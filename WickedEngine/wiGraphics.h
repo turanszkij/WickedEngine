@@ -1494,6 +1494,146 @@ namespace wi::graphics
 			return Format::UNKNOWN;
 		}
 	}
+	constexpr const char* GetFormatString(Format format)
+	{
+		switch (format)
+		{
+		case wi::graphics::Format::UNKNOWN:
+			return "UNKNOWN";
+		case wi::graphics::Format::R32G32B32A32_FLOAT:
+			return "R32G32B32A32_FLOAT";
+		case wi::graphics::Format::R32G32B32A32_UINT:
+			return "R32G32B32A32_UINT";
+		case wi::graphics::Format::R32G32B32A32_SINT:
+			return "R32G32B32A32_SINT";
+		case wi::graphics::Format::R32G32B32_FLOAT:
+			return "R32G32B32_FLOAT";
+		case wi::graphics::Format::R32G32B32_UINT:
+			return "R32G32B32_UINT";
+		case wi::graphics::Format::R32G32B32_SINT:
+			return "R32G32B32_SINT";
+		case wi::graphics::Format::R16G16B16A16_FLOAT:
+			return "R16G16B16A16_FLOAT";
+		case wi::graphics::Format::R16G16B16A16_UNORM:
+			return "R16G16B16A16_UNORM";
+		case wi::graphics::Format::R16G16B16A16_UINT:
+			return "R16G16B16A16_UINT";
+		case wi::graphics::Format::R16G16B16A16_SNORM:
+			return "R16G16B16A16_SNORM";
+		case wi::graphics::Format::R16G16B16A16_SINT:
+			return "R16G16B16A16_SINT";
+		case wi::graphics::Format::R32G32_FLOAT:
+			return "R32G32_FLOAT";
+		case wi::graphics::Format::R32G32_UINT:
+			return "R32G32_UINT";
+		case wi::graphics::Format::R32G32_SINT:
+			return "R32G32_SINT";
+		case wi::graphics::Format::D32_FLOAT_S8X24_UINT:
+			return "D32_FLOAT_S8X24_UINT";
+		case wi::graphics::Format::R10G10B10A2_UNORM:
+			return "R10G10B10A2_UNORM";
+		case wi::graphics::Format::R10G10B10A2_UINT:
+			return "R10G10B10A2_UINT";
+		case wi::graphics::Format::R11G11B10_FLOAT:
+			return "R11G11B10_FLOAT";
+		case wi::graphics::Format::R8G8B8A8_UNORM:
+			return "R8G8B8A8_UNORM";
+		case wi::graphics::Format::R8G8B8A8_UNORM_SRGB:
+			return "R8G8B8A8_UNORM_SRGB";
+		case wi::graphics::Format::R8G8B8A8_UINT:
+			return "R8G8B8A8_UINT";
+		case wi::graphics::Format::R8G8B8A8_SNORM:
+			return "R8G8B8A8_SNORM";
+		case wi::graphics::Format::R8G8B8A8_SINT:
+			return "R8G8B8A8_SINT";
+		case wi::graphics::Format::B8G8R8A8_UNORM:
+			return "B8G8R8A8_UNORM";
+		case wi::graphics::Format::B8G8R8A8_UNORM_SRGB:
+			return "B8G8R8A8_UNORM_SRGB";
+		case wi::graphics::Format::R16G16_FLOAT:
+			return "R16G16_FLOAT";
+		case wi::graphics::Format::R16G16_UNORM:
+			return "R16G16_UNORM";
+		case wi::graphics::Format::R16G16_UINT:
+			return "R16G16_UINT";
+		case wi::graphics::Format::R16G16_SNORM:
+			return "R16G16_SNORM";
+		case wi::graphics::Format::R16G16_SINT:
+			return "R16G16_SINT";
+		case wi::graphics::Format::D32_FLOAT:
+			return "D32_FLOAT";
+		case wi::graphics::Format::R32_FLOAT:
+			return "R32_FLOAT";
+		case wi::graphics::Format::R32_UINT:
+			return "R32_UINT";
+		case wi::graphics::Format::R32_SINT:
+			return "R32_SINT";
+		case wi::graphics::Format::D24_UNORM_S8_UINT:
+			return "D24_UNORM_S8_UINT";
+		case wi::graphics::Format::R9G9B9E5_SHAREDEXP:
+			return "R9G9B9E5_SHAREDEXP";
+		case wi::graphics::Format::R8G8_UNORM:
+			return "R8G8_UNORM";
+		case wi::graphics::Format::R8G8_UINT:
+			return "R8G8_UINT";
+		case wi::graphics::Format::R8G8_SNORM:
+			return "R8G8_SNORM";
+		case wi::graphics::Format::R8G8_SINT:
+			return "R8G8_SINT";
+		case wi::graphics::Format::R16_FLOAT:
+			return "R16_FLOAT";
+		case wi::graphics::Format::D16_UNORM:
+			return "D16_UNORM";
+		case wi::graphics::Format::R16_UNORM:
+			return "R16_UNORM";
+		case wi::graphics::Format::R16_UINT:
+			return "R16_UINT";
+		case wi::graphics::Format::R16_SNORM:
+			return "R16_SNORM";
+		case wi::graphics::Format::R16_SINT:
+			return "R16_SINT";
+		case wi::graphics::Format::R8_UNORM:
+			return "R8_UNORM";
+		case wi::graphics::Format::R8_UINT:
+			return "R8_UINT";
+		case wi::graphics::Format::R8_SNORM:
+			return "R8_SNORM";
+		case wi::graphics::Format::R8_SINT:
+			return "R8_SINT";
+		case wi::graphics::Format::BC1_UNORM:
+			return "BC1_UNORM";
+		case wi::graphics::Format::BC1_UNORM_SRGB:
+			return "BC1_UNORM_SRGB";
+		case wi::graphics::Format::BC2_UNORM:
+			return "BC2_UNORM";
+		case wi::graphics::Format::BC2_UNORM_SRGB:
+			return "BC2_UNORM_SRGB";
+		case wi::graphics::Format::BC3_UNORM:
+			return "BC3_UNORM";
+		case wi::graphics::Format::BC3_UNORM_SRGB:
+			return "BC3_UNORM_SRGB";
+		case wi::graphics::Format::BC4_UNORM:
+			return "BC4_UNORM";
+		case wi::graphics::Format::BC4_SNORM:
+			return "BC4_SNORM";
+		case wi::graphics::Format::BC5_UNORM:
+			return "BC5_UNORM";
+		case wi::graphics::Format::BC5_SNORM:
+			return "BC5_SNORM";
+		case wi::graphics::Format::BC6H_UF16:
+			return "BC6H_UF16";
+		case wi::graphics::Format::BC6H_SF16:
+			return "BC6H_SF16";
+		case wi::graphics::Format::BC7_UNORM:
+			return "BC7_UNORM";
+		case wi::graphics::Format::BC7_UNORM_SRGB:
+			return "BC7_UNORM_SRGB";
+		case wi::graphics::Format::NV12:
+			return "NV12";
+		default:
+			return "";
+		}
+	}
 	constexpr IndexBufferFormat GetIndexBufferFormat(Format format)
 	{
 		switch (format)
@@ -1513,6 +1653,38 @@ namespace wi::graphics
 	constexpr uint64_t AlignTo(uint64_t value, uint64_t alignment)
 	{
 		return ((value + alignment - 1) / alignment) * alignment;
+	}
+	constexpr uint32_t GetMipCount(uint32_t width, uint32_t height, uint32_t depth = 1u)
+	{
+		uint32_t mips = 1;
+		while (width > 1u || height > 1u || depth > 1u)
+		{
+			width = std::max(1u, width >> 1u);
+			height = std::max(1u, height >> 1u);
+			depth = std::max(1u, depth >> 1u);
+			mips++;
+		}
+		return mips;
+	}
+	constexpr size_t ComputeTextureMemorySizeInBytes(const TextureDesc& desc)
+	{
+		size_t size = 0;
+		const uint32_t bytes_per_block = GetFormatStride(desc.format);
+		const uint32_t pixels_per_block = GetFormatBlockSize(desc.format);
+		const uint32_t num_blocks_x = desc.width / pixels_per_block;
+		const uint32_t num_blocks_y = desc.height / pixels_per_block;
+		const uint32_t mips = desc.mip_levels == 0 ? GetMipCount(desc.width, desc.height, desc.depth) : desc.mip_levels;
+		for (uint32_t layer = 0; layer < desc.array_size; ++layer)
+		{
+			for (uint32_t mip = 0; mip < mips; ++mip)
+			{
+				const uint32_t width = std::max(1u, num_blocks_x >> mip);
+				const uint32_t height = std::max(1u, num_blocks_y >> mip);
+				const uint32_t depth = std::max(1u, desc.depth >> mip);
+				size += width * height * depth * bytes_per_block;
+			}
+		}
+		return size;
 	}
 
 

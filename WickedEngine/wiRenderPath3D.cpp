@@ -708,7 +708,7 @@ namespace wi
 		// Preparing the frame:
 		CommandList cmd = device->BeginCommandList();
 		CommandList cmd_prepareframe = cmd;
-		wi::renderer::ProcessDeferredMipGenRequests(cmd); // Execute it first thing in the frame here, on main thread, to not allow other thread steal it and execute on different command list!
+		wi::renderer::ProcessDeferredTextureRequests(cmd); // Execute it first thing in the frame here, on main thread, to not allow other thread steal it and execute on different command list!
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 			GraphicsDevice* device = wi::graphics::GetDevice();
 			wi::renderer::BindCameraCB(

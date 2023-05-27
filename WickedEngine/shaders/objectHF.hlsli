@@ -17,6 +17,7 @@
 #endif
 
 #ifdef WATER
+#define DISABLE_ENVMAPS
 #define DISABLE_VOXELGI
 #endif
 

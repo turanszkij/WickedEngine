@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "MaterialWindow.h"
 
+#include <sstream>
+
 using namespace wi::graphics;
 using namespace wi::ecs;
 using namespace wi::scene;
@@ -129,6 +131,18 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			material->SetOutlineEnabled(args.bValue);
 		});
 	AddWidget(&outlineCheckBox);
+
+	preferUncompressedCheckBox.Create("Prefer Uncompressed Textures: ");
+	preferUncompressedCheckBox.SetTooltip("For uncompressed textures (jpg, png, etc.) or transcodable textures (KTX2, Basis) here it is possible to enable/disable auto block compression on importing. \nBlock compression can reduce GPU memory usage and improve performance, but it can result in degraded quality.");
+	preferUncompressedCheckBox.SetPos(XMFLOAT2(x, y += step));
+	preferUncompressedCheckBox.SetSize(XMFLOAT2(hei, hei));
+	preferUncompressedCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
+		if (material != nullptr)
+			material->SetPreferUncompressedTexturesEnabled(args.bValue);
+			textureSlotComboBox.SetSelected(textureSlotComboBox.GetSelected());
+		});
+	AddWidget(&preferUncompressedCheckBox);
 
 
 	shaderTypeComboBox.Create("Shader: ");
@@ -577,63 +591,88 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			break;
 		}
 	}
-	textureSlotComboBox.OnSelect([this](wi::gui::EventArgs args)
+	textureSlotComboBox.OnSelect([this](wi::gui::EventArgs args) {
+
+		std::string tooltiptext;
+
+		switch (args.iValue)
 		{
+		case MaterialComponent::BASECOLORMAP:
+			tooltiptext = "RGBA: Basecolor";
+			break;
+		case MaterialComponent::NORMALMAP:
+			tooltiptext = "RG: Normal";
+			break;
+		case MaterialComponent::SURFACEMAP:
+			tooltiptext = "Default workflow: R: Occlusion, G: Roughness, B: Metalness, A: Reflectance\nSpecular-glossiness workflow: RGB: Specular color (f0), A: smoothness";
+			break;
+		case MaterialComponent::EMISSIVEMAP:
+			tooltiptext = "RGBA: Emissive";
+			break;
+		case MaterialComponent::OCCLUSIONMAP:
+			tooltiptext = "R: Occlusion";
+			break;
+		case MaterialComponent::DISPLACEMENTMAP:
+			tooltiptext = "R: Displacement heightmap";
+			break;
+		case MaterialComponent::TRANSMISSIONMAP:
+			tooltiptext = "R: Transmission factor";
+			break;
+		case MaterialComponent::SHEENCOLORMAP:
+			tooltiptext = "RGB: Sheen color";
+			break;
+		case MaterialComponent::SHEENROUGHNESSMAP:
+			tooltiptext = "A: Roughness";
+			break;
+		case MaterialComponent::CLEARCOATMAP:
+			tooltiptext = "R: Clearcoat factor";
+			break;
+		case MaterialComponent::CLEARCOATROUGHNESSMAP:
+			tooltiptext = "G: Roughness";
+			break;
+		case MaterialComponent::CLEARCOATNORMALMAP:
+			tooltiptext = "RG: Normal";
+			break;
+		case MaterialComponent::SPECULARMAP:
+			tooltiptext = "RGB: Specular color, A: Specular intensity [non-metal]";
+			break;
+		case MaterialComponent::ANISOTROPYMAP:
+			tooltiptext = "RG: The anisotropy texture. Red and green channels represent the anisotropy direction in [-1, 1] tangent, bitangent space.\nThe vector is rotated by anisotropyRotation, and multiplied by anisotropyStrength, to obtain the final anisotropy direction and strength.";
+			break;
+		default:
+			break;
+		}
 
-			switch (args.iValue)
-			{
-			case MaterialComponent::BASECOLORMAP:
-				textureSlotButton.SetTooltip("RGBA: Basecolor");
-				break;
-			case MaterialComponent::NORMALMAP:
-				textureSlotButton.SetTooltip("RGB: Normal");
-				break;
-			case MaterialComponent::SURFACEMAP:
-				textureSlotButton.SetTooltip("Default workflow: R: Occlusion, G: Roughness, B: Metalness, A: Reflectance\nSpecular-glossiness workflow: RGB: Specular color (f0), A: smoothness");
-				break;
-			case MaterialComponent::EMISSIVEMAP:
-				textureSlotButton.SetTooltip("RGBA: Emissive");
-				break;
-			case MaterialComponent::OCCLUSIONMAP:
-				textureSlotButton.SetTooltip("R: Occlusion");
-				break;
-			case MaterialComponent::DISPLACEMENTMAP:
-				textureSlotButton.SetTooltip("R: Displacement heightmap");
-				break;
-			case MaterialComponent::TRANSMISSIONMAP:
-				textureSlotButton.SetTooltip("R: Transmission factor");
-				break;
-			case MaterialComponent::SHEENCOLORMAP:
-				textureSlotButton.SetTooltip("RGB: Sheen color");
-				break;
-			case MaterialComponent::SHEENROUGHNESSMAP:
-				textureSlotButton.SetTooltip("A: Roughness");
-				break;
-			case MaterialComponent::CLEARCOATMAP:
-				textureSlotButton.SetTooltip("R: Clearcoat factor");
-				break;
-			case MaterialComponent::CLEARCOATROUGHNESSMAP:
-				textureSlotButton.SetTooltip("G: Roughness");
-				break;
-			case MaterialComponent::CLEARCOATNORMALMAP:
-				textureSlotButton.SetTooltip("RGB: Normal");
-				break;
-			case MaterialComponent::SPECULARMAP:
-				textureSlotButton.SetTooltip("RGB: Specular color, A: Specular intensity [non-metal]");
-				break;
-			case MaterialComponent::ANISOTROPYMAP:
-				textureSlotButton.SetTooltip("RG: The anisotropy texture. Red and green channels represent the anisotropy direction in [-1, 1] tangent, bitangent space.\nThe vector is rotated by anisotropyRotation, and multiplied by anisotropyStrength, to obtain the final anisotropy direction and strength.");
-				break;
-			default:
-				break;
-			}
-
-			MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-			if (material == nullptr)
-				return;
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
+		if (material != nullptr)
+		{
 			textureSlotButton.SetImage(material->textures[args.iValue].resource);
+			if (material->textures[args.iValue].resource.IsValid())
+			{
+				const Texture& texture = material->textures[args.iValue].resource.GetTexture();
+				tooltiptext += "\nResolution: " + std::to_string(texture.desc.width) + " * " + std::to_string(texture.desc.height);
+				tooltiptext += "\nMip levels: " + std::to_string(texture.desc.mip_levels);
+				tooltiptext += "\nFormat: ";
+				tooltiptext += GetFormatString(texture.desc.format);
 
-		});
+				std::stringstream ss;
+				ss << std::fixed << std::setprecision(2);
+				const size_t texture_size = ComputeTextureMemorySizeInBytes(texture.desc);
+				if (texture_size >= 1024ull * 1024ull)
+				{
+					ss << "\nMemory: " << ComputeTextureMemorySizeInBytes(texture.desc) / 1024.0f / 1024.0f << " MB";
+				}
+				else
+				{
+					ss << "\nMemory: " << ComputeTextureMemorySizeInBytes(texture.desc) / 1024.0f << " KB";
+				}
+				tooltiptext += ss.str();
+			}
+		}
+
+		textureSlotButton.SetTooltip(tooltiptext);
+
+	});
 	textureSlotComboBox.SetSelected(0);
 	textureSlotComboBox.SetTooltip("Choose the texture slot to modify.");
 	AddWidget(&textureSlotComboBox);
@@ -673,22 +712,14 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
 			wi::helper::FileDialog(params, [this, material, slot](std::string fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					wi::resourcemanager::Flags flags = wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA;
-					switch (slot)
-					{
-					case MaterialComponent::NORMALMAP:
-					case MaterialComponent::CLEARCOATNORMALMAP:
-						flags |= wi::resourcemanager::Flags::IMPORT_NORMALMAP;
-						break;
-					default:
-						break;
-					};
+					wi::resourcemanager::Flags flags = material->GetTextureSlotResourceFlags(MaterialComponent::TEXTURESLOT(slot));
 					material->textures[slot].resource = wi::resourcemanager::Load(fileName, flags);
 					material->textures[slot].name = fileName;
 					material->SetDirty();
 					textureSlotLabel.SetText(wi::helper::GetFileNameFromPath(fileName));
-					});
+					textureSlotComboBox.SetSelected(slot);
 				});
+			});
 		}
 		});
 	AddWidget(&textureSlotButton);
@@ -724,6 +755,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 
 void MaterialWindow::SetEntity(Entity entity)
 {
+	bool changed = this->entity != entity;
 	this->entity = entity;
 
 	Scene& scene = editor->GetCurrentScene();
@@ -755,6 +787,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		windCheckBox.SetCheck(material->IsUsingWind());
 		doubleSidedCheckBox.SetCheck(material->IsDoubleSided());
 		outlineCheckBox.SetCheck(material->IsOutlineEnabled());
+		preferUncompressedCheckBox.SetCheck(material->IsPreferUncompressedTexturesEnabled());
 		normalMapSlider.SetValue(material->normalMapStrength);
 		roughnessSlider.SetValue(material->roughness);
 		reflectanceSlider.SetValue(material->reflectance);
@@ -857,6 +890,10 @@ void MaterialWindow::SetEntity(Entity entity)
 		textureSlotButton.SetImage(material->textures[slot].resource);
 		textureSlotLabel.SetText(wi::helper::GetFileNameFromPath(material->textures[slot].name));
 		textureSlotUvsetField.SetText(std::to_string(material->textures[slot].uvset));
+		if (changed)
+		{
+			textureSlotComboBox.SetSelected(slot);
+		}
 	}
 	else
 	{
@@ -920,6 +957,7 @@ void MaterialWindow::ResizeLayout()
 	add_right(windCheckBox);
 	add_right(doubleSidedCheckBox);
 	add_right(outlineCheckBox);
+	add_right(preferUncompressedCheckBox);
 	add(shaderTypeComboBox);
 	add(blendModeComboBox);
 	add(shadingRateComboBox);

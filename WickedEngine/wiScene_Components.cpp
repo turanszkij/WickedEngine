@@ -400,23 +400,43 @@ namespace wi::scene
 		}
 		return FILTER_TRANSPARENT;
 	}
-	void MaterialComponent::CreateRenderData()
+	wi::resourcemanager::Flags MaterialComponent::GetTextureSlotResourceFlags(TEXTURESLOT slot)
 	{
+		wi::resourcemanager::Flags flags = wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA;
+		if (!IsPreferUncompressedTexturesEnabled())
+		{
+			flags |= wi::resourcemanager::Flags::IMPORT_BLOCK_COMPRESSED;
+		}
+		switch (slot)
+		{
+		case NORMALMAP:
+		case CLEARCOATNORMALMAP:
+			flags |= wi::resourcemanager::Flags::IMPORT_NORMALMAP;
+			break;
+		default:
+			break;
+		}
+		return flags;
+	}
+	void MaterialComponent::CreateRenderData(bool force_recreate)
+	{
+		if (force_recreate)
+		{
+			for (uint32_t slot = 0; slot < TEXTURESLOT_COUNT; ++slot)
+			{
+				auto& textureslot = textures[slot];
+				if (textureslot.resource.IsValid())
+				{
+					textureslot.resource.SetOutdated();
+				}
+			}
+		}
 		for (uint32_t slot = 0; slot < TEXTURESLOT_COUNT; ++slot)
 		{
 			auto& textureslot = textures[slot];
 			if (!textureslot.name.empty())
 			{
-				wi::resourcemanager::Flags flags = wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA;
-				switch (slot)
-				{
-				case NORMALMAP:
-				case CLEARCOATNORMALMAP:
-					flags |= wi::resourcemanager::Flags::IMPORT_NORMALMAP;
-					break;
-				default:
-					break;
-				}
+				wi::resourcemanager::Flags flags = GetTextureSlotResourceFlags(TEXTURESLOT(slot));
 				textureslot.resource = wi::resourcemanager::Load(textureslot.name, flags);
 			}
 		}

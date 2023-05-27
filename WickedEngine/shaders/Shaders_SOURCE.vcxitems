@@ -54,6 +54,18 @@
     <None Include="$(MSBuildThisFileDirectory)voxelHF.hlsli" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="$(MSBuildThisFileDirectory)blockcompressCS_BC1.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.0</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)blockcompressCS_BC3.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.0</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)blockcompressCS_BC5.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.0</ShaderModel>
+    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)bloomseparateCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
@@ -2622,6 +2634,9 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)compressonator\bcn_common_api.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)compressonator\bcn_common_kernel.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)compressonator\common_def.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ffx-fsr2\ffx_common_types.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ffx-fsr2\ffx_core.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ffx-fsr2\ffx_core_cpu.h" />
@@ -2645,6 +2660,12 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ffx-fsr2\ffx_fsr2_sample.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ffx-fsr2\ffx_fsr2_upsample.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ffx-fsr2\ffx_spd.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ffx-fsr\ffx_a.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ffx-fsr\ffx_fsr1.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ffx-shadows-dnsr\ffx_denoiser_shadows_filter.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ffx-shadows-dnsr\ffx_denoiser_shadows_prepare.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ffx-shadows-dnsr\ffx_denoiser_shadows_tileclassification.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ffx-shadows-dnsr\ffx_denoiser_shadows_util.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_BVH.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_DDGI.h" />

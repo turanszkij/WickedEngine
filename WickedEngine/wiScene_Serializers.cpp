@@ -2033,6 +2033,25 @@ namespace wi::scene
 			ddgi.Serialize(archive);
 		}
 
+		wi::jobsystem::Wait(seri.ctx); // This is needed before emitter material fixup that is below, because material CreateRenderDatas might be pending!
+
+		// Fixup old emittedparticle distortion basecolor slot -> normalmap slot
+		if (archive.GetVersion() < 89)
+		{
+			for (size_t i = 0; i < emitters.GetCount(); ++i)
+			{
+				if (emitters[i].shaderType != EmittedParticleSystem::PARTICLESHADERTYPE::SOFT_DISTORTION)
+					continue;
+				Entity entity = emitters.GetEntity(i);
+				MaterialComponent* material = materials.GetComponent(entity);
+				if (material != nullptr)
+				{
+					material->textures[NORMALMAP] = std::move(material->textures[BASECOLORMAP]);
+					material->CreateRenderData(true);
+				}
+			}
+		}
+
 		wi::backlog::post("Scene serialize took " + std::to_string(timer.elapsed_seconds()) + " sec");
 	}
 

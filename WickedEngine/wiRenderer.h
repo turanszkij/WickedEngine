@@ -217,8 +217,8 @@ namespace wi::renderer
 		uint32_t flags = DRAWSCENE_OPAQUE
 	);
 
-	// Render mip levels for textures that reqested it:
-	void ProcessDeferredMipGenRequests(wi::graphics::CommandList cmd);
+	// Process deferred requests such as AddDeferredMIPGen and AddDeferredBlockCompression:
+	void ProcessDeferredTextureRequests(wi::graphics::CommandList cmd);
 
 	// Compute volumetric cloud shadow data
 	void ComputeVolumetricCloudShadows(
@@ -908,6 +908,11 @@ namespace wi::renderer
 	};
 	void GenerateMipChain(const wi::graphics::Texture& texture, MIPGENFILTER filter, wi::graphics::CommandList cmd, const MIPGEN_OPTIONS& options = {});
 
+	// Compress a texture into Block Compressed format
+	//	texture_src	: source uncompressed texture
+	//	texture_bc	: edstination comporessed texture, must be a supported BC format (BC1/BC3/BC5)
+	void BlockCompress(const wi::graphics::Texture& texture_src, const wi::graphics::Texture& texture_bc, wi::graphics::CommandList cmd);
+
 	enum BORDEREXPANDSTYLE
 	{
 		BORDEREXPAND_DISABLE,
@@ -1093,6 +1098,7 @@ namespace wi::renderer
 
 	// Add a texture that should be mipmapped whenever it is feasible to do so
 	void AddDeferredMIPGen(const wi::graphics::Texture& texture, bool preserve_coverage = false);
+	void AddDeferredBlockCompression(const wi::graphics::Texture& texture_src, const wi::graphics::Texture& texture_bc);
 
 	struct CustomShader
 	{

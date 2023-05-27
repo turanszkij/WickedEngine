@@ -4,6 +4,12 @@
 #include "ShaderInterop_EmittedParticle.h"
 #include "objectHF.hlsli"
 
+#ifdef EMITTEDPARTICLE_DISTORTION
+static const uint SLOT = NORMALMAP;
+#else
+static const uint SLOT = BASECOLORMAP;
+#endif // EMITTEDPARTICLE_DISTORTION
+
 [earlydepthstencil]
 float4 main(VertextoPixel input) : SV_TARGET
 {
@@ -12,14 +18,14 @@ float4 main(VertextoPixel input) : SV_TARGET
 	float4 color = 1;
 
 	[branch]
-	if (material.textures[BASECOLORMAP].IsValid())
+	if (material.textures[SLOT].IsValid())
 	{
-		color = material.textures[BASECOLORMAP].Sample(sampler_linear_clamp, input.tex.xyxy);
+		color = material.textures[SLOT].Sample(sampler_linear_clamp, input.tex.xyxy);
 
 		[branch]
 		if (xEmitterOptions & EMITTER_OPTION_BIT_FRAME_BLENDING_ENABLED)
 		{
-			float4 color2 = material.textures[BASECOLORMAP].Sample(sampler_linear_clamp, input.tex.zwzw);
+			float4 color2 = material.textures[SLOT].Sample(sampler_linear_clamp, input.tex.zwzw);
 			color = lerp(color, color2, input.frameBlend);
 		}
 	}
@@ -43,7 +49,6 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 #ifdef EMITTEDPARTICLE_DISTORTION
 	// just make normal maps blendable:
-	color.rgb = ApplySRGBCurve_Fast(color.rgb); // note: This texture uses basecolormap slot, and this slot is using SRGB descriptor, so we correct it here for normal map
 	color.rgb = color.rgb - 0.5f;
 #endif // EMITTEDPARTICLE_DISTORTION
 

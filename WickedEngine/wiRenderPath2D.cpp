@@ -127,7 +127,7 @@ namespace wi
 		wi::image::SetCanvas(*this);
 		wi::font::SetCanvas(*this);
 
-		wi::renderer::ProcessDeferredMipGenRequests(cmd);
+		wi::renderer::ProcessDeferredTextureRequests(cmd);
 
 		if (GetGUIBlurredBackground() != nullptr)
 		{
