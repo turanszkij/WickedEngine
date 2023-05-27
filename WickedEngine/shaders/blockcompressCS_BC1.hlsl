@@ -1,5 +1,18 @@
 #include "globals.hlsli"
+
+// Compressonator is better quality but slower:
+#define USE_COMPRESSONATOR
+
+#ifdef USE_COMPRESSONATOR
+#pragma dxc diagnostic push
+#pragma dxc diagnostic ignored "-Wambig-lit-shift"
+#pragma dxc diagnostic ignored "-Wunused-value"
+#define ASPM_HLSL
+#include "compressonator/bcn_common_kernel.h"
+#pragma dxc diagnostic pop
+#else
 #include "BlockCompress.hlsli"
+#endif // USE_COMPRESSONATOR
 
 #if !defined(BC3) && !defined(BC5)
 #define BC1
@@ -178,6 +191,22 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	//COMPRESS-WRITE///////////////////////////////////////////////////////////////////
 
+#ifdef USE_COMPRESSONATOR
+
+#ifdef BC1
+	output[DTid.xy] = CompressBlockBC1_UNORM(block, CMP_QUALITY2, /*isSRGB =*/ false);
+#endif // BC1
+
+#ifdef BC3
+	output[DTid.xy] = CompressBlockBC3_UNORM(block, block_a, CMP_QUALITY2, /*isSRGB =*/ false);
+#endif // BC3
+
+#ifdef BC5
+	output[DTid.xy] = CompressBlockBC5_UNORM(block_u, block_v, CMP_QUALITY2);
+#endif // BC5
+
+#else
+
 #ifdef BC1
 	output[DTid.xy] = CompressBC1Block(block);
 #endif // BC1
@@ -189,4 +218,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #ifdef BC5
 	output[DTid.xy] = CompressBC5Block(block_u, block_v);
 #endif // BC5
+
+#endif // USE_COMPRESSONATOR
+
 }
