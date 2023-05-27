@@ -34,6 +34,15 @@
     <Filter Include="ffx-fsr2">
       <UniqueIdentifier>{902ab028-5d33-4517-a981-4b5adc0f7031}</UniqueIdentifier>
     </Filter>
+    <Filter Include="compressonator">
+      <UniqueIdentifier>{913dd8d5-7a4e-4a41-9737-4c690309165e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ffx-fsr">
+      <UniqueIdentifier>{a0f04960-eae7-45c2-a6d8-c0c25ec3b333}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ffx-shadows-dnsr">
+      <UniqueIdentifier>{2bb6f2d6-f3e1-4501-95bc-bd4a0ca64c4b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)globals.hlsli">
@@ -1209,6 +1218,33 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_VXGI.h">
       <Filter>interop</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)compressonator\bcn_common_api.h">
+      <Filter>compressonator</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)compressonator\bcn_common_kernel.h">
+      <Filter>compressonator</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)compressonator\common_def.h">
+      <Filter>compressonator</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ffx-fsr\ffx_a.h">
+      <Filter>ffx-fsr</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ffx-fsr\ffx_fsr1.h">
+      <Filter>ffx-fsr</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ffx-shadows-dnsr\ffx_denoiser_shadows_filter.h">
+      <Filter>ffx-shadows-dnsr</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ffx-shadows-dnsr\ffx_denoiser_shadows_prepare.h">
+      <Filter>ffx-shadows-dnsr</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ffx-shadows-dnsr\ffx_denoiser_shadows_tileclassification.h">
+      <Filter>ffx-shadows-dnsr</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ffx-shadows-dnsr\ffx_denoiser_shadows_util.h">
+      <Filter>ffx-shadows-dnsr</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

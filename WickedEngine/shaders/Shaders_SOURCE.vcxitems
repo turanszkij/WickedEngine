@@ -2634,6 +2634,9 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)compressonator\bcn_common_api.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)compressonator\bcn_common_kernel.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)compressonator\common_def.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ffx-fsr2\ffx_common_types.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ffx-fsr2\ffx_core.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ffx-fsr2\ffx_core_cpu.h" />
@@ -2657,6 +2660,12 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ffx-fsr2\ffx_fsr2_sample.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ffx-fsr2\ffx_fsr2_upsample.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ffx-fsr2\ffx_spd.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ffx-fsr\ffx_a.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ffx-fsr\ffx_fsr1.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ffx-shadows-dnsr\ffx_denoiser_shadows_filter.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ffx-shadows-dnsr\ffx_denoiser_shadows_prepare.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ffx-shadows-dnsr\ffx_denoiser_shadows_tileclassification.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ffx-shadows-dnsr\ffx_denoiser_shadows_util.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_BVH.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_DDGI.h" />
