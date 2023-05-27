@@ -601,7 +601,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			tooltiptext = "RGBA: Basecolor";
 			break;
 		case MaterialComponent::NORMALMAP:
-			tooltiptext = "RGB: Normal";
+			tooltiptext = "RG: Normal";
 			break;
 		case MaterialComponent::SURFACEMAP:
 			tooltiptext = "Default workflow: R: Occlusion, G: Roughness, B: Metalness, A: Reflectance\nSpecular-glossiness workflow: RGB: Specular color (f0), A: smoothness";
@@ -631,7 +631,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			tooltiptext = "G: Roughness";
 			break;
 		case MaterialComponent::CLEARCOATNORMALMAP:
-			tooltiptext = "RGB: Normal";
+			tooltiptext = "RG: Normal";
 			break;
 		case MaterialComponent::SPECULARMAP:
 			tooltiptext = "RGB: Specular color, A: Specular intensity [non-metal]";
