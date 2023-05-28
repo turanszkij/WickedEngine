@@ -856,21 +856,36 @@ namespace wi
 									}
 									else
 									{
-										// scan for transparency:
+										// scan for transparency and check if fully grayscale:
 										//	By default we should use BC1 that doesn't have transparency, but half the size of BC3 that supports it
 										bool has_transparency = false;
+										bool is_grayscale = true;
 										for (int y = 0; (y < height) && !has_transparency; ++y)
 										{
 											for (int x = 0; (x < width) && !has_transparency; ++x)
 											{
-												wi::Color color = ((wi::Color*)rgba)[x + y * width];
-												has_transparency |= color.getA() < 255;
+												const wi::Color color = ((wi::Color*)rgba)[x + y * width];
+												const uint8_t r = color.getR();
+												const uint8_t g = color.getG();
+												const uint8_t b = color.getB();
+												const uint8_t a = color.getA();
+												has_transparency |= a < 255;
+												is_grayscale &= r == g;
+												is_grayscale &= r == b;
 											}
 										}
 										if (has_transparency)
 										{
 											// BC3 format supports transparency:
 											desc.format = Format::BC3_UNORM;
+										}
+										else if (is_grayscale)
+										{
+											desc.format = Format::BC4_UNORM;
+											desc.swizzle.r = ComponentSwizzle::R;
+											desc.swizzle.g = ComponentSwizzle::R;
+											desc.swizzle.b = ComponentSwizzle::R;
+											desc.swizzle.a = ComponentSwizzle::ONE;
 										}
 									}
 									desc.bind_flags = BindFlag::SHADER_RESOURCE;

@@ -841,6 +841,29 @@ namespace dx12_internal
 			return 1;
 		}
 	}
+	constexpr D3D12_SHADER_COMPONENT_MAPPING _ConvertComponentSwizzle(ComponentSwizzle value)
+	{
+		switch (value)
+		{
+		default:
+		case wi::graphics::ComponentSwizzle::R:
+			return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0;
+		case wi::graphics::ComponentSwizzle::G:
+			return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1;
+		case wi::graphics::ComponentSwizzle::B:
+			return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2;
+		case wi::graphics::ComponentSwizzle::A:
+			return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3;
+		case wi::graphics::ComponentSwizzle::ZERO:
+			return D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0;
+		case wi::graphics::ComponentSwizzle::ONE:
+			return D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1;
+		}
+	}
+	constexpr UINT _ConvertSwizzle(Swizzle value)
+	{
+		return D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(_ConvertComponentSwizzle(value.r), _ConvertComponentSwizzle(value.g), _ConvertComponentSwizzle(value.b), _ConvertComponentSwizzle(value.a));
+	}
 
 	// Native -> Engine converters
 	constexpr Format _ConvertFormat_Inv(DXGI_FORMAT value)
@@ -4547,7 +4570,7 @@ using namespace dx12_internal;
 		return SUCCEEDED(hr);
 	}
 
-	int GraphicsDevice_DX12::CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change, const ImageAspect* aspect) const
+	int GraphicsDevice_DX12::CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change, const ImageAspect* aspect, const Swizzle* swizzle) const
 	{
 		auto internal_state = to_internal(texture);
 
@@ -4567,7 +4590,7 @@ using namespace dx12_internal;
 		case SubresourceType::SRV:
 		{
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srv_desc.Shader4ComponentMapping = _ConvertSwizzle(swizzle == nullptr ? texture->desc.swizzle : *swizzle);
 
 			// Try to resolve resource format:
 			switch (format)

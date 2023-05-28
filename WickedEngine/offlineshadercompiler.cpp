@@ -31,6 +31,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"generateMIPChain2DCS_unorm4", wi::graphics::ShaderStage::CS},
 	{"blockcompressCS_BC1", wi::graphics::ShaderStage::CS},
 	{"blockcompressCS_BC3", wi::graphics::ShaderStage::CS},
+	{"blockcompressCS_BC4", wi::graphics::ShaderStage::CS},
 	{"blockcompressCS_BC5", wi::graphics::ShaderStage::CS},
 	{"blur_gaussian_float4CS", wi::graphics::ShaderStage::CS},
 	{"bloomseparateCS", wi::graphics::ShaderStage::CS},

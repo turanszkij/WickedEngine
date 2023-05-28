@@ -533,6 +533,35 @@ namespace vulkan_internal
 
 		return flags;
 	}
+	constexpr VkComponentSwizzle _ConvertComponentSwizzle(ComponentSwizzle value)
+	{
+		switch (value)
+		{
+		default:
+			return VK_COMPONENT_SWIZZLE_IDENTITY;
+		case wi::graphics::ComponentSwizzle::R:
+			return VK_COMPONENT_SWIZZLE_R;
+		case wi::graphics::ComponentSwizzle::G:
+			return VK_COMPONENT_SWIZZLE_G;
+		case wi::graphics::ComponentSwizzle::B:
+			return VK_COMPONENT_SWIZZLE_B;
+		case wi::graphics::ComponentSwizzle::A:
+			return VK_COMPONENT_SWIZZLE_A;
+		case wi::graphics::ComponentSwizzle::ZERO:
+			return VK_COMPONENT_SWIZZLE_ZERO;
+		case wi::graphics::ComponentSwizzle::ONE:
+			return VK_COMPONENT_SWIZZLE_ONE;
+		}
+	}
+	constexpr VkComponentMapping _ConvertSwizzle(Swizzle value)
+	{
+		VkComponentMapping mapping = {};
+		mapping.r = _ConvertComponentSwizzle(value.r);
+		mapping.g = _ConvertComponentSwizzle(value.g);
+		mapping.b = _ConvertComponentSwizzle(value.b);
+		mapping.a = _ConvertComponentSwizzle(value.a);
+		return mapping;
+	}
 
 
 	bool checkExtensionSupport(const char* checkExtension, const wi::vector<VkExtensionProperties>& available_extensions)
@@ -6258,7 +6287,7 @@ using namespace vulkan_internal;
 		return true;
 	}
 
-	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change, const ImageAspect* aspect) const
+	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change, const ImageAspect* aspect, const Swizzle* swizzle) const
 	{
 		auto internal_state = to_internal(texture);
 
@@ -6287,6 +6316,7 @@ using namespace vulkan_internal;
 		view_desc.subresourceRange.layerCount = sliceCount;
 		view_desc.subresourceRange.baseMipLevel = firstMip;
 		view_desc.subresourceRange.levelCount = mipCount;
+		view_desc.components = _ConvertSwizzle(swizzle == nullptr ? texture->desc.swizzle : *swizzle);
 		switch (format)
 		{
 		case Format::NV12:

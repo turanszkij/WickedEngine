@@ -14,9 +14,9 @@
 #include "BlockCompress.hlsli"
 #endif // USE_COMPRESSONATOR
 
-#if !defined(BC3) && !defined(BC5)
+#if !defined(BC3) && !defined(BC4) && !defined(BC5)
 #define BC1
-#endif // !BC3 && !BC5
+#endif // !BC3 && !BC4 && !BC5
 
 Texture2D input : register(t0);
 
@@ -27,6 +27,10 @@ RWTexture2D<uint2> output : register(u0);
 #ifdef BC3
 RWTexture2D<uint4> output : register(u0);
 #endif // BC3
+
+#ifdef BC4
+RWTexture2D<uint2> output : register(u0);
+#endif // BC4
 
 #ifdef BC5
 RWTexture2D<uint4> output : register(u0);
@@ -49,6 +53,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #ifdef BC3
 	float3 block[16];
 	float block_a[16];
+#endif // BC3
+
+#ifdef BC4
+	float block_r[16];
 #endif // BC3
 
 #ifdef BC5
@@ -82,6 +90,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	block_a[5] = alpha[1];
 #endif // BC3
 
+#ifdef BC4
+	block_r[0] = red[3];
+	block_r[1] = red[2];
+	block_r[4] = red[0];
+	block_r[5] = red[1];
+#endif // BC4
+
 #ifdef BC5
 	block_u[0] = red[3];
 	block_u[1] = red[2];
@@ -113,6 +128,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	block_a[6] = alpha[0];
 	block_a[7] = alpha[1];
 #endif // BC3
+
+#ifdef BC4
+	block_r[2] = red[3];
+	block_r[3] = red[2];
+	block_r[6] = red[0];
+	block_r[7] = red[1];
+#endif // BC4
 
 #ifdef BC5
 	block_u[2] = red[3];
@@ -146,6 +168,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	block_a[13] = alpha[1];
 #endif // BC3
 
+#ifdef BC4
+	block_r[8] = red[3];
+	block_r[9] = red[2];
+	block_r[12] = red[0];
+	block_r[13] = red[1];
+#endif // BC4
+
 #ifdef BC5
 	block_u[8] = red[3];
 	block_u[9] = red[2];
@@ -178,6 +207,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	block_a[15] = alpha[1];
 #endif // BC3
 
+#ifdef BC4
+	block_r[10] = red[3];
+	block_r[11] = red[2];
+	block_r[14] = red[0];
+	block_r[15] = red[1];
+#endif // BC3
+
 #ifdef BC5
 	block_u[10] = red[3];
 	block_u[11] = red[2];
@@ -200,6 +236,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #ifdef BC3
 	output[DTid.xy] = CompressBlockBC3_UNORM(block, block_a, CMP_QUALITY2, /*isSRGB =*/ false);
 #endif // BC3
+
+#ifdef BC4
+	output[DTid.xy] = CompressBlockBC4_UNORM(block_r, CMP_QUALITY2);
+#endif // BC4
 
 #ifdef BC5
 	output[DTid.xy] = CompressBlockBC5_UNORM(block_u, block_v, CMP_QUALITY2);

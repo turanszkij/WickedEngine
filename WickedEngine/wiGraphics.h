@@ -342,6 +342,21 @@ namespace wi::graphics
 		Predictive,
 	};
 
+	enum class VideoProfile
+	{
+		H264,	// AVC
+	};
+
+	enum class ComponentSwizzle
+	{
+		R,
+		G,
+		B,
+		A,
+		ZERO,
+		ONE,
+	};
+
 	// Flags ////////////////////////////////////////////
 
 	enum class ColorWrite
@@ -458,11 +473,6 @@ namespace wi::graphics
 		RESUMING = 1 << 2,
 	};
 
-	enum class VideoProfile
-	{
-		H264,	// AVC
-	};
-
 
 	// Descriptor structs:
 
@@ -502,6 +512,14 @@ namespace wi::graphics
 		} depth_stencil;
 	};
 
+	struct Swizzle
+	{
+		ComponentSwizzle r = ComponentSwizzle::R;
+		ComponentSwizzle g = ComponentSwizzle::G;
+		ComponentSwizzle b = ComponentSwizzle::B;
+		ComponentSwizzle a = ComponentSwizzle::A;
+	};
+
 	struct TextureDesc
 	{
 		enum class Type
@@ -522,6 +540,7 @@ namespace wi::graphics
 		ResourceMiscFlag misc_flags = ResourceMiscFlag::NONE;
 		ClearValue clear = {};
 		ResourceState layout = ResourceState::SHADER_RESOURCE;
+		Swizzle swizzle;
 	};
 
 	struct SamplerDesc
