@@ -33,6 +33,8 @@ wi::vector<ShaderEntry> shaders = {
 	{"blockcompressCS_BC3", wi::graphics::ShaderStage::CS},
 	{"blockcompressCS_BC4", wi::graphics::ShaderStage::CS},
 	{"blockcompressCS_BC5", wi::graphics::ShaderStage::CS},
+	{"blockcompressCS_BC6H", wi::graphics::ShaderStage::CS},
+	{"blockcompressCS_BC6H_cubemap", wi::graphics::ShaderStage::CS},
 	{"blur_gaussian_float4CS", wi::graphics::ShaderStage::CS},
 	{"bloomseparateCS", wi::graphics::ShaderStage::CS},
 	{"depthoffield_mainCS", wi::graphics::ShaderStage::CS},

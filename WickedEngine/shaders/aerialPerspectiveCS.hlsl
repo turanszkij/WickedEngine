@@ -95,7 +95,7 @@ void RenderAerialPerspective(uint3 DTid, float2 uv, float depth, float3 depthWor
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	TextureCubeArray input = bindless_cubearrays[capture.texture_input];
+	TextureCube input = bindless_cubemaps[capture.texture_input];
 	RWTexture2DArray<float4> output = bindless_rwtextures2DArray[capture.texture_output];
 
 	const float2 uv = (DTid.xy + 0.5) * capture.resolution_rcp;
@@ -113,12 +113,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float depth = texture_input_depth.SampleLevel(sampler_point_clamp, N, 0).r;
 #endif // MSAA
 
-	float4 composite = input.SampleLevel(sampler_linear_clamp, float4(N, capture.arrayIndex), 0);
+	float4 composite = input.SampleLevel(sampler_linear_clamp, N, 0);
 
 	// Ignore skybox
 	if (depth == 0.0)
 	{
-		output[uint3(DTid.xy, DTid.z + capture.arrayIndex * 6)] = composite;
+		output[uint3(DTid.xy, DTid.z)] = composite;
 		return;
 	}
 
@@ -134,7 +134,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float4 result = float4(luminance, transmittance);
 	
     // Output
-	output[uint3(DTid.xy, DTid.z + capture.arrayIndex * 6)] = float4(composite.rgb * (1.0 - result.a) + result.rgb, composite.a * (1.0 - result.a));
+	output[uint3(DTid.xy, DTid.z)] = float4(composite.rgb * (1.0 - result.a) + result.rgb, composite.a * (1.0 - result.a));
 }
 #else
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]

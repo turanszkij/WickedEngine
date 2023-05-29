@@ -22,7 +22,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 {
 	if (DTid.x < push.filterResolution.x && DTid.y < push.filterResolution.y)
 	{
-		TextureCubeArray input = bindless_cubearrays[push.texture_input];
+		TextureCube input = bindless_cubemaps[push.texture_input];
 		RWTexture2DArray<float4> output = bindless_rwtextures2DArray[push.texture_output];
 
 		float2 uv = (DTid.xy + 0.5f) * push.filterResolution_rcp.xy;
@@ -38,10 +38,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			float3 hemisphere = ImportanceSampleGGX(hamm, push.filterRoughness, N);
 			float3 cone = mul(hemisphere, tangentSpace);
 
-			col += input.SampleLevel(sampler_linear_clamp, float4(cone, push.filterArrayIndex), 0);
+			col += input.SampleLevel(sampler_linear_clamp, cone, 0);
 		}
 		col /= (float)push.filterRayCount;
 
-		output[uint3(DTid.xy, DTid.z + push.filterArrayIndex * 6)] = col;
+		output[uint3(DTid.xy, DTid.z)] = col;
 	}
 }

@@ -842,7 +842,7 @@ namespace wi
 
 								if (has_flag(flags, Flags::IMPORT_BLOCK_COMPRESSED))
 								{
-									// Schedul additional task to compress into BC format and replace resource texture:
+									// Schedule additional task to compress into BC format and replace resource texture:
 									Texture uncompressed_src = std::move(resource->texture);
 									resource->srgb_subresource = -1;
 
@@ -856,8 +856,9 @@ namespace wi
 									}
 									else
 									{
-										// scan for transparency and check if fully grayscale:
+										// scan for transparency and also check if fully grayscale:
 										//	By default we should use BC1 that doesn't have transparency, but half the size of BC3 that supports it
+										//	We only care about grayscale if it's not transparent
 										bool has_transparency = false;
 										bool is_grayscale = true;
 										for (int y = 0; (y < height) && !has_transparency; ++y)
@@ -881,7 +882,9 @@ namespace wi
 										}
 										else if (is_grayscale)
 										{
+											// If not transparent and grayscale, than BC4 is better quality than BC1 with same memory footprint
 											desc.format = Format::BC4_UNORM;
+											// In this case, reswizzle the texture to be grayscale, not red. Red is ok for some maps, but not all, it's better to use all channels, for example grayscale specular map
 											desc.swizzle.r = ComponentSwizzle::R;
 											desc.swizzle.g = ComponentSwizzle::R;
 											desc.swizzle.b = ComponentSwizzle::R;
