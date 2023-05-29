@@ -4638,7 +4638,7 @@ using namespace dx12_internal;
 				{
 					if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
 					{
-						if (texture->desc.array_size > 6 && sliceCount > 6)
+						if (texture->desc.array_size > 6)
 						{
 							srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
 							srv_desc.TextureCubeArray.First2DArrayFace = firstSlice;

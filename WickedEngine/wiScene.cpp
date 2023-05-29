@@ -3414,6 +3414,9 @@ namespace wi::scene
 	}
 	void Scene::RunImpostorUpdateSystem(wi::jobsystem::context& ctx)
 	{
+		if (dt == 0)
+			return;
+
 		if (impostors.GetCount() > 0 && !impostorArray.IsValid())
 		{
 			GraphicsDevice* device = wi::graphics::GetDevice();
@@ -3444,6 +3447,19 @@ namespace wi::scene
 				subresource_index = device->CreateSubresource(&impostorArray, SubresourceType::RTV, i, 1, 0, 1);
 				assert(subresource_index == i);
 			}
+
+			std::string info;
+			info += "Created impostor array with " + std::to_string(maxImpostorCount) + " max impostors";
+			info += "\n\tResolution (width * height * angles * properties) = " + std::to_string(impostorTextureDim) + " * " + std::to_string(impostorTextureDim) + " * " + std::to_string(impostorCaptureAngles) + " * 3";
+			info += "\n\tRender Format = ";
+			info += GetFormatString(impostorArray.desc.format);
+			info += "\n\tDepth Format = ";
+			info += GetFormatString(impostorDepthStencil.desc.format);
+			size_t total_size = 0;
+			total_size += ComputeTextureMemorySizeInBytes(impostorArray.desc);
+			total_size += ComputeTextureMemorySizeInBytes(impostorDepthStencil.desc);
+			info += "\n\tMemory = " + std::to_string(total_size / 1024.0f / 1024.0f) + " MB\n";
+			wi::backlog::post(info);
 		}
 
 		// reconstruct impostor array status:
@@ -3885,9 +3901,16 @@ namespace wi::scene
 	{
 		aabb_probes.resize(probes.GetCount());
 
+		if (dt == 0)
+			return;
+
 		if (!envmapArray.IsValid()) // even when zero probes, this will be created, since sometimes only the sky will be rendered into it
 		{
 			GraphicsDevice* device = wi::graphics::GetDevice();
+
+			constexpr Format format = Format::BC6H_UF16;
+			constexpr uint32_t blocks = envmapRes / GetFormatBlockSize(format);
+			constexpr uint32_t mip_count = GetMipCount(blocks, blocks);
 
 			TextureDesc desc;
 			desc.array_size = 6;
@@ -3912,11 +3935,11 @@ namespace wi::scene
 
 			desc.sample_count = 1;
 			desc.array_size = envmapCount * 6;
-			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET;
-			desc.format = wi::renderer::format_rendertarget_envprobe;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE;
+			desc.format = format;
 			desc.height = envmapRes;
 			desc.width = envmapRes;
-			desc.mip_levels = 0; // all mips
+			desc.mip_levels = mip_count;
 			desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
 			desc.usage = Usage::DEFAULT;
 			desc.layout = ResourceState::SHADER_RESOURCE;
@@ -3924,6 +3947,13 @@ namespace wi::scene
 			device->SetName(&envmapArray, "envmapArray");
 
 			desc.array_size = 6;
+			desc.mip_levels = mip_count;
+			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.format = wi::renderer::format_rendertarget_envprobe;
+			desc.layout = ResourceState::SHADER_RESOURCE;
+			device->CreateTexture(&desc, nullptr, &envrenderingColorBuffer);
+			device->SetName(&envrenderingColorBuffer, "envrenderingColorBuffer");
+
 			desc.mip_levels = 1;
 			desc.format = wi::renderer::format_depthbuffer_envprobe;
 			desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
@@ -3931,13 +3961,13 @@ namespace wi::scene
 			device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer);
 			device->SetName(&envrenderingDepthBuffer, "envrenderingDepthBuffer");
 
-			// Cube arrays per mip level:
-			for (uint32_t i = 0; i < envmapArray.desc.mip_levels; ++i)
+			// Cubes per mip level:
+			for (uint32_t i = 0; i < envrenderingColorBuffer.desc.mip_levels; ++i)
 			{
 				int subresource_index;
-				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::SRV, 0, envmapArray.desc.array_size, i, 1);
+				subresource_index = device->CreateSubresource(&envrenderingColorBuffer, SubresourceType::SRV, 0, envrenderingColorBuffer.desc.array_size, i, 1);
 				assert(subresource_index == i);
-				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::UAV, 0, envmapArray.desc.array_size, i, 1);
+				subresource_index = device->CreateSubresource(&envrenderingColorBuffer, SubresourceType::UAV, 0, envrenderingColorBuffer.desc.array_size, i, 1);
 				assert(subresource_index == i);
 			}
 
@@ -3946,23 +3976,27 @@ namespace wi::scene
 			{
 				int subresource_index;
 				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::SRV, i * 6, 6, 0, -1);
-				assert(subresource_index == envmapArray.desc.mip_levels + i);
-			}
-
-			// individual cubes only mip0:
-			for (uint32_t i = 0; i < envmapCount; ++i)
-			{
-				int subresource_index;
-				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::SRV, i * 6, 6, 0, 1);
-				assert(subresource_index == envmapArray.desc.mip_levels + envmapCount + i);
-			}
-
-			for (uint32_t i = 0; i < envmapCount; ++i)
-			{
-				int subresource_index;
-				subresource_index = device->CreateSubresource(&envmapArray, SubresourceType::RTV, i * 6, 6, 0, 1);
 				assert(subresource_index == i);
 			}
+
+			std::string info;
+			info += "Created envprobe array with " + std::to_string(envmapCount) + " probes";
+			info += "\n\tResolution = " + std::to_string(envmapRes) + " * " + std::to_string(envmapRes) + " * 6";
+			info += "\n\tMip Levels = " + std::to_string(envmapArray.desc.mip_levels);
+			info += "\n\tRender Format = ";
+			info += GetFormatString(envrenderingColorBuffer.desc.format);
+			info += "\n\tDepth Format = ";
+			info += GetFormatString(envrenderingDepthBuffer.desc.format);
+			info += "\n\tCompressed Format = ";
+			info += GetFormatString(envmapArray.desc.format);
+			size_t total_size = 0;
+			total_size += ComputeTextureMemorySizeInBytes(envrenderingDepthBuffer.desc);
+			total_size += ComputeTextureMemorySizeInBytes(envrenderingColorBuffer.desc);
+			total_size += ComputeTextureMemorySizeInBytes(envrenderingDepthBuffer_MSAA.desc);
+			total_size += ComputeTextureMemorySizeInBytes(envrenderingColorBuffer_MSAA.desc);
+			total_size += ComputeTextureMemorySizeInBytes(envmapArray.desc);
+			info += "\n\tMemory = " + std::to_string(total_size / 1024.0f / 1024.0f) + " MB\n";
+			wi::backlog::post(info);
 		}
 
 		// reconstruct envmap array status:

@@ -896,6 +896,8 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_BLOCKCOMPRESS_BC3], "blockcompressCS_BC3.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_BLOCKCOMPRESS_BC4], "blockcompressCS_BC4.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_BLOCKCOMPRESS_BC5], "blockcompressCS_BC5.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_BLOCKCOMPRESS_BC6H], "blockcompressCS_BC6H.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_BLOCKCOMPRESS_BC6H_CUBEMAP], "blockcompressCS_BC6H_cubemap.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_FILTERENVMAP], "filterEnvMapCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_COPYTEXTURE2D_UNORM4], "copytexture2D_unorm4CS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_COPYTEXTURE2D_FLOAT4], "copytexture2D_float4CS.cso"); });
@@ -6493,7 +6495,7 @@ void DrawDebugWorld(
 			}
 			else
 			{
-				device->BindResource(&scene.envmapArray, 0, cmd, scene.envmapArray.GetDesc().mip_levels + probe.textureIndex);
+				device->BindResource(&scene.envmapArray, 0, cmd, probe.textureIndex);
 			}
 
 			device->Draw(vertexCount_uvsphere, 0, cmd);
@@ -7099,6 +7101,14 @@ void ComputeSkyAtmosphereTextures(CommandList cmd)
 }
 void ComputeSkyAtmosphereSkyViewLut(CommandList cmd)
 {
+	const int threadSize = 8;
+	const int skyViewLutWidth = textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT].GetDesc().width;
+	const int skyViewLutHeight = textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT].GetDesc().height;
+	const int skyViewLutThreadX = static_cast<uint32_t>(std::ceil(skyViewLutWidth / threadSize));
+	const int skyViewLutThreadY = static_cast<uint32_t>(std::ceil(skyViewLutHeight / threadSize));
+	if (skyViewLutThreadX * skyViewLutThreadY < 1)
+		return;
+
 	device->EventBegin("ComputeSkyAtmosphereSkyViewLut", cmd);
 
 	BindCommonResources(cmd);
@@ -7123,17 +7133,10 @@ void ComputeSkyAtmosphereSkyViewLut(CommandList cmd)
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		const int threadSize = 8;
-		const int skyViewLutWidth = textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT].GetDesc().width;
-		const int skyViewLutHeight = textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT].GetDesc().height;
-		const int skyViewLutThreadX = static_cast<uint32_t>(std::ceil(skyViewLutWidth / threadSize));
-		const int skyViewLutThreadY = static_cast<uint32_t>(std::ceil(skyViewLutHeight / threadSize));
-
 		device->Dispatch(skyViewLutThreadX, skyViewLutThreadY, 1, cmd);
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
 				GPUBarrier::Image(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT].desc.layout)
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
@@ -7285,10 +7288,10 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 					ResourceState::RENDERTARGET
 				),
 				RenderPassImage::Resolve(
-					&vis.scene->envmapArray,
+					&vis.scene->envrenderingColorBuffer,
 					ResourceState::SHADER_RESOURCE,
 					ResourceState::SHADER_RESOURCE,
-					vis.scene->envmapArray.desc.mip_levels + vis.scene->envmapCount + probe.textureIndex // subresource: individual cubes only mip0
+					0
 				)
 			};
 			device->RenderPassBegin(rp, arraysize(rp), cmd);
@@ -7305,12 +7308,11 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 					ResourceState::SHADER_RESOURCE
 				),
 				RenderPassImage::RenderTarget(
-					&vis.scene->envmapArray,
+					&vis.scene->envrenderingColorBuffer,
 					RenderPassImage::LoadOp::DONTCARE,
 					RenderPassImage::StoreOp::STORE,
 					ResourceState::SHADER_RESOURCE,
-					ResourceState::SHADER_RESOURCE,
-					probe.textureIndex
+					ResourceState::SHADER_RESOURCE
 				)
 			};
 			device->RenderPassBegin(rp, arraysize(rp), cmd);
@@ -7385,28 +7387,21 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				device->BindResource(&vis.scene->envrenderingDepthBuffer, 0, cmd);
 			}
 
-			TextureDesc desc = vis.scene->envmapArray.GetDesc();
-			int arrayIndex = probe.textureIndex;
+			TextureDesc desc = vis.scene->envrenderingColorBuffer.GetDesc();
 
 			AerialPerspectiveCapturePushConstants push;
 			push.resolution.x = desc.width;
 			push.resolution.y = desc.height;
 			push.resolution_rcp.x = 1.0f / push.resolution.x;
 			push.resolution_rcp.y = 1.0f / push.resolution.y;
-			push.arrayIndex = arrayIndex;
-			push.texture_input = device->GetDescriptorIndex(&vis.scene->envmapArray, SubresourceType::SRV);
-			push.texture_output = device->GetDescriptorIndex(&vis.scene->envmapArray, SubresourceType::UAV);
+			push.texture_input = device->GetDescriptorIndex(&vis.scene->envrenderingColorBuffer, SubresourceType::SRV);
+			push.texture_output = device->GetDescriptorIndex(&vis.scene->envrenderingColorBuffer, SubresourceType::UAV);
 
 			device->PushConstants(&push, sizeof(push), cmd);
 
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, 0, arrayIndex * 6 + 0),
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, 0, arrayIndex * 6 + 1),
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, 0, arrayIndex * 6 + 2),
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, 0, arrayIndex * 6 + 3),
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, 0, arrayIndex * 6 + 4),
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, 0, arrayIndex * 6 + 5),
+					GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -7419,13 +7414,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Memory(),
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, 0, arrayIndex * 6 + 0),
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, 0, arrayIndex * 6 + 1),
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, 0, arrayIndex * 6 + 2),
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, 0, arrayIndex * 6 + 3),
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, 0, arrayIndex * 6 + 4),
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, 0, arrayIndex * 6 + 5),
+					GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -7471,17 +7460,15 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				device->BindResource(&texture_weatherMap, 4, cmd);
 			}
 
-			TextureDesc desc = vis.scene->envmapArray.GetDesc();
-			int arrayIndex = probe.textureIndex;
+			TextureDesc desc = vis.scene->envrenderingColorBuffer.GetDesc();
 
 			VolumetricCloudCapturePushConstants push;
 			push.resolution.x = desc.width;
 			push.resolution.y = desc.height;
 			push.resolution_rcp.x = 1.0f / push.resolution.x;
 			push.resolution_rcp.y = 1.0f / push.resolution.y;
-			push.arrayIndex = arrayIndex;
-			push.texture_input = device->GetDescriptorIndex(&vis.scene->envmapArray, SubresourceType::SRV);
-			push.texture_output = device->GetDescriptorIndex(&vis.scene->envmapArray, SubresourceType::UAV);
+			push.texture_input = device->GetDescriptorIndex(&vis.scene->envrenderingColorBuffer, SubresourceType::SRV);
+			push.texture_output = device->GetDescriptorIndex(&vis.scene->envrenderingColorBuffer, SubresourceType::UAV);
 
 			if (probe.IsRealTime())
 			{
@@ -7503,12 +7490,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, 0, arrayIndex * 6 + 0),
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, 0, arrayIndex * 6 + 1),
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, 0, arrayIndex * 6 + 2),
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, 0, arrayIndex * 6 + 3),
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, 0, arrayIndex * 6 + 4),
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, 0, arrayIndex * 6 + 5),
+					GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -7521,13 +7503,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Memory(),
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, 0, arrayIndex * 6 + 0),
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, 0, arrayIndex * 6 + 1),
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, 0, arrayIndex * 6 + 2),
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, 0, arrayIndex * 6 + 3),
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, 0, arrayIndex * 6 + 4),
-					GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, 0, arrayIndex * 6 + 5),
+					GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -7535,49 +7511,37 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			device->EventEnd(cmd);
 		}
 
-		MIPGEN_OPTIONS mipopt;
-		mipopt.arrayIndex = probe.textureIndex;
-		GenerateMipChain(vis.scene->envmapArray, MIPGENFILTER_LINEAR, cmd, mipopt);
+		GenerateMipChain(vis.scene->envrenderingColorBuffer, MIPGENFILTER_LINEAR, cmd);
 
 		// Filter the enviroment map mip chain according to BRDF:
 		//	A bit similar to MIP chain generation, but its input is the MIP-mapped texture,
 		//	and we generatethe filtered MIPs from bottom to top.
 		device->EventBegin("FilterEnvMap", cmd);
 		{
-			TextureDesc desc = vis.scene->envmapArray.GetDesc();
-			int arrayIndex = probe.textureIndex;
+			TextureDesc desc = vis.scene->envrenderingColorBuffer.GetDesc();
 
 			device->BindComputeShader(&shaders[CSTYPE_FILTERENVMAP], cmd);
 
-			desc.width = 1;
-			desc.height = 1;
+			desc.width = std::max(1u, desc.width >> (desc.mip_levels - 1));
+			desc.height = std::max(1u, desc.height >> (desc.mip_levels - 1));
 			for (uint32_t i = desc.mip_levels - 1; i > 0; --i)
 			{
 				{
 					GPUBarrier barriers[] = {
-						GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, arrayIndex * 6 + 0),
-						GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, arrayIndex * 6 + 1),
-						GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, arrayIndex * 6 + 2),
-						GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, arrayIndex * 6 + 3),
-						GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, arrayIndex * 6 + 4),
-						GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, arrayIndex * 6 + 5),
+						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i),
 					};
 					device->Barrier(barriers, arraysize(barriers), cmd);
 				}
-
-				device->BindUAV(&vis.scene->envmapArray, 0, cmd, i);
-				device->BindResource(&vis.scene->envmapArray, 0, cmd, std::max(0, (int)i - 2));
 
 				FilterEnvmapPushConstants push;
 				push.filterResolution.x = desc.width;
 				push.filterResolution.y = desc.height;
 				push.filterResolution_rcp.x = 1.0f / push.filterResolution.x;
 				push.filterResolution_rcp.y = 1.0f / push.filterResolution.y;
-				push.filterArrayIndex = arrayIndex;
 				push.filterRoughness = (float)i / (float)desc.mip_levels;
 				push.filterRayCount = 128;
-				push.texture_input = device->GetDescriptorIndex(&vis.scene->envmapArray, SubresourceType::SRV, std::max(0, (int)i - 2));
-				push.texture_output = device->GetDescriptorIndex(&vis.scene->envmapArray, SubresourceType::UAV, i);
+				push.texture_input = device->GetDescriptorIndex(&vis.scene->envrenderingColorBuffer, SubresourceType::SRV, std::max(0, (int)i - 2));
+				push.texture_output = device->GetDescriptorIndex(&vis.scene->envrenderingColorBuffer, SubresourceType::UAV, i);
 				device->PushConstants(&push, sizeof(push), cmd);
 
 				device->Dispatch(
@@ -7588,13 +7552,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 				{
 					GPUBarrier barriers[] = {
-						GPUBarrier::Memory(),
-						GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, arrayIndex * 6 + 0),
-						GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, arrayIndex * 6 + 1),
-						GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, arrayIndex * 6 + 2),
-						GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, arrayIndex * 6 + 3),
-						GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, arrayIndex * 6 + 4),
-						GPUBarrier::Image(&vis.scene->envmapArray, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, arrayIndex * 6 + 5),
+						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i),
 					};
 					device->Barrier(barriers, arraysize(barriers), cmd);
 				}
@@ -7604,6 +7562,9 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			}
 		}
 		device->EventEnd(cmd);
+
+		// Finally, the complete envmap is block compressed into the envmapArray:
+		BlockCompress(vis.scene->envrenderingColorBuffer, vis.scene->envmapArray, cmd, probe.textureIndex * 6);
 	};
 
 	if (vis.scene->probes.GetCount() == 0)
@@ -8594,7 +8555,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 	}
 }
 
-void BlockCompress(const wi::graphics::Texture& texture_src, const wi::graphics::Texture& texture_bc, wi::graphics::CommandList cmd)
+void BlockCompress(const wi::graphics::Texture& texture_src, const wi::graphics::Texture& texture_bc, wi::graphics::CommandList cmd, uint32_t dst_slice_offset)
 {
 	const uint32_t block_size = GetFormatBlockSize(texture_bc.desc.format);
 	TextureDesc desc;
@@ -8606,50 +8567,69 @@ void BlockCompress(const wi::graphics::Texture& texture_src, const wi::graphics:
 
 	static Texture bc_raw_uint2;
 	static Texture bc_raw_uint4;
+	static Texture bc_raw_uint4_cubemap;
 	Texture* bc_raw = nullptr;
 
 	switch (texture_bc.desc.format)
 	{
 	case Format::BC1_UNORM:
 	case Format::BC1_UNORM_SRGB:
-		bc_raw = &bc_raw_uint2;
 		desc.format = Format::R32G32_UINT;
+		bc_raw = &bc_raw_uint2;
 		device->BindComputeShader(&shaders[CSTYPE_BLOCKCOMPRESS_BC1], cmd);
+		device->EventBegin("BlockCompress - BC1", cmd);
 		break;
 	case Format::BC3_UNORM:
 	case Format::BC3_UNORM_SRGB:
-		bc_raw = &bc_raw_uint4;
 		desc.format = Format::R32G32B32A32_UINT;
+		bc_raw = &bc_raw_uint4;
 		device->BindComputeShader(&shaders[CSTYPE_BLOCKCOMPRESS_BC3], cmd);
+		device->EventBegin("BlockCompress - BC3", cmd);
 		break;
 	case Format::BC4_UNORM:
-		bc_raw = &bc_raw_uint2;
 		desc.format = Format::R32G32_UINT;
+		bc_raw = &bc_raw_uint2;
 		device->BindComputeShader(&shaders[CSTYPE_BLOCKCOMPRESS_BC4], cmd);
+		device->EventBegin("BlockCompress - BC4", cmd);
 		break;
 	case Format::BC5_UNORM:
-		bc_raw = &bc_raw_uint4;
 		desc.format = Format::R32G32B32A32_UINT;
+		bc_raw = &bc_raw_uint4;
 		device->BindComputeShader(&shaders[CSTYPE_BLOCKCOMPRESS_BC5], cmd);
+		device->EventBegin("BlockCompress - BC5", cmd);
+		break;
+	case Format::BC6H_UF16:
+		desc.format = Format::R32G32B32A32_UINT;
+		if (has_flag(texture_src.desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
+		{
+			bc_raw = &bc_raw_uint4_cubemap;
+			device->BindComputeShader(&shaders[CSTYPE_BLOCKCOMPRESS_BC6H_CUBEMAP], cmd);
+			device->EventBegin("BlockCompress - BC6H - Cubemap", cmd);
+			desc.array_size = texture_src.desc.array_size; // src array size not dst!!
+		}
+		else
+		{
+			bc_raw = &bc_raw_uint4;
+			device->BindComputeShader(&shaders[CSTYPE_BLOCKCOMPRESS_BC6H], cmd);
+			device->EventBegin("BlockCompress - BC6H", cmd);
+		}
 		break;
 	default:
 		assert(0); // not supported
 		return;
 	}
 
-	if (!bc_raw->IsValid() || bc_raw->desc.width < desc.width || bc_raw->desc.height < desc.height)
+	if (!bc_raw->IsValid() || bc_raw->desc.width < desc.width || bc_raw->desc.height < desc.height || bc_raw->desc.array_size < desc.array_size)
 	{
 		device->CreateTexture(&desc, nullptr, bc_raw);
 		device->SetName(bc_raw, "bc_raw");
 
 		for (uint32_t i = 0; i < bc_raw->desc.mip_levels; ++i)
 		{
-			int subresource_index = device->CreateSubresource(bc_raw, SubresourceType::UAV, 0, 1, i, 1);
+			int subresource_index = device->CreateSubresource(bc_raw, SubresourceType::UAV, 0, desc.array_size, i, 1);
 			assert(subresource_index == i);
 		}
 	}
-
-	device->EventBegin("BlockCompress", cmd);
 
 	for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 	{
@@ -8657,7 +8637,7 @@ void BlockCompress(const wi::graphics::Texture& texture_src, const wi::graphics:
 		const uint32_t height = std::max(1u, desc.height >> mip);
 		device->BindResource(&texture_src, 0, cmd, mip);
 		device->BindUAV(bc_raw, 0, cmd, mip);
-		device->Dispatch((width + 7u) / 8u, (height + 7u) / 8u, 1, cmd);
+		device->Dispatch((width + 7u) / 8u, (height + 7u) / 8u, desc.array_size, cmd);
 	}
 
 	GPUBarrier barriers[] = {
@@ -8666,24 +8646,27 @@ void BlockCompress(const wi::graphics::Texture& texture_src, const wi::graphics:
 	};
 	device->Barrier(barriers, arraysize(barriers), cmd);
 
-	for (uint32_t mip = 0; mip < texture_bc.desc.mip_levels; ++mip)
+	for (uint32_t slice = 0; slice < desc.array_size; ++slice)
 	{
-		const uint32_t width = std::max(1u, desc.width >> mip);
-		const uint32_t height = std::max(1u, desc.height >> mip);
-		Box box;
-		box.left = 0;
-		box.right = width;
-		box.top = 0;
-		box.bottom = height;
-		box.front = 0;
-		box.back = 1;
+		for (uint32_t mip = 0; mip < texture_bc.desc.mip_levels; ++mip)
+		{
+			const uint32_t width = std::max(1u, desc.width >> mip);
+			const uint32_t height = std::max(1u, desc.height >> mip);
+			Box box;
+			box.left = 0;
+			box.right = width;
+			box.top = 0;
+			box.bottom = height;
+			box.front = 0;
+			box.back = 1;
 
-		device->CopyTexture(
-			&texture_bc, 0, 0, 0, mip, 0,
-			bc_raw, std::min(mip, bc_raw->desc.mip_levels - 1), 0,
-			cmd,
-			&box
-		);
+			device->CopyTexture(
+				&texture_bc, 0, 0, 0, mip, dst_slice_offset + slice,
+				bc_raw, std::min(mip, bc_raw->desc.mip_levels - 1), slice,
+				cmd,
+				&box
+			);
+		}
 	}
 
 	for (int i = 0; i < arraysize(barriers); ++i)

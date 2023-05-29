@@ -910,8 +910,9 @@ namespace wi::renderer
 
 	// Compress a texture into Block Compressed format
 	//	texture_src	: source uncompressed texture
-	//	texture_bc	: destination comporessed texture, must be a supported BC format (BC1/BC3/BC4/BC5)
-	void BlockCompress(const wi::graphics::Texture& texture_src, const wi::graphics::Texture& texture_bc, wi::graphics::CommandList cmd);
+	//	texture_bc	: destination comporessed texture, must be a supported BC format (BC1/BC3/BC4/BC5/BC6H_UFLOAT)
+	//	Currently this will handle simple Texture2D with mip levels, and additionally BC6H cubemap
+	void BlockCompress(const wi::graphics::Texture& texture_src, const wi::graphics::Texture& texture_bc, wi::graphics::CommandList cmd, uint32_t dst_slice_offset = 0);
 
 	enum BORDEREXPANDSTYLE
 	{

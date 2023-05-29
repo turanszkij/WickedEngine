@@ -8401,6 +8401,10 @@ using namespace vulkan_internal;
 				copy.extent.height = std::min(dst->desc.height, src->desc.height);
 			}
 			copy.extent.depth = std::min(dst->desc.depth, src->desc.depth);
+
+			copy.extent.width = std::max(1u, copy.extent.width >> srcMip);
+			copy.extent.height = std::max(1u, copy.extent.height >> srcMip);
+			copy.extent.depth = std::max(1u, copy.extent.depth >> srcMip);
 		}
 		else
 		{

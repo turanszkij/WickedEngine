@@ -1195,14 +1195,16 @@ struct FilterEnvmapPushConstants
 {
 	uint2 filterResolution;
 	float2 filterResolution_rcp;
-	uint filterArrayIndex;
+
 	float filterRoughness;
 	uint filterRayCount;
 	uint padding_filterCB;
 	int texture_input;
+
 	int texture_output;
 	int padding0;
 	int padding1;
+	int padding2;
 };
 
 // CopyTexture2D params:
@@ -1277,10 +1279,10 @@ struct AerialPerspectiveCapturePushConstants
 	uint2 resolution;
 	float2 resolution_rcp;
 
-	uint arrayIndex;
 	int texture_input;
 	int texture_output;
-	float padding;
+	float padding0;
+	float padding1;
 };
 
 struct VolumetricCloudCapturePushConstants
@@ -1288,15 +1290,15 @@ struct VolumetricCloudCapturePushConstants
 	uint2 resolution;
 	float2 resolution_rcp;
 
-	uint arrayIndex;
 	int texture_input;
 	int texture_output;
 	int maxStepCount;
-
 	float LODMin;
+
 	float shadowSampleCount;
 	float groundContributionSampleCount;
-	float padding;
+	float padding0;
+	float padding1;
 };
 
 
