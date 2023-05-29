@@ -4,14 +4,14 @@
 #pragma warning(disable : 3078) // "loop control variable conflicts with a previous declaration in the outer scope"
 
 // Whether to use P2 modes (4 endpoints) for compression. Slow, but improves quality.
-#define ENCODE_P2 (QUALITY == 1)
+#define ENCODE_P2 0
 
 // Improve quality at small performance loss
-//#define INSET_COLOR_BBOX 1
-//#define OPTIMIZE_ENDPOINTS 1
+#define INSET_COLOR_BBOX 1
+#define OPTIMIZE_ENDPOINTS 0
 
 // Whether to optimize for luminance error or for RGB error
-//#define LUMINANCE_WEIGHTS 1
+#define LUMINANCE_WEIGHTS 1
 
 
 static const float HALF_MAX = 65504.0f;
