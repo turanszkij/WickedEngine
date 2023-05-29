@@ -316,12 +316,13 @@ namespace wi
 
 							if (has_flag(flags, Flags::IMPORT_BLOCK_COMPRESSED))
 							{
-								if (has_flag(flags, Flags::IMPORT_NORMALMAP))
-								{
-									fmt = basist::transcoder_texture_format::cTFBC5_RG;
-									desc.format = Format::BC5_UNORM;
-								}
-								else
+								// BC5 is disabled because it's missing green channel!
+								//if (has_flag(flags, Flags::IMPORT_NORMALMAP))
+								//{
+								//	fmt = basist::transcoder_texture_format::cTFBC5_RG;
+								//	desc.format = Format::BC5_UNORM;
+								//}
+								//else
 								{
 									if (transcoder.get_has_alpha())
 									{
@@ -443,23 +444,29 @@ namespace wi
 									desc.mip_levels = info.m_total_levels;
 									desc.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;
 
-									basist::transcoder_texture_format fmt;
-									if (has_flag(flags, Flags::IMPORT_NORMALMAP))
+									basist::transcoder_texture_format fmt = basist::transcoder_texture_format::cTFRGBA32;
+									desc.format = Format::R8G8B8A8_UNORM;
+
+									if (has_flag(flags, Flags::IMPORT_BLOCK_COMPRESSED))
 									{
-										fmt = basist::transcoder_texture_format::cTFBC5_RG;
-										desc.format = Format::BC5_UNORM;
-									}
-									else
-									{
-										if (info.m_alpha_flag)
+										// BC5 is disabled because it's missing green channel!
+										//if (has_flag(flags, Flags::IMPORT_NORMALMAP))
+										//{
+										//	fmt = basist::transcoder_texture_format::cTFBC5_RG;
+										//	desc.format = Format::BC5_UNORM;
+										//}
+										//else
 										{
-											fmt = basist::transcoder_texture_format::cTFBC3_RGBA;
-											desc.format = Format::BC3_UNORM;
-										}
-										else
-										{
-											fmt = basist::transcoder_texture_format::cTFBC1_RGB;
-											desc.format = Format::BC1_UNORM;
+											if (info.m_alpha_flag)
+											{
+												fmt = basist::transcoder_texture_format::cTFBC3_RGBA;
+												desc.format = Format::BC3_UNORM;
+											}
+											else
+											{
+												fmt = basist::transcoder_texture_format::cTFBC1_RGB;
+												desc.format = Format::BC1_UNORM;
+											}
 										}
 									}
 									uint32_t bytes_per_block = basis_get_bytes_per_block_or_pixel(fmt);
