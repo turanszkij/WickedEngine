@@ -56,8 +56,31 @@ GPUBuffer			constantBuffers[CBTYPE_COUNT];
 GPUBuffer			resourceBuffers[RBTYPE_COUNT];
 Sampler				samplers[SAMPLER_COUNT];
 
+#if __has_include("wiShaderDump.h")
+// In this case, wiShaderDump.h contains precompiled shader binary data
+#include "wiShaderDump.h"
+#define SHADERDUMP_ENABLED
+size_t GetShaderDumpCount()
+{
+	return wiShaderDump::shaderdump.size();
+}
+#else
+// In this case, shaders can only be loaded from file
+size_t GetShaderDumpCount()
+{
+	return 0;
+}
+#endif // SHADERDUMP
+
+#ifdef SHADERDUMP_ENABLED
+// Note: when using Shader Dump, use relative directory, because the dump will contain relative names too
 std::string SHADERPATH = "shaders/";
 std::string SHADERSOURCEPATH = "../WickedEngine/shaders/";
+#else
+// Note: when NOT using Shader Dump, use absolute directory, to avoid the case when something (eg. file dialog) overrides working directory
+std::string SHADERPATH = wi::helper::GetCurrentPath() + "/shaders/";
+std::string SHADERSOURCEPATH = wi::helper::GetCurrentPath() + "/../WickedEngine/shaders/";
+#endif // SHADERDUMP_ENABLED
 
 // define this to use raytracing pipeline for raytraced reflections:
 //	Currently the DX12 device could crash for unknown reasons with the global root signature export
@@ -593,23 +616,6 @@ enum DEBUGRENDERING
 	DEBUGRENDERING_COUNT
 };
 PipelineState PSO_debug[DEBUGRENDERING_COUNT];
-
-
-#if __has_include("wiShaderDump.h")
-// In this case, wiShaderDump.h contains precompiled shader binary data
-#include "wiShaderDump.h"
-#define SHADERDUMP_ENABLED
-size_t GetShaderDumpCount()
-{
-	return wiShaderDump::shaderdump.size();
-}
-#else
-// In this case, shaders can only be loaded from file
-size_t GetShaderDumpCount()
-{
-	return 0;
-}
-#endif // SHADERDUMP
 
 size_t GetShaderErrorCount()
 {
