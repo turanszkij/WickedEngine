@@ -853,9 +853,6 @@ namespace wi
 									Texture uncompressed_src = std::move(resource->texture);
 									resource->srgb_subresource = -1;
 
-									desc.width = AlignTo(desc.width, GetFormatBlockSize(desc.format));
-									desc.height = AlignTo(desc.height, GetFormatBlockSize(desc.format));
-
 									desc.format = Format::BC1_UNORM;
 									if (has_flag(flags, Flags::IMPORT_NORMALMAP))
 									{
@@ -899,6 +896,9 @@ namespace wi
 										}
 									}
 									desc.bind_flags = BindFlag::SHADER_RESOURCE;
+
+									desc.width = AlignTo(desc.width, GetFormatBlockSize(desc.format));
+									desc.height = AlignTo(desc.height, GetFormatBlockSize(desc.format));
 
 									success = device->CreateTexture(&desc, nullptr, &resource->texture);
 									device->SetName(&resource->texture, name.c_str());
