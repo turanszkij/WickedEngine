@@ -374,8 +374,6 @@ void WaveGraph::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) 
 
 void SoundWindow::SetEntity(Entity entity)
 {
-	if (this->entity == entity)
-		return;
 	this->entity = entity;
 
 	Scene& scene = editor->GetCurrentScene();
@@ -384,7 +382,7 @@ void SoundWindow::SetEntity(Entity entity)
 
 	waveGraph.sound = sound;
 
-	if (sound != nullptr)
+	if (sound != nullptr && sound->soundResource.IsValid())
 	{
 		filenameLabel.SetText(wi::helper::GetFileNameFromPath(sound->filename));
 		playstopButton.SetEnabled(true);
