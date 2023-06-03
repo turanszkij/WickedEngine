@@ -24,6 +24,7 @@ public:
 	wi::gui::ColorPicker colorPicker;
 
 	wi::gui::Slider lightmapResolutionSlider;
+	wi::gui::CheckBox lightmapBlockCompressionCheckBox;
 	wi::gui::ComboBox lightmapSourceUVSetComboBox;
 	wi::gui::Button generateLightmapButton;
 	wi::gui::Button stopLightmapGenButton;

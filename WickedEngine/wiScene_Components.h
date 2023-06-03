@@ -649,6 +649,7 @@ namespace wi::scene
 			_DEPRECATED_IMPOSTOR_PLACEMENT = 1 << 3,
 			REQUEST_PLANAR_REFLECTION = 1 << 4,
 			LIGHTMAP_RENDER_REQUEST = 1 << 5,
+			LIGHTMAP_DISABLE_BLOCK_COMPRESSION = 1 << 6,
 		};
 		uint32_t _flags = RENDERABLE | CAST_SHADOW;
 
@@ -686,12 +687,14 @@ namespace wi::scene
 		inline void SetDynamic(bool value) { if (value) { _flags |= DYNAMIC; } else { _flags &= ~DYNAMIC; } }
 		inline void SetRequestPlanarReflection(bool value) { if (value) { _flags |= REQUEST_PLANAR_REFLECTION; } else { _flags &= ~REQUEST_PLANAR_REFLECTION; } }
 		inline void SetLightmapRenderRequest(bool value) { if (value) { _flags |= LIGHTMAP_RENDER_REQUEST; } else { _flags &= ~LIGHTMAP_RENDER_REQUEST; } }
+		inline void SetLightmapDisableBlockCompression(bool value) { if (value) { _flags |= LIGHTMAP_DISABLE_BLOCK_COMPRESSION; } else { _flags &= ~LIGHTMAP_DISABLE_BLOCK_COMPRESSION; } }
 
 		inline bool IsRenderable() const { return _flags & RENDERABLE; }
 		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
 		inline bool IsDynamic() const { return _flags & DYNAMIC; }
 		inline bool IsRequestPlanarReflection() const { return _flags & REQUEST_PLANAR_REFLECTION; }
 		inline bool IsLightmapRenderRequested() const { return _flags & LIGHTMAP_RENDER_REQUEST; }
+		inline bool IsLightmapDisableBlockCompression() const { return _flags & LIGHTMAP_DISABLE_BLOCK_COMPRESSION; }
 
 		inline float GetTransparency() const { return 1 - color.w; }
 		inline uint32_t GetFilterMask() const { return filterMask | filterMaskDynamic; }
@@ -705,8 +708,8 @@ namespace wi::scene
 		}
 
 		void ClearLightmap();
-		void SaveLightmap();
-		void CompressLightmap();
+		void SaveLightmap(); // not thread safe if LIGHTMAP_BLOCK_COMPRESSION is enabled!
+		void CompressLightmap(); // not thread safe if LIGHTMAP_BLOCK_COMPRESSION is enabled!
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

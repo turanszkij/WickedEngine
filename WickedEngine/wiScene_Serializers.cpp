@@ -568,18 +568,6 @@ namespace wi::scene
 				archive >> lightmapWidth;
 				archive >> lightmapHeight;
 				archive >> lightmapTextureData;
-
-				if (!lightmapTextureData.empty())
-				{
-					const uint32_t expected_datasize = lightmapWidth * lightmapHeight * sizeof(PackedVector::XMFLOAT3PK);
-					if (expected_datasize != lightmapTextureData.size())
-					{
-						// This means it's from an old version, when lightmap data was stored in raw format, so compress it...
-						wi::jobsystem::Execute(seri.ctx, [this](wi::jobsystem::JobArgs args) {
-							CompressLightmap();
-							});
-					}
-				}
 			}
 			if (archive.GetVersion() >= 31)
 			{

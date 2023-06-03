@@ -8569,7 +8569,7 @@ void BlockCompress(const wi::graphics::Texture& texture_src, const wi::graphics:
 	desc.height = std::max(1u, texture_bc.desc.height / block_size);
 	desc.bind_flags = BindFlag::UNORDERED_ACCESS;
 	desc.layout = ResourceState::UNORDERED_ACCESS;
-	desc.mip_levels = GetMipCount(desc.width, desc.height); // full mipchain
+	desc.mip_levels = texture_bc.desc.mip_levels;
 
 	static Texture bc_raw_uint2;
 	static Texture bc_raw_uint4;
@@ -8641,7 +8641,7 @@ void BlockCompress(const wi::graphics::Texture& texture_src, const wi::graphics:
 	{
 		const uint32_t width = std::max(1u, desc.width >> mip);
 		const uint32_t height = std::max(1u, desc.height >> mip);
-		device->BindResource(&texture_src, 0, cmd, mip);
+		device->BindResource(&texture_src, 0, cmd, texture_src.desc.mip_levels == 1 ? -1 : mip);
 		device->BindUAV(bc_raw, 0, cmd, mip);
 		device->Dispatch((width + 7u) / 8u, (height + 7u) / 8u, desc.array_size, cmd);
 	}

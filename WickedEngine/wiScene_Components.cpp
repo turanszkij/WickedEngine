@@ -1376,77 +1376,40 @@ namespace wi::scene
 	}
 	void ObjectComponent::CompressLightmap()
 	{
-
-		// BC6 Block compression code that uses DirectXTex library, but it's not cross platform, so disabled:
-#if 0
-		wi::Timer timer;
-		wi::backlog::post("compressing lightmap...");
-
-		lightmap.desc.Format = lightmap_block_format;
-		lightmap.desc.BindFlags = BindFlag::SHADER_RESOURCE;
-
-		static constexpr wi::graphics::FORMAT lightmap_block_format = wi::graphics::FORMAT_BC6H_UF16;
-		static constexpr uint32_t lightmap_blocksize = wi::graphics::GetFormatBlockSize(lightmap_block_format);
-		static_assert(lightmap_blocksize == 4u);
-		const uint32_t bc6_width = lightmapWidth / lightmap_blocksize;
-		const uint32_t bc6_height = lightmapHeight / lightmap_blocksize;
-		wi::vector<uint8_t> bc6_data;
-		bc6_data.resize(sizeof(XMFLOAT4) * bc6_width * bc6_height);
-		const XMFLOAT4* raw_data = (const XMFLOAT4*)lightmapTextureData.data();
-
-		for (uint32_t x = 0; x < bc6_width; ++x)
+		if (IsLightmapDisableBlockCompression())
 		{
-			for (uint32_t y = 0; y < bc6_height; ++y)
+			// Simple packing to R11G11B10_FLOAT format on CPU:
+			using namespace PackedVector;
+			wi::vector<uint8_t> packed_data;
+			packed_data.resize(sizeof(XMFLOAT3PK) * lightmapWidth * lightmapHeight);
+			XMFLOAT3PK* packed_ptr = (XMFLOAT3PK*)packed_data.data();
+			XMFLOAT4* raw_ptr = (XMFLOAT4*)lightmapTextureData.data();
+
+			uint32_t texelcount = lightmapWidth * lightmapHeight;
+			for (uint32_t i = 0; i < texelcount; ++i)
 			{
-				uint32_t bc6_idx = x + y * bc6_width;
-				uint8_t* ptr = (uint8_t*)((XMFLOAT4*)bc6_data.data() + bc6_idx);
-
-				XMVECTOR raw_vec[lightmap_blocksize * lightmap_blocksize];
-				for (uint32_t i = 0; i < lightmap_blocksize; ++i)
-				{
-					for (uint32_t j = 0; j < lightmap_blocksize; ++j)
-					{
-						uint32_t raw_idx = (x * lightmap_blocksize + i) + (y * lightmap_blocksize + j) * lightmapWidth;
-						uint32_t block_idx = i + j * lightmap_blocksize;
-						raw_vec[block_idx] = XMLoadFloat4(raw_data + raw_idx);
-					}
-				}
-				static_assert(arraysize(raw_vec) == 16); // it will work only for a certain block size!
-				D3DXEncodeBC6HU(ptr, raw_vec, 0);
+				XMStoreFloat3PK(packed_ptr + i, XMLoadFloat4(raw_ptr + i));
 			}
+
+			lightmapTextureData = std::move(packed_data);
+			lightmap.desc.format = Format::R11G11B10_FLOAT;
+			lightmap.desc.bind_flags = BindFlag::SHADER_RESOURCE;
 		}
-
-		lightmapTextureData = std::move(bc6_data); // replace old (raw) data with compressed data
-
-		wi::backlog::post(
-			"compressing lightmap [" +
-			std::to_string(lightmapWidth) +
-			"x" +
-			std::to_string(lightmapHeight) +
-			"] finished in " +
-			std::to_string(timer.elapsed_seconds()) +
-			" seconds"
-		);
-#else
-
-		// Simple compression to R11G11B10_FLOAT format:
-		using namespace PackedVector;
-		wi::vector<uint8_t> packed_data;
-		packed_data.resize(sizeof(XMFLOAT3PK) * lightmapWidth * lightmapHeight);
-		XMFLOAT3PK* packed_ptr = (XMFLOAT3PK*)packed_data.data();
-		XMFLOAT4* raw_ptr = (XMFLOAT4*)lightmapTextureData.data();
-
-		uint32_t texelcount = lightmapWidth * lightmapHeight;
-		for (uint32_t i = 0; i < texelcount; ++i)
+		else
 		{
-			XMStoreFloat3PK(packed_ptr + i, XMLoadFloat4(raw_ptr + i));
+			// BC6 compress on GPU:
+			wi::texturehelper::CreateTexture(lightmap, lightmapTextureData.data(), lightmapWidth, lightmapHeight, lightmap.desc.format);
+			TextureDesc desc = lightmap.desc;
+			desc.format = Format::BC6H_UF16;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE;
+			Texture bc6tex;
+			GraphicsDevice* device = GetDevice();
+			device->CreateTexture(&desc, nullptr, &bc6tex);
+			CommandList cmd = device->BeginCommandList();
+			wi::renderer::BlockCompress(lightmap, bc6tex, cmd);
+			wi::helper::saveTextureToMemory(bc6tex, lightmapTextureData); // internally waits for GPU completion
+			lightmap.desc = desc;
 		}
-
-		lightmapTextureData = std::move(packed_data);
-		lightmap.desc.format = Format::R11G11B10_FLOAT;
-		lightmap.desc.bind_flags = BindFlag::SHADER_RESOURCE;
-
-#endif
 	}
 
 	AnimationComponent::AnimationChannel::PathDataType AnimationComponent::AnimationChannel::GetPathDataType() const

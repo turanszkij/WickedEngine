@@ -3809,7 +3809,23 @@ namespace wi::scene
 				if (!object.lightmapTextureData.empty() && !object.lightmap.IsValid())
 				{
 					// Create a GPU-side per object lightmap if there is none yet, but the data exists already:
-					object.lightmap.desc.format = Format::R11G11B10_FLOAT;
+					const size_t lightmap_size = object.lightmapTextureData.size();
+					if (lightmap_size == object.lightmapWidth * object.lightmapHeight * sizeof(XMFLOAT4))
+					{
+						object.lightmap.desc.format = Format::R32G32B32A32_FLOAT;
+					}
+					else if (lightmap_size == object.lightmapWidth * object.lightmapHeight * sizeof(PackedVector::XMFLOAT3PK))
+					{
+						object.lightmap.desc.format = Format::R11G11B10_FLOAT;
+					}
+					else if (lightmap_size == (object.lightmapWidth / GetFormatBlockSize(Format::BC6H_UF16)) * (object.lightmapHeight / GetFormatBlockSize(Format::BC6H_UF16)) * GetFormatStride(Format::BC6H_UF16))
+					{
+						object.lightmap.desc.format = Format::BC6H_UF16;
+					}
+					else
+					{
+						assert(0); // unknown data format
+					}
 					wi::texturehelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.lightmap.desc.format);
 					device->SetName(&object.lightmap, "lightmap");
 				}

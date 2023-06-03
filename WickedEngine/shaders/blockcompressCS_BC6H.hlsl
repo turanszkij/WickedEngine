@@ -1,10 +1,12 @@
 // Modified version of: https://github.com/knarkowicz/GPURealTimeBC6H/blob/master/bin/compress.hlsl
 #include "globals.hlsli"
 
-#pragma warning(disable : 3078) // "loop control variable conflicts with a previous declaration in the outer scope"
-
 // Whether to use P2 modes (4 endpoints) for compression. Slow, but improves quality.
+#ifdef COMPRESS_CUBEMAP
 #define ENCODE_P2 0
+#else
+#define ENCODE_P2 1
+#endif // COMPRESS_CUBEMAP
 
 // Improve quality at small performance loss
 #define INSET_COLOR_BBOX 1

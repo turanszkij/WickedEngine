@@ -257,7 +257,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_OBJECT " Object", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 640));
+	SetSize(XMFLOAT2(670, 700));
 
 	closeButton.SetTooltip("Delete ObjectComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -436,6 +436,24 @@ void ObjectWindow::Create(EditorComponent* _editor)
 		lightmapResolutionSlider.SetValue(float(wi::math::GetNextPowerOfTwo(uint32_t(args.fValue)))); 
 	});
 	AddWidget(&lightmapResolutionSlider);
+
+	lightmapBlockCompressionCheckBox.Create("Block Compression (BC6H): ");
+	lightmapBlockCompressionCheckBox.SetTooltip("Enabling block compression for lightmaps will reduce memory usage, but it can lead to reduced quality.\nIf enabled, lightmaps will use BC6H block compression.\nIf disabled, lightmaps will use R11G11B10_FLOAT packing.\nChanging this will take effect after a new lightmap was generated.");
+	lightmapBlockCompressionCheckBox.SetSize(XMFLOAT2(hei, hei));
+	lightmapBlockCompressionCheckBox.SetPos(XMFLOAT2(x, y += step));
+	lightmapBlockCompressionCheckBox.SetCheck(true);
+	lightmapBlockCompressionCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			ObjectComponent* object = scene.objects.GetComponent(x.entity);
+			if (object != nullptr)
+			{
+				object->SetLightmapDisableBlockCompression(!args.bValue);
+			}
+		}
+	});
+	AddWidget(&lightmapBlockCompressionCheckBox);
 
 	lightmapSourceUVSetComboBox.Create("UV Set: ");
 	lightmapSourceUVSetComboBox.SetPos(XMFLOAT2(x, y += step));
@@ -666,6 +684,8 @@ void ObjectWindow::SetEntity(Entity entity)
 			break;
 		}
 
+		lightmapBlockCompressionCheckBox.SetCheck(!object->IsLightmapDisableBlockCompression());
+
 	}
 	else
 	{
@@ -729,10 +749,13 @@ void ObjectWindow::ResizeLayout()
 	add(sortPrioritySlider);
 	add(colorComboBox);
 	add_fullwidth(colorPicker);
+
+	y += jump;
 	add(lightmapResolutionSlider);
 
 	margin_left = 80;
 
+	add_right(lightmapBlockCompressionCheckBox);
 	add(lightmapSourceUVSetComboBox);
 	add(generateLightmapButton);
 	add(stopLightmapGenButton);
