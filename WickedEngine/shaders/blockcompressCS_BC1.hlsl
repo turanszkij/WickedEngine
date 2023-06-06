@@ -46,6 +46,17 @@ RWTexture2D<uint4> output : register(u0);
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
+	uint2 dim;
+	input.GetDimensions(dim.x, dim.y);
+	uint2 block_dim = dim / 4;
+
+	[branch]
+	if (any(DTid.xy >= block_dim))
+		return;
+
+	const float2 dim_rcp = rcp(dim);
+	const float2 uv = float2(DTid.xy * 4 + 1) * dim_rcp;
+
 #ifdef BC1
 	float3 block[16];
 #endif // BC1
@@ -63,11 +74,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float block_u[16];
 	float block_v[16];
 #endif // BC5
-
-	uint2 dim;
-	input.GetDimensions(dim.x, dim.y);
-	const float2 dim_rcp = rcp(dim);
-	const float2 uv = float2(DTid.xy * 4 + 1) * dim_rcp;
 
 	//SUB-BLOCK///////////////////////////////////////////////////////////////////////
 

@@ -1482,6 +1482,7 @@ using namespace vulkan_internal;
 		{
 			cbSubmitInfo.commandBuffer = cmd.transferCommandBuffer;
 			signalSemaphoreInfos[0].semaphore = cmd.semaphores[0]; // signal for graphics queue
+			signalSemaphoreInfos[0].stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 
 			submitInfo.commandBufferInfoCount = 1;
 			submitInfo.pCommandBufferInfos = &cbSubmitInfo;
@@ -1495,7 +1496,7 @@ using namespace vulkan_internal;
 
 		{
 			waitSemaphoreInfo.semaphore = cmd.semaphores[0]; // wait for copy queue
-			waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+			waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 
 			cbSubmitInfo.commandBuffer = cmd.transitionCommandBuffer;
 			signalSemaphoreInfos[0].semaphore = cmd.semaphores[1]; // signal for compute queue
@@ -1525,7 +1526,7 @@ using namespace vulkan_internal;
 		if (device->queues[QUEUE_VIDEO_DECODE].queue != VK_NULL_HANDLE)
 		{
 			waitSemaphoreInfo.semaphore = cmd.semaphores[2]; // wait for graphics queue
-			waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR;
+			waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 
 			submitInfo.waitSemaphoreInfoCount = 1;
 			submitInfo.pWaitSemaphoreInfos = &waitSemaphoreInfo;
@@ -3879,24 +3880,6 @@ using namespace vulkan_internal;
 
 			if(cmd.IsValid())
 			{
-				VkBufferMemoryBarrier2 barrier = {};
-				barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
-				barrier.buffer = internal_state->resource;
-				barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-				barrier.srcAccessMask = 0;
-				barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
-				barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
-				barrier.size = VK_WHOLE_SIZE;
-
-				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-				VkDependencyInfo dependencyInfo = {};
-				dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-				dependencyInfo.bufferMemoryBarrierCount = 1;
-				dependencyInfo.pBufferMemoryBarriers = &barrier;
-				vkCmdPipelineBarrier2(cmd.transferCommandBuffer, &dependencyInfo);
-
 				VkBufferCopy copyRegion = {};
 				copyRegion.size = buffer->desc.size;
 				copyRegion.srcOffset = 0;
@@ -3910,8 +3893,17 @@ using namespace vulkan_internal;
 					&copyRegion
 				);
 
-				std::swap(barrier.srcStageMask, barrier.dstStageMask);
-				std::swap(barrier.srcAccessMask, barrier.dstAccessMask);
+				VkBufferMemoryBarrier2 barrier = {};
+				barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
+				barrier.buffer = internal_state->resource;
+				barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+				barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+				barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+				barrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+				barrier.size = VK_WHOLE_SIZE;
+
+				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 				if (has_flag(buffer->desc.bind_flags, BindFlag::CONSTANT_BUFFER))
 				{
@@ -3919,10 +3911,12 @@ using namespace vulkan_internal;
 				}
 				if (has_flag(buffer->desc.bind_flags, BindFlag::VERTEX_BUFFER))
 				{
+					barrier.dstStageMask |= VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT;
 					barrier.dstAccessMask |= VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT;
 				}
 				if (has_flag(buffer->desc.bind_flags, BindFlag::INDEX_BUFFER))
 				{
+					barrier.dstStageMask |= VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT;
 					barrier.dstAccessMask |= VK_ACCESS_2_INDEX_READ_BIT;
 				}
 				if (has_flag(buffer->desc.bind_flags, BindFlag::SHADER_RESOURCE))
@@ -3942,7 +3936,17 @@ using namespace vulkan_internal;
 				{
 					barrier.dstAccessMask |= VK_ACCESS_2_ACCELERATION_STRUCTURE_READ_BIT_KHR;
 				}
-				vkCmdPipelineBarrier2(cmd.transferCommandBuffer, &dependencyInfo);
+				if (has_flag(buffer->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE))
+				{
+					barrier.dstAccessMask |= VK_ACCESS_2_VIDEO_DECODE_READ_BIT_KHR;
+				}
+
+				VkDependencyInfo dependencyInfo = {};
+				dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+				dependencyInfo.bufferMemoryBarrierCount = 1;
+				dependencyInfo.pBufferMemoryBarriers = &barrier;
+
+				vkCmdPipelineBarrier2(cmd.transitionCommandBuffer, &dependencyInfo);
 				
 				copyAllocator.submit(cmd);
 			}

@@ -710,8 +710,13 @@ void main(uint3 groupID : SV_GroupID,
 
 	uint2 dim;
 	SrcTexture.GetDimensions(dim.x, dim.y);
-	float2 TextureSizeRcp = rcp(dim);
 	uint2 TextureSizeInBlocks = dim / 4;
+
+	[branch]
+	if (any(blockCoord >= TextureSizeInBlocks))
+		return;
+
+	float2 TextureSizeRcp = rcp(dim);
 
 	if (all(blockCoord < TextureSizeInBlocks))
 	{
