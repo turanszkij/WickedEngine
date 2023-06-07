@@ -74,19 +74,12 @@ namespace wi::enums
 		STENCILREF_LAST = 15
 	};
 
-	// constant buffers
-	enum CBTYPES
+	// buffers
+	enum BUFFERTYPES
 	{
-		CBTYPE_FRAME,
-		CBTYPE_COUNT
-	};
-
-	// resource buffers (StructuredBuffer, Buffer, etc.)
-	enum RBTYPES
-	{
-		RBTYPE_ENTITYARRAY,
-		RBTYPE_MATRIXARRAY,
-		RBTYPE_COUNT
+		BUFFERTYPE_FRAMECB,
+		BUFFERTYPE_ENTITY,
+		BUFFERTYPE_COUNT
 	};
 
 	// textures

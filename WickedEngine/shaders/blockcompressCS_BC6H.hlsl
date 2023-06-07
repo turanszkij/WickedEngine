@@ -10,7 +10,7 @@
 
 // Improve quality at small performance loss
 #define INSET_COLOR_BBOX 1
-#define OPTIMIZE_ENDPOINTS 0
+#define OPTIMIZE_ENDPOINTS 1
 
 // Whether to optimize for luminance error or for RGB error
 #define LUMINANCE_WEIGHTS 1
@@ -241,8 +241,8 @@ void OptimizeEndpointsP1(float3 texels[16], inout float3 blockMin, inout float3 
 	if (abs(det) > 0.00001f)
 	{
 		float detRcp = rcp(det);
-		blockMin = f16tof32(clamp(detRcp * (alphaTexelSum * betaSqSum - betaTexelSum * alphaBetaSum), 0.0f, HALF_MAX));
-		blockMax = f16tof32(clamp(detRcp * (betaTexelSum * alphaSqSum - alphaTexelSum * alphaBetaSum), 0.0f, HALF_MAX));
+		blockMin = clamp(f16tof32(clamp(detRcp * (alphaTexelSum * betaSqSum - betaTexelSum * alphaBetaSum), 0.0f, HALF_MAX)), blockMin, blockMax);
+		blockMax = clamp(f16tof32(clamp(detRcp * (betaTexelSum * alphaSqSum - alphaTexelSum * alphaBetaSum), 0.0f, HALF_MAX)), blockMin, blockMax);
 	}
 }
 

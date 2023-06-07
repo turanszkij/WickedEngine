@@ -172,18 +172,19 @@ uint load_entitytile(uint tileIndex)
 }
 inline ShaderEntity load_entity(uint entityIndex)
 {
-	return bindless_buffers[GetFrame().buffer_entityarray_index].Load<ShaderEntity>(entityIndex * sizeof(ShaderEntity));
+	return bindless_buffers[GetFrame().buffer_entity_index].Load<ShaderEntity>(entityIndex * sizeof(ShaderEntity));
 }
 inline float4x4 load_entitymatrix(uint matrixIndex)
 {
 	// Workaround for: https://github.com/microsoft/DirectXShaderCompiler/issues/4738
-	ByteAddressBuffer buffer = bindless_buffers[GetFrame().buffer_entitymatrixarray_index];
+	ByteAddressBuffer buffer = bindless_buffers[GetFrame().buffer_entity_index];
+	const uint offset = sizeof(ShaderEntity) * SHADER_ENTITY_COUNT + matrixIndex * sizeof(float4x4);
 	return transpose(float4x4(
-		buffer.Load<float4>((matrixIndex * 4 + 0) * sizeof(float4)),
-		buffer.Load<float4>((matrixIndex * 4 + 1) * sizeof(float4)),
-		buffer.Load<float4>((matrixIndex * 4 + 2) * sizeof(float4)),
-		buffer.Load<float4>((matrixIndex * 4 + 3) * sizeof(float4))
-		));
+		buffer.Load<float4>(offset + 0 * sizeof(float4)),
+		buffer.Load<float4>(offset + 1 * sizeof(float4)),
+		buffer.Load<float4>(offset + 2 * sizeof(float4)),
+		buffer.Load<float4>(offset + 3 * sizeof(float4))
+	));
 }
 
 struct PrimitiveID

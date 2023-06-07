@@ -52,8 +52,7 @@ InputLayout			inputLayouts[ILTYPE_COUNT];
 RasterizerState		rasterizers[RSTYPE_COUNT];
 DepthStencilState	depthStencils[DSSTYPE_COUNT];
 BlendState			blendStates[BSTYPE_COUNT];
-GPUBuffer			constantBuffers[CBTYPE_COUNT];
-GPUBuffer			resourceBuffers[RBTYPE_COUNT];
+GPUBuffer			buffers[BUFFERTYPE_COUNT];
 Sampler				samplers[SAMPLER_COUNT];
 
 #if __has_include("wiShaderDump.h")
@@ -317,9 +316,9 @@ const BlendState* GetBlendState(BSTYPES id)
 {
 	return &blendStates[id];
 }
-const GPUBuffer* GetConstantBuffer(CBTYPES id)
+const GPUBuffer* GetBuffer(BUFFERTYPES id)
 {
-	return &constantBuffers[id];
+	return &buffers[id];
 }
 const Texture* GetTexture(TEXTYPES id)
 {
@@ -1822,29 +1821,18 @@ void LoadShaders()
 void LoadBuffers()
 {
 	GPUBufferDesc bd;
-
-	// The following buffers will be DEFAULT (long lifetime, slow update, fast read):
 	bd.usage = Usage::DEFAULT;
-
 	bd.size = sizeof(FrameCB);
 	bd.bind_flags = BindFlag::CONSTANT_BUFFER;
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_FRAME]);
-	device->SetName(&constantBuffers[CBTYPE_FRAME], "constantBuffers[CBTYPE_FRAME]");
+	device->CreateBuffer(&bd, nullptr, &buffers[BUFFERTYPE_FRAMECB]);
+	device->SetName(&buffers[BUFFERTYPE_FRAMECB], "buffers[BUFFERTYPE_FRAMECB]");
 
-
-	bd.size = sizeof(ShaderEntity) * SHADER_ENTITY_COUNT;
+	bd.usage = Usage::DEFAULT;
+	bd.size = sizeof(ShaderEntity) * SHADER_ENTITY_COUNT + sizeof(XMMATRIX) * MATRIXARRAY_COUNT;
 	bd.bind_flags = BindFlag::SHADER_RESOURCE;
 	bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-	bd.stride = sizeof(ShaderEntity);
-	device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_ENTITYARRAY]);
-	device->SetName(&resourceBuffers[RBTYPE_ENTITYARRAY], "resourceBuffers[RBTYPE_ENTITYARRAY]");
-
-	bd.size = sizeof(XMMATRIX) * MATRIXARRAY_COUNT;
-	bd.bind_flags = BindFlag::SHADER_RESOURCE;
-	bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-	bd.stride = sizeof(XMMATRIX);
-	device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_MATRIXARRAY]);
-	device->SetName(&resourceBuffers[RBTYPE_MATRIXARRAY], "resourceBuffers[RBTYPE_MATRIXARRAY]");
+	device->CreateBuffer(&bd, nullptr, &buffers[BUFFERTYPE_ENTITY]);
+	device->SetName(&buffers[BUFFERTYPE_ENTITY], "buffers[BUFFERTYPE_ENTITY]");
 
 	{
 		TextureDesc desc;
@@ -3575,8 +3563,7 @@ void UpdatePerFrameData(
 	frameCB.texture_skyluminancelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], SubresourceType::SRV);
 	frameCB.texture_cameravolumelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_SKYATMOSPHERE_CAMERAVOLUMELUT], SubresourceType::SRV);
 	frameCB.texture_wind_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_WIND], SubresourceType::SRV);
-	frameCB.buffer_entityarray_index = device->GetDescriptorIndex(&resourceBuffers[RBTYPE_ENTITYARRAY], SubresourceType::SRV);
-	frameCB.buffer_entitymatrixarray_index = device->GetDescriptorIndex(&resourceBuffers[RBTYPE_MATRIXARRAY], SubresourceType::SRV);
+	frameCB.buffer_entity_index = device->GetDescriptorIndex(&buffers[BUFFERTYPE_ENTITY], SubresourceType::SRV);
 
 	frameCB.texture_shadowatlas_index = device->GetDescriptorIndex(&shadowMapAtlas, SubresourceType::SRV);
 	frameCB.texture_shadowatlas_transparent_index = device->GetDescriptorIndex(&shadowMapAtlas_Transparent, SubresourceType::SRV);
@@ -3659,7 +3646,7 @@ void UpdateRenderData(
 	auto prof_updatebuffer_cpu = wi::profiler::BeginRangeCPU("Update Buffers (CPU)");
 	auto prof_updatebuffer_gpu = wi::profiler::BeginRangeGPU("Update Buffers (GPU)", cmd);
 
-	barrier_stack.push_back(GPUBarrier::Buffer(&constantBuffers[CBTYPE_FRAME], ResourceState::CONSTANT_BUFFER, ResourceState::COPY_DST));
+	barrier_stack.push_back(GPUBarrier::Buffer(&buffers[BUFFERTYPE_FRAMECB], ResourceState::CONSTANT_BUFFER, ResourceState::COPY_DST));
 	if (vis.scene->instanceBuffer.IsValid())
 	{
 		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->instanceBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
@@ -3678,8 +3665,8 @@ void UpdateRenderData(
 	}
 	barrier_stack_flush(cmd);
 
-	device->UpdateBuffer(&constantBuffers[CBTYPE_FRAME], &frameCB, cmd);
-	barrier_stack.push_back(GPUBarrier::Buffer(&constantBuffers[CBTYPE_FRAME], ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER));
+	device->UpdateBuffer(&buffers[BUFFERTYPE_FRAMECB], &frameCB, cmd);
+	barrier_stack.push_back(GPUBarrier::Buffer(&buffers[BUFFERTYPE_FRAMECB], ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER));
 
 	if (vis.scene->instanceBuffer.IsValid() && vis.scene->instanceArraySize > 0)
 	{
@@ -4065,29 +4052,31 @@ void UpdateRenderData(
 		}
 
 		// Issue GPU entity array update:
-		if (entityCounter > 0)
+		if (entityCounter > 0 || matrixCounter > 0)
 		{
-			device->CopyBuffer(
-				&resourceBuffers[RBTYPE_ENTITYARRAY],
-				0,
-				&allocation_entityarray.buffer,
-				allocation_entityarray.offset,
-				sizeof(ShaderEntity) * entityCounter,
-				cmd
-			);
-			barrier_stack.push_back(GPUBarrier::Buffer(&resourceBuffers[RBTYPE_ENTITYARRAY], ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-		}
-		if (matrixCounter > 0)
-		{
-			device->CopyBuffer(
-				&resourceBuffers[RBTYPE_MATRIXARRAY],
-				0,
-				&allocation_matrixarray.buffer,
-				allocation_matrixarray.offset,
-				sizeof(XMMATRIX) * matrixCounter,
-				cmd
-			);
-			barrier_stack.push_back(GPUBarrier::Buffer(&resourceBuffers[RBTYPE_MATRIXARRAY], ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+			if (entityCounter > 0)
+			{
+				device->CopyBuffer(
+					&buffers[BUFFERTYPE_ENTITY],
+					0,
+					&allocation_entityarray.buffer,
+					allocation_entityarray.offset,
+					sizeof(ShaderEntity) * entityCounter,
+					cmd
+				);
+			}
+			if (matrixCounter > 0)
+			{
+				device->CopyBuffer(
+					&buffers[BUFFERTYPE_ENTITY],
+					sizeof(ShaderEntity) * SHADER_ENTITY_COUNT,
+					&allocation_matrixarray.buffer,
+					allocation_matrixarray.offset,
+					sizeof(XMMATRIX) * matrixCounter,
+					cmd
+				);
+			}
+			barrier_stack.push_back(GPUBarrier::Buffer(&buffers[BUFFERTYPE_ENTITY], ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 		}
 
 	}
@@ -8569,7 +8558,7 @@ void BlockCompress(const wi::graphics::Texture& texture_src, const wi::graphics:
 	desc.height = std::max(1u, texture_bc.desc.height / block_size);
 	desc.bind_flags = BindFlag::UNORDERED_ACCESS;
 	desc.layout = ResourceState::UNORDERED_ACCESS;
-	desc.mip_levels = texture_bc.desc.mip_levels;
+	desc.mip_levels = GetMipCount(desc.width, desc.height);
 
 	static Texture bc_raw_uint2;
 	static Texture bc_raw_uint4;
@@ -9018,7 +9007,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd, uint8_t instanceInclu
 
 void BindCommonResources(CommandList cmd)
 {
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_FRAME], CBSLOT_RENDERER_FRAME, cmd);
+	device->BindConstantBuffer(&buffers[BUFFERTYPE_FRAMECB], CBSLOT_RENDERER_FRAME, cmd);
 }
 
 void BindCameraCB(

@@ -893,13 +893,13 @@ static const uint OPTION_BIT_VOLUMETRICCLOUDS_RECEIVE_SHADOW = 1 << 19;
 
 struct FrameCB
 {
-	uint		options;							// wi::renderer bool options packed into bitmask
+	uint		options;					// wi::renderer bool options packed into bitmask (OPTION_BIT_ values)
 	float		time;
 	float		time_previous;
 	float		delta_time;
 
 	uint		frame_count;
-	uint		padding0;
+	uint		temporalaa_samplerotation;
 	int			texture_shadowatlas_index;
 	int			texture_shadowatlas_transparent_index;
 
@@ -911,36 +911,32 @@ struct FrameCB
 
 	float		cloudShadowFarPlaneKm;
 	int			texture_volumetricclouds_shadow_index;
-	float2		padding1;
-
 	uint		envprobe_mipcount;
 	float		envprobe_mipcount_rcp;
+
 	uint		lightarray_offset;			// indexing into entity array
 	uint		lightarray_count;			// indexing into entity array
-
 	uint		decalarray_offset;			// indexing into entity array
 	uint		decalarray_count;			// indexing into entity array
+
 	uint		forcefieldarray_offset;		// indexing into entity array
 	uint		forcefieldarray_count;		// indexing into entity array
-
 	uint		envprobearray_offset;		// indexing into entity array
 	uint		envprobearray_count;		// indexing into entity array
-	uint		temporalaa_samplerotation;
-	float		blue_noise_phase;
 
+	float		blue_noise_phase;
 	int			texture_random64x64_index;
 	int			texture_bluenoise_index;
 	int			texture_sheenlut_index;
-	int			texture_skyviewlut_index;
 
+	int			texture_skyviewlut_index;
 	int			texture_transmittancelut_index;
 	int			texture_multiscatteringlut_index;
 	int			texture_skyluminancelut_index;
-	int			texture_cameravolumelut_index;
 
+	int			texture_cameravolumelut_index;
 	int			texture_wind_index;
-	int			buffer_entityarray_index;
-	int			buffer_entitymatrixarray_index;
+	int			buffer_entity_index;
 	float		gi_boost;
 
 	ShaderScene scene;
