@@ -593,18 +593,18 @@ struct ShaderMeshInstancePointer
 	{
 		data = 0;
 	}
-	void Create(uint _instanceIndex, uint frustum_index = 0, float dither = 0)
+	void Create(uint _instanceIndex, uint camera_index = 0, float dither = 0)
 	{
 		data = 0;
 		data |= _instanceIndex & 0xFFFFFF;
-		data |= (frustum_index & 0xF) << 24u;
+		data |= (camera_index & 0xF) << 24u;
 		data |= (uint(dither * 15.0f) & 0xF) << 28u;
 	}
 	uint GetInstanceIndex()
 	{
 		return data & 0xFFFFFF;
 	}
-	uint GetFrustumIndex()
+	uint GetCameraIndex()
 	{
 		return (data >> 24u) & 0xF;
 	}

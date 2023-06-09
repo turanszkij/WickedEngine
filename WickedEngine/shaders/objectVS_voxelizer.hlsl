@@ -33,7 +33,7 @@ VSOut main(VertexInput input)
 	Out.pos.xyz = (Out.pos.xyz - clipmap.center) / clipmap.voxelSize;
 
 	// Project onto dominant axis:
-	const uint frustum_index = input.GetInstancePointer().GetFrustumIndex();
+	const uint frustum_index = input.GetInstancePointer().GetCameraIndex();
 	switch (frustum_index)
 	{
 	default:

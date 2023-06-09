@@ -361,7 +361,7 @@ PixelInput main(VertexInput input)
 #endif // OBJECTSHADER_USE_EMISSIVE
 
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
-	const uint frustum_index = input.GetInstancePointer().GetFrustumIndex();
+	const uint frustum_index = input.GetInstancePointer().GetCameraIndex();
 	Out.RTIndex = GetCamera(frustum_index).output_index;
 #ifndef OBJECTSHADER_USE_NOCAMERA
 	Out.pos = mul(GetCamera(frustum_index).view_projection, surface.position);
@@ -369,7 +369,7 @@ PixelInput main(VertexInput input)
 #endif // OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 
 #ifdef OBJECTSHADER_USE_VIEWPORTARRAYINDEX
-	const uint frustum_index = input.GetInstancePointer().GetFrustumIndex();
+	const uint frustum_index = input.GetInstancePointer().GetCameraIndex();
 	Out.VPIndex = GetCamera(frustum_index).output_index;
 #ifndef OBJECTSHADER_USE_NOCAMERA
 	Out.pos = mul(GetCamera(frustum_index).view_projection, surface.position);

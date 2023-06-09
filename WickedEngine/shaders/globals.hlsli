@@ -257,17 +257,16 @@ struct PrimitiveID
 #define texture_normal bindless_textures_float2[GetCamera().texture_normal_index]
 #define texture_roughness bindless_textures_float[GetCamera().texture_roughness_index]
 
-#define PI 3.14159265358979323846
-#define SQRT2 1.41421356237309504880
-#define FLT_MAX 3.402823466e+38
-#define FLT_EPSILON 1.192092896e-07
-#define GOLDEN_RATIO 1.6180339887
+static const float PI = 3.14159265358979323846;
+static const float SQRT2 = 1.41421356237309504880;
+static const float FLT_MAX = 3.402823466e+38;
+static const float FLT_EPSILON = 1.192092896e-07;
+static const float GOLDEN_RATIO = 1.6180339887;
+static const float M_TO_SKY_UNIT = 0.001f; // Engine units are in meters
+static const float SKY_UNIT_TO_M = rcp(M_TO_SKY_UNIT);
 
-#define sqr(a)		((a)*(a))
+#define sqr(a) ((a)*(a))
 #define pow5(x) pow(x, 5)
-
-#define M_TO_SKY_UNIT 0.001f // Engine units are in meters
-#define SKY_UNIT_TO_M (1.0 / M_TO_SKY_UNIT)
 
 // attribute computation with barycentric interpolation
 //	a0 : attribute at triangle corner 0
@@ -1358,7 +1357,7 @@ enum class ColorSpace
 };
 
 
-#define NUM_PARALLAX_OCCLUSION_STEPS 32
+static const uint NUM_PARALLAX_OCCLUSION_STEPS = 32;
 inline void ParallaxOcclusionMapping_Impl(
 	inout float4 uvsets,		// uvsets to modify
 	in float3 V,				// view vector (pointing towards camera)
