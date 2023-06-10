@@ -222,6 +222,12 @@ namespace wi::scene
 		static constexpr uint32_t maxImpostorCount = 8;
 		static constexpr uint32_t impostorTextureDim = 128;
 		wi::graphics::Texture impostorDepthStencil;
+		wi::graphics::Texture impostorRenderTarget_Albedo_MSAA;
+		wi::graphics::Texture impostorRenderTarget_Normal_MSAA;
+		wi::graphics::Texture impostorRenderTarget_Surface_MSAA;
+		wi::graphics::Texture impostorRenderTarget_Albedo;
+		wi::graphics::Texture impostorRenderTarget_Normal;
+		wi::graphics::Texture impostorRenderTarget_Surface;
 		wi::graphics::Texture impostorArray;
 		wi::graphics::GPUBuffer impostorBuffer;
 		MeshComponent::BufferView impostor_ib;

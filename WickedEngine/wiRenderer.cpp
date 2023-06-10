@@ -7609,16 +7609,11 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 
 	device->EventBegin("Impostor Refresh", cmd);
 
-	device->BindPipelineState(&PSO_captureimpostor, cmd);
-
 	Viewport viewport;
 	viewport.width = viewport.height = (float)scene.impostorTextureDim;
 	device->BindViewports(1, &viewport, cmd);
 
 	BindCommonResources(cmd);
-
-	barrier_stack.push_back(GPUBarrier::Image(&scene.impostorArray, ResourceState::SHADER_RESOURCE, ResourceState::RENDERTARGET));
-	barrier_stack_flush(cmd);
 
 	for (uint32_t impostorIndex = 0; impostorIndex < scene.impostors.GetCount(); ++impostorIndex)
 	{
@@ -7659,29 +7654,29 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 
 			const RenderPassImage rp[] = {
 				RenderPassImage::RenderTarget(
-					&scene.impostorArray,
+					&scene.impostorRenderTarget_Albedo_MSAA,
 					RenderPassImage::LoadOp::CLEAR,
 					RenderPassImage::StoreOp::STORE,
 					ResourceState::RENDERTARGET,
-					ResourceState::RENDERTARGET,
-					slice
+					ResourceState::RENDERTARGET
 				),
 				RenderPassImage::RenderTarget(
-					&scene.impostorArray,
+					&scene.impostorRenderTarget_Normal_MSAA,
 					RenderPassImage::LoadOp::CLEAR,
 					RenderPassImage::StoreOp::STORE,
 					ResourceState::RENDERTARGET,
-					ResourceState::RENDERTARGET,
-					slice + 1
+					ResourceState::RENDERTARGET
 				),
 				RenderPassImage::RenderTarget(
-					&scene.impostorArray,
+					&scene.impostorRenderTarget_Surface_MSAA,
 					RenderPassImage::LoadOp::CLEAR,
 					RenderPassImage::StoreOp::STORE,
 					ResourceState::RENDERTARGET,
-					ResourceState::RENDERTARGET,
-					slice + 2
+					ResourceState::RENDERTARGET
 				),
+				RenderPassImage::Resolve(&scene.impostorRenderTarget_Albedo),
+				RenderPassImage::Resolve(&scene.impostorRenderTarget_Normal),
+				RenderPassImage::Resolve(&scene.impostorRenderTarget_Surface),
 				RenderPassImage::DepthStencil(
 					&scene.impostorDepthStencil,
 					RenderPassImage::LoadOp::CLEAR,
@@ -7689,6 +7684,8 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 				)
 			};
 			device->RenderPassBegin(rp, arraysize(rp), cmd);
+
+			device->BindPipelineState(&PSO_captureimpostor, cmd);
 
 			uint32_t first_subset = 0;
 			uint32_t last_subset = 0;
@@ -7712,12 +7709,13 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 			}
 
 			device->RenderPassEnd(cmd);
+
+			BlockCompress(scene.impostorRenderTarget_Albedo, scene.impostorArray, cmd, slice + 0);
+			BlockCompress(scene.impostorRenderTarget_Normal, scene.impostorArray, cmd, slice + 1);
+			BlockCompress(scene.impostorRenderTarget_Surface, scene.impostorArray, cmd, slice + 2);
 		}
 
 	}
-
-	barrier_stack.push_back(GPUBarrier::Image(&scene.impostorArray, ResourceState::RENDERTARGET, ResourceState::SHADER_RESOURCE));
-	barrier_stack_flush(cmd);
 
 	device->EventEnd(cmd);
 }
@@ -8626,7 +8624,8 @@ void BlockCompress(const wi::graphics::Texture& texture_src, const wi::graphics:
 		}
 	}
 
-	for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
+	const uint32_t mip_levels = std::min(desc.mip_levels, std::min(texture_src.desc.mip_levels, texture_bc.desc.mip_levels));
+	for (uint32_t mip = 0; mip < mip_levels; ++mip)
 	{
 		const uint32_t width = std::max(1u, desc.width >> mip);
 		const uint32_t height = std::max(1u, desc.height >> mip);

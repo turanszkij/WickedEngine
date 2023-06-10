@@ -8009,6 +8009,7 @@ using namespace vulkan_internal;
 			wi::helper::hash_combine(pipeline_hash, commandlist.renderpass_info.get_hash());
 			if (commandlist.prev_pipeline_hash == pipeline_hash)
 			{
+				commandlist.active_pso = pso;
 				return;
 			}
 			commandlist.prev_pipeline_hash = pipeline_hash;

@@ -1703,6 +1703,7 @@ namespace wi::graphics
 				size += width * height * depth * bytes_per_block;
 			}
 		}
+		size *= desc.sample_count;
 		return size;
 	}
 

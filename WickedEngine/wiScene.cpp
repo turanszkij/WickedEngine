@@ -3425,39 +3425,74 @@ namespace wi::scene
 			desc.width = impostorTextureDim;
 			desc.height = impostorTextureDim;
 
+			desc.sample_count = 8;
 			desc.bind_flags = BindFlag::DEPTH_STENCIL;
-			desc.array_size = 1;
 			desc.format = Format::D16_UNORM;
 			desc.layout = ResourceState::DEPTHSTENCIL;
 			desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
 			device->CreateTexture(&desc, nullptr, &impostorDepthStencil);
 			device->SetName(&impostorDepthStencil, "impostorDepthStencil");
 
-			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-			desc.array_size = maxImpostorCount * impostorCaptureAngles * 3;
-			desc.format = Format::R10G10B10A2_UNORM;
+			desc.bind_flags = BindFlag::RENDER_TARGET;
+			desc.layout = ResourceState::RENDERTARGET;
+			desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
+
+			desc.format = Format::R8G8B8A8_UNORM;
+			device->CreateTexture(&desc, nullptr, &impostorRenderTarget_Albedo_MSAA);
+			device->SetName(&impostorRenderTarget_Albedo_MSAA, "impostorRenderTarget_Albedo_MSAA");
+			desc.format = Format::R11G11B10_FLOAT;
+			device->CreateTexture(&desc, nullptr, &impostorRenderTarget_Normal_MSAA);
+			device->SetName(&impostorRenderTarget_Normal_MSAA, "impostorRenderTarget_Normal_MSAA");
+			desc.format = Format::R8G8B8A8_UNORM;
+			device->CreateTexture(&desc, nullptr, &impostorRenderTarget_Surface_MSAA);
+			device->SetName(&impostorRenderTarget_Surface_MSAA, "impostorRenderTarget_Surface_MSAA");
+
+			desc.sample_count = 1;
+			desc.misc_flags = ResourceMiscFlag::NONE;
+			desc.layout = ResourceState::SHADER_RESOURCE;
+
+			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.format = Format::R8G8B8A8_UNORM;
+			device->CreateTexture(&desc, nullptr, &impostorRenderTarget_Albedo);
+			device->SetName(&impostorRenderTarget_Albedo, "impostorRenderTarget_Albedo");
+			desc.format = Format::R11G11B10_FLOAT;
+			device->CreateTexture(&desc, nullptr, &impostorRenderTarget_Normal);
+			device->SetName(&impostorRenderTarget_Normal, "impostorRenderTarget_Normal");
+			desc.format = Format::R8G8B8A8_UNORM;
+			device->CreateTexture(&desc, nullptr, &impostorRenderTarget_Surface);
+			device->SetName(&impostorRenderTarget_Surface, "impostorRenderTarget_Surface");
+
+			desc.format = Format::BC3_UNORM;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.layout = ResourceState::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::NONE;
+			desc.array_size = maxImpostorCount * impostorCaptureAngles * 3;
 			device->CreateTexture(&desc, nullptr, &impostorArray);
 			device->SetName(&impostorArray, "impostorArray");
 
-			for (uint32_t i = 0; i < desc.array_size; ++i)
-			{
-				int subresource_index;
-				subresource_index = device->CreateSubresource(&impostorArray, SubresourceType::RTV, i, 1, 0, 1);
-				assert(subresource_index == i);
-			}
-
 			std::string info;
 			info += "Created impostor array with " + std::to_string(maxImpostorCount) + " max impostors";
-			info += "\n\tResolution (width * height * angles * properties) = " + std::to_string(impostorTextureDim) + " * " + std::to_string(impostorTextureDim) + " * " + std::to_string(impostorCaptureAngles) + " * 3";
-			info += "\n\tRender Format = ";
-			info += GetFormatString(impostorArray.desc.format);
+			info += "\n\tResolution (width * height * angles * properties * capacity) = " + std::to_string(impostorTextureDim) + " * " + std::to_string(impostorTextureDim) + " * " + std::to_string(impostorCaptureAngles) + " * 3 * " + std::to_string(maxImpostorCount);
+			info += "\n\tRender Sample count = " + std::to_string(impostorRenderTarget_Albedo_MSAA.desc.sample_count);
+			info += "\n\tRender Format Albedo = ";
+			info += GetFormatString(impostorRenderTarget_Albedo.desc.format);
+			info += "\n\tRender Format Normal = ";
+			info += GetFormatString(impostorRenderTarget_Normal.desc.format);
+			info += "\n\tRender Format Surface = ";
+			info += GetFormatString(impostorRenderTarget_Surface.desc.format);
 			info += "\n\tDepth Format = ";
 			info += GetFormatString(impostorDepthStencil.desc.format);
+			info += "\n\tSampled Format = ";
+			info += GetFormatString(impostorArray.desc.format);
 			size_t total_size = 0;
 			total_size += ComputeTextureMemorySizeInBytes(impostorArray.desc);
 			total_size += ComputeTextureMemorySizeInBytes(impostorDepthStencil.desc);
+			total_size += ComputeTextureMemorySizeInBytes(impostorRenderTarget_Albedo.desc);
+			total_size += ComputeTextureMemorySizeInBytes(impostorRenderTarget_Surface.desc);
+			total_size += ComputeTextureMemorySizeInBytes(impostorRenderTarget_Normal.desc);
+			total_size += ComputeTextureMemorySizeInBytes(impostorRenderTarget_Albedo_MSAA.desc);
+			total_size += ComputeTextureMemorySizeInBytes(impostorRenderTarget_Surface_MSAA.desc);
+			total_size += ComputeTextureMemorySizeInBytes(impostorRenderTarget_Normal_MSAA.desc);
 			info += "\n\tMemory = " + std::to_string(total_size / 1024.0f / 1024.0f) + " MB\n";
 			wi::backlog::post(info);
 		}
@@ -4003,7 +4038,7 @@ namespace wi::scene
 			info += GetFormatString(envrenderingColorBuffer.desc.format);
 			info += "\n\tDepth Format = ";
 			info += GetFormatString(envrenderingDepthBuffer.desc.format);
-			info += "\n\tCompressed Format = ";
+			info += "\n\tSampled Format = ";
 			info += GetFormatString(envmapArray.desc.format);
 			size_t total_size = 0;
 			total_size += ComputeTextureMemorySizeInBytes(envrenderingDepthBuffer.desc);
