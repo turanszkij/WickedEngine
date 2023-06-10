@@ -17,7 +17,7 @@ namespace wi::noise
 			random_state.seed(seed);
 			for (int i = 0; i < arraysize(state); ++i)
 			{
-				state[i] = random_state.next_uint();
+				state[i] = uint8_t(random_state.next_uint());
 			}
 		}
 		constexpr float fade(float t) const
