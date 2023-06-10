@@ -2,8 +2,7 @@
 #include "CommonInclude.h"
 #include "wiMath.h"
 #include "wiArchive.h"
-
-#include <random>
+#include "wiRandom.h"
 
 namespace wi::noise
 {
@@ -14,11 +13,11 @@ namespace wi::noise
 
 		void init(uint32_t seed)
 		{
-			std::mt19937 perlin_rand(seed);
-			std::uniform_int_distribution<int> perlin_distr(0, 255);
+			wi::random::Xorshift32 random_state;
+			random_state.seed(seed);
 			for (int i = 0; i < arraysize(state); ++i)
 			{
-				state[i] = perlin_distr(perlin_rand);
+				state[i] = random_state.next_uint();
 			}
 		}
 		constexpr float fade(float t) const
