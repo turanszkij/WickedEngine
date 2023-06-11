@@ -1,6 +1,4 @@
 #pragma once
-#include "wiMath.h"
-
 #include <cstdint>
 
 namespace wi::random
@@ -9,10 +7,12 @@ namespace wi::random
 	{
 		uint32_t state = 0;
 
+		// seeds the random number generator, seed should be non-zero number
 		constexpr void seed(uint32_t seed)
 		{
 			state = seed;
 		}
+		// gives an uint in range [0, 1]
 		constexpr uint32_t next_uint()
 		{
 			state ^= state << 13;
@@ -20,18 +20,21 @@ namespace wi::random
 			state ^= state << 5;
 			return state;
 		}
+		// gives an uint in range [min, max]
 		constexpr uint32_t next_uint(uint32_t min, uint32_t max)
 		{
-			return (next_uint() % max) + min;
+			return min + (next_uint() % (max - min));
 		}
+		// gives a float in range [0, 1]
 		constexpr float next_float()
 		{
 			uint32_t u = 0x3f800000 | (next_uint() >> 9);
 			return *((float*)&u) - 1.0f;
 		}
+		// gives a float in range [min, max]
 		constexpr float next_float(float min, float max)
 		{
-			return wi::math::Lerp(min, max, next_float());
+			return min + (max - min) * next_float();
 		}
 	};
 

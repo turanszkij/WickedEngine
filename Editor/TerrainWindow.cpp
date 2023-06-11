@@ -483,7 +483,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		default:
 		case PRESET_HILLS:
 			terrain->weather.SetOceanEnabled(false);
-			seedSlider.SetValue(10183);
+			seedSlider.SetValue(10991);
 			bottomLevelSlider.SetValue(-60);
 			topLevelSlider.SetValue(380);
 			perlin->weightSlider.SetValue(0.5f);
@@ -501,7 +501,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 			break;
 		case PRESET_ISLANDS:
 			terrain->weather.SetOceanEnabled(true);
-			seedSlider.SetValue(4691);
+			seedSlider.SetValue(7233);
 			bottomLevelSlider.SetValue(-79);
 			topLevelSlider.SetValue(520);
 			perlin->weightSlider.SetValue(0.5f);
