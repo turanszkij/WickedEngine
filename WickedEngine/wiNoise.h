@@ -13,8 +13,7 @@ namespace wi::noise
 
 		void init(uint32_t seed)
 		{
-			wi::random::RNG rng;
-			rng.seed(seed);
+			wi::random::RNG rng(seed);
 			for (int i = 0; i < arraysize(state); ++i)
 			{
 				state[i] = uint8_t(rng.next_uint());

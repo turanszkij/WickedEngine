@@ -9,7 +9,7 @@ namespace wi::random
 	{
 		uint64_t state = 0;
 
-		RNG(uint64_t seed = 0) : state(seed) {}
+		constexpr RNG(uint64_t seed = 0) : state(seed) {}
 
 		// seeds the random number generator, seed should be non-zero number
 		constexpr void seed(uint64_t seed)

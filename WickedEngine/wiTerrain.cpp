@@ -911,8 +911,7 @@ namespace wi::terrain
 							generator->scene.Component_Attach(chunk_data.props_entity, chunk_data.entity, true);
 							chunk_data.prop_density_current = prop_density;
 
-							wi::random::RNG rng;
-							rng.seed((uint32_t)chunk.compute_hash() ^ seed);
+							wi::random::RNG rng((uint32_t)chunk.compute_hash() ^ seed);
 
 							for (const auto& prop : props)
 							{
