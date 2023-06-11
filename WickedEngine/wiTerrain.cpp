@@ -911,23 +911,19 @@ namespace wi::terrain
 							generator->scene.Component_Attach(chunk_data.props_entity, chunk_data.entity, true);
 							chunk_data.prop_density_current = prop_density;
 
-							std::mt19937 prop_rand;
-							prop_rand.seed((uint32_t)chunk.compute_hash() ^ seed);
+							wi::random::RNG rng((uint32_t)chunk.compute_hash() ^ seed);
 
 							for (const auto& prop : props)
 							{
 								if (prop.data.empty())
 									continue;
-								std::uniform_int_distribution<uint32_t> gen_distr(
+								int gen_count = (int)rng.next_uint(
 									uint32_t(prop.min_count_per_chunk * chunk_data.prop_density_current),
 									uint32_t(prop.max_count_per_chunk * chunk_data.prop_density_current)
 								);
-								int gen_count = gen_distr(prop_rand);
 								for (int i = 0; i < gen_count; ++i)
 								{
-									std::uniform_real_distribution<float> float_distr(0.0f, 1.0f);
-									std::uniform_int_distribution<uint32_t> ind_distr(0, chunk_indices.lods[0].indexCount / 3 - 1);
-									uint32_t tri = ind_distr(prop_rand); // random triangle on the chunk mesh
+									uint32_t tri = rng.next_uint(0, chunk_indices.lods[0].indexCount / 3 - 1); // random triangle on the chunk mesh
 									uint32_t ind0 = chunk_indices.indices[tri * 3 + 0];
 									uint32_t ind1 = chunk_indices.indices[tri * 3 + 1];
 									uint32_t ind2 = chunk_indices.indices[tri * 3 + 2];
@@ -938,8 +934,8 @@ namespace wi::terrain
 									const XMFLOAT4 region1 = chunk_data.region_weights[ind1];
 									const XMFLOAT4 region2 = chunk_data.region_weights[ind2];
 									// random barycentric coords on the triangle:
-									float f = float_distr(prop_rand);
-									float g = float_distr(prop_rand);
+									float f = rng.next_float();
+									float g = rng.next_float();
 									if (f + g > 1)
 									{
 										f = 1 - f;
@@ -979,10 +975,10 @@ namespace wi::terrain
 											transform = &generator->scene.transforms.Create(entity);
 										}
 										transform->translation_local = vertex_pos;
-										transform->translation_local.y += wi::math::Lerp(prop.min_y_offset, prop.max_y_offset, float_distr(prop_rand));
-										const float scaling = wi::math::Lerp(prop.min_size, prop.max_size, float_distr(prop_rand));
+										transform->translation_local.y += wi::math::Lerp(prop.min_y_offset, prop.max_y_offset, rng.next_float());
+										const float scaling = wi::math::Lerp(prop.min_size, prop.max_size, rng.next_float());
 										transform->Scale(XMFLOAT3(scaling, scaling, scaling));
-										transform->RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * float_distr(prop_rand), 0));
+										transform->RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * rng.next_float(), 0));
 										transform->SetDirty();
 										transform->UpdateTransform();
 										generator->scene.Component_Attach(entity, chunk_data.props_entity, true);
