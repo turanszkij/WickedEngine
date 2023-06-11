@@ -13,11 +13,11 @@ namespace wi::noise
 
 		void init(uint32_t seed)
 		{
-			wi::random::Xorshift32 random_state;
-			random_state.seed(seed);
+			wi::random::RNG rng;
+			rng.seed(seed);
 			for (int i = 0; i < arraysize(state); ++i)
 			{
-				state[i] = uint8_t(random_state.next_uint());
+				state[i] = uint8_t(rng.next_uint());
 			}
 		}
 		constexpr float fade(float t) const

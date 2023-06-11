@@ -1,20 +1,14 @@
 #include "wiRandom.h"
 
-#include <random>
+#include <time.h>
 
 namespace wi::random
 {
-	inline static std::mt19937 &generator()
-	{
-		static std::random_device rand_dev;
-		static std::mt19937 generator(rand_dev());
-		return generator;
-    }
+	static thread_local RNG rng(time(nullptr));
 
 	int GetRandom(int minValue, int maxValue)
 	{
-		std::uniform_int_distribution<int>  distr(minValue, maxValue);
-		return distr(generator());
+		return rng.next_int(minValue, maxValue);
 	}
 	int GetRandom(int maxValue)
 	{
@@ -23,8 +17,7 @@ namespace wi::random
 
 	uint32_t GetRandom(uint32_t minValue, uint32_t maxValue)
 	{
-		std::uniform_int_distribution<uint32_t>  distr(minValue, maxValue);
-		return distr(generator());
+		return rng.next_uint(minValue, maxValue);
 	}
 	uint32_t GetRandom(uint32_t maxValue)
 	{
@@ -33,8 +26,7 @@ namespace wi::random
 
 	uint64_t GetRandom(uint64_t minValue, uint64_t maxValue)
 	{
-		std::uniform_int_distribution<uint64_t>  distr(minValue, maxValue);
-		return distr(generator());
+		return rng.next_uint(minValue, maxValue);
 	}
 	uint64_t GetRandom(uint64_t maxValue)
 	{
@@ -43,8 +35,7 @@ namespace wi::random
 
 	float GetRandom(float minValue, float maxValue)
 	{
-		std::uniform_real_distribution<float>  distr(minValue, maxValue);
-		return distr(generator());
+		return rng.next_float(minValue, maxValue);
 	}
 	float GetRandom(float maxValue)
 	{
