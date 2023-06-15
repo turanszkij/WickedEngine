@@ -783,7 +783,8 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&lightShaftsCheckBox);
 
-	lightShaftsStrengthStrengthSlider.Create(0, 1, 0.05f, 1000, "Strength: ");
+	lightShaftsStrengthStrengthSlider.Create(0, 1, 0.05f, 1000, "Lightshaft.Strength: ");
+	lightShaftsStrengthStrengthSlider.SetText("Strength: ");
 	lightShaftsStrengthStrengthSlider.SetTooltip("Set light shaft strength.");
 	lightShaftsStrengthStrengthSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	lightShaftsStrengthStrengthSlider.SetPos(XMFLOAT2(x + 100, y));
@@ -840,7 +841,8 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&aoPowerSlider);
 
-	aoRangeSlider.Create(1.0f, 100.0f, 1, 1000, "Range: ");
+	aoRangeSlider.Create(1.0f, 100.0f, 1, 1000, "AO.Range: ");
+	aoRangeSlider.SetText("Range: ");
 	aoRangeSlider.SetTooltip("Set AO ray length. Only for SSAO and RTAO");
 	aoRangeSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	aoRangeSlider.SetPos(XMFLOAT2(x + 100, y += step));
@@ -906,7 +908,8 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	AddWidget(&raytracedReflectionsCheckBox);
 	raytracedReflectionsCheckBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::RAYTRACING));
 
-	raytracedReflectionsRangeSlider.Create(1.0f, 10000.0f, 1, 1000, "Range: ");
+	raytracedReflectionsRangeSlider.Create(1.0f, 10000.0f, 1, 1000, "RTReflection.Range: ");
+	raytracedReflectionsRangeSlider.SetText("Range: ");
 	raytracedReflectionsRangeSlider.SetTooltip("Set Reflection ray length for Ray traced reflections.");
 	raytracedReflectionsRangeSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	raytracedReflectionsRangeSlider.SetPos(XMFLOAT2(x + 100, y += step));
@@ -936,7 +939,8 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	AddWidget(&raytracedDiffuseCheckBox);
 	raytracedDiffuseCheckBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::RAYTRACING));
 
-	raytracedDiffuseRangeSlider.Create(1.0f, 100.0f, 1, 1000, "Range: ");
+	raytracedDiffuseRangeSlider.Create(1.0f, 100.0f, 1, 1000, "RTDiffuse.Range: ");
+	raytracedDiffuseRangeSlider.SetText("Range: ");
 	raytracedDiffuseRangeSlider.SetTooltip("Set Reflection ray length for Ray traced diffuse.");
 	raytracedDiffuseRangeSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	raytracedDiffuseRangeSlider.SetPos(XMFLOAT2(x + 100, y += step));
@@ -964,7 +968,8 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&screenSpaceShadowsCheckBox);
 
-	screenSpaceShadowsRangeSlider.Create(0.1f, 10.0f, 1, 1000, "Range: ");
+	screenSpaceShadowsRangeSlider.Create(0.1f, 10.0f, 1, 1000, "ScreenspaceShadows.Range: ");
+	screenSpaceShadowsRangeSlider.SetText("Range: ");
 	screenSpaceShadowsRangeSlider.SetTooltip("Range of contact shadows");
 	screenSpaceShadowsRangeSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	screenSpaceShadowsRangeSlider.SetPos(XMFLOAT2(x + 100, y));
@@ -1052,7 +1057,8 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&motionBlurCheckBox);
 
-	motionBlurStrengthSlider.Create(0.1f, 400, 100, 10000, "Strength: ");
+	motionBlurStrengthSlider.Create(0.1f, 400, 100, 10000, "Motionblur.Strength: ");
+	motionBlurStrengthSlider.SetText("Strength");
 	motionBlurStrengthSlider.SetTooltip("Set the camera shutter speed for motion blur (higher value means stronger blur).");
 	motionBlurStrengthSlider.SetScriptTip("RenderPath3D::SetMotionBlurStrength(float value)");
 	motionBlurStrengthSlider.SetSize(XMFLOAT2(mod_wid, hei));
@@ -1084,7 +1090,8 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&depthOfFieldCheckBox);
 
-	depthOfFieldScaleSlider.Create(1.0f, 20, 100, 1000, "Strength: ");
+	depthOfFieldScaleSlider.Create(1.0f, 20, 100, 1000, "DepthOfField.Strength: ");
+	depthOfFieldScaleSlider.SetText("Strength: ");
 	depthOfFieldScaleSlider.SetTooltip("Set depth of field strength. This is used to scale the Camera's ApertureSize setting");
 	depthOfFieldScaleSlider.SetScriptTip("RenderPath3D::SetDepthOfFieldStrength(float value)");
 	depthOfFieldScaleSlider.SetSize(XMFLOAT2(mod_wid, hei));
@@ -1116,7 +1123,8 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&bloomCheckBox);
 
-	bloomStrengthSlider.Create(0.0f, 10, 1, 1000, "Threshold: ");
+	bloomStrengthSlider.Create(0.0f, 10, 1, 1000, "Bloom.Threshold: ");
+	bloomStrengthSlider.SetText("Threshold: ");
 	bloomStrengthSlider.SetTooltip("Set bloom threshold. The values below this will not glow on the screen.");
 	bloomStrengthSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	bloomStrengthSlider.SetPos(XMFLOAT2(x + 100, y));
@@ -1193,7 +1201,8 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&sharpenFilterCheckBox);
 
-	sharpenFilterAmountSlider.Create(0, 4, 1, 1000, "Strength: ");
+	sharpenFilterAmountSlider.Create(0, 4, 1, 1000, "Sharpen.Strength: ");
+	sharpenFilterAmountSlider.SetText("Strength: ");
 	sharpenFilterAmountSlider.SetTooltip("Set sharpness filter strength.");
 	sharpenFilterAmountSlider.SetScriptTip("RenderPath3D::SetSharpenFilterAmount(float value)");
 	sharpenFilterAmountSlider.SetSize(XMFLOAT2(mod_wid, hei));
@@ -1224,7 +1233,8 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&outlineCheckBox);
 
-	outlineThresholdSlider.Create(0, 1, 0.1f, 1000, "Threshold: ");
+	outlineThresholdSlider.Create(0, 1, 0.1f, 1000, "Outline.Threshold: ");
+	outlineThresholdSlider.SetText("Threshold: ");
 	outlineThresholdSlider.SetTooltip("Outline edge detection threshold. Increase if not enough otlines are detected, decrease if too many outlines are detected.");
 	outlineThresholdSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	outlineThresholdSlider.SetPos(XMFLOAT2(x + 100, y));
@@ -1299,7 +1309,8 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&fsrCheckBox);
 
-	fsrSlider.Create(0, 2, 1.0f, 1000, "Sharpness: ");
+	fsrSlider.Create(0, 2, 1.0f, 1000, "FSR1.Sharpness: ");
+	fsrSlider.SetText("Sharpness: ");
 	fsrSlider.SetTooltip("The sharpening amount to apply for FSR 1.0 upscaling. Note that this increases sharpness will smaller values.");
 	fsrSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	fsrSlider.SetPos(XMFLOAT2(x + 100, y));
@@ -1335,7 +1346,8 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&fsr2CheckBox);
 
-	fsr2Slider.Create(0, 1, 1.0f, 1000, "Sharpness: ");
+	fsr2Slider.Create(0, 1, 1.0f, 1000, "FSR2.Sharpness: ");
+	fsr2Slider.SetText("Sharpness: ");
 	fsr2Slider.SetTooltip("The sharpening amount to apply for FSR 2.1 upscaling.");
 	fsr2Slider.SetSize(XMFLOAT2(mod_wid, hei));
 	fsr2Slider.SetPos(XMFLOAT2(x + 100, y));
