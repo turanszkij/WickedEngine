@@ -32,7 +32,11 @@ namespace wi::initializer
 		size_t shaderdump_count = wi::renderer::GetShaderDumpCount();
 		if (shaderdump_count > 0)
 		{
-			wi::backlog::post("Embedded shaders found: " + std::to_string(shaderdump_count));
+			wi::backlog::post("\nEmbedded shaders found: " + std::to_string(shaderdump_count));
+		}
+		else
+		{
+			wi::backlog::post("\nNo embedded shaders found, shaders will be compiled at runtime if needed.\n\tShader source path: " + wi::renderer::GetShaderSourcePath() + "\n\tShader binary path: " + wi::renderer::GetShaderPath());
 		}
 
 		wi::backlog::post("");

@@ -1326,7 +1326,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	AddWidget(&fsrSlider);
 
 	fsr2CheckBox.Create("FSR 2.1: ");
-	fsr2CheckBox.SetTooltip("FidelityFX FSR Upscaling, version 2.1. You can use this as a replacement for Temporal AA while also upscaling from lowered rendering resolution.");
+	fsr2CheckBox.SetTooltip("FidelityFX FSR Upscaling, version 2.1. You can use this as a replacement for Temporal AA while also upscaling from lowered rendering resolution.\nEnabling FSR 2.1 will apply reduced resolution rendering according to preset, but you can also modify resolution scaling to a custom value.\nDisabling FSR 2.1 will keep your resolution scaling settings, not reset them.");
 	fsr2CheckBox.SetSize(XMFLOAT2(hei, hei));
 	fsr2CheckBox.SetPos(XMFLOAT2(x, y += step));
 	if (editor->main->config.GetSection("graphics").Has("fsr2"))
@@ -1445,13 +1445,14 @@ void GraphicsWindow::UpdateSwapChainFormats(wi::graphics::SwapChain* swapChain)
 		default:
 		case 0:
 		case 1:
-			swapChain->desc.allow_hdr = false;
+			editor->main->allow_hdr = false;
 			break;
 		case 2:
 		case 3:
-			swapChain->desc.allow_hdr = true;
+			editor->main->allow_hdr = true;
 			break;
 		}
+		swapChain->desc.allow_hdr = editor->main->allow_hdr;
 
 		bool success = wi::graphics::GetDevice()->CreateSwapChain(&swapChain->desc, nullptr, swapChain);
 		assert(success);
