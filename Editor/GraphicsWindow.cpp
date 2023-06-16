@@ -1445,13 +1445,14 @@ void GraphicsWindow::UpdateSwapChainFormats(wi::graphics::SwapChain* swapChain)
 		default:
 		case 0:
 		case 1:
-			swapChain->desc.allow_hdr = false;
+			editor->main->allow_hdr = false;
 			break;
 		case 2:
 		case 3:
-			swapChain->desc.allow_hdr = true;
+			editor->main->allow_hdr = true;
 			break;
 		}
+		swapChain->desc.allow_hdr = editor->main->allow_hdr;
 
 		bool success = wi::graphics::GetDevice()->CreateSwapChain(&swapChain->desc, nullptr, swapChain);
 		assert(success);
