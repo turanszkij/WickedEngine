@@ -124,8 +124,7 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="images\HelloWorld.png" />
-    <Image Include="small.ico" />
-    <Image Include="Tests.ico" />
+    <Image Include="wicked.ico" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\WickedEngine\WickedEngine_Windows.vcxproj">

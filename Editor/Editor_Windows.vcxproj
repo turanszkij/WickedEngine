@@ -126,10 +126,6 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="small.ico" />
-    <Image Include="Editor.ico" />
-  </ItemGroup>
-  <ItemGroup>
     <ResourceCompile Include="Editor.rc" />
   </ItemGroup>
   <ItemGroup>
@@ -147,6 +143,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main_Windows.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="wicked.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
