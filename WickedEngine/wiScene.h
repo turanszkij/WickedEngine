@@ -233,8 +233,8 @@ namespace wi::scene
 		MeshComponent::BufferView impostor_ib;
 		MeshComponent::BufferView impostor_vb;
 		MeshComponent::BufferView impostor_data;
+		MeshComponent::BufferView impostor_indirect;
 		wi::graphics::Format impostor_ib_format = wi::graphics::Format::R32_UINT;
-		wi::graphics::GPUBuffer impostorIndirectBuffer;
 		uint32_t impostorInstanceOffset = ~0u;
 		uint32_t impostorGeometryOffset = ~0u;
 		uint32_t impostorMaterialOffset = ~0u;

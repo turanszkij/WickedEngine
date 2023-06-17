@@ -669,8 +669,8 @@ namespace wi::scene
 			GPUBufferDesc desc;
 			desc.usage = Usage::DEFAULT;
 			desc.size = required_impostor_buffer_size * 2; // *2 to grow fast
-			desc.bind_flags = BindFlag::VERTEX_BUFFER | BindFlag::INDEX_BUFFER | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+			desc.bind_flags = BindFlag::INDEX_BUFFER | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::INDIRECT_ARGS;
 			device->CreateBuffer(&desc, nullptr, &impostorBuffer);
 			device->SetName(&impostorBuffer, "impostorBuffer");
 
@@ -701,12 +701,11 @@ namespace wi::scene
 			impostor_data.descriptor_srv = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::SRV, impostor_data.subresource_srv);
 			impostor_data.descriptor_uav = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::UAV, impostor_data.subresource_uav);
 
-			desc.stride = sizeof(IndirectDrawArgsIndexedInstanced);
-			desc.size = desc.stride;
-			desc.bind_flags = BindFlag::UNORDERED_ACCESS;
-			desc.misc_flags = ResourceMiscFlag::INDIRECT_ARGS | ResourceMiscFlag::BUFFER_STRUCTURED;
-			device->CreateBuffer(&desc, nullptr, &impostorIndirectBuffer);
-			device->SetName(&impostorIndirectBuffer, "impostorIndirectBuffer");
+			impostor_indirect.offset = buffer_offset;
+			impostor_indirect.size = sizeof(IndirectDrawArgsIndexedInstanced);
+			buffer_offset += AlignTo(impostor_data.size, alignment);
+			impostor_indirect.subresource_uav = device->CreateSubresource(&impostorBuffer, SubresourceType::UAV, impostor_indirect.offset, impostor_indirect.size);
+
 		}
 
 		// Shader scene resources:

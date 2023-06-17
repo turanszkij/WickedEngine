@@ -2860,7 +2860,7 @@ void RenderImpostors(
 		device->BindResource(&vis.scene->impostorBuffer, 2, cmd, vis.scene->impostor_data.subresource_srv);
 		device->BindResource(&vis.scene->impostorArray, 1, cmd);
 
-		device->DrawIndexedInstancedIndirect(&vis.scene->impostorIndirectBuffer, 0, cmd);
+		device->DrawIndexedInstancedIndirect(&vis.scene->impostorBuffer, vis.scene->impostor_indirect.offset, cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -4232,7 +4232,7 @@ void UpdateRenderData(
 		device->EventBegin("Impostor prepare", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Impostor prepare", cmd);
 
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorIndirectBuffer, ResourceState::INDIRECT_ARGUMENT, ResourceState::COPY_DST));
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorBuffer, ResourceState::SHADER_RESOURCE | ResourceState::INDIRECT_ARGUMENT, ResourceState::COPY_DST));
 		barrier_stack_flush(cmd);
 		IndirectDrawArgsIndexedInstanced clear_indirect = {};
 		clear_indirect.IndexCountPerInstance = 0;
@@ -4240,24 +4240,22 @@ void UpdateRenderData(
 		clear_indirect.StartIndexLocation = 0;
 		clear_indirect.BaseVertexLocation = 0;
 		clear_indirect.StartInstanceLocation = 0;
-		device->UpdateBuffer(&vis.scene->impostorIndirectBuffer, &clear_indirect, cmd, sizeof(clear_indirect), 0);
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorIndirectBuffer, ResourceState::COPY_DST, ResourceState::UNORDERED_ACCESS));
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
+		device->UpdateBuffer(&vis.scene->impostorBuffer, &clear_indirect, cmd, sizeof(clear_indirect), vis.scene->impostor_indirect.offset);
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorBuffer, ResourceState::COPY_DST, ResourceState::UNORDERED_ACCESS));
 		barrier_stack_flush(cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_IMPOSTOR_PREPARE], cmd);
 		device->BindUAV(&vis.scene->impostorBuffer, 0, cmd, vis.scene->impostor_ib.subresource_uav);
 		device->BindUAV(&vis.scene->impostorBuffer, 1, cmd, vis.scene->impostor_vb.subresource_uav);
 		device->BindUAV(&vis.scene->impostorBuffer, 2, cmd, vis.scene->impostor_data.subresource_uav);
-		device->BindUAV(&vis.scene->impostorIndirectBuffer, 3, cmd);
+		device->BindUAV(&vis.scene->impostorBuffer, 3, cmd, vis.scene->impostor_indirect.subresource_uav);
 
 		uint object_count = (uint)vis.scene->objects.GetCount();
 		device->PushConstants(&object_count, sizeof(object_count), cmd);
 
 		device->Dispatch((object_count + 63u) / 64u, 1, 1, cmd);
 
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorIndirectBuffer,ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT));
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE | ResourceState::INDIRECT_ARGUMENT));
 		barrier_stack_flush(cmd);
 
 		wi::profiler::EndRange(range);
