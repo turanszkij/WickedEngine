@@ -2,7 +2,8 @@
 
 static const uint THREADCOUNT = 64;
 
-static const float3 BILLBOARD[] = {
+static const float3 BILLBOARD[] =
+{
 	float3(-1, -1, 0),
 	float3(1, -1, 0),
 	float3(-1, 1, 0),
@@ -12,7 +13,7 @@ static const float3 BILLBOARD[] = {
 RWBuffer<uint> output_indices : register(u0);
 RWByteAddressBuffer output_vertices_pos_nor : register(u1);
 RWByteAddressBuffer output_impostor_data : register(u2);
-RWByteAddressBuffer output_indirect : register(u3);
+RWStructuredBuffer<IndirectDrawArgsIndexedInstanced> output_indirect : register(u3);
 
 struct ObjectCount
 {
@@ -46,7 +47,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	uint waveOffset;
 	if (WaveIsFirstLane() && waveAppendCount > 0)
 	{
-		output_indirect.InterlockedAdd(0, waveAppendCount * 6u, waveOffset); // atomic into IndexCountPerInstance
+		InterlockedAdd(output_indirect[0].IndexCountPerInstance, waveAppendCount * 6u, waveOffset);
 	}
 	waveOffset = WaveReadLaneFirst(waveOffset);
 

@@ -7,6 +7,7 @@
 #include "wiPrimitive.h"
 #include "wiVector.h"
 #include "wiScene_Decl.h"
+#include "wiScene_Components.h"
 
 namespace wi
 {
@@ -19,12 +20,13 @@ namespace wi
 	{
 	public:
 		wi::graphics::GPUBuffer constantBuffer;
-		wi::graphics::GPUBuffer simulationBuffer;
-		wi::graphics::GPUBuffer vertexBuffer_POS[2];
-		wi::graphics::GPUBuffer vertexBuffer_UVS;
+		wi::graphics::GPUBuffer generalBuffer;
+		wi::scene::MeshComponent::BufferView simulation_view;
+		wi::scene::MeshComponent::BufferView vb_pos[2];
+		wi::scene::MeshComponent::BufferView vb_uvs;
+		wi::scene::MeshComponent::BufferView ib_culled;
+		wi::scene::MeshComponent::BufferView indirect_view;
 		wi::graphics::GPUBuffer primitiveBuffer;
-		wi::graphics::GPUBuffer culledIndexBuffer;
-		wi::graphics::GPUBuffer indirectBuffer;
 
 		wi::graphics::GPUBuffer indexBuffer;
 		wi::graphics::GPUBuffer vertexBuffer_length;

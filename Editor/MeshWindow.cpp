@@ -34,7 +34,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 	float step = hei + 2;
 	float wid = 170;
 
-	float infolabel_height = 190;
+	float infolabel_height = 200;
 	meshInfoLabel.Create("Mesh Info");
 	meshInfoLabel.SetPos(XMFLOAT2(20, y));
 	meshInfoLabel.SetSize(XMFLOAT2(260, infolabel_height));
@@ -717,6 +717,7 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		ss += "Mesh name: " + name.name + "\n";
 		ss += "Vertex count: " + std::to_string(mesh->vertex_positions.size()) + "\n";
 		ss += "Index count: " + std::to_string(mesh->indices.size()) + "\n";
+		ss += "Index format: " + std::string(wi::graphics::GetIndexBufferFormatString(mesh->GetIndexFormat())) + "\n";
 		ss += "Subset count: " + std::to_string(mesh->subsets.size()) + " (" + std::to_string(mesh->GetLODCount()) + " LODs)\n";
 		ss += "GPU memory: " + std::to_string((mesh->generalBuffer.GetDesc().size + mesh->streamoutBuffer.GetDesc().size) / 1024.0f / 1024.0f) + " MB\n";
 		ss += "\nVertex buffers:\n";

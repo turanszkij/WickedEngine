@@ -1664,6 +1664,25 @@ namespace wi::graphics
 			return IndexBufferFormat::UINT16;
 		}
 	}
+	constexpr IndexBufferFormat GetIndexBufferFormat(uint32_t vertex_count)
+	{
+		return vertex_count > 65536 ? IndexBufferFormat::UINT32 : IndexBufferFormat::UINT16;
+	}
+	constexpr Format GetIndexBufferFormatRaw(uint32_t vertex_count)
+	{
+		return vertex_count > 65536 ? Format::R32_UINT : Format::R16_UINT;
+	}
+	constexpr const char* GetIndexBufferFormatString(IndexBufferFormat format)
+	{
+		switch (format)
+		{
+		default:
+		case IndexBufferFormat::UINT32:
+			return "UINT32";
+		case IndexBufferFormat::UINT16:
+			return "UINT16";
+		}
+	}
 
 	constexpr uint32_t AlignTo(uint32_t value, uint32_t alignment)
 	{

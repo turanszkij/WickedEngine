@@ -435,7 +435,7 @@ namespace wi::scene
 		inline bool IsDynamic() const { return _flags & DYNAMIC; }
 
 		inline float GetTessellationFactor() const { return tessellationFactor; }
-		inline wi::graphics::IndexBufferFormat GetIndexFormat() const { return vertex_positions.size() > 65536 ? wi::graphics::IndexBufferFormat::UINT32 : wi::graphics::IndexBufferFormat::UINT16; }
+		inline wi::graphics::IndexBufferFormat GetIndexFormat() const { return wi::graphics::GetIndexBufferFormat((uint32_t)vertex_positions.size()); }
 		inline size_t GetIndexStride() const { return GetIndexFormat() == wi::graphics::IndexBufferFormat::UINT32 ? sizeof(uint32_t) : sizeof(uint16_t); }
 		inline bool IsSkinned() const { return armatureID != wi::ecs::INVALID_ENTITY; }
 		inline uint32_t GetLODCount() const { return subsets_per_lod == 0 ? 1 : ((uint32_t)subsets.size() / subsets_per_lod); }

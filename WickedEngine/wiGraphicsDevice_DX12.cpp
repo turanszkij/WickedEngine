@@ -4917,7 +4917,7 @@ using namespace dx12_internal;
 		}
 		return -1;
 	}
-	int GraphicsDevice_DX12::CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size, const Format* format_change) const
+	int GraphicsDevice_DX12::CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size, const Format* format_change, const uint32_t* structuredbuffer_stride_change) const
 	{
 		auto internal_state = to_internal(buffer);
 		const GPUBufferDesc& desc = buffer->GetDesc();
@@ -4952,14 +4952,19 @@ using namespace dx12_internal;
 					srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
 					srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / sizeof(uint32_t);
 				}
-				else if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED))
+				else if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED) || (structuredbuffer_stride_change != nullptr))
 				{
 					// This is a Structured Buffer
+					uint32_t stride = desc.stride;
+					if (structuredbuffer_stride_change != nullptr)
+					{
+						stride = *structuredbuffer_stride_change;
+					}
 					srv_desc.Format = DXGI_FORMAT_UNKNOWN;
 					srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-					srv_desc.Buffer.FirstElement = (UINT)offset / desc.stride;
-					srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / desc.stride;
-					srv_desc.Buffer.StructureByteStride = desc.stride;
+					srv_desc.Buffer.FirstElement = (UINT)offset / stride;
+					srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / stride;
+					srv_desc.Buffer.StructureByteStride = stride;
 				}
 			}
 			else
@@ -5000,13 +5005,18 @@ using namespace dx12_internal;
 					uav_desc.Buffer.FirstElement = (UINT)offset / sizeof(uint32_t);
 					uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / sizeof(uint32_t);
 				}
-				else if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED))
+				else if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED) || (structuredbuffer_stride_change != nullptr))
 				{
 					// This is a Structured Buffer
+					uint32_t stride = desc.stride;
+					if (structuredbuffer_stride_change != nullptr)
+					{
+						stride = *structuredbuffer_stride_change;
+					}
 					uav_desc.Format = DXGI_FORMAT_UNKNOWN;
-					uav_desc.Buffer.FirstElement = (UINT)offset / desc.stride;
-					uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / desc.stride;
-					uav_desc.Buffer.StructureByteStride = desc.stride;
+					uav_desc.Buffer.FirstElement = (UINT)offset / stride;
+					uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / stride;
+					uav_desc.Buffer.StructureByteStride = stride;
 				}
 			}
 			else
