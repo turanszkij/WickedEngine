@@ -4347,9 +4347,9 @@ namespace wi::scene
 			geometry.indexOffset = 0;
 			geometry.materialIndex = (uint)materials.GetIndex(entity);
 			geometry.ib = device->GetDescriptorIndex(&emitter.primitiveBuffer, SubresourceType::SRV);
-			geometry.vb_pos_nor_wind = device->GetDescriptorIndex(&emitter.vertexBuffer_POS, SubresourceType::SRV);
-			geometry.vb_uvs = device->GetDescriptorIndex(&emitter.vertexBuffer_UVS, SubresourceType::SRV);
-			geometry.vb_col = device->GetDescriptorIndex(&emitter.vertexBuffer_COL, SubresourceType::SRV);
+			geometry.vb_pos_nor_wind = emitter.vb_pos.descriptor_srv;
+			geometry.vb_uvs = emitter.vb_uvs.descriptor_srv;
+			geometry.vb_col = emitter.vb_col.descriptor_srv;
 			geometry.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_EMITTEDPARTICLE;
 			geometry.meshletOffset = 0;
 			geometry.meshletCount = meshletCount;

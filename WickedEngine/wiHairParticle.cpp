@@ -83,15 +83,22 @@ namespace wi
 		_flags &= ~REBUILD_BUFFERS;
 		regenerate_frame = true;
 
-		GPUBufferDesc bd;
-		bd.usage = Usage::DEFAULT;
-		bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-		bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-
 		const uint32_t particleCount = GetParticleCount();
 		if (particleCount > 0)
 		{
+			GPUBufferDesc bd;
+			bd.usage = Usage::DEFAULT;
+			bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+			bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::INDEX_BUFFER;
+			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::INDIRECT_ARGS;
+			if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+			{
+				bd.misc_flags |= ResourceMiscFlag::RAY_TRACING;
+			}
+
 			const Format ib_format = GetIndexBufferFormatRaw(particleCount * 4);
+			const uint64_t alignment = device->GetMinOffsetAlignment(&bd);
 
 			simulation_view.size = sizeof(PatchSimulationData) * particleCount;
 			vb_pos[0].size = sizeof(MeshComponent::Vertex_POS) * 4 * particleCount;
@@ -100,24 +107,17 @@ namespace wi
 			ib_culled.size = GetFormatStride(ib_format) * 6 * particleCount;
 			indirect_view.size = sizeof(IndirectDrawArgsIndexedInstanced);
 
-			bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::INDEX_BUFFER;
-			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::INDIRECT_ARGS;
-			if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
-			{
-				bd.misc_flags |= ResourceMiscFlag::RAY_TRACING;
-			}
 			bd.size =
-				simulation_view.size +
-				vb_pos[0].size +
-				vb_pos[1].size +
-				vb_uvs.size +
-				ib_culled.size +
-				indirect_view.size
+				AlignTo(simulation_view.size, alignment) +
+				AlignTo(vb_pos[0].size, alignment) +
+				AlignTo(vb_pos[1].size, alignment) +
+				AlignTo(vb_uvs.size, alignment) +
+				AlignTo(ib_culled.size, alignment) +
+				AlignTo(indirect_view.size, alignment)
 			;
 			device->CreateBuffer(&bd, nullptr, &generalBuffer);
 			device->SetName(&generalBuffer, "HairParticleSystem::generalBuffer");
 
-			const uint64_t alignment = device->GetMinOffsetAlignment(&bd);
 			uint64_t buffer_offset = 0ull;
 
 			const uint32_t simulation_stride = sizeof(PatchSimulationData);
@@ -167,6 +167,8 @@ namespace wi
 			primitiveBuffer = wi::renderer::GetIndexBufferForQuads(particleCount);
 		}
 
+
+		GPUBufferDesc bd;
 		bd.usage = Usage::DEFAULT;
 		bd.size = sizeof(HairParticleCB);
 		bd.bind_flags = BindFlag::CONSTANT_BUFFER;
@@ -226,6 +228,7 @@ namespace wi
 			geometry.triangles.vertex_count = (uint32_t)(vb_pos[0].size / sizeof(MeshComponent::Vertex_POS));
 			geometry.triangles.vertex_format = Format::R32G32B32_FLOAT;
 			geometry.triangles.vertex_stride = sizeof(MeshComponent::Vertex_POS);
+			geometry.triangles.vertex_byte_offset = vb_pos[0].offset;
 
 			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
 			assert(success);

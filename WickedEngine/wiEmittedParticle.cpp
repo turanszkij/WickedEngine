@@ -97,30 +97,48 @@ namespace wi
 			device->CreateBuffer2(&bd, fill_dead_indices, &deadList);
 			device->SetName(&deadList, "EmittedParticleSystem::deadList");
 
-
 			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 			if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 			{
 				bd.misc_flags |= ResourceMiscFlag::RAY_TRACING;
 			}
-			bd.stride = sizeof(MeshComponent::Vertex_POS);
-			bd.size = bd.stride * 4 * MAX_PARTICLES;
-			wi::vector<MeshComponent::Vertex_POS> positionData(4 * MAX_PARTICLES);
-			std::fill(positionData.begin(), positionData.end(), MeshComponent::Vertex_POS());
-			device->CreateBuffer(&bd, positionData.data(), &vertexBuffer_POS);
-			device->SetName(&vertexBuffer_POS, "EmittedParticleSystem::vertexBuffer_POS");
+			const uint64_t alignment = device->GetMinOffsetAlignment(&bd);
 
-			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			bd.stride = sizeof(MeshComponent::Vertex_UVS);
-			bd.size = bd.stride * 4 * MAX_PARTICLES;
-			device->CreateBuffer(&bd, nullptr, &vertexBuffer_UVS);
-			device->SetName(&vertexBuffer_UVS, "EmittedParticleSystem::vertexBuffer_UVS");
+			vb_pos.size = sizeof(MeshComponent::Vertex_POS) * 4 * MAX_PARTICLES;
+			vb_uvs.size = sizeof(MeshComponent::Vertex_UVS) * 4 * MAX_PARTICLES;
+			vb_col.size = sizeof(MeshComponent::Vertex_COL) * 4 * MAX_PARTICLES;
 
-			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			bd.stride = sizeof(MeshComponent::Vertex_COL);
-			bd.size = bd.stride * 4 * MAX_PARTICLES;
-			device->CreateBuffer(&bd, nullptr, &vertexBuffer_COL);
-			device->SetName(&vertexBuffer_COL, "EmittedParticleSystem::vertexBuffer_COL");
+			bd.size =
+				AlignTo(vb_pos.size, alignment) +
+				AlignTo(vb_uvs.size, alignment) +
+				AlignTo(vb_col.size, alignment)
+			;
+
+			device->CreateBuffer(&bd, nullptr, &generalBuffer);
+			device->SetName(&generalBuffer, "EmittedParticleSystem::generalBuffer");
+
+			uint64_t buffer_offset = 0ull;
+
+			vb_pos.offset = buffer_offset;
+			buffer_offset += AlignTo(vb_pos.size, alignment);
+			vb_pos.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos.offset, vb_pos.size);
+			vb_pos.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos.offset, vb_pos.size);
+			vb_pos.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_pos.subresource_srv);
+			vb_pos.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_pos.subresource_uav);
+
+			vb_uvs.offset = buffer_offset;
+			buffer_offset += AlignTo(vb_uvs.size, alignment);
+			vb_uvs.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_uvs.offset, vb_uvs.size);
+			vb_uvs.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_uvs.offset, vb_uvs.size);
+			vb_uvs.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_uvs.subresource_srv);
+			vb_uvs.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_uvs.subresource_uav);
+
+			vb_col.offset = buffer_offset;
+			buffer_offset += AlignTo(vb_col.size, alignment);
+			vb_col.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_col.offset, vb_col.size);
+			vb_col.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_col.offset, vb_col.size);
+			vb_col.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_col.subresource_srv);
+			vb_col.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_col.subresource_uav);
 
 			primitiveBuffer = wi::renderer::GetIndexBufferForQuads(MAX_PARTICLES);
 		}
@@ -255,12 +273,12 @@ namespace wi
 			desc.bottom_level.geometries.emplace_back();
 			auto& geometry = desc.bottom_level.geometries.back();
 			geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::TRIANGLES;
-			geometry.triangles.vertex_buffer = vertexBuffer_POS;
+			geometry.triangles.vertex_buffer = generalBuffer;
 			geometry.triangles.index_buffer = primitiveBuffer;
 			geometry.triangles.index_format = GetIndexBufferFormat(primitiveBuffer.desc.format);
 			geometry.triangles.index_count = MAX_PARTICLES * 6;
 			geometry.triangles.index_offset = 0;
-			geometry.triangles.vertex_count = (uint32_t)(vertexBuffer_POS.desc.size / vertexBuffer_POS.desc.stride);
+			geometry.triangles.vertex_count = (uint32_t)(vb_pos.size / sizeof(MeshComponent::Vertex_POS));
 			geometry.triangles.vertex_format = Format::R32G32B32_FLOAT;
 			geometry.triangles.vertex_stride = sizeof(MeshComponent::Vertex_POS);
 
@@ -288,9 +306,7 @@ namespace wi
 		retVal += counterBuffer.GetDesc().size;
 		retVal += indirectBuffers.GetDesc().size;
 		retVal += constantBuffer.GetDesc().size;
-		retVal += vertexBuffer_POS.GetDesc().size;
-		retVal += vertexBuffer_UVS.GetDesc().size;
-		retVal += vertexBuffer_COL.GetDesc().size;
+		retVal += generalBuffer.GetDesc().size;
 		retVal += culledIndirectionBuffer.GetDesc().size;
 		retVal += culledIndirectionBuffer2.GetDesc().size;
 
@@ -417,21 +433,18 @@ namespace wi
 
 			device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), cmd);
 
-			const GPUResource* uavs[] = {
-				&particleBuffer,
-				&aliveList[0], // CURRENT alivelist
-				&aliveList[1], // NEW alivelist
-				&deadList,
-				&counterBuffer,
-				&indirectBuffers,
-				&distanceBuffer,
-				&vertexBuffer_POS,
-				&vertexBuffer_UVS,
-				&vertexBuffer_COL,
-				&culledIndirectionBuffer,
-				&culledIndirectionBuffer2,
-			};
-			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+			device->BindUAV(&particleBuffer, 0, cmd);
+			device->BindUAV(&aliveList[0], 1, cmd);
+			device->BindUAV(&aliveList[1], 2, cmd);
+			device->BindUAV(&deadList, 3, cmd);
+			device->BindUAV(&counterBuffer, 4, cmd);
+			device->BindUAV(&indirectBuffers, 5, cmd);
+			device->BindUAV(&distanceBuffer, 6, cmd);
+			device->BindUAV(&generalBuffer, 7, cmd, vb_pos.subresource_uav);
+			device->BindUAV(&generalBuffer, 8, cmd, vb_uvs.subresource_uav);
+			device->BindUAV(&generalBuffer, 9, cmd, vb_col.subresource_uav);
+			device->BindUAV(&culledIndirectionBuffer, 10, cmd);
+			device->BindUAV(&culledIndirectionBuffer2, 11, cmd);
 
 			if (mesh != nullptr)
 			{
@@ -597,7 +610,19 @@ namespace wi
 			}
 
 			device->EventBegin("Simulate", cmd);
-			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+			device->BindUAV(&particleBuffer, 0, cmd);
+			device->BindUAV(&aliveList[0], 1, cmd);
+			device->BindUAV(&aliveList[1], 2, cmd);
+			device->BindUAV(&deadList, 3, cmd);
+			device->BindUAV(&counterBuffer, 4, cmd);
+			device->BindUAV(&indirectBuffers, 5, cmd);
+			device->BindUAV(&distanceBuffer, 6, cmd);
+			device->BindUAV(&generalBuffer, 7, cmd, vb_pos.subresource_uav);
+			device->BindUAV(&generalBuffer, 8, cmd, vb_uvs.subresource_uav);
+			device->BindUAV(&generalBuffer, 9, cmd, vb_col.subresource_uav);
+			device->BindUAV(&culledIndirectionBuffer, 10, cmd);
+			device->BindUAV(&culledIndirectionBuffer2, 11, cmd);
 
 			// update CURRENT alive list, write NEW alive list
 			if (IsSorted())
@@ -688,9 +713,7 @@ namespace wi
 				GPUBarrier::Buffer(&counterBuffer, ResourceState::COPY_SRC, ResourceState::SHADER_RESOURCE),
 				GPUBarrier::Buffer(&particleBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				GPUBarrier::Buffer(&aliveList[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-				GPUBarrier::Buffer(&vertexBuffer_POS, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-				GPUBarrier::Buffer(&vertexBuffer_UVS, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-				GPUBarrier::Buffer(&vertexBuffer_COL, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Buffer(&generalBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				GPUBarrier::Buffer(&culledIndirectionBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 				GPUBarrier::Buffer(&culledIndirectionBuffer2, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 			};

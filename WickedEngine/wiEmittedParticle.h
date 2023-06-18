@@ -7,6 +7,7 @@
 #include "wiMath.h"
 #include "wiECS.h"
 #include "wiScene_Decl.h"
+#include "wiScene_Components.h"
 
 namespace wi
 {
@@ -43,9 +44,10 @@ namespace wi
 		wi::graphics::GPUBuffer counterBuffer;
 		wi::graphics::GPUBuffer indirectBuffers; // kickoffUpdate, simulation, draw
 		wi::graphics::GPUBuffer constantBuffer;
-		wi::graphics::GPUBuffer vertexBuffer_POS;
-		wi::graphics::GPUBuffer vertexBuffer_UVS;
-		wi::graphics::GPUBuffer vertexBuffer_COL;
+		wi::graphics::GPUBuffer generalBuffer;
+		wi::scene::MeshComponent::BufferView vb_pos;
+		wi::scene::MeshComponent::BufferView vb_uvs;
+		wi::scene::MeshComponent::BufferView vb_col;
 		wi::graphics::GPUBuffer primitiveBuffer; // raytracing
 		wi::graphics::GPUBuffer culledIndirectionBuffer; // rasterization
 		wi::graphics::GPUBuffer culledIndirectionBuffer2; // rasterization
