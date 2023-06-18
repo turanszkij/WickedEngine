@@ -116,6 +116,7 @@ public:
 	wi::Archive& AdvanceHistory();
 	void ConsumeHistoryOperation(bool undo);
 
+	void Open(const std::string& filename);
 	void Save(const std::string& filename);
 	void SaveAs();
 	bool deleting = false;

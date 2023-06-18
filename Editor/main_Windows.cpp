@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <thread>
+#include <shellapi.h> // drag n drop
 
 // Enable macro and follow instructions from here: https://devblogs.microsoft.com/directx/gettingstarted-dx12agility/
 //#define USING_D3D12_AGILITY_SDK
@@ -43,7 +44,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_ int       nCmdShow)
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
-    UNREFERENCED_PARAMETER(lpCmdLine);
 
     // TODO: Place code here.
 
@@ -189,6 +189,7 @@ BOOL CreateEditorWindow(int nCmdShow)
 	UpdateWindow(hWnd);
 
 	RegisterHotKey(hWnd, PRINTSCREEN, 0, VK_SNAPSHOT);
+	DragAcceptFiles(hWnd, TRUE);
 
 	return TRUE;
 }
@@ -321,6 +322,34 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             EndPaint(hWnd, &ps);
         }
         break;
+	case WM_DROPFILES:
+		{
+			HDROP hdrop = (HDROP)wParam;
+			UINT filecount = DragQueryFile(hdrop, 0xFFFFFFFF, nullptr, 0);
+			assert(filecount != 0);
+			for (UINT i = 0; i < filecount; ++i)
+			{
+				std::wstring wfilename;
+				UINT len = DragQueryFile(hdrop, i, nullptr, 0);
+				if (len == 0)
+				{
+					assert(0);
+					continue;
+				}
+				wfilename.resize(len + 1);
+				UINT res = DragQueryFile(hdrop, i, wfilename.data(), (UINT)wfilename.size());
+				if (res == 0)
+				{
+					assert(0);
+					continue;
+				}
+				std::string filename;
+				wi::helper::StringConvert(wfilename, filename);
+				editor.renderComponent.Open(filename);
+			}
+			SetForegroundWindow(hWnd);
+		}
+		break;
     case WM_DESTROY:
 		if (window_recreating)
 			window_recreating = false;

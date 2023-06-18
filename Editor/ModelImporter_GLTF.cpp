@@ -3358,14 +3358,22 @@ inline tinygltf::TextureInfo _ExportHelper_StoreMaterialTexture(LoaderState& sta
 			auto resource = wi::resourcemanager::Load(texture_file);
 			wi::vector<uint8_t> texturedata;
 			size_t buffer_size = 0;
-			if(wi::helper::saveTextureToMemory(resource.GetTexture(), texturedata))
+			if (resource.GetFileData().empty())
 			{
-				wi::vector<uint8_t> filedata;
-				if(wi::helper::saveTextureToMemoryFile(texturedata, resource.GetTexture().GetDesc(), "png", filedata))
+				if (wi::helper::saveTextureToMemory(resource.GetTexture(), texturedata))
 				{
-					buffer_size = filedata.size();
-					buffer_builder.data = std::move(filedata);
+					wi::vector<uint8_t> filedata;
+					if (wi::helper::saveTextureToMemoryFile(texturedata, resource.GetTexture().GetDesc(), "png", filedata))
+					{
+						buffer_size = filedata.size();
+						buffer_builder.data = std::move(filedata);
+					}
 				}
+			}
+			else
+			{
+				buffer_builder.data = resource.GetFileData();
+				buffer_size = buffer_builder.data.size();
 			}
 			state.gltfModel.buffers.push_back(buffer_builder);
 			

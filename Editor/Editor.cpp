@@ -275,7 +275,10 @@ void EditorComponent::Load()
 	openButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	openButton.SetShadowRadius(2);
 	openButton.font.params.shadowColor = wi::Color::Transparent();
-	openButton.SetTooltip("Open a scene, import a model or execute a Lua script...");
+	openButton.SetTooltip("Open a scene, import a model or execute a Lua script...\nSupported file types: .wiscene, .obj, .gltf, .glb, .vrm, .lua");
+#ifdef PLATFORM_WINDOWS_DESKTOP
+	openButton.SetTooltip(openButton.GetTooltip() + "\nYou can also drag and drop a file onto the window to open it in the Editor.");
+#endif // PLATFORM_WINDOWS_DESKTOP
 	openButton.SetColor(wi::Color(50, 100, 255, 180), wi::gui::WIDGETSTATE::IDLE);
 	openButton.SetColor(wi::Color(120, 160, 255, 255), wi::gui::WIDGETSTATE::FOCUS);
 	openButton.OnClick([&](wi::gui::EventArgs args) {
@@ -290,96 +293,7 @@ void EditorComponent::Load()
 		params.extensions.push_back("lua");
 		wi::helper::FileDialog(params, [&](std::string fileName) {
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-
-				std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
-				if (!extension.compare("LUA"))
-				{
-					last_script_path = fileName;
-					main->config.Set("last_script_path", last_script_path);
-					main->config.Commit();
-					playButton.SetScriptTip("dofile(\"" + last_script_path + "\")");
-					wi::lua::RunFile(fileName);
-					return;
-				}
-
-				size_t camera_count_prev = GetCurrentScene().cameras.GetCount();
-
-				main->loader.addLoadingFunction([=](wi::jobsystem::JobArgs args) {
-
-					if (!extension.compare("WISCENE")) // engine-serialized
-					{
-						Scene scene;
-						wi::scene::LoadModel(scene, fileName);
-						GetCurrentScene().Merge(scene);
-						if (GetCurrentEditorScene().path.empty())
-						{
-							GetCurrentEditorScene().path = fileName;
-						}
-					}
-					else if (!extension.compare("OBJ")) // wavefront-obj
-					{
-						Scene scene;
-						ImportModel_OBJ(fileName, scene);
-						GetCurrentScene().Merge(scene);
-					}
-					else if (!extension.compare("GLTF")) // text-based gltf
-					{
-						Scene scene;
-						ImportModel_GLTF(fileName, scene);
-						GetCurrentScene().Merge(scene);
-					}
-					else if (!extension.compare("GLB") || !extension.compare("VRM")) // binary gltf
-					{
-						Scene scene;
-						ImportModel_GLTF(fileName, scene);
-						GetCurrentScene().Merge(scene);
-					}
-					});
-				main->loader.onFinished([=] {
-
-					// Detect when the new scene contains a new camera, and snap the camera onto it:
-					size_t camera_count = GetCurrentScene().cameras.GetCount();
-					if (camera_count > 0 && camera_count > camera_count_prev)
-					{
-						Entity entity = GetCurrentScene().cameras.GetEntity(camera_count_prev);
-						if (entity != INVALID_ENTITY)
-						{
-							CameraComponent* cam = GetCurrentScene().cameras.GetComponent(entity);
-							if (cam != nullptr)
-							{
-								EditorScene& editorscene = GetCurrentEditorScene();
-								editorscene.camera.Eye = cam->Eye;
-								editorscene.camera.At = cam->At;
-								editorscene.camera.Up = cam->Up;
-								editorscene.camera.fov = cam->fov;
-								editorscene.camera.zNearP = cam->zNearP;
-								editorscene.camera.zFarP = cam->zFarP;
-								editorscene.camera.focal_length = cam->focal_length;
-								editorscene.camera.aperture_size = cam->aperture_size;
-								editorscene.camera.aperture_shape = cam->aperture_shape;
-								// camera aspect should be always for the current screen
-								editorscene.camera.width = (float)renderPath->GetInternalResolution().x;
-								editorscene.camera.height = (float)renderPath->GetInternalResolution().y;
-
-								TransformComponent* camera_transform = GetCurrentScene().transforms.GetComponent(entity);
-								if (camera_transform != nullptr)
-								{
-									editorscene.camera_transform = *camera_transform;
-									editorscene.camera.TransformCamera(editorscene.camera_transform);
-								}
-
-								editorscene.camera.UpdateCamera();
-							}
-						}
-					}
-
-					main->ActivatePath(this, 0.2f, wi::Color::Black());
-					componentsWnd.weatherWnd.Update();
-					optionsWnd.RefreshEntityTree();
-					RefreshSceneList();
-					});
-				main->ActivatePath(&main->loader, 0.2f, wi::Color::Black());
-				ResetHistory();
+				Open(fileName);
 				});
 			});
 		});
@@ -3030,10 +2944,134 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 	optionsWnd.RefreshEntityTree();
 }
 
+enum class FileType
+{
+	INVALID,
+	LUA,
+	WISCENE,
+	OBJ,
+	GLTF,
+	GLB,
+	VRM,
+};
+static const wi::unordered_map<std::string, FileType> filetypes = {
+	{"LUA", FileType::LUA},
+	{"WISCENE", FileType::WISCENE},
+	{"OBJ", FileType::OBJ},
+	{"GLTF", FileType::GLTF},
+	{"GLB", FileType::GLB},
+	{"VRM", FileType::VRM},
+};
+void EditorComponent::Open(const std::string& filename)
+{
+	std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
+
+	FileType type = FileType::INVALID;
+	auto it = filetypes.find(extension);
+	if (it != filetypes.end())
+	{
+		type = it->second;
+	}
+	if (type == FileType::INVALID)
+		return;
+
+	if (type == FileType::LUA)
+	{
+		last_script_path = filename;
+		main->config.Set("last_script_path", last_script_path);
+		main->config.Commit();
+		playButton.SetScriptTip("dofile(\"" + last_script_path + "\")");
+		wi::lua::RunFile(filename);
+		return;
+	}
+
+	size_t camera_count_prev = GetCurrentScene().cameras.GetCount();
+
+	main->loader.addLoadingFunction([=](wi::jobsystem::JobArgs args) {
+
+		if (type == FileType::WISCENE) // engine-serialized
+		{
+			Scene scene;
+			wi::scene::LoadModel(scene, filename);
+			GetCurrentScene().Merge(scene);
+			if (GetCurrentEditorScene().path.empty())
+			{
+				GetCurrentEditorScene().path = filename;
+			}
+		}
+		else if (type == FileType::OBJ) // wavefront-obj
+		{
+			Scene scene;
+			ImportModel_OBJ(filename, scene);
+			GetCurrentScene().Merge(scene);
+		}
+		else if (type == FileType::GLTF || type == FileType::GLB || type == FileType::VRM) // gltf, vrm
+		{
+			Scene scene;
+			ImportModel_GLTF(filename, scene);
+			GetCurrentScene().Merge(scene);
+		}
+	});
+	main->loader.onFinished([=] {
+
+		// Detect when the new scene contains a new camera, and snap the camera onto it:
+		size_t camera_count = GetCurrentScene().cameras.GetCount();
+		if (camera_count > 0 && camera_count > camera_count_prev)
+		{
+			Entity entity = GetCurrentScene().cameras.GetEntity(camera_count_prev);
+			if (entity != INVALID_ENTITY)
+			{
+				CameraComponent* cam = GetCurrentScene().cameras.GetComponent(entity);
+				if (cam != nullptr)
+				{
+					EditorScene& editorscene = GetCurrentEditorScene();
+					editorscene.camera.Eye = cam->Eye;
+					editorscene.camera.At = cam->At;
+					editorscene.camera.Up = cam->Up;
+					editorscene.camera.fov = cam->fov;
+					editorscene.camera.zNearP = cam->zNearP;
+					editorscene.camera.zFarP = cam->zFarP;
+					editorscene.camera.focal_length = cam->focal_length;
+					editorscene.camera.aperture_size = cam->aperture_size;
+					editorscene.camera.aperture_shape = cam->aperture_shape;
+					// camera aspect should be always for the current screen
+					editorscene.camera.width = (float)renderPath->GetInternalResolution().x;
+					editorscene.camera.height = (float)renderPath->GetInternalResolution().y;
+
+					TransformComponent* camera_transform = GetCurrentScene().transforms.GetComponent(entity);
+					if (camera_transform != nullptr)
+					{
+						editorscene.camera_transform = *camera_transform;
+						editorscene.camera.TransformCamera(editorscene.camera_transform);
+					}
+
+					editorscene.camera.UpdateCamera();
+				}
+			}
+		}
+
+		main->ActivatePath(this, 0.2f, wi::Color::Black());
+		componentsWnd.weatherWnd.Update();
+		optionsWnd.RefreshEntityTree();
+		RefreshSceneList();
+		});
+	main->ActivatePath(&main->loader, 0.2f, wi::Color::Black());
+	ResetHistory();
+}
 void EditorComponent::Save(const std::string& filename)
 {
-	auto file_extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
-	if(file_extension == "WISCENE")
+	std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
+
+	FileType type = FileType::INVALID;
+	auto it = filetypes.find(extension);
+	if (it != filetypes.end())
+	{
+		type = it->second;
+	}
+	if (type == FileType::INVALID)
+		return;
+
+	if(type == FileType::WISCENE)
 	{
 		const bool dump_to_header = optionsWnd.generalWnd.saveModeComboBox.GetSelected() == 2;
 
@@ -3058,7 +3096,7 @@ void EditorComponent::Save(const std::string& filename)
 			return;
 		}
 	}
-	if(file_extension == "GLTF" || file_extension == "GLB")
+	if(type == FileType::GLTF || type == FileType::GLB)
 	{
 		ExportModel_GLTF(filename, GetCurrentScene());
 	}
