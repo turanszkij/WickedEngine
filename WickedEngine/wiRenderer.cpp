@@ -7521,7 +7521,12 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			{
 				{
 					GPUBarrier barriers[] = {
-						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i),
+						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, 0),
+						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, 1),
+						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, 2),
+						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, 3),
+						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, 4),
+						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, 5),
 					};
 					device->Barrier(barriers, arraysize(barriers), cmd);
 				}
@@ -7545,7 +7550,12 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 				{
 					GPUBarrier barriers[] = {
-						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i),
+						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, 0),
+						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, 1),
+						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, 2),
+						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, 3),
+						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, 4),
+						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, 5),
 					};
 					device->Barrier(barriers, arraysize(barriers), cmd);
 				}
