@@ -69,6 +69,7 @@ public:
 	wi::gui::Slider bottomLevelSlider;
 	wi::gui::Slider topLevelSlider;
 	wi::gui::Button saveHeightmapButton;
+	wi::gui::Button saveRegionButton;
 	wi::gui::ComboBox addModifierCombo;
 
 	wi::gui::Slider region1Slider;

@@ -121,8 +121,10 @@ public:
 	void SaveAs();
 	bool deleting = false;
 
+	std::string save_text = "";
 	float save_text_alpha = 0; // seconds until save text disappears
 	wi::Color save_text_color = wi::Color::White();
+	void PostSaveText(const std::string& text);
 
 	std::string last_script_path;
 

@@ -273,7 +273,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	ClearTransform();
 
 	wi::gui::Window::Create(ICON_TERRAIN " Terrain", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(420, 940));
+	SetSize(XMFLOAT2(420, 980));
 
 	closeButton.SetTooltip("Delete Terrain.");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -671,6 +671,12 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	saveHeightmapButton.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&saveHeightmapButton);
 
+	saveRegionButton.Create("Save Blendmap...");
+	saveRegionButton.SetTooltip("Save a color texture from the currently generated terrain where RGBA channels indicate terrain property blend weights.\nNote that you can get a completely transparent image easily if the alpha channel weights are zero and you export to PNG.");
+	saveRegionButton.SetSize(XMFLOAT2(wid, hei));
+	saveRegionButton.SetPos(XMFLOAT2(x, y += step));
+	AddWidget(&saveRegionButton);
+
 	region1Slider.Create(0, 8, 1, 10000, "Slope Region: ");
 	region1Slider.SetTooltip("The region's falloff power");
 	region1Slider.SetSize(XMFLOAT2(wid, hei));
@@ -713,7 +719,10 @@ void TerrainWindow::Create(EditorComponent* _editor)
 				wi::primitive::AABB aabb;
 				for (auto& chunk : terrain->chunks)
 				{
-					const wi::primitive::AABB& object_aabb = terrain->scene->aabb_objects[terrain->scene->objects.GetIndex(chunk.second.entity)];
+					const size_t index = terrain->scene->objects.GetIndex(chunk.second.entity);
+					if (index == ~0ull)
+						continue;
+					const wi::primitive::AABB& object_aabb = terrain->scene->aabb_objects[index];
 					aabb = wi::primitive::AABB::Merge(aabb, object_aabb);
 				}
 
@@ -748,12 +757,101 @@ void TerrainWindow::Create(EditorComponent* _editor)
 					}
 				}
 
+				std::string extension = wi::helper::GetExtensionFromFileName(fileName);
+				std::string filename_replaced = fileName;
+				if (extension != "PNG")
+				{
+					filename_replaced = wi::helper::ReplaceExtension(fileName, "PNG");
+				}
+
 				wi::graphics::TextureDesc desc;
 				desc.width = uint32_t(width);
 				desc.height = uint32_t(height);
 				desc.format = wi::graphics::Format::R8_UNORM;
-				bool success = wi::helper::saveTextureToFile(data, desc, wi::helper::ReplaceExtension(fileName, "PNG"));
+				bool success = wi::helper::saveTextureToFile(data, desc, filename_replaced);
 				assert(success);
+
+				if (success)
+				{
+					editor->PostSaveText("Exported terrain height map: " + filename_replaced);
+				}
+
+				});
+			});
+		});
+
+
+	saveRegionButton.OnClick([=](wi::gui::EventArgs args) {
+
+		wi::helper::FileDialogParams params;
+		params.type = wi::helper::FileDialogParams::SAVE;
+		params.description = "JPG, PNG";
+		params.extensions = { "JPG", "PNG" };
+		wi::helper::FileDialog(params, [=](std::string fileName) {
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+
+				wi::primitive::AABB aabb;
+				for (auto& chunk : terrain->chunks)
+				{
+					const size_t index = terrain->scene->objects.GetIndex(chunk.second.entity);
+					if (index == ~0ull)
+						continue;
+					const wi::primitive::AABB& object_aabb = terrain->scene->aabb_objects[index];
+					aabb = wi::primitive::AABB::Merge(aabb, object_aabb);
+				}
+
+				wi::vector<uint8_t> data;
+				int width = int(aabb.getHalfWidth().x * 2 + 1);
+				int height = int(aabb.getHalfWidth().z * 2 + 1);
+				data.resize(width * height * sizeof(wi::Color));
+				std::fill(data.begin(), data.end(), 0u);
+				wi::Color* dest = (wi::Color*)data.data();
+
+				for (auto& chunk : terrain->chunks)
+				{
+					const wi::terrain::ChunkData& chunk_data = chunk.second;
+					const ObjectComponent* object = terrain->scene->objects.GetComponent(chunk.second.entity);
+					if (object != nullptr)
+					{
+						const MeshComponent* mesh = terrain->scene->meshes.GetComponent(object->meshID);
+						if (mesh != nullptr)
+						{
+							size_t objectIndex = terrain->scene->objects.GetIndex(chunk.second.entity);
+							const XMMATRIX W = XMLoadFloat4x4(&terrain->scene->matrix_objects[objectIndex]);
+							int i = 0;
+							for (auto& x : mesh->vertex_positions)
+							{
+								XMVECTOR P = XMLoadFloat3(&x);
+								P = XMVector3Transform(P, W);
+								XMFLOAT3 p;
+								XMStoreFloat3(&p, P);
+								p.x -= aabb._min.x;
+								p.z -= aabb._min.z;
+								int coord = int(p.x) + int(p.z) * width;
+								dest[coord] = chunk_data.region_weights[i++];
+							}
+						}
+					}
+				}
+
+				std::string extension = wi::helper::GetExtensionFromFileName(fileName);
+				std::string filename_replaced = fileName;
+				if (extension != "JPG" && extension != "PNG")
+				{
+					filename_replaced = wi::helper::ReplaceExtension(fileName, "JPG");
+				}
+
+				wi::graphics::TextureDesc desc;
+				desc.width = uint32_t(width);
+				desc.height = uint32_t(height);
+				desc.format = wi::graphics::Format::R8G8B8A8_UNORM;
+				bool success = wi::helper::saveTextureToFile(data, desc, filename_replaced);
+				assert(success);
+
+				if (success)
+				{
+					editor->PostSaveText("Exported terrain blend map: " + filename_replaced);
+				}
 
 				});
 			});
@@ -1089,6 +1187,7 @@ void TerrainWindow::ResizeLayout()
 	add(region2Slider);
 	add(region3Slider);
 	add(saveHeightmapButton);
+	add(saveRegionButton);
 	add(addModifierCombo);
 
 	for (auto& modifier : modifiers)

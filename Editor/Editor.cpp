@@ -2561,7 +2561,9 @@ void EditorComponent::Compose(CommandList cmd) const
 		params.h_align = wi::font::WIFALIGN_CENTER;
 		params.v_align = wi::font::WIFALIGN_CENTER;
 		params.size = 30;
-		wi::font::Draw("Scene saved: " + GetCurrentEditorScene().path, params, cmd);
+		params.shadow_softness = 1;
+		params.shadowColor.setA(100);
+		wi::font::Draw(save_text, params, cmd);
 	}
 
 #ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
@@ -3104,9 +3106,7 @@ void EditorComponent::Save(const std::string& filename)
 	GetCurrentEditorScene().path = filename;
 	RefreshSceneList();
 
-	wi::backlog::post("Scene " + std::to_string(current_scene) + " saved: " + GetCurrentEditorScene().path);
-
-	save_text_alpha = 2;
+	PostSaveText("Scene saved: " + GetCurrentEditorScene().path);
 }
 void EditorComponent::SaveAs()
 {
@@ -3133,6 +3133,13 @@ void EditorComponent::SaveAs()
 			Save(filename);
 			});
 		});
+}
+
+void EditorComponent::PostSaveText(const std::string& text)
+{
+	save_text = text;
+	save_text_alpha = 2;
+	wi::backlog::post(text);
 }
 
 void EditorComponent::CheckBonePickingEnabled()
