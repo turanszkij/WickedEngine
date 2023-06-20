@@ -711,10 +711,12 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 
 	if (mesh != nullptr)
 	{
-		const NameComponent& name = *scene.names.GetComponent(entity);
-
 		std::string ss;
-		ss += "Mesh name: " + name.name + "\n";
+		const NameComponent* name = scene.names.GetComponent(entity);
+		if (name != nullptr)
+		{
+			ss += "Mesh name: " + name->name + "\n";
+		}
 		ss += "Vertex count: " + std::to_string(mesh->vertex_positions.size()) + "\n";
 		ss += "Index count: " + std::to_string(mesh->indices.size()) + "\n";
 		ss += "Index format: " + std::string(wi::graphics::GetIndexBufferFormatString(mesh->GetIndexFormat())) + "\n";

@@ -3356,6 +3356,8 @@ inline tinygltf::TextureInfo _ExportHelper_StoreMaterialTexture(LoaderState& sta
 			tinygltf::Buffer buffer_builder;
 			int buffer_index = (int)state.gltfModel.buffers.size();
 			auto resource = wi::resourcemanager::Load(texture_file);
+			if (!resource.IsValid())
+				return textureinfo_builder;
 			wi::vector<uint8_t> texturedata;
 			size_t buffer_size = 0;
 			if (resource.GetFileData().empty())
@@ -3802,11 +3804,11 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		size_t buf_i = 0;
 
 		// We reverse the indices' windings so that the face isn't flipped
-		for(int m_index = 0 ; m_index < mesh.indices.size(); m_index = m_index + 3)
+		for (size_t i = 0; i < mesh.indices.size(); i += 3)
 		{
-			_ExportHelper_valuetobuf(mesh.indices[m_index], buffer_builder, buf_i);
-			_ExportHelper_valuetobuf(mesh.indices[m_index+2], buffer_builder, buf_i);
-			_ExportHelper_valuetobuf(mesh.indices[m_index+1], buffer_builder, buf_i);
+			_ExportHelper_valuetobuf(mesh.indices[i + 0], buffer_builder, buf_i);
+			_ExportHelper_valuetobuf(mesh.indices[i + 2], buffer_builder, buf_i);
+			_ExportHelper_valuetobuf(mesh.indices[i + 1], buffer_builder, buf_i);
 		}
 		buf_idc_size = buf_i;
 
@@ -4190,9 +4192,14 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		}
 
 		// Store mesh indices by subset, which mapped to primitives
-		for(int msub_id = 0; msub_id < mesh.subsets.size(); ++msub_id)
+		uint32_t first_subset = 0;
+		uint32_t last_subset = 0;
+		mesh.GetLODSubsetRange(0, first_subset, last_subset); // GLTF doesn't have LODs, so export only LOD0
+		for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 		{
-			auto& subset = mesh.subsets[msub_id];
+			const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
+			if (subset.indexCount == 0)
+				continue;
 
 			// One primitive has one bufferview and accessor?
 			tinygltf::BufferView indices_bufferView_builder;
