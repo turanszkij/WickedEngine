@@ -97,7 +97,7 @@ namespace tinygltf
 			std::string ss;
 			do {
 				ss.clear();
-				ss += "gltfimport_" + std::to_string(wi::random::GetRandom(std::numeric_limits<int>::max())) + ".png";
+				ss += "gltfimport_" + std::to_string(wi::random::GetRandom(std::numeric_limits<uint32_t>::max())) + ".png";
 			} while (wi::resourcemanager::Contains(ss)); // this is to avoid overwriting an existing imported image
 			image->uri = ss;
 		}
@@ -3340,9 +3340,11 @@ inline std::string _ExportHelper_GetOriginalTexture(std::string texture_file)
 	return texture_file;
 }
 
-inline tinygltf::TextureInfo _ExportHelper_StoreMaterialTexture(LoaderState& state, std::string gltf_dir, std::string texture_file, uint32_t texcoord_id, bool embed = false)
+inline tinygltf::TextureInfo _ExportHelper_StoreMaterialTexture(LoaderState& state, const std::string& gltf_dir, const MaterialComponent::TextureMap& textureSlot)
 {
-	embed = true;
+	bool embed = true;
+
+	std::string texture_file = textureSlot.name;
 
 	tinygltf::TextureInfo textureinfo_builder;
 	int texture_index = -1;
@@ -3350,32 +3352,65 @@ inline tinygltf::TextureInfo _ExportHelper_StoreMaterialTexture(LoaderState& sta
 
 	if(find_texture_id == state.textureMap.end())
 	{
+		std::string mime_type;
+		std::string src_extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(texture_file));
+		if (src_extension == "PNG")
+		{
+			mime_type = "image/png";
+		}
+		else if (src_extension == "JPG" || src_extension == "JPEG")
+		{
+			mime_type = "image/jpeg";
+		}
+		else if (src_extension == "BMP")
+		{
+			mime_type = "image/bmp";
+		}
+		else if (src_extension == "GIF")
+		{
+			mime_type = "image/gif";
+		}
+
 		int image_bufferView_index = 0;
 		if(embed)
 		{
 			tinygltf::Buffer buffer_builder;
 			int buffer_index = (int)state.gltfModel.buffers.size();
-			auto resource = wi::resourcemanager::Load(texture_file);
-			if (!resource.IsValid())
-				return textureinfo_builder;
 			wi::vector<uint8_t> texturedata;
 			size_t buffer_size = 0;
-			if (resource.GetFileData().empty())
+			if (!textureSlot.resource.GetFileData().empty() && !mime_type.empty())
 			{
-				if (wi::helper::saveTextureToMemory(resource.GetTexture(), texturedata))
+				// If texture file data is available and gltf compatible, simply save it to the gltf as-is:
+				buffer_builder.data = textureSlot.resource.GetFileData();
+				buffer_size = buffer_builder.data.size();
+			}
+			else
+			{
+				// If the texture file data is not available or it is block compressed, download it (and optionally decompress) from GPU:
+				Texture tex = textureSlot.resource.GetTexture();
+				if (IsFormatBlockCompressed(tex.GetDesc().format))
+				{
+					// Decompress block compressed texture on GPU:
+					TextureDesc desc = tex.GetDesc();
+					desc.format = Format::R8G8B8A8_UNORM;
+					desc.bind_flags |= BindFlag::UNORDERED_ACCESS;
+					Texture tex_decompressed;
+					GraphicsDevice* device = GetDevice();
+					device->CreateTexture(&desc, nullptr, &tex_decompressed);
+					CommandList cmd = device->BeginCommandList();
+					device->CreateSubresource(&tex_decompressed, SubresourceType::UAV, 0, 1, 0, 1);
+					wi::renderer::CopyTexture2D(tex_decompressed, 0, 0, 0, tex, 0, cmd); // copy that supports decompression
+					tex = tex_decompressed;
+				}
+				if (wi::helper::saveTextureToMemory(tex, texturedata))
 				{
 					wi::vector<uint8_t> filedata;
-					if (wi::helper::saveTextureToMemoryFile(texturedata, resource.GetTexture().GetDesc(), "png", filedata))
+					if (wi::helper::saveTextureToMemoryFile(texturedata, tex.GetDesc(), "PNG", filedata))
 					{
 						buffer_size = filedata.size();
 						buffer_builder.data = std::move(filedata);
 					}
 				}
-			}
-			else
-			{
-				buffer_builder.data = resource.GetFileData();
-				buffer_size = buffer_builder.data.size();
 			}
 			state.gltfModel.buffers.push_back(buffer_builder);
 			
@@ -3392,7 +3427,7 @@ inline tinygltf::TextureInfo _ExportHelper_StoreMaterialTexture(LoaderState& sta
 		if(embed)
 		{
 			image_builder.bufferView = image_bufferView_index;
-			image_builder.mimeType = "image/png";
+			image_builder.mimeType = mime_type;
 		}
 		else
 		{
@@ -3413,7 +3448,7 @@ inline tinygltf::TextureInfo _ExportHelper_StoreMaterialTexture(LoaderState& sta
 	}
 
 	textureinfo_builder.index = texture_index;
-	textureinfo_builder.texCoord = texcoord_id;
+	textureinfo_builder.texCoord = (int)textureSlot.uvset;
 
 	return textureinfo_builder;
 }
@@ -3439,7 +3474,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 	// Add extension prerequisite
 	state.gltfModel.extensionsUsed = {
-		// "KHR_texture_basisu",
+		"KHR_texture_basisu",
 		"KHR_materials_unlit",
 		"KHR_materials_transmission",
 		"KHR_materials_pbrSpecularGlossiness",
@@ -3481,16 +3516,16 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			material_builder.pbrMetallicRoughness.baseColorTexture = _ExportHelper_StoreMaterialTexture(
 				state, 
 				wi::helper::GetDirectoryFromPath(filename), 
-				material.textures[wi::scene::MaterialComponent::BASECOLORMAP].name,
-				material.textures[wi::scene::MaterialComponent::BASECOLORMAP].uvset);
+				material.textures[wi::scene::MaterialComponent::BASECOLORMAP]
+			);
 		}
 		if(material.textures[wi::scene::MaterialComponent::NORMALMAP].resource.IsValid())
 		{
 			auto normalTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 				state, 
 				wi::helper::GetDirectoryFromPath(filename), 
-				material.textures[wi::scene::MaterialComponent::NORMALMAP].name,
-				material.textures[wi::scene::MaterialComponent::NORMALMAP].uvset);
+				material.textures[wi::scene::MaterialComponent::NORMALMAP]
+			);
 			material_builder.normalTexture.index = normalTexInfo_pre.index;
 			material_builder.normalTexture.texCoord = normalTexInfo_pre.texCoord;
 		}
@@ -3499,28 +3534,26 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			auto occlTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 				state, 
 				wi::helper::GetDirectoryFromPath(filename), 
-				material.textures[wi::scene::MaterialComponent::OCCLUSIONMAP].name,
-				material.textures[wi::scene::MaterialComponent::OCCLUSIONMAP].uvset);
+				material.textures[wi::scene::MaterialComponent::OCCLUSIONMAP]
+			);
 			material_builder.occlusionTexture.index = occlTexInfo_pre.index;
 			material_builder.occlusionTexture.texCoord = occlTexInfo_pre.texCoord;
 		}
 		if(material.textures[wi::scene::MaterialComponent::EMISSIVEMAP].resource.IsValid())
 		{
-			auto emsTexInfo_pre = _ExportHelper_StoreMaterialTexture(
+			material_builder.emissiveTexture = _ExportHelper_StoreMaterialTexture(
 				state, 
 				wi::helper::GetDirectoryFromPath(filename), 
-				material.textures[wi::scene::MaterialComponent::EMISSIVEMAP].name,
-				material.textures[wi::scene::MaterialComponent::EMISSIVEMAP].uvset);
-			material_builder.emissiveTexture.index = emsTexInfo_pre.index;
-			material_builder.emissiveTexture.texCoord = emsTexInfo_pre.texCoord;
+				material.textures[wi::scene::MaterialComponent::EMISSIVEMAP]
+			);
 		}
 		if(material.textures[wi::scene::MaterialComponent::SURFACEMAP].resource.IsValid())
 		{
 			material_builder.pbrMetallicRoughness.metallicRoughnessTexture = _ExportHelper_StoreMaterialTexture(
 				state, 
 				wi::helper::GetDirectoryFromPath(filename), 
-				material.textures[wi::scene::MaterialComponent::SURFACEMAP].name,
-				material.textures[wi::scene::MaterialComponent::SURFACEMAP].uvset);				
+				material.textures[wi::scene::MaterialComponent::SURFACEMAP]
+			);				
 		}
 		// Values
 		material_builder.pbrMetallicRoughness.baseColorFactor = {
@@ -3536,18 +3569,16 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			material.emissiveColor.y * material.emissiveColor.w,
 			material.emissiveColor.z * material.emissiveColor.w,
 		};
+		if (material.alphaRef < 1.f)
+		{
+			material_builder.alphaMode = "MASK";
+			material_builder.alphaCutoff = 1.f - material.alphaRef;
+		}
 		switch(material.userBlendMode)
 		{
 			case wi::enums::BLENDMODE_ALPHA:
-			{
 				material_builder.alphaMode = "BLEND";
-				if(material.alphaRef < 1.f)
-				{
-					material_builder.alphaMode = "MASK";
-					material_builder.alphaCutoff = 1.f - material.alphaRef;
-				}
 				break;
-			}
 			default:
 				break;
 		}
@@ -3569,8 +3600,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			auto transmissionTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 				state, 
 				wi::helper::GetDirectoryFromPath(filename), 
-				material.textures[wi::scene::MaterialComponent::TRANSMISSIONMAP].name,
-				material.textures[wi::scene::MaterialComponent::TRANSMISSIONMAP].uvset);
+				material.textures[wi::scene::MaterialComponent::TRANSMISSIONMAP]
+			);
 			KHR_materials_transmission_builder["transmissionTexture"] = tinygltf::Value({
 					{"index",tinygltf::Value(transmissionTexInfo_pre.index)},
 					{"texCoord",tinygltf::Value(transmissionTexInfo_pre.texCoord)}
@@ -3602,8 +3633,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 				auto diffuseTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 					state, 
 					wi::helper::GetDirectoryFromPath(filename), 
-					material.textures[wi::scene::MaterialComponent::BASECOLORMAP].name,
-					material.textures[MaterialComponent::BASECOLORMAP].uvset);
+					material.textures[wi::scene::MaterialComponent::BASECOLORMAP]
+				);
 				KHR_materials_pbrSpecularGlossiness_builder["diffuseTexture"] = tinygltf::Value({
 						{"index",tinygltf::Value(diffuseTexInfo_pre.index)},
 						{"texCoord",tinygltf::Value(diffuseTexInfo_pre.texCoord)}
@@ -3614,8 +3645,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 				auto specglossTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 					state, 
 					wi::helper::GetDirectoryFromPath(filename), 
-					material.textures[wi::scene::MaterialComponent::SURFACEMAP].name,
-					material.textures[MaterialComponent::SURFACEMAP].uvset);
+					material.textures[wi::scene::MaterialComponent::SURFACEMAP]
+				);
 				KHR_materials_pbrSpecularGlossiness_builder["specularGlossinessTexture"] = tinygltf::Value({
 						{"index",tinygltf::Value(specglossTexInfo_pre.index)},
 						{"texCoord",tinygltf::Value(specglossTexInfo_pre.texCoord)}
@@ -3642,8 +3673,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 				auto sheencolorTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 					state, 
 					wi::helper::GetDirectoryFromPath(filename), 
-					material.textures[wi::scene::MaterialComponent::SHEENCOLORMAP].name,
-					material.textures[wi::scene::MaterialComponent::SHEENCOLORMAP].uvset);
+					material.textures[wi::scene::MaterialComponent::SHEENCOLORMAP]
+				);
 				KHR_materials_sheen_builder["sheenColorTexture"] = tinygltf::Value({
 						{"index",tinygltf::Value(sheencolorTexInfo_pre.index)},
 						{"texCoord",tinygltf::Value(sheencolorTexInfo_pre.texCoord)}
@@ -3654,8 +3685,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 				auto sheenRoughTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 					state, 
 					wi::helper::GetDirectoryFromPath(filename), 
-					material.textures[wi::scene::MaterialComponent::SHEENROUGHNESSMAP].name,
-					material.textures[wi::scene::MaterialComponent::SHEENROUGHNESSMAP].uvset);
+					material.textures[wi::scene::MaterialComponent::SHEENROUGHNESSMAP]
+				);
 				KHR_materials_sheen_builder["sheenRoughnessTexture"] = tinygltf::Value({
 						{"index",tinygltf::Value(sheenRoughTexInfo_pre.index)},
 						{"texCoord",tinygltf::Value(sheenRoughTexInfo_pre.texCoord)}
@@ -3676,8 +3707,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			auto clearcoatTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 				state, 
 				wi::helper::GetDirectoryFromPath(filename), 
-				material.textures[wi::scene::MaterialComponent::CLEARCOATMAP].name,
-				material.textures[wi::scene::MaterialComponent::CLEARCOATMAP].uvset);
+				material.textures[wi::scene::MaterialComponent::CLEARCOATMAP]
+			);
 			KHR_materials_clearcoat_builder["clearcoatTexture"] = tinygltf::Value({
 					{"index",tinygltf::Value(clearcoatTexInfo_pre.index)},
 					{"texCoord",tinygltf::Value(clearcoatTexInfo_pre.texCoord)}
@@ -3688,8 +3719,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			auto clearcoatNormTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 				state, 
 				wi::helper::GetDirectoryFromPath(filename), 
-				material.textures[wi::scene::MaterialComponent::CLEARCOATNORMALMAP].name,
-				material.textures[wi::scene::MaterialComponent::CLEARCOATNORMALMAP].uvset);
+				material.textures[wi::scene::MaterialComponent::CLEARCOATNORMALMAP]
+			);
 			KHR_materials_clearcoat_builder["clearcoatNormalTexture"] = tinygltf::Value({
 					{"index",tinygltf::Value(clearcoatNormTexInfo_pre.index)},
 					{"texCoord",tinygltf::Value(clearcoatNormTexInfo_pre.texCoord)}
@@ -3700,8 +3731,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			auto clearcoatRoughTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 				state, 
 				wi::helper::GetDirectoryFromPath(filename), 
-				material.textures[wi::scene::MaterialComponent::CLEARCOATROUGHNESSMAP].name,
-				material.textures[wi::scene::MaterialComponent::CLEARCOATROUGHNESSMAP].uvset);
+				material.textures[wi::scene::MaterialComponent::CLEARCOATROUGHNESSMAP]
+			);
 			KHR_materials_clearcoat_builder["clearcoatRoughnessTexture"] = tinygltf::Value({
 					{"index",tinygltf::Value(clearcoatRoughTexInfo_pre.index)},
 					{"texCoord",tinygltf::Value(clearcoatRoughTexInfo_pre.texCoord)}
@@ -3731,8 +3762,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			auto specularTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 				state, 
 				wi::helper::GetDirectoryFromPath(filename), 
-				material.textures[wi::scene::MaterialComponent::SPECULARMAP].name,
-				material.textures[wi::scene::MaterialComponent::SPECULARMAP].uvset);
+				material.textures[wi::scene::MaterialComponent::SPECULARMAP]
+			);
 			KHR_materials_specular_builder["specularTexture"] = tinygltf::Value({
 					{"index",tinygltf::Value(specularTexInfo_pre.index)},
 					{"texCoord",tinygltf::Value(specularTexInfo_pre.texCoord)}
@@ -3756,8 +3787,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 				auto specularTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 					state,
 					wi::helper::GetDirectoryFromPath(filename),
-					material.textures[wi::scene::MaterialComponent::ANISOTROPYMAP].name,
-					material.textures[wi::scene::MaterialComponent::ANISOTROPYMAP].uvset);
+					material.textures[wi::scene::MaterialComponent::ANISOTROPYMAP]
+				);
 				KHR_materials_anisotropy_builder["anisotropyTexture"] = tinygltf::Value({
 						{"index",tinygltf::Value(specularTexInfo_pre.index)},
 						{"texCoord",tinygltf::Value(specularTexInfo_pre.texCoord)}
