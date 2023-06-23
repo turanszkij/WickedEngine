@@ -2853,7 +2853,7 @@ void RenderImpostors(
 		device->BindIndexBuffer(
 			&vis.scene->impostorBuffer,
 			vis.scene->impostor_ib_format == Format::R32_UINT ? IndexBufferFormat::UINT32 : IndexBufferFormat::UINT16,
-			vis.scene->impostor_ib.offset,
+			vis.scene->impostor_ib_format == Format::R32_UINT ? vis.scene->impostor_ib32.offset : vis.scene->impostor_ib16.offset,
 			cmd
 		);
 		device->BindResource(&vis.scene->impostorBuffer, 0, cmd, vis.scene->impostor_vb.subresource_srv);
@@ -4245,7 +4245,7 @@ void UpdateRenderData(
 		barrier_stack_flush(cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_IMPOSTOR_PREPARE], cmd);
-		device->BindUAV(&vis.scene->impostorBuffer, 0, cmd, vis.scene->impostor_ib.subresource_uav);
+		device->BindUAV(&vis.scene->impostorBuffer, 0, cmd, vis.scene->impostor_ib_format == Format::R32_UINT ? vis.scene->impostor_ib32.subresource_uav : vis.scene->impostor_ib16.subresource_uav);
 		device->BindUAV(&vis.scene->impostorBuffer, 1, cmd, vis.scene->impostor_vb.subresource_uav);
 		device->BindUAV(&vis.scene->impostorBuffer, 2, cmd, vis.scene->impostor_data.subresource_uav);
 		device->BindUAV(&vis.scene->impostorBuffer, 3, cmd, vis.scene->impostor_indirect.subresource_uav);
@@ -8680,7 +8680,7 @@ void BlockCompress(const wi::graphics::Texture& texture_src, const wi::graphics:
 	device->EventEnd(cmd);
 }
 
-void CopyTexture2D(const Texture& dst, int DstMIP, int DstX, int DstY, const Texture& src, int SrcMIP, CommandList cmd, BORDEREXPANDSTYLE borderExpand)
+void CopyTexture2D(const Texture& dst, int DstMIP, int DstX, int DstY, const Texture& src, int SrcMIP, int SrcX, int SrcY, CommandList cmd, BORDEREXPANDSTYLE borderExpand, bool srgb_convert)
 {
 	const TextureDesc& desc_dst = dst.GetDesc();
 	const TextureDesc& desc_src = src.GetDesc();
@@ -8718,12 +8718,22 @@ void CopyTexture2D(const Texture& dst, int DstMIP, int DstX, int DstY, const Tex
 	}
 
 	CopyTextureCB cb;
-	cb.xCopyDest.x = DstX;
-	cb.xCopyDest.y = DstY;
+	cb.xCopyDst.x = DstX;
+	cb.xCopyDst.y = DstY;
+	cb.xCopySrc.x = SrcX;
+	cb.xCopySrc.y = SrcY;
 	cb.xCopySrcSize.x = desc_src.width >> SrcMIP;
 	cb.xCopySrcSize.y = desc_src.height >> SrcMIP;
 	cb.xCopySrcMIP = SrcMIP;
-	cb.xCopyBorderExpandStyle = (uint)borderExpand;
+	cb.xCopyFlags = 0;
+	if (borderExpand == BORDEREXPAND_WRAP)
+	{
+		cb.xCopyFlags |= COPY_TEXTURE_WRAP;
+	}
+	if (srgb_convert)
+	{
+		cb.xCopyFlags |= COPY_TEXTURE_SRGB;
+	}
 	device->PushConstants(&cb, sizeof(cb), cmd);
 
 	device->BindResource(&src, 0, cmd);
@@ -8737,7 +8747,11 @@ void CopyTexture2D(const Texture& dst, int DstMIP, int DstX, int DstY, const Tex
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	device->Dispatch((cb.xCopySrcSize.x + 7) / 8, (cb.xCopySrcSize.y + 7) / 8, 1, cmd);
+	XMUINT2 copy_dim = XMUINT2(
+		std::min((uint32_t)cb.xCopySrcSize.x, uint32_t((desc_dst.width - DstX) >> DstMIP)),
+		std::min((uint32_t)cb.xCopySrcSize.y, uint32_t((desc_dst.height - DstY) >> DstMIP))
+	);
+	device->Dispatch((copy_dim.x + 7) / 8, (copy_dim.y + 7) / 8, 1, cmd);
 
 	{
 		GPUBarrier barriers[] = {

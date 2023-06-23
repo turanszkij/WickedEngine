@@ -1340,7 +1340,11 @@ void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 					);
 				}
 				assert(cmd.IsValid());
-				wi::renderer::CopyTexture2D(newslot.texture, 0, 0, 0, editTexture.texture, 0, cmd); // custom copy with format conversion capability!
+				wi::renderer::CopyTexture2D(
+					newslot.texture, 0, 0, 0,
+					editTexture.texture, 0, 0, 0,
+					cmd
+				); // custom copy with format conversion and decompression capability!
 
 				ReplaceEditTextureSlot(*material, newslot);
 			}

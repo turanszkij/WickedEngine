@@ -903,7 +903,7 @@ namespace wi::terrain
 					{
 						ChunkData& chunk_data = it->second;
 
-						if (chunk_data.props_entity == INVALID_ENTITY && chunk_data.mesh_vertex_positions != nullptr)
+						if (prop_density > 0 && chunk_data.props_entity == INVALID_ENTITY && chunk_data.mesh_vertex_positions != nullptr)
 						{
 							chunk_data.props_entity = CreateEntity();
 							generator->scene.transforms.Create(chunk_data.props_entity);
@@ -919,7 +919,7 @@ namespace wi::terrain
 									continue;
 								int gen_count = (int)rng.next_uint(
 									uint32_t(prop.min_count_per_chunk * chunk_data.prop_density_current),
-									uint32_t(prop.max_count_per_chunk * chunk_data.prop_density_current)
+									std::max(1u, uint32_t(prop.max_count_per_chunk * chunk_data.prop_density_current))
 								);
 								for (int i = 0; i < gen_count; ++i)
 								{

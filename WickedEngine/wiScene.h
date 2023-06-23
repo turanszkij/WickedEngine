@@ -230,7 +230,9 @@ namespace wi::scene
 		wi::graphics::Texture impostorRenderTarget_Surface;
 		wi::graphics::Texture impostorArray;
 		wi::graphics::GPUBuffer impostorBuffer;
-		MeshComponent::BufferView impostor_ib;
+		uint32_t allocated_impostor_capacity = 0;
+		MeshComponent::BufferView impostor_ib32;
+		MeshComponent::BufferView impostor_ib16;
 		MeshComponent::BufferView impostor_vb;
 		MeshComponent::BufferView impostor_data;
 		MeshComponent::BufferView impostor_indirect;

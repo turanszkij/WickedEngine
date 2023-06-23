@@ -3340,9 +3340,9 @@ inline std::string _ExportHelper_GetOriginalTexture(std::string texture_file)
 	return texture_file;
 }
 
-inline tinygltf::TextureInfo _ExportHelper_StoreMaterialTexture(LoaderState& state, const std::string& gltf_dir, const MaterialComponent::TextureMap& textureSlot)
+inline tinygltf::TextureInfo _ExportHelper_StoreMaterialTexture(LoaderState& state, const std::string& gltf_dir, const MaterialComponent& material, MaterialComponent::TEXTURESLOT slot)
 {
-	bool embed = true;
+	const MaterialComponent::TextureMap& textureSlot = material.textures[slot];
 
 	std::string texture_file = textureSlot.name;
 
@@ -3372,67 +3372,70 @@ inline tinygltf::TextureInfo _ExportHelper_StoreMaterialTexture(LoaderState& sta
 		}
 
 		int image_bufferView_index = 0;
-		if(embed)
-		{
-			tinygltf::Buffer buffer_builder;
-			int buffer_index = (int)state.gltfModel.buffers.size();
-			wi::vector<uint8_t> texturedata;
-			size_t buffer_size = 0;
-			if (!textureSlot.resource.GetFileData().empty() && !mime_type.empty())
-			{
-				// If texture file data is available and gltf compatible, simply save it to the gltf as-is:
-				buffer_builder.data = textureSlot.resource.GetFileData();
-				buffer_size = buffer_builder.data.size();
-			}
-			else
-			{
-				// If the texture file data is not available or it is block compressed, download it (and optionally decompress) from GPU:
-				Texture tex = textureSlot.resource.GetTexture();
-				if (IsFormatBlockCompressed(tex.GetDesc().format))
-				{
-					// Decompress block compressed texture on GPU:
-					TextureDesc desc = tex.GetDesc();
-					desc.format = Format::R8G8B8A8_UNORM;
-					desc.bind_flags |= BindFlag::UNORDERED_ACCESS;
-					Texture tex_decompressed;
-					GraphicsDevice* device = GetDevice();
-					device->CreateTexture(&desc, nullptr, &tex_decompressed);
-					CommandList cmd = device->BeginCommandList();
-					device->CreateSubresource(&tex_decompressed, SubresourceType::UAV, 0, 1, 0, 1);
-					wi::renderer::CopyTexture2D(tex_decompressed, 0, 0, 0, tex, 0, cmd); // copy that supports decompression
-					tex = tex_decompressed;
-				}
-				if (wi::helper::saveTextureToMemory(tex, texturedata))
-				{
-					wi::vector<uint8_t> filedata;
-					if (wi::helper::saveTextureToMemoryFile(texturedata, tex.GetDesc(), "PNG", filedata))
-					{
-						buffer_size = filedata.size();
-						buffer_builder.data = std::move(filedata);
-					}
-				}
-			}
-			state.gltfModel.buffers.push_back(buffer_builder);
-			
-			tinygltf::BufferView bufferView_builder;
-			image_bufferView_index = (int)state.gltfModel.bufferViews.size();
-			bufferView_builder.buffer = buffer_index;
-			bufferView_builder.byteLength = buffer_size;
-			state.gltfModel.bufferViews.push_back(bufferView_builder);
-		}
 
-		tinygltf::Image image_builder;
-		int image_index = (int)state.gltfModel.images.size();
-		wi::helper::MakePathRelative(gltf_dir, texture_file);
-		if(embed)
+		tinygltf::Buffer buffer_builder;
+		int buffer_index = (int)state.gltfModel.buffers.size();
+		wi::vector<uint8_t> texturedata;
+		size_t buffer_size = 0;
+		if (!textureSlot.resource.GetFileData().empty() && !mime_type.empty())
 		{
-			image_builder.bufferView = image_bufferView_index;
-			image_builder.mimeType = mime_type;
+			// If texture file data is available and gltf compatible, simply save it to the gltf as-is:
+			buffer_builder.data = textureSlot.resource.GetFileData();
+			buffer_size = buffer_builder.data.size();
 		}
 		else
 		{
-			image_builder.uri = texture_file;
+			// If the texture file data is not available or it is block compressed, download it (and optionally decompress) from GPU:
+			Texture tex = textureSlot.resource.GetTexture();
+			if (IsFormatBlockCompressed(tex.desc.format))
+			{
+				// Decompress block compressed texture on GPU:
+				const XMFLOAT4 texMulAdd = textureSlot.uvset == 0 ? material.texMulAdd : XMFLOAT4(1, 1, 0, 0);
+				TextureDesc desc;
+				desc.format = Format::R8G8B8A8_UNORM;
+				desc.bind_flags = BindFlag::UNORDERED_ACCESS;
+				desc.width = uint32_t(tex.desc.width * texMulAdd.x);
+				desc.height = uint32_t(tex.desc.height * texMulAdd.y);
+				desc.mip_levels = 1;
+				Texture tex_decompressed;
+				GraphicsDevice* device = GetDevice();
+				device->CreateTexture(&desc, nullptr, &tex_decompressed);
+				CommandList cmd = device->BeginCommandList();
+				device->CreateSubresource(&tex_decompressed, SubresourceType::UAV, 0, 1, 0, 1);
+				wi::renderer::CopyTexture2D(
+					tex_decompressed, 0, 0, 0,
+					tex, 0, int(texMulAdd.z * tex.desc.width), int(texMulAdd.w * tex.desc.height),
+					cmd,
+					wi::renderer::BORDEREXPAND_DISABLE,
+					IsFormatSRGB(tex.desc.format)
+				); // copy that supports format conversion / decompression
+				tex = tex_decompressed;
+			}
+			if (wi::helper::saveTextureToMemory(tex, texturedata))
+			{
+				wi::vector<uint8_t> filedata;
+				if (wi::helper::saveTextureToMemoryFile(texturedata, tex.desc, "PNG", filedata))
+				{
+					buffer_size = filedata.size();
+					buffer_builder.data = std::move(filedata);
+				}
+			}
 		}
+		state.gltfModel.buffers.push_back(buffer_builder);
+			
+		tinygltf::BufferView bufferView_builder;
+		image_bufferView_index = (int)state.gltfModel.bufferViews.size();
+		bufferView_builder.buffer = buffer_index;
+		bufferView_builder.byteLength = buffer_size;
+		state.gltfModel.bufferViews.push_back(bufferView_builder);
+
+		tinygltf::Image image_builder;
+		//image_builder.uri = texture_file;
+		image_builder.bufferView = image_bufferView_index;
+		image_builder.mimeType = mime_type;
+
+		int image_index = (int)state.gltfModel.images.size();
+		wi::helper::MakePathRelative(gltf_dir, texture_file);
 		state.gltfModel.images.push_back(image_builder);
 
 		tinygltf::Texture texture_builder;
@@ -3474,7 +3477,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 	// Add extension prerequisite
 	state.gltfModel.extensionsUsed = {
-		"KHR_texture_basisu",
+		//"KHR_texture_basisu",
 		"KHR_materials_unlit",
 		"KHR_materials_transmission",
 		"KHR_materials_pbrSpecularGlossiness",
@@ -3494,6 +3497,60 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 	//wi::jobsystem::context analysis_ctx;
 	//std::mutex analysis_lock_sync;
 	//uint32_t analysis_readCount = 16384;
+
+	// Terrain chunks need some work to remap virtual texture atlas to individual textures for GLTF:
+	for (size_t i = 0; i < scene.terrains.GetCount(); ++i)
+	{
+		using namespace wi::terrain;
+		Terrain& terrain = scene.terrains[i];
+		for (auto& it : terrain.chunks)
+		{
+			const Chunk& chunk = it.first;
+			ChunkData& chunk_data = it.second;
+
+			MaterialComponent* material = scene.materials.GetComponent(chunk_data.entity);
+			if (material == nullptr)
+				continue;
+
+			VirtualTexture& vt = *chunk_data.vt;
+			for (uint32_t map_type = 0; map_type < arraysize(terrain.atlas.maps); ++map_type)
+			{
+				if (material->textures[map_type].name.empty())
+				{
+					const NameComponent* chunk_name = scene.names.GetComponent(chunk_data.entity);
+					if (chunk_name != nullptr)
+					{
+						switch (map_type)
+						{
+						default:
+						case MaterialComponent::BASECOLORMAP:
+							material->textures[map_type].name = chunk_name->name + "_basecolormap.png";
+							break;
+						case MaterialComponent::NORMALMAP:
+							material->textures[map_type].name = chunk_name->name + "_normalmap.png";
+							break;
+						case MaterialComponent::SURFACEMAP:
+							material->textures[map_type].name = chunk_name->name + "_surfacemap.png";
+							break;
+						}
+					}
+				}
+
+				if (map_type == 0)
+				{
+					auto tile = vt.residency ? vt.tiles[vt.tiles.size() - 2] : vt.tiles.back(); // last nonpacked mip
+					const float2 resolution_rcp = float2(
+						1.0f / (float)terrain.atlas.maps[map_type].texture.desc.width,
+						1.0f / (float)terrain.atlas.maps[map_type].texture.desc.height
+					);
+					material->texMulAdd.x = (float)SVT_TILE_SIZE * resolution_rcp.x;
+					material->texMulAdd.y = (float)SVT_TILE_SIZE * resolution_rcp.y;
+					material->texMulAdd.z = ((float)tile.x * (float)SVT_TILE_SIZE_PADDED + SVT_TILE_BORDER) * resolution_rcp.x;
+					material->texMulAdd.w = ((float)tile.y * (float)SVT_TILE_SIZE_PADDED + SVT_TILE_BORDER) * resolution_rcp.y;
+				}
+			}
+		}
+	}
 
 	// Write Materials
 	for(size_t mt_id = 0; mt_id < wiscene.materials.GetCount(); ++mt_id)
@@ -3516,7 +3573,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			material_builder.pbrMetallicRoughness.baseColorTexture = _ExportHelper_StoreMaterialTexture(
 				state, 
 				wi::helper::GetDirectoryFromPath(filename), 
-				material.textures[wi::scene::MaterialComponent::BASECOLORMAP]
+				material,
+				wi::scene::MaterialComponent::BASECOLORMAP
 			);
 		}
 		if(material.textures[wi::scene::MaterialComponent::NORMALMAP].resource.IsValid())
@@ -3524,7 +3582,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			auto normalTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 				state, 
 				wi::helper::GetDirectoryFromPath(filename), 
-				material.textures[wi::scene::MaterialComponent::NORMALMAP]
+				material,
+				wi::scene::MaterialComponent::NORMALMAP
 			);
 			material_builder.normalTexture.index = normalTexInfo_pre.index;
 			material_builder.normalTexture.texCoord = normalTexInfo_pre.texCoord;
@@ -3534,7 +3593,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			auto occlTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 				state, 
 				wi::helper::GetDirectoryFromPath(filename), 
-				material.textures[wi::scene::MaterialComponent::OCCLUSIONMAP]
+				material,
+				wi::scene::MaterialComponent::OCCLUSIONMAP
 			);
 			material_builder.occlusionTexture.index = occlTexInfo_pre.index;
 			material_builder.occlusionTexture.texCoord = occlTexInfo_pre.texCoord;
@@ -3544,7 +3604,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			material_builder.emissiveTexture = _ExportHelper_StoreMaterialTexture(
 				state, 
 				wi::helper::GetDirectoryFromPath(filename), 
-				material.textures[wi::scene::MaterialComponent::EMISSIVEMAP]
+				material,
+				wi::scene::MaterialComponent::EMISSIVEMAP
 			);
 		}
 		if(material.textures[wi::scene::MaterialComponent::SURFACEMAP].resource.IsValid())
@@ -3552,7 +3613,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			material_builder.pbrMetallicRoughness.metallicRoughnessTexture = _ExportHelper_StoreMaterialTexture(
 				state, 
 				wi::helper::GetDirectoryFromPath(filename), 
-				material.textures[wi::scene::MaterialComponent::SURFACEMAP]
+				material,
+				wi::scene::MaterialComponent::SURFACEMAP
 			);				
 		}
 		// Values
@@ -3600,7 +3662,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			auto transmissionTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 				state, 
 				wi::helper::GetDirectoryFromPath(filename), 
-				material.textures[wi::scene::MaterialComponent::TRANSMISSIONMAP]
+				material,
+				wi::scene::MaterialComponent::TRANSMISSIONMAP
 			);
 			KHR_materials_transmission_builder["transmissionTexture"] = tinygltf::Value({
 					{"index",tinygltf::Value(transmissionTexInfo_pre.index)},
@@ -3633,7 +3696,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 				auto diffuseTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 					state, 
 					wi::helper::GetDirectoryFromPath(filename), 
-					material.textures[wi::scene::MaterialComponent::BASECOLORMAP]
+					material,
+					wi::scene::MaterialComponent::BASECOLORMAP
 				);
 				KHR_materials_pbrSpecularGlossiness_builder["diffuseTexture"] = tinygltf::Value({
 						{"index",tinygltf::Value(diffuseTexInfo_pre.index)},
@@ -3645,7 +3709,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 				auto specglossTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 					state, 
 					wi::helper::GetDirectoryFromPath(filename), 
-					material.textures[wi::scene::MaterialComponent::SURFACEMAP]
+					material,
+					wi::scene::MaterialComponent::SURFACEMAP
 				);
 				KHR_materials_pbrSpecularGlossiness_builder["specularGlossinessTexture"] = tinygltf::Value({
 						{"index",tinygltf::Value(specglossTexInfo_pre.index)},
@@ -3673,7 +3738,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 				auto sheencolorTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 					state, 
 					wi::helper::GetDirectoryFromPath(filename), 
-					material.textures[wi::scene::MaterialComponent::SHEENCOLORMAP]
+					material,
+					wi::scene::MaterialComponent::SHEENCOLORMAP
 				);
 				KHR_materials_sheen_builder["sheenColorTexture"] = tinygltf::Value({
 						{"index",tinygltf::Value(sheencolorTexInfo_pre.index)},
@@ -3685,7 +3751,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 				auto sheenRoughTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 					state, 
 					wi::helper::GetDirectoryFromPath(filename), 
-					material.textures[wi::scene::MaterialComponent::SHEENROUGHNESSMAP]
+					material,
+					wi::scene::MaterialComponent::SHEENROUGHNESSMAP
 				);
 				KHR_materials_sheen_builder["sheenRoughnessTexture"] = tinygltf::Value({
 						{"index",tinygltf::Value(sheenRoughTexInfo_pre.index)},
@@ -3707,7 +3774,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			auto clearcoatTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 				state, 
 				wi::helper::GetDirectoryFromPath(filename), 
-				material.textures[wi::scene::MaterialComponent::CLEARCOATMAP]
+				material,
+				wi::scene::MaterialComponent::CLEARCOATMAP
 			);
 			KHR_materials_clearcoat_builder["clearcoatTexture"] = tinygltf::Value({
 					{"index",tinygltf::Value(clearcoatTexInfo_pre.index)},
@@ -3719,7 +3787,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			auto clearcoatNormTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 				state, 
 				wi::helper::GetDirectoryFromPath(filename), 
-				material.textures[wi::scene::MaterialComponent::CLEARCOATNORMALMAP]
+				material,
+				wi::scene::MaterialComponent::CLEARCOATNORMALMAP
 			);
 			KHR_materials_clearcoat_builder["clearcoatNormalTexture"] = tinygltf::Value({
 					{"index",tinygltf::Value(clearcoatNormTexInfo_pre.index)},
@@ -3731,7 +3800,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			auto clearcoatRoughTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 				state, 
 				wi::helper::GetDirectoryFromPath(filename), 
-				material.textures[wi::scene::MaterialComponent::CLEARCOATROUGHNESSMAP]
+				material,
+				wi::scene::MaterialComponent::CLEARCOATROUGHNESSMAP
 			);
 			KHR_materials_clearcoat_builder["clearcoatRoughnessTexture"] = tinygltf::Value({
 					{"index",tinygltf::Value(clearcoatRoughTexInfo_pre.index)},
@@ -3762,7 +3832,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			auto specularTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 				state, 
 				wi::helper::GetDirectoryFromPath(filename), 
-				material.textures[wi::scene::MaterialComponent::SPECULARMAP]
+				material,
+				wi::scene::MaterialComponent::SPECULARMAP
 			);
 			KHR_materials_specular_builder["specularTexture"] = tinygltf::Value({
 					{"index",tinygltf::Value(specularTexInfo_pre.index)},
@@ -3787,7 +3858,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 				auto specularTexInfo_pre = _ExportHelper_StoreMaterialTexture(
 					state,
 					wi::helper::GetDirectoryFromPath(filename),
-					material.textures[wi::scene::MaterialComponent::ANISOTROPYMAP]
+					material,
+					wi::scene::MaterialComponent::ANISOTROPYMAP
 				);
 				KHR_materials_anisotropy_builder["anisotropyTexture"] = tinygltf::Value({
 						{"index",tinygltf::Value(specularTexInfo_pre.index)},
@@ -3798,6 +3870,27 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		}
 
 		state.gltfModel.materials.push_back(material_builder);
+	}
+
+	// Revert terrain texture remappings for residency tiles:
+	for (size_t i = 0; i < scene.terrains.GetCount(); ++i)
+	{
+		using namespace wi::terrain;
+		Terrain& terrain = scene.terrains[i];
+		for (auto& it : terrain.chunks)
+		{
+			const Chunk& chunk = it.first;
+			ChunkData& chunk_data = it.second;
+
+			MaterialComponent* material = scene.materials.GetComponent(chunk_data.entity);
+			if (material == nullptr)
+				continue;
+
+			VirtualTexture& vt = *chunk_data.vt;
+			if (vt.residency == nullptr)
+				continue;
+			material->texMulAdd = XMFLOAT4(1, 1, 0, 0);
+		}
 	}
 
 	// Write Meshes

@@ -897,8 +897,10 @@ namespace wi
 									}
 									desc.bind_flags = BindFlag::SHADER_RESOURCE;
 
-									desc.width = AlignTo(desc.width, GetFormatBlockSize(desc.format));
-									desc.height = AlignTo(desc.height, GetFormatBlockSize(desc.format));
+									const uint32_t block_size = GetFormatBlockSize(desc.format);
+									desc.width = AlignTo(desc.width, block_size);
+									desc.height = AlignTo(desc.height, block_size);
+									desc.mip_levels = GetMipCount(desc.width, desc.height, desc.depth, block_size);
 
 									success = device->CreateTexture(&desc, nullptr, &resource->texture);
 									device->SetName(&resource->texture, name.c_str());

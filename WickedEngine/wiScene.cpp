@@ -664,31 +664,48 @@ namespace wi::scene
 		if (impostors.GetCount() > 0 && objects.GetCount() > 0)
 		{
 			impostor_ib_format = GetIndexBufferFormatRaw((uint32_t)objects.GetCount() * 4);
-			const size_t impostor_index_stride = impostor_ib_format == Format::R16_UINT ? sizeof(uint16_t) : sizeof(uint32_t);
-			const uint64_t required_impostor_buffer_size = objects.GetCount() * (sizeof(impostor_index_stride) * 6 + sizeof(uint4) * 4 + sizeof(uint2)) + sizeof(IndirectDrawArgsIndexedInstanced);
-			if (impostorBuffer.desc.size < required_impostor_buffer_size)
+
+			if (allocated_impostor_capacity < objects.GetCount())
 			{
+				allocated_impostor_capacity = uint32_t(objects.GetCount() * 2); // *2 to grow fast
+
 				GPUBufferDesc desc;
 				desc.usage = Usage::DEFAULT;
-				desc.size = required_impostor_buffer_size * 2; // *2 to grow fast
 				desc.bind_flags = BindFlag::INDEX_BUFFER | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 				desc.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::INDIRECT_ARGS;
+
+				const uint64_t alignment = device->GetMinOffsetAlignment(&desc);
+
+				desc.size =
+					AlignTo(allocated_impostor_capacity * sizeof(uint) * 6, alignment) +	// indices (must overestimate here for 32-bit indices, because we create 16 bit and 32 bit descriptors)
+					AlignTo(allocated_impostor_capacity * sizeof(uint4) * 4, alignment) +	// vertices
+					AlignTo(allocated_impostor_capacity * sizeof(uint2), alignment) +		// impostordata
+					AlignTo(sizeof(IndirectDrawArgsIndexedInstanced), alignment)			// indirect args
+					;
 				device->CreateBuffer(&desc, nullptr, &impostorBuffer);
 				device->SetName(&impostorBuffer, "impostorBuffer");
 
-				const uint64_t alignment = device->GetMinOffsetAlignment(&desc);
 				uint64_t buffer_offset = 0ull;
 
-				impostor_ib.offset = buffer_offset;
-				impostor_ib.size = objects.GetCount() * sizeof(impostor_index_stride) * 6;
-				buffer_offset += AlignTo(impostor_ib.size, alignment);
-				impostor_ib.subresource_srv = device->CreateSubresource(&impostorBuffer, SubresourceType::SRV, impostor_ib.offset, impostor_ib.size, &impostor_ib_format);
-				impostor_ib.subresource_uav = device->CreateSubresource(&impostorBuffer, SubresourceType::UAV, impostor_ib.offset, impostor_ib.size, &impostor_ib_format);
-				impostor_ib.descriptor_srv = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::SRV, impostor_ib.subresource_srv);
-				impostor_ib.descriptor_uav = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::UAV, impostor_ib.subresource_uav);
+				Format format32 = Format::R32_UINT;
+				Format format16 = Format::R16_UINT;
+				impostor_ib32.offset = buffer_offset;
+				impostor_ib32.size = allocated_impostor_capacity * sizeof(uint32_t) * 6;
+				impostor_ib16.offset = buffer_offset;
+				impostor_ib16.size = allocated_impostor_capacity * sizeof(uint16_t) * 6;
+				buffer_offset += AlignTo(impostor_ib32.size, alignment);
+				impostor_ib32.subresource_srv = device->CreateSubresource(&impostorBuffer, SubresourceType::SRV, impostor_ib32.offset, impostor_ib32.size, &format32);
+				impostor_ib32.subresource_uav = device->CreateSubresource(&impostorBuffer, SubresourceType::UAV, impostor_ib32.offset, impostor_ib32.size, &format32);
+				impostor_ib32.descriptor_srv = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::SRV, impostor_ib32.subresource_srv);
+				impostor_ib32.descriptor_uav = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::UAV, impostor_ib32.subresource_uav);
+
+				impostor_ib16.subresource_srv = device->CreateSubresource(&impostorBuffer, SubresourceType::SRV, impostor_ib16.offset, impostor_ib16.size, &format16);
+				impostor_ib16.subresource_uav = device->CreateSubresource(&impostorBuffer, SubresourceType::UAV, impostor_ib16.offset, impostor_ib16.size, &format16);
+				impostor_ib16.descriptor_srv = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::SRV, impostor_ib16.subresource_srv);
+				impostor_ib16.descriptor_uav = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::UAV, impostor_ib16.subresource_uav);
 
 				impostor_vb.offset = buffer_offset;
-				impostor_vb.size = objects.GetCount() * sizeof(uint4) * 4;
+				impostor_vb.size = allocated_impostor_capacity * sizeof(uint4) * 4;
 				buffer_offset += AlignTo(impostor_vb.size, alignment);
 				impostor_vb.subresource_srv = device->CreateSubresource(&impostorBuffer, SubresourceType::SRV, impostor_vb.offset, impostor_vb.size);
 				impostor_vb.subresource_uav = device->CreateSubresource(&impostorBuffer, SubresourceType::UAV, impostor_vb.offset, impostor_vb.size);
@@ -696,7 +713,7 @@ namespace wi::scene
 				impostor_vb.descriptor_uav = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::UAV, impostor_vb.subresource_uav);
 
 				impostor_data.offset = buffer_offset;
-				impostor_data.size = objects.GetCount() * sizeof(uint2);
+				impostor_data.size = allocated_impostor_capacity * sizeof(uint2);
 				buffer_offset += AlignTo(impostor_data.size, alignment);
 				impostor_data.subresource_srv = device->CreateSubresource(&impostorBuffer, SubresourceType::SRV, impostor_data.offset, impostor_data.size);
 				impostor_data.subresource_uav = device->CreateSubresource(&impostorBuffer, SubresourceType::UAV, impostor_data.offset, impostor_data.size);
@@ -3551,7 +3568,7 @@ namespace wi::scene
 			geometry.init();
 			geometry.meshletCount = triangle_count_to_meshlet_count(uint32_t(objects.GetCount()) * 2);
 			geometry.meshletOffset = 0; // local meshlet offset
-			geometry.ib = impostor_ib.descriptor_srv;
+			geometry.ib = impostor_ib_format == Format::R32_UINT ? impostor_ib32.descriptor_srv : impostor_ib16.descriptor_srv;
 			geometry.vb_pos_nor_wind = impostor_vb.descriptor_srv;
 			geometry.materialIndex = impostorMaterialOffset;
 			std::memcpy(geometryArrayMapped + impostorGeometryOffset, &geometry, sizeof(geometry));

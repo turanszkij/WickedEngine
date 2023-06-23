@@ -1204,13 +1204,18 @@ struct FilterEnvmapPushConstants
 };
 
 // CopyTexture2D params:
+enum COPY_TEXTURE_FLAGS
+{
+	COPY_TEXTURE_WRAP = 1 << 0,
+	COPY_TEXTURE_SRGB = 1 << 1
+};
 struct CopyTextureCB
 {
-	int2 xCopyDest;
+	int2 xCopyDst;
+	int2 xCopySrc;
 	int2 xCopySrcSize;
-	int2 padding0;
 	int  xCopySrcMIP;
-	int  xCopyBorderExpandStyle;
+	int  xCopyFlags;
 };
 
 

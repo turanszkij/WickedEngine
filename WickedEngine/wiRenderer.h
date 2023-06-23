@@ -925,9 +925,10 @@ namespace wi::renderer
 	//	Can also expand border region according to desired sampler func
 	void CopyTexture2D(
 		const wi::graphics::Texture& dst, int DstMIP, int DstX, int DstY,
-		const wi::graphics::Texture& src, int SrcMIP, 
+		const wi::graphics::Texture& src, int SrcMIP, int SrcX, int SrcY,
 		wi::graphics::CommandList cmd,
-		BORDEREXPANDSTYLE borderExpand = BORDEREXPAND_DISABLE
+		BORDEREXPANDSTYLE borderExpand = BORDEREXPAND_DISABLE,
+		bool srgb_convert = false
 	);
 
 	void DrawWaterRipples(const Visibility& vis, wi::graphics::CommandList cmd);
