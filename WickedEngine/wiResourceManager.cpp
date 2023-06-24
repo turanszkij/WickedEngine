@@ -321,6 +321,10 @@ namespace wi
 								//{
 								//	fmt = basist::transcoder_texture_format::cTFBC5_RG;
 								//	desc.format = Format::BC5_UNORM;
+								//	desc.swizzle.r = ComponentSwizzle::R;
+								//	desc.swizzle.g = ComponentSwizzle::G;
+								//	desc.swizzle.b = ComponentSwizzle::ONE;
+								//	desc.swizzle.a = ComponentSwizzle::ONE;
 								//}
 								//else
 								{
@@ -454,6 +458,10 @@ namespace wi
 										//{
 										//	fmt = basist::transcoder_texture_format::cTFBC5_RG;
 										//	desc.format = Format::BC5_UNORM;
+										//	desc.swizzle.r = ComponentSwizzle::R;
+										//	desc.swizzle.g = ComponentSwizzle::G;
+										//	desc.swizzle.b = ComponentSwizzle::ONE;
+										//	desc.swizzle.a = ComponentSwizzle::ONE;
 										//}
 										//else
 										{
@@ -640,6 +648,14 @@ namespace wi
 							default:
 								assert(0); // incoming format is not supported 
 								break;
+							}
+
+							if (desc.format == Format::BC5_UNORM)
+							{
+								desc.swizzle.r = ComponentSwizzle::R;
+								desc.swizzle.g = ComponentSwizzle::G;
+								desc.swizzle.b = ComponentSwizzle::ONE;
+								desc.swizzle.a = ComponentSwizzle::ONE;
 							}
 
 							wi::vector<SubresourceData> InitData;
@@ -857,6 +873,10 @@ namespace wi
 									if (has_flag(flags, Flags::IMPORT_NORMALMAP))
 									{
 										desc.format = Format::BC5_UNORM;
+										desc.swizzle.r = ComponentSwizzle::R;
+										desc.swizzle.g = ComponentSwizzle::G;
+										desc.swizzle.b = ComponentSwizzle::ONE;
+										desc.swizzle.a = ComponentSwizzle::ONE;
 									}
 									else
 									{

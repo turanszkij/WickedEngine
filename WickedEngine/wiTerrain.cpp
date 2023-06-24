@@ -1136,6 +1136,10 @@ namespace wi::terrain
 					case MaterialComponent::NORMALMAP:
 						desc.format = Format::BC5_UNORM;
 						desc_raw_block.format = Format::R32G32B32A32_UINT;
+						desc.swizzle.r = ComponentSwizzle::R;
+						desc.swizzle.g = ComponentSwizzle::G;
+						desc.swizzle.b = ComponentSwizzle::ONE;
+						desc.swizzle.a = ComponentSwizzle::ONE;
 						break;
 					case MaterialComponent::SURFACEMAP:
 						desc.format = Format::BC3_UNORM;
