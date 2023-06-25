@@ -5485,6 +5485,7 @@ void DrawShadowmaps(
 				SHCAM cameras[6];
 				CreateCubemapCameras(light.position, zNearP, zFarP, cameras, arraysize(cameras));
 				Viewport vp[arraysize(cameras)];
+				Frustum frusta[arraysize(cameras)];
 				uint32_t camera_count = 0;
 
 				for (uint32_t shcam = 0; shcam < arraysize(cameras); ++shcam)
@@ -5498,6 +5499,7 @@ void DrawShadowmaps(
 						//	- there will be only as many cameras, as many cubemap face frustums are visible from main camera
 						//	- output_index is mapping camera to viewport, used by shader to output to SV_ViewportArrayIndex
 						cb.cameras[camera_count].output_index = shcam;
+						frusta[camera_count] = cameras[shcam].frustum;
 						camera_count++;
 					}
 					vp[shcam].top_left_x = float(light.shadow_rect.x + shcam * light.shadow_rect.w);
@@ -5522,7 +5524,7 @@ void DrawShadowmaps(
 							uint16_t camera_mask = 0;
 							for (uint32_t camera_index = 0; camera_index < camera_count; ++camera_index)
 							{
-								if (cameras[camera_index].frustum.CheckBoxFast(aabb))
+								if (frusta[camera_index].CheckBoxFast(aabb))
 								{
 									camera_mask |= 1 << camera_index;
 								}
