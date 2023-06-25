@@ -1106,6 +1106,9 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)blockcompressCS_BC6H_cubemap.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)hairparticlePS_shadow.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h">
