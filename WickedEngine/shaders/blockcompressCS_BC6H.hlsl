@@ -710,6 +710,7 @@ void main(uint3 groupID : SV_GroupID,
 
 	uint2 dim;
 	SrcTexture.GetDimensions(dim.x, dim.y);
+	dim = align(dim, 4);
 	uint2 TextureSizeInBlocks = dim / 4;
 
 	[branch]

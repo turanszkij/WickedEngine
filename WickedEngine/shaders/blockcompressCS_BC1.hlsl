@@ -48,6 +48,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 {
 	uint2 dim;
 	input.GetDimensions(dim.x, dim.y);
+	dim = align(dim, 4);
 	uint2 block_dim = dim / 4;
 
 	[branch]

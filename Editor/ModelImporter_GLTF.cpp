@@ -3418,6 +3418,7 @@ inline tinygltf::TextureInfo _ExportHelper_StoreMaterialTexture(LoaderState& sta
 				{
 					buffer_size = filedata.size();
 					buffer_builder.data = std::move(filedata);
+					mime_type = "image/png";
 				}
 			}
 		}
@@ -3477,26 +3478,53 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 	// Add extension prerequisite
 	state.gltfModel.extensionsUsed = {
-		//"KHR_texture_basisu",
-		"KHR_materials_unlit",
-		"KHR_materials_transmission",
-		"KHR_materials_pbrSpecularGlossiness",
-		"KHR_materials_sheen",
-		"KHR_materials_clearcoat",
 		"KHR_materials_ior",
 		"KHR_materials_specular",
-		"KHR_materials_anisotropy",
-		"KHR_lights_punctual"
 	};
 
-	// Create a dummy material
-	state.gltfModel.materials.emplace_back();
-	int def_material_index = 0;
+	if (scene.lights.GetCount() > 0)
+	{
+		state.gltfModel.extensionsUsed.push_back("KHR_lights_punctual");
+	}
+	for (size_t i = 0; i < scene.materials.GetCount(); ++i)
+	{
+		const MaterialComponent& material = scene.materials[i];
+		if (material.transmission > 0 || material.textures[wi::scene::MaterialComponent::TRANSMISSIONMAP].resource.IsValid())
+		{
+			state.gltfModel.extensionsUsed.push_back("KHR_materials_transmission");
+		}
+		if (material.IsUsingSpecularGlossinessWorkflow())
+		{
+			state.gltfModel.extensionsUsed.push_back("KHR_materials_pbrSpecularGlossiness");
+		}
 
-	//// Analysis prep
-	//wi::jobsystem::context analysis_ctx;
-	//std::mutex analysis_lock_sync;
-	//uint32_t analysis_readCount = 16384;
+		if (material.shaderType == MaterialComponent::SHADERTYPE::SHADERTYPE_PBR_CLOTH)
+		{
+			state.gltfModel.extensionsUsed.push_back("KHR_materials_sheen");
+		}
+		else if (material.shaderType == MaterialComponent::SHADERTYPE::SHADERTYPE_PBR_CLEARCOAT)
+		{
+			state.gltfModel.extensionsUsed.push_back("KHR_materials_clearcoat");
+		}
+		else if (material.shaderType == MaterialComponent::SHADERTYPE::SHADERTYPE_PBR_CLOTH_CLEARCOAT)
+		{
+			state.gltfModel.extensionsUsed.push_back("KHR_materials_sheen");
+			state.gltfModel.extensionsUsed.push_back("KHR_materials_clearcoat");
+		}
+		else if (material.shaderType == MaterialComponent::SHADERTYPE::SHADERTYPE_UNLIT)
+		{
+			state.gltfModel.extensionsUsed.push_back("KHR_materials_unlit");
+		}
+		else if (material.shaderType == MaterialComponent::SHADERTYPE::SHADERTYPE_PBR_ANISOTROPIC)
+		{
+			state.gltfModel.extensionsUsed.push_back("KHR_materials_anisotropy");
+		}
+	}
+
+	if (wiscene.materials.GetCount() == 0)
+	{
+		state.gltfModel.materials.emplace_back().name = "dummyMaterial";
+	}
 
 	// Terrain chunks need some work to remap virtual texture atlas to individual textures for GLTF:
 	for (size_t i = 0; i < scene.terrains.GetCount(); ++i)
@@ -3648,29 +3676,34 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 		// Unlit extension (KHR_materials_unlit)
 		// Values
-		if(material.shaderType == wi::scene::MaterialComponent::SHADERTYPE_UNLIT)
+		if (material.shaderType == wi::scene::MaterialComponent::SHADERTYPE_UNLIT)
+		{
 			material_builder.extensions["KHR_materials_unlit"] = tinygltf::Value();
+		}
 
 		// Transmission extension (KHR_materials_transmission)
 		// Values
-		tinygltf::Value::Object KHR_materials_transmission_builder = {
-			{"transmissionFactor", tinygltf::Value(double(material.transmission))}
-		};
-		// Textures
-		if(material.textures[wi::scene::MaterialComponent::TRANSMISSIONMAP].resource.IsValid())
+		if (material.transmission > 0 || material.textures[wi::scene::MaterialComponent::TRANSMISSIONMAP].resource.IsValid())
 		{
-			auto transmissionTexInfo_pre = _ExportHelper_StoreMaterialTexture(
-				state, 
-				wi::helper::GetDirectoryFromPath(filename), 
-				material,
-				wi::scene::MaterialComponent::TRANSMISSIONMAP
-			);
-			KHR_materials_transmission_builder["transmissionTexture"] = tinygltf::Value({
-					{"index",tinygltf::Value(transmissionTexInfo_pre.index)},
-					{"texCoord",tinygltf::Value(transmissionTexInfo_pre.texCoord)}
-				});
+			tinygltf::Value::Object KHR_materials_transmission_builder = {
+				{"transmissionFactor", tinygltf::Value(double(material.transmission))}
+			};
+			// Textures
+			if (material.textures[wi::scene::MaterialComponent::TRANSMISSIONMAP].resource.IsValid())
+			{
+				auto transmissionTexInfo_pre = _ExportHelper_StoreMaterialTexture(
+					state,
+					wi::helper::GetDirectoryFromPath(filename),
+					material,
+					wi::scene::MaterialComponent::TRANSMISSIONMAP
+				);
+				KHR_materials_transmission_builder["transmissionTexture"] = tinygltf::Value({
+						{"index",tinygltf::Value(transmissionTexInfo_pre.index)},
+						{"texCoord",tinygltf::Value(transmissionTexInfo_pre.texCoord)}
+					});
+			}
+			material_builder.extensions["KHR_materials_transmission"] = tinygltf::Value(KHR_materials_transmission_builder);
 		}
-		material_builder.extensions["KHR_materials_transmission"] = tinygltf::Value(KHR_materials_transmission_builder);
 
 		// Specular-glosiness extension (KHR_materials_pbrSpecularGlossiness)
 		if(material.IsUsingSpecularGlossinessWorkflow())
@@ -3720,8 +3753,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		}
 
 		// Sheen extension (KHR_materials_sheen)
-		if(material.shaderType == wi::scene::MaterialComponent::SHADERTYPE_PBR_CLOTH || 
-			material.shaderType == wi::scene::MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT)
+		if(material.shaderType == wi::scene::MaterialComponent::SHADERTYPE_PBR_CLOTH || material.shaderType == wi::scene::MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT)
 		{
 			// Values
 			tinygltf::Value::Object KHR_materials_sheen_builder = {
@@ -3764,51 +3796,54 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 		// Clearcoat extension (KHR_materials_clearcoat)
 		// Values
-		tinygltf::Value::Object KHR_materials_clearcoat_builder = {
-			{"clearcoatFactor", tinygltf::Value(double(material.clearcoat))},
-			{"clearcoatRoughnessFactor", tinygltf::Value(double(material.clearcoatRoughness))}
-		};
-		// Textures
-		if(material.textures[wi::scene::MaterialComponent::CLEARCOATMAP].resource.IsValid())
+		if (material.shaderType == MaterialComponent::SHADERTYPE_PBR_CLEARCOAT || material.shaderType == MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT)
 		{
-			auto clearcoatTexInfo_pre = _ExportHelper_StoreMaterialTexture(
-				state, 
-				wi::helper::GetDirectoryFromPath(filename), 
-				material,
-				wi::scene::MaterialComponent::CLEARCOATMAP
-			);
-			KHR_materials_clearcoat_builder["clearcoatTexture"] = tinygltf::Value({
-					{"index",tinygltf::Value(clearcoatTexInfo_pre.index)},
-					{"texCoord",tinygltf::Value(clearcoatTexInfo_pre.texCoord)}
-				});
+			tinygltf::Value::Object KHR_materials_clearcoat_builder = {
+				{"clearcoatFactor", tinygltf::Value(double(material.clearcoat))},
+				{"clearcoatRoughnessFactor", tinygltf::Value(double(material.clearcoatRoughness))}
+			};
+			// Textures
+			if (material.textures[wi::scene::MaterialComponent::CLEARCOATMAP].resource.IsValid())
+			{
+				auto clearcoatTexInfo_pre = _ExportHelper_StoreMaterialTexture(
+					state,
+					wi::helper::GetDirectoryFromPath(filename),
+					material,
+					wi::scene::MaterialComponent::CLEARCOATMAP
+				);
+				KHR_materials_clearcoat_builder["clearcoatTexture"] = tinygltf::Value({
+						{"index",tinygltf::Value(clearcoatTexInfo_pre.index)},
+						{"texCoord",tinygltf::Value(clearcoatTexInfo_pre.texCoord)}
+					});
+			}
+			if (material.textures[wi::scene::MaterialComponent::CLEARCOATNORMALMAP].resource.IsValid())
+			{
+				auto clearcoatNormTexInfo_pre = _ExportHelper_StoreMaterialTexture(
+					state,
+					wi::helper::GetDirectoryFromPath(filename),
+					material,
+					wi::scene::MaterialComponent::CLEARCOATNORMALMAP
+				);
+				KHR_materials_clearcoat_builder["clearcoatNormalTexture"] = tinygltf::Value({
+						{"index",tinygltf::Value(clearcoatNormTexInfo_pre.index)},
+						{"texCoord",tinygltf::Value(clearcoatNormTexInfo_pre.texCoord)}
+					});
+			}
+			if (material.textures[wi::scene::MaterialComponent::CLEARCOATROUGHNESSMAP].resource.IsValid())
+			{
+				auto clearcoatRoughTexInfo_pre = _ExportHelper_StoreMaterialTexture(
+					state,
+					wi::helper::GetDirectoryFromPath(filename),
+					material,
+					wi::scene::MaterialComponent::CLEARCOATROUGHNESSMAP
+				);
+				KHR_materials_clearcoat_builder["clearcoatRoughnessTexture"] = tinygltf::Value({
+						{"index",tinygltf::Value(clearcoatRoughTexInfo_pre.index)},
+						{"texCoord",tinygltf::Value(clearcoatRoughTexInfo_pre.texCoord)}
+					});
+			}
+			material_builder.extensions["KHR_materials_clearcoat"] = tinygltf::Value(KHR_materials_clearcoat_builder);
 		}
-		if(material.textures[wi::scene::MaterialComponent::CLEARCOATNORMALMAP].resource.IsValid())
-		{
-			auto clearcoatNormTexInfo_pre = _ExportHelper_StoreMaterialTexture(
-				state, 
-				wi::helper::GetDirectoryFromPath(filename), 
-				material,
-				wi::scene::MaterialComponent::CLEARCOATNORMALMAP
-			);
-			KHR_materials_clearcoat_builder["clearcoatNormalTexture"] = tinygltf::Value({
-					{"index",tinygltf::Value(clearcoatNormTexInfo_pre.index)},
-					{"texCoord",tinygltf::Value(clearcoatNormTexInfo_pre.texCoord)}
-				});
-		}
-		if(material.textures[wi::scene::MaterialComponent::CLEARCOATROUGHNESSMAP].resource.IsValid())
-		{
-			auto clearcoatRoughTexInfo_pre = _ExportHelper_StoreMaterialTexture(
-				state, 
-				wi::helper::GetDirectoryFromPath(filename), 
-				material,
-				wi::scene::MaterialComponent::CLEARCOATROUGHNESSMAP
-			);
-			KHR_materials_clearcoat_builder["clearcoatRoughnessTexture"] = tinygltf::Value({
-					{"index",tinygltf::Value(clearcoatRoughTexInfo_pre.index)},
-					{"texCoord",tinygltf::Value(clearcoatRoughTexInfo_pre.texCoord)}
-				});
-		}
-		material_builder.extensions["KHR_materials_clearcoat"] = tinygltf::Value(KHR_materials_clearcoat_builder);
 
 		// IOR Extension (KHR_materials_ior)
 		float ior_retrieve_phase1 = std::sqrt(material.reflectance);
@@ -3948,6 +3983,9 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		buf_d_vnorm_offset = buf_i;
 		for(auto& m_normal : mesh.vertex_normals)
 		{
+			XMVECTOR nor = XMLoadFloat3(&m_normal);
+			nor = XMVector3Normalize(nor);
+			XMStoreFloat3(&m_normal, nor);
 			_ExportHelper_valuetobuf(m_normal, buffer_builder, buf_i);
 		}
 		buf_d_vnorm_size = buf_i - buf_d_vnorm_offset;
@@ -3956,6 +3994,11 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		buf_d_vtan_offset = buf_i;
 		for(auto& m_tangent : mesh.vertex_tangents)
 		{
+			float w = m_tangent.w;
+			XMVECTOR tan = XMLoadFloat4(&m_tangent);
+			tan = XMVector3Normalize(tan);
+			XMStoreFloat4(&m_tangent, tan);
+			m_tangent.w = w;
 			_ExportHelper_valuetobuf(m_tangent, buffer_builder, buf_i);
 		}
 		buf_d_vtan_size = buf_i - buf_d_vtan_offset;
@@ -4358,7 +4401,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 				primitive_builder.attributes["WEIGHTS_0"] = weight_accessor_index;
 			if(buf_d_col_size > 0)
 				primitive_builder.attributes["COLOR_0"] = color_accessor_index;
-			primitive_builder.material = (subset.materialID != wi::ecs::INVALID_ENTITY) ? int(wiscene.materials.GetIndex(subset.materialID) + 1) : def_material_index; // subset.materialID; // TODO remap
+			primitive_builder.material = std::max(0, std::min((int)wiscene.materials.GetIndex(subset.materialID), (int)wiscene.materials.GetCount() - 1));
 			primitive_builder.mode = TINYGLTF_MODE_TRIANGLES;
 
 			for(size_t msub_morph_id = 0; msub_morph_id < morphs_pos_accessors.size(); ++msub_morph_id)

@@ -296,6 +296,23 @@ inline bool is_saturated(float2 a) { return all(a == saturate(a)); }
 inline bool is_saturated(float3 a) { return all(a == saturate(a)); }
 inline bool is_saturated(float4 a) { return all(a == saturate(a)); }
 
+inline uint align(uint value, uint alignment)
+{
+	return ((value + alignment - 1) / alignment) * alignment;
+}
+inline uint2 align(uint2 value, uint2 alignment)
+{
+	return ((value + alignment - 1) / alignment) * alignment;
+}
+inline uint3 align(uint3 value, uint3 alignment)
+{
+	return ((value + alignment - 1) / alignment) * alignment;
+}
+inline uint4 align(uint4 value, uint4 alignment)
+{
+	return ((value + alignment - 1) / alignment) * alignment;
+}
+
 inline float2 uv_to_clipspace(in float2 uv)
 {
 	float2 clipspace = uv * 2 - 1;
