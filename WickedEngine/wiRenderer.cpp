@@ -5340,6 +5340,38 @@ void DrawShadowmaps(
 						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_TRANSPARENT | FILTER_WATER, cmd, 0, (uint32_t)cascade_count);
 					}
 				}
+
+				if (!vis.visibleHairs.empty())
+				{
+					cb.cameras[0].position = vis.camera->Eye;
+					for (uint32_t cascade = 0; cascade < cascade_count; ++cascade)
+					{
+						XMStoreFloat4x4(&cb.cameras[0].view_projection, shcams[cascade].view_projection);
+						device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
+
+						Viewport vp;
+						vp.top_left_x = float(light.shadow_rect.x + cascade * light.shadow_rect.w);
+						vp.top_left_y = float(light.shadow_rect.y);
+						vp.width = float(light.shadow_rect.w);
+						vp.height = float(light.shadow_rect.h);
+						vp.min_depth = 0.0f;
+						vp.max_depth = 1.0f;
+						device->BindViewports(1, &vp, cmd);
+
+						for (uint32_t hairIndex : vis.visibleHairs)
+						{
+							const HairParticleSystem& hair = vis.scene->hairs[hairIndex];
+							if (!shcams[cascade].frustum.CheckBoxFast(hair.aabb))
+								continue;
+							Entity entity = vis.scene->hairs.GetEntity(hairIndex);
+							const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
+							if (material != nullptr)
+							{
+								hair.Draw(*material, RENDERPASS_SHADOW, cmd);
+							}
+						}
+					}
+				}
 			}
 			break;
 			case LightComponent::SPOT:
@@ -5410,6 +5442,35 @@ void DrawShadowmaps(
 					}
 				}
 
+				if (!vis.visibleHairs.empty())
+				{
+					cb.cameras[0].position = vis.camera->Eye;
+					XMStoreFloat4x4(&cb.cameras[0].view_projection, shcam.view_projection);
+					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
+
+					Viewport vp;
+					vp.top_left_x = float(light.shadow_rect.x);
+					vp.top_left_y = float(light.shadow_rect.y);
+					vp.width = float(light.shadow_rect.w);
+					vp.height = float(light.shadow_rect.h);
+					vp.min_depth = 0.0f;
+					vp.max_depth = 1.0f;
+					device->BindViewports(1, &vp, cmd);
+
+					for (uint32_t hairIndex : vis.visibleHairs)
+					{
+						const HairParticleSystem& hair = vis.scene->hairs[hairIndex];
+						if (!shcam.frustum.CheckBoxFast(hair.aabb))
+							continue;
+						Entity entity = vis.scene->hairs.GetEntity(hairIndex);
+						const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
+						if (material != nullptr)
+						{
+							hair.Draw(*material, RENDERPASS_SHADOW, cmd);
+						}
+					}
+				}
+
 			}
 			break;
 			case LightComponent::POINT:
@@ -5423,8 +5484,8 @@ void DrawShadowmaps(
 				const float zFarP = std::max(1.0f, light.GetRange());
 				SHCAM cameras[6];
 				CreateCubemapCameras(light.position, zNearP, zFarP, cameras, arraysize(cameras));
-				Frustum frusta[arraysize(cameras)];
 				Viewport vp[arraysize(cameras)];
+				Frustum frusta[arraysize(cameras)];
 				uint32_t camera_count = 0;
 
 				for (uint32_t shcam = 0; shcam < arraysize(cameras); ++shcam)
@@ -5432,13 +5493,13 @@ void DrawShadowmaps(
 					// Check if cubemap face frustum is visible from main camera, otherwise, it will be skipped:
 					if (cam_frustum.Intersects(cameras[shcam].boundingfrustum))
 					{
-						frusta[camera_count] = cameras[shcam].frustum;
 						XMStoreFloat4x4(&cb.cameras[camera_count].view_projection, cameras[shcam].view_projection);
 						// We no longer have a straight mapping from camera to viewport:
 						//	- there will be always 6 viewports
 						//	- there will be only as many cameras, as many cubemap face frustums are visible from main camera
 						//	- output_index is mapping camera to viewport, used by shader to output to SV_ViewportArrayIndex
 						cb.cameras[camera_count].output_index = shcam;
+						frusta[camera_count] = cameras[shcam].frustum;
 						camera_count++;
 					}
 					vp[shcam].top_left_x = float(light.shadow_rect.x + shcam * light.shadow_rect.w);
@@ -5506,6 +5567,38 @@ void DrawShadowmaps(
 					if (predicationRequest && light.occlusionquery >= 0)
 					{
 						device->PredicationEnd(cmd);
+					}
+				}
+
+				if (!vis.visibleHairs.empty())
+				{
+					cb.cameras[0].position = vis.camera->Eye;
+					for (uint32_t shcam = 0; shcam < arraysize(cameras); ++shcam)
+					{
+						XMStoreFloat4x4(&cb.cameras[0].view_projection, cameras[shcam].view_projection);
+						device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
+
+						Viewport vp;
+						vp.top_left_x = float(light.shadow_rect.x + shcam * light.shadow_rect.w);
+						vp.top_left_y = float(light.shadow_rect.y);
+						vp.width = float(light.shadow_rect.w);
+						vp.height = float(light.shadow_rect.h);
+						vp.min_depth = 0;
+						vp.max_depth = 1;
+						device->BindViewports(1, &vp, cmd);
+
+						for (uint32_t hairIndex : vis.visibleHairs)
+						{
+							const HairParticleSystem& hair = vis.scene->hairs[hairIndex];
+							if (!cameras[shcam].frustum.CheckBoxFast(hair.aabb))
+								continue;
+							Entity entity = vis.scene->hairs.GetEntity(hairIndex);
+							const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
+							if (material != nullptr)
+							{
+								hair.Draw(*material, RENDERPASS_SHADOW, cmd);
+							}
+						}
 					}
 				}
 

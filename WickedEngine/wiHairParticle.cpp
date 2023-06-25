@@ -22,10 +22,11 @@ namespace wi
 	static Shader vs;
 	static Shader ps_prepass;
 	static Shader ps;
+	static Shader ps_shadow;
 	static Shader ps_simple;
 	static Shader cs_simulate;
 	static DepthStencilState dss_default, dss_equal;
-	static RasterizerState rs, ncrs, wirers;
+	static RasterizerState rs, ncrs, wirers, rs_shadow;
 	static BlendState bs;
 	static PipelineState PSO[RENDERPASS_COUNT];
 	static PipelineState PSO_wire;
@@ -498,6 +499,7 @@ namespace wi
 
 			wi::renderer::LoadShader(ShaderStage::PS, ps_simple, "hairparticlePS_simple.cso");
 			wi::renderer::LoadShader(ShaderStage::PS, ps_prepass, "hairparticlePS_prepass.cso");
+			wi::renderer::LoadShader(ShaderStage::PS, ps_shadow, "hairparticlePS_shadow.cso");
 			wi::renderer::LoadShader(ShaderStage::PS, ps, "hairparticlePS.cso");
 
 			wi::renderer::LoadShader(ShaderStage::CS, cs_simulate, "hairparticle_simulateCS.cso");
@@ -506,7 +508,7 @@ namespace wi
 
 			for (int i = 0; i < RENDERPASS_COUNT; ++i)
 			{
-				if (i == RENDERPASS_PREPASS || i == RENDERPASS_MAIN)
+				if (i == RENDERPASS_PREPASS || i == RENDERPASS_MAIN || i == RENDERPASS_SHADOW)
 				{
 					PipelineStateDesc desc;
 					desc.vs = &vs;
@@ -523,6 +525,10 @@ namespace wi
 					case RENDERPASS_MAIN:
 						desc.ps = &ps;
 						desc.dss = &dss_equal;
+						break;
+					case RENDERPASS_SHADOW:
+						desc.ps = &ps_shadow;
+						desc.rs = &rs_shadow;
 						break;
 					}
 
@@ -582,6 +588,9 @@ namespace wi
 		rsd.multisample_enable = false;
 		rsd.antialiased_line_enable = false;
 		wirers = rsd;
+
+		rs_shadow = ncrs;
+		rs_shadow.depth_bias = -1;
 
 
 		DepthStencilState dsd;
