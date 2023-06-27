@@ -7894,27 +7894,49 @@ void VXGI_Voxelize(
 		cb.clipmap_index = scene.vxgi.clipmap_to_update;
 		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_VOXELIZER, cmd);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&scene.vxgi.render_atomic, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&scene.vxgi.prev_radiance, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&scene.vxgi.radiance, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&scene.vxgi.sdf, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&scene.vxgi.sdf_temp, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
 		if (scene.vxgi.pre_clear)
 		{
+			device->EventBegin("Pre Clear", cmd);
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&scene.vxgi.render_atomic, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+					GPUBarrier::Image(&scene.vxgi.prev_radiance, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+					GPUBarrier::Image(&scene.vxgi.radiance, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+					GPUBarrier::Image(&scene.vxgi.sdf, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+					GPUBarrier::Image(&scene.vxgi.sdf_temp, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
 			device->ClearUAV(&scene.vxgi.prev_radiance, 0, cmd);
 			device->ClearUAV(&scene.vxgi.radiance, 0, cmd);
 			device->ClearUAV(&scene.vxgi.sdf, 0, cmd);
 			device->ClearUAV(&scene.vxgi.sdf_temp, 0, cmd);
+			device->ClearUAV(&scene.vxgi.render_atomic, 0, cmd);
 			scene.vxgi.pre_clear = false;
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Memory(&scene.vxgi.render_atomic),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+			device->EventEnd(cmd);
 		}
 		else
 		{
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&scene.vxgi.render_atomic, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+					GPUBarrier::Image(&scene.vxgi.prev_radiance, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+					GPUBarrier::Image(&scene.vxgi.sdf, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+					GPUBarrier::Image(&scene.vxgi.sdf_temp, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+			device->EventBegin("Atomic Clear", cmd);
+			device->ClearUAV(&scene.vxgi.render_atomic, 0, cmd);
+			device->EventEnd(cmd);
+
 			device->EventBegin("Offset Previous Voxels", cmd);
 			device->BindComputeShader(&shaders[CSTYPE_VXGI_OFFSETPREV], cmd);
 			device->BindResource(&scene.vxgi.radiance, 0, cmd);
@@ -7923,20 +7945,14 @@ void VXGI_Voxelize(
 			device->Dispatch(scene.vxgi.res / 8, scene.vxgi.res / 8, scene.vxgi.res / 8, cmd);
 
 			device->EventEnd(cmd);
-		}
 
-		{
-			device->EventBegin("Clear Voxel Atomics", cmd);
-
-			device->ClearUAV(&scene.vxgi.render_atomic, 0, cmd);
-			device->EventEnd(cmd);
-		}
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(&scene.vxgi.render_atomic),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Memory(&scene.vxgi.render_atomic),
+					GPUBarrier::Image(&scene.vxgi.radiance, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
 		}
 
 		{
@@ -8080,9 +8096,18 @@ void VXGI_Resolve(
 		}
 	}
 
+	if(fullres)
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Image(&res.diffuse[0], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.specular[0], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+	else
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&res.diffuse[1], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.specular[1], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
@@ -8149,9 +8174,18 @@ void VXGI_Resolve(
 		device->EventEnd(cmd);
 	}
 
+	if(fullres)
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Image(&res.diffuse[0], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			GPUBarrier::Image(&res.specular[0], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+	else
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&res.diffuse[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 			GPUBarrier::Image(&res.specular[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
