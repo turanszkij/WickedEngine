@@ -57,13 +57,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		f = 1 - f;
 		g = 1 - g;
 	}
+	float2 bary = float2(f, g);
 
 	// compute final surface position on triangle from barycentric coords:
-	float3 position = pos_nor0.xyz + f * (pos_nor1.xyz - pos_nor0.xyz) + g * (pos_nor2.xyz - pos_nor0.xyz);
-	float3 target = normalize(nor0 + f * (nor1 - nor0) + g * (nor2 - nor0));
+	float3 position = attribute_at_bary(pos_nor0.xyz, pos_nor1.xyz, pos_nor2.xyz, bary);
+	float3 target = normalize(attribute_at_bary(nor0, nor1, nor2, bary));
 	float3 tangent = normalize(mul(float3(hemispherepoint_cos(rng.next_float(), rng.next_float()).xy, 0), get_tangentspace(target)));
 	float3 binormal = cross(target, tangent);
-	float strand_length = length0 + f * (length1 - length0) + g * (length2 - length0);
+	float strand_length = attribute_at_bary(length0, length1, length2, bary);
 
 	uint tangent_random = 0;
 	tangent_random |= (uint)((uint)(tangent.x * 127.5f + 127.5f) << 0);
@@ -86,9 +87,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
     target = normalize(mul((float3x3)worldMatrix, target));
 	const float3 root = base;
 
-	const float3 diff = root - GetCamera().position;
+	float3 diff = GetCamera().position - root;
 	const float distsq = dot(diff, diff);
-	const bool distance_culled = dot(diff, diff) > sqr(xHairViewDistance);
+	const bool distance_culled = distsq > sqr(xHairViewDistance);
+
+	// Bend down to camera up vector to avoid seeing flat planes from above
+	const float3 bend = GetCamera().up * (1 - saturate(dot(target, GetCamera().up))) * 0.8;
 
 	float3 normal = 0;
 
@@ -234,7 +238,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		uint i0 = particleID * 6;
 
 		uint rand = (tangent_random >> 24) & 0x000000FF;
-		float3x3 TBN = float3x3(tangent, normal, binormal); // don't derive binormal, because we want the shear!
+		float3x3 TBN = float3x3(tangent, normalize(normal + bend), binormal); // don't derive binormal, because we want the shear!
 		float3 rootposition = base - normal * 0.1 * len; // inset to the emitter a bit, to avoid disconnect:
 		float2 frame = float2(xHairAspect, 1) * len * 0.5;
 		const uint currentFrame = (xHairFrameStart + rand) % xHairFrameCount;
