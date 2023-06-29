@@ -1327,4 +1327,27 @@ namespace wi::helper
 #endif // _WIN32
 		return mem;
 	}
+
+	std::string GetFriendlyMemorySizeText(size_t sizeInBytes)
+	{
+		std::stringstream ss;
+		ss << std::fixed << std::setprecision(2);
+		if (sizeInBytes >= 1024ull * 1024ull * 1024ull)
+		{
+			ss << (double)sizeInBytes / 1024.0 / 1024.0 / 1024.0 << " GB";
+		}
+		else if (sizeInBytes >= 1024ull * 1024ull)
+		{
+			ss << (double)sizeInBytes / 1024.0 / 1024.0 << " MB";
+		}
+		else if (sizeInBytes >= 1024ull)
+		{
+			ss << (double)sizeInBytes / 1024.0 << " KB";
+		}
+		else
+		{
+			ss << sizeInBytes << " bytes";
+		}
+		return ss.str();
+	}
 }

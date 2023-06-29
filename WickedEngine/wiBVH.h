@@ -21,7 +21,8 @@ namespace wi
 		uint32_t node_count = 0;
 		uint32_t* leaf_indices = nullptr;
 		uint32_t leaf_count = 0;
-		const wi::primitive::AABB* leaf_aabb_data = nullptr;
+
+		constexpr bool IsValid() const { return nodes != nullptr; }
 
 		void Build(const wi::primitive::AABB* aabbs, uint32_t aabb_count)
 		{
@@ -37,21 +38,19 @@ namespace wi
 			nodes = (Node*)allocation.data();
 			leaf_indices = (uint32_t*)(nodes + node_capacity);
 			leaf_count = aabb_count;
-			leaf_aabb_data = aabbs;
 
 			Node& node = nodes[node_count++];
-			node.aabb = {};
-			node.offset = 0;
+			node = {};
 			node.count = aabb_count;
 			for (uint32_t i = 0; i < aabb_count; ++i)
 			{
 				node.aabb = wi::primitive::AABB::Merge(node.aabb, aabbs[i]);
 				leaf_indices[i] = i;
 			}
-			Subdivide(0);
+			Subdivide(0, aabbs);
 		}
 
-		void Subdivide(uint32_t nodeIndex)
+		void Subdivide(uint32_t nodeIndex, const wi::primitive::AABB* leaf_aabb_data)
 		{
 			Node& node = nodes[nodeIndex];
 			if (node.count <= 2)
@@ -91,20 +90,22 @@ namespace wi
 			uint32_t left_child_index = node_count++;
 			uint32_t right_child_index = node_count++;
 			node.left = left_child_index;
+			nodes[left_child_index] = {};
 			nodes[left_child_index].offset = node.offset;
 			nodes[left_child_index].count = leftCount;
+			nodes[right_child_index] = {};
 			nodes[right_child_index].offset = i;
 			nodes[right_child_index].count = node.count - leftCount;
 			node.count = 0;
-			UpdateNodeBounds(left_child_index);
-			UpdateNodeBounds(right_child_index);
+			UpdateNodeBounds(left_child_index, leaf_aabb_data);
+			UpdateNodeBounds(right_child_index, leaf_aabb_data);
 
 			// recurse
-			Subdivide(left_child_index);
-			Subdivide(right_child_index);
+			Subdivide(left_child_index, leaf_aabb_data);
+			Subdivide(right_child_index, leaf_aabb_data);
 		}
 
-		void UpdateNodeBounds(uint32_t nodeIndex)
+		void UpdateNodeBounds(uint32_t nodeIndex, const wi::primitive::AABB* leaf_aabb_data)
 		{
 			Node& node = nodes[nodeIndex];
 			node.aabb = {};
@@ -121,14 +122,17 @@ namespace wi
 			const T& primitive,
 			uint32_t nodeIndex,
 			const std::function<void(uint32_t index)>& callback
-		)
+		) const
 		{
 			Node& node = nodes[nodeIndex];
 			if (!node.aabb.intersects(primitive))
 				return;
 			if (node.isLeaf())
 			{
-				callback(leaf_indices[node.offset]);
+				for (uint32_t i = 0; i < node.count; ++i)
+				{
+					callback(leaf_indices[node.offset + i]);
+				}
 			}
 			else
 			{

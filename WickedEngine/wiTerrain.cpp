@@ -588,6 +588,10 @@ namespace wi::terrain
 				{
 					chunk_mesh->tessellationFactor = 0;
 				}
+				if (!chunk_mesh->bvh.IsValid())
+				{
+					chunk_mesh->BuildBVH();
+				}
 
 #if 0
 				// Test: remove off screen chunks
@@ -863,6 +867,9 @@ namespace wi::terrain
 
 					// Create the textures for virtual texture update:
 					CreateChunkRegionTexture(chunk_data);
+
+					// generate BVH to optimize intersection tests:
+					mesh.BuildBVH();
 
 					wi::jobsystem::Wait(ctx); // wait until mesh.CreateRenderData() async task finishes
 					generated_something = true;
