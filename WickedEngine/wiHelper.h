@@ -150,4 +150,7 @@ namespace wi::helper
 		uint64_t process_virtual = 0;	// size of currently mapped virtual memory by application (in bytes)
 	};
 	MemoryUsage GetMemoryUsage();
+
+	// Returns a good looking memory size string as either bytes, KB, MB or GB
+	std::string GetMemorySizeText(size_t sizeInBytes);
 };

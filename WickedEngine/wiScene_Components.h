@@ -13,6 +13,7 @@
 #include "wiArchive.h"
 #include "wiRectPacker.h"
 #include "wiUnorderedSet.h"
+#include "wiBVH.h"
 
 namespace wi::scene
 {
@@ -337,6 +338,7 @@ namespace wi::scene
 			_DEPRECATED_DIRTY_BINDLESS = 1 << 5,
 			TLAS_FORCE_DOUBLE_SIDED = 1 << 6,
 			DOUBLE_SIDED_SHADOW = 1 << 7,
+			BVH_ENABLED = 1 << 8,
 		};
 		uint32_t _flags = RENDERABLE;
 
@@ -424,15 +426,24 @@ namespace wi::scene
 		};
 		mutable BLAS_STATE BLAS_state = BLAS_STATE_NEEDS_REBUILD;
 
+		wi::vector<wi::primitive::AABB> bvh_leaf_aabbs;
+		wi::BVH bvh;
+
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
 		inline void SetDoubleSidedShadow(bool value) { if (value) { _flags |= DOUBLE_SIDED_SHADOW; } else { _flags &= ~DOUBLE_SIDED_SHADOW; } }
 		inline void SetDynamic(bool value) { if (value) { _flags |= DYNAMIC; } else { _flags &= ~DYNAMIC; } }
 
+		// Enable disable CPU-side BVH acceleration structure
+		//	true: BVH will be built immediately if it doesn't exist yet
+		//	false: BVH will be deleted immediately if it exists
+		inline void SetBVHEnabled(bool value) { if (value) { _flags |= BVH_ENABLED; if (!bvh.IsValid()) { BuildBVH(); } } else { _flags &= ~BVH_ENABLED; bvh = {}; bvh_leaf_aabbs.clear(); } }
+
 		inline bool IsRenderable() const { return _flags & RENDERABLE; }
 		inline bool IsDoubleSided() const { return _flags & DOUBLE_SIDED; }
 		inline bool IsDoubleSidedShadow() const { return _flags & DOUBLE_SIDED_SHADOW; }
 		inline bool IsDynamic() const { return _flags & DYNAMIC; }
+		inline bool IsBVHEnabled() const { return _flags & BVH_ENABLED; }
 
 		inline float GetTessellationFactor() const { return tessellationFactor; }
 		inline wi::graphics::IndexBufferFormat GetIndexFormat() const { return wi::graphics::GetIndexBufferFormat((uint32_t)vertex_positions.size()); }
@@ -458,6 +469,13 @@ namespace wi::scene
 		void CreateRenderData();
 		void CreateStreamoutRenderData();
 		void CreateRaytracingRenderData();
+
+		// Rebuilds CPU-side BVH acceleration structure
+		void BuildBVH();
+
+		size_t GetMemoryUsageCPU() const;
+		size_t GetMemoryUsageGPU() const;
+		size_t GetMemoryUsageBVH() const;
 
 		enum COMPUTE_NORMALS
 		{

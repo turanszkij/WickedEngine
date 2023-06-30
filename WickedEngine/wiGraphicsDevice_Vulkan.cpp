@@ -5704,6 +5704,7 @@ using namespace vulkan_internal;
 		bvh->internal_state = internal_state;
 		bvh->type = GPUResource::Type::RAYTRACING_ACCELERATION_STRUCTURE;
 		bvh->desc = *desc;
+		bvh->size = 0;
 
 		internal_state->buildInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
 		internal_state->buildInfo.flags = 0;
@@ -5884,6 +5885,8 @@ using namespace vulkan_internal;
 			&pRangeInfo
 		);
 #endif
+
+		bvh->size = bufferInfo.size;
 
 		return res == VK_SUCCESS;
 	}

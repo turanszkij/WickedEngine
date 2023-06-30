@@ -588,6 +588,10 @@ namespace wi::terrain
 				{
 					chunk_mesh->tessellationFactor = 0;
 				}
+				if (!chunk_mesh->bvh.IsValid())
+				{
+					chunk_mesh->SetBVHEnabled(true);
+				}
 
 #if 0
 				// Test: remove off screen chunks
@@ -850,7 +854,8 @@ namespace wi::terrain
 						chunk_data.sphere.center.y += chunk_data.position.y;
 						chunk_data.sphere.center.z += chunk_data.position.z;
 						chunk_data.sphere.radius = mesh.aabb.getRadius();
-						});
+						mesh.SetBVHEnabled(true);
+					});
 
 					// If there were any vertices in this chunk that could be valid for grass, store the grass particle system:
 					if (grass_valid_vertex_count.load() > 0)

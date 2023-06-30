@@ -12,7 +12,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_MESH " Mesh", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(580, 730));
+	SetSize(XMFLOAT2(580, 760));
 
 	closeButton.SetTooltip("Delete MeshComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -143,6 +143,19 @@ void MeshWindow::Create(EditorComponent* _editor)
 		}
 		});
 	AddWidget(&doubleSidedShadowCheckBox);
+
+	bvhCheckBox.Create("Enable BVH: ");
+	bvhCheckBox.SetTooltip("Whether to generate BVH (Bounding Volume Hierarchy) for the mesh or not.\nBVH will be used to optimize intersections with the mesh at an additional memory cost.\nIt is recommended to use a BVH for high polygon count meshes that will be used for intersections.\nThis CPU BVH does not support skinned or morphed geometry.");
+	bvhCheckBox.SetSize(XMFLOAT2(hei, hei));
+	bvhCheckBox.SetPos(XMFLOAT2(x, y += step));
+	bvhCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		MeshComponent* mesh = editor->GetCurrentScene().meshes.GetComponent(entity);
+		if (mesh != nullptr)
+		{
+			mesh->SetBVHEnabled(args.bValue);
+		}
+	});
+	AddWidget(&bvhCheckBox);
 
 	impostorCreateButton.Create("Create Impostor");
 	impostorCreateButton.SetTooltip("Create an impostor image of the mesh. The mesh will be replaced by this image when far away, to render faster.");
@@ -721,7 +734,21 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		ss += "Index count: " + std::to_string(mesh->indices.size()) + "\n";
 		ss += "Index format: " + std::string(wi::graphics::GetIndexBufferFormatString(mesh->GetIndexFormat())) + "\n";
 		ss += "Subset count: " + std::to_string(mesh->subsets.size()) + " (" + std::to_string(mesh->GetLODCount()) + " LODs)\n";
-		ss += "GPU memory: " + std::to_string((mesh->generalBuffer.GetDesc().size + mesh->streamoutBuffer.GetDesc().size) / 1024.0f / 1024.0f) + " MB\n";
+		ss += "CPU memory: " + wi::helper::GetMemorySizeText(mesh->GetMemoryUsageCPU()) + "\n";
+		if (mesh->bvh.IsValid())
+		{
+			ss += "\tCPU BVH size: " + wi::helper::GetMemorySizeText(mesh->GetMemoryUsageBVH()) + "\n";
+		}
+		ss += "GPU memory: " + wi::helper::GetMemorySizeText(mesh->GetMemoryUsageGPU()) + "\n";
+		if (!mesh->BLASes.empty())
+		{
+			size_t size = 0;
+			for (auto& x : mesh->BLASes)
+			{
+				size += x.size;
+			}
+			ss += "\tBLAS size: " + wi::helper::GetMemorySizeText(size) + "\n";
+		}
 		ss += "\nVertex buffers:\n";
 		if (!mesh->vertex_positions.empty()) ss += "\tposition;\n";
 		if (!mesh->vertex_normals.empty()) ss += "\tnormal;\n";
@@ -732,7 +759,7 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		if (mesh->so_pre.IsValid()) ss += "\tprevious_position;\n";
 		if (mesh->vb_bon.IsValid()) ss += "\tbone;\n";
 		if (mesh->vb_tan.IsValid()) ss += "\ttangent;\n";
-		if (mesh->so_pos_nor_wind.IsValid()) ss += "\tstreamout_position;\n";
+		if (mesh->so_pos_nor_wind.IsValid()) ss += "\tstreamout_position_normal_wind;\n";
 		if (mesh->so_tan.IsValid()) ss += "\tstreamout_tangents;\n";
 		meshInfoLabel.SetText(ss);
 
@@ -776,6 +803,7 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 
 		doubleSidedCheckBox.SetCheck(mesh->IsDoubleSided());
 		doubleSidedShadowCheckBox.SetCheck(mesh->IsDoubleSidedShadow());
+		bvhCheckBox.SetCheck(mesh->bvh.IsValid());
 
 		const ImpostorComponent* impostor = scene.impostors.GetComponent(entity);
 		if (impostor != nullptr)
@@ -865,6 +893,7 @@ void MeshWindow::ResizeLayout()
 	add(subsetMaterialComboBox);
 	add_right(doubleSidedCheckBox);
 	add_right(doubleSidedShadowCheckBox);
+	add_right(bvhCheckBox);
 	add_fullwidth(impostorCreateButton);
 	add(impostorDistanceSlider);
 	add(tessellationFactorSlider);

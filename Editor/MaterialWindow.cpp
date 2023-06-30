@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "MaterialWindow.h"
 
-#include <sstream>
-
 using namespace wi::graphics;
 using namespace wi::ecs;
 using namespace wi::scene;
@@ -654,19 +652,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 				tooltiptext += "\nMip levels: " + std::to_string(texture.desc.mip_levels);
 				tooltiptext += "\nFormat: ";
 				tooltiptext += GetFormatString(texture.desc.format);
-
-				std::stringstream ss;
-				ss << std::fixed << std::setprecision(2);
-				const size_t texture_size = ComputeTextureMemorySizeInBytes(texture.desc);
-				if (texture_size >= 1024ull * 1024ull)
-				{
-					ss << "\nMemory: " << ComputeTextureMemorySizeInBytes(texture.desc) / 1024.0f / 1024.0f << " MB";
-				}
-				else
-				{
-					ss << "\nMemory: " << ComputeTextureMemorySizeInBytes(texture.desc) / 1024.0f << " KB";
-				}
-				tooltiptext += ss.str();
+				tooltiptext += "\nMemory: " + wi::helper::GetMemorySizeText(ComputeTextureMemorySizeInBytes(texture.desc));
 			}
 		}
 

@@ -5911,7 +5911,6 @@ void DrawDebugWorld(
 
 	if (debugPartitionTree)
 	{
-		// Actually, there is no SPTree any more, so this will just render all aabbs...
 		device->EventBegin("DebugPartitionTree", cmd);
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
@@ -5929,6 +5928,22 @@ void DrawDebugWorld(
 
 		for (size_t i = 0; i < scene.aabb_objects.size(); ++i)
 		{
+			//const ObjectComponent& object = scene.objects[i];
+			//const MeshComponent* mesh = scene.meshes.GetComponent(object.meshID);
+			//if (mesh != nullptr && !mesh->bvh_leaf_aabbs.empty())
+			//{
+			//	const XMMATRIX objectMat = XMLoadFloat4x4(&scene.matrix_objects[i]);
+			//	for (const AABB& aabb : mesh->bvh_leaf_aabbs)
+			//	{
+			//		XMStoreFloat4x4(&sb.g_xTransform, aabb.getAsBoxMatrix() * objectMat * camera.GetViewProjection());
+			//		sb.g_xColor = XMFLOAT4(1, 1, 0, 1);
+
+			//		device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+
+			//		device->DrawIndexed(24, 0, 0, cmd);
+			//	}
+			//}
+
 			const AABB& aabb = scene.aabb_objects[i];
 
 			XMStoreFloat4x4(&sb.g_xTransform, aabb.getAsBoxMatrix()*camera.GetViewProjection());

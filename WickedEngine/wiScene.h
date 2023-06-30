@@ -254,7 +254,7 @@ namespace wi::scene
 		wi::primitive::AABB* aabb_colliders_cpu = nullptr;
 		ColliderComponent* colliders_cpu = nullptr;
 		ColliderComponent* colliders_gpu = nullptr;
-		wi::BVH spring_collider_bvh;
+		wi::BVH collider_bvh;
 
 		// Ocean GPU state:
 		wi::Ocean ocean;

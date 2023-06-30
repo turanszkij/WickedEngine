@@ -17,6 +17,7 @@ public:
 	wi::gui::ComboBox subsetMaterialComboBox;
 	wi::gui::CheckBox doubleSidedCheckBox;
 	wi::gui::CheckBox doubleSidedShadowCheckBox;
+	wi::gui::CheckBox bvhCheckBox;
 	wi::gui::Button impostorCreateButton;
 	wi::gui::Slider impostorDistanceSlider;
 	wi::gui::Slider tessellationFactorSlider;
