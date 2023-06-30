@@ -937,6 +937,7 @@ namespace wi::scene
 		GetLODSubsetRange(0, first_subset, last_subset);
 		for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 		{
+			assert(subsetIndex <= 0xFF); // must fit into 8 bits userdata packing
 			const MeshComponent::MeshSubset& subset = subsets[subsetIndex];
 			if (subset.indexCount == 0)
 				continue;
@@ -944,6 +945,7 @@ namespace wi::scene
 			const uint32_t triangleCount = subset.indexCount / 3;
 			for (uint32_t triangleIndex = 0; triangleIndex < triangleCount; ++triangleIndex)
 			{
+				assert(triangleIndex <= 0xFFFFFF); // must fit into 24 bits userdata packing
 				const uint32_t i0 = indices[indexOffset + triangleIndex * 3 + 0];
 				const uint32_t i1 = indices[indexOffset + triangleIndex * 3 + 1];
 				const uint32_t i2 = indices[indexOffset + triangleIndex * 3 + 2];
