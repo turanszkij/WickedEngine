@@ -4209,6 +4209,7 @@ using namespace dx12_internal;
 		bvh->internal_state = internal_state;
 		bvh->type = GPUResource::Type::RAYTRACING_ACCELERATION_STRUCTURE;
 		bvh->desc = *desc;
+		bvh->size = 0;
 
 		if (desc->flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE)
 		{
@@ -4333,6 +4334,8 @@ using namespace dx12_internal;
 
 		GPUBufferDesc scratch_desc;
 		scratch_desc.size = (uint32_t)std::max(internal_state->info.ScratchDataSizeInBytes, internal_state->info.UpdateScratchDataSizeInBytes);
+
+		bvh->size = alignedSize + scratch_desc.size;
 
 		return CreateBuffer(&scratch_desc, nullptr, &internal_state->scratch);
 	}

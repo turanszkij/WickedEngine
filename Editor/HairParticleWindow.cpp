@@ -278,7 +278,7 @@ void HairParticleWindow::UpdateData()
 
 	std::string ss;
 	ss += "To use hair particle system, first you must select a surface mesh to spawn particles on.\n\n";
-	ss += "Memory usage: " + wi::helper::GetFriendlyMemorySizeText(hair->GetMemorySizeInBytes()) + "\n";
+	ss += "Memory usage: " + wi::helper::GetMemorySizeText(hair->GetMemorySizeInBytes()) + "\n";
 	infoLabel.SetText(ss);
 
 	meshComboBox.ClearItems();

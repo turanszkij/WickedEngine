@@ -762,7 +762,7 @@ void EmitterWindow::UpdateData()
 
 	std::string ss;
 	ss += "Emitter Mesh: " + (meshName != nullptr ? meshName->name : "NO EMITTER MESH") + " (" + std::to_string(emitter->meshID) + ")\n";
-	ss += "Memory usage: " + wi::helper::GetFriendlyMemorySizeText(emitter->GetMemorySizeInBytes()) + "\n";
+	ss += "Memory usage: " + wi::helper::GetMemorySizeText(emitter->GetMemorySizeInBytes()) + "\n";
 	ss += "\n";
 
 	auto data = emitter->GetStatistics();

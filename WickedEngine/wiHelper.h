@@ -152,5 +152,5 @@ namespace wi::helper
 	MemoryUsage GetMemoryUsage();
 
 	// Returns a good looking memory size string as either bytes, KB, MB or GB
-	std::string GetFriendlyMemorySizeText(size_t sizeInBytes);
+	std::string GetMemorySizeText(size_t sizeInBytes);
 };

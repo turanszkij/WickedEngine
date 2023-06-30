@@ -1328,10 +1328,10 @@ namespace wi::helper
 		return mem;
 	}
 
-	std::string GetFriendlyMemorySizeText(size_t sizeInBytes)
+	std::string GetMemorySizeText(size_t sizeInBytes)
 	{
 		std::stringstream ss;
-		ss << std::fixed << std::setprecision(2);
+		ss << std::fixed << std::setprecision(1);
 		if (sizeInBytes >= 1024ull * 1024ull * 1024ull)
 		{
 			ss << (double)sizeInBytes / 1024.0 / 1024.0 / 1024.0 << " GB";

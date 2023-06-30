@@ -1181,6 +1181,8 @@ namespace wi::graphics
 	{
 		RaytracingAccelerationStructureDesc desc;
 
+		size_t size = 0;
+
 		constexpr const RaytracingAccelerationStructureDesc& GetDesc() const { return desc; }
 	};
 

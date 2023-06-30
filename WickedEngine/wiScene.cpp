@@ -3507,7 +3507,7 @@ namespace wi::scene
 			total_size += ComputeTextureMemorySizeInBytes(impostorRenderTarget_Albedo_MSAA.desc);
 			total_size += ComputeTextureMemorySizeInBytes(impostorRenderTarget_Surface_MSAA.desc);
 			total_size += ComputeTextureMemorySizeInBytes(impostorRenderTarget_Normal_MSAA.desc);
-			info += "\n\tMemory = " + wi::helper::GetFriendlyMemorySizeText(total_size) + "\n";
+			info += "\n\tMemory = " + wi::helper::GetMemorySizeText(total_size) + "\n";
 			wi::backlog::post(info);
 		}
 
@@ -4060,7 +4060,7 @@ namespace wi::scene
 			total_size += ComputeTextureMemorySizeInBytes(envrenderingDepthBuffer_MSAA.desc);
 			total_size += ComputeTextureMemorySizeInBytes(envrenderingColorBuffer_MSAA.desc);
 			total_size += ComputeTextureMemorySizeInBytes(envmapArray.desc);
-			info += "\n\tMemory = " + wi::helper::GetFriendlyMemorySizeText(total_size) + "\n";
+			info += "\n\tMemory = " + wi::helper::GetMemorySizeText(total_size) + "\n";
 			wi::backlog::post(info);
 		}
 

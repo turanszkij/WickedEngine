@@ -145,7 +145,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 	AddWidget(&doubleSidedShadowCheckBox);
 
 	bvhCheckBox.Create("Enable BVH: ");
-	bvhCheckBox.SetTooltip("Whether to generate BVH (Bounding Volume Hierarchy) for the mesh or not.\nBVH will be used to optimize intersections with the mesh at an additional memory cost.\nIt is recommended to use a BVH for high polygon count meshes that will be used for intersections.");
+	bvhCheckBox.SetTooltip("Whether to generate BVH (Bounding Volume Hierarchy) for the mesh or not.\nBVH will be used to optimize intersections with the mesh at an additional memory cost.\nIt is recommended to use a BVH for high polygon count meshes that will be used for intersections.\nThis CPU BVH does not support skinned or morphed geometry.");
 	bvhCheckBox.SetSize(XMFLOAT2(hei, hei));
 	bvhCheckBox.SetPos(XMFLOAT2(x, y += step));
 	bvhCheckBox.OnClick([&](wi::gui::EventArgs args) {
@@ -743,12 +743,21 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		ss += "Index count: " + std::to_string(mesh->indices.size()) + "\n";
 		ss += "Index format: " + std::string(wi::graphics::GetIndexBufferFormatString(mesh->GetIndexFormat())) + "\n";
 		ss += "Subset count: " + std::to_string(mesh->subsets.size()) + " (" + std::to_string(mesh->GetLODCount()) + " LODs)\n";
-		ss += "CPU memory: " + wi::helper::GetFriendlyMemorySizeText(mesh->GetMemoryUsageCPU()) + "\n";
+		ss += "CPU memory: " + wi::helper::GetMemorySizeText(mesh->GetMemoryUsageCPU()) + "\n";
 		if (mesh->bvh.IsValid())
 		{
-			ss += "\tCPU BVH size: " + wi::helper::GetFriendlyMemorySizeText(mesh->GetMemoryUsageBVH()) + "\n";
+			ss += "\tCPU BVH size: " + wi::helper::GetMemorySizeText(mesh->GetMemoryUsageBVH()) + "\n";
 		}
-		ss += "GPU memory: " + wi::helper::GetFriendlyMemorySizeText(mesh->GetMemoryUsageGPU()) + "\n";
+		ss += "GPU memory: " + wi::helper::GetMemorySizeText(mesh->GetMemoryUsageGPU()) + "\n";
+		if (!mesh->BLASes.empty())
+		{
+			size_t size = 0;
+			for (auto& x : mesh->BLASes)
+			{
+				size += x.size;
+			}
+			ss += "\tBLAS size: " + wi::helper::GetMemorySizeText(size) + "\n";
+		}
 		ss += "\nVertex buffers:\n";
 		if (!mesh->vertex_positions.empty()) ss += "\tposition;\n";
 		if (!mesh->vertex_normals.empty()) ss += "\tnormal;\n";

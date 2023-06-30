@@ -652,7 +652,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 				tooltiptext += "\nMip levels: " + std::to_string(texture.desc.mip_levels);
 				tooltiptext += "\nFormat: ";
 				tooltiptext += GetFormatString(texture.desc.format);
-				tooltiptext += "\nMemory: " + wi::helper::GetFriendlyMemorySizeText(ComputeTextureMemorySizeInBytes(texture.desc));
+				tooltiptext += "\nMemory: " + wi::helper::GetMemorySizeText(ComputeTextureMemorySizeInBytes(texture.desc));
 			}
 		}
 
