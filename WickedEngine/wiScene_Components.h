@@ -433,7 +433,11 @@ namespace wi::scene
 		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
 		inline void SetDoubleSidedShadow(bool value) { if (value) { _flags |= DOUBLE_SIDED_SHADOW; } else { _flags &= ~DOUBLE_SIDED_SHADOW; } }
 		inline void SetDynamic(bool value) { if (value) { _flags |= DYNAMIC; } else { _flags &= ~DYNAMIC; } }
-		inline void SetBVHEnabled(bool value) { if (value) { _flags |= BVH_ENABLED; } else { _flags &= ~BVH_ENABLED; } }
+
+		// Enable disable CPU-side BVH acceleration structure
+		//	true: BVH will be built immediately if it doesn't exist yet
+		//	false: BVH will be deleted immediately if it exists
+		inline void SetBVHEnabled(bool value) { if (value) { _flags |= BVH_ENABLED; if (!bvh.IsValid()) { BuildBVH(); } } else { _flags &= ~BVH_ENABLED; bvh = {}; bvh_leaf_aabbs.clear(); } }
 
 		inline bool IsRenderable() const { return _flags & RENDERABLE; }
 		inline bool IsDoubleSided() const { return _flags & DOUBLE_SIDED; }
@@ -466,6 +470,7 @@ namespace wi::scene
 		void CreateStreamoutRenderData();
 		void CreateRaytracingRenderData();
 
+		// Rebuilds CPU-side BVH acceleration structure
 		void BuildBVH();
 
 		size_t GetMemoryUsageCPU() const;

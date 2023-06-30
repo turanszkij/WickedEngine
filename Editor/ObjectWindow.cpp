@@ -334,7 +334,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	AddWidget(&shadowCheckBox);
 
 	navmeshCheckBox.Create("Navmesh: ");
-	navmeshCheckBox.SetTooltip("Set object to be a navigation mesh filtering (FILTER_NAVIGATION_MESH).");
+	navmeshCheckBox.SetTooltip("Set object to be a navigation mesh filtering (FILTER_NAVIGATION_MESH).\nTurning on navmesh also enables BVH for the underlying mesh.");
 	navmeshCheckBox.SetSize(XMFLOAT2(hei, hei));
 	navmeshCheckBox.SetPos(XMFLOAT2(x, y += step));
 	navmeshCheckBox.SetCheck(true);
@@ -348,6 +348,12 @@ void ObjectWindow::Create(EditorComponent* _editor)
 				if (args.bValue)
 				{
 					object->filterMask |= wi::enums::FILTER_NAVIGATION_MESH;
+
+					MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+					if (mesh != nullptr)
+					{
+						mesh->SetBVHEnabled(args.bValue);
+					}
 				}
 				else
 				{

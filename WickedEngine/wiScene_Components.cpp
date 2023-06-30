@@ -930,7 +930,6 @@ namespace wi::scene
 	}
 	void MeshComponent::BuildBVH()
 	{
-		SetBVHEnabled(true);
 		bvh_leaf_aabbs.clear();
 		uint32_t first_subset = 0;
 		uint32_t last_subset = 0;

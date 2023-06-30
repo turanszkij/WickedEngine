@@ -153,15 +153,6 @@ void MeshWindow::Create(EditorComponent* _editor)
 		if (mesh != nullptr)
 		{
 			mesh->SetBVHEnabled(args.bValue);
-			if (args.bValue)
-			{
-				mesh->BuildBVH();
-			}
-			else
-			{
-				mesh->bvh_leaf_aabbs.clear();
-				mesh->bvh = {};
-			}
 		}
 	});
 	AddWidget(&bvhCheckBox);

@@ -590,7 +590,7 @@ namespace wi::terrain
 				}
 				if (!chunk_mesh->bvh.IsValid())
 				{
-					chunk_mesh->BuildBVH();
+					chunk_mesh->SetBVHEnabled(true);
 				}
 
 #if 0
@@ -854,7 +854,8 @@ namespace wi::terrain
 						chunk_data.sphere.center.y += chunk_data.position.y;
 						chunk_data.sphere.center.z += chunk_data.position.z;
 						chunk_data.sphere.radius = mesh.aabb.getRadius();
-						});
+						mesh.SetBVHEnabled(true);
+					});
 
 					// If there were any vertices in this chunk that could be valid for grass, store the grass particle system:
 					if (grass_valid_vertex_count.load() > 0)
@@ -867,9 +868,6 @@ namespace wi::terrain
 
 					// Create the textures for virtual texture update:
 					CreateChunkRegionTexture(chunk_data);
-
-					// generate BVH to optimize intersection tests:
-					mesh.BuildBVH();
 
 					wi::jobsystem::Wait(ctx); // wait until mesh.CreateRenderData() async task finishes
 					generated_something = true;

@@ -130,6 +130,7 @@ Patreon supporters
 - SAS_Controller
 - Dominik Madarász
 - Segfault
+- Mike amanfo
 		)";
 
 		return credits;
