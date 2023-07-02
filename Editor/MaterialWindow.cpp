@@ -652,6 +652,8 @@ void MaterialWindow::Create(EditorComponent* _editor)
 				tooltiptext += "\nMip levels: " + std::to_string(texture.desc.mip_levels);
 				tooltiptext += "\nFormat: ";
 				tooltiptext += GetFormatString(texture.desc.format);
+				tooltiptext += "\nSwizzle: ";
+				tooltiptext += GetSwizzleString(texture.desc.swizzle);
 				tooltiptext += "\nMemory: " + wi::helper::GetMemorySizeText(ComputeTextureMemorySizeInBytes(texture.desc));
 			}
 		}

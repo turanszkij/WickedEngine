@@ -1686,6 +1686,41 @@ namespace wi::graphics
 		}
 	}
 
+	constexpr const char GetComponentSwizzleChar(ComponentSwizzle value)
+	{
+		switch (value)
+		{
+		default:
+		case wi::graphics::ComponentSwizzle::R:
+			return 'R';
+		case wi::graphics::ComponentSwizzle::G:
+			return 'G';
+		case wi::graphics::ComponentSwizzle::B:
+			return 'B';
+		case wi::graphics::ComponentSwizzle::A:
+			return 'A';
+		case wi::graphics::ComponentSwizzle::ZERO:
+			return '0';
+		case wi::graphics::ComponentSwizzle::ONE:
+			return '1';
+		}
+	}
+	struct SwizzleString
+	{
+		char chars[5] = {};
+		constexpr operator const char*() const { return chars; }
+	};
+	constexpr const SwizzleString GetSwizzleString(Swizzle swizzle)
+	{
+		SwizzleString ret;
+		ret.chars[0] = GetComponentSwizzleChar(swizzle.r);
+		ret.chars[1] = GetComponentSwizzleChar(swizzle.g);
+		ret.chars[2] = GetComponentSwizzleChar(swizzle.b);
+		ret.chars[3] = GetComponentSwizzleChar(swizzle.a);
+		ret.chars[4] = 0;
+		return ret;
+	}
+
 	constexpr uint32_t AlignTo(uint32_t value, uint32_t alignment)
 	{
 		return ((value + alignment - 1) / alignment) * alignment;
