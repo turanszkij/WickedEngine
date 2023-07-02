@@ -540,6 +540,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->hoveredEntityColor = theme.font.color;
 		}
 		editor->inactiveEntityColor.setA(150);
+		editor->backgroundEntityColor = shadow_color;
 
 		editor->save_text_color = theme.font.color;
 

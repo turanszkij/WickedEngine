@@ -859,23 +859,23 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 		params.scaling = 0.04f * dist;
 		params.customProjection = &VP;
 		params.customRotation = &R;
-		params.shadowColor = wi::Color(0, 0, 0, 127);
+		params.shadowColor = wi::Color(0, 0, 0, uint8_t(127 * opacity));
 		params.shadow_softness = 0.8f;
 		XMVECTOR pos = transform.GetPositionV();
 
-		params.color = wi::Color::fromFloat4(XMFLOAT4(1, channel_min, channel_min, 1));
+		params.color = wi::Color::fromFloat4(XMFLOAT4(1, channel_min, channel_min, opacity));
 		XMStoreFloat3(&params.position, pos + XMVector3Transform(XMVectorSet(axis_length + 0.5f, 0, 0, 0) * dist, GetMirrorMatrix(TRANSLATOR_X, camera)));
 		std::memset(TEXT, 0, sizeof(TEXT));
 		WriteAxisText(TRANSLATOR_X, camera, TEXT);
 		wi::font::Draw(TEXT, strlen(TEXT), params, cmd);
 
-		params.color = wi::Color::fromFloat4(XMFLOAT4(channel_min, 1, channel_min, 1));
+		params.color = wi::Color::fromFloat4(XMFLOAT4(channel_min, 1, channel_min, opacity));
 		XMStoreFloat3(&params.position, pos + XMVector3Transform(XMVectorSet(0, axis_length + 0.5f, 0, 0) * dist, GetMirrorMatrix(TRANSLATOR_Y, camera)));
 		std::memset(TEXT, 0, sizeof(TEXT));
 		WriteAxisText(TRANSLATOR_Y, camera, TEXT);
 		wi::font::Draw(TEXT, strlen(TEXT), params, cmd);
 
-		params.color = wi::Color::fromFloat4(XMFLOAT4(channel_min, channel_min, 1, 1));
+		params.color = wi::Color::fromFloat4(XMFLOAT4(channel_min, channel_min, 1, opacity));
 		XMStoreFloat3(&params.position, pos + XMVector3Transform(XMVectorSet(0, 0, axis_length + 0.5f, 0) * dist, GetMirrorMatrix(TRANSLATOR_Z, camera)));
 		std::memset(TEXT, 0, sizeof(TEXT));
 		WriteAxisText(TRANSLATOR_Z, camera, TEXT);
@@ -1063,6 +1063,8 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 		{
 			str += "Scaling = " + std::to_string(transform.scale_local.x / transform_start.scale_local.x) + ", " + std::to_string(transform.scale_local.y / transform_start.scale_local.y) + ", " + std::to_string(transform.scale_local.z / transform_start.scale_local.z);
 		}
+		params.shadowColor.setA(uint8_t(opacity * 255.0f));
+		params.color.setA(uint8_t(opacity * 255.0f));
 		wi::font::Draw(str, params, cmd);
 	}
 
