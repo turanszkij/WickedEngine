@@ -12,6 +12,13 @@
 #include "wiUnorderedMap.h"
 #include "wiLua.h"
 
+#if __has_include("OpenImageDenoise/oidn.hpp")
+#define OPEN_IMAGE_DENOISE
+#include "OpenImageDenoise/oidn.hpp"
+#pragma comment(lib,"OpenImageDenoise.lib")
+// Also provide the required DLL files from OpenImageDenoise release near the exe!
+#endif // __has_include("OpenImageDenoise/oidn.hpp")
+
 using namespace wi::ecs;
 using namespace wi::enums;
 using namespace wi::graphics;
@@ -1379,13 +1386,6 @@ namespace wi::scene
 		SetLightmapRenderRequest(false);
 	}
 
-#if __has_include("OpenImageDenoise/oidn.hpp")
-#define OPEN_IMAGE_DENOISE
-#include "OpenImageDenoise/oidn.hpp"
-#pragma comment(lib,"OpenImageDenoise.lib")
-#pragma comment(lib,"tbb.lib")
-	// Also provide OpenImageDenoise.dll and tbb.dll near the exe!
-#endif
 	void ObjectComponent::SaveLightmap()
 	{
 		if (lightmap.IsValid() && has_flag(lightmap.desc.bind_flags, BindFlag::RENDER_TARGET))
@@ -1414,10 +1414,15 @@ namespace wi::scene
 						init = true;
 					}
 
+					oidn::BufferRef lightmapTextureData_buffer = device.newBuffer(lightmapTextureData.size());
+					oidn::BufferRef texturedata_dst_buffer = device.newBuffer(texturedata_dst.size());
+
+					lightmapTextureData_buffer.write(0, lightmapTextureData.size(), lightmapTextureData.data());
+
 					// Create a denoising filter
 					oidn::FilterRef filter = device.newFilter("RTLightmap");
-					filter.setImage("color", lightmapTextureData.data(), oidn::Format::Float3, width, height, 0, sizeof(XMFLOAT4));
-					filter.setImage("output", texturedata_dst.data(), oidn::Format::Float3, width, height, 0, sizeof(XMFLOAT4));
+					filter.setImage("color", lightmapTextureData_buffer, oidn::Format::Float3, width, height, 0, sizeof(XMFLOAT4));
+					filter.setImage("output", texturedata_dst_buffer, oidn::Format::Float3, width, height, 0, sizeof(XMFLOAT4));
 					filter.commit();
 
 					// Filter the image
@@ -1429,6 +1434,10 @@ namespace wi::scene
 					if (error != oidn::Error::None && error != oidn::Error::Cancelled)
 					{
 						wi::backlog::post(std::string("[OpenImageDenoise error] ") + errorMessage);
+					}
+					else
+					{
+						texturedata_dst_buffer.read(0, texturedata_dst.size(), texturedata_dst.data());
 					}
 				}
 

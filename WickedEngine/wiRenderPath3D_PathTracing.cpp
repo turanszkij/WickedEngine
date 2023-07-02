@@ -9,19 +9,20 @@
 #include "wiBacklog.h"
 #include "wiGraphicsDevice_Vulkan.h"
 
+#if __has_include("OpenImageDenoise/oidn.hpp")
+#define OPEN_IMAGE_DENOISE
+#include "OpenImageDenoise/oidn.hpp"
+#pragma comment(lib,"OpenImageDenoise.lib")
+// Also provide the required DLL files from OpenImageDenoise release near the exe!
+#endif // __has_include("OpenImageDenoise/oidn.hpp")
+
 using namespace wi::graphics;
 using namespace wi::scene;
 
 
 namespace wi
 {
-
-#if __has_include("OpenImageDenoise/oidn.hpp")
-#define OPEN_IMAGE_DENOISE
-#include "OpenImageDenoise/oidn.hpp"
-#pragma comment(lib,"OpenImageDenoise.lib")
-#pragma comment(lib,"tbb.lib")
-	// Also provide OpenImageDenoise.dll and tbb.dll near the exe!
+#ifdef OPEN_IMAGE_DENOISE
 	bool DenoiserCallback(void* userPtr, double n)
 	{
 		auto renderpath = (RenderPath3D_PathTracing*)userPtr;
@@ -36,7 +37,7 @@ namespace wi
 	bool RenderPath3D_PathTracing::isDenoiserAvailable() const { return true; }
 #else
 	bool RenderPath3D_PathTracing::isDenoiserAvailable() const { return false; }
-#endif
+#endif // OPEN_IMAGE_DENOISE
 
 	void RenderPath3D_PathTracing::ResizeBuffers()
 	{
@@ -204,18 +205,29 @@ namespace wi
 								init = true;
 							}
 
+							oidn::BufferRef texturedata_src_buffer = device.newBuffer(texturedata_src.size());
+							oidn::BufferRef texturedata_dst_buffer = device.newBuffer(texturedata_dst.size());
+							oidn::BufferRef texturedata_albedo_buffer;
+							oidn::BufferRef texturedata_normal_buffer;
+
+							texturedata_src_buffer.write(0, texturedata_src.size(), texturedata_src.data());
+
 							// Create a denoising filter
 							oidn::FilterRef filter = device.newFilter("RT"); // generic ray tracing filter
-							filter.setImage("color", texturedata_src.data(), oidn::Format::Float3, width, height, 0, sizeof(XMFLOAT4));
+							filter.setImage("color", texturedata_src_buffer, oidn::Format::Float3, width, height, 0, sizeof(XMFLOAT4));
 							if (!texturedata_albedo.empty())
 							{
-								filter.setImage("albedo", texturedata_albedo.data(), oidn::Format::Float3, width, height, 0, sizeof(XMFLOAT4)); // optional
+								texturedata_albedo_buffer = device.newBuffer(texturedata_albedo.size());
+								texturedata_albedo_buffer.write(0, texturedata_albedo.size(), texturedata_albedo.data());
+								filter.setImage("albedo", texturedata_albedo_buffer, oidn::Format::Float3, width, height, 0, sizeof(XMFLOAT4)); // optional
 							}
 							if (!texturedata_normal.empty())
 							{
-								filter.setImage("normal", texturedata_normal.data(), oidn::Format::Float3, width, height, 0, sizeof(XMFLOAT4)); // optional
+								texturedata_normal_buffer = device.newBuffer(texturedata_normal.size());
+								texturedata_normal_buffer.write(0, texturedata_normal.size(), texturedata_normal.data());
+								filter.setImage("normal", texturedata_normal_buffer, oidn::Format::Float3, width, height, 0, sizeof(XMFLOAT4)); // optional
 							}
-							filter.setImage("output", texturedata_dst.data(), oidn::Format::Float3, width, height, 0, sizeof(XMFLOAT4));
+							filter.setImage("output", texturedata_dst_buffer, oidn::Format::Float3, width, height, 0, sizeof(XMFLOAT4));
 							filter.set("hdr", true); // image is HDR
 							//filter.set("cleanAux", true);
 							filter.commit();
@@ -232,6 +244,10 @@ namespace wi
 							if (error != oidn::Error::None && error != oidn::Error::Cancelled)
 							{
 								wi::backlog::post(std::string("[OpenImageDenoise error] ") + errorMessage);
+							}
+							else
+							{
+								texturedata_dst_buffer.read(0, texturedata_dst.size(), texturedata_dst.data());
 							}
 						}
 
