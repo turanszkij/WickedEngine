@@ -75,6 +75,7 @@ public:
 	const XMFLOAT4 selectionColor2 = XMFLOAT4(0, 1, 0.6f, 0.35f);
 	wi::Color inactiveEntityColor = wi::Color::fromFloat4(XMFLOAT4(1, 1, 1, 0.5f));
 	wi::Color hoveredEntityColor = wi::Color::fromFloat4(XMFLOAT4(1, 1, 1, 1));
+	wi::Color backgroundEntityColor = wi::Color::Black();
 
 	wi::graphics::Texture editor_depthbuffer;
 
