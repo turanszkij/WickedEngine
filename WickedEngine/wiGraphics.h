@@ -1729,7 +1729,7 @@ namespace wi::graphics
 	{
 		return ((value + alignment - 1) / alignment) * alignment;
 	}
-	constexpr uint32_t GetMipCount(uint32_t width, uint32_t height, uint32_t depth = 1u, uint32_t min_dimension = 1u)
+	constexpr uint32_t GetMipCount(uint32_t width, uint32_t height, uint32_t depth = 1u, uint32_t min_dimension = 1u, uint32_t required_alignment = 1u)
 	{
 		uint32_t mips = 1;
 		while (width > min_dimension || height > min_dimension || depth > min_dimension)
@@ -1737,6 +1737,12 @@ namespace wi::graphics
 			width = std::max(min_dimension, width >> 1u);
 			height = std::max(min_dimension, height >> 1u);
 			depth = std::max(min_dimension, depth >> 1u);
+			if (
+				AlignTo(width, required_alignment) != width ||
+				AlignTo(height, required_alignment) != height ||
+				AlignTo(depth, required_alignment) != depth
+				)
+				break;
 			mips++;
 		}
 		return mips;
