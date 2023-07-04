@@ -2016,6 +2016,7 @@ void EditorComponent::Render() const
 					if (light.GetType() == LightComponent::DIRECTIONAL || light.GetType() == LightComponent::SPOT)
 					{
 						// Light direction visualizer:
+						device->EventBegin("LightDirectionVisualizer", cmd);
 						static PipelineState pso;
 						if (!pso.IsValid())
 						{
@@ -2041,9 +2042,9 @@ void EditorComponent::Render() const
 
 						device->BindPipelineState(&pso, cmd);
 
-						const uint32_t segmentCount = 18;
+						const uint32_t segmentCount = 6;
 						const uint32_t cylinder_triangleCount = segmentCount * 2;
-						const uint32_t cone_triangleCount = cylinder_triangleCount;
+						const uint32_t cone_triangleCount = segmentCount;
 						const uint32_t vertexCount = (cylinder_triangleCount + cone_triangleCount) * 3;
 						auto mem = device->AllocateGPU(sizeof(Vertex) * vertexCount, cmd);
 
@@ -2089,9 +2090,6 @@ void EditorComponent::Render() const
 							{
 								const float cone_radius = origin_size;
 								Vertex verts[] = {
-									{XMFLOAT4(cylinder_length, 0, 0, 1), col},
-									{XMFLOAT4(cylinder_length, std::sin(angle0) * cone_radius, std::cos(angle0) * cone_radius, 1), col},
-									{XMFLOAT4(cylinder_length, std::sin(angle1) * cone_radius, std::cos(angle1) * cone_radius, 1), col},
 									{XMFLOAT4(axis_length, 0, 0, 1), col},
 									{XMFLOAT4(cylinder_length, std::sin(angle0) * cone_radius, std::cos(angle0) * cone_radius, 1), col},
 									{XMFLOAT4(cylinder_length, std::sin(angle1) * cone_radius, std::cos(angle1) * cone_radius, 1), col},
@@ -2115,6 +2113,7 @@ void EditorComponent::Render() const
 						};
 						device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 						device->Draw(vertexCount, 0, cmd);
+						device->EventEnd(cmd);
 					}
 				}
 			}
