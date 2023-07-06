@@ -446,6 +446,7 @@ void EditorComponent::Load()
 		ss += "Rotate Toggle: 2\n";
 		ss += "Scale Toggle: 3\n";
 		ss += "Wireframe mode: Ctrl + W\n";
+		ss += "Depth of field refocus to point: C + left mouse button\n";
 		ss += "Color grading reference: Ctrl + G (color grading palette reference will be displayed in top left corner)\n";
 		ss += "Focus on selected: F button, this will make the camera jump to selection.\n";
 		ss += "Inspector mode: I button (hold), hovered entity information will be displayed near mouse position.\n";
@@ -1080,6 +1081,15 @@ void EditorComponent::Update(float dt)
 					hovered = wi::scene::Pick(pickRay, wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
 				}
 			}
+		}
+
+		if (hovered.entity != INVALID_ENTITY &&
+			wi::input::Down((wi::input::BUTTON)'C') &&
+			wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+		{
+			camera.focal_length = hovered.distance;
+			camera.SetDirty();
+			optionsWnd.cameraWnd.focalLengthSlider.SetValue(camera.focal_length);
 		}
 
 		// Interactions only when paint tool is disabled:

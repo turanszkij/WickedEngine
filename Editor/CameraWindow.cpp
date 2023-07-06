@@ -108,7 +108,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	AddWidget(&fovSlider);
 
 	focalLengthSlider.Create(0.001f, 100, 1, 10000, "Focal Length: ");
-	focalLengthSlider.SetTooltip("Controls the depth of field effect's focus distance");
+	focalLengthSlider.SetTooltip("Controls the depth of field effect's focus distance.\nYou can also refocus by holding the C key and picking in the scene with the left mouse button.");
 	focalLengthSlider.SetSize(XMFLOAT2(wid, hei));
 	focalLengthSlider.SetPos(XMFLOAT2(x, y += step));
 	focalLengthSlider.OnSlide([&](wi::gui::EventArgs args) {
