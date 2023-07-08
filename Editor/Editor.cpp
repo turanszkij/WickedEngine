@@ -20,6 +20,15 @@ extern bool window_recreating;
 #include "sdl2.h"
 #endif // PLATFORM_WINDOWS
 
+namespace dummy_female
+{
+#include "dummy_female.h"
+}
+namespace dummy_male
+{
+#include "dummy_male.h"
+}
+
 void Editor::Initialize()
 {
 	if (config.Has("font"))
@@ -127,6 +136,20 @@ void EditorComponent::ResizeBuffers()
 		TextureDesc desc;
 		desc.width = renderPath->GetRenderResult().GetDesc().width;
 		desc.height = renderPath->GetRenderResult().GetDesc().height;
+		desc.format = Format::R8_UNORM;
+		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+		desc.swizzle.r = ComponentSwizzle::R;
+		desc.swizzle.g = ComponentSwizzle::R;
+		desc.swizzle.b = ComponentSwizzle::R;
+		desc.swizzle.a = ComponentSwizzle::R;
+		device->CreateTexture(&desc, nullptr, &rt_dummyOutline);
+		device->SetName(&rt_dummyOutline, "rt_dummyOutline");
+	}
+
+	{
+		TextureDesc desc;
+		desc.width = renderPath->GetRenderResult().GetDesc().width;
+		desc.height = renderPath->GetRenderResult().GetDesc().height;
 		desc.format = Format::D32_FLOAT;
 		desc.bind_flags = BindFlag::DEPTH_STENCIL;
 		desc.layout = ResourceState::DEPTHSTENCIL;
@@ -201,6 +224,25 @@ void EditorComponent::Load()
 		GetGUI().AddWidget(&translateButton);
 	}
 
+	dummyButton.Create(ICON_DUMMY);
+	dummyButton.SetShadowRadius(2);
+	dummyButton.SetTooltip("Toggle reference dummy visualizer\n - Use the reference dummy to get an idea about object sizes compared to a human character size.\n - Position the dummy by clicking on something with the left mouse button while the dummy is active.\n - Pressing this button while Ctrl key is held down will reset dummy position to the origin.\n - Pressing this button while the Shift key is held down will switch between male and female dummies.");
+	dummyButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
+	dummyButton.OnClick([&](wi::gui::EventArgs args) {
+		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL))
+		{
+			dummy_pos = XMFLOAT3(0, 0, 0);
+		}
+		else if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RSHIFT))
+		{
+			dummy_male = !dummy_male;
+		}
+		else
+		{
+			dummy_enabled = !dummy_enabled;
+		}
+	});
+	GetGUI().AddWidget(&dummyButton);
 
 	playButton.Create(ICON_PLAY);
 	playButton.font.params.shadowColor = wi::Color::Transparent();
@@ -585,7 +627,7 @@ void EditorComponent::Update(float dt)
 	componentsWnd.Update(dt);
 
 	// Pulsating selection color update:
-	selectionOutlineTimer += dt;
+	outlineTimer += dt;
 
 	CheckBonePickingEnabled();
 	UpdateTopMenuAnimation();
@@ -1098,63 +1140,70 @@ void EditorComponent::Update(float dt)
 			// Interact:
 			if (hovered.entity != INVALID_ENTITY && wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
 			{
-				const ObjectComponent* object = scene.objects.GetComponent(hovered.entity);
-				if (object != nullptr)
-				{	
-					if (translator.selected.empty() && object->GetFilterMask() & wi::enums::FILTER_WATER)
+				if (dummy_enabled)
+				{
+					dummy_pos = hovered.position;
+				}
+				else
+				{
+					const ObjectComponent* object = scene.objects.GetComponent(hovered.entity);
+					if (object != nullptr)
 					{
-						// if water, then put a water ripple onto it:
-						scene.PutWaterRipple("../Content/models/ripple.png", hovered.position);
-					}
-					else if (componentsWnd.decalWnd.IsEnabled() && componentsWnd.decalWnd.placementCheckBox.GetCheck() && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
-					{
-						// if not water, put a decal on it:
-						Entity entity = scene.Entity_CreateDecal("editorDecal", "");
-						// material and decal parameters will be copied from selected:
-						if (scene.decals.Contains(componentsWnd.decalWnd.entity))
+						if (translator.selected.empty() && object->GetFilterMask() & wi::enums::FILTER_WATER)
 						{
-							*scene.decals.GetComponent(entity) = *scene.decals.GetComponent(componentsWnd.decalWnd.entity);
+							// if water, then put a water ripple onto it:
+							scene.PutWaterRipple("../Content/models/ripple.png", hovered.position);
 						}
-						if (scene.materials.Contains(componentsWnd.decalWnd.entity))
+						else if (componentsWnd.decalWnd.IsEnabled() && componentsWnd.decalWnd.placementCheckBox.GetCheck() && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
 						{
-							*scene.materials.GetComponent(entity) = *scene.materials.GetComponent(componentsWnd.decalWnd.entity);
-						}
-						// place it on picked surface:
-						TransformComponent& transform = *scene.transforms.GetComponent(entity);
-						transform.MatrixTransform(hovered.orientation);
-						transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
-						scene.Component_Attach(entity, hovered.entity);
-
-						wi::Archive& archive = AdvanceHistory();
-						archive << EditorComponent::HISTORYOP_ADD;
-						RecordSelection(archive);
-						RecordSelection(archive);
-						RecordEntity(archive, entity);
-
-						optionsWnd.RefreshEntityTree();
-					}
-					else if(translator.selected.empty())
-					{
-						// Check for interactive grass (hair particle that is child of hovered object:
-						for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
-						{
-							Entity entity = scene.hairs.GetEntity(i);
-							HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
-							if (hier != nullptr && hier->parentID == hovered.entity)
+							// if not water, put a decal on it:
+							Entity entity = scene.Entity_CreateDecal("editorDecal", "");
+							// material and decal parameters will be copied from selected:
+							if (scene.decals.Contains(componentsWnd.decalWnd.entity))
 							{
-								XMVECTOR P = XMLoadFloat3(&hovered.position);
-								P += XMLoadFloat3(&hovered.normal) * 2;
-								if (grass_interaction_entity == INVALID_ENTITY)
+								*scene.decals.GetComponent(entity) = *scene.decals.GetComponent(componentsWnd.decalWnd.entity);
+							}
+							if (scene.materials.Contains(componentsWnd.decalWnd.entity))
+							{
+								*scene.materials.GetComponent(entity) = *scene.materials.GetComponent(componentsWnd.decalWnd.entity);
+							}
+							// place it on picked surface:
+							TransformComponent& transform = *scene.transforms.GetComponent(entity);
+							transform.MatrixTransform(hovered.orientation);
+							transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
+							scene.Component_Attach(entity, hovered.entity);
+
+							wi::Archive& archive = AdvanceHistory();
+							archive << EditorComponent::HISTORYOP_ADD;
+							RecordSelection(archive);
+							RecordSelection(archive);
+							RecordEntity(archive, entity);
+
+							optionsWnd.RefreshEntityTree();
+						}
+						else if (translator.selected.empty())
+						{
+							// Check for interactive grass (hair particle that is child of hovered object:
+							for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+							{
+								Entity entity = scene.hairs.GetEntity(i);
+								HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
+								if (hier != nullptr && hier->parentID == hovered.entity)
 								{
-									grass_interaction_entity = CreateEntity();
+									XMVECTOR P = XMLoadFloat3(&hovered.position);
+									P += XMLoadFloat3(&hovered.normal) * 2;
+									if (grass_interaction_entity == INVALID_ENTITY)
+									{
+										grass_interaction_entity = CreateEntity();
+									}
+									ForceFieldComponent& force = scene.forces.Create(grass_interaction_entity);
+									TransformComponent& transform = scene.transforms.Create(grass_interaction_entity);
+									force.type = ForceFieldComponent::Type::Point;
+									force.gravity = -80;
+									force.range = 3;
+									transform.Translate(P);
+									break;
 								}
-								ForceFieldComponent& force = scene.forces.Create(grass_interaction_entity);
-								TransformComponent& transform = scene.transforms.Create(grass_interaction_entity);
-								force.type = ForceFieldComponent::Type::Point;
-								force.gravity = -80;
-								force.range = 3;
-								transform.Translate(P);
-								break;
 							}
 						}
 					}
@@ -1488,17 +1537,6 @@ void EditorComponent::Update(float dt)
 		const wi::scene::PickResult& picked = translator.selected.back();
 
 		assert(picked.entity != INVALID_ENTITY);
-		componentsWnd.objectWnd.SetEntity(picked.entity);
-
-		for (auto& x : translator.selected)
-		{
-			if (scene.objects.GetComponent(x.entity) != nullptr)
-			{
-				componentsWnd.objectWnd.SetEntity(x.entity);
-				break;
-			}
-		}
-
 		optionsWnd.cameraWnd.SetEntity(picked.entity);
 		componentsWnd.emitterWnd.SetEntity(picked.entity);
 		componentsWnd.hairWnd.SetEntity(picked.entity);
@@ -1530,6 +1568,7 @@ void EditorComponent::Update(float dt)
 			const ObjectComponent* object = scene.objects.GetComponent(picked.entity);
 			if (object != nullptr) // maybe it was deleted...
 			{
+				componentsWnd.objectWnd.SetEntity(picked.entity);
 				componentsWnd.meshWnd.SetEntity(object->meshID, picked.subsetIndex);
 				componentsWnd.softWnd.SetEntity(object->meshID);
 
@@ -1542,9 +1581,50 @@ void EditorComponent::Update(float dt)
 		}
 		else
 		{
-			componentsWnd.meshWnd.SetEntity(picked.entity, picked.subsetIndex);
-			componentsWnd.softWnd.SetEntity(picked.entity);
-			componentsWnd.materialWnd.SetEntity(picked.entity);
+			bool found_object = false;
+			bool found_mesh = false;
+			bool found_soft = false;
+			bool found_material = false;
+			for (auto& x : translator.selected)
+			{
+				if (!found_object && scene.objects.Contains(x.entity))
+				{
+					componentsWnd.objectWnd.SetEntity(x.entity);
+					found_object = true;
+				}
+				if (!found_mesh && scene.meshes.Contains(x.entity))
+				{
+					componentsWnd.meshWnd.SetEntity(x.entity, 0);
+					found_mesh = true;
+				}
+				if (!found_soft && scene.softbodies.Contains(x.entity))
+				{
+					componentsWnd.softWnd.SetEntity(x.entity);
+					found_soft = true;
+				}
+				if (!found_material && scene.materials.Contains(x.entity))
+				{
+					componentsWnd.materialWnd.SetEntity(x.entity);
+					found_material = true;
+				}
+			}
+
+			if (!found_object)
+			{
+				componentsWnd.objectWnd.SetEntity(INVALID_ENTITY);
+			}
+			if (!found_mesh)
+			{
+				componentsWnd.meshWnd.SetEntity(INVALID_ENTITY, -1);
+			}
+			if (!found_soft)
+			{
+				componentsWnd.softWnd.SetEntity(INVALID_ENTITY);
+			}
+			if (!found_material)
+			{
+				componentsWnd.materialWnd.SetEntity(INVALID_ENTITY);
+			}
 		}
 
 	}
@@ -1911,6 +1991,105 @@ void EditorComponent::Render() const
 			device->EventEnd(cmd);
 		}
 
+		// Reference dummy render:
+		if(dummy_enabled)
+		{
+			device->EventBegin("Reference Dummy", cmd);
+			static PipelineState pso;
+			if (!pso.IsValid())
+			{
+				static auto LoadShaders = [] {
+					PipelineStateDesc desc;
+					desc.vs = wi::renderer::GetShader(wi::enums::VSTYPE_VERTEXCOLOR);
+					desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);
+					desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_VERTEXCOLOR);
+					desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEFAULT);
+					desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_DOUBLESIDED);
+					desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_TRANSPARENT);
+					desc.pt = PrimitiveTopology::TRIANGLELIST;
+					wi::graphics::GetDevice()->CreatePipelineState(&desc, &pso);
+				};
+				static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
+				LoadShaders();
+			}
+			struct Vertex
+			{
+				XMFLOAT4 position;
+				XMFLOAT4 color;
+			};
+
+			RenderPassImage rp[] = {
+				RenderPassImage::RenderTarget(&rt_dummyOutline, RenderPassImage::LoadOp::CLEAR),
+			};
+			device->RenderPassBegin(rp, arraysize(rp), cmd);
+
+			Viewport vp;
+			vp.width = (float)rt_dummyOutline.GetDesc().width;
+			vp.height = (float)rt_dummyOutline.GetDesc().height;
+			device->BindViewports(1, &vp, cmd);
+
+			device->BindPipelineState(&pso, cmd);
+
+			// remove camera jittering
+			CameraComponent cam = *renderPath->camera;
+			cam.jitter = XMFLOAT2(0, 0);
+			cam.UpdateCamera();
+			const XMMATRIX VP = cam.GetViewProjection();
+
+			MiscCB sb;
+			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranslation(dummy_pos.x, dummy_pos.y, dummy_pos.z) * VP);
+			sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+
+			const float3* vertices = dummy_female::vertices;
+			size_t vertices_size = sizeof(dummy_female::vertices);
+			size_t vertices_count = arraysize(dummy_female::vertices);
+			const unsigned int* indices = dummy_female::indices;
+			size_t indices_size = sizeof(dummy_female::indices);
+			size_t indices_count = arraysize(dummy_female::indices);
+			if (dummy_male)
+			{
+				vertices = dummy_male::vertices;
+				vertices_size = sizeof(dummy_male::vertices);
+				vertices_count = arraysize(dummy_male::vertices);
+				indices = dummy_male::indices;
+				indices_size = sizeof(dummy_male::indices);
+				indices_count = arraysize(dummy_male::indices);
+			}
+
+			auto mem = device->AllocateGPU(indices_count * sizeof(uint32_t) + vertices_count * sizeof(Vertex), cmd);
+
+			Vertex* gpu_vertices = (Vertex*)mem.data;
+			for (size_t i = 0; i < vertices_count; ++i)
+			{
+				Vertex vert = {};
+				vert.position.x = vertices[i].x;
+				vert.position.y = vertices[i].y;
+				vert.position.z = vertices[i].z;
+				vert.position.w = 1;
+				vert.color = XMFLOAT4(1, 1, 1, 1);
+				std::memcpy(gpu_vertices + i, &vert, sizeof(vert));
+			}
+
+			uint32_t* gpu_indices = (uint32_t*)(gpu_vertices + vertices_count);
+			std::memcpy(gpu_indices, indices, indices_size);
+
+			const GPUBuffer* vbs[] = {
+				&mem.buffer,
+			};
+			const uint32_t strides[] = {
+				sizeof(Vertex),
+			};
+			const uint64_t offsets[] = {
+				mem.offset,
+			};
+			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+			device->BindIndexBuffer(&mem.buffer, IndexBufferFormat::UINT32, mem.offset + vertices_count * sizeof(Vertex), cmd);
+			device->DrawIndexed((uint32_t)indices_count, 0, 0, cmd);
+			device->RenderPassEnd(cmd);
+			device->EventEnd(cmd);
+			}
+
 		// Full resolution:
 		{
 			const Texture& render_result = renderPath->GetRenderResult();
@@ -1934,7 +2113,7 @@ void EditorComponent::Render() const
 			device->BindViewports(1, &vp, cmd);
 
 			// Selection color:
-			float selectionColorIntensity = std::sin(selectionOutlineTimer * XM_2PI * 0.8f) * 0.5f + 0.5f;
+			float selectionColorIntensity = std::sin(outlineTimer * XM_2PI * 0.8f) * 0.5f + 0.5f;
 			XMFLOAT4 glow = wi::math::Lerp(wi::math::Lerp(XMFLOAT4(1, 1, 1, 1), selectionColor, 0.4f), selectionColor, selectionColorIntensity);
 			wi::Color selectedEntityColor = wi::Color::fromFloat4(glow);
 
@@ -1951,6 +2130,18 @@ void EditorComponent::Render() const
 				col.w *= opacity;
 				wi::renderer::Postprocess_Outline(rt_selectionOutline[1], cmd, 0.1f, 1, col);
 				device->EventEnd(cmd);
+			}
+
+			if (dummy_enabled)
+			{
+				wi::image::Params fx;
+				fx.enableFullScreen();
+				fx.blendFlag = wi::enums::BLENDMODE_PREMULTIPLIED;
+				fx.color = XMFLOAT4(0, 0, 0, 0.4f);
+				wi::image::Draw(&rt_dummyOutline, fx, cmd);
+				XMFLOAT4 dummyColorBlinking = dummyColor;
+				dummyColorBlinking.w = wi::math::Lerp(0.4f, 1, selectionColorIntensity);
+				wi::renderer::Postprocess_Outline(rt_dummyOutline, cmd, 0.1f, 1, dummyColorBlinking);
 			}
 
 			const CameraComponent& camera = GetCurrentEditorScene().camera;
@@ -3476,11 +3667,14 @@ void EditorComponent::UpdateTopMenuAnimation()
 
 
 	float static_pos = screenW - wid_idle * 11;
+
+	dummyButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
+	dummyButton.SetPos(XMFLOAT2(static_pos - dummyButton.GetSize().x - 20, 0));
+
 	stopButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
-	stopButton.SetPos(XMFLOAT2(static_pos - stopButton.GetSize().x - 20, 0));
+	stopButton.SetPos(XMFLOAT2(dummyButton.GetPos().x - stopButton.GetSize().x - 20, 0));
 	playButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
 	playButton.SetPos(XMFLOAT2(stopButton.GetPos().x - playButton.GetSize().x - padding, 0));
-
 
 	scaleButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
 	scaleButton.SetPos(XMFLOAT2(playButton.GetPos().x - scaleButton.GetSize().x - 20, 0));
@@ -3488,6 +3682,7 @@ void EditorComponent::UpdateTopMenuAnimation()
 	rotateButton.SetPos(XMFLOAT2(scaleButton.GetPos().x - rotateButton.GetSize().x - padding, 0));
 	translateButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
 	translateButton.SetPos(XMFLOAT2(rotateButton.GetPos().x - translateButton.GetSize().x - padding, 0));
+
 
 	XMFLOAT4 color_on = playButton.sprites[wi::gui::FOCUS].params.color;
 	XMFLOAT4 color_off = playButton.sprites[wi::gui::IDLE].params.color;
@@ -3509,6 +3704,15 @@ void EditorComponent::UpdateTopMenuAnimation()
 		translateButton.sprites[wi::gui::IDLE].params.color = color_off;
 		rotateButton.sprites[wi::gui::IDLE].params.color = color_off;
 		scaleButton.sprites[wi::gui::IDLE].params.color = color_on;
+	}
+
+	if (dummy_enabled)
+	{
+		dummyButton.sprites[wi::gui::IDLE].params.color = color_on;
+	}
+	else
+	{
+		dummyButton.sprites[wi::gui::IDLE].params.color = color_off;
 	}
 
 	float ofs = screenW - 2;

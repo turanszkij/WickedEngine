@@ -12,7 +12,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_MESH " Mesh", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(580, 760));
+	SetSize(XMFLOAT2(580, 780));
 
 	closeButton.SetTooltip("Delete MeshComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -291,7 +291,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 	AddWidget(&recenterToBottomButton);
 
 	mergeButton.Create("Merge Selected");
-	mergeButton.SetTooltip("Merges selected objects/meshes into one.");
+	mergeButton.SetTooltip("Merges selected objects/meshes into one.\nAll selected object transformations will be applied to meshes and allmeshes will be baked into a single mesh.");
 	mergeButton.SetSize(XMFLOAT2(mod_wid, hei));
 	mergeButton.SetPos(XMFLOAT2(mod_x, y += step));
 	mergeButton.OnClick([=](wi::gui::EventArgs args) {
@@ -515,6 +515,79 @@ void MeshWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&optimizeButton);
 
+	exportHeaderButton.Create("Export to header");
+	exportHeaderButton.SetTooltip("Export vertex positions and index buffer into a C++ header file.\nObject transformation (if selected through object picking) and Skinning pose will be applied.\nOnly LOD0 will be exported.");
+	exportHeaderButton.SetSize(XMFLOAT2(mod_wid, hei));
+	exportHeaderButton.SetPos(XMFLOAT2(mod_x, y += step));
+	exportHeaderButton.OnClick([&](wi::gui::EventArgs args) {
+		MeshComponent* mesh = editor->GetCurrentScene().meshes.GetComponent(entity);
+		if (mesh == nullptr)
+			return;
+
+		wi::helper::FileDialogParams params;
+		params.description = ".h (C++ header file)";
+		params.extensions.push_back("h");
+		params.type = wi::helper::FileDialogParams::TYPE::SAVE;
+		wi::helper::FileDialog(params, [=](std::string filename) {
+			std::string str;
+			str += "static const float3 vertices[] = {\n";
+			const Scene& scene = editor->GetCurrentScene();
+			XMMATRIX M = XMMatrixIdentity();
+			if (editor->componentsWnd.objectWnd.entity != INVALID_ENTITY)
+			{
+				// if first selection is an object then transformation will be also applied
+				Entity object_entity = editor->componentsWnd.objectWnd.entity;
+				const ObjectComponent* object = scene.objects.GetComponent(object_entity);
+				if (object != nullptr)
+				{
+					size_t index = scene.objects.GetIndex(object_entity);
+					M = XMLoadFloat4x4(&scene.matrix_objects[index]);
+				}
+			}
+			const ArmatureComponent* armature = scene.armatures.GetComponent(mesh->armatureID);
+			for (size_t i = 0; i < mesh->vertex_positions.size(); ++i)
+			{
+				XMVECTOR P;
+				if (armature == nullptr)
+				{
+					P = XMLoadFloat3(&mesh->vertex_positions[i]);
+				}
+				else
+				{
+					P = wi::scene::SkinVertex(*mesh, *armature, (uint32_t)i);
+				}
+				P = XMVector3Transform(P, M);
+				XMFLOAT3 pos;
+				XMStoreFloat3(&pos, P);
+				str += "\tfloat3(" + std::to_string(pos.x) + "f," + std::to_string(pos.y) + "f," + std::to_string(pos.z) + "f),\n";
+			}
+			str += "};\n";
+
+			str += "static const unsigned int indices[] = {\n";
+			uint32_t first_subset = 0;
+			uint32_t last_subset = 0;
+			mesh->GetLODSubsetRange(0, first_subset, last_subset);
+			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+			{
+				const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+				if (subset.indexCount == 0)
+					continue;
+				const uint32_t triangleOffset = subset.indexOffset / 3;
+				const uint32_t triangleCount = subset.indexCount / 3;
+				for (uint32_t t = 0; t < triangleCount; ++t)
+				{
+					const uint32_t tri = triangleOffset + t;
+					str += "\t" + std::to_string(mesh->indices[tri * 3 + 0]) + "," + std::to_string(mesh->indices[tri * 3 + 1]) + "," + std::to_string(mesh->indices[tri * 3 + 2]) + ",\n";
+				}
+			}
+			str += "};\n";
+
+			filename = wi::helper::ForceExtension(filename, "h");
+			wi::helper::FileWrite(filename, (uint8_t*)str.c_str(), str.length());
+		});
+	});
+	AddWidget(&exportHeaderButton);
+
 
 
 	subsetMaterialComboBox.Create("Material: ");
@@ -734,6 +807,10 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		ss += "Index count: " + std::to_string(mesh->indices.size()) + "\n";
 		ss += "Index format: " + std::string(wi::graphics::GetIndexBufferFormatString(mesh->GetIndexFormat())) + "\n";
 		ss += "Subset count: " + std::to_string(mesh->subsets.size()) + " (" + std::to_string(mesh->GetLODCount()) + " LODs)\n";
+		if (!mesh->morph_targets.empty())
+		{
+			ss += "Morph target count: " + std::to_string(mesh->morph_targets.size()) + "\n";
+		}
 		ss += "CPU memory: " + wi::helper::GetMemorySizeText(mesh->GetMemoryUsageCPU()) + "\n";
 		if (mesh->bvh.IsValid())
 		{
@@ -905,6 +982,7 @@ void MeshWindow::ResizeLayout()
 	add_fullwidth(recenterToBottomButton);
 	add_fullwidth(mergeButton);
 	add_fullwidth(optimizeButton);
+	add_fullwidth(exportHeaderButton);
 
 	add(morphTargetCombo);
 	add(morphTargetSlider);

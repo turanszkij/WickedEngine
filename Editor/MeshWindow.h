@@ -29,6 +29,7 @@ public:
 	wi::gui::Button recenterToBottomButton;
 	wi::gui::Button mergeButton;
 	wi::gui::Button optimizeButton;
+	wi::gui::Button exportHeaderButton;
 
 	wi::gui::ComboBox morphTargetCombo;
 	wi::gui::Slider morphTargetSlider;
