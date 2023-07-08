@@ -15577,6 +15577,65 @@ void Postprocess_Underwater(
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
 }
+void Postprocess_Custom(
+	const Shader& computeshader,
+	const Texture& input,
+	const Texture& output,
+	CommandList cmd,
+	const XMFLOAT4& params0,
+	const XMFLOAT4& params1,
+	const char* debug_name
+)
+{
+	device->EventBegin(debug_name, cmd);
+	auto range = wi::profiler::BeginRangeGPU(debug_name, cmd);
+
+	device->BindComputeShader(&computeshader, cmd);
+
+	BindCommonResources(cmd);
+
+	const TextureDesc& desc = output.GetDesc();
+
+	PostProcess postprocess;
+	postprocess.resolution.x = desc.width;
+	postprocess.resolution.y = desc.height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	postprocess.params0 = params0;
+	postprocess.params1 = params1;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+	device->BindResource(&input, 0, cmd);
+
+	const GPUResource* uavs[] = {
+		&output,
+	};
+	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	device->Dispatch(
+		(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		1,
+		cmd
+	);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	wi::profiler::EndRange(range);
+	device->EventEnd(cmd);
+}
 
 
 void YUV_to_RGB(

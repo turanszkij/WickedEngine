@@ -1916,6 +1916,25 @@ namespace wi
 				std::swap(rt_read, rt_write);
 			}
 
+			for (auto& x : custom_post_processes)
+			{
+				if (x.stage == CustomPostprocess::Stage::BeforeTonemap)
+				{
+					wi::renderer::Postprocess_Custom(
+						x.computeshader,
+						rt_first == nullptr ? *rt_read : *rt_first,
+						*rt_write,
+						cmd,
+						x.params0,
+						x.params1,
+						x.name.c_str()
+					);
+
+					rt_first = nullptr;
+					std::swap(rt_read, rt_write);
+				}
+			}
+
 			if (getDepthOfFieldEnabled() && camera->aperture_size > 0 && getDepthOfFieldStrength() > 0 && depthoffieldResources.IsValid())
 			{
 				wi::renderer::Postprocess_DepthOfField(
@@ -1993,6 +2012,24 @@ namespace wi
 
 		// 3.) LDR post process chain
 		{
+			for (auto& x : custom_post_processes)
+			{
+				if (x.stage == CustomPostprocess::Stage::AfterTonemap)
+				{
+					wi::renderer::Postprocess_Custom(
+						x.computeshader,
+						*rt_read,
+						*rt_write,
+						cmd,
+						x.params0,
+						x.params1,
+						x.name.c_str()
+					);
+
+					std::swap(rt_read, rt_write);
+				}
+			}
+
 			if (getSharpenFilterEnabled())
 			{
 				wi::renderer::Postprocess_Sharpen(*rt_read, *rt_write, cmd, getSharpenFilterAmount());

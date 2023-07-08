@@ -320,6 +320,20 @@ namespace wi
 
 		virtual void setMSAASampleCount(uint32_t value) { msaaSampleCount = value; }
 
+		struct CustomPostprocess
+		{
+			std::string name = "CustomPostprocess";
+			wi::graphics::Shader computeshader;
+			XMFLOAT4 params0;
+			XMFLOAT4 params1;
+			enum class Stage
+			{
+				BeforeTonemap, // Before tonemap and bloom in HDR color space
+				AfterTonemap // After tonemap, in display color space
+			} stage = Stage::AfterTonemap;
+		};
+		wi::vector<CustomPostprocess> custom_post_processes;
+
 		void PreUpdate() override;
 		void Update(float dt) override;
 		void Render() const override;

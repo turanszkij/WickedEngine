@@ -862,6 +862,15 @@ namespace wi::renderer
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd
 	);
+	void Postprocess_Custom(
+		const wi::graphics::Shader& computeshader,
+		const wi::graphics::Texture& input,
+		const wi::graphics::Texture& output,
+		wi::graphics::CommandList cmd,
+		const XMFLOAT4& params0 = XMFLOAT4(0, 0, 0, 0),
+		const XMFLOAT4& params1 = XMFLOAT4(0, 0, 0, 0),
+		const char* debug_name = "Postprocess_Custom"
+	);
 
 	void YUV_to_RGB(
 		const wi::graphics::Texture& input,
