@@ -226,7 +226,7 @@ void EditorComponent::Load()
 
 	dummyButton.Create(ICON_DUMMY);
 	dummyButton.SetShadowRadius(2);
-	dummyButton.SetTooltip("Toggle reference dummy visualizer\n - Use the reference dummy to get an idea about object sizes compared to a human character size.\n - Position the dummy by clicking on something with the left mouse button while the dummy is active.\n - Pressing this button while Ctrl key is held down will reset dummy position to the origin.\n - Pressing this button while the Shift key is held down will switch between male and female dummies.");
+	dummyButton.SetTooltip("Toggle reference dummy visualizer\n - Use the reference dummy to get an idea about object sizes compared to a human character size.\n - Position the dummy by clicking on something with the left mouse button while the dummy is active and nothing is selected.\n - Pressing this button while Ctrl key is held down will reset dummy position to the origin.\n - Pressing this button while the Shift key is held down will switch between male and female dummies.");
 	dummyButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	dummyButton.OnClick([&](wi::gui::EventArgs args) {
 		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL))
@@ -1140,7 +1140,7 @@ void EditorComponent::Update(float dt)
 			// Interact:
 			if (hovered.entity != INVALID_ENTITY && wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
 			{
-				if (dummy_enabled)
+				if (dummy_enabled && translator.selected.empty())
 				{
 					dummy_pos = hovered.position;
 				}
