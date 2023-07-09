@@ -513,6 +513,11 @@ void GeneralWindow::Create(EditorComponent* _editor)
 
 			editor->scaleButton.sprites[i].params.enableCornerRounding();
 			editor->scaleButton.sprites[i].params.corners_rounding[3].radius = 40;
+
+
+			editor->dummyButton.sprites[i].params.enableCornerRounding();
+			editor->dummyButton.sprites[i].params.corners_rounding[2].radius = 40;
+			editor->dummyButton.sprites[i].params.corners_rounding[3].radius = 40;
 		}
 		editor->componentsWnd.weatherWnd.default_sky_horizon = dark_point;
 		editor->componentsWnd.weatherWnd.default_sky_zenith = theme_color_idle;
@@ -533,11 +538,13 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		{
 			editor->inactiveEntityColor = theme_color_focus;
 			editor->hoveredEntityColor = theme_color_focus;
+			editor->dummyColor = theme_color_focus;
 		}
 		else
 		{
 			editor->inactiveEntityColor = theme.font.color;
 			editor->hoveredEntityColor = theme.font.color;
+			editor->dummyColor = theme.font.color;
 		}
 		editor->inactiveEntityColor.setA(150);
 		editor->backgroundEntityColor = shadow_color;
