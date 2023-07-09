@@ -2018,6 +2018,49 @@ void EditorComponent::Render() const
 				XMFLOAT4 color;
 			};
 
+			const float3* vertices = dummy_female::vertices;
+			size_t vertices_size = sizeof(dummy_female::vertices);
+			size_t vertices_count = arraysize(dummy_female::vertices);
+			const unsigned int* indices = dummy_female::indices;
+			size_t indices_size = sizeof(dummy_female::indices);
+			size_t indices_count = arraysize(dummy_female::indices);
+			if (dummy_male)
+			{
+				vertices = dummy_male::vertices;
+				vertices_size = sizeof(dummy_male::vertices);
+				vertices_count = arraysize(dummy_male::vertices);
+				indices = dummy_male::indices;
+				indices_size = sizeof(dummy_male::indices);
+				indices_count = arraysize(dummy_male::indices);
+			}
+
+			static GPUBuffer dummyBuffers[2];
+			if (!dummyBuffers[dummy_male].IsValid())
+			{
+				auto fill_data = [&](void* data) {
+					Vertex* gpu_vertices = (Vertex*)data;
+					for (size_t i = 0; i < vertices_count; ++i)
+					{
+						Vertex vert = {};
+						vert.position.x = vertices[i].x;
+						vert.position.y = vertices[i].y;
+						vert.position.z = vertices[i].z;
+						vert.position.w = 1;
+						vert.color = XMFLOAT4(1, 1, 1, 1);
+						std::memcpy(gpu_vertices + i, &vert, sizeof(vert));
+					}
+
+					uint32_t* gpu_indices = (uint32_t*)(gpu_vertices + vertices_count);
+					std::memcpy(gpu_indices, indices, indices_size);
+				};
+
+				GPUBufferDesc desc;
+				desc.size = indices_count * sizeof(uint32_t) + vertices_count * sizeof(Vertex);
+				desc.bind_flags = BindFlag::INDEX_BUFFER | BindFlag::VERTEX_BUFFER;
+				device->CreateBuffer2(&desc, fill_data, &dummyBuffers[dummy_male]);
+				device->SetName(&dummyBuffers[dummy_male], "dummyBuffer");
+			}
+
 			RenderPassImage rp[] = {
 				RenderPassImage::RenderTarget(&rt_dummyOutline, RenderPassImage::LoadOp::CLEAR),
 			};
@@ -2041,54 +2084,21 @@ void EditorComponent::Render() const
 			sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
-			const float3* vertices = dummy_female::vertices;
-			size_t vertices_size = sizeof(dummy_female::vertices);
-			size_t vertices_count = arraysize(dummy_female::vertices);
-			const unsigned int* indices = dummy_female::indices;
-			size_t indices_size = sizeof(dummy_female::indices);
-			size_t indices_count = arraysize(dummy_female::indices);
-			if (dummy_male)
-			{
-				vertices = dummy_male::vertices;
-				vertices_size = sizeof(dummy_male::vertices);
-				vertices_count = arraysize(dummy_male::vertices);
-				indices = dummy_male::indices;
-				indices_size = sizeof(dummy_male::indices);
-				indices_count = arraysize(dummy_male::indices);
-			}
-
-			auto mem = device->AllocateGPU(indices_count * sizeof(uint32_t) + vertices_count * sizeof(Vertex), cmd);
-
-			Vertex* gpu_vertices = (Vertex*)mem.data;
-			for (size_t i = 0; i < vertices_count; ++i)
-			{
-				Vertex vert = {};
-				vert.position.x = vertices[i].x;
-				vert.position.y = vertices[i].y;
-				vert.position.z = vertices[i].z;
-				vert.position.w = 1;
-				vert.color = XMFLOAT4(1, 1, 1, 1);
-				std::memcpy(gpu_vertices + i, &vert, sizeof(vert));
-			}
-
-			uint32_t* gpu_indices = (uint32_t*)(gpu_vertices + vertices_count);
-			std::memcpy(gpu_indices, indices, indices_size);
-
 			const GPUBuffer* vbs[] = {
-				&mem.buffer,
+				&dummyBuffers[dummy_male],
 			};
 			const uint32_t strides[] = {
 				sizeof(Vertex),
 			};
 			const uint64_t offsets[] = {
-				mem.offset,
+				0,
 			};
 			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
-			device->BindIndexBuffer(&mem.buffer, IndexBufferFormat::UINT32, mem.offset + vertices_count * sizeof(Vertex), cmd);
+			device->BindIndexBuffer(&dummyBuffers[dummy_male], IndexBufferFormat::UINT32, vertices_count * sizeof(Vertex), cmd);
 			device->DrawIndexed((uint32_t)indices_count, 0, 0, cmd);
 			device->RenderPassEnd(cmd);
 			device->EventEnd(cmd);
-			}
+		}
 
 		// Full resolution:
 		{
