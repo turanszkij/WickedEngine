@@ -20,6 +20,8 @@ namespace wi::texturehelper
 	const wi::graphics::Texture* getTransparent();
 	const wi::graphics::Texture* getColor(wi::Color color);
 
-	bool CreateTexture(wi::graphics::Texture& texture, const uint8_t* data, uint32_t width, uint32_t height, wi::graphics::Format format = wi::graphics::Format::R8G8B8A8_UNORM);
+	bool CreateTexture(wi::graphics::Texture& texture, const uint8_t* data, uint32_t width, uint32_t height, wi::graphics::Format format = wi::graphics::Format::R8G8B8A8_UNORM, wi::graphics::Swizzle swizzle = {});
+
+	wi::graphics::Texture CreateCircularProgressGradientTexture(uint32_t width, uint32_t height, const XMFLOAT2& direction = XMFLOAT2(0, 1), bool counter_clockwise = false);
 };
 

@@ -243,7 +243,7 @@ namespace wi::texturehelper
 	}
 
 
-	bool CreateTexture(wi::graphics::Texture& texture, const uint8_t* data, uint32_t width, uint32_t height, Format format)
+	bool CreateTexture(wi::graphics::Texture& texture, const uint8_t* data, uint32_t width, uint32_t height, Format format, wi::graphics::Swizzle swizzle)
 	{
 		if (data == nullptr)
 		{
@@ -251,20 +251,48 @@ namespace wi::texturehelper
 		}
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
-		TextureDesc textureDesc;
-		textureDesc.width = width;
-		textureDesc.height = height;
-		textureDesc.mip_levels = 1;
-		textureDesc.array_size = 1;
-		textureDesc.format = format;
-		textureDesc.sample_count = 1;
-		textureDesc.bind_flags = BindFlag::SHADER_RESOURCE;
+		TextureDesc desc;
+		desc.width = width;
+		desc.height = height;
+		desc.mip_levels = 1;
+		desc.array_size = 1;
+		desc.format = format;
+		desc.sample_count = 1;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE;
+		desc.swizzle = swizzle;
 
 		SubresourceData InitData;
 		InitData.data_ptr = data;
 		InitData.row_pitch = width * GetFormatStride(format) / GetFormatBlockSize(format);
 
-		return device->CreateTexture(&textureDesc, &InitData, &texture);
+		return device->CreateTexture(&desc, &InitData, &texture);
+	}
+
+	wi::graphics::Texture CreateCircularProgressGradientTexture(uint32_t width, uint32_t height, const XMFLOAT2& direction, bool counter_clockwise)
+	{
+		wi::vector<uint8_t> data(width * height);
+		for (uint32_t y = 0; y < height; ++y)
+		{
+			for (uint32_t x = 0; x < width; ++x)
+			{
+				const XMFLOAT2 coord = XMFLOAT2(float(x) / float(width - 1) * 2 - 1, -(float(y) / float(height - 1) * 2 - 1));
+				float gradient = wi::math::GetAngle(direction, coord) / XM_2PI;
+				if (counter_clockwise)
+				{
+					gradient = 1 - gradient;
+				}
+				data[x + y * width] = uint8_t(gradient * 255);
+			}
+		}
+
+		Texture texture;
+		Swizzle swizzle;
+		swizzle.r = ComponentSwizzle::R;
+		swizzle.g = ComponentSwizzle::R;
+		swizzle.b = ComponentSwizzle::R;
+		swizzle.a = ComponentSwizzle::R;
+		CreateTexture(texture, data.data(), width, height, Format::R8_UNORM, swizzle);
+		return texture;
 	}
 
 }
