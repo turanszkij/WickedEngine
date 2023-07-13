@@ -72,6 +72,8 @@ namespace wi::image
 		float fade = 0;
 		float opacity = 1;
 		float hdr_scaling = 1.0f; // a scaling value for use by linear output mapping
+		float mask_alpha_range_start = 0; // constrain mask alpha to not go below this level
+		float mask_alpha_range_end = 1; // constrain mask alpha to not go above this level
 
 		// you can deform the image by its corners (0: top left, 1: top right, 2: bottom left, 3: bottom right)
 		XMFLOAT2 corners[4] = {

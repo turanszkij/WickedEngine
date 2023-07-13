@@ -26,7 +26,7 @@ struct ImageConstants
 	int texture_mask_index;
 	int texture_background_index;
 	float border_soften;
-	int padding0;
+	uint mask_alpha_range;
 
 	// parameters for inverse bilinear interpolation:
 	uint b0; // packed half2

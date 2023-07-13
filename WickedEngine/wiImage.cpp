@@ -125,6 +125,7 @@ namespace wi::image
 		}
 
 		image.border_soften = params.border_soften;
+		image.mask_alpha_range =  XMConvertFloatToHalf(params.mask_alpha_range_start) | (XMConvertFloatToHalf(params.mask_alpha_range_end) << 16u);
 
 		STRIP_MODE strip_mode = STRIP_ON;
 		uint32_t index_count = 0;

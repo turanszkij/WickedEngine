@@ -26,6 +26,10 @@ float4 main(VertextoPixel input) : SV_TARGET
 	{
 		mask = bindless_textures[image.texture_mask_index].Sample(sam, uvsets.zw);
 	}
+
+	const float2 mask_alpha_range = unpack_half2(image.mask_alpha_range);
+	mask.a = smoothstep(mask_alpha_range.x, mask_alpha_range.y, mask.a);
+	
 	color *= mask;
 
 	[branch]

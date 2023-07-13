@@ -243,7 +243,14 @@ namespace wi::texturehelper
 	}
 
 
-	bool CreateTexture(wi::graphics::Texture& texture, const uint8_t* data, uint32_t width, uint32_t height, Format format, wi::graphics::Swizzle swizzle)
+	bool CreateTexture(
+		wi::graphics::Texture& texture,
+		const uint8_t* data,
+		uint32_t width,
+		uint32_t height,
+		Format format,
+		wi::graphics::Swizzle swizzle
+	)
 	{
 		if (data == nullptr)
 		{
@@ -268,7 +275,13 @@ namespace wi::texturehelper
 		return device->CreateTexture(&desc, &InitData, &texture);
 	}
 
-	wi::graphics::Texture CreateCircularProgressGradientTexture(uint32_t width, uint32_t height, const XMFLOAT2& direction, bool counter_clockwise)
+	wi::graphics::Texture CreateCircularProgressGradientTexture(
+		uint32_t width,
+		uint32_t height,
+		const XMFLOAT2& direction,
+		bool counter_clockwise,
+		wi::graphics::Swizzle swizzle
+	)
 	{
 		wi::vector<uint8_t> data(width * height);
 		for (uint32_t y = 0; y < height; ++y)
@@ -286,11 +299,6 @@ namespace wi::texturehelper
 		}
 
 		Texture texture;
-		Swizzle swizzle;
-		swizzle.r = ComponentSwizzle::R;
-		swizzle.g = ComponentSwizzle::R;
-		swizzle.b = ComponentSwizzle::R;
-		swizzle.a = ComponentSwizzle::R;
 		CreateTexture(texture, data.data(), width, height, Format::R8_UNORM, swizzle);
 		return texture;
 	}
