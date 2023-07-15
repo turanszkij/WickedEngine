@@ -115,6 +115,18 @@ namespace wi::math
 	{
 		return (pos - value1) / (value2 - value1);
 	}
+	constexpr XMFLOAT2 InverseLerp(const XMFLOAT2& value1, const XMFLOAT2& value2, const XMFLOAT2& pos)
+	{
+		return XMFLOAT2(InverseLerp(value1.x, value2.x, pos.x), InverseLerp(value1.y, value2.y, pos.y));
+	}
+	constexpr XMFLOAT3 InverseLerp(const XMFLOAT3& value1, const XMFLOAT3& value2, const XMFLOAT3& pos)
+	{
+		return XMFLOAT3(InverseLerp(value1.x, value2.x, pos.x), InverseLerp(value1.y, value2.y, pos.y), InverseLerp(value1.z, value2.z, pos.z));
+	}
+	constexpr XMFLOAT4 InverseLerp(const XMFLOAT4& value1, const XMFLOAT4& value2, const XMFLOAT4& pos)
+	{
+		return XMFLOAT4(InverseLerp(value1.x, value2.x, pos.x), InverseLerp(value1.y, value2.y, pos.y), InverseLerp(value1.z, value2.z, pos.z), InverseLerp(value1.w, value2.w, pos.w));
+	}
 	constexpr float Lerp(float value1, float value2, float amount)
 	{
 		return value1 + (value2 - value1) * amount;

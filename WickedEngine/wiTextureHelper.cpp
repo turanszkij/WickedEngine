@@ -244,12 +244,12 @@ namespace wi::texturehelper
 
 
 	bool CreateTexture(
-		wi::graphics::Texture& texture,
+		Texture& texture,
 		const uint8_t* data,
 		uint32_t width,
 		uint32_t height,
 		Format format,
-		wi::graphics::Swizzle swizzle
+		Swizzle swizzle
 	)
 	{
 		if (data == nullptr)
@@ -275,12 +275,112 @@ namespace wi::texturehelper
 		return device->CreateTexture(&desc, &InitData, &texture);
 	}
 
-	wi::graphics::Texture CreateCircularProgressGradientTexture(
+	Texture CreateGradientTexture(
+		GradientType type,
+		uint32_t width,
+		uint32_t height,
+		const XMFLOAT2& uv_start,
+		const XMFLOAT2& uv_end,
+		GradientFlags flags,
+		Swizzle swizzle
+	)
+	{
+		wi::vector<uint8_t> data(width * height);
+
+		switch (type)
+		{
+		default:
+		case GradientType::Linear:
+		{
+			const XMVECTOR a = XMLoadFloat2(&uv_start);
+			const XMVECTOR b = XMLoadFloat2(&uv_end);
+			const float distance = XMVectorGetX(XMVector3Length(b - a));
+			for (uint32_t y = 0; y < height; ++y)
+			{
+				for (uint32_t x = 0; x < width; ++x)
+				{
+					const XMFLOAT2 uv = XMFLOAT2(float(x) / float(width - 1), float(y) / float(height - 1));
+					const XMVECTOR point_on_line = wi::math::ClosestPointOnLineSegment(a, b, XMLoadFloat2(&uv));
+					const float uv_distance = XMVectorGetX(XMVector3Length(point_on_line - a));
+					float gradient = wi::math::saturate(wi::math::InverseLerp(0, distance, uv_distance));
+					if (has_flag(flags, GradientFlags::Inverse))
+					{
+						gradient = 1 - gradient;
+					}
+					if (has_flag(flags, GradientFlags::Smoothstep))
+					{
+						gradient = wi::math::SmoothStep(0, 1, gradient);
+					}
+					data[x + y * width] = uint8_t(gradient * 255);
+				}
+			}
+		}
+		break;
+
+		case GradientType::Circular:
+		{
+			const XMVECTOR a = XMLoadFloat2(&uv_start);
+			const XMVECTOR b = XMLoadFloat2(&uv_end);
+			const float distance = XMVectorGetX(XMVector3Length(b - a));
+			for (uint32_t y = 0; y < height; ++y)
+			{
+				for (uint32_t x = 0; x < width; ++x)
+				{
+					const XMFLOAT2 uv = XMFLOAT2(float(x) / float(width - 1), float(y) / float(height - 1));
+					const float uv_distance = wi::math::Clamp(XMVectorGetX(XMVector3Length(XMLoadFloat2(&uv) - a)), 0, distance);
+					float gradient = wi::math::saturate(wi::math::InverseLerp(0, distance, uv_distance));
+					if (has_flag(flags, GradientFlags::Inverse))
+					{
+						gradient = 1 - gradient;
+					}
+					if (has_flag(flags, GradientFlags::Smoothstep))
+					{
+						gradient = wi::math::SmoothStep(0, 1, gradient);
+					}
+					data[x + y * width] = uint8_t(gradient * 255);
+				}
+			}
+		}
+		break;
+
+		case GradientType::Angular:
+		{
+			XMFLOAT2 direction;
+			XMStoreFloat2(&direction, XMVector2Normalize(XMLoadFloat2(&uv_end) - XMLoadFloat2(&uv_start)));
+			for (uint32_t y = 0; y < height; ++y)
+			{
+				for (uint32_t x = 0; x < width; ++x)
+				{
+					const XMFLOAT2 uv = XMFLOAT2(float(x) / float(width - 1), float(y) / float(height - 1));
+					const XMFLOAT2 coord = XMFLOAT2(uv.x - uv_start.x, uv.y - uv_start.y);
+					float gradient = wi::math::GetAngle(direction, coord) / XM_2PI;
+					if (has_flag(flags, GradientFlags::Inverse))
+					{
+						gradient = 1 - gradient;
+					}
+					if (has_flag(flags, GradientFlags::Smoothstep))
+					{
+						gradient = wi::math::SmoothStep(0, 1, gradient);
+					}
+					data[x + y * width] = uint8_t(gradient * 255);
+				}
+			}
+		}
+		break;
+
+		}
+
+		Texture texture;
+		CreateTexture(texture, data.data(), width, height, Format::R8_UNORM, swizzle);
+		return texture;
+	}
+
+	Texture CreateCircularProgressGradientTexture(
 		uint32_t width,
 		uint32_t height,
 		const XMFLOAT2& direction,
 		bool counter_clockwise,
-		wi::graphics::Swizzle swizzle
+		Swizzle swizzle
 	)
 	{
 		wi::vector<uint8_t> data(width * height);

@@ -29,6 +29,29 @@ namespace wi::texturehelper
 		wi::graphics::Swizzle swizzle = {}
 	);
 
+	enum class GradientType
+	{
+		Linear,
+		Circular,
+		Angular,
+	};
+	enum class GradientFlags
+	{
+		None = 0,
+		Inverse = 1 << 0,		// inverts resulting gradient
+		Smoothstep = 1 << 1		// applies smoothstep function to resulting gradient
+	};
+	wi::graphics::Texture CreateGradientTexture(
+		GradientType type,
+		uint32_t width,
+		uint32_t height,
+		const XMFLOAT2& uv_start = XMFLOAT2(0, 0),
+		const XMFLOAT2& uv_end = XMFLOAT2(1, 0),
+		GradientFlags gradient_flags = GradientFlags::None,
+		wi::graphics::Swizzle swizzle = { wi::graphics::ComponentSwizzle::R, wi::graphics::ComponentSwizzle::R, wi::graphics::ComponentSwizzle::R, wi::graphics::ComponentSwizzle::R }
+	);
+
+	// Similar to CreateGradientTexture() with GradientType::Angular type but different parameters
 	wi::graphics::Texture CreateCircularProgressGradientTexture(
 		uint32_t width,
 		uint32_t height,
@@ -38,3 +61,7 @@ namespace wi::texturehelper
 	);
 };
 
+template<>
+struct enable_bitmask_operators<wi::texturehelper::GradientFlags> {
+	static const bool enable = true;
+};
