@@ -28,12 +28,12 @@ namespace wi::random
 		// gives an uint64 in range [min, max]
 		constexpr uint64_t next_uint(uint64_t min, uint64_t max)
 		{
-			return min + (next_uint() % (max - min));
+			return min + (next_uint() % (max - min + 1ull));
 		}
 		// gives an uint32 in range [min, max]
 		constexpr uint32_t next_uint(uint32_t min, uint32_t max)
 		{
-			return min + (uint32_t(next_uint()) % (max - min));
+			return min + (uint32_t(next_uint()) % (max - min + 1u));
 		}
 
 		// gives an int64 in range [-INT64_MAX, INT64_MAX]
@@ -45,12 +45,12 @@ namespace wi::random
 		// gives an int64 in range [min, max]
 		constexpr int64_t next_int(int64_t min, int64_t max)
 		{
-			return min + int64_t(next_uint() % (max - min)); // we roll next_uint here to avoid negative value messing with range mapping
+			return min + int64_t(next_uint() % (max - min + 1ll)); // we roll next_uint here to avoid negative value messing with range mapping
 		}
 		// gives an int32 in range [min, max]
 		constexpr int32_t next_int(int32_t min, int32_t max)
 		{
-			return min + int32_t(next_uint() % (max - min)); // we roll next_uint here to avoid negative value messing with range mapping
+			return min + int32_t(next_uint() % (max - min + 1)); // we roll next_uint here to avoid negative value messing with range mapping
 		}
 
 		// gives a float in range [0, 1]

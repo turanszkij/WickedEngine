@@ -4126,8 +4126,8 @@ void UpdateRenderData(
 		wi::profiler::EndRange(range);
 	}
 
-	device->EventBegin("Skinning and Morph", cmd);
 	{
+		device->EventBegin("Skinning and Morph", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Skinning and Morph", cmd);
 		int descriptor_skinningbuffer = -1;
 		if (vis.scene->skinningBuffer.IsValid())
@@ -4145,7 +4145,7 @@ void UpdateRenderData(
 			Entity entity = vis.scene->meshes.GetEntity(i);
 			const MeshComponent& mesh = vis.scene->meshes[i];
 
-			if (mesh.IsSkinned() || mesh.active_morph_count > 0)
+			if ((mesh.IsSkinned() || mesh.active_morph_count > 0) && mesh.streamoutBuffer.IsValid())
 			{
 				const SoftBodyPhysicsComponent* softbody = vis.scene->softbodies.GetComponent(entity);
 				if (softbody != nullptr && softbody->physicsobject != nullptr)
@@ -4193,15 +4193,15 @@ void UpdateRenderData(
 		}
 
 		wi::profiler::EndRange(range); // Skinning and Morph
+		device->EventEnd(cmd); // Skinning and Morph
 	}
-	device->EventEnd(cmd); // Skinning and Morph
 
 	barrier_stack_flush(cmd); // wind/skinning flush
 
 	// Hair particle systems GPU simulation:
 	//	(This must be non-async too, as prepass will render hairs!)
 	static thread_local wi::vector<HairParticleSystem::UpdateGPUItem> hair_updates;
-	if (!vis.visibleHairs.empty() && frameCB.delta_time > 0)
+	if (!vis.visibleHairs.empty())
 	{
 		auto range = wi::profiler::BeginRangeGPU("HairParticles - Simulate", cmd);
 		for (uint32_t hairIndex : vis.visibleHairs)
@@ -4440,7 +4440,7 @@ void UpdateRenderDataAsync(
 	}
 
 	// GPU Particle systems simulation/sorting/culling:
-	if (!vis.visibleEmitters.empty() && frameCB.delta_time > 0)
+	if (!vis.visibleEmitters.empty())
 	{
 		auto range = wi::profiler::BeginRangeGPU("EmittedParticles - Simulate", cmd);
 		for (uint32_t emitterIndex : vis.visibleEmitters)

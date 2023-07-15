@@ -3191,7 +3191,7 @@ namespace wi::scene
 
 				ShaderTransform& shadertransform = armature.boneData[boneIndex];
 				shadertransform.Create(mat);
-				if (dt > 0)
+				if (skinningDataMapped != nullptr)
 				{
 					std::memcpy(gpu_dst + boneIndex, &shadertransform, sizeof(shadertransform));
 				}
@@ -3233,7 +3233,7 @@ namespace wi::scene
 			mesh._flags &= ~MeshComponent::TLAS_FORCE_DOUBLE_SIDED;
 
 			mesh.active_morph_count = 0;
-			if (dt > 0 && !mesh.morph_targets.empty())
+			if (skinningDataMapped != nullptr && !mesh.morph_targets.empty())
 			{
 				mesh.morphGPUOffset = skinningAllocator.fetch_add(uint32_t(mesh.morph_targets.size() * sizeof(MorphTargetGPU)));
 				MorphTargetGPU* gpu_dst = (MorphTargetGPU*)((uint8_t*)skinningDataMapped + mesh.morphGPUOffset);

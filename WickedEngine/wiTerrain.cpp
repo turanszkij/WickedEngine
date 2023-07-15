@@ -928,7 +928,7 @@ namespace wi::terrain
 								);
 								for (int i = 0; i < gen_count; ++i)
 								{
-									uint32_t tri = rng.next_uint(0, chunk_indices.lods[0].indexCount / 3 - 1); // random triangle on the chunk mesh
+									uint32_t tri = rng.next_uint(0, chunk_indices.lods[0].indexCount / 3); // random triangle on the chunk mesh
 									uint32_t ind0 = chunk_indices.indices[tri * 3 + 0];
 									uint32_t ind1 = chunk_indices.indices[tri * 3 + 1];
 									uint32_t ind2 = chunk_indices.indices[tri * 3 + 2];
