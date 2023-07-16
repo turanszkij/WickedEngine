@@ -1388,6 +1388,7 @@ It's like two spheres connected by a cylinder. Base and Tip are the two endpoint
 - [constructor]Capsule(Vector base, tip, float radius)
 - Intersects(Capsule other) : bool result, Vector position, indicent_normal, float penetration_depth
 - Intersects(Ray ray) : bool result
+- Intersects(Vector point) : bool result
 - GetBase() : Vector result
 - GetTip() : Vector result
 - GetRadius() : float result

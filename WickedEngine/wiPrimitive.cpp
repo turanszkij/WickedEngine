@@ -480,6 +480,22 @@ namespace wi::primitive
 		sphere.radius = radius;
 		return sphere.intersects(ray, dist, direction);
 	}
+	bool Capsule::intersects(const XMFLOAT3& point) const
+	{
+		XMVECTOR Base = XMLoadFloat3(&base);
+		XMVECTOR Tip = XMLoadFloat3(&tip);
+		XMVECTOR Radius = XMVectorReplicate(radius);
+		XMVECTOR Normal = XMVector3Normalize(Tip - Base);
+		XMVECTOR LineEndOffset = Normal * Radius;
+		XMVECTOR A = Base + LineEndOffset;
+		XMVECTOR B = Tip - LineEndOffset;
+
+		XMVECTOR P = XMLoadFloat3(&point);
+
+		XMVECTOR C = wi::math::ClosestPointOnLineSegment(A, B, P);
+
+		return XMVectorGetX(XMVector3Length(P - C)) <= radius;
+	}
 
 
 

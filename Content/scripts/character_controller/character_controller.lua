@@ -784,6 +784,31 @@ local function Character(model_name, start_position, face, controllable)
 
 			character_capsules[self.model] = capsule
 			self.position = model_transform.GetPosition()
+
+			-- If camera is inside character capsule, fade out the character, otherwise fade in:
+			if capsule.Intersects(GetCamera().GetPosition()) then
+				for i,entity in ipairs(scene.Entity_GetObjectArray()) do
+					if scene.Entity_IsDescendant(entity, self.model) then
+						local object = scene.Component_GetObject(entity)
+						local color = object.GetColor()
+						local opacity = color.GetW()
+						opacity = math.lerp(opacity, 0, 0.1)
+						color.SetW(opacity)
+						object.SetColor(color)
+					end
+				end
+			else
+				for i,entity in ipairs(scene.Entity_GetObjectArray()) do
+					if scene.Entity_IsDescendant(entity, self.model) then
+						local object = scene.Component_GetObject(entity)
+						local color = object.GetColor()
+						local opacity = color.GetW()
+						opacity = math.lerp(opacity, 1, 0.1)
+						color.SetW(opacity)
+						object.SetColor(color)
+					end
+				end
+			end
 			
 		end,
 

@@ -127,6 +127,7 @@ namespace wi::primitive
 		bool intersects(const Ray& b) const;
 		bool intersects(const Ray& b, float& dist) const;
 		bool intersects(const Ray& b, float& dist, XMFLOAT3& direction) const;
+		bool intersects(const XMFLOAT3& point) const;
 	};
 	struct Plane
 	{

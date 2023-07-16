@@ -568,8 +568,15 @@ namespace wi::lua::primitive
 				wi::lua::SSetBool(L, capsule.intersects(ray->ray));
 				return 1;
 			}
+
+			Vector_BindLua* point = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (point)
+			{
+				wi::lua::SSetBool(L, capsule.intersects(point->GetFloat3()));
+				return 1;
+			}
 		}
-		wi::lua::SError(L, "Intersects(Capsule/Ray other) no matching arguments! ");
+		wi::lua::SError(L, "Intersects(Capsule/Ray/Vector other) no matching arguments! ");
 		return 0;
 	}
 	int Capsule_BindLua::GetAABB(lua_State* L)
