@@ -562,6 +562,18 @@ namespace wi::lua::primitive
 				return 4;
 			}
 
+			Sphere_BindLua* sphere = Luna<Sphere_BindLua>::lightcheck(L, 1);
+			if (sphere)
+			{
+				XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
+				float depth = 0;
+				bool intersects = capsule.intersects(sphere->sphere, depth, normal);
+				wi::lua::SSetBool(L, intersects);
+				wi::lua::SSetFloat(L, depth);
+				Luna<Vector_BindLua>::push(L, XMLoadFloat3(&normal));
+				return 3;
+			}
+
 			Ray_BindLua* ray = Luna<Ray_BindLua>::lightcheck(L, 1);
 			if (ray)
 			{
