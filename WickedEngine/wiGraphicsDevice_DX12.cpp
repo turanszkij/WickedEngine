@@ -4946,16 +4946,7 @@ using namespace dx12_internal;
 
 			if (format == Format::UNKNOWN)
 			{
-				if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_RAW))
-				{
-					// This is a Raw Buffer
-					srv_desc.Format = DXGI_FORMAT_R32_TYPELESS;
-					srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-					srv_desc.Buffer.FirstElement = (UINT)offset / sizeof(uint32_t);
-					srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
-					srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / sizeof(uint32_t);
-				}
-				else if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED) || (structuredbuffer_stride_change != nullptr))
+				if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED) || (structuredbuffer_stride_change != nullptr))
 				{
 					// This is a Structured Buffer
 					uint32_t stride = desc.stride;
@@ -4968,6 +4959,15 @@ using namespace dx12_internal;
 					srv_desc.Buffer.FirstElement = (UINT)offset / stride;
 					srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / stride;
 					srv_desc.Buffer.StructureByteStride = stride;
+				}
+				else if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_RAW))
+				{
+					// This is a Raw Buffer
+					srv_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+					srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+					srv_desc.Buffer.FirstElement = (UINT)offset / sizeof(uint32_t);
+					srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+					srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / sizeof(uint32_t);
 				}
 			}
 			else
@@ -5000,15 +5000,7 @@ using namespace dx12_internal;
 
 			if (format == Format::UNKNOWN)
 			{
-				if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_RAW))
-				{
-					// This is a Raw Buffer
-					uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
-					uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
-					uav_desc.Buffer.FirstElement = (UINT)offset / sizeof(uint32_t);
-					uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / sizeof(uint32_t);
-				}
-				else if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED) || (structuredbuffer_stride_change != nullptr))
+				if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED) || (structuredbuffer_stride_change != nullptr))
 				{
 					// This is a Structured Buffer
 					uint32_t stride = desc.stride;
@@ -5020,6 +5012,14 @@ using namespace dx12_internal;
 					uav_desc.Buffer.FirstElement = (UINT)offset / stride;
 					uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / stride;
 					uav_desc.Buffer.StructureByteStride = stride;
+				}
+				else if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_RAW))
+				{
+					// This is a Raw Buffer
+					uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+					uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+					uav_desc.Buffer.FirstElement = (UINT)offset / sizeof(uint32_t);
+					uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / sizeof(uint32_t);
 				}
 			}
 			else

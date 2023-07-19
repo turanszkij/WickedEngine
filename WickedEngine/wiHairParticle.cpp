@@ -89,8 +89,6 @@ namespace wi
 		{
 			GPUBufferDesc bd;
 			bd.usage = Usage::DEFAULT;
-			bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 			bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::INDEX_BUFFER;
 			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::INDIRECT_ARGS;
 			if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
@@ -99,7 +97,7 @@ namespace wi
 			}
 
 			const Format ib_format = GetIndexBufferFormatRaw(particleCount * 4);
-			const uint64_t alignment = device->GetMinOffsetAlignment(&bd);
+			const uint64_t alignment = std::max(device->GetMinOffsetAlignment(&bd), sizeof(PatchSimulationData)); // also align to structure stride
 
 			simulation_view.size = sizeof(PatchSimulationData) * particleCount;
 			vb_pos[0].size = sizeof(MeshComponent::Vertex_POS) * 4 * particleCount;
@@ -157,11 +155,10 @@ namespace wi
 			ib_culled.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, ib_culled.subresource_srv);
 			ib_culled.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, ib_culled.subresource_uav);
 
-			const uint32_t indirect_stride = sizeof(IndirectDrawArgsIndexedInstanced);
 			indirect_view.offset = buffer_offset;
 			buffer_offset += AlignTo(indirect_view.size, alignment);
-			indirect_view.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, indirect_view.offset, indirect_view.size, nullptr, &indirect_stride);
-			indirect_view.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, indirect_view.offset, indirect_view.size, nullptr, &indirect_stride);
+			indirect_view.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, indirect_view.offset, indirect_view.size);
+			indirect_view.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, indirect_view.offset, indirect_view.size);
 			indirect_view.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, indirect_view.subresource_srv);
 			indirect_view.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, indirect_view.subresource_uav);
 

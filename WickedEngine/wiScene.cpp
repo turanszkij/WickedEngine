@@ -720,11 +720,10 @@ namespace wi::scene
 				impostor_data.descriptor_srv = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::SRV, impostor_data.subresource_srv);
 				impostor_data.descriptor_uav = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::UAV, impostor_data.subresource_uav);
 
-				const uint32_t indirect_stride = sizeof(IndirectDrawArgsIndexedInstanced);
 				impostor_indirect.offset = buffer_offset;
 				impostor_indirect.size = sizeof(IndirectDrawArgsIndexedInstanced);
 				buffer_offset += AlignTo(impostor_data.size, alignment);
-				impostor_indirect.subresource_uav = device->CreateSubresource(&impostorBuffer, SubresourceType::UAV, impostor_indirect.offset, impostor_indirect.size, nullptr, &indirect_stride);
+				impostor_indirect.subresource_uav = device->CreateSubresource(&impostorBuffer, SubresourceType::UAV, impostor_indirect.offset, impostor_indirect.size);
 
 			}
 		}
