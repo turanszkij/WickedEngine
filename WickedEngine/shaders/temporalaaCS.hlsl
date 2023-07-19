@@ -22,6 +22,12 @@ groupshared float tile_depth[TILE_SIZE*TILE_SIZE];
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
+	if (postprocess.params0.x)
+	{
+		// Early exit when it is the first frame
+		output[DTid.xy] = input_current[DTid.xy].rgb;
+		return;
+	}
 	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 	float3 neighborhoodMin = 100000;
 	float3 neighborhoodMax = -100000;

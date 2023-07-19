@@ -14293,23 +14293,25 @@ void Postprocess_TemporalAA(
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_TEMPORALAA], cmd);
 
-	device->BindResource(&input, 0, cmd);
+	device->BindResource(&input, 0, cmd); // input_current
+
 	if (first_frame)
 	{
-		device->BindResource(&input, 0, cmd);
+		device->BindResource(&input, 1, cmd); // input_history
 	}
 	else
 	{
-		device->BindResource(res.GetHistory(), 1, cmd);
+		device->BindResource(res.GetHistory(), 1, cmd); // input_history
 	}
 
 	const TextureDesc& desc = res.texture_temporal[0].GetDesc();
 
-	PostProcess postprocess;
+	PostProcess postprocess = {};
 	postprocess.resolution.x = desc.width;
 	postprocess.resolution.y = desc.height;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	postprocess.params0.x = first_frame ? 1.0f : 0.0f;
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	const Texture* output = res.GetCurrent();

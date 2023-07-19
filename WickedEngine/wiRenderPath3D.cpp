@@ -1894,7 +1894,7 @@ namespace wi
 				rt_read = &rtFSR[0];
 				rt_write = &rtFSR[1];
 			}
-			else if (wi::renderer::GetTemporalAAEnabled() && !wi::renderer::GetTemporalAADebugEnabled())
+			else if (wi::renderer::GetTemporalAAEnabled() && !wi::renderer::GetTemporalAADebugEnabled() && temporalAAResources.IsValid())
 			{
 				wi::renderer::Postprocess_TemporalAA(
 					temporalAAResources,
