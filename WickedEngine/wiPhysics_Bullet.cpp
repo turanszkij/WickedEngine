@@ -280,10 +280,12 @@ namespace wi::physics
 				mass = 0;
 			}
 
-			XMVECTOR SCA, ROT, TRA;
+			XMVECTOR SCA = {};
+			XMVECTOR ROT = {};
+			XMVECTOR TRA = {};
 			XMMatrixDecompose(&SCA, &ROT, &TRA, XMLoadFloat4x4(&transform.world));
-			XMFLOAT4 rot;
-			XMFLOAT3 tra;
+			XMFLOAT4 rot = {};
+			XMFLOAT3 tra = {};
 			XMStoreFloat4(&rot, ROT);
 			XMStoreFloat3(&tra, TRA);
 
