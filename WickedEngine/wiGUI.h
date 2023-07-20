@@ -379,6 +379,7 @@ namespace wi::gui
 		float list_offset = 0;
 		float overscroll = 0;
 		bool vertical = true;
+		float safe_area = 0;
 		XMFLOAT2 grab_pos = {};
 		float grab_delta = 0;
 
@@ -396,6 +397,7 @@ namespace wi::gui
 		void SetOverScroll(float amount) { overscroll = amount; }
 		// Check whether the scrollbar is required (when the items don't fit and scrolling could be used)
 		bool IsScrollbarRequired() const { return scrollbar_granularity < 0.999f; }
+		void SetSafeArea(float value) { safe_area = value; }
 
 		enum SCROLLBAR_STATE
 		{
