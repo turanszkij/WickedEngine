@@ -280,11 +280,18 @@ namespace wi::physics
 				mass = 0;
 			}
 
+			XMVECTOR SCA, ROT, TRA;
+			XMMatrixDecompose(&SCA, &ROT, &TRA, XMLoadFloat4x4(&transform.world));
+			XMFLOAT4 rot;
+			XMFLOAT3 tra;
+			XMStoreFloat4(&rot, ROT);
+			XMStoreFloat3(&tra, TRA);
+
 			//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
 			btTransform shapeTransform;
 			shapeTransform.setIdentity();
-			shapeTransform.setOrigin(btVector3(transform.translation_local.x, transform.translation_local.y, transform.translation_local.z));
-			shapeTransform.setRotation(btQuaternion(transform.rotation_local.x, transform.rotation_local.y, transform.rotation_local.z, transform.rotation_local.w));
+			shapeTransform.setOrigin(btVector3(tra.x, tra.y, tra.z));
+			shapeTransform.setRotation(btQuaternion(rot.x, rot.y, rot.z, rot.w));
 			physicsobject.motionState = btDefaultMotionState(shapeTransform);
 
 			btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, &physicsobject.motionState, physicsobject.shape.get(), localInertia);
@@ -307,6 +314,13 @@ namespace wi::physics
 
 			physicsobject.physics_scene = scene.physics_scene;
 			GetPhysicsScene(scene).dynamicsWorld.addRigidBody(physicsobject.rigidBody.get());
+
+			if (isDynamic)
+			{
+				// We must detach dynamic objects, because their physics object is created in world space
+				//	and attachment would apply double transformation to the transform
+				scene.Component_Detach(entity);
+			}
 		}
 	}
 	void AddSoftBody(
