@@ -74,7 +74,7 @@ If you have questions or stuck, please use the `linux` communication channel on 
 
 #### Initialization (C++):
 
-<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/character_lookat.gif" width="320px"/>
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/inverse_kinematics.gif" width="320px"/>
 
 ```cpp
 // Include engine headers:
@@ -185,6 +185,8 @@ For further details, please check the scripting API documentation: [Wicked Engin
 
 ### Model import/export:
 The native model format is the <b>WISCENE</b> format. Any application using Wicked Engine can open this format efficiently.
+
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/character_lookat.gif" width="320px"/>
 
 In addition, the Editor supports the importing of some common model formats (the list will potentially grow): 
 - <b>OBJ</b>
