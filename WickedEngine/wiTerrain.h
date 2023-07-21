@@ -390,11 +390,20 @@ namespace wi::terrain
 			XMFLOAT2 p = world_pos;
 			p.x *= frequency;
 			p.y *= frequency;
-			XMFLOAT2 pixel = XMFLOAT2(p.x + width * 0.5f, p.y + this->height * 0.5f);
-			if (pixel.x >= 0 && pixel.x < width && pixel.y >= 0 && pixel.y < this->height)
+			XMFLOAT2 pixel = XMFLOAT2(p.x + this->width * 0.5f, p.y + this->height * 0.5f);
+			if (pixel.x >= 0 && pixel.x < this->width && pixel.y >= 0 && pixel.y < this->height)
 			{
-				const int idx = int(pixel.x) + int(pixel.y) * width;
-				Blend(height, ((float)data[idx] / 255.0f) * scale);
+				const int idx = int(pixel.x) + int(pixel.y) * this->width;
+				float value = 0;
+				if (data.size() == this->width * this->height * sizeof(uint8_t))
+				{
+					value = ((float)data[idx] / 255.0f);
+				}
+				else if (data.size() == this->width * this->height * sizeof(uint16_t))
+				{
+					value = ((float)((uint16_t*)data.data())[idx] / 65535.0f);
+				}
+				Blend(height, value * scale);
 			}
 		}
 	};

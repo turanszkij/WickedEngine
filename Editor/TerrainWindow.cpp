@@ -197,13 +197,13 @@ HeightmapModifierWindow::HeightmapModifierWindow() : ModifierWindow("Heightmap")
 	AddWidget(&scaleSlider);
 
 	loadButton.Create("Load Heightmap...");
-	loadButton.SetTooltip("Load a heightmap texture, where the red channel corresponds to terrain height and the resolution to dimensions.\nThe heightmap will be placed in the world center.");
+	loadButton.SetTooltip("Load a heightmap texture, where the red channel corresponds to terrain height and the resolution to dimensions.\nThe heightmap will be placed in the world center.\nIt is recommended to use a 16-bit PNG for heightmaps.");
 	loadButton.OnClick([=](wi::gui::EventArgs args) {
 
 		wi::helper::FileDialogParams params;
 		params.type = wi::helper::FileDialogParams::OPEN;
-		params.description = "Texture";
-		params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
+		params.description = "*.png";
+		params.extensions = { "PNG" };
 		wi::helper::FileDialog(params, [=](std::string fileName) {
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 
@@ -212,21 +212,29 @@ HeightmapModifierWindow::HeightmapModifierWindow() : ModifierWindow("Heightmap")
 				heightmap_modifier->width = 0;
 				heightmap_modifier->height = 0;
 				int bpp = 0;
-				stbi_uc* rgba = stbi_load(fileName.c_str(), &heightmap_modifier->width, &heightmap_modifier->height, &bpp, 1);
-				if (rgba != nullptr)
+				if (stbi_is_16_bit(fileName.c_str()))
 				{
-					heightmap_modifier->data.resize(heightmap_modifier->width * heightmap_modifier->height);
-					for (int i = 0; i < heightmap_modifier->width * heightmap_modifier->height; ++i)
+					stbi_us* rgba = stbi_load_16(fileName.c_str(), &heightmap_modifier->width, &heightmap_modifier->height, &bpp, 1); if (rgba != nullptr)
 					{
-						heightmap_modifier->data[i] = rgba[i];
+						heightmap_modifier->data.resize(heightmap_modifier->width * heightmap_modifier->height * sizeof(uint16_t));
+						std::memcpy(heightmap_modifier->data.data(), rgba, heightmap_modifier->data.size());
+						stbi_image_free(rgba);
+						generation_callback(); // callback after heightmap load confirmation
 					}
-					stbi_image_free(rgba);
-
-					generation_callback(); // callback after heightmap load confirmation
 				}
-				});
+				else
+				{
+					stbi_uc* rgba = stbi_load(fileName.c_str(), &heightmap_modifier->width, &heightmap_modifier->height, &bpp, 1);
+					if (rgba != nullptr)
+					{
+						heightmap_modifier->data.resize(heightmap_modifier->width * heightmap_modifier->height * sizeof(uint8_t));
+						std::memcpy(heightmap_modifier->data.data(), rgba, heightmap_modifier->data.size());
+						generation_callback(); // callback after heightmap load confirmation
+					}
+				}
 			});
 		});
+	});
 	AddWidget(&loadButton);
 
 	SetSize(XMFLOAT2(200, 180));
@@ -666,7 +674,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	AddWidget(&topLevelSlider);
 
 	saveHeightmapButton.Create("Save Heightmap...");
-	saveHeightmapButton.SetTooltip("Save a heightmap texture from the currently generated terrain, where the red channel corresponds to terrain height and the resolution to dimensions.\nThe heightmap will be normalized into 8bit PNG format which can result in precision loss!");
+	saveHeightmapButton.SetTooltip("Save a heightmap texture from the currently generated terrain, where the red channel corresponds to terrain height and the resolution to dimensions.\nThe image will be saved as a single channel 16-bit PNG.");
 	saveHeightmapButton.SetSize(XMFLOAT2(wid, hei));
 	saveHeightmapButton.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&saveHeightmapButton);
@@ -729,8 +737,9 @@ void TerrainWindow::Create(EditorComponent* _editor)
 				wi::vector<uint8_t> data;
 				int width = int(aabb.getHalfWidth().x * 2 + 1);
 				int height = int(aabb.getHalfWidth().z * 2 + 1);
-				data.resize(width * height);
+				data.resize(width * height * sizeof(uint16_t));
 				std::fill(data.begin(), data.end(), 0u);
+				uint16_t* dest = (uint16_t*)data.data();
 
 				for (auto& chunk : terrain->chunks)
 				{
@@ -751,7 +760,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 								p.x -= aabb._min.x;
 								p.z -= aabb._min.z;
 								int coord = int(p.x) + int(p.z) * width;
-								data[coord] = uint8_t(wi::math::InverseLerp(aabb._min.y, aabb._max.y, p.y) * 255u);
+								dest[coord] = uint16_t(wi::math::InverseLerp(aabb._min.y, aabb._max.y, p.y) * 65535u);
 							}
 						}
 					}
@@ -767,7 +776,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 				wi::graphics::TextureDesc desc;
 				desc.width = uint32_t(width);
 				desc.height = uint32_t(height);
-				desc.format = wi::graphics::Format::R8_UNORM;
+				desc.format = wi::graphics::Format::R16_UNORM;
 				bool success = wi::helper::saveTextureToFile(data, desc, filename_replaced);
 				assert(success);
 

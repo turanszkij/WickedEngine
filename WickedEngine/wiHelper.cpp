@@ -7,6 +7,7 @@
 #include "Utility/stb_image_write.h"
 #include "Utility/basis_universal/encoder/basisu_comp.h"
 #include "Utility/basis_universal/encoder/basisu_gpu_texture.h"
+#include "Utility/basis_universal/encoder/lodepng.h"
 extern basist::etc1_global_selector_codebook g_basis_global_codebook;
 
 #include <thread>
@@ -219,6 +220,20 @@ namespace wi::helper
 		using namespace wi::graphics;
 		const uint32_t data_stride = GetFormatStride(desc.format);
 
+		std::string extension = wi::helper::toUpper(fileExtension);
+		if (!extension.compare("PNG") && desc.format == Format::R16_UNORM)
+		{
+			// Specialized handling for 16-bit single channel PNG:
+			uint16_t* dest = (uint16_t*)texturedata.data();
+			for (uint32_t i = 0; i < desc.width * desc.height; ++i)
+			{
+				uint16_t value = dest[i];
+				dest[i] = (value >> 8) | ((value & 0xFF) << 8); // little endian to big endian
+			}
+			lodepng::encode(filedata, texturedata, desc.width, desc.height, LCT_GREY, 16);
+			return !filedata.empty();
+		}
+
 		struct MipDesc
 		{
 			const uint8_t* address = nullptr;
@@ -246,7 +261,6 @@ namespace wi::helper
 			mip_depth = std::max(1u, mip_depth / 2);
 		}
 
-		std::string extension = wi::helper::toUpper(fileExtension);
 		bool basis = !extension.compare("BASIS");
 		bool ktx2 = !extension.compare("KTX2");
 		basisu::image basis_image;
