@@ -11,8 +11,8 @@
 
 
 <br/>
-<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/npc.gif" width="320px"/>
-Wicked Engine is an open-source C++ engine focusing on modern rendering techniques and performance. Use this as a framework for your graphics projects, or learning. Some programming skills are required for the best experience, but some simple tools like an Editor are also included. It is free to be used for anything good.<br/>
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/videoprojectors.gif" width="320px"/>
+Wicked Engine is an open-source 3D engine with modern graphics. Use this as a C++ framework for your graphics projects, a standalone 3D editor, LUA scripting or just for learning.<br/>
 This project is hosted on <a href="https://github.com/turanszkij/WickedEngine/">GitHub</a>.
 
 - [Documentation](Content/Documentation/WickedEngine-Documentation.md)<br/>
@@ -21,8 +21,8 @@ This project is hosted on <a href="https://github.com/turanszkij/WickedEngine/">
 - [Devblog](https://wickedengine.net/)<br/>
 - [Videos](https://www.youtube.com/playlist?list=PLLN-1FTGyLU_HJoC5zx6hJkB3D2XLiaxS)<br/>
 
-You can download the source code by using Git and cloning the repository, or downloading it as zip. You can also choose to download a pre-built version of the Editor or Tests applications, which will allow you to try out features, load content and execute LUA scripts.<br/>
-Tip: try loading models or scripts from the Content folder using the Editor app to see how everything works.
+You can get the full source code by using Git version control and cloning https://github.com/turanszkij/WickedEngine.git, or downloading it as zip. You can also download prebuilt and packaged version of the Editor here (requires Github sign in): [![Github Build Status](https://github.com/turanszkij/WickedEngine/workflows/Build/badge.svg)](https://github.com/turanszkij/WickedEngine/actions)
+<br/>
 <br/>
 
 <img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/swimming.gif" width="320px"/>
@@ -35,24 +35,18 @@ Tip: try loading models or scripts from the Content folder using the Editor app 
 ### How to build: 
 
 #### Windows
-To build Wicked Engine for Windows 10, use Visual Studio and the provided `WickedEngine.sln` solution file. There are a couple of projects that you can run up front: Editor, Tests and Template. You just have to set either as startup project and press F5 in Visual Studio to build and run. For optimal performance, choose `Release` mode, for the best debugging experience, choose `Debug` mode.
+To build Wicked Engine for Windows 10, use the latest version of Visual Studio and the provided `WickedEngine.sln` solution file. By simply pressing F5, the Editor application will be built. There are other example projects that you can build as well within the solution.
 
 <img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/fighting_game.gif" width="320px"/>
 
-If you want to develop an application that uses Wicked Engine, you can build the WickedEngine static library project for the appropriate platform, such as `WickedEngine_Windows` and link against it. Including the `"WickedEngine.h"` header will attempt to link the binaries for the appropriate platform, but search directories should be set up beforehand. For example, you can set additional library directories to `$(SolutionDir)BUILD\$(Platform)\$(Configuration)` by default. For examples, see the `Template`, `Tests`, and `Editor` projects. 
-
-You can also download prebuilt and packaged versions of the Editor and Tests here (requires Github sign in): [![Github Build Status](https://github.com/turanszkij/WickedEngine/workflows/Build/badge.svg)](https://github.com/turanszkij/WickedEngine/actions)
-
-<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/inverse_kinematics.gif" width="320px"/>
+If you want to develop a C++ application that uses Wicked Engine, you can build the WickedEngine static library project for the appropriate platform, such as `WickedEngine_Windows` and link against it. Including the `"WickedEngine.h"` header will attempt to link the binaries for the appropriate platform, but search directories should be set up beforehand. For example, you can set additional library directories to `$(SolutionDir)BUILD\$(Platform)\$(Configuration)` by default. For examples, see the `Template`, `Tests`, and `Editor` projects. 
 
 If you have questions or stuck, please use the `windows` communication channel on Discord: [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
 
-Note: Building 32-bit and ARM versions should be possible, but no longer provided by default. You will need to configure the solution for these platforms yourself if you want this. For ARM platform, also use the `-DBT_USE_DOUBLE_PRECISION=1` definition when compiling.
-
-Cmake: It is possible to build the windows version with Cmake, but the recommended way is to use the provided WickedEngine.sln file with Visual Studio.
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/npc.gif" width="320px"/>
 
 #### Linux
-To build the engine for Linux, use Cmake. You can find a sample build script for Ubuntu 20.04 [here](.github/workflows/build.yml) (in the linux section). You might need to install some dependencies, such as Cmake (3.7 or newer), g++ compiler (C++ 17 compliant version) and SDL2. For Ubuntu 20.04, you can use the following commands to install dependencies:
+To build the engine for Linux, use Cmake. You can find a sample build script for Ubuntu [here](.github/workflows/build.yml) (in the linux section). On the Linux operating system, you will need to ensure some additional dependencies are installed, such as Cmake (3.7 or newer), g++ compiler (C++ 17 compliant version) and SDL2. For Ubuntu 20.04, you can use the following commands to install dependencies:
 
 <img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/grass.gif" width="320px"/>
 
@@ -100,6 +94,8 @@ while(true) {
 
 #### Basics (C++):
 ```cpp
+application.Initialize(); // application will start initializing at this point (asynchronously). If you start calling engine functionality immediately before application.Run() gets called, then you must first initialize the application yourself.
+
 wi::initializer::InitializeComponentsImmediate(); // (Optional) allows to initialize all components immediately and block the application until finished. Otherwise the initialization will take place at the first application.Run() asynchronously. This is useful if you want to start using other parts of the engine before application.Run() is called.
 
 wi::RenderPath3D myGame; // Declare a game screen component, aka "RenderPath" (you could also override its Update(), Render() etc. functions). 
@@ -261,3 +257,4 @@ If you are having trouble getting the applications to run, make sure that you sa
 	- see if there is a wiBackLog.txt in your user temp folder (for example: C:\Users\username\AppData\Local\Temp), and request help on Discord or Github issue
 	- build the engine in Debug mode and try to run it, see where it crashes, provide call stack on Discord or Github issue
 	- run the engine with the `debugdevice` command argument and post the text from your console output window when the crash happens
+		- for very advanced users, using `gpuvalidation` with `debugdevice` will print additional graphics debug information
