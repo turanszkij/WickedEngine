@@ -48,7 +48,7 @@ If you have questions or stuck, please use the `windows` communication channel o
 #### Linux
 To build the engine for Linux, use Cmake. You can find a sample build script for Ubuntu [here](.github/workflows/build.yml) (in the linux section). On the Linux operating system, you will need to ensure some additional dependencies are installed, such as Cmake (3.7 or newer), g++ compiler (C++ 17 compliant version) and SDL2. For Ubuntu 20.04, you can use the following commands to install dependencies:
 
-<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/grass.gif" width="320px"/>
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/inverse_kinematics.gif" width="320px"/>
 
 ```bash
 sudo apt update
@@ -74,7 +74,7 @@ If you have questions or stuck, please use the `linux` communication channel on 
 
 #### Initialization (C++):
 
-<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/inverse_kinematics.gif" width="320px"/>
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/grass.gif" width="320px"/>
 
 ```cpp
 // Include engine headers:
