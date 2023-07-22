@@ -84,7 +84,7 @@ namespace wi::helper
 #endif // _WIN32
 	}
 
-	void screenshot(const wi::graphics::SwapChain& swapchain, const std::string& name)
+	std::string screenshot(const wi::graphics::SwapChain& swapchain, const std::string& name)
 	{
 		std::string directory;
 		if (name.empty())
@@ -102,7 +102,7 @@ namespace wi::helper
 		std::string filename = name;
 		if (filename.empty())
 		{
-			filename = directory + "/sc_" + getCurrentDateTimeAsString() + ".jpg";
+			filename = directory + "/sc_" + getCurrentDateTimeAsString() + ".png";
 		}
 
 		bool result = saveTextureToFile(wi::graphics::GetDevice()->GetBackBuffer(&swapchain), filename);
@@ -110,8 +110,9 @@ namespace wi::helper
 
 		if (result)
 		{
-			wi::backlog::post("Screenshot saved: " + filename);
+			return filename;
 		}
+		return "";
 	}
 
 	bool saveTextureToMemory(const wi::graphics::Texture& texture, wi::vector<uint8_t>& texturedata)
@@ -183,7 +184,7 @@ namespace wi::helper
 							std::memcpy(
 								dst_slice + i * dst_rowpitch,
 								src_slice + i * subresourcedata.row_pitch,
-								subresourcedata.row_pitch
+								dst_rowpitch
 							);
 						}
 						cpy_offset += mip_height * dst_rowpitch;
@@ -221,17 +222,46 @@ namespace wi::helper
 		const uint32_t data_stride = GetFormatStride(desc.format);
 
 		std::string extension = wi::helper::toUpper(fileExtension);
-		if (!extension.compare("PNG") && desc.format == Format::R16_UNORM)
+		const bool is_png = extension.compare("PNG") == 0;
+
+		if (is_png)
 		{
-			// Specialized handling for 16-bit single channel PNG:
-			uint16_t* dest = (uint16_t*)texturedata.data();
-			for (uint32_t i = 0; i < desc.width * desc.height; ++i)
+			if (desc.format == Format::R16_UNORM || desc.format == Format::R16_UINT)
 			{
-				uint16_t value = dest[i];
-				dest[i] = (value >> 8) | ((value & 0xFF) << 8); // little endian to big endian
+				// Specialized handling for 16-bit single channel PNG:
+				wi::vector<uint8_t> src_bigendian = texturedata;
+				uint16_t* dest = (uint16_t*)src_bigendian.data();
+				for (uint32_t i = 0; i < desc.width * desc.height; ++i)
+				{
+					uint16_t r = dest[i];
+					r = (r >> 8) | ((r & 0xFF) << 8); // little endian to big endian
+					dest[i] = r;
+				}
+				unsigned error = lodepng::encode(filedata, src_bigendian, desc.width, desc.height, LCT_GREY, 16);
+				return error == 0;
 			}
-			lodepng::encode(filedata, texturedata, desc.width, desc.height, LCT_GREY, 16);
-			return !filedata.empty();
+			if (desc.format == Format::R16G16B16A16_UNORM || desc.format == Format::R16G16B16A16_UINT)
+			{
+				// Specialized handling for 16-bit PNG:
+				wi::vector<uint8_t> src_bigendian = texturedata;
+				wi::Color16* dest = (wi::Color16*)src_bigendian.data();
+				for (uint32_t i = 0; i < desc.width * desc.height; ++i)
+				{
+					wi::Color16 rgba = dest[i];
+					uint16_t r = rgba.getR();
+					r = (r >> 8) | ((r & 0xFF) << 8); // little endian to big endian
+					uint16_t g = rgba.getG();
+					g = (g >> 8) | ((g & 0xFF) << 8); // little endian to big endian
+					uint16_t b = rgba.getB();
+					b = (b >> 8) | ((b & 0xFF) << 8); // little endian to big endian
+					uint16_t a = rgba.getA();
+					a = (a >> 8) | ((a & 0xFF) << 8); // little endian to big endian
+					rgba = wi::Color16(r, g, b, a);
+					dest[i] = rgba;
+				}
+				unsigned error = lodepng::encode(filedata, src_bigendian, desc.width, desc.height, LCT_RGBA, 16);
+				return error == 0;
+			}
 		}
 
 		struct MipDesc
@@ -333,6 +363,18 @@ namespace wi::helper
 				rgba8 |= (uint32_t)(a * 255.0f) << 24;
 
 				data32[i] = rgba8;
+			}
+		}
+		else if (desc.format == Format::R16G16B16A16_UNORM || desc.format == Format::R16G16B16A16_UINT)
+		{
+			// This will be converted first to rgba8 before saving to common format:
+			wi::Color16* dataSrc = (wi::Color16*)texturedata.data();
+			wi::Color* data32 = (wi::Color*)texturedata.data();
+
+			for (uint32_t i = 0; i < data_count; ++i)
+			{
+				wi::Color16 pixel16 = dataSrc[i];
+				data32[i] = wi::Color::fromFloat4(pixel16.toFloat4());
 			}
 		}
 		else if (desc.format == Format::R11G11B10_FLOAT)
@@ -545,13 +587,16 @@ namespace wi::helper
 		static int mip_request = 0; // you can use this while debugging to write specific mip level to file (todo: option param?)
 		const MipDesc& mip = mips[mip_request];
 
-		if (!extension.compare("JPG") || !extension.compare("JPEG"))
+		if (is_png)
+		{
+			// lodepng encoder is better compressing than stb_image_write:
+			unsigned error = lodepng::encode(filedata, texturedata, desc.width, desc.height);
+			return error == 0;
+			//write_result = stbi_write_png_to_func(func, &filedata, (int)mip.width, (int)mip.height, dst_channel_count, mip.address, 0);
+		}
+		else if (!extension.compare("JPG") || !extension.compare("JPEG"))
 		{
 			write_result = stbi_write_jpg_to_func(func, &filedata, (int)mip.width, (int)mip.height, dst_channel_count, mip.address, 100);
-		}
-		else if (!extension.compare("PNG"))
-		{
-			write_result = stbi_write_png_to_func(func, &filedata, (int)mip.width, (int)mip.height, dst_channel_count, mip.address, 0);
 		}
 		else if (!extension.compare("TGA"))
 		{

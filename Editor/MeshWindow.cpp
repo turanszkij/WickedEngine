@@ -619,11 +619,11 @@ void MeshWindow::Create(EditorComponent* _editor)
 			filename = wi::helper::ForceExtension(filename, "h");
 			if (wi::helper::FileWrite(filename, (uint8_t*)str.c_str(), str.length()))
 			{
-				editor->PostSaveText("Mesh exported to header file: " + filename);
+				editor->PostSaveText("Mesh exported to header file: ", filename);
 			}
 			else
 			{
-				editor->PostSaveText("Failed to write file: " + filename);
+				editor->PostSaveText("Failed to write file: ", filename);
 			}
 		});
 	});

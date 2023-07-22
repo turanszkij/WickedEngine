@@ -488,6 +488,7 @@ void EditorComponent::Load()
 		ss += "Rotate Toggle: 2\n";
 		ss += "Scale Toggle: 3\n";
 		ss += "Wireframe mode: Ctrl + W\n";
+		ss += "Screenshot (saved into Editor's screenshots folder): F2\n";
 		ss += "Depth of field refocus to point: C + left mouse button\n";
 		ss += "Color grading reference: Ctrl + G (color grading palette reference will be displayed in top left corner)\n";
 		ss += "Focus on selected: F button, this will make the camera jump to selection.\n";
@@ -612,6 +613,19 @@ void EditorComponent::Update(float dt)
 {
 	wi::profiler::range_id profrange = wi::profiler::BeginRangeCPU("Editor Update");
 
+	if (wi::input::Press(wi::input::KEYBOARD_BUTTON_F2))
+	{
+		std::string filename = wi::helper::screenshot(main->swapChain);
+		if (filename.empty())
+		{
+			PostSaveText("Error! Screenshot was not successful!");
+		}
+		else
+		{
+			PostSaveText("Screenshot saved: ", filename);
+		}
+	}
+
 	Scene& scene = GetCurrentScene();
 	EditorScene& editorscene = GetCurrentEditorScene();
 	CameraComponent& camera = editorscene.camera;
@@ -632,7 +646,7 @@ void EditorComponent::Update(float dt)
 	CheckBonePickingEnabled();
 	UpdateTopMenuAnimation();
 
-	save_text_alpha = std::max(0.0f, save_text_alpha - 0.016f); // constant fade time (no dt, because after saving, dt can become huge)
+	save_text_alpha = std::max(0.0f, save_text_alpha - std::min(dt, 0.033f)); // after saving, dt can become huge
 
 	bool clear_selected = false;
 	if (wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
@@ -2909,7 +2923,11 @@ void EditorComponent::Compose(CommandList cmd) const
 		params.v_align = wi::font::WIFALIGN_CENTER;
 		params.size = 30;
 		params.shadow_softness = 1;
-		wi::font::Draw(save_text, params, cmd);
+		wi::font::Cursor cursor = wi::font::Draw(save_text_message, params, cmd);
+
+		params.size = 24;
+		params.position.y += cursor.size.y;
+		wi::font::Draw(save_text_filename, params, cmd);
 	}
 
 #ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
@@ -3452,7 +3470,7 @@ void EditorComponent::Save(const std::string& filename)
 	GetCurrentEditorScene().path = filename;
 	RefreshSceneList();
 
-	PostSaveText("Scene saved: " + GetCurrentEditorScene().path);
+	PostSaveText("Scene saved: ", GetCurrentEditorScene().path);
 }
 void EditorComponent::SaveAs()
 {
@@ -3481,11 +3499,12 @@ void EditorComponent::SaveAs()
 		});
 }
 
-void EditorComponent::PostSaveText(const std::string& text)
+void EditorComponent::PostSaveText(const std::string& message, const std::string& filename, float time_seconds)
 {
-	save_text = text;
-	save_text_alpha = 2;
-	wi::backlog::post(text);
+	save_text_message = message;
+	save_text_filename = filename;
+	save_text_alpha = time_seconds;
+	wi::backlog::post(message + filename);
 }
 
 void EditorComponent::CheckBonePickingEnabled()

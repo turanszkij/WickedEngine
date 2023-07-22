@@ -782,7 +782,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 
 				if (success)
 				{
-					editor->PostSaveText("Exported terrain height map: " + filename_replaced);
+					editor->PostSaveText("Exported terrain height map: ", filename_replaced);
 				}
 
 				});
@@ -843,7 +843,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 					}
 				}
 
-				std::string extension = wi::helper::GetExtensionFromFileName(fileName);
+				std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
 				std::string filename_replaced = fileName;
 				if (extension != "JPG" && extension != "PNG")
 				{
@@ -859,7 +859,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 
 				if (success)
 				{
-					editor->PostSaveText("Exported terrain blend map: " + filename_replaced);
+					editor->PostSaveText("Exported terrain blend map: ", filename_replaced);
 				}
 
 				});

@@ -773,19 +773,30 @@ namespace wi
 						// qoi, png, tga, jpg, etc. loader:
 
 						const int channelCount = 4;
-						int height, width, bpp; // stb_image
-						qoi_desc desc;
+						int height = 0, width = 0, bpp = 0;
+						bool is_16bit = false;
 
 						void* rgba;
 						if (!ext.compare("QOI"))
 						{
+							qoi_desc desc = {};
 							rgba = qoi_decode(filedata, (int)filesize, &desc, channelCount);
 							// redefine width, height to avoid further conditionals
 							height = desc.height;
 							width = desc.width;
 						}
 						else
-							rgba = stbi_load_from_memory(filedata, (int)filesize, &width, &height, &bpp, channelCount);
+						{
+							if (!has_flag(flags, Flags::IMPORT_COLORGRADINGLUT) && stbi_is_16_bit_from_memory(filedata, (int)filesize))
+							{
+								is_16bit = true;
+								rgba = stbi_load_16_from_memory(filedata, (int)filesize, &width, &height, &bpp, channelCount);
+							}
+							else
+							{
+								rgba = stbi_load_from_memory(filedata, (int)filesize, &width, &height, &bpp, channelCount);
+							}
+						}
 
 						if (rgba != nullptr)
 						{
@@ -835,7 +846,14 @@ namespace wi
 							else
 							{
 								desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-								desc.format = Format::R8G8B8A8_UNORM;
+								if (is_16bit)
+								{
+									desc.format = Format::R16G16B16A16_UNORM;
+								}
+								else
+								{
+									desc.format = Format::R8G8B8A8_UNORM;
+								}
 								desc.mip_levels = GetMipCount(desc.width, desc.height);
 								desc.usage = Usage::DEFAULT;
 								desc.layout = ResourceState::SHADER_RESOURCE;
@@ -846,7 +864,7 @@ namespace wi
 								for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 								{
 									init_data[mip].data_ptr = rgba; // attention! we don't fill the mips here correctly, just always point to the mip0 data by default. Mip levels will be created using compute shader when needed!
-									init_data[mip].row_pitch = static_cast<uint32_t>(mipwidth * channelCount);
+									init_data[mip].row_pitch = uint32_t(mipwidth * GetFormatStride(desc.format));
 									mipwidth = std::max(1u, mipwidth / 2);
 								}
 
@@ -899,18 +917,38 @@ namespace wi
 										//	We only care about grayscale if it's not transparent
 										bool has_transparency = false;
 										bool is_grayscale = true;
-										for (int y = 0; (y < height) && !has_transparency; ++y)
+										if (is_16bit)
 										{
-											for (int x = 0; (x < width) && !has_transparency; ++x)
+											for (int y = 0; (y < height) && !has_transparency; ++y)
 											{
-												const wi::Color color = ((wi::Color*)rgba)[x + y * width];
-												const uint8_t r = color.getR();
-												const uint8_t g = color.getG();
-												const uint8_t b = color.getB();
-												const uint8_t a = color.getA();
-												has_transparency |= a < 255;
-												is_grayscale &= r == g;
-												is_grayscale &= r == b;
+												for (int x = 0; (x < width) && !has_transparency; ++x)
+												{
+													const wi::Color16 color = ((wi::Color16*)rgba)[x + y * width];
+													const uint16_t r = color.getR();
+													const uint16_t g = color.getG();
+													const uint16_t b = color.getB();
+													const uint16_t a = color.getA();
+													has_transparency |= a < 65535;
+													is_grayscale &= r == g;
+													is_grayscale &= r == b;
+												}
+											}
+										}
+										else
+										{
+											for (int y = 0; (y < height) && !has_transparency; ++y)
+											{
+												for (int x = 0; (x < width) && !has_transparency; ++x)
+												{
+													const wi::Color color = ((wi::Color*)rgba)[x + y * width];
+													const uint8_t r = color.getR();
+													const uint8_t g = color.getG();
+													const uint8_t b = color.getB();
+													const uint8_t a = color.getA();
+													has_transparency |= a < 255;
+													is_grayscale &= r == g;
+													is_grayscale &= r == b;
+												}
 											}
 										}
 										if (has_transparency)

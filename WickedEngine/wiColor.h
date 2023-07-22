@@ -9,7 +9,7 @@ namespace wi
 		uint32_t rgba = 0;
 
 		constexpr Color(uint32_t rgba) :rgba(rgba) {}
-		constexpr Color(uint8_t r = 0, uint8_t g = 0, uint8_t b = 0, uint8_t a = 255) : rgba((r << 0) | (g << 8) | (b << 16) | (a << 24)) {}
+		constexpr Color(uint8_t r = 0, uint8_t g = 0, uint8_t b = 0, uint8_t a = 255) : rgba(uint32_t(r) | (uint32_t(g) << 8) | (uint32_t(b) << 16) | (uint32_t(a) << 24)) {}
 		constexpr Color(const char* hex)
 		{
 			rgba = 0;
@@ -128,6 +128,60 @@ namespace wi
 
 		static constexpr Color Warning() { return 0xFF66FFFF; } // light yellow
 		static constexpr Color Error() { return 0xFF6666FF; } // light red
+	};
+
+	struct Color16
+	{
+		uint64_t rgba = 0;
+
+		constexpr Color16(uint64_t rgba) :rgba(rgba) {}
+		constexpr Color16(uint16_t r = 0, uint16_t g = 0, uint16_t b = 0, uint16_t a = 65535) : rgba(uint64_t(r) | (uint64_t(g) << 16) | (uint64_t(b) << 32) | (uint64_t(a) << 48)) {}
+		constexpr Color16(Color color) { *this = fromFloat4(color.toFloat4()); }
+
+		constexpr uint16_t getR() const { return (rgba >> 0) & 0xFFFF; }
+		constexpr uint16_t getG() const { return (rgba >> 16) & 0xFFFF; }
+		constexpr uint16_t getB() const { return (rgba >> 32) & 0xFFFF; }
+		constexpr uint16_t getA() const { return (rgba >> 48) & 0xFFFF; }
+
+		constexpr void setR(uint16_t value) { *this = Color16(value, getG(), getB(), getA()); }
+		constexpr void setG(uint16_t value) { *this = Color16(getR(), value, getB(), getA()); }
+		constexpr void setB(uint16_t value) { *this = Color16(getR(), getG(), value, getA()); }
+		constexpr void setA(uint16_t value) { *this = Color16(getR(), getG(), getB(), value); }
+
+		constexpr XMFLOAT3 toFloat3() const
+		{
+			return XMFLOAT3(
+				((rgba >> 0) & 0xFFFF) / 65535.0f,
+				((rgba >> 16) & 0xFFFF) / 65535.0f,
+				((rgba >> 32) & 0xFFFF) / 65535.0f
+			);
+		}
+		constexpr XMFLOAT4 toFloat4() const
+		{
+			return XMFLOAT4(
+				((rgba >> 0) & 0xFFFF) / 65535.0f,
+				((rgba >> 16) & 0xFFFF) / 65535.0f,
+				((rgba >> 32) & 0xFFFF) / 65535.0f,
+				((rgba >> 48) & 0xFFFF) / 65535.0f
+			);
+		}
+		constexpr operator XMFLOAT3() const { return toFloat3(); }
+		constexpr operator XMFLOAT4() const { return toFloat4(); }
+		constexpr operator uint64_t() const { return rgba; }
+
+		static constexpr Color16 fromFloat4(const XMFLOAT4& value)
+		{
+			return Color16(uint16_t(value.x * 65535), uint16_t(value.y * 65535), uint16_t(value.z * 65535), uint16_t(value.w * 65535));
+		}
+		static constexpr Color16 fromFloat3(const XMFLOAT3& value)
+		{
+			return Color16(uint16_t(value.x * 65535), uint16_t(value.y * 65535), uint16_t(value.z * 65535));
+		}
+
+		static constexpr Color16 lerp(Color16 a, Color16 b, float i)
+		{
+			return fromFloat4(wi::math::Lerp(a.toFloat4(), b.toFloat4(), i));
+		}
 	};
 }
 
