@@ -113,6 +113,34 @@ namespace wi::config
 			Section,
 			Comment,
 		} state = State::Key;
+
+		bool flushed = false;
+		auto flush_line = [&]() {
+			if (flushed)
+				return;
+			flushed = true;
+			while (!value.empty() && (value.back() == ' ' || value.back() == '\t'))
+			{
+				// trailing whitespaces from values are removed and added as comment:
+				comment = value.back() + comment;
+				value.pop_back();
+			}
+			opened_order.emplace_back();
+			opened_order.back().section_label = section_label;
+			section_label.clear();
+			opened_order.back().section_id = section_id;
+			opened_order.back().comment = comment;
+			if (!key.empty())
+			{
+				opened_order.back().key = key;
+				current_section->Set(key.c_str(), value);
+			}
+			key.clear();
+			value.clear();
+			comment.clear();
+			state = State::Key;
+		};
+
 		for (auto c : text)
 		{
 			switch (c)
@@ -136,26 +164,8 @@ namespace wi::config
 				}
 				break;
 			case '\n':
-				while (!value.empty() && (value.back() == ' ' || value.back() == '\t'))
-				{
-					// trailing whitespaces from values are removed and added as comment:
-					comment = value.back() + comment;
-					value.pop_back();
-				}
-				opened_order.emplace_back();
-				opened_order.back().section_label = section_label;
-				section_label.clear();
-				opened_order.back().section_id = section_id;
-				opened_order.back().comment = comment;
-				if (!key.empty())
-				{
-					opened_order.back().key = key;
-					current_section->Set(key.c_str(), value);
-				}
-				key.clear();
-				value.clear();
-				comment.clear();
-				state = State::Key;
+				flushed = false; // force flush
+				flush_line();
 				break;
 			case '=':
 				if (state == State::Key)
@@ -225,6 +235,9 @@ namespace wi::config
 				break;
 			}
 		}
+
+		flush_line();
+
 		return true;
 	}
 	void File::Commit()
