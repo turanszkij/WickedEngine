@@ -102,7 +102,7 @@ jobs:
     - name: Package Content
       uses: actions/upload-artifact@v2
       with:
-        name: Additional Content
+        name: Content
         path: |
           Content/models
           Content/scripts

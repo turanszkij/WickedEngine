@@ -288,9 +288,9 @@ struct Surface
 	uint i0;
 	uint i1;
 	uint i2;
-	uint4 data0;
-	uint4 data1;
-	uint4 data2;
+	float4 data0;
+	float4 data1;
+	float4 data2;
 	float3 pre;
 
 	bool preload_internal(PrimitiveID prim)
@@ -309,15 +309,15 @@ struct Surface
 		layerMask = material.layerMask & inst.layerMask;
 
 		const uint startIndex = prim.primitiveIndex * 3 + geometry.indexOffset;
-		Buffer<uint> indexBuffer = bindless_ib[NonUniformResourceIndex(geometry.ib)];
+		Buffer<uint> indexBuffer = bindless_buffers_uint[NonUniformResourceIndex(geometry.ib)];
 		i0 = indexBuffer[startIndex + 0];
 		i1 = indexBuffer[startIndex + 1];
 		i2 = indexBuffer[startIndex + 2];
 
-		ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_pos_nor_wind)];
-		data0 = buf.Load4(i0 * sizeof(uint4));
-		data1 = buf.Load4(i1 * sizeof(uint4));
-		data2 = buf.Load4(i2 * sizeof(uint4));
+		Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(geometry.vb_pos_nor_wind)];
+		data0 = buf[i0];
+		data1 = buf[i1];
+		data2 = buf[i2];
 
 		return true;
 	}
@@ -329,9 +329,9 @@ struct Surface
 		const bool is_emittedparticle = geometry.flags & SHADERMESH_FLAG_EMITTEDPARTICLE;
 		const bool simple_lighting = is_hairparticle || is_emittedparticle;
 
-		float3 n0 = unpack_unitvector(data0.w);
-		float3 n1 = unpack_unitvector(data1.w);
-		float3 n2 = unpack_unitvector(data2.w);
+		float3 n0 = unpack_unitvector(asuint(data0.w));
+		float3 n1 = unpack_unitvector(asuint(data1.w));
+		float3 n2 = unpack_unitvector(asuint(data2.w));
 		N = attribute_at_bary(n0, n1, n2, bary);
 		N = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), N);
 		N = normalize(N);
@@ -342,9 +342,9 @@ struct Surface
 		facenormal = N;
 
 #ifdef SURFACE_LOAD_MIPCONE
-		float3 p0 = asfloat(data0.xyz);
-		float3 p1 = asfloat(data1.xyz);
-		float3 p2 = asfloat(data2.xyz);
+		float3 p0 = data0.xyz;
+		float3 p1 = data1.xyz;
+		float3 p2 = data2.xyz;
 		float3 P0 = mul(inst.transform.GetMatrix(), float4(p0, 1)).xyz;
 		float3 P1 = mul(inst.transform.GetMatrix(), float4(p1, 1)).xyz;
 		float3 P2 = mul(inst.transform.GetMatrix(), float4(p2, 1)).xyz;
@@ -363,10 +363,10 @@ struct Surface
 		[branch]
 		if (geometry.vb_uvs >= 0)
 		{
-			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_uvs)];
-			float4 uv0 = unpack_half4(buf.Load2(i0 * sizeof(uint2)));
-			float4 uv1 = unpack_half4(buf.Load2(i1 * sizeof(uint2)));
-			float4 uv2 = unpack_half4(buf.Load2(i2 * sizeof(uint2)));
+			Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(geometry.vb_uvs)];
+			float4 uv0 = buf[i0];
+			float4 uv1 = buf[i1];
+			float4 uv2 = buf[i2];
 			// all three must be transformed, to have correct derivatives (not enough to only transform final uvsets):
 			uv0.xy = mad(uv0.xy, material.texMulAdd.xy, material.texMulAdd.zw);
 			uv1.xy = mad(uv1.xy, material.texMulAdd.xy, material.texMulAdd.zw);
@@ -387,12 +387,11 @@ struct Surface
 		[branch]
 		if (geometry.vb_tan >= 0)
 		{
-			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_tan)];
-			const float4 t0 = unpack_utangent(buf.Load(i0 * sizeof(uint)));
-			const float4 t1 = unpack_utangent(buf.Load(i1 * sizeof(uint)));
-			const float4 t2 = unpack_utangent(buf.Load(i2 * sizeof(uint)));
+			Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(geometry.vb_tan)];
+			const float4 t0 = buf[i0];
+			const float4 t1 = buf[i1];
+			const float4 t2 = buf[i2];
 			T = attribute_at_bary(t0, t1, t2, bary);
-			T = T * 2 - 1;
 			T.xyz = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), T.xyz);
 			T.xyz = normalize(T.xyz);
 			B = normalize(cross(T.xyz, N) * T.w);
@@ -491,10 +490,10 @@ struct Surface
 		[branch]
 		if (geometry.vb_col >= 0 && material.IsUsingVertexColors())
 		{
-			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_col)];
-			const float4 c0 = unpack_rgba(buf.Load(i0 * sizeof(uint)));
-			const float4 c1 = unpack_rgba(buf.Load(i1 * sizeof(uint)));
-			const float4 c2 = unpack_rgba(buf.Load(i2 * sizeof(uint)));
+			Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(geometry.vb_col)];
+			const float4 c0 = buf[i0];
+			const float4 c1 = buf[i1];
+			const float4 c2 = buf[i2];
 			float4 vertexColor = attribute_at_bary(c0, c1, c2, bary);
 			baseColor *= vertexColor;
 		}
@@ -502,10 +501,10 @@ struct Surface
 		[branch]
 		if (inst.lightmap >= 0 && geometry.vb_atl >= 0)
 		{
-			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_atl)];
-			const float2 a0 = unpack_half2(buf.Load(i0 * sizeof(uint)));
-			const float2 a1 = unpack_half2(buf.Load(i1 * sizeof(uint)));
-			const float2 a2 = unpack_half2(buf.Load(i2 * sizeof(uint)));
+			Buffer<float2> buf = bindless_buffers_float2[NonUniformResourceIndex(geometry.vb_atl)];
+			const float2 a0 = buf[i0];
+			const float2 a1 = buf[i1];
+			const float2 a2 = buf[i2];
 			float2 atlas = attribute_at_bary(a0, a1, a2, bary);
 
 			Texture2D<float4> tex = bindless_textures[NonUniformResourceIndex(inst.lightmap)];
@@ -826,16 +825,16 @@ struct Surface
 		[branch]
 		if (geometry.vb_pre >= 0)
 		{
-			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_pre)];
-			pre0 = asfloat(buf.Load3(i0 * sizeof(uint4)));
-			pre1 = asfloat(buf.Load3(i1 * sizeof(uint4)));
-			pre2 = asfloat(buf.Load3(i2 * sizeof(uint4)));
+			Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(geometry.vb_pre)];
+			pre0 = buf[i0].xyz;
+			pre1 = buf[i1].xyz;
+			pre2 = buf[i2].xyz;
 		}
 		else
 		{
-			pre0 = asfloat(data0.xyz);
-			pre1 = asfloat(data1.xyz);
-			pre2 = asfloat(data2.xyz);
+			pre0 = data0.xyz;
+			pre1 = data1.xyz;
+			pre2 = data2.xyz;
 		}
 		pre = attribute_at_bary(pre0, pre1, pre2, bary);
 		pre = mul(inst.transformPrev.GetMatrix(), float4(pre, 1)).xyz;
@@ -850,9 +849,9 @@ struct Surface
 
 		bary = barycentrics;
 
-		float3 p0 = asfloat(data0.xyz);
-		float3 p1 = asfloat(data1.xyz);
-		float3 p2 = asfloat(data2.xyz);
+		float3 p0 = data0.xyz;
+		float3 p1 = data1.xyz;
+		float3 p2 = data2.xyz;
 
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
 		float3 P0 = mul(inst.transform.GetMatrix(), float4(p0, 1)).xyz;
@@ -874,9 +873,9 @@ struct Surface
 		if (!preload_internal(prim))
 			return false;
 
-		float3 p0 = asfloat(data0.xyz);
-		float3 p1 = asfloat(data1.xyz);
-		float3 p2 = asfloat(data2.xyz);
+		float3 p0 = data0.xyz;
+		float3 p1 = data1.xyz;
+		float3 p2 = data2.xyz;
 		float3 P0 = mul(inst.transform.GetMatrix(), float4(p0, 1)).xyz;
 		float3 P1 = mul(inst.transform.GetMatrix(), float4(p1, 1)).xyz;
 		float3 P2 = mul(inst.transform.GetMatrix(), float4(p2, 1)).xyz;
@@ -892,9 +891,9 @@ struct Surface
 		if (!preload_internal(prim))
 			return false;
 
-		float3 p0 = asfloat(data0.xyz);
-		float3 p1 = asfloat(data1.xyz);
-		float3 p2 = asfloat(data2.xyz);
+		float3 p0 = data0.xyz;
+		float3 p1 = data1.xyz;
+		float3 p2 = data2.xyz;
 		float3 P0 = mul(inst.transform.GetMatrix(), float4(p0, 1)).xyz;
 		float3 P1 = mul(inst.transform.GetMatrix(), float4(p1, 1)).xyz;
 		float3 P2 = mul(inst.transform.GetMatrix(), float4(p2, 1)).xyz;
@@ -903,9 +902,9 @@ struct Surface
 		[branch]
 		if (material.IsUsingWind())
 		{
-			float wind0 = ((data0.w >> 24u) & 0xFF) / 255.0;
-			float wind1 = ((data1.w >> 24u) & 0xFF) / 255.0;
-			float wind2 = ((data2.w >> 24u) & 0xFF) / 255.0;
+			float wind0 = ((asuint(data0.w) >> 24u) & 0xFF) / 255.0;
+			float wind1 = ((asuint(data1.w) >> 24u) & 0xFF) / 255.0;
+			float wind2 = ((asuint(data2.w) >> 24u) & 0xFF) / 255.0;
 
 			// this is hella slow to do per pixel:
 			P0 += compute_wind(P0, wind0);
@@ -938,9 +937,9 @@ struct Surface
 		if (!preload_internal(prim))
 			return false;
 
-		float3 p0 = asfloat(data0.xyz);
-		float3 p1 = asfloat(data1.xyz);
-		float3 p2 = asfloat(data2.xyz);
+		float3 p0 = data0.xyz;
+		float3 p1 = data1.xyz;
+		float3 p2 = data2.xyz;
 		float3 P0 = mul(inst.transform.GetMatrix(), float4(p0, 1)).xyz;
 		float3 P1 = mul(inst.transform.GetMatrix(), float4(p1, 1)).xyz;
 		float3 P2 = mul(inst.transform.GetMatrix(), float4(p2, 1)).xyz;
@@ -949,9 +948,9 @@ struct Surface
 		[branch]
 		if (material.IsUsingWind())
 		{
-			float wind0 = ((data0.w >> 24u) & 0xFF) / 255.0;
-			float wind1 = ((data1.w >> 24u) & 0xFF) / 255.0;
-			float wind2 = ((data2.w >> 24u) & 0xFF) / 255.0;
+			float wind0 = ((asuint(data0.w) >> 24u) & 0xFF) / 255.0;
+			float wind1 = ((asuint(data1.w) >> 24u) & 0xFF) / 255.0;
+			float wind2 = ((asuint(data2.w) >> 24u) & 0xFF) / 255.0;
 
 			// this is hella slow to do per pixel:
 			P0 += compute_wind(P0, wind0);

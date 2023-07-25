@@ -20,11 +20,11 @@ VertextoPixel main(uint vid : SV_VertexID, uint instanceID : SV_InstanceID)
 	uint particleIndex = culledIndirectionBuffer2[culledIndirectionBuffer[instanceID]];
 	uint vertexID = particleIndex * 4 + vid;
 
-	uint4 data = bindless_buffers[geometry.vb_pos_nor_wind].Load4(vertexID * 16);
-	float3 position = asfloat(data.xyz);
-	float3 normal = normalize(unpack_unitvector(data.w));
-	float4 uvsets = unpack_half4(bindless_buffers[geometry.vb_uvs].Load2(vertexID * 8));
-	uint color = bindless_buffers[geometry.vb_col].Load(vertexID * 4);
+	float4 pos_nor_wind = bindless_buffers_float4[geometry.vb_pos_nor_wind][vertexID];
+	float3 position = pos_nor_wind.xyz;
+	float3 normal = normalize(unpack_unitvector(asuint(pos_nor_wind.w)));
+	float4 uvsets = bindless_buffers_float4[geometry.vb_uvs][vertexID];
+	float4 color = bindless_buffers_float4[geometry.vb_col][vertexID];
 
 
 	// load particle data:
@@ -45,7 +45,7 @@ VertextoPixel main(uint vid : SV_VertexID, uint instanceID : SV_InstanceID)
 	Out.pos = mul(GetCamera().view_projection, float4(position, 1));
 	Out.tex = uvsets;
 	Out.size = size;
-	Out.color = color;
+	Out.color = pack_rgba(color);
 	Out.unrotated_uv = BILLBOARD[vertexID % 4].xy * float2(1, -1) * 0.5f + 0.5f;
 	Out.frameBlend = frameBlend;
 	return Out;

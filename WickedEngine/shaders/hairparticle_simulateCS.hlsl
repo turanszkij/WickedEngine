@@ -10,12 +10,12 @@ static const float3 HAIRPATCH[] = {
 };
 
 Buffer<uint> meshIndexBuffer : register(t0);
-ByteAddressBuffer meshVertexBuffer_POS : register(t1);
+Buffer<float4> meshVertexBuffer_POS : register(t1);
 Buffer<float> meshVertexBuffer_length : register(t2);
 
 RWStructuredBuffer<PatchSimulationData> simulationBuffer : register(u0);
-RWByteAddressBuffer vertexBuffer_POS : register(u1);
-RWByteAddressBuffer vertexBuffer_UVS : register(u2);
+RWBuffer<float4> vertexBuffer_POS : register(u1);
+RWBuffer<float4> vertexBuffer_UVS : register(u2);
 RWBuffer<uint> culledIndexBuffer : register(u3);
 RWStructuredBuffer<IndirectDrawArgsIndexedInstanced> indirectBuffer : register(u4);
 
@@ -24,11 +24,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 {
 	if (DTid.x >= xHairParticleCount)
 		return;
-
-	// Generate patch:
-
+	
+	RNG rng;
+	rng.init(uint2(xHairRandomSeed, DTid.x), 0);
+	
 	// random triangle on emitter surface:
-	uint tri = (uint)((xHairBaseMeshIndexCount / 3) * hash1(DTid.x));
+	const uint triangleCount = xHairBaseMeshIndexCount / 3;
+	const uint tri = rng.next_uint(triangleCount);
 
 	// load indices of triangle from index buffer
 	uint i0 = meshIndexBuffer[tri * 3 + 0];
@@ -36,19 +38,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	uint i2 = meshIndexBuffer[tri * 3 + 2];
 
 	// load vertices of triangle from vertex buffer:
-	float4 pos_nor0 = asfloat(meshVertexBuffer_POS.Load4(i0 * xHairBaseMeshVertexPositionStride));
-	float4 pos_nor1 = asfloat(meshVertexBuffer_POS.Load4(i1 * xHairBaseMeshVertexPositionStride));
-	float4 pos_nor2 = asfloat(meshVertexBuffer_POS.Load4(i2 * xHairBaseMeshVertexPositionStride));
-    float3 nor0 = unpack_unitvector(asuint(pos_nor0.w));
-    float3 nor1 = unpack_unitvector(asuint(pos_nor1.w));
-    float3 nor2 = unpack_unitvector(asuint(pos_nor2.w));
+	float4 pos_nor0 = meshVertexBuffer_POS[i0];
+	float4 pos_nor1 = meshVertexBuffer_POS[i1];
+	float4 pos_nor2 = meshVertexBuffer_POS[i2];
+	float3 nor0 = unpack_unitvector(asuint(pos_nor0.w));
+	float3 nor1 = unpack_unitvector(asuint(pos_nor1.w));
+	float3 nor2 = unpack_unitvector(asuint(pos_nor2.w));
 	float length0 = meshVertexBuffer_length[i0];
 	float length1 = meshVertexBuffer_length[i1];
 	float length2 = meshVertexBuffer_length[i2];
 
 	// random barycentric coords:
-	RNG rng;
-	rng.init(uint2(xHairRandomSeed, DTid.x), 0);
 	float f = rng.next_float();
 	float g = rng.next_float();
 	[flatten]
@@ -79,12 +79,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	binormal_length |= (uint)(lerp(1, rng.next_float(), saturate(xHairRandomness)) * strand_length * 255) << 24;
 
 	// Identifies the hair strand root particle:
-    const uint strandID = DTid.x * xHairSegmentCount;
-    
+	const uint strandID = DTid.x * xHairSegmentCount;
+	
 	// Transform particle by the emitter object matrix:
 	const float4x4 worldMatrix = xHairTransform.GetMatrix();
-    float3 base = mul(worldMatrix, float4(position.xyz, 1)).xyz;
-    target = normalize(mul((float3x3)worldMatrix, target));
+	float3 base = mul(worldMatrix, float4(position.xyz, 1)).xyz;
+	target = normalize(mul((float3x3)worldMatrix, target));
 	const float3 root = base;
 
 	float3 diff = GetCamera().position - root;
@@ -97,7 +97,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	float3 normal = 0;
 
 	const float delta_time = clamp(GetFrame().delta_time, 0, 1.0 / 30.0); // clamp delta time to avoid simulation blowing up
-    
+	
 	for (uint segmentID = 0; segmentID < xHairSegmentCount; ++segmentID)
 	{
 		// Identifies the hair strand segment particle:
@@ -111,8 +111,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			simulationBuffer[particleID].normal_velocity = f32tof16(target);
 		}
 
-        normal += f16tof32(simulationBuffer[particleID].normal_velocity);
-        normal = normalize(normal);
+		normal += f16tof32(simulationBuffer[particleID].normal_velocity);
+		normal = normalize(normal);
 
 		float len = (binormal_length >> 24) & 0x000000FF;
 		len /= 255.0f;
@@ -123,8 +123,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		// Accumulate forces, apply colliders:
 		float3 force = 0;
-        for (uint i = 0; i < GetFrame().forcefieldarray_count; ++i)
-        {
+		for (uint i = 0; i < GetFrame().forcefieldarray_count; ++i)
+		{
 			ShaderEntity entity = load_entity(GetFrame().forcefieldarray_offset + i);
 
 			[branch]
@@ -198,15 +198,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 					}
 				}
 			}
-        }
+		}
 
 		// Pull back to rest position:
-        force += (target - normal) * xStiffness;
+		force += (target - normal) * xStiffness;
 
-        force *= delta_time;
+		force *= delta_time;
 
 		// Simulation buffer load:
-        float3 velocity = f16tof32(simulationBuffer[particleID].normal_velocity >> 16u);
+		float3 velocity = f16tof32(simulationBuffer[particleID].normal_velocity >> 16u);
 
 		// Apply surface-movement-based velocity:
 		const float3 old_base = simulationBuffer[particleID].position;
@@ -272,12 +272,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			{
 				position = 0;
 			}
-
-			uint4 data;
-			data.xyz = asuint(position);
-			data.w = pack_unitvector(normalize(normal + wind));
-			vertexBuffer_POS.Store4((v0 + vertexID) * 16, data);
-			vertexBuffer_UVS.Store2((v0 + vertexID) * 8, pack_half4(float4(uv, uv))); // a second uv set could be used here
+			
+			vertexBuffer_POS[v0 + vertexID] = float4(position, asfloat(pack_unitvector(normalize(normal + wind))));
+			vertexBuffer_UVS[v0 + vertexID] = uv.xyxy; // a second uv set could be used here
 		}
 
 		// Frustum culling:
@@ -310,5 +307,5 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		// Offset next segment root to current tip:
 		base = tip;
-    }
+	}
 }

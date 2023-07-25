@@ -4176,7 +4176,7 @@ void UpdateRenderData(
 				{
 					push.morph_count = mesh.active_morph_count;
 					push.morph_offset = mesh.morphGPUOffset;
-					push.morphvb_index = device->GetDescriptorIndex(&mesh.generalBuffer, SubresourceType::SRV);
+					push.morphvb_index = mesh.vb_mor.descriptor_srv;
 				}
 				else
 				{

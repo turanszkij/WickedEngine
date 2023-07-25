@@ -28,16 +28,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	ShaderMaterial material = load_material(geometry.materialIndex);
 
 	uint startIndex = prim.primitiveIndex * 3 + geometry.indexOffset;
-	uint i0 = bindless_ib[geometry.ib][startIndex + 0];
-	uint i1 = bindless_ib[geometry.ib][startIndex + 1];
-	uint i2 = bindless_ib[geometry.ib][startIndex + 2];
-
-	uint4 data0 = bindless_buffers[geometry.vb_pos_nor_wind].Load4(i0 * 16);
-	uint4 data1 = bindless_buffers[geometry.vb_pos_nor_wind].Load4(i1 * 16);
-	uint4 data2 = bindless_buffers[geometry.vb_pos_nor_wind].Load4(i2 * 16);
-	float3 p0 = asfloat(data0.xyz);
-	float3 p1 = asfloat(data1.xyz);
-	float3 p2 = asfloat(data2.xyz);
+	uint i0 = bindless_buffers_uint[geometry.ib][startIndex + 0];
+	uint i1 = bindless_buffers_uint[geometry.ib][startIndex + 1];
+	uint i2 = bindless_buffers_uint[geometry.ib][startIndex + 2];
+	
+	float3 p0 = bindless_buffers_float4[geometry.vb_pos_nor_wind][i0].xyz;
+	float3 p1 = bindless_buffers_float4[geometry.vb_pos_nor_wind][i1].xyz;
+	float3 p2 = bindless_buffers_float4[geometry.vb_pos_nor_wind][i2].xyz;
 	float3 P0 = mul(inst.transform.GetMatrix(), float4(p0, 1)).xyz;
 	float3 P1 = mul(inst.transform.GetMatrix(), float4(p1, 1)).xyz;
 	float3 P2 = mul(inst.transform.GetMatrix(), float4(p2, 1)).xyz;

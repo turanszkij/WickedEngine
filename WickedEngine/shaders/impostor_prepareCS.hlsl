@@ -11,7 +11,7 @@ static const float3 BILLBOARD[] =
 };
 
 RWBuffer<uint> output_indices : register(u0);
-RWByteAddressBuffer output_vertices_pos_nor : register(u1);
+RWBuffer<float4> output_vertices_pos_nor : register(u1);
 RWByteAddressBuffer output_impostor_data : register(u2);
 RWStructuredBuffer<IndirectDrawArgsIndexedInstanced> output_indirect : register(u3);
 
@@ -103,7 +103,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			pos = mul(pos, float3x3(right, up, face));
 			pos *= instance.radius;
 			pos += instance.center;
-			output_vertices_pos_nor.Store4((vertexOffset + vertexID) * sizeof(uint4), uint4(asuint(pos), pack_unitvector(face)));
+			output_vertices_pos_nor[vertexOffset + vertexID] = float4(pos, asfloat(pack_unitvector(face)));
 		}
 	}
 }

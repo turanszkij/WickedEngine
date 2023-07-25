@@ -66,7 +66,7 @@ namespace wi::scene
 			desc.stride = sizeof(ShaderMeshInstance);
 			desc.size = desc.stride * instanceArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
-			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 			if (!device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
 			{
 				// Non-UMA: separate Default usage buffer
@@ -99,7 +99,7 @@ namespace wi::scene
 			desc.stride = sizeof(ShaderMaterial);
 			desc.size = desc.stride * materialArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
-			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 			if (!device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
 			{
 				// Non-UMA: separate Default usage buffer
@@ -253,7 +253,7 @@ namespace wi::scene
 			desc.stride = sizeof(ShaderGeometry);
 			desc.size = desc.stride * geometryArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
-			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 			if (!device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
 			{
 				// Non-UMA: separate Default usage buffer
@@ -356,7 +356,7 @@ namespace wi::scene
 			desc.stride = sizeof(ShaderMeshlet);
 			desc.size = desc.stride * meshletCount * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 			bool success = device->CreateBuffer(&desc, nullptr, &meshletBuffer);
 			assert(success);
 			device->SetName(&meshletBuffer, "meshletBuffer");
@@ -679,7 +679,7 @@ namespace wi::scene
 				desc.size =
 					AlignTo(AlignTo(sizeof(IndirectDrawArgsIndexedInstanced), alignment), sizeof(IndirectDrawArgsIndexedInstanced)) +			// indirect args, additional structured buffer alignment
 					AlignTo(allocated_impostor_capacity * sizeof(uint) * 6, alignment) +	// indices (must overestimate here for 32-bit indices, because we create 16 bit and 32 bit descriptors)
-					AlignTo(allocated_impostor_capacity * sizeof(uint4) * 4, alignment) +	// vertices
+					AlignTo(allocated_impostor_capacity * sizeof(MeshComponent::Vertex_POS) * 4, alignment) +	// vertices
 					AlignTo(allocated_impostor_capacity * sizeof(uint2), alignment)		// impostordata
 				;
 				device->CreateBuffer(&desc, nullptr, &impostorBuffer);
@@ -715,9 +715,9 @@ namespace wi::scene
 
 				buffer_offset = AlignTo(buffer_offset, alignment);
 				impostor_vb.offset = buffer_offset;
-				impostor_vb.size = allocated_impostor_capacity * sizeof(uint4) * 4;
-				impostor_vb.subresource_srv = device->CreateSubresource(&impostorBuffer, SubresourceType::SRV, impostor_vb.offset, impostor_vb.size);
-				impostor_vb.subresource_uav = device->CreateSubresource(&impostorBuffer, SubresourceType::UAV, impostor_vb.offset, impostor_vb.size);
+				impostor_vb.size = allocated_impostor_capacity * sizeof(MeshComponent::Vertex_POS) * 4;
+				impostor_vb.subresource_srv = device->CreateSubresource(&impostorBuffer, SubresourceType::SRV, impostor_vb.offset, impostor_vb.size, &MeshComponent::Vertex_POS::FORMAT);
+				impostor_vb.subresource_uav = device->CreateSubresource(&impostorBuffer, SubresourceType::UAV, impostor_vb.offset, impostor_vb.size, &MeshComponent::Vertex_POS::FORMAT);
 				impostor_vb.descriptor_srv = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::SRV, impostor_vb.subresource_srv);
 				impostor_vb.descriptor_uav = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::UAV, impostor_vb.subresource_uav);
 				buffer_offset += impostor_vb.size;
