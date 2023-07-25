@@ -18,13 +18,29 @@ StructuredBuffer<uint> culledIndirectionBuffer2 : register(t3);
 static const uint VERTEXCOUNT = THREADCOUNT_MESH_SHADER * BILLBOARD_VERTEXCOUNT;
 static const uint PRIMITIVECOUNT = THREADCOUNT_MESH_SHADER * 2;
 
+// VertexToPixel separated into two structures:
+struct VertextoPixel_MS
+{
+	float4 pos : SV_POSITION;
+	float4 tex : TEXCOORD0;
+	float3 P : WORLDPOSITION;
+	float2 unrotated_uv : UNROTATED_UV;
+};
+struct VertextoPixel_MS_PRIM
+{
+	nointerpolation float frameBlend : FRAMEBLEND;
+	nointerpolation float size : PARTICLESIZE;
+	nointerpolation uint color : PARTICLECOLOR;
+};
+
 [outputtopology("triangle")]
 [numthreads(THREADCOUNT_MESH_SHADER, 1, 1)]
 void main(
     in uint tid : SV_DispatchThreadID,
     in uint tig : SV_GroupIndex,
 	in uint gid : SV_GroupID,
-    out vertices VertextoPixel verts[VERTEXCOUNT],
+    out vertices VertextoPixel_MS verts[VERTEXCOUNT],
+	out primitives VertextoPixel_MS_PRIM sharedPrimitives[PRIMITIVECOUNT],
     out indices uint3 triangles[PRIMITIVECOUNT])
 {
 	uint particleCount = counterBuffer.Load(PARTICLECOUNTER_OFFSET_CULLEDCOUNT);
@@ -35,14 +51,8 @@ void main(
 
 	if (tig >= realGroupCount)
 		return;
-
-#ifdef SPIRV
-	// Workaround for mesh shader compile issue with vulkan: https://github.com/microsoft/DirectXShaderCompiler/issues/4865#issuecomment-1346806816
-	ShaderGeometry geometry;
-	geometry.init(); // obviously, this will not produce correct result, but let the shader compile at least in vulkan
-#else
+	
 	ShaderGeometry geometry = EmitterGetGeometry();
-#endif // SPIRV
 
 	uint instanceID = tid;
 	uint particleIndex = culledIndirectionBuffer2[culledIndirectionBuffer[instanceID]];
@@ -59,29 +69,31 @@ void main(
 		lerp(xEmitterFrameStart, xEmitterFrameCount, lifeLerp) :
 		((xEmitterFrameStart + particle.life * xEmitterFrameRate) % xEmitterFrameCount);
 	const float frameBlend = frac(spriteframe);
-
+	
     // Transform the vertices and write them
 	for (uint i = 0; i < BILLBOARD_VERTEXCOUNT; ++i)
 	{
 		uint vertexID = particleIndex * 4 + i;
 
-		uint4 data = bindless_buffers[geometry.vb_pos_nor_wind].Load4(vertexID * 16);
-		float3 position = asfloat(data.xyz);
-		float3 normal = normalize(unpack_unitvector(data.w));
-		float4 uvsets = unpack_half4(bindless_buffers[geometry.vb_uvs].Load2(vertexID * 8));
-		uint color = bindless_buffers[geometry.vb_col].Load(vertexID * 4);
+		float4 pos_nor_wind = bindless_buffers_float4[geometry.vb_pos_nor_wind][vertexID];
+		float3 position = pos_nor_wind.xyz;
+		float3 normal = normalize(unpack_unitvector(asuint(pos_nor_wind.w)));
+		float4 uvsets = bindless_buffers_float4[geometry.vb_uvs][vertexID];
 
-		VertextoPixel Out;
+		VertextoPixel_MS Out;
 		Out.P = position;
 		Out.pos = mul(GetCamera().view_projection, float4(position, 1));
-		Out.tex = uvsets;
-		Out.size = size;
-		Out.color = color;
 		Out.unrotated_uv = BILLBOARD[i].xy * float2(1, -1) * 0.5f + 0.5f;
-		Out.frameBlend = frameBlend;
 
 		verts[tig * BILLBOARD_VERTEXCOUNT + i] = Out;
 	}
+
+	VertextoPixel_MS_PRIM OutQuad;
+	OutQuad.color = pack_rgba(bindless_buffers_float4[geometry.vb_col][particleIndex * 4]);
+	OutQuad.size = size;
+	OutQuad.frameBlend = frameBlend;
+	sharedPrimitives[tig * 2 + 0] = OutQuad;
+	sharedPrimitives[tig * 2 + 1] = OutQuad;
 
 	triangles[tig * 2 + 0] = uint3(0, 1, 2) + tig * BILLBOARD_VERTEXCOUNT;
 	triangles[tig * 2 + 1] = uint3(2, 1, 3) + tig * BILLBOARD_VERTEXCOUNT;

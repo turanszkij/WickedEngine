@@ -363,9 +363,9 @@ namespace vulkan_internal
 		switch (value)
 		{
 		case ShaderStage::MS:
-			return VK_SHADER_STAGE_MESH_BIT_NV;
+			return VK_SHADER_STAGE_MESH_BIT_EXT;
 		case ShaderStage::AS:
-			return VK_SHADER_STAGE_TASK_BIT_NV;
+			return VK_SHADER_STAGE_TASK_BIT_EXT;
 		case ShaderStage::VS:
 			return VK_SHADER_STAGE_VERTEX_BIT;
 		case ShaderStage::HS:
@@ -3293,8 +3293,12 @@ using namespace vulkan_internal;
 		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_VERTEX_INPUT_BINDING_STRIDE);
 
 		dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-		dynamicStateInfo.dynamicStateCount = (uint32_t)pso_dynamicStates.size();
 		dynamicStateInfo.pDynamicStates = pso_dynamicStates.data();
+		dynamicStateInfo.dynamicStateCount = (uint32_t)pso_dynamicStates.size();
+
+		dynamicStateInfo_MeshShader.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+		dynamicStateInfo_MeshShader.pDynamicStates = pso_dynamicStates.data();
+		dynamicStateInfo_MeshShader.dynamicStateCount = (uint32_t)pso_dynamicStates.size() - 1; // don't include VK_DYNAMIC_STATE_VERTEX_INPUT_BINDING_STRIDE for mesh shader
 
 		// Note: limiting descriptors by constant amount is needed, because the bindless sets are bound to multiple slots to match DX12 layout
 		//	And binding to multiple slot adds up towards limits, so the limits will be quickly reached for some descriptor types
@@ -4474,10 +4478,10 @@ using namespace vulkan_internal;
 		switch (stage)
 		{
 		case ShaderStage::MS:
-			internal_state->stageInfo.stage = VK_SHADER_STAGE_MESH_BIT_NV;
+			internal_state->stageInfo.stage = VK_SHADER_STAGE_MESH_BIT_EXT;
 			break;
 		case ShaderStage::AS:
-			internal_state->stageInfo.stage = VK_SHADER_STAGE_TASK_BIT_NV;
+			internal_state->stageInfo.stage = VK_SHADER_STAGE_TASK_BIT_EXT;
 			break;
 		case ShaderStage::VS:
 			internal_state->stageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -4538,6 +4542,8 @@ using namespace vulkan_internal;
 
 			for (auto& x : bindings)
 			{
+				if (x->accessed == 0)
+					continue;
 				const bool bindless = x->set > 0;
 
 				if (bindless)
@@ -4554,9 +4560,7 @@ using namespace vulkan_internal;
 				descriptor.descriptorType = (VkDescriptorType)x->descriptor_type;
 
 				if (bindless)
-				{
 					continue;
-				}
 
 				auto& imageViewType = internal_state->imageViewTypes.emplace_back();
 				imageViewType = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
@@ -5504,7 +5508,14 @@ using namespace vulkan_internal;
 
 		pipelineInfo.pTessellationState = &tessellationInfo;
 
-		pipelineInfo.pDynamicState = &dynamicStateInfo;
+		if (pso->desc.ms == nullptr)
+		{
+			pipelineInfo.pDynamicState = &dynamicStateInfo;
+		}
+		else
+		{
+			pipelineInfo.pDynamicState = &dynamicStateInfo_MeshShader;
+		}
 
 		if (renderpass_info != nullptr)
 		{

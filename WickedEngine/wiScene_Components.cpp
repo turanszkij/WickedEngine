@@ -579,15 +579,17 @@ namespace wi::scene
 			AlignTo(vertex_boneindices.size() * sizeof(Vertex_BON), alignment)
 			;
 
+		constexpr Format morph_format = Format::R16G16B16A16_FLOAT;
+		constexpr size_t morph_stride = GetFormatStride(morph_format);
 		for (MorphTarget& morph : morph_targets)
 		{
 			if (!morph.vertex_positions.empty())
 			{
-				bd.size += AlignTo(vertex_positions.size() * sizeof(XMHALF4), alignment);
+				bd.size += AlignTo(vertex_positions.size() * morph_stride, alignment);
 			}
 			if (!morph.vertex_normals.empty())
 			{
-				bd.size += AlignTo(vertex_normals.size() * sizeof(XMHALF4), alignment);
+				bd.size += AlignTo(vertex_normals.size() * morph_stride, alignment);
 			}
 		}
 
@@ -735,11 +737,12 @@ namespace wi::scene
 			// morph buffers:
 			if (!morph_targets.empty())
 			{
+				vb_mor.offset = buffer_offset;
 				for (MorphTarget& morph : morph_targets)
 				{
 					if (!morph.vertex_positions.empty())
 					{
-						morph.offset_pos = buffer_offset;
+						morph.offset_pos = (buffer_offset - vb_mor.offset) / morph_stride;
 						XMHALF4* vertices = (XMHALF4*)(buffer_data + buffer_offset);
 						std::fill(vertices, vertices + vertex_positions.size(), 0);
 						if (morph.sparse_indices_positions.empty())
@@ -763,7 +766,7 @@ namespace wi::scene
 					}
 					if (!morph.vertex_normals.empty())
 					{
-						morph.offset_nor = buffer_offset;
+						morph.offset_nor = (buffer_offset - vb_mor.offset) / morph_stride;
 						XMHALF4* vertices = (XMHALF4*)(buffer_data + buffer_offset);
 						std::fill(vertices, vertices + vertex_normals.size(), 0);
 						if (morph.sparse_indices_normals.empty())
@@ -786,6 +789,7 @@ namespace wi::scene
 						buffer_offset += AlignTo(morph.vertex_normals.size() * sizeof(XMHALF4), alignment);
 					}
 				}
+				vb_mor.size = buffer_offset - vb_mor.offset;
 			}
 		};
 
@@ -799,33 +803,38 @@ namespace wi::scene
 		ib.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, ib.subresource_srv);
 
 		assert(vb_pos_nor_wind.IsValid());
-		vb_pos_nor_wind.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos_nor_wind.offset, vb_pos_nor_wind.size);
+		vb_pos_nor_wind.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos_nor_wind.offset, vb_pos_nor_wind.size, &Vertex_POS::FORMAT);
 		vb_pos_nor_wind.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_pos_nor_wind.subresource_srv);
 
 		if (vb_tan.IsValid())
 		{
-			vb_tan.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_tan.offset, vb_tan.size);
+			vb_tan.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_tan.offset, vb_tan.size, &Vertex_TAN::FORMAT);
 			vb_tan.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_tan.subresource_srv);
 		}
 		if (vb_uvs.IsValid())
 		{
-			vb_uvs.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_uvs.offset, vb_uvs.size);
+			vb_uvs.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_uvs.offset, vb_uvs.size, &Vertex_UVS::FORMAT);
 			vb_uvs.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_uvs.subresource_srv);
 		}
 		if (vb_atl.IsValid())
 		{
-			vb_atl.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_atl.offset, vb_atl.size);
+			vb_atl.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_atl.offset, vb_atl.size, &Vertex_TEX::FORMAT);
 			vb_atl.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_atl.subresource_srv);
 		}
 		if (vb_col.IsValid())
 		{
-			vb_col.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_col.offset, vb_col.size);
+			vb_col.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_col.offset, vb_col.size, &Vertex_COL::FORMAT);
 			vb_col.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_col.subresource_srv);
 		}
 		if (vb_bon.IsValid())
 		{
 			vb_bon.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_bon.offset, vb_bon.size);
 			vb_bon.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_bon.subresource_srv);
+		}
+		if (vb_mor.IsValid())
+		{
+			vb_mor.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_mor.offset, vb_mor.size, &morph_format);
+			vb_mor.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_mor.subresource_srv);
 		}
 
 		if (!vertex_boneindices.empty() || !morph_targets.empty())
@@ -860,8 +869,8 @@ namespace wi::scene
 		so_pos_nor_wind.offset = buffer_offset;
 		so_pos_nor_wind.size = vb_pos_nor_wind.size;
 		buffer_offset += AlignTo(so_pos_nor_wind.size, alignment);
-		so_pos_nor_wind.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_pos_nor_wind.offset, so_pos_nor_wind.size);
-		so_pos_nor_wind.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pos_nor_wind.offset, so_pos_nor_wind.size);
+		so_pos_nor_wind.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_pos_nor_wind.offset, so_pos_nor_wind.size, &Vertex_POS::FORMAT);
+		so_pos_nor_wind.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pos_nor_wind.offset, so_pos_nor_wind.size, &Vertex_POS::FORMAT);
 		so_pos_nor_wind.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_pos_nor_wind.subresource_srv);
 		so_pos_nor_wind.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_pos_nor_wind.subresource_uav);
 
@@ -870,8 +879,8 @@ namespace wi::scene
 			so_tan.offset = buffer_offset;
 			so_tan.size = vb_tan.size;
 			buffer_offset += AlignTo(so_tan.size, alignment);
-			so_tan.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_tan.offset, so_tan.size);
-			so_tan.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_tan.offset, so_tan.size);
+			so_tan.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_tan.offset, so_tan.size, &Vertex_TAN::FORMAT);
+			so_tan.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_tan.offset, so_tan.size, &Vertex_TAN::FORMAT);
 			so_tan.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_tan.subresource_srv);
 			so_tan.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_tan.subresource_uav);
 		}
@@ -879,8 +888,8 @@ namespace wi::scene
 		so_pre.offset = buffer_offset;
 		so_pre.size = vb_pos_nor_wind.size;
 		buffer_offset += AlignTo(so_pre.size, alignment);
-		so_pre.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_pre.offset, so_pre.size);
-		so_pre.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pre.offset, so_pre.size);
+		so_pre.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_pre.offset, so_pre.size, &Vertex_POS::FORMAT);
+		so_pre.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pre.offset, so_pre.size, &Vertex_POS::FORMAT);
 		so_pre.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_pre.subresource_srv);
 		so_pre.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_pre.subresource_uav);
 	}

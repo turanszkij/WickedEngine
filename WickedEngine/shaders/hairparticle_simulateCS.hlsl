@@ -10,12 +10,12 @@ static const float3 HAIRPATCH[] = {
 };
 
 Buffer<uint> meshIndexBuffer : register(t0);
-ByteAddressBuffer meshVertexBuffer_POS : register(t1);
+Buffer<float4> meshVertexBuffer_POS : register(t1);
 Buffer<float> meshVertexBuffer_length : register(t2);
 
 RWStructuredBuffer<PatchSimulationData> simulationBuffer : register(u0);
-RWByteAddressBuffer vertexBuffer_POS : register(u1);
-RWByteAddressBuffer vertexBuffer_UVS : register(u2);
+RWBuffer<float4> vertexBuffer_POS : register(u1);
+RWBuffer<float4> vertexBuffer_UVS : register(u2);
 RWBuffer<uint> culledIndexBuffer : register(u3);
 RWStructuredBuffer<IndirectDrawArgsIndexedInstanced> indirectBuffer : register(u4);
 
@@ -24,11 +24,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 {
 	if (DTid.x >= xHairParticleCount)
 		return;
-
-	// Generate patch:
-
+	
+	RNG rng;
+	rng.init(uint2(xHairRandomSeed, DTid.x), 0);
+	
 	// random triangle on emitter surface:
-	uint tri = (uint)((xHairBaseMeshIndexCount / 3) * hash1(DTid.x));
+	const uint triangleCount = xHairBaseMeshIndexCount / 3;
+	uint tri = rng.next_uint(triangleCount);
 
 	// load indices of triangle from index buffer
 	uint i0 = meshIndexBuffer[tri * 3 + 0];
@@ -36,9 +38,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	uint i2 = meshIndexBuffer[tri * 3 + 2];
 
 	// load vertices of triangle from vertex buffer:
-	float4 pos_nor0 = asfloat(meshVertexBuffer_POS.Load4(i0 * xHairBaseMeshVertexPositionStride));
-	float4 pos_nor1 = asfloat(meshVertexBuffer_POS.Load4(i1 * xHairBaseMeshVertexPositionStride));
-	float4 pos_nor2 = asfloat(meshVertexBuffer_POS.Load4(i2 * xHairBaseMeshVertexPositionStride));
+	float4 pos_nor0 = meshVertexBuffer_POS[i0];
+	float4 pos_nor1 = meshVertexBuffer_POS[i1];
+	float4 pos_nor2 = meshVertexBuffer_POS[i2];
     float3 nor0 = unpack_unitvector(asuint(pos_nor0.w));
     float3 nor1 = unpack_unitvector(asuint(pos_nor1.w));
     float3 nor2 = unpack_unitvector(asuint(pos_nor2.w));
@@ -47,8 +49,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	float length2 = meshVertexBuffer_length[i2];
 
 	// random barycentric coords:
-	RNG rng;
-	rng.init(uint2(xHairRandomSeed, DTid.x), 0);
 	float f = rng.next_float();
 	float g = rng.next_float();
 	[flatten]
@@ -272,12 +272,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			{
 				position = 0;
 			}
-
-			uint4 data;
-			data.xyz = asuint(position);
-			data.w = pack_unitvector(normalize(normal + wind));
-			vertexBuffer_POS.Store4((v0 + vertexID) * 16, data);
-			vertexBuffer_UVS.Store2((v0 + vertexID) * 8, pack_half4(float4(uv, uv))); // a second uv set could be used here
+			
+			vertexBuffer_POS[v0 + vertexID] = float4(position, asfloat(pack_unitvector(normalize(normal + wind))));
+			vertexBuffer_UVS[v0 + vertexID] = uv.xyxy; // a second uv set could be used here
 		}
 
 		// Frustum culling:

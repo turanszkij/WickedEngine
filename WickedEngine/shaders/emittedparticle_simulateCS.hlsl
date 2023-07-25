@@ -15,9 +15,9 @@ RWStructuredBuffer<uint> aliveBuffer_NEW : register(u2);
 RWStructuredBuffer<uint> deadBuffer : register(u3);
 RWByteAddressBuffer counterBuffer : register(u4);
 RWStructuredBuffer<float> distanceBuffer : register(u6);
-RWByteAddressBuffer vertexBuffer_POS : register(u7);
-RWByteAddressBuffer vertexBuffer_UVS : register(u8);
-RWByteAddressBuffer vertexBuffer_COL : register(u9);
+RWBuffer<float4> vertexBuffer_POS : register(u7);
+RWBuffer<float4> vertexBuffer_UVS : register(u8);
+RWBuffer<float4> vertexBuffer_COL : register(u9);
 RWStructuredBuffer<uint> culledIndirectionBuffer : register(u10);
 RWStructuredBuffer<uint> culledIndirectionBuffer2 : register(u11);
 
@@ -292,12 +292,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 				quadPos = mul(quadPos, (float3x3)GetCamera().view); // reversed mul for inverse camera rotation!
 
 				// write out vertex:
-				uint4 data;
-				data.xyz = asuint(particle.position + quadPos);
-				data.w = pack_unitvector(normalize(-GetCamera().forward));
-				vertexBuffer_POS.Store4((v0 + vertexID) * 16, data);
-				vertexBuffer_UVS.Store2((v0 + vertexID) * 8, pack_half4(float4(uv, uv2)));
-				vertexBuffer_COL.Store((v0 + vertexID) * 4, particleColorPacked);
+				vertexBuffer_POS[v0 + vertexID] = float4(particle.position + quadPos, asfloat(pack_unitvector(normalize(-GetCamera().forward))));
+				vertexBuffer_UVS[v0 + vertexID] = float4(uv, uv2);
+				vertexBuffer_COL[v0 + vertexID] = unpack_rgba(particleColorPacked);
 			}
 
 			// Frustum culling:
@@ -329,10 +326,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 			counterBuffer.InterlockedAdd(PARTICLECOUNTER_OFFSET_DEADCOUNT, 1, deadIndex);
 			deadBuffer[deadIndex] = particleIndex;
 
-			vertexBuffer_POS.Store4((v0 + 0) * 16, 0);
-			vertexBuffer_POS.Store4((v0 + 1) * 16, 0);
-			vertexBuffer_POS.Store4((v0 + 2) * 16, 0);
-			vertexBuffer_POS.Store4((v0 + 3) * 16, 0);
+			vertexBuffer_POS[v0 + 0] = 0;
+			vertexBuffer_POS[v0 + 1] = 0;
+			vertexBuffer_POS[v0 + 2] = 0;
+			vertexBuffer_POS[v0 + 3] = 0;
 		}
 	}
 

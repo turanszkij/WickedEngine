@@ -85,6 +85,7 @@ namespace wi::graphics
 
 		wi::vector<VkDynamicState> pso_dynamicStates;
 		VkPipelineDynamicStateCreateInfo dynamicStateInfo = {};
+		VkPipelineDynamicStateCreateInfo dynamicStateInfo_MeshShader = {};
 
 		VkBuffer		nullBuffer = VK_NULL_HANDLE;
 		VmaAllocation	nullBufferAllocation = VK_NULL_HANDLE;
