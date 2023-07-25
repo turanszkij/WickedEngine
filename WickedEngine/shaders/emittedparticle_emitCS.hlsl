@@ -28,7 +28,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		
 #ifdef EMIT_FROM_MESH
 	// random triangle on emitter surface:
-	uint tri = (uint)((xEmitterMeshIndexCount / 3) * hash1(DTid.x + GetFrame().frame_count));
+	const uint triangleCount = xEmitterMeshIndexCount / 3;
+	const uint tri = rng.next_uint(triangleCount);
 
 	// load indices of triangle from index buffer
 	uint i0 = meshIndexBuffer[tri * 3 + 0];
