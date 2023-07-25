@@ -12,13 +12,15 @@
 #define SHADERCOMPILER_ENABLED
 #define SHADERCOMPILER_ENABLED_DXCOMPILER
 #define SHADERCOMPILER_ENABLED_D3DCOMPILER
-#include <atlbase.h> // ComPtr
+#include <wrl/client.h>
+#define CComPtr Microsoft::WRL::ComPtr
 #endif // _WIN32
 
 #ifdef PLATFORM_LINUX
 #define SHADERCOMPILER_ENABLED
 #define SHADERCOMPILER_ENABLED_DXCOMPILER
 #define __RPC_FAR
+#include "Utility/dxc/Support/WinAdapter.h"
 #endif // PLATFORM_LINUX
 
 #ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
@@ -57,7 +59,7 @@ namespace wi::shadercompiler
 					HRESULT hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&dxcCompiler));
 					assert(SUCCEEDED(hr));
 					CComPtr<IDxcVersionInfo> info;
-					hr = dxcCompiler->QueryInterface(&info);
+					hr = dxcCompiler->QueryInterface(IID_PPV_ARGS(&info));
 					assert(SUCCEEDED(hr));
 					uint32_t minor = 0;
 					uint32_t major = 0;
