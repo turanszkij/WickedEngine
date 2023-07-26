@@ -329,6 +329,7 @@ local function Character(model_name, start_position, face, controllable)
 		position = Vector(),
 		controllable = true,
 		fixed_update_remain = 0,
+		timestep_occured = false,
 		root_bone_offset = 0,
 		foot_placed_left = false,
 		foot_placed_right = false,
@@ -708,8 +709,10 @@ local function Character(model_name, start_position, face, controllable)
 			self.fixed_update_remain = self.fixed_update_remain + dt
 			local fixed_update_fps = 120
 			local fixed_dt = 1.0 / fixed_update_fps
+			self.timestep_occured = false;
 
 			while self.fixed_update_remain >= fixed_dt do
+				self.timestep_occured = true;
 				self.fixed_update_remain = self.fixed_update_remain - fixed_dt
 				
 				capsulepos = vector.Add(capsulepos, vector.Multiply(self.velocity, fixed_dt))
@@ -813,6 +816,11 @@ local function Character(model_name, start_position, face, controllable)
 		end,
 
 		Update_IK = function(self)
+			-- Make sure we only update IK as often as we check for ground collisions etc.
+			-- in Update. Otherwise, when the framerate is higher than the step rate, 
+			-- self.velocity is unreliable
+			if not self.timestep_occured then return end;
+
 			-- IK foot placement:
 			local base_y = self.position.GetY()
 			local ik_foot = INVALID_ENTITY
