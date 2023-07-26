@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiMath.h"
+#include "wiVector.h"
 
 #include <string>
 
@@ -19,20 +20,17 @@ namespace wi::lua
 
 	lua_State* GetLuaState();
 
-	//check if the last call succeeded
-	bool Success();
-	//check if the last call failed
-	bool Failed();
-	//get error message for the last call
-	std::string GetErrorMsg();
-	//remove and get error message from stack
-	std::string PopErrorMsg();
 	//post error to backlog and/or debug output
 	void PostErrorMsg();
 	//run a script from file
 	bool RunFile(const std::string& filename);
+	//run a binary script from file
+	bool RunBinaryFile(const std::string& filename);
 	//run a script from param
+	bool RunText(const char* script);
 	bool RunText(const std::string& script);
+	//run binary script
+	bool RunBinaryData(const void* data, size_t size, const char* debugname = "");
 	//register function to use in scripts
 	bool RegisterFunc(const std::string& name, lua_CFunction function);
 
@@ -183,5 +181,10 @@ namespace wi::lua
 	
 	//add new metatable
 	void SAddMetatable(lua_State* L, const std::string& name);
+
+	// Compiles text file containing LUA source code to binary LUA code
+	bool CompileFile(const std::string& filename, wi::vector<uint8_t>& dst);
+	// Compiles LUA source code text into binary LUA code
+	bool CompileText(const std::string& script, wi::vector<uint8_t>& dst);
 };
 
