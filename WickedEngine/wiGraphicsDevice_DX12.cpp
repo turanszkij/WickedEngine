@@ -5617,14 +5617,6 @@ using namespace dx12_internal;
 	{
 		allocationhandler->destroylocker.lock();
 
-		rootsignature_cache_mutex.lock();
-		for (auto& x : rootsignature_cache)
-		{
-			if (x.second) allocationhandler->destroyer_rootSignatures.push_back(std::make_pair(x.second, FRAMECOUNT));
-		}
-		rootsignature_cache.clear();
-		rootsignature_cache_mutex.unlock();
-
 		for (auto& x : pipelines_global)
 		{
 			allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));

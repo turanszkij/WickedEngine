@@ -39,7 +39,7 @@ namespace wi::graphics
 
 #ifndef PLATFORM_UWP
 		Microsoft::WRL::ComPtr<ID3D12Fence> deviceRemovedFence;
-		HANDLE deviceRemovedWaitHandle;
+		HANDLE deviceRemovedWaitHandle = {};
 #endif
 		std::mutex onDeviceRemovedMutex;
 		bool deviceRemoved = false;
@@ -211,10 +211,6 @@ namespace wi::graphics
 			assert(cmd.IsValid());
 			return *(CommandList_DX12*)cmd.internal_state;
 		}
-
-
-		mutable wi::unordered_map<size_t, Microsoft::WRL::ComPtr<ID3D12RootSignature>> rootsignature_cache;
-		mutable std::mutex rootsignature_cache_mutex;
 
 		wi::unordered_map<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_global;
 
