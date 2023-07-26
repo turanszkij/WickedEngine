@@ -513,7 +513,7 @@ namespace wi::lua
 		{
 			dst.push_back(((uint8_t*)p)[i]);
 		}
-		return 0;
+		return LUA_OK;
 	}
 	bool CompileText(const std::string& script, wi::vector<uint8_t>& dst)
 	{
@@ -526,8 +526,10 @@ namespace wi::lua
 		if(lua_dump(lua_internal().m_luaState, writer, &dst, 0) != LUA_OK)
 		{
 			PostErrorMsg();
+			lua_pop(lua_internal().m_luaState, 1); // lua_dump does not pop the dumped function from stack
 			return false;
 		}
+		lua_pop(lua_internal().m_luaState, 1); // lua_dump does not pop the dumped function from stack
 		return true;
 	}
 }
