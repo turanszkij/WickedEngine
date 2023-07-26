@@ -602,7 +602,7 @@ local function Character(model_name, start_position, face, controllable)
 					end
 				end
 
-			else
+			elseif not(conversation.override_input and conversation.character == self) then
 
 				-- NPC patrol behavior:
 				local patrol_count = len(self.patrol_waypoints)
@@ -977,6 +977,7 @@ local ResolveCharacters = function(characterA, characterB)
 			local facing_amount = vector.Dot(characterB.face, vector.Subtract(characterA.position, characterB.position).Normalize())
 			if #characterA.dialogs > 0 and conversation.state == ConversationState.Disabled and facing_amount > 0.8 then
 				if input.Press(KEYBOARD_BUTTON_ENTER) or input.Press(GAMEPAD_BUTTON_2) then
+					characterA.face_next = vector.Subtract(headB, headA):Normalize()
 					conversation:Enter(characterA)
 				end
 				DrawDebugText("", vector.Add(headA, Vector(0,0.4)), Vector(1,1,1,1), 0.1, DEBUG_TEXT_DEPTH_TEST | DEBUG_TEXT_CAMERA_FACING)
