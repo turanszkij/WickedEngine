@@ -20,19 +20,20 @@ namespace wi::lua
 
 	lua_State* GetLuaState();
 
-	//post error to backlog and/or debug output
-	void PostErrorMsg();
 	//run a script from file
-	bool RunFile(const std::string& filename);
+	bool RunFile(const char* filename);
+	inline bool RunFile(const std::string& filename) { return RunFile(filename.c_str()); }
 	//run a binary script from file
-	bool RunBinaryFile(const std::string& filename);
+	bool RunBinaryFile(const char* filename);
+	inline bool RunBinaryFile(const std::string& filename) { return RunBinaryFile(filename.c_str()); }
 	//run a script from param
 	bool RunText(const char* script);
-	bool RunText(const std::string& script);
+	inline bool RunText(const std::string& script) { return RunText(script.c_str()); }
 	//run binary script
 	bool RunBinaryData(const void* data, size_t size, const char* debugname = "");
 	//register function to use in scripts
-	bool RegisterFunc(const std::string& name, lua_CFunction function);
+	void RegisterFunc(const char* name, lua_CFunction function);
+	inline void RegisterFunc(const std::string& name, lua_CFunction function) { RegisterFunc(name.c_str(), function); }
 
 	//set delta time to use with lua
 	void SetDeltaTime(double dt);
@@ -44,7 +45,8 @@ namespace wi::lua
 	void Render();
 
 	//send a signal to lua
-	void Signal(const std::string& name);
+	void Signal(const char* name);
+	inline void Signal(const std::string& name) { Signal(name.c_str()); }
 
 	//kill every running background task (coroutine)
 	void KillProcesses();
@@ -59,7 +61,7 @@ namespace wi::lua
 	//Following functions are "static", operating on specified lua state:
 
 	//get string from lua on stack position
-	std::string SGetString(lua_State* L, int stackpos);
+	const char* SGetString(lua_State* L, int stackpos);
 	//check if a value is string on the stack position
 	bool SIsString(lua_State* L, int stackpos);
 	//check if a value is number on the stack position
@@ -104,7 +106,8 @@ namespace wi::lua
 	//push double to lua stack
 	void SSetDouble(lua_State* L, double data);
 	//push string to lua stack
-	void SSetString(lua_State* L, const std::string& data);
+	void SSetString(lua_State* L, const char* data);
+	inline void SSetString(lua_State* L, const std::string& data) { SSetString(L, data.c_str()); }
 	//push bool to lua stack
 	void SSetBool(lua_State* L, bool data);
 	//push pointer (light userdata) to lua stack
@@ -179,12 +182,11 @@ namespace wi::lua
 	//throw error
 	void SError(lua_State* L, const std::string& error = "");
 	
-	//add new metatable
-	void SAddMetatable(lua_State* L, const std::string& name);
-
 	// Compiles text file containing LUA source code to binary LUA code
-	bool CompileFile(const std::string& filename, wi::vector<uint8_t>& dst);
+	bool CompileFile(const char* filename, wi::vector<uint8_t>& dst);
+	inline bool CompileFile(const std::string& filename, wi::vector<uint8_t>& dst) { return CompileFile(filename.c_str(), dst); }
 	// Compiles LUA source code text into binary LUA code
-	bool CompileText(const std::string& script, wi::vector<uint8_t>& dst);
+	bool CompileText(const char* script, wi::vector<uint8_t>& dst);
+	inline bool CompileText(const std::string& script, wi::vector<uint8_t>& dst) { return CompileText(script.c_str(), dst); }
 };
 

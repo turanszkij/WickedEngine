@@ -193,8 +193,7 @@ namespace wi::lua
 		}
 		return true;
 	}
-
-	bool RunFile(const std::string& filename)
+	bool RunFile(const char* filename)
 	{
 		wi::vector<uint8_t> filedata;
 		if (wi::helper::FileRead(filename, filedata))
@@ -205,12 +204,12 @@ namespace wi::lua
 		}
 		return false;
 	}
-	bool RunBinaryFile(const std::string& filename)
+	bool RunBinaryFile(const char* filename)
 	{
 		wi::vector<uint8_t> filedata;
 		if (wi::helper::FileRead(filename, filedata))
 		{
-			return RunBinaryData(filedata.data(), filedata.size(), filename.c_str());
+			return RunBinaryData(filedata.data(), filedata.size(), filename);
 		}
 		return false;
 	}
@@ -224,10 +223,6 @@ namespace wi::lua
 		PostErrorMsg();
 		return false;
 	}
-	bool RunText(const std::string& script)
-	{
-		return RunText(script.c_str());
-	}
 	bool RunBinaryData(const void* data, size_t size, const char* debugname)
 	{
 		if(luaL_loadbuffer(lua_internal().m_luaState, (const char*)data, size, debugname) == LUA_OK)
@@ -238,10 +233,9 @@ namespace wi::lua
 		PostErrorMsg();
 		return false;
 	}
-	bool RegisterFunc(const std::string& name, lua_CFunction function)
+	void RegisterFunc(const char* name, lua_CFunction function)
 	{
-		lua_register(lua_internal().m_luaState, name.c_str(), function);
-		return true;
+		lua_register(lua_internal().m_luaState, name, function);
 	}
 
 	void SetDeltaTime(double dt)
@@ -275,9 +269,9 @@ namespace wi::lua
 	{
 		SignalHelper(lua_internal().m_luaState, "wickedengine_render_tick");
 	}
-	void Signal(const std::string& name)
+	void Signal(const char* name)
 	{
-		SignalHelper(lua_internal().m_luaState, name.c_str());
+		SignalHelper(lua_internal().m_luaState, name);
 	}
 
 	void KillProcesses()
@@ -285,12 +279,12 @@ namespace wi::lua
 		RunText("killProcesses();");
 	}
 
-	std::string SGetString(lua_State* L, int stackpos)
+	const char* SGetString(lua_State* L, int stackpos)
 	{
 		const char* str = lua_tostring(L, stackpos);
 		if (str != nullptr)
 			return str;
-		return std::string("");
+		return "";
 	}
 	bool SIsString(lua_State* L, int stackpos)
 	{
@@ -383,9 +377,9 @@ namespace wi::lua
 	{
 		lua_pushnumber(L, (lua_Number)data);
 	}
-	void SSetString(lua_State* L, const std::string& data)
+	void SSetString(lua_State* L, const char* data)
 	{
-		lua_pushstring(L, data.c_str());
+		lua_pushstring(L, data);
 	}
 	void SSetBool(lua_State* L, bool data)
 	{
@@ -490,18 +484,13 @@ namespace wi::lua
 		wi::backlog::post(ss, wi::backlog::LogLevel::Error);
 	}
 
-	void SAddMetatable(lua_State* L, const std::string& name)
-	{
-		luaL_newmetatable(L, name.c_str());
-	}
-
-	bool CompileFile(const std::string& filename, wi::vector<uint8_t>& dst)
+	bool CompileFile(const char* filename, wi::vector<uint8_t>& dst)
 	{
 		wi::vector<uint8_t> filedata;
 		if (wi::helper::FileRead(filename, filedata))
 		{
 			std::string script = std::string(filedata.begin(), filedata.end());
-			return CompileText(script, dst);
+			return CompileText(script.c_str(), dst);
 		}
 		return false;
 	}
@@ -515,9 +504,9 @@ namespace wi::lua
 		}
 		return LUA_OK;
 	}
-	bool CompileText(const std::string& script, wi::vector<uint8_t>& dst)
+	bool CompileText(const char* script, wi::vector<uint8_t>& dst)
 	{
-		if(luaL_loadstring(lua_internal().m_luaState, script.c_str()) != LUA_OK)
+		if(luaL_loadstring(lua_internal().m_luaState, script) != LUA_OK)
 		{
 			PostErrorMsg();
 			return false;
