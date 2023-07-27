@@ -28,11 +28,10 @@
 
 namespace wi::lua
 {
-	static const char* WILUA_ERROR_PREFIX = "[Lua Error] ";
+	static constexpr const char* WILUA_ERROR_PREFIX = "[Lua Error] ";
 	struct LuaInternal
 	{
 		lua_State* m_luaState = NULL;
-		int m_status = 0; //last call status
 
 		~LuaInternal()
 		{
@@ -174,67 +173,49 @@ namespace wi::lua
 		return lua_internal().m_luaState;
 	}
 
-	bool Success()
-	{
-		return lua_internal().m_status == 0;
-	}
-	bool Failed()
-	{
-		return lua_internal().m_status != 0;
-	}
-	std::string GetErrorMsg()
-	{
-		if (Failed()) {
-			std::string retVal = lua_tostring(lua_internal().m_luaState, -1);
-			return retVal;
-		}
-		return std::string("");
-	}
-	std::string PopErrorMsg()
-	{
-		std::string retVal = lua_tostring(lua_internal().m_luaState, -1);
-		lua_pop(lua_internal().m_luaState, 1); // remove error message
-		return retVal;
-	}
 	void PostErrorMsg()
 	{
-		if (Failed())
-		{
-			const char* str = lua_tostring(lua_internal().m_luaState, -1);
-			if (str == nullptr)
-				return;
-			std::string ss;
-			ss += WILUA_ERROR_PREFIX;
-			ss += str;
-			wi::backlog::post(ss, wi::backlog::LogLevel::Error);
-			lua_pop(lua_internal().m_luaState, 1); // remove error message
-		}
-	}
-	bool RunFile(const std::string& filename)
-	{
-		wi::vector<uint8_t> filedata;
-		if (wi::helper::FileRead(filename, filedata))
-		{
-			auto script = std::string(filedata.begin(), filedata.end());
-			AttachScriptParameters(script, filename);
-			return RunText(script);
-		}
-		return false;
+		const char* str = lua_tostring(lua_internal().m_luaState, -1);
+		if (str == nullptr)
+			return;
+		std::string ss;
+		ss += WILUA_ERROR_PREFIX;
+		ss += str;
+		wi::backlog::post(ss, wi::backlog::LogLevel::Error);
+		lua_pop(lua_internal().m_luaState, 1); // remove error message
 	}
 	bool RunScript()
 	{
-		lua_internal().m_status = lua_pcall(lua_internal().m_luaState, 0, LUA_MULTRET, 0);
-		if (Failed())
+		if(lua_pcall(lua_internal().m_luaState, 0, LUA_MULTRET, 0) != LUA_OK)
 		{
 			PostErrorMsg();
 			return false;
 		}
 		return true;
 	}
-	bool RunText(const std::string& script)
+	bool RunFile(const char* filename)
 	{
-		lua_internal().m_status = luaL_loadstring(lua_internal().m_luaState, script.c_str());
-		if (Success())
+		wi::vector<uint8_t> filedata;
+		if (wi::helper::FileRead(filename, filedata))
+		{
+			std::string script = std::string(filedata.begin(), filedata.end());
+			AttachScriptParameters(script, filename);
+			return RunText(script);
+		}
+		return false;
+	}
+	bool RunBinaryFile(const char* filename)
+	{
+		wi::vector<uint8_t> filedata;
+		if (wi::helper::FileRead(filename, filedata))
+		{
+			return RunBinaryData(filedata.data(), filedata.size(), filename);
+		}
+		return false;
+	}
+	bool RunText(const char* script)
+	{
+		if(luaL_loadstring(lua_internal().m_luaState, script) == LUA_OK)
 		{
 			return RunScript();
 		}
@@ -242,21 +223,26 @@ namespace wi::lua
 		PostErrorMsg();
 		return false;
 	}
-	bool RegisterFunc(const std::string& name, lua_CFunction function)
+	bool RunBinaryData(const void* data, size_t size, const char* debugname)
 	{
-		lua_register(lua_internal().m_luaState, name.c_str(), function);
+		if(luaL_loadbuffer(lua_internal().m_luaState, (const char*)data, size, debugname) == LUA_OK)
+		{
+			return RunScript();
+		}
 
 		PostErrorMsg();
-
-		return Success();
+		return false;
+	}
+	void RegisterFunc(const char* name, lua_CFunction function)
+	{
+		lua_register(lua_internal().m_luaState, name, function);
 	}
 
 	void SetDeltaTime(double dt)
 	{
 		lua_getglobal(lua_internal().m_luaState, "setDeltaTime");
 		SSetDouble(lua_internal().m_luaState, dt);
-		lua_internal().m_status = lua_pcall(lua_internal().m_luaState, 1, LUA_MULTRET, 0);
-		if (Failed())
+		if(lua_pcall(lua_internal().m_luaState, 1, LUA_MULTRET, 0) != LUA_OK)
 		{
 			PostErrorMsg();
 		}
@@ -266,8 +252,7 @@ namespace wi::lua
 	{
 		lua_getglobal(L, "signal");
 		lua_pushstring(L, str);
-		lua_internal().m_status = lua_pcall(L, 1, LUA_MULTRET, 0);
-		if (Failed())
+		if(lua_pcall(L, 1, LUA_MULTRET, 0) != LUA_OK)
 		{
 			PostErrorMsg();
 		}
@@ -284,9 +269,9 @@ namespace wi::lua
 	{
 		SignalHelper(lua_internal().m_luaState, "wickedengine_render_tick");
 	}
-	void Signal(const std::string& name)
+	void Signal(const char* name)
 	{
-		SignalHelper(lua_internal().m_luaState, name.c_str());
+		SignalHelper(lua_internal().m_luaState, name);
 	}
 
 	void KillProcesses()
@@ -294,12 +279,12 @@ namespace wi::lua
 		RunText("killProcesses();");
 	}
 
-	std::string SGetString(lua_State* L, int stackpos)
+	const char* SGetString(lua_State* L, int stackpos)
 	{
 		const char* str = lua_tostring(L, stackpos);
 		if (str != nullptr)
 			return str;
-		return std::string("");
+		return "";
 	}
 	bool SIsString(lua_State* L, int stackpos)
 	{
@@ -392,9 +377,9 @@ namespace wi::lua
 	{
 		lua_pushnumber(L, (lua_Number)data);
 	}
-	void SSetString(lua_State* L, const std::string& data)
+	void SSetString(lua_State* L, const char* data)
 	{
-		lua_pushstring(L, data.c_str());
+		lua_pushstring(L, data);
 	}
 	void SSetBool(lua_State* L, bool data)
 	{
@@ -499,8 +484,41 @@ namespace wi::lua
 		wi::backlog::post(ss, wi::backlog::LogLevel::Error);
 	}
 
-	void SAddMetatable(lua_State* L, const std::string& name)
+	bool CompileFile(const char* filename, wi::vector<uint8_t>& dst)
 	{
-		luaL_newmetatable(L, name.c_str());
+		wi::vector<uint8_t> filedata;
+		if (wi::helper::FileRead(filename, filedata))
+		{
+			std::string script = std::string(filedata.begin(), filedata.end());
+			return CompileText(script.c_str(), dst);
+		}
+		return false;
+	}
+
+	int writer(lua_State* L, const void* p, size_t sz, void* ud)
+	{
+		wi::vector<uint8_t>& dst = *(wi::vector<uint8_t>*)ud;
+		for (size_t i = 0; i < sz; ++i)
+		{
+			dst.push_back(((uint8_t*)p)[i]);
+		}
+		return LUA_OK;
+	}
+	bool CompileText(const char* script, wi::vector<uint8_t>& dst)
+	{
+		if(luaL_loadstring(lua_internal().m_luaState, script) != LUA_OK)
+		{
+			PostErrorMsg();
+			return false;
+		}
+		dst.clear();
+		if(lua_dump(lua_internal().m_luaState, writer, &dst, 0) != LUA_OK)
+		{
+			PostErrorMsg();
+			lua_pop(lua_internal().m_luaState, 1); // lua_dump does not pop the dumped function from stack
+			return false;
+		}
+		lua_pop(lua_internal().m_luaState, 1); // lua_dump does not pop the dumped function from stack
+		return true;
 	}
 }

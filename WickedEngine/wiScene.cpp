@@ -4515,6 +4515,7 @@ namespace wi::scene
 	}
 	void Scene::RunScriptUpdateSystem(wi::jobsystem::context& ctx)
 	{
+		auto range = wi::profiler::BeginRangeCPU("Script Components");
 		for (size_t i = 0; i < scripts.GetCount(); ++i)
 		{
 			ScriptComponent& script = scripts[i];
@@ -4524,10 +4525,14 @@ namespace wi::scene
 			{
 				if (script.script.empty() && script.resource.IsValid())
 				{
-					script.script += script.resource.GetScript();
-					wi::lua::AttachScriptParameters(script.script, script.filename, wi::lua::GeneratePID(), "local function GetEntity() return " + std::to_string(entity) + "; end;", "");
+					std::string str = script.resource.GetScript();
+					wi::lua::AttachScriptParameters(str, script.filename, wi::lua::GeneratePID(), "local function GetEntity() return " + std::to_string(entity) + "; end;", "");
+					wi::lua::CompileText(str, script.script);
 				}
-				wi::lua::RunText(script.script);
+				if (!script.script.empty())
+				{
+					wi::lua::RunBinaryData(script.script.data(), script.script.size(), script.filename.c_str());
+				}
 
 				if (script.IsPlayingOnlyOnce())
 				{
@@ -4535,6 +4540,7 @@ namespace wi::scene
 				}
 			}
 		}
+		wi::profiler::EndRange(range);
 	}
 
 	Scene::RayIntersectionResult Scene::Intersects(const Ray& ray, uint32_t filterMask, uint32_t layerMask, uint32_t lod) const

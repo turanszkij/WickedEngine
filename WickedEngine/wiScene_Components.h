@@ -1496,7 +1496,7 @@ namespace wi::scene
 		std::string filename;
 
 		// Non-serialized attributes:
-		std::string script;
+		wi::vector<uint8_t> script; // compiled script binary data
 		wi::Resource resource;
 
 		inline void Play() { _flags |= PLAYING; }
