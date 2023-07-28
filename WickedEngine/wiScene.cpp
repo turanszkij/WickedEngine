@@ -1459,7 +1459,8 @@ namespace wi::scene
 				{
 					assert(channel.samplerIndex < (int)animation.samplers.size());
 					const AnimationComponent::AnimationSampler& sampler = animation.samplers[channel.samplerIndex];
-					const AnimationDataComponent* animationdata = animation_datas.GetComponent(sampler.data);
+					const Scene* data_scene = sampler.scene == nullptr ? this : (const Scene*)sampler.scene;
+					const AnimationDataComponent* animationdata = data_scene->animation_datas.GetComponent(sampler.data);
 					if (animationdata == nullptr)
 					{
 						continue;
@@ -1961,7 +1962,7 @@ namespace wi::scene
 							{
 								// Retargeting transfer from source to destination:
 								const AnimationComponent::RetargetSourceData& retarget = animation.retargets[channel.retargetIndex];
-								TransformComponent* source_transform = transforms.GetComponent(retarget.source);
+								TransformComponent* source_transform = data_scene->transforms.GetComponent(retarget.source);
 								if (source_transform != nullptr)
 								{
 									XMMATRIX dstRelativeMatrix = XMLoadFloat4x4(&retarget.dstRelativeMatrix);
@@ -1985,7 +1986,7 @@ namespace wi::scene
 							{
 								// Retargeting transfer from source to destination:
 								const AnimationComponent::RetargetSourceData& retarget = animation.retargets[channel.retargetIndex];
-								TransformComponent* source_transform = transforms.GetComponent(retarget.source);
+								TransformComponent* source_transform = data_scene->transforms.GetComponent(retarget.source);
 								if (source_transform != nullptr)
 								{
 									XMMATRIX dstRelativeMatrix = XMLoadFloat4x4(&retarget.dstRelativeMatrix);
@@ -2009,7 +2010,7 @@ namespace wi::scene
 							{
 								// Retargeting transfer from source to destination:
 								const AnimationComponent::RetargetSourceData& retarget = animation.retargets[channel.retargetIndex];
-								TransformComponent* source_transform = transforms.GetComponent(retarget.source);
+								TransformComponent* source_transform = data_scene->transforms.GetComponent(retarget.source);
 								if (source_transform != nullptr)
 								{
 									XMMATRIX dstRelativeMatrix = XMLoadFloat4x4(&retarget.dstRelativeMatrix);
@@ -5513,9 +5514,12 @@ namespace wi::scene
 		return parentMatrix;
 	}
 
-	Entity Scene::RetargetAnimation(Entity dst, Entity src, bool bake_data)
+	Entity Scene::RetargetAnimation(Entity dst, Entity src, bool bake_data, const Scene* src_scene)
 	{
-		const AnimationComponent* animation_source = animations.GetComponent(src);
+		if (src_scene == nullptr)
+			src_scene = this;
+
+		const AnimationComponent* animation_source = src_scene->animations.GetComponent(src);
 		if (animation_source == nullptr)
 			return INVALID_ENTITY;
 		const HumanoidComponent* humanoid_dest = humanoids.GetComponent(dst);
@@ -5534,9 +5538,9 @@ namespace wi::scene
 		for (auto& channel : animation_source->channels)
 		{
 			bool found = false;
-			for (size_t i = 0; (i < humanoids.GetCount()) && !found; ++i)
+			for (size_t i = 0; (i < src_scene->humanoids.GetCount()) && !found; ++i)
 			{
-				const HumanoidComponent& humanoid_source = humanoids[i];
+				const HumanoidComponent& humanoid_source = src_scene->humanoids[i];
 				for (size_t humanoidBoneIndex = 0; humanoidBoneIndex < arraysize(humanoid_source.bones); ++humanoidBoneIndex)
 				{
 					Entity bone_source = humanoid_source.bones[humanoidBoneIndex];
@@ -5556,12 +5560,13 @@ namespace wi::scene
 						auto& retarget_sampler = animation.samplers.emplace_back();
 						retarget_sampler = sampler;
 						retarget_sampler.backwards_compatibility_data = {};
+						retarget_sampler.scene = src_scene == this ? nullptr : src_scene;
 
-						TransformComponent* transform_source = transforms.GetComponent(bone_source);
+						TransformComponent* transform_source = src_scene->transforms.GetComponent(bone_source);
 						TransformComponent* transform_dest = transforms.GetComponent(bone_dest);
 						if (transform_source != nullptr && transform_dest != nullptr)
 						{
-							XMMATRIX srcParentMatrix = ComputeParentMatrixRecursive(bone_source);
+							XMMATRIX srcParentMatrix = src_scene->ComputeParentMatrixRecursive(bone_source);
 							XMMATRIX srcMatrix = transform_source->GetLocalMatrix() * srcParentMatrix;
 							XMMATRIX inverseSrcMatrix = XMMatrixInverse(nullptr, srcMatrix);
 

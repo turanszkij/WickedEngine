@@ -291,12 +291,12 @@ local function LoadAnimations(model_name)
 		DANCE = anim_scene.Entity_FindByName("dance"),
 		WAVE = anim_scene.Entity_FindByName("wave"),
 	}
-	scene.Merge(anim_scene)
+	return anim_scene
 end
 
 local character_capsules = {}
 
-local function Character(model_name, start_position, face, controllable)
+local function Character(model_name, start_position, face, controllable, anim_scene)
 	local self = {
 		model = INVALID_ENTITY,
 		target_rot_horizontal = 0,
@@ -409,15 +409,15 @@ local function Character(model_name, start_position, face, controllable)
 
 			self.root = scene.Entity_FindByName("Root", self.model)
 			
-			self.anims[States.IDLE] = scene.RetargetAnimation(self.humanoid, animations.IDLE, false)
-			self.anims[States.WALK] = scene.RetargetAnimation(self.humanoid, animations.WALK, false)
-			self.anims[States.JOG] = scene.RetargetAnimation(self.humanoid, animations.JOG, false)
-			self.anims[States.RUN] = scene.RetargetAnimation(self.humanoid, animations.RUN, false)
-			self.anims[States.JUMP] = scene.RetargetAnimation(self.humanoid, animations.JUMP, false)
-			self.anims[States.SWIM_IDLE] = scene.RetargetAnimation(self.humanoid, animations.SWIM_IDLE, false)
-			self.anims[States.SWIM] = scene.RetargetAnimation(self.humanoid, animations.SWIM, false)
-			self.anims[States.DANCE] = scene.RetargetAnimation(self.humanoid, animations.DANCE, false)
-			self.anims[States.WAVE] = scene.RetargetAnimation(self.humanoid, animations.WAVE, false)
+			self.anims[States.IDLE] = scene.RetargetAnimation(self.humanoid, animations.IDLE, false, anim_scene)
+			self.anims[States.WALK] = scene.RetargetAnimation(self.humanoid, animations.WALK, false, anim_scene)
+			self.anims[States.JOG] = scene.RetargetAnimation(self.humanoid, animations.JOG, false, anim_scene)
+			self.anims[States.RUN] = scene.RetargetAnimation(self.humanoid, animations.RUN, false, anim_scene)
+			self.anims[States.JUMP] = scene.RetargetAnimation(self.humanoid, animations.JUMP, false, anim_scene)
+			self.anims[States.SWIM_IDLE] = scene.RetargetAnimation(self.humanoid, animations.SWIM_IDLE, false, anim_scene)
+			self.anims[States.SWIM] = scene.RetargetAnimation(self.humanoid, animations.SWIM, false, anim_scene)
+			self.anims[States.DANCE] = scene.RetargetAnimation(self.humanoid, animations.DANCE, false, anim_scene)
+			self.anims[States.WAVE] = scene.RetargetAnimation(self.humanoid, animations.WAVE, false, anim_scene)
 			
 			local model_transform = scene.Component_GetTransform(self.model)
 			model_transform.ClearTransform()
@@ -1146,19 +1146,19 @@ LoadModel(script_dir() .. "assets/level.wiscene")
 --LoadModel(script_dir() .. "assets/waypoints.wiscene", matrix.Translation(Vector(1,0,2)))
 --dofile(script_dir() .. "../dungeon_generator/dungeon_generator.lua")
 
-LoadAnimations(script_dir() .. "assets/animations.wiscene")
+local anim_scene = LoadAnimations(script_dir() .. "assets/animations.wiscene")
 
-local player = Character(script_dir() .. "assets/character.wiscene", Vector(0,0.5,0), Vector(0,0,1), true)
+local player = Character(script_dir() .. "assets/character.wiscene", Vector(0,0.5,0), Vector(0,0,1), true, anim_scene)
 local npcs = {
 	-- Patrolling NPC IDs: 1,2,3
-	Character(script_dir() .. "assets/character.wiscene", Vector(4,0.1,4), Vector(0,0,-1), false),
-	Character(script_dir() .. "assets/character.wiscene", Vector(-8,1,4), Vector(-1,0,0), false),
-	Character(script_dir() .. "assets/character.wiscene", Vector(-2,0.1,8), Vector(-1,0,0), false),
+	Character(script_dir() .. "assets/character.wiscene", Vector(4,0.1,4), Vector(0,0,-1), false, anim_scene),
+	Character(script_dir() .. "assets/character.wiscene", Vector(-8,1,4), Vector(-1,0,0), false, anim_scene),
+	Character(script_dir() .. "assets/character.wiscene", Vector(-2,0.1,8), Vector(-1,0,0), false, anim_scene),
 
 	-- stationary NPC IDs: 3,4....
-	Character(script_dir() .. "assets/character.wiscene", Vector(-1,0.1,-6), Vector(0,0,1), false),
-	--Character(script_dir() .. "assets/character.wiscene", Vector(10.8,0.1,4.1), Vector(0,0,-1), false),
-	--Character(script_dir() .. "assets/character.wiscene", Vector(11.1,4,7.2), Vector(-1,0,0), false),
+	Character(script_dir() .. "assets/character.wiscene", Vector(-1,0.1,-6), Vector(0,0,1), false, anim_scene),
+	--Character(script_dir() .. "assets/character.wiscene", Vector(10.8,0.1,4.1), Vector(0,0,-1), false, anim_scene),
+	--Character(script_dir() .. "assets/character.wiscene", Vector(11.1,4,7.2), Vector(-1,0,0), false, anim_scene),
 }
 
 local camera = ThirdPersonCamera(player)

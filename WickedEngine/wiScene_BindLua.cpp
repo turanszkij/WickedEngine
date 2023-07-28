@@ -2696,13 +2696,27 @@ int Scene_BindLua::RetargetAnimation(lua_State* L)
 		Entity src = (Entity)wi::lua::SGetLongLong(L, 2);
 		bool bake_data = wi::lua::SGetBool(L, 3);
 
-		Entity entity = scene->RetargetAnimation(dst, src, bake_data);
+		Scene* src_scene = nullptr;
+		if (argc > 3)
+		{
+			Scene_BindLua* _scene = Luna<Scene_BindLua>::lightcheck(L, 4);
+			if (_scene != nullptr)
+			{
+				src_scene = _scene->scene;
+			}
+			else
+			{
+				wi::lua::SError(L, "RetargetAnimation(Entity dst, Entity src, bool bake_data, Scene src_scene = nil) 4th argument is not a scene!");
+			}
+		}
+
+		Entity entity = scene->RetargetAnimation(dst, src, bake_data, src_scene);
 		wi::lua::SSetLongLong(L, entity);
 		return 1;
 	}
 	else
 	{
-		wi::lua::SError(L, "RetargetAnimation(Entity dst, Entity src, bool bake_data) not enough arguments!");
+		wi::lua::SError(L, "RetargetAnimation(Entity dst, Entity src, bool bake_data, Scene src_scene = nil) not enough arguments!");
 	}
 	return 0;
 }

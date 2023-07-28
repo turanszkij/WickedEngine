@@ -1230,6 +1230,9 @@ namespace wi::scene
 
 			// The data is now not part of the sampler, so it can be shared. This is kept only for backwards compatibility with previous versions.
 			AnimationDataComponent backwards_compatibility_data;
+
+			// Non-serialized attributes:
+			const void* scene = nullptr; // if animation data is in a different scene (if retargetting from a separate scene)
 		};
 		struct RetargetSourceData
 		{
