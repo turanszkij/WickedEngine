@@ -2,7 +2,7 @@
 
 static const uint THREADCOUNT = 64;
 
-RWByteAddressBuffer output_meshlets : register(u0);
+RWStructuredBuffer<ShaderMeshlet> output_meshlets : register(u0);
 
 [numthreads(1, THREADCOUNT, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
@@ -23,7 +23,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			meshlet.padding = 0;
 
 			uint meshletIndex = inst.meshletOffset + geometry.meshletOffset + j;
-			output_meshlets.Store<ShaderMeshlet>(meshletIndex * sizeof(ShaderMeshlet), meshlet);
+			output_meshlets[meshletIndex] = meshlet;
 		}
 	}
 }

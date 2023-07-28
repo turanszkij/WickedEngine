@@ -4542,8 +4542,9 @@ using namespace vulkan_internal;
 
 			for (auto& x : bindings)
 			{
-				if (x->accessed == 0)
-					continue;
+				// This has some issues atm with some specific shader, recheck in the future with different compiler version
+				//if (x->accessed == 0)
+				//	continue;
 				const bool bindless = x->set > 0;
 
 				if (bindless)
