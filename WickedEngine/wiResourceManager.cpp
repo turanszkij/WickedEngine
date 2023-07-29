@@ -737,6 +737,7 @@ namespace wi
 					{
 						int height, width, channels; // stb_image
 						float* data = stbi_loadf_from_memory(filedata, (int)filesize, &width, &height, &channels, 0);
+						static constexpr bool allow_packing = true; // we now always assume that we won't need full precision float textures, so pack them for memory saving
 
 						if (data != nullptr)
 						{
@@ -747,16 +748,67 @@ namespace wi
 							{
 							default:
 							case 4:
-								desc.format = Format::R32G32B32A32_FLOAT;
+								if (allow_packing)
+								{
+									desc.format = Format::R16G16B16A16_FLOAT;
+									const XMFLOAT4* data_full = (const XMFLOAT4*)data;
+									XMHALF4* data_packed = (XMHALF4*)data;
+									for (int i = 0; i < width * height; ++i)
+									{
+										XMStoreHalf4(data_packed + i, XMLoadFloat4(data_full + i));
+									}
+								}
+								else
+								{
+									desc.format = Format::R32G32B32A32_FLOAT;
+								}
 								break;
 							case 3:
-								desc.format = Format::R32G32B32_FLOAT;
+								if (allow_packing)
+								{
+									desc.format = Format::R9G9B9E5_SHAREDEXP;
+									const XMFLOAT3* data_full = (const XMFLOAT3*)data;
+									XMFLOAT3SE* data_packed = (XMFLOAT3SE*)data;
+									for (int i = 0; i < width * height; ++i)
+									{
+										XMStoreFloat3SE(data_packed + i, XMLoadFloat3(data_full + i));
+									}
+								}
+								else
+								{
+									desc.format = Format::R32G32B32_FLOAT;
+								}
 								break;
 							case 2:
-								desc.format = Format::R32G32_FLOAT;
+								if (allow_packing)
+								{
+									desc.format = Format::R16G16_FLOAT;
+									const XMFLOAT2* data_full = (const XMFLOAT2*)data;
+									XMHALF2* data_packed = (XMHALF2*)data;
+									for (int i = 0; i < width * height; ++i)
+									{
+										XMStoreHalf2(data_packed + i, XMLoadFloat2(data_full + i));
+									}
+								}
+								else
+								{
+									desc.format = Format::R32G32_FLOAT;
+								}
 								break;
 							case 1:
-								desc.format = Format::R32_FLOAT;
+								if (allow_packing)
+								{
+									desc.format = Format::R16_FLOAT;
+									HALF* data_packed = (HALF*)data;
+									for (int i = 0; i < width * height; ++i)
+									{
+										data_packed[i] = XMConvertFloatToHalf(data[i]);
+									}
+								}
+								else
+								{
+									desc.format = Format::R32_FLOAT;
+								}
 								break;
 							}
 							desc.bind_flags = BindFlag::SHADER_RESOURCE;
@@ -766,12 +818,13 @@ namespace wi
 							InitData.row_pitch = width * GetFormatStride(desc.format);
 							success = device->CreateTexture(&desc, &InitData, &resource->texture);
 							device->SetName(&resource->texture, name.c_str());
+
+							stbi_image_free(data);
 						}
 					}
 					else
 					{
 						// qoi, png, tga, jpg, etc. loader:
-
 						const int channelCount = 4;
 						int height = 0, width = 0, bpp = 0;
 						bool is_16bit = false;
