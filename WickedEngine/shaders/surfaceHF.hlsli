@@ -328,6 +328,7 @@ struct Surface
 		const bool is_hairparticle = geometry.flags & SHADERMESH_FLAG_HAIRPARTICLE;
 		const bool is_emittedparticle = geometry.flags & SHADERMESH_FLAG_EMITTEDPARTICLE;
 		const bool simple_lighting = is_hairparticle || is_emittedparticle;
+		const bool is_backface = flags & SURFACE_FLAG_BACKFACE;
 
 		float3 n0 = unpack_unitvector(asuint(data0.w));
 		float3 n1 = unpack_unitvector(asuint(data1.w));
@@ -335,7 +336,7 @@ struct Surface
 		N = attribute_at_bary(n0, n1, n2, bary);
 		N = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), N);
 		N = normalize(N);
-		if ((flags & SURFACE_FLAG_BACKFACE) && !is_hairparticle && !is_emittedparticle)
+		if (is_backface && !is_hairparticle && !is_emittedparticle)
 		{
 			N = -N;
 		}
@@ -393,6 +394,10 @@ struct Surface
 			const float4 t2 = buf[i2];
 			T = attribute_at_bary(t0, t1, t2, bary);
 			T.xyz = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), T.xyz);
+			if (is_backface)
+			{
+				T.xyz = -T.xyz;
+			}
 			T.xyz = normalize(T.xyz);
 			B = normalize(cross(T.xyz, N) * T.w);
 			const float3x3 TBN = float3x3(T.xyz, B, N);

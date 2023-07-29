@@ -497,7 +497,10 @@ namespace wi::scene
 		struct Vertex_POS
 		{
 			XMFLOAT3 pos = XMFLOAT3(0.0f, 0.0f, 0.0f);
-			uint32_t normal_wind = 0;
+			uint8_t n_x = 0;
+			uint8_t n_y = 0;
+			uint8_t n_z = 0;
+			uint8_t w = 0;
 
 			constexpr void FromFULL(const XMFLOAT3& _pos, const XMFLOAT3& _nor, uint8_t wind)
 			{
@@ -517,32 +520,28 @@ namespace wi::scene
 			}
 			constexpr void MakeFromParams(const XMFLOAT3& normal)
 			{
-				normal_wind = normal_wind & 0xFF000000; // reset only the normals
-				normal_wind |= uint32_t((normal.x * 0.5f + 0.5f) * 255.0f) << 0;
-				normal_wind |= uint32_t((normal.y * 0.5f + 0.5f) * 255.0f) << 8;
-				normal_wind |= uint32_t((normal.z * 0.5f + 0.5f) * 255.0f) << 16;
+				n_x = uint8_t((normal.x * 0.5f + 0.5f) * 255.0f);
+				n_y = uint8_t((normal.y * 0.5f + 0.5f) * 255.0f);
+				n_z = uint8_t((normal.z * 0.5f + 0.5f) * 255.0f);
 			}
 			constexpr void MakeFromParams(const XMFLOAT3& normal, uint8_t wind)
 			{
-				normal_wind = 0;
-				normal_wind |= uint32_t((normal.x * 0.5f + 0.5f) * 255.0f) << 0;
-				normal_wind |= uint32_t((normal.y * 0.5f + 0.5f) * 255.0f) << 8;
-				normal_wind |= uint32_t((normal.z * 0.5f + 0.5f) * 255.0f) << 16;
-				normal_wind |= uint32_t(wind) << 24;
+				n_x = uint8_t((normal.x * 0.5f + 0.5f) * 255.0f);
+				n_y = uint8_t((normal.y * 0.5f + 0.5f) * 255.0f);
+				n_z = uint8_t((normal.z * 0.5f + 0.5f) * 255.0f);
+				w = wind;
 			}
 			constexpr XMFLOAT3 GetNor_FULL() const
 			{
 				XMFLOAT3 nor_FULL(0, 0, 0);
-
-				nor_FULL.x = (float((normal_wind >> 0) & 0xFF) / 255.0f) * 2.0f - 1.0f;
-				nor_FULL.y = (float((normal_wind >> 8) & 0xFF) / 255.0f) * 2.0f - 1.0f;
-				nor_FULL.z = (float((normal_wind >> 16) & 0xFF) / 255.0f) * 2.0f - 1.0f;
-
+				nor_FULL.x = (float(n_x) / 255.0f) * 2.0f - 1.0f;
+				nor_FULL.y = (float(n_y) / 255.0f) * 2.0f - 1.0f;
+				nor_FULL.z = (float(n_z) / 255.0f) * 2.0f - 1.0f;
 				return nor_FULL;
 			}
 			constexpr uint8_t GetWind() const
 			{
-				return (normal_wind >> 24) & 0xFF;
+				return w;
 			}
 
 			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R32G32B32A32_FLOAT;
@@ -622,10 +621,10 @@ namespace wi::scene
 				XMStoreFloat4(&t, T);
 				t.w = tan.w;
 
-				x = int8_t(t.x * 127.0f);
-				y = int8_t(t.y * 127.0f);
-				z = int8_t(t.z * 127.0f);
-				w = int8_t(t.w * 127.0f);
+				x = int8_t(t.x * 127.5f);
+				y = int8_t(t.y * 127.5f);
+				z = int8_t(t.z * 127.5f);
+				w = int8_t(t.w * 127.5f);
 			}
 
 			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R8G8B8A8_SNORM;
