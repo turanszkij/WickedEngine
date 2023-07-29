@@ -5,7 +5,6 @@
 #include "wiBacklog.h"
 #include "wiVersion.h"
 #include "wiTimer.h"
-#include "wiUnorderedSet.h"
 
 #include "Utility/vulkan/vk_video/vulkan_video_codec_h264std_decode.h"
 #include "Utility/h264.h"
@@ -2938,19 +2937,26 @@ using namespace vulkan_internal;
 			}
 
 			wi::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-			wi::unordered_set<uint32_t> uniqueQueueFamilies = { graphicsFamily,copyFamily,computeFamily };
+			// Count number of queues that will be handled by the same family
+			// We need this later when we create the device queues and
+			// we didn't find a dedicated queue
+			wi::unordered_map<uint32_t, uint32_t> sharedQueueFamiliesCounter;
+
+			sharedQueueFamiliesCounter[graphicsFamily]++;
+			sharedQueueFamiliesCounter[copyFamily]++;
+			sharedQueueFamiliesCounter[computeFamily]++;
 			if (videoFamily != VK_QUEUE_FAMILY_IGNORED)
 			{
-				uniqueQueueFamilies.insert(videoFamily);
+				sharedQueueFamiliesCounter[videoFamily]++;
 			}
 
 			float queuePriority = 1.0f;
-			for (uint32_t queueFamily : uniqueQueueFamilies)
+			for (auto& [queueFamily, count] : sharedQueueFamiliesCounter)
 			{
 				VkDeviceQueueCreateInfo queueCreateInfo = {};
 				queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 				queueCreateInfo.queueFamilyIndex = queueFamily;
-				queueCreateInfo.queueCount = 1;
+				queueCreateInfo.queueCount = count;
 				queueCreateInfo.pQueuePriorities = &queuePriority;
 				queueCreateInfos.push_back(queueCreateInfo);
 				families.push_back(queueFamily);
@@ -2974,16 +2980,19 @@ using namespace vulkan_internal;
 			}
 
 			volkLoadDevice(device);
-		}
 
 		// queues:
-		{
-			vkGetDeviceQueue(device, graphicsFamily, 0, &graphicsQueue);
-			vkGetDeviceQueue(device, computeFamily, 0, &computeQueue);
-			vkGetDeviceQueue(device, copyFamily, 0, &copyQueue);
+
+			// we use the instance counter to create an index for the queue;
+			// if it's not shared, the count will be 1 and the queue index will be zero,
+			// otherwise we assign queue index numbers in reverse order, which is ok
+			// since order does not matter here.
+			vkGetDeviceQueue(device, graphicsFamily, --sharedQueueFamiliesCounter[graphicsFamily], &graphicsQueue);
+			vkGetDeviceQueue(device, computeFamily, --sharedQueueFamiliesCounter[computeFamily], &computeQueue);
+			vkGetDeviceQueue(device, copyFamily, --sharedQueueFamiliesCounter[copyFamily], &copyQueue);
 			if (videoFamily != VK_QUEUE_FAMILY_IGNORED)
 			{
-				vkGetDeviceQueue(device, videoFamily, 0, &videoQueue);
+				vkGetDeviceQueue(device, videoFamily, --sharedQueueFamiliesCounter[videoFamily], &videoQueue);
 			}
 
 			queues[QUEUE_GRAPHICS].queue = graphicsQueue;
@@ -2991,6 +3000,9 @@ using namespace vulkan_internal;
 			queues[QUEUE_COPY].queue = copyQueue;
 			queues[QUEUE_VIDEO_DECODE].queue = videoQueue;
 
+		}
+		// semaphores:
+		{
 			VkSemaphoreTypeCreateInfo timelineCreateInfo = {};
 			timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
 			timelineCreateInfo.pNext = nullptr;
