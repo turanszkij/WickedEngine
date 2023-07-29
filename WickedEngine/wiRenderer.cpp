@@ -1827,10 +1827,11 @@ void LoadBuffers()
 	device->CreateBuffer(&bd, nullptr, &buffers[BUFFERTYPE_FRAMECB]);
 	device->SetName(&buffers[BUFFERTYPE_FRAMECB], "buffers[BUFFERTYPE_FRAMECB]");
 
-	bd.usage = Usage::DEFAULT;
-	bd.size = sizeof(ShaderEntity) * SHADER_ENTITY_COUNT + sizeof(XMMATRIX) * MATRIXARRAY_COUNT;
+	static_assert(sizeof(ShaderEntity) == sizeof(float4x4)); // stores both entities and matrices in same structured buffer
+	bd.stride = sizeof(ShaderEntity);
+	bd.size = bd.stride * (SHADER_ENTITY_COUNT +  MATRIXARRAY_COUNT);
 	bd.bind_flags = BindFlag::SHADER_RESOURCE;
-	bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+	bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 	device->CreateBuffer(&bd, nullptr, &buffers[BUFFERTYPE_ENTITY]);
 	device->SetName(&buffers[BUFFERTYPE_ENTITY], "buffers[BUFFERTYPE_ENTITY]");
 

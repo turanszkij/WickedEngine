@@ -62,7 +62,9 @@
 		"SRV(t0, space = 34, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"SRV(t0, space = 35, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"SRV(t0, space = 36, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"SRV(t0, space = 37, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)" \
+		"SRV(t0, space = 37, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 38, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 39, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)" \
 	"), " \
 	"StaticSampler(s100, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP, filter = FILTER_MIN_MAG_MIP_LINEAR)," \
 	"StaticSampler(s101, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, addressW = TEXTURE_ADDRESS_WRAP, filter = FILTER_MIN_MAG_MIP_LINEAR)," \
@@ -186,11 +188,15 @@ RWTexture2D<uint> bindless_rwtextures_uint[] : register(space33);
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderGeometry> bindless_buffers_geometry[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMeshlet> bindless_buffers_meshlet[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMaterial> bindless_buffers_material[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderEntity> bindless_buffers_entity[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<float4x4> bindless_buffers_matrix[];
 #else
 StructuredBuffer<ShaderMeshInstance> bindless_buffers_meshinstance[] : register(space34);
 StructuredBuffer<ShaderGeometry> bindless_buffers_geometry[] : register(space35);
 StructuredBuffer<ShaderMeshlet> bindless_buffers_meshlet[] : register(space36);
 StructuredBuffer<ShaderMaterial> bindless_buffers_material[] : register(space37);
+StructuredBuffer<ShaderEntity> bindless_buffers_entity[] : register(space38);
+StructuredBuffer<float4x4> bindless_buffers_matrix[] : register(space39);
 #endif // SPIRV
 
 inline FrameCB GetFrame()
@@ -235,19 +241,11 @@ uint load_entitytile(uint tileIndex)
 }
 inline ShaderEntity load_entity(uint entityIndex)
 {
-	return bindless_buffers[GetFrame().buffer_entity_index].Load<ShaderEntity>(entityIndex * sizeof(ShaderEntity));
+	return bindless_buffers_entity[GetFrame().buffer_entity_index][entityIndex];
 }
 inline float4x4 load_entitymatrix(uint matrixIndex)
 {
-	// Workaround for: https://github.com/microsoft/DirectXShaderCompiler/issues/4738
-	ByteAddressBuffer buffer = bindless_buffers[GetFrame().buffer_entity_index];
-	const uint offset = sizeof(ShaderEntity) * SHADER_ENTITY_COUNT + matrixIndex * sizeof(float4x4);
-	return transpose(float4x4(
-		buffer.Load<float4>(offset + 0 * sizeof(float4)),
-		buffer.Load<float4>(offset + 1 * sizeof(float4)),
-		buffer.Load<float4>(offset + 2 * sizeof(float4)),
-		buffer.Load<float4>(offset + 3 * sizeof(float4))
-	));
+	return bindless_buffers_matrix[GetFrame().buffer_entity_index][SHADER_ENTITY_COUNT + matrixIndex];
 }
 
 struct PrimitiveID
