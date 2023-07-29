@@ -55,12 +55,17 @@ ConstantOutput PatchConstantFunction(InputPatch<PixelInput, 3> patch)
 
 
 	// compute the cubic geometry control points
-	output.b210 = ((2 * patch[0].pos.xyz) + patch[1].pos.xyz - (dot((patch[1].pos.xyz - patch[0].pos.xyz), patch[0].nor.xyz) * patch[0].nor.xyz)) / 3.0;
-	output.b120 = ((2 * patch[1].pos.xyz) + patch[0].pos.xyz - (dot((patch[0].pos.xyz - patch[1].pos.xyz), patch[1].nor.xyz) * patch[1].nor.xyz)) / 3.0;
-	output.b021 = ((2 * patch[1].pos.xyz) + patch[2].pos.xyz - (dot((patch[2].pos.xyz - patch[1].pos.xyz), patch[1].nor.xyz) * patch[1].nor.xyz)) / 3.0;
-	output.b012 = ((2 * patch[2].pos.xyz) + patch[1].pos.xyz - (dot((patch[1].pos.xyz - patch[2].pos.xyz), patch[2].nor.xyz) * patch[2].nor.xyz)) / 3.0;
-	output.b102 = ((2 * patch[2].pos.xyz) + patch[0].pos.xyz - (dot((patch[0].pos.xyz - patch[2].pos.xyz), patch[2].nor.xyz) * patch[2].nor.xyz)) / 3.0;
-	output.b201 = ((2 * patch[0].pos.xyz) + patch[2].pos.xyz - (dot((patch[2].pos.xyz - patch[0].pos.xyz), patch[0].nor.xyz) * patch[0].nor.xyz)) / 3.0;
+	const float3 nor[] = {
+		normalize(patch[0].nor),
+		normalize(patch[1].nor),
+		normalize(patch[2].nor),
+	};
+	output.b210 = ((2 * patch[0].pos.xyz) + patch[1].pos.xyz - (dot((patch[1].pos.xyz - patch[0].pos.xyz), nor[0]) * nor[0])) / 3.0;
+	output.b120 = ((2 * patch[1].pos.xyz) + patch[0].pos.xyz - (dot((patch[0].pos.xyz - patch[1].pos.xyz), nor[1]) * nor[1])) / 3.0;
+	output.b021 = ((2 * patch[1].pos.xyz) + patch[2].pos.xyz - (dot((patch[2].pos.xyz - patch[1].pos.xyz), nor[1]) * nor[1])) / 3.0;
+	output.b012 = ((2 * patch[2].pos.xyz) + patch[1].pos.xyz - (dot((patch[1].pos.xyz - patch[2].pos.xyz), nor[2]) * nor[2])) / 3.0;
+	output.b102 = ((2 * patch[2].pos.xyz) + patch[0].pos.xyz - (dot((patch[0].pos.xyz - patch[2].pos.xyz), nor[2]) * nor[2])) / 3.0;
+	output.b201 = ((2 * patch[0].pos.xyz) + patch[2].pos.xyz - (dot((patch[2].pos.xyz - patch[0].pos.xyz), nor[0]) * nor[0])) / 3.0;
 	float3 E = (output.b210 + output.b120 + output.b021 + output.b012 + output.b102 + output.b201) / 6.0;
 	float3 V = (patch[0].pos.xyz + patch[1].pos.xyz + patch[2].pos.xyz) / 3.0;
 	output.b111 = E + ((E - V) / 2.0);
@@ -126,11 +131,11 @@ PixelInput main(ConstantOutput input, float3 uvw : SV_DomainLocation, const Outp
 #endif // OBJECTSHADER_USE_ATLAS
 
 #ifdef OBJECTSHADER_USE_NORMAL
-	output.nor = normalize(w * patch[0].nor + u * patch[1].nor + v * patch[2].nor);
+	output.nor = w * patch[0].nor + u * patch[1].nor + v * patch[2].nor;
 #endif // OBJECTSHADER_USE_NORMAL
 
 #ifdef OBJECTSHADER_USE_TANGENT
-	output.tan = normalize(w * patch[0].tan + u * patch[1].tan + v * patch[2].tan);
+	output.tan = w * patch[0].tan + u * patch[1].tan + v * patch[2].tan;
 #endif // OBJECTSHADER_USE_TANGENT
 
 #ifdef OBJECTSHADER_USE_POSITION3D
@@ -146,7 +151,7 @@ PixelInput main(ConstantOutput input, float3 uvw : SV_DomainLocation, const Outp
 	{
 		float displacement = GetMaterial().textures[DISPLACEMENTMAP].SampleLevel(sampler_objectshader, output.uvsets, 0).r;
 		displacement *= GetMaterial().displacementMapping;
-		output.pos.xyz += output.nor * displacement;
+		output.pos.xyz += normalize(output.nor) * displacement;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 #endif // OBJECTSHADER_USE_NORMAL
