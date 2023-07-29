@@ -1299,7 +1299,7 @@ using namespace vulkan_internal;
 	{
 		if (queue == VK_NULL_HANDLE)
 			return;
-		std::scoped_lock lock(locker);
+		std::scoped_lock lock(*locker);
 
 		VkSubmitInfo2 submitInfo = {};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
@@ -1489,7 +1489,7 @@ using namespace vulkan_internal;
 			submitInfo.signalSemaphoreInfoCount = 1;
 			submitInfo.pSignalSemaphoreInfos = signalSemaphoreInfos;
 
-			std::scoped_lock lock(device->queues[QUEUE_COPY].locker);
+			std::scoped_lock lock(*device->queues[QUEUE_COPY].locker);
 			res = vkQueueSubmit2(device->queues[QUEUE_COPY].queue, 1, &submitInfo, VK_NULL_HANDLE);
 			assert(res == VK_SUCCESS);
 		}
@@ -1518,7 +1518,7 @@ using namespace vulkan_internal;
 			}
 			submitInfo.pSignalSemaphoreInfos = signalSemaphoreInfos;
 
-			std::scoped_lock lock(device->queues[QUEUE_GRAPHICS].locker);
+			std::scoped_lock lock(*device->queues[QUEUE_GRAPHICS].locker);
 			res = vkQueueSubmit2(device->queues[QUEUE_GRAPHICS].queue, 1, &submitInfo, VK_NULL_HANDLE);
 			assert(res == VK_SUCCESS);
 		}
@@ -1535,7 +1535,7 @@ using namespace vulkan_internal;
 			submitInfo.signalSemaphoreInfoCount = 0;
 			submitInfo.pSignalSemaphoreInfos = nullptr;
 
-			std::scoped_lock lock(device->queues[QUEUE_VIDEO_DECODE].locker);
+			std::scoped_lock lock(*device->queues[QUEUE_VIDEO_DECODE].locker);
 			res = vkQueueSubmit2(device->queues[QUEUE_VIDEO_DECODE].queue, 1, &submitInfo, VK_NULL_HANDLE);
 			assert(res == VK_SUCCESS);
 		}
@@ -1552,7 +1552,7 @@ using namespace vulkan_internal;
 			submitInfo.signalSemaphoreInfoCount = 0;
 			submitInfo.pSignalSemaphoreInfos = nullptr;
 
-			std::scoped_lock lock(device->queues[QUEUE_COMPUTE].locker);
+			std::scoped_lock lock(*device->queues[QUEUE_COMPUTE].locker);
 			res = vkQueueSubmit2(device->queues[QUEUE_COMPUTE].queue, 1, &submitInfo, cmd.fence); // final submit also signals fence!
 			assert(res == VK_SUCCESS);
 		}
@@ -2326,6 +2326,8 @@ using namespace vulkan_internal;
 	{
 		wi::Timer timer;
 
+		wi::unordered_map<uint32_t, std::shared_ptr<std::mutex>> queue_lockers;
+
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(VkAccelerationStructureInstanceKHR);
 
 		validationMode = validationMode_;
@@ -2947,6 +2949,7 @@ using namespace vulkan_internal;
 			float queuePriority = 1.0f;
 			for (uint32_t queueFamily : uniqueQueueFamilies)
 			{
+				queue_lockers.emplace(queueFamily, std::make_shared<std::mutex>());
 				VkDeviceQueueCreateInfo queueCreateInfo = {};
 				queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 				queueCreateInfo.queueFamilyIndex = queueFamily;
@@ -2987,9 +2990,15 @@ using namespace vulkan_internal;
 			}
 
 			queues[QUEUE_GRAPHICS].queue = graphicsQueue;
+			queues[QUEUE_GRAPHICS].locker = queue_lockers[graphicsFamily];
 			queues[QUEUE_COMPUTE].queue = computeQueue;
+			queues[QUEUE_COMPUTE].locker = queue_lockers[computeFamily];
 			queues[QUEUE_COPY].queue = copyQueue;
+			queues[QUEUE_COPY].locker = queue_lockers[copyFamily];
 			queues[QUEUE_VIDEO_DECODE].queue = videoQueue;
+			if (videoFamily != VK_QUEUE_FAMILY_IGNORED) {
+			    queues[QUEUE_VIDEO_DECODE].locker = queue_lockers[videoFamily];
+			}
 
 			VkSemaphoreTypeCreateInfo timelineCreateInfo = {};
 			timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
@@ -3542,6 +3551,7 @@ using namespace vulkan_internal;
 		for (auto& queue : queues)
 		{
 			vkDestroySemaphore(device, queue.semaphore, nullptr);
+			queue.locker.reset();
 		}
 
 		for (uint32_t fr = 0; fr < BUFFERCOUNT; ++fr)
@@ -7347,7 +7357,7 @@ using namespace vulkan_internal;
 		// Queue command:
 		{
 			CommandQueue& q = queues[queue];
-			std::scoped_lock lock(q.locker);
+			std::scoped_lock lock(*q.locker);
 			assert(q.sparse_binding_supported);
 
 			VkResult res = vkQueueBindSparse(q.queue, (uint32_t)sparse_infos.size(), sparse_infos.data(), VK_NULL_HANDLE);

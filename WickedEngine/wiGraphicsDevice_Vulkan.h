@@ -118,7 +118,7 @@ namespace wi::graphics
 			wi::vector<VkCommandBufferSubmitInfo> submit_cmds;
 
 			bool sparse_binding_supported = false;
-			std::mutex locker;
+			std::shared_ptr<std::mutex> locker;
 
 			void submit(GraphicsDevice_Vulkan* device, VkFence fence);
 
