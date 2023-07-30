@@ -650,6 +650,17 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			material.shaderType = MaterialComponent::SHADERTYPE_UNLIT;
 		}
 
+		auto ext_emissiveStrength = x.extensions.find("KHR_materials_emissive_strength");
+		if (ext_emissiveStrength != x.extensions.end())
+		{
+			// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_emissive_strength/README.md
+			if (ext_emissiveStrength->second.Has("emissiveStrength"))
+			{
+				auto& factor = ext_emissiveStrength->second.Get("emissiveStrength");
+				material.SetEmissiveStrength(float(factor.IsNumber() ? factor.Get<double>() : factor.Get<int>()));
+			}
+		}
+
 		auto ext_transmission = x.extensions.find("KHR_materials_transmission");
 		if (ext_transmission != x.extensions.end())
 		{
@@ -3497,6 +3508,10 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		{
 			state.gltfModel.extensionsUsed.push_back("KHR_materials_pbrSpecularGlossiness");
 		}
+		if (material.GetEmissiveStrength() != 1.0f)
+		{
+			state.gltfModel.extensionsUsed.push_back("KHR_materials_emissive_strength");
+		}
 
 		if (material.shaderType == MaterialComponent::SHADERTYPE::SHADERTYPE_PBR_CLOTH)
 		{
@@ -3655,9 +3670,9 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		material_builder.pbrMetallicRoughness.roughnessFactor = { material.roughness };
 		material_builder.pbrMetallicRoughness.metallicFactor = { material.metalness };
 		material_builder.emissiveFactor = { 
-			material.emissiveColor.x * material.emissiveColor.w,
-			material.emissiveColor.y * material.emissiveColor.w,
-			material.emissiveColor.z * material.emissiveColor.w,
+			material.emissiveColor.x,
+			material.emissiveColor.y,
+			material.emissiveColor.z,
 		};
 		if (material.alphaRef < 1.f)
 		{
@@ -3679,6 +3694,14 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		if (material.shaderType == wi::scene::MaterialComponent::SHADERTYPE_UNLIT)
 		{
 			material_builder.extensions["KHR_materials_unlit"] = tinygltf::Value();
+		}
+
+		if (material.GetEmissiveStrength() != 1.0f)
+		{
+			tinygltf::Value::Object KHR_materials_emissive_strength_builder = {
+				{"emissiveStrength", tinygltf::Value(double(material.GetEmissiveStrength()))}
+			};
+			material_builder.extensions["KHR_materials_emissive_strength"] = tinygltf::Value(KHR_materials_emissive_strength_builder);
 		}
 
 		// Transmission extension (KHR_materials_transmission)
