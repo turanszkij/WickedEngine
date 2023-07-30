@@ -26,6 +26,8 @@ namespace wi::scene
 {
 	const uint32_t small_subtask_groupsize = 64u;
 
+	bool EnvironmentProbeComponent::supports_MSAA = true;
+
 	void Scene::Update(float dt)
 	{
 		this->dt = dt;
@@ -3983,6 +3985,8 @@ namespace wi::scene
 			constexpr uint32_t blocks = envmapRes / GetFormatBlockSize(format);
 			constexpr uint32_t mip_count = GetMipCount(blocks, blocks);
 
+			EnvironmentProbeComponent::supports_MSAA = device->CheckCapability(GraphicsDeviceCapability::SHADER_STORAGE_IMAGE_MULTISAMPLE);
+
 			TextureDesc desc;
 			desc.array_size = 6;
 			desc.height = envmapRes;
@@ -4063,11 +4067,21 @@ namespace wi::scene
 			size_t total_size = 0;
 			total_size += ComputeTextureMemorySizeInBytes(envrenderingDepthBuffer.desc);
 			total_size += ComputeTextureMemorySizeInBytes(envrenderingColorBuffer.desc);
-			total_size += ComputeTextureMemorySizeInBytes(envrenderingDepthBuffer_MSAA.desc);
-			total_size += ComputeTextureMemorySizeInBytes(envrenderingColorBuffer_MSAA.desc);
+			if (device->CheckCapability(GraphicsDeviceCapability::SHADER_STORAGE_IMAGE_MULTISAMPLE))
+			{
+				total_size += ComputeTextureMemorySizeInBytes(envrenderingDepthBuffer_MSAA.desc);
+				total_size += ComputeTextureMemorySizeInBytes(envrenderingColorBuffer_MSAA.desc);
+			}
 			total_size += ComputeTextureMemorySizeInBytes(envmapArray.desc);
 			info += "\n\tMemory = " + wi::helper::GetMemorySizeText(total_size) + "\n";
 			wi::backlog::post(info);
+			if (!EnvironmentProbeComponent::supports_MSAA)
+			{
+				wi::backlog::post(
+					"Device doesn't support SHADER_STORAGE_IMAGE_MULTISAMPLE, envprobes have no MSAA!",
+					wi::backlog::LogLevel::Warning
+				);
+			}
 		}
 
 		// reconstruct envmap array status:

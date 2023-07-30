@@ -2820,6 +2820,11 @@ using namespace vulkan_internal;
 				capabilities |= GraphicsDeviceCapability::GENERIC_SPARSE_TILE_POOL;
 			}
 
+			if (features2.features.shaderStorageImageMultisample == VK_TRUE)
+			{
+				capabilities |= GraphicsDeviceCapability::SHADER_STORAGE_IMAGE_MULTISAMPLE;
+			}
+
 			if (
 				(depth_stencil_resolve_properties.supportedDepthResolveModes & VK_RESOLVE_MODE_MIN_BIT) &&
 				(depth_stencil_resolve_properties.supportedDepthResolveModes & VK_RESOLVE_MODE_MAX_BIT)
@@ -4040,6 +4045,8 @@ using namespace vulkan_internal;
 		if (has_flag(texture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+			// https://registry.khronos.org/vulkan/specs/1.3-khr-extensions/html/vkspec.html#features-shaderStorageImageMultisample
+			assert(imageInfo.samples == 1 || CheckCapability(GraphicsDeviceCapability::SHADER_STORAGE_IMAGE_MULTISAMPLE));
 
 			if (IsFormatSRGB(texture->desc.format))
 			{

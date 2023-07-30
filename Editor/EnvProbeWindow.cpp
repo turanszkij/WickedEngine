@@ -59,7 +59,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 			probe->SetMSAA(args.bValue);
 			probe->SetDirty();
 		}
-		});
+	});
 	AddWidget(&msaaCheckBox);
 
 	refreshButton.Create("Refresh");
@@ -114,8 +114,16 @@ void EnvProbeWindow::SetEntity(Entity entity)
 	{
 		realTimeCheckBox.SetCheck(probe->IsRealTime());
 		realTimeCheckBox.SetEnabled(true);
-		msaaCheckBox.SetCheck(probe->IsMSAA());
-		msaaCheckBox.SetEnabled(true);
+		if (EnvironmentProbeComponent::supports_MSAA)
+		{
+			msaaCheckBox.SetCheck(probe->IsMSAA());
+			msaaCheckBox.SetEnabled(true);
+		}
+		else
+		{
+			msaaCheckBox.SetTooltip("Unsupported on your device!");
+			msaaCheckBox.SetEnabled(false);
+		}
 		refreshButton.SetEnabled(true);
 	}
 }

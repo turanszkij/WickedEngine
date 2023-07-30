@@ -2657,6 +2657,7 @@ using namespace dx12_internal;
 		capabilities |= GraphicsDeviceCapability::PREDICATION;
 		capabilities |= GraphicsDeviceCapability::DEPTH_RESOLVE_MIN_MAX;
 		capabilities |= GraphicsDeviceCapability::STENCIL_RESOLVE_MIN_MAX;
+		capabilities |= GraphicsDeviceCapability::SHADER_STORAGE_IMAGE_MULTISAMPLE;
 
 		// Init feature check (https://devblogs.microsoft.com/directx/introducing-a-new-api-for-checking-feature-support-in-direct3d-12/)
 		CD3DX12FeatureSupport features;

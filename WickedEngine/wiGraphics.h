@@ -428,6 +428,7 @@ namespace wi::graphics
 		STENCIL_RESOLVE_MIN_MAX = 1 << 19,
 		CACHE_COHERENT_UMA = 1 << 20,	// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_feature_data_architecture
 		VIDEO_DECODE_H264 = 1 << 21,
+		SHADER_STORAGE_IMAGE_MULTISAMPLE = 1 << 22, // shaders support Texture2DMSArray, always supported by dx12, optional for Vulkan; https://registry.khronos.org/vulkan/specs/1.3-khr-extensions/html/vkspec.html#features-shaderStorageImageMultisample
 	};
 
 	enum class ResourceState

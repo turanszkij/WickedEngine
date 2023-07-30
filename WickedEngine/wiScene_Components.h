@@ -1030,6 +1030,7 @@ namespace wi::scene
 		float range;
 		XMFLOAT4X4 inverseMatrix;
 		mutable bool render_dirty = false;
+		static bool supports_MSAA;
 
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline void SetRealTime(bool value) { if (value) { _flags |= REALTIME; } else { _flags &= ~REALTIME; } }
@@ -1037,7 +1038,7 @@ namespace wi::scene
 
 		inline bool IsDirty() const { return _flags & DIRTY; }
 		inline bool IsRealTime() const { return _flags & REALTIME; }
-		inline bool IsMSAA() const { return _flags & MSAA; }
+		inline bool IsMSAA() const { return _flags & MSAA && supports_MSAA; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
