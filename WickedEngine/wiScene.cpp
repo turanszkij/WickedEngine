@@ -672,7 +672,7 @@ namespace wi::scene
 				GPUBufferDesc desc;
 				desc.usage = Usage::DEFAULT;
 				desc.bind_flags = BindFlag::INDEX_BUFFER | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-				desc.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::INDIRECT_ARGS;
+				desc.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::TYPED_FORMAT_CASTING | ResourceMiscFlag::INDIRECT_ARGS;
 
 				const uint64_t alignment = device->GetMinOffsetAlignment(&desc);
 

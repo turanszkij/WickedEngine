@@ -270,11 +270,15 @@ namespace wi::graphics
 			}
 			if (has_flag(desc->misc_flags, ResourceMiscFlag::BUFFER_RAW))
 			{
-				alignment = std::max(alignment, 16ull);
+				alignment = std::max(alignment, (uint64_t)D3D12_RAW_UAV_SRV_BYTE_ALIGNMENT);
 			}
 			if (has_flag(desc->misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED))
 			{
 				alignment = std::max(alignment, (uint64_t)desc->stride);
+			}
+			if (desc->format != Format::UNKNOWN || has_flag(desc->misc_flags, ResourceMiscFlag::TYPED_FORMAT_CASTING))
+			{
+				alignment = std::max(alignment, 16ull);
 			}
 			return alignment;
 		}

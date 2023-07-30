@@ -333,11 +333,11 @@ namespace wi::graphics
 			{
 				alignment = std::max(alignment, properties2.properties.limits.minUniformBufferOffsetAlignment);
 			}
-			if (desc->format == Format::UNKNOWN)
+			if (has_flag(desc->misc_flags, ResourceMiscFlag::BUFFER_RAW) || has_flag(desc->misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED))
 			{
 				alignment = std::max(alignment, properties2.properties.limits.minStorageBufferOffsetAlignment);
 			}
-			else
+			if (desc->format != Format::UNKNOWN || has_flag(desc->misc_flags, ResourceMiscFlag::TYPED_FORMAT_CASTING))
 			{
 				alignment = std::max(alignment, properties2.properties.limits.minTexelBufferOffsetAlignment);
 			}
