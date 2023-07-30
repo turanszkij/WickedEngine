@@ -8699,7 +8699,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 	}
 }
 
-void BlockCompress(const wi::graphics::Texture& texture_src, const wi::graphics::Texture& texture_bc, wi::graphics::CommandList cmd, uint32_t dst_slice_offset)
+void BlockCompress(const Texture& texture_src, const Texture& texture_bc, CommandList cmd, uint32_t dst_slice_offset)
 {
 	const uint32_t block_size = GetFormatBlockSize(texture_bc.desc.format);
 	TextureDesc desc;
@@ -8709,70 +8709,97 @@ void BlockCompress(const wi::graphics::Texture& texture_src, const wi::graphics:
 	desc.layout = ResourceState::UNORDERED_ACCESS;
 	desc.mip_levels = GetMipCount(desc.width, desc.height);
 
-	static Texture bc_raw_uint2;
-	static Texture bc_raw_uint4;
-	static Texture bc_raw_uint4_cubemap;
-	Texture* bc_raw = nullptr;
-
-	switch (texture_bc.desc.format)
+	Texture bc_raw_dest;
 	{
-	case Format::BC1_UNORM:
-	case Format::BC1_UNORM_SRGB:
-		desc.format = Format::R32G32_UINT;
-		bc_raw = &bc_raw_uint2;
-		device->BindComputeShader(&shaders[CSTYPE_BLOCKCOMPRESS_BC1], cmd);
-		device->EventBegin("BlockCompress - BC1", cmd);
-		break;
-	case Format::BC3_UNORM:
-	case Format::BC3_UNORM_SRGB:
-		desc.format = Format::R32G32B32A32_UINT;
-		bc_raw = &bc_raw_uint4;
-		device->BindComputeShader(&shaders[CSTYPE_BLOCKCOMPRESS_BC3], cmd);
-		device->EventBegin("BlockCompress - BC3", cmd);
-		break;
-	case Format::BC4_UNORM:
-		desc.format = Format::R32G32_UINT;
-		bc_raw = &bc_raw_uint2;
-		device->BindComputeShader(&shaders[CSTYPE_BLOCKCOMPRESS_BC4], cmd);
-		device->EventBegin("BlockCompress - BC4", cmd);
-		break;
-	case Format::BC5_UNORM:
-		desc.format = Format::R32G32B32A32_UINT;
-		bc_raw = &bc_raw_uint4;
-		device->BindComputeShader(&shaders[CSTYPE_BLOCKCOMPRESS_BC5], cmd);
-		device->EventBegin("BlockCompress - BC5", cmd);
-		break;
-	case Format::BC6H_UF16:
-		desc.format = Format::R32G32B32A32_UINT;
-		if (has_flag(texture_src.desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
+		// Find a raw block texture that will fit the request:
+		static std::mutex locker;
+		std::scoped_lock lock(locker);
+		static Texture bc_raw_uint2;
+		static Texture bc_raw_uint4;
+		static Texture bc_raw_uint4_cubemap;
+		Texture* bc_raw = nullptr;
+		switch (texture_bc.desc.format)
 		{
-			bc_raw = &bc_raw_uint4_cubemap;
-			device->BindComputeShader(&shaders[CSTYPE_BLOCKCOMPRESS_BC6H_CUBEMAP], cmd);
-			device->EventBegin("BlockCompress - BC6H - Cubemap", cmd);
-			desc.array_size = texture_src.desc.array_size; // src array size not dst!!
-		}
-		else
-		{
+		case Format::BC1_UNORM:
+		case Format::BC1_UNORM_SRGB:
+			desc.format = Format::R32G32_UINT;
+			bc_raw = &bc_raw_uint2;
+			device->BindComputeShader(&shaders[CSTYPE_BLOCKCOMPRESS_BC1], cmd);
+			device->EventBegin("BlockCompress - BC1", cmd);
+			break;
+		case Format::BC3_UNORM:
+		case Format::BC3_UNORM_SRGB:
+			desc.format = Format::R32G32B32A32_UINT;
 			bc_raw = &bc_raw_uint4;
-			device->BindComputeShader(&shaders[CSTYPE_BLOCKCOMPRESS_BC6H], cmd);
-			device->EventBegin("BlockCompress - BC6H", cmd);
+			device->BindComputeShader(&shaders[CSTYPE_BLOCKCOMPRESS_BC3], cmd);
+			device->EventBegin("BlockCompress - BC3", cmd);
+			break;
+		case Format::BC4_UNORM:
+			desc.format = Format::R32G32_UINT;
+			bc_raw = &bc_raw_uint2;
+			device->BindComputeShader(&shaders[CSTYPE_BLOCKCOMPRESS_BC4], cmd);
+			device->EventBegin("BlockCompress - BC4", cmd);
+			break;
+		case Format::BC5_UNORM:
+			desc.format = Format::R32G32B32A32_UINT;
+			bc_raw = &bc_raw_uint4;
+			device->BindComputeShader(&shaders[CSTYPE_BLOCKCOMPRESS_BC5], cmd);
+			device->EventBegin("BlockCompress - BC5", cmd);
+			break;
+		case Format::BC6H_UF16:
+			desc.format = Format::R32G32B32A32_UINT;
+			if (has_flag(texture_src.desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
+			{
+				bc_raw = &bc_raw_uint4_cubemap;
+				device->BindComputeShader(&shaders[CSTYPE_BLOCKCOMPRESS_BC6H_CUBEMAP], cmd);
+				device->EventBegin("BlockCompress - BC6H - Cubemap", cmd);
+				desc.array_size = texture_src.desc.array_size; // src array size not dst!!
+			}
+			else
+			{
+				bc_raw = &bc_raw_uint4;
+				device->BindComputeShader(&shaders[CSTYPE_BLOCKCOMPRESS_BC6H], cmd);
+				device->EventBegin("BlockCompress - BC6H", cmd);
+			}
+			break;
+		default:
+			assert(0); // not supported
+			return;
 		}
-		break;
-	default:
-		assert(0); // not supported
-		return;
-	}
 
-	if (!bc_raw->IsValid() || bc_raw->desc.width < desc.width || bc_raw->desc.height < desc.height || bc_raw->desc.array_size < desc.array_size)
-	{
-		device->CreateTexture(&desc, nullptr, bc_raw);
-		device->SetName(bc_raw, "bc_raw");
-
-		for (uint32_t i = 0; i < bc_raw->desc.mip_levels; ++i)
+		if (!bc_raw->IsValid() || bc_raw->desc.width < desc.width || bc_raw->desc.height < desc.height || bc_raw->desc.array_size < desc.array_size)
 		{
-			int subresource_index = device->CreateSubresource(bc_raw, SubresourceType::UAV, 0, desc.array_size, i, 1);
-			assert(subresource_index == i);
+			TextureDesc bc_raw_desc = desc;
+			bc_raw_desc.width = std::max(64u, bc_raw_desc.width);
+			bc_raw_desc.height = std::max(64u, bc_raw_desc.height);
+			bc_raw_desc.width = std::max(bc_raw->desc.width, bc_raw_desc.width);
+			bc_raw_desc.height = std::max(bc_raw->desc.height, bc_raw_desc.height);
+			bc_raw_desc.width = wi::math::GetNextPowerOfTwo(bc_raw_desc.width);
+			bc_raw_desc.height = wi::math::GetNextPowerOfTwo(bc_raw_desc.height);
+			bc_raw_desc.mip_levels = GetMipCount(bc_raw_desc.width, bc_raw_desc.height);
+			device->CreateTexture(&bc_raw_desc, nullptr, bc_raw);
+			device->SetName(bc_raw, "bc_raw");
+
+			for (uint32_t i = 0; i < bc_raw->desc.mip_levels; ++i)
+			{
+				int subresource_index = device->CreateSubresource(bc_raw, SubresourceType::UAV, 0, bc_raw_desc.array_size, i, 1);
+				assert(subresource_index == i);
+			}
+
+			std::string info;
+			info += "BlockCompress created a new raw block texture to fit request: " + std::string(GetFormatString(texture_bc.desc.format)) + " (" + std::to_string(texture_bc.desc.width) + ", " + std::to_string(texture_bc.desc.height) + ")";
+			info += "\n\tFormat = ";
+			info += GetFormatString(bc_raw_desc.format);
+			info += "\n\tResolution = " + std::to_string(bc_raw_desc.width) + " * " + std::to_string(bc_raw_desc.height);
+			info += "\n\tMip Levels = " + std::to_string(bc_raw_desc.mip_levels);
+			info += "\n\tArray Size = " + std::to_string(bc_raw_desc.array_size);
+			size_t total_size = 0;
+			total_size += ComputeTextureMemorySizeInBytes(bc_raw_desc);
+			info += "\n\tMemory = " + wi::helper::GetMemorySizeText(total_size) + "\n";
+			wi::backlog::post(info);
 		}
+
+		bc_raw_dest = *bc_raw;
 	}
 
 	const uint32_t mip_levels = std::min(desc.mip_levels, std::min(texture_src.desc.mip_levels, texture_bc.desc.mip_levels));
@@ -8781,12 +8808,12 @@ void BlockCompress(const wi::graphics::Texture& texture_src, const wi::graphics:
 		const uint32_t width = std::max(1u, desc.width >> mip);
 		const uint32_t height = std::max(1u, desc.height >> mip);
 		device->BindResource(&texture_src, 0, cmd, texture_src.desc.mip_levels == 1 ? -1 : mip);
-		device->BindUAV(bc_raw, 0, cmd, mip);
+		device->BindUAV(&bc_raw_dest, 0, cmd, mip);
 		device->Dispatch((width + 7u) / 8u, (height + 7u) / 8u, desc.array_size, cmd);
 	}
 
 	GPUBarrier barriers[] = {
-		GPUBarrier::Image(bc_raw, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC),
+		GPUBarrier::Image(&bc_raw_dest, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC),
 		GPUBarrier::Image(&texture_bc, texture_bc.desc.layout, ResourceState::COPY_DST),
 	};
 	device->Barrier(barriers, arraysize(barriers), cmd);
@@ -8807,7 +8834,7 @@ void BlockCompress(const wi::graphics::Texture& texture_src, const wi::graphics:
 
 			device->CopyTexture(
 				&texture_bc, 0, 0, 0, mip, dst_slice_offset + slice,
-				bc_raw, std::min(mip, bc_raw->desc.mip_levels - 1), slice,
+				&bc_raw_dest, std::min(mip, bc_raw_dest.desc.mip_levels - 1), slice,
 				cmd,
 				&box
 			);
