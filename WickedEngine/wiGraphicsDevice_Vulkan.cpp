@@ -3989,13 +3989,16 @@ using namespace vulkan_internal;
 		}
 
 		// Create resource views if needed
-		if (has_flag(desc->bind_flags, BindFlag::SHADER_RESOURCE))
+		if (!has_flag(desc->misc_flags, ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS))
 		{
-			CreateSubresource(buffer, SubresourceType::SRV, 0);
-		}
-		if (has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS))
-		{
-			CreateSubresource(buffer, SubresourceType::UAV, 0);
+			if (has_flag(desc->bind_flags, BindFlag::SHADER_RESOURCE))
+			{
+				CreateSubresource(buffer, SubresourceType::SRV, 0);
+			}
+			if (has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS))
+			{
+				CreateSubresource(buffer, SubresourceType::UAV, 0);
+			}
 		}
 
 		return res == VK_SUCCESS;
@@ -4446,21 +4449,24 @@ using namespace vulkan_internal;
 			copyAllocator.submit(cmd);
 		}
 
-		if (has_flag(texture->desc.bind_flags, BindFlag::RENDER_TARGET))
+		if (!has_flag(desc->misc_flags, ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS))
 		{
-			CreateSubresource(texture, SubresourceType::RTV, 0, -1, 0, -1);
-		}
-		if (has_flag(texture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
-		{
-			CreateSubresource(texture, SubresourceType::DSV, 0, -1, 0, -1);
-		}
-		if (has_flag(texture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
-		{
-			CreateSubresource(texture, SubresourceType::SRV, 0, -1, 0, -1);
-		}
-		if (has_flag(texture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
-		{
-			CreateSubresource(texture, SubresourceType::UAV, 0, -1, 0, -1);
+			if (has_flag(texture->desc.bind_flags, BindFlag::RENDER_TARGET))
+			{
+				CreateSubresource(texture, SubresourceType::RTV, 0, -1, 0, -1);
+			}
+			if (has_flag(texture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
+			{
+				CreateSubresource(texture, SubresourceType::DSV, 0, -1, 0, -1);
+			}
+			if (has_flag(texture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
+			{
+				CreateSubresource(texture, SubresourceType::SRV, 0, -1, 0, -1);
+			}
+			if (has_flag(texture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
+			{
+				CreateSubresource(texture, SubresourceType::UAV, 0, -1, 0, -1);
+			}
 		}
 
 		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE))
@@ -8999,8 +9005,8 @@ using namespace vulkan_internal;
 			dpb.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_DPB_SLOT_INFO_KHR;
 			dpb.pStdReferenceInfo = &ref;
 
-			ref.flags.bottom_field_flag = 1;
-			ref.flags.top_field_flag = 1;
+			ref.flags.bottom_field_flag = 0;
+			ref.flags.top_field_flag = 0;
 			ref.flags.is_non_existing = 0;
 			ref.flags.used_for_long_term_reference = 0;
 			ref.FrameNum = op->dpb_framenum[i];

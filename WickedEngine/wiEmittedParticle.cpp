@@ -97,7 +97,7 @@ namespace wi
 			device->CreateBuffer2(&bd, fill_dead_indices, &deadList);
 			device->SetName(&deadList, "EmittedParticleSystem::deadList");
 
-			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::TYPED_FORMAT_CASTING;
+			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::TYPED_FORMAT_CASTING | ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS;
 			if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 			{
 				bd.misc_flags |= ResourceMiscFlag::RAY_TRACING;

@@ -563,7 +563,7 @@ namespace wi::scene
 		GPUBufferDesc bd;
 		bd.usage = Usage::DEFAULT;
 		bd.bind_flags = BindFlag::VERTEX_BUFFER | BindFlag::INDEX_BUFFER | BindFlag::SHADER_RESOURCE;
-		bd.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::TYPED_FORMAT_CASTING;
+		bd.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::TYPED_FORMAT_CASTING | ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS;
 		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 		{
 			bd.misc_flags |= ResourceMiscFlag::RAY_TRACING;
@@ -849,7 +849,7 @@ namespace wi::scene
 		GPUBufferDesc desc;
 		desc.usage = Usage::DEFAULT;
 		desc.bind_flags = BindFlag::VERTEX_BUFFER | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-		desc.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::TYPED_FORMAT_CASTING;
+		desc.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::TYPED_FORMAT_CASTING | ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS;
 		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 		{
 			desc.misc_flags |= ResourceMiscFlag::RAY_TRACING;
