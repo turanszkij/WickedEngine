@@ -2507,10 +2507,11 @@ using namespace vulkan_internal;
 			wi::vector<const char*> enabled_deviceExtensions;
 
 			bool h264_decode_extension = false;
+			bool suitable = false;
 
-			for (const auto& dev : devices)
-			{
-				bool suitable = true;
+
+			auto checkPhysicalDeviceAndFillProperties2 = [&](VkPhysicalDevice dev) {
+				suitable = true;
 
 				uint32_t extensionCount;
 				VkResult res = vkEnumerateDeviceExtensionProperties(dev, nullptr, &extensionCount, nullptr);
@@ -2527,7 +2528,7 @@ using namespace vulkan_internal;
 					}
 				}
 				if (!suitable)
-					continue;
+					return;
 
 				h264_decode_extension = false;
 
@@ -2651,7 +2652,21 @@ using namespace vulkan_internal;
 					h264_decode_extension = true;
 				}
 
+				*properties_chain = nullptr;
+				*features_chain = nullptr;
 				vkGetPhysicalDeviceProperties2(dev, &properties2);
+
+			};
+
+			bool properties2_matches_physical_device = false;
+
+			for (const auto& dev : devices)
+			{
+				properties2_matches_physical_device = false;
+				checkPhysicalDeviceAndFillProperties2(dev);
+
+				if (!suitable)
+					continue;
 
 				bool priority = properties2.properties.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
 				if (preference == GPUPreference::Integrated)
@@ -2661,6 +2676,7 @@ using namespace vulkan_internal;
 				if (priority || physicalDevice == VK_NULL_HANDLE)
 				{
 					physicalDevice = dev;
+					properties2_matches_physical_device = true;
 					if (priority)
 					{
 						break; // if this is prioritized GPU type, look no further
@@ -2673,6 +2689,12 @@ using namespace vulkan_internal;
 				assert(0);
 				wi::helper::messageBox("Failed to find a suitable GPU!");
 				wi::platform::Exit();
+			}
+
+			if (!properties2_matches_physical_device) {
+				// this redoes a few checks, but since this code path is only
+				// executed once, it doesn't affect execution time all that much
+				checkPhysicalDeviceAndFillProperties2(physicalDevice);
 			}
 
 			assert(properties2.properties.limits.timestampComputeAndGraphics == VK_TRUE);
