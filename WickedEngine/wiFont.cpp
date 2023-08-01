@@ -324,6 +324,13 @@ namespace wi::font
 		wi::backlog::post("wi::font Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
+	void InvalidateAtlas()
+	{
+		texture = {};
+		glyph_lookup.clear();
+		rect_lookup.clear();
+		bitmap_lookup.clear();
+	}
 	void UpdateAtlas(float upscaling)
 	{
 		std::scoped_lock locker(glyphLock);
@@ -334,10 +341,7 @@ namespace wi::font
 		if (upscaling_prev != upscaling)
 		{
 			// If upscaling changed (DPI change), clear glyph caches, they will need to be re-rendered:
-			texture = {};
-			glyph_lookup.clear();
-			rect_lookup.clear();
-			bitmap_lookup.clear();
+			InvalidateAtlas();
 			upscaling_prev = upscaling;
 		}
 
@@ -483,6 +487,7 @@ namespace wi::font
 		}
 		fontStyles.push_back(std::make_unique<FontStyle>());
 		fontStyles.back()->Create(fontName);
+		InvalidateAtlas(); // invalidate atlas, in case there were missing glyphs, upon adding new font style they could become valid
 		return int(fontStyles.size() - 1);
 	}
 	int AddFontStyle(const std::string& fontName, const uint8_t* data, size_t size)
@@ -497,6 +502,7 @@ namespace wi::font
 		}
 		fontStyles.push_back(std::make_unique<FontStyle>());
 		fontStyles.back()->Create(fontName, data, size);
+		InvalidateAtlas(); // invalidate atlas, in case there were missing glyphs, upon adding new font style they could become valid
 		return int(fontStyles.size() - 1);
 	}
 

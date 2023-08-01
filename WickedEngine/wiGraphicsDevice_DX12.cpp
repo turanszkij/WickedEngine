@@ -2318,9 +2318,7 @@ using namespace dx12_internal;
 			if (FAILED(hr) || !allowTearing)
 			{
 				tearingSupported = false;
-#ifdef _DEBUG
-				OutputDebugStringA("WARNING: Variable refresh rate displays not supported\n");
-#endif
+				wi::helper::DebugOut("WARNING: Variable refresh rate displays not supported\n");
 			}
 			else
 			{
