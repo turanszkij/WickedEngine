@@ -9,7 +9,7 @@ namespace wi::version
 	// minor features, major updates, breaking compatibility changes
 	const int minor = 71;
 	// minor bug fixes, alterations, refactors, updates
-	const int revision = 270;
+	const int revision = 271;
 
 	const std::string version_string = std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(revision);
 
@@ -89,6 +89,7 @@ Contributors
 	- Fixes
 - Dennis Brakhane | https://github.com/brakhane
 	- Added Liberation Sans default font
+	- Vulkan improvements
 - Cop46 | https://github.com/Cop46
 	- Brightness, Contrast, Saturation post process
 
@@ -131,6 +132,7 @@ Patreon supporters
 - Dominik Madarász
 - Segfault
 - Mike amanfo
+- Dennis Brakhane
 		)";
 
 		return credits;
