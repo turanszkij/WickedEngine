@@ -739,7 +739,7 @@ namespace wi::helper
 	}
 
 #ifdef _WIN32
-	// On windows we need to expand UTF8 strings to UTF16:
+	// On windows we need to expand UTF8 strings to UTF16 when passing it to WinAPI:
 	std::wstring ToNativeString(const std::string& fileName)
 	{
 		std::wstring fileName_wide;

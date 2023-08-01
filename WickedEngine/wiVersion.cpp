@@ -133,7 +133,6 @@ Patreon supporters
 - Segfault
 - Mike amanfo
 - Dennis Brakhane
-- Marco Giordano
 		)";
 
 		return credits;
