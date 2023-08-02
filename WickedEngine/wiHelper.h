@@ -99,6 +99,7 @@ namespace wi::helper
 	uint64_t FileTimestamp(const std::string& fileName);
 
 	std::string GetTempDirectoryPath();
+	std::string GetCacheDirectoryPath();
 	std::string GetCurrentPath();
 
 	struct FileDialogParams
