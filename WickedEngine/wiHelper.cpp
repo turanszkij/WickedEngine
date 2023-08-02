@@ -67,10 +67,11 @@ namespace wi::helper
 
 	void messageBox(const std::string& msg, const std::string& caption)
 	{
-#ifdef _WIN32
-#ifndef PLATFORM_UWP
+#ifdef PLATFORM_WINDOWS_DESKTOP
 		MessageBoxA(GetActiveWindow(), msg.c_str(), caption.c_str(), 0);
-#else
+#endif // PLATFORM_WINDOWS_DESKTOP
+
+#ifdef PLATFORM_UWP
 		std::wstring wmessage, wcaption;
 		StringConvert(msg, wmessage);
 		StringConvert(caption, wcaption);
@@ -79,9 +80,10 @@ namespace wi::helper
 			winrt::Windows::UI::Popups::MessageDialog(wmessage, wcaption).ShowAsync();
 		});
 #endif // PLATFORM_UWP
-#elif SDL2
+
+#ifdef SDL2
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, caption.c_str(), msg.c_str(), NULL);
-#endif // _WIN32
+#endif // SDL2
 	}
 
 	std::string screenshot(const wi::graphics::SwapChain& swapchain, const std::string& name)
@@ -1015,9 +1017,7 @@ namespace wi::helper
 
 	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess)
 	{
-#ifdef _WIN32
-#ifndef PLATFORM_UWP
-
+#ifdef PLATFORM_WINDOWS_DESKTOP
 		std::thread([=] {
 
 			wchar_t szFile[256];
@@ -1089,8 +1089,9 @@ namespace wi::helper
 			}
 
 			}).detach();
+#endif // PLATFORM_WINDOWS_DESKTOP
 
-#else
+#ifdef PLATFORM_UWP
 		auto filedialoghelper = [](FileDialogParams params, std::function<void(std::string fileName)> onSuccess) -> winrt::fire_and_forget {
 
 			using namespace winrt::Windows::Storage;
@@ -1165,7 +1166,7 @@ namespace wi::helper
 
 #endif // PLATFORM_UWP
 
-#else
+#ifdef PLATFORM_LINUX
 		if (!pfd::settings::available()) {
 			const char *message = "No dialog backend available";
 #ifdef SDL2
@@ -1216,7 +1217,7 @@ namespace wi::helper
 				break;
 			}
 		}
-#endif // _WIN32
+#endif // PLATFORM_LINUX
 	}
 
 	void GetFileNamesInDirectory(const std::string& directory, std::function<void(std::string fileName)> onSuccess, const std::string& filter_extension)

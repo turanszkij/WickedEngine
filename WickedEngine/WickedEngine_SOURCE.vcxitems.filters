@@ -1802,9 +1802,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_UWP.cpp">
       <Filter>ENGINE\Network</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\D3D12MemAlloc.cpp">
-      <Filter>UTILITY</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInput.cpp">
       <Filter>ENGINE\Input</Filter>
     </ClCompile>

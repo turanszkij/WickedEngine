@@ -20,6 +20,10 @@
 #include <winrt/Windows.UI.Core.h>
 #include <winrt/Windows.Graphics.Display.h>
 #include <winrt/Windows.ApplicationModel.Core.h>
+#elif WINAPI_FAMILY == WINAPI_FAMILY_GAMES
+#define PLATFORM_XBOX
+#define wiLoadLibrary(name) LoadLibraryA(name)
+#define wiGetProcAddress(handle,name) GetProcAddress(handle, name)
 #else
 #define PLATFORM_WINDOWS_DESKTOP
 #define wiLoadLibrary(name) LoadLibraryA(name)

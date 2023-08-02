@@ -1,7 +1,7 @@
 #include "wiRawInput.h"
 #include "wiPlatform.h"
 
-#if defined(_WIN32) && !defined(PLATFORM_UWP)
+#ifdef PLATFORM_WINDOWS_DESKTOP
 #include "wiVector.h"
 
 #include <cassert>
@@ -569,4 +569,4 @@ namespace wi::input::rawinput
 	bool GetControllerState(wi::input::ControllerState* state, int index) { return false; }
 	void SetControllerFeedback(const wi::input::ControllerFeedback& data, int index) {}
 }
-#endif // _WIN32
+#endif // PLATFORM_WINDOWS_DESKTOP

@@ -11,7 +11,7 @@
 #include "Utility/dx12/d3dx12_resource_helpers.h"
 #include "Utility/dx12/d3dx12_pipeline_state_stream.h"
 #include "Utility/dx12/d3dx12_check_feature_support.h"
-#include "Utility/D3D12MemAlloc.h"
+#include "Utility/D3D12MemAlloc.cpp" // include this here because we use D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
 #include "Utility/h264.h"
 #include "Utility/dxva.h"
 

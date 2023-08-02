@@ -12,6 +12,10 @@
 #include "wiVector.h"
 #include "wiSpinLock.h"
 
+#ifdef PLATFORM_XBOX
+using HMONITOR = HANDLE;
+#endif // PLATFORM_XBOX
+
 #include <dxgi1_6.h>
 #include <wrl/client.h> // ComPtr
 

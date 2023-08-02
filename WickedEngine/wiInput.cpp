@@ -109,7 +109,7 @@ namespace wi::input
 		wi::input::rawinput::Update();
 		wi::input::sdlinput::Update();
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(PLATFORM_XBOX)
 		wi::input::rawinput::GetMouseState(&mouse); // currently only the relative data can be used from this
 		wi::input::rawinput::GetKeyboardState(&keyboard); 
 
@@ -524,13 +524,10 @@ namespace wi::input
 #endif // _WIN32
 				default: break;
 			}
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(PLATFORM_XBOX)
 			return KEY_DOWN(keycode) || KEY_TOGGLE(keycode);
 #elif SDL2
 			return keyboard.buttons[keycode] == 1;
-
-#else
-#error KEYBOARD INPUT NOT SUPPORTED
 #endif
 		}
 
@@ -582,8 +579,7 @@ namespace wi::input
 	}
 	void SetPointer(const XMFLOAT4& props)
 	{
-#ifdef _WIN32
-#ifndef PLATFORM_UWP
+#ifdef PLATFORM_WINDOWS_DESKTOP
 		HWND hWnd = window;
 		const float dpiscaling = (float)GetDpiForWindow(hWnd) / 96.0f;
 		POINT p;
@@ -591,12 +587,15 @@ namespace wi::input
 		p.y = (LONG)(props.y * dpiscaling);
 		ClientToScreen(hWnd, &p);
 		SetCursorPos(p.x, p.y);
-#else
+#endif // PLATFORM_WINDOWS_DESKTOP
+
+#ifdef PLATFORM_UWP
 		auto window = winrt::Windows::UI::Core::CoreWindow::GetForCurrentThread();
 		auto& bounds = window.Bounds();
 		window.PointerPosition(winrt::Windows::Foundation::Point(props.x + bounds.X, props.y + bounds.Y));
-#endif
-#elif SDL2
+#endif // PLATFORM_UWP
+
+#ifdef SDL2
 	SDL_WarpMouseInWindow(window, props.x, props.y);
 #endif // _WIN32
 	}
