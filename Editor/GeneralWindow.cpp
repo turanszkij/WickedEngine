@@ -266,7 +266,9 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		params.extensions.push_back("xml");
 		wi::helper::FileDialog(params, [=](std::string fileName) {
 			editor->GetGUI().ExportLocalization(editor->current_localization);
-			editor->current_localization.Export(wi::helper::ForceExtension(fileName, params.extensions.back()));
+			std::string filenameExt = wi::helper::ForceExtension(fileName, params.extensions.back());
+			editor->current_localization.Export(filenameExt);
+			editor->PostSaveText("Localization template created: ", filenameExt);
 		});
 	});
 	AddWidget(&localizationButton);

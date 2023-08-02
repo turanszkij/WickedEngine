@@ -1638,10 +1638,8 @@ using namespace dx12_internal;
 		{
 			if (freelist[i].uploadbuffer.desc.size >= staging_size)
 			{
-				if (freelist[i].fence->GetCompletedValue() == 1)
+				if (freelist[i].IsCompleted())
 				{
-					HRESULT hr = freelist[i].fence->Signal(0);
-					assert(SUCCEEDED(hr));
 					cmd = std::move(freelist[i]);
 					std::swap(freelist[i], freelist.back());
 					freelist.pop_back();
@@ -1685,26 +1683,27 @@ using namespace dx12_internal;
 	{
 		HRESULT hr;
 
+		locker.lock();
+		cmd.fenceValueSignaled++;
+		freelist.push_back(cmd);
+		locker.unlock();
+
 		cmd.commandList->Close();
 		ID3D12CommandList* commandlists[] = {
 			cmd.commandList.Get()
 		};
 		device->queues[QUEUE_COPY].queue->ExecuteCommandLists(1, commandlists);
-		hr = device->queues[QUEUE_COPY].queue->Signal(cmd.fence.Get(), 1);
+		hr = device->queues[QUEUE_COPY].queue->Signal(cmd.fence.Get(), cmd.fenceValueSignaled);
 		assert(SUCCEEDED(hr));
-		hr = device->queues[QUEUE_GRAPHICS].queue->Wait(cmd.fence.Get(), 1);
+		hr = device->queues[QUEUE_GRAPHICS].queue->Wait(cmd.fence.Get(), cmd.fenceValueSignaled);
 		assert(SUCCEEDED(hr));
-		hr = device->queues[QUEUE_COMPUTE].queue->Wait(cmd.fence.Get(), 1);
+		hr = device->queues[QUEUE_COMPUTE].queue->Wait(cmd.fence.Get(), cmd.fenceValueSignaled);
 		assert(SUCCEEDED(hr));
 		if (device->queues[QUEUE_VIDEO_DECODE].queue)
 		{
-			hr = device->queues[QUEUE_VIDEO_DECODE].queue->Wait(cmd.fence.Get(), 1);
+			hr = device->queues[QUEUE_VIDEO_DECODE].queue->Wait(cmd.fence.Get(), cmd.fenceValueSignaled);
 			assert(SUCCEEDED(hr));
 		}
-
-		locker.lock();
-		freelist.push_back(cmd);
-		locker.unlock();
 	}
 
 	void GraphicsDevice_DX12::DescriptorBinder::init(GraphicsDevice_DX12* device)
@@ -2319,9 +2318,7 @@ using namespace dx12_internal;
 			if (FAILED(hr) || !allowTearing)
 			{
 				tearingSupported = false;
-#ifdef _DEBUG
-				OutputDebugStringA("WARNING: Variable refresh rate displays not supported\n");
-#endif
+				wi::helper::DebugOut("WARNING: Variable refresh rate displays not supported\n");
 			}
 			else
 			{

@@ -547,16 +547,17 @@ The Dump to header () option will use embedding and create a C++ header file 
 				<entry id="6">フォース </entry>
 				<entry id="7">デカル </entry>
 				<entry id="8">音 </entry>
-				<entry id="9">天気 </entry>
-				<entry id="10">エミッター </entry>
-				<entry id="11">ヘアパーティクル </entry>
-				<entry id="12">カメラ </entry>
-				<entry id="13">三乗 </entry>
-				<entry id="14">プレーぬ </entry>
-				<entry id="15">アニメーション </entry>
-				<entry id="16">スクリプト </entry>
-				<entry id="17">コライダー </entry>
-				<entry id="18">地形 </entry>
+				<entry id="9">ビデオ </entry>
+				<entry id="10">天気 </entry>
+				<entry id="11">エミッター </entry>
+				<entry id="12">ヘアパーティクル </entry>
+				<entry id="13">カメラ </entry>
+				<entry id="14">三乗 </entry>
+				<entry id="15">プレーぬ </entry>
+				<entry id="16">アニメーション </entry>
+				<entry id="17">スクリプト </entry>
+				<entry id="18">コライダー </entry>
+				<entry id="19">地形 </entry>
 			</section>
 		</section>
 		<section name="Materials" hint="Window">

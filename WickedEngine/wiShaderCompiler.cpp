@@ -6,7 +6,6 @@
 #include "wiUnorderedSet.h"
 
 #include <mutex>
-#include <filesystem>
 
 #ifdef PLATFORM_WINDOWS_DESKTOP
 #define SHADERCOMPILER_ENABLED
@@ -741,7 +740,7 @@ namespace wi::shadercompiler
 			return false; // no metadata file = no dependency, up to date (for example packaged builds)
 		}
 
-		const auto tim = std::filesystem::last_write_time(filepath);
+		const uint64_t tim = wi::helper::FileTimestamp(filepath);
 
 		wi::Archive dependencyLibrary(dependencylibrarypath);
 		if (dependencyLibrary.IsOpen())
@@ -756,7 +755,7 @@ namespace wi::shadercompiler
 				wi::helper::MakePathAbsolute(dependencypath);
 				if (wi::helper::FileExists(dependencypath))
 				{
-					const auto dep_tim = std::filesystem::last_write_time(dependencypath);
+					const uint64_t dep_tim = wi::helper::FileTimestamp(dependencypath);
 
 					if (tim < dep_tim)
 					{

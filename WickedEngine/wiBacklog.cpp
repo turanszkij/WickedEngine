@@ -362,21 +362,17 @@ namespace wi::backlog
 			}
 			refitscroll = true;
 
-#ifdef _WIN32
-			OutputDebugStringA(str.c_str());
-#endif // _WIN32
-
 			switch (level)
 			{
 			default:
 			case LogLevel::Default:
-				std::cout << str;
+				wi::helper::DebugOut(str, wi::helper::DebugLevel::Normal);
 				break;
 			case LogLevel::Warning:
-				std::clog << str;
+				wi::helper::DebugOut(str, wi::helper::DebugLevel::Warning);
 				break;
 			case LogLevel::Error:
-				std::cerr << str;
+				wi::helper::DebugOut(str, wi::helper::DebugLevel::Error);
 				break;
 			}
 
