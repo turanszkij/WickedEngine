@@ -13,9 +13,7 @@
 #include "wiSpinLock.h"
 
 #ifdef PLATFORM_XBOX
-#include <d3d12_xs.h>
-#include <d3d12video_xs.h>
-#define PPV_ARGS(x) IID_GRAPHICS_PPV_ARGS(x.ReleaseAndGetAddressOf())
+#include "wiGraphicsDevice_DX12_XBOX.h"
 #else
 #include "Utility/dx12/d3d12.h"
 #include "Utility/dx12/d3d12video.h"
@@ -159,10 +157,15 @@ namespace wi::graphics
 			wi::vector<D3D12_RESOURCE_BARRIER> renderpass_barriers_begin;
 			wi::vector<D3D12_RESOURCE_BARRIER> renderpass_barriers_end;
 			ID3D12Resource* shading_rate_image = nullptr;
-
-			// Due to a API bug, this resolve_subresources array must be kept alive between BeginRenderpass() and EndRenderpass()!
+			ID3D12Resource* resolve_src[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+			ID3D12Resource* resolve_dst[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+			DXGI_FORMAT resolve_formats[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+			ID3D12Resource* resolve_src_ds = nullptr;
+			ID3D12Resource* resolve_dst_ds = nullptr;
+			DXGI_FORMAT resolve_ds_format = {};
 			wi::vector<D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS> resolve_subresources[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 			wi::vector<D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS> resolve_subresources_dsv = {};
+			wi::vector<D3D12_RESOURCE_BARRIER> resolve_src_barriers;
 
 			void reset(uint32_t bufferindex)
 			{
@@ -183,11 +186,16 @@ namespace wi::graphics
 				renderpass_info = {};
 				renderpass_barriers_begin.clear();
 				renderpass_barriers_end.clear();
-				for (size_t i = 0; i < arraysize(resolve_subresources); ++i)
+				for (size_t i = 0; i < D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT; ++i)
 				{
+					resolve_src[i] = {};
+					resolve_dst[i] = {};
 					resolve_subresources[i].clear();
 				}
 				resolve_subresources_dsv.clear();
+				resolve_src_barriers.clear();
+				resolve_src_ds = nullptr;
+				resolve_dst_ds = nullptr;
 				shading_rate_image = nullptr;
 			}
 

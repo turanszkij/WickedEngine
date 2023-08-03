@@ -30,6 +30,11 @@
 #include <d3dcompiler.h>
 #endif // SHADERCOMPILER_ENABLED_D3DCOMPILER
 
+#if __has_include("wiShaderCompiler_XBOX.h")
+#include "wiShaderCompiler_XBOX.h"
+#define SHADERCOMPILER_XBOX_INCLUDED
+#endif // __has_include("wiShaderCompiler_XBOX.h")
+
 using namespace wi::graphics;
 
 namespace wi::shadercompiler
@@ -144,11 +149,12 @@ namespace wi::shadercompiler
 			{
 				args.push_back(L"-Qstrip_reflect"); // only valid in HLSL6 compiler
 			}
+#ifdef SHADERCOMPILER_XBOX_INCLUDED
 			if (input.format == ShaderFormat::HLSL6_XS)
 			{
-				args.push_back(L"-D"); args.push_back(L"__XBOX_PRECOMPILE_ALL_STAGES");
-				args.push_back(L"-D"); args.push_back(L"__XBOX_STRIP_DXIL");
+				wi::shadercompiler::xbox::AddArguments(input, args);
 			}
+#endif // SHADERCOMPILER_XBOX_INCLUDED
 			break;
 		case ShaderFormat::SPIRV:
 			args.push_back(L"-D"); args.push_back(L"SPIRV");

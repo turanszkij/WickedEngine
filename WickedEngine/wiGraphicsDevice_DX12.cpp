@@ -6,11 +6,7 @@
 #include "wiTimer.h"
 #include "wiUnorderedSet.h"
 
-#ifdef PLATFORM_XBOX
-#include <d3dx12_xs.h>
-DEFINE_ENUM_FLAG_OPERATORS(D3D12_RENDER_PASS_FLAGS);
-#include "wiGraphicsDevice_DX12_XBOX.h"
-#else
+#ifndef PLATFORM_XBOX
 #include "Utility/dx12/dxgiformat.h"
 #include "Utility/dx12/d3dx12_default.h"
 #include "Utility/dx12/d3dx12_resource_helpers.h"
@@ -2651,12 +2647,12 @@ using namespace dx12_internal;
 		capabilities |= GraphicsDeviceCapability::STENCIL_RESOLVE_MIN_MAX;
 
 #ifdef PLATFORM_XBOX
-		adapterName = "Xbox";
+		adapterName = wi::graphics::xbox::GetAdapterName();
 		capabilities |= GraphicsDeviceCapability::MESH_SHADER;
 		capabilities |= GraphicsDeviceCapability::DEPTH_BOUNDS_TEST;
 		capabilities |= GraphicsDeviceCapability::GENERIC_SPARSE_TILE_POOL;
 		capabilities |= GraphicsDeviceCapability::CACHE_COHERENT_UMA;
-		casting_fully_typed_formats = true;
+		casting_fully_typed_formats = false;
 		resource_heap_tier = D3D12_RESOURCE_HEAP_TIER_2;
 		additionalShadingRatesSupported = false;
 		capabilities |= GraphicsDeviceCapability::VARIABLE_RATE_SHADING;
@@ -3051,7 +3047,7 @@ using namespace dx12_internal;
 				&heap_properties,
 				D3D12_HEAP_FLAG_ALLOW_DISPLAY,
 				&resource_desc,
-				D3D12_RESOURCE_STATE_COMMON,
+				D3D12_RESOURCE_STATE_PRESENT,
 				&clear_value,
 				PPV_ARGS(internal_state->backBuffers[i])
 			);
@@ -3251,7 +3247,6 @@ using namespace dx12_internal;
 		{
 			resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		}
-
 		if (!has_flag(desc->bind_flags, BindFlag::SHADER_RESOURCE) && !has_flag(desc->misc_flags, ResourceMiscFlag::RAY_TRACING))
 		{
 			resourceDesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
@@ -3275,6 +3270,10 @@ using namespace dx12_internal;
 			allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
 			resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
 		}
+
+#ifdef PLATFORM_XBOX
+		wi::graphics::xbox::ApplyBufferCreationFlags(*desc, resourceDesc.Flags, allocationDesc.ExtraHeapFlags);
+#endif // PLATFORM_XBOX
 
 		if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE_TILE_POOL_BUFFER) ||
 			has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE_TILE_POOL_TEXTURE_NON_RT_DS) ||
@@ -3714,17 +3713,7 @@ using namespace dx12_internal;
 
 		internal_state->shadercode.resize(shadercode_size);
 		internal_state->hash = 0;
-#ifndef PIPELINE_LIBRARY_ENABLED
 		std::memcpy(internal_state->shadercode.data(), shadercode, shadercode_size);
-#else
-		// while copying over shader data, also compute hash for pipeline library serialization:
-		for (size_t i = 0; i < shadercode_size; ++i)
-		{
-			uint8_t byte = ((uint8_t*)shadercode)[i];
-			wi::helper::hash_combine(internal_state->hash, byte);
-			internal_state->shadercode[i] = byte;
-		}
-#endif // PIPELINE_LIBRARY_ENABLED
 		shader->stage = stage;
 
 		HRESULT hr = (internal_state->shadercode.empty() ? E_FAIL : S_OK);
@@ -3859,7 +3848,6 @@ using namespace dx12_internal;
 
 		pso->desc = *desc;
 
-#ifndef PIPELINE_LIBRARY_ENABLED
 		internal_state->hash = 0;
 		wi::helper::hash_combine(internal_state->hash, desc->ms);
 		wi::helper::hash_combine(internal_state->hash, desc->as);
@@ -3874,100 +3862,6 @@ using namespace dx12_internal;
 		wi::helper::hash_combine(internal_state->hash, desc->dss);
 		wi::helper::hash_combine(internal_state->hash, desc->pt);
 		wi::helper::hash_combine(internal_state->hash, desc->sample_mask);
-#else
-		// Shouldn't hash pointers here, because hash can be serialized with pipeline library:
-		internal_state->hash = 0;
-		if (desc->ms != nullptr)
-		{
-			wi::helper::hash_combine(internal_state->hash, to_internal(desc->ms)->hash);
-		}
-		if (desc->as != nullptr)
-		{
-			wi::helper::hash_combine(internal_state->hash, to_internal(desc->as)->hash);
-		}
-		if (desc->vs != nullptr)
-		{
-			wi::helper::hash_combine(internal_state->hash, to_internal(desc->vs)->hash);
-		}
-		if (desc->ps != nullptr)
-		{
-			wi::helper::hash_combine(internal_state->hash, to_internal(desc->ps)->hash);
-		}
-		if (desc->hs != nullptr)
-		{
-			wi::helper::hash_combine(internal_state->hash, to_internal(desc->hs)->hash);
-		}
-		if (desc->ds != nullptr)
-		{
-			wi::helper::hash_combine(internal_state->hash, to_internal(desc->ds)->hash);
-		}
-		if (desc->gs != nullptr)
-		{
-			wi::helper::hash_combine(internal_state->hash, to_internal(desc->gs)->hash);
-		}
-		if (desc->il != nullptr)
-		{
-			for (auto& x : desc->il->elements)
-			{
-				wi::helper::hash_combine(internal_state->hash, x.format);
-				wi::helper::hash_combine(internal_state->hash, x.aligned_byte_offset);
-				wi::helper::hash_combine(internal_state->hash, x.input_slot);
-				wi::helper::hash_combine(internal_state->hash, x.input_slot_class);
-				wi::helper::hash_combine(internal_state->hash, x.semantic_index);
-				wi::helper::hash_combine(internal_state->hash, wi::helper::string_hash(x.semantic_name.c_str()));
-			}
-		}
-		if (desc->rs != nullptr)
-		{
-			wi::helper::hash_combine(internal_state->hash, desc->rs->antialiased_line_enable);
-			wi::helper::hash_combine(internal_state->hash, desc->rs->conservative_rasterization_enable);
-			wi::helper::hash_combine(internal_state->hash, desc->rs->cull_mode);
-			wi::helper::hash_combine(internal_state->hash, desc->rs->depth_bias);
-			wi::helper::hash_combine(internal_state->hash, desc->rs->depth_bias_clamp);
-			wi::helper::hash_combine(internal_state->hash, desc->rs->depth_clip_enable);
-			wi::helper::hash_combine(internal_state->hash, desc->rs->fill_mode);
-			wi::helper::hash_combine(internal_state->hash, desc->rs->forced_sample_count);
-			wi::helper::hash_combine(internal_state->hash, desc->rs->front_counter_clockwise);
-			wi::helper::hash_combine(internal_state->hash, desc->rs->multisample_enable);
-			wi::helper::hash_combine(internal_state->hash, desc->rs->slope_scaled_depth_bias);
-		}
-		if (desc->bs != nullptr)
-		{
-			wi::helper::hash_combine(internal_state->hash, desc->bs->alpha_to_coverage_enable);
-			wi::helper::hash_combine(internal_state->hash, desc->bs->independent_blend_enable);
-			for (auto& x : desc->bs->render_target)
-			{
-				wi::helper::hash_combine(internal_state->hash, x.blend_enable);
-				wi::helper::hash_combine(internal_state->hash, x.blend_op);
-				wi::helper::hash_combine(internal_state->hash, x.blend_op_alpha);
-				wi::helper::hash_combine(internal_state->hash, x.dest_blend);
-				wi::helper::hash_combine(internal_state->hash, x.dest_blend_alpha);
-				wi::helper::hash_combine(internal_state->hash, x.render_target_write_mask);
-				wi::helper::hash_combine(internal_state->hash, x.src_blend);
-				wi::helper::hash_combine(internal_state->hash, x.src_blend_alpha);
-			}
-		}
-		if (desc->dss != nullptr)
-		{
-			wi::helper::hash_combine(internal_state->hash, desc->dss->depth_bounds_test_enable);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->depth_enable);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->depth_func);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->depth_write_mask);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->stencil_enable);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->stencil_read_mask);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->stencil_write_mask);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->front_face.stencil_depth_fail_op);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->front_face.stencil_fail_op);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->front_face.stencil_func);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->front_face.stencil_pass_op);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->back_face.stencil_depth_fail_op);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->back_face.stencil_fail_op);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->back_face.stencil_func);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->back_face.stencil_pass_op);
-		}
-		wi::helper::hash_combine(internal_state->hash, desc->pt);
-		wi::helper::hash_combine(internal_state->hash, desc->sample_mask);
-#endif // PIPELINE_LIBRARY_ENABLED
 
 		auto& stream = internal_state->stream;
 		if (pso->desc.vs != nullptr)
@@ -5231,10 +5125,10 @@ using namespace dx12_internal;
 			D3D12_RECT pRects[D3D12_VIEWPORT_AND_SCISSORRECT_MAX_INDEX + 1];
 			for (uint32_t i = 0; i < arraysize(pRects); ++i)
 			{
-				pRects[i].bottom = D3D12_VIEWPORT_BOUNDS_MAX;
-				pRects[i].left = D3D12_VIEWPORT_BOUNDS_MIN;
-				pRects[i].right = D3D12_VIEWPORT_BOUNDS_MAX;
-				pRects[i].top = D3D12_VIEWPORT_BOUNDS_MIN;
+				pRects[i].left = 0;
+				pRects[i].right = 16384;
+				pRects[i].top = 0;
+				pRects[i].bottom = 16384;
 			}
 			commandlist.GetGraphicsCommandList()->RSSetScissorRects(arraysize(pRects), pRects);
 		}
@@ -5843,7 +5737,21 @@ using namespace dx12_internal;
 		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 		commandlist.renderpass_barriers_end.push_back(barrier);
-		
+
+#ifdef PLATFORM_XBOX
+		commandlist.GetGraphicsCommandList()->OMSetRenderTargets(
+			1,
+			&internal_state->backbufferRTV[internal_state->GetBufferIndex()],
+			TRUE,
+			nullptr
+		);
+		commandlist.GetGraphicsCommandList()->ClearRenderTargetView(
+			internal_state->backbufferRTV[internal_state->GetBufferIndex()],
+			swapchain->desc.clear_color,
+			0,
+			nullptr
+		);
+#else
 		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTV = {};
 		RTV.cpuDescriptor = internal_state->backbufferRTV[internal_state->GetBufferIndex()];
 		RTV.BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
@@ -5853,6 +5761,7 @@ using namespace dx12_internal;
 		RTV.BeginningAccess.Clear.ClearValue.Color[3] = swapchain->desc.clear_color[3];
 		RTV.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
 		commandlist.GetGraphicsCommandListLatest()->BeginRenderPass(1, &RTV, nullptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
+#endif // PLATFORM_XBOX
 
 		commandlist.renderpass_info = RenderPassInfo::from(swapchain->desc);
 	}
@@ -5861,6 +5770,16 @@ using namespace dx12_internal;
 		CommandList_DX12& commandlist = GetCommandList(cmd);
 		commandlist.renderpass_barriers_begin.clear();
 		commandlist.renderpass_barriers_end.clear();
+
+		for (uint32_t rt = 0; rt < commandlist.renderpass_info.rt_count; ++rt)
+		{
+			commandlist.resolve_subresources[rt].clear();
+			commandlist.resolve_dst[rt] = nullptr;
+			commandlist.resolve_src[rt] = nullptr;
+		}
+		commandlist.resolve_subresources_dsv.clear();
+		commandlist.resolve_dst_ds = nullptr;
+		commandlist.resolve_src_ds = nullptr;
 
 		uint32_t rt_count = 0;
 		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTVs[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
@@ -5974,6 +5893,9 @@ using namespace dx12_internal;
 				}
 				RTV.EndingAccess.Resolve.pSubresourceParameters = commandlist.resolve_subresources[rt_resolve_count].data();
 				RTV.EndingAccess.Resolve.SubresourceCount = (UINT)commandlist.resolve_subresources[rt_resolve_count].size();
+				commandlist.resolve_src[rt_resolve_count] = RTV.EndingAccess.Resolve.pSrcResource;
+				commandlist.resolve_dst[rt_resolve_count] = RTV.EndingAccess.Resolve.pDstResource;
+				commandlist.resolve_formats[rt_resolve_count] = RTV.EndingAccess.Resolve.Format;
 				rt_resolve_count++;
 			}
 			break;
@@ -6042,6 +5964,9 @@ using namespace dx12_internal;
 				{
 					DSV.StencilEndingAccess = DSV.DepthEndingAccess;
 				}
+				commandlist.resolve_dst_ds = DSV.DepthEndingAccess.Resolve.pDstResource;
+				commandlist.resolve_src_ds = DSV.DepthEndingAccess.Resolve.pSrcResource;
+				commandlist.resolve_ds_format = DSV.DepthEndingAccess.Resolve.Format;
 			}
 			break;
 
@@ -6141,6 +6066,55 @@ using namespace dx12_internal;
 			commandlist.GetGraphicsCommandListLatest()->RSSetShadingRateImage(commandlist.shading_rate_image);
 		}
 
+#ifdef PLATFORM_XBOX
+
+		D3D12_CPU_DESCRIPTOR_HANDLE rt_descriptors[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+		for (uint32_t i = 0; i < rt_count; ++i)
+		{
+			rt_descriptors[i] = RTVs[i].cpuDescriptor;
+		}
+
+		commandlist.GetGraphicsCommandList()->OMSetRenderTargets(
+			rt_count,
+			rt_descriptors,
+			FALSE,
+			DSV.cpuDescriptor.ptr == 0 ? nullptr : &DSV.cpuDescriptor
+		);
+
+		for (uint32_t i = 0; i < rt_count; ++i)
+		{
+			if (RTVs[i].BeginningAccess.Type == D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR)
+			{
+				commandlist.GetGraphicsCommandList()->ClearRenderTargetView(
+					RTVs[i].cpuDescriptor,
+					RTVs[i].BeginningAccess.Clear.ClearValue.Color,
+					0,
+					nullptr
+				);
+			}
+		}
+		if (DSV.DepthBeginningAccess.Type == D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR || DSV.StencilBeginningAccess.Type == D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR)
+		{
+			D3D12_CLEAR_FLAGS clear_flags = {};
+			if (DSV.DepthBeginningAccess.Type == D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR)
+			{
+				clear_flags |= D3D12_CLEAR_FLAG_DEPTH;
+			}
+			if (DSV.StencilBeginningAccess.Type == D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR)
+			{
+				clear_flags |= D3D12_CLEAR_FLAG_STENCIL;
+			}
+			commandlist.GetGraphicsCommandList()->ClearDepthStencilView(
+				DSV.cpuDescriptor,
+				clear_flags,
+				DSV.DepthBeginningAccess.Clear.ClearValue.DepthStencil.Depth,
+				DSV.StencilBeginningAccess.Clear.ClearValue.DepthStencil.Stencil,
+				0,
+				nullptr
+			);
+		}
+
+#else
 		D3D12_RENDER_PASS_FLAGS FLAGS = D3D12_RENDER_PASS_FLAG_NONE;
 		if (has_flag(flags, RenderPassFlags::ALLOW_UAV_WRITES))
 		{
@@ -6161,13 +6135,74 @@ using namespace dx12_internal;
 			DSV.cpuDescriptor.ptr == 0 ? nullptr : &DSV,
 			FLAGS
 		);
+#endif // PLATFORM_XBOX
 
 		commandlist.renderpass_info = RenderPassInfo::from(images, image_count);
 	}
 	void GraphicsDevice_DX12::RenderPassEnd(CommandList cmd)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
+
+#ifdef PLATFORM_XBOX
+		// Batch up resolve SRC barriers since XBOX cannot do it with RenderPass:
+		commandlist.resolve_src_barriers.clear();
+		for (uint32_t rt = 0; rt < commandlist.renderpass_info.rt_count; ++rt)
+		{
+			for (auto& resolve : commandlist.resolve_subresources[rt])
+			{
+				D3D12_RESOURCE_BARRIER& barrier = commandlist.resolve_src_barriers.emplace_back();
+				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				barrier.Transition.pResource = commandlist.resolve_src[rt];
+				barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+				barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RESOLVE_SOURCE;
+				barrier.Transition.Subresource = resolve.SrcSubresource;
+			}
+		}
+		if (commandlist.resolve_dst_ds != nullptr)
+		{
+			for (auto& resolve : commandlist.resolve_subresources_dsv)
+			{
+				D3D12_RESOURCE_BARRIER& barrier = commandlist.resolve_src_barriers.emplace_back();
+				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				barrier.Transition.pResource = commandlist.resolve_src_ds;
+				barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+				barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RESOLVE_SOURCE;
+				barrier.Transition.Subresource = resolve.SrcSubresource;
+			}
+		}
+		commandlist.GetGraphicsCommandList()->ResourceBarrier((UINT)commandlist.resolve_src_barriers.size(), commandlist.resolve_src_barriers.data());
+
+		// Perform all resolves:
+		for (uint32_t rt = 0; rt < commandlist.renderpass_info.rt_count; ++rt)
+		{
+			for (auto& resolve : commandlist.resolve_subresources[rt])
+			{
+				commandlist.GetGraphicsCommandList()->ResolveSubresource(
+					commandlist.resolve_dst[rt],
+					resolve.DstSubresource,
+					commandlist.resolve_src[rt],
+					resolve.SrcSubresource,
+					commandlist.resolve_formats[rt]
+				);
+			}
+		}
+		if (commandlist.resolve_dst_ds != nullptr)
+		{
+			for (auto& resolve : commandlist.resolve_subresources_dsv)
+			{
+				commandlist.GetGraphicsCommandList()->ResolveSubresource(
+					commandlist.resolve_dst_ds,
+					resolve.DstSubresource,
+					commandlist.resolve_src_ds,
+					resolve.SrcSubresource,
+					commandlist.resolve_ds_format
+				);
+			}
+		}
+
+#else
 		commandlist.GetGraphicsCommandListLatest()->EndRenderPass();
+#endif // PLATFORM_XBOX
 
 		if (commandlist.shading_rate_image != nullptr)
 		{

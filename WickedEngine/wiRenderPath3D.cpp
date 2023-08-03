@@ -227,7 +227,7 @@ namespace wi
 			desc.height = internalResolution.y;
 
 			desc.sample_count = getMSAASampleCount();
-			desc.layout = ResourceState::DEPTHSTENCIL_READONLY;
+			desc.layout = ResourceState::DEPTHSTENCIL;
 			desc.format = wi::renderer::format_depthbuffer_main;
 			desc.bind_flags = BindFlag::DEPTH_STENCIL;
 			device->CreateTexture(&desc, nullptr, &depthBuffer_Main);
@@ -405,8 +405,12 @@ namespace wi
 			camera_reflection.jitter = XMFLOAT2(0, 0);
 			temporalAAResources = {};
 		}
+
 		camera->UpdateCamera();
-		camera_reflection.UpdateCamera();
+		if (visibility_main.planar_reflection_visible)
+		{
+			camera_reflection.UpdateCamera();
+		}
 
 		if (getAO() != AO_RTAO)
 		{
@@ -811,9 +815,9 @@ namespace wi
 					&depthBuffer_Main,
 					RenderPassImage::LoadOp::CLEAR,
 					RenderPassImage::StoreOp::STORE,
-					ResourceState::DEPTHSTENCIL_READONLY,
 					ResourceState::DEPTHSTENCIL,
-					ResourceState::DEPTHSTENCIL_READONLY
+					ResourceState::DEPTHSTENCIL,
+					ResourceState::DEPTHSTENCIL
 				),
 				RenderPassImage::RenderTarget(
 					&rtPrimitiveID_render,
@@ -1307,9 +1311,9 @@ namespace wi
 				&depthBuffer_Main,
 				RenderPassImage::LoadOp::LOAD,
 				RenderPassImage::StoreOp::STORE,
-				ResourceState::DEPTHSTENCIL_READONLY,
-				ResourceState::DEPTHSTENCIL_READONLY,
-				ResourceState::DEPTHSTENCIL_READONLY
+				ResourceState::DEPTHSTENCIL,
+				ResourceState::DEPTHSTENCIL,
+				ResourceState::DEPTHSTENCIL
 			);
 			if (getMSAASampleCount() > 1)
 			{
@@ -1573,9 +1577,9 @@ namespace wi
 							&depthBuffer_Main,
 							RenderPassImage::LoadOp::LOAD,
 							RenderPassImage::StoreOp::STORE,
-							ResourceState::DEPTHSTENCIL_READONLY,
-							ResourceState::DEPTHSTENCIL_READONLY,
-							ResourceState::DEPTHSTENCIL_READONLY
+							ResourceState::DEPTHSTENCIL,
+							ResourceState::DEPTHSTENCIL,
+							ResourceState::DEPTHSTENCIL
 						),
 						RenderPassImage::RenderTarget(&rtSun[0], RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE),
 						RenderPassImage::Resolve(&rtSun_resolved),
@@ -1589,9 +1593,9 @@ namespace wi
 							&depthBuffer_Main,
 							RenderPassImage::LoadOp::LOAD,
 							RenderPassImage::StoreOp::STORE,
-							ResourceState::DEPTHSTENCIL_READONLY,
-							ResourceState::DEPTHSTENCIL_READONLY,
-							ResourceState::DEPTHSTENCIL_READONLY
+							ResourceState::DEPTHSTENCIL,
+							ResourceState::DEPTHSTENCIL,
+							ResourceState::DEPTHSTENCIL
 						),
 						RenderPassImage::RenderTarget(&rtSun[0], RenderPassImage::LoadOp::CLEAR),
 					};
@@ -1738,9 +1742,9 @@ namespace wi
 				&depthBuffer_Main,
 				RenderPassImage::LoadOp::LOAD,
 				RenderPassImage::StoreOp::STORE,
-				ResourceState::DEPTHSTENCIL_READONLY,
 				ResourceState::DEPTHSTENCIL,
-				ResourceState::DEPTHSTENCIL_READONLY
+				ResourceState::DEPTHSTENCIL,
+				ResourceState::DEPTHSTENCIL
 			),
 			RenderPassImage::Resolve(&rtMain),
 		};
@@ -1823,9 +1827,9 @@ namespace wi
 						&depthBuffer_Main,
 						RenderPassImage::LoadOp::LOAD,
 						RenderPassImage::StoreOp::STORE,
-						ResourceState::DEPTHSTENCIL_READONLY,
-						ResourceState::DEPTHSTENCIL_READONLY,
-						ResourceState::DEPTHSTENCIL_READONLY
+						ResourceState::DEPTHSTENCIL,
+						ResourceState::DEPTHSTENCIL,
+						ResourceState::DEPTHSTENCIL
 					),
 					RenderPassImage::Resolve(&rtParticleDistortion_Resolved)
 				};
@@ -1839,9 +1843,9 @@ namespace wi
 						&depthBuffer_Main,
 						RenderPassImage::LoadOp::LOAD,
 						RenderPassImage::StoreOp::STORE,
-						ResourceState::DEPTHSTENCIL_READONLY,
-						ResourceState::DEPTHSTENCIL_READONLY,
-						ResourceState::DEPTHSTENCIL_READONLY
+						ResourceState::DEPTHSTENCIL,
+						ResourceState::DEPTHSTENCIL,
+						ResourceState::DEPTHSTENCIL
 					),
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
