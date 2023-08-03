@@ -72,14 +72,13 @@ If you have questions or stuck, please use the `linux` communication channel on 
 
 
 #### UWP
-To build for UWP platform, use the latest version of Visual Studio and the provided `WickedEngine.sln` solution file. The WickedEngine_UWP Project will build the engine for UWP platform as static library. The Template_UWP and Editor_UWP are two applications that will work on UWP platform that you can try. But first you must also build the binary shaders and embed them into the executable. To build and embed shaders, run the `OfflineShaderCompiler` projects with the `hlsl6 shaderdump` command line arguments. Then Rebuild the WickedEngine_UWP to create the engine with embedded shaders included. Now you can build an UWP application and run it on PC or XBOX.
+To build for UWP platform, use the latest version of Visual Studio and the provided `WickedEngine.sln` solution file. The WickedEngine_UWP Project will build the engine for UWP platform as static library. The Template_UWP and Editor_UWP are two applications that will work on UWP platform that you can try. But first you must also build the binary shaders and embed them into the executable. To build and embed shaders, run the `OfflineShaderCompiler` projects with the `hlsl6 shaderdump` command line arguments. Then Rebuild the WickedEngine_UWP to create the engine with embedded shaders included. Now you can build an UWP application and run it on PC or Xbox.
 
-##### XBOX UWP
-To run the UWP application on XBOX, enable developer mode on your XBOX, and choose "Remote Machine" as a debugging target in Visual Studio. Enter the IP address of the XBOX into the Machine Name field of debugging project settings (make sure that you are modifying the debug settings for Remote Machine). The authentication mode should be set to "Universal (Unencrypted Protocol)" and upon launching the application from Visual Studio, you will need to enter the security PIN that you can view on the XBOX developer settings.<br/>
-**Note that to utilize the full performance of Xbox Series, it is required to build with Native Xbox SDK**
+ - To run the UWP application on **Xbox**, enable developer mode on your Xbox, and choose "Remote Machine" as a debugging target in Visual Studio. Enter the IP address of the Xbox into the Machine Name field of debugging project settings (make sure that you are modifying the debug settings for Remote Machine). The authentication mode should be set to "Universal (Unencrypted Protocol)" and upon launching the application from Visual Studio, you will need to enter the security PIN that you can view on the Xbox developer settings.<br/>
+**Note that to utilize the full performance of Xbox Series, it is required to build with the native Xbox SDK build tools**
 
-### XBOX Series (Native)
-To build for Xbox Series natively, download the Xbox SDK from your Xbox developer account, and create a new solution platform targetting the Xbox Series hardware. Xbox specific source files required for building are currently not released publicly.
+#### Xbox Series (Native)
+To build for Xbox Series natively, download and install the Xbox SDK from your Xbox developer account, and create a new Visual Studio solution platform targetting the Xbox Series hardware. Xbox specific source files required for building are currently not released publicly.
 
 
 ### Examples:

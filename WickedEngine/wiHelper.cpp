@@ -20,6 +20,7 @@ extern basist::etc1_global_selector_codebook g_basis_global_codebook;
 #include <filesystem>
 #include <vector>
 #include <iostream>
+#include <cstdlib>
 
 #ifdef _WIN32
 #include <direct.h>
@@ -40,10 +41,6 @@ extern basist::etc1_global_selector_codebook g_basis_global_codebook;
 #else
 #include "Utility/portable-file-dialogs.h"
 #endif // _WIN32
-
-#ifdef PLATFORM_LINUX
-#include <cstdlib>
-#endif
 
 namespace wi::helper
 {
