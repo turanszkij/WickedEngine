@@ -1089,7 +1089,7 @@ namespace vulkan_internal
 
 	inline const std::string GetCachePath()
 	{
-		return wi::helper::GetTempDirectoryPath() + "/wiPipelineCache_Vulkan";
+		return wi::helper::GetCacheDirectoryPath() + "/wiPipelineCache_Vulkan";
 	}
 
 	bool CreateSwapChainInternal(
