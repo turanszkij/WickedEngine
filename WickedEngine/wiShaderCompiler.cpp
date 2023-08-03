@@ -40,14 +40,14 @@ namespace wi::shadercompiler
 	{
 		DxcCreateInstanceProc DxcCreateInstance = nullptr;
 
-		InternalState_DXC()
+		InternalState_DXC(const std::string& modifier = "")
 		{
 #ifdef _WIN32
-#define LIBDXCOMPILER "dxcompiler.dll"
-			HMODULE dxcompiler = wiLoadLibrary(LIBDXCOMPILER);
+			const std::string library = "dxcompiler" + modifier + ".dll";
+			HMODULE dxcompiler = wiLoadLibrary(library.c_str());
 #elif defined(PLATFORM_LINUX)
-#define LIBDXCOMPILER "libdxcompiler.so"
-			HMODULE dxcompiler = wiLoadLibrary("./" LIBDXCOMPILER);
+			const std::string library = "./libdxcompiler" + modifier + ".so";
+			HMODULE dxcompiler = wiLoadLibrary(library.c_str());
 #endif
 			if (dxcompiler != nullptr)
 			{
@@ -64,13 +64,13 @@ namespace wi::shadercompiler
 					uint32_t major = 0;
 					hr = info->GetVersion(&major, &minor);
 					assert(SUCCEEDED(hr));
-					wi::backlog::post("wi::shadercompiler: loaded " LIBDXCOMPILER " (version: " + std::to_string(major) + "." + std::to_string(minor) + ")");
+					wi::backlog::post("wi::shadercompiler: loaded " + library + " (version: " + std::to_string(major) + "." + std::to_string(minor) + ")");
 				}
 			}
 			else
 			{
-				wi::backlog::post("wi::shadercompiler: could not load library " LIBDXCOMPILER, wi::backlog::LogLevel::Error);
-#if defined(PLATFORM_LINUX)
+				wi::backlog::post("wi::shadercompiler: could not load library " + library, wi::backlog::LogLevel::Error);
+#ifdef PLATFORM_LINUX
 				wi::backlog::post(dlerror(), wi::backlog::LogLevel::Error); // print dlopen() error detail: https://linux.die.net/man/3/dlerror
 #endif // PLATFORM_LINUX
 			}
@@ -82,10 +82,16 @@ namespace wi::shadercompiler
 		static InternalState_DXC internal_state;
 		return internal_state;
 	}
+	inline InternalState_DXC& dxc_compiler_xs()
+	{
+		static InternalState_DXC internal_state("_xs");
+		return internal_state;
+	}
 
 	void Compile_DXCompiler(const CompilerInput& input, CompilerOutput& output)
 	{
-		if (dxc_compiler().DxcCreateInstance == nullptr)
+		InternalState_DXC& compiler_internal = input.format == ShaderFormat::HLSL6_XS ? dxc_compiler_xs() : dxc_compiler();
+		if (compiler_internal.DxcCreateInstance == nullptr)
 		{
 			return;
 		}
@@ -93,9 +99,9 @@ namespace wi::shadercompiler
 		CComPtr<IDxcUtils> dxcUtils;
 		CComPtr<IDxcCompiler3> dxcCompiler;
 
-		HRESULT hr = dxc_compiler().DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils));
+		HRESULT hr = compiler_internal.DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils));
 		assert(SUCCEEDED(hr));
-		hr = dxc_compiler().DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&dxcCompiler));
+		hr = compiler_internal.DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&dxcCompiler));
 		assert(SUCCEEDED(hr));
 
 		if (dxcCompiler == nullptr)
@@ -131,11 +137,17 @@ namespace wi::shadercompiler
 		switch (input.format)
 		{
 		case ShaderFormat::HLSL6:
+		case ShaderFormat::HLSL6_XS:
 			args.push_back(L"-D"); args.push_back(L"HLSL6");
 			args.push_back(L"-rootsig-define"); args.push_back(L"WICKED_ENGINE_DEFAULT_ROOTSIGNATURE");
 			if (has_flag(input.flags, Flags::STRIP_REFLECTION))
 			{
 				args.push_back(L"-Qstrip_reflect"); // only valid in HLSL6 compiler
+			}
+			if (input.format == ShaderFormat::HLSL6_XS)
+			{
+				args.push_back(L"-D"); args.push_back(L"__XBOX_PRECOMPILE_ALL_STAGES");
+				args.push_back(L"-D"); args.push_back(L"__XBOX_STRIP_DXIL");
 			}
 			break;
 		case ShaderFormat::SPIRV:
@@ -685,6 +697,7 @@ namespace wi::shadercompiler
 #ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
 		case ShaderFormat::HLSL6:
 		case ShaderFormat::SPIRV:
+		case ShaderFormat::HLSL6_XS:
 			Compile_DXCompiler(input, output);
 			break;
 #endif // SHADERCOMPILER_ENABLED_DXCOMPILER

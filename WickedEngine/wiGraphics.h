@@ -52,10 +52,11 @@ namespace wi::graphics
 	};
 	enum class ShaderFormat
 	{
-		NONE,	// Not used
-		HLSL5,	// DXBC
-		HLSL6,	// DXIL
-		SPIRV,	// SPIR-V
+		NONE,		// Not used
+		HLSL5,		// DXBC
+		HLSL6,		// DXIL
+		SPIRV,		// SPIR-V
+		HLSL6_XS,	// XBOX Series Native
 	};
 	enum class ShaderModel
 	{

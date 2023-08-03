@@ -1015,8 +1015,12 @@ namespace wi::helper
 
 	std::string GetTempDirectoryPath()
 	{
+#ifdef PLATFORM_XBOX
+		return "";
+#else
 		auto path = std::filesystem::temp_directory_path();
 		return path.generic_u8string();
+#endif // PLATFORM_XBOX
 	}
 
 	std::string GetCurrentPath()
@@ -1328,7 +1332,6 @@ namespace wi::helper
 	
 	void DebugOut(const std::string& str, DebugLevel level)
 	{
-#ifdef _DEBUG
 #ifdef _WIN32
 		std::wstring wstr = ToNativeString(str);
 		OutputDebugString(wstr.c_str());
@@ -1347,7 +1350,6 @@ namespace wi::helper
 			break;
 	}
 #endif // _WIN32
-#endif // _DEBUG
 	}
 	
 	void Sleep(float milliseconds)

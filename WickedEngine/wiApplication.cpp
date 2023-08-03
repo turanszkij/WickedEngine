@@ -566,7 +566,11 @@ namespace wi
 			else if (use_dx12)
 			{
 #ifdef WICKEDENGINE_BUILD_DX12
+#ifdef PLATFORM_XBOX
+				wi::renderer::SetShaderPath(wi::renderer::GetShaderPath() + "hlsl6_xs/");
+#else
 				wi::renderer::SetShaderPath(wi::renderer::GetShaderPath() + "hlsl6/");
+#endif // PLATFORM_XBOX
 				graphicsDevice = std::make_unique<GraphicsDevice_DX12>(validationMode, preference);
 #endif
 			}

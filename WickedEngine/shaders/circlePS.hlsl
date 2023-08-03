@@ -1,3 +1,5 @@
+#include "globals.hlsli"
+
 struct GSOutput
 {
 	float4 pos : SV_Position;

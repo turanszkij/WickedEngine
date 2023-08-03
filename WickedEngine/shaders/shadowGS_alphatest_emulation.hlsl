@@ -1,3 +1,4 @@
+#include "globals.hlsli"
 // This geometry shader is intended as fallback support when GPU doesn't support writing to 
 //	SV_ViewportArrayIndex from Vertex Shader stage
 
