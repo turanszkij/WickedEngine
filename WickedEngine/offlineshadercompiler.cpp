@@ -529,6 +529,11 @@ int main(int argc, char* argv[])
 						// if shader format cannot support shader model, then we cancel the task without returning error
 						return;
 					}
+					if (input.minshadermodel >= ShaderModel::SM_6_5 && target.format == ShaderFormat::HLSL6_XS)
+					{
+						// DXR 1.1 inline ray tracing is not implemented on Xbox yet (TODO)
+						return;
+					}
 
 					wi::shadercompiler::CompilerOutput output;
 					wi::shadercompiler::Compile(input, output);
