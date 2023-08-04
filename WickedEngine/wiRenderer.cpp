@@ -3293,12 +3293,14 @@ void UpdatePerFrameData(
 						desc.format = format_depthbuffer_shadowmap;
 						desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
 						desc.layout = ResourceState::SHADER_RESOURCE;
+						desc.misc_flags = ResourceMiscFlag::TEXTURE_COMPATIBLE_COMPRESSION;
 						device->CreateTexture(&desc, nullptr, &shadowMapAtlas);
 						device->SetName(&shadowMapAtlas, "shadowMapAtlas");
 
 						desc.format = format_rendertarget_shadowmap;
 						desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 						desc.layout = ResourceState::SHADER_RESOURCE;
+						desc.misc_flags = ResourceMiscFlag::TEXTURE_ALWAYS_CLEARED;
 						desc.clear.color[0] = 1;
 						desc.clear.color[1] = 1;
 						desc.clear.color[2] = 1;
@@ -7692,6 +7694,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 	}
 	else
 	{
+		bool rendered_anything = false;
 		for (size_t i = 0; i < vis.scene->probes.GetCount(); ++i)
 		{
 			const EnvironmentProbeComponent& probe = vis.scene->probes[i];
@@ -7701,10 +7704,12 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			{
 				probe.render_dirty = false;
 				render_probe(probe, probe_aabb);
+				rendered_anything = true;
 			}
 		}
 
 		// Reset SkyAtmosphere SkyViewLut after usage:
+		if (rendered_anything)
 		{
 			CameraCB cb;
 			cb.init();

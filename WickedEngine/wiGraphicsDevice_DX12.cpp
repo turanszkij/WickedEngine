@@ -1702,6 +1702,10 @@ using namespace dx12_internal;
 		ID3D12CommandList* commandlists[] = {
 			cmd.commandList.Get()
 		};
+
+#ifdef PLATFORM_XBOX
+		std::scoped_lock lock(device->queue_locker); // queue operations are not thread-safe on XBOX
+#endif // PLATFORM_XBOX
 		device->queues[QUEUE_COPY].queue->ExecuteCommandLists(1, commandlists);
 		hr = device->queues[QUEUE_COPY].queue->Signal(cmd.fence.Get(), cmd.fenceValueSignaled);
 		assert(SUCCEEDED(hr));
@@ -2164,9 +2168,7 @@ using namespace dx12_internal;
 		SHADER_IDENTIFIER_SIZE = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
 
-#ifdef PLATFORM_XBOX
-		VIDEO_DECODE_BITSTREAM_ALIGNMENT = 256; // TODO
-#else
+#ifndef PLATFORM_XBOX
 		VIDEO_DECODE_BITSTREAM_ALIGNMENT = D3D12_VIDEO_DECODE_MIN_BITSTREAM_OFFSET_ALIGNMENT;
 #endif // PLATFORM_XBOX
 
@@ -2668,6 +2670,8 @@ using namespace dx12_internal;
 		capabilities |= GraphicsDeviceCapability::SAMPLER_MINMAX;
 		capabilities |= GraphicsDeviceCapability::SPARSE_TEXTURE3D;
 		capabilities |= GraphicsDeviceCapability::CONSERVATIVE_RASTERIZATION;
+		capabilities |= GraphicsDeviceCapability::R9G9B9E5_SHAREDEXP_RENDERABLE;
+		VIDEO_DECODE_BITSTREAM_ALIGNMENT = 256; // TODO
 #else
 		// Init feature check (https://devblogs.microsoft.com/directx/introducing-a-new-api-for-checking-feature-support-in-direct3d-12/)
 		CD3DX12FeatureSupport features;
@@ -3012,6 +3016,18 @@ using namespace dx12_internal;
 		swapchain->desc = *desc;
 		HRESULT hr = E_FAIL;
 
+		if (!internal_state->backbufferRTV.empty())
+		{
+			// Delete back buffer resources if they exist before resizing swap chain:
+			WaitForGPU();
+			internal_state->backBuffers.clear();
+			for (auto& x : internal_state->backbufferRTV)
+			{
+				allocationhandler->descriptors_rtv.free(x);
+			}
+			internal_state->backbufferRTV.clear();
+		}
+
 #ifdef PLATFORM_XBOX
 
 		D3D12_HEAP_PROPERTIES heap_properties = {};
@@ -3051,6 +3067,9 @@ using namespace dx12_internal;
 				&clear_value,
 				PPV_ARGS(internal_state->backBuffers[i])
 			);
+			assert(SUCCEEDED(hr));
+
+			hr = internal_state->backBuffers[i]->SetName(L"BackBufferXBOX");
 			assert(SUCCEEDED(hr));
 
 			internal_state->backbufferRTV[i] = allocationhandler->descriptors_rtv.allocate();
@@ -3122,14 +3141,6 @@ using namespace dx12_internal;
 		else
 		{
 			// Resize swapchain:
-			WaitForGPU();
-			internal_state->backBuffers.clear();
-			for (auto& x : internal_state->backbufferRTV)
-			{
-				allocationhandler->descriptors_rtv.free(x);
-			}
-			internal_state->backbufferRTV.clear();
-
 			hr = internal_state->swapChain->ResizeBuffers(
 				desc->buffer_count,
 				desc->width,
@@ -3554,6 +3565,10 @@ using namespace dx12_internal;
 				resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
 			}
 		}
+
+#ifdef PLATFORM_XBOX
+		wi::graphics::xbox::ApplyTextureCreationFlags(texture->desc, resourcedesc.Flags, allocationDesc.ExtraHeapFlags);
+#endif // PLATFORM_XBOX
 
 		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::SPARSE))
 		{
@@ -5137,6 +5152,10 @@ using namespace dx12_internal;
 	}
 	void GraphicsDevice_DX12::SubmitCommandLists()
 	{
+#ifdef PLATFORM_XBOX
+		std::scoped_lock lock(queue_locker); // queue operations are not thread-safe on XBOX
+#endif // PLATFORM_XBOX
+
 		HRESULT hr;
 
 		// Submit current frame:
@@ -5693,7 +5712,9 @@ using namespace dx12_internal;
 				out_offset = heap_page_offset + in_offset;
 			}
 
-			// No need to lock this, it is thread safe
+#ifdef PLATFORM_XBOX
+			std::scoped_lock lock(queue_locker); // queue operations are not thread-safe on XBOX
+#endif // PLATFORM_XBOX
 			q.queue->UpdateTileMappings(
 				internal_sparse_resource->resource.Get(),
 				command.num_resource_regions,

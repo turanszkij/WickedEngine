@@ -93,6 +93,7 @@ namespace wi
 			TextureDesc desc;
 			desc.format = wi::renderer::format_rendertarget_main;
 			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.misc_flags = ResourceMiscFlag::TEXTURE_ALWAYS_CLEARED;
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
 			desc.sample_count = 1;
@@ -121,6 +122,7 @@ namespace wi
 			desc.height = internalResolution.y;
 			desc.sample_count = 1;
 			desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+			desc.misc_flags = ResourceMiscFlag::TEXTURE_ALWAYS_CLEARED;
 			device->CreateTexture(&desc, nullptr, &rtPrimitiveID);
 			device->SetName(&rtPrimitiveID, "rtPrimitiveID");
 
@@ -2364,6 +2366,7 @@ namespace wi
 
 			TextureDesc desc;
 			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+			desc.misc_flags = ResourceMiscFlag::TEXTURE_ALWAYS_CLEARED;
 			desc.format = wi::renderer::format_rendertarget_main;
 			desc.width = internalResolution.x / 2;
 			desc.height = internalResolution.y / 2;

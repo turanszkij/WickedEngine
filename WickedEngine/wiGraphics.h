@@ -402,6 +402,8 @@ namespace wi::graphics
 		TYPELESS_FORMAT_CASTING = 1 << 12,	// enable casting formats to other formats that have the same bit-width and channel layout: eg. R32_FLOAT -> R32_UINT
 		VIDEO_DECODE = 1 << 13,	// resource is usabe in video decoding operations
 		NO_DEFAULT_DESCRIPTORS = 1 << 14, // skips creation of default descriptors for resources
+		TEXTURE_ALWAYS_CLEARED = 1 << 15, // optimization that can enable delta color compression
+		TEXTURE_COMPATIBLE_COMPRESSION = 1 << 16, // optimization that can enable sampling from compressed textures
 	};
 
 	enum class GraphicsDeviceCapability
@@ -429,6 +431,7 @@ namespace wi::graphics
 		STENCIL_RESOLVE_MIN_MAX = 1 << 19,
 		CACHE_COHERENT_UMA = 1 << 20,	// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_feature_data_architecture
 		VIDEO_DECODE_H264 = 1 << 21,
+		R9G9B9E5_SHAREDEXP_RENDERABLE = 1 << 22, // indicates supporting R9G9B9E5_SHAREDEXP format for rendering to
 	};
 
 	enum class ResourceState

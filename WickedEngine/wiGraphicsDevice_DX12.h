@@ -79,6 +79,10 @@ namespace wi::graphics
 			wi::vector<ID3D12CommandList*> submit_cmds;
 		} queues[QUEUE_COUNT];
 
+#ifdef PLATFORM_XBOX
+		std::mutex queue_locker;
+#endif // PLATFORM_XBOX
+
 		struct CopyAllocator
 		{
 			GraphicsDevice_DX12* device = nullptr;
@@ -155,6 +159,7 @@ namespace wi::graphics
 			wi::vector<D3D12_RAYTRACING_GEOMETRY_DESC> accelerationstructure_build_geometries;
 			RenderPassInfo renderpass_info;
 			wi::vector<D3D12_RESOURCE_BARRIER> renderpass_barriers_begin;
+			wi::vector<D3D12_RESOURCE_BARRIER> renderpass_barriers_begin_after_discards;
 			wi::vector<D3D12_RESOURCE_BARRIER> renderpass_barriers_end;
 			ID3D12Resource* shading_rate_image = nullptr;
 			ID3D12Resource* resolve_src[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};

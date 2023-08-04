@@ -589,7 +589,14 @@ namespace wi
 		{
 			// initialize for the first time
 			desc.buffer_count = 3;
-			desc.format = Format::R10G10B10A2_UNORM;
+			if (graphicsDevice->CheckCapability(GraphicsDeviceCapability::R9G9B9E5_SHAREDEXP_RENDERABLE))
+			{
+				desc.format = Format::R9G9B9E5_SHAREDEXP;
+			}
+			else
+			{
+				desc.format = Format::R10G10B10A2_UNORM;
+			}
 		}
 		desc.width = canvas.GetPhysicalWidth();
 		desc.height = canvas.GetPhysicalHeight();
