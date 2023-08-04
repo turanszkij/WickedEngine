@@ -3300,7 +3300,6 @@ void UpdatePerFrameData(
 						desc.format = format_rendertarget_shadowmap;
 						desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 						desc.layout = ResourceState::SHADER_RESOURCE;
-						desc.misc_flags = ResourceMiscFlag::TEXTURE_ALWAYS_CLEARED;
 						desc.clear.color[0] = 1;
 						desc.clear.color[1] = 1;
 						desc.clear.color[2] = 1;

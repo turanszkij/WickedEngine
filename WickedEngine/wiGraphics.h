@@ -402,8 +402,7 @@ namespace wi::graphics
 		TYPELESS_FORMAT_CASTING = 1 << 12,	// enable casting formats to other formats that have the same bit-width and channel layout: eg. R32_FLOAT -> R32_UINT
 		VIDEO_DECODE = 1 << 13,	// resource is usabe in video decoding operations
 		NO_DEFAULT_DESCRIPTORS = 1 << 14, // skips creation of default descriptors for resources
-		TEXTURE_ALWAYS_CLEARED = 1 << 15, // optimization that can enable delta color compression
-		TEXTURE_COMPATIBLE_COMPRESSION = 1 << 16, // optimization that can enable sampling from compressed textures
+		TEXTURE_COMPATIBLE_COMPRESSION = 1 << 15, // optimization that can enable sampling from compressed textures
 	};
 
 	enum class GraphicsDeviceCapability
