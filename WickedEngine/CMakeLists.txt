@@ -1,3 +1,5 @@
+set(MIN_OpenImageDenoise_VERSION "2.0")
+
 
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
@@ -18,12 +20,12 @@ if (WIN32)
 else ()
 	set(TARGET_NAME WickedEngine_Linux)
 	find_package(SDL2 REQUIRED)
-	find_package(OpenImageDenoise QUIET)
+	find_package(OpenImageDenoise "${MIN_OpenImageDenoise_VERSION}" QUIET)
 	find_package(Threads REQUIRED)
 	if(NOT ${OpenImageDenoise_FOUND})
-		message("OpenImageDenoise not found, it will be disabled.")
+		message("OpenImageDenoise>=${MIN_OpenImageDenoise_VERSION} not found, it will be disabled.")
 	else()
-		message("OpenImageDenoise Found.")
+		message("OpenImageDenoise ${OpenImageDenoise_VERSION} Found.")
 	endif()
 
 	if(NOT TARGET SDL2::SDL2)
