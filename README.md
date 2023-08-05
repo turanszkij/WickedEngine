@@ -31,7 +31,7 @@ You can get the full source code by using Git version control and cloning https:
 - Windows 10 or newer
 - Linux
 - UWP
-- Xbox Series
+- Xbox Series X|S
 
 ### How to build: 
 
@@ -78,7 +78,7 @@ To build for UWP platform, use the latest version of Visual Studio and the provi
 **Note that to utilize the full performance of Xbox Series, it is required to build with the native Xbox SDK build tools**
 
 #### Xbox Series (Native)
-To build for Xbox Series natively, download and install the Xbox SDK from your Xbox developer account, and create a new Visual Studio solution platform targetting the Xbox Series hardware. Xbox specific source files required for building are currently not released publicly.
+To build for Xbox Series natively, download and install the Xbox SDK from your Xbox developer account, and create a new Visual Studio solution platform targetting the Xbox Series hardware. Xbox specific extension files required for building will be provided for registered Xbox developers on request.
 
 
 ### Examples:
