@@ -571,7 +571,7 @@ namespace wi::scene
 				commands[3] = commands[0];
 				commands[3].sparse_resource = &ddgi.color_texture_rw[1];
 				commands[3].range_start_offsets = &tile_offset[1];
-				device->SparseUpdate(QUEUE_COMPUTE, commands, arraysize(commands));
+				device->SparseUpdate(QUEUE_GRAPHICS, commands, arraysize(commands));
 
 				tex.width = DDGI_DEPTH_TEXELS * ddgi.grid_dimensions.x * ddgi.grid_dimensions.y;
 				tex.height = DDGI_DEPTH_TEXELS * ddgi.grid_dimensions.z;
