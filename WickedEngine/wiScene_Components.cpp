@@ -13,10 +13,12 @@
 #include "wiLua.h"
 
 #if __has_include("OpenImageDenoise/oidn.hpp")
-#define OPEN_IMAGE_DENOISE
 #include "OpenImageDenoise/oidn.hpp"
+#if OIDN_VERSION_MAJOR >= 2
+#define OPEN_IMAGE_DENOISE
 #pragma comment(lib,"OpenImageDenoise.lib")
 // Also provide the required DLL files from OpenImageDenoise release near the exe!
+#endif // OIDN_VERSION_MAJOR >= 2
 #endif // __has_include("OpenImageDenoise/oidn.hpp")
 
 using namespace wi::ecs;
