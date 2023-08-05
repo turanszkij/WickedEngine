@@ -6,7 +6,7 @@
 #include "brdf.hlsli"
 
 #ifdef __XBOX_SCARLETT
-#include "raytracingHF_xbox.hlsli"
+#include "raytracingHF_XBOX.hlsli"
 #else
 #define wiRayQuery RayQuery<0>
 #endif // __XBOX_SCARLETT
