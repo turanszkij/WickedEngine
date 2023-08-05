@@ -6,24 +6,25 @@
 #include "wiTimer.h"
 #include "wiUnorderedSet.h"
 
+#ifndef PLATFORM_XBOX
 #include "Utility/dx12/dxgiformat.h"
 #include "Utility/dx12/d3dx12_default.h"
 #include "Utility/dx12/d3dx12_resource_helpers.h"
 #include "Utility/dx12/d3dx12_pipeline_state_stream.h"
 #include "Utility/dx12/d3dx12_check_feature_support.h"
-#include "Utility/D3D12MemAlloc.h"
+#ifdef _DEBUG
+#include <dxgidebug.h>
+#endif
+#pragma comment(lib,"dxguid.lib")
+#endif // PLATFORM_XBOX
+
+#include "Utility/D3D12MemAlloc.cpp" // include this here because we use D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
 #include "Utility/h264.h"
 #include "Utility/dxva.h"
 
 #include <map>
 #include <string>
 #include <pix.h>
-
-#ifdef _DEBUG
-#include <dxgidebug.h>
-#endif
-
-#pragma comment(lib,"dxguid.lib")
 
 #include <sstream>
 #include <algorithm>
@@ -33,10 +34,6 @@ using namespace Microsoft::WRL;
 
 namespace wi::graphics
 {
-// Note: pipeline library is disabled, because it is slower to use than not using it
-//  There is driver-side caching that is much faster
-//#define PIPELINE_LIBRARY_ENABLED
-
 namespace dx12_internal
 {
 	// Bindless allocation limits:
@@ -44,21 +41,21 @@ namespace dx12_internal
 	static constexpr int BINDLESS_SAMPLER_CAPACITY = 256;
 
 
-#ifdef PLATFORM_UWP
-	// UWP will use static link + /DELAYLOAD linker feature for the dlls (optionally)
-#pragma comment(lib,"d3d12.lib")
-#pragma comment(lib,"dxgi.lib")
-#else
+#ifdef PLATFORM_WINDOWS_DESKTOP
+	// On Windows PC we load DLLs manually because graphics device can be chosen at runtime:
 	using PFN_CREATE_DXGI_FACTORY_2 = decltype(&CreateDXGIFactory2);
 	static PFN_CREATE_DXGI_FACTORY_2 CreateDXGIFactory2 = nullptr;
-
 #ifdef _DEBUG
 	using PFN_DXGI_GET_DEBUG_INTERFACE1 = decltype(&DXGIGetDebugInterface1);
 	static PFN_DXGI_GET_DEBUG_INTERFACE1 DXGIGetDebugInterface1 = nullptr;
 #endif
-
 	static PFN_D3D12_CREATE_DEVICE D3D12CreateDevice = nullptr;
 	static PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer = nullptr;
+#endif // PLATFORM_WINDOWS_DESKTOP
+
+#ifdef PLATFORM_UWP
+#pragma comment(lib,"d3d12.lib")
+#pragma comment(lib,"dxgi.lib")
 #endif // PLATFORM_UWP
 
 	// Engine -> Native converters
@@ -1506,7 +1503,11 @@ namespace dx12_internal
 	struct SwapChain_DX12
 	{
 		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
+#ifdef PLATFORM_XBOX
+		uint32_t bufferIndex = 0;
+#else
 		ComPtr<IDXGISwapChain3> swapChain;
+#endif // PLATFORM_XBOX
 		wi::vector<ComPtr<ID3D12Resource>> backBuffers;
 		wi::vector<D3D12_CPU_DESCRIPTOR_HANDLE> backbufferRTV;
 
@@ -1526,6 +1527,15 @@ namespace dx12_internal
 			{
 				allocationhandler->descriptors_rtv.free(x);
 			}
+		}
+
+		inline uint32_t GetBufferIndex() const
+		{
+#ifdef PLATFORM_XBOX
+			return bufferIndex;
+#else
+			return swapChain->GetCurrentBackBufferIndex();
+#endif // PLATFORM_XBOX
 		}
 	};
 	struct VideoDecoder_DX12
@@ -1612,13 +1622,13 @@ namespace dx12_internal
 		}
 	}
 
-#ifndef PLATFORM_UWP
+#ifdef PLATFORM_WINDOWS_DESKTOP
 	inline void HandleDeviceRemoved(PVOID context, BOOLEAN)
 	{
 		GraphicsDevice_DX12* removedDevice = (GraphicsDevice_DX12*)context;
 		removedDevice->OnDeviceRemoved();
 	}
-#endif
+#endif // PLATFORM_WINDOWS_DESKTOP
 }
 using namespace dx12_internal;
 
@@ -1652,15 +1662,15 @@ using namespace dx12_internal;
 		// If no buffer was found that fits the data, create one:
 		if (!cmd.IsValid())
 		{
-			HRESULT hr = device->device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&cmd.commandAllocator));
+			HRESULT hr = device->device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, PPV_ARGS(cmd.commandAllocator));
 			assert(SUCCEEDED(hr));
-			hr = device->device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, cmd.commandAllocator.Get(), nullptr, IID_PPV_ARGS(&cmd.commandList));
+			hr = device->device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, cmd.commandAllocator.Get(), nullptr, PPV_ARGS(cmd.commandList));
 			assert(SUCCEEDED(hr));
 
 			hr = cmd.commandList->Close();
 			assert(SUCCEEDED(hr));
 
-			hr = device->device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&cmd.fence));
+			hr = device->device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(cmd.fence));
 			assert(SUCCEEDED(hr));
 
 			GPUBufferDesc uploadBufferDesc;
@@ -1692,6 +1702,10 @@ using namespace dx12_internal;
 		ID3D12CommandList* commandlists[] = {
 			cmd.commandList.Get()
 		};
+
+#ifdef PLATFORM_XBOX
+		std::scoped_lock lock(device->queue_locker); // queue operations are not thread-safe on XBOX
+#endif // PLATFORM_XBOX
 		device->queues[QUEUE_COPY].queue->ExecuteCommandLists(1, commandlists);
 		hr = device->queues[QUEUE_COPY].queue->Signal(cmd.fence.Get(), cmd.fenceValueSignaled);
 		assert(SUCCEEDED(hr));
@@ -1728,7 +1742,7 @@ using namespace dx12_internal;
 			return;
 
 		CommandList_DX12& commandlist = device->GetCommandList(cmd);
-		ID3D12GraphicsCommandList6* graphicscommandlist = commandlist.GetGraphicsCommandList();
+		ID3D12GraphicsCommandList* graphicscommandlist = commandlist.GetGraphicsCommandList();
 		auto pso_internal = graphics ? to_internal(commandlist.active_pso) : to_internal(commandlist.active_cs);
 		const RootSignatureOptimizer& optimizer = pso_internal->rootsig_optimizer;
 
@@ -2108,32 +2122,8 @@ using namespace dx12_internal;
 				}
 
 				ComPtr<ID3D12PipelineState> newpso;
-
-				HRESULT hr = E_INVALIDARG;
-				std::wstring name;
-
-				if (pipelineLibrary != nullptr)
-				{
-					HashToName(pipeline_hash, name);
-					pipelineLibraryLocker.lock(); // LoadPipeline must be synchronized: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device1-createpipelinelibrary#thread-safety
-					hr = pipelineLibrary->LoadPipeline(name.c_str(), &streamDesc, IID_PPV_ARGS(&newpso));
-				}
-
-				if (hr == E_INVALIDARG)
-				{
-					hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&newpso));
-
-					if (pipelineLibrary != nullptr && SUCCEEDED(hr))
-					{
-						hr = pipelineLibrary->StorePipeline(name.c_str(), newpso.Get());
-					}
-				}
+				HRESULT hr = device->CreatePipelineState(&streamDesc, PPV_ARGS(newpso));
 				assert(SUCCEEDED(hr));
-
-				if (pipelineLibrary != nullptr)
-				{
-					pipelineLibraryLocker.unlock();
-				}
 
 				commandlist.pipelines_worker.push_back(std::make_pair(pipeline_hash, newpso));
 				pipeline = newpso.Get();
@@ -2177,11 +2167,14 @@ using namespace dx12_internal;
 
 		SHADER_IDENTIFIER_SIZE = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
+
+#ifndef PLATFORM_XBOX
 		VIDEO_DECODE_BITSTREAM_ALIGNMENT = D3D12_VIDEO_DECODE_MIN_BITSTREAM_OFFSET_ALIGNMENT;
+#endif // PLATFORM_XBOX
 
 		validationMode = validationMode_;
 
-#ifndef PLATFORM_UWP
+#ifdef PLATFORM_WINDOWS_DESKTOP
 		HMODULE dxgi = LoadLibraryEx(L"dxgi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
 		if (dxgi == nullptr)
 		{
@@ -2237,9 +2230,7 @@ using namespace dx12_internal;
 			wi::helper::messageBox(ss.str(), "Error!");
 			wi::platform::Exit();
 		}
-#endif // PLATFORM_UWP
 
-#if !defined(PLATFORM_UWP)
 		if (validationMode != ValidationMode::Disabled)
 		{
 			// Enable the debug layer.
@@ -2247,7 +2238,7 @@ using namespace dx12_internal;
 			if (D3D12GetDebugInterface)
 			{
 				ComPtr<ID3D12Debug> d3dDebug;
-				if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&d3dDebug))))
+				if (SUCCEEDED(D3D12GetDebugInterface(PPV_ARGS(d3dDebug))))
 				{
 					d3dDebug->EnableDebugLayer();
 					if (validationMode == ValidationMode::GPU)
@@ -2263,7 +2254,7 @@ using namespace dx12_internal;
 
 				// DRED
 				ComPtr<ID3D12DeviceRemovedExtendedDataSettings1> pDredSettings;
-				if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&pDredSettings))))
+				if (SUCCEEDED(D3D12GetDebugInterface(PPV_ARGS(pDredSettings))))
 				{
 					// Turn on auto-breadcrumbs and page fault reporting.
 					pDredSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
@@ -2291,11 +2282,17 @@ using namespace dx12_internal;
 			}
 #endif
 		}
-#endif
+#endif // PLATFORM_WINDOWS_DESKTOP
 
 		HRESULT hr;
+		Microsoft::WRL::ComPtr<IDXGIAdapter1> dxgiAdapter;
 
-		hr = CreateDXGIFactory2((validationMode != ValidationMode::Disabled) ? DXGI_CREATE_FACTORY_DEBUG : 0u, IID_PPV_ARGS(&dxgiFactory));
+#ifdef PLATFORM_XBOX
+
+		hr = wi::graphics::xbox::CreateDevice(device, dxgiAdapter, validationMode);
+
+#else
+		hr = CreateDXGIFactory2((validationMode != ValidationMode::Disabled) ? DXGI_CREATE_FACTORY_DEBUG : 0u, PPV_ARGS(dxgiFactory));
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
@@ -2361,7 +2358,7 @@ using namespace dx12_internal;
 			};
 			for (auto& featureLevel : featurelevels)
 			{
-				if (SUCCEEDED(D3D12CreateDevice(dxgiAdapter.Get(), featureLevel, IID_PPV_ARGS(&device))))
+				if (SUCCEEDED(D3D12CreateDevice(dxgiAdapter.Get(), featureLevel, PPV_ARGS(device))))
 				{
 					break;
 				}
@@ -2413,11 +2410,6 @@ using namespace dx12_internal;
 
 				disabledMessages.push_back(D3D12_MESSAGE_ID_DRAW_EMPTY_SCISSOR_RECTANGLE);
 				disabledMessages.push_back(D3D12_MESSAGE_ID_SETPRIVATEDATA_CHANGINGPARAMS);
-				disabledMessages.push_back(D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_COMMAND_LIST_TYPE);
-
-				disabledMessages.push_back(D3D12_MESSAGE_ID_CREATEPIPELINELIBRARY_DRIVERVERSIONMISMATCH);
-				disabledMessages.push_back(D3D12_MESSAGE_ID_CREATEPIPELINELIBRARY_ADAPTERVERSIONMISMATCH);
-				disabledMessages.push_back(D3D12_MESSAGE_ID_LOADPIPELINE_NAMENOTFOUND);
 
 				D3D12_INFO_QUEUE_FILTER filter = {};
 				filter.AllowList.NumSeverities = static_cast<UINT>(enabledSeverities.size());
@@ -2427,6 +2419,7 @@ using namespace dx12_internal;
 				d3dInfoQueue->AddStorageFilterEntries(&filter);
 			}
 		}
+#endif // PLATFORM_XBOX
 
 		D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
 		allocatorDesc.pDevice = device.Get();
@@ -2454,7 +2447,7 @@ using namespace dx12_internal;
 			queues[QUEUE_GRAPHICS].desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
 			queues[QUEUE_GRAPHICS].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 			queues[QUEUE_GRAPHICS].desc.NodeMask = 0;
-			hr = device->CreateCommandQueue(&queues[QUEUE_GRAPHICS].desc, IID_PPV_ARGS(&queues[QUEUE_GRAPHICS].queue));
+			hr = device->CreateCommandQueue(&queues[QUEUE_GRAPHICS].desc, PPV_ARGS(queues[QUEUE_GRAPHICS].queue));
 			assert(SUCCEEDED(hr));
 			if (FAILED(hr))
 			{
@@ -2463,7 +2456,7 @@ using namespace dx12_internal;
 				wi::helper::messageBox(ss.str(), "Error!");
 				wi::platform::Exit();
 			}
-			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&queues[QUEUE_GRAPHICS].fence));
+			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(queues[QUEUE_GRAPHICS].fence));
 			assert(SUCCEEDED(hr));
 			if (FAILED(hr))
 			{
@@ -2479,7 +2472,7 @@ using namespace dx12_internal;
 			queues[QUEUE_COMPUTE].desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
 			queues[QUEUE_COMPUTE].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 			queues[QUEUE_COMPUTE].desc.NodeMask = 0;
-			hr = device->CreateCommandQueue(&queues[QUEUE_COMPUTE].desc, IID_PPV_ARGS(&queues[QUEUE_COMPUTE].queue));
+			hr = device->CreateCommandQueue(&queues[QUEUE_COMPUTE].desc, PPV_ARGS(queues[QUEUE_COMPUTE].queue));
 			assert(SUCCEEDED(hr));
 			if (FAILED(hr))
 			{
@@ -2488,7 +2481,7 @@ using namespace dx12_internal;
 				wi::helper::messageBox(ss.str(), "Error!");
 				wi::platform::Exit();
 			}
-			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&queues[QUEUE_COMPUTE].fence));
+			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(queues[QUEUE_COMPUTE].fence));
 			assert(SUCCEEDED(hr));
 			if (FAILED(hr))
 			{
@@ -2504,7 +2497,7 @@ using namespace dx12_internal;
 			queues[QUEUE_COPY].desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
 			queues[QUEUE_COPY].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 			queues[QUEUE_COPY].desc.NodeMask = 0;
-			hr = device->CreateCommandQueue(&queues[QUEUE_COPY].desc, IID_PPV_ARGS(&queues[QUEUE_COPY].queue));
+			hr = device->CreateCommandQueue(&queues[QUEUE_COPY].desc, PPV_ARGS(queues[QUEUE_COPY].queue));
 			assert(SUCCEEDED(hr));
 			if (FAILED(hr))
 			{
@@ -2513,7 +2506,7 @@ using namespace dx12_internal;
 				wi::helper::messageBox(ss.str(), "Error!");
 				wi::platform::Exit();
 			}
-			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&queues[QUEUE_COPY].fence));
+			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(queues[QUEUE_COPY].fence));
 			assert(SUCCEEDED(hr));
 			if (FAILED(hr))
 			{
@@ -2532,7 +2525,7 @@ using namespace dx12_internal;
 			queues[QUEUE_VIDEO_DECODE].desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
 			queues[QUEUE_VIDEO_DECODE].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 			queues[QUEUE_VIDEO_DECODE].desc.NodeMask = 0;
-			hr = device->CreateCommandQueue(&queues[QUEUE_VIDEO_DECODE].desc, IID_PPV_ARGS(&queues[QUEUE_VIDEO_DECODE].queue));
+			hr = device->CreateCommandQueue(&queues[QUEUE_VIDEO_DECODE].desc, PPV_ARGS(queues[QUEUE_VIDEO_DECODE].queue));
 			assert(SUCCEEDED(hr));
 			if (FAILED(hr))
 			{
@@ -2541,7 +2534,7 @@ using namespace dx12_internal;
 				wi::helper::messageBox(ss.str(), "Error!");
 				wi::platform::Exit();
 			}
-			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&queues[QUEUE_VIDEO_DECODE].fence));
+			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(queues[QUEUE_VIDEO_DECODE].fence));
 			assert(SUCCEEDED(hr));
 			if (FAILED(hr))
 			{
@@ -2563,7 +2556,7 @@ using namespace dx12_internal;
 			descriptorheap_res.heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 			descriptorheap_res.heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 			descriptorheap_res.heapDesc.NumDescriptors = 1000000; // tier 1 limit
-			hr = device->CreateDescriptorHeap(&descriptorheap_res.heapDesc, IID_PPV_ARGS(&descriptorheap_res.heap_GPU));
+			hr = device->CreateDescriptorHeap(&descriptorheap_res.heapDesc, PPV_ARGS(descriptorheap_res.heap_GPU));
 			assert(SUCCEEDED(hr));
 			if (FAILED(hr))
 			{
@@ -2576,7 +2569,7 @@ using namespace dx12_internal;
 			descriptorheap_res.start_cpu = descriptorheap_res.heap_GPU->GetCPUDescriptorHandleForHeapStart();
 			descriptorheap_res.start_gpu = descriptorheap_res.heap_GPU->GetGPUDescriptorHandleForHeapStart();
 
-			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&descriptorheap_res.fence));
+			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(descriptorheap_res.fence));
 			assert(SUCCEEDED(hr));
 			if (FAILED(hr))
 			{
@@ -2599,7 +2592,7 @@ using namespace dx12_internal;
 			descriptorheap_sam.heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
 			descriptorheap_sam.heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 			descriptorheap_sam.heapDesc.NumDescriptors = 2048; // tier 1 limit
-			hr = device->CreateDescriptorHeap(&descriptorheap_sam.heapDesc, IID_PPV_ARGS(&descriptorheap_sam.heap_GPU));
+			hr = device->CreateDescriptorHeap(&descriptorheap_sam.heapDesc, PPV_ARGS(descriptorheap_sam.heap_GPU));
 			assert(SUCCEEDED(hr));
 			if (FAILED(hr))
 			{
@@ -2612,7 +2605,7 @@ using namespace dx12_internal;
 			descriptorheap_sam.start_cpu = descriptorheap_sam.heap_GPU->GetCPUDescriptorHandleForHeapStart();
 			descriptorheap_sam.start_gpu = descriptorheap_sam.heap_GPU->GetGPUDescriptorHandleForHeapStart();
 
-			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&descriptorheap_sam.fence));
+			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(descriptorheap_sam.fence));
 			assert(SUCCEEDED(hr));
 			if (FAILED(hr))
 			{
@@ -2634,7 +2627,7 @@ using namespace dx12_internal;
 		{
 			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
 			{
-				hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frame_fence[buffer][queue]));
+				hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(frame_fence[buffer][queue]));
 				assert(SUCCEEDED(hr));
 				if (FAILED(hr))
 				{
@@ -2655,6 +2648,31 @@ using namespace dx12_internal;
 		capabilities |= GraphicsDeviceCapability::DEPTH_RESOLVE_MIN_MAX;
 		capabilities |= GraphicsDeviceCapability::STENCIL_RESOLVE_MIN_MAX;
 
+#ifdef PLATFORM_XBOX
+		adapterName = wi::graphics::xbox::GetAdapterName();
+		capabilities |= GraphicsDeviceCapability::MESH_SHADER;
+		capabilities |= GraphicsDeviceCapability::DEPTH_BOUNDS_TEST;
+		capabilities |= GraphicsDeviceCapability::GENERIC_SPARSE_TILE_POOL;
+		capabilities |= GraphicsDeviceCapability::CACHE_COHERENT_UMA;
+		casting_fully_typed_formats = false;
+		resource_heap_tier = D3D12_RESOURCE_HEAP_TIER_2;
+		additionalShadingRatesSupported = false;
+		capabilities |= GraphicsDeviceCapability::VARIABLE_RATE_SHADING;
+		capabilities |= GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2;
+		VARIABLE_RATE_SHADING_TILE_SIZE = 8;
+		capabilities |= GraphicsDeviceCapability::RAYTRACING;
+		capabilities |= GraphicsDeviceCapability::UAV_LOAD_FORMAT_R11G11B10_FLOAT;
+		capabilities |= GraphicsDeviceCapability::UAV_LOAD_FORMAT_COMMON;
+		capabilities |= GraphicsDeviceCapability::RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS;
+		capabilities |= GraphicsDeviceCapability::SPARSE_BUFFER;
+		capabilities |= GraphicsDeviceCapability::SPARSE_TEXTURE2D;
+		capabilities |= GraphicsDeviceCapability::SPARSE_NULL_MAPPING;
+		capabilities |= GraphicsDeviceCapability::SAMPLER_MINMAX;
+		capabilities |= GraphicsDeviceCapability::SPARSE_TEXTURE3D;
+		capabilities |= GraphicsDeviceCapability::CONSERVATIVE_RASTERIZATION;
+		capabilities |= GraphicsDeviceCapability::R9G9B9E5_SHAREDEXP_RENDERABLE;
+		VIDEO_DECODE_BITSTREAM_ALIGNMENT = 256; // TODO
+#else
 		// Init feature check (https://devblogs.microsoft.com/directx/introducing-a-new-api-for-checking-feature-support-in-direct3d-12/)
 		CD3DX12FeatureSupport features;
 		hr = features.Init(device.Get());
@@ -2792,36 +2810,9 @@ using namespace dx12_internal;
 		{
 			capabilities |= GraphicsDeviceCapability::CACHE_COHERENT_UMA;
 		}
+#endif // PLATFORM_XBOX
 
-		// Create pipeline library:
-#ifdef PIPELINE_LIBRARY_ENABLED
-		// Try to read pipeline cache file if exists.
-		std::string cachePath = GetCachePath();
-		if (!wi::helper::FileRead(cachePath, pipelineLibraryData))
-		{
-			pipelineLibraryData.clear();
-		}
-
-		hr = device->CreatePipelineLibrary(pipelineLibraryData.data(), pipelineLibraryData.size(), IID_PPV_ARGS(&pipelineLibrary));
-		switch (hr)
-		{
-			case DXGI_ERROR_UNSUPPORTED: // The driver doesn't support Pipeline libraries. WDDM2.1 drivers must support it.
-				break;
-
-			case E_INVALIDARG: // The provided Library is corrupted or unrecognized.
-			case D3D12_ERROR_ADAPTER_NOT_FOUND: // The provided Library contains data for different hardware (Don't really need to clear the cache, could have a cache per adapter).
-			case D3D12_ERROR_DRIVER_VERSION_MISMATCH: // The provided Library contains data from an old driver or runtime. We need to re-create it.
-				hr = device->CreatePipelineLibrary(nullptr, 0, IID_PPV_ARGS(&pipelineLibrary));
-				assert(SUCCEEDED(hr));
-				break;
-
-			default:
-				assert(SUCCEEDED(hr));
-				break;
-		}
-#endif // PIPELINE_LIBRARY_ENABLED
-
-#ifndef PLATFORM_UWP
+#ifdef PLATFORM_WINDOWS_DESKTOP
 		// Create fence to detect device removal
 		{
 			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(deviceRemovedFence.GetAddressOf()));
@@ -2840,7 +2831,7 @@ using namespace dx12_internal;
 				0 // No flags
 			);
 		}
-#endif
+#endif // PLATFORM_WINDOWS_DESKTOP
 
 		// Create common indirect command signatures:
 
@@ -2858,7 +2849,7 @@ using namespace dx12_internal;
 		cmd_desc.ByteStride = sizeof(D3D12_DISPATCH_ARGUMENTS);
 		cmd_desc.NumArgumentDescs = 1;
 		cmd_desc.pArgumentDescs = dispatchArgs;
-		hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&dispatchIndirectCommandSignature));
+		hr = device->CreateCommandSignature(&cmd_desc, nullptr, PPV_ARGS(dispatchIndirectCommandSignature));
 		assert(SUCCEEDED(hr));
 		if (FAILED(hr))
 		{
@@ -2871,7 +2862,7 @@ using namespace dx12_internal;
 		cmd_desc.ByteStride = sizeof(D3D12_DRAW_ARGUMENTS);
 		cmd_desc.NumArgumentDescs = 1;
 		cmd_desc.pArgumentDescs = drawInstancedArgs;
-		hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&drawInstancedIndirectCommandSignature));
+		hr = device->CreateCommandSignature(&cmd_desc, nullptr, PPV_ARGS(drawInstancedIndirectCommandSignature));
 		assert(SUCCEEDED(hr));
 		if (FAILED(hr))
 		{
@@ -2884,7 +2875,7 @@ using namespace dx12_internal;
 		cmd_desc.ByteStride = sizeof(D3D12_DRAW_INDEXED_ARGUMENTS);
 		cmd_desc.NumArgumentDescs = 1;
 		cmd_desc.pArgumentDescs = drawIndexedInstancedArgs;
-		hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&drawIndexedInstancedIndirectCommandSignature));
+		hr = device->CreateCommandSignature(&cmd_desc, nullptr, PPV_ARGS(drawIndexedInstancedIndirectCommandSignature));
 		assert(SUCCEEDED(hr));
 		if (FAILED(hr))
 		{
@@ -2897,12 +2888,15 @@ using namespace dx12_internal;
 		if (CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
 		{
 			D3D12_INDIRECT_ARGUMENT_DESC dispatchMeshArgs[1];
+#ifdef PLATFORM_XBOX
+			wi::graphics::xbox::FillDispatchMeshIndirectArgumentDesc(dispatchMeshArgs[0], cmd_desc);
+#else
 			dispatchMeshArgs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
-
 			cmd_desc.ByteStride = sizeof(D3D12_DISPATCH_MESH_ARGUMENTS);
+#endif // PLATFORM_XBOX
 			cmd_desc.NumArgumentDescs = 1;
 			cmd_desc.pArgumentDescs = dispatchMeshArgs;
-			hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&dispatchMeshIndirectCommandSignature));
+			hr = device->CreateCommandSignature(&cmd_desc, nullptr, PPV_ARGS(dispatchMeshIndirectCommandSignature));
 			assert(SUCCEEDED(hr));
 			if (FAILED(hr))
 			{
@@ -2921,7 +2915,7 @@ using namespace dx12_internal;
 		D3D12_DESCRIPTOR_HEAP_DESC nullHeapDesc = {};
 		nullHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		nullHeapDesc.NumDescriptors = DESCRIPTORBINDER_CBV_COUNT + DESCRIPTORBINDER_SRV_COUNT + DESCRIPTORBINDER_UAV_COUNT;
-		hr = device->CreateDescriptorHeap(&nullHeapDesc, IID_PPV_ARGS(&nulldescriptorheap_cbv_srv_uav));
+		hr = device->CreateDescriptorHeap(&nullHeapDesc, PPV_ARGS(nulldescriptorheap_cbv_srv_uav));
 		assert(SUCCEEDED(hr));
 		if (FAILED(hr))
 		{
@@ -2932,7 +2926,7 @@ using namespace dx12_internal;
 
 		nullHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
 		nullHeapDesc.NumDescriptors = DESCRIPTORBINDER_SAMPLER_COUNT;
-		device->CreateDescriptorHeap(&nullHeapDesc, IID_PPV_ARGS(&nulldescriptorheap_sampler));
+		device->CreateDescriptorHeap(&nullHeapDesc, PPV_ARGS(nulldescriptorheap_sampler));
 		assert(SUCCEEDED(hr));
 		if (FAILED(hr))
 		{
@@ -3004,23 +2998,10 @@ using namespace dx12_internal;
 	{
 		WaitForGPU();
 
-		if (pipelineLibrary != nullptr)
-		{
-			std::vector<uint8_t> serializedData(pipelineLibrary->GetSerializedSize());
-			HRESULT hr = pipelineLibrary->Serialize(serializedData.data(), serializedData.size());
-			assert(SUCCEEDED(hr));
-			if (SUCCEEDED(hr))
-			{
-				// Write pipeline cache data to a file in binary format
-				std::string cachePath = GetCachePath();
-				wi::helper::FileWrite(cachePath, serializedData.data(), serializedData.size());
-			}
-		}
-
-#ifndef PLATFORM_UWP
+#ifdef PLATFORM_WINDOWS_DESKTOP
 		std::ignore = UnregisterWait(deviceRemovedWaitHandle);
 		deviceRemovedFence.Reset();
-#endif
+#endif // PLATFORM_WINDOWS_DESKTOP
 	}
 
 	bool GraphicsDevice_DX12::CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const
@@ -3033,8 +3014,69 @@ using namespace dx12_internal;
 		internal_state->allocationhandler = allocationhandler;
 		swapchain->internal_state = internal_state;
 		swapchain->desc = *desc;
-		HRESULT hr;
+		HRESULT hr = E_FAIL;
 
+		if (!internal_state->backbufferRTV.empty())
+		{
+			// Delete back buffer resources if they exist before resizing swap chain:
+			WaitForGPU();
+			internal_state->backBuffers.clear();
+			for (auto& x : internal_state->backbufferRTV)
+			{
+				allocationhandler->descriptors_rtv.free(x);
+			}
+			internal_state->backbufferRTV.clear();
+		}
+
+#ifdef PLATFORM_XBOX
+
+		D3D12_HEAP_PROPERTIES heap_properties = {};
+		heap_properties.Type = D3D12_HEAP_TYPE_DEFAULT;
+		heap_properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+
+		D3D12_RESOURCE_DESC resource_desc = {};
+		resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		resource_desc.Format = _ConvertFormat(swapchain->desc.format);
+		resource_desc.Width = swapchain->desc.width;
+		resource_desc.Height = swapchain->desc.height;
+		resource_desc.DepthOrArraySize = 1;
+		resource_desc.MipLevels = 1;
+		resource_desc.SampleDesc.Count = 1;
+		resource_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+		D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {};
+		rtv_desc.Format = resource_desc.Format;
+		rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+
+		D3D12_CLEAR_VALUE clear_value = {};
+		clear_value.Format = resource_desc.Format;
+		clear_value.Color[0] = swapchain->desc.clear_color[0];
+		clear_value.Color[1] = swapchain->desc.clear_color[1];
+		clear_value.Color[2] = swapchain->desc.clear_color[2];
+		clear_value.Color[3] = swapchain->desc.clear_color[3];
+
+		internal_state->backBuffers.resize(swapchain->desc.buffer_count);
+		internal_state->backbufferRTV.resize(swapchain->desc.buffer_count);
+		for (uint32_t i = 0; i < swapchain->desc.buffer_count; ++i)
+		{
+			hr = device->CreateCommittedResource(
+				&heap_properties,
+				D3D12_HEAP_FLAG_ALLOW_DISPLAY,
+				&resource_desc,
+				D3D12_RESOURCE_STATE_PRESENT,
+				&clear_value,
+				PPV_ARGS(internal_state->backBuffers[i])
+			);
+			assert(SUCCEEDED(hr));
+
+			hr = internal_state->backBuffers[i]->SetName(L"BackBufferXBOX");
+			assert(SUCCEEDED(hr));
+
+			internal_state->backbufferRTV[i] = allocationhandler->descriptors_rtv.allocate();
+			device->CreateRenderTargetView(internal_state->backBuffers[i].Get(), &rtv_desc, internal_state->backbufferRTV[i]);
+		}
+
+#else
 		UINT swapChainFlags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 		if (tearingSupported)
 		{
@@ -3059,7 +3101,7 @@ using namespace dx12_internal;
 			swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 			swapChainDesc.Flags = swapChainFlags;
 
-#ifndef PLATFORM_UWP
+#ifdef PLATFORM_WINDOWS_DESKTOP
 			swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
 
 			DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc = {};
@@ -3083,7 +3125,7 @@ using namespace dx12_internal;
 				nullptr,
 				tempSwapChain.GetAddressOf()
 			);
-#endif
+#endif // PLATFORM_WINDOWS_DESKTOP
 
 			if (FAILED(hr))
 			{
@@ -3099,14 +3141,6 @@ using namespace dx12_internal;
 		else
 		{
 			// Resize swapchain:
-			WaitForGPU();
-			internal_state->backBuffers.clear();
-			for (auto& x : internal_state->backbufferRTV)
-			{
-				allocationhandler->descriptors_rtv.free(x);
-			}
-			internal_state->backbufferRTV.clear();
-
 			hr = internal_state->swapChain->ResizeBuffers(
 				desc->buffer_count,
 				desc->width,
@@ -3179,12 +3213,13 @@ using namespace dx12_internal;
 
 		for (uint32_t i = 0; i < desc->buffer_count; ++i)
 		{
-			hr = internal_state->swapChain->GetBuffer(i, IID_PPV_ARGS(&internal_state->backBuffers[i]));
+			hr = internal_state->swapChain->GetBuffer(i, PPV_ARGS(internal_state->backBuffers[i]));
 			assert(SUCCEEDED(hr));
 
 			internal_state->backbufferRTV[i] = allocationhandler->descriptors_rtv.allocate();
 			device->CreateRenderTargetView(internal_state->backBuffers[i].Get(), &rtvDesc, internal_state->backbufferRTV[i]);
 		}
+#endif // PLATFORM_XBOX
 
 		internal_state->dummyTexture.desc.format = desc->format;
 		internal_state->dummyTexture.desc.width = desc->width;
@@ -3223,7 +3258,6 @@ using namespace dx12_internal;
 		{
 			resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		}
-
 		if (!has_flag(desc->bind_flags, BindFlag::SHADER_RESOURCE) && !has_flag(desc->misc_flags, ResourceMiscFlag::RAY_TRACING))
 		{
 			resourceDesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
@@ -3247,6 +3281,10 @@ using namespace dx12_internal;
 			allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
 			resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
 		}
+
+#ifdef PLATFORM_XBOX
+		wi::graphics::xbox::ApplyBufferCreationFlags(*desc, resourceDesc.Flags, allocationDesc.ExtraHeapFlags);
+#endif // PLATFORM_XBOX
 
 		if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE_TILE_POOL_BUFFER) ||
 			has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE_TILE_POOL_TEXTURE_NON_RT_DS) ||
@@ -3293,7 +3331,7 @@ using namespace dx12_internal;
 				&resourceDesc,
 				resourceState,
 				nullptr,
-				IID_PPV_ARGS(&internal_state->resource)
+				PPV_ARGS(internal_state->resource)
 			);
 			buffer->sparse_page_size = D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
 		}
@@ -3305,7 +3343,7 @@ using namespace dx12_internal;
 				resourceState,
 				nullptr,
 				&internal_state->allocation,
-				IID_PPV_ARGS(&internal_state->resource)
+				PPV_ARGS(internal_state->resource)
 			);
 		}
 		assert(SUCCEEDED(hr));
@@ -3528,6 +3566,10 @@ using namespace dx12_internal;
 			}
 		}
 
+#ifdef PLATFORM_XBOX
+		wi::graphics::xbox::ApplyTextureCreationFlags(texture->desc, resourcedesc.Flags, allocationDesc.ExtraHeapFlags);
+#endif // PLATFORM_XBOX
+
 		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::SPARSE))
 		{
 			resourcedesc.Layout = D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE;
@@ -3535,7 +3577,7 @@ using namespace dx12_internal;
 				&resourcedesc,
 				resourceState,
 				useClearValue ? &optimizedClearValue : nullptr,
-				IID_PPV_ARGS(&internal_state->resource)
+				PPV_ARGS(internal_state->resource)
 			);
 			texture->sparse_page_size = D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
 
@@ -3573,7 +3615,7 @@ using namespace dx12_internal;
 				resourceState,
 				useClearValue ? &optimizedClearValue : nullptr,
 				&internal_state->allocation,
-				IID_PPV_ARGS(&internal_state->resource)
+				PPV_ARGS(internal_state->resource)
 			);
 		}
 		assert(SUCCEEDED(hr));
@@ -3686,17 +3728,7 @@ using namespace dx12_internal;
 
 		internal_state->shadercode.resize(shadercode_size);
 		internal_state->hash = 0;
-#ifndef PIPELINE_LIBRARY_ENABLED
 		std::memcpy(internal_state->shadercode.data(), shadercode, shadercode_size);
-#else
-		// while copying over shader data, also compute hash for pipeline library serialization:
-		for (size_t i = 0; i < shadercode_size; ++i)
-		{
-			uint8_t byte = ((uint8_t*)shadercode)[i];
-			wi::helper::hash_combine(internal_state->hash, byte);
-			internal_state->shadercode[i] = byte;
-		}
-#endif // PIPELINE_LIBRARY_ENABLED
 		shader->stage = stage;
 
 		HRESULT hr = (internal_state->shadercode.empty() ? E_FAIL : S_OK);
@@ -3705,7 +3737,7 @@ using namespace dx12_internal;
 		hr = D3D12CreateVersionedRootSignatureDeserializer(
 			internal_state->shadercode.data(),
 			internal_state->shadercode.size(),
-			IID_PPV_ARGS(&internal_state->rootsig_deserializer)
+			PPV_ARGS(internal_state->rootsig_deserializer)
 		);
 		if (SUCCEEDED(hr))
 		{
@@ -3718,7 +3750,7 @@ using namespace dx12_internal;
 					0,
 					internal_state->shadercode.data(),
 					internal_state->shadercode.size(),
-					IID_PPV_ARGS(&internal_state->rootSignature)
+					PPV_ARGS(internal_state->rootSignature)
 				);
 				assert(SUCCEEDED(hr));
 			}
@@ -3744,31 +3776,8 @@ using namespace dx12_internal;
 			streamDesc.pPipelineStateSubobjectStream = &stream;
 			streamDesc.SizeInBytes = sizeof(stream);
 
-			HRESULT hr = E_INVALIDARG;
-
-			std::wstring name;
-			if (pipelineLibrary != nullptr)
-			{
-				HashToName(internal_state->hash, name);
-				pipelineLibraryLocker.lock(); // LoadPipeline must be synchronized: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device1-createpipelinelibrary#thread-safety
-				hr = pipelineLibrary->LoadPipeline(name.c_str(), &streamDesc, IID_PPV_ARGS(&internal_state->resource));
-			}
-
-			if (hr == E_INVALIDARG)
-			{
-				hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&internal_state->resource));
-
-				if (pipelineLibrary != nullptr && SUCCEEDED(hr))
-				{
-					hr = pipelineLibrary->StorePipeline(name.c_str(), internal_state->resource.Get());
-				}
-			}
+			HRESULT hr = device->CreatePipelineState(&streamDesc, PPV_ARGS(internal_state->resource));
 			assert(SUCCEEDED(hr));
-
-			if (pipelineLibrary != nullptr)
-			{
-				pipelineLibraryLocker.unlock();
-			}
 		}
 
 		return SUCCEEDED(hr);
@@ -3841,7 +3850,7 @@ using namespace dx12_internal;
 			break;
 		}
 
-		HRESULT hr = allocationhandler->device->CreateQueryHeap(&queryheapdesc, IID_PPV_ARGS(&internal_state->heap));
+		HRESULT hr = allocationhandler->device->CreateQueryHeap(&queryheapdesc, PPV_ARGS(internal_state->heap));
 		assert(SUCCEEDED(hr));
 
 		return SUCCEEDED(hr);
@@ -3854,7 +3863,6 @@ using namespace dx12_internal;
 
 		pso->desc = *desc;
 
-#ifndef PIPELINE_LIBRARY_ENABLED
 		internal_state->hash = 0;
 		wi::helper::hash_combine(internal_state->hash, desc->ms);
 		wi::helper::hash_combine(internal_state->hash, desc->as);
@@ -3869,100 +3877,6 @@ using namespace dx12_internal;
 		wi::helper::hash_combine(internal_state->hash, desc->dss);
 		wi::helper::hash_combine(internal_state->hash, desc->pt);
 		wi::helper::hash_combine(internal_state->hash, desc->sample_mask);
-#else
-		// Shouldn't hash pointers here, because hash can be serialized with pipeline library:
-		internal_state->hash = 0;
-		if (desc->ms != nullptr)
-		{
-			wi::helper::hash_combine(internal_state->hash, to_internal(desc->ms)->hash);
-		}
-		if (desc->as != nullptr)
-		{
-			wi::helper::hash_combine(internal_state->hash, to_internal(desc->as)->hash);
-		}
-		if (desc->vs != nullptr)
-		{
-			wi::helper::hash_combine(internal_state->hash, to_internal(desc->vs)->hash);
-		}
-		if (desc->ps != nullptr)
-		{
-			wi::helper::hash_combine(internal_state->hash, to_internal(desc->ps)->hash);
-		}
-		if (desc->hs != nullptr)
-		{
-			wi::helper::hash_combine(internal_state->hash, to_internal(desc->hs)->hash);
-		}
-		if (desc->ds != nullptr)
-		{
-			wi::helper::hash_combine(internal_state->hash, to_internal(desc->ds)->hash);
-		}
-		if (desc->gs != nullptr)
-		{
-			wi::helper::hash_combine(internal_state->hash, to_internal(desc->gs)->hash);
-		}
-		if (desc->il != nullptr)
-		{
-			for (auto& x : desc->il->elements)
-			{
-				wi::helper::hash_combine(internal_state->hash, x.format);
-				wi::helper::hash_combine(internal_state->hash, x.aligned_byte_offset);
-				wi::helper::hash_combine(internal_state->hash, x.input_slot);
-				wi::helper::hash_combine(internal_state->hash, x.input_slot_class);
-				wi::helper::hash_combine(internal_state->hash, x.semantic_index);
-				wi::helper::hash_combine(internal_state->hash, wi::helper::string_hash(x.semantic_name.c_str()));
-			}
-		}
-		if (desc->rs != nullptr)
-		{
-			wi::helper::hash_combine(internal_state->hash, desc->rs->antialiased_line_enable);
-			wi::helper::hash_combine(internal_state->hash, desc->rs->conservative_rasterization_enable);
-			wi::helper::hash_combine(internal_state->hash, desc->rs->cull_mode);
-			wi::helper::hash_combine(internal_state->hash, desc->rs->depth_bias);
-			wi::helper::hash_combine(internal_state->hash, desc->rs->depth_bias_clamp);
-			wi::helper::hash_combine(internal_state->hash, desc->rs->depth_clip_enable);
-			wi::helper::hash_combine(internal_state->hash, desc->rs->fill_mode);
-			wi::helper::hash_combine(internal_state->hash, desc->rs->forced_sample_count);
-			wi::helper::hash_combine(internal_state->hash, desc->rs->front_counter_clockwise);
-			wi::helper::hash_combine(internal_state->hash, desc->rs->multisample_enable);
-			wi::helper::hash_combine(internal_state->hash, desc->rs->slope_scaled_depth_bias);
-		}
-		if (desc->bs != nullptr)
-		{
-			wi::helper::hash_combine(internal_state->hash, desc->bs->alpha_to_coverage_enable);
-			wi::helper::hash_combine(internal_state->hash, desc->bs->independent_blend_enable);
-			for (auto& x : desc->bs->render_target)
-			{
-				wi::helper::hash_combine(internal_state->hash, x.blend_enable);
-				wi::helper::hash_combine(internal_state->hash, x.blend_op);
-				wi::helper::hash_combine(internal_state->hash, x.blend_op_alpha);
-				wi::helper::hash_combine(internal_state->hash, x.dest_blend);
-				wi::helper::hash_combine(internal_state->hash, x.dest_blend_alpha);
-				wi::helper::hash_combine(internal_state->hash, x.render_target_write_mask);
-				wi::helper::hash_combine(internal_state->hash, x.src_blend);
-				wi::helper::hash_combine(internal_state->hash, x.src_blend_alpha);
-			}
-		}
-		if (desc->dss != nullptr)
-		{
-			wi::helper::hash_combine(internal_state->hash, desc->dss->depth_bounds_test_enable);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->depth_enable);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->depth_func);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->depth_write_mask);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->stencil_enable);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->stencil_read_mask);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->stencil_write_mask);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->front_face.stencil_depth_fail_op);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->front_face.stencil_fail_op);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->front_face.stencil_func);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->front_face.stencil_pass_op);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->back_face.stencil_depth_fail_op);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->back_face.stencil_fail_op);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->back_face.stencil_func);
-			wi::helper::hash_combine(internal_state->hash, desc->dss->back_face.stencil_pass_op);
-		}
-		wi::helper::hash_combine(internal_state->hash, desc->pt);
-		wi::helper::hash_combine(internal_state->hash, desc->sample_mask);
-#endif // PIPELINE_LIBRARY_ENABLED
 
 		auto& stream = internal_state->stream;
 		if (pso->desc.vs != nullptr)
@@ -4177,30 +4091,8 @@ using namespace dx12_internal;
 				streamDesc.SizeInBytes += sizeof(stream.stream2);
 			}
 
-			HRESULT hr = E_INVALIDARG;
-			std::wstring name;
-			if (pipelineLibrary != nullptr)
-			{
-				HashToName(internal_state->hash, name);
-				pipelineLibraryLocker.lock(); // LoadPipeline must be synchronized: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device1-createpipelinelibrary#thread-safety
-				hr = pipelineLibrary->LoadPipeline(name.c_str(), &streamDesc, IID_PPV_ARGS(&internal_state->resource));
-			}
-
-			if (hr == E_INVALIDARG)
-			{
-				hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&internal_state->resource));
-
-				if (pipelineLibrary != nullptr && SUCCEEDED(hr))
-				{
-					hr = pipelineLibrary->StorePipeline(name.c_str(), internal_state->resource.Get());
-				}
-			}
+			HRESULT hr = device->CreatePipelineState(&streamDesc, PPV_ARGS(internal_state->resource));
 			assert(SUCCEEDED(hr));
-
-			if (pipelineLibrary != nullptr)
-			{
-				pipelineLibraryLocker.unlock();
-			}
 		}
 
 		return true;
@@ -4322,7 +4214,7 @@ using namespace dx12_internal;
 			resourceState,
 			nullptr,
 			&internal_state->allocation,
-			IID_PPV_ARGS(&internal_state->resource)
+			PPV_ARGS(internal_state->resource)
 		);
 		assert(SUCCEEDED(hr));
 
@@ -4449,7 +4341,7 @@ using namespace dx12_internal;
 		stateobjectdesc.NumSubobjects = (UINT)subobjects.size();
 		stateobjectdesc.pSubobjects = subobjects.data();
 
-		HRESULT hr = device->CreateStateObject(&stateobjectdesc, IID_PPV_ARGS(&internal_state->resource));
+		HRESULT hr = device->CreateStateObject(&stateobjectdesc, PPV_ARGS(internal_state->resource));
 		assert(SUCCEEDED(hr));
 
 		hr = internal_state->resource.As(&internal_state->stateObjectProperties);
@@ -4479,7 +4371,9 @@ using namespace dx12_internal;
 		switch (desc->profile)
 		{
 		case VideoProfile::H264:
-			decoder_desc.Configuration.DecodeProfile = D3D12_VIDEO_DECODE_PROFILE_H264;
+#ifndef PLATFORM_XBOX
+			decoder_desc.Configuration.DecodeProfile = D3D12_VIDEO_DECODE_PROFILE_H264; // TODO
+#endif // PLATFORM_XBOX
 			decoder_desc.Configuration.InterlaceType = D3D12_VIDEO_FRAME_CODED_INTERLACE_TYPE_NONE;
 			break;
 		//case VideoProfile::H265:
@@ -4568,9 +4462,9 @@ using namespace dx12_internal;
 		assert(SUCCEEDED(hr));
 #endif
 
-		hr = video_device->CreateVideoDecoderHeap(&heap_desc, IID_PPV_ARGS(&internal_state->decoder_heap));
+		hr = video_device->CreateVideoDecoderHeap(&heap_desc, PPV_ARGS(internal_state->decoder_heap));
 		assert(SUCCEEDED(hr));
-		hr = video_device->CreateVideoDecoder(&decoder_desc, IID_PPV_ARGS(&internal_state->decoder));
+		hr = video_device->CreateVideoDecoder(&decoder_desc, PPV_ARGS(internal_state->decoder));
 		assert(SUCCEEDED(hr));
 
 		return SUCCEEDED(hr);
@@ -5126,7 +5020,7 @@ using namespace dx12_internal;
 	{
 		auto internal_state = to_internal(rtpso);
 
-		void* identifier = internal_state->stateObjectProperties->GetShaderIdentifier(internal_state->group_strings[group_index].c_str());
+		const void* identifier = internal_state->stateObjectProperties->GetShaderIdentifier(internal_state->group_strings[group_index].c_str());
 		std::memcpy(dest, identifier, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 	}
 	
@@ -5169,20 +5063,44 @@ using namespace dx12_internal;
 
 			for (uint32_t buffer = 0; buffer < BUFFERCOUNT; ++buffer)
 			{
-				hr = device->CreateCommandAllocator(queues[queue].desc.Type, IID_PPV_ARGS(&commandlist.commandAllocators[buffer][queue]));
+				hr = device->CreateCommandAllocator(queues[queue].desc.Type, PPV_ARGS(commandlist.commandAllocators[buffer][queue]));
 				assert(SUCCEEDED(hr));
 			}
 
 			if (queue == QUEUE_VIDEO_DECODE)
 			{
-				ComPtr<CommandList_DX12::video_decode_command_list_version> videoCommandList;
-				hr = device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&videoCommandList));
+				ComPtr<ID3D12VideoDecodeCommandList> videoCommandList;
+#ifdef PLATFORM_XBOX
+				hr = device->CreateCommandList(0, queues[queue].desc.Type, commandlist.commandAllocators[0][queue].Get(), nullptr, PPV_ARGS(videoCommandList));
+				assert(SUCCEEDED(hr));
+				hr = videoCommandList->Close();
+#else
+				hr = device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, PPV_ARGS(videoCommandList));
+#endif // PLATFORM_XBOX
 				commandlist.commandLists[queue] = videoCommandList;
+			}
+			else if (queue == QUEUE_COPY)
+			{
+				ComPtr<ID3D12GraphicsCommandList> copyCommandList;
+#ifdef PLATFORM_XBOX
+				hr = device->CreateCommandList(0, queues[queue].desc.Type, commandlist.commandAllocators[0][queue].Get(), nullptr, PPV_ARGS(copyCommandList));
+				assert(SUCCEEDED(hr));
+				hr = copyCommandList->Close();
+#else
+				hr = device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, PPV_ARGS(copyCommandList));
+#endif // PLATFORM_XBOX
+				commandlist.commandLists[queue] = copyCommandList;
 			}
 			else
 			{
 				ComPtr<CommandList_DX12::graphics_command_list_version> graphicsCommandList;
-				hr = device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&graphicsCommandList));
+#ifdef PLATFORM_XBOX
+				hr = device->CreateCommandList(0, queues[queue].desc.Type, commandlist.commandAllocators[0][queue].Get(), nullptr, PPV_ARGS(graphicsCommandList));
+				assert(SUCCEEDED(hr));
+				hr = graphicsCommandList->Close();
+#else
+				hr = device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, PPV_ARGS(graphicsCommandList));
+#endif // PLATFORM_XBOX
 				commandlist.commandLists[queue] = graphicsCommandList;
 			}
 			assert(SUCCEEDED(hr));
@@ -5222,10 +5140,10 @@ using namespace dx12_internal;
 			D3D12_RECT pRects[D3D12_VIEWPORT_AND_SCISSORRECT_MAX_INDEX + 1];
 			for (uint32_t i = 0; i < arraysize(pRects); ++i)
 			{
-				pRects[i].bottom = D3D12_VIEWPORT_BOUNDS_MAX;
-				pRects[i].left = D3D12_VIEWPORT_BOUNDS_MIN;
-				pRects[i].right = D3D12_VIEWPORT_BOUNDS_MAX;
-				pRects[i].top = D3D12_VIEWPORT_BOUNDS_MIN;
+				pRects[i].left = 0;
+				pRects[i].right = 16384;
+				pRects[i].top = 0;
+				pRects[i].bottom = 16384;
 			}
 			commandlist.GetGraphicsCommandList()->RSSetScissorRects(arraysize(pRects), pRects);
 		}
@@ -5234,6 +5152,10 @@ using namespace dx12_internal;
 	}
 	void GraphicsDevice_DX12::SubmitCommandLists()
 	{
+#ifdef PLATFORM_XBOX
+		std::scoped_lock lock(queue_locker); // queue operations are not thread-safe on XBOX
+#endif // PLATFORM_XBOX
+
 		HRESULT hr;
 
 		// Submit current frame:
@@ -5327,13 +5249,27 @@ using namespace dx12_internal;
 				CommandList_DX12& commandlist = *commandlists[cmd].get();
 				for (auto& swapchain : commandlist.swapchains)
 				{
+					auto swapchain_internal = to_internal(swapchain);
+
+#ifdef PLATFORM_XBOX
+
+					wi::graphics::xbox::Present(
+						device.Get(),
+						queues[QUEUE_GRAPHICS].queue.Get(),
+						swapchain_internal->backBuffers[swapchain_internal->bufferIndex].Get(),
+						swapchain->desc.vsync
+					);
+
+					swapchain_internal->bufferIndex = (swapchain_internal->bufferIndex + 1) % (uint32_t)swapchain_internal->backBuffers.size();
+
+#else
 					UINT presentFlags = 0;
 					if (!swapchain->desc.vsync && !swapchain->desc.fullscreen)
 					{
 						presentFlags = DXGI_PRESENT_ALLOW_TEARING;
 					}
 
-					hr = to_internal(swapchain)->swapChain->Present(swapchain->desc.vsync, presentFlags);
+					hr = swapchain_internal->swapChain->Present(swapchain->desc.vsync, presentFlags);
 
 					// If the device was reset we must completely reinitialize the renderer.
 					if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
@@ -5347,6 +5283,7 @@ using namespace dx12_internal;
 						// Handle device lost
 						OnDeviceRemoved();
 					}
+#endif // PLATFORM_XBOX
 				}
 			}
 		}
@@ -5377,6 +5314,7 @@ using namespace dx12_internal;
 
 	void GraphicsDevice_DX12::OnDeviceRemoved()
 	{
+#ifdef PLATFORM_WINDOWS_DESKTOP
 		std::lock_guard<std::mutex> lock(onDeviceRemovedMutex);
 
 		if (deviceRemoved)
@@ -5507,7 +5445,7 @@ using namespace dx12_internal;
 		std::string log;
 
 		ComPtr<ID3D12DeviceRemovedExtendedData1> pDred;
-		if (SUCCEEDED(device->QueryInterface(IID_PPV_ARGS(&pDred))))
+		if (SUCCEEDED(device->QueryInterface(PPV_ARGS(pDred))))
 		{
 			D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT1 pDredAutoBreadcrumbsOutput = {};
 			if (SUCCEEDED(pDred->GetAutoBreadcrumbsOutput1(&pDredAutoBreadcrumbsOutput)))
@@ -5599,12 +5537,13 @@ using namespace dx12_internal;
 		message += removedReasonString;
 		wi::helper::messageBox(message, "Error!");
 		wi::platform::Exit();
+#endif // PLATFORM_WINDOWS_DESKTOP
 	}
 
 	void GraphicsDevice_DX12::WaitForGPU() const
 	{
 		ComPtr<ID3D12Fence> fence;
-		HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
+		HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(fence));
 		assert(SUCCEEDED(hr));
 
 		for (auto& queue : queues)
@@ -5647,7 +5586,7 @@ using namespace dx12_internal;
 
 		auto internal_state = std::make_shared<Texture_DX12>();
 		internal_state->allocationhandler = allocationhandler;
-		internal_state->resource = swapchain_internal->backBuffers[swapchain_internal->swapChain->GetCurrentBackBufferIndex()];
+		internal_state->resource = swapchain_internal->backBuffers[swapchain_internal->GetBufferIndex()];
 
 		D3D12_RESOURCE_DESC resourcedesc = internal_state->resource->GetDesc();
 		internal_state->total_size = 0;
@@ -5681,6 +5620,9 @@ using namespace dx12_internal;
 	{
 		auto internal_state = to_internal(swapchain);
 
+#ifdef PLATFORM_XBOX
+		// TODO
+#else
 		// HDR display query: https://docs.microsoft.com/en-us/windows/win32/direct3darticles/high-dynamic-range
 		ComPtr<IDXGIOutput> dxgiOutput;
 		if (SUCCEEDED(internal_state->swapChain->GetContainingOutput(&dxgiOutput)))
@@ -5698,6 +5640,7 @@ using namespace dx12_internal;
 				}
 			}
 		}
+#endif // PLATFORM_XBOX
 		return false;
 	}
 
@@ -5769,7 +5712,9 @@ using namespace dx12_internal;
 				out_offset = heap_page_offset + in_offset;
 			}
 
-			// No need to lock this, it is thread safe
+#ifdef PLATFORM_XBOX
+			std::scoped_lock lock(queue_locker); // queue operations are not thread-safe on XBOX
+#endif // PLATFORM_XBOX
 			q.queue->UpdateTileMappings(
 				internal_sparse_resource->resource.Get(),
 				command.num_resource_regions,
@@ -5803,7 +5748,7 @@ using namespace dx12_internal;
 
 		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		barrier.Transition.pResource = internal_state->backBuffers[internal_state->swapChain->GetCurrentBackBufferIndex()].Get();
+		barrier.Transition.pResource = internal_state->backBuffers[internal_state->GetBufferIndex()].Get();
 		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
@@ -5813,16 +5758,31 @@ using namespace dx12_internal;
 		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 		commandlist.renderpass_barriers_end.push_back(barrier);
-		
+
+#ifdef PLATFORM_XBOX
+		commandlist.GetGraphicsCommandList()->OMSetRenderTargets(
+			1,
+			&internal_state->backbufferRTV[internal_state->GetBufferIndex()],
+			TRUE,
+			nullptr
+		);
+		commandlist.GetGraphicsCommandList()->ClearRenderTargetView(
+			internal_state->backbufferRTV[internal_state->GetBufferIndex()],
+			swapchain->desc.clear_color,
+			0,
+			nullptr
+		);
+#else
 		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTV = {};
-		RTV.cpuDescriptor = internal_state->backbufferRTV[internal_state->swapChain->GetCurrentBackBufferIndex()];
+		RTV.cpuDescriptor = internal_state->backbufferRTV[internal_state->GetBufferIndex()];
 		RTV.BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
 		RTV.BeginningAccess.Clear.ClearValue.Color[0] = swapchain->desc.clear_color[0];
 		RTV.BeginningAccess.Clear.ClearValue.Color[1] = swapchain->desc.clear_color[1];
 		RTV.BeginningAccess.Clear.ClearValue.Color[2] = swapchain->desc.clear_color[2];
 		RTV.BeginningAccess.Clear.ClearValue.Color[3] = swapchain->desc.clear_color[3];
 		RTV.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
-		commandlist.GetGraphicsCommandList()->BeginRenderPass(1, &RTV, nullptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
+		commandlist.GetGraphicsCommandListLatest()->BeginRenderPass(1, &RTV, nullptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
+#endif // PLATFORM_XBOX
 
 		commandlist.renderpass_info = RenderPassInfo::from(swapchain->desc);
 	}
@@ -5831,6 +5791,16 @@ using namespace dx12_internal;
 		CommandList_DX12& commandlist = GetCommandList(cmd);
 		commandlist.renderpass_barriers_begin.clear();
 		commandlist.renderpass_barriers_end.clear();
+
+		for (uint32_t rt = 0; rt < commandlist.renderpass_info.rt_count; ++rt)
+		{
+			commandlist.resolve_subresources[rt].clear();
+			commandlist.resolve_dst[rt] = nullptr;
+			commandlist.resolve_src[rt] = nullptr;
+		}
+		commandlist.resolve_subresources_dsv.clear();
+		commandlist.resolve_dst_ds = nullptr;
+		commandlist.resolve_src_ds = nullptr;
 
 		uint32_t rt_count = 0;
 		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTVs[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
@@ -5944,6 +5914,9 @@ using namespace dx12_internal;
 				}
 				RTV.EndingAccess.Resolve.pSubresourceParameters = commandlist.resolve_subresources[rt_resolve_count].data();
 				RTV.EndingAccess.Resolve.SubresourceCount = (UINT)commandlist.resolve_subresources[rt_resolve_count].size();
+				commandlist.resolve_src[rt_resolve_count] = RTV.EndingAccess.Resolve.pSrcResource;
+				commandlist.resolve_dst[rt_resolve_count] = RTV.EndingAccess.Resolve.pDstResource;
+				commandlist.resolve_formats[rt_resolve_count] = RTV.EndingAccess.Resolve.Format;
 				rt_resolve_count++;
 			}
 			break;
@@ -6012,6 +5985,9 @@ using namespace dx12_internal;
 				{
 					DSV.StencilEndingAccess = DSV.DepthEndingAccess;
 				}
+				commandlist.resolve_dst_ds = DSV.DepthEndingAccess.Resolve.pDstResource;
+				commandlist.resolve_src_ds = DSV.DepthEndingAccess.Resolve.pSrcResource;
+				commandlist.resolve_ds_format = DSV.DepthEndingAccess.Resolve.Format;
 			}
 			break;
 
@@ -6108,9 +6084,58 @@ using namespace dx12_internal;
 
 		if (commandlist.shading_rate_image != nullptr)
 		{
-			commandlist.GetGraphicsCommandList()->RSSetShadingRateImage(commandlist.shading_rate_image);
+			commandlist.GetGraphicsCommandListLatest()->RSSetShadingRateImage(commandlist.shading_rate_image);
 		}
 
+#ifdef PLATFORM_XBOX
+
+		D3D12_CPU_DESCRIPTOR_HANDLE rt_descriptors[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+		for (uint32_t i = 0; i < rt_count; ++i)
+		{
+			rt_descriptors[i] = RTVs[i].cpuDescriptor;
+		}
+
+		commandlist.GetGraphicsCommandList()->OMSetRenderTargets(
+			rt_count,
+			rt_descriptors,
+			FALSE,
+			DSV.cpuDescriptor.ptr == 0 ? nullptr : &DSV.cpuDescriptor
+		);
+
+		for (uint32_t i = 0; i < rt_count; ++i)
+		{
+			if (RTVs[i].BeginningAccess.Type == D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR)
+			{
+				commandlist.GetGraphicsCommandList()->ClearRenderTargetView(
+					RTVs[i].cpuDescriptor,
+					RTVs[i].BeginningAccess.Clear.ClearValue.Color,
+					0,
+					nullptr
+				);
+			}
+		}
+		if (DSV.DepthBeginningAccess.Type == D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR || DSV.StencilBeginningAccess.Type == D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR)
+		{
+			D3D12_CLEAR_FLAGS clear_flags = {};
+			if (DSV.DepthBeginningAccess.Type == D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR)
+			{
+				clear_flags |= D3D12_CLEAR_FLAG_DEPTH;
+			}
+			if (DSV.StencilBeginningAccess.Type == D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR)
+			{
+				clear_flags |= D3D12_CLEAR_FLAG_STENCIL;
+			}
+			commandlist.GetGraphicsCommandList()->ClearDepthStencilView(
+				DSV.cpuDescriptor,
+				clear_flags,
+				DSV.DepthBeginningAccess.Clear.ClearValue.DepthStencil.Depth,
+				DSV.StencilBeginningAccess.Clear.ClearValue.DepthStencil.Stencil,
+				0,
+				nullptr
+			);
+		}
+
+#else
 		D3D12_RENDER_PASS_FLAGS FLAGS = D3D12_RENDER_PASS_FLAG_NONE;
 		if (has_flag(flags, RenderPassFlags::ALLOW_UAV_WRITES))
 		{
@@ -6125,23 +6150,84 @@ using namespace dx12_internal;
 			FLAGS |= D3D12_RENDER_PASS_FLAG_RESUMING_PASS;
 		}
 
-		commandlist.GetGraphicsCommandList()->BeginRenderPass(
+		commandlist.GetGraphicsCommandListLatest()->BeginRenderPass(
 			rt_count,
 			RTVs,
 			DSV.cpuDescriptor.ptr == 0 ? nullptr : &DSV,
 			FLAGS
 		);
+#endif // PLATFORM_XBOX
 
 		commandlist.renderpass_info = RenderPassInfo::from(images, image_count);
 	}
 	void GraphicsDevice_DX12::RenderPassEnd(CommandList cmd)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
-		commandlist.GetGraphicsCommandList()->EndRenderPass();
+
+#ifdef PLATFORM_XBOX
+		// Batch up resolve SRC barriers since XBOX cannot do it with RenderPass:
+		commandlist.resolve_src_barriers.clear();
+		for (uint32_t rt = 0; rt < commandlist.renderpass_info.rt_count; ++rt)
+		{
+			for (auto& resolve : commandlist.resolve_subresources[rt])
+			{
+				D3D12_RESOURCE_BARRIER& barrier = commandlist.resolve_src_barriers.emplace_back();
+				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				barrier.Transition.pResource = commandlist.resolve_src[rt];
+				barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+				barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RESOLVE_SOURCE;
+				barrier.Transition.Subresource = resolve.SrcSubresource;
+			}
+		}
+		if (commandlist.resolve_dst_ds != nullptr)
+		{
+			for (auto& resolve : commandlist.resolve_subresources_dsv)
+			{
+				D3D12_RESOURCE_BARRIER& barrier = commandlist.resolve_src_barriers.emplace_back();
+				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				barrier.Transition.pResource = commandlist.resolve_src_ds;
+				barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+				barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RESOLVE_SOURCE;
+				barrier.Transition.Subresource = resolve.SrcSubresource;
+			}
+		}
+		commandlist.GetGraphicsCommandList()->ResourceBarrier((UINT)commandlist.resolve_src_barriers.size(), commandlist.resolve_src_barriers.data());
+
+		// Perform all resolves:
+		for (uint32_t rt = 0; rt < commandlist.renderpass_info.rt_count; ++rt)
+		{
+			for (auto& resolve : commandlist.resolve_subresources[rt])
+			{
+				commandlist.GetGraphicsCommandList()->ResolveSubresource(
+					commandlist.resolve_dst[rt],
+					resolve.DstSubresource,
+					commandlist.resolve_src[rt],
+					resolve.SrcSubresource,
+					commandlist.resolve_formats[rt]
+				);
+			}
+		}
+		if (commandlist.resolve_dst_ds != nullptr)
+		{
+			for (auto& resolve : commandlist.resolve_subresources_dsv)
+			{
+				commandlist.GetGraphicsCommandList()->ResolveSubresource(
+					commandlist.resolve_dst_ds,
+					resolve.DstSubresource,
+					commandlist.resolve_src_ds,
+					resolve.SrcSubresource,
+					commandlist.resolve_ds_format
+				);
+			}
+		}
+
+#else
+		commandlist.GetGraphicsCommandListLatest()->EndRenderPass();
+#endif // PLATFORM_XBOX
 
 		if (commandlist.shading_rate_image != nullptr)
 		{
-			commandlist.GetGraphicsCommandList()->RSSetShadingRateImage(nullptr);
+			commandlist.GetGraphicsCommandListLatest()->RSSetShadingRateImage(nullptr);
 			commandlist.shading_rate_image = nullptr;
 		}
 
@@ -6375,7 +6461,7 @@ using namespace dx12_internal;
 				D3D12_SHADING_RATE_COMBINER_MAX,
 				D3D12_SHADING_RATE_COMBINER_MAX,
 			};
-			commandlist.GetGraphicsCommandList()->RSSetShadingRate(_rate, combiners);
+			commandlist.GetGraphicsCommandListLatest()->RSSetShadingRate(_rate, combiners);
 		}
 	}
 	void GraphicsDevice_DX12::BindPipelineState(const PipelineState* pso, CommandList cmd)
@@ -6466,7 +6552,7 @@ using namespace dx12_internal;
 		if (CheckCapability(GraphicsDeviceCapability::DEPTH_BOUNDS_TEST))
 		{
 			CommandList_DX12& commandlist = GetCommandList(cmd);
-			commandlist.GetGraphicsCommandList()->OMSetDepthBounds(min_bounds, max_bounds);
+			commandlist.GetGraphicsCommandListLatest()->OMSetDepthBounds(min_bounds, max_bounds);
 		}
 	}
 	void GraphicsDevice_DX12::Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd)
@@ -6540,7 +6626,7 @@ using namespace dx12_internal;
 	{
 		predraw(cmd);
 		CommandList_DX12& commandlist = GetCommandList(cmd);
-		commandlist.GetGraphicsCommandList()->DispatchMesh(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+		commandlist.GetGraphicsCommandListLatest()->DispatchMesh(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 	}
 	void GraphicsDevice_DX12::DispatchMeshIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
@@ -6961,7 +7047,7 @@ using namespace dx12_internal;
 		}
 		desc.DestAccelerationStructureData = dst_internal->gpu_address;
 		desc.ScratchAccelerationStructureData = to_internal(&dst_internal->scratch)->gpu_address;
-		commandlist.GetGraphicsCommandList()->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
+		commandlist.GetGraphicsCommandListLatest()->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
 	}
 	void GraphicsDevice_DX12::BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd)
 	{
@@ -6974,7 +7060,7 @@ using namespace dx12_internal;
 		BindComputeShader(rtpso->desc.shader_libraries.front().shader, cmd);
 
 		auto internal_state = to_internal(rtpso);
-		commandlist.GetGraphicsCommandList()->SetPipelineState1(internal_state->resource.Get());
+		commandlist.GetGraphicsCommandListLatest()->SetPipelineState1(internal_state->resource.Get());
 	}
 	void GraphicsDevice_DX12::DispatchRays(const DispatchRaysDesc* desc, CommandList cmd)
 	{
@@ -7029,7 +7115,7 @@ using namespace dx12_internal;
 				desc->callable.stride;
 		}
 
-		commandlist.GetGraphicsCommandList()->DispatchRays(&dispatchrays_desc);
+		commandlist.GetGraphicsCommandListLatest()->DispatchRays(&dispatchrays_desc);
 	}
 	void GraphicsDevice_DX12::PushConstants(const void* data, uint32_t size, CommandList cmd, uint32_t offset)
 	{
@@ -7453,7 +7539,7 @@ using namespace dx12_internal;
 		// Debug immediate submit-wait:
 #if 0
 		ComPtr<ID3D12Fence> fence;
-		HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
+		HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(fence));
 		assert(SUCCEEDED(hr));
 
 		//D3D12_RESOURCE_BARRIER bar = {};

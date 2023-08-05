@@ -59,13 +59,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	float shadow = 0;
 
 #ifdef RTAPI
-	RayQuery<
-		RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
-		RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH
-	> q;
+	wiRayQuery q;
 	q.TraceRayInline(
 		scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
-		0,								// uint RayFlags
+		RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
+		RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, // uint RayFlags
 		asuint(postprocess.params1.x),	// uint InstanceInclusionMask
 		ray								// RayDesc Ray
 	);

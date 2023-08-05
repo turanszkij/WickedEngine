@@ -1,6 +1,6 @@
 #include "wiPlatform.h"
 
-#if defined(_WIN32) && !defined(PLATFORM_UWP)
+#ifdef PLATFORM_WINDOWS_DESKTOP
 #include "wiNetwork.h"
 #include "wiBacklog.h"
 #include "wiTimer.h"
@@ -186,4 +186,4 @@ namespace wi::network
 
 }
 
-#endif // _WIN32 && !PLATFORM_UWP
+#endif // PLATFORM_WINDOWS_DESKTOP

@@ -12,12 +12,19 @@
 #include "wiVector.h"
 #include "wiSpinLock.h"
 
-#include <dxgi1_6.h>
-#include <wrl/client.h> // ComPtr
-
+#ifdef PLATFORM_XBOX
+#include "wiGraphicsDevice_DX12_XBOX.h"
+#else
 #include "Utility/dx12/d3d12.h"
 #include "Utility/dx12/d3d12video.h"
+#include <dxgi1_6.h>
+#define PPV_ARGS(x) IID_PPV_ARGS(&x)
+#endif // PLATFORM_XBOX
+
+#include <wrl/client.h> // ComPtr
+
 #define D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
+#define __ID3D12Device1_INTERFACE_DEFINED__
 #include "Utility/D3D12MemAlloc.h"
 
 #include <deque>
@@ -29,18 +36,16 @@ namespace wi::graphics
 	class GraphicsDevice_DX12 final : public GraphicsDevice
 	{
 	protected:
+#ifndef PLATFORM_XBOX
 		Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
-		Microsoft::WRL::ComPtr<IDXGIAdapter1> dxgiAdapter;
+#endif // PLATFORM_XBOX
 		Microsoft::WRL::ComPtr<ID3D12Device5> device;
 		Microsoft::WRL::ComPtr<ID3D12VideoDevice> video_device;
-		Microsoft::WRL::ComPtr<ID3D12PipelineLibrary1> pipelineLibrary;
-		wi::vector<uint8_t> pipelineLibraryData; // must be alive while pipelineLibrary object is alive!
-		mutable std::mutex pipelineLibraryLocker;
 
-#ifndef PLATFORM_UWP
+#ifdef PLATFORM_WINDOWS_DESKTOP
 		Microsoft::WRL::ComPtr<ID3D12Fence> deviceRemovedFence;
 		HANDLE deviceRemovedWaitHandle = {};
-#endif
+#endif // PLATFORM_WINDOWS_DESKTOP
 		std::mutex onDeviceRemovedMutex;
 		bool deviceRemoved = false;
 
@@ -73,6 +78,10 @@ namespace wi::graphics
 			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
 			wi::vector<ID3D12CommandList*> submit_cmds;
 		} queues[QUEUE_COUNT];
+
+#ifdef PLATFORM_XBOX
+		std::mutex queue_locker;
+#endif // PLATFORM_XBOX
 
 		struct CopyAllocator
 		{
@@ -119,7 +128,6 @@ namespace wi::graphics
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[BUFFERCOUNT][QUEUE_COUNT];
 			Microsoft::WRL::ComPtr<ID3D12CommandList> commandLists[QUEUE_COUNT];
 			using graphics_command_list_version = ID3D12GraphicsCommandList6;
-			using video_decode_command_list_version = ID3D12VideoDecodeCommandList;
 			uint32_t buffer_index = 0;
 
 			QUEUE_TYPE queue = {};
@@ -151,12 +159,18 @@ namespace wi::graphics
 			wi::vector<D3D12_RAYTRACING_GEOMETRY_DESC> accelerationstructure_build_geometries;
 			RenderPassInfo renderpass_info;
 			wi::vector<D3D12_RESOURCE_BARRIER> renderpass_barriers_begin;
+			wi::vector<D3D12_RESOURCE_BARRIER> renderpass_barriers_begin_after_discards;
 			wi::vector<D3D12_RESOURCE_BARRIER> renderpass_barriers_end;
 			ID3D12Resource* shading_rate_image = nullptr;
-
-			// Due to a API bug, this resolve_subresources array must be kept alive between BeginRenderpass() and EndRenderpass()!
+			ID3D12Resource* resolve_src[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+			ID3D12Resource* resolve_dst[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+			DXGI_FORMAT resolve_formats[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+			ID3D12Resource* resolve_src_ds = nullptr;
+			ID3D12Resource* resolve_dst_ds = nullptr;
+			DXGI_FORMAT resolve_ds_format = {};
 			wi::vector<D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS> resolve_subresources[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 			wi::vector<D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS> resolve_subresources_dsv = {};
+			wi::vector<D3D12_RESOURCE_BARRIER> resolve_src_barriers;
 
 			void reset(uint32_t bufferindex)
 			{
@@ -177,11 +191,16 @@ namespace wi::graphics
 				renderpass_info = {};
 				renderpass_barriers_begin.clear();
 				renderpass_barriers_end.clear();
-				for (size_t i = 0; i < arraysize(resolve_subresources); ++i)
+				for (size_t i = 0; i < D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT; ++i)
 				{
+					resolve_src[i] = {};
+					resolve_dst[i] = {};
 					resolve_subresources[i].clear();
 				}
 				resolve_subresources_dsv.clear();
+				resolve_src_barriers.clear();
+				resolve_src_ds = nullptr;
+				resolve_dst_ds = nullptr;
 				shading_rate_image = nullptr;
 			}
 
@@ -193,15 +212,20 @@ namespace wi::graphics
 			{
 				return commandLists[queue].Get();
 			}
-			inline graphics_command_list_version* GetGraphicsCommandList()
+			inline ID3D12GraphicsCommandList* GetGraphicsCommandList()
 			{
 				assert(queue != QUEUE_VIDEO_DECODE);
+				return (ID3D12GraphicsCommandList*)commandLists[queue].Get();
+			}
+			inline graphics_command_list_version* GetGraphicsCommandListLatest()
+			{
+				assert(queue != QUEUE_VIDEO_DECODE && queue != QUEUE_COPY);
 				return (graphics_command_list_version*)commandLists[queue].Get();
 			}
-			inline video_decode_command_list_version* GetVideoDecodeCommandList()
+			inline ID3D12VideoDecodeCommandList* GetVideoDecodeCommandList()
 			{
 				assert(queue == QUEUE_VIDEO_DECODE);
-				return (video_decode_command_list_version*)commandLists[queue].Get();
+				return (ID3D12VideoDecodeCommandList*)commandLists[queue].Get();
 			}
 		};
 		wi::vector<std::unique_ptr<CommandList_DX12>> commandlists;
@@ -256,7 +280,14 @@ namespace wi::graphics
 		void ClearPipelineStateCache() override;
 		size_t GetActivePipelineCount() const override { return pipelines_global.size(); }
 
-		ShaderFormat GetShaderFormat() const override { return ShaderFormat::HLSL6; }
+		ShaderFormat GetShaderFormat() const override
+		{
+#ifdef PLATFORM_XBOX
+			return ShaderFormat::HLSL6_XS;
+#else
+			return ShaderFormat::HLSL6;
+#endif // PLATFORM_XBOX
+		}
 
 		Texture GetBackBuffer(const SwapChain* swapchain) const override;
 
@@ -418,7 +449,7 @@ namespace wi::graphics
 				void block_allocate()
 				{
 					heaps.emplace_back();
-					HRESULT hr = device->device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&heaps.back()));
+					HRESULT hr = device->device->CreateDescriptorHeap(&desc, PPV_ARGS(heaps.back()));
 					assert(SUCCEEDED(hr));
 					D3D12_CPU_DESCRIPTOR_HANDLE heap_start = heaps.back()->GetCPUDescriptorHandleForHeapStart();
 					for (UINT i = 0; i < desc.NumDescriptors; ++i)

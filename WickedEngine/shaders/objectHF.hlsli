@@ -232,13 +232,13 @@ struct PixelInput
 {
 	precise float4 pos : SV_POSITION;
 
-#ifdef OBJECTSHADER_USE_INSTANCEINDEX
-	uint instanceIndex : INSTANCEINDEX;
-#endif // OBJECTSHADER_USE_INSTANCEINDEX
-
 #ifdef OBJECTSHADER_USE_CLIPPLANE
 	float  clip : SV_ClipDistance0;
 #endif // OBJECTSHADER_USE_CLIPPLANE
+
+#ifdef OBJECTSHADER_USE_INSTANCEINDEX
+	uint instanceIndex : INSTANCEINDEX;
+#endif // OBJECTSHADER_USE_INSTANCEINDEX
 
 #ifdef OBJECTSHADER_USE_DITHERING
 	nointerpolation float dither : DITHER;

@@ -365,6 +365,7 @@ int main(int argc, char* argv[])
 	std::cout << "\thlsl5 : \t\tCompile shaders to hlsl5 (dx11) format (using d3dcompiler)\n";
 	std::cout << "\thlsl6 : \t\tCompile shaders to hlsl6 (dx12) format (using dxcompiler)\n";
 	std::cout << "\tspirv : \t\tCompile shaders to spirv (vulkan) format (using dxcompiler)\n";
+	std::cout << "\thlsl6_xs : \t\tCompile shaders to hlsl6 Xbox Series native (dx12) format (using dxcompiler_xs)\n";
 	std::cout << "\trebuild : \t\tAll shaders will be rebuilt, regardless if they are outdated or not\n";
 	std::cout << "\tdisable_optimization : \tShaders will be compiled without optimizations (this will improve shader debuggability, but reduce performance)\n";
 	std::cout << "\tstrip_reflection : \tReflection will be stripped from shader binary to reduce file size (this will reduce shader debuggability)\n";
@@ -387,6 +388,11 @@ int main(int argc, char* argv[])
 	{
 		targets.push_back({ ShaderFormat::SPIRV, "shaders/spirv/" });
 		std::cout << "spirv ";
+	}
+	if (wi::arguments::HasArgument("hlsl6_xs"))
+	{
+		targets.push_back({ ShaderFormat::HLSL6_XS, "shaders/hlsl6_xs/" });
+		std::cout << "hlsl6_xs ";
 	}
 
 	if (wi::arguments::HasArgument("shaderdump"))

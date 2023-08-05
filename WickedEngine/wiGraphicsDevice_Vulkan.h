@@ -2,9 +2,9 @@
 #include "CommonInclude.h"
 #include "wiPlatform.h"
 
-#ifndef PLATFORM_UWP
+#if defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX)
 #define WICKEDENGINE_BUILD_VULKAN
-#endif // PLATFORM_UWP
+#endif // PLATFORM_WINDOWS_DESKTOP || PLATFORM_LINUX
 
 #ifdef WICKEDENGINE_BUILD_VULKAN
 #include "wiGraphicsDevice.h"

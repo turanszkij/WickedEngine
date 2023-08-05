@@ -1,4 +1,5 @@
 //#define BRDF_NDOTL_BIAS 0.1
+#define RAYTRACING_HINT_COHERENT_RAYS // xbox
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 #include "raytracingHF.hlsli"
@@ -205,19 +206,19 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 						ray.Direction = L + max3(surface.sss);
 
 #ifdef RTAPI
-						RayQuery<
-							RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
-							RAY_FLAG_CULL_FRONT_FACING_TRIANGLES |
-							RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH
-						> q;
+						wiRayQuery q;
 						q.TraceRayInline(
 							scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
-							0,								// uint RayFlags
+							RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
+							RAY_FLAG_CULL_FRONT_FACING_TRIANGLES |
+							RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,								// uint RayFlags
 							asuint(postprocess.params1.x),	// uint InstanceInclusionMask
 							ray								// RayDesc Ray
 						);
 						while (q.Proceed())
 						{
+							if(q.CandidateType() != CANDIDATE_NON_OPAQUE_TRIANGLE) // see xbox coherent ray traversal documentation
+								continue;
 							PrimitiveID prim;
 							prim.primitiveIndex = q.CandidatePrimitiveIndex();
 							prim.instanceIndex = q.CandidateInstanceID();

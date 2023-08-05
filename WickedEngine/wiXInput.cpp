@@ -2,11 +2,15 @@
 
 #if __has_include("xinput.h")
 
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#if defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_UWP)
 #include <xinput.h>
-
 #pragma comment(lib,"xinput.lib")
+#endif // PLATFORM_WINDOWS_DESKTOP || PLATFORM_UWP
+
+#ifdef PLATFORM_XBOX
+#include <XInputOnGameInput.h>
+using namespace XInputOnGameInput;
+#endif // PLATFORM_XBOX
 
 namespace wi::input::xinput
 {
