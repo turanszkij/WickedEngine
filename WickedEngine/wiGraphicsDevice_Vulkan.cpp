@@ -405,7 +405,8 @@ namespace vulkan_internal
 
 		if (has_flag(value, ResourceState::SHADER_RESOURCE) ||
 			has_flag(value, ResourceState::SHADER_RESOURCE_COMPUTE) ||
-			has_flag(value, ResourceState::UNORDERED_ACCESS))
+			has_flag(value, ResourceState::UNORDERED_ACCESS) ||
+			has_flag(value, ResourceState::CONSTANT_BUFFER))
 		{
 			flags |= VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 		}
@@ -434,10 +435,6 @@ namespace vulkan_internal
 		if (has_flag(value, ResourceState::INDEX_BUFFER))
 		{
 			flags |= VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT;
-		}
-		if (has_flag(value, ResourceState::CONSTANT_BUFFER))
-		{
-			flags |= VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 		}
 		if (has_flag(value, ResourceState::INDIRECT_ARGUMENT))
 		{
@@ -8656,15 +8653,15 @@ using namespace vulkan_internal;
 				if (has_flag(desc.misc_flags, ResourceMiscFlag::RAY_TRACING))
 				{
 					assert(CheckCapability(GraphicsDeviceCapability::RAYTRACING));
-					barrierdesc.srcStageMask |= _ParseResourceState(ResourceState::RAYTRACING_ACCELERATION_STRUCTURE);
-					barrierdesc.dstStageMask |= _ParseResourceState(ResourceState::RAYTRACING_ACCELERATION_STRUCTURE);
+					barrierdesc.srcStageMask |= _ConvertPipelineStage(ResourceState::RAYTRACING_ACCELERATION_STRUCTURE);
+					barrierdesc.dstStageMask |= _ConvertPipelineStage(ResourceState::RAYTRACING_ACCELERATION_STRUCTURE);
 				}
 
 				if (has_flag(desc.misc_flags, ResourceMiscFlag::PREDICATION))
 				{
 					assert(CheckCapability(GraphicsDeviceCapability::PREDICATION));
-					barrierdesc.srcStageMask |= _ParseResourceState(ResourceState::PREDICATION);
-					barrierdesc.dstStageMask |= _ParseResourceState(ResourceState::PREDICATION);
+					barrierdesc.srcStageMask |= _ConvertPipelineStage(ResourceState::PREDICATION);
+					barrierdesc.dstStageMask |= _ConvertPipelineStage(ResourceState::PREDICATION);
 				}
 
 				bufferBarriers.push_back(barrierdesc);
