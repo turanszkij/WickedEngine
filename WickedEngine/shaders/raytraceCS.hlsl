@@ -65,11 +65,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		float4 additive_dist = float4(0, 0, 0, FLT_MAX);
 
 #ifdef RTAPI
-		RayQuery<
-			RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
-		> q;
+		wiRayQuery q;
 
-		uint flags = 0;
+		uint flags = RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES;
 #ifdef RAY_BACKFACE_CULLING
 		flags |= RAY_FLAG_CULL_BACK_FACING_TRIANGLES;
 #endif // RAY_BACKFACE_CULLING
@@ -317,7 +315,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 #ifdef RTAPI
 
-				uint flags = RAY_FLAG_CULL_FRONT_FACING_TRIANGLES;
+				uint flags = RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES | RAY_FLAG_CULL_FRONT_FACING_TRIANGLES;
 				if (bounce > ANYTHIT_CUTOFF_AFTER_BOUNCE_COUNT)
 				{
 					flags |= RAY_FLAG_FORCE_OPAQUE;

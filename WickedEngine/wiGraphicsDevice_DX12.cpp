@@ -2660,7 +2660,7 @@ using namespace dx12_internal;
 		capabilities |= GraphicsDeviceCapability::VARIABLE_RATE_SHADING;
 		capabilities |= GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2;
 		VARIABLE_RATE_SHADING_TILE_SIZE = 8;
-		//capabilities |= GraphicsDeviceCapability::RAYTRACING; // TODO
+		capabilities |= GraphicsDeviceCapability::RAYTRACING;
 		capabilities |= GraphicsDeviceCapability::UAV_LOAD_FORMAT_R11G11B10_FLOAT;
 		capabilities |= GraphicsDeviceCapability::UAV_LOAD_FORMAT_COMMON;
 		capabilities |= GraphicsDeviceCapability::RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS;

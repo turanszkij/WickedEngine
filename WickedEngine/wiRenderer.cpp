@@ -12828,7 +12828,7 @@ void Postprocess_RTShadow(
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
+			GPUBarrier::Image(&res.temp, ResourceState::UNORDERED_ACCESS, res.temp.desc.layout),
 			GPUBarrier::Image(&res.normals, ResourceState::UNORDERED_ACCESS, res.normals.desc.layout),
 			GPUBarrier::Buffer(&res.tiles, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 		};
@@ -12894,7 +12894,6 @@ void Postprocess_RTShadow(
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
 				GPUBarrier::Buffer(&res.metadata, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 				GPUBarrier::Image(&res.scratch[0][0], ResourceState::UNORDERED_ACCESS, res.scratch[0][0].desc.layout),
 				GPUBarrier::Image(&res.scratch[1][0], ResourceState::UNORDERED_ACCESS, res.scratch[1][0].desc.layout),
@@ -12972,7 +12971,6 @@ void Postprocess_RTShadow(
 			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Memory(),
 					GPUBarrier::Image(&res.scratch[0][1], ResourceState::UNORDERED_ACCESS, res.scratch[0][1].desc.layout),
 					GPUBarrier::Image(&res.scratch[1][1], ResourceState::UNORDERED_ACCESS, res.scratch[1][1].desc.layout),
 					GPUBarrier::Image(&res.scratch[2][1], ResourceState::UNORDERED_ACCESS, res.scratch[2][1].desc.layout),
@@ -13013,7 +13011,6 @@ void Postprocess_RTShadow(
 			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Memory(),
 					GPUBarrier::Image(&res.scratch[0][0], ResourceState::UNORDERED_ACCESS, res.scratch[0][0].desc.layout),
 					GPUBarrier::Image(&res.scratch[1][0], ResourceState::UNORDERED_ACCESS, res.scratch[1][0].desc.layout),
 					GPUBarrier::Image(&res.scratch[2][0], ResourceState::UNORDERED_ACCESS, res.scratch[2][0].desc.layout),
@@ -13040,7 +13037,6 @@ void Postprocess_RTShadow(
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
 				GPUBarrier::Image(&res.scratch[0][1], ResourceState::UNORDERED_ACCESS, res.scratch[0][1].desc.layout),
 				GPUBarrier::Image(&res.scratch[1][1], ResourceState::UNORDERED_ACCESS, res.scratch[1][1].desc.layout),
 				GPUBarrier::Image(&res.scratch[2][1], ResourceState::UNORDERED_ACCESS, res.scratch[2][1].desc.layout),
@@ -13071,7 +13067,6 @@ void Postprocess_RTShadow(
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.temp, ResourceState::UNORDERED_ACCESS, res.temp.desc.layout),
 				GPUBarrier::Image(&res.temporal[temporal_output], res.temporal[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
@@ -13086,7 +13081,6 @@ void Postprocess_RTShadow(
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
 				GPUBarrier::Image(&res.temporal[temporal_output], ResourceState::UNORDERED_ACCESS, res.temporal[temporal_output].desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);

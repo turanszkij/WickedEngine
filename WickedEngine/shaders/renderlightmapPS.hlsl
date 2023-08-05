@@ -37,9 +37,7 @@ float4 main(Input input) : SV_TARGET
 	for (uint bounce = 0; bounce < bounces; ++bounce)
 	{
 #ifdef RTAPI
-		RayQuery<
-			RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
-		> q;
+		wiRayQuery q;
 #endif // RTAPI
 
 		surface.P = ray.Origin;
@@ -158,7 +156,7 @@ float4 main(Input input) : SV_TARGET
 					newRay.Direction = L + max3(surface.sss);
 
 #ifdef RTAPI
-					uint flags = RAY_FLAG_CULL_FRONT_FACING_TRIANGLES;
+					uint flags = RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES | RAY_FLAG_CULL_FRONT_FACING_TRIANGLES;
 					if (bounce > ANYTHIT_CUTOFF_AFTER_BOUNCE_COUNT)
 					{
 						flags |= RAY_FLAG_FORCE_OPAQUE;
