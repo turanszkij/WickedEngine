@@ -122,7 +122,7 @@ namespace wi::shadercompiler
 
 		// https://github.com/microsoft/DirectXShaderCompiler/wiki/Using-dxc.exe-and-dxcompiler.dll#dxcompiler-dll-interface
 
-		wi::vector<LPCWSTR> args = {
+		wi::vector<std::wstring> args = {
 			//L"-res-may-alias",
 			//L"-flegacy-macro-expansion",
 			//L"-no-legacy-cbuf-layout",
@@ -149,12 +149,6 @@ namespace wi::shadercompiler
 			{
 				args.push_back(L"-Qstrip_reflect"); // only valid in HLSL6 compiler
 			}
-#ifdef SHADERCOMPILER_XBOX_INCLUDED
-			if (input.format == ShaderFormat::HLSL6_XS)
-			{
-				wi::shadercompiler::xbox::AddArguments(input, args);
-			}
-#endif // SHADERCOMPILER_XBOX_INCLUDED
 			break;
 		case ShaderFormat::SPIRV:
 			args.push_back(L"-D"); args.push_back(L"SPIRV");
@@ -396,24 +390,24 @@ namespace wi::shadercompiler
 			return;
 		}
 
-		wi::vector<std::wstring> wstrings;
-		wstrings.reserve(input.defines.size() + input.include_directories.size());
-
 		for (auto& x : input.defines)
 		{
-			std::wstring& wstr = wstrings.emplace_back();
-			wi::helper::StringConvert(x, wstr);
 			args.push_back(L"-D");
-			args.push_back(wstr.c_str());
+			wi::helper::StringConvert(x, args.emplace_back());
 		}
 
 		for (auto& x : input.include_directories)
 		{
-			std::wstring& wstr = wstrings.emplace_back();
-			wi::helper::StringConvert(x, wstr);
 			args.push_back(L"-I");
-			args.push_back(wstr.c_str());
+			wi::helper::StringConvert(x, args.emplace_back());
 		}
+
+#ifdef SHADERCOMPILER_XBOX_INCLUDED
+		if (input.format == ShaderFormat::HLSL6_XS)
+		{
+			wi::shadercompiler::xbox::AddArguments(input, args);
+		}
+#endif // SHADERCOMPILER_XBOX_INCLUDED
 
 		// Entry point parameter:
 		std::wstring wentry;
@@ -472,13 +466,20 @@ namespace wi::shadercompiler
 		hr = dxcUtils->CreateDefaultIncludeHandler(&includehandler.dxcIncludeHandler);
 		assert(SUCCEEDED(hr));
 
+		wi::vector<const wchar_t*> args_raw;
+		args_raw.reserve(args.size());
+		for (auto& x : args)
+		{
+			args_raw.push_back(x.c_str());
+		}
+
 		CComPtr<IDxcResult> pResults;
 		hr = dxcCompiler->Compile(
-			&Source,                // Source buffer.
-			args.data(),            // Array of pointers to arguments.
-			(uint32_t)args.size(),	// Number of arguments.
+			&Source,						// Source buffer.
+			args_raw.data(),			// Array of pointers to arguments.
+			(uint32_t)args.size(),		// Number of arguments.
 			&includehandler,		// User-provided interface to handle #include directives (optional).
-			IID_PPV_ARGS(&pResults) // Compiler output status, buffer, and errors.
+			IID_PPV_ARGS(&pResults)	// Compiler output status, buffer, and errors.
 		);
 		assert(SUCCEEDED(hr));
 

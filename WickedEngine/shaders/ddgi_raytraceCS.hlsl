@@ -46,7 +46,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 #ifdef RTAPI
 		wiRayQuery q;
-		q.TraceRayInlineNoAHS(
+		q.TraceRayInline(
 			scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
 			RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
 			RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
