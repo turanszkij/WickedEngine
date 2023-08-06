@@ -806,6 +806,7 @@ namespace wi::shadercompiler
 	bool CheckRegisteredShadersOutdated()
 	{
 #ifdef SHADERCOMPILER_ENABLED
+		std::scoped_lock lock(locker);
 		for (auto& x : registered_shaders)
 		{
 			if (IsShaderOutdated(x))
