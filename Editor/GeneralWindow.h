@@ -36,6 +36,8 @@ public:
 	wi::gui::CheckBox skeletonsVisibleCheckBox;
 
 	wi::gui::Button localizationButton;
+	wi::gui::Button eliminateCoarseCascadesButton;
+	wi::gui::Button ktxConvButton;
 
 	void ResizeLayout() override;
 
