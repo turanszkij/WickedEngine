@@ -5,6 +5,8 @@
 
 #include "wiAllocator.h"
 
+#include <string.h> // strlen
+
 #define lunamethod(class, name) {#name, &class::name}
 #define lunaproperty(class, name) {#name, &class::Get##name, &class::Set##name}
 

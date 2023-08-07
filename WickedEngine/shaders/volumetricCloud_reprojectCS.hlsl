@@ -138,7 +138,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					{
 						int2 offset = int2(x, y);
 						int2 neighborCoord = renderCoord + offset;
-						neighborCoord = clamp(neighborCoord, minRenderCoord, maxRenderCoord);
+						neighborCoord = clamp(neighborCoord, (int2)minRenderCoord, (int2)maxRenderCoord);
 						
 						float4 neighborResult = cloud_current[neighborCoord];
 
@@ -180,7 +180,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 						int2 offset = int2(x, y);
 						int2 neighborCoord = renderCoord + offset;
-						neighborCoord = clamp(neighborCoord, minRenderCoord, maxRenderCoord);
+						neighborCoord = clamp(neighborCoord, (int2)minRenderCoord, (int2)maxRenderCoord);
 
 						float2 neighboorDepthResult = cloud_depth_current[neighborCoord];
 						float neighborClosestDepth = abs(tToDepthBuffer - neighboorDepthResult.y);

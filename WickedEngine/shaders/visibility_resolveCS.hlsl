@@ -53,8 +53,12 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
 	const float2 clipspace = uv_to_clipspace(uv);
 	RayDesc ray = CreateCameraRay(clipspace);
-
+	
+#ifdef VISIBILITY_MSAA
+	uint primitiveID = input_primitiveID.Load(pixel, 0);
+#else
 	uint primitiveID = input_primitiveID[pixel];
+#endif // VISIBILITY_MSAA
 
 #ifdef VISIBILITY_MSAA
 	output_primitiveID[pixel] = primitiveID;

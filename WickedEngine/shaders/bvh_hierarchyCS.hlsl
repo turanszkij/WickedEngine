@@ -70,7 +70,7 @@ uint2 DetermineRange(uint idx, uint elementCount)
 	}
 
 	int j = idx + length * d;
-	return uint2(min(idx, j), max(idx, j));
+	return uint2(min((int)idx, j), max((int)idx, j));
 }
 
 int FindSplit(int first, uint last, uint elementCount)

@@ -1,0 +1,1 @@
+This folder contains dummy files and definitions to assist building on PlayStation 5 platform
