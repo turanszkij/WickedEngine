@@ -964,74 +964,6 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&preset5Button);
 
 
-	eliminateCoarseCascadesButton.Create("EliminateCoarseCascades");
-	eliminateCoarseCascadesButton.SetTooltip("Eliminate the coarse cascade mask for every object in the scene.");
-	eliminateCoarseCascadesButton.SetSize(XMFLOAT2(mod_wid, hei));
-	eliminateCoarseCascadesButton.SetPos(XMFLOAT2(mod_x, y += step * 2));
-	eliminateCoarseCascadesButton.OnClick([=](wi::gui::EventArgs args) {
-
-		Scene& scene = editor->GetCurrentScene();
-		for (size_t i = 0; i < scene.objects.GetCount(); ++i)
-		{
-			scene.objects[i].cascadeMask = 1;
-		}
-
-		});
-	AddWidget(&eliminateCoarseCascadesButton);
-
-
-	ktxConvButton.Create("KTX2 Convert");
-	ktxConvButton.SetTooltip("All material textures in the scene will be converted to KTX2 format.\nTHIS MIGHT TAKE LONG, SO GET YOURSELF A COFFEE OR TEA!");
-	ktxConvButton.SetSize(XMFLOAT2(mod_wid, hei));
-	ktxConvButton.SetPos(XMFLOAT2(mod_x, y += step));
-	ktxConvButton.OnClick([=](wi::gui::EventArgs args) {
-
-		Scene& scene = editor->GetCurrentScene();
-
-		wi::unordered_map<std::string, wi::Resource> conv;
-		for (uint32_t i = 0; i < scene.materials.GetCount(); ++i)
-		{
-			MaterialComponent& material = scene.materials[i];
-			for (auto& x : material.textures)
-			{
-				if (x.GetGPUResource() == nullptr)
-					continue;
-				if (wi::helper::GetExtensionFromFileName(x.name).compare("KTX2"))
-				{
-					x.name = wi::helper::ReplaceExtension(x.name, "KTX2");
-					conv[x.name] = x.resource;
-				}
-			}
-		}
-
-		wi::jobsystem::context ctx;
-		for (auto& x : conv)
-		{
-			wi::vector<uint8_t> filedata;
-			if (wi::helper::saveTextureToMemory(x.second.GetTexture(), filedata))
-			{
-				x.second.SetFileData(std::move(filedata));
-				wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
-					wi::vector<uint8_t> filedata_ktx2;
-					if (wi::helper::saveTextureToMemoryFile(x.second.GetFileData(), x.second.GetTexture().desc, "KTX2", filedata_ktx2))
-					{
-						x.second = wi::resourcemanager::Load(x.first, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA, filedata_ktx2.data(), filedata_ktx2.size());
-					}
-					});
-			}
-		}
-		wi::jobsystem::Wait(ctx);
-
-		for (uint32_t i = 0; i < scene.materials.GetCount(); ++i)
-		{
-			MaterialComponent& material = scene.materials[i];
-			material.CreateRenderData();
-		}
-
-		});
-	AddWidget(&ktxConvButton);
-
-
 
 
 	SetMinimized(true);
@@ -1395,7 +1327,5 @@ void WeatherWindow::ResizeLayout()
 	add_fullwidth(preset3Button);
 	add_fullwidth(preset4Button);
 	add_fullwidth(preset5Button);
-	add_fullwidth(eliminateCoarseCascadesButton);
-	add_fullwidth(ktxConvButton);
 
 }
