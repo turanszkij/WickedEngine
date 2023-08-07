@@ -1599,29 +1599,6 @@ namespace dx12_internal
 		return static_cast<VideoDecoder_DX12*>(param->internal_state.get());
 	}
 
-	inline const std::string GetCachePath()
-	{
-		return wi::helper::GetTempDirectoryPath() + "wiPipelineCache_DX12";
-	}
-
-	inline void HashToName(uint64_t hash, std::wstring& name)
-	{
-		static const wchar_t s_hexValues[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
-
-		const size_t nibbleCount = sizeof(hash) * 2;
-		const size_t nibbleSize = 4;
-
-		name.resize(nibbleCount);
-
-		for (size_t nibbleIndex = 0; nibbleIndex < nibbleCount; ++nibbleIndex)
-		{
-			uint64_t nibble = hash;
-			nibble >>= (nibbleIndex * nibbleSize);
-			nibble &= 0xF;
-			name[nibbleCount - nibbleIndex - 1] = s_hexValues[nibble];
-		}
-	}
-
 #ifdef PLATFORM_WINDOWS_DESKTOP
 	inline void HandleDeviceRemoved(PVOID context, BOOLEAN)
 	{

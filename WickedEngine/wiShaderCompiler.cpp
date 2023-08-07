@@ -35,6 +35,11 @@
 #define SHADERCOMPILER_XBOX_INCLUDED
 #endif // __has_include("wiShaderCompiler_XBOX.h")
 
+#if __has_include("wiShaderCompiler_PS5.h") && !defined(PLATFORM_PS5)
+#include "wiShaderCompiler_PS5.h"
+#define SHADERCOMPILER_PS5_INCLUDED
+#endif // __has_include("wiShaderCompiler_PS5.h") && !PLATFORM_PS5
+
 using namespace wi::graphics;
 
 namespace wi::shadercompiler
@@ -714,6 +719,12 @@ namespace wi::shadercompiler
 			Compile_D3DCompiler(input, output);
 			break;
 #endif // SHADERCOMPILER_ENABLED_D3DCOMPILER
+
+#ifdef SHADERCOMPILER_PS5_INCLUDED
+		case ShaderFormat::PS5:
+			wi::shadercompiler::ps5::Compile(input, output);
+			break;
+#endif // SHADERCOMPILER_PS5_INCLUDED
 
 		}
 #endif // SHADERCOMPILER_ENABLED

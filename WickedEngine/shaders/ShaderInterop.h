@@ -41,7 +41,8 @@ using int4 = XMINT4;
 #endif // __spirv__
 #endif // SPIRV
 
-#ifdef SPIRV
+#if defined(__PSSL__)
+#elif defined(SPIRV)
 #define PUSHCONSTANT(name, type) [[vk::push_constant]] type name;
 #else
 #define PUSHCONSTANT(name, type) ConstantBuffer<type> name : register(b999)

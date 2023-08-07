@@ -29,15 +29,14 @@
 #define wiLoadLibrary(name) LoadLibraryA(name)
 #define wiGetProcAddress(handle,name) GetProcAddress(handle, name)
 #endif // WINAPI_FAMILY_APP
-
+#elif defined(__SCE__)
+#define PLATFORM_PS5
 #else
-
 #define PLATFORM_LINUX
 #include <dlfcn.h>
 #define wiLoadLibrary(name) dlopen(name, RTLD_LAZY)
 #define wiGetProcAddress(handle,name) dlsym(handle, name)
 typedef void* HMODULE;
-
 #endif // _WIN32
 
 #ifdef SDL2
@@ -58,7 +57,7 @@ namespace wi::platform
 #elif SDL2
 	using window_type = SDL_Window*;
 #else
-	using window_type = int;
+	using window_type = void*;
 #endif // _WIN32
 
 	inline void Exit()

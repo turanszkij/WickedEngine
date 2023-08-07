@@ -295,7 +295,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		if (visible)
 		{
-			uint prevCount = waveOffset + WavePrefixSum(1);
+			uint prevCount = waveOffset + WavePrefixSum(1u);
 			uint ii0 = prevCount * 6;
 			culledIndexBuffer[ii0 + 0] = i0 + 0;
 			culledIndexBuffer[ii0 + 1] = i0 + 1;

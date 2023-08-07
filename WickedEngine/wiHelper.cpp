@@ -22,7 +22,7 @@ extern basist::etc1_global_selector_codebook g_basis_global_codebook;
 #include <iostream>
 #include <cstdlib>
 
-#ifdef _WIN32
+#if defined(_WIN32)
 #include <direct.h>
 #include <Psapi.h> // GetProcessMemoryInfo
 #ifdef PLATFORM_UWP
@@ -38,6 +38,7 @@ extern basist::etc1_global_selector_codebook g_basis_global_codebook;
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
 #endif // PLATFORM_UWP
+#elif defined(PLATFORM_PS5)
 #else
 #include "Utility/portable-file-dialogs.h"
 #endif // _WIN32
@@ -580,12 +581,6 @@ namespace wi::helper
 				filedata.push_back(*((uint8_t*)data + i));
 			}
 		};
-
-		const void* src_data = texturedata.data();
-		if (basis_image.get_width() > 0 && basis_image.get_ptr() != nullptr)
-		{
-			src_data = basis_image.get_ptr();
-		}
 
 		static int mip_request = 0; // you can use this while debugging to write specific mip level to file (todo: option param?)
 		const MipDesc& mip = mips[mip_request];

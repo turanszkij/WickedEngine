@@ -117,7 +117,7 @@
 #include <math.h>
 #include <float.h>
 #ifndef __APPLE__
-#	include <malloc.h>
+//#	include <malloc.h>
 #endif
 #ifdef _MSC_VER
 #	pragma warning(pop)
@@ -170,7 +170,7 @@
 #ifdef _MSC_VER
 #   include <sal.h>
 #else
-#include "dxc/Support/WinAdapter.h"
+#include "sal.h"
 #endif
 
 #include <assert.h>

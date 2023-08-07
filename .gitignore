@@ -221,3 +221,7 @@ wiShaderdump.h
 
 # vscode
 .vscode/settings.json
+
+*.tlog
+*.o
+*.a

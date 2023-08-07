@@ -77,7 +77,7 @@
 	"StaticSampler(s108, addressU = TEXTURE_ADDRESS_MIRROR, addressV = TEXTURE_ADDRESS_MIRROR, addressW = TEXTURE_ADDRESS_MIRROR, filter = FILTER_ANISOTROPIC)," \
 	"StaticSampler(s109, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP, filter = FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT, comparisonFunc = COMPARISON_GREATER_EQUAL),"
 
-
+#ifndef __PSSL__
 // These are static samplers, they don't need to be bound:
 //	They are also on slots that are not bindable as sampler bind slots must be in [0,15] range!
 SamplerState sampler_linear_clamp : register(s100);
@@ -90,8 +90,44 @@ SamplerState sampler_aniso_clamp : register(s106);
 SamplerState sampler_aniso_wrap : register(s107);
 SamplerState sampler_aniso_mirror : register(s108);
 SamplerComparisonState sampler_cmp_depth : register(s109);
+#endif // __PSSL__
 
-#ifdef SPIRV
+#if defined(__PSSL__)
+static const BindlessResource<SamplerState> bindless_samplers;
+static const BindlessResource<Texture2D> bindless_textures;
+static const BindlessResource<ByteAddressBuffer> bindless_buffers;
+static const BindlessResource<Buffer<uint>> bindless_buffers_uint;
+static const BindlessResource<Buffer<uint2>> bindless_buffers_uint2;
+static const BindlessResource<Buffer<uint3>> bindless_buffers_uint3;
+static const BindlessResource<Buffer<uint4>> bindless_buffers_uint4;
+static const BindlessResource<Buffer<float>> bindless_buffers_float;
+static const BindlessResource<Buffer<float2>> bindless_buffers_float2;
+static const BindlessResource<Buffer<float3>> bindless_buffers_float3;
+static const BindlessResource<Buffer<float4>> bindless_buffers_float4;
+static const BindlessResource<Texture2DArray> bindless_textures2DArray;
+static const BindlessResource<TextureCube> bindless_cubemaps;
+static const BindlessResource<TextureCubeArray> bindless_cubearrays;
+static const BindlessResource<Texture3D> bindless_textures3D;
+static const BindlessResource<Texture2D<float>> bindless_textures_float;
+static const BindlessResource<Texture2D<float2>> bindless_textures_float2;
+static const BindlessResource<Texture2D<uint>> bindless_textures_uint;
+static const BindlessResource<Texture2D<uint4>> bindless_textures_uint4;
+
+static const BindlessResource<RWTexture2D<float4>> bindless_rwtextures;
+static const BindlessResource<RWByteAddressBuffer> bindless_rwbuffers;
+static const BindlessResource<RWBuffer<uint>> bindless_rwbuffers_uint;
+static const BindlessResource<RWBuffer<uint2>> bindless_rwbuffers_uint2;
+static const BindlessResource<RWBuffer<uint3>> bindless_rwbuffers_uint3;
+static const BindlessResource<RWBuffer<uint4>> bindless_rwbuffers_uint4;
+static const BindlessResource<RWBuffer<float>> bindless_rwbuffers_float;
+static const BindlessResource<RWBuffer<float2>> bindless_rwbuffers_float2;
+static const BindlessResource<RWBuffer<float3>> bindless_rwbuffers_float3;
+static const BindlessResource<RWBuffer<float4>> bindless_rwbuffers_float4;
+static const BindlessResource<RWTexture2DArray<float4>> bindless_rwtextures2DArray;
+static const BindlessResource<RWTexture3D<float4>> bindless_rwtextures3D;
+static const BindlessResource<RWTexture2D<uint>> bindless_rwtextures_uint;
+
+#elif defined(SPIRV)
 // In Vulkan, we can manually overlap descriptor sets to reduce bindings:
 //	Note that HLSL register space declaration was not working correctly with overlapped spaces,
 //	But vk::binding works correctly in this case.
@@ -183,7 +219,14 @@ RWTexture2D<uint> bindless_rwtextures_uint[] : register(space33);
 
 #include "ShaderInterop_Renderer.h"
 
-#ifdef SPIRV
+#if defined(__PSSL__)
+static const BindlessResource<StructuredBuffer<ShaderMeshInstance>> bindless_buffers_meshinstance;
+static const BindlessResource<StructuredBuffer<ShaderGeometry>> bindless_buffers_geometry;
+static const BindlessResource<StructuredBuffer<ShaderMeshlet>> bindless_buffers_meshlet;
+static const BindlessResource<StructuredBuffer<ShaderMaterial>> bindless_buffers_material;
+static const BindlessResource<StructuredBuffer<ShaderEntity>> bindless_buffers_entity;
+static const BindlessResource<StructuredBuffer<float4x4>> bindless_buffers_matrix;
+#elif defined(SPIRV)
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMeshInstance> bindless_buffers_meshinstance[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderGeometry> bindless_buffers_geometry[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMeshlet> bindless_buffers_meshlet[];

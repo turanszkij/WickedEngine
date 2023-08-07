@@ -54,6 +54,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		const uint l_width = max(1u, push.width >> lod);
 		const uint l_page_offset = lod_offsets[lod];
 		const uint l_index = l_page_offset + l_x + l_y * l_width;
-		requestBuffer.InterlockedMin(l_index * sizeof(uint), page_request);
+		requestBuffer.InterlockedMin(uint(l_index * sizeof(uint)), page_request);
 	}
 }
