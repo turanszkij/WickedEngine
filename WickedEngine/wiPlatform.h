@@ -33,6 +33,7 @@
 #define PLATFORM_PS5
 #else
 #define PLATFORM_LINUX
+#include <fstream>
 #include <dlfcn.h>
 #define wiLoadLibrary(name) dlopen(name, RTLD_LAZY)
 #define wiGetProcAddress(handle,name) dlsym(handle, name)
