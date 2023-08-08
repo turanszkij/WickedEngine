@@ -9,13 +9,11 @@ StructuredBuffer<uint4> tiles : register(t2);
 RWStructuredBuffer<uint4> metadata : register(u0);
 
 // per-light:
-Texture2D<float3> moments_prev[4] : register(t3);
-Texture2D<float> history[4] : register(t7);
+Texture2D<float3> moments_prev : register(t3);
+Texture2D<float> history : register(t4);
 
-RWTexture2D<float2> reprojection[4] : register(u1);
-RWTexture2D<float3> moments[4] : register(u5);
-
-groupshared uint light_index;
+RWTexture2D<float2> reprojection : register(u1);
+RWTexture2D<float3> moments : register(u2);
 
 int FFX_DNSR_Shadows_IsFirstFrame()
 {
@@ -60,15 +58,15 @@ float3 FFX_DNSR_Shadows_ReadNormals(uint2 did)
 }
 uint FFX_DNSR_Shadows_ReadRaytracedShadowMask(uint linear_tile_index)
 {
-	return tiles[linear_tile_index][light_index];
+	return tiles[linear_tile_index][uint(rtshadow_denoise_lightindex)];
 }
 float3 FFX_DNSR_Shadows_ReadPreviousMomentsBuffer(int2 history_pos)
 {
-	return moments_prev[light_index][history_pos];
+	return moments_prev[history_pos];
 }
 float FFX_DNSR_Shadows_ReadHistory(float2 history_uv)
 {
-	return history[light_index].SampleLevel(sampler_linear_clamp, history_uv, 0);
+	return history.SampleLevel(sampler_linear_clamp, history_uv, 0);
 }
 float2 FFX_DNSR_Shadows_ReadVelocity(uint2 did)
 {
@@ -77,15 +75,15 @@ float2 FFX_DNSR_Shadows_ReadVelocity(uint2 did)
 
 void FFX_DNSR_Shadows_WriteReprojectionResults(uint2 did, float2 value)
 {
-	reprojection[light_index][did] = value;
+	reprojection[did] = value;
 }
 void FFX_DNSR_Shadows_WriteMoments(uint2 did, float3 value)
 {
-	moments[light_index][did] = value;
+	moments[did] = value;
 }
 void FFX_DNSR_Shadows_WriteMetadata(uint idx, uint mask)
 {
-	metadata[idx][light_index] = mask;
+	metadata[idx][uint(rtshadow_denoise_lightindex)] = mask;
 }
 
 bool FFX_DNSR_Shadows_IsShadowReciever(uint2 did)
@@ -101,8 +99,5 @@ bool FFX_DNSR_Shadows_IsShadowReciever(uint2 did)
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
-	light_index = Gid.z;
-	GroupMemoryBarrierWithGroupSync();
-
 	FFX_DNSR_Shadows_TileClassification(groupIndex, Gid.xy);
 }

@@ -11323,7 +11323,7 @@ void Postprocess_RTAO(
 	};
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-	PostProcess postprocess;
+	PostProcess postprocess = {};
 	postprocess.resolution.x = desc.width;
 	postprocess.resolution.y = desc.height;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
@@ -12794,7 +12794,7 @@ void Postprocess_RTShadow(
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTSHADOW], cmd);
 
-	PostProcess postprocess;
+	PostProcess postprocess = {};
 	postprocess.resolution.x = desc.width;
 	postprocess.resolution.y = desc.height;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
@@ -12844,31 +12844,8 @@ void Postprocess_RTShadow(
 	{
 		device->EventBegin("Denoise - Tile Classification", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTSHADOW_DENOISE_TILECLASSIFICATION], cmd);
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-
 		device->BindResource(&res.normals, 0, cmd);
 		device->BindResource(&res.tiles, 2, cmd);
-		device->BindResource(&res.moments[0][temporal_history], 3, cmd);
-		device->BindResource(&res.moments[1][temporal_history], 4, cmd);
-		device->BindResource(&res.moments[2][temporal_history], 5, cmd);
-		device->BindResource(&res.moments[3][temporal_history], 6, cmd);
-		device->BindResource(&res.scratch[0][1], 7, cmd);
-		device->BindResource(&res.scratch[1][1], 8, cmd);
-		device->BindResource(&res.scratch[2][1], 9, cmd);
-		device->BindResource(&res.scratch[3][1], 10, cmd);
-
-		const GPUResource* uavs[] = {
-			&res.metadata,
-			&res.scratch[0][0],
-			&res.scratch[1][0],
-			&res.scratch[2][0],
-			&res.scratch[3][0],
-			&res.moments[0][temporal_output],
-			&res.moments[1][temporal_output],
-			&res.moments[2][temporal_output],
-			&res.moments[3][temporal_output],
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -12885,12 +12862,28 @@ void Postprocess_RTShadow(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->Dispatch(
-			(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			4, // 4 lights
-			cmd
-		);
+		for (int i = 0; i < 4; ++i)
+		{
+			rtshadow_denoise_lightindex = float(i);
+			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+			device->BindResource(&res.moments[i][temporal_history], 3, cmd);
+			device->BindResource(&res.scratch[i][1], 4, cmd);
+
+			const GPUResource* uavs[] = {
+				&res.metadata,
+				&res.scratch[i][0],
+				&res.moments[i][temporal_output],
+			};
+			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+			device->Dispatch(
+				(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				(desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				1,
+				cmd
+			);
+		}
 
 		{
 			GPUBarrier barriers[] = {
@@ -12920,18 +12913,6 @@ void Postprocess_RTShadow(
 
 		// pass0:
 		{
-			device->BindResource(&res.scratch[0][0], 2, cmd);
-			device->BindResource(&res.scratch[1][0], 3, cmd);
-			device->BindResource(&res.scratch[2][0], 4, cmd);
-			device->BindResource(&res.scratch[3][0], 5, cmd);
-			const GPUResource* uavs[] = {
-				&res.scratch[0][1],
-				&res.scratch[1][1],
-				&res.scratch[2][1],
-				&res.scratch[3][1],
-				&res.denoised
-			};
-			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Image(&res.scratch[0][1], res.scratch[0][1].desc.layout, ResourceState::UNORDERED_ACCESS),
@@ -12945,30 +12926,30 @@ void Postprocess_RTShadow(
 
 			postprocess.params1.x = 0;
 			postprocess.params1.y = 1;
-			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
-			device->Dispatch(
-				(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-				(desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-				4, // 4 lights
-				cmd
-			);
+			for (int i = 0; i < 4; ++i)
+			{
+				rtshadow_denoise_lightindex = float(i);
+				device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+				device->BindResource(&res.scratch[i][0], 2, cmd);
+				const GPUResource* uavs[] = {
+					&res.scratch[i][1],
+					&res.denoised
+				};
+				device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+				device->Dispatch(
+					(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+					(desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+					1,
+					cmd
+				);
+			}
 		}
 
 		// pass1:
 		{
-			device->BindResource(&res.scratch[0][1], 2, cmd);
-			device->BindResource(&res.scratch[1][1], 3, cmd);
-			device->BindResource(&res.scratch[2][1], 4, cmd);
-			device->BindResource(&res.scratch[3][1], 5, cmd);
-			const GPUResource* uavs[] = {
-				&res.scratch[0][0],
-				&res.scratch[1][0],
-				&res.scratch[2][0],
-				&res.scratch[3][0],
-				&res.denoised
-			};
-			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Image(&res.scratch[0][1], ResourceState::UNORDERED_ACCESS, res.scratch[0][1].desc.layout),
@@ -12985,30 +12966,30 @@ void Postprocess_RTShadow(
 
 			postprocess.params1.x = 1;
 			postprocess.params1.y = 2;
-			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
-			device->Dispatch(
-				(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-				(desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-				4, // 4 lights
-				cmd
-			);
+			for (int i = 0; i < 4; ++i)
+			{
+				rtshadow_denoise_lightindex = float(i);
+				device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+				device->BindResource(&res.scratch[i][1], 2, cmd);
+				const GPUResource* uavs[] = {
+					&res.scratch[i][0],
+					&res.denoised
+				};
+				device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+				device->Dispatch(
+					(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+					(desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+					1,
+					cmd
+				);
+			}
 		}
 
 		// pass2:
 		{
-			device->BindResource(&res.scratch[0][0], 2, cmd);
-			device->BindResource(&res.scratch[1][0], 3, cmd);
-			device->BindResource(&res.scratch[2][0], 4, cmd);
-			device->BindResource(&res.scratch[3][0], 5, cmd);
-			const GPUResource* uavs[] = {
-				&res.scratch[0][1],
-				&res.scratch[1][1],
-				&res.scratch[2][1],
-				&res.scratch[3][1],
-				&res.denoised
-			};
-			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Image(&res.scratch[0][0], ResourceState::UNORDERED_ACCESS, res.scratch[0][0].desc.layout),
@@ -13025,14 +13006,26 @@ void Postprocess_RTShadow(
 
 			postprocess.params1.x = 2;
 			postprocess.params1.y = 4;
-			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
-			device->Dispatch(
-				(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-				(desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-				4, // 4 lights
-				cmd
-			);
+			for (int i = 0; i < 4; ++i)
+			{
+				rtshadow_denoise_lightindex = float(i);
+				device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+				device->BindResource(&res.scratch[i][0], 2, cmd);
+				const GPUResource* uavs[] = {
+					&res.scratch[i][1],
+					&res.denoised
+				};
+				device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+				device->Dispatch(
+					(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+					(desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+					1,
+					cmd
+				);
+			}
 		}
 
 		{
