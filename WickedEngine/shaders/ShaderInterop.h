@@ -102,8 +102,8 @@ struct IndirectDispatchArgs
 
 #else
 
-#define CBSLOT_RESERVED_PS5						0
-#define CBSLOT_RESERVED_PS5						1
+#define CBSLOT_RESERVED_PS5_0					0
+#define CBSLOT_RESERVED_PS5_1					1
 
 #define CBSLOT_IMAGE							2
 #define CBSLOT_FONT								2

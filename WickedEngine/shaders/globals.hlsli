@@ -64,7 +64,8 @@
 		"SRV(t0, space = 36, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"SRV(t0, space = 37, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"SRV(t0, space = 38, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"SRV(t0, space = 39, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)" \
+		"SRV(t0, space = 39, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 40, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)" \
 	"), " \
 	"StaticSampler(s100, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP, filter = FILTER_MIN_MAG_MIP_LINEAR)," \
 	"StaticSampler(s101, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, addressW = TEXTURE_ADDRESS_WRAP, filter = FILTER_MIN_MAG_MIP_LINEAR)," \
@@ -220,26 +221,29 @@ RWTexture2D<uint> bindless_rwtextures_uint[] : register(space33);
 #include "ShaderInterop_Renderer.h"
 
 #if defined(__PSSL__)
-static const BindlessResource<StructuredBuffer<ShaderMeshInstance>> bindless_buffers_meshinstance;
-static const BindlessResource<StructuredBuffer<ShaderGeometry>> bindless_buffers_geometry;
-static const BindlessResource<StructuredBuffer<ShaderMeshlet>> bindless_buffers_meshlet;
-static const BindlessResource<StructuredBuffer<ShaderMaterial>> bindless_buffers_material;
-static const BindlessResource<StructuredBuffer<ShaderEntity>> bindless_buffers_entity;
-static const BindlessResource<StructuredBuffer<float4x4>> bindless_buffers_matrix;
+static const BindlessResource<StructuredBuffer<ShaderMeshInstance>> bindless_structured_meshinstance;
+static const BindlessResource<StructuredBuffer<ShaderGeometry>> bindless_structured_geometry;
+static const BindlessResource<StructuredBuffer<ShaderMeshlet>> bindless_structured_meshlet;
+static const BindlessResource<StructuredBuffer<ShaderMaterial>> bindless_structured_material;
+static const BindlessResource<StructuredBuffer<ShaderEntity>> bindless_structured_entity;
+static const BindlessResource<StructuredBuffer<float4x4>> bindless_structured_matrix;
+static const BindlessResource<StructuredBuffer<uint>> bindless_structured_uint;
 #elif defined(SPIRV)
-[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMeshInstance> bindless_buffers_meshinstance[];
-[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderGeometry> bindless_buffers_geometry[];
-[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMeshlet> bindless_buffers_meshlet[];
-[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMaterial> bindless_buffers_material[];
-[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderEntity> bindless_buffers_entity[];
-[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<float4x4> bindless_buffers_matrix[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMeshInstance> bindless_structured_meshinstance[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderGeometry> bindless_structured_geometry[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMeshlet> bindless_structured_meshlet[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMaterial> bindless_structured_material[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderEntity> bindless_structured_entity[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<float4x4> bindless_structured_matrix[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<uint> bindless_structured_uint[];
 #else
-StructuredBuffer<ShaderMeshInstance> bindless_buffers_meshinstance[] : register(space34);
-StructuredBuffer<ShaderGeometry> bindless_buffers_geometry[] : register(space35);
-StructuredBuffer<ShaderMeshlet> bindless_buffers_meshlet[] : register(space36);
-StructuredBuffer<ShaderMaterial> bindless_buffers_material[] : register(space37);
-StructuredBuffer<ShaderEntity> bindless_buffers_entity[] : register(space38);
-StructuredBuffer<float4x4> bindless_buffers_matrix[] : register(space39);
+StructuredBuffer<ShaderMeshInstance> bindless_structured_meshinstance[] : register(space34);
+StructuredBuffer<ShaderGeometry> bindless_structured_geometry[] : register(space35);
+StructuredBuffer<ShaderMeshlet> bindless_structured_meshlet[] : register(space36);
+StructuredBuffer<ShaderMaterial> bindless_structured_material[] : register(space37);
+StructuredBuffer<ShaderEntity> bindless_structured_entity[] : register(space38);
+StructuredBuffer<float4x4> bindless_structured_matrix[] : register(space39);
+StructuredBuffer<uint> bindless_structured_uint[] : register(space40);
 #endif // SPIRV
 
 inline FrameCB GetFrame()
@@ -260,35 +264,35 @@ inline ShaderWeather GetWeather()
 }
 inline ShaderMeshInstance load_instance(uint instanceIndex)
 {
-	return bindless_buffers_meshinstance[GetScene().instancebuffer][instanceIndex];
+	return bindless_structured_meshinstance[GetScene().instancebuffer][instanceIndex];
 }
 inline ShaderGeometry load_geometry(uint geometryIndex)
 {
-	return bindless_buffers_geometry[GetScene().geometrybuffer][geometryIndex];
+	return bindless_structured_geometry[GetScene().geometrybuffer][geometryIndex];
 }
 inline ShaderMeshlet load_meshlet(uint meshletIndex)
 {
-	return bindless_buffers_meshlet[GetScene().meshletbuffer][meshletIndex];
+	return bindless_structured_meshlet[GetScene().meshletbuffer][meshletIndex];
 }
 inline ShaderMaterial load_material(uint materialIndex)
 {
-	return bindless_buffers_material[GetScene().materialbuffer][materialIndex];
+	return bindless_structured_material[GetScene().materialbuffer][materialIndex];
 }
 uint load_entitytile(uint tileIndex)
 {
 #ifdef TRANSPARENT
-	return bindless_buffers[GetCamera().buffer_entitytiles_transparent_index].Load(tileIndex * sizeof(uint));
+	return bindless_structured_uint[GetCamera().buffer_entitytiles_transparent_index][tileIndex];
 #else
-	return bindless_buffers[GetCamera().buffer_entitytiles_opaque_index].Load(tileIndex * sizeof(uint));
+	return bindless_structured_uint[GetCamera().buffer_entitytiles_opaque_index][tileIndex];
 #endif // TRANSPARENT
 }
 inline ShaderEntity load_entity(uint entityIndex)
 {
-	return bindless_buffers_entity[GetFrame().buffer_entity_index][entityIndex];
+	return bindless_structured_entity[GetFrame().buffer_entity_index][entityIndex];
 }
 inline float4x4 load_entitymatrix(uint matrixIndex)
 {
-	return bindless_buffers_matrix[GetFrame().buffer_entity_index][SHADER_ENTITY_COUNT + matrixIndex];
+	return bindless_structured_matrix[GetFrame().buffer_entity_index][SHADER_ENTITY_COUNT + matrixIndex];
 }
 
 struct PrimitiveID

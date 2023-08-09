@@ -25,6 +25,7 @@ namespace wi
 		{
 			SetText(value);
 		}
+		virtual ~SpriteFont() = default;
 
 		virtual void FixedUpdate();
 		virtual void Update(float dt);

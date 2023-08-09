@@ -6,13 +6,8 @@
 
 StructuredBuffer<Frustum> in_Frustums : register(t0);
 
-RWByteAddressBuffer EntityTiles_Transparent : register(u0);
-RWByteAddressBuffer EntityTiles_Opaque : register(u1);
-
-
-#ifdef DEBUG_TILEDLIGHTCULLING
-RWTexture2D<unorm float4> DebugTexture : register(u3);
-#endif
+RWStructuredBuffer<uint> EntityTiles_Transparent : register(u0);
+RWStructuredBuffer<uint> EntityTiles_Opaque : register(u1);
 
 // Group shared variables.
 groupshared uint uMinDepth;
@@ -22,6 +17,7 @@ groupshared uint tile_opaque[SHADER_ENTITY_TILE_BUCKET_COUNT];
 groupshared uint tile_transparent[SHADER_ENTITY_TILE_BUCKET_COUNT];
 #ifdef DEBUG_TILEDLIGHTCULLING
 groupshared uint entityCountDebug;
+RWTexture2D<unorm float4> DebugTexture : register(u3);
 #endif // DEBUG_TILEDLIGHTCULLING
 
 void AppendEntity_Opaque(uint entityIndex)
@@ -332,8 +328,8 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	// Each thread will export one bucket from LDS to global memory:
 	for (i = groupIndex; i < SHADER_ENTITY_TILE_BUCKET_COUNT; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
-		EntityTiles_Opaque.Store((tileBucketsAddress + i) * sizeof(uint), tile_opaque[i]);
-		EntityTiles_Transparent.Store((tileBucketsAddress + i) * sizeof(uint), tile_transparent[i]);
+		EntityTiles_Opaque[tileBucketsAddress + i] = tile_opaque[i];
+		EntityTiles_Transparent[tileBucketsAddress + i] = tile_transparent[i];
 	}
 
 #ifdef DEBUG_TILEDLIGHTCULLING

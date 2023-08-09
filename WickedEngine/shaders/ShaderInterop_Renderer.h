@@ -1118,8 +1118,6 @@ struct ShaderCamera
 #endif // __cplusplus
 };
 
-
-
 struct CameraCB
 {
 	ShaderCamera cameras[16];
@@ -1134,7 +1132,6 @@ struct CameraCB
 	}
 #endif // __cplusplus
 };
-
 
 CONSTANTBUFFER(g_xFrame, FrameCB, CBSLOT_RENDERER_FRAME);
 CONSTANTBUFFER(g_xCamera, CameraCB, CBSLOT_RENDERER_CAMERA);

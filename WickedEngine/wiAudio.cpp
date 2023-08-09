@@ -1177,6 +1177,8 @@ namespace wi::audio
 
 namespace wi::audio
 {
+	void Initialize() {}
+
 	bool CreateSound(const std::string& filename, Sound* sound) { return false; }
 	bool CreateSound(const uint8_t* data, size_t size, Sound* sound) { return false; }
 	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance) { return false; }
@@ -1187,6 +1189,10 @@ namespace wi::audio
 	void SetVolume(float volume, SoundInstance* instance) {}
 	float GetVolume(const SoundInstance* instance) { return 0; }
 	void ExitLoop(SoundInstance* instance) {}
+	bool IsEnded(SoundInstance* instance) { return true; }
+
+	SampleInfo GetSampleInfo(const Sound* sound) { return {}; }
+	uint64_t GetTotalSamplesPlayed(const SoundInstance* instance) { return 0; }
 
 	void SetSubmixVolume(SUBMIX_TYPE type, float volume) {}
 	float GetSubmixVolume(SUBMIX_TYPE type) { return 0; }
