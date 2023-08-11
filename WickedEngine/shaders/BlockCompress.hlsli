@@ -398,16 +398,17 @@ uint GetIndicesRGB(float3 block[16], float3 minColor, float3 maxColor)
 // Name: GetIndicesAlpha
 // Desc: Calculate the BC block indices for an alpha channel
 //--------------------------------------------------------------------------------------
-void GetIndicesAlpha(float block[16], float minA, float maxA, inout uint2 packed)
+void GetIndicesAlpha(float block[16], float minA, float maxA, inout uint2 _packed)
 {
     float d = minA - maxA;
     float stepInc = 7.0f / d;
 
-    // Both packed.x and packed.y contain index values, so we need two loops
+    // Both _packed.x and _packed.y contain index values, so we need two loops
 
     uint index = 0;
-    uint shift = 16;
-    for (int i = 0; i < 6; ++i)
+	uint _shift = 16;
+	int i = 0;
+    for (i = 0; i < 6; ++i)
     {
         // For each input alpha value, we need to select between one of eight output values
         //  0: maxA
@@ -425,22 +426,22 @@ void GetIndicesAlpha(float block[16], float minA, float maxA, inout uint2 packed
         //  7: (1/7)*maxA + (6/3)*minA
         index += (index > 0) - (7 * (index == 7));
 
-        packed.x |= (index << shift);
-        shift += 3;
-    }
+		_packed.x |= (index << _shift);
+		_shift += 3;
+	}
 
     // The 6th index straddles the two uints
-    packed.y |= (index >> 1);
+	_packed.y |= (index >> 1);
 
-    shift = 2;
+	_shift = 2;
     for (i = 6; i < 16; ++i)
     {
         index = round((block[i] - maxA) * stepInc);
         index += (index > 0) - (7 * (index == 7));
 
-        packed.y |= (index << shift);
-        shift += 3;
-    }
+		_packed.y |= (index << _shift);
+		_shift += 3;
+	}
 }
 
 

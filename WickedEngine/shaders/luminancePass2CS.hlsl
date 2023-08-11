@@ -33,8 +33,13 @@ void main(uint groupIndex : SV_GroupIndex)
 		float weightedAverageLuminance = exp2(((weightedLogAverage / (LUMINANCE_NUM_HISTOGRAM_BINS - 2)) * luminance_log_range) + luminance_log_min);
 		float luminanceLastFrame = luminance_histogram.Load<float>(LUMINANCE_BUFFER_OFFSET_LUMINANCE);
 		float adaptedLuminance = luminanceLastFrame + (weightedAverageLuminance - luminanceLastFrame) * (1 - exp(-max(GetFrame().delta_time, 0.01) * luminance_adaptionrate));
+#ifdef __PSSL__
+		luminance_histogram.TypedStore<float>(LUMINANCE_BUFFER_OFFSET_LUMINANCE, adaptedLuminance);
+		luminance_histogram.TypedStore<float>(LUMINANCE_BUFFER_OFFSET_EXPOSURE, luminance_eyeadaptionkey / max(adaptedLuminance, 0.0001));
+#else
 		luminance_histogram.Store<float>(LUMINANCE_BUFFER_OFFSET_LUMINANCE, adaptedLuminance);
 		luminance_histogram.Store<float>(LUMINANCE_BUFFER_OFFSET_EXPOSURE, luminance_eyeadaptionkey / max(adaptedLuminance, 0.0001));
+#endif // __PSSL__
 	}
 
 	luminance_histogram.Store(LUMINANCE_BUFFER_OFFSET_HISTOGRAM + groupIndex * 4, 0); // clear histogram for next frame

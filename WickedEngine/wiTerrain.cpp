@@ -172,7 +172,11 @@ namespace wi::terrain
 			}
 		}
 	};
-	static ChunkIndices chunk_indices;
+	inline ChunkIndices& chunk_indices()
+	{
+		static ChunkIndices state;
+		return state;
+	}
 
 	struct Generator
 	{
@@ -747,8 +751,8 @@ namespace wi::terrain
 
 					MeshComponent& mesh = generator->scene.meshes.Create(chunk_data.entity);
 					object.meshID = chunk_data.entity;
-					mesh.indices = chunk_indices.indices;
-					for (auto& lod : chunk_indices.lods)
+					mesh.indices = chunk_indices().indices;
+					for (auto& lod : chunk_indices().lods)
 					{
 						mesh.subsets.emplace_back();
 						mesh.subsets.back().materialID = chunk_data.entity;
@@ -928,10 +932,10 @@ namespace wi::terrain
 								);
 								for (int i = 0; i < gen_count; ++i)
 								{
-									uint32_t tri = rng.next_uint(0, chunk_indices.lods[0].indexCount / 3); // random triangle on the chunk mesh
-									uint32_t ind0 = chunk_indices.indices[tri * 3 + 0];
-									uint32_t ind1 = chunk_indices.indices[tri * 3 + 1];
-									uint32_t ind2 = chunk_indices.indices[tri * 3 + 2];
+									uint32_t tri = rng.next_uint(0, chunk_indices().lods[0].indexCount / 3); // random triangle on the chunk mesh
+									uint32_t ind0 = chunk_indices().indices[tri * 3 + 0];
+									uint32_t ind1 = chunk_indices().indices[tri * 3 + 1];
+									uint32_t ind2 = chunk_indices().indices[tri * 3 + 2];
 									const XMFLOAT3& pos0 = chunk_data.mesh_vertex_positions[ind0];
 									const XMFLOAT3& pos1 = chunk_data.mesh_vertex_positions[ind1];
 									const XMFLOAT3& pos2 = chunk_data.mesh_vertex_positions[ind2];
@@ -1292,7 +1296,7 @@ namespace wi::terrain
 
 				// Perform the allocations and deallocations:
 				//	GPU writes allocation requests by virtualTextureTileAllocateCS.hlsl compute shader
-				if (vt.residency->data_available_CPU)
+				if (data_available_CPU)
 				{
 					uint32_t page_count = 0;
 					uint32_t lod_offsets[10] = {};

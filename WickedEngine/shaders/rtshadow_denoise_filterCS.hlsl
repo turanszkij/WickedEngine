@@ -8,12 +8,10 @@ PUSHCONSTANT(postprocess, PostProcess);
 
 Texture2D<float16_t3> normals : register(t0);
 StructuredBuffer<uint4> metadata : register(t1);
-Texture2D<float16_t2> input[4] : register(t2);
+Texture2D<float16_t2> input : register(t2);
 
-RWTexture2D<float2> history[4] : register(u0);
-RWTexture2D<unorm float4> output : register(u4);
-
-groupshared uint light_index;
+RWTexture2D<float2> history : register(u0);
+RWTexture2D<unorm float4> output : register(u1);
 
 uint2 FFX_DNSR_Shadows_GetBufferDimensions()
 {
@@ -50,12 +48,12 @@ bool FFX_DNSR_Shadows_IsShadowReciever(uint2 did)
 
 float16_t2 FFX_DNSR_Shadows_ReadInput(int2 p)
 {
-	return (float16_t2)input[light_index][p].xy;
+	return (float16_t2)input[p].xy;
 }
 
 uint FFX_DNSR_Shadows_ReadTileMetaData(uint p)
 {
-	return metadata[p][light_index];
+	return metadata[p][uint(rtshadow_denoise_lightindex)];
 }
 
 #include "ffx-shadows-dnsr/ffx_denoiser_shadows_filter.h"
@@ -63,9 +61,6 @@ uint FFX_DNSR_Shadows_ReadTileMetaData(uint p)
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 Gid : SV_GroupID, uint2 gtid : SV_GroupThreadID, uint2 did : SV_DispatchThreadID)
 {
-	light_index = Gid.z;
-	GroupMemoryBarrierWithGroupSync();
-
 	const uint PASS_INDEX = (uint)postprocess.params1.x;
 	const uint STEP_SIZE = (uint)postprocess.params1.y;
 
@@ -76,7 +71,7 @@ void main(uint3 Gid : SV_GroupID, uint2 gtid : SV_GroupThreadID, uint2 did : SV_
 	{
 		if (bWriteOutput)
 		{
-			history[light_index][did] = results;
+			history[did] = results;
 		}
 	}
 	else
@@ -88,8 +83,8 @@ void main(uint3 Gid : SV_GroupID, uint2 gtid : SV_GroupThreadID, uint2 did : SV_
 
 		if (bWriteOutput)
 		{
-#ifdef SPIRV
-			switch (light_index)
+#ifdef __spirv__
+			switch (uint(rtshadow_denoise_lightindex))
 			{
 			default:
 			case 0:
@@ -106,8 +101,8 @@ void main(uint3 Gid : SV_GroupID, uint2 gtid : SV_GroupThreadID, uint2 did : SV_
 				break;
 			}
 #else
-			output[did][light_index] = mean;
-#endif
+			output[did][uint(rtshadow_denoise_lightindex)] = mean;
+#endif // __spirv__
 		}
 	}
 }

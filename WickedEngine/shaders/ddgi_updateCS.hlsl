@@ -39,7 +39,11 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 	{
 		DDGIProbeOffset ofs;
 		ofs.store(float3(0, 0, 0));
+#ifdef __PSSL__
+		ddgiOffsetBuffer.TypedStore<DDGIProbeOffset>(probeIndex * sizeof(DDGIProbeOffset), ofs);
+#else
 		ddgiOffsetBuffer.Store<DDGIProbeOffset>(probeIndex * sizeof(DDGIProbeOffset), ofs);
+#endif // __PSSL__
 	}
 	float3 probeOffset = ddgiOffsetBuffer.Load<DDGIProbeOffset>(probeIndex * sizeof(DDGIProbeOffset)).load();
 	float3 probeOffsetNew = 0;
@@ -158,7 +162,11 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 		probeOffset = clamp(probeOffset, -limit, limit);
 		DDGIProbeOffset ofs;
 		ofs.store(probeOffset);
+#ifdef __PSSL__
+		ddgiOffsetBuffer.TypedStore<DDGIProbeOffset>(probeIndex * sizeof(DDGIProbeOffset), ofs);
+#else
 		ddgiOffsetBuffer.Store<DDGIProbeOffset>(probeIndex * sizeof(DDGIProbeOffset), ofs);
+#endif // __PSSL__
 	}
 #else
 

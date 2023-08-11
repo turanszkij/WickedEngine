@@ -57,6 +57,7 @@ namespace wi::graphics
 		HLSL6,		// DXIL
 		SPIRV,		// SPIR-V
 		HLSL6_XS,	// XBOX Series Native
+		PS5,		// Playstation 5
 	};
 	enum class ShaderModel
 	{
@@ -1058,6 +1059,8 @@ namespace wi::graphics
 				case RenderPassImage::Type::DEPTH_STENCIL:
 					info.ds_format = desc.format;
 					info.sample_count = desc.sample_count;
+					break;
+				default:
 					break;
 				}
 			}

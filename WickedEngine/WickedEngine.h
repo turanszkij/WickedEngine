@@ -47,7 +47,6 @@
 #include "wiEnums.h"
 #include "wiInitializer.h"
 #include "wiLua.h"
-#include "wiLuna.h"
 #include "wiGraphics.h"
 #include "wiGraphicsDevice.h"
 #include "wiGUI.h"
@@ -85,6 +84,10 @@
 #ifdef PLATFORM_XBOX
 #pragma comment(lib,"WickedEngine_XBOX.lib")
 #endif // PLATFORM_XBOX
+
+#ifdef PLATFORM_PS5
+#pragma comment(lib,"WickedEngine_PS5.a")
+#endif // PLATFORM_PS5
 
 
 // After version 0.59.11, namespaces were refactored into nested namespaces under the wi:: root namespace.

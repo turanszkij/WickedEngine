@@ -5,6 +5,8 @@
 
 #include "wiAllocator.h"
 
+#include <string.h> // strlen
+
 #define lunamethod(class, name) {#name, &class::name}
 #define lunaproperty(class, name) {#name, &class::Get##name, &class::Set##name}
 
@@ -74,7 +76,7 @@ public:
 	Registers your class with Lua.  Leave namespac "" if you want to load it into the global space.
 	*/
 	// REGISTER CLASS AS A GLOBAL TABLE 
-	static void Register(lua_State * L, const char *namespac = NULL) {
+	static void Register(lua_State * L, const char *namespac = nullptr) {
 
 		if (namespac && strlen(namespac))
 		{

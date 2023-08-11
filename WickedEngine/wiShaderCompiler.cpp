@@ -35,6 +35,11 @@
 #define SHADERCOMPILER_XBOX_INCLUDED
 #endif // __has_include("wiShaderCompiler_XBOX.h")
 
+#if __has_include("wiShaderCompiler_PS5.h") && !defined(PLATFORM_PS5)
+#include "wiShaderCompiler_PS5.h"
+#define SHADERCOMPILER_PS5_INCLUDED
+#endif // __has_include("wiShaderCompiler_PS5.h") && !PLATFORM_PS5
+
 using namespace wi::graphics;
 
 namespace wi::shadercompiler
@@ -143,7 +148,6 @@ namespace wi::shadercompiler
 		{
 		case ShaderFormat::HLSL6:
 		case ShaderFormat::HLSL6_XS:
-			args.push_back(L"-D"); args.push_back(L"HLSL6");
 			args.push_back(L"-rootsig-define"); args.push_back(L"WICKED_ENGINE_DEFAULT_ROOTSIGNATURE");
 			if (has_flag(input.flags, Flags::STRIP_REFLECTION))
 			{
@@ -151,7 +155,6 @@ namespace wi::shadercompiler
 			}
 			break;
 		case ShaderFormat::SPIRV:
-			args.push_back(L"-D"); args.push_back(L"SPIRV");
 			args.push_back(L"-spirv");
 			args.push_back(L"-fspv-target-env=vulkan1.2");
 			args.push_back(L"-fvk-use-dx-layout");
@@ -714,6 +717,12 @@ namespace wi::shadercompiler
 			Compile_D3DCompiler(input, output);
 			break;
 #endif // SHADERCOMPILER_ENABLED_D3DCOMPILER
+
+#ifdef SHADERCOMPILER_PS5_INCLUDED
+		case ShaderFormat::PS5:
+			wi::shadercompiler::ps5::Compile(input, output);
+			break;
+#endif // SHADERCOMPILER_PS5_INCLUDED
 
 		}
 #endif // SHADERCOMPILER_ENABLED

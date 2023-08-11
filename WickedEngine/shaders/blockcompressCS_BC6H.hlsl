@@ -385,9 +385,9 @@ void EncodeP1(inout uint4 block, inout float blockMSLE, float3 texels[16])
 	block.w |= indices[15] << 28;
 }
 
-float DistToLineSq(float3 PointOnLine, float3 LineDirection, float3 Point)
+float DistToLineSq(float3 PointOnLine, float3 LineDirection, float3 _Point)
 {
-	float3 w = Point - PointOnLine;
+	float3 w = _Point - PointOnLine;
 	float3 x = w - dot(w, LineDirection) * LineDirection;
 	return dot(x, x);
 }

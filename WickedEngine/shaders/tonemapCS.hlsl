@@ -59,6 +59,7 @@ float4x4 saturationMatrix(float saturation)
 	return float4x4(red, 0, green, 0, blue, 0, 0, 0, 0, 1);
 }
 
+#ifndef __PSSL__
 #undef WICKED_ENGINE_DEFAULT_ROOTSIGNATURE // don't use auto root signature!
 [RootSignature(
 	"RootConstants(num32BitConstants=16, b999),"
@@ -98,6 +99,7 @@ float4x4 saturationMatrix(float saturation)
 	"), "
 	"StaticSampler(s100, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP, filter = FILTER_MIN_MAG_MIP_LINEAR)"
 )]
+#endif // __PSSL__
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

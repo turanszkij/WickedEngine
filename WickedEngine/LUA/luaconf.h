@@ -51,6 +51,10 @@
 //#define LUA_USE_WINDOWS  /* enable goodies for regular Windows */
 #endif
 
+#ifdef __SCE__
+#define system(x) 0
+#endif // __SCE__
+
 
 #if defined(LUA_USE_WINDOWS)
 //#define LUA_DL_DLL	/* enable support for DLL */

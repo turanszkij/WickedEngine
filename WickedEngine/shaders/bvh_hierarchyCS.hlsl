@@ -70,7 +70,7 @@ uint2 DetermineRange(uint idx, uint elementCount)
 	}
 
 	int j = idx + length * d;
-	return uint2(min(idx, j), max(idx, j));
+	return uint2(min((int)idx, j), max((int)idx, j));
 }
 
 int FindSplit(int first, uint last, uint elementCount)
@@ -129,7 +129,11 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		BVHNode node = bvhNodeBuffer.Load<BVHNode>(idx * sizeof(BVHNode));
 		node.LeftChildIndex = childAIndex;
 		node.RightChildIndex = childBIndex;
+#ifdef __PSSL__
+		bvhNodeBuffer.TypedStore<BVHNode>(idx * sizeof(BVHNode), node);
+#else
 		bvhNodeBuffer.Store<BVHNode>(idx * sizeof(BVHNode), node);
+#endif // __PSSL__
 		// write to children:
 		bvhParentBuffer[childAIndex] = idx;
 		bvhParentBuffer[childBIndex] = idx;

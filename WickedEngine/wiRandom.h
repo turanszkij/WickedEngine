@@ -11,16 +11,16 @@ namespace wi::random
 	{
 		uint64_t state = 0;
 
-		constexpr RNG(uint64_t seed = 0) : state(seed) {}
+		inline RNG(uint64_t seed = 0) : state(seed) {}
 
 		// seeds the random number generator, seed should be non-zero number
-		constexpr void seed(uint64_t seed)
+		inline void seed(uint64_t seed)
 		{
 			state = seed;
 		}
 
 		// gives an uint in range [0, UINT64_MAX]
-		constexpr uint64_t next_uint()
+		inline uint64_t next_uint()
 		{
 			state ^= state >> 12;
 			state ^= state << 25;
@@ -28,41 +28,41 @@ namespace wi::random
 			return state * 0x2545F4914F6CDD1DULL;
 		}
 		// gives an uint64 in range [min, max]
-		constexpr uint64_t next_uint(uint64_t min, uint64_t max)
+		inline uint64_t next_uint(uint64_t min, uint64_t max)
 		{
 			return min + (next_uint() % (std::min(std::numeric_limits<uint64_t>::max() - uint64_t(1), std::max(uint64_t(1), max - min)) + uint64_t(1)));
 		}
 		// gives an uint32 in range [min, max]
-		constexpr uint32_t next_uint(uint32_t min, uint32_t max)
+		inline uint32_t next_uint(uint32_t min, uint32_t max)
 		{
 			return min + (uint32_t(next_uint()) % (std::min(std::numeric_limits<uint32_t>::max() - uint32_t(1), std::max(uint32_t(1), max - min)) + uint32_t(1)));
 		}
 
 		// gives an int64 in range [-INT64_MAX, INT64_MAX]
-		constexpr int64_t next_int()
+		inline int64_t next_int()
 		{
 			uint64_t u = next_uint();
 			return *(int64_t*)&u;
 		}
 		// gives an int64 in range [min, max]
-		constexpr int64_t next_int(int64_t min, int64_t max)
+		inline int64_t next_int(int64_t min, int64_t max)
 		{
 			return min + int64_t(next_uint() % (std::min(std::numeric_limits<int64_t>::max() - int64_t(1), std::max(int64_t(1), max - min)) + int64_t(1))); // we roll next_uint here to avoid negative value messing with range mapping
 		}
 		// gives an int32 in range [min, max]
-		constexpr int32_t next_int(int32_t min, int32_t max)
+		inline int32_t next_int(int32_t min, int32_t max)
 		{
 			return min + int32_t(next_uint() % (std::min(std::numeric_limits<int32_t>::max() - int32_t(1), std::max(int32_t(1), max - min)) + int32_t(1))); // we roll next_uint here to avoid negative value messing with range mapping
 		}
 
 		// gives a float in range [0, 1]
-		constexpr float next_float()
+		inline float next_float()
 		{
 			uint32_t u = 0x3f800000 | (uint32_t(next_uint()) >> 9);
 			return *((float*)&u) - 1.0f;
 		}
 		// gives a float in range [min, max]
-		constexpr float next_float(float min, float max)
+		inline float next_float(float min, float max)
 		{
 			return min + (max - min) * next_float();
 		}

@@ -20,12 +20,12 @@ struct RayPayload
 	float4 data;
 };
 
-#ifndef SPIRV
+#ifndef __spirv__
 GlobalRootSignature MyGlobalRootSignature =
 {
 	WICKED_ENGINE_DEFAULT_ROOTSIGNATURE
 };
-#endif // SPIRV
+#endif // __spirv__
 
 [shader("raygeneration")]
 void RTReflection_Raygen()

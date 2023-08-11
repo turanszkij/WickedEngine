@@ -37,7 +37,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		node.LeftChildIndex = primitiveID;
 		node.RightChildIndex = ~0u;
 
+#ifdef __PSSL__
+		bvhNodeBuffer.TypedStore<BVHNode>(nodeIndex * sizeof(BVHNode), node);
+#else
 		bvhNodeBuffer.Store<BVHNode>(nodeIndex * sizeof(BVHNode), node);
+#endif // __PSSL__
 		
 
 		// Propagate until we reach root node:
@@ -73,7 +77,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			// Merge the child AABBs:
 			parent_node.min = min(left_min, right_min);
 			parent_node.max = max(left_max, right_max);
+#ifdef __PSSL__
+			bvhNodeBuffer.TypedStore<BVHNode>(nodeIndex * sizeof(BVHNode), parent_node);
+#else
 			bvhNodeBuffer.Store<BVHNode>(nodeIndex * sizeof(BVHNode), parent_node);
+#endif // __PSSL__
 
 		} while (nodeIndex != 0);
 	}

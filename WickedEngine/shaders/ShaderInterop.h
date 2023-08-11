@@ -35,17 +35,13 @@ using int4 = XMINT4;
 #define CBUFFER(name, slot) cbuffer name : register(PASTE(b, slot))
 #define CONSTANTBUFFER(name, type, slot) ConstantBuffer< type > name : register(PASTE(b, slot))
 
-#ifndef SPIRV
-#ifdef __spirv__
-#define SPIRV
-#endif // __spirv__
-#endif // SPIRV
-
-#ifdef SPIRV
+#if defined(__PSSL__)
+// defined separately in preincluded PS5 extension file
+#elif defined(__spirv__)
 #define PUSHCONSTANT(name, type) [[vk::push_constant]] type name;
 #else
 #define PUSHCONSTANT(name, type) ConstantBuffer<type> name : register(b999)
-#endif // HLSL6
+#endif // __PSSL__
 
 #endif // __cplusplus
 
@@ -72,6 +68,7 @@ struct IndirectDispatchArgs
 };
 
 
+#if !defined(__PSSL__) && !defined(__SCE__)
 // Common buffers:
 // These are usable by all shaders
 #define CBSLOT_IMAGE							0
@@ -81,7 +78,6 @@ struct IndirectDispatchArgs
 
 // On demand buffers:
 // These are bound on demand and alive until another is bound at the same slot
-
 #define CBSLOT_RENDERER_FORWARD_LIGHTMASK		2
 #define CBSLOT_RENDERER_VOLUMELIGHT				3
 #define CBSLOT_RENDERER_VOXELIZER				3
@@ -99,5 +95,33 @@ struct IndirectDispatchArgs
 #define CBSLOT_MSAO								4
 #define CBSLOT_FSR								4
 
+#else
+// Don't use overlapping slots on PS5:
+
+#define CBSLOT_RESERVED_PS5_0					0
+#define CBSLOT_RESERVED_PS5_1					1
+
+#define CBSLOT_IMAGE							2
+#define CBSLOT_FONT								2
+#define CBSLOT_RENDERER_FRAME					2
+#define CBSLOT_RENDERER_CAMERA					3
+
+#define CBSLOT_RENDERER_FORWARD_LIGHTMASK		4
+#define CBSLOT_RENDERER_VOLUMELIGHT				5
+#define CBSLOT_RENDERER_VOXELIZER				6
+#define CBSLOT_RENDERER_TRACED					7
+#define CBSLOT_RENDERER_MISC					8
+
+#define CBSLOT_OTHER_EMITTEDPARTICLE			4
+#define CBSLOT_OTHER_HAIRPARTICLE				4
+#define CBSLOT_OTHER_FFTGENERATOR				4
+#define CBSLOT_OTHER_OCEAN_SIMULATION_IMMUTABLE	4
+#define CBSLOT_OTHER_OCEAN_SIMULATION_PERFRAME	5
+#define CBSLOT_OTHER_OCEAN_RENDER				7
+#define CBSLOT_OTHER_CLOUDGENERATOR				4
+#define CBSLOT_OTHER_GPUSORTLIB					4
+#define CBSLOT_MSAO								4
+#define CBSLOT_FSR								4
+#endif // !__PSSL__ && !__SCE__
 
 #endif // WI_SHADERINTEROP_H

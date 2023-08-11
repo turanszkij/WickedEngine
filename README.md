@@ -32,6 +32,7 @@ You can get the full source code by using Git version control and cloning https:
 - Linux
 - UWP
 - Xbox Series X|S
+- PlayStation 5 [in progress]
 
 ### How to build: 
 
@@ -75,10 +76,13 @@ If you have questions or stuck, please use the `linux` communication channel on 
 To build for UWP platform, use the latest version of Visual Studio and the provided `WickedEngine.sln` solution file. The WickedEngine_UWP Project will build the engine for UWP platform as static library. The Template_UWP and Editor_UWP are two applications that will work on UWP platform that you can try. But first you must also build the binary shaders and embed them into the executable. To build and embed shaders, run the `OfflineShaderCompiler` projects with the `hlsl6 shaderdump` command line arguments. Then Rebuild the WickedEngine_UWP to create the engine with embedded shaders included. Now you can build an UWP application and run it on PC or Xbox.
 
  - To run the UWP application on **Xbox**, enable developer mode on your Xbox, and choose "Remote Machine" as a debugging target in Visual Studio. Enter the IP address of the Xbox into the Machine Name field of debugging project settings (make sure that you are modifying the debug settings for Remote Machine). The authentication mode should be set to "Universal (Unencrypted Protocol)" and upon launching the application from Visual Studio, you will need to enter the security PIN that you can view on the Xbox developer settings.<br/>
-**Note that to utilize the full performance of Xbox Series, it is required to build with the native Xbox SDK build tools**
+**Note that to utilize the full performance of Xbox Series, it is required to build with the native Xbox SDK build tools instead of UWP**
 
-#### Xbox Series (Native)
-To build for Xbox Series natively, download and install the Xbox SDK from your Xbox developer account, and create a new Visual Studio solution platform targetting the Xbox Series hardware. Xbox specific extension files required for building will be provided for registered Xbox developers on request.
+#### Xbox Series X|S
+To build for Xbox Series natively, download and install the Xbox SDK from your Xbox developer account. Using the latest version of Visual Studio, create a new static library project for the Xbox Series platform and reference the WickedEngine_SOURCE shared project. Xbox specific extension files required for building, or sample projects will be provided for registered Xbox developers on request.
+
+#### PlayStation 5
+To build for PlayStation 5, download and install the PlayStation 5 SDK from your PlayStation developer account. Using the latest Visual Studio, create a new PlayStation 5 static library project and reference the WickedEngine_SOURCE shared project. PlayStation 5 specific extension files requierd for building, or sample projects will be provided for registered PlayStation developers on request.
 
 
 ### Examples:

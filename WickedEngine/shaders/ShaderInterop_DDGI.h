@@ -141,7 +141,7 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 		// Compute the offset grid coord and clamp to the probe grid boundary
 		// Offset = 0 or 1 along each axis
 		uint3 offset = uint3(i, i >> 1, i >> 2) & 1;
-		uint3 probe_grid_coord = clamp(base_grid_coord + offset, 0, GetScene().ddgi.grid_dimensions - 1);
+		uint3 probe_grid_coord = clamp(base_grid_coord + offset, 0u.xxx, GetScene().ddgi.grid_dimensions - 1);
 		//int p = ddgi_probe_index(probe_grid_coord);
 
 		// Make cosine falloff in tangent plane with respect to the angle from the surface to the probe so that we never

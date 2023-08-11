@@ -16,8 +16,12 @@
 #include "wiImage.h"
 #include "wiEventHandler.h"
 
+#ifdef PLATFORM_PS5
+#include "wiGraphicsDevice_PS5.h"
+#else
 #include "wiGraphicsDevice_DX12.h"
 #include "wiGraphicsDevice_Vulkan.h"
+#endif // PLATFORM_PS5
 
 #include <string>
 #include <algorithm>
@@ -316,28 +320,34 @@ namespace wi
 				infodisplay_str += "[64-bit]";
 #elif defined(_WIN32)
 				infodisplay_str += "[32-bit]";
-#endif
+#endif // _ARM
 
 #ifdef PLATFORM_UWP
 				infodisplay_str += "[UWP]";
-#endif
+#endif // PLATFORM_UWP
 
 #ifdef WICKEDENGINE_BUILD_DX12
 				if (dynamic_cast<GraphicsDevice_DX12*>(graphicsDevice.get()))
 				{
 					infodisplay_str += "[DX12]";
 				}
-#endif
+#endif // WICKEDENGINE_BUILD_DX12
 #ifdef WICKEDENGINE_BUILD_VULKAN
 				if (dynamic_cast<GraphicsDevice_Vulkan*>(graphicsDevice.get()))
 				{
 					infodisplay_str += "[Vulkan]";
 				}
-#endif
+#endif // WICKEDENGINE_BUILD_VULKAN
+#ifdef PLATFORM_PS5
+				if (dynamic_cast<GraphicsDevice_PS5*>(graphicsDevice.get()))
+				{
+					infodisplay_str += "[PS5]";
+				}
+#endif // PLATFORM_PS5
 
 #ifdef _DEBUG
 				infodisplay_str += "[DEBUG]";
-#endif
+#endif // _DEBUG
 				if (graphicsDevice->IsDebugDevice())
 				{
 					infodisplay_str += "[debugdevice]";
@@ -527,6 +537,11 @@ namespace wi
 				preference = GPUPreference::Integrated;
 			}
 
+#ifdef PLATFORM_PS5
+			wi::renderer::SetShaderPath(wi::renderer::GetShaderPath() + "ps5/");
+			graphicsDevice = std::make_unique<GraphicsDevice_PS5>(validationMode);
+
+#else
 			bool use_dx12 = wi::arguments::HasArgument("dx12");
 			bool use_vulkan = wi::arguments::HasArgument("vulkan");
 
@@ -535,13 +550,13 @@ namespace wi
 				wi::helper::messageBox("The engine was built without DX12 support!", "Error");
 				use_dx12 = false;
 			}
-#endif
+#endif // WICKEDENGINE_BUILD_DX12
 #ifndef WICKEDENGINE_BUILD_VULKAN
 			if (use_vulkan) {
 				wi::helper::messageBox("The engine was built without Vulkan support!", "Error");
 				use_vulkan = false;
 			}
-#endif
+#endif // WICKEDENGINE_BUILD_VULKAN
 
 			if (!use_dx12 && !use_vulkan)
 			{
@@ -574,6 +589,7 @@ namespace wi
 				graphicsDevice = std::make_unique<GraphicsDevice_DX12>(validationMode, preference);
 #endif
 			}
+#endif // PLATFORM_PS5
 		}
 		wi::graphics::GetDevice() = graphicsDevice.get();
 
@@ -603,6 +619,11 @@ namespace wi
 		desc.allow_hdr = allow_hdr;
 		bool success = graphicsDevice->CreateSwapChain(&desc, window, &swapChain);
 		assert(success);
+
+#ifdef PLATFORM_PS5
+		// PS5 swapchain resolution was decided in CreateSwapchain(), so reinit canvas:
+		canvas.init(swapChain.desc.width, swapChain.desc.height);
+#endif // PLATFORM_PS5
 
 		swapChainVsyncChangeEvent = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_SET_VSYNC, [this](uint64_t userdata) {
 			SwapChainDesc desc = swapChain.desc;

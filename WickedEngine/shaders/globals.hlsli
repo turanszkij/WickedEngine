@@ -64,7 +64,8 @@
 		"SRV(t0, space = 36, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"SRV(t0, space = 37, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"SRV(t0, space = 38, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"SRV(t0, space = 39, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)" \
+		"SRV(t0, space = 39, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 40, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)" \
 	"), " \
 	"StaticSampler(s100, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP, filter = FILTER_MIN_MAG_MIP_LINEAR)," \
 	"StaticSampler(s101, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, addressW = TEXTURE_ADDRESS_WRAP, filter = FILTER_MIN_MAG_MIP_LINEAR)," \
@@ -77,7 +78,7 @@
 	"StaticSampler(s108, addressU = TEXTURE_ADDRESS_MIRROR, addressV = TEXTURE_ADDRESS_MIRROR, addressW = TEXTURE_ADDRESS_MIRROR, filter = FILTER_ANISOTROPIC)," \
 	"StaticSampler(s109, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP, filter = FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT, comparisonFunc = COMPARISON_GREATER_EQUAL),"
 
-
+#ifndef __PSSL__
 // These are static samplers, they don't need to be bound:
 //	They are also on slots that are not bindable as sampler bind slots must be in [0,15] range!
 SamplerState sampler_linear_clamp : register(s100);
@@ -90,8 +91,44 @@ SamplerState sampler_aniso_clamp : register(s106);
 SamplerState sampler_aniso_wrap : register(s107);
 SamplerState sampler_aniso_mirror : register(s108);
 SamplerComparisonState sampler_cmp_depth : register(s109);
+#endif // __PSSL__
 
-#ifdef SPIRV
+#if defined(__PSSL__)
+static const BindlessResource<SamplerState> bindless_samplers;
+static const BindlessResource<Texture2D> bindless_textures;
+static const BindlessResource<ByteAddressBuffer> bindless_buffers;
+static const BindlessResource<Buffer<uint>> bindless_buffers_uint;
+static const BindlessResource<Buffer<uint2>> bindless_buffers_uint2;
+static const BindlessResource<Buffer<uint3>> bindless_buffers_uint3;
+static const BindlessResource<Buffer<uint4>> bindless_buffers_uint4;
+static const BindlessResource<Buffer<float>> bindless_buffers_float;
+static const BindlessResource<Buffer<float2>> bindless_buffers_float2;
+static const BindlessResource<Buffer<float3>> bindless_buffers_float3;
+static const BindlessResource<Buffer<float4>> bindless_buffers_float4;
+static const BindlessResource<Texture2DArray> bindless_textures2DArray;
+static const BindlessResource<TextureCube> bindless_cubemaps;
+static const BindlessResource<TextureCubeArray> bindless_cubearrays;
+static const BindlessResource<Texture3D> bindless_textures3D;
+static const BindlessResource<Texture2D<float>> bindless_textures_float;
+static const BindlessResource<Texture2D<float2>> bindless_textures_float2;
+static const BindlessResource<Texture2D<uint>> bindless_textures_uint;
+static const BindlessResource<Texture2D<uint4>> bindless_textures_uint4;
+
+static const BindlessResource<RWTexture2D<float4>> bindless_rwtextures;
+static const BindlessResource<RWByteAddressBuffer> bindless_rwbuffers;
+static const BindlessResource<RWBuffer<uint>> bindless_rwbuffers_uint;
+static const BindlessResource<RWBuffer<uint2>> bindless_rwbuffers_uint2;
+static const BindlessResource<RWBuffer<uint3>> bindless_rwbuffers_uint3;
+static const BindlessResource<RWBuffer<uint4>> bindless_rwbuffers_uint4;
+static const BindlessResource<RWBuffer<float>> bindless_rwbuffers_float;
+static const BindlessResource<RWBuffer<float2>> bindless_rwbuffers_float2;
+static const BindlessResource<RWBuffer<float3>> bindless_rwbuffers_float3;
+static const BindlessResource<RWBuffer<float4>> bindless_rwbuffers_float4;
+static const BindlessResource<RWTexture2DArray<float4>> bindless_rwtextures2DArray;
+static const BindlessResource<RWTexture3D<float4>> bindless_rwtextures3D;
+static const BindlessResource<RWTexture2D<uint>> bindless_rwtextures_uint;
+
+#elif defined(__spirv__)
 // In Vulkan, we can manually overlap descriptor sets to reduce bindings:
 //	Note that HLSL register space declaration was not working correctly with overlapped spaces,
 //	But vk::binding works correctly in this case.
@@ -179,25 +216,35 @@ RWTexture2DArray<float4> bindless_rwtextures2DArray[] : register(space31);
 RWTexture3D<float4> bindless_rwtextures3D[] : register(space32);
 RWTexture2D<uint> bindless_rwtextures_uint[] : register(space33);
 
-#endif // SPIRV
+#endif // __spirv__
 
 #include "ShaderInterop_Renderer.h"
 
-#ifdef SPIRV
-[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMeshInstance> bindless_buffers_meshinstance[];
-[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderGeometry> bindless_buffers_geometry[];
-[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMeshlet> bindless_buffers_meshlet[];
-[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMaterial> bindless_buffers_material[];
-[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderEntity> bindless_buffers_entity[];
-[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<float4x4> bindless_buffers_matrix[];
+#if defined(__PSSL__)
+static const BindlessResource<StructuredBuffer<ShaderMeshInstance>> bindless_structured_meshinstance;
+static const BindlessResource<StructuredBuffer<ShaderGeometry>> bindless_structured_geometry;
+static const BindlessResource<StructuredBuffer<ShaderMeshlet>> bindless_structured_meshlet;
+static const BindlessResource<StructuredBuffer<ShaderMaterial>> bindless_structured_material;
+static const BindlessResource<StructuredBuffer<ShaderEntity>> bindless_structured_entity;
+static const BindlessResource<StructuredBuffer<float4x4>> bindless_structured_matrix;
+static const BindlessResource<StructuredBuffer<uint>> bindless_structured_uint;
+#elif defined(__spirv__)
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMeshInstance> bindless_structured_meshinstance[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderGeometry> bindless_structured_geometry[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMeshlet> bindless_structured_meshlet[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMaterial> bindless_structured_material[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderEntity> bindless_structured_entity[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<float4x4> bindless_structured_matrix[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<uint> bindless_structured_uint[];
 #else
-StructuredBuffer<ShaderMeshInstance> bindless_buffers_meshinstance[] : register(space34);
-StructuredBuffer<ShaderGeometry> bindless_buffers_geometry[] : register(space35);
-StructuredBuffer<ShaderMeshlet> bindless_buffers_meshlet[] : register(space36);
-StructuredBuffer<ShaderMaterial> bindless_buffers_material[] : register(space37);
-StructuredBuffer<ShaderEntity> bindless_buffers_entity[] : register(space38);
-StructuredBuffer<float4x4> bindless_buffers_matrix[] : register(space39);
-#endif // SPIRV
+StructuredBuffer<ShaderMeshInstance> bindless_structured_meshinstance[] : register(space34);
+StructuredBuffer<ShaderGeometry> bindless_structured_geometry[] : register(space35);
+StructuredBuffer<ShaderMeshlet> bindless_structured_meshlet[] : register(space36);
+StructuredBuffer<ShaderMaterial> bindless_structured_material[] : register(space37);
+StructuredBuffer<ShaderEntity> bindless_structured_entity[] : register(space38);
+StructuredBuffer<float4x4> bindless_structured_matrix[] : register(space39);
+StructuredBuffer<uint> bindless_structured_uint[] : register(space40);
+#endif // __spirv__
 
 inline FrameCB GetFrame()
 {
@@ -217,35 +264,35 @@ inline ShaderWeather GetWeather()
 }
 inline ShaderMeshInstance load_instance(uint instanceIndex)
 {
-	return bindless_buffers_meshinstance[GetScene().instancebuffer][instanceIndex];
+	return bindless_structured_meshinstance[GetScene().instancebuffer][instanceIndex];
 }
 inline ShaderGeometry load_geometry(uint geometryIndex)
 {
-	return bindless_buffers_geometry[GetScene().geometrybuffer][geometryIndex];
+	return bindless_structured_geometry[GetScene().geometrybuffer][geometryIndex];
 }
 inline ShaderMeshlet load_meshlet(uint meshletIndex)
 {
-	return bindless_buffers_meshlet[GetScene().meshletbuffer][meshletIndex];
+	return bindless_structured_meshlet[GetScene().meshletbuffer][meshletIndex];
 }
 inline ShaderMaterial load_material(uint materialIndex)
 {
-	return bindless_buffers_material[GetScene().materialbuffer][materialIndex];
+	return bindless_structured_material[GetScene().materialbuffer][materialIndex];
 }
 uint load_entitytile(uint tileIndex)
 {
 #ifdef TRANSPARENT
-	return bindless_buffers[GetCamera().buffer_entitytiles_transparent_index].Load(tileIndex * sizeof(uint));
+	return bindless_structured_uint[GetCamera().buffer_entitytiles_transparent_index][tileIndex];
 #else
-	return bindless_buffers[GetCamera().buffer_entitytiles_opaque_index].Load(tileIndex * sizeof(uint));
+	return bindless_structured_uint[GetCamera().buffer_entitytiles_opaque_index][tileIndex];
 #endif // TRANSPARENT
 }
 inline ShaderEntity load_entity(uint entityIndex)
 {
-	return bindless_buffers_entity[GetFrame().buffer_entity_index][entityIndex];
+	return bindless_structured_entity[GetFrame().buffer_entity_index][entityIndex];
 }
 inline float4x4 load_entitymatrix(uint matrixIndex)
 {
-	return bindless_buffers_matrix[GetFrame().buffer_entity_index][SHADER_ENTITY_COUNT + matrixIndex];
+	return bindless_structured_matrix[GetFrame().buffer_entity_index][SHADER_ENTITY_COUNT + matrixIndex];
 }
 
 struct PrimitiveID

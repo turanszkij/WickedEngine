@@ -23,6 +23,7 @@ namespace wi
 		std::string textureName, maskName;
 	public:
 		Sprite(const std::string& newTexture = "", const std::string& newMask = "");
+		virtual ~Sprite() = default;
 
 		virtual void FixedUpdate();
 		virtual void Update(float dt);

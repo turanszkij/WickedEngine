@@ -12,7 +12,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	int dead_count = asint(surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_DEADCOUNT));
 	int shortage = max(0, -dead_count); // if deadcount was negative, there was shortage
-	dead_count = clamp(dead_count, 0, SURFEL_CAPACITY);
+	dead_count = clamp(dead_count, 0, (int)SURFEL_CAPACITY);
 
 	uint ray_count = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_RAYCOUNT);
 

@@ -194,7 +194,7 @@ struct ShaderTextureSlot
 			uint lod0 = floor(clamped_lod);
 			const uint packed_mip_idx = packed_mips ? uint(virtual_lod - max_nonpacked_lod - 1) : 0;
 			uint2 tile_pixel_upperleft = tile * SVT_TILE_SIZE_PADDED + SVT_TILE_BORDER + SVT_PACKED_MIP_OFFSETS[packed_mip_idx];
-			uint2 virtual_lod_dim = max(4, virtual_image_dim >> lod0);
+			uint2 virtual_lod_dim = max(4u.xx, virtual_image_dim >> lod0);
 			float2 virtual_pixel = uv * virtual_lod_dim;
 			float2 virtual_tile_pixel = fmod(virtual_pixel, SVT_TILE_SIZE);
 			float2 atlas_tile_pixel = tile_pixel_upperleft + 0.5 + virtual_tile_pixel;
@@ -211,7 +211,7 @@ struct ShaderTextureSlot
 			residency = residency_map.Load(uint3(pixel >> lod1, min(max_nonpacked_lod, lod1)));
 			tile = packed_mips ? uint2((residency >> 16u) & 0xFF, (residency >> 24u) & 0xFF) : uint2(residency & 0xFF, (residency >> 8u) & 0xFF);
 			uint2 tile_pixel_upperleft = tile * SVT_TILE_SIZE_PADDED + SVT_TILE_BORDER + SVT_PACKED_MIP_OFFSETS[packed_mip_idx];
-			uint2 virtual_lod_dim = max(4, virtual_image_dim >> lod1);
+			uint2 virtual_lod_dim = max(4u.xx, virtual_image_dim >> lod1);
 			float2 virtual_pixel = uv * virtual_lod_dim;
 			float2 virtual_tile_pixel = fmod(virtual_pixel, SVT_TILE_SIZE);
 			float2 atlas_tile_pixel = tile_pixel_upperleft + 0.5 + virtual_tile_pixel;
@@ -1118,9 +1118,6 @@ struct ShaderCamera
 #endif // __cplusplus
 };
 
-
-CONSTANTBUFFER(g_xFrame, FrameCB, CBSLOT_RENDERER_FRAME);
-
 struct CameraCB
 {
 	ShaderCamera cameras[16];
@@ -1135,6 +1132,8 @@ struct CameraCB
 	}
 #endif // __cplusplus
 };
+
+CONSTANTBUFFER(g_xFrame, FrameCB, CBSLOT_RENDERER_FRAME);
 CONSTANTBUFFER(g_xCamera, CameraCB, CBSLOT_RENDERER_CAMERA);
 
 
