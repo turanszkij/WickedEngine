@@ -128,7 +128,7 @@ static const BindlessResource<RWTexture2DArray<float4>> bindless_rwtextures2DArr
 static const BindlessResource<RWTexture3D<float4>> bindless_rwtextures3D;
 static const BindlessResource<RWTexture2D<uint>> bindless_rwtextures_uint;
 
-#elif defined(SPIRV)
+#elif defined(__spirv__)
 // In Vulkan, we can manually overlap descriptor sets to reduce bindings:
 //	Note that HLSL register space declaration was not working correctly with overlapped spaces,
 //	But vk::binding works correctly in this case.
@@ -216,7 +216,7 @@ RWTexture2DArray<float4> bindless_rwtextures2DArray[] : register(space31);
 RWTexture3D<float4> bindless_rwtextures3D[] : register(space32);
 RWTexture2D<uint> bindless_rwtextures_uint[] : register(space33);
 
-#endif // SPIRV
+#endif // __spirv__
 
 #include "ShaderInterop_Renderer.h"
 
@@ -228,7 +228,7 @@ static const BindlessResource<StructuredBuffer<ShaderMaterial>> bindless_structu
 static const BindlessResource<StructuredBuffer<ShaderEntity>> bindless_structured_entity;
 static const BindlessResource<StructuredBuffer<float4x4>> bindless_structured_matrix;
 static const BindlessResource<StructuredBuffer<uint>> bindless_structured_uint;
-#elif defined(SPIRV)
+#elif defined(__spirv__)
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMeshInstance> bindless_structured_meshinstance[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderGeometry> bindless_structured_geometry[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMeshlet> bindless_structured_meshlet[];
@@ -244,7 +244,7 @@ StructuredBuffer<ShaderMaterial> bindless_structured_material[] : register(space
 StructuredBuffer<ShaderEntity> bindless_structured_entity[] : register(space38);
 StructuredBuffer<float4x4> bindless_structured_matrix[] : register(space39);
 StructuredBuffer<uint> bindless_structured_uint[] : register(space40);
-#endif // SPIRV
+#endif // __spirv__
 
 inline FrameCB GetFrame()
 {

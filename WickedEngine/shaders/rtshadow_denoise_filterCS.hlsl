@@ -83,7 +83,7 @@ void main(uint3 Gid : SV_GroupID, uint2 gtid : SV_GroupThreadID, uint2 did : SV_
 
 		if (bWriteOutput)
 		{
-#ifdef SPIRV
+#ifdef __spirv__
 			switch (uint(rtshadow_denoise_lightindex))
 			{
 			default:
@@ -102,7 +102,7 @@ void main(uint3 Gid : SV_GroupID, uint2 gtid : SV_GroupThreadID, uint2 did : SV_
 			}
 #else
 			output[did][uint(rtshadow_denoise_lightindex)] = mean;
-#endif
+#endif // __spirv__
 		}
 	}
 }

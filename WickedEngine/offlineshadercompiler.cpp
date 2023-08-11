@@ -538,6 +538,7 @@ int main(int argc, char* argv[])
 					}
 					if (input.minshadermodel > ShaderModel::SM_5_0 && target.format == ShaderFormat::PS5)
 					{
+						// TODO PS5 raytracing
 						return;
 					}
 

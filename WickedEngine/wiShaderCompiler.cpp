@@ -148,7 +148,6 @@ namespace wi::shadercompiler
 		{
 		case ShaderFormat::HLSL6:
 		case ShaderFormat::HLSL6_XS:
-			args.push_back(L"-D"); args.push_back(L"HLSL6");
 			args.push_back(L"-rootsig-define"); args.push_back(L"WICKED_ENGINE_DEFAULT_ROOTSIGNATURE");
 			if (has_flag(input.flags, Flags::STRIP_REFLECTION))
 			{
@@ -156,7 +155,6 @@ namespace wi::shadercompiler
 			}
 			break;
 		case ShaderFormat::SPIRV:
-			args.push_back(L"-D"); args.push_back(L"SPIRV");
 			args.push_back(L"-spirv");
 			args.push_back(L"-fspv-target-env=vulkan1.2");
 			args.push_back(L"-fvk-use-dx-layout");

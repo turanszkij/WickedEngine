@@ -35,18 +35,13 @@ using int4 = XMINT4;
 #define CBUFFER(name, slot) cbuffer name : register(PASTE(b, slot))
 #define CONSTANTBUFFER(name, type, slot) ConstantBuffer< type > name : register(PASTE(b, slot))
 
-#ifndef SPIRV
-#ifdef __spirv__
-#define SPIRV
-#endif // __spirv__
-#endif // SPIRV
-
 #if defined(__PSSL__)
-#elif defined(SPIRV)
+// defined separately in preincluded PS5 extension file
+#elif defined(__spirv__)
 #define PUSHCONSTANT(name, type) [[vk::push_constant]] type name;
 #else
 #define PUSHCONSTANT(name, type) ConstantBuffer<type> name : register(b999)
-#endif // HLSL6
+#endif // __PSSL__
 
 #endif // __cplusplus
 
