@@ -138,25 +138,22 @@ namespace wi::texturehelper
 
 		// Blue Noise:
 		{
-			uint8_t blueNoise[128][128][4] = {};
+			wi::vector<wi::Color> bluenoise(128 * 128);
 
-			for (int x = 0; x < 128; ++x)
+			for (int y = 0; y < 128; ++y)
 			{
-				for (int y = 0; y < 128; ++y)
+				for (int x = 0; x < 128; ++x)
 				{
-					float const f0 = samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp(x, y, 0, 0);
-					float const f1 = samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp(x, y, 0, 1);
-					float const f2 = samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp(x, y, 0, 2);
-					float const f3 = samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp(x, y, 0, 3);
+					const float f0 = samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp(x, y, 0, 0);
+					const float f1 = samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp(x, y, 0, 1);
+					const float f2 = samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp(x, y, 0, 2);
+					const float f3 = samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp(x, y, 0, 3);
 
-					blueNoise[x][y][0] = static_cast<uint8_t>(f0 * 0xFF);
-					blueNoise[x][y][1] = static_cast<uint8_t>(f1 * 0xFF);
-					blueNoise[x][y][2] = static_cast<uint8_t>(f2 * 0xFF);
-					blueNoise[x][y][3] = static_cast<uint8_t>(f3 * 0xFF);
+					bluenoise[x + y * 128] = wi::Color::fromFloat4(XMFLOAT4(f0, f1, f2, f3));
 				}
 			}
 
-			CreateTexture(helperTextures[HELPERTEXTURE_BLUENOISE], (uint8_t*)blueNoise, 128, 128, Format::R8G8B8A8_UNORM);
+			CreateTexture(helperTextures[HELPERTEXTURE_BLUENOISE], (uint8_t*)bluenoise.data(), 128, 128, Format::R8G8B8A8_UNORM);
 			device->SetName(&helperTextures[HELPERTEXTURE_BLUENOISE], "HELPERTEXTURE_BLUENOISE");
 		}
 
