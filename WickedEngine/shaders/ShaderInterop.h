@@ -96,6 +96,7 @@ struct IndirectDispatchArgs
 #define CBSLOT_FSR								4
 
 #else
+// Don't use overlapping slots on PS5:
 
 #define CBSLOT_RESERVED_PS5_0					0
 #define CBSLOT_RESERVED_PS5_1					1
@@ -121,6 +122,6 @@ struct IndirectDispatchArgs
 #define CBSLOT_OTHER_GPUSORTLIB					4
 #define CBSLOT_MSAO								4
 #define CBSLOT_FSR								4
-#endif // __SCE__
+#endif // !__PSSL__ && !__SCE__
 
 #endif // WI_SHADERINTEROP_H

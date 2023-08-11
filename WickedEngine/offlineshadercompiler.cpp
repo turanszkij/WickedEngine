@@ -536,7 +536,7 @@ int main(int argc, char* argv[])
 						// if shader format cannot support shader model, then we cancel the task without returning error
 						return;
 					}
-					if (input.minshadermodel > ShaderModel::SM_5_0 && target.format == ShaderFormat::PS5)
+					if (input.minshadermodel >= ShaderModel::SM_6_5 && target.format == ShaderFormat::PS5)
 					{
 						// TODO PS5 raytracing
 						return;
