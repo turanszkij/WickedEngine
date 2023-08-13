@@ -1170,7 +1170,10 @@ namespace vulkan_internal
 				//	the color space change will not be applied
 				res = vkDeviceWaitIdle(device);
 				assert(res == VK_SUCCESS);
-				vkDestroySwapchainKHR(device, internal_state->swapChain, nullptr);
+				{
+					std::scoped_lock lock(allocationhandler->destroylocker);
+					allocationhandler->destroyer_swapchains.emplace_back(internal_state->swapChain, allocationhandler->framecount);
+				}
 				internal_state->swapChain = nullptr;
 			}
 		}
@@ -1230,7 +1233,8 @@ namespace vulkan_internal
 
 		if (createInfo.oldSwapchain != VK_NULL_HANDLE)
 		{
-			vkDestroySwapchainKHR(device, createInfo.oldSwapchain, nullptr);
+			std::scoped_lock lock(allocationhandler->destroylocker);
+			allocationhandler->destroyer_swapchains.emplace_back(createInfo.oldSwapchain, allocationhandler->framecount);
 		}
 
 		res = vkGetSwapchainImagesKHR(device, internal_state->swapChain, &imageCount, nullptr);
@@ -7400,13 +7404,12 @@ using namespace vulkan_internal;
 		commandlist.renderpass_barriers_begin.clear();
 		commandlist.renderpass_barriers_end.clear();
 		auto internal_state = to_internal(swapchain);
-		commandlist.prev_swapchains.push_back(*swapchain);
 
 		internal_state->locker.lock();
 		VkResult res = vkAcquireNextImageKHR(
 			device,
 			internal_state->swapChain,
-			0xFFFFFFFFFFFFFFFF,
+			UINT64_MAX,
 			internal_state->swapchainAcquireSemaphore,
 			VK_NULL_HANDLE,
 			&internal_state->swapChainImageIndex
@@ -7418,6 +7421,16 @@ using namespace vulkan_internal;
 			// Handle outdated error in acquire:
 			if (res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR)
 			{
+				// we need to create a new semaphore or jump through a few hoops to
+				// wait for the current one to be unsignalled before we can use it again
+				// creating a new one is easiest. See also:
+				// https://github.com/KhronosGroup/Vulkan-Docs/issues/152
+				// https://www.khronos.org/blog/resolving-longstanding-issues-with-wsi
+				{
+					std::scoped_lock lock(allocationhandler->destroylocker);
+					allocationhandler->destroyer_semaphores.emplace_back(internal_state->swapchainAcquireSemaphore, allocationhandler->framecount);
+				}
+				internal_state->swapchainAcquireSemaphore = VK_NULL_HANDLE;
 				if (CreateSwapChainInternal(internal_state, physicalDevice, device, allocationhandler))
 				{
 					RenderPassBegin(swapchain, cmd);
@@ -7426,6 +7439,7 @@ using namespace vulkan_internal;
 			}
 			assert(0);
 		}
+		commandlist.prev_swapchains.push_back(*swapchain);
 		
 		VkRenderingInfo info = {};
 		info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
