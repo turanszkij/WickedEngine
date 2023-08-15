@@ -595,346 +595,104 @@ namespace wi::graphics
 			// Deferred destroy of resources that the GPU is already finished with:
 			void Update(uint64_t FRAMECOUNT, uint32_t BUFFERCOUNT)
 			{
-				destroylocker.lock();
+				const auto destroy = [&](auto&& queue, auto&& handler) {
+					while (!queue.empty()) {
+						if (queue.front().second + BUFFERCOUNT < FRAMECOUNT)
+						{
+							auto item = queue.front();
+							queue.pop_front();
+							handler(item.first);
+						}
+						else
+						{
+							break;
+						}
+					}
+				};
+
 				framecount = FRAMECOUNT;
-				while (!destroyer_allocations.empty())
-				{
-					if (destroyer_allocations.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_allocations.front();
-						destroyer_allocations.pop_front();
-						vmaFreeMemory(allocator, item.first);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_images.empty())
-				{
-					if (destroyer_images.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_images.front();
-						destroyer_images.pop_front();
-						vmaDestroyImage(allocator, item.first.first, item.first.second);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_imageviews.empty())
-				{
-					if (destroyer_imageviews.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_imageviews.front();
-						destroyer_imageviews.pop_front();
-						vkDestroyImageView(device, item.first, nullptr);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_buffers.empty())
-				{
-					if (destroyer_buffers.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_buffers.front();
-						destroyer_buffers.pop_front();
-						vmaDestroyBuffer(allocator, item.first.first, item.first.second);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_bufferviews.empty())
-				{
-					if (destroyer_bufferviews.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_bufferviews.front();
-						destroyer_bufferviews.pop_front();
-						vkDestroyBufferView(device, item.first, nullptr);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_bvhs.empty())
-				{
-					if (destroyer_bvhs.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_bvhs.front();
-						destroyer_bvhs.pop_front();
-						vkDestroyAccelerationStructureKHR(device, item.first, nullptr);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_samplers.empty())
-				{
-					if (destroyer_samplers.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_samplers.front();
-						destroyer_samplers.pop_front();
-						vkDestroySampler(device, item.first, nullptr);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_descriptorPools.empty())
-				{
-					if (destroyer_descriptorPools.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_descriptorPools.front();
-						destroyer_descriptorPools.pop_front();
-						vkDestroyDescriptorPool(device, item.first, nullptr);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_descriptorSetLayouts.empty())
-				{
-					if (destroyer_descriptorSetLayouts.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_descriptorSetLayouts.front();
-						destroyer_descriptorSetLayouts.pop_front();
-						vkDestroyDescriptorSetLayout(device, item.first, nullptr);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_descriptorUpdateTemplates.empty())
-				{
-					if (destroyer_descriptorUpdateTemplates.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_descriptorUpdateTemplates.front();
-						destroyer_descriptorUpdateTemplates.pop_front();
-						vkDestroyDescriptorUpdateTemplate(device, item.first, nullptr);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_shadermodules.empty())
-				{
-					if (destroyer_shadermodules.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_shadermodules.front();
-						destroyer_shadermodules.pop_front();
-						vkDestroyShaderModule(device, item.first, nullptr);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_pipelineLayouts.empty())
-				{
-					if (destroyer_pipelineLayouts.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_pipelineLayouts.front();
-						destroyer_pipelineLayouts.pop_front();
-						vkDestroyPipelineLayout(device, item.first, nullptr);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_pipelines.empty())
-				{
-					if (destroyer_pipelines.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_pipelines.front();
-						destroyer_pipelines.pop_front();
-						vkDestroyPipeline(device, item.first, nullptr);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_querypools.empty())
-				{
-					if (destroyer_querypools.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_querypools.front();
-						destroyer_querypools.pop_front();
-						vkDestroyQueryPool(device, item.first, nullptr);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_swapchains.empty())
-				{
-					if (destroyer_swapchains.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_swapchains.front();
-						destroyer_swapchains.pop_front();
-						vkDestroySwapchainKHR(device, item.first, nullptr);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_surfaces.empty())
-				{
-					if (destroyer_surfaces.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_surfaces.front();
-						destroyer_surfaces.pop_front();
-						vkDestroySurfaceKHR(instance, item.first, nullptr);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_semaphores.empty())
-				{
-					if (destroyer_semaphores.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_semaphores.front();
-						destroyer_semaphores.pop_front();
-						vkDestroySemaphore(device, item.first, nullptr);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_video_sessions.empty())
-				{
-					if (destroyer_video_sessions.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_video_sessions.front();
-						destroyer_video_sessions.pop_front();
-						vkDestroyVideoSessionKHR(device, item.first, nullptr);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_video_session_parameters.empty())
-				{
-					if (destroyer_video_session_parameters.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						auto item = destroyer_video_session_parameters.front();
-						destroyer_video_session_parameters.pop_front();
-						vkDestroyVideoSessionParametersKHR(device, item.first, nullptr);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_bindlessSampledImages.empty())
-				{
-					if (destroyer_bindlessSampledImages.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						int index = destroyer_bindlessSampledImages.front().first;
-						destroyer_bindlessSampledImages.pop_front();
-						bindlessSampledImages.free(index);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_bindlessUniformTexelBuffers.empty())
-				{
-					if (destroyer_bindlessUniformTexelBuffers.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						int index = destroyer_bindlessUniformTexelBuffers.front().first;
-						destroyer_bindlessUniformTexelBuffers.pop_front();
-						bindlessUniformTexelBuffers.free(index);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_bindlessStorageBuffers.empty())
-				{
-					if (destroyer_bindlessStorageBuffers.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						int index = destroyer_bindlessStorageBuffers.front().first;
-						destroyer_bindlessStorageBuffers.pop_front();
-						bindlessStorageBuffers.free(index);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_bindlessStorageImages.empty())
-				{
-					if (destroyer_bindlessStorageImages.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						int index = destroyer_bindlessStorageImages.front().first;
-						destroyer_bindlessStorageImages.pop_front();
-						bindlessStorageImages.free(index);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_bindlessStorageTexelBuffers.empty())
-				{
-					if (destroyer_bindlessStorageTexelBuffers.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						int index = destroyer_bindlessStorageTexelBuffers.front().first;
-						destroyer_bindlessStorageTexelBuffers.pop_front();
-						bindlessStorageTexelBuffers.free(index);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_bindlessSamplers.empty())
-				{
-					if (destroyer_bindlessSamplers.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						int index = destroyer_bindlessSamplers.front().first;
-						destroyer_bindlessSamplers.pop_front();
-						bindlessSamplers.free(index);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_bindlessAccelerationStructures.empty())
-				{
-					if (destroyer_bindlessAccelerationStructures.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						int index = destroyer_bindlessAccelerationStructures.front().first;
-						destroyer_bindlessAccelerationStructures.pop_front();
-						bindlessAccelerationStructures.free(index);
-					}
-					else
-					{
-						break;
-					}
-				}
+
+				destroylocker.lock();
+
+				destroy(destroyer_allocations, [&](auto& item) {
+					vmaFreeMemory(allocator, item);
+				});
+				destroy(destroyer_images, [&](auto& item) {
+					vmaDestroyImage(allocator, item.first, item.second);
+				});
+				destroy(destroyer_imageviews, [&](auto& item) {
+					vkDestroyImageView(device, item, nullptr);
+				});
+				destroy(destroyer_buffers, [&](auto& item) {
+					vmaDestroyBuffer(allocator, item.first, item.second);
+				});
+				destroy(destroyer_bufferviews, [&](auto& item) {
+					vkDestroyBufferView(device, item, nullptr);
+				});
+				destroy(destroyer_bvhs, [&](auto& item) {
+					vkDestroyAccelerationStructureKHR(device, item, nullptr);
+				});
+				destroy(destroyer_samplers, [&](auto& item) {
+					vkDestroySampler(device, item, nullptr);
+				});
+				destroy(destroyer_descriptorPools, [&](auto& item) {
+					vkDestroyDescriptorPool(device, item, nullptr);
+				});
+				destroy(destroyer_descriptorSetLayouts, [&](auto& item) {
+					vkDestroyDescriptorSetLayout(device, item, nullptr);
+				});
+				destroy(destroyer_descriptorUpdateTemplates, [&](auto& item) {
+					vkDestroyDescriptorUpdateTemplate(device, item, nullptr);
+				});
+				destroy(destroyer_shadermodules, [&](auto& item) {
+					vkDestroyShaderModule(device, item, nullptr);
+				});
+				destroy(destroyer_pipelineLayouts, [&](auto& item) {
+					vkDestroyPipelineLayout(device, item, nullptr);
+				});
+				destroy(destroyer_pipelines, [&](auto& item) {
+					vkDestroyPipeline(device, item, nullptr);
+				});
+				destroy(destroyer_querypools, [&](auto& item) {
+					vkDestroyQueryPool(device, item, nullptr);
+				});
+				destroy(destroyer_swapchains, [&](auto& item) {
+					vkDestroySwapchainKHR(device, item, nullptr);
+				});
+				destroy(destroyer_surfaces, [&](auto& item) {
+					vkDestroySurfaceKHR(instance, item, nullptr);
+				});
+				destroy(destroyer_semaphores, [&](auto& item) {
+					vkDestroySemaphore(device, item, nullptr);
+				});
+				destroy(destroyer_video_sessions, [&](auto& item) {
+					vkDestroyVideoSessionKHR(device, item, nullptr);
+				});
+				destroy(destroyer_video_session_parameters, [&](auto& item) {
+					vkDestroyVideoSessionParametersKHR(device, item, nullptr);
+				});
+				destroy(destroyer_bindlessSampledImages, [&](auto& item) {
+					bindlessSampledImages.free(item);
+				});
+				destroy(destroyer_bindlessUniformTexelBuffers, [&](auto& item) {
+					bindlessUniformTexelBuffers.free(item);
+				});
+				destroy(destroyer_bindlessStorageBuffers, [&](auto& item) {
+					bindlessStorageBuffers.free(item);
+				});
+				destroy(destroyer_bindlessStorageImages, [&](auto& item) {
+					bindlessStorageImages.free(item);
+				});
+				destroy(destroyer_bindlessStorageTexelBuffers, [&](auto& item) {
+					bindlessStorageTexelBuffers.free(item);
+				});
+				destroy(destroyer_bindlessSamplers, [&](auto& item) {
+					bindlessSamplers.free(item);
+				});
+				destroy(destroyer_bindlessAccelerationStructures, [&](auto& item) {
+					bindlessAccelerationStructures.free(item);
+				});
+
 				destroylocker.unlock();
 			}
 		};
