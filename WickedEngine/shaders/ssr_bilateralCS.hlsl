@@ -63,7 +63,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		{
 			const int2 sampleCoord = DTid.xy + (direction * r); // Left to right diameter directionally
 
-			if (all(sampleCoord >= int2(0, 0) && sampleCoord < (int2) postprocess.resolution))
+			if (all(and(sampleCoord >= int2(0, 0), sampleCoord < (int2) postprocess.resolution)))
 			{
 				const float sampleDepth = texture_depth[sampleCoord];
 				const float4 sampleColor = texture_temporal[sampleCoord];

@@ -28,7 +28,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			int2 offset = int2(x, y);
 			int2 neighborCoord = DTid.xy + offset;
 
-			if (all(neighborCoord >= int2(0, 0) && neighborCoord < (int2) postprocess.resolution))
+			if (all(and(neighborCoord >= int2(0, 0), neighborCoord < (int2) postprocess.resolution)))
 			{
 				float3 neighborResult = input[neighborCoord];
 				
