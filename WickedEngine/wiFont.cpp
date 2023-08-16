@@ -463,6 +463,7 @@ namespace wi::font
 
 				// Upload the CPU-side texture atlas bitmap to the GPU:
 				wi::texturehelper::CreateTexture(texture, atlas.data(), atlasWidth, atlasHeight, Format::R8_UNORM);
+				GetDevice()->SetName(&texture, "wi::font::texture");
 			}
 			else
 			{
