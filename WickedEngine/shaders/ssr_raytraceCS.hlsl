@@ -93,10 +93,10 @@ float3 HierarchicalRaymarch(float3 origin, float3 direction, float2 screenSize, 
 	// Offset to the bounding boxes uv space to intersect the ray with the center of the next pixel.
 	// This means we ever so slightly over shoot into the next region. 
 	float2 uvOffset = 0.005 * exp2(HiZTraceMostDetailedLevel) / screenSize;
-	uvOffset = direction.xy < 0 ? -uvOffset : uvOffset;
+	uvOffset = select(direction.xy < 0, -uvOffset, uvOffset);
 
 	// Offset applied depending on current mip resolution to move the boundary to the left/right upper/lower border depending on ray direction.
-	float2 floorOffset = direction.xy < 0 ? 0 : 1;
+	float2 floorOffset = select(direction.xy < 0, 0, 1);
 
 	// Initially advance ray to avoid immediate self intersections.
 	float tCurrent;

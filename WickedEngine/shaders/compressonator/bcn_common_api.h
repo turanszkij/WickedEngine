@@ -934,8 +934,8 @@ CMP_STATIC void cmp_RefineMinMaxAsLog2(CMP_IN CGU_Vec3f texels[16], CMP_INOUT CG
     CGU_Vec3f refinedBlockMax = blockMin;
     for (CGU_UINT32 i = 0u; i < 16u; ++i)
     {
-        refinedBlockMin = cmp_minVec3f(refinedBlockMin, texels[i] == blockMin ? refinedBlockMin : texels[i]);
-        refinedBlockMax = cmp_maxVec3f(refinedBlockMax, texels[i] == blockMax ? refinedBlockMax : texels[i]);
+        refinedBlockMin = cmp_minVec3f(refinedBlockMin, select(texels[i] == blockMin, refinedBlockMin, texels[i]));
+        refinedBlockMax = cmp_maxVec3f(refinedBlockMax, select(texels[i] == blockMax, refinedBlockMax, texels[i]));
     }
 
     CGU_Vec3f logBlockMax = cmp_log2Vec3f(blockMax + 1.0f);
