@@ -7445,8 +7445,8 @@ using namespace vulkan_internal;
 		info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
 		info.renderArea.offset.x = 0;
 		info.renderArea.offset.y = 0;
-		info.renderArea.extent.width = swapchain->desc.width;
-		info.renderArea.extent.height = swapchain->desc.height;
+		info.renderArea.extent.width = std::min(swapchain->desc.width, internal_state->swapChainExtent.width);
+		info.renderArea.extent.height = std::min(swapchain->desc.height, internal_state->swapChainExtent.height);
 		info.layerCount = 1;
 
 		VkRenderingAttachmentInfo color_attachment = {};
