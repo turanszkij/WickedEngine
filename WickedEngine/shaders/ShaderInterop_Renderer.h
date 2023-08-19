@@ -413,6 +413,9 @@ struct ShaderTypeBin
 	uint dispatchY;
 	uint dispatchZ;
 	uint shaderType;
+#if defined(__SCE__) || defined(__PSSL_)
+	uint4 padding; // 32-byte alignment
+#endif // __SCE__ || __PSSL__
 };
 static const uint SHADERTYPE_BIN_COUNT = 10;
 

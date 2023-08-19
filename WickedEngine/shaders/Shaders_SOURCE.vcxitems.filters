@@ -1109,6 +1109,12 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)hairparticlePS_shadow.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)objectGS_primitiveID_emulation.hlsl">
+      <Filter>GS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)objectGS_primitiveID_emulation_alphatest.hlsl">
+      <Filter>GS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h">

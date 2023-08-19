@@ -43,6 +43,17 @@ using int4 = XMINT4;
 #define PUSHCONSTANT(name, type) ConstantBuffer<type> name : register(b999)
 #endif // __PSSL__
 
+namespace wi
+{
+	namespace graphics
+	{
+		inline uint AlignTo(uint value, uint alignment)
+		{
+			return ((value + alignment - 1u) / alignment) * alignment;
+		}
+	}
+}
+
 #endif // __cplusplus
 
 struct IndirectDrawArgsInstanced
@@ -67,6 +78,11 @@ struct IndirectDispatchArgs
 	uint ThreadGroupCountZ;
 };
 
+#if defined(__SCE__) || defined(__PSSL__)
+static const uint IndirectDispatchArgsAlignment = 32u;
+#else
+static const uint IndirectDispatchArgsAlignment = 4u;
+#endif // __SCE__ || __PSSL__
 
 #if !defined(__PSSL__) && !defined(__SCE__)
 // Common buffers:

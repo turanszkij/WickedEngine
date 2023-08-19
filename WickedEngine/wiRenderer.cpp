@@ -441,6 +441,20 @@ SHADERTYPE GetGSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent)
 		break;
 #endif // VOXELIZATION_GEOMETRY_SHADER_ENABLED
 
+	case RENDERPASS_PREPASS:
+		if (device->CheckCapability(GraphicsDeviceCapability::PLAYSTATION5))
+		{
+			if (alphatest)
+			{
+				realGS = GSTYPE_OBJECT_PRIMITIVEID_EMULATION_ALPHATEST;
+			}
+			else
+			{
+				realGS = GSTYPE_OBJECT_PRIMITIVEID_EMULATION;
+			}
+		}
+		break;
+
 	case RENDERPASS_ENVMAPCAPTURE:
 		if (device->CheckCapability(GraphicsDeviceCapability::RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS))
 			break;
@@ -868,6 +882,11 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXELIZER], "objectGS_voxelizer.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXEL], "voxelGS.cso"); });
 
+	if (device->CheckCapability(GraphicsDeviceCapability::PLAYSTATION5))
+	{
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_OBJECT_PRIMITIVEID_EMULATION], "objectGS_primitiveID_emulation.cso"); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_OBJECT_PRIMITIVEID_EMULATION_ALPHATEST], "objectGS_primitiveID_emulation_alphatest.cso"); });
+	}
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_LUMINANCE_PASS1], "luminancePass1CS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_LUMINANCE_PASS2], "luminancePass2CS.cso"); });

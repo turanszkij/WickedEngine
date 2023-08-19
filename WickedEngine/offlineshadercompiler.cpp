@@ -309,6 +309,8 @@ wi::vector<ShaderEntry> shaders = {
 	{"shadowGS_emulation", wi::graphics::ShaderStage::GS },
 	{"shadowGS_alphatest_emulation", wi::graphics::ShaderStage::GS },
 	{"shadowGS_transparent_emulation", wi::graphics::ShaderStage::GS },
+	{"objectGS_primitiveID_emulation", wi::graphics::ShaderStage::GS },
+	{"objectGS_primitiveID_emulation_alphatest", wi::graphics::ShaderStage::GS },
 	{"voxelGS", wi::graphics::ShaderStage::GS },
 	{"objectGS_voxelizer", wi::graphics::ShaderStage::GS },
 	{"objectVS_simple", wi::graphics::ShaderStage::VS },
@@ -536,9 +538,9 @@ int main(int argc, char* argv[])
 						// if shader format cannot support shader model, then we cancel the task without returning error
 						return;
 					}
-					if (input.minshadermodel >= ShaderModel::SM_6_5 && target.format == ShaderFormat::PS5)
+					if (target.format == ShaderFormat::PS5 && (input.minshadermodel >= ShaderModel::SM_6_5 || input.stage == ShaderStage::MS))
 					{
-						// TODO PS5 raytracing
+						// TODO PS5 raytracing, mesh shader
 						return;
 					}
 
