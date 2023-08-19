@@ -371,7 +371,6 @@ PixelInput main(VertexInput input)
 #endif // OBJECTSHADER_COMPILE_VS
 
 
-
 #ifdef OBJECTSHADER_COMPILE_PS
 
 // Possible switches:
@@ -381,6 +380,10 @@ PixelInput main(VertexInput input)
 //	PLANARREFLECTION	-	include planar reflection sampling
 //	PARALLAXOCCLUSIONMAPPING					-	include parallax occlusion mapping computation
 //	WATER				-	include specialized water shader code
+
+#if defined(__PSSL__) && defined(PREPASS)
+#pragma PSSL_target_output_format (target 0 FMT_32_R)
+#endif // __PSSL__ && PREPASS
 
 #ifdef EARLY_DEPTH_STENCIL
 [earlydepthstencil]

@@ -6,7 +6,7 @@ inline float3 sample_shadow(float2 uv, float cmp)
 {
 	[branch]
 	if (GetFrame().texture_shadowatlas_index < 0)
-		return 0;
+		return 1;
 
 	Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
 	float3 shadow = texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp).r;

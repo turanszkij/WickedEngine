@@ -797,13 +797,13 @@ namespace wi::helper
 	bool FileRead_Impl(const std::string& fileName, vector_interface<uint8_t, std::allocator<uint8_t>>& data)
 	{
 #ifndef PLATFORM_UWP
-#ifdef SDL_FILESYSTEM_UNIX
+#if defined(PLATFORM_LINUX) || defined(PLATFORM_PS5)
 		std::string filepath = fileName;
 		std::replace(filepath.begin(), filepath.end(), '\\', '/'); // Linux cannot handle backslash in file path, need to convert it to forward slash
 		std::ifstream file(filepath, std::ios::binary | std::ios::ate);
 #else
 		std::ifstream file(ToNativeString(fileName), std::ios::binary | std::ios::ate);
-#endif // SDL_FILESYSTEM_UNIX
+#endif // PLATFORM_LINUX || PLATFORM_PS5
 		if (file.is_open())
 		{
 			size_t dataSize = (size_t)file.tellg();
@@ -1010,12 +1010,12 @@ namespace wi::helper
 
 	std::string GetTempDirectoryPath()
 	{
-#ifdef PLATFORM_XBOX
+#if defined(PLATFORM_XBOX) || defined(PLATFORM_PS5)
 		return "";
 #else
 		auto path = std::filesystem::temp_directory_path();
 		return path.generic_u8string();
-#endif // PLATFORM_XBOX
+#endif // PLATFORM_XBOX || PLATFORM_PS5
 	}
 
 	std::string GetCacheDirectoryPath()
@@ -1040,8 +1040,12 @@ namespace wi::helper
 
 	std::string GetCurrentPath()
 	{
+#ifdef PLATFORM_PS5
+		return "/app0";
+#else
 		auto path = std::filesystem::current_path();
 		return path.generic_u8string();
+#endif // PLATFORM_PS5
 	}
 
 	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess)

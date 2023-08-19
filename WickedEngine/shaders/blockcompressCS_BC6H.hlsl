@@ -1,6 +1,11 @@
 // Modified version of: https://github.com/knarkowicz/GPURealTimeBC6H/blob/master/bin/compress.hlsl
 #include "globals.hlsli"
 
+#ifdef __PSSL__
+// TODO: register spilling issue
+#pragma warning (disable:7203)
+#endif // __PSSL__
+
 // Whether to use P2 modes (4 endpoints) for compression. Slow, but improves quality.
 #ifdef COMPRESS_CUBEMAP
 #define ENCODE_P2 0
