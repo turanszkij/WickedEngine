@@ -281,9 +281,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		ShaderSphere sphere;
 		sphere.center = (base + tip) * 0.5;
 		sphere.radius = len;
-
+		
 		const bool visible = !distance_culled && GetCamera().frustum.intersects(sphere);
-
+		
 		// Optimization: reduce to 1 atomic operation per wave
 		const uint waveAppendCount = WaveActiveCountBits(visible);
 		uint waveOffset;
@@ -291,12 +291,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		{
 			InterlockedAdd(indirectBuffer[0].IndexCountPerInstance, waveAppendCount * 6, waveOffset);
 		}
-		waveOffset = WaveReadLaneFirst(waveOffset) / 6;
+		waveOffset = WaveReadLaneFirst(waveOffset);
 
 		if (visible)
 		{
-			uint prevCount = waveOffset + WavePrefixSum(1u);
-			uint ii0 = prevCount * 6;
+			uint prevCount = waveOffset + WavePrefixSum(6u);
+			uint ii0 = prevCount;
 			culledIndexBuffer[ii0 + 0] = i0 + 0;
 			culledIndexBuffer[ii0 + 1] = i0 + 1;
 			culledIndexBuffer[ii0 + 2] = i0 + 2;

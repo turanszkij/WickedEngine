@@ -79,8 +79,10 @@ struct IndirectDispatchArgs
 };
 
 #if defined(__SCE__) || defined(__PSSL__)
+static const uint IndirectDrawArgsAlignment = 8u;
 static const uint IndirectDispatchArgsAlignment = 32u;
 #else
+static const uint IndirectDrawArgsAlignment = 4u;
 static const uint IndirectDispatchArgsAlignment = 4u;
 #endif // __SCE__ || __PSSL__
 
