@@ -24,6 +24,10 @@
 #include <winrt/Windows.Devices.Input.h>
 #endif // PLATFORM_UWP
 
+#ifdef PLATFORM_PS5
+#include "wiInput_PS5.h"
+#endif // PLATFORM_PS5
+
 namespace wi::input
 {
 #ifdef _WIN32
@@ -75,6 +79,7 @@ namespace wi::input
 			XINPUT,
 			RAWINPUT,
 			SDLINPUT,
+			PS5,
 		};
 		DeviceType deviceType;
 		int deviceIndex;
@@ -89,6 +94,10 @@ namespace wi::input
 
 		wi::input::rawinput::Initialize();
 		wi::input::sdlinput::Initialize();
+
+#ifdef PLATFORM_PS5
+		wi::input::ps5::Initialize();
+#endif // PLATFORM_PS5
 
 		wi::backlog::post("wi::input Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 		initialized.store(true);
@@ -108,6 +117,10 @@ namespace wi::input
 		wi::input::xinput::Update();
 		wi::input::rawinput::Update();
 		wi::input::sdlinput::Update();
+
+#ifdef PLATFORM_PS5
+		wi::input::ps5::Update();
+#endif // PLATFORM_PS5
 
 #if defined(_WIN32) && !defined(PLATFORM_XBOX)
 		wi::input::rawinput::GetMouseState(&mouse); // currently only the relative data can be used from this
@@ -322,6 +335,39 @@ namespace wi::input
 			}
 		}
 
+#ifdef PLATFORM_PS5
+		// Check if low-level PS5 controller is not registered for playerindex slot and register:
+		for (int i = 0; i < wi::input::ps5::GetMaxControllerCount(); ++i)
+		{
+			if (wi::input::ps5::GetControllerState(nullptr, i))
+			{
+				int slot = -1;
+				for (int j = 0; j < (int)controllers.size(); ++j)
+				{
+					if (slot < 0 && controllers[j].deviceType == Controller::DISCONNECTED)
+					{
+						// take the first disconnected slot
+						slot = j;
+					}
+					if (controllers[j].deviceType == Controller::PS5 && controllers[j].deviceIndex == i)
+					{
+						// it is already registered to this slot
+						slot = j;
+						break;
+					}
+				}
+				if (slot == -1)
+				{
+					// no disconnected slot was found, and it was not registered
+					slot = (int)controllers.size();
+					controllers.emplace_back();
+				}
+				controllers[slot].deviceType = Controller::PS5;
+				controllers[slot].deviceIndex = i;
+			}
+		}
+#endif // PLATFORM_PS5
+
 		// Read low-level controllers:
 		for (auto& controller : controllers)
 		{
@@ -337,6 +383,11 @@ namespace wi::input
 				case Controller::SDLINPUT:
 					connected = wi::input::sdlinput::GetControllerState(&controller.state, controller.deviceIndex);
 					break;
+#ifdef PLATFORM_PS5
+				case Controller::PS5:
+					connected = wi::input::ps5::GetControllerState(&controller.state, controller.deviceIndex);
+					break;
+#endif // PLATFORM_PS5
 				case Controller::DISCONNECTED:
 					connected = false;
 					break;
@@ -664,6 +715,12 @@ namespace wi::input
 			{
 				wi::input::sdlinput::SetControllerFeedback(data, controller.deviceIndex);
 			}
+#ifdef PLATFORM_PS5
+			else if (controller.deviceType == Controller::PS5)
+			{
+				wi::input::ps5::SetControllerFeedback(data, controller.deviceIndex);
+			}
+#endif // PLATFORM_PS5
 		}
 	}
 

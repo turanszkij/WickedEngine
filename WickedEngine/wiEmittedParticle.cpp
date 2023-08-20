@@ -229,9 +229,9 @@ namespace wi
 			bd.bind_flags = BindFlag::UNORDERED_ACCESS;
 			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::INDIRECT_ARGS;
 			bd.size =
-				sizeof(IndirectDispatchArgs) +
-				sizeof(IndirectDispatchArgs) +
-				sizeof(IndirectDrawArgsInstanced);
+				AlignTo(sizeof(IndirectDispatchArgs), (uint64_t)IndirectDispatchArgsAlignment) +
+				AlignTo(sizeof(IndirectDispatchArgs), (uint64_t)IndirectDispatchArgsAlignment) +
+				AlignTo(sizeof(IndirectDrawArgsInstanced), (uint64_t)IndirectDrawArgsAlignment);
 			device->CreateBuffer(&bd, nullptr, &indirectBuffers);
 			device->SetName(&indirectBuffers, "EmittedParticleSystem::indirectBuffers");
 
