@@ -1492,6 +1492,12 @@ namespace wi::gui
 					}
 				}
 
+				if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) && wi::input::Down((wi::input::BUTTON)'A'))
+				{
+					caret_begin = 0;
+					caret_pos = (int)font_input.GetText().size();
+				}
+
 			}
 
 			if (clicked && state == FOCUS)
@@ -1649,6 +1655,8 @@ namespace wi::gui
 	void TextInputField::AddInput(const wchar_t inputChar)
 	{
 		input_updated = true;
+		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL))
+			return;
 		switch (inputChar)
 		{
 		case '\b':	// BACKSPACE

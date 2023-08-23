@@ -3895,7 +3895,19 @@ void EditorComponent::FocusCameraOnSelected()
 		}
 		if (scene.lights.Contains(x.entity))
 		{
-			aabb = AABB::Merge(aabb, scene.aabb_lights[scene.lights.GetIndex(x.entity)]);
+			size_t lightindex = scene.lights.GetIndex(x.entity);
+			const LightComponent& light = scene.lights[lightindex];
+			if (light.GetType() == LightComponent::DIRECTIONAL)
+			{
+				// Directional light AABB is huge, so we handle this as special case:
+				AABB lightAABB;
+				lightAABB.createFromHalfWidth(light.position, XMFLOAT3(1, 1, 1));
+				aabb = AABB::Merge(aabb, lightAABB);
+			}
+			else
+			{
+				aabb = AABB::Merge(aabb, scene.aabb_lights[lightindex]);
+			}
 		}
 		if (scene.decals.Contains(x.entity))
 		{

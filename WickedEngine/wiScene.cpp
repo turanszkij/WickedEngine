@@ -3980,8 +3980,7 @@ namespace wi::scene
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
 			constexpr Format format = Format::BC6H_UF16;
-			constexpr uint32_t blocks = envmapRes / GetFormatBlockSize(format);
-			constexpr uint32_t mip_count = GetMipCount(blocks, blocks);
+			constexpr uint32_t mip_count = GetMipCount(envmapRes, envmapRes);
 
 			TextureDesc desc;
 			desc.array_size = 6;
