@@ -14,7 +14,11 @@
 
 #ifdef PLATFORM_LINUX
 #include <pthread.h>
-#endif
+#endif // PLATFORM_LINUX
+
+#ifdef PLATFORM_PS5
+#include "wiJobSystem_PS5.h"
+#endif // PLATFORM_PS5
 
 namespace wi::jobsystem
 {
@@ -198,6 +202,8 @@ namespace wi::jobsystem
 			if (ret != 0)
 				handle_error_en(ret, std::string(" pthread_setname_np[" + std::to_string(threadID) + ']').c_str());
 #undef handle_error_en
+#elif defined(PLATFORM_PS5)
+			wi::jobsystem::ps5::SetupWorker(worker, threadID);
 #endif // _WIN32
 		}
 

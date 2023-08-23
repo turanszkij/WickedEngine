@@ -1173,6 +1173,8 @@ namespace wi::audio
 	}
 }
 
+#elif __SCE__
+// PS5 audio implementation in wiAudio_PS5.cpp extension file
 #else
 
 namespace wi::audio
