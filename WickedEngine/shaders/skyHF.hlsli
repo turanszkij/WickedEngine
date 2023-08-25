@@ -161,12 +161,21 @@ float3 GetStaticSkyColor(in float3 V)
 	);
 	V.xz = mul(V.xz, rot);
 
+	float3 sky = 0;
 	if (GetFrame().options & OPTION_BIT_STATIC_SKY_SPHEREMAP)
 	{
-		float2 uv = (float2(atan2(V.z, V.x) / PI, -V.y) + 1.0) * 0.5;
-		return bindless_textures[GetScene().globalenvmap].SampleLevel(sampler_linear_clamp, uv, 0).rgb;
+		float2 uv = (float2(-atan2(V.z, V.x) / PI, -V.y) + 1.0) * 0.5;
+		sky = bindless_textures[GetScene().globalenvmap].SampleLevel(sampler_linear_clamp, uv, 0).rgb;
 	}
-	return bindless_cubemaps[GetScene().globalenvmap].SampleLevel(sampler_linear_clamp, V, 0).rgb;
+	else
+	{
+		sky = bindless_cubemaps[GetScene().globalenvmap].SampleLevel(sampler_linear_clamp, V, 0).rgb;
+
+	}
+	
+	sky *= GetWeather().sky_exposure;
+
+	return sky;
 }
 
 
