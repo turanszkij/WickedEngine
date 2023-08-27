@@ -18,16 +18,16 @@ namespace wi::gui
 
 	struct EventArgs
 	{
-		XMFLOAT2 clickPos = {};
-		XMFLOAT2 startPos = {};
-		XMFLOAT2 deltaPos = {};
-		XMFLOAT2 endPos = {};
-		float fValue = 0;
-		bool bValue = false;
-		int iValue = 0;
-		wi::Color color;
-		std::string sValue;
-		uint64_t userdata = 0;
+		XMFLOAT2 clickPos = {};	// mouse click coordinate
+		XMFLOAT2 startPos = {};	// mouse start position of operation (drag)
+		XMFLOAT2 deltaPos = {}; // mouse delta position of operation since last update (drag)
+		XMFLOAT2 endPos = {};	// mouse end position of operation (drag)
+		float fValue = 0;		// generic float value of operation
+		bool bValue = false;	// generic boolean value of operation
+		int iValue = 0;			// generic integer value of operation
+		wi::Color color;		// color value of color picker operation
+		std::string sValue;		// generic string value of operation
+		uint64_t userdata = 0;	// this will provide the userdata value that was set to a widget (or part of a widget)
 	};
 
 	enum WIDGETSTATE
@@ -619,6 +619,7 @@ namespace wi::gui
 		float control_size = 20;
 		std::function<void(EventArgs args)> onClose;
 		std::function<void(EventArgs args)> onCollapse;
+		std::function<void()> onResize;
 
 	public:
 		enum class WindowControls
@@ -669,6 +670,7 @@ namespace wi::gui
 
 		void OnClose(std::function<void(EventArgs args)> func);
 		void OnCollapse(std::function<void(EventArgs args)> func);
+		void OnResize(std::function<void()> func);
 
 		Button closeButton;
 		Button collapseButton;

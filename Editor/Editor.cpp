@@ -173,8 +173,8 @@ void EditorComponent::ResizeLayout()
 	componentsWnd.SetPos(XMFLOAT2(screenW - componentsWnd.GetScale().x, screenH - componentsWnd.GetScale().y));
 	componentsWnd.scale_local = wi::math::Clamp(componentsWnd.scale_local, XMFLOAT3(1, 1, 1), XMFLOAT3(screenW, screenH, 1));
 
-	aboutLabel.SetSize(XMFLOAT2(screenW / 2.0f, screenH / 1.5f));
-	aboutLabel.SetPos(XMFLOAT2(screenW / 2.0f - aboutLabel.scale.x / 2.0f, screenH / 2.0f - aboutLabel.scale.y / 2.0f));
+	aboutWindow.SetSize(XMFLOAT2(screenW / 2.0f, screenH / 1.5f));
+	aboutWindow.SetPos(XMFLOAT2(screenW / 2.0f - aboutWindow.scale.x / 2.0f, screenH / 2.0f - aboutWindow.scale.y / 2.0f));
 
 }
 void EditorComponent::Load()
@@ -451,7 +451,7 @@ void EditorComponent::Load()
 	aboutButton.SetColor(wi::Color(50, 160, 200, 180), wi::gui::WIDGETSTATE::IDLE);
 	aboutButton.SetColor(wi::Color(120, 200, 200, 255), wi::gui::WIDGETSTATE::FOCUS);
 	aboutButton.OnClick([&](wi::gui::EventArgs args) {
-		aboutLabel.SetVisible(!aboutLabel.IsVisible());
+		aboutWindow.SetVisible(!aboutWindow.IsVisible());
 		});
 	GetGUI().AddWidget(&aboutButton);
 
@@ -517,10 +517,21 @@ void EditorComponent::Load()
 
 		aboutLabel.Create("AboutLabel");
 		aboutLabel.SetText(ss);
-		aboutLabel.SetVisible(false);
+		aboutLabel.SetSize(XMFLOAT2(600,4000));
 		aboutLabel.SetColor(wi::Color(113, 183, 214, 100));
 		aboutLabel.SetLocalizationEnabled(false);
-		GetGUI().AddWidget(&aboutLabel);
+		aboutWindow.AddWidget(&aboutLabel);
+
+		auto wctrl = wi::gui::Window::WindowControls::ALL;
+		wctrl &= ~wi::gui::Window::WindowControls::RESIZE_BOTTOMLEFT;
+		aboutWindow.Create("About", wctrl);
+		aboutWindow.SetVisible(false);
+		aboutWindow.SetPos(XMFLOAT2(100, 100));
+		aboutWindow.SetSize(XMFLOAT2(640, 480));
+		aboutWindow.OnResize([this]() {
+			aboutLabel.SetSize(XMFLOAT2(aboutWindow.GetWidgetAreaSize().x - 20, aboutLabel.GetSize().y));
+		});
+		GetGUI().AddWidget(&aboutWindow);
 	}
 
 	exitButton.Create("Exit");

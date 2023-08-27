@@ -510,6 +510,20 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			ktxConvButton.sprites[i].params.corners_rounding[1].radius = 8;
 			ktxConvButton.sprites[i].params.corners_rounding[2].radius = 8;
 			ktxConvButton.sprites[i].params.corners_rounding[3].radius = 8;
+
+			editor->aboutWindow.sprites[i].params.enableCornerRounding();
+			editor->aboutWindow.sprites[i].params.corners_rounding[0].radius = 10;
+			editor->aboutWindow.sprites[i].params.corners_rounding[1].radius = 10;
+			editor->aboutWindow.sprites[i].params.corners_rounding[2].radius = 10;
+			editor->aboutWindow.sprites[i].params.corners_rounding[3].radius = 10;
+			editor->aboutWindow.resizeDragger_UpperLeft.sprites[i].params.enableCornerRounding();
+			editor->aboutWindow.resizeDragger_UpperLeft.sprites[i].params.corners_rounding[0].radius = 10;
+			editor->aboutWindow.resizeDragger_UpperRight.sprites[i].params.enableCornerRounding();
+			editor->aboutWindow.resizeDragger_UpperRight.sprites[i].params.corners_rounding[1].radius = 10;
+			editor->aboutWindow.resizeDragger_BottomLeft.sprites[i].params.enableCornerRounding();
+			editor->aboutWindow.resizeDragger_BottomLeft.sprites[i].params.corners_rounding[2].radius = 10;
+			editor->aboutWindow.resizeDragger_BottomRight.sprites[i].params.enableCornerRounding();
+			editor->aboutWindow.resizeDragger_BottomRight.sprites[i].params.corners_rounding[3].radius = 10;
 		}
 		for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
 		{
@@ -564,6 +578,14 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->backgroundEntityColor = shadow_color;
 
 		editor->save_text_color = theme.font.color;
+
+		editor->aboutLabel.SetShadowColor(wi::Color::Transparent());
+		editor->aboutLabel.SetColor(wi::Color::Transparent());
+		for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
+		{
+			editor->aboutLabel.sprites[i].params.disableBackground();
+			editor->aboutLabel.sprites[i].params.blendFlag = wi::enums::BLENDMODE_ALPHA;
+		}
 
 	});
 	AddWidget(&themeCombo);

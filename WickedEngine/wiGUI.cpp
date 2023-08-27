@@ -3362,6 +3362,10 @@ namespace wi::gui
 	{
 		onCollapse = func;
 	}
+	void Window::OnResize(std::function<void()> func)
+	{
+		onResize = func;
+	}
 	void Window::SetColor(wi::Color color, int id)
 	{
 		Widget::SetColor(color, id);
@@ -3536,6 +3540,11 @@ namespace wi::gui
 			scrollbar_vertical.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y + 1 + control_size));
 			scrollbar_vertical.AttachTo(this);
 			scrollbar_vertical.SetSafeArea(scrollbar_vertical.scale.x);
+		}
+
+		if (onResize)
+		{
+			onResize();
 		}
 	}
 	void Window::ExportLocalization(wi::Localization& localization) const

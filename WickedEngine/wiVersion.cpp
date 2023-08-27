@@ -9,7 +9,7 @@ namespace wi::version
 	// minor features, major updates, breaking compatibility changes
 	const int minor = 71;
 	// minor bug fixes, alterations, refactors, updates
-	const int revision = 278;
+	const int revision = 279;
 
 	const std::string version_string = std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(revision);
 
@@ -137,6 +137,8 @@ Patreon supporters
 - Peter Moore
 - therealjtgill
 - Nicolas Embleton
+- Desuuc
+- radino1977
 		)";
 
 		return credits;

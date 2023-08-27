@@ -45,6 +45,7 @@ public:
 	wi::gui::Button bugButton;
 	wi::gui::Button aboutButton;
 	wi::gui::Button exitButton;
+	wi::gui::Window aboutWindow;
 	wi::gui::Label aboutLabel;
 
 	OptionsWindow optionsWnd;
