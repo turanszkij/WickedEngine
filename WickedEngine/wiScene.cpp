@@ -3471,7 +3471,7 @@ namespace wi::scene
 			desc.misc_flags = ResourceMiscFlag::NONE;
 			desc.layout = ResourceState::SHADER_RESOURCE;
 
-			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::RENDER_TARGET; // Note: RenderTarget required for MSAA resolve dest [PS5]
 			desc.format = Format::R8G8B8A8_UNORM;
 			device->CreateTexture(&desc, nullptr, &impostorRenderTarget_Albedo);
 			device->SetName(&impostorRenderTarget_Albedo, "impostorRenderTarget_Albedo");
