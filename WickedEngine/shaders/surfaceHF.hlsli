@@ -4,10 +4,28 @@
 
 #define max3(v) max(max(v.x, v.y), v.z)
 
+// hard coded value for surfaces with simplified lighting:
+//	occlusion = 1
+//	roughness = 1
+//	metalness = 0
+//	reflectance = 0
+static const float4 surfacemap_simple = float4(1, 1, 0, 0);
+
 float3 F_Schlick(const float3 f0, float f90, float VoH)
 {
 	// Schlick 1994, "An Inexpensive BRDF Model for Physically-Based Rendering"
 	return f0 + (f90 - f0) * pow5(1.0 - VoH);
+}
+
+// https://www.unrealengine.com/en-US/blog/physically-based-shading-on-mobile
+half3 EnvBRDFApprox(half3 SpecularColor, half Roughness, half NoV)
+{
+	const half4 c0 = { -1, -0.0275, -0.572, 0.022 };
+	const half4 c1 = { 1, 0.0425, 1.04, -0.04 };
+	half4 r = Roughness * c0 + c1;
+	half a004 = min(r.x * r.x, exp2(-9.28 * NoV)) * r.x + r.y;
+	half2 AB = half2(-1.04, 1.04) * a004 + r.zw;
+	return SpecularColor * AB.x + AB.y;
 }
 
 struct SheenSurface
@@ -222,7 +240,7 @@ struct Surface
 
 		create(material);
 	}
-
+	
 	inline void update()
 	{
 		roughness = clamp(roughness, 0.045, 1);
@@ -239,9 +257,14 @@ struct Surface
 #endif // CLEARCOAT
 
 		NdotV = saturate(dot(N, V) + 1e-5);
-
+		
 		f90 = saturate(50.0 * dot(f0, 0.33));
+		
+#ifdef CARTOON
 		F = F_Schlick(f0, f90, NdotV);
+#else
+		F = EnvBRDFApprox(f0, roughness, NdotV);
+#endif // CARTOON
 
 		R = -reflect(V, N);
 
@@ -252,7 +275,12 @@ struct Surface
 #endif // SHEEN
 
 #ifdef CLEARCOAT
-		clearcoat.F = F_Schlick(f0, f90, saturate(dot(clearcoat.N, V) + 1e-5));
+		float clearcoatNdotV = saturate(dot(clearcoat.N, V) + 1e-5);
+#ifdef CARTOON
+		clearcoat.F = F_Schlick(f0, f90, clearcoatNdotV);
+#else
+		clearcoat.F = EnvBRDFApprox(f0, clearcoat.roughness, clearcoatNdotV);
+#endif // CARTOON
 		clearcoat.F *= clearcoat.factor;
 		clearcoat.R = -reflect(V, clearcoat.N);
 #endif // CLEARCOAT
@@ -544,7 +572,7 @@ struct Surface
 
 		if (simple_lighting)
 		{
-			surfaceMap = 0;
+			surfaceMap = surfacemap_simple;
 		}
 
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES

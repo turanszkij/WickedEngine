@@ -70,7 +70,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 		Surface surface;
 		surface.init();
-		surface.create(material, color, 0);
+		surface.create(material, color, surfacemap_simple);
 		surface.P = input.P;
 		surface.N = N;
 		surface.V = 0;

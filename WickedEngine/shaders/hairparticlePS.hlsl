@@ -29,7 +29,7 @@ float4 main(VertexToPixel input) : SV_Target
 
 	Surface surface;
 	surface.init();
-	surface.create(material, color, 0);
+	surface.create(material, color, surfacemap_simple);
 	surface.P = input.pos3D;
 	surface.N = input.nor;
 	surface.V = V;
