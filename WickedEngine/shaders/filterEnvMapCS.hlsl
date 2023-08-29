@@ -3,7 +3,8 @@
 
 PUSHCONSTANT(push, FilterEnvmapPushConstants);
 
-// From "Real Shading in UnrealEngine 4" by Brian Karis
+// From "Real Shading in UnrealEngine 4" by Brian Karis, page 4
+//	https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
 float3 ImportanceSampleGGX(float2 Xi, float Roughness, float3 N)
 {
 	float a = Roughness * Roughness;
@@ -14,7 +15,11 @@ float3 ImportanceSampleGGX(float2 Xi, float Roughness, float3 N)
 	H.x = SinTheta * cos(Phi);
 	H.y = SinTheta * sin(Phi); 
 	H.z = CosTheta;
-	return H;
+	float3 UpVector = abs(N.z) < 0.999 ? float3(0, 0, 1) : float3(1, 0, 0);
+	float3 TangentX = normalize(cross(UpVector, N));
+	float3 TangentY = cross(N, TangentX);
+	// Tangent to world space
+	return TangentX * H.x + TangentY * H.y + N * H.z;
 }
 
 [numthreads(GENERATEMIPCHAIN_2D_BLOCK_SIZE, GENERATEMIPCHAIN_2D_BLOCK_SIZE, 1)]
@@ -27,20 +32,30 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 		float2 uv = (DTid.xy + 0.5f) * push.filterResolution_rcp.xy;
 		float3 N = uv_to_cubemap(uv, DTid.z);
-
-		float3x3 tangentSpace = get_tangentspace(N);
+		float3 V = N;
 
 		float4 col = 0;
+		
+		float Roughness = push.filterRoughness;
 
-		for (uint i = 0; i < push.filterRayCount; ++i)
+		uint rayCount = push.filterRayCount;
+		for (uint i = 0; i < rayCount; ++i)
 		{
-			float2 hamm = hammersley2d(i, push.filterRayCount);
-			float3 hemisphere = ImportanceSampleGGX(hamm, push.filterRoughness, N);
-			float3 cone = mul(hemisphere, tangentSpace);
-
-			col += input.SampleLevel(sampler_linear_clamp, cone, 0);
+			float2 Xi = hammersley2d(i, rayCount);
+			float3 H = ImportanceSampleGGX(Xi, Roughness, N);
+			float3 L = 2 * dot(V, H) * H - V;
+			
+			float NoL = saturate(dot(N, L));
+			if (NoL > 0)
+			{
+				col += input.SampleLevel(sampler_linear_clamp, L, 0) * NoL;
+			}
 		}
-		col /= (float)push.filterRayCount;
+
+		if(col.a > 0)
+		{
+			col /= col.a;
+		}
 
 		output[uint3(DTid.xy, DTid.z)] = col;
 	}

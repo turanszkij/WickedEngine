@@ -11,6 +11,8 @@
 //	reflectance = 0
 static const float4 surfacemap_simple = float4(1, 1, 0, 0);
 
+static const float roughness_clamp = 0.045f;
+
 float3 F_Schlick(const float3 f0, float f90, float VoH)
 {
 	// Schlick 1994, "An Inexpensive BRDF Model for Physically-Based Rendering"
@@ -243,16 +245,16 @@ struct Surface
 	
 	inline void update()
 	{
-		roughness = clamp(roughness, 0.045, 1);
+		roughness = clamp(roughness, roughness_clamp, 1);
 		roughnessBRDF = roughness * roughness;
 
 #ifdef SHEEN
-		sheen.roughness = clamp(sheen.roughness, 0.045, 1);
+		sheen.roughness = clamp(sheen.roughness, roughness_clamp, 1);
 		sheen.roughnessBRDF = sheen.roughness * sheen.roughness;
 #endif // SHEEN
 
 #ifdef CLEARCOAT
-		clearcoat.roughness = clamp(clearcoat.roughness, 0.045, 1);
+		clearcoat.roughness = clamp(clearcoat.roughness, roughness_clamp, 1);
 		clearcoat.roughnessBRDF = clearcoat.roughness * clearcoat.roughness;
 #endif // CLEARCOAT
 
