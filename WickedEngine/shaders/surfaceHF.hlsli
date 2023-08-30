@@ -11,7 +11,7 @@
 //	reflectance = 0
 static const float4 surfacemap_simple = float4(1, 1, 0, 0);
 
-static const float roughness_clamp = 0.045f;
+static const float roughness_min = 0.045f;
 
 float3 F_Schlick(const float3 f0, float f90, float VoH)
 {
@@ -245,17 +245,17 @@ struct Surface
 	
 	inline void update()
 	{
-		roughness = clamp(roughness, roughness_clamp, 1);
-		roughnessBRDF = roughness * roughness;
+		roughness = saturate(roughness);
+		roughnessBRDF = sqr(max(roughness, roughness_min)); // only clamp min for BRDF!
 
 #ifdef SHEEN
-		sheen.roughness = clamp(sheen.roughness, roughness_clamp, 1);
-		sheen.roughnessBRDF = sheen.roughness * sheen.roughness;
+		sheen.roughness = saturate(sheen.roughness);
+		sheen.roughnessBRDF = sqr(max(sheen.roughness, roughness_min)); // only clamp min for BRDF!
 #endif // SHEEN
 
 #ifdef CLEARCOAT
-		clearcoat.roughness = clamp(clearcoat.roughness, roughness_clamp, 1);
-		clearcoat.roughnessBRDF = clearcoat.roughness * clearcoat.roughness;
+		clearcoat.roughness = saturate(clearcoat.roughness);
+		clearcoat.roughnessBRDF = sqr(max(clearcoat.roughness, roughness_min)); // only clamp min for BRDF!
 #endif // CLEARCOAT
 
 		NdotV = saturate(dot(N, V) + 1e-5);

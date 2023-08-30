@@ -379,22 +379,22 @@ inline float3 EnvironmentReflection_Global(in Surface surface)
 		GetDynamicSkyColor(float3(0, 1, 0), false, false, true),
 		saturate(surface.R.y * 0.5 + 0.5));
 
-	envColor = lerp(skycolor_real, skycolor_rough, saturate(surface.roughness - roughness_clamp)) * surface.F;
+	envColor = lerp(skycolor_real, skycolor_rough, surface.roughness) * surface.F;
 
 #else
 
-	float MIP = saturate(surface.roughness - roughness_clamp) * GetFrame().envprobe_mipcount;
+	float MIP = surface.roughness * GetFrame().envprobe_mipcount;
 	envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, 0), MIP).rgb * surface.F;
 
 #ifdef SHEEN
 	envColor *= surface.sheen.albedoScaling;
-	MIP = saturate(surface.sheen.roughness - roughness_clamp) * GetFrame().envprobe_mipcount;
+	MIP = surface.sheen.roughness * GetFrame().envprobe_mipcount;
 	envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, 0), MIP).rgb * surface.sheen.color * surface.sheen.DFG;
 #endif // SHEEN
 
 #ifdef CLEARCOAT
 	envColor *= 1 - surface.clearcoat.F;
-	MIP = saturate(surface.clearcoat.roughness - roughness_clamp) * GetFrame().envprobe_mipcount;
+	MIP = surface.clearcoat.roughness * GetFrame().envprobe_mipcount;
 	envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.clearcoat.R, 0), MIP).rgb * surface.clearcoat.F;
 #endif // CLEARCOAT
 
@@ -421,12 +421,12 @@ inline float4 EnvironmentReflection_Local(in Surface surface, in ShaderEntity pr
 	float3 R_parallaxCorrected = IntersectPositionWS - probe.position;
 
 	// Sample cubemap texture:
-	float MIP = saturate(surface.roughness - roughness_clamp) * GetFrame().envprobe_mipcount;
+	float MIP = surface.roughness * GetFrame().envprobe_mipcount;
 	float3 envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.GetTextureIndex()), MIP).rgb * surface.F;
 
 #ifdef SHEEN
 	envColor *= surface.sheen.albedoScaling;
-	MIP = saturate(surface.sheen.roughness - roughness_clamp) * GetFrame().envprobe_mipcount;
+	MIP = surface.sheen.roughness * GetFrame().envprobe_mipcount;
 	envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.GetTextureIndex()), MIP).rgb * surface.sheen.color * surface.sheen.DFG;
 #endif // SHEEN
 
@@ -440,7 +440,7 @@ inline float4 EnvironmentReflection_Local(in Surface surface, in ShaderEntity pr
 	R_parallaxCorrected = IntersectPositionWS - probe.position;
 
 	envColor *= 1 - surface.clearcoat.F;
-	MIP = saturate(surface.clearcoat.roughness - roughness_clamp) * GetFrame().envprobe_mipcount;
+	MIP = surface.clearcoat.roughness * GetFrame().envprobe_mipcount;
 	envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.GetTextureIndex()), MIP).rgb * surface.clearcoat.F;
 #endif // CLEARCOAT
 
