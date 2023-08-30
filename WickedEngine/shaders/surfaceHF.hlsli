@@ -245,17 +245,17 @@ struct Surface
 	
 	inline void update()
 	{
-		roughness = saturate(roughness);
-		roughnessBRDF = sqr(max(roughness, roughness_min)); // only clamp min for BRDF!
+		roughness = clamp(roughness, roughness_min, 1);
+		roughnessBRDF = roughness * roughness;
 
 #ifdef SHEEN
-		sheen.roughness = saturate(sheen.roughness);
-		sheen.roughnessBRDF = sqr(max(sheen.roughness, roughness_min)); // only clamp min for BRDF!
+		sheen.roughness = clamp(sheen.roughness, roughness_min, 1);
+		sheen.roughnessBRDF = sheen.roughness * sheen.roughness;
 #endif // SHEEN
 
 #ifdef CLEARCOAT
-		clearcoat.roughness = saturate(clearcoat.roughness);
-		clearcoat.roughnessBRDF = sqr(max(clearcoat.roughness, roughness_min)); // only clamp min for BRDF!
+		clearcoat.roughness = clamp(clearcoat.roughness, roughness_min, 1);
+		clearcoat.roughnessBRDF = clearcoat.roughness * clearcoat.roughness;
 #endif // CLEARCOAT
 
 		NdotV = saturate(dot(N, V) + 1e-5);
