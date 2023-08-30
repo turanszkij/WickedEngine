@@ -7642,9 +7642,10 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 			device->BindComputeShader(&shaders[CSTYPE_FILTERENVMAP], cmd);
 
-			desc.width = std::max(1u, desc.width >> (desc.mip_levels - 1));
-			desc.height = std::max(1u, desc.height >> (desc.mip_levels - 1));
-			for (uint32_t i = desc.mip_levels - 1; i > 0; --i)
+			int mip_start = desc.mip_levels - 1;
+			desc.width = std::max(1u, desc.width >> mip_start);
+			desc.height = std::max(1u, desc.height >> mip_start);
+			for (int i = mip_start; i > 0; --i)
 			{
 				{
 					GPUBarrier barriers[] = {
@@ -7664,8 +7665,15 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				push.filterResolution_rcp.x = 1.0f / push.filterResolution.x;
 				push.filterResolution_rcp.y = 1.0f / push.filterResolution.y;
 				push.filterRoughness = (float)i / (float)desc.mip_levels;
-				push.filterRayCount = 128;
-				push.texture_input = device->GetDescriptorIndex(&vis.scene->envrenderingColorBuffer, SubresourceType::SRV, std::max(0, (int)i - 2));
+				if (probe.IsRealTime())
+				{
+					push.filterRayCount = 128;
+				}
+				else
+				{
+					push.filterRayCount = 1024;
+				}
+				push.texture_input = device->GetDescriptorIndex(&vis.scene->envrenderingColorBuffer, SubresourceType::SRV, std::max(0, (int)i - 1));
 				push.texture_output = device->GetDescriptorIndex(&vis.scene->envrenderingColorBuffer, SubresourceType::UAV, i);
 				device->PushConstants(&push, sizeof(push), cmd);
 
@@ -7703,6 +7711,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		EnvironmentProbeComponent probe;
 		probe.textureIndex = 0;
 		probe.position = vis.camera->Eye;
+		probe.SetRealTime(true);
 
 		AABB probe_aabb;
 		probe_aabb.layerMask = 0;
@@ -8728,7 +8737,6 @@ void BlockCompress(const Texture& texture_src, const Texture& texture_bc, Comman
 	desc.height = std::max(1u, texture_bc.desc.height / block_size);
 	desc.bind_flags = BindFlag::UNORDERED_ACCESS;
 	desc.layout = ResourceState::UNORDERED_ACCESS;
-	desc.mip_levels = GetMipCount(desc.width, desc.height);
 
 	Texture bc_raw_dest;
 	{
@@ -8797,22 +8805,14 @@ void BlockCompress(const Texture& texture_src, const Texture& texture_bc, Comman
 			bc_raw_desc.height = std::max(bc_raw->desc.height, bc_raw_desc.height);
 			bc_raw_desc.width = wi::math::GetNextPowerOfTwo(bc_raw_desc.width);
 			bc_raw_desc.height = wi::math::GetNextPowerOfTwo(bc_raw_desc.height);
-			bc_raw_desc.mip_levels = GetMipCount(bc_raw_desc.width, bc_raw_desc.height);
 			device->CreateTexture(&bc_raw_desc, nullptr, bc_raw);
 			device->SetName(bc_raw, "bc_raw");
-
-			for (uint32_t i = 0; i < bc_raw->desc.mip_levels; ++i)
-			{
-				int subresource_index = device->CreateSubresource(bc_raw, SubresourceType::UAV, 0, bc_raw_desc.array_size, i, 1);
-				assert(subresource_index == i);
-			}
 
 			std::string info;
 			info += "BlockCompress created a new raw block texture to fit request: " + std::string(GetFormatString(texture_bc.desc.format)) + " (" + std::to_string(texture_bc.desc.width) + ", " + std::to_string(texture_bc.desc.height) + ")";
 			info += "\n\tFormat = ";
 			info += GetFormatString(bc_raw_desc.format);
 			info += "\n\tResolution = " + std::to_string(bc_raw_desc.width) + " * " + std::to_string(bc_raw_desc.height);
-			info += "\n\tMip Levels = " + std::to_string(bc_raw_desc.mip_levels);
 			info += "\n\tArray Size = " + std::to_string(bc_raw_desc.array_size);
 			size_t total_size = 0;
 			total_size += ComputeTextureMemorySizeInBytes(bc_raw_desc);
@@ -8823,28 +8823,22 @@ void BlockCompress(const Texture& texture_src, const Texture& texture_bc, Comman
 		bc_raw_dest = *bc_raw;
 	}
 
-	const uint32_t mip_levels = std::min(desc.mip_levels, std::min(texture_src.desc.mip_levels, texture_bc.desc.mip_levels));
-	for (uint32_t mip = 0; mip < mip_levels; ++mip)
+	for (uint32_t mip = 0; mip < texture_bc.desc.mip_levels; ++mip)
 	{
 		const uint32_t width = std::max(1u, desc.width >> mip);
 		const uint32_t height = std::max(1u, desc.height >> mip);
 		device->BindResource(&texture_src, 0, cmd, texture_src.desc.mip_levels == 1 ? -1 : mip);
-		device->BindUAV(&bc_raw_dest, 0, cmd, mip);
+		device->BindUAV(&bc_raw_dest, 0, cmd);
 		device->Dispatch((width + 7u) / 8u, (height + 7u) / 8u, desc.array_size, cmd);
-	}
 
-	GPUBarrier barriers[] = {
-		GPUBarrier::Image(&bc_raw_dest, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC),
-		GPUBarrier::Image(&texture_bc, texture_bc.desc.layout, ResourceState::COPY_DST),
-	};
-	device->Barrier(barriers, arraysize(barriers), cmd);
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&bc_raw_dest, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC),
+			GPUBarrier::Image(&texture_bc, texture_bc.desc.layout, ResourceState::COPY_DST),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
 
-	for (uint32_t slice = 0; slice < desc.array_size; ++slice)
-	{
-		for (uint32_t mip = 0; mip < texture_bc.desc.mip_levels; ++mip)
+		for (uint32_t slice = 0; slice < desc.array_size; ++slice)
 		{
-			const uint32_t width = std::max(1u, desc.width >> mip);
-			const uint32_t height = std::max(1u, desc.height >> mip);
 			Box box;
 			box.left = 0;
 			box.right = width;
@@ -8855,18 +8849,18 @@ void BlockCompress(const Texture& texture_src, const Texture& texture_bc, Comman
 
 			device->CopyTexture(
 				&texture_bc, 0, 0, 0, mip, dst_slice_offset + slice,
-				&bc_raw_dest, std::min(mip, bc_raw_dest.desc.mip_levels - 1), slice,
+				&bc_raw_dest, 0, slice,
 				cmd,
 				&box
 			);
 		}
-	}
 
-	for (int i = 0; i < arraysize(barriers); ++i)
-	{
-		std::swap(barriers[i].image.layout_before, barriers[i].image.layout_after);
+		for (int i = 0; i < arraysize(barriers); ++i)
+		{
+			std::swap(barriers[i].image.layout_before, barriers[i].image.layout_after);
+		}
+		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
-	device->Barrier(barriers, arraysize(barriers), cmd);
 
 	device->EventEnd(cmd);
 }

@@ -379,7 +379,7 @@ inline float3 EnvironmentReflection_Global(in Surface surface)
 		GetDynamicSkyColor(float3(0, 1, 0), false, false, true),
 		saturate(surface.R.y * 0.5 + 0.5));
 
-	envColor = lerp(skycolor_real, skycolor_rough, saturate(surface.roughness)) * surface.F;
+	envColor = lerp(skycolor_real, skycolor_rough, surface.roughness) * surface.F;
 
 #else
 
