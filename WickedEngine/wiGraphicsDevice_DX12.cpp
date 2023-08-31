@@ -5000,16 +5000,22 @@ using namespace dx12_internal;
 		const void* identifier = internal_state->stateObjectProperties->GetShaderIdentifier(internal_state->group_strings[group_index].c_str());
 		std::memcpy(dest, identifier, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 	}
-	
+
 	void GraphicsDevice_DX12::SetName(GPUResource* pResource, const char* name) const
 	{
-		wchar_t text[256];
-		if (wi::helper::StringConvert(name, text) > 0)
+		wchar_t text[512];
+		//PE: Crash if text array is smaller then name. Not sure why this happens , look at text below how did that happen ?
+		//PE: SampleCrash text: D:\div\SteamLibrary\steamapps\common\Wicked Engine\Content\envtest\D:\div\SteamLibrary\steamapps\common\Wicked Engine\Content\envtest\F:\plemsoft\wickedengine\Editor/terrain/..\..\..\..\Users\turan\Desktop\uploads_files_1894467_Free_Rock_\Rock_1\Rock_1_Tex\Rock_1_Base_Color.KTX2
+		//PE: NOTE - would overwrite memory and crash somewhere else at a later time.
+		if (strlen(name) < 512)
 		{
-			auto internal_state = to_internal(pResource);
-			if (internal_state->resource != nullptr)
+			if (wi::helper::StringConvert(name, text) > 0)
 			{
-				internal_state->resource->SetName(text);
+				auto internal_state = to_internal(pResource);
+				if (internal_state->resource != nullptr)
+				{
+					internal_state->resource->SetName(text);
+				}
 			}
 		}
 	}
