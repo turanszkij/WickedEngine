@@ -113,7 +113,16 @@ void main(uint2 DTid : SV_DispatchThreadID)
 	if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
 	{
 		// miss:
-		payload.data.xyz += GetDynamicSkyColor(q.WorldRayDirection());
+		[branch]
+		if (IsStaticSky())
+		{
+			// We have envmap information in a texture:
+			payload.data.xyz += GetStaticSkyColor(q.WorldRayDirection());
+		}
+		else
+		{
+			payload.data.xyz += GetDynamicSkyColor(q.WorldRayDirection());
+		}
 		payload.data.w = FLT_MAX;
 	}
 	else
