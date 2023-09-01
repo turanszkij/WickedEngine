@@ -1,25 +1,31 @@
 #ifndef DDS_WRITE_H
 #define DDS_WRITE_H
 // Minimal DDS file writer utility created by Turánszki János for Wicked Engine
+// Based on DDS specification: https://learn.microsoft.com/en-us/windows/win32/direct3ddds/dx-graphics-dds-pguide#dds-file-layout
 // 
 //	Usage:
-//	1) Allocate memory of: dds_write::header_size + wholeTextureDataSizeIncludingSubresources
+//	1) Allocate memory of: sizeof(dds_write::Header) + your whole texture size
 //	2) Use dds_write::write_header() to write DDS header into memory
-//	3) write your texture data into memory manually immediately after allocation + dds_write::header_size
-//	4) write the result into file manually if you want to
+//	3) write your texture data into memory manually after allocation + sizeof(dds_write::Header)
+//	4) this only writes to memory, so write the result into file manually if you want to
 //	5) enjoy
+//
+//	Or you can just freely use the structures here to write your own DDS header
+//
+//	Support:
+//	- This will only create DX10 version of DDS, doesn't support legacy
+//	- Tested with Texture 1D, Texture 2D, Texture 2D Array, Cubemap, Cubemap array, 3D Texture
+//	- Tested with uncompressed formats and block compressed
+//	- mipmaps: OK
+//	- arrays: OK
+//
+//	MIT License (see end of file)
 
 namespace dds_write
 {
 	using DWORD = unsigned;
 	using UINT = unsigned;
 
-	static constexpr DWORD fourcc(char a, char b, char c, char d)
-	{
-		return (((unsigned)(d) << 24) | ((unsigned)(c) << 16) | ((unsigned)(b) << 8) | (unsigned)(a));
-	}
-
-	// https://learn.microsoft.com/en-us/windows/win32/direct3ddds/dx-graphics-dds-pguide#dds-file-layout
 	enum DDS_PIXELFORMAT_FLAGS
 	{
 		DDPF_ALPHAPIXELS = 0x1,		// Texture contains alpha data; dwRGBAlphaBitMask contains valid data.
@@ -234,16 +240,20 @@ namespace dds_write
 		UINT                     miscFlags2;
 	} DDS_HEADER_DXT10;
 
-	static constexpr DWORD magic = fourcc('D', 'D', 'S', ' ');
+	static constexpr DWORD fourcc(char a, char b, char c, char d)
+	{
+		return (((unsigned)(d) << 24) | ((unsigned)(c) << 16) | ((unsigned)(b) << 8) | (unsigned)(a));
+	}
 
-	// Size of DDS header, this must be the first data in the file
-	static constexpr size_t header_size =
-		sizeof(magic) +
-		sizeof(DDS_HEADER) +
-		sizeof(DDS_HEADER_DXT10);
+	struct Header
+	{
+		DWORD magic;
+		DDS_HEADER header;
+		DDS_HEADER_DXT10 header10;
+	};
 
-	// Write the DDS header into memory. Memory must be at least of size: dds_write::header_size
-	//	dst:		destination file in memory
+	// Write the DDS header into memory.
+	//	dst:		destination file in memory, must be at least of sizeof(dds_write::Header)
 	//	format:		data format of texture data that will be placed after header
 	//	width:		width of top mip level
 	//	height:		height of top mip level (you can set this to 0 to indicate 1D texture)
@@ -252,7 +262,7 @@ namespace dds_write
 	//	is_cubemap:	whether the texture is a cubemap. If it is a cubemap, it must have at least array_size = 6
 	//	depth:		depth of 3D texture (you can set this to 0 to indicate that the texture is not 3D)
 	inline void write_header(
-		unsigned char* dst,
+		void* dst,
 		DXGI_FORMAT format,
 		unsigned int width,
 		unsigned int height,
@@ -262,34 +272,34 @@ namespace dds_write
 		unsigned int depth = 0
 	)
 	{
-		DDS_HEADER header = {};
-		header.dwSize = sizeof(DDS_HEADER);
-		header.dwFlags =
+		Header h = {};
+		h.magic = fourcc('D', 'D', 'S', ' ');
+		h.header.dwSize = sizeof(DDS_HEADER);
+		h.header.dwFlags =
 			DDSD_CAPS |
 			DDSD_WIDTH |
 			DDSD_HEIGHT |
 			DDSD_PIXELFORMAT |
 			DDSD_MIPMAPCOUNT
 			;
-		header.dwWidth = width;
-		header.dwHeight = height;
-		header.dwDepth = depth;
-		header.dwMipMapCount = mip_levels;
-		header.ddspf.dwSize = sizeof(DDS_PIXELFORMAT);
-		header.ddspf.dwFlags = DDPF_FOURCC;
-		header.ddspf.dwFourCC = fourcc('D', 'X', '1', '0');
-		header.dwCaps = DDSCAPS_TEXTURE;
+		h.header.dwWidth = width;
+		h.header.dwHeight = height;
+		h.header.dwDepth = depth;
+		h.header.dwMipMapCount = mip_levels;
+		h.header.ddspf.dwSize = sizeof(DDS_PIXELFORMAT);
+		h.header.ddspf.dwFlags = DDPF_FOURCC;
+		h.header.ddspf.dwFourCC = fourcc('D', 'X', '1', '0');
+		h.header.dwCaps = DDSCAPS_TEXTURE;
 
-		DDS_HEADER_DXT10 header10 = {};
-		header10.dxgiFormat = format;
-		header10.resourceDimension = D3D10_RESOURCE_DIMENSION_TEXTURE2D;
-		header10.miscFlags2 = DDS_ALPHA_MODE_UNKNOWN;
+		h.header10.dxgiFormat = format;
+		h.header10.resourceDimension = D3D10_RESOURCE_DIMENSION_TEXTURE2D;
+		h.header10.miscFlags2 = DDS_ALPHA_MODE_UNKNOWN;
 
 		if (is_cubemap)
 		{
-			header10.arraySize = array_size / 6;
-			header.dwCaps |= DDSCAPS_COMPLEX;
-			header.dwCaps2 =
+			h.header10.arraySize = array_size / 6;
+			h.header.dwCaps |= DDSCAPS_COMPLEX;
+			h.header.dwCaps2 =
 				DDSCAPS2_CUBEMAP |
 				DDSCAPS2_CUBEMAP_POSITIVEX |
 				DDSCAPS2_CUBEMAP_NEGATIVEX |
@@ -298,34 +308,50 @@ namespace dds_write
 				DDSCAPS2_CUBEMAP_POSITIVEZ |
 				DDSCAPS2_CUBEMAP_NEGATIVEZ
 				;
-			header10.miscFlag = DDS_RESOURCE_MISC_TEXTURECUBE;
+			h.header10.miscFlag = DDS_RESOURCE_MISC_TEXTURECUBE;
 		}
 		else if (depth > 0)
 		{
-			header10.arraySize = 1;
-			header10.resourceDimension = D3D10_RESOURCE_DIMENSION_TEXTURE3D;
-			header.dwCaps2 = DDSCAPS2_VOLUME;
+			h.header10.arraySize = 1;
+			h.header10.resourceDimension = D3D10_RESOURCE_DIMENSION_TEXTURE3D;
+			h.header.dwCaps2 = DDSCAPS2_VOLUME;
 		}
 		else
 		{
-			header10.arraySize = array_size;
+			h.header10.arraySize = array_size;
 		}
 
 		if (height == 0)
 		{
-			header10.resourceDimension = D3D10_RESOURCE_DIMENSION_TEXTURE1D;
+			h.header10.resourceDimension = D3D10_RESOURCE_DIMENSION_TEXTURE1D;
 		}
 		if (mip_levels > 1)
 		{
-			header.dwCaps |= DDSCAPS_COMPLEX;
+			h.header.dwCaps |= DDSCAPS_COMPLEX;
 		}
 
-		*(DWORD*)dst = magic;
-		dst += sizeof(magic);
-		*(DDS_HEADER*)dst = header;
-		dst += sizeof(header);
-		*(DDS_HEADER_DXT10*)dst = header10;
+		*(Header*)dst = h;
 	}
 }
 
 #endif // DDS_WRITE_H
+
+//Copyright(c) 2023 Turánszki János
+//
+//Permission is hereby granted, free of charge, to any person obtaining a copy
+//of this software and associated documentation files(the "Software"), to deal
+//in the Software without restriction, including without limitation the rights
+//to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+//copies of the Software, and to permit persons to whom the Software is
+//furnished to do so, subject to the following conditions :
+//
+//The above copyright notice and this permission notice shall be included in
+//all copies or substantial portions of the Software.
+//
+//THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+//AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+//THE SOFTWARE.

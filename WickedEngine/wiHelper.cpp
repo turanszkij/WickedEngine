@@ -230,7 +230,7 @@ namespace wi::helper
 
 		if (extension.compare("DDS") == 0)
 		{
-			filedata.resize(dds_write::header_size + texturedata.size());
+			filedata.resize(sizeof(dds_write::Header) + texturedata.size());
 			dds_write::DXGI_FORMAT dds_format = dds_write::DXGI_FORMAT_UNKNOWN;
 			switch (desc.format)
 			{
@@ -430,7 +430,7 @@ namespace wi::helper
 				has_flag(desc.misc_flags, ResourceMiscFlag::TEXTURECUBE),
 				desc.type == TextureDesc::Type::TEXTURE_3D ? desc.depth : 0
 			);
-			std::memcpy(filedata.data() + dds_write::header_size, texturedata.data(), texturedata.size());
+			std::memcpy(filedata.data() + sizeof(dds_write::Header), texturedata.data(), texturedata.size());
 			return true;
 		}
 

@@ -1956,7 +1956,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				}
 
 				wi::vector<uint8_t> dds;
-				dds.resize(dds_write::header_size + wholeDataSize);
+				dds.resize(sizeof(dds_write::Header) + wholeDataSize);
 				dds_write::write_header(
 					dds.data(),
 					dds_write::DXGI_FORMAT_R9G9B9E5_SHAREDEXP,
@@ -1967,7 +1967,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					true
 				);
 
-				size_t offset = dds_write::header_size;
+				size_t offset = sizeof(dds_write::Header);
 				for (auto& x : hdr_datas)
 				{
 					std::memcpy(dds.data() + offset, x.data(), x.size() * sizeof(XMFLOAT3SE));
