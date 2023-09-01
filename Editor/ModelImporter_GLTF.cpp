@@ -1857,6 +1857,111 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		camera.zNearP = (float)x.perspective.znear;
 	}
 
+	// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Vendor/EXT_lights_image_based/README.md
+	auto env = state.gltfModel.extensions.find("EXT_lights_image_based");
+	if (env != state.gltfModel.extensions.end())
+	{
+		auto lights = env->second.Get("lights");
+		for (int i = 0; i < (int)lights.ArrayLen(); ++i)
+		{
+			if (scene.weathers.GetCount() == 0)
+			{
+				Entity entity = CreateEntity();
+				scene.weathers.Create(entity);
+				scene.names.Create(entity) = "weather";
+			}
+			WeatherComponent& weather = scene.weathers[0];
+
+			auto light = lights.Get(i);
+			if (light.Has("intensity"))
+			{
+				auto value = light.Get("intensity");
+				weather.skyExposure = (float)value.GetNumberAsDouble();
+			}
+			if (light.Has("rotation"))
+			{
+				auto value = light.Get("rotation");
+			}
+			if (light.Has("irradianceCoefficients"))
+			{
+				auto value = light.Get("irradianceCoefficients");
+			}
+			if (light.Has("specularImages"))
+			{
+				auto mips = light.Get("specularImages");
+				int mip_count = (int)mips.ArrayLen();
+
+				TextureDesc desc;
+				desc.format = Format::R9G9B9E5_SHAREDEXP;
+				desc.bind_flags = BindFlag::SHADER_RESOURCE;
+				if (light.Has("specularImageSize"))
+				{
+					auto value = light.Get("specularImageSize");
+					desc.width = desc.height = (uint32_t)value.GetNumberAsInt();
+				}
+				desc.array_size = 6;
+				desc.mip_levels = (uint32_t)mip_count;
+				desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
+
+				wi::vector<SubresourceData> init_subresources(mip_count * 6);
+				wi::vector<wi::vector<XMFLOAT3SE>> hdr_datas(mip_count * 6);
+
+				for (int m = 0; m < mip_count; ++m)
+				{
+					auto mip = mips.Get(m);
+					int face_count = (int)mip.ArrayLen();
+					for (int f = 0; f < face_count; ++f)
+					{
+						auto index = mip.Get(f).GetNumberAsInt();
+						auto& image = state.gltfModel.images[index];
+						int idx = f * mip_count + m;
+						SubresourceData& initdata = init_subresources[idx];
+						wi::Resource res = wi::resourcemanager::Load(image.uri, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+						auto& imagefiledata = res.GetFileData();
+						const stbi_uc* filedata = imagefiledata.data();
+						size_t filesize = imagefiledata.size();
+						int width, height, bpp;
+						wi::Color* rgba = (wi::Color*)stbi_load_from_memory(filedata, (int)filesize, &width, &height, &bpp, 4);
+						wi::vector<XMFLOAT3SE>& hdr_data = hdr_datas[idx];
+						hdr_data.resize(width * height);
+						for (int y = 0; y < height; ++y)
+						{
+							for (int x = 0; x < width; ++x)
+							{
+								int y_flip = height - 1 - y;
+								wi::Color color = rgba[x + y_flip * width];
+								XMFLOAT4 unpk = color.toFloat4();
+								// Remove SRGB curve:
+								unpk.x = std::pow(unpk.x, 2.2f);
+								unpk.y = std::pow(unpk.y, 2.2f);
+								unpk.z = std::pow(unpk.z, 2.2f);
+								if (bpp == 4) // if has alpha channel, then it is assumed to have RGBD encoding
+								{
+									// RGBD conversion: https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Vendor/EXT_lights_image_based/README.md#rgbd
+									unpk.x /= unpk.w;
+									unpk.y /= unpk.w;
+									unpk.z /= unpk.w;
+								}
+								hdr_data[x + y * width] = XMFLOAT3SE(unpk.x, unpk.y, unpk.z);
+							}
+						}
+						stbi_image_free(rgba);
+						initdata.data_ptr = hdr_data.data();
+						initdata.row_pitch = (desc.width >> m) * GetFormatStride(desc.format);
+					}
+				}
+
+				Texture cubemap;
+				GraphicsDevice* device = wi::graphics::GetDevice();
+				bool success = device->CreateTexture(&desc, init_subresources.data(), &cubemap);
+				assert(success);
+				device->SetName(&cubemap, "GLTFEnvironmentMap");
+
+				weather.skyMap.SetTexture(cubemap);
+			}
+		}
+	}
+
 	Import_Extension_VRM(state);
 	Import_Extension_VRMC(state);
 
