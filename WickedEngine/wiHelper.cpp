@@ -4,6 +4,7 @@
 #include "wiEventHandler.h"
 #include "wiMath.h"
 
+#include "Utility/dds_write.h"
 #include "Utility/stb_image_write.h"
 #include "Utility/basis_universal/encoder/basisu_comp.h"
 #include "Utility/basis_universal/encoder/basisu_gpu_texture.h"
@@ -226,6 +227,213 @@ namespace wi::helper
 		const uint32_t data_stride = GetFormatStride(desc.format);
 
 		std::string extension = wi::helper::toUpper(fileExtension);
+
+		if (extension.compare("DDS") == 0)
+		{
+			filedata.resize(dds_write::header_size + texturedata.size());
+			dds_write::DXGI_FORMAT dds_format = dds_write::DXGI_FORMAT_UNKNOWN;
+			switch (desc.format)
+			{
+			case wi::graphics::Format::R32G32B32A32_FLOAT:
+				dds_format = dds_write::DXGI_FORMAT_R32G32B32A32_FLOAT;
+				break;
+			case wi::graphics::Format::R32G32B32A32_UINT:
+				dds_format = dds_write::DXGI_FORMAT_R32G32B32A32_UINT;
+				break;
+			case wi::graphics::Format::R32G32B32A32_SINT:
+				dds_format = dds_write::DXGI_FORMAT_R32G32B32A32_SINT;
+				break;
+			case wi::graphics::Format::R32G32B32_FLOAT:
+				dds_format = dds_write::DXGI_FORMAT_R32G32B32_FLOAT;
+				break;
+			case wi::graphics::Format::R32G32B32_UINT:
+				dds_format = dds_write::DXGI_FORMAT_R32G32B32_UINT;
+				break;
+			case wi::graphics::Format::R32G32B32_SINT:
+				dds_format = dds_write::DXGI_FORMAT_R32G32B32_SINT;
+				break;
+			case wi::graphics::Format::R16G16B16A16_FLOAT:
+				dds_format = dds_write::DXGI_FORMAT_R16G16B16A16_FLOAT;
+				break;
+			case wi::graphics::Format::R16G16B16A16_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_R16G16B16A16_UNORM;
+				break;
+			case wi::graphics::Format::R16G16B16A16_UINT:
+				dds_format = dds_write::DXGI_FORMAT_R16G16B16A16_UINT;
+				break;
+			case wi::graphics::Format::R16G16B16A16_SNORM:
+				dds_format = dds_write::DXGI_FORMAT_R16G16B16A16_SNORM;
+				break;
+			case wi::graphics::Format::R16G16B16A16_SINT:
+				dds_format = dds_write::DXGI_FORMAT_R16G16B16A16_SINT;
+				break;
+			case wi::graphics::Format::R32G32_FLOAT:
+				dds_format = dds_write::DXGI_FORMAT_R32G32_FLOAT;
+				break;
+			case wi::graphics::Format::R32G32_UINT:
+				dds_format = dds_write::DXGI_FORMAT_R32G32_UINT;
+				break;
+			case wi::graphics::Format::R32G32_SINT:
+				dds_format = dds_write::DXGI_FORMAT_R32G32_SINT;
+				break;
+			case wi::graphics::Format::R10G10B10A2_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_R10G10B10A2_UNORM;
+				break;
+			case wi::graphics::Format::R10G10B10A2_UINT:
+				dds_format = dds_write::DXGI_FORMAT_R10G10B10A2_UINT;
+				break;
+			case wi::graphics::Format::R11G11B10_FLOAT:
+				dds_format = dds_write::DXGI_FORMAT_R11G11B10_FLOAT;
+				break;
+			case wi::graphics::Format::R8G8B8A8_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_R8G8B8A8_UNORM;
+				break;
+			case wi::graphics::Format::R8G8B8A8_UNORM_SRGB:
+				dds_format = dds_write::DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+				break;
+			case wi::graphics::Format::R8G8B8A8_UINT:
+				dds_format = dds_write::DXGI_FORMAT_R8G8B8A8_UINT;
+				break;
+			case wi::graphics::Format::R8G8B8A8_SNORM:
+				dds_format = dds_write::DXGI_FORMAT_R8G8B8A8_SNORM;
+				break;
+			case wi::graphics::Format::R8G8B8A8_SINT:
+				dds_format = dds_write::DXGI_FORMAT_R8G8B8A8_SINT;
+				break;
+			case wi::graphics::Format::B8G8R8A8_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_B8G8R8A8_UNORM;
+				break;
+			case wi::graphics::Format::B8G8R8A8_UNORM_SRGB:
+				dds_format = dds_write::DXGI_FORMAT_R16G16_SINT;
+				break;
+			case wi::graphics::Format::R16G16_FLOAT:
+				dds_format = dds_write::DXGI_FORMAT_R16G16_FLOAT;
+				break;
+			case wi::graphics::Format::R16G16_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_R16G16_UNORM;
+				break;
+			case wi::graphics::Format::R16G16_UINT:
+				dds_format = dds_write::DXGI_FORMAT_R16G16_UINT;
+				break;
+			case wi::graphics::Format::R16G16_SNORM:
+				dds_format = dds_write::DXGI_FORMAT_R16G16_SNORM;
+				break;
+			case wi::graphics::Format::R16G16_SINT:
+				dds_format = dds_write::DXGI_FORMAT_R16G16_SINT;
+				break;
+			case wi::graphics::Format::D32_FLOAT:
+			case wi::graphics::Format::R32_FLOAT:
+				dds_format = dds_write::DXGI_FORMAT_R32_FLOAT;
+				break;
+			case wi::graphics::Format::R32_UINT:
+				dds_format = dds_write::DXGI_FORMAT_R32_UINT;
+				break;
+			case wi::graphics::Format::R32_SINT:
+				dds_format = dds_write::DXGI_FORMAT_R32_SINT;
+				break;
+			case wi::graphics::Format::R9G9B9E5_SHAREDEXP:
+				dds_format = dds_write::DXGI_FORMAT_R9G9B9E5_SHAREDEXP;
+				break;
+			case wi::graphics::Format::R8G8_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_R8G8_UNORM;
+				break;
+			case wi::graphics::Format::R8G8_UINT:
+				dds_format = dds_write::DXGI_FORMAT_R8G8_UINT;
+				break;
+			case wi::graphics::Format::R8G8_SNORM:
+				dds_format = dds_write::DXGI_FORMAT_R8G8_SNORM;
+				break;
+			case wi::graphics::Format::R8G8_SINT:
+				dds_format = dds_write::DXGI_FORMAT_R8G8_SINT;
+				break;
+			case wi::graphics::Format::R16_FLOAT:
+				dds_format = dds_write::DXGI_FORMAT_R16_FLOAT;
+				break;
+			case wi::graphics::Format::D16_UNORM:
+			case wi::graphics::Format::R16_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_R16_UNORM;
+				break;
+			case wi::graphics::Format::R16_UINT:
+				dds_format = dds_write::DXGI_FORMAT_R16_UINT;
+				break;
+			case wi::graphics::Format::R16_SNORM:
+				dds_format = dds_write::DXGI_FORMAT_R16_SNORM;
+				break;
+			case wi::graphics::Format::R16_SINT:
+				dds_format = dds_write::DXGI_FORMAT_R16_SINT;
+				break;
+			case wi::graphics::Format::R8_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_R8_UNORM;
+				break;
+			case wi::graphics::Format::R8_UINT:
+				dds_format = dds_write::DXGI_FORMAT_R8_UINT;
+				break;
+			case wi::graphics::Format::R8_SNORM:
+				dds_format = dds_write::DXGI_FORMAT_R8_SNORM;
+				break;
+			case wi::graphics::Format::R8_SINT:
+				dds_format = dds_write::DXGI_FORMAT_R8_SINT;
+				break;
+			case wi::graphics::Format::BC1_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_BC1_UNORM;
+				break;
+			case wi::graphics::Format::BC1_UNORM_SRGB:
+				dds_format = dds_write::DXGI_FORMAT_BC1_UNORM_SRGB;
+				break;
+			case wi::graphics::Format::BC2_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_BC2_UNORM;
+				break;
+			case wi::graphics::Format::BC2_UNORM_SRGB:
+				dds_format = dds_write::DXGI_FORMAT_BC2_UNORM_SRGB;
+				break;
+			case wi::graphics::Format::BC3_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_BC3_UNORM;
+				break;
+			case wi::graphics::Format::BC3_UNORM_SRGB:
+				dds_format = dds_write::DXGI_FORMAT_BC3_UNORM_SRGB;
+				break;
+			case wi::graphics::Format::BC4_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_BC4_UNORM;
+				break;
+			case wi::graphics::Format::BC4_SNORM:
+				dds_format = dds_write::DXGI_FORMAT_BC4_SNORM;
+				break;
+			case wi::graphics::Format::BC5_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_BC5_UNORM;
+				break;
+			case wi::graphics::Format::BC5_SNORM:
+				dds_format = dds_write::DXGI_FORMAT_BC5_SNORM;
+				break;
+			case wi::graphics::Format::BC6H_UF16:
+				dds_format = dds_write::DXGI_FORMAT_BC6H_UF16;
+				break;
+			case wi::graphics::Format::BC6H_SF16:
+				dds_format = dds_write::DXGI_FORMAT_BC6H_SF16;
+				break;
+			case wi::graphics::Format::BC7_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_BC7_UNORM;
+				break;
+			case wi::graphics::Format::BC7_UNORM_SRGB:
+				dds_format = dds_write::DXGI_FORMAT_BC7_UNORM_SRGB;
+				break;
+			default:
+				assert(0);
+				return false;
+			}
+			dds_write::write_header(
+				filedata.data(),
+				dds_format,
+				desc.width,
+				desc.type == TextureDesc::Type::TEXTURE_1D ? 0 : desc.height,
+				desc.mip_levels,
+				desc.array_size,
+				has_flag(desc.misc_flags, ResourceMiscFlag::TEXTURECUBE),
+				desc.type == TextureDesc::Type::TEXTURE_3D ? desc.depth : 0
+			);
+			std::memcpy(filedata.data() + dds_write::header_size, texturedata.data(), texturedata.size());
+			return true;
+		}
+
 		const bool is_png = extension.compare("PNG") == 0;
 
 		if (is_png)
