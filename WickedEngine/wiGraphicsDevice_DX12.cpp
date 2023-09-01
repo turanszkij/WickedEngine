@@ -2497,28 +2497,24 @@ using namespace dx12_internal;
 
 		if (SUCCEEDED(device.As(&video_device)))
 		{
-			capabilities |= GraphicsDeviceCapability::VIDEO_DECODE_H264;
 			queues[QUEUE_VIDEO_DECODE].desc.Type = D3D12_COMMAND_LIST_TYPE_VIDEO_DECODE;
 			queues[QUEUE_VIDEO_DECODE].desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
 			queues[QUEUE_VIDEO_DECODE].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 			queues[QUEUE_VIDEO_DECODE].desc.NodeMask = 0;
 			hr = device->CreateCommandQueue(&queues[QUEUE_VIDEO_DECODE].desc, PPV_ARGS(queues[QUEUE_VIDEO_DECODE].queue));
 			assert(SUCCEEDED(hr));
-			if (FAILED(hr))
+			if (SUCCEEDED(hr))
 			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateCommandQueue[QUEUE_VIDEO_DECODE] failed! ERROR: 0x" << std::hex << hr;
-				wi::helper::messageBox(ss.str(), "Error!");
-				wi::platform::Exit();
-			}
-			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(queues[QUEUE_VIDEO_DECODE].fence));
-			assert(SUCCEEDED(hr));
-			if (FAILED(hr))
-			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateFence[QUEUE_VIDEO_DECODE] failed! ERROR: 0x" << std::hex << hr;
-				wi::helper::messageBox(ss.str(), "Error!");
-				wi::platform::Exit();
+				capabilities |= GraphicsDeviceCapability::VIDEO_DECODE_H264;
+				hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(queues[QUEUE_VIDEO_DECODE].fence));
+				assert(SUCCEEDED(hr));
+				if (FAILED(hr))
+				{
+					std::stringstream ss("");
+					ss << "ID3D12Device::CreateFence[QUEUE_VIDEO_DECODE] failed! ERROR: 0x" << std::hex << hr;
+					wi::helper::messageBox(ss.str(), "Error!");
+					wi::platform::Exit();
+				}
 			}
 		}
 
