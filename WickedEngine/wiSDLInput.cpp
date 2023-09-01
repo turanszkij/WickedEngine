@@ -45,6 +45,7 @@ namespace wi::input::sdlinput
     void Update()
     {
         mouse.delta_wheel = 0; // Do not accumulate mouse wheel motion delta
+        mouse.delta_position = XMFLOAT2(0, 0); // Do not accumulate mouse position delta
 
         for(auto& event : events){
             switch(event.type){
@@ -75,8 +76,8 @@ namespace wi::input::sdlinput
                 case SDL_MOUSEMOTION:          // Mouse moved
                     mouse.position.x = event.motion.x;
                     mouse.position.y = event.motion.y;
-                    mouse.delta_position.x = event.motion.xrel;
-                    mouse.delta_position.y = event.motion.yrel;
+                    mouse.delta_position.x += event.motion.xrel;
+                    mouse.delta_position.y += event.motion.yrel;
                     break;
                 case SDL_MOUSEBUTTONDOWN:      // Mouse button pressed
                     switch(event.button.button){
