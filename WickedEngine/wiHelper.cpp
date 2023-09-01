@@ -1525,35 +1525,55 @@ namespace wi::helper
 #endif // _WIN32
 	}
 
-	int StringConvert(const char* from, wchar_t* to)
+	int StringConvert(const char* from, wchar_t* to, int dest_size_in_characters)
 	{
 #ifdef _WIN32
 		int num = MultiByteToWideChar(CP_UTF8, 0, from, -1, NULL, 0);
 		if (num > 0)
 		{
+			if (dest_size_in_characters >= 0)
+			{
+				num = std::min(num, dest_size_in_characters);
+			}
 			MultiByteToWideChar(CP_UTF8, 0, from, -1, &to[0], num);
 		}
 		return num;
 #else
 		std::wstring_convert<std::codecvt_utf8<wchar_t>> cv;
-		std::memcpy(to, cv.from_bytes(from).c_str(), cv.converted());
-		return (int)cv.converted();
+		auto result = cv.from_bytes(from).c_str();
+		int num = (int)cv.converted();
+		if (dest_size_in_characters >= 0)
+		{
+			num = std::min(num, dest_size_in_characters);
+		}
+		std::memcpy(to, result, num * sizeof(wchar_t));
+		return num;
 #endif // _WIN32
 	}
 
-	int StringConvert(const wchar_t* from, char* to)
+	int StringConvert(const wchar_t* from, char* to, int dest_size_in_characters)
 	{
 #ifdef _WIN32
 		int num = WideCharToMultiByte(CP_UTF8, 0, from, -1, NULL, 0, NULL, NULL);
 		if (num > 0)
 		{
+			if (dest_size_in_characters >= 0)
+			{
+				num = std::min(num, dest_size_in_characters);
+			}
 			WideCharToMultiByte(CP_UTF8, 0, from, -1, &to[0], num, NULL, NULL);
 		}
 		return num;
 #else
 		std::wstring_convert<std::codecvt_utf8<wchar_t>> cv;
-		std::memcpy(to, cv.to_bytes(from).c_str(), cv.converted());
-		return (int)cv.converted();
+		auto result = cv.to_bytes(from).c_str();
+		int num = (size_t)cv.converted();
+		if (dest_size_in_characters >= 0)
+		{
+			num = std::min(num, dest_size_in_characters);
+		}
+		std::memcpy(to, result, num * sizeof(char));
+		return num;
 #endif // _WIN32
 	}
 	
