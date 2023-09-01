@@ -109,60 +109,6 @@ install(FILES ${HEADER_FILES_vulkan}
 		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/Utility/vulkan/vk_video/")
 
 
-set(HEADER_FILES_encoder
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/apg_bmp.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/basisu_astc_decomp.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/basisu_backend.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/basisu_basis_file.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/basisu_bc7enc.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/basisu_comp.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/basisu_enc.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/basisu_etc.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/basisu_frontend.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/basisu_global_selector_palette_helpers.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/basisu_gpu_texture.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/basisu_kernels_declares.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/basisu_kernels_imp.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/basisu_miniz.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/basisu_pvrtc1_4.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/basisu_resampler.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/basisu_resampler_filters.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/basisu_ssim.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/basisu_uastc_enc.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/cppspmd_flow.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/cppspmd_math.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/cppspmd_math_declares.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/cppspmd_sse.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/cppspmd_type_aliases.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/jpgd.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/encoder/lodepng.h
-		)
-install(FILES ${HEADER_FILES_encoder}
-		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/Utility/basis_universal/encoder/")
-
-
-set(HEADER_FILES_transcoder
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/transcoder/basisu.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/transcoder/basisu_containers.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/transcoder/basisu_containers_impl.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/transcoder/basisu_file_headers.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/transcoder/basisu_global_selector_cb.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/transcoder/basisu_global_selector_palette.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/transcoder/basisu_transcoder.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/transcoder/basisu_transcoder_internal.h
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/transcoder/basisu_transcoder_uastc.h
-		)
-install(FILES ${HEADER_FILES_transcoder}
-		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/Utility/basis_universal/transcoder/")
-
-
-set(HEADER_FILES_zstd
-		${CMAKE_CURRENT_SOURCE_DIR}/basis_universal/zstd/zstd.h
-		)
-install(FILES ${HEADER_FILES_zstd}
-		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/Utility/basis_universal/zstd/")
-
-
 set(HEADER_FILES_dxc
 		${CMAKE_CURRENT_SOURCE_DIR}/dxc/Support/WinAdapter.h
 		)
