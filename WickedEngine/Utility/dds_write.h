@@ -4,22 +4,50 @@
 // Based on DDS specification: https://learn.microsoft.com/en-us/windows/win32/direct3ddds/dx-graphics-dds-pguide#dds-file-layout
 // 
 //	Usage:
-//	1) Allocate memory of: sizeof(dds_write::Header) + your whole texture size
-//	2) Use dds_write::write_header() to write DDS header into memory
-//	3) write your texture data into memory manually after allocation + sizeof(dds_write::Header)
-//	4) this only writes to memory, so write the result into file manually if you want to
-//	5) enjoy
+//		1) Allocate memory of: sizeof(dds_write::Header) + your whole texture size
+//		2) Use dds_write::write_header() to write DDS header into memory
+//		3) write your texture data into memory manually after allocation + sizeof(dds_write::Header)
+//		4) this only writes to memory, so write the result into file manually if you want to
+//		5) enjoy
 //
-//	Or you can just freely use the structures here to write your own DDS header
+//	Example:
+//		std::vector<uint8_t> texturedata; // your texture data in a GPU format
+//		std::vector<uint8_t> filedata; // DDS file data container
+//		filedata.resize(sizeof(dds_write::Header) + texturedata.size()); // allocate memory
+//		
+//		dds_write::write_header(
+//			filedata.data(),
+//			dds_write::DXGI_FORMAT_R8G8B8A8_UNORM,
+//			width,
+//			height,
+//			mip_count,	// optional
+//			array_size,	// optional
+//			false,		// optional (is_cubemap)
+//			depth		// optional
+//		);
+//		std::memcpy(filedata.data() + sizeof(dds_write::Header), texturedata.data(), texturedata.size());
+//
+//	...Or you can just freely use the structures here to write your own DDS header
+//
+//	Note: texture data need to be in the following layout in the DDS file, tightly packed:
+//		- Array slice 0 / cubemap face +X / depth slice 0
+//			- mipmap 0
+//			- mipmap 1
+//			- ...
+//		- Array slice 1 / cubemap face -X / depth slice 1
+//			- mipmap 0
+//			- mipmap 1
+//			- ...
+//		- ...
 //
 //	Support:
-//	- This will only create DX10 version of DDS, doesn't support legacy
-//	- Tested with Texture 1D, Texture 2D, Texture 2D Array, Cubemap, Cubemap array, 3D Texture
-//	- Tested with uncompressed formats and block compressed
-//	- mipmaps: OK
-//	- arrays: OK
+//		- This will only create DX10 version of DDS, doesn't support legacy
+//		- Tested with Texture 1D, Texture 2D, Texture 2D Array, Cubemap, Cubemap array, 3D Texture
+//		- Tested with uncompressed formats and block compressed
+//		- mipmaps: Yes
+//		- arrays: Yes
 //
-//	MIT License (see end of file)
+//	MIT License (see the end of this file)
 
 namespace dds_write
 {
