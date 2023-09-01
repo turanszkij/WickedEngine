@@ -22,22 +22,6 @@
 #include <intrin.h>
 #endif
 
-#if !defined(_MSC_VER)
-	#if __AVX__ || __AVX2__ || __AVX512F__
-		#error Please check your compiler options
-	#endif
-	
-	#if CPPSPMD_SSE2
-		#if __SSE4_1__ || __SSE3__ || __SSE4_2__ || __SSSE3__
-			#error SSE4.1/SSE3/SSE4.2/SSSE3 cannot be enabled to use this file
-		#endif
-	#else
-		#if !__SSE4_1__ || !__SSE3__ || __SSE4_2__ || !__SSSE3__
-			#error Please check your compiler options
-		#endif
-	#endif
-#endif
-
 #include "cppspmd_sse.h"
 
 #include "cppspmd_type_aliases.h"

@@ -4,12 +4,11 @@
 #include "wiEventHandler.h"
 #include "wiMath.h"
 
+#include "Utility/lodepng.h"
 #include "Utility/dds_write.h"
 #include "Utility/stb_image_write.h"
 #include "Utility/basis_universal/encoder/basisu_comp.h"
 #include "Utility/basis_universal/encoder/basisu_gpu_texture.h"
-#include "Utility/basis_universal/encoder/lodepng.h"
-extern basist::etc1_global_selector_codebook g_basis_global_codebook;
 
 #include <thread>
 #include <locale>
@@ -720,6 +719,12 @@ namespace wi::helper
 					}
 				}
 			}
+			static bool encoder_initialized = false;
+			if (!encoder_initialized)
+			{
+				encoder_initialized = true;
+				basisu::basisu_encoder_init(false, false);
+			}
 			basisu::basis_compressor_params params;
 			params.m_source_images.push_back(basis_image);
 			if (desc.mip_levels > 1)
@@ -743,7 +748,6 @@ namespace wi::helper
 			//	instead we provide mipmap data that was downloaded from the GPU with m_source_mipmap_images.
 			//	This is better, because engine specific mipgen options will be retained, such as coverage preserving mipmaps
 			params.m_mip_gen = false;
-			params.m_pSel_codebook = &g_basis_global_codebook;
 			params.m_quality_level = basisu::BASISU_QUALITY_MAX;
 			params.m_multithreading = true;
 			int num_threads = std::max(1u, std::thread::hardware_concurrency());

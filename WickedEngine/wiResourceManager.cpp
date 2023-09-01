@@ -9,7 +9,6 @@
 #include "Utility/qoi.h"
 #include "Utility/tinyddsloader.h"
 #include "Utility/basis_universal/transcoder/basisu_transcoder.h"
-extern basist::etc1_global_selector_codebook g_basis_global_codebook;
 
 #include <algorithm>
 #include <mutex>
@@ -296,7 +295,7 @@ namespace wi
 					GraphicsDevice* device = wi::graphics::GetDevice();
 					if (!ext.compare("KTX2"))
 					{
-						basist::ktx2_transcoder transcoder(&g_basis_global_codebook);
+						basist::ktx2_transcoder transcoder;
 						if (transcoder.init(filedata, (uint32_t)filesize))
 						{
 							TextureDesc desc;
@@ -438,7 +437,7 @@ namespace wi
 					}
 					else if (!ext.compare("BASIS"))
 					{
-						basist::basisu_transcoder transcoder(&g_basis_global_codebook);
+						basist::basisu_transcoder transcoder;
 						if (transcoder.validate_header(filedata, (uint32_t)filesize))
 						{
 							basist::basisu_file_info fileInfo;

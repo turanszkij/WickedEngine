@@ -34,6 +34,8 @@ set(HEADER_FILES
 		${CMAKE_CURRENT_SOURCE_DIR}/pugixml.hpp
 		${CMAKE_CURRENT_SOURCE_DIR}/pugiconfig.hpp
 		${CMAKE_CURRENT_SOURCE_DIR}/h264.h
+		${CMAKE_CURRENT_SOURCE_DIR}/dds_write.h
+		${CMAKE_CURRENT_SOURCE_DIR}/lodepng.h
 		)
 install(FILES ${HEADER_FILES}
 		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/Utility/")
@@ -174,6 +176,7 @@ set (SOURCE_FILES
 	stb_vorbis.c
 	samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp.cpp
 	pugixml.cpp
+	lodepng.cpp
 )
 
 if (WIN32)
