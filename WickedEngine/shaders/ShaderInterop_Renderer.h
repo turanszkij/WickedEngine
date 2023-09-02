@@ -11,10 +11,10 @@ struct ShaderScene
 	int materialbuffer;
 	int meshletbuffer;
 
-	int envmaparray;
-	int globalenvmap;
+	int globalenvmap; // static sky, not guaranteed to be cubemap, mipmaps or format, just whatever is imported
+	int globalprobe; // rendered probe with guaranteed mipmaps, hdr, etc.
 	int impostorInstanceOffset;
-	int padding1;
+	int padding0;
 
 	int TLAS;
 	int BVH_counter;
@@ -914,8 +914,8 @@ struct FrameCB
 
 	float		cloudShadowFarPlaneKm;
 	int			texture_volumetricclouds_shadow_index;
-	uint		envprobe_mipcount;
-	float		envprobe_mipcount_rcp;
+	int			padding0;
+	int			padding1;
 
 	uint		lightarray_offset;			// indexing into entity array
 	uint		lightarray_count;			// indexing into entity array

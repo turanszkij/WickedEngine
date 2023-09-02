@@ -4,11 +4,13 @@
 using namespace wi::ecs;
 using namespace wi::scene;
 
+const std::string default_text = "Environment probes can be used to capture the scene from a specific location in a 360 degrees panorama. The probes will be used for reflections fallback, where a better reflection type is not available. The probes can affect the ambient colors slightly.\nTip: You can scale, rotate and move the probes to set up parallax correct rendering to affect a specific area only. The parallax correction will take effect inside the probe's bounds (indicated with a cyan colored box).";
+
 void EnvProbeWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_ENVIRONMENTPROBE " Environment Probe", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(420, 260));
+	SetSize(XMFLOAT2(420, 300));
 
 	closeButton.SetTooltip("Delete EnvironmentProbeComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -27,8 +29,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	float x = 5, y = 0, step = 35;
 
 	infoLabel.Create("");
-	infoLabel.SetText("Environment probes can be used to capture the scene from a specific location in a 360 degrees panorama. The probes will be used for reflections fallback, where a better reflection type is not available. The probes can affect the ambient colors slightly.\nTip: You can scale, rotate and move the probes to set up parallax correct rendering to affect a specific area only. The parallax correction will take effect inside the probe's bounds (indicated with a cyan colored box).");
-	infoLabel.SetSize(XMFLOAT2(300, 100));
+	infoLabel.SetSize(XMFLOAT2(300, 120));
 	infoLabel.SetPos(XMFLOAT2(x, y));
 	infoLabel.SetColor(wi::Color::Transparent());
 	AddWidget(&infoLabel);
@@ -96,39 +97,8 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	exportButton.OnClick([&](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
 		EnvironmentProbeComponent* probe = scene.probes.GetComponent(entity);
-		if (probe != nullptr && probe->textureIndex >= 0)
+		if (probe != nullptr && probe->texture.IsValid())
 		{
-			using namespace wi::graphics;
-			GraphicsDevice* device = GetDevice();
-			TextureDesc desc = scene.envmapArray.desc;
-			desc.array_size = 6;
-			Texture singleprobe;
-			bool success = device->CreateTexture(&desc, nullptr, &singleprobe);
-			assert(success);
-			CommandList cmd = device->BeginCommandList();
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&scene.envmapArray, desc.layout, ResourceState::COPY_SRC),
-				GPUBarrier::Image(&singleprobe, desc.layout, ResourceState::COPY_DST),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-			for (uint32_t face = 0; face < 6; ++face)
-			{
-				for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
-				{
-					device->CopyTexture(
-						&singleprobe, 0, 0, 0, mip, face,
-						&scene.envmapArray, mip, probe->textureIndex * 6 + face,
-						cmd
-					);
-				}
-			}
-			for (auto& x : barriers)
-			{
-				std::swap(x.image.layout_before, x.image.layout_after);
-			}
-			device->Barrier(barriers, arraysize(barriers), cmd);
-			device->SubmitCommandLists();
-
 			wi::helper::FileDialogParams params;
 			params.type = wi::helper::FileDialogParams::SAVE;
 			params.description = "DDS";
@@ -143,7 +113,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 						filename_replaced = wi::helper::ReplaceExtension(fileName, "DDS");
 					}
 
-					bool success = wi::helper::saveTextureToFile(singleprobe, filename_replaced);
+					bool success = wi::helper::saveTextureToFile(probe->texture, filename_replaced);
 					assert(success);
 
 					if (success)
@@ -159,6 +129,26 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	AddWidget(&exportButton);
 
 
+	resolutionCombo.Create("Resolution: ");
+	resolutionCombo.SetTooltip("Set the resolution of environment probe.");
+	resolutionCombo.AddItem("32", 32);
+	resolutionCombo.AddItem("64", 64);
+	resolutionCombo.AddItem("128", 128);
+	resolutionCombo.AddItem("256", 256);
+	resolutionCombo.AddItem("512", 512);
+	resolutionCombo.AddItem("1024", 1024);
+	resolutionCombo.AddItem("2048", 2048);
+	resolutionCombo.AddItem("4096", 4096);
+	resolutionCombo.OnSelect([&](wi::gui::EventArgs args) {
+		Scene& scene = editor->GetCurrentScene();
+		EnvironmentProbeComponent* probe = scene.probes.GetComponent(entity);
+		if (probe != nullptr)
+		{
+			probe->resolution = (uint32_t)args.userdata;
+			probe->CreateRenderData();
+		}
+	});
+	AddWidget(&resolutionCombo);
 
 
 	SetMinimized(true);
@@ -171,7 +161,8 @@ void EnvProbeWindow::SetEntity(Entity entity)
 {
 	this->entity = entity;
 
-	const EnvironmentProbeComponent* probe = editor->GetCurrentScene().probes.GetComponent(entity);
+	Scene& scene = editor->GetCurrentScene();
+	const EnvironmentProbeComponent* probe = scene.probes.GetComponent(entity);
 
 	if (probe == nullptr)
 	{
@@ -186,7 +177,10 @@ void EnvProbeWindow::SetEntity(Entity entity)
 		msaaCheckBox.SetCheck(probe->IsMSAA());
 		msaaCheckBox.SetEnabled(true);
 		refreshButton.SetEnabled(true);
+		resolutionCombo.SetSelectedByUserdata(probe->resolution);
+		infoLabel.SetText("GPU Memory usage: " + wi::helper::GetMemorySizeText(probe->GetMemorySizeInBytes()) + "\n" + default_text);
 	}
+
 }
 
 
@@ -234,12 +228,16 @@ void EnvProbeWindow::ResizeLayout()
 	refreshAllButton.SetPos(XMFLOAT2(width - padding - refreshButton.GetSize().x, y));
 	refreshButton.SetPos(XMFLOAT2(refreshAllButton.GetPos().x - padding - refreshButton.GetSize().x, y));
 	y += refreshAllButton.GetSize().y;
-
 	y += padding;
+
 	exportButton.SetSize(XMFLOAT2(width - padding * 2, exportButton.GetSize().y));
 	exportButton.SetPos(XMFLOAT2(padding, y));
 	y += exportButton.GetSize().y;
+	y += padding;
 
+	resolutionCombo.SetSize(XMFLOAT2(width - 100 - resolutionCombo.GetSize().y - padding, resolutionCombo.GetSize().y));
+	resolutionCombo.SetPos(XMFLOAT2(100, y));
+	y += resolutionCombo.GetSize().y;
 	y += padding;
 
 	add_right(realTimeCheckBox);

@@ -16,6 +16,7 @@ public:
 	wi::gui::Button refreshButton;
 	wi::gui::Button refreshAllButton;
 	wi::gui::Button exportButton;
+	wi::gui::ComboBox resolutionCombo;
 
 	void ResizeLayout() override;
 };

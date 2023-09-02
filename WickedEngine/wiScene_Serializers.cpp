@@ -958,11 +958,21 @@ namespace wi::scene
 		{
 			archive >> _flags;
 
+			if (seri.GetVersion() >= 1)
+			{
+				archive >> resolution;
+			}
+
 			SetDirty();
 		}
 		else
 		{
 			archive << _flags;
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive << resolution;
+			}
 		}
 	}
 	void ForceFieldComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)

@@ -1500,6 +1500,110 @@ namespace wi::scene
 		}
 	}
 
+	void EnvironmentProbeComponent::CreateRenderData()
+	{
+		const uint32_t required_sample_count = IsMSAA() ? envmapMSAASampleCount : 1;
+		if (
+			texture.IsValid() &&
+			resolution == texture.desc.width &&
+			required_sample_count == current_samplecount
+			)
+			return;
+		current_samplecount = required_sample_count;
+		SetDirty();
+
+		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		const uint32_t mip_count = GetMipCount(resolution, resolution);
+
+		TextureDesc desc;
+		desc.array_size = 6;
+		desc.height = resolution;
+		desc.width = resolution;
+		desc.usage = Usage::DEFAULT;
+
+		desc.mip_levels = 1;
+		desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
+		desc.format = wi::renderer::format_depthbuffer_envprobe;
+		desc.layout = ResourceState::SHADER_RESOURCE;
+		desc.sample_count = required_sample_count;
+		if (required_sample_count == 1)
+		{
+			desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
+		}
+		device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer);
+		device->SetName(&envrenderingDepthBuffer, "envrenderingDepthBuffer");
+
+		desc.mip_levels = mip_count;
+		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		desc.format = wi::renderer::format_rendertarget_envprobe;
+		desc.layout = ResourceState::SHADER_RESOURCE;
+		desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
+		desc.sample_count = 1;
+		device->CreateTexture(&desc, nullptr, &envrenderingColorBuffer);
+		device->SetName(&envrenderingColorBuffer, "envrenderingColorBuffer");
+		if (required_sample_count > 1)
+		{
+			desc.sample_count = required_sample_count;
+			desc.mip_levels = 1;
+			desc.bind_flags = BindFlag::RENDER_TARGET;
+			desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
+			desc.layout = ResourceState::RENDERTARGET;
+			device->CreateTexture(&desc, nullptr, &envrenderingColorBuffer_MSAA);
+			device->SetName(&envrenderingColorBuffer_MSAA, "envrenderingColorBuffer_MSAA");
+		}
+		else
+		{
+			envrenderingColorBuffer_MSAA = {};
+		}
+
+		desc.sample_count = 1;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE;
+		desc.format = Format::BC6H_UF16;
+		desc.mip_levels = mip_count;
+		desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
+		desc.usage = Usage::DEFAULT;
+		desc.layout = ResourceState::SHADER_RESOURCE;
+		device->CreateTexture(&desc, nullptr, &texture);
+		device->SetName(&texture, "texture");
+
+		// Cubes per mip level:
+		for (uint32_t i = 0; i < envrenderingColorBuffer.desc.mip_levels; ++i)
+		{
+			int subresource_index;
+			subresource_index = device->CreateSubresource(&envrenderingColorBuffer, SubresourceType::SRV, 0, envrenderingColorBuffer.desc.array_size, i, 1);
+			assert(subresource_index == i);
+			subresource_index = device->CreateSubresource(&envrenderingColorBuffer, SubresourceType::UAV, 0, envrenderingColorBuffer.desc.array_size, i, 1);
+			assert(subresource_index == i);
+		}
+
+		std::string info;
+		info += "Created envprobe";
+		info += "\n\tResolution = " + std::to_string(resolution) + " * " + std::to_string(resolution) + " * 6";
+		info += "\n\tMip Levels = " + std::to_string(texture.desc.mip_levels);
+		info += "\n\tRender Format = ";
+		info += GetFormatString(envrenderingColorBuffer.desc.format);
+		info += "\n\tDepth Format = ";
+		info += GetFormatString(envrenderingDepthBuffer.desc.format);
+		info += "\n\tSampled Format = ";
+		info += GetFormatString(texture.desc.format);
+		info += "\n\tMemory = " + wi::helper::GetMemorySizeText(GetMemorySizeInBytes()) + "\n";
+		wi::backlog::post(info);
+	}
+	size_t EnvironmentProbeComponent::GetMemorySizeInBytes() const
+	{
+		size_t totalSize =
+			ComputeTextureMemorySizeInBytes(envrenderingDepthBuffer.desc) +
+			ComputeTextureMemorySizeInBytes(envrenderingColorBuffer.desc) +
+			ComputeTextureMemorySizeInBytes(texture.desc)
+			;
+		if (envrenderingColorBuffer_MSAA.IsValid())
+		{
+			totalSize += ComputeTextureMemorySizeInBytes(envrenderingColorBuffer_MSAA.desc);
+		}
+		return totalSize;
+	}
+
 	AnimationComponent::AnimationChannel::PathDataType AnimationComponent::AnimationChannel::GetPathDataType() const
 	{
 		switch (path)
