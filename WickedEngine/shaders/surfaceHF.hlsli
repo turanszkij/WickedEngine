@@ -294,6 +294,13 @@ struct Surface
 #ifdef CARTOON
 		F = smoothstep(0.1, 0.5, F);
 #endif // CARTOON
+		
+#ifndef ENVMAPRENDERING
+		if (GetFrame().options & OPTION_BIT_FORCE_DIFFUSE_LIGHTING)
+#endif // ENVMAPRENDERING
+		{
+			F = 0;
+		}
 	}
 
 	inline bool IsReceiveShadow() { return flags & SURFACE_FLAG_RECEIVE_SHADOW; }
