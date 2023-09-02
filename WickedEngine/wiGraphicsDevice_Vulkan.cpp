@@ -8284,32 +8284,42 @@ using namespace vulkan_internal;
 			else if (dst_desc.usage == Usage::READBACK)
 			{
 				VkBufferImageCopy copy = {};
-				copy.imageSubresource.baseArrayLayer = 0;
-				copy.imageSubresource.layerCount = dst_desc.array_size;
 				copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				const uint32_t data_stride = GetFormatStride(dst_desc.format);
-				uint32_t mip_width = dst_desc.width;
-				uint32_t mip_height = dst_desc.height;
-				uint32_t mip_depth = dst_desc.depth;
-				for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
+				const uint32_t block_size = GetFormatBlockSize(dst_desc.format);
+				const uint32_t num_blocks_x = dst_desc.width / block_size;
+				const uint32_t num_blocks_y = dst_desc.height / block_size;
+				for (uint32_t slice = 0; slice < dst_desc.array_size; ++slice)
 				{
-					copy.imageExtent.width = mip_width;
-					copy.imageExtent.height = mip_height;
-					copy.imageExtent.depth = mip_depth;
-					copy.imageSubresource.mipLevel = mip;
-					vkCmdCopyImageToBuffer(
-						commandlist.GetCommandBuffer(),
-						internal_state_src->resource,
-						VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-						internal_state_dst->staging_resource,
-						1,
-						&copy
-					);
+					copy.imageSubresource.baseArrayLayer = slice;
+					copy.imageSubresource.layerCount = 1;
+					uint32_t mip_blocks_x = num_blocks_x;
+					uint32_t mip_blocks_y = num_blocks_y;
+					uint32_t mip_width = dst_desc.width;
+					uint32_t mip_height = dst_desc.height;
+					uint32_t mip_depth = dst_desc.depth;
+					for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
+					{
+						copy.imageExtent.width = mip_width;
+						copy.imageExtent.height = mip_height;
+						copy.imageExtent.depth = mip_depth;
+						copy.imageSubresource.mipLevel = mip;
+						vkCmdCopyImageToBuffer(
+							commandlist.GetCommandBuffer(),
+							internal_state_src->resource,
+							VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+							internal_state_dst->staging_resource,
+							1,
+							&copy
+						);
 
-					copy.bufferOffset += mip_width * mip_height * mip_depth * data_stride;
-					mip_width = std::max(1u, mip_width / 2);
-					mip_height = std::max(1u, mip_height / 2);
-					mip_depth = std::max(1u, mip_depth / 2);
+						copy.bufferOffset += mip_blocks_x * mip_blocks_y * mip_depth * data_stride;
+						mip_blocks_x = std::max(1u, mip_blocks_x / 2);
+						mip_blocks_y = std::max(1u, mip_blocks_y / 2);
+						mip_width = std::max(1u, mip_width / 2);
+						mip_height = std::max(1u, mip_height / 2);
+						mip_depth = std::max(1u, mip_depth / 2);
+					}
 				}
 			}
 			else

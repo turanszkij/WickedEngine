@@ -8,7 +8,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_ENVIRONMENTPROBE " Environment Probe", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(420, 230));
+	SetSize(XMFLOAT2(420, 260));
 
 	closeButton.SetTooltip("Delete EnvironmentProbeComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -89,6 +89,75 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&refreshAllButton);
 
+	exportButton.Create("Export Cubemap");
+	exportButton.SetTooltip("Export the selected probe into a DDS cubemap texture file.");
+	exportButton.SetPos(XMFLOAT2(x, y += step));
+	exportButton.SetEnabled(false);
+	exportButton.OnClick([&](wi::gui::EventArgs args) {
+		Scene& scene = editor->GetCurrentScene();
+		EnvironmentProbeComponent* probe = scene.probes.GetComponent(entity);
+		if (probe != nullptr && probe->textureIndex >= 0)
+		{
+			using namespace wi::graphics;
+			GraphicsDevice* device = GetDevice();
+			TextureDesc desc = scene.envmapArray.desc;
+			desc.array_size = 6;
+			Texture singleprobe;
+			bool success = device->CreateTexture(&desc, nullptr, &singleprobe);
+			assert(success);
+			CommandList cmd = device->BeginCommandList();
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&scene.envmapArray, desc.layout, ResourceState::COPY_SRC),
+				GPUBarrier::Image(&singleprobe, desc.layout, ResourceState::COPY_DST),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+			for (uint32_t face = 0; face < 6; ++face)
+			{
+				for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
+				{
+					device->CopyTexture(
+						&singleprobe, 0, 0, 0, mip, face,
+						&scene.envmapArray, mip, probe->textureIndex * 6 + face,
+						cmd
+					);
+				}
+			}
+			for (auto& x : barriers)
+			{
+				std::swap(x.image.layout_before, x.image.layout_after);
+			}
+			device->Barrier(barriers, arraysize(barriers), cmd);
+			device->SubmitCommandLists();
+
+			wi::helper::FileDialogParams params;
+			params.type = wi::helper::FileDialogParams::SAVE;
+			params.description = "DDS";
+			params.extensions = { "DDS" };
+			wi::helper::FileDialog(params, [=](std::string fileName) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+
+					std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
+					std::string filename_replaced = fileName;
+					if (extension != "DDS")
+					{
+						filename_replaced = wi::helper::ReplaceExtension(fileName, "DDS");
+					}
+
+					bool success = wi::helper::saveTextureToFile(singleprobe, filename_replaced);
+					assert(success);
+
+					if (success)
+					{
+						editor->PostSaveText("Exported environment cubemap: ", filename_replaced);
+					}
+
+					});
+				});
+
+		}
+	});
+	AddWidget(&exportButton);
+
 
 
 
@@ -165,6 +234,12 @@ void EnvProbeWindow::ResizeLayout()
 	refreshAllButton.SetPos(XMFLOAT2(width - padding - refreshButton.GetSize().x, y));
 	refreshButton.SetPos(XMFLOAT2(refreshAllButton.GetPos().x - padding - refreshButton.GetSize().x, y));
 	y += refreshAllButton.GetSize().y;
+
+	y += padding;
+	exportButton.SetSize(XMFLOAT2(width - padding * 2, exportButton.GetSize().y));
+	exportButton.SetPos(XMFLOAT2(padding, y));
+	y += exportButton.GetSize().y;
+
 	y += padding;
 
 	add_right(realTimeCheckBox);
