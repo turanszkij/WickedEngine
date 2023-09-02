@@ -1024,14 +1024,10 @@ namespace wi::scene
 			MSAA = 1 << 2,
 		};
 		uint32_t _flags = DIRTY;
-		uint32_t resolution = 256;
+		uint32_t resolution = 256; // power of two
 
 		// Non-serialized attributes:
-		uint32_t current_samplecount = 0;
-		wi::graphics::Texture envrenderingDepthBuffer;
-		wi::graphics::Texture envrenderingColorBuffer_MSAA;
-		wi::graphics::Texture envrenderingColorBuffer;
-		wi::graphics::Texture texture; // final, compressed
+		wi::graphics::Texture texture;
 		XMFLOAT3 position;
 		float range;
 		XMFLOAT4X4 inverseMatrix;
@@ -1039,7 +1035,7 @@ namespace wi::scene
 
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline void SetRealTime(bool value) { if (value) { _flags |= REALTIME; } else { _flags &= ~REALTIME; } }
-		inline void SetMSAA(bool value) { if (value) { _flags |= MSAA; } else { _flags &= ~MSAA; } }
+		inline void SetMSAA(bool value) { if (value) { _flags |= MSAA; } else { _flags &= ~MSAA; } SetDirty(); }
 
 		inline bool IsDirty() const { return _flags & DIRTY; }
 		inline bool IsRealTime() const { return _flags & REALTIME; }

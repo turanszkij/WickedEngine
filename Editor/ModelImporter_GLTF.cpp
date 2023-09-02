@@ -1894,11 +1894,18 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				XMQuaternionToAxisAngle(&axis, &angle, Q);
 				weather.sky_rotation = XM_2PI - angle;
 			}
-			if (light.Has("irradianceCoefficients"))
-			{
-				// TODO
-				//auto value = light.Get("irradianceCoefficients");
-			}
+			//if (light.Has("irradianceCoefficients"))
+			//{
+			//	auto value = light.Get("irradianceCoefficients");
+			//	float spherical_harmonics[9][3] = {};
+			//	for (int c = 0; c < std::min(9, (int)value.ArrayLen()); ++c)
+			//	{
+			//		for (int f = 0; f < std::min(3, (int)value.Get(c).ArrayLen()); ++f)
+			//		{
+			//			spherical_harmonics[c][f] = (float)value.Get(c).Get(f).GetNumberAsDouble();
+			//		}
+			//	}
+			//}
 			if (light.Has("specularImages"))
 			{
 				auto mips = light.Get("specularImages");

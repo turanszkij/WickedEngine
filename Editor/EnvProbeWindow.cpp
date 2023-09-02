@@ -138,7 +138,6 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	resolutionCombo.AddItem("512", 512);
 	resolutionCombo.AddItem("1024", 1024);
 	resolutionCombo.AddItem("2048", 2048);
-	resolutionCombo.AddItem("4096", 4096);
 	resolutionCombo.OnSelect([&](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
 		EnvironmentProbeComponent* probe = scene.probes.GetComponent(entity);
