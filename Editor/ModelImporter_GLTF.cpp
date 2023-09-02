@@ -1883,10 +1883,21 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			if (light.Has("rotation"))
 			{
 				auto value = light.Get("rotation");
+				XMFLOAT4 quaternion = {};
+				quaternion.x = value.ArrayLen() > 0 ? float(value.Get(0).IsNumber() ? value.Get(0).Get<double>() : value.Get(0).Get<int>()) : 0.0f;
+				quaternion.y = value.ArrayLen() > 1 ? float(value.Get(1).IsNumber() ? value.Get(1).Get<double>() : value.Get(1).Get<int>()) : 0.0f;
+				quaternion.z = value.ArrayLen() > 2 ? float(value.Get(2).IsNumber() ? value.Get(2).Get<double>() : value.Get(2).Get<int>()) : 0.0f;
+				quaternion.w = value.ArrayLen() > 3 ? float(value.Get(3).IsNumber() ? value.Get(3).Get<double>() : value.Get(3).Get<int>()) : 1.0f;
+				XMVECTOR Q = XMLoadFloat4(&quaternion);
+				float angle;
+				XMVECTOR axis;
+				XMQuaternionToAxisAngle(&axis, &angle, Q);
+				weather.sky_rotation = XM_2PI - angle;
 			}
 			if (light.Has("irradianceCoefficients"))
 			{
-				auto value = light.Get("irradianceCoefficients");
+				// TODO
+				//auto value = light.Get("irradianceCoefficients");
 			}
 			if (light.Has("specularImages"))
 			{
@@ -1981,6 +1992,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					dds.data(),
 					dds.size()
 				);
+				weather.ambient = {}; // remove ambient if gltf has env lighting
 			}
 		}
 	}
