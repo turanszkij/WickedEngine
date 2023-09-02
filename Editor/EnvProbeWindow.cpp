@@ -10,7 +10,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_ENVIRONMENTPROBE " Environment Probe", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(420, 300));
+	SetSize(XMFLOAT2(420, 340));
 
 	closeButton.SetTooltip("Delete EnvironmentProbeComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -90,6 +90,40 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&refreshAllButton);
 
+	importButton.Create("Import Cubemap");
+	importButton.SetTooltip("Import a DDS texture file into the selected environment probe.");
+	importButton.SetPos(XMFLOAT2(x, y += step));
+	importButton.SetEnabled(false);
+	importButton.OnClick([&](wi::gui::EventArgs args) {
+		Scene& scene = editor->GetCurrentScene();
+		EnvironmentProbeComponent* probe = scene.probes.GetComponent(entity);
+		if (probe != nullptr && probe->texture.IsValid())
+		{
+			wi::helper::FileDialogParams params;
+			params.type = wi::helper::FileDialogParams::OPEN;
+			params.description = "DDS";
+			params.extensions = { "DDS" };
+			wi::helper::FileDialog(params, [=](std::string fileName) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+
+					wi::Resource resource = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					if (has_flag(resource.GetTexture().GetDesc().misc_flags, wi::graphics::ResourceMiscFlag::TEXTURECUBE))
+					{
+						probe->textureName = fileName;
+						probe->CreateRenderData();
+					}
+					else
+					{
+						wi::helper::messageBox("Error!", "The texture you tried to open is not a cubemap texture, so it won't be imported!");
+					}
+
+					});
+				});
+
+		}
+		});
+	AddWidget(&importButton);
+
 	exportButton.Create("Export Cubemap");
 	exportButton.SetTooltip("Export the selected probe into a DDS cubemap texture file.");
 	exportButton.SetPos(XMFLOAT2(x, y += step));
@@ -130,7 +164,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 
 
 	resolutionCombo.Create("Resolution: ");
-	resolutionCombo.SetTooltip("Set the resolution of environment probe.");
+	resolutionCombo.SetTooltip("Set the resolution of the selected environment probe. Only takes effect if this is a rendered probe, not for probes that are imported from files.");
 	resolutionCombo.AddItem("32", 32);
 	resolutionCombo.AddItem("64", 64);
 	resolutionCombo.AddItem("128", 128);
@@ -227,6 +261,11 @@ void EnvProbeWindow::ResizeLayout()
 	refreshAllButton.SetPos(XMFLOAT2(width - padding - refreshButton.GetSize().x, y));
 	refreshButton.SetPos(XMFLOAT2(refreshAllButton.GetPos().x - padding - refreshButton.GetSize().x, y));
 	y += refreshAllButton.GetSize().y;
+	y += padding;
+
+	importButton.SetSize(XMFLOAT2(width - padding * 2, importButton.GetSize().y));
+	importButton.SetPos(XMFLOAT2(padding, y));
+	y += importButton.GetSize().y;
 	y += padding;
 
 	exportButton.SetSize(XMFLOAT2(width - padding * 2, exportButton.GetSize().y));

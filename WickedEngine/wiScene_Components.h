@@ -1025,15 +1025,17 @@ namespace wi::scene
 		};
 		uint32_t _flags = DIRTY;
 		uint32_t resolution = 256; // power of two
+		std::string textureName; // if texture is coming from an asset
 
 		// Non-serialized attributes:
 		wi::graphics::Texture texture;
+		wi::Resource resource; // if texture is coming from an asset
 		XMFLOAT3 position;
 		float range;
 		XMFLOAT4X4 inverseMatrix;
 		mutable bool render_dirty = false;
 
-		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
+		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; DeleteResource(); } else { _flags &= ~DIRTY; } }
 		inline void SetRealTime(bool value) { if (value) { _flags |= REALTIME; } else { _flags &= ~REALTIME; } }
 		inline void SetMSAA(bool value) { if (value) { _flags |= MSAA; } else { _flags &= ~MSAA; } SetDirty(); }
 
@@ -1044,6 +1046,7 @@ namespace wi::scene
 		size_t GetMemorySizeInBytes() const;
 
 		void CreateRenderData();
+		void DeleteResource();
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

@@ -954,16 +954,24 @@ namespace wi::scene
 	}
 	void EnvironmentProbeComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
+		const std::string& dir = archive.GetSourceDirectory();
+
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
+			SetDirty();
 
 			if (seri.GetVersion() >= 1)
 			{
 				archive >> resolution;
-			}
+				archive >> textureName;
 
-			SetDirty();
+				if (!textureName.empty())
+				{
+					textureName = dir + textureName;
+					CreateRenderData();
+				}
+			}
 		}
 		else
 		{
@@ -972,6 +980,9 @@ namespace wi::scene
 			if (seri.GetVersion() >= 1)
 			{
 				archive << resolution;
+
+				wi::helper::MakePathRelative(dir, textureName);
+				archive << textureName;
 			}
 		}
 	}

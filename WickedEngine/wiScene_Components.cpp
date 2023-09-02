@@ -1502,6 +1502,16 @@ namespace wi::scene
 
 	void EnvironmentProbeComponent::CreateRenderData()
 	{
+		if (!textureName.empty() && !resource.IsValid())
+		{
+			resource = wi::resourcemanager::Load(textureName);
+		}
+		if (resource.IsValid())
+		{
+			texture = resource.GetTexture();
+			SetDirty(false);
+			return;
+		}
 		resolution = wi::math::GetNextPowerOfTwo(resolution);
 		if (texture.IsValid() && resolution == texture.desc.width)
 			return;
@@ -1522,6 +1532,16 @@ namespace wi::scene
 		desc.layout = ResourceState::SHADER_RESOURCE;
 		device->CreateTexture(&desc, nullptr, &texture);
 		device->SetName(&texture, "EnvironmentProbeComponent::texture");
+	}
+	void EnvironmentProbeComponent::DeleteResource()
+	{
+		if (resource.IsValid())
+		{
+			// only delete these if resource is actually valid!
+			resource = {};
+			texture = {};
+			textureName = {};
+		}
 	}
 	size_t EnvironmentProbeComponent::GetMemorySizeInBytes() const
 	{

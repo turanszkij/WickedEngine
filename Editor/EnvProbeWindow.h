@@ -15,6 +15,7 @@ public:
 	wi::gui::CheckBox msaaCheckBox;
 	wi::gui::Button refreshButton;
 	wi::gui::Button refreshAllButton;
+	wi::gui::Button importButton;
 	wi::gui::Button exportButton;
 	wi::gui::ComboBox resolutionCombo;
 
