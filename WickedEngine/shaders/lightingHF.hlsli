@@ -495,7 +495,8 @@ inline void VoxelGI(inout Surface surface, inout Lighting lighting)
 		[branch]
 		if (GetFrame().options & OPTION_BIT_VXGI_REFLECTIONS_ENABLED)
 		{
-			float4 trace = ConeTraceSpecular(voxels, surface.P, surface.N, surface.V, surface.roughnessBRDF, surface.pixel);
+			float roughnessBRDF = sqr(clamp(surface.roughness, 0.045, 1));
+			float4 trace = ConeTraceSpecular(voxels, surface.P, surface.N, surface.V, roughnessBRDF, surface.pixel);
 			lighting.indirect.specular = mad(lighting.indirect.specular, 1 - trace.a, trace.rgb * surface.F);
 		}
 	}

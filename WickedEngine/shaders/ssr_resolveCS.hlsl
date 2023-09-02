@@ -28,8 +28,8 @@ float GetWeight(int2 neighborTracingCoord, float3 V, float3 N, float roughness, 
 
 	float sampleNdotH = saturate(dot(N, sampleH));
 	float sampleNdotL = saturate(dot(N, sampleL));
-
-	float roughnessBRDF = roughness * roughness;
+	
+	float roughnessBRDF = sqr(clamp(roughness, 0.045, 1));
 
 	float Vis = V_SmithGGXCorrelated(roughnessBRDF, NdotV, sampleNdotL);
 	float D = D_GGX(roughnessBRDF, sampleNdotH, sampleH);

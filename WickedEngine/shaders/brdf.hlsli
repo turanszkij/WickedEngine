@@ -126,7 +126,7 @@ struct SurfaceToLight
 		LdotH = saturate(dot(L, H));
 		VdotH = saturate(dot(surface.V, H));
 
-		F = F_Schlick(surface.f0, surface.f90, VdotH);
+		F = F_Schlick(surface.f0, VdotH);
 
 #ifdef ANISOTROPIC
 		TdotL = dot(surface.aniso.T.xyz, L);
@@ -164,15 +164,17 @@ float3 BRDF_GetSpecular(in Surface surface, in SurfaceToLight surface_to_light)
 	float Vis = V_SmithGGXCorrelated_Anisotropic(surface.aniso.at, surface.aniso.ab, surface.aniso.TdotV, surface.aniso.BdotV,
 		surface_to_light.TdotL, surface_to_light.BdotL, surface.NdotV, surface_to_light.NdotL);
 #else
-	float D = D_GGX(surface.roughnessBRDF, surface_to_light.NdotH, surface_to_light.H);
-	float Vis = V_SmithGGXCorrelated(surface.roughnessBRDF, surface.NdotV, surface_to_light.NdotL);
+	float roughnessBRDF = sqr(clamp(surface.roughness, 0.045, 1));
+	float D = D_GGX(roughnessBRDF, surface_to_light.NdotH, surface_to_light.H);
+	float Vis = V_SmithGGXCorrelated(roughnessBRDF, surface.NdotV, surface_to_light.NdotL);
 #endif // ANISOTROPIC
 
 	float3 specular = D * Vis * surface_to_light.F;
 
 #ifdef SHEEN
 	specular *= surface.sheen.albedoScaling;
-	D = D_Charlie(surface.sheen.roughnessBRDF, surface_to_light.NdotH);
+	float sheen_roughnessBRDF = sqr(clamp(surface.sheen.roughness, 0.045, 1));
+	D = D_Charlie(sheen_roughnessBRDF, surface_to_light.NdotH);
 	Vis = V_Neubelt(surface.NdotV, surface_to_light.NdotL);
 	specular += D * Vis * surface.sheen.color;
 #endif // SHEEN
@@ -180,7 +182,8 @@ float3 BRDF_GetSpecular(in Surface surface, in SurfaceToLight surface_to_light)
 #ifdef CLEARCOAT
 	specular *= 1 - surface.clearcoat.F;
 	float NdotH = saturate(dot(surface.clearcoat.N, surface_to_light.H));
-	D = D_GGX(surface.clearcoat.roughnessBRDF, NdotH, surface_to_light.H);
+	float clearcoat_roughnessBRDF = sqr(clamp(surface.clearcoat.roughness, 0.045, 1));
+	D = D_GGX(clearcoat_roughnessBRDF, NdotH, surface_to_light.H);
 	Vis = V_Kelemen(surface_to_light.LdotH);
 	specular += D * Vis * surface.clearcoat.F;
 #endif // CLEARCOAT

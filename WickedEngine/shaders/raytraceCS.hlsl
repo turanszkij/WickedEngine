@@ -180,7 +180,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 		result += energy * surface.emissiveColor;
 
-		raycone = raycone.propagate(surface.roughnessBRDF, surface.hit_depth);
+		float roughnessBRDF = sqr(clamp(surface.roughness, 0.045, 1));
+		raycone = raycone.propagate(roughnessBRDF, surface.hit_depth);
 
 		if (bounce == 0)
 		{
@@ -375,7 +376,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		{
 			// Refraction
 			const float3 R = refract(ray.Direction, surface.N, 1 - surface.material.refraction);
-			ray.Direction = lerp(R, sample_hemisphere_cos(R, rng), surface.roughnessBRDF);
+			float roughnessBRDF = sqr(clamp(surface.roughness, 0.045, 1));
+			ray.Direction = lerp(R, sample_hemisphere_cos(R, rng), roughnessBRDF);
 			energy *= surface.albedo / max(0.001, surface.transmission);
 
 			// Add a new bounce iteration, otherwise the transparent effect can disappear:

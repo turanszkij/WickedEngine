@@ -274,7 +274,8 @@ float4 main(Input input) : SV_TARGET
 		{
 			// Refraction
 			const float3 R = refract(ray.Direction, surface.N, 1 - surface.material.refraction);
-			ray.Direction = lerp(R, sample_hemisphere_cos(R, rng), surface.roughnessBRDF);
+			float roughnessBRDF = sqr(clamp(surface.roughness, 0.045, 1));
+			ray.Direction = lerp(R, sample_hemisphere_cos(R, rng), roughnessBRDF);
 			energy *= surface.albedo / max(0.001, surface.transmission);
 
 			// Add a new bounce iteration, otherwise the transparent effect can disappear:
