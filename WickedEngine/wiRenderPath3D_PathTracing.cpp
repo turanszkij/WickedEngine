@@ -452,7 +452,8 @@ namespace wi
 				nullptr,
 				getEyeAdaptionEnabled() ? &luminanceResources.luminance : nullptr,
 				getBloomEnabled() ? &bloomResources.texture_bloom : nullptr,
-				colorspace
+				colorspace,
+				getTonemap()
 			);
 			lastPostprocessRT = &rtPostprocess;
 
