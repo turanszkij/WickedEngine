@@ -140,7 +140,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	[branch]
 	if (tonemap_push.display_colorspace == (uint)ColorSpace::SRGB)
 	{
-		result.rgb = ACESFitted(hdr.rgb);
+		if (tonemap_push.flags & TONEMAP_FLAG_ACES)
+		{
+			result.rgb = ACESFitted(hdr.rgb);
+		}
+		else
+		{
+			result.rgb = tonemap(hdr.rgb);
+		}
 		result.rgb = ApplySRGBCurve_Fast(result.rgb);
 	}
 
@@ -151,7 +158,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	}
 
 	[branch]
-	if (tonemap_push.dither != 0)
+	if (tonemap_push.flags & TONEMAP_FLAG_DITHER)
 	{
 		// dithering before outputting to SDR will reduce color banding:
 		result.rgb += (dither((float2)DTid.xy) - 0.5f) / 64.0f;

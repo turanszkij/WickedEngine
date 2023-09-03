@@ -58,6 +58,7 @@ namespace wi::lua
 		lunamethod(RenderPath3D_BindLua, SetFSR2Enabled),
 		lunamethod(RenderPath3D_BindLua, SetFSR2Sharpness),
 		lunamethod(RenderPath3D_BindLua, SetFSR2Preset),
+		lunamethod(RenderPath3D_BindLua, SetTonemap),
 
 		lunamethod(RenderPath3D_BindLua, SetCropLeft),
 		lunamethod(RenderPath3D_BindLua, SetCropTop),
@@ -571,6 +572,21 @@ namespace wi::lua
 			wi::lua::SError(L, "SetFSR2Preset(FSR2_Preset value) not enough arguments!");
 		return 0;
 	}
+	int RenderPath3D_BindLua::SetTonemap(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetTonemap(Tonemap value) component is null!");
+			return 0;
+		}
+		if (wi::lua::SGetArgCount(L) > 0)
+		{
+			((RenderPath3D*)component)->setTonemap((wi::renderer::Tonemap)wi::lua::SGetInt(L, 1));
+		}
+		else
+			wi::lua::SError(L, "SetTonemap(Tonemap value) not enough arguments!");
+		return 0;
+	}
 	int RenderPath3D_BindLua::SetCropLeft(lua_State* L)
 	{
 		((RenderPath3D*)component)->crop_left = wi::lua::SGetFloat(L, 1);
@@ -604,6 +620,11 @@ FSR2_Preset = {
 	Balanced = 1,
 	Performance = 2,
 	Ultra_Performance = 3,
+}
+
+Tonemap = {
+	Reinhard = 0,
+	ACES = 1,
 }
 )";
 

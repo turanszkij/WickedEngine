@@ -14566,7 +14566,8 @@ void Postprocess_Tonemap(
 	const Texture* texture_distortion,
 	const GPUBuffer* buffer_luminance,
 	const Texture* texture_bloom,
-	ColorSpace display_colorspace
+	ColorSpace display_colorspace,
+	Tonemap tonemap
 )
 {
 	if (!input.IsValid() || !output.IsValid())
@@ -14587,7 +14588,15 @@ void Postprocess_Tonemap(
 	tonemap_push.resolution_rcp.x = 1.0f / desc.width;
 	tonemap_push.resolution_rcp.y = 1.0f / desc.height;
 	tonemap_push.exposure = exposure;
-	tonemap_push.dither = dither ? 1.0f : 0.0f;
+	tonemap_push.flags = 0;
+	if (dither)
+	{
+		tonemap_push.flags |= TONEMAP_FLAG_DITHER;
+	}
+	if (tonemap == Tonemap::ACES)
+	{
+		tonemap_push.flags |= TONEMAP_FLAG_ACES;
+	}
 	tonemap_push.brightness = brightness;
 	tonemap_push.contrast = contrast;
 	tonemap_push.saturation = saturation;

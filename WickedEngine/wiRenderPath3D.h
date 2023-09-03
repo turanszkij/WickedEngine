@@ -55,6 +55,7 @@ namespace wi
 		float raytracedDiffuseRange = 10;
 		float raytracedReflectionsRange = 10000.0f;
 		float reflectionRoughnessCutoff = 0.6f;
+		wi::renderer::Tonemap tonemap = wi::renderer::Tonemap::ACES;
 
 		AO ao = AO_DISABLED;
 		bool fxaaEnabled = false;
@@ -237,6 +238,7 @@ namespace wi
 		constexpr float getRaytracedDiffuseRange() const { return raytracedDiffuseRange; }
 		constexpr float getRaytracedReflectionsRange() const { return raytracedReflectionsRange; }
 		constexpr float getReflectionRoughnessCutoff() const { return reflectionRoughnessCutoff; }
+		constexpr wi::renderer::Tonemap getTonemap() const { return tonemap; }
 
 		constexpr bool getAOEnabled() const { return ao != AO_DISABLED; }
 		constexpr AO getAO() const { return ao; }
@@ -291,6 +293,7 @@ namespace wi
 		constexpr void setRaytracedDiffuseRange(float value) { raytracedDiffuseRange = value; }
 		constexpr void setRaytracedReflectionsRange(float value) { raytracedReflectionsRange = value; }
 		constexpr void setReflectionRoughnessCutoff(float value) { reflectionRoughnessCutoff = value; }
+		constexpr void setTonemap(wi::renderer::Tonemap value) { tonemap = value; }
 
 		void setAO(AO value);
 		void setSSREnabled(bool value);
