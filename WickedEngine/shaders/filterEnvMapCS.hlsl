@@ -25,38 +25,38 @@ float3 ImportanceSampleGGX(float2 Xi, float Roughness, float3 N)
 [numthreads(GENERATEMIPCHAIN_2D_BLOCK_SIZE, GENERATEMIPCHAIN_2D_BLOCK_SIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	if (DTid.x < push.filterResolution.x && DTid.y < push.filterResolution.y)
-	{
-		TextureCube input = bindless_cubemaps[push.texture_input];
-		RWTexture2DArray<float4> output = bindless_rwtextures2DArray[push.texture_output];
+	if (DTid.x >= push.filterResolution.x || DTid.y >= push.filterResolution.y)
+		return;
+	
+	TextureCube input = bindless_cubemaps[push.texture_input];
+	RWTexture2DArray<float4> output = bindless_rwtextures2DArray[push.texture_output];
 
-		float2 uv = (DTid.xy + 0.5f) * push.filterResolution_rcp.xy;
-		float3 N = uv_to_cubemap(uv, DTid.z);
-		float3 V = N;
+	float2 uv = (DTid.xy + 0.5f) * push.filterResolution_rcp.xy;
+	float3 N = normalize(uv_to_cubemap(uv, DTid.z));
+	float3 V = N;
 
-		float4 col = 0;
+	float4 col = 0;
 		
-		float Roughness = push.filterRoughness;
+	float Roughness = push.filterRoughness;
 
-		uint rayCount = push.filterRayCount;
-		for (uint i = 0; i < rayCount; ++i)
-		{
-			float2 Xi = hammersley2d(i, rayCount);
-			float3 H = ImportanceSampleGGX(Xi, Roughness, N);
-			float3 L = 2 * dot(V, H) * H - V;
+	uint rayCount = push.filterRayCount;
+	for (uint i = 0; i < rayCount; ++i)
+	{
+		float2 Xi = hammersley2d(i, rayCount);
+		float3 H = ImportanceSampleGGX(Xi, Roughness, N);
+		float3 L = 2 * dot(V, H) * H - V;
 			
-			float NoL = saturate(dot(N, L));
-			if (NoL > 0)
-			{
-				col += input.SampleLevel(sampler_linear_clamp, L, 0) * NoL;
-			}
-		}
-
-		if(col.a > 0)
+		float NoL = saturate(dot(N, L));
+		if (NoL > 0)
 		{
-			col /= col.a;
+			col += input.SampleLevel(sampler_linear_clamp, L, 0) * NoL;
 		}
-
-		output[uint3(DTid.xy, DTid.z)] = col;
 	}
+
+	if (col.a > 0)
+	{
+		col /= col.a;
+	}
+
+	output[uint3(DTid.xy, DTid.z)] = col;
 }

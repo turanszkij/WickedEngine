@@ -7788,14 +7788,14 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				push.filterResolution.y = desc.height;
 				push.filterResolution_rcp.x = 1.0f / push.filterResolution.x;
 				push.filterResolution_rcp.y = 1.0f / push.filterResolution.y;
-				push.filterRoughness = (float)i / (float)desc.mip_levels;
+				push.filterRoughness = (float)i / (float)(desc.mip_levels - 1);
 				if (probe.IsRealTime())
 				{
 					push.filterRayCount = 128;
 				}
 				else
 				{
-					push.filterRayCount = 1024;
+					push.filterRayCount = 8192;
 				}
 				push.texture_input = device->GetDescriptorIndex(&envrenderingColorBuffer, SubresourceType::SRV, std::max(0, (int)i - 1));
 				push.texture_output = device->GetDescriptorIndex(&envrenderingColorBuffer, SubresourceType::UAV, i);

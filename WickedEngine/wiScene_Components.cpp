@@ -1527,7 +1527,7 @@ namespace wi::scene
 		desc.format = Format::BC6H_UF16;
 		desc.sample_count = 1; // Note that this texture is always non-MSAA, even if probe is rendered as MSAA, because this contains resolved result
 		desc.bind_flags = BindFlag::SHADER_RESOURCE;
-		desc.mip_levels = GetMipCount(resolution, resolution);
+		desc.mip_levels = GetMipCount(resolution, resolution, 1, 16);
 		desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
 		desc.layout = ResourceState::SHADER_RESOURCE;
 		device->CreateTexture(&desc, nullptr, &texture);
