@@ -4,11 +4,13 @@
 using namespace wi::ecs;
 using namespace wi::scene;
 
+const std::string default_text = "Environment probes can be used to capture the scene from a specific location in a 360 degrees panorama. The probes will be used for reflections fallback, where a better reflection type is not available. The probes can affect the ambient colors slightly.\nTip: You can scale, rotate and move the probes to set up parallax correct rendering to affect a specific area only. The parallax correction will take effect inside the probe's bounds (indicated with a cyan colored box).";
+
 void EnvProbeWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_ENVIRONMENTPROBE " Environment Probe", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(420, 230));
+	SetSize(XMFLOAT2(420, 340));
 
 	closeButton.SetTooltip("Delete EnvironmentProbeComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -27,8 +29,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	float x = 5, y = 0, step = 35;
 
 	infoLabel.Create("");
-	infoLabel.SetText("Environment probes can be used to capture the scene from a specific location in a 360 degrees panorama. The probes will be used for reflections fallback, where a better reflection type is not available. The probes can affect the ambient colors slightly.\nTip: You can scale, rotate and move the probes to set up parallax correct rendering to affect a specific area only. The parallax correction will take effect inside the probe's bounds (indicated with a cyan colored box).");
-	infoLabel.SetSize(XMFLOAT2(300, 100));
+	infoLabel.SetSize(XMFLOAT2(300, 120));
 	infoLabel.SetPos(XMFLOAT2(x, y));
 	infoLabel.SetColor(wi::Color::Transparent());
 	AddWidget(&infoLabel);
@@ -89,7 +90,98 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&refreshAllButton);
 
+	importButton.Create("Import Cubemap");
+	importButton.SetTooltip("Import a DDS texture file into the selected environment probe.");
+	importButton.SetPos(XMFLOAT2(x, y += step));
+	importButton.SetEnabled(false);
+	importButton.OnClick([&](wi::gui::EventArgs args) {
+		Scene& scene = editor->GetCurrentScene();
+		EnvironmentProbeComponent* probe = scene.probes.GetComponent(entity);
+		if (probe != nullptr && probe->texture.IsValid())
+		{
+			wi::helper::FileDialogParams params;
+			params.type = wi::helper::FileDialogParams::OPEN;
+			params.description = "DDS";
+			params.extensions = { "DDS" };
+			wi::helper::FileDialog(params, [=](std::string fileName) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 
+					wi::Resource resource = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					if (has_flag(resource.GetTexture().GetDesc().misc_flags, wi::graphics::ResourceMiscFlag::TEXTURECUBE))
+					{
+						probe->textureName = fileName;
+						probe->CreateRenderData();
+					}
+					else
+					{
+						wi::helper::messageBox("Error!", "The texture you tried to open is not a cubemap texture, so it won't be imported!");
+					}
+
+					});
+				});
+
+		}
+		});
+	AddWidget(&importButton);
+
+	exportButton.Create("Export Cubemap");
+	exportButton.SetTooltip("Export the selected probe into a DDS cubemap texture file.");
+	exportButton.SetPos(XMFLOAT2(x, y += step));
+	exportButton.SetEnabled(false);
+	exportButton.OnClick([&](wi::gui::EventArgs args) {
+		Scene& scene = editor->GetCurrentScene();
+		EnvironmentProbeComponent* probe = scene.probes.GetComponent(entity);
+		if (probe != nullptr && probe->texture.IsValid())
+		{
+			wi::helper::FileDialogParams params;
+			params.type = wi::helper::FileDialogParams::SAVE;
+			params.description = "DDS";
+			params.extensions = { "DDS" };
+			wi::helper::FileDialog(params, [=](std::string fileName) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+
+					std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
+					std::string filename_replaced = fileName;
+					if (extension != "DDS")
+					{
+						filename_replaced = wi::helper::ReplaceExtension(fileName, "DDS");
+					}
+
+					bool success = wi::helper::saveTextureToFile(probe->texture, filename_replaced);
+					assert(success);
+
+					if (success)
+					{
+						editor->PostSaveText("Exported environment cubemap: ", filename_replaced);
+					}
+
+					});
+				});
+
+		}
+	});
+	AddWidget(&exportButton);
+
+
+	resolutionCombo.Create("Resolution: ");
+	resolutionCombo.SetTooltip("Set the resolution of the selected environment probe. Only takes effect if this is a rendered probe, not for probes that are imported from files.");
+	resolutionCombo.AddItem("32", 32);
+	resolutionCombo.AddItem("64", 64);
+	resolutionCombo.AddItem("128", 128);
+	resolutionCombo.AddItem("256", 256);
+	resolutionCombo.AddItem("512", 512);
+	resolutionCombo.AddItem("1024", 1024);
+	resolutionCombo.AddItem("2048", 2048);
+	resolutionCombo.OnSelect([&](wi::gui::EventArgs args) {
+		Scene& scene = editor->GetCurrentScene();
+		EnvironmentProbeComponent* probe = scene.probes.GetComponent(entity);
+		if (probe != nullptr)
+		{
+			probe->resolution = (uint32_t)args.userdata;
+			probe->CreateRenderData();
+		}
+	});
+	AddWidget(&resolutionCombo);
 
 
 	SetMinimized(true);
@@ -102,7 +194,8 @@ void EnvProbeWindow::SetEntity(Entity entity)
 {
 	this->entity = entity;
 
-	const EnvironmentProbeComponent* probe = editor->GetCurrentScene().probes.GetComponent(entity);
+	Scene& scene = editor->GetCurrentScene();
+	const EnvironmentProbeComponent* probe = scene.probes.GetComponent(entity);
 
 	if (probe == nullptr)
 	{
@@ -117,7 +210,22 @@ void EnvProbeWindow::SetEntity(Entity entity)
 		msaaCheckBox.SetCheck(probe->IsMSAA());
 		msaaCheckBox.SetEnabled(true);
 		refreshButton.SetEnabled(true);
+		resolutionCombo.SetSelectedByUserdata(probe->resolution);
+
+		std::string text =
+			"GPU Memory usage: " + wi::helper::GetMemorySizeText(probe->GetMemorySizeInBytes()) + "\n" +
+			"Resolution: " + std::to_string(probe->texture.desc.width) + "\n" +
+			"Mipmaps: " + std::to_string(probe->texture.desc.mip_levels) + "\n" +
+			"Format: " + std::string(wi::graphics::GetFormatString(probe->texture.desc.format)) + "\n"
+			;
+		if (!probe->textureName.empty())
+		{
+			text += "Filename: " + probe->textureName + "\n";
+		}
+		text += "\n" + default_text;
+		infoLabel.SetText(text);
 	}
+
 }
 
 
@@ -165,6 +273,21 @@ void EnvProbeWindow::ResizeLayout()
 	refreshAllButton.SetPos(XMFLOAT2(width - padding - refreshButton.GetSize().x, y));
 	refreshButton.SetPos(XMFLOAT2(refreshAllButton.GetPos().x - padding - refreshButton.GetSize().x, y));
 	y += refreshAllButton.GetSize().y;
+	y += padding;
+
+	importButton.SetSize(XMFLOAT2(width - padding * 2, importButton.GetSize().y));
+	importButton.SetPos(XMFLOAT2(padding, y));
+	y += importButton.GetSize().y;
+	y += padding;
+
+	exportButton.SetSize(XMFLOAT2(width - padding * 2, exportButton.GetSize().y));
+	exportButton.SetPos(XMFLOAT2(padding, y));
+	y += exportButton.GetSize().y;
+	y += padding;
+
+	resolutionCombo.SetSize(XMFLOAT2(width - 100 - resolutionCombo.GetSize().y - padding, resolutionCombo.GetSize().y));
+	resolutionCombo.SetPos(XMFLOAT2(100, y));
+	y += resolutionCombo.GetSize().y;
 	y += padding;
 
 	add_right(realTimeCheckBox);

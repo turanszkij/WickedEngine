@@ -46,6 +46,7 @@ public:
 	wi::gui::Slider mipLodBiasSlider;
 	wi::gui::Slider raytraceBounceCountSlider;
 
+	wi::gui::ComboBox tonemapCombo;
 	wi::gui::Slider exposureSlider;
 	wi::gui::Slider brightnessSlider;
 	wi::gui::Slider contrastSlider;

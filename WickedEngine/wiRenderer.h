@@ -750,6 +750,11 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd,
 		float amount = 1.0f
 	);
+	enum class Tonemap
+	{
+		Reinhard,
+		ACES
+	};
 	void Postprocess_Tonemap(
 		const wi::graphics::Texture& input,
 		const wi::graphics::Texture& output,
@@ -763,7 +768,8 @@ namespace wi::renderer
 		const wi::graphics::Texture* texture_distortion = nullptr,
 		const wi::graphics::GPUBuffer* buffer_luminance = nullptr,
 		const wi::graphics::Texture* texture_bloom = nullptr,
-		wi::graphics::ColorSpace display_colorspace = wi::graphics::ColorSpace::SRGB
+		wi::graphics::ColorSpace display_colorspace = wi::graphics::ColorSpace::SRGB,
+		Tonemap tonemap = Tonemap::Reinhard 
 	);
 	void Postprocess_FSR(
 		const wi::graphics::Texture& input,

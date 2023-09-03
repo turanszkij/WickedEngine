@@ -1739,6 +1739,10 @@ namespace wi::graphics
 		return value == AlignTo(value, alignment);
 	}
 
+	// Get mipmap count for a given texture dimension.
+	//	width, height, depth: dimensions of the texture
+	//	min_dimension: constrain all dimensions to a specific resolution (optional, default: 1x1x1)
+	//	required_alignment: make sure to only return so many levels so that dimensions remain aligned to a value (optional)
 	constexpr uint32_t GetMipCount(uint32_t width, uint32_t height, uint32_t depth = 1u, uint32_t min_dimension = 1u, uint32_t required_alignment = 1u)
 	{
 		uint32_t mips = 1;
@@ -1757,6 +1761,9 @@ namespace wi::graphics
 		}
 		return mips;
 	}
+
+	// Compute the approximate texture memory usage
+	//	Approximate because this doesn't reflect GPU specific texture memory requirements, like alignment and metadata
 	constexpr size_t ComputeTextureMemorySizeInBytes(const TextureDesc& desc)
 	{
 		size_t size = 0;

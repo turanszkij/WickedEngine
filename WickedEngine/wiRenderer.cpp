@@ -3466,7 +3466,7 @@ void UpdatePerFrameData(
 	frameCB.decalarray_offset = 0;
 	frameCB.decalarray_count = std::min(MAX_SHADER_DECAL_COUNT, (uint)vis.visibleDecals.size());
 	frameCB.envprobearray_offset = frameCB.decalarray_count;
-	frameCB.envprobearray_count = std::min(MAX_SHADER_PROBE_COUNT, std::min(vis.scene->envmapCount, (uint)vis.visibleEnvProbes.size()));
+	frameCB.envprobearray_count = std::min(MAX_SHADER_PROBE_COUNT, (uint)vis.visibleEnvProbes.size());
 	frameCB.lightarray_offset = frameCB.envprobearray_offset + frameCB.envprobearray_count;
 	frameCB.lightarray_count = (uint)vis.visibleLights.size();
 	frameCB.forcefieldarray_offset = frameCB.lightarray_offset + frameCB.lightarray_count;
@@ -3477,14 +3477,6 @@ void UpdatePerFrameData(
 	frameCB.envprobearray_offset = std::min(SHADER_ENTITY_COUNT, frameCB.envprobearray_offset);
 	frameCB.lightarray_offset = std::min(SHADER_ENTITY_COUNT, frameCB.lightarray_offset);
 	frameCB.forcefieldarray_offset = std::min(SHADER_ENTITY_COUNT, frameCB.forcefieldarray_offset);
-
-	frameCB.envprobe_mipcount = 0;
-	frameCB.envprobe_mipcount_rcp = 1.0f;
-	if (vis.scene->envmapArray.IsValid())
-	{
-		frameCB.envprobe_mipcount = vis.scene->envmapArray.GetDesc().mip_levels;
-		frameCB.envprobe_mipcount_rcp = 1.0f / (float)frameCB.envprobe_mipcount;
-	}
 
 	frameCB.gi_boost = GetGIBoost();
 
@@ -3825,7 +3817,7 @@ void UpdateRenderData(
 		}
 
 		// Write environment probes into entity array:
-		const size_t probe_iterations = std::min((size_t)MAX_SHADER_PROBE_COUNT, std::min((size_t)vis.scene->envmapCount, vis.visibleEnvProbes.size()));
+		const size_t probe_iterations = std::min((size_t)MAX_SHADER_PROBE_COUNT, vis.visibleEnvProbes.size());
 		for (size_t i = 0; i < probe_iterations; ++i)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
@@ -3860,8 +3852,19 @@ void UpdateRenderData(
 			shaderentity.position = probe.position;
 			shaderentity.SetRange(probe.range);
 
-			shaderentity.SetIndices(matrixCounter, (uint32_t)probe.textureIndex);
+			shaderentity.SetIndices(matrixCounter, 0);
 			shadermatrix = XMLoadFloat4x4(&probe.inverseMatrix);
+
+			int texture = -1;
+			if (probe.texture.IsValid())
+			{
+				texture = device->GetDescriptorIndex(&probe.texture, SubresourceType::SRV);
+			}
+
+			shadermatrix.r[0] = XMVectorSetW(shadermatrix.r[0], *(float*)&texture);
+			shadermatrix.r[1] = XMVectorSetW(shadermatrix.r[1], 0);
+			shadermatrix.r[2] = XMVectorSetW(shadermatrix.r[2], 0);
+			shadermatrix.r[3] = XMVectorSetW(shadermatrix.r[3], 0);
 
 			std::memcpy(matrixArray + matrixCounter, &shadermatrix, sizeof(XMMATRIX));
 			matrixCounter++;
@@ -6594,7 +6597,7 @@ void DrawDebugWorld(
 	}
 
 
-	if (debugEnvProbes && scene.envmapArray.IsValid())
+	if (debugEnvProbes)
 	{
 		device->EventBegin("Debug EnvProbes", cmd);
 		// Envmap spheres:
@@ -6609,14 +6612,7 @@ void DrawDebugWorld(
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranslationFromVector(XMLoadFloat3(&probe.position)));
 			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
-			if (probe.textureIndex < 0)
-			{
-				device->BindResource(wi::texturehelper::getBlackCubeMap(), 0, cmd);
-			}
-			else
-			{
-				device->BindResource(&scene.envmapArray, 0, cmd, probe.textureIndex);
-			}
+			device->BindResource(&probe.texture, 0, cmd);
 
 			device->Draw(vertexCount_uvsphere, 0, cmd);
 		}
@@ -6640,7 +6636,7 @@ void DrawDebugWorld(
 			const EnvironmentProbeComponent& probe = scene.probes[i];
 			Entity entity = scene.probes.GetEntity(i);
 
-			if (probe.textureIndex < 0 || !scene.transforms.Contains(entity))
+			if (!scene.transforms.Contains(entity))
 			{
 				continue;
 			}
@@ -7352,22 +7348,19 @@ void DrawSun(CommandList cmd)
 
 void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 {
-	if (!vis.scene->envmapArray.IsValid())
-		return;
-
 	device->EventBegin("EnvironmentProbe Refresh", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Environment Probe Refresh", cmd);
 
 	BindCommonResources(cmd);
 
-	Viewport vp;
-	vp.height = vp.width = (float)vis.scene->envmapArray.desc.width;
-	device->BindViewports(1, &vp, cmd);
-
 	const float zNearP = vis.camera->zNearP;
 	const float zFarP = vis.camera->zFarP;
 
 	auto render_probe = [&](const EnvironmentProbeComponent& probe, const AABB& probe_aabb) {
+
+		Viewport vp;
+		vp.height = vp.width = (float)probe.texture.desc.width;
+		device->BindViewports(1, &vp, cmd);
 
 		SHCAM cameras[6];
 		CreateCubemapCameras(probe.position, zNearP, zFarP, cameras, arraysize(cameras));
@@ -7389,11 +7382,142 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			ComputeSkyAtmosphereSkyViewLut(cmd);
 		}
 
+		Texture envrenderingDepthBuffer;
+		Texture envrenderingColorBuffer_MSAA;
+		Texture envrenderingColorBuffer;
+
+		// Find temporary render textures to fit request, or create new ones if they don't exist:
+		union RenderTextureID
+		{
+			struct
+			{
+				uint32_t width : 16;
+				uint32_t sample_count : 3;
+				uint32_t is_depth : 1;
+			} bits;
+			uint32_t raw;
+		};
+		static wi::unordered_map<uint32_t, Texture> render_textures;
+		static std::mutex locker;
+		{
+			const uint32_t required_sample_count = probe.IsMSAA() ? EnvironmentProbeComponent::envmapMSAASampleCount : 1;
+
+			std::scoped_lock lck(locker);
+			RenderTextureID id_depth = {};
+			id_depth.bits.width = probe.resolution;
+			id_depth.bits.sample_count = required_sample_count;
+			id_depth.bits.is_depth = 1;
+			envrenderingDepthBuffer = render_textures[id_depth.raw];
+
+			RenderTextureID id_color = {};
+			id_color.bits.width = probe.resolution;
+			id_color.bits.sample_count = 1;
+			id_color.bits.is_depth = 0;
+			envrenderingColorBuffer = render_textures[id_color.raw];
+
+			TextureDesc desc;
+			desc.array_size = 6;
+			desc.height = probe.resolution;
+			desc.width = probe.resolution;
+			desc.usage = Usage::DEFAULT;
+
+			if (!envrenderingDepthBuffer.IsValid())
+			{
+				desc.mip_levels = 1;
+				desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
+				desc.format = wi::renderer::format_depthbuffer_envprobe;
+				desc.layout = ResourceState::SHADER_RESOURCE;
+				desc.sample_count = required_sample_count;
+				if (required_sample_count == 1)
+				{
+					desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
+				}
+				device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer);
+				device->SetName(&envrenderingDepthBuffer, "envrenderingDepthBuffer");
+				render_textures[id_depth.raw] = envrenderingDepthBuffer;
+
+				std::string info;
+				info += "Created envprobe depth buffer for request";
+				info += "\n\tResolution = " + std::to_string(desc.width) + " * " + std::to_string(desc.height) + " * 6";
+				info += "\n\tSample Count = " + std::to_string(desc.sample_count);
+				info += "\n\tMip Levels = " + std::to_string(desc.mip_levels);
+				info += "\n\tFormat = ";
+				info += GetFormatString(desc.format);
+				info += "\n\tMemory = " + wi::helper::GetMemorySizeText(ComputeTextureMemorySizeInBytes(desc)) + "\n";
+				wi::backlog::post(info);
+			}
+
+			if (!envrenderingColorBuffer.IsValid())
+			{
+				desc.mip_levels = probe.texture.desc.mip_levels;
+				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+				desc.format = wi::renderer::format_rendertarget_envprobe;
+				desc.layout = ResourceState::SHADER_RESOURCE;
+				desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
+				desc.sample_count = 1;
+				device->CreateTexture(&desc, nullptr, &envrenderingColorBuffer);
+				device->SetName(&envrenderingColorBuffer, "envrenderingColorBuffer");
+				render_textures[id_color.raw] = envrenderingColorBuffer;
+
+				// Cubes per mip level:
+				for (uint32_t i = 0; i < envrenderingColorBuffer.desc.mip_levels; ++i)
+				{
+					int subresource_index;
+					subresource_index = device->CreateSubresource(&envrenderingColorBuffer, SubresourceType::SRV, 0, envrenderingColorBuffer.desc.array_size, i, 1);
+					assert(subresource_index == i);
+					subresource_index = device->CreateSubresource(&envrenderingColorBuffer, SubresourceType::UAV, 0, envrenderingColorBuffer.desc.array_size, i, 1);
+					assert(subresource_index == i);
+				}
+
+				std::string info;
+				info += "Created envprobe render target for request";
+				info += "\n\tResolution = " + std::to_string(desc.width) + " * " + std::to_string(desc.height) + " * 6";
+				info += "\n\tSample Count = " + std::to_string(desc.sample_count);
+				info += "\n\tMip Levels = " + std::to_string(desc.mip_levels);
+				info += "\n\tFormat = ";
+				info += GetFormatString(desc.format);
+				info += "\n\tMemory = " + wi::helper::GetMemorySizeText(ComputeTextureMemorySizeInBytes(desc)) + "\n";
+				wi::backlog::post(info);
+			}
+
+			if (required_sample_count > 1)
+			{
+				RenderTextureID id_color_msaa = {};
+				id_color_msaa.bits.width = probe.resolution;
+				id_color_msaa.bits.sample_count = required_sample_count;
+				id_color_msaa.bits.is_depth = 0;
+				envrenderingColorBuffer_MSAA = render_textures[id_color_msaa.raw];
+
+				if (!envrenderingColorBuffer_MSAA.IsValid())
+				{
+					desc.sample_count = required_sample_count;
+					desc.mip_levels = 1;
+					desc.bind_flags = BindFlag::RENDER_TARGET;
+					desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
+					desc.layout = ResourceState::RENDERTARGET;
+					desc.format = wi::renderer::format_rendertarget_envprobe;
+					device->CreateTexture(&desc, nullptr, &envrenderingColorBuffer_MSAA);
+					device->SetName(&envrenderingColorBuffer_MSAA, "envrenderingColorBuffer_MSAA");
+					render_textures[id_color_msaa.raw] = envrenderingColorBuffer_MSAA;
+
+					std::string info;
+					info += "Created envprobe render target for request";
+					info += "\n\tResolution = " + std::to_string(desc.width) + " * " + std::to_string(desc.height) + " * 6";
+					info += "\n\tSample Count = " + std::to_string(desc.sample_count);
+					info += "\n\tMip Levels = " + std::to_string(desc.mip_levels);
+					info += "\n\tFormat = ";
+					info += GetFormatString(desc.format);
+					info += "\n\tMemory = " + wi::helper::GetMemorySizeText(ComputeTextureMemorySizeInBytes(desc)) + "\n";
+					wi::backlog::post(info);
+				}
+			}
+		}
+
 		if (probe.IsMSAA())
 		{
 			const RenderPassImage rp[] = {
 				RenderPassImage::DepthStencil(
-					&vis.scene->envrenderingDepthBuffer_MSAA,
+					&envrenderingDepthBuffer,
 					RenderPassImage::LoadOp::CLEAR,
 					RenderPassImage::StoreOp::STORE,
 					ResourceState::SHADER_RESOURCE,
@@ -7401,14 +7525,14 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 					ResourceState::SHADER_RESOURCE
 				),
 				RenderPassImage::RenderTarget(
-					&vis.scene->envrenderingColorBuffer_MSAA,
+					&envrenderingColorBuffer_MSAA,
 					RenderPassImage::LoadOp::DONTCARE,
 					RenderPassImage::StoreOp::DONTCARE,
 					ResourceState::RENDERTARGET,
 					ResourceState::RENDERTARGET
 				),
 				RenderPassImage::Resolve(
-					&vis.scene->envrenderingColorBuffer,
+					&envrenderingColorBuffer,
 					ResourceState::SHADER_RESOURCE,
 					ResourceState::SHADER_RESOURCE,
 					0
@@ -7420,7 +7544,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		{
 			const RenderPassImage rp[] = {
 				RenderPassImage::DepthStencil(
-					&vis.scene->envrenderingDepthBuffer,
+					&envrenderingDepthBuffer,
 					RenderPassImage::LoadOp::CLEAR,
 					RenderPassImage::StoreOp::STORE,
 					ResourceState::SHADER_RESOURCE,
@@ -7428,7 +7552,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 					ResourceState::SHADER_RESOURCE
 				),
 				RenderPassImage::RenderTarget(
-					&vis.scene->envrenderingColorBuffer,
+					&envrenderingColorBuffer,
 					RenderPassImage::LoadOp::DONTCARE,
 					RenderPassImage::StoreOp::STORE,
 					ResourceState::SHADER_RESOURCE,
@@ -7498,30 +7622,30 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			{
 				device->EventBegin("Aerial Perspective Capture [MSAA]", cmd);
 				device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_AERIALPERSPECTIVE_CAPTURE_MSAA], cmd);
-				device->BindResource(&vis.scene->envrenderingDepthBuffer_MSAA, 0, cmd);
 			}
 			else
 			{
 				device->EventBegin("Aerial Perspective Capture", cmd);
 				device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_AERIALPERSPECTIVE_CAPTURE], cmd);
-				device->BindResource(&vis.scene->envrenderingDepthBuffer, 0, cmd);
 			}
 
-			TextureDesc desc = vis.scene->envrenderingColorBuffer.GetDesc();
+			device->BindResource(&envrenderingDepthBuffer, 0, cmd);
+
+			TextureDesc desc = envrenderingColorBuffer.GetDesc();
 
 			AerialPerspectiveCapturePushConstants push;
 			push.resolution.x = desc.width;
 			push.resolution.y = desc.height;
 			push.resolution_rcp.x = 1.0f / push.resolution.x;
 			push.resolution_rcp.y = 1.0f / push.resolution.y;
-			push.texture_input = device->GetDescriptorIndex(&vis.scene->envrenderingColorBuffer, SubresourceType::SRV);
-			push.texture_output = device->GetDescriptorIndex(&vis.scene->envrenderingColorBuffer, SubresourceType::UAV);
+			push.texture_input = device->GetDescriptorIndex(&envrenderingColorBuffer, SubresourceType::SRV);
+			push.texture_output = device->GetDescriptorIndex(&envrenderingColorBuffer, SubresourceType::UAV);
 
 			device->PushConstants(&push, sizeof(push), cmd);
 
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+					GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -7534,7 +7658,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+					GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -7549,14 +7673,14 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			{
 				device->EventBegin("Volumetric Cloud Rendering Capture [MSAA]", cmd);
 				device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_RENDER_CAPTURE_MSAA], cmd);
-				device->BindResource(&vis.scene->envrenderingDepthBuffer_MSAA, 5, cmd);
 			}
 			else
 			{
 				device->EventBegin("Volumetric Cloud Rendering Capture", cmd);
 				device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_RENDER_CAPTURE], cmd);
-				device->BindResource(&vis.scene->envrenderingDepthBuffer, 5, cmd);
 			}
+
+			device->BindResource(&envrenderingDepthBuffer, 5, cmd);
 
 			device->BindResource(&texture_shapeNoise, 0, cmd);
 			device->BindResource(&texture_detailNoise, 1, cmd);
@@ -7580,15 +7704,15 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				device->BindResource(&texture_weatherMap, 4, cmd);
 			}
 
-			TextureDesc desc = vis.scene->envrenderingColorBuffer.GetDesc();
+			TextureDesc desc = envrenderingColorBuffer.GetDesc();
 
 			VolumetricCloudCapturePushConstants push;
 			push.resolution.x = desc.width;
 			push.resolution.y = desc.height;
 			push.resolution_rcp.x = 1.0f / push.resolution.x;
 			push.resolution_rcp.y = 1.0f / push.resolution.y;
-			push.texture_input = device->GetDescriptorIndex(&vis.scene->envrenderingColorBuffer, SubresourceType::SRV);
-			push.texture_output = device->GetDescriptorIndex(&vis.scene->envrenderingColorBuffer, SubresourceType::UAV);
+			push.texture_input = device->GetDescriptorIndex(&envrenderingColorBuffer, SubresourceType::SRV);
+			push.texture_output = device->GetDescriptorIndex(&envrenderingColorBuffer, SubresourceType::UAV);
 
 			if (probe.IsRealTime())
 			{
@@ -7610,7 +7734,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+					GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -7623,7 +7747,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+					GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -7631,14 +7755,14 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			device->EventEnd(cmd);
 		}
 
-		GenerateMipChain(vis.scene->envrenderingColorBuffer, MIPGENFILTER_LINEAR, cmd);
+		GenerateMipChain(envrenderingColorBuffer, MIPGENFILTER_LINEAR, cmd);
 
 		// Filter the enviroment map mip chain according to BRDF:
 		//	A bit similar to MIP chain generation, but its input is the MIP-mapped texture,
 		//	and we generatethe filtered MIPs from bottom to top.
 		device->EventBegin("FilterEnvMap", cmd);
 		{
-			TextureDesc desc = vis.scene->envrenderingColorBuffer.GetDesc();
+			TextureDesc desc = envrenderingColorBuffer.GetDesc();
 
 			device->BindComputeShader(&shaders[CSTYPE_FILTERENVMAP], cmd);
 
@@ -7649,12 +7773,12 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			{
 				{
 					GPUBarrier barriers[] = {
-						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, 0),
-						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, 1),
-						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, 2),
-						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, 3),
-						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, 4),
-						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, 5),
+						GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, 0),
+						GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, 1),
+						GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, 2),
+						GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, 3),
+						GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, 4),
+						GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS, i, 5),
 					};
 					device->Barrier(barriers, arraysize(barriers), cmd);
 				}
@@ -7664,17 +7788,17 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				push.filterResolution.y = desc.height;
 				push.filterResolution_rcp.x = 1.0f / push.filterResolution.x;
 				push.filterResolution_rcp.y = 1.0f / push.filterResolution.y;
-				push.filterRoughness = (float)i / (float)desc.mip_levels;
+				push.filterRoughness = (float)i / (float)(desc.mip_levels - 1);
 				if (probe.IsRealTime())
-				{
-					push.filterRayCount = 128;
-				}
-				else
 				{
 					push.filterRayCount = 1024;
 				}
-				push.texture_input = device->GetDescriptorIndex(&vis.scene->envrenderingColorBuffer, SubresourceType::SRV, std::max(0, (int)i - 1));
-				push.texture_output = device->GetDescriptorIndex(&vis.scene->envrenderingColorBuffer, SubresourceType::UAV, i);
+				else
+				{
+					push.filterRayCount = 8192;
+				}
+				push.texture_input = device->GetDescriptorIndex(&envrenderingColorBuffer, SubresourceType::SRV, std::max(0, (int)i - 1));
+				push.texture_output = device->GetDescriptorIndex(&envrenderingColorBuffer, SubresourceType::UAV, i);
 				device->PushConstants(&push, sizeof(push), cmd);
 
 				device->Dispatch(
@@ -7685,12 +7809,12 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 				{
 					GPUBarrier barriers[] = {
-						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, 0),
-						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, 1),
-						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, 2),
-						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, 3),
-						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, 4),
-						GPUBarrier::Image(&vis.scene->envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, 5),
+						GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, 0),
+						GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, 1),
+						GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, 2),
+						GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, 3),
+						GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, 4),
+						GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE, i, 5),
 					};
 					device->Barrier(barriers, arraysize(barriers), cmd);
 				}
@@ -7701,21 +7825,21 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		}
 		device->EventEnd(cmd);
 
-		// Finally, the complete envmap is block compressed into the envmapArray:
-		BlockCompress(vis.scene->envrenderingColorBuffer, vis.scene->envmapArray, cmd, probe.textureIndex * 6);
+		// Finally, the complete envmap is block compressed into the probe's texture:
+		BlockCompress(envrenderingColorBuffer, probe.texture, cmd);
 	};
 
 	if (vis.scene->probes.GetCount() == 0)
 	{
 		// In this case, there are no probes, so the sky will be rendered to first envmap:
-		EnvironmentProbeComponent probe;
-		probe.textureIndex = 0;
-		probe.position = vis.camera->Eye;
-		probe.SetRealTime(true);
+		const EnvironmentProbeComponent& probe = vis.scene->global_dynamic_probe;
 
 		AABB probe_aabb;
 		probe_aabb.layerMask = 0;
-		render_probe(probe, probe_aabb);
+		if (probe.texture.IsValid())
+		{
+			render_probe(probe, probe_aabb);
+		}
 	}
 	else
 	{
@@ -7725,7 +7849,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			const EnvironmentProbeComponent& probe = vis.scene->probes[i];
 			const AABB& probe_aabb = vis.scene->aabb_probes[i];
 
-			if ((probe_aabb.layerMask & vis.layerMask) && probe.render_dirty && probe.textureIndex >= 0 && probe.textureIndex < vis.scene->envmapCount)
+			if ((probe_aabb.layerMask & vis.layerMask) && probe.render_dirty && probe.texture.IsValid())
 			{
 				probe.render_dirty = false;
 				render_probe(probe, probe_aabb);
@@ -14442,7 +14566,8 @@ void Postprocess_Tonemap(
 	const Texture* texture_distortion,
 	const GPUBuffer* buffer_luminance,
 	const Texture* texture_bloom,
-	ColorSpace display_colorspace
+	ColorSpace display_colorspace,
+	Tonemap tonemap
 )
 {
 	if (!input.IsValid() || !output.IsValid())
@@ -14463,7 +14588,15 @@ void Postprocess_Tonemap(
 	tonemap_push.resolution_rcp.x = 1.0f / desc.width;
 	tonemap_push.resolution_rcp.y = 1.0f / desc.height;
 	tonemap_push.exposure = exposure;
-	tonemap_push.dither = dither ? 1.0f : 0.0f;
+	tonemap_push.flags = 0;
+	if (dither)
+	{
+		tonemap_push.flags |= TONEMAP_FLAG_DITHER;
+	}
+	if (tonemap == Tonemap::ACES)
+	{
+		tonemap_push.flags |= TONEMAP_FLAG_ACES;
+	}
 	tonemap_push.brightness = brightness;
 	tonemap_push.contrast = contrast;
 	tonemap_push.saturation = saturation;

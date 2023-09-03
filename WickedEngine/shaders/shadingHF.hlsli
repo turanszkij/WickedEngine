@@ -63,14 +63,16 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 				ShaderEntity probe = load_entity(GetFrame().envprobearray_offset + entity_index);
 				if ((probe.layerMask & surface.layerMask) == 0)
 					continue;
-
-				const float4x4 probeProjection = load_entitymatrix(probe.GetMatrixIndex());
+				
+				float4x4 probeProjection = load_entitymatrix(probe.GetMatrixIndex());
+				const int probeTexture = asint(probeProjection[3][0]);
+				probeProjection[3] = float4(0, 0, 0, 1);
 				const float3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
 				const float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
 				[branch]
 				if (is_saturated(uvw))
 				{
-					const float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos);
+					const float4 envmapColor = EnvironmentReflection_Local(probeTexture, surface, probe, probeProjection, clipSpacePos);
 					// perform manual blending of probes:
 					//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
 					envmapAccumulation.rgb = mad(1 - envmapAccumulation.a, envmapColor.a * envmapColor.rgb, envmapAccumulation.rgb);
@@ -295,13 +297,15 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 					if ((probe.layerMask & surface.layerMask) == 0)
 						continue;
 
-					const float4x4 probeProjection = load_entitymatrix(probe.GetMatrixIndex());
+					float4x4 probeProjection = load_entitymatrix(probe.GetMatrixIndex());
+					const int probeTexture = asint(probeProjection[3][0]);
+					probeProjection[3] = float4(0, 0, 0, 1);
 					const float3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
 					const float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
 					[branch]
 					if (is_saturated(uvw))
 					{
-						const float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos);
+						const float4 envmapColor = EnvironmentReflection_Local(probeTexture, surface, probe, probeProjection, clipSpacePos);
 						// perform manual blending of probes:
 						//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
 						envmapAccumulation.rgb = mad(1 - envmapAccumulation.a, envmapColor.a * envmapColor.rgb, envmapAccumulation.rgb);

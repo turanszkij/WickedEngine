@@ -4,11 +4,11 @@
 #include "wiEventHandler.h"
 #include "wiMath.h"
 
+#include "Utility/lodepng.h"
+#include "Utility/dds_write.h"
 #include "Utility/stb_image_write.h"
 #include "Utility/basis_universal/encoder/basisu_comp.h"
 #include "Utility/basis_universal/encoder/basisu_gpu_texture.h"
-#include "Utility/basis_universal/encoder/lodepng.h"
-extern basist::etc1_global_selector_codebook g_basis_global_codebook;
 
 #include <thread>
 #include <locale>
@@ -226,6 +226,213 @@ namespace wi::helper
 		const uint32_t data_stride = GetFormatStride(desc.format);
 
 		std::string extension = wi::helper::toUpper(fileExtension);
+
+		if (extension.compare("DDS") == 0)
+		{
+			filedata.resize(sizeof(dds_write::Header) + texturedata.size());
+			dds_write::DXGI_FORMAT dds_format = dds_write::DXGI_FORMAT_UNKNOWN;
+			switch (desc.format)
+			{
+			case wi::graphics::Format::R32G32B32A32_FLOAT:
+				dds_format = dds_write::DXGI_FORMAT_R32G32B32A32_FLOAT;
+				break;
+			case wi::graphics::Format::R32G32B32A32_UINT:
+				dds_format = dds_write::DXGI_FORMAT_R32G32B32A32_UINT;
+				break;
+			case wi::graphics::Format::R32G32B32A32_SINT:
+				dds_format = dds_write::DXGI_FORMAT_R32G32B32A32_SINT;
+				break;
+			case wi::graphics::Format::R32G32B32_FLOAT:
+				dds_format = dds_write::DXGI_FORMAT_R32G32B32_FLOAT;
+				break;
+			case wi::graphics::Format::R32G32B32_UINT:
+				dds_format = dds_write::DXGI_FORMAT_R32G32B32_UINT;
+				break;
+			case wi::graphics::Format::R32G32B32_SINT:
+				dds_format = dds_write::DXGI_FORMAT_R32G32B32_SINT;
+				break;
+			case wi::graphics::Format::R16G16B16A16_FLOAT:
+				dds_format = dds_write::DXGI_FORMAT_R16G16B16A16_FLOAT;
+				break;
+			case wi::graphics::Format::R16G16B16A16_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_R16G16B16A16_UNORM;
+				break;
+			case wi::graphics::Format::R16G16B16A16_UINT:
+				dds_format = dds_write::DXGI_FORMAT_R16G16B16A16_UINT;
+				break;
+			case wi::graphics::Format::R16G16B16A16_SNORM:
+				dds_format = dds_write::DXGI_FORMAT_R16G16B16A16_SNORM;
+				break;
+			case wi::graphics::Format::R16G16B16A16_SINT:
+				dds_format = dds_write::DXGI_FORMAT_R16G16B16A16_SINT;
+				break;
+			case wi::graphics::Format::R32G32_FLOAT:
+				dds_format = dds_write::DXGI_FORMAT_R32G32_FLOAT;
+				break;
+			case wi::graphics::Format::R32G32_UINT:
+				dds_format = dds_write::DXGI_FORMAT_R32G32_UINT;
+				break;
+			case wi::graphics::Format::R32G32_SINT:
+				dds_format = dds_write::DXGI_FORMAT_R32G32_SINT;
+				break;
+			case wi::graphics::Format::R10G10B10A2_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_R10G10B10A2_UNORM;
+				break;
+			case wi::graphics::Format::R10G10B10A2_UINT:
+				dds_format = dds_write::DXGI_FORMAT_R10G10B10A2_UINT;
+				break;
+			case wi::graphics::Format::R11G11B10_FLOAT:
+				dds_format = dds_write::DXGI_FORMAT_R11G11B10_FLOAT;
+				break;
+			case wi::graphics::Format::R8G8B8A8_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_R8G8B8A8_UNORM;
+				break;
+			case wi::graphics::Format::R8G8B8A8_UNORM_SRGB:
+				dds_format = dds_write::DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+				break;
+			case wi::graphics::Format::R8G8B8A8_UINT:
+				dds_format = dds_write::DXGI_FORMAT_R8G8B8A8_UINT;
+				break;
+			case wi::graphics::Format::R8G8B8A8_SNORM:
+				dds_format = dds_write::DXGI_FORMAT_R8G8B8A8_SNORM;
+				break;
+			case wi::graphics::Format::R8G8B8A8_SINT:
+				dds_format = dds_write::DXGI_FORMAT_R8G8B8A8_SINT;
+				break;
+			case wi::graphics::Format::B8G8R8A8_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_B8G8R8A8_UNORM;
+				break;
+			case wi::graphics::Format::B8G8R8A8_UNORM_SRGB:
+				dds_format = dds_write::DXGI_FORMAT_R16G16_SINT;
+				break;
+			case wi::graphics::Format::R16G16_FLOAT:
+				dds_format = dds_write::DXGI_FORMAT_R16G16_FLOAT;
+				break;
+			case wi::graphics::Format::R16G16_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_R16G16_UNORM;
+				break;
+			case wi::graphics::Format::R16G16_UINT:
+				dds_format = dds_write::DXGI_FORMAT_R16G16_UINT;
+				break;
+			case wi::graphics::Format::R16G16_SNORM:
+				dds_format = dds_write::DXGI_FORMAT_R16G16_SNORM;
+				break;
+			case wi::graphics::Format::R16G16_SINT:
+				dds_format = dds_write::DXGI_FORMAT_R16G16_SINT;
+				break;
+			case wi::graphics::Format::D32_FLOAT:
+			case wi::graphics::Format::R32_FLOAT:
+				dds_format = dds_write::DXGI_FORMAT_R32_FLOAT;
+				break;
+			case wi::graphics::Format::R32_UINT:
+				dds_format = dds_write::DXGI_FORMAT_R32_UINT;
+				break;
+			case wi::graphics::Format::R32_SINT:
+				dds_format = dds_write::DXGI_FORMAT_R32_SINT;
+				break;
+			case wi::graphics::Format::R9G9B9E5_SHAREDEXP:
+				dds_format = dds_write::DXGI_FORMAT_R9G9B9E5_SHAREDEXP;
+				break;
+			case wi::graphics::Format::R8G8_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_R8G8_UNORM;
+				break;
+			case wi::graphics::Format::R8G8_UINT:
+				dds_format = dds_write::DXGI_FORMAT_R8G8_UINT;
+				break;
+			case wi::graphics::Format::R8G8_SNORM:
+				dds_format = dds_write::DXGI_FORMAT_R8G8_SNORM;
+				break;
+			case wi::graphics::Format::R8G8_SINT:
+				dds_format = dds_write::DXGI_FORMAT_R8G8_SINT;
+				break;
+			case wi::graphics::Format::R16_FLOAT:
+				dds_format = dds_write::DXGI_FORMAT_R16_FLOAT;
+				break;
+			case wi::graphics::Format::D16_UNORM:
+			case wi::graphics::Format::R16_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_R16_UNORM;
+				break;
+			case wi::graphics::Format::R16_UINT:
+				dds_format = dds_write::DXGI_FORMAT_R16_UINT;
+				break;
+			case wi::graphics::Format::R16_SNORM:
+				dds_format = dds_write::DXGI_FORMAT_R16_SNORM;
+				break;
+			case wi::graphics::Format::R16_SINT:
+				dds_format = dds_write::DXGI_FORMAT_R16_SINT;
+				break;
+			case wi::graphics::Format::R8_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_R8_UNORM;
+				break;
+			case wi::graphics::Format::R8_UINT:
+				dds_format = dds_write::DXGI_FORMAT_R8_UINT;
+				break;
+			case wi::graphics::Format::R8_SNORM:
+				dds_format = dds_write::DXGI_FORMAT_R8_SNORM;
+				break;
+			case wi::graphics::Format::R8_SINT:
+				dds_format = dds_write::DXGI_FORMAT_R8_SINT;
+				break;
+			case wi::graphics::Format::BC1_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_BC1_UNORM;
+				break;
+			case wi::graphics::Format::BC1_UNORM_SRGB:
+				dds_format = dds_write::DXGI_FORMAT_BC1_UNORM_SRGB;
+				break;
+			case wi::graphics::Format::BC2_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_BC2_UNORM;
+				break;
+			case wi::graphics::Format::BC2_UNORM_SRGB:
+				dds_format = dds_write::DXGI_FORMAT_BC2_UNORM_SRGB;
+				break;
+			case wi::graphics::Format::BC3_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_BC3_UNORM;
+				break;
+			case wi::graphics::Format::BC3_UNORM_SRGB:
+				dds_format = dds_write::DXGI_FORMAT_BC3_UNORM_SRGB;
+				break;
+			case wi::graphics::Format::BC4_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_BC4_UNORM;
+				break;
+			case wi::graphics::Format::BC4_SNORM:
+				dds_format = dds_write::DXGI_FORMAT_BC4_SNORM;
+				break;
+			case wi::graphics::Format::BC5_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_BC5_UNORM;
+				break;
+			case wi::graphics::Format::BC5_SNORM:
+				dds_format = dds_write::DXGI_FORMAT_BC5_SNORM;
+				break;
+			case wi::graphics::Format::BC6H_UF16:
+				dds_format = dds_write::DXGI_FORMAT_BC6H_UF16;
+				break;
+			case wi::graphics::Format::BC6H_SF16:
+				dds_format = dds_write::DXGI_FORMAT_BC6H_SF16;
+				break;
+			case wi::graphics::Format::BC7_UNORM:
+				dds_format = dds_write::DXGI_FORMAT_BC7_UNORM;
+				break;
+			case wi::graphics::Format::BC7_UNORM_SRGB:
+				dds_format = dds_write::DXGI_FORMAT_BC7_UNORM_SRGB;
+				break;
+			default:
+				assert(0);
+				return false;
+			}
+			dds_write::write_header(
+				filedata.data(),
+				dds_format,
+				desc.width,
+				desc.type == TextureDesc::Type::TEXTURE_1D ? 0 : desc.height,
+				desc.mip_levels,
+				desc.array_size,
+				has_flag(desc.misc_flags, ResourceMiscFlag::TEXTURECUBE),
+				desc.type == TextureDesc::Type::TEXTURE_3D ? desc.depth : 0
+			);
+			std::memcpy(filedata.data() + sizeof(dds_write::Header), texturedata.data(), texturedata.size());
+			return true;
+		}
+
 		const bool is_png = extension.compare("PNG") == 0;
 
 		if (is_png)
@@ -512,6 +719,12 @@ namespace wi::helper
 					}
 				}
 			}
+			static bool encoder_initialized = false;
+			if (!encoder_initialized)
+			{
+				encoder_initialized = true;
+				basisu::basisu_encoder_init(false, false);
+			}
 			basisu::basis_compressor_params params;
 			params.m_source_images.push_back(basis_image);
 			if (desc.mip_levels > 1)
@@ -535,7 +748,6 @@ namespace wi::helper
 			//	instead we provide mipmap data that was downloaded from the GPU with m_source_mipmap_images.
 			//	This is better, because engine specific mipgen options will be retained, such as coverage preserving mipmaps
 			params.m_mip_gen = false;
-			params.m_pSel_codebook = &g_basis_global_codebook;
 			params.m_quality_level = basisu::BASISU_QUALITY_MAX;
 			params.m_multithreading = true;
 			int num_threads = std::max(1u, std::thread::hardware_concurrency());
@@ -1317,35 +1529,55 @@ namespace wi::helper
 #endif // _WIN32
 	}
 
-	int StringConvert(const char* from, wchar_t* to)
+	int StringConvert(const char* from, wchar_t* to, int dest_size_in_characters)
 	{
 #ifdef _WIN32
 		int num = MultiByteToWideChar(CP_UTF8, 0, from, -1, NULL, 0);
 		if (num > 0)
 		{
+			if (dest_size_in_characters >= 0)
+			{
+				num = std::min(num, dest_size_in_characters);
+			}
 			MultiByteToWideChar(CP_UTF8, 0, from, -1, &to[0], num);
 		}
 		return num;
 #else
 		std::wstring_convert<std::codecvt_utf8<wchar_t>> cv;
-		std::memcpy(to, cv.from_bytes(from).c_str(), cv.converted());
-		return (int)cv.converted();
+		auto result = cv.from_bytes(from).c_str();
+		int num = (int)cv.converted();
+		if (dest_size_in_characters >= 0)
+		{
+			num = std::min(num, dest_size_in_characters);
+		}
+		std::memcpy(to, result, num * sizeof(wchar_t));
+		return num;
 #endif // _WIN32
 	}
 
-	int StringConvert(const wchar_t* from, char* to)
+	int StringConvert(const wchar_t* from, char* to, int dest_size_in_characters)
 	{
 #ifdef _WIN32
 		int num = WideCharToMultiByte(CP_UTF8, 0, from, -1, NULL, 0, NULL, NULL);
 		if (num > 0)
 		{
+			if (dest_size_in_characters >= 0)
+			{
+				num = std::min(num, dest_size_in_characters);
+			}
 			WideCharToMultiByte(CP_UTF8, 0, from, -1, &to[0], num, NULL, NULL);
 		}
 		return num;
 #else
 		std::wstring_convert<std::codecvt_utf8<wchar_t>> cv;
-		std::memcpy(to, cv.to_bytes(from).c_str(), cv.converted());
-		return (int)cv.converted();
+		auto result = cv.to_bytes(from).c_str();
+		int num = (size_t)cv.converted();
+		if (dest_size_in_characters >= 0)
+		{
+			num = std::min(num, dest_size_in_characters);
+		}
+		std::memcpy(to, result, num * sizeof(char));
+		return num;
 #endif // _WIN32
 	}
 	

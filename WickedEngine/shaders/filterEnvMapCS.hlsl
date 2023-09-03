@@ -22,41 +22,51 @@ float3 ImportanceSampleGGX(float2 Xi, float Roughness, float3 N)
 	return TangentX * H.x + TangentY * H.y + N * H.z;
 }
 
-[numthreads(GENERATEMIPCHAIN_2D_BLOCK_SIZE, GENERATEMIPCHAIN_2D_BLOCK_SIZE, 1)]
-void main(uint3 DTid : SV_DispatchThreadID)
+static const uint THREAD_OFFLOAD = 16;
+groupshared uint2 shared_colors[GENERATEMIPCHAIN_2D_BLOCK_SIZE][GENERATEMIPCHAIN_2D_BLOCK_SIZE][THREAD_OFFLOAD];
+
+[numthreads(GENERATEMIPCHAIN_2D_BLOCK_SIZE, GENERATEMIPCHAIN_2D_BLOCK_SIZE, THREAD_OFFLOAD)]
+void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 {
-	if (DTid.x < push.filterResolution.x && DTid.y < push.filterResolution.y)
+	if (DTid.x >= push.filterResolution.x || DTid.y >= push.filterResolution.y)
+		return;
+	
+	TextureCube input = bindless_cubemaps[push.texture_input];
+	RWTexture2DArray<float4> output = bindless_rwtextures2DArray[push.texture_output];
+
+	float2 uv = (DTid.xy + 0.5f) * push.filterResolution_rcp.xy;
+	uint face = DTid.z / THREAD_OFFLOAD;
+	float3 N = normalize(uv_to_cubemap(uv, face));
+	float3 V = N;
+
+	float4 col = 0;
+	uint threadstart = DTid.z % THREAD_OFFLOAD;
+	
+	for (uint i = threadstart; i < push.filterRayCount; i += THREAD_OFFLOAD)
 	{
-		TextureCube input = bindless_cubemaps[push.texture_input];
-		RWTexture2DArray<float4> output = bindless_rwtextures2DArray[push.texture_output];
-
-		float2 uv = (DTid.xy + 0.5f) * push.filterResolution_rcp.xy;
-		float3 N = uv_to_cubemap(uv, DTid.z);
-		float3 V = N;
-
-		float4 col = 0;
-		
-		float Roughness = push.filterRoughness;
-
-		uint rayCount = push.filterRayCount;
-		for (uint i = 0; i < rayCount; ++i)
-		{
-			float2 Xi = hammersley2d(i, rayCount);
-			float3 H = ImportanceSampleGGX(Xi, Roughness, N);
-			float3 L = 2 * dot(V, H) * H - V;
+		float2 Xi = hammersley2d(i, push.filterRayCount);
+		float3 H = ImportanceSampleGGX(Xi, push.filterRoughness, N);
+		float3 L = 2 * dot(V, H) * H - V;
 			
-			float NoL = saturate(dot(N, L));
-			if (NoL > 0)
-			{
-				col += input.SampleLevel(sampler_linear_clamp, L, 0) * NoL;
-			}
-		}
-
-		if(col.a > 0)
+		float NoL = saturate(dot(N, L));
+		if (NoL > 0)
 		{
-			col /= col.a;
+			col += input.SampleLevel(sampler_linear_clamp, L, 0) * NoL;
 		}
-
-		output[uint3(DTid.xy, DTid.z)] = col;
 	}
+
+	shared_colors[GTid.x][GTid.y][threadstart] = pack_half4(col);
+	GroupMemoryBarrierWithGroupSync();
+
+	if(threadstart == 0)
+	{
+		float4 accum = 0;
+		for (uint j = 0; j < THREAD_OFFLOAD;++j)
+		{
+			accum += unpack_half4(shared_colors[GTid.x][GTid.y][j]);
+		}
+		accum /= accum.a;
+		output[uint3(DTid.xy, face)] = accum;
+	}
+
 }

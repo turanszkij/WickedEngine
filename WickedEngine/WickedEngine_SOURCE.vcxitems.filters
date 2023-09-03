@@ -1119,6 +1119,12 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dxva.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dds_write.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\lodepng.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1870,6 +1876,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVideo.cpp">
       <Filter>ENGINE\Video</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\lodepng.cpp">
+      <Filter>UTILITY</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

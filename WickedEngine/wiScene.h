@@ -38,7 +38,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<ArmatureComponent>& armatures = componentLibrary.Register<ArmatureComponent>("wi::scene::Scene::armatures");
 		wi::ecs::ComponentManager<LightComponent>& lights = componentLibrary.Register<LightComponent>("wi::scene::Scene::lights", 2); // version = 2
 		wi::ecs::ComponentManager<CameraComponent>& cameras = componentLibrary.Register<CameraComponent>("wi::scene::Scene::cameras");
-		wi::ecs::ComponentManager<EnvironmentProbeComponent>& probes = componentLibrary.Register<EnvironmentProbeComponent>("wi::scene::Scene::probes");
+		wi::ecs::ComponentManager<EnvironmentProbeComponent>& probes = componentLibrary.Register<EnvironmentProbeComponent>("wi::scene::Scene::probes", 1); // version = 1
 		wi::ecs::ComponentManager<ForceFieldComponent>& forces = componentLibrary.Register<ForceFieldComponent>("wi::scene::Scene::forces", 1); // version = 1
 		wi::ecs::ComponentManager<DecalComponent>& decals = componentLibrary.Register<DecalComponent>("wi::scene::Scene::decals", 1); // version = 1
 		wi::ecs::ComponentManager<AnimationComponent>& animations = componentLibrary.Register<AnimationComponent>("wi::scene::Scene::animations", 1); // version = 1
@@ -208,15 +208,7 @@ namespace wi::scene
 			mutable bool pre_clear = true;
 		} vxgi;
 
-		// Environment probe cubemap array state:
-		static constexpr uint32_t envmapCount = 16;
-		static constexpr uint32_t envmapRes = 256;
-		static constexpr uint32_t envmapMSAASampleCount = 8;
-		wi::graphics::Texture envrenderingDepthBuffer;
-		wi::graphics::Texture envrenderingColorBuffer;
-		wi::graphics::Texture envrenderingDepthBuffer_MSAA;
-		wi::graphics::Texture envrenderingColorBuffer_MSAA;
-		wi::graphics::Texture envmapArray;
+		EnvironmentProbeComponent global_dynamic_probe; // when no envprobes are placed, this will be the fallback
 
 		// Impostor state:
 		static constexpr uint32_t maxImpostorCount = 8;

@@ -630,23 +630,19 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			}
 		}
 
-		wi::jobsystem::context ctx;
 		for (auto& x : conv)
 		{
 			wi::vector<uint8_t> filedata;
 			if (wi::helper::saveTextureToMemory(x.second.GetTexture(), filedata))
 			{
 				x.second.SetFileData(std::move(filedata));
-				wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
-					wi::vector<uint8_t> filedata_ktx2;
-					if (wi::helper::saveTextureToMemoryFile(x.second.GetFileData(), x.second.GetTexture().desc, "KTX2", filedata_ktx2))
-					{
-						x.second = wi::resourcemanager::Load(x.first, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA, filedata_ktx2.data(), filedata_ktx2.size());
-					}
-					});
+				wi::vector<uint8_t> filedata_ktx2;
+				if (wi::helper::saveTextureToMemoryFile(x.second.GetFileData(), x.second.GetTexture().desc, "KTX2", filedata_ktx2))
+				{
+					x.second = wi::resourcemanager::Load(x.first, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA, filedata_ktx2.data(), filedata_ktx2.size());
+				}
 			}
 		}
-		wi::jobsystem::Wait(ctx);
 
 		for (uint32_t i = 0; i < scene.materials.GetCount(); ++i)
 		{

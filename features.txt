@@ -100,6 +100,7 @@ KHR_materials_ior
 KHR_materials_emissive_strength
 KHR_texture_basisu
 KHR_lights_punctual
+EXT_lights_image_based
 
 GLTF 2.0 - VRM 0.0 extensions supported:
 VRM_secondaryAnimation

@@ -1015,6 +1015,7 @@ namespace wi::scene
 
 	struct EnvironmentProbeComponent
 	{
+		static constexpr uint32_t envmapMSAASampleCount = 8;
 		enum FLAGS
 		{
 			EMPTY = 0,
@@ -1023,21 +1024,29 @@ namespace wi::scene
 			MSAA = 1 << 2,
 		};
 		uint32_t _flags = DIRTY;
+		uint32_t resolution = 128; // power of two
+		std::string textureName; // if texture is coming from an asset
 
 		// Non-serialized attributes:
-		int textureIndex = -1;
+		wi::graphics::Texture texture;
+		wi::Resource resource; // if texture is coming from an asset
 		XMFLOAT3 position;
 		float range;
 		XMFLOAT4X4 inverseMatrix;
 		mutable bool render_dirty = false;
 
-		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
+		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; DeleteResource(); } else { _flags &= ~DIRTY; } }
 		inline void SetRealTime(bool value) { if (value) { _flags |= REALTIME; } else { _flags &= ~REALTIME; } }
-		inline void SetMSAA(bool value) { if (value) { _flags |= MSAA; } else { _flags &= ~MSAA; } }
+		inline void SetMSAA(bool value) { if (value) { _flags |= MSAA; } else { _flags &= ~MSAA; } SetDirty(); }
 
 		inline bool IsDirty() const { return _flags & DIRTY; }
 		inline bool IsRealTime() const { return _flags & REALTIME; }
 		inline bool IsMSAA() const { return _flags & MSAA; }
+
+		size_t GetMemorySizeInBytes() const;
+
+		void CreateRenderData();
+		void DeleteResource();
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

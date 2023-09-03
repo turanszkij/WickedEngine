@@ -119,11 +119,13 @@ static const uint DEPTHOFFIELD_TILESIZE = 32;
 #define dof_cocscale postprocess.params0.x
 #define dof_maxcoc postprocess.params0.y
 
+static const uint TONEMAP_FLAG_DITHER = 1 << 0;
+static const uint TONEMAP_FLAG_ACES = 1 << 1;
 struct PushConstantsTonemap
 {
 	float2 resolution_rcp;
 	float exposure;
-	float dither;
+	uint flags;
 	float brightness;
 	float contrast;
 	float saturation;

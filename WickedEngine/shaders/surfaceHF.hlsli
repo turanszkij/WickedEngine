@@ -11,11 +11,10 @@
 //	reflectance = 0
 static const float4 surfacemap_simple = float4(1, 1, 0, 0);
 
-static const float roughness_min = 0.045f;
-
-float3 F_Schlick(const float3 f0, float f90, float VoH)
+float3 F_Schlick(const float3 f0, float VoH)
 {
 	// Schlick 1994, "An Inexpensive BRDF Model for Physically-Based Rendering"
+	float f90 = saturate(50.0 * dot(f0, 0.33)); // reflectance at grazing angle
 	return f0 + (f90 - f0) * pow5(1.0 - VoH);
 }
 
@@ -36,7 +35,6 @@ struct SheenSurface
 	float roughness;
 
 	// computed values:
-	float roughnessBRDF;
 	float DFG;
 	float albedoScaling;
 };
@@ -48,7 +46,6 @@ struct ClearcoatSurface
 	float3 N;
 
 	// computed values:
-	float roughnessBRDF;
 	float3 R;
 	float3 F;
 };
@@ -105,9 +102,7 @@ struct Surface
 	float3 bumpColor;
 
 	// These will be computed when calling Update():
-	float roughnessBRDF;	// roughness input for BRDF functions
 	float NdotV;			// cos(angle between normal and view vector)
-	float f90;				// reflectance at grazing angle
 	float3 R;				// reflection vector
 	float3 F;				// fresnel term computed from NdotV
 
@@ -245,25 +240,23 @@ struct Surface
 	
 	inline void update()
 	{
-		roughness = clamp(roughness, roughness_min, 1);
-		roughnessBRDF = roughness * roughness;
+		// the basic roughness must be between [0,1], do not clamp it here for BRDF,
+		//	because it is also used for other effects (eg. envmaps, reflections, etc.)
+		//	BRDF roughness (squared) will have the clamping just before it is computed
+		roughness = saturate(roughness);
 
 #ifdef SHEEN
-		sheen.roughness = clamp(sheen.roughness, roughness_min, 1);
-		sheen.roughnessBRDF = sheen.roughness * sheen.roughness;
+		sheen.roughness = saturate(sheen.roughness);
 #endif // SHEEN
 
 #ifdef CLEARCOAT
-		clearcoat.roughness = clamp(clearcoat.roughness, roughness_min, 1);
-		clearcoat.roughnessBRDF = clearcoat.roughness * clearcoat.roughness;
+		clearcoat.roughness = saturate(clearcoat.roughness);
 #endif // CLEARCOAT
 
 		NdotV = saturate(dot(N, V) + 1e-5);
 		
-		f90 = saturate(50.0 * dot(f0, 0.33));
-		
 #ifdef CARTOON
-		F = F_Schlick(f0, f90, NdotV);
+		F = F_Schlick(f0, NdotV);
 #else
 		F = EnvBRDFApprox(f0, roughness, NdotV);
 #endif // CARTOON
@@ -279,7 +272,7 @@ struct Surface
 #ifdef CLEARCOAT
 		float clearcoatNdotV = saturate(dot(clearcoat.N, V) + 1e-5);
 #ifdef CARTOON
-		clearcoat.F = F_Schlick(f0, f90, clearcoatNdotV);
+		clearcoat.F = F_Schlick(f0, clearcoatNdotV);
 #else
 		clearcoat.F = EnvBRDFApprox(f0, clearcoat.roughness, clearcoatNdotV);
 #endif // CARTOON
@@ -293,6 +286,7 @@ struct Surface
 		aniso.B = normalize(cross(N, aniso.T));
 		aniso.TdotV = dot(aniso.T.xyz, V);
 		aniso.BdotV = dot(aniso.B, V);
+		float roughnessBRDF = sqr(clamp(roughness, 0.045, 1));
 		aniso.at = max(0, roughnessBRDF * (1 + aniso.strength));
 		aniso.ab = max(0, roughnessBRDF * (1 - aniso.strength));
 #endif // ANISOTROPIC
@@ -300,6 +294,13 @@ struct Surface
 #ifdef CARTOON
 		F = smoothstep(0.1, 0.5, F);
 #endif // CARTOON
+		
+#ifndef ENVMAPRENDERING
+		if (GetFrame().options & OPTION_BIT_FORCE_DIFFUSE_LIGHTING)
+#endif // ENVMAPRENDERING
+		{
+			F = 0;
+		}
 	}
 
 	inline bool IsReceiveShadow() { return flags & SURFACE_FLAG_RECEIVE_SHADOW; }

@@ -13,7 +13,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 1600));
+	SetSize(XMFLOAT2(580, 1640));
 
 	float step = 21;
 	float itemheight = 18;
@@ -698,6 +698,23 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	float hei = itemheight;
 	wid = 140;
 	float mod_wid = 60;
+
+	tonemapCombo.Create("Tonemap: ");
+	tonemapCombo.SetTooltip("Choose tone mapping type");
+	tonemapCombo.SetScriptTip("RenderPath3D::SetTonemap(Tonemap value)");
+	tonemapCombo.AddItem("Reinhard");
+	tonemapCombo.AddItem("ACES");
+	tonemapCombo.OnSelect([=](wi::gui::EventArgs args) {
+		editor->renderPath->setTonemap((wi::renderer::Tonemap)args.iValue);
+		editor->main->config.GetSection("graphics").Set("tonemap", args.iValue);
+		editor->main->config.Commit();
+		});
+	if (editor->main->config.GetSection("graphics").Has("tonemap"))
+	{
+		int tonemap = editor->main->config.GetSection("graphics").GetInt("tonemap");
+		tonemapCombo.SetSelected(tonemap);
+	}
+	AddWidget(&tonemapCombo);
 
 	exposureSlider.Create(0.0f, 3.0f, 1, 10000, "Tonemap Exposure: ");
 	exposureSlider.SetTooltip("Set the tonemap exposure value");
@@ -1490,6 +1507,7 @@ void GraphicsWindow::Update()
 	visibilityComputeShadingCheckBox.SetCheck(editor->renderPath->visibility_shading_in_compute);
 	resolutionScaleSlider.SetValue(editor->resolutionScale);
 	MSAAComboBox.SetSelectedByUserdataWithoutCallback(editor->renderPath->getMSAASampleCount());
+	tonemapCombo.SetSelected((int)editor->renderPath->getTonemap());
 	exposureSlider.SetValue(editor->renderPath->getExposure());
 	brightnessSlider.SetValue(editor->renderPath->getBrightness());
 	contrastSlider.SetValue(editor->renderPath->getContrast());
@@ -1772,6 +1790,7 @@ void GraphicsWindow::ResizeLayout()
 
 	y += jump;
 
+	add(tonemapCombo);
 	add(exposureSlider);
 	add(brightnessSlider);
 	add(contrastSlider);

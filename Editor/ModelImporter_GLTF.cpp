@@ -4,6 +4,7 @@
 #include "wiRandom.h"
 
 #include "Utility/stb_image.h"
+#include "Utility/dds_write.h"
 
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NO_FS
@@ -1855,6 +1856,152 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		camera.fov = (float)x.perspective.yfov;
 		camera.zFarP = (float)x.perspective.zfar;
 		camera.zNearP = (float)x.perspective.znear;
+	}
+
+	// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Vendor/EXT_lights_image_based/README.md
+	auto env = state.gltfModel.extensions.find("EXT_lights_image_based");
+	if (env != state.gltfModel.extensions.end())
+	{
+		int counter = 0;
+		auto lights = env->second.Get("lights");
+		for (int i = 0; i < (int)lights.ArrayLen(); ++i)
+		{
+			if (scene.weathers.GetCount() == 0)
+			{
+				Entity entity = CreateEntity();
+				scene.weathers.Create(entity);
+				scene.names.Create(entity) = "weather";
+			}
+			WeatherComponent& weather = scene.weathers[0];
+
+			auto light = lights.Get(i);
+			if (light.Has("intensity"))
+			{
+				auto value = light.Get("intensity");
+				weather.skyExposure = (float)value.GetNumberAsDouble();
+			}
+			if (light.Has("rotation"))
+			{
+				auto value = light.Get("rotation");
+				XMFLOAT4 quaternion = {};
+				quaternion.x = value.ArrayLen() > 0 ? float(value.Get(0).IsNumber() ? value.Get(0).Get<double>() : value.Get(0).Get<int>()) : 0.0f;
+				quaternion.y = value.ArrayLen() > 1 ? float(value.Get(1).IsNumber() ? value.Get(1).Get<double>() : value.Get(1).Get<int>()) : 0.0f;
+				quaternion.z = value.ArrayLen() > 2 ? float(value.Get(2).IsNumber() ? value.Get(2).Get<double>() : value.Get(2).Get<int>()) : 0.0f;
+				quaternion.w = value.ArrayLen() > 3 ? float(value.Get(3).IsNumber() ? value.Get(3).Get<double>() : value.Get(3).Get<int>()) : 1.0f;
+				XMVECTOR Q = XMLoadFloat4(&quaternion);
+				float angle;
+				XMVECTOR axis;
+				XMQuaternionToAxisAngle(&axis, &angle, Q);
+				weather.sky_rotation = XM_2PI - angle;
+			}
+			//if (light.Has("irradianceCoefficients"))
+			//{
+			//	auto value = light.Get("irradianceCoefficients");
+			//	float spherical_harmonics[9][3] = {};
+			//	for (int c = 0; c < std::min(9, (int)value.ArrayLen()); ++c)
+			//	{
+			//		for (int f = 0; f < std::min(3, (int)value.Get(c).ArrayLen()); ++f)
+			//		{
+			//			spherical_harmonics[c][f] = (float)value.Get(c).Get(f).GetNumberAsDouble();
+			//		}
+			//	}
+			//}
+			if (light.Has("specularImages"))
+			{
+				auto mips = light.Get("specularImages");
+				int mip_count = (int)mips.ArrayLen();
+
+				TextureDesc desc;
+				desc.format = Format::R9G9B9E5_SHAREDEXP;
+				desc.bind_flags = BindFlag::SHADER_RESOURCE;
+				if (light.Has("specularImageSize"))
+				{
+					auto value = light.Get("specularImageSize");
+					desc.width = desc.height = (uint32_t)value.GetNumberAsInt();
+				}
+				desc.array_size = 6;
+				desc.mip_levels = (uint32_t)mip_count;
+				desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
+
+				wi::vector<wi::vector<XMFLOAT3SE>> hdr_datas(mip_count * 6);
+
+				for (int m = 0; m < mip_count; ++m)
+				{
+					auto mip = mips.Get(m);
+					int face_count = (int)mip.ArrayLen();
+					for (int f = 0; f < face_count; ++f)
+					{
+						auto index = mip.Get(f).GetNumberAsInt();
+						auto& image = state.gltfModel.images[index];
+						int idx = f * mip_count + m;
+						wi::Resource res = wi::resourcemanager::Load(image.uri, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+						auto& imagefiledata = res.GetFileData();
+						const stbi_uc* filedata = imagefiledata.data();
+						size_t filesize = imagefiledata.size();
+						int width, height, bpp;
+						wi::Color* rgba = (wi::Color*)stbi_load_from_memory(filedata, (int)filesize, &width, &height, &bpp, 4);
+						wi::vector<XMFLOAT3SE>& hdr_data = hdr_datas[idx];
+						hdr_data.resize(width * height);
+						for (int y = 0; y < height; ++y)
+						{
+							for (int x = 0; x < width; ++x)
+							{
+								int y_flip = height - 1 - y;
+								wi::Color color = rgba[x + y_flip * width];
+								XMFLOAT4 unpk = color.toFloat4();
+								// Remove SRGB curve:
+								unpk.x = std::pow(unpk.x, 2.2f);
+								unpk.y = std::pow(unpk.y, 2.2f);
+								unpk.z = std::pow(unpk.z, 2.2f);
+								if (bpp == 4) // if has alpha channel, then it is assumed to have RGBD encoding
+								{
+									// RGBD conversion: https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Vendor/EXT_lights_image_based/README.md#rgbd
+									unpk.x /= unpk.w;
+									unpk.y /= unpk.w;
+									unpk.z /= unpk.w;
+								}
+								hdr_data[x + y * width] = XMFLOAT3SE(unpk.x, unpk.y, unpk.z);
+							}
+						}
+						stbi_image_free(rgba);
+					}
+				}
+
+				size_t wholeDataSize = 0;
+				for (auto& x : hdr_datas)
+				{
+					wholeDataSize += x.size() * sizeof(XMFLOAT3SE);
+				}
+
+				wi::vector<uint8_t> dds;
+				dds.resize(sizeof(dds_write::Header) + wholeDataSize);
+				dds_write::write_header(
+					dds.data(),
+					dds_write::DXGI_FORMAT_R9G9B9E5_SHAREDEXP,
+					desc.width,
+					desc.height,
+					desc.mip_levels,
+					desc.array_size,
+					true
+				);
+
+				size_t offset = sizeof(dds_write::Header);
+				for (auto& x : hdr_datas)
+				{
+					std::memcpy(dds.data() + offset, x.data(), x.size() * sizeof(XMFLOAT3SE));
+					offset += x.size() * sizeof(XMFLOAT3SE);
+				}
+				
+				weather.skyMapName = wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(fileName)) + "/EXT_lights_image_based_" + std::to_string(counter++) + ".dds";
+				weather.skyMap = wi::resourcemanager::Load(
+					weather.skyMapName,
+					wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA,
+					dds.data(),
+					dds.size()
+				);
+				weather.ambient = {}; // remove ambient if gltf has env lighting
+			}
+		}
 	}
 
 	Import_Extension_VRM(state);

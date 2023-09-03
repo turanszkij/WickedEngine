@@ -1500,6 +1500,54 @@ namespace wi::scene
 		}
 	}
 
+	void EnvironmentProbeComponent::CreateRenderData()
+	{
+		if (!textureName.empty() && !resource.IsValid())
+		{
+			resource = wi::resourcemanager::Load(textureName);
+		}
+		if (resource.IsValid())
+		{
+			texture = resource.GetTexture();
+			SetDirty(false);
+			return;
+		}
+		resolution = wi::math::GetNextPowerOfTwo(resolution);
+		if (texture.IsValid() && resolution == texture.desc.width)
+			return;
+		SetDirty();
+
+		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		TextureDesc desc;
+		desc.array_size = 6;
+		desc.height = resolution;
+		desc.width = resolution;
+		desc.usage = Usage::DEFAULT;
+		desc.format = Format::BC6H_UF16;
+		desc.sample_count = 1; // Note that this texture is always non-MSAA, even if probe is rendered as MSAA, because this contains resolved result
+		desc.bind_flags = BindFlag::SHADER_RESOURCE;
+		desc.mip_levels = GetMipCount(resolution, resolution, 1, 16);
+		desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
+		desc.layout = ResourceState::SHADER_RESOURCE;
+		device->CreateTexture(&desc, nullptr, &texture);
+		device->SetName(&texture, "EnvironmentProbeComponent::texture");
+	}
+	void EnvironmentProbeComponent::DeleteResource()
+	{
+		if (resource.IsValid())
+		{
+			// only delete these if resource is actually valid!
+			resource = {};
+			texture = {};
+			textureName = {};
+		}
+	}
+	size_t EnvironmentProbeComponent::GetMemorySizeInBytes() const
+	{
+		return ComputeTextureMemorySizeInBytes(texture.desc);
+	}
+
 	AnimationComponent::AnimationChannel::PathDataType AnimationComponent::AnimationChannel::GetPathDataType() const
 	{
 		switch (path)

@@ -14,7 +14,8 @@ float4 main(PixelInput input) : SV_TARGET
 	bool highQuality = GetFrame().options & OPTION_BIT_REALISTIC_SKY_HIGH_QUALITY;
 	bool receiveShadow = GetFrame().options & OPTION_BIT_REALISTIC_SKY_RECEIVE_SHADOW;
 
-	float4 color = float4(GetDynamicSkyColor(input.pos.xy, normal, true, false, false, highQuality, false, receiveShadow), 1);
+	// No direct sun should be visible inside the probe capture:
+	float4 color = float4(GetDynamicSkyColor(input.pos.xy, normal, false, false, false, highQuality, false, receiveShadow), 1);
 
 	color = clamp(color, 0, 65000);
 	return float4(color.rgb, 1);

@@ -2007,7 +2007,8 @@ namespace wi
 				getMSAASampleCount() > 1 ? &rtParticleDistortion_Resolved : &rtParticleDistortion,
 				getEyeAdaptionEnabled() ? &luminanceResources.luminance : nullptr,
 				getBloomEnabled() ? &bloomResources.texture_bloom : nullptr,
-				colorspace
+				colorspace,
+				getTonemap()
 			);
 
 			rt_first = nullptr;
