@@ -7791,7 +7791,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				push.filterRoughness = (float)i / (float)(desc.mip_levels - 1);
 				if (probe.IsRealTime())
 				{
-					push.filterRayCount = 128;
+					push.filterRayCount = 1024;
 				}
 				else
 				{

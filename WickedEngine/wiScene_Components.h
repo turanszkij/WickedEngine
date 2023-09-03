@@ -1024,7 +1024,7 @@ namespace wi::scene
 			MSAA = 1 << 2,
 		};
 		uint32_t _flags = DIRTY;
-		uint32_t resolution = 256; // power of two
+		uint32_t resolution = 128; // power of two
 		std::string textureName; // if texture is coming from an asset
 
 		// Non-serialized attributes:

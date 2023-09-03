@@ -211,7 +211,19 @@ void EnvProbeWindow::SetEntity(Entity entity)
 		msaaCheckBox.SetEnabled(true);
 		refreshButton.SetEnabled(true);
 		resolutionCombo.SetSelectedByUserdata(probe->resolution);
-		infoLabel.SetText("GPU Memory usage: " + wi::helper::GetMemorySizeText(probe->GetMemorySizeInBytes()) + "\n" + default_text);
+
+		std::string text =
+			"GPU Memory usage: " + wi::helper::GetMemorySizeText(probe->GetMemorySizeInBytes()) + "\n" +
+			"Resolution: " + std::to_string(probe->texture.desc.width) + "\n" +
+			"Mipmaps: " + std::to_string(probe->texture.desc.mip_levels) + "\n" +
+			"Format: " + std::string(wi::graphics::GetFormatString(probe->texture.desc.format)) + "\n"
+			;
+		if (!probe->textureName.empty())
+		{
+			text += "Filename: " + probe->textureName + "\n";
+		}
+		text += "\n" + default_text;
+		infoLabel.SetText(text);
 	}
 
 }
