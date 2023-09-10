@@ -1228,6 +1228,10 @@ namespace vulkan_internal
 		createInfo.clipped = VK_TRUE;
 		createInfo.oldSwapchain = internal_state->swapChain;
 
+		// An explicit wait is added as a workaround for crashes experienced on some systems when rapidly resizing the screen
+		res = vkDeviceWaitIdle(device);
+		assert(res == VK_SUCCESS);
+
 		res = vkCreateSwapchainKHR(device, &createInfo, nullptr, &internal_state->swapChain);
 		assert(res == VK_SUCCESS);
 
