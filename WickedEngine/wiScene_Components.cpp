@@ -563,7 +563,15 @@ namespace wi::scene
 		const size_t uv_count = std::max(vertex_uvset_0.size(), vertex_uvset_1.size());
 
 		GPUBufferDesc bd;
-		bd.usage = Usage::DEFAULT;
+		if (device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
+		{
+			// In UMA mode, it is better to create UPLOAD buffer, this avoids one copy from UPLOAD to DEFAULT
+			bd.usage = Usage::UPLOAD;
+		}
+		else
+		{
+			bd.usage = Usage::DEFAULT;
+		}
 		bd.bind_flags = BindFlag::VERTEX_BUFFER | BindFlag::INDEX_BUFFER | BindFlag::SHADER_RESOURCE;
 		bd.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::TYPED_FORMAT_CASTING | ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS;
 		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
