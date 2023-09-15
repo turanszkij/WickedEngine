@@ -1178,7 +1178,7 @@ namespace vulkan_internal
 			}
 		}
 
-		if (swapchain_capabilities.currentExtent.width != 0xFFFFFFFF && swapchain_capabilities.currentExtent.width != 0xFFFFFFFF)
+		if (swapchain_capabilities.currentExtent.width != 0xFFFFFFFF && swapchain_capabilities.currentExtent.height != 0xFFFFFFFF)
 		{
 			internal_state->swapChainExtent = swapchain_capabilities.currentExtent;
 		}
