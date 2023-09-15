@@ -8088,12 +8088,12 @@ void VXGI_Voxelize(
 
 	static thread_local RenderQueue renderQueue;
 	renderQueue.init();
-	for (size_t i = 0; i < vis.scene->aabb_objects.size(); ++i)
+	for (size_t i = 0; i < scene.aabb_objects.size(); ++i)
 	{
-		const AABB& aabb = vis.scene->aabb_objects[i];
+		const AABB& aabb = scene.aabb_objects[i];
 		if (bbox.intersects(aabb))
 		{
-			const ObjectComponent& object = vis.scene->objects[i];
+			const ObjectComponent& object = scene.objects[i];
 			if (object.IsRenderable() && (scene.vxgi.clipmap_to_update < (VXGI_CLIPMAP_COUNT - object.cascadeMask)))
 			{
 				renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits);
