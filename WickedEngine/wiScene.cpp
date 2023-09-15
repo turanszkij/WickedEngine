@@ -5107,7 +5107,8 @@ namespace wi::scene
 					// Find the nearest feature on the triangle to the sphere.
 					XMVECTOR Dist = XMVector3Dot(XMVectorSubtract(Center, p0), N);
 
-					if (!mesh->IsDoubleSided() && XMVectorGetX(Dist) > 0)
+					bool onBackside = XMVectorGetX(Dist) > 0;
+					if (!mesh->IsDoubleSided() && onBackside)
 						return; // pass through back faces
 
 					// If the center of the sphere is farther from the plane of the triangle than
@@ -5191,13 +5192,53 @@ namespace wi::scene
 						XMVECTOR intersectionVec = Center - bestPoint;
 						XMVECTOR intersectionVecLen = XMVector3Length(intersectionVec);
 
-						float depth = capsule.radius - XMVectorGetX(intersectionVecLen);
+						float lenX = XMVectorGetX(intersectionVecLen);
+						float depth = capsule.radius - lenX;
 						if (depth > result.depth)
 						{
 							result.entity = entity;
-							result.depth = depth;
 							XMStoreFloat3(&result.position, bestPoint);
-							XMStoreFloat3(&result.normal, intersectionVec / intersectionVecLen);
+							if (lenX > std::numeric_limits<float>::epsilon())
+							{
+								result.depth = depth;
+								XMStoreFloat3(&result.normal, intersectionVec / intersectionVecLen);
+							} 
+							else 
+							{
+								// The line segment that makes the spine of the capsule has 
+								// intersected the triangle plane, so interSectionVec ~= Zero, 
+								// and depth ~= capsule.radius.  Use the triangle normal.
+								XMVECTOR CandNorm; 
+								if (onBackside)
+								{
+									CandNorm = N;
+								} else 
+								{
+									CandNorm = XMVectorNegate(N);
+								}
+								XMStoreFloat3(&result.normal, CandNorm);
+
+								// If the capsule has penetrated enough to intersect the spine, the
+								// depth is calculated from closest point on the spine, not from the
+								// actual endpoint, so the real depth may be greater, depending on the
+								// orientation of the capsule relative to the triangle normal.
+								// For simplicity, we assume the penetrating endpoint is the one closest
+								// to Center, and we project the distance from Center to the closest endpoint
+								// onto the normal.
+								XMVECTOR A_C = XMVector3LengthSq(Center - A);
+								XMVECTOR B_C = XMVector3LengthSq(Center - B);
+								XMVECTOR CDiff;
+								if (XMVector3Less(A_C, B_C)) 
+								{
+									CDiff = XMVectorSubtract(A, Center);
+								}
+								else 
+								{
+									CDiff = XMVectorSubtract(B, Center);
+								}
+								XMVECTOR CDiffOnN = XMVectorMultiply(XMVector3Dot(CDiff, N), CDiff);
+								result.depth = depth + XMVectorGetX(XMVector3Length(CDiffOnN));
+							}
 
 							XMVECTOR vel = bestPoint - XMVector3Transform(XMVector3Transform(bestPoint, objectMat_Inverse), objectMatPrev);
 							XMStoreFloat3(&result.velocity, vel);
