@@ -4033,6 +4033,7 @@ namespace wi::scene
 		if (probes.GetCount() == 0)
 		{
 			global_dynamic_probe.SetRealTime(true);
+			global_dynamic_probe.resolution = 64;
 			global_dynamic_probe.CreateRenderData();
 		}
 	}

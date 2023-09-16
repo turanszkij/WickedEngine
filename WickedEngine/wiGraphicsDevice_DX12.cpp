@@ -2782,6 +2782,13 @@ using namespace dx12_internal;
 		if (features.CacheCoherentUMA())
 		{
 			capabilities |= GraphicsDeviceCapability::CACHE_COHERENT_UMA;
+
+			D3D12MA::POOL_DESC pool_desc = {};
+			pool_desc.HeapProperties.Type = D3D12_HEAP_TYPE_CUSTOM;
+			pool_desc.HeapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_WRITE_COMBINE;
+			pool_desc.HeapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_L0;
+			hr = allocationhandler->allocator->CreatePool(&pool_desc, &allocationhandler->uma_pool);
+			assert(SUCCEEDED(hr));
 		}
 #endif // PLATFORM_XBOX
 
@@ -3539,6 +3546,17 @@ using namespace dx12_internal;
 			}
 		}
 
+		if (
+			initial_data != nullptr &&
+			allocationDesc.HeapType == D3D12_HEAP_TYPE_DEFAULT &&
+			CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA)
+			)
+		{
+			// UMA: custom pool is like DEFAULT heap + CPU Write Combine
+			//	It will be used with WriteToSubresource to avoid GPU copy from UPLOAD to DEAFULT
+			allocationDesc.CustomPool = allocationhandler->uma_pool.Get();
+		}
+
 #ifdef PLATFORM_XBOX
 		wi::graphics::xbox::ApplyTextureCreationFlags(texture->desc, resourcedesc.Flags, allocationDesc.ExtraHeapFlags);
 #endif // PLATFORM_XBOX
@@ -3622,52 +3640,69 @@ using namespace dx12_internal;
 		// Issue data copy on request:
 		if (initial_data != nullptr)
 		{
-			wi::vector<D3D12_SUBRESOURCE_DATA> data(internal_state->footprints.size());
-			for (size_t i = 0; i < internal_state->footprints.size(); ++i)
+			if (allocationDesc.CustomPool != nullptr && allocationDesc.CustomPool == allocationhandler->uma_pool.Get())
 			{
-				data[i] = _ConvertSubresourceData(initial_data[i]);
-			}
+				// UMA direct texture write path:
+				for (size_t i = 0; i < internal_state->footprints.size(); ++i)
+				{
+					const SubresourceData& data = initial_data[i];
 
-			CopyAllocator::CopyCMD cmd;
-			void* mapped_data = nullptr;
-			if (desc->usage == Usage::UPLOAD)
-			{
-				mapped_data = texture->mapped_data;
+					hr = internal_state->resource->WriteToSubresource(
+						(UINT)i,
+						nullptr,
+						data.data_ptr,
+						data.row_pitch,
+						data.slice_pitch
+					);
+					assert(SUCCEEDED(hr));
+				}
 			}
 			else
 			{
-				cmd = copyAllocator.allocate(internal_state->total_size);
-				mapped_data = cmd.uploadbuffer.mapped_data;
-			}
+				// Discrete GPU texture upload path:
+				CopyAllocator::CopyCMD cmd;
+				void* mapped_data = nullptr;
+				if (texture->mapped_data == nullptr)
+				{
+					cmd = copyAllocator.allocate(internal_state->total_size);
+					mapped_data = cmd.uploadbuffer.mapped_data;
+				}
+				else
+				{
+					mapped_data = texture->mapped_data;
+				}
 
-			for (size_t i = 0; i < internal_state->footprints.size(); ++i)
-			{
-				if (internal_state->rowSizesInBytes[i] > (SIZE_T)-1)
-					continue;
-				D3D12_MEMCPY_DEST DestData = {};
-				DestData.pData = (void*)((UINT64)mapped_data + internal_state->footprints[i].Offset);
-				DestData.RowPitch = (SIZE_T)internal_state->footprints[i].Footprint.RowPitch;
-				DestData.SlicePitch = (SIZE_T)internal_state->footprints[i].Footprint.RowPitch * (SIZE_T)internal_state->numRows[i];
-				MemcpySubresource(&DestData, &data[i], (SIZE_T)internal_state->rowSizesInBytes[i], internal_state->numRows[i], internal_state->footprints[i].Footprint.Depth);
+				for (size_t i = 0; i < internal_state->footprints.size(); ++i)
+				{
+					D3D12_SUBRESOURCE_DATA data = _ConvertSubresourceData(initial_data[i]);
+
+					if (internal_state->rowSizesInBytes[i] > (SIZE_T)-1)
+						continue;
+					D3D12_MEMCPY_DEST DestData = {};
+					DestData.pData = (void*)((UINT64)mapped_data + internal_state->footprints[i].Offset);
+					DestData.RowPitch = (SIZE_T)internal_state->footprints[i].Footprint.RowPitch;
+					DestData.SlicePitch = (SIZE_T)internal_state->footprints[i].Footprint.RowPitch * (SIZE_T)internal_state->numRows[i];
+					MemcpySubresource(&DestData, &data, (SIZE_T)internal_state->rowSizesInBytes[i], internal_state->numRows[i], internal_state->footprints[i].Footprint.Depth);
+
+					if (cmd.IsValid())
+					{
+						CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state->resource.Get(), UINT(i));
+						CD3DX12_TEXTURE_COPY_LOCATION Src(to_internal(&cmd.uploadbuffer)->resource.Get(), internal_state->footprints[i]);
+						cmd.commandList->CopyTextureRegion(
+							&Dst,
+							0,
+							0,
+							0,
+							&Src,
+							nullptr
+						);
+					}
+				}
 
 				if (cmd.IsValid())
 				{
-					CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state->resource.Get(), UINT(i));
-					CD3DX12_TEXTURE_COPY_LOCATION Src(to_internal(&cmd.uploadbuffer)->resource.Get(), internal_state->footprints[i]);
-					cmd.commandList->CopyTextureRegion(
-						&Dst,
-						0,
-						0,
-						0,
-						&Src,
-						nullptr
-					);
+					copyAllocator.submit(cmd);
 				}
-			}
-
-			if (cmd.IsValid())
-			{
-				copyAllocator.submit(cmd);
 			}
 		}
 

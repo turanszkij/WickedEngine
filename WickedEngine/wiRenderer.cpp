@@ -7839,13 +7839,22 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				push.filterResolution_rcp.x = 1.0f / push.filterResolution.x;
 				push.filterResolution_rcp.y = 1.0f / push.filterResolution.y;
 				push.filterRoughness = (float)i / (float)(desc.mip_levels - 1);
-				if (probe.IsRealTime())
+				if (probe_aabb.layerMask & vis.layerMask)
 				{
-					push.filterRayCount = 1024;
+					// real probe:
+					if (probe.IsRealTime())
+					{
+						push.filterRayCount = 1024;
+					}
+					else
+					{
+						push.filterRayCount = 8192;
+					}
 				}
 				else
 				{
-					push.filterRayCount = 8192;
+					// dummy probe, reduced ray count:
+					push.filterRayCount = 64;
 				}
 				push.texture_input = device->GetDescriptorIndex(&envrenderingColorBuffer, SubresourceType::SRV);
 				push.texture_output = device->GetDescriptorIndex(&envrenderingColorBuffer_Filtered, SubresourceType::UAV, i);

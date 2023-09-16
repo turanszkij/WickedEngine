@@ -430,6 +430,8 @@ namespace wi::graphics
 			uint64_t framecount = 0;
 			std::mutex destroylocker;
 
+			Microsoft::WRL::ComPtr<D3D12MA::Pool> uma_pool;
+
 			struct DescriptorAllocator
 			{
 				GraphicsDevice_DX12* device = nullptr;
