@@ -4426,6 +4426,7 @@ Luna<ObjectComponent_BindLua>::FunctionType ObjectComponent_BindLua::methods[] =
 	lunamethod(ObjectComponent_BindLua, GetEmissiveColor),
 	lunamethod(ObjectComponent_BindLua, GetUserStencilRef),
 	lunamethod(ObjectComponent_BindLua, GetDrawDistance),
+	lunamethod(ObjectComponent_BindLua, IsForeground),
 
 	lunamethod(ObjectComponent_BindLua, SetMeshID),
 	lunamethod(ObjectComponent_BindLua, SetCascadeMask),
@@ -4434,6 +4435,7 @@ Luna<ObjectComponent_BindLua>::FunctionType ObjectComponent_BindLua::methods[] =
 	lunamethod(ObjectComponent_BindLua, SetEmissiveColor),
 	lunamethod(ObjectComponent_BindLua, SetUserStencilRef),
 	lunamethod(ObjectComponent_BindLua, SetDrawDistance),
+	lunamethod(ObjectComponent_BindLua, SetForeground),
 	{ NULL, NULL }
 };
 Luna<ObjectComponent_BindLua>::PropertyType ObjectComponent_BindLua::properties[] = {
@@ -4484,6 +4486,11 @@ int ObjectComponent_BindLua::GetLodDistanceMultiplier(lua_State* L)
 int ObjectComponent_BindLua::GetDrawDistance(lua_State* L)
 {
 	wi::lua::SSetInt(L, (int)component->draw_distance);
+	return 1;
+}
+int ObjectComponent_BindLua::IsForeground(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsForeground());
 	return 1;
 }
 
@@ -4614,6 +4621,21 @@ int ObjectComponent_BindLua::SetDrawDistance(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "SetDrawDistance(float value) not enough arguments!");
+	}
+
+	return 0;
+}
+int ObjectComponent_BindLua::SetForeground(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		float value = wi::lua::SGetBool(L, 1);
+		component->SetForeground(value);
+	}
+	else
+	{
+		wi::lua::SError(L, "SetForeground(bool value) not enough arguments!");
 	}
 
 	return 0;

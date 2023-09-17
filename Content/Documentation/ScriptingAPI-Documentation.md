@@ -941,10 +941,12 @@ TextureSlot = {
 - SetCascadeMask(int value)
 - SetRendertypeMask(int value)
 - SetColor(Vector value)
-- GetEmissiveColor(Vector value)
+- SetEmissiveColor(Vector value)
 - SetUserStencilRef(int value)
-- GetLodDistanceMultiplier(float value)
-- GetDrawDistance(float value)
+- SetLodDistanceMultiplier(float value)
+- SetDrawDistance(float value)
+- SetForeground(bool value) -- enable/disable foreground object rendering. Foreground objects will be always rendered on top of regular objects
+- IsForeground() : bool
 
 #### InverseKinematicsComponent
 Describes an Inverse Kinematics effector.
