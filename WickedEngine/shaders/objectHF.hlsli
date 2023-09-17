@@ -5,21 +5,21 @@
 #define TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
 #else
 #define SHADOW_MASK_ENABLED
-#endif
+#endif // TRANSPARENT
 
 #if !defined(TRANSPARENT) && !defined(PREPASS)
 #define DISABLE_ALPHATEST
-#endif
+#endif // !defined(TRANSPARENT) && !defined(PREPASS)
 
 #ifdef PLANARREFLECTION
 #define DISABLE_ENVMAPS
 #define DISABLE_VOXELGI
-#endif
+#endif // PLANARREFLECTION
 
 #ifdef WATER
 #define DISABLE_ENVMAPS
 #define DISABLE_VOXELGI
-#endif
+#endif // WATER
 
 #define LIGHTMAP_QUALITY_BICUBIC
 

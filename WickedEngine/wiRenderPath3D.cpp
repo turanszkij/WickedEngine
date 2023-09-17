@@ -10,6 +10,7 @@ using namespace wi::enums;
 
 namespace wi
 {
+	static constexpr float foreground_depth_range = 0.01f;
 
 	void RenderPath3D::DeleteGPUResources()
 	{
@@ -832,15 +833,35 @@ namespace wi
 			device->EventBegin("Opaque Z-prepass", cmd);
 			auto range = wi::profiler::BeginRangeGPU("Z-Prepass", cmd);
 
-			Viewport vp;
-			vp.width = (float)depthBuffer_Main.GetDesc().width;
-			vp.height = (float)depthBuffer_Main.GetDesc().height;
-			device->BindViewports(1, &vp, cmd);
-
 			Rect scissor = GetScissorInternalResolution();
 			device->BindScissorRects(1, &scissor, cmd);
 
-			wi::renderer::DrawScene(visibility_main, RENDERPASS_PREPASS, cmd, drawscene_flags);
+			Viewport vp;
+			vp.width = (float)depthBuffer_Main.GetDesc().width;
+			vp.height = (float)depthBuffer_Main.GetDesc().height;
+
+			// Foreground:
+			vp.min_depth = 1 - foreground_depth_range;
+			vp.max_depth = 1;
+			device->BindViewports(1, &vp, cmd);
+			wi::renderer::DrawScene(
+				visibility_main,
+				RENDERPASS_PREPASS,
+				cmd,
+				wi::renderer::DRAWSCENE_OPAQUE |
+				wi::renderer::DRAWSCENE_FOREGROUND_ONLY
+			);
+
+			// Regular:
+			vp.min_depth = 0;
+			vp.max_depth = 1;
+			device->BindViewports(1, &vp, cmd);
+			wi::renderer::DrawScene(
+				visibility_main,
+				RENDERPASS_PREPASS,
+				cmd,
+				drawscene_flags
+			);
 
 			wi::profiler::EndRange(range);
 			device->EventEnd(cmd);
@@ -1041,11 +1062,6 @@ namespace wi
 				device->EventBegin("Planar reflections Z-Prepass", cmd);
 				auto range = wi::profiler::BeginRangeGPU("Planar Reflections Z-Prepass", cmd);
 
-				Viewport vp;
-				vp.width = (float)depthBuffer_Reflection.GetDesc().width;
-				vp.height = (float)depthBuffer_Reflection.GetDesc().height;
-				device->BindViewports(1, &vp, cmd);
-
 				RenderPassImage rp[] = {
 					RenderPassImage::DepthStencil(
 						&depthBuffer_Reflection,
@@ -1058,7 +1074,34 @@ namespace wi
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 
-				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_PREPASS, cmd, wi::renderer::DRAWSCENE_OPAQUE | wi::renderer::DRAWSCENE_IMPOSTOR | wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS);
+				Viewport vp;
+				vp.width = (float)depthBuffer_Reflection.GetDesc().width;
+				vp.height = (float)depthBuffer_Reflection.GetDesc().height;
+
+				// Foreground:
+				vp.min_depth = 1 - foreground_depth_range;
+				vp.max_depth = 1;
+				device->BindViewports(1, &vp, cmd);
+				wi::renderer::DrawScene(
+					visibility_reflection,
+					RENDERPASS_PREPASS,
+					cmd,
+					wi::renderer::DRAWSCENE_OPAQUE |
+					wi::renderer::DRAWSCENE_FOREGROUND_ONLY
+				);
+
+				// Regular:
+				vp.min_depth = 0;
+				vp.max_depth = 1;
+				device->BindViewports(1, &vp, cmd);
+				wi::renderer::DrawScene(
+					visibility_reflection,
+					RENDERPASS_PREPASS,
+					cmd,
+					wi::renderer::DRAWSCENE_OPAQUE |
+					wi::renderer::DRAWSCENE_IMPOSTOR |
+					wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS
+				);
 
 				device->RenderPassEnd(cmd);
 
@@ -1111,11 +1154,6 @@ namespace wi
 				device->EventBegin("Planar reflections", cmd);
 				auto range = wi::profiler::BeginRangeGPU("Planar Reflections", cmd);
 
-				Viewport vp;
-				vp.width = (float)depthBuffer_Reflection.GetDesc().width;
-				vp.height = (float)depthBuffer_Reflection.GetDesc().height;
-				device->BindViewports(1, &vp, cmd);
-
 				RenderPassImage rp[] = {
 					RenderPassImage::RenderTarget(
 						&rtReflection,
@@ -1133,8 +1171,41 @@ namespace wi
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 
-				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, wi::renderer::DRAWSCENE_OPAQUE | wi::renderer::DRAWSCENE_IMPOSTOR | wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS);
-				wi::renderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, wi::renderer::DRAWSCENE_TRANSPARENT | wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS); // separate renderscene, to be drawn after opaque and transparent sort order
+				Viewport vp;
+				vp.width = (float)depthBuffer_Reflection.GetDesc().width;
+				vp.height = (float)depthBuffer_Reflection.GetDesc().height;
+
+				// Foreground:
+				vp.min_depth = 1 - foreground_depth_range;
+				vp.max_depth = 1;
+				device->BindViewports(1, &vp, cmd);
+				wi::renderer::DrawScene(
+					visibility_reflection,
+					RENDERPASS_MAIN,
+					cmd,
+					wi::renderer::DRAWSCENE_OPAQUE |
+					wi::renderer::DRAWSCENE_FOREGROUND_ONLY
+				);
+
+				// Regular:
+				vp.min_depth = 0;
+				vp.max_depth = 1;
+				device->BindViewports(1, &vp, cmd);
+				wi::renderer::DrawScene(
+					visibility_reflection,
+					RENDERPASS_MAIN,
+					cmd,
+					wi::renderer::DRAWSCENE_OPAQUE |
+					wi::renderer::DRAWSCENE_IMPOSTOR |
+					wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS
+				);
+				wi::renderer::DrawScene(
+					visibility_reflection,
+					RENDERPASS_MAIN,
+					cmd,
+					wi::renderer::DRAWSCENE_TRANSPARENT |
+					wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS
+				); // separate renderscene, to be drawn after opaque and transparent sort order
 				wi::renderer::DrawSky(*scene, cmd);
 
 				if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
@@ -1328,12 +1399,39 @@ namespace wi
 			if (visibility_shading_in_compute)
 			{
 				// In visibility compute shading, the impostors must still be drawn using rasterization:
-				wi::renderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, wi::renderer::DRAWSCENE_IMPOSTOR);
+				wi::renderer::DrawScene(
+					visibility_main,
+					RENDERPASS_MAIN,
+					cmd,
+					wi::renderer::DRAWSCENE_IMPOSTOR
+				);
 			}
 			else
 			{
 				auto range = wi::profiler::BeginRangeGPU("Opaque Scene", cmd);
-				wi::renderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
+
+				// Foreground:
+				vp.min_depth = 1 - foreground_depth_range;
+				vp.max_depth = 1;
+				device->BindViewports(1, &vp, cmd);
+				wi::renderer::DrawScene(
+					visibility_main,
+					RENDERPASS_MAIN,
+					cmd,
+					wi::renderer::DRAWSCENE_OPAQUE |
+					wi::renderer::DRAWSCENE_FOREGROUND_ONLY
+				);
+
+				// Regular:
+				vp.min_depth = 0;
+				vp.max_depth = 1;
+				device->BindViewports(1, &vp, cmd);
+				wi::renderer::DrawScene(
+					visibility_main,
+					RENDERPASS_MAIN,
+					cmd,
+					drawscene_flags
+				);
 				wi::renderer::DrawSky(*scene, cmd);
 				wi::profiler::EndRange(range); // Opaque Scene
 			}
@@ -1750,11 +1848,6 @@ namespace wi
 		};
 		device->RenderPassBegin(rp, getMSAASampleCount() > 1 ? 3 : 2, cmd);
 
-		Viewport vp;
-		vp.width = (float)depthBuffer_Main.GetDesc().width;
-		vp.height = (float)depthBuffer_Main.GetDesc().height;
-		device->BindViewports(1, &vp, cmd);
-
 		Rect scissor = GetScissorInternalResolution();
 		device->BindScissorRects(1, &scissor, cmd);
 
@@ -1763,13 +1856,36 @@ namespace wi
 			auto range = wi::profiler::BeginRangeGPU("Transparent Scene", cmd);
 			device->EventBegin("Transparent Scene", cmd);
 
-			uint32_t drawscene_flags = 0;
-			drawscene_flags |= wi::renderer::DRAWSCENE_TRANSPARENT;
-			drawscene_flags |= wi::renderer::DRAWSCENE_OCCLUSIONCULLING;
-			drawscene_flags |= wi::renderer::DRAWSCENE_HAIRPARTICLE;
-			drawscene_flags |= wi::renderer::DRAWSCENE_TESSELLATION;
-			drawscene_flags |= wi::renderer::DRAWSCENE_OCEAN;
-			wi::renderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
+			Viewport vp;
+			vp.width = (float)depthBuffer_Main.GetDesc().width;
+			vp.height = (float)depthBuffer_Main.GetDesc().height;
+
+			// Foreground:
+			vp.min_depth = 1 - foreground_depth_range;
+			vp.max_depth = 1;
+			device->BindViewports(1, &vp, cmd);
+			wi::renderer::DrawScene(
+				visibility_main,
+				RENDERPASS_MAIN,
+				cmd,
+				wi::renderer::DRAWSCENE_TRANSPARENT |
+				wi::renderer::DRAWSCENE_FOREGROUND_ONLY
+			);
+
+			// Regular:
+			vp.min_depth = 0;
+			vp.max_depth = 1;
+			device->BindViewports(1, &vp, cmd);
+			wi::renderer::DrawScene(
+				visibility_main,
+				RENDERPASS_MAIN,
+				cmd,
+				wi::renderer::DRAWSCENE_TRANSPARENT |
+				wi::renderer::DRAWSCENE_OCCLUSIONCULLING |
+				wi::renderer::DRAWSCENE_HAIRPARTICLE |
+				wi::renderer::DRAWSCENE_TESSELLATION |
+				wi::renderer::DRAWSCENE_OCEAN
+			);
 
 			device->EventEnd(cmd);
 			wi::profiler::EndRange(range); // Transparent Scene

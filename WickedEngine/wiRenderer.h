@@ -199,14 +199,15 @@ namespace wi::renderer
 
 	enum DRAWSCENE_FLAGS
 	{
-		DRAWSCENE_OPAQUE = 1 << 0,
-		DRAWSCENE_TRANSPARENT = 1 << 1,
-		DRAWSCENE_OCCLUSIONCULLING = 1 << 2,
-		DRAWSCENE_TESSELLATION = 1 << 3,
-		DRAWSCENE_HAIRPARTICLE = 1 << 4,
-		DRAWSCENE_IMPOSTOR = 1 << 5,
-		DRAWSCENE_OCEAN = 1 << 6,
-		DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS = 1 << 7,
+		DRAWSCENE_OPAQUE = 1 << 0, // include opaque objects
+		DRAWSCENE_TRANSPARENT = 1 << 1, // include transparent objects
+		DRAWSCENE_OCCLUSIONCULLING = 1 << 2, // enable skipping objects based on occlusion culling results
+		DRAWSCENE_TESSELLATION = 1 << 3, // enable tessellation
+		DRAWSCENE_HAIRPARTICLE = 1 << 4, // include hair particles
+		DRAWSCENE_IMPOSTOR = 1 << 5, // include impostors
+		DRAWSCENE_OCEAN = 1 << 6, // include ocean
+		DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS = 1 << 7, // don't draw subsets which have planar reflection material
+		DRAWSCENE_FOREGROUND_ONLY = 1 << 8, // only include objects that are tagged as foreground
 	};
 
 	// Draw the world from a camera. You must call BindCameraCB() at least once in this frame prior to this

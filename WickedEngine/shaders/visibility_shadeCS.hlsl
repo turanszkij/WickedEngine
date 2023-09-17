@@ -5,6 +5,12 @@
 //#define DISABLE_ENVMAPS
 //#define DISABLE_SOFT_SHADOWMAP
 //#define DISABLE_TRANSPARENT_SHADOWMAP
+
+#ifdef PLANARREFLECTION
+#define DISABLE_ENVMAPS
+#define DISABLE_VOXELGI
+#endif // PLANARREFLECTION
+
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 #include "raytracingHF.hlsli"

@@ -5651,6 +5651,7 @@ void DrawScene(
 	const bool occlusion = (flags & DRAWSCENE_OCCLUSIONCULLING) && GetOcclusionCullingEnabled();
 	const bool ocean = flags & DRAWSCENE_OCEAN;
 	const bool skip_planar_reflection_objects = flags & DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS;
+	const bool foreground_only = flags & DRAWSCENE_FOREGROUND_ONLY;
 
 	device->EventBegin("DrawScene", cmd);
 	device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
@@ -5689,7 +5690,7 @@ void DrawScene(
 			continue;
 
 		const ObjectComponent& object = vis.scene->objects[instanceIndex];
-		if (object.IsRenderable() && (object.GetFilterMask() & filterMask))
+		if (object.IsRenderable() && object.IsForeground() == foreground_only && (object.GetFilterMask() & filterMask))
 		{
 			const float distance = wi::math::Distance(vis.camera->Eye, object.center);
 			if (distance > object.fadeDistance + object.radius)

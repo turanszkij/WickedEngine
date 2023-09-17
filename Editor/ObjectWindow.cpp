@@ -257,7 +257,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_OBJECT " Object", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 700));
+	SetSize(XMFLOAT2(670, 730));
 
 	closeButton.SetTooltip("Delete ObjectComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -363,6 +363,24 @@ void ObjectWindow::Create(EditorComponent* _editor)
 		}
 		});
 	AddWidget(&navmeshCheckBox);
+
+	foregroundCheckBox.Create("Foreground: ");
+	foregroundCheckBox.SetTooltip("Set object to be rendered in the foreground. This is useful for first person hands or weapons.");
+	foregroundCheckBox.SetSize(XMFLOAT2(hei, hei));
+	foregroundCheckBox.SetPos(XMFLOAT2(x, y += step));
+	foregroundCheckBox.SetCheck(true);
+	foregroundCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			ObjectComponent* object = scene.objects.GetComponent(x.entity);
+			if (object != nullptr)
+			{
+				object->SetForeground(args.bValue);
+			}
+		}
+		});
+	AddWidget(&foregroundCheckBox);
 
 	ditherSlider.Create(0, 1, 0, 1000, "Transparency: ");
 	ditherSlider.SetTooltip("Adjust transparency of the object. Opaque materials will use dithered transparency in this case!");
@@ -672,6 +690,7 @@ void ObjectWindow::SetEntity(Entity entity)
 
 		renderableCheckBox.SetCheck(object->IsRenderable());
 		shadowCheckBox.SetCheck(object->IsCastingShadow());
+		foregroundCheckBox.SetCheck(object->IsForeground());
 		navmeshCheckBox.SetCheck(object->filterMask & wi::enums::FILTER_NAVIGATION_MESH);
 		cascadeMaskSlider.SetValue((float)object->cascadeMask);
 		ditherSlider.SetValue(object->GetTransparency());
@@ -747,6 +766,7 @@ void ObjectWindow::ResizeLayout()
 
 	add_right(renderableCheckBox);
 	add_right(shadowCheckBox);
+	add_right(foregroundCheckBox);
 	add_right(navmeshCheckBox);
 	add(ditherSlider);
 	add(cascadeMaskSlider);

@@ -665,6 +665,7 @@ namespace wi::scene
 			REQUEST_PLANAR_REFLECTION = 1 << 4,
 			LIGHTMAP_RENDER_REQUEST = 1 << 5,
 			LIGHTMAP_DISABLE_BLOCK_COMPRESSION = 1 << 6,
+			FOREGROUND = 1 << 7,
 		};
 		uint32_t _flags = RENDERABLE | CAST_SHADOW;
 
@@ -703,6 +704,7 @@ namespace wi::scene
 		inline void SetRequestPlanarReflection(bool value) { if (value) { _flags |= REQUEST_PLANAR_REFLECTION; } else { _flags &= ~REQUEST_PLANAR_REFLECTION; } }
 		inline void SetLightmapRenderRequest(bool value) { if (value) { _flags |= LIGHTMAP_RENDER_REQUEST; } else { _flags &= ~LIGHTMAP_RENDER_REQUEST; } }
 		inline void SetLightmapDisableBlockCompression(bool value) { if (value) { _flags |= LIGHTMAP_DISABLE_BLOCK_COMPRESSION; } else { _flags &= ~LIGHTMAP_DISABLE_BLOCK_COMPRESSION; } }
+		inline void SetForeground(bool value) { if (value) { _flags |= FOREGROUND; } else { _flags &= ~FOREGROUND; } }
 
 		inline bool IsRenderable() const { return _flags & RENDERABLE; }
 		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
@@ -710,6 +712,7 @@ namespace wi::scene
 		inline bool IsRequestPlanarReflection() const { return _flags & REQUEST_PLANAR_REFLECTION; }
 		inline bool IsLightmapRenderRequested() const { return _flags & LIGHTMAP_RENDER_REQUEST; }
 		inline bool IsLightmapDisableBlockCompression() const { return _flags & LIGHTMAP_DISABLE_BLOCK_COMPRESSION; }
+		inline bool IsForeground() const { return _flags & FOREGROUND; }
 
 		inline float GetTransparency() const { return 1 - color.w; }
 		inline uint32_t GetFilterMask() const { return filterMask | filterMaskDynamic; }
