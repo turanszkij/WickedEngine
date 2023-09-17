@@ -3300,12 +3300,19 @@ using namespace dx12_internal;
 				&allocationInfo,
 				&internal_state->allocation
 			);
-
 			assert(SUCCEEDED(hr));
-			return SUCCEEDED(hr);
-		}
 
-		if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE))
+			hr = device->CreatePlacedResource(
+				internal_state->allocation->GetHeap(),
+				internal_state->allocation->GetOffset(),
+				&resourceDesc,
+				resourceState,
+				nullptr,
+				PPV_ARGS(internal_state->resource)
+			);
+			assert(SUCCEEDED(hr));
+		}
+		else if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE))
 		{
 			hr = device->CreateReservedResource(
 				&resourceDesc,
@@ -3313,6 +3320,7 @@ using namespace dx12_internal;
 				nullptr,
 				PPV_ARGS(internal_state->resource)
 			);
+			assert(SUCCEEDED(hr));
 			buffer->sparse_page_size = D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
 		}
 		else
@@ -3325,8 +3333,9 @@ using namespace dx12_internal;
 				&internal_state->allocation,
 				PPV_ARGS(internal_state->resource)
 			);
+			assert(SUCCEEDED(hr));
 		}
-		assert(SUCCEEDED(hr));
+
 		if (!SUCCEEDED(hr))
 			return false;
 

@@ -3841,10 +3841,23 @@ using namespace vulkan_internal;
 			);
 			assert(res == VK_SUCCESS);
 
-			return res == VK_SUCCESS;
-		}
+			res = vkCreateBuffer(
+				device,
+				&bufferInfo,
+				nullptr,
+				&internal_state->resource
+			);
+			assert(res == VK_SUCCESS);
 
-		if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE))
+			res = vkBindBufferMemory(
+				device,
+				internal_state->resource,
+				internal_state->allocation->GetMemory(),
+				internal_state->allocation->GetOffset()
+			);
+			assert(res == VK_SUCCESS);
+		}
+		else if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE))
 		{
 			bufferInfo.flags |= VK_BUFFER_CREATE_SPARSE_BINDING_BIT;
 			bufferInfo.flags |= VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT;
@@ -3877,8 +3890,8 @@ using namespace vulkan_internal;
 			}
 
 			res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
+			assert(res == VK_SUCCESS);
 		}
-		assert(res == VK_SUCCESS);
 
 		if (desc->usage == Usage::READBACK || desc->usage == Usage::UPLOAD)
 		{
@@ -7264,7 +7277,7 @@ using namespace vulkan_internal;
 					}
 				}
 
-				if (out_info.bufferBindCount > 0)
+				if (info.bindCount > 0)
 				{
 					out_info.pBufferBinds = &out_bind.buffer_bind_info;
 					out_info.bufferBindCount = 1;
