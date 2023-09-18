@@ -1,6 +1,6 @@
 #ifndef DDS_WRITE_H
 #define DDS_WRITE_H
-// Minimal DDS file writer utility created by Turánszki János for Wicked Engine
+// Minimal DDS file writer utility created by Turánszki János for Wicked Engine: https://github.com/turanszkij/WickedEngine
 // Based on DDS specification: https://learn.microsoft.com/en-us/windows/win32/direct3ddds/dx-graphics-dds-pguide#dds-file-layout
 // 
 //	Usage:
@@ -30,15 +30,28 @@
 //	...Or you can just freely use the structures here to write your own DDS header
 //
 //	Note: texture data need to be in the following layout in the DDS file, tightly packed:
-//		- Array slice 0 / cubemap face +X / depth slice 0
+//		- Array slice 0 / cubemap face +X
 //			- mipmap 0
+//				- depth slice 0
+//				- depth slice 1
+//				- ...
 //			- mipmap 1
+//				- depth slice 0
+//				- depth slice 1
+//				- ...
 //			- ...
-//		- Array slice 1 / cubemap face -X / depth slice 1
+//		- Array slice 1 / cubemap face -X
 //			- mipmap 0
+//				- depth slice 0
+//				- depth slice 1
+//				- ...
 //			- mipmap 1
+//				- depth slice 0
+//				- depth slice 1
+//				- ...
 //			- ...
 //		- ...
+//	Note: This is similar to how you would provide the texture with DirectX 11 API's D3D11_SUBRESOURCE_DATA when creating textures
 //
 //	Support:
 //		- This will only create DX10 version of DDS, doesn't support legacy
@@ -352,6 +365,7 @@ namespace dds_write
 		if (height == 0)
 		{
 			h.header10.resourceDimension = D3D10_RESOURCE_DIMENSION_TEXTURE1D;
+			h.header.dwHeight = 1;
 		}
 		if (mip_levels > 1)
 		{
