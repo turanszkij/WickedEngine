@@ -1892,6 +1892,29 @@ void LoadBuffers()
 		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_3D_WIND]);
 		device->SetName(&textures[TEXTYPE_3D_WIND], "textures[TEXTYPE_3D_WIND]");
 	}
+	{
+		// Note: Create dummy shadow map atlas to avoid issue with AMD RX 6650 GPU
+		//	It seems like it incorectly handles dynamic branch on descriptor index
+		TextureDesc desc;
+		desc.width = 1;
+		desc.height = 1;
+		desc.format = format_depthbuffer_shadowmap;
+		desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
+		desc.layout = ResourceState::SHADER_RESOURCE;
+		desc.misc_flags = ResourceMiscFlag::TEXTURE_COMPATIBLE_COMPRESSION;
+		device->CreateTexture(&desc, nullptr, &shadowMapAtlas);
+		device->SetName(&shadowMapAtlas, "shadowMapAtlas");
+
+		desc.format = format_rendertarget_shadowmap;
+		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+		desc.layout = ResourceState::SHADER_RESOURCE;
+		desc.clear.color[0] = 1;
+		desc.clear.color[1] = 1;
+		desc.clear.color[2] = 1;
+		desc.clear.color[3] = 0;
+		device->CreateTexture(&desc, nullptr, &shadowMapAtlas_Transparent);
+		device->SetName(&shadowMapAtlas_Transparent, "shadowMapAtlas_Transparent");
+	}
 }
 void SetUpStates()
 {
