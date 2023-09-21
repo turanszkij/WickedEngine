@@ -98,20 +98,23 @@ namespace wi::font
 		namespace SDF
 		{
 			static constexpr int padding = 5;
-			static constexpr unsigned char onedge_value = 180;
+			static constexpr unsigned char onedge_value = 127;
+			static constexpr float onedge_value_float = onedge_value / 255.0f;
 			static constexpr float pixel_dist_scale = float(onedge_value) / float(padding);
 		}
-		// pack glyph identifiers to a 32-bit hash:
-		//	height:	10 bits	(height supported: 0 - 1023)
-		//	sdf:	1 bit
-		//	style:	5 bits	(number of font styles supported: 0 - 31)
-		//	code:	16 bits (character code range supported: 0 - 65535)
-		constexpr int32_t glyphhash(int code, bool sdf, int style, int height) { return ((code & 0xFFFF) << 16) | (int(sdf) << 15) | ((style & 0x1F) << 10) | (height & 0x3FF); }
-		constexpr int codefromhash(int32_t hash) { return int((hash >> 16) & 0xFFFF); }
-		constexpr bool sdffromhash(int32_t hash) { return bool((hash >> 15) & 0x1); }
-		constexpr int stylefromhash(int32_t hash) { return int((hash >> 10) & 0x1F); }
-		constexpr int heightfromhash(int32_t hash) { return int((hash >> 0) & 0x3FF); }
-		static wi::unordered_set<int32_t> pendingGlyphs;
+		union GlyphHash
+		{
+			struct
+			{
+				uint32_t code : 16;		// character code range supported: 0 - 65535
+				uint32_t height : 10;	// height supported: 0 - 1023
+				uint32_t style : 5;		// number of font styles supported: 0 - 31
+				uint32_t sdf : 1;		// true or false
+			} bits;
+			uint32_t raw;
+		};
+		static_assert(sizeof(GlyphHash) == sizeof(uint32_t));
+		static wi::unordered_set<uint32_t> pendingGlyphs;
 		static std::mutex glyphLock;
 
 		struct ParseStatus
@@ -156,13 +159,17 @@ namespace wi::font
 			for (size_t i = 0; i < text_length; ++i)
 			{
 				int code = (int)text[i];
-				const int32_t hash = glyphhash(code, params.isSDFRenderingEnabled(), params.style, params.size);
+				GlyphHash hash;
+				hash.bits.code = text[i];
+				hash.bits.height = params.size;
+				hash.bits.style = (uint32_t)params.style;
+				hash.bits.sdf = params.isSDFRenderingEnabled() ? 1 : 0;
 
-				if (glyph_lookup.count(hash) == 0)
+				if (glyph_lookup.count(hash.raw) == 0)
 				{
 					// glyph not packed yet, so add to pending list:
 					std::scoped_lock locker(glyphLock);
-					pendingGlyphs.insert(hash);
+					pendingGlyphs.insert(hash.raw);
 					continue;
 				}
 
@@ -184,7 +191,7 @@ namespace wi::font
 				}
 				else
 				{
-					const Glyph& glyph = glyph_lookup.at(hash);
+					const Glyph& glyph = glyph_lookup.at(hash.raw);
 					const float glyphWidth = glyph.width;
 					const float glyphHeight = glyph.height;
 					const float glyphOffsetX = glyph.x;
@@ -348,12 +355,14 @@ namespace wi::font
 		// If there are pending glyphs, render them and repack the atlas:
 		if (!pendingGlyphs.empty())
 		{
-			for (int32_t hash : pendingGlyphs)
+			for (int32_t raw : pendingGlyphs)
 			{
-				const int code = codefromhash(hash);
-				bool is_sdf = sdffromhash(hash);
-				int style = stylefromhash(hash);
-				const float height = (float)heightfromhash(hash);
+				GlyphHash hash;
+				hash.raw = raw;
+				const int code = (int)hash.bits.code;
+				const float height = (float)hash.bits.height;
+				const bool is_sdf = hash.bits.sdf ? true : false;
+				uint32_t style = hash.bits.style;
 				FontStyle* fontStyle = fontStyles[style].get();
 				int glyphIndex = stbtt_FindGlyphIndex(&fontStyle->fontInfo, code);
 				if (glyphIndex == 0)
@@ -370,7 +379,7 @@ namespace wi::font
 
 				float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle->fontInfo, height * upscaling);
 
-				Bitmap& bitmap = bitmap_lookup[hash];
+				Bitmap& bitmap = bitmap_lookup[hash.raw];
 				bitmap.width = 0;
 				bitmap.height = 0;
 				bitmap.xoff = 0;
@@ -394,10 +403,10 @@ namespace wi::font
 				wi::rectpacker::Rect rect = {};
 				rect.w = bitmap.width + 2;
 				rect.h = bitmap.height + 2;
-				rect.id = hash;
-				rect_lookup[hash] = rect;
+				rect.id = hash.raw;
+				rect_lookup[hash.raw] = rect;
 
-				Glyph& glyph = glyph_lookup[hash];
+				Glyph& glyph = glyph_lookup[hash.raw];
 				glyph.x = float(bitmap.xoff) * upscaling_rcp;
 				glyph.y = (float(bitmap.yoff) + float(fontStyle->ascent) * fontScaling) * upscaling_rcp;
 				glyph.width = float(bitmap.width) * upscaling_rcp;
@@ -603,8 +612,11 @@ namespace wi::font
 				// font shadow render:
 				XMStoreFloat4x4(&font.transform, XMMatrixTranslation(params.shadow_offset_x, params.shadow_offset_y, 0) * M);
 				font.color = params.shadowColor.rgba;
-				font.sdf_threshold_top = wi::math::Lerp(float(SDF::onedge_value) / 255.0f, 0, std::max(0.0f, params.shadow_bolden));
-				font.sdf_threshold_bottom = wi::math::Lerp(font.sdf_threshold_top, 0, std::max(0.0f, params.shadow_softness));
+				const float boldness = std::max(0.0f, params.shadow_bolden);
+				const float mid = wi::math::Lerp(SDF::onedge_value_float, 0.0f, boldness);
+				const float softness = std::max(0.0f, params.shadow_softness);
+				font.sdf_threshold_bottom = wi::math::saturate(mid - softness);
+				font.sdf_threshold_top = wi::math::saturate(mid + softness);
 				device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
 
 				device->DrawInstanced(4, status.quadCount, 0, 0, cmd);
@@ -613,8 +625,11 @@ namespace wi::font
 			// font base render:
 			XMStoreFloat4x4(&font.transform, M);
 			font.color = params.color.rgba;
-			font.sdf_threshold_top = wi::math::Lerp(float(SDF::onedge_value) / 255.0f, 0, std::max(0.0f, params.bolden));
-			font.sdf_threshold_bottom = wi::math::Lerp(font.sdf_threshold_top, 0, std::max(0.0f, params.softness));
+			const float boldness = std::max(0.0f, params.bolden);
+			const float mid = wi::math::Lerp(SDF::onedge_value_float, 0.0f, boldness);
+			const float softness = std::max(0.0f, params.softness);
+			font.sdf_threshold_bottom = wi::math::saturate(mid - softness);
+			font.sdf_threshold_top = wi::math::saturate(mid + softness);
 			device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
 
 			device->DrawInstanced(4, status.quadCount, 0, 0, cmd);
