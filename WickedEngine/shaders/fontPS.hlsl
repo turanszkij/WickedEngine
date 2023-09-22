@@ -5,19 +5,21 @@ struct VertextoPixel
 {
 	float4 pos : SV_Position;
 	float2 uv : TEXCOORD0;
+	float2 bary : TEXCOORD1;
 };
 
 float4 main(VertextoPixel input) : SV_TARGET
 {
-	float value = bindless_textures[font.texture_index].SampleLevel(sampler_linear_clamp, input.uv, 0).r;
+	Texture2D tex = bindless_textures[font.texture_index];
+	float value = tex.SampleLevel(sampler_linear_clamp, input.uv, 0).r;
 	float4 color = unpack_rgba(font.color);
 
 	[branch]
 	if (font.flags & FONT_FLAG_SDF_RENDERING)
 	{
-		//float w = fwidth(value);
-		float w = max(abs(ddx(value)), abs(ddy(value))); // consistency according to screen space area
-		w = max(0.001, w); // min softness
+		float2 bary_fw = fwidth(input.bary);
+		float w = max(bary_fw.x, bary_fw.y); // screen coverage dependency
+		w = max(0.005, w); // min softness to avoid pixelated hard edge in magnification
 		w += font.softness;
 		w = saturate(w);
 		float mid = lerp(SDF::onedge_value_unorm, 0, font.bolden);

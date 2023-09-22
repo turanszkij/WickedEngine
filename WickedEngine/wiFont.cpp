@@ -335,6 +335,7 @@ namespace wi::font
 	{
 		std::scoped_lock locker(glyphLock);
 
+		upscaling = std::max(1.5f, upscaling); // add some minimum upscaling, especially for SDF
 		static float upscaling_prev = 1;
 		const float upscaling_rcp = 1.0f / upscaling;
 
