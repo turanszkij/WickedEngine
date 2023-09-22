@@ -15,7 +15,13 @@ float4 main(VertextoPixel input) : SV_TARGET
 	[branch]
 	if (font.flags & FONT_FLAG_SDF_RENDERING)
 	{
-		color.a *= smoothstep(font.sdf_threshold_bottom, font.sdf_threshold_top, value);
+		//float w = fwidth(value);
+		float w = max(abs(ddx(value)), abs(ddy(value))); // consistency according to screen space area
+		w = max(0.001, w); // min softness
+		w += font.softness;
+		w = saturate(w);
+		float mid = lerp(SDF::onedge_value_unorm, 0, font.bolden);
+		color.a *= smoothstep(saturate(mid - w), saturate(mid + w), value);
 	}
 	else
 	{

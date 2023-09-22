@@ -95,13 +95,6 @@ namespace wi::font
 			wi::vector<uint8_t> data;
 		};
 		static wi::unordered_map<int32_t, Bitmap> bitmap_lookup;
-		namespace SDF
-		{
-			static constexpr int padding = 5;
-			static constexpr unsigned char onedge_value = 127;
-			static constexpr float onedge_value_float = onedge_value / 255.0f;
-			static constexpr float pixel_dist_scale = float(onedge_value) / float(padding);
-		}
 		union GlyphHash
 		{
 			struct
@@ -387,14 +380,34 @@ namespace wi::font
 
 				if (is_sdf)
 				{
-					unsigned char* data = stbtt_GetGlyphSDF(&fontStyle->fontInfo, fontScaling, glyphIndex, SDF::padding, SDF::onedge_value, SDF::pixel_dist_scale, &bitmap.width, &bitmap.height, &bitmap.xoff, &bitmap.yoff);
+					unsigned char* data = stbtt_GetGlyphSDF(
+						&fontStyle->fontInfo,
+						fontScaling,
+						glyphIndex,
+						(int)SDF::padding,
+						(unsigned char)SDF::onedge_value,
+						SDF::pixel_dist_scale,
+						&bitmap.width,
+						&bitmap.height,
+						&bitmap.xoff,
+						&bitmap.yoff
+					);
 					bitmap.data.resize(bitmap.width * bitmap.height);
 					std::memcpy(bitmap.data.data(), data, bitmap.data.size());
 					stbtt_FreeSDF(data, nullptr);
 				}
 				else
 				{
-					unsigned char* data = stbtt_GetGlyphBitmap(&fontStyle->fontInfo, fontScaling, fontScaling, glyphIndex, &bitmap.width, &bitmap.height, &bitmap.xoff, &bitmap.yoff);
+					unsigned char* data = stbtt_GetGlyphBitmap(
+						&fontStyle->fontInfo,
+						fontScaling,
+						fontScaling,
+						glyphIndex,
+						&bitmap.width,
+						&bitmap.height,
+						&bitmap.xoff,
+						&bitmap.yoff
+					);
 					bitmap.data.resize(bitmap.width * bitmap.height);
 					std::memcpy(bitmap.data.data(), data, bitmap.data.size());
 					stbtt_FreeBitmap(data, nullptr);
@@ -612,11 +625,8 @@ namespace wi::font
 				// font shadow render:
 				XMStoreFloat4x4(&font.transform, XMMatrixTranslation(params.shadow_offset_x, params.shadow_offset_y, 0) * M);
 				font.color = params.shadowColor.rgba;
-				const float boldness = std::max(0.0f, params.shadow_bolden);
-				const float mid = wi::math::Lerp(SDF::onedge_value_float, 0.0f, boldness);
-				const float softness = std::max(0.0f, params.shadow_softness);
-				font.sdf_threshold_bottom = wi::math::saturate(mid - softness);
-				font.sdf_threshold_top = wi::math::saturate(mid + softness);
+				font.bolden = params.shadow_bolden;
+				font.softness = params.shadow_softness;
 				device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
 
 				device->DrawInstanced(4, status.quadCount, 0, 0, cmd);
@@ -625,11 +635,8 @@ namespace wi::font
 			// font base render:
 			XMStoreFloat4x4(&font.transform, M);
 			font.color = params.color.rgba;
-			const float boldness = std::max(0.0f, params.bolden);
-			const float mid = wi::math::Lerp(SDF::onedge_value_float, 0.0f, boldness);
-			const float softness = std::max(0.0f, params.softness);
-			font.sdf_threshold_bottom = wi::math::saturate(mid - softness);
-			font.sdf_threshold_top = wi::math::saturate(mid + softness);
+			font.bolden = params.bolden;
+			font.softness = params.softness;
 			device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
 
 			device->DrawInstanced(4, status.quadCount, 0, 0, cmd);
