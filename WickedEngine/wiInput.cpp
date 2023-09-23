@@ -572,6 +572,54 @@ namespace wi::input
 			case wi::input::KEYBOARD_BUTTON_PAGEUP:
 				keycode = VK_PRIOR;
 				break;
+			case KEYBOARD_BUTTON_NUMPAD0:
+				keycode = VK_NUMPAD0;
+				break;
+			case KEYBOARD_BUTTON_NUMPAD1:
+				keycode = VK_NUMPAD1;
+				break;
+			case KEYBOARD_BUTTON_NUMPAD2:
+				keycode = VK_NUMPAD2;
+				break;
+			case KEYBOARD_BUTTON_NUMPAD3:
+				keycode = VK_NUMPAD3;
+				break;
+			case KEYBOARD_BUTTON_NUMPAD4:
+				keycode = VK_NUMPAD4;
+				break;
+			case KEYBOARD_BUTTON_NUMPAD5:
+				keycode = VK_NUMPAD5;
+				break;
+			case KEYBOARD_BUTTON_NUMPAD6:
+				keycode = VK_NUMPAD6;
+				break;
+			case KEYBOARD_BUTTON_NUMPAD7:
+				keycode = VK_NUMPAD7;
+				break;
+			case KEYBOARD_BUTTON_NUMPAD8:
+				keycode = VK_NUMPAD8;
+				break;
+			case KEYBOARD_BUTTON_NUMPAD9:
+				keycode = VK_NUMPAD9;
+				break;
+			case KEYBOARD_BUTTON_MULTIPLY:
+				keycode = VK_MULTIPLY;
+				break;
+			case KEYBOARD_BUTTON_ADD:
+				keycode = VK_ADD;
+				break;
+			case KEYBOARD_BUTTON_SEPARATOR:
+				keycode = VK_SEPARATOR;
+				break;
+			case KEYBOARD_BUTTON_SUBTRACT:
+				keycode = VK_SUBTRACT;
+				break;
+			case KEYBOARD_BUTTON_DECIMAL:
+				keycode = VK_DECIMAL;
+				break;
+			case KEYBOARD_BUTTON_DIVIDE:
+				keycode = VK_DIVIDE;
+				break;
 #endif // _WIN32
 				default: break;
 			}

@@ -718,19 +718,19 @@ void EditorComponent::Update(float dt)
 		}
 
 		const float buttonrotSpeed = 2.0f * dt;
-		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LEFT))
+		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LEFT) || wi::input::Down(wi::input::KEYBOARD_BUTTON_NUMPAD4))
 		{
 			xDif -= buttonrotSpeed;
 		}
-		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_RIGHT))
+		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_RIGHT) || wi::input::Down(wi::input::KEYBOARD_BUTTON_NUMPAD6))
 		{
 			xDif += buttonrotSpeed;
 		}
-		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_UP))
+		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_UP) || wi::input::Down(wi::input::KEYBOARD_BUTTON_NUMPAD8))
 		{
 			yDif -= buttonrotSpeed;
 		}
-		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_DOWN))
+		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_DOWN) || wi::input::Down(wi::input::KEYBOARD_BUTTON_NUMPAD2))
 		{
 			yDif += buttonrotSpeed;
 		}
