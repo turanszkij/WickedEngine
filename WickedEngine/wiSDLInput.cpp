@@ -296,11 +296,11 @@ namespace wi::input::sdlinput
 				return wi::input::KEYBOARD_BUTTON_NUMPAD9;
 			case SDL_SCANCODE_KP_MULTIPLY:
 				return wi::input::KEYBOARD_BUTTON_MULTIPLY;
-			case SDL_SCANCODE_KP_ADD:
+			case SDL_SCANCODE_KP_PLUS:
 				return wi::input::KEYBOARD_BUTTON_ADD;
 			case SDL_SCANCODE_SEPARATOR:
 				return wi::input::KEYBOARD_BUTTON_SEPARATOR;
-			case SDL_SCANCODE_KP_SUBTRACT:
+			case SDL_SCANCODE_KP_MINUS:
 				return wi::input::KEYBOARD_BUTTON_SUBTRACT;
 			case SDL_SCANCODE_KP_DECIMAL:
 				return wi::input::KEYBOARD_BUTTON_DECIMAL;
