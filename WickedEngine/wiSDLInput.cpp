@@ -274,6 +274,38 @@ namespace wi::input::sdlinput
                 return wi::input::KEYBOARD_BUTTON_PAGEDOWN;
             case SDL_SCANCODE_PAGEUP:
                 return wi::input::KEYBOARD_BUTTON_PAGEUP;
+			case SDL_SCANCODE_KP_0:
+				return wi::input::KEYBOARD_BUTTON_NUMPAD0;
+			case SDL_SCANCODE_KP_1:
+				return wi::input::KEYBOARD_BUTTON_NUMPAD1;
+			case SDL_SCANCODE_KP_2:
+				return wi::input::KEYBOARD_BUTTON_NUMPAD2;
+			case SDL_SCANCODE_KP_3:
+				return wi::input::KEYBOARD_BUTTON_NUMPAD3;
+			case SDL_SCANCODE_KP_4:
+				return wi::input::KEYBOARD_BUTTON_NUMPAD4;
+			case SDL_SCANCODE_KP_5:
+				return wi::input::KEYBOARD_BUTTON_NUMPAD5;
+			case SDL_SCANCODE_KP_6:
+				return wi::input::KEYBOARD_BUTTON_NUMPAD6;
+			case SDL_SCANCODE_KP_7:
+				return wi::input::KEYBOARD_BUTTON_NUMPAD7;
+			case SDL_SCANCODE_KP_8:
+				return wi::input::KEYBOARD_BUTTON_NUMPAD8;
+			case SDL_SCANCODE_KP_9:
+				return wi::input::KEYBOARD_BUTTON_NUMPAD9;
+			case SDL_SCANCODE_KP_MULTIPLY:
+				return wi::input::KEYBOARD_BUTTON_MULTIPLY;
+			case SDL_SCANCODE_KP_ADD:
+				return wi::input::KEYBOARD_BUTTON_ADD;
+			case SDL_SCANCODE_SEPARATOR:
+				return wi::input::KEYBOARD_BUTTON_SEPARATOR;
+			case SDL_SCANCODE_KP_SUBTRACT:
+				return wi::input::KEYBOARD_BUTTON_SUBTRACT;
+			case SDL_SCANCODE_KP_DECIMAL:
+				return wi::input::KEYBOARD_BUTTON_DECIMAL;
+			case SDL_SCANCODE_KP_DIVIDE:
+				return wi::input::KEYBOARD_BUTTON_DIVIDE;
         }
 
 
