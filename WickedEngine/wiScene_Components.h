@@ -1372,8 +1372,8 @@ namespace wi::scene
 		inline bool IsLooped() const { return _flags & LOOPED; }
 		inline bool IsDisable3D() const { return _flags & DISABLE_3D; }
 
-		inline void Play() { _flags |= PLAYING; }
-		inline void Stop() { _flags &= ~PLAYING; }
+		void Play();
+		void Stop();
 		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
 		inline void SetDisable3D(bool value = true) { if (value) { _flags |= DISABLE_3D; } else { _flags &= ~DISABLE_3D; } }
 

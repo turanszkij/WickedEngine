@@ -1058,7 +1058,7 @@ Describes a Sound object.
 
 - Play() -- Plays the sound
 - Stop() -- Stop the sound
-- SetLoop(bool value = true) -- Sets if the sound is looping when playing
+- SetLooped(bool value = true) -- Sets if the sound is looping when playing
 - SetDisable3D(bool value = true) -- Disable/Enable 3D sounds
 - IsPlaying() : bool result -- Check if sound is playing
 - IsLooped() : bool result -- Check if sound is looping
