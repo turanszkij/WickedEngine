@@ -120,8 +120,8 @@ parent-child relationships between the scene hierarchy, updating the world, anim
 You can use the Renderer with the following functions, all of which are in the global scope:
 - GetGameSpeed() : float result
 - SetGameSpeed(float speed)
-- GetScreenWidth() : float result  -- (deprecated, use MainComponent::GetCanvas().GetLogicalWidth() instead)
-- GetScreenHeight() : float result  -- (deprecated, use MainComponent::GetCanvas().GetLogicalHeight() instead)
+- GetScreenWidth() : float result  -- (deprecated, use application.GetCanvas().GetLogicalWidth() instead)
+- GetScreenHeight() : float result  -- (deprecated, use application.GetCanvas().GetLogicalHeight() instead)
 - HairParticleSettings(opt int lod0, opt int lod1, opt int lod2)
 - SetShadowProps2D(int resolution, int count)
 - SetShadowPropsCube(int resolution, int count)
@@ -198,7 +198,7 @@ Specify Sprite properties, like position, size, etc.
 - SetPos(Vector pos)
 - SetSize(Vector size)
 - SetPivot(Vector value)
-- SetColor(Vector size)
+- SetColor(Vector value)
 - SetOpacity(float opacity)
 - SetFade(float fade)
 - SetStencil(int stencilMode,stencilRef)
@@ -463,6 +463,7 @@ A four component floating point vector. Provides efficient calculations with SIM
 - X : float
 - Y : float
 - Z : float
+- W : float
 
 </br>
 
@@ -507,6 +508,7 @@ A four by four matrix, efficient calculations with SIMD support.
 - RotationZ(opt float angleInRadians) : Matrix result
 - RotationQuaternion(opt Vector quaternion) : Matrix result
 - Scale(opt Vector scaleXYZ) : Matrix result
+- Scale(float scaleXYZ) : Matrix result
 - LookTo(Vector eye,direction, opt Vector up) : Matrix result
 - LookAt(Vector eye,focusPos, opt Vector up) : Matrix result
 - Multiply(Matrix m1,m2) : Matrix result
@@ -1468,6 +1470,22 @@ Describes a touch contact point
 - [outer]KEYBOARD_BUTTON_BACKSPACE		 : int
 - [outer]KEYBOARD_BUTTON_PAGEDOWN		 : int
 - [outer]KEYBOARD_BUTTON_PAGEUP			 : int
+- [outer]KEYBOARD_BUTTON_NUMPAD0		 : int
+- [outer]KEYBOARD_BUTTON_NUMPAD1		 : int
+- [outer]KEYBOARD_BUTTON_NUMPAD2		 : int
+- [outer]KEYBOARD_BUTTON_NUMPAD3		 : int
+- [outer]KEYBOARD_BUTTON_NUMPAD4		 : int
+- [outer]KEYBOARD_BUTTON_NUMPAD5		 : int
+- [outer]KEYBOARD_BUTTON_NUMPAD6		 : int
+- [outer]KEYBOARD_BUTTON_NUMPAD7		 : int
+- [outer]KEYBOARD_BUTTON_NUMPAD8		 : int
+- [outer]KEYBOARD_BUTTON_NUMPAD9		 : int
+- [outer]KEYBOARD_BUTTON_MULTIPLY		 : int
+- [outer]KEYBOARD_BUTTON_ADD			 : int
+- [outer]KEYBOARD_BUTTON_SEPARATOR		 : int
+- [outer]KEYBOARD_BUTTON_SUBTRACT		 : int
+- [outer]KEYBOARD_BUTTON_DECIMAL		 : int
+- [outer]KEYBOARD_BUTTON_DIVIDE			 : int
 - You can also generate a key code by calling string.byte(char uppercaseLetter) where the parameter represents the desired key of the keyboard
 
 #### Mouse Key Codes
@@ -1480,12 +1498,38 @@ Describes a touch contact point
 - [outer]GAMEPAD_BUTTON_LEFT : int
 - [outer]GAMEPAD_BUTTON_DOWN : int
 - [outer]GAMEPAD_BUTTON_RIGHT : int
+
+Generic button codes:
 - [outer]GAMEPAD_BUTTON_1 : int
 - [outer]GAMEPAD_BUTTON_2 : int
 - [outer]GAMEPAD_BUTTON_3 : int
 - [outer]GAMEPAD_BUTTON_4 : int
 ...
-- [outer]GAMEPAD_14 : int
+- [outer]GAMEPAD_BUTTON_14 : int
+
+Xbox button codes:
+- [outer]GAMEPAD_BUTTON_XBOX_X  : GAMEPAD_BUTTON_1
+- [outer]GAMEPAD_BUTTON_XBOX_A  : GAMEPAD_BUTTON_2
+- [outer]GAMEPAD_BUTTON_XBOX_B  : GAMEPAD_BUTTON_3
+- [outer]GAMEPAD_BUTTON_XBOX_Y  : GAMEPAD_BUTTON_4
+- [outer]GAMEPAD_BUTTON_XBOX_L1 : GAMEPAD_BUTTON_5
+- [outer]GAMEPAD_BUTTON_XBOX_R1 : GAMEPAD_BUTTON_6
+- [outer]GAMEPAD_BUTTON_XBOX_L3 : GAMEPAD_BUTTON_7
+- [outer]GAMEPAD_BUTTON_XBOX_R3 : GAMEPAD_BUTTON_8
+- [outer]GAMEPAD_BUTTON_XBOX_BACK : GAMEPAD_BUTTON_9
+- [outer]GAMEPAD_BUTTON_XBOX_START : GAMEPAD_BUTTON_10
+
+Playstation button codes:
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_SQUARE : GAMEPAD_BUTTON_1
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_CROSS : GAMEPAD_BUTTON_2
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_CIRCLE : GAMEPAD_BUTTON_3
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_TRIANGLE : GAMEPAD_BUTTON_4
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_L1 : GAMEPAD_BUTTON_5
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_R1 : GAMEPAD_BUTTON_6
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_L3 : GAMEPAD_BUTTON_7
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_R3 : GAMEPAD_BUTTON_8
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_SHARE : GAMEPAD_BUTTON_9
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_OPTION : GAMEPAD_BUTTON_10
 
 #### Gamepad Analog Codes
 - [outer]GAMEPAD_ANALOG_THUMBSTICK_L : int

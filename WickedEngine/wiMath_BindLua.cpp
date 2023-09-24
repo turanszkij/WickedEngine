@@ -680,6 +680,11 @@ namespace wi::lua
 			{
 				mat = XMMatrixScalingFromVector(XMLoadFloat4(&vector->data));
 			}
+			else
+			{
+				float value = wi::lua::SGetFloat(L, 1);
+				mat = XMMatrixScaling(value, value, value);
+			}
 		}
 		Luna<Matrix_BindLua>::push(L, mat);
 		return 1;
