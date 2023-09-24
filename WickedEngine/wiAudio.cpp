@@ -511,6 +511,8 @@ namespace wi::audio
 		if (instance != nullptr && instance->IsValid())
 		{
 			auto instanceinternal = to_internal(instance);
+			if (instanceinternal->buffer.LoopCount == 0)
+				return;
 			HRESULT hr = instanceinternal->sourceVoice->ExitLoop();
 			assert(SUCCEEDED(hr));
 			if (instanceinternal->ended)
@@ -1054,6 +1056,8 @@ namespace wi::audio
 	void ExitLoop(SoundInstance* instance) {
 		if (instance != nullptr && instance->IsValid()){
 			auto instanceinternal = to_internal(instance);
+			if (instanceinternal->buffer.LoopCount == 0)
+				return;
 			uint32_t res = FAudioSourceVoice_ExitLoop(instanceinternal->sourceVoice, FAUDIO_COMMIT_NOW);
 			assert(res == 0);
 			if (instanceinternal->ended)
