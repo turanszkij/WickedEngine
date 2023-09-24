@@ -513,6 +513,12 @@ namespace wi::audio
 			auto instanceinternal = to_internal(instance);
 			HRESULT hr = instanceinternal->sourceVoice->ExitLoop();
 			assert(SUCCEEDED(hr));
+			if (instanceinternal->ended)
+			{
+				instanceinternal->buffer.LoopCount = 0;
+				hr = instanceinternal->sourceVoice->SubmitSourceBuffer(&instanceinternal->buffer);
+				assert(SUCCEEDED(hr));
+			}
 		}
 	}
 	bool IsEnded(SoundInstance* instance)
@@ -1050,6 +1056,12 @@ namespace wi::audio
 			auto instanceinternal = to_internal(instance);
 			uint32_t res = FAudioSourceVoice_ExitLoop(instanceinternal->sourceVoice, FAUDIO_COMMIT_NOW);
 			assert(res == 0);
+			if (instanceinternal->ended)
+			{
+				instanceinternal->buffer.LoopCount = 0;
+				res = FAudioSourceVoice_SubmitSourceBuffer(instanceinternal->sourceVoice, &(instanceinternal->buffer), nullptr);
+				assert(res == 0);
+			}
 		}
 	}
 	bool IsEnded(SoundInstance* instance)
