@@ -165,11 +165,9 @@ namespace wi::lua
 				Luna<Vector_BindLua>::push(L, XMVector4Transform(XMLoadFloat4(&vec->data), XMLoadFloat4x4(&mat->data)));
 				return 1;
 			}
-			else
-				wi::lua::SError(L, "Transform(Vector vec, Matrix matrix) argument types mismatch!");
+			wi::lua::SError(L, "Transform(Vector vec, Matrix matrix) argument types mismatch!");
 		}
-		else
-			wi::lua::SError(L, "Transform(Vector vec, Matrix matrix) not enough arguments!");
+		wi::lua::SError(L, "Transform(Vector vec, Matrix matrix) not enough arguments!");
 		return 0;
 	}
 	int Vector_BindLua::TransformNormal(lua_State* L)
@@ -187,8 +185,7 @@ namespace wi::lua
 			else
 				wi::lua::SError(L, "TransformNormal(Vector vec, Matrix matrix) argument types mismatch!");
 		}
-		else
-			wi::lua::SError(L, "TransformNormal(Vector vec, Matrix matrix) not enough arguments!");
+		wi::lua::SError(L, "TransformNormal(Vector vec, Matrix matrix) not enough arguments!");
 		return 0;
 	}
 	int Vector_BindLua::TransformCoord(lua_State* L)
@@ -206,28 +203,72 @@ namespace wi::lua
 			else
 				wi::lua::SError(L, "TransformCoord(Vector vec, Matrix matrix) argument types mismatch!");
 		}
-		else
-			wi::lua::SError(L, "TransformCoord(Vector vec, Matrix matrix) not enough arguments!");
+		wi::lua::SError(L, "TransformCoord(Vector vec, Matrix matrix) not enough arguments!");
 		return 0;
 	}
 	int Vector_BindLua::Length(lua_State* L)
 	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (vec)
+			{
+				// Additional syntax support for static access
+				wi::lua::SSetFloat(L, XMVectorGetX(XMVector3Length(XMLoadFloat4(&vec->data))));
+				return 1;
+			}
+		}
 		wi::lua::SSetFloat(L, XMVectorGetX(XMVector3Length(XMLoadFloat4(&data))));
 		return 1;
 	}
 	int Vector_BindLua::Normalize(lua_State* L)
 	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (vec)
+			{
+				// Additional syntax support for static access
+				Luna<Vector_BindLua>::push(L, XMVector3Normalize(XMLoadFloat4(&vec->data)));
+				return 1;
+			}
+		}
 		Luna<Vector_BindLua>::push(L, XMVector3Normalize(XMLoadFloat4(&data)));
 		return 1;
 	}
 	int Vector_BindLua::QuaternionNormalize(lua_State* L)
 	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (vec)
+			{
+				// Additional syntax support for static access
+				Luna<Vector_BindLua>::push(L, XMQuaternionNormalize(XMLoadFloat4(&vec->data)));
+				return 1;
+			}
+		}
 		Luna<Vector_BindLua>::push(L, XMQuaternionNormalize(XMLoadFloat4(&data)));
 		return 1;
 	}
 	int Vector_BindLua::Clamp(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 2)
+		{
+			// Additional syntax support for static access
+			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (vec)
+			{
+				float a = wi::lua::SGetFloat(L, 2);
+				float b = wi::lua::SGetFloat(L, 3);
+				Luna<Vector_BindLua>::push(L, XMVectorClamp(XMLoadFloat4(&vec->data), XMVectorReplicate(a), XMVectorReplicate(b)));
+				return 1;
+			}
+		}
 		if (argc > 1)
 		{
 			float a = wi::lua::SGetFloat(L, 1);
@@ -235,12 +276,22 @@ namespace wi::lua
 			Luna<Vector_BindLua>::push(L, XMVectorClamp(XMLoadFloat4(&data), XMVectorReplicate(a), XMVectorReplicate(b)));
 			return 1;
 		}
-		else
-			wi::lua::SError(L, "Clamp(float min,max) not enough arguments!");
+		wi::lua::SError(L, "Clamp(float min,max) not enough arguments!");
 		return 0;
 	}
 	int Vector_BindLua::Saturate(lua_State* L)
 	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (vec)
+			{
+				// Additional syntax support for static access
+				Luna<Vector_BindLua>::push(L, XMVectorSaturate(XMLoadFloat4(&vec->data)));
+				return 1;
+			}
+		}
 		Luna<Vector_BindLua>::push(L, XMVectorSaturate(XMLoadFloat4(&data)));
 		return 1;
 	}

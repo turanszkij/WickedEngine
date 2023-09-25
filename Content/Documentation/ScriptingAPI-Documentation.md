@@ -477,9 +477,16 @@ A four component floating point vector. Provides efficient calculations with SIM
 - SetY(float value)
 - SetZ(float value)
 - SetW(float value)
-- Length() : float result
-- Normalize() : Vector result
-- QuaternionNormalize() : Vector result
+- Length() : float result	-- old syntax with operation on current object
+- Length(Vector v) : float result
+- Normalize() : Vector result	-- old syntax with operation on current object
+- Normalize(Vector v) : Vector result
+- QuaternionNormalize() : Vector result	-- old syntax with operation on current object
+- QuaternionNormalize(Vector v) : Vector result
+- Clamp(float min,max) : Vector result	-- old syntax with operation on current object
+- Clamp(Vector v, float min,max) : Vector result
+- Saturate() : Vector result	-- old syntax with operation on current object
+- Saturate(Vector v) : Vector result
 - Transform(Vector vec, Matrix matrix)
 - TransformNormal(Vector vec, Matrix matrix)
 - TransformCoord(Vector vec, Matrix matrix)
@@ -545,7 +552,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - [outer]FILTER_OBJECT_ALL : uint	-- include all objects, meshes
 - [outer]FILTER_COLLIDER : uint	-- include colliders
 - [outer]FILTER_ALL : uint	-- include everything
-- Intersects(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : int entity, Vector position,normal, float distance, Vector velocity	-- intersects a primitive with the scene and return collision parameters
+- Intersects(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : int entity, Vector position,normal, float distance, Vector velocity, int subsetIndex	-- intersects a primitive with the scene and return collision parameters
 - Update()  -- updates the scene and every entity and component inside the scene
 - Clear()  -- deletes every entity and component inside the scene
 - Merge(Scene other)  -- moves contents from an other scene into this one. The other scene will be empty after this operation (contents are moved, not copied)
@@ -828,7 +835,7 @@ TextureSlot = {
 </br>
 
 - SetMeshSubsetMaterialID(int subsetindex, Entity materialID)
-- GetMeshSubsetMaterialID(int subsetindex)
+- GetMeshSubsetMaterialID(int subsetindex) : Entity entity
 
 #### EmitterComponent
 - _flags : int
