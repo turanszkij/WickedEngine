@@ -3555,6 +3555,7 @@ using namespace dx12_internal;
 			}
 		}
 
+#ifndef PLATFORM_XBOX // Xbox is detected as UMA, but the UMA texture upload path is disabled for now
 		if (
 			initial_data != nullptr &&
 			allocationDesc.HeapType == D3D12_HEAP_TYPE_DEFAULT &&
@@ -3565,6 +3566,7 @@ using namespace dx12_internal;
 			//	It will be used with WriteToSubresource to avoid GPU copy from UPLOAD to DEAFULT
 			allocationDesc.CustomPool = allocationhandler->uma_pool.Get();
 		}
+#endif // PLATFORM_XBOX
 
 #ifdef PLATFORM_XBOX
 		wi::graphics::xbox::ApplyTextureCreationFlags(texture->desc, resourcedesc.Flags, allocationDesc.ExtraHeapFlags);
