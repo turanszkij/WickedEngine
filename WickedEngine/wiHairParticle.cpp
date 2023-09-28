@@ -116,6 +116,7 @@ namespace wi
 			;
 			device->CreateBuffer(&bd, nullptr, &generalBuffer);
 			device->SetName(&generalBuffer, "HairParticleSystem::generalBuffer");
+			gpu_initialized = false;
 
 			uint64_t buffer_offset = 0ull;
 
