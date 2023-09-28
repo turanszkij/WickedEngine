@@ -2276,14 +2276,17 @@ void SetUpStates()
 
 const GPUBuffer& GetIndexBufferForQuads(uint32_t max_quad_count)
 {
-	const size_t required_index_count = max_quad_count * 6;
-	const size_t required_max_index = max_quad_count * 4;
+	const size_t required_max_index = max_quad_count * 4u;
 
 	static std::mutex locker;
 	std::scoped_lock lock(locker);
 
-	if (required_max_index < 65536)
+	if (required_max_index < 65536u)
 	{
+		// 16-bit request:
+		max_quad_count = std::max(65535u / 4u, max_quad_count); // minimum a full 16 bit index buffer request, avoid allocating multiple 16-bit small requests
+		const size_t required_index_count = max_quad_count * 6u;
+
 		static GPUBuffer indexBufferForQuads16;
 		if (!indexBufferForQuads16.IsValid() || indexBufferForQuads16.desc.size / indexBufferForQuads16.desc.stride < required_index_count)
 		{
@@ -2296,23 +2299,30 @@ const GPUBuffer& GetIndexBufferForQuads(uint32_t max_quad_count)
 			bd.format = Format::R16_UINT;
 			bd.stride = GetFormatStride(bd.format);
 			bd.size = bd.stride * required_index_count;
-			wi::vector<uint16_t> primitiveData(required_index_count);
-			for (uint16_t particleID = 0; particleID < uint16_t(max_quad_count); ++particleID)
+			auto fill_ib = [&](void* dst)
 			{
-				uint16_t v0 = particleID * 4;
-				uint32_t i0 = particleID * 6;
-				primitiveData[i0 + 0] = v0 + 0;
-				primitiveData[i0 + 1] = v0 + 1;
-				primitiveData[i0 + 2] = v0 + 2;
-				primitiveData[i0 + 3] = v0 + 2;
-				primitiveData[i0 + 4] = v0 + 1;
-				primitiveData[i0 + 5] = v0 + 3;
-			}
-			device->CreateBuffer(&bd, primitiveData.data(), &indexBufferForQuads16);
-			device->SetName(&indexBufferForQuads16, "wi::renderer::indexBufferForQuads16");
+				uint16_t* primitiveData = (uint16_t*)dst;
+				for (uint16_t particleID = 0; particleID < uint16_t(max_quad_count); ++particleID)
+				{
+					uint16_t v0 = particleID * 4;
+					uint32_t i0 = particleID * 6;
+					primitiveData[i0 + 0] = v0 + 0;
+					primitiveData[i0 + 1] = v0 + 1;
+					primitiveData[i0 + 2] = v0 + 2;
+					primitiveData[i0 + 3] = v0 + 2;
+					primitiveData[i0 + 4] = v0 + 1;
+					primitiveData[i0 + 5] = v0 + 3;
+				}
+			};
+			device->CreateBuffer2(&bd, fill_ib, &indexBufferForQuads16);
+			device->SetName(&indexBufferForQuads16, "wi::renderer::indexBufferForQuads16bit");
 		}
 		return indexBufferForQuads16;
 	}
+
+	// 32-bit request below:
+	max_quad_count = wi::math::GetNextPowerOfTwo(max_quad_count); // reduce allocations by making larger fitting allocations
+	const size_t required_index_count = max_quad_count * 6u;
 
 	static GPUBuffer indexBufferForQuads32;
 	if (!indexBufferForQuads32.IsValid() || indexBufferForQuads32.desc.size / indexBufferForQuads32.desc.stride < required_index_count)
@@ -2326,20 +2336,23 @@ const GPUBuffer& GetIndexBufferForQuads(uint32_t max_quad_count)
 		bd.format = Format::R32_UINT;
 		bd.stride = GetFormatStride(bd.format);
 		bd.size = bd.stride * required_index_count;
-		wi::vector<uint32_t> primitiveData(required_index_count);
-		for (uint particleID = 0; particleID < max_quad_count; ++particleID)
+		auto fill_ib = [&](void* dst)
 		{
-			uint32_t v0 = particleID * 4;
-			uint32_t i0 = particleID * 6;
-			primitiveData[i0 + 0] = v0 + 0;
-			primitiveData[i0 + 1] = v0 + 1;
-			primitiveData[i0 + 2] = v0 + 2;
-			primitiveData[i0 + 3] = v0 + 2;
-			primitiveData[i0 + 4] = v0 + 1;
-			primitiveData[i0 + 5] = v0 + 3;
-		}
-		device->CreateBuffer(&bd, primitiveData.data(), &indexBufferForQuads32);
-		device->SetName(&indexBufferForQuads32, "wi::renderer::indexBufferForQuads32");
+			uint32_t* primitiveData = (uint32_t*)dst;
+			for (uint particleID = 0; particleID < max_quad_count; ++particleID)
+			{
+				uint32_t v0 = particleID * 4;
+				uint32_t i0 = particleID * 6;
+				primitiveData[i0 + 0] = v0 + 0;
+				primitiveData[i0 + 1] = v0 + 1;
+				primitiveData[i0 + 2] = v0 + 2;
+				primitiveData[i0 + 3] = v0 + 2;
+				primitiveData[i0 + 4] = v0 + 1;
+				primitiveData[i0 + 5] = v0 + 3;
+			}
+		};
+		device->CreateBuffer2(&bd, fill_ib, &indexBufferForQuads32);
+		device->SetName(&indexBufferForQuads32, "wi::renderer::indexBufferForQuads32bit");
 	}
 
 	return indexBufferForQuads32;
@@ -4242,6 +4255,14 @@ void UpdateRenderData(
 	}
 
 	barrier_stack_flush(cmd); // wind/skinning flush
+
+	// Hair particle initialization is needed for all, not just visible ones:
+	//	This fixes an issue when hair is included in ray tracing acceleration
+	//	structure, but not yet updated properly, because it was not yet visible
+	for (size_t i = 0; i < vis.scene->hairs.GetCount(); ++i)
+	{
+		vis.scene->hairs[i].InitializeGPUDataIfNeeded(cmd);
+	}
 
 	// Hair particle systems GPU simulation:
 	//	(This must be non-async too, as prepass will render hairs!)

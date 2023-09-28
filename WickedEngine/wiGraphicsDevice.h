@@ -243,6 +243,11 @@ namespace wi::graphics
 			return CreateBuffer2(desc, [&](void* dest) { std::memcpy(dest, initial_data, desc->size); }, buffer);
 		}
 
+		void Barrier(const GPUBarrier& barrier, CommandList cmd)
+		{
+			Barrier(&barrier, 1, cmd);
+		}
+
 		struct GPULinearAllocator
 		{
 			GPUBuffer buffer;

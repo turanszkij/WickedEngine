@@ -57,6 +57,9 @@ namespace wi
 			wi::graphics::CommandList cmd
 		);
 
+		mutable bool gpu_initialized = false;
+		void InitializeGPUDataIfNeeded(wi::graphics::CommandList cmd);
+
 		void Draw(
 			const wi::scene::MaterialComponent& material,
 			wi::enums::RENDERPASS renderPass,

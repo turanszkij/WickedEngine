@@ -3396,18 +3396,24 @@ using namespace dx12_internal;
 			if (has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS))
 			{
 				CreateSubresource(buffer, SubresourceType::UAV, 0);
-
-				if (has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS) && !has_flag(desc->misc_flags, ResourceMiscFlag::BUFFER_RAW))
-				{
-					// Create raw buffer if doesn't exist for ClearUAV:
-					D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
-					uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
-					uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-					uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
-					uav_desc.Buffer.NumElements = uint32_t(desc->size / sizeof(uint32_t));
-					internal_state->uav_raw.init(this, uav_desc, internal_state->resource.Get());
-				}
 			}
+		}
+
+		if (
+			has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS) &&
+			(
+				!has_flag(desc->misc_flags, ResourceMiscFlag::BUFFER_RAW) ||
+				has_flag(desc->misc_flags, ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS)
+			)
+		)
+		{
+			// Create raw buffer if doesn't exist for ClearUAV:
+			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
+			uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+			uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+			uav_desc.Buffer.NumElements = uint32_t(desc->size / sizeof(uint32_t));
+			internal_state->uav_raw.init(this, uav_desc, internal_state->resource.Get());
 		}
 
 		return SUCCEEDED(hr);
