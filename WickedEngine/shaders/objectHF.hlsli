@@ -188,7 +188,6 @@ struct VertexSurface
 	float4 color;
 	float3 normal;
 	float4 tangent;
-	uint emissiveColor;
 
 	inline void create(in ShaderMaterial material, in VertexInput input)
 	{
@@ -198,7 +197,6 @@ struct VertexSurface
 		normal = unpack_unitvector(normal_wind);
 		color = GetMaterial().baseColor * unpack_rgba(input.GetInstance().color);
 		color.a *= 1 - input.GetInstancePointer().GetDither();
-		emissiveColor = input.GetInstance().emissive;
 
 		[branch]
 		if (material.IsUsingVertexColors())
@@ -236,17 +234,13 @@ struct PixelInput
 	float  clip : SV_ClipDistance0;
 #endif // OBJECTSHADER_USE_CLIPPLANE
 
-#ifdef OBJECTSHADER_USE_INSTANCEINDEX
-	uint instanceIndex : INSTANCEINDEX;
-#endif // OBJECTSHADER_USE_INSTANCEINDEX
+#ifdef OBJECTSHADER_USE_NORMAL
+	float3 nor : NORMAL;
+#endif // OBJECTSHADER_USE_NORMAL
 
-#ifdef OBJECTSHADER_USE_DITHERING
-	nointerpolation float dither : DITHER;
-#endif // OBJECTSHADER_USE_DITHERING
-
-#ifdef OBJECTSHADER_USE_EMISSIVE
-	uint emissiveColor : EMISSIVECOLOR;
-#endif // OBJECTSHADER_USE_EMISSIVE
+#if defined(OBJECTSHADER_USE_INSTANCEINDEX) || defined(OBJECTSHADER_USE_DITHERING)
+	uint instanceIndex_dither : INSTANCEINDEX_DITHER;
+#endif // OBJECTSHADER_USE_INSTANCEINDEX || OBJECTSHADER_USE_DITHERING
 
 #ifdef OBJECTSHADER_USE_COLOR
 	float4 color : COLOR;
@@ -256,17 +250,13 @@ struct PixelInput
 	float4 uvsets : UVSETS;
 #endif // OBJECTSHADER_USE_UVSETS
 
-#ifdef OBJECTSHADER_USE_ATLAS
-	float2 atl : ATLAS;
-#endif // OBJECTSHADER_USE_ATLAS
-
-#ifdef OBJECTSHADER_USE_NORMAL
-	float3 nor : NORMAL;
-#endif // OBJECTSHADER_USE_NORMAL
-
 #ifdef OBJECTSHADER_USE_TANGENT
 	float4 tan : TANGENT;
 #endif // OBJECTSHADER_USE_TANGENT
+
+#ifdef OBJECTSHADER_USE_ATLAS
+	float2 atl : ATLAS;
+#endif // OBJECTSHADER_USE_ATLAS
 
 #ifdef OBJECTSHADER_USE_POSITION3D
 	float3 pos3D : WORLDPOSITION;
@@ -287,6 +277,20 @@ struct PixelInput
 	uint VPIndex : SV_ViewportArrayIndex;
 #endif // VPRT_EMULATION
 #endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
+
+#ifdef OBJECTSHADER_USE_INSTANCEINDEX
+	inline uint GetInstanceIndex()
+	{
+		return instanceIndex_dither & 0xFFFFFF;
+	}
+#endif // OBJECTSHADER_USE_INSTANCEINDEX
+
+#ifdef OBJECTSHADER_USE_DITHERING
+	inline float GetDither()
+	{
+		return (instanceIndex_dither >> 24u) / 255.0f;
+	}
+#endif // OBJECTSHADER_USE_DITHERING
 };
 
 
@@ -299,10 +303,6 @@ struct PixelInput
 PixelInput main(VertexInput input)
 {
 	PixelInput Out;
-
-#ifdef OBJECTSHADER_USE_INSTANCEINDEX
-	Out.instanceIndex = input.GetInstancePointer().GetInstanceIndex();
-#endif // OBJECTSHADER_USE_INSTANCEINDEX
 
 	VertexSurface surface;
 	surface.create(GetMaterial(), input);
@@ -317,6 +317,16 @@ PixelInput main(VertexInput input)
 	Out.clip = dot(surface.position, GetCamera().clip_plane);
 #endif // OBJECTSHADER_USE_CLIPPLANE
 
+#if defined(OBJECTSHADER_USE_INSTANCEINDEX) || defined(OBJECTSHADER_USE_DITHERING)
+	Out.instanceIndex_dither = 0;
+#ifdef OBJECTSHADER_USE_INSTANCEINDEX
+	Out.instanceIndex_dither |= input.GetInstancePointer().GetInstanceIndex() & 0xFFFFFF;
+#endif // OBJECTSHADER_USE_INSTANCEINDEX
+#ifdef OBJECTSHADER_USE_DITHERING
+	Out.instanceIndex_dither |= (uint(surface.color.a * 255u) & 0xFF) << 24u;
+#endif // OBJECTSHADER_USE_DITHERING
+#endif // OBJECTSHADER_USE_INSTANCEINDEX || OBJECTSHADER_USE_DITHERING
+
 #ifdef OBJECTSHADER_USE_POSITION3D
 	Out.pos3D = surface.position.xyz;
 #endif // OBJECTSHADER_USE_POSITION3D
@@ -324,10 +334,6 @@ PixelInput main(VertexInput input)
 #ifdef OBJECTSHADER_USE_COLOR
 	Out.color = surface.color;
 #endif // OBJECTSHADER_USE_COLOR
-
-#ifdef OBJECTSHADER_USE_DITHERING
-	Out.dither = surface.color.a;
-#endif // OBJECTSHADER_USE_DITHERING
 
 #ifdef OBJECTSHADER_USE_UVSETS
 	Out.uvsets = surface.uvsets;
@@ -344,10 +350,6 @@ PixelInput main(VertexInput input)
 #ifdef OBJECTSHADER_USE_TANGENT
 	Out.tan = surface.tangent;
 #endif // OBJECTSHADER_USE_TANGENT
-
-#ifdef OBJECTSHADER_USE_EMISSIVE
-	Out.emissiveColor = surface.emissiveColor;
-#endif // OBJECTSHADER_USE_EMISSIVE
 
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 	const uint frustum_index = input.GetInstancePointer().GetCameraIndex();
@@ -409,11 +411,15 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #ifndef ENVMAPRENDERING
 #ifdef OBJECTSHADER_USE_DITHERING
 	// apply dithering:
-	clip(dither(pixel + GetTemporalAASampleRotation()) - (1 - input.dither));
+	clip(dither(pixel + GetTemporalAASampleRotation()) - (1 - input.GetDither()));
 #endif // OBJECTSHADER_USE_DITHERING
 #endif // DISABLE_ALPHATEST
 #endif // TRANSPARENT
 #endif // ENVMAPRENDERING
+
+#ifdef OBJECTSHADER_USE_INSTANCEINDEX
+	ShaderMeshInstance meshinstance = load_instance(input.GetInstanceIndex());
+#endif // OBJECTSHADER_USE_INSTANCEINDEX
 
 
 	Surface surface;
@@ -515,7 +521,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // OBJECTSHADER_USE_TANGENT
 #endif // WATER
 
-	surface.layerMask = GetMaterial().layerMask & load_instance(input.instanceIndex).layerMask;
+	surface.layerMask = GetMaterial().layerMask & meshinstance.layerMask;
 
 
 	float4 surfaceMap = 1;
@@ -580,6 +586,9 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	surface.create(GetMaterial(), surface.baseColor, surfaceMap, specularMap);
 
 
+
+
+#ifdef OBJECTSHADER_USE_EMISSIVE
 	// Emissive map:
 	surface.emissiveColor = GetMaterial().GetEmissive();
 
@@ -592,10 +601,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 
-
-
-#ifdef OBJECTSHADER_USE_EMISSIVE
-	surface.emissiveColor *= Unpack_R11G11B10_FLOAT(input.emissiveColor);
+	surface.emissiveColor *= Unpack_R11G11B10_FLOAT(meshinstance.emissive);
 #endif // OBJECTSHADER_USE_EMISSIVE
 
 
@@ -779,7 +785,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 
 #ifdef OBJECTSHADER_USE_ATLAS
-	LightMapping(load_instance(input.instanceIndex).lightmap, input.atl, lighting, surface);
+	LightMapping(meshinstance.lightmap, input.atl, lighting, surface);
 #endif // OBJECTSHADER_USE_ATLAS
 
 
@@ -866,8 +872,8 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 	PrimitiveID prim;
 	prim.primitiveIndex = primitiveID;
-	prim.instanceIndex = input.instanceIndex;
-	prim.subsetIndex = push.geometryIndex - load_instance(input.instanceIndex).geometryOffset;
+	prim.instanceIndex = input.GetInstanceIndex();
+	prim.subsetIndex = push.geometryIndex - meshinstance.geometryOffset;
 	return prim.pack();
 #else
 	return color;
