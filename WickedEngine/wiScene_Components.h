@@ -666,6 +666,7 @@ namespace wi::scene
 			LIGHTMAP_RENDER_REQUEST = 1 << 5,
 			LIGHTMAP_DISABLE_BLOCK_COMPRESSION = 1 << 6,
 			FOREGROUND = 1 << 7,
+			NOT_VISIBLE_IN_MAIN_CAMERA = 1 << 8,
 		};
 		uint32_t _flags = RENDERABLE | CAST_SHADOW;
 
@@ -704,7 +705,10 @@ namespace wi::scene
 		inline void SetRequestPlanarReflection(bool value) { if (value) { _flags |= REQUEST_PLANAR_REFLECTION; } else { _flags &= ~REQUEST_PLANAR_REFLECTION; } }
 		inline void SetLightmapRenderRequest(bool value) { if (value) { _flags |= LIGHTMAP_RENDER_REQUEST; } else { _flags &= ~LIGHTMAP_RENDER_REQUEST; } }
 		inline void SetLightmapDisableBlockCompression(bool value) { if (value) { _flags |= LIGHTMAP_DISABLE_BLOCK_COMPRESSION; } else { _flags &= ~LIGHTMAP_DISABLE_BLOCK_COMPRESSION; } }
+		// Foreground object will be rendered in front of regular objects
 		inline void SetForeground(bool value) { if (value) { _flags |= FOREGROUND; } else { _flags &= ~FOREGROUND; } }
+		// With this you can disable object rendering for main camera (DRAWSCENE_MAINCAMERA)
+		inline void SetNotVisibleInMainCamera(bool value) { if (value) { _flags |= NOT_VISIBLE_IN_MAIN_CAMERA; } else { _flags &= ~NOT_VISIBLE_IN_MAIN_CAMERA; } }
 
 		inline bool IsRenderable() const { return _flags & RENDERABLE; }
 		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
@@ -713,6 +717,7 @@ namespace wi::scene
 		inline bool IsLightmapRenderRequested() const { return _flags & LIGHTMAP_RENDER_REQUEST; }
 		inline bool IsLightmapDisableBlockCompression() const { return _flags & LIGHTMAP_DISABLE_BLOCK_COMPRESSION; }
 		inline bool IsForeground() const { return _flags & FOREGROUND; }
+		inline bool IsNotVisibleInMainCamera() const { return _flags & NOT_VISIBLE_IN_MAIN_CAMERA; }
 
 		inline float GetTransparency() const { return 1 - color.w; }
 		inline uint32_t GetFilterMask() const { return filterMask | filterMaskDynamic; }

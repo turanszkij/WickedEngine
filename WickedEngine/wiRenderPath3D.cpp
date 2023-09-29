@@ -792,8 +792,9 @@ namespace wi
 			wi::renderer::DRAWSCENE_IMPOSTOR |
 			wi::renderer::DRAWSCENE_HAIRPARTICLE |
 			wi::renderer::DRAWSCENE_TESSELLATION |
-			wi::renderer::DRAWSCENE_OCCLUSIONCULLING
-			;
+			wi::renderer::DRAWSCENE_OCCLUSIONCULLING |
+			wi::renderer::DRAWSCENE_MAINCAMERA
+		;
 
 		// Main camera depth prepass + occlusion culling:
 		cmd = device->BeginCommandList();
@@ -849,7 +850,8 @@ namespace wi
 				RENDERPASS_PREPASS,
 				cmd,
 				wi::renderer::DRAWSCENE_OPAQUE |
-				wi::renderer::DRAWSCENE_FOREGROUND_ONLY
+				wi::renderer::DRAWSCENE_FOREGROUND_ONLY |
+				wi::renderer::DRAWSCENE_MAINCAMERA
 			);
 
 			// Regular:
@@ -1077,23 +1079,10 @@ namespace wi
 				Viewport vp;
 				vp.width = (float)depthBuffer_Reflection.GetDesc().width;
 				vp.height = (float)depthBuffer_Reflection.GetDesc().height;
-
-				// Foreground:
-				vp.min_depth = 1 - foreground_depth_range;
-				vp.max_depth = 1;
-				device->BindViewports(1, &vp, cmd);
-				wi::renderer::DrawScene(
-					visibility_reflection,
-					RENDERPASS_PREPASS,
-					cmd,
-					wi::renderer::DRAWSCENE_OPAQUE |
-					wi::renderer::DRAWSCENE_FOREGROUND_ONLY
-				);
-
-				// Regular:
 				vp.min_depth = 0;
 				vp.max_depth = 1;
 				device->BindViewports(1, &vp, cmd);
+
 				wi::renderer::DrawScene(
 					visibility_reflection,
 					RENDERPASS_PREPASS,
@@ -1174,23 +1163,10 @@ namespace wi
 				Viewport vp;
 				vp.width = (float)depthBuffer_Reflection.GetDesc().width;
 				vp.height = (float)depthBuffer_Reflection.GetDesc().height;
-
-				// Foreground:
-				vp.min_depth = 1 - foreground_depth_range;
-				vp.max_depth = 1;
-				device->BindViewports(1, &vp, cmd);
-				wi::renderer::DrawScene(
-					visibility_reflection,
-					RENDERPASS_MAIN,
-					cmd,
-					wi::renderer::DRAWSCENE_OPAQUE |
-					wi::renderer::DRAWSCENE_FOREGROUND_ONLY
-				);
-
-				// Regular:
 				vp.min_depth = 0;
 				vp.max_depth = 1;
 				device->BindViewports(1, &vp, cmd);
+
 				wi::renderer::DrawScene(
 					visibility_reflection,
 					RENDERPASS_MAIN,
@@ -1419,7 +1395,8 @@ namespace wi
 					RENDERPASS_MAIN,
 					cmd,
 					wi::renderer::DRAWSCENE_OPAQUE |
-					wi::renderer::DRAWSCENE_FOREGROUND_ONLY
+					wi::renderer::DRAWSCENE_FOREGROUND_ONLY |
+					wi::renderer::DRAWSCENE_MAINCAMERA
 				);
 
 				// Regular:
@@ -1869,7 +1846,8 @@ namespace wi
 				RENDERPASS_MAIN,
 				cmd,
 				wi::renderer::DRAWSCENE_TRANSPARENT |
-				wi::renderer::DRAWSCENE_FOREGROUND_ONLY
+				wi::renderer::DRAWSCENE_FOREGROUND_ONLY |
+				wi::renderer::DRAWSCENE_MAINCAMERA
 			);
 
 			// Regular:
@@ -1884,7 +1862,8 @@ namespace wi
 				wi::renderer::DRAWSCENE_OCCLUSIONCULLING |
 				wi::renderer::DRAWSCENE_HAIRPARTICLE |
 				wi::renderer::DRAWSCENE_TESSELLATION |
-				wi::renderer::DRAWSCENE_OCEAN
+				wi::renderer::DRAWSCENE_OCEAN |
+				wi::renderer::DRAWSCENE_MAINCAMERA
 			);
 
 			device->EventEnd(cmd);

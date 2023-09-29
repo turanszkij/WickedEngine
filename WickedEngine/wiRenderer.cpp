@@ -5696,6 +5696,7 @@ void DrawScene(
 	const bool ocean = flags & DRAWSCENE_OCEAN;
 	const bool skip_planar_reflection_objects = flags & DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS;
 	const bool foreground_only = flags & DRAWSCENE_FOREGROUND_ONLY;
+	const bool maincamera = flags & DRAWSCENE_MAINCAMERA;
 
 	device->EventBegin("DrawScene", cmd);
 	device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
@@ -5734,15 +5735,20 @@ void DrawScene(
 			continue;
 
 		const ObjectComponent& object = vis.scene->objects[instanceIndex];
-		if (object.IsRenderable() && object.IsForeground() == foreground_only && (object.GetFilterMask() & filterMask))
-		{
-			const float distance = wi::math::Distance(vis.camera->Eye, object.center);
-			if (distance > object.fadeDistance + object.radius)
-			{
-				continue;
-			}
-			renderQueue.add(object.mesh_index, instanceIndex, distance, object.sort_bits);
-		}
+		if (!object.IsRenderable())
+			continue;
+		if (foreground_only && !object.IsForeground())
+			continue;
+		if (maincamera && object.IsNotVisibleInMainCamera())
+			continue;
+		if ((object.GetFilterMask() & filterMask) == 0)
+			continue;
+
+		const float distance = wi::math::Distance(vis.camera->Eye, object.center);
+		if (distance > object.fadeDistance + object.radius)
+			continue;
+
+		renderQueue.add(object.mesh_index, instanceIndex, distance, object.sort_bits);
 	}
 	if (!renderQueue.empty())
 	{
