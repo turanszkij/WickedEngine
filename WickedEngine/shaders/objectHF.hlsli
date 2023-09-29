@@ -290,6 +290,15 @@ struct PixelInput
 		return min16float((instanceIndex_dither >> 24u) / 255.0);
 	}
 #endif // OBJECTSHADER_USE_DITHERING
+	
+#ifdef OBJECTSHADER_USE_UVSETS
+	inline float4 GetUVSets()
+	{
+		float4 ret = uvsets;
+		ret.xy = mad(ret.xy, GetMaterial().texMulAdd.xy, GetMaterial().texMulAdd.zw);
+		return ret;
+	}
+#endif // OBJECTSHADER_USE_UVSETS
 };
 
 
@@ -406,8 +415,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	const float2 ScreenCoord = pixel * GetCamera().internal_resolution_rcp;
 
 #ifdef OBJECTSHADER_USE_UVSETS
-	float4 uvsets = input.uvsets;
-	uvsets.xy = mad(uvsets.xy, GetMaterial().texMulAdd.xy, GetMaterial().texMulAdd.zw);
+	float4 uvsets = input.GetUVSets();
 #endif // OBJECTSHADER_USE_UVSETS
 
 #ifndef DISABLE_ALPHATEST

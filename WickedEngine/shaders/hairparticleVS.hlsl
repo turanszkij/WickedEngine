@@ -24,8 +24,8 @@ VertexToPixel main(uint vid : SV_VERTEXID)
 	Out.pos3D = Out.pos.xyz;
 	Out.pos = mul(GetCamera().view_projection, Out.pos);
 
-	Out.nor = normalize(normal);
-	Out.tex = uvsets.xy;
+	Out.nor = min16float3(normal);
+	Out.tex = min16float2(uvsets.xy);
 
 	return Out;
 }

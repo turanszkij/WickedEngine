@@ -4,11 +4,13 @@
 [earlydepthstencil]
 float4 main(PixelInput input) : SV_TARGET
 {
+	float4 uvsets = input.GetUVSets();
+	
 	float4 color;
 	[branch]
 	if (GetMaterial().textures[BASECOLORMAP].IsValid() && (GetFrame().options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 	{
-		color = GetMaterial().textures[BASECOLORMAP].Sample(sampler_objectshader, input.uvsets);
+		color = GetMaterial().textures[BASECOLORMAP].Sample(sampler_objectshader, uvsets);
 		color.rgb = max(color.r, max(color.g, color.b));
 	}
 	else
@@ -21,7 +23,7 @@ float4 main(PixelInput input) : SV_TARGET
 	[branch]
 	if (any(emissiveColor) && GetMaterial().textures[EMISSIVEMAP].IsValid())
 	{
-		float4 emissiveMap = GetMaterial().textures[EMISSIVEMAP].Sample(sampler_objectshader, input.uvsets);
+		float4 emissiveMap = GetMaterial().textures[EMISSIVEMAP].Sample(sampler_objectshader, uvsets);
 		emissiveColor *= emissiveMap.rgb * emissiveMap.a;
 	}
 	color.rgb += emissiveColor;

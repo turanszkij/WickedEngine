@@ -10,11 +10,13 @@ struct ImpostorOutput
 
 ImpostorOutput main(PixelInput input)
 {
+	float4 uvsets = input.GetUVSets();
+	
 	float4 color;
 	[branch]
 	if (GetMaterial().textures[BASECOLORMAP].IsValid())
 	{
-		color = GetMaterial().textures[BASECOLORMAP].Sample(sampler_linear_wrap, input.uvsets);
+		color = GetMaterial().textures[BASECOLORMAP].Sample(sampler_linear_wrap, uvsets);
 	}
 	else
 	{
@@ -26,7 +28,7 @@ ImpostorOutput main(PixelInput input)
 	float3 N = normalize(input.nor);
 	float3 P = input.pos3D;
 
-	float3x3 TBN = compute_tangent_frame(N, P, input.uvsets.xy);
+	float3x3 TBN = compute_tangent_frame(N, P, uvsets.xy);
 
 	[branch]
 	if (GetMaterial().textures[NORMALMAP].IsValid())
@@ -34,7 +36,7 @@ ImpostorOutput main(PixelInput input)
 		[branch]
 		if (GetMaterial().normalMapStrength > 0 && GetMaterial().textures[NORMALMAP].IsValid())
 		{
-			float3 normalMap = float3(GetMaterial().textures[NORMALMAP].Sample(sampler_objectshader, input.uvsets).rg, 1);
+			float3 normalMap = float3(GetMaterial().textures[NORMALMAP].Sample(sampler_objectshader, uvsets).rg, 1);
 			float3 bumpColor = normalMap.rgb * 2 - 1;
 			N = normalize(lerp(N, mul(bumpColor, TBN), GetMaterial().normalMapStrength));
 		}
@@ -44,7 +46,7 @@ ImpostorOutput main(PixelInput input)
 	[branch]
 	if (GetMaterial().textures[SURFACEMAP].IsValid())
 	{
-		surfaceMap = GetMaterial().textures[SURFACEMAP].Sample(sampler_linear_wrap, input.uvsets);
+		surfaceMap = GetMaterial().textures[SURFACEMAP].Sample(sampler_linear_wrap, uvsets);
 	}
 
 	float4 surface;

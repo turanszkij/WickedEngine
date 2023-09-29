@@ -43,19 +43,27 @@ void VoxelAtomicAverage(inout RWTexture3D<uint> output, in uint3 dest, in float4
 struct PSInput
 {
 	float4 pos : SV_POSITION;
-	centroid float4 color : COLOR;
-	float4 uvsets : UVSETS;
-	centroid float3 N : NORMAL;
+	centroid min16float4 color : COLOR;
+	centroid min16float4 uvsets : UVSETS;
+	centroid min16float3 N : NORMAL;
 	centroid float3 P : POSITION3D;
 
 #ifdef VOXELIZATION_CONSERVATIVE_RASTERIZATION_ENABLED
 	nointerpolation float3 aabb_min : AABB_MIN;
 	nointerpolation float3 aabb_max : AABB_MAX;
 #endif // VOXELIZATION_CONSERVATIVE_RASTERIZATION_ENABLED
+	
+	inline float4 GetUVSets()
+	{
+		float4 ret = uvsets;
+		ret.xy = mad(ret.xy, GetMaterial().texMulAdd.xy, GetMaterial().texMulAdd.zw);
+		return ret;
+	}
 };
 
 void main(PSInput input)
 {
+	float4 uvsets = input.GetUVSets();
 	float3 P = input.P;
 
 	VoxelClipMap clipmap = GetFrame().vxgi.clipmaps[g_xVoxelizer.clipmap_index];
@@ -87,14 +95,14 @@ void main(PSInput input)
 			//	mip level in which alpha is completely gone (helps with trees)
 			lod_bias = -10;
 		}
-		baseColor *= GetMaterial().textures[BASECOLORMAP].SampleBias(sampler_linear_wrap, input.uvsets, lod_bias);
+		baseColor *= GetMaterial().textures[BASECOLORMAP].SampleBias(sampler_linear_wrap, uvsets, lod_bias);
 	}
 
 	float3 emissiveColor = GetMaterial().GetEmissive();
 	[branch]
 	if (any(emissiveColor) && GetMaterial().textures[EMISSIVEMAP].IsValid())
 	{
-		float4 emissiveMap = GetMaterial().textures[EMISSIVEMAP].Sample(sampler_linear_wrap, input.uvsets);
+		float4 emissiveMap = GetMaterial().textures[EMISSIVEMAP].Sample(sampler_linear_wrap, uvsets);
 		emissiveColor *= emissiveMap.rgb * emissiveMap.a;
 	}
 

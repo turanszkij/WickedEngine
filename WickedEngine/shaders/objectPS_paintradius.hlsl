@@ -6,7 +6,8 @@
 [earlydepthstencil]
 float4 main(PixelInput input) : SV_TARGET
 {
-	const float2 pixel = (xPaintRadUVSET == 0 ? input.uvsets.xy : input.uvsets.zw) * xPaintRadResolution;
+	float4 uvsets = input.GetUVSets();
+	const float2 pixel = (xPaintRadUVSET == 0 ? uvsets.xy : uvsets.zw) * xPaintRadResolution;
 
 	const float2x2 rot = float2x2(
 		cos(xPaintRadBrushRotation), -sin(xPaintRadBrushRotation),
