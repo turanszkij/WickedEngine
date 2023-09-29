@@ -86,6 +86,7 @@ namespace wi::graphics
 		struct CopyAllocator
 		{
 			GraphicsDevice_DX12* device = nullptr;
+			Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue; // create separate copy queue to reduce interference with main QUEUE_COPY
 			std::mutex locker;
 
 			struct CopyCMD
