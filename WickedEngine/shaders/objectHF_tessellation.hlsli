@@ -119,23 +119,23 @@ PixelInput main(ConstantOutput input, float3 uvw : SV_DomainLocation, const Outp
 #endif // OBJECTSHADER_USE_POSITIONPREV
 
 #ifdef OBJECTSHADER_USE_COLOR
-	output.color = w * patch[0].color + u * patch[1].color + v * patch[2].color;
+	output.color = min16float4(w * patch[0].color + u * patch[1].color + v * patch[2].color);
 #endif // OBJECTSHADER_USE_COLOR
 
 #ifdef OBJECTSHADER_USE_UVSETS
-	output.uvsets = w * patch[0].uvsets + u * patch[1].uvsets + v * patch[2].uvsets;
+	output.uvsets = min16float4(w * patch[0].uvsets + u * patch[1].uvsets + v * patch[2].uvsets);
 #endif // OBJECTSHADER_USE_UVSETS
 
 #ifdef OBJECTSHADER_USE_ATLAS
-	output.atl = w * patch[0].atl + u * patch[1].atl + v * patch[2].atl;
+	output.atl = min16float2(w * patch[0].atl + u * patch[1].atl + v * patch[2].atl);
 #endif // OBJECTSHADER_USE_ATLAS
 
 #ifdef OBJECTSHADER_USE_NORMAL
-	output.nor = w * patch[0].nor + u * patch[1].nor + v * patch[2].nor;
+	output.nor = min16float3(w * patch[0].nor + u * patch[1].nor + v * patch[2].nor);
 #endif // OBJECTSHADER_USE_NORMAL
 
 #ifdef OBJECTSHADER_USE_TANGENT
-	output.tan = w * patch[0].tan + u * patch[1].tan + v * patch[2].tan;
+	output.tan = min16float4(w * patch[0].tan + u * patch[1].tan + v * patch[2].tan);
 #endif // OBJECTSHADER_USE_TANGENT
 
 #ifdef OBJECTSHADER_USE_POSITION3D
@@ -151,7 +151,7 @@ PixelInput main(ConstantOutput input, float3 uvw : SV_DomainLocation, const Outp
 	{
 		float displacement = GetMaterial().textures[DISPLACEMENTMAP].SampleLevel(sampler_objectshader, output.uvsets, 0).r;
 		displacement *= GetMaterial().displacementMapping;
-		output.pos.xyz += normalize(output.nor) * displacement;
+		output.pos.xyz += normalize(float3(output.nor)) * displacement;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 #endif // OBJECTSHADER_USE_NORMAL

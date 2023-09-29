@@ -126,12 +126,12 @@ struct VertexInput
 		return bindless_buffers_float4[GetMesh().vb_pos_nor_wind][vertexID];
 	}
 
-	float4 GetUVSets()
+	min16float4 GetUVSets()
 	{
 		[branch]
 		if (GetMesh().vb_uvs < 0)
 			return 0;
-		return bindless_buffers_float4[GetMesh().vb_uvs][vertexID];
+		return (min16float4)bindless_buffers_float4[GetMesh().vb_uvs][vertexID];
 	}
 
 	ShaderMeshInstancePointer GetInstancePointer()
@@ -144,28 +144,28 @@ struct VertexInput
 		return poi;
 	}
 
-	float2 GetAtlasUV()
+	min16float2 GetAtlasUV()
 	{
 		[branch]
 		if (GetMesh().vb_atl < 0)
 			return 0;
-		return bindless_buffers_float2[GetMesh().vb_atl][vertexID];
+		return (min16float2)bindless_buffers_float2[GetMesh().vb_atl][vertexID];
 	}
 
-	float4 GetVertexColor()
+	min16float4 GetVertexColor()
 	{
 		[branch]
 		if (GetMesh().vb_col < 0)
 			return 1;
-		return bindless_buffers_float4[GetMesh().vb_col][vertexID];
+		return (min16float4)bindless_buffers_float4[GetMesh().vb_col][vertexID];
 	}
 
-	float4 GetTangent()
+	min16float4 GetTangent()
 	{
 		[branch]
 		if (GetMesh().vb_tan < 0)
 			return 0;
-		return bindless_buffers_float4[GetMesh().vb_tan][vertexID];
+		return (min16float4)bindless_buffers_float4[GetMesh().vb_tan][vertexID];
 	}
 
 	ShaderMeshInstance GetInstance()
@@ -183,20 +183,20 @@ struct VertexInput
 struct VertexSurface
 {
 	float4 position;
-	float4 uvsets;
-	float2 atlas;
-	float4 color;
-	float3 normal;
-	float4 tangent;
+	min16float4 uvsets;
+	min16float2 atlas;
+	min16float4 color;
+	min16float3 normal;
+	min16float4 tangent;
 
 	inline void create(in ShaderMaterial material, in VertexInput input)
 	{
 		float4 pos_nor_wind = input.GetPositionNormalWind();
 		uint normal_wind = asuint(pos_nor_wind.w);
 		position = float4(pos_nor_wind.xyz, 1);
-		normal = unpack_unitvector(normal_wind);
-		color = GetMaterial().baseColor * unpack_rgba(input.GetInstance().color);
-		color.a *= 1 - input.GetInstancePointer().GetDither();
+		normal = min16float3(unpack_unitvector(normal_wind));
+		color = min16float4(GetMaterial().baseColor * unpack_rgba(input.GetInstance().color));
+		color.a *= min16float(1 - input.GetInstancePointer().GetDither());
 
 		[branch]
 		if (material.IsUsingVertexColors())
@@ -204,13 +204,12 @@ struct VertexSurface
 			color *= input.GetVertexColor();
 		}
 		
-		normal = mul((float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), normal);
+		normal = mul((min16float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), normal);
 
 		tangent = input.GetTangent();
-		tangent.xyz = mul((float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), tangent.xyz);
+		tangent.xyz = mul((min16float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), tangent.xyz);
 
 		uvsets = input.GetUVSets();
-		uvsets.xy = mad(uvsets.xy, material.texMulAdd.xy, material.texMulAdd.zw);
 
 		atlas = input.GetAtlasUV();
 
@@ -234,28 +233,28 @@ struct PixelInput
 	float  clip : SV_ClipDistance0;
 #endif // OBJECTSHADER_USE_CLIPPLANE
 
-#ifdef OBJECTSHADER_USE_NORMAL
-	float3 nor : NORMAL;
-#endif // OBJECTSHADER_USE_NORMAL
-
 #if defined(OBJECTSHADER_USE_INSTANCEINDEX) || defined(OBJECTSHADER_USE_DITHERING)
 	uint instanceIndex_dither : INSTANCEINDEX_DITHER;
 #endif // OBJECTSHADER_USE_INSTANCEINDEX || OBJECTSHADER_USE_DITHERING
 
 #ifdef OBJECTSHADER_USE_COLOR
-	float4 color : COLOR;
+	min16float4 color : COLOR;
 #endif // OBJECTSHADER_USE_COLOR
 
 #ifdef OBJECTSHADER_USE_UVSETS
-	float4 uvsets : UVSETS;
+	min16float4 uvsets : UVSETS;
 #endif // OBJECTSHADER_USE_UVSETS
 
 #ifdef OBJECTSHADER_USE_TANGENT
-	float4 tan : TANGENT;
+	min16float4 tan : TANGENT;
 #endif // OBJECTSHADER_USE_TANGENT
 
+#ifdef OBJECTSHADER_USE_NORMAL
+	min16float3 nor : NORMAL;
+#endif // OBJECTSHADER_USE_NORMAL
+
 #ifdef OBJECTSHADER_USE_ATLAS
-	float2 atl : ATLAS;
+	min16float2 atl : ATLAS;
 #endif // OBJECTSHADER_USE_ATLAS
 
 #ifdef OBJECTSHADER_USE_POSITION3D
@@ -286,9 +285,9 @@ struct PixelInput
 #endif // OBJECTSHADER_USE_INSTANCEINDEX
 
 #ifdef OBJECTSHADER_USE_DITHERING
-	inline float GetDither()
+	inline min16float GetDither()
 	{
-		return (instanceIndex_dither >> 24u) / 255.0f;
+		return min16float((instanceIndex_dither >> 24u) / 255.0);
 	}
 #endif // OBJECTSHADER_USE_DITHERING
 };
@@ -406,6 +405,11 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	const uint2 pixel = input.pos.xy;
 	const float2 ScreenCoord = pixel * GetCamera().internal_resolution_rcp;
 
+#ifdef OBJECTSHADER_USE_UVSETS
+	float4 uvsets = input.uvsets;
+	uvsets.xy = mad(uvsets.xy, GetMaterial().texMulAdd.xy, GetMaterial().texMulAdd.zw);
+#endif // OBJECTSHADER_USE_UVSETS
+
 #ifndef DISABLE_ALPHATEST
 #ifndef TRANSPARENT
 #ifndef ENVMAPRENDERING
@@ -443,7 +447,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 #ifdef OBJECTSHADER_USE_TANGENT
 #if 0
-	float3x3 TBN = compute_tangent_frame(surface.N, surface.P, input.uvsets.xy);
+	float3x3 TBN = compute_tangent_frame(surface.N, surface.P, uvsets.xy);
 #else
 	if (is_frontface == false)
 	{
@@ -460,12 +464,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	if (GetMaterial().textures[DISPLACEMENTMAP].IsValid())
 	{
 		Texture2D tex = bindless_textures[GetMaterial().textures[DISPLACEMENTMAP].texture_descriptor];
-		float2 uv = GetMaterial().textures[DISPLACEMENTMAP].GetUVSet() == 0 ? input.uvsets.xy : input.uvsets.zw;
+		float2 uv = GetMaterial().textures[DISPLACEMENTMAP].GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
 		float2 uv_dx = ddx_coarse(uv);
 		float2 uv_dy = ddy_coarse(uv);
 
 		ParallaxOcclusionMapping_Impl(
-			input.uvsets,
+			uvsets,
 			surface.V,
 			TBN,
 			GetMaterial(),
@@ -489,7 +493,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	if (GetMaterial().textures[BASECOLORMAP].IsValid() && (GetFrame().options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 #endif // PREPASS
 	{
-		surface.baseColor *= GetMaterial().textures[BASECOLORMAP].Sample(sampler_objectshader, input.uvsets);
+		surface.baseColor *= GetMaterial().textures[BASECOLORMAP].Sample(sampler_objectshader, uvsets);
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 
@@ -514,7 +518,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (GetMaterial().normalMapStrength > 0 && GetMaterial().textures[NORMALMAP].IsValid())
 	{
-		surface.bumpColor = float3(GetMaterial().textures[NORMALMAP].Sample(sampler_objectshader, input.uvsets).rg, 1);
+		surface.bumpColor = float3(GetMaterial().textures[NORMALMAP].Sample(sampler_objectshader, uvsets).rg, 1);
 		surface.bumpColor = surface.bumpColor * 2 - 1;
 		surface.bumpColor.rg *= GetMaterial().normalMapStrength;
 	}
@@ -529,7 +533,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (GetMaterial().textures[SURFACEMAP].IsValid())
 	{
-		surfaceMap = GetMaterial().textures[SURFACEMAP].Sample(sampler_objectshader, input.uvsets);
+		surfaceMap = GetMaterial().textures[SURFACEMAP].Sample(sampler_objectshader, uvsets);
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 
@@ -577,7 +581,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (GetMaterial().textures[SPECULARMAP].IsValid())
 	{
-		specularMap = GetMaterial().textures[SPECULARMAP].Sample(sampler_objectshader, input.uvsets);
+		specularMap = GetMaterial().textures[SPECULARMAP].Sample(sampler_objectshader, uvsets);
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 
@@ -596,7 +600,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (any(surface.emissiveColor) && GetMaterial().textures[EMISSIVEMAP].IsValid())
 	{
-		float4 emissiveMap = GetMaterial().textures[EMISSIVEMAP].Sample(sampler_objectshader, input.uvsets);
+		float4 emissiveMap = GetMaterial().textures[EMISSIVEMAP].Sample(sampler_objectshader, uvsets);
 		surface.emissiveColor *= emissiveMap.rgb * emissiveMap.a;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
@@ -610,7 +614,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (GetMaterial().IsOcclusionEnabled_Secondary() && GetMaterial().textures[OCCLUSIONMAP].IsValid())
 	{
-		surface.occlusion *= GetMaterial().textures[OCCLUSIONMAP].Sample(sampler_objectshader, input.uvsets).r;
+		surface.occlusion *= GetMaterial().textures[OCCLUSIONMAP].Sample(sampler_objectshader, uvsets).r;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 
@@ -638,7 +642,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (GetMaterial().textures[ANISOTROPYMAP].IsValid())
 	{
-		float2 anisotropyTexture = GetMaterial().textures[ANISOTROPYMAP].Sample(sampler_objectshader, input.uvsets).rg * 2 - 1;
+		float2 anisotropyTexture = GetMaterial().textures[ANISOTROPYMAP].Sample(sampler_objectshader, uvsets).rg * 2 - 1;
 		surface.aniso.strength *= length(anisotropyTexture);
 		surface.aniso.direction = mul(float2x2(surface.aniso.direction.x, surface.aniso.direction.y, -surface.aniso.direction.y, surface.aniso.direction.x), normalize(anisotropyTexture));
 	}
@@ -657,12 +661,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (GetMaterial().textures[SHEENCOLORMAP].IsValid())
 	{
-		surface.sheen.color = GetMaterial().textures[SHEENCOLORMAP].Sample(sampler_objectshader, input.uvsets).rgb;
+		surface.sheen.color = GetMaterial().textures[SHEENCOLORMAP].Sample(sampler_objectshader, uvsets).rgb;
 	}
 	[branch]
 	if (GetMaterial().textures[SHEENROUGHNESSMAP].IsValid())
 	{
-		surface.sheen.roughness = GetMaterial().textures[SHEENROUGHNESSMAP].Sample(sampler_objectshader, input.uvsets).a;
+		surface.sheen.roughness = GetMaterial().textures[SHEENROUGHNESSMAP].Sample(sampler_objectshader, uvsets).a;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 #endif // SHEEN
@@ -677,18 +681,18 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (GetMaterial().textures[CLEARCOATMAP].IsValid())
 	{
-		surface.clearcoat.factor = GetMaterial().textures[CLEARCOATMAP].Sample(sampler_objectshader, input.uvsets).r;
+		surface.clearcoat.factor = GetMaterial().textures[CLEARCOATMAP].Sample(sampler_objectshader, uvsets).r;
 	}
 	[branch]
 	if (GetMaterial().textures[CLEARCOATROUGHNESSMAP].IsValid())
 	{
-		surface.clearcoat.roughness = GetMaterial().textures[CLEARCOATROUGHNESSMAP].Sample(sampler_objectshader, input.uvsets).g;
+		surface.clearcoat.roughness = GetMaterial().textures[CLEARCOATROUGHNESSMAP].Sample(sampler_objectshader, uvsets).g;
 	}
 #ifdef OBJECTSHADER_USE_TANGENT
 	[branch]
 	if (GetMaterial().textures[CLEARCOATNORMALMAP].IsValid())
 	{
-		float3 clearcoatNormalMap = float3(GetMaterial().textures[CLEARCOATNORMALMAP].Sample(sampler_objectshader, input.uvsets).rg, 1);
+		float3 clearcoatNormalMap = float3(GetMaterial().textures[CLEARCOATNORMALMAP].Sample(sampler_objectshader, uvsets).rg, 1);
 		clearcoatNormalMap = clearcoatNormalMap * 2 - 1;
 		surface.clearcoat.N = mul(clearcoatNormalMap, TBN);
 	}
@@ -726,7 +730,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	if (GetMaterial().textures[NORMALMAP].IsValid())
 	{
 		Texture2D texture_normalmap = bindless_textures[GetMaterial().textures[NORMALMAP].texture_descriptor];
-		const float2 UV_normalMap = GetMaterial().textures[NORMALMAP].GetUVSet() == 0 ? input.uvsets.xy : input.uvsets.zw;
+		const float2 UV_normalMap = GetMaterial().textures[NORMALMAP].GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
 		bumpColor0 = 2 * texture_normalmap.Sample(sampler_objectshader, UV_normalMap - GetMaterial().texMulAdd.ww).rg - 1;
 		bumpColor1 = 2 * texture_normalmap.Sample(sampler_objectshader, UV_normalMap + GetMaterial().texMulAdd.zw).rg - 1;
 	}
@@ -762,7 +766,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 		[branch]
 		if (GetMaterial().textures[TRANSMISSIONMAP].IsValid())
 		{
-			float transmissionMap = GetMaterial().textures[TRANSMISSIONMAP].Sample(sampler_objectshader, input.uvsets).r;
+			float transmissionMap = GetMaterial().textures[TRANSMISSIONMAP].Sample(sampler_objectshader, uvsets).r;
 			surface.transmission *= transmissionMap;
 		}
 #endif // OBJECTSHADER_USE_UVSETS
