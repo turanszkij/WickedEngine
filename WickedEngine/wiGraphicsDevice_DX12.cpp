@@ -1701,7 +1701,7 @@ using namespace dx12_internal;
 #endif // PLATFORM_XBOX
 
 		queue->ExecuteCommandLists(1, commandlists);
-		queue->Signal(cmd.fence.Get(), cmd.fenceValueSignaled);
+		hr = queue->Signal(cmd.fence.Get(), cmd.fenceValueSignaled);
 		assert(SUCCEEDED(hr));
 
 		hr = device->queues[QUEUE_GRAPHICS].queue->Wait(cmd.fence.Get(), cmd.fenceValueSignaled);
