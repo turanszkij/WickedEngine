@@ -315,6 +315,12 @@ namespace wi
 
 	void EmittedParticleSystem::UpdateCPU(const TransformComponent& transform, float dt)
 	{
+		if (!particleBuffer.IsValid())
+		{
+			// set initial prev matrix to current:
+			transformPrev = transform.world;
+		}
+
 		CreateSelfBuffers();
 
 		if (IsPaused())
@@ -363,6 +369,8 @@ namespace wi
 		{
 			EmittedParticleCB cb;
 			cb.xEmitterTransform.Create(transform.world);
+			cb.xEmitterTransformPrev.Create(transformPrev);
+			transformPrev = transform.world;
 			cb.xEmitCount = (uint32_t)emit;
 			cb.xEmitterMeshIndexCount = mesh == nullptr ? 0 : (uint32_t)mesh->indices.size();
 			cb.xEmitterRandomness = wi::random::GetRandom(0.0f, 1.0f);

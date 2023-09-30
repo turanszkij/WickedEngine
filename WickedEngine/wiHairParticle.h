@@ -93,7 +93,6 @@ namespace wi
 
 		// Non-serialized attributes:
 		XMFLOAT4X4 world;
-		XMFLOAT4X4 worldPrev;
 		wi::primitive::AABB aabb;
 		wi::vector<uint32_t> indices; // it is dependent on vertex_lengths and contains triangles with non-zero lengths
 		uint32_t layerMask = ~0u;

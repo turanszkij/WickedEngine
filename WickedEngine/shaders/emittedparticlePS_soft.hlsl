@@ -31,18 +31,25 @@ float4 main(VertextoPixel input) : SV_TARGET
 	}
 
 	uint2 pixel = input.pos.xy;
-	float2 ScreenCoord = pixel * GetCamera().internal_resolution_rcp;
-	float4 depthScene = texture_lineardepth.GatherRed(sampler_linear_clamp, ScreenCoord) * GetCamera().z_far;
-	float depthFragment = input.pos.w;
-	float fade = saturate(1.0 / input.size*(max(max(depthScene.x, depthScene.y), max(depthScene.z, depthScene.w)) - depthFragment));
-
+	
 	float4 inputColor;
 	inputColor.r = ((input.color >> 0)  & 0xFF) / 255.0f;
 	inputColor.g = ((input.color >> 8)  & 0xFF) / 255.0f;
 	inputColor.b = ((input.color >> 16) & 0xFF) / 255.0f;
 	inputColor.a = ((input.color >> 24) & 0xFF) / 255.0f;
 
-	float opacity = saturate(color.a * inputColor.a * fade);
+	float opacity = color.a * inputColor.a;
+
+	[branch]
+	if (GetCamera().texture_lineardepth_index >= 0)
+	{
+		float2 ScreenCoord = pixel * GetCamera().internal_resolution_rcp;
+		float4 depthScene = texture_lineardepth.GatherRed(sampler_linear_clamp, ScreenCoord) * GetCamera().z_far;
+		float depthFragment = input.pos.w;
+		opacity *= saturate(1.0 / input.size * (max(max(depthScene.x, depthScene.y), max(depthScene.z, depthScene.w)) - depthFragment));
+	}
+
+	opacity = saturate(opacity);
 
 	color.rgb *= inputColor.rgb * (1 + material.GetEmissive());
 	color.a = opacity;

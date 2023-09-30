@@ -5,14 +5,14 @@
 struct GSInput
 {
 	float4 pos : SV_POSITION;
-	float4 uvsets : UVSETS;
+	min16float4 uvsets : UVSETS;
 	uint VPIndex : VPINDEX;
 };
 
 struct GSOutput
 {
 	float4 pos : SV_POSITION;
-	float4 uvsets : UVSETS;
+	min16float4 uvsets : UVSETS;
 	uint VPIndex : SV_ViewportArrayIndex;
 };
 

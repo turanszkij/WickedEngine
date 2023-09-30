@@ -132,6 +132,7 @@ namespace wi
 		// Non-serialized attributes:
 		XMFLOAT3 center;
 		uint32_t layerMask = ~0u;
+		mutable XMFLOAT4X4 transformPrev = wi::math::IDENTITY_MATRIX;
 
 		inline bool IsDebug() const { return _flags & FLAG_DEBUG; }
 		inline bool IsPaused() const { return _flags & FLAG_PAUSED; }

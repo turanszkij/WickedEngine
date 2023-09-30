@@ -369,7 +369,10 @@ namespace wi
 			visibility_reflection.layerMask = getLayerMask();
 			visibility_reflection.scene = scene;
 			visibility_reflection.camera = &camera_reflection;
-			visibility_reflection.flags = wi::renderer::Visibility::ALLOW_OBJECTS;
+			visibility_reflection.flags =
+				wi::renderer::Visibility::ALLOW_OBJECTS |
+				wi::renderer::Visibility::ALLOW_EMITTERS
+			;
 			wi::renderer::UpdateVisibility(visibility_reflection);
 		}
 
@@ -1207,6 +1210,8 @@ namespace wi
 					device->EventEnd(cmd);
 				}
 
+				wi::renderer::DrawSoftParticles(visibility_reflection, false, cmd);
+
 				device->RenderPassEnd(cmd);
 
 				wi::profiler::EndRange(range); // Planar Reflections
@@ -1872,7 +1877,7 @@ namespace wi
 
 		wi::renderer::DrawLightVisualizers(visibility_main, cmd);
 
-		wi::renderer::DrawSoftParticles(visibility_main, rtLinearDepth, false, cmd);
+		wi::renderer::DrawSoftParticles(visibility_main, false, cmd);
 
 		if (getVolumeLightsEnabled() && visibility_main.IsRequestedVolumetricLights())
 		{
@@ -1951,7 +1956,7 @@ namespace wi
 			vp.height = (float)rtParticleDistortion.GetDesc().height;
 			device->BindViewports(1, &vp, cmd);
 
-			wi::renderer::DrawSoftParticles(visibility_main, rtLinearDepth, true, cmd);
+			wi::renderer::DrawSoftParticles(visibility_main, true, cmd);
 
 			device->RenderPassEnd(cmd);
 		}

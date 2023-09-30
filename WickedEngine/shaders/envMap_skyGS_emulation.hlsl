@@ -5,14 +5,14 @@
 struct GSInput
 {
 	float4 pos : SV_POSITION;
-	float3 nor : NORMAL;
+	min16float3 nor : NORMAL;
 	uint RTIndex : RTINDEX;
 };
 
 struct GSOutput
 {
 	float4 pos : SV_POSITION;
-	float3 nor : NORMAL;
+	min16float3 nor : NORMAL;
 	uint RTIndex : SV_RenderTargetArrayIndex;
 };
 

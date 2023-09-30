@@ -255,7 +255,6 @@ namespace wi::renderer
 	// Draw Soft offscreen particles.
 	void DrawSoftParticles(
 		const Visibility& vis,
-		const wi::graphics::Texture& lineardepth,
 		bool distortion, 
 		wi::graphics::CommandList cmd
 	);

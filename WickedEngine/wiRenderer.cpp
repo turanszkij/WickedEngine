@@ -4835,7 +4835,6 @@ void DrawWaterRipples(const Visibility& vis, CommandList cmd)
 
 void DrawSoftParticles(
 	const Visibility& vis,
-	const Texture& lineardepth,
 	bool distortion, 
 	CommandList cmd
 )

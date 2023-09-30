@@ -5,10 +5,9 @@ struct GSInput
 {
 	float4 pos : SV_POSITION;
 	float clip : SV_ClipDistance0;
-	uint instanceIndex : INSTANCEINDEX;
+	uint instanceIndex_dither : INSTANCEINDEX_DITHER;
 #ifdef ALPHATEST
-	nointerpolation float dither : DITHER;
-	float4 uvsets : UVSETS;
+	min16float4 uvsets : UVSETS;
 #endif // ALPHATEST
 };
 
@@ -16,10 +15,9 @@ struct GSOutput
 {
 	float4 pos : SV_POSITION;
 	float clip : SV_ClipDistance0;
-	uint instanceIndex : INSTANCEINDEX;
+	uint instanceIndex_dither : INSTANCEINDEX_DITHER;
 #ifdef ALPHATEST
-	nointerpolation float dither : DITHER;
-	float4 uvsets : UVSETS;
+	min16float4 uvsets : UVSETS;
 #endif // ALPHATEST
 	uint primitiveID : PRIMITIVEID;
 };
@@ -36,9 +34,8 @@ void main(
 		GSOutput element;
 		element.pos = input[i].pos;
 		element.clip = input[i].clip;
-		element.instanceIndex = input[i].instanceIndex;
+		element.instanceIndex_dither = input[i].instanceIndex_dither;
 #ifdef ALPHATEST
-		element.dither = input[i].dither;
 		element.uvsets = input[i].uvsets;
 #endif // ALPHATEST
 		element.primitiveID = primitiveID;
