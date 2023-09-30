@@ -263,4 +263,15 @@ function math.round(x)
 	return x + 0.5 - ( x + 0.5 ) % 1;
 end
 
+-- These are fallback for when the script was not executed with attached parameters (like binary script):
+function script_file()
+	return ""
+end
+function script_dir()
+	return ""
+end
+function script_pid()
+	return 0
+end
+
 )";
