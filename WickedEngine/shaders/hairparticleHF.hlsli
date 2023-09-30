@@ -19,6 +19,7 @@ ShaderMaterial HairGetMaterial()
 struct VertexToPixel
 {
 	float4 pos : SV_POSITION;
+	float clip : SV_ClipDistance0;
 	min16float2 tex : TEXCOORD;
 	nointerpolation float fade : DITHERFADE;
 	uint primitiveID : PRIMITIVEID;

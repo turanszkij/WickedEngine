@@ -42,7 +42,9 @@ VertextoPixel main(uint vid : SV_VertexID, uint instanceID : SV_InstanceID)
 
 	VertextoPixel Out;
 	Out.P = position;
-	Out.pos = mul(GetCamera().view_projection, float4(position, 1));
+	Out.pos = float4(position, 1);
+	Out.clip = dot(Out.pos, GetCamera().clip_plane);
+	Out.pos = mul(GetCamera().view_projection, Out.pos);
 	Out.tex = min16float4(uvsets);
 	Out.size = min16float(size);
 	Out.color = pack_rgba(color);

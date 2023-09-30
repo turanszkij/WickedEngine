@@ -21,11 +21,12 @@ VertexToPixel main(uint vid : SV_VERTEXID)
 	Out.fade = saturate(Out.fade - 0.8f) * 5.0f; // fade will be on edge and inwards 20%
 
 	Out.pos = float4(position, 1);
+	Out.clip = dot(Out.pos, GetCamera().clip_plane);
 	Out.pos3D = Out.pos.xyz;
 	Out.pos = mul(GetCamera().view_projection, Out.pos);
 
 	Out.nor = min16float3(normal);
 	Out.tex = min16float2(uvsets.xy);
-
+	
 	return Out;
 }
