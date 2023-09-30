@@ -735,6 +735,7 @@ namespace wi::lua::scene
 		int GetLodDistanceMultiplier(lua_State* L);
 		int GetDrawDistance(lua_State* L);
 		int IsForeground(lua_State* L);
+		int IsNotVisibleInMainCamera(lua_State* L);
 
 		int SetMeshID(lua_State* L);
 		int SetCascadeMask(lua_State* L);
@@ -745,6 +746,7 @@ namespace wi::lua::scene
 		int SetLodDistanceMultiplier(lua_State* L);
 		int SetDrawDistance(lua_State* L);
 		int SetForeground(lua_State* L);
+		int SetNotVisibleInMainCamera(lua_State* L);
 	};
 
 	class InverseKinematicsComponent_BindLua

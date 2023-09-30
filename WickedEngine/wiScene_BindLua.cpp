@@ -4428,6 +4428,7 @@ Luna<ObjectComponent_BindLua>::FunctionType ObjectComponent_BindLua::methods[] =
 	lunamethod(ObjectComponent_BindLua, GetUserStencilRef),
 	lunamethod(ObjectComponent_BindLua, GetDrawDistance),
 	lunamethod(ObjectComponent_BindLua, IsForeground),
+	lunamethod(ObjectComponent_BindLua, IsNotVisibleInMainCamera),
 
 	lunamethod(ObjectComponent_BindLua, SetMeshID),
 	lunamethod(ObjectComponent_BindLua, SetCascadeMask),
@@ -4437,6 +4438,7 @@ Luna<ObjectComponent_BindLua>::FunctionType ObjectComponent_BindLua::methods[] =
 	lunamethod(ObjectComponent_BindLua, SetUserStencilRef),
 	lunamethod(ObjectComponent_BindLua, SetDrawDistance),
 	lunamethod(ObjectComponent_BindLua, SetForeground),
+	lunamethod(ObjectComponent_BindLua, SetNotVisibleInMainCamera),
 	{ NULL, NULL }
 };
 Luna<ObjectComponent_BindLua>::PropertyType ObjectComponent_BindLua::properties[] = {
@@ -4492,6 +4494,11 @@ int ObjectComponent_BindLua::GetDrawDistance(lua_State* L)
 int ObjectComponent_BindLua::IsForeground(lua_State* L)
 {
 	wi::lua::SSetBool(L, component->IsForeground());
+	return 1;
+}
+int ObjectComponent_BindLua::IsNotVisibleInMainCamera(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsNotVisibleInMainCamera());
 	return 1;
 }
 
@@ -4637,6 +4644,21 @@ int ObjectComponent_BindLua::SetForeground(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "SetForeground(bool value) not enough arguments!");
+	}
+
+	return 0;
+}
+int ObjectComponent_BindLua::SetNotVisibleInMainCamera(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		float value = wi::lua::SGetBool(L, 1);
+		component->SetNotVisibleInMainCamera(value);
+	}
+	else
+	{
+		wi::lua::SError(L, "SetNotVisibleInMainCamera(bool value) not enough arguments!");
 	}
 
 	return 0;

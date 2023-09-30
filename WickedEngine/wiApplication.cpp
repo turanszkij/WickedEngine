@@ -131,7 +131,22 @@ namespace wi
 			startup_script = true;
 			Luna<wi::lua::Application_BindLua>::push_global(wi::lua::GetLuaState(), "main", this);
 			Luna<wi::lua::Application_BindLua>::push_global(wi::lua::GetLuaState(), "application", this);
-			wi::lua::RunFile(wi::helper::GetCurrentPath() + "/startup.lua");
+			std::string startup_lua_filename = wi::helper::GetCurrentPath() + "/startup.lua";
+			if (wi::helper::FileExists(startup_lua_filename))
+			{
+				if (wi::lua::RunFile(startup_lua_filename))
+				{
+					wi::backlog::post("Executed startup file: " + startup_lua_filename);
+				}
+			}
+			std::string startup_luab_filename = wi::helper::GetCurrentPath() + "/startup.luab";
+			if (wi::helper::FileExists(startup_luab_filename))
+			{
+				if (wi::lua::RunBinaryFile(startup_luab_filename))
+				{
+					wi::backlog::post("Executed startup file: " + startup_luab_filename);
+				}
+			}
 		}
 
 		if (!is_window_active && !wi::arguments::HasArgument("alwaysactive"))

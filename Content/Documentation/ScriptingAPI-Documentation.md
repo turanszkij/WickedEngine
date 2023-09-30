@@ -100,6 +100,8 @@ This section describes the common tools for scripting which are not necessarily 
 - math.clamp(float x,min,max)  -- clamp x between min and max
 - math.saturate(float x)  -- clamp x between 0 and 1
 - math.round(float x)  -- round x to nearest integer
+- dobinaryfile(string filename) -- executes a binary LUA file
+- compilebinaryfile(string filename_src, dilename_dst) -- compiles a text LUA file (filename_src) into a binary LUA file (filename_dst)
 
 ## Engine Bindings
 The scripting API provides functions for the developer to manipulate engine behaviour or query it for information.
@@ -113,6 +115,10 @@ The scripting API provides some functions which manipulate the BackLog. These fu
 - backlog_fontsize(int size)  -- modify the fint size of the backlog
 - backlog_isactive() : boolean result  -- returns true if the backlog is active, false otherwise
 - backlog_fontrowspacing(float spacing)  -- set a row spacing to the backlog
+- backlog_lock() -- disable and lock the backlog so HOME key doesn't bring it up
+- backlog_unlock() -- unlock the backlog so it can be toggled with the HOME key
+- backlog_blocklua() -- disable LUA code execution in the backlog
+- backlog_unblocklua() -- undisable LUA code execution in the backlog
 
 ### Renderer
 This is the graphics renderer, which is also responsible for managing the scene graph which consists of keeping track of
@@ -954,8 +960,10 @@ TextureSlot = {
 - SetUserStencilRef(int value)
 - SetLodDistanceMultiplier(float value)
 - SetDrawDistance(float value)
-- SetForeground(bool value) -- enable/disable foreground object rendering. Foreground objects will be always rendered on top of regular objects
+- SetForeground(bool value) -- enable/disable foreground object rendering. Foreground objects will be always rendered on top of regular objects, useful for FPS weapon or hands
 - IsForeground() : bool
+- SetNotVisibleInMainCamera(bool value) -- you can set the object to not be visible in main camera, but it will remain visible in reflections and shadows, useful for FPS character model
+- IsNotVisibleInMainCamera() : bool
 
 #### InverseKinematicsComponent
 Describes an Inverse Kinematics effector.

@@ -133,6 +133,41 @@ namespace wi::lua
 
 		return 1;
 	}
+	int Internal_DoBinaryFile(lua_State* L)
+	{
+		int argc = SGetArgCount(L);
+
+		if (argc > 0)
+		{
+			std::string filename = SGetString(L, 1);
+			if (wi::lua::RunBinaryFile(filename))
+			{
+				return 0;
+			}
+			wi::lua::SError(L, "dobinaryfile(string filename): File could not be read!");
+		}
+		wi::lua::SError(L, "dobinaryfile(string filename): Not enough arguments!");
+		return 0;
+	}
+	int Internal_CompileBinaryFile(lua_State* L)
+	{
+		int argc = SGetArgCount(L);
+
+		if (argc > 1)
+		{
+			std::string filename_src = SGetString(L, 1);
+			std::string filename_dst = SGetString(L, 2);
+			wi::vector<uint8_t> data;
+			if (wi::lua::CompileFile(filename_src, data))
+			{
+				wi::helper::FileWrite(filename_dst, data.data(), data.size());
+				return 0;
+			}
+			wi::lua::SError(L, "compilebinaryfile(string filename_src, filename_dst): Source file could not be read, or compilation failed!");
+		}
+		wi::lua::SError(L, "compilebinaryfile(string filename_src, filename_dst): Not enough arguments!");
+		return 0;
+	}
 
 	void Initialize()
 	{
@@ -141,6 +176,8 @@ namespace wi::lua
 		lua_internal().m_luaState = luaL_newstate();
 		luaL_openlibs(lua_internal().m_luaState);
 		RegisterFunc("dofile", Internal_DoFile);
+		RegisterFunc("dobinaryfile", Internal_DoBinaryFile);
+		RegisterFunc("compilebinaryfile", Internal_CompileBinaryFile);
 		RunText(wiLua_Globals);
 
 		Vector_BindLua::Bind();
