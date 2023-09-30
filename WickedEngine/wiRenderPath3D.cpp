@@ -371,7 +371,9 @@ namespace wi
 			visibility_reflection.camera = &camera_reflection;
 			visibility_reflection.flags =
 				wi::renderer::Visibility::ALLOW_OBJECTS |
-				wi::renderer::Visibility::ALLOW_EMITTERS
+				wi::renderer::Visibility::ALLOW_EMITTERS |
+				wi::renderer::Visibility::ALLOW_HAIRS |
+				wi::renderer::Visibility::ALLOW_LIGHTS
 			;
 			wi::renderer::UpdateVisibility(visibility_reflection);
 		}
@@ -1092,6 +1094,7 @@ namespace wi
 					cmd,
 					wi::renderer::DRAWSCENE_OPAQUE |
 					wi::renderer::DRAWSCENE_IMPOSTOR |
+					wi::renderer::DRAWSCENE_HAIRPARTICLE |
 					wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS
 				);
 
@@ -1176,6 +1179,7 @@ namespace wi
 					cmd,
 					wi::renderer::DRAWSCENE_OPAQUE |
 					wi::renderer::DRAWSCENE_IMPOSTOR |
+					wi::renderer::DRAWSCENE_HAIRPARTICLE |
 					wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS
 				);
 				wi::renderer::DrawScene(
