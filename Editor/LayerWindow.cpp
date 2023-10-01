@@ -31,7 +31,7 @@ void LayerWindow::Create(EditorComponent* _editor)
 	float wid = 250;
 
 	label.Create("LayerWindowLabel");
-	label.SetText("The layer is a 32-bit mask (uint32_t), which can be used for filtering by multiple systems (visibility, collision, picking, etc.).\n- If all bits are disabled, it means the layer will be inactive in most systems.\n- For ray tracing, the lower 8 bits will be used as instance inclusion mask.");
+	label.SetText("The layer is a 32-bit mask (uint32_t), which can be used for filtering by multiple systems (visibility, collision, picking, scripts, etc.).\n- If all bits are disabled, it means the layer will be inactive in most systems.");
 	label.SetPos(XMFLOAT2(x, y));
 	label.SetSize(XMFLOAT2(wid, 100));
 	label.SetColor(wi::Color::Transparent());

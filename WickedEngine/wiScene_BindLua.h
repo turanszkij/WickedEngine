@@ -262,6 +262,9 @@ namespace wi::lua::scene
 		int GetScale(lua_State* L);
 		int IsDirty(lua_State* L);
 		int SetDirty(lua_State* L);
+		int SetScale(lua_State* L);
+		int SetRotation(lua_State* L);
+		int SetPosition(lua_State* L);
 	};
 
 	class CameraComponent_BindLua
@@ -301,6 +304,7 @@ namespace wi::lua::scene
 		int GetPosition(lua_State* L);
 		int GetLookDirection(lua_State* L);
 		int GetUpDirection(lua_State* L);
+		int GetRightDirection(lua_State* L);
 		int SetPosition(lua_State* L);
 		int SetLookDirection(lua_State* L);
 		int SetUpDirection(lua_State* L);
@@ -736,6 +740,7 @@ namespace wi::lua::scene
 		int GetDrawDistance(lua_State* L);
 		int IsForeground(lua_State* L);
 		int IsNotVisibleInMainCamera(lua_State* L);
+		int IsNotVisibleInReflections(lua_State* L);
 
 		int SetMeshID(lua_State* L);
 		int SetCascadeMask(lua_State* L);
@@ -747,6 +752,7 @@ namespace wi::lua::scene
 		int SetDrawDistance(lua_State* L);
 		int SetForeground(lua_State* L);
 		int SetNotVisibleInMainCamera(lua_State* L);
+		int SetNotVisibleInReflections(lua_State* L);
 	};
 
 	class InverseKinematicsComponent_BindLua

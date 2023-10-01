@@ -315,12 +315,6 @@ namespace wi
 
 	void EmittedParticleSystem::UpdateCPU(const TransformComponent& transform, float dt)
 	{
-		if (!particleBuffer.IsValid())
-		{
-			// set initial prev matrix to current:
-			transformPrev = transform.world;
-		}
-
 		CreateSelfBuffers();
 
 		if (IsPaused())
@@ -334,6 +328,8 @@ namespace wi
 
 		emit += burst;
 		burst = 0;
+
+		worldMatrix = transform.world;
 
 		// Swap CURRENT alivelist with NEW alivelist
 		std::swap(aliveList[0], aliveList[1]);
@@ -355,7 +351,7 @@ namespace wi
 		counterBuffer = {}; // will be recreated
 	}
 
-	void EmittedParticleSystem::UpdateGPU(uint32_t instanceIndex, const TransformComponent& transform, const MeshComponent* mesh, CommandList cmd) const
+	void EmittedParticleSystem::UpdateGPU(uint32_t instanceIndex, const MeshComponent* mesh, CommandList cmd) const
 	{
 		if (!particleBuffer.IsValid())
 		{
@@ -368,9 +364,7 @@ namespace wi
 		if (!IsPaused())
 		{
 			EmittedParticleCB cb;
-			cb.xEmitterTransform.Create(transform.world);
-			cb.xEmitterTransformPrev.Create(transformPrev);
-			transformPrev = transform.world;
+			cb.xEmitterTransform.Create(worldMatrix);
 			cb.xEmitCount = (uint32_t)emit;
 			cb.xEmitterMeshIndexCount = mesh == nullptr ? 0 : (uint32_t)mesh->indices.size();
 			cb.xEmitterRandomness = wi::random::GetRandom(0.0f, 1.0f);
@@ -393,7 +387,7 @@ namespace wi
 			cb.xEmitterFrameRate = frameRate;
 			cb.xParticleGravity = gravity;
 			cb.xParticleDrag = drag;
-			XMStoreFloat3(&cb.xParticleVelocity, XMVector3TransformNormal(XMLoadFloat3(&velocity), XMLoadFloat4x4(&transform.world)));
+			XMStoreFloat3(&cb.xParticleVelocity, XMVector3TransformNormal(XMLoadFloat3(&velocity), XMLoadFloat4x4(&worldMatrix)));
 			cb.xParticleRandomColorFactor = random_color;
 			cb.xEmitterLayerMask = layerMask;
 			cb.xEmitterInstanceIndex = instanceIndex;

@@ -68,7 +68,7 @@ namespace wi
 		void Restart();
 
 		// Must have a transform and material component, but mesh is optional
-		void UpdateGPU(uint32_t instanceIndex, const wi::scene::TransformComponent& transform, const wi::scene::MeshComponent* mesh, wi::graphics::CommandList cmd) const;
+		void UpdateGPU(uint32_t instanceIndex, const wi::scene::MeshComponent* mesh, wi::graphics::CommandList cmd) const;
 		void Draw(const wi::scene::MaterialComponent& material, wi::graphics::CommandList cmd) const;
 
 		void CreateRaytracingRenderData();
@@ -132,7 +132,7 @@ namespace wi
 		// Non-serialized attributes:
 		XMFLOAT3 center;
 		uint32_t layerMask = ~0u;
-		mutable XMFLOAT4X4 transformPrev = wi::math::IDENTITY_MATRIX;
+		XMFLOAT4X4 worldMatrix = wi::math::IDENTITY_MATRIX;
 
 		inline bool IsDebug() const { return _flags & FLAG_DEBUG; }
 		inline bool IsPaused() const { return _flags & FLAG_PAUSED; }

@@ -25,7 +25,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	rng.init(uint2(xEmitterRandomness, DTid.x), GetFrame().frame_count);
 
 	const float4x4 worldMatrix = xEmitterTransform.GetMatrix();
-	const float4x4 worldMatrixPrev = xEmitterTransformPrev.GetMatrix();
 	float3 emitPos = 0;
 		
 #ifdef EMIT_FROM_MESH
@@ -78,8 +77,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #endif // EMIT_FROM_MESH
 
 	float3 pos = mul(worldMatrix, float4(emitPos, 1)).xyz;
-	float3 posPrev = mul(worldMatrixPrev, float4(emitPos, 1)).xyz;
-	float3 emitVelocity = pos - posPrev;
 
 	float particleStartingSize = xParticleSize + xParticleSize * (rng.next_float() - 0.5f) * xParticleRandomFactor;
 
@@ -88,7 +85,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	particle.position = pos;
 	particle.force = 0;
 	particle.mass = xParticleMass;
-	particle.velocity = emitVelocity + xParticleVelocity + (nor + (float3(rng.next_float(), rng.next_float(), rng.next_float()) - 0.5f) * xParticleRandomFactor) * xParticleNormalFactor;
+	particle.velocity = xParticleVelocity + (nor + (float3(rng.next_float(), rng.next_float(), rng.next_float()) - 0.5f) * xParticleRandomFactor) * xParticleNormalFactor;
 	particle.rotationalVelocity = xParticleRotation + (rng.next_float() - 0.5f) * xParticleRandomFactor;
 	particle.maxLife = xParticleLifeSpan + xParticleLifeSpan * (rng.next_float() - 0.5f) * xParticleLifeSpanRandomness;
 	particle.life = particle.maxLife;
