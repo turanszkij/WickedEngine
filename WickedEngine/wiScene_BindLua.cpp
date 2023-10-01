@@ -791,7 +791,8 @@ int Scene_BindLua::Intersects(lua_State* L)
 			wi::lua::SSetFloat(L, result.distance);
 			Luna<Vector_BindLua>::push(L, result.velocity);
 			wi::lua::SSetInt(L, result.subsetIndex);
-			return 6;
+			Luna<Matrix_BindLua>::push(L, result.orientation);
+			return 7;
 		}
 
 		Sphere_BindLua* sphere = Luna<Sphere_BindLua>::lightcheck(L, 1);

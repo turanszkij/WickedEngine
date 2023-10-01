@@ -3948,6 +3948,7 @@ namespace wi::scene
 			XMMATRIX W = XMLoadFloat4x4(&decal.world);
 			XMVECTOR front = XMVectorSet(0, 0, -1, 0);
 			front = XMVector3TransformNormal(front, W);
+			front = XMVector3Normalize(front);
 			XMStoreFloat3(&decal.front, front);
 
 			XMVECTOR S, R, T;
@@ -4565,7 +4566,22 @@ namespace wi::scene
 						// Note: we do the TMin, Tmax check here, in world space! We use the RayTriangleIntersects in local space, so we don't use those in there
 						if (distance < result.distance && distance >= ray.TMin && distance <= ray.TMax)
 						{
-							const XMVECTOR nor = XMVector3Normalize(XMVector3TransformNormal(XMVector3Cross(XMVectorSubtract(p2, p1), XMVectorSubtract(p1, p0)), objectMat));
+							XMVECTOR nor;
+							if (mesh->vertex_normals.empty())
+							{
+								nor = XMVector3Cross(p2 - p1, p1 - p0);
+							}
+							else
+							{
+								nor = XMVectorBaryCentric(
+									XMLoadFloat3(&mesh->vertex_normals[i0]),
+									XMLoadFloat3(&mesh->vertex_normals[i1]),
+									XMLoadFloat3(&mesh->vertex_normals[i2]),
+									bary.x,
+									bary.y
+								);
+							}
+							nor = XMVector3Normalize(XMVector3TransformNormal(nor, objectMat));
 							const XMVECTOR vel = pos - XMVector3Transform(pos_local, objectMatPrev);
 
 							result.entity = entity;
@@ -4752,7 +4768,7 @@ namespace wi::scene
 						return;
 
 					// Compute the plane of the triangle (has to be normalized).
-					XMVECTOR N = XMVector3Normalize(XMVector3Cross(XMVectorSubtract(p1, p0), XMVectorSubtract(p2, p0)));
+					XMVECTOR N = XMVector3Normalize(XMVector3Cross(p1 - p0, p2 - p0));
 
 					// Assert that the triangle is not degenerate.
 					assert(!XMVector3Equal(N, XMVectorZero()));
@@ -5029,7 +5045,7 @@ namespace wi::scene
 						return;
 
 					// Compute the plane of the triangle (has to be normalized).
-					XMVECTOR N = XMVector3Normalize(XMVector3Cross(XMVectorSubtract(p1, p0), XMVectorSubtract(p2, p0)));
+					XMVECTOR N = XMVector3Normalize(XMVector3Cross(p1 - p0, p2 - p0));
 
 					XMVECTOR ReferencePoint;
 					XMVECTOR d = XMVector3Normalize(B - A);
