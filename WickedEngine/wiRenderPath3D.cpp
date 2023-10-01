@@ -776,8 +776,7 @@ namespace wi
 				wi::renderer::SurfelGI(
 					surfelGIResources,
 					*scene,
-					cmd,
-					instanceInclusionMask_SurfelGI
+					cmd
 				);
 			}
 
@@ -785,8 +784,7 @@ namespace wi
 			{
 				wi::renderer::DDGI(
 					*scene,
-					cmd,
-					instanceInclusionMask_DDGI
+					cmd
 				);
 			}
 
@@ -1000,8 +998,7 @@ namespace wi
 					tiledLightResources.entityTiles_Opaque,
 					rtLinearDepth,
 					rtShadow,
-					cmd,
-					instanceInclusionMask_RTShadow
+					cmd
 				);
 			}
 
@@ -1035,7 +1032,7 @@ namespace wi
 				camera_reflection,
 				cmd
 			);
-			wi::renderer::RefreshLightmaps(*scene, cmd, instanceInclusionMask_Lightmap);
+			wi::renderer::RefreshLightmaps(*scene, cmd);
 			wi::renderer::RefreshEnvProbes(visibility_main, cmd);
 			wi::renderer::RefreshImpostors(*scene, cmd);
 		});
@@ -1257,8 +1254,7 @@ namespace wi
 					rtSSR,
 					cmd,
 					getRaytracedReflectionsRange(),
-					getReflectionRoughnessCutoff(),
-					instanceInclusionMask_RTReflection
+					getReflectionRoughnessCutoff()
 				);
 			}
 			if (getRaytracedDiffuseEnabled())
@@ -1268,8 +1264,7 @@ namespace wi
 					*scene,
 					rtRaytracedDiffuse,
 					cmd,
-					getRaytracedDiffuseRange(),
-					instanceInclusionMask_RTDiffuse
+					getRaytracedDiffuseRange()
 				);
 			}
 			if (wi::renderer::GetVXGIEnabled())
@@ -1608,8 +1603,7 @@ namespace wi
 					rtAO,
 					cmd,
 					getAORange(),
-					getAOPower(),
-					instanceInclusionMask_RTAO
+					getAOPower()
 				);
 				break;
 			case AO_DISABLED:

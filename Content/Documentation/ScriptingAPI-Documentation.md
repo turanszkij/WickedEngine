@@ -558,8 +558,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - [outer]FILTER_OBJECT_ALL : uint	-- include all objects, meshes
 - [outer]FILTER_COLLIDER : uint	-- include colliders
 - [outer]FILTER_ALL : uint	-- include everything
-- Intersects(Ray ray, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : int entity, Vector position,normal, float distance, Vector velocity, int subsetIndex, Matrix orientation	-- intersects a ray with the scene and returns collision parameters
-- Intersects(Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : int entity, Vector position,normal, float distance, Vector velocity	-- intersects a sphere or capsule with the scene and returns collision parameters
+- Intersects(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : int entity, Vector position,normal, float distance, Vector velocity, int subsetIndex, Matrix orientation	-- intersects a primitive with the scene and returns collision parameters
 - Update()  -- updates the scene and every entity and component inside the scene
 - Clear()  -- deletes every entity and component inside the scene
 - Merge(Scene other)  -- moves contents from an other scene into this one. The other scene will be empty after this operation (contents are moved, not copied)
@@ -567,7 +566,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 
 - CreateEntity() : int entity  -- creates an empty entity and returns it
 - Entity_FindByName(string value, opt Entity ancestor = INVALID_ENTITY) : int entity  -- returns an entity ID if it exists, and INVALID_ENTITY otherwise. You can specify an ancestor entity if you only want to find entities that are descendants of ancestor entity
-- Entity_Remove(Entity entity)  -- removes an entity and deletes all its components if it exists
+- Entity_Remove(Entity entity, bool recursive = true, bool keep_sorted = false)  -- removes an entity and deletes all its components if it exists. If recursive is specified, then all children will be removed as well (enabled by default). If keep_sorted is specified, then component order will be kept (disabled by default, slower)
 - Entity_Duplicate(Entity entity) : int entity  -- duplicates all of an entity's components and creates a new entity with them. Returns the clone entity handle
 - Entity_IsDescendant(Entity entity, Entity ancestor) : bool result	-- Check whether entity is a descendant of ancestor. Returns `true` if entity is in the hierarchy tree of ancestor, `false` otherwise
 
@@ -709,6 +708,9 @@ Describes an orientation in 3D space.
 - GetPosition() : Vector resultXYZ  -- query the position in world space
 - GetRotation() : Vector resultQuaternion  -- query the rotation as a quaternion in world space
 - GetScale() : Vector resultXYZ  -- query the scaling in world space
+- SetScale(Vector value) -- set scale in local space
+- SetRotation(Vector quaternnion) -- set rotation quaternion in local space
+- SetPosition(Vector value) -- set position in local space
 
 #### CameraComponent
 - FOV : float
@@ -744,6 +746,7 @@ Describes an orientation in 3D space.
 - GetPosition() : Vector result
 - GetLookDirection() : Vector result
 - GetUpDirection() : Vector result
+- GetRightDirection() : Vector result
 - SetPosition(Vector value)	-- Sets the position of the camera. `UpdateCamera()` should be used after this to apply the value. 
 - SetLookDirection(Vector value)		-- Sets the look direction of the camera. The value must be a normalized direction `Vector`, relative to the camera position, and also perpendicular to the up direction. `UpdateCamera()` should be used after this to apply the value. This value will also be set if using the `TransformCamera()` function, from the transform's rotation.
 - SetUpDirection(Vector value)		-- Sets the up direction of the camera. This must be a normalized direction `Vector`, relative to the camera position, and also perpendicular to the look direction. `UpdateCamera()` should be used after this to apply the value. This value will also be set if using the `TransformCamera()` function, from the transform's rotation.
@@ -965,6 +968,8 @@ TextureSlot = {
 - IsForeground() : bool
 - SetNotVisibleInMainCamera(bool value) -- you can set the object to not be visible in main camera, but it will remain visible in reflections and shadows, useful for FPS character model
 - IsNotVisibleInMainCamera() : bool
+- SetNotVisibleInReflections(bool value) -- you can set the object to not be visible in main camera, but it will remain visible in reflections and shadows, useful for vampires
+- IsNotVisibleInReflections() : bool
 
 #### InverseKinematicsComponent
 Describes an Inverse Kinematics effector.

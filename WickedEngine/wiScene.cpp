@@ -881,7 +881,7 @@ namespace wi::scene
 		}
 	}
 
-	void Scene::Entity_Remove(Entity entity, bool recursive)
+	void Scene::Entity_Remove(Entity entity, bool recursive, bool keep_sorted)
 	{
 		if (recursive)
 		{
@@ -903,7 +903,14 @@ namespace wi::scene
 
 		for (auto& entry : componentLibrary.entries)
 		{
-			entry.second.component_manager->Remove(entity);
+			if (keep_sorted)
+			{
+				entry.second.component_manager->Remove_KeepSorted(entity);
+			}
+			else
+			{
+				entry.second.component_manager->Remove(entity);
+			}
 		}
 	}
 	Entity Scene::Entity_FindByName(const std::string& name, Entity ancestor)
@@ -3826,10 +3833,18 @@ namespace wi::scene
 						}
 					}
 					instance.instance_id = args.jobIndex;
-					instance.instance_mask = layerMask & 0xFF;
+					instance.instance_mask = layerMask == 0 ? 0 : 0xFF;
 					if (!object.IsRenderable() || !mesh.IsRenderable())
 					{
 						instance.instance_mask = 0;
+					}
+					if (!object.IsCastingShadow())
+					{
+						instance.instance_mask ^= wi::renderer::raytracing_inclusion_mask_shadow;
+					}
+					if (object.IsNotVisibleInReflections())
+					{
+						instance.instance_mask ^= wi::renderer::raytracing_inclusion_mask_reflection;
 					}
 					instance.bottom_level = &mesh.BLASes[object.lod];
 					instance.instance_contribution_to_hit_group_index = 0;
@@ -4206,7 +4221,7 @@ namespace wi::scene
 						}
 					}
 					instance.instance_id = (uint32_t)instanceIndex;
-					instance.instance_mask = hair.layerMask & 0xFF;
+					instance.instance_mask = hair.layerMask == 0 ? 0 : 0xFF;
 					instance.bottom_level = &hair.BLAS;
 					instance.instance_contribution_to_hit_group_index = 0;
 					instance.flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
@@ -4305,7 +4320,7 @@ namespace wi::scene
 					}
 				}
 				instance.instance_id = (uint32_t)instanceIndex;
-				instance.instance_mask = emitter.layerMask & 0xFF;
+				instance.instance_mask = emitter.layerMask == 0 ? 0 : 0xFF;
 				instance.bottom_level = &emitter.BLAS;
 				instance.instance_contribution_to_hit_group_index = 0;
 				instance.flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
@@ -4870,6 +4885,8 @@ namespace wi::scene
 
 							XMVECTOR vel = bestPoint - XMVector3Transform(XMVector3Transform(bestPoint, objectMatInverse), objectMatPrev);
 							XMStoreFloat3(&result.velocity, vel);
+
+							result.subsetIndex = (int)subsetIndex;
 						}
 					}
 				};
@@ -4917,6 +4934,15 @@ namespace wi::scene
 			}
 		}
 
+		// Construct a matrix that will orient to position (P) according to surface normal (N):
+		XMVECTOR N = XMLoadFloat3(&result.normal);
+		XMVECTOR P = XMLoadFloat3(&result.position);
+		XMVECTOR E = Center - P;
+		XMVECTOR T = XMVector3Normalize(XMVector3Cross(N, P - E));
+		XMVECTOR B = XMVector3Normalize(XMVector3Cross(T, N));
+		XMMATRIX M = { T, N, B, P };
+		XMStoreFloat4x4(&result.orientation, M);
+
 		return result;
 	}
 	Scene::CapsuleIntersectionResult Scene::Intersects(const Capsule& capsule, uint32_t filterMask, uint32_t layerMask, uint32_t lod) const
@@ -4926,7 +4952,8 @@ namespace wi::scene
 		const XMVECTOR Base = XMLoadFloat3(&capsule.base);
 		const XMVECTOR Tip = XMLoadFloat3(&capsule.tip);
 		const XMVECTOR Radius = XMVectorReplicate(capsule.radius);
-		const XMVECTOR LineEndOffset = XMVector3Normalize(Tip - Base) * Radius;
+		const XMVECTOR Axis = XMVector3Normalize(Tip - Base);
+		const XMVECTOR LineEndOffset = Axis * Radius;
 		const XMVECTOR A = Base + LineEndOffset;
 		const XMVECTOR B = Tip - LineEndOffset;
 		const XMVECTOR RadiusSq = XMVectorMultiply(Radius, Radius);
@@ -5259,6 +5286,8 @@ namespace wi::scene
 
 							XMVECTOR vel = bestPoint - XMVector3Transform(XMVector3Transform(bestPoint, objectMat_Inverse), objectMatPrev);
 							XMStoreFloat3(&result.velocity, vel);
+
+							result.subsetIndex = (int)subsetIndex;
 						}
 					}
 				};
@@ -5307,6 +5336,15 @@ namespace wi::scene
 
 			}
 		}
+
+		// Construct a matrix that will orient to position (P) according to surface normal (N):
+		XMVECTOR N = XMLoadFloat3(&result.normal);
+		XMVECTOR P = XMLoadFloat3(&result.position);
+		XMVECTOR E = Axis;
+		XMVECTOR T = XMVector3Normalize(XMVector3Cross(N, P - E));
+		XMVECTOR Binorm = XMVector3Normalize(XMVector3Cross(T, N));
+		XMMATRIX M = { T, N, Binorm, P };
+		XMStoreFloat4x4(&result.orientation, M);
 
 		return result;
 	}

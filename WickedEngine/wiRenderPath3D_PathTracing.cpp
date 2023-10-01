@@ -366,7 +366,6 @@ namespace wi
 						traceResult,
 						sam,
 						cmd,
-						instanceInclusionMask_PathTrace,
 						denoiserAlbedo.IsValid() ? &denoiserAlbedo : nullptr,
 						denoiserNormal.IsValid() ? &denoiserNormal : nullptr,
 						traceDepth.IsValid() ? &traceDepth : nullptr,

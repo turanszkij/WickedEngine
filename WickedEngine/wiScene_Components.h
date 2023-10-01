@@ -667,6 +667,7 @@ namespace wi::scene
 			LIGHTMAP_DISABLE_BLOCK_COMPRESSION = 1 << 6,
 			FOREGROUND = 1 << 7,
 			NOT_VISIBLE_IN_MAIN_CAMERA = 1 << 8,
+			NOT_VISIBLE_IN_REFLECTIONS = 1 << 9,
 		};
 		uint32_t _flags = RENDERABLE | CAST_SHADOW;
 
@@ -709,6 +710,8 @@ namespace wi::scene
 		inline void SetForeground(bool value) { if (value) { _flags |= FOREGROUND; } else { _flags &= ~FOREGROUND; } }
 		// With this you can disable object rendering for main camera (DRAWSCENE_MAINCAMERA)
 		inline void SetNotVisibleInMainCamera(bool value) { if (value) { _flags |= NOT_VISIBLE_IN_MAIN_CAMERA; } else { _flags &= ~NOT_VISIBLE_IN_MAIN_CAMERA; } }
+		// With this you can disable object rendering for reflections
+		inline void SetNotVisibleInReflections(bool value) { if (value) { _flags |= NOT_VISIBLE_IN_REFLECTIONS; } else { _flags &= ~NOT_VISIBLE_IN_REFLECTIONS; } }
 
 		inline bool IsRenderable() const { return _flags & RENDERABLE; }
 		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
@@ -718,6 +721,7 @@ namespace wi::scene
 		inline bool IsLightmapDisableBlockCompression() const { return _flags & LIGHTMAP_DISABLE_BLOCK_COMPRESSION; }
 		inline bool IsForeground() const { return _flags & FOREGROUND; }
 		inline bool IsNotVisibleInMainCamera() const { return _flags & NOT_VISIBLE_IN_MAIN_CAMERA; }
+		inline bool IsNotVisibleInReflections() const { return _flags & NOT_VISIBLE_IN_REFLECTIONS; }
 
 		inline float GetTransparency() const { return 1 - color.w; }
 		inline uint32_t GetFilterMask() const { return filterMask | filterMaskDynamic; }

@@ -281,7 +281,8 @@ namespace wi::scene
 
 		// Removes (deletes) a specific entity from the scene (if it exists):
 		//	recursive	: also removes children if true
-		void Entity_Remove(wi::ecs::Entity entity, bool recursive = true);
+		//	keep_sorted	: remove all components while keeping sorted order (slow)
+		void Entity_Remove(wi::ecs::Entity entity, bool recursive = true, bool keep_sorted = false);
 		// Finds the first entity by the name (if it exists, otherwise returns INVALID_ENTITY):
 		//	ancestor : you can specify an ancestor entity if you only want to find entities that are descendants of ancestor entity
 		wi::ecs::Entity Entity_FindByName(const std::string& name, wi::ecs::Entity ancestor = wi::ecs::INVALID_ENTITY);
@@ -438,6 +439,8 @@ namespace wi::scene
 			XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
 			XMFLOAT3 velocity = XMFLOAT3(0, 0, 0);
 			float depth = 0;
+			int subsetIndex = -1;
+			XMFLOAT4X4 orientation = wi::math::IDENTITY_MATRIX;
 		};
 		SphereIntersectionResult Intersects(const wi::primitive::Sphere& sphere, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;
 

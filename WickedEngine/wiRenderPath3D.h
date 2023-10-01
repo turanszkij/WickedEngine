@@ -176,14 +176,6 @@ namespace wi
 
 		FrameCB frameCB = {};
 
-		uint8_t instanceInclusionMask_RTAO = 0xFF;
-		uint8_t instanceInclusionMask_RTShadow = 0xFF;
-		uint8_t instanceInclusionMask_RTDiffuse = 0xFF;
-		uint8_t instanceInclusionMask_RTReflection = 0xFF;
-		uint8_t instanceInclusionMask_SurfelGI = 0xFF;
-		uint8_t instanceInclusionMask_Lightmap = 0xFF;
-		uint8_t instanceInclusionMask_DDGI = 0xFF;
-
 		bool visibility_shading_in_compute = false;
 
 		// Crop parameters in logical coordinates:

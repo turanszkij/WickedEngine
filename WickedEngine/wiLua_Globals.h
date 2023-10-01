@@ -244,6 +244,10 @@ end
 function math.lerp(a,b,t)
 	return (a + (b-a)*t);
 end
+-- inverse linear interpolation
+function math.inverselerp(value1,value2,pos)
+	return (pos - value1) / (value2 - value1);
+end
 -- clamp number between min,max
 function math.clamp(x,min,max)
 	if(x < min) then

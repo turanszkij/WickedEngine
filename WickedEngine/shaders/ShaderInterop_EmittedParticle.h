@@ -41,7 +41,6 @@ static const uint EMITTER_OPTION_BIT_COLLIDERS_DISABLED = 1 << 3;
 CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 {
 	ShaderTransform	xEmitterTransform;
-	ShaderTransform	xEmitterTransformPrev;
 
 	uint		xEmitCount;
 	uint		xEmitterMeshIndexCount;

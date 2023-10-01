@@ -24,6 +24,9 @@ namespace wi::renderer
 	constexpr wi::graphics::Format format_rendertarget_envprobe = wi::graphics::Format::R11G11B10_FLOAT;
 	constexpr wi::graphics::Format format_depthbuffer_envprobe = wi::graphics::Format::D16_UNORM;
 
+	constexpr uint8_t raytracing_inclusion_mask_shadow = 1 << 0;
+	constexpr uint8_t raytracing_inclusion_mask_reflection = 1 << 1;
+
 	constexpr uint32_t CombineStencilrefs(wi::enums::STENCILREF engineStencilRef, uint8_t userStencilRef)
 	{
 		return (userStencilRef << 4) | static_cast<uint8_t>(engineStencilRef);
@@ -279,7 +282,7 @@ namespace wi::renderer
 	// Call once per frame to re-render out of date impostors
 	void RefreshImpostors(const wi::scene::Scene& scene, wi::graphics::CommandList cmd);
 	// Call once per frame to repack out of date lightmaps in the atlas
-	void RefreshLightmaps(const wi::scene::Scene& scene, wi::graphics::CommandList cmd, uint8_t instanceInclusionMask = 0xFF);
+	void RefreshLightmaps(const wi::scene::Scene& scene, wi::graphics::CommandList cmd);
 	// Run a compute shader that will resolve a MSAA depth buffer to a single-sample texture
 	void ResolveMSAADepthBuffer(const wi::graphics::Texture& dst, const wi::graphics::Texture& src, wi::graphics::CommandList cmd);
 	void DownsampleDepthBuffer(const wi::graphics::Texture& src, wi::graphics::CommandList cmd);
@@ -390,15 +393,13 @@ namespace wi::renderer
 	void SurfelGI(
 		const SurfelGIResources& res,
 		const wi::scene::Scene& scene,
-		wi::graphics::CommandList cmd,
-		uint8_t instanceInclusionMask = 0xFF
+		wi::graphics::CommandList cmd
 	);
 
 	// DDGI: Dynamic Diffuse Global Illumination (probe-based ray tracing)
 	void DDGI(
 		const wi::scene::Scene& scene,
-		wi::graphics::CommandList cmd,
-		uint8_t instanceInclusionMask = 0xFF
+		wi::graphics::CommandList cmd
 	);
 
 	// VXGI: Voxel-based Global Illumination (voxel cone tracing-based)
@@ -515,8 +516,7 @@ namespace wi::renderer
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
 		float range = 1.0f,
-		float power = 1.0f,
-		uint8_t instanceInclusionMask = 0xFF
+		float power = 1.0f
 	);
 	struct RTDiffuseResources
 	{
@@ -534,8 +534,7 @@ namespace wi::renderer
 		const wi::scene::Scene& scene,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
-		float range = 1000.0f,
-		uint8_t instanceInclusionMask = 0xFF
+		float range = 1000.0f
 	);
 	struct RTReflectionResources
 	{
@@ -557,8 +556,7 @@ namespace wi::renderer
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
 		float range = 1000.0f,
-		float roughnessCutoff = 0.5f,
-		uint8_t instanceInclusionMask = 0xFF
+		float roughnessCutoff = 0.5f
 	);
 	struct SSRResources
 	{
@@ -608,8 +606,7 @@ namespace wi::renderer
 		const wi::graphics::GPUBuffer& entityTiles_Opaque,
 		const wi::graphics::Texture& lineardepth,
 		const wi::graphics::Texture& output,
-		wi::graphics::CommandList cmd,
-		uint8_t instanceInclusionMask = 0xFF
+		wi::graphics::CommandList cmd
 	);
 	struct ScreenSpaceShadowResources
 	{
@@ -893,7 +890,6 @@ namespace wi::renderer
 		const wi::graphics::Texture& output,
 		int accumulation_sample,
 		wi::graphics::CommandList cmd,
-		uint8_t instanceInclusionMask = 0xFF,
 		const wi::graphics::Texture* output_albedo = nullptr,
 		const wi::graphics::Texture* output_normal = nullptr,
 		const wi::graphics::Texture* output_depth = nullptr,

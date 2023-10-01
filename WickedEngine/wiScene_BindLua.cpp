@@ -340,6 +340,17 @@ TextureSlot = {
 	ANISOTROPYMAP = 13,
 }
 
+SHADERTYPE_PBR = 0
+SHADERTYPE_PBR_PLANARREFLECTION = 1
+SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING = 2
+SHADERTYPE_PBR_ANISOTROPIC = 3
+SHADERTYPE_WATER = 4
+SHADERTYPE_CARTOON = 5
+SHADERTYPE_UNLIT = 6
+SHADERTYPE_PBR_CLOTH = 7
+SHADERTYPE_PBR_CLEARCOAT = 8
+SHADERTYPE_PBR_CLOTH_CLEARCOAT = 9
+
 ExpressionPreset = {
 	Happy = 0,
 	Angry = 1,
@@ -707,8 +718,19 @@ int Scene_BindLua::Entity_Remove(lua_State* L)
 	if (argc > 0)
 	{
 		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+		bool recursive = true;
+		bool keep_sorted = false;
 
-		scene->Entity_Remove(entity);
+		if (argc > 1)
+		{
+			recursive = wi::lua::SGetBool(L, 2);
+			if (argc > 2)
+			{
+				keep_sorted = wi::lua::SGetBool(L, 3);
+			}
+		}
+
+		scene->Entity_Remove(entity, recursive, keep_sorted);
 	}
 	else
 	{
@@ -804,7 +826,9 @@ int Scene_BindLua::Intersects(lua_State* L)
 			Luna<Vector_BindLua>::push(L, result.normal);
 			wi::lua::SSetFloat(L, result.depth);
 			Luna<Vector_BindLua>::push(L, result.velocity);
-			return 5;
+			wi::lua::SSetInt(L, result.subsetIndex);
+			Luna<Matrix_BindLua>::push(L, result.orientation);
+			return 7;
 		}
 
 		Capsule_BindLua* capsule = Luna<Capsule_BindLua>::lightcheck(L, 1);
@@ -816,7 +840,9 @@ int Scene_BindLua::Intersects(lua_State* L)
 			Luna<Vector_BindLua>::push(L, result.normal);
 			wi::lua::SSetFloat(L, result.depth);
 			Luna<Vector_BindLua>::push(L, result.velocity);
-			return 5;
+			wi::lua::SSetInt(L, result.subsetIndex);
+			Luna<Matrix_BindLua>::push(L, result.orientation);
+			return 7;
 		}
 
 		wi::lua::SError(L, "Scene::Intersects(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) first argument is not an accepted primitive type!");
@@ -2812,6 +2838,9 @@ Luna<TransformComponent_BindLua>::FunctionType TransformComponent_BindLua::metho
 	lunamethod(TransformComponent_BindLua, GetScale),
 	lunamethod(TransformComponent_BindLua, IsDirty),
 	lunamethod(TransformComponent_BindLua, SetDirty),
+	lunamethod(TransformComponent_BindLua, SetScale),
+	lunamethod(TransformComponent_BindLua, SetRotation),
+	lunamethod(TransformComponent_BindLua, SetPosition),
 	{ NULL, NULL }
 };
 Luna<TransformComponent_BindLua>::PropertyType TransformComponent_BindLua::properties[] = {
@@ -3070,6 +3099,76 @@ int TransformComponent_BindLua::SetDirty(lua_State *L)
 	component->SetDirty(value);
 	return 0;
 }
+int TransformComponent_BindLua::SetScale(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (vec != nullptr)
+		{
+			component->scale_local.x = vec->data.x;
+			component->scale_local.y = vec->data.y;
+			component->scale_local.z = vec->data.z;
+			component->SetDirty(true);
+		}
+		else
+		{
+			wi::lua::SError(L, "SetScale(Vector value) argument is not a vector!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "SetScale(Vector value) not enough arguments!");
+	}
+	return 0;
+}
+int TransformComponent_BindLua::SetRotation(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (vec != nullptr)
+		{
+			component->rotation_local = vec->data;
+			component->SetDirty(true);
+		}
+		else
+		{
+			wi::lua::SError(L, "SetRotation(Vector quaternion) argument is not a vector!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "SetRotation(Vector quaternion) not enough arguments!");
+	}
+	return 0;
+}
+int TransformComponent_BindLua::SetPosition(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (vec != nullptr)
+		{
+			component->translation_local.x = vec->data.x;
+			component->translation_local.y = vec->data.y;
+			component->translation_local.z = vec->data.z;
+			component->SetDirty(true);
+		}
+		else
+		{
+			wi::lua::SError(L, "SetPosition(Vector value) argument is not a vector!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "SetPosition(Vector value) not enough arguments!");
+	}
+	return 0;
+}
 
 
 
@@ -3104,6 +3203,7 @@ Luna<CameraComponent_BindLua>::FunctionType CameraComponent_BindLua::methods[] =
 	lunamethod(CameraComponent_BindLua, GetPosition),
 	lunamethod(CameraComponent_BindLua, GetLookDirection),
 	lunamethod(CameraComponent_BindLua, GetUpDirection),
+	lunamethod(CameraComponent_BindLua, GetRightDirection),
 	lunamethod(CameraComponent_BindLua, SetPosition),
 	lunamethod(CameraComponent_BindLua, SetLookDirection),
 	lunamethod(CameraComponent_BindLua, SetUpDirection),
@@ -3305,6 +3405,11 @@ int CameraComponent_BindLua::GetLookDirection(lua_State* L)
 int CameraComponent_BindLua::GetUpDirection(lua_State* L)
 {
 	Luna<Vector_BindLua>::push(L, component->GetUp());
+	return 1;
+}
+int CameraComponent_BindLua::GetRightDirection(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, component->GetRight());
 	return 1;
 }
 int CameraComponent_BindLua::SetPosition(lua_State* L)
@@ -4430,6 +4535,7 @@ Luna<ObjectComponent_BindLua>::FunctionType ObjectComponent_BindLua::methods[] =
 	lunamethod(ObjectComponent_BindLua, GetDrawDistance),
 	lunamethod(ObjectComponent_BindLua, IsForeground),
 	lunamethod(ObjectComponent_BindLua, IsNotVisibleInMainCamera),
+	lunamethod(ObjectComponent_BindLua, IsNotVisibleInReflections),
 
 	lunamethod(ObjectComponent_BindLua, SetMeshID),
 	lunamethod(ObjectComponent_BindLua, SetCascadeMask),
@@ -4440,6 +4546,7 @@ Luna<ObjectComponent_BindLua>::FunctionType ObjectComponent_BindLua::methods[] =
 	lunamethod(ObjectComponent_BindLua, SetDrawDistance),
 	lunamethod(ObjectComponent_BindLua, SetForeground),
 	lunamethod(ObjectComponent_BindLua, SetNotVisibleInMainCamera),
+	lunamethod(ObjectComponent_BindLua, SetNotVisibleInReflections),
 	{ NULL, NULL }
 };
 Luna<ObjectComponent_BindLua>::PropertyType ObjectComponent_BindLua::properties[] = {
@@ -4500,6 +4607,11 @@ int ObjectComponent_BindLua::IsForeground(lua_State* L)
 int ObjectComponent_BindLua::IsNotVisibleInMainCamera(lua_State* L)
 {
 	wi::lua::SSetBool(L, component->IsNotVisibleInMainCamera());
+	return 1;
+}
+int ObjectComponent_BindLua::IsNotVisibleInReflections(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsNotVisibleInReflections());
 	return 1;
 }
 
@@ -4660,6 +4772,21 @@ int ObjectComponent_BindLua::SetNotVisibleInMainCamera(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "SetNotVisibleInMainCamera(bool value) not enough arguments!");
+	}
+
+	return 0;
+}
+int ObjectComponent_BindLua::SetNotVisibleInReflections(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		float value = wi::lua::SGetBool(L, 1);
+		component->SetNotVisibleInReflections(value);
+	}
+	else
+	{
+		wi::lua::SError(L, "SetNotVisibleInReflections(bool value) not enough arguments!");
 	}
 
 	return 0;
