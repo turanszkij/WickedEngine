@@ -4,8 +4,8 @@
 struct GSInput
 {
 	float4 pos : SV_POSITION;
+	float4 uvsets : UVSETS;
 	min16float4 color : COLOR;
-	min16float4 uvsets : UVSETS;
 	min16float3 nor : NORMAL;
 };
 
@@ -13,8 +13,8 @@ struct GSInput
 struct GSOutput
 {
 	float4 pos : SV_POSITION;
+	centroid float4 uvsets : UVSETS;
 	centroid min16float4 color : COLOR;
-	centroid min16float4 uvsets : UVSETS;
 	centroid min16float3 N : NORMAL;
 	centroid float3 P : POSITION3D;
 

@@ -183,7 +183,7 @@ struct VertexInput
 struct VertexSurface
 {
 	float4 position;
-	min16float4 uvsets;
+	float4 uvsets;
 	min16float2 atlas;
 	min16float4 color;
 	min16float3 normal;
@@ -230,20 +230,20 @@ struct PixelInput
 	precise float4 pos : SV_POSITION;
 
 #ifdef OBJECTSHADER_USE_CLIPPLANE
-	float  clip : SV_ClipDistance0;
+	float clip : SV_ClipDistance0;
 #endif // OBJECTSHADER_USE_CLIPPLANE
 
 #if defined(OBJECTSHADER_USE_INSTANCEINDEX) || defined(OBJECTSHADER_USE_DITHERING)
 	uint instanceIndex_dither : INSTANCEINDEX_DITHER;
 #endif // OBJECTSHADER_USE_INSTANCEINDEX || OBJECTSHADER_USE_DITHERING
 
+#ifdef OBJECTSHADER_USE_UVSETS
+	float4 uvsets : UVSETS;
+#endif // OBJECTSHADER_USE_UVSETS
+
 #ifdef OBJECTSHADER_USE_COLOR
 	min16float4 color : COLOR;
 #endif // OBJECTSHADER_USE_COLOR
-
-#ifdef OBJECTSHADER_USE_UVSETS
-	min16float4 uvsets : UVSETS;
-#endif // OBJECTSHADER_USE_UVSETS
 
 #ifdef OBJECTSHADER_USE_TANGENT
 	min16float4 tan : TANGENT;

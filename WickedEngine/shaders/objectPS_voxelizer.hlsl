@@ -43,8 +43,8 @@ void VoxelAtomicAverage(inout RWTexture3D<uint> output, in uint3 dest, in float4
 struct PSInput
 {
 	float4 pos : SV_POSITION;
+	centroid float4 uvsets : UVSETS;
 	centroid min16float4 color : COLOR;
-	centroid min16float4 uvsets : UVSETS;
 	centroid min16float3 N : NORMAL;
 	centroid float3 P : POSITION3D;
 

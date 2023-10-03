@@ -7,7 +7,7 @@ struct GSInput
 	float clip : SV_ClipDistance0;
 	uint instanceIndex_dither : INSTANCEINDEX_DITHER;
 #ifdef ALPHATEST
-	min16float4 uvsets : UVSETS;
+	float4 uvsets : UVSETS;
 #endif // ALPHATEST
 };
 
@@ -17,7 +17,7 @@ struct GSOutput
 	float clip : SV_ClipDistance0;
 	uint instanceIndex_dither : INSTANCEINDEX_DITHER;
 #ifdef ALPHATEST
-	min16float4 uvsets : UVSETS;
+	float4 uvsets : UVSETS;
 #endif // ALPHATEST
 	uint primitiveID : PRIMITIVEID;
 };

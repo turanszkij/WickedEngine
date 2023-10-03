@@ -6,8 +6,8 @@ struct GSInput
 {
 	float4 pos : SV_POSITION;
 	uint instanceIndex_dither : INSTANCEINDEX_DITHER;
+	float4 uvsets : UVSETS;
 	min16float4 color : COLOR;
-	min16float4 uvsets : UVSETS;
 	min16float4 tan : TANGENT;
 	min16float3 nor : NORMAL;
 	min16float2 atl : ATLAS;
@@ -19,8 +19,8 @@ struct GSOutput
 {
 	float4 pos : SV_POSITION;
 	uint instanceIndex_dither : INSTANCEINDEX_DITHER;
+	float4 uvsets : UVSETS;
 	min16float4 color : COLOR;
-	min16float4 uvsets : UVSETS;
 	min16float4 tan : TANGENT;
 	min16float3 nor : NORMAL;
 	min16float2 atl : ATLAS;
