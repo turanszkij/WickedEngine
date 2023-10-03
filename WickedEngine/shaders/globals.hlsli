@@ -771,12 +771,15 @@ inline float3 reconstruct_position(in float2 uv, in float z)
 
 inline float find_max_depth(in float2 uv, in int radius, in float lod)
 {
+	uint2 dim;
+	texture_depth.GetDimensions(dim.x, dim.y);
+	float2 dim_rcp = rcp(dim);
 	float ret = 0;
 	for (int x = -radius; x <= radius;++x)
 	{
 		for (int y = -radius; y <= radius;++y)
 		{
-			ret = max(ret, texture_depth.SampleLevel(sampler_point_clamp, uv, lod, int2(x, y)));
+			ret = max(ret, texture_depth.SampleLevel(sampler_point_clamp, uv + float2(x, y) * dim_rcp, lod));
 		}
 	}
 	return ret;
