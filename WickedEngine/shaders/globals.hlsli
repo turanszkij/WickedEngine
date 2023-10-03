@@ -769,6 +769,19 @@ inline float3 reconstruct_position(in float2 uv, in float z)
 	return reconstruct_position(uv, z, GetCamera().inverse_view_projection);
 }
 
+inline float find_max_depth(in float2 uv, in int radius, in float lod)
+{
+	float ret = 0;
+	for (int x = -radius; x <= radius;++x)
+	{
+		for (int y = -radius; y <= radius;++y)
+		{
+			ret = max(ret, texture_depth.SampleLevel(sampler_point_clamp, uv, lod, int2(x, y)));
+		}
+	}
+	return ret;
+}
+
 // Caustic pattern from: https://www.shadertoy.com/view/XtKfRG
 inline float caustic_pattern(float2 uv, float time)
 {

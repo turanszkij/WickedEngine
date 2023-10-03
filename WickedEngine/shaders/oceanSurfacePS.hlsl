@@ -67,21 +67,34 @@ float4 main(PSIn input) : SV_TARGET
 	[branch]
 	if (GetCamera().texture_refraction_index >= 0)
 	{
-		// WATER REFRACTION
-		Texture2D texture_refraction = bindless_textures[GetCamera().texture_refraction_index];
-		float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + surface.N.xz * bump_strength, 0) * GetCamera().z_far;
-		float depth_difference = sampled_lineardepth - lineardepth;
-		surface.refraction.rgb = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + surface.N.xz * bump_strength * saturate(0.5 * depth_difference), 0).rgb;
 		if (camera_above_water)
 		{
-			if (depth_difference < 0)
+			// Water refraction:
+			Texture2D texture_refraction = bindless_textures[GetCamera().texture_refraction_index];
+			float4 water_plane = GetCamera().reflection_clip_plane;
+			// First sample using full perturbation:
+			float2 refraction_uv = ScreenCoord.xy + surface.N.xz * bump_strength;
+			float refraction_depth = find_max_depth(refraction_uv, 2, 2);
+			float3 refraction_position = reconstruct_position(refraction_uv, refraction_depth);
+			float water_depth = -dot(float4(refraction_position, 1), water_plane);
+			if (water_depth <= 0)
 			{
-				// Fix cutoff by taking unperturbed depth diff to fill the holes with fog:
-				sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy, 0) * GetCamera().z_far;
-				depth_difference = sampled_lineardepth - lineardepth;
+			// Above water, fill holes by taking unperturbed sample:
+				refraction_uv = ScreenCoord.xy;
 			}
-			// WATER FOG:
-			surface.refraction.a = 1 - saturate(color.a * 0.1f * depth_difference);
+			else
+			{
+				// Below water, compute perturbation according to first sample water depth:
+				refraction_uv = ScreenCoord.xy + surface.N.xz * bump_strength * saturate(1 - exp(-water_depth));
+			}
+			surface.refraction.rgb = texture_refraction.SampleLevel(sampler_linear_mirror, refraction_uv, 0).rgb;
+			// Recompute depth params again with actual perturbation:
+			refraction_depth = texture_depth.SampleLevel(sampler_point_clamp, refraction_uv, 0);
+			refraction_position = reconstruct_position(refraction_uv, refraction_depth);
+			water_depth = max(water_depth, -dot(float4(refraction_position, 1), water_plane));
+			// Water fog computation:
+			surface.refraction.a = saturate(exp(-water_depth * color.a));
+			color.a = 1;
 		}
 		else
 		{

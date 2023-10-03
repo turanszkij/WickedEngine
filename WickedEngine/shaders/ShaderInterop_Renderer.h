@@ -955,6 +955,7 @@ struct ShaderCamera
 	uint		output_index; // viewport or rendertarget array index
 
 	float4		clip_plane;
+	float4		reflection_clip_plane;
 
 	float3		forward;
 	float		z_near;

@@ -34,9 +34,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float4 color = original_color;
 	if (world_pos.y < ocean_pos.y) // if below water surface, apply effects
 	{
+#if 0
 		// It's not realistic to apply much refraction underwater to camera, but looks cool:
 		uv += sin(uv * 10 + GetFrame().time * 5) * 0.005;
 		uv += sin(-uv.y * 5 + GetFrame().time * 2) * 0.005;
+#endif
 		color = input.SampleLevel(sampler_linear_mirror, uv, 0);
 
 		const float lineardepth = texture_lineardepth.SampleLevel(sampler_linear_clamp, uv, 0).r * GetCamera().z_far;
@@ -51,9 +53,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		const float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, ocean_surface_uv, 0).xzy;
 		ocean_surface_pos += displacement;
 		const float ocean_dist = length(ocean_surface_pos - o);
-
-		const float min_dist = min(lineardepth, ocean_dist);
-		float3 modified_color = lerp(color.rgb, ocean.water_color.rgb, saturate(0.5 + min_dist * 0.025 * ocean.water_color.a));
+		
+		float3 modified_color = lerp(color.rgb, ocean.water_color.rgb, 1 - saturate(exp(-lineardepth * ocean.water_color.a)));
 		color.rgb = lerp(color.rgb, modified_color, pow(saturate(ocean_pos.y - world_pos.y), 0.25));
 	}
 	output[DTid.xy] = color;

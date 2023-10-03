@@ -3050,6 +3050,7 @@ void UpdateVisibility(Visibility& vis)
 						XMVECTOR P = XMLoadFloat3(&object.center);
 						XMVECTOR N = XMVectorSet(0, 1, 0, 0);
 						N = XMVector3TransformNormal(N, XMLoadFloat4x4(&vis.scene->matrix_objects[args.jobIndex]));
+						N = XMVector3Normalize(N);
 						XMVECTOR _refPlane = XMPlaneFromPointNormal(P, N);
 						XMStoreFloat4(&vis.reflectionPlane, _refPlane);
 
@@ -9466,6 +9467,7 @@ void BindCameraCB(
 	shadercam.z_range = abs(shadercam.z_far - shadercam.z_near);
 	shadercam.z_range_rcp = 1.0f / std::max(0.0001f, shadercam.z_range);
 	shadercam.clip_plane = camera.clipPlane;
+	shadercam.reflection_clip_plane = camera_reflection.clipPlane;
 
 	static_assert(arraysize(camera.frustum.planes) == arraysize(shadercam.frustum.planes), "Mismatch!");
 	for (int i = 0; i < arraysize(camera.frustum.planes); ++i)
