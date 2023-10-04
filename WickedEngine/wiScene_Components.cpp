@@ -1733,6 +1733,8 @@ namespace wi::scene
 		XMVECTOR _Up = XMLoadFloat3(&Up);
 		XMMATRIX _Ref = XMMatrixReflect(XMLoadFloat4(&plane));
 
+		clipPlaneOriginal = plane;
+
 		// reverse clipping if behind clip plane ("if underwater")
 		clipPlane = plane;
 		float d = XMVectorGetX(XMPlaneDotCoord(XMLoadFloat4(&clipPlane), _Eye));

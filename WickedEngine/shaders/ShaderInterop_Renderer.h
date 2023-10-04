@@ -955,7 +955,7 @@ struct ShaderCamera
 	uint		output_index; // viewport or rendertarget array index
 
 	float4		clip_plane;
-	float4		reflection_clip_plane;
+	float4		reflection_plane; // not clip plane (not reversed when camera is under), but the original plane
 
 	float3		forward;
 	float		z_near;
@@ -984,6 +984,7 @@ struct ShaderCamera
 	float4x4	previous_view_projection;
 	float4x4	previous_inverse_view_projection;
 	float4x4	reflection_view_projection;
+	float4x4	reflection_inverse_view_projection;
 	float4x4	reprojection; // view_projection_inverse_matrix * previous_view_projection_matrix
 
 	float2		aperture_shape;
@@ -1018,18 +1019,18 @@ struct ShaderCamera
 
 	int buffer_entitytiles_transparent_index;
 	int texture_reflection_index;
+	int texture_reflection_depth_index;
 	int texture_refraction_index;
-	int texture_waterriples_index;
 
+	int texture_waterriples_index;
 	int texture_ao_index;
 	int texture_ssr_index;
 	int texture_rtshadow_index;
-	int texture_surfelgi_index;
 
+	int texture_surfelgi_index;
 	int texture_depth_index_prev;
 	int texture_vxgi_diffuse_index;
 	int texture_vxgi_specular_index;
-	int padding1;
 
 #ifdef __cplusplus
 	void init()

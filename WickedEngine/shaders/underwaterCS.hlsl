@@ -15,7 +15,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 
 	// Unproject near plane and determine for every pixel if it's below water surface:
-	float4 clipspace = float4(uv_to_clipspace(uv), 0.1, 1); // pushed away from near plane to better match up with ocean mesh (and reversed z)
+	float4 clipspace = float4(uv_to_clipspace(uv), 1, 1);
 	float4 unproj = mul(GetCamera().inverse_view_projection, clipspace);
 	unproj.xyz /= unproj.w;
 	float3 world_pos = unproj.xyz;
@@ -38,10 +38,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		// It's not realistic to apply much refraction underwater to camera, but looks cool:
 		uv += sin(uv * 10 + GetFrame().time * 5) * 0.005;
 		uv += sin(-uv.y * 5 + GetFrame().time * 2) * 0.005;
-#endif
 		color = input.SampleLevel(sampler_linear_mirror, uv, 0);
+#endif
 
-		const float lineardepth = texture_lineardepth.SampleLevel(sampler_linear_clamp, uv, 0).r * GetCamera().z_far;
+		const float depth = texture_depth[DTid.xy];
+		const float lineardepth = compute_lineardepth(depth);
 
 		// The ocean is not rendered into the lineardepth unfortunately, so we also trace it:
 		//	Otherwise the ocean surface could be same as infinite depth and incorrectly fogged
@@ -53,9 +54,29 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		const float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, ocean_surface_uv, 0).xzy;
 		ocean_surface_pos += displacement;
 		const float ocean_dist = length(ocean_surface_pos - o);
+
+		float3 surface_position = reconstruct_position(uv, depth);
+		[branch]
+		if (ocean.texture_displacementmap >= 0)
+		{
+			const float2 ocean_uv = surface_position.xz * ocean.patch_size_rcp;
+			Texture2D texture_displacementmap = bindless_textures[ocean.texture_displacementmap];
+			const float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, ocean_uv, 0).xzy;
+			surface_position += displacement;
+		}
+		float water_depth = ocean_pos.y - surface_position.y;
+		water_depth = max(min(lineardepth, ocean_dist), water_depth);
 		
-		float3 modified_color = lerp(color.rgb, ocean.water_color.rgb, 1 - saturate(exp(-lineardepth * ocean.water_color.a)));
-		color.rgb = lerp(color.rgb, modified_color, pow(saturate(ocean_pos.y - world_pos.y), 0.25));
+		color.rgb = lerp(ocean.water_color.rgb, color.rgb, saturate(exp(-water_depth * ocean.water_color.a)));
+		//color = float4(1, 0, 0, 1);
 	}
+
+	// Transition at intersection:
+	float intersection_direction = world_pos.y - ocean_pos.y;
+	float intersection_distance = abs(intersection_direction);
+	float intersection_blend = saturate(exp(-intersection_distance * 100));
+	float3 intersection_color = ocean.water_color.rgb;
+	color.rgb = lerp(color.rgb, intersection_color, intersection_blend);
+	
 	output[DTid.xy] = color;
 }

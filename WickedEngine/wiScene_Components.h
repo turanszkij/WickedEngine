@@ -976,6 +976,7 @@ namespace wi::scene
 		XMFLOAT4X4 InvView, InvProjection, InvVP;
 		XMFLOAT2 jitter;
 		XMFLOAT4 clipPlane = XMFLOAT4(0, 0, 0, 0); // default: no clip plane
+		XMFLOAT4 clipPlaneOriginal = XMFLOAT4(0, 0, 0, 0); // not reversed clip plane
 		wi::Canvas canvas;
 		wi::graphics::Rect scissor;
 		uint32_t sample_count = 1;
@@ -986,6 +987,7 @@ namespace wi::scene
 		int texture_normal_index = -1;
 		int texture_roughness_index = -1;
 		int texture_reflection_index = -1;
+		int texture_reflection_depth_index = -1;
 		int texture_refraction_index = -1;
 		int texture_waterriples_index = -1;
 		int texture_ao_index = -1;

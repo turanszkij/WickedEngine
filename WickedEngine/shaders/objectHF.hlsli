@@ -726,10 +726,10 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	Lighting lighting;
 	lighting.create(0, 0, ambient, 0);
 
-
+	
+	float4 color = surface.baseColor;
 
 #ifdef WATER
-
 	//NORMALMAP
 	float2 bumpColor0 = 0;
 	float2 bumpColor1 = 0;
@@ -757,8 +757,18 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 		//REFLECTION
 		float4 reflectionUV = mul(GetCamera().reflection_view_projection, float4(surface.P, 1));
 		reflectionUV.xy /= reflectionUV.w;
-		reflectionUV.xy = clipspace_to_uv(reflectionUV.xy);
-		lighting.indirect.specular += bindless_textures[GetCamera().texture_reflection_index].SampleLevel(sampler_linear_mirror, reflectionUV.xy + surface.bumpColor.rg, 0).rgb * surface.F;
+		reflectionUV.xy = clipspace_to_uv(reflectionUV.xy) + surface.bumpColor.rg;
+		float3 reflectiveColor = bindless_textures[GetCamera().texture_reflection_index].SampleLevel(sampler_linear_mirror, reflectionUV.xy, 0).rgb;
+		[branch]
+		if(GetCamera().texture_reflection_depth_index >= 0)
+		{
+			float reflectiveDepth = bindless_textures[GetCamera().texture_reflection_depth_index].SampleLevel(sampler_point_clamp, reflectionUV.xy, 0).r;
+			float3 reflectivePosition = reconstruct_position(reflectionUV.xy, reflectiveDepth, GetCamera().reflection_inverse_view_projection);
+			float4 water_plane = GetCamera().reflection_plane;
+			float water_depth = -dot(float4(reflectivePosition, 1), water_plane);
+			reflectiveColor.rgb = lerp(color.rgb, reflectiveColor.rgb, saturate(exp(-water_depth * color.a)));
+		}
+		lighting.indirect.specular += reflectiveColor * surface.F;
 	}
 #endif // WATER
 
@@ -831,21 +841,21 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // ENVMAPRENDERING
 #endif // WATER
 
-
-	float4 color = surface.baseColor;
-
 #ifdef WATER
 	[branch]
 	if (GetCamera().texture_refraction_index >= 0)
 	{
 		// Water refraction:
+		float4 water_plane = GetCamera().reflection_plane;
+		const float camera_above_water = dot(float4(GetCamera().position, 1), water_plane) < 0; 
 		Texture2D texture_refraction = bindless_textures[GetCamera().texture_refraction_index];
-		float4 water_plane = GetCamera().reflection_clip_plane;
 		// First sample using full perturbation:
 		float2 refraction_uv = ScreenCoord.xy + surface.bumpColor.rg;
 		float refraction_depth = find_max_depth(refraction_uv, 2, 2);
 		float3 refraction_position = reconstruct_position(refraction_uv, refraction_depth);
 		float water_depth = -dot(float4(refraction_position, 1), water_plane);
+		if(camera_above_water)
+			water_depth = -water_depth;
 		if(water_depth <= 0)
 		{
 			// Above water, fill holes by taking unperturbed sample:
@@ -861,6 +871,8 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 		refraction_depth = texture_depth.SampleLevel(sampler_point_clamp, refraction_uv, 0);
 		refraction_position = reconstruct_position(refraction_uv, refraction_depth);
 		water_depth = max(water_depth, -dot(float4(refraction_position, 1), water_plane));
+		if(camera_above_water)
+			water_depth = -water_depth;
 		// Water fog computation:
 		surface.refraction.a = saturate(exp(-water_depth * color.a));
 		color.a = 1;

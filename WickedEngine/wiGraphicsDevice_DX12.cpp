@@ -2717,6 +2717,35 @@ using namespace dx12_internal;
 			}
 		}
 
+		if (features.HighestShaderModel() < D3D_SHADER_MODEL_6_0)
+		{
+			std::string error = "Shader model 6.0 is required, but not supported by your system!\n";
+			error += "Adapter name: " + adapterName + "\n";
+			error += "Adapter type: ";
+			switch (adapterType)
+			{
+			case wi::graphics::AdapterType::IntegratedGpu:
+				error += "Integrated GPU";
+				break;
+			case wi::graphics::AdapterType::DiscreteGpu:
+				error += "Discrete GPU";
+				break;
+			case wi::graphics::AdapterType::VirtualGpu:
+				error += "Virtual GPU";
+				break;
+			case wi::graphics::AdapterType::Cpu:
+				error += "CPU";
+				break;
+			default:
+				error += "Unknown";
+				break;
+			}
+			error += "\nExiting.";
+			wi::helper::messageBox(error, "Error!");
+			wi::backlog::post(error, wi::backlog::LogLevel::Error);
+			wi::platform::Exit();
+		}
+
 		if (features.ConservativeRasterizationTier() >= D3D12_CONSERVATIVE_RASTERIZATION_TIER_1)
 		{
 			capabilities |= GraphicsDeviceCapability::CONSERVATIVE_RASTERIZATION;

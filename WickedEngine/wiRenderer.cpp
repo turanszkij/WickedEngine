@@ -9467,7 +9467,7 @@ void BindCameraCB(
 	shadercam.z_range = abs(shadercam.z_far - shadercam.z_near);
 	shadercam.z_range_rcp = 1.0f / std::max(0.0001f, shadercam.z_range);
 	shadercam.clip_plane = camera.clipPlane;
-	shadercam.reflection_clip_plane = camera_reflection.clipPlane;
+	shadercam.reflection_plane = camera_reflection.clipPlaneOriginal;
 
 	static_assert(arraysize(camera.frustum.planes) == arraysize(shadercam.frustum.planes), "Mismatch!");
 	for (int i = 0; i < arraysize(camera.frustum.planes); ++i)
@@ -9483,6 +9483,7 @@ void BindCameraCB(
 	XMStoreFloat4x4(&shadercam.previous_view_projection, camera_previous.GetViewProjection());
 	XMStoreFloat4x4(&shadercam.previous_inverse_view_projection, camera_previous.GetInvViewProjection());
 	XMStoreFloat4x4(&shadercam.reflection_view_projection, camera_reflection.GetViewProjection());
+	XMStoreFloat4x4(&shadercam.reflection_inverse_view_projection, camera_reflection.GetInvViewProjection());
 	XMStoreFloat4x4(&shadercam.reprojection, camera.GetInvViewProjection() * camera_previous.GetViewProjection());
 
 	shadercam.focal_length = camera.focal_length;
@@ -9519,6 +9520,7 @@ void BindCameraCB(
 	shadercam.buffer_entitytiles_opaque_index = camera.buffer_entitytiles_opaque_index;
 	shadercam.buffer_entitytiles_transparent_index = camera.buffer_entitytiles_transparent_index;
 	shadercam.texture_reflection_index = camera.texture_reflection_index;
+	shadercam.texture_reflection_depth_index = camera.texture_reflection_depth_index;
 	shadercam.texture_refraction_index = camera.texture_refraction_index;
 	shadercam.texture_waterriples_index = camera.texture_waterriples_index;
 	shadercam.texture_ao_index = camera.texture_ao_index;
