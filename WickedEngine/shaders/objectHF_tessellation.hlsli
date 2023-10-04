@@ -118,13 +118,13 @@ PixelInput main(ConstantOutput input, float3 uvw : SV_DomainLocation, const Outp
 		input.b102 * w * vv3 + input.b012 * u * vv3 + input.b111 * 6.0 * w * u * v;
 #endif // OBJECTSHADER_USE_POSITIONPREV
 
+#ifdef OBJECTSHADER_USE_UVSETS
+	output.uvsets = w * patch[0].uvsets + u * patch[1].uvsets + v * patch[2].uvsets;
+#endif // OBJECTSHADER_USE_UVSETS
+
 #ifdef OBJECTSHADER_USE_COLOR
 	output.color = min16float4(w * patch[0].color + u * patch[1].color + v * patch[2].color);
 #endif // OBJECTSHADER_USE_COLOR
-
-#ifdef OBJECTSHADER_USE_UVSETS
-	output.uvsets = min16float4(w * patch[0].uvsets + u * patch[1].uvsets + v * patch[2].uvsets);
-#endif // OBJECTSHADER_USE_UVSETS
 
 #ifdef OBJECTSHADER_USE_ATLAS
 	output.atl = min16float2(w * patch[0].atl + u * patch[1].atl + v * patch[2].atl);
