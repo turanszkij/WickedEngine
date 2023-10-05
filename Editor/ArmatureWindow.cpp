@@ -44,13 +44,6 @@ void ArmatureWindow::Create(EditorComponent* _editor)
 		if (armature == nullptr)
 			return;
 
-		XMMATRIX R = XMMatrixIdentity();
-		const TransformComponent* armature_transform = scene.transforms.GetComponent(entity);
-		if (armature_transform != nullptr)
-		{
-			R = XMMatrixInverse(nullptr, XMLoadFloat4x4(&armature_transform->world));
-		}
-
 		for (size_t i = 0; i < armature->boneCollection.size(); ++i)
 		{
 			Entity bone = armature->boneCollection[i];
@@ -58,7 +51,7 @@ void ArmatureWindow::Create(EditorComponent* _editor)
 			if (transform != nullptr)
 			{
 				transform->ClearTransform();
-				transform->MatrixTransform(XMMatrixInverse(nullptr, XMLoadFloat4x4(&armature->inverseBindMatrices[i])) * R);
+				transform->MatrixTransform(XMMatrixInverse(nullptr, XMLoadFloat4x4(&armature->inverseBindMatrices[i])));
 				transform->UpdateTransform();
 				const HierarchyComponent* hier = scene.hierarchy.GetComponent(bone);
 				if (hier != nullptr && hier->parentID != INVALID_ENTITY)
