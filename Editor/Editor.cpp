@@ -503,13 +503,14 @@ void EditorComponent::Load()
 		ss += "You can also import models from .OBJ, .GLTF, .GLB, .VRM files.\n";
 		ss += "You can find a program configuration file at Editor/config.ini\n";
 		ss += "You can find sample LUA scripts in the Content/scripts directory. Try to load one.\n";
-		ss += "You can find a startup script at Editor/startup.lua (this will be executed on program start, if exists)\n";
+		ss += "You can find a startup script in startup.lua (this will be executed on program start, if exists)\n";
 		ss += "You can use some command line arguments (without any prefix):\n";
 		ss += "\t- Default to DirectX12 graphics device: dx12\n";
 		ss += "\t- Default to Vulkan graphics device: vulkan\n";
 		ss += "\t- Enable graphics device debug mode: debugdevice\n";
 		ss += "\t- Enable graphics device GPU-based validation: gpuvalidation\n";
 		ss += "\t- Make window always active, even when in background: alwaysactive\n";
+		ss += "\t- Prefer to use integrated GPU: igpu\n";
 		ss += "\nFor questions, bug reports, feedback, requests, please open an issue at:\n";
 		ss += "https://github.com/turanszkij/WickedEngine/issues\n";
 		ss += "\n\n";
@@ -530,6 +531,35 @@ void EditorComponent::Load()
 		aboutWindow.SetSize(XMFLOAT2(640, 480));
 		aboutWindow.OnResize([this]() {
 			aboutLabel.SetSize(XMFLOAT2(aboutWindow.GetWidgetAreaSize().x - 20, aboutLabel.GetSize().y));
+		});
+		aboutWindow.OnCollapse([&](wi::gui::EventArgs args) {
+			for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
+			{
+				aboutWindow.sprites[i].params.enableCornerRounding();
+				aboutWindow.sprites[i].params.corners_rounding[0].radius = 10;
+				aboutWindow.sprites[i].params.corners_rounding[1].radius = 10;
+				aboutWindow.sprites[i].params.corners_rounding[2].radius = 10;
+				aboutWindow.sprites[i].params.corners_rounding[3].radius = 10;
+				aboutWindow.resizeDragger_UpperLeft.sprites[i].params.enableCornerRounding();
+				aboutWindow.resizeDragger_UpperLeft.sprites[i].params.corners_rounding[0].radius = 10;
+				aboutWindow.resizeDragger_UpperRight.sprites[i].params.enableCornerRounding();
+				aboutWindow.resizeDragger_UpperRight.sprites[i].params.corners_rounding[1].radius = 10;
+				aboutWindow.resizeDragger_BottomLeft.sprites[i].params.enableCornerRounding();
+				aboutWindow.resizeDragger_BottomLeft.sprites[i].params.corners_rounding[2].radius = 10;
+				aboutWindow.resizeDragger_BottomRight.sprites[i].params.enableCornerRounding();
+				aboutWindow.resizeDragger_BottomRight.sprites[i].params.corners_rounding[3].radius = 10;
+
+				if (aboutWindow.IsCollapsed())
+				{
+					aboutWindow.resizeDragger_UpperLeft.sprites[i].params.corners_rounding[2].radius = 10;
+					aboutWindow.resizeDragger_UpperRight.sprites[i].params.corners_rounding[3].radius = 10;
+				}
+				else
+				{
+					aboutWindow.resizeDragger_UpperLeft.sprites[i].params.corners_rounding[2].radius = 0;
+					aboutWindow.resizeDragger_UpperRight.sprites[i].params.corners_rounding[3].radius = 0;
+				}
+			}
 		});
 		GetGUI().AddWidget(&aboutWindow);
 	}

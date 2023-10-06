@@ -118,7 +118,7 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	rotationSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&rotationSlider);
 
-	stabilizerSlider.Create(1, 15, 8, 14, "Stabilizer: ");
+	stabilizerSlider.Create(1, 15, 2, 14, "Stabilizer: ");
 	stabilizerSlider.SetTooltip("The stabilizer generates a small delay between user input and painting, which will be used to compute a smoother paint stroke..");
 	stabilizerSlider.SetSize(XMFLOAT2(wid, hei));
 	stabilizerSlider.SetPos(XMFLOAT2(x, y += step));

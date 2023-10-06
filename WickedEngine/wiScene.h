@@ -374,6 +374,12 @@ namespace wi::scene
 		wi::ecs::Entity Entity_CreatePlane(
 			const std::string& name
 		);
+		wi::ecs::Entity Entity_CreateSphere(
+			const std::string& name,
+			float radius = 1,
+			uint32_t latitudeBands = 64,
+			uint32_t longitudeBands = 64
+		);
 
 		// Attaches an entity to a parent:
 		//	child_already_in_local_space	:	child won't be transformed from world space to local space

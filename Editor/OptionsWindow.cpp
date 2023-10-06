@@ -12,31 +12,57 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	wi::gui::Window::Create("Options", wi::gui::Window::WindowControls::RESIZE_TOPRIGHT);
 	SetShadowRadius(2);
 
+	enum NEW_THING
+	{
+		NEW_TRANSFORM,
+		NEW_MATERIAL,
+		NEW_POINTLIGHT,
+		NEW_SPOTLIGHT,
+		NEW_DIRECTIONALLIGHT,
+		NEW_ENVIRONMENTPROBE,
+		NEW_FORCE,
+		NEW_DECAL,
+		NEW_SOUND,
+		NEW_VIDEO,
+		NEW_WEATHER,
+		NEW_EMITTER,
+		NEW_HAIR,
+		NEW_CAMERA,
+		NEW_CUBE,
+		NEW_PLANE,
+		NEW_SPHERE,
+		NEW_ANIMATION,
+		NEW_SCRIPT,
+		NEW_COLLIDER,
+		NEW_TERRAIN,
+	};
+
 	newCombo.Create("New: ");
 	newCombo.selected_font.anim.typewriter.looped = true;
 	newCombo.selected_font.anim.typewriter.time = 2;
 	newCombo.selected_font.anim.typewriter.character_start = 1;
 	newCombo.SetInvalidSelectionText("...");
-	newCombo.AddItem("Transform " ICON_TRANSFORM, 0);
-	newCombo.AddItem("Material " ICON_MATERIAL, 1);
-	newCombo.AddItem("Point Light " ICON_POINTLIGHT, 2);
-	newCombo.AddItem("Spot Light " ICON_SPOTLIGHT, 3);
-	newCombo.AddItem("Directional Light " ICON_DIRECTIONALLIGHT, 4);
-	newCombo.AddItem("Environment Probe " ICON_ENVIRONMENTPROBE, 5);
-	newCombo.AddItem("Force " ICON_FORCE, 6);
-	newCombo.AddItem("Decal " ICON_DECAL, 7);
-	newCombo.AddItem("Sound " ICON_SOUND, 8);
-	newCombo.AddItem("Video " ICON_VIDEO, 19);
-	newCombo.AddItem("Weather " ICON_WEATHER, 9);
-	newCombo.AddItem("Emitter " ICON_EMITTER, 10);
-	newCombo.AddItem("HairParticle " ICON_HAIR, 11);
-	newCombo.AddItem("Camera " ICON_CAMERA, 12);
-	newCombo.AddItem("Cube " ICON_CUBE, 13);
-	newCombo.AddItem("Plane " ICON_SQUARE, 14);
-	newCombo.AddItem("Animation " ICON_ANIMATION, 15);
-	newCombo.AddItem("Script " ICON_SCRIPT, 16);
-	newCombo.AddItem("Collider " ICON_COLLIDER, 17);
-	newCombo.AddItem("Terrain " ICON_TERRAIN, 18);
+	newCombo.AddItem("Transform " ICON_TRANSFORM, NEW_TRANSFORM);
+	newCombo.AddItem("Material " ICON_MATERIAL, NEW_MATERIAL);
+	newCombo.AddItem("Point Light " ICON_POINTLIGHT, NEW_POINTLIGHT);
+	newCombo.AddItem("Spot Light " ICON_SPOTLIGHT, NEW_SPOTLIGHT);
+	newCombo.AddItem("Directional Light " ICON_DIRECTIONALLIGHT, NEW_DIRECTIONALLIGHT);
+	newCombo.AddItem("Environment Probe " ICON_ENVIRONMENTPROBE, NEW_ENVIRONMENTPROBE);
+	newCombo.AddItem("Force " ICON_FORCE, NEW_FORCE);
+	newCombo.AddItem("Decal " ICON_DECAL, NEW_DECAL);
+	newCombo.AddItem("Sound " ICON_SOUND, NEW_SOUND);
+	newCombo.AddItem("Video " ICON_VIDEO, NEW_VIDEO);
+	newCombo.AddItem("Weather " ICON_WEATHER, NEW_WEATHER);
+	newCombo.AddItem("Emitter " ICON_EMITTER, NEW_EMITTER);
+	newCombo.AddItem("HairParticle " ICON_HAIR, NEW_HAIR);
+	newCombo.AddItem("Camera " ICON_CAMERA, NEW_CAMERA);
+	newCombo.AddItem("Cube " ICON_CUBE, NEW_CUBE);
+	newCombo.AddItem("Plane " ICON_SQUARE, NEW_PLANE);
+	newCombo.AddItem("Sphere " ICON_CIRCLE, NEW_SPHERE);
+	newCombo.AddItem("Animation " ICON_ANIMATION, NEW_ANIMATION);
+	newCombo.AddItem("Script " ICON_SCRIPT, NEW_SCRIPT);
+	newCombo.AddItem("Collider " ICON_COLLIDER, NEW_COLLIDER);
+	newCombo.AddItem("Terrain " ICON_TERRAIN, NEW_TERRAIN);
 	newCombo.OnSelect([&](wi::gui::EventArgs args) {
 		newCombo.SetSelectedWithoutCallback(-1);
 		const EditorComponent::EditorScene& editorscene = editor->GetCurrentEditorScene();
@@ -49,34 +75,34 @@ void OptionsWindow::Create(EditorComponent* _editor)
 
 		switch (args.userdata)
 		{
-		case 0:
+		case NEW_TRANSFORM:
 			pick.entity = scene.Entity_CreateTransform("transform");
 			break;
-		case 1:
+		case NEW_MATERIAL:
 			pick.entity = scene.Entity_CreateMaterial("material");
 			break;
-		case 2:
+		case NEW_POINTLIGHT:
 			pick.entity = scene.Entity_CreateLight("pointlight", in_front_of_camera, XMFLOAT3(1, 1, 1), 2, 60);
 			scene.lights.GetComponent(pick.entity)->type = LightComponent::POINT;
 			scene.lights.GetComponent(pick.entity)->intensity = 20;
 			break;
-		case 3:
+		case NEW_SPOTLIGHT:
 			pick.entity = scene.Entity_CreateLight("spotlight", in_front_of_camera, XMFLOAT3(1, 1, 1), 2, 60);
 			scene.lights.GetComponent(pick.entity)->type = LightComponent::SPOT;
 			scene.lights.GetComponent(pick.entity)->intensity = 100;
 			break;
-		case 4:
+		case NEW_DIRECTIONALLIGHT:
 			pick.entity = scene.Entity_CreateLight("dirlight", XMFLOAT3(0, 3, 0), XMFLOAT3(1, 1, 1), 2, 60);
 			scene.lights.GetComponent(pick.entity)->type = LightComponent::DIRECTIONAL;
 			scene.lights.GetComponent(pick.entity)->intensity = 10;
 			break;
-		case 5:
+		case NEW_ENVIRONMENTPROBE:
 			pick.entity = scene.Entity_CreateEnvironmentProbe("envprobe", in_front_of_camera);
 			break;
-		case 6:
+		case NEW_FORCE:
 			pick.entity = scene.Entity_CreateForce("force");
 			break;
-		case 7:
+		case NEW_DECAL:
 			pick.entity = scene.Entity_CreateDecal("decal", "");
 			if (scene.materials.Contains(pick.entity))
 			{
@@ -85,7 +111,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			}
 			scene.transforms.GetComponent(pick.entity)->RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
 			break;
-		case 8:
+		case NEW_SOUND:
 		{
 			wi::helper::FileDialogParams params;
 			params.type = wi::helper::FileDialogParams::OPEN;
@@ -112,7 +138,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			return;
 		}
 		break;
-		case 19:
+		case NEW_VIDEO:
 		{
 			wi::helper::FileDialogParams params;
 			params.type = wi::helper::FileDialogParams::OPEN;
@@ -139,47 +165,51 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			return;
 		}
 		break;
-		case 9:
+		case NEW_WEATHER:
 			pick.entity = CreateEntity();
 			scene.weathers.Create(pick.entity);
 			scene.names.Create(pick.entity) = "weather";
 			break;
-		case 10:
+		case NEW_EMITTER:
 			pick.entity = scene.Entity_CreateEmitter("emitter");
 			break;
-		case 11:
+		case NEW_HAIR:
 			pick.entity = scene.Entity_CreateHair("hair");
 			break;
-		case 12:
+		case NEW_CAMERA:
 			pick.entity = scene.Entity_CreateCamera("camera", camera.width, camera.height);
 			*scene.cameras.GetComponent(pick.entity) = camera;
 			*scene.transforms.GetComponent(pick.entity) = editorscene.camera_transform;
 			break;
-		case 13:
+		case NEW_CUBE:
 			pick.entity = scene.Entity_CreateCube("cube");
 			pick.subsetIndex = 0;
 			break;
-		case 14:
+		case NEW_PLANE:
 			pick.entity = scene.Entity_CreatePlane("plane");
 			pick.subsetIndex = 0;
 			break;
-		case 15:
+		case NEW_SPHERE:
+			pick.entity = scene.Entity_CreateSphere("sphere");
+			pick.subsetIndex = 0;
+			break;
+		case NEW_ANIMATION:
 			pick.entity = CreateEntity();
 			scene.animations.Create(pick.entity);
 			scene.names.Create(pick.entity) = "animation";
 			break;
-		case 16:
+		case NEW_SCRIPT:
 			pick.entity = CreateEntity();
 			scene.scripts.Create(pick.entity);
 			scene.names.Create(pick.entity) = "script";
 			break;
-		case 17:
+		case NEW_COLLIDER:
 			pick.entity = CreateEntity();
 			scene.colliders.Create(pick.entity);
 			scene.transforms.Create(pick.entity);
 			scene.names.Create(pick.entity) = "collider";
 			break;
-		case 18:
+		case NEW_TERRAIN:
 			editor->componentsWnd.terrainWnd.SetupAssets();
 			pick.entity = CreateEntity();
 			scene.terrains.Create(pick.entity) = editor->componentsWnd.terrainWnd.terrain_preset;

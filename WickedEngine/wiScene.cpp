@@ -1398,6 +1398,86 @@ namespace wi::scene
 
 		return entity;
 	}
+	Entity Scene::Entity_CreateSphere(
+		const std::string& name,
+		float radius,
+		uint32_t latitudeBands,
+		uint32_t longitudeBands
+	)
+	{
+		Entity entity = CreateEntity();
+
+		if (!name.empty())
+		{
+			names.Create(entity) = name;
+		}
+
+		layers.Create(entity);
+
+		transforms.Create(entity);
+
+		ObjectComponent& object = objects.Create(entity);
+
+		MeshComponent& mesh = meshes.Create(entity);
+
+		// object references the mesh entity (there can be multiple objects referencing one mesh):
+		object.meshID = entity;
+
+		for (uint32_t latNumber = 0; latNumber <= latitudeBands; latNumber++)
+		{
+			float theta = float(latNumber) * XM_PI / float(latitudeBands);
+			float sinTheta = sin(theta);
+			float cosTheta = cos(theta);
+
+			for (uint32_t longNumber = 0; longNumber <= longitudeBands; longNumber++)
+			{
+				float phi = float(longNumber) * 2 * XM_PI / float(longitudeBands);
+				float sinPhi = sin(phi);
+				float cosPhi = cos(phi);
+
+				XMFLOAT3& position = mesh.vertex_positions.emplace_back();
+				XMFLOAT3& normal = mesh.vertex_normals.emplace_back();
+				XMFLOAT2& uv = mesh.vertex_uvset_0.emplace_back();
+
+				normal.x = cosPhi * sinTheta;   // x
+				normal.y = cosTheta;            // y
+				normal.z = sinPhi * sinTheta;   // z
+				uv.x = float(longNumber) / float(longitudeBands); // u
+				uv.y = float(latNumber) / float(latitudeBands);   // v
+				position.x = radius * normal.x;
+				position.y = radius * normal.y;
+				position.z = radius * normal.z;
+			}
+		}
+
+		for (uint32_t latNumber = 0; latNumber < latitudeBands; latNumber++)
+		{
+			for (uint32_t longNumber = 0; longNumber < longitudeBands; longNumber++)
+			{
+				uint32_t first = (latNumber * (longitudeBands + 1)) + longNumber;
+				uint32_t second = first + longitudeBands + 1;
+
+				mesh.indices.push_back(first);
+				mesh.indices.push_back(second);
+				mesh.indices.push_back(first + 1);
+
+				mesh.indices.push_back(second);
+				mesh.indices.push_back(second + 1);
+				mesh.indices.push_back(first + 1);
+			}
+		}
+
+		// Subset maps a part of the mesh to a material:
+		MeshComponent::MeshSubset& subset = mesh.subsets.emplace_back();
+		subset.indexCount = uint32_t(mesh.indices.size());
+		materials.Create(entity);
+		subset.materialID = entity; // the material component is created on the same entity as the mesh component, though it is not required as it could also use a different material entity
+
+		// vertex buffer GPU data will be packed and uploaded here:
+		mesh.CreateRenderData();
+
+		return entity;
+	}
 
 	void Scene::Component_Attach(Entity entity, Entity parent, bool child_already_in_local_space)
 	{
