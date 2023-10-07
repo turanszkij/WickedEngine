@@ -2327,6 +2327,10 @@ using namespace vulkan_internal;
 	{
 		wi::Timer timer;
 
+		// This functionalty is missing from Vulkan but might be added in the future:
+		//	Issue: https://github.com/KhronosGroup/Vulkan-Docs/issues/2079
+		capabilities |= GraphicsDeviceCapability::COPY_BETWEEN_DIFFERENT_IMAGE_ASPECTS_NOT_SUPPORTED;
+
 		wi::unordered_map<uint32_t, std::shared_ptr<std::mutex>> queue_lockers;
 
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(VkAccelerationStructureInstanceKHR);
