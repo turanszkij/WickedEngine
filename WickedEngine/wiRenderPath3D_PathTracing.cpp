@@ -7,7 +7,6 @@
 #include "wiProfiler.h"
 #include "wiScene.h"
 #include "wiBacklog.h"
-#include "wiGraphicsDevice_Vulkan.h"
 
 #if __has_include("OpenImageDenoise/oidn.hpp")
 #include "OpenImageDenoise/oidn.hpp"
@@ -43,7 +42,6 @@ namespace wi
 
 	void RenderPath3D_PathTracing::ResizeBuffers()
 	{
-		RenderPath2D::ResizeBuffers(); // we don't need to use any buffers from RenderPath3D, so skip those
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
@@ -67,11 +65,8 @@ namespace wi
 			device->SetName(&denoiserNormal, "denoiserNormal");
 #endif // OPEN_IMAGE_DENOISE
 
-#ifdef WICKEDENGINE_BUILD_VULKAN
-			if (dynamic_cast<GraphicsDevice_Vulkan*>(device) == nullptr) // There is a problem with Vulkan depth/stencil copying, so for now it's disabled
-#endif // WICKEDENGINE_BUILD_VULKAN
 			{
-				desc.bind_flags = BindFlag::UNORDERED_ACCESS;
+				desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 				desc.layout = ResourceState::UNORDERED_ACCESS;
 				desc.format = Format::R32_FLOAT;
 				device->CreateTexture(&desc, nullptr, &traceDepth);
@@ -83,8 +78,8 @@ namespace wi
 				desc.layout = ResourceState::DEPTHSTENCIL;
 				desc.bind_flags = BindFlag::DEPTH_STENCIL;
 				desc.format = wi::renderer::format_depthbuffer_main;
-				device->CreateTexture(&desc, nullptr, &traceDepthStencil);
-				device->SetName(&traceDepthStencil, "traceDepthStencil");
+				device->CreateTexture(&desc, nullptr, &depthBuffer_Main);
+				device->SetName(&depthBuffer_Main, "depthBuffer_Main");
 			}
 		}
 		{
@@ -116,6 +111,8 @@ namespace wi
 
 		// also reset accumulation buffer state:
 		sam = -1;
+
+		RenderPath2D::ResizeBuffers(); // we don't need to use any buffers from RenderPath3D, so skip those
 	}
 
 	void RenderPath3D_PathTracing::Update(float dt)
@@ -370,7 +367,7 @@ namespace wi
 						denoiserNormal.IsValid() ? &denoiserNormal : nullptr,
 						traceDepth.IsValid() ? &traceDepth : nullptr,
 						traceStencil.IsValid() ? &traceStencil : nullptr,
-						traceDepthStencil.IsValid() ? &traceDepthStencil : nullptr
+						depthBuffer_Main.IsValid() ? &depthBuffer_Main : nullptr
 					);
 
 					wi::profiler::EndRange(range); // Traced Scene

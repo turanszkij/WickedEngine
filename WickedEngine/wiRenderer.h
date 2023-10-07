@@ -884,6 +884,18 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd
 	);
 
+	// This performs copies from separate depth and stencil shader resource textures
+	//	into hardware depthStencil buffer that supports depth/stencil testing
+	//	This is only supported by QUEUE_GRAPHICS!
+	//	stencil_bits_to_copy : bitmask can be specified to mask out stencil bits that will be copied
+	void CopyDepthStencil(
+		const wi::graphics::Texture* input_depth,
+		const wi::graphics::Texture* input_stencil,
+		const wi::graphics::Texture& output_depth_stencil,
+		wi::graphics::CommandList cmd,
+		uint8_t stencil_bits_to_copy = 0xFF
+	);
+
 	// Render the scene with ray tracing
 	void RayTraceScene(
 		const wi::scene::Scene& scene,
@@ -903,7 +915,6 @@ namespace wi::renderer
 	void OcclusionCulling_Reset(const Visibility& vis, wi::graphics::CommandList cmd);
 	void OcclusionCulling_Render(const wi::scene::CameraComponent& camera, const Visibility& vis, wi::graphics::CommandList cmd);
 	void OcclusionCulling_Resolve(const Visibility& vis, wi::graphics::CommandList cmd);
-
 
 	enum MIPGENFILTER
 	{

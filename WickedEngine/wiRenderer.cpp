@@ -590,12 +590,11 @@ PipelineState PSO_renderlightmap;
 PipelineState PSO_lensflare;
 
 PipelineState PSO_downsampledepthbuffer;
-PipelineState PSO_deferredcomposition;
-PipelineState PSO_sss_skin;
-PipelineState PSO_sss_snow;
 PipelineState PSO_upsample_bilateral;
 PipelineState PSO_volumetricclouds_upsample;
 PipelineState PSO_outline;
+PipelineState PSO_copyDepth;
+PipelineState PSO_copyStencilBit[8];
 
 RaytracingPipelineState RTPSO_reflection;
 
@@ -808,6 +807,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_POSTPROCESS], "postprocessVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_LENSFLARE], "lensFlareVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_DDGI_DEBUG], "ddgi_debugVS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SCREEN], "screenVS.cso"); });
 
 	if (device->CheckCapability(GraphicsDeviceCapability::RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS))
 	{
@@ -877,6 +877,8 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_LENSFLARE], "lensFlarePS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_DDGI_DEBUG], "ddgi_debugPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_UPSAMPLE], "volumetricCloud_upsamplePS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_COPY_DEPTH], "copyDepthPS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_COPY_STENCIL_BIT], "copyStencilBitPS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXELIZER], "objectGS_voxelizer.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXEL], "voxelGS.cso"); });
@@ -1396,6 +1398,23 @@ void LoadShaders()
 		desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
 
 		device->CreatePipelineState(&desc, &PSO_outline);
+		});
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
+		PipelineStateDesc desc;
+
+		desc.vs = &shaders[VSTYPE_SCREEN];
+		desc.ps = &shaders[PSTYPE_COPY_DEPTH];
+		desc.bs = &blendStates[BSTYPE_OPAQUE];
+		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+		desc.dss = &depthStencils[DSSTYPE_WRITEONLY];
+		device->CreatePipelineState(&desc, &PSO_copyDepth);
+
+		desc.ps = &shaders[PSTYPE_COPY_STENCIL_BIT];
+		for (int i = 0; i < 8; ++i)
+		{
+			desc.dss = &depthStencils[DSSTYPE_COPY_STENCIL_BIT_0 + i];
+			device->CreatePipelineState(&desc, &PSO_copyStencilBit[i]);
+		}
 		});
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		PipelineStateDesc desc;
@@ -2111,6 +2130,19 @@ void SetUpStates()
 	dsd.depth_func = ComparisonFunc::ALWAYS;
 	dsd.stencil_enable = false;
 	depthStencils[DSSTYPE_WRITEONLY] = dsd;
+
+	dsd.depth_enable = false;
+	dsd.depth_write_mask = DepthWriteMask::ZERO;
+	dsd.stencil_enable = true;
+	dsd.stencil_read_mask = 0;
+	dsd.front_face.stencil_func = ComparisonFunc::ALWAYS;
+	dsd.front_face.stencil_pass_op = StencilOp::REPLACE;
+	dsd.back_face = dsd.front_face;
+	for (int i = 0; i < 8; ++i)
+	{
+		dsd.stencil_write_mask = uint8_t(1 << i);
+		depthStencils[DSSTYPE_COPY_STENCIL_BIT_0 + i] = dsd;
+	}
 
 
 	BlendState bd;
@@ -9283,9 +9315,13 @@ void RayTraceScene(
 	barrier_stack.push_back(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout));
 	if (output_depth_stencil != nullptr)
 	{
-		barrier_stack.push_back(GPUBarrier::Image(output_depth, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC));
-		barrier_stack.push_back(GPUBarrier::Image(output_stencil, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC));
-		barrier_stack.push_back(GPUBarrier::Image(output_depth_stencil, output_depth_stencil->desc.layout, ResourceState::COPY_DST));
+		CopyDepthStencil(
+			output_depth,
+			output_stencil,
+			*output_depth_stencil,
+			cmd,
+			0xFF
+		);
 	}
 	else
 	{
@@ -9299,31 +9335,6 @@ void RayTraceScene(
 		}
 	}
 	barrier_stack_flush(cmd);
-
-	if (output_depth_stencil != nullptr && output_depth != nullptr && output_stencil != nullptr)
-	{
-		// The separate depth, stencil textures will be copied to a real depth-stencil:
-		device->CopyTexture(
-			output_depth_stencil, 0, 0, 0, 0, 0,
-			output_depth, 0, 0,
-			cmd,
-			nullptr,
-			ImageAspect::DEPTH,
-			ImageAspect::COLOR
-		);
-		device->CopyTexture(
-			output_depth_stencil, 0, 0, 0, 0, 0,
-			output_stencil, 0, 0,
-			cmd,
-			nullptr,
-			ImageAspect::STENCIL,
-			ImageAspect::COLOR
-		);
-		barrier_stack.push_back(GPUBarrier::Image(output_depth, ResourceState::COPY_SRC, output_depth->desc.layout));
-		barrier_stack.push_back(GPUBarrier::Image(output_stencil, ResourceState::COPY_SRC, output_stencil->desc.layout));
-		barrier_stack.push_back(GPUBarrier::Image(output_depth_stencil, ResourceState::COPY_DST, output_depth_stencil->desc.layout));
-		barrier_stack_flush(cmd);
-	}
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd); // RayTraceScene
@@ -15954,6 +15965,119 @@ void YUV_to_RGB(
 			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	device->EventEnd(cmd);
+}
+
+void CopyDepthStencil(
+	const Texture* input_depth,
+	const Texture* input_stencil,
+	const Texture& output_depth_stencil,
+	CommandList cmd,
+	uint8_t stencil_bits_to_copy
+)
+{
+	device->EventBegin("CopyDepthStencil", cmd);
+
+	bool manual_depthstencil_copy_required =
+		(stencil_bits_to_copy != 0xFF) ||
+		device->CheckCapability(GraphicsDeviceCapability::COPY_BETWEEN_DIFFERENT_IMAGE_ASPECTS_NOT_SUPPORTED)
+	;
+
+	if (manual_depthstencil_copy_required)
+	{
+		barrier_stack.push_back(GPUBarrier::Image(input_depth, input_depth->desc.layout, ResourceState::SHADER_RESOURCE));
+		barrier_stack.push_back(GPUBarrier::Image(input_stencil, input_stencil->desc.layout, ResourceState::SHADER_RESOURCE));
+		barrier_stack_flush(cmd);
+
+		RenderPassImage rp[] = {
+			RenderPassImage::DepthStencil(
+				&output_depth_stencil,
+				RenderPassImage::LoadOp::CLEAR,
+				RenderPassImage::StoreOp::STORE
+			),
+		};
+		device->RenderPassBegin(rp, arraysize(rp), cmd);
+
+		Viewport vp;
+		vp.width = (float)output_depth_stencil.desc.width;
+		vp.height = (float)output_depth_stencil.desc.height;
+		device->BindViewports(1, &vp, cmd);
+
+		Rect rect;
+		rect.left = 0;
+		rect.right = output_depth_stencil.desc.width;
+		rect.top = 0;
+		rect.bottom = output_depth_stencil.desc.height;
+		device->BindScissorRects(1, &rect, cmd);
+
+		if (input_depth != nullptr)
+		{
+			device->EventBegin("CopyDepth", cmd);
+			device->BindPipelineState(&PSO_copyDepth, cmd);
+			device->BindResource(input_depth, 0, cmd);
+			device->Draw(3, 0, cmd);
+			device->EventEnd(cmd);
+		}
+
+		if (input_stencil != nullptr)
+		{
+			device->EventBegin("CopyStencilBits", cmd);
+			device->BindResource(input_stencil, 0, cmd);
+
+			uint32_t bit_index = 0;
+			while (stencil_bits_to_copy != 0)
+			{
+				if (stencil_bits_to_copy & 0x1)
+				{
+					device->BindPipelineState(&PSO_copyStencilBit[bit_index], cmd);
+					const uint bit = 1u << bit_index;
+					device->PushConstants(&bit, sizeof(bit), cmd);
+					device->BindStencilRef(bit, cmd);
+					device->Draw(3, 0, cmd);
+				}
+				bit_index++;
+				stencil_bits_to_copy >>= 1;
+			}
+			device->EventEnd(cmd);
+		}
+
+		device->RenderPassEnd(cmd);
+
+		barrier_stack.push_back(GPUBarrier::Image(input_depth, ResourceState::SHADER_RESOURCE, input_depth->desc.layout));
+		barrier_stack.push_back(GPUBarrier::Image(input_stencil, ResourceState::SHADER_RESOURCE, input_stencil->desc.layout));
+		barrier_stack_flush(cmd);
+
+	}
+	else
+	{
+		barrier_stack.push_back(GPUBarrier::Image(input_depth, input_depth->desc.layout, ResourceState::COPY_SRC));
+		barrier_stack.push_back(GPUBarrier::Image(input_stencil, input_stencil->desc.layout, ResourceState::COPY_SRC));
+		barrier_stack.push_back(GPUBarrier::Image(&output_depth_stencil, output_depth_stencil.desc.layout, ResourceState::COPY_DST));
+		barrier_stack_flush(cmd);
+
+		device->CopyTexture(
+			&output_depth_stencil, 0, 0, 0, 0, 0,
+			input_depth, 0, 0,
+			cmd,
+			nullptr,
+			ImageAspect::DEPTH,
+			ImageAspect::COLOR
+		);
+		device->CopyTexture(
+			&output_depth_stencil, 0, 0, 0, 0, 0,
+			input_stencil, 0, 0,
+			cmd,
+			nullptr,
+			ImageAspect::STENCIL,
+			ImageAspect::COLOR
+		);
+
+		barrier_stack.push_back(GPUBarrier::Image(input_depth, ResourceState::COPY_SRC, input_depth->desc.layout));
+		barrier_stack.push_back(GPUBarrier::Image(input_stencil, ResourceState::COPY_SRC, input_stencil->desc.layout));
+		barrier_stack.push_back(GPUBarrier::Image(&output_depth_stencil, ResourceState::COPY_DST, output_depth_stencil.desc.layout));
+		barrier_stack_flush(cmd);
 	}
 
 	device->EventEnd(cmd);

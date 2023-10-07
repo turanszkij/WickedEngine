@@ -14,7 +14,6 @@ namespace wi
 		wi::graphics::Texture traceResult;
 		wi::graphics::Texture traceDepth;
 		wi::graphics::Texture traceStencil;
-		wi::graphics::Texture traceDepthStencil;
 
 		wi::vector<uint8_t> texturedata_src;
 		wi::vector<uint8_t> texturedata_dst;
@@ -28,7 +27,6 @@ namespace wi
 		void ResizeBuffers() override;
 
 	public:
-		const wi::graphics::Texture* GetDepthStencil() const override { return traceDepthStencil.IsValid() ? &traceDepthStencil : nullptr; };
 
 		void Update(float dt) override;
 		void Render() const override;
