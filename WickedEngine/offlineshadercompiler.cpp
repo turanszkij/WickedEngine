@@ -274,7 +274,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"captureImpostorPS", wi::graphics::ShaderStage::PS },
 	{"ddgi_debugPS", wi::graphics::ShaderStage::PS },
 	{"copyDepthPS", wi::graphics::ShaderStage::PS },
-	{"copyStencilBitsPS", wi::graphics::ShaderStage::PS },
+	{"copyStencilBitPS", wi::graphics::ShaderStage::PS },
 
 
 	{"hairparticleVS", wi::graphics::ShaderStage::VS },
