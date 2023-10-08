@@ -1028,8 +1028,8 @@ namespace wi::audio
 		}
 		instanceinternal->buffer.LoopLength = std::min(num_remaining_samples, uint32_t(instance->loop_length * soundinternal->wfx.nSamplesPerSec));
 
-		instanceinternal->buffer.Flags = FAUDIO2_END_OF_STREAM;
-		instanceinternal->buffer.LoopCount = instance->IsLooped() ? FAUDIO2_LOOP_INFINITE : 0;
+		instanceinternal->buffer.Flags = FAUDIO_END_OF_STREAM;
+		instanceinternal->buffer.LoopCount = instance->IsLooped() ? FAUDIO_LOOP_INFINITE : 0;
 
 		res = FAudioSourceVoice_SubmitSourceBuffer(instanceinternal->sourceVoice, &(instanceinternal->buffer), nullptr);
 		if(res != 0){
