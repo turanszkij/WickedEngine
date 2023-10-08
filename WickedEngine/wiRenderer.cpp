@@ -2872,7 +2872,11 @@ void RenderMeshes(
 		}
 
 		const float dither = std::max(instance.GetTransparency(), std::max(0.0f, batch.GetDistance() - instance.fadeDistance) / instance.radius);
-		if (dither > 0)
+		if (dither > 0.99f)
+		{
+			continue;
+		}
+		else if (dither > 0)
 		{
 			instancedBatch.forceAlphatestForDithering = 1;
 		}
@@ -15975,7 +15979,8 @@ void CopyDepthStencil(
 	const Texture* input_stencil,
 	const Texture& output_depth_stencil,
 	CommandList cmd,
-	uint8_t stencil_bits_to_copy
+	uint8_t stencil_bits_to_copy,
+	bool depthstencil_already_cleared
 )
 {
 	device->EventBegin("CopyDepthStencil", cmd);
@@ -15994,8 +15999,7 @@ void CopyDepthStencil(
 		RenderPassImage rp[] = {
 			RenderPassImage::DepthStencil(
 				&output_depth_stencil,
-				RenderPassImage::LoadOp::CLEAR,
-				RenderPassImage::StoreOp::STORE
+				depthstencil_already_cleared ? RenderPassImage::LoadOp::LOAD : RenderPassImage::LoadOp::CLEAR
 			),
 		};
 		device->RenderPassBegin(rp, arraysize(rp), cmd);
@@ -16019,6 +16023,7 @@ void CopyDepthStencil(
 			device->BindResource(input_depth, 0, cmd);
 			device->Draw(3, 0, cmd);
 			device->EventEnd(cmd);
+			barrier_stack.push_back(GPUBarrier::Image(input_depth, ResourceState::SHADER_RESOURCE, input_depth->desc.layout));
 		}
 
 		if (input_stencil != nullptr)
@@ -16041,12 +16046,11 @@ void CopyDepthStencil(
 				stencil_bits_to_copy >>= 1;
 			}
 			device->EventEnd(cmd);
+			barrier_stack.push_back(GPUBarrier::Image(input_stencil, ResourceState::SHADER_RESOURCE, input_stencil->desc.layout));
 		}
 
 		device->RenderPassEnd(cmd);
 
-		barrier_stack.push_back(GPUBarrier::Image(input_depth, ResourceState::SHADER_RESOURCE, input_depth->desc.layout));
-		barrier_stack.push_back(GPUBarrier::Image(input_stencil, ResourceState::SHADER_RESOURCE, input_stencil->desc.layout));
 		barrier_stack_flush(cmd);
 
 	}

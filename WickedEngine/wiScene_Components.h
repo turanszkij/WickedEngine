@@ -713,7 +713,7 @@ namespace wi::scene
 		// With this you can disable object rendering for reflections
 		inline void SetNotVisibleInReflections(bool value) { if (value) { _flags |= NOT_VISIBLE_IN_REFLECTIONS; } else { _flags &= ~NOT_VISIBLE_IN_REFLECTIONS; } }
 
-		inline bool IsRenderable() const { return _flags & RENDERABLE; }
+		inline bool IsRenderable() const { return (_flags & RENDERABLE) && (GetTransparency() < 0.99f); }
 		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
 		inline bool IsDynamic() const { return _flags & DYNAMIC; }
 		inline bool IsRequestPlanarReflection() const { return _flags & REQUEST_PLANAR_REFLECTION; }

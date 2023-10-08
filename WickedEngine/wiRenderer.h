@@ -888,12 +888,14 @@ namespace wi::renderer
 	//	into hardware depthStencil buffer that supports depth/stencil testing
 	//	This is only supported by QUEUE_GRAPHICS!
 	//	stencil_bits_to_copy : bitmask can be specified to mask out stencil bits that will be copied
+	//	depthstencil_already_cleared : if false, it will be fully cleared if required; if true, it will be left intact
 	void CopyDepthStencil(
 		const wi::graphics::Texture* input_depth,
 		const wi::graphics::Texture* input_stencil,
 		const wi::graphics::Texture& output_depth_stencil,
 		wi::graphics::CommandList cmd,
-		uint8_t stencil_bits_to_copy = 0xFF
+		uint8_t stencil_bits_to_copy = 0xFF,
+		bool depthstencil_already_cleared = false
 	);
 
 	// Render the scene with ray tracing
