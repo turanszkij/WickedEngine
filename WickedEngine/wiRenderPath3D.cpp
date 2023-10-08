@@ -1159,7 +1159,7 @@ namespace wi
 					RenderPassImage::DepthStencil(
 						&depthBuffer_Reflection,
 						RenderPassImage::LoadOp::LOAD,
-						RenderPassImage::StoreOp::DONTCARE,
+						RenderPassImage::StoreOp::STORE,
 						ResourceState::SHADER_RESOURCE
 					),
 				};

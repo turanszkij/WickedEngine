@@ -7,6 +7,7 @@ namespace wi::lua
 	Luna<Input_BindLua>::FunctionType Input_BindLua::methods[] = {
 		lunamethod(Input_BindLua, Down),
 		lunamethod(Input_BindLua, Press),
+		lunamethod(Input_BindLua, Release),
 		lunamethod(Input_BindLua, Hold),
 		lunamethod(Input_BindLua, GetPointer),
 		lunamethod(Input_BindLua, SetPointer),
@@ -55,6 +56,24 @@ namespace wi::lua
 		}
 		else
 			wi::lua::SError(L, "Press(int code, opt int playerindex = 0) not enough arguments!");
+		return 0;
+	}
+	int Input_BindLua::Release(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::input::BUTTON code = (wi::input::BUTTON)wi::lua::SGetInt(L, 1);
+			int playerindex = 0;
+			if (argc > 1)
+			{
+				playerindex = wi::lua::SGetInt(L, 2);
+			}
+			wi::lua::SSetBool(L, wi::input::Release(code, playerindex));
+			return 1;
+		}
+		else
+			wi::lua::SError(L, "Release(int code, opt int playerindex = 0) not enough arguments!");
 		return 0;
 	}
 	int Input_BindLua::Hold(lua_State* L)

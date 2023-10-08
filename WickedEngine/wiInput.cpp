@@ -68,7 +68,7 @@ namespace wi::input
 			}
 		};
 	};
-	std::map<Input, uint32_t, Input::LessComparer> inputs;
+	std::map<Input, int, Input::LessComparer> inputs; // Input -> down frames (-1 = released)
 	wi::vector<Touch> touches;
 
 	struct Controller
@@ -410,9 +410,13 @@ namespace wi::input
 			{
 				iter->second++;
 			}
-			else
+			else if (iter->second == -1)
 			{
 				todelete = true;
+			}
+			else
+			{
+				iter->second = -1;
 			}
 
 			if (todelete)
@@ -652,6 +656,24 @@ namespace wi::input
 		}
 		return false;
 	}
+	bool Release(BUTTON button, int playerindex)
+	{
+		Input input;
+		input.button = button;
+		input.playerIndex = playerindex;
+		auto iter = inputs.find(input);
+		if (iter == inputs.end())
+		{
+			if (Down(button, playerindex))
+				inputs.insert(std::make_pair(input, 0));
+			return false;
+		}
+		if (iter->second == -1)
+		{
+			return true;
+		}
+		return false;
+	}
 	bool Hold(BUTTON button, uint32_t frames, bool continuous, int playerIndex)
 	{
 		if (!Down(button, playerIndex))
@@ -666,7 +688,7 @@ namespace wi::input
 			inputs.insert(std::make_pair(input, 0));
 			return false;
 		}
-		else if ((!continuous && iter->second == frames) || (continuous && iter->second >= frames))
+		else if ((!continuous && iter->second == (int)frames) || (continuous && iter->second >= (int)frames))
 		{
 			return true;
 		}

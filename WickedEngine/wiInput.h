@@ -166,6 +166,8 @@ namespace wi::input
 	bool Down(BUTTON button, int playerindex = 0);
 	// check if a button is pressed once
 	bool Press(BUTTON button, int playerindex = 0);
+	// check if a button has been just released
+	bool Release(BUTTON button, int playerindex = 0);
 	// check if a button is held down
 	bool Hold(BUTTON button, uint32_t frames = 30, bool continuous = false, int playerIndex = 0);
 	// get pointer position (eg. mouse pointer) (.xy) + scroll delta (.z) + pressure (.w)

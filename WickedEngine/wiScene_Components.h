@@ -1385,8 +1385,8 @@ namespace wi::scene
 
 		void Play();
 		void Stop();
-		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
-		inline void SetDisable3D(bool value = true) { if (value) { _flags |= DISABLE_3D; } else { _flags &= ~DISABLE_3D; } }
+		void SetLooped(bool value = true);
+		void SetDisable3D(bool value = true);
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
