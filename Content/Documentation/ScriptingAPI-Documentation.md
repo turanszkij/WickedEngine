@@ -407,9 +407,22 @@ An audio file. Can be instanced several times via SoundInstance.
 - [constructor]Sound()  -- creates an empty sound. Use the audio device to load sounds from files
 
 #### SoundInstance
-An audio file instance that can be played.
+An audio file instance that can be played. Note: after modifying parameters of the SoundInstance, the SoundInstance will need to be recreated from a specified sound
 - [constructor]SoundInstance()  -- creates an empty soundinstance. Use the audio device to clone sounds
 - SetSubmixType(int submixtype)  -- set a submix type group (default is SUBMIX_TYPE_SOUNDEFFECT)
+- SetBegin(float seconds) -- beginning of the playback in seconds, relative to the Sound it will be created from (0 = from beginning)
+- SetLength(float seconds) -- length in seconds (0 = until end)
+- SetLoopBegin(float seconds) -- loop region begin in seconds, relative to the instance begin time (0 = from beginning)
+- SetLoopLength(float seconds) -- loop region length in seconds (0 = until the end)
+- SetEnableReverb(bool value) -- enable/disable reverb for the sound instance
+- SetLooped(bool value) -- enable/disable looping for the sound instance
+- GetSubmixType() : int
+- GetBegin() : float
+- GetLength() : float
+- GetLoopBegin() : float
+- GetLoopLength() : float
+- IsEnableReverb() : bool
+- IsLooped() : bool
 
 #### SoundInstance3D
 Describes the relation between a sound instance and a listener in a 3D world
@@ -1434,6 +1447,7 @@ Query input devices
 - [void-constructor]Input()
 - Down(int code, opt int playerindex = 0) : bool result  -- Check whether a button is currently being held down
 - Press(int code, opt int playerindex = 0) : bool result  -- Check whether a button has just been pushed that wasn't before
+- Release(int code, opt int playerindex = 0) : bool result  -- Check whether a button has just been released that was down before
 - Hold(int code, opt int duration = 30, opt boolean continuous = false, opt int playerindex = 0) : bool result  -- Check whether a button was being held down for a specific duration (nunmber of frames). If continuous == true, than it will also return true after the duration was reached
 - GetPointer() : Vector result  -- get mouse pointer or primary touch position (x, y). Also returns mouse wheel delta movement (z), and pen pressure (w)
 - SetPointer(Vector pos)  -- set mouse poisition

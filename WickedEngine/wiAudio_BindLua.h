@@ -60,6 +60,20 @@ namespace wi::lua
 		~SoundInstance_BindLua() { }
 
 		int SetSubmixType(lua_State* L);
+		int SetBegin(lua_State* L);
+		int SetLength(lua_State* L);
+		int SetLoopBegin(lua_State* L);
+		int SetLoopLength(lua_State* L);
+		int SetEnableReverb(lua_State* L);
+		int SetLooped(lua_State* L);
+
+		int GetSubmixType(lua_State* L);
+		int GetBegin(lua_State* L);
+		int GetLength(lua_State* L);
+		int GetLoopBegin(lua_State* L);
+		int GetLoopLength(lua_State* L);
+		int IsEnableReverb(lua_State* L);
+		int IsLooped(lua_State* L);
 
 		static void Bind();
 	};

@@ -17,6 +17,7 @@ namespace wi::lua
 
 		int Down(lua_State* L);
 		int Press(lua_State* L);
+		int Release(lua_State* L);
 		int Hold(lua_State* L);
 		int GetPointer(lua_State* L);
 		int SetPointer(lua_State* L);

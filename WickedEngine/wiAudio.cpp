@@ -426,12 +426,30 @@ namespace wi::audio
 			instanceinternal->channelAzimuths[i] = X3DAUDIO_2PI * float(i) / float(instanceinternal->channelAzimuths.size());
 		}
 
-		instanceinternal->buffer.AudioBytes = (UINT32)soundinternal->audioData.size();
+		const uint32_t bytes_per_second = soundinternal->wfx.nSamplesPerSec * soundinternal->wfx.nChannels * sizeof(short);
 		instanceinternal->buffer.pAudioData = soundinternal->audioData.data();
+		instanceinternal->buffer.AudioBytes = (uint32_t)soundinternal->audioData.size();
+		if (instance->begin > 0)
+		{
+			const uint32_t bytes_from_beginning = std::min(instanceinternal->buffer.AudioBytes, uint32_t(instance->begin * bytes_per_second));
+			instanceinternal->buffer.pAudioData += bytes_from_beginning;
+			instanceinternal->buffer.AudioBytes -= bytes_from_beginning;
+		}
+		if (instance->length > 0)
+		{
+			instanceinternal->buffer.AudioBytes = std::min(instanceinternal->buffer.AudioBytes, uint32_t(instance->length * bytes_per_second));
+		}
+
+		uint32_t num_remaining_samples = instanceinternal->buffer.AudioBytes / (soundinternal->wfx.nChannels * sizeof(short));
+		if (instance->loop_begin > 0)
+		{
+			instanceinternal->buffer.LoopBegin = std::min(num_remaining_samples, uint32_t(instance->loop_begin * soundinternal->wfx.nSamplesPerSec));
+			num_remaining_samples -= instanceinternal->buffer.LoopBegin;
+		}
+		instanceinternal->buffer.LoopLength = std::min(num_remaining_samples, uint32_t(instance->loop_length * soundinternal->wfx.nSamplesPerSec));
+
 		instanceinternal->buffer.Flags = XAUDIO2_END_OF_STREAM;
-		instanceinternal->buffer.LoopCount = XAUDIO2_LOOP_INFINITE;
-		instanceinternal->buffer.LoopBegin = UINT32(instance->loop_begin * instanceinternal->audio->masteringVoiceDetails.InputSampleRate);
-		instanceinternal->buffer.LoopLength = UINT32(instance->loop_length * instanceinternal->audio->masteringVoiceDetails.InputSampleRate);
+		instanceinternal->buffer.LoopCount = instance->IsLooped() ? XAUDIO2_LOOP_INFINITE : 0;
 
 		hr = instanceinternal->sourceVoice->SubmitSourceBuffer(&instanceinternal->buffer);
 		if (FAILED(hr))
@@ -539,10 +557,10 @@ namespace wi::audio
 		if (sound != nullptr && sound->IsValid())
 		{
 			auto soundinternal = to_internal(sound);
-			info.samples = (const short*)soundinternal->audioData.data();
-			info.sample_count = soundinternal->audioData.size() / sizeof(short);
-			info.sample_rate = soundinternal->wfx.nSamplesPerSec;
 			info.channel_count = soundinternal->wfx.nChannels;
+			info.samples = (const short*)soundinternal->audioData.data();
+			info.sample_count = soundinternal->audioData.size() / (info.channel_count * sizeof(short));
+			info.sample_rate = soundinternal->wfx.nSamplesPerSec;
 		}
 		return info;
 	}
@@ -988,12 +1006,30 @@ namespace wi::audio
 			instanceinternal->channelAzimuths[i] = F3DAUDIO_2PI * float(i) / float(instanceinternal->channelAzimuths.size());
 		}
 
-		instanceinternal->buffer.AudioBytes = (uint32_t)soundinternal->audioData.size();
+		const uint32_t bytes_per_second = soundinternal->wfx.nSamplesPerSec * soundinternal->wfx.nChannels * sizeof(short);
 		instanceinternal->buffer.pAudioData = soundinternal->audioData.data();
+		instanceinternal->buffer.AudioBytes = (uint32_t)soundinternal->audioData.size();
+		if (instance->begin > 0)
+		{
+			const uint32_t bytes_from_beginning = std::min(instanceinternal->buffer.AudioBytes, uint32_t(instance->begin * bytes_per_second));
+			instanceinternal->buffer.pAudioData += bytes_from_beginning;
+			instanceinternal->buffer.AudioBytes -= bytes_from_beginning;
+		}
+		if (instance->length > 0)
+		{
+			instanceinternal->buffer.AudioBytes = std::min(instanceinternal->buffer.AudioBytes, uint32_t(instance->length * bytes_per_second));
+		}
+
+		uint32_t num_remaining_samples = instanceinternal->buffer.AudioBytes / (soundinternal->wfx.nChannels * sizeof(short));
+		if (instance->loop_begin > 0)
+		{
+			instanceinternal->buffer.LoopBegin = std::min(num_remaining_samples, uint32_t(instance->loop_begin * soundinternal->wfx.nSamplesPerSec));
+			num_remaining_samples -= instanceinternal->buffer.LoopBegin;
+		}
+		instanceinternal->buffer.LoopLength = std::min(num_remaining_samples, uint32_t(instance->loop_length * soundinternal->wfx.nSamplesPerSec));
+
 		instanceinternal->buffer.Flags = FAUDIO_END_OF_STREAM;
-		instanceinternal->buffer.LoopCount = FAUDIO_LOOP_INFINITE;
-		instanceinternal->buffer.LoopBegin = uint32_t(instance->loop_begin * instanceinternal->audio->masteringVoiceDetails.InputSampleRate);
-		instanceinternal->buffer.LoopLength = uint32_t(instance->loop_length * instanceinternal->audio->masteringVoiceDetails.InputSampleRate);
+		instanceinternal->buffer.LoopCount = instance->IsLooped() ? FAUDIO_LOOP_INFINITE : 0;
 
 		res = FAudioSourceVoice_SubmitSourceBuffer(instanceinternal->sourceVoice, &(instanceinternal->buffer), nullptr);
 		if(res != 0){

@@ -35,7 +35,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_SOUND " Sound", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(440, 300));
+	SetSize(XMFLOAT2(440, 400));
 
 	closeButton.SetTooltip("Delete SoundComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -106,7 +106,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 				playstopButton.SetText(ICON_STOP);
 			}
 		}
-	});
+		});
 	AddWidget(&playstopButton);
 	playstopButton.SetEnabled(false);
 
@@ -121,7 +121,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 		{
 			sound->SetLooped(args.bValue);
 		}
-	});
+		});
 	AddWidget(&loopedCheckbox);
 	loopedCheckbox.SetEnabled(false);
 
@@ -136,7 +136,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 			sound->soundinstance.SetEnableReverb(args.bValue);
 			wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
 		}
-	});
+		});
 	AddWidget(&reverbCheckbox);
 	reverbCheckbox.SetEnabled(false);
 
@@ -149,9 +149,8 @@ void SoundWindow::Create(EditorComponent* _editor)
 		if (sound != nullptr)
 		{
 			sound->SetDisable3D(args.bValue);
-			wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
 		}
-	});
+		});
 	AddWidget(&disable3dCheckbox);
 	loopedCheckbox.SetEnabled(false);
 
@@ -165,7 +164,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 		{
 			sound->volume = args.fValue;
 		}
-	});
+		});
 	AddWidget(&volumeSlider);
 	volumeSlider.SetEnabled(false);
 
@@ -179,7 +178,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 			sound->soundinstance.type = (wi::audio::SUBMIX_TYPE)args.iValue;
 			wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
 		}
-	});
+		});
 	submixComboBox.AddItem("SOUNDEFFECT");
 	submixComboBox.AddItem("MUSIC");
 	submixComboBox.AddItem("USER0");
@@ -231,6 +230,61 @@ void SoundWindow::Create(EditorComponent* _editor)
 	waveGraph.SetSize(XMFLOAT2(100, 50));
 	AddWidget(&waveGraph);
 
+	beginInput.Create("");
+	beginInput.SetDescription("Begin: ");
+	beginInput.SetTooltip("Beginning of the playback in seconds, relative to the Sound it will be created from (0 = from beginning).");
+	beginInput.SetSize(XMFLOAT2(wid, hei));
+	beginInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
+		if (sound != nullptr)
+		{
+			sound->soundinstance.begin = args.fValue;
+			wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
+		}
+		});
+	AddWidget(&beginInput);
+
+	lengthInput.Create("");
+	lengthInput.SetDescription("Length: ");
+	lengthInput.SetTooltip("Length in seconds (0 = until end)");
+	lengthInput.SetSize(XMFLOAT2(wid, hei));
+	lengthInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
+		if (sound != nullptr)
+		{
+			sound->soundinstance.length = args.fValue;
+			wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
+		}
+		});
+	AddWidget(&lengthInput);
+
+	loopBeginInput.Create("");
+	loopBeginInput.SetDescription("Loop Begin: ");
+	loopBeginInput.SetTooltip("Loop region begin in seconds, relative to the instance begin time (0 = from beginning)");
+	loopBeginInput.SetSize(XMFLOAT2(wid, hei));
+	loopBeginInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
+		if (sound != nullptr)
+		{
+			sound->soundinstance.loop_begin = args.fValue;
+			wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
+		}
+		});
+	AddWidget(&loopBeginInput);
+
+	loopLengthInput.Create("");
+	loopLengthInput.SetDescription("Loop Length: ");
+	loopLengthInput.SetTooltip("Loop region length in seconds (0 = until the end)");
+	loopLengthInput.SetSize(XMFLOAT2(wid, hei));
+	loopLengthInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
+		if (sound != nullptr)
+		{
+			sound->soundinstance.loop_length = args.fValue;
+			wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
+		}
+		});
+	AddWidget(&loopLengthInput);
 
 	SetMinimized(true);
 	SetVisible(false);
@@ -277,35 +331,38 @@ void WaveGraph::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) 
 	{
 		// Vertices for [-1, 1] second range of current sound sample:
 		wi::audio::SampleInfo info = wi::audio::GetSampleInfo(&sound->soundResource.GetSound());
-		uint32_t sample_frequency = info.sample_rate * info.channel_count;
-		uint32_t step = uint32_t(sample_frequency * 2) / vertexCount;
-		uint64_t current_sample = wi::audio::GetTotalSamplesPlayed(&sound->soundinstance);
+		const uint32_t step = uint32_t(info.sample_rate * 2) / vertexCount;
+		const uint32_t instance_sample_offset = uint32_t(sound->soundinstance.begin * info.sample_rate);
+		const uint32_t instance_sample_count = uint32_t(sound->soundinstance.length > 0 ? uint32_t(sound->soundinstance.length * info.sample_rate) : uint32_t(info.sample_count));
+		uint64_t current_instance_sample = wi::audio::GetTotalSamplesPlayed(&sound->soundinstance);
 		if (sound->IsLooped())
 		{
-			float total_time = float(current_sample) / float(info.sample_rate);
+			float total_time = float(current_instance_sample) / float(info.sample_rate);
 			if (total_time > sound->soundinstance.loop_begin)
 			{
-				float loop_length = sound->soundinstance.loop_length > 0 ? sound->soundinstance.loop_length : (float(info.sample_count) / float(sample_frequency));
+				float loop_length = sound->soundinstance.loop_length > 0 ? sound->soundinstance.loop_length : (float(info.sample_count) / float(info.sample_rate));
 				float loop_time = std::fmod(total_time - sound->soundinstance.loop_begin, loop_length);
-				current_sample = uint64_t(loop_time * info.sample_rate);
+				current_instance_sample = uint64_t(loop_time * info.sample_rate);
 			}
 		}
-		current_sample *= info.channel_count;
+		current_instance_sample = current_instance_sample % instance_sample_count;
+
+		uint64_t current_sound_sample = instance_sample_offset + current_instance_sample;
 		// This integer divide and multiply fixes the sample positions so the wave visualizer is stable:
-		current_sample /= step;
-		current_sample *= step;
-		int64_t start_sample = (int64_t)current_sample - sample_frequency;
-		int64_t end_sample = current_sample + sample_frequency;
+		current_sound_sample /= step;
+		current_sound_sample *= step;
+		int64_t start_sample = (int64_t)current_sound_sample - info.sample_rate;
+		int64_t end_sample = current_sound_sample + info.sample_rate;
 
 		Vertex vert;
 		vert.color = base_color;
 		for (uint32_t i = 0; i < vertexCount; ++i)
 		{
 			vert.position = XMFLOAT4(float(i) / vertexCount, 0, 0, 1);
-			int64_t sample_idx = start_sample + i * step;
+			const int64_t sample_idx = start_sample + i * step;
 			if (sample_idx > 0 && sample_idx < (int64_t)info.sample_count)
 			{
-				vert.position.y = float(info.samples[sample_idx]) / 32768.0f;
+				vert.position.y = float(info.samples[sample_idx * info.channel_count]) / 32768.0f;
 			}
 			std::memcpy((Vertex*)allocation.data + i, &vert, sizeof(vert));
 		}
@@ -407,6 +464,10 @@ void SoundWindow::SetEntity(Entity entity)
 		{
 			submixComboBox.SetSelected((int)sound->soundinstance.type);
 		}
+		beginInput.SetValue(sound->soundinstance.begin);
+		lengthInput.SetValue(sound->soundinstance.length);
+		loopBeginInput.SetValue(sound->soundinstance.loop_begin);
+		loopLengthInput.SetValue(sound->soundinstance.loop_length);
 	}
 	else
 	{
@@ -432,7 +493,7 @@ void SoundWindow::ResizeLayout()
 	auto add = [&](wi::gui::Widget& widget) {
 		if (!widget.IsVisible())
 			return;
-		const float margin_left = 80;
+		const float margin_left = 100;
 		const float margin_right = 40;
 		widget.SetPos(XMFLOAT2(margin_left, y));
 		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
@@ -467,6 +528,11 @@ void SoundWindow::ResizeLayout()
 	disable3dCheckbox.SetPos(XMFLOAT2(reverbCheckbox.GetPos().x - disable3dCheckbox.GetSize().x - 100 - 2, reverbCheckbox.GetPos().y));
 	add(submixComboBox);
 	add(reverbComboBox);
+
+	add(beginInput);
+	add(lengthInput);
+	add(loopBeginInput);
+	add(loopLengthInput);
 
 	y += 10;
 	add_fullwidth(waveGraph);

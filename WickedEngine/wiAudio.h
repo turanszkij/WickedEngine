@@ -39,19 +39,26 @@ namespace wi::audio
 		std::shared_ptr<void> internal_state;
 		inline bool IsValid() const { return internal_state.get() != nullptr; }
 
+		// You can specify these params before creating the sound instance:
+		//	The sound instance will need to be recreated for changes to take effect
 		SUBMIX_TYPE type = SUBMIX_TYPE_SOUNDEFFECT;
-		float loop_begin = 0;	// loop region begin in seconds (0 = from beginning)
+		float begin = 0;		// beginning of the playback in seconds, relative to the Sound it will be created from (0 = from beginning)
+		float length = 0;		// length in seconds (0 = until end)
+		float loop_begin = 0;	// loop region begin in seconds, relative to the instance begin time (0 = from beginning)
 		float loop_length = 0;	// loop region length in seconds (0 = until the end)
 
 		enum FLAGS
 		{
 			EMPTY = 0,
 			ENABLE_REVERB = 1 << 0,
+			LOOPED = 1 << 1,
 		};
 		uint32_t _flags = EMPTY;
 
 		inline void SetEnableReverb(bool value = true) { if (value) { _flags |= ENABLE_REVERB; } else { _flags &= ~ENABLE_REVERB; } }
 		inline bool IsEnableReverb() const { return _flags & ENABLE_REVERB; }
+		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
+		inline bool IsLooped() const { return _flags & LOOPED; }
 	};
 
 	bool CreateSound(const std::string& filename, Sound* sound);

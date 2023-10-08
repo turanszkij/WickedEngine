@@ -27,6 +27,10 @@ public:
 	wi::gui::CheckBox disable3dCheckbox;
 	wi::gui::Slider volumeSlider;
 	wi::gui::ComboBox submixComboBox;
+	wi::gui::TextInputField beginInput;
+	wi::gui::TextInputField lengthInput;
+	wi::gui::TextInputField loopBeginInput;
+	wi::gui::TextInputField loopLengthInput;
 	WaveGraph waveGraph;
 
 	void ResizeLayout() override;

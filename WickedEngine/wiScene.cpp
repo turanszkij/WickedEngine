@@ -4473,10 +4473,6 @@ namespace wi::scene
 			{
 				wi::audio::Stop(&sound.soundinstance);
 			}
-			if (!sound.IsLooped())
-			{
-				wi::audio::ExitLoop(&sound.soundinstance);
-			}
 			wi::audio::SetVolume(sound.volume, &sound.soundinstance);
 		}
 	}
