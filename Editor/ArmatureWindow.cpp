@@ -9,7 +9,7 @@ void ArmatureWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_ARMATURE " Armature", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 350));
+	SetSize(XMFLOAT2(670, 380));
 
 	closeButton.SetTooltip("Delete ArmatureComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -37,6 +37,7 @@ void ArmatureWindow::Create(EditorComponent* _editor)
 	AddWidget(&infoLabel);
 
 	resetPoseButton.Create("Reset Pose");
+	resetPoseButton.SetTooltip("Reset Pose will be performed on the Armature, based on the bone inverse bind matrices.");
 	resetPoseButton.SetSize(XMFLOAT2(wid, hei));
 	resetPoseButton.OnClick([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -62,6 +63,131 @@ void ArmatureWindow::Create(EditorComponent* _editor)
 		}
 		});
 	AddWidget(&resetPoseButton);
+
+	createHumanoidButton.Create("Try to create humanoid rig");
+	createHumanoidButton.SetTooltip("Tries to create a humanoid component based on bone naming convention.\nIt supports the VRM and Mixamo naming convention.");
+	createHumanoidButton.SetSize(XMFLOAT2(wid, hei));
+	createHumanoidButton.OnClick([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		if (scene.humanoids.Contains(entity))
+		{
+			wi::helper::messageBox("Humanoid Component already exists!");
+			return;
+		}
+
+		const ArmatureComponent* armature = scene.armatures.GetComponent(entity);
+		if (armature == nullptr)
+			return;
+
+		static const wi::unordered_map<HumanoidComponent::HumanoidBone, wi::vector<std::string>> mapping = {
+			{HumanoidComponent::HumanoidBone::Hips, {"Hips"}},
+			{HumanoidComponent::HumanoidBone::Spine, {"Spine"}},
+			{HumanoidComponent::HumanoidBone::Chest, {"Chest", "Spine1"}},
+			{HumanoidComponent::HumanoidBone::UpperChest, {"UpperChest", "Spine2"}},
+			{HumanoidComponent::HumanoidBone::Neck, {"Neck"}},
+
+			{HumanoidComponent::HumanoidBone::Head, {"Head"}},
+			{HumanoidComponent::HumanoidBone::LeftEye, {"LeftEye"}},
+			{HumanoidComponent::HumanoidBone::RightEye, {"RightEye"}},
+			{HumanoidComponent::HumanoidBone::Jaw, {"Jaw"}},
+
+			{HumanoidComponent::HumanoidBone::LeftUpperLeg, {"LeftUpperLeg", "LeftUpLeg"}},
+			{HumanoidComponent::HumanoidBone::LeftLowerLeg, {"LeftLowerLeg", "LeftLeg"}},
+			{HumanoidComponent::HumanoidBone::LeftFoot, {"LeftFoot"}},
+			{HumanoidComponent::HumanoidBone::LeftToes, {"LeftToe"}},
+			{HumanoidComponent::HumanoidBone::RightUpperLeg, {"RightUpperLeg", "RightUpLeg"}},
+			{HumanoidComponent::HumanoidBone::RightLowerLeg, {"RightLowerLeg", "RightLeg"}},
+			{HumanoidComponent::HumanoidBone::RightFoot, {"RightFoot"}},
+			{HumanoidComponent::HumanoidBone::RightToes, {"RightToe"}},
+
+			{HumanoidComponent::HumanoidBone::LeftShoulder, {"LeftShoulder"}},
+			{HumanoidComponent::HumanoidBone::LeftUpperArm, {"LeftUpperArm", "LeftArm"}},
+			{HumanoidComponent::HumanoidBone::LeftLowerArm, {"LeftLowerArm", "LeftForeArm"}},
+			{HumanoidComponent::HumanoidBone::LeftHand, {"LeftHand"}},
+			{HumanoidComponent::HumanoidBone::RightShoulder, {"RightShoulder"}},
+			{HumanoidComponent::HumanoidBone::RightUpperArm, {"RightUpperArm", "RightArm"}},
+			{HumanoidComponent::HumanoidBone::RightLowerArm, {"RightLowerArm", "RightForeArm"}},
+			{HumanoidComponent::HumanoidBone::RightHand, {"RightHand"}},
+
+			{HumanoidComponent::HumanoidBone::LeftThumbMetacarpal, {"LeftThumbMetacarpal", "LeftHandThumb1"}},
+			{HumanoidComponent::HumanoidBone::LeftThumbProximal, {"LeftThumbProximal", "LeftHandThumb2"}},
+			{HumanoidComponent::HumanoidBone::LeftThumbDistal, {"LeftThumbDistal", "LeftHandThumb3"}},
+			{HumanoidComponent::HumanoidBone::LeftIndexProximal, {"LeftIndexProximal", "LeftHandIndex1"}},
+			{HumanoidComponent::HumanoidBone::LeftIndexIntermediate, {"LeftIndexIntermediate", "LeftHandIndex2"}},
+			{HumanoidComponent::HumanoidBone::LeftIndexDistal, {"LeftIndexDistal", "LeftHandIndex3"}},
+			{HumanoidComponent::HumanoidBone::LeftMiddleProximal, {"LeftMiddleProximal", "LeftHandMiddle1"}},
+			{HumanoidComponent::HumanoidBone::LeftMiddleIntermediate, {"LeftMiddleIntermediate", "LeftHandMiddle2"}},
+			{HumanoidComponent::HumanoidBone::LeftMiddleDistal, {"LeftMiddleDistal", "LeftHandMiddle3"}},
+			{HumanoidComponent::HumanoidBone::LeftRingProximal, {"LeftRingProximal", "LeftHandRing1"}},
+			{HumanoidComponent::HumanoidBone::LeftRingIntermediate, {"LeftRingIntermediate", "LeftHandRing2"}},
+			{HumanoidComponent::HumanoidBone::LeftRingDistal, {"LeftRingDistal", "LeftHandRing3"}},
+			{HumanoidComponent::HumanoidBone::LeftLittleProximal, {"LeftLittleProximal", "LeftHandPinky1"}},
+			{HumanoidComponent::HumanoidBone::LeftLittleIntermediate, {"LeftLittleIntermediate", "LeftHandPinky2"}},
+			{HumanoidComponent::HumanoidBone::LeftLittleDistal, {"LeftLittleDistal", "LeftHandPinky3"}},
+			{HumanoidComponent::HumanoidBone::RightThumbMetacarpal, {"RightThumbMetacarpal", "RightHandThumb1"}},
+			{HumanoidComponent::HumanoidBone::RightThumbProximal, {"RightThumbProximal", "RightHandThumb2"}},
+			{HumanoidComponent::HumanoidBone::RightThumbDistal, {"RightThumbDistal", "RightHandThumb3"}},
+			{HumanoidComponent::HumanoidBone::RightIndexIntermediate, {"RightIndexIntermediate", "RightHandIndex2"}},
+			{HumanoidComponent::HumanoidBone::RightIndexDistal, {"RightIndexDistal", "RightHandIndex3"}},
+			{HumanoidComponent::HumanoidBone::RightIndexProximal, {"RightIndexProximal", "RightHandIndex1"}},
+			{HumanoidComponent::HumanoidBone::RightMiddleProximal, {"RightMiddleProximal", "RightHandMiddle1"}},
+			{HumanoidComponent::HumanoidBone::RightMiddleIntermediate, {"RightMiddleIntermediate", "RightHandMiddle2"}},
+			{HumanoidComponent::HumanoidBone::RightMiddleDistal, {"RightMiddleDistal", "RightHandMiddle3"}},
+			{HumanoidComponent::HumanoidBone::RightRingProximal, {"RightRingProximal", "RightHandRing1"}},
+			{HumanoidComponent::HumanoidBone::RightRingIntermediate, {"RightRingIntermediate", "RightHandRing2"}},
+			{HumanoidComponent::HumanoidBone::RightRingDistal, {"RightRingDistal", "RightHandRing3"}},
+			{HumanoidComponent::HumanoidBone::RightLittleProximal, {"RightLittleProximal", "RightHandPinky1"}},
+			{HumanoidComponent::HumanoidBone::RightLittleIntermediate, {"RightLittleIntermediate", "RightHandPinky2"}},
+			{HumanoidComponent::HumanoidBone::RightLittleDistal, {"RightLittleDistal", "RightHandPinky3"}},
+		};
+
+		HumanoidComponent humanoid;
+		bool found_anything = false;
+		humanoid.default_look_direction = XMFLOAT3(0, 0, -1);
+
+		for (size_t i = 0; i < armature->boneCollection.size(); ++i)
+		{
+			Entity bone = armature->boneCollection[i];
+			NameComponent* name = scene.names.GetComponent(bone);
+			if (name == nullptr)
+				continue;
+
+			size_t iType = 0;
+			for (auto& humanoidBone : humanoid.bones)
+			{
+				if (humanoidBone == INVALID_ENTITY)
+				{
+					HumanoidComponent::HumanoidBone type = (HumanoidComponent::HumanoidBone)iType;
+					auto it = mapping.find(type);
+					if (it != mapping.end())
+					{
+						for (auto& candidate : it->second)
+						{
+							if (wi::helper::toUpper(name->name).find(wi::helper::toUpper(candidate)) != std::string::npos)
+							{
+								humanoidBone = bone;
+								found_anything = true;
+								break;
+							}
+						}
+					}
+				}
+				iType++;
+			}
+		}
+
+		if (found_anything)
+		{
+			scene.humanoids.Create(entity) = humanoid;
+			editor->componentsWnd.humanoidWnd.SetEntity(INVALID_ENTITY);
+			editor->componentsWnd.humanoidWnd.SetEntity(entity);
+		}
+		else
+		{
+			wi::helper::messageBox("No matching humanoid bones found!");
+		}
+	});
+	AddWidget(&createHumanoidButton);
 
 	boneList.Create("Bones: ");
 	boneList.SetSize(XMFLOAT2(wid, 200));
@@ -191,6 +317,7 @@ void ArmatureWindow::ResizeLayout()
 
 	add_fullwidth(infoLabel);
 	add_fullwidth(resetPoseButton);
+	add_fullwidth(createHumanoidButton);
 
 	y += jump;
 

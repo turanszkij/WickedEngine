@@ -13,6 +13,7 @@ public:
 
 	wi::gui::Label infoLabel;
 	wi::gui::Button resetPoseButton;
+	wi::gui::Button createHumanoidButton;
 	wi::gui::TreeList boneList;
 
 	void ResizeLayout() override;
