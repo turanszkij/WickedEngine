@@ -226,6 +226,17 @@ namespace wi
 		if (colorspace_conversion_required)
 		{
 			// In HDR10, we perform the compositing in a custom linear color space render target
+			if (!rendertarget.IsValid())
+			{
+				TextureDesc desc;
+				desc.width = swapChain.desc.width;
+				desc.height = swapChain.desc.height;
+				desc.format = Format::R11G11B10_FLOAT;
+				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+				bool success = graphicsDevice->CreateTexture(&desc, nullptr, &rendertarget);
+				assert(success);
+				graphicsDevice->SetName(&rendertarget, "Application::rendertarget");
+			}
 			RenderPassImage rp[] = {
 				RenderPassImage::RenderTarget(&rendertarget, RenderPassImage::LoadOp::CLEAR),
 			};
@@ -236,6 +247,7 @@ namespace wi
 			// If swapchain is SRGB or Linear HDR, it can be used for blending
 			//	- If it is SRGB, the render path will ensure tonemapping to SDR
 			//	- If it is Linear HDR, we can blend trivially in linear space
+			rendertarget = {};
 			graphicsDevice->RenderPassBegin(&swapChain, cmd);
 		}
 		Compose(cmd);
@@ -647,17 +659,6 @@ namespace wi
 			assert(success);
 			});
 
-		if (graphicsDevice->GetSwapChainColorSpace(&swapChain) == ColorSpace::HDR10_ST2084)
-		{
-			TextureDesc desc;
-			desc.width = swapChain.desc.width;
-			desc.height = swapChain.desc.height;
-			desc.format = Format::R11G11B10_FLOAT;
-			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-			bool success = graphicsDevice->CreateTexture(&desc, nullptr, &rendertarget);
-			assert(success);
-			graphicsDevice->SetName(&rendertarget, "Application::rendertarget");
-		}
 	}
 
 }

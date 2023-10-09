@@ -43,6 +43,32 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	humanoidWnd.Create(editor);
 	terrainWnd.Create(editor);
 
+	enum ADD_THING
+	{
+		ADD_NAME,
+		ADD_LAYER,
+		ADD_HIERARCHY,
+		ADD_TRANSFORM,
+		ADD_LIGHT,
+		ADD_MATERIAL,
+		ADD_SPRING,
+		ADD_IK,
+		ADD_SOUND,
+		ADD_ENVPROBE,
+		ADD_EMITTER,
+		ADD_HAIR,
+		ADD_DECAL,
+		ADD_WEATHER,
+		ADD_FORCE,
+		ADD_ANIMATION,
+		ADD_SCRIPT,
+		ADD_RIGIDBODY,
+		ADD_SOFTBODY,
+		ADD_COLLIDER,
+		ADD_CAMERA,
+		ADD_OBJECT,
+		ADD_VIDEO,
+	};
 
 	newComponentCombo.Create("Add: ");
 	newComponentCombo.selected_font.anim.typewriter.looped = true;
@@ -50,36 +76,36 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.selected_font.anim.typewriter.character_start = 1;
 	newComponentCombo.SetTooltip("Add a component to the last selected entity.");
 	newComponentCombo.SetInvalidSelectionText("...");
-	newComponentCombo.AddItem("Name " ICON_NAME, 0);
-	newComponentCombo.AddItem("Layer " ICON_LAYER, 1);
-	newComponentCombo.AddItem("Hierarchy " ICON_HIERARCHY, 19);
-	newComponentCombo.AddItem("Transform " ICON_TRANSFORM, 2);
-	newComponentCombo.AddItem("Light " ICON_POINTLIGHT, 3);
-	newComponentCombo.AddItem("Material " ICON_MATERIAL, 4);
-	newComponentCombo.AddItem("Spring", 5);
-	newComponentCombo.AddItem("Inverse Kinematics " ICON_IK, 6);
-	newComponentCombo.AddItem("Sound " ICON_SOUND, 7);
-	newComponentCombo.AddItem("Environment Probe " ICON_ENVIRONMENTPROBE, 8);
-	newComponentCombo.AddItem("Emitted Particle System " ICON_EMITTER, 9);
-	newComponentCombo.AddItem("Hair Particle System " ICON_HAIR, 10);
-	newComponentCombo.AddItem("Decal " ICON_DECAL, 11);
-	newComponentCombo.AddItem("Weather " ICON_WEATHER, 12);
-	newComponentCombo.AddItem("Force Field " ICON_FORCE, 13);
-	newComponentCombo.AddItem("Animation " ICON_ANIMATION, 14);
-	newComponentCombo.AddItem("Script " ICON_SCRIPT, 15);
-	newComponentCombo.AddItem("Rigid Body Physics " ICON_RIGIDBODY, 16);
-	newComponentCombo.AddItem("Soft Body Physics " ICON_SOFTBODY, 17);
-	newComponentCombo.AddItem("Collider " ICON_COLLIDER, 18);
-	newComponentCombo.AddItem("Camera " ICON_CAMERA, 20);
-	newComponentCombo.AddItem("Object " ICON_OBJECT, 21);
-	newComponentCombo.AddItem("Video " ICON_VIDEO, 22);
+	newComponentCombo.AddItem("Name " ICON_NAME, ADD_NAME);
+	newComponentCombo.AddItem("Layer " ICON_LAYER, ADD_LAYER);
+	newComponentCombo.AddItem("Hierarchy " ICON_HIERARCHY, ADD_HIERARCHY);
+	newComponentCombo.AddItem("Transform " ICON_TRANSFORM, ADD_TRANSFORM);
+	newComponentCombo.AddItem("Light " ICON_POINTLIGHT, ADD_LIGHT);
+	newComponentCombo.AddItem("Material " ICON_MATERIAL, ADD_MATERIAL);
+	newComponentCombo.AddItem("Spring", ADD_SPRING);
+	newComponentCombo.AddItem("Inverse Kinematics " ICON_IK, ADD_IK);
+	newComponentCombo.AddItem("Sound " ICON_SOUND, ADD_SOUND);
+	newComponentCombo.AddItem("Environment Probe " ICON_ENVIRONMENTPROBE, ADD_ENVPROBE);
+	newComponentCombo.AddItem("Emitted Particle System " ICON_EMITTER, ADD_EMITTER);
+	newComponentCombo.AddItem("Hair Particle System " ICON_HAIR, ADD_HAIR);
+	newComponentCombo.AddItem("Decal " ICON_DECAL, ADD_DECAL);
+	newComponentCombo.AddItem("Weather " ICON_WEATHER, ADD_WEATHER);
+	newComponentCombo.AddItem("Force Field " ICON_FORCE, ADD_FORCE);
+	newComponentCombo.AddItem("Animation " ICON_ANIMATION, ADD_ANIMATION);
+	newComponentCombo.AddItem("Script " ICON_SCRIPT, ADD_SCRIPT);
+	newComponentCombo.AddItem("Rigid Body Physics " ICON_RIGIDBODY, ADD_RIGIDBODY);
+	newComponentCombo.AddItem("Soft Body Physics " ICON_SOFTBODY, ADD_SOFTBODY);
+	newComponentCombo.AddItem("Collider " ICON_COLLIDER, ADD_COLLIDER);
+	newComponentCombo.AddItem("Camera " ICON_CAMERA, ADD_CAMERA);
+	newComponentCombo.AddItem("Object " ICON_OBJECT, ADD_OBJECT);
+	newComponentCombo.AddItem("Video " ICON_VIDEO, ADD_VIDEO);
 	newComponentCombo.OnSelect([=](wi::gui::EventArgs args) {
 		newComponentCombo.SetSelectedWithoutCallback(-1);
 		if (editor->translator.selected.empty())
 			return;
 		Scene& scene = editor->GetCurrentScene();
 		Entity entity = editor->translator.selected.back().entity;
-		if (args.userdata == 17)
+		if (args.userdata == ADD_SOFTBODY)
 		{
 			// explanation: for softbody, we want to create it for the MeshComponent, if it's also selected together with the object:
 			ObjectComponent* object = scene.objects.GetComponent(entity);
@@ -97,95 +123,95 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		// Can early exit before creating history entry!
 		switch (args.userdata)
 		{
-		case 0:
+		case ADD_NAME:
 			if (scene.names.Contains(entity))
 				return;
 			break;
-		case 1:
+		case ADD_LAYER:
 			if (scene.layers.Contains(entity))
 				return;
 			break;
-		case 2:
+		case ADD_TRANSFORM:
 			if (scene.transforms.Contains(entity))
 				return;
 			break;
-		case 3:
+		case ADD_LIGHT:
 			if (scene.lights.Contains(entity))
 				return;
 			break;
-		case 4:
+		case ADD_MATERIAL:
 			if (scene.materials.Contains(entity))
 				return;
 			break;
-		case 5:
+		case ADD_SPRING:
 			if (scene.springs.Contains(entity))
 				return;
 			break;
-		case 6:
+		case ADD_IK:
 			if (scene.inverse_kinematics.Contains(entity))
 				return;
 			break;
-		case 7:
-			if (scene.inverse_kinematics.Contains(entity))
+		case ADD_SOUND:
+			if (scene.sounds.Contains(entity))
 				return;
 			break;
-		case 8:
+		case ADD_ENVPROBE:
 			if (scene.probes.Contains(entity))
 				return;
 			break;
-		case 9:
+		case ADD_EMITTER:
 			if (scene.emitters.Contains(entity))
 				return;
 			break;
-		case 10:
+		case ADD_HAIR:
 			if (scene.hairs.Contains(entity))
 				return;
 			break;
-		case 11:
+		case ADD_DECAL:
 			if (scene.decals.Contains(entity))
 				return;
 			break;
-		case 12:
+		case ADD_WEATHER:
 			if (scene.weathers.Contains(entity))
 				return;
 			break;
-		case 13:
+		case ADD_FORCE:
 			if (scene.forces.Contains(entity))
 				return;
 			break;
-		case 14:
+		case ADD_ANIMATION:
 			if (scene.animations.Contains(entity))
 				return;
 			break;
-		case 15:
+		case ADD_SCRIPT:
 			if (scene.scripts.Contains(entity))
 				return;
 			break;
-		case 16:
+		case ADD_RIGIDBODY:
 			if (scene.rigidbodies.Contains(entity))
 				return;
 			break;
-		case 17:
+		case ADD_SOFTBODY:
 			if (scene.softbodies.Contains(entity))
 				return;
 			break;
-		case 18:
+		case ADD_COLLIDER:
 			if (scene.colliders.Contains(entity))
 				return;
 			break;
-		case 19:
+		case ADD_HIERARCHY:
 			if (scene.hierarchy.Contains(entity))
 				return;
 			break;
-		case 20:
+		case ADD_CAMERA:
 			if (scene.cameras.Contains(entity))
 				return;
 			break;
-		case 21:
+		case ADD_OBJECT:
 			if (scene.objects.Contains(entity))
 				return;
 			break;
-		case 22:
+		case ADD_VIDEO:
 			if (scene.videos.Contains(entity))
 				return;
 			break;
@@ -199,22 +225,22 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 
 		switch (args.userdata)
 		{
-		case 0:
+		case ADD_NAME:
 			scene.names.Create(entity);
 			break;
-		case 1:
+		case ADD_LAYER:
 			scene.layers.Create(entity);
 			break;
-		case 2:
+		case ADD_TRANSFORM:
 			scene.transforms.Create(entity);
 			break;
-		case 3:
+		case ADD_LIGHT:
 			scene.lights.Create(entity);
 			break;
-		case 4:
+		case ADD_MATERIAL:
 			scene.materials.Create(entity);
 			break;
-		case 5:
+		case ADD_SPRING:
 			scene.springs.Create(entity);
 
 			// Springs are special because they are computed in ordered fashion
@@ -231,61 +257,61 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 				}
 			}
 			break;
-		case 6:
+		case ADD_IK:
 			scene.inverse_kinematics.Create(entity);
 			break;
-		case 7:
+		case ADD_SOUND:
 			scene.sounds.Create(entity);
 			break;
-		case 8:
+		case ADD_ENVPROBE:
 			scene.probes.Create(entity);
 			break;
-		case 9:
+		case ADD_EMITTER:
 			if (!scene.materials.Contains(entity))
 				scene.materials.Create(entity);
 			scene.emitters.Create(entity);
 			break;
-		case 10:
+		case ADD_HAIR:
 			if (!scene.materials.Contains(entity))
 				scene.materials.Create(entity);
 			scene.hairs.Create(entity);
 			break;
-		case 11:
+		case ADD_DECAL:
 			if (!scene.materials.Contains(entity))
 				scene.materials.Create(entity);
 			scene.decals.Create(entity);
 			break;
-		case 12:
+		case ADD_WEATHER:
 			scene.weathers.Create(entity);
 			break;
-		case 13:
+		case ADD_FORCE:
 			scene.forces.Create(entity);
 			break;
-		case 14:
+		case ADD_ANIMATION:
 			scene.animations.Create(entity);
 			break;
-		case 15:
+		case ADD_SCRIPT:
 			scene.scripts.Create(entity);
 			break;
-		case 16:
+		case ADD_RIGIDBODY:
 			scene.rigidbodies.Create(entity);
 			break;
-		case 17:
+		case ADD_SOFTBODY:
 			scene.softbodies.Create(entity);
 			break;
-		case 18:
+		case ADD_COLLIDER:
 			scene.colliders.Create(entity);
 			break;
-		case 19:
+		case ADD_HIERARCHY:
 			scene.hierarchy.Create(entity);
 			break;
-		case 20:
+		case ADD_CAMERA:
 			scene.cameras.Create(entity);
 			break;
-		case 21:
+		case ADD_OBJECT:
 			scene.objects.Create(entity);
 			break;
-		case 22:
+		case ADD_VIDEO:
 			scene.videos.Create(entity);
 			break;
 		default:
