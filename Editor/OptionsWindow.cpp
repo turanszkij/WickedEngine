@@ -35,6 +35,8 @@ void OptionsWindow::Create(EditorComponent* _editor)
 		NEW_SCRIPT,
 		NEW_COLLIDER,
 		NEW_TERRAIN,
+		NEW_SPRITE,
+		NEW_FONT,
 	};
 
 	newCombo.Create("New: ");
@@ -63,6 +65,8 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	newCombo.AddItem("Script " ICON_SCRIPT, NEW_SCRIPT);
 	newCombo.AddItem("Collider " ICON_COLLIDER, NEW_COLLIDER);
 	newCombo.AddItem("Terrain " ICON_TERRAIN, NEW_TERRAIN);
+	newCombo.AddItem("Sprite " ICON_SPRITE, NEW_SPRITE);
+	newCombo.AddItem("Font " ICON_FONT, NEW_FONT);
 	newCombo.OnSelect([&](wi::gui::EventArgs args) {
 		newCombo.SetSelectedWithoutCallback(-1);
 		const EditorComponent::EditorScene& editorscene = editor->GetCurrentEditorScene();
@@ -215,6 +219,28 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			scene.terrains.Create(pick.entity) = editor->componentsWnd.terrainWnd.terrain_preset;
 			scene.names.Create(pick.entity) = "terrain";
 			break;
+		case NEW_SPRITE:
+		{
+			pick.entity = CreateEntity();
+			wi::Sprite& sprite = scene.sprites.Create(pick.entity);
+			sprite.params.pivot = XMFLOAT2(0.5f, 0.5f);
+			scene.transforms.Create(pick.entity);
+			scene.names.Create(pick.entity) = "sprite";
+		}
+		break;
+		case NEW_FONT:
+		{
+			pick.entity = CreateEntity();
+			wi::SpriteFont& font = scene.fonts.Create(pick.entity);
+			font.SetText("Text");
+			font.params.h_align = wi::font::Alignment::WIFALIGN_CENTER;
+			font.params.v_align = wi::font::Alignment::WIFALIGN_CENTER;
+			font.params.scaling = 0.1f;
+			font.params.size = 26;
+			scene.transforms.Create(pick.entity);
+			scene.names.Create(pick.entity) = "font";
+		}
+		break;
 		default:
 			break;
 		}
@@ -265,6 +291,8 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	filterCombo.AddItem(ICON_EXPRESSION, (uint64_t)Filter::Expression);
 	filterCombo.AddItem(ICON_HUMANOID, (uint64_t)Filter::Humanoid);
 	filterCombo.AddItem(ICON_TERRAIN, (uint64_t)Filter::Terrain);
+	filterCombo.AddItem(ICON_SPRITE, (uint64_t)Filter::Sprite);
+	filterCombo.AddItem(ICON_FONT, (uint64_t)Filter::Font);
 	filterCombo.SetTooltip("Apply filtering to the Entities by components");
 	filterCombo.OnSelect([&](wi::gui::EventArgs args) {
 		filter = (Filter)args.userdata;
@@ -553,6 +581,14 @@ void OptionsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 	if (scene.humanoids.Contains(entity))
 	{
 		item.name += ICON_HUMANOID " ";
+	}
+	if (scene.sprites.Contains(entity))
+	{
+		item.name += ICON_SPRITE " ";
+	}
+	if (scene.fonts.Contains(entity))
+	{
+		item.name += ICON_FONT " ";
 	}
 	if (scene.lights.Contains(entity))
 	{
@@ -875,6 +911,22 @@ void OptionsWindow::RefreshEntityTree()
 		for (size_t i = 0; i < scene.terrains.GetCount(); ++i)
 		{
 			PushToEntityTree(scene.terrains.GetEntity(i), 0);
+		}
+	}
+
+	if (has_flag(filter, Filter::Sprite))
+	{
+		for (size_t i = 0; i < scene.sprites.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.sprites.GetEntity(i), 0);
+		}
+	}
+
+	if (has_flag(filter, Filter::Font))
+	{
+		for (size_t i = 0; i < scene.fonts.GetCount(); ++i)
+		{
+			PushToEntityTree(scene.fonts.GetEntity(i), 0);
 		}
 	}
 

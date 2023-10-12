@@ -43,6 +43,8 @@ set (SOURCE_FILES
 	HumanoidWindow.cpp
 	GeneralWindow.cpp
 	ProfilerWindow.cpp
+	SpriteWindow.cpp
+	FontWindow.cpp
 	xatlas.cpp
 	EmbeddedResources.cpp
 )

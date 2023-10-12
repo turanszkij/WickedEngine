@@ -261,6 +261,13 @@ namespace wi::renderer
 		bool distortion, 
 		wi::graphics::CommandList cmd
 	);
+	// Draw the sprites and fonts from the scene
+	void DrawSpritesAndFonts(
+		const wi::scene::Scene& scene,
+		const wi::scene::CameraComponent& camera,
+		bool distortion,
+		wi::graphics::CommandList cmd
+	);
 	// Draw simple light visualizer geometries
 	void DrawLightVisualizers(
 		const Visibility& vis,

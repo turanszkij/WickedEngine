@@ -140,10 +140,11 @@ namespace wi::font
 	//	fontName : name of the font (it doesn't need to be a path)
 	//	data : binary data of the .ttf font
 	//	size : size of the font binary data
+	//  copyData : whether data is copied away for storage. If false (default) developer must ensure that it is not deleted
 	//	Returns fontStyleID that is reusable. If font already exists, just return its ID
 	//	NOTE: When loading font with this method, the developer must ensure that font data is
-	//	not deleted while the font is in use
-	int AddFontStyle(const std::string& fontName, const uint8_t* data, size_t size);
+	//	not deleted while the font is in use (unless copyData is specified as true)
+	int AddFontStyle(const std::string& fontName, const uint8_t* data, size_t size, bool copyData = false);
 
 	// Set canvas for the CommandList to handle DPI-aware font rendering on the current thread
 	void SetCanvas(const wi::Canvas& current_canvas);

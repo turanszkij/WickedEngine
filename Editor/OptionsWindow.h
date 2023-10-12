@@ -47,6 +47,8 @@ public:
 		Spring = 1 << 20,
 		Humanoid = 1 << 21,
 		Video = 1 << 22,
+		Sprite = 1 << 23,
+		Font = 1 << 24,
 
 		All = ~0ull,
 	} filter = Filter::All;

@@ -339,6 +339,10 @@ namespace wi::scene
 
 		RunImpostorUpdateSystem(ctx);
 
+		RunSpriteUpdateSystem(ctx);
+
+		RunFontUpdateSystem(ctx);
+
 		wi::jobsystem::Wait(ctx); // dependencies
 
 		// Merge parallel bounds computation (depends on object update system):
@@ -4532,6 +4536,44 @@ namespace wi::scene
 			}
 		}
 		wi::profiler::EndRange(range);
+	}
+	void Scene::RunSpriteUpdateSystem(wi::jobsystem::context& ctx)
+	{
+		wi::jobsystem::Dispatch(ctx, (uint32_t)sprites.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
+			Sprite& sprite = sprites[args.jobIndex];
+			if (sprite.params.isExtractNormalMapEnabled())
+			{
+				sprite.params.image_subresource = -1;
+			}
+			else if (sprite.textureResource.IsValid())
+			{
+				sprite.params.image_subresource = sprite.textureResource.GetTextureSRGBSubresource();
+			}
+			if (sprite.maskResource.IsValid())
+			{
+				sprite.params.mask_subresource = sprite.maskResource.GetTextureSRGBSubresource();
+			}
+			sprite.Update(dt);
+		});
+	}
+	void Scene::RunFontUpdateSystem(wi::jobsystem::context& ctx)
+	{
+		wi::jobsystem::Dispatch(ctx, (uint32_t)fonts.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
+			SpriteFont& font = fonts[args.jobIndex];
+			Entity entity = fonts.GetEntity(args.jobIndex);
+			const SoundComponent* sound = sounds.GetComponent(entity);
+			if (sound != nullptr && sound->soundResource.IsValid())
+			{
+				font.anim.typewriter.sound = sound->soundResource.GetSound();
+				font.anim.typewriter.soundinstance = sound->soundinstance;
+			}
+			else
+			{
+				font.anim.typewriter.sound = {};
+				font.anim.typewriter.soundinstance = {};
+			}
+			font.Update(dt);
+		});
 	}
 
 	Scene::RayIntersectionResult Scene::Intersects(const Ray& ray, uint32_t filterMask, uint32_t layerMask, uint32_t lod) const

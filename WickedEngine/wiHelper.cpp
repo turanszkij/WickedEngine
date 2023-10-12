@@ -799,10 +799,7 @@ namespace wi::helper
 
 		if (is_png)
 		{
-			// lodepng encoder is better compressing than stb_image_write:
-			unsigned error = lodepng::encode(filedata, texturedata, desc.width, desc.height);
-			return error == 0;
-			//write_result = stbi_write_png_to_func(func, &filedata, (int)mip.width, (int)mip.height, dst_channel_count, mip.address, 0);
+			write_result = stbi_write_png_to_func(func, &filedata, (int)mip.width, (int)mip.height, dst_channel_count, mip.address, 0);
 		}
 		else if (!extension.compare("JPG") || !extension.compare("JPEG"))
 		{

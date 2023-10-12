@@ -19,7 +19,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 	{
 		float2 bary_fw = fwidth(input.bary);
 		float w = max(bary_fw.x, bary_fw.y); // screen coverage dependency
-		w = max(0.005, w); // min softness to avoid pixelated hard edge in magnification
+		w = max(w, 1.0 / 255.0); // min softness to avoid pixelated hard edge in magnification
 		w += font.softness;
 		w = saturate(w);
 		float mid = lerp(SDF::onedge_value_unorm, 0, font.bolden);

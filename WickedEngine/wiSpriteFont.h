@@ -1,6 +1,9 @@
 #pragma once
 #include "wiFont.h"
 #include "wiAudio.h"
+#include "wiArchive.h"
+#include "wiECS.h"
+#include "wiResourceManager.h"
 
 #include <string>
 
@@ -8,22 +11,29 @@ namespace wi
 {
 	class SpriteFont
 	{
-	private:
+	public:
 		enum FLAGS
 		{
 			EMPTY = 0,
 			HIDDEN = 1 << 0,
 			DISABLE_UPDATE = 1 << 1,
+			CAMERA_FACING = 1 << 2,
+			CAMERA_SCALING = 1 << 3,
 		};
 		uint32_t _flags = EMPTY;
-	public:
 		std::wstring text;
 		wi::font::Params params;
+		wi::Resource fontStyleResource;
+		std::string fontStyleName;
 
 		SpriteFont() = default;
-		SpriteFont(const std::string& value, const wi::font::Params& params = wi::font::Params()) :params(params)
+		SpriteFont(const std::string& value, const wi::font::Params& params = wi::font::Params(), const std::string& fontStyleName = "") :params(params), fontStyleName(fontStyleName)
 		{
 			SetText(value);
+			if (!fontStyleName.empty())
+			{
+				fontStyleResource = wi::resourcemanager::Load(fontStyleName);
+			}
 		}
 		virtual ~SpriteFont() = default;
 
@@ -34,7 +44,12 @@ namespace wi
 		constexpr void SetHidden(bool value = true) { if (value) { _flags |= HIDDEN; } else { _flags &= ~HIDDEN; } }
 		constexpr bool IsHidden() const { return _flags & HIDDEN; }
 		constexpr void SetDisableUpdate(bool value = true) { if (value) { _flags |= DISABLE_UPDATE; } else { _flags &= ~DISABLE_UPDATE; } }
+		constexpr void SetCameraFacing(bool value = true) { if (value) { _flags |= CAMERA_FACING; } else { _flags &= ~CAMERA_FACING; } }
+		constexpr void SetCameraScaling(bool value = true) { if (value) { _flags |= CAMERA_SCALING; } else { _flags &= ~CAMERA_SCALING; } }
+
 		constexpr bool IsDisableUpdate() const { return _flags & DISABLE_UPDATE; }
+		constexpr bool IsCameraFacing() const { return _flags & CAMERA_FACING; }
+		constexpr bool IsCameraScaling() const { return _flags & CAMERA_SCALING; }
 
 		XMFLOAT2 TextSize() const;
 		float TextWidth() const;
@@ -47,6 +62,8 @@ namespace wi
 
 		std::string GetTextA() const;
 		const std::wstring& GetText() const;
+
+		size_t GetCurrentTextLength() const;
 
 		struct Animation
 		{
@@ -74,5 +91,7 @@ namespace wi
 				}
 			} typewriter;
 		} anim;
+
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 }

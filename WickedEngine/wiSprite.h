@@ -3,6 +3,8 @@
 #include "wiGraphicsDevice.h"
 #include "wiResourceManager.h"
 #include "wiRandom.h"
+#include "wiArchive.h"
+#include "wiECS.h"
 
 #include <memory>
 #include <string>
@@ -11,17 +13,19 @@ namespace wi
 {
 	class Sprite
 	{
-	private:
+	public:
 		enum FLAGS
 		{
 			EMPTY = 0,
 			HIDDEN = 1 << 0,
 			DISABLE_UPDATE = 1 << 1,
+			CAMERA_FACING = 1 << 2,
+			CAMERA_SCALING = 1 << 3,
 		};
 		uint32_t _flags = EMPTY;
 
 		std::string textureName, maskName;
-	public:
+
 		Sprite(const std::string& newTexture = "", const std::string& newMask = "");
 		virtual ~Sprite() = default;
 
@@ -32,11 +36,18 @@ namespace wi
 		constexpr void SetHidden(bool value = true) { if (value) { _flags |= HIDDEN; } else { _flags &= ~HIDDEN; } }
 		constexpr bool IsHidden() const { return _flags & HIDDEN; }
 		constexpr void SetDisableUpdate(bool value = true) { if (value) { _flags |= DISABLE_UPDATE; } else { _flags &= ~DISABLE_UPDATE; } }
+		constexpr void SetCameraFacing(bool value = true) { if (value) { _flags |= CAMERA_FACING; } else { _flags &= ~CAMERA_FACING; } }
+		constexpr void SetCameraScaling(bool value = true) { if (value) { _flags |= CAMERA_SCALING; } else { _flags &= ~CAMERA_SCALING; } }
+
 		constexpr bool IsDisableUpdate() const { return _flags & DISABLE_UPDATE; }
+		constexpr bool IsCameraFacing() const { return _flags & CAMERA_FACING; }
+		constexpr bool IsCameraScaling() const { return _flags & CAMERA_SCALING; }
 
 		wi::image::Params params;
 		wi::Resource textureResource;
 		wi::Resource maskResource;
+
+		const wi::graphics::Texture* GetTexture() const;
 
 		struct Anim
 		{
@@ -104,5 +115,7 @@ namespace wi
 			}
 			return nullptr;
 		}
+
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 }

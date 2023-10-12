@@ -7,8 +7,8 @@
 #include "wiEventHandler.h"
 #include "wiTimer.h"
 
-using namespace wi::graphics;
 using namespace wi::enums;
+using namespace wi::graphics;
 
 namespace wi::image
 {
@@ -17,14 +17,20 @@ namespace wi::image
 	static Shader pixelShader;
 	static BlendState blendStates[BLENDMODE_COUNT];
 	static RasterizerState rasterizerState;
-	static DepthStencilState depthStencilStates[STENCILMODE_COUNT][STENCILREFMODE_COUNT];
+	enum DEPTH_TEST_MODE
+	{
+		DEPTH_TEST_OFF,
+		DEPTH_TEST_ON,
+		DEPTH_TEST_MODE_COUNT
+	};
+	static DepthStencilState depthStencilStates[STENCILMODE_COUNT][STENCILREFMODE_COUNT][DEPTH_TEST_MODE_COUNT];
 	enum STRIP_MODE
 	{
 		STRIP_OFF,
 		STRIP_ON,
 		STRIP_MODE_COUNT,
 	};
-	static PipelineState imagePSO[BLENDMODE_COUNT][STENCILMODE_COUNT][STENCILREFMODE_COUNT][STRIP_MODE_COUNT];
+	static PipelineState imagePSO[BLENDMODE_COUNT][STENCILMODE_COUNT][STENCILREFMODE_COUNT][DEPTH_TEST_MODE_COUNT][STRIP_MODE_COUNT];
 	static thread_local Texture backgroundTexture;
 	static thread_local wi::Canvas canvas;
 
@@ -335,7 +341,7 @@ namespace wi::image
 		}
 		device->BindStencilRef(stencilRef, cmd);
 
-		device->BindPipelineState(&imagePSO[params.blendFlag][params.stencilComp][params.stencilRefMode][strip_mode], cmd);
+		device->BindPipelineState(&imagePSO[params.blendFlag][params.stencilComp][params.stencilRefMode][params.isDepthTestEnabled()][strip_mode], cmd);
 
 		device->BindDynamicConstantBuffer(image, CBSLOT_IMAGE, cmd);
 
@@ -380,23 +386,25 @@ namespace wi::image
 			{
 				for (int m = 0; m < STENCILREFMODE_COUNT; ++m)
 				{
-					desc.dss = &depthStencilStates[k][m];
-
-					for (int n = 0; n < STRIP_MODE_COUNT; ++n)
+					for (int d = 0; d < DEPTH_TEST_MODE_COUNT; ++d)
 					{
-						switch (n)
-						{
-						default:
-						case STRIP_ON:
-							desc.pt = PrimitiveTopology::TRIANGLESTRIP;
-							break;
-						case STRIP_OFF:
-							desc.pt = PrimitiveTopology::TRIANGLELIST;
-							break;
-						}
-						device->CreatePipelineState(&desc, &imagePSO[j][k][m][n]);
-					}
+						desc.dss = &depthStencilStates[k][m][d];
 
+						for (int n = 0; n < STRIP_MODE_COUNT; ++n)
+						{
+							switch (n)
+							{
+							default:
+							case STRIP_ON:
+								desc.pt = PrimitiveTopology::TRIANGLESTRIP;
+								break;
+							case STRIP_OFF:
+								desc.pt = PrimitiveTopology::TRIANGLELIST;
+								break;
+							}
+							device->CreatePipelineState(&desc, &imagePSO[j][k][m][d][n]);
+						}
+					}
 				}
 			}
 		}
@@ -425,59 +433,75 @@ namespace wi::image
 
 		for (int i = 0; i < STENCILREFMODE_COUNT; ++i)
 		{
-			DepthStencilState dsd;
-			dsd.depth_enable = false;
-			dsd.stencil_enable = false;
-			depthStencilStates[STENCILMODE_DISABLED][i] = dsd;
-
-			dsd.stencil_enable = true;
-			switch (i)
+			for (int d = 0; d < DEPTH_TEST_MODE_COUNT; ++d)
 			{
-			case STENCILREFMODE_ENGINE:
-				dsd.stencil_read_mask = STENCILREF_MASK_ENGINE;
-				break;
-			case STENCILREFMODE_USER:
-				dsd.stencil_read_mask = STENCILREF_MASK_USER;
-				break;
-			default:
-				dsd.stencil_read_mask = STENCILREF_MASK_ALL;
-				break;
+				DepthStencilState dsd;
+				dsd.depth_write_mask = DepthWriteMask::ZERO;
+
+				switch (d)
+				{
+				default:
+				case DEPTH_TEST_OFF:
+					dsd.depth_enable = false;
+					break;
+				case DEPTH_TEST_ON:
+					dsd.depth_enable = true;
+					dsd.depth_func = ComparisonFunc::GREATER_EQUAL;
+					break;
+				}
+
+				dsd.stencil_enable = false;
+				depthStencilStates[STENCILMODE_DISABLED][i][d] = dsd;
+
+				dsd.stencil_enable = true;
+				switch (i)
+				{
+				case STENCILREFMODE_ENGINE:
+					dsd.stencil_read_mask = STENCILREF_MASK_ENGINE;
+					break;
+				case STENCILREFMODE_USER:
+					dsd.stencil_read_mask = STENCILREF_MASK_USER;
+					break;
+				default:
+					dsd.stencil_read_mask = STENCILREF_MASK_ALL;
+					break;
+				}
+				dsd.stencil_write_mask = 0;
+				dsd.front_face.stencil_pass_op = StencilOp::KEEP;
+				dsd.front_face.stencil_fail_op = StencilOp::KEEP;
+				dsd.front_face.stencil_depth_fail_op = StencilOp::KEEP;
+				dsd.back_face.stencil_pass_op = StencilOp::KEEP;
+				dsd.back_face.stencil_fail_op = StencilOp::KEEP;
+				dsd.back_face.stencil_depth_fail_op = StencilOp::KEEP;
+
+				dsd.front_face.stencil_func = ComparisonFunc::EQUAL;
+				dsd.back_face.stencil_func = ComparisonFunc::EQUAL;
+				depthStencilStates[STENCILMODE_EQUAL][i][d] = dsd;
+
+				dsd.front_face.stencil_func = ComparisonFunc::LESS;
+				dsd.back_face.stencil_func = ComparisonFunc::LESS;
+				depthStencilStates[STENCILMODE_LESS][i][d] = dsd;
+
+				dsd.front_face.stencil_func = ComparisonFunc::LESS_EQUAL;
+				dsd.back_face.stencil_func = ComparisonFunc::LESS_EQUAL;
+				depthStencilStates[STENCILMODE_LESSEQUAL][i][d] = dsd;
+
+				dsd.front_face.stencil_func = ComparisonFunc::GREATER;
+				dsd.back_face.stencil_func = ComparisonFunc::GREATER;
+				depthStencilStates[STENCILMODE_GREATER][i][d] = dsd;
+
+				dsd.front_face.stencil_func = ComparisonFunc::GREATER_EQUAL;
+				dsd.back_face.stencil_func = ComparisonFunc::GREATER_EQUAL;
+				depthStencilStates[STENCILMODE_GREATEREQUAL][i][d] = dsd;
+
+				dsd.front_face.stencil_func = ComparisonFunc::NOT_EQUAL;
+				dsd.back_face.stencil_func = ComparisonFunc::NOT_EQUAL;
+				depthStencilStates[STENCILMODE_NOT][i][d] = dsd;
+
+				dsd.front_face.stencil_func = ComparisonFunc::ALWAYS;
+				dsd.back_face.stencil_func = ComparisonFunc::ALWAYS;
+				depthStencilStates[STENCILMODE_ALWAYS][i][d] = dsd;
 			}
-			dsd.stencil_write_mask = 0;
-			dsd.front_face.stencil_pass_op = StencilOp::KEEP;
-			dsd.front_face.stencil_fail_op = StencilOp::KEEP;
-			dsd.front_face.stencil_depth_fail_op = StencilOp::KEEP;
-			dsd.back_face.stencil_pass_op = StencilOp::KEEP;
-			dsd.back_face.stencil_fail_op = StencilOp::KEEP;
-			dsd.back_face.stencil_depth_fail_op = StencilOp::KEEP;
-
-			dsd.front_face.stencil_func = ComparisonFunc::EQUAL;
-			dsd.back_face.stencil_func = ComparisonFunc::EQUAL;
-			depthStencilStates[STENCILMODE_EQUAL][i] = dsd;
-
-			dsd.front_face.stencil_func = ComparisonFunc::LESS;
-			dsd.back_face.stencil_func = ComparisonFunc::LESS;
-			depthStencilStates[STENCILMODE_LESS][i] = dsd;
-
-			dsd.front_face.stencil_func = ComparisonFunc::LESS_EQUAL;
-			dsd.back_face.stencil_func = ComparisonFunc::LESS_EQUAL;
-			depthStencilStates[STENCILMODE_LESSEQUAL][i] = dsd;
-
-			dsd.front_face.stencil_func = ComparisonFunc::GREATER;
-			dsd.back_face.stencil_func = ComparisonFunc::GREATER;
-			depthStencilStates[STENCILMODE_GREATER][i] = dsd;
-
-			dsd.front_face.stencil_func = ComparisonFunc::GREATER_EQUAL;
-			dsd.back_face.stencil_func = ComparisonFunc::GREATER_EQUAL;
-			depthStencilStates[STENCILMODE_GREATEREQUAL][i] = dsd;
-
-			dsd.front_face.stencil_func = ComparisonFunc::NOT_EQUAL;
-			dsd.back_face.stencil_func = ComparisonFunc::NOT_EQUAL;
-			depthStencilStates[STENCILMODE_NOT][i] = dsd;
-
-			dsd.front_face.stencil_func = ComparisonFunc::ALWAYS;
-			dsd.back_face.stencil_func = ComparisonFunc::ALWAYS;
-			depthStencilStates[STENCILMODE_ALWAYS][i] = dsd;
 		}
 
 
