@@ -224,6 +224,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			pick.entity = CreateEntity();
 			wi::Sprite& sprite = scene.sprites.Create(pick.entity);
 			sprite.params.pivot = XMFLOAT2(0.5f, 0.5f);
+			sprite.anim.repeatable = true;
 			scene.transforms.Create(pick.entity);
 			scene.names.Create(pick.entity) = "sprite";
 		}
@@ -237,6 +238,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			font.params.v_align = wi::font::Alignment::WIFALIGN_CENTER;
 			font.params.scaling = 0.1f;
 			font.params.size = 26;
+			font.anim.typewriter.looped = true;
 			scene.transforms.Create(pick.entity);
 			scene.names.Create(pick.entity) = "font";
 		}

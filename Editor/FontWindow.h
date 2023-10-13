@@ -31,6 +31,7 @@ public:
 	wi::gui::ComboBox colorModeCombo;
 	wi::gui::ColorPicker colorPicker;
 
+	wi::gui::Label typewriterInfoLabel;
 	wi::gui::Slider typewriterTimeSlider;
 	wi::gui::CheckBox typewriterLoopedCheckBox;
 	wi::gui::TextInputField typewriterStartInput;

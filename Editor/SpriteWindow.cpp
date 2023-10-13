@@ -299,6 +299,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 		if (sprite == nullptr)
 			return;
 		sprite->anim.drawRectAnim.frameRate = args.fValue;
+		UpdateSpriteDrawRectParams(sprite);
 		});
 	AddWidget(&drawrectFrameRateSlider);
 
@@ -310,6 +311,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 		if (sprite == nullptr)
 			return;
 		sprite->anim.drawRectAnim.frameCount = args.iValue;
+		UpdateSpriteDrawRectParams(sprite);
 		});
 	AddWidget(&drawrectFrameCountInput);
 
@@ -321,6 +323,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 		if (sprite == nullptr)
 			return;
 		sprite->anim.drawRectAnim.horizontalFrameCount = args.iValue;
+		UpdateSpriteDrawRectParams(sprite);
 		});
 	AddWidget(&drawrectHorizontalFrameCountInput);
 
@@ -484,4 +487,21 @@ void SpriteWindow::ResizeLayout()
 	add(wobbleXSlider);
 	add(wobbleYSlider);
 	add(wobbleSpeedSlider);
+}
+
+void SpriteWindow::UpdateSpriteDrawRectParams(wi::Sprite* sprite)
+{
+	if (sprite->anim.drawRectAnim.frameCount > 1 && sprite->textureResource.IsValid())
+	{
+		const TextureDesc& desc = sprite->textureResource.GetTexture().GetDesc();
+		XMFLOAT4 rect = XMFLOAT4(0, 0, 0, 0);
+		int vertical_frame_count = std::max(1, sprite->anim.drawRectAnim.frameCount / sprite->anim.drawRectAnim.horizontalFrameCount);
+		rect.z = float(desc.width) / float(std::max(1, sprite->anim.drawRectAnim.horizontalFrameCount));
+		rect.w = float(desc.height) / float(vertical_frame_count);
+		sprite->params.enableDrawRect(rect);
+	}
+	else
+	{
+		sprite->params.disableDrawRect();
+	}
 }

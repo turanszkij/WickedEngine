@@ -40,4 +40,6 @@ public:
 	wi::gui::Slider wobbleSpeedSlider;
 
 	void ResizeLayout() override;
+
+	void UpdateSpriteDrawRectParams(wi::Sprite* sprite);
 };

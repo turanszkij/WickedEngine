@@ -9,7 +9,7 @@ void FontWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_FONT " Font", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 900));
+	SetSize(XMFLOAT2(670, 1000));
 
 	closeButton.SetTooltip("Delete Font");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -313,6 +313,10 @@ void FontWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&colorPicker);
 
+	typewriterInfoLabel.Create("Tip: if you add Sound Component to text, then the typewriter animation will use that sound as typewriter sound effect.");
+	typewriterInfoLabel.SetSize(XMFLOAT2(80, 80));
+	AddWidget(&typewriterInfoLabel);
+
 	typewriterTimeSlider.Create(0, 10, 0, 10000, "Typewriter time: ");
 	typewriterTimeSlider.SetTooltip("Time to complete typewriter animation (0 = disable).");
 	typewriterTimeSlider.OnSlide([=](wi::gui::EventArgs args) {
@@ -459,6 +463,7 @@ void FontWindow::ResizeLayout()
 	add_right(sdfCheckBox);
 	add(colorModeCombo);
 	add_fullwidth(colorPicker);
+	add_fullwidth(typewriterInfoLabel);
 	add(typewriterTimeSlider);
 	add_right(typewriterLoopedCheckBox);
 	add(typewriterStartInput);
