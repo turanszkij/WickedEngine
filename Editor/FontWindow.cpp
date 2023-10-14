@@ -206,6 +206,24 @@ void FontWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&shadowOffsetYSlider);
 
+	intensitySlider.Create(0, 100, 1, 10000, "Intensity: ");
+	intensitySlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::SpriteFont* font = editor->GetCurrentScene().fonts.GetComponent(entity);
+		if (font == nullptr)
+			return;
+		font->params.intensity = args.fValue;
+		});
+	AddWidget(&intensitySlider);
+
+	shadowIntensitySlider.Create(0, 100, 1, 10000, "Shadow Intensity: ");
+	shadowIntensitySlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::SpriteFont* font = editor->GetCurrentScene().fonts.GetComponent(entity);
+		if (font == nullptr)
+			return;
+		font->params.shadow_intensity = args.fValue;
+		});
+	AddWidget(&shadowIntensitySlider);
+
 	hiddenCheckBox.Create("Hidden: ");
 	hiddenCheckBox.SetTooltip("Hide / unhide the font");
 	hiddenCheckBox.OnClick([=](wi::gui::EventArgs args) {
@@ -386,6 +404,8 @@ void FontWindow::SetEntity(wi::ecs::Entity entity)
 	shadowBoldenSlider.SetValue(font->params.shadow_bolden);
 	shadowOffsetXSlider.SetValue(font->params.shadow_offset_x);
 	shadowOffsetYSlider.SetValue(font->params.shadow_offset_y);
+	intensitySlider.SetValue(font->params.intensity);
+	shadowIntensitySlider.SetValue(font->params.shadow_intensity);
 	hiddenCheckBox.SetCheck(font->IsHidden());
 	cameraFacingCheckBox.SetCheck(font->IsCameraFacing());
 	cameraScalingCheckBox.SetCheck(font->IsCameraScaling());
@@ -450,8 +470,10 @@ void FontWindow::ResizeLayout()
 	add(spacingSlider);
 	add(softnessSlider);
 	add(boldenSlider);
+	add(intensitySlider);
 	add(shadowSoftnessSlider);
 	add(shadowBoldenSlider);
+	add(shadowIntensitySlider);
 	add(shadowOffsetXSlider);
 	add(shadowOffsetYSlider);
 	add_right(hiddenCheckBox);

@@ -100,6 +100,9 @@ namespace wi::image
 		color.x *= darken;
 		color.y *= darken;
 		color.z *= darken;
+		color.x *= params.intensity;
+		color.y *= params.intensity;
+		color.z *= params.intensity;
 		color.w *= params.opacity;
 
 		XMHALF4 packed_color;

@@ -166,6 +166,7 @@ namespace wi
 			archive >> params.rotation;
 			archive >> params.fade;
 			archive >> params.opacity;
+			archive >> params.intensity;
 			archive >> params.hdr_scaling;
 			archive >> params.mask_alpha_range_start;
 			archive >> params.mask_alpha_range_end;
@@ -245,6 +246,7 @@ namespace wi
 			archive << params.rotation;
 			archive << params.fade;
 			archive << params.opacity;
+			archive << params.intensity;
 			archive << params.hdr_scaling;
 			archive << params.mask_alpha_range_start;
 			archive << params.mask_alpha_range_end;

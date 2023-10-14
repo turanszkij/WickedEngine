@@ -225,7 +225,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			wi::Sprite& sprite = scene.sprites.Create(pick.entity);
 			sprite.params.pivot = XMFLOAT2(0.5f, 0.5f);
 			sprite.anim.repeatable = true;
-			scene.transforms.Create(pick.entity);
+			scene.transforms.Create(pick.entity).Translate(XMFLOAT3(0, 2, 0));
 			scene.names.Create(pick.entity) = "sprite";
 		}
 		break;
@@ -239,7 +239,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			font.params.scaling = 0.1f;
 			font.params.size = 26;
 			font.anim.typewriter.looped = true;
-			scene.transforms.Create(pick.entity);
+			scene.transforms.Create(pick.entity).Translate(XMFLOAT3(0, 2, 0));
 			scene.names.Create(pick.entity) = "font";
 		}
 		break;

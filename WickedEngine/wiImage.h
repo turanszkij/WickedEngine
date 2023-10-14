@@ -72,6 +72,7 @@ namespace wi::image
 		float rotation = 0;
 		float fade = 0;
 		float opacity = 1;
+		float intensity = 1;
 		float hdr_scaling = 1.0f; // a scaling value for use by linear output mapping
 		float mask_alpha_range_start = 0; // constrain mask alpha to not go below this level
 		float mask_alpha_range_end = 1; // constrain mask alpha to not go above this level

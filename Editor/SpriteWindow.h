@@ -14,6 +14,7 @@ public:
 	wi::gui::Button maskButton;
 	wi::gui::Slider pivotXSlider;
 	wi::gui::Slider pivotYSlider;
+	wi::gui::Slider intensitySlider;
 	wi::gui::Slider rotationSlider;
 	wi::gui::Slider alphaStartSlider;
 	wi::gui::Slider alphaEndSlider;

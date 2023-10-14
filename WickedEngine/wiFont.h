@@ -56,6 +56,8 @@ namespace wi::font
 		float shadow_offset_y = 0; // offset for shadow under the text in logical canvas coordinates
 		Cursor cursor; // cursor can be used to continue text drawing by taking the Draw's return value (optional)
 		float hdr_scaling = 1.0f; // a scaling value for use by linear output mapping
+		float intensity = 1.0f; // color multiplier
+		float shadow_intensity = 1.0f; // shadow color multiplier
 		const XMMATRIX* customProjection = nullptr;
 		const XMMATRIX* customRotation = nullptr;
 

@@ -142,6 +142,8 @@ namespace wi
 			archive >> params.shadow_offset_x;
 			archive >> params.shadow_offset_y;
 			archive >> params.hdr_scaling;
+			archive >> params.intensity;
+			archive >> params.shadow_intensity;
 
 			archive >> anim.typewriter.time;
 			archive >> anim.typewriter.looped;
@@ -191,6 +193,8 @@ namespace wi
 			archive << params.shadow_offset_x;
 			archive << params.shadow_offset_y;
 			archive << params.hdr_scaling;
+			archive << params.intensity;
+			archive << params.shadow_intensity;
 
 			archive << anim.typewriter.time;
 			archive << anim.typewriter.looped;

@@ -24,7 +24,9 @@ struct FontConstants
 	int buffer_index;
 	uint buffer_offset;
 	int texture_index;
-	uint color;
+	int padding0;
+
+	float4 color;
 
 	float softness;
 	float bolden;

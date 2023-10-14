@@ -631,7 +631,10 @@ namespace wi::font
 			{
 				// font shadow render:
 				XMStoreFloat4x4(&font.transform, XMMatrixTranslation(params.shadow_offset_x, params.shadow_offset_y, 0) * M);
-				font.color = params.shadowColor.rgba;
+				font.color = params.shadowColor;
+				font.color.x *= params.shadow_intensity;
+				font.color.y *= params.shadow_intensity;
+				font.color.z *= params.shadow_intensity;
 				font.bolden = params.shadow_bolden;
 				font.softness = params.shadow_softness * 0.5f;
 				device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
@@ -641,7 +644,10 @@ namespace wi::font
 
 			// font base render:
 			XMStoreFloat4x4(&font.transform, M);
-			font.color = params.color.rgba;
+			font.color = params.color;
+			font.color.x *= params.intensity;
+			font.color.y *= params.intensity;
+			font.color.z *= params.intensity;
 			font.bolden = params.bolden;
 			font.softness = params.softness * 0.5f;
 			device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);

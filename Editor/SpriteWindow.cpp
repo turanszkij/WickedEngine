@@ -131,6 +131,16 @@ void SpriteWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&pivotYSlider);
 
+	intensitySlider.Create(0, 100, 1, 10000, "Intensity: ");
+	intensitySlider.SetTooltip("Color multiplier");
+	intensitySlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
+		if (sprite == nullptr)
+			return;
+		sprite->params.intensity = args.fValue;
+		});
+	AddWidget(&intensitySlider);
+
 	rotationSlider.Create(0, 360, 0, 10000, "Rotation: ");
 	rotationSlider.SetTooltip("Z Rotation around pivot point. The editor input is in degrees.");
 	rotationSlider.OnSlide([=](wi::gui::EventArgs args) {
@@ -404,6 +414,7 @@ void SpriteWindow::SetEntity(wi::ecs::Entity entity)
 	maskButton.SetImage(sprite->maskResource);
 	pivotXSlider.SetValue(sprite->params.pivot.x);
 	pivotYSlider.SetValue(sprite->params.pivot.y);
+	intensitySlider.SetValue(sprite->params.intensity);
 	rotationSlider.SetValue(wi::math::RadiansToDegrees(sprite->params.rotation));
 	alphaStartSlider.SetValue(sprite->params.mask_alpha_range_start);
 	alphaEndSlider.SetValue(sprite->params.mask_alpha_range_end);
@@ -467,6 +478,7 @@ void SpriteWindow::ResizeLayout()
 	add_fullwidth(maskButton);
 	add(pivotXSlider);
 	add(pivotYSlider);
+	add(intensitySlider);
 	add(rotationSlider);
 	add(alphaStartSlider);
 	add(alphaEndSlider);

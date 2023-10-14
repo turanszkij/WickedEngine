@@ -23,6 +23,8 @@ public:
 	wi::gui::Slider shadowBoldenSlider;
 	wi::gui::Slider shadowOffsetXSlider;
 	wi::gui::Slider shadowOffsetYSlider;
+	wi::gui::Slider intensitySlider;
+	wi::gui::Slider shadowIntensitySlider;
 	wi::gui::CheckBox hiddenCheckBox;
 	wi::gui::CheckBox cameraFacingCheckBox;
 	wi::gui::CheckBox cameraScalingCheckBox;

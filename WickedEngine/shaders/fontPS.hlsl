@@ -12,7 +12,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 {
 	Texture2D tex = bindless_textures[font.texture_index];
 	float value = tex.SampleLevel(sampler_linear_clamp, input.uv, 0).r;
-	float4 color = unpack_rgba(font.color);
+	float4 color = font.color;
 
 	[branch]
 	if (font.flags & FONT_FLAG_SDF_RENDERING)
