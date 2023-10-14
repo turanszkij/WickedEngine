@@ -18,6 +18,11 @@ public:
 	wi::gui::Slider rotationSlider;
 	wi::gui::Slider alphaStartSlider;
 	wi::gui::Slider alphaEndSlider;
+	wi::gui::Slider borderSoftenSlider;
+	wi::gui::Slider cornerRounding0Slider;
+	wi::gui::Slider cornerRounding1Slider;
+	wi::gui::Slider cornerRounding2Slider;
+	wi::gui::Slider cornerRounding3Slider;
 	wi::gui::ComboBox qualityCombo;
 	wi::gui::ComboBox samplemodeCombo;
 	wi::gui::ComboBox blendModeCombo;

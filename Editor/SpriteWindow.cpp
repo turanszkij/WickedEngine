@@ -10,7 +10,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_SPRITE " Sprite", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 1400));
+	SetSize(XMFLOAT2(670, 1500));
 
 	closeButton.SetTooltip("Delete Sprite");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -170,6 +170,51 @@ void SpriteWindow::Create(EditorComponent* _editor)
 		sprite->params.mask_alpha_range_end = args.fValue;
 		});
 	AddWidget(&alphaEndSlider);
+
+	borderSoftenSlider.Create(0, 1, 0, 10000, "Border Soften: ");
+	borderSoftenSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
+		if (sprite == nullptr)
+			return;
+		sprite->params.border_soften = args.fValue;
+		});
+	AddWidget(&borderSoftenSlider);
+
+	cornerRounding0Slider.Create(0, 0.5f, 1, 10000, "Rounding 0: ");
+	cornerRounding0Slider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
+		if (sprite == nullptr)
+			return;
+		sprite->params.corners_rounding[0].radius = args.fValue;
+		});
+	AddWidget(&cornerRounding0Slider);
+
+	cornerRounding1Slider.Create(0, 0.5f, 0, 10000, "Rounding 1: ");
+	cornerRounding1Slider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
+		if (sprite == nullptr)
+			return;
+		sprite->params.corners_rounding[1].radius = args.fValue;
+		});
+	AddWidget(&cornerRounding1Slider);
+
+	cornerRounding2Slider.Create(0, 0.5f, 0, 10000, "Rounding 2: ");
+	cornerRounding2Slider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
+		if (sprite == nullptr)
+			return;
+		sprite->params.corners_rounding[2].radius = args.fValue;
+		});
+	AddWidget(&cornerRounding2Slider);
+
+	cornerRounding3Slider.Create(0, 0.5f, 0, 10000, "Rounding 3: ");
+	cornerRounding3Slider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
+		if (sprite == nullptr)
+			return;
+		sprite->params.corners_rounding[3].radius = args.fValue;
+		});
+	AddWidget(&cornerRounding3Slider);
 
 	qualityCombo.Create("Filtering: ");
 	qualityCombo.AddItem("Nearest Neighbor", wi::image::QUALITY_NEAREST);
@@ -378,7 +423,7 @@ void SpriteWindow::SetEntity(wi::ecs::Entity entity)
 	this->entity = entity;
 
 	Scene& scene = editor->GetCurrentScene();
-	const wi::Sprite* sprite = scene.sprites.GetComponent(entity);
+	wi::Sprite* sprite = scene.sprites.GetComponent(entity);
 	if (sprite == nullptr)
 		return;
 
@@ -410,6 +455,20 @@ void SpriteWindow::SetEntity(wi::ecs::Entity entity)
 	}
 	maskButton.SetTooltip(tooltiptext);
 
+	if (
+		sprite->params.corners_rounding[0].radius > 0 ||
+		sprite->params.corners_rounding[1].radius > 0 ||
+		sprite->params.corners_rounding[2].radius > 0 ||
+		sprite->params.corners_rounding[3].radius > 0
+		)
+	{
+		sprite->params.enableCornerRounding();
+	}
+	else
+	{
+		sprite->params.disableCornerRounding();
+	}
+
 	textureButton.SetImage(sprite->textureResource);
 	maskButton.SetImage(sprite->maskResource);
 	pivotXSlider.SetValue(sprite->params.pivot.x);
@@ -418,6 +477,11 @@ void SpriteWindow::SetEntity(wi::ecs::Entity entity)
 	rotationSlider.SetValue(wi::math::RadiansToDegrees(sprite->params.rotation));
 	alphaStartSlider.SetValue(sprite->params.mask_alpha_range_start);
 	alphaEndSlider.SetValue(sprite->params.mask_alpha_range_end);
+	borderSoftenSlider.SetValue(sprite->params.border_soften);
+	cornerRounding0Slider.SetValue(sprite->params.corners_rounding[0].radius);
+	cornerRounding1Slider.SetValue(sprite->params.corners_rounding[1].radius);
+	cornerRounding2Slider.SetValue(sprite->params.corners_rounding[2].radius);
+	cornerRounding3Slider.SetValue(sprite->params.corners_rounding[3].radius);
 	qualityCombo.SetSelectedByUserdataWithoutCallback(sprite->params.quality);
 	samplemodeCombo.SetSelectedByUserdataWithoutCallback(sprite->params.sampleFlag);
 	blendModeCombo.SetSelectedByUserdataWithoutCallback(sprite->params.blendFlag);
@@ -482,6 +546,11 @@ void SpriteWindow::ResizeLayout()
 	add(rotationSlider);
 	add(alphaStartSlider);
 	add(alphaEndSlider);
+	add(borderSoftenSlider);
+	add(cornerRounding0Slider);
+	add(cornerRounding1Slider);
+	add(cornerRounding2Slider);
+	add(cornerRounding3Slider);
 	add(qualityCombo);
 	add(samplemodeCombo);
 	add(blendModeCombo);
