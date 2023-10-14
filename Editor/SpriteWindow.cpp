@@ -585,8 +585,9 @@ void SpriteWindow::UpdateSpriteDrawRectParams(wi::Sprite* sprite)
 	{
 		const TextureDesc& desc = sprite->textureResource.GetTexture().GetDesc();
 		XMFLOAT4 rect = XMFLOAT4(0, 0, 0, 0);
-		int vertical_frame_count = std::max(1, sprite->anim.drawRectAnim.frameCount / sprite->anim.drawRectAnim.horizontalFrameCount);
-		rect.z = float(desc.width) / float(std::max(1, sprite->anim.drawRectAnim.horizontalFrameCount));
+		int horizontal_frame_count = std::max(1, sprite->anim.drawRectAnim.horizontalFrameCount);
+		int vertical_frame_count = sprite->anim.drawRectAnim.frameCount / horizontal_frame_count;
+		rect.z = float(desc.width) / float(horizontal_frame_count);
 		rect.w = float(desc.height) / float(vertical_frame_count);
 		sprite->params.enableDrawRect(rect);
 	}
