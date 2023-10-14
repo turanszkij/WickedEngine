@@ -504,4 +504,5 @@ void SpriteWindow::UpdateSpriteDrawRectParams(wi::Sprite* sprite)
 	{
 		sprite->params.disableDrawRect();
 	}
+	sprite->anim.drawRectAnim.restart();
 }

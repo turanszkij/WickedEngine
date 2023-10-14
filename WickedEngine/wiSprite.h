@@ -64,6 +64,12 @@ namespace wi
 
 				float _elapsedTime = 0; // internal use; you don't need to initialize
 				int _currentFrame = 0; // internal use; you don't need to initialize
+
+				void restart()
+				{
+					_elapsedTime = 0;
+					_currentFrame = 0;
+				}
 			};
 			struct WobbleAnim
 			{
