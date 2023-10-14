@@ -70,8 +70,12 @@ namespace wi
 		params.texOffset.y += anim.movingTexAnim.speedY * dt;
 
 		// Draw rect anim:
-		if (anim.drawRectAnim.frameCount > 0)
+		if (anim.drawRectAnim.frameCount > 1)
 		{
+			if (anim.drawRectAnim._currentFrame == 0)
+			{
+				anim.drawRectAnim.originalDrawRect = params.drawRect;
+			}
 			anim.drawRectAnim._elapsedTime += dt * anim.drawRectAnim.frameRate;
 			if (anim.drawRectAnim._elapsedTime >= 1.0f)
 			{
@@ -228,6 +232,11 @@ namespace wi
 			archive << params.siz;
 			archive << params.scale;
 			archive << params.color;
+			if (anim.drawRectAnim.frameCount > 1)
+			{
+				params.drawRect = anim.drawRectAnim.originalDrawRect;
+				anim.drawRectAnim.restart();
+			}
 			archive << params.drawRect;
 			archive << params.drawRect2;
 			archive << params.texOffset;

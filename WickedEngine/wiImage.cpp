@@ -179,10 +179,10 @@ namespace wi::image
 				XMStoreFloat4(corners + i, XMVector2Transform(V[i], M)); // division by w will happen on GPU
 			}
 
-			image.b0 = XMHALF2(corners[0].x, corners[0].y).v;
-			image.b1 = XMHALF2(corners[1].x - corners[0].x, corners[1].y - corners[0].y).v;
-			image.b2 = XMHALF2(corners[2].x - corners[0].x, corners[2].y - corners[0].y).v;
-			image.b3 = XMHALF2(corners[0].x - corners[1].x - corners[2].x + corners[3].x, corners[0].y - corners[1].y - corners[2].y + corners[3].y).v;
+			image.b0 = float2(corners[0].x, corners[0].y);
+			image.b1 = float2(corners[1].x - corners[0].x, corners[1].y - corners[0].y);
+			image.b2 = float2(corners[2].x - corners[0].x, corners[2].y - corners[0].y);
+			image.b3 = float2(corners[0].x - corners[1].x - corners[2].x + corners[3].x, corners[0].y - corners[1].y - corners[2].y + corners[3].y);
 
 			if (params.isCornerRoundingEnabled())
 			{
@@ -288,49 +288,33 @@ namespace wi::image
 		const float inv_width = 1.0f / float(desc.width);
 		const float inv_height = 1.0f / float(desc.height);
 
-		XMFLOAT4 texMulAdd;
 		if (params.isDrawRectEnabled())
 		{
-			texMulAdd.x = params.drawRect.z * inv_width;	// drawRec.width: mul
-			texMulAdd.y = params.drawRect.w * inv_height;	// drawRec.heigh: mul
-			texMulAdd.z = params.drawRect.x * inv_width;	// drawRec.x: add
-			texMulAdd.w = params.drawRect.y * inv_height;	// drawRec.y: add
+			image.texMulAdd.x = params.drawRect.z * inv_width;	// drawRec.width: mul
+			image.texMulAdd.y = params.drawRect.w * inv_height;	// drawRec.heigh: mul
+			image.texMulAdd.z = params.drawRect.x * inv_width;	// drawRec.x: add
+			image.texMulAdd.w = params.drawRect.y * inv_height;	// drawRec.y: add
 		}
 		else
 		{
-			texMulAdd = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
+			image.texMulAdd = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
 		}
-		texMulAdd.z += params.texOffset.x * inv_width;	// texOffset.x: add
-		texMulAdd.w += params.texOffset.y * inv_height;	// texOffset.y: add
-		XMHALF4 half_texMulAdd;
-		half_texMulAdd.x = XMConvertFloatToHalf(texMulAdd.x);
-		half_texMulAdd.y = XMConvertFloatToHalf(texMulAdd.y);
-		half_texMulAdd.z = XMConvertFloatToHalf(texMulAdd.z);
-		half_texMulAdd.w = XMConvertFloatToHalf(texMulAdd.w);
-		image.texMulAdd.x = uint(half_texMulAdd.v);
-		image.texMulAdd.y = uint(half_texMulAdd.v >> 32ull);
+		image.texMulAdd.z += params.texOffset.x * inv_width;	// texOffset.x: add
+		image.texMulAdd.w += params.texOffset.y * inv_height;	// texOffset.y: add
 
-		XMFLOAT4 texMulAdd2;
 		if (params.isDrawRect2Enabled())
 		{
-			texMulAdd2.x = params.drawRect2.z * inv_width;	// drawRec.width: mul
-			texMulAdd2.y = params.drawRect2.w * inv_height;	// drawRec.heigh: mul
-			texMulAdd2.z = params.drawRect2.x * inv_width;	// drawRec.x: add
-			texMulAdd2.w = params.drawRect2.y * inv_height;	// drawRec.y: add
+			image.texMulAdd2.x = params.drawRect2.z * inv_width;	// drawRec.width: mul
+			image.texMulAdd2.y = params.drawRect2.w * inv_height;	// drawRec.heigh: mul
+			image.texMulAdd2.z = params.drawRect2.x * inv_width;	// drawRec.x: add
+			image.texMulAdd2.w = params.drawRect2.y * inv_height;	// drawRec.y: add
 		}
 		else
 		{
-			texMulAdd2 = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
+			image.texMulAdd2 = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
 		}
-		texMulAdd2.z += params.texOffset2.x * inv_width;	// texOffset.x: add
-		texMulAdd2.w += params.texOffset2.y * inv_height;	// texOffset.y: add
-		XMHALF4 half_texMulAdd2;
-		half_texMulAdd2.x = XMConvertFloatToHalf(texMulAdd2.x);
-		half_texMulAdd2.y = XMConvertFloatToHalf(texMulAdd2.y);
-		half_texMulAdd2.z = XMConvertFloatToHalf(texMulAdd2.z);
-		half_texMulAdd2.w = XMConvertFloatToHalf(texMulAdd2.w);
-		image.texMulAdd2.x = uint(half_texMulAdd2.v);
-		image.texMulAdd2.y = uint(half_texMulAdd2.v >> 32ull);
+		image.texMulAdd2.z += params.texOffset2.x * inv_width;	// texOffset.x: add
+		image.texMulAdd2.w += params.texOffset2.y * inv_height;	// texOffset.y: add
 
 		device->EventBegin("Image", cmd);
 

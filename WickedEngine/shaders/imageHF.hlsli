@@ -33,9 +33,9 @@ struct VertextoPixel
 		else
 		{
 			// Quad interpolation: http://reedbeta.com/blog/quadrilateral-interpolation-part-2/
-			float2 b1 = unpack_half2(image.b1);
-			float2 b2 = unpack_half2(image.b2);
-			float2 b3 = unpack_half2(image.b3);
+			float2 b1 = image.b1;
+			float2 b2 = image.b2;
+			float2 b3 = image.b3;
 
 			// Set up quadratic formula
 			float A = Wedge2D(b2, b3);
@@ -63,11 +63,8 @@ struct VertextoPixel
 			else
 				uv.x = (q.y - b2.y * uv.y) / denom.y;
 
-			float4 texMulAdd = unpack_half4(image.texMulAdd);
-			float4 texMulAdd2 = unpack_half4(image.texMulAdd2);
-
-			uv0 = mad(uv, texMulAdd.xy, texMulAdd.zw);
-			uv1 = mad(uv, texMulAdd2.xy, texMulAdd2.zw);
+			uv0 = mad(uv, image.texMulAdd.xy, image.texMulAdd.zw);
+			uv1 = mad(uv, image.texMulAdd2.xy, image.texMulAdd2.zw);
 		}
 
 		if (image.flags & IMAGE_FLAG_MIRROR)

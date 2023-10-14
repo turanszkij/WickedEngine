@@ -434,7 +434,7 @@ void SpriteWindow::ResizeLayout()
 	float y = padding;
 	float jump = 20;
 
-	const float margin_left = 110;
+	const float margin_left = 118;
 	const float margin_right = 45;
 
 	auto add = [&](wi::gui::Widget& widget) {
