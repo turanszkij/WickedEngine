@@ -172,6 +172,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	AddWidget(&alphaEndSlider);
 
 	borderSoftenSlider.Create(0, 1, 0, 10000, "Border Soften: ");
+	borderSoftenSlider.SetTooltip("Soften the borders of the sprite.");
 	borderSoftenSlider.OnSlide([=](wi::gui::EventArgs args) {
 		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
 		if (sprite == nullptr)
@@ -181,6 +182,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	AddWidget(&borderSoftenSlider);
 
 	cornerRounding0Slider.Create(0, 0.5f, 1, 10000, "Rounding 0: ");
+	cornerRounding0Slider.SetTooltip("Enable corner rounding for the lop left corner.");
 	cornerRounding0Slider.OnSlide([=](wi::gui::EventArgs args) {
 		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
 		if (sprite == nullptr)
@@ -190,6 +192,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	AddWidget(&cornerRounding0Slider);
 
 	cornerRounding1Slider.Create(0, 0.5f, 0, 10000, "Rounding 1: ");
+	cornerRounding1Slider.SetTooltip("Enable corner rounding for the lop right corner.");
 	cornerRounding1Slider.OnSlide([=](wi::gui::EventArgs args) {
 		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
 		if (sprite == nullptr)
@@ -199,6 +202,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	AddWidget(&cornerRounding1Slider);
 
 	cornerRounding2Slider.Create(0, 0.5f, 0, 10000, "Rounding 2: ");
+	cornerRounding2Slider.SetTooltip("Enable corner rounding for the bottom left corner.");
 	cornerRounding2Slider.OnSlide([=](wi::gui::EventArgs args) {
 		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
 		if (sprite == nullptr)
@@ -208,6 +212,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	AddWidget(&cornerRounding2Slider);
 
 	cornerRounding3Slider.Create(0, 0.5f, 0, 10000, "Rounding 3: ");
+	cornerRounding3Slider.SetTooltip("Enable corner rounding for the bottom right corner.");
 	cornerRounding3Slider.OnSlide([=](wi::gui::EventArgs args) {
 		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
 		if (sprite == nullptr)
@@ -463,6 +468,10 @@ void SpriteWindow::SetEntity(wi::ecs::Entity entity)
 		)
 	{
 		sprite->params.enableCornerRounding();
+		sprite->params.corners_rounding[0].segments = 36;
+		sprite->params.corners_rounding[1].segments = 36;
+		sprite->params.corners_rounding[2].segments = 36;
+		sprite->params.corners_rounding[3].segments = 36;
 	}
 	else
 	{
