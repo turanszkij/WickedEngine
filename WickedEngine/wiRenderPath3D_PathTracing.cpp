@@ -373,6 +373,24 @@ namespace wi
 					wi::profiler::EndRange(range); // Traced Scene
 				}
 
+				if (depthBuffer_Main.IsValid())
+				{
+					RenderPassImage rp[] = {
+						RenderPassImage::DepthStencil(&depthBuffer_Main, RenderPassImage::LoadOp::LOAD),
+						RenderPassImage::RenderTarget(&traceResult, RenderPassImage::LoadOp::LOAD)
+					};
+					device->RenderPassBegin(rp, arraysize(rp), cmd);
+				}
+				else
+				{
+					RenderPassImage rp[] = {
+						RenderPassImage::RenderTarget(&traceResult, RenderPassImage::LoadOp::LOAD)
+					};
+					device->RenderPassBegin(rp, arraysize(rp), cmd);
+				}
+				wi::renderer::DrawSpritesAndFonts(*scene, *camera, false, cmd);
+				device->RenderPassEnd(cmd);
+
 				});
 
 			if (scene->terrains.GetCount() > 0)
