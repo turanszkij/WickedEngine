@@ -4,6 +4,9 @@
 #include "wiEmittedParticle.h"
 #include "wiTexture_BindLua.h"
 #include "wiPrimitive_BindLua.h"
+#include "wiSprite_BindLua.h"
+#include "wiSpriteFont_BindLua.h"
+
 #include <string>
 #include <wiBacklog.h>
 #include <wiECS.h>
@@ -533,6 +536,8 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_CreateExpression),
 	lunamethod(Scene_BindLua, Component_CreateHumanoid),
 	lunamethod(Scene_BindLua, Component_CreateDecal),
+	lunamethod(Scene_BindLua, Component_CreateSprite),
+	lunamethod(Scene_BindLua, Component_CreateFont),
 
 	lunamethod(Scene_BindLua, Component_GetName),
 	lunamethod(Scene_BindLua, Component_GetLayer),
@@ -557,6 +562,8 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetExpression),
 	lunamethod(Scene_BindLua, Component_GetHumanoid),
 	lunamethod(Scene_BindLua, Component_GetDecal),
+	lunamethod(Scene_BindLua, Component_GetSprite),
+	lunamethod(Scene_BindLua, Component_GetFont),
 
 	lunamethod(Scene_BindLua, Component_GetNameArray),
 	lunamethod(Scene_BindLua, Component_GetLayerArray),
@@ -581,6 +588,8 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetExpressionArray),
 	lunamethod(Scene_BindLua, Component_GetHumanoidArray),
 	lunamethod(Scene_BindLua, Component_GetDecalArray),
+	lunamethod(Scene_BindLua, Component_GetSpriteArray),
+	lunamethod(Scene_BindLua, Component_GetFontArray),
 
 	lunamethod(Scene_BindLua, Entity_GetNameArray),
 	lunamethod(Scene_BindLua, Entity_GetLayerArray),
@@ -606,6 +615,8 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Entity_GetExpressionArray),
 	lunamethod(Scene_BindLua, Entity_GetHumanoidArray),
 	lunamethod(Scene_BindLua, Entity_GetDecalArray),
+	lunamethod(Scene_BindLua, Entity_GetSpriteArray),
+	lunamethod(Scene_BindLua, Entity_GetFontArray),
 
 	lunamethod(Scene_BindLua, Component_RemoveName),
 	lunamethod(Scene_BindLua, Component_RemoveLayer),
@@ -631,6 +642,8 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_RemoveExpression),
 	lunamethod(Scene_BindLua, Component_RemoveHumanoid),
 	lunamethod(Scene_BindLua, Component_RemoveDecal),
+	lunamethod(Scene_BindLua, Component_RemoveSprite),
+	lunamethod(Scene_BindLua, Component_RemoveFont),
 
 	lunamethod(Scene_BindLua, Component_Attach),
 	lunamethod(Scene_BindLua, Component_Detach),
@@ -1194,6 +1207,40 @@ int Scene_BindLua::Component_CreateDecal(lua_State* L)
 	}
 	return 0;
 }
+int Scene_BindLua::Component_CreateSprite(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		wi::Sprite& component = scene->sprites.Create(entity);
+		Luna<Sprite_BindLua>::push(L, component);
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_CreateSprite(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_CreateFont(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		wi::SpriteFont& component = scene->fonts.Create(entity);
+		Luna<SpriteFont_BindLua>::push(L, component);
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_CreateFont(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
 
 int Scene_BindLua::Component_GetName(lua_State* L)
 {
@@ -1701,6 +1748,50 @@ int Scene_BindLua::Component_GetDecal(lua_State* L)
 	}
 	return 0;
 }
+int Scene_BindLua::Component_GetSprite(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		wi::Sprite* component = scene->sprites.GetComponent(entity);
+		if (component == nullptr)
+		{
+			return 0;
+		}
+
+		Luna<Sprite_BindLua>::push(L, *component);
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_GetSprite(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_GetFont(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		wi::SpriteFont* component = scene->fonts.GetComponent(entity);
+		if (component == nullptr)
+		{
+			return 0;
+		}
+
+		Luna<SpriteFont_BindLua>::push(L, *component);
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_GetFont(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
 
 int Scene_BindLua::Component_GetNameArray(lua_State* L)
 {
@@ -1951,6 +2042,28 @@ int Scene_BindLua::Component_GetDecalArray(lua_State* L)
 	for (size_t i = 0; i < scene->decals.GetCount(); ++i)
 	{
 		Luna<DecalComponent_BindLua>::push(L, &scene->decals[i]);
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Component_GetSpriteArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->sprites.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->sprites.GetCount(); ++i)
+	{
+		Luna<Sprite_BindLua>::push(L, scene->sprites[i]);
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Component_GetFontArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->fonts.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->fonts.GetCount(); ++i)
+	{
+		Luna<SpriteFont_BindLua>::push(L, scene->fonts[i]);
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -2216,6 +2329,28 @@ int Scene_BindLua::Entity_GetDecalArray(lua_State* L)
 	for (size_t i = 0; i < scene->decals.GetCount(); ++i)
 	{
 		wi::lua::SSetLongLong(L, scene->decals.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Entity_GetSpriteArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->sprites.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->sprites.GetCount(); ++i)
+	{
+		wi::lua::SSetLongLong(L, scene->sprites.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Entity_GetFontArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->fonts.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->fonts.GetCount(); ++i)
+	{
+		wi::lua::SSetLongLong(L, scene->fonts.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -2626,6 +2761,40 @@ int Scene_BindLua::Component_RemoveDecal(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "Scene::Component_RemoveDecal(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_RemoveSprite(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+		if (scene->sprites.Contains(entity))
+		{
+			scene->sprites.Remove(entity);
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_RemoveSprite(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_RemoveFont(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+		if (scene->fonts.Contains(entity))
+		{
+			scene->fonts.Remove(entity);
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_RemoveFont(Entity entity) not enough arguments!");
 	}
 	return 0;
 }

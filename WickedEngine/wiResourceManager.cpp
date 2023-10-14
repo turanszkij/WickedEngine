@@ -26,6 +26,7 @@ namespace wi
 		std::string script;
 		wi::video::Video video;
 		wi::vector<uint8_t> filedata;
+		int font_style = -1;
 	};
 
 	const wi::vector<uint8_t>& Resource::GetFileData() const
@@ -57,6 +58,11 @@ namespace wi
 	{
 		const ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		return resourceinternal->srgb_subresource;
+	}
+	int Resource::GetFontStyle() const
+	{
+		const ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
+		return resourceinternal->font_style;
 	}
 
 	void Resource::SetFileData(const wi::vector<uint8_t>& data)
@@ -146,6 +152,7 @@ namespace wi
 			SOUND,
 			SCRIPT,
 			VIDEO,
+			FONTSTYLE,
 		};
 		static const wi::unordered_map<std::string, DataType> types = {
 			{"BASIS", DataType::IMAGE},
@@ -162,6 +169,7 @@ namespace wi
 			{"OGG", DataType::SOUND},
 			{"LUA", DataType::SCRIPT},
 			{"MP4", DataType::VIDEO},
+			{"TTF", DataType::FONTSTYLE},
 		};
 		wi::vector<std::string> GetSupportedImageExtensions()
 		{
@@ -205,6 +213,18 @@ namespace wi
 			for (auto& x : types)
 			{
 				if (x.second == DataType::SCRIPT)
+				{
+					ret.push_back(x.first);
+				}
+			}
+			return ret;
+		}
+		wi::vector<std::string> GetSupportedFontStyleExtensions()
+		{
+			wi::vector<std::string> ret;
+			for (auto& x : types)
+			{
+				if (x.second == DataType::FONTSTYLE)
 				{
 					ret.push_back(x.first);
 				}
@@ -1069,6 +1089,13 @@ namespace wi
 				case DataType::VIDEO:
 				{
 					success = wi::video::CreateVideo(filedata, filesize, &resource->video);
+				}
+				break;
+
+				case DataType::FONTSTYLE:
+				{
+					resource->font_style = wi::font::AddFontStyle(name, filedata, filesize, true);
+					success = resource->font_style >= 0;
 				}
 				break;
 

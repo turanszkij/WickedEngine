@@ -23,7 +23,7 @@ VertextoPixel main(uint vI : SV_VertexID)
 		Out.pos = bindless_buffers[image.buffer_index].Load<float4>(image.buffer_offset + vI * sizeof(float4));
 
 		// Set up inverse bilinear interpolation
-		Out.q = Out.pos.xy - unpack_half2(image.b0);
+		Out.q = Out.pos.xy - image.b0;
 
 		if (image.flags & IMAGE_FLAG_CORNER_ROUNDING)
 		{

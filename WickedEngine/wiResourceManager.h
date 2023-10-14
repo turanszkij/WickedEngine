@@ -24,6 +24,7 @@ namespace wi
 		const std::string& GetScript() const;
 		const wi::video::Video& GetVideo() const;
 		int GetTextureSRGBSubresource() const;
+		int GetFontStyle() const;
 
 		void SetFileData(const wi::vector<uint8_t>& data);
 		void SetFileData(wi::vector<uint8_t>&& data);
@@ -53,6 +54,7 @@ namespace wi
 		wi::vector<std::string> GetSupportedSoundExtensions();
 		wi::vector<std::string> GetSupportedVideoExtensions();
 		wi::vector<std::string> GetSupportedScriptExtensions();
+		wi::vector<std::string> GetSupportedFontStyleExtensions();
 
 		// Order of these must not change as the flags can be serialized!
 		enum class Flags

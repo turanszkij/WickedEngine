@@ -4918,6 +4918,149 @@ void DrawSoftParticles(
 
 	wi::profiler::EndRange(range);
 }
+void DrawSpritesAndFonts(
+	const wi::scene::Scene& scene,
+	const wi::scene::CameraComponent& camera,
+	bool distortion,
+	wi::graphics::CommandList cmd
+)
+{
+	if (scene.sprites.GetCount() == 0 && scene.fonts.GetCount() == 0)
+		return;
+	if (distortion)
+	{
+		device->EventBegin("Sprites and Fonts (distortion)", cmd);
+	}
+	else
+	{
+		device->EventBegin("Sprites and Fonts", cmd);
+	}
+	const XMMATRIX VP = camera.GetViewProjection();
+	const XMMATRIX R = XMLoadFloat3x3(&camera.rotationMatrix);
+	enum TYPE // ordering of the enums is important, it is designed to prioritize font on top of sprite rendering if distance is the same
+	{
+		FONT,
+		SPRITE,
+	};
+	union DistanceSorter {
+		struct
+		{
+			uint64_t id : 32;
+			uint64_t type : 16;
+			uint64_t distance : 16;
+		} bits;
+		uint64_t raw;
+		static_assert(sizeof(bits) == sizeof(raw));
+	};
+	static thread_local wi::vector<uint64_t> distance_sorter;
+	distance_sorter.clear();
+	for (size_t i = 0; i < scene.sprites.GetCount(); ++i)
+	{
+		const wi::Sprite& sprite = scene.sprites[i];
+		if (sprite.IsHidden())
+			continue;
+		if (sprite.params.isExtractNormalMapEnabled() != distortion)
+			continue;
+		DistanceSorter sorter = {};
+		sorter.bits.id = uint32_t(i);
+		sorter.bits.type = SPRITE;
+		Entity entity = scene.sprites.GetEntity(i);
+		const TransformComponent* transform = scene.transforms.GetComponent(entity);
+		if (transform != nullptr)
+		{
+			sorter.bits.distance = XMConvertFloatToHalf(wi::math::DistanceEstimated(transform->GetPosition(), camera.Eye));
+		}
+		distance_sorter.push_back(sorter.raw);
+	}
+	if (!distortion)
+	{
+		for (size_t i = 0; i < scene.fonts.GetCount(); ++i)
+		{
+			const wi::SpriteFont& font = scene.fonts[i];
+			if (font.IsHidden())
+				continue;
+			DistanceSorter sorter = {};
+			sorter.bits.id = uint32_t(i);
+			sorter.bits.type = FONT;
+			Entity entity = scene.fonts.GetEntity(i);
+			const TransformComponent* transform = scene.transforms.GetComponent(entity);
+			if (transform != nullptr)
+			{
+				sorter.bits.distance = XMConvertFloatToHalf(wi::math::DistanceEstimated(transform->GetPosition(), camera.Eye));
+			}
+			distance_sorter.push_back(sorter.raw);
+		}
+	}
+	std::sort(distance_sorter.begin(), distance_sorter.end(), std::greater<uint64_t>());
+	for (auto& x : distance_sorter)
+	{
+		DistanceSorter sorter = {};
+		sorter.raw = x;
+		XMMATRIX M = VP;
+		Entity entity = INVALID_ENTITY;
+		const TransformComponent* transform = nullptr;
+
+		switch (sorter.bits.type)
+		{
+		default:
+		case SPRITE:
+		{
+			const wi::Sprite& sprite = scene.sprites[sorter.bits.id];
+			wi::image::Params params = sprite.params;
+			entity = scene.sprites.GetEntity(sorter.bits.id);
+			transform = scene.transforms.GetComponent(entity);
+			if (transform != nullptr)
+			{
+				M = XMLoadFloat4x4(&transform->world) * M;
+				if (sprite.IsCameraScaling())
+				{
+					float scale = 0.05f * wi::math::Distance(transform->GetPosition(), camera.Eye);
+					M = XMMatrixScaling(scale, scale, scale) * M;
+				}
+			}
+			if (sprite.IsCameraFacing())
+			{
+				M = R * M;
+			}
+			params.customProjection = &M;
+			if (sprite.maskResource.IsValid())
+			{
+				params.setMaskMap(&sprite.maskResource.GetTexture());
+			}
+			else
+			{
+				params.setMaskMap(nullptr);
+			}
+			wi::image::Draw(sprite.GetTexture(), params, cmd);
+		}
+		break;
+		case FONT:
+		{
+			const wi::SpriteFont& font = scene.fonts[sorter.bits.id];
+			wi::font::Params params = font.params;
+			entity = scene.fonts.GetEntity(sorter.bits.id);
+			transform = scene.transforms.GetComponent(entity);
+			if (transform != nullptr)
+			{
+				M = XMLoadFloat4x4(&transform->world) * M;
+				if (font.IsCameraScaling())
+				{
+					float scale = 0.05f * wi::math::Distance(transform->GetPosition(), camera.Eye);
+					M = XMMatrixScaling(scale, scale, scale) * M;
+				}
+			}
+			if (font.IsCameraFacing())
+			{
+				M = R * M;
+			}
+			params.customProjection = &M;
+			wi::font::Draw(font.GetText().c_str(), font.GetCurrentTextLength(), params, cmd);
+		}
+		break;
+		}
+	}
+	device->EventEnd(cmd);
+}
 void DrawLightVisualizers(
 	const Visibility& vis,
 	CommandList cmd

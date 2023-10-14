@@ -2,6 +2,7 @@
 #include "wiImage.h"
 #include "wiRandom.h"
 #include "wiTextureHelper.h"
+#include "wiHelper.h"
 
 using namespace wi::graphics;
 
@@ -27,7 +28,7 @@ namespace wi
 	{
 		if (IsHidden())
 			return;
-		wi::image::Draw(textureResource.IsValid() ? &textureResource.GetTexture() : wi::texturehelper::getWhite(), params, cmd);
+		wi::image::Draw(GetTexture(), params, cmd);
 	}
 
 	void Sprite::FixedUpdate()
@@ -69,8 +70,12 @@ namespace wi
 		params.texOffset.y += anim.movingTexAnim.speedY * dt;
 
 		// Draw rect anim:
-		if (anim.drawRectAnim.frameCount > 0)
+		if (anim.drawRectAnim.frameCount > 1)
 		{
+			if (anim.drawRectAnim._currentFrame == 0)
+			{
+				anim.drawRectAnim.originalDrawRect = params.drawRect;
+			}
 			anim.drawRectAnim._elapsedTime += dt * anim.drawRectAnim.frameRate;
 			if (anim.drawRectAnim._elapsedTime >= 1.0f)
 			{
@@ -131,6 +136,149 @@ namespace wi
 			}
 		}
 
+	}
+
+	const wi::graphics::Texture* Sprite::GetTexture() const
+	{
+		return textureResource.IsValid() ? &textureResource.GetTexture() : wi::texturehelper::getWhite();
+	}
+
+	void Sprite::Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri)
+	{
+		const std::string& dir = archive.GetSourceDirectory();
+
+		if (archive.IsReadMode())
+		{
+			archive >> _flags;
+			archive >> textureName;
+			archive >> maskName;
+
+			archive >> params._flags;
+			archive >> params.pos;
+			archive >> params.siz;
+			archive >> params.scale;
+			archive >> params.color;
+			archive >> params.drawRect;
+			archive >> params.drawRect2;
+			archive >> params.texOffset;
+			archive >> params.texOffset2;
+			archive >> params.pivot;
+			archive >> params.rotation;
+			archive >> params.fade;
+			archive >> params.opacity;
+			archive >> params.intensity;
+			archive >> params.hdr_scaling;
+			archive >> params.mask_alpha_range_start;
+			archive >> params.mask_alpha_range_end;
+			archive >> params.border_soften;
+			archive >> params.stencilRef;
+			archive >> *(uint32_t*)&params.stencilComp;
+			archive >> *(uint32_t*)&params.stencilRefMode;
+			archive >> *(uint32_t*)&params.blendFlag;
+			archive >> *(uint32_t*)&params.sampleFlag;
+			archive >> *(uint32_t*)&params.quality;
+			for (int i = 0; i < arraysize(params.corners); ++i)
+			{
+				archive >> params.corners[i];
+				archive >> params.corners_rounding[i].radius;
+				archive >> params.corners_rounding[i].segments;
+			}
+
+			archive >> anim.repeatable;
+			archive >> anim.vel;
+			archive >> anim.rot;
+			archive >> anim.scaleX;
+			archive >> anim.scaleY;
+			archive >> anim.opa;
+			archive >> anim.fad;
+			archive >> anim.movingTexAnim.speedX;
+			archive >> anim.movingTexAnim.speedY;
+			archive >> anim.drawRectAnim.frameRate;
+			archive >> anim.drawRectAnim.frameCount;
+			archive >> anim.drawRectAnim.horizontalFrameCount;
+			archive >> anim.wobbleAnim.amount;
+			archive >> anim.wobbleAnim.speed;
+
+			if (!textureName.empty() || !maskName.empty())
+			{
+				wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
+					if (!textureName.empty())
+					{
+						textureName = dir + textureName;
+						textureResource = wi::resourcemanager::Load(textureName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					}
+					if (!maskName.empty())
+					{
+						maskName = dir + maskName;
+						maskResource = wi::resourcemanager::Load(maskName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					}
+				});
+			}
+		}
+		else
+		{
+			// If detecting an absolute path in textures, remove it and convert to relative:
+			if (!dir.empty())
+			{
+				wi::helper::MakePathRelative(dir, textureName);
+				wi::helper::MakePathRelative(dir, maskName);
+			}
+
+			archive << _flags;
+			archive << textureName;
+			archive << maskName;
+
+			archive << params._flags;
+			archive << params.pos;
+			archive << params.siz;
+			archive << params.scale;
+			archive << params.color;
+			if (anim.drawRectAnim.frameCount > 1)
+			{
+				params.drawRect = anim.drawRectAnim.originalDrawRect;
+				anim.drawRectAnim.restart();
+			}
+			archive << params.drawRect;
+			archive << params.drawRect2;
+			archive << params.texOffset;
+			archive << params.texOffset2;
+			archive << params.pivot;
+			archive << params.rotation;
+			archive << params.fade;
+			archive << params.opacity;
+			archive << params.intensity;
+			archive << params.hdr_scaling;
+			archive << params.mask_alpha_range_start;
+			archive << params.mask_alpha_range_end;
+			archive << params.border_soften;
+			archive << params.stencilRef;
+			archive << (uint32_t)params.stencilComp;
+			archive << (uint32_t)params.stencilRefMode;
+			archive << (uint32_t)params.blendFlag;
+			archive << (uint32_t)params.sampleFlag;
+			archive << (uint32_t)params.quality;
+			for (int i = 0; i < arraysize(params.corners); ++i)
+			{
+				archive << params.corners[i];
+				archive << params.corners_rounding[i].radius;
+				archive << params.corners_rounding[i].segments;
+			}
+
+			archive << anim.repeatable;
+			archive << anim.vel;
+			archive << anim.rot;
+			archive << anim.scaleX;
+			archive << anim.scaleY;
+			archive << anim.opa;
+			archive << anim.fad;
+			archive << anim.movingTexAnim.speedX;
+			archive << anim.movingTexAnim.speedY;
+			archive << anim.drawRectAnim.frameRate;
+			archive << anim.drawRectAnim.frameCount;
+			archive << anim.drawRectAnim.horizontalFrameCount;
+			archive << anim.wobbleAnim.amount;
+			archive << anim.wobbleAnim.speed;
+		}
 	}
 
 }

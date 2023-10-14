@@ -89,6 +89,8 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)ProfilerWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)EmbeddedResources.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)VideoWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)SpriteWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)FontWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
@@ -142,6 +144,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ProfilerWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)yumin.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)VideoWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)SpriteWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)FontWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />

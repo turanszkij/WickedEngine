@@ -1214,6 +1214,7 @@ namespace wi
 				}
 
 				wi::renderer::DrawSoftParticles(visibility_reflection, false, cmd);
+				wi::renderer::DrawSpritesAndFonts(*scene, camera_reflection, false, cmd);
 
 				device->RenderPassEnd(cmd);
 
@@ -1875,9 +1876,12 @@ namespace wi
 			wi::profiler::EndRange(range); // Transparent Scene
 		}
 
+		wi::renderer::DrawDebugWorld(*scene, *camera, *this, cmd);
+
 		wi::renderer::DrawLightVisualizers(visibility_main, cmd);
 
 		wi::renderer::DrawSoftParticles(visibility_main, false, cmd);
+		wi::renderer::DrawSpritesAndFonts(*scene, *camera, false, cmd);
 
 		if (getVolumeLightsEnabled() && visibility_main.IsRequestedVolumetricLights())
 		{
@@ -1912,8 +1916,6 @@ namespace wi
 				scene->weather.IsVolumetricClouds() ? &volumetriccloudResources.texture_cloudMask : nullptr
 			);
 		}
-
-		wi::renderer::DrawDebugWorld(*scene, *camera, *this, cmd);
 
 		device->RenderPassEnd(cmd);
 
@@ -1957,6 +1959,7 @@ namespace wi
 			device->BindViewports(1, &vp, cmd);
 
 			wi::renderer::DrawSoftParticles(visibility_main, true, cmd);
+			wi::renderer::DrawSpritesAndFonts(*scene, *camera, true, cmd);
 
 			device->RenderPassEnd(cmd);
 		}

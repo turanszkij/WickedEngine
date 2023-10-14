@@ -4,6 +4,7 @@
 #include "wiSpinLock.h"
 #include "wiGPUBVH.h"
 #include "wiSprite.h"
+#include "wiSpriteFont.h"
 #include "wiMath.h"
 #include "wiECS.h"
 #include "wiScene_Components.h"
@@ -55,6 +56,8 @@ namespace wi::scene
 		wi::ecs::ComponentManager<ExpressionComponent>& expressions = componentLibrary.Register<ExpressionComponent>("wi::scene::Scene::expressions");
 		wi::ecs::ComponentManager<HumanoidComponent>& humanoids = componentLibrary.Register<HumanoidComponent>("wi::scene::Scene::humanoids");
 		wi::ecs::ComponentManager<wi::terrain::Terrain>& terrains = componentLibrary.Register<wi::terrain::Terrain>("wi::scene::Scene::terrains", 3); // version = 3
+		wi::ecs::ComponentManager<wi::Sprite>& sprites = componentLibrary.Register<wi::Sprite>("wi::scene::Scene::sprites");
+		wi::ecs::ComponentManager<wi::SpriteFont>& fonts = componentLibrary.Register<wi::SpriteFont>("wi::scene::Scene::fonts");
 
 		// Non-serialized attributes:
 		float dt = 0;
@@ -411,6 +414,8 @@ namespace wi::scene
 		void RunSoundUpdateSystem(wi::jobsystem::context& ctx);
 		void RunVideoUpdateSystem(wi::jobsystem::context& ctx);
 		void RunScriptUpdateSystem(wi::jobsystem::context& ctx);
+		void RunSpriteUpdateSystem(wi::jobsystem::context& ctx);
+		void RunFontUpdateSystem(wi::jobsystem::context& ctx);
 
 
 		struct RayIntersectionResult

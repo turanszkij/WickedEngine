@@ -7,8 +7,8 @@
 #include "wiEventHandler.h"
 #include "wiTimer.h"
 
-using namespace wi::graphics;
 using namespace wi::enums;
+using namespace wi::graphics;
 
 namespace wi::image
 {
@@ -17,14 +17,20 @@ namespace wi::image
 	static Shader pixelShader;
 	static BlendState blendStates[BLENDMODE_COUNT];
 	static RasterizerState rasterizerState;
-	static DepthStencilState depthStencilStates[STENCILMODE_COUNT][STENCILREFMODE_COUNT];
+	enum DEPTH_TEST_MODE
+	{
+		DEPTH_TEST_OFF,
+		DEPTH_TEST_ON,
+		DEPTH_TEST_MODE_COUNT
+	};
+	static DepthStencilState depthStencilStates[STENCILMODE_COUNT][STENCILREFMODE_COUNT][DEPTH_TEST_MODE_COUNT];
 	enum STRIP_MODE
 	{
 		STRIP_OFF,
 		STRIP_ON,
 		STRIP_MODE_COUNT,
 	};
-	static PipelineState imagePSO[BLENDMODE_COUNT][STENCILMODE_COUNT][STENCILREFMODE_COUNT][STRIP_MODE_COUNT];
+	static PipelineState imagePSO[BLENDMODE_COUNT][STENCILMODE_COUNT][STENCILREFMODE_COUNT][DEPTH_TEST_MODE_COUNT][STRIP_MODE_COUNT];
 	static thread_local Texture backgroundTexture;
 	static thread_local wi::Canvas canvas;
 
@@ -94,6 +100,9 @@ namespace wi::image
 		color.x *= darken;
 		color.y *= darken;
 		color.z *= darken;
+		color.x *= params.intensity;
+		color.y *= params.intensity;
+		color.z *= params.intensity;
 		color.w *= params.opacity;
 
 		XMHALF4 packed_color;
@@ -173,10 +182,10 @@ namespace wi::image
 				XMStoreFloat4(corners + i, XMVector2Transform(V[i], M)); // division by w will happen on GPU
 			}
 
-			image.b0 = XMHALF2(corners[0].x, corners[0].y).v;
-			image.b1 = XMHALF2(corners[1].x - corners[0].x, corners[1].y - corners[0].y).v;
-			image.b2 = XMHALF2(corners[2].x - corners[0].x, corners[2].y - corners[0].y).v;
-			image.b3 = XMHALF2(corners[0].x - corners[1].x - corners[2].x + corners[3].x, corners[0].y - corners[1].y - corners[2].y + corners[3].y).v;
+			image.b0 = float2(corners[0].x, corners[0].y);
+			image.b1 = float2(corners[1].x - corners[0].x, corners[1].y - corners[0].y);
+			image.b2 = float2(corners[2].x - corners[0].x, corners[2].y - corners[0].y);
+			image.b3 = float2(corners[0].x - corners[1].x - corners[2].x + corners[3].x, corners[0].y - corners[1].y - corners[2].y + corners[3].y);
 
 			if (params.isCornerRoundingEnabled())
 			{
@@ -282,49 +291,33 @@ namespace wi::image
 		const float inv_width = 1.0f / float(desc.width);
 		const float inv_height = 1.0f / float(desc.height);
 
-		XMFLOAT4 texMulAdd;
 		if (params.isDrawRectEnabled())
 		{
-			texMulAdd.x = params.drawRect.z * inv_width;	// drawRec.width: mul
-			texMulAdd.y = params.drawRect.w * inv_height;	// drawRec.heigh: mul
-			texMulAdd.z = params.drawRect.x * inv_width;	// drawRec.x: add
-			texMulAdd.w = params.drawRect.y * inv_height;	// drawRec.y: add
+			image.texMulAdd.x = params.drawRect.z * inv_width;	// drawRec.width: mul
+			image.texMulAdd.y = params.drawRect.w * inv_height;	// drawRec.heigh: mul
+			image.texMulAdd.z = params.drawRect.x * inv_width;	// drawRec.x: add
+			image.texMulAdd.w = params.drawRect.y * inv_height;	// drawRec.y: add
 		}
 		else
 		{
-			texMulAdd = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
+			image.texMulAdd = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
 		}
-		texMulAdd.z += params.texOffset.x * inv_width;	// texOffset.x: add
-		texMulAdd.w += params.texOffset.y * inv_height;	// texOffset.y: add
-		XMHALF4 half_texMulAdd;
-		half_texMulAdd.x = XMConvertFloatToHalf(texMulAdd.x);
-		half_texMulAdd.y = XMConvertFloatToHalf(texMulAdd.y);
-		half_texMulAdd.z = XMConvertFloatToHalf(texMulAdd.z);
-		half_texMulAdd.w = XMConvertFloatToHalf(texMulAdd.w);
-		image.texMulAdd.x = uint(half_texMulAdd.v);
-		image.texMulAdd.y = uint(half_texMulAdd.v >> 32ull);
+		image.texMulAdd.z += params.texOffset.x * inv_width;	// texOffset.x: add
+		image.texMulAdd.w += params.texOffset.y * inv_height;	// texOffset.y: add
 
-		XMFLOAT4 texMulAdd2;
 		if (params.isDrawRect2Enabled())
 		{
-			texMulAdd2.x = params.drawRect2.z * inv_width;	// drawRec.width: mul
-			texMulAdd2.y = params.drawRect2.w * inv_height;	// drawRec.heigh: mul
-			texMulAdd2.z = params.drawRect2.x * inv_width;	// drawRec.x: add
-			texMulAdd2.w = params.drawRect2.y * inv_height;	// drawRec.y: add
+			image.texMulAdd2.x = params.drawRect2.z * inv_width;	// drawRec.width: mul
+			image.texMulAdd2.y = params.drawRect2.w * inv_height;	// drawRec.heigh: mul
+			image.texMulAdd2.z = params.drawRect2.x * inv_width;	// drawRec.x: add
+			image.texMulAdd2.w = params.drawRect2.y * inv_height;	// drawRec.y: add
 		}
 		else
 		{
-			texMulAdd2 = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
+			image.texMulAdd2 = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
 		}
-		texMulAdd2.z += params.texOffset2.x * inv_width;	// texOffset.x: add
-		texMulAdd2.w += params.texOffset2.y * inv_height;	// texOffset.y: add
-		XMHALF4 half_texMulAdd2;
-		half_texMulAdd2.x = XMConvertFloatToHalf(texMulAdd2.x);
-		half_texMulAdd2.y = XMConvertFloatToHalf(texMulAdd2.y);
-		half_texMulAdd2.z = XMConvertFloatToHalf(texMulAdd2.z);
-		half_texMulAdd2.w = XMConvertFloatToHalf(texMulAdd2.w);
-		image.texMulAdd2.x = uint(half_texMulAdd2.v);
-		image.texMulAdd2.y = uint(half_texMulAdd2.v >> 32ull);
+		image.texMulAdd2.z += params.texOffset2.x * inv_width;	// texOffset.x: add
+		image.texMulAdd2.w += params.texOffset2.y * inv_height;	// texOffset.y: add
 
 		device->EventBegin("Image", cmd);
 
@@ -335,7 +328,7 @@ namespace wi::image
 		}
 		device->BindStencilRef(stencilRef, cmd);
 
-		device->BindPipelineState(&imagePSO[params.blendFlag][params.stencilComp][params.stencilRefMode][strip_mode], cmd);
+		device->BindPipelineState(&imagePSO[params.blendFlag][params.stencilComp][params.stencilRefMode][params.isDepthTestEnabled()][strip_mode], cmd);
 
 		device->BindDynamicConstantBuffer(image, CBSLOT_IMAGE, cmd);
 
@@ -380,23 +373,25 @@ namespace wi::image
 			{
 				for (int m = 0; m < STENCILREFMODE_COUNT; ++m)
 				{
-					desc.dss = &depthStencilStates[k][m];
-
-					for (int n = 0; n < STRIP_MODE_COUNT; ++n)
+					for (int d = 0; d < DEPTH_TEST_MODE_COUNT; ++d)
 					{
-						switch (n)
-						{
-						default:
-						case STRIP_ON:
-							desc.pt = PrimitiveTopology::TRIANGLESTRIP;
-							break;
-						case STRIP_OFF:
-							desc.pt = PrimitiveTopology::TRIANGLELIST;
-							break;
-						}
-						device->CreatePipelineState(&desc, &imagePSO[j][k][m][n]);
-					}
+						desc.dss = &depthStencilStates[k][m][d];
 
+						for (int n = 0; n < STRIP_MODE_COUNT; ++n)
+						{
+							switch (n)
+							{
+							default:
+							case STRIP_ON:
+								desc.pt = PrimitiveTopology::TRIANGLESTRIP;
+								break;
+							case STRIP_OFF:
+								desc.pt = PrimitiveTopology::TRIANGLELIST;
+								break;
+							}
+							device->CreatePipelineState(&desc, &imagePSO[j][k][m][d][n]);
+						}
+					}
 				}
 			}
 		}
@@ -425,59 +420,75 @@ namespace wi::image
 
 		for (int i = 0; i < STENCILREFMODE_COUNT; ++i)
 		{
-			DepthStencilState dsd;
-			dsd.depth_enable = false;
-			dsd.stencil_enable = false;
-			depthStencilStates[STENCILMODE_DISABLED][i] = dsd;
-
-			dsd.stencil_enable = true;
-			switch (i)
+			for (int d = 0; d < DEPTH_TEST_MODE_COUNT; ++d)
 			{
-			case STENCILREFMODE_ENGINE:
-				dsd.stencil_read_mask = STENCILREF_MASK_ENGINE;
-				break;
-			case STENCILREFMODE_USER:
-				dsd.stencil_read_mask = STENCILREF_MASK_USER;
-				break;
-			default:
-				dsd.stencil_read_mask = STENCILREF_MASK_ALL;
-				break;
+				DepthStencilState dsd;
+				dsd.depth_write_mask = DepthWriteMask::ZERO;
+
+				switch (d)
+				{
+				default:
+				case DEPTH_TEST_OFF:
+					dsd.depth_enable = false;
+					break;
+				case DEPTH_TEST_ON:
+					dsd.depth_enable = true;
+					dsd.depth_func = ComparisonFunc::GREATER_EQUAL;
+					break;
+				}
+
+				dsd.stencil_enable = false;
+				depthStencilStates[STENCILMODE_DISABLED][i][d] = dsd;
+
+				dsd.stencil_enable = true;
+				switch (i)
+				{
+				case STENCILREFMODE_ENGINE:
+					dsd.stencil_read_mask = STENCILREF_MASK_ENGINE;
+					break;
+				case STENCILREFMODE_USER:
+					dsd.stencil_read_mask = STENCILREF_MASK_USER;
+					break;
+				default:
+					dsd.stencil_read_mask = STENCILREF_MASK_ALL;
+					break;
+				}
+				dsd.stencil_write_mask = 0;
+				dsd.front_face.stencil_pass_op = StencilOp::KEEP;
+				dsd.front_face.stencil_fail_op = StencilOp::KEEP;
+				dsd.front_face.stencil_depth_fail_op = StencilOp::KEEP;
+				dsd.back_face.stencil_pass_op = StencilOp::KEEP;
+				dsd.back_face.stencil_fail_op = StencilOp::KEEP;
+				dsd.back_face.stencil_depth_fail_op = StencilOp::KEEP;
+
+				dsd.front_face.stencil_func = ComparisonFunc::EQUAL;
+				dsd.back_face.stencil_func = ComparisonFunc::EQUAL;
+				depthStencilStates[STENCILMODE_EQUAL][i][d] = dsd;
+
+				dsd.front_face.stencil_func = ComparisonFunc::LESS;
+				dsd.back_face.stencil_func = ComparisonFunc::LESS;
+				depthStencilStates[STENCILMODE_LESS][i][d] = dsd;
+
+				dsd.front_face.stencil_func = ComparisonFunc::LESS_EQUAL;
+				dsd.back_face.stencil_func = ComparisonFunc::LESS_EQUAL;
+				depthStencilStates[STENCILMODE_LESSEQUAL][i][d] = dsd;
+
+				dsd.front_face.stencil_func = ComparisonFunc::GREATER;
+				dsd.back_face.stencil_func = ComparisonFunc::GREATER;
+				depthStencilStates[STENCILMODE_GREATER][i][d] = dsd;
+
+				dsd.front_face.stencil_func = ComparisonFunc::GREATER_EQUAL;
+				dsd.back_face.stencil_func = ComparisonFunc::GREATER_EQUAL;
+				depthStencilStates[STENCILMODE_GREATEREQUAL][i][d] = dsd;
+
+				dsd.front_face.stencil_func = ComparisonFunc::NOT_EQUAL;
+				dsd.back_face.stencil_func = ComparisonFunc::NOT_EQUAL;
+				depthStencilStates[STENCILMODE_NOT][i][d] = dsd;
+
+				dsd.front_face.stencil_func = ComparisonFunc::ALWAYS;
+				dsd.back_face.stencil_func = ComparisonFunc::ALWAYS;
+				depthStencilStates[STENCILMODE_ALWAYS][i][d] = dsd;
 			}
-			dsd.stencil_write_mask = 0;
-			dsd.front_face.stencil_pass_op = StencilOp::KEEP;
-			dsd.front_face.stencil_fail_op = StencilOp::KEEP;
-			dsd.front_face.stencil_depth_fail_op = StencilOp::KEEP;
-			dsd.back_face.stencil_pass_op = StencilOp::KEEP;
-			dsd.back_face.stencil_fail_op = StencilOp::KEEP;
-			dsd.back_face.stencil_depth_fail_op = StencilOp::KEEP;
-
-			dsd.front_face.stencil_func = ComparisonFunc::EQUAL;
-			dsd.back_face.stencil_func = ComparisonFunc::EQUAL;
-			depthStencilStates[STENCILMODE_EQUAL][i] = dsd;
-
-			dsd.front_face.stencil_func = ComparisonFunc::LESS;
-			dsd.back_face.stencil_func = ComparisonFunc::LESS;
-			depthStencilStates[STENCILMODE_LESS][i] = dsd;
-
-			dsd.front_face.stencil_func = ComparisonFunc::LESS_EQUAL;
-			dsd.back_face.stencil_func = ComparisonFunc::LESS_EQUAL;
-			depthStencilStates[STENCILMODE_LESSEQUAL][i] = dsd;
-
-			dsd.front_face.stencil_func = ComparisonFunc::GREATER;
-			dsd.back_face.stencil_func = ComparisonFunc::GREATER;
-			depthStencilStates[STENCILMODE_GREATER][i] = dsd;
-
-			dsd.front_face.stencil_func = ComparisonFunc::GREATER_EQUAL;
-			dsd.back_face.stencil_func = ComparisonFunc::GREATER_EQUAL;
-			depthStencilStates[STENCILMODE_GREATEREQUAL][i] = dsd;
-
-			dsd.front_face.stencil_func = ComparisonFunc::NOT_EQUAL;
-			dsd.back_face.stencil_func = ComparisonFunc::NOT_EQUAL;
-			depthStencilStates[STENCILMODE_NOT][i] = dsd;
-
-			dsd.front_face.stencil_func = ComparisonFunc::ALWAYS;
-			dsd.back_face.stencil_func = ComparisonFunc::ALWAYS;
-			depthStencilStates[STENCILMODE_ALWAYS][i] = dsd;
 		}
 
 

@@ -12,14 +12,14 @@ float4 main(VertextoPixel input) : SV_TARGET
 {
 	Texture2D tex = bindless_textures[font.texture_index];
 	float value = tex.SampleLevel(sampler_linear_clamp, input.uv, 0).r;
-	float4 color = unpack_rgba(font.color);
+	float4 color = font.color;
 
 	[branch]
 	if (font.flags & FONT_FLAG_SDF_RENDERING)
 	{
 		float2 bary_fw = fwidth(input.bary);
 		float w = max(bary_fw.x, bary_fw.y); // screen coverage dependency
-		w = max(0.005, w); // min softness to avoid pixelated hard edge in magnification
+		w = max(w, 1.0 / 255.0); // min softness to avoid pixelated hard edge in magnification
 		w += font.softness;
 		w = saturate(w);
 		float mid = lerp(SDF::onedge_value_unorm, 0, font.bolden);

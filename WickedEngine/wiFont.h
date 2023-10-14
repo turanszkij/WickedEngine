@@ -56,6 +56,8 @@ namespace wi::font
 		float shadow_offset_y = 0; // offset for shadow under the text in logical canvas coordinates
 		Cursor cursor; // cursor can be used to continue text drawing by taking the Draw's return value (optional)
 		float hdr_scaling = 1.0f; // a scaling value for use by linear output mapping
+		float intensity = 1.0f; // color multiplier
+		float shadow_intensity = 1.0f; // shadow color multiplier
 		const XMMATRIX* customProjection = nullptr;
 		const XMMATRIX* customRotation = nullptr;
 
@@ -140,10 +142,11 @@ namespace wi::font
 	//	fontName : name of the font (it doesn't need to be a path)
 	//	data : binary data of the .ttf font
 	//	size : size of the font binary data
+	//  copyData : whether data is copied away for storage. If false (default) developer must ensure that it is not deleted
 	//	Returns fontStyleID that is reusable. If font already exists, just return its ID
 	//	NOTE: When loading font with this method, the developer must ensure that font data is
-	//	not deleted while the font is in use
-	int AddFontStyle(const std::string& fontName, const uint8_t* data, size_t size);
+	//	not deleted while the font is in use (unless copyData is specified as true)
+	int AddFontStyle(const std::string& fontName, const uint8_t* data, size_t size, bool copyData = false);
 
 	// Set canvas for the CommandList to handle DPI-aware font rendering on the current thread
 	void SetCanvas(const wi::Canvas& current_canvas);
@@ -168,6 +171,14 @@ namespace wi::font
 	XMFLOAT2 TextSize(const wchar_t* text, const Params& params);
 	XMFLOAT2 TextSize(const std::string& text, const Params& params);
 	XMFLOAT2 TextSize(const std::wstring& text, const Params& params);
+
+	// Computes the text's cursor coordinate for a given string
+	Cursor TextCursor(const char* text, size_t text_length, const Params& params);
+	Cursor TextCursor(const wchar_t* text, size_t text_length, const Params& params);
+	Cursor TextCursor(const char* text, const Params& params);
+	Cursor TextCursor(const wchar_t* text, const Params& params);
+	Cursor TextCursor(const std::string& text, const Params& params);
+	Cursor TextCursor(const std::wstring& text, const Params& params);
 
 	// Computes the text's width in logical canvas coordinates
 	//	Avoid calling TextWidth() and TextHeight() both, instead use TextSize() if you need both measurements!

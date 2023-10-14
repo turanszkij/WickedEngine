@@ -15,8 +15,8 @@ struct ImageConstants
 	float hdr_scaling;
 	uint2 packed_color; // packed half4
 
-	uint2 texMulAdd; // packed half4
-	uint2 texMulAdd2; // packed half4
+	float4 texMulAdd;
+	float4 texMulAdd2;
 
 	int buffer_index;
 	uint buffer_offset;
@@ -26,13 +26,13 @@ struct ImageConstants
 	int texture_mask_index;
 	int texture_background_index;
 	float border_soften;
-	uint mask_alpha_range;
+	uint mask_alpha_range; // packed half2
 
 	// parameters for inverse bilinear interpolation:
-	uint b0; // packed half2
-	uint b1; // packed half2
-	uint b2; // packed half2
-	uint b3; // packed half2
+	float2 b0;
+	float2 b1;
+	float2 b2;
+	float2 b3;
 };
 CONSTANTBUFFER(image, ImageConstants, CBSLOT_IMAGE);
 

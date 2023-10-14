@@ -20,21 +20,26 @@
 #include <fstream>
 #include <mutex>
 
+using namespace wi::enums;
 using namespace wi::graphics;
 
 namespace wi::font
 {
 	namespace font_internal
 	{
+		enum DEPTH_TEST_MODE
+		{
+			DEPTH_TEST_OFF,
+			DEPTH_TEST_ON,
+			DEPTH_TEST_MODE_COUNT
+		};
 		static BlendState blendState;
 		static RasterizerState rasterizerState;
-		static DepthStencilState depthStencilState;
-		static DepthStencilState depthStencilState_depth_test;
+		static DepthStencilState depthStencilStates[DEPTH_TEST_MODE_COUNT];
 
 		static Shader vertexShader;
 		static Shader pixelShader;
-		static PipelineState PSO;
-		static PipelineState PSO_depth_test;
+		static PipelineState PSO[DEPTH_TEST_MODE_COUNT];
 
 		static thread_local wi::Canvas canvas;
 
@@ -108,7 +113,7 @@ namespace wi::font
 		};
 		static_assert(sizeof(GlyphHash) == sizeof(uint32_t));
 		static wi::unordered_set<uint32_t> pendingGlyphs;
-		static std::mutex glyphLock;
+		static std::mutex locker;
 
 		struct ParseStatus
 		{
@@ -161,7 +166,7 @@ namespace wi::font
 				if (glyph_lookup.count(hash.raw) == 0)
 				{
 					// glyph not packed yet, so add to pending list:
-					std::scoped_lock locker(glyphLock);
+					std::scoped_lock lck(locker);
 					pendingGlyphs.insert(hash.raw);
 					continue;
 				}
@@ -262,17 +267,17 @@ namespace wi::font
 		wi::renderer::LoadShader(ShaderStage::VS, vertexShader, "fontVS.cso");
 		wi::renderer::LoadShader(ShaderStage::PS, pixelShader, "fontPS.cso");
 
-		PipelineStateDesc desc;
-		desc.vs = &vertexShader;
-		desc.ps = &pixelShader;
-		desc.bs = &blendState;
-		desc.dss = &depthStencilState;
-		desc.rs = &rasterizerState;
-		desc.pt = PrimitiveTopology::TRIANGLESTRIP;
-		wi::graphics::GetDevice()->CreatePipelineState(&desc, &PSO);
-
-		desc.dss = &depthStencilState_depth_test;
-		wi::graphics::GetDevice()->CreatePipelineState(&desc, &PSO_depth_test);
+		for (int d = 0; d < DEPTH_TEST_MODE_COUNT; ++d)
+		{
+			PipelineStateDesc desc;
+			desc.vs = &vertexShader;
+			desc.ps = &pixelShader;
+			desc.bs = &blendState;
+			desc.dss = &depthStencilStates[d];
+			desc.rs = &rasterizerState;
+			desc.pt = PrimitiveTopology::TRIANGLESTRIP;
+			wi::graphics::GetDevice()->CreatePipelineState(&desc, &PSO[d]);
+		}
 	}
 	void Initialize()
 	{
@@ -311,12 +316,12 @@ namespace wi::font
 		DepthStencilState dsd;
 		dsd.depth_enable = false;
 		dsd.stencil_enable = false;
-		depthStencilState = dsd;
+		depthStencilStates[DEPTH_TEST_OFF] = dsd;
 
 		dsd.depth_enable = true;
 		dsd.depth_write_mask = DepthWriteMask::ZERO;
-		dsd.depth_func = ComparisonFunc::GREATER;
-		depthStencilState_depth_test = dsd;
+		dsd.depth_func = ComparisonFunc::GREATER_EQUAL;
+		depthStencilStates[DEPTH_TEST_ON] = dsd;
 
 		static wi::eventhandler::Handle handle1 = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 		LoadShaders();
@@ -333,7 +338,7 @@ namespace wi::font
 	}
 	void UpdateAtlas(float upscaling)
 	{
-		std::scoped_lock locker(glyphLock);
+		std::scoped_lock lck(locker);
 
 		upscaling = std::max(1.5f, upscaling); // add some minimum upscaling, especially for SDF
 		static float upscaling_prev = 1;
@@ -501,6 +506,7 @@ namespace wi::font
 	}
 	int AddFontStyle(const std::string& fontName)
 	{
+		std::scoped_lock lck(locker);
 		for (size_t i = 0; i < fontStyles.size(); i++)
 		{
 			const FontStyle& fontStyle = *fontStyles[i];
@@ -514,8 +520,9 @@ namespace wi::font
 		InvalidateAtlas(); // invalidate atlas, in case there were missing glyphs, upon adding new font style they could become valid
 		return int(fontStyles.size() - 1);
 	}
-	int AddFontStyle(const std::string& fontName, const uint8_t* data, size_t size)
+	int AddFontStyle(const std::string& fontName, const uint8_t* data, size_t size, bool copyData)
 	{
+		std::scoped_lock lck(locker);
 		for (size_t i = 0; i < fontStyles.size(); i++)
 		{
 			const FontStyle& fontStyle = *fontStyles[i];
@@ -525,6 +532,12 @@ namespace wi::font
 			}
 		}
 		fontStyles.push_back(std::make_unique<FontStyle>());
+		if (copyData)
+		{
+			fontStyles.back()->fontBuffer.resize(size);
+			std::memcpy(fontStyles.back()->fontBuffer.data(), data, size);
+			data = fontStyles.back()->fontBuffer.data();
+		}
 		fontStyles.back()->Create(fontName, data, size);
 		InvalidateAtlas(); // invalidate atlas, in case there were missing glyphs, upon adding new font style they could become valid
 		return int(fontStyles.size() - 1);
@@ -560,14 +573,7 @@ namespace wi::font
 
 			device->EventBegin("Font", cmd);
 
-			if (params.isDepthTestEnabled())
-			{
-				device->BindPipelineState(&PSO_depth_test, cmd);
-			}
-			else
-			{
-				device->BindPipelineState(&PSO, cmd);
-			}
+			device->BindPipelineState(&PSO[params.isDepthTestEnabled()], cmd);
 
 			font.flags = 0;
 			if (params.isSDFRenderingEnabled())
@@ -625,9 +631,12 @@ namespace wi::font
 			{
 				// font shadow render:
 				XMStoreFloat4x4(&font.transform, XMMatrixTranslation(params.shadow_offset_x, params.shadow_offset_y, 0) * M);
-				font.color = params.shadowColor.rgba;
+				font.color = params.shadowColor;
+				font.color.x *= params.shadow_intensity;
+				font.color.y *= params.shadow_intensity;
+				font.color.z *= params.shadow_intensity;
 				font.bolden = params.shadow_bolden;
-				font.softness = params.shadow_softness;
+				font.softness = params.shadow_softness * 0.5f;
 				device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
 
 				device->DrawInstanced(4, status.quadCount, 0, 0, cmd);
@@ -635,9 +644,12 @@ namespace wi::font
 
 			// font base render:
 			XMStoreFloat4x4(&font.transform, M);
-			font.color = params.color.rgba;
+			font.color = params.color;
+			font.color.x *= params.intensity;
+			font.color.y *= params.intensity;
+			font.color.z *= params.intensity;
 			font.bolden = params.bolden;
-			font.softness = params.softness;
+			font.softness = params.softness * 0.5f;
 			device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
 
 			device->DrawInstanced(4, status.quadCount, 0, 0, cmd);
@@ -727,6 +739,57 @@ namespace wi::font
 			return XMFLOAT2(0, 0);
 		}
 		return ParseText(text.c_str(), text.length(), params).cursor.size;
+	}
+
+	Cursor TextCursor(const char* text, size_t text_length, const Params& params)
+	{
+		if (text_length == 0)
+		{
+			return {};
+		}
+		return ParseText(text, text_length, params).cursor;
+	}
+	Cursor TextCursor(const wchar_t* text, size_t text_length, const Params& params)
+	{
+		if (text_length == 0)
+		{
+			return {};
+		}
+		return ParseText(text, text_length, params).cursor;
+	}
+	Cursor TextCursor(const char* text, const Params& params)
+	{
+		size_t text_length = strlen(text);
+		if (text_length == 0)
+		{
+			return {};
+		}
+		return ParseText(text, text_length, params).cursor;
+	}
+	Cursor TextCursor(const wchar_t* text, const Params& params)
+	{
+		size_t text_length = wcslen(text);
+		if (text_length == 0)
+		{
+			return {};
+		}
+		return ParseText(text, text_length, params).cursor;
+	}
+	Cursor TextCursor(const std::string& text, const Params& params)
+	{
+		if (text.empty())
+		{
+			return {};
+		}
+		return ParseText(text.c_str(), text.length(), params).cursor;
+	}
+	Cursor TextCursor(const std::wstring& text, const Params& params)
+	{
+		if (text.empty())
+		{
+			return {};
+		}
+		return ParseText(text.c_str(), text.length(), params).cursor;
 	}
 
 	float TextWidth(const char* text, size_t text_length, const Params& params)

@@ -1754,7 +1754,7 @@ namespace wi::gui
 		SetName(name);
 		SetText(name);
 		OnSlide([](EventArgs args) {});
-		SetSize(XMFLOAT2(200, 40));
+		SetSize(XMFLOAT2(200, 20));
 
 		valueInputField.Create(name + "_endInputField");
 		valueInputField.SetLocalizationEnabled(LocalizationEnabled::None);
