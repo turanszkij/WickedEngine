@@ -170,6 +170,14 @@ namespace wi::font
 	XMFLOAT2 TextSize(const std::string& text, const Params& params);
 	XMFLOAT2 TextSize(const std::wstring& text, const Params& params);
 
+	// Computes the text's cursor coordinate for a given string
+	Cursor TextCursor(const char* text, size_t text_length, const Params& params);
+	Cursor TextCursor(const wchar_t* text, size_t text_length, const Params& params);
+	Cursor TextCursor(const char* text, const Params& params);
+	Cursor TextCursor(const wchar_t* text, const Params& params);
+	Cursor TextCursor(const std::string& text, const Params& params);
+	Cursor TextCursor(const std::wstring& text, const Params& params);
+
 	// Computes the text's width in logical canvas coordinates
 	//	Avoid calling TextWidth() and TextHeight() both, instead use TextSize() if you need both measurements!
 	float TextWidth(const char* text, size_t text_length, const Params& params);

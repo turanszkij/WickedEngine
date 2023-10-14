@@ -32,10 +32,8 @@ void FontWindow::Create(EditorComponent* _editor)
 	float hei = 20;
 
 	textInput.Create("");
-	textInput.SetDescription("Text: ");
 	textInput.SetPos(XMFLOAT2(x, y));
-	textInput.SetSize(XMFLOAT2(siz, hei));
-	textInput.OnInputAccepted([=](wi::gui::EventArgs args) {
+	textInput.OnInput([=](wi::gui::EventArgs args) {
 		wi::SpriteFont* font = editor->GetCurrentScene().fonts.GetComponent(entity);
 		if (font == nullptr)
 			return;
@@ -443,7 +441,7 @@ void FontWindow::ResizeLayout()
 		y += padding;
 	};
 
-	add(textInput);
+	add_fullwidth(textInput);
 	add(fontStyleButton);
 	add(fontSizeCombo);
 	add(hAlignCombo);

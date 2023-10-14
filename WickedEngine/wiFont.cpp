@@ -735,6 +735,57 @@ namespace wi::font
 		return ParseText(text.c_str(), text.length(), params).cursor.size;
 	}
 
+	Cursor TextCursor(const char* text, size_t text_length, const Params& params)
+	{
+		if (text_length == 0)
+		{
+			return {};
+		}
+		return ParseText(text, text_length, params).cursor;
+	}
+	Cursor TextCursor(const wchar_t* text, size_t text_length, const Params& params)
+	{
+		if (text_length == 0)
+		{
+			return {};
+		}
+		return ParseText(text, text_length, params).cursor;
+	}
+	Cursor TextCursor(const char* text, const Params& params)
+	{
+		size_t text_length = strlen(text);
+		if (text_length == 0)
+		{
+			return {};
+		}
+		return ParseText(text, text_length, params).cursor;
+	}
+	Cursor TextCursor(const wchar_t* text, const Params& params)
+	{
+		size_t text_length = wcslen(text);
+		if (text_length == 0)
+		{
+			return {};
+		}
+		return ParseText(text, text_length, params).cursor;
+	}
+	Cursor TextCursor(const std::string& text, const Params& params)
+	{
+		if (text.empty())
+		{
+			return {};
+		}
+		return ParseText(text.c_str(), text.length(), params).cursor;
+	}
+	Cursor TextCursor(const std::wstring& text, const Params& params)
+	{
+		if (text.empty())
+		{
+			return {};
+		}
+		return ParseText(text.c_str(), text.length(), params).cursor;
+	}
+
 	float TextWidth(const char* text, size_t text_length, const Params& params)
 	{
 		return TextSize(text, text_length, params).x;
