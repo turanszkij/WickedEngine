@@ -65,6 +65,8 @@ namespace wi::lua::scene
 		int Component_CreateExpression(lua_State* L);
 		int Component_CreateHumanoid(lua_State* L);
 		int Component_CreateDecal(lua_State* L);
+		int Component_CreateSprite(lua_State* L);
+		int Component_CreateFont(lua_State* L);
 
 		int Component_GetName(lua_State* L);
 		int Component_GetLayer(lua_State* L);
@@ -89,6 +91,8 @@ namespace wi::lua::scene
 		int Component_GetExpression(lua_State* L);
 		int Component_GetHumanoid(lua_State* L);
 		int Component_GetDecal(lua_State* L);
+		int Component_GetSprite(lua_State* L);
+		int Component_GetFont(lua_State* L);
 
 		int Component_GetNameArray(lua_State* L);
 		int Component_GetLayerArray(lua_State* L);
@@ -113,6 +117,8 @@ namespace wi::lua::scene
 		int Component_GetExpressionArray(lua_State* L);
 		int Component_GetHumanoidArray(lua_State* L);
 		int Component_GetDecalArray(lua_State* L);
+		int Component_GetSpriteArray(lua_State* L);
+		int Component_GetFontArray(lua_State* L);
 
 		int Entity_GetNameArray(lua_State* L);
 		int Entity_GetLayerArray(lua_State* L);
@@ -138,6 +144,8 @@ namespace wi::lua::scene
 		int Entity_GetExpressionArray(lua_State* L);
 		int Entity_GetHumanoidArray(lua_State* L);
 		int Entity_GetDecalArray(lua_State* L);
+		int Entity_GetSpriteArray(lua_State* L);
+		int Entity_GetFontArray(lua_State* L);
 
 		int Component_RemoveName(lua_State* L);
 		int Component_RemoveLayer(lua_State* L);
@@ -163,6 +171,8 @@ namespace wi::lua::scene
 		int Component_RemoveExpression(lua_State* L);
 		int Component_RemoveHumanoid(lua_State* L);
 		int Component_RemoveDecal(lua_State* L);
+		int Component_RemoveSprite(lua_State* L);
+		int Component_RemoveFont(lua_State* L);
 
 		int Component_Attach(lua_State* L);
 		int Component_Detach(lua_State* L);

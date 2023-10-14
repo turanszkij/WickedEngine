@@ -583,20 +583,25 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Entity_Duplicate(Entity entity) : int entity  -- duplicates all of an entity's components and creates a new entity with them. Returns the clone entity handle
 - Entity_IsDescendant(Entity entity, Entity ancestor) : bool result	-- Check whether entity is a descendant of ancestor. Returns `true` if entity is in the hierarchy tree of ancestor, `false` otherwise
 
-- Component_CreateName(Entity entity) : NameComponent result  -- attach a name component to an entity. The returned NameComponent is associated with the entity and can be manipulated
-- Component_CreateLayer(Entity entity) : LayerComponent result  -- attach a layer component to an entity. The returned LayerComponent is associated with the entity and can be manipulated
-- Component_CreateTransform(Entity entity) : TransformComponent result  -- attach a transform component to an entity. The returned TransformComponent is associated with the entity and can be manipulated
-- Component_CreateLight(Entity entity) : LightComponent result  -- attach a light component to an entity. The returned LightComponent is associated with the entity and can be manipulated
-- Component_CreateObject(Entity entity) : ObjectComponent result  -- attach an object component to an entity. The returned ObjectComponent is associated with the entity and can be manipulated
-- Component_CreateInverseKinematics(Entity entity) : InverseKinematicsComponent result  -- attach an IK component to an entity. The returned InverseKinematicsComponent is associated with the entity and can be manipulated
-- Component_CreateSpring(Entity entity) : SpringComponent result  -- attach a spring component to an entity. The returned SpringComponent is associated with the entity and can be manipulated
-- Component_CreateScript(Entity entity) : ScriptComponent result  -- attach a script component to an entity. The returned ScriptComponent is associated with the entity and can be manipulated
-- Component_CreateRigidBodyPhysics(Entity entity) : RigidBodyPhysicsComponent result  -- attach a RigidBodyPhysicsComponent to an entity. The returned RigidBodyPhysicsComponent is associated with the entity and can be manipulated
-- Component_CreateSoftBodyPhysics(Entity entity) : SoftBodyPhysicsComponent result  -- attach a SoftBodyPhysicsComponent to an entity. The returned SoftBodyPhysicsComponent is associated with the entity and can be manipulated
-- Component_CreateForceField(Entity entity) : ForceFieldComponent result  -- attach a ForceFieldComponent to an entity. The returned ForceFieldComponent is associated with the entity and can be manipulated
-- Component_CreateWeather(Entity entity) : WeatherComponent result  -- attach a WeatherComponent to an entity. The returned WeatherComponent is associated with the entity and can be manipulated
-- Component_CreateSound(Entity entity) : SoundComponent result  -- attach a SoundComponent to an entity. The returned SoundComponent is associated with the entity and can be manipulated
-- Component_CreateCollider(Entity entity) : ColliderComponent result  -- attach a script to an entity. The returned ColliderComponent is associated with the entity and can be manipulated
+- Component_CreateName(Entity entity) : NameComponent result  -- attach a name component to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateLayer(Entity entity) : LayerComponent result  -- attach a layer component to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateTransform(Entity entity) : TransformComponent result  -- attach a transform component to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateLight(Entity entity) : LightComponent result  -- attach a light component to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateObject(Entity entity) : ObjectComponent result  -- attach an object component to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateInverseKinematics(Entity entity) : InverseKinematicsComponent result  -- attach an IK component to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateSpring(Entity entity) : SpringComponent result  -- attach a spring component to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateScript(Entity entity) : ScriptComponent result  -- attach a script component to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateRigidBodyPhysics(Entity entity) : RigidBodyPhysicsComponent result  -- attach a RigidBodyPhysicsComponent to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateSoftBodyPhysics(Entity entity) : SoftBodyPhysicsComponent result  -- attach a SoftBodyPhysicsComponent to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateForceField(Entity entity) : ForceFieldComponent result  -- attach a ForceFieldComponent to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateWeather(Entity entity) : WeatherComponent result  -- attach a WeatherComponent to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateSound(Entity entity) : SoundComponent result  -- attach a SoundComponent to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateCollider(Entity entity) : ColliderComponent result  -- attach a ColliderComponent to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateExpression(Entity entity) : ExpressionComponent result  -- attach a ExpressionComponent to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateHumanoid(Entity entity) : HumanoidComponent result  -- attach a HumanoidComponent to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateDecal(Entity entity) : DecalComponent result  -- attach a DecalComponent to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateSprite(Entity entity) : Sprite result  -- attach a Sprite to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateFont(Entity entity) : SpriteFont result  -- attach a SpriteFont to an entity. The returned component is associated with the entity and can be manipulated
 
 - Component_GetName(Entity entity) : NameComponent? result  -- query the name component of the entity (if exists)
 - Component_GetLayer(Entity entity) : LayerComponent? result  -- query the layer component of the entity (if exists)
@@ -616,6 +621,11 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_GetWeather(Entity entity) : WeatherComponent? result  -- query the WeatherComponent of the entity (if exists)
 - Component_GetSound(Entity entity) : SoundComponent? result  -- query the SoundComponent of the entity (if exists)
 - Component_GetCollider(Entity entity) : ColliderComponent? result  -- query the ColliderComponent of the entity (if exists)
+- Component_GetExpression(Entity entity) : ExpressionComponent? result  -- query the ExpressionComponent of the entity (if exists)
+- Component_GetHumanoid(Entity entity) : HumanoidComponent? result  -- query the HumanoidComponent of the entity (if exists)
+- Component_GetDecal(Entity entity) : DecalComponent? result  -- query the DecalComponent of the entity (if exists)
+- Component_GetSprite(Entity entity) : Sprite? result  -- query the Sprite of the entity (if exists)
+- Component_GetFont(Entity entity) : SpriteFont? result  -- query the SpriteFont of the entity (if exists)
 
 - Component_GetNameArray() : NameComponent[] result  -- returns the array of all components of this type
 - Component_GetLayerArray() : LayerComponent[] result  -- returns the array of all components of this type
@@ -635,6 +645,11 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_GetWeatherArray() : WeatherComponent[] result  -- returns the array of all components of this type
 - Component_GetSoundArray() : SoundComponent[] result  -- returns the array of all components of this type
 - Component_GetColliderArray() : ColliderComponent[] result  -- returns the array of all components of this type
+- Component_GetExpressionArray() : ExpressionComponent[] result  -- returns the array of all components of this type
+- Component_GetHumanoidArray() : HumanoidComponent[] result  -- returns the array of all components of this type
+- Component_GetDecalArray() : DecalComponent[] result  -- returns the array of all components of this type
+- Component_GetSpriteArray() : Sprite[] result  -- returns the array of all components of this type
+- Component_GetFontArray() : SpriteFont[] result  -- returns the array of all components of this type
 
 - Entity_GetNameArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetLayerArray() : Entity[] result  -- returns the array of all entities that have this component type
@@ -655,6 +670,11 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Entity_GetWeatherArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetSoundArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetColliderArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetExpressionArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetHumanoidArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetDecalArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetSpriteArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetFontArray() : Entity[] result  -- returns the array of all entities that have this component type
 
 - Component_RemoveName(Entity entity)  -- remove the name component of the entity (if exists)
 - Component_RemoveLayer(Entity entity)  -- remove the layer component of the entity (if exists)
@@ -675,6 +695,11 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_RemoveWeather(Entity entity) -- remove the WeatherComponent of the entity (if exists)
 - Component_RemoveSound(Entity entity)  -- remove the SoundComponent of the entity (if exists)
 - Component_RemoveCollider(Entity entity)  -- remove the ColliderComponent of the entity (if exists)
+- Component_RemoveExpression(Entity entity)  -- remove the ExpressionComponent of the entity (if exists)
+- Component_RemoveHumanoid(Entity entity)  -- remove the HumanoidComponent of the entity (if exists)
+- Component_RemoveDecal(Entity entity)  -- remove the DecalComponent of the entity (if exists)
+- Component_RemoveSprite(Entity entity)  -- remove the Sprite of the entity (if exists)
+- Component_RemoveFont(Entity entity)  -- remove the SpriteFont of the entity (if exists)
 
 - Component_Attach(Entity entity,parent, opt bool child_already_in_local_space = false)  -- attaches entity to parent (adds a hierarchy component to entity). From now on, entity will inherit certain properties from parent, such as transform (entity will move with parent) or layer (entity's layer will be a sublayer of parent's layer). If child_already_in_local_space is false, then child will be transformed into parent's local space, if true, it will be used as-is.
 - Component_Detach(Entity entity)  -- detaches entity from parent (if hierarchycomponent exists for it). Restores entity's original layer, and applies current transformation to entity
