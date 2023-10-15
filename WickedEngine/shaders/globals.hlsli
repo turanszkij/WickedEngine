@@ -600,6 +600,38 @@ float noise_gradient_3D(in float3 p)
 				dot(hash_gradient_3D(i + float3(1.0, 1.0, 1.0)), f - float3(1.0, 1.0, 1.0)), u.x), u.y), u.z);
 }
 
+
+// Based on: https://www.shadertoy.com/view/MslGD8
+float2 hash_voronoi(float2 p)
+{
+    //p = mod(p, 4.0); // tile
+	p = float2(dot(p, float2(127.1, 311.7)),
+             dot(p, float2(269.5, 183.3)));
+	return frac(sin(p) * 18.5453);
+}
+
+// return distance, and cell id
+float2 noise_voronoi(in float2 x, in float seed)
+{
+	float2 n = floor(x);
+	float2 f = frac(x);
+
+	float3 m = 8.0;
+	for (int j = -1; j <= 1; j++)
+		for (int i = -1; i <= 1; i++)
+		{
+			float2 g = float2(float(i), float(j));
+			float2 o = hash_voronoi(n + g);
+			//float2  r = g - f + o;
+			float2 r = g - f + (0.5 + 0.5 * sin(seed + 6.2831 * o));
+			float d = dot(r, r);
+			if (d < m.x)
+				m = float3(d, o);
+		}
+
+	return float2(sqrt(m.x), m.y + m.z);
+}
+
 // https://www.shadertoy.com/view/llGSzw
 float hash1(uint n)
 {
