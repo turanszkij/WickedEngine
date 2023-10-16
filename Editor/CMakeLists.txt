@@ -109,7 +109,7 @@ install(DIRECTORY
 # optional .ini .ico .lua
 install(FILES
 		${CMAKE_CURRENT_SOURCE_DIR}/config.ini
-		${CMAKE_CURRENT_SOURCE_DIR}/Editor.ico
+		${CMAKE_CURRENT_SOURCE_DIR}/wicked.ico
 		${CMAKE_CURRENT_SOURCE_DIR}/startup.lua
 		DESTINATION ${EDITOR_INSTALL_FOLDER})
 
