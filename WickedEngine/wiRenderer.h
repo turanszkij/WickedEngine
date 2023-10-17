@@ -268,6 +268,11 @@ namespace wi::renderer
 		bool distortion,
 		wi::graphics::CommandList cmd
 	);
+	void DrawRain(
+		const wi::scene::Scene& scene,
+		const wi::scene::CameraComponent& camera,
+		wi::graphics::CommandList cmd
+	);
 	// Draw simple light visualizer geometries
 	void DrawLightVisualizers(
 		const Visibility& vis,

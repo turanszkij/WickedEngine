@@ -1436,6 +1436,14 @@ namespace wi::scene
 			{
 				archive >> sky_rotation;
 			}
+			if (seri.GetVersion() >= 5)
+			{
+				archive >> rain_amount;
+				archive >> rain_length;
+				archive >> rain_speed;
+				archive >> rain_scale;
+				archive >> rain_color;
+			}
 		}
 		else
 		{
@@ -1646,6 +1654,14 @@ namespace wi::scene
 			if (seri.GetVersion() >= 4)
 			{
 				archive << sky_rotation;
+			}
+			if (seri.GetVersion() >= 5)
+			{
+				archive << rain_amount;
+				archive << rain_length;
+				archive << rain_speed;
+				archive << rain_scale;
+				archive << rain_color;
 			}
 		}
 	}

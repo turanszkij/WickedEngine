@@ -595,6 +595,7 @@ PipelineState PSO_volumetricclouds_upsample;
 PipelineState PSO_outline;
 PipelineState PSO_copyDepth;
 PipelineState PSO_copyStencilBit[8];
+PipelineState PSO_rain;
 
 RaytracingPipelineState RTPSO_reflection;
 
@@ -808,6 +809,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_LENSFLARE], "lensFlareVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_DDGI_DEBUG], "ddgi_debugVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SCREEN], "screenVS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_RAIN], "rainVS.cso"); });
 
 	if (device->CheckCapability(GraphicsDeviceCapability::RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS))
 	{
@@ -879,6 +881,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_UPSAMPLE], "volumetricCloud_upsamplePS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_COPY_DEPTH], "copyDepthPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_COPY_STENCIL_BIT], "copyStencilBitPS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_RAIN], "rainPS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXELIZER], "objectGS_voxelizer.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXEL], "voxelGS.cso"); });
@@ -1591,6 +1594,17 @@ void LoadShaders()
 
 		device->CreatePipelineState(&desc, &PSO_debug[args.jobIndex]);
 		});
+
+	{
+		PipelineStateDesc desc;
+		desc.vs = &shaders[VSTYPE_RAIN];
+		desc.ps = &shaders[PSTYPE_RAIN];
+		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+		desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+		desc.pt = PrimitiveTopology::TRIANGLELIST;
+		device->CreatePipelineState(&desc, &PSO_rain);
+	}
 
 #ifdef RTREFLECTION_WITH_RAYTRACING_PIPELINE
 	if(device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
@@ -2441,7 +2455,6 @@ void ClearWorld(Scene& scene)
 struct SHCAM
 {
 	XMMATRIX view_projection;
-	XMMATRIX inverse_view_projection;
 	Frustum frustum;					// This frustum can be used for intersection test with wiPrimitive primitives
 	BoundingFrustum boundingfrustum;	// This boundingfrustum can be used for frustum vs frustum intersection test
 
@@ -2455,7 +2468,6 @@ struct SHCAM
 		const XMMATRIX V = XMMatrixLookToLH(E, to, up);
 		const XMMATRIX P = XMMatrixPerspectiveFovLH(fov, 1, farPlane, nearPlane);
 		view_projection = XMMatrixMultiply(V, P);
-		inverse_view_projection = XMMatrixInverse(nullptr, view_projection);
 		frustum.Create(view_projection);
 		
 		BoundingFrustum::CreateFromMatrix(boundingfrustum, P);
@@ -3275,7 +3287,7 @@ void UpdatePerFrameData(
 	}
 
 	// Shadow atlas packing:
-	if (!vis.visibleLights.empty())
+	if (!vis.visibleLights.empty() || vis.scene->weather.rain_amount > 0)
 	{
 		auto range = wi::profiler::BeginRangeCPU("Shadowmap packing");
 		static thread_local wi::rectpacker::State packer;
@@ -3284,6 +3296,14 @@ void UpdatePerFrameData(
 		while (iterative_scaling > 0.03f)
 		{
 			packer.clear();
+			if(vis.scene->weather.rain_amount > 0)
+			{
+				// Rain blocker:
+				wi::rectpacker::Rect rect = {};
+				rect.id = -1;
+				rect.w = rect.h = 256;
+				packer.add_rect(rect);
+			}
 			for (uint32_t lightIndex : vis.visibleLights)
 			{
 				LightComponent& light = scene.lights[lightIndex];
@@ -3347,6 +3367,19 @@ void UpdatePerFrameData(
 				{
 					for (auto& rect : packer.rects)
 					{
+						if (rect.id == -1)
+						{
+							// Rain blocker:
+							if (rect.was_packed)
+							{
+								scene.weather.rain_blocker_dummy_light.shadow_rect = rect;
+							}
+							else
+							{
+								scene.weather.rain_blocker_dummy_light.shadow_rect = {};
+							}
+							continue;
+						}
 						uint32_t lightIndex = uint32_t(rect.id);
 						LightComponent& light = scene.lights[lightIndex];
 						if (rect.was_packed)
@@ -3547,6 +3580,17 @@ void UpdatePerFrameData(
 	frameCB.forcefieldarray_offset = std::min(SHADER_ENTITY_COUNT, frameCB.forcefieldarray_offset);
 
 	frameCB.gi_boost = GetGIBoost();
+
+	frameCB.rain_blocker_mad = XMFLOAT4(
+		float(scene.weather.rain_blocker_dummy_light.shadow_rect.w) / float(shadowMapAtlas.desc.width),
+		float(scene.weather.rain_blocker_dummy_light.shadow_rect.h) / float(shadowMapAtlas.desc.height),
+		float(scene.weather.rain_blocker_dummy_light.shadow_rect.x) / float(shadowMapAtlas.desc.width),
+		float(scene.weather.rain_blocker_dummy_light.shadow_rect.y) / float(shadowMapAtlas.desc.height)
+	);
+	SHCAM shcam;
+	CreateDirLightShadowCams(vis.scene->weather.rain_blocker_dummy_light, *vis.camera, &shcam, 1);
+	XMStoreFloat4x4(&frameCB.rain_blocker_matrix, shcam.view_projection);
+	XMStoreFloat4x4(&frameCB.rain_blocker_matrix_inverse, XMMatrixInverse(nullptr, shcam.view_projection));
 
 	frameCB.temporalaa_samplerotation = 0;
 	if (GetTemporalAAEnabled())
@@ -4919,10 +4963,10 @@ void DrawSoftParticles(
 	wi::profiler::EndRange(range);
 }
 void DrawSpritesAndFonts(
-	const wi::scene::Scene& scene,
-	const wi::scene::CameraComponent& camera,
+	const Scene& scene,
+	const CameraComponent& camera,
 	bool distortion,
-	wi::graphics::CommandList cmd
+	CommandList cmd
 )
 {
 	if (scene.sprites.GetCount() == 0 && scene.fonts.GetCount() == 0)
@@ -5059,6 +5103,31 @@ void DrawSpritesAndFonts(
 		break;
 		}
 	}
+	device->EventEnd(cmd);
+}
+void DrawRain(
+	const Scene& scene,
+	const CameraComponent& camera,
+	CommandList cmd
+)
+{
+	if (scene.weather.rain_amount <= 0)
+		return;
+	device->EventBegin("Rain", cmd);
+	auto range = wi::profiler::BeginRangeGPU("Rain", cmd);
+
+	device->BindPipelineState(&PSO_rain, cmd);
+
+	static uint32_t layers = 10;
+	struct PushConstants
+	{
+		uint layers;
+	} push;
+	push.layers = layers;
+	device->PushConstants(&push, sizeof(push), cmd);
+	device->DrawInstanced(384, layers, 0, 0, cmd); // cylinder * layers
+
+	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
 }
 void DrawLightVisualizers(
@@ -5454,7 +5523,7 @@ void DrawShadowmaps(
 	if (IsWireRender())
 		return;
 
-	if (!vis.visibleLights.empty() && shadowMapAtlas.IsValid())
+	if ((!vis.visibleLights.empty() || vis.scene->weather.rain_amount > 0) && shadowMapAtlas.IsValid())
 	{
 		device->EventBegin("DrawShadowmaps", cmd);
 		auto range_cpu = wi::profiler::BeginRangeCPU("Shadowmap Rendering");
@@ -5845,6 +5914,56 @@ void DrawShadowmaps(
 			}
 			break;
 			} // terminate switch
+		}
+
+		// Rain blocker:
+		if(vis.scene->weather.rain_amount > 0)
+		{
+			SHCAM shcam;
+			CreateDirLightShadowCams(vis.scene->weather.rain_blocker_dummy_light, *vis.camera, &shcam, 1);
+
+			renderQueue.init();
+			for (size_t i = 0; i < vis.scene->aabb_objects.size(); ++i)
+			{
+				const AABB& aabb = vis.scene->aabb_objects[i];
+				if (aabb.layerMask & vis.layerMask)
+				{
+					const ObjectComponent& object = vis.scene->objects[i];
+					if (object.IsRenderable())
+					{
+						uint16_t camera_mask = 0;
+						if (shcam.frustum.CheckBoxFast(aabb))
+						{
+							camera_mask |= 1 << 0;
+						}
+						if (camera_mask == 0)
+							continue;
+
+						renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits, camera_mask);
+					}
+				}
+			}
+
+			if (!renderQueue.empty())
+			{
+				const uint cascade = 0;
+				XMStoreFloat4x4(&cb.cameras[cascade].view_projection, shcam.view_projection);
+				cb.cameras[cascade].output_index = cascade;
+
+				Viewport vp;
+				vp.top_left_x = float(vis.scene->weather.rain_blocker_dummy_light.shadow_rect.x + cascade * vis.scene->weather.rain_blocker_dummy_light.shadow_rect.w);
+				vp.top_left_y = float(vis.scene->weather.rain_blocker_dummy_light.shadow_rect.y);
+				vp.width = float(vis.scene->weather.rain_blocker_dummy_light.shadow_rect.w);
+				vp.height = float(vis.scene->weather.rain_blocker_dummy_light.shadow_rect.h);
+				vp.min_depth = 0.0f;
+				vp.max_depth = 1.0f;
+
+				device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
+				device->BindViewports(1, &vp, cmd);
+
+				renderQueue.sort_opaque();
+				RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_OBJECT_ALL, cmd, 0, 1);
+			}
 		}
 
 		device->RenderPassEnd(cmd);

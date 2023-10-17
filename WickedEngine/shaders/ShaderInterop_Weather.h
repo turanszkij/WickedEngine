@@ -366,6 +366,12 @@ struct ShaderWeather
 
 	float4x4 stars_rotation;
 
+	float rain_amount;
+	float rain_length;
+	float rain_speed;
+	float rain_scale;
+	float4 rain_color;
+
 	ShaderFog fog;
 	ShaderWind wind;
 	ShaderOcean ocean;

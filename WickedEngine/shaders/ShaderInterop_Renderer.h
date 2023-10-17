@@ -942,6 +942,10 @@ struct FrameCB
 	int			buffer_entity_index;
 	float		gi_boost;
 
+	float4		rain_blocker_mad;
+	float4x4	rain_blocker_matrix;
+	float4x4	rain_blocker_matrix_inverse;
+
 	ShaderScene scene;
 
 	VXGI vxgi;

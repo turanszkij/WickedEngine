@@ -1124,6 +1124,12 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)copyStencilBitPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)rainPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)rainVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h">

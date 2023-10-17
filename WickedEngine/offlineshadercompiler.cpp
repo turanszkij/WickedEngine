@@ -275,6 +275,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"ddgi_debugPS", wi::graphics::ShaderStage::PS },
 	{"copyDepthPS", wi::graphics::ShaderStage::PS },
 	{"copyStencilBitPS", wi::graphics::ShaderStage::PS },
+	{"rainPS", wi::graphics::ShaderStage::PS },
 
 
 	{"hairparticleVS", wi::graphics::ShaderStage::VS },
@@ -330,6 +331,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"shadowVS_transparent", wi::graphics::ShaderStage::VS },
 	{"shadowVS_transparent_emulation", wi::graphics::ShaderStage::VS },
 	{"screenVS", wi::graphics::ShaderStage::VS },
+	{"rainVS", wi::graphics::ShaderStage::VS },
 
 
 

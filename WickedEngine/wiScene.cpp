@@ -815,6 +815,11 @@ namespace wi::scene
 		shaderscene.weather.ocean.texture_gradientmap = device->GetDescriptorIndex(ocean.getGradientMap(), SubresourceType::SRV);
 		shaderscene.weather.stars = weather.stars;
 		XMStoreFloat4x4(&shaderscene.weather.stars_rotation, XMMatrixRotationQuaternion(XMLoadFloat4(&weather.stars_rotation_quaternion)));
+		shaderscene.weather.rain_amount = weather.rain_amount;
+		shaderscene.weather.rain_length = weather.rain_length;
+		shaderscene.weather.rain_speed = weather.rain_speed;
+		shaderscene.weather.rain_scale = weather.rain_scale;
+		shaderscene.weather.rain_color = weather.rain_color;
 
 		shaderscene.ddgi.grid_dimensions = ddgi.grid_dimensions;
 		shaderscene.ddgi.probe_count = ddgi.grid_dimensions.x * ddgi.grid_dimensions.y * ddgi.grid_dimensions.z;
@@ -4450,6 +4455,9 @@ namespace wi::scene
 			}
 			ocean.occlusionQueries[queryheap_idx] = -1; // invalidate query
 		}
+
+		weather.rain_blocker_dummy_light.shadow_rect = {};
+		weather.rain_blocker_dummy_light.cascade_distances[0] = 100;
 	}
 	void Scene::RunSoundUpdateSystem(wi::jobsystem::context& ctx)
 	{
