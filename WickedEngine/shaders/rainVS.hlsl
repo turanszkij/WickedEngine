@@ -15,10 +15,7 @@ void main(
 	out float3 uvw : TEXCOORD2
 )
 {
-	float near_layer = 1;
-	float far_layer = 100;
-	float t = 1 - saturate(float(layer) / float(push.layers));
-	float layer_distance = lerp(near_layer, far_layer, pow(t, 2));
+	float layer_distance = pow(2, (push.layers - layer));
 
     float fSinAngle;
     float fCosAngle;

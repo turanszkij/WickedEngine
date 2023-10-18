@@ -1344,7 +1344,7 @@ namespace wi::scene
 		float rain_length = 80;
 		float rain_speed = 20;
 		float rain_scale = 0.01f;
-		XMFLOAT4 rain_color = XMFLOAT4(0.6f, 0.8f, 1, 0.2f);
+		XMFLOAT4 rain_color = XMFLOAT4(0.6f, 0.8f, 1, 0.8f);
 
 		wi::Ocean::OceanParameters oceanParameters;
 		AtmosphereParameters atmosphereParameters;

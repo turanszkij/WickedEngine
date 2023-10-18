@@ -5115,10 +5115,11 @@ void DrawRain(
 		return;
 	device->EventBegin("Rain", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Rain", cmd);
+	device->BindShadingRate(ShadingRate::RATE_2X4, cmd);
 
 	device->BindPipelineState(&PSO_rain, cmd);
 
-	static uint32_t layers = 10;
+	static uint32_t layers = 4;
 	struct PushConstants
 	{
 		uint layers;
@@ -5126,6 +5127,8 @@ void DrawRain(
 	push.layers = layers;
 	device->PushConstants(&push, sizeof(push), cmd);
 	device->DrawInstanced(384, layers, 0, 0, cmd); // cylinder * layers
+
+	device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);

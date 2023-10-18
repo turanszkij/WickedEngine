@@ -1,4 +1,6 @@
 #define TRANSPARENT // uses transparent light lists
+#define DISABLE_SOFT_SHADOWMAP
+#define DISABLE_TRANSPARENT_SHADOWMAP
 #include "globals.hlsli"
 #include "shadingHF.hlsli"
 
@@ -11,14 +13,12 @@ float4 main(
 	uint2 pixel = pos.xy;
 
 	ShaderWeather weather = GetWeather();
-	
-	float amount = 1 - weather.rain_amount;
 				
 	uvw /= weather.rain_scale;
 	uvw.y /= weather.rain_length;
 	uvw.y += GetTime() * weather.rain_speed;
 	float noise = noise_gradient_3D(uvw);
-	noise = noise - amount;
+	noise = noise - (1 - weather.rain_amount);
 	noise = saturate(noise);
 	//noise = smoothstep(0.3, 1, noise);
 	float4 color = 1;
@@ -82,7 +82,8 @@ float4 main(
 		float intersection_fade = saturate(rcp(softness_intersection) * (max(max(depthScene.x, depthScene.y), max(depthScene.z, depthScene.w)) - depthFragment));
 		color.a *= intersection_fade;
 	}
-	
+
+#if 1
 	[branch]
 	if (color.a > 0)
 	{
@@ -109,6 +110,7 @@ float4 main(
 
 		color = max(0, color);
 	}
+#endif
 	
 	color *= weather.rain_color;
 
