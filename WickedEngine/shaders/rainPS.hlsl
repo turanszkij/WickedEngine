@@ -12,6 +12,7 @@ float4 main(
 {
 	uint2 pixel = pos.xy;
 
+	ShaderCamera camera = GetCamera();
 	ShaderWeather weather = GetWeather();
 				
 	uvw /= weather.rain_scale;
@@ -24,7 +25,7 @@ float4 main(
 	float4 color = 1;
 	color.a *= noise;
 
-	float3 V = P - GetCamera().position;
+	float3 V = P - camera.position;
 	float dist = length(V);
 	V /= dist;
 	float top_fade = abs(V.y);
@@ -54,11 +55,11 @@ float4 main(
 			{
 				float3 P2 = reconstruct_position(clipspace_to_uv(shadow_pos).xy, shadow, GetFrame().rain_blocker_matrix_inverse);
 				float vapor_falloff = distance(P, P2);
-				vapor_falloff *= 0.2;
+				vapor_falloff *= 0.3; // controls height of vapor
 				vapor_falloff = saturate(vapor_falloff);
 				vapor_falloff = 1 - pow(1 - vapor_falloff, 4);
 				float vapor_color = 1;
-				float3 uvw = P - GetCamera().position;
+				float3 uvw = P - camera.position;
 				// small scale vapor noise:
 				vapor_color += noise_gradient_3D(uvw + GetTime() * 0.1 * weather.rain_speed);
 				vapor_color -= 0.5;
@@ -72,10 +73,10 @@ float4 main(
 	}
 	
 	[branch]
-	if (GetCamera().texture_lineardepth_index >= 0)
+	if (camera.texture_lineardepth_index >= 0)
 	{
-		float2 ScreenCoord = pixel * GetCamera().internal_resolution_rcp;
-		float4 depthScene = texture_lineardepth.GatherRed(sampler_linear_clamp, ScreenCoord) * GetCamera().z_far;
+		float2 ScreenCoord = pixel * camera.internal_resolution_rcp;
+		float4 depthScene = texture_lineardepth.GatherRed(sampler_linear_clamp, ScreenCoord) * camera.z_far;
 		float depthFragment = pos.w;
 		
 		float softness_intersection = 4;
