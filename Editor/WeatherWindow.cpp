@@ -247,7 +247,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&rainAmountSlider);
 
-	rainLengthSlider.Create(1, 100, 0, 10000, "Rain Length: ");
+	rainLengthSlider.Create(0, 0.1f, 0, 10000, "Rain Length: ");
 	rainLengthSlider.SetSize(XMFLOAT2(wid, hei));
 	rainLengthSlider.SetPos(XMFLOAT2(x, y += step));
 	rainLengthSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -255,7 +255,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&rainLengthSlider);
 
-	rainSpeedSlider.Create(0, 50, 0, 10000, "Rain Speed: ");
+	rainSpeedSlider.Create(0, 2, 0, 10000, "Rain Speed: ");
 	rainSpeedSlider.SetSize(XMFLOAT2(wid, hei));
 	rainSpeedSlider.SetPos(XMFLOAT2(x, y += step));
 	rainSpeedSlider.OnSlide([&](wi::gui::EventArgs args) {

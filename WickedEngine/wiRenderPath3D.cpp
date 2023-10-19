@@ -1881,7 +1881,6 @@ namespace wi
 		wi::renderer::DrawLightVisualizers(visibility_main, cmd);
 
 		wi::renderer::DrawSoftParticles(visibility_main, false, cmd);
-		wi::renderer::DrawRain(*scene, *camera, cmd);
 		wi::renderer::DrawSpritesAndFonts(*scene, *camera, false, cmd);
 
 		if (getVolumeLightsEnabled() && visibility_main.IsRequestedVolumetricLights())

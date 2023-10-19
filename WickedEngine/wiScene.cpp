@@ -60,6 +60,11 @@ namespace wi::scene
 			impostorInstanceOffset = uint32_t(instanceArraySize);
 			instanceArraySize += 1;
 		}
+		if (weathers.GetCount() > 0 && weathers[0].rain_amount > 0)
+		{
+			rainInstanceOffset = uint32_t(instanceArraySize);
+			instanceArraySize += 1;
+		}
 		if (instanceUploadBuffer[0].desc.size < (instanceArraySize * sizeof(ShaderMeshInstance)))
 		{
 			GPUBufferDesc desc;
@@ -91,6 +96,11 @@ namespace wi::scene
 		if (impostors.GetCount() > 0)
 		{
 			impostorMaterialOffset = uint32_t(materialArraySize);
+			materialArraySize += 1;
+		}
+		if (weathers.GetCount() > 0 && weathers[0].rain_amount > 0)
+		{
+			rainMaterialOffset = uint32_t(materialArraySize);
 			materialArraySize += 1;
 		}
 		if (materialUploadBuffer[0].desc.size < (materialArraySize * sizeof(ShaderMaterial)))
@@ -245,6 +255,11 @@ namespace wi::scene
 		if (impostors.GetCount() > 0)
 		{
 			impostorGeometryOffset = uint32_t(geometryArraySize);
+			geometryArraySize += 1;
+		}
+		if (weathers.GetCount() > 0 && weathers[0].rain_amount > 0)
+		{
+			rainGeometryOffset = uint32_t(geometryArraySize);
 			geometryArraySize += 1;
 		}
 		if (geometryUploadBuffer[0].desc.size < (geometryArraySize * sizeof(ShaderGeometry)))
@@ -4360,11 +4375,6 @@ namespace wi::scene
 
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
-			uint32_t indexCount = emitter.GetMaxParticleCount() * 6;
-			uint32_t triangleCount = indexCount / 3u;
-			uint32_t meshletCount = triangle_count_to_meshlet_count(triangleCount);
-			uint32_t meshletOffset = meshletAllocator.fetch_add(meshletCount);
-
 			ShaderGeometry geometry;
 			geometry.init();
 			geometry.indexOffset = 0;
@@ -4374,8 +4384,6 @@ namespace wi::scene
 			geometry.vb_uvs = emitter.vb_uvs.descriptor_srv;
 			geometry.vb_col = emitter.vb_col.descriptor_srv;
 			geometry.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_EMITTEDPARTICLE;
-			geometry.meshletOffset = 0;
-			geometry.meshletCount = meshletCount;
 
 			size_t geometryAllocation = geometryAllocator.fetch_add(1);
 			std::memcpy(geometryArrayMapped + geometryAllocation, &geometry, sizeof(geometry));
@@ -4390,7 +4398,6 @@ namespace wi::scene
 			inst.geometryCount = 1;
 			inst.baseGeometryOffset = inst.geometryOffset;
 			inst.baseGeometryCount = inst.geometryCount;
-			inst.meshletOffset = meshletOffset;
 
 			const size_t instanceIndex = objects.GetCount() + hairs.GetCount() + args.jobIndex;
 			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
@@ -4458,6 +4465,117 @@ namespace wi::scene
 
 		weather.rain_blocker_dummy_light.shadow_rect = {};
 		weather.rain_blocker_dummy_light.cascade_distances[0] = 100;
+		if (weather.rain_amount > 0)
+		{
+			rainEmitter._flags |= wi::EmittedParticleSystem::FLAG_USE_RAIN_BLOCKER;
+			rainEmitter.shaderType = wi::EmittedParticleSystem::PARTICLESHADERTYPE::SOFT_LIGHTING;
+			rainEmitter.SetCollidersDisabled(true);
+			rainEmitter.SetVolumeEnabled(true);
+			constexpr uint32_t target_max_particle_count = 1000000;
+			if (rainEmitter.GetMaxParticleCount() != target_max_particle_count)
+			{
+				rainEmitter.SetMaxParticleCount(target_max_particle_count);
+			}
+			constexpr float target_max_emit_count = 100000;
+			rainEmitter.count = wi::math::Lerp(0, target_max_emit_count, weather.rain_amount);
+			rainEmitter.life = 1;
+			rainEmitter.size = weather.rain_scale;
+			rainEmitter.random_factor = weather.windRandomness;
+			rainEmitter.random_life = 1;
+			rainEmitter.motionBlurAmount = weather.rain_length;
+			rainEmitter.velocity = XMFLOAT3(
+				weather.windDirection.x * weather.windSpeed,
+				-weather.rain_speed,
+				weather.windDirection.z * weather.windSpeed
+			);
+			rainMaterial.SetUseVertexColors(true);
+			rainMaterial.shaderType = MaterialComponent::SHADERTYPE_PBR;
+			rainMaterial.subsurfaceScattering = XMFLOAT4(1, 1, 1, 2);
+			rainMaterial.userBlendMode = BLENDMODE_ALPHA;
+			rainMaterial.baseColor = weather.rain_color;
+			if (!rainMaterial.textures[MaterialComponent::BASECOLORMAP].resource.IsValid())
+			{
+				rainMaterial.textures[MaterialComponent::BASECOLORMAP].resource.SetTexture(
+					wi::texturehelper::CreateGradientTexture(
+						wi::texturehelper::GradientType::Circular,
+						64, 64,
+						XMFLOAT2(0.5f, 0.5f), XMFLOAT2(0.5f, 0),
+						wi::texturehelper::GradientFlags::Smoothstep | wi::texturehelper::GradientFlags::Inverse,
+						{ wi::graphics::ComponentSwizzle::ONE,wi::graphics::ComponentSwizzle::ONE,wi::graphics::ComponentSwizzle::ONE,wi::graphics::ComponentSwizzle::R }
+					)
+				);
+			}
+			TransformComponent transform;
+			transform.scale_local = XMFLOAT3(50, 50, 50);
+			transform.translation_local = camera.Eye;
+			transform.translation_local.y += transform.scale_local.y * 0.5f;
+			transform.UpdateTransform();
+			rainEmitter.UpdateCPU(transform, dt);
+
+			GraphicsDevice* device = wi::graphics::GetDevice();
+
+			ShaderMaterial material;
+			material.init();
+			rainMaterial.WriteShaderMaterial(&material);
+			std::memcpy(materialArrayMapped + rainMaterialOffset, &material, sizeof(material));
+
+			ShaderGeometry geometry;
+			geometry.init();
+			geometry.indexOffset = 0;
+			geometry.materialIndex = rainMaterialOffset;
+			geometry.ib = device->GetDescriptorIndex(&rainEmitter.primitiveBuffer, SubresourceType::SRV);
+			geometry.vb_pos_nor_wind = rainEmitter.vb_pos.descriptor_srv;
+			geometry.vb_uvs = rainEmitter.vb_uvs.descriptor_srv;
+			geometry.vb_col = rainEmitter.vb_col.descriptor_srv;
+			geometry.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_EMITTEDPARTICLE;
+
+			std::memcpy(geometryArrayMapped + rainGeometryOffset, &geometry, sizeof(geometry));
+
+			ShaderMeshInstance inst;
+			inst.init();
+			inst.uid = 0;
+			inst.layerMask = ~0u;
+			inst.emissive = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(1, 1, 1));
+			inst.color = wi::math::CompressColor(XMFLOAT4(1, 1, 1, 1));
+			inst.geometryOffset = (uint)rainGeometryOffset;
+			inst.geometryCount = 1;
+			inst.baseGeometryOffset = inst.geometryOffset;
+			inst.baseGeometryCount = inst.geometryCount;
+
+			const size_t instanceIndex = rainInstanceOffset;
+			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
+
+			if (TLAS_instancesMapped != nullptr)
+			{
+				if (!rainEmitter.BLAS.IsValid())
+				{
+					rainEmitter.CreateRaytracingRenderData();
+				}
+
+				// TLAS instance data:
+				RaytracingAccelerationStructureDesc::TopLevel::Instance instance;
+				for (int i = 0; i < arraysize(instance.transform); ++i)
+				{
+					for (int j = 0; j < arraysize(instance.transform[i]); ++j)
+					{
+						instance.transform[i][j] = wi::math::IDENTITY_MATRIX.m[j][i];
+					}
+				}
+				instance.instance_id = (uint32_t)instanceIndex;
+				instance.instance_mask = rainEmitter.layerMask == 0 ? 0 : 0xFF;
+				instance.bottom_level = &rainEmitter.BLAS;
+				instance.instance_contribution_to_hit_group_index = 0;
+				instance.flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
+
+				void* dest = (void*)((size_t)TLAS_instancesMapped + instanceIndex * device->GetTopLevelAccelerationStructureInstanceSize());
+				device->WriteTopLevelAccelerationStructureInstance(&instance, dest);
+			}
+		}
+		else
+		{
+			rainMaterial = {};
+			rainEmitter = {};
+		}
 	}
 	void Scene::RunSoundUpdateSystem(wi::jobsystem::context& ctx)
 	{

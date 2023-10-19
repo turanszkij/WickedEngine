@@ -236,6 +236,12 @@ namespace wi::scene
 		uint32_t impostorGeometryOffset = ~0u;
 		uint32_t impostorMaterialOffset = ~0u;
 
+		wi::EmittedParticleSystem rainEmitter;
+		MaterialComponent rainMaterial;
+		uint32_t rainInstanceOffset = ~0u;
+		uint32_t rainGeometryOffset = ~0u;
+		uint32_t rainMaterialOffset = ~0u;
+
 		std::atomic<uint32_t> lightmap_request_allocator{ 0 };
 		wi::vector<uint32_t> lightmap_requests;
 		wi::vector<TransformComponent> transforms_temp;

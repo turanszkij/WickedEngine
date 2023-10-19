@@ -136,7 +136,6 @@ namespace wi::enums
 		VSTYPE_LENSFLARE,
 		VSTYPE_DDGI_DEBUG,
 		VSTYPE_SCREEN,
-		VSTYPE_RAIN,
 
 
 		// pixel shaders
@@ -186,7 +185,6 @@ namespace wi::enums
 		PSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_UPSAMPLE,
 		PSTYPE_COPY_DEPTH,
 		PSTYPE_COPY_STENCIL_BIT,
-		PSTYPE_RAIN,
 
 
 		// geometry shaders

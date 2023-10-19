@@ -595,7 +595,6 @@ PipelineState PSO_volumetricclouds_upsample;
 PipelineState PSO_outline;
 PipelineState PSO_copyDepth;
 PipelineState PSO_copyStencilBit[8];
-PipelineState PSO_rain;
 
 RaytracingPipelineState RTPSO_reflection;
 
@@ -809,7 +808,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_LENSFLARE], "lensFlareVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_DDGI_DEBUG], "ddgi_debugVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SCREEN], "screenVS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_RAIN], "rainVS.cso"); });
 
 	if (device->CheckCapability(GraphicsDeviceCapability::RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS))
 	{
@@ -881,7 +879,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_UPSAMPLE], "volumetricCloud_upsamplePS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_COPY_DEPTH], "copyDepthPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_COPY_STENCIL_BIT], "copyStencilBitPS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_RAIN], "rainPS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXELIZER], "objectGS_voxelizer.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXEL], "voxelGS.cso"); });
@@ -1594,17 +1591,6 @@ void LoadShaders()
 
 		device->CreatePipelineState(&desc, &PSO_debug[args.jobIndex]);
 		});
-
-	{
-		PipelineStateDesc desc;
-		desc.vs = &shaders[VSTYPE_RAIN];
-		desc.ps = &shaders[PSTYPE_RAIN];
-		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
-		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
-		desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
-		desc.pt = PrimitiveTopology::TRIANGLELIST;
-		device->CreatePipelineState(&desc, &PSO_rain);
-	}
 
 #ifdef RTREFLECTION_WITH_RAYTRACING_PIPELINE
 	if(device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
@@ -4582,7 +4568,7 @@ void UpdateRenderDataAsync(
 	}
 
 	// GPU Particle systems simulation/sorting/culling:
-	if (!vis.visibleEmitters.empty())
+	if (!vis.visibleEmitters.empty() || vis.scene->weather.rain_amount > 0)
 	{
 		auto range = wi::profiler::BeginRangeGPU("EmittedParticles - Simulate", cmd);
 		for (uint32_t emitterIndex : vis.visibleEmitters)
@@ -4594,6 +4580,10 @@ void UpdateRenderDataAsync(
 			const uint32_t instanceIndex = uint32_t(vis.scene->objects.GetCount() + vis.scene->hairs.GetCount()) + emitterIndex;
 
 			emitter.UpdateGPU(instanceIndex, mesh, cmd);
+		}
+		if (vis.scene->weather.rain_amount > 0)
+		{
+			vis.scene->rainEmitter.UpdateGPU(vis.scene->rainInstanceOffset, nullptr, cmd);
 		}
 		wi::profiler::EndRange(range);
 	}
@@ -4915,47 +4905,51 @@ void DrawSoftParticles(
 	CommandList cmd
 )
 {
-	size_t emitterCount = vis.visibleEmitters.size();
-	if (emitterCount == 0)
-	{
-		return;
-	}
 	auto range = distortion ?
 		wi::profiler::BeginRangeGPU("EmittedParticles - Render (Distortion)", cmd) :
 		wi::profiler::BeginRangeGPU("EmittedParticles - Render", cmd);
 
 	BindCommonResources(cmd);
 
-	// Sort emitters based on distance:
-	assert(emitterCount < 0x0000FFFF); // watch out for sorting hash truncation!
-	static thread_local wi::vector<uint32_t> emitterSortingHashes;
-	emitterSortingHashes.resize(emitterCount);
-	for (size_t i = 0; i < emitterCount; ++i)
+	size_t emitterCount = vis.visibleEmitters.size();
+	if (emitterCount > 0)
 	{
-		const uint32_t emitterIndex = vis.visibleEmitters[i];
-		const wi::EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
-		float distance = wi::math::DistanceEstimated(emitter.center, vis.camera->Eye);
-		emitterSortingHashes[i] = 0;
-		emitterSortingHashes[i] |= (uint32_t)i & 0x0000FFFF;
-		emitterSortingHashes[i] |= (uint32_t)XMConvertFloatToHalf(distance) << 16u;
+		// Sort emitters based on distance:
+		assert(emitterCount < 0x0000FFFF); // watch out for sorting hash truncation!
+		static thread_local wi::vector<uint32_t> emitterSortingHashes;
+		emitterSortingHashes.resize(emitterCount);
+		for (size_t i = 0; i < emitterCount; ++i)
+		{
+			const uint32_t emitterIndex = vis.visibleEmitters[i];
+			const wi::EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
+			float distance = wi::math::DistanceEstimated(emitter.center, vis.camera->Eye);
+			emitterSortingHashes[i] = 0;
+			emitterSortingHashes[i] |= (uint32_t)i & 0x0000FFFF;
+			emitterSortingHashes[i] |= (uint32_t)XMConvertFloatToHalf(distance) << 16u;
+		}
+		std::sort(emitterSortingHashes.begin(), emitterSortingHashes.end(), std::greater<uint32_t>());
+
+		for (size_t i = 0; i < emitterCount; ++i)
+		{
+			const uint32_t emitterIndex = vis.visibleEmitters[emitterSortingHashes[i] & 0x0000FFFF];
+			const wi::EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
+			const Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
+			const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
+
+			if (distortion && emitter.shaderType == wi::EmittedParticleSystem::SOFT_DISTORTION)
+			{
+				emitter.Draw(material, cmd);
+			}
+			else if (!distortion && (emitter.shaderType == wi::EmittedParticleSystem::SOFT || emitter.shaderType == wi::EmittedParticleSystem::SOFT_LIGHTING || emitter.shaderType == wi::EmittedParticleSystem::SIMPLE || IsWireRender()))
+			{
+				emitter.Draw(material, cmd);
+			}
+		}
 	}
-	std::sort(emitterSortingHashes.begin(), emitterSortingHashes.end(), std::greater<uint32_t>());
 
-	for (size_t i = 0; i < emitterCount; ++i)
+	if (!distortion && vis.scene->weather.rain_amount > 0)
 	{
-		const uint32_t emitterIndex = vis.visibleEmitters[emitterSortingHashes[i] & 0x0000FFFF];
-		const wi::EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
-		const Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
-		const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
-
-		if (distortion && emitter.shaderType == wi::EmittedParticleSystem::SOFT_DISTORTION)
-		{
-			emitter.Draw(material, cmd);
-		}
-		else if (!distortion && (emitter.shaderType == wi::EmittedParticleSystem::SOFT || emitter.shaderType == wi::EmittedParticleSystem::SOFT_LIGHTING || emitter.shaderType == wi::EmittedParticleSystem::SIMPLE || IsWireRender()))
-		{
-			emitter.Draw(material, cmd);
-		}
+		vis.scene->rainEmitter.Draw(vis.scene->rainMaterial, cmd);
 	}
 
 	device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
@@ -5103,34 +5097,6 @@ void DrawSpritesAndFonts(
 		break;
 		}
 	}
-	device->EventEnd(cmd);
-}
-void DrawRain(
-	const Scene& scene,
-	const CameraComponent& camera,
-	CommandList cmd
-)
-{
-	if (scene.weather.rain_amount <= 0)
-		return;
-	device->EventBegin("Rain", cmd);
-	auto range = wi::profiler::BeginRangeGPU("Rain", cmd);
-	device->BindShadingRate(ShadingRate::RATE_2X4, cmd);
-
-	device->BindPipelineState(&PSO_rain, cmd);
-
-	static uint32_t layers = 4;
-	struct PushConstants
-	{
-		uint layers;
-	} push;
-	push.layers = layers;
-	device->PushConstants(&push, sizeof(push), cmd);
-	device->DrawInstanced(384, layers, 0, 0, cmd); // cylinder * layers
-
-	device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
-
-	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
 }
 void DrawLightVisualizers(
@@ -5949,6 +5915,7 @@ void DrawShadowmaps(
 
 			if (!renderQueue.empty())
 			{
+				device->EventBegin("Rain Blocker", cmd);
 				const uint cascade = 0;
 				XMStoreFloat4x4(&cb.cameras[cascade].view_projection, shcam.view_projection);
 				cb.cameras[cascade].output_index = cascade;
@@ -5966,6 +5933,7 @@ void DrawShadowmaps(
 
 				renderQueue.sort_opaque();
 				RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_OBJECT_ALL, cmd, 0, 1);
+				device->EventEnd(cmd);
 			}
 		}
 

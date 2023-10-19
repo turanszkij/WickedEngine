@@ -10,6 +10,7 @@ float4 main(
 	in float3 uvw : TEXCOORD2
 ) : SV_Target
 {
+return 0;
 	uint2 pixel = pos.xy;
 
 	ShaderCamera camera = GetCamera();

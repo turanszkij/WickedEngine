@@ -1341,10 +1341,10 @@ namespace wi::scene
 		XMFLOAT3 gravity = XMFLOAT3(0, -10, 0);
 		float sky_rotation = 0; // horizontal rotation for skyMap texture (in radians)
 		float rain_amount = 0;
-		float rain_length = 80;
-		float rain_speed = 20;
-		float rain_scale = 0.01f;
-		XMFLOAT4 rain_color = XMFLOAT4(0.6f, 0.8f, 1, 0.8f);
+		float rain_length = 0.04f;
+		float rain_speed = 1;
+		float rain_scale = 0.005f;
+		XMFLOAT4 rain_color = XMFLOAT4(0.6f, 0.8f, 1, 0.5f);
 
 		wi::Ocean::OceanParameters oceanParameters;
 		AtmosphereParameters atmosphereParameters;

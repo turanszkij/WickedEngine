@@ -48,6 +48,25 @@ float4 main(VertextoPixel input) : SV_TARGET
 		float depthFragment = input.pos.w;
 		opacity *= saturate(1.0 / input.size * (max(max(depthScene.x, depthScene.y), max(depthScene.z, depthScene.w)) - depthFragment));
 	}
+	
+	// Blocker shadow map check:
+	[branch]
+	if ((xEmitterOptions & EMITTER_OPTION_BIT_USE_RAIN_BLOCKER) && GetFrame().texture_shadowatlas_index >= 0)
+	{
+		Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
+		float3 shadow_pos = mul(GetFrame().rain_blocker_matrix, float4(input.P, 1)).xyz;
+		float3 shadow_uv = clipspace_to_uv(shadow_pos);
+		if (is_saturated(shadow_uv))
+		{
+			shadow_uv.xy = mad(shadow_uv.xy, GetFrame().rain_blocker_mad.xy, GetFrame().rain_blocker_mad.zw);
+			float shadow = texture_shadowatlas.SampleLevel(sampler_point_clamp, shadow_uv.xy, 0).r;
+
+			if(shadow > shadow_pos.z)
+			{
+				opacity = 0;
+			}
+		}
+	}
 
 	opacity = saturate(opacity);
 
@@ -64,13 +83,16 @@ float4 main(VertextoPixel input) : SV_TARGET
 	[branch]
 	if (color.a > 0)
 	{
-
 		float3 N;
 		N.x = -cos(PI * input.unrotated_uv.x);
 		N.y = cos(PI * input.unrotated_uv.y);
 		N.z = -sin(PI * length(input.unrotated_uv));
 		N = mul((float3x3)GetCamera().inverse_view, N);
 		N = normalize(N);
+		
+		float3 V = GetCamera().position - input.P;
+		float dist = length(V);
+		V /= dist;
 
 		Lighting lighting;
 		lighting.create(0, 0, GetAmbient(N), 0);
@@ -80,7 +102,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 		surface.create(material, color, surfacemap_simple);
 		surface.P = input.P;
 		surface.N = N;
-		surface.V = 0;
+		surface.V = V;
 		surface.pixel = pixel;
 		surface.sss = material.subsurfaceScattering;
 		surface.sss_inv = material.subsurfaceScattering_inv;
@@ -92,6 +114,8 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 		//color.rgb = float3(unrotated_uv, 0);
 		//color.rgb = float3(input.tex, 0);
+
+		ApplyFog(dist, V, color);
 
 		color = max(0, color);
 	}

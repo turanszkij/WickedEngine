@@ -86,6 +86,7 @@ namespace wi
 			FLAG_HAS_VOLUME = 1 << 5,
 			FLAG_FRAME_BLENDING = 1 << 6,
 			FLAG_COLLIDERS_DISABLED = 1 << 7,
+			FLAG_USE_RAIN_BLOCKER = 1 << 8,
 		};
 		uint32_t _flags = FLAG_EMPTY;
 
