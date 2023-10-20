@@ -1,6 +1,7 @@
 #include "globals.hlsli"
 #include "emittedparticleHF.hlsli"
 #include "ShaderInterop_EmittedParticle.h"
+#include "shadowHF.hlsli"
 
 RWStructuredBuffer<Particle> particleBuffer : register(u0);
 RWStructuredBuffer<uint> aliveBuffer_CURRENT : register(u1);
@@ -77,25 +78,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #endif // EMIT_FROM_MESH
 
 	float3 pos = mul(worldMatrix, float4(emitPos, 1)).xyz;
-
 	
 	// Blocker shadow map check:
 	[branch]
-	if ((xEmitterOptions & EMITTER_OPTION_BIT_USE_RAIN_BLOCKER) && GetFrame().texture_shadowatlas_index >= 0)
+	if ((xEmitterOptions & EMITTER_OPTION_BIT_USE_RAIN_BLOCKER) && rain_blocker_check(pos))
 	{
-		Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
-		float3 shadow_pos = mul(GetFrame().rain_blocker_matrix, float4(pos, 1)).xyz;
-		float3 shadow_uv = clipspace_to_uv(shadow_pos);
-		if (is_saturated(shadow_uv))
-		{
-			shadow_uv.xy = mad(shadow_uv.xy, GetFrame().rain_blocker_mad.xy, GetFrame().rain_blocker_mad.zw);
-			float shadow = texture_shadowatlas.SampleLevel(sampler_point_clamp, shadow_uv.xy, 0).r;
-
-			if(shadow > shadow_pos.z)
-			{
-				return;
-			}
-		}
+		return;
 	}
 
 	float particleStartingSize = xParticleSize + xParticleSize * (rng.next_float() - 0.5f) * xParticleRandomFactor;

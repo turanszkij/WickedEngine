@@ -3358,11 +3358,11 @@ void UpdatePerFrameData(
 							// Rain blocker:
 							if (rect.was_packed)
 							{
-								scene.weather.rain_blocker_dummy_light.shadow_rect = rect;
+								scene.rain_blocker_dummy_light.shadow_rect = rect;
 							}
 							else
 							{
-								scene.weather.rain_blocker_dummy_light.shadow_rect = {};
+								scene.rain_blocker_dummy_light.shadow_rect = {};
 							}
 							continue;
 						}
@@ -3568,13 +3568,13 @@ void UpdatePerFrameData(
 	frameCB.gi_boost = GetGIBoost();
 
 	frameCB.rain_blocker_mad = XMFLOAT4(
-		float(scene.weather.rain_blocker_dummy_light.shadow_rect.w) / float(shadowMapAtlas.desc.width),
-		float(scene.weather.rain_blocker_dummy_light.shadow_rect.h) / float(shadowMapAtlas.desc.height),
-		float(scene.weather.rain_blocker_dummy_light.shadow_rect.x) / float(shadowMapAtlas.desc.width),
-		float(scene.weather.rain_blocker_dummy_light.shadow_rect.y) / float(shadowMapAtlas.desc.height)
+		float(scene.rain_blocker_dummy_light.shadow_rect.w) / float(shadowMapAtlas.desc.width),
+		float(scene.rain_blocker_dummy_light.shadow_rect.h) / float(shadowMapAtlas.desc.height),
+		float(scene.rain_blocker_dummy_light.shadow_rect.x) / float(shadowMapAtlas.desc.width),
+		float(scene.rain_blocker_dummy_light.shadow_rect.y) / float(shadowMapAtlas.desc.height)
 	);
 	SHCAM shcam;
-	CreateDirLightShadowCams(vis.scene->weather.rain_blocker_dummy_light, *vis.camera, &shcam, 1);
+	CreateDirLightShadowCams(vis.scene->rain_blocker_dummy_light, *vis.camera, &shcam, 1);
 	XMStoreFloat4x4(&frameCB.rain_blocker_matrix, shcam.view_projection);
 	XMStoreFloat4x4(&frameCB.rain_blocker_matrix_inverse, XMMatrixInverse(nullptr, shcam.view_projection));
 
@@ -4671,6 +4671,11 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 				{
 					device->BuildRaytracingAccelerationStructure(&emitter.BLAS, cmd, nullptr);
 				}
+			}
+
+			if (scene.weather.rain_amount > 0 && scene.rainEmitter.BLAS.IsValid())
+			{
+				device->BuildRaytracingAccelerationStructure(&scene.rainEmitter.BLAS, cmd, nullptr);
 			}
 
 			{
@@ -5889,7 +5894,7 @@ void DrawShadowmaps(
 		if(vis.scene->weather.rain_amount > 0)
 		{
 			SHCAM shcam;
-			CreateDirLightShadowCams(vis.scene->weather.rain_blocker_dummy_light, *vis.camera, &shcam, 1);
+			CreateDirLightShadowCams(vis.scene->rain_blocker_dummy_light, *vis.camera, &shcam, 1);
 
 			renderQueue.init();
 			for (size_t i = 0; i < vis.scene->aabb_objects.size(); ++i)
@@ -5921,10 +5926,10 @@ void DrawShadowmaps(
 				cb.cameras[cascade].output_index = cascade;
 
 				Viewport vp;
-				vp.top_left_x = float(vis.scene->weather.rain_blocker_dummy_light.shadow_rect.x + cascade * vis.scene->weather.rain_blocker_dummy_light.shadow_rect.w);
-				vp.top_left_y = float(vis.scene->weather.rain_blocker_dummy_light.shadow_rect.y);
-				vp.width = float(vis.scene->weather.rain_blocker_dummy_light.shadow_rect.w);
-				vp.height = float(vis.scene->weather.rain_blocker_dummy_light.shadow_rect.h);
+				vp.top_left_x = float(vis.scene->rain_blocker_dummy_light.shadow_rect.x + cascade * vis.scene->rain_blocker_dummy_light.shadow_rect.w);
+				vp.top_left_y = float(vis.scene->rain_blocker_dummy_light.shadow_rect.y);
+				vp.width = float(vis.scene->rain_blocker_dummy_light.shadow_rect.w);
+				vp.height = float(vis.scene->rain_blocker_dummy_light.shadow_rect.h);
 				vp.min_depth = 0.0f;
 				vp.max_depth = 1.0f;
 

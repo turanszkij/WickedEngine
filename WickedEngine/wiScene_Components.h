@@ -1362,7 +1362,6 @@ namespace wi::scene
 		wi::Resource volumetricCloudsWeatherMapFirst;
 		wi::Resource volumetricCloudsWeatherMapSecond;
 		XMFLOAT4 stars_rotation_quaternion = XMFLOAT4(0, 0, 0, 1);
-		LightComponent rain_blocker_dummy_light;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

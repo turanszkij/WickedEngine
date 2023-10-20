@@ -4463,8 +4463,8 @@ namespace wi::scene
 			ocean.occlusionQueries[queryheap_idx] = -1; // invalidate query
 		}
 
-		weather.rain_blocker_dummy_light.shadow_rect = {};
-		weather.rain_blocker_dummy_light.cascade_distances[0] = 100;
+		rain_blocker_dummy_light.shadow_rect = {};
+		rain_blocker_dummy_light.cascade_distances[0] = 100;
 		if (weather.rain_amount > 0)
 		{
 			rainEmitter._flags |= wi::EmittedParticleSystem::FLAG_USE_RAIN_BLOCKER;
@@ -4476,8 +4476,7 @@ namespace wi::scene
 			{
 				rainEmitter.SetMaxParticleCount(target_max_particle_count);
 			}
-			constexpr float target_max_emit_count = 100000;
-			rainEmitter.count = wi::math::Lerp(0, target_max_emit_count, weather.rain_amount);
+			rainEmitter.count = wi::math::Lerp(0, (float)target_max_particle_count, weather.rain_amount);
 			rainEmitter.life = 1;
 			rainEmitter.size = weather.rain_scale;
 			rainEmitter.random_factor = weather.windRandomness;

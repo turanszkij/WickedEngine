@@ -241,6 +241,7 @@ namespace wi::scene
 		uint32_t rainInstanceOffset = ~0u;
 		uint32_t rainGeometryOffset = ~0u;
 		uint32_t rainMaterialOffset = ~0u;
+		LightComponent rain_blocker_dummy_light;
 
 		std::atomic<uint32_t> lightmap_request_allocator{ 0 };
 		wi::vector<uint32_t> lightmap_requests;
