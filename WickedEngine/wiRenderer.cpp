@@ -1956,7 +1956,7 @@ void SetUpStates()
 	rs.front_counter_clockwise = true;
 	rs.depth_bias = -1;
 	rs.depth_bias_clamp = 0;
-	rs.slope_scaled_depth_bias = -4.0f;
+	rs.slope_scaled_depth_bias = -2.0f;
 	rs.depth_clip_enable = true;
 	rs.multisample_enable = false;
 	rs.antialiased_line_enable = false;
@@ -3567,6 +3567,8 @@ void UpdatePerFrameData(
 
 	frameCB.gi_boost = GetGIBoost();
 
+	frameCB.rain_blocker_mad_prev = frameCB.rain_blocker_mad;
+	frameCB.rain_blocker_matrix_prev = frameCB.rain_blocker_matrix;
 	frameCB.rain_blocker_mad = XMFLOAT4(
 		float(scene.rain_blocker_dummy_light.shadow_rect.w) / float(shadowMapAtlas.desc.width),
 		float(scene.rain_blocker_dummy_light.shadow_rect.h) / float(shadowMapAtlas.desc.height),
@@ -3576,7 +3578,6 @@ void UpdatePerFrameData(
 	SHCAM shcam;
 	CreateDirLightShadowCams(vis.scene->rain_blocker_dummy_light, *vis.camera, &shcam, 1);
 	XMStoreFloat4x4(&frameCB.rain_blocker_matrix, shcam.view_projection);
-	XMStoreFloat4x4(&frameCB.rain_blocker_matrix_inverse, XMMatrixInverse(nullptr, shcam.view_projection));
 
 	frameCB.temporalaa_samplerotation = 0;
 	if (GetTemporalAAEnabled())

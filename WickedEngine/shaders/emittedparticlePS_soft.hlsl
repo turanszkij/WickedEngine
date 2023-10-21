@@ -13,6 +13,13 @@ static const uint SLOT = BASECOLORMAP;
 [earlydepthstencil]
 float4 main(VertextoPixel input) : SV_TARGET
 {
+	// Blocker shadow map check:
+	[branch]
+	if ((xEmitterOptions & EMITTER_OPTION_BIT_USE_RAIN_BLOCKER) && rain_blocker_check(input.P))
+	{
+		return 0;
+	}
+	
 	ShaderMaterial material = EmitterGetMaterial();
 
 	float4 color = 1;
@@ -47,13 +54,6 @@ float4 main(VertextoPixel input) : SV_TARGET
 		float4 depthScene = texture_lineardepth.GatherRed(sampler_linear_clamp, ScreenCoord) * GetCamera().z_far;
 		float depthFragment = input.pos.w;
 		opacity *= saturate(1.0 / input.size * (max(max(depthScene.x, depthScene.y), max(depthScene.z, depthScene.w)) - depthFragment));
-	}
-	
-	// Blocker shadow map check:
-	[branch]
-	if ((xEmitterOptions & EMITTER_OPTION_BIT_USE_RAIN_BLOCKER) && rain_blocker_check(input.P))
-	{
-		opacity = 0;
 	}
 
 	opacity = saturate(opacity);

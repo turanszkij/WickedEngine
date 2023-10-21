@@ -4467,6 +4467,7 @@ namespace wi::scene
 		rain_blocker_dummy_light.cascade_distances[0] = 100;
 		if (weather.rain_amount > 0)
 		{
+			GraphicsDevice* device = wi::graphics::GetDevice();
 			rainEmitter._flags |= wi::EmittedParticleSystem::FLAG_USE_RAIN_BLOCKER;
 			rainEmitter.shaderType = wi::EmittedParticleSystem::PARTICLESHADERTYPE::SOFT_LIGHTING;
 			rainEmitter.SetCollidersDisabled(true);
@@ -4494,24 +4495,29 @@ namespace wi::scene
 			rainMaterial.baseColor = weather.rain_color;
 			if (!rainMaterial.textures[MaterialComponent::BASECOLORMAP].resource.IsValid())
 			{
-				rainMaterial.textures[MaterialComponent::BASECOLORMAP].resource.SetTexture(
-					wi::texturehelper::CreateGradientTexture(
-						wi::texturehelper::GradientType::Circular,
-						64, 64,
-						XMFLOAT2(0.5f, 0.5f), XMFLOAT2(0.5f, 0),
-						wi::texturehelper::GradientFlags::Smoothstep | wi::texturehelper::GradientFlags::Inverse,
-						{ wi::graphics::ComponentSwizzle::ONE,wi::graphics::ComponentSwizzle::ONE,wi::graphics::ComponentSwizzle::ONE,wi::graphics::ComponentSwizzle::R }
-					)
+				Texture gradientTex = wi::texturehelper::CreateGradientTexture(
+					wi::texturehelper::GradientType::Circular,
+					32, 32,
+					XMFLOAT2(0.5f, 0.5f), XMFLOAT2(0.5f, 0),
+					wi::texturehelper::GradientFlags::Smoothstep | wi::texturehelper::GradientFlags::Inverse
 				);
+				Texture gradientTexBC;
+				TextureDesc desc = gradientTex.GetDesc();
+				desc.format = Format::BC4_UNORM;
+				desc.swizzle = { wi::graphics::ComponentSwizzle::ONE,wi::graphics::ComponentSwizzle::ONE,wi::graphics::ComponentSwizzle::ONE,wi::graphics::ComponentSwizzle::R };
+				bool success = device->CreateTexture(&desc, nullptr, &gradientTexBC);
+				assert(success);
+				wi::renderer::AddDeferredBlockCompression(gradientTex, gradientTexBC);
+				rainMaterial.textures[MaterialComponent::BASECOLORMAP].resource.SetTexture(gradientTexBC);
 			}
+			rainMaterial.shadingRate = ShadingRate::RATE_2X2;
 			TransformComponent transform;
-			transform.scale_local = XMFLOAT3(50, 50, 50);
-			transform.translation_local = camera.Eye;
-			transform.translation_local.y += transform.scale_local.y * 0.5f;
+			transform.scale_local = XMFLOAT3(30, 30, 30);
+			transform.translation_local.x = camera.Eye.x + camera.At.x * 10;
+			transform.translation_local.y = camera.Eye.y + camera.At.y * 10 + transform.scale_local.y * 0.5f;
+			transform.translation_local.z = camera.Eye.z + camera.At.z * 10;
 			transform.UpdateTransform();
 			rainEmitter.UpdateCPU(transform, dt);
-
-			GraphicsDevice* device = wi::graphics::GetDevice();
 
 			ShaderMaterial material;
 			material.init();

@@ -131,11 +131,11 @@ PixelInput main(ConstantOutput input, float3 uvw : SV_DomainLocation, const Outp
 #endif // OBJECTSHADER_USE_ATLAS
 
 #ifdef OBJECTSHADER_USE_NORMAL
-	output.nor = min16float3(w * patch[0].nor + u * patch[1].nor + v * patch[2].nor);
+	output.nor = min16float3(normalize(w * patch[0].nor + u * patch[1].nor + v * patch[2].nor));
 #endif // OBJECTSHADER_USE_NORMAL
 
 #ifdef OBJECTSHADER_USE_TANGENT
-	output.tan = min16float4(w * patch[0].tan + u * patch[1].tan + v * patch[2].tan);
+	output.tan = min16float4(normalize(w * patch[0].tan + u * patch[1].tan + v * patch[2].tan));
 #endif // OBJECTSHADER_USE_TANGENT
 
 #ifdef OBJECTSHADER_USE_POSITION3D

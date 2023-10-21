@@ -256,6 +256,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&rainLengthSlider);
 
 	rainSpeedSlider.Create(0, 2, 0, 10000, "Rain Speed: ");
+	rainSpeedSlider.SetTooltip("The downward speed of rain particles. The final speed will be modulated by the wind direction and speed as well.");
 	rainSpeedSlider.SetSize(XMFLOAT2(wid, hei));
 	rainSpeedSlider.SetPos(XMFLOAT2(x, y += step));
 	rainSpeedSlider.OnSlide([&](wi::gui::EventArgs args) {

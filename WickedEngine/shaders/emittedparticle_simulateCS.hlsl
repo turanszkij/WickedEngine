@@ -55,9 +55,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		// drag: 
 		particle.velocity *= xParticleDrag;
 		
-		// Blocker shadow map check:
+		// Blocker shadow map check using previous frame:
 		[branch]
-		if ((xEmitterOptions & EMITTER_OPTION_BIT_USE_RAIN_BLOCKER) && rain_blocker_check(particle.position))
+		if ((xEmitterOptions & EMITTER_OPTION_BIT_USE_RAIN_BLOCKER) && rain_blocker_check_prev(particle.position))
 		{
 			particle.life = 0;
 		}

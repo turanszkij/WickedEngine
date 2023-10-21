@@ -79,9 +79,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	float3 pos = mul(worldMatrix, float4(emitPos, 1)).xyz;
 	
-	// Blocker shadow map check:
+	// Blocker shadow map check using previous frame:
 	[branch]
-	if ((xEmitterOptions & EMITTER_OPTION_BIT_USE_RAIN_BLOCKER) && rain_blocker_check(pos))
+	if ((xEmitterOptions & EMITTER_OPTION_BIT_USE_RAIN_BLOCKER) && rain_blocker_check_prev(pos))
 	{
 		return;
 	}
