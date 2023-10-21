@@ -204,13 +204,15 @@ struct VertexSurface
 			color *= input.GetVertexColor();
 		}
 
-		// Note: normalization must happen when normal is exported as half precision for interpolator!
-		normal = normalize(mul((min16float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), normal));
+		normal = mul((min16float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), normal);
 
 		tangent = input.GetTangent();
-		// Note: normalization must happen when tangent is exported as half precision for interpolator!
-		tangent.xyz = normalize(mul((min16float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), tangent.xyz));
+		tangent.xyz = mul((min16float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), tangent.xyz);
 
+		// Note: normalization must happen when normal is exported as half precision for interpolator!
+		normal = any(normal) ? normalize(normal) : 0;
+		tangent = any(tangent) ? normalize(tangent) : 0;
+		
 		uvsets = input.GetUVSets();
 
 		atlas = input.GetAtlasUV();

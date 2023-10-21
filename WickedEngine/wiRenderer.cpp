@@ -3287,7 +3287,7 @@ void UpdatePerFrameData(
 				// Rain blocker:
 				wi::rectpacker::Rect rect = {};
 				rect.id = -1;
-				rect.w = rect.h = 256;
+				rect.w = rect.h = 128;
 				packer.add_rect(rect);
 			}
 			for (uint32_t lightIndex : vis.visibleLights)
@@ -3569,6 +3569,7 @@ void UpdatePerFrameData(
 
 	frameCB.rain_blocker_mad_prev = frameCB.rain_blocker_mad;
 	frameCB.rain_blocker_matrix_prev = frameCB.rain_blocker_matrix;
+	frameCB.rain_blocker_matrix_inverse_prev = frameCB.rain_blocker_matrix_inverse;
 	frameCB.rain_blocker_mad = XMFLOAT4(
 		float(scene.rain_blocker_dummy_light.shadow_rect.w) / float(shadowMapAtlas.desc.width),
 		float(scene.rain_blocker_dummy_light.shadow_rect.h) / float(shadowMapAtlas.desc.height),
@@ -3578,6 +3579,7 @@ void UpdatePerFrameData(
 	SHCAM shcam;
 	CreateDirLightShadowCams(vis.scene->rain_blocker_dummy_light, *vis.camera, &shcam, 1);
 	XMStoreFloat4x4(&frameCB.rain_blocker_matrix, shcam.view_projection);
+	XMStoreFloat4x4(&frameCB.rain_blocker_matrix_inverse, XMMatrixInverse(nullptr, shcam.view_projection));
 
 	frameCB.temporalaa_samplerotation = 0;
 	if (GetTemporalAAEnabled())

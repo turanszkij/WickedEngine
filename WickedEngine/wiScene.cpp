@@ -4464,7 +4464,6 @@ namespace wi::scene
 		}
 
 		rain_blocker_dummy_light.shadow_rect = {};
-		rain_blocker_dummy_light.cascade_distances[0] = 100;
 		if (weather.rain_amount > 0)
 		{
 			GraphicsDevice* device = wi::graphics::GetDevice();
@@ -4510,7 +4509,7 @@ namespace wi::scene
 				wi::renderer::AddDeferredBlockCompression(gradientTex, gradientTexBC);
 				rainMaterial.textures[MaterialComponent::BASECOLORMAP].resource.SetTexture(gradientTexBC);
 			}
-			rainMaterial.shadingRate = ShadingRate::RATE_2X2;
+			rainMaterial.shadingRate = ShadingRate::RATE_4X4;
 			TransformComponent transform;
 			transform.scale_local = XMFLOAT3(30, 30, 30);
 			transform.translation_local.x = camera.Eye.x + camera.At.x * 10;
@@ -4518,6 +4517,7 @@ namespace wi::scene
 			transform.translation_local.z = camera.Eye.z + camera.At.z * 10;
 			transform.UpdateTransform();
 			rainEmitter.UpdateCPU(transform, dt);
+			rain_blocker_dummy_light.cascade_distances[0] = transform.scale_local.x;
 
 			ShaderMaterial material;
 			material.init();
