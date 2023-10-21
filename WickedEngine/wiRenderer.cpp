@@ -425,6 +425,9 @@ SHADERTYPE GetVSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, b
 	case RENDERPASS_VOXELIZE:
 		realVS = VSTYPE_VOXELIZER;
 		break;
+	case RENDERPASS_RAINBLOCKER:
+		realVS = VSTYPE_SHADOW;
+		break;
 	}
 
 	return realVS;
@@ -1666,6 +1669,8 @@ void LoadShaders()
 					{
 						for (uint32_t tessellation = 0; tessellation <= 1; ++tessellation)
 						{
+							if (tessellation && renderPass > RENDERPASS_PREPASS)
+								continue;
 							for (uint32_t alphatest = 0; alphatest <= 1; ++alphatest)
 							{
 								const bool transparency = blendMode != BLENDMODE_OPAQUE;
@@ -1715,6 +1720,9 @@ void LoadShaders()
 								case RENDERPASS_SHADOW:
 									desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOW : BSTYPE_COLORWRITEDISABLE];
 									break;
+								case RENDERPASS_RAINBLOCKER:
+									desc.bs = &blendStates[BSTYPE_COLORWRITEDISABLE];
+									break;
 								default:
 									break;
 								}
@@ -1739,6 +1747,9 @@ void LoadShaders()
 									break;
 								case RENDERPASS_VOXELIZE:
 									desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
+									break;
+								case RENDERPASS_RAINBLOCKER:
+									desc.dss = &depthStencils[DSSTYPE_DEFAULT];
 									break;
 								default:
 									if (blendMode == BLENDMODE_ADDITIVE)
@@ -1835,6 +1846,15 @@ void LoadShaders()
 									RenderPassInfo renderpass_info;
 									renderpass_info.rt_count = 1;
 									renderpass_info.rt_formats[0] = format_rendertarget_shadowmap;
+									renderpass_info.ds_format = format_depthbuffer_shadowmap;
+									device->CreatePipelineState(&desc, GetObjectPSO(variant), &renderpass_info);
+								}
+								break;
+
+								case RENDERPASS_RAINBLOCKER:
+								{
+									RenderPassInfo renderpass_info;
+									renderpass_info.rt_count = 0;
 									renderpass_info.ds_format = format_depthbuffer_shadowmap;
 									device->CreatePipelineState(&desc, GetObjectPSO(variant), &renderpass_info);
 								}
@@ -5940,7 +5960,7 @@ void DrawShadowmaps(
 				device->BindViewports(1, &vp, cmd);
 
 				renderQueue.sort_opaque();
-				RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_OBJECT_ALL, cmd, 0, 1);
+				RenderMeshes(vis, renderQueue, RENDERPASS_RAINBLOCKER, FILTER_OBJECT_ALL, cmd, 0, 1);
 				device->EventEnd(cmd);
 			}
 		}

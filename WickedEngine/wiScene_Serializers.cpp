@@ -1442,6 +1442,7 @@ namespace wi::scene
 				archive >> rain_length;
 				archive >> rain_speed;
 				archive >> rain_scale;
+				archive >> rain_splash_scale;
 				archive >> rain_color;
 			}
 		}
@@ -1661,6 +1662,7 @@ namespace wi::scene
 				archive << rain_length;
 				archive << rain_speed;
 				archive << rain_scale;
+				archive << rain_splash_scale;
 				archive << rain_color;
 			}
 		}

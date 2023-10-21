@@ -73,7 +73,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 					// Under blocker, make a splash by placing above blocker and modulating some params:
 					float3 blockerPos = reconstruct_position(clipspace_to_uv(shadow_pos.xy), shadow, GetFrame().rain_blocker_matrix_inverse_prev);
 					particle.velocity = 0;
-					float splashSize = GetWeather().rain_scale * 100;
+					float splashSize = GetWeather().rain_splash_scale;
 					particle.position = blockerPos + float3(0, splashSize * 0.5, 0);
 					particle.sizeBeginEnd = splashSize;
 					particle.life = 0.15;

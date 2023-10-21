@@ -834,6 +834,7 @@ namespace wi::scene
 		shaderscene.weather.rain_length = weather.rain_length;
 		shaderscene.weather.rain_speed = weather.rain_speed;
 		shaderscene.weather.rain_scale = weather.rain_scale;
+		shaderscene.weather.rain_splash_scale = weather.rain_splash_scale;
 		shaderscene.weather.rain_color = weather.rain_color;
 
 		shaderscene.ddgi.grid_dimensions = ddgi.grid_dimensions;

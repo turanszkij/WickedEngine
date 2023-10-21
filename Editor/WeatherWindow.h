@@ -39,6 +39,7 @@ public:
 	wi::gui::Slider rainLengthSlider;
 	wi::gui::Slider rainSpeedSlider;
 	wi::gui::Slider rainScaleSlider;
+	wi::gui::Slider rainSplashScaleSlider;
 	wi::gui::CheckBox realisticskyCheckBox;
 	wi::gui::CheckBox aerialperspectiveCheckBox;
 	wi::gui::CheckBox realisticskyHighQualityCheckBox;

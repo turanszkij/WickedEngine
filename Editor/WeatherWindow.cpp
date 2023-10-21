@@ -9,7 +9,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_WEATHER " Weather", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(660, 2100));
+	SetSize(XMFLOAT2(660, 2140));
 
 	closeButton.SetTooltip("Delete WeatherComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -248,6 +248,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&rainAmountSlider);
 
 	rainLengthSlider.Create(0, 0.1f, 0, 10000, "Rain Length: ");
+	rainLengthSlider.SetTooltip("The elongation of rain particles in the direction of their motion.");
 	rainLengthSlider.SetSize(XMFLOAT2(wid, hei));
 	rainLengthSlider.SetPos(XMFLOAT2(x, y += step));
 	rainLengthSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -265,12 +266,22 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	AddWidget(&rainSpeedSlider);
 
 	rainScaleSlider.Create(0.005f, 0.1f, 0, 10000, "Rain Scale: ");
+	rainScaleSlider.SetTooltip("The overall size of rain particles.");
 	rainScaleSlider.SetSize(XMFLOAT2(wid, hei));
 	rainScaleSlider.SetPos(XMFLOAT2(x, y += step));
 	rainScaleSlider.OnSlide([&](wi::gui::EventArgs args) {
 		GetWeather().rain_scale = args.fValue;
 		});
 	AddWidget(&rainScaleSlider);
+
+	rainSplashScaleSlider.Create(0, 1, 0, 10000, "Rain Splash Scale: ");
+	rainSplashScaleSlider.SetTooltip("The size of rain particles when they hit the ground.");
+	rainSplashScaleSlider.SetSize(XMFLOAT2(wid, hei));
+	rainSplashScaleSlider.SetPos(XMFLOAT2(x, y += step));
+	rainSplashScaleSlider.OnSlide([&](wi::gui::EventArgs args) {
+		GetWeather().rain_splash_scale = args.fValue;
+		});
+	AddWidget(&rainSplashScaleSlider);
 
 	realisticskyCheckBox.Create("Realistic sky: ");
 	realisticskyCheckBox.SetTooltip("Physically based sky rendering model.\nNote that realistic sky requires a sun (directional light) to be visible.");
@@ -1063,6 +1074,7 @@ void WeatherWindow::Update()
 		rainLengthSlider.SetValue(weather.rain_length);
 		rainSpeedSlider.SetValue(weather.rain_speed);
 		rainScaleSlider.SetValue(weather.rain_scale);
+		rainSplashScaleSlider.SetValue(weather.rain_splash_scale);
 		windMagnitudeSlider.SetValue(XMVectorGetX(XMVector3Length(XMLoadFloat3(&weather.windDirection))));
 
 		switch (colorComboBox.GetSelected())
@@ -1307,6 +1319,7 @@ void WeatherWindow::ResizeLayout()
 	add(rainLengthSlider);
 	add(rainSpeedSlider);
 	add(rainScaleSlider);
+	add(rainSplashScaleSlider);
 
 	y += jump;
 
