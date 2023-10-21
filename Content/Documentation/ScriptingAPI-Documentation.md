@@ -1093,7 +1093,27 @@ Describes a Weather
 - VolumetricCloudParameters : VolumetricCloudParameters -- Returns a table to modify volumetric cloud parameters
 - SkyMapName : string -- Resource name for sky texture
 - ColorGradingMapName : string -- Resource name for color grading map
-- Gravity : Vector
+- sunColor : Vector
+- sunDirection : Vector
+- skyExposure : float
+- horizon : Vector
+- zenith : Vector
+- ambient : Vector
+- fogStart : float
+- fog Density : float
+- fogHeightStart : float
+- fogHeightEnd : float
+- windDirection : Vector
+- windRandomness : float
+- windWaveSize : float
+- windSpeed : float
+- stars : float
+- rainAmount : float
+- rainLenght : float
+- rainSpeed : float
+- rainScale : float
+- rainColor : Vector
+- gravity : Vector
 
 </br>
 
