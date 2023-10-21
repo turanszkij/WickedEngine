@@ -121,4 +121,54 @@ inline bool furthest_cascade_volumetrics(inout ShaderEntity light, inout uint fu
 	return false;
 }
 
+// Checks whether position is below or above rain blocker
+//	true: below
+//	false: above
+inline bool rain_blocker_check(in float3 P)
+{
+	[branch]
+	if (GetFrame().texture_shadowatlas_index < 0 || !any(GetFrame().rain_blocker_mad))
+		return false;
+		
+	Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
+	float3 shadow_pos = mul(GetFrame().rain_blocker_matrix, float4(P, 1)).xyz;
+	float3 shadow_uv = clipspace_to_uv(shadow_pos);
+	if (is_saturated(shadow_uv))
+	{
+		shadow_uv.xy = mad(shadow_uv.xy, GetFrame().rain_blocker_mad.xy, GetFrame().rain_blocker_mad.zw);
+		float shadow = texture_shadowatlas.SampleLevel(sampler_point_clamp, shadow_uv.xy, 0).r;
+
+		if(shadow > shadow_pos.z)
+		{
+			return true;
+		}
+		
+	}
+	return false;
+}
+
+// Same as above but using previous frame's values
+inline bool rain_blocker_check_prev(in float3 P)
+{
+	[branch]
+	if (GetFrame().texture_shadowatlas_index < 0 || !any(GetFrame().rain_blocker_mad_prev))
+		return false;
+		
+	Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
+	float3 shadow_pos = mul(GetFrame().rain_blocker_matrix_prev, float4(P, 1)).xyz;
+	float3 shadow_uv = clipspace_to_uv(shadow_pos);
+	if (is_saturated(shadow_uv))
+	{
+		shadow_uv.xy = mad(shadow_uv.xy, GetFrame().rain_blocker_mad_prev.xy, GetFrame().rain_blocker_mad_prev.zw);
+		float shadow = texture_shadowatlas.SampleLevel(sampler_point_clamp, shadow_uv.xy, 0).r;
+
+		if(shadow > shadow_pos.z)
+		{
+			return true;
+		}
+		
+	}
+	return false;
+}
+
 #endif // WI_SHADOW_HF

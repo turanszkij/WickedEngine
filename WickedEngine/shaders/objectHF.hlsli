@@ -203,12 +203,16 @@ struct VertexSurface
 		{
 			color *= input.GetVertexColor();
 		}
-		
+
 		normal = mul((min16float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), normal);
 
 		tangent = input.GetTangent();
 		tangent.xyz = mul((min16float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), tangent.xyz);
 
+		// Note: normalization must happen when normal is exported as half precision for interpolator!
+		normal = any(normal) ? normalize(normal) : 0;
+		tangent = any(tangent) ? normalize(tangent) : 0;
+		
 		uvsets = input.GetUVSets();
 
 		atlas = input.GetAtlasUV();

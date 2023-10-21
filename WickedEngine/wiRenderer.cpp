@@ -425,6 +425,9 @@ SHADERTYPE GetVSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, b
 	case RENDERPASS_VOXELIZE:
 		realVS = VSTYPE_VOXELIZER;
 		break;
+	case RENDERPASS_RAINBLOCKER:
+		realVS = VSTYPE_SHADOW;
+		break;
 	}
 
 	return realVS;
@@ -1666,6 +1669,8 @@ void LoadShaders()
 					{
 						for (uint32_t tessellation = 0; tessellation <= 1; ++tessellation)
 						{
+							if (tessellation && renderPass > RENDERPASS_PREPASS)
+								continue;
 							for (uint32_t alphatest = 0; alphatest <= 1; ++alphatest)
 							{
 								const bool transparency = blendMode != BLENDMODE_OPAQUE;
@@ -1715,6 +1720,9 @@ void LoadShaders()
 								case RENDERPASS_SHADOW:
 									desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOW : BSTYPE_COLORWRITEDISABLE];
 									break;
+								case RENDERPASS_RAINBLOCKER:
+									desc.bs = &blendStates[BSTYPE_COLORWRITEDISABLE];
+									break;
 								default:
 									break;
 								}
@@ -1739,6 +1747,9 @@ void LoadShaders()
 									break;
 								case RENDERPASS_VOXELIZE:
 									desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
+									break;
+								case RENDERPASS_RAINBLOCKER:
+									desc.dss = &depthStencils[DSSTYPE_DEFAULT];
 									break;
 								default:
 									if (blendMode == BLENDMODE_ADDITIVE)
@@ -1835,6 +1846,15 @@ void LoadShaders()
 									RenderPassInfo renderpass_info;
 									renderpass_info.rt_count = 1;
 									renderpass_info.rt_formats[0] = format_rendertarget_shadowmap;
+									renderpass_info.ds_format = format_depthbuffer_shadowmap;
+									device->CreatePipelineState(&desc, GetObjectPSO(variant), &renderpass_info);
+								}
+								break;
+
+								case RENDERPASS_RAINBLOCKER:
+								{
+									RenderPassInfo renderpass_info;
+									renderpass_info.rt_count = 0;
 									renderpass_info.ds_format = format_depthbuffer_shadowmap;
 									device->CreatePipelineState(&desc, GetObjectPSO(variant), &renderpass_info);
 								}
@@ -1956,7 +1976,7 @@ void SetUpStates()
 	rs.front_counter_clockwise = true;
 	rs.depth_bias = -1;
 	rs.depth_bias_clamp = 0;
-	rs.slope_scaled_depth_bias = -4.0f;
+	rs.slope_scaled_depth_bias = -2.0f;
 	rs.depth_clip_enable = true;
 	rs.multisample_enable = false;
 	rs.antialiased_line_enable = false;
@@ -2441,7 +2461,6 @@ void ClearWorld(Scene& scene)
 struct SHCAM
 {
 	XMMATRIX view_projection;
-	XMMATRIX inverse_view_projection;
 	Frustum frustum;					// This frustum can be used for intersection test with wiPrimitive primitives
 	BoundingFrustum boundingfrustum;	// This boundingfrustum can be used for frustum vs frustum intersection test
 
@@ -2455,7 +2474,6 @@ struct SHCAM
 		const XMMATRIX V = XMMatrixLookToLH(E, to, up);
 		const XMMATRIX P = XMMatrixPerspectiveFovLH(fov, 1, farPlane, nearPlane);
 		view_projection = XMMatrixMultiply(V, P);
-		inverse_view_projection = XMMatrixInverse(nullptr, view_projection);
 		frustum.Create(view_projection);
 		
 		BoundingFrustum::CreateFromMatrix(boundingfrustum, P);
@@ -3275,7 +3293,7 @@ void UpdatePerFrameData(
 	}
 
 	// Shadow atlas packing:
-	if (!vis.visibleLights.empty())
+	if (!vis.visibleLights.empty() || vis.scene->weather.rain_amount > 0)
 	{
 		auto range = wi::profiler::BeginRangeCPU("Shadowmap packing");
 		static thread_local wi::rectpacker::State packer;
@@ -3284,6 +3302,14 @@ void UpdatePerFrameData(
 		while (iterative_scaling > 0.03f)
 		{
 			packer.clear();
+			if(vis.scene->weather.rain_amount > 0)
+			{
+				// Rain blocker:
+				wi::rectpacker::Rect rect = {};
+				rect.id = -1;
+				rect.w = rect.h = 128;
+				packer.add_rect(rect);
+			}
 			for (uint32_t lightIndex : vis.visibleLights)
 			{
 				LightComponent& light = scene.lights[lightIndex];
@@ -3347,6 +3373,19 @@ void UpdatePerFrameData(
 				{
 					for (auto& rect : packer.rects)
 					{
+						if (rect.id == -1)
+						{
+							// Rain blocker:
+							if (rect.was_packed)
+							{
+								scene.rain_blocker_dummy_light.shadow_rect = rect;
+							}
+							else
+							{
+								scene.rain_blocker_dummy_light.shadow_rect = {};
+							}
+							continue;
+						}
 						uint32_t lightIndex = uint32_t(rect.id);
 						LightComponent& light = scene.lights[lightIndex];
 						if (rect.was_packed)
@@ -3547,6 +3586,20 @@ void UpdatePerFrameData(
 	frameCB.forcefieldarray_offset = std::min(SHADER_ENTITY_COUNT, frameCB.forcefieldarray_offset);
 
 	frameCB.gi_boost = GetGIBoost();
+
+	frameCB.rain_blocker_mad_prev = frameCB.rain_blocker_mad;
+	frameCB.rain_blocker_matrix_prev = frameCB.rain_blocker_matrix;
+	frameCB.rain_blocker_matrix_inverse_prev = frameCB.rain_blocker_matrix_inverse;
+	frameCB.rain_blocker_mad = XMFLOAT4(
+		float(scene.rain_blocker_dummy_light.shadow_rect.w) / float(shadowMapAtlas.desc.width),
+		float(scene.rain_blocker_dummy_light.shadow_rect.h) / float(shadowMapAtlas.desc.height),
+		float(scene.rain_blocker_dummy_light.shadow_rect.x) / float(shadowMapAtlas.desc.width),
+		float(scene.rain_blocker_dummy_light.shadow_rect.y) / float(shadowMapAtlas.desc.height)
+	);
+	SHCAM shcam;
+	CreateDirLightShadowCams(vis.scene->rain_blocker_dummy_light, *vis.camera, &shcam, 1);
+	XMStoreFloat4x4(&frameCB.rain_blocker_matrix, shcam.view_projection);
+	XMStoreFloat4x4(&frameCB.rain_blocker_matrix_inverse, XMMatrixInverse(nullptr, shcam.view_projection));
 
 	frameCB.temporalaa_samplerotation = 0;
 	if (GetTemporalAAEnabled())
@@ -4538,7 +4591,7 @@ void UpdateRenderDataAsync(
 	}
 
 	// GPU Particle systems simulation/sorting/culling:
-	if (!vis.visibleEmitters.empty())
+	if (!vis.visibleEmitters.empty() || vis.scene->weather.rain_amount > 0)
 	{
 		auto range = wi::profiler::BeginRangeGPU("EmittedParticles - Simulate", cmd);
 		for (uint32_t emitterIndex : vis.visibleEmitters)
@@ -4550,6 +4603,10 @@ void UpdateRenderDataAsync(
 			const uint32_t instanceIndex = uint32_t(vis.scene->objects.GetCount() + vis.scene->hairs.GetCount()) + emitterIndex;
 
 			emitter.UpdateGPU(instanceIndex, mesh, cmd);
+		}
+		if (vis.scene->weather.rain_amount > 0)
+		{
+			vis.scene->rainEmitter.UpdateGPU(vis.scene->rainInstanceOffset, nullptr, cmd);
 		}
 		wi::profiler::EndRange(range);
 	}
@@ -4637,6 +4694,11 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 				{
 					device->BuildRaytracingAccelerationStructure(&emitter.BLAS, cmd, nullptr);
 				}
+			}
+
+			if (scene.weather.rain_amount > 0 && scene.rainEmitter.BLAS.IsValid())
+			{
+				device->BuildRaytracingAccelerationStructure(&scene.rainEmitter.BLAS, cmd, nullptr);
 			}
 
 			{
@@ -4871,47 +4933,51 @@ void DrawSoftParticles(
 	CommandList cmd
 )
 {
-	size_t emitterCount = vis.visibleEmitters.size();
-	if (emitterCount == 0)
-	{
-		return;
-	}
 	auto range = distortion ?
 		wi::profiler::BeginRangeGPU("EmittedParticles - Render (Distortion)", cmd) :
 		wi::profiler::BeginRangeGPU("EmittedParticles - Render", cmd);
 
 	BindCommonResources(cmd);
 
-	// Sort emitters based on distance:
-	assert(emitterCount < 0x0000FFFF); // watch out for sorting hash truncation!
-	static thread_local wi::vector<uint32_t> emitterSortingHashes;
-	emitterSortingHashes.resize(emitterCount);
-	for (size_t i = 0; i < emitterCount; ++i)
+	size_t emitterCount = vis.visibleEmitters.size();
+	if (emitterCount > 0)
 	{
-		const uint32_t emitterIndex = vis.visibleEmitters[i];
-		const wi::EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
-		float distance = wi::math::DistanceEstimated(emitter.center, vis.camera->Eye);
-		emitterSortingHashes[i] = 0;
-		emitterSortingHashes[i] |= (uint32_t)i & 0x0000FFFF;
-		emitterSortingHashes[i] |= (uint32_t)XMConvertFloatToHalf(distance) << 16u;
+		// Sort emitters based on distance:
+		assert(emitterCount < 0x0000FFFF); // watch out for sorting hash truncation!
+		static thread_local wi::vector<uint32_t> emitterSortingHashes;
+		emitterSortingHashes.resize(emitterCount);
+		for (size_t i = 0; i < emitterCount; ++i)
+		{
+			const uint32_t emitterIndex = vis.visibleEmitters[i];
+			const wi::EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
+			float distance = wi::math::DistanceEstimated(emitter.center, vis.camera->Eye);
+			emitterSortingHashes[i] = 0;
+			emitterSortingHashes[i] |= (uint32_t)i & 0x0000FFFF;
+			emitterSortingHashes[i] |= (uint32_t)XMConvertFloatToHalf(distance) << 16u;
+		}
+		std::sort(emitterSortingHashes.begin(), emitterSortingHashes.end(), std::greater<uint32_t>());
+
+		for (size_t i = 0; i < emitterCount; ++i)
+		{
+			const uint32_t emitterIndex = vis.visibleEmitters[emitterSortingHashes[i] & 0x0000FFFF];
+			const wi::EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
+			const Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
+			const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
+
+			if (distortion && emitter.shaderType == wi::EmittedParticleSystem::SOFT_DISTORTION)
+			{
+				emitter.Draw(material, cmd);
+			}
+			else if (!distortion && (emitter.shaderType == wi::EmittedParticleSystem::SOFT || emitter.shaderType == wi::EmittedParticleSystem::SOFT_LIGHTING || emitter.shaderType == wi::EmittedParticleSystem::SIMPLE || IsWireRender()))
+			{
+				emitter.Draw(material, cmd);
+			}
+		}
 	}
-	std::sort(emitterSortingHashes.begin(), emitterSortingHashes.end(), std::greater<uint32_t>());
 
-	for (size_t i = 0; i < emitterCount; ++i)
+	if (!distortion && vis.scene->weather.rain_amount > 0)
 	{
-		const uint32_t emitterIndex = vis.visibleEmitters[emitterSortingHashes[i] & 0x0000FFFF];
-		const wi::EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
-		const Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
-		const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
-
-		if (distortion && emitter.shaderType == wi::EmittedParticleSystem::SOFT_DISTORTION)
-		{
-			emitter.Draw(material, cmd);
-		}
-		else if (!distortion && (emitter.shaderType == wi::EmittedParticleSystem::SOFT || emitter.shaderType == wi::EmittedParticleSystem::SOFT_LIGHTING || emitter.shaderType == wi::EmittedParticleSystem::SIMPLE || IsWireRender()))
-		{
-			emitter.Draw(material, cmd);
-		}
+		vis.scene->rainEmitter.Draw(vis.scene->rainMaterial, cmd);
 	}
 
 	device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
@@ -4919,10 +4985,10 @@ void DrawSoftParticles(
 	wi::profiler::EndRange(range);
 }
 void DrawSpritesAndFonts(
-	const wi::scene::Scene& scene,
-	const wi::scene::CameraComponent& camera,
+	const Scene& scene,
+	const CameraComponent& camera,
 	bool distortion,
-	wi::graphics::CommandList cmd
+	CommandList cmd
 )
 {
 	if (scene.sprites.GetCount() == 0 && scene.fonts.GetCount() == 0)
@@ -5454,7 +5520,7 @@ void DrawShadowmaps(
 	if (IsWireRender())
 		return;
 
-	if (!vis.visibleLights.empty() && shadowMapAtlas.IsValid())
+	if ((!vis.visibleLights.empty() || vis.scene->weather.rain_amount > 0) && shadowMapAtlas.IsValid())
 	{
 		device->EventBegin("DrawShadowmaps", cmd);
 		auto range_cpu = wi::profiler::BeginRangeCPU("Shadowmap Rendering");
@@ -5845,6 +5911,58 @@ void DrawShadowmaps(
 			}
 			break;
 			} // terminate switch
+		}
+
+		// Rain blocker:
+		if(vis.scene->weather.rain_amount > 0)
+		{
+			SHCAM shcam;
+			CreateDirLightShadowCams(vis.scene->rain_blocker_dummy_light, *vis.camera, &shcam, 1);
+
+			renderQueue.init();
+			for (size_t i = 0; i < vis.scene->aabb_objects.size(); ++i)
+			{
+				const AABB& aabb = vis.scene->aabb_objects[i];
+				if (aabb.layerMask & vis.layerMask)
+				{
+					const ObjectComponent& object = vis.scene->objects[i];
+					if (object.IsRenderable())
+					{
+						uint16_t camera_mask = 0;
+						if (shcam.frustum.CheckBoxFast(aabb))
+						{
+							camera_mask |= 1 << 0;
+						}
+						if (camera_mask == 0)
+							continue;
+
+						renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits, camera_mask);
+					}
+				}
+			}
+
+			if (!renderQueue.empty())
+			{
+				device->EventBegin("Rain Blocker", cmd);
+				const uint cascade = 0;
+				XMStoreFloat4x4(&cb.cameras[cascade].view_projection, shcam.view_projection);
+				cb.cameras[cascade].output_index = cascade;
+
+				Viewport vp;
+				vp.top_left_x = float(vis.scene->rain_blocker_dummy_light.shadow_rect.x + cascade * vis.scene->rain_blocker_dummy_light.shadow_rect.w);
+				vp.top_left_y = float(vis.scene->rain_blocker_dummy_light.shadow_rect.y);
+				vp.width = float(vis.scene->rain_blocker_dummy_light.shadow_rect.w);
+				vp.height = float(vis.scene->rain_blocker_dummy_light.shadow_rect.h);
+				vp.min_depth = 0.0f;
+				vp.max_depth = 1.0f;
+
+				device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
+				device->BindViewports(1, &vp, cmd);
+
+				renderQueue.sort_opaque();
+				RenderMeshes(vis, renderQueue, RENDERPASS_RAINBLOCKER, FILTER_OBJECT_ALL, cmd, 0, 1);
+				device->EventEnd(cmd);
+			}
 		}
 
 		device->RenderPassEnd(cmd);

@@ -1,6 +1,7 @@
 #include "globals.hlsli"
 #include "emittedparticleHF.hlsli"
 #include "ShaderInterop_EmittedParticle.h"
+#include "shadowHF.hlsli"
 
 RWStructuredBuffer<Particle> particleBuffer : register(u0);
 RWStructuredBuffer<uint> aliveBuffer_CURRENT : register(u1);
@@ -77,6 +78,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #endif // EMIT_FROM_MESH
 
 	float3 pos = mul(worldMatrix, float4(emitPos, 1)).xyz;
+	
+	// Blocker shadow map check using previous frame:
+	[branch]
+	if ((xEmitterOptions & EMITTER_OPTION_BIT_USE_RAIN_BLOCKER) && rain_blocker_check_prev(pos))
+	{
+		return;
+	}
 
 	float particleStartingSize = xParticleSize + xParticleSize * (rng.next_float() - 0.5f) * xParticleRandomFactor;
 

@@ -409,6 +409,10 @@ namespace wi
 			{
 				cb.xEmitterOptions |= EMITTER_OPTION_BIT_COLLIDERS_DISABLED;
 			}
+			if (_flags & FLAG_USE_RAIN_BLOCKER)
+			{
+				cb.xEmitterOptions |= EMITTER_OPTION_BIT_USE_RAIN_BLOCKER;
+			}
 
 			// SPH:
 			cb.xSPH_h = SPH_h;

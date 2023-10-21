@@ -274,20 +274,20 @@ namespace wi::graphics
 
 		// Formats that are not usable in render pass must be below because formats in render pass must be encodable as 6 bits:
 
-		BC1_UNORM,
-		BC1_UNORM_SRGB,
-		BC2_UNORM,
-		BC2_UNORM_SRGB,
-		BC3_UNORM,
-		BC3_UNORM_SRGB,
-		BC4_UNORM,
-		BC4_SNORM,
-		BC5_UNORM,
-		BC5_SNORM,
-		BC6H_UF16,
-		BC6H_SF16,
-		BC7_UNORM,
-		BC7_UNORM_SRGB,
+		BC1_UNORM,			// Three color channels (5 bits:6 bits:5 bits), with 0 or 1 bit(s) of alpha
+		BC1_UNORM_SRGB,		// Three color channels (5 bits:6 bits:5 bits), with 0 or 1 bit(s) of alpha
+		BC2_UNORM,			// Three color channels (5 bits:6 bits:5 bits), with 4 bits of alpha
+		BC2_UNORM_SRGB,		// Three color channels (5 bits:6 bits:5 bits), with 4 bits of alpha
+		BC3_UNORM,			// Three color channels (5 bits:6 bits:5 bits) with 8 bits of alpha
+		BC3_UNORM_SRGB,		// Three color channels (5 bits:6 bits:5 bits) with 8 bits of alpha
+		BC4_UNORM,			// One color channel (8 bits)
+		BC4_SNORM,			// One color channel (8 bits)
+		BC5_UNORM,			// Two color channels (8 bits:8 bits)
+		BC5_SNORM,			// Two color channels (8 bits:8 bits)
+		BC6H_UF16,			// Three color channels (16 bits:16 bits:16 bits) in "half" floating point
+		BC6H_SF16,			// Three color channels (16 bits:16 bits:16 bits) in "half" floating point
+		BC7_UNORM,			// Three color channels (4 to 7 bits per channel) with 0 to 8 bits of alpha
+		BC7_UNORM_SRGB,		// Three color channels (4 to 7 bits per channel) with 0 to 8 bits of alpha
 
 		NV12,				// video YUV420; SRV Luminance aspect: R8_UNORM, SRV Chrominance aspect: R8G8_UNORM
 	};

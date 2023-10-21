@@ -13,6 +13,13 @@ static const uint SLOT = BASECOLORMAP;
 [earlydepthstencil]
 float4 main(VertextoPixel input) : SV_TARGET
 {
+	// Blocker shadow map check:
+	[branch]
+	if ((xEmitterOptions & EMITTER_OPTION_BIT_USE_RAIN_BLOCKER) && rain_blocker_check(input.P))
+	{
+		return 0;
+	}
+	
 	ShaderMaterial material = EmitterGetMaterial();
 
 	float4 color = 1;
@@ -64,13 +71,16 @@ float4 main(VertextoPixel input) : SV_TARGET
 	[branch]
 	if (color.a > 0)
 	{
-
 		float3 N;
 		N.x = -cos(PI * input.unrotated_uv.x);
 		N.y = cos(PI * input.unrotated_uv.y);
 		N.z = -sin(PI * length(input.unrotated_uv));
 		N = mul((float3x3)GetCamera().inverse_view, N);
 		N = normalize(N);
+		
+		float3 V = GetCamera().position - input.P;
+		float dist = length(V);
+		V /= dist;
 
 		Lighting lighting;
 		lighting.create(0, 0, GetAmbient(N), 0);
@@ -80,7 +90,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 		surface.create(material, color, surfacemap_simple);
 		surface.P = input.P;
 		surface.N = N;
-		surface.V = 0;
+		surface.V = V;
 		surface.pixel = pixel;
 		surface.sss = material.subsurfaceScattering;
 		surface.sss_inv = material.subsurfaceScattering_inv;
@@ -92,6 +102,8 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 		//color.rgb = float3(unrotated_uv, 0);
 		//color.rgb = float3(input.tex, 0);
+
+		ApplyFog(dist, V, color);
 
 		color = max(0, color);
 	}

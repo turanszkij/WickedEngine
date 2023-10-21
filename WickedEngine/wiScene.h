@@ -46,7 +46,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<AnimationDataComponent>& animation_datas = componentLibrary.Register<AnimationDataComponent>("wi::scene::Scene::animation_datas");
 		wi::ecs::ComponentManager<EmittedParticleSystem>& emitters = componentLibrary.Register<EmittedParticleSystem>("wi::scene::Scene::emitters");
 		wi::ecs::ComponentManager<HairParticleSystem>& hairs = componentLibrary.Register<HairParticleSystem>("wi::scene::Scene::hairs");
-		wi::ecs::ComponentManager<WeatherComponent>& weathers = componentLibrary.Register<WeatherComponent>("wi::scene::Scene::weathers", 4); // version = 4
+		wi::ecs::ComponentManager<WeatherComponent>& weathers = componentLibrary.Register<WeatherComponent>("wi::scene::Scene::weathers", 5); // version = 5
 		wi::ecs::ComponentManager<SoundComponent>& sounds = componentLibrary.Register<SoundComponent>("wi::scene::Scene::sounds", 1); // version = 1
 		wi::ecs::ComponentManager<VideoComponent>& videos = componentLibrary.Register<VideoComponent>("wi::scene::Scene::videos");
 		wi::ecs::ComponentManager<InverseKinematicsComponent>& inverse_kinematics = componentLibrary.Register<InverseKinematicsComponent>("wi::scene::Scene::inverse_kinematics");
@@ -235,6 +235,13 @@ namespace wi::scene
 		uint32_t impostorInstanceOffset = ~0u;
 		uint32_t impostorGeometryOffset = ~0u;
 		uint32_t impostorMaterialOffset = ~0u;
+
+		wi::EmittedParticleSystem rainEmitter;
+		MaterialComponent rainMaterial;
+		uint32_t rainInstanceOffset = ~0u;
+		uint32_t rainGeometryOffset = ~0u;
+		uint32_t rainMaterialOffset = ~0u;
+		LightComponent rain_blocker_dummy_light;
 
 		std::atomic<uint32_t> lightmap_request_allocator{ 0 };
 		wi::vector<uint32_t> lightmap_requests;

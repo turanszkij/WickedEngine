@@ -894,12 +894,10 @@ namespace wi::scene
 		int forced_shadow_resolution = -1; // -1: disabled, greater: fixed shadow map resolution
 
 		// Non-serialized attributes:
-		XMFLOAT3 position;
-		XMFLOAT3 direction;
-		XMFLOAT4 rotation;
-		XMFLOAT3 scale;
-		XMFLOAT3 front;
-		XMFLOAT3 right;
+		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
+		XMFLOAT3 direction = XMFLOAT3(0, 1, 0);
+		XMFLOAT4 rotation = XMFLOAT4(0, 0, 0, 1);
+		XMFLOAT3 scale = XMFLOAT3(1, 1, 1);
 		mutable int occlusionquery = -1;
 		wi::rectpacker::Rect shadow_rect = {};
 
@@ -1342,6 +1340,12 @@ namespace wi::scene
 		float stars = 0.5f;
 		XMFLOAT3 gravity = XMFLOAT3(0, -10, 0);
 		float sky_rotation = 0; // horizontal rotation for skyMap texture (in radians)
+		float rain_amount = 0;
+		float rain_length = 0.04f;
+		float rain_speed = 1;
+		float rain_scale = 0.005f;
+		float rain_splash_scale = 0.1f;
+		XMFLOAT4 rain_color = XMFLOAT4(0.6f, 0.8f, 1, 0.5f);
 
 		wi::Ocean::OceanParameters oceanParameters;
 		AtmosphereParameters atmosphereParameters;

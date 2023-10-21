@@ -9,7 +9,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_WEATHER " Weather", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(660, 2000));
+	SetSize(XMFLOAT2(660, 2140));
 
 	closeButton.SetTooltip("Delete WeatherComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -61,7 +61,9 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	colorComboBox.AddItem("Cloud color 2");
 	colorComboBox.AddItem("Cloud extinction 1");
 	colorComboBox.AddItem("Cloud extinction 2");
+	colorComboBox.AddItem("Rain color");
 	colorComboBox.SetTooltip("Choose the destination data of the color picker.");
+	colorComboBox.SetMaxVisibleItemCount(100);
 	AddWidget(&colorComboBox);
 
 	colorPicker.Create("Color", wi::gui::Window::WindowControls::NONE);
@@ -96,6 +98,9 @@ void WeatherWindow::Create(EditorComponent* _editor)
 			break;
 		case 7:
 			weather.volumetricCloudParameters.layerSecond.extinctionCoefficient = args.color.toFloat3();
+			break;
+		case 8:
+			weather.rain_color = args.color.toFloat4();
 			break;
 		}
 		});
@@ -232,6 +237,51 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		GetWeather().sky_rotation = wi::math::DegreesToRadians(args.fValue);
 		});
 	AddWidget(&skyRotationSlider);
+
+	rainAmountSlider.Create(0, 1, 0, 10000, "Rain Amount: ");
+	rainAmountSlider.SetTooltip("Set the amount of rain effect. 0 = disabled, 1 = heavy rain");
+	rainAmountSlider.SetSize(XMFLOAT2(wid, hei));
+	rainAmountSlider.SetPos(XMFLOAT2(x, y += step));
+	rainAmountSlider.OnSlide([&](wi::gui::EventArgs args) {
+		GetWeather().rain_amount = args.fValue;
+		});
+	AddWidget(&rainAmountSlider);
+
+	rainLengthSlider.Create(0, 0.1f, 0, 10000, "Rain Length: ");
+	rainLengthSlider.SetTooltip("The elongation of rain particles in the direction of their motion.");
+	rainLengthSlider.SetSize(XMFLOAT2(wid, hei));
+	rainLengthSlider.SetPos(XMFLOAT2(x, y += step));
+	rainLengthSlider.OnSlide([&](wi::gui::EventArgs args) {
+		GetWeather().rain_length = args.fValue;
+		});
+	AddWidget(&rainLengthSlider);
+
+	rainSpeedSlider.Create(0, 2, 0, 10000, "Rain Speed: ");
+	rainSpeedSlider.SetTooltip("The downward speed of rain particles. The final speed will be modulated by the wind direction and speed as well.");
+	rainSpeedSlider.SetSize(XMFLOAT2(wid, hei));
+	rainSpeedSlider.SetPos(XMFLOAT2(x, y += step));
+	rainSpeedSlider.OnSlide([&](wi::gui::EventArgs args) {
+		GetWeather().rain_speed = args.fValue;
+		});
+	AddWidget(&rainSpeedSlider);
+
+	rainScaleSlider.Create(0.005f, 0.1f, 0, 10000, "Rain Scale: ");
+	rainScaleSlider.SetTooltip("The overall size of rain particles.");
+	rainScaleSlider.SetSize(XMFLOAT2(wid, hei));
+	rainScaleSlider.SetPos(XMFLOAT2(x, y += step));
+	rainScaleSlider.OnSlide([&](wi::gui::EventArgs args) {
+		GetWeather().rain_scale = args.fValue;
+		});
+	AddWidget(&rainScaleSlider);
+
+	rainSplashScaleSlider.Create(0, 1, 0, 10000, "Rain Splash Scale: ");
+	rainSplashScaleSlider.SetTooltip("The size of rain particles when they hit the ground.");
+	rainSplashScaleSlider.SetSize(XMFLOAT2(wid, hei));
+	rainSplashScaleSlider.SetPos(XMFLOAT2(x, y += step));
+	rainSplashScaleSlider.OnSlide([&](wi::gui::EventArgs args) {
+		GetWeather().rain_splash_scale = args.fValue;
+		});
+	AddWidget(&rainSplashScaleSlider);
 
 	realisticskyCheckBox.Create("Realistic sky: ");
 	realisticskyCheckBox.SetTooltip("Physically based sky rendering model.\nNote that realistic sky requires a sun (directional light) to be visible.");
@@ -1020,6 +1070,11 @@ void WeatherWindow::Update()
 		skyExposureSlider.SetValue(weather.skyExposure);
 		starsSlider.SetValue(weather.stars);
 		skyRotationSlider.SetValue(wi::math::RadiansToDegrees(weather.sky_rotation));
+		rainAmountSlider.SetValue(weather.rain_amount);
+		rainLengthSlider.SetValue(weather.rain_length);
+		rainSpeedSlider.SetValue(weather.rain_speed);
+		rainScaleSlider.SetValue(weather.rain_scale);
+		rainSplashScaleSlider.SetValue(weather.rain_splash_scale);
 		windMagnitudeSlider.SetValue(XMVectorGetX(XMVector3Length(XMLoadFloat3(&weather.windDirection))));
 
 		switch (colorComboBox.GetSelected())
@@ -1048,6 +1103,9 @@ void WeatherWindow::Update()
 			break;
 		case 7:
 			colorPicker.SetPickColor(wi::Color::fromFloat3(weather.volumetricCloudParameters.layerSecond.extinctionCoefficient));
+			break;
+		case 8:
+			colorPicker.SetPickColor(wi::Color::fromFloat4(weather.rain_color));
 			break;
 		}
 
@@ -1257,6 +1315,11 @@ void WeatherWindow::ResizeLayout()
 	add(skyExposureSlider);
 	add(starsSlider);
 	add(skyRotationSlider);
+	add(rainAmountSlider);
+	add(rainLengthSlider);
+	add(rainSpeedSlider);
+	add(rainScaleSlider);
+	add(rainSplashScaleSlider);
 
 	y += jump;
 
