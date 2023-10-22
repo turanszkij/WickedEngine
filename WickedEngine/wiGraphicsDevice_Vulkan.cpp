@@ -7008,7 +7008,7 @@ using namespace vulkan_internal;
 						VkSemaphoreSubmitInfo& waitSemaphore = queue.submit_waitSemaphoreInfos.emplace_back();
 						waitSemaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 						waitSemaphore.semaphore = waitcommandlist.semaphore;
-						waitSemaphore.value = 0;
+						waitSemaphore.value = 0; // not a timeline semaphore
 						waitSemaphore.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 					}
 
@@ -7018,7 +7018,7 @@ using namespace vulkan_internal;
 						VkSemaphoreSubmitInfo& signalSemaphore = queue.submit_signalSemaphoreInfos.emplace_back();
 						signalSemaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 						signalSemaphore.semaphore = commandlist.semaphore;
-						signalSemaphore.value = 0;
+						signalSemaphore.value = 0; // not a timeline semaphore
 						signalSemaphore.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 					}
 
