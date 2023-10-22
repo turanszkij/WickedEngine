@@ -5,8 +5,8 @@
 #include "wiUnorderedMap.h"
 #include "wiBacklog.h"
 
-#include "Utility/stb_image.h"
 #include "Utility/qoi.h"
+#include "Utility/stb_image.h"
 #include "Utility/tinyddsloader.h"
 #include "Utility/basis_universal/transcoder/basisu_transcoder.h"
 
@@ -845,29 +845,116 @@ namespace wi
 					else
 					{
 						// qoi, png, tga, jpg, etc. loader:
-						const int channelCount = 4;
-						int height = 0, width = 0, bpp = 0;
+						int height = 0, width = 0, channels = 0;
 						bool is_16bit = false;
+						Format format = Format::R8G8B8A8_UNORM;
+						Format bc_format = Format::BC3_UNORM;
+						Swizzle bc_swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::A };
 
 						void* rgba;
 						if (!ext.compare("QOI"))
 						{
 							qoi_desc desc = {};
-							rgba = qoi_decode(filedata, (int)filesize, &desc, channelCount);
+							rgba = qoi_decode(filedata, (int)filesize, &desc, 4);
 							// redefine width, height to avoid further conditionals
 							height = desc.height;
 							width = desc.width;
+							channels = 4;
 						}
 						else
 						{
 							if (!has_flag(flags, Flags::IMPORT_COLORGRADINGLUT) && stbi_is_16_bit_from_memory(filedata, (int)filesize))
 							{
 								is_16bit = true;
-								rgba = stbi_load_16_from_memory(filedata, (int)filesize, &width, &height, &bpp, channelCount);
+								rgba = stbi_load_16_from_memory(filedata, (int)filesize, &width, &height, &channels, 0);
+								switch (channels)
+								{
+								case 1:
+									format = Format::R16_UNORM;
+									bc_format = Format::BC4_UNORM;
+									bc_swizzle = { ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::ONE };
+									break;
+								case 2:
+									format = Format::R16G16_UNORM;
+									bc_format = Format::BC5_UNORM;
+									bc_swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::ONE, ComponentSwizzle::ONE };
+									break;
+								case 3:
+								{
+									// Graphics API doesn't support 3 channel formats, so need to expand to RGBA:
+									struct Color3
+									{
+										uint16_t r, g, b;
+									};
+									const Color3* color3 = (const Color3*)rgba;
+									wi::Color16* color4 = (wi::Color16*)malloc(width * height * sizeof(wi::Color16));
+									for (int i = 0; i < width * height; ++i)
+									{
+										color4[i].setR(color3[i].r);
+										color4[i].setG(color3[i].g);
+										color4[i].setB(color3[i].b);
+										color4[i].setA(65535);
+									}
+									free(rgba);
+									rgba = color4;
+									format = Format::R16G16B16A16_UNORM;
+									bc_format = Format::BC1_UNORM;
+									bc_swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::ONE };
+								}
+								break;
+								case 4:
+								default:
+									format = Format::R16G16B16A16_UNORM;
+									bc_format = Format::BC3_UNORM;
+									bc_swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::A };
+									break;
+								}
 							}
 							else
 							{
-								rgba = stbi_load_from_memory(filedata, (int)filesize, &width, &height, &bpp, channelCount);
+								rgba = stbi_load_from_memory(filedata, (int)filesize, &width, &height, &channels, 0);
+								switch (channels)
+								{
+								case 1:
+									format = Format::R8_UNORM;
+									bc_format = Format::BC4_UNORM;
+									bc_swizzle = { ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::ONE };
+									break;
+								case 2:
+									format = Format::R8G8_UNORM;
+									bc_format = Format::BC5_UNORM;
+									bc_swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::ONE, ComponentSwizzle::ONE };
+									break;
+								case 3:
+								{
+									// Graphics API doesn't support 3 channel formats, so need to expand to RGBA:
+									struct Color3
+									{
+										uint8_t r, g, b;
+									};
+									const Color3* color3 = (const Color3*)rgba;
+									wi::Color* color4 = (wi::Color*)malloc(width * height * sizeof(wi::Color));
+									for (int i = 0; i < width * height; ++i)
+									{
+										color4[i].setR(color3[i].r);
+										color4[i].setG(color3[i].g);
+										color4[i].setB(color3[i].b);
+										color4[i].setA(255);
+									}
+									free(rgba);
+									rgba = color4;
+									format = Format::R8G8B8A8_UNORM;
+									bc_format = Format::BC1_UNORM;
+									bc_swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::ONE };
+								}
+								break;
+								case 4:
+								default:
+									format = Format::R8G8B8A8_UNORM;
+									bc_format = Format::BC3_UNORM;
+									bc_swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::A };
+									break;
+								}
 							}
 						}
 
@@ -877,14 +964,16 @@ namespace wi
 							desc.height = uint32_t(height);
 							desc.width = uint32_t(width);
 							desc.layout = ResourceState::SHADER_RESOURCE;
+							desc.format = format;
 
 							if (has_flag(flags, Flags::IMPORT_COLORGRADINGLUT))
 							{
 								if (desc.type != TextureDesc::Type::TEXTURE_2D ||
 									desc.width != 256 ||
-									desc.height != 16)
+									desc.height != 16 ||
+									format != Format::R8G8B8A8_UNORM)
 								{
-									wi::helper::messageBox("The Dimensions must be 256 x 16 for color grading LUT!", "Error");
+									wi::helper::messageBox("The Dimensions must be 256 x 16 for color grading LUT and format must be RGB or RGBA!", "Error");
 								}
 								else
 								{
@@ -906,7 +995,6 @@ namespace wi
 									desc.width = 16;
 									desc.height = 16;
 									desc.depth = 16;
-									desc.format = Format::R8G8B8A8_UNORM;
 									desc.bind_flags = BindFlag::SHADER_RESOURCE;
 									SubresourceData InitData;
 									InitData.data_ptr = data;
@@ -919,14 +1007,6 @@ namespace wi
 							else
 							{
 								desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-								if (is_16bit)
-								{
-									desc.format = Format::R16G16B16A16_UNORM;
-								}
-								else
-								{
-									desc.format = Format::R8G8B8A8_UNORM;
-								}
 								desc.mip_levels = GetMipCount(desc.width, desc.height);
 								desc.usage = Usage::DEFAULT;
 								desc.layout = ResourceState::SHADER_RESOURCE;
@@ -974,72 +1054,15 @@ namespace wi
 									Texture uncompressed_src = std::move(resource->texture);
 									resource->srgb_subresource = -1;
 
-									desc.format = Format::BC1_UNORM;
+									desc.format = bc_format;
+									desc.swizzle = bc_swizzle;
+
 									if (has_flag(flags, Flags::IMPORT_NORMALMAP))
 									{
 										desc.format = Format::BC5_UNORM;
-										desc.swizzle.r = ComponentSwizzle::R;
-										desc.swizzle.g = ComponentSwizzle::G;
-										desc.swizzle.b = ComponentSwizzle::ONE;
-										desc.swizzle.a = ComponentSwizzle::ONE;
+										bc_swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::ONE, ComponentSwizzle::ONE };
 									}
-									else
-									{
-										// scan for transparency and also check if fully grayscale:
-										//	By default we should use BC1 that doesn't have transparency, but half the size of BC3 that supports it
-										//	We only care about grayscale if it's not transparent
-										bool has_transparency = false;
-										bool is_grayscale = true;
-										if (is_16bit)
-										{
-											for (int y = 0; (y < height) && !has_transparency; ++y)
-											{
-												for (int x = 0; (x < width) && !has_transparency; ++x)
-												{
-													const wi::Color16 color = ((wi::Color16*)rgba)[x + y * width];
-													const uint16_t r = color.getR();
-													const uint16_t g = color.getG();
-													const uint16_t b = color.getB();
-													const uint16_t a = color.getA();
-													has_transparency |= a < 65535;
-													is_grayscale &= r == g;
-													is_grayscale &= r == b;
-												}
-											}
-										}
-										else
-										{
-											for (int y = 0; (y < height) && !has_transparency; ++y)
-											{
-												for (int x = 0; (x < width) && !has_transparency; ++x)
-												{
-													const wi::Color color = ((wi::Color*)rgba)[x + y * width];
-													const uint8_t r = color.getR();
-													const uint8_t g = color.getG();
-													const uint8_t b = color.getB();
-													const uint8_t a = color.getA();
-													has_transparency |= a < 255;
-													is_grayscale &= r == g;
-													is_grayscale &= r == b;
-												}
-											}
-										}
-										if (has_transparency)
-										{
-											// BC3 format supports transparency:
-											desc.format = Format::BC3_UNORM;
-										}
-										else if (is_grayscale)
-										{
-											// If not transparent and grayscale, than BC4 is better quality than BC1 with same memory footprint
-											desc.format = Format::BC4_UNORM;
-											// In this case, reswizzle the texture to be grayscale, not red. Red is ok for some maps, but not all, it's better to use all channels, for example grayscale specular map
-											desc.swizzle.r = ComponentSwizzle::R;
-											desc.swizzle.g = ComponentSwizzle::R;
-											desc.swizzle.b = ComponentSwizzle::R;
-											desc.swizzle.a = ComponentSwizzle::ONE;
-										}
-									}
+
 									desc.bind_flags = BindFlag::SHADER_RESOURCE;
 
 									const uint32_t block_size = GetFormatBlockSize(desc.format);
