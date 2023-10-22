@@ -3023,48 +3023,6 @@ using namespace vulkan_internal;
 			    queues[QUEUE_VIDEO_DECODE].locker = queue_lockers[videoFamily];
 			}
 
-			VkSemaphoreTypeCreateInfo timelineCreateInfo = {};
-			timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
-			timelineCreateInfo.pNext = nullptr;
-			timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
-			timelineCreateInfo.initialValue = 0;
-
-			VkSemaphoreCreateInfo createInfo = {};
-			createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-			createInfo.pNext = &timelineCreateInfo;
-			createInfo.flags = 0;
-
-			res = vkCreateSemaphore(device, &createInfo, nullptr, &queues[QUEUE_GRAPHICS].semaphore);
-			assert(res == VK_SUCCESS);
-			if (res != VK_SUCCESS)
-			{
-				wi::helper::messageBox("vkCreateSemaphore[QUEUE_GRAPHICS] failed! ERROR: " + std::to_string(res), "Error!");
-				wi::platform::Exit();
-			}
-			res = vkCreateSemaphore(device, &createInfo, nullptr, &queues[QUEUE_COMPUTE].semaphore);
-			assert(res == VK_SUCCESS);
-			if (res != VK_SUCCESS)
-			{
-				wi::helper::messageBox("vkCreateSemaphore[QUEUE_COMPUTE] failed! ERROR: " + std::to_string(res), "Error!");
-				wi::platform::Exit();
-			}
-			res = vkCreateSemaphore(device, &createInfo, nullptr, &queues[QUEUE_COPY].semaphore);
-			assert(res == VK_SUCCESS);
-			if (res != VK_SUCCESS)
-			{
-				wi::helper::messageBox("vkCreateSemaphore[QUEUE_COPY] failed! ERROR: " + std::to_string(res), "Error!");
-				wi::platform::Exit();
-			}
-			if (videoQueue != VK_NULL_HANDLE)
-			{
-				res = vkCreateSemaphore(device, &createInfo, nullptr, &queues[QUEUE_VIDEO_DECODE].semaphore);
-				assert(res == VK_SUCCESS);
-				if (res != VK_SUCCESS)
-				{
-					wi::helper::messageBox("vkCreateSemaphore[QUEUE_VIDEO_DECODE] failed! ERROR: " + std::to_string(res), "Error!");
-					wi::platform::Exit();
-				}
-			}
 		}
 
 		memory_properties_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
@@ -3571,12 +3529,6 @@ using namespace vulkan_internal;
 		VkResult res = vkDeviceWaitIdle(device);
 		assert(res == VK_SUCCESS);
 
-		for (auto& queue : queues)
-		{
-			vkDestroySemaphore(device, queue.semaphore, nullptr);
-			queue.locker.reset();
-		}
-
 		for (uint32_t fr = 0; fr < BUFFERCOUNT; ++fr)
 		{
 			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
@@ -3610,6 +3562,7 @@ using namespace vulkan_internal;
 			{
 				x.destroy();
 			}
+			vkDestroySemaphore(device, commandlist->semaphore, nullptr);
 		}
 		for (auto& x : pipelines_global)
 		{
@@ -6954,6 +6907,11 @@ using namespace vulkan_internal;
 				assert(res == VK_SUCCESS);
 
 				commandlist.binder_pools[buffer].init(this);
+
+				VkSemaphoreCreateInfo createInfo = {};
+				createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+				res = vkCreateSemaphore(device, &createInfo, nullptr, &commandlist.semaphore);
+				assert(res == VK_SUCCESS);
 			}
 
 			commandlist.binder.init(this);
@@ -7049,8 +7007,8 @@ using namespace vulkan_internal;
 
 						VkSemaphoreSubmitInfo& waitSemaphore = queue.submit_waitSemaphoreInfos.emplace_back();
 						waitSemaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-						waitSemaphore.semaphore = queues[waitcommandlist.queue].semaphore;
-						waitSemaphore.value = FRAMECOUNT * commandlists.size() + (uint64_t)waitcommandlist.id;
+						waitSemaphore.semaphore = waitcommandlist.semaphore;
+						waitSemaphore.value = 0;
 						waitSemaphore.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 					}
 
@@ -7059,8 +7017,9 @@ using namespace vulkan_internal;
 						// Signal this command list's completion:
 						VkSemaphoreSubmitInfo& signalSemaphore = queue.submit_signalSemaphoreInfos.emplace_back();
 						signalSemaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-						signalSemaphore.semaphore = queue.semaphore;
-						signalSemaphore.value = FRAMECOUNT * commandlists.size() + (uint64_t)commandlist.id;
+						signalSemaphore.semaphore = commandlist.semaphore;
+						signalSemaphore.value = 0;
+						signalSemaphore.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 					}
 
 					queue.submit(this, VK_NULL_HANDLE);
