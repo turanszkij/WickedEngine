@@ -108,7 +108,6 @@ namespace wi::graphics
 		struct CommandQueue
 		{
 			VkQueue queue = VK_NULL_HANDLE;
-			VkSemaphore semaphore = VK_NULL_HANDLE;
 			wi::vector<SwapChain> swapchain_updates;
 			wi::vector<VkSwapchainKHR> submit_swapchains;
 			wi::vector<uint32_t> submit_swapChainImageIndices;
@@ -195,6 +194,7 @@ namespace wi::graphics
 
 		struct CommandList_Vulkan
 		{
+			VkSemaphore semaphore = VK_NULL_HANDLE;
 			VkCommandPool commandPools[BUFFERCOUNT][QUEUE_COUNT] = {};
 			VkCommandBuffer commandBuffers[BUFFERCOUNT][QUEUE_COUNT] = {};
 			uint32_t buffer_index = 0;
