@@ -1060,7 +1060,7 @@ namespace wi
 									if (has_flag(flags, Flags::IMPORT_NORMALMAP))
 									{
 										desc.format = Format::BC5_UNORM;
-										bc_swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::ONE, ComponentSwizzle::ONE };
+										desc.swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::ONE, ComponentSwizzle::ONE };
 									}
 
 									desc.bind_flags = BindFlag::SHADER_RESOURCE;
