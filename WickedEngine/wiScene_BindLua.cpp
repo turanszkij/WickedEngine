@@ -6,12 +6,12 @@
 #include "wiPrimitive_BindLua.h"
 #include "wiSprite_BindLua.h"
 #include "wiSpriteFont_BindLua.h"
+#include "wiBacklog.h"
+#include "wiECS.h"
+#include "wiLua.h"
+#include "wiUnorderedMap.h"
 
 #include <string>
-#include <wiBacklog.h>
-#include <wiECS.h>
-#include <wiLua.h>
-#include <wiUnorderedMap.h>
 
 using namespace wi::ecs;
 using namespace wi::scene;
