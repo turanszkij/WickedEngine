@@ -1,6 +1,11 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 
+#ifdef __PSSL__
+// TODO: register spilling issue
+#pragma warning (disable:7203)
+#endif // __PSSL__
+
 PUSHCONSTANT(push, FilterEnvmapPushConstants);
 
 float D_GGX(float NdotH, float roughness)

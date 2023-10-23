@@ -3587,19 +3587,22 @@ void UpdatePerFrameData(
 
 	frameCB.gi_boost = GetGIBoost();
 
-	frameCB.rain_blocker_mad_prev = frameCB.rain_blocker_mad;
-	frameCB.rain_blocker_matrix_prev = frameCB.rain_blocker_matrix;
-	frameCB.rain_blocker_matrix_inverse_prev = frameCB.rain_blocker_matrix_inverse;
-	frameCB.rain_blocker_mad = XMFLOAT4(
-		float(scene.rain_blocker_dummy_light.shadow_rect.w) / float(shadowMapAtlas.desc.width),
-		float(scene.rain_blocker_dummy_light.shadow_rect.h) / float(shadowMapAtlas.desc.height),
-		float(scene.rain_blocker_dummy_light.shadow_rect.x) / float(shadowMapAtlas.desc.width),
-		float(scene.rain_blocker_dummy_light.shadow_rect.y) / float(shadowMapAtlas.desc.height)
-	);
-	SHCAM shcam;
-	CreateDirLightShadowCams(vis.scene->rain_blocker_dummy_light, *vis.camera, &shcam, 1);
-	XMStoreFloat4x4(&frameCB.rain_blocker_matrix, shcam.view_projection);
-	XMStoreFloat4x4(&frameCB.rain_blocker_matrix_inverse, XMMatrixInverse(nullptr, shcam.view_projection));
+	if (scene.weather.rain_amount > 0)
+	{
+		frameCB.rain_blocker_mad_prev = frameCB.rain_blocker_mad;
+		frameCB.rain_blocker_matrix_prev = frameCB.rain_blocker_matrix;
+		frameCB.rain_blocker_matrix_inverse_prev = frameCB.rain_blocker_matrix_inverse;
+		frameCB.rain_blocker_mad = XMFLOAT4(
+			float(scene.rain_blocker_dummy_light.shadow_rect.w) / float(shadowMapAtlas.desc.width),
+			float(scene.rain_blocker_dummy_light.shadow_rect.h) / float(shadowMapAtlas.desc.height),
+			float(scene.rain_blocker_dummy_light.shadow_rect.x) / float(shadowMapAtlas.desc.width),
+			float(scene.rain_blocker_dummy_light.shadow_rect.y) / float(shadowMapAtlas.desc.height)
+		);
+		SHCAM shcam;
+		CreateDirLightShadowCams(vis.scene->rain_blocker_dummy_light, *vis.camera, &shcam, 1);
+		XMStoreFloat4x4(&frameCB.rain_blocker_matrix, shcam.view_projection);
+		XMStoreFloat4x4(&frameCB.rain_blocker_matrix_inverse, XMMatrixInverse(nullptr, shcam.view_projection));
+	}
 
 	frameCB.temporalaa_samplerotation = 0;
 	if (GetTemporalAAEnabled())

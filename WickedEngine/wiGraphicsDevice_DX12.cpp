@@ -1614,6 +1614,10 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::CopyAllocator::init(GraphicsDevice_DX12* device)
 	{
 		this->device = device;
+#ifdef PLATFORM_XBOX
+		queue = device->queues[QUEUE_COPY].queue;
+#else
+		// On PC we can create secondary copy queue for background uploading tasks:
 		D3D12_COMMAND_QUEUE_DESC desc = {};
 		desc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
 		desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
@@ -1630,6 +1634,7 @@ using namespace dx12_internal;
 		}
 		hr = queue->SetName(L"CopyAllocator");
 		assert(SUCCEEDED(hr));
+#endif // PLATFORM_XBOX
 	}
 	GraphicsDevice_DX12::CopyAllocator::CopyCMD GraphicsDevice_DX12::CopyAllocator::allocate(uint64_t staging_size)
 	{
