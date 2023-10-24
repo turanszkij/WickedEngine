@@ -5149,7 +5149,7 @@ namespace wi::scene
 					XMFLOAT3 center_local;
 					float radius_local;
 					XMStoreFloat3(&center_local, XMVector3Transform(XMLoadFloat3(&sphere.center), objectMatInverse));
-					XMStoreFloat(&radius_local, XMVector3TransformNormal(XMLoadFloat(&sphere.radius), objectMatInverse));
+					XMStoreFloat(&radius_local, XMVector3Length(XMVector3TransformNormal(XMLoadFloat(&sphere.radius), objectMatInverse)));
 					Sphere sphere_local = Sphere(center_local, radius_local);
 
 					mesh->bvh.Intersects(sphere_local, 0, [&](uint32_t index) {
@@ -5552,7 +5552,7 @@ namespace wi::scene
 					float radius_local;
 					XMStoreFloat3(&base_local, XMVector3Transform(XMLoadFloat3(&capsule.base), objectMat_Inverse));
 					XMStoreFloat3(&tip_local, XMVector3Transform(XMLoadFloat3(&capsule.tip), objectMat_Inverse));
-					XMStoreFloat(&radius_local, XMVector3TransformNormal(XMLoadFloat(&capsule.radius), objectMat_Inverse));
+					XMStoreFloat(&radius_local, XMVector3Length(XMVector3TransformNormal(XMLoadFloat(&capsule.radius), objectMat_Inverse)));
 					AABB capsule_local_aabb = Capsule(base_local, tip_local, radius_local).getAABB();
 
 					mesh->bvh.Intersects(capsule_local_aabb, 0, [&](uint32_t index){
