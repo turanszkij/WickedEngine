@@ -6907,12 +6907,12 @@ using namespace vulkan_internal;
 				assert(res == VK_SUCCESS);
 
 				commandlist.binder_pools[buffer].init(this);
-
-				VkSemaphoreCreateInfo createInfo = {};
-				createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-				res = vkCreateSemaphore(device, &createInfo, nullptr, &commandlist.semaphore);
-				assert(res == VK_SUCCESS);
 			}
+
+			VkSemaphoreCreateInfo createInfo = {};
+			createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+			res = vkCreateSemaphore(device, &createInfo, nullptr, &commandlist.semaphore);
+			assert(res == VK_SUCCESS);
 
 			commandlist.binder.init(this);
 		}
