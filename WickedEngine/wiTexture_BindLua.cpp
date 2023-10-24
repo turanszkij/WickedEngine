@@ -1,6 +1,7 @@
 #include "wiTexture_BindLua.h"
 #include "wiTextureHelper.h"
 #include "wiMath_BindLua.h"
+#include "wiHelper.h"
 
 using namespace wi::graphics;
 
@@ -10,6 +11,7 @@ namespace wi::lua
 	Luna<Texture_BindLua>::FunctionType Texture_BindLua::methods[] = {
 		lunamethod(Texture_BindLua, GetLogo),
 		lunamethod(Texture_BindLua, CreateGradientTexture),
+		lunamethod(Texture_BindLua, Save),
 		{ NULL, NULL }
 	};
 	Luna<Texture_BindLua>::PropertyType Texture_BindLua::properties[] = {
@@ -118,6 +120,21 @@ namespace wi::lua
 		);
 		Luna<Texture_BindLua>::push(L, texture);
 		return 1;
+	}
+	int Texture_BindLua::Save(lua_State* L)
+	{
+		if (wi::lua::SGetArgCount(L) == 0)
+		{
+			wi::lua::SError(L, "Texture::Save(string filename) filename parameter is not provided!");
+			return 0;
+		}
+		if (!resource.IsValid() || !resource.GetTexture().IsValid())
+		{
+			wi::lua::SError(L, "Texture::Save(string filename) texture is invalid!");
+			return 0;
+		}
+		wi::helper::saveTextureToFile(resource.GetTexture(), wi::lua::SGetString(L, 1));
+		return 0;
 	}
 
 	void Texture_BindLua::Bind()

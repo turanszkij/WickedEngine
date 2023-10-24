@@ -399,6 +399,7 @@ Just holds texture information in VRAM.
 	int perlin_seed = 1234, 
 	int perlin_octaves = 8, 
 	float perlin_persistence = 0.5) -- creates a gradient texture from parameters
+- Save(string filename) -- saves texture into a file. Provide the extension in the filename, it should be one of the following: .JPG, .PNG, .TGA, .BMP, .DDS, .KTX2, .BASISGradient
 
 ```lua
 GradientType = {
@@ -416,7 +417,7 @@ GradientFlags = {
 }
 ```
 
-Example gradient texture creation:
+Example texture creation:
 ```lua
 texture = texturehelper.CreateGradientTexture(
 	GradientType.Circular, -- gradient type
@@ -429,6 +430,9 @@ texture = texturehelper.CreateGradientTexture(
 	6, -- perlin noise octaves
 	0.8 -- perlin noise persistence
 )
+texture.Save("gradient.png") -- you can save it to file
+sprite.SetTexture(texture) -- you can set it to a sprite
+material.SetTexture(TextureSlot.BASECOLORMAP, texture) -- you can set it to a material
 ```
 
 ### Audio
