@@ -1975,10 +1975,7 @@ void EditorComponent::Render() const
 						RenderPassImage::DepthStencil(
 							renderPath->GetDepthStencil(),
 							RenderPassImage::LoadOp::LOAD,
-							RenderPassImage::StoreOp::STORE,
-							ResourceState::DEPTHSTENCIL_READONLY,
-							ResourceState::DEPTHSTENCIL_READONLY,
-							ResourceState::DEPTHSTENCIL_READONLY
+							RenderPassImage::StoreOp::STORE
 						),
 					};
 					device->RenderPassBegin(rp, arraysize(rp), cmd);
@@ -1990,10 +1987,7 @@ void EditorComponent::Render() const
 						RenderPassImage::DepthStencil(
 							renderPath->GetDepthStencil(),
 							RenderPassImage::LoadOp::LOAD,
-							RenderPassImage::StoreOp::STORE,
-							ResourceState::DEPTHSTENCIL_READONLY,
-							ResourceState::DEPTHSTENCIL_READONLY,
-							ResourceState::DEPTHSTENCIL_READONLY
+							RenderPassImage::StoreOp::STORE
 						),
 					};
 					device->RenderPassBegin(rp, arraysize(rp), cmd);
@@ -2016,10 +2010,7 @@ void EditorComponent::Render() const
 						RenderPassImage::DepthStencil(
 							renderPath->GetDepthStencil(),
 							RenderPassImage::LoadOp::LOAD,
-							RenderPassImage::StoreOp::STORE,
-							ResourceState::DEPTHSTENCIL_READONLY,
-							ResourceState::DEPTHSTENCIL_READONLY,
-							ResourceState::DEPTHSTENCIL_READONLY
+							RenderPassImage::StoreOp::STORE
 						),
 					};
 					device->RenderPassBegin(rp, arraysize(rp), cmd);
@@ -2031,10 +2022,7 @@ void EditorComponent::Render() const
 						RenderPassImage::DepthStencil(
 							renderPath->GetDepthStencil(),
 							RenderPassImage::LoadOp::LOAD,
-							RenderPassImage::StoreOp::STORE,
-							ResourceState::DEPTHSTENCIL_READONLY,
-							ResourceState::DEPTHSTENCIL_READONLY,
-							ResourceState::DEPTHSTENCIL_READONLY
+							RenderPassImage::StoreOp::STORE
 						),
 					};
 					device->RenderPassBegin(rp, arraysize(rp), cmd);
