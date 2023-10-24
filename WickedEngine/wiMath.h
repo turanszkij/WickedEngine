@@ -113,7 +113,7 @@ namespace wi::math
 	}
 	constexpr float InverseLerp(float value1, float value2, float pos)
 	{
-		return (pos - value1) / (value2 - value1);
+		return value2 == value1 ? 0 : ((pos - value1) / (value2 - value1));
 	}
 	constexpr XMFLOAT2 InverseLerp(const XMFLOAT2& value1, const XMFLOAT2& value2, const XMFLOAT2& pos)
 	{

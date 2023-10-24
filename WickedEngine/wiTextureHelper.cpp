@@ -6,6 +6,7 @@
 #include "wiTimer.h"
 #include "wiUnorderedMap.h"
 #include "logo.h"
+#include "wiNoise.h"
 
 using namespace wi::graphics;
 
@@ -279,10 +280,30 @@ namespace wi::texturehelper
 		const XMFLOAT2& uv_start,
 		const XMFLOAT2& uv_end,
 		GradientFlags flags,
-		Swizzle swizzle
+		Swizzle swizzle,
+		float perlin_scale,
+		uint32_t perlin_seed,
+		int perlin_octaves,
+		float perlin_persistence
 	)
 	{
-		wi::vector<uint8_t> data(width * height);
+		wi::vector<uint8_t> data;
+		wi::vector<uint16_t> data16;
+		if (has_flag(flags, GradientFlags::R16Unorm))
+		{
+			data16.resize(width * height);
+		}
+		else
+		{
+			data.resize(width * height);
+		}
+		wi::noise::Perlin perlin;
+		if (has_flag(flags, GradientFlags::PerlinNoise))
+		{
+			perlin.init(perlin_seed);
+		}
+		float aspect = float(height) / float(width);
+		XMFLOAT2 perlin_scale2 = XMFLOAT2(perlin_scale, perlin_scale * aspect);
 
 		switch (type)
 		{
@@ -308,7 +329,19 @@ namespace wi::texturehelper
 					{
 						gradient = wi::math::SmoothStep(0, 1, gradient);
 					}
-					data[x + y * width] = uint8_t(gradient * 255);
+					if (has_flag(flags, GradientFlags::PerlinNoise))
+					{
+						gradient *= perlin.compute(uv.x * perlin_scale2.x, uv.y * perlin_scale2.y, 0, perlin_octaves, perlin_persistence) * 0.5f + 0.5f;
+					}
+					gradient = wi::math::saturate(gradient);
+					if (has_flag(flags, GradientFlags::R16Unorm))
+					{
+						data16[x + y * width] = uint16_t(gradient * 65535);
+					}
+					else
+					{
+						data[x + y * width] = uint8_t(gradient * 255);
+					}
 				}
 			}
 		}
@@ -334,7 +367,19 @@ namespace wi::texturehelper
 					{
 						gradient = wi::math::SmoothStep(0, 1, gradient);
 					}
-					data[x + y * width] = uint8_t(gradient * 255);
+					if (has_flag(flags, GradientFlags::PerlinNoise))
+					{
+						gradient *= perlin.compute(uv.x * perlin_scale2.x, uv.y * perlin_scale2.y, 0, perlin_octaves, perlin_persistence) * 0.5f + 0.5f;
+					}
+					gradient = wi::math::saturate(gradient);
+					if (has_flag(flags, GradientFlags::R16Unorm))
+					{
+						data16[x + y * width] = uint16_t(gradient * 65535);
+					}
+					else
+					{
+						data[x + y * width] = uint8_t(gradient * 255);
+					}
 				}
 			}
 		}
@@ -359,7 +404,19 @@ namespace wi::texturehelper
 					{
 						gradient = wi::math::SmoothStep(0, 1, gradient);
 					}
-					data[x + y * width] = uint8_t(gradient * 255);
+					if (has_flag(flags, GradientFlags::PerlinNoise))
+					{
+						gradient *= perlin.compute(uv.x * perlin_scale2.x, uv.y * perlin_scale2.y, 0, perlin_octaves, perlin_persistence) * 0.5f + 0.5f;
+					}
+					gradient = wi::math::saturate(gradient);
+					if (has_flag(flags, GradientFlags::R16Unorm))
+					{
+						data16[x + y * width] = uint16_t(gradient * 65535);
+					}
+					else
+					{
+						data[x + y * width] = uint8_t(gradient * 255);
+					}
 				}
 			}
 		}
@@ -368,7 +425,14 @@ namespace wi::texturehelper
 		}
 
 		Texture texture;
-		CreateTexture(texture, data.data(), width, height, Format::R8_UNORM, swizzle);
+		if (has_flag(flags, GradientFlags::R16Unorm))
+		{
+			CreateTexture(texture, (const uint8_t*)data16.data(), width, height, Format::R16_UNORM, swizzle);
+		}
+		else
+		{
+			CreateTexture(texture, data.data(), width, height, Format::R8_UNORM, swizzle);
+		}
 		return texture;
 	}
 

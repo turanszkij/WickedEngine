@@ -13,6 +13,20 @@ ToggleCameraAnimation();
 
 -- Load an image:
 local sprite = Sprite("../Content/logo_small.png");
+--sprite.SetTexture(
+--	texturehelper.CreateGradientTexture(
+--		GradientType.Circular, -- gradient type
+--		256, 256, -- resolution of the texture
+--		Vector(0.5, 0.5), Vector(0.5, 0), -- start and end uv coordinates will specify the gradient direction and extents
+--		GradientFlags.Inverse | GradientFlags.Smoothstep | GradientFlags.PerlinNoise, -- modifier flags bitwise combination
+--		"111R", -- for each channel ,you can specify one of the following characters: 0, 1, r, g, b, a
+--		2, -- perlin noise scale
+--		123, -- perlin noise seed
+--		6, -- perlin noise octaves
+--		0.8 -- perlin noise persistence
+--	)
+--)
+--sprite.SetTexture(texturehelper.GetLogo())
 sprite.SetParams(ImageParams(100,100,128,128));
 -- Set this image as renderable to the active component:
 local component = main.GetActivePath();

@@ -385,6 +385,51 @@ Gives you the ability to render text with a custom font.
 ### Texture
 Just holds texture information in VRAM.
 - [constructor]Texture(opt string filename)	-- creates a texture from file
+- [outer]texturehelper -- a global helper texture creation utility
+- GetLogo() : Texture -- returns the Wicked Engine logo texture
+- CreateGradientTexture(
+	GradientType type = GradientType.Linear, 
+	int width = 256,
+	int height = 256, 
+	Vector uv_start = Vector(0,0),
+	Vector uv_end = Vector(0,0), 
+	GradientFlags flags = GradientFlags.None, 
+	string swizzle = "rgba", 
+	float perlin_scale = 1,
+	int perlin_seed = 1234, 
+	int perlin_octaves = 8, 
+	float perlin_persistence = 0.5) -- creates a gradient texture from parameters
+
+```lua
+GradientType = {
+	Linear = 0,
+	Circular = 1,
+	Angular = 2,
+}
+
+GradientFlags = {
+	None = 0,
+	Inverse = 1 << 0,	
+	Smoothstep = 1 << 1,
+	PerlinNoise = 1 << 2,
+	R16Unorm = 1 << 3,
+}
+```
+
+Example gradient texture creation:
+```lua
+texture = texturehelper.CreateGradientTexture(
+	GradientType.Circular, -- gradient type
+	256, 256, -- resolution of the texture
+	Vector(0.5, 0.5), Vector(0.5, 0), -- start and end uv coordinates will specify the gradient direction and extents
+	GradientFlags.Inverse | GradientFlags.Smoothstep | GradientFlags.PerlinNoise, -- modifier flags bitwise combination
+	"rrr1", -- for each channel ,you can specify one of the following characters: 0, 1, r, g, b, a
+	2, -- perlin noise scale
+	123, -- perlin noise seed
+	6, -- perlin noise octaves
+	0.8 -- perlin noise persistence
+)
+```
 
 ### Audio
 Loads and plays an audio files.

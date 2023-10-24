@@ -1728,6 +1728,45 @@ namespace wi::graphics
 		ret.chars[4] = 0;
 		return ret;
 	}
+	constexpr Swizzle SwizzleFromString(const char* str)
+	{
+		Swizzle swizzle;
+		if (str == nullptr)
+			return swizzle;
+		ComponentSwizzle* comp = (ComponentSwizzle*)&swizzle;
+		for (int i = 0; i < 4; ++i)
+		{
+			switch (str[i])
+			{
+			case 'r':
+			case 'R':
+				*comp = ComponentSwizzle::R;
+				break;
+			case 'g':
+			case 'G':
+				*comp = ComponentSwizzle::G;
+				break;
+			case 'b':
+			case 'B':
+				*comp = ComponentSwizzle::B;
+				break;
+			case 'a':
+			case 'A':
+				*comp = ComponentSwizzle::A;
+				break;
+			case '0':
+				*comp = ComponentSwizzle::ZERO;
+				break;
+			case '1':
+				*comp = ComponentSwizzle::ONE;
+				break;
+			case 0:
+				return swizzle;
+			}
+			comp++;
+		}
+		return swizzle;
+	}
 
 	template<typename T>
 	constexpr T AlignTo(T value, T alignment)
