@@ -110,6 +110,7 @@ namespace wi::physics
 			std::shared_ptr<void> physics_scene;
 			std::unique_ptr<btCollisionShape> shape;
 			std::unique_ptr<btRigidBody> rigidBody;
+			btTransform additionalTransform;
 			btTransform additionalTransformInverse;
 			btDefaultMotionState motionState;
 			btTriangleIndexVertexArray triangles;
@@ -305,10 +306,12 @@ namespace wi::physics
 			if (additionalTransform != nullptr)
 			{
 				shapeTransform.mult(shapeTransform, *additionalTransform);
+				physicsobject.additionalTransform = *additionalTransform;
 				physicsobject.additionalTransformInverse = additionalTransform->inverse();
 			}
 			else
 			{
+				physicsobject.additionalTransform.setIdentity();
 				physicsobject.additionalTransformInverse.setIdentity();
 			}
 			physicsobject.motionState = btDefaultMotionState(shapeTransform);
@@ -321,6 +324,7 @@ namespace wi::physics
 
 			physicsobject.rigidBody = std::make_unique<btRigidBody>(rbInfo);
 			physicsobject.rigidBody->setUserIndex(entity);
+			physicsobject.rigidBody->setWorldTransform(shapeTransform); // immediate transform on first frame
 
 			if (physicscomponent.IsKinematic())
 			{
@@ -504,9 +508,6 @@ namespace wi::physics
 
 	struct Ragdoll
 	{
-#define M_PI XM_PI
-#define M_PI_2 XM_PIDIV2
-#define M_PI_4 XM_PIDIV4
 		enum
 		{
 			BODYPART_PELVIS = 0,
@@ -559,13 +560,13 @@ namespace wi::physics
 
 			// https://github.com/bulletphysics/bullet3/blob/39b8de74df93721add193e5b3d9ebee579faebf8/examples/Benchmarks/BenchmarkDemo.cpp#L647
 
-			Entity bodyparts[BODYPART_COUNT] = {};
 			btVector3 roots[BODYPART_COUNT] = {};
 			btTransform transforms[BODYPART_COUNT] = {};
 
 			//wi::renderer::SetGameSpeed(0.1f);
 			//SetDebugDrawEnabled(true);
 
+			// Calculate the bone lengths and radiuses in armature local space:
 			for (int c = 0; c < BODYPART_COUNT; ++c)
 			{
 				Entity entityA = INVALID_ENTITY;
@@ -618,10 +619,34 @@ namespace wi::physics
 				}
 				assert(entityA != INVALID_ENTITY);
 
-				const TransformComponent* transformA = scene.transforms.GetComponent(entityA);
+				// Calculations here will be done in armature local space.
+				//	Unfortunately since humanoid can be separate from armature, we use a "find" utility to find bone rest matrix in armature
+				XMMATRIX restA = scene.FindBoneRestPose(entityA);
+				XMMATRIX restB = scene.FindBoneRestPose(entityB);
+				XMVECTOR rootA = restA.r[3];
+				XMVECTOR rootB = restB.r[3];
 
-				wi::scene::RigidBodyPhysicsComponent& physicscomponent = scene.rigidbodies.Contains(entityA) ? *scene.rigidbodies.GetComponent(entityA) : scene.rigidbodies.Create(entityA);
-				//physicscomponent.SetDisableDeactivation(true);
+				// Every bone will be a rigid body:
+				if (scene.rigidbodies.Contains(entityA))
+					scene.rigidbodies.Remove(entityA);
+				wi::scene::RigidBodyPhysicsComponent& physicscomponent =  scene.rigidbodies.Create(entityA);
+
+#if 0
+				// Fix body parts for testing:
+				switch (c)
+				{
+				case BODYPART_PELVIS:
+				case BODYPART_SPINE:
+				//case BODYPART_LEFT_UPPER_LEG:
+				//case BODYPART_LEFT_LOWER_LEG:
+				//case BODYPART_RIGHT_UPPER_LEG:
+				//case BODYPART_RIGHT_LOWER_LEG:
+					physicscomponent.SetKinematic(true);
+					break;
+				default:
+					break;
+				}
+#endif
 
 				switch (c)
 				{
@@ -629,6 +654,7 @@ namespace wi::physics
 				case BODYPART_LEFT_LOWER_ARM:
 				case BODYPART_RIGHT_UPPER_ARM:
 				case BODYPART_RIGHT_LOWER_ARM:
+					// Capsule could be rotated, but it is easier to just make CapsuleX and offset it:
 					physicscomponent.shape = wi::scene::RigidBodyPhysicsComponent::CAPSULE_X;
 					break;
 				default:
@@ -639,24 +665,22 @@ namespace wi::physics
 
 				if (c == BODYPART_HEAD)
 				{
+					// Head doesn't necessarily have a child, so make up something reasonable:
 					physicscomponent.capsule.height = 0.05f;
 					physicscomponent.capsule.radius = 0.1f;
 				}
 				else
 				{
-					const TransformComponent* transformB = nullptr;
-					XMVECTOR to_tail = XMVectorSet(0, 1, 0, 0);
-					if (entityB != INVALID_ENTITY)
-					{
-						transformB = scene.transforms.GetComponent(entityB);
-						to_tail = XMVectorSubtract(transformB->GetPositionV(), transformA->GetPositionV());
-						XMVECTOR len = XMVector3Length(to_tail);
-						to_tail /= len;
-						physicscomponent.capsule.height = XMVectorGetX(len);
-					}
+					// bone length:
+					XMVECTOR len = XMVector3Length(XMVectorSubtract(rootB, rootA));
+					physicscomponent.capsule.height = XMVectorGetX(len);
 
+					// capsule radius and length is tweaked per body part:
 					switch (c)
 					{
+					case BODYPART_PELVIS:
+						physicscomponent.capsule.radius = physicscomponent.capsule.height * 1.8f;
+						break;
 					case BODYPART_LEFT_LOWER_ARM:
 					case BODYPART_RIGHT_LOWER_ARM:
 						physicscomponent.capsule.radius = physicscomponent.capsule.height * 0.15f;
@@ -679,15 +703,17 @@ namespace wi::physics
 					}
 				}
 
+				// capsule offset on axis is performed because otherwise capsule center would be in the bone root position
+				//	which is not what we want. Instead the bone is moved on its axis so it resides between root and tail
 				const float offset = physicscomponent.capsule.height * 0.5f + physicscomponent.capsule.radius;
 
 				btTransform additionalTransform;
 				additionalTransform.setIdentity();
-				additionalTransform.getBasis().setEulerZYX(0, XM_PI, 0);
 
 				switch (c)
 				{
 				case BODYPART_PELVIS:
+					break;
 				case BODYPART_SPINE:
 				case BODYPART_HEAD:
 					additionalTransform.setOrigin(btVector3(0, offset, 0));
@@ -700,21 +726,23 @@ namespace wi::physics
 					break;
 				case BODYPART_LEFT_UPPER_ARM:
 				case BODYPART_LEFT_LOWER_ARM:
-					additionalTransform.setOrigin(btVector3(offset, 0, 0));
+					additionalTransform.setOrigin(btVector3(-offset, 0, 0));
 					break;
 				case BODYPART_RIGHT_UPPER_ARM:
 				case BODYPART_RIGHT_LOWER_ARM:
-					additionalTransform.setOrigin(btVector3(-offset, 0, 0));
+					additionalTransform.setOrigin(btVector3(offset, 0, 0));
 					break;
 				}
 
-				AddRigidBody(scene, entityA, physicscomponent, *transformA, nullptr, &additionalTransform);
-				//AddRigidBody(scene, entityA, physicscomponent, *transformA, nullptr);
+				// We use armature local space here, because constraints will be defined in local space too later:
+				TransformComponent restTransform;
+				XMStoreFloat4x4(&restTransform.world, restA);
+
+				AddRigidBody(scene, entityA, physicscomponent, restTransform, nullptr, &additionalTransform);
 				rigidbodies[c] = physicscomponent.physicsobject;
 
 				auto& rb = GetRigidBody(physicscomponent);
-				roots[c] = btVector3(transformA->GetPosition().x, transformA->GetPosition().y, transformA->GetPosition().z);
-				bodyparts[c] = entityA;
+				roots[c] = btVector3(XMVectorGetX(rootA), XMVectorGetY(rootA), XMVectorGetZ(rootA));
 				m_bodies[c] = rb.rigidBody.get();
 				transforms[c] = rb.rigidBody->getWorldTransform();
 			}
@@ -727,128 +755,168 @@ namespace wi::physics
 				m_bodies[i]->setSleepingThresholds(btScalar(1.6), btScalar(2.5));
 			}
 
-			btHingeConstraint* hingeC;
-			btConeTwistConstraint* coneC;
+			// Create all constraints below:
+			btHingeConstraint* hingeC = nullptr;
+			btConeTwistConstraint* coneC = nullptr;
 
 			btTransform localA, localB;
-			float scale = 1;
-			btSoftRigidDynamicsWorld* m_ownerWorld = &dynamicsWorld;
+			float constraint_dbg = 10;
 
 			localA.setIdentity();
 			localB.setIdentity();
+			localA.getBasis().setEulerZYX(0, -XM_PIDIV2, 0);
 			localA.setOrigin(roots[BODYPART_SPINE] - transforms[BODYPART_PELVIS].getOrigin());
+			localB.getBasis().setEulerZYX(0, -XM_PIDIV2, 0);
 			localB.setOrigin(roots[BODYPART_SPINE] - transforms[BODYPART_SPINE].getOrigin());
 			hingeC = new btHingeConstraint(*m_bodies[BODYPART_PELVIS], *m_bodies[BODYPART_SPINE], localA, localB);
-			hingeC->setLimit(btScalar(-M_PI_4), btScalar(M_PI_2));
+			hingeC->setLimit(0, XM_PIDIV2);
 			//hingeC->setLimit(0, 0);
+			hingeC->setDbgDrawSize(constraint_dbg);
 			m_joints[JOINT_PELVIS_SPINE] = hingeC;
-			m_ownerWorld->addConstraint(m_joints[JOINT_PELVIS_SPINE], true);
+			dynamicsWorld.addConstraint(m_joints[JOINT_PELVIS_SPINE], true);
 
 			localA.setIdentity();
 			localB.setIdentity();
+			localA.getBasis().setEulerZYX(0, 0, XM_PIDIV2);
 			localA.setOrigin(roots[BODYPART_HEAD] - transforms[BODYPART_SPINE].getOrigin());
+			localB.getBasis().setEulerZYX(0, 0, XM_PIDIV2);
 			localB.setOrigin(roots[BODYPART_HEAD] - transforms[BODYPART_HEAD].getOrigin());
 			coneC = new btConeTwistConstraint(*m_bodies[BODYPART_SPINE], *m_bodies[BODYPART_HEAD], localA, localB);
-			coneC->setLimit(M_PI_4, M_PI_2, M_PI_4);
+			coneC->setLimit(XM_PIDIV4, XM_PIDIV2, XM_PIDIV4);
 			//coneC->setLimit(0, 0, 0);
+			coneC->setDbgDrawSize(constraint_dbg);
 			m_joints[JOINT_SPINE_HEAD] = coneC;
-			m_ownerWorld->addConstraint(m_joints[JOINT_SPINE_HEAD], true);
+			dynamicsWorld.addConstraint(m_joints[JOINT_SPINE_HEAD], true);
 
 			localA.setIdentity();
 			localB.setIdentity();
-			localA.getBasis().setEulerZYX(0, 0, -M_PI_4 * 5);
+			localA.getBasis().setEulerZYX(0, 0, XM_PIDIV4);
 			localA.setOrigin(roots[BODYPART_LEFT_UPPER_LEG] - transforms[BODYPART_PELVIS].getOrigin());
-			localB.getBasis().setEulerZYX(0, 0, -M_PI_4 * 5);
+			localB.getBasis().setEulerZYX(0, 0, XM_PIDIV4);
 			localB.setOrigin(roots[BODYPART_LEFT_UPPER_LEG] - transforms[BODYPART_LEFT_UPPER_LEG].getOrigin());
 			coneC = new btConeTwistConstraint(*m_bodies[BODYPART_PELVIS], *m_bodies[BODYPART_LEFT_UPPER_LEG], localA, localB);
-			coneC->setLimit(M_PI_4, M_PI_4, 0);
+			coneC->setLimit(XM_PIDIV4, XM_PIDIV4, 0);
 			//coneC->setLimit(0, 0, 0);
+			coneC->setDbgDrawSize(constraint_dbg);
 			m_joints[JOINT_LEFT_HIP] = coneC;
-			m_ownerWorld->addConstraint(m_joints[JOINT_LEFT_HIP], true);
+			dynamicsWorld.addConstraint(m_joints[JOINT_LEFT_HIP], true);
 
 			localA.setIdentity();
 			localB.setIdentity();
-			localA.getBasis().setEulerZYX(0, M_PI_2, 0);
+			localA.getBasis().setEulerZYX(0, -XM_PIDIV2, 0);
 			localA.setOrigin(roots[BODYPART_LEFT_LOWER_LEG] - transforms[BODYPART_LEFT_UPPER_LEG].getOrigin());
-			localB.getBasis().setEulerZYX(0, M_PI_2, 0);
+			localB.getBasis().setEulerZYX(0, -XM_PIDIV2, 0);
 			localB.setOrigin(roots[BODYPART_LEFT_LOWER_LEG] - transforms[BODYPART_LEFT_LOWER_LEG].getOrigin());
 			hingeC = new btHingeConstraint(*m_bodies[BODYPART_LEFT_UPPER_LEG], *m_bodies[BODYPART_LEFT_LOWER_LEG], localA, localB);
-			hingeC->setLimit(btScalar(0), btScalar(M_PI_2));
+			hingeC->setLimit(0, XM_PI * 0.8f);
 			//hingeC->setLimit(0, 0);
+			hingeC->setDbgDrawSize(constraint_dbg);
 			m_joints[JOINT_LEFT_KNEE] = hingeC;
-			m_ownerWorld->addConstraint(m_joints[JOINT_LEFT_KNEE], true);
+			dynamicsWorld.addConstraint(m_joints[JOINT_LEFT_KNEE], true);
 
 			localA.setIdentity();
 			localB.setIdentity();
-			localA.getBasis().setEulerZYX(0, 0, M_PI_4);
+			localA.getBasis().setEulerZYX(0, 0, -XM_PIDIV4);
 			localA.setOrigin(roots[BODYPART_RIGHT_UPPER_LEG] - transforms[BODYPART_PELVIS].getOrigin());
-			localB.getBasis().setEulerZYX(0, 0, M_PI_4);
+			localB.getBasis().setEulerZYX(0, 0, -XM_PIDIV4);
 			localB.setOrigin(roots[BODYPART_RIGHT_UPPER_LEG] - transforms[BODYPART_RIGHT_UPPER_LEG].getOrigin());
 			coneC = new btConeTwistConstraint(*m_bodies[BODYPART_PELVIS], *m_bodies[BODYPART_RIGHT_UPPER_LEG], localA, localB);
-			coneC->setLimit(M_PI_4, M_PI_4, 0);
+			coneC->setLimit(XM_PIDIV4, XM_PIDIV4, 0);
 			//coneC->setLimit(0, 0, 0);
+			coneC->setDbgDrawSize(constraint_dbg);
 			m_joints[JOINT_RIGHT_HIP] = coneC;
-			m_ownerWorld->addConstraint(m_joints[JOINT_RIGHT_HIP], true);
+			dynamicsWorld.addConstraint(m_joints[JOINT_RIGHT_HIP], true);
 
 			localA.setIdentity();
 			localB.setIdentity();
-			localA.getBasis().setEulerZYX(0, M_PI_2, 0);
+			localA.getBasis().setEulerZYX(0, -XM_PIDIV2, 0);
 			localA.setOrigin(roots[BODYPART_RIGHT_LOWER_LEG] - transforms[BODYPART_RIGHT_UPPER_LEG].getOrigin());
-			localB.getBasis().setEulerZYX(0, M_PI_2, 0);
+			localB.getBasis().setEulerZYX(0, -XM_PIDIV2, 0);
 			localB.setOrigin(roots[BODYPART_RIGHT_LOWER_LEG] - transforms[BODYPART_RIGHT_LOWER_LEG].getOrigin());
 			hingeC = new btHingeConstraint(*m_bodies[BODYPART_RIGHT_UPPER_LEG], *m_bodies[BODYPART_RIGHT_LOWER_LEG], localA, localB);
-			hingeC->setLimit(btScalar(0), btScalar(M_PI_2));
+			hingeC->setLimit(0, XM_PI * 0.8f);
 			//hingeC->setLimit(0, 0);
+			hingeC->setDbgDrawSize(constraint_dbg);
 			m_joints[JOINT_RIGHT_KNEE] = hingeC;
-			m_ownerWorld->addConstraint(m_joints[JOINT_RIGHT_KNEE], true);
+			dynamicsWorld.addConstraint(m_joints[JOINT_RIGHT_KNEE], true);
 
 			localA.setIdentity();
 			localB.setIdentity();
-			//localA.getBasis().setEulerZYX(0, 0, M_PI);
 			localA.setOrigin(roots[BODYPART_LEFT_UPPER_ARM] - transforms[BODYPART_SPINE].getOrigin());
-			//localB.getBasis().setEulerZYX(0, 0, M_PI_2);
 			localB.setOrigin(roots[BODYPART_LEFT_UPPER_ARM] - transforms[BODYPART_LEFT_UPPER_ARM].getOrigin());
 			coneC = new btConeTwistConstraint(*m_bodies[BODYPART_SPINE], *m_bodies[BODYPART_LEFT_UPPER_ARM], localA, localB);
-			coneC->setLimit(M_PI_2, M_PI_2, 0);
+			coneC->setLimit(XM_PIDIV2, XM_PIDIV2, 0);
 			//coneC->setLimit(0, 0, 0);
+			coneC->setDbgDrawSize(constraint_dbg);
 			m_joints[JOINT_LEFT_SHOULDER] = coneC;
-			m_ownerWorld->addConstraint(m_joints[JOINT_LEFT_SHOULDER], true);
+			dynamicsWorld.addConstraint(m_joints[JOINT_LEFT_SHOULDER], true);
 
 			localA.setIdentity();
 			localB.setIdentity();
-			//localA.getBasis().setEulerZYX(0, M_PI_2, 0);
+			localA.getBasis().setEulerZYX(-XM_PIDIV2, 0, 0);
 			localA.setOrigin(roots[BODYPART_LEFT_LOWER_ARM] - transforms[BODYPART_LEFT_UPPER_ARM].getOrigin());
-			//localB.getBasis().setEulerZYX(0, M_PI_2, 0);
+			localB.getBasis().setEulerZYX(-XM_PIDIV2, 0, 0);
 			localB.setOrigin(roots[BODYPART_LEFT_LOWER_ARM] - transforms[BODYPART_LEFT_LOWER_ARM].getOrigin());
 			hingeC = new btHingeConstraint(*m_bodies[BODYPART_LEFT_UPPER_ARM], *m_bodies[BODYPART_LEFT_LOWER_ARM], localA, localB);
-			hingeC->setLimit(btScalar(-M_PI_2), btScalar(0));
+			hingeC->setLimit(-XM_PIDIV2, 0);
 			//hingeC->setLimit(0, 0);
+			hingeC->setDbgDrawSize(constraint_dbg);
 			m_joints[JOINT_LEFT_ELBOW] = hingeC;
-			m_ownerWorld->addConstraint(m_joints[JOINT_LEFT_ELBOW], true);
+			dynamicsWorld.addConstraint(m_joints[JOINT_LEFT_ELBOW], true);
 
 			localA.setIdentity();
 			localB.setIdentity();
-			//localA.getBasis().setEulerZYX(0, 0, 0);
+			localA.getBasis().setEulerZYX(0, 0, 0);
 			localA.setOrigin(roots[BODYPART_RIGHT_UPPER_ARM] - transforms[BODYPART_SPINE].getOrigin());
-			//localB.getBasis().setEulerZYX(0, 0, M_PI_2);
 			localB.setOrigin(roots[BODYPART_RIGHT_UPPER_ARM] - transforms[BODYPART_RIGHT_UPPER_ARM].getOrigin());
 			coneC = new btConeTwistConstraint(*m_bodies[BODYPART_SPINE], *m_bodies[BODYPART_RIGHT_UPPER_ARM], localA, localB);
-			coneC->setLimit(M_PI_2, M_PI_2, 0);
+			coneC->setLimit(XM_PIDIV2, XM_PIDIV2, 0);
 			//coneC->setLimit(0, 0, 0);
+			coneC->setDbgDrawSize(constraint_dbg);
 			m_joints[JOINT_RIGHT_SHOULDER] = coneC;
-			m_ownerWorld->addConstraint(m_joints[JOINT_RIGHT_SHOULDER], true);
+			dynamicsWorld.addConstraint(m_joints[JOINT_RIGHT_SHOULDER], true);
 
 			localA.setIdentity();
 			localB.setIdentity();
-			//localA.getBasis().setEulerZYX(0, M_PI_2, 0);
+			localA.getBasis().setEulerZYX(XM_PIDIV2, 0, 0);
 			localA.setOrigin(roots[BODYPART_RIGHT_LOWER_ARM] - transforms[BODYPART_RIGHT_UPPER_ARM].getOrigin());
-			//localB.getBasis().setEulerZYX(0, M_PI_2, 0);
+			localB.getBasis().setEulerZYX(XM_PIDIV2, 0, 0);
 			localB.setOrigin(roots[BODYPART_RIGHT_LOWER_ARM] - transforms[BODYPART_RIGHT_LOWER_ARM].getOrigin());
 			hingeC = new btHingeConstraint(*m_bodies[BODYPART_RIGHT_UPPER_ARM], *m_bodies[BODYPART_RIGHT_LOWER_ARM], localA, localB);
-			hingeC->setLimit(btScalar(-M_PI_2), btScalar(0));
+			hingeC->setLimit(-XM_PIDIV2, 0);
 			//hingeC->setLimit(0, 0);
+			hingeC->setDbgDrawSize(constraint_dbg);
 			m_joints[JOINT_RIGHT_ELBOW] = hingeC;
-			m_ownerWorld->addConstraint(m_joints[JOINT_RIGHT_ELBOW], true);
+			dynamicsWorld.addConstraint(m_joints[JOINT_RIGHT_ELBOW], true);
+
+			// For all body parts, we now apply the current world space pose:
+			for (auto& x : rigidbodies)
+			{
+				RigidBody& rb = *(RigidBody*)x.get();
+				Entity entity = (Entity)rb.rigidBody->getUserIndex();
+				const TransformComponent* transform = scene.transforms.GetComponent(entity);
+				if (transform == nullptr)
+					continue;
+
+				XMVECTOR SCA = {};
+				XMVECTOR ROT = {};
+				XMVECTOR TRA = {};
+				XMMatrixDecompose(&SCA, &ROT, &TRA, XMLoadFloat4x4(&transform->world));
+				XMFLOAT4 rot = {};
+				XMFLOAT3 tra = {};
+				XMStoreFloat4(&rot, ROT);
+				XMStoreFloat3(&tra, TRA);
+
+				btTransform shapeTransform;
+				shapeTransform.setIdentity();
+				shapeTransform.setOrigin(btVector3(tra.x, tra.y, tra.z));
+				shapeTransform.setRotation(btQuaternion(rot.x, rot.y, rot.z, rot.w));
+				shapeTransform.mult(shapeTransform, rb.additionalTransform);
+
+				btMotionState* ms = rb.rigidBody->getMotionState();
+				ms->setWorldTransform(shapeTransform);
+				rb.rigidBody->setWorldTransform(shapeTransform); // immediate transform on first frame
+			}
 		}
 		~Ragdoll()
 		{
@@ -860,6 +928,12 @@ namespace wi::physics
 				if (x == nullptr)
 					continue;
 				dynamicsWorld.removeConstraint(x);
+				delete x;
+			}
+			for (auto& x : m_bodies)
+			{
+				dynamicsWorld.removeRigidBody(x);
+				// no delete, these are weak refs
 			}
 		}
 	};

@@ -5899,6 +5899,29 @@ namespace wi::scene
 		return INVALID_ENTITY;
 	}
 
+	XMMATRIX Scene::FindBoneRestPose(wi::ecs::Entity bone) const
+	{
+		if (bone != INVALID_ENTITY)
+		{
+			for (size_t i = 0; i < armatures.GetCount(); ++i)
+			{
+				const ArmatureComponent& armature = armatures[i];
+				int boneIndex = -1;
+				for (auto& x : armature.boneCollection)
+				{
+					boneIndex++;
+					if (x == bone)
+					{
+						XMMATRIX inverseBindMatrix = XMLoadFloat4x4(armature.inverseBindMatrices.data() + boneIndex);
+						XMMATRIX bindMatrix = XMMatrixInverse(nullptr, inverseBindMatrix);
+						return bindMatrix;
+					}
+				}
+			}
+		}
+		return XMMatrixIdentity();
+	}
+
 	void Scene::ScanAnimationDependencies()
 	{
 		if (animations.GetCount() == 0)

@@ -478,6 +478,10 @@ namespace wi::scene
 		//
 		//	returns entity ID of the new animation or INVALID_ENTITY if retargeting was not successful
 		wi::ecs::Entity RetargetAnimation(wi::ecs::Entity dst, wi::ecs::Entity src, bool bake_data, const Scene* src_scene = nullptr);
+
+		// If you don't know which armature the bone is contained int, this function can be used to find the first such armature and return the bone's rest matrix
+		//	If not found, return identity matrix
+		XMMATRIX FindBoneRestPose(wi::ecs::Entity bone) const;
 	};
 
 	// Returns skinned vertex position in armature local space
