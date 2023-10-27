@@ -628,6 +628,19 @@ namespace wi::physics
 					physicscomponent.capsule.height = XMVectorGetX(len);
 				}
 
+				const HierarchyComponent* hier = scene.hierarchy.GetComponent(entityA);
+				size_t parent_index = hier == nullptr ? ~0ull : scene.transforms.GetIndex(hier->parentID);
+				if (parent_index != ~0ull)
+				{
+					// Spring hierarchy resolve depends on spring component order!
+					//	It works best when parent spring is located before child spring!
+					//	It will work the other way, but results will be less convincing
+					const TransformComponent& parent_transform = scene.transforms[parent_index];
+					XMMATRIX parentWorldMatrix = XMLoadFloat4x4(&parent_transform.world);
+					XMMATRIX parentWorldMatrixInverse = XMMatrixInverse(nullptr, parentWorldMatrix);
+					to_tail = XMVector3TransformNormal(to_tail, parentWorldMatrixInverse);
+				}
+
 				switch (c)
 				{
 				case BODYPART_HEAD:
@@ -656,9 +669,14 @@ namespace wi::physics
 				}
 
 				XMVECTOR boneAxis = XMVectorSet(0, 1, 0, 0);
+#if 1
 				const XMVECTOR axis = XMVector3Normalize(XMVector3Cross(boneAxis, to_tail));
 				const float angle = XMScalarACos(XMVectorGetX(XMVector3Dot(boneAxis, to_tail)));
-				const XMVECTOR Q = XMQuaternionNormalize(XMQuaternionRotationNormal(axis, -angle));
+#else
+				const XMVECTOR axis = XMVectorSet(0, 0, 1, 0);
+				const float angle = wi::math::GetAngle(boneAxis, to_tail, axis);
+#endif
+				const XMVECTOR Q = XMQuaternionNormalize(XMQuaternionRotationNormal(axis, angle));
 				XMFLOAT4 rot;
 				XMStoreFloat4(&rot, Q);
 
