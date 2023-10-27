@@ -110,6 +110,7 @@ namespace wi::physics
 			std::shared_ptr<void> physics_scene;
 			std::unique_ptr<btCollisionShape> shape;
 			std::unique_ptr<btRigidBody> rigidBody;
+			btTransform additionalTransformInverse;
 			btDefaultMotionState motionState;
 			btTriangleIndexVertexArray triangles;
 			~RigidBody()
@@ -176,7 +177,8 @@ namespace wi::physics
 		Entity entity,
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const wi::scene::TransformComponent& transform,
-		const wi::scene::MeshComponent* mesh
+		const wi::scene::MeshComponent* mesh,
+		const btTransform* additionalTransform = nullptr
 	)
 	{
 		RigidBody& physicsobject = GetRigidBody(physicscomponent);
@@ -294,6 +296,15 @@ namespace wi::physics
 			shapeTransform.setIdentity();
 			shapeTransform.setOrigin(btVector3(tra.x, tra.y, tra.z));
 			shapeTransform.setRotation(btQuaternion(rot.x, rot.y, rot.z, rot.w));
+			if (additionalTransform != nullptr)
+			{
+				shapeTransform.mult(shapeTransform, *additionalTransform);
+				physicsobject.additionalTransformInverse = additionalTransform->inverse();
+			}
+			else
+			{
+				physicsobject.additionalTransformInverse.setIdentity();
+			}
 			physicsobject.motionState = btDefaultMotionState(shapeTransform);
 
 			btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, &physicsobject.motionState, physicsobject.shape.get(), localInertia);
@@ -485,6 +496,327 @@ namespace wi::physics
 		}
 	}
 
+	struct Ragdoll
+	{
+#define M_PI XM_PI
+#define M_PI_2 XM_PIDIV2
+#define M_PI_4 XM_PIDIV4
+		enum
+		{
+			BODYPART_PELVIS = 0,
+			BODYPART_SPINE,
+			BODYPART_HEAD,
+
+			BODYPART_LEFT_UPPER_LEG,
+			BODYPART_LEFT_LOWER_LEG,
+
+			BODYPART_RIGHT_UPPER_LEG,
+			BODYPART_RIGHT_LOWER_LEG,
+
+			BODYPART_LEFT_UPPER_ARM,
+			BODYPART_LEFT_LOWER_ARM,
+
+			BODYPART_RIGHT_UPPER_ARM,
+			BODYPART_RIGHT_LOWER_ARM,
+
+			BODYPART_COUNT
+		};
+		enum
+		{
+			JOINT_PELVIS_SPINE = 0,
+			JOINT_SPINE_HEAD,
+
+			JOINT_LEFT_HIP,
+			JOINT_LEFT_KNEE,
+
+			JOINT_RIGHT_HIP,
+			JOINT_RIGHT_KNEE,
+
+			JOINT_LEFT_SHOULDER,
+			JOINT_LEFT_ELBOW,
+
+			JOINT_RIGHT_SHOULDER,
+			JOINT_RIGHT_ELBOW,
+
+			JOINT_COUNT
+		};
+
+		std::shared_ptr<void> physics_scene;
+		std::shared_ptr<void> rigidbodies[BODYPART_COUNT];
+		btRigidBody* m_bodies[BODYPART_COUNT];
+		btTypedConstraint* m_joints[JOINT_COUNT];
+
+		Ragdoll(wi::scene::Scene& scene, wi::scene::HumanoidComponent& humanoid)
+		{
+			physics_scene = scene.physics_scene;
+			btSoftRigidDynamicsWorld& dynamicsWorld = ((PhysicsScene*)physics_scene.get())->dynamicsWorld;
+
+			// https://github.com/bulletphysics/bullet3/blob/39b8de74df93721add193e5b3d9ebee579faebf8/examples/Benchmarks/BenchmarkDemo.cpp#L647
+
+			Entity bodyparts[BODYPART_COUNT] = {};
+			btVector3 roots[BODYPART_COUNT] = {};
+			btTransform transforms[BODYPART_COUNT] = {};
+
+			wi::renderer::SetGameSpeed(0.1f);
+
+			for (int c = 0; c < BODYPART_COUNT; ++c)
+			{
+				Entity entityA = INVALID_ENTITY;
+				Entity entityB = INVALID_ENTITY;
+				switch (c)
+				{
+				case BODYPART_PELVIS:
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Hips];
+					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Spine];
+					break;
+				case BODYPART_SPINE:
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Spine];
+					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Neck];
+					break;
+				case BODYPART_HEAD:
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Neck];
+					break;
+				case BODYPART_LEFT_UPPER_LEG:
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftUpperLeg];
+					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftLowerLeg];
+					break;
+				case BODYPART_LEFT_LOWER_LEG:
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftLowerLeg];
+					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftFoot];
+					break;
+				case BODYPART_RIGHT_UPPER_LEG:
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightUpperLeg];
+					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightLowerLeg];
+					break;
+				case BODYPART_RIGHT_LOWER_LEG:
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightLowerLeg];
+					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightFoot];
+					break;
+				case BODYPART_LEFT_UPPER_ARM:
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftUpperArm];
+					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftLowerArm];
+					break;
+				case BODYPART_LEFT_LOWER_ARM:
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftLowerArm];
+					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftHand];
+					break;
+				case BODYPART_RIGHT_UPPER_ARM:
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightUpperArm];
+					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightLowerArm];
+					break;
+				case BODYPART_RIGHT_LOWER_ARM:
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightLowerArm];
+					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightHand];
+					break;
+				}
+				assert(entityA != INVALID_ENTITY);
+
+				wi::scene::RigidBodyPhysicsComponent& physicscomponent = scene.rigidbodies.Contains(entityA) ? *scene.rigidbodies.GetComponent(entityA) : scene.rigidbodies.Create(entityA);
+				//physicscomponent.SetDisableDeactivation(true);
+				physicscomponent.shape = wi::scene::RigidBodyPhysicsComponent::CAPSULE;
+				physicscomponent.capsule.height = 0.1f;
+
+				const TransformComponent* transformA = scene.transforms.GetComponent(entityA);
+				const TransformComponent* transformB = nullptr;
+				XMVECTOR to_tail = XMVectorSet(0, 1, 0, 0);
+				if (entityB != INVALID_ENTITY)
+				{
+					transformB = scene.transforms.GetComponent(entityB);
+					to_tail = XMVectorSubtract(transformB->GetPositionV(), transformA->GetPositionV());
+					XMVECTOR len = XMVector3Length(to_tail);
+					to_tail /= len;
+					physicscomponent.capsule.height = XMVectorGetX(len);
+				}
+
+				switch (c)
+				{
+				case BODYPART_HEAD:
+					physicscomponent.capsule.height = 0.05f;
+					physicscomponent.capsule.radius = 0.1f;
+					break;
+				case BODYPART_LEFT_LOWER_ARM:
+				case BODYPART_RIGHT_LOWER_ARM:
+					physicscomponent.capsule.radius = physicscomponent.capsule.height * 0.15f;
+					physicscomponent.capsule.height += physicscomponent.capsule.radius;
+					break;
+				case BODYPART_LEFT_UPPER_LEG:
+				case BODYPART_RIGHT_UPPER_LEG:
+					physicscomponent.capsule.radius = physicscomponent.capsule.height * 0.15f;
+					physicscomponent.capsule.height -= physicscomponent.capsule.radius * 2;
+					break;
+				case BODYPART_LEFT_LOWER_LEG:
+				case BODYPART_RIGHT_LOWER_LEG:
+					physicscomponent.capsule.radius = physicscomponent.capsule.height * 0.15f;
+					physicscomponent.capsule.height -= physicscomponent.capsule.radius;
+					break;
+				default:
+					physicscomponent.capsule.radius = physicscomponent.capsule.height * 0.2f;
+					physicscomponent.capsule.height -= physicscomponent.capsule.radius * 2;
+					break;
+				}
+
+				XMVECTOR boneAxis = XMVectorSet(0, 1, 0, 0);
+				const XMVECTOR axis = XMVector3Normalize(XMVector3Cross(boneAxis, to_tail));
+				const float angle = XMScalarACos(XMVectorGetX(XMVector3Dot(boneAxis, to_tail)));
+				const XMVECTOR Q = XMQuaternionNormalize(XMQuaternionRotationNormal(axis, -angle));
+				XMFLOAT4 rot;
+				XMStoreFloat4(&rot, Q);
+
+				btTransform additionalTransform;
+				additionalTransform.setIdentity();
+				additionalTransform.setOrigin(btVector3(0, physicscomponent.capsule.height * 0.5f + physicscomponent.capsule.radius, 0));
+				additionalTransform.setRotation(btQuaternion(rot.x, rot.y, rot.z, rot.w));
+				AddRigidBody(scene, entityA, physicscomponent, *transformA, nullptr, &additionalTransform);
+				//AddRigidBody(scene, entityA, physicscomponent, *transformA, nullptr);
+				rigidbodies[c] = physicscomponent.physicsobject;
+
+				auto& rb = GetRigidBody(physicscomponent);
+				roots[c] = btVector3(transformA->GetPosition().x, transformA->GetPosition().y, transformA->GetPosition().z);
+				bodyparts[c] = entityA;
+				m_bodies[c] = rb.rigidBody.get();
+				transforms[c] = rb.rigidBody->getWorldTransform();
+			}
+
+			// Setup some damping on the m_bodies
+			for (int i = 0; i < BODYPART_COUNT; ++i)
+			{
+				m_bodies[i]->setDamping(btScalar(0.05), btScalar(0.85));
+				m_bodies[i]->setDeactivationTime(btScalar(0.8));
+				m_bodies[i]->setSleepingThresholds(btScalar(1.6), btScalar(2.5));
+			}
+
+			btHingeConstraint* hingeC;
+			btConeTwistConstraint* coneC;
+
+			btTransform localA, localB;
+			float scale = 1;
+			btSoftRigidDynamicsWorld* m_ownerWorld = &dynamicsWorld;
+
+			localA.setIdentity();
+			localB.setIdentity();
+			localA.setBasis(transforms[BODYPART_PELVIS].getBasis());
+			localA.setOrigin((roots[BODYPART_SPINE] - transforms[BODYPART_PELVIS].getOrigin()) * localA.getBasis());
+			localB.setBasis(transforms[BODYPART_SPINE].getBasis());
+			localB.setOrigin((roots[BODYPART_SPINE] - transforms[BODYPART_SPINE].getOrigin()) * localB.getBasis());
+			hingeC = new btHingeConstraint(*m_bodies[BODYPART_PELVIS], *m_bodies[BODYPART_SPINE], localA, localB);
+			hingeC->setLimit(btScalar(-M_PI_4), btScalar(M_PI_2));
+			m_joints[JOINT_PELVIS_SPINE] = hingeC;
+			m_ownerWorld->addConstraint(m_joints[JOINT_PELVIS_SPINE], true);
+
+			localA.setIdentity();
+			localB.setIdentity();
+			localA.setBasis(transforms[BODYPART_SPINE].getBasis());
+			localA.setOrigin((roots[BODYPART_HEAD] - transforms[BODYPART_SPINE].getOrigin()) * localA.getBasis());
+			localB.setBasis(transforms[BODYPART_HEAD].getBasis());
+			localB.setOrigin((roots[BODYPART_HEAD] - transforms[BODYPART_HEAD].getOrigin()) * localB.getBasis());
+			coneC = new btConeTwistConstraint(*m_bodies[BODYPART_SPINE], *m_bodies[BODYPART_HEAD], localA, localB);
+			coneC->setLimit(M_PI_4, M_PI_2, M_PI_4);
+			m_joints[JOINT_SPINE_HEAD] = coneC;
+			m_ownerWorld->addConstraint(m_joints[JOINT_SPINE_HEAD], true);
+
+			localA.setIdentity();
+			localB.setIdentity();
+			localA.setBasis(transforms[BODYPART_PELVIS].getBasis());
+			localA.setOrigin((roots[BODYPART_LEFT_UPPER_LEG] - transforms[BODYPART_PELVIS].getOrigin()) * localA.getBasis());
+			localB.setBasis(transforms[BODYPART_LEFT_UPPER_LEG].getBasis());
+			localB.setOrigin((roots[BODYPART_LEFT_UPPER_LEG] - transforms[BODYPART_LEFT_UPPER_LEG].getOrigin()) * localB.getBasis());
+			coneC = new btConeTwistConstraint(*m_bodies[BODYPART_PELVIS], *m_bodies[BODYPART_LEFT_UPPER_LEG], localA, localB);
+			coneC->setLimit(M_PI_4, M_PI_4, 0);
+			m_joints[JOINT_LEFT_HIP] = coneC;
+			m_ownerWorld->addConstraint(m_joints[JOINT_LEFT_HIP], true);
+
+			localA.setIdentity();
+			localB.setIdentity();
+			localA.setBasis(transforms[BODYPART_LEFT_UPPER_LEG].getBasis());
+			localA.setOrigin((roots[BODYPART_LEFT_LOWER_LEG] - transforms[BODYPART_LEFT_UPPER_LEG].getOrigin()) * localA.getBasis());
+			localB.setBasis(transforms[BODYPART_LEFT_LOWER_LEG].getBasis());
+			localB.setOrigin((roots[BODYPART_LEFT_LOWER_LEG] - transforms[BODYPART_LEFT_LOWER_LEG].getOrigin()) * localB.getBasis());
+			hingeC = new btHingeConstraint(*m_bodies[BODYPART_LEFT_UPPER_LEG], *m_bodies[BODYPART_LEFT_LOWER_LEG], localA, localB);
+			hingeC->setLimit(btScalar(0), btScalar(M_PI_2));
+			m_joints[JOINT_LEFT_KNEE] = hingeC;
+			m_ownerWorld->addConstraint(m_joints[JOINT_LEFT_KNEE], true);
+
+			localA.setIdentity();
+			localB.setIdentity();
+			localA.setBasis(transforms[BODYPART_PELVIS].getBasis());
+			localA.setOrigin((roots[BODYPART_RIGHT_UPPER_LEG] - transforms[BODYPART_PELVIS].getOrigin()) * localA.getBasis());
+			localB.setBasis(transforms[BODYPART_RIGHT_UPPER_LEG].getBasis());
+			localB.setOrigin((roots[BODYPART_RIGHT_UPPER_LEG] - transforms[BODYPART_RIGHT_UPPER_LEG].getOrigin()) * localB.getBasis());
+			coneC = new btConeTwistConstraint(*m_bodies[BODYPART_PELVIS], *m_bodies[BODYPART_RIGHT_UPPER_LEG], localA, localB);
+			coneC->setLimit(M_PI_4, M_PI_4, 0);
+			m_joints[JOINT_RIGHT_HIP] = coneC;
+			m_ownerWorld->addConstraint(m_joints[JOINT_RIGHT_HIP], true);
+
+			localA.setIdentity();
+			localB.setIdentity();
+			localA.setBasis(transforms[BODYPART_RIGHT_UPPER_LEG].getBasis());
+			localA.setOrigin((roots[BODYPART_RIGHT_LOWER_LEG] - transforms[BODYPART_RIGHT_UPPER_LEG].getOrigin()) * localA.getBasis());
+			localB.setBasis(transforms[BODYPART_RIGHT_LOWER_LEG].getBasis());
+			localB.setOrigin((roots[BODYPART_RIGHT_LOWER_LEG] - transforms[BODYPART_RIGHT_LOWER_LEG].getOrigin()) * localB.getBasis());
+			hingeC = new btHingeConstraint(*m_bodies[BODYPART_RIGHT_UPPER_LEG], *m_bodies[BODYPART_RIGHT_LOWER_LEG], localA, localB);
+			hingeC->setLimit(btScalar(0), btScalar(M_PI_2));
+			m_joints[JOINT_RIGHT_KNEE] = hingeC;
+			m_ownerWorld->addConstraint(m_joints[JOINT_RIGHT_KNEE], true);
+
+			localA.setIdentity();
+			localB.setIdentity();
+			localA.setBasis(transforms[BODYPART_SPINE].getBasis());
+			localA.setOrigin((roots[BODYPART_LEFT_UPPER_ARM] - transforms[BODYPART_SPINE].getOrigin()) * localA.getBasis());
+			localB.setBasis(transforms[BODYPART_LEFT_UPPER_ARM].getBasis());
+			localB.setOrigin((roots[BODYPART_LEFT_UPPER_ARM] - transforms[BODYPART_LEFT_UPPER_ARM].getOrigin()) * localB.getBasis());
+			coneC = new btConeTwistConstraint(*m_bodies[BODYPART_SPINE], *m_bodies[BODYPART_LEFT_UPPER_ARM], localA, localB);
+			coneC->setLimit(M_PI_2, M_PI_2, 0);
+			m_joints[JOINT_LEFT_SHOULDER] = coneC;
+			m_ownerWorld->addConstraint(m_joints[JOINT_LEFT_SHOULDER], true);
+
+			localA.setIdentity();
+			localB.setIdentity();
+			localA.setBasis(transforms[BODYPART_LEFT_UPPER_ARM].getBasis());
+			localA.setOrigin((roots[BODYPART_LEFT_LOWER_ARM] - transforms[BODYPART_LEFT_UPPER_ARM].getOrigin()) * localA.getBasis());
+			localB.setBasis(transforms[BODYPART_LEFT_LOWER_ARM].getBasis());
+			localB.setOrigin((roots[BODYPART_LEFT_LOWER_ARM] - transforms[BODYPART_LEFT_LOWER_ARM].getOrigin()) * localB.getBasis());
+			hingeC = new btHingeConstraint(*m_bodies[BODYPART_LEFT_UPPER_ARM], *m_bodies[BODYPART_LEFT_LOWER_ARM], localA, localB);
+			hingeC->setLimit(btScalar(-M_PI_2), btScalar(0));
+			m_joints[JOINT_LEFT_ELBOW] = hingeC;
+			m_ownerWorld->addConstraint(m_joints[JOINT_LEFT_ELBOW], true);
+
+			localA.setIdentity();
+			localB.setIdentity();
+			localA.setBasis(transforms[BODYPART_SPINE].getBasis());
+			localA.setOrigin((roots[BODYPART_RIGHT_UPPER_ARM] - transforms[BODYPART_SPINE].getOrigin()) * localA.getBasis());
+			localB.setBasis(transforms[BODYPART_RIGHT_UPPER_ARM].getBasis());
+			localB.setOrigin((roots[BODYPART_RIGHT_UPPER_ARM] - transforms[BODYPART_RIGHT_UPPER_ARM].getOrigin()) * localB.getBasis());
+			coneC = new btConeTwistConstraint(*m_bodies[BODYPART_SPINE], *m_bodies[BODYPART_RIGHT_UPPER_ARM], localA, localB);
+			coneC->setLimit(M_PI_2, M_PI_2, 0);
+			m_joints[JOINT_RIGHT_SHOULDER] = coneC;
+			m_ownerWorld->addConstraint(m_joints[JOINT_RIGHT_SHOULDER], true);
+
+			localA.setIdentity();
+			localB.setIdentity();
+			localA.setBasis(transforms[BODYPART_RIGHT_UPPER_ARM].getBasis());
+			localA.setOrigin((roots[BODYPART_RIGHT_LOWER_ARM] - transforms[BODYPART_RIGHT_UPPER_ARM].getOrigin()) * localA.getBasis());
+			localB.setBasis(transforms[BODYPART_RIGHT_LOWER_ARM].getBasis());
+			localB.setOrigin((roots[BODYPART_RIGHT_LOWER_ARM] - transforms[BODYPART_RIGHT_LOWER_ARM].getOrigin()) * localB.getBasis());
+			hingeC = new btHingeConstraint(*m_bodies[BODYPART_RIGHT_UPPER_ARM], *m_bodies[BODYPART_RIGHT_LOWER_ARM], localA, localB);
+			hingeC->setLimit(btScalar(-M_PI_2), btScalar(0));
+			m_joints[JOINT_RIGHT_ELBOW] = hingeC;
+			m_ownerWorld->addConstraint(m_joints[JOINT_RIGHT_ELBOW], true);
+		}
+		~Ragdoll()
+		{
+			if (physics_scene == nullptr)
+				return;
+			btSoftRigidDynamicsWorld& dynamicsWorld = ((PhysicsScene*)physics_scene.get())->dynamicsWorld;
+			for (auto& x : m_joints)
+			{
+				if (x == nullptr)
+					continue;
+				dynamicsWorld.removeConstraint(x);
+			}
+		}
+	};
+
+
 	void RunPhysicsUpdateSystem(
 		wi::jobsystem::context& ctx,
 		Scene& scene,
@@ -500,6 +832,27 @@ namespace wi::physics
 		dynamicsWorld.setGravity(btVector3(scene.weather.gravity.x, scene.weather.gravity.y, scene.weather.gravity.z));
 
 		btVector3 wind = btVector3(scene.weather.windDirection.x, scene.weather.windDirection.y, scene.weather.windDirection.z);
+
+		SetDebugDrawEnabled(true);
+		for (size_t i = 0; i < scene.humanoids.GetCount(); ++i)
+		{
+			HumanoidComponent& humanoid = scene.humanoids[i];
+			if (!humanoid.IsRagdollPhysicsEnabled())
+			{
+				if (humanoid.ragdoll != nullptr)
+				{
+					// Delete ragdoll:
+					humanoid.ragdoll = {};
+				}
+				continue;
+			}
+
+			if (humanoid.ragdoll == nullptr)
+			{
+				//humanoid.ragdoll = std::make_shared<RagDoll>(&dynamicsWorld, btVector3(), 1.0f);
+				humanoid.ragdoll = std::make_shared<Ragdoll>(scene, humanoid);
+			}
+		}
 
 		// System will register rigidbodies to objects, and update physics engine state for kinematics:
 		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), 256, [&](wi::jobsystem::JobArgs args) {
@@ -533,7 +886,7 @@ namespace wi::physics
 				rigidbody->setRestitution(physicscomponent.restitution);
 
 				// For kinematic object, system updates physics state, else the physics updates system state:
-				if ((physicscomponent.IsKinematic() || !IsSimulationEnabled()) && scene.transforms.Contains(entity))
+				if ((physicscomponent.IsKinematic() /*|| !IsSimulationEnabled()*/) && scene.transforms.Contains(entity))
 				{
 					TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
@@ -630,6 +983,8 @@ namespace wi::physics
 		{
 			btCollisionObject* collisionobject = dynamicsWorld.getCollisionObjectArray()[i];
 			Entity entity = (Entity)collisionobject->getUserIndex();
+			if (entity == INVALID_ENTITY)
+				continue;
 
 			btRigidBody* rigidbody = btRigidBody::upcast(collisionobject);
 			if (rigidbody != nullptr)
@@ -641,7 +996,9 @@ namespace wi::physics
 				{
 					TransformComponent& transform = *scene.transforms.GetComponent(entity);
 	
-					btTransform physicsTransform = rigidbody->getWorldTransform();
+					btTransform physicsTransform;
+					rigidbody->getMotionState()->getWorldTransform(physicsTransform);
+					physicsTransform.mult(physicsTransform, GetRigidBody(*physicscomponent).additionalTransformInverse);
 					btVector3 T = physicsTransform.getOrigin();
 					btQuaternion R = physicsTransform.getRotation();
 
