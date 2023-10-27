@@ -758,6 +758,8 @@ namespace wi::scene
 			CAPSULE,
 			CONVEX_HULL,
 			TRIANGLE_MESH,
+			CAPSULE_X,
+			CAPSULE_Z,
 			ENUM_FORCE_UINT32 = 0xFFFFFFFF
 		};
 		CollisionShape shape;
