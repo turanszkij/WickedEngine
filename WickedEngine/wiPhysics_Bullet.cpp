@@ -552,7 +552,7 @@ namespace wi::physics
 			btVector3 roots[BODYPART_COUNT] = {};
 			btTransform transforms[BODYPART_COUNT] = {};
 
-#if 1
+#if 0
 			// slow speed and visualizer to aid debugging:
 			wi::renderer::SetGameSpeed(0.1f);
 			SetDebugDrawEnabled(true);
