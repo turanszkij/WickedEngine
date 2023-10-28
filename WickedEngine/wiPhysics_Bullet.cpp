@@ -553,7 +553,7 @@ namespace wi::physics
 		btRigidBody* m_bodies[BODYPART_COUNT];
 		btTypedConstraint* m_joints[JOINT_COUNT];
 
-		Ragdoll(wi::scene::Scene& scene, wi::scene::HumanoidComponent& humanoid)
+		Ragdoll(wi::scene::Scene& scene, wi::scene::HumanoidComponent& humanoid, Entity humanoidEntity)
 		{
 			physics_scene = scene.physics_scene;
 			btSoftRigidDynamicsWorld& dynamicsWorld = ((PhysicsScene*)physics_scene.get())->dynamicsWorld;
@@ -917,6 +917,16 @@ namespace wi::physics
 				ms->setWorldTransform(shapeTransform);
 				rb.rigidBody->setWorldTransform(shapeTransform); // immediate transform on first frame
 			}
+
+			// Stop all anims that are children of humanoid:
+			for (size_t i = 0; i < scene.animations.GetCount(); ++i)
+			{
+				Entity entity = scene.animations.GetEntity(i);
+				if (!scene.Entity_IsDescendant(entity, humanoidEntity))
+					continue;
+				AnimationComponent& animation = scene.animations[i];
+				animation.Stop();
+			}
 		}
 		~Ragdoll()
 		{
@@ -970,8 +980,7 @@ namespace wi::physics
 
 			if (humanoid.ragdoll == nullptr)
 			{
-				//humanoid.ragdoll = std::make_shared<RagDoll>(&dynamicsWorld, btVector3(), 1.0f);
-				humanoid.ragdoll = std::make_shared<Ragdoll>(scene, humanoid);
+				humanoid.ragdoll = std::make_shared<Ragdoll>(scene, humanoid, scene.humanoids.GetEntity(i));
 			}
 		}
 
