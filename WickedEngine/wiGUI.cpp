@@ -1459,7 +1459,7 @@ namespace wi::gui
 				}
 				else if ((clicked && !intersectsPointer) || wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
 				{
-					// cancel input 
+					// cancel input
 					font_input.text.clear();
 					Deactivate();
 					typing_active = false;
@@ -1762,7 +1762,7 @@ namespace wi::gui
 		valueInputField.SetTooltip("Enter number to modify value even outside slider limits. Enter \"reset\" to reset slider to initial state.");
 		valueInputField.SetValue(end);
 		valueInputField.OnInputAccepted([this, start, end, defaultValue](EventArgs args) {
-			if (args.sValue.compare("reset") != std::string::npos)
+			if (args.sValue.compare("reset") == 0)
 			{
 				this->value = defaultValue;
 				this->start = start;
@@ -3062,7 +3062,7 @@ namespace wi::gui
 		scrollable_area.active_area.pos.y = float(scrollable_area.scissorRect.top);
 		scrollable_area.active_area.siz.x = float(scrollable_area.scissorRect.right) - float(scrollable_area.scissorRect.left);
 		scrollable_area.active_area.siz.y = float(scrollable_area.scissorRect.bottom) - float(scrollable_area.scissorRect.top);
-		
+
 
 		bool focus = false;
 		for (size_t i = 0; i < widgets.size(); ++i)
@@ -3614,7 +3614,7 @@ namespace wi::gui
 			out.s = (delta / max);                  // s
 		}
 		else {
-			// if max is 0, then r = g = b = 0              
+			// if max is 0, then r = g = b = 0
 			// s = 0, h is undefined
 			out.s = 0.0f;
 			out.h = NAN;                            // its now undefined
