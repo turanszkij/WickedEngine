@@ -170,8 +170,6 @@ namespace wi::scene
 			queryAllocator.store(0);
 		}
 
-		wi::physics::RunPhysicsUpdateSystem(ctx, *this, dt);
-
 		if (dt > 0)
 		{
 			// Scan objects to check if lightmap rendering is requested:
@@ -211,6 +209,8 @@ namespace wi::scene
 		}
 
 		RunAnimationUpdateSystem(ctx);
+
+		wi::physics::RunPhysicsUpdateSystem(ctx, *this, dt);
 
 		RunTransformUpdateSystem(ctx);
 
