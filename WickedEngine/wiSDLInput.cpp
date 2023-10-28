@@ -38,7 +38,7 @@ namespace wi::input::sdlinput
         }
     }
 
-    void ProcessEvent(SDL_Event &event){
+    void ProcessEvent(const SDL_Event &event){
         events.push_back(event);
     }
 
@@ -133,7 +133,8 @@ namespace wi::input::sdlinput
                     auto controller_get = controller_mapped.find(event.caxis.which);
                     if(controller_get != controller_mapped.end()){
                         float raw = event.caxis.value / 32767.0f;
-                        float deadzoned = (raw < -0.01 || raw > 0.01) ? raw : 0;
+                        const float deadzone = 0.2;
+                        float deadzoned = (raw < -deadzone || raw > deadzone) ? raw : 0;
                         switch(event.caxis.axis){
                             case SDL_CONTROLLER_AXIS_LEFTX:
                                 controllers[controller_get->second].state.thumbstick_L.x = deadzoned;
@@ -223,7 +224,7 @@ namespace wi::input::sdlinput
         //Update rumble every call
         for(auto& controller : controllers){
             SDL_GameControllerRumble(
-                controller.controller, 
+                controller.controller,
                 controller.rumble_l,
                 controller.rumble_r,
                 60); //Buffer at 60ms
@@ -316,7 +317,7 @@ namespace wi::input::sdlinput
         }
 
         return -1;
-        
+
     }
 
     void controller_to_wicked(uint32_t *current, Uint8 button, bool pressed){
@@ -376,9 +377,9 @@ namespace wi::input::sdlinput
         if(index < controllers.size()){
 #ifdef SDL2_FEATURE_CONTROLLER_LED
             SDL_GameControllerSetLED(
-                controllers[index].controller, 
-                data.led_color.getR(), 
-                data.led_color.getG(), 
+                controllers[index].controller,
+                data.led_color.getR(),
+                data.led_color.getG(),
                 data.led_color.getB());
 #endif
             controllers[index].rumble_l = (Uint16)floor(data.vibration_left * 0xFFFF);
