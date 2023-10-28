@@ -114,6 +114,7 @@ namespace wi::physics
 			btTransform additionalTransformInverse;
 			btDefaultMotionState motionState;
 			btTriangleIndexVertexArray triangles;
+			Entity entity = INVALID_ENTITY;
 			~RigidBody()
 			{
 				if (physics_scene == nullptr)
@@ -126,6 +127,7 @@ namespace wi::physics
 		{
 			std::shared_ptr<void> physics_scene;
 			std::unique_ptr<btSoftBody> softBody;
+			Entity entity = INVALID_ENTITY;
 			~SoftBody()
 			{
 				if (physics_scene == nullptr)
@@ -183,6 +185,7 @@ namespace wi::physics
 	)
 	{
 		RigidBody& physicsobject = GetRigidBody(physicscomponent);
+		physicsobject.entity = entity;
 
 		switch (physicscomponent.shape)
 		{
@@ -194,12 +197,6 @@ namespace wi::physics
 			break;
 		case RigidBodyPhysicsComponent::CollisionShape::CAPSULE:
 			physicsobject.shape = std::make_unique<btCapsuleShape>(btScalar(physicscomponent.capsule.radius), btScalar(physicscomponent.capsule.height));
-			break;
-		case RigidBodyPhysicsComponent::CollisionShape::CAPSULE_X:
-			physicsobject.shape = std::make_unique<btCapsuleShapeX>(btScalar(physicscomponent.capsule.radius), btScalar(physicscomponent.capsule.height));
-			break;
-		case RigidBodyPhysicsComponent::CollisionShape::CAPSULE_Z:
-			physicsobject.shape = std::make_unique<btCapsuleShapeZ>(btScalar(physicscomponent.capsule.radius), btScalar(physicscomponent.capsule.height));
 			break;
 
 		case RigidBodyPhysicsComponent::CollisionShape::CONVEX_HULL:
@@ -323,7 +320,7 @@ namespace wi::physics
 			//rbInfo.m_angularDamping = physicscomponent.damping;
 
 			physicsobject.rigidBody = std::make_unique<btRigidBody>(rbInfo);
-			physicsobject.rigidBody->setUserIndex(entity);
+			physicsobject.rigidBody->setUserPointer(&physicsobject);
 			physicsobject.rigidBody->setWorldTransform(shapeTransform); // immediate transform on first frame
 
 			if (physicscomponent.IsKinematic())
@@ -354,6 +351,7 @@ namespace wi::physics
 	)
 	{
 		SoftBody& physicsobject = GetSoftBody(physicscomponent);
+		physicsobject.entity = entity;
 		physicscomponent.CreateFromMesh(mesh);
 
 		XMMATRIX worldMatrix = XMLoadFloat4x4(&physicscomponent.worldMatrix);
@@ -453,7 +451,7 @@ namespace wi::physics
 
 		if (softbody)
 		{
-			softbody->setUserIndex(entity);
+			softbody->setUserPointer(&physicsobject);
 
 			//btSoftBody::Material* pm = softbody->appendMaterial();
 			btSoftBody::Material* pm = softbody->m_materials[0];
@@ -549,7 +547,7 @@ namespace wi::physics
 		};
 
 		std::shared_ptr<void> physics_scene;
-		std::shared_ptr<void> rigidbodies[BODYPART_COUNT];
+		std::shared_ptr<RigidBody> rigidbodies[BODYPART_COUNT];
 		btRigidBody* m_bodies[BODYPART_COUNT];
 		btTypedConstraint* m_joints[JOINT_COUNT];
 
@@ -563,8 +561,11 @@ namespace wi::physics
 			btVector3 roots[BODYPART_COUNT] = {};
 			btTransform transforms[BODYPART_COUNT] = {};
 
-			//wi::renderer::SetGameSpeed(0.1f);
-			//SetDebugDrawEnabled(true);
+#if 0
+			// slow speed and visualizer to aid debugging:
+			wi::renderer::SetGameSpeed(0.1f);
+			SetDebugDrawEnabled(true);
+#endif
 
 			// Calculate the bone lengths and radiuses in armature local space:
 			for (int c = 0; c < BODYPART_COUNT; ++c)
@@ -579,10 +580,18 @@ namespace wi::physics
 					break;
 				case BODYPART_SPINE:
 					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Spine];
-					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Neck];
+					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Neck]; // prefer neck instead of head
+					if (entityB == INVALID_ENTITY)
+					{
+						entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Head]; // fall back to head if neck not available
+					}
 					break;
 				case BODYPART_HEAD:
-					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Neck];
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Neck]; // prefer neck instead of head
+					if (entityA == INVALID_ENTITY)
+					{
+						entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Head]; // fall back to head if neck not available
+					}
 					break;
 				case BODYPART_LEFT_UPPER_LEG:
 					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftUpperLeg];
@@ -627,9 +636,11 @@ namespace wi::physics
 				XMVECTOR rootB = restB.r[3];
 
 				// Every bone will be a rigid body:
-				if (scene.rigidbodies.Contains(entityA))
-					scene.rigidbodies.Remove(entityA);
-				wi::scene::RigidBodyPhysicsComponent& physicscomponent =  scene.rigidbodies.Create(entityA);
+				rigidbodies[c] = std::make_unique<RigidBody>();
+				RigidBody& physicsobject = *rigidbodies[c];
+				physicsobject.entity = entityA;
+
+				float mass = 1;
 
 #if 0
 				// Fix body parts for testing:
@@ -641,12 +652,59 @@ namespace wi::physics
 				//case BODYPART_LEFT_LOWER_LEG:
 				//case BODYPART_RIGHT_UPPER_LEG:
 				//case BODYPART_RIGHT_LOWER_LEG:
-					physicscomponent.SetKinematic(true);
+					mass = 0;
 					break;
 				default:
 					break;
 				}
 #endif
+
+				float capsule_height = 1;
+				float capsule_radius = 1;
+
+				if (c == BODYPART_HEAD)
+				{
+					// Head doesn't necessarily have a child, so make up something reasonable:
+					capsule_height = 0.05f;
+					capsule_radius = 0.1f;
+				}
+				else
+				{
+					// bone length:
+					XMVECTOR len = XMVector3Length(XMVectorSubtract(rootB, rootA));
+					capsule_height = XMVectorGetX(len);
+
+					// capsule radius and length is tweaked per body part:
+					switch (c)
+					{
+					case BODYPART_PELVIS:
+						capsule_radius = 0.1f;
+						break;
+					case BODYPART_SPINE:
+						capsule_radius = 0.1f;
+						capsule_height -= capsule_radius * 2;
+						break;
+					case BODYPART_LEFT_LOWER_ARM:
+					case BODYPART_RIGHT_LOWER_ARM:
+						capsule_radius = capsule_height * 0.15f;
+						capsule_height += capsule_radius;
+						break;
+					case BODYPART_LEFT_UPPER_LEG:
+					case BODYPART_RIGHT_UPPER_LEG:
+						capsule_radius = capsule_height * 0.15f;
+						capsule_height -= capsule_radius * 2;
+						break;
+					case BODYPART_LEFT_LOWER_LEG:
+					case BODYPART_RIGHT_LOWER_LEG:
+						capsule_radius = capsule_height * 0.15f;
+						capsule_height -= capsule_radius;
+						break;
+					default:
+						capsule_radius = capsule_height * 0.2f;
+						capsule_height -= capsule_radius * 2;
+						break;
+					}
+				}
 
 				switch (c)
 				{
@@ -655,57 +713,26 @@ namespace wi::physics
 				case BODYPART_RIGHT_UPPER_ARM:
 				case BODYPART_RIGHT_LOWER_ARM:
 					// Capsule could be rotated, but it is easier to just make CapsuleX and offset it:
-					physicscomponent.shape = wi::scene::RigidBodyPhysicsComponent::CAPSULE_X;
+					physicsobject.shape = std::make_unique<btCapsuleShapeX>(capsule_radius, capsule_height);
 					break;
 				default:
-					physicscomponent.shape = wi::scene::RigidBodyPhysicsComponent::CAPSULE;
+					physicsobject.shape = std::make_unique<btCapsuleShape>(capsule_radius, capsule_height);
 					break;
 				}
-				physicscomponent.capsule.height = 0.1f;
 
-				if (c == BODYPART_HEAD)
+				btVector3 localInertia(0, 0, 0);
+				if (mass > 0)
 				{
-					// Head doesn't necessarily have a child, so make up something reasonable:
-					physicscomponent.capsule.height = 0.05f;
-					physicscomponent.capsule.radius = 0.1f;
+					physicsobject.shape->calculateLocalInertia(mass, localInertia);
 				}
-				else
-				{
-					// bone length:
-					XMVECTOR len = XMVector3Length(XMVectorSubtract(rootB, rootA));
-					physicscomponent.capsule.height = XMVectorGetX(len);
 
-					// capsule radius and length is tweaked per body part:
-					switch (c)
-					{
-					case BODYPART_PELVIS:
-						physicscomponent.capsule.radius = physicscomponent.capsule.height * 1.8f;
-						break;
-					case BODYPART_LEFT_LOWER_ARM:
-					case BODYPART_RIGHT_LOWER_ARM:
-						physicscomponent.capsule.radius = physicscomponent.capsule.height * 0.15f;
-						physicscomponent.capsule.height += physicscomponent.capsule.radius;
-						break;
-					case BODYPART_LEFT_UPPER_LEG:
-					case BODYPART_RIGHT_UPPER_LEG:
-						physicscomponent.capsule.radius = physicscomponent.capsule.height * 0.15f;
-						physicscomponent.capsule.height -= physicscomponent.capsule.radius * 2;
-						break;
-					case BODYPART_LEFT_LOWER_LEG:
-					case BODYPART_RIGHT_LOWER_LEG:
-						physicscomponent.capsule.radius = physicscomponent.capsule.height * 0.15f;
-						physicscomponent.capsule.height -= physicscomponent.capsule.radius;
-						break;
-					default:
-						physicscomponent.capsule.radius = physicscomponent.capsule.height * 0.2f;
-						physicscomponent.capsule.height -= physicscomponent.capsule.radius * 2;
-						break;
-					}
-				}
+				btTransform shapeTransform;
+				shapeTransform.setIdentity();
+				shapeTransform.setOrigin(btVector3(XMVectorGetX(rootA), XMVectorGetY(rootA), XMVectorGetZ(rootA)));
 
 				// capsule offset on axis is performed because otherwise capsule center would be in the bone root position
 				//	which is not what we want. Instead the bone is moved on its axis so it resides between root and tail
-				const float offset = physicscomponent.capsule.height * 0.5f + physicscomponent.capsule.radius;
+				const float offset = capsule_height * 0.5f + capsule_radius;
 
 				btTransform additionalTransform;
 				additionalTransform.setIdentity();
@@ -734,25 +761,36 @@ namespace wi::physics
 					break;
 				}
 
-				// We use armature local space here, because constraints will be defined in local space too later:
-				TransformComponent restTransform;
-				XMStoreFloat4x4(&restTransform.world, restA);
+				shapeTransform.mult(shapeTransform, additionalTransform);
+				physicsobject.additionalTransform = additionalTransform;
+				physicsobject.additionalTransformInverse = additionalTransform.inverse();
 
-				AddRigidBody(scene, entityA, physicscomponent, restTransform, nullptr, &additionalTransform);
-				rigidbodies[c] = physicscomponent.physicsobject;
+				physicsobject.motionState = btDefaultMotionState(shapeTransform);
 
-				auto& rb = GetRigidBody(physicscomponent);
+				btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, &physicsobject.motionState, physicsobject.shape.get(), localInertia);
+
+				physicsobject.rigidBody = std::make_unique<btRigidBody>(rbInfo);
+				physicsobject.rigidBody->setUserPointer(&physicsobject);
+				physicsobject.rigidBody->setWorldTransform(shapeTransform); // immediate transform on first frame
+
+				physicsobject.rigidBody->setDamping(btScalar(0.05), btScalar(0.85));
+				physicsobject.rigidBody->setDeactivationTime(btScalar(0.8));
+				physicsobject.rigidBody->setSleepingThresholds(btScalar(1.6), btScalar(2.5));
+
+				if (mass == 0)
+				{
+					physicsobject.rigidBody->setCollisionFlags(physicsobject.rigidBody->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+				}
+
+				physicsobject.physics_scene = scene.physics_scene;
+				dynamicsWorld.addRigidBody(physicsobject.rigidBody.get());
+
+				scene.Component_Detach(entityA);
+
 				roots[c] = btVector3(XMVectorGetX(rootA), XMVectorGetY(rootA), XMVectorGetZ(rootA));
-				m_bodies[c] = rb.rigidBody.get();
-				transforms[c] = rb.rigidBody->getWorldTransform();
-			}
+				m_bodies[c] = physicsobject.rigidBody.get();
+				transforms[c] = physicsobject.rigidBody->getWorldTransform();
 
-			// Setup some damping on the m_bodies
-			for (int i = 0; i < BODYPART_COUNT; ++i)
-			{
-				m_bodies[i]->setDamping(btScalar(0.05), btScalar(0.85));
-				m_bodies[i]->setDeactivationTime(btScalar(0.8));
-				m_bodies[i]->setSleepingThresholds(btScalar(1.6), btScalar(2.5));
 			}
 
 			// Create all constraints below:
@@ -892,8 +930,8 @@ namespace wi::physics
 			// For all body parts, we now apply the current world space pose:
 			for (auto& x : rigidbodies)
 			{
-				RigidBody& rb = *(RigidBody*)x.get();
-				Entity entity = (Entity)rb.rigidBody->getUserIndex();
+				RigidBody& physicsobject = *x.get();
+				Entity entity = physicsobject.entity;
 				const TransformComponent* transform = scene.transforms.GetComponent(entity);
 				if (transform == nullptr)
 					continue;
@@ -911,11 +949,11 @@ namespace wi::physics
 				shapeTransform.setIdentity();
 				shapeTransform.setOrigin(btVector3(tra.x, tra.y, tra.z));
 				shapeTransform.setRotation(btQuaternion(rot.x, rot.y, rot.z, rot.w));
-				shapeTransform.mult(shapeTransform, rb.additionalTransform);
+				shapeTransform.mult(shapeTransform, physicsobject.additionalTransform);
 
-				btMotionState* ms = rb.rigidBody->getMotionState();
+				btMotionState* ms = physicsobject.rigidBody->getMotionState();
 				ms->setWorldTransform(shapeTransform);
-				rb.rigidBody->setWorldTransform(shapeTransform); // immediate transform on first frame
+				physicsobject.rigidBody->setWorldTransform(shapeTransform); // immediate transform on first frame
 			}
 
 			// Stop all anims that are children of humanoid:
@@ -940,10 +978,9 @@ namespace wi::physics
 				dynamicsWorld.removeConstraint(x);
 				delete x;
 			}
-			for (auto& x : m_bodies)
+			for (auto& x : rigidbodies)
 			{
-				dynamicsWorld.removeRigidBody(x);
-				// no delete, these are weak refs
+				dynamicsWorld.removeRigidBody(x->rigidBody.get());
 			}
 		}
 	};
@@ -1112,23 +1149,22 @@ namespace wi::physics
 		for (int i = 0; i < dynamicsWorld.getCollisionObjectArray().size(); ++i)
 		{
 			btCollisionObject* collisionobject = dynamicsWorld.getCollisionObjectArray()[i];
-			Entity entity = (Entity)collisionobject->getUserIndex();
-			if (entity == INVALID_ENTITY)
-				continue;
 
 			btRigidBody* rigidbody = btRigidBody::upcast(collisionobject);
 			if (rigidbody != nullptr)
 			{
-				RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(entity);
+				RigidBody* physicsobject = (RigidBody*)rigidbody->getUserPointer();
+				Entity entity = physicsobject->entity;
+				const bool kinematic = rigidbody->getCollisionFlags() & btCollisionObject::CF_KINEMATIC_OBJECT;
 
 				// Feedback non-kinematic objects to system:
-				if (IsSimulationEnabled() && !physicscomponent->IsKinematic() && scene.transforms.Contains(entity))
+				if (IsSimulationEnabled() && !kinematic && scene.transforms.Contains(entity))
 				{
 					TransformComponent& transform = *scene.transforms.GetComponent(entity);
 	
 					btTransform physicsTransform;
 					rigidbody->getMotionState()->getWorldTransform(physicsTransform);
-					physicsTransform.mult(physicsTransform, GetRigidBody(*physicscomponent).additionalTransformInverse);
+					physicsTransform.mult(physicsTransform, physicsobject->additionalTransformInverse);
 					btVector3 T = physicsTransform.getOrigin();
 					btQuaternion R = physicsTransform.getRotation();
 
@@ -1143,6 +1179,8 @@ namespace wi::physics
 
 				if (softbody != nullptr)
 				{
+					SoftBody* physicsobject = (SoftBody*)softbody->getUserPointer();
+					Entity entity = physicsobject->entity;
 					SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(entity);
 
 					// If you need it, you can enable soft body node debug strings here:
