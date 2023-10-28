@@ -730,8 +730,8 @@ namespace wi::physics
 
 				btTransform shapeTransform;
 				shapeTransform.setIdentity();
-				//shapeTransform.setOrigin(btVector3(XMVectorGetX(rootA), XMVectorGetY(rootA), XMVectorGetZ(rootA)));
 
+				// Get the translation and rotation part of rest matrix:
 				XMVECTOR SCA = {};
 				XMVECTOR ROT = {};
 				XMVECTOR TRA = {};
@@ -740,8 +740,9 @@ namespace wi::physics
 				XMFLOAT3 tra = {};
 				XMStoreFloat4(&rot, ROT);
 				XMStoreFloat3(&tra, TRA);
-				shapeTransform.setOrigin(btVector3(tra.x, tra.y, tra.z));
+				shapeTransform.setOrigin(btVector3(tra.x, tra.y, tra.z)); // bone will be only translated initially
 
+				// Rest basis is saved to make final correction between only-translated rest pose and final pose
 				btTransform restBasis;
 				restBasis.setIdentity();
 				restBasis.setRotation(btQuaternion(rot.x, rot.y, rot.z, rot.w));
