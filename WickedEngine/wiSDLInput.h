@@ -34,6 +34,6 @@ namespace wi::input::sdlinput
 	// External events can be used for events that is needed outside the engine library, like main_SDL2.cpp for example
 #ifdef SDL2
 	// Call this within the main.cpp program loop for the engine to be able handle the input
-	void ProcessEvent(SDL_Event &event);
+	void ProcessEvent(const SDL_Event &event);
 #endif
 }
