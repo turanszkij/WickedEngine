@@ -551,6 +551,7 @@ namespace wi::physics
 		btRigidBody* m_bodies[BODYPART_COUNT];
 		btTypedConstraint* m_joints[JOINT_COUNT];
 		bool state_active = false;
+		Entity saved_parents[BODYPART_COUNT] = {};
 
 		Ragdoll(Scene& scene, HumanoidComponent& humanoid)
 		{
@@ -791,7 +792,6 @@ namespace wi::physics
 				roots[c] = btVector3(XMVectorGetX(rootA), XMVectorGetY(rootA), XMVectorGetZ(rootA));
 				m_bodies[c] = physicsobject.rigidBody.get();
 				transforms[c] = physicsobject.rigidBody->getWorldTransform();
-
 			}
 
 			// Create all constraints below:
@@ -1037,6 +1037,7 @@ namespace wi::physics
 			}
 		}
 
+		// Activates ragdoll as dynamic physics object:
 		void Activate(
 			Scene& scene,
 			Entity humanoidEntity
@@ -1052,6 +1053,7 @@ namespace wi::physics
 
 			btSoftRigidDynamicsWorld& dynamicsWorld = ((PhysicsScene*)scene.physics_scene.get())->dynamicsWorld;
 
+			int c = 0;
 			for (auto& x : rigidbodies)
 			{
 				// remove kinematic flag from bone:
@@ -1066,8 +1068,21 @@ namespace wi::physics
 				dynamicsWorld.removeRigidBody(x->rigidBody.get());
 				dynamicsWorld.addRigidBody(x->rigidBody.get());
 
+				// Save parenting information to be able to restore it:
+				const HierarchyComponent* hier = scene.hierarchy.GetComponent(x->entity);
+				if (hier != nullptr)
+				{
+					saved_parents[c] = hier->parentID;
+				}
+				else
+				{
+					saved_parents[c] = INVALID_ENTITY;
+				}
+
 				// detach bone because it will be simulated in world space:
 				scene.Component_Detach(x->entity);
+
+				c++;
 			}
 
 			// Stop all anims that are children of humanoid:
@@ -1078,6 +1093,37 @@ namespace wi::physics
 					continue;
 				AnimationComponent& animation = scene.animations[i];
 				animation.Stop();
+			}
+		}
+
+		// Disables dynamic ragdoll and reattaches loose parts as they were:
+		void Deactivate(
+			Scene& scene,
+			Entity humanoidEntity
+		)
+		{
+			if (!state_active)
+				return;
+			state_active = false;
+
+			btSoftRigidDynamicsWorld& dynamicsWorld = ((PhysicsScene*)scene.physics_scene.get())->dynamicsWorld;
+
+			int c = 0;
+			for (auto& x : rigidbodies)
+			{
+				// add kinematic flag from bone:
+				x->rigidBody->setCollisionFlags(x->rigidBody->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+
+				x->rigidBody->forceActivationState(DISABLE_DEACTIVATION);
+
+				dynamicsWorld.removeRigidBody(x->rigidBody.get());
+				dynamicsWorld.addRigidBody(x->rigidBody.get());
+
+				if (saved_parents[c] != INVALID_ENTITY)
+				{
+					scene.Component_Attach(x->entity, saved_parents[c]);
+				}
+				c++;
 			}
 		}
 	};
@@ -1106,10 +1152,14 @@ namespace wi::physics
 			{
 				humanoid.ragdoll = std::make_shared<Ragdoll>(scene, humanoid);
 			}
+			Ragdoll& ragdoll = *(Ragdoll*)humanoid.ragdoll.get();
 			if (humanoid.IsRagdollPhysicsEnabled())
 			{
-				Ragdoll& ragdoll = *(Ragdoll*)humanoid.ragdoll.get();
 				ragdoll.Activate(scene, scene.humanoids.GetEntity(i));
+			}
+			else
+			{
+				ragdoll.Deactivate(scene, scene.humanoids.GetEntity(i));
 			}
 		}
 
