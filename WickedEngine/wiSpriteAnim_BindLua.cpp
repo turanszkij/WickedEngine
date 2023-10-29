@@ -9,6 +9,7 @@ namespace wi::lua
 		lunamethod(SpriteAnim_BindLua, SetRotation),
 		lunamethod(SpriteAnim_BindLua, SetOpacity),
 		lunamethod(SpriteAnim_BindLua, SetFade),
+		lunamethod(SpriteAnim_BindLua, SetWobbleAnimStrenght),
 		lunamethod(SpriteAnim_BindLua, SetRepeatable),
 		lunamethod(SpriteAnim_BindLua, SetVelocity),
 		lunamethod(SpriteAnim_BindLua, SetScaleX),
@@ -93,6 +94,18 @@ namespace wi::lua
 		else
 		{
 			wi::lua::SError(L, "SetFade(float val) not enough arguments!");
+		}
+		return 0;
+	}
+	int SpriteAnim_BindLua::SetWobbleAnimStrenght(lua_State* L) {
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			anim.wobbleAnim.amount = XMFLOAT2(wi::lua::SGetFloat(L, 1), wi::lua::SGetFloat(L, 1));
+		}
+		else
+		{
+			wi::lua::SError(L, "SetWobbleAnimStrenght(float val) not enough arguments!");
 		}
 		return 0;
 	}
