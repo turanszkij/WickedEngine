@@ -112,6 +112,25 @@ namespace wi::physics
 			std::unique_ptr<btRigidBody> rigidBody;
 			btDefaultMotionState motionState;
 			btTriangleIndexVertexArray triangles;
+			Entity entity = INVALID_ENTITY;
+
+			// for trace hit reporting:
+			wi::ecs::Entity humanoid_ragdoll_entity = wi::ecs::INVALID_ENTITY;
+			wi::scene::HumanoidComponent::HumanoidBone humanoid_bone = wi::scene::HumanoidComponent::HumanoidBone::Count;
+
+			// These are used to remap default shape orientations into ragdoll and back:
+			btTransform additionalTransform;
+			btTransform additionalTransformInverse;
+			btTransform restBasis;
+			btTransform restBasisInverse;
+
+			RigidBody()
+			{
+				additionalTransform.setIdentity();
+				additionalTransformInverse.setIdentity();
+				restBasis.setIdentity();
+				restBasisInverse.setIdentity();
+			}
 			~RigidBody()
 			{
 				if (physics_scene == nullptr)
@@ -124,6 +143,7 @@ namespace wi::physics
 		{
 			std::shared_ptr<void> physics_scene;
 			std::unique_ptr<btSoftBody> softBody;
+			Entity entity = INVALID_ENTITY;
 			~SoftBody()
 			{
 				if (physics_scene == nullptr)
@@ -180,6 +200,7 @@ namespace wi::physics
 	)
 	{
 		RigidBody& physicsobject = GetRigidBody(physicscomponent);
+		physicsobject.entity = entity;
 
 		switch (physicscomponent.shape)
 		{
@@ -303,7 +324,8 @@ namespace wi::physics
 			//rbInfo.m_angularDamping = physicscomponent.damping;
 
 			physicsobject.rigidBody = std::make_unique<btRigidBody>(rbInfo);
-			physicsobject.rigidBody->setUserIndex(entity);
+			physicsobject.rigidBody->setUserPointer(&physicsobject);
+			physicsobject.rigidBody->setWorldTransform(shapeTransform); // immediate transform on first frame
 
 			if (physicscomponent.IsKinematic())
 			{
@@ -333,6 +355,7 @@ namespace wi::physics
 	)
 	{
 		SoftBody& physicsobject = GetSoftBody(physicscomponent);
+		physicsobject.entity = entity;
 		physicscomponent.CreateFromMesh(mesh);
 
 		XMMATRIX worldMatrix = XMLoadFloat4x4(&physicscomponent.worldMatrix);
@@ -432,7 +455,7 @@ namespace wi::physics
 
 		if (softbody)
 		{
-			softbody->setUserIndex(entity);
+			softbody->setUserPointer(&physicsobject);
 
 			//btSoftBody::Material* pm = softbody->appendMaterial();
 			btSoftBody::Material* pm = softbody->m_materials[0];
@@ -485,6 +508,646 @@ namespace wi::physics
 		}
 	}
 
+	struct Ragdoll
+	{
+		enum BODYPART
+		{
+			BODYPART_PELVIS = 0,
+			BODYPART_SPINE,
+			BODYPART_HEAD,
+
+			BODYPART_LEFT_UPPER_LEG,
+			BODYPART_LEFT_LOWER_LEG,
+
+			BODYPART_RIGHT_UPPER_LEG,
+			BODYPART_RIGHT_LOWER_LEG,
+
+			BODYPART_LEFT_UPPER_ARM,
+			BODYPART_LEFT_LOWER_ARM,
+
+			BODYPART_RIGHT_UPPER_ARM,
+			BODYPART_RIGHT_LOWER_ARM,
+
+			BODYPART_COUNT
+		};
+		enum JOINT
+		{
+			JOINT_PELVIS_SPINE = 0,
+			JOINT_SPINE_HEAD,
+
+			JOINT_LEFT_HIP,
+			JOINT_LEFT_KNEE,
+
+			JOINT_RIGHT_HIP,
+			JOINT_RIGHT_KNEE,
+
+			JOINT_LEFT_SHOULDER,
+			JOINT_LEFT_ELBOW,
+
+			JOINT_RIGHT_SHOULDER,
+			JOINT_RIGHT_ELBOW,
+
+			JOINT_COUNT
+		};
+
+		std::shared_ptr<void> physics_scene;
+		std::shared_ptr<RigidBody> rigidbodies[BODYPART_COUNT];
+		btRigidBody* m_bodies[BODYPART_COUNT];
+		btTypedConstraint* m_joints[JOINT_COUNT];
+		bool state_active = false;
+		Entity saved_parents[BODYPART_COUNT] = {};
+
+		Ragdoll(Scene& scene, HumanoidComponent& humanoid, Entity humanoidEntity)
+		{
+			physics_scene = scene.physics_scene;
+			btSoftRigidDynamicsWorld& dynamicsWorld = ((PhysicsScene*)physics_scene.get())->dynamicsWorld;
+
+			// https://github.com/bulletphysics/bullet3/blob/39b8de74df93721add193e5b3d9ebee579faebf8/examples/Benchmarks/BenchmarkDemo.cpp#L647
+
+			btVector3 roots[BODYPART_COUNT] = {};
+			btTransform transforms[BODYPART_COUNT] = {};
+
+#if 0
+			// slow speed and visualizer to aid debugging:
+			wi::renderer::SetGameSpeed(0.1f);
+			SetDebugDrawEnabled(true);
+#endif
+
+			//Detect which way humanoid is facing in rest pose:
+			float facing = 1;
+			Entity left_shoulder = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftUpperArm];
+			Entity right_shoulder = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightUpperArm];
+			const XMVECTOR& left_shoulder_pos = scene.FindBoneRestPose(left_shoulder).r[3];
+			const XMVECTOR& right_shoulder_pos = scene.FindBoneRestPose(right_shoulder).r[3];
+			if (XMVectorGetX(right_shoulder_pos) < XMVectorGetX(left_shoulder_pos))
+			{
+				facing = -1;
+			}
+
+			// Calculate the bone lengths and radiuses in armature local space and create rigid bodies for bones:
+			for (int c = 0; c < BODYPART_COUNT; ++c)
+			{
+				HumanoidComponent::HumanoidBone humanoid_bone = HumanoidComponent::HumanoidBone::Count;
+				Entity entityA = INVALID_ENTITY;
+				Entity entityB = INVALID_ENTITY;
+				switch (c)
+				{
+				case BODYPART_PELVIS:
+					humanoid_bone = HumanoidComponent::HumanoidBone::Hips;
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Hips];
+					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Spine];
+					break;
+				case BODYPART_SPINE:
+					humanoid_bone = HumanoidComponent::HumanoidBone::Spine;
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Spine];
+					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Neck]; // prefer neck instead of head
+					if (entityB == INVALID_ENTITY)
+					{
+						entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Head]; // fall back to head if neck not available
+					}
+					break;
+				case BODYPART_HEAD:
+					humanoid_bone = HumanoidComponent::HumanoidBone::Neck;
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Neck]; // prefer neck instead of head
+					if (entityA == INVALID_ENTITY)
+					{
+						humanoid_bone = HumanoidComponent::HumanoidBone::Head;
+						entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Head]; // fall back to head if neck not available
+					}
+					break;
+				case BODYPART_LEFT_UPPER_LEG:
+					humanoid_bone = HumanoidComponent::HumanoidBone::LeftUpperLeg;
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftUpperLeg];
+					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftLowerLeg];
+					break;
+				case BODYPART_LEFT_LOWER_LEG:
+					humanoid_bone = HumanoidComponent::HumanoidBone::LeftLowerLeg;
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftLowerLeg];
+					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftFoot];
+					break;
+				case BODYPART_RIGHT_UPPER_LEG:
+					humanoid_bone = HumanoidComponent::HumanoidBone::RightUpperLeg;
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightUpperLeg];
+					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightLowerLeg];
+					break;
+				case BODYPART_RIGHT_LOWER_LEG:
+					humanoid_bone = HumanoidComponent::HumanoidBone::RightLowerLeg;
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightLowerLeg];
+					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightFoot];
+					break;
+				case BODYPART_LEFT_UPPER_ARM:
+					humanoid_bone = HumanoidComponent::HumanoidBone::LeftUpperArm;
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftUpperArm];
+					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftLowerArm];
+					break;
+				case BODYPART_LEFT_LOWER_ARM:
+					humanoid_bone = HumanoidComponent::HumanoidBone::LeftLowerArm;
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftLowerArm];
+					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftHand];
+					break;
+				case BODYPART_RIGHT_UPPER_ARM:
+					humanoid_bone = HumanoidComponent::HumanoidBone::RightUpperArm;
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightUpperArm];
+					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightLowerArm];
+					break;
+				case BODYPART_RIGHT_LOWER_ARM:
+					humanoid_bone = HumanoidComponent::HumanoidBone::RightLowerArm;
+					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightLowerArm];
+					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightHand];
+					break;
+				}
+				assert(entityA != INVALID_ENTITY);
+
+				// Calculations here will be done in armature local space.
+				//	Unfortunately since humanoid can be separate from armature, we use a "find" utility to find bone rest matrix in armature
+				XMMATRIX restA = scene.FindBoneRestPose(entityA);
+				XMMATRIX restB = scene.FindBoneRestPose(entityB);
+				XMVECTOR rootA = restA.r[3];
+				XMVECTOR rootB = restB.r[3];
+
+				// Every bone will be a rigid body:
+				rigidbodies[c] = std::make_unique<RigidBody>();
+				RigidBody& physicsobject = *rigidbodies[c];
+				physicsobject.entity = entityA;
+
+				float mass = 1;
+				float capsule_height = 1;
+				float capsule_radius = 1;
+
+				if (c == BODYPART_HEAD)
+				{
+					// Head doesn't necessarily have a child, so make up something reasonable:
+					capsule_height = 0.05f;
+					capsule_radius = 0.1f;
+				}
+				else
+				{
+					// bone length:
+					XMVECTOR len = XMVector3Length(XMVectorSubtract(rootB, rootA));
+					capsule_height = XMVectorGetX(len);
+
+					// capsule radius and length is tweaked per body part:
+					switch (c)
+					{
+					case BODYPART_PELVIS:
+						capsule_radius = 0.1f;
+						break;
+					case BODYPART_SPINE:
+						capsule_radius = 0.1f;
+						capsule_height -= capsule_radius * 2;
+						break;
+					case BODYPART_LEFT_LOWER_ARM:
+					case BODYPART_RIGHT_LOWER_ARM:
+						capsule_radius = capsule_height * 0.15f;
+						capsule_height += capsule_radius;
+						break;
+					case BODYPART_LEFT_UPPER_LEG:
+					case BODYPART_RIGHT_UPPER_LEG:
+						capsule_radius = capsule_height * 0.15f;
+						capsule_height -= capsule_radius * 2;
+						break;
+					case BODYPART_LEFT_LOWER_LEG:
+					case BODYPART_RIGHT_LOWER_LEG:
+						capsule_radius = capsule_height * 0.15f;
+						capsule_height -= capsule_radius;
+						break;
+					default:
+						capsule_radius = capsule_height * 0.2f;
+						capsule_height -= capsule_radius * 2;
+						break;
+					}
+				}
+
+				switch (c)
+				{
+				case BODYPART_LEFT_UPPER_ARM:
+				case BODYPART_LEFT_LOWER_ARM:
+				case BODYPART_RIGHT_UPPER_ARM:
+				case BODYPART_RIGHT_LOWER_ARM:
+					// Capsule could be rotated, but it is easier to just make CapsuleX and offset it:
+					physicsobject.shape = std::make_unique<btCapsuleShapeX>(capsule_radius, capsule_height);
+					break;
+				default:
+					physicsobject.shape = std::make_unique<btCapsuleShape>(capsule_radius, capsule_height);
+					break;
+				}
+
+				btVector3 localInertia(0, 0, 0);
+				physicsobject.shape->calculateLocalInertia(mass, localInertia);
+
+				btTransform shapeTransform;
+				shapeTransform.setIdentity();
+
+				// Get the translation and rotation part of rest matrix:
+				XMVECTOR SCA = {};
+				XMVECTOR ROT = {};
+				XMVECTOR TRA = {};
+				XMMatrixDecompose(&SCA, &ROT, &TRA, restA);
+				XMFLOAT4 rot = {};
+				XMFLOAT3 tra = {};
+				XMStoreFloat4(&rot, ROT);
+				XMStoreFloat3(&tra, TRA);
+				shapeTransform.setOrigin(btVector3(tra.x, tra.y, tra.z)); // bone will be only translated initially
+
+				// Rest basis is saved to make final correction between only-translated rest pose and final pose
+				btTransform restBasis;
+				restBasis.setIdentity();
+				restBasis.setRotation(btQuaternion(rot.x, rot.y, rot.z, rot.w));
+
+				// capsule offset on axis is performed because otherwise capsule center would be in the bone root position
+				//	which is not what we want. Instead the bone is moved on its axis so it resides between root and tail
+				const float offset = capsule_height * 0.5f + capsule_radius;
+
+				btTransform additionalTransform;
+				additionalTransform.setIdentity();
+
+				switch (c)
+				{
+				case BODYPART_PELVIS:
+					break;
+				case BODYPART_SPINE:
+				case BODYPART_HEAD:
+					additionalTransform.setOrigin(btVector3(0, offset, 0));
+					break;
+				case BODYPART_LEFT_UPPER_LEG:
+				case BODYPART_LEFT_LOWER_LEG:
+				case BODYPART_RIGHT_UPPER_LEG:
+				case BODYPART_RIGHT_LOWER_LEG:
+					additionalTransform.setOrigin(btVector3(0, -offset, 0));
+					break;
+				case BODYPART_LEFT_UPPER_ARM:
+				case BODYPART_LEFT_LOWER_ARM:
+					additionalTransform.setOrigin(btVector3(-offset * facing, 0, 0));
+					break;
+				case BODYPART_RIGHT_UPPER_ARM:
+				case BODYPART_RIGHT_LOWER_ARM:
+					additionalTransform.setOrigin(btVector3(offset * facing, 0, 0));
+					break;
+				}
+
+				shapeTransform.mult(shapeTransform, additionalTransform);
+				physicsobject.additionalTransform = additionalTransform;
+				physicsobject.additionalTransformInverse = additionalTransform.inverse();
+				physicsobject.restBasis = restBasis;
+				physicsobject.restBasisInverse = restBasis.inverse();
+
+				physicsobject.motionState = btDefaultMotionState(shapeTransform);
+
+				btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, &physicsobject.motionState, physicsobject.shape.get(), localInertia);
+
+				physicsobject.rigidBody = std::make_unique<btRigidBody>(rbInfo);
+				physicsobject.rigidBody->setUserPointer(&physicsobject);
+				physicsobject.rigidBody->setWorldTransform(shapeTransform); // immediate transform on first frame
+
+				// by default, whole ragdoll is kinematic:
+				physicsobject.rigidBody->setCollisionFlags(physicsobject.rigidBody->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+				physicsobject.rigidBody->setActivationState(DISABLE_DEACTIVATION);
+
+				physicsobject.humanoid_ragdoll_entity = humanoidEntity;
+				physicsobject.humanoid_bone = humanoid_bone;
+
+				physicsobject.physics_scene = scene.physics_scene;
+				dynamicsWorld.addRigidBody(physicsobject.rigidBody.get());
+
+				roots[c] = btVector3(XMVectorGetX(rootA), XMVectorGetY(rootA), XMVectorGetZ(rootA));
+				m_bodies[c] = physicsobject.rigidBody.get();
+				transforms[c] = physicsobject.rigidBody->getWorldTransform();
+			}
+
+			// Create all constraints below:
+			btHingeConstraint* hingeC = nullptr;
+			btConeTwistConstraint* coneC = nullptr;
+
+			btTransform localA, localB;
+			static float constraint_dbg = 10;
+			static bool fixpose = false; // enable to fix the pose to rest pose, useful for debugging
+
+			localA.setIdentity();
+			localB.setIdentity();
+			localA.getBasis().setEulerZYX(0, -XM_PIDIV2 * facing, 0);
+			localA.setOrigin(roots[BODYPART_SPINE] - transforms[BODYPART_PELVIS].getOrigin());
+			localB.getBasis().setEulerZYX(0, -XM_PIDIV2 * facing, 0);
+			localB.setOrigin(roots[BODYPART_SPINE] - transforms[BODYPART_SPINE].getOrigin());
+			hingeC = new btHingeConstraint(*m_bodies[BODYPART_PELVIS], *m_bodies[BODYPART_SPINE], localA, localB);
+			if (fixpose)
+			{
+				hingeC->setLimit(0, 0);
+			}
+			else
+			{
+				hingeC->setLimit(0, XM_PIDIV2);
+			}
+			hingeC->setDbgDrawSize(constraint_dbg);
+			m_joints[JOINT_PELVIS_SPINE] = hingeC;
+			dynamicsWorld.addConstraint(m_joints[JOINT_PELVIS_SPINE], true);
+
+			localA.setIdentity();
+			localB.setIdentity();
+			localA.getBasis().setEulerZYX(0, 0, XM_PIDIV2);
+			localA.setOrigin(roots[BODYPART_HEAD] - transforms[BODYPART_SPINE].getOrigin());
+			localB.getBasis().setEulerZYX(0, 0, XM_PIDIV2);
+			localB.setOrigin(roots[BODYPART_HEAD] - transforms[BODYPART_HEAD].getOrigin());
+			coneC = new btConeTwistConstraint(*m_bodies[BODYPART_SPINE], *m_bodies[BODYPART_HEAD], localA, localB);
+			if (fixpose)
+			{
+				coneC->setLimit(0, 0, 0);
+			}
+			else
+			{
+				coneC->setLimit(XM_PIDIV4, XM_PIDIV2, XM_PIDIV4);
+			}
+			coneC->setDbgDrawSize(constraint_dbg);
+			m_joints[JOINT_SPINE_HEAD] = coneC;
+			dynamicsWorld.addConstraint(m_joints[JOINT_SPINE_HEAD], true);
+
+			localA.setIdentity();
+			localB.setIdentity();
+			localA.getBasis().setEulerZYX(0, 0, XM_PIDIV4);
+			localA.setOrigin(roots[BODYPART_LEFT_UPPER_LEG] - transforms[BODYPART_PELVIS].getOrigin());
+			localB.getBasis().setEulerZYX(0, 0, XM_PIDIV4);
+			localB.setOrigin(roots[BODYPART_LEFT_UPPER_LEG] - transforms[BODYPART_LEFT_UPPER_LEG].getOrigin());
+			coneC = new btConeTwistConstraint(*m_bodies[BODYPART_PELVIS], *m_bodies[BODYPART_LEFT_UPPER_LEG], localA, localB);
+			if (fixpose)
+			{
+				coneC->setLimit(0, 0, 0);
+			}
+			else
+			{
+				coneC->setLimit(XM_PIDIV4, XM_PIDIV4, 0);
+			}
+			coneC->setDbgDrawSize(constraint_dbg);
+			m_joints[JOINT_LEFT_HIP] = coneC;
+			dynamicsWorld.addConstraint(m_joints[JOINT_LEFT_HIP], true);
+
+			localA.setIdentity();
+			localB.setIdentity();
+			localA.getBasis().setEulerZYX(0, -XM_PIDIV2 * facing, 0);
+			localA.setOrigin(roots[BODYPART_LEFT_LOWER_LEG] - transforms[BODYPART_LEFT_UPPER_LEG].getOrigin());
+			localB.getBasis().setEulerZYX(0, -XM_PIDIV2 * facing, 0);
+			localB.setOrigin(roots[BODYPART_LEFT_LOWER_LEG] - transforms[BODYPART_LEFT_LOWER_LEG].getOrigin());
+			hingeC = new btHingeConstraint(*m_bodies[BODYPART_LEFT_UPPER_LEG], *m_bodies[BODYPART_LEFT_LOWER_LEG], localA, localB);
+			if (fixpose)
+			{
+				hingeC->setLimit(0, 0);
+			}
+			else
+			{
+				hingeC->setLimit(0, XM_PI * 0.8f);
+			}
+			hingeC->setDbgDrawSize(constraint_dbg);
+			m_joints[JOINT_LEFT_KNEE] = hingeC;
+			dynamicsWorld.addConstraint(m_joints[JOINT_LEFT_KNEE], true);
+
+			localA.setIdentity();
+			localB.setIdentity();
+			localA.getBasis().setEulerZYX(0, 0, -XM_PIDIV4);
+			localA.setOrigin(roots[BODYPART_RIGHT_UPPER_LEG] - transforms[BODYPART_PELVIS].getOrigin());
+			localB.getBasis().setEulerZYX(0, 0, -XM_PIDIV4);
+			localB.setOrigin(roots[BODYPART_RIGHT_UPPER_LEG] - transforms[BODYPART_RIGHT_UPPER_LEG].getOrigin());
+			coneC = new btConeTwistConstraint(*m_bodies[BODYPART_PELVIS], *m_bodies[BODYPART_RIGHT_UPPER_LEG], localA, localB);
+			if (fixpose)
+			{
+				coneC->setLimit(0, 0, 0);
+			}
+			else
+			{
+				coneC->setLimit(XM_PIDIV4, XM_PIDIV4, 0);
+			}
+			coneC->setDbgDrawSize(constraint_dbg);
+			m_joints[JOINT_RIGHT_HIP] = coneC;
+			dynamicsWorld.addConstraint(m_joints[JOINT_RIGHT_HIP], true);
+
+			localA.setIdentity();
+			localB.setIdentity();
+			localA.getBasis().setEulerZYX(0, -XM_PIDIV2 * facing, 0);
+			localA.setOrigin(roots[BODYPART_RIGHT_LOWER_LEG] - transforms[BODYPART_RIGHT_UPPER_LEG].getOrigin());
+			localB.getBasis().setEulerZYX(0, -XM_PIDIV2 * facing, 0);
+			localB.setOrigin(roots[BODYPART_RIGHT_LOWER_LEG] - transforms[BODYPART_RIGHT_LOWER_LEG].getOrigin());
+			hingeC = new btHingeConstraint(*m_bodies[BODYPART_RIGHT_UPPER_LEG], *m_bodies[BODYPART_RIGHT_LOWER_LEG], localA, localB);
+			if (fixpose)
+			{
+				hingeC->setLimit(0, 0);
+			}
+			else
+			{
+				hingeC->setLimit(0, XM_PI * 0.8f);
+			}
+			hingeC->setDbgDrawSize(constraint_dbg);
+			m_joints[JOINT_RIGHT_KNEE] = hingeC;
+			dynamicsWorld.addConstraint(m_joints[JOINT_RIGHT_KNEE], true);
+
+			localA.setIdentity();
+			localB.setIdentity();
+			localA.setOrigin(roots[BODYPART_LEFT_UPPER_ARM] - transforms[BODYPART_SPINE].getOrigin());
+			localB.setOrigin(roots[BODYPART_LEFT_UPPER_ARM] - transforms[BODYPART_LEFT_UPPER_ARM].getOrigin());
+			coneC = new btConeTwistConstraint(*m_bodies[BODYPART_SPINE], *m_bodies[BODYPART_LEFT_UPPER_ARM], localA, localB);
+			if (fixpose)
+			{
+				coneC->setLimit(0, 0, 0);
+			}
+			else
+			{
+				coneC->setLimit(XM_PIDIV2, XM_PIDIV2, 0);
+			}
+			coneC->setDbgDrawSize(constraint_dbg);
+			m_joints[JOINT_LEFT_SHOULDER] = coneC;
+			dynamicsWorld.addConstraint(m_joints[JOINT_LEFT_SHOULDER], true);
+
+			localA.setIdentity();
+			localB.setIdentity();
+			localA.getBasis().setEulerZYX(-XM_PIDIV2, 0, 0);
+			localA.setOrigin(roots[BODYPART_LEFT_LOWER_ARM] - transforms[BODYPART_LEFT_UPPER_ARM].getOrigin());
+			localB.getBasis().setEulerZYX(-XM_PIDIV2, 0, 0);
+			localB.setOrigin(roots[BODYPART_LEFT_LOWER_ARM] - transforms[BODYPART_LEFT_LOWER_ARM].getOrigin());
+			hingeC = new btHingeConstraint(*m_bodies[BODYPART_LEFT_UPPER_ARM], *m_bodies[BODYPART_LEFT_LOWER_ARM], localA, localB);
+			if (fixpose)
+			{
+				hingeC->setLimit(0, 0);
+			}
+			else
+			{
+				hingeC->setLimit(-XM_PIDIV2, 0);
+			}
+			hingeC->setDbgDrawSize(constraint_dbg);
+			m_joints[JOINT_LEFT_ELBOW] = hingeC;
+			dynamicsWorld.addConstraint(m_joints[JOINT_LEFT_ELBOW], true);
+
+			localA.setIdentity();
+			localB.setIdentity();
+			localA.getBasis().setEulerZYX(0, 0, 0);
+			localA.setOrigin(roots[BODYPART_RIGHT_UPPER_ARM] - transforms[BODYPART_SPINE].getOrigin());
+			localB.setOrigin(roots[BODYPART_RIGHT_UPPER_ARM] - transforms[BODYPART_RIGHT_UPPER_ARM].getOrigin());
+			coneC = new btConeTwistConstraint(*m_bodies[BODYPART_SPINE], *m_bodies[BODYPART_RIGHT_UPPER_ARM], localA, localB);
+			if (fixpose)
+			{
+				coneC->setLimit(0, 0, 0);
+			}
+			else
+			{
+				coneC->setLimit(XM_PIDIV2, XM_PIDIV2, 0);
+			}
+			coneC->setDbgDrawSize(constraint_dbg);
+			m_joints[JOINT_RIGHT_SHOULDER] = coneC;
+			dynamicsWorld.addConstraint(m_joints[JOINT_RIGHT_SHOULDER], true);
+
+			localA.setIdentity();
+			localB.setIdentity();
+			localA.getBasis().setEulerZYX(XM_PIDIV2, 0, 0);
+			localA.setOrigin(roots[BODYPART_RIGHT_LOWER_ARM] - transforms[BODYPART_RIGHT_UPPER_ARM].getOrigin());
+			localB.getBasis().setEulerZYX(XM_PIDIV2, 0, 0);
+			localB.setOrigin(roots[BODYPART_RIGHT_LOWER_ARM] - transforms[BODYPART_RIGHT_LOWER_ARM].getOrigin());
+			hingeC = new btHingeConstraint(*m_bodies[BODYPART_RIGHT_UPPER_ARM], *m_bodies[BODYPART_RIGHT_LOWER_ARM], localA, localB);
+			if (fixpose)
+			{
+				hingeC->setLimit(0, 0);
+			}
+			else
+			{
+				hingeC->setLimit(-XM_PIDIV2, 0);
+			}
+			hingeC->setDbgDrawSize(constraint_dbg);
+			m_joints[JOINT_RIGHT_ELBOW] = hingeC;
+			dynamicsWorld.addConstraint(m_joints[JOINT_RIGHT_ELBOW], true);
+
+			// For all body parts, we now apply the current world space pose:
+			for (auto& x : rigidbodies)
+			{
+				RigidBody& physicsobject = *x.get();
+				Entity entity = physicsobject.entity;
+				const TransformComponent* transform = scene.transforms.GetComponent(entity);
+				if (transform == nullptr)
+					continue;
+
+				XMVECTOR SCA = {};
+				XMVECTOR ROT = {};
+				XMVECTOR TRA = {};
+				XMMatrixDecompose(&SCA, &ROT, &TRA, XMLoadFloat4x4(&transform->world));
+				XMFLOAT4 rot = {};
+				XMFLOAT3 tra = {};
+				XMStoreFloat4(&rot, ROT);
+				XMStoreFloat3(&tra, TRA);
+
+				btTransform shapeTransform;
+				shapeTransform.setIdentity();
+				shapeTransform.setOrigin(btVector3(tra.x, tra.y, tra.z));
+				shapeTransform.setRotation(btQuaternion(rot.x, rot.y, rot.z, rot.w));
+				shapeTransform.mult(shapeTransform, physicsobject.restBasisInverse);
+				shapeTransform.mult(shapeTransform, physicsobject.additionalTransform);
+
+				btMotionState* ms = physicsobject.rigidBody->getMotionState();
+				ms->setWorldTransform(shapeTransform);
+				physicsobject.rigidBody->setWorldTransform(shapeTransform); // immediate transform on first frame
+			}
+		}
+		~Ragdoll()
+		{
+			if (physics_scene == nullptr)
+				return;
+			btSoftRigidDynamicsWorld& dynamicsWorld = ((PhysicsScene*)physics_scene.get())->dynamicsWorld;
+			for (auto& x : m_joints)
+			{
+				if (x == nullptr)
+					continue;
+				dynamicsWorld.removeConstraint(x);
+				delete x;
+			}
+			for (auto& x : rigidbodies)
+			{
+				dynamicsWorld.removeRigidBody(x->rigidBody.get());
+			}
+		}
+
+		// Activates ragdoll as dynamic physics object:
+		void Activate(
+			Scene& scene,
+			Entity humanoidEntity
+		)
+		{
+			if (state_active)
+				return;
+			state_active = true;
+
+			const HumanoidComponent* humanoid = scene.humanoids.GetComponent(humanoidEntity);
+			if (humanoid == nullptr)
+				return;
+
+			btSoftRigidDynamicsWorld& dynamicsWorld = ((PhysicsScene*)scene.physics_scene.get())->dynamicsWorld;
+
+			int c = 0;
+			for (auto& x : rigidbodies)
+			{
+				// remove kinematic flag from bone:
+				x->rigidBody->setCollisionFlags(x->rigidBody->getCollisionFlags() ^ btCollisionObject::CF_KINEMATIC_OBJECT);
+
+				x->rigidBody->forceActivationState(ACTIVE_TAG);
+				x->rigidBody->setDeactivationTime(btScalar(0.8));
+				x->rigidBody->setSleepingThresholds(btScalar(1.6), btScalar(2.5));
+				x->rigidBody->setDamping(btScalar(0.05), btScalar(0.85));
+
+				// If we don't remove and re-add rigid body, then it will not correctly switch from kinematic to dynamic it seems:
+				dynamicsWorld.removeRigidBody(x->rigidBody.get());
+				dynamicsWorld.addRigidBody(x->rigidBody.get());
+
+				// Save parenting information to be able to restore it:
+				const HierarchyComponent* hier = scene.hierarchy.GetComponent(x->entity);
+				if (hier != nullptr)
+				{
+					saved_parents[c] = hier->parentID;
+				}
+				else
+				{
+					saved_parents[c] = INVALID_ENTITY;
+				}
+
+				// detach bone because it will be simulated in world space:
+				scene.Component_Detach(x->entity);
+
+				c++;
+			}
+
+			// Stop all anims that are children of humanoid:
+			for (size_t i = 0; i < scene.animations.GetCount(); ++i)
+			{
+				Entity entity = scene.animations.GetEntity(i);
+				if (!scene.Entity_IsDescendant(entity, humanoidEntity))
+					continue;
+				AnimationComponent& animation = scene.animations[i];
+				animation.Stop();
+			}
+		}
+
+		// Disables dynamic ragdoll and reattaches loose parts as they were:
+		void Deactivate(
+			Scene& scene
+		)
+		{
+			if (!state_active)
+				return;
+			state_active = false;
+
+			btSoftRigidDynamicsWorld& dynamicsWorld = ((PhysicsScene*)scene.physics_scene.get())->dynamicsWorld;
+
+			int c = 0;
+			for (auto& x : rigidbodies)
+			{
+				// add kinematic flag from bone:
+				x->rigidBody->setCollisionFlags(x->rigidBody->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+
+				x->rigidBody->forceActivationState(DISABLE_DEACTIVATION);
+
+				dynamicsWorld.removeRigidBody(x->rigidBody.get());
+				dynamicsWorld.addRigidBody(x->rigidBody.get());
+
+				if (saved_parents[c] != INVALID_ENTITY)
+				{
+					scene.Component_Attach(x->entity, saved_parents[c]);
+				}
+				c++;
+			}
+		}
+	};
+
+
 	void RunPhysicsUpdateSystem(
 		wi::jobsystem::context& ctx,
 		Scene& scene,
@@ -501,7 +1164,26 @@ namespace wi::physics
 
 		btVector3 wind = btVector3(scene.weather.windDirection.x, scene.weather.windDirection.y, scene.weather.windDirection.z);
 
-		// System will register rigidbodies to objects, and update physics engine state for kinematics:
+		for (size_t i = 0; i < scene.humanoids.GetCount(); ++i)
+		{
+			HumanoidComponent& humanoid = scene.humanoids[i];
+			Entity humanoidEntity = scene.humanoids.GetEntity(i);
+			if (humanoid.ragdoll == nullptr)
+			{
+				humanoid.ragdoll = std::make_shared<Ragdoll>(scene, humanoid, humanoidEntity);
+			}
+			Ragdoll& ragdoll = *(Ragdoll*)humanoid.ragdoll.get();
+			if (humanoid.IsRagdollPhysicsEnabled())
+			{
+				ragdoll.Activate(scene, humanoidEntity);
+			}
+			else
+			{
+				ragdoll.Deactivate(scene);
+			}
+		}
+
+		// System will register rigidbodies to objects:
 		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), 256, [&](wi::jobsystem::JobArgs args) {
 
 			RigidBodyPhysicsComponent& physicscomponent = scene.rigidbodies[args.jobIndex];
@@ -531,34 +1213,6 @@ namespace wi::physics
 				);
 				rigidbody->setFriction(physicscomponent.friction);
 				rigidbody->setRestitution(physicscomponent.restitution);
-
-				// For kinematic object, system updates physics state, else the physics updates system state:
-				if ((physicscomponent.IsKinematic() || !IsSimulationEnabled()) && scene.transforms.Contains(entity))
-				{
-					TransformComponent& transform = *scene.transforms.GetComponent(entity);
-
-					btMotionState* motionState = rigidbody->getMotionState();
-					btTransform physicsTransform;
-
-					XMFLOAT3 position = transform.GetPosition();
-					XMFLOAT4 rotation = transform.GetRotation();
-					btVector3 T(position.x, position.y, position.z);
-					btQuaternion R(rotation.x, rotation.y, rotation.z, rotation.w);
-					physicsTransform.setOrigin(T);
-					physicsTransform.setRotation(R);
-					motionState->setWorldTransform(physicsTransform);
-
-					if (!IsSimulationEnabled())
-					{
-						// This is a more direct way of manipulating rigid body:
-						rigidbody->setWorldTransform(physicsTransform);
-					}
-
-					btCollisionShape* shape = rigidbody->getCollisionShape();
-					XMFLOAT3 scale = transform.GetScale();
-					btVector3 S(scale.x, scale.y, scale.z);
-					shape->setLocalScaling(S);
-				}
 			}
 		});
 
@@ -617,31 +1271,73 @@ namespace wi::physics
 			}
 		});
 
+		// Feedback system kinematics to physics engine:
+		for (int i = 0; i < dynamicsWorld.getCollisionObjectArray().size(); ++i)
+		{
+			btCollisionObject* collisionobject = dynamicsWorld.getCollisionObjectArray()[i];
+
+			btRigidBody* rigidbody = btRigidBody::upcast(collisionobject);
+			if (rigidbody != nullptr)
+			{
+				RigidBody* physicsobject = (RigidBody*)rigidbody->getUserPointer();
+				Entity entity = physicsobject->entity;
+				const bool kinematic = rigidbody->getCollisionFlags() & btCollisionObject::CF_KINEMATIC_OBJECT;
+
+				TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+				btMotionState* motionState = rigidbody->getMotionState();
+				btTransform physicsTransform;
+
+				XMFLOAT3 position = transform.GetPosition();
+				XMFLOAT4 rotation = transform.GetRotation();
+				btVector3 T(position.x, position.y, position.z);
+				btQuaternion R(rotation.x, rotation.y, rotation.z, rotation.w);
+				physicsTransform.setOrigin(T);
+				physicsTransform.setRotation(R);
+				physicsTransform.mult(physicsTransform, physicsobject->restBasisInverse);
+				physicsTransform.mult(physicsTransform, physicsobject->additionalTransform);
+				motionState->setWorldTransform(physicsTransform);
+				rigidbody->setWorldTransform(physicsTransform);
+
+				if (physicsobject->humanoid_ragdoll_entity == INVALID_ENTITY)
+				{
+					btCollisionShape* shape = rigidbody->getCollisionShape();
+					XMFLOAT3 scale = transform.GetScale();
+					btVector3 S(scale.x, scale.y, scale.z);
+					shape->setLocalScaling(S);
+				}
+			}
+		}
+
 		wi::jobsystem::Wait(ctx);
 
 		// Perform internal simulation step:
 		if (IsSimulationEnabled())
 		{
-			dynamicsWorld.stepSimulation(dt, ACCURACY);
+			dynamicsWorld.stepSimulation(dt, ACCURACY, 1.0f / 120.0f);
 		}
 
 		// Feedback physics engine state to system:
 		for (int i = 0; i < dynamicsWorld.getCollisionObjectArray().size(); ++i)
 		{
 			btCollisionObject* collisionobject = dynamicsWorld.getCollisionObjectArray()[i];
-			Entity entity = (Entity)collisionobject->getUserIndex();
 
 			btRigidBody* rigidbody = btRigidBody::upcast(collisionobject);
 			if (rigidbody != nullptr)
 			{
-				RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(entity);
+				RigidBody* physicsobject = (RigidBody*)rigidbody->getUserPointer();
+				Entity entity = physicsobject->entity;
+				const bool kinematic = rigidbody->getCollisionFlags() & btCollisionObject::CF_KINEMATIC_OBJECT;
 
 				// Feedback non-kinematic objects to system:
-				if (IsSimulationEnabled() && !physicscomponent->IsKinematic() && scene.transforms.Contains(entity))
+				if (IsSimulationEnabled() && !kinematic && scene.transforms.Contains(entity))
 				{
 					TransformComponent& transform = *scene.transforms.GetComponent(entity);
 	
-					btTransform physicsTransform = rigidbody->getWorldTransform();
+					btTransform physicsTransform;
+					rigidbody->getMotionState()->getWorldTransform(physicsTransform);
+					physicsTransform.mult(physicsTransform, physicsobject->additionalTransformInverse);
+					physicsTransform.mult(physicsTransform, physicsobject->restBasis);
 					btVector3 T = physicsTransform.getOrigin();
 					btQuaternion R = physicsTransform.getRotation();
 
@@ -656,6 +1352,8 @@ namespace wi::physics
 
 				if (softbody != nullptr)
 				{
+					SoftBody* physicsobject = (SoftBody*)softbody->getUserPointer();
+					Entity entity = physicsobject->entity;
 					SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(entity);
 
 					// If you need it, you can enable soft body node debug strings here:
@@ -843,6 +1541,14 @@ namespace wi::physics
 			GetRigidBody(physicscomponent).rigidBody->applyCentralImpulse(btVector3(impulse.x, impulse.y, impulse.z));
 		}
 	}
+	void ApplyImpulse(
+		wi::scene::HumanoidComponent& humanoid,
+		wi::scene::HumanoidComponent::HumanoidBone bone,
+		const XMFLOAT3& impulse
+	)
+	{
+		ApplyImpulseAt(humanoid, bone, impulse, XMFLOAT3(0, 0, 0));
+	}
 	void ApplyImpulseAt(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& impulse,
@@ -853,6 +1559,62 @@ namespace wi::physics
 		{
 			GetRigidBody(physicscomponent).rigidBody->applyImpulse(btVector3(impulse.x, impulse.y, impulse.z), btVector3(at.x, at.y, at.z));
 		}
+	}
+	void ApplyImpulseAt(
+		wi::scene::HumanoidComponent& humanoid,
+		wi::scene::HumanoidComponent::HumanoidBone bone,
+		const XMFLOAT3& impulse,
+		const XMFLOAT3& at
+	)
+	{
+		if (humanoid.ragdoll == nullptr)
+			return;
+
+		Ragdoll::BODYPART bodypart = Ragdoll::BODYPART_COUNT;
+		switch (bone)
+		{
+		case HumanoidComponent::HumanoidBone::Hips:
+			bodypart = Ragdoll::BODYPART_PELVIS;
+			break;
+		case HumanoidComponent::HumanoidBone::Spine:
+			bodypart = Ragdoll::BODYPART_SPINE;
+			break;
+		case HumanoidComponent::HumanoidBone::Head:
+		case HumanoidComponent::HumanoidBone::Neck:
+			bodypart = Ragdoll::BODYPART_HEAD;
+			break;
+		case HumanoidComponent::HumanoidBone::RightUpperArm:
+			bodypart = Ragdoll::BODYPART_RIGHT_UPPER_ARM;
+			break;
+		case HumanoidComponent::HumanoidBone::RightLowerArm:
+			bodypart = Ragdoll::BODYPART_RIGHT_LOWER_ARM;
+			break;
+		case HumanoidComponent::HumanoidBone::LeftUpperArm:
+			bodypart = Ragdoll::BODYPART_LEFT_UPPER_ARM;
+			break;
+		case HumanoidComponent::HumanoidBone::LeftLowerArm:
+			bodypart = Ragdoll::BODYPART_LEFT_LOWER_ARM;
+			break;
+		case HumanoidComponent::HumanoidBone::RightUpperLeg:
+			bodypart = Ragdoll::BODYPART_RIGHT_UPPER_LEG;
+			break;
+		case HumanoidComponent::HumanoidBone::RightLowerLeg:
+			bodypart = Ragdoll::BODYPART_RIGHT_LOWER_LEG;
+			break;
+		case HumanoidComponent::HumanoidBone::LeftUpperLeg:
+			bodypart = Ragdoll::BODYPART_LEFT_UPPER_LEG;
+			break;
+		case HumanoidComponent::HumanoidBone::LeftLowerLeg:
+			bodypart = Ragdoll::BODYPART_LEFT_LOWER_LEG;
+			break;
+		}
+		if (bodypart == Ragdoll::BODYPART_COUNT)
+			return;
+
+		Ragdoll& ragdoll = *(Ragdoll*)humanoid.ragdoll.get();
+		if (ragdoll.rigidbodies[bodypart] == nullptr || ragdoll.rigidbodies[bodypart]->rigidBody == nullptr)
+			return;
+		ragdoll.rigidbodies[bodypart]->rigidBody->applyImpulse(btVector3(impulse.x, impulse.y, impulse.z), btVector3(at.x, at.y, at.z));
 	}
 
 	void ApplyTorque(
@@ -908,5 +1670,56 @@ namespace wi::physics
 			//GetSoftBody(physicscomponent).softBody->setActivationState(to_internal(state));
 			GetSoftBody(physicscomponent).softBody->forceActivationState(to_internal(state));
 		}
+	}
+
+	RayIntersectionResult Intersects(
+		const wi::scene::Scene& scene,
+		wi::primitive::Ray ray
+	)
+	{
+		RayIntersectionResult result;
+		btSoftRigidDynamicsWorld& dynamicsWorld = ((PhysicsScene*)scene.physics_scene.get())->dynamicsWorld;
+		float tmin = wi::math::Clamp(ray.TMin, 0, 1000000);
+		float tmax = wi::math::Clamp(ray.TMax, 0, 1000000);
+		btVector3 rayFrom = btVector3(
+			ray.origin.x + ray.direction.x * tmin,
+			ray.origin.y + ray.direction.y * tmin,
+			ray.origin.z + ray.direction.z * tmin
+		);
+		btVector3 rayTo = btVector3(
+			ray.origin.x + ray.direction.x * tmax,
+			ray.origin.y + ray.direction.y * tmax,
+			ray.origin.z + ray.direction.z * tmax
+		);
+		btCollisionWorld::ClosestRayResultCallback rayCallback(rayFrom, rayTo);
+		dynamicsWorld.rayTest(rayFrom, rayTo, rayCallback);
+		if (rayCallback.hasHit())
+		{
+			result.position.x = rayCallback.m_hitPointWorld.getX();
+			result.position.y = rayCallback.m_hitPointWorld.getY();
+			result.position.z = rayCallback.m_hitPointWorld.getZ();
+			result.normal.x = rayCallback.m_hitNormalWorld.getX();
+			result.normal.y = rayCallback.m_hitNormalWorld.getY();
+			result.normal.z = -rayCallback.m_hitNormalWorld.getZ();
+
+			btVector3 position_local = rayCallback.m_hitPointWorld;
+			btVector3 normal_local = rayCallback.m_hitNormalWorld;
+
+			const btRigidBody* rigidbody = btRigidBody::upcast(rayCallback.m_collisionObject);
+			if (rigidbody != nullptr)
+			{
+				RigidBody* physicsobject = (RigidBody*)rigidbody->getUserPointer();
+				result.entity = physicsobject->entity;
+				result.humanoid_ragdoll_entity = physicsobject->humanoid_ragdoll_entity;
+				result.humanoid_bone = physicsobject->humanoid_bone;
+			}
+			const btSoftBody* softbody = btSoftBody::upcast(rayCallback.m_collisionObject);
+			if (softbody != nullptr)
+			{
+				SoftBody* physicsobject = (SoftBody*)rigidbody->getUserPointer();
+				result.entity = physicsobject->entity;
+			}
+		}
+		return result;
 	}
 }

@@ -14,6 +14,7 @@ public:
 	wi::gui::Label infoLabel;
 	wi::gui::CheckBox lookatMouseCheckBox;
 	wi::gui::CheckBox lookatCheckBox;
+	wi::gui::CheckBox ragdollCheckBox;
 	wi::gui::Slider headRotMaxXSlider;
 	wi::gui::Slider headRotMaxYSlider;
 	wi::gui::Slider headRotSpeedSlider;

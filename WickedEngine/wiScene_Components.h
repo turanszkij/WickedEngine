@@ -1671,6 +1671,7 @@ namespace wi::scene
 		{
 			NONE = 0,
 			LOOKAT = 1 << 0,
+			RAGDOLL_PHYSICS = 1 << 1,
 		};
 		uint32_t _flags = LOOKAT;
 
@@ -1747,8 +1748,10 @@ namespace wi::scene
 		wi::ecs::Entity bones[size_t(HumanoidBone::Count)] = {};
 
 		constexpr bool IsLookAtEnabled() const { return _flags & LOOKAT; }
+		constexpr bool IsRagdollPhysicsEnabled() const { return _flags & RAGDOLL_PHYSICS; }
 
 		constexpr void SetLookAtEnabled(bool value = true) { if (value) { _flags |= LOOKAT; } else { _flags &= ~LOOKAT; } }
+		constexpr void SetRagdollPhysicsEnabled(bool value = true) { if (value) { _flags |= RAGDOLL_PHYSICS; } else { _flags &= ~RAGDOLL_PHYSICS; } }
 
 		XMFLOAT3 default_look_direction = XMFLOAT3(0, 0, 1);
 		XMFLOAT2 head_rotation_max = XMFLOAT2(XM_PI / 3.0f, XM_PI / 6.0f);
@@ -1761,6 +1764,7 @@ namespace wi::scene
 		XMFLOAT4 lookAtDeltaRotationState_Head = XMFLOAT4(0, 0, 0, 1);
 		XMFLOAT4 lookAtDeltaRotationState_LeftEye = XMFLOAT4(0, 0, 0, 1);
 		XMFLOAT4 lookAtDeltaRotationState_RightEye = XMFLOAT4(0, 0, 0, 1);
+		std::shared_ptr<void> ragdoll = nullptr; // physics system implementation-specific object
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

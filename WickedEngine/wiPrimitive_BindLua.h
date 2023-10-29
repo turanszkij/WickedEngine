@@ -26,6 +26,7 @@ namespace wi::lua::primitive
 		int SetOrigin(lua_State* L);
 		int SetDirection(lua_State* L);
 		int CreateFromPoints(lua_State* L);
+		int GetPlacementOrientation(lua_State* L);
 	};
 
 	class AABB_BindLua
@@ -69,6 +70,7 @@ namespace wi::lua::primitive
 		int GetRadius(lua_State* L);
 		int SetCenter(lua_State* L);
 		int SetRadius(lua_State* L);
+		int GetPlacementOrientation(lua_State* L);
 	};
 
 	class Capsule_BindLua
@@ -91,5 +93,6 @@ namespace wi::lua::primitive
 		int SetBase(lua_State* L);
 		int SetTip(lua_State* L);
 		int SetRadius(lua_State* L);
+		int GetPlacementOrientation(lua_State* L);
 	};
 }

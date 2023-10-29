@@ -9,7 +9,7 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_HUMANOID " Humanoid", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 500));
+	SetSize(XMFLOAT2(670, 540));
 
 	closeButton.SetTooltip("Delete HumanoidComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -54,6 +54,19 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 	lookatMouseCheckBox.SetSize(XMFLOAT2(hei, hei));
 	AddWidget(&lookatMouseCheckBox);
 	lookatMouseCheckBox.SetCheck(true);
+
+	ragdollCheckBox.Create("Ragdoll: ");
+	ragdollCheckBox.SetTooltip("Activate dynamic ragdoll physics. Note that kinematic ragdoll physics is always active (ragdoll is animation-driven/kinematic by default).");
+	ragdollCheckBox.SetSize(XMFLOAT2(hei, hei));
+	ragdollCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		HumanoidComponent* humanoid = scene.humanoids.GetComponent(entity);
+		if (humanoid != nullptr)
+		{
+			humanoid->SetRagdollPhysicsEnabled(args.bValue);
+		}
+		});
+	AddWidget(&ragdollCheckBox);
 
 	headRotMaxXSlider.Create(0, 90, 60, 180, "Head horizontal: ");
 	headRotMaxXSlider.SetTooltip("Limit horizontal head movement (input in degrees)");
@@ -216,6 +229,7 @@ void HumanoidWindow::SetEntity(Entity entity)
 		if (humanoid != nullptr)
 		{
 			lookatCheckBox.SetCheck(humanoid->IsLookAtEnabled());
+			ragdollCheckBox.SetCheck(humanoid->IsRagdollPhysicsEnabled());
 			headRotMaxXSlider.SetValue(wi::math::RadiansToDegrees(humanoid->head_rotation_max.x));
 			headRotMaxYSlider.SetValue(wi::math::RadiansToDegrees(humanoid->head_rotation_max.y));
 			headRotSpeedSlider.SetValue(humanoid->head_rotation_speed);
@@ -522,6 +536,7 @@ void HumanoidWindow::ResizeLayout()
 	add_fullwidth(infoLabel);
 	add_right(lookatCheckBox);
 	lookatMouseCheckBox.SetPos(XMFLOAT2(lookatCheckBox.GetPos().x - 120, lookatCheckBox.GetPos().y));
+	add_right(ragdollCheckBox);
 	add(headRotMaxXSlider);
 	add(headRotMaxYSlider);
 	add(headRotSpeedSlider);

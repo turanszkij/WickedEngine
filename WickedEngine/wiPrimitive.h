@@ -99,6 +99,9 @@ namespace wi::primitive
 		bool intersects(const Ray& b) const;
 		bool intersects(const Ray& b, float& dist) const;
 		bool intersects(const Ray& b, float& dist, XMFLOAT3& direction) const;
+
+		// Construct a matrix that will orient to position according to surface normal:
+		XMFLOAT4X4 GetPlacementOrientation(const XMFLOAT3& position, const XMFLOAT3& normal) const;
 	};
 	struct Capsule
 	{
@@ -139,6 +142,9 @@ namespace wi::primitive
 		bool intersects(const Ray& b, float& dist) const;
 		bool intersects(const Ray& b, float& dist, XMFLOAT3& direction) const;
 		bool intersects(const XMFLOAT3& point) const;
+
+		// Construct a matrix that will orient to position according to surface normal:
+		XMFLOAT4X4 GetPlacementOrientation(const XMFLOAT3& position, const XMFLOAT3& normal) const;
 	};
 	struct Plane
 	{
@@ -187,6 +193,9 @@ namespace wi::primitive
 		bool intersects(const Plane& b, float& dist, XMFLOAT3& direction) const;
 
 		void CreateFromPoints(const XMFLOAT3& a, const XMFLOAT3& b);
+
+		// Construct a matrix that will orient to position according to surface normal:
+		XMFLOAT4X4 GetPlacementOrientation(const XMFLOAT3& position, const XMFLOAT3& normal) const;
 	};
 
 	struct Frustum

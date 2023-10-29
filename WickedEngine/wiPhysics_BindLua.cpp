@@ -2,6 +2,7 @@
 #include "wiPhysics.h"
 #include "wiScene_BindLua.h"
 #include "wiMath_BindLua.h"
+#include "wiPrimitive_BindLua.h"
 
 namespace wi::lua
 {
@@ -24,6 +25,7 @@ namespace wi::lua
 		lunamethod(Physics_BindLua, ApplyTorque),
 		lunamethod(Physics_BindLua, ApplyTorqueImpulse),
 		lunamethod(Physics_BindLua, SetActivationState),
+		lunamethod(Physics_BindLua, Intersects),
 		{ NULL, NULL }
 	};
 	Luna<Physics_BindLua>::PropertyType Physics_BindLua::properties[] = {
@@ -215,7 +217,25 @@ namespace wi::lua
 			scene::RigidBodyPhysicsComponent_BindLua* component = Luna<scene::RigidBodyPhysicsComponent_BindLua>::lightcheck(L, 1);
 			if (component == nullptr)
 			{
-				wi::lua::SError(L, "ApplyImpulse(RigidBodyPhysicsComponent component, Vector impulse) first argument is not a RigidBodyPhysicsComponent!");
+				scene::HumanoidComponent_BindLua* humanoid = Luna<scene::HumanoidComponent_BindLua>::lightcheck(L, 1);
+				if (humanoid == nullptr)
+				{
+					wi::lua::SError(L, "ApplyImpulse(RigidBodyPhysicsComponent component, Vector impulse) first argument is not a RigidBodyPhysicsComponent!");
+					wi::lua::SError(L, "ApplyImpulse(HumanoidComponent component, HumanoidBone bone, Vector impulse) first argument is not a HumanoidComponent!");
+					return 0;
+				}
+				wi::scene::HumanoidComponent::HumanoidBone bone = (wi::scene::HumanoidComponent::HumanoidBone)wi::lua::SGetInt(L, 2);
+				Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 3);
+				if (vec == nullptr)
+				{
+					wi::lua::SError(L, "ApplyImpulse(HumanoidComponent component, HumanoidBone bone, Vector impulse) third argument is not a Vector!");
+					return 0;
+				}
+				wi::physics::ApplyImpulse(
+					*humanoid->component,
+					bone,
+					*(XMFLOAT3*)vec
+				);
 				return 0;
 			}
 			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 2);
@@ -241,7 +261,32 @@ namespace wi::lua
 			scene::RigidBodyPhysicsComponent_BindLua* component = Luna<scene::RigidBodyPhysicsComponent_BindLua>::lightcheck(L, 1);
 			if (component == nullptr)
 			{
-				wi::lua::SError(L, "ApplyImpulseAt(RigidBodyPhysicsComponent component, Vector impulse, Vector at) first argument is not a RigidBodyPhysicsComponent!");
+				scene::HumanoidComponent_BindLua* humanoid = Luna<scene::HumanoidComponent_BindLua>::lightcheck(L, 1);
+				if (humanoid == nullptr)
+				{
+					wi::lua::SError(L, "ApplyImpulseAt(RigidBodyPhysicsComponent component, Vector impulse, Vector at) first argument is not a RigidBodyPhysicsComponent!");
+					wi::lua::SError(L, "ApplyImpulseAt(HumanoidComponent component, HumanoidBone bone, Vector impulse, Vector at) first argument is not a HumanoidComponent!");
+					return 0;
+				}
+				wi::scene::HumanoidComponent::HumanoidBone bone = (wi::scene::HumanoidComponent::HumanoidBone)wi::lua::SGetInt(L, 2);
+				Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 3);
+				if (vec == nullptr)
+				{
+					wi::lua::SError(L, "ApplyImpulseAt(HumanoidComponent component, HumanoidBone bone, Vector impulse, Vector at) third argument is not a Vector!");
+					return 0;
+				}
+				Vector_BindLua* vec2 = Luna<Vector_BindLua>::lightcheck(L, 4);
+				if (vec2 == nullptr)
+				{
+					wi::lua::SError(L, "ApplyImpulseAt(HumanoidComponent component, HumanoidBone bone, Vector impulse, Vector at) fourth argument is not a Vector!");
+					return 0;
+				}
+				wi::physics::ApplyImpulseAt(
+					*humanoid->component,
+					bone,
+					*(XMFLOAT3*)vec,
+					*(XMFLOAT3*)vec2
+				);
 				return 0;
 			}
 			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 2);
@@ -345,6 +390,36 @@ namespace wi::lua
 		}
 		else
 			wi::lua::SError(L, "SetActivationState(RigidBodyPhysicsComponent | SoftBodyPhysicsComponent component, int state) not enough arguments!");
+		return 0;
+	}
+
+	int Physics_BindLua::Intersects(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			scene::Scene_BindLua* scene = Luna<scene::Scene_BindLua>::lightcheck(L, 1);
+			if (scene == nullptr)
+			{
+				wi::lua::SError(L, "Intersects(Scene, Ray) first argument is not a Scene!");
+				return 0;
+			}
+			primitive::Ray_BindLua* ray = Luna<primitive::Ray_BindLua>::lightcheck(L, 2);
+			if (ray == nullptr)
+			{
+				wi::lua::SError(L, "Intersects(Scene, Ray) second argument is not a Ray!");
+				return 0;
+			}
+
+			wi::physics::RayIntersectionResult result = wi::physics::Intersects(*scene->scene, ray->ray);
+			wi::lua::SSetLongLong(L, result.entity);
+			Luna<Vector_BindLua>::push(L, result.position);
+			Luna<Vector_BindLua>::push(L, result.normal);
+			wi::lua::SSetLongLong(L, result.humanoid_ragdoll_entity);
+			wi::lua::SSetInt(L, (int)result.humanoid_bone);
+			return 5;
+		}
+		wi::lua::SError(L, "Intersects(Scene, Ray) not enough arguments!");
 		return 0;
 	}
 

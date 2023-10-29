@@ -6266,6 +6266,8 @@ Luna<HumanoidComponent_BindLua>::FunctionType HumanoidComponent_BindLua::methods
 	lunamethod(HumanoidComponent_BindLua, GetBoneEntity),
 	lunamethod(HumanoidComponent_BindLua, SetLookAtEnabled),
 	lunamethod(HumanoidComponent_BindLua, SetLookAt),
+	lunamethod(HumanoidComponent_BindLua, SetRagdollPhysicsEnabled),
+	lunamethod(HumanoidComponent_BindLua, IsRagdollPhysicsEnabled),
 	{ NULL, NULL }
 };
 Luna<HumanoidComponent_BindLua>::PropertyType HumanoidComponent_BindLua::properties[] = {
@@ -6330,6 +6332,24 @@ int HumanoidComponent_BindLua::SetLookAt(lua_State* L)
 		wi::lua::SError(L, "SetLookAt(Vector value) not enough arguments!");
 	}
 	return 0;
+}
+int HumanoidComponent_BindLua::SetRagdollPhysicsEnabled(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->SetRagdollPhysicsEnabled(wi::lua::SGetBool(L, 1));
+	}
+	else
+	{
+		wi::lua::SError(L, "SetRagdollPhysicsEnabled(bool value) not enough arguments!");
+	}
+	return 0;
+}
+int HumanoidComponent_BindLua::IsRagdollPhysicsEnabled(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsRagdollPhysicsEnabled());
+	return 1;
 }
 
 
