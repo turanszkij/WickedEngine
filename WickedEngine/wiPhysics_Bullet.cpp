@@ -1314,7 +1314,7 @@ namespace wi::physics
 		// Perform internal simulation step:
 		if (IsSimulationEnabled())
 		{
-			dynamicsWorld.stepSimulation(dt, ACCURACY);
+			dynamicsWorld.stepSimulation(dt, ACCURACY, 1.0f / 120.0f);
 		}
 
 		// Feedback physics engine state to system:
