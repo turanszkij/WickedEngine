@@ -494,6 +494,7 @@ void EditorComponent::Load()
 		ss += "Focus on selected: F button, this will make the camera jump to selection.\n";
 		ss += "Inspector mode: I button (hold), hovered entity information will be displayed near mouse position.\n";
 		ss += "Place Instances: Ctrl + Shift + Left mouse click (place clipboard onto clicked surface)\n";
+		ss += "Ragdoll and physics impulse tester: Hold P and click on ragdoll or rigid body physics entity.\n";
 		ss += "Script Console / backlog: HOME button\n";
 		ss += "Bone picking: First select an armature, only then bone picking becomes available. As long as you have an armature or bone selected, bone picking will remain active.\n";
 		ss += "\n";
@@ -1194,7 +1195,36 @@ void EditorComponent::Update(float dt)
 		if (optionsWnd.paintToolWnd.GetMode() == PaintToolWindow::MODE_DISABLED)
 		{
 			// Interact:
-			if (hovered.entity != INVALID_ENTITY && wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Down((wi::input::BUTTON)'P') && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+			{
+				// Physics impulse tester:
+				wi::physics::RayIntersectionResult result = wi::physics::Intersects(scene, pickRay);
+				if (result.IsValid())
+				{
+					XMFLOAT3 impulse;
+					XMStoreFloat3(&impulse, XMVector3Normalize(XMLoadFloat3(&pickRay.direction)) * 20);
+					if (result.humanoid_ragdoll_entity != INVALID_ENTITY)
+					{
+						// Ragdoll:
+						HumanoidComponent* humanoid = scene.humanoids.GetComponent(result.humanoid_ragdoll_entity);
+						if (humanoid != nullptr)
+						{
+							humanoid->SetRagdollPhysicsEnabled(true);
+							wi::physics::ApplyImpulse(*humanoid, result.humanoid_bone, impulse);
+						}
+					}
+					else
+					{
+						// Rigidbody:
+						RigidBodyPhysicsComponent* rigidbody = scene.rigidbodies.GetComponent(result.entity);
+						if (rigidbody != nullptr)
+						{
+							wi::physics::ApplyImpulse(*rigidbody, impulse);
+						}
+					}
+				}
+			}
+			else if (hovered.entity != INVALID_ENTITY && wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
 			{
 				if (dummy_enabled && translator.selected.empty())
 				{
