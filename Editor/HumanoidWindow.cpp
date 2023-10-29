@@ -56,6 +56,7 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 	lookatMouseCheckBox.SetCheck(true);
 
 	ragdollCheckBox.Create("Ragdoll: ");
+	ragdollCheckBox.SetTooltip("Activate dynamic ragdoll physics. Note that kinematic ragdoll physics is always active (ragdoll is animation-driven/kinematic by default).");
 	ragdollCheckBox.SetSize(XMFLOAT2(hei, hei));
 	ragdollCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();

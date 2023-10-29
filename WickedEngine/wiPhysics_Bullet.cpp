@@ -550,8 +550,9 @@ namespace wi::physics
 		std::shared_ptr<RigidBody> rigidbodies[BODYPART_COUNT];
 		btRigidBody* m_bodies[BODYPART_COUNT];
 		btTypedConstraint* m_joints[JOINT_COUNT];
+		bool state_active = false;
 
-		Ragdoll(wi::scene::Scene& scene, wi::scene::HumanoidComponent& humanoid, Entity humanoidEntity)
+		Ragdoll(Scene& scene, HumanoidComponent& humanoid)
 		{
 			physics_scene = scene.physics_scene;
 			btSoftRigidDynamicsWorld& dynamicsWorld = ((PhysicsScene*)physics_scene.get())->dynamicsWorld;
@@ -652,24 +653,6 @@ namespace wi::physics
 				physicsobject.entity = entityA;
 
 				float mass = 1;
-
-#if 0
-				// Fix body parts for testing:
-				switch (c)
-				{
-				case BODYPART_PELVIS:
-				case BODYPART_SPINE:
-				//case BODYPART_LEFT_UPPER_LEG:
-				//case BODYPART_LEFT_LOWER_LEG:
-				//case BODYPART_RIGHT_UPPER_LEG:
-				//case BODYPART_RIGHT_LOWER_LEG:
-					mass = 0;
-					break;
-				default:
-					break;
-				}
-#endif
-
 				float capsule_height = 1;
 				float capsule_radius = 1;
 
@@ -732,10 +715,7 @@ namespace wi::physics
 				}
 
 				btVector3 localInertia(0, 0, 0);
-				if (mass > 0)
-				{
-					physicsobject.shape->calculateLocalInertia(mass, localInertia);
-				}
+				physicsobject.shape->calculateLocalInertia(mass, localInertia);
 
 				btTransform shapeTransform;
 				shapeTransform.setIdentity();
@@ -805,15 +785,11 @@ namespace wi::physics
 				physicsobject.rigidBody->setDeactivationTime(btScalar(0.8));
 				physicsobject.rigidBody->setSleepingThresholds(btScalar(1.6), btScalar(2.5));
 
-				if (mass == 0)
-				{
-					physicsobject.rigidBody->setCollisionFlags(physicsobject.rigidBody->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
-				}
+				// by default, whole ragdoll is kinematic:
+				physicsobject.rigidBody->setCollisionFlags(physicsobject.rigidBody->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
 
 				physicsobject.physics_scene = scene.physics_scene;
 				dynamicsWorld.addRigidBody(physicsobject.rigidBody.get());
-
-				scene.Component_Detach(entityA);
 
 				roots[c] = btVector3(XMVectorGetX(rootA), XMVectorGetY(rootA), XMVectorGetZ(rootA));
 				m_bodies[c] = physicsobject.rigidBody.get();
@@ -1045,16 +1021,6 @@ namespace wi::physics
 				ms->setWorldTransform(shapeTransform);
 				physicsobject.rigidBody->setWorldTransform(shapeTransform); // immediate transform on first frame
 			}
-
-			// Stop all anims that are children of humanoid:
-			for (size_t i = 0; i < scene.animations.GetCount(); ++i)
-			{
-				Entity entity = scene.animations.GetEntity(i);
-				if (!scene.Entity_IsDescendant(entity, humanoidEntity))
-					continue;
-				AnimationComponent& animation = scene.animations[i];
-				animation.Stop();
-			}
 		}
 		~Ragdoll()
 		{
@@ -1071,6 +1037,45 @@ namespace wi::physics
 			for (auto& x : rigidbodies)
 			{
 				dynamicsWorld.removeRigidBody(x->rigidBody.get());
+			}
+		}
+
+		void Activate(
+			Scene& scene,
+			Entity humanoidEntity
+		)
+		{
+			if (state_active)
+				return;
+			state_active = true;
+
+			const HumanoidComponent* humanoid = scene.humanoids.GetComponent(humanoidEntity);
+			if (humanoid == nullptr)
+				return;
+
+			btSoftRigidDynamicsWorld& dynamicsWorld = ((PhysicsScene*)scene.physics_scene.get())->dynamicsWorld;
+
+			for (auto& x : rigidbodies)
+			{
+				// remove kinematic flag from bone:
+				x->rigidBody->setCollisionFlags(x->rigidBody->getCollisionFlags() ^ btCollisionObject::CF_KINEMATIC_OBJECT);
+
+				// If we don't remove and re-add rigid body, then it will not correctly switch from kinematic to dynamic it seems:
+				dynamicsWorld.removeRigidBody(x->rigidBody.get());
+				dynamicsWorld.addRigidBody(x->rigidBody.get());
+
+				// detach bone because it will be simulated in world space:
+				scene.Component_Detach(x->entity);
+			}
+
+			// Stop all anims that are children of humanoid:
+			for (size_t i = 0; i < scene.animations.GetCount(); ++i)
+			{
+				Entity entity = scene.animations.GetEntity(i);
+				if (!scene.Entity_IsDescendant(entity, humanoidEntity))
+					continue;
+				AnimationComponent& animation = scene.animations[i];
+				animation.Stop();
 			}
 		}
 	};
@@ -1095,23 +1100,18 @@ namespace wi::physics
 		for (size_t i = 0; i < scene.humanoids.GetCount(); ++i)
 		{
 			HumanoidComponent& humanoid = scene.humanoids[i];
-			if (!humanoid.IsRagdollPhysicsEnabled())
-			{
-				if (humanoid.ragdoll != nullptr)
-				{
-					// Delete ragdoll:
-					humanoid.ragdoll = {};
-				}
-				continue;
-			}
-
 			if (humanoid.ragdoll == nullptr)
 			{
-				humanoid.ragdoll = std::make_shared<Ragdoll>(scene, humanoid, scene.humanoids.GetEntity(i));
+				humanoid.ragdoll = std::make_shared<Ragdoll>(scene, humanoid);
+			}
+			if (humanoid.IsRagdollPhysicsEnabled())
+			{
+				Ragdoll& ragdoll = *(Ragdoll*)humanoid.ragdoll.get();
+				ragdoll.Activate(scene, scene.humanoids.GetEntity(i));
 			}
 		}
 
-		// System will register rigidbodies to objects, and update physics engine state for kinematics:
+		// System will register rigidbodies to objects:
 		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), 256, [&](wi::jobsystem::JobArgs args) {
 
 			RigidBodyPhysicsComponent& physicscomponent = scene.rigidbodies[args.jobIndex];
@@ -1141,34 +1141,6 @@ namespace wi::physics
 				);
 				rigidbody->setFriction(physicscomponent.friction);
 				rigidbody->setRestitution(physicscomponent.restitution);
-
-				// For kinematic object, system updates physics state, else the physics updates system state:
-				if ((physicscomponent.IsKinematic() /*|| !IsSimulationEnabled()*/) && scene.transforms.Contains(entity))
-				{
-					TransformComponent& transform = *scene.transforms.GetComponent(entity);
-
-					btMotionState* motionState = rigidbody->getMotionState();
-					btTransform physicsTransform;
-
-					XMFLOAT3 position = transform.GetPosition();
-					XMFLOAT4 rotation = transform.GetRotation();
-					btVector3 T(position.x, position.y, position.z);
-					btQuaternion R(rotation.x, rotation.y, rotation.z, rotation.w);
-					physicsTransform.setOrigin(T);
-					physicsTransform.setRotation(R);
-					motionState->setWorldTransform(physicsTransform);
-
-					if (!IsSimulationEnabled())
-					{
-						// This is a more direct way of manipulating rigid body:
-						rigidbody->setWorldTransform(physicsTransform);
-					}
-
-					btCollisionShape* shape = rigidbody->getCollisionShape();
-					XMFLOAT3 scale = transform.GetScale();
-					btVector3 S(scale.x, scale.y, scale.z);
-					shape->setLocalScaling(S);
-				}
 			}
 		});
 
@@ -1226,6 +1198,41 @@ namespace wi::physics
 				}
 			}
 		});
+
+		// Feedback system kinematics to physics engine:
+		for (int i = 0; i < dynamicsWorld.getCollisionObjectArray().size(); ++i)
+		{
+			btCollisionObject* collisionobject = dynamicsWorld.getCollisionObjectArray()[i];
+
+			btRigidBody* rigidbody = btRigidBody::upcast(collisionobject);
+			if (rigidbody != nullptr)
+			{
+				RigidBody* physicsobject = (RigidBody*)rigidbody->getUserPointer();
+				Entity entity = physicsobject->entity;
+				const bool kinematic = rigidbody->getCollisionFlags() & btCollisionObject::CF_KINEMATIC_OBJECT;
+
+				TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+				btMotionState* motionState = rigidbody->getMotionState();
+				btTransform physicsTransform;
+
+				XMFLOAT3 position = transform.GetPosition();
+				XMFLOAT4 rotation = transform.GetRotation();
+				btVector3 T(position.x, position.y, position.z);
+				btQuaternion R(rotation.x, rotation.y, rotation.z, rotation.w);
+				physicsTransform.setOrigin(T);
+				physicsTransform.setRotation(R);
+				physicsTransform.mult(physicsTransform, physicsobject->restBasisInverse);
+				physicsTransform.mult(physicsTransform, physicsobject->additionalTransform);
+				motionState->setWorldTransform(physicsTransform);
+				rigidbody->setWorldTransform(physicsTransform);
+
+				btCollisionShape* shape = rigidbody->getCollisionShape();
+				XMFLOAT3 scale = transform.GetScale();
+				btVector3 S(scale.x, scale.y, scale.z);
+				shape->setLocalScaling(S);
+			}
+		}
 
 		wi::jobsystem::Wait(ctx);
 
