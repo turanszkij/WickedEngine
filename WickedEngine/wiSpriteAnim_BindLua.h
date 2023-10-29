@@ -22,6 +22,7 @@ namespace wi::lua
 		int SetRotation(lua_State* L);
 		int SetOpacity(lua_State* L);
 		int SetFade(lua_State* L);
+		int SetWobbleAnimStrenght(lua_State* L);
 		int SetRepeatable(lua_State* L);
 		int SetVelocity(lua_State* L);
 		int SetScaleX(lua_State* L);
