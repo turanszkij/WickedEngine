@@ -1299,10 +1299,13 @@ namespace wi::physics
 				motionState->setWorldTransform(physicsTransform);
 				rigidbody->setWorldTransform(physicsTransform);
 
-				btCollisionShape* shape = rigidbody->getCollisionShape();
-				XMFLOAT3 scale = transform.GetScale();
-				btVector3 S(scale.x, scale.y, scale.z);
-				shape->setLocalScaling(S);
+				if (physicsobject->humanoid_ragdoll_entity == INVALID_ENTITY)
+				{
+					btCollisionShape* shape = rigidbody->getCollisionShape();
+					XMFLOAT3 scale = transform.GetScale();
+					btVector3 S(scale.x, scale.y, scale.z);
+					shape->setLocalScaling(S);
+				}
 			}
 		}
 
