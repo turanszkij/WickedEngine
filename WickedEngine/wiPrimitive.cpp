@@ -349,6 +349,18 @@ namespace wi::primitive
 		}
 		return false;
 	}
+	XMFLOAT4X4 Sphere::GetPlacementOrientation(const XMFLOAT3& position, const XMFLOAT3& normal) const
+	{
+		XMVECTOR N = XMLoadFloat3(&normal);
+		XMVECTOR P = XMLoadFloat3(&position);
+		XMVECTOR E = XMLoadFloat3(&center) - P;
+		XMVECTOR T = XMVector3Normalize(XMVector3Cross(N, P - E));
+		XMVECTOR B = XMVector3Normalize(XMVector3Cross(T, N));
+		XMMATRIX M = { T, N, B, P };
+		XMFLOAT4X4 orientation;
+		XMStoreFloat4x4(&orientation, M);
+		return orientation;
+	}
 
 
 
@@ -496,7 +508,21 @@ namespace wi::primitive
 
 		return XMVectorGetX(XMVector3Length(P - C)) <= radius;
 	}
-
+	XMFLOAT4X4 Capsule::GetPlacementOrientation(const XMFLOAT3& position, const XMFLOAT3& normal) const
+	{
+		const XMVECTOR Base = XMLoadFloat3(&base);
+		const XMVECTOR Tip = XMLoadFloat3(&tip);
+		const XMVECTOR Axis = XMVector3Normalize(Tip - Base);
+		XMVECTOR N = XMLoadFloat3(&normal);
+		XMVECTOR P = XMLoadFloat3(&position);
+		XMVECTOR E = Axis;
+		XMVECTOR T = XMVector3Normalize(XMVector3Cross(N, P - E));
+		XMVECTOR Binorm = XMVector3Normalize(XMVector3Cross(T, N));
+		XMMATRIX M = { T, N, Binorm, P };
+		XMFLOAT4X4 orientation;
+		XMStoreFloat4x4(&orientation, M);
+		return orientation;
+	}
 
 
 
@@ -710,6 +736,18 @@ namespace wi::primitive
 		XMStoreFloat3(&direction_inverse, XMVectorReciprocal(D));
 		TMin = 0;
 		TMax = XMVectorGetX(L);
+	}
+	XMFLOAT4X4 Ray::GetPlacementOrientation(const XMFLOAT3& position, const XMFLOAT3& normal) const
+	{
+		XMVECTOR N = XMLoadFloat3(&normal);
+		XMVECTOR P = XMLoadFloat3(&position);
+		XMVECTOR E = XMLoadFloat3(&origin);
+		XMVECTOR T = XMVector3Normalize(XMVector3Cross(N, P - E));
+		XMVECTOR B = XMVector3Normalize(XMVector3Cross(T, N));
+		XMMATRIX M = { T, N, B, P };
+		XMFLOAT4X4 orientation;
+		XMStoreFloat4x4(&orientation, M);
+		return orientation;
 	}
 
 

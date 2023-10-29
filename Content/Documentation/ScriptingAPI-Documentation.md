@@ -1479,6 +1479,7 @@ A ray is defined by an origin Vector and a normalized direction Vector. It can b
 - SetOrigin(Vector vector)
 - SetDirection(Vector vector)
 - CreateFromPoints(Vector a,b)	-- creates a ray from two points. Point a will be the ray origin, pointing towards point b
+- GetSurfaceOrientation(Vector position, normal) : Matrix -- compute placement orientation matrix at intersection result. This matrix can be used to place entities in the scene oriented on the surface.
 
 #### AABB
 Axis Aligned Bounding Box. Can be intersected with other primitives.
@@ -1516,6 +1517,7 @@ Sphere defined by center Vector and radius. Can be intersected with other primit
 - GetRadius() : float result
 - SetCenter(Vector value)
 - SetRadius(float value)
+- GetSurfaceOrientation(Vector position, normal) : Matrix -- compute placement orientation matrix at intersection result. This matrix can be used to place entities in the scene oriented on the surface.
 
 #### Capsule
 It's like two spheres connected by a cylinder. Base and Tip are the two endpoints, radius is the cylinder's radius.
@@ -1536,6 +1538,7 @@ It's like two spheres connected by a cylinder. Base and Tip are the two endpoint
 - SetBase(Vector value)
 - SetTip(Vector value)
 - SetRadius(float value)
+- GetSurfaceOrientation(Vector position, normal) : Matrix -- compute placement orientation matrix at intersection result. This matrix can be used to place entities in the scene oriented on the surface.
 
 ### Input
 Query input devices

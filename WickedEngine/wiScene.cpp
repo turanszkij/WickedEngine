@@ -4905,14 +4905,7 @@ namespace wi::scene
 			}
 		}
 
-		// Construct a matrix that will orient to position (P) according to surface normal (N):
-		XMVECTOR N = XMLoadFloat3(&result.normal);
-		XMVECTOR P = XMLoadFloat3(&result.position);
-		XMVECTOR E = XMLoadFloat3(&ray.origin);
-		XMVECTOR T = XMVector3Normalize(XMVector3Cross(N, P - E));
-		XMVECTOR B = XMVector3Normalize(XMVector3Cross(T, N));
-		XMMATRIX M = { T, N, B, P };
-		XMStoreFloat4x4(&result.orientation, M);
+		result.orientation = ray.GetPlacementOrientation(result.position, result.normal);
 
 		return result;
 	}
@@ -5187,14 +5180,7 @@ namespace wi::scene
 			}
 		}
 
-		// Construct a matrix that will orient to position (P) according to surface normal (N):
-		XMVECTOR N = XMLoadFloat3(&result.normal);
-		XMVECTOR P = XMLoadFloat3(&result.position);
-		XMVECTOR E = Center - P;
-		XMVECTOR T = XMVector3Normalize(XMVector3Cross(N, P - E));
-		XMVECTOR B = XMVector3Normalize(XMVector3Cross(T, N));
-		XMMATRIX M = { T, N, B, P };
-		XMStoreFloat4x4(&result.orientation, M);
+		result.orientation = sphere.GetPlacementOrientation(result.position, result.normal);
 
 		return result;
 	}
@@ -5590,14 +5576,7 @@ namespace wi::scene
 			}
 		}
 
-		// Construct a matrix that will orient to position (P) according to surface normal (N):
-		XMVECTOR N = XMLoadFloat3(&result.normal);
-		XMVECTOR P = XMLoadFloat3(&result.position);
-		XMVECTOR E = Axis;
-		XMVECTOR T = XMVector3Normalize(XMVector3Cross(N, P - E));
-		XMVECTOR Binorm = XMVector3Normalize(XMVector3Cross(T, N));
-		XMMATRIX M = { T, N, Binorm, P };
-		XMStoreFloat4x4(&result.orientation, M);
+		result.orientation = capsule.GetPlacementOrientation(result.position, result.normal);
 
 		return result;
 	}

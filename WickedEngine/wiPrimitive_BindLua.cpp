@@ -31,6 +31,7 @@ namespace wi::lua::primitive
 		lunamethod(Ray_BindLua, SetOrigin),
 		lunamethod(Ray_BindLua, SetDirection),
 		lunamethod(Ray_BindLua, CreateFromPoints),
+		lunamethod(Ray_BindLua, GetPlacementOrientation),
 		{ NULL, NULL }
 	};
 	Luna<Ray_BindLua>::PropertyType Ray_BindLua::properties[] = {
@@ -174,6 +175,29 @@ namespace wi::lua::primitive
 		{
 			wi::lua::SError(L, "CreateFromPoints(Vector a,b) not enough arguments!");
 		}
+		return 0;
+	}
+	int Ray_BindLua::GetPlacementOrientation(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			Vector_BindLua* position = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (position == nullptr)
+			{
+				wi::lua::SError(L, "GetPlacementOrientation(Vector position, normal) first argument is not a Vector!");
+				return 0;
+			}
+			Vector_BindLua* normal = Luna<Vector_BindLua>::lightcheck(L, 2);
+			if (normal == nullptr)
+			{
+				wi::lua::SError(L, "GetPlacementOrientation(Vector position, normal) second argument is not a Vector!");
+				return 0;
+			}
+			Luna<Matrix_BindLua>::push(L, ray.GetPlacementOrientation(position->GetFloat3(), normal->GetFloat3()));
+			return 1;
+		}
+		wi::lua::SError(L, "GetPlacementOrientation(Vector position, normal) not enough arguments!");
 		return 0;
 	}
 
@@ -382,6 +406,7 @@ namespace wi::lua::primitive
 		lunamethod(Sphere_BindLua, GetRadius),
 		lunamethod(Sphere_BindLua, SetCenter),
 		lunamethod(Sphere_BindLua, SetRadius),
+		lunamethod(Sphere_BindLua, GetPlacementOrientation),
 		{ NULL, NULL }
 	};
 	Luna<Sphere_BindLua>::PropertyType Sphere_BindLua::properties[] = {
@@ -493,6 +518,29 @@ namespace wi::lua::primitive
 		}
 		return 0;
 	}
+	int Sphere_BindLua::GetPlacementOrientation(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			Vector_BindLua* position = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (position == nullptr)
+			{
+				wi::lua::SError(L, "GetPlacementOrientation(Vector position, normal) first argument is not a Vector!");
+				return 0;
+			}
+			Vector_BindLua* normal = Luna<Vector_BindLua>::lightcheck(L, 2);
+			if (normal == nullptr)
+			{
+				wi::lua::SError(L, "GetPlacementOrientation(Vector position, normal) second argument is not a Vector!");
+				return 0;
+			}
+			Luna<Matrix_BindLua>::push(L, sphere.GetPlacementOrientation(position->GetFloat3(), normal->GetFloat3()));
+			return 1;
+		}
+		wi::lua::SError(L, "GetPlacementOrientation(Vector position, normal) not enough arguments!");
+		return 0;
+	}
 
 
 
@@ -505,6 +553,7 @@ namespace wi::lua::primitive
 		lunamethod(Capsule_BindLua, SetBase),
 		lunamethod(Capsule_BindLua, SetTip),
 		lunamethod(Capsule_BindLua, SetRadius),
+		lunamethod(Capsule_BindLua, GetPlacementOrientation),
 		{ NULL, NULL }
 	};
 	Luna<Capsule_BindLua>::PropertyType Capsule_BindLua::properties[] = {
@@ -664,6 +713,29 @@ namespace wi::lua::primitive
 		{
 			wi::lua::SError(L, "SetRadius(float value) not enough arguments!");
 		}
+		return 0;
+	}
+	int Capsule_BindLua::GetPlacementOrientation(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			Vector_BindLua* position = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (position == nullptr)
+			{
+				wi::lua::SError(L, "GetPlacementOrientation(Vector position, normal) first argument is not a Vector!");
+				return 0;
+			}
+			Vector_BindLua* normal = Luna<Vector_BindLua>::lightcheck(L, 2);
+			if (normal == nullptr)
+			{
+				wi::lua::SError(L, "GetPlacementOrientation(Vector position, normal) second argument is not a Vector!");
+				return 0;
+			}
+			Luna<Matrix_BindLua>::push(L, capsule.GetPlacementOrientation(position->GetFloat3(), normal->GetFloat3()));
+			return 1;
+		}
+		wi::lua::SError(L, "GetPlacementOrientation(Vector position, normal) not enough arguments!");
 		return 0;
 	}
 
