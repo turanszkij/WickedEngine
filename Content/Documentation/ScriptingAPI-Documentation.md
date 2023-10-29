@@ -154,7 +154,7 @@ You can use the Renderer with the following functions, all of which are in the g
 ### Sprite
 Render images on the screen.
 - Params : ImageParams
-- Anim :  
+- Anim : SpriteAnim
 
 </br>
 
