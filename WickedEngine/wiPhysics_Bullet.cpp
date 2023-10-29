@@ -110,13 +110,23 @@ namespace wi::physics
 			std::shared_ptr<void> physics_scene;
 			std::unique_ptr<btCollisionShape> shape;
 			std::unique_ptr<btRigidBody> rigidBody;
+			btDefaultMotionState motionState;
+			btTriangleIndexVertexArray triangles;
+			Entity entity = INVALID_ENTITY;
+
+			// These are used to remap default shape orientations into ragdoll and back:
 			btTransform additionalTransform;
 			btTransform additionalTransformInverse;
 			btTransform restBasis;
 			btTransform restBasisInverse;
-			btDefaultMotionState motionState;
-			btTriangleIndexVertexArray triangles;
-			Entity entity = INVALID_ENTITY;
+
+			RigidBody()
+			{
+				additionalTransform.setIdentity();
+				additionalTransformInverse.setIdentity();
+				restBasis.setIdentity();
+				restBasisInverse.setIdentity();
+			}
 			~RigidBody()
 			{
 				if (physics_scene == nullptr)
@@ -182,8 +192,7 @@ namespace wi::physics
 		Entity entity,
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const wi::scene::TransformComponent& transform,
-		const wi::scene::MeshComponent* mesh,
-		const btTransform* additionalTransform = nullptr
+		const wi::scene::MeshComponent* mesh
 	)
 	{
 		RigidBody& physicsobject = GetRigidBody(physicscomponent);
