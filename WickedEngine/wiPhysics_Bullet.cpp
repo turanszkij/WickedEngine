@@ -1538,6 +1538,14 @@ namespace wi::physics
 			GetRigidBody(physicscomponent).rigidBody->applyCentralImpulse(btVector3(impulse.x, impulse.y, impulse.z));
 		}
 	}
+	void ApplyImpulse(
+		wi::scene::HumanoidComponent& humanoid,
+		wi::scene::HumanoidComponent::HumanoidBone bone,
+		const XMFLOAT3& impulse
+	)
+	{
+		ApplyImpulseAt(humanoid, bone, impulse, XMFLOAT3(0, 0, 0));
+	}
 	void ApplyImpulseAt(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& impulse,
@@ -1701,16 +1709,6 @@ namespace wi::physics
 				result.entity = physicsobject->entity;
 				result.humanoid_ragdoll_entity = physicsobject->humanoid_ragdoll_entity;
 				result.humanoid_bone = physicsobject->humanoid_bone;
-
-				btTransform physicsTransform;
-				rigidbody->getMotionState()->getWorldTransform(physicsTransform);
-				physicsTransform = physicsTransform.inverse();
-				btTransform local_transform;
-				local_transform.setIdentity();
-				local_transform.setOrigin(position_local);
-				local_transform.mult(local_transform, physicsTransform);
-				position_local = local_transform.getOrigin();
-				normal_local = normal_local * physicsTransform.getBasis();
 			}
 			const btSoftBody* softbody = btSoftBody::upcast(rayCallback.m_collisionObject);
 			if (softbody != nullptr)
@@ -1718,13 +1716,6 @@ namespace wi::physics
 				SoftBody* physicsobject = (SoftBody*)rigidbody->getUserPointer();
 				result.entity = physicsobject->entity;
 			}
-
-			result.position_local.x = position_local.getX();
-			result.position_local.y = position_local.getY();
-			result.position_local.z = position_local.getZ();
-			result.normal_local.x = normal_local.getX();
-			result.normal_local.y = normal_local.getY();
-			result.normal_local.z = -normal_local.getZ();
 		}
 		return result;
 	}

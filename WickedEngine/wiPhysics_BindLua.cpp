@@ -217,7 +217,25 @@ namespace wi::lua
 			scene::RigidBodyPhysicsComponent_BindLua* component = Luna<scene::RigidBodyPhysicsComponent_BindLua>::lightcheck(L, 1);
 			if (component == nullptr)
 			{
-				wi::lua::SError(L, "ApplyImpulse(RigidBodyPhysicsComponent component, Vector impulse) first argument is not a RigidBodyPhysicsComponent!");
+				scene::HumanoidComponent_BindLua* humanoid = Luna<scene::HumanoidComponent_BindLua>::lightcheck(L, 1);
+				if (humanoid == nullptr)
+				{
+					wi::lua::SError(L, "ApplyImpulse(RigidBodyPhysicsComponent component, Vector impulse) first argument is not a RigidBodyPhysicsComponent!");
+					wi::lua::SError(L, "ApplyImpulse(HumanoidComponent component, HumanoidBone bone, Vector impulse) first argument is not a HumanoidComponent!");
+					return 0;
+				}
+				wi::scene::HumanoidComponent::HumanoidBone bone = (wi::scene::HumanoidComponent::HumanoidBone)wi::lua::SGetInt(L, 2);
+				Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 3);
+				if (vec == nullptr)
+				{
+					wi::lua::SError(L, "ApplyImpulse(HumanoidComponent component, HumanoidBone bone, Vector impulse) third argument is not a Vector!");
+					return 0;
+				}
+				wi::physics::ApplyImpulse(
+					*humanoid->component,
+					bone,
+					*(XMFLOAT3*)vec
+				);
 				return 0;
 			}
 			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 2);
@@ -397,11 +415,9 @@ namespace wi::lua
 			wi::lua::SSetLongLong(L, result.entity);
 			Luna<Vector_BindLua>::push(L, result.position);
 			Luna<Vector_BindLua>::push(L, result.normal);
-			Luna<Vector_BindLua>::push(L, result.position_local);
-			Luna<Vector_BindLua>::push(L, result.normal_local);
 			wi::lua::SSetLongLong(L, result.humanoid_ragdoll_entity);
 			wi::lua::SSetInt(L, (int)result.humanoid_bone);
-			return 7;
+			return 5;
 		}
 		wi::lua::SError(L, "Intersects(Scene, Ray) not enough arguments!");
 		return 0;

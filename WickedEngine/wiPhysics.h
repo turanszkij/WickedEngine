@@ -63,6 +63,11 @@ namespace wi::physics
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& impulse
 	);
+	void ApplyImpulse(
+		wi::scene::HumanoidComponent& humanoid,
+		wi::scene::HumanoidComponent::HumanoidBone bone,
+		const XMFLOAT3& impulse
+	);
 	// Apply impulse at body local position
 	void ApplyImpulseAt(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
@@ -104,8 +109,6 @@ namespace wi::physics
 		wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
-		XMFLOAT3 position_local = XMFLOAT3(0, 0, 0);
-		XMFLOAT3 normal_local = XMFLOAT3(0, 0, 0);
 		wi::ecs::Entity humanoid_ragdoll_entity = wi::ecs::INVALID_ENTITY;
 		wi::scene::HumanoidComponent::HumanoidBone humanoid_bone = wi::scene::HumanoidComponent::HumanoidBone::Count;
 		constexpr bool IsValid() const { return entity != wi::ecs::INVALID_ENTITY; }
