@@ -1694,4 +1694,4 @@ Playstation button codes:
 - [outer]ACTIVATION_STATE_ACTIVE : int
 - [outer]ACTIVATION_STATE_INACTIVE : int
 
-- Intersects(Scene scene, Ray ray) : Entity entity, Vector position,normal,position_local,normal_local, Entity humanoid_ragdoll_entity, HumanoidBone humanoid_bone	-- Performns physics scene intersection for closest hit with a ray
+- Intersects(Scene scene, Ray ray) : Entity entity, Vector position,normal, Entity humanoid_ragdoll_entity, HumanoidBone humanoid_bone	-- Performns physics scene intersection for closest hit with a ray
