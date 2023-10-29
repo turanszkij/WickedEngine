@@ -1258,6 +1258,8 @@ Describes a Collider object.
 - GetBoneEntity(HumanoidBone bone) : int	-- Get the entity that is mapped to the specified humanoid bone. Use HumanoidBone table to get access to humanoid bone values
 - SetLookAtEnabled(bool value)	-- Enable/disable automatic lookAt (for head and eyes movement)
 - SetLookAt(Vector value)	-- Set a target lookAt position (for head an eyes movement)
+- SetRagdollPhysicsEnabled(bool value) -- Activate dynamic ragdoll physics. Note that kinematic ragdoll physics is always active (ragdoll is animation-driven/kinematic by default).
+- IsRagdollPhysicsEnabled() : bool
 
 [outer] HumanoidBone = {
 	Hips = 0,
