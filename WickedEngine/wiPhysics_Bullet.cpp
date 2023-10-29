@@ -781,12 +781,9 @@ namespace wi::physics
 				physicsobject.rigidBody->setUserPointer(&physicsobject);
 				physicsobject.rigidBody->setWorldTransform(shapeTransform); // immediate transform on first frame
 
-				physicsobject.rigidBody->setDamping(btScalar(0.05), btScalar(0.85));
-				physicsobject.rigidBody->setDeactivationTime(btScalar(0.8));
-				physicsobject.rigidBody->setSleepingThresholds(btScalar(1.6), btScalar(2.5));
-
 				// by default, whole ragdoll is kinematic:
 				physicsobject.rigidBody->setCollisionFlags(physicsobject.rigidBody->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+				physicsobject.rigidBody->setActivationState(DISABLE_DEACTIVATION);
 
 				physicsobject.physics_scene = scene.physics_scene;
 				dynamicsWorld.addRigidBody(physicsobject.rigidBody.get());
@@ -1059,6 +1056,11 @@ namespace wi::physics
 			{
 				// remove kinematic flag from bone:
 				x->rigidBody->setCollisionFlags(x->rigidBody->getCollisionFlags() ^ btCollisionObject::CF_KINEMATIC_OBJECT);
+
+				x->rigidBody->forceActivationState(ACTIVE_TAG);
+				x->rigidBody->setDeactivationTime(btScalar(0.8));
+				x->rigidBody->setSleepingThresholds(btScalar(1.6), btScalar(2.5));
+				x->rigidBody->setDamping(btScalar(0.05), btScalar(0.85));
 
 				// If we don't remove and re-add rigid body, then it will not correctly switch from kinematic to dynamic it seems:
 				dynamicsWorld.removeRigidBody(x->rigidBody.get());
