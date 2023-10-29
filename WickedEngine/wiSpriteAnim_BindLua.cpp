@@ -52,8 +52,6 @@ namespace wi::lua
 		anim = wi::Sprite::Anim();
 	}
 
-
-
 	int SpriteAnim_BindLua::SetRot(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);
@@ -97,7 +95,8 @@ namespace wi::lua
 		}
 		return 0;
 	}
-	int SpriteAnim_BindLua::SetWobbleAnimStrenght(lua_State* L) {
+	int SpriteAnim_BindLua::SetWobbleAnimStrenght(lua_State* L) 
+	{
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
