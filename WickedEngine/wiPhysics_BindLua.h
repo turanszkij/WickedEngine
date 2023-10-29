@@ -34,6 +34,8 @@ namespace wi::lua
 		int ApplyTorqueImpulse(lua_State* L);
 		int SetActivationState(lua_State* L);
 
+		int Intersects(lua_State* L);
+
 		static void Bind();
 	};
 }

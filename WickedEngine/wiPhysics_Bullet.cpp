@@ -114,6 +114,10 @@ namespace wi::physics
 			btTriangleIndexVertexArray triangles;
 			Entity entity = INVALID_ENTITY;
 
+			// for trace hit reporting:
+			wi::ecs::Entity humanoid_ragdoll_entity = wi::ecs::INVALID_ENTITY;
+			wi::scene::HumanoidComponent::HumanoidBone humanoid_bone = wi::scene::HumanoidComponent::HumanoidBone::Count;
+
 			// These are used to remap default shape orientations into ragdoll and back:
 			btTransform additionalTransform;
 			btTransform additionalTransformInverse;
@@ -506,7 +510,7 @@ namespace wi::physics
 
 	struct Ragdoll
 	{
-		enum
+		enum BODYPART
 		{
 			BODYPART_PELVIS = 0,
 			BODYPART_SPINE,
@@ -526,7 +530,7 @@ namespace wi::physics
 
 			BODYPART_COUNT
 		};
-		enum
+		enum JOINT
 		{
 			JOINT_PELVIS_SPINE = 0,
 			JOINT_SPINE_HEAD,
@@ -553,7 +557,7 @@ namespace wi::physics
 		bool state_active = false;
 		Entity saved_parents[BODYPART_COUNT] = {};
 
-		Ragdoll(Scene& scene, HumanoidComponent& humanoid)
+		Ragdoll(Scene& scene, HumanoidComponent& humanoid, Entity humanoidEntity)
 		{
 			physics_scene = scene.physics_scene;
 			btSoftRigidDynamicsWorld& dynamicsWorld = ((PhysicsScene*)physics_scene.get())->dynamicsWorld;
@@ -583,15 +587,18 @@ namespace wi::physics
 			// Calculate the bone lengths and radiuses in armature local space and create rigid bodies for bones:
 			for (int c = 0; c < BODYPART_COUNT; ++c)
 			{
+				HumanoidComponent::HumanoidBone humanoid_bone = HumanoidComponent::HumanoidBone::Count;
 				Entity entityA = INVALID_ENTITY;
 				Entity entityB = INVALID_ENTITY;
 				switch (c)
 				{
 				case BODYPART_PELVIS:
+					humanoid_bone = HumanoidComponent::HumanoidBone::Hips;
 					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Hips];
 					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Spine];
 					break;
 				case BODYPART_SPINE:
+					humanoid_bone = HumanoidComponent::HumanoidBone::Spine;
 					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Spine];
 					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Neck]; // prefer neck instead of head
 					if (entityB == INVALID_ENTITY)
@@ -600,41 +607,51 @@ namespace wi::physics
 					}
 					break;
 				case BODYPART_HEAD:
+					humanoid_bone = HumanoidComponent::HumanoidBone::Neck;
 					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Neck]; // prefer neck instead of head
 					if (entityA == INVALID_ENTITY)
 					{
+						humanoid_bone = HumanoidComponent::HumanoidBone::Head;
 						entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::Head]; // fall back to head if neck not available
 					}
 					break;
 				case BODYPART_LEFT_UPPER_LEG:
+					humanoid_bone = HumanoidComponent::HumanoidBone::LeftUpperLeg;
 					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftUpperLeg];
 					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftLowerLeg];
 					break;
 				case BODYPART_LEFT_LOWER_LEG:
+					humanoid_bone = HumanoidComponent::HumanoidBone::LeftLowerLeg;
 					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftLowerLeg];
 					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftFoot];
 					break;
 				case BODYPART_RIGHT_UPPER_LEG:
+					humanoid_bone = HumanoidComponent::HumanoidBone::RightUpperLeg;
 					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightUpperLeg];
 					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightLowerLeg];
 					break;
 				case BODYPART_RIGHT_LOWER_LEG:
+					humanoid_bone = HumanoidComponent::HumanoidBone::RightLowerLeg;
 					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightLowerLeg];
 					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightFoot];
 					break;
 				case BODYPART_LEFT_UPPER_ARM:
+					humanoid_bone = HumanoidComponent::HumanoidBone::LeftUpperArm;
 					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftUpperArm];
 					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftLowerArm];
 					break;
 				case BODYPART_LEFT_LOWER_ARM:
+					humanoid_bone = HumanoidComponent::HumanoidBone::LeftLowerArm;
 					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftLowerArm];
 					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftHand];
 					break;
 				case BODYPART_RIGHT_UPPER_ARM:
+					humanoid_bone = HumanoidComponent::HumanoidBone::RightUpperArm;
 					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightUpperArm];
 					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightLowerArm];
 					break;
 				case BODYPART_RIGHT_LOWER_ARM:
+					humanoid_bone = HumanoidComponent::HumanoidBone::RightLowerArm;
 					entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightLowerArm];
 					entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightHand];
 					break;
@@ -785,6 +802,9 @@ namespace wi::physics
 				// by default, whole ragdoll is kinematic:
 				physicsobject.rigidBody->setCollisionFlags(physicsobject.rigidBody->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
 				physicsobject.rigidBody->setActivationState(DISABLE_DEACTIVATION);
+
+				physicsobject.humanoid_ragdoll_entity = humanoidEntity;
+				physicsobject.humanoid_bone = humanoid_bone;
 
 				physicsobject.physics_scene = scene.physics_scene;
 				dynamicsWorld.addRigidBody(physicsobject.rigidBody.get());
@@ -1098,8 +1118,7 @@ namespace wi::physics
 
 		// Disables dynamic ragdoll and reattaches loose parts as they were:
 		void Deactivate(
-			Scene& scene,
-			Entity humanoidEntity
+			Scene& scene
 		)
 		{
 			if (!state_active)
@@ -1148,18 +1167,19 @@ namespace wi::physics
 		for (size_t i = 0; i < scene.humanoids.GetCount(); ++i)
 		{
 			HumanoidComponent& humanoid = scene.humanoids[i];
+			Entity humanoidEntity = scene.humanoids.GetEntity(i);
 			if (humanoid.ragdoll == nullptr)
 			{
-				humanoid.ragdoll = std::make_shared<Ragdoll>(scene, humanoid);
+				humanoid.ragdoll = std::make_shared<Ragdoll>(scene, humanoid, humanoidEntity);
 			}
 			Ragdoll& ragdoll = *(Ragdoll*)humanoid.ragdoll.get();
 			if (humanoid.IsRagdollPhysicsEnabled())
 			{
-				ragdoll.Activate(scene, scene.humanoids.GetEntity(i));
+				ragdoll.Activate(scene, humanoidEntity);
 			}
 			else
 			{
-				ragdoll.Deactivate(scene, scene.humanoids.GetEntity(i));
+				ragdoll.Deactivate(scene);
 			}
 		}
 
@@ -1529,6 +1549,62 @@ namespace wi::physics
 			GetRigidBody(physicscomponent).rigidBody->applyImpulse(btVector3(impulse.x, impulse.y, impulse.z), btVector3(at.x, at.y, at.z));
 		}
 	}
+	void ApplyImpulseAt(
+		wi::scene::HumanoidComponent& humanoid,
+		wi::scene::HumanoidComponent::HumanoidBone bone,
+		const XMFLOAT3& impulse,
+		const XMFLOAT3& at
+	)
+	{
+		if (humanoid.ragdoll == nullptr)
+			return;
+
+		Ragdoll::BODYPART bodypart = Ragdoll::BODYPART_COUNT;
+		switch (bone)
+		{
+		case HumanoidComponent::HumanoidBone::Hips:
+			bodypart = Ragdoll::BODYPART_PELVIS;
+			break;
+		case HumanoidComponent::HumanoidBone::Spine:
+			bodypart = Ragdoll::BODYPART_SPINE;
+			break;
+		case HumanoidComponent::HumanoidBone::Head:
+		case HumanoidComponent::HumanoidBone::Neck:
+			bodypart = Ragdoll::BODYPART_HEAD;
+			break;
+		case HumanoidComponent::HumanoidBone::RightUpperArm:
+			bodypart = Ragdoll::BODYPART_RIGHT_UPPER_ARM;
+			break;
+		case HumanoidComponent::HumanoidBone::RightLowerArm:
+			bodypart = Ragdoll::BODYPART_RIGHT_LOWER_ARM;
+			break;
+		case HumanoidComponent::HumanoidBone::LeftUpperArm:
+			bodypart = Ragdoll::BODYPART_LEFT_UPPER_ARM;
+			break;
+		case HumanoidComponent::HumanoidBone::LeftLowerArm:
+			bodypart = Ragdoll::BODYPART_LEFT_LOWER_ARM;
+			break;
+		case HumanoidComponent::HumanoidBone::RightUpperLeg:
+			bodypart = Ragdoll::BODYPART_RIGHT_UPPER_LEG;
+			break;
+		case HumanoidComponent::HumanoidBone::RightLowerLeg:
+			bodypart = Ragdoll::BODYPART_RIGHT_LOWER_LEG;
+			break;
+		case HumanoidComponent::HumanoidBone::LeftUpperLeg:
+			bodypart = Ragdoll::BODYPART_LEFT_UPPER_LEG;
+			break;
+		case HumanoidComponent::HumanoidBone::LeftLowerLeg:
+			bodypart = Ragdoll::BODYPART_LEFT_LOWER_LEG;
+			break;
+		}
+		if (bodypart == Ragdoll::BODYPART_COUNT)
+			return;
+
+		Ragdoll& ragdoll = *(Ragdoll*)humanoid.ragdoll.get();
+		if (ragdoll.rigidbodies[bodypart] == nullptr || ragdoll.rigidbodies[bodypart]->rigidBody == nullptr)
+			return;
+		ragdoll.rigidbodies[bodypart]->rigidBody->applyImpulse(btVector3(impulse.x, impulse.y, impulse.z), btVector3(at.x, at.y, at.z));
+	}
 
 	void ApplyTorque(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
@@ -1583,5 +1659,73 @@ namespace wi::physics
 			//GetSoftBody(physicscomponent).softBody->setActivationState(to_internal(state));
 			GetSoftBody(physicscomponent).softBody->forceActivationState(to_internal(state));
 		}
+	}
+
+	RayIntersectionResult Intersects(
+		const wi::scene::Scene& scene,
+		wi::primitive::Ray ray
+	)
+	{
+		RayIntersectionResult result;
+		btSoftRigidDynamicsWorld& dynamicsWorld = ((PhysicsScene*)scene.physics_scene.get())->dynamicsWorld;
+		float tmin = wi::math::Clamp(ray.TMin, 0, 1000000);
+		float tmax = wi::math::Clamp(ray.TMax, 0, 1000000);
+		btVector3 rayFrom = btVector3(
+			ray.origin.x + ray.direction.x * tmin,
+			ray.origin.y + ray.direction.y * tmin,
+			ray.origin.z + ray.direction.z * tmin
+		);
+		btVector3 rayTo = btVector3(
+			ray.origin.x + ray.direction.x * tmax,
+			ray.origin.y + ray.direction.y * tmax,
+			ray.origin.z + ray.direction.z * tmax
+		);
+		btCollisionWorld::ClosestRayResultCallback rayCallback(rayFrom, rayTo);
+		dynamicsWorld.rayTest(rayFrom, rayTo, rayCallback);
+		if (rayCallback.hasHit())
+		{
+			result.position.x = rayCallback.m_hitPointWorld.getX();
+			result.position.y = rayCallback.m_hitPointWorld.getY();
+			result.position.z = rayCallback.m_hitPointWorld.getZ();
+			result.normal.x = rayCallback.m_hitNormalWorld.getX();
+			result.normal.y = rayCallback.m_hitNormalWorld.getY();
+			result.normal.z = -rayCallback.m_hitNormalWorld.getZ();
+
+			btVector3 position_local = rayCallback.m_hitPointWorld;
+			btVector3 normal_local = rayCallback.m_hitNormalWorld;
+
+			const btRigidBody* rigidbody = btRigidBody::upcast(rayCallback.m_collisionObject);
+			if (rigidbody != nullptr)
+			{
+				RigidBody* physicsobject = (RigidBody*)rigidbody->getUserPointer();
+				result.entity = physicsobject->entity;
+				result.humanoid_ragdoll_entity = physicsobject->humanoid_ragdoll_entity;
+				result.humanoid_bone = physicsobject->humanoid_bone;
+
+				btTransform physicsTransform;
+				rigidbody->getMotionState()->getWorldTransform(physicsTransform);
+				physicsTransform = physicsTransform.inverse();
+				btTransform local_transform;
+				local_transform.setIdentity();
+				local_transform.setOrigin(position_local);
+				local_transform.mult(local_transform, physicsTransform);
+				position_local = local_transform.getOrigin();
+				normal_local = normal_local * physicsTransform.getBasis();
+			}
+			const btSoftBody* softbody = btSoftBody::upcast(rayCallback.m_collisionObject);
+			if (softbody != nullptr)
+			{
+				SoftBody* physicsobject = (SoftBody*)rigidbody->getUserPointer();
+				result.entity = physicsobject->entity;
+			}
+
+			result.position_local.x = position_local.getX();
+			result.position_local.y = position_local.getY();
+			result.position_local.z = position_local.getZ();
+			result.normal_local.x = normal_local.getX();
+			result.normal_local.y = normal_local.getY();
+			result.normal_local.z = -normal_local.getZ();
+		}
+		return result;
 	}
 }

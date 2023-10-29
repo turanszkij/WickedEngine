@@ -2,6 +2,7 @@
 #include "wiECS.h"
 #include "wiScene.h"
 #include "wiJobSystem.h"
+#include "wiPrimitive.h"
 
 namespace wi::physics
 {
@@ -68,6 +69,12 @@ namespace wi::physics
 		const XMFLOAT3& impulse,
 		const XMFLOAT3& at
 	);
+	void ApplyImpulseAt(
+		wi::scene::HumanoidComponent& humanoid,
+		wi::scene::HumanoidComponent::HumanoidBone bone,
+		const XMFLOAT3& impulse,
+		const XMFLOAT3& at
+	);
 
 	void ApplyTorque(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
@@ -90,5 +97,21 @@ namespace wi::physics
 	void SetActivationState(
 		wi::scene::SoftBodyPhysicsComponent& physicscomponent,
 		ActivationState state
+	);
+
+	struct RayIntersectionResult
+	{
+		wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
+		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
+		XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
+		XMFLOAT3 position_local = XMFLOAT3(0, 0, 0);
+		XMFLOAT3 normal_local = XMFLOAT3(0, 0, 0);
+		wi::ecs::Entity humanoid_ragdoll_entity = wi::ecs::INVALID_ENTITY;
+		wi::scene::HumanoidComponent::HumanoidBone humanoid_bone = wi::scene::HumanoidComponent::HumanoidBone::Count;
+		constexpr bool IsValid() const { return entity != wi::ecs::INVALID_ENTITY; }
+	};
+	RayIntersectionResult Intersects(
+		const wi::scene::Scene& scene,
+		wi::primitive::Ray ray
 	);
 }
