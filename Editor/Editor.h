@@ -52,6 +52,8 @@ public:
 	ComponentsWindow componentsWnd;
 	ProfilerWindow profilerWnd;
 
+	wi::physics::PickDragOperation physicsDragOp;
+
 	std::unique_ptr<wi::RenderPath3D> renderPath;
 	const wi::graphics::Texture* GetGUIBlurredBackground() const override { return renderPath->GetGUIBlurredBackground(); }
 

@@ -467,7 +467,7 @@ void EditorComponent::Load()
 		ss += "Move camera: WASD, or Contoller left stick or D-pad\n";
 		ss += "Look: Middle mouse button / arrow keys / controller right stick\n";
 		ss += "Select: Right mouse button\n";
-		ss += "Interact with water: Left mouse button when nothing is selected\n";
+		ss += "Interact with physics/water: Left mouse button when nothing is selected\n";
 		ss += "Faster camera: Left Shift button or controller R2/RT\n";
 		ss += "Snap transform: Left Ctrl (hold while transforming)\n";
 		ss += "Camera up: E\n";
@@ -1195,36 +1195,53 @@ void EditorComponent::Update(float dt)
 		if (optionsWnd.paintToolWnd.GetMode() == PaintToolWindow::MODE_DISABLED)
 		{
 			// Interact:
-			if (wi::input::Down((wi::input::BUTTON)'P') && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Down((wi::input::BUTTON)'P'))
 			{
-				// Physics impulse tester:
-				wi::physics::RayIntersectionResult result = wi::physics::Intersects(scene, pickRay);
-				if (result.IsValid())
+				if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
 				{
-					XMFLOAT3 impulse;
-					XMStoreFloat3(&impulse, XMVector3Normalize(XMLoadFloat3(&pickRay.direction)) * 20);
-					if (result.humanoid_ragdoll_entity != INVALID_ENTITY)
+					// Physics impulse tester:
+					wi::physics::RayIntersectionResult result = wi::physics::Intersects(scene, pickRay);
+					if (result.IsValid())
 					{
-						// Ragdoll:
-						HumanoidComponent* humanoid = scene.humanoids.GetComponent(result.humanoid_ragdoll_entity);
-						if (humanoid != nullptr)
+						XMFLOAT3 impulse;
+						XMStoreFloat3(&impulse, XMVector3Normalize(XMLoadFloat3(&pickRay.direction)) * 20);
+						if (result.humanoid_ragdoll_entity != INVALID_ENTITY)
 						{
-							humanoid->SetRagdollPhysicsEnabled(true);
-							wi::physics::ApplyImpulse(*humanoid, result.humanoid_bone, impulse);
+							// Ragdoll:
+							HumanoidComponent* humanoid = scene.humanoids.GetComponent(result.humanoid_ragdoll_entity);
+							if (humanoid != nullptr)
+							{
+								humanoid->SetRagdollPhysicsEnabled(true);
+								wi::physics::ApplyImpulse(*humanoid, result.humanoid_bone, impulse);
+							}
 						}
-					}
-					else
-					{
-						// Rigidbody:
-						RigidBodyPhysicsComponent* rigidbody = scene.rigidbodies.GetComponent(result.entity);
-						if (rigidbody != nullptr)
+						else
 						{
-							wi::physics::ApplyImpulse(*rigidbody, impulse);
+							// Rigidbody:
+							RigidBodyPhysicsComponent* rigidbody = scene.rigidbodies.GetComponent(result.entity);
+							if (rigidbody != nullptr)
+							{
+								wi::physics::ApplyImpulse(*rigidbody, impulse);
+							}
 						}
 					}
 				}
 			}
-			else if (hovered.entity != INVALID_ENTITY && wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+			else
+			{
+				// Physics pick dragger:
+				if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+				{
+					wi::physics::PickDrag(scene, pickRay, physicsDragOp);
+				}
+				else
+				{
+					physicsDragOp = {};
+				}
+			}
+
+			// Other:
+			if (hovered.entity != INVALID_ENTITY && wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
 			{
 				if (dummy_enabled && translator.selected.empty())
 				{

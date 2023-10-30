@@ -417,7 +417,8 @@ namespace wi::lua
 			Luna<Vector_BindLua>::push(L, result.normal);
 			wi::lua::SSetLongLong(L, result.humanoid_ragdoll_entity);
 			wi::lua::SSetInt(L, (int)result.humanoid_bone);
-			return 5;
+			Luna<Vector_BindLua>::push(L, result.position_local);
+			return 6;
 		}
 		wi::lua::SError(L, "Intersects(Scene, Ray) not enough arguments!");
 		return 0;

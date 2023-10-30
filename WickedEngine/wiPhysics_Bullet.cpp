@@ -25,7 +25,7 @@ namespace wi::physics
 		bool ENABLED = true;
 		bool SIMULATION_ENABLED = true;
 		bool DEBUGDRAW_ENABLED = false;
-		int ACCURACY = 1;
+		int ACCURACY = 2;
 		int softbodyIterationCount = 5;
 		std::mutex physicsLock;
 
@@ -1695,6 +1695,7 @@ namespace wi::physics
 		dynamicsWorld.rayTest(rayFrom, rayTo, rayCallback);
 		if (rayCallback.hasHit())
 		{
+			result.physicsobject = rayCallback.m_collisionObject;
 			result.position.x = rayCallback.m_hitPointWorld.getX();
 			result.position.y = rayCallback.m_hitPointWorld.getY();
 			result.position.z = rayCallback.m_hitPointWorld.getZ();
@@ -1703,7 +1704,6 @@ namespace wi::physics
 			result.normal.z = -rayCallback.m_hitNormalWorld.getZ();
 
 			btVector3 position_local = rayCallback.m_hitPointWorld;
-			btVector3 normal_local = rayCallback.m_hitNormalWorld;
 
 			const btRigidBody* rigidbody = btRigidBody::upcast(rayCallback.m_collisionObject);
 			if (rigidbody != nullptr)
@@ -1712,6 +1712,7 @@ namespace wi::physics
 				result.entity = physicsobject->entity;
 				result.humanoid_ragdoll_entity = physicsobject->humanoid_ragdoll_entity;
 				result.humanoid_bone = physicsobject->humanoid_bone;
+				position_local = physicsobject->rigidBody->getCenterOfMassTransform().inverse() * position_local;
 			}
 			const btSoftBody* softbody = btSoftBody::upcast(rayCallback.m_collisionObject);
 			if (softbody != nullptr)
@@ -1719,7 +1720,95 @@ namespace wi::physics
 				SoftBody* physicsobject = (SoftBody*)rigidbody->getUserPointer();
 				result.entity = physicsobject->entity;
 			}
+
+			result.position_local.x = position_local.getX();
+			result.position_local.y = position_local.getY();
+			result.position_local.z = position_local.getZ();
 		}
 		return result;
+	}
+
+	struct PickDragOperation_Bullet
+	{
+		std::shared_ptr<void> physics_scene;
+		std::unique_ptr<btGeneric6DofConstraint> constraint;
+		float pick_distance = 0;
+		~PickDragOperation_Bullet()
+		{
+			btSoftRigidDynamicsWorld& dynamicsWorld = ((PhysicsScene*)physics_scene.get())->dynamicsWorld;
+			dynamicsWorld.removeConstraint(constraint.get());
+		}
+	};
+	void PickDrag(
+		const wi::scene::Scene& scene,
+		wi::primitive::Ray ray,
+		PickDragOperation& op
+	)
+	{
+		btSoftRigidDynamicsWorld& dynamicsWorld = ((PhysicsScene*)scene.physics_scene.get())->dynamicsWorld;
+		float tmin = wi::math::Clamp(ray.TMin, 0, 1000000);
+		float tmax = wi::math::Clamp(ray.TMax, 0, 1000000);
+		btVector3 rayFrom = btVector3(
+			ray.origin.x + ray.direction.x * tmin,
+			ray.origin.y + ray.direction.y * tmin,
+			ray.origin.z + ray.direction.z * tmin
+		);
+		btVector3 rayTo = btVector3(
+			ray.origin.x + ray.direction.x * tmax,
+			ray.origin.y + ray.direction.y * tmax,
+			ray.origin.z + ray.direction.z * tmax
+		);
+		if (op.IsValid())
+		{
+			// Continue dragging:
+			PickDragOperation_Bullet* internal_state = (PickDragOperation_Bullet*)op.internal_state.get();
+			btVector3 oldPivotInB = internal_state->constraint->getFrameOffsetA().getOrigin();
+			btVector3 newPivotB;
+			btVector3 dir = (rayTo - rayFrom).normalize();
+			newPivotB = rayFrom + dir * internal_state->pick_distance;
+			internal_state->constraint->getFrameOffsetA().setOrigin(newPivotB);
+		}
+		else
+		{
+			// Begin picking:
+			RayIntersectionResult result = Intersects(scene, ray);
+			if (!result.IsValid())
+				return;
+			btCollisionObject* collisionobject = (btCollisionObject*)result.physicsobject;
+			btRigidBody* rigidbody = btRigidBody::upcast(collisionobject);
+			if (rigidbody == nullptr)
+				return;
+
+			auto internal_state = std::make_shared<PickDragOperation_Bullet>();
+			internal_state->physics_scene = scene.physics_scene;
+			internal_state->pick_distance = (btVector3(result.position.x, result.position.y, result.position.z) - rayFrom).length();
+
+			btTransform transform;
+			transform.setIdentity();
+			transform.setOrigin(btVector3(result.position_local.x, result.position_local.y, result.position_local.z));
+
+			internal_state->constraint = std::make_unique<btGeneric6DofConstraint>(*rigidbody, transform, false);
+			internal_state->constraint->setLinearLowerLimit(btVector3(0, 0, 0));
+			internal_state->constraint->setLinearUpperLimit(btVector3(0, 0, 0));
+			internal_state->constraint->setAngularLowerLimit(btVector3(0, 0, 0));
+			internal_state->constraint->setAngularUpperLimit(btVector3(0, 0, 0));
+			dynamicsWorld.addConstraint(internal_state->constraint.get());
+
+			internal_state->constraint->setParam(BT_CONSTRAINT_STOP_CFM, 0.8f, 0);
+			internal_state->constraint->setParam(BT_CONSTRAINT_STOP_CFM, 0.8f, 1);
+			internal_state->constraint->setParam(BT_CONSTRAINT_STOP_CFM, 0.8f, 2);
+			internal_state->constraint->setParam(BT_CONSTRAINT_STOP_CFM, 0.8f, 3);
+			internal_state->constraint->setParam(BT_CONSTRAINT_STOP_CFM, 0.8f, 4);
+			internal_state->constraint->setParam(BT_CONSTRAINT_STOP_CFM, 0.8f, 5);
+
+			internal_state->constraint->setParam(BT_CONSTRAINT_STOP_ERP, 0.1f, 0);
+			internal_state->constraint->setParam(BT_CONSTRAINT_STOP_ERP, 0.1f, 1);
+			internal_state->constraint->setParam(BT_CONSTRAINT_STOP_ERP, 0.1f, 2);
+			internal_state->constraint->setParam(BT_CONSTRAINT_STOP_ERP, 0.1f, 3);
+			internal_state->constraint->setParam(BT_CONSTRAINT_STOP_ERP, 0.1f, 4);
+			internal_state->constraint->setParam(BT_CONSTRAINT_STOP_ERP, 0.1f, 5);
+
+			op.internal_state = internal_state;
+		}
 	}
 }

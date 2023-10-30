@@ -4,6 +4,8 @@
 #include "wiJobSystem.h"
 #include "wiPrimitive.h"
 
+#include <memory>
+
 namespace wi::physics
 {
 	// Initializes the physics engine
@@ -108,13 +110,26 @@ namespace wi::physics
 	{
 		wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
+		XMFLOAT3 position_local = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
 		wi::ecs::Entity humanoid_ragdoll_entity = wi::ecs::INVALID_ENTITY;
 		wi::scene::HumanoidComponent::HumanoidBone humanoid_bone = wi::scene::HumanoidComponent::HumanoidBone::Count;
+		const void* physicsobject = nullptr;
 		constexpr bool IsValid() const { return entity != wi::ecs::INVALID_ENTITY; }
 	};
 	RayIntersectionResult Intersects(
 		const wi::scene::Scene& scene,
 		wi::primitive::Ray ray
+	);
+
+	struct PickDragOperation
+	{
+		std::shared_ptr<void> internal_state;
+		inline bool IsValid() const { return internal_state != nullptr; }
+	};
+	void PickDrag(
+		const wi::scene::Scene& scene,
+		wi::primitive::Ray ray,
+		PickDragOperation& op
 	);
 }
