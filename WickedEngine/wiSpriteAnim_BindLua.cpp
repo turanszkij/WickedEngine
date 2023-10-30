@@ -9,7 +9,8 @@ namespace wi::lua
 		lunamethod(SpriteAnim_BindLua, SetRotation),
 		lunamethod(SpriteAnim_BindLua, SetOpacity),
 		lunamethod(SpriteAnim_BindLua, SetFade),
-		lunamethod(SpriteAnim_BindLua, SetWobbleAnimStrenght),
+		lunamethod(SpriteAnim_BindLua, SetWobbleAnimAmount),
+		lunamethod(SpriteAnim_BindLua, SetWobbleAnimSpeed),
 		lunamethod(SpriteAnim_BindLua, SetRepeatable),
 		lunamethod(SpriteAnim_BindLua, SetVelocity),
 		lunamethod(SpriteAnim_BindLua, SetScaleX),
@@ -95,7 +96,7 @@ namespace wi::lua
 		}
 		return 0;
 	}
-	int SpriteAnim_BindLua::SetWobbleAnimStrenght(lua_State* L) 
+	int SpriteAnim_BindLua::SetWobbleAnimAmount(lua_State* L) 
 	{
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
@@ -104,7 +105,20 @@ namespace wi::lua
 		}
 		else
 		{
-			wi::lua::SError(L, "SetWobbleAnimStrenght(float val) not enough arguments!");
+			wi::lua::SError(L, "SetWobbleAnimAmount(float val) not enough arguments!");
+		}
+		return 0;
+	}
+	int SpriteAnim_BindLua::SetWobbleAnimSpeed(lua_State* L) 
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			anim.wobbleAnim.speed = wi::lua::SGetFloat(L, 1);
+		}
+		else
+		{
+			wi::lua::SError(L, "SetWobbleAnimSpeed(float val) not enough arguments!");
 		}
 		return 0;
 	}
