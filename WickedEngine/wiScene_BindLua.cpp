@@ -512,6 +512,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Merge),
 	lunamethod(Scene_BindLua, UpdateHierarchy),
 	lunamethod(Scene_BindLua, Intersects),
+	lunamethod(Scene_BindLua, Entity_FindAllEntities),
 	lunamethod(Scene_BindLua, Entity_FindByName),
 	lunamethod(Scene_BindLua, Entity_Remove),
 	lunamethod(Scene_BindLua, Entity_Duplicate),
@@ -700,6 +701,35 @@ int Scene_BindLua::Merge(lua_State* L)
 	}
 	return 0;
 }
+
+int Scene_BindLua::Entity_FindAllEntities(lua_State* L)
+{
+
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		wi::lua::SError(L, "Scene::Entity_FindAllEntities() doesnt take any argument");
+		return 0;
+	}
+	else {
+		wi::unordered_set<wi::ecs::Entity> listOfAllEntities;
+		scene->FindAllEntities(listOfAllEntities);
+		
+		int idx = 1; // lua indexes start at 1
+
+		lua_newtable(L); // build the return table
+		for (wi::ecs::Entity entity : listOfAllEntities)
+		{
+			wi::lua::SSetLongLong(L, entity);
+			lua_rawseti(L, -2, idx); // the table is now at -2 because we pushed the entity
+			++idx;
+		}
+		// our table should be already on the stack
+		return 1;
+	}
+
+}
+
 
 int Scene_BindLua::Entity_FindByName(lua_State* L)
 {
