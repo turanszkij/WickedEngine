@@ -556,8 +556,9 @@ namespace wi::physics
 		btTypedConstraint* m_joints[JOINT_COUNT];
 		bool state_active = false;
 		Entity saved_parents[BODYPART_COUNT] = {};
+		float scale = 1;
 
-		Ragdoll(Scene& scene, HumanoidComponent& humanoid, Entity humanoidEntity)
+		Ragdoll(Scene& scene, HumanoidComponent& humanoid, Entity humanoidEntity, float scale)
 		{
 			physics_scene = scene.physics_scene;
 			btSoftRigidDynamicsWorld& dynamicsWorld = ((PhysicsScene*)physics_scene.get())->dynamicsWorld;
@@ -583,6 +584,10 @@ namespace wi::physics
 			{
 				facing = -1;
 			}
+
+			// Whole ragdoll will take a uniform scaling:
+			const XMMATRIX scaleMatrix = XMMatrixScaling(scale, scale, scale);
+			this->scale = scale;
 
 			// Calculate the bone lengths and radiuses in armature local space and create rigid bodies for bones:
 			for (int c = 0; c < BODYPART_COUNT; ++c)
@@ -660,8 +665,9 @@ namespace wi::physics
 
 				// Calculations here will be done in armature local space.
 				//	Unfortunately since humanoid can be separate from armature, we use a "find" utility to find bone rest matrix in armature
-				XMMATRIX restA = scene.FindBoneRestPose(entityA);
-				XMMATRIX restB = scene.FindBoneRestPose(entityB);
+				//	Note that current scaling of character is applied here separately from rest pose
+				XMMATRIX restA = scene.FindBoneRestPose(entityA) * scaleMatrix;
+				XMMATRIX restB = scene.FindBoneRestPose(entityB) * scaleMatrix;
 				XMVECTOR rootA = restA.r[3];
 				XMVECTOR rootB = restB.r[3];
 
@@ -670,15 +676,15 @@ namespace wi::physics
 				RigidBody& physicsobject = *rigidbodies[c];
 				physicsobject.entity = entityA;
 
-				float mass = 1;
-				float capsule_height = 1;
-				float capsule_radius = 1;
+				float mass = scale;
+				float capsule_height = scale;
+				float capsule_radius = scale;
 
 				if (c == BODYPART_HEAD)
 				{
 					// Head doesn't necessarily have a child, so make up something reasonable:
-					capsule_height = 0.05f;
-					capsule_radius = 0.1f;
+					capsule_height = 0.05f * scale;
+					capsule_radius = 0.1f * scale;
 				}
 				else
 				{
@@ -690,10 +696,10 @@ namespace wi::physics
 					switch (c)
 					{
 					case BODYPART_PELVIS:
-						capsule_radius = 0.1f;
+						capsule_radius = 0.1f * scale;
 						break;
 					case BODYPART_SPINE:
-						capsule_radius = 0.1f;
+						capsule_radius = 0.1f * scale;
 						capsule_height -= capsule_radius * 2;
 						break;
 					case BODYPART_LEFT_LOWER_ARM:
@@ -1164,13 +1170,29 @@ namespace wi::physics
 
 		btVector3 wind = btVector3(scene.weather.windDirection.x, scene.weather.windDirection.y, scene.weather.windDirection.z);
 
+		// Ragdoll management:
 		for (size_t i = 0; i < scene.humanoids.GetCount(); ++i)
 		{
 			HumanoidComponent& humanoid = scene.humanoids[i];
 			Entity humanoidEntity = scene.humanoids.GetEntity(i);
+			float scale = 1;
+			if (scene.transforms.Contains(humanoidEntity))
+			{
+				scale = scene.transforms.GetComponent(humanoidEntity)->GetScale().x;
+			}
+			if (humanoid.ragdoll != nullptr)
+			{
+				Ragdoll& ragdoll = *(Ragdoll*)humanoid.ragdoll.get();
+				if (!wi::math::float_equal(ragdoll.scale, scale))
+				{
+					humanoid.SetRagdollPhysicsEnabled(false); // while scaling ragdoll, it will be kinematic
+					ragdoll.Deactivate(scene); // recreate attached skeleton hierarchy structure
+					humanoid.ragdoll = {}; // delete ragdoll if scale changed, it will be recreated
+				}
+			}
 			if (humanoid.ragdoll == nullptr)
 			{
-				humanoid.ragdoll = std::make_shared<Ragdoll>(scene, humanoid, humanoidEntity);
+				humanoid.ragdoll = std::make_shared<Ragdoll>(scene, humanoid, humanoidEntity, scale);
 			}
 			Ragdoll& ragdoll = *(Ragdoll*)humanoid.ragdoll.get();
 			if (humanoid.IsRagdollPhysicsEnabled())

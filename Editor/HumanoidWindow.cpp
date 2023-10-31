@@ -56,7 +56,7 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 	lookatMouseCheckBox.SetCheck(true);
 
 	ragdollCheckBox.Create("Ragdoll: ");
-	ragdollCheckBox.SetTooltip("Activate dynamic ragdoll physics. Note that kinematic ragdoll physics is always active (ragdoll is animation-driven/kinematic by default).");
+	ragdollCheckBox.SetTooltip("Activate dynamic ragdoll physics.\nNote that kinematic ragdoll physics is always active (ragdoll is animation-driven/kinematic by default).\nNote that scaling humanoid will disable ragdoll physics and you need to re-enable if you want to.");
 	ragdollCheckBox.SetSize(XMFLOAT2(hei, hei));
 	ragdollCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -214,12 +214,17 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 
 void HumanoidWindow::SetEntity(Entity entity)
 {
-	if (this->entity == entity)
-		return;
-
 	Scene& scene = editor->GetCurrentScene();
 
 	const HumanoidComponent* humanoid = scene.humanoids.GetComponent(entity);
+
+	if (humanoid != nullptr)
+	{
+		ragdollCheckBox.SetCheck(humanoid->IsRagdollPhysicsEnabled()); // this is always force updated
+	}
+
+	if (this->entity == entity)
+		return;
 
 	if (humanoid != nullptr || IsCollapsed())
 	{

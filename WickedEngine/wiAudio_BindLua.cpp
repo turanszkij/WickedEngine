@@ -34,6 +34,7 @@ namespace wi::lua
 			{
 				bool result = wi::audio::CreateSound(wi::lua::SGetString(L, 1), &sound->sound);
 				wi::lua::SSetBool(L, result);
+				return 1;
 			}
 			else
 			{
