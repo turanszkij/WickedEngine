@@ -709,11 +709,12 @@ int Scene_BindLua::FindAllEntities(lua_State* L)
 		
 	int idx = 1; // lua indexes start at 1
 
-	lua_newtable(L); // build the return table
+	lua_createtable(L, listOfAllEntities.size(), 0); // fixed size table
+	int entt_table = lua_gettop(L);
 	for (wi::ecs::Entity entity : listOfAllEntities)
 	{
 		wi::lua::SSetLongLong(L, entity);
-		lua_rawseti(L, -2, idx); // the table is now at -2 because we pushed the entity
+		lua_rawseti(L, entt_table, lua_Integer(idx));
 		++idx;
 	}
 	// our table should be already on the stack
