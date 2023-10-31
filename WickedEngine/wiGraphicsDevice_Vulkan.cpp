@@ -6313,7 +6313,10 @@ using namespace vulkan_internal;
 		view_desc.subresourceRange.layerCount = sliceCount;
 		view_desc.subresourceRange.baseMipLevel = firstMip;
 		view_desc.subresourceRange.levelCount = mipCount;
-		view_desc.components = _ConvertSwizzle(swizzle == nullptr ? texture->desc.swizzle : *swizzle);
+		if (type == SubresourceType::SRV)
+		{
+			view_desc.components = _ConvertSwizzle(swizzle == nullptr ? texture->desc.swizzle : *swizzle);
+		}
 		switch (format)
 		{
 		case Format::NV12:
