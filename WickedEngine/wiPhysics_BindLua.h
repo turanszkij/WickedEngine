@@ -35,7 +35,22 @@ namespace wi::lua
 		int SetActivationState(lua_State* L);
 
 		int Intersects(lua_State* L);
+		int PickDrag(lua_State* L);
 
 		static void Bind();
+	};
+
+	class PickDragOperation_BindLua
+	{
+	public:
+		wi::physics::PickDragOperation op;
+		inline static constexpr char className[] = "PickDragOperation";
+		static Luna<PickDragOperation_BindLua>::FunctionType methods[];
+		static Luna<PickDragOperation_BindLua>::PropertyType properties[];
+
+		PickDragOperation_BindLua() = default;
+		PickDragOperation_BindLua(lua_State* L) {}
+
+		int Finish(lua_State* L);
 	};
 }

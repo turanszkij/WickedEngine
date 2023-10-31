@@ -849,7 +849,7 @@ namespace wi
 						bool is_16bit = false;
 						Format format = Format::R8G8B8A8_UNORM;
 						Format bc_format = Format::BC3_UNORM;
-						Swizzle bc_swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::A };
+						Swizzle swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::A };
 
 						void* rgba;
 						if (!ext.compare("QOI"))
@@ -872,12 +872,12 @@ namespace wi
 								case 1:
 									format = Format::R16_UNORM;
 									bc_format = Format::BC4_UNORM;
-									bc_swizzle = { ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::ONE };
+									swizzle = { ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::ONE };
 									break;
 								case 2:
 									format = Format::R16G16_UNORM;
 									bc_format = Format::BC5_UNORM;
-									bc_swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::ONE, ComponentSwizzle::ONE };
+									swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::ONE, ComponentSwizzle::ONE };
 									break;
 								case 3:
 								{
@@ -899,14 +899,14 @@ namespace wi
 									rgba = color4;
 									format = Format::R16G16B16A16_UNORM;
 									bc_format = Format::BC1_UNORM;
-									bc_swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::ONE };
+									swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::ONE };
 								}
 								break;
 								case 4:
 								default:
 									format = Format::R16G16B16A16_UNORM;
 									bc_format = Format::BC3_UNORM;
-									bc_swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::A };
+									swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::A };
 									break;
 								}
 							}
@@ -918,12 +918,12 @@ namespace wi
 								case 1:
 									format = Format::R8_UNORM;
 									bc_format = Format::BC4_UNORM;
-									bc_swizzle = { ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::ONE };
+									swizzle = { ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::ONE };
 									break;
 								case 2:
 									format = Format::R8G8_UNORM;
 									bc_format = Format::BC5_UNORM;
-									bc_swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::ONE, ComponentSwizzle::ONE };
+									swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::ONE, ComponentSwizzle::ONE };
 									break;
 								case 3:
 								{
@@ -945,14 +945,14 @@ namespace wi
 									rgba = color4;
 									format = Format::R8G8B8A8_UNORM;
 									bc_format = Format::BC1_UNORM;
-									bc_swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::ONE };
+									swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::ONE };
 								}
 								break;
 								case 4:
 								default:
 									format = Format::R8G8B8A8_UNORM;
 									bc_format = Format::BC3_UNORM;
-									bc_swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::A };
+									swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::A };
 									break;
 								}
 							}
@@ -965,6 +965,7 @@ namespace wi
 							desc.width = uint32_t(width);
 							desc.layout = ResourceState::SHADER_RESOURCE;
 							desc.format = format;
+							desc.swizzle = swizzle;
 
 							if (has_flag(flags, Flags::IMPORT_COLORGRADINGLUT))
 							{
@@ -1055,7 +1056,6 @@ namespace wi
 									resource->srgb_subresource = -1;
 
 									desc.format = bc_format;
-									desc.swizzle = bc_swizzle;
 
 									if (has_flag(flags, Flags::IMPORT_NORMALMAP))
 									{
