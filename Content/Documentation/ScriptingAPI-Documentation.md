@@ -1700,3 +1700,10 @@ Playstation button codes:
 - [outer]ACTIVATION_STATE_INACTIVE : int
 
 - Intersects(Scene scene, Ray ray) : Entity entity, Vector position,normal, Entity humanoid_ragdoll_entity, HumanoidBone humanoid_bone, Vector position_local	-- Performns physics scene intersection for closest hit with a ray
+
+- PickDrag(Scene scene, Ray, ray, PickDragOperation op) -- pick and drag physics objects such as ragdolls and rigid bodies.
+
+#### PickDragOperation
+Tracks a physics pick drag operation. Use it with `phyiscs.PickDrag()` function. When using this object first time to PickDrag, the operation will be started and the operation will end when you call Finish() or when the object is destroyed
+- [constructor]PickDragOperation() -- creates the object
+- Finish() -- finish the operation, puts down the physics object

@@ -26,6 +26,7 @@ namespace wi::lua
 		lunamethod(Physics_BindLua, ApplyTorqueImpulse),
 		lunamethod(Physics_BindLua, SetActivationState),
 		lunamethod(Physics_BindLua, Intersects),
+		lunamethod(Physics_BindLua, PickDrag),
 		{ NULL, NULL }
 	};
 	Luna<Physics_BindLua>::PropertyType Physics_BindLua::properties[] = {
@@ -423,6 +424,36 @@ namespace wi::lua
 		wi::lua::SError(L, "Intersects(Scene, Ray) not enough arguments!");
 		return 0;
 	}
+	int Physics_BindLua::PickDrag(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 2)
+		{
+			scene::Scene_BindLua* scene = Luna<scene::Scene_BindLua>::lightcheck(L, 1);
+			if (scene == nullptr)
+			{
+				wi::lua::SError(L, "Intersects(Scene, Ray, PickDragOperation) first argument is not a Scene!");
+				return 0;
+			}
+			primitive::Ray_BindLua* ray = Luna<primitive::Ray_BindLua>::lightcheck(L, 2);
+			if (ray == nullptr)
+			{
+				wi::lua::SError(L, "Intersects(Scene, Ray, PickDragOperation) second argument is not a Ray!");
+				return 0;
+			}
+			PickDragOperation_BindLua* op = Luna<PickDragOperation_BindLua>::lightcheck(L, 3);
+			if (op == nullptr)
+			{
+				wi::lua::SError(L, "Intersects(Scene, Ray, PickDragOperation) third argument is not a PickDragOperation!");
+				return 0;
+			}
+
+			wi::physics::PickDrag(*scene->scene, ray->ray, op->op);
+			return 0;
+		}
+		wi::lua::SError(L, "Intersects(Scene, Ray, PickDragOperation) not enough arguments!");
+		return 0;
+	}
 
 	void Physics_BindLua::Bind()
 	{
@@ -430,6 +461,7 @@ namespace wi::lua
 		if (!initialized)
 		{
 			initialized = true;
+			Luna<PickDragOperation_BindLua>::Register(wi::lua::GetLuaState());
 			Luna<Physics_BindLua>::Register(wi::lua::GetLuaState());
 			Luna<Physics_BindLua>::push_global(wi::lua::GetLuaState(), "physics");
 
@@ -438,5 +470,22 @@ ACTIVATION_STATE_ACTIVE = 0
 ACTIVATION_STATE_INACTIVE = 1
 )");
 		}
+	}
+
+
+
+
+	Luna<PickDragOperation_BindLua>::FunctionType PickDragOperation_BindLua::methods[] = {
+		lunamethod(PickDragOperation_BindLua, Finish),
+		{ NULL, NULL }
+	};
+	Luna<PickDragOperation_BindLua>::PropertyType PickDragOperation_BindLua::properties[] = {
+		{ NULL, NULL }
+	};
+
+	int PickDragOperation_BindLua::Finish(lua_State* L)
+	{
+		op = {};
+		return 0;
 	}
 }
