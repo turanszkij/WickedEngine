@@ -704,30 +704,20 @@ int Scene_BindLua::Merge(lua_State* L)
 
 int Scene_BindLua::FindAllEntities(lua_State* L)
 {
-
-	int argc = wi::lua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		wi::lua::SError(L, "Scene::FindAllEntities() doesnt take any argument");
-		return 0;
-	}
-	else {
-		wi::unordered_set<wi::ecs::Entity> listOfAllEntities;
-		scene->FindAllEntities(listOfAllEntities);
+	wi::unordered_set<wi::ecs::Entity> listOfAllEntities;
+	scene->FindAllEntities(listOfAllEntities);
 		
-		int idx = 1; // lua indexes start at 1
+	int idx = 1; // lua indexes start at 1
 
-		lua_newtable(L); // build the return table
-		for (wi::ecs::Entity entity : listOfAllEntities)
-		{
-			wi::lua::SSetLongLong(L, entity);
-			lua_rawseti(L, -2, idx); // the table is now at -2 because we pushed the entity
-			++idx;
-		}
-		// our table should be already on the stack
-		return 1;
+	lua_newtable(L); // build the return table
+	for (wi::ecs::Entity entity : listOfAllEntities)
+	{
+		wi::lua::SSetLongLong(L, entity);
+		lua_rawseti(L, -2, idx); // the table is now at -2 because we pushed the entity
+		++idx;
 	}
-
+	// our table should be already on the stack
+	return 1;
 }
 
 
