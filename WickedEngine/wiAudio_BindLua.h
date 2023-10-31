@@ -44,6 +44,8 @@ namespace wi::lua
 		Sound_BindLua(lua_State* L) {}
 		Sound_BindLua(const wi::audio::Sound& sound) :sound(sound) {}
 
+		int IsValid(lua_State* L);
+
 		static void Bind();
 	};
 
@@ -74,6 +76,8 @@ namespace wi::lua
 		int GetLoopLength(lua_State* L);
 		int IsEnableReverb(lua_State* L);
 		int IsLooped(lua_State* L);
+
+		int IsValid(lua_State* L);
 
 		static void Bind();
 	};

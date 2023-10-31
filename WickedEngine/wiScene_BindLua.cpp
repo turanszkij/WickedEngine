@@ -709,7 +709,7 @@ int Scene_BindLua::FindAllEntities(lua_State* L)
 		
 	int idx = 1; // lua indexes start at 1
 
-	lua_createtable(L, listOfAllEntities.size(), 0); // fixed size table
+	lua_createtable(L, (int)listOfAllEntities.size(), 0); // fixed size table
 	int entt_table = lua_gettop(L);
 	for (wi::ecs::Entity entity : listOfAllEntities)
 	{
