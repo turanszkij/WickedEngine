@@ -512,7 +512,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Merge),
 	lunamethod(Scene_BindLua, UpdateHierarchy),
 	lunamethod(Scene_BindLua, Intersects),
-	lunamethod(Scene_BindLua, Entity_FindAllEntities),
+	lunamethod(Scene_BindLua, FindAllEntities),
 	lunamethod(Scene_BindLua, Entity_FindByName),
 	lunamethod(Scene_BindLua, Entity_Remove),
 	lunamethod(Scene_BindLua, Entity_Duplicate),
@@ -702,13 +702,13 @@ int Scene_BindLua::Merge(lua_State* L)
 	return 0;
 }
 
-int Scene_BindLua::Entity_FindAllEntities(lua_State* L)
+int Scene_BindLua::FindAllEntities(lua_State* L)
 {
 
 	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		wi::lua::SError(L, "Scene::Entity_FindAllEntities() doesnt take any argument");
+		wi::lua::SError(L, "Scene::FindAllEntities() doesnt take any argument");
 		return 0;
 	}
 	else {
