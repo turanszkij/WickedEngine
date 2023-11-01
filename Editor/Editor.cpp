@@ -187,8 +187,6 @@ void EditorComponent::Load()
 		});
 	GetGUI().AddWidget(&newSceneButton);
 
-
-
 	translateButton.Create(ICON_TRANSLATE);
 	rotateButton.Create(ICON_ROTATE);
 	scaleButton.Create(ICON_SCALE);
@@ -223,6 +221,20 @@ void EditorComponent::Load()
 			});
 		GetGUI().AddWidget(&translateButton);
 	}
+
+	physicsButton.Create(ICON_RIGIDBODY);
+	physicsButton.SetShadowRadius(2);
+	physicsButton.SetTooltip("Toggle Physics Simulation On/Off");
+	if (main->config.GetSection("options").Has("physics"))
+	{
+		wi::physics::SetSimulationEnabled(main->config.GetSection("options").GetBool("physics"));
+	}
+	physicsButton.OnClick([&](wi::gui::EventArgs args) {
+		wi::physics::SetSimulationEnabled(!wi::physics::IsSimulationEnabled());
+		main->config.GetSection("options").Set("physics", wi::physics::IsSimulationEnabled());
+		main->config.Commit();
+		});
+	GetGUI().AddWidget(&physicsButton);
 
 	dummyButton.Create(ICON_DUMMY);
 	dummyButton.SetShadowRadius(2);
@@ -3781,8 +3793,11 @@ void EditorComponent::UpdateTopMenuAnimation()
 	dummyButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
 	dummyButton.SetPos(XMFLOAT2(static_pos - dummyButton.GetSize().x - 20, 0));
 
+	physicsButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
+	physicsButton.SetPos(XMFLOAT2(dummyButton.GetPos().x - physicsButton.GetSize().x - 20, 0));
+
 	stopButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
-	stopButton.SetPos(XMFLOAT2(dummyButton.GetPos().x - stopButton.GetSize().x - 20, 0));
+	stopButton.SetPos(XMFLOAT2(physicsButton.GetPos().x - stopButton.GetSize().x - 20, 0));
 	playButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
 	playButton.SetPos(XMFLOAT2(stopButton.GetPos().x - playButton.GetSize().x - padding, 0));
 
@@ -3823,6 +3838,15 @@ void EditorComponent::UpdateTopMenuAnimation()
 	else
 	{
 		dummyButton.sprites[wi::gui::IDLE].params.color = color_off;
+	}
+
+	if (wi::physics::IsSimulationEnabled())
+	{
+		physicsButton.sprites[wi::gui::IDLE].params.color = color_on;
+	}
+	else
+	{
+		physicsButton.sprites[wi::gui::IDLE].params.color = color_off;
 	}
 
 	float ofs = screenW - 2;

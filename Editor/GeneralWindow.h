@@ -14,7 +14,6 @@ public:
 	wi::gui::ComboBox saveModeComboBox;
 	wi::gui::ComboBox languageCombo;
 
-	wi::gui::CheckBox physicsEnabledCheckBox;
 	wi::gui::CheckBox physicsDebugCheckBox;
 	wi::gui::CheckBox nameDebugCheckBox;
 	wi::gui::CheckBox gridHelperCheckBox;

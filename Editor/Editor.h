@@ -28,6 +28,8 @@ public:
 	wi::gui::Button rotateButton;
 	wi::gui::Button scaleButton;
 
+	wi::gui::Button physicsButton;
+
 	wi::gui::Button dummyButton;
 	bool dummy_enabled = false;
 	bool dummy_male = false;
