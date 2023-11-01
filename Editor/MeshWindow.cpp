@@ -529,102 +529,103 @@ void MeshWindow::Create(EditorComponent* _editor)
 		params.extensions.push_back("h");
 		params.type = wi::helper::FileDialogParams::TYPE::SAVE;
 		wi::helper::FileDialog(params, [=](std::string filename) {
-
-			// Bake transformed and skinned positions:
-			wi::vector<XMFLOAT3> vertices(mesh->vertex_positions.size());
-			const Scene& scene = editor->GetCurrentScene();
-			XMMATRIX M = XMMatrixIdentity();
-			if (editor->componentsWnd.objectWnd.entity != INVALID_ENTITY)
-			{
-				// if first selection is an object then transformation will be also applied
-				Entity object_entity = editor->componentsWnd.objectWnd.entity;
-				const ObjectComponent* object = scene.objects.GetComponent(object_entity);
-				if (object != nullptr)
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+				// Bake transformed and skinned positions:
+				wi::vector<XMFLOAT3> vertices(mesh->vertex_positions.size());
+				const Scene& scene = editor->GetCurrentScene();
+				XMMATRIX M = XMMatrixIdentity();
+				if (editor->componentsWnd.objectWnd.entity != INVALID_ENTITY)
 				{
-					size_t index = scene.objects.GetIndex(object_entity);
-					M = XMLoadFloat4x4(&scene.matrix_objects[index]);
+					// if first selection is an object then transformation will be also applied
+					Entity object_entity = editor->componentsWnd.objectWnd.entity;
+					const ObjectComponent* object = scene.objects.GetComponent(object_entity);
+					if (object != nullptr)
+					{
+						size_t index = scene.objects.GetIndex(object_entity);
+						M = XMLoadFloat4x4(&scene.matrix_objects[index]);
+					}
 				}
-			}
-			const ArmatureComponent* armature = scene.armatures.GetComponent(mesh->armatureID);
-			for (size_t i = 0; i < mesh->vertex_positions.size(); ++i)
-			{
-				XMVECTOR P;
-				if (armature == nullptr)
+				const ArmatureComponent* armature = scene.armatures.GetComponent(mesh->armatureID);
+				for (size_t i = 0; i < mesh->vertex_positions.size(); ++i)
 				{
-					P = XMLoadFloat3(&mesh->vertex_positions[i]);
+					XMVECTOR P;
+					if (armature == nullptr)
+					{
+						P = XMLoadFloat3(&mesh->vertex_positions[i]);
+					}
+					else
+					{
+						P = wi::scene::SkinVertex(*mesh, *armature, (uint32_t)i);
+					}
+					P = XMVector3Transform(P, M);
+					XMStoreFloat3(&vertices[i], P);
+				}
+
+				// Gather all indices for all subsets in LOD0:
+				wi::vector<uint32_t> indices;
+				uint32_t first_subset = 0;
+				uint32_t last_subset = 0;
+				mesh->GetLODSubsetRange(0, first_subset, last_subset);
+				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+				{
+					const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+					if (subset.indexCount == 0)
+						continue;
+					for (uint32_t i = 0; i < subset.indexCount; ++i)
+					{
+						indices.push_back(mesh->indices[subset.indexOffset + i]);
+					}
+				}
+
+				// Generate shadow indices for position-only stream:
+				wi::vector<uint32_t> shadow_indices(indices.size() * 2); // *2 fixes some weird memory oob write issue with a specific model
+				meshopt_generateShadowIndexBuffer(
+					shadow_indices.data(), indices.data(), indices.size(),
+					vertices.data(), vertices.size(), sizeof(XMFLOAT3), sizeof(XMFLOAT3)
+				);
+
+				// De-duplicate vertices based on shadow index buffer:
+				wi::vector<unsigned int> remap(shadow_indices.size());
+				const size_t vertex_count = meshopt_generateVertexRemap(
+					remap.data(),
+					shadow_indices.data(), shadow_indices.size(),
+					vertices.data(), vertices.size(), sizeof(XMFLOAT3)
+				);
+				wi::vector<XMFLOAT3> remapped_vertices(vertex_count);
+				wi::vector<uint32_t> remapped_indices(shadow_indices.size());
+				meshopt_remapIndexBuffer(remapped_indices.data(), shadow_indices.data(), shadow_indices.size(), remap.data());
+				meshopt_remapVertexBuffer(remapped_vertices.data(), vertices.data(), vertices.size() /*initial vertex count, not the one returned from meshopt_generateVertexRemap*/, sizeof(XMFLOAT3), remap.data());
+
+				// Optimizations:
+				meshopt_optimizeVertexCache(remapped_indices.data(), remapped_indices.data(), remapped_indices.size(), vertex_count);
+				meshopt_optimizeVertexFetch(remapped_vertices.data(), remapped_indices.data(), remapped_indices.size(), remapped_vertices.data(), vertex_count, sizeof(XMFLOAT3));
+
+				// Generate C++ header syntax:
+				std::string str;
+				str += "static const float3 vertices[" + std::to_string(remapped_vertices.size()) + "] = {\n";
+				for (auto& pos : remapped_vertices)
+				{
+					str += "\tfloat3(" + std::to_string(pos.x) + "f," + std::to_string(pos.y) + "f," + std::to_string(pos.z) + "f),\n";
+				}
+				str += "};\n";
+				str += "static const unsigned int indices[" + std::to_string(remapped_indices.size()) + "] = {\n";
+				for (size_t i = 0; i < remapped_indices.size(); i += 3)
+				{
+					str += "\t" + std::to_string(remapped_indices[i + 0]) + "," + std::to_string(remapped_indices[i + 1]) + "," + std::to_string(remapped_indices[i + 2]) + ",\n";
+				}
+				str += "};\n";
+
+				// Write to file:
+				std::string filename_dest = wi::helper::ForceExtension(filename, "h");
+				if (wi::helper::FileWrite(filename_dest, (uint8_t*)str.c_str(), str.length()))
+				{
+					editor->PostSaveText("Mesh exported to header file: ", filename_dest);
 				}
 				else
 				{
-					P = wi::scene::SkinVertex(*mesh, *armature, (uint32_t)i);
+					editor->PostSaveText("Failed to write file: ", filename_dest);
 				}
-				P = XMVector3Transform(P, M);
-				XMStoreFloat3(&vertices[i], P);
-			}
-
-			// Gather all indices for all subsets in LOD0:
-			wi::vector<uint32_t> indices;
-			uint32_t first_subset = 0;
-			uint32_t last_subset = 0;
-			mesh->GetLODSubsetRange(0, first_subset, last_subset);
-			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
-			{
-				const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
-				if (subset.indexCount == 0)
-					continue;
-				for (uint32_t i = 0; i < subset.indexCount; ++i)
-				{
-					indices.push_back(mesh->indices[subset.indexOffset + i]);
-				}
-			}
-
-			// Generate shadow indices for position-only stream:
-			wi::vector<uint32_t> shadow_indices(indices.size());
-			meshopt_generateShadowIndexBuffer(
-				shadow_indices.data(), indices.data(), indices.size(),
-				vertices.data(), vertices.size(), sizeof(XMFLOAT3), sizeof(XMFLOAT3)
-			);
-
-			// De-duplicate vertices based on shadow index buffer:
-			wi::vector<unsigned int> remap(shadow_indices.size());
-			const size_t vertex_count = meshopt_generateVertexRemap(
-				remap.data(),
-				shadow_indices.data(), shadow_indices.size(),
-				vertices.data(), vertices.size(), sizeof(XMFLOAT3)
-			);
-			wi::vector<XMFLOAT3> remapped_vertices(vertex_count);
-			wi::vector<uint32_t> remapped_indices(shadow_indices.size());
-			meshopt_remapIndexBuffer(remapped_indices.data(), shadow_indices.data(), shadow_indices.size(), remap.data());
-			meshopt_remapVertexBuffer(remapped_vertices.data(), vertices.data(), vertices.size() /*initial vertex count, not the one returned from meshopt_generateVertexRemap*/, sizeof(XMFLOAT3), remap.data());
-
-			// Optimizations:
-			meshopt_optimizeVertexCache(remapped_indices.data(), remapped_indices.data(), remapped_indices.size(), vertex_count);
-			meshopt_optimizeVertexFetch(remapped_vertices.data(), remapped_indices.data(), remapped_indices.size(), remapped_vertices.data(), vertex_count, sizeof(XMFLOAT3));
-
-			// Generate C++ header syntax:
-			std::string str;
-			str += "static const float3 vertices[" + std::to_string(remapped_vertices.size()) + "] = {\n";
-			for (auto& pos : remapped_vertices)
-			{
-				str += "\tfloat3(" + std::to_string(pos.x) + "f," + std::to_string(pos.y) + "f," + std::to_string(pos.z) + "f),\n";
-			}
-			str += "};\n";
-			str += "static const unsigned int indices[" + std::to_string(remapped_indices.size()) + "] = {\n";
-			for (size_t i = 0; i < remapped_indices.size(); i += 3)
-			{
-				str += "\t" + std::to_string(remapped_indices[i + 0]) + "," + std::to_string(remapped_indices[i + 1]) + "," + std::to_string(remapped_indices[i + 2]) + ",\n";
-			}
-			str += "};\n";
-
-			// Write to file:
-			filename = wi::helper::ForceExtension(filename, "h");
-			if (wi::helper::FileWrite(filename, (uint8_t*)str.c_str(), str.length()))
-			{
-				editor->PostSaveText("Mesh exported to header file: ", filename);
-			}
-			else
-			{
-				editor->PostSaveText("Failed to write file: ", filename);
-			}
+			});
 		});
 	});
 	AddWidget(&exportHeaderButton);
