@@ -552,6 +552,30 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			}
 		}
 
+		editor->componentsWnd.transformWnd.resetTranslationButton.SetColor(wi::Color::Error(), wi::gui::WIDGETSTATE::FOCUS);
+		for (auto& sprite : editor->componentsWnd.transformWnd.resetTranslationButton.sprites)
+		{
+			sprite.params.enableCornerRounding();
+			sprite.params.corners_rounding[1].radius = 10;
+			sprite.params.corners_rounding[3].radius = 10;
+		}
+
+		editor->componentsWnd.transformWnd.resetScaleButton.SetColor(wi::Color::Error(), wi::gui::WIDGETSTATE::FOCUS);
+		for (auto& sprite : editor->componentsWnd.transformWnd.resetScaleButton.sprites)
+		{
+			sprite.params.enableCornerRounding();
+			sprite.params.corners_rounding[1].radius = 10;
+			sprite.params.corners_rounding[3].radius = 10;
+		}
+
+		editor->componentsWnd.transformWnd.resetRotationButton.SetColor(wi::Color::Error(), wi::gui::WIDGETSTATE::FOCUS);
+		for (auto& sprite : editor->componentsWnd.transformWnd.resetRotationButton.sprites)
+		{
+			sprite.params.enableCornerRounding();
+			sprite.params.corners_rounding[1].radius = 10;
+			sprite.params.corners_rounding[3].radius = 10;
+		}
+
 		if ((Theme)args.userdata == Theme::Bright)
 		{
 			editor->inactiveEntityColor = theme_color_focus;

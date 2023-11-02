@@ -313,6 +313,48 @@ void TransformWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&snapTranslateInput);
 
+	resetTranslationButton.Create("ResetTranslation");
+	resetTranslationButton.SetText("X");
+	resetTranslationButton.SetTooltip("Reset translation");
+	resetTranslationButton.SetSize(XMFLOAT2(hei, hei));
+	resetTranslationButton.OnClick([=](wi::gui::EventArgs args) {
+		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
+		if (transform != nullptr)
+		{
+			transform->translation_local = XMFLOAT3(0, 0, 0);
+			transform->SetDirty();
+		}
+		});
+	AddWidget(&resetTranslationButton);
+
+	resetScaleButton.Create("ResetScale");
+	resetScaleButton.SetText("X");
+	resetScaleButton.SetTooltip("Reset scale");
+	resetScaleButton.SetSize(XMFLOAT2(hei, hei));
+	resetScaleButton.OnClick([=](wi::gui::EventArgs args) {
+		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
+		if (transform != nullptr)
+		{
+			transform->scale_local = XMFLOAT3(1, 1, 1);
+			transform->SetDirty();
+		}
+		});
+	AddWidget(&resetScaleButton);
+
+	resetRotationButton.Create("ResetRotation");
+	resetRotationButton.SetText("X");
+	resetRotationButton.SetTooltip("Reset rotation");
+	resetRotationButton.SetSize(XMFLOAT2(hei, hei));
+	resetRotationButton.OnClick([=](wi::gui::EventArgs args) {
+		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
+		if (transform != nullptr)
+		{
+			transform->rotation_local = XMFLOAT4(0, 0, 0, 1);
+			transform->SetDirty();
+		}
+		});
+	AddWidget(&resetRotationButton);
+
 
 	SetMinimized(true);
 	SetVisible(false);
@@ -395,7 +437,7 @@ void TransformWindow::ResizeLayout()
 
 	add_fullwidth(clearButton);
 
-	float safe_width = width - 100;
+	float safe_width = width - 100 - 20 - padding;
 	txInput.SetSize(XMFLOAT2(safe_width / 3.0f - padding, txInput.GetSize().y));
 	tyInput.SetSize(XMFLOAT2(safe_width / 3.0f - padding, txInput.GetSize().y));
 	tzInput.SetSize(XMFLOAT2(safe_width / 3.0f - padding, txInput.GetSize().y));
@@ -408,18 +450,22 @@ void TransformWindow::ResizeLayout()
 	pitchInput.SetSize(XMFLOAT2(safe_width / 3.0f - padding, txInput.GetSize().y));
 	yawInput.SetSize(XMFLOAT2(safe_width / 3.0f - padding, txInput.GetSize().y));
 
+	safe_width = width - 100;
 	rxInput.SetSize(XMFLOAT2(safe_width / 4.0f - padding, txInput.GetSize().y));
 	ryInput.SetSize(XMFLOAT2(safe_width / 4.0f - padding, txInput.GetSize().y));
 	rzInput.SetSize(XMFLOAT2(safe_width / 4.0f - padding, txInput.GetSize().y));
 	rwInput.SetSize(XMFLOAT2(safe_width / 4.0f - padding, txInput.GetSize().y));
 
-	add_right(tzInput);
+	add_right(resetTranslationButton);
+	tzInput.SetPos(XMFLOAT2(resetTranslationButton.GetPos().x - tzInput.GetSize().x - padding, resetTranslationButton.GetPos().y));
 	tyInput.SetPos(XMFLOAT2(tzInput.GetPos().x - tyInput.GetSize().x - padding, tzInput.GetPos().y));
 	txInput.SetPos(XMFLOAT2(tyInput.GetPos().x - txInput.GetSize().x - padding, tyInput.GetPos().y));
-	add_right(szInput);
+	add_right(resetScaleButton);
+	szInput.SetPos(XMFLOAT2(resetScaleButton.GetPos().x - szInput.GetSize().x - padding, resetScaleButton.GetPos().y));
 	syInput.SetPos(XMFLOAT2(szInput.GetPos().x - syInput.GetSize().x - padding, szInput.GetPos().y));
 	sxInput.SetPos(XMFLOAT2(syInput.GetPos().x - sxInput.GetSize().x - padding, syInput.GetPos().y));
-	add_right(yawInput);
+	add_right(resetRotationButton);
+	yawInput.SetPos(XMFLOAT2(resetRotationButton.GetPos().x - yawInput.GetSize().x - padding, resetRotationButton.GetPos().y));
 	pitchInput.SetPos(XMFLOAT2(yawInput.GetPos().x - pitchInput.GetSize().x - padding, yawInput.GetPos().y));
 	rollInput.SetPos(XMFLOAT2(pitchInput.GetPos().x - rollInput.GetSize().x - padding, pitchInput.GetPos().y));
 	add_right(rwInput);
