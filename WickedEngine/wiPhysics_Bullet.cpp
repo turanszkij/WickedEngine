@@ -1178,7 +1178,7 @@ namespace wi::physics
 			float scale = 1;
 			if (scene.transforms.Contains(humanoidEntity))
 			{
-				scale = scene.transforms.GetComponent(humanoidEntity)->GetScale().x;
+				scale = scene.transforms.GetComponent(humanoidEntity)->scale_local.x;
 			}
 			if (humanoid.ragdoll != nullptr)
 			{
