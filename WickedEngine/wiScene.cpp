@@ -2865,6 +2865,20 @@ namespace wi::scene
 		{
 			HumanoidComponent& humanoid = humanoids[i];
 
+			// The head is always taken as reference frame transform even for the eyes:
+			//	Note: taking eye reference frame transform for the eyes was causing issue with VRM 1.0 because eyes were rotated differently than head
+			const Entity headBone = humanoid.bones[size_t(HumanoidComponent::HumanoidBone::Head)];
+			if (headBone == INVALID_ENTITY)
+				continue;
+			const size_t headBoneIndex = transforms.GetIndex(headBone);
+			if (headBoneIndex == ~0ull)
+				continue;
+			const TransformComponent& head_transform = transforms_temp[headBoneIndex];
+
+			const XMVECTOR UP = XMVectorSet(0, 1, 0, 0);
+			const XMVECTOR SIDE = XMVectorSet(1, 0, 0, 0);
+			const XMVECTOR FORWARD = XMLoadFloat3(&humanoid.default_look_direction);
+
 			struct LookAtSource
 			{
 				HumanoidComponent::HumanoidBone type;
@@ -2877,10 +2891,15 @@ namespace wi::scene
 				{ HumanoidComponent::HumanoidBone::LeftEye, &humanoid.eye_rotation_max, &humanoid.eye_rotation_speed, &humanoid.lookAtDeltaRotationState_LeftEye },
 				{ HumanoidComponent::HumanoidBone::RightEye, &humanoid.eye_rotation_max, &humanoid.eye_rotation_speed, &humanoid.lookAtDeltaRotationState_RightEye },
 			};
+
 			for (auto& source : sources)
 			{
-				Entity bone = humanoid.bones[size_t(source.type)];
-				size_t boneIndex = transforms.GetIndex(bone);
+				const Entity bone = humanoid.bones[size_t(source.type)];
+				if (bone == INVALID_ENTITY)
+					continue;
+				const size_t boneIndex = transforms.GetIndex(bone);
+				if (boneIndex == ~0ull)
+					continue;
 
 				if (boneIndex < transforms_temp.size())
 				{
@@ -2898,20 +2917,51 @@ namespace wi::scene
 							transform.UpdateTransform_Parented(parent_transform);
 						}
 
-						XMVECTOR P = transform.GetPositionV();
-						XMMATRIX W = XMLoadFloat4x4(&transform.world);
-						XMMATRIX InverseW = XMMatrixInverse(nullptr, W);
-						XMVECTOR FORWARD = XMLoadFloat3(&humanoid.default_look_direction);
-						XMVECTOR UP = XMVectorSet(0, 1, 0, 0);
-						XMVECTOR SIDE = XMVectorSet(1, 0, 0, 0);
-						XMVECTOR TARGET = XMVector3TransformNormal(XMVector3Normalize(XMLoadFloat3(&humanoid.lookAt) - P), InverseW);
-						XMVECTOR TARGET_HORIZONTAL = XMVector3Normalize(XMVectorSetY(TARGET, 0));
-						XMVECTOR TARGET_VERTICAL = XMVector3Normalize(XMVectorSetX(TARGET, 0) + FORWARD);
+						const XMVECTOR P = transform.GetPositionV();
+						const XMMATRIX HeadW = XMLoadFloat4x4(&head_transform.world); // take it inside iteration loop!
+						const XMMATRIX HeadInverseW = XMMatrixInverse(nullptr, HeadW); // take it inside iteration loop!
+						const XMVECTOR TARGET = XMVector3Normalize(XMVector3TransformNormal(XMLoadFloat3(&humanoid.lookAt) - P, HeadInverseW));
+						const XMVECTOR TARGET_HORIZONTAL = XMVector3Normalize(XMVectorSetY(TARGET, 0));
+						const XMVECTOR TARGET_VERTICAL = XMVector3Normalize(XMVectorSetX(TARGET, 0) + FORWARD);
 
 						const float angle_horizontal = wi::math::GetAngle(FORWARD, TARGET_HORIZONTAL, UP, source.rotation_max->x);
 						const float angle_vertical = wi::math::GetAngle(FORWARD, TARGET_VERTICAL, SIDE, source.rotation_max->y);
 
 						Q = XMQuaternionNormalize(XMQuaternionRotationRollPitchYaw(angle_vertical, angle_horizontal, 0));
+
+#if 0
+						wi::renderer::RenderableLine line;
+						line.color_start = XMFLOAT4(0, 0, 1, 1);
+						line.color_end = XMFLOAT4(0, 1, 0, 1);
+						XMVECTOR E = P + FORWARD;
+						XMStoreFloat3(&line.start, P);
+						XMStoreFloat3(&line.end, E);
+						wi::renderer::DrawLine(line);
+
+						line.color_end = XMFLOAT4(1, 0, 0, 1);
+						E = P + TARGET;
+						XMStoreFloat3(&line.end, E);
+						wi::renderer::DrawLine(line);
+
+						line.color_start = line.color_end = XMFLOAT4(1, 0, 1, 1);
+						E = P + UP;
+						XMStoreFloat3(&line.end, E);
+						wi::renderer::DrawLine(line);
+
+						line.color_start = line.color_end = XMFLOAT4(1, 1, 0, 1);
+						E = P + SIDE;
+						XMStoreFloat3(&line.end, E);
+						wi::renderer::DrawLine(line);
+
+						std::string text = "angle_horizontal = " + std::to_string(angle_horizontal);
+						text += "\nangle_vertical = " + std::to_string(angle_vertical);
+						wi::renderer::DebugTextParams textparams;
+						textparams.flags |= wi::renderer::DebugTextParams::CAMERA_FACING;
+						textparams.flags |= wi::renderer::DebugTextParams::CAMERA_SCALING;
+						textparams.position = humanoid.lookAt;
+						textparams.scaling = 0.8f;
+						wi::renderer::DrawDebugText(text.c_str(), textparams);
+#endif
 					}
 
 					Q = XMQuaternionSlerp(XMLoadFloat4(source.lookAtDeltaRotationState), Q, *source.rotation_speed);
@@ -2924,39 +2974,6 @@ namespace wi::scene
 					W = XMMatrixRotationQuaternion(Q) * W;
 					XMStoreFloat4x4(&transform.world, W); // world space to have immediate feedback from parent to child (head -> eyes)
 
-#if 0
-					wi::renderer::RenderableLine line;
-					line.color_start = XMFLOAT4(0, 0, 1, 1);
-					line.color_end = XMFLOAT4(0, 1, 0, 1);
-					XMVECTOR E = P + FORWARD;
-					XMStoreFloat3(&line.start, P);
-					XMStoreFloat3(&line.end, E);
-					wi::renderer::DrawLine(line);
-
-					line.color_end = XMFLOAT4(1, 0, 0, 1);
-					E = P + TARGET;
-					XMStoreFloat3(&line.end, E);
-					wi::renderer::DrawLine(line);
-
-					line.color_start = line.color_end = XMFLOAT4(1, 0, 1, 1);
-					E = P + UP;
-					XMStoreFloat3(&line.end, E);
-					wi::renderer::DrawLine(line);
-
-					line.color_start = line.color_end = XMFLOAT4(1, 1, 0, 1);
-					E = P + SIDE;
-					XMStoreFloat3(&line.end, E);
-					wi::renderer::DrawLine(line);
-
-					std::string text = "angle_horizontal = " + std::to_string(angle_horizontal);
-					text += "\nangle_vertical = " + std::to_string(angle_vertical);
-					wi::renderer::DebugTextParams textparams;
-					textparams.flags |= wi::renderer::DebugTextParams::CAMERA_FACING;
-					textparams.flags |= wi::renderer::DebugTextParams::CAMERA_SCALING;
-					textparams.position = humanoid.lookAt;
-					textparams.scaling = 0.8f;
-					wi::renderer::DrawDebugText(text.c_str(), textparams);
-#endif
 				}
 			}
 		}
