@@ -5,8 +5,11 @@
 #include "wiSpinLock.h"
 #include "wiTimer.h"
 #include "wiUnorderedMap.h"
-#include "logo.h"
 #include "wiNoise.h"
+
+// embedded image datas:
+#include "logo.h"
+#include "waterripple.h"
 
 using namespace wi::graphics;
 
@@ -25,6 +28,7 @@ namespace wi::texturehelper
 		HELPERTEXTURE_BLACKCUBEMAP,
 		HELPERTEXTURE_UINT4,
 		HELPERTEXTURE_BLUENOISE,
+		HELPERTEXTURE_WATERRIPPLE,
 		HELPERTEXTURE_COUNT
 	};
 	wi::graphics::Texture helperTextures[HELPERTEXTURE_COUNT];
@@ -158,6 +162,32 @@ namespace wi::texturehelper
 			device->SetName(&helperTextures[HELPERTEXTURE_BLUENOISE], "HELPERTEXTURE_BLUENOISE");
 		}
 
+		// Water ripple:
+		{
+			TextureDesc desc;
+			desc.width = 64;
+			desc.height = 64;
+			desc.mip_levels = 7;
+			desc.format = Format::BC5_UNORM;
+			desc.swizzle = { ComponentSwizzle::R,ComponentSwizzle::G,ComponentSwizzle::ONE,ComponentSwizzle::ONE };
+			desc.bind_flags = BindFlag::SHADER_RESOURCE;
+
+			const uint32_t data_stride = GetFormatStride(desc.format);
+			const uint32_t block_size = GetFormatBlockSize(desc.format);
+			const uint8_t* src = waterriple;
+			wi::vector<SubresourceData> initdata(desc.mip_levels);
+			for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
+			{
+				const uint32_t num_blocks_x = std::max(1u, desc.width >> mip) / block_size;
+				const uint32_t num_blocks_y = std::max(1u, desc.height >> mip) / block_size;
+				initdata[mip].data_ptr = src;
+				initdata[mip].row_pitch = num_blocks_x * data_stride;
+				src += num_blocks_x * num_blocks_y * data_stride;
+			}
+			device->CreateTexture(&desc, initdata.data(), &helperTextures[HELPERTEXTURE_WATERRIPPLE]);
+			device->SetName(&helperTextures[HELPERTEXTURE_WATERRIPPLE], "HELPERTEXTURE_WATERRIPPLE");
+		}
+
 		wi::backlog::post("wi::texturehelper Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
@@ -188,6 +218,10 @@ namespace wi::texturehelper
 	const Texture* getBlueNoise()
 	{
 		return &helperTextures[HELPERTEXTURE_BLUENOISE];
+	}
+	const Texture* getWaterRipple()
+	{
+		return &helperTextures[HELPERTEXTURE_WATERRIPPLE];
 	}
 	const Texture* getWhite()
 	{

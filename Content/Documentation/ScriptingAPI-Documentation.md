@@ -147,7 +147,8 @@ You can use the Renderer with the following functions, all of which are in the g
 	[outer]DEBUG_TEXT_DEPTH_TEST		-- text can be occluded by geometry
 	[outer]DEBUG_TEXT_CAMERA_FACING		-- text will be rotated to face the camera
 	[outer]DEBUG_TEXT_CAMERA_SCALING	-- text will be always the same size, independent of distance to camera
-- PutWaterRipple(String imagename, Vector position)
+- PutWaterRipple(Vector position) -- put down a water ripple with default embedded asset
+- PutWaterRipple(string imagename, Vector position) -- put down water ripple texture from image asset file
 - ClearWorld(opt Scene scene) -- Clears the scene and the associated renderer resources. If parmaeter is not specified, it will clear the global scene
 - ReloadShaders()
 

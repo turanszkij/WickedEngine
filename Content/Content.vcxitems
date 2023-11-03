@@ -518,7 +518,6 @@
     <Image Include="$(MSBuildThisFileDirectory)models\flare6.jpg" />
     <Image Include="$(MSBuildThisFileDirectory)models\grassbb.png" />
     <Image Include="$(MSBuildThisFileDirectory)models\orb.dds" />
-    <Image Include="$(MSBuildThisFileDirectory)models\ripple.png" />
     <Image Include="$(MSBuildThisFileDirectory)models\sky.dds" />
     <Image Include="$(MSBuildThisFileDirectory)models\smoke0.png" />
     <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\background.png" />
@@ -601,7 +600,6 @@
     <Image Include="$(MSBuildThisFileDirectory)models\waterNormalMap.jpg" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\footprint.dds" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\grassparticle.png" />
-    <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\ripple.png" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\waterNormalMap.jpg" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\baseColor.png" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\fire.jpg" />

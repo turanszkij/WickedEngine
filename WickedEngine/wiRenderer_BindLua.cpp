@@ -361,15 +361,26 @@ namespace wi::lua::renderer
 			Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 2);
 			if (v)
 			{
-				XMFLOAT3 pos;
-				XMStoreFloat3(&pos, XMLoadFloat4(&v->data));
-				GetGlobalScene()->PutWaterRipple(name, pos);
+				GetGlobalScene()->PutWaterRipple(name, v->GetFloat3());
 			}
 			else
-				wi::lua::SError(L, "PutWaterRipple(String imagename, Vector position) argument is not a Vector!");
+				wi::lua::SError(L, "PutWaterRipple(string imagename, Vector position) argument is not a Vector!");
+		}
+		else if (argc > 0)
+		{
+			Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (v)
+			{
+				GetGlobalScene()->PutWaterRipple(v->GetFloat3());
+			}
+			else
+				wi::lua::SError(L, "PutWaterRipple(Vector position) argument is not a Vector!");
 		}
 		else
-			wi::lua::SError(L, "PutWaterRipple(String imagename, Vector position) not enough arguments!");
+		{
+			wi::lua::SError(L, "PutWaterRipple(Vector position) not enough arguments!");
+			wi::lua::SError(L, "PutWaterRipple(string imagename, Vector position) not enough arguments!");
+		}
 		return 0;
 	}
 

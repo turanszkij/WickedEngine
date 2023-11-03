@@ -527,9 +527,6 @@
     <Image Include="$(MSBuildThisFileDirectory)models\waterNormalMap.jpg">
       <Filter>models</Filter>
     </Image>
-    <Image Include="$(MSBuildThisFileDirectory)models\ripple.png">
-      <Filter>models</Filter>
-    </Image>
     <Image Include="$(MSBuildThisFileDirectory)models\colorgradinglut_default.png">
       <Filter>models</Filter>
     </Image>
@@ -564,9 +561,6 @@
       <Filter>scripts\fighting_game\assets</Filter>
     </Image>
     <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\grassparticle.png">
-      <Filter>scripts\character_controller\assets</Filter>
-    </Image>
-    <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\ripple.png">
       <Filter>scripts\character_controller\assets</Filter>
     </Image>
     <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\waterNormalMap.jpg">

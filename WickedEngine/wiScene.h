@@ -264,6 +264,7 @@ namespace wi::scene
 
 		// Simple water ripple sprites:
 		mutable wi::vector<wi::Sprite> waterRipples;
+		void PutWaterRipple(const XMFLOAT3& pos);
 		void PutWaterRipple(const std::string& image, const XMFLOAT3& pos);
 
 		// Animation processing optimizer:

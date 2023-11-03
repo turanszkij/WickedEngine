@@ -784,7 +784,7 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 			if self.velocity.Length() > 0.01 and self.state ~= States.SWIM_IDLE then
 				local w,wp = scene.Intersects(capsule, FILTER_WATER)
 				if w ~= INVALID_ENTITY then
-					PutWaterRipple(script_dir() .. "assets/ripple.png", wp)
+					PutWaterRipple(wp)
 				end
 			end
 

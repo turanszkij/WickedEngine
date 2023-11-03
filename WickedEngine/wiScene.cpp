@@ -5605,8 +5605,24 @@ namespace wi::scene
 		img.params.enableExtractNormalMap();
 		img.params.blendFlag = BLENDMODE_ADDITIVE;
 		img.anim.fad = 0.01f;
-		img.anim.scaleX = 0.2f;
-		img.anim.scaleY = 0.2f;
+		img.anim.scaleX = 0.1f;
+		img.anim.scaleY = 0.1f;
+		img.params.pos = pos;
+		img.params.rotation = (wi::random::GetRandom(0, 1000) * 0.001f) * 2 * 3.1415f;
+		img.params.siz = XMFLOAT2(1, 1);
+		img.params.quality = wi::image::QUALITY_ANISOTROPIC;
+		img.params.pivot = XMFLOAT2(0.5f, 0.5f);
+		waterRipples.push_back(img);
+	}
+	void Scene::PutWaterRipple(const XMFLOAT3& pos)
+	{
+		wi::Sprite img;
+		img.textureResource.SetTexture(*wi::texturehelper::getWaterRipple());
+		img.params.enableExtractNormalMap();
+		img.params.blendFlag = BLENDMODE_ADDITIVE;
+		img.anim.fad = 0.01f;
+		img.anim.scaleX = 0.1f;
+		img.anim.scaleY = 0.1f;
 		img.params.pos = pos;
 		img.params.rotation = (wi::random::GetRandom(0, 1000) * 0.001f) * 2 * 3.1415f;
 		img.params.siz = XMFLOAT2(1, 1);
