@@ -23,6 +23,8 @@ namespace wi::lua
 		int IsDebugDrawEnabled(lua_State* L);
 		int SetAccuracy(lua_State* L);
 		int GetAccuracy(lua_State* L);
+		int SetFrameRate(lua_State* L);
+		int GetFrameRate(lua_State* L);
 
 		int SetLinearVelocity(lua_State* L);
 		int SetAngularVelocity(lua_State* L);

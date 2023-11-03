@@ -15,6 +15,8 @@ namespace wi::lua
 		lunamethod(Physics_BindLua, IsDebugDrawEnabled),
 		lunamethod(Physics_BindLua, SetAccuracy),
 		lunamethod(Physics_BindLua, GetAccuracy),
+		lunamethod(Physics_BindLua, SetFrameRate),
+		lunamethod(Physics_BindLua, GetFrameRate),
 		lunamethod(Physics_BindLua, SetLinearVelocity),
 		lunamethod(Physics_BindLua, SetAngularVelocity),
 		lunamethod(Physics_BindLua, ApplyForceAt),
@@ -96,6 +98,22 @@ namespace wi::lua
 	int Physics_BindLua::GetAccuracy(lua_State* L)
 	{
 		wi::lua::SSetInt(L, wi::physics::GetAccuracy());
+		return 1;
+	}
+	int Physics_BindLua::SetFrameRate(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::physics::SetFrameRate(wi::lua::SGetFloat(L, 1));
+		}
+		else
+			wi::lua::SError(L, "SetFrameRate(float value) not enough arguments!");
+		return 0;
+	}
+	int Physics_BindLua::GetFrameRate(lua_State* L)
+	{
+		wi::lua::SSetFloat(L, wi::physics::GetFrameRate());
 		return 1;
 	}
 

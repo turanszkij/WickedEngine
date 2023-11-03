@@ -30,6 +30,10 @@ namespace wi::physics
 	void SetAccuracy(int value);
 	int GetAccuracy();
 
+	// Set frames per second value of physics simulation (default = 120 FPS)
+	void SetFrameRate(float value);
+	float GetFrameRate();
+
 	// Update the physics state, run simulation, etc.
 	void RunPhysicsUpdateSystem(
 		wi::jobsystem::context& ctx,

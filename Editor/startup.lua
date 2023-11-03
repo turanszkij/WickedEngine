@@ -1,5 +1,6 @@
 SetProfilerEnabled(false)
-physics.SetAccuracy(1)
+physics.SetFrameRate(120)
+physics.SetAccuracy(2)
 
 -- You can set custom scaling for 2D screen elements here (GUI, sprites, fonts):
 --local canvas = application.GetCanvas()

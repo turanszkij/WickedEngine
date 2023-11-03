@@ -1687,6 +1687,8 @@ Playstation button codes:
 - IsDebugDrawEnabled() : bool
 - SetAccuracy(int value)	-- Set the accuracy of the simulation. This value corresponds to maximum simulation step count. Higher values will be slower but more accurate.
 - GetAccuracy() : int
+- SetFrameRate(float value)	-- Set the frames per second resolution of physics simulation (default = 120 FPS)
+- GetFrameRate() : float
 - SetLinearVelocity(RigidBodyPhysicsComponent component, Vector velocity)	-- Set the linear velocity manually
 - SetAngularVelocity(RigidBodyPhysicsComponent component, Vector velocity)	-- Set the angular velocity manually
 - ApplyForce(RigidBodyPhysicsComponent component, Vector force)	-- Apply force at body center

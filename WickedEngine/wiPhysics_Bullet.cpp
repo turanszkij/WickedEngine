@@ -27,6 +27,7 @@ namespace wi::physics
 		bool DEBUGDRAW_ENABLED = false;
 		int ACCURACY = 2;
 		int softbodyIterationCount = 5;
+		float TIMESTEP = 1.0f / 120.0f;
 		std::mutex physicsLock;
 
 		class DebugDraw final : public btIDebugDraw
@@ -190,6 +191,9 @@ namespace wi::physics
 
 	int GetAccuracy() { return ACCURACY; }
 	void SetAccuracy(int value) { ACCURACY = value; }
+
+	float GetFrameRate() { return 1.0f / TIMESTEP; }
+	void SetFrameRate(float value) { TIMESTEP = 1.0f / value; }
 
 	void AddRigidBody(
 		wi::scene::Scene& scene,
@@ -1336,7 +1340,7 @@ namespace wi::physics
 		// Perform internal simulation step:
 		if (IsSimulationEnabled())
 		{
-			dynamicsWorld.stepSimulation(dt, ACCURACY, 1.0f / 120.0f);
+			dynamicsWorld.stepSimulation(dt, ACCURACY, TIMESTEP);
 		}
 
 		// Feedback physics engine state to system:
