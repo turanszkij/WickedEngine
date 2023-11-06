@@ -914,8 +914,8 @@ struct FrameCB
 
 	float		cloudShadowFarPlaneKm;
 	int			texture_volumetricclouds_shadow_index;
+	float		gi_boost;
 	int			padding0;
-	int			padding1;
 
 	uint		lightarray_offset;			// indexing into entity array
 	uint		lightarray_count;			// indexing into entity array
@@ -939,8 +939,8 @@ struct FrameCB
 
 	int			texture_cameravolumelut_index;
 	int			texture_wind_index;
+	int			texture_wind_prev_index;
 	int			buffer_entity_index;
-	float		gi_boost;
 
 	float4		rain_blocker_mad;
 	float4x4	rain_blocker_matrix;

@@ -1,13 +1,10 @@
 #include "globals.hlsli"
 
 RWTexture3D<float> output : register(u0);
+RWTexture3D<float> output_prev : register(u1);
 
-[numthreads(8, 8, 8)]
-void main(uint3 DTid : SV_DispatchThreadID)
+float compute_wind(float3 position, float time)
 {
-	float3 position = (float3)DTid;
-
-	const float time = GetTime();
 	position += time;
 	const ShaderWind wind = GetWeather().wind;
 
@@ -23,5 +20,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float direction_amount = dot(position.xyz, wind.direction);
 	float waveoffset = mad(direction_amount, wind.wavesize, randomness_amount);
 
-	output[DTid] = sin(mad(time, wind.speed, waveoffset));
+	return sin(mad(time, wind.speed, waveoffset));
+}
+
+[numthreads(8, 8, 8)]
+void main(uint3 DTid : SV_DispatchThreadID)
+{
+	float3 position = (float3)DTid;
+
+	output[DTid] = compute_wind(position, GetTime());
+	output_prev[DTid] = compute_wind(position, GetTimePrev());
 }

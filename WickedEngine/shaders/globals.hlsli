@@ -353,6 +353,7 @@ struct PrimitiveID
 #define texture_skyluminancelut bindless_textures[GetFrame().texture_skyluminancelut_index]
 #define texture_cameravolumelut bindless_textures3D[GetFrame().texture_cameravolumelut_index]
 #define texture_wind bindless_textures3D[GetFrame().texture_wind_index]
+#define texture_wind_prev bindless_textures3D[GetFrame().texture_wind_prev_index]
 #define scene_acceleration_structure bindless_accelerationstructures[GetScene().TLAS]
 
 #define texture_depth bindless_textures_float[GetCamera().texture_depth_index]
@@ -441,6 +442,7 @@ inline float3 GetZenithColor() { return GetWeather().zenith.rgb; }
 inline float3 GetAmbientColor() { return GetWeather().ambient.rgb; }
 inline uint2 GetInternalResolution() { return GetCamera().internal_resolution; }
 inline float GetTime() { return GetFrame().time; }
+inline float GetTimePrev() { return GetFrame().time_previous; }
 inline uint2 GetTemporalAASampleRotation() { return uint2((GetFrame().temporalaa_samplerotation >> 0u) & 0x000000FF, (GetFrame().temporalaa_samplerotation >> 8) & 0x000000FF); }
 inline bool IsStaticSky() { return GetScene().globalenvmap >= 0; }
 
@@ -1437,12 +1439,24 @@ RayCone pixel_ray_cone_from_image_height(float image_height)
 }
 
 
-float3 compute_wind(float3 position, float weight)
+float3 sample_wind(float3 position, float weight)
 {
 	[branch]
 	if (weight > 0)
 	{
 		return texture_wind.SampleLevel(sampler_linear_mirror, position, 0).r * GetWeather().wind.direction * weight;
+	}
+	else
+	{
+		return 0;
+	}
+}
+float3 sample_wind_prev(float3 position, float weight)
+{
+	[branch]
+	if (weight > 0)
+	{
+		return texture_wind_prev.SampleLevel(sampler_linear_mirror, position, 0).r * GetWeather().wind.direction * weight;
 	}
 	else
 	{

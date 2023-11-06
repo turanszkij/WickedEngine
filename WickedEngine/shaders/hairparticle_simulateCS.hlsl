@@ -265,7 +265,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			patchPos = mul(patchPos, TBN);
 
 			// simplistic wind effect only affects the top, but leaves the base as is:
-			const float3 wind = compute_wind(rootposition, segmentID + patchPos.y);
+			const float3 wind = sample_wind(rootposition, segmentID + patchPos.y);
 
 			float3 position = rootposition + patchPos + wind;
 			if (distance_culled)

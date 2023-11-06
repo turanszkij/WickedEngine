@@ -223,7 +223,7 @@ struct VertexSurface
 		[branch]
 		if (material.IsUsingWind())
 		{
-			position.xyz += compute_wind(position.xyz, ((normal_wind >> 24u) & 0xFF) / 255.0);
+			position.xyz += sample_wind(position.xyz, ((normal_wind >> 24u) & 0xFF) / 255.0);
 		}
 #endif // DISABLE_WIND
 	}

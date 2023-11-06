@@ -872,8 +872,29 @@ struct Surface
 			pre1 = data1.xyz;
 			pre2 = data2.xyz;
 		}
+
+#ifdef SURFACE_LOAD_ENABLE_WIND
+		// Need interpolated wind transform:
+		pre0 = mul(inst.transformPrev.GetMatrix(), float4(pre0, 1)).xyz;
+		pre1 = mul(inst.transformPrev.GetMatrix(), float4(pre1, 1)).xyz;
+		pre2 = mul(inst.transformPrev.GetMatrix(), float4(pre2, 1)).xyz;
+		
+		[branch]
+		if (material.IsUsingWind())
+		{
+			float wind0 = ((asuint(data0.w) >> 24u) & 0xFF) / 255.0;
+			float wind1 = ((asuint(data1.w) >> 24u) & 0xFF) / 255.0;
+			float wind2 = ((asuint(data2.w) >> 24u) & 0xFF) / 255.0;
+			pre0 += sample_wind_prev(pre0, wind0);
+			pre1 += sample_wind_prev(pre1, wind1);
+			pre2 += sample_wind_prev(pre2, wind2);
+		}
+		pre = attribute_at_bary(pre0, pre1, pre2, bary);
+#else
+		// Simplified matrix transform is allowed without wind:
 		pre = attribute_at_bary(pre0, pre1, pre2, bary);
 		pre = mul(inst.transformPrev.GetMatrix(), float4(pre, 1)).xyz;
+#endif // SURFACE_LOAD_ENABLE_WIND
 
 		update();
 	}
@@ -941,11 +962,9 @@ struct Surface
 			float wind0 = ((asuint(data0.w) >> 24u) & 0xFF) / 255.0;
 			float wind1 = ((asuint(data1.w) >> 24u) & 0xFF) / 255.0;
 			float wind2 = ((asuint(data2.w) >> 24u) & 0xFF) / 255.0;
-
-			// this is hella slow to do per pixel:
-			P0 += compute_wind(P0, wind0);
-			P1 += compute_wind(P1, wind1);
-			P2 += compute_wind(P2, wind2);
+			P0 += sample_wind(P0, wind0);
+			P1 += sample_wind(P1, wind1);
+			P2 += sample_wind(P2, wind2);
 		}
 #endif // SURFACE_LOAD_ENABLE_WIND
 
@@ -989,9 +1008,9 @@ struct Surface
 			float wind2 = ((asuint(data2.w) >> 24u) & 0xFF) / 255.0;
 
 			// this is hella slow to do per pixel:
-			P0 += compute_wind(P0, wind0);
-			P1 += compute_wind(P1, wind1);
-			P2 += compute_wind(P2, wind2);
+			P0 += sample_wind(P0, wind0);
+			P1 += sample_wind(P1, wind1);
+			P2 += sample_wind(P2, wind2);
 		}
 #endif // SURFACE_LOAD_ENABLE_WIND
 
