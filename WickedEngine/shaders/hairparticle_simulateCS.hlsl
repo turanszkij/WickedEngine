@@ -18,6 +18,7 @@ RWBuffer<float4> vertexBuffer_POS : register(u1);
 RWBuffer<float4> vertexBuffer_UVS : register(u2);
 RWBuffer<uint> culledIndexBuffer : register(u3);
 RWStructuredBuffer<IndirectDrawArgsIndexedInstanced> indirectBuffer : register(u4);
+RWStructuredBuffer<float3> vertexBuffer_POS_RT : register(u5);
 
 [numthreads(THREADCOUNT_SIMULATEHAIR, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
@@ -268,13 +269,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			const float3 wind = sample_wind(rootposition, segmentID + patchPos.y);
 
 			float3 position = rootposition + patchPos + wind;
-			if (distance_culled)
-			{
-				position = 0;
-			}
 			
 			vertexBuffer_POS[v0 + vertexID] = float4(position, asfloat(pack_unitvector(normalize(normal + wind))));
 			vertexBuffer_UVS[v0 + vertexID] = uv.xyxy; // a second uv set could be used here
+			
+			if (distance_culled)
+			{
+				position = 0; // We can only zero out for raytracing geometry to keep correct prevpos swapping motion vectors!
+			}
+			vertexBuffer_POS_RT[v0 + vertexID] = position;
 		}
 
 		// Frustum culling:

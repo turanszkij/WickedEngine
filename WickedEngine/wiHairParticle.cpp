@@ -105,6 +105,7 @@ namespace wi
 			vb_uvs.size = sizeof(MeshComponent::Vertex_UVS) * 4 * particleCount;
 			ib_culled.size = GetFormatStride(ib_format) * 6 * particleCount;
 			indirect_view.size = sizeof(IndirectDrawArgsIndexedInstanced);
+			vb_pos_raytracing.size = sizeof(float3) * 4 * particleCount;
 
 			bd.size =
 				AlignTo(AlignTo(indirect_view.size, alignment), sizeof(IndirectDrawArgsIndexedInstanced)) + // additional structured buffer alignment
@@ -112,7 +113,8 @@ namespace wi
 				AlignTo(vb_pos[0].size, alignment) +
 				AlignTo(vb_pos[1].size, alignment) +
 				AlignTo(vb_uvs.size, alignment) +
-				AlignTo(ib_culled.size, alignment)
+				AlignTo(ib_culled.size, alignment) +
+				AlignTo(AlignTo(vb_pos_raytracing.size, alignment), sizeof(float3))
 			;
 			device->CreateBuffer(&bd, nullptr, &generalBuffer);
 			device->SetName(&generalBuffer, "HairParticleSystem::generalBuffer");
@@ -171,6 +173,14 @@ namespace wi
 			ib_culled.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, ib_culled.subresource_srv);
 			ib_culled.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, ib_culled.subresource_uav);
 			buffer_offset += ib_culled.size;
+
+			constexpr uint32_t vb_pos_raytracing_stride = sizeof(float3);
+			buffer_offset = AlignTo(buffer_offset, alignment);
+			buffer_offset = AlignTo(buffer_offset, sizeof(float3));
+			vb_pos_raytracing.offset = buffer_offset;
+			vb_pos_raytracing.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos_raytracing.offset, vb_pos_raytracing.size, nullptr, &vb_pos_raytracing_stride);
+			vb_pos_raytracing.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_pos_raytracing.subresource_uav);
+			buffer_offset += vb_pos_raytracing.size;
 
 			primitiveBuffer = wi::renderer::GetIndexBufferForQuads(particleCount);
 		}
@@ -232,10 +242,10 @@ namespace wi
 			geometry.triangles.index_format = GetIndexBufferFormat(primitiveBuffer.desc.format);
 			geometry.triangles.index_count = GetParticleCount() * 6;
 			geometry.triangles.index_offset = 0;
-			geometry.triangles.vertex_count = (uint32_t)(vb_pos[0].size / sizeof(MeshComponent::Vertex_POS));
+			geometry.triangles.vertex_count = (uint32_t)(vb_pos_raytracing.size / sizeof(float3));
 			geometry.triangles.vertex_format = Format::R32G32B32_FLOAT;
-			geometry.triangles.vertex_stride = sizeof(MeshComponent::Vertex_POS);
-			geometry.triangles.vertex_byte_offset = vb_pos[0].offset;
+			geometry.triangles.vertex_stride = sizeof(float3);
+			geometry.triangles.vertex_byte_offset = vb_pos_raytracing.offset;
 
 			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
 			assert(success);
@@ -272,11 +282,6 @@ namespace wi
 		}
 
 		std::swap(vb_pos[0], vb_pos[1]);
-
-		if (BLAS.IsValid() && !BLAS.desc.bottom_level.geometries.empty())
-		{
-			BLAS.desc.bottom_level.geometries.back().triangles.vertex_byte_offset = vb_pos[0].offset;
-		}
 	}
 	void HairParticleSystem::UpdateGPU(
 		const UpdateGPUItem* items,
@@ -371,6 +376,7 @@ namespace wi
 			device->BindUAV(&hair.generalBuffer, 2, cmd, hair.vb_uvs.subresource_uav);
 			device->BindUAV(&hair.generalBuffer, 3, cmd, hair.ib_culled.subresource_uav);
 			device->BindUAV(&hair.generalBuffer, 4, cmd, hair.indirect_view.subresource_uav);
+			device->BindUAV(&hair.generalBuffer, 5, cmd, hair.vb_pos_raytracing.subresource_uav);
 
 			if (hair.indexBuffer.IsValid())
 			{

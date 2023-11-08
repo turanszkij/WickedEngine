@@ -257,6 +257,7 @@ You can specify command line arguments (without any prefix) to switch between re
 ### Other software using Wicked Engine
 - <a href="https://www.game-guru.com/max">Game Guru MAX</a>: Easy to use game creator software
 - <a href="https://www.youtube.com/watch?v=0SxXmnSQ6Q4">Flytrap</a>: Demoscene production by qop
+- <a href="https://youtu.be/mbmNU5QVM8A?si=9sDMS1LrMsz03f5r">doddering</a>: Demoscene production by qop
 - Your project: add your project to this readme and open a pull request
 
 <br/>
