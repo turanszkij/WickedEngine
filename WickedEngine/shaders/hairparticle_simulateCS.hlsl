@@ -18,7 +18,7 @@ RWBuffer<float4> vertexBuffer_POS : register(u1);
 RWBuffer<float4> vertexBuffer_UVS : register(u2);
 RWBuffer<uint> culledIndexBuffer : register(u3);
 RWStructuredBuffer<IndirectDrawArgsIndexedInstanced> indirectBuffer : register(u4);
-RWStructuredBuffer<float3> vertexBuffer_POS_RT : register(u5);
+RWByteAddressBuffer vertexBuffer_POS_RT : register(u5);
 
 [numthreads(THREADCOUNT_SIMULATEHAIR, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
@@ -277,7 +277,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			{
 				position = 0; // We can only zero out for raytracing geometry to keep correct prevpos swapping motion vectors!
 			}
-			vertexBuffer_POS_RT[v0 + vertexID] = position;
+			vertexBuffer_POS_RT.Store<float3>((v0 + vertexID) * sizeof(float3), position);
 		}
 
 		// Frustum culling:

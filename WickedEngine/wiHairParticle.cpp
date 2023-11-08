@@ -114,7 +114,7 @@ namespace wi
 				AlignTo(vb_pos[1].size, alignment) +
 				AlignTo(vb_uvs.size, alignment) +
 				AlignTo(ib_culled.size, alignment) +
-				AlignTo(AlignTo(vb_pos_raytracing.size, alignment), sizeof(float3))
+				AlignTo(vb_pos_raytracing.size, alignment)
 			;
 			device->CreateBuffer(&bd, nullptr, &generalBuffer);
 			device->SetName(&generalBuffer, "HairParticleSystem::generalBuffer");
@@ -174,11 +174,9 @@ namespace wi
 			ib_culled.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, ib_culled.subresource_uav);
 			buffer_offset += ib_culled.size;
 
-			constexpr uint32_t vb_pos_raytracing_stride = sizeof(float3);
 			buffer_offset = AlignTo(buffer_offset, alignment);
-			buffer_offset = AlignTo(buffer_offset, sizeof(float3));
 			vb_pos_raytracing.offset = buffer_offset;
-			vb_pos_raytracing.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos_raytracing.offset, vb_pos_raytracing.size, nullptr, &vb_pos_raytracing_stride);
+			vb_pos_raytracing.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos_raytracing.offset, vb_pos_raytracing.size);
 			vb_pos_raytracing.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_pos_raytracing.subresource_uav);
 			buffer_offset += vb_pos_raytracing.size;
 
