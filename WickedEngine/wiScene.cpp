@@ -2567,7 +2567,7 @@ namespace wi::scene
 				}
 				if (!talking_active)
 				{
-					expression_mastering._flags ^= ExpressionComponent::TALKING_ENDED;
+					expression_mastering._flags &= ~ExpressionComponent::TALKING_ENDED;
 				}
 			}
 
@@ -3965,11 +3965,11 @@ namespace wi::scene
 					}
 					if (!object.IsCastingShadow())
 					{
-						instance.instance_mask ^= wi::renderer::raytracing_inclusion_mask_shadow;
+						instance.instance_mask &= ~wi::renderer::raytracing_inclusion_mask_shadow;
 					}
 					if (object.IsNotVisibleInReflections())
 					{
-						instance.instance_mask ^= wi::renderer::raytracing_inclusion_mask_reflection;
+						instance.instance_mask &= ~wi::renderer::raytracing_inclusion_mask_reflection;
 					}
 					instance.bottom_level = &mesh.BLASes[object.lod];
 					instance.instance_contribution_to_hit_group_index = 0;
