@@ -121,11 +121,23 @@ inline bool furthest_cascade_volumetrics(inout ShaderEntity light, inout uint fu
 	return false;
 }
 
+static const float rain_blocker_head_size = 1;
+static const float rain_blocker_head_size_sq = rain_blocker_head_size * rain_blocker_head_size;
+
 // Checks whether position is below or above rain blocker
 //	true: below
 //	false: above
 inline bool rain_blocker_check(in float3 P)
 {
+	// Before checking blocker shadow map, check "head" blocker:
+	if(P.y < GetCamera().position.y + rain_blocker_head_size)
+	{
+		float2 diff = GetCamera().position.xz - P.xz;
+		float distsq = dot(diff, diff);
+		if(distsq < rain_blocker_head_size_sq)
+			return true;
+	}
+
 	[branch]
 	if (GetFrame().texture_shadowatlas_index < 0 || !any(GetFrame().rain_blocker_mad))
 		return false;
@@ -150,6 +162,15 @@ inline bool rain_blocker_check(in float3 P)
 // Same as above but using previous frame's values
 inline bool rain_blocker_check_prev(in float3 P)
 {
+	// Before checking blocker shadow map, check "head" blocker:
+	if(P.y < GetCamera().position.y + rain_blocker_head_size)
+	{
+		float2 diff = GetCamera().position.xz - P.xz;
+		float distsq = dot(diff, diff);
+		if(distsq < rain_blocker_head_size_sq)
+			return true;
+	}
+		
 	[branch]
 	if (GetFrame().texture_shadowatlas_index < 0 || !any(GetFrame().rain_blocker_mad_prev))
 		return false;
