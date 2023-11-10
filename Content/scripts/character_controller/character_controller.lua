@@ -335,6 +335,7 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 		foot_placed_right = false,
 		mood = Mood.Neutral,
 		mood_amount = 1,
+		expression = INVALID_ENTITY,
 
 		patrol_waypoints = {},
 		patrol_next = 0,
