@@ -163,6 +163,8 @@ namespace wi
 		}
 		else
 		{
+			seri.RegisterResource(fontStyleName);
+
 			// If detecting an absolute path in textures, remove it and convert to relative:
 			if (!dir.empty())
 			{

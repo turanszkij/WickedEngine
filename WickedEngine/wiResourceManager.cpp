@@ -1172,91 +1172,97 @@ namespace wi
 		}
 
 
-		void Serialize(wi::Archive& archive, ResourceSerializer& seri)
+		void Serialize_READ(wi::Archive& archive, ResourceSerializer& seri)
 		{
-			if (archive.IsReadMode())
+			assert(archive.IsReadMode());
+			size_t serializable_count = 0;
+			archive >> serializable_count;
+
+			struct TempResource
 			{
-				size_t serializable_count = 0;
-				archive >> serializable_count;
+				std::string name;
+				Flags flags = Flags::NONE;
+				wi::vector<uint8_t> filedata;
+			};
+			wi::vector<TempResource> temp_resources;
+			temp_resources.resize(serializable_count);
 
-				struct TempResource
-				{
-					std::string name;
-					Flags flags = Flags::NONE;
-					wi::vector<uint8_t> filedata;
-				};
-				wi::vector<TempResource> temp_resources;
-				temp_resources.resize(serializable_count);
+			wi::jobsystem::context ctx;
+			std::mutex seri_locker;
+			for (size_t i = 0; i < serializable_count; ++i)
+			{
+				auto& resource = temp_resources[i];
 
-				wi::jobsystem::context ctx;
-				std::mutex seri_locker;
-				for (size_t i = 0; i < serializable_count; ++i)
-				{
-					auto& resource = temp_resources[i];
+				archive >> resource.name;
+				uint32_t flags_temp;
+				archive >> flags_temp;
+				resource.flags = (Flags)flags_temp;
+				archive >> resource.filedata;
 
-					archive >> resource.name;
-					uint32_t flags_temp;
-					archive >> flags_temp;
-					resource.flags = (Flags)flags_temp;
-					archive >> resource.filedata;
+				resource.name = archive.GetSourceDirectory() + resource.name;
+				resource.flags |= Flags::IMPORT_DELAY; // delay resource creation, to be able to receive additional flags (this way only file data is loaded)
 
-					resource.name = archive.GetSourceDirectory() + resource.name;
-					resource.flags |= Flags::IMPORT_DELAY; // delay resource creation, to be able to receive additional flags (this way only file data is loaded)
+				// "Loading" the resource can happen asynchronously to serialization of file data, to improve performance
+				wi::jobsystem::Execute(ctx, [i, &temp_resources, &seri_locker, &seri](wi::jobsystem::JobArgs args) {
+					auto& tmp_resource = temp_resources[i];
+					auto res = Load(tmp_resource.name, tmp_resource.flags, tmp_resource.filedata.data(), tmp_resource.filedata.size());
+					seri_locker.lock();
+					seri.resources.push_back(res);
+					seri_locker.unlock();
+					});
+			}
 
-					// "Loading" the resource can happen asynchronously to serialization of file data, to improve performance
-					wi::jobsystem::Execute(ctx, [i, &temp_resources, &seri_locker, &seri](wi::jobsystem::JobArgs args) {
-						auto& tmp_resource = temp_resources[i];
-						auto res = Load(tmp_resource.name, tmp_resource.flags, tmp_resource.filedata.data(), tmp_resource.filedata.size());
-						seri_locker.lock();
-						seri.resources.push_back(res);
-						seri_locker.unlock();
-						});
-				}
+			wi::jobsystem::Wait(ctx);
+		}
+		void Serialize_WRITE(wi::Archive& archive, const wi::unordered_set<std::string>& resource_names)
+		{
+			assert(!archive.IsReadMode());
 
-				wi::jobsystem::Wait(ctx);
+			locker.lock();
+			size_t serializable_count = 0;
+
+			if (mode == Mode::ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING)
+			{
+				// Simply not serialize any embedded resources
+				serializable_count = 0;
+				archive << serializable_count;
 			}
 			else
 			{
-				locker.lock();
-				size_t serializable_count = 0;
-
-				if (mode == Mode::ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING)
+				// Count embedded resources:
+				for (auto& name : resource_names)
 				{
-					// Simply not serialize any embedded resources
-					serializable_count = 0;
-					archive << serializable_count;
-				}
-				else
-				{
-					// Count embedded resources:
-					for (auto& it : resources)
+					auto it = resources.find(name);
+					if (it == resources.end())
+						continue;
+					std::shared_ptr<ResourceInternal> resource = it->second.lock();
+					if (resource != nullptr && !resource->filedata.empty())
 					{
-						std::shared_ptr<ResourceInternal> resource = it.second.lock();
-						if (resource != nullptr && !resource->filedata.empty())
-						{
-							serializable_count++;
-						}
-					}
-
-					// Write all embedded resources:
-					archive << serializable_count;
-					for (auto& it : resources)
-					{
-						std::shared_ptr<ResourceInternal> resource = it.second.lock();
-
-						if (resource != nullptr && !resource->filedata.empty())
-						{
-							std::string name = it.first;
-							wi::helper::MakePathRelative(archive.GetSourceDirectory(), name);
-
-							archive << name;
-							archive << (uint32_t)resource->flags;
-							archive << resource->filedata;
-						}
+						serializable_count++;
 					}
 				}
-				locker.unlock();
+
+				// Write all embedded resources:
+				archive << serializable_count;
+				for (auto& name : resource_names)
+				{
+					auto it = resources.find(name);
+					if (it == resources.end())
+						continue;
+					std::shared_ptr<ResourceInternal> resource = it->second.lock();
+
+					if (resource != nullptr && !resource->filedata.empty())
+					{
+						std::string name = it->first;
+						wi::helper::MakePathRelative(archive.GetSourceDirectory(), name);
+
+						archive << name;
+						archive << (uint32_t)resource->flags;
+						archive << resource->filedata;
+					}
+				}
 			}
+			locker.unlock();
 		}
 
 	}

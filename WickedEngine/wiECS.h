@@ -4,6 +4,7 @@
 #include "wiArchive.h"
 #include "wiJobSystem.h"
 #include "wiUnorderedMap.h"
+#include "wiUnorderedSet.h"
 #include "wiVector.h"
 
 #include <cstdint>
@@ -34,6 +35,7 @@ namespace wi::ecs
 		wi::unordered_map<uint64_t, Entity> remap;
 		bool allow_remap = true;
 		uint64_t version = 0; // The ComponentLibrary serialization will modify this by the registered component's version number
+		wi::unordered_set<std::string> resource_registration; // register for resource manager serialization
 
 		~EntitySerializer()
 		{
@@ -45,6 +47,13 @@ namespace wi::ecs
 		uint64_t GetVersion() const
 		{
 			return version;
+		}
+
+		void RegisterResource(const std::string& resource_name)
+		{
+			if (resource_name.empty())
+				return;
+			resource_registration.insert(resource_name);
 		}
 	};
 	// This is the safe way to serialize an entity
