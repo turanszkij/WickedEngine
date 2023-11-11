@@ -2011,7 +2011,7 @@ namespace wi::scene
 			archive << reserved;
 		}
 
-		// Manage jump position to jump to resource serialization area:
+		// Manage jump position to jump to resource serialization WRITE area:
 		size_t jump = 0;
 		size_t original_pos = 0;
 		if (archive.GetVersion() >= 90)
@@ -3030,7 +3030,7 @@ namespace wi::scene
 		EntitySerializeFlags flags
 	)
 	{
-		// Manage jump position to jump to resource serialization area:
+		// Manage jump position to jump to resource serialization WRITE area:
 		size_t jump = 0;
 		size_t original_pos = 0;
 		if (archive.GetVersion() >= 90)
@@ -3049,14 +3049,11 @@ namespace wi::scene
 
 		// Keeping this alive to keep serialized resources alive until entity serialization ends:
 		wi::resourcemanager::ResourceSerializer resource_seri;
-		if (archive.IsReadMode())
+		if (archive.IsReadMode() && archive.GetVersion() >= 90)
 		{
 			wi::resourcemanager::Serialize_READ(archive, resource_seri);
-			if (archive.GetVersion() >= 90)
-			{
-				// After resource serialization, jump back to entity serialization area:
-				archive.Jump(original_pos);
-			}
+			// After resource serialization, jump back to entity serialization area:
+			archive.Jump(original_pos);
 		}
 
 		Entity ret = Entity_Serialize_Internal(
