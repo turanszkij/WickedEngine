@@ -2012,19 +2012,22 @@ namespace wi::scene
 		}
 
 		// Manage jump position to jump to resource serialization WRITE area:
-		size_t jump = 0;
+		size_t jump_before = 0;
+		size_t jump_after = 0;
 		size_t original_pos = 0;
 		if (archive.GetVersion() >= 90)
 		{
 			if (archive.IsReadMode())
 			{
-				archive >> jump;
+				archive >> jump_before;
+				archive >> jump_after;
 				original_pos = archive.GetPos();
-				archive.Jump(jump);
+				archive.Jump(jump_before); // jump before resourcemanager::Serialize_WRITE
 			}
 			else
 			{
-				jump = archive.WriteUnknownJumpPosition();
+				jump_before = archive.WriteUnknownJumpPosition();
+				jump_after = archive.WriteUnknownJumpPosition();
 			}
 		}
 
@@ -2146,10 +2149,15 @@ namespace wi::scene
 			}
 		}
 
-		if (!archive.IsReadMode())
+		if (archive.IsReadMode())
 		{
-			archive.PatchUnknownJumpPosition(jump);
+			archive.Jump(jump_after); // jump after resourcemanager::Serialize_WRITE
+		}
+		else
+		{
+			archive.PatchUnknownJumpPosition(jump_before);
 			wi::resourcemanager::Serialize_WRITE(archive, seri.resource_registration);
+			archive.PatchUnknownJumpPosition(jump_after);
 		}
 
 		wi::backlog::post("Scene serialize took " + std::to_string(timer.elapsed_seconds()) + " sec");
@@ -3031,19 +3039,22 @@ namespace wi::scene
 	)
 	{
 		// Manage jump position to jump to resource serialization WRITE area:
-		size_t jump = 0;
+		size_t jump_before = 0;
+		size_t jump_after = 0;
 		size_t original_pos = 0;
 		if (archive.GetVersion() >= 90)
 		{
 			if (archive.IsReadMode())
 			{
-				archive >> jump;
+				archive >> jump_before;
+				archive >> jump_after;
 				original_pos = archive.GetPos();
-				archive.Jump(jump);
+				archive.Jump(jump_before); // jump before resourcemanager::Serialize_WRITE
 			}
 			else
 			{
-				jump = archive.WriteUnknownJumpPosition();
+				jump_before = archive.WriteUnknownJumpPosition();
+				jump_after = archive.WriteUnknownJumpPosition();
 			}
 		}
 
@@ -3053,7 +3064,7 @@ namespace wi::scene
 		{
 			wi::resourcemanager::Serialize_READ(archive, resource_seri);
 			// After resource serialization, jump back to entity serialization area:
-			archive.Jump(original_pos);
+			archive.Jump(original_pos); // jump back to entity serialize
 		}
 
 		Entity ret = Entity_Serialize_Internal(
@@ -3064,10 +3075,15 @@ namespace wi::scene
 			flags
 		);
 
-		if (!archive.IsReadMode())
+		if (archive.IsReadMode())
 		{
-			archive.PatchUnknownJumpPosition(jump);
+			archive.Jump(jump_after); // jump after resourcemanager::Serialize_WRITE
+		}
+		else
+		{
+			archive.PatchUnknownJumpPosition(jump_before);
 			wi::resourcemanager::Serialize_WRITE(archive, seri.resource_registration);
+			archive.PatchUnknownJumpPosition(jump_after);
 		}
 
 		return ret;
