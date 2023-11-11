@@ -6,8 +6,10 @@
 #include "wiJobSystem.h"
 #include "wiVector.h"
 #include "wiVideo.h"
+#include "wiUnorderedSet.h"
 
 #include <memory>
+#include <string>
 
 namespace wi
 {
@@ -87,9 +89,11 @@ namespace wi
 		{
 			wi::vector<Resource> resources;
 		};
+
 		// Serializes all resources that are compatible
 		//	Compatible resources are those whose file data is kept around using the IMPORT_RETAIN_FILEDATA flag when loading.
-		void Serialize(wi::Archive& archive, ResourceSerializer& seri);
+		void Serialize_READ(wi::Archive& archive, ResourceSerializer& resources);
+		void Serialize_WRITE(wi::Archive& archive, const wi::unordered_set<std::string>& resource_names);
 	}
 
 }

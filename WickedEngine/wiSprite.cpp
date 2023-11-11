@@ -217,6 +217,9 @@ namespace wi
 		}
 		else
 		{
+			seri.RegisterResource(textureName);
+			seri.RegisterResource(maskName);
+
 			// If detecting an absolute path in textures, remove it and convert to relative:
 			if (!dir.empty())
 			{
