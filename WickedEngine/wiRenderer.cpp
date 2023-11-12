@@ -740,8 +740,6 @@ void LoadShaders()
 {
 	wi::jobsystem::context ctx;
 
-	static const wi::vector<std::string> wind_permutation = { "WIND" };
-
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		inputLayouts[ILTYPE_OBJECT_DEBUG].elements =
 		{
