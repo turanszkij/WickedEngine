@@ -1224,7 +1224,7 @@ void EditorComponent::Update(float dt)
 							if (humanoid != nullptr)
 							{
 								humanoid->SetRagdollPhysicsEnabled(true);
-								wi::physics::ApplyImpulse(*humanoid, result.humanoid_bone, impulse);
+								wi::physics::ApplyImpulseAt(*humanoid, result.humanoid_bone, impulse, result.position_local);
 							}
 						}
 						else
@@ -1233,7 +1233,7 @@ void EditorComponent::Update(float dt)
 							RigidBodyPhysicsComponent* rigidbody = scene.rigidbodies.GetComponent(result.entity);
 							if (rigidbody != nullptr)
 							{
-								wi::physics::ApplyImpulse(*rigidbody, impulse);
+								wi::physics::ApplyImpulseAt(*rigidbody, impulse, result.position_local);
 							}
 						}
 					}
