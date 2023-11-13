@@ -327,15 +327,15 @@ namespace wi
 			}
 			HairParticleCB hcb;
 			hcb.xHairTransform.Create(hair.world);
-			if (mesh.position_format == MeshComponent::Vertex_POS32::FORMAT)
-			{
-				hcb.xHairBaseMeshUnormRemap.init();
-			}
-			else
+			if (IsFormatUnorm(mesh.position_format))
 			{
 				XMFLOAT4X4 unormRemap;
 				XMStoreFloat4x4(&unormRemap, mesh.aabb.getUnormRemapMatrix());
 				hcb.xHairBaseMeshUnormRemap.Create(unormRemap);
+			}
+			else
+			{
+				hcb.xHairBaseMeshUnormRemap.init();
 			}
 			hcb.xHairRegenerate = hair.regenerate_frame ? 1 : 0;
 			hcb.xLength = hair.length;

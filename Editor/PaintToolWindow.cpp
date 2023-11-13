@@ -936,22 +936,7 @@ void PaintToolWindow::Update(float dt)
 					size_t j = 0;
 					for (auto& ind : softbody->physicsToGraphicsVertexMapping)
 					{
-						XMVECTOR P;
-						switch (mesh->position_format)
-						{
-						case MeshComponent::Vertex_POS8::FORMAT:
-							P = softbody->vertex_positions_simulation8[ind].LoadPOS();
-							break;
-						case MeshComponent::Vertex_POS16::FORMAT:
-							P = softbody->vertex_positions_simulation16[ind].LoadPOS();
-							break;
-						case MeshComponent::Vertex_POS32::FORMAT:
-							P = softbody->vertex_positions_simulation32[ind].LoadPOS();
-							break;
-						default:
-							assert(0);
-							break;
-						}
+						XMVECTOR P = softbody->vertex_positions_simulation[ind].LoadPOS();
 						P = XMVector3TransformCoord(P, VP);
 						P = P * MUL + ADD;
 						P = P * SCREEN;
@@ -988,27 +973,9 @@ void PaintToolWindow::Update(float dt)
 						wi::renderer::RenderableTriangle tri;
 						if (softbody->HasVertices())
 						{
-							switch (mesh->position_format)
-							{
-							case MeshComponent::Vertex_POS8::FORMAT:
-								tri.positionA = softbody->vertex_positions_simulation8[graphicsIndex0].GetPOS();
-								tri.positionB = softbody->vertex_positions_simulation8[graphicsIndex1].GetPOS();
-								tri.positionC = softbody->vertex_positions_simulation8[graphicsIndex2].GetPOS();
-								break;
-							case MeshComponent::Vertex_POS16::FORMAT:
-								tri.positionA = softbody->vertex_positions_simulation16[graphicsIndex0].GetPOS();
-								tri.positionB = softbody->vertex_positions_simulation16[graphicsIndex1].GetPOS();
-								tri.positionC = softbody->vertex_positions_simulation16[graphicsIndex2].GetPOS();
-								break;
-							case MeshComponent::Vertex_POS32::FORMAT:
-								tri.positionA = softbody->vertex_positions_simulation32[graphicsIndex0].GetPOS();
-								tri.positionB = softbody->vertex_positions_simulation32[graphicsIndex1].GetPOS();
-								tri.positionC = softbody->vertex_positions_simulation32[graphicsIndex2].GetPOS();
-								break;
-							default:
-								assert(0);
-								break;
-							}
+							tri.positionA = softbody->vertex_positions_simulation[graphicsIndex0].GetPOS();
+							tri.positionB = softbody->vertex_positions_simulation[graphicsIndex1].GetPOS();
+							tri.positionC = softbody->vertex_positions_simulation[graphicsIndex2].GetPOS();
 						}
 						else
 						{

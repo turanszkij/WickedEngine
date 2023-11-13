@@ -571,6 +571,32 @@ namespace wi::scene
 			}
 			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R16G16B16A16_UNORM;
 		};
+		struct Vertex_POS16F
+		{
+			XMHALF4 data = XMHALF4(0.0f, 0.0f, 0.0f, 0.0f);
+
+			inline void FromFULL(XMFLOAT3 pos, uint8_t wind)
+			{
+				data = XMHALF4(pos.x, pos.y, pos.z, float(wind) / 255.0f);
+			}
+			inline XMVECTOR LoadPOS() const
+			{
+				return XMLoadHalf4(&data);
+			}
+			inline XMFLOAT3 GetPOS() const
+			{
+				return XMFLOAT3(
+					XMConvertHalfToFloat(data.x),
+					XMConvertHalfToFloat(data.y),
+					XMConvertHalfToFloat(data.z)
+				);
+			}
+			inline uint8_t GetWind() const
+			{
+				return uint8_t(XMConvertHalfToFloat(data.w) * 255);
+			}
+			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R16G16B16A16_FLOAT;
+		};
 		struct Vertex_POS32
 		{
 			float x = 0;
@@ -919,9 +945,7 @@ namespace wi::scene
 		// Non-serialized attributes:
 		std::shared_ptr<void> physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
 		XMFLOAT4X4 worldMatrix = wi::math::IDENTITY_MATRIX;
-		wi::vector<MeshComponent::Vertex_POS8> vertex_positions_simulation8; // graphics vertices after simulation (world space)
-		wi::vector<MeshComponent::Vertex_POS16> vertex_positions_simulation16; // graphics vertices after simulation (world space)
-		wi::vector<MeshComponent::Vertex_POS32> vertex_positions_simulation32; // graphics vertices after simulation (world space)
+		wi::vector<MeshComponent::Vertex_POS32> vertex_positions_simulation; // graphics vertices after simulation (world space)
 		wi::vector<MeshComponent::Vertex_NOR> vertex_normals_simulation;
 		wi::vector<XMFLOAT4>vertex_tangents_tmp;
 		wi::vector<MeshComponent::Vertex_TAN> vertex_tangents_simulation;
@@ -933,11 +957,7 @@ namespace wi::scene
 
 		inline bool HasVertices() const
 		{
-			return
-				!vertex_positions_simulation8.empty() ||
-				!vertex_positions_simulation16.empty() ||
-				!vertex_positions_simulation32.empty()
-				;
+			return !vertex_positions_simulation.empty();
 		}
 
 		// Create physics represenation of graphics mesh

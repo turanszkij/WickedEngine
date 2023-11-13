@@ -3943,7 +3943,7 @@ namespace wi::scene
 				XMStoreFloat4x4(matrix_objects.data() + args.jobIndex, W);
 				XMFLOAT4X4 worldMatrix = matrix_objects[args.jobIndex];
 
-				if (IsFormatUnorm(mesh.position_format))
+				if (IsFormatUnorm(mesh.position_format) && !mesh.so_pos_wind.IsValid())
 				{
 					// The UNORM correction is only done for the GPU data!
 					XMMATRIX R = mesh.aabb.getUnormRemapMatrix();
@@ -4860,27 +4860,9 @@ namespace wi::scene
 					const bool softbody_active = softbody != nullptr && softbody->HasVertices();
 					if (softbody_active)
 					{
-						switch (mesh->position_format)
-						{
-						case MeshComponent::Vertex_POS8::FORMAT:
-							p0 = wi::math::Lerp(aabb_min, aabb_max, softbody->vertex_positions_simulation8[i0].LoadPOS());
-							p1 = wi::math::Lerp(aabb_min, aabb_max, softbody->vertex_positions_simulation8[i1].LoadPOS());
-							p2 = wi::math::Lerp(aabb_min, aabb_max, softbody->vertex_positions_simulation8[i2].LoadPOS());
-							break;
-						case MeshComponent::Vertex_POS16::FORMAT:
-							p0 = wi::math::Lerp(aabb_min, aabb_max, softbody->vertex_positions_simulation16[i0].LoadPOS());
-							p1 = wi::math::Lerp(aabb_min, aabb_max, softbody->vertex_positions_simulation16[i1].LoadPOS());
-							p2 = wi::math::Lerp(aabb_min, aabb_max, softbody->vertex_positions_simulation16[i2].LoadPOS());
-							break;
-						case MeshComponent::Vertex_POS32::FORMAT:
-							p0 = softbody->vertex_positions_simulation32[i0].LoadPOS();
-							p1 = softbody->vertex_positions_simulation32[i1].LoadPOS();
-							p2 = softbody->vertex_positions_simulation32[i2].LoadPOS();
-							break;
-						default:
-							assert(0);
-							break;
-						}
+						p0 = softbody->vertex_positions_simulation[i0].LoadPOS();
+						p1 = softbody->vertex_positions_simulation[i1].LoadPOS();
+						p2 = softbody->vertex_positions_simulation[i2].LoadPOS();
 					}
 					else
 					{
@@ -5074,27 +5056,9 @@ namespace wi::scene
 					const bool softbody_active = softbody != nullptr && softbody->HasVertices();
 					if (softbody_active)
 					{
-						switch (mesh->position_format)
-						{
-						case MeshComponent::Vertex_POS8::FORMAT:
-							p0 = wi::math::Lerp(aabb_min, aabb_max, softbody->vertex_positions_simulation8[i0].LoadPOS());
-							p1 = wi::math::Lerp(aabb_min, aabb_max, softbody->vertex_positions_simulation8[i1].LoadPOS());
-							p2 = wi::math::Lerp(aabb_min, aabb_max, softbody->vertex_positions_simulation8[i2].LoadPOS());
-							break;
-						case MeshComponent::Vertex_POS16::FORMAT:
-							p0 = wi::math::Lerp(aabb_min, aabb_max, softbody->vertex_positions_simulation16[i0].LoadPOS());
-							p1 = wi::math::Lerp(aabb_min, aabb_max, softbody->vertex_positions_simulation16[i1].LoadPOS());
-							p2 = wi::math::Lerp(aabb_min, aabb_max, softbody->vertex_positions_simulation16[i2].LoadPOS());
-							break;
-						case MeshComponent::Vertex_POS32::FORMAT:
-							p0 = softbody->vertex_positions_simulation32[i0].LoadPOS();
-							p1 = softbody->vertex_positions_simulation32[i1].LoadPOS();
-							p2 = softbody->vertex_positions_simulation32[i2].LoadPOS();
-							break;
-						default:
-							assert(0);
-							break;
-						}
+						p0 = softbody->vertex_positions_simulation[i0].LoadPOS();
+						p1 = softbody->vertex_positions_simulation[i1].LoadPOS();
+						p2 = softbody->vertex_positions_simulation[i2].LoadPOS();
 					}
 					else
 					{
@@ -5376,27 +5340,9 @@ namespace wi::scene
 					const bool softbody_active = softbody != nullptr && softbody->HasVertices();
 					if (softbody_active)
 					{
-						switch (mesh->position_format)
-						{
-						case MeshComponent::Vertex_POS8::FORMAT:
-							p0 = wi::math::Lerp(aabb_min, aabb_max, softbody->vertex_positions_simulation8[i0].LoadPOS());
-							p1 = wi::math::Lerp(aabb_min, aabb_max, softbody->vertex_positions_simulation8[i1].LoadPOS());
-							p2 = wi::math::Lerp(aabb_min, aabb_max, softbody->vertex_positions_simulation8[i2].LoadPOS());
-							break;
-						case MeshComponent::Vertex_POS16::FORMAT:
-							p0 = wi::math::Lerp(aabb_min, aabb_max, softbody->vertex_positions_simulation16[i0].LoadPOS());
-							p1 = wi::math::Lerp(aabb_min, aabb_max, softbody->vertex_positions_simulation16[i1].LoadPOS());
-							p2 = wi::math::Lerp(aabb_min, aabb_max, softbody->vertex_positions_simulation16[i2].LoadPOS());
-							break;
-						case MeshComponent::Vertex_POS32::FORMAT:
-							p0 = softbody->vertex_positions_simulation32[i0].LoadPOS();
-							p1 = softbody->vertex_positions_simulation32[i1].LoadPOS();
-							p2 = softbody->vertex_positions_simulation32[i2].LoadPOS();
-							break;
-						default:
-							assert(0);
-							break;
-						}
+						p0 = softbody->vertex_positions_simulation[i0].LoadPOS();
+						p1 = softbody->vertex_positions_simulation[i1].LoadPOS();
+						p2 = softbody->vertex_positions_simulation[i2].LoadPOS();
 					}
 					else
 					{

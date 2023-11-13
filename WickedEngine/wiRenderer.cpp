@@ -4229,21 +4229,7 @@ void UpdateRenderData(
 			GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(mesh->so_pos_wind.size + mesh->so_nor.size + mesh->so_tan.size, cmd);
 			uint8_t* dst = (uint8_t*)allocation.data;
 			uint64_t offset = allocation.offset;
-			switch (mesh->position_format)
-			{
-			case MeshComponent::Vertex_POS8::FORMAT:
-				std::memcpy(dst, softbody.vertex_positions_simulation8.data(), mesh->so_pos_wind.size);
-				break;
-			case MeshComponent::Vertex_POS16::FORMAT:
-				std::memcpy(dst, softbody.vertex_positions_simulation16.data(), mesh->so_pos_wind.size);
-				break;
-			case MeshComponent::Vertex_POS32::FORMAT:
-				std::memcpy(dst, softbody.vertex_positions_simulation32.data(), mesh->so_pos_wind.size);
-				break;
-			default:
-				assert(0);
-				break;
-			}
+			std::memcpy(dst, softbody.vertex_positions_simulation.data(), mesh->so_pos_wind.size);
 			device->CopyBuffer(&mesh->streamoutBuffer, mesh->so_pos_wind.offset, &allocation.buffer, offset, mesh->so_pos_wind.size, cmd);
 			dst += mesh->so_pos_wind.size;
 			offset += mesh->so_pos_wind.size;
