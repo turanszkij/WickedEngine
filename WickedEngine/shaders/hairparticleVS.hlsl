@@ -6,15 +6,16 @@ Buffer<uint> primitiveBuffer : register(t0);
 
 VertexToPixel main(uint vid : SV_VERTEXID)
 {
+	ShaderMeshInstance inst = HairGetInstance();
 	ShaderGeometry geometry = HairGetGeometry();
 
 	VertexToPixel Out;
 	Out.primitiveID = vid / 3;
 
 	uint vertexID = primitiveBuffer[vid];
-	float4 pos_nor_wind = bindless_buffers_float4[geometry.vb_pos_nor_wind][vertexID];
-	float3 position = pos_nor_wind.xyz;
-	float3 normal = normalize(unpack_unitvector(asuint(pos_nor_wind.w)));
+	float4 pos_wind = bindless_buffers_float4[geometry.vb_pos_wind][vertexID];
+	float3 position = mul(inst.transform.GetMatrix(), float4(pos_wind.xyz, 1)).xyz;
+	float3 normal = normalize(bindless_buffers_float4[geometry.vb_nor][vertexID].xyz);
 	float4 uvsets = bindless_buffers_float4[geometry.vb_uvs][vertexID];
 
 	Out.fade = saturate(distance(position.xyz, GetCamera().position.xyz) / xHairViewDistance);

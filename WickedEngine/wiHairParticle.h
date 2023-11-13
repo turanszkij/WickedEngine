@@ -23,6 +23,7 @@ namespace wi
 		wi::graphics::GPUBuffer generalBuffer;
 		wi::scene::MeshComponent::BufferView simulation_view;
 		wi::scene::MeshComponent::BufferView vb_pos[2];
+		wi::scene::MeshComponent::BufferView vb_nor;
 		wi::scene::MeshComponent::BufferView vb_pos_raytracing;
 		wi::scene::MeshComponent::BufferView vb_uvs;
 		wi::scene::MeshComponent::BufferView ib_culled;

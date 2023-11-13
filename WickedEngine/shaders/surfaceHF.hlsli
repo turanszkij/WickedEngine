@@ -331,7 +331,7 @@ struct Surface
 			return false;
 
 		geometry = load_geometry(inst.geometryOffset + prim.subsetIndex);
-		if (geometry.vb_pos_nor_wind < 0)
+		if (geometry.vb_pos_wind < 0)
 			return false;
 
 		material = load_material(geometry.materialIndex);
@@ -345,7 +345,7 @@ struct Surface
 		i1 = indexBuffer[startIndex + 1];
 		i2 = indexBuffer[startIndex + 2];
 
-		Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(geometry.vb_pos_nor_wind)];
+		Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(geometry.vb_pos_wind)];
 		data0 = buf[i0];
 		data1 = buf[i1];
 		data2 = buf[i2];
@@ -360,16 +360,21 @@ struct Surface
 		const bool is_emittedparticle = geometry.flags & SHADERMESH_FLAG_EMITTEDPARTICLE;
 		const bool simple_lighting = is_hairparticle || is_emittedparticle;
 		const bool is_backface = flags & SURFACE_FLAG_BACKFACE;
-
-		float3 n0 = unpack_unitvector(asuint(data0.w));
-		float3 n1 = unpack_unitvector(asuint(data1.w));
-		float3 n2 = unpack_unitvector(asuint(data2.w));
-		N = attribute_at_bary(n0, n1, n2, bary);
-		N = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), N);
-		N = normalize(N);
-		if (is_backface && !is_hairparticle && !is_emittedparticle)
+		
+		[branch]
+		if (geometry.vb_nor >= 0)
 		{
-			N = -N;
+			Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(geometry.vb_nor)];
+			float3 n0 = buf[i0].xyz;
+			float3 n1 = buf[i1].xyz;
+			float3 n2 = buf[i2].xyz;
+			N = attribute_at_bary(n0, n1, n2, bary);
+			N = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), N);
+			N = normalize(N);
+			if (is_backface && !is_hairparticle && !is_emittedparticle)
+			{
+				N = -N;
+			}
 		}
 		facenormal = N;
 

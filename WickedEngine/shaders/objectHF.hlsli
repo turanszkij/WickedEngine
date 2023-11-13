@@ -121,9 +121,9 @@ struct VertexInput
 	uint vertexID : SV_VertexID;
 	uint instanceID : SV_InstanceID;
 
-	float4 GetPositionNormalWind()
+	float4 GetPositionWind()
 	{
-		return bindless_buffers_float4[GetMesh().vb_pos_nor_wind][vertexID];
+		return bindless_buffers_float4[GetMesh().vb_pos_wind][vertexID];
 	}
 
 	min16float4 GetUVSets()
@@ -159,6 +159,14 @@ struct VertexInput
 			return 1;
 		return (min16float4)bindless_buffers_float4[GetMesh().vb_col][vertexID];
 	}
+	
+	min16float3 GetNormal()
+	{
+		[branch]
+		if (GetMesh().vb_nor < 0)
+			return 0;
+		return (min16float3)bindless_buffers_float4[GetMesh().vb_nor][vertexID].xyz;
+	}
 
 	min16float4 GetTangent()
 	{
@@ -191,10 +199,9 @@ struct VertexSurface
 
 	inline void create(in ShaderMaterial material, in VertexInput input)
 	{
-		float4 pos_nor_wind = input.GetPositionNormalWind();
-		uint normal_wind = asuint(pos_nor_wind.w);
-		position = float4(pos_nor_wind.xyz, 1);
-		normal = min16float3(unpack_unitvector(normal_wind));
+		float4 pos_wind = input.GetPositionWind();
+		position = float4(pos_wind.xyz, 1);
+		normal = input.GetNormal();
 		color = min16float4(GetMaterial().baseColor * unpack_rgba(input.GetInstance().color));
 		color.a *= min16float(1 - input.GetInstancePointer().GetDither());
 
@@ -223,7 +230,7 @@ struct VertexSurface
 		[branch]
 		if (material.IsUsingWind())
 		{
-			position.xyz += sample_wind(position.xyz, ((normal_wind >> 24u) & 0xFF) / 255.0);
+			position.xyz += sample_wind(position.xyz, pos_wind.w);
 		}
 #endif // DISABLE_WIND
 	}

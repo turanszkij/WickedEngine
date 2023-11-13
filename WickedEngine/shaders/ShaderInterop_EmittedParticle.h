@@ -42,6 +42,7 @@ static const uint EMITTER_OPTION_BIT_USE_RAIN_BLOCKER = 1 << 4;
 CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 {
 	ShaderTransform	xEmitterTransform;
+	ShaderTransform xEmitterBaseMeshUnormRemap;
 
 	uint		xEmitCount;
 	uint		xEmitterMeshIndexCount;

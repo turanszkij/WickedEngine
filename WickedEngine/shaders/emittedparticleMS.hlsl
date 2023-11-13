@@ -75,9 +75,9 @@ void main(
 	{
 		uint vertexID = particleIndex * 4 + i;
 
-		float4 pos_nor_wind = bindless_buffers_float4[geometry.vb_pos_nor_wind][vertexID];
-		float3 position = pos_nor_wind.xyz;
-		float3 normal = normalize(unpack_unitvector(asuint(pos_nor_wind.w)));
+		float4 pos_wind = bindless_buffers_float4[geometry.vb_pos_wind][vertexID];
+		float3 position = pos_wind.xyz;
+		float3 normal = normalize(bindless_buffers_float4[geometry.vb_nor][vertexID].xyz);
 		float4 uvsets = bindless_buffers_float4[geometry.vb_uvs][vertexID];
 
 		VertextoPixel_MS Out;

@@ -100,18 +100,20 @@ namespace wi
 			const uint64_t alignment = device->GetMinOffsetAlignment(&bd);
 
 			simulation_view.size = sizeof(PatchSimulationData) * particleCount;
-			vb_pos[0].size = sizeof(MeshComponent::Vertex_POS) * 4 * particleCount;
-			vb_pos[1].size = sizeof(MeshComponent::Vertex_POS) * 4 * particleCount;
+			vb_pos[0].size = sizeof(MeshComponent::Vertex_POS16) * 4 * particleCount;
+			vb_pos[1].size = sizeof(MeshComponent::Vertex_POS16) * 4 * particleCount;
+			vb_nor.size = sizeof(MeshComponent::Vertex_NOR) * 4 * particleCount;
 			vb_uvs.size = sizeof(MeshComponent::Vertex_UVS) * 4 * particleCount;
 			ib_culled.size = GetFormatStride(ib_format) * 6 * particleCount;
 			indirect_view.size = sizeof(IndirectDrawArgsIndexedInstanced);
-			vb_pos_raytracing.size = sizeof(float3) * 4 * particleCount;
+			vb_pos_raytracing.size = sizeof(MeshComponent::Vertex_POS16) * 4 * particleCount;
 
 			bd.size =
 				AlignTo(AlignTo(indirect_view.size, alignment), sizeof(IndirectDrawArgsIndexedInstanced)) + // additional structured buffer alignment
 				AlignTo(AlignTo(simulation_view.size, alignment), sizeof(PatchSimulationData)) + // additional structured buffer alignment
 				AlignTo(vb_pos[0].size, alignment) +
 				AlignTo(vb_pos[1].size, alignment) +
+				AlignTo(vb_nor.size, alignment) +
 				AlignTo(vb_uvs.size, alignment) +
 				AlignTo(ib_culled.size, alignment) +
 				AlignTo(vb_pos_raytracing.size, alignment)
@@ -144,19 +146,27 @@ namespace wi
 
 			buffer_offset = AlignTo(buffer_offset, alignment);
 			vb_pos[0].offset = buffer_offset;
-			vb_pos[0].subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos[0].offset, vb_pos[0].size, &MeshComponent::Vertex_POS::FORMAT);
-			vb_pos[0].subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos[0].offset, vb_pos[0].size, &MeshComponent::Vertex_POS::FORMAT);
+			vb_pos[0].subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos[0].offset, vb_pos[0].size, &MeshComponent::Vertex_POS16::FORMAT);
+			vb_pos[0].subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos[0].offset, vb_pos[0].size, &MeshComponent::Vertex_POS16::FORMAT);
 			vb_pos[0].descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_pos[0].subresource_srv);
 			vb_pos[0].descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_pos[0].subresource_uav);
 			buffer_offset += vb_pos[0].size;
 
 			buffer_offset = AlignTo(buffer_offset, alignment);
 			vb_pos[1].offset = buffer_offset;
-			vb_pos[1].subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos[1].offset, vb_pos[1].size, &MeshComponent::Vertex_POS::FORMAT);
-			vb_pos[1].subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos[1].offset, vb_pos[1].size, &MeshComponent::Vertex_POS::FORMAT);
+			vb_pos[1].subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos[1].offset, vb_pos[1].size, &MeshComponent::Vertex_POS16::FORMAT);
+			vb_pos[1].subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos[1].offset, vb_pos[1].size, &MeshComponent::Vertex_POS16::FORMAT);
 			vb_pos[1].descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_pos[1].subresource_srv);
 			vb_pos[1].descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_pos[1].subresource_uav);
 			buffer_offset += vb_pos[1].size;
+
+			buffer_offset = AlignTo(buffer_offset, alignment);
+			vb_nor.offset = buffer_offset;
+			vb_nor.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_nor.offset, vb_nor.size, &MeshComponent::Vertex_NOR::FORMAT);
+			vb_nor.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_nor.offset, vb_nor.size, &MeshComponent::Vertex_NOR::FORMAT);
+			vb_nor.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_nor.subresource_srv);
+			vb_nor.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_nor.subresource_uav);
+			buffer_offset += vb_nor.size;
 
 			buffer_offset = AlignTo(buffer_offset, alignment);
 			vb_uvs.offset = buffer_offset;
@@ -176,7 +186,7 @@ namespace wi
 
 			buffer_offset = AlignTo(buffer_offset, alignment);
 			vb_pos_raytracing.offset = buffer_offset;
-			vb_pos_raytracing.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos_raytracing.offset, vb_pos_raytracing.size);
+			vb_pos_raytracing.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos_raytracing.offset, vb_pos_raytracing.size, &MeshComponent::Vertex_POS16::FORMAT);
 			vb_pos_raytracing.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_pos_raytracing.subresource_uav);
 			buffer_offset += vb_pos_raytracing.size;
 
@@ -240,9 +250,9 @@ namespace wi
 			geometry.triangles.index_format = GetIndexBufferFormat(primitiveBuffer.desc.format);
 			geometry.triangles.index_count = GetParticleCount() * 6;
 			geometry.triangles.index_offset = 0;
-			geometry.triangles.vertex_count = (uint32_t)(vb_pos_raytracing.size / sizeof(float3));
-			geometry.triangles.vertex_format = Format::R32G32B32_FLOAT;
-			geometry.triangles.vertex_stride = sizeof(float3);
+			geometry.triangles.vertex_count = (uint32_t)(vb_pos_raytracing.size / sizeof(MeshComponent::Vertex_POS16));
+			geometry.triangles.vertex_format = MeshComponent::Vertex_POS16::FORMAT;
+			geometry.triangles.vertex_stride = sizeof(MeshComponent::Vertex_POS16);
 			geometry.triangles.vertex_byte_offset = vb_pos_raytracing.offset;
 
 			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
@@ -317,6 +327,16 @@ namespace wi
 			}
 			HairParticleCB hcb;
 			hcb.xHairTransform.Create(hair.world);
+			if (mesh.position_format == MeshComponent::Vertex_POS32::FORMAT)
+			{
+				hcb.xHairBaseMeshUnormRemap.init();
+			}
+			else
+			{
+				XMFLOAT4X4 unormRemap;
+				XMStoreFloat4x4(&unormRemap, mesh.aabb.getUnormRemapMatrix());
+				hcb.xHairBaseMeshUnormRemap.Create(unormRemap);
+			}
 			hcb.xHairRegenerate = hair.regenerate_frame ? 1 : 0;
 			hcb.xLength = hair.length;
 			hcb.xStiffness = hair.stiffness;
@@ -327,7 +347,7 @@ namespace wi
 			hcb.xHairRandomSeed = hair.randomSeed;
 			hcb.xHairViewDistance = hair.viewDistance;
 			hcb.xHairBaseMeshIndexCount = (uint)hair.indices.size();
-			hcb.xHairBaseMeshVertexPositionStride = sizeof(MeshComponent::Vertex_POS);
+			hcb.xHairBaseMeshVertexPositionStride = sizeof(MeshComponent::Vertex_POS16);
 			hcb.xHairFramesXY = uint2(std::max(1u, hair.framesX), std::max(1u, hair.framesY));
 			hcb.xHairFrameCount = std::max(1u, hair.frameCount);
 			hcb.xHairFrameStart = hair.frameStart;
@@ -375,6 +395,7 @@ namespace wi
 			device->BindUAV(&hair.generalBuffer, 3, cmd, hair.ib_culled.subresource_uav);
 			device->BindUAV(&hair.generalBuffer, 4, cmd, hair.indirect_view.subresource_uav);
 			device->BindUAV(&hair.generalBuffer, 5, cmd, hair.vb_pos_raytracing.subresource_uav);
+			device->BindUAV(&hair.generalBuffer, 6, cmd, hair.vb_nor.subresource_uav);
 
 			if (hair.indexBuffer.IsValid())
 			{
@@ -386,13 +407,15 @@ namespace wi
 			}
 			if (mesh.streamoutBuffer.IsValid())
 			{
-				device->BindResource(&mesh.streamoutBuffer, 1, cmd, mesh.so_pos_nor_wind.subresource_srv);
+				device->BindResource(&mesh.streamoutBuffer, 1, cmd, mesh.so_pos_wind.subresource_srv);
+				device->BindResource(&mesh.streamoutBuffer, 2, cmd, mesh.so_nor.subresource_srv);
 			}
 			else
 			{
-				device->BindResource(&mesh.generalBuffer, 1, cmd, mesh.vb_pos_nor_wind.subresource_srv);
+				device->BindResource(&mesh.generalBuffer, 1, cmd, mesh.vb_pos_wind.subresource_srv);
+				device->BindResource(&mesh.generalBuffer, 2, cmd, mesh.vb_nor.subresource_srv);
 			}
-			device->BindResource(&hair.vertexBuffer_length, 2, cmd);
+			device->BindResource(&hair.vertexBuffer_length, 3, cmd);
 
 			device->Dispatch((hair.strandCount + THREADCOUNT_SIMULATEHAIR - 1) / THREADCOUNT_SIMULATEHAIR, 1, 1, cmd);
 

@@ -848,6 +848,7 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		ss += "Vertex count: " + std::to_string(mesh->vertex_positions.size()) + "\n";
 		ss += "Index count: " + std::to_string(mesh->indices.size()) + "\n";
 		ss += "Index format: " + std::string(wi::graphics::GetIndexBufferFormatString(mesh->GetIndexFormat())) + "\n";
+		ss += "Position format: " + std::string(wi::graphics::GetFormatString(mesh->position_format)) + "\n";
 		ss += "Subset count: " + std::to_string(mesh->subsets.size()) + " (" + std::to_string(mesh->GetLODCount()) + " LODs)\n";
 		if (!mesh->morph_targets.empty())
 		{
@@ -878,7 +879,8 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		if (mesh->so_pre.IsValid()) ss += "\tprevious_position;\n";
 		if (mesh->vb_bon.IsValid()) ss += "\tbone;\n";
 		if (mesh->vb_tan.IsValid()) ss += "\ttangent;\n";
-		if (mesh->so_pos_nor_wind.IsValid()) ss += "\tstreamout_position_normal_wind;\n";
+		if (mesh->so_pos_wind.IsValid()) ss += "\tstreamout_position_wind;\n";
+		if (mesh->so_nor.IsValid()) ss += "\tstreamout_normals;\n";
 		if (mesh->so_tan.IsValid()) ss += "\tstreamout_tangents;\n";
 		meshInfoLabel.SetText(ss);
 

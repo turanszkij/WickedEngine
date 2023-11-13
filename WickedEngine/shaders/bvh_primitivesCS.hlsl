@@ -32,9 +32,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	uint i1 = bindless_buffers_uint[geometry.ib][startIndex + 1];
 	uint i2 = bindless_buffers_uint[geometry.ib][startIndex + 2];
 	
-	float3 p0 = bindless_buffers_float4[geometry.vb_pos_nor_wind][i0].xyz;
-	float3 p1 = bindless_buffers_float4[geometry.vb_pos_nor_wind][i1].xyz;
-	float3 p2 = bindless_buffers_float4[geometry.vb_pos_nor_wind][i2].xyz;
+	float3 p0 = bindless_buffers_float4[geometry.vb_pos_wind][i0].xyz;
+	float3 p1 = bindless_buffers_float4[geometry.vb_pos_wind][i1].xyz;
+	float3 p2 = bindless_buffers_float4[geometry.vb_pos_wind][i2].xyz;
 	float3 P0 = mul(inst.transform.GetMatrix(), float4(p0, 1)).xyz;
 	float3 P1 = mul(inst.transform.GetMatrix(), float4(p1, 1)).xyz;
 	float3 P2 = mul(inst.transform.GetMatrix(), float4(p2, 1)).xyz;

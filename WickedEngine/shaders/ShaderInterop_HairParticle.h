@@ -17,6 +17,7 @@ struct PatchSimulationData
 CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
 {
 	ShaderTransform xHairTransform;
+	ShaderTransform xHairBaseMeshUnormRemap;
 
 	uint xHairRegenerate;
 	float xLength;

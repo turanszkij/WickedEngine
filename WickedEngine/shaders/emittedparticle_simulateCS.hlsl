@@ -17,10 +17,11 @@ RWStructuredBuffer<uint> deadBuffer : register(u3);
 RWByteAddressBuffer counterBuffer : register(u4);
 RWStructuredBuffer<float> distanceBuffer : register(u6);
 RWBuffer<float4> vertexBuffer_POS : register(u7);
-RWBuffer<float4> vertexBuffer_UVS : register(u8);
-RWBuffer<float4> vertexBuffer_COL : register(u9);
-RWStructuredBuffer<uint> culledIndirectionBuffer : register(u10);
-RWStructuredBuffer<uint> culledIndirectionBuffer2 : register(u11);
+RWBuffer<float4> vertexBuffer_NOR : register(u8);
+RWBuffer<float4> vertexBuffer_UVS : register(u9);
+RWBuffer<float4> vertexBuffer_COL : register(u10);
+RWStructuredBuffer<uint> culledIndirectionBuffer : register(u11);
+RWStructuredBuffer<uint> culledIndirectionBuffer2 : register(u12);
 
 //#define SPH_FLOOR_COLLISION
 //#define SPH_BOX_COLLISION
@@ -319,7 +320,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 				quadPos = mul(quadPos, (float3x3)GetCamera().view); // reversed mul for inverse camera rotation!
 
 				// write out vertex:
-				vertexBuffer_POS[v0 + vertexID] = float4(particle.position + quadPos, asfloat(pack_unitvector(normalize(-GetCamera().forward))));
+				vertexBuffer_POS[v0 + vertexID] = float4(particle.position + quadPos, 0);
+				vertexBuffer_NOR[v0 + vertexID] = float4(normalize(-GetCamera().forward), 0);
 				vertexBuffer_UVS[v0 + vertexID] = float4(uv, uv2);
 				vertexBuffer_COL[v0 + vertexID] = unpack_rgba(particleColorPacked);
 			}

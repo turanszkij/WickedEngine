@@ -64,6 +64,13 @@ namespace wi::primitive
 
 		return sca * tra;
 	}
+	XMMATRIX AABB::AABB::getUnormRemapMatrix() const
+	{
+		return
+			XMMatrixScaling(_max.x - _min.x, _max.y - _min.y, _max.z - _min.z) *
+			XMMatrixTranslation(_min.x, _min.y, _min.z)
+			;
+	}
 	float AABB::getArea() const
 	{
 		XMFLOAT3 _min = getMin();

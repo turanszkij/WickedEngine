@@ -444,47 +444,54 @@ static const uint SHADERMESH_FLAG_EMITTEDPARTICLE = 1 << 2;
 //	But because these are always loaded toghether by shaders, they are unrolled into one to reduce individual buffer loads
 struct ShaderGeometry
 {
-	int vb_pos_nor_wind;
+	int vb_pos_wind;
 	int vb_uvs;
 	int ib;
 	uint indexOffset;
 
+	int vb_nor;
 	int vb_tan;
 	int vb_col;
 	int vb_atl;
-	int vb_pre;
 
+	int vb_pre;
 	uint materialIndex;
 	uint meshletOffset; // offset of this subset in meshlets (locally within the mesh)
 	uint meshletCount;
-	int impostorSliceOffset;
 
 	float3 aabb_min;
 	uint flags;
 	float3 aabb_max;
 	float tessellation_factor;
 
+	int impostorSliceOffset;
+	int padding0;
+	int padding1;
+	int padding2;
+
 	void init()
 	{
 		ib = -1;
 		indexOffset = 0;
-		vb_pos_nor_wind = -1;
+		vb_pos_wind = -1;
 		vb_uvs = -1;
 
+		vb_nor = -1;
 		vb_tan = -1;
 		vb_col = -1;
 		vb_atl = -1;
-		vb_pre = -1;
 
+		vb_pre = -1;
 		materialIndex = 0;
 		meshletOffset = 0;
 		meshletCount = 0;
-		impostorSliceOffset = -1;
 
 		aabb_min = float3(0, 0, 0);
 		flags = 0;
 		aabb_max = float3(0, 0, 0);
 		tessellation_factor = 0;
+
+		impostorSliceOffset = -1;
 	}
 };
 
@@ -1263,20 +1270,33 @@ CBUFFER(PaintRadiusCB, CBSLOT_RENDERER_MISC)
 
 struct SkinningPushConstants
 {
-	uint vertexCount;
-	int vb_pos_nor_wind;
+	int vb_pos_wind;
+	int vb_nor;
 	int vb_tan;
-	int so_pos_nor_wind;
+	int so_pos_wind;
 
+	int so_nor;
 	int so_tan;
 	int vb_bon;
+	int morphvb_index;
+
 	int skinningbuffer_index;
 	uint bone_offset;
-
 	uint morph_offset;
 	uint morph_count;
-	int morphvb_index;
-	int padding;
+};
+
+struct DebugObjectPushConstants
+{
+	int vb_pos_wind;
+};
+
+struct LightmapPushConstants
+{
+	int vb_pos_wind;
+	int vb_nor;
+	int vb_atl;
+	uint instanceIndex;
 };
 
 struct MorphTargetGPU

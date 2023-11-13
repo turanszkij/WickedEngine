@@ -46,6 +46,7 @@ namespace wi
 		wi::graphics::GPUBuffer constantBuffer;
 		wi::graphics::GPUBuffer generalBuffer;
 		wi::scene::MeshComponent::BufferView vb_pos;
+		wi::scene::MeshComponent::BufferView vb_nor;
 		wi::scene::MeshComponent::BufferView vb_uvs;
 		wi::scene::MeshComponent::BufferView vb_col;
 		wi::graphics::GPUBuffer primitiveBuffer; // raytracing

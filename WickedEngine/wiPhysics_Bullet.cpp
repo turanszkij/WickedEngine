@@ -1403,24 +1403,33 @@ namespace wi::physics
 					btVector3 aabb_max;
 					softbody->getAabb(aabb_min, aabb_max);
 					physicscomponent->aabb = wi::primitive::AABB(XMFLOAT3(aabb_min.x(), aabb_min.y(), aabb_min.z()), XMFLOAT3(aabb_max.x(), aabb_max.y(), aabb_max.z()));
+					mesh.aabb = physicscomponent->aabb;
 
 					// Soft body simulation nodes will update graphics mesh:
-					for (size_t ind = 0; ind < physicscomponent->vertex_positions_simulation.size(); ++ind)
+					for (size_t ind = 0; ind < mesh.vertex_positions.size(); ++ind)
 					{
 						uint32_t physicsInd = physicscomponent->graphicsToPhysicsVertexMapping[ind];
 
 						btSoftBody::Node& node = softbody->m_nodes[physicsInd];
 
-						MeshComponent::Vertex_POS& vertex = physicscomponent->vertex_positions_simulation[ind];
-						vertex.pos.x = node.m_x.getX();
-						vertex.pos.y = node.m_x.getY();
-						vertex.pos.z = node.m_x.getZ();
+						switch (mesh.position_format)
+						{
+						case MeshComponent::Vertex_POS8::FORMAT:
+							physicscomponent->vertex_positions_simulation8[ind].FromFULL(mesh.aabb, XMFLOAT3(node.m_x.getX(), node.m_x.getY(), node.m_x.getZ()), 0);
+							break;
+						case MeshComponent::Vertex_POS16::FORMAT:
+							physicscomponent->vertex_positions_simulation16[ind].FromFULL(mesh.aabb, XMFLOAT3(node.m_x.getX(), node.m_x.getY(), node.m_x.getZ()), 0);
+							break;
+						case MeshComponent::Vertex_POS32::FORMAT:
+							physicscomponent->vertex_positions_simulation32[ind].FromFULL(XMFLOAT3(node.m_x.getX(), node.m_x.getY(), node.m_x.getZ()), 0);
+							break;
+						default:
+							assert(0);
+							break;
+						}
 
-						XMFLOAT3 normal;
-						normal.x = -node.m_n.getX();
-						normal.y = -node.m_n.getY();
-						normal.z = -node.m_n.getZ();
-						vertex.MakeFromParams(normal);
+						MeshComponent::Vertex_NOR& nor = physicscomponent->vertex_normals_simulation[ind];
+						nor.FromFULL(XMFLOAT3(-node.m_n.getX(), -node.m_n.getY(), -node.m_n.getZ()));
 					}
 
 					// Update tangent vectors:
@@ -1438,17 +1447,39 @@ namespace wi::physics
 								const uint32_t i1 = mesh.indices[i + 1];
 								const uint32_t i2 = mesh.indices[i + 2];
 
-								const XMFLOAT3 v0 = physicscomponent->vertex_positions_simulation[i0].pos;
-								const XMFLOAT3 v1 = physicscomponent->vertex_positions_simulation[i1].pos;
-								const XMFLOAT3 v2 = physicscomponent->vertex_positions_simulation[i2].pos;
+								XMFLOAT3 v0;
+								XMFLOAT3 v1;
+								XMFLOAT3 v2;
+
+								switch (mesh.position_format)
+								{
+								case MeshComponent::Vertex_POS8::FORMAT:
+									v0 = physicscomponent->vertex_positions_simulation8[i0].GetPOS();
+									v1 = physicscomponent->vertex_positions_simulation8[i1].GetPOS();
+									v2 = physicscomponent->vertex_positions_simulation8[i2].GetPOS();
+									break;
+								case MeshComponent::Vertex_POS16::FORMAT:
+									v0 = physicscomponent->vertex_positions_simulation16[i0].GetPOS();
+									v1 = physicscomponent->vertex_positions_simulation16[i1].GetPOS();
+									v2 = physicscomponent->vertex_positions_simulation16[i2].GetPOS();
+									break;
+								case MeshComponent::Vertex_POS32::FORMAT:
+									v0 = physicscomponent->vertex_positions_simulation32[i0].GetPOS();
+									v1 = physicscomponent->vertex_positions_simulation32[i1].GetPOS();
+									v2 = physicscomponent->vertex_positions_simulation32[i2].GetPOS();
+									break;
+								default:
+									assert(0);
+									break;
+								}
 
 								const XMFLOAT2 u0 = mesh.vertex_uvset_0[i0];
 								const XMFLOAT2 u1 = mesh.vertex_uvset_0[i1];
 								const XMFLOAT2 u2 = mesh.vertex_uvset_0[i2];
 
-								const XMVECTOR nor0 = physicscomponent->vertex_positions_simulation[i0].LoadNOR();
-								const XMVECTOR nor1 = physicscomponent->vertex_positions_simulation[i1].LoadNOR();
-								const XMVECTOR nor2 = physicscomponent->vertex_positions_simulation[i2].LoadNOR();
+								const XMVECTOR nor0 = physicscomponent->vertex_normals_simulation[i0].LoadNOR();
+								const XMVECTOR nor1 = physicscomponent->vertex_normals_simulation[i1].LoadNOR();
+								const XMVECTOR nor2 = physicscomponent->vertex_normals_simulation[i2].LoadNOR();
 
 								const XMVECTOR facenormal = XMVector3Normalize(XMVectorAdd(XMVectorAdd(nor0, nor1), nor2));
 

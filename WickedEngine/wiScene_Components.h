@@ -403,14 +403,16 @@ namespace wi::scene
 			}
 		};
 		BufferView ib;
-		BufferView vb_pos_nor_wind;
+		BufferView vb_pos_wind;
+		BufferView vb_nor;
 		BufferView vb_tan;
 		BufferView vb_uvs;
 		BufferView vb_atl;
 		BufferView vb_col;
 		BufferView vb_bon;
 		BufferView vb_mor;
-		BufferView so_pos_nor_wind;
+		BufferView so_pos_wind;
+		BufferView so_nor;
 		BufferView so_tan;
 		BufferView so_pre;
 		uint32_t geometryOffset = 0;
@@ -493,59 +495,112 @@ namespace wi::scene
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 
-
-		struct Vertex_POS
+		struct Vertex_POS8
 		{
-			XMFLOAT3 pos = XMFLOAT3(0.0f, 0.0f, 0.0f);
-			uint8_t n_x = 0;
-			uint8_t n_y = 0;
-			uint8_t n_z = 0;
+			uint8_t x = 0;
+			uint8_t y = 0;
+			uint8_t z = 0;
 			uint8_t w = 0;
 
-			constexpr void FromFULL(const XMFLOAT3& _pos, const XMFLOAT3& _nor, uint8_t wind)
+			inline void FromFULL(const wi::primitive::AABB& aabb, XMFLOAT3 pos, uint8_t wind)
 			{
-				pos.x = _pos.x;
-				pos.y = _pos.y;
-				pos.z = _pos.z;
-				MakeFromParams(_nor, wind);
+				pos = wi::math::InverseLerp(aabb._min, aabb._max, pos); // UNORM remap
+				x = uint8_t(pos.x * 255.0f);
+				y = uint8_t(pos.y * 255.0f);
+				z = uint8_t(pos.z * 255.0f);
+				w = wind;
 			}
 			inline XMVECTOR LoadPOS() const
 			{
-				return XMLoadFloat3(&pos);
+				return XMVectorSet(
+					float(x) / 255.0f,
+					float(y) / 255.0f,
+					float(z) / 255.0f,
+					1
+				);
 			}
-			inline XMVECTOR LoadNOR() const
+			inline XMFLOAT3 GetPOS() const
 			{
-				XMFLOAT3 N = GetNor_FULL();
-				return XMLoadFloat3(&N);
+				return XMFLOAT3(
+					float(x) / 255.0f,
+					float(y) / 255.0f,
+					float(z) / 255.0f
+				);
 			}
-			constexpr void MakeFromParams(const XMFLOAT3& normal)
-			{
-				n_x = uint8_t((normal.x * 0.5f + 0.5f) * 255.0f);
-				n_y = uint8_t((normal.y * 0.5f + 0.5f) * 255.0f);
-				n_z = uint8_t((normal.z * 0.5f + 0.5f) * 255.0f);
-			}
-			constexpr void MakeFromParams(const XMFLOAT3& normal, uint8_t wind)
-			{
-				n_x = uint8_t((normal.x * 0.5f + 0.5f) * 255.0f);
-				n_y = uint8_t((normal.y * 0.5f + 0.5f) * 255.0f);
-				n_z = uint8_t((normal.z * 0.5f + 0.5f) * 255.0f);
-				w = wind;
-			}
-			constexpr XMFLOAT3 GetNor_FULL() const
-			{
-				XMFLOAT3 nor_FULL(0, 0, 0);
-				nor_FULL.x = (float(n_x) / 255.0f) * 2.0f - 1.0f;
-				nor_FULL.y = (float(n_y) / 255.0f) * 2.0f - 1.0f;
-				nor_FULL.z = (float(n_z) / 255.0f) * 2.0f - 1.0f;
-				return nor_FULL;
-			}
-			constexpr uint8_t GetWind() const
+			inline uint8_t GetWind() const
 			{
 				return w;
 			}
+			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R8G8B8A8_UNORM;
+		};
+		struct Vertex_POS16
+		{
+			uint16_t x = 0;
+			uint16_t y = 0;
+			uint16_t z = 0;
+			uint16_t w = 0;
 
+			inline void FromFULL(const wi::primitive::AABB& aabb, XMFLOAT3 pos, uint8_t wind)
+			{
+				pos = wi::math::InverseLerp(aabb._min, aabb._max, pos); // UNORM remap
+				x = uint16_t(pos.x * 65535.0f);
+				y = uint16_t(pos.y * 65535.0f);
+				z = uint16_t(pos.z * 65535.0f);
+				w = uint16_t((float(wind) / 255.0f) * 65535.0f);
+			}
+			inline XMVECTOR LoadPOS() const
+			{
+				return XMVectorSet(
+					float(x) / 65535.0f,
+					float(y) / 65535.0f,
+					float(z) / 65535.0f,
+					1
+				);
+			}
+			inline XMFLOAT3 GetPOS() const
+			{
+				return XMFLOAT3(
+					float(x) / 65535.0f,
+					float(y) / 65535.0f,
+					float(z) / 65535.0f
+				);
+			}
+			inline uint8_t GetWind() const
+			{
+				return uint8_t((float(w) / 65535.0f) * 255);
+			}
+			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R16G16B16A16_UNORM;
+		};
+		struct Vertex_POS32
+		{
+			float x = 0;
+			float y = 0;
+			float z = 0;
+			float w = 0;
+
+			inline void FromFULL(const XMFLOAT3& pos, uint8_t wind)
+			{
+				x = pos.x;
+				y = pos.y;
+				z = pos.z;
+				w = float(wind) / 255.0f;
+			}
+			inline XMVECTOR LoadPOS() const
+			{
+				return XMVectorSet(x, y, z, 1);
+			}
+			inline XMFLOAT3 GetPOS() const
+			{
+				return XMFLOAT3(x, y, z);
+			}
+			inline uint8_t GetWind() const
+			{
+				return uint8_t(w * 255);
+			}
 			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R32G32B32A32_FLOAT;
 		};
+		wi::graphics::Format position_format = Vertex_POS16::FORMAT; // CreateRenderData() will choose the appropriate format
+
 		struct Vertex_TEX
 		{
 			XMHALF2 tex = XMHALF2(0.0f, 0.0f);
@@ -554,7 +609,6 @@ namespace wi::scene
 			{
 				tex = XMHALF2(texcoords.x, texcoords.y);
 			}
-
 			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R16G16_FLOAT;
 		};
 		struct Vertex_UVS
@@ -606,6 +660,44 @@ namespace wi::scene
 			uint32_t color = 0;
 			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R8G8B8A8_UNORM;
 		};
+		struct Vertex_NOR
+		{
+			int8_t x = 0;
+			int8_t y = 0;
+			int8_t z = 0;
+			int8_t w = 0;
+
+			void FromFULL(const XMFLOAT3& nor)
+			{
+				XMVECTOR N = XMLoadFloat3(&nor);
+				N = XMVector3Normalize(N);
+				XMFLOAT3 n;
+				XMStoreFloat3(&n, N);
+
+				x = int8_t(n.x * 127.5f);
+				y = int8_t(n.y * 127.5f);
+				z = int8_t(n.z * 127.5f);
+				w = 0;
+			}
+			inline XMFLOAT3 GetNOR() const
+			{
+				return XMFLOAT3(
+					float(x) / 127.5f,
+					float(y) / 127.5f,
+					float(z) / 127.5f
+				);
+			}
+			inline XMVECTOR LoadNOR() const
+			{
+				return XMVectorSet(
+					float(x) / 127.5f,
+					float(y) / 127.5f,
+					float(z) / 127.5f,
+					0
+				);
+			}
+			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R8G8B8A8_SNORM;
+		};
 		struct Vertex_TAN
 		{
 			int8_t x = 0;
@@ -626,7 +718,15 @@ namespace wi::scene
 				z = int8_t(t.z * 127.5f);
 				w = int8_t(t.w * 127.5f);
 			}
-
+			inline XMFLOAT4 GetTAN() const
+			{
+				return XMFLOAT4(
+					float(x) / 127.5f,
+					float(y) / 127.5f,
+					float(z) / 127.5f,
+					float(w) / 127.5f
+				);
+			}
 			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R8G8B8A8_SNORM;
 		};
 
@@ -819,7 +919,10 @@ namespace wi::scene
 		// Non-serialized attributes:
 		std::shared_ptr<void> physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
 		XMFLOAT4X4 worldMatrix = wi::math::IDENTITY_MATRIX;
-		wi::vector<MeshComponent::Vertex_POS> vertex_positions_simulation; // graphics vertices after simulation (world space)
+		wi::vector<MeshComponent::Vertex_POS8> vertex_positions_simulation8; // graphics vertices after simulation (world space)
+		wi::vector<MeshComponent::Vertex_POS16> vertex_positions_simulation16; // graphics vertices after simulation (world space)
+		wi::vector<MeshComponent::Vertex_POS32> vertex_positions_simulation32; // graphics vertices after simulation (world space)
+		wi::vector<MeshComponent::Vertex_NOR> vertex_normals_simulation;
 		wi::vector<XMFLOAT4>vertex_tangents_tmp;
 		wi::vector<MeshComponent::Vertex_TAN> vertex_tangents_simulation;
 		wi::primitive::AABB aabb;
@@ -827,6 +930,15 @@ namespace wi::scene
 		inline void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
 
 		inline bool IsDisableDeactivation() const { return _flags & DISABLE_DEACTIVATION; }
+
+		inline bool HasVertices() const
+		{
+			return
+				!vertex_positions_simulation8.empty() ||
+				!vertex_positions_simulation16.empty() ||
+				!vertex_positions_simulation32.empty()
+				;
+		}
 
 		// Create physics represenation of graphics mesh
 		void CreateFromMesh(const MeshComponent& mesh);

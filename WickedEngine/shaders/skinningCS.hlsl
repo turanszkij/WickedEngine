@@ -8,18 +8,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	const uint vertexID = DTid.x;
 
 	[branch]
-	if (push.vb_pos_nor_wind < 0 || vertexID >= push.vertexCount)
+	if (push.vb_pos_wind < 0)
 		return;
 	
-	float4 pos_nor_wind = bindless_buffers_float4[push.vb_pos_nor_wind][vertexID];
-	uint nor_wind = asuint(pos_nor_wind.w);
+	float4 pos_wind = bindless_buffers_float4[push.vb_pos_wind][vertexID];
+	float3 nor = bindless_buffers_float4[push.vb_nor][vertexID].xyz;
 	
-	float3 pos = pos_nor_wind.xyz;
-	float4 nor = 0;
-	nor.x = (float)((nor_wind >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	nor.y = (float)((nor_wind >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	nor.z = (float)((nor_wind >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	nor.w = (float)((nor_wind >> 24) & 0x000000FF) / 255.0f; // wind
+	float3 pos = pos_wind.xyz;
 	
 	float4 tan = bindless_buffers_float4[push.vb_tan][vertexID];
 
@@ -92,15 +87,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 
 	// Store data:
 	[branch]
-	if (push.so_pos_nor_wind >= 0)
+	if (push.so_pos_wind >= 0)
 	{
-		uint nor_wind = 0;
-		nor_wind |= uint((nor.x * 0.5f + 0.5f) * 255.0f) << 0;
-		nor_wind |= uint((nor.y * 0.5f + 0.5f) * 255.0f) << 8;
-		nor_wind |= uint((nor.z * 0.5f + 0.5f) * 255.0f) << 16;
-		nor_wind |= uint(nor.w * 255.0f) << 24; // wind
-		pos_nor_wind = float4(pos.xyz, asfloat(nor_wind));
-		bindless_rwbuffers_float4[push.so_pos_nor_wind][vertexID] = pos_nor_wind;
+		pos_wind.xyz = pos.xyz;
+		bindless_rwbuffers_float4[push.so_pos_wind][vertexID] = pos_wind;
+	}
+
+	[branch]
+	if (push.so_nor >= 0)
+	{
+		bindless_rwbuffers_float4[push.so_nor][vertexID] = float4(nor, 0);
 	}
 
 	[branch]

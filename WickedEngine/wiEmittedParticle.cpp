@@ -104,12 +104,14 @@ namespace wi
 			}
 			const uint64_t alignment = device->GetMinOffsetAlignment(&bd);
 
-			vb_pos.size = sizeof(MeshComponent::Vertex_POS) * 4 * MAX_PARTICLES;
+			vb_pos.size = sizeof(MeshComponent::Vertex_POS32) * 4 * MAX_PARTICLES;
+			vb_nor.size = sizeof(MeshComponent::Vertex_NOR) * 4 * MAX_PARTICLES;
 			vb_uvs.size = sizeof(MeshComponent::Vertex_UVS) * 4 * MAX_PARTICLES;
 			vb_col.size = sizeof(MeshComponent::Vertex_COL) * 4 * MAX_PARTICLES;
 
 			bd.size =
 				AlignTo(vb_pos.size, alignment) +
+				AlignTo(vb_nor.size, alignment) +
 				AlignTo(vb_uvs.size, alignment) +
 				AlignTo(vb_col.size, alignment)
 			;
@@ -121,10 +123,17 @@ namespace wi
 
 			vb_pos.offset = buffer_offset;
 			buffer_offset += AlignTo(vb_pos.size, alignment);
-			vb_pos.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos.offset, vb_pos.size, &MeshComponent::Vertex_POS::FORMAT);
-			vb_pos.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos.offset, vb_pos.size, &MeshComponent::Vertex_POS::FORMAT);
+			vb_pos.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos.offset, vb_pos.size, &MeshComponent::Vertex_POS32::FORMAT);
+			vb_pos.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos.offset, vb_pos.size, &MeshComponent::Vertex_POS32::FORMAT);
 			vb_pos.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_pos.subresource_srv);
 			vb_pos.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_pos.subresource_uav);
+
+			vb_nor.offset = buffer_offset;
+			buffer_offset += AlignTo(vb_nor.size, alignment);
+			vb_nor.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_nor.offset, vb_nor.size, &MeshComponent::Vertex_NOR::FORMAT);
+			vb_nor.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_nor.offset, vb_nor.size, &MeshComponent::Vertex_NOR::FORMAT);
+			vb_nor.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_nor.subresource_srv);
+			vb_nor.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_nor.subresource_uav);
 
 			vb_uvs.offset = buffer_offset;
 			buffer_offset += AlignTo(vb_uvs.size, alignment);
@@ -278,9 +287,9 @@ namespace wi
 			geometry.triangles.index_format = GetIndexBufferFormat(primitiveBuffer.desc.format);
 			geometry.triangles.index_count = MAX_PARTICLES * 6;
 			geometry.triangles.index_offset = 0;
-			geometry.triangles.vertex_count = (uint32_t)(vb_pos.size / sizeof(MeshComponent::Vertex_POS));
+			geometry.triangles.vertex_count = (uint32_t)(vb_pos.size / sizeof(MeshComponent::Vertex_POS32));
 			geometry.triangles.vertex_format = Format::R32G32B32_FLOAT;
-			geometry.triangles.vertex_stride = sizeof(MeshComponent::Vertex_POS);
+			geometry.triangles.vertex_stride = sizeof(MeshComponent::Vertex_POS32);
 
 			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
 			assert(success);
@@ -365,6 +374,16 @@ namespace wi
 		{
 			EmittedParticleCB cb;
 			cb.xEmitterTransform.Create(worldMatrix);
+			if (mesh == nullptr || mesh->position_format == MeshComponent::Vertex_POS32::FORMAT)
+			{
+				cb.xEmitterBaseMeshUnormRemap.init();
+			}
+			else
+			{
+				XMFLOAT4X4 unormRemap;
+				XMStoreFloat4x4(&unormRemap, mesh->aabb.getUnormRemapMatrix());
+				cb.xEmitterBaseMeshUnormRemap.Create(unormRemap);
+			}
 			cb.xEmitCount = (uint32_t)emit;
 			cb.xEmitterMeshIndexCount = mesh == nullptr ? 0 : (uint32_t)mesh->indices.size();
 			cb.xEmitterRandomness = wi::random::GetRandom(0.0f, 1.0f);
@@ -446,21 +465,24 @@ namespace wi
 			device->BindUAV(&indirectBuffers, 5, cmd);
 			device->BindUAV(&distanceBuffer, 6, cmd);
 			device->BindUAV(&generalBuffer, 7, cmd, vb_pos.subresource_uav);
-			device->BindUAV(&generalBuffer, 8, cmd, vb_uvs.subresource_uav);
-			device->BindUAV(&generalBuffer, 9, cmd, vb_col.subresource_uav);
-			device->BindUAV(&culledIndirectionBuffer, 10, cmd);
-			device->BindUAV(&culledIndirectionBuffer2, 11, cmd);
+			device->BindUAV(&generalBuffer, 8, cmd, vb_nor.subresource_uav);
+			device->BindUAV(&generalBuffer, 9, cmd, vb_uvs.subresource_uav);
+			device->BindUAV(&generalBuffer, 10, cmd, vb_col.subresource_uav);
+			device->BindUAV(&culledIndirectionBuffer, 11, cmd);
+			device->BindUAV(&culledIndirectionBuffer2, 12, cmd);
 
 			if (mesh != nullptr)
 			{
 				device->BindResource(&mesh->generalBuffer, 0, cmd, mesh->ib.subresource_srv);
 				if (mesh->streamoutBuffer.IsValid())
 				{
-					device->BindResource(&mesh->streamoutBuffer, 1, cmd, mesh->so_pos_nor_wind.subresource_srv);
+					device->BindResource(&mesh->streamoutBuffer, 1, cmd, mesh->so_pos_wind.subresource_srv);
+					device->BindResource(&mesh->streamoutBuffer, 2, cmd, mesh->so_nor.subresource_srv);
 				}
 				else
 				{
-					device->BindResource(&mesh->generalBuffer, 1, cmd, mesh->vb_pos_nor_wind.subresource_srv);
+					device->BindResource(&mesh->generalBuffer, 1, cmd, mesh->vb_pos_wind.subresource_srv);
+					device->BindResource(&mesh->generalBuffer, 2, cmd, mesh->vb_nor.subresource_srv);
 				}
 			}
 
@@ -624,10 +646,11 @@ namespace wi
 			device->BindUAV(&indirectBuffers, 5, cmd);
 			device->BindUAV(&distanceBuffer, 6, cmd);
 			device->BindUAV(&generalBuffer, 7, cmd, vb_pos.subresource_uav);
-			device->BindUAV(&generalBuffer, 8, cmd, vb_uvs.subresource_uav);
-			device->BindUAV(&generalBuffer, 9, cmd, vb_col.subresource_uav);
-			device->BindUAV(&culledIndirectionBuffer, 10, cmd);
-			device->BindUAV(&culledIndirectionBuffer2, 11, cmd);
+			device->BindUAV(&generalBuffer, 8, cmd, vb_nor.subresource_uav);
+			device->BindUAV(&generalBuffer, 9, cmd, vb_uvs.subresource_uav);
+			device->BindUAV(&generalBuffer, 10, cmd, vb_col.subresource_uav);
+			device->BindUAV(&culledIndirectionBuffer, 11, cmd);
+			device->BindUAV(&culledIndirectionBuffer2, 12, cmd);
 
 			// update CURRENT alive list, write NEW alive list
 			if (IsSorted())

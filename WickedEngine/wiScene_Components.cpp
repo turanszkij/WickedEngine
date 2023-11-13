@@ -460,13 +460,15 @@ namespace wi::scene
 		generalBuffer = {};
 		streamoutBuffer = {};
 		ib = {};
-		vb_pos_nor_wind = {};
+		vb_pos_wind = {};
+		vb_nor = {};
 		vb_tan = {};
 		vb_uvs = {};
 		vb_atl = {};
 		vb_col = {};
 		vb_bon = {};
-		so_pos_nor_wind = {};
+		so_pos_wind = {};
+		so_nor = {};
 		so_tan = {};
 		so_pre = {};
 		BLASes.clear();
@@ -562,6 +564,81 @@ namespace wi::scene
 
 		const size_t uv_count = std::max(vertex_uvset_0.size(), vertex_uvset_1.size());
 
+		// Bounds computation:
+		XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+		XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
+		for (size_t i = 0; i < vertex_positions.size(); ++i)
+		{
+			const XMFLOAT3& pos = vertex_positions[i];
+			_min = wi::math::Min(_min, pos);
+			_max = wi::math::Max(_max, pos);
+		}
+		aabb = AABB(_min, _max);
+
+		// Determine minimum precision for positions:
+		if (armatureID == INVALID_ENTITY)
+		{
+			const float target_precision = 1.0f / 1000.0f; // millimeter
+			int min_precision = 8;
+			for (size_t i = 0; i < vertex_positions.size(); ++i)
+			{
+				const XMFLOAT3& pos = vertex_positions[i];
+				if (min_precision == 8)
+				{
+					Vertex_POS8 v;
+					v.FromFULL(aabb, pos, 0);
+					XMFLOAT3 p = wi::math::Lerp(aabb._min, aabb._max, v.GetPOS());
+					if (
+						std::abs(p.x - pos.x) <= target_precision &&
+						std::abs(p.y - pos.y) <= target_precision &&
+						std::abs(p.z - pos.z) <= target_precision
+						)
+					{
+						// success, continue to next vertex with 8 bits
+						continue;
+					}
+					min_precision = 16; // failed, increase to 16 bits
+				}
+				if (min_precision == 16)
+				{
+					Vertex_POS16 v;
+					v.FromFULL(aabb, pos, 0);
+					XMFLOAT3 p = wi::math::Lerp(aabb._min, aabb._max, v.GetPOS());
+					if (
+						std::abs(p.x - pos.x) <= target_precision &&
+						std::abs(p.y - pos.y) <= target_precision &&
+						std::abs(p.z - pos.z) <= target_precision
+						)
+					{
+						// success, continue to next vertex with 16 bits
+						continue;
+					}
+					min_precision = 32; // failed, increase to 32 bits
+					break; // since 32 bit is the max, we can bail out
+				}
+			}
+			switch (min_precision)
+			{
+			case 8:
+				position_format = Vertex_POS8::FORMAT;
+				break;
+			case 16:
+				position_format = Vertex_POS16::FORMAT;
+				break;
+			default:
+			case 32:
+				position_format = Vertex_POS32::FORMAT;
+				break;
+			}
+		}
+		else
+		{
+			// Skinning cannot use quantized position vertex buffer, so it will use full 32 bit per component format:
+			position_format = Vertex_POS32::FORMAT;
+		}
+
+		const size_t position_stride = GetFormatStride(position_format);
+
 		GPUBufferDesc bd;
 		if (device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
 		{
@@ -581,7 +658,8 @@ namespace wi::scene
 		const uint64_t alignment = device->GetMinOffsetAlignment(&bd);
 		bd.size =
 			AlignTo(indices.size() * GetIndexStride(), alignment) +
-			AlignTo(vertex_positions.size() * sizeof(Vertex_POS), alignment) +
+			AlignTo(vertex_positions.size() * position_stride, alignment) +
+			AlignTo(vertex_normals.size() * sizeof(Vertex_NOR), alignment) +
 			AlignTo(vertex_tangents.size() * sizeof(Vertex_TAN), alignment) +
 			AlignTo(uv_count * sizeof(Vertex_UVS), alignment) +
 			AlignTo(vertex_atlas.size() * sizeof(Vertex_TEX), alignment) +
@@ -628,31 +706,78 @@ namespace wi::scene
 				}
 			}
 
-			XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
-			XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
-
-			// vertexBuffer - POSITION + NORMAL + WIND:
+			// vertexBuffer - POSITION + WIND:
+			switch (position_format)
 			{
-				vb_pos_nor_wind.offset = buffer_offset;
-				vb_pos_nor_wind.size = vertex_positions.size() * sizeof(Vertex_POS);
-				Vertex_POS* vertices = (Vertex_POS*)(buffer_data + buffer_offset);
-				buffer_offset += AlignTo(vb_pos_nor_wind.size, alignment);
+			case Vertex_POS8::FORMAT:
+			{
+				vb_pos_wind.offset = buffer_offset;
+				vb_pos_wind.size = vertex_positions.size() * sizeof(Vertex_POS8);
+				Vertex_POS8* vertices = (Vertex_POS8*)(buffer_data + buffer_offset);
+				buffer_offset += AlignTo(vb_pos_wind.size, alignment);
+				for (size_t i = 0; i < vertex_positions.size(); ++i)
+				{
+					XMFLOAT3 pos = vertex_positions[i];
+					const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
+					Vertex_POS8 vert;
+					vert.FromFULL(aabb, pos, wind);
+					std::memcpy(vertices + i, &vert, sizeof(vert));
+				}
+			}
+			break;
+			case Vertex_POS16::FORMAT:
+			{
+				vb_pos_wind.offset = buffer_offset;
+				vb_pos_wind.size = vertex_positions.size() * sizeof(Vertex_POS16);
+				Vertex_POS16* vertices = (Vertex_POS16*)(buffer_data + buffer_offset);
+				buffer_offset += AlignTo(vb_pos_wind.size, alignment);
+				for (size_t i = 0; i < vertex_positions.size(); ++i)
+				{
+					XMFLOAT3 pos = vertex_positions[i];
+					const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
+					Vertex_POS16 vert;
+					vert.FromFULL(aabb, pos, wind);
+					std::memcpy(vertices + i, &vert, sizeof(vert));
+				}
+			}
+			break;
+			case Vertex_POS32::FORMAT:
+			{
+				vb_pos_wind.offset = buffer_offset;
+				vb_pos_wind.size = vertex_positions.size() * sizeof(Vertex_POS32);
+				Vertex_POS32* vertices = (Vertex_POS32*)(buffer_data + buffer_offset);
+				buffer_offset += AlignTo(vb_pos_wind.size, alignment);
 				for (size_t i = 0; i < vertex_positions.size(); ++i)
 				{
 					const XMFLOAT3& pos = vertex_positions[i];
-					XMFLOAT3 nor = vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : vertex_normals[i];
-					XMStoreFloat3(&nor, XMVector3Normalize(XMLoadFloat3(&nor)));
 					const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
-					Vertex_POS vert;
-					vert.FromFULL(pos, nor, wind);
+					Vertex_POS32 vert;
+					vert.FromFULL(pos, wind);
 					std::memcpy(vertices + i, &vert, sizeof(vert));
-
-					_min = wi::math::Min(_min, pos);
-					_max = wi::math::Max(_max, pos);
 				}
 			}
+			break;
+			default:
+				assert(0);
+				break;
+			}
 
-			aabb = AABB(_min, _max);
+			// vertexBuffer - NORMALS:
+			if (!vertex_normals.empty())
+			{
+				vb_nor.offset = buffer_offset;
+				vb_nor.size = vertex_normals.size() * sizeof(Vertex_NOR);
+				Vertex_NOR* vertices = (Vertex_NOR*)(buffer_data + buffer_offset);
+				buffer_offset += AlignTo(vb_nor.size, alignment);
+				for (size_t i = 0; i < vertex_normals.size(); ++i)
+				{
+					XMFLOAT3 nor = vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : vertex_normals[i];
+					XMStoreFloat3(&nor, XMVector3Normalize(XMLoadFloat3(&nor)));
+					Vertex_NOR vert;
+					vert.FromFULL(nor);
+					std::memcpy(vertices + i, &vert, sizeof(vert));
+				}
+			}
 
 			// vertexBuffer - TANGENTS
 			if (!vertex_tangents.empty())
@@ -812,10 +937,15 @@ namespace wi::scene
 		ib.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, ib.offset, ib.size, &ib_format);
 		ib.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, ib.subresource_srv);
 
-		assert(vb_pos_nor_wind.IsValid());
-		vb_pos_nor_wind.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos_nor_wind.offset, vb_pos_nor_wind.size, &Vertex_POS::FORMAT);
-		vb_pos_nor_wind.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_pos_nor_wind.subresource_srv);
+		assert(vb_pos_wind.IsValid());
+		vb_pos_wind.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos_wind.offset, vb_pos_wind.size, &position_format);
+		vb_pos_wind.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_pos_wind.subresource_srv);
 
+		if (vb_nor.IsValid())
+		{
+			vb_nor.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_nor.offset, vb_nor.size, &Vertex_NOR::FORMAT);
+			vb_nor.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_nor.subresource_srv);
+		}
 		if (vb_tan.IsValid())
 		{
 			vb_tan.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_tan.offset, vb_tan.size, &Vertex_TAN::FORMAT);
@@ -864,9 +994,14 @@ namespace wi::scene
 		{
 			desc.misc_flags |= ResourceMiscFlag::RAY_TRACING;
 		}
+
+		const size_t position_stride = GetFormatStride(position_format);
+
 		const uint64_t alignment = device->GetMinOffsetAlignment(&desc);
 		desc.size =
-			AlignTo(vertex_positions.size() * sizeof(Vertex_POS) * 2, alignment) + // *2 because prevpos also goes into this!
+			AlignTo(vertex_positions.size() * position_stride, alignment) + // pos
+			AlignTo(vertex_positions.size() * position_stride, alignment) + // prevpos
+			AlignTo(vertex_normals.size() * sizeof(Vertex_NOR), alignment) +
 			AlignTo(vertex_tangents.size() * sizeof(Vertex_TAN), alignment)
 			;
 
@@ -876,13 +1011,32 @@ namespace wi::scene
 
 		uint64_t buffer_offset = 0ull;
 
-		so_pos_nor_wind.offset = buffer_offset;
-		so_pos_nor_wind.size = vb_pos_nor_wind.size;
-		buffer_offset += AlignTo(so_pos_nor_wind.size, alignment);
-		so_pos_nor_wind.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_pos_nor_wind.offset, so_pos_nor_wind.size, &Vertex_POS::FORMAT);
-		so_pos_nor_wind.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pos_nor_wind.offset, so_pos_nor_wind.size, &Vertex_POS::FORMAT);
-		so_pos_nor_wind.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_pos_nor_wind.subresource_srv);
-		so_pos_nor_wind.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_pos_nor_wind.subresource_uav);
+		so_pos_wind.offset = buffer_offset;
+		so_pos_wind.size = vb_pos_wind.size;
+		buffer_offset += AlignTo(so_pos_wind.size, alignment);
+		so_pos_wind.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_pos_wind.offset, so_pos_wind.size, &position_format);
+		so_pos_wind.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pos_wind.offset, so_pos_wind.size, &position_format);
+		so_pos_wind.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_pos_wind.subresource_srv);
+		so_pos_wind.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_pos_wind.subresource_uav);
+
+		so_pre.offset = buffer_offset;
+		so_pre.size = vb_pos_wind.size;
+		buffer_offset += AlignTo(so_pre.size, alignment);
+		so_pre.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_pre.offset, so_pre.size, &position_format);
+		so_pre.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pre.offset, so_pre.size, &position_format);
+		so_pre.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_pre.subresource_srv);
+		so_pre.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_pre.subresource_uav);
+
+		if (vb_nor.IsValid())
+		{
+			so_nor.offset = buffer_offset;
+			so_nor.size = vb_nor.size;
+			buffer_offset += AlignTo(so_nor.size, alignment);
+			so_nor.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_nor.offset, so_nor.size, &Vertex_NOR::FORMAT);
+			so_nor.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_nor.offset, so_nor.size, &Vertex_NOR::FORMAT);
+			so_nor.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_nor.subresource_srv);
+			so_nor.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_nor.subresource_uav);
+		}
 
 		if (vb_tan.IsValid())
 		{
@@ -894,14 +1048,6 @@ namespace wi::scene
 			so_tan.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_tan.subresource_srv);
 			so_tan.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_tan.subresource_uav);
 		}
-
-		so_pre.offset = buffer_offset;
-		so_pre.size = vb_pos_nor_wind.size;
-		buffer_offset += AlignTo(so_pre.size, alignment);
-		so_pre.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_pre.offset, so_pre.size, &Vertex_POS::FORMAT);
-		so_pre.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pre.offset, so_pre.size, &Vertex_POS::FORMAT);
-		so_pre.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_pre.subresource_srv);
-		so_pre.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_pre.subresource_uav);
 	}
 	void MeshComponent::CreateRaytracingRenderData()
 	{
@@ -939,14 +1085,14 @@ namespace wi::scene
 				auto& geometry = desc.bottom_level.geometries.back();
 				geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::TRIANGLES;
 				geometry.triangles.vertex_buffer = generalBuffer;
-				geometry.triangles.vertex_byte_offset = vb_pos_nor_wind.offset;
+				geometry.triangles.vertex_byte_offset = vb_pos_wind.offset;
 				geometry.triangles.index_buffer = generalBuffer;
 				geometry.triangles.index_format = GetIndexFormat();
 				geometry.triangles.index_count = subset.indexCount;
 				geometry.triangles.index_offset = ib.offset / GetIndexStride() + subset.indexOffset;
 				geometry.triangles.vertex_count = (uint32_t)vertex_positions.size();
-				geometry.triangles.vertex_format = Format::R32G32B32_FLOAT;
-				geometry.triangles.vertex_stride = sizeof(MeshComponent::Vertex_POS);
+				geometry.triangles.vertex_format = position_format == Format::R32G32B32A32_FLOAT ? Format::R32G32B32_FLOAT : position_format;
+				geometry.triangles.vertex_stride = GetFormatStride(position_format);
 			}
 
 			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLASes[lod]);
@@ -1615,25 +1761,60 @@ namespace wi::scene
 
 	void SoftBodyPhysicsComponent::CreateFromMesh(const MeshComponent& mesh)
 	{
-		vertex_positions_simulation.resize(mesh.vertex_positions.size());
+		vertex_positions_simulation8.clear();
+		vertex_positions_simulation16.clear();
+		vertex_positions_simulation32.clear();
+		switch (mesh.position_format)
+		{
+		case MeshComponent::Vertex_POS8::FORMAT:
+			vertex_positions_simulation8.resize(mesh.vertex_positions.size());
+			break;
+		case MeshComponent::Vertex_POS16::FORMAT:
+			vertex_positions_simulation16.resize(mesh.vertex_positions.size());
+			break;
+		case MeshComponent::Vertex_POS32::FORMAT:
+			vertex_positions_simulation32.resize(mesh.vertex_positions.size());
+			break;
+		default:
+			assert(0);
+			break;
+		}
+		vertex_normals_simulation.resize(mesh.vertex_normals.size());
 		vertex_tangents_tmp.resize(mesh.vertex_tangents.size());
 		vertex_tangents_simulation.resize(mesh.vertex_tangents.size());
 
-		XMMATRIX W = XMLoadFloat4x4(&worldMatrix);
 		XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 		XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
-		for (size_t i = 0; i < vertex_positions_simulation.size(); ++i)
+		for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
 		{
 			XMFLOAT3 pos = mesh.vertex_positions[i];
-			XMStoreFloat3(&pos, XMVector3Transform(XMLoadFloat3(&pos), W));
-			XMFLOAT3 nor = mesh.vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : mesh.vertex_normals[i];
-			XMStoreFloat3(&nor, XMVector3Normalize(XMVector3TransformNormal(XMLoadFloat3(&nor), W)));
-			const uint8_t wind = mesh.vertex_windweights.empty() ? 0xFF : mesh.vertex_windweights[i];
-			vertex_positions_simulation[i].FromFULL(pos, nor, wind);
 			_min = wi::math::Min(_min, pos);
 			_max = wi::math::Max(_max, pos);
 		}
 		aabb = AABB(_min, _max);
+
+		XMMATRIX W = XMLoadFloat4x4(&worldMatrix);
+		for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
+		{
+			XMFLOAT3 pos = mesh.vertex_positions[i];
+			XMStoreFloat3(&pos, XMVector3Transform(XMLoadFloat3(&pos), W));
+			const uint8_t wind = mesh.vertex_windweights.empty() ? 0xFF : mesh.vertex_windweights[i];
+			switch (mesh.position_format)
+			{
+			case MeshComponent::Vertex_POS8::FORMAT:
+				vertex_positions_simulation8[i].FromFULL(aabb, pos, wind);
+				break;
+			case MeshComponent::Vertex_POS16::FORMAT:
+				vertex_positions_simulation16[i].FromFULL(aabb, pos, wind);
+				break;
+			case MeshComponent::Vertex_POS32::FORMAT:
+				vertex_positions_simulation32[i].FromFULL(pos, wind);
+				break;
+			default:
+				assert(0);
+				break;
+			}
+		}
 
 		if (physicsToGraphicsVertexMapping.empty())
 		{
