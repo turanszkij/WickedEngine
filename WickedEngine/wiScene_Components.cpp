@@ -577,19 +577,21 @@ namespace wi::scene
 
 		// Determine minimum precision for positions:
 		const float target_precision = 1.0f / 1000.0f; // millimeter
-		position_format = Vertex_POS8::FORMAT;
+		position_format = Vertex_POS10::FORMAT;
 		for (size_t i = 0; i < vertex_positions.size(); ++i)
 		{
 			const XMFLOAT3& pos = vertex_positions[i];
-			if (position_format == Vertex_POS8::FORMAT)
+			const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
+			if (position_format == Vertex_POS10::FORMAT)
 			{
-				Vertex_POS8 v;
-				v.FromFULL(aabb, pos, 0);
+				Vertex_POS10 v;
+				v.FromFULL(aabb, pos, wind);
 				XMFLOAT3 p = v.GetPOS(aabb);
 				if (
 					std::abs(p.x - pos.x) <= target_precision &&
 					std::abs(p.y - pos.y) <= target_precision &&
-					std::abs(p.z - pos.z) <= target_precision
+					std::abs(p.z - pos.z) <= target_precision &&
+					wind == v.GetWind()
 					)
 				{
 					// success, continue to next vertex with 8 bits
@@ -600,12 +602,13 @@ namespace wi::scene
 			if (position_format == Vertex_POS16::FORMAT)
 			{
 				Vertex_POS16 v;
-				v.FromFULL(aabb, pos, 0);
+				v.FromFULL(aabb, pos, wind);
 				XMFLOAT3 p = v.GetPOS(aabb);
 				if (
 					std::abs(p.x - pos.x) <= target_precision &&
 					std::abs(p.y - pos.y) <= target_precision &&
-					std::abs(p.z - pos.z) <= target_precision
+					std::abs(p.z - pos.z) <= target_precision &&
+					wind == v.GetWind()
 					)
 				{
 					// success, continue to next vertex with 16 bits
@@ -688,17 +691,17 @@ namespace wi::scene
 			// vertexBuffer - POSITION + WIND:
 			switch (position_format)
 			{
-			case Vertex_POS8::FORMAT:
+			case Vertex_POS10::FORMAT:
 			{
 				vb_pos_wind.offset = buffer_offset;
-				vb_pos_wind.size = vertex_positions.size() * sizeof(Vertex_POS8);
-				Vertex_POS8* vertices = (Vertex_POS8*)(buffer_data + buffer_offset);
+				vb_pos_wind.size = vertex_positions.size() * sizeof(Vertex_POS10);
+				Vertex_POS10* vertices = (Vertex_POS10*)(buffer_data + buffer_offset);
 				buffer_offset += AlignTo(vb_pos_wind.size, alignment);
 				for (size_t i = 0; i < vertex_positions.size(); ++i)
 				{
 					XMFLOAT3 pos = vertex_positions[i];
 					const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
-					Vertex_POS8 vert;
+					Vertex_POS10 vert;
 					vert.FromFULL(aabb, pos, wind);
 					std::memcpy(vertices + i, &vert, sizeof(vert));
 				}

@@ -495,20 +495,20 @@ namespace wi::scene
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 
-		struct Vertex_POS8
+		struct Vertex_POS10
 		{
-			uint8_t x = 0;
-			uint8_t y = 0;
-			uint8_t z = 0;
-			uint8_t w = 0;
+			uint32_t x : 10;
+			uint32_t y : 10;
+			uint32_t z : 10;
+			uint32_t w : 2;
 
 			inline void FromFULL(const wi::primitive::AABB& aabb, XMFLOAT3 pos, uint8_t wind)
 			{
 				pos = wi::math::InverseLerp(aabb._min, aabb._max, pos); // UNORM remap
-				x = uint8_t(pos.x * 255.0f);
-				y = uint8_t(pos.y * 255.0f);
-				z = uint8_t(pos.z * 255.0f);
-				w = wind;
+				x = uint32_t(wi::math::saturate(pos.x) * 1023.0f);
+				y = uint32_t(wi::math::saturate(pos.y) * 1023.0f);
+				z = uint32_t(wi::math::saturate(pos.z) * 1023.0f);
+				w = uint32_t((float(wind) / 255.0f) * 3);
 			}
 			inline XMVECTOR LoadPOS(const wi::primitive::AABB& aabb) const
 			{
@@ -518,17 +518,17 @@ namespace wi::scene
 			inline XMFLOAT3 GetPOS(const wi::primitive::AABB& aabb) const
 			{
 				XMFLOAT3 v = XMFLOAT3(
-					float(x) / 255.0f,
-					float(y) / 255.0f,
-					float(z) / 255.0f
+					float(x) / 1023.0f,
+					float(y) / 1023.0f,
+					float(z) / 1023.0f
 				);
 				return wi::math::Lerp(aabb._min, aabb._max, v);
 			}
 			inline uint8_t GetWind() const
 			{
-				return w;
+				return uint8_t((float(w) / 3.0f) * 255);
 			}
-			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R8G8B8A8_UNORM;
+			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R10G10B10A2_UNORM;
 		};
 		struct Vertex_POS16
 		{
