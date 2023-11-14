@@ -510,22 +510,19 @@ namespace wi::scene
 				z = uint8_t(pos.z * 255.0f);
 				w = wind;
 			}
-			inline XMVECTOR LoadPOS() const
+			inline XMVECTOR LoadPOS(const wi::primitive::AABB& aabb) const
 			{
-				return XMVectorSet(
-					float(x) / 255.0f,
-					float(y) / 255.0f,
-					float(z) / 255.0f,
-					1
-				);
+				XMFLOAT3 v = GetPOS(aabb);
+				return XMLoadFloat3(&v);
 			}
-			inline XMFLOAT3 GetPOS() const
+			inline XMFLOAT3 GetPOS(const wi::primitive::AABB& aabb) const
 			{
-				return XMFLOAT3(
+				XMFLOAT3 v = XMFLOAT3(
 					float(x) / 255.0f,
 					float(y) / 255.0f,
 					float(z) / 255.0f
 				);
+				return wi::math::Lerp(aabb._min, aabb._max, v);
 			}
 			inline uint8_t GetWind() const
 			{
@@ -548,54 +545,25 @@ namespace wi::scene
 				z = uint16_t(pos.z * 65535.0f);
 				w = uint16_t((float(wind) / 255.0f) * 65535.0f);
 			}
-			inline XMVECTOR LoadPOS() const
+			inline XMVECTOR LoadPOS(const wi::primitive::AABB& aabb) const
 			{
-				return XMVectorSet(
-					float(x) / 65535.0f,
-					float(y) / 65535.0f,
-					float(z) / 65535.0f,
-					1
-				);
+				XMFLOAT3 v = GetPOS(aabb);
+				return XMLoadFloat3(&v);
 			}
-			inline XMFLOAT3 GetPOS() const
+			inline XMFLOAT3 GetPOS(const wi::primitive::AABB& aabb) const
 			{
-				return XMFLOAT3(
+				XMFLOAT3 v = XMFLOAT3(
 					float(x) / 65535.0f,
 					float(y) / 65535.0f,
 					float(z) / 65535.0f
 				);
+				return wi::math::Lerp(aabb._min, aabb._max, v);
 			}
 			inline uint8_t GetWind() const
 			{
 				return uint8_t((float(w) / 65535.0f) * 255);
 			}
 			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R16G16B16A16_UNORM;
-		};
-		struct Vertex_POS16F
-		{
-			XMHALF4 data = XMHALF4(0.0f, 0.0f, 0.0f, 0.0f);
-
-			inline void FromFULL(XMFLOAT3 pos, uint8_t wind)
-			{
-				data = XMHALF4(pos.x, pos.y, pos.z, float(wind) / 255.0f);
-			}
-			inline XMVECTOR LoadPOS() const
-			{
-				return XMLoadHalf4(&data);
-			}
-			inline XMFLOAT3 GetPOS() const
-			{
-				return XMFLOAT3(
-					XMConvertHalfToFloat(data.x),
-					XMConvertHalfToFloat(data.y),
-					XMConvertHalfToFloat(data.z)
-				);
-			}
-			inline uint8_t GetWind() const
-			{
-				return uint8_t(XMConvertHalfToFloat(data.w) * 255);
-			}
-			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R16G16B16A16_FLOAT;
 		};
 		struct Vertex_POS32
 		{

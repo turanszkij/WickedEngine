@@ -4337,6 +4337,15 @@ void UpdateRenderData(
 					push.morph_offset = ~0u;
 					push.morphvb_index = -1;
 				}
+				if (IsFormatUnorm(mesh.position_format))
+				{
+					push.geometryIndex = mesh.geometryOffset;
+				}
+				else
+				{
+					push.geometryIndex = ~0u;
+				}
+				push.vertexCount = (uint)mesh.vertex_positions.size();
 				device->PushConstants(&push, sizeof(push), cmd);
 
 				device->Dispatch(((uint32_t)mesh.vertex_positions.size() + 63) / 64, 1, 1, cmd);

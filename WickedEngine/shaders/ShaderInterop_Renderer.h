@@ -1284,6 +1284,9 @@ struct SkinningPushConstants
 	uint bone_offset;
 	uint morph_offset;
 	uint morph_count;
+
+	uint geometryIndex;
+	uint vertexCount;
 };
 
 struct DebugObjectPushConstants

@@ -577,95 +577,42 @@ namespace wi::scene
 
 		// Determine minimum precision for positions:
 		const float target_precision = 1.0f / 1000.0f; // millimeter
-		if (armatureID == INVALID_ENTITY)
+		position_format = Vertex_POS8::FORMAT;
+		for (size_t i = 0; i < vertex_positions.size(); ++i)
 		{
-			// Non-skinned can use 8 or 16 bit UNORM, or 32 bit FLOAT
-			int min_precision = 8;
-			for (size_t i = 0; i < vertex_positions.size(); ++i)
+			const XMFLOAT3& pos = vertex_positions[i];
+			if (position_format == Vertex_POS8::FORMAT)
 			{
-				const XMFLOAT3& pos = vertex_positions[i];
-				if (min_precision == 8)
+				Vertex_POS8 v;
+				v.FromFULL(aabb, pos, 0);
+				XMFLOAT3 p = v.GetPOS(aabb);
+				if (
+					std::abs(p.x - pos.x) <= target_precision &&
+					std::abs(p.y - pos.y) <= target_precision &&
+					std::abs(p.z - pos.z) <= target_precision
+					)
 				{
-					Vertex_POS8 v;
-					v.FromFULL(aabb, pos, 0);
-					XMFLOAT3 p = wi::math::Lerp(aabb._min, aabb._max, v.GetPOS());
-					if (
-						std::abs(p.x - pos.x) <= target_precision &&
-						std::abs(p.y - pos.y) <= target_precision &&
-						std::abs(p.z - pos.z) <= target_precision
-						)
-					{
-						// success, continue to next vertex with 8 bits
-						continue;
-					}
-					min_precision = 16; // failed, increase to 16 bits
+					// success, continue to next vertex with 8 bits
+					continue;
 				}
-				if (min_precision == 16)
+				position_format = Vertex_POS16::FORMAT; // failed, increase to 16 bits
+			}
+			if (position_format == Vertex_POS16::FORMAT)
+			{
+				Vertex_POS16 v;
+				v.FromFULL(aabb, pos, 0);
+				XMFLOAT3 p = v.GetPOS(aabb);
+				if (
+					std::abs(p.x - pos.x) <= target_precision &&
+					std::abs(p.y - pos.y) <= target_precision &&
+					std::abs(p.z - pos.z) <= target_precision
+					)
 				{
-					Vertex_POS16 v;
-					v.FromFULL(aabb, pos, 0);
-					XMFLOAT3 p = wi::math::Lerp(aabb._min, aabb._max, v.GetPOS());
-					if (
-						std::abs(p.x - pos.x) <= target_precision &&
-						std::abs(p.y - pos.y) <= target_precision &&
-						std::abs(p.z - pos.z) <= target_precision
-						)
-					{
-						// success, continue to next vertex with 16 bits
-						continue;
-					}
-					min_precision = 32; // failed, increase to 32 bits
-					break; // since 32 bit is the max, we can bail out
+					// success, continue to next vertex with 16 bits
+					continue;
 				}
-			}
-			switch (min_precision)
-			{
-			case 8:
-				position_format = Vertex_POS8::FORMAT;
-				break;
-			case 16:
-				position_format = Vertex_POS16::FORMAT;
-				break;
-			default:
-			case 32:
-				position_format = Vertex_POS32::FORMAT;
-				break;
-			}
-		}
-		else
-		{
-			// Skinning can either use 16 or 32 bit FLOAT:
-			int min_precision = 16;
-			for (size_t i = 0; i < vertex_positions.size(); ++i)
-			{
-				const XMFLOAT3& pos = vertex_positions[i];
-				if (min_precision == 16)
-				{
-					Vertex_POS16F v;
-					v.FromFULL(pos, 0);
-					XMFLOAT3 p = v.GetPOS();
-					if (
-						std::abs(p.x - pos.x) <= target_precision &&
-						std::abs(p.y - pos.y) <= target_precision &&
-						std::abs(p.z - pos.z) <= target_precision
-						)
-					{
-						// success, continue to next vertex with 16 bits
-						continue;
-					}
-					min_precision = 32; // failed, increase to 32 bits
-					break; // since 32 bit is the max, we can bail out
-				}
-			}
-			switch (min_precision)
-			{
-			case 16:
-				position_format = Vertex_POS16F::FORMAT;
-				break;
-			default:
-			case 32:
-				position_format = Vertex_POS32::FORMAT;
-				break;
+				position_format = Vertex_POS32::FORMAT; // failed, increase to 32 bits
+				break; // since 32 bit is the max, we can bail out
 			}
 		}
 
@@ -769,22 +716,6 @@ namespace wi::scene
 					const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
 					Vertex_POS16 vert;
 					vert.FromFULL(aabb, pos, wind);
-					std::memcpy(vertices + i, &vert, sizeof(vert));
-				}
-			}
-			break;
-			case Vertex_POS16F::FORMAT:
-			{
-				vb_pos_wind.offset = buffer_offset;
-				vb_pos_wind.size = vertex_positions.size() * sizeof(Vertex_POS16F);
-				Vertex_POS16F* vertices = (Vertex_POS16F*)(buffer_data + buffer_offset);
-				buffer_offset += AlignTo(vb_pos_wind.size, alignment);
-				for (size_t i = 0; i < vertex_positions.size(); ++i)
-				{
-					XMFLOAT3 pos = vertex_positions[i];
-					const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
-					Vertex_POS16F vert;
-					vert.FromFULL(pos, wind);
 					std::memcpy(vertices + i, &vert, sizeof(vert));
 				}
 			}
@@ -1137,8 +1068,16 @@ namespace wi::scene
 				geometry.triangles.index_count = subset.indexCount;
 				geometry.triangles.index_offset = ib.offset / GetIndexStride() + subset.indexOffset;
 				geometry.triangles.vertex_count = (uint32_t)vertex_positions.size();
-				geometry.triangles.vertex_format = position_format == Format::R32G32B32A32_FLOAT ? Format::R32G32B32_FLOAT : position_format;
-				geometry.triangles.vertex_stride = GetFormatStride(position_format);
+				if (so_pos_wind.IsValid())
+				{
+					geometry.triangles.vertex_format = Format::R32G32B32_FLOAT;
+					geometry.triangles.vertex_stride = sizeof(Vertex_POS32);
+				}
+				else
+				{
+					geometry.triangles.vertex_format = position_format == Format::R32G32B32A32_FLOAT ? Format::R32G32B32_FLOAT : position_format;
+					geometry.triangles.vertex_stride = GetFormatStride(position_format);
+				}
 			}
 
 			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLASes[lod]);
