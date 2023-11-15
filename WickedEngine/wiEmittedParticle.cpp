@@ -374,7 +374,7 @@ namespace wi
 		{
 			EmittedParticleCB cb;
 			cb.xEmitterTransform.Create(worldMatrix);
-			if (mesh == nullptr || !IsFormatUnorm(mesh->position_format))
+			if (mesh == nullptr || !IsFormatUnorm(mesh->position_format) || mesh->so_pos_wind.IsValid())
 			{
 				cb.xEmitterBaseMeshUnormRemap.init();
 			}
