@@ -5,8 +5,7 @@ PUSHCONSTANT(push, SkinningPushConstants);
 #ifndef __PSSL__
 #undef WICKED_ENGINE_DEFAULT_ROOTSIGNATURE // don't use auto root signature!
 [RootSignature(
-	"RootConstants(num32BitConstants=14, b999),"
-	"CBV(b0), " \
+	"RootConstants(num32BitConstants=20, b999),"
 	"DescriptorTable( "
 		"SRV(t0, space = 2, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"SRV(t0, space = 3, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
@@ -64,10 +63,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	float3 nor = bindless_buffers_float4[push.vb_nor][vertexID].xyz;
 	
 	float3 pos = pos_wind.xyz;
-	if(push.geometryIndex != ~0u)
+	if(any(push.aabb_min) || any(push.aabb_max))
 	{
-		ShaderGeometry geometry = load_geometry(push.geometryIndex);
-		pos = lerp(geometry.aabb_min, geometry.aabb_max, pos);
+		// UNORM vertex position remap:
+		pos = lerp(push.aabb_min, push.aabb_max, pos);
 	}
 	
 	float4 tan = bindless_buffers_float4[push.vb_tan][vertexID];

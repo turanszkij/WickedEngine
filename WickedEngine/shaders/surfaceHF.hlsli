@@ -371,10 +371,11 @@ struct Surface
 			N = attribute_at_bary(n0, n1, n2, bary);
 			N = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), N);
 			N = normalize(N);
-			if (is_backface && !is_hairparticle && !is_emittedparticle)
-			{
-				N = -N;
-			}
+		}
+		
+		if (is_backface && !is_hairparticle && !is_emittedparticle)
+		{
+			N = -N;
 		}
 		facenormal = N;
 
@@ -887,12 +888,9 @@ struct Surface
 		[branch]
 		if (material.IsUsingWind())
 		{
-			float wind0 = ((asuint(data0.w) >> 24u) & 0xFF) / 255.0;
-			float wind1 = ((asuint(data1.w) >> 24u) & 0xFF) / 255.0;
-			float wind2 = ((asuint(data2.w) >> 24u) & 0xFF) / 255.0;
-			pre0 += sample_wind_prev(pre0, wind0);
-			pre1 += sample_wind_prev(pre1, wind1);
-			pre2 += sample_wind_prev(pre2, wind2);
+			pre0 += sample_wind_prev(pre0, data0.w);
+			pre1 += sample_wind_prev(pre1, data1.w);
+			pre2 += sample_wind_prev(pre2, data2.w);
 		}
 		pre = attribute_at_bary(pre0, pre1, pre2, bary);
 #else
@@ -964,12 +962,9 @@ struct Surface
 		[branch]
 		if (material.IsUsingWind())
 		{
-			float wind0 = ((asuint(data0.w) >> 24u) & 0xFF) / 255.0;
-			float wind1 = ((asuint(data1.w) >> 24u) & 0xFF) / 255.0;
-			float wind2 = ((asuint(data2.w) >> 24u) & 0xFF) / 255.0;
-			P0 += sample_wind(P0, wind0);
-			P1 += sample_wind(P1, wind1);
-			P2 += sample_wind(P2, wind2);
+			P0 += sample_wind(P0, data0.w);
+			P1 += sample_wind(P1, data1.w);
+			P2 += sample_wind(P2, data2.w);
 		}
 #endif // SURFACE_LOAD_ENABLE_WIND
 
@@ -1008,14 +1003,9 @@ struct Surface
 		[branch]
 		if (material.IsUsingWind())
 		{
-			float wind0 = ((asuint(data0.w) >> 24u) & 0xFF) / 255.0;
-			float wind1 = ((asuint(data1.w) >> 24u) & 0xFF) / 255.0;
-			float wind2 = ((asuint(data2.w) >> 24u) & 0xFF) / 255.0;
-
-			// this is hella slow to do per pixel:
-			P0 += sample_wind(P0, wind0);
-			P1 += sample_wind(P1, wind1);
-			P2 += sample_wind(P2, wind2);
+			P0 += sample_wind(P0, data0.w);
+			P1 += sample_wind(P1, data1.w);
+			P2 += sample_wind(P2, data2.w);
 		}
 #endif // SURFACE_LOAD_ENABLE_WIND
 

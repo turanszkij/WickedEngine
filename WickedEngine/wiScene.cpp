@@ -3947,7 +3947,7 @@ namespace wi::scene
 				{
 					// The UNORM correction is only done for the GPU data!
 					XMMATRIX R = mesh.aabb.getUnormRemapMatrix();
-					XMStoreFloat4x4(&worldMatrix, R * XMLoadFloat4x4(&worldMatrix));
+					XMStoreFloat4x4(&worldMatrix, R * W);
 					XMStoreFloat4x4(&worldMatrixPrev, R * XMLoadFloat4x4(&worldMatrixPrev));
 				}
 				inst.transform.Create(worldMatrix);

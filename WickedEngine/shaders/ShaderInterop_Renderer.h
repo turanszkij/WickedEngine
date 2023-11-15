@@ -1285,8 +1285,11 @@ struct SkinningPushConstants
 	uint morph_offset;
 	uint morph_count;
 
-	uint geometryIndex;
+	float3 aabb_min;
 	uint vertexCount;
+
+	float3 aabb_max;
+	float padding;
 };
 
 struct DebugObjectPushConstants

@@ -619,6 +619,27 @@ namespace wi::scene
 			}
 		}
 
+		if (IsFormatUnorm(position_format))
+		{
+			// This is done to avoid 0 scaling on any axis of the UNORM remap matrix of the AABB
+			//	It specifically solves a problem with hardware raytracing which treats AABB with zero axis as invisible
+			if (aabb._max.x - aabb._min.x < std::numeric_limits<float>::epsilon())
+			{
+				aabb._max.x += std::numeric_limits<float>::epsilon();
+				aabb._min.x -= std::numeric_limits<float>::epsilon();
+			}
+			if (aabb._max.y - aabb._min.y < std::numeric_limits<float>::epsilon())
+			{
+				aabb._max.y += std::numeric_limits<float>::epsilon();
+				aabb._min.y -= std::numeric_limits<float>::epsilon();
+			}
+			if (aabb._max.z - aabb._min.z < std::numeric_limits<float>::epsilon())
+			{
+				aabb._max.z += std::numeric_limits<float>::epsilon();
+				aabb._min.z -= std::numeric_limits<float>::epsilon();
+			}
+		}
+
 		const size_t position_stride = GetFormatStride(position_format);
 
 		GPUBufferDesc bd;

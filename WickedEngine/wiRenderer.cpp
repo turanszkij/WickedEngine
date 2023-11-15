@@ -4339,11 +4339,13 @@ void UpdateRenderData(
 				}
 				if (IsFormatUnorm(mesh.position_format))
 				{
-					push.geometryIndex = mesh.geometryOffset;
+					push.aabb_min = mesh.aabb._min;
+					push.aabb_max = mesh.aabb._max;
 				}
 				else
 				{
-					push.geometryIndex = ~0u;
+					push.aabb_min = {};
+					push.aabb_max = {};
 				}
 				push.vertexCount = (uint)mesh.vertex_positions.size();
 				device->PushConstants(&push, sizeof(push), cmd);
@@ -9706,7 +9708,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 				cb.xTraceSampleIndex = object.lightmapIterationCount;
 				device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(RaytracingCB), cmd);
 
-				device->DrawIndexedInstanced((uint32_t)mesh.indices.size(), 1, 0, 0, 0, cmd);
+				device->DrawIndexed((uint32_t)mesh.indices.size(), 0, 0, cmd);
 				object.lightmapIterationCount++;
 
 				device->RenderPassEnd(cmd);
