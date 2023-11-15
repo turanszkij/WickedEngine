@@ -17,6 +17,7 @@ VSOut main(uint vertexID : SV_VertexID)
 
 	VSOut Out;
 	Out.pos3D = vb_pos[vertexID].xyz;
+	Out.clip = dot(float4(Out.pos3D, 1), GetCamera().clip_plane);
 	Out.pos = mul(GetCamera().view_projection, float4(Out.pos3D, 1));
 	Out.uv = float2(BILLBOARD[vertexID % 4u] * float2(0.5f, -0.5f) + 0.5f);
 	Out.slice = data.x & 0xFFFFFF;
