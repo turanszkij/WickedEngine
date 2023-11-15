@@ -176,11 +176,32 @@ namespace wi::math
 		XMStoreFloat4(&retVal, result);
 		return retVal;
 	}
+	constexpr XMFLOAT2 Max(const XMFLOAT2& a, const XMFLOAT2& b) {
+		return XMFLOAT2(std::max(a.x, b.x), std::max(a.y, b.y));
+	}
 	constexpr XMFLOAT3 Max(const XMFLOAT3& a, const XMFLOAT3& b) {
 		return XMFLOAT3(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z));
 	}
+	constexpr XMFLOAT4 Max(const XMFLOAT4& a, const XMFLOAT4& b) {
+		return XMFLOAT4(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z), std::max(a.w, b.w));
+	}
+	constexpr XMFLOAT2 Min(const XMFLOAT2& a, const XMFLOAT2& b) {
+		return XMFLOAT2(std::min(a.x, b.x), std::min(a.y, b.y));
+	}
 	constexpr XMFLOAT3 Min(const XMFLOAT3& a, const XMFLOAT3& b) {
 		return XMFLOAT3(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z));
+	}
+	constexpr XMFLOAT4 Min(const XMFLOAT4& a, const XMFLOAT4& b) {
+		return XMFLOAT4(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z), std::min(a.w, b.w));
+	}
+	constexpr XMFLOAT2 Abs(const XMFLOAT2& a) {
+		return XMFLOAT2(std::abs(a.x), std::abs(a.y));
+	}
+	constexpr XMFLOAT3 Abs(const XMFLOAT3& a) {
+		return XMFLOAT3(std::abs(a.x), std::abs(a.y), std::abs(a.z));
+	}
+	constexpr XMFLOAT4 Abs(const XMFLOAT4& a) {
+		return XMFLOAT4(std::abs(a.x), std::abs(a.y), std::abs(a.z), std::abs(a.w));
 	}
 	constexpr float Clamp(float val, float min, float max)
 	{

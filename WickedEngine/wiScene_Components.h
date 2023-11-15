@@ -419,6 +419,8 @@ namespace wi::scene
 		uint32_t meshletCount = 0;
 		uint32_t active_morph_count = 0;
 		uint32_t morphGPUOffset = 0;
+		XMFLOAT2 uv_range_min = XMFLOAT2(0, 0);
+		XMFLOAT2 uv_range_max = XMFLOAT2(1, 1);
 
 		wi::vector<wi::graphics::RaytracingAccelerationStructure> BLASes; // one BLAS per LOD
 		enum BLAS_STATE
@@ -502,7 +504,7 @@ namespace wi::scene
 			uint32_t z : 10;
 			uint32_t w : 2;
 
-			inline void FromFULL(const wi::primitive::AABB& aabb, XMFLOAT3 pos, uint8_t wind)
+			constexpr void FromFULL(const wi::primitive::AABB& aabb, XMFLOAT3 pos, uint8_t wind)
 			{
 				pos = wi::math::InverseLerp(aabb._min, aabb._max, pos); // UNORM remap
 				x = uint32_t(wi::math::saturate(pos.x) * 1023.0f);
@@ -515,7 +517,7 @@ namespace wi::scene
 				XMFLOAT3 v = GetPOS(aabb);
 				return XMLoadFloat3(&v);
 			}
-			inline XMFLOAT3 GetPOS(const wi::primitive::AABB& aabb) const
+			constexpr XMFLOAT3 GetPOS(const wi::primitive::AABB& aabb) const
 			{
 				XMFLOAT3 v = XMFLOAT3(
 					float(x) / 1023.0f,
@@ -524,7 +526,7 @@ namespace wi::scene
 				);
 				return wi::math::Lerp(aabb._min, aabb._max, v);
 			}
-			inline uint8_t GetWind() const
+			constexpr uint8_t GetWind() const
 			{
 				return uint8_t((float(w) / 3.0f) * 255);
 			}
@@ -537,7 +539,7 @@ namespace wi::scene
 			uint16_t z = 0;
 			uint16_t w = 0;
 
-			inline void FromFULL(const wi::primitive::AABB& aabb, XMFLOAT3 pos, uint8_t wind)
+			constexpr void FromFULL(const wi::primitive::AABB& aabb, XMFLOAT3 pos, uint8_t wind)
 			{
 				pos = wi::math::InverseLerp(aabb._min, aabb._max, pos); // UNORM remap
 				x = uint16_t(pos.x * 65535.0f);
@@ -550,7 +552,7 @@ namespace wi::scene
 				XMFLOAT3 v = GetPOS(aabb);
 				return XMLoadFloat3(&v);
 			}
-			inline XMFLOAT3 GetPOS(const wi::primitive::AABB& aabb) const
+			constexpr XMFLOAT3 GetPOS(const wi::primitive::AABB& aabb) const
 			{
 				XMFLOAT3 v = XMFLOAT3(
 					float(x) / 65535.0f,
@@ -559,7 +561,7 @@ namespace wi::scene
 				);
 				return wi::math::Lerp(aabb._min, aabb._max, v);
 			}
-			inline uint8_t GetWind() const
+			constexpr uint8_t GetWind() const
 			{
 				return uint8_t((float(w) / 65535.0f) * 255);
 			}
@@ -572,7 +574,7 @@ namespace wi::scene
 			float z = 0;
 			float w = 0;
 
-			inline void FromFULL(const XMFLOAT3& pos, uint8_t wind)
+			constexpr void FromFULL(const XMFLOAT3& pos, uint8_t wind)
 			{
 				x = pos.x;
 				y = pos.y;
@@ -583,11 +585,11 @@ namespace wi::scene
 			{
 				return XMVectorSet(x, y, z, 1);
 			}
-			inline XMFLOAT3 GetPOS() const
+			constexpr XMFLOAT3 GetPOS() const
 			{
 				return XMFLOAT3(x, y, z);
 			}
-			inline uint8_t GetWind() const
+			constexpr uint8_t GetWind() const
 			{
 				return uint8_t(w * 255);
 			}
@@ -597,19 +599,21 @@ namespace wi::scene
 
 		struct Vertex_TEX
 		{
-			XMHALF2 tex = XMHALF2(0.0f, 0.0f);
+			uint16_t x = 0;
+			uint16_t y = 0;
 
-			void FromFULL(const XMFLOAT2& texcoords)
+			constexpr void FromFULL(const XMFLOAT2& uv, const XMFLOAT2& uv_range_min = XMFLOAT2(0, 0), const XMFLOAT2& uv_range_max = XMFLOAT2(1, 1))
 			{
-				tex = XMHALF2(texcoords.x, texcoords.y);
+				x = uint16_t(wi::math::InverseLerp(uv_range_min.x, uv_range_max.x, uv.x) * 65535.0f);
+				y = uint16_t(wi::math::InverseLerp(uv_range_min.y, uv_range_max.y, uv.y) * 65535.0f);
 			}
-			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R16G16_FLOAT;
+			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R16G16_UNORM;
 		};
 		struct Vertex_UVS
 		{
 			Vertex_TEX uv0;
 			Vertex_TEX uv1;
-			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R16G16B16A16_FLOAT;
+			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R16G16B16A16_UNORM;
 		};
 		struct Vertex_BON
 		{

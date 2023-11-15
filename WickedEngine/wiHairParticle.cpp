@@ -48,6 +48,15 @@ namespace wi
 
 	void HairParticleSystem::CreateFromMesh(const wi::scene::MeshComponent& mesh)
 	{
+		if (mesh.so_pos_wind.IsValid())
+		{
+			position_format = MeshComponent::Vertex_POS32::FORMAT;
+		}
+		else
+		{
+			position_format = MeshComponent::Vertex_POS16::FORMAT;
+		}
+
 		if (vertex_lengths.size() != mesh.vertex_positions.size())
 		{
 			vertex_lengths.resize(mesh.vertex_positions.size());
@@ -96,17 +105,18 @@ namespace wi
 				bd.misc_flags |= ResourceMiscFlag::RAY_TRACING;
 			}
 
+			const size_t position_stride = GetFormatStride(position_format);
 			const Format ib_format = GetIndexBufferFormatRaw(particleCount * 4);
 			const uint64_t alignment = device->GetMinOffsetAlignment(&bd);
 
 			simulation_view.size = sizeof(PatchSimulationData) * particleCount;
-			vb_pos[0].size = sizeof(MeshComponent::Vertex_POS16) * 4 * particleCount;
-			vb_pos[1].size = sizeof(MeshComponent::Vertex_POS16) * 4 * particleCount;
+			vb_pos[0].size = position_stride * 4 * particleCount;
+			vb_pos[1].size = position_stride * 4 * particleCount;
 			vb_nor.size = sizeof(MeshComponent::Vertex_NOR) * 4 * particleCount;
 			vb_uvs.size = sizeof(MeshComponent::Vertex_UVS) * 4 * particleCount;
 			ib_culled.size = GetFormatStride(ib_format) * 6 * particleCount;
 			indirect_view.size = sizeof(IndirectDrawArgsIndexedInstanced);
-			vb_pos_raytracing.size = sizeof(MeshComponent::Vertex_POS16) * 4 * particleCount;
+			vb_pos_raytracing.size = position_stride * 4 * particleCount;
 
 			bd.size =
 				AlignTo(AlignTo(indirect_view.size, alignment), sizeof(IndirectDrawArgsIndexedInstanced)) + // additional structured buffer alignment
@@ -146,16 +156,16 @@ namespace wi
 
 			buffer_offset = AlignTo(buffer_offset, alignment);
 			vb_pos[0].offset = buffer_offset;
-			vb_pos[0].subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos[0].offset, vb_pos[0].size, &MeshComponent::Vertex_POS16::FORMAT);
-			vb_pos[0].subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos[0].offset, vb_pos[0].size, &MeshComponent::Vertex_POS16::FORMAT);
+			vb_pos[0].subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos[0].offset, vb_pos[0].size, &position_format);
+			vb_pos[0].subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos[0].offset, vb_pos[0].size, &position_format);
 			vb_pos[0].descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_pos[0].subresource_srv);
 			vb_pos[0].descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_pos[0].subresource_uav);
 			buffer_offset += vb_pos[0].size;
 
 			buffer_offset = AlignTo(buffer_offset, alignment);
 			vb_pos[1].offset = buffer_offset;
-			vb_pos[1].subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos[1].offset, vb_pos[1].size, &MeshComponent::Vertex_POS16::FORMAT);
-			vb_pos[1].subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos[1].offset, vb_pos[1].size, &MeshComponent::Vertex_POS16::FORMAT);
+			vb_pos[1].subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos[1].offset, vb_pos[1].size, &position_format);
+			vb_pos[1].subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos[1].offset, vb_pos[1].size, &position_format);
 			vb_pos[1].descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_pos[1].subresource_srv);
 			vb_pos[1].descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_pos[1].subresource_uav);
 			buffer_offset += vb_pos[1].size;
@@ -186,7 +196,7 @@ namespace wi
 
 			buffer_offset = AlignTo(buffer_offset, alignment);
 			vb_pos_raytracing.offset = buffer_offset;
-			vb_pos_raytracing.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos_raytracing.offset, vb_pos_raytracing.size, &MeshComponent::Vertex_POS16::FORMAT);
+			vb_pos_raytracing.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos_raytracing.offset, vb_pos_raytracing.size, &position_format);
 			vb_pos_raytracing.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_pos_raytracing.subresource_uav);
 			buffer_offset += vb_pos_raytracing.size;
 
@@ -250,9 +260,9 @@ namespace wi
 			geometry.triangles.index_format = GetIndexBufferFormat(primitiveBuffer.desc.format);
 			geometry.triangles.index_count = GetParticleCount() * 6;
 			geometry.triangles.index_offset = 0;
-			geometry.triangles.vertex_count = (uint32_t)(vb_pos_raytracing.size / sizeof(MeshComponent::Vertex_POS16));
-			geometry.triangles.vertex_format = MeshComponent::Vertex_POS16::FORMAT;
-			geometry.triangles.vertex_stride = sizeof(MeshComponent::Vertex_POS16);
+			geometry.triangles.vertex_count = (uint32_t)(vb_pos_raytracing.size / GetFormatStride(position_format));
+			geometry.triangles.vertex_format = position_format == Format::R32G32B32A32_FLOAT ? Format::R32G32B32_FLOAT : position_format;
+			geometry.triangles.vertex_stride = GetFormatStride(position_format);
 			geometry.triangles.vertex_byte_offset = vb_pos_raytracing.offset;
 
 			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
@@ -428,6 +438,8 @@ namespace wi
 
 	void HairParticleSystem::InitializeGPUDataIfNeeded(wi::graphics::CommandList cmd)
 	{
+		if (strandCount == 0 || !generalBuffer.IsValid())
+			return;
 		if (gpu_initialized)
 			return;
 		GraphicsDevice* device = wi::graphics::GetDevice();

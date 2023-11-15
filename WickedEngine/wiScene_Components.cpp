@@ -640,6 +640,23 @@ namespace wi::scene
 			}
 		}
 
+		// Determine UV range for normalization:
+		if (!vertex_uvset_0.empty() || !vertex_uvset_1.empty())
+		{
+			const XMFLOAT2* uv0_stream = vertex_uvset_0.empty() ? vertex_uvset_1.data() : vertex_uvset_0.data();
+			const XMFLOAT2* uv1_stream = vertex_uvset_1.empty() ? vertex_uvset_0.data() : vertex_uvset_1.data();
+
+			uv_range_min = XMFLOAT2(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+			uv_range_max = XMFLOAT2(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
+			for (size_t i = 0; i < uv_count; ++i)
+			{
+				uv_range_max = wi::math::Max(uv_range_max, uv0_stream[i]);
+				uv_range_max = wi::math::Max(uv_range_max, uv1_stream[i]);
+				uv_range_min = wi::math::Min(uv_range_min, uv0_stream[i]);
+				uv_range_min = wi::math::Min(uv_range_min, uv1_stream[i]);
+			}
+		}
+
 		const size_t position_stride = GetFormatStride(position_format);
 
 		GPUBufferDesc bd;
@@ -810,8 +827,8 @@ namespace wi::scene
 				for (size_t i = 0; i < uv_count; ++i)
 				{
 					Vertex_UVS vert;
-					vert.uv0.FromFULL(uv0_stream[i]);
-					vert.uv1.FromFULL(uv1_stream[i]);
+					vert.uv0.FromFULL(uv0_stream[i], uv_range_min, uv_range_max);
+					vert.uv1.FromFULL(uv1_stream[i], uv_range_min, uv_range_max);
 					std::memcpy(vertices + i, &vert, sizeof(vert));
 				}
 			}

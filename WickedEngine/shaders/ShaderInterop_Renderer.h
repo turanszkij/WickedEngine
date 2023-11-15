@@ -464,6 +464,9 @@ struct ShaderGeometry
 	float3 aabb_max;
 	float tessellation_factor;
 
+	float2 uv_range_min;
+	float2 uv_range_max;
+
 	int impostorSliceOffset;
 	int padding0;
 	int padding1;
@@ -490,6 +493,9 @@ struct ShaderGeometry
 		flags = 0;
 		aabb_max = float3(0, 0, 0);
 		tessellation_factor = 0;
+
+		uv_range_min = float2(0, 0);
+		uv_range_max = float2(1, 1);
 
 		impostorSliceOffset = -1;
 	}

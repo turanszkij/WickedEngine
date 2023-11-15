@@ -126,12 +126,12 @@ struct VertexInput
 		return bindless_buffers_float4[GetMesh().vb_pos_wind][vertexID];
 	}
 
-	min16float4 GetUVSets()
+	float4 GetUVSets()
 	{
 		[branch]
 		if (GetMesh().vb_uvs < 0)
 			return 0;
-		return (min16float4)bindless_buffers_float4[GetMesh().vb_uvs][vertexID];
+		return lerp(GetMesh().uv_range_min.xyxy, GetMesh().uv_range_max.xyxy, bindless_buffers_float4[GetMesh().vb_uvs][vertexID]);
 	}
 
 	ShaderMeshInstancePointer GetInstancePointer()

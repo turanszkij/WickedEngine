@@ -3449,6 +3449,8 @@ namespace wi::scene
 				geometry.aabb_min = mesh.aabb._min;
 				geometry.aabb_max = mesh.aabb._max;
 				geometry.tessellation_factor = mesh.tessellationFactor;
+				geometry.uv_range_min = mesh.uv_range_min;
+				geometry.uv_range_max = mesh.uv_range_max;
 
 				const ImpostorComponent* impostor = impostors.GetComponent(entity);
 				if (impostor != nullptr && impostor->textureIndex >= 0)

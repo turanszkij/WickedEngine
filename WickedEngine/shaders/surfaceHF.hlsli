@@ -402,9 +402,9 @@ struct Surface
 		if (geometry.vb_uvs >= 0)
 		{
 			Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(geometry.vb_uvs)];
-			float4 uv0 = buf[i0];
-			float4 uv1 = buf[i1];
-			float4 uv2 = buf[i2];
+			float4 uv0 = lerp(geometry.uv_range_min.xyxy, geometry.uv_range_max.xyxy, buf[i0]);
+			float4 uv1 = lerp(geometry.uv_range_min.xyxy, geometry.uv_range_max.xyxy, buf[i1]);
+			float4 uv2 = lerp(geometry.uv_range_min.xyxy, geometry.uv_range_max.xyxy, buf[i2]);
 			// all three must be transformed, to have correct derivatives (not enough to only transform final uvsets):
 			uv0.xy = mad(uv0.xy, material.texMulAdd.xy, material.texMulAdd.zw);
 			uv1.xy = mad(uv1.xy, material.texMulAdd.xy, material.texMulAdd.zw);
