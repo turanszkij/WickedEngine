@@ -347,7 +347,6 @@ namespace wi
 			hcb.xHairRandomSeed = hair.randomSeed;
 			hcb.xHairViewDistance = hair.viewDistance;
 			hcb.xHairBaseMeshIndexCount = (uint)hair.indices.size();
-			hcb.xHairBaseMeshVertexPositionStride = sizeof(MeshComponent::Vertex_POS16);
 			hcb.xHairFramesXY = uint2(std::max(1u, hair.framesX), std::max(1u, hair.framesY));
 			hcb.xHairFrameCount = std::max(1u, hair.frameCount);
 			hcb.xHairFrameStart = hair.frameStart;
