@@ -48,7 +48,7 @@ namespace wi
 
 	void HairParticleSystem::CreateFromMesh(const wi::scene::MeshComponent& mesh)
 	{
-		if (mesh.so_pos_wind.IsValid())
+		if (mesh.so_pos.IsValid())
 		{
 			position_format = MeshComponent::Vertex_POS32::FORMAT;
 		}
@@ -337,7 +337,7 @@ namespace wi
 			}
 			HairParticleCB hcb;
 			hcb.xHairTransform.Create(hair.world);
-			if (!IsFormatUnorm(mesh.position_format) || mesh.so_pos_wind.IsValid())
+			if (!IsFormatUnorm(mesh.position_format) || mesh.so_pos.IsValid())
 			{
 				hcb.xHairBaseMeshUnormRemap.init();
 			}
@@ -416,7 +416,7 @@ namespace wi
 			}
 			if (mesh.streamoutBuffer.IsValid())
 			{
-				device->BindResource(&mesh.streamoutBuffer, 1, cmd, mesh.so_pos_wind.subresource_srv);
+				device->BindResource(&mesh.streamoutBuffer, 1, cmd, mesh.so_pos.subresource_srv);
 				device->BindResource(&mesh.streamoutBuffer, 2, cmd, mesh.so_nor.subresource_srv);
 			}
 			else

@@ -412,7 +412,7 @@ namespace wi::scene
 		BufferView vb_col;
 		BufferView vb_bon;
 		BufferView vb_mor;
-		BufferView so_pos_wind;
+		BufferView so_pos;
 		BufferView so_nor;
 		BufferView so_tan;
 		BufferView so_pre;
@@ -574,6 +574,28 @@ namespace wi::scene
 			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R16G16B16A16_UNORM;
 		};
 		struct Vertex_POS32
+		{
+			float x = 0;
+			float y = 0;
+			float z = 0;
+
+			constexpr void FromFULL(const XMFLOAT3& pos)
+			{
+				x = pos.x;
+				y = pos.y;
+				z = pos.z;
+			}
+			inline XMVECTOR LoadPOS() const
+			{
+				return XMVectorSet(x, y, z, 1);
+			}
+			constexpr XMFLOAT3 GetPOS() const
+			{
+				return XMFLOAT3(x, y, z);
+			}
+			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R32G32B32_FLOAT;
+		};
+		struct Vertex_POS32W
 		{
 			float x = 0;
 			float y = 0;

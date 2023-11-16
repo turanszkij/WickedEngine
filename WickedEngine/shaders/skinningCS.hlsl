@@ -140,10 +140,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 
 	// Store data:
 	[branch]
-	if (push.so_pos_wind >= 0)
+	if (push.so_pos >= 0)
 	{
-		pos_wind.xyz = pos.xyz;
-		bindless_rwbuffers_float4[push.so_pos_wind][vertexID] = pos_wind;
+		bindless_rwbuffers[push.so_pos].Store<float3>(vertexID * sizeof(float3), pos);
 	}
 
 	[branch]

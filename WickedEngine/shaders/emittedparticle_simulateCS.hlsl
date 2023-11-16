@@ -16,7 +16,7 @@ RWStructuredBuffer<uint> aliveBuffer_NEW : register(u2);
 RWStructuredBuffer<uint> deadBuffer : register(u3);
 RWByteAddressBuffer counterBuffer : register(u4);
 RWStructuredBuffer<float> distanceBuffer : register(u6);
-RWBuffer<float4> vertexBuffer_POS : register(u7);
+RWByteAddressBuffer vertexBuffer_POS : register(u7);
 RWBuffer<float4> vertexBuffer_NOR : register(u8);
 RWBuffer<float4> vertexBuffer_UVS : register(u9);
 RWBuffer<float4> vertexBuffer_COL : register(u10);
@@ -320,7 +320,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 				quadPos = mul(quadPos, (float3x3)GetCamera().view); // reversed mul for inverse camera rotation!
 
 				// write out vertex:
-				vertexBuffer_POS[v0 + vertexID] = float4(particle.position + quadPos, 0);
+				vertexBuffer_POS.Store<float3>((v0 + vertexID) * sizeof(float3), particle.position + quadPos);
 				vertexBuffer_NOR[v0 + vertexID] = float4(normalize(-GetCamera().forward), 0);
 				vertexBuffer_UVS[v0 + vertexID] = float4(uv, uv2);
 				vertexBuffer_COL[v0 + vertexID] = unpack_rgba(particleColorPacked);
@@ -355,10 +355,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 			counterBuffer.InterlockedAdd(PARTICLECOUNTER_OFFSET_DEADCOUNT, 1, deadIndex);
 			deadBuffer[deadIndex] = particleIndex;
 
-			vertexBuffer_POS[v0 + 0] = 0;
-			vertexBuffer_POS[v0 + 1] = 0;
-			vertexBuffer_POS[v0 + 2] = 0;
-			vertexBuffer_POS[v0 + 3] = 0;
+			vertexBuffer_POS.Store<float3>((v0 + 0) * sizeof(float3), 0);
+			vertexBuffer_POS.Store<float3>((v0 + 1) * sizeof(float3), 0);
+			vertexBuffer_POS.Store<float3>((v0 + 2) * sizeof(float3), 0);
+			vertexBuffer_POS.Store<float3>((v0 + 3) * sizeof(float3), 0);
 		}
 	}
 

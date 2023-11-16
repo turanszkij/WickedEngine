@@ -897,7 +897,7 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		if (mesh->so_pre.IsValid()) ss += "\tprevious_position;\n";
 		if (mesh->vb_bon.IsValid()) ss += "\tbone;\n";
 		if (mesh->vb_tan.IsValid()) ss += "\ttangent;\n";
-		if (mesh->so_pos_wind.IsValid()) ss += "\tstreamout_position_wind;\n";
+		if (mesh->so_pos.IsValid()) ss += "\tstreamout_position;\n";
 		if (mesh->so_nor.IsValid()) ss += "\tstreamout_normals;\n";
 		if (mesh->so_tan.IsValid()) ss += "\tstreamout_tangents;\n";
 		meshInfoLabel.SetText(ss);

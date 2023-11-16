@@ -467,7 +467,7 @@ namespace wi::scene
 		vb_atl = {};
 		vb_col = {};
 		vb_bon = {};
-		so_pos_wind = {};
+		so_pos = {};
 		so_nor = {};
 		so_tan = {};
 		so_pre = {};
@@ -577,7 +577,7 @@ namespace wi::scene
 
 		if (IsQuantizedPositionsDisabled())
 		{
-			position_format = Vertex_POS32::FORMAT;
+			position_format = vertex_windweights.empty() ? Vertex_POS32::FORMAT : Vertex_POS32W::FORMAT;
 		}
 		else
 		{
@@ -620,7 +620,7 @@ namespace wi::scene
 						// success, continue to next vertex with 16 bits
 						continue;
 					}
-					position_format = Vertex_POS32::FORMAT; // failed, increase to 32 bits
+					position_format = vertex_windweights.empty() ? Vertex_POS32::FORMAT : Vertex_POS32W::FORMAT; // failed, increase to 32 bits
 					break; // since 32 bit is the max, we can bail out
 				}
 			}
@@ -684,8 +684,8 @@ namespace wi::scene
 		}
 		const uint64_t alignment = device->GetMinOffsetAlignment(&bd);
 		bd.size =
+			AlignTo(vertex_positions.size() * position_stride, alignment) + // position will be first to have 0 offset for flexible alignment!
 			AlignTo(indices.size() * GetIndexStride(), alignment) +
-			AlignTo(vertex_positions.size() * position_stride, alignment) +
 			AlignTo(vertex_normals.size() * sizeof(Vertex_NOR), alignment) +
 			AlignTo(vertex_tangents.size() * sizeof(Vertex_TAN), alignment) +
 			AlignTo(uv_count * sizeof(Vertex_UVS), alignment) +
@@ -711,27 +711,6 @@ namespace wi::scene
 		auto init_callback = [&](void* dest) {
 			uint8_t* buffer_data = (uint8_t*)dest;
 			uint64_t buffer_offset = 0ull;
-
-			// Create index buffer GPU data:
-			if (GetIndexFormat() == IndexBufferFormat::UINT32)
-			{
-				ib.offset = buffer_offset;
-				ib.size = indices.size() * sizeof(uint32_t);
-				uint32_t* indexdata = (uint32_t*)(buffer_data + buffer_offset);
-				buffer_offset += AlignTo(ib.size, alignment);
-				std::memcpy(indexdata, indices.data(), ib.size);
-			}
-			else
-			{
-				ib.offset = buffer_offset;
-				ib.size = indices.size() * sizeof(uint16_t);
-				uint16_t* indexdata = (uint16_t*)(buffer_data + buffer_offset);
-				buffer_offset += AlignTo(ib.size, alignment);
-				for (size_t i = 0; i < indices.size(); ++i)
-				{
-					std::memcpy(indexdata + i, &indices[i], sizeof(uint16_t));
-				}
-			}
 
 			// vertexBuffer - POSITION + WIND:
 			switch (position_format)
@@ -779,6 +758,22 @@ namespace wi::scene
 					const XMFLOAT3& pos = vertex_positions[i];
 					const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
 					Vertex_POS32 vert;
+					vert.FromFULL(pos);
+					std::memcpy(vertices + i, &vert, sizeof(vert));
+				}
+			}
+			break;
+			case Vertex_POS32W::FORMAT:
+			{
+				vb_pos_wind.offset = buffer_offset;
+				vb_pos_wind.size = vertex_positions.size() * sizeof(Vertex_POS32W);
+				Vertex_POS32W* vertices = (Vertex_POS32W*)(buffer_data + buffer_offset);
+				buffer_offset += AlignTo(vb_pos_wind.size, alignment);
+				for (size_t i = 0; i < vertex_positions.size(); ++i)
+				{
+					const XMFLOAT3& pos = vertex_positions[i];
+					const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
+					Vertex_POS32W vert;
 					vert.FromFULL(pos, wind);
 					std::memcpy(vertices + i, &vert, sizeof(vert));
 				}
@@ -787,6 +782,27 @@ namespace wi::scene
 			default:
 				assert(0);
 				break;
+			}
+
+			// Create index buffer GPU data:
+			if (GetIndexFormat() == IndexBufferFormat::UINT32)
+			{
+				ib.offset = buffer_offset;
+				ib.size = indices.size() * sizeof(uint32_t);
+				uint32_t* indexdata = (uint32_t*)(buffer_data + buffer_offset);
+				buffer_offset += AlignTo(ib.size, alignment);
+				std::memcpy(indexdata, indices.data(), ib.size);
+			}
+			else
+			{
+				ib.offset = buffer_offset;
+				ib.size = indices.size() * sizeof(uint16_t);
+				uint16_t* indexdata = (uint16_t*)(buffer_data + buffer_offset);
+				buffer_offset += AlignTo(ib.size, alignment);
+				for (size_t i = 0; i < indices.size(); ++i)
+				{
+					std::memcpy(indexdata + i, &indices[i], sizeof(uint16_t));
+				}
 			}
 
 			// vertexBuffer - NORMALS:
@@ -1022,7 +1038,7 @@ namespace wi::scene
 			desc.misc_flags |= ResourceMiscFlag::RAY_TRACING;
 		}
 
-		const uint64_t alignment = device->GetMinOffsetAlignment(&desc);
+		const uint64_t alignment = device->GetMinOffsetAlignment(&desc) * sizeof(Vertex_POS32); // additional alignment for RGB32F
 		desc.size =
 			AlignTo(vertex_positions.size() * sizeof(Vertex_POS32), alignment) + // pos
 			AlignTo(vertex_positions.size() * sizeof(Vertex_POS32), alignment) + // prevpos
@@ -1036,19 +1052,19 @@ namespace wi::scene
 
 		uint64_t buffer_offset = 0ull;
 
-		so_pos_wind.offset = buffer_offset;
-		so_pos_wind.size = vertex_positions.size() * sizeof(Vertex_POS32);
-		buffer_offset += AlignTo(so_pos_wind.size, alignment);
-		so_pos_wind.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_pos_wind.offset, so_pos_wind.size, &Vertex_POS32::FORMAT);
-		so_pos_wind.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pos_wind.offset, so_pos_wind.size, &Vertex_POS32::FORMAT);
-		so_pos_wind.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_pos_wind.subresource_srv);
-		so_pos_wind.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_pos_wind.subresource_uav);
+		so_pos.offset = buffer_offset;
+		so_pos.size = vertex_positions.size() * sizeof(Vertex_POS32);
+		buffer_offset += AlignTo(so_pos.size, alignment);
+		so_pos.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_pos.offset, so_pos.size, &Vertex_POS32::FORMAT);
+		so_pos.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pos.offset, so_pos.size); // UAV can't have RGB32_F format!
+		so_pos.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_pos.subresource_srv);
+		so_pos.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_pos.subresource_uav);
 
 		so_pre.offset = buffer_offset;
-		so_pre.size = so_pos_wind.size;
+		so_pre.size = so_pos.size;
 		buffer_offset += AlignTo(so_pre.size, alignment);
 		so_pre.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_pre.offset, so_pre.size, &Vertex_POS32::FORMAT);
-		so_pre.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pre.offset, so_pre.size, &Vertex_POS32::FORMAT);
+		so_pre.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pre.offset, so_pre.size); // UAV can't have RGB32_F format!
 		so_pre.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_pre.subresource_srv);
 		so_pre.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_pre.subresource_uav);
 
@@ -1116,9 +1132,9 @@ namespace wi::scene
 				geometry.triangles.index_count = subset.indexCount;
 				geometry.triangles.index_offset = ib.offset / GetIndexStride() + subset.indexOffset;
 				geometry.triangles.vertex_count = (uint32_t)vertex_positions.size();
-				if (so_pos_wind.IsValid())
+				if (so_pos.IsValid())
 				{
-					geometry.triangles.vertex_format = Format::R32G32B32_FLOAT;
+					geometry.triangles.vertex_format = Vertex_POS32::FORMAT;
 					geometry.triangles.vertex_stride = sizeof(Vertex_POS32);
 				}
 				else
@@ -1806,8 +1822,7 @@ namespace wi::scene
 		{
 			XMFLOAT3 pos = mesh.vertex_positions[i];
 			XMStoreFloat3(&pos, XMVector3Transform(XMLoadFloat3(&pos), W));
-			const uint8_t wind = mesh.vertex_windweights.empty() ? 0xFF : mesh.vertex_windweights[i];
-			vertex_positions_simulation[i].FromFULL(pos, wind);
+			vertex_positions_simulation[i].FromFULL(pos);
 			_min = wi::math::Min(_min, pos);
 			_max = wi::math::Max(_max, pos);
 		}

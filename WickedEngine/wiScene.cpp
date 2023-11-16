@@ -693,10 +693,14 @@ namespace wi::scene
 				desc.bind_flags = BindFlag::INDEX_BUFFER | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 				desc.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::TYPED_FORMAT_CASTING | ResourceMiscFlag::INDIRECT_ARGS | ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS;
 
-				const uint64_t alignment = device->GetMinOffsetAlignment(&desc);
+				const uint64_t alignment =
+					device->GetMinOffsetAlignment(&desc) *
+					sizeof(IndirectDrawArgsIndexedInstanced) * // additional alignment
+					sizeof(MeshComponent::Vertex_POS32) // additional alignment
+					;
 
 				desc.size =
-					AlignTo(AlignTo(sizeof(IndirectDrawArgsIndexedInstanced), alignment), sizeof(IndirectDrawArgsIndexedInstanced)) +			// indirect args, additional structured buffer alignment
+					AlignTo(sizeof(IndirectDrawArgsIndexedInstanced), alignment) +	// indirect args
 					AlignTo(allocated_impostor_capacity * sizeof(uint) * 6, alignment) +	// indices (must overestimate here for 32-bit indices, because we create 16 bit and 32 bit descriptors)
 					AlignTo(allocated_impostor_capacity * sizeof(MeshComponent::Vertex_POS32) * 4, alignment) +	// vertices
 					AlignTo(allocated_impostor_capacity * sizeof(MeshComponent::Vertex_NOR) * 4, alignment) +	// vertices
@@ -737,7 +741,7 @@ namespace wi::scene
 				impostor_vb_pos.offset = buffer_offset;
 				impostor_vb_pos.size = allocated_impostor_capacity * sizeof(MeshComponent::Vertex_POS32) * 4;
 				impostor_vb_pos.subresource_srv = device->CreateSubresource(&impostorBuffer, SubresourceType::SRV, impostor_vb_pos.offset, impostor_vb_pos.size, &MeshComponent::Vertex_POS32::FORMAT);
-				impostor_vb_pos.subresource_uav = device->CreateSubresource(&impostorBuffer, SubresourceType::UAV, impostor_vb_pos.offset, impostor_vb_pos.size, &MeshComponent::Vertex_POS32::FORMAT);
+				impostor_vb_pos.subresource_uav = device->CreateSubresource(&impostorBuffer, SubresourceType::UAV, impostor_vb_pos.offset, impostor_vb_pos.size); // can't have RGB32F format for UAV!
 				impostor_vb_pos.descriptor_srv = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::SRV, impostor_vb_pos.subresource_srv);
 				impostor_vb_pos.descriptor_uav = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::UAV, impostor_vb_pos.subresource_uav);
 				buffer_offset += impostor_vb_pos.size;
@@ -3386,9 +3390,9 @@ namespace wi::scene
 				}
 			}
 
-			if (mesh.so_pos_wind.IsValid() && mesh.so_pre.IsValid())
+			if (mesh.so_pos.IsValid() && mesh.so_pre.IsValid())
 			{
-				std::swap(mesh.so_pos_wind, mesh.so_pre);
+				std::swap(mesh.so_pos, mesh.so_pre);
 			}
 
 			mesh._flags &= ~MeshComponent::TLAS_FORCE_DOUBLE_SIDED;
@@ -3418,9 +3422,9 @@ namespace wi::scene
 				ShaderGeometry geometry;
 				geometry.init();
 				geometry.ib = mesh.ib.descriptor_srv;
-				if (mesh.so_pos_wind.IsValid())
+				if (mesh.so_pos.IsValid())
 				{
-					geometry.vb_pos_wind = mesh.so_pos_wind.descriptor_srv;
+					geometry.vb_pos_wind = mesh.so_pos.descriptor_srv;
 				}
 				else
 				{
@@ -3528,7 +3532,7 @@ namespace wi::scene
 						{
 							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
 							geometry.triangles.vertex_buffer = mesh.streamoutBuffer;
-							geometry.triangles.vertex_byte_offset = mesh.so_pos_wind.offset;
+							geometry.triangles.vertex_byte_offset = mesh.so_pos.offset;
 						}
 						if (material.IsDoubleSided())
 						{
@@ -3945,7 +3949,7 @@ namespace wi::scene
 				XMStoreFloat4x4(matrix_objects.data() + args.jobIndex, W);
 				XMFLOAT4X4 worldMatrix = matrix_objects[args.jobIndex];
 
-				if (IsFormatUnorm(mesh.position_format) && !mesh.so_pos_wind.IsValid())
+				if (IsFormatUnorm(mesh.position_format) && !mesh.so_pos.IsValid())
 				{
 					// The UNORM correction is only done for the GPU data!
 					XMMATRIX R = mesh.aabb.getUnormRemapMatrix();

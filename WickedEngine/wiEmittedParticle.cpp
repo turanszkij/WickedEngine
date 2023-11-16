@@ -124,7 +124,7 @@ namespace wi
 			vb_pos.offset = buffer_offset;
 			buffer_offset += AlignTo(vb_pos.size, alignment);
 			vb_pos.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos.offset, vb_pos.size, &MeshComponent::Vertex_POS32::FORMAT);
-			vb_pos.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos.offset, vb_pos.size, &MeshComponent::Vertex_POS32::FORMAT);
+			vb_pos.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos.offset, vb_pos.size); // UAV can't have RGB32_F format!
 			vb_pos.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_pos.subresource_srv);
 			vb_pos.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_pos.subresource_uav);
 
@@ -288,7 +288,7 @@ namespace wi
 			geometry.triangles.index_count = MAX_PARTICLES * 6;
 			geometry.triangles.index_offset = 0;
 			geometry.triangles.vertex_count = (uint32_t)(vb_pos.size / sizeof(MeshComponent::Vertex_POS32));
-			geometry.triangles.vertex_format = Format::R32G32B32_FLOAT;
+			geometry.triangles.vertex_format = MeshComponent::Vertex_POS32::FORMAT;
 			geometry.triangles.vertex_stride = sizeof(MeshComponent::Vertex_POS32);
 
 			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
@@ -374,7 +374,7 @@ namespace wi
 		{
 			EmittedParticleCB cb;
 			cb.xEmitterTransform.Create(worldMatrix);
-			if (mesh == nullptr || !IsFormatUnorm(mesh->position_format) || mesh->so_pos_wind.IsValid())
+			if (mesh == nullptr || !IsFormatUnorm(mesh->position_format) || mesh->so_pos.IsValid())
 			{
 				cb.xEmitterBaseMeshUnormRemap.init();
 			}
@@ -476,7 +476,7 @@ namespace wi
 				device->BindResource(&mesh->generalBuffer, 0, cmd, mesh->ib.subresource_srv);
 				if (mesh->streamoutBuffer.IsValid())
 				{
-					device->BindResource(&mesh->streamoutBuffer, 1, cmd, mesh->so_pos_wind.subresource_srv);
+					device->BindResource(&mesh->streamoutBuffer, 1, cmd, mesh->so_pos.subresource_srv);
 					device->BindResource(&mesh->streamoutBuffer, 2, cmd, mesh->so_nor.subresource_srv);
 				}
 				else

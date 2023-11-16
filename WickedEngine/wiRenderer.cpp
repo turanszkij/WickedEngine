@@ -4226,13 +4226,13 @@ void UpdateRenderData(
 		const MeshComponent* mesh = vis.scene->meshes.GetComponent(entity);
 		if (mesh != nullptr && mesh->streamoutBuffer.IsValid() && softbody.HasVertices())
 		{
-			GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(mesh->so_pos_wind.size + mesh->so_nor.size + mesh->so_tan.size, cmd);
+			GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(mesh->so_pos.size + mesh->so_nor.size + mesh->so_tan.size, cmd);
 			uint8_t* dst = (uint8_t*)allocation.data;
 			uint64_t offset = allocation.offset;
-			std::memcpy(dst, softbody.vertex_positions_simulation.data(), mesh->so_pos_wind.size);
-			device->CopyBuffer(&mesh->streamoutBuffer, mesh->so_pos_wind.offset, &allocation.buffer, offset, mesh->so_pos_wind.size, cmd);
-			dst += mesh->so_pos_wind.size;
-			offset += mesh->so_pos_wind.size;
+			std::memcpy(dst, softbody.vertex_positions_simulation.data(), mesh->so_pos.size);
+			device->CopyBuffer(&mesh->streamoutBuffer, mesh->so_pos.offset, &allocation.buffer, offset, mesh->so_pos.size, cmd);
+			dst += mesh->so_pos.size;
+			offset += mesh->so_pos.size;
 			if (!softbody.vertex_normals_simulation.empty())
 			{
 				std::memcpy(dst, softbody.vertex_normals_simulation.data(), mesh->so_nor.size);
@@ -4311,7 +4311,7 @@ void UpdateRenderData(
 				push.vb_pos_wind = mesh.vb_pos_wind.descriptor_srv;
 				push.vb_nor = mesh.vb_nor.descriptor_srv;
 				push.vb_tan = mesh.vb_tan.descriptor_srv;
-				push.so_pos_wind = mesh.so_pos_wind.descriptor_uav;
+				push.so_pos = mesh.so_pos.descriptor_uav;
 				push.so_nor = mesh.so_nor.descriptor_uav;
 				push.so_tan = mesh.so_tan.descriptor_uav;
 				push.skinningbuffer_index = descriptor_skinningbuffer;
@@ -7150,7 +7150,7 @@ void DrawDebugWorld(
 				// Draw mesh wireframe:
 				device->BindPipelineState(&PSO_debug[DEBUGRENDERING_EMITTER], cmd);
 				DebugObjectPushConstants push;
-				push.vb_pos_wind = mesh->so_pos_wind.IsValid() ? mesh->so_pos_wind.descriptor_srv : mesh->vb_pos_wind.descriptor_srv;
+				push.vb_pos_wind = mesh->so_pos.IsValid() ? mesh->so_pos.descriptor_srv : mesh->vb_pos_wind.descriptor_srv;
 				device->PushConstants(&push, sizeof(push), cmd);
 				device->BindIndexBuffer(&mesh->generalBuffer, mesh->GetIndexFormat(), mesh->ib.offset, cmd);
 

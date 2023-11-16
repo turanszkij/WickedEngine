@@ -1412,7 +1412,7 @@ namespace wi::physics
 
 						btSoftBody::Node& node = softbody->m_nodes[physicsInd];
 
-						physicscomponent->vertex_positions_simulation[ind].FromFULL(XMFLOAT3(node.m_x.getX(), node.m_x.getY(), node.m_x.getZ()), 0);
+						physicscomponent->vertex_positions_simulation[ind].FromFULL(XMFLOAT3(node.m_x.getX(), node.m_x.getY(), node.m_x.getZ()));
 						physicscomponent->vertex_normals_simulation[ind].FromFULL(XMFLOAT3(-node.m_n.getX(), -node.m_n.getY(), -node.m_n.getZ()));
 					}
 

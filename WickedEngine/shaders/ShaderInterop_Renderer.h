@@ -1279,7 +1279,7 @@ struct SkinningPushConstants
 	int vb_pos_wind;
 	int vb_nor;
 	int vb_tan;
-	int so_pos_wind;
+	int so_pos;
 
 	int so_nor;
 	int so_tan;
