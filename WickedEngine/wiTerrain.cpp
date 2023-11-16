@@ -750,6 +750,7 @@ namespace wi::terrain
 					material.SetReflectance(1);
 
 					MeshComponent& mesh = generator->scene.meshes.Create(chunk_data.entity);
+					mesh.SetQuantizedPositionsDisabled(true); // connecting meshes quantization is not correct because mismatching AABBs
 					object.meshID = chunk_data.entity;
 					mesh.indices = chunk_indices().indices;
 					for (auto& lod : chunk_indices().lods)

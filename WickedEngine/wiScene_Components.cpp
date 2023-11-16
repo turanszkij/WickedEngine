@@ -575,68 +575,75 @@ namespace wi::scene
 		}
 		aabb = AABB(_min, _max);
 
-		// Determine minimum precision for positions:
-		const float target_precision = 1.0f / 1000.0f; // millimeter
-		position_format = Vertex_POS10::FORMAT;
-		for (size_t i = 0; i < vertex_positions.size(); ++i)
+		if (IsQuantizedPositionsDisabled())
 		{
-			const XMFLOAT3& pos = vertex_positions[i];
-			const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
-			if (position_format == Vertex_POS10::FORMAT)
-			{
-				Vertex_POS10 v;
-				v.FromFULL(aabb, pos, wind);
-				XMFLOAT3 p = v.GetPOS(aabb);
-				if (
-					std::abs(p.x - pos.x) <= target_precision &&
-					std::abs(p.y - pos.y) <= target_precision &&
-					std::abs(p.z - pos.z) <= target_precision &&
-					wind == v.GetWind()
-					)
-				{
-					// success, continue to next vertex with 8 bits
-					continue;
-				}
-				position_format = Vertex_POS16::FORMAT; // failed, increase to 16 bits
-			}
-			if (position_format == Vertex_POS16::FORMAT)
-			{
-				Vertex_POS16 v;
-				v.FromFULL(aabb, pos, wind);
-				XMFLOAT3 p = v.GetPOS(aabb);
-				if (
-					std::abs(p.x - pos.x) <= target_precision &&
-					std::abs(p.y - pos.y) <= target_precision &&
-					std::abs(p.z - pos.z) <= target_precision &&
-					wind == v.GetWind()
-					)
-				{
-					// success, continue to next vertex with 16 bits
-					continue;
-				}
-				position_format = Vertex_POS32::FORMAT; // failed, increase to 32 bits
-				break; // since 32 bit is the max, we can bail out
-			}
+			position_format = Vertex_POS32::FORMAT;
 		}
-
-		if (IsFormatUnorm(position_format))
+		else
 		{
-			// This is done to avoid 0 scaling on any axis of the UNORM remap matrix of the AABB
-			//	It specifically solves a problem with hardware raytracing which treats AABB with zero axis as invisible
-			if (aabb._max.x - aabb._min.x < std::numeric_limits<float>::epsilon())
+			// Determine minimum precision for positions:
+			const float target_precision = 1.0f / 1000.0f; // millimeter
+			position_format = Vertex_POS10::FORMAT;
+			for (size_t i = 0; i < vertex_positions.size(); ++i)
 			{
-				aabb._max.x += std::numeric_limits<float>::epsilon();
-				aabb._min.x -= std::numeric_limits<float>::epsilon();
+				const XMFLOAT3& pos = vertex_positions[i];
+				const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
+				if (position_format == Vertex_POS10::FORMAT)
+				{
+					Vertex_POS10 v;
+					v.FromFULL(aabb, pos, wind);
+					XMFLOAT3 p = v.GetPOS(aabb);
+					if (
+						std::abs(p.x - pos.x) <= target_precision &&
+						std::abs(p.y - pos.y) <= target_precision &&
+						std::abs(p.z - pos.z) <= target_precision &&
+						wind == v.GetWind()
+						)
+					{
+						// success, continue to next vertex with 8 bits
+						continue;
+					}
+					position_format = Vertex_POS16::FORMAT; // failed, increase to 16 bits
+				}
+				if (position_format == Vertex_POS16::FORMAT)
+				{
+					Vertex_POS16 v;
+					v.FromFULL(aabb, pos, wind);
+					XMFLOAT3 p = v.GetPOS(aabb);
+					if (
+						std::abs(p.x - pos.x) <= target_precision &&
+						std::abs(p.y - pos.y) <= target_precision &&
+						std::abs(p.z - pos.z) <= target_precision &&
+						wind == v.GetWind()
+						)
+					{
+						// success, continue to next vertex with 16 bits
+						continue;
+					}
+					position_format = Vertex_POS32::FORMAT; // failed, increase to 32 bits
+					break; // since 32 bit is the max, we can bail out
+				}
 			}
-			if (aabb._max.y - aabb._min.y < std::numeric_limits<float>::epsilon())
+
+			if (IsFormatUnorm(position_format))
 			{
-				aabb._max.y += std::numeric_limits<float>::epsilon();
-				aabb._min.y -= std::numeric_limits<float>::epsilon();
-			}
-			if (aabb._max.z - aabb._min.z < std::numeric_limits<float>::epsilon())
-			{
-				aabb._max.z += std::numeric_limits<float>::epsilon();
-				aabb._min.z -= std::numeric_limits<float>::epsilon();
+				// This is done to avoid 0 scaling on any axis of the UNORM remap matrix of the AABB
+				//	It specifically solves a problem with hardware raytracing which treats AABB with zero axis as invisible
+				if (aabb._max.x - aabb._min.x < std::numeric_limits<float>::epsilon())
+				{
+					aabb._max.x += std::numeric_limits<float>::epsilon();
+					aabb._min.x -= std::numeric_limits<float>::epsilon();
+				}
+				if (aabb._max.y - aabb._min.y < std::numeric_limits<float>::epsilon())
+				{
+					aabb._max.y += std::numeric_limits<float>::epsilon();
+					aabb._min.y -= std::numeric_limits<float>::epsilon();
+				}
+				if (aabb._max.z - aabb._min.z < std::numeric_limits<float>::epsilon())
+				{
+					aabb._max.z += std::numeric_limits<float>::epsilon();
+					aabb._min.z -= std::numeric_limits<float>::epsilon();
+				}
 			}
 		}
 

@@ -339,6 +339,7 @@ namespace wi::scene
 			TLAS_FORCE_DOUBLE_SIDED = 1 << 6,
 			DOUBLE_SIDED_SHADOW = 1 << 7,
 			BVH_ENABLED = 1 << 8,
+			QUANTIZED_POSITIONS_DISABLED = 1 << 9,
 		};
 		uint32_t _flags = RENDERABLE;
 
@@ -444,11 +445,16 @@ namespace wi::scene
 		//	false: BVH will be deleted immediately if it exists
 		inline void SetBVHEnabled(bool value) { if (value) { _flags |= BVH_ENABLED; if (!bvh.IsValid()) { BuildBVH(); } } else { _flags &= ~BVH_ENABLED; bvh = {}; bvh_leaf_aabbs.clear(); } }
 
+		// Disable quantization of position GPU data. You can use this if you notice inaccuracy in positions.
+		//	This should be enabled for connecting meshes like terrain chunks if their AABB is not consistent with each other
+		inline void SetQuantizedPositionsDisabled(bool value) { if (value) { _flags |= QUANTIZED_POSITIONS_DISABLED; } else { _flags &= ~QUANTIZED_POSITIONS_DISABLED; } }
+
 		inline bool IsRenderable() const { return _flags & RENDERABLE; }
 		inline bool IsDoubleSided() const { return _flags & DOUBLE_SIDED; }
 		inline bool IsDoubleSidedShadow() const { return _flags & DOUBLE_SIDED_SHADOW; }
 		inline bool IsDynamic() const { return _flags & DYNAMIC; }
 		inline bool IsBVHEnabled() const { return _flags & BVH_ENABLED; }
+		inline bool IsQuantizedPositionsDisabled() const { return _flags & QUANTIZED_POSITIONS_DISABLED; }
 
 		inline float GetTessellationFactor() const { return tessellationFactor; }
 		inline wi::graphics::IndexBufferFormat GetIndexFormat() const { return wi::graphics::GetIndexBufferFormat((uint32_t)vertex_positions.size()); }
