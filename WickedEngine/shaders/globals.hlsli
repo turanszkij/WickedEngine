@@ -435,6 +435,12 @@ inline float3 clipspace_to_uv(in float3 clipspace)
 	return clipspace * float3(0.5, -0.5, 0.5) + 0.5;
 }
 
+template<typename T>
+T inverse_lerp(T value1, T value2, T pos)
+{
+	return all(value2 == value1) ? 0 : ((pos - value1) / (value2 - value1));
+}
+
 inline float3 GetSunColor() { return GetWeather().sun_color; } // sun color with intensity applied
 inline float3 GetSunDirection() { return GetWeather().sun_direction; }
 inline float3 GetHorizonColor() { return GetWeather().horizon.rgb; }

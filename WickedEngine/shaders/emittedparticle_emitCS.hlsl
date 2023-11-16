@@ -12,6 +12,7 @@ RWByteAddressBuffer counterBuffer : register(u4);
 #ifdef EMIT_FROM_MESH
 Buffer<uint> meshIndexBuffer : register(t0);
 Buffer<float4> meshVertexBuffer_POS : register(t1);
+Buffer<float4> meshVertexBuffer_NOR : register(t2);
 #endif // EMIT_FROM_MESH
 
 
@@ -39,13 +40,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	uint i2 = meshIndexBuffer[tri * 3 + 2];
 
 	// load vertices of triangle from vertex buffer:
-	float4 pos_nor0 = meshVertexBuffer_POS[i0];
-	float4 pos_nor1 = meshVertexBuffer_POS[i1];
-	float4 pos_nor2 = meshVertexBuffer_POS[i2];
+	float3 pos0 = meshVertexBuffer_POS[i0].xyz;
+	float3 pos1 = meshVertexBuffer_POS[i1].xyz;
+	float3 pos2 = meshVertexBuffer_POS[i2].xyz;
 	
-	float3 nor0 = unpack_unitvector(asuint(pos_nor0.w));
-	float3 nor1 = unpack_unitvector(asuint(pos_nor1.w));
-	float3 nor2 = unpack_unitvector(asuint(pos_nor2.w));
+	float3 nor0 = meshVertexBuffer_NOR[i0].xyz;
+	float3 nor1 = meshVertexBuffer_NOR[i1].xyz;
+	float3 nor2 = meshVertexBuffer_NOR[i2].xyz;
 
 	// random barycentric coords:
 	float f = rng.next_float();
@@ -59,7 +60,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 bary = float2(f, g);
 
 	// compute final surface position on triangle from barycentric coords:
-	emitPos = attribute_at_bary(pos_nor0.xyz, pos_nor1.xyz, pos_nor2.xyz, bary);
+	emitPos = attribute_at_bary(pos0.xyz, pos1.xyz, pos2.xyz, bary);
+	emitPos = mul(xEmitterBaseMeshUnormRemap.GetMatrix(), float4(emitPos, 1)).xyz;
 	float3 nor = normalize(attribute_at_bary(nor0, nor1, nor2, bary));
 	nor = normalize(mul((float3x3)worldMatrix, nor));
 

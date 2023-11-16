@@ -8,7 +8,7 @@ static const float2 BILLBOARD[] = {
 	float2(1, 1),
 };
 
-Buffer<float4> vb_pos_nor : register(t0);
+Buffer<float4> vb_pos : register(t0);
 ByteAddressBuffer impostor_data : register(t2);
 
 VSOut main(uint vertexID : SV_VertexID)
@@ -16,7 +16,8 @@ VSOut main(uint vertexID : SV_VertexID)
 	uint2 data = impostor_data.Load2((vertexID / 4u) * sizeof(uint2));
 
 	VSOut Out;
-	Out.pos3D = vb_pos_nor[vertexID].xyz;
+	Out.pos3D = vb_pos[vertexID].xyz;
+	Out.clip = dot(float4(Out.pos3D, 1), GetCamera().clip_plane);
 	Out.pos = mul(GetCamera().view_projection, float4(Out.pos3D, 1));
 	Out.uv = float2(BILLBOARD[vertexID % 4u] * float2(0.5f, -0.5f) + 0.5f);
 	Out.slice = data.x & 0xFFFFFF;

@@ -11,20 +11,24 @@ static const float3 HAIRPATCH[] = {
 
 Buffer<uint> meshIndexBuffer : register(t0);
 Buffer<float4> meshVertexBuffer_POS : register(t1);
-Buffer<float> meshVertexBuffer_length : register(t2);
+Buffer<float4> meshVertexBuffer_NOR : register(t2);
+Buffer<float> meshVertexBuffer_length : register(t3);
 
 RWStructuredBuffer<PatchSimulationData> simulationBuffer : register(u0);
 RWBuffer<float4> vertexBuffer_POS : register(u1);
 RWBuffer<float4> vertexBuffer_UVS : register(u2);
 RWBuffer<uint> culledIndexBuffer : register(u3);
 RWStructuredBuffer<IndirectDrawArgsIndexedInstanced> indirectBuffer : register(u4);
-RWByteAddressBuffer vertexBuffer_POS_RT : register(u5);
+RWBuffer<float4> vertexBuffer_POS_RT : register(u5);
+RWBuffer<float4> vertexBuffer_NOR : register(u6);
 
 [numthreads(THREADCOUNT_SIMULATEHAIR, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
 	if (DTid.x >= xHairParticleCount)
 		return;
+		
+	ShaderGeometry geometry = HairGetGeometry();
 	
 	RNG rng;
 	rng.init(uint2(xHairRandomSeed, DTid.x), 0);
@@ -39,12 +43,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	uint i2 = meshIndexBuffer[tri * 3 + 2];
 
 	// load vertices of triangle from vertex buffer:
-	float4 pos_nor0 = meshVertexBuffer_POS[i0];
-	float4 pos_nor1 = meshVertexBuffer_POS[i1];
-	float4 pos_nor2 = meshVertexBuffer_POS[i2];
-	float3 nor0 = unpack_unitvector(asuint(pos_nor0.w));
-	float3 nor1 = unpack_unitvector(asuint(pos_nor1.w));
-	float3 nor2 = unpack_unitvector(asuint(pos_nor2.w));
+	float3 pos0 = meshVertexBuffer_POS[i0].xyz;
+	float3 pos1 = meshVertexBuffer_POS[i1].xyz;
+	float3 pos2 = meshVertexBuffer_POS[i2].xyz;
+	float3 nor0 = meshVertexBuffer_NOR[i0].xyz;
+	float3 nor1 = meshVertexBuffer_NOR[i1].xyz;
+	float3 nor2 = meshVertexBuffer_NOR[i2].xyz;
 	float length0 = meshVertexBuffer_length[i0];
 	float length1 = meshVertexBuffer_length[i1];
 	float length2 = meshVertexBuffer_length[i2];
@@ -61,7 +65,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	float2 bary = float2(f, g);
 
 	// compute final surface position on triangle from barycentric coords:
-	float3 position = attribute_at_bary(pos_nor0.xyz, pos_nor1.xyz, pos_nor2.xyz, bary);
+	float3 position = attribute_at_bary(pos0, pos1, pos2, bary);
+	position = mul(xHairBaseMeshUnormRemap.GetMatrix(), float4(position, 1)).xyz;
 	float3 target = normalize(attribute_at_bary(nor0, nor1, nor2, bary));
 	float3 tangent = normalize(mul(float3(hemispherepoint_cos(rng.next_float(), rng.next_float()).xy, 0), get_tangentspace(target)));
 	float3 binormal = cross(target, tangent);
@@ -269,15 +274,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			const float3 wind = sample_wind(rootposition, segmentID + patchPos.y);
 
 			float3 position = rootposition + patchPos + wind;
+			position = inverse_lerp(geometry.aabb_min, geometry.aabb_max, position); // remap to UNORM
 			
-			vertexBuffer_POS[v0 + vertexID] = float4(position, asfloat(pack_unitvector(normalize(normal + wind))));
+			vertexBuffer_POS[v0 + vertexID] = float4(position, 0);
+			vertexBuffer_NOR[v0 + vertexID] = float4(normalize(normal + wind), 0);
 			vertexBuffer_UVS[v0 + vertexID] = uv.xyxy; // a second uv set could be used here
 			
 			if (distance_culled)
 			{
 				position = 0; // We can only zero out for raytracing geometry to keep correct prevpos swapping motion vectors!
 			}
-			vertexBuffer_POS_RT.Store<float3>((v0 + vertexID) * sizeof(float3), position);
+			vertexBuffer_POS_RT[v0 + vertexID] = float4(position, 0);
 		}
 
 		// Frustum culling:

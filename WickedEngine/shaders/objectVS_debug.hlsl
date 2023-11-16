@@ -1,8 +1,8 @@
 #include "globals.hlsli"
 
-float4 main(float4 inPos : POSITION_NORMAL_WIND) : SV_POSITION
-{
-	float4 pos = mul(g_xTransform, float4(inPos.xyz, 1));
+PUSHCONSTANT(push, DebugObjectPushConstants);
 
-	return pos;
+float4 main(uint vertexID : SV_VertexID) : SV_POSITION
+{
+	return mul(g_xTransform, float4(bindless_buffers_float4[push.vb_pos_wind][vertexID].xyz, 1));
 }

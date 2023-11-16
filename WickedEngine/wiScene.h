@@ -228,7 +228,8 @@ namespace wi::scene
 		uint32_t allocated_impostor_capacity = 0;
 		MeshComponent::BufferView impostor_ib32;
 		MeshComponent::BufferView impostor_ib16;
-		MeshComponent::BufferView impostor_vb;
+		MeshComponent::BufferView impostor_vb_pos;
+		MeshComponent::BufferView impostor_vb_nor;
 		MeshComponent::BufferView impostor_data;
 		MeshComponent::BufferView impostor_indirect;
 		wi::graphics::Format impostor_ib_format = wi::graphics::Format::R32_UINT;

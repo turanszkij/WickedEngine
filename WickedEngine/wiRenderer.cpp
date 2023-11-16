@@ -741,10 +741,6 @@ void LoadShaders()
 	wi::jobsystem::context ctx;
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
-		inputLayouts[ILTYPE_OBJECT_DEBUG].elements =
-		{
-			{ "POSITION_NORMAL_WIND",	0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayout::APPEND_ALIGNED_ELEMENT, InputClassification::PER_VERTEX_DATA },
-		};
 		LoadShader(ShaderStage::VS, shaders[VSTYPE_OBJECT_DEBUG], "objectVS_debug.cso");
 		});
 
@@ -774,11 +770,6 @@ void LoadShaders()
 		});
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
-		inputLayouts[ILTYPE_RENDERLIGHTMAP].elements =
-		{
-			{ "POSITION_NORMAL_WIND",		0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayout::APPEND_ALIGNED_ELEMENT, InputClassification::PER_VERTEX_DATA },
-			{ "ATLAS",						0, MeshComponent::Vertex_TEX::FORMAT, 1, InputLayout::APPEND_ALIGNED_ELEMENT, InputClassification::PER_VERTEX_DATA },
-		};
 		LoadShader(ShaderStage::VS, shaders[VSTYPE_RENDERLIGHTMAP], "renderlightmapVS.cso");
 		});
 
@@ -1347,7 +1338,6 @@ void LoadShaders()
 		});
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		PipelineStateDesc desc;
-		desc.il = &inputLayouts[ILTYPE_RENDERLIGHTMAP];
 		desc.vs = &shaders[VSTYPE_RENDERLIGHTMAP];
 		desc.ps = &shaders[PSTYPE_RENDERLIGHTMAP];
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
@@ -1541,7 +1531,6 @@ void LoadShaders()
 		case DEBUGRENDERING_EMITTER:
 			desc.vs = &shaders[VSTYPE_OBJECT_DEBUG];
 			desc.ps = &shaders[PSTYPE_OBJECT_DEBUG];
-			desc.il = &inputLayouts[ILTYPE_OBJECT_DEBUG];
 			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 			desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
 			desc.bs = &blendStates[BSTYPE_OPAQUE];
@@ -2959,7 +2948,7 @@ void RenderImpostors(
 			vis.scene->impostor_ib_format == Format::R32_UINT ? vis.scene->impostor_ib32.offset : vis.scene->impostor_ib16.offset,
 			cmd
 		);
-		device->BindResource(&vis.scene->impostorBuffer, 0, cmd, vis.scene->impostor_vb.subresource_srv);
+		device->BindResource(&vis.scene->impostorBuffer, 0, cmd, vis.scene->impostor_vb_pos.subresource_srv);
 		device->BindResource(&vis.scene->impostorBuffer, 2, cmd, vis.scene->impostor_data.subresource_srv);
 		device->BindResource(&vis.scene->impostorArray, 1, cmd);
 
@@ -4235,15 +4224,28 @@ void UpdateRenderData(
 		const SoftBodyPhysicsComponent& softbody = vis.scene->softbodies[i];
 
 		const MeshComponent* mesh = vis.scene->meshes.GetComponent(entity);
-		if (mesh != nullptr && mesh->streamoutBuffer.IsValid() && !softbody.vertex_positions_simulation.empty())
+		if (mesh != nullptr && mesh->streamoutBuffer.IsValid() && softbody.HasVertices())
 		{
-			GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(mesh->so_pos_nor_wind.size + mesh->so_tan.size, cmd);
-			std::memcpy(allocation.data, softbody.vertex_positions_simulation.data(), mesh->so_pos_nor_wind.size);
-			device->CopyBuffer(&mesh->streamoutBuffer, mesh->so_pos_nor_wind.offset, &allocation.buffer, allocation.offset, mesh->so_pos_nor_wind.size, cmd);
+			GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(mesh->so_pos.size + mesh->so_nor.size + mesh->so_tan.size, cmd);
+			uint8_t* dst = (uint8_t*)allocation.data;
+			uint64_t offset = allocation.offset;
+			std::memcpy(dst, softbody.vertex_positions_simulation.data(), mesh->so_pos.size);
+			device->CopyBuffer(&mesh->streamoutBuffer, mesh->so_pos.offset, &allocation.buffer, offset, mesh->so_pos.size, cmd);
+			dst += mesh->so_pos.size;
+			offset += mesh->so_pos.size;
+			if (!softbody.vertex_normals_simulation.empty())
+			{
+				std::memcpy(dst, softbody.vertex_normals_simulation.data(), mesh->so_nor.size);
+				device->CopyBuffer(&mesh->streamoutBuffer, mesh->so_nor.offset, &allocation.buffer, offset, mesh->so_nor.size, cmd);
+				dst += mesh->so_nor.size;
+				offset += mesh->so_nor.size;
+			}
 			if (!softbody.vertex_tangents_simulation.empty())
 			{
-				std::memcpy((uint8_t*)allocation.data + mesh->so_pos_nor_wind.size, softbody.vertex_tangents_simulation.data(), mesh->so_tan.size);
-				device->CopyBuffer(&mesh->streamoutBuffer, mesh->so_tan.offset, &allocation.buffer, allocation.offset + mesh->so_pos_nor_wind.size, mesh->so_tan.size, cmd);
+				std::memcpy(dst, softbody.vertex_tangents_simulation.data(), mesh->so_tan.size);
+				device->CopyBuffer(&mesh->streamoutBuffer, mesh->so_tan.offset, &allocation.buffer, offset, mesh->so_tan.size, cmd);
+				dst += mesh->so_tan.size;
+				offset += mesh->so_tan.size;
 			}
 			barrier_stack.push_back(GPUBarrier::Buffer(&mesh->streamoutBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 		}
@@ -4306,10 +4308,11 @@ void UpdateRenderData(
 				}
 
 				SkinningPushConstants push;
-				push.vertexCount = (uint)mesh.vertex_positions.size();
-				push.vb_pos_nor_wind = mesh.vb_pos_nor_wind.descriptor_srv;
+				push.vb_pos_wind = mesh.vb_pos_wind.descriptor_srv;
+				push.vb_nor = mesh.vb_nor.descriptor_srv;
 				push.vb_tan = mesh.vb_tan.descriptor_srv;
-				push.so_pos_nor_wind = mesh.so_pos_nor_wind.descriptor_uav;
+				push.so_pos = mesh.so_pos.descriptor_uav;
+				push.so_nor = mesh.so_nor.descriptor_uav;
 				push.so_tan = mesh.so_tan.descriptor_uav;
 				push.skinningbuffer_index = descriptor_skinningbuffer;
 				const ArmatureComponent* armature = vis.scene->armatures.GetComponent(mesh.armatureID);
@@ -4334,6 +4337,17 @@ void UpdateRenderData(
 					push.morph_offset = ~0u;
 					push.morphvb_index = -1;
 				}
+				if (IsFormatUnorm(mesh.position_format))
+				{
+					push.aabb_min = mesh.aabb._min;
+					push.aabb_max = mesh.aabb._max;
+				}
+				else
+				{
+					push.aabb_min = {};
+					push.aabb_max = {};
+				}
+				push.vertexCount = (uint)mesh.vertex_positions.size();
 				device->PushConstants(&push, sizeof(push), cmd);
 
 				device->Dispatch(((uint32_t)mesh.vertex_positions.size() + 63) / 64, 1, 1, cmd);
@@ -4404,9 +4418,10 @@ void UpdateRenderData(
 
 		device->BindComputeShader(&shaders[CSTYPE_IMPOSTOR_PREPARE], cmd);
 		device->BindUAV(&vis.scene->impostorBuffer, 0, cmd, vis.scene->impostor_ib_format == Format::R32_UINT ? vis.scene->impostor_ib32.subresource_uav : vis.scene->impostor_ib16.subresource_uav);
-		device->BindUAV(&vis.scene->impostorBuffer, 1, cmd, vis.scene->impostor_vb.subresource_uav);
-		device->BindUAV(&vis.scene->impostorBuffer, 2, cmd, vis.scene->impostor_data.subresource_uav);
-		device->BindUAV(&vis.scene->impostorBuffer, 3, cmd, vis.scene->impostor_indirect.subresource_uav);
+		device->BindUAV(&vis.scene->impostorBuffer, 1, cmd, vis.scene->impostor_vb_pos.subresource_uav);
+		device->BindUAV(&vis.scene->impostorBuffer, 2, cmd, vis.scene->impostor_vb_nor.subresource_uav);
+		device->BindUAV(&vis.scene->impostorBuffer, 3, cmd, vis.scene->impostor_data.subresource_uav);
+		device->BindUAV(&vis.scene->impostorBuffer, 4, cmd, vis.scene->impostor_indirect.subresource_uav);
 
 		uint object_count = (uint)vis.scene->objects.GetCount();
 		device->PushConstants(&object_count, sizeof(object_count), cmd);
@@ -7134,16 +7149,9 @@ void DrawDebugWorld(
 			{
 				// Draw mesh wireframe:
 				device->BindPipelineState(&PSO_debug[DEBUGRENDERING_EMITTER], cmd);
-				const GPUBuffer* vbs[] = {
-					mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->generalBuffer,
-				};
-				const uint32_t strides[] = {
-					sizeof(MeshComponent::Vertex_POS),
-				};
-				const uint64_t offsets[] = {
-					mesh->so_pos_nor_wind.IsValid() ? mesh->so_pos_nor_wind.offset : mesh->vb_pos_nor_wind.offset,
-				};
-				device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+				DebugObjectPushConstants push;
+				push.vb_pos_wind = mesh->so_pos.IsValid() ? mesh->so_pos.descriptor_srv : mesh->vb_pos_wind.descriptor_srv;
+				device->PushConstants(&push, sizeof(push), cmd);
 				device->BindIndexBuffer(&mesh->generalBuffer, mesh->GetIndexFormat(), mesh->ib.offset, cmd);
 
 				device->DrawIndexed((uint32_t)mesh->indices.size(), 0, 0, cmd);
@@ -8321,9 +8329,16 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 			impostorcamera.TransformCamera(camera_transform);
 			impostorcamera.UpdateCamera();
 
+			if (IsFormatUnorm(mesh.position_format))
+			{
+				XMMATRIX VP = impostorcamera.GetViewProjection();
+				VP = mesh.aabb.getUnormRemapMatrix() * VP;
+				XMStoreFloat4x4(&impostorcamera.VP, VP);
+			}
+
 			BindCameraCB(impostorcamera, impostorcamera, impostorcamera, cmd);
 
-			int slice = (int)(impostor.textureIndex * impostorCaptureAngles * 3 + i * 3);
+			int slice = int(impostor.textureIndex * impostorCaptureAngles * 3 + i * 3);
 
 			const RenderPassImage rp[] = {
 				RenderPassImage::RenderTarget(
@@ -9665,25 +9680,16 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 				vp.height = (float)desc.height;
 				device->BindViewports(1, &vp, cmd);
 
-				MiscCB misccb;
-				misccb.g_xTransform = scene.matrix_objects[objectIndex];
+				device->BindPipelineState(&PSO_renderlightmap, cmd);
 
-				device->BindDynamicConstantBuffer(misccb, CB_GETBINDSLOT(MiscCB), cmd);
-
-				const GPUBuffer* vbs[] = {
-					&mesh.generalBuffer,
-					&mesh.generalBuffer,
-				};
-				uint32_t strides[] = {
-					sizeof(MeshComponent::Vertex_POS),
-					sizeof(MeshComponent::Vertex_TEX),
-				};
-				uint64_t offsets[] = {
-					mesh.vb_pos_nor_wind.offset,
-					mesh.vb_atl.offset,
-				};
-				device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 				device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetIndexFormat(), mesh.ib.offset, cmd);
+
+				LightmapPushConstants push;
+				push.vb_pos_wind = mesh.vb_pos_wind.descriptor_srv;
+				push.vb_nor = mesh.vb_nor.descriptor_srv;
+				push.vb_atl = mesh.vb_atl.descriptor_srv;
+				push.instanceIndex = objectIndex;
+				device->PushConstants(&push, sizeof(push), cmd);
 
 				RaytracingCB cb;
 				cb.xTraceResolution.x = desc.width;
@@ -9702,9 +9708,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 				cb.xTraceSampleIndex = object.lightmapIterationCount;
 				device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(RaytracingCB), cmd);
 
-				device->BindPipelineState(&PSO_renderlightmap, cmd);
-
-				device->DrawIndexedInstanced((uint32_t)mesh.indices.size(), 1, 0, 0, 0, cmd);
+				device->DrawIndexed((uint32_t)mesh.indices.size(), 0, 0, cmd);
 				object.lightmapIterationCount++;
 
 				device->RenderPassEnd(cmd);

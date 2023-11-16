@@ -39,6 +39,7 @@ namespace wi::primitive
 		XMFLOAT3 getCenter() const;
 		XMFLOAT3 getHalfWidth() const;
 		XMMATRIX getAsBoxMatrix() const;
+		XMMATRIX getUnormRemapMatrix() const;
 		float getArea() const;
 		float getRadius() const;
 		INTERSECTION_TYPE intersects2D(const AABB& b) const;

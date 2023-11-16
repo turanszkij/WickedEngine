@@ -693,12 +693,17 @@ namespace wi::scene
 				desc.bind_flags = BindFlag::INDEX_BUFFER | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 				desc.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::TYPED_FORMAT_CASTING | ResourceMiscFlag::INDIRECT_ARGS | ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS;
 
-				const uint64_t alignment = device->GetMinOffsetAlignment(&desc);
+				const uint64_t alignment =
+					device->GetMinOffsetAlignment(&desc) *
+					sizeof(IndirectDrawArgsIndexedInstanced) * // additional alignment
+					sizeof(MeshComponent::Vertex_POS32) // additional alignment
+					;
 
 				desc.size =
-					AlignTo(AlignTo(sizeof(IndirectDrawArgsIndexedInstanced), alignment), sizeof(IndirectDrawArgsIndexedInstanced)) +			// indirect args, additional structured buffer alignment
+					AlignTo(sizeof(IndirectDrawArgsIndexedInstanced), alignment) +	// indirect args
 					AlignTo(allocated_impostor_capacity * sizeof(uint) * 6, alignment) +	// indices (must overestimate here for 32-bit indices, because we create 16 bit and 32 bit descriptors)
-					AlignTo(allocated_impostor_capacity * sizeof(MeshComponent::Vertex_POS) * 4, alignment) +	// vertices
+					AlignTo(allocated_impostor_capacity * sizeof(MeshComponent::Vertex_POS32) * 4, alignment) +	// vertices
+					AlignTo(allocated_impostor_capacity * sizeof(MeshComponent::Vertex_NOR) * 4, alignment) +	// vertices
 					AlignTo(allocated_impostor_capacity * sizeof(uint2), alignment)		// impostordata
 				;
 				device->CreateBuffer(&desc, nullptr, &impostorBuffer);
@@ -733,13 +738,22 @@ namespace wi::scene
 				impostor_ib16.descriptor_uav = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::UAV, impostor_ib16.subresource_uav);
 
 				buffer_offset = AlignTo(buffer_offset, alignment);
-				impostor_vb.offset = buffer_offset;
-				impostor_vb.size = allocated_impostor_capacity * sizeof(MeshComponent::Vertex_POS) * 4;
-				impostor_vb.subresource_srv = device->CreateSubresource(&impostorBuffer, SubresourceType::SRV, impostor_vb.offset, impostor_vb.size, &MeshComponent::Vertex_POS::FORMAT);
-				impostor_vb.subresource_uav = device->CreateSubresource(&impostorBuffer, SubresourceType::UAV, impostor_vb.offset, impostor_vb.size, &MeshComponent::Vertex_POS::FORMAT);
-				impostor_vb.descriptor_srv = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::SRV, impostor_vb.subresource_srv);
-				impostor_vb.descriptor_uav = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::UAV, impostor_vb.subresource_uav);
-				buffer_offset += impostor_vb.size;
+				impostor_vb_pos.offset = buffer_offset;
+				impostor_vb_pos.size = allocated_impostor_capacity * sizeof(MeshComponent::Vertex_POS32) * 4;
+				impostor_vb_pos.subresource_srv = device->CreateSubresource(&impostorBuffer, SubresourceType::SRV, impostor_vb_pos.offset, impostor_vb_pos.size, &MeshComponent::Vertex_POS32::FORMAT);
+				impostor_vb_pos.subresource_uav = device->CreateSubresource(&impostorBuffer, SubresourceType::UAV, impostor_vb_pos.offset, impostor_vb_pos.size); // can't have RGB32F format for UAV!
+				impostor_vb_pos.descriptor_srv = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::SRV, impostor_vb_pos.subresource_srv);
+				impostor_vb_pos.descriptor_uav = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::UAV, impostor_vb_pos.subresource_uav);
+				buffer_offset += impostor_vb_pos.size;
+
+				buffer_offset = AlignTo(buffer_offset, alignment);
+				impostor_vb_nor.offset = buffer_offset;
+				impostor_vb_nor.size = allocated_impostor_capacity * sizeof(MeshComponent::Vertex_NOR) * 4;
+				impostor_vb_nor.subresource_srv = device->CreateSubresource(&impostorBuffer, SubresourceType::SRV, impostor_vb_nor.offset, impostor_vb_nor.size, &MeshComponent::Vertex_NOR::FORMAT);
+				impostor_vb_nor.subresource_uav = device->CreateSubresource(&impostorBuffer, SubresourceType::UAV, impostor_vb_nor.offset, impostor_vb_nor.size, &MeshComponent::Vertex_NOR::FORMAT);
+				impostor_vb_nor.descriptor_srv = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::SRV, impostor_vb_nor.subresource_srv);
+				impostor_vb_nor.descriptor_uav = device->GetDescriptorIndex(&impostorBuffer, SubresourceType::UAV, impostor_vb_nor.subresource_uav);
+				buffer_offset += impostor_vb_nor.size;
 
 				buffer_offset = AlignTo(buffer_offset, alignment);
 				impostor_data.offset = buffer_offset;
@@ -3376,9 +3390,9 @@ namespace wi::scene
 				}
 			}
 
-			if (mesh.so_pos_nor_wind.IsValid() && mesh.so_pre.IsValid())
+			if (mesh.so_pos.IsValid() && mesh.so_pre.IsValid())
 			{
-				std::swap(mesh.so_pos_nor_wind, mesh.so_pre);
+				std::swap(mesh.so_pos, mesh.so_pre);
 			}
 
 			mesh._flags &= ~MeshComponent::TLAS_FORCE_DOUBLE_SIDED;
@@ -3408,13 +3422,21 @@ namespace wi::scene
 				ShaderGeometry geometry;
 				geometry.init();
 				geometry.ib = mesh.ib.descriptor_srv;
-				if (mesh.so_pos_nor_wind.IsValid())
+				if (mesh.so_pos.IsValid())
 				{
-					geometry.vb_pos_nor_wind = mesh.so_pos_nor_wind.descriptor_srv;
+					geometry.vb_pos_wind = mesh.so_pos.descriptor_srv;
 				}
 				else
 				{
-					geometry.vb_pos_nor_wind = mesh.vb_pos_nor_wind.descriptor_srv;
+					geometry.vb_pos_wind = mesh.vb_pos_wind.descriptor_srv;
+				}
+				if (mesh.so_nor.IsValid())
+				{
+					geometry.vb_nor = mesh.so_nor.descriptor_srv;
+				}
+				else
+				{
+					geometry.vb_nor = mesh.vb_nor.descriptor_srv;
 				}
 				if (mesh.so_tan.IsValid())
 				{
@@ -3431,6 +3453,8 @@ namespace wi::scene
 				geometry.aabb_min = mesh.aabb._min;
 				geometry.aabb_max = mesh.aabb._max;
 				geometry.tessellation_factor = mesh.tessellationFactor;
+				geometry.uv_range_min = mesh.uv_range_min;
+				geometry.uv_range_max = mesh.uv_range_max;
 
 				const ImpostorComponent* impostor = impostors.GetComponent(entity);
 				if (impostor != nullptr && impostor->textureIndex >= 0)
@@ -3508,7 +3532,7 @@ namespace wi::scene
 						{
 							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
 							geometry.triangles.vertex_buffer = mesh.streamoutBuffer;
-							geometry.triangles.vertex_byte_offset = mesh.so_pos_nor_wind.offset;
+							geometry.triangles.vertex_byte_offset = mesh.so_pos.offset;
 						}
 						if (material.IsDoubleSided())
 						{
@@ -3714,7 +3738,8 @@ namespace wi::scene
 			geometry.meshletCount = triangle_count_to_meshlet_count(uint32_t(objects.GetCount()) * 2);
 			geometry.meshletOffset = 0; // local meshlet offset
 			geometry.ib = impostor_ib_format == Format::R32_UINT ? impostor_ib32.descriptor_srv : impostor_ib16.descriptor_srv;
-			geometry.vb_pos_nor_wind = impostor_vb.descriptor_srv;
+			geometry.vb_pos_wind = impostor_vb_pos.descriptor_srv;
+			geometry.vb_nor = impostor_vb_nor.descriptor_srv;
 			geometry.materialIndex = impostorMaterialOffset;
 			std::memcpy(geometryArrayMapped + impostorGeometryOffset, &geometry, sizeof(geometry));
 
@@ -3910,20 +3935,29 @@ namespace wi::scene
 
 				object.sort_bits = sort_bits.value;
 
-				// Create GPU instance data:
-				GraphicsDevice* device = wi::graphics::GetDevice();
-				ShaderMeshInstance inst;
-				inst.init();
-				XMFLOAT4X4& worldMatrix = matrix_objects[args.jobIndex];
-				matrix_objects_prev[args.jobIndex] = worldMatrix;
-				inst.transformPrev.Create(worldMatrix);
-				XMStoreFloat4x4(&worldMatrix, W);
-				inst.transform.Create(worldMatrix);
-
 				// Correction matrix for mesh normals with non-uniform object scaling:
 				XMMATRIX worldMatrixInverseTranspose = XMMatrixTranspose(XMMatrixInverse(nullptr, W));
 				XMFLOAT4X4 transformIT;
 				XMStoreFloat4x4(&transformIT, worldMatrixInverseTranspose);
+
+				// Create GPU instance data:
+				GraphicsDevice* device = wi::graphics::GetDevice();
+				ShaderMeshInstance inst;
+				inst.init();
+				XMFLOAT4X4 worldMatrixPrev = matrix_objects[args.jobIndex];
+				matrix_objects_prev[args.jobIndex] = worldMatrixPrev;
+				XMStoreFloat4x4(matrix_objects.data() + args.jobIndex, W);
+				XMFLOAT4X4 worldMatrix = matrix_objects[args.jobIndex];
+
+				if (IsFormatUnorm(mesh.position_format) && !mesh.so_pos.IsValid())
+				{
+					// The UNORM correction is only done for the GPU data!
+					XMMATRIX R = mesh.aabb.getUnormRemapMatrix();
+					XMStoreFloat4x4(&worldMatrix, R * W);
+					XMStoreFloat4x4(&worldMatrixPrev, R * XMLoadFloat4x4(&worldMatrixPrev));
+				}
+				inst.transform.Create(worldMatrix);
+				inst.transformPrev.Create(worldMatrixPrev);
 
 				inst.transformInverseTranspose.Create(transformIT);
 				if (object.lightmap.IsValid())
@@ -4301,12 +4335,15 @@ namespace wi::scene
 			geometry.indexOffset = 0;
 			geometry.materialIndex = (uint)materials.GetIndex(entity);
 			geometry.ib = device->GetDescriptorIndex(&hair.primitiveBuffer, SubresourceType::SRV);
-			geometry.vb_pos_nor_wind = hair.vb_pos[0].descriptor_srv;
+			geometry.vb_pos_wind = hair.vb_pos[0].descriptor_srv;
+			geometry.vb_nor = hair.vb_nor.descriptor_srv;
 			geometry.vb_pre = hair.vb_pos[1].descriptor_srv;
 			geometry.vb_uvs = hair.vb_uvs.descriptor_srv;
 			geometry.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_HAIRPARTICLE;
 			geometry.meshletOffset = 0;
 			geometry.meshletCount = meshletCount;
+			geometry.aabb_min = hair.aabb._min;
+			geometry.aabb_max = hair.aabb._max;
 
 			size_t geometryAllocation = geometryAllocator.fetch_add(1);
 			std::memcpy(geometryArrayMapped + geometryAllocation, &geometry, sizeof(geometry));
@@ -4325,6 +4362,11 @@ namespace wi::scene
 			inst.baseGeometryCount = inst.geometryCount;
 			inst.meshletOffset = meshletOffset;
 
+			XMFLOAT4X4 remapMatrix;
+			XMStoreFloat4x4(&remapMatrix, hair.aabb.getUnormRemapMatrix());
+			inst.transform.Create(remapMatrix);
+			inst.transformPrev = inst.transform;
+
 			const size_t instanceIndex = objects.GetCount() + args.jobIndex;
 			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
 
@@ -4342,7 +4384,7 @@ namespace wi::scene
 					{
 						for (int j = 0; j < arraysize(instance.transform[i]); ++j)
 						{
-							instance.transform[i][j] = wi::math::IDENTITY_MATRIX.m[j][i];
+							instance.transform[i][j] = remapMatrix.m[j][i];
 						}
 					}
 					instance.instance_id = (uint32_t)instanceIndex;
@@ -4398,7 +4440,8 @@ namespace wi::scene
 			geometry.indexOffset = 0;
 			geometry.materialIndex = (uint)materials.GetIndex(entity);
 			geometry.ib = device->GetDescriptorIndex(&emitter.primitiveBuffer, SubresourceType::SRV);
-			geometry.vb_pos_nor_wind = emitter.vb_pos.descriptor_srv;
+			geometry.vb_pos_wind = emitter.vb_pos.descriptor_srv;
+			geometry.vb_nor = emitter.vb_nor.descriptor_srv;
 			geometry.vb_uvs = emitter.vb_uvs.descriptor_srv;
 			geometry.vb_col = emitter.vb_col.descriptor_srv;
 			geometry.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_EMITTEDPARTICLE;
@@ -4547,7 +4590,8 @@ namespace wi::scene
 			geometry.indexOffset = 0;
 			geometry.materialIndex = rainMaterialOffset;
 			geometry.ib = device->GetDescriptorIndex(&rainEmitter.primitiveBuffer, SubresourceType::SRV);
-			geometry.vb_pos_nor_wind = rainEmitter.vb_pos.descriptor_srv;
+			geometry.vb_pos_wind = rainEmitter.vb_pos.descriptor_srv;
+			geometry.vb_nor = rainEmitter.vb_nor.descriptor_srv;
 			geometry.vb_uvs = rainEmitter.vb_uvs.descriptor_srv;
 			geometry.vb_col = rainEmitter.vb_col.descriptor_srv;
 			geometry.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_EMITTEDPARTICLE;
@@ -4806,6 +4850,8 @@ namespace wi::scene
 				const XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
 				const XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
 				const ArmatureComponent* armature = mesh->IsSkinned() ? armatures.GetComponent(mesh->armatureID) : nullptr;
+				const XMVECTOR aabb_min = XMLoadFloat3(&mesh->aabb._min);
+				const XMVECTOR aabb_max = XMLoadFloat3(&mesh->aabb._max);
 
 				auto intersect_triangle = [&](uint32_t subsetIndex, uint32_t indexOffset, uint32_t triangleIndex)
 				{
@@ -4817,7 +4863,7 @@ namespace wi::scene
 					XMVECTOR p1;
 					XMVECTOR p2;
 
-					const bool softbody_active = softbody != nullptr && !softbody->vertex_positions_simulation.empty();
+					const bool softbody_active = softbody != nullptr && softbody->HasVertices();
 					if (softbody_active)
 					{
 						p0 = softbody->vertex_positions_simulation[i0].LoadPOS();
@@ -5000,6 +5046,8 @@ namespace wi::scene
 				const XMMATRIX objectMatPrev = XMLoadFloat4x4(&matrix_objects_prev[objectIndex]);
 				const XMMATRIX objectMatInverse = XMMatrixInverse(nullptr, objectMat);
 				const ArmatureComponent* armature = mesh->IsSkinned() ? armatures.GetComponent(mesh->armatureID) : nullptr;
+				const XMVECTOR aabb_min = XMLoadFloat3(&mesh->aabb._min);
+				const XMVECTOR aabb_max = XMLoadFloat3(&mesh->aabb._max);
 
 				auto intersect_triangle = [&](uint32_t subsetIndex, uint32_t indexOffset, uint32_t triangleIndex)
 				{
@@ -5011,7 +5059,7 @@ namespace wi::scene
 					XMVECTOR p1;
 					XMVECTOR p2;
 
-					const bool softbody_active = softbody != nullptr && !softbody->vertex_positions_simulation.empty();
+					const bool softbody_active = softbody != nullptr && softbody->HasVertices();
 					if (softbody_active)
 					{
 						p0 = softbody->vertex_positions_simulation[i0].LoadPOS();
@@ -5282,6 +5330,8 @@ namespace wi::scene
 				const XMMATRIX objectMatPrev = XMLoadFloat4x4(&matrix_objects_prev[objectIndex]);
 				const ArmatureComponent* armature = mesh->IsSkinned() ? armatures.GetComponent(mesh->armatureID) : nullptr;
 				const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
+				const XMVECTOR aabb_min = XMLoadFloat3(&mesh->aabb._min);
+				const XMVECTOR aabb_max = XMLoadFloat3(&mesh->aabb._max);
 				
 				auto intersect_triangle = [&](uint32_t subsetIndex, uint32_t indexOffset, uint32_t triangleIndex)
 				{
@@ -5293,7 +5343,7 @@ namespace wi::scene
 					XMVECTOR p1;
 					XMVECTOR p2;
 
-					const bool softbody_active = softbody != nullptr && !softbody->vertex_positions_simulation.empty();
+					const bool softbody_active = softbody != nullptr && softbody->HasVertices();
 					if (softbody_active)
 					{
 						p0 = softbody->vertex_positions_simulation[i0].LoadPOS();

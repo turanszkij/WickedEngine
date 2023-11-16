@@ -18,6 +18,7 @@ public:
 	wi::gui::CheckBox doubleSidedCheckBox;
 	wi::gui::CheckBox doubleSidedShadowCheckBox;
 	wi::gui::CheckBox bvhCheckBox;
+	wi::gui::CheckBox quantizeCheckBox;
 	wi::gui::Button impostorCreateButton;
 	wi::gui::Slider impostorDistanceSlider;
 	wi::gui::Slider tessellationFactorSlider;

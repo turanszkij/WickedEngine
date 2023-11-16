@@ -115,6 +115,10 @@ namespace wi::math
 	{
 		return XMFLOAT3((a.x + b.x)*0.5f, (a.y + b.y)*0.5f, (a.z + b.z)*0.5f);
 	}
+	inline XMVECTOR InverseLerp(XMVECTOR value1, XMVECTOR value2, XMVECTOR pos)
+	{
+		return (pos - value1) / (value2 - value1);
+	}
 	constexpr float InverseLerp(float value1, float value2, float pos)
 	{
 		return value2 == value1 ? 0 : ((pos - value1) / (value2 - value1));
@@ -130,6 +134,10 @@ namespace wi::math
 	constexpr XMFLOAT4 InverseLerp(const XMFLOAT4& value1, const XMFLOAT4& value2, const XMFLOAT4& pos)
 	{
 		return XMFLOAT4(InverseLerp(value1.x, value2.x, pos.x), InverseLerp(value1.y, value2.y, pos.y), InverseLerp(value1.z, value2.z, pos.z), InverseLerp(value1.w, value2.w, pos.w));
+	}
+	inline XMVECTOR Lerp(XMVECTOR value1, XMVECTOR value2, XMVECTOR amount)
+	{
+		return value1 + (value2 - value1) * amount;
 	}
 	constexpr float Lerp(float value1, float value2, float amount)
 	{
@@ -147,6 +155,18 @@ namespace wi::math
 	{
 		return XMFLOAT4(Lerp(a.x, b.x, i), Lerp(a.y, b.y, i), Lerp(a.z, b.z, i), Lerp(a.w, b.w, i));
 	}
+	constexpr XMFLOAT2 Lerp(const XMFLOAT2& a, const XMFLOAT2& b, const XMFLOAT2& i)
+	{
+		return XMFLOAT2(Lerp(a.x, b.x, i.x), Lerp(a.y, b.y, i.y));
+	}
+	constexpr XMFLOAT3 Lerp(const XMFLOAT3& a, const XMFLOAT3& b, const XMFLOAT3& i)
+	{
+		return XMFLOAT3(Lerp(a.x, b.x, i.x), Lerp(a.y, b.y, i.y), Lerp(a.z, b.z, i.z));
+	}
+	constexpr XMFLOAT4 Lerp(const XMFLOAT4& a, const XMFLOAT4& b, const XMFLOAT4& i)
+	{
+		return XMFLOAT4(Lerp(a.x, b.x, i.x), Lerp(a.y, b.y, i.y), Lerp(a.z, b.z, i.z), Lerp(a.w, b.w, i.w));
+	}
 	inline XMFLOAT4 Slerp(const XMFLOAT4& a, const XMFLOAT4& b, float i)
 	{
 		XMVECTOR _a = XMLoadFloat4(&a);
@@ -156,11 +176,32 @@ namespace wi::math
 		XMStoreFloat4(&retVal, result);
 		return retVal;
 	}
+	constexpr XMFLOAT2 Max(const XMFLOAT2& a, const XMFLOAT2& b) {
+		return XMFLOAT2(std::max(a.x, b.x), std::max(a.y, b.y));
+	}
 	constexpr XMFLOAT3 Max(const XMFLOAT3& a, const XMFLOAT3& b) {
 		return XMFLOAT3(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z));
 	}
+	constexpr XMFLOAT4 Max(const XMFLOAT4& a, const XMFLOAT4& b) {
+		return XMFLOAT4(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z), std::max(a.w, b.w));
+	}
+	constexpr XMFLOAT2 Min(const XMFLOAT2& a, const XMFLOAT2& b) {
+		return XMFLOAT2(std::min(a.x, b.x), std::min(a.y, b.y));
+	}
 	constexpr XMFLOAT3 Min(const XMFLOAT3& a, const XMFLOAT3& b) {
 		return XMFLOAT3(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z));
+	}
+	constexpr XMFLOAT4 Min(const XMFLOAT4& a, const XMFLOAT4& b) {
+		return XMFLOAT4(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z), std::min(a.w, b.w));
+	}
+	constexpr XMFLOAT2 Abs(const XMFLOAT2& a) {
+		return XMFLOAT2(std::abs(a.x), std::abs(a.y));
+	}
+	constexpr XMFLOAT3 Abs(const XMFLOAT3& a) {
+		return XMFLOAT3(std::abs(a.x), std::abs(a.y), std::abs(a.z));
+	}
+	constexpr XMFLOAT4 Abs(const XMFLOAT4& a) {
+		return XMFLOAT4(std::abs(a.x), std::abs(a.y), std::abs(a.z), std::abs(a.w));
 	}
 	constexpr float Clamp(float val, float min, float max)
 	{

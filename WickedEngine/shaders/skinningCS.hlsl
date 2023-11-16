@@ -2,24 +2,72 @@
 
 PUSHCONSTANT(push, SkinningPushConstants);
 
+#ifndef __PSSL__
+#undef WICKED_ENGINE_DEFAULT_ROOTSIGNATURE // don't use auto root signature!
+[RootSignature(
+	"RootConstants(num32BitConstants=20, b999),"
+	"DescriptorTable( "
+		"SRV(t0, space = 2, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 3, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 4, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 5, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 6, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 7, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 8, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 9, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 10, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 11, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 12, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 13, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 14, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 15, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 16, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 17, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 18, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 19, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 20, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 21, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 22, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 23, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 24, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 25, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 26, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 27, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 28, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 29, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 30, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 31, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 32, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 33, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 34, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 35, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 36, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 37, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 38, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 39, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 40, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)" \
+	")"
+)]
+#endif // __PSSL__
+
 [numthreads(64, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 {
 	const uint vertexID = DTid.x;
 
 	[branch]
-	if (push.vb_pos_nor_wind < 0 || vertexID >= push.vertexCount)
+	if (push.vb_pos_wind < 0 || vertexID >= push.vertexCount)
 		return;
 	
-	float4 pos_nor_wind = bindless_buffers_float4[push.vb_pos_nor_wind][vertexID];
-	uint nor_wind = asuint(pos_nor_wind.w);
+	float4 pos_wind = bindless_buffers_float4[push.vb_pos_wind][vertexID];
+	float3 nor = bindless_buffers_float4[push.vb_nor][vertexID].xyz;
 	
-	float3 pos = pos_nor_wind.xyz;
-	float4 nor = 0;
-	nor.x = (float)((nor_wind >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	nor.y = (float)((nor_wind >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	nor.z = (float)((nor_wind >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	nor.w = (float)((nor_wind >> 24) & 0x000000FF) / 255.0f; // wind
+	float3 pos = pos_wind.xyz;
+	if(any(push.aabb_min) || any(push.aabb_max))
+	{
+		// UNORM vertex position remap:
+		pos = lerp(push.aabb_min, push.aabb_max, pos);
+	}
 	
 	float4 tan = bindless_buffers_float4[push.vb_tan][vertexID];
 
@@ -92,15 +140,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 
 	// Store data:
 	[branch]
-	if (push.so_pos_nor_wind >= 0)
+	if (push.so_pos >= 0)
 	{
-		uint nor_wind = 0;
-		nor_wind |= uint((nor.x * 0.5f + 0.5f) * 255.0f) << 0;
-		nor_wind |= uint((nor.y * 0.5f + 0.5f) * 255.0f) << 8;
-		nor_wind |= uint((nor.z * 0.5f + 0.5f) * 255.0f) << 16;
-		nor_wind |= uint(nor.w * 255.0f) << 24; // wind
-		pos_nor_wind = float4(pos.xyz, asfloat(nor_wind));
-		bindless_rwbuffers_float4[push.so_pos_nor_wind][vertexID] = pos_nor_wind;
+		bindless_rwbuffers[push.so_pos].Store<float3>(vertexID * sizeof(float3), pos);
+	}
+
+	[branch]
+	if (push.so_nor >= 0)
+	{
+		bindless_rwbuffers_float4[push.so_nor][vertexID] = float4(nor, 0);
 	}
 
 	[branch]
