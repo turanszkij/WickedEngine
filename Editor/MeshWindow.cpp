@@ -158,7 +158,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 	AddWidget(&bvhCheckBox);
 
 	quantizeCheckBox.Create("Quantization Disabled: ");
-	quantizeCheckBox.SetTooltip("Disable quantization of vertex positions if you notice inaccuracy errors with formats lesser than RGBA32_FLOAT.");
+	quantizeCheckBox.SetTooltip("Disable quantization of vertex positions if you notice inaccuracy errors with UNORM position formats.");
 	quantizeCheckBox.SetSize(XMFLOAT2(hei, hei));
 	quantizeCheckBox.SetPos(XMFLOAT2(x, y += step));
 	quantizeCheckBox.OnClick([&](wi::gui::EventArgs args) {
