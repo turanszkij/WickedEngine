@@ -79,6 +79,8 @@ namespace wi::helper
 
 	std::string RemoveExtension(const std::string& filename);
 
+	std::string GetPathRelative(const std::string& rootdir, std::string& path);
+
 	void MakePathRelative(const std::string& rootdir, std::string& path);
 
 	void MakePathAbsolute(std::string& path);

@@ -220,16 +220,9 @@ namespace wi
 			seri.RegisterResource(textureName);
 			seri.RegisterResource(maskName);
 
-			// If detecting an absolute path in textures, remove it and convert to relative:
-			if (!dir.empty())
-			{
-				wi::helper::MakePathRelative(dir, textureName);
-				wi::helper::MakePathRelative(dir, maskName);
-			}
-
 			archive << _flags;
-			archive << textureName;
-			archive << maskName;
+			archive << wi::helper::GetPathRelative(dir, textureName);
+			archive << wi::helper::GetPathRelative(dir, maskName);
 
 			archive << params._flags;
 			archive << params.pos;

@@ -402,7 +402,7 @@ Just holds texture information in VRAM.
 	int perlin_seed = 1234, 
 	int perlin_octaves = 8, 
 	float perlin_persistence = 0.5) -- creates a gradient texture from parameters
-- Save(string filename) -- saves texture into a file. Provide the extension in the filename, it should be one of the following: .JPG, .PNG, .TGA, .BMP, .DDS, .KTX2, .BASISGradient
+- Save(string filename) -- saves texture into a file. Provide the extension in the filename, it should be one of the following: .JPG, .PNG, .TGA, .BMP, .DDS, .KTX2, .BASIS
 
 ```lua
 GradientType = {

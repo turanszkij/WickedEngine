@@ -3483,6 +3483,7 @@ namespace wi::scene
 					}
 
 					geometry.indexOffset = subset.indexOffset;
+					geometry.indexCount = subset.indexCount;
 					geometry.materialIndex = subset.materialIndex;
 					geometry.meshletOffset = mesh.meshletCount;
 					geometry.meshletCount = triangle_count_to_meshlet_count(subset.indexCount / 3u);
@@ -4333,6 +4334,7 @@ namespace wi::scene
 			ShaderGeometry geometry;
 			geometry.init();
 			geometry.indexOffset = 0;
+			geometry.indexCount = indexCount;
 			geometry.materialIndex = (uint)materials.GetIndex(entity);
 			geometry.ib = device->GetDescriptorIndex(&hair.primitiveBuffer, SubresourceType::SRV);
 			geometry.vb_pos_wind = hair.vb_pos[0].descriptor_srv;
@@ -4438,6 +4440,7 @@ namespace wi::scene
 			ShaderGeometry geometry;
 			geometry.init();
 			geometry.indexOffset = 0;
+			geometry.indexCount = emitter.GetMaxParticleCount() * 6;
 			geometry.materialIndex = (uint)materials.GetIndex(entity);
 			geometry.ib = device->GetDescriptorIndex(&emitter.primitiveBuffer, SubresourceType::SRV);
 			geometry.vb_pos_wind = emitter.vb_pos.descriptor_srv;
@@ -4588,6 +4591,7 @@ namespace wi::scene
 			ShaderGeometry geometry;
 			geometry.init();
 			geometry.indexOffset = 0;
+			geometry.indexCount = rainEmitter.GetMaxParticleCount() * 6;
 			geometry.materialIndex = rainMaterialOffset;
 			geometry.ib = device->GetDescriptorIndex(&rainEmitter.primitiveBuffer, SubresourceType::SRV);
 			geometry.vb_pos_wind = rainEmitter.vb_pos.descriptor_srv;

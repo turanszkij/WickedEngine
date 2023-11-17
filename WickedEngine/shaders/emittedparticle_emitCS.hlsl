@@ -9,13 +9,6 @@ RWStructuredBuffer<uint> aliveBuffer_NEW : register(u2);
 RWStructuredBuffer<uint> deadBuffer : register(u3);
 RWByteAddressBuffer counterBuffer : register(u4);
 
-#ifdef EMIT_FROM_MESH
-Buffer<uint> meshIndexBuffer : register(t0);
-Buffer<float4> meshVertexBuffer_POS : register(t1);
-Buffer<float4> meshVertexBuffer_NOR : register(t2);
-#endif // EMIT_FROM_MESH
-
-
 [numthreads(THREADCOUNT_EMIT, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
@@ -28,25 +21,55 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	const float4x4 worldMatrix = xEmitterTransform.GetMatrix();
 	float3 emitPos = 0;
+	float3 nor = 0;
+	float4 baseColor = EmitterGetMaterial().baseColor;
 		
 #ifdef EMIT_FROM_MESH
+	// random subset of emitter mesh:
+	uint geometryIndex = xEmitterMeshGeometryOffset + rng.next_uint(xEmitterMeshGeometryCount);
+	ShaderGeometry geometry = load_geometry(geometryIndex);
+	
 	// random triangle on emitter surface:
-	const uint triangleCount = xEmitterMeshIndexCount / 3;
+	const uint triangleCount = geometry.indexCount / 3;
 	const uint tri = rng.next_uint(triangleCount);
 
 	// load indices of triangle from index buffer
-	uint i0 = meshIndexBuffer[tri * 3 + 0];
-	uint i1 = meshIndexBuffer[tri * 3 + 1];
-	uint i2 = meshIndexBuffer[tri * 3 + 2];
+	uint i0 = 0;
+	uint i1 = 0;
+	uint i2 = 0;
+	[branch]
+	if(geometry.ib >= 0)
+	{
+		Buffer<uint> buf = bindless_buffers_uint[geometry.ib];
+		i0 = buf[geometry.indexOffset + tri * 3 + 0];
+		i1 = buf[geometry.indexOffset + tri * 3 + 1];
+		i2 = buf[geometry.indexOffset + tri * 3 + 2];
+	}
 
 	// load vertices of triangle from vertex buffer:
-	float3 pos0 = meshVertexBuffer_POS[i0].xyz;
-	float3 pos1 = meshVertexBuffer_POS[i1].xyz;
-	float3 pos2 = meshVertexBuffer_POS[i2].xyz;
-	
-	float3 nor0 = meshVertexBuffer_NOR[i0].xyz;
-	float3 nor1 = meshVertexBuffer_NOR[i1].xyz;
-	float3 nor2 = meshVertexBuffer_NOR[i2].xyz;
+	float3 pos0 = 0;
+	float3 pos1 = 0;
+	float3 pos2 = 0;
+	[branch]
+	if(geometry.vb_pos_wind >= 0)
+	{
+		Buffer<float4> buf = bindless_buffers_float4[geometry.vb_pos_wind];
+		pos0 = buf[i0].xyz;
+		pos1 = buf[i1].xyz;
+		pos2 = buf[i2].xyz;
+	}
+
+	float3 nor0 = 0;
+	float3 nor1 = 0;
+	float3 nor2 = 0;
+	[branch]
+	if(geometry.vb_nor >= 0)
+	{
+		Buffer<float4> buf = bindless_buffers_float4[geometry.vb_nor];
+		nor0 = buf[i0].xyz;
+		nor1 = buf[i1].xyz;
+		nor2 = buf[i2].xyz;
+	}
 
 	// random barycentric coords:
 	float f = rng.next_float();
@@ -62,8 +85,43 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	// compute final surface position on triangle from barycentric coords:
 	emitPos = attribute_at_bary(pos0.xyz, pos1.xyz, pos2.xyz, bary);
 	emitPos = mul(xEmitterBaseMeshUnormRemap.GetMatrix(), float4(emitPos, 1)).xyz;
-	float3 nor = normalize(attribute_at_bary(nor0, nor1, nor2, bary));
+	nor = normalize(attribute_at_bary(nor0, nor1, nor2, bary));
 	nor = normalize(mul((float3x3)worldMatrix, nor));
+
+	if(xEmitterOptions & EMITTER_OPTION_BIT_TAKE_COLOR_FROM_MESH)
+	{
+		ShaderMaterial material = load_material(geometry.materialIndex);
+		baseColor *= material.baseColor;
+		
+		[branch]
+		if (geometry.vb_col >= 0 && material.IsUsingVertexColors())
+		{
+			Buffer<float4> buf = bindless_buffers_float4[geometry.vb_col];
+			const float4 c0 = buf[i0];
+			const float4 c1 = buf[i1];
+			const float4 c2 = buf[i2];
+			float4 vertexColor = attribute_at_bary(c0, c1, c2, bary);
+			baseColor *= vertexColor;
+		}
+		
+		float4 uvsets = 0;
+		[branch]
+		if(geometry.vb_uvs >= 0)
+		{
+			Buffer<float4> buf = bindless_buffers_float4[geometry.vb_uvs];
+			float4 uv0 = lerp(geometry.uv_range_min.xyxy, geometry.uv_range_max.xyxy, buf[i0]);
+			float4 uv1 = lerp(geometry.uv_range_min.xyxy, geometry.uv_range_max.xyxy, buf[i1]);
+			float4 uv2 = lerp(geometry.uv_range_min.xyxy, geometry.uv_range_max.xyxy, buf[i2]);
+			uvsets = attribute_at_bary(uv0, uv1, uv2, bary);
+			uvsets.xy = mad(uvsets.xy, material.texMulAdd.xy, material.texMulAdd.zw);
+
+			[branch]
+			if(material.textures[BASECOLORMAP].IsValid())
+			{
+				baseColor *= material.textures[BASECOLORMAP].SampleLevel(sampler_linear_wrap, uvsets, 0);
+			}
+		}
+	}
 
 #else
 
@@ -74,8 +132,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	// Just emit from center point:
 	emitPos = 0;
 #endif // EMITTER_VOLUME
-
-	float3 nor = 0;
 
 #endif // EMIT_FROM_MESH
 
@@ -100,15 +156,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	particle.maxLife = xParticleLifeSpan + xParticleLifeSpan * (rng.next_float() - 0.5f) * xParticleLifeSpanRandomness;
 	particle.life = particle.maxLife;
 	particle.sizeBeginEnd = float2(particleStartingSize, particleStartingSize * xParticleScaling);
-	particle.color_mirror = 0;
-	particle.color_mirror |= ((rng.next_float() > 0.5f) << 31) & 0x10000000;
-	particle.color_mirror |= ((rng.next_float() < 0.5f) << 30) & 0x20000000;
 
-	uint color_modifier = 0;
-	color_modifier |= (uint) (255.0 * lerp(1, rng.next_float(), xParticleRandomColorFactor)) << 0;
-	color_modifier |= (uint) (255.0 * lerp(1, rng.next_float(), xParticleRandomColorFactor)) << 8;
-	color_modifier |= (uint) (255.0 * lerp(1, rng.next_float(), xParticleRandomColorFactor)) << 16;
-	particle.color_mirror |= pack_rgba(float4(EmitterGetMaterial().baseColor.rgb, 1)) & color_modifier;
+	baseColor.r *= lerp(1, rng.next_float(), xParticleRandomColorFactor);
+	baseColor.g *= lerp(1, rng.next_float(), xParticleRandomColorFactor);
+	baseColor.b *= lerp(1, rng.next_float(), xParticleRandomColorFactor);
+	particle.color = pack_rgba(baseColor);
 	
 	// new particle index retrieved from dead list (pop):
 	uint deadCount;

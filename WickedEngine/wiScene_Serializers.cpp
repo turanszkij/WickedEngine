@@ -280,24 +280,19 @@ namespace wi::scene
 			archive << texAnimFrameRate;
 			archive << texAnimElapsedTime;
 
-			for (auto& x : textures)
-			{
-				wi::helper::MakePathRelative(dir, x.name);
-			}
-
-			archive << textures[BASECOLORMAP].name;
-			archive << textures[SURFACEMAP].name;
-			archive << textures[NORMALMAP].name;
-			archive << textures[DISPLACEMENTMAP].name;
+			archive << wi::helper::GetPathRelative(dir, textures[BASECOLORMAP].name);
+			archive << wi::helper::GetPathRelative(dir, textures[SURFACEMAP].name);
+			archive << wi::helper::GetPathRelative(dir, textures[NORMALMAP].name);
+			archive << wi::helper::GetPathRelative(dir, textures[DISPLACEMENTMAP].name);
 
 			if (archive.GetVersion() >= 24)
 			{
-				archive << textures[EMISSIVEMAP].name;
+				archive << wi::helper::GetPathRelative(dir, textures[EMISSIVEMAP].name);
 			}
 
 			if (archive.GetVersion() >= 28)
 			{
-				archive << textures[OCCLUSIONMAP].name;
+				archive << wi::helper::GetPathRelative(dir, textures[OCCLUSIONMAP].name);
 
 				archive << textures[BASECOLORMAP].uvset;
 				archive << textures[SURFACEMAP].uvset;
@@ -333,7 +328,7 @@ namespace wi::scene
 			if (archive.GetVersion() >= 59)
 			{
 				archive << transmission;
-				archive << textures[TRANSMISSIONMAP].name;
+				archive << wi::helper::GetPathRelative(dir, textures[TRANSMISSIONMAP].name);
 				archive << textures[TRANSMISSIONMAP].uvset;
 			}
 
@@ -341,16 +336,16 @@ namespace wi::scene
 			{
 				archive << sheenColor;
 				archive << sheenRoughness;
-				archive << textures[SHEENCOLORMAP].name;
-				archive << textures[SHEENROUGHNESSMAP].name;
+				archive << wi::helper::GetPathRelative(dir, textures[SHEENCOLORMAP].name);
+				archive << wi::helper::GetPathRelative(dir, textures[SHEENROUGHNESSMAP].name);
 				archive << textures[SHEENCOLORMAP].uvset;
 				archive << textures[SHEENROUGHNESSMAP].uvset;
 
 				archive << clearcoat;
 				archive << clearcoatRoughness;
-				archive << textures[CLEARCOATMAP].name;
-				archive << textures[CLEARCOATROUGHNESSMAP].name;
-				archive << textures[CLEARCOATNORMALMAP].name;
+				archive << wi::helper::GetPathRelative(dir, textures[CLEARCOATMAP].name);
+				archive << wi::helper::GetPathRelative(dir, textures[CLEARCOATROUGHNESSMAP].name);
+				archive << wi::helper::GetPathRelative(dir, textures[CLEARCOATNORMALMAP].name);
 				archive << textures[CLEARCOATMAP].uvset;
 				archive << textures[CLEARCOATROUGHNESSMAP].uvset;
 				archive << textures[CLEARCOATNORMALMAP].uvset;
@@ -358,7 +353,7 @@ namespace wi::scene
 
 			if (archive.GetVersion() >= 68)
 			{
-				archive << textures[SPECULARMAP].name;
+				archive << wi::helper::GetPathRelative(dir, textures[SPECULARMAP].name);
 				archive << textures[SPECULARMAP].uvset;
 			}
 
@@ -371,7 +366,7 @@ namespace wi::scene
 			{
 				archive << anisotropy_strength;
 				archive << anisotropy_rotation;
-				archive << textures[ANISOTROPYMAP].name;
+				archive << wi::helper::GetPathRelative(dir, textures[ANISOTROPYMAP].name);
 				archive << textures[ANISOTROPYMAP].uvset;
 			}
 		}
@@ -895,14 +890,15 @@ namespace wi::scene
 			}
 
 			// If detecting an absolute path in textures, remove it and convert to relative:
+			wi::vector<std::string> lensFlareNamesRelative = lensFlareNames;
 			if (!dir.empty())
 			{
-				for (size_t i = 0; i < lensFlareNames.size(); ++i)
+				for (size_t i = 0; i < lensFlareNamesRelative.size(); ++i)
 				{
-					wi::helper::MakePathRelative(dir, lensFlareNames[i]);
+					wi::helper::MakePathRelative(dir, lensFlareNamesRelative[i]);
 				}
 			}
-			archive << lensFlareNames;
+			archive << lensFlareNamesRelative;
 
 			if (archive.GetVersion() >= 81)
 			{
@@ -992,9 +988,7 @@ namespace wi::scene
 			if (seri.GetVersion() >= 1)
 			{
 				archive << resolution;
-
-				wi::helper::MakePathRelative(dir, textureName);
-				archive << textureName;
+				archive << wi::helper::GetPathRelative(dir, textureName);
 			}
 		}
 	}
@@ -1490,14 +1484,9 @@ namespace wi::scene
 			archive << oceanParameters.surfaceDetail;
 			archive << oceanParameters.surfaceDisplacementTolerance;
 
-			wi::helper::MakePathRelative(dir, skyMapName);
-			wi::helper::MakePathRelative(dir, colorGradingMapName);
-			wi::helper::MakePathRelative(dir, volumetricCloudsWeatherMapFirstName);
-			wi::helper::MakePathRelative(dir, volumetricCloudsWeatherMapSecondName);
-
 			if (archive.GetVersion() >= 32)
 			{
-				archive << skyMapName;
+				archive << wi::helper::GetPathRelative(dir, skyMapName);
 			}
 			if (archive.GetVersion() >= 40)
 			{
@@ -1505,7 +1494,7 @@ namespace wi::scene
 			}
 			if (archive.GetVersion() >= 62)
 			{
-				archive << colorGradingMapName;
+				archive << wi::helper::GetPathRelative(dir, colorGradingMapName);
 			}
 
 			if (archive.GetVersion() >= 66)
@@ -1613,12 +1602,12 @@ namespace wi::scene
 
 			if (archive.GetVersion() >= 86)
 			{
-				archive << volumetricCloudsWeatherMapFirstName;
+				archive << wi::helper::GetPathRelative(dir, volumetricCloudsWeatherMapFirstName);
 			}
 
 			if (archive.GetVersion() >= 88)
 			{
-				archive << volumetricCloudsWeatherMapSecondName;
+				archive << wi::helper::GetPathRelative(dir, volumetricCloudsWeatherMapSecondName);
 
 				archive << volumetricCloudParameters.layerFirst.curlNoiseHeightFraction;
 				archive << volumetricCloudParameters.layerFirst.skewAlongCoverageWindDirection;
@@ -1717,10 +1706,8 @@ namespace wi::scene
 		{
 			seri.RegisterResource(filename);
 
-			wi::helper::MakePathRelative(dir, filename);
-
 			archive << _flags;
-			archive << filename;
+			archive << wi::helper::GetPathRelative(dir, filename);
 			archive << volume;
 			archive << soundinstance.type;
 
@@ -1755,10 +1742,8 @@ namespace wi::scene
 		{
 			seri.RegisterResource(filename);
 
-			wi::helper::MakePathRelative(dir, filename);
-
 			archive << _flags;
-			archive << filename;
+			archive << wi::helper::GetPathRelative(dir, filename);
 		}
 	}
 	void InverseKinematicsComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
@@ -1865,14 +1850,8 @@ namespace wi::scene
 		{
 			seri.RegisterResource(filename);
 
-			std::string relative_filename = filename; // don't modify actual filename, because script_file() and script_dir() can rely on it
-			if (!dir.empty())
-			{
-				wi::helper::MakePathRelative(dir, relative_filename);
-			}
-
 			archive << _flags;
-			archive << relative_filename;
+			archive << wi::helper::GetPathRelative(dir, filename);
 		}
 	}
 	void ExpressionComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
@@ -2149,15 +2128,18 @@ namespace wi::scene
 			}
 		}
 
-		if (archive.IsReadMode())
+		if (archive.GetVersion() >= 90)
 		{
-			archive.Jump(jump_after); // jump after resourcemanager::Serialize_WRITE
-		}
-		else
-		{
-			archive.PatchUnknownJumpPosition(jump_before);
-			wi::resourcemanager::Serialize_WRITE(archive, seri.resource_registration);
-			archive.PatchUnknownJumpPosition(jump_after);
+			if (archive.IsReadMode())
+			{
+				archive.Jump(jump_after); // jump after resourcemanager::Serialize_WRITE
+			}
+			else
+			{
+				archive.PatchUnknownJumpPosition(jump_before);
+				wi::resourcemanager::Serialize_WRITE(archive, seri.resource_registration);
+				archive.PatchUnknownJumpPosition(jump_after);
+			}
 		}
 
 		wi::backlog::post("Scene serialize took " + std::to_string(timer.elapsed_seconds()) + " sec");
@@ -3075,15 +3057,18 @@ namespace wi::scene
 			flags
 		);
 
-		if (archive.IsReadMode())
+		if (archive.GetVersion() >= 90)
 		{
-			archive.Jump(jump_after); // jump after resourcemanager::Serialize_WRITE
-		}
-		else
-		{
-			archive.PatchUnknownJumpPosition(jump_before);
-			wi::resourcemanager::Serialize_WRITE(archive, seri.resource_registration);
-			archive.PatchUnknownJumpPosition(jump_after);
+			if (archive.IsReadMode())
+			{
+				archive.Jump(jump_after); // jump after resourcemanager::Serialize_WRITE
+			}
+			else
+			{
+				archive.PatchUnknownJumpPosition(jump_before);
+				wi::resourcemanager::Serialize_WRITE(archive, seri.resource_registration);
+				archive.PatchUnknownJumpPosition(jump_after);
+			}
 		}
 
 		return ret;

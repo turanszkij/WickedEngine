@@ -88,6 +88,7 @@ namespace wi
 			FLAG_FRAME_BLENDING = 1 << 6,
 			FLAG_COLLIDERS_DISABLED = 1 << 7,
 			FLAG_USE_RAIN_BLOCKER = 1 << 8,
+			FLAG_TAKE_COLOR_FROM_MESH = 1 << 9,
 		};
 		uint32_t _flags = FLAG_EMPTY;
 
@@ -144,6 +145,7 @@ namespace wi
 		inline bool IsVolumeEnabled() const { return _flags & FLAG_HAS_VOLUME; }
 		inline bool IsFrameBlendingEnabled() const { return _flags & FLAG_FRAME_BLENDING; }
 		inline bool IsCollidersDisabled() const { return _flags & FLAG_COLLIDERS_DISABLED; }
+		inline bool IsTakeColorFromMesh() const { return _flags & FLAG_TAKE_COLOR_FROM_MESH; }
 
 		inline void SetDebug(bool value) { if (value) { _flags |= FLAG_DEBUG; } else { _flags &= ~FLAG_DEBUG; } }
 		inline void SetPaused(bool value) { if (value) { _flags |= FLAG_PAUSED; } else { _flags &= ~FLAG_PAUSED; } }
@@ -153,6 +155,7 @@ namespace wi
 		inline void SetVolumeEnabled(bool value) { if (value) { _flags |= FLAG_HAS_VOLUME; } else { _flags &= ~FLAG_HAS_VOLUME; } }
 		inline void SetFrameBlendingEnabled(bool value) { if (value) { _flags |= FLAG_FRAME_BLENDING; } else { _flags &= ~FLAG_FRAME_BLENDING; } }
 		inline void SetCollidersDisabled(bool value) { if (value) { _flags |= FLAG_COLLIDERS_DISABLED; } else { _flags &= ~FLAG_COLLIDERS_DISABLED; } }
+		inline void SetTakeColorFromMesh(bool value) { if (value) { _flags |= FLAG_TAKE_COLOR_FROM_MESH; } else { _flags &= ~FLAG_TAKE_COLOR_FROM_MESH; } }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 

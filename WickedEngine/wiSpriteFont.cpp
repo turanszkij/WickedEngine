@@ -165,16 +165,10 @@ namespace wi
 		{
 			seri.RegisterResource(fontStyleName);
 
-			// If detecting an absolute path in textures, remove it and convert to relative:
-			if (!dir.empty())
-			{
-				wi::helper::MakePathRelative(dir, fontStyleName);
-			}
-
 			archive << _flags;
 			std::string textA = GetTextA();
 			archive << textA;
-			archive << fontStyleName;
+			archive << wi::helper::GetPathRelative(dir, fontStyleName);
 
 			archive << params._flags;
 			archive << params.position;

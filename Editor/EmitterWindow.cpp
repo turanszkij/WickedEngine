@@ -8,7 +8,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_EMITTER " Emitter", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(300, 960));
+	SetSize(XMFLOAT2(300, 980));
 
 	closeButton.SetTooltip("Delete EmittedParticleSystem");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -198,6 +198,21 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	collidersDisabledCheckBox.SetCheck(false);
 	collidersDisabledCheckBox.SetTooltip("Simply disables all colliders for acting on this particle system");
 	AddWidget(&collidersDisabledCheckBox);
+
+
+	takeColorCheckBox.Create("Take color from mesh: ");
+	takeColorCheckBox.SetPos(XMFLOAT2(x, y += step));
+	takeColorCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	takeColorCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->SetTakeColorFromMesh(args.bValue);
+		}
+		});
+	takeColorCheckBox.SetCheck(false);
+	takeColorCheckBox.SetTooltip("If it emits from a mesh, then particle color will be taken from mesh material surface.");
+	AddWidget(&takeColorCheckBox);
 
 
 
@@ -675,6 +690,7 @@ void EmitterWindow::SetEntity(Entity entity)
 		volumeCheckBox.SetCheck(emitter->IsVolumeEnabled());
 		frameBlendingCheckBox.SetCheck(emitter->IsFrameBlendingEnabled());
 		collidersDisabledCheckBox.SetCheck(emitter->IsCollidersDisabled());
+		takeColorCheckBox.SetCheck(emitter->IsTakeColorFromMesh());
 		maxParticlesSlider.SetValue((float)emitter->GetMaxParticleCount());
 
 		frameRateInput.SetValue(emitter->frameRate);
@@ -824,6 +840,7 @@ void EmitterWindow::ResizeLayout()
 	add_right(volumeCheckBox);
 	add_right(frameBlendingCheckBox);
 	add_right(collidersDisabledCheckBox);
+	add_right(takeColorCheckBox);
 	add(maxParticlesSlider);
 	add(emitCountSlider);
 	add(emitSizeSlider);
