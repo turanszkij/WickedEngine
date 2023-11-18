@@ -188,11 +188,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 #ifdef DEBUG_PRESSURE
 		// debug pressure:
 		float3 color = lerp(float3(1, 1, 1), float3(1, 0, 0), pow(saturate(pressureA * 0.0005f), 0.5)) * 255;
-		uint uColor = 0;
-		uColor |= (uint)color.r << 0;
-		uColor |= (uint)color.g << 8;
-		uColor |= (uint)color.b << 16;
-		particleBuffer[particleIndexA].color_mirror = uColor;
+		particleBuffer[particleIndexA].color = pack_rgba(color, 1);
 #endif // DEBUG_PRESSURE
 
 	}

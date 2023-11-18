@@ -444,20 +444,20 @@ static const uint SHADERMESH_FLAG_EMITTEDPARTICLE = 1 << 2;
 //	But because these are always loaded toghether by shaders, they are unrolled into one to reduce individual buffer loads
 struct ShaderGeometry
 {
+	int ib;
 	int vb_pos_wind;
 	int vb_uvs;
-	int ib;
-	uint indexOffset;
-
 	int vb_nor;
+
 	int vb_tan;
 	int vb_col;
 	int vb_atl;
-
 	int vb_pre;
+
 	uint materialIndex;
 	uint meshletOffset; // offset of this subset in meshlets (locally within the mesh)
 	uint meshletCount;
+	int impostorSliceOffset;
 
 	float3 aabb_min;
 	uint flags;
@@ -467,15 +467,14 @@ struct ShaderGeometry
 	float2 uv_range_min;
 	float2 uv_range_max;
 
-	int impostorSliceOffset;
+	uint indexOffset;
+	uint indexCount;
 	int padding0;
 	int padding1;
-	int padding2;
 
 	void init()
 	{
 		ib = -1;
-		indexOffset = 0;
 		vb_pos_wind = -1;
 		vb_uvs = -1;
 
@@ -498,6 +497,8 @@ struct ShaderGeometry
 		uv_range_max = float2(1, 1);
 
 		impostorSliceOffset = -1;
+		indexOffset = 0;
+		indexCount = 0;
 	}
 };
 

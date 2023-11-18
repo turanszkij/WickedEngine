@@ -14,7 +14,7 @@ struct Particle
 	float maxLife;
 	float2 sizeBeginEnd;
 	float life;
-	uint color_mirror;
+	uint color;
 };
 
 struct ParticleCounters
@@ -38,6 +38,7 @@ static const uint EMITTER_OPTION_BIT_SPH_ENABLED = 1 << 1;
 static const uint EMITTER_OPTION_BIT_MESH_SHADER_ENABLED = 1 << 2;
 static const uint EMITTER_OPTION_BIT_COLLIDERS_DISABLED = 1 << 3;
 static const uint EMITTER_OPTION_BIT_USE_RAIN_BLOCKER = 1 << 4;
+static const uint EMITTER_OPTION_BIT_TAKE_COLOR_FROM_MESH = 1 << 5;
 
 CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 {
@@ -45,24 +46,24 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 	ShaderTransform xEmitterBaseMeshUnormRemap;
 
 	uint		xEmitCount;
-	uint		xEmitterMeshIndexCount;
 	float		xEmitterRandomness;
 	float		xParticleRandomColorFactor;
-
 	float		xParticleSize;
+
 	float		xParticleScaling;
 	float		xParticleRotation;
 	float		xParticleRandomFactor;
-
 	float		xParticleNormalFactor;
+
 	float		xParticleLifeSpan;
 	float		xParticleLifeSpanRandomness;
 	float		xParticleMass;
-
 	float		xParticleMotionBlurAmount;
+
 	uint		xEmitterMaxParticleCount;
 	uint		xEmitterInstanceIndex;
-	uint		xEmitter_padding1;
+	uint		xEmitterMeshGeometryOffset;
+	uint		xEmitterMeshGeometryCount;
 
 	uint2		xEmitterFramesXY;
 	uint		xEmitterFrameCount;

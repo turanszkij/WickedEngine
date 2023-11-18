@@ -121,33 +121,37 @@ namespace wi
 
 			uint64_t buffer_offset = 0ull;
 
+			buffer_offset = AlignTo(buffer_offset, alignment);
 			vb_pos.offset = buffer_offset;
-			buffer_offset += AlignTo(vb_pos.size, alignment);
 			vb_pos.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos.offset, vb_pos.size, &MeshComponent::Vertex_POS32::FORMAT);
 			vb_pos.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos.offset, vb_pos.size); // UAV can't have RGB32_F format!
 			vb_pos.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_pos.subresource_srv);
 			vb_pos.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_pos.subresource_uav);
+			buffer_offset += vb_pos.size;
 
+			buffer_offset = AlignTo(buffer_offset, alignment);
 			vb_nor.offset = buffer_offset;
-			buffer_offset += AlignTo(vb_nor.size, alignment);
 			vb_nor.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_nor.offset, vb_nor.size, &MeshComponent::Vertex_NOR::FORMAT);
 			vb_nor.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_nor.offset, vb_nor.size, &MeshComponent::Vertex_NOR::FORMAT);
 			vb_nor.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_nor.subresource_srv);
 			vb_nor.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_nor.subresource_uav);
+			buffer_offset += vb_nor.size;
 
+			buffer_offset = AlignTo(buffer_offset, alignment);
 			vb_uvs.offset = buffer_offset;
-			buffer_offset += AlignTo(vb_uvs.size, alignment);
 			vb_uvs.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_uvs.offset, vb_uvs.size, &MeshComponent::Vertex_UVS::FORMAT);
 			vb_uvs.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_uvs.offset, vb_uvs.size, &MeshComponent::Vertex_UVS::FORMAT);
 			vb_uvs.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_uvs.subresource_srv);
 			vb_uvs.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_uvs.subresource_uav);
+			buffer_offset += vb_uvs.size;
 
+			buffer_offset = AlignTo(buffer_offset, alignment);
 			vb_col.offset = buffer_offset;
-			buffer_offset += AlignTo(vb_col.size, alignment);
 			vb_col.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_col.offset, vb_col.size, &MeshComponent::Vertex_COL::FORMAT);
 			vb_col.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_col.offset, vb_col.size, &MeshComponent::Vertex_COL::FORMAT);
 			vb_col.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_col.subresource_srv);
 			vb_col.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_col.subresource_uav);
+			buffer_offset += vb_col.size;
 
 			primitiveBuffer = wi::renderer::GetIndexBufferForQuads(MAX_PARTICLES);
 		}
@@ -326,7 +330,7 @@ namespace wi
 	{
 		CreateSelfBuffers();
 
-		if (IsPaused())
+		if (IsPaused() || dt == 0)
 			return;
 
 		emit = std::max(0.0f, emit - std::floor(emit));
@@ -385,7 +389,19 @@ namespace wi
 				cb.xEmitterBaseMeshUnormRemap.Create(unormRemap);
 			}
 			cb.xEmitCount = (uint32_t)emit;
-			cb.xEmitterMeshIndexCount = mesh == nullptr ? 0 : (uint32_t)mesh->indices.size();
+			if (mesh == nullptr)
+			{
+				cb.xEmitterMeshGeometryOffset = 0;
+				cb.xEmitterMeshGeometryCount = 0;
+			}
+			else
+			{
+				uint32_t first_subset = 0;
+				uint32_t last_subset = 0;
+				mesh->GetLODSubsetRange(0, first_subset, last_subset);
+				cb.xEmitterMeshGeometryOffset = mesh->geometryOffset + first_subset;
+				cb.xEmitterMeshGeometryCount = last_subset - first_subset;
+			}
 			cb.xEmitterRandomness = wi::random::GetRandom(0.0f, 1.0f);
 			cb.xParticleLifeSpan = life;
 			cb.xParticleLifeSpanRandomness = random_life;
@@ -432,6 +448,10 @@ namespace wi
 			{
 				cb.xEmitterOptions |= EMITTER_OPTION_BIT_USE_RAIN_BLOCKER;
 			}
+			if (IsTakeColorFromMesh())
+			{
+				cb.xEmitterOptions |= EMITTER_OPTION_BIT_TAKE_COLOR_FROM_MESH;
+			}
 
 			// SPH:
 			cb.xSPH_h = SPH_h;
@@ -470,21 +490,6 @@ namespace wi
 			device->BindUAV(&generalBuffer, 10, cmd, vb_col.subresource_uav);
 			device->BindUAV(&culledIndirectionBuffer, 11, cmd);
 			device->BindUAV(&culledIndirectionBuffer2, 12, cmd);
-
-			if (mesh != nullptr)
-			{
-				device->BindResource(&mesh->generalBuffer, 0, cmd, mesh->ib.subresource_srv);
-				if (mesh->streamoutBuffer.IsValid())
-				{
-					device->BindResource(&mesh->streamoutBuffer, 1, cmd, mesh->so_pos.subresource_srv);
-					device->BindResource(&mesh->streamoutBuffer, 2, cmd, mesh->so_nor.subresource_srv);
-				}
-				else
-				{
-					device->BindResource(&mesh->generalBuffer, 1, cmd, mesh->vb_pos_wind.subresource_srv);
-					device->BindResource(&mesh->generalBuffer, 2, cmd, mesh->vb_nor.subresource_srv);
-				}
-			}
 
 			GPUBarrier barrier_indirect_uav = GPUBarrier::Buffer(&indirectBuffers, ResourceState::INDIRECT_ARGUMENT, ResourceState::UNORDERED_ACCESS);
 			GPUBarrier barrier_uav_indirect = GPUBarrier::Buffer(&indirectBuffers, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT);

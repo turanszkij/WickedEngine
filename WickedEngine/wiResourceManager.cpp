@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <mutex>
+#include <unordered_map>
 
 using namespace wi::graphics;
 
@@ -134,7 +135,7 @@ namespace wi
 	namespace resourcemanager
 	{
 		static std::mutex locker;
-		static wi::unordered_map<std::string, std::weak_ptr<ResourceInternal>> resources;
+		static std::unordered_map<std::string, std::weak_ptr<ResourceInternal>> resources;
 		static Mode mode = Mode::DISCARD_FILEDATA_AFTER_LOAD;
 
 		void SetMode(Mode param)
