@@ -4419,6 +4419,14 @@ namespace wi::gui
 		scrollbar.sprites_knob[ScrollBar::SCROLLBAR_GRABBED].params.color = wi::Color::White();
 		scrollbar.SetOverScroll(0.25f);
 	}
+	bool TreeList::DoesItemHaveChildren(int index) const
+	{
+		if (items.size() <= size_t(index + 1)) // if item doesn't exist or last then no children
+			return false;
+		if (items[index].level + 1 == items[index + 1].level) // if item after index is exactly one level down, then it is its child
+			return true;
+		return false;
+	}
 	float TreeList::GetItemOffset(int index) const
 	{
 		return 2 + scrollbar.GetOffset() + index * item_height();
@@ -4730,6 +4738,7 @@ namespace wi::gui
 			}
 
 			// opened flag triangle:
+			if(DoesItemHaveChildren(i))
 			{
 				device->BindPipelineState(&gui_internal().PSO_colored, cmd);
 

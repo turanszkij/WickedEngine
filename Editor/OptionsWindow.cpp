@@ -1,9 +1,9 @@
 #include "stdafx.h"
 #include "OptionsWindow.h"
 
-using namespace wi::graphics;
 using namespace wi::ecs;
 using namespace wi::scene;
+using namespace wi::graphics;
 
 void OptionsWindow::Create(EditorComponent* _editor)
 {
@@ -458,7 +458,7 @@ void OptionsWindow::ResizeLayout()
 
 
 	entityTree.SetPos(pos);
-	entityTree.SetSize(XMFLOAT2(width, std::max(editor->GetLogicalHeight() * 0.75f, editor->GetLogicalHeight() - pos.y)));
+	entityTree.SetSize(XMFLOAT2(width, editor->GetLogicalHeight() - pos.y - this->translation_local.y - this->control_size - padding));
 	pos.y += entityTree.GetSize().y;
 	pos.y += padding;
 }
@@ -681,254 +681,16 @@ void OptionsWindow::RefreshEntityTree()
 
 	entityTree.ClearItems();
 
-	if (has_flag(filter, Filter::All))
-	{
-		// Add hierarchy:
-		for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
-		{
-			if (scene.hierarchy[i].parentID == INVALID_ENTITY)
-				continue;
-			PushToEntityTree(scene.hierarchy[i].parentID, 0);
-		}
-	}
+	entitytree_temp_items.clear();
+	scene.FindAllEntities(entitytree_temp_items);
 
-	// Add any left over entities that might not have had a hierarchy:
-
-	if (has_flag(filter, Filter::Terrain))
+	// Add items to level 0 that are not in hierarchy (not in hierarchy can also mean top level parent):
+	//	Note that PushToEntityTree will add children recursively, so this is all we need
+	for (auto& x : entitytree_temp_items)
 	{
-		// Any transform left that is not part of a hierarchy:
-		for (size_t i = 0; i < scene.terrains.GetCount(); ++i)
+		if (!scene.hierarchy.Contains(x))
 		{
-			PushToEntityTree(scene.terrains.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Transform))
-	{
-		// Any transform left that is not part of a hierarchy:
-		for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.transforms.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Light))
-	{
-		for (size_t i = 0; i < scene.lights.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.lights.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Decal))
-	{
-		for (size_t i = 0; i < scene.decals.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.decals.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Camera))
-	{
-		for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.cameras.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Material))
-	{
-		for (size_t i = 0; i < scene.materials.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.materials.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Mesh))
-	{
-		for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.meshes.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Armature))
-	{
-		for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.armatures.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Object))
-	{
-		for (size_t i = 0; i < scene.objects.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.objects.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Weather))
-	{
-		for (size_t i = 0; i < scene.weathers.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.weathers.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Sound))
-	{
-		for (size_t i = 0; i < scene.sounds.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.sounds.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Video))
-	{
-		for (size_t i = 0; i < scene.videos.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.videos.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Hairparticle))
-	{
-		for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.hairs.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Emitter))
-	{
-		for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.emitters.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Animation))
-	{
-		for (size_t i = 0; i < scene.animations.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.animations.GetEntity(i), 0);
-		}
-		for (size_t i = 0; i < scene.animation_datas.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.animation_datas.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::EnvironmentProbe))
-	{
-		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.probes.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Force))
-	{
-		for (size_t i = 0; i < scene.forces.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.forces.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::All))
-	{
-		for (size_t i = 0; i < scene.rigidbodies.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.rigidbodies.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::All))
-	{
-		for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.softbodies.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Spring))
-	{
-		for (size_t i = 0; i < scene.springs.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.springs.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Collider))
-	{
-		for (size_t i = 0; i < scene.colliders.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.colliders.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::IK))
-	{
-		for (size_t i = 0; i < scene.inverse_kinematics.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.inverse_kinematics.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::All))
-	{
-		for (size_t i = 0; i < scene.names.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.names.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Script))
-	{
-		for (size_t i = 0; i < scene.scripts.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.scripts.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Humanoid))
-	{
-		for (size_t i = 0; i < scene.humanoids.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.humanoids.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Expression))
-	{
-		for (size_t i = 0; i < scene.expressions.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.expressions.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Terrain))
-	{
-		for (size_t i = 0; i < scene.terrains.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.terrains.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Sprite))
-	{
-		for (size_t i = 0; i < scene.sprites.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.sprites.GetEntity(i), 0);
-		}
-	}
-
-	if (has_flag(filter, Filter::Font))
-	{
-		for (size_t i = 0; i < scene.fonts.GetCount(); ++i)
-		{
-			PushToEntityTree(scene.fonts.GetEntity(i), 0);
+			PushToEntityTree(x, 0);
 		}
 	}
 

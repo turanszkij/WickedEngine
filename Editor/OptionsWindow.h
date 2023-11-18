@@ -57,6 +57,7 @@ public:
 	wi::gui::TextInputField filterInput;
 	wi::gui::CheckBox filterCaseCheckBox;
 	wi::gui::TreeList entityTree;
+	wi::unordered_set<wi::ecs::Entity> entitytree_temp_items;
 	wi::unordered_set<wi::ecs::Entity> entitytree_added_items;
 	wi::unordered_set<wi::ecs::Entity> entitytree_opened_items;
 	void PushToEntityTree(wi::ecs::Entity entity, int level);

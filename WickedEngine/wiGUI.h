@@ -751,6 +751,7 @@ namespace wi::gui
 		wi::vector<Item> items;
 
 		float GetItemOffset(int index) const;
+		bool DoesItemHaveChildren(int index) const;
 	public:
 		void Create(const std::string& name);
 
