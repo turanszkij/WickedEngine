@@ -330,7 +330,7 @@ namespace wi
 	{
 		CreateSelfBuffers();
 
-		if (IsPaused())
+		if (IsPaused() || dt == 0)
 			return;
 
 		emit = std::max(0.0f, emit - std::floor(emit));
