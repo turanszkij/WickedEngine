@@ -22,6 +22,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float4x4 worldMatrix = xEmitterTransform.GetMatrix();
 	float3 emitPos = 0;
 	float3 nor = 0;
+	float3 velocity = xParticleVelocity;
 	float4 baseColor = EmitterGetMaterial().baseColor;
 		
 #ifdef EMIT_FROM_MESH
@@ -88,6 +89,19 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	nor = normalize(attribute_at_bary(nor0, nor1, nor2, bary));
 	nor = normalize(mul((float3x3)worldMatrix, nor));
 
+	// Take velocity from surface motion:
+	[branch]
+	if(geometry.vb_pre >= 0)
+	{
+		Buffer<float4> buf = bindless_buffers_float4[geometry.vb_pre];
+		float3 pre0 = buf[i0].xyz;
+		float3 pre1 = buf[i1].xyz;
+		float3 pre2 = buf[i2].xyz;
+		float3 pre = attribute_at_bary(pre0.xyz, pre1.xyz, pre2.xyz, bary);
+		pre = mul(xEmitterBaseMeshUnormRemap.GetMatrix(), float4(pre, 1)).xyz;
+		velocity += emitPos - pre;
+	}
+
 	if(xEmitterOptions & EMITTER_OPTION_BIT_TAKE_COLOR_FROM_MESH)
 	{
 		ShaderMaterial material = load_material(geometry.materialIndex);
@@ -151,7 +165,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	particle.position = pos;
 	particle.force = 0;
 	particle.mass = xParticleMass;
-	particle.velocity = xParticleVelocity + (nor + (float3(rng.next_float(), rng.next_float(), rng.next_float()) - 0.5f) * xParticleRandomFactor) * xParticleNormalFactor;
+	particle.velocity = velocity + (nor + (float3(rng.next_float(), rng.next_float(), rng.next_float()) - 0.5f) * xParticleRandomFactor) * xParticleNormalFactor;
 	particle.rotationalVelocity = xParticleRotation + (rng.next_float() - 0.5f) * xParticleRandomFactor;
 	particle.maxLife = xParticleLifeSpan + xParticleLifeSpan * (rng.next_float() - 0.5f) * xParticleLifeSpanRandomness;
 	particle.life = particle.maxLife;
