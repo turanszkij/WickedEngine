@@ -60,6 +60,7 @@ namespace wi
 
 		float emit = 0.0f;
 		int burst = 0;
+		float dt = 0;
 
 		uint32_t MAX_PARTICLES = 1000;
 

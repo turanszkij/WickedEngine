@@ -328,6 +328,7 @@ namespace wi
 
 	void EmittedParticleSystem::UpdateCPU(const TransformComponent& transform, float dt)
 	{
+		this->dt = dt;
 		CreateSelfBuffers();
 
 		if (IsPaused() || dt == 0)
@@ -374,7 +375,7 @@ namespace wi
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		device->EventBegin("UpdateEmittedParticles", cmd);
 
-		if (!IsPaused())
+		if (!IsPaused() && dt > 0)
 		{
 			EmittedParticleCB cb;
 			cb.xEmitterTransform.Create(worldMatrix);
@@ -698,7 +699,7 @@ namespace wi
 			wi::gpusortlib::Sort(MAX_PARTICLES, distanceBuffer, counterBuffer, PARTICLECOUNTER_OFFSET_CULLEDCOUNT, culledIndirectionBuffer, cmd);
 		}
 
-		if (!IsPaused())
+		if (!IsPaused() && dt > 0)
 		{
 			// finish updating, update draw argument buffer:
 			device->EventBegin("FinishUpdate", cmd);
