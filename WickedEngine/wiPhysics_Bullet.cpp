@@ -1736,7 +1736,7 @@ namespace wi::physics
 			const btSoftBody* softbody = btSoftBody::upcast(rayCallback.m_collisionObject);
 			if (softbody != nullptr)
 			{
-				SoftBody* physicsobject = (SoftBody*)rigidbody->getUserPointer();
+				SoftBody* physicsobject = (SoftBody*)softbody->getUserPointer();
 				result.entity = physicsobject->entity;
 			}
 
