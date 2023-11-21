@@ -62,6 +62,8 @@ public:
 	wi::unordered_set<wi::ecs::Entity> entitytree_opened_items;
 	void PushToEntityTree(wi::ecs::Entity entity, int level);
 	void RefreshEntityTree();
+
+	bool CheckEntityFilter(wi::ecs::Entity entity);
 };
 
 template<>

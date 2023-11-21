@@ -472,190 +472,200 @@ void OptionsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 	}
 	const Scene& scene = editor->GetCurrentScene();
 
-	wi::gui::TreeList::Item item;
-	item.level = level;
-	item.userdata = entity;
-	item.selected = editor->IsSelected(entity);
-	item.open = entitytree_opened_items.count(entity) != 0;
-
-	const NameComponent* name = scene.names.GetComponent(entity);
-
-	std::string name_string;
-	if (name == nullptr)
+	if (CheckEntityFilter(entity))
 	{
-		name_string = "[no_name] " + std::to_string(entity);
-	}
-	else if (name->name.empty())
-	{
-		name_string = "[name_empty] " + std::to_string(entity);
-	}
-	else
-	{
-		name_string = name->name;
-	}
-
-	std::string name_filter = filterInput.GetCurrentInputValue();
-	if (!name_filter.empty())
-	{
-		if (filterCaseCheckBox.GetCheck() && name_string.find(name_filter) == std::string::npos)
+		wi::gui::TreeList::Item item;
+		if (filter == Filter::All)
 		{
-			return;
+			item.level = level;
 		}
-		else if (wi::helper::toUpper(name_string).find(wi::helper::toUpper(name_filter)) == std::string::npos)
+		else
 		{
-			return;
+			item.level = 0;
 		}
-	}
+		item.userdata = entity;
+		item.selected = editor->IsSelected(entity);
+		item.open = entitytree_opened_items.count(entity) != 0;
 
-	// Icons:
-	if (scene.layers.Contains(entity))
-	{
-		item.name += ICON_LAYER " ";
-	}
-	if (scene.transforms.Contains(entity))
-	{
-		item.name += ICON_TRANSFORM " ";
-	}
-	if (scene.terrains.Contains(entity))
-	{
-		item.name += ICON_TERRAIN " ";
-	}
-	if (scene.meshes.Contains(entity))
-	{
-		item.name += ICON_MESH " ";
-	}
-	if (scene.objects.Contains(entity))
-	{
-		item.name += ICON_OBJECT " ";
-	}
-	if (scene.rigidbodies.Contains(entity))
-	{
-		item.name += ICON_RIGIDBODY " ";
-	}
-	if (scene.softbodies.Contains(entity))
-	{
-		item.name += ICON_SOFTBODY " ";
-	}
-	if (scene.emitters.Contains(entity))
-	{
-		item.name += ICON_EMITTER " ";
-	}
-	if (scene.hairs.Contains(entity))
-	{
-		item.name += ICON_HAIR " ";
-	}
-	if (scene.forces.Contains(entity))
-	{
-		item.name += ICON_FORCE " ";
-	}
-	if (scene.sounds.Contains(entity))
-	{
-		item.name += ICON_SOUND " ";
-	}
-	if (scene.videos.Contains(entity))
-	{
-		item.name += ICON_VIDEO " ";
-	}
-	if (scene.decals.Contains(entity))
-	{
-		item.name += ICON_DECAL " ";
-	}
-	if (scene.cameras.Contains(entity))
-	{
-		item.name += ICON_CAMERA " ";
-	}
-	if (scene.probes.Contains(entity))
-	{
-		item.name += ICON_ENVIRONMENTPROBE " ";
-	}
-	if (scene.animations.Contains(entity))
-	{
-		item.name += ICON_ANIMATION " ";
-	}
-	if (scene.animation_datas.Contains(entity))
-	{
-		item.name += "[animation_data] ";
-	}
-	if (scene.armatures.Contains(entity))
-	{
-		item.name += ICON_ARMATURE " ";
-	}
-	if (scene.humanoids.Contains(entity))
-	{
-		item.name += ICON_HUMANOID " ";
-	}
-	if (scene.sprites.Contains(entity))
-	{
-		item.name += ICON_SPRITE " ";
-	}
-	if (scene.fonts.Contains(entity))
-	{
-		item.name += ICON_FONT " ";
-	}
-	if (scene.lights.Contains(entity))
-	{
-		const LightComponent* light = scene.lights.GetComponent(entity);
-		switch (light->type)
+		const NameComponent* name = scene.names.GetComponent(entity);
+
+		std::string name_string;
+		if (name == nullptr)
 		{
-		default:
-		case LightComponent::POINT:
-			item.name += ICON_POINTLIGHT " ";
-			break;
-		case LightComponent::SPOT:
-			item.name += ICON_SPOTLIGHT " ";
-			break;
-		case LightComponent::DIRECTIONAL:
-			item.name += ICON_DIRECTIONALLIGHT " ";
-			break;
+			name_string = "[no_name] " + std::to_string(entity);
 		}
-	}
-	if (scene.materials.Contains(entity))
-	{
-		item.name += ICON_MATERIAL " ";
-	}
-	if (scene.weathers.Contains(entity))
-	{
-		item.name += ICON_WEATHER " ";
-	}
-	if (scene.inverse_kinematics.Contains(entity))
-	{
-		item.name += ICON_IK " ";
-	}
-	if (scene.springs.Contains(entity))
-	{
-		item.name += ICON_SPRING " ";
-	}
-	if (scene.colliders.Contains(entity))
-	{
-		item.name += ICON_COLLIDER " ";
-	}
-	if (scene.scripts.Contains(entity))
-	{
-		item.name += ICON_SCRIPT " ";
-	}
-	if (scene.expressions.Contains(entity))
-	{
-		item.name += ICON_EXPRESSION " ";
-	}
-	bool bone_found = false;
-	for (size_t i = 0; i < scene.armatures.GetCount() && !bone_found; ++i)
-	{
-		const ArmatureComponent& armature = scene.armatures[i];
-		for (Entity bone : armature.boneCollection)
+		else if (name->name.empty())
 		{
-			if (entity == bone)
+			name_string = "[name_empty] " + std::to_string(entity);
+		}
+		else
+		{
+			name_string = name->name;
+		}
+
+		std::string name_filter = filterInput.GetCurrentInputValue();
+		if (!name_filter.empty())
+		{
+			if (filterCaseCheckBox.GetCheck() && name_string.find(name_filter) == std::string::npos)
 			{
-				item.name += ICON_BONE " ";
-				bone_found = true;
+				return;
+			}
+			else if (wi::helper::toUpper(name_string).find(wi::helper::toUpper(name_filter)) == std::string::npos)
+			{
+				return;
+			}
+		}
+
+		// Icons:
+		if (scene.layers.Contains(entity))
+		{
+			item.name += ICON_LAYER " ";
+		}
+		if (scene.transforms.Contains(entity))
+		{
+			item.name += ICON_TRANSFORM " ";
+		}
+		if (scene.terrains.Contains(entity))
+		{
+			item.name += ICON_TERRAIN " ";
+		}
+		if (scene.meshes.Contains(entity))
+		{
+			item.name += ICON_MESH " ";
+		}
+		if (scene.objects.Contains(entity))
+		{
+			item.name += ICON_OBJECT " ";
+		}
+		if (scene.rigidbodies.Contains(entity))
+		{
+			item.name += ICON_RIGIDBODY " ";
+		}
+		if (scene.softbodies.Contains(entity))
+		{
+			item.name += ICON_SOFTBODY " ";
+		}
+		if (scene.emitters.Contains(entity))
+		{
+			item.name += ICON_EMITTER " ";
+		}
+		if (scene.hairs.Contains(entity))
+		{
+			item.name += ICON_HAIR " ";
+		}
+		if (scene.forces.Contains(entity))
+		{
+			item.name += ICON_FORCE " ";
+		}
+		if (scene.sounds.Contains(entity))
+		{
+			item.name += ICON_SOUND " ";
+		}
+		if (scene.videos.Contains(entity))
+		{
+			item.name += ICON_VIDEO " ";
+		}
+		if (scene.decals.Contains(entity))
+		{
+			item.name += ICON_DECAL " ";
+		}
+		if (scene.cameras.Contains(entity))
+		{
+			item.name += ICON_CAMERA " ";
+		}
+		if (scene.probes.Contains(entity))
+		{
+			item.name += ICON_ENVIRONMENTPROBE " ";
+		}
+		if (scene.animations.Contains(entity))
+		{
+			item.name += ICON_ANIMATION " ";
+		}
+		if (scene.animation_datas.Contains(entity))
+		{
+			item.name += "[animation_data] ";
+		}
+		if (scene.armatures.Contains(entity))
+		{
+			item.name += ICON_ARMATURE " ";
+		}
+		if (scene.humanoids.Contains(entity))
+		{
+			item.name += ICON_HUMANOID " ";
+		}
+		if (scene.sprites.Contains(entity))
+		{
+			item.name += ICON_SPRITE " ";
+		}
+		if (scene.fonts.Contains(entity))
+		{
+			item.name += ICON_FONT " ";
+		}
+		if (scene.lights.Contains(entity))
+		{
+			const LightComponent* light = scene.lights.GetComponent(entity);
+			switch (light->type)
+			{
+			default:
+			case LightComponent::POINT:
+				item.name += ICON_POINTLIGHT " ";
+				break;
+			case LightComponent::SPOT:
+				item.name += ICON_SPOTLIGHT " ";
+				break;
+			case LightComponent::DIRECTIONAL:
+				item.name += ICON_DIRECTIONALLIGHT " ";
 				break;
 			}
 		}
+		if (scene.materials.Contains(entity))
+		{
+			item.name += ICON_MATERIAL " ";
+		}
+		if (scene.weathers.Contains(entity))
+		{
+			item.name += ICON_WEATHER " ";
+		}
+		if (scene.inverse_kinematics.Contains(entity))
+		{
+			item.name += ICON_IK " ";
+		}
+		if (scene.springs.Contains(entity))
+		{
+			item.name += ICON_SPRING " ";
+		}
+		if (scene.colliders.Contains(entity))
+		{
+			item.name += ICON_COLLIDER " ";
+		}
+		if (scene.scripts.Contains(entity))
+		{
+			item.name += ICON_SCRIPT " ";
+		}
+		if (scene.expressions.Contains(entity))
+		{
+			item.name += ICON_EXPRESSION " ";
+		}
+		bool bone_found = false;
+		for (size_t i = 0; i < scene.armatures.GetCount() && !bone_found; ++i)
+		{
+			const ArmatureComponent& armature = scene.armatures[i];
+			for (Entity bone : armature.boneCollection)
+			{
+				if (entity == bone)
+				{
+					item.name += ICON_BONE " ";
+					bone_found = true;
+					break;
+				}
+			}
+		}
+
+		item.name += name_string;
+		entityTree.AddItem(item);
+
+		entitytree_added_items.insert(entity);
 	}
-
-	item.name += name_string;
-	entityTree.AddItem(item);
-
-	entitytree_added_items.insert(entity);
 
 	for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
 	{
@@ -696,4 +706,42 @@ void OptionsWindow::RefreshEntityTree()
 
 	entitytree_added_items.clear();
 	entitytree_opened_items.clear();
+}
+
+bool OptionsWindow::CheckEntityFilter(wi::ecs::Entity entity)
+{
+	const Scene& scene = editor->GetCurrentScene();
+	bool valid = false;
+
+	if (
+		has_flag(filter, Filter::Transform) && scene.transforms.Contains(entity) ||
+		has_flag(filter, Filter::Material) && scene.materials.Contains(entity) ||
+		has_flag(filter, Filter::Mesh) && scene.meshes.Contains(entity) ||
+		has_flag(filter, Filter::Object) && scene.objects.Contains(entity) ||
+		has_flag(filter, Filter::EnvironmentProbe) && scene.probes.Contains(entity) ||
+		has_flag(filter, Filter::Decal) && scene.decals.Contains(entity) ||
+		has_flag(filter, Filter::Sound) && scene.sounds.Contains(entity) ||
+		has_flag(filter, Filter::Weather) && scene.weathers.Contains(entity) ||
+		has_flag(filter, Filter::Light) && scene.lights.Contains(entity) ||
+		has_flag(filter, Filter::Animation) && scene.animations.Contains(entity) ||
+		has_flag(filter, Filter::Force) && scene.forces.Contains(entity) ||
+		has_flag(filter, Filter::Emitter) && scene.emitters.Contains(entity) ||
+		has_flag(filter, Filter::IK) && scene.inverse_kinematics.Contains(entity) ||
+		has_flag(filter, Filter::Camera) && scene.cameras.Contains(entity) ||
+		has_flag(filter, Filter::Armature) && scene.armatures.Contains(entity) ||
+		has_flag(filter, Filter::Collider) && scene.colliders.Contains(entity) ||
+		has_flag(filter, Filter::Script) && scene.scripts.Contains(entity) ||
+		has_flag(filter, Filter::Expression) && scene.expressions.Contains(entity) ||
+		has_flag(filter, Filter::Terrain) && scene.terrains.Contains(entity) ||
+		has_flag(filter, Filter::Spring) && scene.springs.Contains(entity) ||
+		has_flag(filter, Filter::Humanoid) && scene.humanoids.Contains(entity) ||
+		has_flag(filter, Filter::Video) && scene.videos.Contains(entity) ||
+		has_flag(filter, Filter::Sprite) && scene.sprites.Contains(entity) ||
+		has_flag(filter, Filter::Font) && scene.fonts.Contains(entity)
+		)
+	{
+		valid = true;
+	}
+
+	return valid;
 }
