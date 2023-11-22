@@ -6333,7 +6333,7 @@ using namespace vulkan_internal;
 			{
 				view_desc.format = VK_FORMAT_R8_UNORM;
 			}
-			else if (view_desc.subresourceRange.aspectMask == VK_IMAGE_ASPECT_PLANE_0_BIT)
+			else if (view_desc.subresourceRange.aspectMask == VK_IMAGE_ASPECT_PLANE_1_BIT)
 			{
 				view_desc.format = VK_FORMAT_R8G8_UNORM;
 			}
