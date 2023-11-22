@@ -3816,6 +3816,7 @@ using namespace vulkan_internal;
 		}
 		else if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE))
 		{
+			assert(CheckCapability(GraphicsDeviceCapability::SPARSE_BUFFER));
 			bufferInfo.flags |= VK_BUFFER_CREATE_SPARSE_BINDING_BIT;
 			bufferInfo.flags |= VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT;
 			bufferInfo.flags |= VK_BUFFER_CREATE_SPARSE_ALIASED_BIT;
@@ -4118,6 +4119,9 @@ using namespace vulkan_internal;
 
 		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::SPARSE))
 		{
+			assert(CheckCapability(GraphicsDeviceCapability::GENERIC_SPARSE_TILE_POOL));
+			assert(CheckCapability(GraphicsDeviceCapability::SPARSE_TEXTURE2D) || imageInfo.imageType != VK_IMAGE_TYPE_2D);
+			assert(CheckCapability(GraphicsDeviceCapability::SPARSE_TEXTURE3D) || imageInfo.imageType != VK_IMAGE_TYPE_3D);
 			imageInfo.flags |= VK_IMAGE_CREATE_SPARSE_BINDING_BIT;
 			imageInfo.flags |= VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT;
 			imageInfo.flags |= VK_IMAGE_CREATE_SPARSE_ALIASED_BIT;
