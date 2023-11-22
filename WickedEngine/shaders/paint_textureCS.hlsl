@@ -11,13 +11,17 @@ RWTexture2D<unorm float4> output : register(u0);
 [numthreads(PAINT_TEXTURE_BLOCKSIZE, PAINT_TEXTURE_BLOCKSIZE, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
 {
-	const uint2 pixel = push.xPaintBrushCenter + DTid.xy - push.xPaintBrushRadius.xx;
+	float2 dim;
+	output.GetDimensions(dim.x, dim.y);
+
+	const uint2 pixelUnwrapped = push.xPaintBrushCenter + DTid.xy - push.xPaintBrushRadius.xx;
+	const uint2 pixel = pixelUnwrapped % dim.xy;
 
 	const float2x2 rot = float2x2(
 		cos(push.xPaintBrushRotation), -sin(push.xPaintBrushRotation),
 		sin(push.xPaintBrushRotation), cos(push.xPaintBrushRotation)
 		);
-	const float2 diff = mul((float2)push.xPaintBrushCenter - (float2)pixel, rot);
+	const float2 diff = mul((float2)push.xPaintBrushCenter - (float2)pixelUnwrapped, rot);
 
 	float dist = 0;
 	float radius = (float)push.xPaintBrushRadius;
@@ -33,15 +37,13 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		break;
 	}
 
-	const float2 brush_uv = (diff / radius) * 0.5 + 0.5;
+	const float2 brush_uv = (diff / radius) * float2(0.5, -0.5) + 0.5;
 	const float2 brush_uv_quad_x = QuadReadAcrossX(brush_uv);
 	const float2 brush_uv_quad_y = QuadReadAcrossY(brush_uv);
 	const float2 brush_uv_dx = brush_uv - brush_uv_quad_x;
 	const float2 brush_uv_dy = brush_uv - brush_uv_quad_y;
 	float4 brush_color = texture_brush.SampleGrad(sampler_linear_clamp, brush_uv, brush_uv_dx, brush_uv_dy) * unpack_rgba(push.xPaintBrushColor);
 
-	float2 dim;
-	output.GetDimensions(dim.x, dim.y);
 	const float2 reveal_uv = (pixel + 0.5) / dim;
 	const float2 reveal_uv_quad_x = QuadReadAcrossX(reveal_uv);
 	const float2 reveal_uv_quad_y = QuadReadAcrossY(reveal_uv);
