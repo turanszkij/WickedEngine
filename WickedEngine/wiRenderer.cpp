@@ -9944,6 +9944,25 @@ void ComputeBloom(
 	device->EventBegin("Bloom", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Bloom", cmd);
 
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&res.texture_bloom, res.texture_bloom.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_temp, res.texture_temp.desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	device->ClearUAV(&res.texture_bloom, 0, cmd);
+	device->ClearUAV(&res.texture_temp, 0, cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(&res.texture_bloom),
+			GPUBarrier::Memory(&res.texture_temp),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
 	// Separate bright parts of image to bloom texture:
 	{
 		device->EventBegin("Bloom Separate", cmd);
@@ -9962,13 +9981,6 @@ void ComputeBloom(
 		bloom.buffer_input_luminance = device->GetDescriptorIndex((buffer_luminance == nullptr) ? &luminance_dummy : buffer_luminance, SubresourceType::SRV);
 		device->PushConstants(&bloom, sizeof(bloom), cmd);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.texture_bloom, res.texture_bloom.desc.layout, ResourceState::UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
 		device->Dispatch(
 			(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 			(desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -9976,15 +9988,15 @@ void ComputeBloom(
 			cmd
 		);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Image(&res.texture_bloom, ResourceState::UNORDERED_ACCESS, res.texture_bloom.desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
 		device->EventEnd(cmd);
+	}
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&res.texture_bloom, ResourceState::UNORDERED_ACCESS, res.texture_bloom.desc.layout),
+			GPUBarrier::Image(&res.texture_temp, ResourceState::UNORDERED_ACCESS, res.texture_temp.desc.layout),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
 	device->EventBegin("Bloom Mipchain", cmd);
@@ -14977,6 +14989,22 @@ void Postprocess_Tonemap(
 
 	device->EventBegin("Postprocess_Tonemap", cmd);
 
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	device->ClearUAV(&output, 0, cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(&output),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_TONEMAP], cmd);
 
 	const TextureDesc& desc = output.GetDesc();
@@ -15008,13 +15036,6 @@ void Postprocess_Tonemap(
 	tonemap_push.display_colorspace = static_cast<uint32_t>(display_colorspace);
 	device->PushConstants(&tonemap_push, sizeof(tonemap_push), cmd);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
-
 	device->Dispatch(
 		(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 		(desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -15024,7 +15045,6 @@ void Postprocess_Tonemap(
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
 			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);

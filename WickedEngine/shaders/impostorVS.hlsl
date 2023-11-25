@@ -24,6 +24,6 @@ VSOut main(uint vertexID : SV_VertexID)
 	Out.slice = data.x & 0xFFFFFF;
 	Out.dither = float((data.x >> 24u) & 0xFF) / 255.0;
 	Out.instanceColor = data.y;
-	Out.primitiveID = impostorID * 2;
+	Out.primitiveID = vertexID / 2u;
 	return Out;
 }

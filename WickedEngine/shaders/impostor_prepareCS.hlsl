@@ -60,12 +60,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		const uint vertexOffset = impostorOffset * 4u;
 
 		// Write out indices:
-		output_indices[indexOffset + 0] = vertexOffset + 0;
+		output_indices[indexOffset + 0] = vertexOffset + 0; // provoking vertex prim0
 		output_indices[indexOffset + 1] = vertexOffset + 1;
 		output_indices[indexOffset + 2] = vertexOffset + 2;
-		output_indices[indexOffset + 3] = vertexOffset + 2;
-		output_indices[indexOffset + 4] = vertexOffset + 1;
-		output_indices[indexOffset + 5] = vertexOffset + 3;
+		output_indices[indexOffset + 3] = vertexOffset + 3; // provoking vertex prim1
+		output_indices[indexOffset + 4] = vertexOffset + 2;
+		output_indices[indexOffset + 5] = vertexOffset + 1;
 
 		// We rotate the billboard to face camera, but unlike emitted particles, 
 		//	they don't rotate according to camera rotation, but the camera position relative

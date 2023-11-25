@@ -117,7 +117,11 @@ namespace wi
 		{
 			TextureDesc desc;
 			desc.format = wi::renderer::format_idbuffer;
-			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+			if (getMSAASampleCount() > 1)
+			{
+				desc.bind_flags |= BindFlag::UNORDERED_ACCESS;
+			}
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
 			desc.sample_count = 1;
@@ -817,6 +821,8 @@ namespace wi
 
 			wi::renderer::OcclusionCulling_Reset(visibility_main, cmd); // must be outside renderpass!
 
+			wi::renderer::RefreshImpostors(*scene, cmd);
+
 			RenderPassImage rp[] = {
 				RenderPassImage::DepthStencil(
 					&depthBuffer_Main,
@@ -1036,7 +1042,6 @@ namespace wi
 			);
 			wi::renderer::RefreshLightmaps(*scene, cmd);
 			wi::renderer::RefreshEnvProbes(visibility_main, cmd);
-			wi::renderer::RefreshImpostors(*scene, cmd);
 		});
 
 		if (visibility_main.IsRequestedPlanarReflections())
@@ -2042,7 +2047,7 @@ namespace wi
 				}
 			}
 
-			if (getDepthOfFieldEnabled() && camera->aperture_size > 0 && getDepthOfFieldStrength() > 0 && depthoffieldResources.IsValid())
+			if (getDepthOfFieldEnabled() && camera->aperture_size > 0.001f && getDepthOfFieldStrength() > 0.001f && depthoffieldResources.IsValid())
 			{
 				wi::renderer::Postprocess_DepthOfField(
 					depthoffieldResources,
