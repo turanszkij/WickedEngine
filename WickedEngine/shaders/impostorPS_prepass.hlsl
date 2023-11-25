@@ -2,7 +2,7 @@
 #include "impostorHF.hlsli"
 #include "objectHF.hlsli"
 
-uint main(VSOut input, in uint primitiveID : SV_PrimitiveID, out uint coverage : SV_Coverage) : SV_Target
+uint main(VSOut input, out uint coverage : SV_Coverage) : SV_Target
 {
 	clip(dither(input.pos.xy + GetTemporalAASampleRotation()) - input.dither);
 	float3 uv_col = float3(input.uv, input.slice);
@@ -10,7 +10,7 @@ uint main(VSOut input, in uint primitiveID : SV_PrimitiveID, out uint coverage :
 	coverage = AlphaToCoverage(alpha, 0.75, input.pos);
 
 	PrimitiveID prim;
-	prim.primitiveIndex = primitiveID;
+	prim.primitiveIndex = input.primitiveID;
 	prim.instanceIndex = GetScene().impostorInstanceOffset;
 	prim.subsetIndex = 0;
 	return prim.pack();

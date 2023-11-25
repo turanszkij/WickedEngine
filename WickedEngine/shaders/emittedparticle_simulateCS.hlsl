@@ -318,7 +318,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 			quadPos = mul(quadPos, (float3x3)GetCamera().view); // reversed mul for inverse camera rotation!
 
 			// write out vertex:
+#ifdef __PSSL__
+			vertexBuffer_POS.TypedStore<float3>((v0 + vertexID) * sizeof(float3), particle.position + quadPos);
+#else
 			vertexBuffer_POS.Store<float3>((v0 + vertexID) * sizeof(float3), particle.position + quadPos);
+#endif // __PSSL__
 			vertexBuffer_NOR[v0 + vertexID] = float4(normalize(-GetCamera().forward), 0);
 			vertexBuffer_UVS[v0 + vertexID] = float4(uv, uv2);
 			vertexBuffer_COL[v0 + vertexID] = particleColor;
@@ -352,10 +356,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		uint deadIndex;
 		counterBuffer.InterlockedAdd(PARTICLECOUNTER_OFFSET_DEADCOUNT, 1, deadIndex);
 		deadBuffer[deadIndex] = particleIndex;
-
+		
+#ifdef __PSSL__
+		vertexBuffer_POS.TypedStore<float3>((v0 + 0) * sizeof(float3), 0);
+		vertexBuffer_POS.TypedStore<float3>((v0 + 1) * sizeof(float3), 0);
+		vertexBuffer_POS.TypedStore<float3>((v0 + 2) * sizeof(float3), 0);
+		vertexBuffer_POS.TypedStore<float3>((v0 + 3) * sizeof(float3), 0);
+#else
 		vertexBuffer_POS.Store<float3>((v0 + 0) * sizeof(float3), 0);
 		vertexBuffer_POS.Store<float3>((v0 + 1) * sizeof(float3), 0);
 		vertexBuffer_POS.Store<float3>((v0 + 2) * sizeof(float3), 0);
 		vertexBuffer_POS.Store<float3>((v0 + 3) * sizeof(float3), 0);
+#endif // __PSSL__
 	}
 }

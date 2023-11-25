@@ -13,7 +13,8 @@ ByteAddressBuffer impostor_data : register(t2);
 
 VSOut main(uint vertexID : SV_VertexID)
 {
-	uint2 data = impostor_data.Load2((vertexID / 4u) * sizeof(uint2));
+	uint impostorID = vertexID / 4u;
+	uint2 data = impostor_data.Load2(impostorID * sizeof(uint2));
 
 	VSOut Out;
 	Out.pos3D = vb_pos[vertexID].xyz;
@@ -23,5 +24,6 @@ VSOut main(uint vertexID : SV_VertexID)
 	Out.slice = data.x & 0xFFFFFF;
 	Out.dither = float((data.x >> 24u) & 0xFF) / 255.0;
 	Out.instanceColor = data.y;
+	Out.primitiveID = impostorID * 2;
 	return Out;
 }

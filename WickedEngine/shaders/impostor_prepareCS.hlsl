@@ -104,7 +104,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			pos = mul(pos, float3x3(right, up, face));
 			pos *= instance.radius;
 			pos += instance.center;
+#ifdef __PSSL__
+			output_vertices_pos.TypedStore<float3>((vertexOffset + vertexID) * sizeof(float3), pos);
+#else
 			output_vertices_pos.Store<float3>((vertexOffset + vertexID) * sizeof(float3), pos);
+#endif // __PSSL__
 			output_vertices_nor[vertexOffset + vertexID] = float4(face, 0);
 		}
 	}

@@ -10,6 +10,7 @@ struct VSOut
 	nointerpolation float dither	: DITHER;
 	float3 pos3D					: WORLDPOSITION;
 	uint instanceColor				: COLOR;
+	uint primitiveID				: PRIMITIVEID;
 };
 
 Texture2DArray<float4> impostorTex : register(t1);

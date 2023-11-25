@@ -142,7 +142,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	[branch]
 	if (push.so_pos >= 0)
 	{
+#ifdef __PSSL__
+		bindless_rwbuffers[push.so_pos].TypedStore<float3>(vertexID * sizeof(float3), pos);
+#else
 		bindless_rwbuffers[push.so_pos].Store<float3>(vertexID * sizeof(float3), pos);
+#endif // __PSSL__
 	}
 
 	[branch]
