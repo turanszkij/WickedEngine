@@ -118,7 +118,7 @@ namespace wi::video
 							bs.init(sps_data, size);
 							h264::NALHeader nal = {};
 							h264::read_nal_header(&nal, &bs);
-							assert(nal.type = h264::NAL_UNIT_TYPE_SPS);
+							assert(nal.type == h264::NAL_UNIT_TYPE_SPS);
 
 							h264::SPS sps = {};
 							h264::read_sps(&sps, &bs);
@@ -162,7 +162,7 @@ namespace wi::video
 							bs.init(pps_data, size);
 							h264::NALHeader nal = {};
 							h264::read_nal_header(&nal, &bs);
-							assert(nal.type = h264::NAL_UNIT_TYPE_PPS);
+							assert(nal.type == h264::NAL_UNIT_TYPE_PPS);
 
 							h264::PPS pps = {};
 							h264::read_pps(&pps, &bs);

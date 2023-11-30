@@ -11394,6 +11394,62 @@ void Postprocess_MSAO(
 	device->EventBegin("Postprocess_MSAO", cmd);
 	auto prof_range = wi::profiler::BeginRangeGPU("MSAO", cmd);
 
+	// Pre-clear:
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_lineardepth_downsize1, res.texture_lineardepth_downsize1.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_lineardepth_tiled1, res.texture_lineardepth_tiled1.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_lineardepth_downsize2, res.texture_lineardepth_downsize2.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_lineardepth_tiled2, res.texture_lineardepth_tiled2.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_lineardepth_downsize3, res.texture_lineardepth_downsize3.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_lineardepth_tiled3, res.texture_lineardepth_tiled3.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_lineardepth_downsize4, res.texture_lineardepth_downsize4.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_lineardepth_tiled4, res.texture_lineardepth_tiled4.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_ao_merged1, res.texture_ao_merged1.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_ao_hq1, res.texture_ao_hq1.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_ao_smooth1, res.texture_ao_smooth1.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_ao_merged2, res.texture_ao_merged2.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_ao_hq2, res.texture_ao_hq2.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_ao_smooth2, res.texture_ao_smooth2.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_ao_merged3, res.texture_ao_merged3.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_ao_hq3, res.texture_ao_hq3.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_ao_smooth3, res.texture_ao_smooth3.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_ao_merged4, res.texture_ao_merged4.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_ao_hq4, res.texture_ao_hq4.desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+		device->ClearUAV(&output, 0, cmd); // always clear this
+		if (!res.cleared) // clear the rest only at first time
+		{
+			res.cleared = true;
+			device->ClearUAV(&res.texture_lineardepth_downsize1, 0, cmd);
+			device->ClearUAV(&res.texture_lineardepth_tiled1, 0, cmd);
+			device->ClearUAV(&res.texture_lineardepth_downsize2, 0, cmd);
+			device->ClearUAV(&res.texture_lineardepth_tiled2, 0, cmd);
+			device->ClearUAV(&res.texture_lineardepth_downsize3, 0, cmd);
+			device->ClearUAV(&res.texture_lineardepth_tiled3, 0, cmd);
+			device->ClearUAV(&res.texture_lineardepth_downsize4, 0, cmd);
+			device->ClearUAV(&res.texture_lineardepth_tiled4, 0, cmd);
+			device->ClearUAV(&res.texture_ao_merged1, 0, cmd);
+			device->ClearUAV(&res.texture_ao_hq1, 0, cmd);
+			device->ClearUAV(&res.texture_ao_smooth1, 0, cmd);
+			device->ClearUAV(&res.texture_ao_merged2, 0, cmd);
+			device->ClearUAV(&res.texture_ao_hq2, 0, cmd);
+			device->ClearUAV(&res.texture_ao_smooth2, 0, cmd);
+			device->ClearUAV(&res.texture_ao_merged3, 0, cmd);
+			device->ClearUAV(&res.texture_ao_hq3, 0, cmd);
+			device->ClearUAV(&res.texture_ao_smooth3, 0, cmd);
+			device->ClearUAV(&res.texture_ao_merged4, 0, cmd);
+			device->ClearUAV(&res.texture_ao_hq4, 0, cmd);
+		}
+		for (auto& x : barriers)
+		{
+			std::swap(x.image.layout_before, x.image.layout_after);
+		}
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
 	// Depth downsampling + deinterleaving pass1:
 	{
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MSAO_PREPAREDEPTHBUFFERS1], cmd);
@@ -11421,7 +11477,6 @@ void Postprocess_MSAO(
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
 				GPUBarrier::Image(&res.texture_lineardepth_downsize1, ResourceState::UNORDERED_ACCESS, res.texture_lineardepth_downsize1.desc.layout),
 				GPUBarrier::Image(&res.texture_lineardepth_tiled1, ResourceState::UNORDERED_ACCESS, res.texture_lineardepth_tiled1.desc.layout),
 				GPUBarrier::Image(&res.texture_lineardepth_downsize2, ResourceState::UNORDERED_ACCESS, res.texture_lineardepth_downsize2.desc.layout),
@@ -11461,7 +11516,6 @@ void Postprocess_MSAO(
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
 				GPUBarrier::Image(&res.texture_lineardepth_downsize3, ResourceState::UNORDERED_ACCESS, res.texture_lineardepth_downsize3.desc.layout),
 				GPUBarrier::Image(&res.texture_lineardepth_tiled3, ResourceState::UNORDERED_ACCESS, res.texture_lineardepth_tiled3.desc.layout),
 				GPUBarrier::Image(&res.texture_lineardepth_downsize4, ResourceState::UNORDERED_ACCESS, res.texture_lineardepth_downsize4.desc.layout),
@@ -11628,7 +11682,6 @@ void Postprocess_MSAO(
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
 				GPUBarrier::Image(&write_result, ResourceState::UNORDERED_ACCESS, write_result.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
@@ -11720,7 +11773,6 @@ void Postprocess_MSAO(
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
 				GPUBarrier::Image(&Destination, ResourceState::UNORDERED_ACCESS, Destination.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
@@ -11788,21 +11840,21 @@ void CreateRTAOResources(RTAOResources& res, XMUINT2 resolution)
 	bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 	bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 	device->CreateBuffer(&bd, nullptr, &res.tiles);
-	device->SetName(&res.tiles, "rtshadow_tiles");
+	device->SetName(&res.tiles, "rtao_tiles");
 	device->CreateBuffer(&bd, nullptr, &res.metadata);
-	device->SetName(&res.metadata, "rtshadow_metadata");
+	device->SetName(&res.metadata, "rtao_metadata");
 
 	desc.format = Format::R16G16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.scratch[0]);
-	device->SetName(&res.scratch[0], "rtshadow_scratch[0]");
+	device->SetName(&res.scratch[0], "rtao_scratch[0]");
 	device->CreateTexture(&desc, nullptr, &res.scratch[1]);
-	device->SetName(&res.scratch[1], "rtshadow_scratch[1]");
+	device->SetName(&res.scratch[1], "rtao_scratch[1]");
 
 	desc.format = Format::R11G11B10_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.moments[0]);
-	device->SetName(&res.moments[0], "rtshadow_moments[0]");
+	device->SetName(&res.moments[0], "rtao_moments[0]");
 	device->CreateTexture(&desc, nullptr, &res.moments[1]);
-	device->SetName(&res.moments[1], "rtshadow_moments[1]");
+	device->SetName(&res.moments[1], "rtao_moments[1]");
 }
 void Postprocess_RTAO(
 	const RTAOResources& res,

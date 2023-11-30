@@ -477,6 +477,7 @@ namespace wi::renderer
 		);
 	struct MSAOResources
 	{
+		mutable bool cleared = false;
 		wi::graphics::Texture texture_lineardepth_downsize1;
 		wi::graphics::Texture texture_lineardepth_tiled1;
 		wi::graphics::Texture texture_lineardepth_downsize2;
