@@ -62,17 +62,17 @@ void Editor::Initialize()
 	auto ext_video = wi::resourcemanager::GetSupportedVideoExtensions();
 	for (auto& x : ext_video)
 	{
-		filetypes.insert(std::make_pair(x, FileType::VIDEO));
+		filetypes[x] = FileType::VIDEO;
 	}
 	auto ext_sound = wi::resourcemanager::GetSupportedSoundExtensions();
 	for (auto& x : ext_sound)
 	{
-		filetypes.insert(std::make_pair(x, FileType::SOUND));
+		filetypes[x] = FileType::SOUND;
 	}
 	auto ext_image = wi::resourcemanager::GetSupportedImageExtensions();
 	for (auto& x : ext_image)
 	{
-		filetypes.insert(std::make_pair(x, FileType::IMAGE));
+		filetypes[x] = FileType::IMAGE;
 	}
 
 	Application::Initialize();
