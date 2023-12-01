@@ -29,12 +29,50 @@ namespace dummy_male
 #include "dummy_male.h"
 }
 
+enum class FileType
+{
+	INVALID,
+	LUA,
+	WISCENE,
+	OBJ,
+	GLTF,
+	GLB,
+	VRM,
+	IMAGE,
+	VIDEO,
+	SOUND,
+};
+static wi::unordered_map<std::string, FileType> filetypes = {
+	{"LUA", FileType::LUA},
+	{"WISCENE", FileType::WISCENE},
+	{"OBJ", FileType::OBJ},
+	{"GLTF", FileType::GLTF},
+	{"GLB", FileType::GLB},
+	{"VRM", FileType::VRM},
+};
+
 void Editor::Initialize()
 {
 	if (config.Has("font"))
 	{
 		// Replace default font from config:
 		wi::font::AddFontStyle(config.GetText("font"));
+	}
+
+	auto ext_video = wi::resourcemanager::GetSupportedVideoExtensions();
+	for (auto& x : ext_video)
+	{
+		filetypes.insert(std::make_pair(x, FileType::VIDEO));
+	}
+	auto ext_sound = wi::resourcemanager::GetSupportedSoundExtensions();
+	for (auto& x : ext_sound)
+	{
+		filetypes.insert(std::make_pair(x, FileType::SOUND));
+	}
+	auto ext_image = wi::resourcemanager::GetSupportedImageExtensions();
+	for (auto& x : ext_image)
+	{
+		filetypes.insert(std::make_pair(x, FileType::IMAGE));
 	}
 
 	Application::Initialize();
@@ -338,13 +376,28 @@ void EditorComponent::Load()
 	openButton.OnClick([&](wi::gui::EventArgs args) {
 		wi::helper::FileDialogParams params;
 		params.type = wi::helper::FileDialogParams::OPEN;
-		params.description = ".wiscene, .obj, .gltf, .glb, .vrm, .lua";
+		params.description = ".wiscene, .obj, .gltf, .glb, .vrm, .lua, .mp4, .png, ...";
 		params.extensions.push_back("wiscene");
 		params.extensions.push_back("obj");
 		params.extensions.push_back("gltf");
 		params.extensions.push_back("glb");
 		params.extensions.push_back("vrm");
 		params.extensions.push_back("lua");
+		auto ext_video = wi::resourcemanager::GetSupportedVideoExtensions();
+		for (auto& x : ext_video)
+		{
+			params.extensions.push_back(x);
+		}
+		auto ext_sound = wi::resourcemanager::GetSupportedSoundExtensions();
+		for (auto& x : ext_sound)
+		{
+			params.extensions.push_back(x);
+		}
+		auto ext_image = wi::resourcemanager::GetSupportedImageExtensions();
+		for (auto& x : ext_image)
+		{
+			params.extensions.push_back(x);
+		}
 		wi::helper::FileDialog(params, [&](std::string fileName) {
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 				Open(fileName);
@@ -3403,24 +3456,6 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 	optionsWnd.RefreshEntityTree();
 }
 
-enum class FileType
-{
-	INVALID,
-	LUA,
-	WISCENE,
-	OBJ,
-	GLTF,
-	GLB,
-	VRM,
-};
-static const wi::unordered_map<std::string, FileType> filetypes = {
-	{"LUA", FileType::LUA},
-	{"WISCENE", FileType::WISCENE},
-	{"OBJ", FileType::OBJ},
-	{"GLTF", FileType::GLTF},
-	{"GLB", FileType::GLB},
-	{"VRM", FileType::VRM},
-};
 void EditorComponent::Open(const std::string& filename)
 {
 	std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
@@ -3441,6 +3476,41 @@ void EditorComponent::Open(const std::string& filename)
 		main->config.Commit();
 		playButton.SetScriptTip("dofile(\"" + last_script_path + "\")");
 		wi::lua::RunFile(filename);
+		optionsWnd.RefreshEntityTree();
+		return;
+	}
+	if (type == FileType::VIDEO)
+	{
+		GetCurrentScene().Entity_CreateVideo(wi::helper::GetFileNameFromPath(filename), filename);
+		optionsWnd.RefreshEntityTree();
+		return;
+	}
+	if (type == FileType::SOUND)
+	{
+		GetCurrentScene().Entity_CreateSound(wi::helper::GetFileNameFromPath(filename), filename);
+		optionsWnd.RefreshEntityTree();
+		return;
+	}
+	if (type == FileType::IMAGE)
+	{
+		Scene& scene = GetCurrentScene();
+		Entity entity = CreateEntity();
+		wi::Sprite& sprite = scene.sprites.Create(entity);
+		sprite = wi::Sprite(filename);
+		if (sprite.textureResource.IsValid())
+		{
+			const TextureDesc& desc = sprite.textureResource.GetTexture().GetDesc();
+			sprite.params.siz = XMFLOAT2(1, float(desc.height) / float(desc.width));
+		}
+		else
+		{
+			sprite.params.siz = XMFLOAT2(1, 1);
+		}
+		sprite.params.pivot = XMFLOAT2(0.5f, 0.5f);
+		sprite.anim.repeatable = true;
+		scene.transforms.Create(entity).Translate(XMFLOAT3(0, 2, 0));
+		scene.names.Create(entity) = wi::helper::GetFileNameFromPath(filename);
+		optionsWnd.RefreshEntityTree();
 		return;
 	}
 
