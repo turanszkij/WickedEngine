@@ -308,51 +308,55 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			{
 				float3 shadow = energy;
 
-				RayDesc newRay;
-				newRay.Origin = surface.P;
-				newRay.TMin = 0.001;
-				newRay.TMax = dist;
-				newRay.Direction = L + max3(surface.sss);
+				if(light.IsCastingShadow() && surface.IsReceiveShadow())
+				{
+					RayDesc newRay;
+					newRay.Origin = surface.P;
+					newRay.TMin = 0.001;
+					newRay.TMax = dist;
+					newRay.Direction = L + max3(surface.sss);
 
 #ifdef RTAPI
 
-				uint flags = RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES | RAY_FLAG_CULL_FRONT_FACING_TRIANGLES;
-				if (bounce > ANYTHIT_CUTOFF_AFTER_BOUNCE_COUNT)
-				{
-					flags |= RAY_FLAG_FORCE_OPAQUE;
-				}
-
-				q.TraceRayInline(
-					scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
-					flags,							// uint RayFlags
-					0xFF,							// uint InstanceInclusionMask
-					newRay							// RayDesc Ray
-				);
-				while (q.Proceed())
-				{
-					PrimitiveID prim;
-					prim.primitiveIndex = q.CandidatePrimitiveIndex();
-					prim.instanceIndex = q.CandidateInstanceID();
-					prim.subsetIndex = q.CandidateGeometryIndex();
-
-					Surface surface;
-					surface.init();
-					surface.hit_depth = q.CandidateTriangleRayT();
-					if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
-						break;
-
-					shadow *= lerp(1, surface.albedo * surface.transmission, surface.opacity);
-
-					[branch]
-					if (!any(shadow))
+					uint flags = RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES | RAY_FLAG_CULL_FRONT_FACING_TRIANGLES;
+					if (bounce > ANYTHIT_CUTOFF_AFTER_BOUNCE_COUNT)
 					{
-						q.CommitNonOpaqueTriangleHit();
+						flags |= RAY_FLAG_FORCE_OPAQUE;
 					}
-				}
-				shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : shadow;
+
+					q.TraceRayInline(
+						scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
+						flags,							// uint RayFlags
+						0xFF,							// uint InstanceInclusionMask
+						newRay							// RayDesc Ray
+					);
+					while (q.Proceed())
+					{
+						PrimitiveID prim;
+						prim.primitiveIndex = q.CandidatePrimitiveIndex();
+						prim.instanceIndex = q.CandidateInstanceID();
+						prim.subsetIndex = q.CandidateGeometryIndex();
+
+						Surface surface;
+						surface.init();
+						surface.hit_depth = q.CandidateTriangleRayT();
+						if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
+							break;
+
+						shadow *= lerp(1, surface.albedo * surface.transmission, surface.opacity);
+
+						[branch]
+						if (!any(shadow))
+						{
+							q.CommitNonOpaqueTriangleHit();
+						}
+					}
+					shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : shadow;
 #else
-				shadow = TraceRay_Any(newRay, xTraceUserData.y, rng, groupIndex) ? 0 : shadow;
+					shadow = TraceRay_Any(newRay, xTraceUserData.y, rng, groupIndex) ? 0 : shadow;
 #endif // RTAPI
+				}
+				
 				if (any(shadow))
 				{
 					lightColor *= shadow;
