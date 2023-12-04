@@ -148,6 +148,12 @@ static const WCHAR* const HeapTypeNames[] =
     L"READBACK",
     L"CUSTOM",
 };
+static const WCHAR* const StandardHeapTypeNames[] =
+{
+    L"DEFAULT",
+    L"UPLOAD",
+    L"READBACK",
+};
 
 static const D3D12_HEAP_FLAGS RESOURCE_CLASS_HEAP_FLAGS =
     D3D12_HEAP_FLAG_DENY_BUFFERS | D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES | D3D12_HEAP_FLAG_DENY_NON_RT_DS_TEXTURES;
@@ -452,23 +458,26 @@ static IterT BinaryFindSorted(const IterT& beg, const IterT& end, const KeyT& va
     return end;
 }
 
-static UINT HeapTypeToIndex(D3D12_HEAP_TYPE type)
+static UINT StandardHeapTypeToIndex(D3D12_HEAP_TYPE type)
 {
     switch (type)
     {
     case D3D12_HEAP_TYPE_DEFAULT:  return 0;
     case D3D12_HEAP_TYPE_UPLOAD:   return 1;
     case D3D12_HEAP_TYPE_READBACK: return 2;
-    case D3D12_HEAP_TYPE_CUSTOM:   return 3;
     default: D3D12MA_ASSERT(0); return UINT_MAX;
     }
 }
 
-static D3D12_HEAP_TYPE IndexToHeapType(UINT heapTypeIndex)
+static D3D12_HEAP_TYPE IndexToStandardHeapType(UINT heapTypeIndex)
 {
-    D3D12MA_ASSERT(heapTypeIndex < 4);
-    // D3D12_HEAP_TYPE_DEFAULT starts at 1.
-    return (D3D12_HEAP_TYPE)(heapTypeIndex + 1);
+    switch(heapTypeIndex)
+    {
+    case 0: return D3D12_HEAP_TYPE_DEFAULT;
+    case 1: return D3D12_HEAP_TYPE_UPLOAD;
+    case 2: return D3D12_HEAP_TYPE_READBACK;
+    default: D3D12MA_ASSERT(0); return D3D12_HEAP_TYPE_CUSTOM;
+    }
 }
 
 static UINT64 HeapFlagsToAlignment(D3D12_HEAP_FLAGS flags, bool denyMsaaTextures)
@@ -6625,8 +6634,8 @@ public:
     void SetResidencyPriority(ID3D12Pageable* obj, D3D12_RESIDENCY_PRIORITY priority) const;
 
     void SetCurrentFrameIndex(UINT frameIndex);
-    // For more deailed stats use outCutomHeaps to access statistics divided into L0 and L1 group
-    void CalculateStatistics(TotalStatistics& outStats, DetailedStatistics outCutomHeaps[2] = NULL);
+    // For more deailed stats use outCustomHeaps to access statistics divided into L0 and L1 group
+    void CalculateStatistics(TotalStatistics& outStats, DetailedStatistics outCustomHeaps[2] = NULL);
 
     void GetBudget(Budget* outLocalBudget, Budget* outNonLocalBudget);
     void GetBudgetForHeapType(Budget& outBudget, D3D12_HEAP_TYPE heapType);
@@ -6747,7 +6756,7 @@ AllocatorPimpl::AllocatorPimpl(const ALLOCATION_CALLBACKS& allocationCallbacks, 
     {
         m_CommittedAllocations[i].Init(
             m_UseMutex,
-            (D3D12_HEAP_TYPE)(D3D12_HEAP_TYPE_DEFAULT + i),
+            IndexToStandardHeapType(i),
             NULL); // pool
     }
 
@@ -7253,7 +7262,7 @@ void AllocatorPimpl::SetCurrentFrameIndex(UINT frameIndex)
 #endif
 }
 
-void AllocatorPimpl::CalculateStatistics(TotalStatistics& outStats, DetailedStatistics outCutomHeaps[2])
+void AllocatorPimpl::CalculateStatistics(TotalStatistics& outStats, DetailedStatistics outCustomHeaps[2])
 {
     // Init stats
     for (size_t i = 0; i < HEAP_TYPE_COUNT; i++)
@@ -7261,10 +7270,10 @@ void AllocatorPimpl::CalculateStatistics(TotalStatistics& outStats, DetailedStat
     for (size_t i = 0; i < DXGI_MEMORY_SEGMENT_GROUP_COUNT; i++)
         ClearDetailedStatistics(outStats.MemorySegmentGroup[i]);
     ClearDetailedStatistics(outStats.Total);
-    if (outCutomHeaps)
+    if (outCustomHeaps)
     {
-        ClearDetailedStatistics(outCutomHeaps[0]);
-        ClearDetailedStatistics(outCutomHeaps[1]);
+        ClearDetailedStatistics(outCustomHeaps[0]);
+        ClearDetailedStatistics(outCustomHeaps[1]);
     }
 
     // Process default pools. 3 standard heap types only. Add them to outStats.HeapType[i].
@@ -7321,8 +7330,8 @@ void AllocatorPimpl::CalculateStatistics(TotalStatistics& outStats, DetailedStat
             AddDetailedStatistics(
                 outStats.MemorySegmentGroup[memorySegment], tmpStats);
 
-            if (outCutomHeaps)
-                AddDetailedStatistics(outCutomHeaps[memorySegment], tmpStats);
+            if (outCustomHeaps)
+                AddDetailedStatistics(outCustomHeaps[memorySegment], tmpStats);
         }
     }
 
@@ -7334,7 +7343,7 @@ void AllocatorPimpl::CalculateStatistics(TotalStatistics& outStats, DetailedStat
         AddDetailedStatistics(
             outStats.HeapType[heapTypeIndex], tmpStats);
         AddDetailedStatistics(
-            outStats.MemorySegmentGroup[StandardHeapTypeToMemorySegmentGroup(IndexToHeapType(heapTypeIndex))], tmpStats);
+            outStats.MemorySegmentGroup[StandardHeapTypeToMemorySegmentGroup(IndexToStandardHeapType(heapTypeIndex))], tmpStats);
     }
 
     // Sum up memory segment groups to totals.
@@ -7678,7 +7687,7 @@ void AllocatorPimpl::BuildStatsString(WCHAR** ppStatsString, BOOL detailedMap)
                 {
                     for (uint8_t heapType = 0; heapType < STANDARD_HEAP_TYPE_COUNT; ++heapType)
                     {
-                        json.WriteString(HeapTypeNames[heapType]);
+                        json.WriteString(StandardHeapTypeNames[heapType]);
                         json.BeginObject();
                         writeHeapInfo(m_BlockVectors[heapType], m_CommittedAllocations + heapType, false);
                         json.EndObject();
@@ -7695,11 +7704,11 @@ void AllocatorPimpl::BuildStatsString(WCHAR** ppStatsString, BOOL detailedMap)
                                 L" - Textures",
                                 L" - Textures RT/DS",
                             };
-                            json.BeginString(HeapTypeNames[heapType]);
+                            json.BeginString(StandardHeapTypeNames[heapType]);
                             json.EndString(heapSubTypeName[heapSubType]);
 
                             json.BeginObject();
-                            writeHeapInfo(m_BlockVectors[heapType + heapSubType], m_CommittedAllocations + heapType, false);
+                            writeHeapInfo(m_BlockVectors[heapType * 3 + heapSubType], m_CommittedAllocations + heapType, false);
                             json.EndObject();
                         }
                     }
@@ -8014,7 +8023,7 @@ HRESULT AllocatorPimpl::CalcAllocationParams(const ALLOCATION_DESC& allocDesc, U
 
         outCommittedAllocationParams.m_HeapProperties = StandardHeapTypeToHeapProperties(allocDesc.HeapType);
         outCommittedAllocationParams.m_HeapFlags = allocDesc.ExtraHeapFlags;
-        outCommittedAllocationParams.m_List = &m_CommittedAllocations[HeapTypeToIndex(allocDesc.HeapType)];
+        outCommittedAllocationParams.m_List = &m_CommittedAllocations[StandardHeapTypeToIndex(allocDesc.HeapType)];
         // outCommittedAllocationParams.m_ResidencyPriority intentionally left with default value.
 
         const ResourceClass resourceClass = (resDesc != NULL) ?
@@ -8150,7 +8159,7 @@ void AllocatorPimpl::CalcDefaultPoolParams(D3D12_HEAP_TYPE& outHeapType, D3D12_H
 
 void AllocatorPimpl::RegisterPool(Pool* pool, D3D12_HEAP_TYPE heapType)
 {
-    const UINT heapTypeIndex = HeapTypeToIndex(heapType);
+    const UINT heapTypeIndex = (UINT)heapType - 1;
 
     MutexLockWrite lock(m_PoolsMutex[heapTypeIndex], m_UseMutex);
     m_Pools[heapTypeIndex].PushBack(pool->m_Pimpl);
@@ -8158,7 +8167,7 @@ void AllocatorPimpl::RegisterPool(Pool* pool, D3D12_HEAP_TYPE heapType)
 
 void AllocatorPimpl::UnregisterPool(Pool* pool, D3D12_HEAP_TYPE heapType)
 {
-    const UINT heapTypeIndex = HeapTypeToIndex(heapType);
+    const UINT heapTypeIndex = (UINT)heapType - 1;
 
     MutexLockWrite lock(m_PoolsMutex[heapTypeIndex], m_UseMutex);
     m_Pools[heapTypeIndex].Remove(pool->m_Pimpl);
@@ -8178,7 +8187,14 @@ HRESULT AllocatorPimpl::UpdateD3D12Budget()
 
 D3D12_RESOURCE_ALLOCATION_INFO AllocatorPimpl::GetResourceAllocationInfoNative(const D3D12_RESOURCE_DESC& resourceDesc) const
 {
+    // This is how new D3D12 headers define GetResourceAllocationInfo function -
+    // different signature depending on these macros.
+#if defined(_MSC_VER) || !defined(_WIN32)
     return m_Device->GetResourceAllocationInfo(0, 1, &resourceDesc);
+#else
+    D3D12_RESOURCE_ALLOCATION_INFO retVal;
+    return *m_Device->GetResourceAllocationInfo(&retVal, 0, 1, &resourceDesc);
+#endif
 }
 
 #ifdef __ID3D12Device8_INTERFACE_DEFINED__
@@ -8186,13 +8202,22 @@ D3D12_RESOURCE_ALLOCATION_INFO AllocatorPimpl::GetResourceAllocationInfoNative(c
 {
     D3D12MA_ASSERT(m_Device8 != NULL);
     D3D12_RESOURCE_ALLOCATION_INFO1 info1Unused;
+
+    // This is how new D3D12 headers define GetResourceAllocationInfo function -
+    // different signature depending on these macros.
+#if defined(_MSC_VER) || !defined(_WIN32)
     return m_Device8->GetResourceAllocationInfo2(0, 1, &resourceDesc, &info1Unused);
+#else
+    D3D12_RESOURCE_ALLOCATION_INFO retVal;
+    return *m_Device8->GetResourceAllocationInfo2(&retVal, 0, 1, &resourceDesc, &info1Unused);
+#endif
 }
 #endif // #ifdef __ID3D12Device8_INTERFACE_DEFINED__
 
 template<typename D3D12_RESOURCE_DESC_T>
 D3D12_RESOURCE_ALLOCATION_INFO AllocatorPimpl::GetResourceAllocationInfo(D3D12_RESOURCE_DESC_T& inOutResourceDesc) const
 {
+#ifdef __ID3D12Device1_INTERFACE_DEFINED__
     /* Optional optimization: Microsoft documentation says:
     https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-getresourceallocationinfo
 
@@ -8208,6 +8233,7 @@ D3D12_RESOURCE_ALLOCATION_INFO AllocatorPimpl::GetResourceAllocationInfo(D3D12_R
             AlignUp<UINT64>(inOutResourceDesc.Width, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT), // SizeInBytes
             D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT }; // Alignment
     }
+#endif // #ifdef __ID3D12Device1_INTERFACE_DEFINED__
 
 #if D3D12MA_USE_SMALL_RESOURCE_PLACEMENT_ALIGNMENT
     if (inOutResourceDesc.Alignment == 0 &&

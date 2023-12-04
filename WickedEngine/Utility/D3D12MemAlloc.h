@@ -24,9 +24,9 @@
 
 /** \mainpage D3D12 Memory Allocator
 
-<b>Version 2.1.0-development</b> (2022-12-15)
+<b>Version 2.1.0-development</b> (2023-07-05)
 
-Copyright (c) 2019-2022 Advanced Micro Devices, Inc. All rights reserved. \n
+Copyright (c) 2019-2023 Advanced Micro Devices, Inc. All rights reserved. \n
 License: MIT
 
 Documentation of all members: D3D12MemAlloc.h
@@ -1333,7 +1333,7 @@ public:
       - `pNonLocalBudget` returns the budget of the system memory available for D3D12 resources.
     - When IsUMA() `== TRUE` (integrated graphics chip):
       - `pLocalBudget` returns the budget of the shared memory available for all D3D12 resources.
-        All memory is considered "local".
+         All memory is considered "local".
       - `pNonLocalBudget` is not applicable and returns zeros.
 
     This function is called "get" not "calculate" because it is very fast, suitable to be called
