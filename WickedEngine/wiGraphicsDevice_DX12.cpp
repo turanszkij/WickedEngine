@@ -3679,6 +3679,12 @@ using namespace dx12_internal;
 		}
 		else
 		{
+			if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::SHARED))
+			{
+				// What about D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER and D3D12_HEAP_FLAG_SHARED_CROSS_ADAPTER?
+				allocationDesc.ExtraHeapFlags |= D3D12_HEAP_FLAG_SHARED;
+			}
+
 			hr = allocationhandler->allocator->CreateResource(
 				&allocationDesc,
 				&resourcedesc,
@@ -3699,6 +3705,17 @@ using namespace dx12_internal;
 		{
 			D3D12_RANGE read_range = {};
 			hr = internal_state->resource->Map(0, &read_range, &texture->mapped_data);
+			assert(SUCCEEDED(hr));
+		}
+		else if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::SHARED))
+		{
+			hr = allocationhandler->device->CreateSharedHandle(
+				internal_state->resource.Get(),
+				nullptr,
+				GENERIC_ALL,
+				nullptr,
+				&texture->shared_handle);
+
 			assert(SUCCEEDED(hr));
 		}
 
