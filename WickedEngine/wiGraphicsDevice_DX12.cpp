@@ -3681,6 +3681,9 @@ using namespace dx12_internal;
 		{
 			if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::SHARED))
 			{
+				// Dedicated memory
+				allocationDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
+
 				// What about D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER and D3D12_HEAP_FLAG_SHARED_CROSS_ADAPTER?
 				allocationDesc.ExtraHeapFlags |= D3D12_HEAP_FLAG_SHARED;
 			}
