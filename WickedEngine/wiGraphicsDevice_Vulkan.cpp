@@ -16,6 +16,8 @@
 #include "Utility/spirv_reflect.h"
 
 #define VMA_IMPLEMENTATION
+#define VMA_STATIC_VULKAN_FUNCTIONS 0
+#define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
 #include "Utility/vk_mem_alloc.h"
 
 #ifdef SDL2
@@ -2504,6 +2506,15 @@ using namespace vulkan_internal;
 
 			const wi::vector<const char*> required_deviceExtensions = {
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+				VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME,
+				VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME,
+				VK_KHR_EXTERNAL_FENCE_WIN32_EXTENSION_NAME,
+#elif defined(__linux__)
+				VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME,
+				VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME,
+				VK_KHR_EXTERNAL_FENCE_FD_EXTENSION_NAME,
+#endif
 			};
 			wi::vector<const char*> enabled_deviceExtensions;
 
@@ -3042,27 +3053,6 @@ using namespace vulkan_internal;
 		allocationhandler->instance = instance;
 
 		// Initialize Vulkan Memory Allocator helper:
-		VmaVulkanFunctions vma_vulkan_func{};
-		vma_vulkan_func.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
-		vma_vulkan_func.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
-		vma_vulkan_func.vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties;
-		vma_vulkan_func.vkGetPhysicalDeviceMemoryProperties = vkGetPhysicalDeviceMemoryProperties;
-		vma_vulkan_func.vkAllocateMemory = vkAllocateMemory;
-		vma_vulkan_func.vkFreeMemory = vkFreeMemory;
-		vma_vulkan_func.vkMapMemory = vkMapMemory;
-		vma_vulkan_func.vkUnmapMemory = vkUnmapMemory;
-		vma_vulkan_func.vkFlushMappedMemoryRanges = vkFlushMappedMemoryRanges;
-		vma_vulkan_func.vkInvalidateMappedMemoryRanges = vkInvalidateMappedMemoryRanges;
-		vma_vulkan_func.vkBindBufferMemory = vkBindBufferMemory;
-		vma_vulkan_func.vkBindImageMemory = vkBindImageMemory;
-		vma_vulkan_func.vkGetBufferMemoryRequirements = vkGetBufferMemoryRequirements;
-		vma_vulkan_func.vkGetImageMemoryRequirements = vkGetImageMemoryRequirements;
-		vma_vulkan_func.vkCreateBuffer = vkCreateBuffer;
-		vma_vulkan_func.vkDestroyBuffer = vkDestroyBuffer;
-		vma_vulkan_func.vkCreateImage = vkCreateImage;
-		vma_vulkan_func.vkDestroyImage = vkDestroyImage;
-		vma_vulkan_func.vkCmdCopyBuffer = vkCmdCopyBuffer;
-
 		VmaAllocatorCreateInfo allocatorInfo = {};
 		allocatorInfo.physicalDevice = physicalDevice;
 		allocatorInfo.device = device;
@@ -3072,22 +3062,40 @@ using namespace vulkan_internal;
 		allocatorInfo.flags =
 			VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT |
 			VMA_ALLOCATOR_CREATE_KHR_BIND_MEMORY2_BIT;
-		vma_vulkan_func.vkGetBufferMemoryRequirements2KHR = vkGetBufferMemoryRequirements2;
-		vma_vulkan_func.vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2;
 
 		if (features_1_2.bufferDeviceAddress)
 		{
 			allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
-			vma_vulkan_func.vkBindBufferMemory2KHR = vkBindBufferMemory2;
-			vma_vulkan_func.vkBindImageMemory2KHR = vkBindImageMemory2;
 		}
-		allocatorInfo.pVulkanFunctions = &vma_vulkan_func;
 
+#if VMA_DYNAMIC_VULKAN_FUNCTIONS
+		static VmaVulkanFunctions vulkanFunctions = {};
+		vulkanFunctions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
+		vulkanFunctions.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
+		allocatorInfo.pVulkanFunctions = &vulkanFunctions;
+#endif
 		res = vmaCreateAllocator(&allocatorInfo, &allocationhandler->allocator);
 		assert(res == VK_SUCCESS);
 		if (res != VK_SUCCESS)
 		{
 			wi::helper::messageBox("vmaCreateAllocator failed! ERROR: " + std::to_string(res), "Error!");
+			wi::platform::Exit();
+		}
+
+		std::vector<VkExternalMemoryHandleTypeFlags> externalMemoryHandleTypes;
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+		externalMemoryHandleTypes.resize(memory_properties_2.memoryProperties.memoryTypeCount, VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT);
+		allocatorInfo.pTypeExternalMemoryHandleTypes = externalMemoryHandleTypes.data();
+#elif defined(__linux__)
+		externalMemoryHandleTypes.resize(memory_properties_2.memoryProperties.memoryTypeCount, VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT);
+		allocatorInfo.pTypeExternalMemoryHandleTypes = externalMemoryHandleTypes.data();
+#endif
+
+		res = vmaCreateAllocator(&allocatorInfo, &allocationhandler->externalAllocator);
+		assert(res == VK_SUCCESS);
+		if (res != VK_SUCCESS)
+		{
+			wi::helper::messageBox("Failed to create Vulkan external memory allocator, ERROR: " + std::to_string(res), "Error!");
 			wi::platform::Exit();
 		}
 
@@ -4251,8 +4259,52 @@ using namespace vulkan_internal;
 			}
 			else
 			{
-				res = vmaCreateImage(allocationhandler->allocator, &imageInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
+				VmaAllocator allocator = allocationhandler->allocator;
+				VkExternalMemoryImageCreateInfo externalMemImageCreateInfo = {};
+
+				if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::SHARED))
+				{
+					externalMemImageCreateInfo.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO;
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+					// TODO: Expose this? should we use VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D12_RESOURCE_BIT?
+					externalMemImageCreateInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
+#else
+					externalMemImageCreateInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
+#endif
+					imageInfo.pNext = &externalMemImageCreateInfo;
+
+					// We have to use a dedicated allocator for external handles that has been created with VkExportMemoryAllocateInfo
+					allocator = allocationhandler->externalAllocator;
+
+					allocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+				}
+
+				res = vmaCreateImage(allocator, &imageInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
 				assert(res == VK_SUCCESS);
+
+				if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::SHARED))
+				{
+					VmaAllocationInfo allocationInfo;
+					vmaGetAllocationInfo(allocator, internal_state->allocation, &allocationInfo);
+
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+					VkMemoryGetWin32HandleInfoKHR getWin32HandleInfoKHR = {};
+					getWin32HandleInfoKHR.sType = VK_STRUCTURE_TYPE_MEMORY_GET_WIN32_HANDLE_INFO_KHR;
+					getWin32HandleInfoKHR.pNext = nullptr;
+					getWin32HandleInfoKHR.memory = allocationInfo.deviceMemory;
+					getWin32HandleInfoKHR.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR;
+					res = vkGetMemoryWin32HandleKHR(allocationhandler->device, &getWin32HandleInfoKHR, &texture->shared_handle);
+					assert(res == VK_SUCCESS);
+#elif defined(__linux__)
+					VkMemoryGetFdInfoKHR memoryGetFdInfoKHR = {};
+					memoryGetFdInfoKHR.sType = VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR;
+					memoryGetFdInfoKHR.pNext = nullptr;
+					memoryGetFdInfoKHR.memory = allocationInfo.deviceMemory;
+					memoryGetFdInfoKHR.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR;
+					res = vkGetMemoryFdKHR(allocationhandler->device, &memoryGetFdInfoKHR, &texture->shared_handle);
+					assert(res == VK_SUCCESS);
+#endif
+				}
 			}
 		}
 

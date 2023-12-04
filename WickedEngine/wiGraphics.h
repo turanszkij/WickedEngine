@@ -404,6 +404,7 @@ namespace wi::graphics
 		VIDEO_DECODE = 1 << 13,	// resource is usabe in video decoding operations
 		NO_DEFAULT_DESCRIPTORS = 1 << 14, // skips creation of default descriptors for resources
 		TEXTURE_COMPATIBLE_COMPRESSION = 1 << 15, // optimization that can enable sampling from compressed textures
+		SHARED = 1 << 16, // shared texture
 	};
 
 	enum class GraphicsDeviceCapability
@@ -842,6 +843,12 @@ namespace wi::graphics
 
 		// These are only valid if texture was created with ResourceMiscFlag::SPARSE flag:
 		const SparseTextureProperties* sparse_properties = nullptr;
+
+#if defined(_WIN32)
+		void* shared_handle = nullptr; /* HANDLE */
+#else
+		int shared_handle = 0;
+#endif
 
 		constexpr const TextureDesc& GetDesc() const { return desc; }
 	};
