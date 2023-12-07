@@ -2506,15 +2506,6 @@ using namespace vulkan_internal;
 
 			const wi::vector<const char*> required_deviceExtensions = {
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-				VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME,
-				VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME,
-				VK_KHR_EXTERNAL_FENCE_WIN32_EXTENSION_NAME,
-#elif defined(__linux__)
-				VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME,
-				VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME,
-				VK_KHR_EXTERNAL_FENCE_FD_EXTENSION_NAME,
-#endif
 			};
 			wi::vector<const char*> enabled_deviceExtensions;
 
@@ -2666,21 +2657,17 @@ using namespace vulkan_internal;
 
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
 				if (checkExtensionSupport(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME, available_deviceExtensions) &&
-					checkExtensionSupport(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME, available_deviceExtensions) &&
-					checkExtensionSupport(VK_KHR_EXTERNAL_FENCE_WIN32_EXTENSION_NAME, available_deviceExtensions))
+					checkExtensionSupport(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME, available_deviceExtensions))
 				{
 					enabled_deviceExtensions.push_back(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME);
 					enabled_deviceExtensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME);
-					enabled_deviceExtensions.push_back(VK_KHR_EXTERNAL_FENCE_WIN32_EXTENSION_NAME);
 				}
 #elif defined(__linux__)
 				if (checkExtensionSupport(VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME, available_deviceExtensions) &&
-					checkExtensionSupport(VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME, available_deviceExtensions) &&
-					checkExtensionSupport(VK_KHR_EXTERNAL_FENCE_FD_EXTENSION_NAME, available_deviceExtensions))
+					checkExtensionSupport(VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME, available_deviceExtensions))
 				{
 					enabled_deviceExtensions.push_back(VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME);
 					enabled_deviceExtensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME);
-					enabled_deviceExtensions.push_back(VK_KHR_EXTERNAL_FENCE_FD_EXTENSION_NAME);
 				}
 #endif
 
