@@ -49,7 +49,7 @@ namespace Translator_Internal
 			desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);
 			desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_VERTEXCOLOR);
 			desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEFAULT);
-			desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_WIRE_DOUBLESIDED_SMOOTH);
+			desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_WIRE_DOUBLESIDED);
 			desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_TRANSPARENT);
 			desc.pt = PrimitiveTopology::LINELIST;
 

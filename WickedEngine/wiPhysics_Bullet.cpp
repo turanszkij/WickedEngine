@@ -25,7 +25,7 @@ namespace wi::physics
 		bool ENABLED = true;
 		bool SIMULATION_ENABLED = true;
 		bool DEBUGDRAW_ENABLED = false;
-		int ACCURACY = 2;
+		int ACCURACY = 8;
 		int softbodyIterationCount = 5;
 		float TIMESTEP = 1.0f / 120.0f;
 		std::mutex physicsLock;

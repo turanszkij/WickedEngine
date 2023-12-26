@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
+set(WICKED_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 option(WICKED_DYNAMIC_LIBRARY "Build WickedEngine as a dynamic library" OFF)
 
