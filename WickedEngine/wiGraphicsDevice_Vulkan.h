@@ -433,6 +433,7 @@ namespace wi::graphics
 		struct AllocationHandler
 		{
 			VmaAllocator allocator = VK_NULL_HANDLE;
+			VmaAllocator externalAllocator = VK_NULL_HANDLE;
 			VkDevice device = VK_NULL_HANDLE;
 			VkInstance instance;
 			uint64_t framecount = 0;
@@ -588,6 +589,7 @@ namespace wi::graphics
 				bindlessAccelerationStructures.destroy(device);
 				Update(~0, 0); // destroy all remaining
 				vmaDestroyAllocator(allocator);
+				vmaDestroyAllocator(externalAllocator);
 				vkDestroyDevice(device, nullptr);
 				vkDestroyInstance(instance, nullptr);
 			}
