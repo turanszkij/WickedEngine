@@ -710,6 +710,9 @@ void OptionsWindow::RefreshEntityTree()
 
 bool OptionsWindow::CheckEntityFilter(wi::ecs::Entity entity)
 {
+	if (filter == Filter::All)
+		return true;
+
 	const Scene& scene = editor->GetCurrentScene();
 	bool valid = false;
 
