@@ -111,6 +111,8 @@ Alexandr
 Lee Bamber
 MCAlarm MC2
 Titoutan
+Willow
+Aldo
 		)";
 
 		return credits;
