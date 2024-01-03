@@ -12,14 +12,10 @@ namespace sdl2 {
 // Very useful function from Eric Scott Barr:
 // https://eb2.co/blog/2014/04/c-plus-plus-14-and-sdl2-managing-resources/
 template <typename Creator, typename Destructor, typename... Arguments>
-auto make_resource(Creator c, Destructor d, Arguments&&... args)
+inline auto make_resource(Creator c, Destructor d, Arguments&&... args)
 {
-    using std::decay_t;
-    using std::forward;
-    using std::unique_ptr;
-
-    auto r = c(forward<Arguments>(args)...);
-    return unique_ptr<decay_t<decltype(*r)>, decltype(d)>(r, d);
+    auto r = c(std::forward<Arguments>(args)...);
+    return std::unique_ptr<std::decay_t<decltype(*r)>, decltype(d)>(r, d);
 }
 
 // The "internal type" of the SDL System
@@ -99,7 +95,7 @@ class SDLError : public std::exception
     {
         return error_message.c_str();
     }
-  
+
 };
 
 } // namespace sdl2

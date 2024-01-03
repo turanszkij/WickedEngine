@@ -7,7 +7,7 @@
 
 #if __has_include("DirectXMath.h")
 // In this case, DirectXMath is coming from Windows SDK.
-//	It is better to use this on Windows as some Windows libraries could depend on the same 
+//	It is better to use this on Windows as some Windows libraries could depend on the same
 //	DirectXMath headers
 #include <DirectXMath.h>
 #include <DirectXPackedVector.h>
@@ -29,8 +29,8 @@ using namespace DirectX::PackedVector;
 
 namespace wi::math
 {
-	static constexpr XMFLOAT4X4 IDENTITY_MATRIX = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-	static constexpr float PI = XM_PI;
+	inline constexpr XMFLOAT4X4 IDENTITY_MATRIX = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+	inline constexpr float PI = XM_PI;
 
 	inline bool float_equal(float f1, float f2) {
 		return (std::abs(f1 - f2) <= std::numeric_limits<float>::epsilon() * std::max(std::abs(f1), std::abs(f2)));
@@ -395,12 +395,12 @@ namespace wi::math
 
 
 	//-----------------------------------------------------------------------------
-	// Compute the intersection of a ray (Origin, Direction) with a triangle 
-	// (V0, V1, V2).  Return true if there is an intersection and also set *pDist 
+	// Compute the intersection of a ray (Origin, Direction) with a triangle
+	// (V0, V1, V2).  Return true if there is an intersection and also set *pDist
 	// to the distance along the ray to the intersection.
-	// 
-	// The algorithm is based on Moller, Tomas and Trumbore, "Fast, Minimum Storage 
-	// Ray-Triangle Intersection", Journal of Graphics Tools, vol. 2, no. 1, 
+	//
+	// The algorithm is based on Moller, Tomas and Trumbore, "Fast, Minimum Storage
+	// Ray-Triangle Intersection", Journal of Graphics Tools, vol. 2, no. 1,
 	// pp 21-28, 1997.
 	//
 	//	Modified for WickedEngine to return barycentrics and support TMin, TMax
