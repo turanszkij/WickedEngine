@@ -9,6 +9,7 @@ option(WICKED_EDITOR "Build WickedEngine editor" ON)
 option(WICKED_TESTS "Build WickedEngine tests" ON)
 option(WICKED_IMGUI_EXAMPLE "Build WickedEngine imgui example" ON)
 option(WICKED_LINUX_TEMPLATE "Build WickedEngine Linux template" ON)
+option(BLENDER_EXPORTER "Build blender wiscene exporter plugin" OFF)
 
 
 # Configure CMake global variables
@@ -62,4 +63,11 @@ endif()
 
 if (WICKED_LINUX_TEMPLATE)
     add_subdirectory(Template_Linux)
+endif()
+
+if (BLENDER_EXPORTER)
+	if (NOT ${WICKED_DYNAMIC_LIBRARY})
+		message(FATAL_ERROR "WICKED_DYNAMIC_LIBRARY required to build blender exporter")
+	endif()
+    add_subdirectory(BlenderExporter)
 endif()
