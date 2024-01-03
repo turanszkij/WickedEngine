@@ -6,9 +6,9 @@
 
 namespace wi::eventhandler
 {
-	static constexpr int EVENT_THREAD_SAFE_POINT = -1;
-	static constexpr int EVENT_RELOAD_SHADERS = -2;
-	static constexpr int EVENT_SET_VSYNC = -3;
+	inline constexpr int EVENT_THREAD_SAFE_POINT = -1;
+	inline constexpr int EVENT_RELOAD_SHADERS = -2;
+	inline constexpr int EVENT_SET_VSYNC = -3;
 
 	struct Handle
 	{

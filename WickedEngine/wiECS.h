@@ -21,7 +21,7 @@ namespace wi::ecs
 	//	The entity can be a different value on a different run of the application, if it was serialized
 	//	It must be only serialized with the SerializeEntity() function. It will ensure that entities still match with their components correctly after serialization
 	using Entity = uint32_t;
-	static const Entity INVALID_ENTITY = 0;
+	inline constexpr Entity INVALID_ENTITY = 0;
 	// Runtime can create a new entity with this
 	inline Entity CreateEntity()
 	{
@@ -98,7 +98,7 @@ namespace wi::ecs
 		}
 	}
 
-	// This is an interface class to implement a ComponentManager, 
+	// This is an interface class to implement a ComponentManager,
 	// inherit this class if you want to work with ComponentLibrary
 	class ComponentManager_Interface
 	{
@@ -152,7 +152,7 @@ namespace wi::ecs
 			lookup = other.lookup;
 		}
 
-		// Merge in an other component manager of the same type to this. 
+		// Merge in an other component manager of the same type to this.
 		//	The other component manager MUST NOT contain any of the same entities!
 		//	The other component manager is not retained after this operation!
 		inline void Merge(ComponentManager<Component>& other)
@@ -399,7 +399,7 @@ namespace wi::ecs
 		}
 
 		// Retrieve component index by entity handle (if not exists, returns ~0ull value)
-		inline size_t GetIndex(Entity entity) const 
+		inline size_t GetIndex(Entity entity) const
 		{
 			if (lookup.empty())
 				return ~0ull;
