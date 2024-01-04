@@ -51,8 +51,6 @@ void init_wicked(py::module_& mod)
 	wi::renderer::SetShaderPath(WICKED_ROOT_DIR"/build/BlenderExporter/shaders/");
 
 	wi::initializer::InitializeComponentsImmediate();
-	app.Initialize();
-	app.Update(0.33);
 }
 
 void export_primitives(py::module_& mod)
