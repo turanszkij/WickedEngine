@@ -3,9 +3,8 @@
 import bpy
 import os
 import ctypes
-from mathutils import Vector
+from mathutils import Vector, Quaternion, Matrix
 
-import pywickedengine as wi
 
 bl_info = {
     "name": "Wicked wiscene Extension",
@@ -25,6 +24,12 @@ def WIVector3(blvector3: Vector):
     import pywickedengine as wi
     return wi.XMFLOAT3(blvector3[0], blvector3[2], blvector3[1])
 
+def WIQuaternion(q: Quaternion):
+    import pywickedengine as wi
+    # [W X Y Z] -> [X Y Z W] -> [X Z Y -W]
+    # q2=[q1.x,q1.z,q1.y,−q1.w]
+    return wi.XMFLOAT4(q[1], q[3], q[2], -q[0])
+
 def wicked_add_mesh(item, scene, root):
     print(f"Adding {item.name} mesh ...")
     import pywickedengine as wi
@@ -36,6 +41,11 @@ def wicked_add_mesh(item, scene, root):
     mesh = scene.meshes().GetComponent(entity)
     transform = scene.transforms().GetComponent(entity)
     transform.translation_local = WIVector3(item.location)
+    transform.scale_local = WIVector3(item.scale)
+    if item.rotation_mode == 'QUATERNION':
+        transform.rotation_local = WIQuaternion(item.rotation_quaternion)
+    else:
+        transform.rotation_local = WIQuaternion(item.rotation_euler.to_matrix().to_quaternion())
     transform.UpdateTransform()
     object.meshID = entity
 
@@ -135,6 +145,7 @@ def create_wiscene(scene_name):
 
 def write_wiscene(context, filepath, dump_to_header: bool):
     print("running write_wiscene...")
+    import pywickedengine as wi
 
     filename = os.path.splitext(filepath)[0]
     scene_name = os.path.basename(filename)
