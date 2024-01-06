@@ -30,141 +30,228 @@ bl_info = {
 def WIVector3(blvector3: Vector) -> wi.XMFLOAT3:
     return wi.XMFLOAT3(blvector3[0], blvector3[2], blvector3[1])
 
+
 def WIQuaternion(q: Quaternion) -> wi.XMFLOAT4:
     # [W X Y Z] -> [X Y Z W] -> [X Z Y -W]
     # q2=[q1.x,q1.z,q1.y,−q1.w]
     return wi.XMFLOAT4(q[1], q[3], q[2], -q[0])
 
-def wicked_add_mesh(obj, scene, root):
-    print(f"Adding {obj.name} mesh ...")
-    mesh = obj.data
-    entity = scene.Entity_CreateObject(obj.name)
-    print(f'{obj.name}={entity}')
-    object = scene.objects().GetComponent(entity)
-    scene.meshes().Create(entity)
-    #entity = scene.Entity_CreateMesh(obj.name)
-    #scene.Component_Attach(entity, root) #TODO this creates a self referencing entity, getting the loading screen stuck in an infintie while loop
-    wimesh = scene.meshes().GetComponent(entity)
-    transform = scene.transforms().GetComponent(entity)
-    transform.translation_local = WIVector3(obj.location)
-    transform.scale_local = WIVector3(obj.scale)
-    if obj.rotation_mode == 'QUATERNION':
-        transform.rotation_local = WIQuaternion(obj.rotation_quaternion)
-    else:
-        transform.rotation_local = WIQuaternion(obj.rotation_euler.to_matrix().to_quaternion())
-    transform.UpdateTransform()
-    object.meshID = entity
 
-    if scene.materials().GetCount() == 0:
-        scene.materials().Create(wi.CreateEntity())
+def WIColor(c) -> wi.XMFLOAT4:
+    return wi.XMFLOAT4(c[0], c[1], c[2], c[3])
 
-    #vertices[i].co # position data
-    #vertices[i].undeformed_co # position data - no deforming modifiers applied
 
-    for mat in mesh.materials:
-        pass
-        #TODO create a subset per material
-    # create only one submesh for now
-    subset = wi.MeshComponent_MeshSubset()
-    material = scene.materials().GetComponent(subset.materialID)
-    vertex_offset = len(wimesh.vertex_positions)
+class WiExporter():
 
-    print("Generating vertex data")
-    mesh.calc_loop_triangles()
-    #After using mesh.calc_normals_split() you access the normals with loop.normal
-    mesh.calc_normals_split()
+    def __init__(self):
+        self.__default_material = None
+        self._materials = {}
+        self.scene: wi.Scene = None
 
-    vertices_map = {}
-    vertices_array = []
+    def _default_material(self) -> wi.Entity:
+        if self.__default_material is None:
+            # create default material
+            self.__default_material = self.scene.Entity_CreateMaterial("default_material")
+        return self.__default_material
 
-    #index_remap = [0,1,-1]
-    index_remap = [0,0,0]
+    def wicked_add_material(self, i, material, root: wi.Entity):
+        print(f'Adding {material.name} material ...')
+        entity = self.scene.Entity_CreateMaterial(material.name)
+        wimaterial = self.scene.materials().GetComponent(entity)
+        self._materials[material] = entity
 
-    for triangle in mesh.loop_triangles:
-        face_index = mesh.loop_triangle_polygons[triangle.index].value
-        face = mesh.polygons[face_index]
-        #print(f'triangle[{triangle.index}]{triangle}={face_index} SmoothGroup={smooth_groups[face_index]}')
-        offset=0
-        for i in triangle.loops:
-            i += index_remap[offset]
-            ix = mesh.loops[i].vertex_index
-            normal = mesh.loops[i].normal
-            uv = mesh.uv_layers.active.data[i].uv
-            assert len(uv) == 2
-            v = (ix, WIVector3(normal), wi.XMFLOAT2(uv[0], uv[1]))
-            if v in vertices_map:
-                newix = vertices_map[v]
+        if material.use_nodes:
+            print("Nodes")
+            for node in material.node_tree.nodes:
+                print(f'{node.name}={node}')
+            print("Links")
+            for link in material.node_tree.links:
+                print(f'{link.from_node.name}[{link.from_socket.name}]-->{link.to_node.name}[{link.to_socket.name}]')
+
+            output_node = None
+            for node in material.node_tree.nodes:
+                if isinstance(node, bpy.types.ShaderNodeOutputMaterial):
+                    if node.is_active_output:
+                        output_node = node
+                        break
             else:
-                newix = len(vertices_array)
-                vertices_array.append(v)
-                vertices_map[v] = newix
-            wimesh.indices.append(newix)
-            offset +=1
+                print("ERROR - CANNOT FIND OUTPUT MATERIAL NODE")
+                return
 
-    print("Adding vertex data")
-    for i, normal, uv in vertices_array:
-        vertex = mesh.vertices[i]
-        wimesh.vertex_positions.append(WIVector3(vertex.co))
-        wimesh.vertex_normals.append(normal)
-        wimesh.vertex_uvset_0.append(uv)
+            surface_output = output_node.inputs[0]
+            _volume_ouput = output_node.inputs[1]
+            _displacement_ouput = output_node.inputs[2]
 
-    if len(wimesh.vertex_normals) == 0 and len(wimesh.vertex_positions) > 0:
-        print("Generating missing normal data")
-        for _ in range(len(wimesh.vertex_positions)):
-            wimesh.vertex_normals.append(wi.XMFLOAT3(0,0,0))
-        wimesh.ComputeNormals(wi.MeshComponentComputeNormals.SMOOTH_FAST);
+            if len(surface_output.links) > 0:
+                assert len(surface_output.links) == 1
+                surface_node = surface_output.links[0].from_node
+                if isinstance(surface_node, bpy.types.ShaderNodeBsdfPrincipled):
+                    wimaterial.shaderType = wi.MaterialComponent_SHADERTYPE.PBR
+                    baseColor = surface_node.inputs[0].default_value
+                    wimaterial.metalness = surface_node.inputs[1].default_value
+                    wimaterial.roughness = surface_node.inputs[2].default_value
+                    #wimaterial.IOR       = surface_node.inputs[3].default_value
+                    alpha                = surface_node.inputs[4].default_value
+                    #normal               = surface_node.inputs[5].default_value
 
-    subset.materialID = scene.materials().GetEntity(0)#max(0, face.material))
-    subset.indexOffset = 0
-    subset.indexCount = len(wimesh.indices)
-    wimesh.subsets.append(subset)
+                    wimaterial.baseColor = WIColor((baseColor[0], baseColor[1], baseColor[2], alpha))
+                # elif isinstance(surface_node, bpy.types....):
+                #     pass
+                else:
+                    print(f"ERROR - SURFACE MATERIAL NODE of type {type(surface_node)} is not convertible")
+                    return
+            else:
+                print("ERROR - CANNOT FIND SURFACE MATERIAL NODE")
+                return
 
-    print(f"Finished adding {obj.name} mesh")
+        else:
+            wimaterial.baseColor = WIColor(material.diffuse_color)
+            wimaterial.metalness = material.metallic
+            wimaterial.roughness = material.roughness
 
 
-def create_wiscene(scene_name):
-    ### Load Scene
-    scene = wi.Scene()
-    rootEntity = wi.CreateEntity()
-    print(f'rootEntity({scene_name})={rootEntity}')
-    scene.transforms().Create(rootEntity)
-    scene.names().Create(rootEntity)
-    scene.names().GetComponent(rootEntity).name = scene_name
+    def wicked_add_mesh(self, obj, root: wi.Entity):
+        print(f"Adding {obj.name} mesh ...")
+        mesh = obj.data
+        entity = self.scene.Entity_CreateObject(obj.name)
+        object = self.scene.objects().GetComponent(entity)
+        self.scene.meshes().Create(entity)
+        #entity = self.scene.Entity_CreateMesh(obj.name)
+        #self.scene.Component_Attach(entity, root) #TODO this creates a self referencing entity, getting the loading screen stuck in an infintie while loop
+        wimesh = self.scene.meshes().GetComponent(entity)
+        transform = self.scene.transforms().GetComponent(entity)
+        transform.translation_local = WIVector3(obj.location)
+        transform.scale_local = WIVector3(obj.scale)
+        if obj.rotation_mode == 'QUATERNION':
+            transform.rotation_local = WIQuaternion(obj.rotation_quaternion)
+        else:
+            transform.rotation_local = WIQuaternion(obj.rotation_euler.to_matrix().to_quaternion())
+        transform.UpdateTransform()
+        object.meshID = entity
 
-    #TODO materials
-    for mat in bpy.data.materials:
-        pass
+        #vertices[i].co # position data
+        #vertices[i].undeformed_co # position data - no deforming modifiers applied
 
-    # Meshes
-    print("Exporting meshes")
-    for obj in bpy.data.objects:
-        print(f"Element in scene {obj.name}")
-        match obj.type:
-            case 'MESH':
-                wicked_add_mesh(obj, scene, rootEntity)
-    print("Finished exporting meshes")
+        for mat in mesh.materials:
+            wimaterial_entity = self._materials[mat]
+            #TODO create a subset per material
+        # create only one submesh for now
+        subset = wi.MeshComponent_MeshSubset()
+        material = self.scene.materials().GetComponent(subset.materialID)
+        vertex_offset = len(wimesh.vertex_positions)
 
-    #TODO armatures
+        print("Generating vertex data")
+        mesh.calc_loop_triangles()
+        #After using mesh.calc_normals_split() you access the normals with loop.normal
+        mesh.calc_normals_split()
 
-    #TODO transform hierarchy
+        vertices_map = {}
+        vertices_array = []
 
-    #TODO armature-bone mappings
+        #index_remap = [0,1,-1]
+        index_remap = [0,0,0]
 
-    #TODO animations
+        material_index = -1
+        for triangle in mesh.loop_triangles:
+            if material_index < 0:
+                material_index = triangle.material_index
+            else:
+                assert material_index == triangle.material_index
 
-    #TODO lights
+            face_index = mesh.loop_triangle_polygons[triangle.index].value
+            face = mesh.polygons[face_index]
+            #print(f'triangle[{triangle.index}]{triangle}={face_index} SmoothGroup={smooth_groups[face_index]}')
+            offset=0
+            for i in triangle.loops:
+                i += index_remap[offset]
+                ix = mesh.loops[i].vertex_index
+                normal = mesh.loops[i].normal
+                uv = mesh.uv_layers.active.data[i].uv
+                assert len(uv) == 2
+                v = (ix, WIVector3(normal), wi.XMFLOAT2(uv[0], uv[1]))
+                if v in vertices_map:
+                    newix = vertices_map[v]
+                else:
+                    newix = len(vertices_array)
+                    vertices_array.append(v)
+                    vertices_map[v] = newix
+                wimesh.indices.append(newix)
+                offset +=1
+        assert material_index == 0
 
-    #TODO cameras
+        print("Adding vertex data")
+        for i, normal, uv in vertices_array:
+            vertex = mesh.vertices[i]
+            wimesh.vertex_positions.append(WIVector3(vertex.co))
+            wimesh.vertex_normals.append(normal)
+            wimesh.vertex_uvset_0.append(uv)
 
-    ## Correct orientation after importing
-    #scene.Update(0)
-    #TODO FlipZAxis
-    ## Update hte scene to have up to date values immediately after loading:
-    ## e.g. snap to camera functionality relies on this
-    #scene.Update(0)
+        if len(wimesh.vertex_normals) == 0 and len(wimesh.vertex_positions) > 0:
+            print("Generating missing normal data")
+            for _ in range(len(wimesh.vertex_positions)):
+                wimesh.vertex_normals.append(wi.XMFLOAT3(0,0,0))
+            wimesh.ComputeNormals(wi.MeshComponentComputeNormals.SMOOTH_FAST);
 
-    print("FINISH")
-    return scene
+        if len(mesh.materials) == 0:
+            wimaterial = self._default_material()
+        else:
+            wimaterial = self._materials[mesh.materials[material_index]]
+
+        subset.materialID = wimaterial
+        subset.indexOffset = 0
+        subset.indexCount = len(wimesh.indices)
+        wimesh.subsets.append(subset)
+
+        print(f"Finished adding {obj.name} mesh")
+
+
+    def create_wiscene(self, scene_name):
+        ### Load Scene
+        self.scene = wi.Scene()
+        rootEntity = wi.CreateEntity()
+        print(f'rootEntity({scene_name})={rootEntity}')
+        self.scene.transforms().Create(rootEntity)
+        self.scene.names().Create(rootEntity)
+        self.scene.names().GetComponent(rootEntity).name = scene_name
+
+        # Materials
+        print("Exporting materials")
+        for i, mat in enumerate(bpy.data.materials):
+            self.wicked_add_material(i, mat, rootEntity)
+
+        if self.scene.materials().GetCount() == 0:
+            self.scene.materials().Create(wi.CreateEntity())
+
+        # Meshes
+        print("Exporting meshes")
+        for obj in bpy.data.objects:
+            print(f"Element in scene {obj.name}")
+            match obj.type:
+                case 'MESH':
+                    self.wicked_add_mesh(obj, rootEntity)
+        print("Finished exporting meshes")
+
+        #TODO armatures
+
+        #TODO transform hierarchy
+
+        #TODO armature-bone mappings
+
+        #TODO animations
+
+        #TODO lights
+
+        #TODO cameras
+
+        ## Correct orientation after importing
+        #self.scene.Update(0)
+        #TODO FlipZAxis
+        ## Update hte scene to have up to date values immediately after loading:
+        ## e.g. snap to camera functionality relies on this
+        #self.scene.Update(0)
+
+        print("FINISH")
+        return self.scene
 
 
 def write_wiscene(context, filepath, dump_to_header: bool):
@@ -178,7 +265,8 @@ def write_wiscene(context, filepath, dump_to_header: bool):
         print("ERROR, ARCHIVE DID NOT OPEN")
         return {'ERROR'}
 
-    scene = create_wiscene(scene_name)
+    exporter = WiExporter()
+    scene = exporter.create_wiscene(scene_name)
 
     ### Serialize Scene
     scene.Serialize(ar)

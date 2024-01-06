@@ -203,7 +203,8 @@ void export_ECS(py::module_& mod)
 	using namespace wi::scene;
 	// py::class_<ComponentLibrary>(mod, "ComponentLibrary");
 
-	// py::class_<Entity>(mod, "Entity");
+	py::class_<Entity>(mod, "Entity");
+
 	mod.def("CreateEntity", &CreateEntity);
 
 	//maybe Components need to not handle memory by python
@@ -277,8 +278,50 @@ void export_ECS(py::module_& mod)
 		;
 
 
+	py::enum_<MaterialComponent::SHADERTYPE>(mod, "MaterialComponent_SHADERTYPE")
+		.value("PBR", MaterialComponent::SHADERTYPE::SHADERTYPE_PBR)
+		.value("PBR_PLANARREFLECTION", MaterialComponent::SHADERTYPE_PBR_PLANARREFLECTION)
+		.value("PBR_PARALLAXOCCLUSIONMAPPING", MaterialComponent::SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING)
+		.value("PBR_ANISOTROPIC", MaterialComponent::SHADERTYPE_PBR_ANISOTROPIC)
+		.value("WATER", MaterialComponent::SHADERTYPE_WATER)
+		.value("CARTOON", MaterialComponent::SHADERTYPE_CARTOON)
+		.value("UNLIT", MaterialComponent::SHADERTYPE_UNLIT)
+		.value("PBR_CLOTH", MaterialComponent::SHADERTYPE_PBR_CLOTH)
+		.value("PBR_CLEARCOAT", MaterialComponent::SHADERTYPE_PBR_CLEARCOAT)
+		.value("PBR_CLOTH_CLEARCOAT", MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT)
+		//.value("COUNT", MaterialComponent::SHADERTYPE_COUNT)
+		.export_values()
+		;
+
 	py::class_<MaterialComponent, std::unique_ptr<MaterialComponent, py::nodelete>>(mod, "MaterialComponent")
+		.def_readwrite("shaderType", &MaterialComponent::shaderType)
+		//wi::enums::STENCILREF engineStencilRef = wi::enums::STENCILREF_DEFAULT;
+		//uint8_t userStencilRef = 0;
+		//wi::enums::BLENDMODE userBlendMode = wi::enums::BLENDMODE_OPAQUE;
 		.def_readwrite("baseColor", &MaterialComponent::baseColor)
+		.def_readwrite("specularColor", &MaterialComponent::specularColor)
+		.def_readwrite("emissiveColor", &MaterialComponent::emissiveColor)
+		.def_readwrite("subsurfaceScattering", &MaterialComponent::subsurfaceScattering)
+		.def_readwrite("texMulAdd", &MaterialComponent::texMulAdd)
+		.def_readwrite("roughness", &MaterialComponent::roughness)
+		.def_readwrite("reflectance", &MaterialComponent::reflectance)
+		.def_readwrite("metalness", &MaterialComponent::metalness)
+		.def_readwrite("normalMapStrength", &MaterialComponent::normalMapStrength)
+		.def_readwrite("parallaxOcclusionMapping", &MaterialComponent::parallaxOcclusionMapping)
+		.def_readwrite("displacementMapping", &MaterialComponent::displacementMapping)
+		.def_readwrite("refraction", &MaterialComponent::refraction)
+		.def_readwrite("transmission", &MaterialComponent::transmission)
+		.def_readwrite("alphaRef", &MaterialComponent::alphaRef)
+		.def_readwrite("anisotropy_strength", &MaterialComponent::anisotropy_strength)
+		.def_readwrite("anisotropy_rotation", &MaterialComponent::anisotropy_rotation)
+		.def_readwrite("sheenColor", &MaterialComponent::sheenColor)
+		.def_readwrite("sheenRoughness", &MaterialComponent::sheenRoughness)
+		.def_readwrite("clearcoat", &MaterialComponent::clearcoat)
+		.def_readwrite("clearcoatRoughness", &MaterialComponent::clearcoatRoughness)
+		//.def_readwrite("shadingRate", &MaterialComponent::shadingRate) //wi::graphics::ShadingRate
+		.def_readwrite("texAnimDirection", &MaterialComponent::texAnimDirection)
+		.def_readwrite("texAnimFrameRate", &MaterialComponent::texAnimFrameRate)
+		.def_readwrite("texAnimElapsedTime", &MaterialComponent::texAnimElapsedTime)
 		;
 
 	py::class_<ObjectComponent, std::unique_ptr<ObjectComponent, py::nodelete>>(mod, "ObjectComponent")
