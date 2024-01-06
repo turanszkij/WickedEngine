@@ -27,30 +27,45 @@ PYBIND11_MAKE_OPAQUE(wi::scene::TransformComponent);
 PYBIND11_MAKE_OPAQUE(wi::scene::ObjectComponent);
 
 static wi::Application app;
+static sdl2::sdlsystem_ptr_t sdl_system { nullptr, nullptr };
+static sdl2::window_ptr_t sdl_window { nullptr, nullptr };
 
 void init_wicked(py::module_& mod)
 {
-	//TODO we can probably initialize less stuff
+	static bool INIT_DONE = false;
 
-	sdl2::sdlsystem_ptr_t system = sdl2::make_sdlsystem(SDL_INIT_VIDEO);
-	if (!system) {
-		throw sdl2::SDLError("Error creating SDL2 system");
-	}
+	mod.def("init", []()
+	{
+		if (INIT_DONE) return;
+		INIT_DONE = true;
 
-	sdl2::window_ptr_t window = sdl2::make_window("WickedBlenderExporter",
-												  SDL_WINDOWPOS_CENTERED,
-												  SDL_WINDOWPOS_CENTERED,
-												  50, 50,
-												  SDL_WINDOW_HIDDEN | SDL_WINDOW_VULKAN);
-	if (!window) {
-		throw sdl2::SDLError("Error creating window");
-	}
+		//TODO we can probably initialize less stuff
+		sdl_system = sdl2::make_sdlsystem(SDL_INIT_VIDEO);
 
-	app.SetWindow(window.get());
-	wi::renderer::SetShaderSourcePath(WICKED_ROOT_DIR"/WickedEngine/shaders/");
-	wi::renderer::SetShaderPath(WICKED_ROOT_DIR"/build/BlenderExporter/shaders/");
+		if (!sdl_system) {
+			throw sdl2::SDLError("Error creating SDL2 system");
+		}
 
-	wi::initializer::InitializeComponentsImmediate();
+		sdl_window = sdl2::make_window("WickedBlenderExporter",
+													SDL_WINDOWPOS_CENTERED,
+													SDL_WINDOWPOS_CENTERED,
+													50, 50,
+													SDL_WINDOW_HIDDEN | SDL_WINDOW_VULKAN);
+		if (!sdl_window) {
+			throw sdl2::SDLError("Error creating window");
+		}
+
+		app.SetWindow(sdl_window.get());
+		wi::renderer::SetShaderSourcePath(WICKED_ROOT_DIR"/WickedEngine/shaders/");
+		wi::renderer::SetShaderPath(WICKED_ROOT_DIR"/build/BlenderExporter/shaders/");
+
+		//wi::initializer::InitializeComponentsImmediate();
+		app.Initialize();
+	});
+
+	mod.def("deinit", [](){
+		//TODO INIT_DONE = false;
+	});
 }
 
 void export_primitives(py::module_& mod)
