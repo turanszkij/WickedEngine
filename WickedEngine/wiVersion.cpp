@@ -113,6 +113,7 @@ MCAlarm MC2
 Titoutan
 Willow
 Aldo
+lokimx
 		)";
 
 		return credits;

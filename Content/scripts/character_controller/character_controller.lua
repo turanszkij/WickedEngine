@@ -315,11 +315,12 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 		face = Vector(0,0,1), -- forward direction (smoothed)
 		face_next = Vector(0,0,1), -- forward direction in current frame
 		force = Vector(),
+		movement_force = Vector(),
 		velocity = Vector(),
 		savedPointerPos = Vector(),
-		walk_speed = 0.2,
-		jog_speed = 0.4,
-		run_speed = 0.8,
+		walk_speed = 0.1,
+		jog_speed = 0.2,
+		run_speed = 0.4,
 		jump_speed = 8,
 		swim_speed = 0.5,
 		layerMask = ~0, -- layerMask will be used to filter collisions
@@ -457,7 +458,7 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 				elseif self.state == States.SWIM then
 					speed = self.swim_speed
 				end
-				self.force = vector.Add(self.force, self.face:Multiply(Vector(speed,speed,speed)))
+				self.movement_force = self.face:Multiply(Vector(speed,speed,speed))
 			end
 		end,
 
@@ -542,6 +543,7 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 			end
 
 			-- swim test:
+			local swimming = false
 			if self.neck ~= INVALID_ENTITY then
 				local neck_pos = scene.Component_GetTransform(self.neck).GetPosition()
 				local water_threshold = 0.1
@@ -552,7 +554,8 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 					model_transform.Translate(Vector(0,water_distance - water_threshold,0))
 					model_transform.UpdateTransform()
 					self.force.SetY(0)
-					self.force = vector.Multiply(self.force, 0.8) -- water friction
+					self.velocity.SetY(0)
+					swimming = true
 					self.state = States.SWIM_IDLE
 				end
 			end
@@ -688,8 +691,6 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 				end
 				
 			end
-
-			self.velocity = self.force
 			
 			-- Capsule collision for character:
 			local capsule = scene.Component_GetCollider(self.collider).GetCapsule()
@@ -705,7 +706,6 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 				collision_layer = collision_layer & ~Layers.Player
 			end
 			local current_anim = scene.Component_GetAnimation(self.anims[self.state])
-			local ground_intersect = false
 			local platform_velocity_accumulation = Vector()
 			local platform_velocity_count = 0
 
@@ -718,7 +718,10 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 			while self.fixed_update_remain >= fixed_dt do
 				self.timestep_occured = true;
 				self.fixed_update_remain = self.fixed_update_remain - fixed_dt
-				
+
+				self.force = vector.Add(self.force, self.movement_force)
+				self.velocity = self.force
+
 				capsulepos = vector.Add(capsulepos, vector.Multiply(self.velocity, fixed_dt))
 				capsule = Capsule(capsulepos, vector.Add(capsulepos, Vector(0, capsuleheight)), radius)
 				local o2, p2, n2, depth, platform_velocity = scene.Intersects(capsule, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, collision_layer) -- scene/capsule collision
@@ -733,7 +736,7 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 
 					if ground_slope > slope_threshold then
 						-- Ground intersection:
-						ground_intersect = true
+						self.force = vector.Multiply(self.force, 0.92) -- ground friction
 						capsulepos = vector.Add(capsulepos, Vector(0, depth, 0)) -- avoid sliding, instead stand upright
 						platform_velocity_accumulation = vector.Add(platform_velocity_accumulation, platform_velocity)
 						platform_velocity_count = platform_velocity_count + 1
@@ -749,6 +752,13 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 				if self.force.Length() < 30 then
 					self.force = vector.Add(self.force, Vector(0, gravity * fixed_dt, 0)) -- gravity
 				end
+			
+				self.face.SetY(0)
+				self.face = self.face.Normalize()
+				if swimming then
+					self.force = vector.Multiply(self.force, 0.8) -- water friction
+				end
+
 				-- Animation blending
 				if current_anim ~= nil then
 					-- Blend in current animation:
@@ -774,12 +784,8 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 
 			model_transform.Translate(vector.Subtract(capsulepos, original_capsulepos)) -- transform by the capsule offset
 			model_transform.UpdateTransform()
-			
-			self.face.SetY(0)
-			self.face = self.face.Normalize()
-			if ground_intersect then
-				self.force = vector.Multiply(self.force, 0.85) -- ground friction
-			end
+
+			self.movement_force = Vector()
 			
 			-- try to put water ripple:
 			if self.velocity.Length() > 0.01 and self.state ~= States.SWIM_IDLE then
@@ -1062,7 +1068,7 @@ local function ThirdPersonCamera(character)
 			local character_position = character_transform.GetPosition()
 			self.target_rot_horizontal = math.lerp(self.target_rot_horizontal, self.character.target_rot_horizontal, 0.1)
 			self.target_rot_vertical = math.lerp(self.target_rot_vertical, self.character.target_rot_vertical, 0.1)
-			self.target_height = math.lerp(self.target_height, character_position.GetY() + self.character.target_height, 0.05)
+			self.target_height = math.lerp(self.target_height, character_position.GetY() + self.character.target_height, 0.1)
 
 			local camera_transform = scene.Component_GetTransform(self.camera)
 			local target_transform = TransformComponent()
