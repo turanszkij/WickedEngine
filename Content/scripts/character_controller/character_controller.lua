@@ -713,12 +713,12 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 			self.fixed_update_remain = self.fixed_update_remain + dt
 			local fixed_update_fps = 120
 			local fixed_dt = 1.0 / fixed_update_fps
-			self.timestep_occured = false;
+			self.timestep_occured = false
 
 			while self.fixed_update_remain >= fixed_dt do
 				self.timestep_occured = true;
 				self.fixed_update_remain = self.fixed_update_remain - fixed_dt
-
+				
 				self.force = vector.Add(self.force, self.movement_force)
 				self.velocity = self.force
 
@@ -740,7 +740,8 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 						capsulepos = vector.Add(capsulepos, Vector(0, depth, 0)) -- avoid sliding, instead stand upright
 						platform_velocity_accumulation = vector.Add(platform_velocity_accumulation, platform_velocity)
 						platform_velocity_count = platform_velocity_count + 1
-						self.velocity.SetY(0) -- remove falling motion
+						self.velocity.SetY(0)
+						self.force.SetY(0)
 					else
 						-- Slide on contact surface:
 						capsulepos = vector.Add(capsulepos, vector.Multiply(n2, depth))
@@ -752,7 +753,7 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 				if self.force.Length() < 30 then
 					self.force = vector.Add(self.force, Vector(0, gravity * fixed_dt, 0)) -- gravity
 				end
-			
+
 				self.face.SetY(0)
 				self.face = self.face.Normalize()
 				if swimming then
