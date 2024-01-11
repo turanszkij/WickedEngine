@@ -305,6 +305,7 @@ namespace wi::renderer
 	// Compute light grid tiles
 	void ComputeTiledLightCulling(
 		const TiledLightResources& res,
+		const Visibility& vis,
 		const wi::graphics::Texture& debugUAV,
 		wi::graphics::CommandList cmd
 	);

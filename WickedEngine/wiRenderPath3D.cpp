@@ -925,6 +925,7 @@ namespace wi
 
 			wi::renderer::ComputeTiledLightCulling(
 				tiledLightResources,
+				visibility_main,
 				debugUAV,
 				cmd
 			);
@@ -1132,6 +1133,7 @@ namespace wi
 
 				wi::renderer::ComputeTiledLightCulling(
 					tiledLightResources_planarReflection,
+					visibility_reflection,
 					Texture(),
 					cmd
 				);
