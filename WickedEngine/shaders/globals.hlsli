@@ -281,9 +281,9 @@ inline ShaderMaterial load_material(uint materialIndex)
 uint load_entitytile(uint tileIndex)
 {
 #ifdef TRANSPARENT
-	return bindless_structured_uint[GetCamera().buffer_entitytiles_transparent_index][tileIndex];
+	return bindless_structured_uint[GetCamera().buffer_entitytiles_index][GetCamera().entity_culling_tile_bucket_count_flat + tileIndex];
 #else
-	return bindless_structured_uint[GetCamera().buffer_entitytiles_opaque_index][tileIndex];
+	return bindless_structured_uint[GetCamera().buffer_entitytiles_index][tileIndex];
 #endif // TRANSPARENT
 }
 inline ShaderEntity load_entity(uint entityIndex)

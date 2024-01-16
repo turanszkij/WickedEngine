@@ -1022,7 +1022,8 @@ struct ShaderCamera
 	uint4 scissor; // scissor in physical coordinates (left,top,right,bottom) range: [0, internal_resolution]
 	float4 scissor_uv; // scissor in screen UV coordinates (left,top,right,bottom) range: [0, 1]
 
-	uint3 entity_culling_tilecount;
+	uint2 entity_culling_tilecount;
+	uint entity_culling_tile_bucket_count_flat; // tilecount.x * tilecount.y * SHADER_ENTITY_TILE_BUCKET_COUNT (the total number of uint buckets for the whole screen)
 	uint sample_count;
 
 	uint2 visibility_tilecount;
@@ -1037,9 +1038,9 @@ struct ShaderCamera
 	int texture_velocity_index;
 	int texture_normal_index;
 	int texture_roughness_index;
-	int buffer_entitytiles_opaque_index;
+	int buffer_entitytiles_index;
 
-	int buffer_entitytiles_transparent_index;
+	int padding;
 	int texture_reflection_index;
 	int texture_reflection_depth_index;
 	int texture_refraction_index;
@@ -1093,6 +1094,7 @@ struct ShaderCamera
 		scissor = {};
 		scissor_uv = {};
 		entity_culling_tilecount = {};
+		entity_culling_tile_bucket_count_flat = 0;
 		sample_count = {};
 		visibility_tilecount = {};
 		visibility_tilecount_flat = {};
@@ -1105,8 +1107,7 @@ struct ShaderCamera
 		texture_velocity_index = -1;
 		texture_normal_index = -1;
 		texture_roughness_index = -1;
-		buffer_entitytiles_opaque_index = -1;
-		buffer_entitytiles_transparent_index = -1;
+		buffer_entitytiles_index = -1;
 		texture_reflection_index = -1;
 		texture_refraction_index = -1;
 		texture_waterriples_index = -1;

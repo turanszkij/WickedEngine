@@ -1125,8 +1125,7 @@ namespace wi::scene
 		int texture_rtshadow_index = -1;
 		int texture_rtdiffuse_index = -1;
 		int texture_surfelgi_index = -1;
-		int buffer_entitytiles_opaque_index = -1;
-		int buffer_entitytiles_transparent_index = -1;
+		int buffer_entitytiles_index = -1;
 		int texture_vxgi_diffuse_index = -1;
 		int texture_vxgi_specular_index = -1;
 

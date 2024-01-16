@@ -6,8 +6,7 @@
 
 StructuredBuffer<Frustum> in_Frustums : register(t0);
 
-RWStructuredBuffer<uint> EntityTiles_Transparent : register(u0);
-RWStructuredBuffer<uint> EntityTiles_Opaque : register(u1);
+RWStructuredBuffer<uint> entityTiles : register(u0);
 
 // Group shared variables.
 groupshared uint uMinDepth;
@@ -328,8 +327,8 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	// Each thread will export one bucket from LDS to global memory:
 	for (i = groupIndex; i < SHADER_ENTITY_TILE_BUCKET_COUNT; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
-		EntityTiles_Opaque[tileBucketsAddress + i] = tile_opaque[i];
-		EntityTiles_Transparent[tileBucketsAddress + i] = tile_transparent[i];
+		entityTiles[tileBucketsAddress + i] = tile_opaque[i];
+		entityTiles[GetCamera().entity_culling_tile_bucket_count_flat + tileBucketsAddress + i] = tile_transparent[i];
 	}
 
 #ifdef DEBUG_TILEDLIGHTCULLING

@@ -31,12 +31,11 @@ namespace wi::renderer
 	{
 		return (userStencilRef << 4) | static_cast<uint8_t>(engineStencilRef);
 	}
-	constexpr XMUINT3 GetEntityCullingTileCount(XMUINT2 internalResolution)
+	constexpr XMUINT2 GetEntityCullingTileCount(XMUINT2 internalResolution)
 	{
-		return XMUINT3(
+		return XMUINT2(
 			(internalResolution.x + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
-			(internalResolution.y + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
-			1
+			(internalResolution.y + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE
 		);
 	}
 	constexpr XMUINT2 GetVisibilityTileCount(XMUINT2 internalResolution)
@@ -296,10 +295,9 @@ namespace wi::renderer
 
 	struct TiledLightResources
 	{
-		XMUINT3 tileCount = {};
+		XMUINT2 tileCount = {};
 		wi::graphics::GPUBuffer tileFrustums; // entity culling frustums
-		wi::graphics::GPUBuffer entityTiles_Opaque; // culled entity indices (for opaque pass)
-		wi::graphics::GPUBuffer entityTiles_Transparent; // culled entity indices (for transparent pass)
+		wi::graphics::GPUBuffer entityTiles; // culled entity indices
 	};
 	void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution);
 	// Compute light grid tiles
