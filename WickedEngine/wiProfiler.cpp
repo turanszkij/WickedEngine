@@ -327,7 +327,6 @@ namespace wi::profiler
 
 		const XMFLOAT2 graph_size = XMFLOAT2(190, 100);
 		const float graph_left_offset = 45;
-		const float graph_memory_left_offset = graph_left_offset * 2 + graph_size.x + 20;
 		const float graph_padding_y = 40;
 
 		wi::image::SetCanvas(canvas);
@@ -389,14 +388,14 @@ namespace wi::profiler
 			x.second.total_time = 0;
 		}
 
-		wi::font::Params params = wi::font::Params(x, y + graph_size.y + graph_padding_y, wi::font::WIFONTSIZE_DEFAULT - 4, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_TOP, text_color);
+		wi::font::Params params = wi::font::Params(x, y + (graph_size.y + graph_padding_y) * 2, wi::font::WIFONTSIZE_DEFAULT - 6, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_TOP, text_color);
 
 		// Background:
 		wi::image::Params fx;
 		fx.pos.x = x - 10;
 		fx.pos.y = y - 10;
-		fx.siz.x = std::max(graph_size.x * 2, (float)wi::font::TextWidth(ss.str(), params)) + 200;
-		fx.siz.y = (float)wi::font::TextHeight(ss.str(), params) + graph_size.y + graph_padding_y + 20;
+		fx.siz.x = std::max(graph_size.x, (float)wi::font::TextWidth(ss.str(), params)) + 200;
+		fx.siz.y = (float)wi::font::TextHeight(ss.str(), params) + (graph_size.y + graph_padding_y) * 2 + 20;
 		fx.color = background_color;
 
 		if (colorspace != ColorSpace::SRGB)
@@ -539,9 +538,10 @@ namespace wi::profiler
 			device->Draw(sizeof(graph_info) / sizeof(Vertex), graph_vertex_count * 4, cmd);
 
 			// Memory graph:
+			const float memory_graph_y = y + graph_size.y + graph_padding_y;
 			XMStoreFloat4x4(&cb.g_xTransform,
 				XMMatrixScaling(graph_size.x - graph_left_offset, graph_size.y, 1) *
-				XMMatrixTranslation(x + graph_memory_left_offset, y, 0) *
+				XMMatrixTranslation(x + graph_left_offset, memory_graph_y, 0) *
 				canvas.GetProjection()
 			);
 			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MiscCB), cmd);
@@ -564,12 +564,12 @@ namespace wi::profiler
 			params.position.y = y + graph_size.y - (16.6f / graph_max) * graph_size.y;
 			wi::font::Draw("16.6 ms", params, cmd);
 
-			params.position.x = x + graph_memory_left_offset - 40;
-			params.position.y = y;
+			params.position.x = x + graph_left_offset - 40;
+			params.position.y = memory_graph_y;
 			ss.str("");
 			ss << graph_max_memory << " GB";
 			wi::font::Draw(ss.str(), params, cmd);
-			params.position.y = y + graph_size.y - 0.5f * graph_size.y;
+			params.position.y = memory_graph_y + graph_size.y - 0.5f * graph_size.y;
 			ss.str("");
 			ss << graph_max_memory * 0.5f << " GB";
 			wi::font::Draw(ss.str(), params, cmd);
@@ -602,8 +602,8 @@ namespace wi::profiler
 			ss << "gpu: " << gpu_graph[0] << " ms";
 			wi::font::Draw(ss.str(), params, cmd);
 
-			params.position.x = x + graph_memory_left_offset + graph_size.x - graph_left_offset + 5;
-			params.position.y = y + graph_size.y - cpu_memory_graph[0] / graph_max_memory * graph_size.y;
+			params.position.x = x + graph_left_offset + graph_size.x - graph_left_offset + 5;
+			params.position.y = memory_graph_y + graph_size.y - cpu_memory_graph[0] / graph_max_memory * graph_size.y;
 			params.color = wi::Color::fromFloat4(XMFLOAT4(1, 0.2f, 1, 1));
 			ss.str("");
 			ss.clear();
@@ -611,7 +611,7 @@ namespace wi::profiler
 			wi::font::Draw(ss.str(), params, cmd);
 
 			cpu_position = params.position.y;
-			params.position.y = y + graph_size.y - gpu_memory_graph[0] / graph_max_memory * graph_size.y;
+			params.position.y = memory_graph_y + graph_size.y - gpu_memory_graph[0] / graph_max_memory * graph_size.y;
 			if (std::abs(params.position.y - cpu_position) < params.size)
 			{
 				if (params.position.y < cpu_position)
@@ -638,10 +638,10 @@ namespace wi::profiler
 			wi::font::Draw("current frame", params, cmd);
 
 			// Memory graph:
-			params.position.x = x + graph_memory_left_offset + (graph_size.x - graph_left_offset) * 0.5f;
-			params.position.y = y + graph_size.y + 10;
+			params.position.x = x + graph_left_offset + (graph_size.x - graph_left_offset) * 0.5f;
+			params.position.y = memory_graph_y + graph_size.y + 10;
 			wi::font::Draw("60 frames", params, cmd);
-			params.position.x = x + graph_memory_left_offset + graph_size.x - graph_left_offset;
+			params.position.x = x + graph_left_offset + graph_size.x - graph_left_offset;
 			wi::font::Draw("current frame", params, cmd);
 		}
 	}

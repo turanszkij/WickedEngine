@@ -530,7 +530,7 @@ namespace wi
 			}
 		}
 
-		wi::profiler::DrawData(canvas, 4, 120, cmd, colorspace);
+		wi::profiler::DrawData(canvas, 4, 10, cmd, colorspace);
 
 		wi::backlog::Draw(canvas, cmd, colorspace);
 
