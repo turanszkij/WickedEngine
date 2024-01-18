@@ -23,8 +23,8 @@ float4 main(VSOut input) : SV_Target
 	float dist = length(V);
 	V /= dist;
 
-	const uint2 pixel = input.pos.xy;
-	const float2 ScreenCoord = pixel * GetCamera().internal_resolution_rcp;
+	const uint2 pixel = input.pos.xy; // no longer pixel center!
+	const float2 ScreenCoord = input.pos.xy * GetCamera().internal_resolution_rcp; // use pixel center!
 
 	Surface surface;
 	surface.init();

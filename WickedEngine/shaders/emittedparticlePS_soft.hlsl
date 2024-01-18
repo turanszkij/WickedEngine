@@ -37,7 +37,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 		}
 	}
 
-	uint2 pixel = input.pos.xy;
+	uint2 pixel = input.pos.xy; // no longer pixel center!
 	
 	float4 inputColor;
 	inputColor.r = ((input.color >> 0)  & 0xFF) / 255.0f;
@@ -50,7 +50,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 	[branch]
 	if (GetCamera().texture_lineardepth_index >= 0)
 	{
-		float2 ScreenCoord = pixel * GetCamera().internal_resolution_rcp;
+		float2 ScreenCoord = input.pos.xy * GetCamera().internal_resolution_rcp; // use pixel center!
 		float4 depthScene = texture_lineardepth.GatherRed(sampler_linear_clamp, ScreenCoord) * GetCamera().z_far;
 		float depthFragment = input.pos.w;
 		opacity *= saturate(1.0 / input.size * (max(max(depthScene.x, depthScene.y), max(depthScene.z, depthScene.w)) - depthFragment));

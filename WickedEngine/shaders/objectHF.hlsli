@@ -422,8 +422,8 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 {
 	const float depth = input.pos.z;
 	const float lineardepth = input.pos.w;
-	const uint2 pixel = input.pos.xy;
-	const float2 ScreenCoord = pixel * GetCamera().internal_resolution_rcp;
+	const uint2 pixel = input.pos.xy; // no longer pixel center!
+	const float2 ScreenCoord = input.pos.xy * GetCamera().internal_resolution_rcp; // use pixel center!
 
 #ifdef OBJECTSHADER_USE_UVSETS
 	float4 uvsets = input.GetUVSets();

@@ -146,7 +146,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 			return;
 
 		surface.pixel = DTid.xy;
-		surface.screenUV = surface.pixel * postprocess.resolution_rcp.xy;
+		surface.screenUV = (surface.pixel + 0.5) * postprocess.resolution_rcp.xy;
 
 		if (surface.material.IsUnlit())
 		{

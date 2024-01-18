@@ -104,7 +104,7 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 		return;
 
 	surface.pixel = DispatchRaysIndex().xy;
-	surface.screenUV = surface.pixel / (float2)DispatchRaysDimensions().xy;
+	surface.screenUV = (surface.pixel + 0.5) / (float2)DispatchRaysDimensions().xy;
 
 	if (surface.material.IsUnlit())
 	{
