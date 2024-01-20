@@ -159,8 +159,14 @@ void main(uint2 DTid : SV_DispatchThreadID)
 			surface.V = -q.WorldRayDirection();
 			surface.update();
 
+			if ((surface.flags & SURFACE_FLAG_GI_APPLIED) == 0)
+			{
+				float3 ambient = GetAmbient(surface.N);
+				surface.gi = lerp(ambient, ambient * surface.sss.rgb, saturate(surface.sss.a));
+			}
+
 			Lighting lighting;
-			lighting.create(0, 0, GetAmbient(surface.N), 0);
+			lighting.create(0, 0, surface.gi, 0);
 
 			[loop]
 			for (uint iterator = 0; iterator < GetFrame().lightarray_count; iterator++)
