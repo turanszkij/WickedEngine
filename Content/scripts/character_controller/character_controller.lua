@@ -314,8 +314,7 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 		right_toes = INVALID_ENTITY,
 		face = Vector(0,0,1), -- forward direction (smoothed)
 		face_next = Vector(0,0,1), -- forward direction in current frame
-		force = Vector(),
-		movement_force = Vector(),
+		movement_velocity = Vector(),
 		velocity = Vector(),
 		savedPointerPos = Vector(),
 		walk_speed = 0.1,
@@ -434,7 +433,7 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 		end,
 		
 		Jump = function(self,f)
-			self.force.SetY(f)
+			self.velocity.SetY(f)
 			self.state = States.JUMP
 		end,
 		MoveDirection = function(self,dir)
@@ -458,7 +457,7 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 				elseif self.state == States.SWIM then
 					speed = self.swim_speed
 				end
-				self.movement_force = self.face:Multiply(Vector(speed,speed,speed))
+				self.movement_velocity = self.face:Multiply(Vector(speed,speed,speed))
 			end
 		end,
 
@@ -553,7 +552,6 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 				if water_entity ~= INVALID_ENTITY then
 					model_transform.Translate(Vector(0,water_distance - water_threshold,0))
 					model_transform.UpdateTransform()
-					self.force.SetY(0)
 					self.velocity.SetY(0)
 					swimming = true
 					self.state = States.SWIM_IDLE
@@ -719,8 +717,13 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 				self.timestep_occured = true;
 				self.fixed_update_remain = self.fixed_update_remain - fixed_dt
 				
-				self.force = vector.Add(self.force, self.movement_force)
-				self.velocity = self.force
+				if swimming then
+					self.velocity = vector.Multiply(self.velocity, 0.8) -- water friction
+				end
+				if self.velocity.GetY() > -30 then
+					self.velocity = vector.Add(self.velocity, Vector(0, gravity * fixed_dt, 0)) -- gravity
+				end
+				self.velocity = vector.Add(self.velocity, self.movement_velocity)
 
 				capsulepos = vector.Add(capsulepos, vector.Multiply(self.velocity, fixed_dt))
 				capsule = Capsule(capsulepos, vector.Add(capsulepos, Vector(0, capsuleheight)), radius)
@@ -736,29 +739,26 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 
 					if ground_slope > slope_threshold then
 						-- Ground intersection:
-						self.force = vector.Multiply(self.force, 0.92) -- ground friction
+						self.velocity = vector.Multiply(self.velocity, 0.92) -- ground friction
 						capsulepos = vector.Add(capsulepos, Vector(0, depth, 0)) -- avoid sliding, instead stand upright
 						platform_velocity_accumulation = vector.Add(platform_velocity_accumulation, platform_velocity)
 						platform_velocity_count = platform_velocity_count + 1
 						self.velocity.SetY(0)
-						self.force.SetY(0)
 					else
 						-- Slide on contact surface:
+						local velocityLen = self.velocity.Length()
+						local velocityNormalized = self.velocity.Normalize()
+						local undesiredMotion = n2:Multiply(vector.Dot(velocityNormalized, n2))
+						local desiredMotion = vector.Subtract(velocityNormalized, undesiredMotion)
+						self.velocity = vector.Multiply(desiredMotion, velocityLen)
 						capsulepos = vector.Add(capsulepos, vector.Multiply(n2, depth))
 					end
 				end
 				
 				-- Some other things also updated at fixed rate:
 				self.face = vector.Lerp(self.face, self.face_next, 0.1) -- smooth the turning in fixed update
-				if self.force.Length() < 30 then
-					self.force = vector.Add(self.force, Vector(0, gravity * fixed_dt, 0)) -- gravity
-				end
-
 				self.face.SetY(0)
 				self.face = self.face.Normalize()
-				if swimming then
-					self.force = vector.Multiply(self.force, 0.8) -- water friction
-				end
 
 				-- Animation blending
 				if current_anim ~= nil then
@@ -786,7 +786,7 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 			model_transform.Translate(vector.Subtract(capsulepos, original_capsulepos)) -- transform by the capsule offset
 			model_transform.UpdateTransform()
 
-			self.movement_force = Vector()
+			self.movement_velocity = Vector()
 			
 			-- try to put water ripple:
 			if self.velocity.Length() > 0.01 and self.state ~= States.SWIM_IDLE then
@@ -1335,7 +1335,6 @@ runProcess(function()
 
 			local str = "State: " .. player.state .. "\n"
 			--str = str .. "Velocity = " .. player.velocity.GetX() .. ", " .. player.velocity.GetY() .. "," .. player.velocity.GetZ() .. "\n"
-			--str = str .. "Force = " .. player.force.GetX() .. ", " .. player.force.GetY() .. "," .. player.force.GetZ() .. "\n"
 			DrawDebugText(str, vector.Add(capsule.GetBase(), Vector(0,0.4)), Vector(1,1,1,1), 1, DEBUG_TEXT_CAMERA_FACING | DEBUG_TEXT_CAMERA_SCALING)
 
 		end
