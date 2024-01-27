@@ -541,6 +541,17 @@ struct Surface
 		}
 
 		[branch]
+		if (geometry.vb_ao >= 0 && material.IsUsingVertexAO())
+		{
+			Buffer<float> buf = bindless_buffers_float[NonUniformResourceIndex(geometry.vb_ao)];
+			const float ao0 = buf[i0];
+			const float ao1 = buf[i1];
+			const float ao2 = buf[i2];
+			float ao = attribute_at_bary(ao0, ao1, ao2, bary);
+			occlusion = ao;
+		}
+
+		[branch]
 		if (inst.lightmap >= 0 && geometry.vb_atl >= 0)
 		{
 			Buffer<float2> buf = bindless_buffers_float2[NonUniformResourceIndex(geometry.vb_atl)];

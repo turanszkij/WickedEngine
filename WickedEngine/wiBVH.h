@@ -140,5 +140,38 @@ namespace wi
 				Intersects(primitive, node.left + 1, callback);
 			}
 		}
+
+		// Returning true from callback will immediately exit the whole search
+		template <typename T>
+		bool IntersectsFirst(
+			const T& primitive,
+			const std::function<bool(uint32_t index)>& callback
+		) const
+		{
+			uint32_t stack[64];
+			uint32_t count = 0;
+			stack[count++] = 0; // push node 0
+			while (count > 0)
+			{
+				const uint32_t nodeIndex = stack[--count];
+				Node& node = nodes[nodeIndex];
+				if (!node.aabb.intersects(primitive))
+					continue;
+				if (node.isLeaf())
+				{
+					for (uint32_t i = 0; i < node.count; ++i)
+					{
+						if (callback(leaf_indices[node.offset + i]))
+							return true;
+					}
+				}
+				else
+				{
+					stack[count++] = node.left;
+					stack[count++] = node.left + 1;
+				}
+			}
+			return false;
+		}
 	};
 }

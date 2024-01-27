@@ -330,6 +330,10 @@ namespace wi::scene
 		{
 			material.options |= SHADERMATERIAL_OPTION_BIT_UNLIT;
 		}
+		if (!IsVertexAODisabled())
+		{
+			material.options |= SHADERMATERIAL_OPTION_BIT_USE_VERTEXAO;
+		}
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		for (int i = 0; i < TEXTURESLOT_COUNT; ++i)
@@ -466,6 +470,7 @@ namespace wi::scene
 		vb_uvs = {};
 		vb_atl = {};
 		vb_col = {};
+		vb_ao = {};
 		vb_bon = {};
 		so_pos = {};
 		so_nor = {};
@@ -691,6 +696,7 @@ namespace wi::scene
 			AlignTo(uv_count * sizeof(Vertex_UVS), alignment) +
 			AlignTo(vertex_atlas.size() * sizeof(Vertex_TEX), alignment) +
 			AlignTo(vertex_colors.size() * sizeof(Vertex_COL), alignment) +
+			AlignTo(vertex_ao.size() * sizeof(Vertex_AO), alignment) +
 			AlignTo(vertex_boneindices.size() * sizeof(Vertex_BON), alignment)
 			;
 
@@ -886,6 +892,21 @@ namespace wi::scene
 				}
 			}
 
+			// vertexBuffer - AO (ambient occlusion)
+			if (!vertex_ao.empty())
+			{
+				vb_ao.offset = buffer_offset;
+				vb_ao.size = vertex_ao.size() * sizeof(Vertex_AO);
+				Vertex_AO* vertices = (Vertex_AO*)(buffer_data + buffer_offset);
+				buffer_offset += AlignTo(vb_ao.size, alignment);
+				for (size_t i = 0; i < vertex_ao.size(); ++i)
+				{
+					Vertex_AO vert;
+					vert.value = vertex_ao[i];
+					std::memcpy(vertices + i, &vert, sizeof(vert));
+				}
+			}
+
 			// skinning buffers:
 			if (!vertex_boneindices.empty())
 			{
@@ -1008,6 +1029,11 @@ namespace wi::scene
 		{
 			vb_col.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_col.offset, vb_col.size, &Vertex_COL::FORMAT);
 			vb_col.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_col.subresource_srv);
+		}
+		if (vb_ao.IsValid())
+		{
+			vb_ao.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_ao.offset, vb_ao.size, &Vertex_AO::FORMAT);
+			vb_ao.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_ao.subresource_srv);
 		}
 		if (vb_bon.IsValid())
 		{
@@ -1563,6 +1589,7 @@ namespace wi::scene
 			vertex_boneweights.size() * sizeof(XMFLOAT4) +
 			vertex_atlas.size() * sizeof(XMFLOAT2) +
 			vertex_colors.size() * sizeof(uint32_t) +
+			vertex_ao.size() * sizeof(uint8_t) +
 			vertex_windweights.size() * sizeof(uint8_t) +
 			indices.size() * sizeof(uint32_t);
 

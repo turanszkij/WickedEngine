@@ -72,6 +72,7 @@ static const uint SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED = 1 << 7;
 static const uint SHADERMATERIAL_OPTION_BIT_TRANSPARENT = 1 << 8;
 static const uint SHADERMATERIAL_OPTION_BIT_ADDITIVE = 1 << 9;
 static const uint SHADERMATERIAL_OPTION_BIT_UNLIT = 1 << 10;
+static const uint SHADERMATERIAL_OPTION_BIT_USE_VERTEXAO = 1 << 11;
 
 // Same as MaterialComponent::TEXTURESLOT
 enum TEXTURESLOT
@@ -397,6 +398,7 @@ struct ShaderMaterial
 #endif // __cplusplus
 
 	inline bool IsUsingVertexColors() { return options & SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS; }
+	inline bool IsUsingVertexAO() { return options & SHADERMATERIAL_OPTION_BIT_USE_VERTEXAO; }
 	inline bool IsUsingSpecularGlossinessWorkflow() { return options & SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW; }
 	inline bool IsOcclusionEnabled_Primary() { return options & SHADERMATERIAL_OPTION_BIT_OCCLUSION_PRIMARY; }
 	inline bool IsOcclusionEnabled_Secondary() { return options & SHADERMATERIAL_OPTION_BIT_OCCLUSION_SECONDARY; }
@@ -452,12 +454,12 @@ struct ShaderGeometry
 	int vb_tan;
 	int vb_col;
 	int vb_atl;
-	int vb_pre;
+	int vb_ao;
 
+	int vb_pre;
 	uint materialIndex;
 	uint meshletOffset; // offset of this subset in meshlets (locally within the mesh)
 	uint meshletCount;
-	int impostorSliceOffset;
 
 	float3 aabb_min;
 	uint flags;
@@ -469,20 +471,19 @@ struct ShaderGeometry
 
 	uint indexOffset;
 	uint indexCount;
+	int impostorSliceOffset;
 	int padding0;
-	int padding1;
 
 	void init()
 	{
 		ib = -1;
 		vb_pos_wind = -1;
 		vb_uvs = -1;
-
 		vb_nor = -1;
 		vb_tan = -1;
 		vb_col = -1;
 		vb_atl = -1;
-
+		vb_ao = -1;
 		vb_pre = -1;
 		materialIndex = 0;
 		meshletOffset = 0;

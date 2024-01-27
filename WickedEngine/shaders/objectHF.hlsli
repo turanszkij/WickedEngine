@@ -76,6 +76,7 @@ inline ShaderMaterial GetMaterial()
 //#define OBJECTSHADER_USE_UVSETS					- shader will sample textures with uv sets
 //#define OBJECTSHADER_USE_ATLAS					- shader will use atlas
 //#define OBJECTSHADER_USE_NORMAL					- shader will use normals
+//#define OBJECTSHADER_USE_AO						- shader will use ambient occlusion
 //#define OBJECTSHADER_USE_TANGENT					- shader will use tangents, normal mapping
 //#define OBJECTSHADER_USE_POSITION3D				- shader will use world space positions
 //#define OBJECTSHADER_USE_EMISSIVE					- shader will use emissive
@@ -110,6 +111,7 @@ inline ShaderMaterial GetMaterial()
 #define OBJECTSHADER_USE_ATLAS
 #define OBJECTSHADER_USE_COLOR
 #define OBJECTSHADER_USE_NORMAL
+#define OBJECTSHADER_USE_AO
 #define OBJECTSHADER_USE_TANGENT
 #define OBJECTSHADER_USE_POSITION3D
 #define OBJECTSHADER_USE_EMISSIVE
@@ -159,6 +161,14 @@ struct VertexInput
 			return 1;
 		return (min16float4)bindless_buffers_float4[GetMesh().vb_col][vertexID];
 	}
+
+	min16float GetVertexAO()
+	{
+		[branch]
+		if (GetMesh().vb_ao < 0)
+			return 1;
+		return (min16float)bindless_buffers_float[GetMesh().vb_ao][vertexID];
+	}
 	
 	min16float3 GetNormal()
 	{
@@ -196,6 +206,7 @@ struct VertexSurface
 	min16float4 color;
 	min16float3 normal;
 	min16float4 tangent;
+	min16float ao;
 
 	inline void create(in ShaderMaterial material, in VertexInput input)
 	{
@@ -209,6 +220,16 @@ struct VertexSurface
 		if (material.IsUsingVertexColors())
 		{
 			color *= input.GetVertexColor();
+		}
+
+		[branch]
+		if (material.IsUsingVertexAO())
+		{
+			ao = input.GetVertexAO();
+		}
+		else
+		{
+			ao = 1;
 		}
 
 		normal = mul((min16float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), normal);
@@ -263,6 +284,10 @@ struct PixelInput
 #ifdef OBJECTSHADER_USE_NORMAL
 	min16float3 nor : NORMAL;
 #endif // OBJECTSHADER_USE_NORMAL
+
+#ifdef OBJECTSHADER_USE_AO
+	min16float ao : AMBIENT_OCCLUSION;
+#endif // OBJECTSHADER_USE_AO
 
 #ifdef OBJECTSHADER_USE_ATLAS
 	min16float2 atl : ATLAS;
@@ -366,6 +391,10 @@ PixelInput main(VertexInput input)
 	Out.nor = surface.normal;
 #endif // OBJECTSHADER_USE_NORMAL
 
+#ifdef OBJECTSHADER_USE_AO
+	Out.ao = surface.ao;
+#endif // OBJECTSHADER_USE_AO
+
 #ifdef OBJECTSHADER_USE_TANGENT
 	Out.tan = surface.tangent;
 #endif // OBJECTSHADER_USE_TANGENT
@@ -456,6 +485,10 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	}
 	surface.N = normalize(input.nor);
 #endif // OBJECTSHADER_USE_NORMAL
+
+#ifdef OBJECTSHADER_USE_AO
+	surface.occlusion = input.ao;
+#endif // OBJECTSHADER_USE_AO
 
 #ifdef OBJECTSHADER_USE_POSITION3D
 	surface.P = input.pos3D;

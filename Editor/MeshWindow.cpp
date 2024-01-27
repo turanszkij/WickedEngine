@@ -323,6 +323,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 		bool valid_boneindices = false;
 		bool valid_boneweights = false;
 		bool valid_colors = false;
+		bool valid_ao = false;
 		bool valid_windweights = false;
 		wi::unordered_set<Entity> entities_to_remove;
 		Entity prev_subset_material = INVALID_ENTITY;
@@ -440,6 +441,16 @@ void MeshWindow::Create(EditorComponent* _editor)
 					merged_mesh.vertex_colors.push_back(mesh->vertex_colors[i]);
 				}
 
+				if (mesh->vertex_ao.empty())
+				{
+					merged_mesh.vertex_ao.push_back(0xFF);
+				}
+				else
+				{
+					valid_ao = true;
+					merged_mesh.vertex_ao.push_back(mesh->vertex_ao[i]);
+				}
+
 				if (mesh->vertex_windweights.empty())
 				{
 					merged_mesh.vertex_windweights.emplace_back();
@@ -488,6 +499,8 @@ void MeshWindow::Create(EditorComponent* _editor)
 				merged_mesh.vertex_boneweights.clear();
 			if (!valid_colors)
 				merged_mesh.vertex_colors.clear();
+			if (!valid_ao)
+				merged_mesh.vertex_ao.clear();
 			if (!valid_windweights)
 				merged_mesh.vertex_windweights.clear();
 
@@ -647,7 +660,6 @@ void MeshWindow::Create(EditorComponent* _editor)
 		});
 	});
 	AddWidget(&exportHeaderButton);
-
 
 
 	subsetMaterialComboBox.Create("Material: ");
@@ -894,6 +906,7 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		if (mesh->vb_uvs.IsValid()) ss += "\tuvsets;\n";
 		if (mesh->vb_atl.IsValid()) ss += "\tatlas;\n";
 		if (mesh->vb_col.IsValid()) ss += "\tcolor;\n";
+		if (mesh->vb_ao.IsValid()) ss += "\tao;\n";
 		if (mesh->so_pre.IsValid()) ss += "\tprevious_position;\n";
 		if (mesh->vb_bon.IsValid()) ss += "\tbone;\n";
 		if (mesh->vb_tan.IsValid()) ss += "\ttangent;\n";

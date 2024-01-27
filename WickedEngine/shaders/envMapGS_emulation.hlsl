@@ -10,6 +10,7 @@ struct GSInput
 	min16float4 color : COLOR;
 	min16float4 tan : TANGENT;
 	min16float3 nor : NORMAL;
+	min16float ao : AMBIENT_OCCLUSION;
 	min16float2 atl : ATLAS;
 	float3 pos3D : WORLDPOSITION;
 	uint RTIndex : RTINDEX;
@@ -23,6 +24,7 @@ struct GSOutput
 	min16float4 color : COLOR;
 	min16float4 tan : TANGENT;
 	min16float3 nor : NORMAL;
+	min16float ao : AMBIENT_OCCLUSION;
 	min16float2 atl : ATLAS;
 	float3 pos3D : WORLDPOSITION;
 	uint RTIndex : SV_RenderTargetArrayIndex;
@@ -43,6 +45,7 @@ void main(
 		element.uvsets = input[i].uvsets;
 		element.atl = input[i].atl;
 		element.nor = input[i].nor;
+		element.ao = input[i].ao;
 		element.tan = input[i].tan;
 		element.pos3D = input[i].pos3D;
 		element.RTIndex = input[i].RTIndex;

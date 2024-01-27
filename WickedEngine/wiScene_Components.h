@@ -122,6 +122,7 @@ namespace wi::scene
 			DOUBLE_SIDED = 1 << 11,
 			OUTLINE = 1 << 12,
 			PREFER_UNCOMPRESSED_TEXTURES = 1 << 13,
+			DISABLE_VERTEXAO = 1 << 14,
 		};
 		uint32_t _flags = CAST_SHADOW;
 
@@ -267,6 +268,7 @@ namespace wi::scene
 		inline bool IsDoubleSided() const { return _flags & DOUBLE_SIDED; }
 		inline bool IsOutlineEnabled() const { return _flags & OUTLINE; }
 		inline bool IsPreferUncompressedTexturesEnabled() const { return _flags & PREFER_UNCOMPRESSED_TEXTURES; }
+		inline bool IsVertexAODisabled() const { return _flags & DISABLE_VERTEXAO; }
 
 		inline void SetBaseColor(const XMFLOAT4& value) { SetDirty(); baseColor = value; }
 		inline void SetSpecularColor(const XMFLOAT4& value) { SetDirty(); specularColor = value; }
@@ -306,6 +308,7 @@ namespace wi::scene
 		inline void SetDoubleSided(bool value = true) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
 		inline void SetOutlineEnabled(bool value = true) { if (value) { _flags |= OUTLINE; } else { _flags &= ~OUTLINE; } }
 		inline void SetPreferUncompressedTexturesEnabled(bool value = true) { if (value) { _flags |= PREFER_UNCOMPRESSED_TEXTURES; } else { _flags &= ~PREFER_UNCOMPRESSED_TEXTURES; } CreateRenderData(true); }
+		inline void SetVertexAODisabled(bool value = true) { if (value) { _flags |= DISABLE_VERTEXAO; } else { _flags &= ~DISABLE_VERTEXAO; } }
 
 		// The MaterialComponent will be written to ShaderMaterial (a struct that is optimized for GPU use)
 		void WriteShaderMaterial(ShaderMaterial* dest) const;
@@ -352,6 +355,7 @@ namespace wi::scene
 		wi::vector<XMFLOAT4> vertex_boneweights;
 		wi::vector<XMFLOAT2> vertex_atlas;
 		wi::vector<uint32_t> vertex_colors;
+		wi::vector<uint8_t> vertex_ao;
 		wi::vector<uint8_t> vertex_windweights;
 		wi::vector<uint32_t> indices;
 
@@ -410,6 +414,7 @@ namespace wi::scene
 		BufferView vb_uvs;
 		BufferView vb_atl;
 		BufferView vb_col;
+		BufferView vb_ao;
 		BufferView vb_bon;
 		BufferView vb_mor;
 		BufferView so_pos;
@@ -685,6 +690,11 @@ namespace wi::scene
 		{
 			uint32_t color = 0;
 			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R8G8B8A8_UNORM;
+		};
+		struct Vertex_AO
+		{
+			uint8_t value = 0;
+			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R8_UNORM;
 		};
 		struct Vertex_NOR
 		{

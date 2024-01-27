@@ -373,7 +373,6 @@ namespace wi::scene
 	}
 	void MeshComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
-
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
@@ -449,6 +448,11 @@ namespace wi::scene
 			if (archive.GetVersion() >= 76)
 			{
 				archive >> subsets_per_lod;
+			}
+
+			if (seri.GetVersion() >= 3)
+			{
+				archive >> vertex_ao;
 			}
 
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
@@ -531,6 +535,11 @@ namespace wi::scene
 			if (archive.GetVersion() >= 76)
 			{
 				archive << subsets_per_lod;
+			}
+
+			if (seri.GetVersion() >= 3)
+			{
+				archive << vertex_ao;
 			}
 
 		}

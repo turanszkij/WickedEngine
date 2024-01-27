@@ -274,6 +274,32 @@ namespace wi::math
 		return ++x;
 	}
 
+	inline XMMATRIX GetTangentSpace(const XMFLOAT3& N)
+	{
+		// Choose a helper vector for the cross product
+		XMVECTOR helper = std::abs(N.x) > 0.99 ? XMVectorSet(0, 0, 1, 0) : XMVectorSet(1, 0, 0, 0);
+
+		// Generate vectors
+		XMVECTOR normal = XMLoadFloat3(&N);
+		XMVECTOR tangent = XMVector3Normalize(XMVector3Cross(normal, helper));
+		XMVECTOR binormal = XMVector3Normalize(XMVector3Cross(normal, tangent));
+		return XMMATRIX(tangent, binormal, normal, XMVectorSet(0,0,0,1));
+	}
+	inline XMFLOAT3 HemispherePoint_Uniform(float u, float v)
+	{
+		float phi = v * 2 * PI;
+		float cosTheta = 1 - u;
+		float sinTheta = std::sqrt(1 - cosTheta * cosTheta);
+		return XMFLOAT3(std::cos(phi) * sinTheta, std::sin(phi) * sinTheta, cosTheta);
+	}
+	inline XMFLOAT3 HemispherePoint_Cos(float u, float v)
+	{
+		float phi = v * 2 * PI;
+		float cosTheta = std::sqrt(1 - u);
+		float sinTheta = std::sqrt(1 - cosTheta * cosTheta);
+		return XMFLOAT3(std::cos(phi) * sinTheta, std::sin(phi) * sinTheta, cosTheta);
+	}
+
 	// A, B, C: trangle vertices
 	float TriangleArea(const XMVECTOR& A, const XMVECTOR& B, const XMVECTOR& C);
 	// a, b, c: trangle side lengths

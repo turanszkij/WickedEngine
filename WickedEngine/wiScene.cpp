@@ -3447,6 +3447,7 @@ namespace wi::scene
 					geometry.vb_tan = mesh.vb_tan.descriptor_srv;
 				}
 				geometry.vb_col = mesh.vb_col.descriptor_srv;
+				geometry.vb_ao = mesh.vb_ao.descriptor_srv;
 				geometry.vb_uvs = mesh.vb_uvs.descriptor_srv;
 				geometry.vb_atl = mesh.vb_atl.descriptor_srv;
 				geometry.vb_pre = mesh.so_pre.descriptor_srv;
@@ -4854,8 +4855,6 @@ namespace wi::scene
 				const XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
 				const XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
 				const ArmatureComponent* armature = mesh->IsSkinned() ? armatures.GetComponent(mesh->armatureID) : nullptr;
-				const XMVECTOR aabb_min = XMLoadFloat3(&mesh->aabb._min);
-				const XMVECTOR aabb_max = XMLoadFloat3(&mesh->aabb._max);
 
 				auto intersect_triangle = [&](uint32_t subsetIndex, uint32_t indexOffset, uint32_t triangleIndex)
 				{
@@ -4950,7 +4949,7 @@ namespace wi::scene
 				}
 				else
 				{
-					// Brute-force interection test:
+					// Brute-force intersection test:
 					uint32_t first_subset = 0;
 					uint32_t last_subset = 0;
 					mesh->GetLODSubsetRange(lod, first_subset, last_subset);
@@ -5050,8 +5049,6 @@ namespace wi::scene
 				const XMMATRIX objectMatPrev = XMLoadFloat4x4(&matrix_objects_prev[objectIndex]);
 				const XMMATRIX objectMatInverse = XMMatrixInverse(nullptr, objectMat);
 				const ArmatureComponent* armature = mesh->IsSkinned() ? armatures.GetComponent(mesh->armatureID) : nullptr;
-				const XMVECTOR aabb_min = XMLoadFloat3(&mesh->aabb._min);
-				const XMVECTOR aabb_max = XMLoadFloat3(&mesh->aabb._max);
 
 				auto intersect_triangle = [&](uint32_t subsetIndex, uint32_t indexOffset, uint32_t triangleIndex)
 				{
@@ -5227,7 +5224,7 @@ namespace wi::scene
 				}
 				else
 				{
-					// Brute-force interection test:
+					// Brute-force intersection test:
 					uint32_t first_subset = 0;
 					uint32_t last_subset = 0;
 					mesh->GetLODSubsetRange(lod, first_subset, last_subset);
@@ -5334,8 +5331,6 @@ namespace wi::scene
 				const XMMATRIX objectMatPrev = XMLoadFloat4x4(&matrix_objects_prev[objectIndex]);
 				const ArmatureComponent* armature = mesh->IsSkinned() ? armatures.GetComponent(mesh->armatureID) : nullptr;
 				const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
-				const XMVECTOR aabb_min = XMLoadFloat3(&mesh->aabb._min);
-				const XMVECTOR aabb_max = XMLoadFloat3(&mesh->aabb._max);
 				
 				auto intersect_triangle = [&](uint32_t subsetIndex, uint32_t indexOffset, uint32_t triangleIndex)
 				{
@@ -5625,7 +5620,7 @@ namespace wi::scene
 				}
 				else
 				{
-					// Brute-force interection test:
+					// Brute-force intersection test:
 					uint32_t first_subset = 0;
 					uint32_t last_subset = 0;
 					mesh->GetLODSubsetRange(lod, first_subset, last_subset);
