@@ -678,7 +678,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 					}
 				}
 			}
-			wi::backlog::post("Building BVHs for vertex AO took " + wi::helper::GetTimerDurationText(timer.elapsed_seconds()));
+			wi::backlog::post("Building BVHs for vertex AO took " + wi::helper::GetTimerDurationText((float)timer.elapsed_seconds()));
 		}
 
 		for (auto& x : this->editor->translator.selected)
@@ -686,26 +686,26 @@ void ObjectWindow::Create(EditorComponent* _editor)
 			ObjectComponent* objectcomponent = scene.objects.GetComponent(x.entity);
 			if (objectcomponent != nullptr)
 			{
-				const size_t objectcomponentIndex = scene.objects.GetIndex(x.entity);
-				MeshComponent* meshcomponent = scene.meshes.GetComponent(objectcomponent->meshID);
-				if (meshcomponent == nullptr)
-					continue;
 				if (deleteAOMode)
 				{
-					meshcomponent->vertex_ao.clear();
+					objectcomponent->vertex_ao.clear();
 				}
 				else
 				{
+					const MeshComponent* meshcomponent = scene.meshes.GetComponent(objectcomponent->meshID);
+					if (meshcomponent == nullptr)
+						continue;
 					if (meshcomponent->vertex_normals.size() != meshcomponent->vertex_positions.size())
 						continue;
 					wi::Timer timer;
 					using namespace wi::primitive;
-					meshcomponent->vertex_ao.resize(meshcomponent->vertex_positions.size());
+					objectcomponent->vertex_ao.resize(meshcomponent->vertex_positions.size());
+					const size_t objectcomponentIndex = scene.objects.GetIndex(x.entity);
 
-					uint32_t groupSizePerCore = wi::jobsystem::DispatchGroupCount((uint32_t)meshcomponent->vertex_ao.size(), wi::jobsystem::GetThreadCount());
+					uint32_t groupSizePerCore = wi::jobsystem::DispatchGroupCount((uint32_t)objectcomponent->vertex_ao.size(), wi::jobsystem::GetThreadCount());
 
 					wi::jobsystem::context ctx;
-					wi::jobsystem::Dispatch(ctx, (uint32_t)meshcomponent->vertex_ao.size(), groupSizePerCore, [&](wi::jobsystem::JobArgs args) {
+					wi::jobsystem::Dispatch(ctx, (uint32_t)objectcomponent->vertex_ao.size(), groupSizePerCore, [&](wi::jobsystem::JobArgs args) {
 						XMFLOAT3 position = meshcomponent->vertex_positions[args.jobIndex];
 						XMFLOAT3 normal = meshcomponent->vertex_normals[args.jobIndex];
 						const XMMATRIX W = XMLoadFloat4x4(&scene.matrix_objects[objectcomponentIndex]);
@@ -718,7 +718,8 @@ void ObjectWindow::Create(EditorComponent* _editor)
 						const XMVECTOR rayOrigin = XMLoadFloat3(&position);
 						for (uint32_t sam = 0; sam < samplecount; ++sam)
 						{
-							XMFLOAT3 hemi = wi::math::HemispherePoint_Cos(wi::random::GetRandom(1.0f), wi::random::GetRandom(1.0f));
+							XMFLOAT2 hamm = wi::math::Hammersley2D(sam, samplecount);
+							XMFLOAT3 hemi = wi::math::HemispherePoint_Cos(hamm.x, hamm.y);
 							XMVECTOR rayDirection = XMLoadFloat3(&hemi);
 							rayDirection = XMVector3TransformNormal(rayDirection, TBN);
 							rayDirection = XMVector3Normalize(rayDirection);
@@ -742,13 +743,11 @@ void ObjectWindow::Create(EditorComponent* _editor)
 									continue;
 
 								const Entity entity = scene.objects.GetEntity(objectIndex);
-								const SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(object.meshID);
 								const XMMATRIX objectMat = XMLoadFloat4x4(&scene.matrix_objects[objectIndex]);
 								const XMMATRIX objectMatPrev = XMLoadFloat4x4(&scene.matrix_objects_prev[objectIndex]);
 								const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
 								const XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
 								const XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
-								const ArmatureComponent* armature = mesh->IsSkinned() ? scene.armatures.GetComponent(mesh->armatureID) : nullptr;
 
 								auto intersect_triangle = [&](uint32_t subsetIndex, uint32_t indexOffset, uint32_t triangleIndex)
 								{
@@ -785,7 +784,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 										if (intersect_triangle(subsetIndex, indexOffset, triangleIndex))
 											return true;
 										return false;
-										});
+									});
 								}
 								else
 								{
@@ -816,12 +815,12 @@ void ObjectWindow::Create(EditorComponent* _editor)
 								accum += 1.0f;
 						}
 						accum /= float(samplecount);
-						meshcomponent->vertex_ao[args.jobIndex] = uint8_t(accum * 255);
-						});
+						objectcomponent->vertex_ao[args.jobIndex] = uint8_t(accum * 255);
+					});
 					wi::jobsystem::Wait(ctx);
-					wi::backlog::post("Vertex AO baking took " + wi::helper::GetTimerDurationText(timer.elapsed_seconds()));
+					wi::backlog::post("Vertex AO baking took " + wi::helper::GetTimerDurationText((float)timer.elapsed_seconds()));
 				}
-				meshcomponent->CreateRenderData();
+				objectcomponent->CreateRenderData();
 			}
 		}
 
@@ -843,6 +842,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 			}
 		}
 
+		SetEntity(entity);
 		});
 	AddWidget(&vertexAOButton);
 
@@ -910,8 +910,7 @@ void ObjectWindow::SetEntity(Entity entity)
 
 	if (object != nullptr)
 	{
-		const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
-		if (mesh != nullptr && mesh->vertex_ao.empty())
+		if (object->vertex_ao.empty())
 		{
 			vertexAOButton.SetText("Compute Vertex AO");
 			deleteAOMode = false;

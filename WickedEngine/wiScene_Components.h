@@ -355,7 +355,6 @@ namespace wi::scene
 		wi::vector<XMFLOAT4> vertex_boneweights;
 		wi::vector<XMFLOAT2> vertex_atlas;
 		wi::vector<uint32_t> vertex_colors;
-		wi::vector<uint8_t> vertex_ao;
 		wi::vector<uint8_t> vertex_windweights;
 		wi::vector<uint32_t> indices;
 
@@ -414,7 +413,6 @@ namespace wi::scene
 		BufferView vb_uvs;
 		BufferView vb_atl;
 		BufferView vb_col;
-		BufferView vb_ao;
 		BufferView vb_bon;
 		BufferView vb_mor;
 		BufferView so_pos;
@@ -691,11 +689,6 @@ namespace wi::scene
 			uint32_t color = 0;
 			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R8G8B8A8_UNORM;
 		};
-		struct Vertex_AO
-		{
-			uint8_t value = 0;
-			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R8_UNORM;
-		};
 		struct Vertex_NOR
 		{
 			int8_t x = 0;
@@ -819,12 +812,15 @@ namespace wi::scene
 		uint32_t lightmapHeight = 0;
 		wi::vector<uint8_t> lightmapTextureData;
 		uint32_t sort_priority = 0; // increase to draw earlier (currently 4 bits will be used)
+		wi::vector<uint8_t> vertex_ao;
 
 		// Non-serialized attributes:
 		uint32_t filterMaskDynamic = 0;
 
 		wi::graphics::Texture lightmap;
 		mutable uint32_t lightmapIterationCount = 0;
+		wi::graphics::GPUBuffer vb_ao;
+		int vb_ao_srv = -1;
 
 		XMFLOAT3 center = XMFLOAT3(0, 0, 0);
 		float radius = 0;
@@ -875,6 +871,14 @@ namespace wi::scene
 		void CompressLightmap(); // not thread safe if LIGHTMAP_BLOCK_COMPRESSION is enabled!
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+
+		void CreateRenderData();
+		void DeleteRenderData();
+		struct Vertex_AO
+		{
+			uint8_t value = 0;
+			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R8_UNORM;
+		};
 	};
 
 	struct RigidBodyPhysicsComponent

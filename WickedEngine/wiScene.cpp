@@ -3447,7 +3447,6 @@ namespace wi::scene
 					geometry.vb_tan = mesh.vb_tan.descriptor_srv;
 				}
 				geometry.vb_col = mesh.vb_col.descriptor_srv;
-				geometry.vb_ao = mesh.vb_ao.descriptor_srv;
 				geometry.vb_uvs = mesh.vb_uvs.descriptor_srv;
 				geometry.vb_atl = mesh.vb_atl.descriptor_srv;
 				geometry.vb_pre = mesh.so_pre.descriptor_srv;
@@ -3978,6 +3977,7 @@ namespace wi::scene
 				inst.fadeDistance = object.fadeDistance;
 				inst.center = object.center;
 				inst.radius = object.radius;
+				inst.vb_ao = object.vb_ao_srv;
 				inst.SetUserStencilRef(object.userStencilRef);
 
 				std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory

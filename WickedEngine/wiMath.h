@@ -274,6 +274,20 @@ namespace wi::math
 		return ++x;
 	}
 
+	// A uniform 2D random generator for hemisphere sampling: http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html
+	//	idx	: iteration index
+	//	num	: number of iterations in total
+	constexpr XMFLOAT2 Hammersley2D(uint32_t idx, uint32_t num) {
+		uint32_t bits = idx;
+		bits = (bits << 16u) | (bits >> 16u);
+		bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+		bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+		bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+		bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+		const float radicalInverse_VdC = float(bits) * 2.3283064365386963e-10f; // / 0x100000000
+
+		return XMFLOAT2(float(idx) / float(num), radicalInverse_VdC);
+	}
 	inline XMMATRIX GetTangentSpace(const XMFLOAT3& N)
 	{
 		// Choose a helper vector for the cross product

@@ -541,9 +541,9 @@ struct Surface
 		}
 
 		[branch]
-		if (geometry.vb_ao >= 0 && material.IsUsingVertexAO())
+		if (inst.vb_ao >= 0 && material.IsUsingVertexAO())
 		{
-			Buffer<float> buf = bindless_buffers_float[NonUniformResourceIndex(geometry.vb_ao)];
+			Buffer<float> buf = bindless_buffers_float[NonUniformResourceIndex(inst.vb_ao)];
 			const float ao0 = buf[i0];
 			const float ao1 = buf[i1];
 			const float ao2 = buf[i2];

@@ -450,11 +450,6 @@ namespace wi::scene
 				archive >> subsets_per_lod;
 			}
 
-			if (seri.GetVersion() >= 3)
-			{
-				archive >> vertex_ao;
-			}
-
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				CreateRenderData();
 
@@ -537,11 +532,6 @@ namespace wi::scene
 				archive << subsets_per_lod;
 			}
 
-			if (seri.GetVersion() >= 3)
-			{
-				archive << vertex_ao;
-			}
-
 		}
 	}
 	void ImpostorComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
@@ -603,6 +593,14 @@ namespace wi::scene
 			{
 				archive >> sort_priority;
 			}
+			if (seri.GetVersion() >= 3)
+			{
+				archive >> vertex_ao;
+			}
+
+			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
+				CreateRenderData();
+			});
 		}
 		else
 		{
@@ -640,6 +638,10 @@ namespace wi::scene
 			if (seri.GetVersion() >= 2)
 			{
 				archive << sort_priority;
+			}
+			if (seri.GetVersion() >= 3)
+			{
+				archive << vertex_ao;
 			}
 		}
 	}

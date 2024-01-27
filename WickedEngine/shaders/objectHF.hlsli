@@ -161,14 +161,6 @@ struct VertexInput
 			return 1;
 		return (min16float4)bindless_buffers_float4[GetMesh().vb_col][vertexID];
 	}
-
-	min16float GetVertexAO()
-	{
-		[branch]
-		if (GetMesh().vb_ao < 0)
-			return 1;
-		return (min16float)bindless_buffers_float[GetMesh().vb_ao][vertexID];
-	}
 	
 	min16float3 GetNormal()
 	{
@@ -194,6 +186,14 @@ struct VertexInput
 		ShaderMeshInstance inst;
 		inst.init();
 		return inst;
+	}
+
+	min16float GetVertexAO()
+	{
+		[branch]
+		if (GetInstance().vb_ao < 0)
+			return 1;
+		return (min16float)bindless_buffers_float[GetInstance().vb_ao][vertexID];
 	}
 };
 

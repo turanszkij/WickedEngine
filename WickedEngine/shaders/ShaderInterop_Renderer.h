@@ -454,9 +454,9 @@ struct ShaderGeometry
 	int vb_tan;
 	int vb_col;
 	int vb_atl;
-	int vb_ao;
-
 	int vb_pre;
+
+	int impostorSliceOffset;
 	uint materialIndex;
 	uint meshletOffset; // offset of this subset in meshlets (locally within the mesh)
 	uint meshletCount;
@@ -471,8 +471,8 @@ struct ShaderGeometry
 
 	uint indexOffset;
 	uint indexCount;
-	int impostorSliceOffset;
 	int padding0;
+	int padding1;
 
 	void init()
 	{
@@ -483,7 +483,6 @@ struct ShaderGeometry
 		vb_tan = -1;
 		vb_col = -1;
 		vb_atl = -1;
-		vb_ao = -1;
 		vb_pre = -1;
 		materialIndex = 0;
 		meshletOffset = 0;
@@ -569,6 +568,11 @@ struct ShaderMeshInstance
 	float3 center;
 	float radius;
 
+	int vb_ao;
+	int padding0;
+	int padding1;
+	int padding2;
+
 	ShaderTransform transform;
 	ShaderTransform transformInverseTranspose; // This correctly handles non uniform scaling for normals
 	ShaderTransform transformPrev;
@@ -589,6 +593,7 @@ struct ShaderMeshInstance
 		fadeDistance = 0;
 		center = float3(0, 0, 0);
 		radius = 0;
+		vb_ao = -1;
 		transform.init();
 		transformInverseTranspose.init();
 		transformPrev.init();
