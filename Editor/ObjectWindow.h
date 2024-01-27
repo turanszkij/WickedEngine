@@ -33,6 +33,11 @@ public:
 	wi::gui::Button stopLightmapGenButton;
 	wi::gui::Button clearLightmapButton;
 
+	wi::gui::Button vertexAOButton;
+	bool deleteAOMode = false;
+	wi::gui::Slider vertexAORayCountSlider;
+	wi::gui::Slider vertexAORayLengthSlider;
+
 	void ResizeLayout() override;
 };
 

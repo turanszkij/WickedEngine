@@ -649,7 +649,6 @@ void MeshWindow::Create(EditorComponent* _editor)
 	AddWidget(&exportHeaderButton);
 
 
-
 	subsetMaterialComboBox.Create("Material: ");
 	subsetMaterialComboBox.SetSize(XMFLOAT2(wid, hei));
 	subsetMaterialComboBox.SetPos(XMFLOAT2(x, y += step));

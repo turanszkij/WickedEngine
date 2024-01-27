@@ -122,6 +122,7 @@ namespace wi::scene
 			DOUBLE_SIDED = 1 << 11,
 			OUTLINE = 1 << 12,
 			PREFER_UNCOMPRESSED_TEXTURES = 1 << 13,
+			DISABLE_VERTEXAO = 1 << 14,
 		};
 		uint32_t _flags = CAST_SHADOW;
 
@@ -267,6 +268,7 @@ namespace wi::scene
 		inline bool IsDoubleSided() const { return _flags & DOUBLE_SIDED; }
 		inline bool IsOutlineEnabled() const { return _flags & OUTLINE; }
 		inline bool IsPreferUncompressedTexturesEnabled() const { return _flags & PREFER_UNCOMPRESSED_TEXTURES; }
+		inline bool IsVertexAODisabled() const { return _flags & DISABLE_VERTEXAO; }
 
 		inline void SetBaseColor(const XMFLOAT4& value) { SetDirty(); baseColor = value; }
 		inline void SetSpecularColor(const XMFLOAT4& value) { SetDirty(); specularColor = value; }
@@ -306,6 +308,7 @@ namespace wi::scene
 		inline void SetDoubleSided(bool value = true) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
 		inline void SetOutlineEnabled(bool value = true) { if (value) { _flags |= OUTLINE; } else { _flags &= ~OUTLINE; } }
 		inline void SetPreferUncompressedTexturesEnabled(bool value = true) { if (value) { _flags |= PREFER_UNCOMPRESSED_TEXTURES; } else { _flags &= ~PREFER_UNCOMPRESSED_TEXTURES; } CreateRenderData(true); }
+		inline void SetVertexAODisabled(bool value = true) { if (value) { _flags |= DISABLE_VERTEXAO; } else { _flags &= ~DISABLE_VERTEXAO; } }
 
 		// The MaterialComponent will be written to ShaderMaterial (a struct that is optimized for GPU use)
 		void WriteShaderMaterial(ShaderMaterial* dest) const;
@@ -809,12 +812,15 @@ namespace wi::scene
 		uint32_t lightmapHeight = 0;
 		wi::vector<uint8_t> lightmapTextureData;
 		uint32_t sort_priority = 0; // increase to draw earlier (currently 4 bits will be used)
+		wi::vector<uint8_t> vertex_ao;
 
 		// Non-serialized attributes:
 		uint32_t filterMaskDynamic = 0;
 
 		wi::graphics::Texture lightmap;
 		mutable uint32_t lightmapIterationCount = 0;
+		wi::graphics::GPUBuffer vb_ao;
+		int vb_ao_srv = -1;
 
 		XMFLOAT3 center = XMFLOAT3(0, 0, 0);
 		float radius = 0;
@@ -865,6 +871,14 @@ namespace wi::scene
 		void CompressLightmap(); // not thread safe if LIGHTMAP_BLOCK_COMPRESSION is enabled!
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+
+		void CreateRenderData();
+		void DeleteRenderData();
+		struct Vertex_AO
+		{
+			uint8_t value = 0;
+			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R8_UNORM;
+		};
 	};
 
 	struct RigidBodyPhysicsComponent

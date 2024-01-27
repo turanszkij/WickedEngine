@@ -330,6 +330,10 @@ namespace wi::scene
 		{
 			material.options |= SHADERMATERIAL_OPTION_BIT_UNLIT;
 		}
+		if (!IsVertexAODisabled())
+		{
+			material.options |= SHADERMATERIAL_OPTION_BIT_USE_VERTEXAO;
+		}
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		for (int i = 0; i < TEXTURESLOT_COUNT; ++i)
@@ -1599,7 +1603,6 @@ namespace wi::scene
 		lightmapTextureData.clear();
 		SetLightmapRenderRequest(false);
 	}
-
 	void ObjectComponent::SaveLightmap()
 	{
 		if (lightmap.IsValid() && has_flag(lightmap.desc.bind_flags, BindFlag::RENDER_TARGET))
@@ -1700,6 +1703,35 @@ namespace wi::scene
 			wi::renderer::BlockCompress(lightmap, bc6tex, cmd);
 			wi::helper::saveTextureToMemory(bc6tex, lightmapTextureData); // internally waits for GPU completion
 			lightmap.desc = desc;
+		}
+	}
+	void ObjectComponent::DeleteRenderData()
+	{
+		vb_ao = {};
+		vb_ao_srv = -1;
+	}
+	void ObjectComponent::CreateRenderData()
+	{
+		DeleteRenderData();
+
+		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		if (!vertex_ao.empty())
+		{
+			GPUBufferDesc desc;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE;
+			desc.size = sizeof(Vertex_AO) * vertex_ao.size();
+			desc.format = Vertex_AO::FORMAT;
+
+			auto fill_ao = [&](void* data) {
+				std::memcpy(data, vertex_ao.data(), vertex_ao.size());
+			};
+
+			bool success = device->CreateBuffer2(&desc, fill_ao, &vb_ao);
+			assert(success);
+			device->SetName(&vb_ao, "ObjectComponent::vb_ao");
+
+			vb_ao_srv = device->GetDescriptorIndex(&vb_ao, SubresourceType::SRV);
 		}
 	}
 

@@ -9,7 +9,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_MATERIAL " Material", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(300, 1340));
+	SetSize(XMFLOAT2(300, 1360));
 
 	closeButton.SetTooltip("Delete MaterialComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -96,6 +96,17 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			material->SetOcclusionEnabled_Secondary(args.bValue);
 	});
 	AddWidget(&occlusionSecondaryCheckBox);
+
+	vertexAOCheckBox.Create("Vertex AO: ");
+	vertexAOCheckBox.SetTooltip("If enabled, vertex ambient occlusion will be enabled (if it exists)");
+	vertexAOCheckBox.SetPos(XMFLOAT2(x, y += step));
+	vertexAOCheckBox.SetSize(XMFLOAT2(hei, hei));
+	vertexAOCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
+		if (material != nullptr)
+			material->SetVertexAODisabled(!args.bValue);
+		});
+	AddWidget(&vertexAOCheckBox);
 
 	windCheckBox.Create("Wind: ");
 	windCheckBox.SetTooltip("If enabled, vertex wind weights will affect how much wind offset affects the subset.");
@@ -772,6 +783,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		specularGlossinessCheckBox.SetCheck(material->IsUsingSpecularGlossinessWorkflow());
 		occlusionPrimaryCheckBox.SetCheck(material->IsOcclusionEnabled_Primary());
 		occlusionSecondaryCheckBox.SetCheck(material->IsOcclusionEnabled_Secondary());
+		vertexAOCheckBox.SetCheck(!material->IsVertexAODisabled());
 		windCheckBox.SetCheck(material->IsUsingWind());
 		doubleSidedCheckBox.SetCheck(material->IsDoubleSided());
 		outlineCheckBox.SetCheck(material->IsOutlineEnabled());
@@ -942,6 +954,7 @@ void MaterialWindow::ResizeLayout()
 	add_right(specularGlossinessCheckBox);
 	add_right(occlusionPrimaryCheckBox);
 	add_right(occlusionSecondaryCheckBox);
+	add_right(vertexAOCheckBox);
 	add_right(windCheckBox);
 	add_right(doubleSidedCheckBox);
 	add_right(outlineCheckBox);

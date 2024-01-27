@@ -1702,4 +1702,27 @@ namespace wi::helper
 		}
 		return ss.str();
 	}
+
+	std::string GetTimerDurationText(float timerSeconds)
+	{
+		std::stringstream ss;
+		ss << std::fixed << std::setprecision(1);
+		if (timerSeconds < 1)
+		{
+			ss << timerSeconds * 1000 << " ms";
+		}
+		else if (timerSeconds < 60)
+		{
+			ss << timerSeconds << " sec";
+		}
+		else if (timerSeconds < 60 * 60)
+		{
+			ss << timerSeconds * 60 << " min";
+		}
+		else
+		{
+			ss << timerSeconds * 60 * 60 << " hours";
+		}
+		return ss.str();
+	}
 }

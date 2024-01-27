@@ -373,7 +373,6 @@ namespace wi::scene
 	}
 	void MeshComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
-
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
@@ -594,6 +593,14 @@ namespace wi::scene
 			{
 				archive >> sort_priority;
 			}
+			if (seri.GetVersion() >= 3)
+			{
+				archive >> vertex_ao;
+			}
+
+			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
+				CreateRenderData();
+			});
 		}
 		else
 		{
@@ -631,6 +638,10 @@ namespace wi::scene
 			if (seri.GetVersion() >= 2)
 			{
 				archive << sort_priority;
+			}
+			if (seri.GetVersion() >= 3)
+			{
+				archive << vertex_ao;
 			}
 		}
 	}
