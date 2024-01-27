@@ -456,10 +456,10 @@ struct ShaderGeometry
 	int vb_atl;
 	int vb_pre;
 
-	int impostorSliceOffset;
 	uint materialIndex;
 	uint meshletOffset; // offset of this subset in meshlets (locally within the mesh)
 	uint meshletCount;
+	int impostorSliceOffset;
 
 	float3 aabb_min;
 	uint flags;

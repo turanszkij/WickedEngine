@@ -323,7 +323,6 @@ void MeshWindow::Create(EditorComponent* _editor)
 		bool valid_boneindices = false;
 		bool valid_boneweights = false;
 		bool valid_colors = false;
-		bool valid_ao = false;
 		bool valid_windweights = false;
 		wi::unordered_set<Entity> entities_to_remove;
 		Entity prev_subset_material = INVALID_ENTITY;
