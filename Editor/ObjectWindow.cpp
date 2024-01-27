@@ -662,6 +662,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 		// Build BVHs for everything selected:
 		if (!deleteAOMode)
 		{
+			wi::Timer timer;
 			for (auto& x : this->editor->translator.selected)
 			{
 				ObjectComponent* objectcomponent = scene.objects.GetComponent(x.entity);
@@ -677,6 +678,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 					}
 				}
 			}
+			wi::backlog::post("Building BVHs for vertex AO took " + wi::helper::GetTimerDurationText(timer.elapsed_seconds()));
 		}
 
 		for (auto& x : this->editor->translator.selected)
@@ -696,12 +698,14 @@ void ObjectWindow::Create(EditorComponent* _editor)
 				{
 					if (meshcomponent->vertex_normals.size() != meshcomponent->vertex_positions.size())
 						continue;
+					wi::Timer timer;
 					using namespace wi::primitive;
 					meshcomponent->vertex_ao.resize(meshcomponent->vertex_positions.size());
 
+					uint32_t groupSizePerCore = wi::jobsystem::DispatchGroupCount((uint32_t)meshcomponent->vertex_ao.size(), wi::jobsystem::GetThreadCount());
 
 					wi::jobsystem::context ctx;
-					wi::jobsystem::Dispatch(ctx, (uint32_t)meshcomponent->vertex_ao.size(), 1024, [&](wi::jobsystem::JobArgs args) {
+					wi::jobsystem::Dispatch(ctx, (uint32_t)meshcomponent->vertex_ao.size(), groupSizePerCore, [&](wi::jobsystem::JobArgs args) {
 						XMFLOAT3 position = meshcomponent->vertex_positions[args.jobIndex];
 						XMFLOAT3 normal = meshcomponent->vertex_normals[args.jobIndex];
 						const XMMATRIX W = XMLoadFloat4x4(&scene.matrix_objects[objectcomponentIndex]);
@@ -815,6 +819,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 						meshcomponent->vertex_ao[args.jobIndex] = uint8_t(accum * 255);
 						});
 					wi::jobsystem::Wait(ctx);
+					wi::backlog::post("Vertex AO baking took " + wi::helper::GetTimerDurationText(timer.elapsed_seconds()));
 				}
 				meshcomponent->CreateRenderData();
 			}

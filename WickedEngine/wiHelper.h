@@ -170,4 +170,7 @@ namespace wi::helper
 
 	// Returns a good looking memory size string as either bytes, KB, MB or GB
 	std::string GetMemorySizeText(size_t sizeInBytes);
+
+	// Returns a good looking timer duration text as either milliseconds, seconds, minutes or hours
+	std::string GetTimerDurationText(float timerSeconds);
 };
