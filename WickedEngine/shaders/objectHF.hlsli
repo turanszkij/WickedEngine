@@ -162,12 +162,12 @@ struct VertexInput
 		return (min16float4)bindless_buffers_float4[GetMesh().vb_col][vertexID];
 	}
 	
-	min16float3 GetNormal()
+	float3 GetNormal()
 	{
 		[branch]
 		if (GetMesh().vb_nor < 0)
 			return 0;
-		return (min16float3)bindless_buffers_float4[GetMesh().vb_nor][vertexID].xyz;
+		return bindless_buffers_float4[GetMesh().vb_nor][vertexID].xyz;
 	}
 
 	min16float4 GetTangent()
@@ -204,7 +204,7 @@ struct VertexSurface
 	float4 uvsets;
 	min16float2 atlas;
 	min16float4 color;
-	min16float3 normal;
+	float3 normal;
 	min16float4 tangent;
 	min16float ao;
 
@@ -232,7 +232,7 @@ struct VertexSurface
 			ao = 1;
 		}
 
-		normal = mul((min16float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), normal);
+		normal = mul((float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), normal);
 
 		tangent = input.GetTangent();
 		tangent.xyz = mul((min16float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), tangent.xyz);
@@ -282,12 +282,8 @@ struct PixelInput
 #endif // OBJECTSHADER_USE_TANGENT
 
 #ifdef OBJECTSHADER_USE_NORMAL
-	min16float3 nor : NORMAL;
+	float3 nor : NORMAL;
 #endif // OBJECTSHADER_USE_NORMAL
-
-#ifdef OBJECTSHADER_USE_AO
-	min16float ao : AMBIENT_OCCLUSION;
-#endif // OBJECTSHADER_USE_AO
 
 #ifdef OBJECTSHADER_USE_ATLAS
 	min16float2 atl : ATLAS;
@@ -296,6 +292,10 @@ struct PixelInput
 #ifdef OBJECTSHADER_USE_POSITION3D
 	float3 pos3D : WORLDPOSITION;
 #endif // OBJECTSHADER_USE_POSITION3D
+
+#ifdef OBJECTSHADER_USE_AO
+	min16float ao : AMBIENT_OCCLUSION;
+#endif // OBJECTSHADER_USE_AO
 
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 #ifdef VPRT_EMULATION

@@ -9,10 +9,10 @@ struct GSInput
 	float4 uvsets : UVSETS;
 	min16float4 color : COLOR;
 	min16float4 tan : TANGENT;
-	min16float3 nor : NORMAL;
-	min16float ao : AMBIENT_OCCLUSION;
+	float3 nor : NORMAL;
 	min16float2 atl : ATLAS;
 	float3 pos3D : WORLDPOSITION;
+	min16float ao : AMBIENT_OCCLUSION;
 	uint RTIndex : RTINDEX;
 };
 
@@ -23,10 +23,10 @@ struct GSOutput
 	float4 uvsets : UVSETS;
 	min16float4 color : COLOR;
 	min16float4 tan : TANGENT;
-	min16float3 nor : NORMAL;
-	min16float ao : AMBIENT_OCCLUSION;
+	float3 nor : NORMAL;
 	min16float2 atl : ATLAS;
 	float3 pos3D : WORLDPOSITION;
+	min16float ao : AMBIENT_OCCLUSION;
 	uint RTIndex : SV_RenderTargetArrayIndex;
 };
 

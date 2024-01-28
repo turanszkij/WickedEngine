@@ -7,7 +7,7 @@ struct VSOut
 	float4 pos : SV_POSITION;
 	float4 uvsets : UVSETS;
 	min16float4 color : COLOR;
-	min16float3 N : NORMAL;
+	float3 N : NORMAL;
 #ifndef VOXELIZATION_GEOMETRY_SHADER_ENABLED
 	float3 P : POSITION3D;
 #endif // VOXELIZATION_GEOMETRY_SHADER_ENABLED
