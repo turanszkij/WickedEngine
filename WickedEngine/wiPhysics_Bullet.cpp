@@ -92,8 +92,6 @@ namespace wi::physics
 				btDispatcherInfo& dispatcherInfo = physics_scene->dynamicsWorld.getDispatchInfo();
 				dispatcherInfo.m_enableSatConvex = true;
 
-				physics_scene->dynamicsWorld.setDebugDrawer(&debugDraw);
-
 				btSoftBodyWorldInfo& softWorldInfo = physics_scene->dynamicsWorld.getWorldInfo();
 				softWorldInfo.air_density = btScalar(1.2f);
 				softWorldInfo.water_density = 0;
@@ -1499,7 +1497,13 @@ namespace wi::physics
 
 		if (IsDebugDrawEnabled())
 		{
+			dynamicsWorld.setDebugDrawer(&debugDraw);
 			dynamicsWorld.debugDrawWorld();
+		}
+		else
+		{
+			// Note: there was an issue of stuck debug draws if debug drawer is not removed completely:
+			dynamicsWorld.setDebugDrawer(nullptr);
 		}
 
 		wi::profiler::EndRange(range); // Physics
