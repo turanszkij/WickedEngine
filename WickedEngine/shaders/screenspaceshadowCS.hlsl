@@ -36,7 +36,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 #endif // RTSHADOW
 
 	float3 P = reconstruct_position(uv, depth);
-	float3 N = decode_oct(texture_normal[DTid.xy * 2]);
+	float3 N = decode_oct(texture_normal[DTid.xy]);
 
 	Surface surface;
 	surface.init();
@@ -45,7 +45,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 
 	const float4 bluenoise = blue_noise(DTid.xy);
 
-	const uint2 tileIndex = uint2(floor(DTid.xy * 2 / TILED_CULLING_BLOCKSIZE));
+	const uint2 tileIndex = uint2(floor(DTid.xy / TILED_CULLING_BLOCKSIZE));
 	const uint flatTileIndex = flatten2D(tileIndex, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
 
 	uint shadow_mask[4] = {0,0,0,0}; // FXC issue: can't dynamically index into uint4, unless unrolling all loops

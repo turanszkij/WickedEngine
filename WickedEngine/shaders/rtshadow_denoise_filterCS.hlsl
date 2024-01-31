@@ -33,11 +33,11 @@ float FFX_DNSR_Shadows_GetDepthSimilaritySigma()
 
 float FFX_DNSR_Shadows_ReadDepth(uint2 did)
 {
-	return texture_depth[did * 2];
+	return texture_depth[did];
 }
 float16_t3 FFX_DNSR_Shadows_ReadNormals(uint2 did)
 {
-	return normalize((float16_t3)normals[did] * 2 - 1);
+	return normalize((float16_t3)normals[did] - 0.5);
 }
 
 bool FFX_DNSR_Shadows_IsShadowReciever(uint2 did)

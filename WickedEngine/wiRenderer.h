@@ -595,7 +595,6 @@ namespace wi::renderer
 	);
 	struct RTShadowResources
 	{
-		wi::graphics::Texture temp;
 		wi::graphics::Texture temporal[2];
 		wi::graphics::Texture normals;
 
@@ -617,7 +616,7 @@ namespace wi::renderer
 	);
 	struct ScreenSpaceShadowResources
 	{
-		wi::graphics::Texture lowres;
+		int placeholder = 0;
 	};
 	void CreateScreenSpaceShadowResources(ScreenSpaceShadowResources& res, XMUINT2 resolution);
 	void Postprocess_ScreenSpaceShadow(

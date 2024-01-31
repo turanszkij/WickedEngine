@@ -68,7 +68,7 @@ inline void ResolverAABB(in uint shadow_index, float sharpness, float exposureSc
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
-	if (texture_depth.Load(uint3(DTid.xy, 1)) == 0)
+	if (texture_depth[DTid.xy] == 0)
 		return;
 
 	// first 4 lights are denoised
