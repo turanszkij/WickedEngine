@@ -130,6 +130,8 @@ public:
 			lua_pushnumber(L, i | (1 << 8));						// Add a number indexing which func it is
 			lua_settable(L, metatable);								//
 		}
+
+		lua_pop(L, 1);
 	}
 
 	/*
