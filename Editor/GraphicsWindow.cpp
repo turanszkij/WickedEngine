@@ -305,22 +305,6 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	vxgiReflectionsCheckBox.SetCheck(wi::renderer::GetVXGIReflectionsEnabled());
 	AddWidget(&vxgiReflectionsCheckBox);
 
-	vxgiFullresCheckBox.Create("VXGI Full Resolution: ");
-	vxgiFullresCheckBox.SetTooltip("Toggle resolve mode for VXGI opaque. Full resolution will use the full rendering resolution, otherwise it will be upsampled from lower resolution.");
-	vxgiFullresCheckBox.SetPos(XMFLOAT2(x + wid + 1, y));
-	vxgiFullresCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	if (editor->main->config.GetSection("graphics").Has("vxgi.fullres"))
-	{
-		editor->renderPath->setVXGIResolveFullResolutionEnabled(editor->main->config.GetSection("graphics").GetBool("vxgi.fullres"));
-	}
-	vxgiFullresCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		editor->renderPath->setVXGIResolveFullResolutionEnabled(args.bValue);
-		editor->main->config.GetSection("graphics").Set("vxgi.fullres", args.bValue);
-		editor->main->config.Commit();
-	});
-	vxgiFullresCheckBox.SetCheck(editor->renderPath->getVXGIResolveFullResolutionEnabled());
-	AddWidget(&vxgiFullresCheckBox);
-
 	vxgiVoxelSizeSlider.Create(0.125f, 0.5f, 1, 7, "VXGI Voxel Size: ");
 	vxgiVoxelSizeSlider.SetTooltip("Adjust the voxel size for VXGI calculations.");
 	vxgiVoxelSizeSlider.SetSize(XMFLOAT2(wid, itemheight));
@@ -1724,7 +1708,6 @@ void GraphicsWindow::ResizeLayout()
 		vxgiDebugCombo.SetVisible(false);
 		vxgiCheckBox.SetVisible(false);
 		vxgiReflectionsCheckBox.SetVisible(false);
-		vxgiFullresCheckBox.SetVisible(false);
 		vxgiVoxelSizeSlider.SetVisible(false);
 		vxgiRayStepSizeSlider.SetVisible(false);
 		vxgiMaxDistanceSlider.SetVisible(false);
@@ -1750,7 +1733,6 @@ void GraphicsWindow::ResizeLayout()
 		vxgiDebugCombo.SetVisible(true);
 		vxgiCheckBox.SetVisible(true);
 		vxgiReflectionsCheckBox.SetVisible(true);
-		vxgiFullresCheckBox.SetVisible(true);
 		vxgiVoxelSizeSlider.SetVisible(true);
 		vxgiVoxelSizeSlider.SetValue(editor->GetCurrentScene().vxgi.clipmaps[0].voxelsize);
 		vxgiRayStepSizeSlider.SetVisible(true);
@@ -1781,7 +1763,6 @@ void GraphicsWindow::ResizeLayout()
 		add_right(vxgiDebugCombo);
 		vxgiCheckBox.SetPos(XMFLOAT2(vxgiDebugCombo.GetPos().x - vxgiCheckBox.GetSize().x - padding, vxgiDebugCombo.GetPos().y));
 		add_right(vxgiReflectionsCheckBox);
-		add_right(vxgiFullresCheckBox);
 		add(vxgiVoxelSizeSlider);
 		add(vxgiRayStepSizeSlider);
 		add(vxgiMaxDistanceSlider);

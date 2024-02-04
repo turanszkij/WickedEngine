@@ -645,10 +645,10 @@ namespace wi
 		camera->texture_rtshadow_index = device->GetDescriptorIndex(&rtShadow, SubresourceType::SRV);
 		camera->texture_rtdiffuse_index = device->GetDescriptorIndex(&rtRaytracedDiffuse, SubresourceType::SRV);
 		camera->texture_surfelgi_index = device->GetDescriptorIndex(&surfelGIResources.result, SubresourceType::SRV);
-		camera->texture_vxgi_diffuse_index = device->GetDescriptorIndex(&vxgiResources.diffuse[0], SubresourceType::SRV);
+		camera->texture_vxgi_diffuse_index = device->GetDescriptorIndex(&vxgiResources.diffuse, SubresourceType::SRV);
 		if (wi::renderer::GetVXGIReflectionsEnabled())
 		{
-			camera->texture_vxgi_specular_index = device->GetDescriptorIndex(&vxgiResources.specular[0], SubresourceType::SRV);
+			camera->texture_vxgi_specular_index = device->GetDescriptorIndex(&vxgiResources.specular, SubresourceType::SRV);
 		}
 		else
 		{
@@ -1281,8 +1281,7 @@ namespace wi
 					vxgiResources,
 					*scene,
 					rtLinearDepth,
-					cmd,
-					getVXGIResolveFullResolutionEnabled()
+					cmd
 				);
 			}
 			if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())

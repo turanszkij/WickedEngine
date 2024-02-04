@@ -411,11 +411,11 @@ namespace wi::renderer
 	// VXGI: Voxel-based Global Illumination (voxel cone tracing-based)
 	struct VXGIResources
 	{
-		wi::graphics::Texture diffuse[2];
-		wi::graphics::Texture specular[2];
+		wi::graphics::Texture diffuse;
+		wi::graphics::Texture specular;
 		mutable bool pre_clear = true;
 
-		bool IsValid() const { return diffuse[0].IsValid(); }
+		bool IsValid() const { return diffuse.IsValid(); }
 	};
 	void CreateVXGIResources(VXGIResources& res, XMUINT2 resolution);
 	void VXGI_Voxelize(
@@ -423,13 +423,11 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd
 	);
 	// Resolve VXGI to screen
-	//	fullres : if true it will be in native resolution, otherwise it will use some upsampling from low res
 	void VXGI_Resolve(
 		const VXGIResources& res,
 		const wi::scene::Scene& scene,
 		wi::graphics::Texture texture_lineardepth,
-		wi::graphics::CommandList cmd,
-		bool fullres = false
+		wi::graphics::CommandList cmd
 	);
 
 	void Postprocess_Blur_Gaussian(

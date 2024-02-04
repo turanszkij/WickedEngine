@@ -80,7 +80,6 @@ namespace wi
 		bool sceneUpdateEnabled = true;
 		bool fsrEnabled = false;
 		bool fsr2Enabled = false;
-		bool vxgiResolveFullResolution = false;
 
 		uint32_t msaaSampleCount = 1;
 
@@ -256,7 +255,6 @@ namespace wi
 		constexpr bool getSceneUpdateEnabled() const { return sceneUpdateEnabled; }
 		constexpr bool getFSREnabled() const { return fsrEnabled; }
 		constexpr bool getFSR2Enabled() const { return fsr2Enabled; }
-		constexpr bool getVXGIResolveFullResolutionEnabled() const { return vxgiResolveFullResolution; }
 
 		constexpr uint32_t getMSAASampleCount() const { return msaaSampleCount; }
 
@@ -311,7 +309,6 @@ namespace wi
 		void setFSREnabled(bool value);
 		void setFSR2Enabled(bool value);
 		void setFSR2Preset(FSR2_Preset preset); // this will modify resolution scaling and sampler lod bias
-		void setVXGIResolveFullResolutionEnabled(bool value) { vxgiResolveFullResolution = value; }
 
 		virtual void setMSAASampleCount(uint32_t value) { msaaSampleCount = value; }
 
