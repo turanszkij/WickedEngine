@@ -104,12 +104,81 @@ namespace wi::lua::renderer
 		}
 		return 0;
 	}
+	int SetDebugEnvProbesEnabled(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::renderer::SetToDrawDebugEnvProbes(wi::lua::SGetBool(L, 1));
+		}
+		else
+		{
+			wi::lua::SError(L, "SetDebugEnvProbesEnabled(bool enabled) not enough arguments!");
+		}
+		return 0;
+	}
 	int SetDebugForceFieldsEnabled(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
 			wi::renderer::SetToDrawDebugForceFields(wi::lua::SGetBool(L, 1));
+		}
+		else
+		{
+			wi::lua::SError(L, "SetDebugForceFieldsEnabled(bool enabled) not enough arguments!");
+		}
+		return 0;
+	}
+	int SetDebugCamerasEnabled(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::renderer::SetToDrawDebugCameras(wi::lua::SGetBool(L, 1));
+		}
+		else
+		{
+			wi::lua::SError(L, "SetDebugCamerasEnabled(bool enabled) not enough arguments!");
+		}
+		return 0;
+	}
+	int SetDebugCollidersEnabled(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::renderer::SetToDrawDebugColliders(wi::lua::SGetBool(L, 1));
+		}
+		else
+		{
+			wi::lua::SError(L, "SetDebugCollidersEnabled(bool enabled) not enough arguments!");
+		}
+		return 0;
+	}
+	int SetGridHelperEnabled(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::renderer::SetToDrawGridHelper(wi::lua::SGetBool(L, 1));
+		}
+		else
+		{
+			wi::lua::SError(L, "SetGridHelperEnabled(bool enabled) not enough arguments!");
+		}
+		return 0;
+	}
+	int SetDDGIDebugEnabled(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::renderer::SetDDGIDebugEnabled(wi::lua::SGetBool(L, 1));
+		}
+		else
+		{
+			wi::lua::SError(L, "SetDDGIDebugEnabled(bool enabled) not enough arguments!");
 		}
 		return 0;
 	}
@@ -420,7 +489,12 @@ namespace wi::lua::renderer
 			wi::lua::RegisterFunc("SetDebugPartitionTreeEnabled", SetDebugPartitionTreeEnabled);
 			wi::lua::RegisterFunc("SetDebugBonesEnabled", SetDebugBonesEnabled);
 			wi::lua::RegisterFunc("SetDebugEmittersEnabled", SetDebugEmittersEnabled);
+			wi::lua::RegisterFunc("SetDebugEnvProbesEnabled", SetDebugEnvProbesEnabled);
 			wi::lua::RegisterFunc("SetDebugForceFieldsEnabled", SetDebugForceFieldsEnabled);
+			wi::lua::RegisterFunc("SetDebugCamerasEnabled", SetDebugCamerasEnabled);
+			wi::lua::RegisterFunc("SetDebugCollidersEnabled", SetDebugCollidersEnabled);
+			wi::lua::RegisterFunc("SetGridHelperEnabled", SetGridHelperEnabled);
+			wi::lua::RegisterFunc("SetDDGIDebugEnabled", SetDDGIDebugEnabled);
 			wi::lua::RegisterFunc("SetVSyncEnabled", SetVSyncEnabled);
 			wi::lua::RegisterFunc("SetResolution", SetResolution);
 			wi::lua::RegisterFunc("SetDebugLightCulling", SetDebugLightCulling);
