@@ -15622,7 +15622,7 @@ void Postprocess_FSR2(
 			uint32_t    flags;
 		};
 		Fsr2GenerateReactiveConstants constants = {};
-		static float scale = 1.0f;
+		static float scale = 0.5f;
 		static float threshold = 0.2f;
 		static float binaryValue = 0.9f;
 		constants.scale = scale;
