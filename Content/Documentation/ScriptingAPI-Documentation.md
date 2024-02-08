@@ -577,6 +577,7 @@ A four component floating point vector. Provides efficient calculations with SIM
 - Dot(Vector v1,v2) : Vector result
 - Cross(Vector v1,v2) : Vector result
 - Lerp(Vector v1,v2, float t) : Vector result
+- Rotate(Vector v1,quaternion) : Vector result -- rotates the first argument 3D vector with the second argument quaternion
 - QuaternionInverse(Vector quaternion) : Vector resultQuaternion
 - QuaternionMultiply(Vector quaternion1,quaternion2) : Vector resultQuaternion
 - QuaternionFromRollPitchYaw(Vector rotXYZ) : Vector resultQuaternion

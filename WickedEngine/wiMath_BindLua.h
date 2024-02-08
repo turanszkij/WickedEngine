@@ -48,6 +48,7 @@ namespace wi::lua
 		int Add(lua_State* L);
 		int Subtract(lua_State* L);
 		int Lerp(lua_State* L);
+		int Rotate(lua_State* L);
 
 
 		int QuaternionInverse(lua_State* L);

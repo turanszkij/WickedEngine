@@ -23,6 +23,7 @@ namespace wi::lua
 		lunamethod(Vector_BindLua, Dot),
 		lunamethod(Vector_BindLua, Cross),
 		lunamethod(Vector_BindLua, Lerp),
+		lunamethod(Vector_BindLua, Rotate),
 		lunamethod(Vector_BindLua, QuaternionSlerp),
 		lunamethod(Vector_BindLua, Slerp),
 		lunamethod(Vector_BindLua, Clamp),
@@ -405,6 +406,22 @@ namespace wi::lua
 			}
 		}
 		wi::lua::SError(L, "Lerp(Vector v1,v2, float t) not enough arguments!");
+		return 0;
+	}
+	int Vector_BindLua::Rotate(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
+			Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
+			if (v1 && v2)
+			{
+				Luna<Vector_BindLua>::push(L, XMVector3Rotate(XMLoadFloat4(&v1->data), XMLoadFloat4(&v2->data)));
+				return 1;
+			}
+		}
+		wi::lua::SError(L, "Rotate(Vector v1,quaternion) not enough arguments!");
 		return 0;
 	}
 
