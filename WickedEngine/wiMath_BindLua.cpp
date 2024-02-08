@@ -23,8 +23,10 @@ namespace wi::lua
 		lunamethod(Vector_BindLua, Dot),
 		lunamethod(Vector_BindLua, Cross),
 		lunamethod(Vector_BindLua, Lerp),
+		lunamethod(Vector_BindLua, QuaternionSlerp),
 		lunamethod(Vector_BindLua, Slerp),
 		lunamethod(Vector_BindLua, Clamp),
+		lunamethod(Vector_BindLua, QuaternionInverse),
 		lunamethod(Vector_BindLua, QuaternionNormalize),
 		lunamethod(Vector_BindLua, QuaternionMultiply),
 		lunamethod(Vector_BindLua, QuaternionFromRollPitchYaw),
@@ -407,6 +409,21 @@ namespace wi::lua
 	}
 
 
+	int Vector_BindLua::QuaternionInverse(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (v1)
+			{
+				Luna<Vector_BindLua>::push(L, XMQuaternionInverse(XMLoadFloat4(&v1->data)));
+				return 1;
+			}
+		}
+		wi::lua::SError(L, "QuaternionInverse(Vector quaternion) not enough arguments!");
+		return 0;
+	}
 	int Vector_BindLua::QuaternionMultiply(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);
@@ -420,7 +437,7 @@ namespace wi::lua
 				return 1;
 			}
 		}
-		wi::lua::SError(L, "QuaternionMultiply(Vector v1,v2) not enough arguments!");
+		wi::lua::SError(L, "QuaternionMultiply(Vector quaternion1,quaternion2) not enough arguments!");
 		return 0;
 	}
 	int Vector_BindLua::QuaternionFromRollPitchYaw(lua_State* L)
@@ -468,7 +485,24 @@ namespace wi::lua
 				return 1;
 			}
 		}
-		wi::lua::SError(L, "QuaternionSlerp(Vector v1,v2, float t) not enough arguments!");
+		wi::lua::SError(L, "Slerp(Vector quaternion1,quaternion2, float t) not enough arguments!");
+		return 0;
+	}
+	int Vector_BindLua::QuaternionSlerp(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 2)
+		{
+			Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
+			Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
+			float t = wi::lua::SGetFloat(L, 3);
+			if (v1 && v2)
+			{
+				Luna<Vector_BindLua>::push(L, XMQuaternionSlerp(XMLoadFloat4(&v1->data), XMLoadFloat4(&v2->data), t));
+				return 1;
+			}
+		}
+		wi::lua::SError(L, "QuaternionSlerp(Vector quaternion1,quaternion2, float t) not enough arguments!");
 		return 0;
 	}
 

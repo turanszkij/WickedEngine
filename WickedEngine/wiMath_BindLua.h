@@ -50,10 +50,12 @@ namespace wi::lua
 		int Lerp(lua_State* L);
 
 
+		int QuaternionInverse(lua_State* L);
 		int QuaternionNormalize(lua_State* L);
 		int QuaternionMultiply(lua_State* L);
 		int QuaternionFromRollPitchYaw(lua_State* L);
 		int QuaternionToRollPitchYaw(lua_State* L);
+		int QuaternionSlerp(lua_State* L);
 		int Slerp(lua_State* L);
 
 		int GetAngle(lua_State* L);

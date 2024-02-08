@@ -577,10 +577,12 @@ A four component floating point vector. Provides efficient calculations with SIM
 - Dot(Vector v1,v2) : Vector result
 - Cross(Vector v1,v2) : Vector result
 - Lerp(Vector v1,v2, float t) : Vector result
-- QuaternionMultiply(Vector v1,v2) : Vector result
-- QuaternionFromRollPitchYaw(Vector rotXYZ) : Vector result
-- QuaternionToRollPitchYaw(Vector quaternion) : Vector result
-- QuaternionSlerp(Vector v1,v2, float t) : Vector result
+- QuaternionInverse(Vector quaternion) : Vector resultQuaternion
+- QuaternionMultiply(Vector quaternion1,quaternion2) : Vector resultQuaternion
+- QuaternionFromRollPitchYaw(Vector rotXYZ) : Vector resultQuaternion
+- QuaternionToRollPitchYaw(Vector quaternion) : Vector resultQuaternion
+- QuaternionSlerp(Vector quaternion1,quaternion2, float t) : Vector resultQuaternion
+- Slerp(Vector quaternion1,quaternion2, float t) : Vector resultQuaternion -- same as QuaternionSlerp
 - GetAngle(Vector a,b,axis, opt float max_angle = math.pi * 2) : float result	-- computes the signed angle between two 3D vectors around specified axis
 
 ### Matrix
