@@ -1163,6 +1163,9 @@ namespace wi::scene
 				}
 			}
 		}
+
+		// Root Bone Name
+		SerializeEntity(archive, rootMotionBone, seri);
 	}
 	void AnimationDataComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{

@@ -3021,6 +3021,7 @@ Luna<TransformComponent_BindLua>::FunctionType TransformComponent_BindLua::metho
 	lunamethod(TransformComponent_BindLua, CatmullRom),
 	lunamethod(TransformComponent_BindLua, MatrixTransform),
 	lunamethod(TransformComponent_BindLua, GetMatrix),
+	lunamethod(TransformComponent_BindLua, GetLocalMatrix),
 	lunamethod(TransformComponent_BindLua, ClearTransform),
 	lunamethod(TransformComponent_BindLua, UpdateTransform),
 	lunamethod(TransformComponent_BindLua, GetPosition),
@@ -3241,6 +3242,12 @@ int TransformComponent_BindLua::MatrixTransform(lua_State* L)
 int TransformComponent_BindLua::GetMatrix(lua_State* L)
 {
 	XMMATRIX M = XMLoadFloat4x4(&component->world);
+	Luna<Matrix_BindLua>::push(L, M);
+	return 1;
+}
+int TransformComponent_BindLua::GetLocalMatrix(lua_State* L)
+{
+	XMMATRIX M = component->GetLocalMatrix();
 	Luna<Matrix_BindLua>::push(L, M);
 	return 1;
 }
@@ -3685,6 +3692,11 @@ Luna<AnimationComponent_BindLua>::FunctionType AnimationComponent_BindLua::metho
 	lunamethod(AnimationComponent_BindLua, SetStart),
 	lunamethod(AnimationComponent_BindLua, GetEnd),
 	lunamethod(AnimationComponent_BindLua, SetEnd),
+	lunamethod(AnimationComponent_BindLua, IsRootMotion),
+	lunamethod(AnimationComponent_BindLua, RootMotionOn),
+	lunamethod(AnimationComponent_BindLua, RootMotionOff),
+	lunamethod(AnimationComponent_BindLua, GetRootTranslation),
+	lunamethod(AnimationComponent_BindLua, GetRootRotation),
 	{ NULL, NULL }
 };
 Luna<AnimationComponent_BindLua>::PropertyType AnimationComponent_BindLua::properties[] = {
@@ -3812,6 +3824,36 @@ int AnimationComponent_BindLua::SetEnd(lua_State* L)
 		wi::lua::SError(L, "SetEnd(float value) not enough arguments!");
 	}
 	return 0;
+}
+
+int AnimationComponent_BindLua::IsRootMotion(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsRootMotion());
+	return 1;
+}
+
+int AnimationComponent_BindLua::RootMotionOn(lua_State* L)
+{
+	component->RootMotionOn();
+	return 0;
+}
+
+int AnimationComponent_BindLua::RootMotionOff(lua_State* L)
+{
+	component->RootMotionOff();
+	return 0;
+}
+
+int AnimationComponent_BindLua::GetRootTranslation(lua_State* L)
+{
+	wi::lua::SSetFloat3(L, component->rootTranslationOffset);
+	return 3;
+}
+
+int AnimationComponent_BindLua::GetRootRotation(lua_State* L)
+{
+	wi::lua::SSetFloat4(L, component->rootRotationOffset);
+	return 4;
 }
 
 
