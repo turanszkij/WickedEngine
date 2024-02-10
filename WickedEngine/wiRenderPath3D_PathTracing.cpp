@@ -42,6 +42,7 @@ namespace wi
 
 	void RenderPath3D_PathTracing::ResizeBuffers()
 	{
+		DeleteGPUResources();
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
@@ -78,15 +79,40 @@ namespace wi
 				desc.format = Format::R32_FLOAT;
 				device->CreateTexture(&desc, nullptr, &traceDepth);
 				device->SetName(&traceDepth, "traceDepth");
+				device->CreateTexture(&desc, nullptr, &traceDepth);
+				device->SetName(&traceDepth, "traceDepth");
 				desc.format = Format::R8_UINT;
 				device->CreateTexture(&desc, nullptr, &traceStencil);
 				device->SetName(&traceStencil, "traceStencil");
+
+				depthBuffer_Copy = traceDepth;
+				depthBuffer_Copy1 = traceDepth;
 
 				desc.layout = ResourceState::DEPTHSTENCIL;
 				desc.bind_flags = BindFlag::DEPTH_STENCIL;
 				desc.format = wi::renderer::format_depthbuffer_main;
 				device->CreateTexture(&desc, nullptr, &depthBuffer_Main);
 				device->SetName(&depthBuffer_Main, "depthBuffer_Main");
+			}
+		}
+		{
+			TextureDesc desc;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.format = Format::R32_FLOAT;
+			desc.width = internalResolution.x;
+			desc.height = internalResolution.y;
+			desc.mip_levels = 5;
+			desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+			device->CreateTexture(&desc, nullptr, &rtLinearDepth);
+			device->SetName(&rtLinearDepth, "rtLinearDepth");
+
+			for (uint32_t i = 0; i < desc.mip_levels; ++i)
+			{
+				int subresource_index;
+				subresource_index = device->CreateSubresource(&rtLinearDepth, SubresourceType::SRV, 0, 1, i, 1);
+				assert(subresource_index == i);
+				subresource_index = device->CreateSubresource(&rtLinearDepth, SubresourceType::UAV, 0, 1, i, 1);
+				assert(subresource_index == i);
 			}
 		}
 		{
@@ -173,7 +199,6 @@ namespace wi
 		setSceneUpdateEnabled(sam == 0);
 
 		RenderPath3D::Update(dt);
-
 
 #ifdef OPEN_IMAGE_DENOISE
 		if (sam == target)
@@ -332,8 +357,8 @@ namespace wi
 
 				wi::renderer::BindCameraCB(
 					*camera,
-					*camera,
-					*camera,
+					camera_previous,
+					camera_reflection,
 					cmd
 				);
 				wi::renderer::BindCommonResources(cmd);
@@ -412,70 +437,45 @@ namespace wi
 
 			wi::renderer::BindCameraCB(
 				*camera,
-				*camera,
-				*camera,
+				camera_previous,
+				camera_reflection,
 				cmd
 			);
 			wi::renderer::BindCommonResources(cmd);
 
-			// Lightshafts:
-			bool lightshafts = false;
-			if (depthBuffer_Main.IsValid())
+			wi::renderer::Postprocess_Lineardepth(traceDepth, rtLinearDepth, cmd);
+
+			if (scene->weather.IsRealisticSky())
 			{
-				XMVECTOR sunDirection = XMLoadFloat3(&scene->weather.sunDirection);
-				if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, camera->GetAt())) > 0)
+				wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
+
+				if (scene->weather.IsRealisticSkyAerialPerspective())
 				{
-					device->EventBegin("Light Shafts", cmd);
-					lightshafts = true;
-
-					// Render sun stencil cutout:
-					{
-						RenderPassImage rp[] = {
-							RenderPassImage::DepthStencil(
-								&depthBuffer_Main,
-								RenderPassImage::LoadOp::LOAD,
-								RenderPassImage::StoreOp::STORE,
-								ResourceState::DEPTHSTENCIL,
-								ResourceState::DEPTHSTENCIL,
-								ResourceState::DEPTHSTENCIL
-							),
-							RenderPassImage::RenderTarget(&rtSun[0], RenderPassImage::LoadOp::CLEAR),
-						};
-						device->RenderPassBegin(rp, arraysize(rp), cmd);
-
-						Viewport vp;
-						vp.width = (float)depthBuffer_Main.GetDesc().width;
-						vp.height = (float)depthBuffer_Main.GetDesc().height;
-						device->BindViewports(1, &vp, cmd);
-
-						Rect scissor = GetScissorInternalResolution();
-						device->BindScissorRects(1, &scissor, cmd);
-
-						wi::renderer::DrawSun(cmd);
-
-						device->RenderPassEnd(cmd);
-					}
-
-					// Radial blur on the sun:
-					{
-						XMVECTOR sunPos = XMVector3Project(camera->GetEye() + sunDirection * camera->zFarP, 0, 0,
-							1.0f, 1.0f, 0.1f, 1.0f,
-							camera->GetProjection(), camera->GetView(), XMMatrixIdentity());
-						{
-							XMFLOAT2 sun;
-							XMStoreFloat2(&sun, sunPos);
-							wi::renderer::Postprocess_LightShafts(
-								getMSAASampleCount() > 1 ? rtSun_resolved : rtSun[0],
-								rtSun[1],
-								cmd,
-								sun,
-								getLightShaftsStrength()
-							);
-						}
-					}
-					device->EventEnd(cmd);
+					wi::renderer::ComputeSkyAtmosphereCameraVolumeLut(cmd);
 				}
 			}
+			if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
+			{
+				wi::renderer::Postprocess_AerialPerspective(
+					aerialperspectiveResources,
+					cmd
+				);
+			}
+			if (scene->weather.IsVolumetricClouds())
+			{
+				wi::renderer::Postprocess_VolumetricClouds(
+					volumetriccloudResources,
+					cmd,
+					*camera,
+					camera_previous,
+					camera_reflection,
+					false,
+					scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
+					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
+				);
+			}
+
+			RenderLightShafts(cmd);
 
 			// Composite other effects on top:
 			{
@@ -517,9 +517,29 @@ namespace wi
 					device->EventEnd(cmd);
 				}
 
+				// Blend Aerial Perspective on top:
+				if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
+				{
+					device->EventBegin("Aerial Perspective Blend", cmd);
+					wi::image::Params fx;
+					fx.enableFullScreen();
+					fx.blendFlag = wi::enums::BLENDMODE_PREMULTIPLIED;
+					wi::image::Draw(&aerialperspectiveResources.texture_output, fx, cmd);
+					device->EventEnd(cmd);
+				}
+
+				// Blend the volumetric clouds on top:
+				if (scene->weather.IsVolumetricClouds())
+				{
+					wi::renderer::Postprocess_VolumetricClouds_Upsample(volumetriccloudResources, cmd);
+				}
+
+				wi::renderer::DrawDebugWorld(*scene, *camera, *this, cmd);
+				wi::renderer::DrawLightVisualizers(visibility_main, cmd);
 				wi::renderer::DrawSpritesAndFonts(*scene, *camera, false, cmd);
 
-				if (lightshafts)
+				XMVECTOR sunDirection = XMLoadFloat3(&scene->weather.sunDirection);
+				if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, camera->GetAt())) > 0)
 				{
 					device->EventBegin("Contribute LightShafts", cmd);
 					wi::image::Params fx;
@@ -527,6 +547,14 @@ namespace wi
 					fx.blendFlag = wi::enums::BLENDMODE_ADDITIVE;
 					wi::image::Draw(&rtSun[1], fx, cmd);
 					device->EventEnd(cmd);
+				}
+				if (getLensFlareEnabled())
+				{
+					wi::renderer::DrawLensFlares(
+						visibility_main,
+						cmd,
+						scene->weather.IsVolumetricClouds() ? &volumetriccloudResources.texture_cloudMask : nullptr
+					);
 				}
 
 				device->RenderPassEnd(cmd);
