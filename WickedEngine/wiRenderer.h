@@ -860,6 +860,11 @@ namespace wi::renderer
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd
 	);
+	void Postprocess_Lineardepth(
+		const wi::graphics::Texture& input,
+		const wi::graphics::Texture& output,
+		wi::graphics::CommandList cmd
+	);
 	void Postprocess_NormalsFromDepth(
 		const wi::graphics::Texture& depthbuffer,
 		const wi::graphics::Texture& output,
