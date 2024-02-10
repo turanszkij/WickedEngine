@@ -3685,6 +3685,11 @@ Luna<AnimationComponent_BindLua>::FunctionType AnimationComponent_BindLua::metho
 	lunamethod(AnimationComponent_BindLua, SetStart),
 	lunamethod(AnimationComponent_BindLua, GetEnd),
 	lunamethod(AnimationComponent_BindLua, SetEnd),
+	lunamethod(AnimationComponent_BindLua, IsRootMotion),
+	lunamethod(AnimationComponent_BindLua, RootMotionOn),
+	lunamethod(AnimationComponent_BindLua, RootMotionOff),
+	lunamethod(AnimationComponent_BindLua, GetRootTranslation),
+	lunamethod(AnimationComponent_BindLua, GetRootRotation),
 	{ NULL, NULL }
 };
 Luna<AnimationComponent_BindLua>::PropertyType AnimationComponent_BindLua::properties[] = {
@@ -3812,6 +3817,36 @@ int AnimationComponent_BindLua::SetEnd(lua_State* L)
 		wi::lua::SError(L, "SetEnd(float value) not enough arguments!");
 	}
 	return 0;
+}
+
+int AnimationComponent_BindLua::IsRootMotion(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsRootMotion());
+	return 1;
+}
+
+int AnimationComponent_BindLua::RootMotionOn(lua_State* L)
+{
+	component->RootMotionOn();
+	return 0;
+}
+
+int AnimationComponent_BindLua::RootMotionOff(lua_State* L)
+{
+	component->RootMotionOff();
+	return 0;
+}
+
+int AnimationComponent_BindLua::GetRootTranslation(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, component->rootTranslationOffset);
+	return 1;
+}
+
+int AnimationComponent_BindLua::GetRootRotation(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, component->rootRotationOffset);
+	return 1;
 }
 
 
