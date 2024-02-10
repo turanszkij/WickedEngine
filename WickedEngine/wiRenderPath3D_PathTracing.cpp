@@ -49,6 +49,13 @@ namespace wi
 
 		{
 			TextureDesc desc;
+			desc.format = wi::renderer::format_rendertarget_main;
+			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.width = internalResolution.x;
+			desc.height = internalResolution.y;
+			device->CreateTexture(&desc, nullptr, &rtMain);
+			device->SetName(&rtMain, "rtMain");
+
 			desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE | BindFlag::RENDER_TARGET;
 			desc.format = Format::R32G32B32A32_FLOAT;
 			desc.width = internalResolution.x;
@@ -373,24 +380,6 @@ namespace wi
 					wi::profiler::EndRange(range); // Traced Scene
 				}
 
-				if (depthBuffer_Main.IsValid())
-				{
-					RenderPassImage rp[] = {
-						RenderPassImage::DepthStencil(&depthBuffer_Main, RenderPassImage::LoadOp::LOAD),
-						RenderPassImage::RenderTarget(&traceResult, RenderPassImage::LoadOp::LOAD)
-					};
-					device->RenderPassBegin(rp, arraysize(rp), cmd);
-				}
-				else
-				{
-					RenderPassImage rp[] = {
-						RenderPassImage::RenderTarget(&traceResult, RenderPassImage::LoadOp::LOAD)
-					};
-					device->RenderPassBegin(rp, arraysize(rp), cmd);
-				}
-				wi::renderer::DrawSpritesAndFonts(*scene, *camera, false, cmd);
-				device->RenderPassEnd(cmd);
-
 				});
 
 			if (scene->terrains.GetCount() > 0)
@@ -415,7 +404,7 @@ namespace wi
 			}
 		}
 
-		// Tonemap etc:
+		// Composite, tonemap etc:
 		CommandList cmd = device->BeginCommandList();
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 
@@ -429,13 +418,125 @@ namespace wi
 			);
 			wi::renderer::BindCommonResources(cmd);
 
-			Texture srcTex = denoiserResult.IsValid() && !wi::jobsystem::IsBusy(denoiserContext) ? denoiserResult : traceResult;
+			// Lightshafts:
+			bool lightshafts = false;
+			if (depthBuffer_Main.IsValid())
+			{
+				XMVECTOR sunDirection = XMLoadFloat3(&scene->weather.sunDirection);
+				if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, camera->GetAt())) > 0)
+				{
+					device->EventBegin("Light Shafts", cmd);
+					lightshafts = true;
+
+					// Render sun stencil cutout:
+					{
+						RenderPassImage rp[] = {
+							RenderPassImage::DepthStencil(
+								&depthBuffer_Main,
+								RenderPassImage::LoadOp::LOAD,
+								RenderPassImage::StoreOp::STORE,
+								ResourceState::DEPTHSTENCIL,
+								ResourceState::DEPTHSTENCIL,
+								ResourceState::DEPTHSTENCIL
+							),
+							RenderPassImage::RenderTarget(&rtSun[0], RenderPassImage::LoadOp::CLEAR),
+						};
+						device->RenderPassBegin(rp, arraysize(rp), cmd);
+
+						Viewport vp;
+						vp.width = (float)depthBuffer_Main.GetDesc().width;
+						vp.height = (float)depthBuffer_Main.GetDesc().height;
+						device->BindViewports(1, &vp, cmd);
+
+						Rect scissor = GetScissorInternalResolution();
+						device->BindScissorRects(1, &scissor, cmd);
+
+						wi::renderer::DrawSun(cmd);
+
+						device->RenderPassEnd(cmd);
+					}
+
+					// Radial blur on the sun:
+					{
+						XMVECTOR sunPos = XMVector3Project(camera->GetEye() + sunDirection * camera->zFarP, 0, 0,
+							1.0f, 1.0f, 0.1f, 1.0f,
+							camera->GetProjection(), camera->GetView(), XMMatrixIdentity());
+						{
+							XMFLOAT2 sun;
+							XMStoreFloat2(&sun, sunPos);
+							wi::renderer::Postprocess_LightShafts(
+								getMSAASampleCount() > 1 ? rtSun_resolved : rtSun[0],
+								rtSun[1],
+								cmd,
+								sun,
+								getLightShaftsStrength()
+							);
+						}
+					}
+					device->EventEnd(cmd);
+				}
+			}
+
+			// Composite other effects on top:
+			{
+				if (depthBuffer_Main.IsValid())
+				{
+					RenderPassImage rp[] = {
+						RenderPassImage::DepthStencil(&depthBuffer_Main, RenderPassImage::LoadOp::LOAD),
+						RenderPassImage::RenderTarget(&rtMain, RenderPassImage::LoadOp::CLEAR)
+					};
+					device->RenderPassBegin(rp, arraysize(rp), cmd);
+				}
+				else
+				{
+					RenderPassImage rp[] = {
+						RenderPassImage::RenderTarget(&rtMain, RenderPassImage::LoadOp::CLEAR)
+					};
+					device->RenderPassBegin(rp, arraysize(rp), cmd);
+				}
+
+				Viewport vp;
+				vp.width = (float)rtMain.GetDesc().width;
+				vp.height = (float)rtMain.GetDesc().height;
+				device->BindViewports(1, &vp, cmd);
+
+				// Clear to trace result:
+				{
+					device->EventBegin("Clear to trace result", cmd);
+					wi::image::Params fx;
+					fx.enableFullScreen();
+					fx.blendFlag = wi::enums::BLENDMODE_OPAQUE;
+					if (denoiserResult.IsValid() && !wi::jobsystem::IsBusy(denoiserContext))
+					{
+						wi::image::Draw(&denoiserResult, fx, cmd);
+					}
+					else
+					{
+						wi::image::Draw(&traceResult, fx, cmd);
+					}
+					device->EventEnd(cmd);
+				}
+
+				wi::renderer::DrawSpritesAndFonts(*scene, *camera, false, cmd);
+
+				if (lightshafts)
+				{
+					device->EventBegin("Contribute LightShafts", cmd);
+					wi::image::Params fx;
+					fx.enableFullScreen();
+					fx.blendFlag = wi::enums::BLENDMODE_ADDITIVE;
+					wi::image::Draw(&rtSun[1], fx, cmd);
+					device->EventEnd(cmd);
+				}
+
+				device->RenderPassEnd(cmd);
+			}
 
 			if (getEyeAdaptionEnabled())
 			{
 				wi::renderer::ComputeLuminance(
 					luminanceResources,
-					srcTex,
+					rtMain,
 					cmd,
 					getEyeAdaptionRate(),
 					getEyeAdaptionKey()
@@ -445,7 +546,7 @@ namespace wi
 			{
 				wi::renderer::ComputeBloom(
 					bloomResources,
-					srcTex,
+					rtMain,
 					cmd,
 					getBloomThreshold(),
 					getExposure(),
@@ -454,7 +555,7 @@ namespace wi
 			}
 
 			wi::renderer::Postprocess_Tonemap(
-				srcTex,
+				rtMain,
 				rtPostprocess,
 				cmd,
 				getExposure(),
