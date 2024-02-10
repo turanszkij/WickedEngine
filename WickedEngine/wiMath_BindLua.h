@@ -109,6 +109,10 @@ namespace wi::lua
 		int Transpose(lua_State* L);
 		int Inverse(lua_State* L);
 
+		int GetForward(lua_State* L);
+		int GetUp(lua_State* L);
+		int GetRight(lua_State* L);
+
 		static void Bind();
 	};
 	struct MatrixProperty

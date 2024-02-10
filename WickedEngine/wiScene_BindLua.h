@@ -349,6 +349,13 @@ namespace wi::lua::scene
 		int SetStart(lua_State* L);
 		int GetEnd(lua_State* L);
 		int SetEnd(lua_State* L);
+
+		// For Rootmotion
+		int IsRootMotion(lua_State* L);
+		int RootMotionOn(lua_State* L);
+		int RootMotionOff(lua_State* L);
+		int GetRootTranslation(lua_State* L);
+		int GetRootRotation(lua_State* L);
 	};
 
 	class MaterialComponent_BindLua

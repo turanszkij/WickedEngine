@@ -2090,6 +2090,9 @@ namespace wi::scene
 					// The interpolated raw values will be blended on top of component values:
 					const float t = animation.amount;
 
+					// CheckIf this channel is the root motion bone or not.
+					const bool isRootBone = (animation.IsRootMotion() && animation.rootMotionBone != wi::ecs::INVALID_ENTITY && (target_transform == transforms.GetComponent(animation.rootMotionBone)));
+
 					if (target_transform != nullptr)
 					{
 						target_transform->SetDirty();
@@ -2117,7 +2120,40 @@ namespace wi::scene
 								}
 							}
 							const XMVECTOR T = XMVectorLerp(aT, bT, t);
-							XMStoreFloat3(&target_transform->translation_local, T);
+							if (!isRootBone)
+							{
+								// Not root motion bone.
+								XMStoreFloat3(&target_transform->translation_local, T);
+							}
+							else
+							{
+								if (XMVector4Equal(animation.rootPrevTranslation, animation.INVALID_VECTOR) || animation.end < animation.prevLocTimer)
+								{
+									// If root motion bone.
+									animation.rootPrevTranslation = T;
+								}
+
+								XMVECTOR rotation_quat = animation.rootPrevRotation;
+
+								if (XMVector4Equal(animation.rootPrevRotation, animation.INVALID_VECTOR) || animation.end < animation.prevRotTimer)
+								{
+									// If root motion bone.
+									rotation_quat = XMLoadFloat4(&target_transform->rotation_local);
+								}
+
+								const XMVECTOR root_trans = XMVectorSubtract(T, animation.rootPrevTranslation);
+								XMVECTOR inverseQuaternion = XMQuaternionInverse(rotation_quat);
+								XMVECTOR rotatedDirectionVector = XMVector3Rotate(root_trans, inverseQuaternion);
+
+								XMMATRIX mat = XMLoadFloat4x4(&target_transform->world);
+								rotatedDirectionVector = XMVector4Transform(rotatedDirectionVector, mat);
+
+								// Store root motion offset
+								XMStoreFloat3(&animation.rootTranslationOffset, rotatedDirectionVector);
+								// If root motion bone.
+								animation.rootPrevTranslation = T;
+								animation.prevLocTimer = animation.timer;
+							}
 						}
 						break;
 						case AnimationComponent::AnimationChannel::Path::ROTATION:
@@ -2141,7 +2177,41 @@ namespace wi::scene
 								}
 							}
 							const XMVECTOR R = XMQuaternionSlerp(aR, bR, t);
-							XMStoreFloat4(&target_transform->rotation_local, R);
+							if (!isRootBone)
+							{
+								// Not root motion bone.
+								XMStoreFloat4(&target_transform->rotation_local, R);
+							}
+							else
+							{
+								if (XMVector4Equal(animation.rootPrevRotation, animation.INVALID_VECTOR) || animation.end < animation.prevRotTimer)
+								{
+									// If root motion bone.
+									animation.rootPrevRotation = R;
+								}
+
+								// Assuming q1 and q2 are the two quaternions you want to subtract
+								// // Let's say you want to find the relative rotation from q1 to q2
+								XMMATRIX mat1 = XMMatrixRotationQuaternion(animation.rootPrevRotation);
+								XMMATRIX mat2 = XMMatrixRotationQuaternion(R);
+								// Compute the relative rotation matrix by multiplying the inverse of the first rotation
+								// by the second rotation
+								XMMATRIX relativeRotationMatrix = XMMatrixMultiply(XMMatrixTranspose(mat1), mat2);
+								// Extract the quaternion representing the relative rotation
+								XMVECTOR relativeRotationQuaternion = XMQuaternionRotationMatrix(relativeRotationMatrix);
+
+								// Store root motion offset
+								XMStoreFloat4(&animation.rootRotationOffset, relativeRotationQuaternion);
+								// Swap Y and Z Axis for Unknown reason
+								const float Y = animation.rootRotationOffset.y;
+								animation.rootRotationOffset.y = animation.rootRotationOffset.z;
+								animation.rootRotationOffset.z = Y;
+
+								// If root motion bone.
+								animation.rootPrevRotation = R;
+								animation.prevRotTimer = animation.timer;
+							}
+
 						}
 						break;
 						case AnimationComponent::AnimationChannel::Path::SCALE:
