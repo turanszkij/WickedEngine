@@ -8,7 +8,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_ANIMATION " Animation", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(520, 500));
+	SetSize(XMFLOAT2(520, 540));
 
 	closeButton.SetTooltip("Delete AnimationComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -975,10 +975,10 @@ void AnimationWindow::Create(EditorComponent* _editor)
 
 }
 // Example function to check if an entity already exists in the list
-static bool EntityExistsInList(Entity entity, std::vector<Entity> entityList)
+static bool EntityExistsInList(Entity entity, const wi::vector<Entity>& entityList)
 {
 	// Iterate through the list of entities
-	for (Entity& e : entityList)
+	for (Entity e : entityList)
 	{
 		if (e == entity)
 		{
@@ -1007,7 +1007,7 @@ void AnimationWindow::SetEntity(Entity entity)
 			if (animation != nullptr)
 			{
 				// Define a list of entities
-				std::vector<Entity> bone_list;
+				wi::vector<Entity> bone_list;
 				// Add items to root bone name combo box.
 				for (const AnimationComponent::AnimationChannel& channel : animation->channels)
 				{
@@ -1299,7 +1299,9 @@ void AnimationWindow::ResizeLayout()
 	add(endInput);
 	add(recordCombo);
 	add(retargetCombo);
-	add(rootMotionCheckBox);
+	rootMotionCheckBox.SetPos(XMFLOAT2(margin_left, y));
+	y += rootMotionCheckBox.GetSize().y;
+	y += padding;
 	add(rootBoneComboBox);
 	add_fullwidth(keyframesList);
 }
