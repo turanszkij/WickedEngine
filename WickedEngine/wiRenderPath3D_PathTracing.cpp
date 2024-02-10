@@ -469,7 +469,7 @@ namespace wi
 					*camera,
 					camera_previous,
 					camera_reflection,
-					wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
+					false,
 					scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
 					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
 				);
