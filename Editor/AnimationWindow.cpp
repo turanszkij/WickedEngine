@@ -927,68 +927,10 @@ void AnimationWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&retargetCombo);
 
-	// Root Motion Tick
-	rootMotionCheckBox.Create("RootMotion: ");
-	rootMotionCheckBox.SetTooltip("Toggle root bone animation.");
-	rootMotionCheckBox.SetSize(XMFLOAT2(hei, hei));
-	//rootMotionCheckBox.SetPos(XMFLOAT2(x, y += step));
-	rootMotionCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		AnimationComponent* animation = editor->GetCurrentScene().animations.GetComponent(entity);
-		if (animation != nullptr)
-		{
-			if (args.bValue) {
-				animation->RootMotionOn();
-			}
-			else {
-				animation->RootMotionOff();
-			}
-		}
-		});
-	rootMotionCheckBox.SetCheckText(ICON_CHECK);
-	AddWidget(&rootMotionCheckBox);
-	// Root Bone selector
-	rootBoneComboBox.Create("Root Bone: ");
-	rootBoneComboBox.SetSize(XMFLOAT2(wid, hei));
-	rootBoneComboBox.SetPos(XMFLOAT2(x, y));
-	rootBoneComboBox.SetEnabled(false);
-	rootBoneComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		AnimationComponent* animation = editor->GetCurrentScene().animations.GetComponent(entity);
-		if (animation != nullptr)
-		{
-			Entity ent = (Entity)args.userdata;
-			if (ent != wi::ecs::INVALID_ENTITY)
-			{
-				animation->rootMotionBone = ent;
-			}
-			else
-			{
-				animation->rootMotionBone = wi::ecs::INVALID_ENTITY;
-			}
-		}
-		});
-	rootBoneComboBox.SetTooltip("Choose the root bone to evaluate root motion from.");
-	AddWidget(&rootBoneComboBox);
-
 
 	SetMinimized(true);
 	SetVisible(false);
 
-}
-
-// Example function to check if an entity already exists in the list
-static bool EntityExistsInList(Entity entity, std::vector<Entity> entityList)
-{
-	// Iterate through the list of entities
-	for (Entity& e : entityList)
-	{
-		if (e == entity)
-		{
-			// Entity found in the list
-			return true;
-		}
-	}
-	// Entity not found in the list
-	return false;
 }
 
 void AnimationWindow::SetEntity(Entity entity)
@@ -1002,32 +944,6 @@ void AnimationWindow::SetEntity(Entity entity)
 		{
 			this->entity = entity;
 			RefreshKeyframesList();
-
-			rootBoneComboBox.ClearItems();
-			rootBoneComboBox.AddItem("NO ROOT BONE " ICON_DISABLED, wi::ecs::INVALID_ENTITY);
-			if (animation != nullptr)
-			{
-				// Define a list of entities
-				std::vector<Entity> bone_list;
-				// Add items to root bone name combo box.
-				for (const AnimationComponent::AnimationChannel& channel : animation->channels)
-				{
-					if (channel.path == AnimationComponent::AnimationChannel::Path::TRANSLATION ||
-						channel.path == AnimationComponent::AnimationChannel::Path::ROTATION) {
-
-						if (!EntityExistsInList(channel.target, bone_list))
-						{
-							bone_list.push_back(channel.target);
-							const NameComponent* name = scene.names.GetComponent(channel.target);
-							if (name != nullptr)
-							{
-								rootBoneComboBox.AddItem(name->name, channel.target);
-							}
-						}
-					}
-				}
-				bone_list.clear();
-			}
 		}
 	}
 }
@@ -1069,15 +985,6 @@ void AnimationWindow::Update()
 	}
 
 	loopedCheckBox.SetCheck(animation.IsLooped());
-	rootMotionCheckBox.SetCheck(animation.IsRootMotion());
-	if (animation.rootMotionBone != wi::ecs::INVALID_ENTITY)
-	{
-		rootBoneComboBox.SetSelectedByUserdataWithoutCallback(animation.rootMotionBone);
-	}
-	else
-	{
-		rootBoneComboBox.SetSelectedByUserdataWithoutCallback(wi::ecs::INVALID_ENTITY);
-	}
 
 	timerSlider.SetRange(animation.start, animation.end);
 	timerSlider.SetValue(animation.timer);
@@ -1306,7 +1213,5 @@ void AnimationWindow::ResizeLayout()
 	add(endInput);
 	add(recordCombo);
 	add(retargetCombo);
-	add(rootMotionCheckBox);
-	add(rootBoneComboBox);
 	add_fullwidth(keyframesList);
 }

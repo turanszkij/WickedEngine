@@ -23,16 +23,16 @@ namespace wi::lua
 		lunamethod(Vector_BindLua, Dot),
 		lunamethod(Vector_BindLua, Cross),
 		lunamethod(Vector_BindLua, Lerp),
+		lunamethod(Vector_BindLua, Rotate),
+		lunamethod(Vector_BindLua, QuaternionSlerp),
 		lunamethod(Vector_BindLua, Slerp),
 		lunamethod(Vector_BindLua, Clamp),
+		lunamethod(Vector_BindLua, QuaternionInverse),
 		lunamethod(Vector_BindLua, QuaternionNormalize),
 		lunamethod(Vector_BindLua, QuaternionMultiply),
 		lunamethod(Vector_BindLua, QuaternionFromRollPitchYaw),
 		lunamethod(Vector_BindLua, QuaternionToRollPitchYaw),
 		lunamethod(Vector_BindLua, GetAngle),
-		lunamethod(Vector_BindLua, QuaternionInverse),
-		lunamethod(Vector_BindLua, Vector3Rotate),
-		lunamethod(Vector_BindLua, Vector3InverseRotate),
 		{ NULL, NULL }
 	};
 	Luna<Vector_BindLua>::PropertyType Vector_BindLua::properties[] = {
@@ -408,8 +408,39 @@ namespace wi::lua
 		wi::lua::SError(L, "Lerp(Vector v1,v2, float t) not enough arguments!");
 		return 0;
 	}
+	int Vector_BindLua::Rotate(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
+			Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
+			if (v1 && v2)
+			{
+				Luna<Vector_BindLua>::push(L, XMVector3Rotate(XMLoadFloat4(&v1->data), XMLoadFloat4(&v2->data)));
+				return 1;
+			}
+		}
+		wi::lua::SError(L, "Rotate(Vector v1,quaternion) not enough arguments!");
+		return 0;
+	}
 
 
+	int Vector_BindLua::QuaternionInverse(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (v1)
+			{
+				Luna<Vector_BindLua>::push(L, XMQuaternionInverse(XMLoadFloat4(&v1->data)));
+				return 1;
+			}
+		}
+		wi::lua::SError(L, "QuaternionInverse(Vector quaternion) not enough arguments!");
+		return 0;
+	}
 	int Vector_BindLua::QuaternionMultiply(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);
@@ -423,7 +454,7 @@ namespace wi::lua
 				return 1;
 			}
 		}
-		wi::lua::SError(L, "QuaternionMultiply(Vector v1,v2) not enough arguments!");
+		wi::lua::SError(L, "QuaternionMultiply(Vector quaternion1,quaternion2) not enough arguments!");
 		return 0;
 	}
 	int Vector_BindLua::QuaternionFromRollPitchYaw(lua_State* L)
@@ -471,7 +502,24 @@ namespace wi::lua
 				return 1;
 			}
 		}
-		wi::lua::SError(L, "QuaternionSlerp(Vector v1,v2, float t) not enough arguments!");
+		wi::lua::SError(L, "Slerp(Vector quaternion1,quaternion2, float t) not enough arguments!");
+		return 0;
+	}
+	int Vector_BindLua::QuaternionSlerp(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 2)
+		{
+			Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
+			Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
+			float t = wi::lua::SGetFloat(L, 3);
+			if (v1 && v2)
+			{
+				Luna<Vector_BindLua>::push(L, XMQuaternionSlerp(XMLoadFloat4(&v1->data), XMLoadFloat4(&v2->data), t));
+				return 1;
+			}
+		}
+		wi::lua::SError(L, "QuaternionSlerp(Vector quaternion1,quaternion2, float t) not enough arguments!");
 		return 0;
 	}
 
@@ -499,56 +547,6 @@ namespace wi::lua
 			}
 		}
 		wi::lua::SError(L, "GetAngle(Vector a,b,axis, opt float max) not enough arguments!");
-		return 0;
-	}
-
-	int Vector_BindLua::QuaternionInverse(lua_State* L)
-	{
-		int argc = wi::lua::SGetArgCount(L);
-		if (argc > 0)
-		{
-			Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
-			if (v1)
-			{
-				Luna<Vector_BindLua>::push(L, XMQuaternionInverse(XMLoadFloat4(&v1->data)));
-				return 1;
-			}
-		}
-		wi::lua::SError(L, "QuaternionInverse(Vector v1) not enough arguments!");
-		return 0;
-	}
-
-	int Vector_BindLua::Vector3Rotate(lua_State* L)
-	{
-		int argc = wi::lua::SGetArgCount(L);
-		if (argc > 1)
-		{
-			Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
-			Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
-			if (v1 && v2)
-			{
-				Luna<Vector_BindLua>::push(L, XMVector3Rotate(XMLoadFloat4(&v1->data), XMLoadFloat4(&v2->data)));
-				return 1;
-			}
-		}
-		wi::lua::SError(L, "Vector3Rotate(Vector v1, Quaternion v2) not enough arguments!");
-		return 0;
-	}
-
-	int Vector_BindLua::Vector3InverseRotate(lua_State* L)
-	{
-		int argc = wi::lua::SGetArgCount(L);
-		if (argc > 1)
-		{
-			Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
-			Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
-			if (v1 && v2)
-			{
-				Luna<Vector_BindLua>::push(L, XMVector3Rotate(XMLoadFloat4(&v1->data), XMLoadFloat4(&v2->data)));
-				return 1;
-			}
-		}
-		wi::lua::SError(L, "Vector3InverseRotate(Vector v1, Quaternion v2) not enough arguments!");
 		return 0;
 	}
 
@@ -624,10 +622,6 @@ namespace wi::lua
 		lunamethod(Matrix_BindLua, Multiply),
 		lunamethod(Matrix_BindLua, Transpose),
 		lunamethod(Matrix_BindLua, Inverse),
-		lunamethod(Matrix_BindLua, GetForward),
-		lunamethod(Matrix_BindLua, GetUp),
-		lunamethod(Matrix_BindLua, GetRight),
-		lunamethod(Matrix_BindLua, GetRotateAroundLocalAxis),
 		{ NULL, NULL }
 	};
 	Luna<Matrix_BindLua>::PropertyType Matrix_BindLua::properties[] = {
@@ -914,109 +908,6 @@ namespace wi::lua
 			}
 		}
 		wi::lua::SError(L, "Inverse(Matrix m) not enough arguments!");
-		return 0;
-	}
-	static XMVECTOR GetForward(XMMATRIX* _m)
-	{
-		XMVECTOR V = XMVectorSet(XMVectorGetX(_m->r[2]), XMVectorGetY(_m->r[2]), XMVectorGetZ(_m->r[2]), 0.0f);
-		return V;
-	}
-	int Matrix_BindLua::GetForward(lua_State* L)
-	{
-		int argc = wi::lua::SGetArgCount(L);
-		if (argc > 0)
-		{
-			Matrix_BindLua* m1 = Luna<Matrix_BindLua>::lightcheck(L, 1);
-			if (m1)
-			{
-				XMMATRIX matrix = XMLoadFloat4x4(&m1->data);
-				XMVECTOR V = XMVectorSet(XMVectorGetX(matrix.r[2]), XMVectorGetY(matrix.r[2]), XMVectorGetZ(matrix.r[2]), 0.0f);
-				Luna<Vector_BindLua>::push(L, V);
-				return 1;
-			}
-		}
-		wi::lua::SError(L, "GetForward(Matrix m) not enough arguments!");
-		return 0;
-	}
-	static XMVECTOR GetUp(XMMATRIX* _m)
-	{
-		XMVECTOR V = XMVectorSet(XMVectorGetX(_m->r[1]), XMVectorGetY(_m->r[1]), XMVectorGetZ(_m->r[1]), 0.0f);
-		return V;
-	}
-	int Matrix_BindLua::GetUp(lua_State* L)
-	{
-		int argc = wi::lua::SGetArgCount(L);
-		if (argc > 0)
-		{
-			Matrix_BindLua* m1 = Luna<Matrix_BindLua>::lightcheck(L, 1);
-			if (m1)
-			{
-				XMMATRIX matrix = XMLoadFloat4x4(&m1->data);
-				XMVECTOR V = XMVectorSet(XMVectorGetX(matrix.r[1]), XMVectorGetY(matrix.r[1]), XMVectorGetZ(matrix.r[1]), 0.0f);
-				Luna<Vector_BindLua>::push(L, V);
-				return 1;
-			}
-		}
-		wi::lua::SError(L, "GetUp(Matrix m) not enough arguments!");
-		return 0;
-	}
-	static XMVECTOR GetRight(XMMATRIX* _m)
-	{
-		XMVECTOR V = XMVectorSet(XMVectorGetX(_m->r[0]), XMVectorGetY(_m->r[0]), XMVectorGetZ(_m->r[0]), 0.0f);
-		return V;
-	}
-	int Matrix_BindLua::GetRight(lua_State* L)
-	{
-		int argc = wi::lua::SGetArgCount(L);
-		if (argc > 0)
-		{
-			Matrix_BindLua* m1 = Luna<Matrix_BindLua>::lightcheck(L, 1);
-			if (m1)
-			{
-				XMMATRIX matrix = XMLoadFloat4x4(&m1->data);
-				XMVECTOR V = XMVectorSet(XMVectorGetX(matrix.r[0]), XMVectorGetY(matrix.r[0]), XMVectorGetZ(matrix.r[0]), 0.0f);
-				Luna<Vector_BindLua>::push(L, V);
-				return 1;
-			}
-		}
-		wi::lua::SError(L, "GetRight(Matrix m) not enough arguments!");
-		return 0;
-	}
-
-	int Matrix_BindLua::GetRotateAroundLocalAxis(lua_State* L)
-	{
-		int argc = wi::lua::SGetArgCount(L);
-		if (argc > 2)
-		{
-			Matrix_BindLua* m1 = Luna<Matrix_BindLua>::lightcheck(L, 1);
-			Vector_BindLua* rpy = Luna<Vector_BindLua>::lightcheck(L, 2);
-			Vector_BindLua* wp = Luna<Vector_BindLua>::lightcheck(L, 3);
-			if (m1 && rpy && wp)
-			{
-				XMMATRIX matrix = XMLoadFloat4x4(&m1->data);
-				XMFLOAT4 roll_pitch_yaw = rpy->data;
-				XMFLOAT4 world_pos = wp->data;
-
-				XMVECTOR forward = wi::lua::GetForward(&matrix);
-				XMVECTOR up = wi::lua::GetUp(&matrix);
-				XMVECTOR right = wi::lua::GetRight(&matrix);
-				
-				XMMATRIX F = XMMatrixRotationAxis(forward, roll_pitch_yaw.z);
-				XMMATRIX U = XMMatrixRotationAxis(up, roll_pitch_yaw.y);
-				XMMATRIX R = XMMatrixRotationAxis(right, roll_pitch_yaw.x);
-				XMMATRIX ROT_M = F * U * R;
-				XMMATRIX LOC_M = XMMatrixTranslation(world_pos.x, world_pos.y, world_pos.z);//XMMatrixTranslationFromVector(XMLoadFloat4(&world_pos));
-				XMMATRIX M = ROT_M * LOC_M;// Convert roll, pitch, yaw angles from radians to quaternions
-
-				//XMVECTOR quaternion = XMQuaternionRotationRollPitchYaw(roll_pitch_yaw.x, roll_pitch_yaw.y, roll_pitch_yaw.z);
-				//XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(quaternion);
-				//XMMATRIX translationMatrix = XMMatrixTranslationFromVector(XMLoadFloat4(&world_pos));
-				//XMMATRIX M = rotationMatrix * translationMatrix;
-				Luna<Matrix_BindLua>::push(L, M);
-				return 1;
-			}
-		}
-		wi::lua::SError(L, "GetRotateAroundLocalAxis(Matrix m, Vector rpy, Vector wp) not enough arguments!");
 		return 0;
 	}
 

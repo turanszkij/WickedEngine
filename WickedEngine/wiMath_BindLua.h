@@ -48,19 +48,18 @@ namespace wi::lua
 		int Add(lua_State* L);
 		int Subtract(lua_State* L);
 		int Lerp(lua_State* L);
+		int Rotate(lua_State* L);
 
 
+		int QuaternionInverse(lua_State* L);
 		int QuaternionNormalize(lua_State* L);
 		int QuaternionMultiply(lua_State* L);
 		int QuaternionFromRollPitchYaw(lua_State* L);
 		int QuaternionToRollPitchYaw(lua_State* L);
+		int QuaternionSlerp(lua_State* L);
 		int Slerp(lua_State* L);
 
 		int GetAngle(lua_State* L);
-
-		int QuaternionInverse(lua_State* L);
-		int Vector3Rotate(lua_State* L);
-		int Vector3InverseRotate(lua_State* L);
 
 		static void Bind();
 	};
@@ -109,11 +108,6 @@ namespace wi::lua
 		int Add(lua_State* L);
 		int Transpose(lua_State* L);
 		int Inverse(lua_State* L);
-
-		int GetForward(lua_State* L);
-		int GetUp(lua_State* L);
-		int GetRight(lua_State* L);
-		int GetRotateAroundLocalAxis(lua_State* L);
 
 		static void Bind();
 	};

@@ -26,9 +26,6 @@ public:
 
 	wi::gui::ComboBox retargetCombo;
 
-	wi::gui::CheckBox rootMotionCheckBox;
-	wi::gui::ComboBox rootBoneComboBox;
-
 	void Update();
 
 	void RefreshKeyframesList();

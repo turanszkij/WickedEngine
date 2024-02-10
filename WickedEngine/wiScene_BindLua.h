@@ -265,7 +265,6 @@ namespace wi::lua::scene
 		int CatmullRom(lua_State* L);
 		int MatrixTransform(lua_State* L);
 		int GetMatrix(lua_State* L);
-		int GetLocalMatrix(lua_State* L);
 		int ClearTransform(lua_State* L);
 		int UpdateTransform(lua_State* L);
 		int GetPosition(lua_State* L);
@@ -350,13 +349,6 @@ namespace wi::lua::scene
 		int SetStart(lua_State* L);
 		int GetEnd(lua_State* L);
 		int SetEnd(lua_State* L);
-
-		// For Rootmotion
-		int IsRootMotion(lua_State* L);
-		int RootMotionOn(lua_State* L);
-		int RootMotionOff(lua_State* L);
-		int GetRootTranslation(lua_State* L);
-		int GetRootRotation(lua_State* L);
 	};
 
 	class MaterialComponent_BindLua

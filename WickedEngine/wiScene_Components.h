@@ -1290,7 +1290,6 @@ namespace wi::scene
 			EMPTY = 0,
 			PLAYING = 1 << 0,
 			LOOPED = 1 << 1,
-			ROOT_MOTION = 1 << 2
 		};
 		uint32_t _flags = LOOPED;
 		float start = 0;
@@ -1415,21 +1414,8 @@ namespace wi::scene
 		wi::vector<float> morph_weights_temp;
 		float last_update_time = 0;
 
-		// Root Motion
-		XMFLOAT3 rootTranslationOffset;
-		XMFLOAT4 rootRotationOffset;
-		wi::ecs::Entity rootMotionBone;
-
-		XMVECTOR rootPrevTranslation = XMVectorSet(-69, 420, 69, -420);
-		XMVECTOR rootPrevRotation = XMVectorSet(-69, 420, 69, -420);
-		XMVECTOR INVALID_VECTOR = XMVectorSet(-69, 420, 69, -420);
-		float prevLocTimer;
-		float prevRotTimer;
-		// Root Motion
-
 		inline bool IsPlaying() const { return _flags & PLAYING; }
 		inline bool IsLooped() const { return _flags & LOOPED; }
-		inline bool IsRootMotion() const { return _flags & ROOT_MOTION; }
 		inline float GetLength() const { return end - start; }
 		inline bool IsEnded() const { return timer >= end; }
 
@@ -1437,12 +1423,6 @@ namespace wi::scene
 		inline void Pause() { _flags &= ~PLAYING; }
 		inline void Stop() { Pause(); timer = 0.0f; last_update_time = timer; }
 		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
-		inline void RootMotionOn() { _flags |= ROOT_MOTION; }
-		inline void RootMotionOff() { _flags &= ~ROOT_MOTION; }
-		inline XMFLOAT3 GetRootTranslation() const { return rootTranslationOffset; }
-		inline XMFLOAT4 GetRootRotation() const { return rootRotationOffset;  }
-		inline wi::ecs::Entity GetRootMotionBone() const { return rootMotionBone; }
-		inline void SetRootMotionBone(wi::ecs::Entity _rootMotionBone ) { rootMotionBone = _rootMotionBone; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
