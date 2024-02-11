@@ -79,8 +79,6 @@ namespace wi
 				desc.format = Format::R32_FLOAT;
 				device->CreateTexture(&desc, nullptr, &traceDepth);
 				device->SetName(&traceDepth, "traceDepth");
-				device->CreateTexture(&desc, nullptr, &traceDepth);
-				device->SetName(&traceDepth, "traceDepth");
 				desc.format = Format::R8_UINT;
 				device->CreateTexture(&desc, nullptr, &traceStencil);
 				device->SetName(&traceStencil, "traceStencil");
@@ -142,8 +140,7 @@ namespace wi
 		wi::renderer::CreateLuminanceResources(luminanceResources, internalResolution);
 		wi::renderer::CreateBloomResources(bloomResources, internalResolution);
 
-		// also reset accumulation buffer state:
-		sam = -1;
+		resetProgress();
 
 		RenderPath2D::ResizeBuffers(); // we don't need to use any buffers from RenderPath3D, so skip those
 	}
@@ -155,7 +152,7 @@ namespace wi
 		if (camera->IsDirty())
 		{
 			camera->SetDirty(false);
-			sam = -1;
+			resetProgress();
 		}
 		else
 		{
@@ -189,10 +186,6 @@ namespace wi
 		if (sam > target)
 		{
 			sam = target;
-		}
-		if (target < sam)
-		{
-			resetProgress();
 		}
 
 		scene->SetAccelerationStructureUpdateRequested(sam == 0);
@@ -314,7 +307,6 @@ namespace wi
 
 		if (sam < target)
 		{
-
 			CommandList cmd_copypages;
 			if (scene->terrains.GetCount() > 0)
 			{
@@ -343,7 +335,7 @@ namespace wi
 				{
 					wi::renderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
 				}
-				});
+			});
 
 			// Main scene:
 			cmd = device->BeginCommandList();
