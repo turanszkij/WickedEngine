@@ -1925,6 +1925,13 @@ void EditorComponent::PostUpdate()
 	RenderPath2D::PostUpdate();
 
 	renderPath->PostUpdate();
+
+	// This needs to be after scene was updated fully by EditorComponent's renderPath
+	//	Because this will just render the scene without updating its resources
+	if (renderPath->getSceneUpdateEnabled()) // only update preview if scene was updated at all by main renderPath
+	{
+		componentsWnd.cameraComponentWnd.preview.RenderPreview();
+	}
 }
 void EditorComponent::Render() const
 {

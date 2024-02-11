@@ -8,6 +8,15 @@ using namespace wi::graphics;
 
 namespace wi
 {
+	void RenderPath2D::DeleteGPUResources()
+	{
+		current_buffersize = {};
+		current_layoutscale = 0; // invalidate layout
+
+		rtFinal = {};
+		rtStenciled = {};
+		rtStenciled_resolved = {};
+	}
 
 	void RenderPath2D::ResizeBuffers()
 	{

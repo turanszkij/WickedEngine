@@ -1,6 +1,17 @@
 #pragma once
 class EditorComponent;
 
+class CameraPreview : public wi::gui::Widget
+{
+public:
+	wi::RenderPath3D renderpath;
+	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
+
+	void RenderPreview();
+
+	void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
+};
+
 class CameraComponentWindow : public wi::gui::Window
 {
 public:
@@ -17,6 +28,8 @@ public:
 	wi::gui::Slider apertureSizeSlider;
 	wi::gui::Slider apertureShapeXSlider;
 	wi::gui::Slider apertureShapeYSlider;
+
+	CameraPreview preview;
 
 	void ResizeLayout() override;
 };
