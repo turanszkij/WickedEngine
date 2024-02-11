@@ -426,12 +426,8 @@ inline float3 EnvironmentReflection_Global(in Surface surface)
 // clipSpacePos:		world space pixel position transformed into OBB space by probeProjection matrix
 // MIP:					mip level to sample
 // return:				color of the environment map (rgb), blend factor of the environment map (a)
-inline float4 EnvironmentReflection_Local(int textureIndex, in Surface surface, in ShaderEntity probe, in float4x4 probeProjection, in float3 clipSpacePos)
+inline float4 EnvironmentReflection_Local(in TextureCube cubemap, in Surface surface, in ShaderEntity probe, in float4x4 probeProjection, in float3 clipSpacePos)
 {
-	[branch]
-	if (GetScene().globalprobe < 0)
-		return 0;
-	
 	// Perform parallax correction of reflection ray (R) into OBB:
 	float3 RayLS = mul((float3x3)probeProjection, surface.R);
 	float3 FirstPlaneIntersect = (float3(1, 1, 1) - clipSpacePos) / RayLS;
@@ -441,7 +437,6 @@ inline float4 EnvironmentReflection_Local(int textureIndex, in Surface surface, 
 	float3 IntersectPositionWS = surface.P + surface.R * Distance;
 	float3 R_parallaxCorrected = IntersectPositionWS - probe.position;
 
-	TextureCube cubemap = bindless_cubemaps[NonUniformResourceIndex(textureIndex)];
 	uint2 dim;
 	uint mips;
 	cubemap.GetDimensions(0, dim.x, dim.y, mips);
