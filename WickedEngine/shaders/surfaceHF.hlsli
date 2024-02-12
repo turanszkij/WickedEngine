@@ -623,7 +623,7 @@ struct Surface
 #endif // ENTITY_TILE_UNIFORM
 
 				[loop]
-				while (bucket_bits != 0 && decalAccumulation.a < 1 && decalBumpAccumulation.a < 1 && decalSurfaceAccumulationAlpha < 1)
+				while (bucket_bits != 0)
 				{
 					// Retrieve global entity index from local bucket, then remove bit from local bucket:
 					const uint bucket_bit_index = firstbitlow(bucket_bits);
@@ -643,47 +643,53 @@ struct Surface
 						float decalNormalStrength = decalProjection[3][2];
 						int decalSurfacemap = asint(decalProjection[3][3]);
 						decalProjection[3] = float4(0, 0, 0, 1);
-						const float3 clipSpacePos = mul(decalProjection, float4(P, 1)).xyz;
-						float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
+						
+						// under here will be VGPR!
 						[branch]
-						if (is_saturated(uvw))
+						if(decalAccumulation.a < 1 && decalBumpAccumulation.a < 1 && decalSurfaceAccumulationAlpha < 1)
 						{
-							uvw.xy = mad(uvw.xy, decal.shadowAtlasMulAdd.xy, decal.shadowAtlasMulAdd.zw);
-							// mipmapping needs to be performed by hand:
-							const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy;
-							const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy;
-							float4 decalColor = decal.GetColor();
-							// blend out if close to cube Z:
-							const float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
-							const float slopeBlend = decal.GetConeAngleCos() > 0 ? pow(saturate(dot(N, decal.GetDirection())), decal.GetConeAngleCos()) : 1;
-							decalColor.a *= edgeBlend * slopeBlend;
+							const float3 clipSpacePos = mul(decalProjection, float4(P, 1)).xyz;
+							float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
 							[branch]
-							if (decalTexture >= 0)
+							if (is_saturated(uvw))
 							{
-								decalColor *= bindless_textures[NonUniformResourceIndex(decalTexture)].SampleGrad(sam, uvw.xy, decalDX, decalDY);
-								if ((decal.GetFlags() & ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA) == 0)
+								uvw.xy = mad(uvw.xy, decal.shadowAtlasMulAdd.xy, decal.shadowAtlasMulAdd.zw);
+								// mipmapping needs to be performed by hand:
+								const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy;
+								const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy;
+								float4 decalColor = decal.GetColor();
+								// blend out if close to cube Z:
+								const float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
+								const float slopeBlend = decal.GetConeAngleCos() > 0 ? pow(saturate(dot(N, decal.GetDirection())), decal.GetConeAngleCos()) : 1;
+								decalColor.a *= edgeBlend * slopeBlend;
+								[branch]
+								if (decalTexture >= 0)
 								{
-									// perform manual blending of decals:
-									//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-									decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
-									decalAccumulation.a = mad(1 - decalColor.a, decalAccumulation.a, decalColor.a);
+									decalColor *= bindless_textures[decalTexture].SampleGrad(sam, uvw.xy, decalDX, decalDY);
+									if ((decal.GetFlags() & ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA) == 0)
+									{
+										// perform manual blending of decals:
+										//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
+										decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
+										decalAccumulation.a = mad(1 - decalColor.a, decalAccumulation.a, decalColor.a);
+									}
 								}
-							}
-							[branch]
-							if (decalNormal >= 0)
-							{
-								float3 decalBumpColor = float3(bindless_textures[NonUniformResourceIndex(decalNormal)].SampleGrad(sam, uvw.xy, decalDX, decalDY).rg, 1);
-								decalBumpColor = decalBumpColor * 2 - 1;
-								decalBumpColor.rg *= decalNormalStrength;
-								decalBumpAccumulation.rgb = mad(1 - decalBumpAccumulation.a, decalColor.a * decalBumpColor.rgb, decalBumpAccumulation.rgb);
-								decalBumpAccumulation.a = mad(1 - decalColor.a, decalBumpAccumulation.a, decalColor.a);
-							}
-							[branch]
-							if (decalSurfacemap >= 0)
-							{
-								float4 decalSurfaceColor = bindless_textures[NonUniformResourceIndex(decalSurfacemap)].SampleGrad(sam, uvw.xy, decalDX, decalDY);
-								decalSurfaceAccumulation = mad(1 - decalSurfaceAccumulationAlpha, decalColor.a * decalSurfaceColor, decalSurfaceAccumulation);
-								decalSurfaceAccumulationAlpha = mad(1 - decalColor.a, decalSurfaceAccumulationAlpha, decalColor.a);
+								[branch]
+								if (decalNormal >= 0)
+								{
+									float3 decalBumpColor = float3(bindless_textures[decalNormal].SampleGrad(sam, uvw.xy, decalDX, decalDY).rg, 1);
+									decalBumpColor = decalBumpColor * 2 - 1;
+									decalBumpColor.rg *= decalNormalStrength;
+									decalBumpAccumulation.rgb = mad(1 - decalBumpAccumulation.a, decalColor.a * decalBumpColor.rgb, decalBumpAccumulation.rgb);
+									decalBumpAccumulation.a = mad(1 - decalColor.a, decalBumpAccumulation.a, decalColor.a);
+								}
+								[branch]
+								if (decalSurfacemap >= 0)
+								{
+									float4 decalSurfaceColor = bindless_textures[decalSurfacemap].SampleGrad(sam, uvw.xy, decalDX, decalDY);
+									decalSurfaceAccumulation = mad(1 - decalSurfaceAccumulationAlpha, decalColor.a * decalSurfaceColor, decalSurfaceAccumulation);
+									decalSurfaceAccumulationAlpha = mad(1 - decalColor.a, decalSurfaceAccumulationAlpha, decalColor.a);
+								}
 							}
 						}
 					}
