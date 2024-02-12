@@ -389,9 +389,9 @@ namespace wi
 						cmd,
 						denoiserAlbedo.IsValid() ? &denoiserAlbedo : nullptr,
 						denoiserNormal.IsValid() ? &denoiserNormal : nullptr,
-						traceDepth.IsValid() ? &traceDepth : nullptr,
-						traceStencil.IsValid() ? &traceStencil : nullptr,
-						depthBuffer_Main.IsValid() ? &depthBuffer_Main : nullptr
+						&traceDepth,
+						&traceStencil,
+						&depthBuffer_Main
 					);
 
 					wi::profiler::EndRange(range); // Traced Scene
@@ -471,21 +471,11 @@ namespace wi
 
 			// Composite other effects on top:
 			{
-				if (depthBuffer_Main.IsValid())
-				{
-					RenderPassImage rp[] = {
-						RenderPassImage::DepthStencil(&depthBuffer_Main, RenderPassImage::LoadOp::LOAD),
-						RenderPassImage::RenderTarget(&rtMain, RenderPassImage::LoadOp::CLEAR)
-					};
-					device->RenderPassBegin(rp, arraysize(rp), cmd);
-				}
-				else
-				{
-					RenderPassImage rp[] = {
-						RenderPassImage::RenderTarget(&rtMain, RenderPassImage::LoadOp::CLEAR)
-					};
-					device->RenderPassBegin(rp, arraysize(rp), cmd);
-				}
+				RenderPassImage rp[] = {
+					RenderPassImage::DepthStencil(&depthBuffer_Main, RenderPassImage::LoadOp::LOAD),
+					RenderPassImage::RenderTarget(&rtMain, RenderPassImage::LoadOp::CLEAR)
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
 
 				Viewport vp;
 				vp.width = (float)rtMain.GetDesc().width;

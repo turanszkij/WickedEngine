@@ -4,6 +4,63 @@
 using namespace wi::ecs;
 using namespace wi::scene;
 
+void CameraPreview::RenderPreview()
+{
+	if (renderpath.scene != nullptr)
+	{
+		// Camera pointers can change because they are stored in ComponentManager array, so get its pointer every time:
+		CameraComponent* camera = renderpath.scene->cameras.GetComponent(entity);
+		if (camera != nullptr)
+		{
+			renderpath.camera = camera;
+			scale_local.y = scale_local.x * renderpath.camera->height / renderpath.camera->width;
+			renderpath.setSceneUpdateEnabled(false); // we just view our scene with this that's updated by the main rernderpath
+			renderpath.setOcclusionCullingEnabled(false); // occlusion culling only works for one camera
+			renderpath.PreUpdate();
+			renderpath.Update(0);
+			renderpath.PostUpdate();
+			renderpath.Render();
+		}
+		else
+		{
+			renderpath.camera = nullptr;
+		}
+	}
+}
+void CameraPreview::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const
+{
+	wi::gui::Widget::Render(canvas, cmd);
+
+	if (renderpath.scene != nullptr && renderpath.camera != nullptr)
+	{
+		wi::image::Params params;
+		params.pos = translation;
+		params.siz = XMFLOAT2(scale.x, scale.y);
+		params.color = shadow_color;
+		params.blendFlag = wi::enums::BLENDMODE_ALPHA;
+		params.enableCornerRounding();
+		params.corners_rounding[0].radius = 10;
+		params.corners_rounding[1].radius = 10;
+		params.corners_rounding[2].radius = 10;
+		params.corners_rounding[3].radius = 10;
+		wi::image::Draw(wi::texturehelper::getWhite(), params, cmd);
+
+		params.pos.x += 4;
+		params.pos.y += 4;
+		params.siz.x -= 8;
+		params.siz.y -= 8;
+		params.corners_rounding[0].radius = 8;
+		params.corners_rounding[1].radius = 8;
+		params.corners_rounding[2].radius = 8;
+		params.corners_rounding[3].radius = 8;
+		params.color = wi::Color::White();
+		params.blendFlag = wi::enums::BLENDMODE_OPAQUE;
+		wi::image::Draw(renderpath.GetLastPostprocessRT(), params, cmd);
+
+		wi::font::Draw("Camera preview:", wi::font::Params(params.pos.x + 2, params.pos.y + 2), cmd);
+	}
+}
+
 void CameraComponentWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
@@ -11,7 +68,7 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	editor->GetCurrentEditorScene().camera_transform.MatrixTransform(editor->GetCurrentEditorScene().camera.GetInvView());
 	editor->GetCurrentEditorScene().camera_transform.UpdateTransform();
 
-	SetSize(XMFLOAT2(320, 200));
+	SetSize(XMFLOAT2(320, 400));
 
 	closeButton.SetTooltip("Delete CameraComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -135,6 +192,9 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	AddWidget(&apertureShapeYSlider);
 
 
+	AddWidget(&preview);
+
+
 	SetEntity(INVALID_ENTITY);
 
 	SetPos(XMFLOAT2(100, 100));
@@ -144,10 +204,11 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 
 void CameraComponentWindow::SetEntity(Entity entity)
 {
+	bool changed = this->entity != entity;
 	this->entity = entity;
 
 	Scene& scene = editor->GetCurrentScene();
-	const CameraComponent* camera = scene.cameras.GetComponent(entity);
+	CameraComponent* camera = scene.cameras.GetComponent(entity);
 
 	if (camera != nullptr)
 	{
@@ -158,6 +219,18 @@ void CameraComponentWindow::SetEntity(Entity entity)
 		apertureSizeSlider.SetValue(camera->aperture_size);
 		apertureShapeXSlider.SetValue(camera->aperture_shape.x);
 		apertureShapeYSlider.SetValue(camera->aperture_shape.y);
+
+		preview.entity = entity;
+		preview.renderpath.scene = &scene;
+		preview.renderpath.width = 480;
+		preview.renderpath.height = 272;
+	}
+	else if (changed)
+	{
+		preview.entity = INVALID_ENTITY;
+		preview.renderpath.scene = nullptr;
+		preview.renderpath.camera = nullptr;
+		preview.renderpath.DeleteGPUResources();
 	}
 }
 
@@ -205,5 +278,6 @@ void CameraComponentWindow::ResizeLayout()
 	add(apertureSizeSlider);
 	add(apertureShapeXSlider);
 	add(apertureShapeYSlider);
+	add_fullwidth(preview);
 
 }

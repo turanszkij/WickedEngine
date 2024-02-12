@@ -14,6 +14,8 @@ namespace wi
 
 	void RenderPath3D::DeleteGPUResources()
 	{
+		RenderPath2D::DeleteGPUResources();
+
 		rtMain = {};
 		rtMain_render = {};
 		rtPrimitiveID = {};
@@ -355,31 +357,35 @@ namespace wi
 
 			scene->camera = *camera;
 			scene->Update(dt * wi::renderer::GetGameSpeed());
+		}
 
-			// Frustum culling for main camera:
-			visibility_main.layerMask = getLayerMask();
-			visibility_main.scene = scene;
-			visibility_main.camera = camera;
-			visibility_main.flags = wi::renderer::Visibility::ALLOW_EVERYTHING;
-			wi::renderer::UpdateVisibility(visibility_main);
+		// Frustum culling for main camera:
+		visibility_main.layerMask = getLayerMask();
+		visibility_main.scene = scene;
+		visibility_main.camera = camera;
+		visibility_main.flags = wi::renderer::Visibility::ALLOW_EVERYTHING;
+		if (!getOcclusionCullingEnabled())
+		{
+			visibility_main.flags &= ~wi::renderer::Visibility::ALLOW_OCCLUSION_CULLING;
+		}
+		wi::renderer::UpdateVisibility(visibility_main);
 
-			if (visibility_main.planar_reflection_visible)
-			{
-				// Frustum culling for planar reflections:
-				camera_reflection = *camera;
-				camera_reflection.jitter = XMFLOAT2(0, 0);
-				camera_reflection.Reflect(visibility_main.reflectionPlane);
-				visibility_reflection.layerMask = getLayerMask();
-				visibility_reflection.scene = scene;
-				visibility_reflection.camera = &camera_reflection;
-				visibility_reflection.flags =
-					wi::renderer::Visibility::ALLOW_OBJECTS |
-					wi::renderer::Visibility::ALLOW_EMITTERS |
-					wi::renderer::Visibility::ALLOW_HAIRS |
-					wi::renderer::Visibility::ALLOW_LIGHTS
-					;
-				wi::renderer::UpdateVisibility(visibility_reflection);
-			}
+		if (visibility_main.planar_reflection_visible)
+		{
+			// Frustum culling for planar reflections:
+			camera_reflection = *camera;
+			camera_reflection.jitter = XMFLOAT2(0, 0);
+			camera_reflection.Reflect(visibility_main.reflectionPlane);
+			visibility_reflection.layerMask = getLayerMask();
+			visibility_reflection.scene = scene;
+			visibility_reflection.camera = &camera_reflection;
+			visibility_reflection.flags =
+				wi::renderer::Visibility::ALLOW_OBJECTS |
+				wi::renderer::Visibility::ALLOW_EMITTERS |
+				wi::renderer::Visibility::ALLOW_HAIRS |
+				wi::renderer::Visibility::ALLOW_LIGHTS
+				;
+			wi::renderer::UpdateVisibility(visibility_reflection);
 		}
 
 		XMUINT2 internalResolution = GetInternalResolution();
@@ -683,7 +689,7 @@ namespace wi
 		camera_reflection.texture_vxgi_specular_index = -1;
 
 		video_cmd = {};
-		if (scene->videos.GetCount() > 0)
+		if (getSceneUpdateEnabled() && scene->videos.GetCount() > 0)
 		{
 			for (size_t i = 0; i < scene->videos.GetCount(); ++i)
 			{
@@ -801,7 +807,7 @@ namespace wi
 			wi::renderer::DRAWSCENE_TESSELLATION |
 			wi::renderer::DRAWSCENE_OCCLUSIONCULLING |
 			wi::renderer::DRAWSCENE_MAINCAMERA
-		;
+			;
 
 		// Main camera depth prepass + occlusion culling:
 		cmd = device->BeginCommandList();
@@ -817,7 +823,10 @@ namespace wi
 				cmd
 			);
 
-			wi::renderer::OcclusionCulling_Reset(visibility_main, cmd); // must be outside renderpass!
+			if (getOcclusionCullingEnabled())
+			{
+				wi::renderer::OcclusionCulling_Reset(visibility_main, cmd); // must be outside renderpass!
+			}
 
 			wi::renderer::RefreshImpostors(*scene, cmd);
 
@@ -884,7 +893,10 @@ namespace wi
 
 			device->RenderPassEnd(cmd);
 
-			wi::renderer::OcclusionCulling_Resolve(visibility_main, cmd); // must be outside renderpass!
+			if (getOcclusionCullingEnabled())
+			{
+				wi::renderer::OcclusionCulling_Resolve(visibility_main, cmd); // must be outside renderpass!
+			}
 
 			});
 
@@ -1869,9 +1881,8 @@ namespace wi
 				RENDERPASS_MAIN,
 				cmd,
 				wi::renderer::DRAWSCENE_TRANSPARENT |
-				wi::renderer::DRAWSCENE_OCCLUSIONCULLING |
-				wi::renderer::DRAWSCENE_HAIRPARTICLE |
 				wi::renderer::DRAWSCENE_TESSELLATION |
+				wi::renderer::DRAWSCENE_OCCLUSIONCULLING |
 				wi::renderer::DRAWSCENE_OCEAN |
 				wi::renderer::DRAWSCENE_MAINCAMERA
 			);

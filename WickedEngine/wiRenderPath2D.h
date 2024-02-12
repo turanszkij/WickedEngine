@@ -26,6 +26,8 @@ namespace wi
 		float hdr_scaling = 9.0f;
 
 	public:
+		// Delete GPU resources and initialize them to default
+		virtual void DeleteGPUResources();
 		// create resolution dependent resources, such as render targets
 		virtual void ResizeBuffers();
 		// update DPI dependent elements, such as GUI elements, sprites
