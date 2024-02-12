@@ -15,6 +15,7 @@ void CameraPreview::RenderPreview()
 			renderpath.camera = camera;
 			scale_local.y = scale_local.x * renderpath.camera->height / renderpath.camera->width;
 			renderpath.setSceneUpdateEnabled(false); // we just view our scene with this that's updated by the main rernderpath
+			renderpath.setOcclusionCullingEnabled(false); // occlusion culling only works for one camera
 			renderpath.PreUpdate();
 			renderpath.Update(0);
 			renderpath.PostUpdate();

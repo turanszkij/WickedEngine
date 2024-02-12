@@ -3084,8 +3084,13 @@ void UpdateVisibility(Visibility& vis)
 
 				const ObjectComponent& object = vis.scene->objects[args.jobIndex];
 				Scene::OcclusionResult& occlusion_result = vis.scene->occlusion_results_objects[args.jobIndex];
+				bool occluded = false;
+				if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
+				{
+					occluded = occlusion_result.IsOccluded();
+				}
 
-				if ((vis.flags & Visibility::ALLOW_REQUEST_REFLECTION) && object.IsRequestPlanarReflection() && !occlusion_result.IsOccluded())
+				if ((vis.flags & Visibility::ALLOW_REQUEST_REFLECTION) && object.IsRequestPlanarReflection() && !occluded)
 				{
 					// Planar reflection priority request:
 					float dist = wi::math::DistanceEstimated(vis.camera->Eye, object.center);
@@ -4650,7 +4655,12 @@ void UpdateRenderDataAsync(
 	// Compute water simulation:
 	if (vis.scene->weather.IsOceanEnabled())
 	{
-		if (!GetOcclusionCullingEnabled() || !vis.scene->ocean.IsOccluded())
+		bool occluded = false;
+		if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
+		{
+			occluded = vis.scene->ocean.IsOccluded();
+		}
+		if (!occluded)
 		{
 			auto range = wi::profiler::BeginRangeGPU("Ocean - Simulate", cmd);
 			vis.scene->ocean.UpdateDisplacementMap(vis.scene->weather.oceanParameters, cmd);
@@ -6020,7 +6030,7 @@ void DrawScene(
 	const bool transparent = flags & DRAWSCENE_TRANSPARENT;
 	const bool hairparticle = flags & DRAWSCENE_HAIRPARTICLE;
 	const bool impostor = flags & DRAWSCENE_IMPOSTOR;
-	const bool occlusion = (flags & DRAWSCENE_OCCLUSIONCULLING) && GetOcclusionCullingEnabled();
+	const bool occlusion = (flags & DRAWSCENE_OCCLUSIONCULLING) && (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING) && GetOcclusionCullingEnabled();
 	const bool ocean = flags & DRAWSCENE_OCEAN;
 	const bool skip_planar_reflection_objects = flags & DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS;
 	const bool foreground_only = flags & DRAWSCENE_FOREGROUND_ONLY;
