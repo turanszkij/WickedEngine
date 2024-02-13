@@ -4,6 +4,7 @@
 #include "wiGraphicsDevice.h"
 #include "wiScene.h"
 #include "wiECS.h"
+#include "wiRectPacker.h"
 #include "wiPrimitive.h"
 #include "wiCanvas.h"
 #include "wiMath.h"
@@ -109,6 +110,7 @@ namespace wi::renderer
 			ALLOW_HAIRS = 1 << 5,
 			ALLOW_REQUEST_REFLECTION = 1 << 6,
 			ALLOW_OCCLUSION_CULLING = 1 << 7,
+			ALLOW_SHADOW_ATLAS_PACKING = 1 << 8,
 
 			ALLOW_EVERYTHING = ~0u
 		};
@@ -122,6 +124,9 @@ namespace wi::renderer
 		wi::vector<uint32_t> visibleEmitters;
 		wi::vector<uint32_t> visibleHairs;
 		wi::vector<uint32_t> visibleLights;
+		wi::rectpacker::State shadow_packer;
+		wi::rectpacker::Rect rain_blocker_shadow_rect;
+		wi::vector<wi::rectpacker::Rect> visibleLightShadowRects;
 
 		std::atomic<uint32_t> object_counter;
 		std::atomic<uint32_t> light_counter;

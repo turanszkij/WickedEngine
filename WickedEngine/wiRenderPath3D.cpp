@@ -790,7 +790,7 @@ namespace wi
 				);
 			}
 
-			if (wi::renderer::GetDDGIEnabled())
+			if (wi::renderer::GetDDGIEnabled() && getSceneUpdateEnabled())
 			{
 				wi::renderer::DDGI(
 					*scene,
@@ -1032,7 +1032,7 @@ namespace wi
 				});
 		}
 
-		if (wi::renderer::GetVXGIEnabled())
+		if (wi::renderer::GetVXGIEnabled() && getSceneUpdateEnabled())
 		{
 			cmd = device->BeginCommandList();
 			wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
@@ -1041,19 +1041,22 @@ namespace wi
 		}
 
 		// Updating textures:
-		cmd = device->BeginCommandList();
-		device->WaitCommandList(cmd, cmd_prepareframe_async);
-		wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
-			wi::renderer::BindCommonResources(cmd);
-			wi::renderer::BindCameraCB(
-				*camera,
-				camera_previous,
-				camera_reflection,
-				cmd
-			);
-			wi::renderer::RefreshLightmaps(*scene, cmd);
-			wi::renderer::RefreshEnvProbes(visibility_main, cmd);
-		});
+		if (getSceneUpdateEnabled())
+		{
+			cmd = device->BeginCommandList();
+			device->WaitCommandList(cmd, cmd_prepareframe_async);
+			wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
+				wi::renderer::BindCommonResources(cmd);
+				wi::renderer::BindCameraCB(
+					*camera,
+					camera_previous,
+					camera_reflection,
+					cmd
+				);
+				wi::renderer::RefreshLightmaps(*scene, cmd);
+				wi::renderer::RefreshEnvProbes(visibility_main, cmd);
+			});
+		}
 
 		if (visibility_main.IsRequestedPlanarReflections())
 		{

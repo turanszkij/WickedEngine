@@ -767,6 +767,25 @@ namespace wi::scene
 			}
 		}
 
+		// VXGI volume update:
+		//	Note: this is using camera that the scene is associated with
+		{
+			VXGI::ClipMap& clipmap = vxgi.clipmaps[vxgi.clipmap_to_update];
+			clipmap.voxelsize = vxgi.clipmaps[0].voxelsize * (1u << vxgi.clipmap_to_update);
+			const float texelSize = clipmap.voxelsize * 2;
+			XMFLOAT3 center = XMFLOAT3(std::floor(camera.Eye.x / texelSize) * texelSize, std::floor(camera.Eye.y / texelSize) * texelSize, std::floor(camera.Eye.z / texelSize) * texelSize);
+			clipmap.offsetfromPrevFrame.x = int((clipmap.center.x - center.x) / texelSize);
+			clipmap.offsetfromPrevFrame.y = -int((clipmap.center.y - center.y) / texelSize);
+			clipmap.offsetfromPrevFrame.z = int((clipmap.center.z - center.z) / texelSize);
+			clipmap.center = center;
+			XMFLOAT3 extents = XMFLOAT3(vxgi.res * clipmap.voxelsize, vxgi.res * clipmap.voxelsize, vxgi.res * clipmap.voxelsize);
+			if (extents.x != clipmap.extents.x || extents.y != clipmap.extents.y || extents.z != clipmap.extents.z)
+			{
+				vxgi.pre_clear = true;
+			}
+			clipmap.extents = extents;
+		}
+
 		// Shader scene resources:
 		if (device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
 		{
@@ -4598,7 +4617,6 @@ namespace wi::scene
 			ocean.occlusionQueries[queryheap_idx] = -1; // invalidate query
 		}
 
-		rain_blocker_dummy_light.shadow_rect = {};
 		if (weather.rain_amount > 0)
 		{
 			GraphicsDevice* device = wi::graphics::GetDevice();
