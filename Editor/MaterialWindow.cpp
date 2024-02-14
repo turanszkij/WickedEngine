@@ -596,6 +596,9 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		case MaterialComponent::ANISOTROPYMAP:
 			textureSlotComboBox.AddItem("Anisotropy map");
 			break;
+		case MaterialComponent::TRANSPARENCYMAP:
+			textureSlotComboBox.AddItem("Transparency map");
+			break;
 		default:
 			break;
 		}
@@ -647,6 +650,9 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			break;
 		case MaterialComponent::ANISOTROPYMAP:
 			tooltiptext = "RG: The anisotropy texture. Red and green channels represent the anisotropy direction in [-1, 1] tangent, bitangent space.\nThe vector is rotated by anisotropyRotation, and multiplied by anisotropyStrength, to obtain the final anisotropy direction and strength.";
+			break;
+		case MaterialComponent::TRANSPARENCYMAP:
+			tooltiptext = "R: transparency.";
 			break;
 		default:
 			break;

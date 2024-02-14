@@ -3,9 +3,19 @@
 
 void main(PixelInput input)
 {
+	float alpha = 1;
+
 	[branch]
 	if (GetMaterial().textures[BASECOLORMAP].IsValid())
 	{
-		clip(GetMaterial().textures[BASECOLORMAP].Sample(sampler_point_wrap, input.GetUVSets()).a - GetMaterial().alphaTest);
+		alpha = GetMaterial().textures[BASECOLORMAP].Sample(sampler_point_wrap, input.GetUVSets()).a;
 	}
+	
+	[branch]
+	if (GetMaterial().textures[TRANSPARENCYMAP].IsValid())
+	{
+		alpha *= GetMaterial().textures[TRANSPARENCYMAP].Sample(sampler_point_wrap, input.GetUVSets()).r;
+	}
+	
+	clip(alpha - GetMaterial().alphaTest);
 }

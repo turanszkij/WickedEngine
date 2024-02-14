@@ -207,6 +207,9 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	textureSlotComboBox.AddItem("ClearcoatMap (R)", MaterialComponent::CLEARCOATMAP);
 	textureSlotComboBox.AddItem("ClearcoatRoughMap (R)", MaterialComponent::CLEARCOATROUGHNESSMAP);
 	textureSlotComboBox.AddItem("ClearcoatNormMap (R)", MaterialComponent::CLEARCOATNORMALMAP);
+	textureSlotComboBox.AddItem("SpecularMap (RGBA)", MaterialComponent::SPECULARMAP);
+	textureSlotComboBox.AddItem("AnisotropyMap (RG)", MaterialComponent::ANISOTROPYMAP);
+	textureSlotComboBox.AddItem("TransparencyMap (R)", MaterialComponent::TRANSPARENCYMAP);
 	textureSlotComboBox.SetSelected(0);
 	AddWidget(&textureSlotComboBox);
 
@@ -248,6 +251,13 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 			if (wi::helper::saveTextureToMemoryFile(editTexture.texture, "PNG", texturefiledata))
 			{
 				material->textures[sel].resource.SetFileData(texturefiledata);
+				// Register into resource manager:
+				material->textures[sel].resource = wi::resourcemanager::Load(
+					material->textures[sel].name,
+					wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA,
+					texturefiledata.data(),
+					texturefiledata.size()
+				);
 			}
 			else
 			{
@@ -476,12 +486,61 @@ void PaintToolWindow::Update(float dt)
 				if (mesh == nullptr || (mesh->vertex_uvset_0.empty() && mesh->vertex_uvset_1.empty()))
 					break;
 
-				MaterialComponent* material = selected.subsetIndex >= 0 && selected.subsetIndex < (int)mesh->subsets.size() ? scene.materials.GetComponent(mesh->subsets[selected.subsetIndex].materialID) : nullptr;
+				Entity materialID = mesh->subsets[selected.subsetIndex].materialID;
+				MaterialComponent* material = selected.subsetIndex >= 0 && selected.subsetIndex < (int)mesh->subsets.size() ? scene.materials.GetComponent(materialID) : nullptr;
 				if (material == nullptr)
 					break;
 
 				int uvset = 0;
 				TextureSlot editTexture = GetEditTextureSlot(*material, &uvset);
+
+				// Missing texture will be created a blank one:
+				if (!editTexture.texture.IsValid())
+				{
+					std::string texturename = "painttool/";
+					const NameComponent* materialname = scene.names.GetComponent(materialID);
+					if (materialname != nullptr)
+					{
+						texturename += materialname->name;
+						texturename += "_";
+					}
+					texturename += std::to_string(wi::random::GetRandom(std::numeric_limits<int>::max()));
+					texturename += ".PNG";
+					uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
+					material->textures[sel].name = texturename;
+
+					TextureDesc desc;
+					desc.width = 1024;
+					desc.height = 1024;
+					desc.format = Format::R8G8B8A8_UNORM;
+					desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+					wi::vector<wi::Color> whitedata(desc.width * desc.height);
+					std::fill(whitedata.begin(), whitedata.end(), wi::Color::White());
+					SubresourceData initdata;
+					initdata.data_ptr = whitedata.data();
+					initdata.row_pitch = desc.width * GetFormatStride(desc.format);
+					Texture texture;
+					GraphicsDevice* device = GetDevice();
+					device->CreateTexture(&desc, &initdata, &texture);
+					device->SetName(&texture, texturename.c_str());
+					// This part must be AFTER mip level subresource creation:
+					int srgb_subresource = -1;
+					{
+						Format srgb_format = GetFormatSRGB(desc.format);
+						srgb_subresource = device->CreateSubresource(
+							&texture,
+							SubresourceType::SRV,
+							0, -1,
+							0, -1,
+							&srgb_format
+						);
+					}
+					material->textures[sel].resource.SetTexture(texture, srgb_subresource);
+					editTexture = GetEditTextureSlot(*material, &uvset);
+
+					wi::backlog::post("Paint Tool created default texture: " + texturename);
+				}
+
 				if (!editTexture.texture.IsValid())
 					break;
 				const TextureDesc& desc = editTexture.texture.GetDesc();

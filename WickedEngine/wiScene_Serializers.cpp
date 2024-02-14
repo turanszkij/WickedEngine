@@ -231,6 +231,12 @@ namespace wi::scene
 				anisotropy_strength = parallaxOcclusionMapping; // old version fix
 			}
 
+			if (seri.GetVersion() >= 3)
+			{
+				archive >> textures[TRANSPARENCYMAP].name;
+				archive >> textures[TRANSPARENCYMAP].uvset;
+			}
+
 			for (auto& x : textures)
 			{
 				if (!x.name.empty())
@@ -368,6 +374,12 @@ namespace wi::scene
 				archive << anisotropy_rotation;
 				archive << wi::helper::GetPathRelative(dir, textures[ANISOTROPYMAP].name);
 				archive << textures[ANISOTROPYMAP].uvset;
+			}
+
+			if (seri.GetVersion() >= 2)
+			{
+				archive << wi::helper::GetPathRelative(dir, textures[TRANSPARENCYMAP].name);
+				archive << textures[TRANSPARENCYMAP].uvset;
 			}
 		}
 	}

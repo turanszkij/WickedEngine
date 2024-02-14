@@ -16,6 +16,13 @@ float4 main(PixelInput input) : SV_TARGET
 	{
 		color = 1;
 	}
+	
+	[branch]
+	if (GetMaterial().textures[TRANSPARENCYMAP].IsValid())
+	{
+		color.a *= GetMaterial().textures[TRANSPARENCYMAP].Sample(sampler_objectshader, uvsets).r;
+	}
+	
 	color *= input.color;
 
 	clip(color.a - GetMaterial().alphaTest);

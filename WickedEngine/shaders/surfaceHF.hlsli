@@ -528,6 +528,20 @@ struct Surface
 				baseColor.a *= baseColorMap.a;
 			}
 		}
+		
+		[branch]
+		if (material.textures[TRANSPARENCYMAP].IsValid())
+		{
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+			baseColor.a *= material.textures[TRANSPARENCYMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy).r;
+#else
+			float lod = 0;
+#ifdef SURFACE_LOAD_MIPCONE
+			lod = compute_texture_lod(material.textures[TRANSPARENCYMAP].GetTexture(), material.textures[TRANSPARENCYMAP].GetUVSet() == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+#endif // SURFACE_LOAD_MIPCONE
+			baseColor.a *= material.textures[TRANSPARENCYMAP].SampleLevel(sam, uvsets, lod).r;
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
+		}
 
 		[branch]
 		if (geometry.vb_col >= 0 && material.IsUsingVertexColors())

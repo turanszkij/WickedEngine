@@ -547,6 +547,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	{
 		surface.baseColor *= GetMaterial().textures[BASECOLORMAP].Sample(sampler_objectshader, uvsets);
 	}
+	
+	[branch]
+	if (GetMaterial().textures[TRANSPARENCYMAP].IsValid())
+	{
+		surface.baseColor.a *= GetMaterial().textures[TRANSPARENCYMAP].Sample(sampler_objectshader, uvsets).r;
+	}
 #endif // OBJECTSHADER_USE_UVSETS
 
 
