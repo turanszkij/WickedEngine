@@ -378,6 +378,7 @@ SHADERTYPE GetVSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, b
 		}
 		break;
 	case RENDERPASS_PREPASS:
+	case RENDERPASS_PREPASS_DEPTHONLY:
 		if (tessellation)
 		{
 			if (alphatest)
@@ -491,6 +492,7 @@ SHADERTYPE GetHSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest)
 		switch (renderPass)
 		{
 		case RENDERPASS_PREPASS:
+		case RENDERPASS_PREPASS_DEPTHONLY:
 			if (alphatest)
 			{
 				return HSTYPE_OBJECT_PREPASS_ALPHATEST;
@@ -515,6 +517,7 @@ SHADERTYPE GetDSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest)
 		switch (renderPass)
 		{
 		case RENDERPASS_PREPASS:
+		case RENDERPASS_PREPASS_DEPTHONLY:
 			if (alphatest)
 			{
 				return DSTYPE_OBJECT_PREPASS_ALPHATEST;
@@ -547,6 +550,16 @@ SHADERTYPE GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, Ma
 		else
 		{
 			realPS = PSTYPE_OBJECT_PREPASS;
+		}
+		break;
+	case RENDERPASS_PREPASS_DEPTHONLY:
+		if (alphatest)
+		{
+			realPS = PSTYPE_OBJECT_PREPASS_DEPTHONLY_ALPHATEST;
+		}
+		else
+		{
+			realPS = PSTYPE_OBJECT_PREPASS_DEPTHONLY;
 		}
 		break;
 	case RENDERPASS_ENVMAPCAPTURE:
@@ -832,7 +845,10 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_SIMPLE], "objectPS_simple.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_PREPASS], "objectPS_prepass.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_PREPASS_ALPHATEST], "objectPS_prepass_alphatest.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_PREPASS_DEPTHONLY], "objectPS_prepass_depthonly.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_PREPASS_DEPTHONLY_ALPHATEST], "objectPS_prepass_depthonly_alphatest.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_IMPOSTOR_PREPASS], "impostorPS_prepass.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_IMPOSTOR_PREPASS_DEPTHONLY], "impostorPS_prepass_depthonly.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_IMPOSTOR_SIMPLE], "impostorPS_simple.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_LIGHTVISUALIZER], "lightVisualizerPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOLUMETRICLIGHT_DIRECTIONAL], "volumetricLight_DirectionalPS.cso"); });
@@ -1243,6 +1259,10 @@ void LoadShaders()
 		case RENDERPASS_PREPASS:
 			desc.vs = &shaders[VSTYPE_IMPOSTOR];
 			desc.ps = &shaders[PSTYPE_IMPOSTOR_PREPASS];
+			break;
+		case RENDERPASS_PREPASS_DEPTHONLY:
+			desc.vs = &shaders[VSTYPE_IMPOSTOR];
+			desc.ps = &shaders[PSTYPE_IMPOSTOR_PREPASS_DEPTHONLY];
 			break;
 		default:
 			desc.vs = &shaders[VSTYPE_IMPOSTOR];
@@ -1656,12 +1676,12 @@ void LoadShaders()
 					{
 						for (uint32_t tessellation = 0; tessellation <= 1; ++tessellation)
 						{
-							if (tessellation && renderPass > RENDERPASS_PREPASS)
+							if (tessellation && renderPass > RENDERPASS_PREPASS_DEPTHONLY)
 								continue;
 							for (uint32_t alphatest = 0; alphatest <= 1; ++alphatest)
 							{
 								const bool transparency = blendMode != BLENDMODE_OPAQUE;
-								if (renderPass == RENDERPASS_PREPASS && transparency)
+								if ((renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY) && transparency)
 									continue;
 
 								SHADERTYPE realVS = GetVSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
@@ -1797,10 +1817,19 @@ void LoadShaders()
 								{
 								case RENDERPASS_MAIN:
 								case RENDERPASS_PREPASS:
+								case RENDERPASS_PREPASS_DEPTHONLY:
 								{
 									RenderPassInfo renderpass_info;
-									renderpass_info.rt_count = 1;
-									renderpass_info.rt_formats[0] = renderPass == RENDERPASS_MAIN ? format_rendertarget_main : format_idbuffer;
+									if (renderPass == RENDERPASS_PREPASS_DEPTHONLY)
+									{
+										renderpass_info.rt_count = 0;
+										renderpass_info.rt_formats[0] = Format::UNKNOWN;
+									}
+									else
+									{
+										renderpass_info.rt_count = 1;
+										renderpass_info.rt_formats[0] = renderPass == RENDERPASS_MAIN ? format_rendertarget_main : format_idbuffer;
+									}
 									renderpass_info.ds_format = format_depthbuffer_main;
 									const uint32_t msaa_support[] = { 1,2,4,8 };
 									for (uint32_t msaa : msaa_support)
@@ -2822,8 +2851,13 @@ void RenderMeshes(
 				prev_ib = &mesh.generalBuffer;
 			}
 
-			if (renderPass != RENDERPASS_PREPASS && renderPass != RENDERPASS_VOXELIZE) // depth only alpha test will be full res
+			if (
+				renderPass != RENDERPASS_PREPASS &&
+				renderPass != RENDERPASS_PREPASS_DEPTHONLY &&
+				renderPass != RENDERPASS_VOXELIZE
+				) 
 			{
+				// depth only alpha test will be full res
 				device->BindShadingRate(material.shadingRate, cmd);
 			}
 
@@ -2925,7 +2959,7 @@ void RenderImpostors(
 	const PipelineState* pso = &PSO_impostor[renderPass];
 	if (IsWireRender())
 	{
-		if (renderPass != RENDERPASS_PREPASS)
+		if (renderPass != RENDERPASS_PREPASS && renderPass != RENDERPASS_PREPASS_DEPTHONLY)
 		{
 			pso = &PSO_impostor_wire;
 		}

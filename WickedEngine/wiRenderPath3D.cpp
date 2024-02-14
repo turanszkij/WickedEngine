@@ -1108,7 +1108,7 @@ namespace wi
 
 				wi::renderer::DrawScene(
 					visibility_reflection,
-					RENDERPASS_PREPASS,
+					RENDERPASS_PREPASS_DEPTHONLY,
 					cmd,
 					wi::renderer::DRAWSCENE_OPAQUE |
 					wi::renderer::DRAWSCENE_IMPOSTOR |

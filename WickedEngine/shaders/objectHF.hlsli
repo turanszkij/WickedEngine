@@ -425,13 +425,15 @@ PixelInput main(VertexInput input)
 
 // Possible switches:
 //	PREPASS				-	assemble object shader for depth prepass rendering
-//	TRANSPARENT			-	assemble object shader for forward or tile forward transparent rendering
+//	DEPTHONLY			-	assemble object shader for depth prepass rendering with no return
+//	TRANSPARENT			-	assemble object shader for tiled forward transparent rendering
 //	ENVMAPRENDERING		-	modify object shader for envmap rendering
 //	PLANARREFLECTION	-	include planar reflection sampling
 //	PARALLAXOCCLUSIONMAPPING					-	include parallax occlusion mapping computation
 //	WATER				-	include specialized water shader code
+//  ... and other material type specific defines
 
-#if defined(__PSSL__) && defined(PREPASS)
+#if defined(__PSSL__) && defined(PREPASS) && !defined(DEPTHONLY)
 #pragma PSSL_target_output_format (target 0 FMT_32_R)
 #endif // __PSSL__ && PREPASS
 
@@ -441,7 +443,11 @@ PixelInput main(VertexInput input)
 
 // entry point:
 #ifdef PREPASS
+#ifdef DEPTHONLY
+void main(PixelInput input, in uint primitiveID : SV_PrimitiveID, out uint coverage : SV_Coverage)
+#else
 uint main(PixelInput input, in uint primitiveID : SV_PrimitiveID, out uint coverage : SV_Coverage) : SV_Target
+#endif // DEPTHONLY
 #else
 float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // PREPASS
@@ -955,12 +961,13 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	// end point:
 #ifdef PREPASS
 	coverage = AlphaToCoverage(color.a, GetMaterial().alphaTest, input.pos);
-
+#ifndef DEPTHONLY
 	PrimitiveID prim;
 	prim.primitiveIndex = primitiveID;
 	prim.instanceIndex = input.GetInstanceIndex();
 	prim.subsetIndex = push.geometryIndex - meshinstance.geometryOffset;
 	return prim.pack();
+#endif // DEPTHONLY
 #else
 	return color;
 #endif // PREPASS

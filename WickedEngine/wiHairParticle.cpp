@@ -21,6 +21,7 @@ namespace wi
 {
 	static Shader vs;
 	static Shader ps_prepass;
+	static Shader ps_prepass_depthonly;
 	static Shader ps;
 	static Shader ps_shadow;
 	static Shader ps_simple;
@@ -462,7 +463,7 @@ namespace wi
 
 		if (wi::renderer::IsWireRender())
 		{
-			if (renderPass == RENDERPASS_PREPASS)
+			if (renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY)
 			{
 				return;
 			}
@@ -472,7 +473,7 @@ namespace wi
 		{
 			device->BindPipelineState(&PSO[renderPass], cmd);
 
-			if (renderPass != RENDERPASS_PREPASS) // depth only alpha test will be full res
+			if (renderPass != RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY) // depth only alpha test will be full res
 			{
 				device->BindShadingRate(material.shadingRate, cmd);
 			}
@@ -553,6 +554,7 @@ namespace wi
 
 			wi::renderer::LoadShader(ShaderStage::PS, ps_simple, "hairparticlePS_simple.cso");
 			wi::renderer::LoadShader(ShaderStage::PS, ps_prepass, "hairparticlePS_prepass.cso");
+			wi::renderer::LoadShader(ShaderStage::PS, ps_prepass_depthonly, "hairparticlePS_prepass_depthonly.cso");
 			wi::renderer::LoadShader(ShaderStage::PS, ps_shadow, "hairparticlePS_shadow.cso");
 			wi::renderer::LoadShader(ShaderStage::PS, ps, "hairparticlePS.cso");
 
@@ -562,7 +564,7 @@ namespace wi
 
 			for (int i = 0; i < RENDERPASS_COUNT; ++i)
 			{
-				if (i == RENDERPASS_PREPASS || i == RENDERPASS_MAIN || i == RENDERPASS_SHADOW)
+				if (i == RENDERPASS_PREPASS || i == RENDERPASS_PREPASS_DEPTHONLY || i == RENDERPASS_MAIN || i == RENDERPASS_SHADOW)
 				{
 					PipelineStateDesc desc;
 					desc.vs = &vs;
@@ -575,6 +577,9 @@ namespace wi
 					{
 					case RENDERPASS_PREPASS:
 						desc.ps = &ps_prepass;
+						break;
+					case RENDERPASS_PREPASS_DEPTHONLY:
+						desc.ps = &ps_prepass_depthonly;
 						break;
 					case RENDERPASS_MAIN:
 						desc.ps = &ps;
