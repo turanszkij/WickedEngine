@@ -987,7 +987,8 @@ namespace vulkan_internal
 		VkSurfaceKHR surface = VK_NULL_HANDLE;
 
 		uint32_t swapChainImageIndex = 0;
-		VkSemaphore swapchainAcquireSemaphore = VK_NULL_HANDLE;
+		uint32_t swapChainAcquireSemaphoreIndex = 0;
+		wi::vector<VkSemaphore> swapchainAcquireSemaphores;
 		VkSemaphore swapchainReleaseSemaphore = VK_NULL_HANDLE;
 
 		ColorSpace colorSpace = ColorSpace::SRGB;
@@ -1004,6 +1005,7 @@ namespace vulkan_internal
 			for (size_t i = 0; i < swapChainImages.size(); ++i)
 			{
 				allocationhandler->destroyer_imageviews.push_back(std::make_pair(swapChainImageViews[i], framecount));
+				allocationhandler->destroyer_semaphores.push_back(std::make_pair(swapchainAcquireSemaphores[i], framecount));
 			}
 
 #ifdef SDL2
@@ -1015,7 +1017,6 @@ namespace vulkan_internal
 				allocationhandler->destroyer_swapchains.push_back(std::make_pair(swapChain, framecount));
 				allocationhandler->destroyer_surfaces.push_back(std::make_pair(surface, framecount));
 			}
-			allocationhandler->destroyer_semaphores.push_back(std::make_pair(swapchainAcquireSemaphore, framecount));
 			allocationhandler->destroyer_semaphores.push_back(std::make_pair(swapchainReleaseSemaphore, framecount));
 
 			allocationhandler->destroylocker.unlock();
@@ -1279,10 +1280,13 @@ namespace vulkan_internal
 		VkSemaphoreCreateInfo semaphoreInfo = {};
 		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-		if (internal_state->swapchainAcquireSemaphore == VK_NULL_HANDLE)
+		if (internal_state->swapchainAcquireSemaphores.empty())
 		{
-			res = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &internal_state->swapchainAcquireSemaphore);
-			assert(res == VK_SUCCESS);
+			for (size_t i = 0; i < internal_state->swapChainImages.size(); ++i)
+			{
+				res = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &internal_state->swapchainAcquireSemaphores.emplace_back());
+				assert(res == VK_SUCCESS);
+			}
 		}
 
 		if (internal_state->swapchainReleaseSemaphore == VK_NULL_HANDLE)
@@ -7053,7 +7057,7 @@ using namespace vulkan_internal;
 
 					VkSemaphoreSubmitInfo& waitSemaphore = queue.submit_waitSemaphoreInfos.emplace_back();
 					waitSemaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-					waitSemaphore.semaphore = internal_state->swapchainAcquireSemaphore;
+					waitSemaphore.semaphore = internal_state->swapchainAcquireSemaphores[internal_state->swapChainAcquireSemaphoreIndex];
 					waitSemaphore.value = 0; // not a timeline semaphore
 					waitSemaphore.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
@@ -7447,12 +7451,14 @@ using namespace vulkan_internal;
 		commandlist.renderpass_barriers_end.clear();
 		auto internal_state = to_internal(swapchain);
 
+		internal_state->swapChainAcquireSemaphoreIndex = (internal_state->swapChainAcquireSemaphoreIndex + 1) % internal_state->swapchainAcquireSemaphores.size();
+
 		internal_state->locker.lock();
 		VkResult res = vkAcquireNextImageKHR(
 			device,
 			internal_state->swapChain,
 			UINT64_MAX,
-			internal_state->swapchainAcquireSemaphore,
+			internal_state->swapchainAcquireSemaphores[internal_state->swapChainAcquireSemaphoreIndex],
 			VK_NULL_HANDLE,
 			&internal_state->swapChainImageIndex
 		);
@@ -7470,9 +7476,12 @@ using namespace vulkan_internal;
 				// https://www.khronos.org/blog/resolving-longstanding-issues-with-wsi
 				{
 					std::scoped_lock lock(allocationhandler->destroylocker);
-					allocationhandler->destroyer_semaphores.emplace_back(internal_state->swapchainAcquireSemaphore, allocationhandler->framecount);
+					for (auto& x : internal_state->swapchainAcquireSemaphores)
+					{
+						allocationhandler->destroyer_semaphores.emplace_back(x, allocationhandler->framecount);
+					}
 				}
-				internal_state->swapchainAcquireSemaphore = VK_NULL_HANDLE;
+				internal_state->swapchainAcquireSemaphores.clear();
 				if (CreateSwapChainInternal(internal_state, physicalDevice, device, allocationhandler))
 				{
 					RenderPassBegin(swapchain, cmd);

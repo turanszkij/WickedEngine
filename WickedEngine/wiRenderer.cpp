@@ -13648,9 +13648,19 @@ void Postprocess_RTShadow(
 		device->EventEnd(cmd);
 	}
 
-	device->Barrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::COPY_DST), cmd);
-	device->CopyResource(&output, &res.temporal[temporal_output], cmd);
-	device->Barrier(GPUBarrier::Image(&output, ResourceState::COPY_DST, output.desc.layout), cmd);
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&output, output.desc.layout, ResourceState::COPY_DST),
+			GPUBarrier::Image(&res.temporal[temporal_output], output.desc.layout, ResourceState::COPY_SRC),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+		device->CopyResource(&output, &res.temporal[temporal_output], cmd);
+		for (auto& x : barriers)
+		{
+			std::swap(x.image.layout_before, x.image.layout_after);
+		}
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 
 	wi::profiler::EndRange(prof_range);
 	device->EventEnd(cmd);
