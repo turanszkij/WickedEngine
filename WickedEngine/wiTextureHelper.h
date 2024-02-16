@@ -19,7 +19,6 @@ namespace wi::texturehelper
 	const wi::graphics::Texture* getWhite();
 	const wi::graphics::Texture* getBlack();
 	const wi::graphics::Texture* getTransparent();
-	const wi::graphics::Texture* getColor(wi::Color color);
 
 	bool CreateTexture(
 		wi::graphics::Texture& texture,

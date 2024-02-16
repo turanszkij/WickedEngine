@@ -2115,7 +2115,7 @@ void EditorComponent::Render() const
 
 				// Draw solid blocks of selected materials
 				fx.stencilRef = EDITORSTENCILREF_HIGHLIGHT_MATERIAL;
-				wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+				wi::image::Draw(nullptr, fx, cmd);
 
 				device->RenderPassEnd(cmd);
 			}
@@ -2150,7 +2150,7 @@ void EditorComponent::Render() const
 
 				// Draw solid blocks of selected objects
 				fx.stencilRef = EDITORSTENCILREF_HIGHLIGHT_OBJECT;
-				wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+				wi::image::Draw(nullptr, fx, cmd);
 
 				device->RenderPassEnd(cmd);
 			}

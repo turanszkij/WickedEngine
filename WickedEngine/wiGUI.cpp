@@ -391,7 +391,7 @@ namespace wi::gui
 					tooltipSprite.params.siz.y + tooltip_shadow * 2,
 					tooltip_shadow_color
 				);
-				wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+				wi::image::Draw(nullptr, fx, cmd);
 			}
 
 			tooltipSprite.Draw(cmd);
@@ -930,7 +930,7 @@ namespace wi::gui
 					}
 				}
 			}
-			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+			wi::image::Draw(nullptr, fx, cmd);
 		}
 
 		font_description.Draw(cmd);
@@ -1127,7 +1127,7 @@ namespace wi::gui
 		fx.pos = XMFLOAT3(translation.x, translation.y, 0);
 		fx.siz = XMFLOAT2(scale.x, scale.y);
 		fx.color = sprites[IDLE].params.color;
-		wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+		wi::image::Draw(nullptr, fx, cmd);
 
 		// scrollbar knob
 		sprites_knob[scrollbar_state].Draw(cmd);
@@ -1139,7 +1139,7 @@ namespace wi::gui
 		//scissorRect.top = (int32_t)(0);
 		//GraphicsDevice* device = wi::graphics::GetDevice();
 		//device->BindScissorRects(1, &scissorRect, cmd);
-		//wi::image::Draw(wi::texturehelper::getWhite(), wi::image::Params(hitBox.pos.x, hitBox.pos.y, hitBox.siz.x, hitBox.siz.y, wi::Color(255,0,0,100)), cmd);
+		//wi::image::Draw(nullptr, wi::image::Params(hitBox.pos.x, hitBox.pos.y, hitBox.siz.x, hitBox.siz.y, wi::Color(255,0,0,100)), cmd);
 
 	}
 	void ScrollBar::SetColor(wi::Color color, int id)
@@ -1294,7 +1294,7 @@ namespace wi::gui
 					}
 				}
 			}
-			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+			wi::image::Draw(nullptr, fx, cmd);
 		}
 
 		ApplyScissor(canvas, scissorRect, cmd);
@@ -1584,7 +1584,7 @@ namespace wi::gui
 					}
 				}
 			}
-			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+			wi::image::Draw(nullptr, fx, cmd);
 		}
 
 		font_description.Draw(cmd);
@@ -1626,7 +1626,7 @@ namespace wi::gui
 				params.siz.y = scale.y - 2;
 				params.blendFlag = wi::enums::BLENDMODE_ALPHA;
 				params.color = wi::Color::lerp(font_input.params.color, wi::Color::Transparent(), 0.5f);
-				wi::image::Draw(wi::texturehelper::getWhite(), params, cmd);
+				wi::image::Draw(nullptr, params, cmd);
 			}
 
 			//Rect scissorRect;
@@ -1941,7 +1941,7 @@ namespace wi::gui
 					}
 				}
 			}
-			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+			wi::image::Draw(nullptr, fx, cmd);
 		}
 
 		font.Draw(cmd);
@@ -2111,7 +2111,7 @@ namespace wi::gui
 					}
 				}
 			}
-			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+			wi::image::Draw(nullptr, fx, cmd);
 		}
 
 		font.Draw(cmd);
@@ -2160,7 +2160,7 @@ namespace wi::gui
 					scale.y * 0.5f
 				);
 				params.color = font.params.color;
-				wi::image::Draw(wi::texturehelper::getWhite(), params, cmd);
+				wi::image::Draw(nullptr, params, cmd);
 			}
 		}
 		else if (!uncheck_text.empty())
@@ -2435,7 +2435,7 @@ namespace wi::gui
 					}
 				}
 			}
-			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+			wi::image::Draw(nullptr, fx, cmd);
 		}
 
 		wi::Color color = GetColor();
@@ -2473,7 +2473,7 @@ namespace wi::gui
 		wi::image::Params fx = sprites[state].params;
 		fx.pos = XMFLOAT3(translation.x + scale.x + 1, translation.y, 0);
 		fx.siz = XMFLOAT2(scale.y, scale.y);
-		wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+		wi::image::Draw(nullptr, fx, cmd);
 
 		// control-arrow-triangle
 		{
@@ -2524,7 +2524,7 @@ namespace wi::gui
 					fx.pos = XMFLOAT3(translation.x + scale.x + 1, translation.y + scale.y + drop_offset, 0);
 					fx.siz = XMFLOAT2(scale.y, scale.y * maxVisibleItemCount);
 					fx.color = drop_color;
-					wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+					wi::image::Draw(nullptr, fx, cmd);
 				}
 
 				// control-scrollbar-grab
@@ -2577,7 +2577,7 @@ namespace wi::gui
 						fx.color = sprites[ACTIVE].params.color;
 					}
 				}
-				wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+				wi::image::Draw(nullptr, fx, cmd);
 
 				wi::font::Params fp = wi::font::Params(
 					translation.x + scale.x * 0.5f,
@@ -3197,7 +3197,7 @@ namespace wi::gui
 					}
 				}
 			}
-			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+			wi::image::Draw(nullptr, fx, cmd);
 		}
 
 		// base:
@@ -3228,12 +3228,12 @@ namespace wi::gui
 		//scissorRect.top = (int32_t)(0);
 		//GraphicsDevice* device = wi::graphics::GetDevice();
 		//device->BindScissorRects(1, &scissorRect, cmd);
-		//wi::image::Draw(wi::texturehelper::getWhite(), wi::image::Params(scrollable_area.active_area.pos.x, scrollable_area.active_area.pos.y, scrollable_area.active_area.siz.x, scrollable_area.active_area.siz.y, wi::Color(255,0,255,100)), cmd);
+		//wi::image::Draw(nullptr, wi::image::Params(scrollable_area.active_area.pos.x, scrollable_area.active_area.pos.y, scrollable_area.active_area.siz.x, scrollable_area.active_area.siz.y, wi::Color(255,0,255,100)), cmd);
 		//Hitbox2D p = scrollable_area.GetPointerHitbox();
-		//wi::image::Draw(wi::texturehelper::getWhite(), wi::image::Params(p.pos.x, p.pos.y, p.siz.x * 10, p.siz.y * 10, wi::Color(255,0,0,100)), cmd);
+		//wi::image::Draw(nullptr, wi::image::Params(p.pos.x, p.pos.y, p.siz.x * 10, p.siz.y * 10, wi::Color(255,0,0,100)), cmd);
 		//if (!IsCollapsed())
 		//{
-		//	wi::image::Draw(wi::texturehelper::getWhite(), wi::image::Params(scrollable_area.translation.x, scrollable_area.translation.y, scale.x, 10, wi::Color(255,0,255,100)), cmd);
+		//	wi::image::Draw(nullptr, wi::image::Params(scrollable_area.translation.x, scrollable_area.translation.y, scale.x, 10, wi::Color(255,0,255,100)), cmd);
 		//}
 
 		GetDevice()->EventEnd(cmd);
@@ -4657,7 +4657,7 @@ namespace wi::gui
 					}
 				}
 			}
-			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+			wi::image::Draw(nullptr, fx, cmd);
 		}
 
 		// control-base
@@ -4675,7 +4675,7 @@ namespace wi::gui
 		fx.color = sprites[IDLE].params.color;
 		fx.pos = XMFLOAT3(itemlist_box.pos.x, itemlist_box.pos.y, 0);
 		fx.siz = XMFLOAT2(itemlist_box.siz.x, itemlist_box.siz.y);
-		wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+		wi::image::Draw(nullptr, fx, cmd);
 
 		Rect rect_without_scrollbar;
 		rect_without_scrollbar.left = (int)itemlist_box.pos.x;
@@ -4732,7 +4732,7 @@ namespace wi::gui
 			// selected box:
 			if (item.selected || item_highlight == i)
 			{
-				wi::image::Draw(wi::texturehelper::getWhite()
+				wi::image::Draw(nullptr
 					, wi::image::Params(name_box.pos.x, name_box.pos.y, name_box.siz.x, name_box.siz.y,
 						sprites[item.selected ? FOCUS : IDLE].params.color), cmd);
 			}

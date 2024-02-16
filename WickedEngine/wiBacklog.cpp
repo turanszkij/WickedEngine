@@ -245,7 +245,7 @@ namespace wi::backlog
 		{
 			inputbg.enableLinearOutputMapping(9);
 		}
-		wi::image::Draw(wi::texturehelper::getWhite(), inputbg, cmd);
+		wi::image::Draw(nullptr, inputbg, cmd);
 
 		if (colorspace != ColorSpace::SRGB)
 		{

@@ -43,7 +43,7 @@ void CameraPreview::Render(const wi::Canvas& canvas, wi::graphics::CommandList c
 		params.corners_rounding[1].radius = 10;
 		params.corners_rounding[2].radius = 10;
 		params.corners_rounding[3].radius = 10;
-		wi::image::Draw(wi::texturehelper::getWhite(), params, cmd);
+		wi::image::Draw(nullptr, params, cmd);
 
 		params.pos.x += 4;
 		params.pos.y += 4;

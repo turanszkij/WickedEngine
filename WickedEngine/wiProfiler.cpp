@@ -404,7 +404,7 @@ namespace wi::profiler
 			fx.enableLinearOutputMapping(9);
 		}
 
-		wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+		wi::image::Draw(nullptr, fx, cmd);
 		wi::font::Draw(ss.str(), params, cmd);
 
 

@@ -287,9 +287,14 @@ namespace wi::image
 			image.flags |= IMAGE_FLAG_MIRROR;
 		}
 
-		const TextureDesc& desc = texture->GetDesc();
-		const float inv_width = 1.0f / float(desc.width);
-		const float inv_height = 1.0f / float(desc.height);
+		float inv_width = 1.0f;
+		float inv_height = 1.0f;
+		if (texture != nullptr)
+		{
+			const TextureDesc& desc = texture->GetDesc();
+			inv_width = 1.0f / float(desc.width);
+			inv_height = 1.0f / float(desc.height);
+		}
 
 		if (params.isDrawRectEnabled())
 		{

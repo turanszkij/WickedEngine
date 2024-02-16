@@ -328,7 +328,7 @@ namespace wi
 			fx.enableFullScreen();
 			fx.color = fadeManager.color;
 			fx.opacity = fadeManager.opacity;
-			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+			wi::image::Draw(nullptr, fx, cmd);
 		}
 
 		// Draw the information display

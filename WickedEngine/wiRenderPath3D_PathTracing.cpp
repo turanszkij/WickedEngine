@@ -140,6 +140,8 @@ namespace wi
 		wi::renderer::CreateLuminanceResources(luminanceResources, internalResolution);
 		wi::renderer::CreateBloomResources(bloomResources, internalResolution);
 
+		setLightShaftsEnabled(getLightShaftsEnabled());
+
 		resetProgress();
 
 		RenderPath2D::ResizeBuffers(); // we don't need to use any buffers from RenderPath3D, so skip those
