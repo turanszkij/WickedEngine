@@ -633,20 +633,22 @@ namespace wi::scene
 			{
 				// This is done to avoid 0 scaling on any axis of the UNORM remap matrix of the AABB
 				//	It specifically solves a problem with hardware raytracing which treats AABB with zero axis as invisible
-				if (aabb._max.x - aabb._min.x < std::numeric_limits<float>::epsilon())
+				//	Also there was problem with using float epsilon value, it did not enough precision for raytracing
+				constexpr float min_dim = 0.01f;
+				if (aabb._max.x - aabb._min.x < min_dim)
 				{
-					aabb._max.x += std::numeric_limits<float>::epsilon();
-					aabb._min.x -= std::numeric_limits<float>::epsilon();
+					aabb._max.x += min_dim;
+					aabb._min.x -= min_dim;
 				}
-				if (aabb._max.y - aabb._min.y < std::numeric_limits<float>::epsilon())
+				if (aabb._max.y - aabb._min.y < min_dim)
 				{
-					aabb._max.y += std::numeric_limits<float>::epsilon();
-					aabb._min.y -= std::numeric_limits<float>::epsilon();
+					aabb._max.y += min_dim;
+					aabb._min.y -= min_dim;
 				}
-				if (aabb._max.z - aabb._min.z < std::numeric_limits<float>::epsilon())
+				if (aabb._max.z - aabb._min.z < min_dim)
 				{
-					aabb._max.z += std::numeric_limits<float>::epsilon();
-					aabb._min.z -= std::numeric_limits<float>::epsilon();
+					aabb._max.z += min_dim;
+					aabb._min.z -= min_dim;
 				}
 			}
 		}
