@@ -786,6 +786,28 @@ namespace wi::scene
 			clipmap.extents = extents;
 		}
 
+		{
+			auto range = wi::profiler::BeginRangeCPU("VOXELIZE");
+			if (!voxelgrid.IsValid())
+			{
+				voxelgrid.init(64, 128, 128);
+				voxelgrid.set_voxelsize(0.125f);
+			}
+			voxelgrid.from_aabb(bounds);
+			voxelgrid.cleardata();
+			for (size_t i = 0; i < objects.GetCount(); ++i)
+			{
+				const ObjectComponent& object = objects[i];
+				//if ((object.GetFilterMask() & FILTER::FILTER_NAVIGATION_MESH) == 0)
+				//	continue;
+				wi::jobsystem::Execute(ctx, [i, this](wi::jobsystem::JobArgs args) {
+					VoxelizeObject(i, voxelgrid);
+					});
+			}
+			wi::jobsystem::Wait(ctx);
+			wi::profiler::EndRange(range);
+		}
+
 		// Shader scene resources:
 		if (device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
 		{
@@ -5733,6 +5755,71 @@ namespace wi::scene
 		result.orientation = capsule.GetPlacementOrientation(result.position, result.normal);
 
 		return result;
+	}
+
+	void Scene::VoxelizeObject(size_t objectIndex, wi::VoxelGrid& grid)
+	{
+		if (aabb_objects[objectIndex].intersects(grid.get_aabb()) == wi::primitive::AABB::OUTSIDE)
+			return;
+		const ObjectComponent& object = objects[objectIndex];
+		const MeshComponent* mesh = meshes.GetComponent(object.meshID);
+		if (mesh == nullptr)
+			return;
+		const SoftBodyPhysicsComponent* softbody = softbodies.GetComponent(object.meshID);
+		const XMMATRIX objectMat = XMLoadFloat4x4(&matrix_objects[objectIndex]);
+		const ArmatureComponent* armature = mesh->IsSkinned() ? armatures.GetComponent(mesh->armatureID) : nullptr;
+
+		uint32_t first_subset = 0;
+		uint32_t last_subset = 0;
+		mesh->GetLODSubsetRange(0, first_subset, last_subset);
+		for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+		{
+			const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+			if (subset.indexCount == 0)
+				continue;
+			const uint32_t indexOffset = subset.indexOffset;
+			const uint32_t triangleCount = subset.indexCount / 3;
+
+			for (uint32_t triangleIndex = 0; triangleIndex < triangleCount; ++triangleIndex)
+			{
+				const uint32_t i0 = mesh->indices[indexOffset + triangleIndex * 3 + 0];
+				const uint32_t i1 = mesh->indices[indexOffset + triangleIndex * 3 + 1];
+				const uint32_t i2 = mesh->indices[indexOffset + triangleIndex * 3 + 2];
+
+				XMVECTOR p0;
+				XMVECTOR p1;
+				XMVECTOR p2;
+
+				const bool softbody_active = softbody != nullptr && softbody->HasVertices();
+				if (softbody_active)
+				{
+					p0 = softbody->vertex_positions_simulation[i0].LoadPOS();
+					p1 = softbody->vertex_positions_simulation[i1].LoadPOS();
+					p2 = softbody->vertex_positions_simulation[i2].LoadPOS();
+				}
+				else
+				{
+					if (armature == nullptr || armature->boneData.empty())
+					{
+						p0 = XMLoadFloat3(&mesh->vertex_positions[i0]);
+						p1 = XMLoadFloat3(&mesh->vertex_positions[i1]);
+						p2 = XMLoadFloat3(&mesh->vertex_positions[i2]);
+					}
+					else
+					{
+						p0 = SkinVertex(*mesh, *armature, i0);
+						p1 = SkinVertex(*mesh, *armature, i1);
+						p2 = SkinVertex(*mesh, *armature, i2);
+					}
+
+					p0 = XMVector3Transform(p0, objectMat);
+					p1 = XMVector3Transform(p1, objectMat);
+					p2 = XMVector3Transform(p2, objectMat);
+				}
+
+				grid.inject_triangle(p0, p1, p2);
+			}
+		}
 	}
 
 

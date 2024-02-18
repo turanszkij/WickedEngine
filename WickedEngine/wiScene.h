@@ -13,6 +13,7 @@
 #include "wiTerrain.h"
 #include "wiBVH.h"
 #include "wiUnorderedSet.h"
+#include "wiVoxelGrid.h"
 
 #include <string>
 #include <memory>
@@ -259,6 +260,8 @@ namespace wi::scene
 		ColliderComponent* colliders_gpu = nullptr;
 		wi::BVH collider_bvh;
 
+		wi::VoxelGrid voxelgrid;
+
 		// Ocean GPU state:
 		wi::Ocean ocean;
 		void OceanRegenerate() { ocean.Create(weather.oceanParameters); }
@@ -484,6 +487,8 @@ namespace wi::scene
 		// If you don't know which armature the bone is contained int, this function can be used to find the first such armature and return the bone's rest matrix
 		//	If not found, return identity matrix
 		XMMATRIX FindBoneRestPose(wi::ecs::Entity bone) const;
+
+		void VoxelizeObject(size_t objectIndex, wi::VoxelGrid& grid);
 	};
 
 	// Returns skinned vertex position in armature local space

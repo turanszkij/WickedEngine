@@ -6185,6 +6185,11 @@ void DrawDebugWorld(
 
 	device->EventBegin("DrawDebugWorld", cmd);
 
+	if (scene.voxelgrid.IsValid())
+	{
+		scene.voxelgrid.debugdraw(camera.VP, cmd);
+	}
+
 	BindCommonResources(cmd);
 
 	if (debugCameras)
