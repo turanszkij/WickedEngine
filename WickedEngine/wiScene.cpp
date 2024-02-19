@@ -790,11 +790,20 @@ namespace wi::scene
 			auto range = wi::profiler::BeginRangeCPU("VOXELIZE");
 			if (!voxelgrid.IsValid())
 			{
-				voxelgrid.init(64, 128, 128);
+				voxelgrid.init(64, 16, 64);
 				voxelgrid.set_voxelsize(0.125f);
+				wi::backlog::post("Created voxel grid, size = " + wi::helper::GetMemorySizeText(voxelgrid.get_memory_size()));
+				voxelgrid_waypoints = voxelgrid;
+				voxelgrid_waypoints.debug_color = XMFLOAT4(1, 0, 0, 1);
+				voxelgrid_path = voxelgrid;
+				voxelgrid_path.debug_color = XMFLOAT4(0, 0, 1, 0.8f);
 			}
-			voxelgrid.from_aabb(bounds);
+			//voxelgrid.from_aabb(bounds);
+			//voxelgrid_waypoints.from_aabb(bounds);
+			//voxelgrid_path.from_aabb(bounds);
 			voxelgrid.cleardata();
+			voxelgrid_waypoints.cleardata();
+			voxelgrid_path.cleardata();
 			for (size_t i = 0; i < objects.GetCount(); ++i)
 			{
 				const ObjectComponent& object = objects[i];
@@ -5757,7 +5766,7 @@ namespace wi::scene
 		return result;
 	}
 
-	void Scene::VoxelizeObject(size_t objectIndex, wi::VoxelGrid& grid)
+	void Scene::VoxelizeObject(size_t objectIndex, wi::VoxelGrid& grid, bool subtract)
 	{
 		if (aabb_objects[objectIndex].intersects(grid.get_aabb()) == wi::primitive::AABB::OUTSIDE)
 			return;
@@ -5817,9 +5826,62 @@ namespace wi::scene
 					p2 = XMVector3Transform(p2, objectMat);
 				}
 
-				grid.inject_triangle(p0, p1, p2);
+				grid.inject_triangle(p0, p1, p2, subtract);
 			}
 		}
+	}
+
+	XMFLOAT3 Scene::GetPositionOnSurface(wi::ecs::Entity objectEntity, int vertexID0, int vertexID1, int vertexID2, const XMFLOAT2& bary) const
+	{
+		const ObjectComponent* object = objects.GetComponent(objectEntity);
+		if (object == nullptr || object->meshID == INVALID_ENTITY)
+			return XMFLOAT3(0, 0, 0);
+		const MeshComponent* mesh = meshes.GetComponent(object->meshID);
+		if (mesh == nullptr)
+			return XMFLOAT3(0, 0, 0);
+
+		const SoftBodyPhysicsComponent* softbody = softbodies.GetComponent(object->meshID);
+		const ArmatureComponent* armature = mesh->IsSkinned() ? armatures.GetComponent(mesh->armatureID) : nullptr;
+
+		XMVECTOR p0;
+		XMVECTOR p1;
+		XMVECTOR p2;
+
+		const bool softbody_active = softbody != nullptr && softbody->HasVertices();
+		if (softbody_active)
+		{
+			p0 = softbody->vertex_positions_simulation[vertexID0].LoadPOS();
+			p1 = softbody->vertex_positions_simulation[vertexID1].LoadPOS();
+			p2 = softbody->vertex_positions_simulation[vertexID2].LoadPOS();
+		}
+		else
+		{
+			if (armature == nullptr || armature->boneData.empty())
+			{
+				p0 = XMLoadFloat3(&mesh->vertex_positions[vertexID0]);
+				p1 = XMLoadFloat3(&mesh->vertex_positions[vertexID1]);
+				p2 = XMLoadFloat3(&mesh->vertex_positions[vertexID2]);
+			}
+			else
+			{
+				p0 = SkinVertex(*mesh, *armature, vertexID0);
+				p1 = SkinVertex(*mesh, *armature, vertexID1);
+				p2 = SkinVertex(*mesh, *armature, vertexID2);
+			}
+		}
+
+		XMVECTOR P = XMVectorBaryCentric(p0, p1, p2, bary.x, bary.y);
+
+		if (!softbody_active)
+		{
+			const size_t objectIndex = objects.GetIndex(objectEntity);
+			const XMMATRIX objectMat = XMLoadFloat4x4(&matrix_objects[objectIndex]);
+			P = XMVector3Transform(P, objectMat);
+		}
+
+		XMFLOAT3 result;
+		XMStoreFloat3(&result, P);
+		return result;
 	}
 
 

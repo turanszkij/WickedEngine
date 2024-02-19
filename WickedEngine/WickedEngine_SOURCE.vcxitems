@@ -241,6 +241,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiConfig.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLocalization.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNoise.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiPathQuery.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiPhysics_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderPath3D_PathTracing.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\liberation_sans.h" />
@@ -518,6 +519,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\pugixml.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiConfig.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLocalization.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiPathQuery.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiPhysics_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderPath3D_PathTracing.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp.cpp" />

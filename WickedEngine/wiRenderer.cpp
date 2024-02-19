@@ -6189,6 +6189,15 @@ void DrawDebugWorld(
 	{
 		scene.voxelgrid.debugdraw(camera.VP, cmd);
 	}
+	if (scene.voxelgrid_waypoints.IsValid())
+	{
+		scene.voxelgrid_waypoints.debugdraw(camera.VP, cmd);
+	}
+	if (scene.voxelgrid_path.IsValid())
+	{
+		scene.voxelgrid_path.debugdraw(camera.VP, cmd);
+	}
+	scene.pathquery.debugdraw(camera.VP, cmd);
 
 	BindCommonResources(cmd);
 

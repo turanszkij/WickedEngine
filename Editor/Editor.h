@@ -179,6 +179,9 @@ public:
 		wi::vector<uint8_t> filedata;
 	};
 	wi::vector<FontData> font_datas;
+
+	wi::scene::PickResult navtest_start_pick;
+	wi::scene::PickResult navtest_goal_pick;
 };
 
 class Editor : public wi::Application

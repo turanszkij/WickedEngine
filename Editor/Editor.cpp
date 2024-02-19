@@ -1903,6 +1903,76 @@ void EditorComponent::Update(float dt)
 	renderPath->Update(dt);
 
 
+
+
+
+
+
+
+
+
+	// PATH FINDER DEBUG
+	if (hovered.entity != INVALID_ENTITY && wi::input::Down((wi::input::BUTTON)'N'))
+	{
+		if (scene.voxelgrid.check_voxel(hovered.position))
+		{
+			navtest_start_pick = hovered;
+		}
+	}
+	if (hovered.entity != INVALID_ENTITY && wi::input::Down((wi::input::BUTTON)'M'))
+	{
+		if (scene.voxelgrid.check_voxel(hovered.position))
+		{
+			navtest_goal_pick = hovered;
+		}
+	}
+	if (navtest_start_pick.entity != INVALID_ENTITY)
+	{
+		scene.voxelgrid_waypoints.set_voxel(navtest_start_pick.position, 1);
+	}
+	if (navtest_goal_pick.entity != INVALID_ENTITY)
+	{
+		scene.voxelgrid_waypoints.set_voxel(navtest_goal_pick.position, 1);
+	}
+
+	if (navtest_start_pick.entity != INVALID_ENTITY && navtest_goal_pick.entity != INVALID_ENTITY)
+	{
+		navtest_start_pick.position = scene.GetPositionOnSurface(
+			navtest_start_pick.entity,
+			navtest_start_pick.vertexID0,
+			navtest_start_pick.vertexID1,
+			navtest_start_pick.vertexID2,
+			navtest_start_pick.bary
+		);
+		navtest_goal_pick.position = scene.GetPositionOnSurface(
+			navtest_goal_pick.entity,
+			navtest_goal_pick.vertexID0,
+			navtest_goal_pick.vertexID1,
+			navtest_goal_pick.vertexID2,
+			navtest_goal_pick.bary
+		);
+		scene.pathquery.process(navtest_start_pick.position, navtest_goal_pick.position, scene.voxelgrid);
+
+		for (auto& x : scene.pathquery.result_path_goal_to_start)
+		{
+			scene.voxelgrid_path.set_voxel(x, 1);
+		}
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	bool force_collider_visualizer = false;
 	for (auto& x : translator.selected)
 	{

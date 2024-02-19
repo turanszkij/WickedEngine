@@ -73,6 +73,7 @@
 #include "wiLocalization.h"
 #include "wiVideo.h"
 #include "wiVoxelGrid.h"
+#include "wiPathQuery.h"
 
 #ifdef PLATFORM_WINDOWS_DESKTOP
 #pragma comment(lib,"WickedEngine_Windows.lib")

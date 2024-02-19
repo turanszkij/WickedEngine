@@ -14,6 +14,7 @@
 #include "wiBVH.h"
 #include "wiUnorderedSet.h"
 #include "wiVoxelGrid.h"
+#include "wiPathQuery.h"
 
 #include <string>
 #include <memory>
@@ -261,6 +262,9 @@ namespace wi::scene
 		wi::BVH collider_bvh;
 
 		wi::VoxelGrid voxelgrid;
+		wi::VoxelGrid voxelgrid_waypoints;
+		wi::VoxelGrid voxelgrid_path;
+		wi::PathQuery pathquery;
 
 		// Ocean GPU state:
 		wi::Ocean ocean;
@@ -488,7 +492,12 @@ namespace wi::scene
 		//	If not found, return identity matrix
 		XMMATRIX FindBoneRestPose(wi::ecs::Entity bone) const;
 
-		void VoxelizeObject(size_t objectIndex, wi::VoxelGrid& grid);
+		// All triangles of the object will be injected into the voxel grid
+		//	subtract: if false (default), voxels will be added, if true then voxels will be removed
+		void VoxelizeObject(size_t objectIndex, wi::VoxelGrid& grid, bool subtract = false);
+
+		// Get the current position on the surface of an object, tracked by the triangle barycentrics
+		XMFLOAT3 GetPositionOnSurface(wi::ecs::Entity objectEntity, int vertexID0, int vertexID1, int vertexID2, const XMFLOAT2& bary) const;
 	};
 
 	// Returns skinned vertex position in armature local space

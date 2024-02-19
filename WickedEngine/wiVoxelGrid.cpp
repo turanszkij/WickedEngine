@@ -108,8 +108,22 @@ namespace wi
 		}
 	}
 
+	XMUINT3 VoxelGrid::world_to_coord(const XMFLOAT3& worldpos) const
+	{
+		XMUINT3 coord;
+		XMStoreUInt3(&coord, world_to_uvw(XMLoadFloat3(&worldpos), XMLoadFloat3(&center), XMLoadFloat3(&resolution_rcp), XMLoadFloat3(&voxelSize_rcp)) * XMLoadUInt3(&resolution));
+		return coord;
+	}
+	XMFLOAT3 VoxelGrid::coord_to_world(const XMUINT3& coord) const
+	{
+		XMFLOAT3 worldpos;
+		XMStoreFloat3(&worldpos, uvw_to_world((XMLoadUInt3(&coord) + XMVectorReplicate(0.5f)) * XMLoadFloat3(&resolution_rcp), XMLoadFloat3(&center), XMLoadUInt3(&resolution), XMLoadFloat3(&voxelSize)));
+		return worldpos;
+	}
 	bool VoxelGrid::check_voxel(XMUINT3 coord) const
 	{
+		if (coord.x >= resolution.x || coord.y >= resolution.y || coord.z >= resolution.z)
+			return false;
 		uint3 sub_coord;
 		sub_coord.x = coord.x % 4u;
 		sub_coord.y = coord.y % 4u;
@@ -121,6 +135,41 @@ namespace wi
 		const uint bit = flatten3D(sub_coord, uint3(4, 4, 4));
 		const uint64_t mask = 1ull << bit;
 		return (voxels[idx] & mask) != 0ull;
+	}
+	bool VoxelGrid::check_voxel(const XMFLOAT3& worldpos) const
+	{
+		return check_voxel(world_to_coord(worldpos));
+	}
+	void VoxelGrid::set_voxel(XMUINT3 coord, bool value)
+	{
+		if (coord.x >= resolution.x || coord.y >= resolution.y || coord.z >= resolution.z)
+			return;
+		uint3 sub_coord;
+		sub_coord.x = coord.x % 4u;
+		sub_coord.y = coord.y % 4u;
+		sub_coord.z = coord.z % 4u;
+		coord.x /= 4u;
+		coord.y /= 4u;
+		coord.z /= 4u;
+		const uint idx = flatten3D(coord, resolution_div4);
+		const uint bit = flatten3D(sub_coord, uint3(4, 4, 4));
+		const uint64_t mask = 1ull << bit;
+		if (value)
+		{
+			voxels[idx] |= mask;
+		}
+		else
+		{
+			voxels[idx] &= ~mask;
+		}
+	}
+	void VoxelGrid::set_voxel(const XMFLOAT3& worldpos, bool value)
+	{
+		set_voxel(world_to_coord(worldpos), value);
+	}
+	size_t VoxelGrid::get_memory_size() const
+	{
+		return voxels.size() * sizeof(uint64_t);
 	}
 
 	void VoxelGrid::set_voxelsize(float size)
@@ -148,29 +197,63 @@ namespace wi
 		set_voxelsize(XMFLOAT3(halfwidth.x / resolution.x, halfwidth.y / resolution.y, halfwidth.z / resolution.z));
 	}
 
-	PipelineState pso_solidpart;
-	static void LoadShaders()
+	VoxelGrid::Neighbors VoxelGrid::get_neighbors(XMUINT3 coord) const
 	{
-		PipelineStateDesc desc;
-
-		desc.vs = wi::renderer::GetShader(wi::enums::VSTYPE_VERTEXCOLOR);
-		desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);
-		desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_VERTEXCOLOR);
-		desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEPTHREAD);
-		desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_FRONT);
-		desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_ADDITIVE);
-		desc.pt = PrimitiveTopology::TRIANGLELIST;
-
-		GraphicsDevice* device = GetDevice();
-		device->CreatePipelineState(&desc, &pso_solidpart);
+		Neighbors neighbors;
+		for (int x = -1; x <= 1; ++x)
+		{
+			for (int y = -1; y <= 1; ++y)
+			{
+				for (int z = -1; z <= 1; ++z)
+				{
+					if (x == 0 && y == 0 && z == 0)
+						continue; // center not needed
+					XMUINT3 neighbor_coord = coord;
+					neighbor_coord.x += x;
+					neighbor_coord.y += y;
+					neighbor_coord.z += z;
+					if (check_voxel(neighbor_coord))
+					{
+						// add valid neighbor to list:
+						neighbors.coords[neighbors.count] = neighbor_coord;
+						neighbors.count++;
+					}
+				}
+			}
+		}
+		return neighbors;
 	}
+	VoxelGrid::Neighbors VoxelGrid::get_neighbors(const XMFLOAT3& worldpos) const
+	{
+		return get_neighbors(world_to_coord(worldpos));
+	}
+
+	namespace VoxelGrid_internal
+	{
+		PipelineState pso_solidpart;
+		static void LoadShaders()
+		{
+			PipelineStateDesc desc;
+			desc.vs = wi::renderer::GetShader(wi::enums::VSTYPE_VERTEXCOLOR);
+			desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);
+			desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_VERTEXCOLOR);
+			desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEPTHREAD);
+			desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_FRONT);
+			desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_ADDITIVE);
+			desc.pt = PrimitiveTopology::TRIANGLELIST;
+
+			GraphicsDevice* device = GetDevice();
+			device->CreatePipelineState(&desc, &pso_solidpart);
+		}
+	}
+	using namespace VoxelGrid_internal;
 
 	void VoxelGrid::debugdraw(const XMFLOAT4X4& ViewProjection, CommandList cmd) const
 	{
 		// add box renderer for whole volume:
 		XMFLOAT4X4 boxmat;
 		XMStoreFloat4x4(&boxmat, get_aabb().getAsBoxMatrix());
-		wi::renderer::DrawBox(boxmat, XMFLOAT4(1, 1, 0.2f, 1));
+		wi::renderer::DrawBox(boxmat, debug_color_extent);
 
 		// Add a cube for every filled voxel below:
 		uint32_t numVoxels = 0;
@@ -289,7 +372,7 @@ namespace wi
 
 		MiscCB sb;
 		sb.g_xTransform = ViewProjection;
-		sb.g_xColor = XMFLOAT4(0.4f, 1, 0.2f, 0.1f);
+		sb.g_xColor = debug_color;
 		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 
 		device->Draw(arraysize(cubeVerts) * numVoxels, 0, cmd);

@@ -1128,6 +1128,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVoxelGrid.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiPathQuery.h">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1884,6 +1887,9 @@
       <Filter>UTILITY</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVoxelGrid.cpp">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiPathQuery.cpp">
       <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
   </ItemGroup>
