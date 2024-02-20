@@ -28,6 +28,7 @@ namespace wi
 		XMFLOAT3 coord_to_world(const XMUINT3& coord) const;
 		bool check_voxel(XMUINT3 coord) const;
 		bool check_voxel(const XMFLOAT3& worldpos) const;
+		bool is_coord_valid(const XMUINT3& coord) const;
 		void set_voxel(XMUINT3 coord, bool value);
 		void set_voxel(const XMFLOAT3& worldpos, bool value);
 		size_t get_memory_size() const;
@@ -42,8 +43,14 @@ namespace wi
 			XMUINT3 coords[3 * 3 * 3 - 1] = {}; // 3x3x3 grid, except center
 			uint32_t count = 0;
 		};
-		Neighbors get_neighbors(XMUINT3 coord) const;
-		Neighbors get_neighbors(const XMFLOAT3& worldpos) const;
+		enum class NeighborQueryFlags
+		{
+			None = 0,
+			MustBeValid = 1 << 0, // only get neighbors that are set to 1
+			DisableDiagonal = 1 << 1, // get neighbors only in straight directions
+		};
+		Neighbors get_neighbors(XMUINT3 coord, NeighborQueryFlags flags = NeighborQueryFlags::None) const;
+		Neighbors get_neighbors(const XMFLOAT3& worldpos, NeighborQueryFlags flags = NeighborQueryFlags::None) const;
 
 		inline bool IsValid() const { return !voxels.empty(); }
 
@@ -65,3 +72,8 @@ namespace wi
 	};
 
 }
+
+template<>
+struct enable_bitmask_operators<wi::VoxelGrid::NeighborQueryFlags> {
+	static const bool enable = true;
+};

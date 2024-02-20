@@ -140,6 +140,10 @@ namespace wi
 	{
 		return check_voxel(world_to_coord(worldpos));
 	}
+	bool VoxelGrid::is_coord_valid(const XMUINT3& coord) const
+	{
+		return coord.x < resolution.x && coord.y < resolution.y && coord.z < resolution.z;
+	}
 	void VoxelGrid::set_voxel(XMUINT3 coord, bool value)
 	{
 		if (coord.x >= resolution.x || coord.y >= resolution.y || coord.z >= resolution.z)
@@ -197,35 +201,53 @@ namespace wi
 		set_voxelsize(XMFLOAT3(halfwidth.x / resolution.x, halfwidth.y / resolution.y, halfwidth.z / resolution.z));
 	}
 
-	VoxelGrid::Neighbors VoxelGrid::get_neighbors(XMUINT3 coord) const
+	VoxelGrid::Neighbors VoxelGrid::get_neighbors(XMUINT3 coord, NeighborQueryFlags flags) const
 	{
 		Neighbors neighbors;
-		for (int x = -1; x <= 1; ++x)
-		{
-			for (int y = -1; y <= 1; ++y)
+		auto add = [&](XMUINT3 neighbor_coord){
+			if (!is_coord_valid(neighbor_coord))
+				return;
+			if (!has_flag(flags, NeighborQueryFlags::MustBeValid) || check_voxel(neighbor_coord))
 			{
-				for (int z = -1; z <= 1; ++z)
+				// add valid neighbor to list:
+				neighbors.coords[neighbors.count] = neighbor_coord;
+				neighbors.count++;
+			}
+		};
+
+		if (has_flag(flags, NeighborQueryFlags::DisableDiagonal))
+		{
+			add(XMUINT3(coord.x - 1, coord.y, coord.z));
+			add(XMUINT3(coord.x + 1, coord.y, coord.z));
+			add(XMUINT3(coord.x, coord.y - 1, coord.z));
+			add(XMUINT3(coord.x, coord.y + 1, coord.z));
+			add(XMUINT3(coord.x, coord.y, coord.z - 1));
+			add(XMUINT3(coord.x, coord.y, coord.z + 1));
+		}
+		else
+		{
+			for (int x = -1; x <= 1; ++x)
+			{
+				for (int y = -1; y <= 1; ++y)
 				{
-					if (x == 0 && y == 0 && z == 0)
-						continue; // center not needed
-					XMUINT3 neighbor_coord = coord;
-					neighbor_coord.x += x;
-					neighbor_coord.y += y;
-					neighbor_coord.z += z;
-					if (check_voxel(neighbor_coord))
+					for (int z = -1; z <= 1; ++z)
 					{
-						// add valid neighbor to list:
-						neighbors.coords[neighbors.count] = neighbor_coord;
-						neighbors.count++;
+						if (x == 0 && y == 0 && z == 0)
+							continue; // center not needed
+						XMUINT3 neighbor_coord = coord;
+						neighbor_coord.x += x;
+						neighbor_coord.y += y;
+						neighbor_coord.z += z;
+						add(neighbor_coord);
 					}
 				}
 			}
 		}
 		return neighbors;
 	}
-	VoxelGrid::Neighbors VoxelGrid::get_neighbors(const XMFLOAT3& worldpos) const
+	VoxelGrid::Neighbors VoxelGrid::get_neighbors(const XMFLOAT3& worldpos, NeighborQueryFlags flags) const
 	{
-		return get_neighbors(world_to_coord(worldpos));
+		return get_neighbors(world_to_coord(worldpos), flags);
 	}
 
 	namespace VoxelGrid_internal

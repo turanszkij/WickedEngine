@@ -7,6 +7,7 @@ using namespace wi::graphics;
 
 namespace wi
 {
+
 	void PathQuery::process(const XMFLOAT3& startpos, const XMFLOAT3& goalpos, const wi::VoxelGrid& voxelgrid)
 	{
 		auto range = wi::profiler::BeginRangeCPU("PathQuery");
@@ -14,19 +15,126 @@ namespace wi
 		came_from.clear();
 		cost_so_far.clear();
 		result_path_goal_to_start.clear();
+		result_path_goal_to_start_simplified.clear();
 		process_startpos = startpos;
 		debugvoxelsize = voxelgrid.voxelSize;
 
-		auto is_coord_valid = [&](XMUINT3 coord) {
+		auto is_voxel_valid = [&](XMUINT3 coord) {
+			if (!voxelgrid.check_voxel(coord))
+				return false;
+			// Check blocking from above 2 voxels:
 			if (voxelgrid.check_voxel(XMUINT3(coord.x, coord.y - 1, coord.z)))
-				return false; // if blocked from above, then it is not traversible
+				return false;
 			if (voxelgrid.check_voxel(XMUINT3(coord.x, coord.y - 2, coord.z)))
-				return false; // if blocked from above, then it is not traversible
+				return false;
+			return true;
+		};
+		auto is_voxel_valid2 = [&](XMUINT3 coord) {
+			for (int x = -1; x <= 1; ++x)
+			{
+				for (int z = -1; z <= 1; ++z)
+				{
+					XMUINT3 neighbor_coord = coord;
+					neighbor_coord.x += x;
+					neighbor_coord.z += z;
+					if (!is_voxel_valid(neighbor_coord))
+						return false;
+				}
+			}
 			return true;
 		};
 		auto cost_to_goal = [&](XMUINT3 coord, XMUINT3 goal) {
 			// manhattan distance:
 			return std::abs(int(coord.x) - int(goal.x)) + std::abs(int(coord.y) - int(goal.y)) + std::abs(int(coord.z) - int(goal.z));
+		};
+		auto dda = [&](const XMUINT3& start, const XMUINT3& goal)
+		{
+			const int dx = int(goal.x) - int(start.x);
+			const int dy = int(goal.y) - int(start.y);
+			const int dz = int(goal.z) - int(start.z);
+
+			static int method = 0;
+
+			if (method == 0)
+			{
+				// Thick-line (conservative) DDA:
+				const int stepX = dx >= 0 ? 1 : -1;
+				const int stepY = dy >= 0 ? 1 : -1;
+				const int stepZ = dz >= 0 ? 1 : -1;
+
+				const float tDeltaX = float(stepX) / dx;
+				const float tDeltaY = float(stepY) / dy;
+				const float tDeltaZ = float(stepZ) / dz;
+
+				float tMaxX = tDeltaX;
+				float tMaxY = tDeltaY;
+				float tMaxZ = tDeltaZ;
+
+				int x = start.x;
+				int y = start.y;
+				int z = start.z;
+
+				do {
+					if (tMaxX < tMaxY)
+					{
+						if (tMaxX < tMaxZ)
+						{
+							x += stepX;
+							tMaxX += tDeltaX;
+						}
+						else
+						{
+							z += stepZ;
+							tMaxZ += tDeltaZ;
+						}
+					}
+					else
+					{
+						if (tMaxY < tMaxZ)
+						{
+							y += stepY;
+							tMaxY += tDeltaY;
+						}
+						else
+						{
+							z += stepZ;
+							tMaxZ += tDeltaZ;
+						}
+					}
+					XMUINT3 coord = XMUINT3(uint32_t(x), uint32_t(y), uint32_t(z));
+					if (!is_voxel_valid(coord))
+						return false;
+				} while (x != goal.x || y != goal.y || z != goal.z);
+			}
+			else
+			{
+				// Thin-line DDA:
+				const int abs_dx = std::abs(dx);
+				const int abs_dy = std::abs(dy);
+				const int abs_dz = std::abs(dz);
+
+				int step = abs_dx > abs_dy ? abs_dx : abs_dy;
+				step = abs_dz > step ? abs_dz : step;
+
+				const float x_incr = float(dx) / step;
+				const float y_incr = float(dy) / step;
+				const float z_incr = float(dz) / step;
+
+				float x = float(start.x);
+				float y = float(start.y);
+				float z = float(start.z);
+
+				for (int i = 0; i < step; i++)
+				{
+					XMUINT3 coord = XMUINT3(uint32_t(std::round(x)), uint32_t(std::round(y)), uint32_t(std::round(z)));
+					if (!is_voxel_valid(coord))
+						return false;
+					x += x_incr;
+					y += y_incr;
+					z += z_incr;
+				}
+			}
+			return true;
 		};
 
 		// A* explanation at: https://www.redblobgames.com/pathfinding/a-star/introduction.html
@@ -44,10 +152,13 @@ namespace wi
 			if (current == goal)
 				break;
 
-			wi::VoxelGrid::Neighbors neighbors = voxelgrid.get_neighbors(current.coord());
+			VoxelGrid::NeighborQueryFlags neighbor_flags = VoxelGrid::NeighborQueryFlags::None;
+			//neighbor_flags |= VoxelGrid::NeighborQueryFlags::MustBeValid;
+			//neighbor_flags |= VoxelGrid::NeighborQueryFlags::DisableDiagonal;
+			wi::VoxelGrid::Neighbors neighbors = voxelgrid.get_neighbors(current.coord(), neighbor_flags);
 			for (uint32_t i = 0; i < neighbors.count; ++i)
 			{
-				if (!is_coord_valid(neighbors.coords[i]))
+				if (!is_voxel_valid(neighbors.coords[i]))
 					continue;
 				Node next = Node::create(neighbors.coords[i]);
 				uint16_t new_cost = cost_so_far[current] + cost_to_goal(current.coord(), next.coord());
@@ -76,14 +187,34 @@ namespace wi
 			current = node;
 		}
 
+		// Simplification:
+		if (!result_path_goal_to_start.empty())
+		{
+			size_t i = 0;
+			while (i < result_path_goal_to_start.size())
+			{
+				result_path_goal_to_start_simplified.push_back(result_path_goal_to_start[i]);
+				Node current = Node::create(voxelgrid.world_to_coord(result_path_goal_to_start[i]));
+				size_t maxi = i;
+				for (maxi = i + 1; maxi < result_path_goal_to_start.size() - 1; ++maxi)
+				{
+					Node next = Node::create(voxelgrid.world_to_coord(result_path_goal_to_start[maxi]));
+					if (!dda(current.coord(), next.coord()))
+						break;
+				}
+				i = maxi;
+			}
+		}
+
 		wi::profiler::EndRange(range);
 	}
 
 	XMFLOAT3 PathQuery::get_first_waypoint() const
 	{
-		if (result_path_goal_to_start.size() < 2)
+		const wi::vector<XMFLOAT3>& results = result_path_goal_to_start_simplified.empty() ? result_path_goal_to_start : result_path_goal_to_start_simplified;
+		if (results.size() < 2)
 			return process_startpos;
-		return result_path_goal_to_start[result_path_goal_to_start.size() - 2];
+		return results[results.size() - 2];
 	}
 
 	namespace PathQuery_internal
@@ -108,7 +239,9 @@ namespace wi
 
 	void PathQuery::debugdraw(const XMFLOAT4X4& ViewProjection, CommandList cmd) const
 	{
-		if (result_path_goal_to_start.size() < 2)
+		const wi::vector<XMFLOAT3>& results = result_path_goal_to_start_simplified.empty() ? result_path_goal_to_start : result_path_goal_to_start_simplified;
+
+		if (results.size() < 2)
 			return;
 
 		static bool shaders_loaded = false;
@@ -126,7 +259,8 @@ namespace wi
 		};
 
 		static uint32_t resolution = 10;
-		uint32_t numSegments = uint32_t(result_path_goal_to_start.size()) * resolution;
+		const float resolution_rcp = 1.0f / resolution;
+		uint32_t numSegments = uint32_t(results.size()) * resolution;
 		uint32_t numVertices = numSegments * 2;
 
 		GraphicsDevice* device = GetDevice();
@@ -145,35 +279,44 @@ namespace wi
 		numVertices = 0;
 		Vertex* vertices = (Vertex*)mem.data;
 		XMVECTOR P0, P1, P2, P3;
-		XMVECTOR P_prev = XMLoadFloat3(&result_path_goal_to_start[0]) + topalign;
-		int count = (int)result_path_goal_to_start.size();
-		for (int i = 0; i < count - 1; ++i)
+		int count = (int)results.size();
+		for (int i = 0; i < count; ++i)
 		{
-			P0 = XMLoadFloat3(&result_path_goal_to_start[std::max(0, std::min(i - 1, count - 1))]) + topalign;
-			P1 = XMLoadFloat3(&result_path_goal_to_start[std::max(0, std::min(i, count - 1))]) + topalign;
-			P2 = XMLoadFloat3(&result_path_goal_to_start[std::max(0, std::min(i + 1, count - 1))]) + topalign;
-			P3 = XMLoadFloat3(&result_path_goal_to_start[std::max(0, std::min(i + 2, count - 1))]) + topalign;
-			for (uint32_t j = 0; j < resolution; ++j)
+			P0 = XMLoadFloat3(&results[std::max(0, std::min(i - 1, count - 1))]) + topalign;
+			P1 = XMLoadFloat3(&results[std::max(0, std::min(i, count - 1))]) + topalign;
+			P2 = XMLoadFloat3(&results[std::max(0, std::min(i + 1, count - 1))]) + topalign;
+			P3 = XMLoadFloat3(&results[std::max(0, std::min(i + 2, count - 1))]) + topalign;
+			XMFLOAT4X4 boxmat;
+			XMStoreFloat4x4(&boxmat, XMMatrixScaling(debugvoxelsize.x, debugvoxelsize.y, debugvoxelsize.z)* XMMatrixTranslationFromVector(P1));
+			wi::renderer::DrawBox(boxmat);
+			for (uint32_t j = 0; j < (i == (count - 1) ? 1 : resolution); ++j)
 			{
 				float t = float(j) / float(resolution);
+#if 1
 				XMVECTOR P = XMVectorCatmullRom(P0, P1, P2, P3, t);
+				XMVECTOR P_prev = XMVectorCatmullRom(P0, P1, P2, P3, t - resolution_rcp);
+				XMVECTOR P_next = XMVectorCatmullRom(P0, P1, P2, P3, t + resolution_rcp);
+#else
+				XMVECTOR P = XMVectorLerp(P1, P2, t);
+				XMVECTOR P_prev = XMVectorLerp(P0, P1, t - resolution_rcp);
+				XMVECTOR P_next = XMVectorLerp(P1, P2, t + resolution_rcp);
+#endif
 
-				XMVECTOR T = XMVector3Normalize(P - P_prev);
+				XMVECTOR T = XMVector3Normalize(P_next - P_prev);
 				XMVECTOR B = XMVector3Normalize(XMVector3Cross(T, XMVectorSet(0, 1, 0, 0)));
 				B *= width;
 
 				Vertex vert;
 				vert.color = wi::math::Lerp(color0, color1, wi::math::saturate(std::sin(segmenti + debugtimer) * 0.5f + 0.5f));
 
-				XMStoreFloat4(&vert.position, XMVectorSetW(P_prev - B, 1));
+				XMStoreFloat4(&vert.position, XMVectorSetW(P - B, 1));
 				std::memcpy(vertices + numVertices, &vert, sizeof(vert));
 				numVertices++;
 
-				XMStoreFloat4(&vert.position, XMVectorSetW(P_prev + B, 1));
+				XMStoreFloat4(&vert.position, XMVectorSetW(P + B, 1));
 				std::memcpy(vertices + numVertices, &vert, sizeof(vert));
 				numVertices++;
 
-				P_prev = P;
 				segmenti += gradientsize;
 			}
 		}

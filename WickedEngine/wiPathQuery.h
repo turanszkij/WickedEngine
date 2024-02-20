@@ -42,6 +42,7 @@ namespace wi
 		wi::unordered_map<uint64_t, Node> came_from;
 		wi::unordered_map<uint64_t, uint16_t> cost_so_far;
 		wi::vector<XMFLOAT3> result_path_goal_to_start;
+		wi::vector<XMFLOAT3> result_path_goal_to_start_simplified;
 		XMFLOAT3 process_startpos = XMFLOAT3(0, 0, 0);
 
 		// Find the path between startpos and goalpos in the voxel grid:
