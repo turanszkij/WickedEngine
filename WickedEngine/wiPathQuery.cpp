@@ -237,6 +237,14 @@ namespace wi
 	}
 	using namespace PathQuery_internal;
 
+	XMVECTOR CatmullRomInterpolation(
+		FXMVECTOR P0, FXMVECTOR P1, FXMVECTOR P2, FXMVECTOR P3, float t) {
+		return 0.5f * ((2.0f * P1) +
+			(-P0 + P2) * t +
+			(2.0f * P0 - 5.0f * P1 + 4.0f * P2 - P3) * t * t +
+			(-P0 + 3.0f * P1 - 3.0f * P2 + P3) * t * t * t);
+	}
+
 	void PathQuery::debugdraw(const XMFLOAT4X4& ViewProjection, CommandList cmd) const
 	{
 		const wi::vector<XMFLOAT3>& results = result_path_goal_to_start_simplified.empty() ? result_path_goal_to_start : result_path_goal_to_start_simplified;
@@ -274,28 +282,45 @@ namespace wi
 		static XMFLOAT4 color0 = wi::Color(10, 10, 20, 255);
 		static XMFLOAT4 color1 = wi::Color(70, 150, 170, 255);
 
-		static const XMVECTOR topalign = XMVectorSet(0, debugvoxelsize.y, 0, 0); // align line to top of voxels
+		const XMVECTOR topalign = XMVectorSet(0, debugvoxelsize.y, 0, 0); // align line to top of voxels
 		
 		numVertices = 0;
 		Vertex* vertices = (Vertex*)mem.data;
-		XMVECTOR P0, P1, P2, P3;
 		int count = (int)results.size();
 		for (int i = 0; i < count; ++i)
 		{
-			P0 = XMLoadFloat3(&results[std::max(0, std::min(i - 1, count - 1))]) + topalign;
-			P1 = XMLoadFloat3(&results[std::max(0, std::min(i, count - 1))]) + topalign;
-			P2 = XMLoadFloat3(&results[std::max(0, std::min(i + 1, count - 1))]) + topalign;
-			P3 = XMLoadFloat3(&results[std::max(0, std::min(i + 2, count - 1))]) + topalign;
+			XMVECTOR P0 = XMLoadFloat3(&results[std::max(0, std::min(i - 1, count - 1))]);
+			XMVECTOR P1 = XMLoadFloat3(&results[std::max(0, std::min(i, count - 1))]);
+			XMVECTOR P2 = XMLoadFloat3(&results[std::max(0, std::min(i + 1, count - 1))]);
+			XMVECTOR P3 = XMLoadFloat3(&results[std::max(0, std::min(i + 2, count - 1))]);
+
+			if (i == 0)
+			{
+				// when P0 == P1, centripetal catmull doesn't work, so we have to do a dummy control point
+				P0 += P1 - P2;
+			}
+			if (i >= count - 2)
+			{
+				// when P2 == P3, centripetal catmull doesn't work, so we have to do a dummy control point
+				P3 += P2 - P1;
+			}
+
+			// add box debug draw for control points:
 			XMFLOAT4X4 boxmat;
 			XMStoreFloat4x4(&boxmat, XMMatrixScaling(debugvoxelsize.x, debugvoxelsize.y, debugvoxelsize.z)* XMMatrixTranslationFromVector(P1));
 			wi::renderer::DrawBox(boxmat);
-			for (uint32_t j = 0; j < (i == (count - 1) ? 1 : resolution); ++j)
+
+			bool cap = i == (count - 1);
+			uint32_t segment_resolution = cap ? 1 : resolution;
+
+			for (uint32_t j = 0; j < segment_resolution; ++j)
 			{
-				float t = float(j) / float(resolution);
+				float t = float(j) / float(segment_resolution);
+
 #if 1
-				XMVECTOR P = XMVectorCatmullRom(P0, P1, P2, P3, t);
-				XMVECTOR P_prev = XMVectorCatmullRom(P0, P1, P2, P3, t - resolution_rcp);
-				XMVECTOR P_next = XMVectorCatmullRom(P0, P1, P2, P3, t + resolution_rcp);
+				XMVECTOR P = cap ? XMVectorLerp(P1, P2, t) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t);
+				XMVECTOR P_prev = cap ? XMVectorLerp(P0, P1, t - resolution_rcp) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t - resolution_rcp);
+				XMVECTOR P_next = cap ? XMVectorLerp(P1, P2, t + resolution_rcp) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t + resolution_rcp);
 #else
 				XMVECTOR P = XMVectorLerp(P1, P2, t);
 				XMVECTOR P_prev = XMVectorLerp(P0, P1, t - resolution_rcp);
@@ -309,11 +334,11 @@ namespace wi
 				Vertex vert;
 				vert.color = wi::math::Lerp(color0, color1, wi::math::saturate(std::sin(segmenti + debugtimer) * 0.5f + 0.5f));
 
-				XMStoreFloat4(&vert.position, XMVectorSetW(P - B, 1));
+				XMStoreFloat4(&vert.position, XMVectorSetW(P - B + topalign, 1));
 				std::memcpy(vertices + numVertices, &vert, sizeof(vert));
 				numVertices++;
 
-				XMStoreFloat4(&vert.position, XMVectorSetW(P + B, 1));
+				XMStoreFloat4(&vert.position, XMVectorSetW(P + B + topalign, 1));
 				std::memcpy(vertices + numVertices, &vert, sizeof(vert));
 				numVertices++;
 

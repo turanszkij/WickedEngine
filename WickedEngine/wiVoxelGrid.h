@@ -54,13 +54,13 @@ namespace wi
 
 		inline bool IsValid() const { return !voxels.empty(); }
 
-		inline static XMVECTOR __vectorcall world_to_uvw(XMVECTOR P, XMVECTOR center, XMVECTOR resolution_rcp, XMVECTOR voxelSize_rcp)
+		inline static XMVECTOR XM_CALLCONV world_to_uvw(XMVECTOR P, XMVECTOR center, XMVECTOR resolution_rcp, XMVECTOR voxelSize_rcp)
 		{
 			XMVECTOR diff = (P - center) * resolution_rcp * voxelSize_rcp;
 			XMVECTOR uvw = diff * XMVectorSet(0.5f, -0.5f, 0.5f, 1) + XMVectorReplicate(0.5f);
 			return uvw;
 		}
-		inline static XMVECTOR __vectorcall uvw_to_world(XMVECTOR uvw, XMVECTOR center, XMVECTOR resolution, XMVECTOR voxelSize)
+		inline static XMVECTOR XM_CALLCONV uvw_to_world(XMVECTOR uvw, XMVECTOR center, XMVECTOR resolution, XMVECTOR voxelSize)
 		{
 			XMVECTOR P = uvw * 2 - XMVectorReplicate(1);
 			P *= XMVectorSet(1, -1, 1, 1);

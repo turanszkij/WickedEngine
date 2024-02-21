@@ -348,6 +348,32 @@ namespace wi::math
 		return XMVector3TransformNormal(param, M);
 	}
 
+	// Centripetal Catmull-Rom avoids self intersections that can appear with XMVectorCatmullRom
+	//	But it doesn't support the case when p0 == p1 or p2 == p3!
+	//	This also supports tension to control curve smoothness
+	//	Note: Catmull-Rom interpolates between p1 and p2 by value of t
+	inline XMVECTOR XM_CALLCONV CatmullRomCentripetal(XMVECTOR p0, XMVECTOR p1, XMVECTOR p2, XMVECTOR p3, float t, float tension = 0.5f)
+	{
+		float alpha = 1.0f - tension;
+		float t0 = 0.0f;
+		float t1 = t0 + std::pow(DistanceEstimated(p0, p1), alpha);
+		float t2 = t1 + std::pow(DistanceEstimated(p1, p2), alpha);
+		float t3 = t2 + std::pow(DistanceEstimated(p2, p3), alpha);
+		t = Lerp(t1, t2, t);
+		float t1t0 = 1.0f / std::max(0.001f, t1 - t0);
+		float t2t1 = 1.0f / std::max(0.001f, t2 - t1);
+		float t3t2 = 1.0f / std::max(0.001f, t3 - t2);
+		float t2t0 = 1.0f / std::max(0.001f, t2 - t0);
+		float t3t1 = 1.0f / std::max(0.001f, t3 - t1);
+		XMVECTOR A1 = (t1 - t) * t1t0 * p0 + (t - t0) * t1t0 * p1;
+		XMVECTOR A2 = (t2 - t) * t2t1 * p1 + (t - t1) * t2t1 * p2;
+		XMVECTOR A3 = (t3 - t) * t3t2 * p2 + (t - t2) * t3t2 * p3;
+		XMVECTOR B1 = (t2 - t) * t2t0 * A1 + (t - t0) * t2t0 * A2;
+		XMVECTOR B2 = (t3 - t) * t3t1 * A2 + (t - t1) * t3t1 * A3;
+		XMVECTOR C = (t2 - t) * t2t1 * B1 + (t - t1) * t2t1 * B2;
+		return C;
+	}
+
 	XMFLOAT3 QuaternionToRollPitchYaw(const XMFLOAT4& quaternion);
 
 	XMVECTOR GetClosestPointToLine(const XMVECTOR& A, const XMVECTOR& B, const XMVECTOR& P, bool segmentClamp = false);
