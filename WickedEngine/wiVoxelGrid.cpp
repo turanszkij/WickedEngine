@@ -3,8 +3,6 @@
 #include "wiEventHandler.h"
 #include "wiRenderer.h"
 
-#include <intrin.h>
-
 using namespace wi::graphics;
 using namespace wi::primitive;
 
@@ -96,11 +94,11 @@ namespace wi
 						const uint64_t mask = 1ull << bit;
 						if (subtract)
 						{
-							_InterlockedAnd64(data + idx, ~mask);
+							AtomicAnd(data + idx, ~mask);
 						}
 						else
 						{
-							_InterlockedOr64(data + idx, mask);
+							AtomicOr(data + idx, mask);
 						}
 					}
 				}
@@ -201,55 +199,6 @@ namespace wi
 		set_voxelsize(XMFLOAT3(halfwidth.x / resolution.x, halfwidth.y / resolution.y, halfwidth.z / resolution.z));
 	}
 
-	VoxelGrid::Neighbors VoxelGrid::get_neighbors(XMUINT3 coord, NeighborQueryFlags flags) const
-	{
-		Neighbors neighbors;
-		auto add = [&](XMUINT3 neighbor_coord){
-			if (!is_coord_valid(neighbor_coord))
-				return;
-			if (!has_flag(flags, NeighborQueryFlags::MustBeValid) || check_voxel(neighbor_coord))
-			{
-				// add valid neighbor to list:
-				neighbors.coords[neighbors.count] = neighbor_coord;
-				neighbors.count++;
-			}
-		};
-
-		if (has_flag(flags, NeighborQueryFlags::DisableDiagonal))
-		{
-			add(XMUINT3(coord.x - 1, coord.y, coord.z));
-			add(XMUINT3(coord.x + 1, coord.y, coord.z));
-			add(XMUINT3(coord.x, coord.y - 1, coord.z));
-			add(XMUINT3(coord.x, coord.y + 1, coord.z));
-			add(XMUINT3(coord.x, coord.y, coord.z - 1));
-			add(XMUINT3(coord.x, coord.y, coord.z + 1));
-		}
-		else
-		{
-			for (int x = -1; x <= 1; ++x)
-			{
-				for (int y = -1; y <= 1; ++y)
-				{
-					for (int z = -1; z <= 1; ++z)
-					{
-						if (x == 0 && y == 0 && z == 0)
-							continue; // center not needed
-						XMUINT3 neighbor_coord = coord;
-						neighbor_coord.x += x;
-						neighbor_coord.y += y;
-						neighbor_coord.z += z;
-						add(neighbor_coord);
-					}
-				}
-			}
-		}
-		return neighbors;
-	}
-	VoxelGrid::Neighbors VoxelGrid::get_neighbors(const XMFLOAT3& worldpos, NeighborQueryFlags flags) const
-	{
-		return get_neighbors(world_to_coord(worldpos), flags);
-	}
-
 	namespace VoxelGrid_internal
 	{
 		PipelineState pso_solidpart;
@@ -282,7 +231,7 @@ namespace wi
 		for (auto& x : voxels)
 		{
 			if (x != 0)
-				numVoxels += (uint32_t)__popcnt64(x);
+				numVoxels += (uint32_t)countbits(x);
 		}
 		if (numVoxels == 0)
 			return;
@@ -356,9 +305,9 @@ namespace wi
 			if (voxel_bits == 0)
 				continue;
 			const uint3 coord = unflatten3D(uint(i), resolution_div4);
-			unsigned long bit_index;
-			while (_BitScanReverse64(&bit_index, voxel_bits))
+			while (voxel_bits != 0)
 			{
+				unsigned long bit_index = firstbithigh(voxel_bits);
 				voxel_bits ^= 1ull << bit_index; // remove current bit
 				const uint3 sub_coord = unflatten3D(bit_index, uint3(4, 4, 4));
 				XMVECTOR uvw = XMVectorSet(coord.x * 4 + sub_coord.x + 0.5f, coord.y * 4 + sub_coord.y + 0.5f, coord.z * 4 + sub_coord.z + 0.5f, 1) * RESOLUTION_RCP;

@@ -46,7 +46,12 @@ namespace wi
 		XMFLOAT3 process_startpos = XMFLOAT3(0, 0, 0);
 
 		// Find the path between startpos and goalpos in the voxel grid:
-		void process(const XMFLOAT3& startpos, const XMFLOAT3& goalpos, const wi::VoxelGrid& voxelgrid);
+		void process(
+			const XMFLOAT3& startpos,
+			const XMFLOAT3& goalpos,
+			const wi::VoxelGrid& voxelgrid,
+			wi::VoxelGrid* debug_voxelgrid = nullptr
+		);
 
 		// Gets the first waypoint between start and goal that was used in process():
 		XMFLOAT3 get_first_waypoint() const;

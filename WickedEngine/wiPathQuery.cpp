@@ -8,7 +8,12 @@ using namespace wi::graphics;
 namespace wi
 {
 
-	void PathQuery::process(const XMFLOAT3& startpos, const XMFLOAT3& goalpos, const wi::VoxelGrid& voxelgrid)
+	void PathQuery::process(
+		const XMFLOAT3& startpos,
+		const XMFLOAT3& goalpos,
+		const wi::VoxelGrid& voxelgrid,
+		wi::VoxelGrid* debug_voxelgrid
+	)
 	{
 		auto range = wi::profiler::BeginRangeCPU("PathQuery");
 		frontier = {};
@@ -53,86 +58,26 @@ namespace wi
 			const int dy = int(goal.y) - int(start.y);
 			const int dz = int(goal.z) - int(start.z);
 
-			static int method = 0;
+			const int step = std::max(std::abs(dx), std::max(std::abs(dy), std::abs(dz)));
 
-			if (method == 0)
+			const float x_incr = float(dx) / step;
+			const float y_incr = float(dy) / step;
+			const float z_incr = float(dz) / step;
+
+			float x = float(start.x);
+			float y = float(start.y);
+			float z = float(start.z);
+
+			for (int i = 0; i < step; i++)
 			{
-				// Thick-line (conservative) DDA:
-				const int stepX = dx >= 0 ? 1 : -1;
-				const int stepY = dy >= 0 ? 1 : -1;
-				const int stepZ = dz >= 0 ? 1 : -1;
-
-				const float tDeltaX = float(stepX) / dx;
-				const float tDeltaY = float(stepY) / dy;
-				const float tDeltaZ = float(stepZ) / dz;
-
-				float tMaxX = tDeltaX;
-				float tMaxY = tDeltaY;
-				float tMaxZ = tDeltaZ;
-
-				int x = start.x;
-				int y = start.y;
-				int z = start.z;
-
-				do {
-					if (tMaxX < tMaxY)
-					{
-						if (tMaxX < tMaxZ)
-						{
-							x += stepX;
-							tMaxX += tDeltaX;
-						}
-						else
-						{
-							z += stepZ;
-							tMaxZ += tDeltaZ;
-						}
-					}
-					else
-					{
-						if (tMaxY < tMaxZ)
-						{
-							y += stepY;
-							tMaxY += tDeltaY;
-						}
-						else
-						{
-							z += stepZ;
-							tMaxZ += tDeltaZ;
-						}
-					}
-					XMUINT3 coord = XMUINT3(uint32_t(x), uint32_t(y), uint32_t(z));
-					if (!is_voxel_valid(coord))
-						return false;
-				} while (x != goal.x || y != goal.y || z != goal.z);
-			}
-			else
-			{
-				// Thin-line DDA:
-				const int abs_dx = std::abs(dx);
-				const int abs_dy = std::abs(dy);
-				const int abs_dz = std::abs(dz);
-
-				int step = abs_dx > abs_dy ? abs_dx : abs_dy;
-				step = abs_dz > step ? abs_dz : step;
-
-				const float x_incr = float(dx) / step;
-				const float y_incr = float(dy) / step;
-				const float z_incr = float(dz) / step;
-
-				float x = float(start.x);
-				float y = float(start.y);
-				float z = float(start.z);
-
-				for (int i = 0; i < step; i++)
-				{
-					XMUINT3 coord = XMUINT3(uint32_t(std::round(x)), uint32_t(std::round(y)), uint32_t(std::round(z)));
-					if (!is_voxel_valid(coord))
-						return false;
-					x += x_incr;
-					y += y_incr;
-					z += z_incr;
-				}
+				XMUINT3 coord = XMUINT3(uint32_t(std::round(x)), uint32_t(std::round(y)), uint32_t(std::round(z)));
+				if (debug_voxelgrid != nullptr)
+					debug_voxelgrid->set_voxel(coord, 1);
+				if (!is_voxel_valid(coord))
+					return false;
+				x += x_incr;
+				y += y_incr;
+				z += z_incr;
 			}
 			return true;
 		};
@@ -152,20 +97,52 @@ namespace wi
 			if (current == goal)
 				break;
 
-			VoxelGrid::NeighborQueryFlags neighbor_flags = VoxelGrid::NeighborQueryFlags::None;
-			//neighbor_flags |= VoxelGrid::NeighborQueryFlags::MustBeValid;
-			//neighbor_flags |= VoxelGrid::NeighborQueryFlags::DisableDiagonal;
-			wi::VoxelGrid::Neighbors neighbors = voxelgrid.get_neighbors(current.coord(), neighbor_flags);
-			for (uint32_t i = 0; i < neighbors.count; ++i)
+			// The neighbors to which traversal can happen from the current cell:
+			//	Horizontal diagonal is not allowed, only vertical (to support stairs)
+			//	Note: diagonal can be supported, but since the path will be simplified,
+			//		diagonal voxel movements do not seem to contribute much improvement,
+			//		in fact non-diagonal movements can keep away better from wall corners
+			XMUINT3 coord = current.coord();
+			XMUINT3 neighbors[] = {
+				// left-right:
+				XMUINT3(coord.x - 1, coord.y, coord.z),
+				XMUINT3(coord.x + 1, coord.y, coord.z),
+
+				// left-right up:
+				XMUINT3(coord.x - 1, coord.y - 1, coord.z),
+				XMUINT3(coord.x + 1, coord.y - 1, coord.z),
+
+				// left-right down:
+				XMUINT3(coord.x - 1, coord.y + 1, coord.z),
+				XMUINT3(coord.x + 1, coord.y + 1, coord.z),
+
+				// up-down:
+				XMUINT3(coord.x, coord.y - 1, coord.z),
+				XMUINT3(coord.x, coord.y + 1, coord.z),
+
+				// forward-back:
+				XMUINT3(coord.x, coord.y, coord.z - 1),
+				XMUINT3(coord.x, coord.y, coord.z + 1),
+
+				// forward-back up:
+				XMUINT3(coord.x, coord.y - 1, coord.z - 1),
+				XMUINT3(coord.x, coord.y - 1, coord.z + 1),
+
+				// forward-back down:
+				XMUINT3(coord.x, coord.y + 1, coord.z - 1),
+				XMUINT3(coord.x, coord.y + 1, coord.z + 1),
+			};
+
+			for (uint32_t i = 0; i < arraysize(neighbors); ++i)
 			{
-				if (!is_voxel_valid(neighbors.coords[i]))
+				if (!is_voxel_valid(neighbors[i]))
 					continue;
-				Node next = Node::create(neighbors.coords[i]);
+				Node next = Node::create(neighbors[i]);
 				uint16_t new_cost = cost_so_far[current] + cost_to_goal(current.coord(), next.coord());
 				if (cost_so_far.find(next) == cost_so_far.end() || new_cost < cost_so_far[next])
 				{
 					cost_so_far[next] = new_cost;
-					next.cost = new_cost + cost_to_goal(neighbors.coords[i], goal.coord());
+					next.cost = new_cost + cost_to_goal(neighbors[i], goal.coord());
 					frontier.push(next);
 					came_from[next] = current;
 				}
@@ -190,19 +167,38 @@ namespace wi
 		// Simplification:
 		if (!result_path_goal_to_start.empty())
 		{
-			size_t i = 0;
-			while (i < result_path_goal_to_start.size())
+			// first waypoint will always need to be in the simplified path:
+			result_path_goal_to_start_simplified.push_back(result_path_goal_to_start[0]);
+
+			for (size_t i = 0; i < result_path_goal_to_start.size() - 1;)
 			{
-				result_path_goal_to_start_simplified.push_back(result_path_goal_to_start[i]);
 				Node current = Node::create(voxelgrid.world_to_coord(result_path_goal_to_start[i]));
-				size_t maxi = i;
-				for (maxi = i + 1; maxi < result_path_goal_to_start.size() - 1; ++maxi)
+
+				// If no occlusion test was successful, then the next will be inserted.
+				//	We don't check occlusion for this as this is definitely traversible from previous node
+				size_t next_candidate = i + 1;
+
+				// Occlusion tests will be performed further down from next node:
+				for (size_t j = next_candidate + 1; j < result_path_goal_to_start.size(); ++j)
 				{
-					Node next = Node::create(voxelgrid.world_to_coord(result_path_goal_to_start[maxi]));
-					if (!dda(current.coord(), next.coord()))
+					Node next = Node::create(voxelgrid.world_to_coord(result_path_goal_to_start[j]));
+
+					// Visibility check from current to next by drawing a line with DDA and checking validity at each step:
+					if (dda(current.coord(), next.coord()))
+					{
+						// if visible from current, this is accepted as a good next candidate:
+						next_candidate = j;
+					}
+					else
+					{
+						// if not visible from current we abandon testing anything further:
 						break;
+					}
 				}
-				i = maxi;
+
+				// Always insert the next best candidate node to the simplified path:
+				result_path_goal_to_start_simplified.push_back(result_path_goal_to_start[next_candidate]);
+				i = next_candidate; // the next candidate will be the current node of the next iteration
 			}
 		}
 
@@ -236,14 +232,6 @@ namespace wi
 		}
 	}
 	using namespace PathQuery_internal;
-
-	XMVECTOR CatmullRomInterpolation(
-		FXMVECTOR P0, FXMVECTOR P1, FXMVECTOR P2, FXMVECTOR P3, float t) {
-		return 0.5f * ((2.0f * P1) +
-			(-P0 + P2) * t +
-			(2.0f * P0 - 5.0f * P1 + 4.0f * P2 - P3) * t * t +
-			(-P0 + 3.0f * P1 - 3.0f * P2 + P3) * t * t * t);
-	}
 
 	void PathQuery::debugdraw(const XMFLOAT4X4& ViewProjection, CommandList cmd) const
 	{
@@ -281,6 +269,7 @@ namespace wi
 		static float gradientsize = 5.0f / resolution;
 		static XMFLOAT4 color0 = wi::Color(10, 10, 20, 255);
 		static XMFLOAT4 color1 = wi::Color(70, 150, 170, 255);
+		static float curve_tension = 0.5f;
 
 		const XMVECTOR topalign = XMVectorSet(0, debugvoxelsize.y, 0, 0); // align line to top of voxels
 		
@@ -318,9 +307,9 @@ namespace wi
 				float t = float(j) / float(segment_resolution);
 
 #if 1
-				XMVECTOR P = cap ? XMVectorLerp(P1, P2, t) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t);
-				XMVECTOR P_prev = cap ? XMVectorLerp(P0, P1, t - resolution_rcp) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t - resolution_rcp);
-				XMVECTOR P_next = cap ? XMVectorLerp(P1, P2, t + resolution_rcp) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t + resolution_rcp);
+				XMVECTOR P = cap ? XMVectorLerp(P1, P2, t) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t, curve_tension);
+				XMVECTOR P_prev = cap ? XMVectorLerp(P0, P1, t - resolution_rcp) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t - resolution_rcp, curve_tension);
+				XMVECTOR P_next = cap ? XMVectorLerp(P1, P2, t + resolution_rcp) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t + resolution_rcp, curve_tension);
 #else
 				XMVECTOR P = XMVectorLerp(P1, P2, t);
 				XMVECTOR P_prev = XMVectorLerp(P0, P1, t - resolution_rcp);

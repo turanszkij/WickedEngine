@@ -1926,14 +1926,6 @@ void EditorComponent::Update(float dt)
 			navtest_goal_pick = hovered;
 		}
 	}
-	if (navtest_start_pick.entity != INVALID_ENTITY)
-	{
-		scene.voxelgrid_waypoints.set_voxel(navtest_start_pick.position, 1);
-	}
-	if (navtest_goal_pick.entity != INVALID_ENTITY)
-	{
-		scene.voxelgrid_waypoints.set_voxel(navtest_goal_pick.position, 1);
-	}
 
 	if (navtest_start_pick.entity != INVALID_ENTITY && navtest_goal_pick.entity != INVALID_ENTITY)
 	{
@@ -1951,13 +1943,16 @@ void EditorComponent::Update(float dt)
 			navtest_goal_pick.vertexID2,
 			navtest_goal_pick.bary
 		);
-		scene.pathquery.process(navtest_start_pick.position, navtest_goal_pick.position, scene.voxelgrid);
+		scene.pathquery.process(
+			navtest_start_pick.position,
+			navtest_goal_pick.position,
+			scene.voxelgrid
+			//,&scene.voxelgrid_waypoints
+		);
 
-		for (auto& x : scene.pathquery.result_path_goal_to_start)
-		{
-			scene.voxelgrid_path.set_voxel(x, 1);
-		}
-
+		static bool method = 0;
+		if (wi::input::Press(wi::input::BUTTON('K')))
+			method = !method;
 
 		auto dda = [&](const XMUINT3& start, const XMUINT3& goal)
 		{
@@ -1965,90 +1960,105 @@ void EditorComponent::Update(float dt)
 			const int dy = int(goal.y) - int(start.y);
 			const int dz = int(goal.z) - int(start.z);
 
-#if 1
-			// Thick-line (conservative) DDA:
-			const int stepX = dx >= 0 ? 1 : -1;
-			const int stepY = dy >= 0 ? 1 : -1;
-			const int stepZ = dz >= 0 ? 1 : -1;
-
-			const float tDeltaX = float(stepX) / dx;
-			const float tDeltaY = float(stepY) / dy;
-			const float tDeltaZ = float(stepZ) / dz;
-
-			float tMaxX = tDeltaX;
-			float tMaxY = tDeltaY;
-			float tMaxZ = tDeltaZ;
-
-			int x = start.x;
-			int y = start.y;
-			int z = start.z;
-
-			do {
-				if (tMaxX < tMaxY)
-				{
-					if (tMaxX < tMaxZ)
-					{
-						x += stepX;
-						tMaxX += tDeltaX;
-					}
-					else
-					{
-						z += stepZ;
-						tMaxZ += tDeltaZ;
-					}
-				}
-				else
-				{
-					if (tMaxY < tMaxZ)
-					{
-						y += stepY;
-						tMaxY += tDeltaY;
-					}
-					else
-					{
-						z += stepZ;
-						tMaxZ += tDeltaZ;
-					}
-				}
-				XMUINT3 coord = XMUINT3(uint32_t(x), uint32_t(y), uint32_t(z));
-				if (!scene.voxelgrid_waypoints.is_coord_valid(coord))
-					return;
-				//assert(!scene.voxelgrid_waypoints.check_voxel(coord));
-				scene.voxelgrid_waypoints.set_voxel(coord, 1);
-			} while (x != goal.x || y != goal.y || z != goal.z);
-#else
-			// Thin-line DDA:
-			const int abs_dx = std::abs(dx);
-			const int abs_dy = std::abs(dy);
-			const int abs_dz = std::abs(dz);
-
-			int step = abs_dx > abs_dy ? abs_dx : abs_dy;
-			step = abs_dz > step ? abs_dz : step;
-
-			const float x_incr = float(dx) / step;
-			const float y_incr = float(dy) / step;
-			const float z_incr = float(dz) / step;
-
-			float x = float(start.x);
-			float y = float(start.y);
-			float z = float(start.z);
-
-			for (int i = 0; i < step; i++)
+			if (method)
 			{
-				XMUINT3 coord = XMUINT3(uint32_t(std::round(x)), uint32_t(std::round(y)), uint32_t(std::round(z)));
-				if (!scene.voxelgrid_waypoints.is_coord_valid(coord))
-					return;
-				//assert(!scene.voxelgrid_waypoints.check_voxel(coord));
-				scene.voxelgrid_waypoints.set_voxel(coord, 1);
-				x += x_incr;
-				y += y_incr;
-				z += z_incr;
+				// Thick-line (conservative) DDA:
+				const int stepX = dx >= 0 ? 1 : -1;
+				const int stepY = dy >= 0 ? 1 : -1;
+				const int stepZ = dz >= 0 ? 1 : -1;
+
+				const float tDeltaX = float(stepX) / dx;
+				const float tDeltaY = float(stepY) / dy;
+				const float tDeltaZ = float(stepZ) / dz;
+
+				float tMaxX = tDeltaX;
+				float tMaxY = tDeltaY;
+				float tMaxZ = tDeltaZ;
+
+				int x = start.x;
+				int y = start.y;
+				int z = start.z;
+
+				while (x != goal.x || y != goal.y || z != goal.z)
+				{
+					XMUINT3 coord = XMUINT3(uint32_t(x), uint32_t(y), uint32_t(z));
+					if (!scene.voxelgrid_waypoints.is_coord_valid(coord))
+						return;
+					scene.voxelgrid_waypoints.set_voxel(coord, 1);
+
+					if (tMaxX < tMaxY)
+					{
+						if (tMaxX < tMaxZ)
+						{
+							x += stepX;
+							tMaxX += tDeltaX;
+						}
+						else
+						{
+							z += stepZ;
+							tMaxZ += tDeltaZ;
+						}
+					}
+					else
+					{
+						if (tMaxY < tMaxZ)
+						{
+							y += stepY;
+							tMaxY += tDeltaY;
+						}
+						else
+						{
+							z += stepZ;
+							tMaxZ += tDeltaZ;
+						}
+					}
+				}
 			}
-#endif
+			else
+			{
+				const int step = std::max(std::abs(dx), std::max(std::abs(dy), std::abs(dz)));
+
+				const float x_incr = float(dx) / step;
+				const float y_incr = float(dy) / step;
+				const float z_incr = float(dz) / step;
+
+				float x = float(start.x);
+				float y = float(start.y);
+				float z = float(start.z);
+
+				for (int i = 0; i < step; i++)
+				{
+					XMUINT3 coord = XMUINT3(uint32_t(std::round(x)), uint32_t(std::round(y)), uint32_t(std::round(z)));
+					if (!scene.voxelgrid_waypoints.is_coord_valid(coord))
+						return;
+					scene.voxelgrid_waypoints.set_voxel(coord, 1);
+					x += x_incr;
+					y += y_incr;
+					z += z_incr;
+				}
+				return;
+			}
 		};
 		//dda(scene.voxelgrid_waypoints.world_to_coord(navtest_start_pick.position), scene.voxelgrid_waypoints.world_to_coord(navtest_goal_pick.position));
 	}
 
+
+	if (navtest_start_pick.entity != INVALID_ENTITY)
+	{
+		scene.voxelgrid_waypoints.set_voxel(navtest_start_pick.position, 1);
+	}
+	if (navtest_goal_pick.entity != INVALID_ENTITY)
+	{
+		scene.voxelgrid_waypoints.set_voxel(navtest_goal_pick.position, 1);
+	}
+	for (auto& x : scene.pathquery.result_path_goal_to_start)
+	{
+		scene.voxelgrid_path.set_voxel(x, 1);
+	}
+	for (auto& x : scene.pathquery.result_path_goal_to_start_simplified)
+	{
+		scene.voxelgrid_waypoints.set_voxel(x, 1);
+	}
 
 
 

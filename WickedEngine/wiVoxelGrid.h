@@ -38,20 +38,6 @@ namespace wi
 		void from_aabb(const wi::primitive::AABB& aabb);
 		void debugdraw(const XMFLOAT4X4& ViewProjection, wi::graphics::CommandList cmd) const;
 
-		struct Neighbors
-		{
-			XMUINT3 coords[3 * 3 * 3 - 1] = {}; // 3x3x3 grid, except center
-			uint32_t count = 0;
-		};
-		enum class NeighborQueryFlags
-		{
-			None = 0,
-			MustBeValid = 1 << 0, // only get neighbors that are set to 1
-			DisableDiagonal = 1 << 1, // get neighbors only in straight directions
-		};
-		Neighbors get_neighbors(XMUINT3 coord, NeighborQueryFlags flags = NeighborQueryFlags::None) const;
-		Neighbors get_neighbors(const XMFLOAT3& worldpos, NeighborQueryFlags flags = NeighborQueryFlags::None) const;
-
 		inline bool IsValid() const { return !voxels.empty(); }
 
 		inline static XMVECTOR XM_CALLCONV world_to_uvw(XMVECTOR P, XMVECTOR center, XMVECTOR resolution_rcp, XMVECTOR voxelSize_rcp)
@@ -72,8 +58,3 @@ namespace wi
 	};
 
 }
-
-template<>
-struct enable_bitmask_operators<wi::VoxelGrid::NeighborQueryFlags> {
-	static const bool enable = true;
-};
