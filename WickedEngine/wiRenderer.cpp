@@ -148,6 +148,8 @@ wi::vector<RenderableTriangle> renderableTriangles_solid;
 wi::vector<RenderableTriangle> renderableTriangles_wireframe;
 wi::vector<uint8_t> debugTextStorage; // A stream of DebugText struct + text characters
 wi::vector<PaintRadius> paintrads;
+wi::vector<const wi::VoxelGrid*> renderableVoxelgrids;
+wi::vector<const wi::PathQuery*> renderablePathqueries;
 
 wi::SpinLock deferredMIPGenLock;
 wi::vector<std::pair<Texture, bool>> deferredMIPGens;
@@ -6185,21 +6187,19 @@ void DrawDebugWorld(
 
 	device->EventBegin("DrawDebugWorld", cmd);
 
-	if (scene.voxelgrid.IsValid())
-	{
-		scene.voxelgrid.debugdraw(camera.VP, cmd);
-	}
-	if (scene.voxelgrid_waypoints.IsValid())
-	{
-		scene.voxelgrid_waypoints.debugdraw(camera.VP, cmd);
-	}
-	if (scene.voxelgrid_path.IsValid())
-	{
-		scene.voxelgrid_path.debugdraw(camera.VP, cmd);
-	}
-	scene.pathquery.debugdraw(camera.VP, cmd);
-
 	BindCommonResources(cmd);
+
+	for (auto& x : renderableVoxelgrids)
+	{
+		x->debugdraw(camera.VP, cmd);
+	}
+	renderableVoxelgrids.clear();
+
+	for (auto& x : renderablePathqueries)
+	{
+		x->debugdraw(camera.VP, cmd);
+	}
+	renderablePathqueries.clear();
 
 	if (debugCameras)
 	{
@@ -16531,6 +16531,14 @@ void DrawDebugText(const char* text, const DebugTextParams& params)
 void DrawPaintRadius(const PaintRadius& paintrad)
 {
 	paintrads.push_back(paintrad);
+}
+void DrawVoxelGrid(const wi::VoxelGrid* voxelgrid)
+{
+	renderableVoxelgrids.push_back(voxelgrid);
+}
+void DrawPathQuery(const wi::PathQuery* pathquery)
+{
+	renderablePathqueries.push_back(pathquery);
 }
 
 void AddDeferredMIPGen(const Texture& texture, bool preserve_coverage)

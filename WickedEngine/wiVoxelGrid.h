@@ -4,6 +4,8 @@
 #include "wiMath.h"
 #include "wiPrimitive.h"
 #include "wiGraphicsDevice.h"
+#include "wiArchive.h"
+#include "wiECS.h"
 
 namespace wi
 {
@@ -24,6 +26,8 @@ namespace wi
 		void init(uint32_t dimX, uint32_t dimY, uint32_t dimZ);
 		void cleardata();
 		void inject_triangle(XMVECTOR A, XMVECTOR B, XMVECTOR C, bool subtract = false);
+		void inject_aabb(const wi::primitive::AABB& aabb, bool subtract = false);
+		void inject_sphere(const wi::primitive::Sphere& sphere, bool subtract = false);
 		XMUINT3 world_to_coord(const XMFLOAT3& worldpos) const;
 		XMFLOAT3 coord_to_world(const XMUINT3& coord) const;
 		bool check_voxel(XMUINT3 coord) const;
@@ -39,6 +43,8 @@ namespace wi
 		void debugdraw(const XMFLOAT4X4& ViewProjection, wi::graphics::CommandList cmd) const;
 
 		inline bool IsValid() const { return !voxels.empty(); }
+
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 
 		inline static XMVECTOR XM_CALLCONV world_to_uvw(XMVECTOR P, XMVECTOR center, XMVECTOR resolution_rcp, XMVECTOR voxelSize_rcp)
 		{

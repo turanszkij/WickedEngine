@@ -10,6 +10,7 @@
 #include "wiECS.h"
 #include "wiLua.h"
 #include "wiUnorderedMap.h"
+#include "wiVoxelGrid_BindLua.h"
 
 #include <string>
 
@@ -655,6 +656,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, GetWeather),
 	lunamethod(Scene_BindLua, SetWeather),
 	lunamethod(Scene_BindLua, RetargetAnimation),
+	lunamethod(Scene_BindLua, VoxelizeObject),
 	{ NULL, NULL }
 };
 Luna<Scene_BindLua>::PropertyType Scene_BindLua::properties[] = {
@@ -2940,6 +2942,29 @@ int Scene_BindLua::RetargetAnimation(lua_State* L)
 	return 0;
 }
 
+int Scene_BindLua::VoxelizeObject(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 2)
+	{
+		wi::lua::SError(L, "VoxelizeObject(int objectIndex, VoxelGrid voxelgrid, opt bool subtract = false) not enough arguments!");
+		return 0;
+	}
+	size_t objectIndex = (size_t)wi::lua::SGetInt(L, 1);
+	VoxelGrid_BindLua* voxelgrid = Luna<VoxelGrid_BindLua>::lightcheck(L, 2);
+	if (voxelgrid == nullptr)
+	{
+		wi::lua::SError(L, "VoxelizeObject(int objectIndex, VoxelGrid voxelgrid, opt bool subtract = false) second argument is not a VoxelGrid!");
+		return 0;
+	}
+	bool subtract = false;
+	if (argc > 2)
+	{
+		subtract = wi::lua::SGetBool(L, 3);
+	}
+	scene->VoxelizeObject(objectIndex, voxelgrid->voxelgrid, subtract);
+	return 0;
+}
 
 
 

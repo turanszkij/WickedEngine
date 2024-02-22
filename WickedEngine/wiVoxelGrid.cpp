@@ -105,6 +105,136 @@ namespace wi
 			}
 		}
 	}
+	void VoxelGrid::inject_aabb(const wi::primitive::AABB& aabb, bool subtract)
+	{
+		const XMVECTOR CENTER = XMLoadFloat3(&center);
+		const XMVECTOR RESOLUTION = XMLoadUInt3(&resolution);
+		const XMVECTOR RESOLUTION_RCP = XMLoadFloat3(&resolution_rcp);
+		const XMVECTOR VOXELSIZE_RCP = XMLoadFloat3(&voxelSize_rcp);
+
+		XMVECTOR _MIN = XMLoadFloat3(&aabb._min);
+		XMVECTOR _MAX = XMLoadFloat3(&aabb._max);
+
+		// world -> uvw space:
+		_MIN = world_to_uvw(_MIN, CENTER, RESOLUTION_RCP, VOXELSIZE_RCP);
+		_MAX = world_to_uvw(_MAX, CENTER, RESOLUTION_RCP, VOXELSIZE_RCP);
+
+		// pixel space:
+		_MIN *= RESOLUTION;
+		_MAX *= RESOLUTION;
+
+		// After changing spaces, need to minmax again:
+		XMVECTOR MIN = XMVectorMin(_MIN, _MAX);
+		XMVECTOR MAX = XMVectorMax(_MIN, _MAX);
+
+		MIN = XMVectorFloor(MIN);
+		MAX = XMVectorCeiling(MAX + XMVectorSet(0.5f, 0.5f, 0.5f, 0));
+
+		MIN = XMVectorMax(MIN, XMVectorZero());
+		MAX = XMVectorMin(MAX, RESOLUTION);
+
+		XMUINT3 mini, maxi;
+		XMStoreUInt3(&mini, MIN);
+		XMStoreUInt3(&maxi, MAX);
+
+		wi::primitive::AABB aabb_src;
+		XMStoreFloat3(&aabb_src._min, MIN);
+		XMStoreFloat3(&aabb_src._max, MAX);
+
+		volatile long long* data = (volatile long long*)voxels.data();
+		for (uint32_t x = mini.x; x < maxi.x; ++x)
+		{
+			for (uint32_t y = mini.y; y < maxi.y; ++y)
+			{
+				for (uint32_t z = mini.z; z < maxi.z; ++z)
+				{
+					wi::primitive::AABB voxel_aabb;
+					voxel_aabb.createFromHalfWidth(XMFLOAT3(x + 0.5f, y + 0.5f, z + 0.5f), XMFLOAT3(0.5f, 0.5f, 0.5f));
+					if (voxel_aabb.intersects(aabb_src) != wi::primitive::AABB::INTERSECTION_TYPE::OUTSIDE)
+					{
+						const uint3 coord = uint3(x / 4u, y / 4u, z / 4u);
+						const uint3 sub_coord = uint3(x % 4u, y % 4u, z % 4u);
+						const uint32_t idx = flatten3D(coord, resolution_div4);
+						const uint32_t bit = flatten3D(sub_coord, uint3(4, 4, 4));
+						const uint64_t mask = 1ull << bit;
+						if (subtract)
+						{
+							AtomicAnd(data + idx, ~mask);
+						}
+						else
+						{
+							AtomicOr(data + idx, mask);
+						}
+					}
+				}
+			}
+		}
+	}
+	void VoxelGrid::inject_sphere(const wi::primitive::Sphere& sphere, bool subtract)
+	{
+		const XMVECTOR CENTER = XMLoadFloat3(&center);
+		const XMVECTOR RESOLUTION = XMLoadUInt3(&resolution);
+		const XMVECTOR RESOLUTION_RCP = XMLoadFloat3(&resolution_rcp);
+		const XMVECTOR VOXELSIZE_RCP = XMLoadFloat3(&voxelSize_rcp);
+
+		AABB aabb;
+		aabb.createFromHalfWidth(sphere.center, XMFLOAT3(sphere.radius, sphere.radius, sphere.radius));
+
+		XMVECTOR _MIN = XMLoadFloat3(&aabb._min);
+		XMVECTOR _MAX = XMLoadFloat3(&aabb._max);
+
+		// world -> uvw space:
+		_MIN = world_to_uvw(_MIN, CENTER, RESOLUTION_RCP, VOXELSIZE_RCP);
+		_MAX = world_to_uvw(_MAX, CENTER, RESOLUTION_RCP, VOXELSIZE_RCP);
+
+		// pixel space:
+		_MIN *= RESOLUTION;
+		_MAX *= RESOLUTION;
+
+		// After changing spaces, need to minmax again:
+		XMVECTOR MIN = XMVectorMin(_MIN, _MAX);
+		XMVECTOR MAX = XMVectorMax(_MIN, _MAX);
+
+		MIN = XMVectorFloor(MIN);
+		MAX = XMVectorCeiling(MAX + XMVectorSet(0.5f, 0.5f, 0.5f, 0));
+
+		MIN = XMVectorMax(MIN, XMVectorZero());
+		MAX = XMVectorMin(MAX, RESOLUTION);
+
+		XMUINT3 mini, maxi;
+		XMStoreUInt3(&mini, MIN);
+		XMStoreUInt3(&maxi, MAX);
+
+		volatile long long* data = (volatile long long*)voxels.data();
+		for (uint32_t x = mini.x; x < maxi.x; ++x)
+		{
+			for (uint32_t y = mini.y; y < maxi.y; ++y)
+			{
+				for (uint32_t z = mini.z; z < maxi.z; ++z)
+				{
+					wi::primitive::AABB voxel_aabb;
+					XMFLOAT3 voxel_center_world = coord_to_world(XMUINT3(x, y, z));
+					voxel_aabb.createFromHalfWidth(voxel_center_world, voxelSize);
+					if (voxel_aabb.intersects(sphere))
+					{
+						const uint3 coord = uint3(x / 4u, y / 4u, z / 4u);
+						const uint3 sub_coord = uint3(x % 4u, y % 4u, z % 4u);
+						const uint32_t idx = flatten3D(coord, resolution_div4);
+						const uint32_t bit = flatten3D(sub_coord, uint3(4, 4, 4));
+						const uint64_t mask = 1ull << bit;
+						if (subtract)
+						{
+							AtomicAnd(data + idx, ~mask);
+						}
+						else
+						{
+							AtomicOr(data + idx, mask);
+						}
+					}
+				}
+			}
+		}
+	}
 
 	XMUINT3 VoxelGrid::world_to_coord(const XMFLOAT3& worldpos) const
 	{
@@ -199,9 +329,35 @@ namespace wi
 		set_voxelsize(XMFLOAT3(halfwidth.x / resolution.x, halfwidth.y / resolution.y, halfwidth.z / resolution.z));
 	}
 
+	void VoxelGrid::Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri)
+	{
+		if (archive.IsReadMode())
+		{
+			archive >> voxels;
+			archive >> resolution;
+			archive >> voxelSize;
+			archive >> center;
+
+			resolution_div4.x = (resolution.x + 3u) / 4u;
+			resolution_div4.y = (resolution.y + 3u) / 4u;
+			resolution_div4.z = (resolution.z + 3u) / 4u;
+			resolution_rcp.x = 1.0f / resolution.x;
+			resolution_rcp.y = 1.0f / resolution.y;
+			resolution_rcp.z = 1.0f / resolution.z;
+			set_voxelsize(voxelSize);
+		}
+		else
+		{
+			archive << voxels;
+			archive << resolution;
+			archive << voxelSize;
+			archive << center;
+		}
+	}
+
 	namespace VoxelGrid_internal
 	{
-		PipelineState pso_solidpart;
+		PipelineState pso;
 		static void LoadShaders()
 		{
 			PipelineStateDesc desc;
@@ -214,7 +370,7 @@ namespace wi
 			desc.pt = PrimitiveTopology::TRIANGLELIST;
 
 			GraphicsDevice* device = GetDevice();
-			device->CreatePipelineState(&desc, &pso_solidpart);
+			device->CreatePipelineState(&desc, &pso);
 		}
 	}
 	using namespace VoxelGrid_internal;
@@ -328,7 +484,7 @@ namespace wi
 		}
 
 		device->EventBegin("VoxelGrid::debugdraw", cmd);
-		device->BindPipelineState(&pso_solidpart, cmd);
+		device->BindPipelineState(&pso, cmd);
 
 		const GPUBuffer* vbs[] = {
 			&mem.buffer,

@@ -6,7 +6,6 @@
 
 namespace wi::lua
 {
-
 	class Vector_BindLua
 	{
 	public:

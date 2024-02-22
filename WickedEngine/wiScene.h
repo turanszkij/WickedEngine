@@ -60,6 +60,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<wi::terrain::Terrain>& terrains = componentLibrary.Register<wi::terrain::Terrain>("wi::scene::Scene::terrains", 3); // version = 3
 		wi::ecs::ComponentManager<wi::Sprite>& sprites = componentLibrary.Register<wi::Sprite>("wi::scene::Scene::sprites");
 		wi::ecs::ComponentManager<wi::SpriteFont>& fonts = componentLibrary.Register<wi::SpriteFont>("wi::scene::Scene::fonts");
+		wi::ecs::ComponentManager<wi::VoxelGrid>& voxel_grids = componentLibrary.Register<wi::VoxelGrid>("wi::scene::Scene::voxel_grids");
 
 		// Non-serialized attributes:
 		float dt = 0;
@@ -260,11 +261,6 @@ namespace wi::scene
 		ColliderComponent* colliders_cpu = nullptr;
 		ColliderComponent* colliders_gpu = nullptr;
 		wi::BVH collider_bvh;
-
-		wi::VoxelGrid voxelgrid;
-		wi::VoxelGrid voxelgrid_waypoints;
-		wi::VoxelGrid voxelgrid_path;
-		wi::PathQuery pathquery;
 
 		// Ocean GPU state:
 		wi::Ocean ocean;

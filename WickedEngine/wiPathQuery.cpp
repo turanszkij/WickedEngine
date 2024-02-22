@@ -205,7 +205,7 @@ namespace wi
 		wi::profiler::EndRange(range);
 	}
 
-	XMFLOAT3 PathQuery::get_first_waypoint() const
+	XMFLOAT3 PathQuery::get_next_waypoint() const
 	{
 		const wi::vector<XMFLOAT3>& results = result_path_goal_to_start_simplified.empty() ? result_path_goal_to_start : result_path_goal_to_start_simplified;
 		if (results.size() < 2)
@@ -215,7 +215,8 @@ namespace wi
 
 	namespace PathQuery_internal
 	{
-		PipelineState pso_solidpart;
+		PipelineState pso_curve;
+		PipelineState pso_waypoint;
 		static void LoadShaders()
 		{
 			PipelineStateDesc desc;
@@ -228,7 +229,12 @@ namespace wi
 			desc.pt = PrimitiveTopology::TRIANGLESTRIP;
 
 			GraphicsDevice* device = GetDevice();
-			device->CreatePipelineState(&desc, &pso_solidpart);
+			device->CreatePipelineState(&desc, &pso_curve);
+
+			desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_FRONT);
+			desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_ADDITIVE);
+			desc.pt = PrimitiveTopology::TRIANGLELIST;
+			device->CreatePipelineState(&desc, &pso_waypoint);
 		}
 	}
 	using namespace PathQuery_internal;
@@ -254,107 +260,191 @@ namespace wi
 			XMFLOAT4 color;
 		};
 
-		static uint32_t resolution = 10;
-		const float resolution_rcp = 1.0f / resolution;
-		uint32_t numSegments = uint32_t(results.size()) * resolution;
-		uint32_t numVertices = numSegments * 2;
-
 		GraphicsDevice* device = GetDevice();
-
-		auto mem = device->AllocateGPU(sizeof(Vertex) * numVertices, cmd);
-
-		static float width = std::max(debugvoxelsize.x, debugvoxelsize.z) * 0.2f;
-		debugtimer += 0.16f;
-		float segmenti = 0;
-		static float gradientsize = 5.0f / resolution;
-		static XMFLOAT4 color0 = wi::Color(10, 10, 20, 255);
-		static XMFLOAT4 color1 = wi::Color(70, 150, 170, 255);
-		static float curve_tension = 0.5f;
-
-		const XMVECTOR topalign = XMVectorSet(0, debugvoxelsize.y, 0, 0); // align line to top of voxels
-		
-		numVertices = 0;
-		Vertex* vertices = (Vertex*)mem.data;
-		int count = (int)results.size();
-		for (int i = 0; i < count; ++i)
-		{
-			XMVECTOR P0 = XMLoadFloat3(&results[std::max(0, std::min(i - 1, count - 1))]);
-			XMVECTOR P1 = XMLoadFloat3(&results[std::max(0, std::min(i, count - 1))]);
-			XMVECTOR P2 = XMLoadFloat3(&results[std::max(0, std::min(i + 1, count - 1))]);
-			XMVECTOR P3 = XMLoadFloat3(&results[std::max(0, std::min(i + 2, count - 1))]);
-
-			if (i == 0)
-			{
-				// when P0 == P1, centripetal catmull doesn't work, so we have to do a dummy control point
-				P0 += P1 - P2;
-			}
-			if (i >= count - 2)
-			{
-				// when P2 == P3, centripetal catmull doesn't work, so we have to do a dummy control point
-				P3 += P2 - P1;
-			}
-
-			// add box debug draw for control points:
-			XMFLOAT4X4 boxmat;
-			XMStoreFloat4x4(&boxmat, XMMatrixScaling(debugvoxelsize.x, debugvoxelsize.y, debugvoxelsize.z)* XMMatrixTranslationFromVector(P1));
-			wi::renderer::DrawBox(boxmat);
-
-			bool cap = i == (count - 1);
-			uint32_t segment_resolution = cap ? 1 : resolution;
-
-			for (uint32_t j = 0; j < segment_resolution; ++j)
-			{
-				float t = float(j) / float(segment_resolution);
-
-#if 1
-				XMVECTOR P = cap ? XMVectorLerp(P1, P2, t) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t, curve_tension);
-				XMVECTOR P_prev = cap ? XMVectorLerp(P0, P1, t - resolution_rcp) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t - resolution_rcp, curve_tension);
-				XMVECTOR P_next = cap ? XMVectorLerp(P1, P2, t + resolution_rcp) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t + resolution_rcp, curve_tension);
-#else
-				XMVECTOR P = XMVectorLerp(P1, P2, t);
-				XMVECTOR P_prev = XMVectorLerp(P0, P1, t - resolution_rcp);
-				XMVECTOR P_next = XMVectorLerp(P1, P2, t + resolution_rcp);
-#endif
-
-				XMVECTOR T = XMVector3Normalize(P_next - P_prev);
-				XMVECTOR B = XMVector3Normalize(XMVector3Cross(T, XMVectorSet(0, 1, 0, 0)));
-				B *= width;
-
-				Vertex vert;
-				vert.color = wi::math::Lerp(color0, color1, wi::math::saturate(std::sin(segmenti + debugtimer) * 0.5f + 0.5f));
-
-				XMStoreFloat4(&vert.position, XMVectorSetW(P - B + topalign, 1));
-				std::memcpy(vertices + numVertices, &vert, sizeof(vert));
-				numVertices++;
-
-				XMStoreFloat4(&vert.position, XMVectorSetW(P + B + topalign, 1));
-				std::memcpy(vertices + numVertices, &vert, sizeof(vert));
-				numVertices++;
-
-				segmenti += gradientsize;
-			}
-		}
-
 		device->EventBegin("PathQuery::debugdraw", cmd);
-		device->BindPipelineState(&pso_solidpart, cmd);
-
-		const GPUBuffer* vbs[] = {
-			&mem.buffer,
-		};
-		const uint32_t strides[] = {
-			sizeof(Vertex),
-		};
-		const uint64_t offsets[] = {
-			mem.offset,
-		};
-		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 
 		MiscCB sb;
 		sb.g_xTransform = ViewProjection;
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 
-		device->Draw(numVertices, 0, cmd);
+		// Curve:
+		{
+			static uint32_t resolution = 10;
+			const float resolution_rcp = 1.0f / resolution;
+			uint32_t numSegments = uint32_t(results.size()) * resolution;
+			uint32_t numVertices = numSegments * 2;
+
+			auto mem = device->AllocateGPU(sizeof(Vertex) * numVertices, cmd);
+
+			static float width = std::max(debugvoxelsize.x, debugvoxelsize.z) * 0.2f;
+			debugtimer += 0.16f;
+			float segmenti = 0;
+			static float gradientsize = 5.0f / resolution;
+			static XMFLOAT4 color0 = wi::Color(10, 10, 20, 255);
+			static XMFLOAT4 color1 = wi::Color(70, 150, 170, 255);
+			static float curve_tension = 0.5f;
+
+			const XMVECTOR topalign = XMVectorSet(0, debugvoxelsize.y, 0, 0); // align line to top of voxels
+
+			numVertices = 0;
+			Vertex* vertices = (Vertex*)mem.data;
+			int count = (int)results.size();
+			for (int i = 0; i < count; ++i)
+			{
+				XMVECTOR P0 = XMLoadFloat3(&results[std::max(0, std::min(i - 1, count - 1))]);
+				XMVECTOR P1 = XMLoadFloat3(&results[std::max(0, std::min(i, count - 1))]);
+				XMVECTOR P2 = XMLoadFloat3(&results[std::max(0, std::min(i + 1, count - 1))]);
+				XMVECTOR P3 = XMLoadFloat3(&results[std::max(0, std::min(i + 2, count - 1))]);
+
+				if (i == 0)
+				{
+					// when P0 == P1, centripetal catmull doesn't work, so we have to do a dummy control point
+					P0 += P1 - P2;
+				}
+				if (i >= count - 2)
+				{
+					// when P2 == P3, centripetal catmull doesn't work, so we have to do a dummy control point
+					P3 += P2 - P1;
+				}
+
+				bool cap = i == (count - 1);
+				uint32_t segment_resolution = cap ? 1 : resolution;
+
+				for (uint32_t j = 0; j < segment_resolution; ++j)
+				{
+					float t = float(j) / float(segment_resolution);
+
+#if 1
+					XMVECTOR P = cap ? XMVectorLerp(P1, P2, t) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t, curve_tension);
+					XMVECTOR P_prev = cap ? XMVectorLerp(P0, P1, t - resolution_rcp) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t - resolution_rcp, curve_tension);
+					XMVECTOR P_next = cap ? XMVectorLerp(P1, P2, t + resolution_rcp) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t + resolution_rcp, curve_tension);
+#else
+					XMVECTOR P = XMVectorLerp(P1, P2, t);
+					XMVECTOR P_prev = XMVectorLerp(P0, P1, t - resolution_rcp);
+					XMVECTOR P_next = XMVectorLerp(P1, P2, t + resolution_rcp);
+#endif
+
+					XMVECTOR T = XMVector3Normalize(P_next - P_prev);
+					XMVECTOR B = XMVector3Normalize(XMVector3Cross(T, XMVectorSet(0, 1, 0, 0)));
+					B *= width;
+
+					Vertex vert;
+					vert.color = wi::math::Lerp(color0, color1, wi::math::saturate(std::sin(segmenti + debugtimer) * 0.5f + 0.5f));
+
+					XMStoreFloat4(&vert.position, XMVectorSetW(P - B + topalign, 1));
+					std::memcpy(vertices + numVertices, &vert, sizeof(vert));
+					numVertices++;
+
+					XMStoreFloat4(&vert.position, XMVectorSetW(P + B + topalign, 1));
+					std::memcpy(vertices + numVertices, &vert, sizeof(vert));
+					numVertices++;
+
+					segmenti += gradientsize;
+				}
+			}
+
+			device->BindPipelineState(&pso_curve, cmd);
+
+			const GPUBuffer* vbs[] = {
+				&mem.buffer,
+			};
+			const uint32_t strides[] = {
+				sizeof(Vertex),
+			};
+			const uint64_t offsets[] = {
+				mem.offset,
+			};
+			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+			device->Draw(numVertices, 0, cmd);
+		}
+
+		// Waypoint cubes:
+		{
+			static constexpr Vertex cubeVerts[] = {
+				{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
+			};
+
+			size_t numVoxels = result_path_goal_to_start_simplified.size() + result_path_goal_to_start.size();
+			auto mem = device->AllocateGPU(sizeof(cubeVerts) * numVoxels, cmd);
+
+			const XMVECTOR VOXELSIZE = XMLoadFloat3(&debugvoxelsize);
+
+			size_t dst_offset = 0;
+			for (size_t i = 0; i < numVoxels; ++i)
+			{
+				const wi::vector<XMFLOAT3>& srcarray = i < result_path_goal_to_start.size() ? result_path_goal_to_start : result_path_goal_to_start_simplified;
+				const size_t idx = i < result_path_goal_to_start.size() ? i : (i - result_path_goal_to_start.size());
+				const XMFLOAT4 color = i < result_path_goal_to_start.size() ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(1, 0, 0, 1);
+
+				const XMVECTOR P = XMLoadFloat3(srcarray.data() + idx);
+
+				Vertex verts[arraysize(cubeVerts)];
+				std::memcpy(verts, cubeVerts, sizeof(cubeVerts));
+				for (auto& v : verts)
+				{
+					XMVECTOR C = XMLoadFloat4(&v.position);
+					C *= VOXELSIZE;
+					C += P;
+					C = XMVectorSetW(C, 1);
+					XMStoreFloat4(&v.position, C);
+					v.color = color;
+				}
+				std::memcpy((uint8_t*)mem.data + dst_offset, verts, sizeof(verts));
+				dst_offset += sizeof(verts);
+			}
+
+			device->BindPipelineState(&pso_waypoint, cmd);
+
+			const GPUBuffer* vbs[] = {
+				&mem.buffer,
+			};
+			const uint32_t strides[] = {
+				sizeof(Vertex),
+			};
+			const uint64_t offsets[] = {
+				mem.offset,
+			};
+			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+			device->Draw(uint32_t(arraysize(cubeVerts) * numVoxels), 0, cmd);
+		}
 
 		device->EventEnd(cmd);
 	}

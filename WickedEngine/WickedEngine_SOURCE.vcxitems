@@ -242,6 +242,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLocalization.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNoise.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiPathQuery.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiPathQuery_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiPhysics_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderPath3D_PathTracing.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\liberation_sans.h" />
@@ -372,6 +373,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVersion.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVideo.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVoxelGrid.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiVoxelGrid_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiXInput.h" />
   </ItemGroup>
   <ItemGroup>
@@ -520,6 +522,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiConfig.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLocalization.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiPathQuery.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiPathQuery_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiPhysics_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderPath3D_PathTracing.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp.cpp" />
@@ -713,6 +716,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVersion.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVideo.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVoxelGrid.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiVoxelGrid_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiXInput.cpp" />
   </ItemGroup>
   <ItemGroup>

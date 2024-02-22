@@ -1131,6 +1131,12 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiPathQuery.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiVoxelGrid_BindLua.h">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiPathQuery_BindLua.h">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1891,6 +1897,12 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiPathQuery.cpp">
       <Filter>ENGINE\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiVoxelGrid_BindLua.cpp">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiPathQuery_BindLua.cpp">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

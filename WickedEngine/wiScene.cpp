@@ -788,30 +788,34 @@ namespace wi::scene
 
 		{
 			auto range = wi::profiler::BeginRangeCPU("VOXELIZE");
-			if (!voxelgrid.IsValid())
+			for (size_t voxelgridIndex = 0; voxelgridIndex < voxel_grids.GetCount(); ++voxelgridIndex)
 			{
-				voxelgrid.init(64, 16, 64);
-				voxelgrid.set_voxelsize(0.125f);
-				wi::backlog::post("Created voxel grid, size = " + wi::helper::GetMemorySizeText(voxelgrid.get_memory_size()));
-				voxelgrid_waypoints = voxelgrid;
-				voxelgrid_waypoints.debug_color = XMFLOAT4(1, 0, 0, 1);
-				voxelgrid_path = voxelgrid;
-				voxelgrid_path.debug_color = XMFLOAT4(0, 0, 1, 0.8f);
-			}
-			//voxelgrid.from_aabb(bounds);
-			//voxelgrid_waypoints.from_aabb(bounds);
-			//voxelgrid_path.from_aabb(bounds);
-			voxelgrid.cleardata();
-			voxelgrid_waypoints.cleardata();
-			voxelgrid_path.cleardata();
-			for (size_t i = 0; i < objects.GetCount(); ++i)
-			{
-				const ObjectComponent& object = objects[i];
-				//if ((object.GetFilterMask() & FILTER::FILTER_NAVIGATION_MESH) == 0)
-				//	continue;
-				wi::jobsystem::Execute(ctx, [i, this](wi::jobsystem::JobArgs args) {
-					VoxelizeObject(i, voxelgrid);
+				wi::VoxelGrid& voxelgrid = voxel_grids[voxelgridIndex];
+				Entity entity = voxel_grids.GetEntity(voxelgridIndex);
+
+				const TransformComponent* transform = transforms.GetComponent(entity);
+				if (transform != nullptr)
+				{
+					voxelgrid.center = transform->GetPosition();
+					voxelgrid.set_voxelsize(transform->GetScale());
+				}
+
+				voxelgrid.cleardata();
+				for (size_t objectIndex = 0; objectIndex < objects.GetCount(); ++objectIndex)
+				{
+					const ObjectComponent& object = objects[objectIndex];
+					if ((object.GetFilterMask() & FILTER::FILTER_NAVIGATION_MESH) == 0)
+						continue;
+
+					// two indices are packed to fit into 16 bytes lambda capture without heap allocation:
+					const uint64_t pk = (uint64_t(objectIndex) & 0xFFFFFF) | (uint64_t(voxelgridIndex) & 0xFF);
+
+					wi::jobsystem::Execute(ctx, [this, pk](wi::jobsystem::JobArgs args) {
+						size_t objectIndex = pk & 0xFFFFFF;
+						size_t voxelgridIndex = (pk >> 24u) & 0xFF;
+						VoxelizeObject(objectIndex, voxel_grids[voxelgridIndex]);
 					});
+				}
 			}
 			wi::jobsystem::Wait(ctx);
 			wi::profiler::EndRange(range);
@@ -5768,6 +5772,8 @@ namespace wi::scene
 
 	void Scene::VoxelizeObject(size_t objectIndex, wi::VoxelGrid& grid, bool subtract)
 	{
+		if (objectIndex >= objects.GetCount() || objectIndex >= aabb_objects.size())
+			return;
 		if (aabb_objects[objectIndex].intersects(grid.get_aabb()) == wi::primitive::AABB::OUTSIDE)
 			return;
 		const ObjectComponent& object = objects[objectIndex];

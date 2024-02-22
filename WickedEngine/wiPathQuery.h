@@ -53,11 +53,12 @@ namespace wi
 			wi::VoxelGrid* debug_voxelgrid = nullptr
 		);
 
-		// Gets the first waypoint between start and goal that was used in process():
-		XMFLOAT3 get_first_waypoint() const;
+		// Gets the next upcoming waypoint between start and goal that was used in process():
+		XMFLOAT3 get_next_waypoint() const;
 
 		mutable float debugtimer = 0;
 		XMFLOAT3 debugvoxelsize = XMFLOAT3(0, 0, 0);
+		bool debug_waypoints = false; // if true, waypoint voxels will be drawn. Blue = waypoint, Pink = simplified waypoint
 		void debugdraw(const XMFLOAT4X4& ViewProjection, wi::graphics::CommandList cmd) const;
 	};
 }
