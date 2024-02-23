@@ -19,35 +19,35 @@
 #include <intrin.h>
 inline long AtomicAnd(volatile long* ptr, long mask)
 {
-	return InterlockedAnd(ptr, mask);
+	return _InterlockedAnd(ptr, mask);
 }
 inline long long AtomicAnd(volatile long long* ptr, long long mask)
 {
-	return InterlockedAnd64(ptr, mask);
+	return _InterlockedAnd64(ptr, mask);
 }
 inline long AtomicOr(volatile long* ptr, long mask)
 {
-	return InterlockedOr(ptr, mask);
+	return _InterlockedOr(ptr, mask);
 }
 inline long long AtomicOr(volatile long long* ptr, long long mask)
 {
-	return InterlockedOr64(ptr, mask);
+	return _InterlockedOr64(ptr, mask);
 }
 inline long AtomicXor(volatile long* ptr, long mask)
 {
-	return InterlockedXor(ptr, mask);
+	return _InterlockedXor(ptr, mask);
 }
 inline long long AtomicXor(volatile long long* ptr, long long mask)
 {
-	return InterlockedXor64(ptr, mask);
+	return _InterlockedXor64(ptr, mask);
 }
 inline long AtomicAdd(volatile long* ptr, long val)
 {
-	return InterlockedAdd(ptr, val);
+	return _InlineInterlockedAdd(ptr, val);
 }
 inline long long AtomicAdd(volatile long long* ptr, long long val)
 {
-	return InterlockedAdd64(ptr, val);
+	return _InlineInterlockedAdd64(ptr, val);
 }
 inline unsigned int countbits(unsigned int value)
 {
@@ -60,7 +60,7 @@ inline unsigned long long countbits(unsigned long long value)
 inline unsigned long firstbithigh(unsigned long value)
 {
 	unsigned long bit_index;
-	if (BitScanReverse(&bit_index, value))
+	if (_BitScanReverse(&bit_index, value))
 	{
 		return bit_index;
 	}
@@ -69,7 +69,7 @@ inline unsigned long firstbithigh(unsigned long value)
 inline unsigned long firstbithigh(unsigned long long value)
 {
 	unsigned long bit_index;
-	if (BitScanReverse64(&bit_index, value))
+	if (_BitScanReverse64(&bit_index, value))
 	{
 		return bit_index;
 	}
@@ -78,7 +78,7 @@ inline unsigned long firstbithigh(unsigned long long value)
 inline unsigned long firstbitlow(unsigned long value)
 {
 	unsigned long bit_index;
-	if (BitScanForward(&bit_index, value))
+	if (_BitScanForward(&bit_index, value))
 	{
 		return bit_index;
 	}
@@ -87,7 +87,7 @@ inline unsigned long firstbitlow(unsigned long value)
 inline unsigned long firstbitlow(unsigned long long value)
 {
 	unsigned long bit_index;
-	if (BitScanForward64(&bit_index, value))
+	if (_BitScanForward64(&bit_index, value))
 	{
 		return bit_index;
 	}
