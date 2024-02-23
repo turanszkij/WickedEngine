@@ -469,7 +469,7 @@ namespace wi
 			const uint3 coord = unflatten3D(uint(i), resolution_div4);
 			while (voxel_bits != 0)
 			{
-				unsigned long bit_index = firstbithigh(voxel_bits);
+				unsigned long bit_index = firstbitlow(voxel_bits);
 				voxel_bits ^= 1ull << bit_index; // remove current bit
 				const uint3 sub_coord = unflatten3D(bit_index, uint3(4, 4, 4));
 				XMVECTOR uvw = XMVectorSet(coord.x * 4 + sub_coord.x + 0.5f, coord.y * 4 + sub_coord.y + 0.5f, coord.z * 4 + sub_coord.z + 0.5f, 1) * RESOLUTION_RCP;
