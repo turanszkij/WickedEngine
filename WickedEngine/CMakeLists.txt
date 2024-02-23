@@ -148,6 +148,8 @@ set(HEADER_FILES
 		wiVideo.h
 		wiVoxelGrid.h
 		wiPathQuery.h
+ 		wiVoxelGrid_BindLua.h
+  		wiPathQuery_BindLua.h
 		)
 
 add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
@@ -224,6 +226,8 @@ add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
 	wiVideo.cpp
 	wiVoxelGrid.cpp
 	wiPathQuery.cpp
+ 	wiVoxelGrid_BindLua.cpp
+  	wiPathQuery_BindLua.cpp
 	${HEADER_FILES}
 )
 add_library(WickedEngine ALIAS ${TARGET_NAME})
