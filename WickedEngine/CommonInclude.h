@@ -15,31 +15,39 @@
 
 // CPU intrinsics:
 #if defined(_WIN32)
-// Windows:
+// Windows, Xbox:
 #include <intrin.h>
 inline long AtomicAnd(volatile long* ptr, long mask)
 {
-	return _InterlockedAnd(ptr, mask);
+	return InterlockedAnd(ptr, mask);
 }
 inline long long AtomicAnd(volatile long long* ptr, long long mask)
 {
-	return _InterlockedAnd64(ptr, mask);
+	return InterlockedAnd64(ptr, mask);
 }
 inline long AtomicOr(volatile long* ptr, long mask)
 {
-	return _InterlockedOr(ptr, mask);
+	return InterlockedOr(ptr, mask);
 }
 inline long long AtomicOr(volatile long long* ptr, long long mask)
 {
-	return _InterlockedOr64(ptr, mask);
+	return InterlockedOr64(ptr, mask);
 }
 inline long AtomicXor(volatile long* ptr, long mask)
 {
-	return _InterlockedXor(ptr, mask);
+	return InterlockedXor(ptr, mask);
 }
 inline long long AtomicXor(volatile long long* ptr, long long mask)
 {
-	return _InterlockedXor64(ptr, mask);
+	return InterlockedXor64(ptr, mask);
+}
+inline long AtomicAdd(volatile long* ptr, long val)
+{
+	return InterlockedAdd(ptr, val);
+}
+inline long long AtomicAdd(volatile long long* ptr, long long val)
+{
+	return InterlockedAdd64(ptr, val);
 }
 inline unsigned int countbits(unsigned int value)
 {
@@ -52,7 +60,7 @@ inline unsigned long long countbits(unsigned long long value)
 inline unsigned long firstbithigh(unsigned long value)
 {
 	unsigned long bit_index;
-	if (_BitScanReverse(&bit_index, value))
+	if (BitScanReverse(&bit_index, value))
 	{
 		return bit_index;
 	}
@@ -61,7 +69,7 @@ inline unsigned long firstbithigh(unsigned long value)
 inline unsigned long firstbithigh(unsigned long long value)
 {
 	unsigned long bit_index;
-	if (_BitScanReverse64(&bit_index, value))
+	if (BitScanReverse64(&bit_index, value))
 	{
 		return bit_index;
 	}
@@ -70,7 +78,7 @@ inline unsigned long firstbithigh(unsigned long long value)
 inline unsigned long firstbitlow(unsigned long value)
 {
 	unsigned long bit_index;
-	if (_BitScanForward(&bit_index, value))
+	if (BitScanForward(&bit_index, value))
 	{
 		return bit_index;
 	}
@@ -79,7 +87,7 @@ inline unsigned long firstbitlow(unsigned long value)
 inline unsigned long firstbitlow(unsigned long long value)
 {
 	unsigned long bit_index;
-	if (_BitScanForward64(&bit_index, value))
+	if (BitScanForward64(&bit_index, value))
 	{
 		return bit_index;
 	}
@@ -89,27 +97,35 @@ inline unsigned long firstbitlow(unsigned long long value)
 // Linux, PlayStation:
 inline long AtomicAnd(volatile long* ptr, long mask)
 {
-	return __atomic_and_fetch(ptr, mask, __ATOMIC_SEQ_CST);
+	return __atomic_fetch_and(ptr, mask, __ATOMIC_SEQ_CST);
 }
 inline long long AtomicAnd(volatile long long* ptr, long long mask)
 {
-	return __atomic_and_fetch(ptr, mask, __ATOMIC_SEQ_CST);
+	return __atomic_fetch_and(ptr, mask, __ATOMIC_SEQ_CST);
 }
 inline long AtomicOr(volatile long* ptr, long mask)
 {
-	return __atomic_or_fetch(ptr, mask, __ATOMIC_SEQ_CST);
+	return __atomic_fetch_or(ptr, mask, __ATOMIC_SEQ_CST);
 }
 inline long long AtomicOr(volatile long long* ptr, long long mask)
 {
-	return __atomic_or_fetch(ptr, mask, __ATOMIC_SEQ_CST);
+	return __atomic_fetch_or(ptr, mask, __ATOMIC_SEQ_CST);
 }
 inline long AtomicXor(volatile long* ptr, long mask)
 {
-	return __atomic_xor_fetch(ptr, mask, __ATOMIC_SEQ_CST);
+	return __atomic_fetch_xor(ptr, mask, __ATOMIC_SEQ_CST);
 }
 inline long long AtomicXor(volatile long long* ptr, long long mask)
 {
-	return __atomic_xor_fetch(ptr, mask, __ATOMIC_SEQ_CST);
+	return __atomic_fetch_xor(ptr, mask, __ATOMIC_SEQ_CST);
+}
+inline long AtomicAdd(volatile long* ptr, long val)
+{
+	return __atomic_fetch_add(ptr, val, __ATOMIC_SEQ_CST);
+}
+inline long long AtomicAdd(volatile long long* ptr, long long val)
+{
+	return __atomic_fetch_add(ptr, val, __ATOMIC_SEQ_CST);
 }
 inline unsigned int countbits(unsigned int value)
 {
