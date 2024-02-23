@@ -43,11 +43,11 @@ inline long long AtomicXor(volatile long long* ptr, long long mask)
 }
 inline long AtomicAdd(volatile long* ptr, long val)
 {
-	return _InlineInterlockedAdd(ptr, val);
+	return _InterlockedExchangeAdd(ptr, val);
 }
 inline long long AtomicAdd(volatile long long* ptr, long long val)
 {
-	return _InlineInterlockedAdd64(ptr, val);
+	return _InterlockedExchangeAdd64(ptr, val);
 }
 inline unsigned int countbits(unsigned int value)
 {
