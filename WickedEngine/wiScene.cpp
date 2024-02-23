@@ -787,7 +787,6 @@ namespace wi::scene
 		}
 
 		{
-			auto range = wi::profiler::BeginRangeCPU("VOXELIZE");
 			for (size_t voxelgridIndex = 0; voxelgridIndex < voxel_grids.GetCount(); ++voxelgridIndex)
 			{
 				wi::VoxelGrid& voxelgrid = voxel_grids[voxelgridIndex];
@@ -799,26 +798,7 @@ namespace wi::scene
 					voxelgrid.center = transform->GetPosition();
 					voxelgrid.set_voxelsize(transform->GetScale());
 				}
-
-				voxelgrid.cleardata();
-				for (size_t objectIndex = 0; objectIndex < objects.GetCount(); ++objectIndex)
-				{
-					const ObjectComponent& object = objects[objectIndex];
-					if ((object.GetFilterMask() & FILTER::FILTER_NAVIGATION_MESH) == 0)
-						continue;
-
-					// two indices are packed to fit into 16 bytes lambda capture without heap allocation:
-					const uint64_t pk = (uint64_t(objectIndex) & 0xFFFFFF) | (uint64_t(voxelgridIndex) & 0xFF);
-
-					wi::jobsystem::Execute(ctx, [this, pk](wi::jobsystem::JobArgs args) {
-						size_t objectIndex = pk & 0xFFFFFF;
-						size_t voxelgridIndex = (pk >> 24u) & 0xFF;
-						VoxelizeObject(objectIndex, voxel_grids[voxelgridIndex]);
-					});
-				}
 			}
-			wi::jobsystem::Wait(ctx);
-			wi::profiler::EndRange(range);
 		}
 
 		// Shader scene resources:
@@ -5834,6 +5814,29 @@ namespace wi::scene
 
 				grid.inject_triangle(p0, p1, p2, subtract);
 			}
+		}
+	}
+	void Scene::VoxelizeNavigation(wi::jobsystem::context& ctx, wi::VoxelGrid& voxelgrid)
+	{
+		for (size_t i = 0; i < objects.GetCount(); ++i)
+		{
+			const ObjectComponent& object = objects[i];
+			if ((object.GetFilterMask() & FILTER::FILTER_NAVIGATION_MESH) == 0)
+				continue;
+
+			wi::jobsystem::Execute(ctx, [this, i, &voxelgrid](wi::jobsystem::JobArgs args) {
+				VoxelizeObject(i, voxelgrid);
+			});
+		}
+	}
+	void Scene::VoxelizeWholeScene(wi::jobsystem::context& ctx, wi::VoxelGrid& voxelgrid)
+	{
+		for (size_t i = 0; i < objects.GetCount(); ++i)
+		{
+			const ObjectComponent& object = objects[i];
+			wi::jobsystem::Execute(ctx, [this, i, &voxelgrid](wi::jobsystem::JobArgs args) {
+				VoxelizeObject(i, voxelgrid);
+			});
 		}
 	}
 

@@ -333,10 +333,13 @@ namespace wi
 	{
 		if (archive.IsReadMode())
 		{
+			archive >> _flags;
 			archive >> voxels;
 			archive >> resolution;
 			archive >> voxelSize;
 			archive >> center;
+			archive >> debug_color;
+			archive >> debug_color_extent;
 
 			resolution_div4.x = (resolution.x + 3u) / 4u;
 			resolution_div4.y = (resolution.y + 3u) / 4u;
@@ -348,10 +351,13 @@ namespace wi
 		}
 		else
 		{
+			archive << _flags;
 			archive << voxels;
 			archive << resolution;
 			archive << voxelSize;
 			archive << center;
+			archive << debug_color;
+			archive << debug_color_extent;
 		}
 	}
 

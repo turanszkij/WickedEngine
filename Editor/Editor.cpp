@@ -1150,6 +1150,25 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::VoxelGrid))
+			{
+				for (size_t i = 0; i < scene.voxel_grids.GetCount(); ++i)
+				{
+					Entity entity = scene.voxel_grids.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
+					float dis = XMVectorGetX(disV);
+					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					{
+						hovered = wi::scene::PickResult();
+						hovered.entity = entity;
+						hovered.distance = dis;
+					}
+				}
+			}
 			if (bone_picking)
 			{
 				for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
@@ -1701,6 +1720,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.terrainWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.spriteWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.fontWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.voxelGridWnd.SetEntity(INVALID_ENTITY);
 	}
 	else
 	{
@@ -1734,6 +1754,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.terrainWnd.SetEntity(picked.entity);
 		componentsWnd.spriteWnd.SetEntity(picked.entity);
 		componentsWnd.fontWnd.SetEntity(picked.entity);
+		componentsWnd.voxelGridWnd.SetEntity(picked.entity);
 
 		if (picked.subsetIndex >= 0)
 		{
@@ -2102,6 +2123,24 @@ void EditorComponent::PostUpdate()
 	if (renderPath->getSceneUpdateEnabled()) // only update preview if scene was updated at all by main renderPath
 	{
 		componentsWnd.cameraComponentWnd.preview.RenderPreview();
+	}
+
+	const Scene& scene = GetCurrentScene();
+	if (componentsWnd.voxelGridWnd.debugAllCheckBox.GetCheck())
+	{
+		// Draw all voxel grids:
+		for (size_t i = 0; i < scene.voxel_grids.GetCount(); ++i)
+		{
+			wi::renderer::DrawVoxelGrid(&scene.voxel_grids[i]);
+		}
+	}
+	else
+	{
+		// Draw only selected:
+		if (scene.voxel_grids.Contains(componentsWnd.voxelGridWnd.entity))
+		{
+			wi::renderer::DrawVoxelGrid(scene.voxel_grids.GetComponent(componentsWnd.voxelGridWnd.entity));
+		}
 	}
 }
 void EditorComponent::Render() const
@@ -2912,6 +2951,36 @@ void EditorComponent::Render() const
 
 
 					wi::font::Draw(ICON_VIDEO, fp, cmd);
+				}
+			}
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::VoxelGrid))
+			{
+				for (size_t i = 0; i < scene.voxel_grids.GetCount(); ++i)
+				{
+					Entity entity = scene.voxel_grids.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					fp.position = transform.GetPosition();
+					fp.scaling = scaling * wi::math::Distance(transform.GetPosition(), camera.Eye);
+					fp.color = inactiveEntityColor;
+
+					if (hovered.entity == entity)
+					{
+						fp.color = hoveredEntityColor;
+					}
+					for (auto& picked : translator.selected)
+					{
+						if (picked.entity == entity)
+						{
+							fp.color = selectedEntityColor;
+							break;
+						}
+					}
+
+
+					wi::font::Draw(ICON_VOXELGRID, fp, cmd);
 				}
 			}
 			if (bone_picking)
@@ -4191,6 +4260,7 @@ void EditorComponent::RefreshSceneList()
 			componentsWnd.terrainWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.spriteWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.fontWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.voxelGridWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 
 			optionsWnd.RefreshEntityTree();
 			ResetHistory();

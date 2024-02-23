@@ -29,6 +29,7 @@
 #include "TerrainWindow.h"
 #include "SpriteWindow.h"
 #include "FontWindow.h"
+#include "VoxelGridWindow.h"
 
 class EditorComponent;
 
@@ -72,4 +73,5 @@ public:
 	TerrainWindow terrainWnd;
 	SpriteWindow spriteWnd;
 	FontWindow fontWnd;
+	VoxelGridWindow voxelGridWnd;
 };

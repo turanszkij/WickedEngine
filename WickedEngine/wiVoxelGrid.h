@@ -11,6 +11,12 @@ namespace wi
 {
 	struct VoxelGrid
 	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+		};
+		uint32_t _flags = EMPTY;
+
 		XMUINT3 resolution = XMUINT3(0, 0, 0);
 		XMUINT3 resolution_div4 = XMUINT3(0, 0, 0);
 		XMFLOAT3 resolution_rcp = XMFLOAT3(0, 0, 0);
