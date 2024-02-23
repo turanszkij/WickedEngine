@@ -34,6 +34,9 @@ using namespace Microsoft::WRL;
 
 namespace wi::graphics
 {
+
+	GraphicsDevice* static_device = nullptr;
+
 namespace dx12_internal
 {
 	// Bindless allocation limits:
@@ -1003,7 +1006,7 @@ namespace dx12_internal
 	constexpr TextureDesc _ConvertTextureDesc_Inv(const D3D12_RESOURCE_DESC& desc)
 	{
 		TextureDesc retVal;
-		
+
 		switch (desc.Dimension)
 		{
 		case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
@@ -1610,7 +1613,7 @@ namespace dx12_internal
 }
 using namespace dx12_internal;
 
-	
+
 
 	void GraphicsDevice_DX12::CopyAllocator::init(GraphicsDevice_DX12* device)
 	{
@@ -4315,7 +4318,7 @@ using namespace dx12_internal;
 		{
 			internal_state->desc.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_MINIMIZE_MEMORY;
 		}
-		
+
 
 		switch (desc->type)
 		{
@@ -4349,7 +4352,7 @@ using namespace dx12_internal;
 				}
 				else if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::PROCEDURAL_AABBS)
 				{
-					geometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS; 
+					geometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
 					geometry.AABBs.AABBs.StartAddress = to_internal(&x.aabbs.aabb_buffer)->gpu_address +
 						(D3D12_GPU_VIRTUAL_ADDRESS)x.aabbs.offset;
 					geometry.AABBs.AABBs.StrideInBytes = (UINT64)x.aabbs.stride;
@@ -5210,7 +5213,7 @@ using namespace dx12_internal;
 		const void* identifier = internal_state->stateObjectProperties->GetShaderIdentifier(internal_state->group_strings[group_index].c_str());
 		std::memcpy(dest, identifier, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 	}
-	
+
 	void GraphicsDevice_DX12::SetName(GPUResource* pResource, const char* name) const
 	{
 		wchar_t text[256];
@@ -7212,7 +7215,7 @@ using namespace dx12_internal;
 
 				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::TRIANGLES)
 				{
-					geometry.Triangles.VertexBuffer.StartAddress = to_internal(&x.triangles.vertex_buffer)->gpu_address + 
+					geometry.Triangles.VertexBuffer.StartAddress = to_internal(&x.triangles.vertex_buffer)->gpu_address +
 						(D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.vertex_byte_offset;
 					geometry.Triangles.IndexBuffer = to_internal(&x.triangles.index_buffer)->gpu_address +
 						(D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.index_offset * (x.triangles.index_format == IndexBufferFormat::UINT16 ? sizeof(uint16_t) : sizeof(uint32_t));

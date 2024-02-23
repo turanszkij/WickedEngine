@@ -235,7 +235,10 @@ add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
 	${HEADER_FILES}
 )
 add_library(WickedEngine ALIAS ${TARGET_NAME})
-set_target_properties(${TARGET_NAME} PROPERTIES PUBLIC_HEADER "${HEADER_FILES}")
+set_target_properties(${TARGET_NAME} PROPERTIES
+	PUBLIC_HEADER "${HEADER_FILES}"
+	POSITION_INDEPENDENT_CODE ${WICKED_PIC_CODE}
+)
 
 target_include_directories(${TARGET_NAME} SYSTEM PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
@@ -269,17 +272,17 @@ else ()
 	set(WICKEDENGINE_STATIC_LIBRARIES ${WICKEDENGINE_STATIC_LIBRARIES} FAudio)
 
 	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-	target_compile_options(${TARGET_NAME} PRIVATE
-			-Wuninitialized
-			#-Wwrite-strings
-			#-Winit-self
-			#-Wreturn-type
-			#-Wreorder
-			#-Werror=delete-non-virtual-dtor
-			#-Werror
-			#uncomment this to stop the compilation at the first error
-			# -Wfatal-errors
-			)
+		target_compile_options(${TARGET_NAME} PRIVATE
+				-Wuninitialized
+				-Wwrite-strings
+				-Winit-self
+				-Wreturn-type
+				-Wreorder
+				-Werror=delete-non-virtual-dtor
+				#-Werror
+				#uncomment this to stop the compilation at the first error
+				# -Wfatal-errors
+				)
 	elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	# add some warnings and set them as errors
 	# read more details here: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html

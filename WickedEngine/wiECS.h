@@ -23,9 +23,10 @@ namespace wi::ecs
 	using Entity = uint32_t;
 	inline constexpr Entity INVALID_ENTITY = 0;
 	// Runtime can create a new entity with this
+
+	extern std::atomic<Entity> next;//{ INVALID_ENTITY + 1 };
 	inline Entity CreateEntity()
 	{
-		static std::atomic<Entity> next{ INVALID_ENTITY + 1 };
 		return next.fetch_add(1);
 	}
 

@@ -10,6 +10,7 @@
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
 #include <wiScene_Components.h>
+#include <string>
 
 namespace py = pybind11;
 
@@ -36,6 +37,7 @@ void init_wicked(py::module_& mod)
 
 	mod.def("init", []()
 	{
+		return;
 		if (INIT_DONE) return;
 		INIT_DONE = true;
 
@@ -56,8 +58,8 @@ void init_wicked(py::module_& mod)
 		}
 
 		app.SetWindow(sdl_window.get());
-		wi::renderer::SetShaderSourcePath(WICKED_ROOT_DIR"/WickedEngine/shaders/");
-		wi::renderer::SetShaderPath(WICKED_ROOT_DIR"/build/BlenderExporter/shaders/");
+		wi::renderer::SetShaderSourcePath(std::string{WICKED_ROOT_DIR"/WickedEngine/shaders/"});
+		wi::renderer::SetShaderPath(std::string{WICKED_ROOT_DIR"/build/BlenderExporter/shaders/"});
 
 		//wi::initializer::InitializeComponentsImmediate();
 		app.Initialize();

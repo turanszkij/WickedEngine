@@ -22,7 +22,7 @@ bl_info = {
     'description': 'Addon to add wiscene export to file functionality.',
     'tracker_url': "https://github.com/turanszkij/WickedEngine/issues/",
     'isDraft': True,
-    'developer': "Matteo De Carlo", # Replace this
+    'developer': "Matteo De Carlo",
     'url': 'https://github.com/turanszkij/WickedEngine/',
 }
 
