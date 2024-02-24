@@ -67,6 +67,7 @@ namespace wi::lua::scene
 		int Component_CreateDecal(lua_State* L);
 		int Component_CreateSprite(lua_State* L);
 		int Component_CreateFont(lua_State* L);
+		int Component_CreateVoxelGrid(lua_State* L);
 
 		int Component_GetName(lua_State* L);
 		int Component_GetLayer(lua_State* L);
@@ -93,6 +94,7 @@ namespace wi::lua::scene
 		int Component_GetDecal(lua_State* L);
 		int Component_GetSprite(lua_State* L);
 		int Component_GetFont(lua_State* L);
+		int Component_GetVoxelGrid(lua_State* L);
 
 		int Component_GetNameArray(lua_State* L);
 		int Component_GetLayerArray(lua_State* L);
@@ -119,6 +121,7 @@ namespace wi::lua::scene
 		int Component_GetDecalArray(lua_State* L);
 		int Component_GetSpriteArray(lua_State* L);
 		int Component_GetFontArray(lua_State* L);
+		int Component_GetVoxelGridArray(lua_State* L);
 
 		int Entity_GetNameArray(lua_State* L);
 		int Entity_GetLayerArray(lua_State* L);
@@ -146,6 +149,7 @@ namespace wi::lua::scene
 		int Entity_GetDecalArray(lua_State* L);
 		int Entity_GetSpriteArray(lua_State* L);
 		int Entity_GetFontArray(lua_State* L);
+		int Entity_GetVoxelGridArray(lua_State* L);
 
 		int Component_RemoveName(lua_State* L);
 		int Component_RemoveLayer(lua_State* L);
@@ -173,6 +177,7 @@ namespace wi::lua::scene
 		int Component_RemoveDecal(lua_State* L);
 		int Component_RemoveSprite(lua_State* L);
 		int Component_RemoveFont(lua_State* L);
+		int Component_RemoveVoxelGrid(lua_State* L);
 
 		int Component_Attach(lua_State* L);
 		int Component_Detach(lua_State* L);
@@ -186,6 +191,7 @@ namespace wi::lua::scene
 		int RetargetAnimation(lua_State* L);
 
 		int VoxelizeObject(lua_State* L);
+		int VoxelizeScene(lua_State* L);
 	};
 
 	class NameComponent_BindLua

@@ -46,6 +46,8 @@ namespace wi
 		void set_voxelsize(const XMFLOAT3& size);
 		wi::primitive::AABB get_aabb() const;
 		void from_aabb(const wi::primitive::AABB& aabb);
+		void add(const VoxelGrid& other);
+		void subtract(const VoxelGrid& other);
 		void debugdraw(const XMFLOAT4X4& ViewProjection, wi::graphics::CommandList cmd) const;
 
 		inline bool IsValid() const { return !voxels.empty(); }

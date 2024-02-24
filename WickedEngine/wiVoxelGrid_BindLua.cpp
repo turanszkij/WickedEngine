@@ -24,6 +24,8 @@ namespace wi::lua
 		lunamethod(VoxelGrid_BindLua, GetDebugColorExtent),
 		lunamethod(VoxelGrid_BindLua, SetDebugColorExtent),
 		lunamethod(VoxelGrid_BindLua, GetMemorySize),
+		lunamethod(VoxelGrid_BindLua, Add),
+		lunamethod(VoxelGrid_BindLua, Subtract),
 		{ NULL, NULL }
 	};
 	Luna<VoxelGrid_BindLua>::PropertyType VoxelGrid_BindLua::properties[] = {
@@ -32,6 +34,7 @@ namespace wi::lua
 
 	VoxelGrid_BindLua::VoxelGrid_BindLua(lua_State* L)
 	{
+		voxelgrid = &owning;
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc >= 3)
 		{
@@ -50,12 +53,12 @@ namespace wi::lua
 		uint32_t x = (uint32_t)wi::lua::SGetInt(L, 1);
 		uint32_t y = (uint32_t)wi::lua::SGetInt(L, 2);
 		uint32_t z = (uint32_t)wi::lua::SGetInt(L, 3);
-		voxelgrid.init(x, y, z);
+		voxelgrid->init(x, y, z);
 		return 0;
 	}
 	int VoxelGrid_BindLua::ClearData(lua_State* L)
 	{
-		voxelgrid.cleardata();
+		voxelgrid->cleardata();
 		return 0;
 	}
 	int VoxelGrid_BindLua::FromAABB(lua_State* L)
@@ -72,7 +75,7 @@ namespace wi::lua
 			wi::lua::SError(L, "VoxelGrid::FromAABB(AABB aabb) argument is not an AABB!");
 			return 0;
 		}
-		voxelgrid.from_aabb(aabb->aabb);
+		voxelgrid->from_aabb(aabb->aabb);
 		return 0;
 	}
 	int VoxelGrid_BindLua::InjectTriangle(lua_State* L)
@@ -106,7 +109,7 @@ namespace wi::lua
 		{
 			subtract = wi::lua::SGetBool(L, 4);
 		}
-		voxelgrid.inject_triangle(XMLoadFloat4(&a->data), XMLoadFloat4(&b->data), XMLoadFloat4(&c->data), subtract);
+		voxelgrid->inject_triangle(XMLoadFloat4(&a->data), XMLoadFloat4(&b->data), XMLoadFloat4(&c->data), subtract);
 		return 0;
 	}
 	int VoxelGrid_BindLua::InjectAABB(lua_State* L)
@@ -128,7 +131,7 @@ namespace wi::lua
 		{
 			subtract = wi::lua::SGetBool(L, 2);
 		}
-		voxelgrid.inject_aabb(aabb->aabb, subtract);
+		voxelgrid->inject_aabb(aabb->aabb, subtract);
 		return 0;
 	}
 	int VoxelGrid_BindLua::InjectSphere(lua_State* L)
@@ -150,7 +153,7 @@ namespace wi::lua
 		{
 			subtract = wi::lua::SGetBool(L, 2);
 		}
-		voxelgrid.inject_sphere(sphere->sphere, subtract);
+		voxelgrid->inject_sphere(sphere->sphere, subtract);
 		return 0;
 	}
 	int VoxelGrid_BindLua::WorldToCoord(lua_State* L)
@@ -167,7 +170,7 @@ namespace wi::lua
 			wi::lua::SError(L, "VoxelGrid::WorldToCoord(Vector pos) first argument is not a Vector!");
 			return 0;
 		}
-		XMUINT3 coord = voxelgrid.world_to_coord(pos->GetFloat3());
+		XMUINT3 coord = voxelgrid->world_to_coord(pos->GetFloat3());
 		wi::lua::SSetInt(L, int(coord.x));
 		wi::lua::SSetInt(L, int(coord.y));
 		wi::lua::SSetInt(L, int(coord.z));
@@ -184,7 +187,7 @@ namespace wi::lua
 		int x = wi::lua::SGetInt(L, 1);
 		int y = wi::lua::SGetInt(L, 2);
 		int z = wi::lua::SGetInt(L, 3);
-		Luna<Vector_BindLua>::push(L, voxelgrid.coord_to_world(XMUINT3(uint32_t(x), uint32_t(y), uint32_t(z))));
+		Luna<Vector_BindLua>::push(L, voxelgrid->coord_to_world(XMUINT3(uint32_t(x), uint32_t(y), uint32_t(z))));
 		return 1;
 	}
 	int VoxelGrid_BindLua::CheckVoxel(lua_State* L)
@@ -207,10 +210,10 @@ namespace wi::lua
 			int x = wi::lua::SGetInt(L, 1);
 			int y = wi::lua::SGetInt(L, 2);
 			int z = wi::lua::SGetInt(L, 3);
-			wi::lua::SSetBool(L, voxelgrid.check_voxel(XMUINT3(uint32_t(x), uint32_t(y), uint32_t(z))));
+			wi::lua::SSetBool(L, voxelgrid->check_voxel(XMUINT3(uint32_t(x), uint32_t(y), uint32_t(z))));
 			return 1;
 		}
-		wi::lua::SSetBool(L, voxelgrid.check_voxel(pos->GetFloat3()));
+		wi::lua::SSetBool(L, voxelgrid->check_voxel(pos->GetFloat3()));
 		return 1;
 	}
 	int VoxelGrid_BindLua::SetVoxel(lua_State* L)
@@ -234,16 +237,16 @@ namespace wi::lua
 			int y = wi::lua::SGetInt(L, 2);
 			int z = wi::lua::SGetInt(L, 3);
 			int value = wi::lua::SGetBool(L, 4);
-			voxelgrid.set_voxel(XMUINT3(uint32_t(x), uint32_t(y), uint32_t(z)), value);
+			voxelgrid->set_voxel(XMUINT3(uint32_t(x), uint32_t(y), uint32_t(z)), value);
 			return 0;
 		}
 		int value = wi::lua::SGetBool(L, 2);
-		voxelgrid.set_voxel(pos->GetFloat3(), value);
+		voxelgrid->set_voxel(pos->GetFloat3(), value);
 		return 0;
 	}
 	int VoxelGrid_BindLua::GetCenter(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, voxelgrid.center);
+		Luna<Vector_BindLua>::push(L, voxelgrid->center);
 		return 1;
 	}
 	int VoxelGrid_BindLua::SetCenter(lua_State* L)
@@ -260,12 +263,12 @@ namespace wi::lua
 			wi::lua::SError(L, "VoxelGrid::SetCenter(Vector pos) first argument is not a Vector!");
 			return 0;
 		}
-		voxelgrid.center = pos->GetFloat3();
+		voxelgrid->center = pos->GetFloat3();
 		return 0;
 	}
 	int VoxelGrid_BindLua::GetVoxelSize(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, voxelgrid.voxelSize);
+		Luna<Vector_BindLua>::push(L, voxelgrid->voxelSize);
 		return 1;
 	}
 	int VoxelGrid_BindLua::SetVoxelSize(lua_State* L)
@@ -280,15 +283,15 @@ namespace wi::lua
 		Vector_BindLua* size = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (size == nullptr)
 		{
-			voxelgrid.set_voxelsize(wi::lua::SGetFloat(L, 1));
+			voxelgrid->set_voxelsize(wi::lua::SGetFloat(L, 1));
 			return 0;
 		}
-		voxelgrid.set_voxelsize(size->GetFloat3());
+		voxelgrid->set_voxelsize(size->GetFloat3());
 		return 0;
 	}
 	int VoxelGrid_BindLua::GetDebugColor(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, voxelgrid.debug_color);
+		Luna<Vector_BindLua>::push(L, voxelgrid->debug_color);
 		return 1;
 	}
 	int VoxelGrid_BindLua::SetDebugColor(lua_State* L)
@@ -305,12 +308,12 @@ namespace wi::lua
 			wi::lua::SError(L, "VoxelGrid::SetDebugColor(Vector color) first argument is not a Vector!");
 			return 0;
 		}
-		voxelgrid.debug_color = color->data;
+		voxelgrid->debug_color = color->data;
 		return 0;
 	}
 	int VoxelGrid_BindLua::GetDebugColorExtent(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, voxelgrid.debug_color);
+		Luna<Vector_BindLua>::push(L, voxelgrid->debug_color);
 		return 1;
 	}
 	int VoxelGrid_BindLua::SetDebugColorExtent(lua_State* L)
@@ -327,13 +330,47 @@ namespace wi::lua
 			wi::lua::SError(L, "VoxelGrid::SetDebugColorExtent(Vector color) first argument is not a Vector!");
 			return 0;
 		}
-		voxelgrid.debug_color_extent = color->data;
+		voxelgrid->debug_color_extent = color->data;
 		return 0;
 	}
 	int VoxelGrid_BindLua::GetMemorySize(lua_State* L)
 	{
-		wi::lua::SSetLongLong(L, (long long)voxelgrid.get_memory_size());
+		wi::lua::SSetLongLong(L, (long long)voxelgrid->get_memory_size());
 		return 1;
+	}
+	int VoxelGrid_BindLua::Add(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "Add(VoxelGrid other) not enough arguments!");
+			return 0;
+		}
+		VoxelGrid_BindLua* other = Luna<VoxelGrid_BindLua>::lightcheck(L, 1);
+		if (other == nullptr)
+		{
+			wi::lua::SError(L, "Add(VoxelGrid other) first argument is not a VoxelGrid!");
+			return 0;
+		}
+		voxelgrid->add(*other->voxelgrid);
+		return 0;
+	}
+	int VoxelGrid_BindLua::Subtract(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "Subtract(VoxelGrid other) not enough arguments!");
+			return 0;
+		}
+		VoxelGrid_BindLua* other = Luna<VoxelGrid_BindLua>::lightcheck(L, 1);
+		if (other == nullptr)
+		{
+			wi::lua::SError(L, "Subtract(VoxelGrid other) first argument is not a VoxelGrid!");
+			return 0;
+		}
+		voxelgrid->subtract(*other->voxelgrid);
+		return 0;
 	}
 
 	void VoxelGrid_BindLua::Bind()

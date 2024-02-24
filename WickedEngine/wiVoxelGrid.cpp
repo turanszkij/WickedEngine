@@ -329,6 +329,31 @@ namespace wi
 		set_voxelsize(XMFLOAT3(halfwidth.x / resolution.x, halfwidth.y / resolution.y, halfwidth.z / resolution.z));
 	}
 
+	void VoxelGrid::add(const VoxelGrid& other)
+	{
+		if (voxels.size() != other.voxels.size())
+		{
+			assert(0);
+			return;
+		}
+		for (size_t i = 0; i < voxels.size(); ++i)
+		{
+			voxels[i] |= other.voxels[i];
+		}
+	}
+	void VoxelGrid::subtract(const VoxelGrid& other)
+	{
+		if (voxels.size() != other.voxels.size())
+		{
+			assert(0);
+			return;
+		}
+		for (size_t i = 0; i < voxels.size(); ++i)
+		{
+			voxels[i] &= ~other.voxels[i];
+		}
+	}
+
 	void VoxelGrid::Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())

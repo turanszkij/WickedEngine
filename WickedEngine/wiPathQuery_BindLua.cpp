@@ -41,7 +41,7 @@ namespace wi::lua
 			return 0;
 		}
 
-		pathquery.process(start->GetFloat3(), goal->GetFloat3(), voxelgrid->voxelgrid);
+		pathquery.process(start->GetFloat3(), goal->GetFloat3(), *voxelgrid->voxelgrid);
 
 		return 0;
 	}

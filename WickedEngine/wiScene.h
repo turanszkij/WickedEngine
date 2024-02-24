@@ -493,7 +493,7 @@ namespace wi::scene
 		void VoxelizeObject(size_t objectIndex, wi::VoxelGrid& grid, bool subtract = false, uint32_t lod = 0);
 
 		// Voxelize all meshes that match the filters into a voxel grid
-		void VoxelizeScene(wi::VoxelGrid& voxelgrid, bool subtract = false, wi::enums::FILTER filterMask = wi::enums::FILTER_ALL, uint32_t layerMask = ~0, uint32_t lod = 0);
+		void VoxelizeScene(wi::VoxelGrid& voxelgrid, bool subtract = false, uint32_t filterMask = wi::enums::FILTER_ALL, uint32_t layerMask = ~0, uint32_t lod = 0);
 
 		// Get the current position on the surface of an object, tracked by the triangle barycentrics
 		XMFLOAT3 GetPositionOnSurface(wi::ecs::Entity objectEntity, int vertexID0, int vertexID1, int vertexID2, const XMFLOAT2& bary) const;

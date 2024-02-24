@@ -541,6 +541,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_CreateDecal),
 	lunamethod(Scene_BindLua, Component_CreateSprite),
 	lunamethod(Scene_BindLua, Component_CreateFont),
+	lunamethod(Scene_BindLua, Component_CreateVoxelGrid),
 
 	lunamethod(Scene_BindLua, Component_GetName),
 	lunamethod(Scene_BindLua, Component_GetLayer),
@@ -567,6 +568,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetDecal),
 	lunamethod(Scene_BindLua, Component_GetSprite),
 	lunamethod(Scene_BindLua, Component_GetFont),
+	lunamethod(Scene_BindLua, Component_GetVoxelGrid),
 
 	lunamethod(Scene_BindLua, Component_GetNameArray),
 	lunamethod(Scene_BindLua, Component_GetLayerArray),
@@ -593,6 +595,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetDecalArray),
 	lunamethod(Scene_BindLua, Component_GetSpriteArray),
 	lunamethod(Scene_BindLua, Component_GetFontArray),
+	lunamethod(Scene_BindLua, Component_GetVoxelGridArray),
 
 	lunamethod(Scene_BindLua, Entity_GetNameArray),
 	lunamethod(Scene_BindLua, Entity_GetLayerArray),
@@ -619,7 +622,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Entity_GetHumanoidArray),
 	lunamethod(Scene_BindLua, Entity_GetDecalArray),
 	lunamethod(Scene_BindLua, Entity_GetSpriteArray),
-	lunamethod(Scene_BindLua, Entity_GetFontArray),
+	lunamethod(Scene_BindLua, Entity_GetVoxelGridArray),
 
 	lunamethod(Scene_BindLua, Component_RemoveName),
 	lunamethod(Scene_BindLua, Component_RemoveLayer),
@@ -647,6 +650,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_RemoveDecal),
 	lunamethod(Scene_BindLua, Component_RemoveSprite),
 	lunamethod(Scene_BindLua, Component_RemoveFont),
+	lunamethod(Scene_BindLua, Component_RemoveVoxelGrid),
 
 	lunamethod(Scene_BindLua, Component_Attach),
 	lunamethod(Scene_BindLua, Component_Detach),
@@ -657,6 +661,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, SetWeather),
 	lunamethod(Scene_BindLua, RetargetAnimation),
 	lunamethod(Scene_BindLua, VoxelizeObject),
+	lunamethod(Scene_BindLua, VoxelizeScene),
 	{ NULL, NULL }
 };
 Luna<Scene_BindLua>::PropertyType Scene_BindLua::properties[] = {
@@ -1265,6 +1270,23 @@ int Scene_BindLua::Component_CreateFont(lua_State* L)
 	}
 	return 0;
 }
+int Scene_BindLua::Component_CreateVoxelGrid(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		wi::VoxelGrid& component = scene->voxel_grids.Create(entity);
+		Luna<VoxelGrid_BindLua>::push(L, component);
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_CreateVoxelGrid(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
 
 int Scene_BindLua::Component_GetName(lua_State* L)
 {
@@ -1816,6 +1838,28 @@ int Scene_BindLua::Component_GetFont(lua_State* L)
 	}
 	return 0;
 }
+int Scene_BindLua::Component_GetVoxelGrid(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		wi::VoxelGrid* component = scene->voxel_grids.GetComponent(entity);
+		if (component == nullptr)
+		{
+			return 0;
+		}
+
+		Luna<VoxelGrid_BindLua>::push(L, *component);
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_GetVoxelGrid(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
 
 int Scene_BindLua::Component_GetNameArray(lua_State* L)
 {
@@ -2088,6 +2132,17 @@ int Scene_BindLua::Component_GetFontArray(lua_State* L)
 	for (size_t i = 0; i < scene->fonts.GetCount(); ++i)
 	{
 		Luna<SpriteFont_BindLua>::push(L, scene->fonts[i]);
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Component_GetVoxelGridArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->voxel_grids.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->voxel_grids.GetCount(); ++i)
+	{
+		Luna<VoxelGrid_BindLua>::push(L, scene->voxel_grids[i]);
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -2375,6 +2430,17 @@ int Scene_BindLua::Entity_GetFontArray(lua_State* L)
 	for (size_t i = 0; i < scene->fonts.GetCount(); ++i)
 	{
 		wi::lua::SSetLongLong(L, scene->fonts.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Entity_GetVoxelGridArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->voxel_grids.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->voxel_grids.GetCount(); ++i)
+	{
+		wi::lua::SSetLongLong(L, scene->voxel_grids.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -2822,6 +2888,23 @@ int Scene_BindLua::Component_RemoveFont(lua_State* L)
 	}
 	return 0;
 }
+int Scene_BindLua::Component_RemoveVoxelGrid(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+		if (scene->voxel_grids.Contains(entity))
+		{
+			scene->voxel_grids.Remove(entity);
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_RemoveVoxelGrid(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
 
 int Scene_BindLua::Component_Attach(lua_State* L)
 {
@@ -2967,7 +3050,44 @@ int Scene_BindLua::VoxelizeObject(lua_State* L)
 			lod = (uint32_t)wi::lua::SGetInt(L, 4);
 		}
 	}
-	scene->VoxelizeObject(objectIndex, voxelgrid->voxelgrid, subtract, lod);
+	scene->VoxelizeObject(objectIndex, *voxelgrid->voxelgrid, subtract, lod);
+	return 0;
+}
+int Scene_BindLua::VoxelizeScene(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "VoxelizeScene(VoxelGrid voxelgrid, opt bool subtract = false, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) not enough arguments!");
+		return 0;
+	}
+	VoxelGrid_BindLua* voxelgrid = Luna<VoxelGrid_BindLua>::lightcheck(L, 1);
+	if (voxelgrid == nullptr)
+	{
+		wi::lua::SError(L, "VoxelizeScene(VoxelGrid voxelgrid, opt bool subtract = false, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) first argument is not a VoxelGrid!");
+		return 0;
+	}
+	bool subtract = false;
+	uint32_t filterMask = wi::enums::FILTER_ALL;
+	uint32_t layerMask = ~0u;
+	uint32_t lod = 0;
+	if (argc > 1)
+	{
+		subtract = wi::lua::SGetBool(L, 2);
+		if (argc > 2)
+		{
+			filterMask = (uint32_t)wi::lua::SGetInt(L, 3);
+			if (argc > 3)
+			{
+				layerMask = (uint32_t)wi::lua::SGetInt(L, 4);
+				if (argc > 4)
+				{
+					lod = (uint32_t)wi::lua::SGetInt(L, 5);
+				}
+			}
+		}
+	}
+	scene->VoxelizeScene(*voxelgrid->voxelgrid, subtract, filterMask, layerMask, lod);
 	return 0;
 }
 

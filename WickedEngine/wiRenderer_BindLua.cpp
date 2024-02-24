@@ -431,7 +431,7 @@ namespace wi::lua::renderer
 			VoxelGrid_BindLua* a = Luna<VoxelGrid_BindLua>::lightcheck(L, 1);
 			if (a)
 			{
-				wi::renderer::DrawVoxelGrid(&a->voxelgrid);
+				wi::renderer::DrawVoxelGrid(a->voxelgrid);
 			}
 			else
 				wi::lua::SError(L, "DrawVoxelGrid(VoxelGrid voxelgrid) first argument must be a VoxelGrid type!");

@@ -5817,7 +5817,7 @@ namespace wi::scene
 		}
 	}
 	
-	void Scene::VoxelizeScene(wi::VoxelGrid& voxelgrid, bool subtract, wi::enums::FILTER filterMask, uint32_t layerMask, uint32_t lod)
+	void Scene::VoxelizeScene(wi::VoxelGrid& voxelgrid, bool subtract, uint32_t filterMask, uint32_t layerMask, uint32_t lod)
 	{
 		wi::jobsystem::context ctx;
 		if ((filterMask & FILTER_COLLIDER))
