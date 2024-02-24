@@ -5750,7 +5750,7 @@ namespace wi::scene
 		return result;
 	}
 
-	void Scene::VoxelizeObject(size_t objectIndex, wi::VoxelGrid& grid, bool subtract)
+	void Scene::VoxelizeObject(size_t objectIndex, wi::VoxelGrid& grid, bool subtract, uint32_t lod)
 	{
 		if (objectIndex >= objects.GetCount() || objectIndex >= aabb_objects.size())
 			return;
@@ -5766,7 +5766,7 @@ namespace wi::scene
 
 		uint32_t first_subset = 0;
 		uint32_t last_subset = 0;
-		mesh->GetLODSubsetRange(0, first_subset, last_subset);
+		mesh->GetLODSubsetRange(lod, first_subset, last_subset);
 		for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 		{
 			const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
@@ -5816,28 +5816,74 @@ namespace wi::scene
 			}
 		}
 	}
-	void Scene::VoxelizeNavigation(wi::jobsystem::context& ctx, wi::VoxelGrid& voxelgrid)
+	
+	void Scene::VoxelizeScene(wi::VoxelGrid& voxelgrid, bool subtract, wi::enums::FILTER filterMask, uint32_t layerMask, uint32_t lod)
 	{
-		for (size_t i = 0; i < objects.GetCount(); ++i)
+		wi::jobsystem::context ctx;
+		if ((filterMask & FILTER_COLLIDER))
 		{
-			const ObjectComponent& object = objects[i];
-			if ((object.GetFilterMask() & FILTER::FILTER_NAVIGATION_MESH) == 0)
-				continue;
+			for (size_t i = 0; i < collider_count_cpu; ++i)
+			{
+				const ColliderComponent& collider = colliders_cpu[i];
 
-			wi::jobsystem::Execute(ctx, [this, i, &voxelgrid](wi::jobsystem::JobArgs args) {
-				VoxelizeObject(i, voxelgrid);
-			});
+				if ((collider.layerMask & layerMask) == 0)
+					continue;
+
+				switch (collider.shape)
+				{
+				default:
+				case ColliderComponent::Shape::Sphere:
+				{
+					Sphere sphere = collider.sphere;
+					// TODO: fix heap allocating lambda capture!
+					wi::jobsystem::Execute(ctx, [&voxelgrid, subtract, sphere](wi::jobsystem::JobArgs args) {
+						voxelgrid.inject_sphere(sphere, subtract);
+						});
+				}
+				break;
+				case ColliderComponent::Shape::Capsule:
+				{
+					AABB aabb = collider.capsule.getAABB();
+					// TODO: fix heap allocating lambda capture!
+					wi::jobsystem::Execute(ctx, [&voxelgrid, subtract, aabb](wi::jobsystem::JobArgs args) {
+						voxelgrid.inject_aabb(aabb, subtract);
+						});
+				}
+				break;
+				case ColliderComponent::Shape::Plane:
+				{
+					XMMATRIX planeMatrix = XMMatrixInverse(nullptr, XMLoadFloat4x4(&collider.plane.projection));
+					XMVECTOR P0 = XMVector3Transform(XMVectorSet(-1, 0, -1, 1), planeMatrix);
+					XMVECTOR P1 = XMVector3Transform(XMVectorSet(1, 0, -1, 1), planeMatrix);
+					XMVECTOR P2 = XMVector3Transform(XMVectorSet(1, 0, 1, 1), planeMatrix);
+					XMVECTOR P3 = XMVector3Transform(XMVectorSet(-1, 0, 1, 1), planeMatrix);
+					// TODO: fix heap allocating lambda capture!
+					wi::jobsystem::Execute(ctx, [&voxelgrid, subtract, P0, P1, P2, P3](wi::jobsystem::JobArgs args) {
+						voxelgrid.inject_triangle(P0, P1, P2, subtract);
+						voxelgrid.inject_triangle(P0, P2, P3, subtract);
+						});
+				}
+				break;
+				}
+			}
 		}
-	}
-	void Scene::VoxelizeWholeScene(wi::jobsystem::context& ctx, wi::VoxelGrid& voxelgrid)
-	{
-		for (size_t i = 0; i < objects.GetCount(); ++i)
+		if (filterMask & FILTER_OBJECT_ALL)
 		{
-			const ObjectComponent& object = objects[i];
-			wi::jobsystem::Execute(ctx, [this, i, &voxelgrid](wi::jobsystem::JobArgs args) {
-				VoxelizeObject(i, voxelgrid);
-			});
+			for (size_t i = 0; i < objects.GetCount(); ++i)
+			{
+				const ObjectComponent& object = objects[i];
+				if ((filterMask & object.GetFilterMask()) == 0)
+					continue;
+				const AABB& aabb = aabb_objects[i];
+				if ((layerMask & aabb.layerMask) == 0)
+					continue;
+				// TODO: fix heap allocating lambda capture!
+				wi::jobsystem::Execute(ctx, [this, &voxelgrid, subtract, lod, i](wi::jobsystem::JobArgs args) {
+					VoxelizeObject(i, voxelgrid, subtract, lod);
+					});
+			}
 		}
+		wi::jobsystem::Wait(ctx);
 	}
 
 	XMFLOAT3 Scene::GetPositionOnSurface(wi::ecs::Entity objectEntity, int vertexID0, int vertexID1, int vertexID2, const XMFLOAT2& bary) const

@@ -490,13 +490,10 @@ namespace wi::scene
 
 		// All triangles of the object will be injected into the voxel grid
 		//	subtract: if false (default), voxels will be added, if true then voxels will be removed
-		void VoxelizeObject(size_t objectIndex, wi::VoxelGrid& grid, bool subtract = false);
+		void VoxelizeObject(size_t objectIndex, wi::VoxelGrid& grid, bool subtract = false, uint32_t lod = 0);
 
-		// Voxelize all navigation meshes into a voxel grid
-		void VoxelizeNavigation(wi::jobsystem::context& ctx, wi::VoxelGrid& voxelgrid);
-
-		// Voxelize all meshes into a voxel grid
-		void VoxelizeWholeScene(wi::jobsystem::context& ctx, wi::VoxelGrid& voxelgrid);
+		// Voxelize all meshes that match the filters into a voxel grid
+		void VoxelizeScene(wi::VoxelGrid& voxelgrid, bool subtract = false, wi::enums::FILTER filterMask = wi::enums::FILTER_ALL, uint32_t layerMask = ~0, uint32_t lod = 0);
 
 		// Get the current position on the surface of an object, tracked by the triangle barycentrics
 		XMFLOAT3 GetPositionOnSurface(wi::ecs::Entity objectEntity, int vertexID0, int vertexID1, int vertexID2, const XMFLOAT2& bary) const;

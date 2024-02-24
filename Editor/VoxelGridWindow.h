@@ -15,8 +15,11 @@ public:
 	wi::gui::TextInputField dimYInput;
 	wi::gui::TextInputField dimZInput;
 	wi::gui::Button	clearButton;
-	wi::gui::Button	generateWholeButton;
-	wi::gui::Button	generateNavigationButton;
+	wi::gui::Button	voxelizeObjectsButton;
+	wi::gui::Button	voxelizeNavigationButton;
+	wi::gui::Button	voxelizeCollidersButton;
+	wi::gui::Button	fitToSceneButton;
+	wi::gui::CheckBox subtractCheckBox;
 	wi::gui::CheckBox debugAllCheckBox;
 
 	void ResizeLayout() override;

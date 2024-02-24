@@ -87,6 +87,7 @@ Expressions
 Humanoid rig
 Animation retargeting
 Video decoding: H264
+3D voxel path finding
 
 GLTF 2.0 - KHR extensions supported:
 KHR_materials_unlit

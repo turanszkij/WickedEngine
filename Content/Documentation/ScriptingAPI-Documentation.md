@@ -780,7 +780,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 
 - RetargetAnimation(Entity dst, src, bool bake_data) : Entity entity	-- Retargets an animation from a Humanoid to an other Humanoid such that the new animation will play back on the destination humanoid. dst : destination humanoid that the animation will be fit onto src : the animation to copy, it should already target humanoid bones. bake_data : if true, the retargeted data will be baked into a new animation data. If false, it will reuse the source animation data without creating a new one and retargeting will be applied at runtime on every Update. Returns entity ID of the new animation or INVALID_ENTITY if retargeting was not successful
 
-- VoxelizeObject(int objectIndex, VoxelGrid voxelgrid, bool subtract = false) -- voxelizes a single object into the voxel grid. Subtract parameter controls whether the voxels are added (true) or removed (false). This returns immediately after voxelization is finished.
+- VoxelizeObject(int objectIndex, VoxelGrid voxelgrid, bool subtract = false, opt int lod = 0) -- voxelizes a single object into the voxel grid. Subtract parameter controls whether the voxels are added (true) or removed (false). Lod argument selects object's level of detail
 
 #### NameComponent
 Holds a string that can more easily identify an entity to humans than an entity ID. 

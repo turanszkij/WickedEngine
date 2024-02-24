@@ -248,8 +248,8 @@ void OptionsWindow::Create(EditorComponent* _editor)
 		case NEW_VOXELGRID:
 		{
 			pick.entity = CreateEntity();
-			scene.voxel_grids.Create(pick.entity).init(32, 32, 32);
-			scene.transforms.Create(pick.entity);
+			scene.voxel_grids.Create(pick.entity).init(64, 64, 64);
+			scene.transforms.Create(pick.entity).Scale(XMFLOAT3(0.25f, 0.25f, 0.25f));
 			scene.names.Create(pick.entity) = "voxelgrid";
 		}
 		break;

@@ -2947,22 +2947,27 @@ int Scene_BindLua::VoxelizeObject(lua_State* L)
 	int argc = wi::lua::SGetArgCount(L);
 	if (argc < 2)
 	{
-		wi::lua::SError(L, "VoxelizeObject(int objectIndex, VoxelGrid voxelgrid, opt bool subtract = false) not enough arguments!");
+		wi::lua::SError(L, "VoxelizeObject(int objectIndex, VoxelGrid voxelgrid, opt bool subtract = false, opt int lod = 0) not enough arguments!");
 		return 0;
 	}
 	size_t objectIndex = (size_t)wi::lua::SGetInt(L, 1);
 	VoxelGrid_BindLua* voxelgrid = Luna<VoxelGrid_BindLua>::lightcheck(L, 2);
 	if (voxelgrid == nullptr)
 	{
-		wi::lua::SError(L, "VoxelizeObject(int objectIndex, VoxelGrid voxelgrid, opt bool subtract = false) second argument is not a VoxelGrid!");
+		wi::lua::SError(L, "VoxelizeObject(int objectIndex, VoxelGrid voxelgrid, opt bool subtract = false, opt int lod = 0) second argument is not a VoxelGrid!");
 		return 0;
 	}
 	bool subtract = false;
+	uint32_t lod = 0;
 	if (argc > 2)
 	{
 		subtract = wi::lua::SGetBool(L, 3);
+		if (argc > 3)
+		{
+			lod = (uint32_t)wi::lua::SGetInt(L, 4);
+		}
 	}
-	scene->VoxelizeObject(objectIndex, voxelgrid->voxelgrid, subtract);
+	scene->VoxelizeObject(objectIndex, voxelgrid->voxelgrid, subtract, lod);
 	return 0;
 }
 
