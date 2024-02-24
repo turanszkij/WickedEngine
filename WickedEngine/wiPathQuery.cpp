@@ -22,29 +22,31 @@ namespace wi
 		result_path_goal_to_start.clear();
 		result_path_goal_to_start_simplified.clear();
 		process_startpos = startpos;
+		Node start_node = Node::create(voxelgrid.world_to_coord(startpos));
+		Node goal_node = Node::create(voxelgrid.world_to_coord(goalpos));
+		debugstartnode = voxelgrid.coord_to_world(start_node.coord());
+		debuggoalnode = voxelgrid.coord_to_world(goal_node.coord());
 		debugvoxelsize = voxelgrid.voxelSize;
 
 		auto is_voxel_valid = [&](XMUINT3 coord) {
-			if (!voxelgrid.check_voxel(coord))
-				return false;
-			// Check blocking from above 2 voxels:
-			if (voxelgrid.check_voxel(XMUINT3(coord.x, coord.y - 1, coord.z)))
-				return false;
-			if (voxelgrid.check_voxel(XMUINT3(coord.x, coord.y - 2, coord.z)))
-				return false;
-			return true;
-		};
-		auto is_voxel_valid2 = [&](XMUINT3 coord) {
-			for (int x = -1; x <= 1; ++x)
+			if (flying)
 			{
-				for (int z = -1; z <= 1; ++z)
-				{
-					XMUINT3 neighbor_coord = coord;
-					neighbor_coord.x += x;
-					neighbor_coord.z += z;
-					if (!is_voxel_valid(neighbor_coord))
-						return false;
-				}
+				// Flying checks:
+				if (!voxelgrid.is_coord_valid(coord))
+					return false; // this is different from voxel valid check, it means voxel coord must still be in bounds!
+				if (voxelgrid.check_voxel(coord))
+					return false;
+			}
+			else
+			{
+				// Grounded checks:
+				if (!voxelgrid.check_voxel(coord))
+					return false;
+				// Check blocking from above 2 voxels:
+				if (voxelgrid.check_voxel(XMUINT3(coord.x, coord.y - 1, coord.z)))
+					return false;
+				if (voxelgrid.check_voxel(XMUINT3(coord.x, coord.y - 2, coord.z)))
+					return false;
 			}
 			return true;
 		};
@@ -82,6 +84,11 @@ namespace wi
 			return true;
 		};
 
+		if (!is_voxel_valid(start_node.coord()))
+			return; // unreachable
+		if (!is_voxel_valid(goal_node.coord()))
+			return; // unreachable
+
 		// A* explanation at: https://www.redblobgames.com/pathfinding/a-star/introduction.html
 		Node start = Node::create(voxelgrid.world_to_coord(startpos));
 		Node goal = Node::create(voxelgrid.world_to_coord(goalpos));
@@ -97,12 +104,14 @@ namespace wi
 			if (current == goal)
 				break;
 
+			XMUINT3 coord = current.coord();
+
+#if 1
 			// The neighbors to which traversal can happen from the current cell:
 			//	Horizontal diagonal is not allowed, only vertical (to support stairs)
 			//	Note: diagonal can be supported, but since the path will be simplified,
 			//		diagonal voxel movements do not seem to contribute much improvement,
 			//		in fact non-diagonal movements can keep away better from wall corners
-			XMUINT3 coord = current.coord();
 			XMUINT3 neighbors[] = {
 				// left-right:
 				XMUINT3(coord.x - 1, coord.y, coord.z),
@@ -132,8 +141,27 @@ namespace wi
 				XMUINT3(coord.x, coord.y + 1, coord.z - 1),
 				XMUINT3(coord.x, coord.y + 1, coord.z + 1),
 			};
+			uint32_t neighbor_count = arraysize(neighbors);
+#else
+			uint32_t neighbor_count = 0;
+			XMUINT3 neighbors[26];
+			for (int x = -1; x <= 1; ++x)
+			{
+				for (int y = -1; y <= 1; ++y)
+				{
+					for (int z = -1; z <= 1; ++z)
+					{
+						if (x == 0 && y == 0 && z == 0)
+						{
+							continue;
+						}
+						neighbors[neighbor_count++] = XMUINT3(uint32_t(coord.x + x), uint32_t(coord.y + y), uint32_t(coord.z + z));
+					}
+				}
+			}
+#endif
 
-			for (uint32_t i = 0; i < arraysize(neighbors); ++i)
+			for (uint32_t i = 0; i < neighbor_count; ++i)
 			{
 				if (!is_voxel_valid(neighbors[i]))
 					continue;
@@ -243,9 +271,6 @@ namespace wi
 	{
 		const wi::vector<XMFLOAT3>& results = result_path_goal_to_start_simplified.empty() ? result_path_goal_to_start : result_path_goal_to_start_simplified;
 
-		if (results.size() < 2)
-			return;
-
 		static bool shaders_loaded = false;
 		if (!shaders_loaded)
 		{
@@ -268,9 +293,157 @@ namespace wi
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 
-		// Curve:
+		if (debug_voxels)
 		{
-			static uint32_t resolution = 10;
+			static constexpr Vertex cubeVerts[] = {
+				{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
+				{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
+			};
+
+			if (results.size() >= 2)
+			{
+				// Waypoint cubes:
+				size_t numVoxels = result_path_goal_to_start_simplified.size() + result_path_goal_to_start.size();
+				auto mem = device->AllocateGPU(sizeof(cubeVerts) * numVoxels, cmd);
+
+				const XMVECTOR VOXELSIZE = XMLoadFloat3(&debugvoxelsize);
+
+				size_t dst_offset = 0;
+				for (size_t i = 0; i < numVoxels; ++i)
+				{
+					const wi::vector<XMFLOAT3>& srcarray = i < result_path_goal_to_start.size() ? result_path_goal_to_start : result_path_goal_to_start_simplified;
+					const size_t idx = i < result_path_goal_to_start.size() ? i : (i - result_path_goal_to_start.size());
+					const XMFLOAT4 color = i < result_path_goal_to_start.size() ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(1, 0, 0, 1);
+
+					const XMVECTOR P = XMLoadFloat3(srcarray.data() + idx);
+
+					Vertex verts[arraysize(cubeVerts)];
+					std::memcpy(verts, cubeVerts, sizeof(cubeVerts));
+					for (auto& v : verts)
+					{
+						XMVECTOR C = XMLoadFloat4(&v.position);
+						C *= VOXELSIZE;
+						C += P;
+						C = XMVectorSetW(C, 1);
+						XMStoreFloat4(&v.position, C);
+						v.color = color;
+					}
+					std::memcpy((uint8_t*)mem.data + dst_offset, verts, sizeof(verts));
+					dst_offset += sizeof(verts);
+				}
+
+				device->BindPipelineState(&pso_waypoint, cmd);
+
+				const GPUBuffer* vbs[] = {
+					&mem.buffer,
+				};
+				const uint32_t strides[] = {
+					sizeof(Vertex),
+				};
+				const uint64_t offsets[] = {
+					mem.offset,
+				};
+				device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+				device->Draw(uint32_t(arraysize(cubeVerts) * numVoxels), 0, cmd);
+			}
+			else
+			{
+				// Start and goal positions:
+				const size_t numVoxels = 2;
+				auto mem = device->AllocateGPU(sizeof(cubeVerts) * numVoxels, cmd);
+
+				const XMVECTOR VOXELSIZE = XMLoadFloat3(&debugvoxelsize);
+
+				size_t dst_offset = 0;
+				{
+					XMVECTOR P = XMLoadFloat3(&debugstartnode);
+					Vertex verts[arraysize(cubeVerts)];
+					std::memcpy(verts, cubeVerts, sizeof(cubeVerts));
+					for (auto& v : verts)
+					{
+						XMVECTOR C = XMLoadFloat4(&v.position);
+						C *= VOXELSIZE;
+						C += P;
+						C = XMVectorSetW(C, 1);
+						XMStoreFloat4(&v.position, C);
+						v.color = XMFLOAT4(1, 0, 0, 1);
+					}
+					std::memcpy((uint8_t*)mem.data + dst_offset, verts, sizeof(verts));
+					dst_offset += sizeof(verts);
+				}
+				{
+					XMVECTOR P = XMLoadFloat3(&debuggoalnode);
+					Vertex verts[arraysize(cubeVerts)];
+					std::memcpy(verts, cubeVerts, sizeof(cubeVerts));
+					for (auto& v : verts)
+					{
+						XMVECTOR C = XMLoadFloat4(&v.position);
+						C *= VOXELSIZE;
+						C += P;
+						C = XMVectorSetW(C, 1);
+						XMStoreFloat4(&v.position, C);
+						v.color = XMFLOAT4(1, 0, 0, 1);
+					}
+					std::memcpy((uint8_t*)mem.data + dst_offset, verts, sizeof(verts));
+					dst_offset += sizeof(verts);
+				}
+
+				device->BindPipelineState(&pso_waypoint, cmd);
+
+				const GPUBuffer* vbs[] = {
+					&mem.buffer,
+				};
+				const uint32_t strides[] = {
+					sizeof(Vertex),
+				};
+				const uint64_t offsets[] = {
+					mem.offset,
+				};
+				device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+				device->Draw(uint32_t(arraysize(cubeVerts) * numVoxels), 0, cmd);
+			}
+		}
+
+		// Curve:
+		if (results.size() >= 2)
+		{
+			static uint32_t resolution = 100;
 			const float resolution_rcp = 1.0f / resolution;
 			uint32_t numSegments = uint32_t(results.size()) * resolution;
 			uint32_t numVertices = numSegments * 2;
@@ -285,7 +458,7 @@ namespace wi
 			static XMFLOAT4 color1 = wi::Color(70, 150, 170, 255);
 			static float curve_tension = 0.5f;
 
-			const XMVECTOR topalign = XMVectorSet(0, debugvoxelsize.y, 0, 0); // align line to top of voxels
+			const XMVECTOR topalign = XMVectorSet(0, flying ? 0 : debugvoxelsize.y, 0, 0); // align line to top of voxels (if not flying)
 
 			numVertices = 0;
 			Vertex* vertices = (Vertex*)mem.data;
@@ -358,92 +531,6 @@ namespace wi
 			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 
 			device->Draw(numVertices, 0, cmd);
-		}
-
-		// Waypoint cubes:
-		{
-			static constexpr Vertex cubeVerts[] = {
-				{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
-			};
-
-			size_t numVoxels = result_path_goal_to_start_simplified.size() + result_path_goal_to_start.size();
-			auto mem = device->AllocateGPU(sizeof(cubeVerts) * numVoxels, cmd);
-
-			const XMVECTOR VOXELSIZE = XMLoadFloat3(&debugvoxelsize);
-
-			size_t dst_offset = 0;
-			for (size_t i = 0; i < numVoxels; ++i)
-			{
-				const wi::vector<XMFLOAT3>& srcarray = i < result_path_goal_to_start.size() ? result_path_goal_to_start : result_path_goal_to_start_simplified;
-				const size_t idx = i < result_path_goal_to_start.size() ? i : (i - result_path_goal_to_start.size());
-				const XMFLOAT4 color = i < result_path_goal_to_start.size() ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(1, 0, 0, 1);
-
-				const XMVECTOR P = XMLoadFloat3(srcarray.data() + idx);
-
-				Vertex verts[arraysize(cubeVerts)];
-				std::memcpy(verts, cubeVerts, sizeof(cubeVerts));
-				for (auto& v : verts)
-				{
-					XMVECTOR C = XMLoadFloat4(&v.position);
-					C *= VOXELSIZE;
-					C += P;
-					C = XMVectorSetW(C, 1);
-					XMStoreFloat4(&v.position, C);
-					v.color = color;
-				}
-				std::memcpy((uint8_t*)mem.data + dst_offset, verts, sizeof(verts));
-				dst_offset += sizeof(verts);
-			}
-
-			device->BindPipelineState(&pso_waypoint, cmd);
-
-			const GPUBuffer* vbs[] = {
-				&mem.buffer,
-			};
-			const uint32_t strides[] = {
-				sizeof(Vertex),
-			};
-			const uint64_t offsets[] = {
-				mem.offset,
-			};
-			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
-
-			device->Draw(uint32_t(arraysize(cubeVerts) * numVoxels), 0, cmd);
 		}
 
 		device->EventEnd(cmd);

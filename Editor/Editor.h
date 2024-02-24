@@ -35,6 +35,12 @@ public:
 	bool dummy_male = false;
 	XMFLOAT3 dummy_pos = XMFLOAT3(0, 0, 0);
 
+	wi::gui::Button navtestButton;
+	bool navtest_enabled = false;
+	wi::scene::PickResult navtest_start_pick;
+	wi::scene::PickResult navtest_goal_pick;
+	wi::PathQuery navtest_pathquery;
+
 	wi::gui::Button playButton;
 	wi::gui::Button stopButton;
 
@@ -54,6 +60,7 @@ public:
 	ComponentsWindow componentsWnd;
 	ProfilerWindow profilerWnd;
 
+	wi::primitive::Ray pickRay;
 	wi::physics::PickDragOperation physicsDragOp;
 
 	std::unique_ptr<wi::RenderPath3D> renderPath;
@@ -179,9 +186,6 @@ public:
 		wi::vector<uint8_t> filedata;
 	};
 	wi::vector<FontData> font_datas;
-
-	wi::scene::PickResult navtest_start_pick;
-	wi::scene::PickResult navtest_goal_pick;
 };
 
 class Editor : public wi::Application

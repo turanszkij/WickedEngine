@@ -294,6 +294,15 @@ void EditorComponent::Load()
 	});
 	GetGUI().AddWidget(&dummyButton);
 
+	navtestButton.Create(ICON_NAVIGATION);
+	navtestButton.SetShadowRadius(2);
+	navtestButton.SetTooltip("Toggle navigation testing.\nYou can put down START and GOAL waypoints inside voxel grids to test path finding.\nControls:\n----------\nF5: put START to surface\nF6: put GOAL to surface\nF7: put START to air\nF8: put GOAL to air");
+	navtestButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
+	navtestButton.OnClick([&](wi::gui::EventArgs args) {
+		navtest_enabled = !navtest_enabled;
+	});
+	GetGUI().AddWidget(&navtestButton);
+
 	playButton.Create(ICON_PLAY);
 	playButton.font.params.shadowColor = wi::Color::Transparent();
 	playButton.SetShadowRadius(2);
@@ -923,7 +932,7 @@ void EditorComponent::Update(float dt)
 		inspector_mode = wi::input::Down((wi::input::BUTTON)'I');
 
 		// Begin picking:
-		Ray pickRay = wi::renderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, *this, camera);
+		pickRay = wi::renderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, *this, camera);
 		{
 			hovered = wi::scene::PickResult();
 
@@ -1923,177 +1932,76 @@ void EditorComponent::Update(float dt)
 	renderPath->colorspace = colorspace;
 	renderPath->Update(dt);
 
+	if (navtest_enabled)
+	{
+		if (hovered.entity != INVALID_ENTITY && wi::input::Down(wi::input::KEYBOARD_BUTTON_F5))
+		{
+			navtest_start_pick = hovered;
+		}
+		if (hovered.entity != INVALID_ENTITY && wi::input::Down(wi::input::KEYBOARD_BUTTON_F6))
+		{
+			navtest_goal_pick = hovered;
+		}
+		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_F7) && wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+		{
+			navtest_start_pick.entity = INVALID_ENTITY;
+			XMStoreFloat3(&navtest_start_pick.position, XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction) * 2);
+		}
+		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_F8) && wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+		{
+			navtest_goal_pick.entity = INVALID_ENTITY;
+			XMStoreFloat3(&navtest_goal_pick.position, XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction) * 2);
+		}
 
+		//navtest_pathquery.debug_voxels = false;
+		navtest_pathquery.flying = false;
+		if (
+			navtest_start_pick.entity != INVALID_ENTITY &&
+			navtest_goal_pick.entity != INVALID_ENTITY
+			)
+		{
+			navtest_start_pick.position = scene.GetPositionOnSurface(
+				navtest_start_pick.entity,
+				navtest_start_pick.vertexID0,
+				navtest_start_pick.vertexID1,
+				navtest_start_pick.vertexID2,
+				navtest_start_pick.bary
+			);
+			navtest_goal_pick.position = scene.GetPositionOnSurface(
+				navtest_goal_pick.entity,
+				navtest_goal_pick.vertexID0,
+				navtest_goal_pick.vertexID1,
+				navtest_goal_pick.vertexID2,
+				navtest_goal_pick.bary
+			);
+		}
+		else if(
+			navtest_start_pick.entity == INVALID_ENTITY &&
+			navtest_goal_pick.entity == INVALID_ENTITY
+			)
+		{
+			navtest_pathquery.flying = true;
+		}
 
+		for (size_t i = 0; i < scene.voxel_grids.GetCount(); ++i)
+		{
+			const wi::VoxelGrid& voxelgrid = scene.voxel_grids[i];
+			AABB aabb = voxelgrid.get_aabb();
+			if (aabb.intersects(navtest_start_pick.position) && aabb.intersects(navtest_goal_pick.position))
+			{
+				auto range = wi::profiler::BeginRangeCPU("NAVTEST PATHQUERY");
+				navtest_pathquery.process(
+					navtest_start_pick.position,
+					navtest_goal_pick.position,
+					voxelgrid
+				);
+				wi::profiler::EndRange(range);
+				wi::renderer::DrawPathQuery(&navtest_pathquery);
+				break;
+			}
+		}
 
-
-
-
-
-
-
-	//// PATH FINDER DEBUG
-	//if (hovered.entity != INVALID_ENTITY && wi::input::Down((wi::input::BUTTON)'N'))
-	//{
-	//	if (scene.voxelgrid.check_voxel(hovered.position))
-	//	{
-	//		navtest_start_pick = hovered;
-	//	}
-	//}
-	//if (hovered.entity != INVALID_ENTITY && wi::input::Down((wi::input::BUTTON)'M'))
-	//{
-	//	if (scene.voxelgrid.check_voxel(hovered.position))
-	//	{
-	//		navtest_goal_pick = hovered;
-	//	}
-	//}
-
-	//if (navtest_start_pick.entity != INVALID_ENTITY && navtest_goal_pick.entity != INVALID_ENTITY)
-	//{
-	//	navtest_start_pick.position = scene.GetPositionOnSurface(
-	//		navtest_start_pick.entity,
-	//		navtest_start_pick.vertexID0,
-	//		navtest_start_pick.vertexID1,
-	//		navtest_start_pick.vertexID2,
-	//		navtest_start_pick.bary
-	//	);
-	//	navtest_goal_pick.position = scene.GetPositionOnSurface(
-	//		navtest_goal_pick.entity,
-	//		navtest_goal_pick.vertexID0,
-	//		navtest_goal_pick.vertexID1,
-	//		navtest_goal_pick.vertexID2,
-	//		navtest_goal_pick.bary
-	//	);
-	//	scene.pathquery.process(
-	//		navtest_start_pick.position,
-	//		navtest_goal_pick.position,
-	//		scene.voxelgrid
-	//		//,&scene.voxelgrid_waypoints
-	//	);
-
-	//	static bool method = 0;
-	//	if (wi::input::Press(wi::input::BUTTON('K')))
-	//		method = !method;
-
-	//	auto dda = [&](const XMUINT3& start, const XMUINT3& goal)
-	//	{
-	//		const int dx = int(goal.x) - int(start.x);
-	//		const int dy = int(goal.y) - int(start.y);
-	//		const int dz = int(goal.z) - int(start.z);
-
-	//		if (method)
-	//		{
-	//			// Thick-line (conservative) DDA:
-	//			const int stepX = dx >= 0 ? 1 : -1;
-	//			const int stepY = dy >= 0 ? 1 : -1;
-	//			const int stepZ = dz >= 0 ? 1 : -1;
-
-	//			const float tDeltaX = float(stepX) / dx;
-	//			const float tDeltaY = float(stepY) / dy;
-	//			const float tDeltaZ = float(stepZ) / dz;
-
-	//			float tMaxX = tDeltaX;
-	//			float tMaxY = tDeltaY;
-	//			float tMaxZ = tDeltaZ;
-
-	//			int x = start.x;
-	//			int y = start.y;
-	//			int z = start.z;
-
-	//			while (x != goal.x || y != goal.y || z != goal.z)
-	//			{
-	//				XMUINT3 coord = XMUINT3(uint32_t(x), uint32_t(y), uint32_t(z));
-	//				if (!scene.voxelgrid_waypoints.is_coord_valid(coord))
-	//					return;
-	//				scene.voxelgrid_waypoints.set_voxel(coord, 1);
-
-	//				if (tMaxX < tMaxY)
-	//				{
-	//					if (tMaxX < tMaxZ)
-	//					{
-	//						x += stepX;
-	//						tMaxX += tDeltaX;
-	//					}
-	//					else
-	//					{
-	//						z += stepZ;
-	//						tMaxZ += tDeltaZ;
-	//					}
-	//				}
-	//				else
-	//				{
-	//					if (tMaxY < tMaxZ)
-	//					{
-	//						y += stepY;
-	//						tMaxY += tDeltaY;
-	//					}
-	//					else
-	//					{
-	//						z += stepZ;
-	//						tMaxZ += tDeltaZ;
-	//					}
-	//				}
-	//			}
-	//		}
-	//		else
-	//		{
-	//			const int step = std::max(std::abs(dx), std::max(std::abs(dy), std::abs(dz)));
-
-	//			const float x_incr = float(dx) / step;
-	//			const float y_incr = float(dy) / step;
-	//			const float z_incr = float(dz) / step;
-
-	//			float x = float(start.x);
-	//			float y = float(start.y);
-	//			float z = float(start.z);
-
-	//			for (int i = 0; i < step; i++)
-	//			{
-	//				XMUINT3 coord = XMUINT3(uint32_t(std::round(x)), uint32_t(std::round(y)), uint32_t(std::round(z)));
-	//				if (!scene.voxelgrid_waypoints.is_coord_valid(coord))
-	//					return;
-	//				scene.voxelgrid_waypoints.set_voxel(coord, 1);
-	//				x += x_incr;
-	//				y += y_incr;
-	//				z += z_incr;
-	//			}
-	//			return;
-	//		}
-	//	};
-	//	dda(scene.voxelgrid_waypoints.world_to_coord(navtest_start_pick.position), scene.voxelgrid_waypoints.world_to_coord(navtest_goal_pick.position));
-	//}
-
-
-	//if (navtest_start_pick.entity != INVALID_ENTITY)
-	//{
-	//	scene.voxelgrid_waypoints.set_voxel(navtest_start_pick.position, 1);
-	//}
-	//if (navtest_goal_pick.entity != INVALID_ENTITY)
-	//{
-	//	scene.voxelgrid_waypoints.set_voxel(navtest_goal_pick.position, 1);
-	//}
-	//for (auto& x : scene.pathquery.result_path_goal_to_start)
-	//{
-	//	scene.voxelgrid_path.set_voxel(x, 1);
-	//}
-	//for (auto& x : scene.pathquery.result_path_goal_to_start_simplified)
-	//{
-	//	scene.voxelgrid_waypoints.set_voxel(x, 1);
-	//}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	}
 
 	bool force_collider_visualizer = false;
 	for (auto& x : translator.selected)
@@ -4109,9 +4017,11 @@ void EditorComponent::UpdateTopMenuAnimation()
 
 	dummyButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
 	dummyButton.SetPos(XMFLOAT2(static_pos - dummyButton.GetSize().x - 20, 0));
+	navtestButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
+	navtestButton.SetPos(XMFLOAT2(dummyButton.GetPos().x - navtestButton.GetSize().x - padding, 0));
 
 	physicsButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
-	physicsButton.SetPos(XMFLOAT2(dummyButton.GetPos().x - physicsButton.GetSize().x - 20, 0));
+	physicsButton.SetPos(XMFLOAT2(navtestButton.GetPos().x - physicsButton.GetSize().x - 20, 0));
 
 	stopButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
 	stopButton.SetPos(XMFLOAT2(physicsButton.GetPos().x - stopButton.GetSize().x - 20, 0));
@@ -4155,6 +4065,15 @@ void EditorComponent::UpdateTopMenuAnimation()
 	else
 	{
 		dummyButton.sprites[wi::gui::IDLE].params.color = color_off;
+	}
+
+	if (navtest_enabled)
+	{
+		navtestButton.sprites[wi::gui::IDLE].params.color = color_on;
+	}
+	else
+	{
+		navtestButton.sprites[wi::gui::IDLE].params.color = color_off;
 	}
 
 	if (wi::physics::IsSimulationEnabled())

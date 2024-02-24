@@ -213,7 +213,8 @@ namespace wi
 				for (uint32_t z = mini.z; z < maxi.z; ++z)
 				{
 					wi::primitive::AABB voxel_aabb;
-					XMFLOAT3 voxel_center_world = coord_to_world(XMUINT3(x, y, z));
+					XMUINT3 voxel_center_coord = XMUINT3(x, y, z);
+					XMFLOAT3 voxel_center_world = coord_to_world(voxel_center_coord);
 					voxel_aabb.createFromHalfWidth(voxel_center_world, voxelSize);
 					if (voxel_aabb.intersects(sphere))
 					{

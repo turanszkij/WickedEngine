@@ -671,6 +671,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_CreateDecal(Entity entity) : DecalComponent result  -- attach a DecalComponent to an entity. The returned component is associated with the entity and can be manipulated
 - Component_CreateSprite(Entity entity) : Sprite result  -- attach a Sprite to an entity. The returned component is associated with the entity and can be manipulated
 - Component_CreateFont(Entity entity) : SpriteFont result  -- attach a SpriteFont to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateVoxelGrid(Entity entity) : VoxelGrid result  -- attach a VoxelGrid to an entity. The returned component is associated with the entity and can be manipulated
 
 - Component_GetName(Entity entity) : NameComponent? result  -- query the name component of the entity (if exists)
 - Component_GetLayer(Entity entity) : LayerComponent? result  -- query the layer component of the entity (if exists)
@@ -694,7 +695,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_GetHumanoid(Entity entity) : HumanoidComponent? result  -- query the HumanoidComponent of the entity (if exists)
 - Component_GetDecal(Entity entity) : DecalComponent? result  -- query the DecalComponent of the entity (if exists)
 - Component_GetSprite(Entity entity) : Sprite? result  -- query the Sprite of the entity (if exists)
-- Component_GetFont(Entity entity) : SpriteFont? result  -- query the SpriteFont of the entity (if exists)
+- Component_GetVoxexlGrid(Entity entity) : VoxelGrid? result  -- query the VoxelGrid of the entity (if exists)
 
 - Component_GetNameArray() : NameComponent[] result  -- returns the array of all components of this type
 - Component_GetLayerArray() : LayerComponent[] result  -- returns the array of all components of this type
@@ -719,6 +720,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_GetDecalArray() : DecalComponent[] result  -- returns the array of all components of this type
 - Component_GetSpriteArray() : Sprite[] result  -- returns the array of all components of this type
 - Component_GetFontArray() : SpriteFont[] result  -- returns the array of all components of this type
+- Component_GetVoxelGridArray() : VoxelGrid[] result  -- returns the array of all components of this type
 
 - Entity_GetNameArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetLayerArray() : Entity[] result  -- returns the array of all entities that have this component type
@@ -744,6 +746,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Entity_GetDecalArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetSpriteArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetFontArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetVoxelGridArray() : Entity[] result  -- returns the array of all entities that have this component type
 
 - Component_RemoveName(Entity entity)  -- remove the name component of the entity (if exists)
 - Component_RemoveLayer(Entity entity)  -- remove the layer component of the entity (if exists)
@@ -769,6 +772,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_RemoveDecal(Entity entity)  -- remove the DecalComponent of the entity (if exists)
 - Component_RemoveSprite(Entity entity)  -- remove the Sprite of the entity (if exists)
 - Component_RemoveFont(Entity entity)  -- remove the SpriteFont of the entity (if exists)
+- Component_RemoveVoxelGrid(Entity entity)  -- remove the VoxelGrid of the entity (if exists)
 
 - Component_Attach(Entity entity,parent, opt bool child_already_in_local_space = false)  -- attaches entity to parent (adds a hierarchy component to entity). From now on, entity will inherit certain properties from parent, such as transform (entity will move with parent) or layer (entity's layer will be a sublayer of parent's layer). If child_already_in_local_space is false, then child will be transformed into parent's local space, if true, it will be used as-is.
 - Component_Detach(Entity entity)  -- detaches entity from parent (if hierarchycomponent exists for it). Restores entity's original layer, and applies current transformation to entity
@@ -780,7 +784,8 @@ The scene holds components. Entity handles can be used to retrieve associated co
 
 - RetargetAnimation(Entity dst, src, bool bake_data) : Entity entity	-- Retargets an animation from a Humanoid to an other Humanoid such that the new animation will play back on the destination humanoid. dst : destination humanoid that the animation will be fit onto src : the animation to copy, it should already target humanoid bones. bake_data : if true, the retargeted data will be baked into a new animation data. If false, it will reuse the source animation data without creating a new one and retargeting will be applied at runtime on every Update. Returns entity ID of the new animation or INVALID_ENTITY if retargeting was not successful
 
-- VoxelizeObject(int objectIndex, VoxelGrid voxelgrid, bool subtract = false, opt int lod = 0) -- voxelizes a single object into the voxel grid. Subtract parameter controls whether the voxels are added (true) or removed (false). Lod argument selects object's level of detail
+- VoxelizeObject(int objectIndex, VoxelGrid voxelgrid, opt bool subtract = false, opt int lod = 0) -- voxelizes a single object into the voxel grid. Subtract parameter controls whether the voxels are added (true) or removed (false). Lod argument selects object's level of detail
+- VoxelizeScene(VoxelGrid voxelgrid, opt bool subtract = false, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) -- voxelizes all entities in the scene which intersect the voxel grid volume and match the filterMask and layerMask. Subtract parameter controls whether the voxels are added (true) or removed (false). Lod argument selects object's level of detail
 
 #### NameComponent
 Holds a string that can more easily identify an entity to humans than an entity ID. 

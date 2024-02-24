@@ -44,6 +44,7 @@ namespace wi
 		wi::vector<XMFLOAT3> result_path_goal_to_start;
 		wi::vector<XMFLOAT3> result_path_goal_to_start_simplified;
 		XMFLOAT3 process_startpos = XMFLOAT3(0, 0, 0);
+		bool flying = false; // if set to true, it will switch to navigating on empty voxels
 
 		// Find the path between startpos and goalpos in the voxel grid:
 		void process(
@@ -56,8 +57,11 @@ namespace wi
 		// Gets the next upcoming waypoint between start and goal that was used in process():
 		XMFLOAT3 get_next_waypoint() const;
 
+		bool debug_voxels = true;
 		mutable float debugtimer = 0;
 		XMFLOAT3 debugvoxelsize = XMFLOAT3(0, 0, 0);
+		XMFLOAT3 debugstartnode = XMFLOAT3(0, 0, 0);
+		XMFLOAT3 debuggoalnode = XMFLOAT3(0, 0, 0);
 		bool debug_waypoints = false; // if true, waypoint voxels will be drawn. Blue = waypoint, Pink = simplified waypoint
 		void debugdraw(const XMFLOAT4X4& ViewProjection, wi::graphics::CommandList cmd) const;
 	};
