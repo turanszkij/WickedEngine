@@ -11,6 +11,7 @@ namespace wi::lua
 		lunamethod(VoxelGrid_BindLua, InjectTriangle),
 		lunamethod(VoxelGrid_BindLua, InjectAABB),
 		lunamethod(VoxelGrid_BindLua, InjectSphere),
+		lunamethod(VoxelGrid_BindLua, InjectCapsule),
 		lunamethod(VoxelGrid_BindLua, WorldToCoord),
 		lunamethod(VoxelGrid_BindLua, CoordToWorld),
 		lunamethod(VoxelGrid_BindLua, CheckVoxel),
@@ -154,6 +155,28 @@ namespace wi::lua
 			subtract = wi::lua::SGetBool(L, 2);
 		}
 		voxelgrid->inject_sphere(sphere->sphere, subtract);
+		return 0;
+	}
+	int VoxelGrid_BindLua::InjectCapsule(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "VoxelGrid::InjectCapsule(Capsule capsule, opt bool subtract = false) not enough arguments!");
+			return 0;
+		}
+		primitive::Capsule_BindLua* capsule = Luna<primitive::Capsule_BindLua>::lightcheck(L, 1);
+		if (capsule == nullptr)
+		{
+			wi::lua::SError(L, "VoxelGrid::InjectCapsule(Capsule capsule, opt bool subtract = false) first argument is not a Vector!");
+			return 0;
+		}
+		bool subtract = false;
+		if (argc > 1)
+		{
+			subtract = wi::lua::SGetBool(L, 2);
+		}
+		voxelgrid->inject_capsule(capsule->capsule, subtract);
 		return 0;
 	}
 	int VoxelGrid_BindLua::WorldToCoord(lua_State* L)

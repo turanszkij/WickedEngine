@@ -1745,6 +1745,7 @@ Tracks a physics pick drag operation. Use it with `phyiscs.PickDrag()` function.
 - InjectTriangle(Vector a,b,c, opt bool subtract = false) -- voxelizes triangle, and either adds it to the voxels (default), or removes voxels
 - InjectAABB(AABB aabb, opt bool subtract = false) -- voxelizes axis aligned bounding box, and either adds it to the voxels (default), or removes voxels
 - InjectSphere(Sphere sphere, opt bool subtract = false) -- voxelizes sphere, and either adds it to the voxels (default), or removes voxels
+- InjectCapsule(Capsule capsule, opt bool subtract = false) -- voxelizes capsule, and either adds it to the voxels (default), or removes voxels
 - WorldToCoord(Vector pos) : int x,y,z  -- converts a position in world space to voxel coordinate
 - CoordToWorld(int x,y,z) : Vector -- converts voxel coordinate to world space position
 - CheckVoxel(Vector pos) : bool -- returns false if voxel is empty, true if it's valid

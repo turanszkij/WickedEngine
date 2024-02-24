@@ -236,6 +236,76 @@ namespace wi
 			}
 		}
 	}
+	void VoxelGrid::inject_capsule(const wi::primitive::Capsule& capsule, bool subtract)
+	{
+		const XMVECTOR CENTER = XMLoadFloat3(&center);
+		const XMVECTOR RESOLUTION = XMLoadUInt3(&resolution);
+		const XMVECTOR RESOLUTION_RCP = XMLoadFloat3(&resolution_rcp);
+		const XMVECTOR VOXELSIZE_RCP = XMLoadFloat3(&voxelSize_rcp);
+
+		AABB aabb = capsule.getAABB();
+
+		XMVECTOR _MIN = XMLoadFloat3(&aabb._min);
+		XMVECTOR _MAX = XMLoadFloat3(&aabb._max);
+
+		// world -> uvw space:
+		_MIN = world_to_uvw(_MIN, CENTER, RESOLUTION_RCP, VOXELSIZE_RCP);
+		_MAX = world_to_uvw(_MAX, CENTER, RESOLUTION_RCP, VOXELSIZE_RCP);
+
+		// pixel space:
+		_MIN *= RESOLUTION;
+		_MAX *= RESOLUTION;
+
+		// After changing spaces, need to minmax again:
+		XMVECTOR MIN = XMVectorMin(_MIN, _MAX);
+		XMVECTOR MAX = XMVectorMax(_MIN, _MAX);
+
+		MIN = XMVectorFloor(MIN);
+		MAX = XMVectorCeiling(MAX + XMVectorSet(0.5f, 0.5f, 0.5f, 0));
+
+		MIN = XMVectorMax(MIN, XMVectorZero());
+		MAX = XMVectorMin(MAX, RESOLUTION);
+
+		XMUINT3 mini, maxi;
+		XMStoreUInt3(&mini, MIN);
+		XMStoreUInt3(&maxi, MAX);
+
+		volatile long long* data = (volatile long long*)voxels.data();
+		for (uint32_t x = mini.x; x < maxi.x; ++x)
+		{
+			for (uint32_t y = mini.y; y < maxi.y; ++y)
+			{
+				for (uint32_t z = mini.z; z < maxi.z; ++z)
+				{
+					wi::primitive::AABB voxel_aabb;
+					XMUINT3 voxel_center_coord = XMUINT3(x, y, z);
+					XMFLOAT3 voxel_center_world = coord_to_world(voxel_center_coord);
+					voxel_aabb.createFromHalfWidth(voxel_center_world, voxelSize);
+					for (int c = 0; c < 8; ++c)
+					{
+						// This capsule-box test can fail if capsule doesn't contain any of the corners,
+						//	but it intersects with the cube. But for now this simple method is used.
+						if (capsule.intersects(voxel_aabb.corner(c)))
+						{
+							const uint3 coord = uint3(x / 4u, y / 4u, z / 4u);
+							const uint3 sub_coord = uint3(x % 4u, y % 4u, z % 4u);
+							const uint32_t idx = flatten3D(coord, resolution_div4);
+							const uint32_t bit = flatten3D(sub_coord, uint3(4, 4, 4));
+							const uint64_t mask = 1ull << bit;
+							if (subtract)
+							{
+								AtomicAnd(data + idx, ~mask);
+							}
+							else
+							{
+								AtomicOr(data + idx, mask);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 
 	XMUINT3 VoxelGrid::world_to_coord(const XMFLOAT3& worldpos) const
 	{

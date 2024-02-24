@@ -28,6 +28,7 @@ namespace wi::lua
 		int InjectTriangle(lua_State* L);
 		int InjectAABB(lua_State* L);
 		int InjectSphere(lua_State* L);
+		int InjectCapsule(lua_State* L);
 		int WorldToCoord(lua_State* L);
 		int CoordToWorld(lua_State* L);
 		int CheckVoxel(lua_State* L);

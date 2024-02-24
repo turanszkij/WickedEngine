@@ -14,6 +14,7 @@ voxelgrid.InjectAABB(AABB(Vector(4, 0, 0.8), Vector(8, voxelsize.GetY() * 2, 5))
 voxelgrid.InjectAABB(AABB(Vector(4, 0, 3), Vector(8, voxelsize.GetY() * 3.5, 7)))
 voxelgrid.InjectAABB(AABB(Vector(4, 0, 6), Vector(8, voxelsize.GetY() * 4.5, 7)))
 voxelgrid.InjectSphere(Sphere(Vector(-4.8,1.6,-2.5), 1.6))
+voxelgrid.InjectCapsule(Capsule(Vector(4.8,-0.6,-2.5), Vector(2, 1, 1), 0.4))
 
 -- If teapot model can be loaded, then load it and voxelize it too:
 local scene = Scene()

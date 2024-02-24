@@ -34,6 +34,7 @@ namespace wi
 		void inject_triangle(XMVECTOR A, XMVECTOR B, XMVECTOR C, bool subtract = false);
 		void inject_aabb(const wi::primitive::AABB& aabb, bool subtract = false);
 		void inject_sphere(const wi::primitive::Sphere& sphere, bool subtract = false);
+		void inject_capsule(const wi::primitive::Capsule& capsule, bool subtract = false);
 		XMUINT3 world_to_coord(const XMFLOAT3& worldpos) const;
 		XMFLOAT3 coord_to_world(const XMUINT3& coord) const;
 		bool check_voxel(XMUINT3 coord) const;

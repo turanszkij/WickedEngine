@@ -5843,10 +5843,10 @@ namespace wi::scene
 				break;
 				case ColliderComponent::Shape::Capsule:
 				{
-					AABB aabb = collider.capsule.getAABB();
+					Capsule capsule = collider.capsule;
 					// TODO: fix heap allocating lambda capture!
-					wi::jobsystem::Execute(ctx, [&voxelgrid, subtract, aabb](wi::jobsystem::JobArgs args) {
-						voxelgrid.inject_aabb(aabb, subtract);
+					wi::jobsystem::Execute(ctx, [&voxelgrid, subtract, capsule](wi::jobsystem::JobArgs args) {
+						voxelgrid.inject_capsule(capsule, subtract);
 						});
 				}
 				break;
