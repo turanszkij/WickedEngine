@@ -20,6 +20,8 @@ namespace wi::lua
 		int Process(lua_State* L);
 		int GetNextWaypoint(lua_State* L);
 		int SetDebugDrawWaypointsEnabled(lua_State* L);
+		int SetFlying(lua_State* L);
+		int IsFlying(lua_State* L);
 
 		static void Bind();
 	};

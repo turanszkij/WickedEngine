@@ -8,6 +8,8 @@ namespace wi::lua
 		lunamethod(PathQuery_BindLua, Process),
 		lunamethod(PathQuery_BindLua, GetNextWaypoint),
 		lunamethod(PathQuery_BindLua, SetDebugDrawWaypointsEnabled),
+		lunamethod(PathQuery_BindLua, SetFlying),
+		lunamethod(PathQuery_BindLua, IsFlying),
 		{ NULL, NULL }
 	};
 	Luna<PathQuery_BindLua>::PropertyType PathQuery_BindLua::properties[] = {
@@ -60,6 +62,22 @@ namespace wi::lua
 		}
 		pathquery.debug_waypoints = wi::lua::SGetBool(L, 1);
 		return 0;
+	}
+	int PathQuery_BindLua::SetFlying(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 0)
+		{
+			wi::lua::SError(L, "PathQuery::SetFlying(bool value) not enough arguments!");
+			return 0;
+		}
+		pathquery.flying = wi::lua::SGetBool(L, 1);
+		return 0;
+	}
+	int PathQuery_BindLua::IsFlying(lua_State* L)
+	{
+		wi::lua::SSetBool(L, pathquery.flying);
+		return 1;
 	}
 
 	void PathQuery_BindLua::Bind()

@@ -1768,3 +1768,5 @@ Tracks a physics pick drag operation. Use it with `phyiscs.PickDrag()` function.
 - Process(Vector start,goal, VoxelGrid voxelgrid) -- computes the path from start to goal on a voxel grid and stores the result
 - GetNextWaypoint() : Vector -- Get the next waypoint on the path from the starting location. This requires that Process() has been called beforehand.
 - SetDebugDrawWaypointsEnabled(bool value) -- Enable/disable waypoint debug rendering when using DrawPathQuery(). If enabled, voxel waypoints will be drawn in blue, simplified voxel waypoints will be drawn in pink 
+- SetFlying(bool value) -- Enable/disable fying behaviour. When flying is enabled, then the path will be on empty voxels (air), otherwise and by default the path will be on filled voxels (ground)
+- IsFlying() : bool
