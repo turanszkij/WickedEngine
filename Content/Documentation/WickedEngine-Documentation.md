@@ -133,6 +133,8 @@ This is a reference for the C++ features of Wicked Engine
 	12. [wiSpinLock](#wispinlock)
 	13. [wiArguments](#wiarguments)
 	14. [wiTimer](#witimer)
+	14. [wiVoxelGrid](#wivoxelgrid)
+	14. [wiPathQuery](#wipathquery)
 6. [Input](#input)
 7. [Audio](#audio)
 	1. [Sound](#sound)
@@ -1046,6 +1048,32 @@ This is to store the startup parameters that were passed to the application from
 ### Timer
 [[Header]](../../WickedEngine/wiTimer.h) [[Cpp]](../../WickedEngine/wiTimer.cpp)
 High resolution stopwatch timer
+
+### wiVoxelGrid
+[[Header]](../../WickedEngine/wiVoxelGrid.h) [[Cpp]](../../WickedEngine/wiVoxelGrid.cpp)
+An axis aligned bounding box volume that contains a 3D grid of voxels. It can be used to voxelize the scene, and used by [PathQuery](#wipathquery) for path finding.
+
+The voxel grid is created with the `init()` function, providing the dimensions of the 3D grid. This function will allocate the necessary memory to store the grid, and fill every voxel to empty. To simply clear the grid, use `cleardata()` function, which will not allocate memory, only clear all voxels to empty.
+
+The volume of the grid is specified by the `center` and `voxelSize` members. To set the `voxelSize`, use the `set_voxelsize()` function instead of directly modifying the `voxelSize`. You can also align it easily to an existing AABB with the `from_aabb()` function. Setting these doesn't modify voxel data, so it probably needs to be revoxelized after modifications.
+
+The main feature is that you can inject primitives into the voxel grid, this is the voxelization process. You can inject triangles, AABB, Sphere and Capsule primitives with the `inject_triangle()`, `inject_aabb()`, `inject_sphere()` and the `inject_capsule()` functions, respectively. All the primitives are input to these functions in world space, and they will be mapped into the voxel grid internally by these functions based on the grid center, voxelSize and resolution. These functions can also accept a bool option called `subtract` which - if set to `true` - will modify the voxelization process to remove voxels intead of add them. The voxelization process is performance sensitive, but it can be done from different threads as it is thread safe, using atomic operations to modify voxel data.
+
+To access individual voxels, you can use the `check_voxel()` function to check if a voxel is empty or validm and the `set_voxel()` function to set a voxel to empty or valid. These operations are not thread safe! Also these functions will both accept world position, or voxel coordinates. You can additionally convert world positions to voxel coordinates by using the `world_to_coord()` function, or do the reverse with the `coord_to_world()` function.
+
+Note: There are helper functions to voxelize a whole object or the whole scene, accessible from the [Scene](#scene) object. These are called `VoxelizeObject()` and `VoxelizeScene()`.
+
+### wiPathQuery
+[[Header]](../../WickedEngine/wiPathQuery.h) [[Cpp]](../../WickedEngine/wiPathQuery.cpp)
+Path query can find paths from start to goal position within a voxel grid. To run a path finding query, first prepare a [voxel grid](#wivoxelgrid) with scene data, then process it with the path query.
+
+The usage of the path query at minimum is to call the `process()` function, with start and goal positions and a [voxel grid](#wivoxelgrid). When the function returns, you can check path finding success with the `is_successful()` function, and `get_next_waypoint()` function to find the next waypoint in the path from the start that goes towards the goal.
+
+The path query can be additionally configured with the `flying` bool param. If you set `flying` to `true`, then the path finding will search a path in empty voxels (in the air), otherwise by default it will try to find a path that goes on the ground.
+
+The traversing entity can have a logical size, configured by the `agent_height` and `agent_width` parameters, that specify the approcimate size of traversing entity in voxels. `agent_height` will specify how many empty voxels must be above the traversed path at any waypoint. `agent_width` specifies how many empty voxels must be in the horizontal directions. With these you can specify how far the path should keep away from walls and obstacles, and also to not allow going in between tight openings that the logical size would not allow.
+
+Note: processing a path query can take a long time, depending on how far the goal is from the start. Consider doing multiple path queries on multiple threads, or doing them asynchronously across the frame, the [Job System](#job-system) can be used to track completion of asynchronous tasks like this.
 
 
 ## Input

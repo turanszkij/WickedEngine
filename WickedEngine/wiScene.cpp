@@ -786,6 +786,21 @@ namespace wi::scene
 			clipmap.extents = extents;
 		}
 
+		{
+			for (size_t voxelgridIndex = 0; voxelgridIndex < voxel_grids.GetCount(); ++voxelgridIndex)
+			{
+				wi::VoxelGrid& voxelgrid = voxel_grids[voxelgridIndex];
+				Entity entity = voxel_grids.GetEntity(voxelgridIndex);
+
+				const TransformComponent* transform = transforms.GetComponent(entity);
+				if (transform != nullptr)
+				{
+					voxelgrid.center = transform->GetPosition();
+					voxelgrid.set_voxelsize(transform->GetScale());
+				}
+			}
+		}
+
 		// Shader scene resources:
 		if (device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
 		{
@@ -916,6 +931,17 @@ namespace wi::scene
 		surfelCellBuffer = {};
 
 		ddgi = {};
+
+		aabb_objects.clear();
+		aabb_lights.clear();
+		aabb_decals.clear();
+		aabb_probes.clear();
+
+		matrix_objects.clear();
+		matrix_objects_prev.clear();
+
+		collider_count_cpu = 0;
+		collider_count_gpu = 0;
 	}
 	void Scene::Merge(Scene& other)
 	{
@@ -930,6 +956,98 @@ namespace wi::scene
 		{
 			ddgi = std::move(other.ddgi);
 		}
+
+		aabb_objects.insert(aabb_objects.end(), other.aabb_objects.begin(), other.aabb_objects.end());
+		aabb_lights.insert(aabb_lights.end(), other.aabb_lights.begin(), other.aabb_lights.end());
+		aabb_decals.insert(aabb_decals.end(), other.aabb_decals.begin(), other.aabb_decals.end());
+		aabb_probes.insert(aabb_probes.end(), other.aabb_probes.begin(), other.aabb_probes.end());
+
+		matrix_objects.insert(matrix_objects.end(), other.matrix_objects.begin(), other.matrix_objects.end());
+		matrix_objects_prev.insert(matrix_objects_prev.end(), other.matrix_objects_prev.begin(), other.matrix_objects_prev.end());
+
+		// Recount colliders:
+		collider_allocator_cpu.store(0u);
+		collider_allocator_gpu.store(0u);
+		collider_deinterleaved_data.reserve(
+			sizeof(wi::primitive::AABB) * colliders.GetCount() +
+			sizeof(ColliderComponent) * colliders.GetCount() +
+			sizeof(ColliderComponent) * colliders.GetCount()
+		);
+		aabb_colliders_cpu = (wi::primitive::AABB*)collider_deinterleaved_data.data();
+		colliders_cpu = (ColliderComponent*)(aabb_colliders_cpu + colliders.GetCount());
+		colliders_gpu = colliders_cpu + colliders.GetCount();
+
+		for (size_t i = 0; i < colliders.GetCount(); ++i)
+		{
+			ColliderComponent& collider = colliders[i];
+			Entity entity = colliders.GetEntity(i);
+			const TransformComponent* transform = transforms.GetComponent(entity);
+			if (transform == nullptr)
+				return;
+
+			XMFLOAT3 scale = transform->GetScale();
+			collider.sphere.radius = collider.radius * std::max(scale.x, std::max(scale.y, scale.z));
+			collider.capsule.radius = collider.sphere.radius;
+
+			XMMATRIX W = XMLoadFloat4x4(&transform->world);
+			XMVECTOR offset = XMLoadFloat3(&collider.offset);
+			XMVECTOR tail = XMLoadFloat3(&collider.tail);
+			offset = XMVector3Transform(offset, W);
+			tail = XMVector3Transform(tail, W);
+
+			XMStoreFloat3(&collider.sphere.center, offset);
+			XMVECTOR N = XMVector3Normalize(offset - tail);
+			offset += N * collider.capsule.radius;
+			tail -= N * collider.capsule.radius;
+			XMStoreFloat3(&collider.capsule.base, offset);
+			XMStoreFloat3(&collider.capsule.tip, tail);
+
+			AABB aabb;
+
+			switch (collider.shape)
+			{
+			default:
+			case ColliderComponent::Shape::Sphere:
+				aabb.createFromHalfWidth(collider.sphere.center, XMFLOAT3(collider.sphere.radius, collider.sphere.radius, collider.sphere.radius));
+				break;
+			case ColliderComponent::Shape::Capsule:
+				aabb = collider.capsule.getAABB();
+				break;
+			case ColliderComponent::Shape::Plane:
+			{
+				collider.plane.origin = collider.sphere.center;
+				XMVECTOR N = XMVectorSet(0, 1, 0, 0);
+				N = XMVector3Normalize(XMVector3TransformNormal(N, W));
+				XMStoreFloat3(&collider.plane.normal, N);
+
+				aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
+
+				XMMATRIX PLANE = XMMatrixScaling(collider.radius, 1, collider.radius);
+				PLANE = PLANE * XMMatrixTranslationFromVector(XMLoadFloat3(&collider.offset));
+				PLANE = PLANE * W;
+				aabb = aabb.transform(PLANE);
+
+				PLANE = XMMatrixInverse(nullptr, PLANE);
+				XMStoreFloat4x4(&collider.plane.projection, PLANE);
+			}
+			break;
+			}
+
+			if (collider.IsCPUEnabled())
+			{
+				uint32_t index = collider_allocator_cpu.fetch_add(1u);
+				colliders_cpu[index] = collider;
+				aabb_colliders_cpu[index] = aabb;
+			}
+			if (collider.IsGPUEnabled())
+			{
+				uint32_t index = collider_allocator_gpu.fetch_add(1u);
+				colliders_gpu[index] = collider;
+			}
+		}
+		collider_count_cpu = collider_allocator_cpu.load();
+		collider_count_gpu = collider_allocator_gpu.load();
+		collider_bvh.Build(aabb_colliders_cpu, collider_count_cpu);
 	}
 	void Scene::FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities) const
 	{
@@ -5732,6 +5850,195 @@ namespace wi::scene
 
 		result.orientation = capsule.GetPlacementOrientation(result.position, result.normal);
 
+		return result;
+	}
+
+	void Scene::VoxelizeObject(size_t objectIndex, wi::VoxelGrid& grid, bool subtract, uint32_t lod)
+	{
+		if (objectIndex >= objects.GetCount() || objectIndex >= aabb_objects.size())
+			return;
+		if (aabb_objects[objectIndex].intersects(grid.get_aabb()) == wi::primitive::AABB::OUTSIDE)
+			return;
+		const ObjectComponent& object = objects[objectIndex];
+		const MeshComponent* mesh = meshes.GetComponent(object.meshID);
+		if (mesh == nullptr)
+			return;
+		const SoftBodyPhysicsComponent* softbody = softbodies.GetComponent(object.meshID);
+		const XMMATRIX objectMat = XMLoadFloat4x4(&matrix_objects[objectIndex]);
+		const ArmatureComponent* armature = mesh->IsSkinned() ? armatures.GetComponent(mesh->armatureID) : nullptr;
+
+		uint32_t first_subset = 0;
+		uint32_t last_subset = 0;
+		mesh->GetLODSubsetRange(lod, first_subset, last_subset);
+		for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+		{
+			const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+			if (subset.indexCount == 0)
+				continue;
+			const uint32_t indexOffset = subset.indexOffset;
+			const uint32_t triangleCount = subset.indexCount / 3;
+
+			for (uint32_t triangleIndex = 0; triangleIndex < triangleCount; ++triangleIndex)
+			{
+				const uint32_t i0 = mesh->indices[indexOffset + triangleIndex * 3 + 0];
+				const uint32_t i1 = mesh->indices[indexOffset + triangleIndex * 3 + 1];
+				const uint32_t i2 = mesh->indices[indexOffset + triangleIndex * 3 + 2];
+
+				XMVECTOR p0;
+				XMVECTOR p1;
+				XMVECTOR p2;
+
+				const bool softbody_active = softbody != nullptr && softbody->HasVertices();
+				if (softbody_active)
+				{
+					p0 = softbody->vertex_positions_simulation[i0].LoadPOS();
+					p1 = softbody->vertex_positions_simulation[i1].LoadPOS();
+					p2 = softbody->vertex_positions_simulation[i2].LoadPOS();
+				}
+				else
+				{
+					if (armature == nullptr || armature->boneData.empty())
+					{
+						p0 = XMLoadFloat3(&mesh->vertex_positions[i0]);
+						p1 = XMLoadFloat3(&mesh->vertex_positions[i1]);
+						p2 = XMLoadFloat3(&mesh->vertex_positions[i2]);
+					}
+					else
+					{
+						p0 = SkinVertex(*mesh, *armature, i0);
+						p1 = SkinVertex(*mesh, *armature, i1);
+						p2 = SkinVertex(*mesh, *armature, i2);
+					}
+
+					p0 = XMVector3Transform(p0, objectMat);
+					p1 = XMVector3Transform(p1, objectMat);
+					p2 = XMVector3Transform(p2, objectMat);
+				}
+
+				grid.inject_triangle(p0, p1, p2, subtract);
+			}
+		}
+	}
+	
+	void Scene::VoxelizeScene(wi::VoxelGrid& voxelgrid, bool subtract, uint32_t filterMask, uint32_t layerMask, uint32_t lod)
+	{
+		wi::jobsystem::context ctx;
+		if ((filterMask & FILTER_COLLIDER))
+		{
+			for (size_t i = 0; i < collider_count_cpu; ++i)
+			{
+				const ColliderComponent& collider = colliders_cpu[i];
+
+				if ((collider.layerMask & layerMask) == 0)
+					continue;
+
+				switch (collider.shape)
+				{
+				default:
+				case ColliderComponent::Shape::Sphere:
+				{
+					Sphere sphere = collider.sphere;
+					// TODO: fix heap allocating lambda capture!
+					wi::jobsystem::Execute(ctx, [&voxelgrid, subtract, sphere](wi::jobsystem::JobArgs args) {
+						voxelgrid.inject_sphere(sphere, subtract);
+						});
+				}
+				break;
+				case ColliderComponent::Shape::Capsule:
+				{
+					Capsule capsule = collider.capsule;
+					// TODO: fix heap allocating lambda capture!
+					wi::jobsystem::Execute(ctx, [&voxelgrid, subtract, capsule](wi::jobsystem::JobArgs args) {
+						voxelgrid.inject_capsule(capsule, subtract);
+						});
+				}
+				break;
+				case ColliderComponent::Shape::Plane:
+				{
+					XMMATRIX planeMatrix = XMMatrixInverse(nullptr, XMLoadFloat4x4(&collider.plane.projection));
+					XMVECTOR P0 = XMVector3Transform(XMVectorSet(-1, 0, -1, 1), planeMatrix);
+					XMVECTOR P1 = XMVector3Transform(XMVectorSet(1, 0, -1, 1), planeMatrix);
+					XMVECTOR P2 = XMVector3Transform(XMVectorSet(1, 0, 1, 1), planeMatrix);
+					XMVECTOR P3 = XMVector3Transform(XMVectorSet(-1, 0, 1, 1), planeMatrix);
+					// TODO: fix heap allocating lambda capture!
+					wi::jobsystem::Execute(ctx, [&voxelgrid, subtract, P0, P1, P2, P3](wi::jobsystem::JobArgs args) {
+						voxelgrid.inject_triangle(P0, P1, P2, subtract);
+						voxelgrid.inject_triangle(P0, P2, P3, subtract);
+						});
+				}
+				break;
+				}
+			}
+		}
+		if (filterMask & FILTER_OBJECT_ALL)
+		{
+			for (size_t i = 0; i < objects.GetCount(); ++i)
+			{
+				const ObjectComponent& object = objects[i];
+				if ((filterMask & object.GetFilterMask()) == 0)
+					continue;
+				const AABB& aabb = aabb_objects[i];
+				if ((layerMask & aabb.layerMask) == 0)
+					continue;
+				// TODO: fix heap allocating lambda capture!
+				wi::jobsystem::Execute(ctx, [this, &voxelgrid, subtract, lod, i](wi::jobsystem::JobArgs args) {
+					VoxelizeObject(i, voxelgrid, subtract, lod);
+					});
+			}
+		}
+		wi::jobsystem::Wait(ctx);
+	}
+
+	XMFLOAT3 Scene::GetPositionOnSurface(wi::ecs::Entity objectEntity, int vertexID0, int vertexID1, int vertexID2, const XMFLOAT2& bary) const
+	{
+		const ObjectComponent* object = objects.GetComponent(objectEntity);
+		if (object == nullptr || object->meshID == INVALID_ENTITY)
+			return XMFLOAT3(0, 0, 0);
+		const MeshComponent* mesh = meshes.GetComponent(object->meshID);
+		if (mesh == nullptr)
+			return XMFLOAT3(0, 0, 0);
+
+		const SoftBodyPhysicsComponent* softbody = softbodies.GetComponent(object->meshID);
+		const ArmatureComponent* armature = mesh->IsSkinned() ? armatures.GetComponent(mesh->armatureID) : nullptr;
+
+		XMVECTOR p0;
+		XMVECTOR p1;
+		XMVECTOR p2;
+
+		const bool softbody_active = softbody != nullptr && softbody->HasVertices();
+		if (softbody_active)
+		{
+			p0 = softbody->vertex_positions_simulation[vertexID0].LoadPOS();
+			p1 = softbody->vertex_positions_simulation[vertexID1].LoadPOS();
+			p2 = softbody->vertex_positions_simulation[vertexID2].LoadPOS();
+		}
+		else
+		{
+			if (armature == nullptr || armature->boneData.empty())
+			{
+				p0 = XMLoadFloat3(&mesh->vertex_positions[vertexID0]);
+				p1 = XMLoadFloat3(&mesh->vertex_positions[vertexID1]);
+				p2 = XMLoadFloat3(&mesh->vertex_positions[vertexID2]);
+			}
+			else
+			{
+				p0 = SkinVertex(*mesh, *armature, vertexID0);
+				p1 = SkinVertex(*mesh, *armature, vertexID1);
+				p2 = SkinVertex(*mesh, *armature, vertexID2);
+			}
+		}
+
+		XMVECTOR P = XMVectorBaryCentric(p0, p1, p2, bary.x, bary.y);
+
+		if (!softbody_active)
+		{
+			const size_t objectIndex = objects.GetIndex(objectEntity);
+			const XMMATRIX objectMat = XMLoadFloat4x4(&matrix_objects[objectIndex]);
+			P = XMVector3Transform(P, objectMat);
+		}
+
+		XMFLOAT3 result;
+		XMStoreFloat3(&result, P);
 		return result;
 	}
 

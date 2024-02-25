@@ -530,8 +530,10 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->scaleButton.sprites[i].params.corners_rounding[3].radius = 40;
 
 			editor->dummyButton.sprites[i].params.enableCornerRounding();
-			editor->dummyButton.sprites[i].params.corners_rounding[2].radius = 40;
 			editor->dummyButton.sprites[i].params.corners_rounding[3].radius = 40;
+
+			editor->navtestButton.sprites[i].params.enableCornerRounding();
+			editor->navtestButton.sprites[i].params.corners_rounding[2].radius = 40;
 
 			editor->physicsButton.sprites[i].params.enableCornerRounding();
 			editor->physicsButton.sprites[i].params.corners_rounding[2].radius = 40;

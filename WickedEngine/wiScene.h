@@ -13,6 +13,8 @@
 #include "wiTerrain.h"
 #include "wiBVH.h"
 #include "wiUnorderedSet.h"
+#include "wiVoxelGrid.h"
+#include "wiPathQuery.h"
 
 #include <string>
 #include <memory>
@@ -58,6 +60,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<wi::terrain::Terrain>& terrains = componentLibrary.Register<wi::terrain::Terrain>("wi::scene::Scene::terrains", 3); // version = 3
 		wi::ecs::ComponentManager<wi::Sprite>& sprites = componentLibrary.Register<wi::Sprite>("wi::scene::Scene::sprites");
 		wi::ecs::ComponentManager<wi::SpriteFont>& fonts = componentLibrary.Register<wi::SpriteFont>("wi::scene::Scene::fonts");
+		wi::ecs::ComponentManager<wi::VoxelGrid>& voxel_grids = componentLibrary.Register<wi::VoxelGrid>("wi::scene::Scene::voxel_grids");
 
 		// Non-serialized attributes:
 		float dt = 0;
@@ -484,6 +487,16 @@ namespace wi::scene
 		// If you don't know which armature the bone is contained int, this function can be used to find the first such armature and return the bone's rest matrix
 		//	If not found, return identity matrix
 		XMMATRIX FindBoneRestPose(wi::ecs::Entity bone) const;
+
+		// All triangles of the object will be injected into the voxel grid
+		//	subtract: if false (default), voxels will be added, if true then voxels will be removed
+		void VoxelizeObject(size_t objectIndex, wi::VoxelGrid& grid, bool subtract = false, uint32_t lod = 0);
+
+		// Voxelize all meshes that match the filters into a voxel grid
+		void VoxelizeScene(wi::VoxelGrid& voxelgrid, bool subtract = false, uint32_t filterMask = wi::enums::FILTER_ALL, uint32_t layerMask = ~0, uint32_t lod = 0);
+
+		// Get the current position on the surface of an object, tracked by the triangle barycentrics
+		XMFLOAT3 GetPositionOnSurface(wi::ecs::Entity objectEntity, int vertexID0, int vertexID1, int vertexID2, const XMFLOAT2& bary) const;
 	};
 
 	// Returns skinned vertex position in armature local space

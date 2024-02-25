@@ -15,6 +15,12 @@
 #include <memory>
 #include <limits>
 
+namespace wi
+{
+	struct VoxelGrid;
+	struct PathQuery;
+}
+
 namespace wi::renderer
 {
 	constexpr wi::graphics::Format format_depthbuffer_main = wi::graphics::Format::D32_FLOAT_S8X24_UINT;
@@ -1136,6 +1142,14 @@ namespace wi::renderer
 		uint shape = 0; // 0: circle, 1 : square
 	};
 	void DrawPaintRadius(const PaintRadius& paintrad);
+
+	// Add voxel grid to be drawn in debug rendering phase.
+	//	WARNING: This retains pointer until next call to DrawDebugScene(), so voxel grid must not be destroyed until then!
+	void DrawVoxelGrid(const wi::VoxelGrid* voxelgrid);
+
+	// Add path query to be drawn in debug rendering phase.
+	//	WARNING: This retains pointer until next call to DrawDebugScene(), so path query must not be destroyed until then!
+	void DrawPathQuery(const wi::PathQuery* pathquery);
 
 	// Add a texture that should be mipmapped whenever it is feasible to do so
 	void AddDeferredMIPGen(const wi::graphics::Texture& texture, bool preserve_coverage = false);

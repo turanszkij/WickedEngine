@@ -45,6 +45,7 @@ set (SOURCE_FILES
 	ProfilerWindow.cpp
 	SpriteWindow.cpp
 	FontWindow.cpp
+ 	VoxelGridWindow.cpp
 	xatlas.cpp
 	EmbeddedResources.cpp
 )

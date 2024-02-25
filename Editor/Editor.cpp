@@ -100,7 +100,6 @@ void Editor::Initialize()
 	loader.addLoadingComponent(&renderComponent, this, 0.2f);
 
 	ActivatePath(&loader);
-
 }
 
 void EditorLoadingScreen::Load()
@@ -293,6 +292,15 @@ void EditorComponent::Load()
 		}
 	});
 	GetGUI().AddWidget(&dummyButton);
+
+	navtestButton.Create(ICON_NAVIGATION);
+	navtestButton.SetShadowRadius(2);
+	navtestButton.SetTooltip("Toggle navigation testing.\nYou can put down START and GOAL waypoints inside voxel grids to test path finding.\nControls:\n----------\nF5: put START to surface\nF6: put GOAL to surface\nF7: put START to air\nF8: put GOAL to air");
+	navtestButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
+	navtestButton.OnClick([&](wi::gui::EventArgs args) {
+		navtest_enabled = !navtest_enabled;
+	});
+	GetGUI().AddWidget(&navtestButton);
 
 	playButton.Create(ICON_PLAY);
 	playButton.font.params.shadowColor = wi::Color::Transparent();
@@ -923,7 +931,7 @@ void EditorComponent::Update(float dt)
 		inspector_mode = wi::input::Down((wi::input::BUTTON)'I');
 
 		// Begin picking:
-		Ray pickRay = wi::renderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, *this, camera);
+		pickRay = wi::renderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, *this, camera);
 		{
 			hovered = wi::scene::PickResult();
 
@@ -1136,6 +1144,25 @@ void EditorComponent::Update(float dt)
 				for (size_t i = 0; i < scene.videos.GetCount(); ++i)
 				{
 					Entity entity = scene.videos.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
+					float dis = XMVectorGetX(disV);
+					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					{
+						hovered = wi::scene::PickResult();
+						hovered.entity = entity;
+						hovered.distance = dis;
+					}
+				}
+			}
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::VoxelGrid))
+			{
+				for (size_t i = 0; i < scene.voxel_grids.GetCount(); ++i)
+				{
+					Entity entity = scene.voxel_grids.GetEntity(i);
 					if (!scene.transforms.Contains(entity))
 						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
@@ -1701,6 +1728,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.terrainWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.spriteWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.fontWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.voxelGridWnd.SetEntity(INVALID_ENTITY);
 	}
 	else
 	{
@@ -1734,6 +1762,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.terrainWnd.SetEntity(picked.entity);
 		componentsWnd.spriteWnd.SetEntity(picked.entity);
 		componentsWnd.fontWnd.SetEntity(picked.entity);
+		componentsWnd.voxelGridWnd.SetEntity(picked.entity);
 
 		if (picked.subsetIndex >= 0)
 		{
@@ -1902,6 +1931,75 @@ void EditorComponent::Update(float dt)
 	renderPath->colorspace = colorspace;
 	renderPath->Update(dt);
 
+	if (navtest_enabled)
+	{
+		if (hovered.entity != INVALID_ENTITY && wi::input::Down(wi::input::KEYBOARD_BUTTON_F5))
+		{
+			navtest_start_pick = hovered;
+		}
+		if (hovered.entity != INVALID_ENTITY && wi::input::Down(wi::input::KEYBOARD_BUTTON_F6))
+		{
+			navtest_goal_pick = hovered;
+		}
+		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_F7) && wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+		{
+			navtest_start_pick.entity = INVALID_ENTITY;
+			XMStoreFloat3(&navtest_start_pick.position, XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction) * 2);
+		}
+		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_F8) && wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+		{
+			navtest_goal_pick.entity = INVALID_ENTITY;
+			XMStoreFloat3(&navtest_goal_pick.position, XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction) * 2);
+		}
+
+		navtest_pathquery.flying = false;
+		if (
+			navtest_start_pick.entity != INVALID_ENTITY &&
+			navtest_goal_pick.entity != INVALID_ENTITY
+			)
+		{
+			navtest_start_pick.position = scene.GetPositionOnSurface(
+				navtest_start_pick.entity,
+				navtest_start_pick.vertexID0,
+				navtest_start_pick.vertexID1,
+				navtest_start_pick.vertexID2,
+				navtest_start_pick.bary
+			);
+			navtest_goal_pick.position = scene.GetPositionOnSurface(
+				navtest_goal_pick.entity,
+				navtest_goal_pick.vertexID0,
+				navtest_goal_pick.vertexID1,
+				navtest_goal_pick.vertexID2,
+				navtest_goal_pick.bary
+			);
+		}
+		else if(
+			navtest_start_pick.entity == INVALID_ENTITY &&
+			navtest_goal_pick.entity == INVALID_ENTITY
+			)
+		{
+			navtest_pathquery.flying = true;
+		}
+
+		for (size_t i = 0; i < scene.voxel_grids.GetCount(); ++i)
+		{
+			const wi::VoxelGrid& voxelgrid = scene.voxel_grids[i];
+			AABB aabb = voxelgrid.get_aabb();
+			if (aabb.intersects(navtest_start_pick.position) && aabb.intersects(navtest_goal_pick.position))
+			{
+				auto range = wi::profiler::BeginRangeCPU("NAVTEST PATHQUERY");
+				navtest_pathquery.process(
+					navtest_start_pick.position,
+					navtest_goal_pick.position,
+					voxelgrid
+				);
+				wi::profiler::EndRange(range);
+				wi::renderer::DrawPathQuery(&navtest_pathquery);
+				break;
+			}
+		}
+
+	}
 
 	bool force_collider_visualizer = false;
 	for (auto& x : translator.selected)
@@ -1931,6 +2029,24 @@ void EditorComponent::PostUpdate()
 	if (renderPath->getSceneUpdateEnabled()) // only update preview if scene was updated at all by main renderPath
 	{
 		componentsWnd.cameraComponentWnd.preview.RenderPreview();
+	}
+
+	const Scene& scene = GetCurrentScene();
+	if (componentsWnd.voxelGridWnd.debugAllCheckBox.GetCheck())
+	{
+		// Draw all voxel grids:
+		for (size_t i = 0; i < scene.voxel_grids.GetCount(); ++i)
+		{
+			wi::renderer::DrawVoxelGrid(&scene.voxel_grids[i]);
+		}
+	}
+	else
+	{
+		// Draw only selected:
+		if (scene.voxel_grids.Contains(componentsWnd.voxelGridWnd.entity))
+		{
+			wi::renderer::DrawVoxelGrid(scene.voxel_grids.GetComponent(componentsWnd.voxelGridWnd.entity));
+		}
 	}
 }
 void EditorComponent::Render() const
@@ -2741,6 +2857,36 @@ void EditorComponent::Render() const
 
 
 					wi::font::Draw(ICON_VIDEO, fp, cmd);
+				}
+			}
+			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::VoxelGrid))
+			{
+				for (size_t i = 0; i < scene.voxel_grids.GetCount(); ++i)
+				{
+					Entity entity = scene.voxel_grids.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					fp.position = transform.GetPosition();
+					fp.scaling = scaling * wi::math::Distance(transform.GetPosition(), camera.Eye);
+					fp.color = inactiveEntityColor;
+
+					if (hovered.entity == entity)
+					{
+						fp.color = hoveredEntityColor;
+					}
+					for (auto& picked : translator.selected)
+					{
+						if (picked.entity == entity)
+						{
+							fp.color = selectedEntityColor;
+							break;
+						}
+					}
+
+
+					wi::font::Draw(ICON_VOXELGRID, fp, cmd);
 				}
 			}
 			if (bone_picking)
@@ -3869,9 +4015,11 @@ void EditorComponent::UpdateTopMenuAnimation()
 
 	dummyButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
 	dummyButton.SetPos(XMFLOAT2(static_pos - dummyButton.GetSize().x - 20, 0));
+	navtestButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
+	navtestButton.SetPos(XMFLOAT2(dummyButton.GetPos().x - navtestButton.GetSize().x - padding, 0));
 
 	physicsButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
-	physicsButton.SetPos(XMFLOAT2(dummyButton.GetPos().x - physicsButton.GetSize().x - 20, 0));
+	physicsButton.SetPos(XMFLOAT2(navtestButton.GetPos().x - physicsButton.GetSize().x - 20, 0));
 
 	stopButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
 	stopButton.SetPos(XMFLOAT2(physicsButton.GetPos().x - stopButton.GetSize().x - 20, 0));
@@ -3915,6 +4063,15 @@ void EditorComponent::UpdateTopMenuAnimation()
 	else
 	{
 		dummyButton.sprites[wi::gui::IDLE].params.color = color_off;
+	}
+
+	if (navtest_enabled)
+	{
+		navtestButton.sprites[wi::gui::IDLE].params.color = color_on;
+	}
+	else
+	{
+		navtestButton.sprites[wi::gui::IDLE].params.color = color_off;
 	}
 
 	if (wi::physics::IsSimulationEnabled())
@@ -4020,6 +4177,7 @@ void EditorComponent::RefreshSceneList()
 			componentsWnd.terrainWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.spriteWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.fontWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.voxelGridWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 
 			optionsWnd.RefreshEntityTree();
 			ResetHistory();

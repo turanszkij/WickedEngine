@@ -49,6 +49,7 @@ public:
 		Video = 1 << 22,
 		Sprite = 1 << 23,
 		Font = 1 << 24,
+		VoxelGrid = 1 << 25,
 
 		All = ~0ull,
 	} filter = Filter::All;

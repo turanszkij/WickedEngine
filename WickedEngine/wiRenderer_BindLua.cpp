@@ -9,6 +9,8 @@
 #include "wiHairParticle.h"
 #include "wiPrimitive_BindLua.h"
 #include "wiEventHandler.h"
+#include "wiVoxelGrid_BindLua.h"
+#include "wiPathQuery_BindLua.h"
 
 using namespace wi::ecs;
 using namespace wi::graphics;
@@ -421,6 +423,43 @@ namespace wi::lua::renderer
 
 		return 0;
 	}
+	int DrawVoxelGrid(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			VoxelGrid_BindLua* a = Luna<VoxelGrid_BindLua>::lightcheck(L, 1);
+			if (a)
+			{
+				wi::renderer::DrawVoxelGrid(a->voxelgrid);
+			}
+			else
+				wi::lua::SError(L, "DrawVoxelGrid(VoxelGrid voxelgrid) first argument must be a VoxelGrid type!");
+		}
+		else
+			wi::lua::SError(L, "DrawVoxelGrid(VoxelGrid voxelgrid) not enough arguments!");
+
+		return 0;
+	}
+	int DrawPathQuery(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			PathQuery_BindLua* a = Luna<PathQuery_BindLua>::lightcheck(L, 1);
+			if (a)
+			{
+				wi::renderer::DrawPathQuery(&a->pathquery);
+			}
+			else
+				wi::lua::SError(L, "DrawPathQuery(PathQuery pathquery) first argument must be a PathQuery type!");
+		}
+		else
+			wi::lua::SError(L, "DrawPathQuery(PathQuery pathquery) not enough arguments!");
+
+		return 0;
+	}
+
 	int PutWaterRipple(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);
@@ -506,6 +545,9 @@ namespace wi::lua::renderer
 			wi::lua::RegisterFunc("DrawSphere", DrawSphere);
 			wi::lua::RegisterFunc("DrawCapsule", DrawCapsule);
 			wi::lua::RegisterFunc("DrawDebugText", DrawDebugText);
+			wi::lua::RegisterFunc("DrawVoxelGrid", DrawVoxelGrid);
+			wi::lua::RegisterFunc("DrawPathQuery", DrawPathQuery);
+
 			wi::lua::RegisterFunc("PutWaterRipple", PutWaterRipple);
 
 			wi::lua::RegisterFunc("ClearWorld", ClearWorld);

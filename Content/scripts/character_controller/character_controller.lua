@@ -57,9 +57,9 @@ local function Conversation()
 
 			-- Update conversation percentage (fade in/out of conversation)
 			if self.state == ConversationState.Disabled then
-				self.percent = math.lerp(self.percent, 0, 0.05)
+				self.percent = math.lerp(self.percent, 0, getDeltaTime() * 4)
 			else
-				self.percent = math.lerp(self.percent, 1, 0.05)
+				self.percent = math.lerp(self.percent, 1, getDeltaTime() * 4)
 			end
 			path.SetCropTop(self.percent * crop_height)
 			path.SetCropBottom(self.percent * crop_height)
@@ -295,6 +295,9 @@ local function LoadAnimations(model_name)
 end
 
 local character_capsules = {}
+local voxelgrid = VoxelGrid(128,32,128)
+voxelgrid.SetVoxelSize(0.25)
+voxelgrid.SetCenter(Vector(0,0.1,0))
 
 local function Character(model_name, start_position, face, controllable, anim_scene)
 	local self = {
@@ -337,6 +340,7 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 		mood_amount = 1,
 		expression = INVALID_ENTITY,
 
+		pathquery = PathQuery(),
 		patrol_waypoints = {},
 		patrol_next = 0,
 		patrol_wait = 0,
@@ -645,6 +649,14 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 							end
 						else
 							-- move towards patrol waypoint:
+							self.pathquery.Process(pos, patrol_pos, voxelgrid)
+							if self.pathquery.IsSuccessful() then
+								-- If there is a valid pathfinding result for waypoint, replace heading direction by that:
+								patrol_vec = vector.Subtract(self.pathquery.GetNextWaypoint(), pos)
+							end
+							if debug then
+								DrawPathQuery(self.pathquery)
+							end
 							self.patrol_wait = 0
 							-- check if it's blocked by player collision:
 							local capsule = scene.Component_GetCollider(self.collider).GetCapsule()
@@ -1158,6 +1170,7 @@ LoadModel(script_dir() .. "assets/level.wiscene")
 --LoadModel(script_dir() .. "assets/terrain.wiscene")
 --LoadModel(script_dir() .. "assets/waypoints.wiscene", matrix.Translation(Vector(1,0,2)))
 --dofile(script_dir() .. "../dungeon_generator/dungeon_generator.lua")
+scene.VoxelizeScene(voxelgrid, false, FILTER_NAVIGATION_MESH | FILTER_COLLIDER)
 
 local anim_scene = LoadAnimations(script_dir() .. "assets/animations.wiscene")
 
@@ -1336,6 +1349,8 @@ runProcess(function()
 			local str = "State: " .. player.state .. "\n"
 			--str = str .. "Velocity = " .. player.velocity.GetX() .. ", " .. player.velocity.GetY() .. "," .. player.velocity.GetZ() .. "\n"
 			DrawDebugText(str, vector.Add(capsule.GetBase(), Vector(0,0.4)), Vector(1,1,1,1), 1, DEBUG_TEXT_CAMERA_FACING | DEBUG_TEXT_CAMERA_SCALING)
+
+			DrawVoxelGrid(voxelgrid)
 
 		end
 

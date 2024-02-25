@@ -60,6 +60,9 @@ This is a reference and explanation of Lua scripting features in Wicked Engine.
 		4. [Capsule](#capsule)
 	12. [Input](#input)
 	13. [Physics](#physics)
+	14. [Path finding](#path-finding)
+		1. [VoxelGrid](#voxelgrid)
+		2. [PathQuery](#pathquery)
 		
 ## Introduction and usage
 Scripting in Wicked Engine is powered by Lua, meaning that the user can make use of the 
@@ -153,6 +156,8 @@ You can use the Renderer with the following functions, all of which are in the g
 	[outer]DEBUG_TEXT_DEPTH_TEST		-- text can be occluded by geometry
 	[outer]DEBUG_TEXT_CAMERA_FACING		-- text will be rotated to face the camera
 	[outer]DEBUG_TEXT_CAMERA_SCALING	-- text will be always the same size, independent of distance to camera
+- DrawVoxelGrid(VoxelGrid voxelgrid) -- draws the voxel grid in the debug rendering phase. VoxelGrid object must not be destroyed until then!
+- DrawPathQuery(PathQuery pathquery) -- draws the path query in the debug rendering phase. PathQuery object must not be destroyed until then!
 - PutWaterRipple(Vector position) -- put down a water ripple with default embedded asset
 - PutWaterRipple(string imagename, Vector position) -- put down water ripple texture from image asset file
 - ClearWorld(opt Scene scene) -- Clears the scene and the associated renderer resources. If parmaeter is not specified, it will clear the global scene
@@ -666,6 +671,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_CreateDecal(Entity entity) : DecalComponent result  -- attach a DecalComponent to an entity. The returned component is associated with the entity and can be manipulated
 - Component_CreateSprite(Entity entity) : Sprite result  -- attach a Sprite to an entity. The returned component is associated with the entity and can be manipulated
 - Component_CreateFont(Entity entity) : SpriteFont result  -- attach a SpriteFont to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateVoxelGrid(Entity entity) : VoxelGrid result  -- attach a VoxelGrid to an entity. The returned component is associated with the entity and can be manipulated
 
 - Component_GetName(Entity entity) : NameComponent? result  -- query the name component of the entity (if exists)
 - Component_GetLayer(Entity entity) : LayerComponent? result  -- query the layer component of the entity (if exists)
@@ -689,7 +695,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_GetHumanoid(Entity entity) : HumanoidComponent? result  -- query the HumanoidComponent of the entity (if exists)
 - Component_GetDecal(Entity entity) : DecalComponent? result  -- query the DecalComponent of the entity (if exists)
 - Component_GetSprite(Entity entity) : Sprite? result  -- query the Sprite of the entity (if exists)
-- Component_GetFont(Entity entity) : SpriteFont? result  -- query the SpriteFont of the entity (if exists)
+- Component_GetVoxexlGrid(Entity entity) : VoxelGrid? result  -- query the VoxelGrid of the entity (if exists)
 
 - Component_GetNameArray() : NameComponent[] result  -- returns the array of all components of this type
 - Component_GetLayerArray() : LayerComponent[] result  -- returns the array of all components of this type
@@ -714,6 +720,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_GetDecalArray() : DecalComponent[] result  -- returns the array of all components of this type
 - Component_GetSpriteArray() : Sprite[] result  -- returns the array of all components of this type
 - Component_GetFontArray() : SpriteFont[] result  -- returns the array of all components of this type
+- Component_GetVoxelGridArray() : VoxelGrid[] result  -- returns the array of all components of this type
 
 - Entity_GetNameArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetLayerArray() : Entity[] result  -- returns the array of all entities that have this component type
@@ -739,6 +746,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Entity_GetDecalArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetSpriteArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetFontArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetVoxelGridArray() : Entity[] result  -- returns the array of all entities that have this component type
 
 - Component_RemoveName(Entity entity)  -- remove the name component of the entity (if exists)
 - Component_RemoveLayer(Entity entity)  -- remove the layer component of the entity (if exists)
@@ -764,6 +772,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_RemoveDecal(Entity entity)  -- remove the DecalComponent of the entity (if exists)
 - Component_RemoveSprite(Entity entity)  -- remove the Sprite of the entity (if exists)
 - Component_RemoveFont(Entity entity)  -- remove the SpriteFont of the entity (if exists)
+- Component_RemoveVoxelGrid(Entity entity)  -- remove the VoxelGrid of the entity (if exists)
 
 - Component_Attach(Entity entity,parent, opt bool child_already_in_local_space = false)  -- attaches entity to parent (adds a hierarchy component to entity). From now on, entity will inherit certain properties from parent, such as transform (entity will move with parent) or layer (entity's layer will be a sublayer of parent's layer). If child_already_in_local_space is false, then child will be transformed into parent's local space, if true, it will be used as-is.
 - Component_Detach(Entity entity)  -- detaches entity from parent (if hierarchycomponent exists for it). Restores entity's original layer, and applies current transformation to entity
@@ -773,8 +782,10 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - GetWeather() : WeatherComponent
 - SetWeather(WeatherComponent weather)
 
-
 - RetargetAnimation(Entity dst, src, bool bake_data) : Entity entity	-- Retargets an animation from a Humanoid to an other Humanoid such that the new animation will play back on the destination humanoid. dst : destination humanoid that the animation will be fit onto src : the animation to copy, it should already target humanoid bones. bake_data : if true, the retargeted data will be baked into a new animation data. If false, it will reuse the source animation data without creating a new one and retargeting will be applied at runtime on every Update. Returns entity ID of the new animation or INVALID_ENTITY if retargeting was not successful
+
+- VoxelizeObject(int objectIndex, VoxelGrid voxelgrid, opt bool subtract = false, opt int lod = 0) -- voxelizes a single object into the voxel grid. Subtract parameter controls whether the voxels are added (true) or removed (false). Lod argument selects object's level of detail
+- VoxelizeScene(VoxelGrid voxelgrid, opt bool subtract = false, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) -- voxelizes all entities in the scene which intersect the voxel grid volume and match the filterMask and layerMask. Subtract parameter controls whether the voxels are added (true) or removed (false). Lod argument selects object's level of detail
 
 #### NameComponent
 Holds a string that can more easily identify an entity to humans than an entity ID. 
@@ -1722,3 +1733,46 @@ Playstation button codes:
 Tracks a physics pick drag operation. Use it with `phyiscs.PickDrag()` function. When using this object first time to PickDrag, the operation will be started and the operation will end when you call Finish() or when the object is destroyed
 - [constructor]PickDragOperation() -- creates the object
 - Finish() -- finish the operation, puts down the physics object
+
+
+### Path finding
+Path finding operations can be made by using a voxel grid and path queries. The voxel grid can store spatial information about a scene, or a part of the scene, while the path query manages the path finding result from a point to a different point within the voxel grid.
+
+#### VoxelGrid
+- [constructor] VoxelGrid(opt int dimX,dimY,dimZ) -- if you give parameters, it will work like the Init() function
+- Init(int dimX,dimY,dimZ) -- Allocates memory for dimX * dimY * dimZ number of voxels and initializes them to empty
+- ClearData() -- initializes all voxels to empty
+- FromAABB(AABB aabb) -- places the voxel grid volume to fit to the given AABB. The number of voxels doesn't change, only the center and voxel size
+- InjectTriangle(Vector a,b,c, opt bool subtract = false) -- voxelizes triangle, and either adds it to the voxels (default), or removes voxels
+- InjectAABB(AABB aabb, opt bool subtract = false) -- voxelizes axis aligned bounding box, and either adds it to the voxels (default), or removes voxels
+- InjectSphere(Sphere sphere, opt bool subtract = false) -- voxelizes sphere, and either adds it to the voxels (default), or removes voxels
+- InjectCapsule(Capsule capsule, opt bool subtract = false) -- voxelizes capsule, and either adds it to the voxels (default), or removes voxels
+- WorldToCoord(Vector pos) : int x,y,z  -- converts a position in world space to voxel coordinate
+- CoordToWorld(int x,y,z) : Vector -- converts voxel coordinate to world space position
+- CheckVoxel(Vector pos) : bool -- returns false if voxel is empty, true if it's valid
+- CheckVoxel(int x,y,z) : bool -- returns false if voxel is empty, true if it's valid
+- SetVoxel(Vector pos, bool value) -- sets a single voxel to the specified state
+- SetVoxel(int x,y,z, bool value) -- sets a single voxel to the specified state
+- GetCenter() : Vector -- returns the center of the voxel grid volume
+- SetCenter(Vector pos) -- sets the center of the voxel grid volume
+- GetVoxelSize() : Vector -- get the half extent of one voxel in world space
+- SetVoxelSize(Vector voxelsize) -- sets the half extent of one voxel in world space
+- SetVoxelSize(float voxelsize) -- sets the half extent of one voxel in world space uniformly in all dimension
+- GetDebugColor() : Vector -- returns color of debug visualization of voxels
+- SetDebugColor(Vector color) -- set the color for debug visualization of voxels
+- GetDebugColorExtent() : Vector -- returns color of debug visualization of voxel grid extents
+- SetDebugColorExtent(Vector color) -- set the color for debug visualization of voxel grid extents
+- GetMemorySize() : int -- returns the memory consumption of the voxel grid in bytes
+
+#### PathQuery
+- [constructor] PathQuery()
+- Process(Vector start,goal, VoxelGrid voxelgrid) -- computes the path from start to goal on a voxel grid and stores the result
+- IsSuccesful() : bool -- returns whether the last call to Process() was succesfully able to find a path
+- GetNextWaypoint() : Vector -- Get the next waypoint on the path from the starting location. This requires that Process() has been called beforehand.
+- SetDebugDrawWaypointsEnabled(bool value) -- Enable/disable waypoint debug rendering when using DrawPathQuery(). If enabled, voxel waypoints will be drawn in blue, simplified voxel waypoints will be drawn in pink 
+- SetFlying(bool value) -- Enable/disable fying behaviour. When flying is enabled, then the path will be on empty voxels (air), otherwise and by default the path will be on filled voxels (ground)
+- IsFlying() : bool
+- SetAgentWidth(int value) --Set the navigation width requirement in voxels. This means how many voxels the query will keep away from obstacles horizontally.
+- GetAgentWidth(int value) : int
+- SetAgentHeight(int value) -- Set the navigation height requirement in voxels. This means how many voxels the query will keep away from obstacles vertically.
+- GetAgentHeight(int value) : int
