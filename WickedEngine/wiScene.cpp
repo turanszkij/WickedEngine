@@ -931,6 +931,14 @@ namespace wi::scene
 		surfelCellBuffer = {};
 
 		ddgi = {};
+
+		aabb_objects.clear();
+		aabb_lights.clear();
+		aabb_decals.clear();
+		aabb_probes.clear();
+
+		matrix_objects.clear();
+		matrix_objects_prev.clear();
 	}
 	void Scene::Merge(Scene& other)
 	{
