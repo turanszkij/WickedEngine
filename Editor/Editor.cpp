@@ -100,7 +100,6 @@ void Editor::Initialize()
 	loader.addLoadingComponent(&renderComponent, this, 0.2f);
 
 	ActivatePath(&loader);
-
 }
 
 void EditorLoadingScreen::Load()
@@ -1953,7 +1952,6 @@ void EditorComponent::Update(float dt)
 			XMStoreFloat3(&navtest_goal_pick.position, XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction) * 2);
 		}
 
-		//navtest_pathquery.debug_voxels = false;
 		navtest_pathquery.flying = false;
 		if (
 			navtest_start_pick.entity != INVALID_ENTITY &&

@@ -18,10 +18,15 @@ namespace wi::lua
 		PathQuery_BindLua(lua_State* L) {}
 
 		int Process(lua_State* L);
+		int IsSuccessful(lua_State* L);
 		int GetNextWaypoint(lua_State* L);
 		int SetDebugDrawWaypointsEnabled(lua_State* L);
 		int SetFlying(lua_State* L);
 		int IsFlying(lua_State* L);
+		int SetAgentWidth(lua_State* L);
+		int GetAgentWidth(lua_State* L);
+		int SetAgentHeight(lua_State* L);
+		int GetAgentHeight(lua_State* L);
 
 		static void Bind();
 	};

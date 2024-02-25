@@ -945,6 +945,14 @@ namespace wi::scene
 		{
 			ddgi = std::move(other.ddgi);
 		}
+
+		aabb_objects.insert(aabb_objects.end(), other.aabb_objects.begin(), other.aabb_objects.end());
+		aabb_lights.insert(aabb_lights.end(), other.aabb_lights.begin(), other.aabb_lights.end());
+		aabb_decals.insert(aabb_decals.end(), other.aabb_decals.begin(), other.aabb_decals.end());
+		aabb_probes.insert(aabb_probes.end(), other.aabb_probes.begin(), other.aabb_probes.end());
+
+		matrix_objects.insert(matrix_objects.end(), other.matrix_objects.begin(), other.matrix_objects.end());
+		matrix_objects_prev.insert(matrix_objects_prev.end(), other.matrix_objects_prev.begin(), other.matrix_objects_prev.end());
 	}
 	void Scene::FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities) const
 	{

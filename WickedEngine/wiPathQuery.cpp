@@ -11,42 +11,66 @@ namespace wi
 	void PathQuery::process(
 		const XMFLOAT3& startpos,
 		const XMFLOAT3& goalpos,
-		const wi::VoxelGrid& voxelgrid,
-		wi::VoxelGrid* debug_voxelgrid
+		const wi::VoxelGrid& voxelgrid
 	)
 	{
-		auto range = wi::profiler::BeginRangeCPU("PathQuery");
 		frontier = {};
 		came_from.clear();
 		cost_so_far.clear();
 		result_path_goal_to_start.clear();
 		result_path_goal_to_start_simplified.clear();
 		process_startpos = startpos;
-		Node start_node = Node::create(voxelgrid.world_to_coord(startpos));
-		Node goal_node = Node::create(voxelgrid.world_to_coord(goalpos));
-		debugstartnode = voxelgrid.coord_to_world(start_node.coord());
-		debuggoalnode = voxelgrid.coord_to_world(goal_node.coord());
+		Node start = Node::create(voxelgrid.world_to_coord(startpos));
+		Node goal = Node::create(voxelgrid.world_to_coord(goalpos));
+		debugstartnode = voxelgrid.coord_to_world(start.coord());
+		debuggoalnode = voxelgrid.coord_to_world(goal.coord());
 		debugvoxelsize = voxelgrid.voxelSize;
 
 		auto is_voxel_valid = [&](XMUINT3 coord) {
 			if (flying)
 			{
 				// Flying checks:
+
+				// Center voxel must be within voxel grid:
 				if (!voxelgrid.is_coord_valid(coord))
-					return false; // this is different from voxel valid check, it means voxel coord must still be in bounds!
-				if (voxelgrid.check_voxel(coord))
 					return false;
+
+				// Neighbor voxels around center must be empty according to agent width and height:
+				for (int x = -agent_width; x <= agent_width; ++x)
+				{
+					for (int z = -agent_width; z <= agent_width; ++z)
+					{
+						for (int y = 0; y < agent_height; ++y)
+						{
+							XMUINT3 neighbor_coord = XMUINT3(uint32_t(coord.x + x), uint32_t(coord.y - y), uint32_t(coord.z + z));
+							if (voxelgrid.check_voxel(neighbor_coord))
+								return false;
+						}
+					}
+				}
 			}
 			else
 			{
 				// Grounded checks:
+
+				// Center voxel must be ground (valid):
 				if (!voxelgrid.check_voxel(coord))
 					return false;
-				// Check blocking from above 2 voxels:
-				if (voxelgrid.check_voxel(XMUINT3(coord.x, coord.y - 1, coord.z)))
-					return false;
-				if (voxelgrid.check_voxel(XMUINT3(coord.x, coord.y - 2, coord.z)))
-					return false;
+
+				// Neighbor voxels above center must be empty according to agent width and height:
+				for (int x = -agent_width; x <= agent_width; ++x)
+				{
+					for (int z = -agent_width; z <= agent_width; ++z)
+					{
+						for (int y = 0; y < 0 + agent_height; ++y)
+						{
+							// Note that we check above ground only (-1 on Y)!
+							XMUINT3 neighbor_coord = XMUINT3(uint32_t(coord.x + x), uint32_t(coord.y - y - 1), uint32_t(coord.z + z));
+							if (voxelgrid.check_voxel(neighbor_coord))
+								return false;
+						}
+					}
+				}
 			}
 			return true;
 		};
@@ -73,8 +97,6 @@ namespace wi
 			for (int i = 0; i < step; i++)
 			{
 				XMUINT3 coord = XMUINT3(uint32_t(std::round(x)), uint32_t(std::round(y)), uint32_t(std::round(z)));
-				if (debug_voxelgrid != nullptr)
-					debug_voxelgrid->set_voxel(coord, 1);
 				if (!is_voxel_valid(coord))
 					return false;
 				x += x_incr;
@@ -84,14 +106,42 @@ namespace wi
 			return true;
 		};
 
-		if (!is_voxel_valid(start_node.coord()))
-			return; // unreachable
-		if (!is_voxel_valid(goal_node.coord()))
-			return; // unreachable
+		if (!is_voxel_valid(goal.coord()))
+		{
+			// If goal is unreachable because it is not a valid voxel, check immediate neighborhood:
+			//	This works better than abandoning when goal happens to be in an invalid voxel because
+			//	that happens often because mismatching voxel resolution from real geometry
+			bool found = false;
+			const int allow_width = agent_width + 1;
+			const int allow_height = agent_height + 1;
+			for (int x = -allow_width; x <= allow_width && !found; ++x)
+			{
+				for (int y = -allow_height; y <= allow_height && !found; ++y)
+				{
+					for (int z = -allow_width; z <= allow_width && !found; ++z)
+					{
+						if (x == 0 && y == 0 && z == 0)
+						{
+							continue;
+						}
+						XMUINT3 neighbor_coord = XMUINT3(uint32_t(goal.x + x), uint32_t(goal.y + y), uint32_t(goal.z + z));
+						if (is_voxel_valid(neighbor_coord))
+						{
+							goal = Node::create(neighbor_coord);
+							found = true;
+							break;
+						}
+					}
+				}
+			}
+			if (!found)
+			{
+				// if neighborhood was not valid at all, then abandon the search:
+				return;
+			}
+		}
 
 		// A* explanation at: https://www.redblobgames.com/pathfinding/a-star/introduction.html
-		Node start = Node::create(voxelgrid.world_to_coord(startpos));
-		Node goal = Node::create(voxelgrid.world_to_coord(goalpos));
 		frontier.emplace(start);
 		came_from[start] = Node::invalid();
 		cost_so_far[start] = 0;
@@ -229,8 +279,11 @@ namespace wi
 				i = next_candidate; // the next candidate will be the current node of the next iteration
 			}
 		}
+	}
 
-		wi::profiler::EndRange(range);
+	bool PathQuery::is_succesful() const
+	{
+		return !result_path_goal_to_start.empty();
 	}
 
 	XMFLOAT3 PathQuery::get_next_waypoint() const

@@ -1736,6 +1736,7 @@ Tracks a physics pick drag operation. Use it with `phyiscs.PickDrag()` function.
 
 
 ### Path finding
+Path finding operations can be made by using a voxel grid and path queries. The voxel grid can store spatial information about a scene, or a part of the scene, while the path query manages the path finding result from a point to a different point within the voxel grid.
 
 #### VoxelGrid
 - [constructor] VoxelGrid(opt int dimX,dimY,dimZ) -- if you give parameters, it will work like the Init() function
@@ -1766,7 +1767,12 @@ Tracks a physics pick drag operation. Use it with `phyiscs.PickDrag()` function.
 #### PathQuery
 - [constructor] PathQuery()
 - Process(Vector start,goal, VoxelGrid voxelgrid) -- computes the path from start to goal on a voxel grid and stores the result
+- IsSuccesful() : bool -- returns whether the last call to Process() was succesfully able to find a path
 - GetNextWaypoint() : Vector -- Get the next waypoint on the path from the starting location. This requires that Process() has been called beforehand.
 - SetDebugDrawWaypointsEnabled(bool value) -- Enable/disable waypoint debug rendering when using DrawPathQuery(). If enabled, voxel waypoints will be drawn in blue, simplified voxel waypoints will be drawn in pink 
 - SetFlying(bool value) -- Enable/disable fying behaviour. When flying is enabled, then the path will be on empty voxels (air), otherwise and by default the path will be on filled voxels (ground)
 - IsFlying() : bool
+- SetAgentWidth(int value) --Set the navigation width requirement in voxels. This means how many voxels the query will keep away from obstacles horizontally.
+- GetAgentWidth(int value) : int
+- SetAgentHeight(int value) -- Set the navigation height requirement in voxels. This means how many voxels the query will keep away from obstacles vertically.
+- GetAgentHeight(int value) : int

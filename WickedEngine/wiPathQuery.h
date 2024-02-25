@@ -4,6 +4,7 @@
 #include "wiVector.h"
 #include "wiVoxelGrid.h"
 #include "wiGraphicsDevice.h"
+#include "wiPrimitive.h"
 
 #include <queue>
 
@@ -45,14 +46,17 @@ namespace wi
 		wi::vector<XMFLOAT3> result_path_goal_to_start_simplified;
 		XMFLOAT3 process_startpos = XMFLOAT3(0, 0, 0);
 		bool flying = false; // if set to true, it will switch to navigating on empty voxels
+		int agent_height = 1; // keep away from vertical obstacles by this many voxels
+		int agent_width = 0; // keep away from horizontal obstacles by this many voxels
 
 		// Find the path between startpos and goalpos in the voxel grid:
 		void process(
 			const XMFLOAT3& startpos,
 			const XMFLOAT3& goalpos,
-			const wi::VoxelGrid& voxelgrid,
-			wi::VoxelGrid* debug_voxelgrid = nullptr
+			const wi::VoxelGrid& voxelgrid
 		);
+
+		bool is_succesful() const;
 
 		// Gets the next upcoming waypoint between start and goal that was used in process():
 		XMFLOAT3 get_next_waypoint() const;
