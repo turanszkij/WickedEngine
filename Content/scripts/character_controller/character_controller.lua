@@ -297,6 +297,7 @@ end
 local character_capsules = {}
 local voxelgrid = VoxelGrid(128,32,128)
 voxelgrid.SetVoxelSize(0.25)
+voxelgrid.SetCenter(Vector(0,0.1,0))
 
 local function Character(model_name, start_position, face, controllable, anim_scene)
 	local self = {
@@ -1169,7 +1170,7 @@ LoadModel(script_dir() .. "assets/level.wiscene")
 --LoadModel(script_dir() .. "assets/terrain.wiscene")
 --LoadModel(script_dir() .. "assets/waypoints.wiscene", matrix.Translation(Vector(1,0,2)))
 --dofile(script_dir() .. "../dungeon_generator/dungeon_generator.lua")
-scene.VoxelizeScene(voxelgrid, false, FILTER_NAVIGATION_MESH)
+scene.VoxelizeScene(voxelgrid, false, FILTER_NAVIGATION_MESH | FILTER_COLLIDER)
 
 local anim_scene = LoadAnimations(script_dir() .. "assets/animations.wiscene")
 

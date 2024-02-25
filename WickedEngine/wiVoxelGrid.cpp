@@ -281,25 +281,34 @@ namespace wi
 					XMUINT3 voxel_center_coord = XMUINT3(x, y, z);
 					XMFLOAT3 voxel_center_world = coord_to_world(voxel_center_coord);
 					voxel_aabb.createFromHalfWidth(voxel_center_world, voxelSize);
-					for (int c = 0; c < 8; ++c)
+					// This capsule-box test can fail if capsule doesn't contain any of the corners or center,
+					//	but it intersects with the cube. But for now this simple method is used.
+					bool intersects = capsule.intersects(voxel_aabb.getCenter());
+					if (!intersects)
 					{
-						// This capsule-box test can fail if capsule doesn't contain any of the corners,
-						//	but it intersects with the cube. But for now this simple method is used.
-						if (capsule.intersects(voxel_aabb.corner(c)))
+						for (int c = 0; c < 8; ++c)
 						{
-							const uint3 coord = uint3(x / 4u, y / 4u, z / 4u);
-							const uint3 sub_coord = uint3(x % 4u, y % 4u, z % 4u);
-							const uint32_t idx = flatten3D(coord, resolution_div4);
-							const uint32_t bit = flatten3D(sub_coord, uint3(4, 4, 4));
-							const uint64_t mask = 1ull << bit;
-							if (subtract)
+							if (capsule.intersects(voxel_aabb.corner(c)))
 							{
-								AtomicAnd(data + idx, ~mask);
+								intersects = true;
+								break;
 							}
-							else
-							{
-								AtomicOr(data + idx, mask);
-							}
+						}
+					}
+					if (intersects)
+					{
+						const uint3 coord = uint3(x / 4u, y / 4u, z / 4u);
+						const uint3 sub_coord = uint3(x % 4u, y % 4u, z % 4u);
+						const uint32_t idx = flatten3D(coord, resolution_div4);
+						const uint32_t bit = flatten3D(sub_coord, uint3(4, 4, 4));
+						const uint64_t mask = 1ull << bit;
+						if (subtract)
+						{
+							AtomicAnd(data + idx, ~mask);
+						}
+						else
+						{
+							AtomicOr(data + idx, mask);
 						}
 					}
 				}

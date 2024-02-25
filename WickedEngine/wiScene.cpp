@@ -939,6 +939,9 @@ namespace wi::scene
 
 		matrix_objects.clear();
 		matrix_objects_prev.clear();
+
+		collider_count_cpu = 0;
+		collider_count_gpu = 0;
 	}
 	void Scene::Merge(Scene& other)
 	{
@@ -961,6 +964,90 @@ namespace wi::scene
 
 		matrix_objects.insert(matrix_objects.end(), other.matrix_objects.begin(), other.matrix_objects.end());
 		matrix_objects_prev.insert(matrix_objects_prev.end(), other.matrix_objects_prev.begin(), other.matrix_objects_prev.end());
+
+		// Recount colliders:
+		collider_allocator_cpu.store(0u);
+		collider_allocator_gpu.store(0u);
+		collider_deinterleaved_data.reserve(
+			sizeof(wi::primitive::AABB) * colliders.GetCount() +
+			sizeof(ColliderComponent) * colliders.GetCount() +
+			sizeof(ColliderComponent) * colliders.GetCount()
+		);
+		aabb_colliders_cpu = (wi::primitive::AABB*)collider_deinterleaved_data.data();
+		colliders_cpu = (ColliderComponent*)(aabb_colliders_cpu + colliders.GetCount());
+		colliders_gpu = colliders_cpu + colliders.GetCount();
+
+		for (size_t i = 0; i < colliders.GetCount(); ++i)
+		{
+			ColliderComponent& collider = colliders[i];
+			Entity entity = colliders.GetEntity(i);
+			const TransformComponent* transform = transforms.GetComponent(entity);
+			if (transform == nullptr)
+				return;
+
+			XMFLOAT3 scale = transform->GetScale();
+			collider.sphere.radius = collider.radius * std::max(scale.x, std::max(scale.y, scale.z));
+			collider.capsule.radius = collider.sphere.radius;
+
+			XMMATRIX W = XMLoadFloat4x4(&transform->world);
+			XMVECTOR offset = XMLoadFloat3(&collider.offset);
+			XMVECTOR tail = XMLoadFloat3(&collider.tail);
+			offset = XMVector3Transform(offset, W);
+			tail = XMVector3Transform(tail, W);
+
+			XMStoreFloat3(&collider.sphere.center, offset);
+			XMVECTOR N = XMVector3Normalize(offset - tail);
+			offset += N * collider.capsule.radius;
+			tail -= N * collider.capsule.radius;
+			XMStoreFloat3(&collider.capsule.base, offset);
+			XMStoreFloat3(&collider.capsule.tip, tail);
+
+			AABB aabb;
+
+			switch (collider.shape)
+			{
+			default:
+			case ColliderComponent::Shape::Sphere:
+				aabb.createFromHalfWidth(collider.sphere.center, XMFLOAT3(collider.sphere.radius, collider.sphere.radius, collider.sphere.radius));
+				break;
+			case ColliderComponent::Shape::Capsule:
+				aabb = collider.capsule.getAABB();
+				break;
+			case ColliderComponent::Shape::Plane:
+			{
+				collider.plane.origin = collider.sphere.center;
+				XMVECTOR N = XMVectorSet(0, 1, 0, 0);
+				N = XMVector3Normalize(XMVector3TransformNormal(N, W));
+				XMStoreFloat3(&collider.plane.normal, N);
+
+				aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
+
+				XMMATRIX PLANE = XMMatrixScaling(collider.radius, 1, collider.radius);
+				PLANE = PLANE * XMMatrixTranslationFromVector(XMLoadFloat3(&collider.offset));
+				PLANE = PLANE * W;
+				aabb = aabb.transform(PLANE);
+
+				PLANE = XMMatrixInverse(nullptr, PLANE);
+				XMStoreFloat4x4(&collider.plane.projection, PLANE);
+			}
+			break;
+			}
+
+			if (collider.IsCPUEnabled())
+			{
+				uint32_t index = collider_allocator_cpu.fetch_add(1u);
+				colliders_cpu[index] = collider;
+				aabb_colliders_cpu[index] = aabb;
+			}
+			if (collider.IsGPUEnabled())
+			{
+				uint32_t index = collider_allocator_gpu.fetch_add(1u);
+				colliders_gpu[index] = collider;
+			}
+		}
+		collider_count_cpu = collider_allocator_cpu.load();
+		collider_count_gpu = collider_allocator_gpu.load();
+		collider_bvh.Build(aabb_colliders_cpu, collider_count_cpu);
 	}
 	void Scene::FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities) const
 	{
