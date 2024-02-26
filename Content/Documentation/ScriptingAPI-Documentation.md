@@ -824,6 +824,8 @@ Describes an orientation in 3D space.
 - SetScale(Vector value) -- set scale in local space
 - SetRotation(Vector quaternnion) -- set rotation quaternion in local space
 - SetPosition(Vector value) -- set position in local space
+- SetDirty(bool value) -- invalidate, this will cause transfomr to be updated in next scene update
+- IsDirty() : bool -- check if transform was invalidated since last update
 
 #### CameraComponent
 - FOV : float

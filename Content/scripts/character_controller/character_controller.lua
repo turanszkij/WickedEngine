@@ -27,6 +27,7 @@ local framerate_lock = false
 local framerate_lock_target = 20
 local slope_threshold = 0.2 -- How much slopeiness will cause character to slide down instead of standing on it
 local gravity = -30
+local dynamic_voxelization = false -- Set to true to revoxelize navigation every frame
 
 local ConversationState = {
 	Disabled = 0,
@@ -618,14 +619,13 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 				local patrol_count = len(self.patrol_waypoints)
 				if patrol_count > 0 then
 					local pos = savedPos
-					pos.SetY(0)
 					local patrol = self.patrol_waypoints[self.patrol_next % patrol_count + 1]
 					local patrol_transform = scene.Component_GetTransform(patrol.entity)
 					if patrol_transform ~= nil then
 						local patrol_pos = patrol_transform.GetPosition()
-						patrol_pos.SetY(0)
 						local patrol_wait = patrol.wait or 0 -- default: 0
 						local patrol_vec = vector.Subtract(patrol_pos, pos)
+						patrol_vec.SetY(0)
 						local distance = patrol_vec.Length()
 						local patrol_dist = patrol.distance or 0.5 -- default : 0.5
 						local patrol_dist_threshold = patrol.distance_threshold or 0 -- default : 0
@@ -649,10 +649,12 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 							end
 						else
 							-- move towards patrol waypoint:
+							self.pathquery.SetAgentHeight(3)
 							self.pathquery.Process(pos, patrol_pos, voxelgrid)
 							if self.pathquery.IsSuccessful() then
 								-- If there is a valid pathfinding result for waypoint, replace heading direction by that:
 								patrol_vec = vector.Subtract(self.pathquery.GetNextWaypoint(), pos)
+								patrol_vec.SetY(0)
 							end
 							if debug then
 								DrawPathQuery(self.pathquery)
@@ -1170,7 +1172,8 @@ LoadModel(script_dir() .. "assets/level.wiscene")
 --LoadModel(script_dir() .. "assets/terrain.wiscene")
 --LoadModel(script_dir() .. "assets/waypoints.wiscene", matrix.Translation(Vector(1,0,2)))
 --dofile(script_dir() .. "../dungeon_generator/dungeon_generator.lua")
-scene.VoxelizeScene(voxelgrid, false, FILTER_NAVIGATION_MESH | FILTER_COLLIDER)
+
+scene.VoxelizeScene(voxelgrid, false, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~(Layers.Player | Layers.NPC)) -- player and npc layers not included in voxelization
 
 local anim_scene = LoadAnimations(script_dir() .. "assets/animations.wiscene")
 
@@ -1252,6 +1255,11 @@ runProcess(function()
 
 		if not conversation.override_input then
 			camera:Update()
+		end
+
+		if dynamic_voxelization then
+			voxelgrid.ClearData()
+			scene.VoxelizeScene(voxelgrid, false, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~(Layers.Player | Layers.NPC)) -- player and npc layers not included in voxelization
 		end
 
 		update()
