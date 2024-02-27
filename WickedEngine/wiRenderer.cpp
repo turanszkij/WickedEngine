@@ -4011,6 +4011,8 @@ void UpdateRenderData(
 
 		// Write lights into entity array:
 		const XMFLOAT2 atlas_dim_rcp = XMFLOAT2(1.0f / float(shadowMapAtlas.desc.width), 1.0f / float(shadowMapAtlas.desc.height));
+		ShaderEntity shaderentity;
+
 		for (uint32_t lightIndex : vis.visibleLights)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
@@ -4019,7 +4021,7 @@ void UpdateRenderData(
 				entityCounter--;
 				break;
 			}
-			ShaderEntity shaderentity = {};
+			shaderentity = {};
 
 			const LightComponent& light = vis.scene->lights[lightIndex];
 
