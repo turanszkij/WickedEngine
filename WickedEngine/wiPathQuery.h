@@ -61,6 +61,12 @@ namespace wi
 		// Gets the next upcoming waypoint between start and goal that was used in process():
 		XMFLOAT3 get_next_waypoint() const;
 
+		// Gets the number of resulting waypoints
+		size_t get_waypoint_count() const;
+
+		// Gets the result waypoint at specified index (direction: start -> goal)
+		XMFLOAT3 get_waypoint(size_t index) const;
+
 		bool debug_voxels = true;
 		mutable float debugtimer = 0;
 		XMFLOAT3 debugvoxelsize = XMFLOAT3(0, 0, 0);

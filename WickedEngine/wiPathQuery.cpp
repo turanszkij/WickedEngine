@@ -294,6 +294,20 @@ namespace wi
 		return results[results.size() - 2];
 	}
 
+	size_t PathQuery::get_waypoint_count() const
+	{
+		const wi::vector<XMFLOAT3>& results = result_path_goal_to_start_simplified.empty() ? result_path_goal_to_start : result_path_goal_to_start_simplified;
+		return results.size();
+	}
+
+	XMFLOAT3 PathQuery::get_waypoint(size_t index) const
+	{
+		const wi::vector<XMFLOAT3>& results = result_path_goal_to_start_simplified.empty() ? result_path_goal_to_start : result_path_goal_to_start_simplified;
+		if (results.size() <= index)
+			return process_startpos;
+		return results[results.size() - 1 - index]; // return results in direction: start -> goal
+	}
+
 	namespace PathQuery_internal
 	{
 		PipelineState pso_curve;

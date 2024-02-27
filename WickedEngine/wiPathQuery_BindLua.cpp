@@ -15,6 +15,8 @@ namespace wi::lua
 		lunamethod(PathQuery_BindLua, GetAgentWidth),
 		lunamethod(PathQuery_BindLua, SetAgentHeight),
 		lunamethod(PathQuery_BindLua, GetAgentHeight),
+		lunamethod(PathQuery_BindLua, GetWaypointCount),
+		lunamethod(PathQuery_BindLua, GetWaypoint),
 		{ NULL, NULL }
 	};
 	Luna<PathQuery_BindLua>::PropertyType PathQuery_BindLua::properties[] = {
@@ -119,6 +121,23 @@ namespace wi::lua
 	int PathQuery_BindLua::GetAgentWidth(lua_State* L)
 	{
 		wi::lua::SSetInt(L, pathquery.agent_width);
+		return 1;
+	}
+	int PathQuery_BindLua::GetWaypointCount(lua_State* L)
+	{
+		wi::lua::SSetInt(L, (int)pathquery.get_waypoint_count());
+		return 1;
+	}
+	int PathQuery_BindLua::GetWaypoint(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "PathQuery::GetWaypoint(int index) not enough arguments!");
+			return 0;
+		}
+		int index = wi::lua::SGetInt(L, 1);
+		Luna<Vector_BindLua>::push(L, pathquery.get_waypoint(size_t(index)));
 		return 1;
 	}
 

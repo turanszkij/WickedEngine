@@ -295,7 +295,7 @@ void EditorComponent::Load()
 
 	navtestButton.Create(ICON_NAVIGATION);
 	navtestButton.SetShadowRadius(2);
-	navtestButton.SetTooltip("Toggle navigation testing.\nYou can put down START and GOAL waypoints inside voxel grids to test path finding.\nControls:\n----------\nF5: put START to surface\nF6: put GOAL to surface\nF7: put START to air\nF8: put GOAL to air");
+	navtestButton.SetTooltip("Toggle navigation testing. When enabled, you can visualize path finding results.\nYou can put down START and GOAL waypoints inside voxel grids to test path finding.\nControls:\n----------\nF5 + left click: put START to surface\nF6 + left click: put GOAL to surface\nF7 + left click: put START to air\nF8 + left click: put GOAL to air");
 	navtestButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	navtestButton.OnClick([&](wi::gui::EventArgs args) {
 		navtest_enabled = !navtest_enabled;

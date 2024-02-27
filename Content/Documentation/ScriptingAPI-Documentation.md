@@ -1778,3 +1778,5 @@ Path finding operations can be made by using a voxel grid and path queries. The 
 - GetAgentWidth(int value) : int
 - SetAgentHeight(int value) -- Set the navigation height requirement in voxels. This means how many voxels the query will keep away from obstacles vertically.
 - GetAgentHeight(int value) : int
+- GetWaypointCount() : int -- returns the number of waypoints that were computed in Process()
+- GetWaypoint(int index) : Vector returns the waypoint at specified index (direction: start -> goal)

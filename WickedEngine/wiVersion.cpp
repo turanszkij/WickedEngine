@@ -9,7 +9,7 @@ namespace wi::version
 	// minor features, major updates, breaking compatibility changes
 	const int minor = 71;
 	// minor bug fixes, alterations, refactors, updates
-	const int revision = 382;
+	const int revision = 383;
 
 	const std::string version_string = std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(revision);
 
@@ -50,72 +50,7 @@ All contributors: https://github.com/turanszkij/WickedEngine/graphs/contributors
 
 Patreon supporters
 ---------------------------
-Nemerle
-James Webb
-Quifeng Jin
-TheGameCreators
-Joseph Goldin
-Yuri
-Sergey K
-Yukawa Kanta
-Dragon Josh
-John
-LurkingNinja
-Bernardo Del Castillo
-Invictus
-Scott Hunt
-Yazan Altaki
-Tuan NV
-Robert MacGregor
-cybernescence
-Alexander Dahlin
-blueapples
-Delhills
-NI NI
-Sherief
-ktopoet
-Justin Macklin
-Cédric Fabre
-TogetherTeam
-Bartosz Boczula
-Arne Koenig
-Ivan Trajchev
-nathants
-Fahd Ahmed
-Gabriel Jadderson
-SAS_Controller
-Dominik Madarász
-Segfault
-Mike amanfo
-Dennis Brakhane
-rookie
-Peter Moore
-therealjtgill
-Nicolas Embleton
-Desuuc
-radino1977
-Anthony Curtis
-manni heck
-Matthias Hölzl
-Phyffer
-Lucas Pinheiro
-Tapkaara
-gpman
-Anthony Python
-Gnowos
-Klaus
-slaughternaut
-Paul Brain
-Connor Greaves
-Alexandr
-Lee Bamber
-MCAlarm MC2
-Titoutan
-Willow
-Aldo
-lokimx
-K. Osterman
-Nomad
+Nemerle, James Webb, Quifeng Jin, TheGameCreators, Joseph Goldin, Yuri, Sergey K, Yukawa Kanta, Dragon Josh, John, LurkingNinja, Bernardo Del Castillo, Invictus, Scott Hunt, Yazan Altaki, Tuan NV, Robert MacGregor, cybernescence, Alexander Dahlin, blueapples, Delhills, NI NI, Sherief, ktopoet, Justin Macklin, Cédric Fabre, TogetherTeam, Bartosz Boczula, Arne Koenig, Ivan Trajchev, nathants, Fahd Ahmed, Gabriel Jadderson, SAS_Controller, Dominik Madarász, Segfault, Mike amanfo, Dennis Brakhane, rookie, Peter Moore, therealjtgill, Nicolas Embleton, Desuuc, radino1977, Anthony Curtis, manni heck, Matthias Hölzl, Phyffer, Lucas Pinheiro, Tapkaara, gpman, Anthony Python, Gnowos, Klaus, slaughternaut, Paul Brain, Connor Greaves, Alexandr, Lee Bamber, MCAlarm MC2, Titoutan, Willow, Aldo, lokimx, K. Osterman, Nomad
 		)";
 
 		return credits;

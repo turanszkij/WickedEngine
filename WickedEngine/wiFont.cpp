@@ -140,7 +140,7 @@ namespace wi::font
 				if (status.last_word_begin > 0 && params.h_wrap >= 0 && status.cursor.position.x >= params.h_wrap - 1)
 				{
 					// Word ended and wrap detected, push down last word by one line:
-					float word_offset = vertexList[status.last_word_begin].pos.x + whitespace_size;
+					const float word_offset = vertexList[status.last_word_begin].pos.x;
 					for (size_t i = status.last_word_begin; i < status.quadCount * 4; ++i)
 					{
 						vertexList[i].pos.x -= word_offset;

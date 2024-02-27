@@ -27,6 +27,8 @@ namespace wi::lua
 		int GetAgentWidth(lua_State* L);
 		int SetAgentHeight(lua_State* L);
 		int GetAgentHeight(lua_State* L);
+		int GetWaypointCount(lua_State* L);
+		int GetWaypoint(lua_State* L);
 
 		static void Bind();
 	};
