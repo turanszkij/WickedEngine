@@ -25,6 +25,8 @@ namespace wi::lua
 		int GetTexture(lua_State* L);
 		int SetMaskTexture(lua_State* L);
 		int GetMaskTexture(lua_State* L);
+		int SetHidden(lua_State* L);
+		int IsHidden(lua_State* L);
 
 		static void Bind();
 	};

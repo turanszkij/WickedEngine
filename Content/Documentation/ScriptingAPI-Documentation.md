@@ -179,6 +179,8 @@ Render images on the screen.
 - GetTexture() : Texture
 - SetMaskTexture(Texture texture)
 - GetMaskTexture() : Texture
+- SetHidden(bool value)
+- IsHidden() : bool
 
 #### ImageParams
 Specify Sprite properties, like position, size, etc.
@@ -1765,6 +1767,9 @@ Path finding operations can be made by using a voxel grid and path queries. The 
 - GetDebugColorExtent() : Vector -- returns color of debug visualization of voxel grid extents
 - SetDebugColorExtent(Vector color) -- set the color for debug visualization of voxel grid extents
 - GetMemorySize() : int -- returns the memory consumption of the voxel grid in bytes
+- IsVisible(int observer_x,observer_y,observer_z, subject_x,subject_y,subject_z) : bool -- performs line of sight occlusion test from observer to subject voxel coordinates. Returns false if occlusion was found, true otherwise.
+- IsVisible(AABB observer, subject) : bool -- performs line of sight occlusion test from observer to subject world space points. Returns false if occlusion was found, true otherwise.
+- IsVisible(AABB observer, AABB subject) : bool -- performs line of sight occlusion test from observer world space point to subject AABB. Returns true if any of the AABB's touched voxels is visible, false otherwise.
 
 #### PathQuery
 - [constructor] PathQuery()

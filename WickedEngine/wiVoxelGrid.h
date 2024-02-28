@@ -37,16 +37,19 @@ namespace wi
 		void inject_capsule(const wi::primitive::Capsule& capsule, bool subtract = false);
 		XMUINT3 world_to_coord(const XMFLOAT3& worldpos) const;
 		XMFLOAT3 coord_to_world(const XMUINT3& coord) const;
-		bool check_voxel(XMUINT3 coord) const;
+		bool check_voxel(const XMUINT3& coord) const;
 		bool check_voxel(const XMFLOAT3& worldpos) const;
 		bool is_coord_valid(const XMUINT3& coord) const;
-		void set_voxel(XMUINT3 coord, bool value);
+		void set_voxel(const XMUINT3& coord, bool value);
 		void set_voxel(const XMFLOAT3& worldpos, bool value);
 		size_t get_memory_size() const;
 		void set_voxelsize(float size);
 		void set_voxelsize(const XMFLOAT3& size);
 		wi::primitive::AABB get_aabb() const;
 		void from_aabb(const wi::primitive::AABB& aabb);
+		bool is_visible(const XMUINT3& observer, const XMUINT3& subject) const;
+		bool is_visible(const XMFLOAT3& observer, const XMFLOAT3& subject) const;
+		bool is_visible(const XMFLOAT3& observer, const wi::primitive::AABB& subject) const;
 		void add(const VoxelGrid& other);
 		void subtract(const VoxelGrid& other);
 		void debugdraw(const XMFLOAT4X4& ViewProjection, wi::graphics::CommandList cmd) const;
@@ -70,6 +73,13 @@ namespace wi
 			P += center;
 			return P;
 		}
+
+//#define DEBUG_VOXEL_OCCLUSION
+#ifdef DEBUG_VOXEL_OCCLUSION
+		mutable wi::vector<XMUINT3> debug_subject_coords;
+		mutable wi::vector<XMUINT3> debug_visible_coords;
+		mutable wi::vector<XMUINT3> debug_occluded_coords;
+#endif // DEBUG_VOXEL_OCCLUSION
 	};
 
 }

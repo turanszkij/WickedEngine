@@ -27,6 +27,7 @@ namespace wi::lua
 		lunamethod(VoxelGrid_BindLua, GetMemorySize),
 		lunamethod(VoxelGrid_BindLua, Add),
 		lunamethod(VoxelGrid_BindLua, Subtract),
+		lunamethod(VoxelGrid_BindLua, IsVisible),
 		{ NULL, NULL }
 	};
 	Luna<VoxelGrid_BindLua>::PropertyType VoxelGrid_BindLua::properties[] = {
@@ -394,6 +395,48 @@ namespace wi::lua
 		}
 		voxelgrid->subtract(*other->voxelgrid);
 		return 0;
+	}
+	int VoxelGrid_BindLua::IsVisible(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 2)
+		{
+			wi::lua::SError(L, "VoxelGrid::IsVisible(Vector observer, Vector subject) not enough arguments!");
+			wi::lua::SError(L, "VoxelGrid::IsVisible(Vector observer, AABB subject) not enough arguments!");
+			return 0;
+		}
+		Vector_BindLua* observer = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (observer == nullptr)
+		{
+			if (argc < 6)
+			{
+				wi::lua::SError(L, "VoxelGrid::IsVisible(int observer_x,observer_y,observer_z, subject_x,subject_y,subject_z) not enough arguments!");
+				return 0;
+			}
+			int observer_x = wi::lua::SGetInt(L, 1);
+			int observer_y = wi::lua::SGetInt(L, 2);
+			int observer_z = wi::lua::SGetInt(L, 3);
+			int subject_x = wi::lua::SGetInt(L, 4);
+			int subject_y = wi::lua::SGetInt(L, 5);
+			int subject_z = wi::lua::SGetInt(L, 6);
+			wi::lua::SSetBool(L, voxelgrid->is_visible(XMUINT3(uint32_t(observer_x), uint32_t(observer_y), uint32_t(observer_z)), XMUINT3(uint32_t(subject_x), uint32_t(subject_y), uint32_t(subject_z))));
+			return 1;
+		}
+		Vector_BindLua* subject_vec = Luna<Vector_BindLua>::lightcheck(L, 2);
+		if (subject_vec == nullptr)
+		{
+			primitive::AABB_BindLua* aabb = Luna<primitive::AABB_BindLua>::lightcheck(L, 2);
+			if (aabb == nullptr)
+			{
+				wi::lua::SError(L, "VoxelGrid::IsVisible(Vector observer, Vector subject) second argument is not a Vector!");
+				wi::lua::SError(L, "VoxelGrid::IsVisible(Vector observer, AABB subject) second argument is not an AABB!");
+				return 0;
+			}
+			wi::lua::SSetBool(L, voxelgrid->is_visible(observer->GetFloat3(), aabb->aabb));
+			return 1;
+		}
+		wi::lua::SSetBool(L, voxelgrid->is_visible(observer->GetFloat3(), subject_vec->GetFloat3()));
+		return 1;
 	}
 
 	void VoxelGrid_BindLua::Bind()
