@@ -1768,6 +1768,8 @@ namespace wi::physics
 		PickDragOperation& op
 	)
 	{
+		if (scene.physics_scene == nullptr)
+			return;
 		btSoftRigidDynamicsWorld& dynamicsWorld = ((PhysicsScene*)scene.physics_scene.get())->dynamicsWorld;
 		float tmin = wi::math::Clamp(ray.TMin, 0, 1000000);
 		float tmax = wi::math::Clamp(ray.TMax, 0, 1000000);
