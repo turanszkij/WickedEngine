@@ -44,7 +44,7 @@ namespace wi::lua
 			return 0;
 		}
 		VoxelGrid_BindLua* voxelgrid = Luna<VoxelGrid_BindLua>::lightcheck(L, 3);
-		if (start == nullptr)
+		if (voxelgrid == nullptr)
 		{
 			wi::lua::SError(L, "PathQuery::Process(Vector start,goal, VoxelGrid voxelgrid) third argument is not a VoxelGrid!");
 			return 0;
