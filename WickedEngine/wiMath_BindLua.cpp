@@ -914,11 +914,6 @@ namespace wi::lua
 		wi::lua::SError(L, "Inverse(Matrix m) not enough arguments!");
 		return 0;
 	}
-	static XMVECTOR GetForward(XMMATRIX* _m)
-	{
-		XMVECTOR V = XMVectorSet(XMVectorGetX(_m->r[2]), XMVectorGetY(_m->r[2]), XMVectorGetZ(_m->r[2]), 0.0f);
-		return V;
-	}
 	int Matrix_BindLua::GetForward(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);
@@ -927,19 +922,12 @@ namespace wi::lua
 			Matrix_BindLua* m1 = Luna<Matrix_BindLua>::lightcheck(L, 1);
 			if (m1)
 			{
-				XMMATRIX matrix = XMLoadFloat4x4(&m1->data);
-				XMVECTOR V = XMVectorSet(XMVectorGetX(matrix.r[2]), XMVectorGetY(matrix.r[2]), XMVectorGetZ(matrix.r[2]), 0.0f);
-				Luna<Vector_BindLua>::push(L, V);
+				Luna<Vector_BindLua>::push(L, wi::math::GetForward(m1->data));
 				return 1;
 			}
 		}
-		wi::lua::SError(L, "GetForward(Matrix m) not enough arguments!");
-		return 0;
-	}
-	static XMVECTOR GetUp(XMMATRIX* _m)
-	{
-		XMVECTOR V = XMVectorSet(XMVectorGetX(_m->r[1]), XMVectorGetY(_m->r[1]), XMVectorGetZ(_m->r[1]), 0.0f);
-		return V;
+		Luna<Vector_BindLua>::push(L, wi::math::GetForward(data));
+		return 1;
 	}
 	int Matrix_BindLua::GetUp(lua_State* L)
 	{
@@ -949,19 +937,12 @@ namespace wi::lua
 			Matrix_BindLua* m1 = Luna<Matrix_BindLua>::lightcheck(L, 1);
 			if (m1)
 			{
-				XMMATRIX matrix = XMLoadFloat4x4(&m1->data);
-				XMVECTOR V = XMVectorSet(XMVectorGetX(matrix.r[1]), XMVectorGetY(matrix.r[1]), XMVectorGetZ(matrix.r[1]), 0.0f);
-				Luna<Vector_BindLua>::push(L, V);
+				Luna<Vector_BindLua>::push(L, wi::math::GetUp(m1->data));
 				return 1;
 			}
 		}
-		wi::lua::SError(L, "GetUp(Matrix m) not enough arguments!");
-		return 0;
-	}
-	static XMVECTOR GetRight(XMMATRIX* _m)
-	{
-		XMVECTOR V = XMVectorSet(XMVectorGetX(_m->r[0]), XMVectorGetY(_m->r[0]), XMVectorGetZ(_m->r[0]), 0.0f);
-		return V;
+		Luna<Vector_BindLua>::push(L, wi::math::GetUp(data));
+		return 1;
 	}
 	int Matrix_BindLua::GetRight(lua_State* L)
 	{
@@ -971,14 +952,12 @@ namespace wi::lua
 			Matrix_BindLua* m1 = Luna<Matrix_BindLua>::lightcheck(L, 1);
 			if (m1)
 			{
-				XMMATRIX matrix = XMLoadFloat4x4(&m1->data);
-				XMVECTOR V = XMVectorSet(XMVectorGetX(matrix.r[0]), XMVectorGetY(matrix.r[0]), XMVectorGetZ(matrix.r[0]), 0.0f);
-				Luna<Vector_BindLua>::push(L, V);
+				Luna<Vector_BindLua>::push(L, wi::math::GetRight(m1->data));
 				return 1;
 			}
 		}
-		wi::lua::SError(L, "GetRight(Matrix m) not enough arguments!");
-		return 0;
+		Luna<Vector_BindLua>::push(L, wi::math::GetRight(data));
+		return 1;
 	}
 
 	void Matrix_BindLua::Bind()

@@ -611,6 +611,13 @@ A four by four matrix, efficient calculations with SIMD support.
 - Add(Matrix m1,m2) : Matrix result
 - Transpose(Matrix m) : Matrix result
 - Inverse(Matrix m) : Matrix result, float determinant
+- GetForward() : Vector -- returns forward direction of self
+- GetUp() : Vector -- returns upwards direction of self
+- GetRight() : Vector -- returns right direction of self
+- GetForward(Matrix mat) : Vector -- returns forward direction of parameter matrix
+- GetUp(Matrix mat) : Vector -- returns upwards direction of parameter matrix
+- GetRight(Matrix mat) : Vector -- returns right direction of parameter matrix
+
 
 ### Scene System (using entity-component system)
 Manipulate the 3D scene with these components.
@@ -828,6 +835,9 @@ Describes an orientation in 3D space.
 - SetPosition(Vector value) -- set position in local space
 - SetDirty(bool value) -- invalidate, this will cause transfomr to be updated in next scene update
 - IsDirty() : bool -- check if transform was invalidated since last update
+- GetForward() : Vector -- returns forward direction
+- GetUp() : Vector -- returns upwards direction
+- GetRight() : Vector -- returns right direction
 
 #### CameraComponent
 - FOV : float

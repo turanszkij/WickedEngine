@@ -70,6 +70,12 @@ namespace wi::scene
 		XMVECTOR GetPositionV() const;
 		XMVECTOR GetRotationV() const;
 		XMVECTOR GetScaleV() const;
+		XMFLOAT3 GetForward() const;
+		XMFLOAT3 GetUp() const;
+		XMFLOAT3 GetRight() const;
+		XMVECTOR GetForwardV() const;
+		XMVECTOR GetUpV() const;
+		XMVECTOR GetRightV() const;
 		// Computes the local space matrix from scale, rotation, translation and returns it
 		XMMATRIX GetLocalMatrix() const;
 		// Applies the local space to the world space matrix. This overwrites world matrix

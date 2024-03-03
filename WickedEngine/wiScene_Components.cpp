@@ -72,6 +72,33 @@ namespace wi::scene
 			XMMatrixRotationQuaternion(R_local) *
 			XMMatrixTranslationFromVector(T_local);
 	}
+	XMFLOAT3 TransformComponent::GetForward() const
+	{
+		return wi::math::GetForward(world);
+	}
+	XMFLOAT3 TransformComponent::GetUp() const
+	{
+		return wi::math::GetUp(world);
+	}
+	XMFLOAT3 TransformComponent::GetRight() const
+	{
+		return wi::math::GetRight(world);
+	}
+	XMVECTOR TransformComponent::GetForwardV() const
+	{
+		XMFLOAT3 v = wi::math::GetForward(world);
+		return XMLoadFloat3(&v);
+	}
+	XMVECTOR TransformComponent::GetUpV() const
+	{
+		XMFLOAT3 v = wi::math::GetUp(world);
+		return XMLoadFloat3(&v);
+	}
+	XMVECTOR TransformComponent::GetRightV() const
+	{
+		XMFLOAT3 v = wi::math::GetRight(world);
+		return XMLoadFloat3(&v);
+	}
 	void TransformComponent::UpdateTransform()
 	{
 		if (IsDirty())

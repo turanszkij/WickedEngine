@@ -3177,6 +3177,9 @@ Luna<TransformComponent_BindLua>::FunctionType TransformComponent_BindLua::metho
 	lunamethod(TransformComponent_BindLua, GetPosition),
 	lunamethod(TransformComponent_BindLua, GetRotation),
 	lunamethod(TransformComponent_BindLua, GetScale),
+	lunamethod(TransformComponent_BindLua, GetForward),
+	lunamethod(TransformComponent_BindLua, GetUp),
+	lunamethod(TransformComponent_BindLua, GetRight),
 	lunamethod(TransformComponent_BindLua, IsDirty),
 	lunamethod(TransformComponent_BindLua, SetDirty),
 	lunamethod(TransformComponent_BindLua, SetScale),
@@ -3407,20 +3410,32 @@ int TransformComponent_BindLua::UpdateTransform(lua_State* L)
 }
 int TransformComponent_BindLua::GetPosition(lua_State* L)
 {
-	XMVECTOR V = component->GetPositionV();
-	Luna<Vector_BindLua>::push(L, V);
+	Luna<Vector_BindLua>::push(L, component->GetPosition());
 	return 1;
 }
 int TransformComponent_BindLua::GetRotation(lua_State* L)
 {
-	XMVECTOR V = component->GetRotationV();
-	Luna<Vector_BindLua>::push(L, V);
+	Luna<Vector_BindLua>::push(L, component->GetRotation());
 	return 1;
 }
 int TransformComponent_BindLua::GetScale(lua_State* L)
 {
-	XMVECTOR V = component->GetScaleV();
-	Luna<Vector_BindLua>::push(L, V);
+	Luna<Vector_BindLua>::push(L, component->GetScale());
+	return 1;
+}
+int TransformComponent_BindLua::GetForward(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, component->GetForward());
+	return 1;
+}
+int TransformComponent_BindLua::GetUp(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, component->GetUp());
+	return 1;
+}
+int TransformComponent_BindLua::GetRight(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, component->GetRight());
 	return 1;
 }
 int TransformComponent_BindLua::IsDirty(lua_State *L)
