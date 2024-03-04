@@ -1237,6 +1237,26 @@ namespace wi::physics
 				);
 				rigidbody->setFriction(physicscomponent.friction);
 				rigidbody->setRestitution(physicscomponent.restitution);
+				if (physicscomponent.IsKinematic() && (rigidbody->getCollisionFlags() & btCollisionObject::CF_KINEMATIC_OBJECT) == 0)
+				{
+					// It became kinematic when it wasn't before:
+					rigidbody->setCollisionFlags(rigidbody->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+					btVector3 localInertia(0, 0, 0);
+					rigidbody->setMassProps(0, localInertia);
+					dynamicsWorld.removeRigidBody(rigidbody);
+					dynamicsWorld.addRigidBody(rigidbody);
+				}
+				if (!physicscomponent.IsKinematic() && (rigidbody->getCollisionFlags() & btCollisionObject::CF_KINEMATIC_OBJECT) != 0)
+				{
+					// It became non-kinematic when it was kinematic before:
+					rigidbody->setCollisionFlags(rigidbody->getCollisionFlags() ^ btCollisionObject::CF_KINEMATIC_OBJECT);
+					btVector3 localInertia(0, 0, 0);
+					rigidbody->getCollisionShape()->calculateLocalInertia(physicscomponent.mass, localInertia);
+					rigidbody->setMassProps(physicscomponent.mass, localInertia);
+					dynamicsWorld.removeRigidBody(rigidbody);
+					dynamicsWorld.addRigidBody(rigidbody);
+					scene.Component_Detach(entity);
+				}
 			}
 		});
 
