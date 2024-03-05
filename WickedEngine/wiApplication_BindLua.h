@@ -59,6 +59,8 @@ namespace wi::lua
 		int GetCanvas(lua_State* L);
 		int SetCanvas(lua_State* L);
 
+		int Exit(lua_State* L);
+
 		static void Bind();
 	};
 

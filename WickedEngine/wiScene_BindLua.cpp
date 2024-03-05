@@ -522,6 +522,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_CreateName),
 	lunamethod(Scene_BindLua, Component_CreateLayer),
 	lunamethod(Scene_BindLua, Component_CreateTransform),
+	lunamethod(Scene_BindLua, Component_CreateCamera),
 	lunamethod(Scene_BindLua, Component_CreateEmitter),
 	lunamethod(Scene_BindLua, Component_CreateHairParticleSystem),
 	lunamethod(Scene_BindLua, Component_CreateLight),
@@ -944,6 +945,23 @@ int Scene_BindLua::Component_CreateTransform(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "Scene::Component_CreateTransform(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_CreateCamera(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		CameraComponent& component = scene->cameras.Create(entity);
+		Luna<CameraComponent_BindLua>::push(L, &component);
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_CreateCamera(Entity entity) not enough arguments!");
 	}
 	return 0;
 }

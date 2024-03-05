@@ -48,6 +48,7 @@ namespace wi::lua::scene
 		int Component_CreateName(lua_State* L);
 		int Component_CreateLayer(lua_State* L);
 		int Component_CreateTransform(lua_State* L);
+		int Component_CreateCamera(lua_State* L);
 		int Component_CreateEmitter(lua_State* L);
 		int Component_CreateHairParticleSystem(lua_State* L);
 		int Component_CreateLight(lua_State* L);
