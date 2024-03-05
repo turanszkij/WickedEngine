@@ -48,7 +48,7 @@ This is a reference and explanation of Lua scripting features in Wicked Engine.
 		19. [DecalComponent](#decalcomponent)
 	10. [Canvas](#canvas)
 	11. [High Level Interface](#high-level-interface)
-		1. [MainComponent](#maincomponent)
+		1. [Application](#application)
 		2. [RenderPath](#renderpath)
 			1. [RenderPath2D](#renderpath2d)
 			2. [RenderPath3D](#renderpath3d)
@@ -664,6 +664,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_CreateName(Entity entity) : NameComponent result  -- attach a name component to an entity. The returned component is associated with the entity and can be manipulated
 - Component_CreateLayer(Entity entity) : LayerComponent result  -- attach a layer component to an entity. The returned component is associated with the entity and can be manipulated
 - Component_CreateTransform(Entity entity) : TransformComponent result  -- attach a transform component to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateCamera(Entity entity) : CameraComponent result  -- attach a camera component to an entity. The returned component is associated with the entity and can be manipulated
 - Component_CreateLight(Entity entity) : LightComponent result  -- attach a light component to an entity. The returned component is associated with the entity and can be manipulated
 - Component_CreateObject(Entity entity) : ObjectComponent result  -- attach an object component to an entity. The returned component is associated with the entity and can be manipulated
 - Component_CreateInverseKinematics(Entity entity) : InverseKinematicsComponent result  -- attach an IK component to an entity. The returned component is associated with the entity and can be manipulated
@@ -1407,6 +1408,7 @@ This is the main entry point and manages the lifetime of the application.
 - SetVRAMUsageDisplay(bool active)	-- toggle display of video memory usage if info display is enabled
 - GetCanvas() : Canvas canvas  -- returns a copy of the application's current canvas
 - SetCanvas(Canvas canvas)  -- applies the specified canvas to the application
+- Exit() -- Closes the program
 - [outer]SetProfilerEnabled(bool enabled)
 
 ### RenderPath
