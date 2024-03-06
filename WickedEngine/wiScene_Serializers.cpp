@@ -1988,6 +1988,12 @@ namespace wi::scene
 			{
 				SerializeEntity(archive, entity, seri);
 			}
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive >> ragdoll_fatness;
+				archive >> ragdoll_headsize;
+			}
 		}
 		else
 		{
@@ -2001,6 +2007,12 @@ namespace wi::scene
 			for (auto& entity : bones)
 			{
 				SerializeEntity(archive, entity, seri);
+			}
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive << ragdoll_fatness;
+				archive << ragdoll_headsize;
 			}
 		}
 	}

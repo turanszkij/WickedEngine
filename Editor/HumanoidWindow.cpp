@@ -9,7 +9,7 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_HUMANOID " Humanoid", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 540));
+	SetSize(XMFLOAT2(670, 580));
 
 	closeButton.SetTooltip("Delete HumanoidComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -168,6 +168,34 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&headSizeSlider);
 
+	ragdollFatnessSlider.Create(0.5f, 2, 1, 1000, "Ragdoll fatness: ");
+	ragdollFatnessSlider.SetTooltip("Adjust overall fatness of ragdoll physics skeleton.");
+	ragdollFatnessSlider.SetSize(XMFLOAT2(wid, hei));
+	ragdollFatnessSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		HumanoidComponent* humanoid = scene.humanoids.GetComponent(entity);
+		if (humanoid != nullptr)
+		{
+			humanoid->ragdoll_fatness = args.fValue;
+			humanoid->ragdoll = {}; // request recreate
+		}
+	});
+	AddWidget(&ragdollFatnessSlider);
+
+	ragdollHeadSizeSlider.Create(0.5f, 2, 1, 1000, "Ragdoll head: ");
+	ragdollHeadSizeSlider.SetTooltip("Adjust overall size of ragdoll physics head.");
+	ragdollHeadSizeSlider.SetSize(XMFLOAT2(wid, hei));
+	ragdollHeadSizeSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		HumanoidComponent* humanoid = scene.humanoids.GetComponent(entity);
+		if (humanoid != nullptr)
+		{
+			humanoid->ragdoll_headsize = args.fValue;
+			humanoid->ragdoll = {}; // request recreate
+		}
+		});
+	AddWidget(&ragdollHeadSizeSlider);
+
 	boneList.Create("Bones: ");
 	boneList.SetSize(XMFLOAT2(wid, 200));
 	boneList.SetPos(XMFLOAT2(4, y += step));
@@ -241,6 +269,8 @@ void HumanoidWindow::SetEntity(Entity entity)
 			eyeRotMaxXSlider.SetValue(wi::math::RadiansToDegrees(humanoid->eye_rotation_max.x));
 			eyeRotMaxYSlider.SetValue(wi::math::RadiansToDegrees(humanoid->eye_rotation_max.y));
 			eyeRotSpeedSlider.SetValue(humanoid->eye_rotation_speed);
+			ragdollFatnessSlider.SetValue(humanoid->ragdoll_fatness);
+			ragdollHeadSizeSlider.SetValue(humanoid->ragdoll_headsize);
 
 			Entity bone = humanoid->bones[size_t(HumanoidComponent::HumanoidBone::Head)];
 			const TransformComponent* transform = scene.transforms.GetComponent(bone);
@@ -549,6 +579,8 @@ void HumanoidWindow::ResizeLayout()
 	add(eyeRotMaxYSlider);
 	add(eyeRotSpeedSlider);
 	add(headSizeSlider);
+	add(ragdollFatnessSlider);
+	add(ragdollHeadSizeSlider);
 
 	y += jump;
 

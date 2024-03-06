@@ -5181,6 +5181,172 @@ namespace wi::scene
 
 		return result;
 	}
+	bool Scene::IntersectsFirst(const wi::primitive::Ray& ray, uint32_t filterMask, uint32_t layerMask, uint32_t lod) const
+	{
+		bool result = false;
+
+		const XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
+		const XMVECTOR rayDirection = XMVector3Normalize(XMLoadFloat3(&ray.direction));
+
+		if ((filterMask & FILTER_COLLIDER) && collider_bvh.IsValid())
+		{
+			collider_bvh.IntersectsFirst(ray, [&](uint32_t collider_index) {
+				const ColliderComponent& collider = colliders_cpu[collider_index];
+
+				if ((collider.layerMask & layerMask) == 0)
+					return false;
+
+				float dist = 0;
+				XMFLOAT3 direction = {};
+				bool intersects = false;
+
+				switch (collider.shape)
+				{
+				default:
+				case ColliderComponent::Shape::Sphere:
+					intersects = ray.intersects(collider.sphere, dist, direction);
+					break;
+				case ColliderComponent::Shape::Capsule:
+					intersects = ray.intersects(collider.capsule, dist, direction);
+					break;
+				case ColliderComponent::Shape::Plane:
+					intersects = ray.intersects(collider.plane, dist, direction);
+					break;
+				}
+
+				if (intersects)
+				{
+					result = true;
+					return true;
+				}
+				return false;
+			});
+			if (result)
+				return result;
+		}
+
+		if (filterMask & FILTER_OBJECT_ALL)
+		{
+			for (size_t objectIndex = 0; objectIndex < aabb_objects.size(); ++objectIndex)
+			{
+				const AABB& aabb = aabb_objects[objectIndex];
+				if (!ray.intersects(aabb) || (layerMask & aabb.layerMask) == 0)
+					continue;
+
+				const ObjectComponent& object = objects[objectIndex];
+				if (object.meshID == INVALID_ENTITY)
+					continue;
+				if ((filterMask & object.GetFilterMask()) == 0)
+					continue;
+
+				const MeshComponent* mesh = meshes.GetComponent(object.meshID);
+				if (mesh == nullptr)
+					continue;
+
+				const Entity entity = objects.GetEntity(objectIndex);
+				const SoftBodyPhysicsComponent* softbody = softbodies.GetComponent(object.meshID);
+				const XMMATRIX objectMat = XMLoadFloat4x4(&matrix_objects[objectIndex]);
+				const XMMATRIX objectMatPrev = XMLoadFloat4x4(&matrix_objects_prev[objectIndex]);
+				const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
+				const XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
+				const XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
+				const ArmatureComponent* armature = mesh->IsSkinned() ? armatures.GetComponent(mesh->armatureID) : nullptr;
+
+				auto intersect_triangle = [&](uint32_t subsetIndex, uint32_t indexOffset, uint32_t triangleIndex)
+				{
+					const uint32_t i0 = mesh->indices[indexOffset + triangleIndex * 3 + 0];
+					const uint32_t i1 = mesh->indices[indexOffset + triangleIndex * 3 + 1];
+					const uint32_t i2 = mesh->indices[indexOffset + triangleIndex * 3 + 2];
+
+					XMVECTOR p0;
+					XMVECTOR p1;
+					XMVECTOR p2;
+
+					const bool softbody_active = softbody != nullptr && softbody->HasVertices();
+					if (softbody_active)
+					{
+						p0 = softbody->vertex_positions_simulation[i0].LoadPOS();
+						p1 = softbody->vertex_positions_simulation[i1].LoadPOS();
+						p2 = softbody->vertex_positions_simulation[i2].LoadPOS();
+					}
+					else
+					{
+						if (armature == nullptr || armature->boneData.empty())
+						{
+							p0 = XMLoadFloat3(&mesh->vertex_positions[i0]);
+							p1 = XMLoadFloat3(&mesh->vertex_positions[i1]);
+							p2 = XMLoadFloat3(&mesh->vertex_positions[i2]);
+						}
+						else
+						{
+							p0 = SkinVertex(*mesh, *armature, i0);
+							p1 = SkinVertex(*mesh, *armature, i1);
+							p2 = SkinVertex(*mesh, *armature, i2);
+						}
+					}
+
+					float distance;
+					XMFLOAT2 bary;
+					if (wi::math::RayTriangleIntersects(rayOrigin_local, rayDirection_local, p0, p1, p2, distance, bary))
+					{
+						const XMVECTOR pos_local = XMVectorAdd(rayOrigin_local, rayDirection_local * distance);
+						const XMVECTOR pos = XMVector3Transform(pos_local, objectMat);
+						distance = wi::math::Distance(pos, rayOrigin);
+
+						// Note: we do the TMin, Tmax check here, in world space! We use the RayTriangleIntersects in local space, so we don't use those in there
+						if (distance >= ray.TMin && distance <= ray.TMax)
+						{
+							result = true;
+							return true;
+						}
+					}
+					return false;
+				};
+
+				if (mesh->bvh.IsValid())
+				{
+					Ray ray_local = Ray(rayOrigin_local, rayDirection_local);
+
+					mesh->bvh.IntersectsFirst(ray_local, [&](uint32_t index) {
+						const uint32_t userdata = mesh->bvh_leaf_aabbs[index].userdata;
+						const uint32_t triangleIndex = userdata & 0xFFFFFF;
+						const uint32_t subsetIndex = userdata >> 24u;
+						const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+						if (subset.indexCount == 0)
+							return false;
+						const uint32_t indexOffset = subset.indexOffset;
+						return intersect_triangle(subsetIndex, indexOffset, triangleIndex);
+					});
+				}
+				else
+				{
+					// Brute-force intersection test:
+					uint32_t first_subset = 0;
+					uint32_t last_subset = 0;
+					mesh->GetLODSubsetRange(lod, first_subset, last_subset);
+					for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+					{
+						const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+						if (subset.indexCount == 0)
+							continue;
+						const uint32_t indexOffset = subset.indexOffset;
+						const uint32_t triangleCount = subset.indexCount / 3;
+
+						for (uint32_t triangleIndex = 0; triangleIndex < triangleCount; ++triangleIndex)
+						{
+							if (intersect_triangle(subsetIndex, indexOffset, triangleIndex))
+							{
+								result = true;
+								return true;
+							}
+						}
+					}
+				}
+
+			}
+		}
+		return result;
+	}
 	Scene::SphereIntersectionResult Scene::Intersects(const Sphere& sphere, uint32_t filterMask, uint32_t layerMask, uint32_t lod) const
 	{
 		SphereIntersectionResult result;

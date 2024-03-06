@@ -1931,6 +1931,9 @@ namespace wi::scene
 		XMFLOAT2 eye_rotation_max = XMFLOAT2(XM_PI / 20.0f, XM_PI / 20.0f);
 		float eye_rotation_speed = 0.1f;
 
+		float ragdoll_fatness = 1.0f;
+		float ragdoll_headsize = 1.0f;
+
 		// Non-serialized attributes:
 		XMFLOAT3 lookAt = {}; // lookAt target pos, can be set by user
 		XMFLOAT4 lookAtDeltaRotationState_Head = XMFLOAT4(0, 0, 0, 1);

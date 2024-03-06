@@ -680,13 +680,13 @@ namespace wi::physics
 
 				float mass = scale;
 				float capsule_height = scale;
-				float capsule_radius = scale;
+				float capsule_radius = scale * humanoid.ragdoll_fatness;
 
 				if (c == BODYPART_HEAD)
 				{
 					// Head doesn't necessarily have a child, so make up something reasonable:
 					capsule_height = 0.05f * scale;
-					capsule_radius = 0.1f * scale;
+					capsule_radius = 0.1f * scale * humanoid.ragdoll_headsize;
 				}
 				else
 				{
@@ -698,29 +698,29 @@ namespace wi::physics
 					switch (c)
 					{
 					case BODYPART_PELVIS:
-						capsule_radius = 0.1f * scale;
+						capsule_radius = 0.1f * scale * humanoid.ragdoll_fatness;
 						break;
 					case BODYPART_SPINE:
-						capsule_radius = 0.1f * scale;
+						capsule_radius = 0.1f * scale * humanoid.ragdoll_fatness;
 						capsule_height -= capsule_radius * 2;
 						break;
 					case BODYPART_LEFT_LOWER_ARM:
 					case BODYPART_RIGHT_LOWER_ARM:
-						capsule_radius = capsule_height * 0.15f;
+						capsule_radius = capsule_height * 0.15f * humanoid.ragdoll_fatness;
 						capsule_height += capsule_radius;
 						break;
 					case BODYPART_LEFT_UPPER_LEG:
 					case BODYPART_RIGHT_UPPER_LEG:
-						capsule_radius = capsule_height * 0.15f;
+						capsule_radius = capsule_height * 0.15f * humanoid.ragdoll_fatness;
 						capsule_height -= capsule_radius * 2;
 						break;
 					case BODYPART_LEFT_LOWER_LEG:
 					case BODYPART_RIGHT_LOWER_LEG:
-						capsule_radius = capsule_height * 0.15f;
+						capsule_radius = capsule_height * 0.15f * humanoid.ragdoll_fatness;
 						capsule_height -= capsule_radius;
 						break;
 					default:
-						capsule_radius = capsule_height * 0.2f;
+						capsule_radius = capsule_height * 0.2f * humanoid.ragdoll_fatness;
 						capsule_height -= capsule_radius * 2;
 						break;
 					}

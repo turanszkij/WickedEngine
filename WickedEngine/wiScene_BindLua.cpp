@@ -514,6 +514,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Merge),
 	lunamethod(Scene_BindLua, UpdateHierarchy),
 	lunamethod(Scene_BindLua, Intersects),
+	lunamethod(Scene_BindLua, IntersectsFirst),
 	lunamethod(Scene_BindLua, FindAllEntities),
 	lunamethod(Scene_BindLua, Entity_FindByName),
 	lunamethod(Scene_BindLua, Entity_Remove),
@@ -893,6 +894,43 @@ int Scene_BindLua::Intersects(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "Scene::Intersects(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::IntersectsFirst(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		uint32_t filterMask = wi::enums::FILTER_ALL;
+		uint32_t layerMask = ~0u;
+		uint lod = 0;
+		if (argc > 1)
+		{
+			filterMask = (uint32_t)wi::lua::SGetInt(L, 2);
+			if (argc > 2)
+			{
+				layerMask = (uint32_t)wi::lua::SGetInt(L, 3);
+				if (argc > 3)
+				{
+					lod = (uint32_t)wi::lua::SGetInt(L, 4);
+				}
+			}
+		}
+
+		Ray_BindLua* ray = Luna<Ray_BindLua>::lightcheck(L, 1);
+		if (ray != nullptr)
+		{
+			bool result = scene->IntersectsFirst(ray->ray, filterMask, layerMask, lod);
+			wi::lua::SSetBool(L, result);
+			return 1;
+		}
+
+		wi::lua::SError(L, "Scene::IntersectsFirst(Ray primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) first argument is not a Ray!");
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::IntersectsFirst(Ray primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) not enough arguments!");
 	}
 	return 0;
 }
@@ -6508,6 +6546,10 @@ Luna<HumanoidComponent_BindLua>::FunctionType HumanoidComponent_BindLua::methods
 	lunamethod(HumanoidComponent_BindLua, SetLookAt),
 	lunamethod(HumanoidComponent_BindLua, SetRagdollPhysicsEnabled),
 	lunamethod(HumanoidComponent_BindLua, IsRagdollPhysicsEnabled),
+	lunamethod(HumanoidComponent_BindLua, SetRagdollFatness),
+	lunamethod(HumanoidComponent_BindLua, SetRagdollHeadSize),
+	lunamethod(HumanoidComponent_BindLua, GetRagdollFatness),
+	lunamethod(HumanoidComponent_BindLua, GetRagdollHeadSize),
 	{ NULL, NULL }
 };
 Luna<HumanoidComponent_BindLua>::PropertyType HumanoidComponent_BindLua::properties[] = {
@@ -6589,6 +6631,42 @@ int HumanoidComponent_BindLua::SetRagdollPhysicsEnabled(lua_State* L)
 int HumanoidComponent_BindLua::IsRagdollPhysicsEnabled(lua_State* L)
 {
 	wi::lua::SSetBool(L, component->IsRagdollPhysicsEnabled());
+	return 1;
+}
+int HumanoidComponent_BindLua::SetRagdollFatness(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->ragdoll_fatness = wi::lua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wi::lua::SError(L, "SetRagdollFatness(float value) not enough arguments!");
+	}
+	return 0;
+}
+int HumanoidComponent_BindLua::SetRagdollHeadSize(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->ragdoll_headsize = wi::lua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wi::lua::SError(L, "SetRagdollHeadSize(float value) not enough arguments!");
+	}
+	return 0;
+}
+int HumanoidComponent_BindLua::GetRagdollFatness(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->ragdoll_fatness);
+	return 1;
+}
+int HumanoidComponent_BindLua::GetRagdollHeadSize(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->ragdoll_headsize);
 	return 1;
 }
 

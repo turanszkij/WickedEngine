@@ -649,6 +649,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - [outer]FILTER_COLLIDER : uint	-- include colliders
 - [outer]FILTER_ALL : uint	-- include everything
 - Intersects(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : int entity, Vector position,normal, float distance, Vector velocity, int subsetIndex, Matrix orientation	-- intersects a primitive with the scene and returns collision parameters
+- IntersectsFirst(Ray primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : bool	-- intersects a primitive with the scene and returns true immediately on intersection, false if there was no intersection. This can be faster for occlusion check than regular `Intersects` that searches for closest intersection.
 - Update()  -- updates the scene and every entity and component inside the scene
 - Clear()  -- deletes every entity and component inside the scene
 - Merge(Scene other)  -- moves contents from an other scene into this one. The other scene will be empty after this operation (contents are moved, not copied)
@@ -1301,6 +1302,10 @@ Describes a Collider object.
 - SetLookAt(Vector value)	-- Set a target lookAt position (for head an eyes movement)
 - SetRagdollPhysicsEnabled(bool value) -- Activate dynamic ragdoll physics. Note that kinematic ragdoll physics is always active (ragdoll is animation-driven/kinematic by default).
 - IsRagdollPhysicsEnabled() : bool
+- SetRagdollFatness(float value) -- Control the overall fatness of the ragdoll body parts except head (default: 1)
+- SetRagdollHeadSize(float value) -- Control the overall size of the ragdoll head (default: 1)
+- GetRagdollFatness() : float
+- GetRagdollHeadSize() : float
 
 [outer] HumanoidBone = {
 	Hips = 0,

@@ -38,6 +38,7 @@ namespace wi::lua::scene
 		int UpdateHierarchy(lua_State* L);
 
 		int Intersects(lua_State* L);
+		int IntersectsFirst(lua_State* L);
 
 		int FindAllEntities(lua_State* L);
 		int Entity_FindByName(lua_State* L);
@@ -1732,6 +1733,10 @@ namespace wi::lua::scene
 		int SetLookAt(lua_State* L);
 		int SetRagdollPhysicsEnabled(lua_State* L);
 		int IsRagdollPhysicsEnabled(lua_State* L);
+		int SetRagdollFatness(lua_State* L);
+		int SetRagdollHeadSize(lua_State* L);
+		int GetRagdollFatness(lua_State* L);
+		int GetRagdollHeadSize(lua_State* L);
 	};
 
 	class DecalComponent_BindLua
