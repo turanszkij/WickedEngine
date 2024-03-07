@@ -2526,7 +2526,6 @@ using namespace dx12_internal;
 			}
 		}
 
-
 		if (SUCCEEDED(device.As(&video_device)))
 		{
 			queues[QUEUE_VIDEO_DECODE].desc.Type = D3D12_COMMAND_LIST_TYPE_VIDEO_DECODE;
@@ -5345,6 +5344,8 @@ using namespace dx12_internal;
 			for (int q = 0; q < QUEUE_COUNT; ++q)
 			{
 				CommandQueue& queue = queues[q];
+				if (queue.queue == nullptr)
+					continue;
 
 				if (!queue.submit_cmds.empty())
 				{
@@ -5413,6 +5414,8 @@ using namespace dx12_internal;
 		const uint32_t bufferindex = GetBufferIndex();
 		for (int queue = 0; queue < QUEUE_COUNT; ++queue)
 		{
+			if (queues[queue].queue == nullptr)
+				continue;
 			if (FRAMECOUNT >= BUFFERCOUNT && frame_fence[bufferindex][queue]->GetCompletedValue() < 1)
 			{
 				// NULL event handle will simply wait immediately:
@@ -5663,6 +5666,8 @@ using namespace dx12_internal;
 
 		for (auto& queue : queues)
 		{
+			if (queue.queue == nullptr)
+				continue;
 			hr = queue.queue->Signal(fence.Get(), 1);
 			assert(SUCCEEDED(hr));
 			if (fence->GetCompletedValue() < 1)
