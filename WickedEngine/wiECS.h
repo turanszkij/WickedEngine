@@ -29,6 +29,7 @@ namespace wi::ecs
 		return next.fetch_add(1);
 	}
 
+	class ComponentLibrary;
 	struct EntitySerializer
 	{
 		wi::jobsystem::context ctx; // allow components to spawn serialization subtasks
@@ -36,6 +37,7 @@ namespace wi::ecs
 		bool allow_remap = true;
 		uint64_t version = 0; // The ComponentLibrary serialization will modify this by the registered component's version number
 		wi::unordered_set<std::string> resource_registration; // register for resource manager serialization
+		ComponentLibrary* componentlibrary = nullptr;
 
 		~EntitySerializer()
 		{
@@ -470,6 +472,7 @@ namespace wi::ecs
 		// Serialize all registered component managers
 		inline void Serialize(wi::Archive& archive, EntitySerializer& seri)
 		{
+			seri.componentlibrary = this;
 			if(archive.IsReadMode())
 			{
 				bool has_next = false;
@@ -516,6 +519,7 @@ namespace wi::ecs
 		// Serialize all components for one entity
 		inline void Entity_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri)
 		{
+			seri.componentlibrary = this;
 			if(archive.IsReadMode())
 			{
 				bool has_next = false;

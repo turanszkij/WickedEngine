@@ -376,7 +376,7 @@ namespace wi::scene
 				archive << textures[ANISOTROPYMAP].uvset;
 			}
 
-			if (seri.GetVersion() >= 2)
+			if (seri.GetVersion() >= 3)
 			{
 				archive << wi::helper::GetPathRelative(dir, textures[TRANSPARENCYMAP].name);
 				archive << textures[TRANSPARENCYMAP].uvset;
