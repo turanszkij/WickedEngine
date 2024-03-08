@@ -763,6 +763,7 @@ namespace wi::terrain
 					mesh.subsets_per_lod = 1;
 					mesh.vertex_positions.resize(vertexCount);
 					mesh.vertex_normals.resize(vertexCount);
+					mesh.vertex_tangents.resize(vertexCount);
 					mesh.vertex_uvset_0.resize(vertexCount);
 					chunk_data.region_weights.resize(vertexCount);
 
@@ -829,6 +830,8 @@ namespace wi::terrain
 
 						mesh.vertex_positions[index] = XMFLOAT3(x, height, z);
 						mesh.vertex_normals[index] = normal;
+						XMStoreFloat4(&mesh.vertex_tangents[index], T);
+						mesh.vertex_tangents[index].w = 1;
 						const XMFLOAT2 uv = XMFLOAT2(x * chunk_scale_rcp * chunk_width_rcp + 0.5f, z * chunk_scale_rcp * chunk_width_rcp + 0.5f);
 						mesh.vertex_uvset_0[index] = uv;
 

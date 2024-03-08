@@ -705,14 +705,9 @@ namespace wi::scene
 
 			void FromFULL(const XMFLOAT3& nor)
 			{
-				XMVECTOR N = XMLoadFloat3(&nor);
-				N = XMVector3Normalize(N);
-				XMFLOAT3 n;
-				XMStoreFloat3(&n, N);
-
-				x = int8_t(n.x * 127.5f);
-				y = int8_t(n.y * 127.5f);
-				z = int8_t(n.z * 127.5f);
+				x = int8_t(nor.x * 127.5f);
+				y = int8_t(nor.y * 127.5f);
+				z = int8_t(nor.z * 127.5f);
 				w = 0;
 			}
 			inline XMFLOAT3 GetNOR() const
@@ -743,16 +738,10 @@ namespace wi::scene
 
 			void FromFULL(const XMFLOAT4& tan)
 			{
-				XMVECTOR T = XMLoadFloat4(&tan);
-				T = XMVector3Normalize(T);
-				XMFLOAT4 t;
-				XMStoreFloat4(&t, T);
-				t.w = tan.w;
-
-				x = int8_t(t.x * 127.5f);
-				y = int8_t(t.y * 127.5f);
-				z = int8_t(t.z * 127.5f);
-				w = int8_t(t.w * 127.5f);
+				x = int8_t(tan.x * 127.5f);
+				y = int8_t(tan.y * 127.5f);
+				z = int8_t(tan.z * 127.5f);
+				w = int8_t(tan.w * 127.5f);
 			}
 			inline XMFLOAT4 GetTAN() const
 			{

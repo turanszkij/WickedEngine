@@ -146,7 +146,7 @@ struct Surface
 		facenormal = 0;
 		flags = 0;
 		gi = 0;
-		bumpColor = 0;
+		bumpColor = float3(0, 0, 1);
 
 		uid_validate = 0;
 		hit_depth = 0;
@@ -361,21 +361,26 @@ struct Surface
 		const bool simple_lighting = is_hairparticle || is_emittedparticle;
 		const bool is_backface = flags & SURFACE_FLAG_BACKFACE;
 		
+		float3 Nunnormalized = 0;
+		
 		[branch]
 		if (geometry.vb_nor >= 0)
 		{
 			Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(geometry.vb_nor)];
-			float3 n0 = buf[i0].xyz;
-			float3 n1 = buf[i1].xyz;
-			float3 n2 = buf[i2].xyz;
+			float3 n0 = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), buf[i0].xyz);
+			float3 n1 = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), buf[i1].xyz);
+			float3 n2 = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), buf[i2].xyz);
+			n0 = any(n0) ? normalize(n0) : 0;
+			n1 = any(n1) ? normalize(n1) : 0;
+			n2 = any(n2) ? normalize(n2) : 0;
 			N = attribute_at_bary(n0, n1, n2, bary);
-			N = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), N);
+			Nunnormalized = N; // This must be the interpolated version of the normalized corners! (mikktspace)
 			N = normalize(N);
 		}
 		
 		if (is_backface && !is_hairparticle && !is_emittedparticle)
 		{
-			N = -N;
+			//N = -N;
 		}
 		facenormal = N;
 
@@ -422,22 +427,35 @@ struct Surface
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 		}
 
+		float3x3 TBN = float3x3(1,0,0, 0,1,0, 0,0,1);
+
 		[branch]
 		if (geometry.vb_tan >= 0)
 		{
 			Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(geometry.vb_tan)];
-			const float4 t0 = buf[i0];
-			const float4 t1 = buf[i1];
-			const float4 t2 = buf[i2];
+			float4 t0 = buf[i0];
+			float4 t1 = buf[i1];
+			float4 t2 = buf[i2];
+			t0.xyz = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), t0.xyz);
+			t1.xyz = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), t1.xyz);
+			t2.xyz = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), t2.xyz);
+			t0.xyz = any(t0.xyz) ? normalize(t0.xyz) : 0;
+			t1.xyz = any(t1.xyz) ? normalize(t1.xyz) : 0;
+			t2.xyz = any(t2.xyz) ? normalize(t2.xyz) : 0;
 			T = attribute_at_bary(t0, t1, t2, bary);
-			T.xyz = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), T.xyz);
 			if (is_backface)
 			{
-				T.xyz = -T.xyz;
+				//T = -T; // w is also flipped, this is tested in GLTF samples!
 			}
-			T.xyz = normalize(T.xyz);
-			B = normalize(cross(T.xyz, N) * T.w);
-			const float3x3 TBN = float3x3(T.xyz, B, N);
+			
+			// MikkTSpace reconstruction: http://www.mikktspace.com/
+			//	Note that mikktspace tangents require unnormalized interpolated vectors!
+			float sign = T.w < 0 ? -1 : 1;
+			float3 B = sign * cross(T.xyz, Nunnormalized);
+			TBN = float3x3(T.xyz, B, Nunnormalized);
+			
+			T = float4(normalize(T.xyz), sign); // keep T unnormalized until this! (mikktspace)
+			B = normalize(B);
 
 #ifdef PARALLAXOCCLUSIONMAPPING
 			[branch]
@@ -462,7 +480,7 @@ struct Surface
 
 			// Normal mapping:
 			[branch]
-			if (geometry.vb_tan >= 0 && material.textures[NORMALMAP].IsValid() && material.normalMapStrength > 0)
+			if (geometry.vb_tan >= 0)
 			{
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
 				bumpColor = float3(material.textures[NORMALMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy).rg, 1);
@@ -724,10 +742,9 @@ struct Surface
 #endif // DISABLE_DECALS
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 
-		if (any(bumpColor))
+		if(any(bumpColor))
 		{
-			const float3x3 TBN = float3x3(T.xyz, B, N);
-			N = normalize(lerp(N, mul(bumpColor, TBN), length(bumpColor)));
+			N = normalize(mul(bumpColor, TBN));
 		}
 
 		float4 specularMap = 1;
@@ -1006,6 +1023,7 @@ struct Surface
 		if (is_backface)
 		{
 			flags |= SURFACE_FLAG_BACKFACE;
+			V = -V;
 		}
 
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
@@ -1047,6 +1065,7 @@ struct Surface
 		if (is_backface)
 		{
 			flags |= SURFACE_FLAG_BACKFACE;
+			V = -V;
 		}
 
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES

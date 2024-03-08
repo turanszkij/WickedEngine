@@ -1507,6 +1507,10 @@ namespace wi::physics
 
 						for (size_t i = 0; i < physicscomponent->vertex_tangents_simulation.size(); ++i)
 						{
+							XMVECTOR T = XMLoadFloat4(&physicscomponent->vertex_tangents_tmp[i]);
+							T = XMVector3Normalize(T);
+							T = XMVectorSetW(T, physicscomponent->vertex_tangents_tmp[i].w);
+							XMStoreFloat4(&physicscomponent->vertex_tangents_tmp[i], T);
 							physicscomponent->vertex_tangents_simulation[i].FromFULL(physicscomponent->vertex_tangents_tmp[i]);
 						}
 					}

@@ -166,7 +166,7 @@ struct VertexInput
 	{
 		[branch]
 		if (GetMesh().vb_nor < 0)
-			return 0;
+			return float3(0, 1, 0);
 		return bindless_buffers_float4[GetMesh().vb_nor][vertexID].xyz;
 	}
 
@@ -174,7 +174,7 @@ struct VertexInput
 	{
 		[branch]
 		if (GetMesh().vb_tan < 0)
-			return 0;
+			return min16float4(0, 0, 1, 1);
 		return (min16float4)bindless_buffers_float4[GetMesh().vb_tan][vertexID];
 	}
 
@@ -233,13 +233,11 @@ struct VertexSurface
 		}
 
 		normal = mul((float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), normal);
+		normal = any(normal) ? normalize(normal) : 0;
 
 		tangent = input.GetTangent();
 		tangent.xyz = mul((min16float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), tangent.xyz);
-
-		// Note: normalization must happen when normal is exported as half precision for interpolator!
-		normal = any(normal) ? normalize(normal) : 0;
-		tangent = any(tangent) ? normalize(tangent) : 0;
+		tangent.xyz = any(tangent.xyz) ? normalize(tangent.xyz) : 0;
 		
 		uvsets = input.GetUVSets();
 
@@ -504,18 +502,18 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // OBJECTSHADER_USE_POSITION3D
 
 #ifdef OBJECTSHADER_USE_TANGENT
-#if 0
-	float3x3 TBN = compute_tangent_frame(surface.N, surface.P, uvsets.xy);
-#else
 	if (is_frontface == false)
 	{
-		input.tan = -input.tan;
+		input.tan = -input.tan; // w is also flipped, this is tested in GLTF samples!
 	}
-	surface.T = input.tan;
-	surface.T.xyz = normalize(surface.T.xyz);
-	float3 binormal = normalize(cross(surface.T.xyz, surface.N) * surface.T.w);
-	float3x3 TBN = float3x3(surface.T.xyz, binormal, surface.N);
-#endif
+	
+	// MikkTSpace reconstruction: http://www.mikktspace.com/
+	//	Note that mikktspace tangents require unnormalized interpolated vectors!
+	float sign = input.tan.w < 0 ? -1 : 1;
+	float3 B = sign * cross(input.tan.xyz, input.nor);
+	float3x3 TBN = float3x3(input.tan.xyz, B, input.nor);
+	
+	surface.T = float4(normalize(input.tan.xyz), sign);
 
 #ifdef PARALLAXOCCLUSIONMAPPING
 	[branch]
@@ -580,7 +578,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #ifndef WATER
 #ifdef OBJECTSHADER_USE_TANGENT
 	[branch]
-	if (GetMaterial().normalMapStrength > 0 && GetMaterial().textures[NORMALMAP].IsValid())
+	if (GetMaterial().textures[NORMALMAP].IsValid())
 	{
 		surface.bumpColor = float3(GetMaterial().textures[NORMALMAP].Sample(sampler_objectshader, uvsets).rg, 1);
 		surface.bumpColor = surface.bumpColor * 2 - 1;
@@ -627,17 +625,14 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // WATER
 #endif // PREPASS
 
-
 #ifndef WATER
 #ifdef OBJECTSHADER_USE_TANGENT
-	[branch]
-	if (any(surface.bumpColor))
+	if(any(surface.bumpColor))
 	{
-		surface.N = normalize(lerp(surface.N, mul(surface.bumpColor, TBN), length(surface.bumpColor)));
+		surface.N = normalize(mul(surface.bumpColor, TBN));
 	}
 #endif // OBJECTSHADER_USE_TANGENT
 #endif // WATER
-
 
 	float4 specularMap = 1;
 
@@ -805,7 +800,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	}
 	surface.bumpColor = float3(bumpColor0 + bumpColor1 + bumpColor2, 1)  * GetMaterial().refraction;
 	surface.N = normalize(lerp(surface.N, mul(normalize(surface.bumpColor), TBN), GetMaterial().normalMapStrength));
-	surface.bumpColor *= GetMaterial().normalMapStrength;
+	surface.bumpColor.rg *= GetMaterial().normalMapStrength;
 
 	[branch]
 	if (GetCamera().texture_reflection_index >= 0)
