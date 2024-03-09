@@ -27,6 +27,8 @@
 #define H264_IMPLEMENTATION
 #include "h264.h"
 
+#include "mikktspace.c"
+
 
 // Basis Universal library sources are compiled below for simplicity:
 
