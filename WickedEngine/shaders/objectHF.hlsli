@@ -510,8 +510,8 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	// MikkTSpace reconstruction: http://www.mikktspace.com/
 	//	Note that mikktspace tangents require unnormalized interpolated vectors!
 	float sign = input.tan.w < 0 ? -1 : 1;
-	float3 B = sign * cross(input.tan.xyz, input.nor);
-	float3x3 TBN = float3x3(input.tan.xyz, B, input.nor);
+	float3 bitangent = sign * cross(input.nor, input.tan.xyz);
+	float3x3 TBN = float3x3(input.tan.xyz, bitangent, input.nor);
 	
 	surface.T = float4(normalize(input.tan.xyz), sign);
 

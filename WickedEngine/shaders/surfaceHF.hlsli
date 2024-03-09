@@ -451,11 +451,10 @@ struct Surface
 			// MikkTSpace reconstruction: http://www.mikktspace.com/
 			//	Note that mikktspace tangents require unnormalized interpolated vectors!
 			float sign = T.w < 0 ? -1 : 1;
-			float3 B = sign * cross(T.xyz, Nunnormalized);
-			TBN = float3x3(T.xyz, B, Nunnormalized);
+			float3 bitangent = sign * cross(Nunnormalized, T.xyz);
+			TBN = float3x3(T.xyz, bitangent, Nunnormalized);
 			
 			T = float4(normalize(T.xyz), sign); // keep T unnormalized until this! (mikktspace)
-			B = normalize(B);
 
 #ifdef PARALLAXOCCLUSIONMAPPING
 			[branch]

@@ -283,40 +283,35 @@ void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 	}
 }
 
-void FlipZAxis(LoaderState& state)
+void FlipZAxisMesh(MeshComponent& mesh)
+{
+	for (auto& v_pos : mesh.vertex_positions)
+	{
+		v_pos.z *= -1.f;
+	}
+	for (auto& v_norm : mesh.vertex_normals)
+	{
+		v_norm.z *= -1.f;
+	}
+	for (auto& v_tan : mesh.vertex_tangents)
+	{
+		v_tan.w *= -1.f; // flip w instead of z, check GLTF NormalTangentMirrorTest
+	}
+	for (auto& v_morph : mesh.morph_targets)
+	{
+		for (auto& v_morph_norm : v_morph.vertex_normals)
+		{
+			v_morph_norm.z *= -1.f;
+		}
+		for (auto& v_morph_pos : v_morph.vertex_positions)
+		{
+			v_morph_pos.z *= -1.f;
+		}
+	}
+}
+void FlipZAxisEverythingExceptMesh(LoaderState& state)
 {
 	Scene& wiscene = *state.scene;
-
-	// Flip mesh data first
-	for(size_t i = 0; i < wiscene.meshes.GetCount(); ++i)
-	{
-		auto& mesh = wiscene.meshes[i];
-		for(auto& v_pos : mesh.vertex_positions)
-		{
-			v_pos.z *= -1.f;
-		}
-		for(auto& v_norm : mesh.vertex_normals)
-		{
-			v_norm.z *= -1.f;
-		}
-		for(auto& v_tan : mesh.vertex_tangents)
-		{
-			v_tan.z *= -1.f;
-		}
-		for(auto& v_morph : mesh.morph_targets)
-		{
-			for(auto& v_morph_norm : v_morph.vertex_normals)
-			{
-				v_morph_norm.z *= -1.f;
-			}
-			for(auto& v_morph_pos : v_morph.vertex_positions)
-			{
-				v_morph_pos.z *= -1.f;
-			}
-		}
-		mesh.FlipCulling();
-		mesh.CreateRenderData();
-	}
 
 	// Flip scene's transformComponents
 	bool state_restore = (state.transforms_original.size() > 0);
@@ -1036,10 +1031,6 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			MaterialComponent* material = scene.materials.GetComponent(mesh.subsets.back().materialID);
 			uint32_t vertexOffset = (uint32_t)mesh.vertex_positions.size();
 
-			const size_t index_remap[] = {
-				0,2,1
-			};
-
 			if (prim.indices >= 0)
 			{
 				// Fill indices:
@@ -1060,27 +1051,27 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				{
 					for (size_t i = 0; i < indexCount; i += 3)
 					{
-						mesh.indices[indexOffset + i + 0] = vertexOffset + data[i + index_remap[0]];
-						mesh.indices[indexOffset + i + 1] = vertexOffset + data[i + index_remap[1]];
-						mesh.indices[indexOffset + i + 2] = vertexOffset + data[i + index_remap[2]];
+						mesh.indices[indexOffset + i + 0] = vertexOffset + data[i + 0];
+						mesh.indices[indexOffset + i + 1] = vertexOffset + data[i + 1];
+						mesh.indices[indexOffset + i + 2] = vertexOffset + data[i + 2];
 					}
 				}
 				else if (stride == 2)
 				{
 					for (size_t i = 0; i < indexCount; i += 3)
 					{
-						mesh.indices[indexOffset + i + 0] = vertexOffset + ((uint16_t*)data)[i + index_remap[0]];
-						mesh.indices[indexOffset + i + 1] = vertexOffset + ((uint16_t*)data)[i + index_remap[1]];
-						mesh.indices[indexOffset + i + 2] = vertexOffset + ((uint16_t*)data)[i + index_remap[2]];
+						mesh.indices[indexOffset + i + 0] = vertexOffset + ((uint16_t*)data)[i + 0];
+						mesh.indices[indexOffset + i + 1] = vertexOffset + ((uint16_t*)data)[i + 1];
+						mesh.indices[indexOffset + i + 2] = vertexOffset + ((uint16_t*)data)[i + 2];
 					}
 				}
 				else if (stride == 4)
 				{
 					for (size_t i = 0; i < indexCount; i += 3)
 					{
-						mesh.indices[indexOffset + i + 0] = vertexOffset + ((uint32_t*)data)[i + index_remap[0]];
-						mesh.indices[indexOffset + i + 1] = vertexOffset + ((uint32_t*)data)[i + index_remap[1]];
-						mesh.indices[indexOffset + i + 2] = vertexOffset + ((uint32_t*)data)[i + index_remap[2]];
+						mesh.indices[indexOffset + i + 0] = vertexOffset + ((uint32_t*)data)[i + 0];
+						mesh.indices[indexOffset + i + 1] = vertexOffset + ((uint32_t*)data)[i + 1];
+						mesh.indices[indexOffset + i + 2] = vertexOffset + ((uint32_t*)data)[i + 2];
 					}
 				}
 				else
@@ -1109,9 +1100,9 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					mesh.indices.resize(indexOffset + vertexCount);
 					for (size_t vi = 0; vi < vertexCount; vi += 3)
 					{
-						mesh.indices[indexOffset + vi + 0] = uint32_t(vertexOffset + vi + index_remap[0]);
-						mesh.indices[indexOffset + vi + 1] = uint32_t(vertexOffset + vi + index_remap[1]);
-						mesh.indices[indexOffset + vi + 2] = uint32_t(vertexOffset + vi + index_remap[2]);
+						mesh.indices[indexOffset + vi + 0] = uint32_t(vertexOffset + vi + 0);
+						mesh.indices[indexOffset + vi + 1] = uint32_t(vertexOffset + vi + 1);
+						mesh.indices[indexOffset + vi + 2] = uint32_t(vertexOffset + vi + 2);
 					}
 					mesh.subsets.back().indexOffset = (uint32_t)indexOffset;
 					mesh.subsets.back().indexCount = (uint32_t)vertexCount;
@@ -1606,6 +1597,8 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			mesh.morph_targets[i].weight = static_cast<float_t>(x.weights[i]);
 		}
 
+		FlipZAxisMesh(mesh);
+
 		if (mesh.vertex_normals.empty())
 		{
 			mesh.vertex_normals.resize(mesh.vertex_positions.size());
@@ -2017,7 +2010,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 	//Correct orientation after importing
 	scene.Update(0);
-	FlipZAxis(state);
+	FlipZAxisEverythingExceptMesh(state);
 
 	// Update the scene, to have up to date values immediately after loading:
 	//	For example, snap to camera functionality relies on this
@@ -3642,7 +3635,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 	auto& wiscene = *state.scene;
 
 	// Prerequisite: flip world Z coordinate
-	FlipZAxis(state);
+	FlipZAxisEverythingExceptMesh(state);
 	wiscene.Update(0.f);
 
 	// Add extension prerequisite
@@ -4113,6 +4106,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 	for(size_t m_id = 0; m_id < wiscene.meshes.GetCount(); ++m_id)
 	{
 		auto& mesh = wiscene.meshes[m_id];
+		FlipZAxisMesh(mesh);
 		auto meshEntity = wiscene.meshes.GetEntity(m_id);
 		auto nameComponent = wiscene.names.GetComponent(meshEntity);
 
@@ -4598,6 +4592,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			mesh_builder.primitives.push_back(primitive_builder);
 		}
 
+		FlipZAxisMesh(mesh); // flip back to engine space
+
 		state.gltfModel.buffers.push_back(buffer_builder);
 		state.gltfModel.meshes.push_back(mesh_builder);
 	}
@@ -4933,6 +4929,6 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 	}
 
 	// Restore scene world orientation
-	FlipZAxis(state);
+	FlipZAxisEverythingExceptMesh(state);
 	wiscene.Update(0.f);
 }
