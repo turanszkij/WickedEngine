@@ -374,14 +374,14 @@ struct Surface
 			n1 = any(n1) ? normalize(n1) : 0;
 			n2 = any(n2) ? normalize(n2) : 0;
 			N = attribute_at_bary(n0, n1, n2, bary);
-			Nunnormalized = N; // This must be the interpolated version of the normalized corners! (mikktspace)
-			N = normalize(N);
 		}
 		
 		if (is_backface && !is_hairparticle && !is_emittedparticle)
 		{
-			//N = -N;
+			N = -N;
 		}
+		Nunnormalized = N; // This must be the interpolated version of the normalized corners, but itself is NOT normalized! (mikktspace)
+		N = normalize(N);
 		facenormal = N;
 
 #ifdef SURFACE_LOAD_MIPCONE
@@ -445,7 +445,7 @@ struct Surface
 			T = attribute_at_bary(t0, t1, t2, bary);
 			if (is_backface)
 			{
-				//T = -T; // w is also flipped, this is tested in GLTF samples!
+				T = -T; // w is also flipped, this is tested in GLTF samples!
 			}
 			
 			// MikkTSpace reconstruction: http://www.mikktspace.com/
@@ -1023,7 +1023,6 @@ struct Surface
 		if (is_backface)
 		{
 			flags |= SURFACE_FLAG_BACKFACE;
-			V = -V;
 		}
 
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
@@ -1065,7 +1064,6 @@ struct Surface
 		if (is_backface)
 		{
 			flags |= SURFACE_FLAG_BACKFACE;
-			V = -V;
 		}
 
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
