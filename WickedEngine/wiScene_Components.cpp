@@ -583,6 +583,7 @@ namespace wi::scene
 			vertex_tangents.resize(vertex_positions.size());
 
 #if 1
+			// MikkTSpace tangent generation:
 			MikkTSpaceUserdata userdata;
 			userdata.mesh = this;
 			uint32_t indexOffsetLOD0 = ~0u;
@@ -613,6 +614,7 @@ namespace wi::scene
 			assert(mikktspace_result == 1);
 
 #else
+			// Old tangent generation logic:
 			uint32_t first_subset = 0;
 			uint32_t last_subset = 0;
 			GetLODSubsetRange(0, first_subset, last_subset);

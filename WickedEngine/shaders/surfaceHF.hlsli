@@ -280,10 +280,10 @@ struct Surface
 		clearcoat.R = -reflect(V, clearcoat.N);
 #endif // CLEARCOAT
 
-		B = normalize(cross(T.xyz, N) * T.w); // Compute bitangent again after normal mapping
+		B = cross(T.xyz, N) * T.w; // Compute bitangent again after normal mapping
 
 #ifdef ANISOTROPIC
-		aniso.B = normalize(cross(N, aniso.T));
+		aniso.B = cross(N, aniso.T);
 		aniso.TdotV = dot(aniso.T.xyz, V);
 		aniso.BdotV = dot(aniso.B, V);
 		float roughnessBRDF = sqr(clamp(roughness, 0.045, 1));
