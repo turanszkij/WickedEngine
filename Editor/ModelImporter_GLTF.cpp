@@ -314,8 +314,7 @@ void FlipZAxis(LoaderState& state)
 				v_morph_pos.z *= -1.f;
 			}
 		}
-		mesh.FlipCulling();
-		mesh.CreateRenderData();
+		mesh.FlipCulling(); // calls CreateRenderData
 	}
 
 	// Flip scene's transformComponents
@@ -1612,7 +1611,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			mesh.ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
 		}
 
-		mesh.CreateRenderData();
+		mesh.CreateRenderData(); // tangents are generated inside if needed, which must be done before FlipZAxis!
 	}
 
 	// Create armatures:

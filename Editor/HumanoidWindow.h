@@ -22,6 +22,8 @@ public:
 	wi::gui::Slider eyeRotMaxYSlider;
 	wi::gui::Slider eyeRotSpeedSlider;
 	wi::gui::Slider headSizeSlider;
+	wi::gui::Slider ragdollFatnessSlider;
+	wi::gui::Slider ragdollHeadSizeSlider;
 	wi::gui::TreeList boneList;
 
 	void Update(const wi::Canvas& canvas, float dt) override;

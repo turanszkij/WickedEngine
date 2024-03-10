@@ -38,6 +38,7 @@ namespace wi::lua::scene
 		int UpdateHierarchy(lua_State* L);
 
 		int Intersects(lua_State* L);
+		int IntersectsFirst(lua_State* L);
 
 		int FindAllEntities(lua_State* L);
 		int Entity_FindByName(lua_State* L);
@@ -48,6 +49,7 @@ namespace wi::lua::scene
 		int Component_CreateName(lua_State* L);
 		int Component_CreateLayer(lua_State* L);
 		int Component_CreateTransform(lua_State* L);
+		int Component_CreateCamera(lua_State* L);
 		int Component_CreateEmitter(lua_State* L);
 		int Component_CreateHairParticleSystem(lua_State* L);
 		int Component_CreateLight(lua_State* L);
@@ -278,6 +280,9 @@ namespace wi::lua::scene
 		int GetPosition(lua_State* L);
 		int GetRotation(lua_State* L);
 		int GetScale(lua_State* L);
+		int GetForward(lua_State* L);
+		int GetUp(lua_State* L);
+		int GetRight(lua_State* L);
 		int IsDirty(lua_State* L);
 		int SetDirty(lua_State* L);
 		int SetScale(lua_State* L);
@@ -1728,6 +1733,10 @@ namespace wi::lua::scene
 		int SetLookAt(lua_State* L);
 		int SetRagdollPhysicsEnabled(lua_State* L);
 		int IsRagdollPhysicsEnabled(lua_State* L);
+		int SetRagdollFatness(lua_State* L);
+		int SetRagdollHeadSize(lua_State* L);
+		int GetRagdollFatness(lua_State* L);
+		int GetRagdollHeadSize(lua_State* L);
 	};
 
 	class DecalComponent_BindLua

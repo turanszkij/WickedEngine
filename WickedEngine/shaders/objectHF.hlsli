@@ -233,13 +233,11 @@ struct VertexSurface
 		}
 
 		normal = mul((float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), normal);
+		normal = any(normal) ? normalize(normal) : 0;
 
 		tangent = input.GetTangent();
 		tangent.xyz = mul((min16float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), tangent.xyz);
-
-		// Note: normalization must happen when normal is exported as half precision for interpolator!
-		normal = any(normal) ? normalize(normal) : 0;
-		tangent = any(tangent) ? normalize(tangent) : 0;
+		tangent.xyz = any(tangent.xyz) ? normalize(tangent.xyz) : 0;
 		
 		uvsets = input.GetUVSets();
 
@@ -512,9 +510,11 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 		input.tan = -input.tan;
 	}
 	surface.T = input.tan;
+	surface.T.w = surface.T.w < 0 ? -1 : 1;
+	float3 bitangent = cross(surface.T.xyz, input.nor) * surface.T.w;
+	float3x3 TBN = float3x3(surface.T.xyz, bitangent, input.nor); // unnormalized TBN! http://www.mikktspace.com/
+	
 	surface.T.xyz = normalize(surface.T.xyz);
-	float3 binormal = normalize(cross(surface.T.xyz, surface.N) * surface.T.w);
-	float3x3 TBN = float3x3(surface.T.xyz, binormal, surface.N);
 #endif
 
 #ifdef PARALLAXOCCLUSIONMAPPING
@@ -580,7 +580,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #ifndef WATER
 #ifdef OBJECTSHADER_USE_TANGENT
 	[branch]
-	if (GetMaterial().normalMapStrength > 0 && GetMaterial().textures[NORMALMAP].IsValid())
+	if (GetMaterial().textures[NORMALMAP].IsValid())
 	{
 		surface.bumpColor = float3(GetMaterial().textures[NORMALMAP].Sample(sampler_objectshader, uvsets).rg, 1);
 		surface.bumpColor = surface.bumpColor * 2 - 1;
@@ -633,7 +633,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (any(surface.bumpColor))
 	{
-		surface.N = normalize(lerp(surface.N, mul(surface.bumpColor, TBN), length(surface.bumpColor)));
+		surface.N = normalize(mul(surface.bumpColor, TBN));
 	}
 #endif // OBJECTSHADER_USE_TANGENT
 #endif // WATER
@@ -805,7 +805,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	}
 	surface.bumpColor = float3(bumpColor0 + bumpColor1 + bumpColor2, 1)  * GetMaterial().refraction;
 	surface.N = normalize(lerp(surface.N, mul(normalize(surface.bumpColor), TBN), GetMaterial().normalMapStrength));
-	surface.bumpColor *= GetMaterial().normalMapStrength;
+	surface.bumpColor.rg *= GetMaterial().normalMapStrength;
 
 	[branch]
 	if (GetCamera().texture_reflection_index >= 0)

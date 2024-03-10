@@ -393,6 +393,19 @@ namespace wi::math
 	void ConstructTriangleEquilateral(float radius, XMFLOAT4& A, XMFLOAT4& B, XMFLOAT4& C);
 	void GetBarycentric(const XMVECTOR& p, const XMVECTOR& a, const XMVECTOR& b, const XMVECTOR& c, float &u, float &v, float &w, bool clamp = false);
 
+	inline XMFLOAT3 GetForward(const XMFLOAT4X4& _m)
+	{
+		return XMFLOAT3(_m.m[2][0], _m.m[2][1], _m.m[2][2]);
+	}
+	inline XMFLOAT3 GetUp(const XMFLOAT4X4& _m)
+	{
+		return XMFLOAT3(_m.m[1][0], _m.m[1][1], _m.m[1][2]);
+	}
+	inline XMFLOAT3 GetRight(const XMFLOAT4X4& _m)
+	{
+		return XMFLOAT3(_m.m[0][0], _m.m[0][1], _m.m[0][2]);
+	}
+
 	// Returns an element of a precomputed halton sequence. Specify which iteration to get with idx >= 0
 	const XMFLOAT4& GetHaltonSequence(int idx);
 

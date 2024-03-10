@@ -4,6 +4,7 @@
 #include "wiRenderPath2D_BindLua.h"
 #include "wiLoadingScreen_BindLua.h"
 #include "wiProfiler.h"
+#include "wiPlatform.h"
 
 namespace wi::lua
 {
@@ -26,6 +27,7 @@ namespace wi::lua
 		lunamethod(Application_BindLua, SetVRAMUsageDisplay),
 		lunamethod(Application_BindLua, GetCanvas),
 		lunamethod(Application_BindLua, SetCanvas),
+		lunamethod(Application_BindLua, Exit),
 		{ NULL, NULL }
 	};
 	Luna<Application_BindLua>::PropertyType Application_BindLua::properties[] = {
@@ -380,6 +382,12 @@ namespace wi::lua
 			wi::lua::SError(L, "SetCanvas(canvas canvas) not enough arguments!");
 		}
 		return 1;
+	}
+
+	int Application_BindLua::Exit(lua_State* L)
+	{
+		wi::platform::Exit();
+		return 0;
 	}
 
 

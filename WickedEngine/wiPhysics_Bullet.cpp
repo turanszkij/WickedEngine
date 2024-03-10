@@ -680,13 +680,13 @@ namespace wi::physics
 
 				float mass = scale;
 				float capsule_height = scale;
-				float capsule_radius = scale;
+				float capsule_radius = scale * humanoid.ragdoll_fatness;
 
 				if (c == BODYPART_HEAD)
 				{
 					// Head doesn't necessarily have a child, so make up something reasonable:
 					capsule_height = 0.05f * scale;
-					capsule_radius = 0.1f * scale;
+					capsule_radius = 0.1f * scale * humanoid.ragdoll_headsize;
 				}
 				else
 				{
@@ -698,29 +698,29 @@ namespace wi::physics
 					switch (c)
 					{
 					case BODYPART_PELVIS:
-						capsule_radius = 0.1f * scale;
+						capsule_radius = 0.1f * scale * humanoid.ragdoll_fatness;
 						break;
 					case BODYPART_SPINE:
-						capsule_radius = 0.1f * scale;
+						capsule_radius = 0.1f * scale * humanoid.ragdoll_fatness;
 						capsule_height -= capsule_radius * 2;
 						break;
 					case BODYPART_LEFT_LOWER_ARM:
 					case BODYPART_RIGHT_LOWER_ARM:
-						capsule_radius = capsule_height * 0.15f;
+						capsule_radius = capsule_height * 0.15f * humanoid.ragdoll_fatness;
 						capsule_height += capsule_radius;
 						break;
 					case BODYPART_LEFT_UPPER_LEG:
 					case BODYPART_RIGHT_UPPER_LEG:
-						capsule_radius = capsule_height * 0.15f;
+						capsule_radius = capsule_height * 0.15f * humanoid.ragdoll_fatness;
 						capsule_height -= capsule_radius * 2;
 						break;
 					case BODYPART_LEFT_LOWER_LEG:
 					case BODYPART_RIGHT_LOWER_LEG:
-						capsule_radius = capsule_height * 0.15f;
+						capsule_radius = capsule_height * 0.15f * humanoid.ragdoll_fatness;
 						capsule_height -= capsule_radius;
 						break;
 					default:
-						capsule_radius = capsule_height * 0.2f;
+						capsule_radius = capsule_height * 0.2f * humanoid.ragdoll_fatness;
 						capsule_height -= capsule_radius * 2;
 						break;
 					}
@@ -1237,6 +1237,26 @@ namespace wi::physics
 				);
 				rigidbody->setFriction(physicscomponent.friction);
 				rigidbody->setRestitution(physicscomponent.restitution);
+				if (physicscomponent.IsKinematic() && (rigidbody->getCollisionFlags() & btCollisionObject::CF_KINEMATIC_OBJECT) == 0)
+				{
+					// It became kinematic when it wasn't before:
+					rigidbody->setCollisionFlags(rigidbody->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+					btVector3 localInertia(0, 0, 0);
+					rigidbody->setMassProps(0, localInertia);
+					dynamicsWorld.removeRigidBody(rigidbody);
+					dynamicsWorld.addRigidBody(rigidbody);
+				}
+				if (!physicscomponent.IsKinematic() && (rigidbody->getCollisionFlags() & btCollisionObject::CF_KINEMATIC_OBJECT) != 0)
+				{
+					// It became non-kinematic when it was kinematic before:
+					rigidbody->setCollisionFlags(rigidbody->getCollisionFlags() ^ btCollisionObject::CF_KINEMATIC_OBJECT);
+					btVector3 localInertia(0, 0, 0);
+					rigidbody->getCollisionShape()->calculateLocalInertia(physicscomponent.mass, localInertia);
+					rigidbody->setMassProps(physicscomponent.mass, localInertia);
+					dynamicsWorld.removeRigidBody(rigidbody);
+					dynamicsWorld.addRigidBody(rigidbody);
+					scene.Component_Detach(entity);
+				}
 			}
 		});
 
@@ -1768,6 +1788,8 @@ namespace wi::physics
 		PickDragOperation& op
 	)
 	{
+		if (scene.physics_scene == nullptr)
+			return;
 		btSoftRigidDynamicsWorld& dynamicsWorld = ((PhysicsScene*)scene.physics_scene.get())->dynamicsWorld;
 		float tmin = wi::math::Clamp(ray.TMin, 0, 1000000);
 		float tmax = wi::math::Clamp(ray.TMax, 0, 1000000);

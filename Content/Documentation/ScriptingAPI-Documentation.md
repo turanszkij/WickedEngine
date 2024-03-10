@@ -48,7 +48,7 @@ This is a reference and explanation of Lua scripting features in Wicked Engine.
 		19. [DecalComponent](#decalcomponent)
 	10. [Canvas](#canvas)
 	11. [High Level Interface](#high-level-interface)
-		1. [MainComponent](#maincomponent)
+		1. [Application](#application)
 		2. [RenderPath](#renderpath)
 			1. [RenderPath2D](#renderpath2d)
 			2. [RenderPath3D](#renderpath3d)
@@ -611,6 +611,13 @@ A four by four matrix, efficient calculations with SIMD support.
 - Add(Matrix m1,m2) : Matrix result
 - Transpose(Matrix m) : Matrix result
 - Inverse(Matrix m) : Matrix result, float determinant
+- GetForward() : Vector -- returns forward direction of self
+- GetUp() : Vector -- returns upwards direction of self
+- GetRight() : Vector -- returns right direction of self
+- GetForward(Matrix mat) : Vector -- returns forward direction of parameter matrix
+- GetUp(Matrix mat) : Vector -- returns upwards direction of parameter matrix
+- GetRight(Matrix mat) : Vector -- returns right direction of parameter matrix
+
 
 ### Scene System (using entity-component system)
 Manipulate the 3D scene with these components.
@@ -642,6 +649,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - [outer]FILTER_COLLIDER : uint	-- include colliders
 - [outer]FILTER_ALL : uint	-- include everything
 - Intersects(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : int entity, Vector position,normal, float distance, Vector velocity, int subsetIndex, Matrix orientation	-- intersects a primitive with the scene and returns collision parameters
+- IntersectsFirst(Ray primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : bool	-- intersects a primitive with the scene and returns true immediately on intersection, false if there was no intersection. This can be faster for occlusion check than regular `Intersects` that searches for closest intersection.
 - Update()  -- updates the scene and every entity and component inside the scene
 - Clear()  -- deletes every entity and component inside the scene
 - Merge(Scene other)  -- moves contents from an other scene into this one. The other scene will be empty after this operation (contents are moved, not copied)
@@ -657,6 +665,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_CreateName(Entity entity) : NameComponent result  -- attach a name component to an entity. The returned component is associated with the entity and can be manipulated
 - Component_CreateLayer(Entity entity) : LayerComponent result  -- attach a layer component to an entity. The returned component is associated with the entity and can be manipulated
 - Component_CreateTransform(Entity entity) : TransformComponent result  -- attach a transform component to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateCamera(Entity entity) : CameraComponent result  -- attach a camera component to an entity. The returned component is associated with the entity and can be manipulated
 - Component_CreateLight(Entity entity) : LightComponent result  -- attach a light component to an entity. The returned component is associated with the entity and can be manipulated
 - Component_CreateObject(Entity entity) : ObjectComponent result  -- attach an object component to an entity. The returned component is associated with the entity and can be manipulated
 - Component_CreateInverseKinematics(Entity entity) : InverseKinematicsComponent result  -- attach an IK component to an entity. The returned component is associated with the entity and can be manipulated
@@ -828,6 +837,9 @@ Describes an orientation in 3D space.
 - SetPosition(Vector value) -- set position in local space
 - SetDirty(bool value) -- invalidate, this will cause transfomr to be updated in next scene update
 - IsDirty() : bool -- check if transform was invalidated since last update
+- GetForward() : Vector -- returns forward direction
+- GetUp() : Vector -- returns upwards direction
+- GetRight() : Vector -- returns right direction
 
 #### CameraComponent
 - FOV : float
@@ -1290,6 +1302,10 @@ Describes a Collider object.
 - SetLookAt(Vector value)	-- Set a target lookAt position (for head an eyes movement)
 - SetRagdollPhysicsEnabled(bool value) -- Activate dynamic ragdoll physics. Note that kinematic ragdoll physics is always active (ragdoll is animation-driven/kinematic by default).
 - IsRagdollPhysicsEnabled() : bool
+- SetRagdollFatness(float value) -- Control the overall fatness of the ragdoll body parts except head (default: 1)
+- SetRagdollHeadSize(float value) -- Control the overall size of the ragdoll head (default: 1)
+- GetRagdollFatness() : float
+- GetRagdollHeadSize() : float
 
 [outer] HumanoidBone = {
 	Hips = 0,
@@ -1397,6 +1413,7 @@ This is the main entry point and manages the lifetime of the application.
 - SetVRAMUsageDisplay(bool active)	-- toggle display of video memory usage if info display is enabled
 - GetCanvas() : Canvas canvas  -- returns a copy of the application's current canvas
 - SetCanvas(Canvas canvas)  -- applies the specified canvas to the application
+- Exit() -- Closes the program
 - [outer]SetProfilerEnabled(bool enabled)
 
 ### RenderPath

@@ -56,7 +56,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<ColliderComponent>& colliders = componentLibrary.Register<ColliderComponent>("wi::scene::Scene::colliders", 2); // version = 2
 		wi::ecs::ComponentManager<ScriptComponent>& scripts = componentLibrary.Register<ScriptComponent>("wi::scene::Scene::scripts");
 		wi::ecs::ComponentManager<ExpressionComponent>& expressions = componentLibrary.Register<ExpressionComponent>("wi::scene::Scene::expressions");
-		wi::ecs::ComponentManager<HumanoidComponent>& humanoids = componentLibrary.Register<HumanoidComponent>("wi::scene::Scene::humanoids");
+		wi::ecs::ComponentManager<HumanoidComponent>& humanoids = componentLibrary.Register<HumanoidComponent>("wi::scene::Scene::humanoids", 1); // version = 1
 		wi::ecs::ComponentManager<wi::terrain::Terrain>& terrains = componentLibrary.Register<wi::terrain::Terrain>("wi::scene::Scene::terrains", 3); // version = 3
 		wi::ecs::ComponentManager<wi::Sprite>& sprites = componentLibrary.Register<wi::Sprite>("wi::scene::Scene::sprites");
 		wi::ecs::ComponentManager<wi::SpriteFont>& fonts = componentLibrary.Register<wi::SpriteFont>("wi::scene::Scene::fonts");
@@ -449,11 +449,20 @@ namespace wi::scene
 				return entity == other.entity;
 			}
 		};
-		// Given a ray, finds the closest intersection point against all mesh instances
+		// Given a ray, finds the closest intersection point against all mesh instances or collliders
 		//	ray				:	the incoming ray that will be traced
-		//	renderTypeMask	:	filter based on render type
+		//	filterMask		:	filter based on type
 		//	layerMask		:	filter based on layer
+		//	lod				:	specify min level of detail for meshes
 		RayIntersectionResult Intersects(const wi::primitive::Ray& ray, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;
+
+		// Given a ray, finds the first intersection point against all mesh instances or colliders
+		//	returns true immediately if intersection was found, false otherwise
+		//	ray				:	the incoming ray that will be traced
+		//	filterMask		:	filter based on type
+		//	layerMask		:	filter based on layer
+		//	lod				:	specify min level of detail for meshes
+		bool IntersectsFirst(const wi::primitive::Ray& ray, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;
 
 		struct SphereIntersectionResult
 		{

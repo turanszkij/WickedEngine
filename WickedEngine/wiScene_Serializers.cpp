@@ -376,7 +376,7 @@ namespace wi::scene
 				archive << textures[ANISOTROPYMAP].uvset;
 			}
 
-			if (seri.GetVersion() >= 2)
+			if (seri.GetVersion() >= 3)
 			{
 				archive << wi::helper::GetPathRelative(dir, textures[TRANSPARENCYMAP].name);
 				archive << textures[TRANSPARENCYMAP].uvset;
@@ -1988,6 +1988,12 @@ namespace wi::scene
 			{
 				SerializeEntity(archive, entity, seri);
 			}
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive >> ragdoll_fatness;
+				archive >> ragdoll_headsize;
+			}
 		}
 		else
 		{
@@ -2001,6 +2007,12 @@ namespace wi::scene
 			for (auto& entity : bones)
 			{
 				SerializeEntity(archive, entity, seri);
+			}
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive << ragdoll_fatness;
+				archive << ragdoll_headsize;
 			}
 		}
 	}
