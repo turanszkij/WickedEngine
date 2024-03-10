@@ -3407,14 +3407,6 @@ namespace wi::gui
 		{
 			moveDragger.Detach();
 			float rem = 0;
-			if (closeButton.parent != nullptr)
-			{
-				rem++;
-			}
-			if (collapseButton.parent != nullptr)
-			{
-				rem++;
-			}
 			if (resizeDragger_UpperLeft.parent != nullptr)
 			{
 				rem++;
@@ -3423,9 +3415,25 @@ namespace wi::gui
 			{
 				rem++;
 			}
+			if (closeButton.parent != nullptr)
+			{
+				rem++;
+			}
+			if (collapseButton.parent != nullptr)
+			{
+				rem++;
+			}
 			moveDragger.SetSize(XMFLOAT2(scale.x - control_size * rem, control_size));
 			float offset = 0;
 			if (resizeDragger_UpperLeft.parent != nullptr)
+			{
+				offset++;
+			}
+			if (closeButton.parent != nullptr)
+			{
+				offset++;
+			}
+			if (collapseButton.parent != nullptr)
 			{
 				offset++;
 			}
@@ -3436,28 +3444,28 @@ namespace wi::gui
 		{
 			closeButton.Detach();
 			closeButton.SetSize(XMFLOAT2(control_size, control_size));
-			float offset = 1;
-			if (resizeDragger_UpperRight.parent != nullptr)
+			float offset = 0;
+			if (resizeDragger_UpperLeft.parent != nullptr)
 			{
 				offset++;
 			}
-			closeButton.SetPos(XMFLOAT2(translation.x + scale.x - control_size * offset, translation.y));
+			closeButton.SetPos(XMFLOAT2(translation.x + control_size * offset, translation.y));
 			closeButton.AttachTo(this);
 		}
 		if (collapseButton.parent != nullptr)
 		{
 			collapseButton.Detach();
 			collapseButton.SetSize(XMFLOAT2(control_size, control_size));
-			float offset = 1;
+			float offset = 0;
 			if (closeButton.parent != nullptr)
 			{
 				offset++;
 			}
-			if (resizeDragger_UpperRight.parent != nullptr)
+			if (resizeDragger_UpperLeft.parent != nullptr)
 			{
 				offset++;
 			}
-			collapseButton.SetPos(XMFLOAT2(translation.x + scale.x - control_size * offset, translation.y));
+			collapseButton.SetPos(XMFLOAT2(translation.x + control_size * offset, translation.y));
 			collapseButton.AttachTo(this);
 		}
 		if (resizeDragger_UpperLeft.parent != nullptr)
@@ -3499,15 +3507,17 @@ namespace wi::gui
 				label_size.x -= control_size;
 				label_pos.x += control_size;
 			}
-			if (resizeDragger_UpperRight.parent != nullptr)
-			{
-				label_size.x -= control_size;
-			}
 			if (closeButton.parent != nullptr)
 			{
 				label_size.x -= control_size;
+				label_pos.x += control_size;
 			}
 			if (collapseButton.parent != nullptr)
+			{
+				label_size.x -= control_size;
+				label_pos.x += control_size;
+			}
+			if (resizeDragger_UpperRight.parent != nullptr)
 			{
 				label_size.x -= control_size;
 			}
