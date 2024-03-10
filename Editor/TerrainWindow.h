@@ -20,7 +20,7 @@ struct PerlinModifierWindow : public ModifierWindow
 	wi::gui::Slider octavesSlider;
 
 	PerlinModifierWindow();
-	void ResizeLayout();
+	void ResizeLayout() override;
 	void Bind(wi::terrain::PerlinModifier* ptr);
 	void From(wi::terrain::PerlinModifier* ptr);
 };
@@ -45,6 +45,52 @@ struct HeightmapModifierWindow : public ModifierWindow
 	void ResizeLayout() override;
 	void Bind(wi::terrain::HeightmapModifier* ptr);
 	void From(wi::terrain::HeightmapModifier* ptr);
+};
+
+struct PropWindow : public wi::gui::Window
+{
+	wi::gui::ComboBox meshCombo;
+	wi::gui::TextInputField minCountPerChunkInput;
+	wi::gui::TextInputField maxCountPerChunkInput;
+	wi::gui::ComboBox regionCombo;
+	wi::gui::Slider regionPowerSlider;
+	wi::gui::Slider noiseFrequencySlider;
+	wi::gui::Slider noisePowerSlider;
+	wi::gui::Slider thresholdSlider;
+	wi::gui::Slider minSizeSlider;
+	wi::gui::Slider maxSizeSlider;
+	wi::gui::TextInputField minYOffsetInput;
+	wi::gui::TextInputField maxYOffsetInput;
+
+	PropWindow(wi::terrain::Prop* prop, wi::scene::Scene* scene);
+	void ResizeLayout() override;
+
+	wi::terrain::Prop* prop = nullptr;
+	wi::scene::Scene* scene = nullptr;
+
+	std::function<void()> generation_callback;
+};
+
+struct PropsWindow : public wi::gui::Window
+{
+	wi::gui::Button addButton;
+
+	PropsWindow(EditorComponent* editor);
+
+	void SetTerrain(wi::terrain::Terrain*);
+	void AddWindow(wi::terrain::Prop& prop);
+
+	void Update(const wi::Canvas& canvas, float dt) override;
+
+	void ResizeLayout() override;
+
+	EditorComponent* editor = nullptr;
+	wi::terrain::Terrain* terrain = nullptr;
+
+	wi::vector<std::unique_ptr<PropWindow>> windows;
+	wi::vector<PropWindow*> windows_to_remove;
+
+	std::function<void()> generation_callback;
 };
 
 class TerrainWindow : public wi::gui::Window
@@ -75,6 +121,8 @@ public:
 	wi::gui::Slider region1Slider;
 	wi::gui::Slider region2Slider;
 	wi::gui::Slider region3Slider;
+
+	std::unique_ptr<PropsWindow> propsWindow;
 
 	enum PRESET
 	{

@@ -273,6 +273,354 @@ void HeightmapModifierWindow::From(wi::terrain::HeightmapModifier* ptr)
 	scaleSlider.SetValue(ptr->scale);
 }
 
+PropWindow::PropWindow(wi::terrain::Prop* prop, wi::scene::Scene* scene)
+	:prop(prop)
+	,scene(scene)
+{
+	std::string windowName = "Prop: ";
+	std::string propName = "NONE";
+	Entity entity = INVALID_ENTITY;
+
+	if(!prop->data.empty()) // extract object name
+	{
+		wi::Archive archive = wi::Archive(prop->data.data());
+		EntitySerializer serializer;
+		entity = scene->Entity_Serialize(
+			archive,
+			serializer,
+			INVALID_ENTITY,
+			wi::scene::Scene::EntitySerializeFlags::RECURSIVE |
+			wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
+		);
+
+		const NameComponent* name = scene->names.GetComponent(entity);
+		if (name != nullptr)
+		{
+			propName = name->name;
+			windowName += propName;
+		}
+
+		scene->Entity_Remove(entity);
+	}
+
+	wi::gui::Window::Create(windowName, wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
+
+	constexpr auto elementSize = XMFLOAT2(100, 20);
+
+	meshCombo.Create("Object: ");
+	meshCombo.SetTooltip("Select object component");
+	meshCombo.SetSize(elementSize);
+	meshCombo.AddItem(propName, entity);
+	for (size_t i = 0; i < scene->objects.GetCount(); ++i)
+	{
+		const Entity ent = scene->objects.GetEntity(i);
+		const auto* name = scene->names.GetComponent(ent);
+		meshCombo.AddItem(name != nullptr ? name->name : std::to_string(ent), ent);
+	}
+	AddWidget(&meshCombo);
+
+	meshCombo.OnSelect([=](wi::gui::EventArgs args) {
+		if(args.userdata == entity)
+		{
+			return;
+		}
+
+		const auto name = "Prop: " + args.sValue;
+		SetName(name);
+		SetText(name);
+		label.SetText(name);
+
+		const wi::ecs::Entity ent = static_cast<wi::ecs::Entity>(args.userdata);
+
+		wi::Archive archive;
+		EntitySerializer serializer;
+		scene->Entity_Serialize(
+			archive,
+			serializer,
+			ent,
+			wi::scene::Scene::EntitySerializeFlags::RECURSIVE | wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
+		);
+		archive.WriteData(prop->data);
+
+		generation_callback();
+	});
+
+	minCountPerChunkInput.Create("");
+	minCountPerChunkInput.SetDescription("Min count per chunk: ");
+	minCountPerChunkInput.SetSize(elementSize);
+	minCountPerChunkInput.SetValue(0);
+	minCountPerChunkInput.SetTooltip("A chunk will try to generate min this many props of this type");
+	minCountPerChunkInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+		prop->min_count_per_chunk = std::min(prop->max_count_per_chunk, args.iValue);
+		generation_callback();
+	});
+	AddWidget(&minCountPerChunkInput);
+
+	maxCountPerChunkInput.Create("");
+	maxCountPerChunkInput.SetDescription("Max count per chunk: ");
+	maxCountPerChunkInput.SetSize(elementSize);
+	maxCountPerChunkInput.SetValue(5);
+	maxCountPerChunkInput.SetTooltip("A chunk will try to generate max this many props of this type");
+	maxCountPerChunkInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+		prop->max_count_per_chunk = std::max(prop->min_count_per_chunk, args.iValue);
+		generation_callback();
+	});
+	AddWidget(&maxCountPerChunkInput);
+
+	regionCombo.Create("Region: ");
+	regionCombo.SetTooltip("Select a terrain region");
+	regionCombo.SetSize(elementSize);
+	regionCombo.AddItem("Base", 0);
+	regionCombo.AddItem("Slopes", 1);
+	regionCombo.AddItem("Low altitude ", 2);
+	regionCombo.AddItem("High altitude", 3);
+	regionCombo.OnSelect([=](wi::gui::EventArgs args) {
+		prop->region = static_cast<int>(args.userdata);
+		generation_callback();
+	});
+	AddWidget(&regionCombo);
+
+	regionPowerSlider.Create(0.0f, 1.0f, 1.0f, 1000, "Region power: ");
+	regionPowerSlider.SetSize(elementSize);
+	regionPowerSlider.SetTooltip("Region weight affection power factor");
+	regionPowerSlider.OnSlide([=](wi::gui::EventArgs args) {
+		prop->region_power = args.fValue;
+		generation_callback();
+		});
+	AddWidget(&regionPowerSlider);
+
+	noiseFrequencySlider.Create(0.0f, 1.0f, 1.0f, 1000, "Noise frequency: ");
+	noiseFrequencySlider.SetSize(elementSize);
+	noiseFrequencySlider.SetTooltip("Perlin noise's frequency for placement factor");
+	noiseFrequencySlider.OnSlide([=](wi::gui::EventArgs args) {
+		prop->noise_frequency = args.fValue;
+		generation_callback();
+		});
+	AddWidget(&noiseFrequencySlider);
+
+	noisePowerSlider.Create(0.0f, 1.0f, 1.0f, 1000, "Noise pwer: ");
+	noisePowerSlider.SetSize(elementSize);
+	noisePowerSlider.SetTooltip("Perlin noise's power");
+	noisePowerSlider.OnSlide([=](wi::gui::EventArgs args) {
+		prop->noise_power = args.fValue;
+		generation_callback();
+		});
+	AddWidget(&noisePowerSlider);
+
+	thresholdSlider.Create(0.0f, 1.0f, 0.5f, 1000, "Threshold: ");
+	thresholdSlider.SetSize(elementSize);
+	thresholdSlider.SetTooltip("The chance of placement (higher is less chance)");
+	thresholdSlider.OnSlide([=](wi::gui::EventArgs args) {
+		prop->threshold = args.fValue;
+		generation_callback();
+	});
+	AddWidget(&thresholdSlider);
+
+	minSizeSlider.Create(0.0f, 1.0f, 1.0f, 1000, "Min size: ");
+	minSizeSlider.SetSize(elementSize);
+	minSizeSlider.SetTooltip("Scaling randomization range min");
+	minSizeSlider.OnSlide([=](wi::gui::EventArgs args) {
+		prop->min_size = std::min(args.fValue, prop->max_size);
+		generation_callback();
+	});
+	AddWidget(&minSizeSlider);
+
+	maxSizeSlider.Create(0.0f, 1.0f, 1.0f, 1000, "Max size: ");
+	maxSizeSlider.SetSize(elementSize);
+	maxSizeSlider.SetTooltip("Scaling randomization range max");
+	maxSizeSlider.OnSlide([=](wi::gui::EventArgs args) {
+		prop->max_size = std::max(args.fValue, prop->min_size);
+		generation_callback();
+	});
+	AddWidget(&maxSizeSlider);
+
+	minYOffsetInput.Create("");
+	minYOffsetInput.SetDescription("Min vertical offset: ");
+	minYOffsetInput.SetSize(elementSize);
+	minYOffsetInput.SetValue(0);
+	minYOffsetInput.SetTooltip("Minimal randomized offset on vertical axis");
+	minYOffsetInput.OnInputAccepted([=](wi::gui::EventArgs args) {
+		prop->min_y_offset = std::min(args.fValue, prop->max_y_offset);
+		generation_callback();
+	});
+	AddWidget(&minYOffsetInput);
+
+	maxYOffsetInput.Create("");
+	maxYOffsetInput.SetDescription("Max vertical offset: ");
+	maxYOffsetInput.SetSize(elementSize);
+	maxYOffsetInput.SetValue(0);
+	maxYOffsetInput.SetTooltip("Maximum randomized offset on vertical axis");
+	maxYOffsetInput.OnInputAccepted([=](wi::gui::EventArgs args) {
+		prop->max_y_offset = std::max(args.fValue, prop->min_y_offset);
+		generation_callback();
+	});
+	AddWidget(&maxYOffsetInput);
+
+	SetSize(XMFLOAT2(200, 312));
+	SetCollapsed(true);
+}
+
+void PropWindow::ResizeLayout()
+{
+	wi::gui::Window::ResizeLayout();
+
+	constexpr float padding = 4;
+	const float width = GetWidgetAreaSize().x;
+	float y = padding;
+
+	auto add = [&](wi::gui::Widget& widget) {
+		constexpr float margin_left = 150;
+		constexpr float margin_right = 50;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	add(meshCombo);
+	add(minCountPerChunkInput);
+	add(maxCountPerChunkInput);
+	add(regionCombo);
+	add(regionPowerSlider);
+	add(noiseFrequencySlider);
+	add(noisePowerSlider);
+	add(thresholdSlider);
+	add(minSizeSlider);
+	add(maxSizeSlider);
+	add(minYOffsetInput);
+	add(maxYOffsetInput);
+}
+
+PropsWindow::PropsWindow(EditorComponent* editor)
+	:editor(editor)
+{
+	wi::gui::Window::Create("Props", wi::gui::Window::WindowControls::COLLAPSE);
+
+	SetCollapsed(true);
+
+	addButton.Create("Add prop");
+	addButton.SetSize(XMFLOAT2(100, 20));
+	addButton.OnClick([this](wi::gui::EventArgs args) {
+		terrain->props.emplace_back();
+		AddWindow(terrain->props.back());
+	});
+	AddWidget(&addButton);
+
+	SetSize(XMFLOAT2(420, 332));
+}
+
+void PropsWindow::SetTerrain(wi::terrain::Terrain* t)
+{
+	terrain = t;
+	generation_callback = [&] {
+		terrain->Generation_Restart();
+	};
+
+	for(auto& window : windows)
+	{
+		RemoveWidget(window.get());
+	}
+
+	windows.clear();
+	windows_to_remove.clear();
+
+	for(auto i = terrain->props.begin(); i != terrain->props.end(); ++i)
+	{
+		AddWindow(*i);
+	}
+}
+
+void PropsWindow::AddWindow(wi::terrain::Prop& prop)
+{
+	PropWindow* wnd = new PropWindow(&prop, &editor->GetCurrentScene());
+	wnd->generation_callback = generation_callback;
+	wnd->OnClose([&, wnd](wi::gui::EventArgs args) {
+		windows_to_remove.push_back(wnd);
+	});
+	AddWidget(wnd);
+
+	windows.emplace_back().reset(wnd);
+
+	editor->optionsWnd.generalWnd.themeCombo.SetSelected(editor->optionsWnd.generalWnd.themeCombo.GetSelected()); // theme refresh
+}
+
+void PropsWindow::Update(const wi::Canvas& canvas, float dt)
+{
+	if(windows.size() != terrain->props.size())
+	{
+		// recreate all windows
+		SetTerrain(terrain);
+	}
+	else
+	{
+		if(!windows_to_remove.empty())
+		{
+			for(const auto& window : windows_to_remove)
+			{
+				for (size_t i = 0; i < windows.size(); ++i)
+				{
+					if (windows[i].get() == window)
+					{
+						RemoveWidget(window);
+
+						terrain->props.erase(terrain->props.begin() + i);
+						windows.erase(windows.begin() + i);
+
+						break;
+					}
+				}
+			}
+
+			// updating props pointers
+			for(size_t i = 0; i < windows.size(); ++i)
+			{
+				windows[i]->prop = &terrain->props[i];
+			}
+
+			windows_to_remove.clear();
+			generation_callback();
+		}
+	}
+
+	Window::Update(canvas, dt);
+}
+
+void PropsWindow::ResizeLayout()
+{
+	constexpr float padding = 4;
+	const float width = GetWidgetAreaSize().x;
+	float y = padding;
+
+	auto add = [&](wi::gui::Widget& widget) {
+		constexpr float margin_left = 150;
+		constexpr float margin_right = 50;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	auto add_window = [&](wi::gui::Window& widget) {
+		constexpr float margin_left = padding;
+		constexpr float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+		widget.SetEnabled(true);
+	};
+
+	add(addButton);
+
+	for(auto& window : windows)
+	{
+		add_window(*window);
+	}
+
+	SetSize(XMFLOAT2(GetScale().x, control_size + y));
+
+	wi::gui::Window::ResizeLayout();
+}
 
 void TerrainWindow::Create(EditorComponent* _editor)
 {
@@ -715,6 +1063,9 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&region3Slider);
 
+	propsWindow.reset(new PropsWindow(editor));
+	AddWidget(propsWindow.get());
+
 	saveHeightmapButton.OnClick([=](wi::gui::EventArgs args) {
 
 		wi::helper::FileDialogParams params;
@@ -938,6 +1289,8 @@ void TerrainWindow::SetEntity(Entity entity)
 		break;
 		}
 	}
+
+	propsWindow->SetTerrain(terrain);
 }
 void TerrainWindow::AddModifier(ModifierWindow* modifier_window)
 {
@@ -1145,7 +1498,6 @@ void TerrainWindow::Update(const wi::Canvas& canvas, float dt)
 }
 void TerrainWindow::ResizeLayout()
 {
-	wi::gui::Window::ResizeLayout();
 	const float padding = 4;
 	const float width = GetWidgetAreaSize().x;
 	float y = padding;
@@ -1204,4 +1556,9 @@ void TerrainWindow::ResizeLayout()
 		add_window(*modifier);
 	}
 
+	add_window(*propsWindow.get());
+
+	SetSize(XMFLOAT2(GetScale().x, y + control_size));
+
+	wi::gui::Window::ResizeLayout();
 }
