@@ -601,8 +601,8 @@ void PropsWindow::ResizeLayout()
 	};
 
 	auto add_window = [&](wi::gui::Window& widget) {
-		constexpr float margin_left = padding;
-		constexpr float margin_right = padding;
+		const float margin_left = padding;
+		const float margin_right = padding;
 		widget.SetPos(XMFLOAT2(margin_left, y));
 		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
 		y += widget.GetSize().y;
