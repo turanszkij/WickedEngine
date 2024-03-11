@@ -19,6 +19,7 @@ namespace wi
 {
 	struct VoxelGrid;
 	struct PathQuery;
+	struct TrailRenderer;
 }
 
 namespace wi::renderer
@@ -1150,6 +1151,10 @@ namespace wi::renderer
 	// Add path query to be drawn in debug rendering phase.
 	//	WARNING: This retains pointer until next call to DrawDebugScene(), so path query must not be destroyed until then!
 	void DrawPathQuery(const wi::PathQuery* pathquery);
+
+	// Add trail to be drawn in debug rendering phase.
+	//	WARNING: This retains pointer until next call to DrawDebugScene(), so trail must not be destroyed until then!
+	void DrawTrail(const wi::TrailRenderer* trail);
 
 	// Add a texture that should be mipmapped whenever it is feasible to do so
 	void AddDeferredMIPGen(const wi::graphics::Texture& texture, bool preserve_coverage = false);
