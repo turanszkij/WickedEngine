@@ -11,6 +11,7 @@
 #include "wiEventHandler.h"
 #include "wiVoxelGrid_BindLua.h"
 #include "wiPathQuery_BindLua.h"
+#include "wiTrailRenderer_BindLua.h"
 
 using namespace wi::ecs;
 using namespace wi::graphics;
@@ -459,6 +460,24 @@ namespace wi::lua::renderer
 
 		return 0;
 	}
+	int DrawTrail(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			TrailRenderer_BindLua* a = Luna<TrailRenderer_BindLua>::lightcheck(L, 1);
+			if (a)
+			{
+				wi::renderer::DrawTrail(&a->trail);
+			}
+			else
+				wi::lua::SError(L, "DrawTrail(TrailRenderer trail) first argument must be a TrailRenderer type!");
+		}
+		else
+			wi::lua::SError(L, "DrawTrail(TrailRenderer trail) not enough arguments!");
+
+		return 0;
+	}
 
 	int PutWaterRipple(lua_State* L)
 	{
@@ -547,6 +566,7 @@ namespace wi::lua::renderer
 			wi::lua::RegisterFunc("DrawDebugText", DrawDebugText);
 			wi::lua::RegisterFunc("DrawVoxelGrid", DrawVoxelGrid);
 			wi::lua::RegisterFunc("DrawPathQuery", DrawPathQuery);
+			wi::lua::RegisterFunc("DrawTrail", DrawTrail);
 
 			wi::lua::RegisterFunc("PutWaterRipple", PutWaterRipple);
 

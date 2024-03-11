@@ -278,6 +278,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_Vulkan.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiScene_Components.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTerrain.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiTrailRenderer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiTrailRenderer_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiUnorderedSet.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInput.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInput_BindLua.h" />
@@ -713,6 +715,8 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiArguments.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTextureHelper.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiTrailRenderer.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiTrailRenderer_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVersion.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVideo.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVoxelGrid.cpp" />

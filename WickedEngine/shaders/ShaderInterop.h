@@ -112,6 +112,7 @@ static const uint IndirectDispatchArgsAlignment = 4u;
 #define CBSLOT_OTHER_GPUSORTLIB					4
 #define CBSLOT_MSAO								4
 #define CBSLOT_FSR								4
+#define CBSLOT_TRAILRENDERER					3
 
 #else
 // Don't use overlapping slots on PS5:

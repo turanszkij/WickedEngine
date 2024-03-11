@@ -63,6 +63,7 @@ This is a reference and explanation of Lua scripting features in Wicked Engine.
 	14. [Path finding](#path-finding)
 		1. [VoxelGrid](#voxelgrid)
 		2. [PathQuery](#pathquery)
+	15. [TrailRenderer](#trailrenderer)
 		
 ## Introduction and usage
 Scripting in Wicked Engine is powered by Lua, meaning that the user can make use of the 
@@ -158,6 +159,7 @@ You can use the Renderer with the following functions, all of which are in the g
 	[outer]DEBUG_TEXT_CAMERA_SCALING	-- text will be always the same size, independent of distance to camera
 - DrawVoxelGrid(VoxelGrid voxelgrid) -- draws the voxel grid in the debug rendering phase. VoxelGrid object must not be destroyed until then!
 - DrawPathQuery(PathQuery pathquery) -- draws the path query in the debug rendering phase. PathQuery object must not be destroyed until then!
+- DrawTrail(TrailRenderer trail) -- draws the trail in the debug rendering phase. TrailRenderer object must not be destroyed until then!
 - PutWaterRipple(Vector position) -- put down a water ripple with default embedded asset
 - PutWaterRipple(string imagename, Vector position) -- put down water ripple texture from image asset file
 - ClearWorld(opt Scene scene) -- Clears the scene and the associated renderer resources. If parmaeter is not specified, it will clear the global scene
@@ -1802,3 +1804,28 @@ Path finding operations can be made by using a voxel grid and path queries. The 
 - GetAgentHeight(int value) : int
 - GetWaypointCount() : int -- returns the number of waypoints that were computed in Process()
 - GetWaypoint(int index) : Vector returns the waypoint at specified index (direction: start -> goal)
+
+### TrailRenderer
+- [constructor] TrailRenderer()
+- AddPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1)) -- adds a new point to the trail
+- Cut() -- cuts the trail at last point and starts a new trail
+- Clear() -- removes all points and cuts from the trail
+- GetPointCount() : int -- returns the number of points in the trail
+- GetPoint() : Vector pos, float width -- returns the point of the trail on the specified index
+- SetPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1)) -- sets the point parameters on the specified index
+- SetBlendMode(int blendmode) -- set blend mode of the whole trail
+- GetBlendMode() : int
+- SetSubdivision(int subdiv) -- set the subdivision amount of the whole trail
+- GetSubdivision() : int
+- SetWidth(float width) -- set the width of the whole trail
+- GetWidth() : float
+- SetColor(Vector color) -- set the color of the whole trail
+- GetColor() : Vector
+- SetTexture(Texture tex) -- set the texture of the whole trail
+- GetTexture() : Texture
+- SetTexture2(Texture tex) -- set the texture2 of the whole trail
+- GetTexture2() : Texture
+- SetTexMulAdd(Texture tex) -- set the texture UV tiling multiply-add value of the whole trail
+- GetTexMulAdd() : Texture
+- SetTexMulAdd2(Texture tex) -- set the texture2 UV tiling multiply-add value of the whole trail
+- GetTexMulAdd2() : Texture
