@@ -20,6 +20,9 @@
 #include "wiTimer.h"
 #include "wiUnorderedMap.h" // leave it here for shader dump!
 #include "wiFont.h"
+#include "wiVoxelGrid.h"
+#include "wiPathQuery.h"
+#include "wiTrailRenderer.h"
 
 #include "shaders/ShaderInterop_Postprocess.h"
 #include "shaders/ShaderInterop_Raytracing.h"
@@ -150,6 +153,7 @@ wi::vector<uint8_t> debugTextStorage; // A stream of DebugText struct + text cha
 wi::vector<PaintRadius> paintrads;
 wi::vector<const wi::VoxelGrid*> renderableVoxelgrids;
 wi::vector<const wi::PathQuery*> renderablePathqueries;
+wi::vector<const wi::TrailRenderer*> renderableTrails;
 
 wi::SpinLock deferredMIPGenLock;
 wi::vector<std::pair<Texture, bool>> deferredMIPGens;
@@ -6202,6 +6206,12 @@ void DrawDebugWorld(
 		x->debugdraw(camera.VP, cmd);
 	}
 	renderablePathqueries.clear();
+
+	for (auto& x : renderableTrails)
+	{
+		x->Draw(camera, cmd);
+	}
+	renderableTrails.clear();
 
 	if (debugCameras)
 	{
@@ -16542,6 +16552,10 @@ void DrawVoxelGrid(const wi::VoxelGrid* voxelgrid)
 void DrawPathQuery(const wi::PathQuery* pathquery)
 {
 	renderablePathqueries.push_back(pathquery);
+}
+void DrawTrail(const wi::TrailRenderer* trail)
+{
+	renderableTrails.push_back(trail);
 }
 
 void AddDeferredMIPGen(const Texture& texture, bool preserve_coverage)

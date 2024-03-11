@@ -55,6 +55,7 @@ namespace wi::initializer
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::GPUBVH::Initialize(); systems[INITIALIZED_SYSTEM_GPUBVH].store(true); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::physics::Initialize(); systems[INITIALIZED_SYSTEM_PHYSICS].store(true); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::audio::Initialize(); systems[INITIALIZED_SYSTEM_AUDIO].store(true); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::TrailRenderer::Initialize(); systems[INITIALIZED_SYSTEM_TRAILRENDERER].store(true); });
 
 		// Initialize this immediately:
 		wi::lua::Initialize(); systems[INITIALIZED_SYSTEM_LUA].store(true);

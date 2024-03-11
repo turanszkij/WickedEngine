@@ -1396,5 +1396,13 @@ struct VirtualTextureTileRequestsPush
 	int padding2;
 };
 
+CBUFFER(TrailRendererCB, CBSLOT_TRAILRENDERER)
+{
+	float4x4	g_xTrailTransform;
+	float4		g_xTrailColor;
+	float4		g_xTrailTexMulAdd;
+	float4		g_xTrailTexMulAdd2;
+};
+
 
 #endif // WI_SHADERINTEROP_RENDERER_H
