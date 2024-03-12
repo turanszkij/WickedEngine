@@ -250,19 +250,40 @@
 #define _In_opt_
 #define _In_opt_count_(size)
 #define _In_opt_z_
+#define _In_reads_(size)
+#define _In_reads_bytes_(size)
+#define _In_reads_bytes_opt_(size)
+#define _In_reads_opt_(size)
+#define _In_reads_to_ptr_(ptr)
 #define _In_count_(size)
+#define _In_range_(lb, ub)
 #define _In_bytecount_(size)
+#define _In_opt_bytecount_(size)
+#define _In_NLS_string_(size)
+#define __in_bcount(size)
 
 #define _Out_
-#define _Out_opt_
+#define _Out_bytecap_(nbytes)
+#define _Out_writes_to_(a, b)
+#define _Out_writes_to_opt_(a, b)
 #define _Outptr_
 #define _Outptr_opt_
-#define _Outptr_result_z_
 #define _Outptr_opt_result_z_
+#define _Out_opt_
+#define _Out_writes_(size)
+#define _Out_write_bytes_(size)
+#define _Out_writes_z_(size)
+#define _Out_writes_all_(size)
+#define _Out_writes_bytes_(size)
+#define _Outref_result_buffer_(size)
+#define _Outptr_result_buffer_(size)
+#define _Out_cap_(size)
+#define _Out_cap_x_(size)
+#define _Out_range_(lb, ub)
+#define _Outptr_result_z_
+#define _Outptr_result_buffer_maybenull_(ptr)
 #define _Outptr_result_maybenull_
 #define _Outptr_result_nullonfailure_
-#define _Outptr_result_buffer_maybenull_(ptr)
-#define _Outptr_result_buffer_(ptr)
 
 #define _COM_Outptr_
 #define _COM_Outptr_opt_
