@@ -715,6 +715,38 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&region3Slider);
 
+	materialCombos[0].Create("Base material: ");
+	materialCombos[1].Create("Slope material: ");
+	materialCombos[2].Create("Low altitude material: ");
+	materialCombos[3].Create("High altitude material: ");
+
+	for (size_t i = 0; i < wi::terrain::materialCount; ++i)
+	{
+		materialCombos[i].SetTooltip("Select material component");
+		materialCombos[i].SetSize(XMFLOAT2(wid, hei));
+		materialCombos[i].SetPos(XMFLOAT2(x, y += step));
+		materialCombos[i].OnSelect([&, i=i](wi::gui::EventArgs args) {
+			const Scene& scene = editor->GetCurrentScene();
+			wi::ecs::Entity entity = static_cast<wi::ecs::Entity>(args.userdata);
+			if (entity != INVALID_ENTITY && scene.materials.Contains(entity))
+			{
+				if (terrain->materialEntities[i].materialID != entity)
+				{
+					terrain->materialEntities[i].materialID = entity;
+					terrain->materialEntities[i].materialIndex = scene.materials.GetIndex(entity);
+					terrain->Generation_Restart();
+				}
+			}
+			else
+			{
+				terrain->materialEntities[i].materialID = INVALID_ENTITY;
+				terrain->materialEntities[i].materialIndex = 0;
+			}
+		});
+
+		AddWidget(&materialCombos[i]);
+	}
+
 	saveHeightmapButton.OnClick([=](wi::gui::EventArgs args) {
 
 		wi::helper::FileDialogParams params;
@@ -910,6 +942,34 @@ void TerrainWindow::SetEntity(Entity entity)
 	region2Slider.SetValue(terrain->region2);
 	region3Slider.SetValue(terrain->region3);
 
+	auto fillMaterialCombo = [&](wi::gui::ComboBox& comboBox, Entity selected) {
+		comboBox.ClearItems();
+		comboBox.AddItem("NO MATERIAL", INVALID_ENTITY);
+		for (size_t i = 0; i < scene.materials.GetCount(); ++i)
+		{
+			Entity entity = scene.materials.GetEntity(i);
+			if (scene.names.Contains(entity))
+			{
+				const NameComponent& name = *scene.names.GetComponent(entity);
+				comboBox.AddItem(name.name, entity);
+			}
+			else
+			{
+				comboBox.AddItem(std::to_string(entity), entity);
+			}
+
+			if (selected == entity)
+			{
+				comboBox.SetSelectedWithoutCallback(i + 1);
+			}
+		}
+	};
+
+	for (size_t i = 0; i < wi::terrain::materialCount; ++i)
+	{
+		fillMaterialCombo(materialCombos[i], terrain->materialEntities[i].materialID);
+	}
+
 	for (auto& x : terrain->modifiers)
 	{
 		switch (x->type)
@@ -961,23 +1021,40 @@ void TerrainWindow::SetupAssets()
 		return;
 
 	// Customize terrain generator before it's initialized:
-	terrain_preset.material_Base.SetRoughness(1);
-	terrain_preset.material_Base.SetReflectance(0.005f);
-	terrain_preset.material_Slope.SetRoughness(0.1f);
-	terrain_preset.material_LowAltitude.SetRoughness(1);
-	terrain_preset.material_HighAltitude.SetRoughness(1);
-	terrain_preset.material_Base.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/base.jpg";
-	terrain_preset.material_Base.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/base_nor.jpg";
-	terrain_preset.material_Slope.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/slope.jpg";
-	terrain_preset.material_Slope.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/slope_nor.jpg";
-	terrain_preset.material_LowAltitude.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/low_altitude.jpg";
-	terrain_preset.material_LowAltitude.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/low_altitude_nor.jpg";
-	terrain_preset.material_HighAltitude.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/high_altitude.jpg";
-	terrain_preset.material_HighAltitude.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/high_altitude_nor.jpg";
-	terrain_preset.material_Base.CreateRenderData();
-	terrain_preset.material_Slope.CreateRenderData();
-	terrain_preset.material_LowAltitude.CreateRenderData();
-	terrain_preset.material_HighAltitude.CreateRenderData();
+	Scene& currentScene = editor->GetCurrentScene();
+
+	auto material_BaseID = currentScene.Entity_CreateMaterial("terrain_Base");
+	auto material_SlopeID = currentScene.Entity_CreateMaterial("terrain_Slope");
+	auto material_LowAltitudeID = currentScene.Entity_CreateMaterial("terrain_LowAltitude");
+	auto material_HighAltitudeID = currentScene.Entity_CreateMaterial("terrain_HighAltitude");
+
+	auto material_Base = currentScene.materials.GetComponent(material_BaseID);
+	auto material_Slope = currentScene.materials.GetComponent(material_SlopeID);
+	auto material_LowAltitude = currentScene.materials.GetComponent(material_LowAltitudeID);
+	auto material_HighAltitude = currentScene.materials.GetComponent(material_HighAltitudeID);
+
+	material_Base->SetRoughness(1);
+	material_Base->SetReflectance(0.005f);
+	material_Slope->SetRoughness(0.1f);
+	material_LowAltitude->SetRoughness(1);
+	material_HighAltitude->SetRoughness(1);
+	material_Base->textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/base.jpg";
+	material_Base->textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/base_nor.jpg";
+	material_Slope->textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/slope.jpg";
+	material_Slope->textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/slope_nor.jpg";
+	material_LowAltitude->textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/low_altitude.jpg";
+	material_LowAltitude->textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/low_altitude_nor.jpg";
+	material_HighAltitude->textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/high_altitude.jpg";
+	material_HighAltitude->textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/high_altitude_nor.jpg";
+	material_Base->CreateRenderData();
+	material_Slope->CreateRenderData();
+	material_LowAltitude->CreateRenderData();
+	material_HighAltitude->CreateRenderData();
+
+	terrain_preset.materialEntities[0].materialID = material_BaseID;
+	terrain_preset.materialEntities[1].materialID = material_SlopeID;
+	terrain_preset.materialEntities[2].materialID = material_LowAltitudeID;
+	terrain_preset.materialEntities[3].materialID = material_HighAltitudeID;
 
 	std::string terrain_path = wi::helper::GetCurrentPath() + "/terrain/";
 	wi::config::File config;
@@ -1195,6 +1272,10 @@ void TerrainWindow::ResizeLayout()
 	add(region1Slider);
 	add(region2Slider);
 	add(region3Slider);
+	for (size_t i = 0; i < wi::terrain::materialCount; ++i)
+	{
+		add(materialCombos[i]);
+	}
 	add(saveHeightmapButton);
 	add(saveRegionButton);
 	add(addModifierCombo);

@@ -76,6 +76,8 @@ public:
 	wi::gui::Slider region2Slider;
 	wi::gui::Slider region3Slider;
 
+	wi::gui::ComboBox materialCombos[wi::terrain::materialCount];
+
 	enum PRESET
 	{
 		PRESET_HILLS,

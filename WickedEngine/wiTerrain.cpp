@@ -507,6 +507,24 @@ namespace wi::terrain
 			return;
 		}
 
+		auto updateMaterialIndex = [&](MaterialEntity& set) {
+			auto index = scene->materials.GetIndex(set.materialID);
+			if (index != ~0ull)
+			{
+				set.materialIndex = scene->materials.GetIndex(set.materialID);
+			}
+			else
+			{
+				set.materialID = INVALID_ENTITY;
+				set.materialIndex = 0;
+			}
+		};
+
+		for (size_t i = 0; i < materialCount; ++i)
+		{
+			updateMaterialIndex(materialEntities[i]);
+		}
+
 		WeatherComponent* weather_component = scene->weathers.GetComponent(terrainEntity);
 		if (weather_component != nullptr)
 		{
@@ -530,34 +548,37 @@ namespace wi::terrain
 		// Check whether there are any materials that would write to virtual textures:
 		bool virtual_texture_any = false;
 		bool virtual_texture_available[TEXTURESLOT_COUNT] = {};
-		MaterialComponent* virtual_materials[4] = {
-			&material_Base,
-			&material_Slope,
-			&material_LowAltitude,
-			&material_HighAltitude,
-		};
-		for (auto& material : virtual_materials)
+
+		if (scene->materials.GetCount() > 0)
 		{
-			for (int i = 0; i < TEXTURESLOT_COUNT; ++i)
+			for (auto& entity : materialEntities)
 			{
-				virtual_texture_available[i] = false;
-				switch (i)
+				auto material = &scene->materials[entity.materialIndex];
+
+				if (material->IsDirty())
+					Generation_Restart();
+
+				for (int i = 0; i < TEXTURESLOT_COUNT; ++i)
 				{
-				case MaterialComponent::BASECOLORMAP:
-				case MaterialComponent::NORMALMAP:
-				case MaterialComponent::SURFACEMAP:
-					if (material->textures[i].resource.IsValid())
+					virtual_texture_available[i] = false;
+					switch (i)
 					{
-						virtual_texture_available[i] = true;
-						virtual_texture_any = true;
+					case MaterialComponent::BASECOLORMAP:
+					case MaterialComponent::NORMALMAP:
+					case MaterialComponent::SURFACEMAP:
+						if (material->textures[i].resource.IsValid())
+						{
+							virtual_texture_available[i] = true;
+							virtual_texture_any = true;
+						}
+						break;
+					default:
+						break;
 					}
-					break;
-				default:
-					break;
 				}
 			}
+			virtual_texture_available[MaterialComponent::SURFACEMAP] = true; // this is always needed to bake individual material properties
 		}
-		virtual_texture_available[MaterialComponent::SURFACEMAP] = true; // this is always needed to bake individual material properties
 
 		for (auto it = chunks.begin(); it != chunks.end();)
 		{
@@ -1442,11 +1463,14 @@ namespace wi::terrain
 
 		device->EventBegin("Render Tile Regions", cmd);
 
-		ShaderMaterial materials[4];
-		material_Base.WriteShaderMaterial(&materials[0]);
-		material_Slope.WriteShaderMaterial(&materials[1]);
-		material_LowAltitude.WriteShaderMaterial(&materials[2]);
-		material_HighAltitude.WriteShaderMaterial(&materials[3]);
+		ShaderMaterial materials[materialCount];
+		for (size_t i = 0; i < materialCount && scene->materials.GetCount() > 0; ++i)
+		{
+			if (materialEntities[i].materialID != INVALID_ENTITY)
+			{
+				scene->materials[materialEntities[i].materialIndex].WriteShaderMaterial(&materials[i]);
+			}
+		}
 		device->BindDynamicConstantBuffer(materials, 0, cmd);
 
 		for (uint32_t map_type = 0; map_type < 3; map_type++)
@@ -1941,10 +1965,10 @@ namespace wi::terrain
 
 		// Caution: seri.version changes must be handled carefully!
 		seri.version = material_version;
-		material_Base.Serialize(archive, seri);
-		material_Slope.Serialize(archive, seri);
-		material_LowAltitude.Serialize(archive, seri);
-		material_HighAltitude.Serialize(archive, seri);
+		for (size_t i = 0; i < materialCount; ++i)
+		{
+			SerializeEntity(archive, materialEntities[i].materialID, seri);
+		}
 		material_GrassParticle.Serialize(archive, seri);
 
 		seri.version = weather_version;
