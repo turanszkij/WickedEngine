@@ -19,7 +19,7 @@
 #define SHADERCOMPILER_ENABLED
 #define SHADERCOMPILER_ENABLED_DXCOMPILER
 #define __RPC_FAR
-#include "Utility/dxc/Support/WinAdapter.h"
+#include "Utility/WinAdapter.h"
 #endif // PLATFORM_LINUX
 
 #ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
