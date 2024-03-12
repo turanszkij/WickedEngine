@@ -173,7 +173,7 @@
 #ifdef __SCE__
 #include "sal.h"
 #else
-#include "dxc/Support/WinAdapter.h"
+#include "WinAdapter.h"
 #endif // __SCE__
 #endif
 
