@@ -285,6 +285,41 @@
 #define _Outptr_result_maybenull_
 #define _Outptr_result_nullonfailure_
 
+#define __out_ecount_part(a, b)
+
+#define _Inout_
+#define _Inout_z_
+#define _Inout_opt_
+#define _Inout_cap_(size)
+#define _Inout_count_(size)
+#define _Inout_count_c_(size)
+#define _Inout_opt_count_c_(size)
+#define _Inout_bytecount_c_(size)
+#define _Inout_opt_bytecount_c_(size)
+
+#define _Ret_maybenull_
+#define _Ret_notnull_
+#define _Ret_opt_
+
+#define _Use_decl_annotations_
+#define __analysis_assume(expr)
+#define _Analysis_assume_(expr)
+#define _Analysis_assume_nullterminated_(x)
+#define _Success_(expr)
+
+#define __inexpressible_readableTo(size)
+#define __inexpressible_writableTo(size)
+
+#define _Printf_format_string_
+#define _Null_terminated_
+
+#define _Field_size_(size)
+#define _Field_size_full_(size)
+#define _Field_size_opt_(size)
+#define _Post_writable_byte_size_(size)
+#define _Post_readable_byte_size_(size)
+#define __drv_allocatesMem(mem)
+
 #define _COM_Outptr_
 #define _COM_Outptr_opt_
 #define _COM_Outptr_result_maybenull_
