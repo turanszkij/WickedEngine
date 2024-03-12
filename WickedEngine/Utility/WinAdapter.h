@@ -68,10 +68,9 @@
 #define STDMETHODCALLTYPE
 #define STDMETHODIMP_(type) type STDMETHODCALLTYPE
 #define STDMETHODIMP STDMETHODIMP_(HRESULT)
-#define STDMETHOD_(type,name) virtual STDMETHODIMP_(type) name
+#define STDMETHOD_(type, name) virtual STDMETHODIMP_(type) name
 #define STDMETHOD(name) STDMETHOD_(HRESULT, name)
 #define EXTERN_C extern "C"
-
 
 #define UNREFERENCED_PARAMETER(P) (void)(P)
 
@@ -122,6 +121,7 @@
 #define ERROR_NOT_CAPABLE EPERM
 #define ERROR_NOT_FOUND ENOTSUP
 #define ERROR_UNHANDLED_EXCEPTION EBADF
+#define ERROR_BROKEN_PIPE EPIPE
 
 // Used by HRESULT <--> WIN32 error code conversion
 #define SEVERITY_ERROR 1
@@ -183,7 +183,7 @@
 #define _strdup strdup
 #define _strnicmp strnicmp
 
-#define vsprintf_s vsprintf
+#define vsnprintf_s vsnprintf
 #define strcat_s strcat
 #define strcpy_s(dst, n, src) strncpy(dst, src, n)
 #define _vscwprintf vwprintf
@@ -325,14 +325,11 @@
 #define _COM_Outptr_result_maybenull_
 #define _COM_Outptr_opt_result_maybenull_
 
-#define _Null_
-#define _Notnull_
-#define _Maybenull_
 #define THIS_
 #define THIS
 #define PURE = 0
 
-#define _Outptr_result_bytebuffer_(size)
+#define _Maybenull_
 
 #define __debugbreak()
 
@@ -619,17 +616,18 @@ template <typename T> inline void **IID_PPV_ARGS_Helper(T **pp) {
 #endif // __EMULATE_UUID
 
 // Needed for d3d headers, but fail to create actual interfaces
-#define DEFINE_GUID(name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) const GUID name = { l, w1, w2, { b1, b2,  b3,  b4,  b5,  b6,  b7,  b8 } }
+#define DEFINE_GUID(name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8)           \
+  const GUID name = {l, w1, w2, {b1, b2, b3, b4, b5, b6, b7, b8}}
 #define DECLSPEC_UUID(x)
 #define MIDL_INTERFACE(x) struct DECLSPEC_UUID(x)
-#define DECLARE_INTERFACE(iface)                struct iface
-#define DECLARE_INTERFACE_(iface, parent)       DECLARE_INTERFACE(iface) : parent
+#define DECLARE_INTERFACE(iface) struct iface
+#define DECLARE_INTERFACE_(iface, parent) DECLARE_INTERFACE(iface) : parent
 
 //===--------------------- COM Interfaces ---------------------------------===//
 
 CROSS_PLATFORM_UUIDOF(IUnknown, "00000000-0000-0000-C000-000000000046")
 struct IUnknown {
-  IUnknown() {};
+  IUnknown(){};
   virtual HRESULT QueryInterface(REFIID riid, void **ppvObject) = 0;
   virtual ULONG AddRef() = 0;
   virtual ULONG Release() = 0;
@@ -643,10 +641,10 @@ struct INoMarshal : public IUnknown {};
 
 CROSS_PLATFORM_UUIDOF(IMalloc, "00000002-0000-0000-C000-000000000046")
 struct IMalloc : public IUnknown {
-  virtual void *Alloc(size_t size) = 0;
-  virtual void *Realloc(void *ptr, size_t size) = 0;
+  virtual void *Alloc(SIZE_T size) = 0;
+  virtual void *Realloc(void *ptr, SIZE_T size) = 0;
   virtual void Free(void *ptr) = 0;
-  virtual size_t GetSize(void *pv) = 0;
+  virtual SIZE_T GetSize(void *pv) = 0;
   virtual int DidAlloc(void *pv) = 0;
   virtual void HeapMinimize(void) = 0;
 };
@@ -683,8 +681,10 @@ struct IStream : public ISequentialStream {
 
 // These don't need stub implementations as they come from the DirectX Headers
 // They still need the __uuidof() though
-CROSS_PLATFORM_UUIDOF(ID3D12LibraryReflection, "8E349D19-54DB-4A56-9DC9-119D87BDB804")
-CROSS_PLATFORM_UUIDOF(ID3D12ShaderReflection, "5A58797D-A72C-478D-8BA2-EFC6B0EFE88E")
+CROSS_PLATFORM_UUIDOF(ID3D12LibraryReflection,
+                      "8E349D19-54DB-4A56-9DC9-119D87BDB804")
+CROSS_PLATFORM_UUIDOF(ID3D12ShaderReflection,
+                      "5A58797D-A72C-478D-8BA2-EFC6B0EFE88E")
 
 //===--------------------- COM Pointer Types ------------------------------===//
 
@@ -815,6 +815,14 @@ public:
     }
     return *this;
   }
+
+  // NOTE: This conversion constructor is not part of the official CComPtr spec;
+  // however, it is needed to convert CComPtr<Q> to CComPtr<T> where T derives
+  // from Q on Clang. MSVC compiles this conversion as first a call to
+  // CComPtr<Q>::operator T*, followed by CComPtr<T>(T*), but Clang fails to
+  // compile with error: no viable conversion from 'CComPtr<Q>' to 'CComPtr<T>'.
+  template <typename Q>
+  CComPtr(const CComPtr<Q> &lp) throw() : CComPtrBase<T>(lp.p) {}
 
   T *operator=(const CComPtr<T> &lp) throw() {
     if (*this != lp) {
@@ -951,6 +959,9 @@ void SysFreeString(BSTR bstrString);
 // Allocate string with length prefix
 BSTR SysAllocStringLen(const OLECHAR *strIn, UINT ui);
 
+//===--------------------------- BSTR Length ------------------------------===//
+unsigned int SysStringLen(const BSTR bstrString);
+
 //===--------------------- UTF-8 Related Types ----------------------------===//
 
 // Code Page
@@ -1037,6 +1048,44 @@ public:
 
 private:
   HANDLE m_h;
+};
+
+/////////////////////////////////////////////////////////////////////////////
+// CComBSTR
+
+class CComBSTR {
+public:
+  BSTR m_str;
+  CComBSTR() : m_str(nullptr){};
+  CComBSTR(int nSize, LPCWSTR sz);
+  ~CComBSTR() throw() { SysFreeString(m_str); }
+  unsigned int Length() const throw() { return SysStringLen(m_str); }
+  operator BSTR() const throw() { return m_str; }
+
+  bool operator==(const CComBSTR &bstrSrc) const throw();
+
+  BSTR *operator&() throw() { return &m_str; }
+
+  BSTR Detach() throw() {
+    BSTR s = m_str;
+    m_str = NULL;
+    return s;
+  }
+
+  void Empty() throw() {
+    SysFreeString(m_str);
+    m_str = NULL;
+  }
+};
+
+//===--------- Convert argv to wchar ----------------===//
+class WArgV {
+  std::vector<std::wstring> WStringVector;
+  std::vector<const wchar_t *> WCharPtrVector;
+
+public:
+  WArgV(int argc, const char **argv);
+  const wchar_t **argv() { return WCharPtrVector.data(); }
 };
 
 #endif // __cplusplus

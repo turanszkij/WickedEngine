@@ -27,6 +27,7 @@ set(HEADER_FILES
 		${CMAKE_CURRENT_SOURCE_DIR}/stb_truetype.h
 		${CMAKE_CURRENT_SOURCE_DIR}/qoi.h
 		${CMAKE_CURRENT_SOURCE_DIR}/dxcapi.h
+		${CMAKE_CURRENT_SOURCE_DIR}/WinAdapter.h
 		${CMAKE_CURRENT_SOURCE_DIR}/D3D12MemAlloc.h
 		${CMAKE_CURRENT_SOURCE_DIR}/volk.h
 		${CMAKE_CURRENT_SOURCE_DIR}/vk_mem_alloc.h
@@ -107,13 +108,6 @@ set(HEADER_FILES_vk_video
 		)
 install(FILES ${HEADER_FILES_vulkan}
 		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/Utility/vulkan/vk_video/")
-
-
-set(HEADER_FILES_dxc
-		${CMAKE_CURRENT_SOURCE_DIR}/dxc/Support/WinAdapter.h
-		)
-install(FILES ${HEADER_FILES_dxc}
-		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/Utility/dxc/Support/")
 
 
 set (SOURCE_FILES
