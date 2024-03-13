@@ -50,11 +50,16 @@ namespace wi
 			device->BindPipelineState(&PSO[blendMode], cmd);
 		}
 
-		TrailRendererCB sb;
+		TrailRendererCB sb = {};
 		sb.g_xTrailTransform = camera.VP;
 		sb.g_xTrailColor = color;
 		sb.g_xTrailTexMulAdd = texMulAdd;
 		sb.g_xTrailTexMulAdd2 = texMulAdd2;
+		sb.g_xTrailDepthSoften = 1.0f / (width * 10);
+		sb.g_xTrailTextureIndex1 = device->GetDescriptorIndex(texture.IsValid() ? &texture : wi::texturehelper::getWhite(), SubresourceType::SRV);
+		sb.g_xTrailTextureIndex2 = device->GetDescriptorIndex(texture2.IsValid() ? &texture : wi::texturehelper::getWhite(), SubresourceType::SRV);
+		sb.g_xTrailLinearDepthTextureIndex = camera.texture_lineardepth_index;
+		sb.g_xTrailCameraFar = camera.zFarP;
 		device->BindDynamicConstantBuffer(sb, CBSLOT_TRAILRENDERER, cmd);
 
 		struct Vertex
@@ -190,9 +195,6 @@ namespace wi
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 
 		device->BindIndexBuffer(&mem.buffer, IndexBufferFormat::UINT32, mem.offset + sizeof(Vertex) * vertexCountAlloc, cmd);
-
-		device->BindResource(texture.IsValid() ? &texture : wi::texturehelper::getWhite(), 0, cmd);
-		device->BindResource(texture2.IsValid() ? &texture2 : wi::texturehelper::getWhite(), 1, cmd);
 
 		device->DrawIndexed(indexCount, 0, 0, cmd);
 

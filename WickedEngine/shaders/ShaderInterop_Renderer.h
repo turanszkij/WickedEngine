@@ -1402,6 +1402,12 @@ CBUFFER(TrailRendererCB, CBSLOT_TRAILRENDERER)
 	float4		g_xTrailColor;
 	float4		g_xTrailTexMulAdd;
 	float4		g_xTrailTexMulAdd2;
+	int			g_xTrailTextureIndex1;
+	int			g_xTrailTextureIndex2;
+	int			g_xTrailLinearDepthTextureIndex;
+	float		g_xTrailDepthSoften;
+	float3		g_xTrailPadding;
+	float		g_xTrailCameraFar;
 };
 
 
