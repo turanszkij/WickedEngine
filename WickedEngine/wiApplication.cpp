@@ -620,6 +620,7 @@ namespace wi
 		}
 		wi::graphics::GetDevice() = graphicsDevice.get();
 
+		rendertarget = {};
 		canvas.init(window);
 
 		SwapChainDesc desc;
