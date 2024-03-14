@@ -31,9 +31,8 @@ namespace wi::lua
 
 	class Application_BindLua
 	{
-	private:
-		Application* component = nullptr;
 	public:
+		Application* component = nullptr;
 		inline static constexpr char className[] = "Application";
 		static Luna<Application_BindLua>::FunctionType methods[];
 		static Luna<Application_BindLua>::PropertyType properties[];

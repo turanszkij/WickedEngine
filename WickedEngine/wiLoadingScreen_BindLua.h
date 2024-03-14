@@ -26,6 +26,7 @@ namespace wi::lua
 		}
 
 		int AddLoadModelTask(lua_State* L);
+		int AddRenderPathActivationTask(lua_State* L);
 		int IsFinished(lua_State* L);
 		int GetProgress(lua_State* L);
 		int SetBackgroundTexture(lua_State* L);

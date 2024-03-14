@@ -1172,6 +1172,23 @@ runProcess(function()
 	local path = RenderPath3D()
 	local loadingscreen = LoadingScreen()
 
+	--path.SetLightShaftsEnabled(true)
+	path.SetLightShaftsStrength(0.01)
+	path.SetAO(AO_MSAO)
+	path.SetAOPower(0.25)
+	--path.SetOutlineEnabled(true)
+	path.SetOutlineThreshold(0.11)
+	path.SetOutlineThickness(1.7)
+	path.SetOutlineColor(0,0,0,0.6)
+	path.SetBloomThreshold(5)
+
+	--application.SetInfoDisplay(false)
+	--application.SetFPSDisplay(true)
+	--path.SetResolutionScale(0.75)
+	--path.SetFSR2Enabled(true)
+	--path.SetFSR2Preset(FSR2_Preset.Performance)
+	--SetProfilerEnabled(true)
+
 	-- Configure a simple loading progress bar:
     local loadingbar = Sprite()
 	loadingbar.SetMaskTexture(texturehelper.CreateGradientTexture(
@@ -1199,6 +1216,7 @@ runProcess(function()
 		loadingscreen.AddLoadModelTask(loading_scene, script_dir() .. "assets/character.wiscene"),
 	}
 	loadingscreen.AddLoadModelTask(loading_scene, script_dir() .. "assets/level.wiscene")
+	loadingscreen.AddRenderPathActivationTask(path, application, 0.5)
 	application.SetActivePath(loadingscreen, 0.5) -- activate and switch to loading screen
 
     -- Because we are in a runProcess, we can block loading screen like this while application is still running normally:
@@ -1238,24 +1256,6 @@ runProcess(function()
 	}
 	
 	local camera = ThirdPersonCamera(player)
-
-	--path.SetLightShaftsEnabled(true)
-	path.SetLightShaftsStrength(0.01)
-	path.SetAO(AO_MSAO)
-	path.SetAOPower(0.25)
-	--path.SetOutlineEnabled(true)
-	path.SetOutlineThreshold(0.11)
-	path.SetOutlineThickness(1.7)
-	path.SetOutlineColor(0,0,0,0.6)
-	path.SetBloomThreshold(5)
-	application.SetActivePath(path, 0.5)	
-
-	--application.SetInfoDisplay(false)
-	application.SetFPSDisplay(true)
-	--path.SetResolutionScale(0.75)
-	--path.SetFSR2Enabled(true)
-	--path.SetFSR2Preset(FSR2_Preset.Performance)
-	--SetProfilerEnabled(true)
 
 	path.AddFont(conversation.font)
 	path.AddFont(conversation.advance_font)

@@ -1,6 +1,8 @@
 #include "wiLoadingScreen_BindLua.h"
 #include "wiScene_BindLua.h"
 #include "wiTexture_BindLua.h"
+#include "wiApplication_BindLua.h"
+#include "wiRenderPath3D_BindLua.h"
 
 #include <mutex>
 
@@ -30,6 +32,7 @@ namespace wi::lua
 		lunamethod(RenderPath_BindLua, SetLayerMask),
 
 		lunamethod(LoadingScreen_BindLua, AddLoadModelTask),
+		lunamethod(LoadingScreen_BindLua, AddRenderPathActivationTask),
 		lunamethod(LoadingScreen_BindLua, IsFinished),
 		lunamethod(LoadingScreen_BindLua, GetProgress),
 		lunamethod(LoadingScreen_BindLua, SetBackgroundTexture),
@@ -128,6 +131,88 @@ namespace wi::lua
 		{
 			wi::lua::SError(L, "AddLoadModelTask(string fileName, opt Matrix transform) not enough arguments!");
 		}
+		return 0;
+	}
+	int LoadingScreen_BindLua::AddRenderPathActivationTask(lua_State* L)
+	{
+		LoadingScreen* loading = dynamic_cast<LoadingScreen*>(component);
+		if (loading == nullptr)
+		{
+			wi::lua::SError(L, "AddRenderPathActivationTask(RenderPath path, opt float fadeSeconds = 0, opt int fadeR = 0,fadeG = 0,fadeB = 0): loading screen is invalid!");
+			return 0;
+		}
+
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 2)
+		{
+			wi::lua::SError(L, "AddRenderPathActivationTask(RenderPath path, Application app, opt float fadeSeconds = 0, opt int fadeR = 0,fadeG = 0,fadeB = 0): not enough arguments!");
+			return 0;
+		}
+		RenderPath* path = nullptr;
+
+		RenderPath3D_BindLua* comp3D = Luna<RenderPath3D_BindLua>::lightcheck(L, 1);
+		if (comp3D == nullptr)
+		{
+			RenderPath2D_BindLua* comp2D = Luna<RenderPath2D_BindLua>::lightcheck(L, 1);
+			if (comp2D == nullptr)
+			{
+				LoadingScreen_BindLua* compLoading = Luna<LoadingScreen_BindLua>::lightcheck(L, 1);
+				if (compLoading == nullptr)
+				{
+					RenderPath_BindLua* comp = Luna<RenderPath_BindLua>::lightcheck(L, 1);
+					if (comp == nullptr)
+					{
+						wi::lua::SError(L, "AddRenderPathActivationTask(RenderPath path, Application app, opt float fadeSeconds = 0, opt int fadeR = 0,fadeG = 0,fadeB = 0): first argument is not a RenderPath!");
+						return 0;
+					}
+					else
+					{
+						path = comp->component;
+					}
+				}
+				else
+				{
+					path = compLoading->component;
+				}
+			}
+			else
+			{
+				path = comp2D->component;
+			}
+		}
+		else
+		{
+			path = comp3D->component;
+		}
+
+		Application_BindLua* app = Luna<Application_BindLua>::lightcheck(L, 2);
+		if (app == nullptr)
+		{
+			wi::lua::SError(L, "AddRenderPathActivationTask(RenderPath path, Application app, opt float fadeSeconds = 0, opt int fadeR = 0,fadeG = 0,fadeB = 0): second argument is not an Application!");
+			return 0;
+		}
+
+		float fadeSeconds = 0;
+		wi::Color fadeColor = wi::Color::Black();
+
+		if (argc > 2)
+		{
+			fadeSeconds = wi::lua::SGetFloat(L, 3);
+			if (argc > 3)
+			{
+				fadeColor.setR((uint8_t)wi::lua::SGetInt(L, 4));
+				if (argc > 4)
+				{
+					fadeColor.setG((uint8_t)wi::lua::SGetInt(L, 5));
+					if (argc > 5)
+					{
+						fadeColor.setB((uint8_t)wi::lua::SGetInt(L, 6));
+					}
+				}
+			}
+		}
+
+		loading->addLoadingComponent(path, app->component, fadeSeconds, fadeColor);
 		return 0;
 	}
 	int LoadingScreen_BindLua::IsFinished(lua_State* L)
