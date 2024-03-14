@@ -60,7 +60,6 @@ namespace wi
 		}
 
 		// Fade manager will activate on fadeout
-		//fadeManager.Clear();
 		fadeManager.Start(fadeSeconds, fadeColor, [this, component]() {
 
 			if (GetActivePath() != nullptr)
