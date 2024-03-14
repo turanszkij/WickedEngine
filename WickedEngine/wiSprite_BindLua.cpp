@@ -120,6 +120,7 @@ namespace wi::lua
 			if (tex != nullptr)
 			{
 				sprite.maskResource = tex->resource;
+				sprite.params.setMaskMap(&tex->resource.GetTexture());
 			}
 		}
 		else

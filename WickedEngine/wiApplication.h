@@ -120,6 +120,8 @@ namespace wi
 		// display all-time engine information text
 		InfoDisplayer infoDisplay;
 
+		bool IsFaded() const { return fadeManager.IsFaded(); }
+
 	};
 
 }

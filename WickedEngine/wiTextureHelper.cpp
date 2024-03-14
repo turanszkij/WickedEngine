@@ -335,7 +335,7 @@ namespace wi::texturehelper
 			{
 				for (uint32_t x = 0; x < width; ++x)
 				{
-					const XMFLOAT2 uv = XMFLOAT2(float(x) / float(width - 1), float(y) / float(height - 1));
+					const XMFLOAT2 uv = XMFLOAT2((float(x) + 0.5f) / float(width), (float(y) + 0.5f) / float(height));
 					const XMVECTOR point_on_line = wi::math::ClosestPointOnLineSegment(a, b, XMLoadFloat2(&uv));
 					const float uv_distance = XMVectorGetX(XMVector3Length(point_on_line - a));
 					float gradient = wi::math::saturate(wi::math::InverseLerp(0, distance, uv_distance));
@@ -374,7 +374,7 @@ namespace wi::texturehelper
 			{
 				for (uint32_t x = 0; x < width; ++x)
 				{
-					const XMFLOAT2 uv = XMFLOAT2(float(x) / float(width - 1), float(y) / float(height - 1));
+					const XMFLOAT2 uv = XMFLOAT2((float(x) + 0.5f) / float(width), (float(y) + 0.5f) / float(height));
 					const float uv_distance = wi::math::Clamp(XMVectorGetX(XMVector3Length(XMLoadFloat2(&uv) - a)), 0, distance);
 					float gradient = wi::math::saturate(wi::math::InverseLerp(0, distance, uv_distance));
 					if (has_flag(flags, GradientFlags::Inverse))
@@ -411,7 +411,7 @@ namespace wi::texturehelper
 			{
 				for (uint32_t x = 0; x < width; ++x)
 				{
-					const XMFLOAT2 uv = XMFLOAT2(float(x) / float(width - 1), float(y) / float(height - 1));
+					const XMFLOAT2 uv = XMFLOAT2((float(x) + 0.5f) / float(width), (float(y) + 0.5f) / float(height));
 					const XMFLOAT2 coord = XMFLOAT2(uv.x - uv_start.x, uv.y - uv_start.y);
 					float gradient = wi::math::GetAngle(direction, coord) / XM_2PI;
 					if (has_flag(flags, GradientFlags::Inverse))
@@ -467,7 +467,7 @@ namespace wi::texturehelper
 		{
 			for (uint32_t x = 0; x < width; ++x)
 			{
-				const XMFLOAT2 coord = XMFLOAT2(float(x) / float(width - 1) * 2 - 1, -(float(y) / float(height - 1) * 2 - 1));
+				const XMFLOAT2 coord = XMFLOAT2((float(x) + 0.5f) / float(width) * 2 - 1, -((float(y) + 0.5f) / float(height) * 2 - 1));
 				float gradient = wi::math::GetAngle(direction, coord) / XM_2PI;
 				if (counter_clockwise)
 				{
