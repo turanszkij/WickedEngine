@@ -1176,7 +1176,7 @@ runProcess(function()
     local loadingbar = Sprite()
 	loadingbar.SetMaskTexture(texturehelper.CreateGradientTexture(
 		GradientType.Linear,
-		1024, 2,
+		2048, 1,
 		Vector(0, 0), Vector(1, 0),
 		GradientFlags.Inverse,
 		"111r"
