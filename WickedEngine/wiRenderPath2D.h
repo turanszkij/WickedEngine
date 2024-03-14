@@ -13,7 +13,7 @@ namespace wi
 	class RenderPath2D :
 		public RenderPath
 	{
-	private:
+	protected:
 		wi::graphics::Texture rtStenciled;
 		wi::graphics::Texture rtStenciled_resolved;
 		wi::graphics::Texture rtFinal;

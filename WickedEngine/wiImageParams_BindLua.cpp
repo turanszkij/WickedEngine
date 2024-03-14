@@ -45,6 +45,8 @@ namespace wi::lua
 		lunamethod(ImageParams_BindLua, DisableBackgroundBlur),
 		lunamethod(ImageParams_BindLua, EnableBackground),
 		lunamethod(ImageParams_BindLua, DisableBackground),
+		lunamethod(ImageParams_BindLua, SetMaskAlphaRange),
+		lunamethod(ImageParams_BindLua, GetMaskAlphaRange),
 		{ nullptr, nullptr }
 	};
 	Luna<ImageParams_BindLua>::PropertyType ImageParams_BindLua::properties[] = {
@@ -430,6 +432,24 @@ namespace wi::lua
 	{
 		params.disableBackground();
 		return 0;
+	}
+	int ImageParams_BindLua::SetMaskAlphaRange(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 2)
+		{
+			wi::lua::SError(L, "SetMaskAlphaRange(float start, end): not enough arguments!");
+			return 0;
+		}
+		params.mask_alpha_range_start = wi::lua::SGetFloat(L, 1);
+		params.mask_alpha_range_end = wi::lua::SGetFloat(L, 2);
+		return 0;
+	}
+	int ImageParams_BindLua::GetMaskAlphaRange(lua_State* L)
+	{
+		wi::lua::SSetFloat(L, params.mask_alpha_range_start);
+		wi::lua::SSetFloat(L, params.mask_alpha_range_end);
+		return 2;
 	}
 
 	ImageParams_BindLua::ImageParams_BindLua(lua_State* L)

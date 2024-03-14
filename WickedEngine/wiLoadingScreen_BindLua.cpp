@@ -1,4 +1,12 @@
 #include "wiLoadingScreen_BindLua.h"
+#include "wiScene_BindLua.h"
+#include "wiTexture_BindLua.h"
+
+#include <mutex>
+
+using namespace wi::lua::scene;
+using namespace wi::scene;
+using namespace wi::ecs;
 
 namespace wi::lua
 {
@@ -21,53 +29,162 @@ namespace wi::lua
 		lunamethod(RenderPath_BindLua, GetLayerMask),
 		lunamethod(RenderPath_BindLua, SetLayerMask),
 
-		lunamethod(LoadingScreen_BindLua, AddLoadingTask),
-		lunamethod(LoadingScreen_BindLua, OnFinished),
+		lunamethod(LoadingScreen_BindLua, AddLoadModelTask),
+		lunamethod(LoadingScreen_BindLua, IsFinished),
+		lunamethod(LoadingScreen_BindLua, GetProgress),
+		lunamethod(LoadingScreen_BindLua, SetBackgroundTexture),
+		lunamethod(LoadingScreen_BindLua, GetBackgroundTexture),
 		{ NULL, NULL }
 	};
 	Luna<LoadingScreen_BindLua>::PropertyType LoadingScreen_BindLua::properties[] = {
 		{ NULL, NULL }
 	};
 
-	int LoadingScreen_BindLua::AddLoadingTask(lua_State* L)
+	int LoadingScreen_BindLua::AddLoadModelTask(lua_State* L)
 	{
+		LoadingScreen* loading = dynamic_cast<LoadingScreen*>(component);
+		if (loading == nullptr)
+		{
+			wi::lua::SError(L, "AddLoadModelTask(Scene scene, string fileName, opt Matrix transform): loading screen is invalid!");
+			return 0;
+		}
+
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			std::string task = wi::lua::SGetString(L, 1);
-			LoadingScreen* loading = dynamic_cast<LoadingScreen*>(component);
-			if (loading != nullptr)
+			Scene_BindLua* custom_scene = Luna<Scene_BindLua>::lightcheck(L, 1);
+			if (custom_scene)
 			{
-				loading->addLoadingFunction([=](wi::jobsystem::JobArgs args) {
-					wi::lua::RunText(task);
+				// Overload 1: thread safe version
+				if (argc > 1)
+				{
+					std::string fileName = wi::lua::SGetString(L, 2);
+					XMMATRIX transform = XMMatrixIdentity();
+					if (argc > 2)
+					{
+						Matrix_BindLua* matrix = Luna<Matrix_BindLua>::lightcheck(L, 3);
+						if (matrix != nullptr)
+						{
+							transform = XMLoadFloat4x4(&matrix->data);
+						}
+						else
+						{
+							wi::lua::SError(L, "AddLoadModelTask(Scene scene, string fileName, opt Matrix transform) argument is not a matrix!");
+						}
+					}
+					Entity root = CreateEntity();
+					loading->addLoadingFunction([=](wi::jobsystem::JobArgs args) {
+						Scene scene;
+						wi::scene::LoadModel2(scene, fileName, transform, root);
+
+						// Note: we lock the  scene for merging from multiple loading screen tasks
+						//	Because we don't have fine control over thread execution in lua, and this significantly
+						//	simplifies loading into scene from loadingscreen
+						std::scoped_lock lck(custom_scene->scene->locker);
+						custom_scene->scene->Merge(scene);
 					});
+					wi::lua::SSetLongLong(L, root);
+					return 1;
+				}
+				else
+				{
+					wi::lua::SError(L, "AddLoadModelTask(Scene scene, string fileName, opt Matrix transform) not enough arguments!");
+					return 0;
+				}
 			}
 			else
-				wi::lua::SError(L, "AddLoader(string taskScript) component is not a LoadingScreen!");
+			{
+				// Overload 2: global scene version
+				std::string fileName = wi::lua::SGetString(L, 1);
+				XMMATRIX transform = XMMatrixIdentity();
+				if (argc > 1)
+				{
+					Matrix_BindLua* matrix = Luna<Matrix_BindLua>::lightcheck(L, 2);
+					if (matrix != nullptr)
+					{
+						transform = XMLoadFloat4x4(&matrix->data);
+					}
+					else
+					{
+						wi::lua::SError(L, "AddLoadModelTask(string fileName, opt Matrix transform) argument is not a matrix!");
+					}
+				}
+				Entity root = CreateEntity();
+				loading->addLoadingFunction([=](wi::jobsystem::JobArgs args) {
+					Scene scene;
+					wi::scene::LoadModel2(scene, fileName, transform, root);
+
+					// Note: we lock the  scene for merging from multiple loading screen tasks
+					//	Because we don't have fine control over thread execution in lua, and this significantly
+					//	simplifies loading into scene from loadingscreen
+					std::scoped_lock lck(GetGlobalScene()->locker);
+					GetGlobalScene()->Merge(scene);
+				});
+				wi::lua::SSetLongLong(L, root);
+				return 1;
+			}
 		}
 		else
-			wi::lua::SError(L, "AddLoader(string taskScript) not enough arguments!");
+		{
+			wi::lua::SError(L, "AddLoadModelTask(string fileName, opt Matrix transform) not enough arguments!");
+		}
 		return 0;
 	}
-	int LoadingScreen_BindLua::OnFinished(lua_State* L)
+	int LoadingScreen_BindLua::IsFinished(lua_State* L)
 	{
-		int argc = wi::lua::SGetArgCount(L);
-		if (argc > 0)
+		LoadingScreen* loading = dynamic_cast<LoadingScreen*>(component);
+		if (loading != nullptr)
 		{
-			std::string task = wi::lua::SGetString(L, 1);
-			LoadingScreen* loading = dynamic_cast<LoadingScreen*>(component);
-			if (loading != nullptr)
-			{
-				loading->onFinished([=] {
-					wi::lua::RunText(task);
-					});
-			}
-			else
-				wi::lua::SError(L, "OnFinished(string taskScript) component is not a LoadingScreen!");
+			wi::lua::SSetBool(L, loading->isFinished());
+			return 1;
 		}
-		else
-			wi::lua::SError(L, "OnFinished(string taskScript) not enough arguments!");
+		wi::lua::SError(L, "IsFinished(): loading screen is invalid!");
 		return 0;
+	}
+	int LoadingScreen_BindLua::GetProgress(lua_State* L)
+	{
+		LoadingScreen* loading = dynamic_cast<LoadingScreen*>(component);
+		if (loading != nullptr)
+		{
+			wi::lua::SSetInt(L, loading->getProgress());
+			return 1;
+		}
+		wi::lua::SError(L, "GetProgress(): loading screen is invalid!");
+		return 0;
+	}
+	int LoadingScreen_BindLua::SetBackgroundTexture(lua_State* L)
+	{
+		LoadingScreen* loading = dynamic_cast<LoadingScreen*>(component);
+		if (loading == nullptr)
+		{
+			wi::lua::SError(L, "SetBackgroundTexture(Texture tex): loading screen is not valid!");
+			return 0;
+		}
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "SetBackgroundTexture(Texture tex): not enough arguments!");
+			return 0;
+		}
+		Texture_BindLua* tex = Luna<Texture_BindLua>::lightcheck(L, 1);
+		if (tex == nullptr)
+		{
+			wi::lua::SError(L, "SetBackgroundTexture(Texture tex): argument is not a Texture!");
+			return 0;
+		}
+		loading->backgroundTexture = tex->resource;
+		return 0;
+	}
+	int LoadingScreen_BindLua::GetBackgroundTexture(lua_State* L)
+	{
+		LoadingScreen* loading = dynamic_cast<LoadingScreen*>(component);
+		if (loading == nullptr)
+		{
+			wi::lua::SError(L, "GetBackgroundTexture(): loading screen is not valid!");
+			return 0;
+		}
+		Luna<Texture_BindLua>::push(L, loading->backgroundTexture);
+		return 1;
 	}
 
 	void LoadingScreen_BindLua::Bind()

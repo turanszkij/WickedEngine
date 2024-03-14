@@ -60,6 +60,7 @@ namespace wi::lua
 		int SetCanvas(lua_State* L);
 
 		int Exit(lua_State* L);
+		int IsFaded(lua_State* L);
 
 		static void Bind();
 	};

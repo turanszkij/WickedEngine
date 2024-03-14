@@ -58,6 +58,8 @@ namespace wi::lua
 		int DisableBackgroundBlur(lua_State* L);
 		int EnableBackground(lua_State* L);
 		int DisableBackground(lua_State* L);
+		int SetMaskAlphaRange(lua_State* L);
+		int GetMaskAlphaRange(lua_State* L);
 
 		static void Bind();
 	};

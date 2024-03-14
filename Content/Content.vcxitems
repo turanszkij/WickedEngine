@@ -600,6 +600,7 @@
     <Image Include="$(MSBuildThisFileDirectory)models\waterNormalMap.jpg" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\footprint.dds" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\grassparticle.png" />
+    <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\loadingscreen.png" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\waterNormalMap.jpg" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\baseColor.png" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\fire.jpg" />

@@ -569,6 +569,9 @@
     <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\footprint.dds">
       <Filter>scripts\character_controller\assets</Filter>
     </Image>
+    <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\loadingscreen.png">
+      <Filter>scripts\character_controller\assets</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Media Include="$(MSBuildThisFileDirectory)models\water.wav">
