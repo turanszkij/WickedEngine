@@ -4514,6 +4514,11 @@ namespace wi::scene
 			if (!transforms.Contains(entity))
 				return;
 
+			if (hair.IsDirty())
+			{
+				hair.SetDirty(false);
+			}
+
 			const LayerComponent* layer = layers.GetComponent(entity);
 			if (layer != nullptr)
 			{

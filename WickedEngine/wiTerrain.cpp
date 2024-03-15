@@ -425,6 +425,7 @@ namespace wi::terrain
 		if (scene->hairs.Contains(grassEntity))
 		{
 			grass_properties = *scene->hairs.GetComponent(grassEntity);
+			grass_properties.SetDirty(false);
 		}
 		if (scene->materials.Contains(grassEntity))
 		{
@@ -474,7 +475,7 @@ namespace wi::terrain
 		}
 
 		{
-			Entity sunEntity = scene->Entity_CreateLight("terrainSun");
+			Entity sunEntity = scene->Entity_CreateLight("sun");
 			scene->Component_Attach(sunEntity, terrainEntity);
 			LightComponent& light = *scene->lights.GetComponent(sunEntity);
 			light.SetType(LightComponent::LightType::DIRECTIONAL);
@@ -505,30 +506,21 @@ namespace wi::terrain
 					{
 					default:
 					case MATERIAL_BASE:
-						name = "MATERIAL_BASE";
+						name = "material_base";
 						break;
 					case MATERIAL_SLOPE:
-						name = "MATERIAL_SLOPE";
+						name = "material_slope";
 						break;
 					case MATERIAL_LOW_ALTITUDE:
-						name = "MATERIAL_LOW_ALTITUDE";
+						name = "material_low_altitude";
 						break;
 					case MATERIAL_HIGH_ALTITUDE:
-						name = "MATERIAL_HIGH_ALTITUDE";
+						name = "material_high_altitude";
 						break;
 					}
 				}
+				*scene->materials.GetComponent(materialEntities[i]) = materials[i];
 			}
-
-			MaterialComponent* material_Base = scene->materials.GetComponent(materialEntities[MATERIAL_BASE]);
-			MaterialComponent* material_Slope = scene->materials.GetComponent(materialEntities[MATERIAL_SLOPE]);
-			MaterialComponent* material_LowAltitude = scene->materials.GetComponent(materialEntities[MATERIAL_LOW_ALTITUDE]);
-			MaterialComponent* material_HighAltitude = scene->materials.GetComponent(materialEntities[MATERIAL_HIGH_ALTITUDE]);
-
-			*material_Base = materials[MATERIAL_BASE];
-			*material_Slope = materials[MATERIAL_SLOPE];
-			*material_LowAltitude = materials[MATERIAL_LOW_ALTITUDE];
-			*material_HighAltitude = materials[MATERIAL_HIGH_ALTITUDE];
 		}
 
 		// Restore grass parameters:
@@ -540,16 +532,18 @@ namespace wi::terrain
 			scene->Component_Attach(grassEntity, terrainEntity);
 			if (!scene->hairs.Contains(grassEntity))
 			{
-				scene->hairs.Create(grassEntity) = grass_properties;
+				scene->hairs.Create(grassEntity);
 			}
 			if (!scene->materials.Contains(grassEntity))
 			{
-				scene->materials.Create(grassEntity) = grass_material;
+				scene->materials.Create(grassEntity);
 			}
 			if (!scene->names.Contains(grassEntity))
 			{
 				scene->names.Create(grassEntity) = "grass";
 			}
+			*scene->hairs.GetComponent(grassEntity) = grass_properties;
+			*scene->materials.GetComponent(grassEntity) = grass_material;
 		}
 
 		if (chunkGroupEntity == INVALID_ENTITY)
@@ -608,6 +602,14 @@ namespace wi::terrain
 			if (material_grassparticle_in_scene != nullptr)
 			{
 				if (material_grassparticle_in_scene->IsDirty())
+				{
+					restart_generation = true;
+				}
+			}
+			wi::HairParticleSystem* hair = scene->hairs.GetComponent(grassEntity);
+			if (hair != nullptr)
+			{
+				if (hair->IsDirty())
 				{
 					restart_generation = true;
 				}
@@ -2108,23 +2110,23 @@ namespace wi::terrain
 			grass_material.Serialize(archive, seri);
 			wi::jobsystem::Wait(seri.ctx); // wait for material CreateRenderData() that was asynchronously launched in Serialize()!
 
-			materialEntities[0] = CreateEntity();
-			materialEntities[1] = CreateEntity();
-			materialEntities[2] = CreateEntity();
-			materialEntities[3] = CreateEntity();
+			materialEntities[MATERIAL_BASE] = CreateEntity();
+			materialEntities[MATERIAL_SLOPE] = CreateEntity();
+			materialEntities[MATERIAL_LOW_ALTITUDE] = CreateEntity();
+			materialEntities[MATERIAL_HIGH_ALTITUDE] = CreateEntity();
 			grassEntity = CreateEntity();
 
-			seri.remap[materialEntities[0]] = materialEntities[0];
-			seri.remap[materialEntities[1]] = materialEntities[1];
-			seri.remap[materialEntities[2]] = materialEntities[2];
-			seri.remap[materialEntities[3]] = materialEntities[3];
+			seri.remap[materialEntities[MATERIAL_BASE]] = materialEntities[MATERIAL_BASE];
+			seri.remap[materialEntities[MATERIAL_SLOPE]] = materialEntities[MATERIAL_SLOPE];
+			seri.remap[materialEntities[MATERIAL_LOW_ALTITUDE]] = materialEntities[MATERIAL_LOW_ALTITUDE];
+			seri.remap[materialEntities[MATERIAL_HIGH_ALTITUDE]] = materialEntities[MATERIAL_HIGH_ALTITUDE];
 			seri.remap[grassEntity] = grassEntity;
 
 			ComponentManager<MaterialComponent>* scene_materials = library.Get<MaterialComponent>("wi::scene::Scene::materials");
-			scene_materials->Create(materialEntities[0]) = materials[MATERIAL_BASE];
-			scene_materials->Create(materialEntities[1]) = materials[MATERIAL_SLOPE];
-			scene_materials->Create(materialEntities[2]) = materials[MATERIAL_LOW_ALTITUDE];
-			scene_materials->Create(materialEntities[3]) = materials[MATERIAL_HIGH_ALTITUDE];
+			scene_materials->Create(materialEntities[MATERIAL_BASE]) = materials[MATERIAL_BASE];
+			scene_materials->Create(materialEntities[MATERIAL_SLOPE]) = materials[MATERIAL_SLOPE];
+			scene_materials->Create(materialEntities[MATERIAL_LOW_ALTITUDE]) = materials[MATERIAL_LOW_ALTITUDE];
+			scene_materials->Create(materialEntities[MATERIAL_HIGH_ALTITUDE]) = materials[MATERIAL_HIGH_ALTITUDE];
 			scene_materials->Create(grassEntity) = grass_material;
 		}
 
