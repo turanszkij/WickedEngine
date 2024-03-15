@@ -43,6 +43,14 @@ namespace wi::terrain
 	static constexpr float chunk_half_width = (chunk_width - 1) * 0.5f;
 	static constexpr float chunk_width_rcp = 1.0f / (chunk_width - 1);
 	static constexpr uint32_t vertexCount = chunk_width * chunk_width;
+	enum
+	{
+		MATERIAL_BASE,
+		MATERIAL_SLOPE,
+		MATERIAL_LOW_ALTITUDE,
+		MATERIAL_HIGH_ALTITUDE,
+		MATERIAL_COUNT
+	};
 
 	struct VirtualTextureAtlas
 	{
@@ -207,14 +215,13 @@ namespace wi::terrain
 		uint32_t _flags = CENTER_TO_CAM | REMOVAL | GRASS;
 
 		wi::ecs::Entity terrainEntity = wi::ecs::INVALID_ENTITY;
+		wi::ecs::Entity chunkGroupEntity = wi::ecs::INVALID_ENTITY;
 		wi::scene::Scene* scene = nullptr;
-		wi::scene::MaterialComponent material_Base;
-		wi::scene::MaterialComponent material_Slope;
-		wi::scene::MaterialComponent material_LowAltitude;
-		wi::scene::MaterialComponent material_HighAltitude;
-		wi::scene::MaterialComponent material_GrassParticle;
+		wi::ecs::Entity materialEntities[MATERIAL_COUNT] = {};
+		wi::ecs::Entity grassEntity = wi::ecs::INVALID_ENTITY;
 		wi::scene::WeatherComponent weather;
 		wi::HairParticleSystem grass_properties;
+		wi::scene::MaterialComponent grass_material;
 		wi::unordered_map<Chunk, ChunkData> chunks;
 		Chunk center_chunk = {};
 		wi::noise::Perlin perlin_noise;
