@@ -122,7 +122,8 @@ public:
 	wi::gui::Slider region2Slider;
 	wi::gui::Slider region3Slider;
 
-	wi::gui::ComboBox materialCombos[wi::terrain::materialCount];
+	wi::gui::ComboBox materialCombos[wi::terrain::MATERIAL_COUNT];
+	wi::gui::ComboBox materialCombo_GrassParticle;
 
 	std::unique_ptr<PropsWindow> propsWindow;
 
