@@ -633,6 +633,11 @@ namespace wi::terrain
 			return;
 		}
 
+		if (chunkGroupEntity == INVALID_ENTITY)
+		{
+			chunkGroupEntity = terrainEntity;
+		}
+
 		WeatherComponent* weather_component = scene->weathers.GetComponent(terrainEntity);
 		if (weather_component != nullptr)
 		{
@@ -2114,18 +2119,19 @@ namespace wi::terrain
 			materialEntities[3] = CreateEntity();
 			grassEntity = CreateEntity();
 
-			seri.remap[materialEntities[0]] = materialEntities[0];
-			seri.remap[materialEntities[1]] = materialEntities[1];
-			seri.remap[materialEntities[2]] = materialEntities[2];
-			seri.remap[materialEntities[3]] = materialEntities[3];
-			seri.remap[grassEntity] = grassEntity;
-
 			ComponentManager<MaterialComponent>* scene_materials = library.Get<MaterialComponent>("wi::scene::Scene::materials");
 			scene_materials->Create(materialEntities[0]) = materials[MATERIAL_BASE];
 			scene_materials->Create(materialEntities[1]) = materials[MATERIAL_SLOPE];
 			scene_materials->Create(materialEntities[2]) = materials[MATERIAL_LOW_ALTITUDE];
 			scene_materials->Create(materialEntities[3]) = materials[MATERIAL_HIGH_ALTITUDE];
 			scene_materials->Create(grassEntity) = grass_material;
+
+			ComponentManager<NameComponent>* scene_names = library.Get<NameComponent>("wi::scene::Scene::names");
+			scene_names->Create(materialEntities[0]).name = "MATERIAL_BASE";
+			scene_names->Create(materialEntities[1]).name = "MATERIAL_SLOPE";
+			scene_names->Create(materialEntities[2]).name = "MATERIAL_LOW_ALTITUDE";
+			scene_names->Create(materialEntities[3]).name = "MATERIAL_HIGH_ALTITUDE";
+			scene_names->Create(grassEntity).name = "grass";
 		}
 
 		seri.version = weather_version;
