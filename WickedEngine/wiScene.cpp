@@ -4866,6 +4866,12 @@ namespace wi::scene
 		{
 			SoundComponent& sound = sounds[i];
 
+			if (!sound.soundinstance.IsValid())
+			{
+				sound.soundinstance.SetLooped(sound.IsLooped());
+				wi::audio::CreateSoundInstance(&sound.soundResource.GetSound(), &sound.soundinstance);
+			}
+
 			if (!sound.IsDisable3D())
 			{
 				Entity entity = sounds.GetEntity(i);
@@ -4917,6 +4923,8 @@ namespace wi::scene
 	}
 	void Scene::RunScriptUpdateSystem(wi::jobsystem::context& ctx)
 	{
+		if (dt == 0)
+			return; // not allowed to be run when dt == 0 as it could be on separate thread!
 		auto range = wi::profiler::BeginRangeCPU("Script Components");
 		for (size_t i = 0; i < scripts.GetCount(); ++i)
 		{
@@ -6285,57 +6293,78 @@ namespace wi::scene
 
 	Entity LoadModel(const std::string& fileName, const XMMATRIX& transformMatrix, bool attached)
 	{
-		Scene scene;
-		Entity root = LoadModel(scene, fileName, transformMatrix, attached);
-		GetScene().Merge(scene);
-		return root;
+		Entity rootEntity = INVALID_ENTITY;
+		if (attached)
+		{
+			rootEntity = CreateEntity();
+		}
+		LoadModel2(fileName, transformMatrix, rootEntity);
+		return rootEntity;
 	}
 
 	Entity LoadModel(Scene& scene, const std::string& fileName, const XMMATRIX& transformMatrix, bool attached)
 	{
-		wi::Archive archive(fileName, true);
-		if (archive.IsOpen())
+		Entity rootEntity = INVALID_ENTITY;
+		if (attached)
 		{
-			// Serialize it from file:
-			scene.Serialize(archive);
+			rootEntity = CreateEntity();
+		}
+		LoadModel2(scene, fileName, transformMatrix, rootEntity);
+		return rootEntity;
+	}
 
-			// First, create new root:
-			Entity root = CreateEntity();
-			scene.transforms.Create(root);
-			scene.layers.Create(root).layerMask = ~0;
+	void LoadModel2(const std::string& fileName, const XMMATRIX& transformMatrix, Entity rootEntity)
+	{
+		Scene scene;
+		LoadModel(scene, fileName, transformMatrix, rootEntity);
+		GetScene().Merge(scene);
+	}
 
+	void LoadModel2(Scene& scene, const std::string& fileName, const XMMATRIX& transformMatrix, Entity rootEntity)
+	{
+		wi::Archive archive(fileName, true);
+		if (!archive.IsOpen())
+			return;
+
+		// Serialize it from file:
+		scene.Serialize(archive);
+
+		// First, create new root:
+		bool attached = true;
+		if (rootEntity == INVALID_ENTITY)
+		{
+			rootEntity = CreateEntity();
+			attached = false;
+		}
+		scene.transforms.Create(rootEntity);
+		scene.layers.Create(rootEntity).layerMask = ~0;
+
+		{
+			// Apply the optional transformation matrix to the new scene:
+
+			// Parent all unparented transforms to new root entity
+			for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
 			{
-				// Apply the optional transformation matrix to the new scene:
-
-				// Parent all unparented transforms to new root entity
-				for (size_t i = 0; i < scene.transforms.GetCount() - 1; ++i) // GetCount() - 1 because the last added was the "root"
+				Entity entity = scene.transforms.GetEntity(i);
+				if (entity != rootEntity && !scene.hierarchy.Contains(entity))
 				{
-					Entity entity = scene.transforms.GetEntity(i);
-					if (!scene.hierarchy.Contains(entity))
-					{
-						scene.Component_Attach(entity, root);
-					}
+					scene.Component_Attach(entity, rootEntity);
 				}
-
-				// The root component is transformed, scene is updated:
-				TransformComponent* root_transform = scene.transforms.GetComponent(root);
-				root_transform->MatrixTransform(transformMatrix);
-
-				scene.Update(0);
 			}
 
-			if (!attached)
-			{
-				// In this case, we don't care about the root anymore, so delete it. This will simplify overall hierarchy
-				scene.Component_DetachChildren(root);
-				scene.Entity_Remove(root);
-				root = INVALID_ENTITY;
-			}
+			// The root component is transformed, scene is updated:
+			TransformComponent* root_transform = scene.transforms.GetComponent(rootEntity);
+			root_transform->MatrixTransform(transformMatrix);
 
-			return root;
+			scene.Update(0);
 		}
 
-		return INVALID_ENTITY;
+		if (!attached)
+		{
+			// In this case, we don't care about the root anymore, so delete it. This will simplify overall hierarchy
+			scene.Component_DetachChildren(rootEntity);
+			scene.Entity_Remove(rootEntity);
+		}
 	}
 
 	PickResult Pick(const wi::primitive::Ray& ray, uint32_t filterMask, uint32_t layerMask, const Scene& scene, uint32_t lod)

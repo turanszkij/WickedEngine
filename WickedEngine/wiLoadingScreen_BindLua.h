@@ -25,8 +25,12 @@ namespace wi::lua
 			this->component = &loadingscreen;
 		}
 
-		int AddLoadingTask(lua_State* L);
-		int OnFinished(lua_State* L);
+		int AddLoadModelTask(lua_State* L);
+		int AddRenderPathActivationTask(lua_State* L);
+		int IsFinished(lua_State* L);
+		int GetProgress(lua_State* L);
+		int SetBackgroundTexture(lua_State* L);
+		int GetBackgroundTexture(lua_State* L);
 
 		static void Bind();
 	};

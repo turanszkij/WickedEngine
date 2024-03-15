@@ -190,24 +190,24 @@ namespace wi::ecs
 		{
 			if (archive.IsReadMode())
 			{
-				Clear(); // If we deserialize, we start from empty
+				const size_t prev_count = components.size();
 
 				size_t count;
 				archive >> count;
 
-				components.resize(count);
+				components.resize(prev_count + count);
 				for (size_t i = 0; i < count; ++i)
 				{
-					components[i].Serialize(archive, seri);
+					components[prev_count + i].Serialize(archive, seri);
 				}
 
-				entities.resize(count);
+				entities.resize(prev_count + count);
 				for (size_t i = 0; i < count; ++i)
 				{
 					Entity entity;
 					SerializeEntity(archive, entity, seri);
-					entities[i] = entity;
-					lookup[entity] = i;
+					entities[prev_count + i] = entity;
+					lookup[entity] = prev_count + i;
 				}
 			}
 			else
@@ -462,11 +462,37 @@ namespace wi::ecs
 		//	The name must be unique, it will be used in serialization
 		//	version is optional, it will be propagated to ComponentManager::Serialize() inside the EntitySerializer parameter
 		template<typename T>
-		inline ComponentManager<T>& Register(std::string name, uint64_t version = 0)
+		inline ComponentManager<T>& Register(const std::string& name, uint64_t version = 0)
 		{
 			entries[name].component_manager = std::make_unique<ComponentManager<T>>();
 			entries[name].version = version;
 			return static_cast<ComponentManager<T>&>(*entries[name].component_manager);
+		}
+
+		template<typename T>
+		inline ComponentManager<T>* Get(const std::string& name)
+		{
+			auto it = entries.find(name);
+			if (it == entries.end())
+				return nullptr;
+			return static_cast<ComponentManager<T>*>(it->second.component_manager.get());
+		}
+
+		template<typename T>
+		inline const ComponentManager<T>* Get(const std::string& name) const
+		{
+			auto it = entries.find(name);
+			if (it == entries.end())
+				return nullptr;
+			return static_cast<const ComponentManager<T>*>(it->second.component_manager.get());
+		}
+
+		inline uint64_t GetVersion(std::string name) const
+		{
+			auto it = entries.find(name);
+			if (it == entries.end())
+				return 0;
+			return it->second.version;
 		}
 
 		// Serialize all registered component managers

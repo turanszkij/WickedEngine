@@ -57,7 +57,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<ScriptComponent>& scripts = componentLibrary.Register<ScriptComponent>("wi::scene::Scene::scripts");
 		wi::ecs::ComponentManager<ExpressionComponent>& expressions = componentLibrary.Register<ExpressionComponent>("wi::scene::Scene::expressions");
 		wi::ecs::ComponentManager<HumanoidComponent>& humanoids = componentLibrary.Register<HumanoidComponent>("wi::scene::Scene::humanoids", 1); // version = 1
-		wi::ecs::ComponentManager<wi::terrain::Terrain>& terrains = componentLibrary.Register<wi::terrain::Terrain>("wi::scene::Scene::terrains", 3); // version = 3
+		wi::ecs::ComponentManager<wi::terrain::Terrain>& terrains = componentLibrary.Register<wi::terrain::Terrain>("wi::scene::Scene::terrains", 4); // version = 4
 		wi::ecs::ComponentManager<wi::Sprite>& sprites = componentLibrary.Register<wi::Sprite>("wi::scene::Scene::sprites");
 		wi::ecs::ComponentManager<wi::SpriteFont>& fonts = componentLibrary.Register<wi::SpriteFont>("wi::scene::Scene::fonts");
 		wi::ecs::ComponentManager<wi::VoxelGrid>& voxel_grids = componentLibrary.Register<wi::VoxelGrid>("wi::scene::Scene::voxel_grids");
@@ -545,6 +545,19 @@ namespace wi::scene
 	//
 	//	returns INVALID_ENTITY if attached argument was false, else it returns the base entity handle
 	wi::ecs::Entity LoadModel(Scene& scene, const std::string& fileName, const XMMATRIX& transformMatrix = XMMatrixIdentity(), bool attached = false);
+
+	// Helper function to open a wiscene file and add the contents to the global scene
+	//	fileName		:	file path
+	//	transformMatrix	:	everything will be transformed by this matrix (optional)
+	//	rootEntity		:	specify entity to attach whole scene to (optional)
+	void LoadModel2(const std::string& fileName, const XMMATRIX& transformMatrix = XMMatrixIdentity(), wi::ecs::Entity rootEntity = wi::ecs::INVALID_ENTITY);
+
+	// Helper function to open a wiscene file and add the contents to the specified scene. This is thread safe as it doesn't modify global scene
+	//	scene			:	the scene that will contain the model
+	//	fileName		:	file path
+	//	transformMatrix	:	everything will be transformed by this matrix (optional)
+	//	rootEntity		:	specify entity to attach whole scene to (optional)
+	void LoadModel2(Scene& scene, const std::string& fileName, const XMMATRIX& transformMatrix = XMMatrixIdentity(), wi::ecs::Entity rootEntity = wi::ecs::INVALID_ENTITY);
 
 	// Deprecated, use Scene::Intersects() function instead
 	using PickResult = Scene::RayIntersectionResult;

@@ -240,6 +240,8 @@ Specify Sprite properties, like position, size, etc.
 - DisableMirror()
 - EnableBackgroundBlur(opt float mip = 0)
 - DisableBackgroundBlur()
+- SetMaskAlphaRange(float start, end)
+- GetMaskAlphaRange() : float start, end
 
 - [outer]STENCILMODE_DISABLED : int
 - [outer]STENCILMODE_EQUAL : int
@@ -1400,7 +1402,7 @@ This is the main entry point and manages the lifetime of the application.
 - [void-constructor]Application()
 - GetContent() : Resource? result
 - GetActivePath() : RenderPath? result
-- SetActivePath(RenderPath path, opt float fadeSeconds,fadeColorR,fadeColorG,fadeColorB)
+- SetActivePath(RenderPath path, opt float fadeSeconds, opt int fadeColorR = 0, fadeColorG = 0, fadeColorB = 0)
 - SetFrameSkip(bool enabled)	-- enable/disable frame skipping in fixed update 
 - SetTargetFrameRate(float fps)	-- set target frame rate for fixed update and variable rate update when frame rate is locked
 - SetFrameRateLock(bool enabled)	-- if enabled, variable rate update will use a fixed delta time
@@ -1416,6 +1418,7 @@ This is the main entry point and manages the lifetime of the application.
 - GetCanvas() : Canvas canvas  -- returns a copy of the application's current canvas
 - SetCanvas(Canvas canvas)  -- applies the specified canvas to the application
 - Exit() -- Closes the program
+- IsFaded() -- returns true when fadeout is full (fadeout can be set when switching paths with SetActivePath())
 - [outer]SetProfilerEnabled(bool enabled)
 
 ### RenderPath
@@ -1507,8 +1510,13 @@ Tonemap = {
 It is a RenderPath2D but one that internally manages resource loading and can display information about the process.
 It inherits functions from RenderPath2D.
 - [constructor]LoadingScreen()
-- AddLoadingTask(string taskScript)
-- OnFinished(string taskScript)
+- AddLoadModelTask(string fileName, Matrix matrix) : Entity -- Adds a scene loading task into the global scene and returns the root entity handle immediately. The loading task will be started asynchronously when the LoadingScreen is activated by the Application.
+- AddLoadModelTask(Scene scene, string fileName, Matrix matrix) : Entity -- Adds a scene loading task into the specified scene and returns the root entity handle immediately. The loading task will be started asynchronously when the LoadingScreen is activated by the Application.
+- AddRenderPathActivationTask(RenderPath path, opt float fadeSeconds = 0, opt int fadeR = 0,fadeG = 0,fadeB = 0) -- loads resources of a RenderPath and activates it after all loading tasks have finished
+- IsFinished() : bool -- returns true when all loading tasks have finished
+- GetProgress() : int -- returns percentage of loading complete (0% - 100%)
+- SetBackgroundTexture(Texture tex) -- set a full screen background texture that wil be displayed when loading screen is active
+- GetBackgroundTexture() : Texture
 
 ### Primitives
 

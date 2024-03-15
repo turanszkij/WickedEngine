@@ -31,9 +31,8 @@ namespace wi::lua
 
 	class Application_BindLua
 	{
-	private:
-		Application* component = nullptr;
 	public:
+		Application* component = nullptr;
 		inline static constexpr char className[] = "Application";
 		static Luna<Application_BindLua>::FunctionType methods[];
 		static Luna<Application_BindLua>::PropertyType properties[];
@@ -60,6 +59,7 @@ namespace wi::lua
 		int SetCanvas(lua_State* L);
 
 		int Exit(lua_State* L);
+		int IsFaded(lua_State* L);
 
 		static void Bind();
 	};

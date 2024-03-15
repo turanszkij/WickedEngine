@@ -410,6 +410,27 @@ namespace wi::terrain
 		Generation_Cancel();
 		generator->scene.Clear();
 
+		// save material parameters:
+		wi::scene::MaterialComponent materials[MATERIAL_COUNT];
+		for (int i = 0; i < MATERIAL_COUNT; ++i)
+		{
+			MaterialComponent* material = scene->materials.GetComponent(materialEntities[i]);
+			if (material == nullptr)
+				continue;
+			materials[i] = *material;
+			materials[i].SetDirty(false);
+		}
+
+		// save grass parameters:
+		if (scene->hairs.Contains(grassEntity))
+		{
+			grass_properties = *scene->hairs.GetComponent(grassEntity);
+		}
+		if (scene->materials.Contains(grassEntity))
+		{
+			grass_material = *scene->materials.GetComponent(grassEntity);
+			grass_material.SetDirty(false);
+		}
 
 		for (auto it = chunks.begin(); it != chunks.end(); it++)
 		{
@@ -463,6 +484,83 @@ namespace wi::terrain
 			transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV4, 0, XM_PIDIV4));
 			transform.Translate(XMFLOAT3(0, 4, 0));
 		}
+
+		// Restore surface source materials:
+		{
+			for (int i = 0; i < MATERIAL_COUNT; ++i)
+			{
+				if (materialEntities[i] == INVALID_ENTITY)
+				{
+					materialEntities[i] = CreateEntity();
+				}
+				scene->Component_Attach(materialEntities[i], terrainEntity);
+				if (!scene->materials.Contains(materialEntities[i]))
+				{
+					scene->materials.Create(materialEntities[i]);
+				}
+				if (!scene->names.Contains(materialEntities[i]))
+				{
+					NameComponent& name = scene->names.Create(materialEntities[i]);
+					switch (i)
+					{
+					default:
+					case MATERIAL_BASE:
+						name = "MATERIAL_BASE";
+						break;
+					case MATERIAL_SLOPE:
+						name = "MATERIAL_SLOPE";
+						break;
+					case MATERIAL_LOW_ALTITUDE:
+						name = "MATERIAL_LOW_ALTITUDE";
+						break;
+					case MATERIAL_HIGH_ALTITUDE:
+						name = "MATERIAL_HIGH_ALTITUDE";
+						break;
+					}
+				}
+			}
+
+			MaterialComponent* material_Base = scene->materials.GetComponent(materialEntities[MATERIAL_BASE]);
+			MaterialComponent* material_Slope = scene->materials.GetComponent(materialEntities[MATERIAL_SLOPE]);
+			MaterialComponent* material_LowAltitude = scene->materials.GetComponent(materialEntities[MATERIAL_LOW_ALTITUDE]);
+			MaterialComponent* material_HighAltitude = scene->materials.GetComponent(materialEntities[MATERIAL_HIGH_ALTITUDE]);
+
+			*material_Base = materials[MATERIAL_BASE];
+			*material_Slope = materials[MATERIAL_SLOPE];
+			*material_LowAltitude = materials[MATERIAL_LOW_ALTITUDE];
+			*material_HighAltitude = materials[MATERIAL_HIGH_ALTITUDE];
+		}
+
+		// Restore grass parameters:
+		{
+			if (grassEntity == INVALID_ENTITY)
+			{
+				grassEntity = CreateEntity();
+			}
+			scene->Component_Attach(grassEntity, terrainEntity);
+			if (!scene->hairs.Contains(grassEntity))
+			{
+				scene->hairs.Create(grassEntity) = grass_properties;
+			}
+			if (!scene->materials.Contains(grassEntity))
+			{
+				scene->materials.Create(grassEntity) = grass_material;
+			}
+			if (!scene->names.Contains(grassEntity))
+			{
+				scene->names.Create(grassEntity) = "grass";
+			}
+		}
+
+		if (chunkGroupEntity == INVALID_ENTITY)
+		{
+			chunkGroupEntity = CreateEntity();
+		}
+		scene->Component_Attach(chunkGroupEntity, terrainEntity);
+		if (!scene->names.Contains(chunkGroupEntity))
+		{
+			scene->names.Create(chunkGroupEntity) = "chunks";
+		}
 	}
 
 	void Terrain::Generation_Update(const CameraComponent& camera)
@@ -470,9 +568,10 @@ namespace wi::terrain
 		// The generation task is always cancelled every frame so we are sure that generation is not running at this point
 		Generation_Cancel();
 
+		bool restart_generation = false;
 		if (!IsGenerationStarted())
 		{
-			Generation_Restart();
+			restart_generation = true;
 		}
 
 		// Check whether any modifiers need to be removed, and we will really remove them here if so:
@@ -489,8 +588,35 @@ namespace wi::terrain
 					}
 				}
 			}
-			Generation_Restart();
+			restart_generation = true;
 			modifiers_to_remove.clear();
+		}
+		for (wi::ecs::Entity entity : materialEntities)
+		{
+			MaterialComponent* material = scene->materials.GetComponent(entity);
+			if (material == nullptr)
+				continue;
+			if (material->IsDirty())
+			{
+				restart_generation = true;
+				break;
+			}
+		}
+		if (grassEntity != INVALID_ENTITY)
+		{
+			MaterialComponent* material_grassparticle_in_scene = scene->materials.GetComponent(grassEntity);
+			if (material_grassparticle_in_scene != nullptr)
+			{
+				if (material_grassparticle_in_scene->IsDirty())
+				{
+					restart_generation = true;
+				}
+			}
+		}
+
+		if (restart_generation)
+		{
+			Generation_Restart();
 		}
 
 		if (terrainEntity == INVALID_ENTITY)
@@ -505,24 +631,6 @@ namespace wi::terrain
 			}
 			chunks.clear();
 			return;
-		}
-
-		auto updateMaterialIndex = [&](MaterialEntity& set) {
-			auto index = scene->materials.GetIndex(set.materialID);
-			if (index != ~0ull)
-			{
-				set.materialIndex = scene->materials.GetIndex(set.materialID);
-			}
-			else
-			{
-				set.materialID = INVALID_ENTITY;
-				set.materialIndex = 0;
-			}
-		};
-
-		for (size_t i = 0; i < materialCount; ++i)
-		{
-			updateMaterialIndex(materialEntities[i]);
 		}
 
 		WeatherComponent* weather_component = scene->weathers.GetComponent(terrainEntity);
@@ -551,12 +659,11 @@ namespace wi::terrain
 
 		if (scene->materials.GetCount() > 0)
 		{
-			for (auto& entity : materialEntities)
+			for (wi::ecs::Entity entity : materialEntities)
 			{
-				auto material = &scene->materials[entity.materialIndex];
-
-				if (material->IsDirty())
-					Generation_Restart();
+				MaterialComponent* material = scene->materials.GetComponent(entity);
+				if (material == nullptr)
+					continue;
 
 				for (int i = 0; i < TEXTURESLOT_COUNT; ++i)
 				{
@@ -578,6 +685,20 @@ namespace wi::terrain
 				}
 			}
 			virtual_texture_available[MaterialComponent::SURFACEMAP] = true; // this is always needed to bake individual material properties
+
+			if (grassEntity != INVALID_ENTITY)
+			{
+				MaterialComponent* material_grassparticle_in_scene = scene->materials.GetComponent(grassEntity);
+				if (material_grassparticle_in_scene != nullptr)
+				{
+					grass_material = *material_grassparticle_in_scene;
+				}
+				HairParticleSystem* hair = scene->hairs.GetComponent(grassEntity);
+				if (hair != nullptr)
+				{
+					grass_properties = *hair;
+				}
+			}
 		}
 
 		for (auto it = chunks.begin(); it != chunks.end();)
@@ -755,7 +876,7 @@ namespace wi::terrain
 					ObjectComponent& object = *generator->scene.objects.GetComponent(chunk_data.entity);
 					object.lod_distance_multiplier = lod_multiplier;
 					object.filterMask |= wi::enums::FILTER_NAVIGATION_MESH;
-					generator->scene.Component_Attach(chunk_data.entity, terrainEntity);
+					generator->scene.Component_Attach(chunk_data.entity, chunkGroupEntity);
 
 					TransformComponent& transform = *generator->scene.transforms.GetComponent(chunk_data.entity);
 					transform.ClearTransform();
@@ -920,7 +1041,7 @@ namespace wi::terrain
 							chunk_data.grass_density_current = grass_density;
 							grass.strandCount = uint32_t(grass.strandCount * chunk_data.grass_density_current);
 							grass.CreateRenderData();
-							generator->scene.materials.Create(chunk_data.grass_entity) = material_GrassParticle;
+							generator->scene.materials.Create(chunk_data.grass_entity) = grass_material;
 							generator->scene.transforms.Create(chunk_data.grass_entity);
 							generator->scene.names.Create(chunk_data.grass_entity) = "grass";
 							generator->scene.Component_Attach(chunk_data.grass_entity, chunk_data.entity, true);
@@ -1463,13 +1584,13 @@ namespace wi::terrain
 
 		device->EventBegin("Render Tile Regions", cmd);
 
-		ShaderMaterial materials[materialCount];
-		for (size_t i = 0; i < materialCount && scene->materials.GetCount() > 0; ++i)
+		ShaderMaterial materials[MATERIAL_COUNT];
+		for (size_t i = 0; i < MATERIAL_COUNT && scene->materials.GetCount() > 0; ++i)
 		{
-			if (materialEntities[i].materialID != INVALID_ENTITY)
-			{
-				scene->materials[materialEntities[i].materialIndex].WriteShaderMaterial(&materials[i]);
-			}
+			const MaterialComponent* material = scene->materials.GetComponent(materialEntities[i]);
+			if (material == nullptr)
+				continue;
+			material->WriteShaderMaterial(&materials[i]);
 		}
 		device->BindDynamicConstantBuffer(materials, 0, cmd);
 
@@ -1666,10 +1787,11 @@ namespace wi::terrain
 		Generation_Cancel();
 
 		// Note: separate component types serialized within terrain must NOT use the version of the terrain, but their own!
+		ComponentLibrary& library = *seri.componentlibrary;
 		const uint64_t terrain_version = seri.GetVersion();
-		const uint64_t grass_version = seri.componentlibrary->entries["wi::scene::Scene::hairs"].version;
-		const uint64_t material_version = seri.componentlibrary->entries["wi::scene::Scene::materials"].version;
-		const uint64_t weather_version = seri.componentlibrary->entries["wi::scene::Scene::weathers"].version;
+		const uint64_t grass_version = library.GetVersion("wi::scene::Scene::hairs");
+		const uint64_t material_version = library.GetVersion("wi::scene::Scene::materials");
+		const uint64_t weather_version = library.GetVersion("wi::scene::Scene::weathers");
 
 		if (archive.IsReadMode())
 		{
@@ -1695,11 +1817,11 @@ namespace wi::terrain
 			archive >> center_chunk.x;
 			archive >> center_chunk.z;
 
-			if (seri.GetVersion() >= 1)
+			if (terrain_version >= 1)
 			{
 				archive >> physics_generation;
 			}
-			if (seri.GetVersion() >= 2 && seri.GetVersion() < 3)
+			if (terrain_version >= 2 && terrain_version < 3)
 			{
 				uint32_t target_texture_resolution;
 				archive >> target_texture_resolution;
@@ -1711,7 +1833,7 @@ namespace wi::terrain
 			for (size_t i = 0; i < props.size(); ++i)
 			{
 				Prop& prop = props[i];
-				if (seri.GetVersion() >= 1)
+				if (terrain_version >= 1)
 				{
 					archive >> prop.data;
 
@@ -1858,7 +1980,7 @@ namespace wi::terrain
 		{
 			archive << _flags;
 			archive << lod_multiplier;
-			if (seri.GetVersion() < 3)
+			if (terrain_version < 3)
 			{
 				float texlod = 1;
 				archive << texlod;
@@ -1878,11 +2000,11 @@ namespace wi::terrain
 			archive << center_chunk.x;
 			archive << center_chunk.z;
 
-			if (seri.GetVersion() >= 1)
+			if (terrain_version >= 1)
 			{
 				archive << physics_generation;
 			}
-			if (seri.GetVersion() >= 2 && seri.GetVersion() < 3)
+			if (terrain_version >= 2 && terrain_version < 3)
 			{
 				uint32_t target_texture_resolution = 1024;
 				archive << target_texture_resolution;
@@ -1964,19 +2086,60 @@ namespace wi::terrain
 		}
 
 		// Caution: seri.version changes must be handled carefully!
-		seri.version = material_version;
-		for (size_t i = 0; i < materialCount; ++i)
+
+		if (terrain_version >= 4)
 		{
-			SerializeEntity(archive, materialEntities[i].materialID, seri);
+			SerializeEntity(archive, chunkGroupEntity, seri);
+			for (size_t i = 0; i < MATERIAL_COUNT; ++i)
+			{
+				SerializeEntity(archive, materialEntities[i], seri);
+			}
+			SerializeEntity(archive, grassEntity, seri);
 		}
-		material_GrassParticle.Serialize(archive, seri);
+		else
+		{
+			// Convert terrain version below 4 to newer version:
+			seri.version = material_version;
+			wi::scene::MaterialComponent materials[MATERIAL_COUNT];
+			materials[MATERIAL_BASE].Serialize(archive, seri);
+			materials[MATERIAL_SLOPE].Serialize(archive, seri);
+			materials[MATERIAL_LOW_ALTITUDE].Serialize(archive, seri);
+			materials[MATERIAL_HIGH_ALTITUDE].Serialize(archive, seri);
+			grass_material.Serialize(archive, seri);
+			wi::jobsystem::Wait(seri.ctx); // wait for material CreateRenderData() that was asynchronously launched in Serialize()!
+
+			materialEntities[0] = CreateEntity();
+			materialEntities[1] = CreateEntity();
+			materialEntities[2] = CreateEntity();
+			materialEntities[3] = CreateEntity();
+			grassEntity = CreateEntity();
+
+			seri.remap[materialEntities[0]] = materialEntities[0];
+			seri.remap[materialEntities[1]] = materialEntities[1];
+			seri.remap[materialEntities[2]] = materialEntities[2];
+			seri.remap[materialEntities[3]] = materialEntities[3];
+			seri.remap[grassEntity] = grassEntity;
+
+			ComponentManager<MaterialComponent>* scene_materials = library.Get<MaterialComponent>("wi::scene::Scene::materials");
+			scene_materials->Create(materialEntities[0]) = materials[MATERIAL_BASE];
+			scene_materials->Create(materialEntities[1]) = materials[MATERIAL_SLOPE];
+			scene_materials->Create(materialEntities[2]) = materials[MATERIAL_LOW_ALTITUDE];
+			scene_materials->Create(materialEntities[3]) = materials[MATERIAL_HIGH_ALTITUDE];
+			scene_materials->Create(grassEntity) = grass_material;
+		}
 
 		seri.version = weather_version;
 		weather.Serialize(archive, seri);
 
-		seri.version = grass_version;
-		grass_properties.Serialize(archive, seri);
-		seri.version = terrain_version;
+		if (terrain_version < 4)
+		{
+			seri.version = grass_version;
+			grass_properties.Serialize(archive, seri);
+			seri.version = terrain_version;
+
+			ComponentManager<wi::HairParticleSystem>* scene_hairs = library.Get<wi::HairParticleSystem>("wi::scene::Scene::hairs");
+			scene_hairs->Create(grassEntity) = grass_properties;
+		}
 
 		perlin_noise.Serialize(archive);
 	}

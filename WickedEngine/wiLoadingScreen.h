@@ -14,27 +14,31 @@ namespace wi
 	class LoadingScreen :
 		public RenderPath2D
 	{
-	private:
+	protected:
 		wi::jobsystem::context ctx;
 		wi::vector<std::function<void(wi::jobsystem::JobArgs)>> tasks;
 		std::function<void()> finish;
+		uint32_t launchedTasks = 0;
 	public:
+		wi::Resource backgroundTexture;
 
 		//Add a loading task which should be executed
-		//use std::bind( YourFunctionPointer )
 		void addLoadingFunction(std::function<void(wi::jobsystem::JobArgs)> loadingFunction);
 		//Helper for loading a whole renderable component
 		void addLoadingComponent(RenderPath* component, Application* main, float fadeSeconds = 0, wi::Color fadeColor = wi::Color(0, 0, 0, 255));
 		//Set a function that should be called when the loading finishes
-		//use std::bind( YourFunctionPointer )
 		void onFinished(std::function<void()> finishFunction);
 		//See if the loading is currently running
-		bool isActive();
+		bool isActive() const;
+		// See if there are any loading tasks that are still not finished
+		bool isFinished() const;
+		// Returns the percentage of loading tasks that are finished (0% - 100%)
+		int getProgress() const;
 
 		//Start Executing the tasks and mark the loading as active
-		virtual void Start() override;
-		//Clear all tasks
-		virtual void Stop() override;
+		void Start() override;
+
+		void Compose(wi::graphics::CommandList cmd) const override;
 	};
 
 }

@@ -278,9 +278,7 @@ local footprint_texture = Texture(script_dir() .. "assets/footprint.dds")
 local footprints = {}
 	
 local animations = {}
-local function LoadAnimations(model_name)
-	local anim_scene = Scene()
-	LoadModel(anim_scene, model_name)
+local function LoadAnimations(anim_scene)
 	animations = {
 		IDLE = anim_scene.Entity_FindByName("idle"),
 		WALK = anim_scene.Entity_FindByName("walk"),
@@ -292,7 +290,6 @@ local function LoadAnimations(model_name)
 		DANCE = anim_scene.Entity_FindByName("dance"),
 		WAVE = anim_scene.Entity_FindByName("wave"),
 	}
-	return anim_scene
 end
 
 local character_capsules = {}
@@ -300,7 +297,7 @@ local voxelgrid = VoxelGrid(128,32,128)
 voxelgrid.SetVoxelSize(0.25)
 voxelgrid.SetCenter(Vector(0,0.1,0))
 
-local function Character(model_name, start_position, face, controllable, anim_scene)
+local function Character(model_entity, start_position, face, controllable, anim_scene)
 	local self = {
 		model = INVALID_ENTITY,
 		target_rot_horizontal = 0,
@@ -350,7 +347,7 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 		dialogs = {},
 		next_dialog = 1,
 		
-		Create = function(self, model_name, start_position, face, controllable)
+		Create = function(self, model_entity, start_position, face, controllable)
 			self.start_position = start_position
 			self.face = face
 			self.face_next = face
@@ -360,7 +357,7 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 			else
 				self.layerMask = Layers.NPC
 			end
-			self.model = LoadModel(model_name)
+			self.model = model_entity
 			local layer = scene.Component_GetLayer(self.model)
 			layer.SetLayerMask(self.layerMask)
 
@@ -991,7 +988,7 @@ local function Character(model_name, start_position, face, controllable, anim_sc
 
 	}
 
-	self:Create(model_name, start_position, face, controllable)
+	self:Create(model_entity, start_position, face, controllable)
 	return self
 end
 
@@ -1167,38 +1164,14 @@ local function ThirdPersonCamera(character)
 	return self
 end
 
-ClearWorld()
-LoadModel(script_dir() .. "assets/level.wiscene")
---LoadModel(script_dir() .. "assets/terrain.wiscene")
---LoadModel(script_dir() .. "assets/waypoints.wiscene", matrix.Translation(Vector(1,0,2)))
---dofile(script_dir() .. "../dungeon_generator/dungeon_generator.lua")
-
-scene.VoxelizeScene(voxelgrid, false, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~(Layers.Player | Layers.NPC)) -- player and npc layers not included in voxelization
-
-local anim_scene = LoadAnimations(script_dir() .. "assets/animations.wiscene")
-
-local player = Character(script_dir() .. "assets/character.wiscene", Vector(0,0.5,0), Vector(0,0,1), true, anim_scene)
-local npcs = {
-	-- Patrolling NPC IDs: 1,2,3
-	Character(script_dir() .. "assets/character.wiscene", Vector(4,0.1,4), Vector(0,0,-1), false, anim_scene),
-	Character(script_dir() .. "assets/character.wiscene", Vector(-8,1,4), Vector(-1,0,0), false, anim_scene),
-	Character(script_dir() .. "assets/character.wiscene", Vector(-2,0.1,8), Vector(-1,0,0), false, anim_scene),
-
-	-- stationary NPC IDs: 3,4....
-	Character(script_dir() .. "assets/character.wiscene", Vector(-1,0.1,-6), Vector(0,0,1), false, anim_scene),
-	--Character(script_dir() .. "assets/character.wiscene", Vector(10.8,0.1,4.1), Vector(0,0,-1), false, anim_scene),
-	--Character(script_dir() .. "assets/character.wiscene", Vector(11.1,4,7.2), Vector(-1,0,0), false, anim_scene),
-}
-
-local camera = ThirdPersonCamera(player)
-
--- Main loop:
 runProcess(function()
 	
 	-- We will override the render path so we can invoke the script from Editor and controls won't collide with editor scripts
 	--	Also save the active component that we can restore when ESCAPE is pressed
 	local prevPath = application.GetActivePath()
 	local path = RenderPath3D()
+	local loadingscreen = LoadingScreen()
+
 	--path.SetLightShaftsEnabled(true)
 	path.SetLightShaftsStrength(0.01)
 	path.SetAO(AO_MSAO)
@@ -1208,18 +1181,343 @@ runProcess(function()
 	path.SetOutlineThickness(1.7)
 	path.SetOutlineColor(0,0,0,0.6)
 	path.SetBloomThreshold(5)
-	application.SetActivePath(path)	
 
 	--application.SetInfoDisplay(false)
-	application.SetFPSDisplay(true)
+	--application.SetFPSDisplay(true)
 	--path.SetResolutionScale(0.75)
 	--path.SetFSR2Enabled(true)
 	--path.SetFSR2Preset(FSR2_Preset.Performance)
 	--SetProfilerEnabled(true)
 
+	-- Configure a simple loading progress bar:
+    local loadingbar = Sprite()
+	loadingbar.SetMaskTexture(texturehelper.CreateGradientTexture(
+		GradientType.Linear,
+		2048, 1,
+		Vector(0, 0), Vector(1, 0),
+		GradientFlags.Inverse,
+		"111r"
+	))
+	local loadingbarparams = loadingbar.GetParams()
+	loadingbarparams.SetColor(Vector(1,0.2,0.2,1))
+	loadingbarparams.SetBlendMode(BLENDMODE_ALPHA)
+    loadingscreen.AddSprite(loadingbar)
+	loadingscreen.SetBackgroundTexture(Texture(script_dir() .. "assets/loadingscreen.png"))
+
+	-- All LoadModel tasks are started by the LoadingScreen asynchronously, but we get back root Entity handles immediately:
+	local anim_scene = Scene()
+	loadingscreen.AddLoadModelTask(anim_scene, script_dir() .. "assets/animations.wiscene")
+	local loading_scene = Scene()
+	local character_entities = {
+		loadingscreen.AddLoadModelTask(loading_scene, script_dir() .. "assets/character.wiscene"),
+		loadingscreen.AddLoadModelTask(loading_scene, script_dir() .. "assets/character.wiscene"),
+		loadingscreen.AddLoadModelTask(loading_scene, script_dir() .. "assets/character.wiscene"),
+		loadingscreen.AddLoadModelTask(loading_scene, script_dir() .. "assets/character.wiscene"),
+		loadingscreen.AddLoadModelTask(loading_scene, script_dir() .. "assets/character.wiscene"),
+	}
+	loadingscreen.AddLoadModelTask(loading_scene, script_dir() .. "assets/level.wiscene")
+	loadingscreen.AddRenderPathActivationTask(path, application, 0.5)
+	application.SetActivePath(loadingscreen, 0.5) -- activate and switch to loading screen
+
+    -- Because we are in a runProcess, we can block loading screen like this while application is still running normally:
+	--	Meanwhile, we can update the progress bar sprite
+    while not loadingscreen.IsFinished() do
+        update() -- gives back control for application for one frame, script waits until next update() phase
+		local canvas = application.GetCanvas()
+		loadingbarparams.SetPos(Vector(50, canvas.GetLogicalHeight() * 0.8))
+		loadingbarparams.SetSize(Vector(canvas.GetLogicalWidth() - 100, 20))
+		local progress = 1 - loadingscreen.GetProgress() / 100.0
+		loadingbarparams.SetMaskAlphaRange(math.saturate(progress - 0.05), math.saturate(progress))
+		loadingbar.SetParams(loadingbarparams)
+    end
+    
+	-- After loading finished, we clear the main scene, and merge loaded scene into it:
+    scene.Clear()
+    scene.Merge(loading_scene)
+    scene.Update(0)
+	
+	scene.VoxelizeScene(voxelgrid, false, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~(Layers.Player | Layers.NPC)) -- player and npc layers not included in voxelization
+	
+	-- Parse animations from anim_scene, which was loaded by the loading screen:
+	LoadAnimations(anim_scene)
+	
+	-- Create characters from root Entity handles that were loaded by loading screen
+	local player = Character(character_entities[1], Vector(0,0.5,0), Vector(0,0,1), true, anim_scene)
+	local npcs = {
+		-- Patrolling NPC IDs: 1,2,3
+		Character(character_entities[2], Vector(4,0.1,4), Vector(0,0,-1), false, anim_scene),
+		Character(character_entities[3], Vector(-8,1,4), Vector(-1,0,0), false, anim_scene),
+		Character(character_entities[4], Vector(-2,0.1,8), Vector(-1,0,0), false, anim_scene),
+	
+		-- stationary NPC IDs: 3,4....
+		Character(character_entities[5], Vector(-1,0.1,-6), Vector(0,0,1), false, anim_scene),
+		--Character(character_entities[6], Vector(10.8,0.1,4.1), Vector(0,0,-1), false, anim_scene),
+		--Character(character_entities[7], Vector(11.1,4,7.2), Vector(-1,0,0), false, anim_scene),
+	}
+	
+	local camera = ThirdPersonCamera(player)
+
 	path.AddFont(conversation.font)
 	path.AddFont(conversation.advance_font)
+	
+	local help_text = "Wicked Engine Character demo (LUA)\n\n"
+	help_text = help_text .. "Controls:\n"
+	help_text = help_text .. "#############\n"
+	help_text = help_text .. "WASD/arrows/left analog stick: walk\n"
+	help_text = help_text .. "SHIFT/right shoulder button: walk -> jog\n"
+	help_text = help_text .. "E/left shoulder button: jog -> run\n"
+	help_text = help_text .. "SPACE/gamepad X/gamepad button 3: Jump\n"
+	help_text = help_text .. "Right Mouse Button/Right thumbstick: rotate camera\n"
+	help_text = help_text .. "Scoll middle mouse/Left-Right triggers: adjust camera distance\n"
+	help_text = help_text .. "ESCAPE key: quit\n"
+	help_text = help_text .. "ENTER key: interact\n"
+	help_text = help_text .. "R: reload script\n"
+	help_text = help_text .. "H: toggle debug draw\n"
+	help_text = help_text .. "L: toggle framerate lock\n"
 
+	
+	-- Conversation dialogs:
+	local dialogtree = {
+		-- Dialog starts here:
+		{"Hello! Today is a nice day for a walk, isn't it? The sun is shining, the wind blows lightly, and the temperature is just perfect! To be honest, I don't need anything else to be happy."},
+		{"I just finished my morning routine and I'm ready for the day. What should I do now...?"},
+		{
+			"Anything I can do for you?",
+			choices = {
+				{
+					"Follow me!",
+					action = function()
+						conversation.character:Follow(player)
+						conversation.character.next_dialog = 4
+					end
+				},
+				{
+					"Never mind.",
+					action = function()
+						conversation.character.next_dialog = 5
+					end
+				}
+			}
+		},
+
+		-- Dialog 4: When chosen [Follow me] or [Just keep following me]
+		{"Lead the way!", action_after = function() conversation:Exit() conversation.character.next_dialog = 6 end},
+
+		-- Dialog 5: When chosen [Never mind] - this also modifies mood (expression) and state (anim) while dialog is playing
+		{
+			"Have a nice day!",
+			action = function()
+				conversation.character.mood = Mood.Happy
+				conversation.character.state = States.WAVE
+				conversation.character.anim_amount = 0.1
+			end,
+			action_after = function()
+				conversation.character.mood = Mood.Neutral
+				conversation.character.state = States.IDLE
+				conversation.character.anim_amount = 1
+				conversation:Exit() 
+				conversation.character.next_dialog = 1 
+			end
+		},
+
+		-- Dialog 6: After Dialog 4 finished, so character is following player
+		{
+			"Where are we going?",
+			choices = {
+				{"Just keep following me.", action = function() conversation.character.next_dialog = 4 end},
+				{"Stay here!", action = function() conversation.character:Unfollow() end}
+			}
+		},
+		{"Gotcha!"}, -- After chosen [Stay here]
+	}
+
+	for i,npc in pairs(npcs) do
+		npc.dialogs = dialogtree
+	end
+
+	-- Patrol waypoints:
+
+	local waypoints = {
+		scene.Entity_FindByName("waypoint1"),
+		scene.Entity_FindByName("waypoint2"),
+
+		scene.Entity_FindByName("waypoint3"),
+		scene.Entity_FindByName("waypoint4"),
+		scene.Entity_FindByName("waypoint5"),
+		scene.Entity_FindByName("waypoint6"),
+
+		scene.Entity_FindByName("waypoint7"),
+		scene.Entity_FindByName("waypoint8"),
+		scene.Entity_FindByName("waypoint9"),
+		scene.Entity_FindByName("waypoint10"),
+		scene.Entity_FindByName("waypoint11"),
+		scene.Entity_FindByName("waypoint12"),
+		scene.Entity_FindByName("waypoint13"),
+		scene.Entity_FindByName("waypoint14"),
+		scene.Entity_FindByName("waypoint15"),
+		scene.Entity_FindByName("waypoint16"),
+		scene.Entity_FindByName("waypoint17"),
+		scene.Entity_FindByName("waypoint18"),
+		scene.Entity_FindByName("waypoint19"),
+		scene.Entity_FindByName("waypoint20"),
+		scene.Entity_FindByName("waypoint21"),
+		scene.Entity_FindByName("waypoint22"),
+		scene.Entity_FindByName("waypoint23"),
+		scene.Entity_FindByName("waypoint24"),
+		scene.Entity_FindByName("waypoint25"),
+	}
+
+	-- Simplest 1-2 patrol:
+	if(
+		waypoints[1] ~= INVALID_ENTITY and 
+		waypoints[2] ~= INVALID_ENTITY
+	) then
+		npcs[1].patrol_waypoints = {
+			{
+				entity = waypoints[1],
+				wait = 0,
+			},
+			{
+				entity = waypoints[2],
+				wait = 2,
+			},
+		}
+	end
+
+	-- Some more advanced, toggle between walk and jog, also swimming (because waypoints are across water mesh in test level):
+	if(
+		waypoints[3] ~= INVALID_ENTITY and 
+		waypoints[4] ~= INVALID_ENTITY and
+		waypoints[5] ~= INVALID_ENTITY and
+		waypoints[6] ~= INVALID_ENTITY
+	) then
+		npcs[2].patrol_waypoints = {
+			{
+				entity = waypoints[3],
+				wait = 0,
+				state = States.JOG,
+			},
+			{
+				entity = waypoints[4],
+				wait = 0,
+			},
+			{
+				entity = waypoints[5],
+				wait = 2,
+			},
+			{
+				entity = waypoints[6],
+				wait = 0,
+				state = States.JOG,
+			},
+		}
+	end
+
+
+	-- Run long circle:
+	if(
+		waypoints[7] ~= INVALID_ENTITY and 
+		waypoints[8] ~= INVALID_ENTITY and 
+		waypoints[9] ~= INVALID_ENTITY and 
+		waypoints[10] ~= INVALID_ENTITY and 
+		waypoints[11] ~= INVALID_ENTITY and 
+		waypoints[12] ~= INVALID_ENTITY and 
+		waypoints[13] ~= INVALID_ENTITY and 
+		waypoints[14] ~= INVALID_ENTITY and 
+		waypoints[15] ~= INVALID_ENTITY and 
+		waypoints[16] ~= INVALID_ENTITY and 
+		waypoints[17] ~= INVALID_ENTITY and 
+		waypoints[18] ~= INVALID_ENTITY and 
+		waypoints[19] ~= INVALID_ENTITY and 
+		waypoints[20] ~= INVALID_ENTITY and 
+		waypoints[21] ~= INVALID_ENTITY and 
+		waypoints[22] ~= INVALID_ENTITY and 
+		waypoints[23] ~= INVALID_ENTITY and 
+		waypoints[24] ~= INVALID_ENTITY and 
+		waypoints[25] ~= INVALID_ENTITY
+	) then
+		npcs[3].patrol_waypoints = {
+			{
+				entity = waypoints[7],
+				state = States.JOG,
+			},
+			{
+				entity = waypoints[8],
+				state = States.JOG,
+			},
+			{
+				entity = waypoints[9],
+				state = States.JOG,
+			},
+			{
+				entity = waypoints[10],
+				state = States.JOG,
+			},
+			{
+				entity = waypoints[11],
+				state = States.JOG,
+			},
+			{
+				entity = waypoints[12],
+				state = States.JOG,
+			},
+			{
+				entity = waypoints[13],
+				state = States.JOG,
+			},
+			{
+				entity = waypoints[14],
+				state = States.JOG,
+			},
+			{
+				entity = waypoints[15],
+				state = States.JOG,
+			},
+			{
+				entity = waypoints[16],
+				state = States.JOG,
+			},
+			{
+				entity = waypoints[17],
+				state = States.JOG,
+			},
+			{
+				entity = waypoints[18],
+				state = States.JOG,
+				wait = 2, -- little wait at top of slope
+			},
+			{
+				entity = waypoints[19],
+				state = States.JOG,
+			},
+			{
+				entity = waypoints[20],
+				state = States.JOG,
+			},
+			{
+				entity = waypoints[21],
+				state = States.JOG,
+			},
+			{
+				entity = waypoints[22],
+				state = States.JOG,
+			},
+			{
+				entity = waypoints[23],
+				state = States.JOG,
+			},
+			{
+				entity = waypoints[24],
+				state = States.JOG,
+			},
+			{
+				entity = waypoints[25],
+				state = States.JOG,
+			},
+		}
+	end
+
+	-- Main loop:
 	while true do
 
 		player:Update()
@@ -1262,58 +1560,7 @@ runProcess(function()
 			scene.VoxelizeScene(voxelgrid, false, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~(Layers.Player | Layers.NPC)) -- player and npc layers not included in voxelization
 		end
 
-		update()
 		
-		if not backlog_isactive() then
-			if(input.Press(KEYBOARD_BUTTON_ESCAPE)) then
-				-- restore previous component
-				--	so if you loaded this script from the editor, you can go back to the editor with ESC
-				backlog_post("EXIT")
-				killProcesses()
-				application.SetActivePath(prevPath)
-				return
-			end
-			if(input.Press(string.byte('R'))) then
-				-- reload script
-				backlog_post("RELOAD")
-				killProcesses()
-				application.SetActivePath(prevPath)
-				dofile(script_file())
-				return
-			end
-			if input.Press(string.byte('L')) then
-				framerate_lock = not framerate_lock
-				application.SetFrameRateLock(framerate_lock)
-				if framerate_lock then
-					application.SetTargetFrameRate(framerate_lock_target)
-				end
-			end
-		end
-
-	end
-	
-end)
-
--- Draw
-runProcess(function()
-
-	local help_text = "Wicked Engine Character demo (LUA)\n\n"
-	help_text = help_text .. "Controls:\n"
-	help_text = help_text .. "#############\n"
-	help_text = help_text .. "WASD/arrows/left analog stick: walk\n"
-	help_text = help_text .. "SHIFT/right shoulder button: walk -> jog\n"
-	help_text = help_text .. "E/left shoulder button: jog -> run\n"
-	help_text = help_text .. "SPACE/gamepad X/gamepad button 3: Jump\n"
-	help_text = help_text .. "Right Mouse Button/Right thumbstick: rotate camera\n"
-	help_text = help_text .. "Scoll middle mouse/Left-Right triggers: adjust camera distance\n"
-	help_text = help_text .. "ESCAPE key: quit\n"
-	help_text = help_text .. "ENTER key: interact\n"
-	help_text = help_text .. "R: reload script\n"
-	help_text = help_text .. "H: toggle debug draw\n"
-	help_text = help_text .. "L: toggle framerate lock\n"
-	
-	while true do
-
 		-- Do some debug draw geometry:
 			
 		DrawDebugText(help_text, Vector(0,2,2), Vector(1,1,1,1), 0.1, DEBUG_TEXT_DEPTH_TEST)
@@ -1362,249 +1609,37 @@ runProcess(function()
 
 		end
 
-		-- Wait for the engine to render the scene
-		render()
-	end
-end)
-
--- Conversation dialogs:
-local dialogtree = {
-	-- Dialog starts here:
-	{"Hello! Today is a nice day for a walk, isn't it? The sun is shining, the wind blows lightly, and the temperature is just perfect! To be honest, I don't need anything else to be happy."},
-	{"I just finished my morning routine and I'm ready for the day. What should I do now...?"},
-	{
-		"Anything I can do for you?",
-		choices = {
-			{
-				"Follow me!",
-				action = function()
-					conversation.character:Follow(player)
-					conversation.character.next_dialog = 4
+		update()
+		
+		if not backlog_isactive() then
+			if(input.Press(KEYBOARD_BUTTON_ESCAPE)) then
+				-- restore previous component
+				--	so if you loaded this script from the editor, you can go back to the editor with ESC
+				backlog_post("EXIT")
+				application.SetActivePath(prevPath)
+				killProcesses()
+				return
+			end
+			if(input.Press(string.byte('R'))) then
+				-- reload script
+				backlog_post("RELOAD")
+				application.SetActivePath(prevPath, 0.5)
+				while not application.IsFaded() do
+					update()
 				end
-			},
-			{
-				"Never mind.",
-				action = function()
-					conversation.character.next_dialog = 5
+				killProcesses()
+				dofile(script_file())
+				return
+			end
+			if input.Press(string.byte('L')) then
+				framerate_lock = not framerate_lock
+				application.SetFrameRateLock(framerate_lock)
+				if framerate_lock then
+					application.SetTargetFrameRate(framerate_lock_target)
 				end
-			}
-		}
-	},
-
-	-- Dialog 4: When chosen [Follow me] or [Just keep following me]
-	{"Lead the way!", action_after = function() conversation:Exit() conversation.character.next_dialog = 6 end},
-
-	-- Dialog 5: When chosen [Never mind] - this also modifies mood (expression) and state (anim) while dialog is playing
-	{
-		"Have a nice day!",
-		action = function()
-			conversation.character.mood = Mood.Happy
-			conversation.character.state = States.WAVE
-			conversation.character.anim_amount = 0.1
-		end,
-		action_after = function()
-			conversation.character.mood = Mood.Neutral
-			conversation.character.state = States.IDLE
-			conversation.character.anim_amount = 1
-			conversation:Exit() 
-			conversation.character.next_dialog = 1 
+			end
 		end
-	},
 
-	-- Dialog 6: After Dialog 4 finished, so character is following player
-	{
-		"Where are we going?",
-		choices = {
-			{"Just keep following me.", action = function() conversation.character.next_dialog = 4 end},
-			{"Stay here!", action = function() conversation.character:Unfollow() end}
-		}
-	},
-	{"Gotcha!"}, -- After chosen [Stay here]
-}
-
-for i,npc in pairs(npcs) do
-	npc.dialogs = dialogtree
-end
-
--- Patrol waypoints:
-
-local waypoints = {
-	scene.Entity_FindByName("waypoint1"),
-	scene.Entity_FindByName("waypoint2"),
-
-	scene.Entity_FindByName("waypoint3"),
-	scene.Entity_FindByName("waypoint4"),
-	scene.Entity_FindByName("waypoint5"),
-	scene.Entity_FindByName("waypoint6"),
-
-	scene.Entity_FindByName("waypoint7"),
-	scene.Entity_FindByName("waypoint8"),
-	scene.Entity_FindByName("waypoint9"),
-	scene.Entity_FindByName("waypoint10"),
-	scene.Entity_FindByName("waypoint11"),
-	scene.Entity_FindByName("waypoint12"),
-	scene.Entity_FindByName("waypoint13"),
-	scene.Entity_FindByName("waypoint14"),
-	scene.Entity_FindByName("waypoint15"),
-	scene.Entity_FindByName("waypoint16"),
-	scene.Entity_FindByName("waypoint17"),
-	scene.Entity_FindByName("waypoint18"),
-	scene.Entity_FindByName("waypoint19"),
-	scene.Entity_FindByName("waypoint20"),
-	scene.Entity_FindByName("waypoint21"),
-	scene.Entity_FindByName("waypoint22"),
-	scene.Entity_FindByName("waypoint23"),
-	scene.Entity_FindByName("waypoint24"),
-	scene.Entity_FindByName("waypoint25"),
-}
-
--- Simplest 1-2 patrol:
-if(
-	waypoints[1] ~= INVALID_ENTITY and 
-	waypoints[2] ~= INVALID_ENTITY
-) then
-	npcs[1].patrol_waypoints = {
-		{
-			entity = waypoints[1],
-			wait = 0,
-		},
-		{
-			entity = waypoints[2],
-			wait = 2,
-		},
-	}
-end
-
--- Some more advanced, toggle between walk and jog, also swimming (because waypoints are across water mesh in test level):
-if(
-	waypoints[3] ~= INVALID_ENTITY and 
-	waypoints[4] ~= INVALID_ENTITY and
-	waypoints[5] ~= INVALID_ENTITY and
-	waypoints[6] ~= INVALID_ENTITY
-) then
-	npcs[2].patrol_waypoints = {
-		{
-			entity = waypoints[3],
-			wait = 0,
-			state = States.JOG,
-		},
-		{
-			entity = waypoints[4],
-			wait = 0,
-		},
-		{
-			entity = waypoints[5],
-			wait = 2,
-		},
-		{
-			entity = waypoints[6],
-			wait = 0,
-			state = States.JOG,
-		},
-	}
-end
-
-
--- Run long circle:
-if(
-	waypoints[7] ~= INVALID_ENTITY and 
-	waypoints[8] ~= INVALID_ENTITY and 
-	waypoints[9] ~= INVALID_ENTITY and 
-	waypoints[10] ~= INVALID_ENTITY and 
-	waypoints[11] ~= INVALID_ENTITY and 
-	waypoints[12] ~= INVALID_ENTITY and 
-	waypoints[13] ~= INVALID_ENTITY and 
-	waypoints[14] ~= INVALID_ENTITY and 
-	waypoints[15] ~= INVALID_ENTITY and 
-	waypoints[16] ~= INVALID_ENTITY and 
-	waypoints[17] ~= INVALID_ENTITY and 
-	waypoints[18] ~= INVALID_ENTITY and 
-	waypoints[19] ~= INVALID_ENTITY and 
-	waypoints[20] ~= INVALID_ENTITY and 
-	waypoints[21] ~= INVALID_ENTITY and 
-	waypoints[22] ~= INVALID_ENTITY and 
-	waypoints[23] ~= INVALID_ENTITY and 
-	waypoints[24] ~= INVALID_ENTITY and 
-	waypoints[25] ~= INVALID_ENTITY
-) then
-	npcs[3].patrol_waypoints = {
-		{
-			entity = waypoints[7],
-			state = States.JOG,
-		},
-		{
-			entity = waypoints[8],
-			state = States.JOG,
-		},
-		{
-			entity = waypoints[9],
-			state = States.JOG,
-		},
-		{
-			entity = waypoints[10],
-			state = States.JOG,
-		},
-		{
-			entity = waypoints[11],
-			state = States.JOG,
-		},
-		{
-			entity = waypoints[12],
-			state = States.JOG,
-		},
-		{
-			entity = waypoints[13],
-			state = States.JOG,
-		},
-		{
-			entity = waypoints[14],
-			state = States.JOG,
-		},
-		{
-			entity = waypoints[15],
-			state = States.JOG,
-		},
-		{
-			entity = waypoints[16],
-			state = States.JOG,
-		},
-		{
-			entity = waypoints[17],
-			state = States.JOG,
-		},
-		{
-			entity = waypoints[18],
-			state = States.JOG,
-			wait = 2, -- little wait at top of slope
-		},
-		{
-			entity = waypoints[19],
-			state = States.JOG,
-		},
-		{
-			entity = waypoints[20],
-			state = States.JOG,
-		},
-		{
-			entity = waypoints[21],
-			state = States.JOG,
-		},
-		{
-			entity = waypoints[22],
-			state = States.JOG,
-		},
-		{
-			entity = waypoints[23],
-			state = States.JOG,
-		},
-		{
-			entity = waypoints[24],
-			state = States.JOG,
-		},
-		{
-			entity = waypoints[25],
-			state = States.JOG,
-		},
-	}
-end
-
+	end
+	
+end)

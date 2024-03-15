@@ -11,6 +11,7 @@ namespace wi
 
 	void FadeManager::Update(float dt)
 	{
+		fadeEventTriggeredThisFrame = false;
 		if (!IsActive())
 			return;
 
@@ -19,6 +20,7 @@ namespace wi
 			// skip fade, just launch the job
 			onFade();
 			state = FADE_FINISHED;
+			fadeEventTriggeredThisFrame = true;
 		}
 
 		float t = timer / targetFadeTimeInSeconds;
@@ -39,6 +41,7 @@ namespace wi
 			opacity = 1.0f;
 			onFade();
 			timer = 0;
+			fadeEventTriggeredThisFrame = true;
 		}
 		else if (state == FADE_OUT)
 		{

@@ -216,6 +216,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 			scene.names.Create(pick.entity) = "collider";
 			break;
 		case NEW_TERRAIN:
+			editor->componentsWnd.terrainWnd.entity = pick.entity;
 			editor->componentsWnd.terrainWnd.SetupAssets();
 			pick.entity = CreateEntity();
 			scene.terrains.Create(pick.entity) = editor->componentsWnd.terrainWnd.terrain_preset;

@@ -1727,8 +1727,9 @@ namespace wi::scene
 				{
 					filename = dir + filename;
 					soundResource = wi::resourcemanager::Load(filename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
-					soundinstance.SetLooped(IsLooped());
-					wi::audio::CreateSoundInstance(&soundResource.GetSound(), &soundinstance);
+					// Note: sound instance can't be created yet, as soundResource is not necessarily ready at this point
+					//	Consider when multiple threads are loading the same sound, one thread will be loading the data,
+					//	the others return early with the resource that will be containing the data once it has been loaded.
 				}
 			});
 		}
