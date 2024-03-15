@@ -2129,10 +2129,10 @@ namespace wi::terrain
 			scene_materials->Create(grassEntity) = grass_material;
 
 			ComponentManager<NameComponent>* scene_names = library.Get<NameComponent>("wi::scene::Scene::names");
-			scene_names->Create(materialEntities[MATERIAL_BASE]).name = "MATERIAL_BASE";
-			scene_names->Create(materialEntities[MATERIAL_SLOPE]).name = "MATERIAL_SLOPE";
-			scene_names->Create(materialEntities[MATERIAL_LOW_ALTITUDE]).name = "MATERIAL_LOW_ALTITUDE";
-			scene_names->Create(materialEntities[MATERIAL_HIGH_ALTITUDE]).name = "MATERIAL_HIGH_ALTITUDE";
+			scene_names->Create(materialEntities[MATERIAL_BASE]).name = "material_base";
+			scene_names->Create(materialEntities[MATERIAL_SLOPE]).name = "material_slope";
+			scene_names->Create(materialEntities[MATERIAL_LOW_ALTITUDE]).name = "material_low_altitude";
+			scene_names->Create(materialEntities[MATERIAL_HIGH_ALTITUDE]).name = "material_high_altitude";
 			scene_names->Create(grassEntity).name = "grass";
 		}
 
