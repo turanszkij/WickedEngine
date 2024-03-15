@@ -73,6 +73,7 @@ namespace wi
 			EMPTY = 0,
 			_DEPRECATED_REGENERATE_FRAME = 1 << 0,
 			REBUILD_BUFFERS = 1 << 1,
+			DIRTY = 1 << 2,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -107,5 +108,8 @@ namespace wi
 
 		constexpr uint32_t GetParticleCount() const { return strandCount * segmentCount; }
 		uint64_t GetMemorySizeInBytes() const;
+
+		constexpr bool IsDirty() const { return _flags & DIRTY; }
+		constexpr void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 	};
 }

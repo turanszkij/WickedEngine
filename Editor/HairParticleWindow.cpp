@@ -51,6 +51,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 				Scene& scene = editor->GetCurrentScene();
 				hair->meshID = scene.meshes.GetEntity(args.iValue - 1);
 			}
+			hair->SetDirty();
 		}
 	});
 	meshComboBox.SetTooltip("Choose a mesh where hair will grow from...");
@@ -64,6 +65,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 		if (hair != nullptr)
 		{
 			hair->strandCount = (uint32_t)args.iValue;
+			hair->SetDirty();
 		}
 	});
 	countSlider.SetEnabled(false);
@@ -78,6 +80,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 		if (hair != nullptr)
 		{
 			hair->length = args.fValue;
+			hair->SetDirty();
 		}
 	});
 	lengthSlider.SetEnabled(false);
@@ -92,6 +95,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 		if (hair != nullptr)
 		{
 			hair->stiffness = args.fValue;
+			hair->SetDirty();
 		}
 	});
 	stiffnessSlider.SetEnabled(false);
@@ -106,6 +110,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 		if (hair != nullptr)
 		{
 			hair->randomness = args.fValue;
+			hair->SetDirty();
 		}
 	});
 	randomnessSlider.SetEnabled(false);
@@ -134,6 +139,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 		if (hair != nullptr)
 		{
 			hair->randomSeed = (uint32_t)args.iValue;
+			hair->SetDirty();
 		}
 	});
 	randomSeedSlider.SetEnabled(false);
@@ -148,6 +154,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 		if (hair != nullptr)
 		{
 			hair->viewDistance = args.fValue;
+			hair->SetDirty();
 		}
 		});
 	viewDistanceSlider.SetEnabled(false);
@@ -165,6 +172,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 		if (hair != nullptr)
 		{
 			hair->framesX = (uint32_t)args.iValue;
+			hair->SetDirty();
 		}
 	});
 	AddWidget(&framesXInput);
@@ -179,6 +187,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 		if (hair != nullptr)
 		{
 			hair->framesY = (uint32_t)args.iValue;
+			hair->SetDirty();
 		}
 		});
 	AddWidget(&framesYInput);
@@ -196,6 +205,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 		if (hair != nullptr)
 		{
 			hair->frameCount = (uint32_t)args.iValue;
+			hair->SetDirty();
 		}
 		});
 	AddWidget(&frameCountInput);
@@ -211,6 +221,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 		if (hair != nullptr)
 		{
 			hair->frameStart = (uint32_t)args.iValue;
+			hair->SetDirty();
 		}
 		});
 	AddWidget(&frameStartInput);
