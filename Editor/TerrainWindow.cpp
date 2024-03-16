@@ -509,13 +509,8 @@ PropsWindow::PropsWindow(EditorComponent* editor)
 	SetSize(XMFLOAT2(420, 332));
 }
 
-void PropsWindow::SetTerrain(wi::terrain::Terrain* t)
+void PropsWindow::Rebuild()
 {
-	terrain = t;
-	generation_callback = [&] {
-		terrain->Generation_Restart();
-	};
-
 	for(auto& window : windows)
 	{
 		RemoveWidget(window.get());
@@ -523,6 +518,15 @@ void PropsWindow::SetTerrain(wi::terrain::Terrain* t)
 
 	windows.clear();
 	windows_to_remove.clear();
+
+	if(terrain == nullptr)
+	{
+		return;
+	}
+
+	generation_callback = [&] {
+		terrain->Generation_Restart();
+	};
 
 	for(auto i = terrain->props.begin(); i != terrain->props.end(); ++i)
 	{
@@ -549,7 +553,7 @@ void PropsWindow::Update(const wi::Canvas& canvas, float dt)
 	if(windows.size() != terrain->props.size())
 	{
 		// recreate all windows
-		SetTerrain(terrain);
+		Rebuild();
 	}
 	else
 	{
@@ -1281,6 +1285,8 @@ void TerrainWindow::SetEntity(Entity entity)
 		terrain = &terrain_preset;
 	}
 
+	propsWindow->terrain = terrain;
+
 	if (this->entity == entity)
 		return;
 
@@ -1371,7 +1377,7 @@ void TerrainWindow::SetEntity(Entity entity)
 		}
 	}
 
-	propsWindow->SetTerrain(terrain);
+	propsWindow->Rebuild();
 }
 void TerrainWindow::AddModifier(ModifierWindow* modifier_window)
 {
