@@ -1616,6 +1616,9 @@ runProcess(function()
 				-- restore previous component
 				--	so if you loaded this script from the editor, you can go back to the editor with ESC
 				backlog_post("EXIT")
+				for i,anim in ipairs(scene.Component_GetAnimationArray()) do
+					anim.Stop() -- stop animations because some of them are retargeted and animation source scene will be lost after we exit this script!
+				end
 				application.SetActivePath(prevPath)
 				killProcesses()
 				return
