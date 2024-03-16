@@ -118,6 +118,8 @@ namespace wi::helper
 
 	void GetFileNamesInDirectory(const std::string& directory, std::function<void(std::string fileName)> onSuccess, const std::string& filter_extension = "");
 
+	void GetFolderNamesInDirectory(const std::string& directory, std::function<void(std::string folderName)> onSuccess);
+
 	// Converts a file into a C++ header file that contains the file contents as byte array.
 	//	dataName : the byte array's name
 	bool Bin2H(const uint8_t* data, size_t size, const std::string& dst_filename, const char* dataName);

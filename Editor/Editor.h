@@ -4,6 +4,7 @@
 #include "OptionsWindow.h"
 #include "ComponentsWindow.h"
 #include "ProfilerWindow.h"
+#include "ContentBrowserWindow.h"
 #include "IconDefinitions.h"
 
 class EditorLoadingScreen : public wi::LoadingScreen
@@ -46,6 +47,7 @@ public:
 
 	wi::gui::Button saveButton;
 	wi::gui::Button openButton;
+	wi::gui::Button contentBrowserButton;
 	wi::gui::Button logButton;
 	wi::gui::Button profilerButton;
 	wi::gui::Button cinemaButton;
@@ -59,6 +61,7 @@ public:
 	OptionsWindow optionsWnd;
 	ComponentsWindow componentsWnd;
 	ProfilerWindow profilerWnd;
+	ContentBrowserWindow contentBrowserWnd;
 
 	wi::primitive::Ray pickRay;
 	wi::physics::PickDragOperation physicsDragOp;
@@ -209,6 +212,7 @@ enum class EditorLocalization
 	// Top menu:
 	Save,
 	Open,
+	ContentBrowser,
 	Backlog,
 	Profiler,
 	Cinema,
@@ -227,6 +231,7 @@ static const char* EditorLocalizationStrings[] = {
 	// Top menu:
 	"Save",
 	"Open",
+	"Content",
 	"Backlog",
 	"Profiler",
 	"Cinema",

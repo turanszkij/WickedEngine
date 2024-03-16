@@ -213,6 +213,9 @@ void EditorComponent::ResizeLayout()
 	aboutWindow.SetSize(XMFLOAT2(screenW / 2.0f, screenH / 1.5f));
 	aboutWindow.SetPos(XMFLOAT2(screenW / 2.0f - aboutWindow.scale.x / 2.0f, screenH / 2.0f - aboutWindow.scale.y / 2.0f));
 
+	contentBrowserWnd.SetSize(XMFLOAT2(screenW / 2.0f, screenH / 1.5f));
+	contentBrowserWnd.SetPos(XMFLOAT2(screenW / 2.0f - contentBrowserWnd.scale.x / 2.0f, screenH / 2.0f - contentBrowserWnd.scale.y / 2.0f));
+
 }
 void EditorComponent::Load()
 {
@@ -413,6 +416,19 @@ void EditorComponent::Load()
 			});
 		});
 	GetGUI().AddWidget(&openButton);
+
+
+	contentBrowserButton.Create("Content Browser");
+	contentBrowserButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
+	contentBrowserButton.SetShadowRadius(2);
+	contentBrowserButton.font.params.shadowColor = wi::Color::Transparent();
+	contentBrowserButton.SetTooltip("Browse sample content.");
+	contentBrowserButton.SetColor(wi::Color(50, 100, 255, 180), wi::gui::WIDGETSTATE::IDLE);
+	contentBrowserButton.SetColor(wi::Color(120, 160, 255, 255), wi::gui::WIDGETSTATE::FOCUS);
+	contentBrowserButton.OnClick([&](wi::gui::EventArgs args) {
+		contentBrowserWnd.SetVisible(!contentBrowserWnd.IsVisible());
+	});
+	GetGUI().AddWidget(&contentBrowserButton);
 
 
 	logButton.Create("Backlog");
@@ -658,6 +674,9 @@ void EditorComponent::Load()
 
 	profilerWnd.Create();
 	GetGUI().AddWidget(&profilerWnd);
+
+	contentBrowserWnd.Create(this);
+	GetGUI().AddWidget(&contentBrowserWnd);
 
 	std::string theme = main->config.GetSection("options").GetText("theme");
 	if(theme.empty())
@@ -3897,6 +3916,18 @@ void EditorComponent::UpdateTopMenuAnimation()
 		openButton.SetText(openButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_OPEN " Open" : ICON_OPEN);
 	}
 
+	if (contentBrowserButton.GetState() > wi::gui::WIDGETSTATE::IDLE && current_localization.Get((size_t)EditorLocalization::ContentBrowser) != nullptr)
+	{
+		tmp = ICON_CONTENT_BROWSER " ";
+		tmp += current_localization.Get((size_t)EditorLocalization::ContentBrowser);
+		contentBrowserButton.SetText(tmp);
+	}
+	else
+	{
+		contentBrowserButton.SetText(contentBrowserButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_CONTENT_BROWSER " Content" : ICON_CONTENT_BROWSER);
+	}
+
+
 	if (logButton.GetState() > wi::gui::WIDGETSTATE::IDLE && current_localization.Get((size_t)EditorLocalization::Backlog) != nullptr)
 	{
 		tmp = ICON_BACKLOG " ";
@@ -3997,6 +4028,7 @@ void EditorComponent::UpdateTopMenuAnimation()
 	profilerButton.SetSize(XMFLOAT2(wi::math::Lerp(profilerButton.GetSize().x, profilerButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	cinemaButton.SetSize(XMFLOAT2(wi::math::Lerp(cinemaButton.GetSize().x, cinemaButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	logButton.SetSize(XMFLOAT2(wi::math::Lerp(logButton.GetSize().x, logButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
+	contentBrowserButton.SetSize(XMFLOAT2(wi::math::Lerp(contentBrowserButton.GetSize().x, contentBrowserButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	openButton.SetSize(XMFLOAT2(wi::math::Lerp(openButton.GetSize().x, openButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	saveButton.SetSize(XMFLOAT2(wi::math::Lerp(saveButton.GetSize().x, saveButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 
@@ -4007,11 +4039,12 @@ void EditorComponent::UpdateTopMenuAnimation()
 	cinemaButton.SetPos(XMFLOAT2(fullscreenButton.GetPos().x - cinemaButton.GetSize().x - padding, 0));
 	profilerButton.SetPos(XMFLOAT2(cinemaButton.GetPos().x - profilerButton.GetSize().x - padding, 0));
 	logButton.SetPos(XMFLOAT2(profilerButton.GetPos().x - logButton.GetSize().x - padding, 0));
-	openButton.SetPos(XMFLOAT2(logButton.GetPos().x - openButton.GetSize().x - padding, 0));
+	contentBrowserButton.SetPos(XMFLOAT2(logButton.GetPos().x - contentBrowserButton.GetSize().x - padding, 0));
+	openButton.SetPos(XMFLOAT2(contentBrowserButton.GetPos().x - openButton.GetSize().x - padding, 0));
 	saveButton.SetPos(XMFLOAT2(openButton.GetPos().x - saveButton.GetSize().x - padding, 0));
 
 
-	float static_pos = screenW - wid_idle * 11;
+	float static_pos = screenW - wid_idle * 12;
 
 	dummyButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
 	dummyButton.SetPos(XMFLOAT2(static_pos - dummyButton.GetSize().x - 20, 0));

@@ -1477,11 +1477,28 @@ namespace wi::helper
 
 		for (const auto& entry : std::filesystem::directory_iterator(directory_path))
 		{
+			if (entry.is_directory())
+				continue;
 			std::string filename = entry.path().filename().generic_u8string();
-			if (filter_extension.empty() || wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename)).compare(filter_extension) == 0)
+			if (filter_extension.empty() || wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename)).compare(wi::helper::toUpper(filter_extension)) == 0)
 			{
 				onSuccess(directory + filename);
 			}
+		}
+	}
+
+	void GetFolderNamesInDirectory(const std::string& directory, std::function<void(std::string folderName)> onSuccess)
+	{
+		std::filesystem::path directory_path = ToNativeString(directory);
+		if (!std::filesystem::exists(directory_path))
+			return;
+
+		for (const auto& entry : std::filesystem::directory_iterator(directory_path))
+		{
+			if (!entry.is_directory())
+				continue;
+			std::string filename = entry.path().filename().generic_u8string();
+			onSuccess(directory + filename);
 		}
 	}
 
