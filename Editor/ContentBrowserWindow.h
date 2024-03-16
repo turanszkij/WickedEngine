@@ -10,22 +10,20 @@ public:
 
 	EditorComponent* editor = nullptr;
 
-	std::string content_folder = "../Content/";
-	wi::vector<wi::gui::Button> folderButtons;
-
-	class ItemWindow : public wi::gui::Window
+	std::string content_folder;
+	enum SELECTION
 	{
-	public:
-		EditorComponent* editor = nullptr;
-		wi::vector<wi::gui::Button> itemButtons;
+		SELECTION_SCRIPTS,
+		SELECTION_MODELS,
 
-		void ClearItems();
-		void AddItems(const std::string& folder, const std::string& extension);
-		void RegisterItems();
-
-		void ResizeLayout() override;
+		SELECTION_COUNT
 	};
-	ItemWindow itemWindow;
+	SELECTION current_selection = SELECTION_SCRIPTS;
+	wi::gui::Button folderButtons[SELECTION_COUNT];
+	wi::vector<wi::gui::Button> itemButtons;
+
+	void SetSelection(SELECTION selection);
+	void AddItems(const std::string& folder, const std::string& extension, const std::string& icon);
 
 	void Update(const wi::Canvas& canvas, float dt);
 	void ResizeLayout() override;

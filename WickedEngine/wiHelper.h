@@ -98,6 +98,8 @@ namespace wi::helper
 
 	bool FileExists(const std::string& fileName);
 
+	bool DirectoryExists(const std::string& fileName);
+
 	uint64_t FileTimestamp(const std::string& fileName);
 
 	std::string GetTempDirectoryPath();

@@ -1218,6 +1218,54 @@ namespace wi::helper
 #endif // PLATFORM_UWP
 	}
 
+	bool DirectoryExists(const std::string& fileName)
+	{
+#ifndef PLATFORM_UWP
+		bool exists = std::filesystem::exists(ToNativeString(fileName));
+		return exists;
+#else
+		using namespace winrt::Windows::Storage;
+		using namespace winrt::Windows::Storage::Streams;
+		using namespace winrt::Windows::Foundation;
+		std::wstring wstr;
+		std::filesystem::path filepath = fileName;
+		filepath = std::filesystem::absolute(filepath);
+		StringConvert(filepath.string(), wstr);
+		bool success = false;
+
+		auto async_helper = [&]() -> IAsyncAction {
+			try
+			{
+				auto file = co_await StorageFolder::GetFolderFromPathAsync(wstr);
+				success = true;
+			}
+			catch (winrt::hresult_error const& ex)
+			{
+				switch (ex.code())
+				{
+				case E_ACCESSDENIED:
+					wi::backlog::post("Opening folder failed: " + fileName + " | Reason: Permission Denied!");
+					break;
+				default:
+					break;
+				}
+			}
+
+			};
+
+		if (winrt::impl::is_sta_thread())
+		{
+			std::thread([&] { async_helper().get(); }).join(); // can't block coroutine from ui thread
+		}
+		else
+		{
+			async_helper().get();
+		}
+
+		return success;
+#endif // PLATFORM_UWP
+	}
+
 	uint64_t FileTimestamp(const std::string& fileName)
 	{
 		auto tim = std::filesystem::last_write_time(ToNativeString(fileName));

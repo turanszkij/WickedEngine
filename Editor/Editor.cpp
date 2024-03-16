@@ -213,7 +213,7 @@ void EditorComponent::ResizeLayout()
 	aboutWindow.SetSize(XMFLOAT2(screenW / 2.0f, screenH / 1.5f));
 	aboutWindow.SetPos(XMFLOAT2(screenW / 2.0f - aboutWindow.scale.x / 2.0f, screenH / 2.0f - aboutWindow.scale.y / 2.0f));
 
-	contentBrowserWnd.SetSize(XMFLOAT2(screenW / 2.0f, screenH / 1.5f));
+	contentBrowserWnd.SetSize(XMFLOAT2(screenW / 1.6f, screenH / 1.2f));
 	contentBrowserWnd.SetPos(XMFLOAT2(screenW / 2.0f - contentBrowserWnd.scale.x / 2.0f, screenH / 2.0f - contentBrowserWnd.scale.y / 2.0f));
 
 }
