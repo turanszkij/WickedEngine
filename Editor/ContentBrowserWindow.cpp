@@ -17,9 +17,11 @@ void ContentBrowserWindow::Create(EditorComponent* _editor)
 	content_folder = wi::helper::GetCurrentPath() + "/";
 #else
 	content_folder = wi::helper::GetCurrentPath() + "/Content/";
+	wi::helper::MakePathAbsolute(content_folder);
 	if (!wi::helper::FileExists(content_folder))
 	{
-		content_folder = "../Content/";
+		content_folder = wi::helper::GetCurrentPath() + "/../Content/";
+		wi::helper::MakePathAbsolute(content_folder);
 	}
 #endif // PLATFORM_UWP
 
@@ -190,6 +192,7 @@ void ContentBrowserWindow::AddItems(const std::string& folder, const std::string
 			button.SetSize(siz);
 			button.SetLocalizationEnabled(false);
 			button.SetDescription(itemname);
+			button.SetTooltip(filename);
 			button.OnClick([this, filename](wi::gui::EventArgs args) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					editor->Open(filename);
@@ -222,6 +225,7 @@ void ContentBrowserWindow::AddItems(const std::string& folder, const std::string
 		button.SetSize(siz);
 		button.SetLocalizationEnabled(false);
 		button.SetDescription(filename.substr(folder.size()));
+		button.SetTooltip(filename);
 		button.OnClick([this, filename](wi::gui::EventArgs args) {
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 				editor->Open(filename);
