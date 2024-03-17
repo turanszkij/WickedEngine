@@ -23,7 +23,7 @@ void ContentBrowserWindow::Render(const wi::Canvas& canvas, wi::graphics::Comman
 {
 	wi::gui::Window::Render(canvas, cmd);
 
-	if (!IsCollapsed())
+	if (IsVisible() && !IsCollapsed())
 	{
 		ApplyScissor(canvas, scissorRect, cmd);
 		wi::image::Params params;
