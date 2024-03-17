@@ -143,6 +143,12 @@ void ContentBrowserWindow::RefreshContent()
 	{
 		RemoveWidget(&x);
 	}
+	for (auto& x : itemButtons)
+	{
+		RemoveWidget(&x);
+	}
+	itemButtons.clear();
+	RemoveWidget(&openFolderButton);
 
 	if (wi::helper::DirectoryExists(content_folder + "scripts"))
 	{
@@ -154,6 +160,11 @@ void ContentBrowserWindow::RefreshContent()
 			SetSelection(SELECTION_SCRIPTS);
 		});
 		AddWidget(&button, wi::gui::Window::AttachmentOptions::NONE);
+
+		if (current_selection == SELECTION_COUNT)
+		{
+			SetSelection(SELECTION_SCRIPTS);
+		}
 	}
 	if (wi::helper::DirectoryExists(content_folder + "models"))
 	{
@@ -165,11 +176,11 @@ void ContentBrowserWindow::RefreshContent()
 			SetSelection(SELECTION_MODELS);
 		});
 		AddWidget(&button, wi::gui::Window::AttachmentOptions::NONE);
-	}
 
-	if (current_selection == SELECTION_COUNT)
-	{
-		SetSelection(SELECTION_SCRIPTS);
+		if (current_selection == SELECTION_COUNT)
+		{
+			SetSelection(SELECTION_SCRIPTS);
+		}
 	}
 }
 void ContentBrowserWindow::SetSelection(SELECTION selection)

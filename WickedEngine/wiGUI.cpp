@@ -2959,7 +2959,14 @@ namespace wi::gui
 	void Window::AddWidget(Widget* widget, AttachmentOptions options)
 	{
 		widget->SetEnabled(this->IsEnabled());
-		widget->SetVisible(this->IsVisible());
+		if (IsVisible() && !IsMinimized())
+		{
+			widget->SetVisible(true);
+		}
+		else
+		{
+			widget->SetVisible(false);
+		}
 		if (has_flag(options, AttachmentOptions::SCROLLABLE))
 		{
 			widget->AttachTo(&scrollable_area);
@@ -3249,12 +3256,23 @@ namespace wi::gui
 	void Window::SetVisible(bool value)
 	{
 		Widget::SetVisible(value);
-		//SetMinimized(!value);
-		if (!IsMinimized())
+		bool minimized = IsMinimized();
+		for (auto& x : widgets)
 		{
-			for (auto& x : widgets)
+			if (
+				x == &resizeDragger_UpperLeft ||
+				x == &resizeDragger_UpperRight ||
+				x == &closeButton ||
+				x == &collapseButton ||
+				x == &moveDragger ||
+				x == &label
+				)
 			{
 				x->SetVisible(value);
+			}
+			else
+			{
+				x->SetVisible(!minimized);
 			}
 		}
 	}
