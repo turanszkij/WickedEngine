@@ -17,7 +17,7 @@ public:
 
 		SELECTION_COUNT
 	};
-	SELECTION current_selection = SELECTION_SCRIPTS;
+	SELECTION current_selection = SELECTION_COUNT;
 	wi::gui::Button folderButtons[SELECTION_COUNT];
 	wi::vector<wi::gui::Button> itemButtons;
 

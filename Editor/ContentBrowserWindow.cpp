@@ -154,6 +154,10 @@ void ContentBrowserWindow::RefreshContent()
 			SetSelection(SELECTION_SCRIPTS);
 		});
 		AddWidget(&button, wi::gui::Window::AttachmentOptions::NONE);
+		if (current_selection == SELECTION_COUNT)
+		{
+			current_selection = SELECTION_SCRIPTS;
+		}
 	}
 	if (wi::helper::DirectoryExists(content_folder + "models"))
 	{
@@ -165,6 +169,10 @@ void ContentBrowserWindow::RefreshContent()
 			SetSelection(SELECTION_MODELS);
 		});
 		AddWidget(&button, wi::gui::Window::AttachmentOptions::NONE);
+		if (current_selection == SELECTION_COUNT)
+		{
+			current_selection = SELECTION_MODELS;
+		}
 	}
 	if (!editor->recentFilenames.empty())
 	{
@@ -176,9 +184,16 @@ void ContentBrowserWindow::RefreshContent()
 			SetSelection(SELECTION_RECENT);
 		});
 		AddWidget(&button, wi::gui::Window::AttachmentOptions::NONE);
+		if (current_selection == SELECTION_COUNT)
+		{
+			current_selection = SELECTION_RECENT;
+		}
 	}
 
-	SetSelection(current_selection);
+	if (current_selection != SELECTION_COUNT)
+	{
+		SetSelection(current_selection);
+	}
 }
 void ContentBrowserWindow::SetSelection(SELECTION selection)
 {
