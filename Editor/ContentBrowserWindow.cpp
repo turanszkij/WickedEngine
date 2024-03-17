@@ -8,16 +8,37 @@ void ContentBrowserWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	control_size = 30;
-	wi::gui::Window::Create("Content Browser");
+
+	wi::gui::Window::WindowControls controls = wi::gui::Window::WindowControls::ALL;
+	controls &= ~wi::gui::Window::WindowControls::RESIZE_BOTTOMLEFT;
+	wi::gui::Window::Create("Content Browser", controls);
 
 	RemoveWidget(&scrollbar_horizontal);
 
 	SetVisible(false);
 }
 
+static const float separator = 140;
+void ContentBrowserWindow::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const
+{
+	wi::gui::Window::Render(canvas, cmd);
+
+	if (!IsCollapsed())
+	{
+		ApplyScissor(canvas, scissorRect, cmd);
+		wi::image::Params params;
+		params.pos = XMFLOAT3(translation.x + separator, translation.y + control_size, 0);
+		params.siz = XMFLOAT2(2, scale.y - control_size);
+		params.color = shadow_color;
+		wi::image::Draw(nullptr, params, cmd);
+	}
+}
+
 void ContentBrowserWindow::Update(const wi::Canvas& canvas, float dt)
 {
 	wi::gui::Window::Update(canvas, dt);
+
+	SetShadowRadius(6);
 
 	static const float radius = 15;
 
@@ -55,6 +76,16 @@ void ContentBrowserWindow::Update(const wi::Canvas& canvas, float dt)
 		openFolderButton.sprites[i].params.corners_rounding[3].radius = radius;
 	}
 
+	for (auto& x : folderButtons)
+	{
+		x.font.params.h_align = wi::font::WIFALIGN_LEFT;
+		for (auto& y : x.sprites)
+		{
+			y.params.enableCornerRounding();
+			y.params.corners_rounding[3].radius = radius;
+		}
+		x.SetShadowRadius(0);
+	}
 	for (auto& x : itemButtons)
 	{
 		if (x.sprites[wi::gui::IDLE].textureResource.IsValid())
@@ -71,6 +102,8 @@ void ContentBrowserWindow::Update(const wi::Canvas& canvas, float dt)
 		}
 		x.SetShadowRadius(4);
 	}
+
+	openFolderButton.SetShadowRadius(0);
 
 	XMFLOAT4 color_on = sprites[wi::gui::FOCUS].params.color;
 	XMFLOAT4 color_off = sprites[wi::gui::IDLE].params.color;
@@ -90,33 +123,33 @@ void ContentBrowserWindow::ResizeLayout()
 	wi::gui::Window::ResizeLayout();
 	const float padding = 4;
 	const float width = GetWidgetAreaSize().x;
-	float separator = 140;
 	float y = padding;
 
 	openFolderButton.Detach();
-	openFolderButton.SetPos(XMFLOAT2(translation.x + padding, translation.y + scale.y - openFolderButton.GetSize().y - control_size - padding));
-	openFolderButton.SetSize(XMFLOAT2(separator - padding, openFolderButton.GetSize().y));
+	openFolderButton.SetPos(XMFLOAT2(translation.x + padding, translation.y + scale.y - openFolderButton.GetSize().y - padding));
+	openFolderButton.SetSize(XMFLOAT2(separator - padding * 2, openFolderButton.GetSize().y));
 	openFolderButton.AttachTo(this);
 
 	for (auto& x : folderButtons)
 	{
 		x.Detach();
 		x.SetPos(XMFLOAT2(translation.x + padding, translation.y + control_size + y));
-		x.SetSize(XMFLOAT2(separator - padding, x.GetSize().y));
+		x.SetSize(XMFLOAT2(separator - padding * 2, x.GetSize().y));
 		y += x.GetSize().y + padding;
 		x.AttachTo(this);
 	}
-	y = padding;
 
-	separator = 150;
-	float hoffset = separator;
+	y = padding + 10;
+
+	float sep = separator + 10;
+	float hoffset = sep;
 	for (auto& x : itemButtons)
 	{
 		x.SetPos(XMFLOAT2(hoffset, y));
 		hoffset += x.GetSize().x + 15;
 		if (hoffset + x.GetSize().x >= width)
 		{
-			hoffset = separator;
+			hoffset = sep;
 			y += x.GetSize().y + 40;
 		}
 	}
