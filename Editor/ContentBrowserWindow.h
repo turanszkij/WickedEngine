@@ -6,8 +6,6 @@ class ContentBrowserWindow : public wi::gui::Window
 public:
 	void Create(EditorComponent* editor);
 
-	void ResetCam();
-
 	EditorComponent* editor = nullptr;
 
 	std::string content_folder;
@@ -18,9 +16,13 @@ public:
 
 		SELECTION_COUNT
 	};
-	SELECTION current_selection = SELECTION_SCRIPTS;
+	SELECTION current_selection = SELECTION_COUNT;
 	wi::gui::Button folderButtons[SELECTION_COUNT];
 	wi::vector<wi::gui::Button> itemButtons;
+
+	wi::gui::Button openFolderButton;
+
+	void RefreshContent();
 
 	void SetSelection(SELECTION selection);
 	void AddItems(const std::string& folder, const std::string& extension, const std::string& icon);

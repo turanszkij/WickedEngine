@@ -7,58 +7,10 @@ using namespace wi::scene;
 void ContentBrowserWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
+	control_size = 30;
 	wi::gui::Window::Create("Content Browser");
-	SetSize(XMFLOAT2(320, 390));
 
 	RemoveWidget(&scrollbar_horizontal);
-
-
-#ifdef PLATFORM_UWP
-	content_folder = wi::helper::GetCurrentPath() + "/";
-#else
-	content_folder = wi::helper::GetCurrentPath() + "/Content/";
-	wi::helper::MakePathAbsolute(content_folder);
-	if (!wi::helper::FileExists(content_folder))
-	{
-		content_folder = wi::helper::GetCurrentPath() + "/../Content/";
-		wi::helper::MakePathAbsolute(content_folder);
-	}
-#endif // PLATFORM_UWP
-
-	float x = 140;
-	float y = 0;
-	float hei = 18;
-	float step = hei + 2;
-	float wid = 120;
-
-	if (wi::helper::DirectoryExists(content_folder + "scripts"))
-	{
-		wi::gui::Button& button = folderButtons[SELECTION_SCRIPTS];
-		button.Create("scripts");
-		button.SetLocalizationEnabled(false);
-		button.SetSize(XMFLOAT2(wid, hei));
-		button.OnClick([this](wi::gui::EventArgs args) {
-			SetSelection(SELECTION_SCRIPTS);
-		});
-	}
-	if (wi::helper::DirectoryExists(content_folder + "models"))
-	{
-		wi::gui::Button& button = folderButtons[SELECTION_MODELS];
-		button.Create("models");
-		button.SetLocalizationEnabled(false);
-		button.SetSize(XMFLOAT2(wid, hei));
-		button.OnClick([this](wi::gui::EventArgs args) {
-			SetSelection(SELECTION_MODELS);
-			});
-	}
-	for (auto& x : folderButtons)
-	{
-		AddWidget(&x, wi::gui::Window::AttachmentOptions::NONE);
-	}
-
-	SetSelection(SELECTION_SCRIPTS);
-
-	SetPos(XMFLOAT2(100, 100));
 
 	SetVisible(false);
 }
@@ -67,32 +19,40 @@ void ContentBrowserWindow::Update(const wi::Canvas& canvas, float dt)
 {
 	wi::gui::Window::Update(canvas, dt);
 
+	static const float radius = 15;
+
 	for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
 	{
 		sprites[i].params.enableCornerRounding();
-		sprites[i].params.corners_rounding[0].radius = 10;
-		sprites[i].params.corners_rounding[1].radius = 10;
-		sprites[i].params.corners_rounding[2].radius = 10;
-		sprites[i].params.corners_rounding[3].radius = 10;
+		sprites[i].params.corners_rounding[0].radius = radius;
+		sprites[i].params.corners_rounding[1].radius = radius;
+		sprites[i].params.corners_rounding[2].radius = radius;
+		sprites[i].params.corners_rounding[3].radius = radius;
 		resizeDragger_UpperLeft.sprites[i].params.enableCornerRounding();
-		resizeDragger_UpperLeft.sprites[i].params.corners_rounding[0].radius = 10;
+		resizeDragger_UpperLeft.sprites[i].params.corners_rounding[0].radius = radius;
 		resizeDragger_UpperRight.sprites[i].params.enableCornerRounding();
-		resizeDragger_UpperRight.sprites[i].params.corners_rounding[1].radius = 10;
+		resizeDragger_UpperRight.sprites[i].params.corners_rounding[1].radius = radius;
 		resizeDragger_BottomLeft.sprites[i].params.enableCornerRounding();
-		resizeDragger_BottomLeft.sprites[i].params.corners_rounding[2].radius = 10;
+		resizeDragger_BottomLeft.sprites[i].params.corners_rounding[2].radius = radius;
 		resizeDragger_BottomRight.sprites[i].params.enableCornerRounding();
-		resizeDragger_BottomRight.sprites[i].params.corners_rounding[3].radius = 10;
+		resizeDragger_BottomRight.sprites[i].params.corners_rounding[3].radius = radius;
 
 		if (IsCollapsed())
 		{
-			resizeDragger_UpperLeft.sprites[i].params.corners_rounding[2].radius = 10;
-			resizeDragger_UpperRight.sprites[i].params.corners_rounding[3].radius = 10;
+			resizeDragger_UpperLeft.sprites[i].params.corners_rounding[2].radius = radius;
+			resizeDragger_UpperRight.sprites[i].params.corners_rounding[3].radius = radius;
 		}
 		else
 		{
 			resizeDragger_UpperLeft.sprites[i].params.corners_rounding[2].radius = 0;
 			resizeDragger_UpperRight.sprites[i].params.corners_rounding[3].radius = 0;
 		}
+
+		openFolderButton.sprites[i].params.enableCornerRounding();
+		openFolderButton.sprites[i].params.corners_rounding[0].radius = radius;
+		openFolderButton.sprites[i].params.corners_rounding[1].radius = radius;
+		openFolderButton.sprites[i].params.corners_rounding[2].radius = radius;
+		openFolderButton.sprites[i].params.corners_rounding[3].radius = radius;
 	}
 
 	for (auto& x : itemButtons)
@@ -101,6 +61,15 @@ void ContentBrowserWindow::Update(const wi::Canvas& canvas, float dt)
 		{
 			x.sprites[wi::gui::IDLE].params.color = wi::Color::White();
 		}
+		for (auto& y : x.sprites)
+		{
+			y.params.enableCornerRounding();
+			y.params.corners_rounding[0].radius = radius;
+			y.params.corners_rounding[1].radius = radius;
+			y.params.corners_rounding[2].radius = radius;
+			y.params.corners_rounding[3].radius = radius;
+		}
+		x.SetShadowRadius(4);
 	}
 
 	XMFLOAT4 color_on = sprites[wi::gui::FOCUS].params.color;
@@ -110,7 +79,10 @@ void ContentBrowserWindow::Update(const wi::Canvas& canvas, float dt)
 	{
 		x.sprites[wi::gui::IDLE].params.color = color_off;
 	}
-	folderButtons[current_selection].sprites[wi::gui::IDLE].params.color = color_on;
+	if (current_selection < SELECTION_COUNT)
+	{
+		folderButtons[current_selection].sprites[wi::gui::IDLE].params.color = color_on;
+	}
 }
 
 void ContentBrowserWindow::ResizeLayout()
@@ -120,6 +92,11 @@ void ContentBrowserWindow::ResizeLayout()
 	const float width = GetWidgetAreaSize().x;
 	float separator = 140;
 	float y = padding;
+
+	openFolderButton.Detach();
+	openFolderButton.SetPos(XMFLOAT2(translation.x + padding, translation.y + scale.y - openFolderButton.GetSize().y - control_size - padding));
+	openFolderButton.SetSize(XMFLOAT2(separator - padding, openFolderButton.GetSize().y));
+	openFolderButton.AttachTo(this);
 
 	for (auto& x : folderButtons)
 	{
@@ -135,47 +112,111 @@ void ContentBrowserWindow::ResizeLayout()
 	float hoffset = separator;
 	for (auto& x : itemButtons)
 	{
+		x.SetPos(XMFLOAT2(hoffset, y));
+		hoffset += x.GetSize().x + 15;
 		if (hoffset + x.GetSize().x >= width)
 		{
 			hoffset = separator;
 			y += x.GetSize().y + 40;
 		}
-		x.SetPos(XMFLOAT2(hoffset, y));
-		hoffset += x.GetSize().x + 10;
 	}
-
 }
 
-void ContentBrowserWindow::SetSelection(SELECTION selection)
+void ContentBrowserWindow::RefreshContent()
 {
-	current_selection = selection;
-	for (auto& x : itemButtons)
+#ifdef PLATFORM_UWP
+	content_folder = wi::helper::GetCurrentPath() + "/";
+#else
+	content_folder = wi::helper::GetCurrentPath() + "/Content/";
+	wi::helper::MakePathAbsolute(content_folder);
+	if (!wi::helper::FileExists(content_folder))
+	{
+		content_folder = wi::helper::GetCurrentPath() + "/../Content/";
+		wi::helper::MakePathAbsolute(content_folder);
+	}
+#endif // PLATFORM_UWP
+
+	float hei = 25;
+	float wid = 120;
+
+	for (auto& x : folderButtons)
 	{
 		RemoveWidget(&x);
 	}
-	itemButtons.clear();
 
-	switch (selection)
+	if (wi::helper::DirectoryExists(content_folder + "scripts"))
 	{
-	default:
-	case SELECTION_SCRIPTS:
-		AddItems(content_folder + "scripts/", "lua", ICON_SCRIPT);
-		break;
-	case SELECTION_MODELS:
-		AddItems(content_folder + "models/", "wiscene", ICON_OBJECT);
-		AddItems(content_folder + "models/", "gltf", ICON_OBJECT);
-		AddItems(content_folder + "models/", "glb", ICON_OBJECT);
-		AddItems(content_folder + "models/", "obj", ICON_OBJECT);
-		break;
+		wi::gui::Button& button = folderButtons[SELECTION_SCRIPTS];
+		button.Create("scripts");
+		button.SetLocalizationEnabled(false);
+		button.SetSize(XMFLOAT2(wid, hei));
+		button.OnClick([this](wi::gui::EventArgs args) {
+			SetSelection(SELECTION_SCRIPTS);
+		});
+		AddWidget(&button, wi::gui::Window::AttachmentOptions::NONE);
+	}
+	if (wi::helper::DirectoryExists(content_folder + "models"))
+	{
+		wi::gui::Button& button = folderButtons[SELECTION_MODELS];
+		button.Create("models");
+		button.SetLocalizationEnabled(false);
+		button.SetSize(XMFLOAT2(wid, hei));
+		button.OnClick([this](wi::gui::EventArgs args) {
+			SetSelection(SELECTION_MODELS);
+		});
+		AddWidget(&button, wi::gui::Window::AttachmentOptions::NONE);
 	}
 
-	for (auto& x : itemButtons)
+	if (current_selection == SELECTION_COUNT)
 	{
-		AddWidget(&x);
+		SetSelection(SELECTION_SCRIPTS);
 	}
+}
+void ContentBrowserWindow::SetSelection(SELECTION selection)
+{
+	wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+		current_selection = selection;
+		for (auto& x : itemButtons)
+		{
+			RemoveWidget(&x);
+		}
+		itemButtons.clear();
 
-	// Refresh theme:
-	editor->optionsWnd.generalWnd.themeCombo.SetSelected(editor->optionsWnd.generalWnd.themeCombo.GetSelected());
+		RemoveWidget(&openFolderButton);
+		openFolderButton.Create("Open location");
+		openFolderButton.SetSize(XMFLOAT2(60, 60));
+
+		switch (selection)
+		{
+		default:
+		case SELECTION_SCRIPTS:
+			AddItems(content_folder + "scripts/", "lua", ICON_SCRIPT);
+			openFolderButton.OnClick([this](wi::gui::EventArgs args) {
+				wi::helper::OpenUrl(content_folder + "scripts/");
+				});
+			AddWidget(&openFolderButton, wi::gui::Window::AttachmentOptions::NONE);
+			break;
+		case SELECTION_MODELS:
+			AddItems(content_folder + "models/", "wiscene", ICON_OBJECT);
+			AddItems(content_folder + "models/", "gltf", ICON_OBJECT);
+			AddItems(content_folder + "models/", "glb", ICON_OBJECT);
+			AddItems(content_folder + "models/", "obj", ICON_OBJECT);
+			openFolderButton.OnClick([this](wi::gui::EventArgs args) {
+				wi::helper::OpenUrl(content_folder + "models/");
+				});
+			AddWidget(&openFolderButton, wi::gui::Window::AttachmentOptions::NONE);
+			break;
+		}
+
+		for (auto& x : itemButtons)
+		{
+			AddWidget(&x);
+		}
+
+		// Refresh theme:
+		editor->optionsWnd.generalWnd.themeCombo.SetSelected(editor->optionsWnd.generalWnd.themeCombo.GetSelected());
+
+	});
 }
 void ContentBrowserWindow::AddItems(const std::string& folder, const std::string& extension, const std::string& icon)
 {

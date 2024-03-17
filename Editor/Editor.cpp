@@ -427,6 +427,10 @@ void EditorComponent::Load()
 	contentBrowserButton.SetColor(wi::Color(120, 160, 255, 255), wi::gui::WIDGETSTATE::FOCUS);
 	contentBrowserButton.OnClick([&](wi::gui::EventArgs args) {
 		contentBrowserWnd.SetVisible(!contentBrowserWnd.IsVisible());
+		if (contentBrowserWnd.IsVisible())
+		{
+			contentBrowserWnd.RefreshContent();
+		}
 	});
 	GetGUI().AddWidget(&contentBrowserButton);
 
