@@ -210,7 +210,7 @@ void ContentBrowserWindow::RefreshContent()
 	if (!editor->recentFilenames.empty())
 	{
 		wi::gui::Button& button = folderButtons[SELECTION_RECENT];
-		button.Create("Recently Opened");
+		button.Create("Recently Used");
 		button.SetLocalizationEnabled(false);
 		button.SetSize(XMFLOAT2(wid, hei));
 		button.OnClick([this](wi::gui::EventArgs args) {

@@ -3846,6 +3846,8 @@ void EditorComponent::Save(const std::string& filename)
 	GetCurrentEditorScene().path = filename;
 	RefreshSceneList();
 
+	RegisterRecentlyUsed(filename);
+
 	PostSaveText("Scene saved: ", GetCurrentEditorScene().path);
 }
 void EditorComponent::SaveAs()
