@@ -1707,7 +1707,7 @@ namespace wi::helper
 #endif // PLATFORM_UWP
 
 #ifdef PLATFORM_WINDOWS_DESKTOP
-		std::string op = "start " + url;
+		std::string op = "start \"\" \"" + url + "\"";
 		int status = system(op.c_str());
 		wi::backlog::post("wi::helper::OpenUrl(" + url + ") returned status: " + std::to_string(status));
 		return;
