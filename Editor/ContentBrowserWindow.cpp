@@ -206,7 +206,7 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 		itemButtons.clear();
 
 		RemoveWidget(&openFolderButton);
-		openFolderButton.Create("Open location");
+		openFolderButton.Create(ICON_OPEN " Go to location");
 		openFolderButton.SetSize(XMFLOAT2(60, 60));
 
 		switch (selection)
