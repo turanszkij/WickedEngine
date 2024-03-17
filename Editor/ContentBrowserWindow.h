@@ -13,10 +13,11 @@ public:
 	{
 		SELECTION_SCRIPTS,
 		SELECTION_MODELS,
+		SELECTION_RECENT,
 
 		SELECTION_COUNT
 	};
-	SELECTION current_selection = SELECTION_COUNT;
+	SELECTION current_selection = SELECTION_SCRIPTS;
 	wi::gui::Button folderButtons[SELECTION_COUNT];
 	wi::vector<wi::gui::Button> itemButtons;
 
@@ -26,6 +27,7 @@ public:
 
 	void SetSelection(SELECTION selection);
 	void AddItems(const std::string& folder, const std::string& extension, const std::string& icon);
+	void AddItem(const std::string& filename, const std::string& icon);
 
 	void Update(const wi::Canvas& canvas, float dt);
 	void ResizeLayout() override;

@@ -717,6 +717,14 @@ void EditorComponent::Load()
 	};
 	wi::helper::GetFileNamesInDirectory("fonts/", load_font, "TTF");
 
+	size_t current_recent = 0;
+	auto& recent = main->config.GetSection("recent");
+	while (recent.Has(std::to_string(current_recent).c_str()))
+	{
+		recentFilenames.push_back(recent.GetText(std::to_string(current_recent).c_str()));
+		current_recent++;
+	}
+
 	RenderPath2D::Load();
 }
 void EditorComponent::Start()
@@ -3632,6 +3640,32 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 	optionsWnd.RefreshEntityTree();
 }
 
+void EditorComponent::RegisterRecentlyUsed(const std::string& filename)
+{
+	for (size_t i = 0; i < recentFilenames.size();)
+	{
+		if (recentFilenames[i].compare(filename) == 0)
+		{
+			recentFilenames.erase(recentFilenames.begin() + i);
+		}
+		else
+		{
+			i++;
+		}
+	}
+	while (recentFilenames.size() >= maxRecentFilenames)
+	{
+		recentFilenames.erase(recentFilenames.begin());
+	}
+	recentFilenames.push_back(filename);
+	auto& recent = main->config.GetSection("recent");
+	for (size_t i = 0; i < recentFilenames.size(); ++i)
+	{
+		recent.Set(std::to_string(i).c_str(), recentFilenames[i]);
+	}
+	main->config.Commit();
+}
+
 void EditorComponent::Open(const std::string& filename)
 {
 	std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
@@ -3653,6 +3687,7 @@ void EditorComponent::Open(const std::string& filename)
 		playButton.SetScriptTip("dofile(\"" + last_script_path + "\")");
 		wi::lua::RunFile(filename);
 		optionsWnd.RefreshEntityTree();
+		RegisterRecentlyUsed(filename);
 		return;
 	}
 	if (type == FileType::VIDEO)
@@ -3689,6 +3724,8 @@ void EditorComponent::Open(const std::string& filename)
 		optionsWnd.RefreshEntityTree();
 		return;
 	}
+
+	RegisterRecentlyUsed(filename);
 
 	size_t camera_count_prev = GetCurrentScene().cameras.GetCount();
 

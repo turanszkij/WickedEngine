@@ -143,45 +143,42 @@ void ContentBrowserWindow::RefreshContent()
 	{
 		RemoveWidget(&x);
 	}
-	for (auto& x : itemButtons)
-	{
-		RemoveWidget(&x);
-	}
-	itemButtons.clear();
-	RemoveWidget(&openFolderButton);
 
 	if (wi::helper::DirectoryExists(content_folder + "scripts"))
 	{
 		wi::gui::Button& button = folderButtons[SELECTION_SCRIPTS];
-		button.Create("scripts");
+		button.Create("Scripts");
 		button.SetLocalizationEnabled(false);
 		button.SetSize(XMFLOAT2(wid, hei));
 		button.OnClick([this](wi::gui::EventArgs args) {
 			SetSelection(SELECTION_SCRIPTS);
 		});
 		AddWidget(&button, wi::gui::Window::AttachmentOptions::NONE);
-
-		if (current_selection == SELECTION_COUNT)
-		{
-			SetSelection(SELECTION_SCRIPTS);
-		}
 	}
 	if (wi::helper::DirectoryExists(content_folder + "models"))
 	{
 		wi::gui::Button& button = folderButtons[SELECTION_MODELS];
-		button.Create("models");
+		button.Create("Models");
 		button.SetLocalizationEnabled(false);
 		button.SetSize(XMFLOAT2(wid, hei));
 		button.OnClick([this](wi::gui::EventArgs args) {
 			SetSelection(SELECTION_MODELS);
 		});
 		AddWidget(&button, wi::gui::Window::AttachmentOptions::NONE);
-
-		if (current_selection == SELECTION_COUNT)
-		{
-			SetSelection(SELECTION_SCRIPTS);
-		}
 	}
+	if (!editor->recentFilenames.empty())
+	{
+		wi::gui::Button& button = folderButtons[SELECTION_RECENT];
+		button.Create("Recently Opened");
+		button.SetLocalizationEnabled(false);
+		button.SetSize(XMFLOAT2(wid, hei));
+		button.OnClick([this](wi::gui::EventArgs args) {
+			SetSelection(SELECTION_RECENT);
+		});
+		AddWidget(&button, wi::gui::Window::AttachmentOptions::NONE);
+	}
+
+	SetSelection(current_selection);
 }
 void ContentBrowserWindow::SetSelection(SELECTION selection)
 {
@@ -217,6 +214,33 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 				});
 			AddWidget(&openFolderButton, wi::gui::Window::AttachmentOptions::NONE);
 			break;
+		case SELECTION_RECENT:
+			for (size_t i = 0; i < editor->recentFilenames.size(); ++i)
+			{
+				const std::string& filename = editor->recentFilenames[editor->recentFilenames.size() - 1 - i];
+				std::string ext = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
+				if (!ext.compare("LUA"))
+				{
+					AddItem(filename, ICON_SCRIPT);
+				}
+				if (!ext.compare("WISCENE"))
+				{
+					AddItem(filename, ICON_OBJECT);
+				}
+				if (!ext.compare("GLTF"))
+				{
+					AddItem(filename, ICON_OBJECT);
+				}
+				if (!ext.compare("GLB"))
+				{
+					AddItem(filename, ICON_OBJECT);
+				}
+				if (!ext.compare("OBJ"))
+				{
+					AddItem(filename, ICON_OBJECT);
+				}
+			}
+			break;
 		}
 
 		for (auto& x : itemButtons)
@@ -231,61 +255,54 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 }
 void ContentBrowserWindow::AddItems(const std::string& folder, const std::string& extension, const std::string& icon)
 {
-	static const XMFLOAT2 siz = XMFLOAT2(240, 120);
-
 	// Folders parse:
 	wi::helper::GetFolderNamesInDirectory(folder, [&](std::string foldername) {
 		std::string itemname = foldername.substr(folder.size()) + "." + extension;
 		std::string filename = foldername + "/" + itemname;
 		if (wi::helper::FileExists(filename))
 		{
-			wi::gui::Button& button = itemButtons.emplace_back();
-			button.Create(icon);
-			button.SetSize(siz);
-			button.SetLocalizationEnabled(false);
-			button.SetDescription(itemname);
-			button.SetTooltip(filename);
-			button.OnClick([this, filename](wi::gui::EventArgs args) {
-				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					editor->Open(filename);
-				});
-				this->SetVisible(false);
-				});
-			button.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
-			button.font_description.params.v_align = wi::font::WIFALIGN_TOP;
-			button.font.params.size = 42;
-			std::string thumbnailName = foldername + "/thumbnail.png";
-			if (wi::helper::FileExists(thumbnailName))
-			{
-				wi::Resource thumbnail = wi::resourcemanager::Load(thumbnailName);
-				if (thumbnail.IsValid())
-				{
-					for (int i = 0; i < arraysize(sprites); ++i)
-					{
-						button.sprites[i].textureResource = thumbnail;
-					}
-					button.SetText("");
-				}
-			}
+			AddItem(filename, icon);
 		}
 	});
 
 	// Individual items:
 	wi::helper::GetFileNamesInDirectory(folder, [&](std::string filename) {
-		wi::gui::Button& button = itemButtons.emplace_back();
-		button.Create(icon);
-		button.SetSize(siz);
-		button.SetLocalizationEnabled(false);
-		button.SetDescription(filename.substr(folder.size()));
-		button.SetTooltip(filename);
-		button.OnClick([this, filename](wi::gui::EventArgs args) {
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-				editor->Open(filename);
-			});
-			this->SetVisible(false);
-			});
-		button.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
-		button.font_description.params.v_align = wi::font::WIFALIGN_TOP;
-		button.font.params.size = 42;
+		AddItem(filename, icon);
 		}, extension);
+}
+void ContentBrowserWindow::AddItem(const std::string& filename, const std::string& icon)
+{
+	static const XMFLOAT2 siz = XMFLOAT2(240, 120);
+
+	std::string itemname = wi::helper::GetFileNameFromPath(filename);
+	std::string foldername = wi::helper::GetDirectoryFromPath(filename);
+
+	wi::gui::Button& button = itemButtons.emplace_back();
+	button.Create(icon);
+	button.SetSize(siz);
+	button.SetLocalizationEnabled(false);
+	button.SetDescription(itemname);
+	button.SetTooltip(filename);
+	button.OnClick([this, filename](wi::gui::EventArgs args) {
+		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+			editor->Open(filename);
+			});
+		this->SetVisible(false);
+		});
+	button.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
+	button.font_description.params.v_align = wi::font::WIFALIGN_TOP;
+	button.font.params.size = 42;
+	std::string thumbnailName = foldername + "/thumbnail.png";
+	if (wi::helper::FileExists(thumbnailName))
+	{
+		wi::Resource thumbnail = wi::resourcemanager::Load(thumbnailName);
+		if (thumbnail.IsValid())
+		{
+			for (int i = 0; i < arraysize(sprites); ++i)
+			{
+				button.sprites[i].textureResource = thumbnail;
+			}
+			button.SetText("");
+		}
+	}
 }
