@@ -572,6 +572,18 @@
     <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\loadingscreen.png">
       <Filter>scripts\character_controller\assets</Filter>
     </Image>
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\thumbnail.png">
+      <Filter>models\Sponza</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\thumbnail.png">
+      <Filter>scripts\character_controller</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)scripts\dungeon_generator\thumbnail.png">
+      <Filter>scripts\dungeon_generator</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\thumbnail.png">
+      <Filter>scripts\fighting_game</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Media Include="$(MSBuildThisFileDirectory)models\water.wav">

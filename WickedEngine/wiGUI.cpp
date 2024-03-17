@@ -880,10 +880,10 @@ namespace wi::gui
 		switch (font_description.params.h_align)
 		{
 		case wi::font::WIFALIGN_LEFT:
-			font_description.params.posX = translation.x + scale.x;
+			font_description.params.posX = translation.x + scale.x + shadow;
 			break;
 		case wi::font::WIFALIGN_RIGHT:
-			font_description.params.posX = translation.x;
+			font_description.params.posX = translation.x - shadow;
 			break;
 		case wi::font::WIFALIGN_CENTER:
 		default:
@@ -893,10 +893,10 @@ namespace wi::gui
 		switch (font_description.params.v_align)
 		{
 		case wi::font::WIFALIGN_TOP:
-			font_description.params.posY = translation.y + scale.y;
+			font_description.params.posY = translation.y + scale.y + shadow;
 			break;
 		case wi::font::WIFALIGN_BOTTOM:
-			font_description.params.posY = translation.y;
+			font_description.params.posY = translation.y - shadow;
 			break;
 		case wi::font::WIFALIGN_CENTER:
 		default:
@@ -2959,7 +2959,14 @@ namespace wi::gui
 	void Window::AddWidget(Widget* widget, AttachmentOptions options)
 	{
 		widget->SetEnabled(this->IsEnabled());
-		widget->SetVisible(this->IsVisible());
+		if (IsVisible() && !IsMinimized())
+		{
+			widget->SetVisible(true);
+		}
+		else
+		{
+			widget->SetVisible(false);
+		}
 		if (has_flag(options, AttachmentOptions::SCROLLABLE))
 		{
 			widget->AttachTo(&scrollable_area);
@@ -3249,12 +3256,23 @@ namespace wi::gui
 	void Window::SetVisible(bool value)
 	{
 		Widget::SetVisible(value);
-		//SetMinimized(!value);
-		if (!IsMinimized())
+		bool minimized = IsMinimized();
+		for (auto& x : widgets)
 		{
-			for (auto& x : widgets)
+			if (
+				x == &resizeDragger_UpperLeft ||
+				x == &resizeDragger_UpperRight ||
+				x == &closeButton ||
+				x == &collapseButton ||
+				x == &moveDragger ||
+				x == &label
+				)
 			{
 				x->SetVisible(value);
+			}
+			else
+			{
+				x->SetVisible(!minimized);
 			}
 		}
 	}
@@ -3296,18 +3314,23 @@ namespace wi::gui
 	{
 		minimized = value;
 
-		scrollable_area.SetVisible(!value);
-		if (resizeDragger_BottomLeft.parent != nullptr)
+		for (auto& x : widgets)
 		{
-			resizeDragger_BottomLeft.SetVisible(!value);
-		}
-		if (resizeDragger_BottomRight.parent != nullptr)
-		{
-			resizeDragger_BottomRight.SetVisible(!value);
+			if (
+				x == &resizeDragger_UpperLeft ||
+				x == &resizeDragger_UpperRight ||
+				x == &closeButton ||
+				x == &collapseButton ||
+				x == &moveDragger ||
+				x == &label
+				)
+			{
+				continue;
+			}
+			x->SetVisible(!value);
 		}
 
-		scrollbar_horizontal.SetVisible(!value);
-		scrollbar_vertical.SetVisible(!value);
+		scrollable_area.SetVisible(!value);
 
 		if (IsMinimized())
 		{

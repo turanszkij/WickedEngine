@@ -597,11 +597,14 @@
     <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_round_bump.png" />
     <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_round_ddn.png" />
     <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_round_spec.png" />
+    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\thumbnail.png" />
     <Image Include="$(MSBuildThisFileDirectory)models\waterNormalMap.jpg" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\footprint.dds" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\grassparticle.png" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\loadingscreen.png" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\waterNormalMap.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\thumbnail.png" />
+    <Image Include="$(MSBuildThisFileDirectory)scripts\dungeon_generator\thumbnail.png" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\baseColor.png" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\fire.jpg" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\grid.dds" />
@@ -610,6 +613,7 @@
     <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\orb.dds" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\ripple.png" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\smoke0.png" />
+    <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\thumbnail.png" />
   </ItemGroup>
   <ItemGroup>
     <Media Include="$(MSBuildThisFileDirectory)models\water.wav" />

@@ -46,6 +46,7 @@ set (SOURCE_FILES
 	SpriteWindow.cpp
 	FontWindow.cpp
  	VoxelGridWindow.cpp
+	ContentBrowserWindow.cpp
 	xatlas.cpp
 	EmbeddedResources.cpp
 )
