@@ -7189,7 +7189,14 @@ void DrawDebugWorld(
 			Entity entity = scene.emitters.GetEntity(i);
 			const MeshComponent* mesh = scene.meshes.GetComponent(emitter.meshID);
 
-			XMStoreFloat4x4(&sb.g_xTransform, XMLoadFloat4x4(&emitter.worldMatrix)*camera.GetViewProjection());
+			XMMATRIX W = XMLoadFloat4x4(&emitter.worldMatrix) * camera.GetViewProjection();
+			if (mesh != nullptr && IsFormatUnorm(mesh->position_format) && !mesh->so_pos.IsValid())
+			{
+				XMMATRIX R = mesh->aabb.getUnormRemapMatrix();
+				W = R * W;
+			}
+
+			XMStoreFloat4x4(&sb.g_xTransform, W);
 			sb.g_xColor = float4(0, 1, 0, 1);
 
 			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);

@@ -177,6 +177,21 @@ void ContentBrowserWindow::RefreshContent()
 		RemoveWidget(&x);
 	}
 
+	if (!editor->recentFilenames.empty())
+	{
+		wi::gui::Button& button = folderButtons[SELECTION_RECENT];
+		button.Create("Recently Used");
+		button.SetLocalizationEnabled(false);
+		button.SetSize(XMFLOAT2(wid, hei));
+		button.OnClick([this](wi::gui::EventArgs args) {
+			SetSelection(SELECTION_RECENT);
+			});
+		AddWidget(&button, wi::gui::Window::AttachmentOptions::NONE);
+		if (current_selection == SELECTION_COUNT)
+		{
+			current_selection = SELECTION_RECENT;
+		}
+	}
 	if (wi::helper::DirectoryExists(content_folder + "scripts"))
 	{
 		wi::gui::Button& button = folderButtons[SELECTION_SCRIPTS];
@@ -205,21 +220,6 @@ void ContentBrowserWindow::RefreshContent()
 		if (current_selection == SELECTION_COUNT)
 		{
 			current_selection = SELECTION_MODELS;
-		}
-	}
-	if (!editor->recentFilenames.empty())
-	{
-		wi::gui::Button& button = folderButtons[SELECTION_RECENT];
-		button.Create("Recently Used");
-		button.SetLocalizationEnabled(false);
-		button.SetSize(XMFLOAT2(wid, hei));
-		button.OnClick([this](wi::gui::EventArgs args) {
-			SetSelection(SELECTION_RECENT);
-		});
-		AddWidget(&button, wi::gui::Window::AttachmentOptions::NONE);
-		if (current_selection == SELECTION_COUNT)
-		{
-			current_selection = SELECTION_RECENT;
 		}
 	}
 

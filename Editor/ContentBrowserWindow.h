@@ -11,9 +11,9 @@ public:
 	std::string content_folder;
 	enum SELECTION
 	{
+		SELECTION_RECENT,
 		SELECTION_SCRIPTS,
 		SELECTION_MODELS,
-		SELECTION_RECENT,
 
 		SELECTION_COUNT
 	};

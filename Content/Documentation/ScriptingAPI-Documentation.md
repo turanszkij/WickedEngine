@@ -1021,6 +1021,7 @@ TextureSlot = {
 - SetScaleY(float value)  -- set scaling along lifetime in Y axis
 - SetRotation(float value)  -- set rotation speed
 - SetMotionBlurAmount(float value)  -- set the motion elongation factor
+- SetCollidersDisabled(bool value) -- disable GPU colliders
 
 #### HairParticleSystem
 - _flags : int

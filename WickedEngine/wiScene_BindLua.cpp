@@ -4459,6 +4459,8 @@ Luna<EmitterComponent_BindLua>::FunctionType EmitterComponent_BindLua::methods[]
 	lunamethod(EmitterComponent_BindLua, SetScaleY),
 	lunamethod(EmitterComponent_BindLua, SetRotation),
 	lunamethod(EmitterComponent_BindLua, SetMotionBlurAmount),
+	lunamethod(EmitterComponent_BindLua, IsCollidersDisabled),
+	lunamethod(EmitterComponent_BindLua, SetCollidersDisabled),
 	{ NULL, NULL }
 };
 Luna<EmitterComponent_BindLua>::PropertyType EmitterComponent_BindLua::properties[] = {
@@ -4695,6 +4697,25 @@ int EmitterComponent_BindLua::SetMotionBlurAmount(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "SetMotionBlurAmount(float value) not enough arguments!");
+	}
+
+	return 0;
+}
+int EmitterComponent_BindLua::IsCollidersDisabled(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsCollidersDisabled());
+	return 1;
+}
+int EmitterComponent_BindLua::SetCollidersDisabled(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->SetCollidersDisabled(wi::lua::SGetBool(L, 1));
+	}
+	else
+	{
+		wi::lua::SError(L, "SetCollidersDisabled(bool value) not enough arguments!");
 	}
 
 	return 0;
