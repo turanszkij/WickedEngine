@@ -1218,6 +1218,54 @@ namespace wi::helper
 #endif // PLATFORM_UWP
 	}
 
+	bool DirectoryExists(const std::string& fileName)
+	{
+#ifndef PLATFORM_UWP
+		bool exists = std::filesystem::exists(ToNativeString(fileName));
+		return exists;
+#else
+		using namespace winrt::Windows::Storage;
+		using namespace winrt::Windows::Storage::Streams;
+		using namespace winrt::Windows::Foundation;
+		std::wstring wstr;
+		std::filesystem::path filepath = fileName;
+		filepath = std::filesystem::absolute(filepath);
+		StringConvert(filepath.string(), wstr);
+		bool success = false;
+
+		auto async_helper = [&]() -> IAsyncAction {
+			try
+			{
+				auto file = co_await StorageFolder::GetFolderFromPathAsync(wstr);
+				success = true;
+			}
+			catch (winrt::hresult_error const& ex)
+			{
+				switch (ex.code())
+				{
+				case E_ACCESSDENIED:
+					wi::backlog::post("Opening folder failed: " + fileName + " | Reason: Permission Denied!");
+					break;
+				default:
+					break;
+				}
+			}
+
+			};
+
+		if (winrt::impl::is_sta_thread())
+		{
+			std::thread([&] { async_helper().get(); }).join(); // can't block coroutine from ui thread
+		}
+		else
+		{
+			async_helper().get();
+		}
+
+		return success;
+#endif // PLATFORM_UWP
+	}
+
 	uint64_t FileTimestamp(const std::string& fileName)
 	{
 		auto tim = std::filesystem::last_write_time(ToNativeString(fileName));
@@ -1477,11 +1525,28 @@ namespace wi::helper
 
 		for (const auto& entry : std::filesystem::directory_iterator(directory_path))
 		{
+			if (entry.is_directory())
+				continue;
 			std::string filename = entry.path().filename().generic_u8string();
-			if (filter_extension.empty() || wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename)).compare(filter_extension) == 0)
+			if (filter_extension.empty() || wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename)).compare(wi::helper::toUpper(filter_extension)) == 0)
 			{
 				onSuccess(directory + filename);
 			}
+		}
+	}
+
+	void GetFolderNamesInDirectory(const std::string& directory, std::function<void(std::string folderName)> onSuccess)
+	{
+		std::filesystem::path directory_path = ToNativeString(directory);
+		if (!std::filesystem::exists(directory_path))
+			return;
+
+		for (const auto& entry : std::filesystem::directory_iterator(directory_path))
+		{
+			if (!entry.is_directory())
+				continue;
+			std::string filename = entry.path().filename().generic_u8string();
+			onSuccess(directory + filename);
 		}
 	}
 
@@ -1642,7 +1707,7 @@ namespace wi::helper
 #endif // PLATFORM_UWP
 
 #ifdef PLATFORM_WINDOWS_DESKTOP
-		std::string op = "start " + url;
+		std::string op = "start \"\" \"" + url + "\"";
 		int status = system(op.c_str());
 		wi::backlog::post("wi::helper::OpenUrl(" + url + ") returned status: " + std::to_string(status));
 		return;
