@@ -98,6 +98,8 @@ namespace wi::helper
 
 	bool FileExists(const std::string& fileName);
 
+	bool DirectoryExists(const std::string& fileName);
+
 	uint64_t FileTimestamp(const std::string& fileName);
 
 	std::string GetTempDirectoryPath();
@@ -117,6 +119,8 @@ namespace wi::helper
 	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess);
 
 	void GetFileNamesInDirectory(const std::string& directory, std::function<void(std::string fileName)> onSuccess, const std::string& filter_extension = "");
+
+	void GetFolderNamesInDirectory(const std::string& directory, std::function<void(std::string folderName)> onSuccess);
 
 	// Converts a file into a C++ header file that contains the file contents as byte array.
 	//	dataName : the byte array's name

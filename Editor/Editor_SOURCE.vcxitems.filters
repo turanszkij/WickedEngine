@@ -92,6 +92,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)SpriteWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)FontWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)VoxelGridWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ContentBrowserWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
@@ -148,6 +149,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)SpriteWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)FontWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)VoxelGridWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ContentBrowserWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />
