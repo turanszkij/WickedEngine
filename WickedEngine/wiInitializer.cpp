@@ -14,7 +14,10 @@ namespace wi::initializer
 
 	void InitializeComponentsImmediate()
 	{
-		InitializeComponentsAsync();
+		if (!initializationStarted)
+		{
+			InitializeComponentsAsync();
+		}
 		wi::jobsystem::Wait(ctx);
 	}
 	void InitializeComponentsAsync()
