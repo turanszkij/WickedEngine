@@ -2,6 +2,7 @@
 #include "wiLua.h"
 #include "wiLuna.h"
 #include "wiAudio.h"
+#include "wiResourceManager.h"
 
 namespace wi::lua
 {
@@ -35,14 +36,17 @@ namespace wi::lua
 	class Sound_BindLua
 	{
 	public:
-		wi::audio::Sound sound;
+		wi::Resource soundResource;
 
 		inline static constexpr char className[] = "Sound";
 		static Luna<Sound_BindLua>::FunctionType methods[];
 		static Luna<Sound_BindLua>::PropertyType properties[];
 
-		Sound_BindLua(lua_State* L) {}
-		Sound_BindLua(const wi::audio::Sound& sound) :sound(sound) {}
+		Sound_BindLua(lua_State* L);
+		Sound_BindLua(const wi::audio::Sound& sound)
+		{
+			soundResource.SetSound(sound);
+		}
 
 		int IsValid(lua_State* L);
 
@@ -58,7 +62,7 @@ namespace wi::lua
 		static Luna<SoundInstance_BindLua>::FunctionType methods[];
 		static Luna<SoundInstance_BindLua>::PropertyType properties[];
 
-		SoundInstance_BindLua(lua_State* L) { }
+		SoundInstance_BindLua(lua_State* L);
 		~SoundInstance_BindLua() { }
 
 		int SetSubmixType(lua_State* L);

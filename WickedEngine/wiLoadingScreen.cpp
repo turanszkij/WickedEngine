@@ -78,14 +78,32 @@ namespace wi
 		if (backgroundTexture.IsValid())
 		{
 			wi::image::Params fx;
-			fx.enableFullScreen();
-			fx.blendFlag = wi::enums::BLENDMODE_PREMULTIPLIED;
+			const Texture& tex = backgroundTexture.GetTexture();
+			const TextureDesc& desc = tex.GetDesc();
+
+			const float canvas_aspect = GetLogicalWidth() / GetLogicalHeight();
+			const float image_aspect = float(desc.width) / float(desc.height);
+
+			if (canvas_aspect > image_aspect)
+			{
+				// display aspect is wider than image:
+				fx.siz.x = GetLogicalWidth() / canvas_aspect * image_aspect;
+				fx.siz.y = GetLogicalHeight();
+			}
+			else
+			{
+				// image aspect is wider or equal to display
+				fx.siz.x = GetLogicalWidth();
+				fx.siz.y = GetLogicalHeight() * canvas_aspect / image_aspect;
+			}
+
+			fx.pos = XMFLOAT3(GetLogicalWidth() * 0.5f, GetLogicalHeight() * 0.5f, 0);
+			fx.pivot = XMFLOAT2(0.5f, 0.5f);
+			fx.blendFlag = wi::enums::BLENDMODE_ALPHA;
 			if (colorspace != ColorSpace::SRGB)
 			{
-				// Convert the regular SRGB result of the render path to linear space for HDR compositing:
 				fx.enableLinearOutputMapping(hdr_scaling);
 			}
-			const Texture& tex = backgroundTexture.GetTexture();
 			wi::image::Draw(&tex, fx, cmd);
 		}
 

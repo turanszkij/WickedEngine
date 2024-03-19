@@ -32,8 +32,8 @@ namespace wi::lua
 			Sound_BindLua* sound = Luna<Sound_BindLua>::lightcheck(L, 2);
 			if (sound != nullptr)
 			{
-				bool result = wi::audio::CreateSound(wi::lua::SGetString(L, 1), &sound->sound);
-				wi::lua::SSetBool(L, result);
+				sound->soundResource = wi::resourcemanager::Load(wi::lua::SGetString(L, 1));
+				wi::lua::SSetBool(L, sound->soundResource.GetSound().IsValid());
 				return 1;
 			}
 			else
@@ -50,11 +50,12 @@ namespace wi::lua
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			Sound_BindLua* sound = Luna<Sound_BindLua>::lightcheck(L, 1);
+			Sound_BindLua* s = Luna<Sound_BindLua>::lightcheck(L, 1);
 			SoundInstance_BindLua* soundinstance = Luna<SoundInstance_BindLua>::lightcheck(L, 2);
-			if (sound != nullptr && soundinstance != nullptr)
+			if (s != nullptr && soundinstance != nullptr)
 			{
-				bool result = wi::audio::CreateSoundInstance(&sound->sound, &soundinstance->soundinstance);
+				const wi::audio::Sound& sound = s->soundResource.GetSound();
+				bool result = wi::audio::CreateSoundInstance(&sound, &soundinstance->soundinstance);
 				wi::lua::SSetBool(L, result);
 				return 1;
 			}
@@ -296,9 +297,18 @@ REVERB_PRESET_PLATE = 29
 		{ NULL, NULL }
 	};
 
+	Sound_BindLua::Sound_BindLua(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			soundResource = wi::resourcemanager::Load(wi::lua::SGetString(L, 1));
+		}
+	}
+
 	int Sound_BindLua::IsValid(lua_State* L)
 	{
-		wi::lua::SSetBool(L, sound.IsValid());
+		wi::lua::SSetBool(L, soundResource.IsValid() && soundResource.GetSound().IsValid());
 		return 1;
 	}
 
@@ -335,6 +345,35 @@ REVERB_PRESET_PLATE = 29
 	Luna<SoundInstance_BindLua>::PropertyType SoundInstance_BindLua::properties[] = {
 		{ NULL, NULL }
 	};
+
+	SoundInstance_BindLua::SoundInstance_BindLua(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Sound_BindLua* s = Luna<Sound_BindLua>::lightcheck(L, 1);
+			if (s == nullptr)
+			{
+				wi::lua::SError(L, "SoundInstance(Sound sound, opt float begin,length) : first argument is not a Sound!");
+				return;
+			}
+			if (argc > 1)
+			{
+				soundinstance.begin = wi::lua::SGetFloat(L, 2);
+				if (argc > 2)
+				{
+					soundinstance.length = wi::lua::SGetFloat(L, 3);
+				}
+			}
+			const wi::audio::Sound& sound = s->soundResource.GetSound();
+			if (!sound.IsValid())
+			{
+				wi::lua::SError(L, "SoundInstance(Sound sound, opt float begin,end) : Sound is not valid!");
+				return;
+			}
+			wi::audio::CreateSoundInstance(&sound, &soundinstance);
+		}
+	}
 
 	int SoundInstance_BindLua::SetSubmixType(lua_State* L)
 	{

@@ -474,11 +474,13 @@ Loads and plays an audio files.
 #### Sound
 An audio file. Can be instanced several times via SoundInstance.
 - [constructor]Sound()  -- creates an empty sound. Use the audio device to load sounds from files
+- [constructor]Sound(string name)  -- loads a sound from a file
 - IsValid() : bool -- returns whether the sound was created successfully
 
 #### SoundInstance
 An audio file instance that can be played. Note: after modifying parameters of the SoundInstance, the SoundInstance will need to be recreated from a specified sound
 - [constructor]SoundInstance()  -- creates an empty soundinstance. Use the audio device to clone sounds
+- [constructor]SoundInstance(Sound sound, opt float begin,length)  -- creates a soundinstance from a sound
 - SetSubmixType(int submixtype)  -- set a submix type group (default is SUBMIX_TYPE_SOUNDEFFECT)
 - SetBegin(float seconds) -- beginning of the playback in seconds, relative to the Sound it will be created from (0 = from beginning)
 - SetLength(float seconds) -- length in seconds (0 = until end)
@@ -1022,6 +1024,7 @@ TextureSlot = {
 - SetRotation(float value)  -- set rotation speed
 - SetMotionBlurAmount(float value)  -- set the motion elongation factor
 - SetCollidersDisabled(bool value) -- disable GPU colliders
+- IsCollidersDisabled()
 
 #### HairParticleSystem
 - _flags : int

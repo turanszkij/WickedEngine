@@ -3183,43 +3183,24 @@ void UpdateVisibility(Visibility& vis)
 
 	if (vis.flags & Visibility::ALLOW_DECALS)
 	{
-		const uint32_t decal_loop = (uint32_t)std::min(vis.scene->aabb_decals.size(), vis.scene->decals.GetCount());
-		vis.visibleDecals.resize(decal_loop);
-		wi::jobsystem::Dispatch(ctx, decal_loop, groupSize, [&](wi::jobsystem::JobArgs args) {
-
-			// Setup stream compaction:
-			uint32_t& group_count = *(uint32_t*)args.sharedmemory;
-			uint32_t* group_list = (uint32_t*)args.sharedmemory + 1;
-			if (args.isFirstJobInGroup)
+		// Note: decals must be appended in order for correct blending, must not use parallelization!
+		wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
+			for (size_t i = 0; i < vis.scene->aabb_decals.size(); ++i)
 			{
-				group_count = 0; // first thread initializes local counter
-			}
+				const AABB& aabb = vis.scene->aabb_decals[i];
 
-			const AABB& aabb = vis.scene->aabb_decals[args.jobIndex];
-
-			if ((aabb.layerMask & vis.layerMask) && vis.frustum.CheckBoxFast(aabb))
-			{
-				// Local stream compaction:
-				group_list[group_count++] = args.jobIndex;
-			}
-
-			// Global stream compaction:
-			if (args.isLastJobInGroup && group_count > 0)
-			{
-				uint32_t prev_count = vis.decal_counter.fetch_add(group_count);
-				for (uint32_t i = 0; i < group_count; ++i)
+				if ((aabb.layerMask & vis.layerMask) && vis.frustum.CheckBoxFast(aabb))
 				{
-					vis.visibleDecals[prev_count + i] = group_list[i];
+					vis.visibleDecals.push_back(uint32_t(i));
 				}
 			}
-
-			}, sharedmemory_size);
+		});
 	}
 
 	if (vis.flags & Visibility::ALLOW_ENVPROBES)
 	{
+		// Note: probes must be appended in order for correct blending, must not use parallelization!
 		wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
-			// Cull probes:
 			for (size_t i = 0; i < vis.scene->aabb_probes.size(); ++i)
 			{
 				const AABB& aabb = vis.scene->aabb_probes[i];
@@ -3279,7 +3260,6 @@ void UpdateVisibility(Visibility& vis)
 
 	// finalize stream compaction:
 	vis.visibleObjects.resize((size_t)vis.object_counter.load());
-	vis.visibleDecals.resize((size_t)vis.decal_counter.load());
 	vis.visibleLights.resize((size_t)vis.light_counter.load());
 
 	if (vis.scene->weather.IsOceanEnabled())

@@ -137,7 +137,6 @@ namespace wi::renderer
 
 		std::atomic<uint32_t> object_counter;
 		std::atomic<uint32_t> light_counter;
-		std::atomic<uint32_t> decal_counter;
 
 		wi::SpinLock locker;
 		bool planar_reflection_visible = false;
@@ -156,7 +155,6 @@ namespace wi::renderer
 
 			object_counter.store(0);
 			light_counter.store(0);
-			decal_counter.store(0);
 
 			closestRefPlane = std::numeric_limits<float>::max();
 			planar_reflection_visible = false;
