@@ -802,6 +802,11 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	grassLengthSlider.SetPos(XMFLOAT2(x, y += step));
 	grassLengthSlider.OnSlide([this](wi::gui::EventArgs args) {
 		terrain->grass_properties.length = args.fValue;
+		wi::HairParticleSystem* hair = terrain->scene->hairs.GetComponent(terrain->grassEntity);
+		if (hair != nullptr)
+		{
+			hair->length = args.fValue;
+		}
 		});
 	AddWidget(&grassLengthSlider);
 
@@ -811,6 +816,11 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	grassDistanceSlider.SetPos(XMFLOAT2(x, y += step));
 	grassDistanceSlider.OnSlide([this](wi::gui::EventArgs args) {
 		terrain->grass_properties.viewDistance = args.fValue;
+		wi::HairParticleSystem* hair = terrain->scene->hairs.GetComponent(terrain->grassEntity);
+		if (hair != nullptr)
+		{
+			hair->viewDistance = args.fValue;
+		}
 		});
 	AddWidget(&grassDistanceSlider);
 
@@ -1535,7 +1545,7 @@ void TerrainWindow::SetupAssets()
 	terrain_preset.grassEntity = CreateEntity();
 	currentScene.Component_Attach(terrain_preset.grassEntity, entity);
 	currentScene.materials.Create(terrain_preset.grassEntity);
-	currentScene.hairs.Create(terrain_preset.grassEntity);
+	currentScene.hairs.Create(terrain_preset.grassEntity) = terrain_preset.grass_properties;
 	MaterialComponent* material_Grass = currentScene.materials.GetComponent(terrain_preset.grassEntity);
 	wi::HairParticleSystem* grass = currentScene.hairs.GetComponent(terrain_preset.grassEntity);
 	wi::config::File grass_config;
