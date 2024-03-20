@@ -435,6 +435,7 @@ namespace wi::scene
 			wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 			XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 			XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
+			XMFLOAT4 uv = XMFLOAT4(0, 0, 0, 0);
 			XMFLOAT3 velocity = XMFLOAT3(0, 0, 0);
 			float distance = std::numeric_limits<float>::max();
 			int subsetIndex = -1;

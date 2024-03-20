@@ -160,10 +160,25 @@ You can use the Renderer with the following functions, all of which are in the g
 - DrawVoxelGrid(VoxelGrid voxelgrid) -- draws the voxel grid in the debug rendering phase. VoxelGrid object must not be destroyed until then!
 - DrawPathQuery(PathQuery pathquery) -- draws the path query in the debug rendering phase. PathQuery object must not be destroyed until then!
 - DrawTrail(TrailRenderer trail) -- draws the trail in the debug rendering phase. TrailRenderer object must not be destroyed until then!
+- PaintIntoTexture(PaintTextureParams params)
+- CreatePaintableTexture(int width,height, opt int mips = 0, opt Vector initialColor = Vector()) -- creates a texture that can be used for destination of PaintIntoTexture()
 - PutWaterRipple(Vector position) -- put down a water ripple with default embedded asset
 - PutWaterRipple(string imagename, Vector position) -- put down water ripple texture from image asset file
 - ClearWorld(opt Scene scene) -- Clears the scene and the associated renderer resources. If parmaeter is not specified, it will clear the global scene
 - ReloadShaders()
+
+#### PaintTextureParams
+- [constructor]PaintTextureParams
+- SetEditTexture(Texture tex)
+- SetBrushTexture(Texture tex)
+- SetRevealTexture(Texture tex)
+- SetBrushColor(Vector value)
+- SetCenterPixel(Vector value)
+- SetBrushRadius(int value)
+- SetBrushAmount(float value)
+- SetBrushSmoothness(float value)
+- SetBrushRotation(float value)
+- SetBrushShape(int value) -- 0 = circle, 1 = rectangle
 
 ### Sprite
 Render images on the screen.
@@ -654,7 +669,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - [outer]FILTER_OBJECT_ALL : uint	-- include all objects, meshes
 - [outer]FILTER_COLLIDER : uint	-- include colliders
 - [outer]FILTER_ALL : uint	-- include everything
-- Intersects(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : int entity, Vector position,normal, float distance, Vector velocity, int subsetIndex, Matrix orientation	-- intersects a primitive with the scene and returns collision parameters
+- Intersects(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : int entity, Vector position,normal, float distance, Vector velocity, int subsetIndex, Matrix orientation, Vector uv	-- intersects a primitive with the scene and returns collision parameters
 - IntersectsFirst(Ray primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : bool	-- intersects a primitive with the scene and returns true immediately on intersection, false if there was no intersection. This can be faster for occlusion check than regular `Intersects` that searches for closest intersection.
 - Update()  -- updates the scene and every entity and component inside the scene
 - Clear()  -- deletes every entity and component inside the scene
@@ -723,6 +738,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_GetEmitterArray() : EmitterComponent[] result  -- returns the array of all components of this type
 - Component_GetLightArray() : LightComponent[] result  -- returns the array of all components of this type
 - Component_GetObjectArray() : ObjectComponent[] result  -- returns the array of all components of this type
+- Component_GetMeshArray() : MeshComponent[] result  -- returns the array of all components of this type
 - Component_GetInverseKinematicsArray() : InverseKinematicsComponent[] result  -- returns the array of all components of this type
 - Component_GetSpringArray() : SpringComponent[] result  -- returns the array of all components of this type
 - Component_GetScriptArray() : ScriptComponent[] result  -- returns the array of all components of this type
@@ -749,6 +765,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Entity_GetEmitterArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetLightArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetObjectArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetMeshArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetInverseKinematicsArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetSpringArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetScriptArray() : Entity[] result  -- returns the array of all entities that have this component type
@@ -952,6 +969,8 @@ Describes an orientation in 3D space.
 - GetTexture(TextureSlot slot) : Texture
 - GetTextureName(TextureSlot slot) : string
 - GetTextureUVSet(TextureSlot slot) : int uvset
+- SetCastShadow(bool value)
+- IsCastingShadow() : bool
 
 ```lua
 TextureSlot = {
@@ -981,6 +1000,7 @@ TextureSlot = {
 
 - SetMeshSubsetMaterialID(int subsetindex, Entity materialID)
 - GetMeshSubsetMaterialID(int subsetindex) : Entity entity
+- CreateSubset() : int -- creates subset containing all faces, returns subset index
 
 #### EmitterComponent
 - _flags : int

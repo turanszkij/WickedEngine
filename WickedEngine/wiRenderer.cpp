@@ -151,6 +151,7 @@ wi::vector<RenderableTriangle> renderableTriangles_solid;
 wi::vector<RenderableTriangle> renderableTriangles_wireframe;
 wi::vector<uint8_t> debugTextStorage; // A stream of DebugText struct + text characters
 wi::vector<PaintRadius> paintrads;
+wi::vector<PaintTextureParams> painttextures;
 wi::vector<const wi::VoxelGrid*> renderableVoxelgrids;
 wi::vector<const wi::PathQuery*> renderablePathqueries;
 wi::vector<const wi::TrailRenderer*> renderableTrails;
@@ -3000,6 +3001,64 @@ void RenderImpostors(
 
 void ProcessDeferredTextureRequests(CommandList cmd)
 {
+	{
+		device->EventBegin("Paint Into Texture", cmd);
+
+		for (auto& params : painttextures)
+		{
+			device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_PAINT_TEXTURE), cmd);
+
+			if (params.brushTex.IsValid())
+			{
+				device->BindResource(&params.brushTex, 0, cmd);
+			}
+			else
+			{
+				device->BindResource(wi::texturehelper::getWhite(), 0, cmd);
+			}
+			if (params.revealTex.IsValid())
+			{
+				device->BindResource(&params.revealTex, 1, cmd);
+			}
+			else
+			{
+				device->BindResource(wi::texturehelper::getWhite(), 1, cmd);
+			}
+			device->BindUAV(&params.editTex, 0, cmd);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&params.editTex, params.editTex.desc.layout, ResourceState::UNORDERED_ACCESS),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			params.cb.xPaintReveal = params.revealTex.IsValid() ? 1 : 0; // overwrite params!
+
+			device->PushConstants(&params.cb, sizeof(params.cb), cmd);
+
+			const uint diameter = params.cb.xPaintBrushRadius * 2;
+			const uint dispatch_dim = (diameter + PAINT_TEXTURE_BLOCKSIZE - 1) / PAINT_TEXTURE_BLOCKSIZE;
+			device->Dispatch(dispatch_dim, dispatch_dim, 1, cmd);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&params.editTex, ResourceState::UNORDERED_ACCESS, params.editTex.desc.layout),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			if (params.editTex.desc.mip_levels > 1)
+			{
+				GenerateMipChain(params.editTex, wi::renderer::MIPGENFILTER::MIPGENFILTER_LINEAR, cmd);
+			}
+		}
+		painttextures.clear();
+
+		device->EventEnd(cmd);
+	}
+
+
 	deferredMIPGenLock.lock();
 	for (auto& it : deferredMIPGens)
 	{
@@ -6034,7 +6093,7 @@ void DrawScene(
 	const bool occlusion = (flags & DRAWSCENE_OCCLUSIONCULLING) && (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING) && GetOcclusionCullingEnabled();
 	const bool ocean = flags & DRAWSCENE_OCEAN;
 	const bool skip_planar_reflection_objects = flags & DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS;
-	const bool foreground_only = flags & DRAWSCENE_FOREGROUND_ONLY;
+	const bool foreground = flags & DRAWSCENE_FOREGROUND_ONLY;
 	const bool maincamera = flags & DRAWSCENE_MAINCAMERA;
 
 	device->EventBegin("DrawScene", cmd);
@@ -6076,7 +6135,7 @@ void DrawScene(
 		const ObjectComponent& object = vis.scene->objects[instanceIndex];
 		if (!object.IsRenderable())
 			continue;
-		if (foreground_only && !object.IsForeground())
+		if (foreground != object.IsForeground())
 			continue;
 		if (maincamera && object.IsNotVisibleInMainCamera())
 			continue;
@@ -16532,6 +16591,10 @@ void DrawPaintRadius(const PaintRadius& paintrad)
 {
 	paintrads.push_back(paintrad);
 }
+void PaintIntoTexture(const PaintTextureParams& params)
+{
+	painttextures.push_back(params);
+}
 void DrawVoxelGrid(const wi::VoxelGrid* voxelgrid)
 {
 	renderableVoxelgrids.push_back(voxelgrid);
@@ -16721,6 +16784,61 @@ void SetGIBoost(float value)
 float GetGIBoost()
 {
 	return GI_BOOST;
+}
+
+wi::Resource CreatePaintableTexture(uint32_t width, uint32_t height, uint32_t mips, wi::Color initialColor)
+{
+	TextureDesc desc;
+	desc.width = width;
+	desc.height = height;
+	desc.mip_levels = mips;
+	if (desc.mip_levels == 0)
+	{
+		desc.mip_levels = GetMipCount(desc.width, desc.height);
+	}
+	desc.format = Format::R8G8B8A8_UNORM;
+	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+	wi::vector<wi::Color> data(desc.width * desc.height);
+	std::fill(data.begin(), data.end(), initialColor);
+	SubresourceData initdata[32] = {};
+	for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
+	{
+		initdata[mip].data_ptr = data.data();
+		initdata[mip].row_pitch = std::max(1u, desc.width >> mip) * GetFormatStride(desc.format);
+	}
+	Texture texture;
+	GraphicsDevice* device = GetDevice();
+	device->CreateTexture(&desc, initdata, &texture);
+
+	static std::atomic<uint32_t> cnt = 0;
+	device->SetName(&texture, std::string("PaintableTexture" + std::to_string(cnt.fetch_add(1u))).c_str());
+
+	for (uint32_t i = 0; i < texture.GetDesc().mip_levels; ++i)
+	{
+		int subresource_index;
+		subresource_index = device->CreateSubresource(&texture, SubresourceType::SRV, 0, 1, i, 1);
+		assert(subresource_index == i);
+		subresource_index = device->CreateSubresource(&texture, SubresourceType::UAV, 0, 1, i, 1);
+		assert(subresource_index == i);
+	}
+
+	// This part must be AFTER mip level subresource creation:
+	int srgb_subresource = -1;
+	{
+		Format srgb_format = GetFormatSRGB(desc.format);
+		srgb_subresource = device->CreateSubresource(
+			&texture,
+			SubresourceType::SRV,
+			0, -1,
+			0, -1,
+			&srgb_format
+		);
+	}
+
+	wi::Resource resource;
+	resource.SetTexture(texture, srgb_subresource);
+
+	return resource;
 }
 
 }

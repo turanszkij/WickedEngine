@@ -1142,6 +1142,16 @@ namespace wi::renderer
 	};
 	void DrawPaintRadius(const PaintRadius& paintrad);
 
+	struct PaintTextureParams
+	{
+		wi::graphics::Texture editTex; // UAV writable texture
+		wi::graphics::Texture brushTex; // splat texture (optional)
+		wi::graphics::Texture revealTex; // mask texture that can be revealed (optional)
+		PaintTextureCB cb = {}; // shader parameters
+	};
+	void PaintIntoTexture(const PaintTextureParams& params);
+	wi::Resource CreatePaintableTexture(uint32_t width, uint32_t height, uint32_t mips = 0, wi::Color initialColor = wi::Color::Transparent());
+
 	// Add voxel grid to be drawn in debug rendering phase.
 	//	WARNING: This retains pointer until next call to DrawDebugScene(), so voxel grid must not be destroyed until then!
 	void DrawVoxelGrid(const wi::VoxelGrid* voxelgrid);

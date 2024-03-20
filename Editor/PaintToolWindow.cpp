@@ -508,34 +508,7 @@ void PaintToolWindow::Update(float dt)
 					texturename += ".PNG";
 					uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
 					material->textures[sel].name = texturename;
-
-					TextureDesc desc;
-					desc.width = 1024;
-					desc.height = 1024;
-					desc.format = Format::R8G8B8A8_UNORM;
-					desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-					wi::vector<wi::Color> whitedata(desc.width * desc.height);
-					std::fill(whitedata.begin(), whitedata.end(), wi::Color::White());
-					SubresourceData initdata;
-					initdata.data_ptr = whitedata.data();
-					initdata.row_pitch = desc.width * GetFormatStride(desc.format);
-					Texture texture;
-					GraphicsDevice* device = GetDevice();
-					device->CreateTexture(&desc, &initdata, &texture);
-					device->SetName(&texture, texturename.c_str());
-					// This part must be AFTER mip level subresource creation:
-					int srgb_subresource = -1;
-					{
-						Format srgb_format = GetFormatSRGB(desc.format);
-						srgb_subresource = device->CreateSubresource(
-							&texture,
-							SubresourceType::SRV,
-							0, -1,
-							0, -1,
-							&srgb_format
-						);
-					}
-					material->textures[sel].resource.SetTexture(texture, srgb_subresource);
+					material->textures[sel].resource = wi::renderer::CreatePaintableTexture(1024, 1024, 1, wi::Color::White());
 					editTexture = GetEditTextureSlot(*material, &uvset);
 
 					wi::backlog::post("Paint Tool created default texture: " + texturename);
@@ -573,54 +546,32 @@ void PaintToolWindow::Update(float dt)
 					// Need to requery this because RecordHistory might swap textures on material:
 					editTexture = GetEditTextureSlot(*material, &uvset);
 
-					device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_PAINT_TEXTURE), cmd);
+					wi::renderer::PaintTextureParams paintparams = {};
 
+					paintparams.editTex = editTexture.texture;
 					if (brushTex.IsValid())
 					{
-						device->BindResource(&brushTex.GetTexture(), 0, cmd);
-					}
-					else
-					{
-						device->BindResource(wi::texturehelper::getWhite(), 0, cmd);
+						paintparams.brushTex = brushTex.GetTexture();
 					}
 					if (revealTex.IsValid())
 					{
-						device->BindResource(&revealTex.GetTexture(), 1, cmd);
+						paintparams.revealTex = revealTex.GetTexture();
 					}
-					else
-					{
-						device->BindResource(wi::texturehelper::getWhite(), 1, cmd);
-					}
-					device->BindUAV(&editTexture.texture, 0, cmd);
 
-					PaintTextureCB cb;
-					cb.xPaintBrushCenter = center;
-					cb.xPaintBrushRadius = (uint32_t)pressure_radius;
+					paintparams.cb.xPaintBrushCenter = center;
+					paintparams.cb.xPaintBrushRadius = (uint32_t)pressure_radius;
 					if (brushShapeComboBox.GetSelected() == 1)
 					{
-						cb.xPaintBrushRadius = (uint)std::ceil((float(cb.xPaintBrushRadius) * 2 / std::sqrt(2.0f))); // square shape, diagonal dispatch size
+						paintparams.cb.xPaintBrushRadius = (uint)std::ceil((float(paintparams.cb.xPaintBrushRadius) * 2 / std::sqrt(2.0f))); // square shape, diagonal dispatch size
 					}
-					cb.xPaintBrushAmount = amount;
-					cb.xPaintBrushSmoothness = smoothness;
-					cb.xPaintBrushColor = color.rgba;
-					cb.xPaintReveal = revealTex.IsValid() ? 1 : 0;
-					cb.xPaintBrushRotation = brush_rotation;
-					cb.xPaintBrushShape = (uint)brushShapeComboBox.GetSelected();
-					device->PushConstants(&cb, sizeof(cb), cmd);
+					paintparams.cb.xPaintBrushAmount = amount;
+					paintparams.cb.xPaintBrushSmoothness = smoothness;
+					paintparams.cb.xPaintBrushColor = color.rgba;
+					paintparams.cb.xPaintReveal = revealTex.IsValid() ? 1 : 0;
+					paintparams.cb.xPaintBrushRotation = brush_rotation;
+					paintparams.cb.xPaintBrushShape = (uint)brushShapeComboBox.GetSelected();
 
-					const uint diameter = cb.xPaintBrushRadius * 2;
-					const uint dispatch_dim = (diameter + PAINT_TEXTURE_BLOCKSIZE - 1) / PAINT_TEXTURE_BLOCKSIZE;
-					device->Dispatch(dispatch_dim, dispatch_dim, 1, cmd);
-
-					GPUBarrier barriers[] = {
-						GPUBarrier::Memory(),
-					};
-					device->Barrier(barriers, arraysize(barriers), cmd);
-
-					if (editTexture.texture.desc.mip_levels > 1)
-					{
-						wi::renderer::GenerateMipChain(editTexture.texture, wi::renderer::MIPGENFILTER::MIPGENFILTER_LINEAR, cmd);
-					}
+					wi::renderer::PaintIntoTexture(paintparams);
 				}
 				if(substep == substep_count - 1)
 				{

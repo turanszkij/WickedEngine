@@ -58,7 +58,9 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		{
 			brush_color *= reveal_color;
 		}
-		output[pixel] = lerp(output[pixel], brush_color, affection);
+		brush_color.a *= affection;
+		float4 prevColor = output[pixel];
+		output[pixel] = lerp(prevColor, brush_color, brush_color.a);
 	}
 	//else
 	//{

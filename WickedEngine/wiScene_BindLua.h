@@ -386,7 +386,7 @@ namespace wi::lua::scene
 		{
 			_flags = LongLongProperty(reinterpret_cast<long long*>(&component->_flags));
 			ShaderType = IntProperty(reinterpret_cast<int*>(&component->shaderType));
-			UserBlendMode = IntProperty(reinterpret_cast<int*>(&component->roughness));
+			UserBlendMode = IntProperty(reinterpret_cast<int*>(&component->userBlendMode));
 			SpecularColor = VectorProperty(&component->specularColor);
 			SubsurfaceScattering = VectorProperty(&component->subsurfaceScattering);
 			TexMulAdd = VectorProperty(&component->texMulAdd);
@@ -478,6 +478,8 @@ namespace wi::lua::scene
 		int SetUserStencilRef(lua_State* L);
 		int GetUserStencilRef(lua_State* L);
 		int GetStencilRef(lua_State* L);
+		int SetCastShadow(lua_State* L);
+		int IsCastingShadow(lua_State* L);
 
 		int SetTexture(lua_State* L);
 		int SetTextureUVSet(lua_State* L);
@@ -526,6 +528,7 @@ namespace wi::lua::scene
 
 		int SetMeshSubsetMaterialID(lua_State* L);
 		int GetMeshSubsetMaterialID(lua_State* L);
+		int CreateSubset(lua_State* L);
 	};
 
 	class EmitterComponent_BindLua

@@ -858,7 +858,8 @@ int Scene_BindLua::Intersects(lua_State* L)
 			Luna<Vector_BindLua>::push(L, result.velocity);
 			wi::lua::SSetInt(L, result.subsetIndex);
 			Luna<Matrix_BindLua>::push(L, result.orientation);
-			return 7;
+			Luna<Vector_BindLua>::push(L, result.uv);
+			return 8;
 		}
 
 		Sphere_BindLua* sphere = Luna<Sphere_BindLua>::lightcheck(L, 1);
@@ -4088,6 +4089,8 @@ Luna<MaterialComponent_BindLua>::FunctionType MaterialComponent_BindLua::methods
 	lunamethod(MaterialComponent_BindLua, GetStencilRef),
 	lunamethod(MaterialComponent_BindLua, SetTexMulAdd),
 	lunamethod(MaterialComponent_BindLua, GetTexMulAdd),
+	lunamethod(MaterialComponent_BindLua, SetCastShadow),
+	lunamethod(MaterialComponent_BindLua, IsCastingShadow),
 
 	lunamethod(MaterialComponent_BindLua, SetTexture),
 	lunamethod(MaterialComponent_BindLua, SetTextureUVSet),
@@ -4365,6 +4368,22 @@ int MaterialComponent_BindLua::GetTextureUVSet(lua_State* L)
 	}
 	return 0;
 }
+int MaterialComponent_BindLua::SetCastShadow(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "SetCastShadow(bool value): not enough arguments!");
+		return 0;
+	}
+	component->SetCastShadow(wi::lua::SGetBool(L, 1));
+	return 0;
+}
+int MaterialComponent_BindLua::IsCastingShadow(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsCastingShadow());
+	return 1;
+}
 
 
 
@@ -4378,6 +4397,7 @@ int MaterialComponent_BindLua::GetTextureUVSet(lua_State* L)
 Luna<MeshComponent_BindLua>::FunctionType MeshComponent_BindLua::methods[] = {
 	lunamethod(MeshComponent_BindLua, SetMeshSubsetMaterialID),
 	lunamethod(MeshComponent_BindLua, GetMeshSubsetMaterialID),
+	lunamethod(MeshComponent_BindLua, CreateSubset),
 	{ NULL, NULL }
 };
 Luna<MeshComponent_BindLua>::PropertyType MeshComponent_BindLua::properties[] = {
@@ -4436,6 +4456,15 @@ int MeshComponent_BindLua::GetMeshSubsetMaterialID(lua_State* L)
 		wi::lua::SError(L, "GetMeshSubsetMaterialID(int subsetindex) not enough arguments!");
 	}
 	return 0;
+}
+int MeshComponent_BindLua::CreateSubset(lua_State* L)
+{
+	int index = (int)component->subsets.size();
+	auto& subset = component->subsets.emplace_back();
+	subset.indexOffset = 0;
+	subset.indexCount = (uint32_t)component->indices.size();
+	wi::lua::SSetInt(L, index);
+	return 1;
 }
 
 
