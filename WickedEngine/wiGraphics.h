@@ -661,6 +661,7 @@ namespace wi::graphics
 			MEMORY,		// UAV accesses
 			IMAGE,		// image layout transition
 			BUFFER,		// buffer state transition
+			ALIASING,	// memory aliasing transition
 		} type = Type::MEMORY;
 
 		struct Memory
@@ -682,11 +683,17 @@ namespace wi::graphics
 			ResourceState state_before;
 			ResourceState state_after;
 		};
+		struct Aliasing
+		{
+			const GPUResource* resource_before;
+			const GPUResource* resource_after;
+		};
 		union
 		{
 			Memory memory;
 			Image image;
 			Buffer buffer;
+			Aliasing aliasing;
 		};
 
 		static GPUBarrier Memory(const GPUResource* resource = nullptr)
@@ -716,6 +723,14 @@ namespace wi::graphics
 			barrier.buffer.buffer = buffer;
 			barrier.buffer.state_before = before;
 			barrier.buffer.state_after = after;
+			return barrier;
+		}
+		static GPUBarrier Aliasing(const GPUResource* before, const GPUResource* after)
+		{
+			GPUBarrier barrier;
+			barrier.type = Type::ALIASING;
+			barrier.aliasing.resource_before = before;
+			barrier.aliasing.resource_after = after;
 			return barrier;
 		}
 	};

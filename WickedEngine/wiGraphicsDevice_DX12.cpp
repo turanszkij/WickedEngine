@@ -3268,7 +3268,7 @@ using namespace dx12_internal;
 		internal_state->dummyTexture.desc.height = desc->height;
 		return true;
 	}
-	bool GraphicsDevice_DX12::CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer) const
+	bool GraphicsDevice_DX12::CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer, const GPUResource* alias, uint64_t alias_offset) const
 	{
 		auto internal_state = std::make_shared<Resource_DX12>();
 		internal_state->allocationhandler = allocationhandler;
@@ -3387,14 +3387,30 @@ using namespace dx12_internal;
 		}
 		else
 		{
-			hr = allocationhandler->allocator->CreateResource(
-				&allocationDesc,
-				&resourceDesc,
-				resourceState,
-				nullptr,
-				&internal_state->allocation,
-				PPV_ARGS(internal_state->resource)
-			);
+			if (alias == nullptr)
+			{
+				hr = allocationhandler->allocator->CreateResource(
+					&allocationDesc,
+					&resourceDesc,
+					resourceState,
+					nullptr,
+					&internal_state->allocation,
+					PPV_ARGS(internal_state->resource)
+				);
+			}
+			else
+			{
+				// Aliasing: https://gpuopen-librariesandsdks.github.io/D3D12MemoryAllocator/html/resource_aliasing.html
+				auto alias_internal = to_internal(alias);
+				hr = allocationhandler->allocator->CreateAliasingResource(
+					alias_internal->allocation.Get(),
+					alias_offset,
+					&resourceDesc,
+					resourceState,
+					nullptr,
+					PPV_ARGS(internal_state->resource)
+				);
+			}
 			assert(SUCCEEDED(hr));
 		}
 
@@ -3480,7 +3496,7 @@ using namespace dx12_internal;
 
 		return SUCCEEDED(hr);
 	}
-	bool GraphicsDevice_DX12::CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture) const
+	bool GraphicsDevice_DX12::CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture, const GPUResource* alias, uint64_t alias_offset) const
 	{
 		auto internal_state = std::make_shared<Texture_DX12>();
 		internal_state->allocationhandler = allocationhandler;
@@ -3688,14 +3704,30 @@ using namespace dx12_internal;
 				allocationDesc.ExtraHeapFlags |= D3D12_HEAP_FLAG_SHARED;
 			}
 
-			hr = allocationhandler->allocator->CreateResource(
-				&allocationDesc,
-				&resourcedesc,
-				resourceState,
-				useClearValue ? &optimizedClearValue : nullptr,
-				&internal_state->allocation,
-				PPV_ARGS(internal_state->resource)
-			);
+			if (alias == nullptr)
+			{
+				hr = allocationhandler->allocator->CreateResource(
+					&allocationDesc,
+					&resourcedesc,
+					resourceState,
+					useClearValue ? &optimizedClearValue : nullptr,
+					&internal_state->allocation,
+					PPV_ARGS(internal_state->resource)
+				);
+			}
+			else
+			{
+				// Aliasing: https://gpuopen-librariesandsdks.github.io/D3D12MemoryAllocator/html/resource_aliasing.html
+				auto alias_internal = to_internal(alias);
+				hr = allocationhandler->allocator->CreateAliasingResource(
+					alias_internal->allocation.Get(),
+					alias_offset,
+					&resourcedesc,
+					resourceState,
+					useClearValue ? &optimizedClearValue : nullptr,
+					PPV_ARGS(internal_state->resource)
+				);
+			}
 		}
 		assert(SUCCEEDED(hr));
 
@@ -7041,6 +7073,14 @@ using namespace dx12_internal;
 					CommandList_DX12::Discard& discard = commandlist.discards.emplace_back();
 					discard.resource = internal_state->resource.Get();
 				}
+			}
+			break;
+			case GPUBarrier::Type::ALIASING:
+			{
+				barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_ALIASING;
+				barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+				barrierdesc.Aliasing.pResourceBefore = to_internal(barrier.aliasing.resource_before)->resource.Get();
+				barrierdesc.Aliasing.pResourceAfter = to_internal(barrier.aliasing.resource_after)->resource.Get();
 			}
 			break;
 			}

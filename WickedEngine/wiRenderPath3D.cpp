@@ -191,7 +191,7 @@ namespace wi
 			desc.format = wi::renderer::format_rendertarget_main;
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
-			device->CreateTexture(&desc, nullptr, &rtPostprocess);
+			device->CreateTexture(&desc, nullptr, &rtPostprocess, &rtPrimitiveID); // Aliased!
 			device->SetName(&rtPostprocess, "rtPostprocess");
 		}
 		{
@@ -739,14 +739,15 @@ namespace wi
 			);
 			wi::renderer::UpdateRenderData(visibility_main, frameCB, cmd);
 
-			uint32_t num_barriers = 1;
-			GPUBarrier barriers[2] = {
+			uint32_t num_barriers = 2;
+			GPUBarrier barriers[] = {
 				GPUBarrier::Image(&debugUAV, debugUAV.desc.layout, ResourceState::UNORDERED_ACCESS),
+				GPUBarrier::Aliasing(&rtPostprocess, &rtPrimitiveID),
+				GPUBarrier::Image(&rtMain, rtMain.desc.layout, ResourceState::SHADER_RESOURCE_COMPUTE), // prepares transition for discard in dx12
 			};
 			if (visibility_shading_in_compute)
 			{
-				num_barriers = 2;
-				barriers[1] = GPUBarrier::Image(&rtMain, rtMain.desc.layout, ResourceState::SHADER_RESOURCE_COMPUTE); // prepares transition for discard in dx12
+				num_barriers = 3;
 			}
 			device->Barrier(barriers, num_barriers, cmd);
 
@@ -1989,6 +1990,17 @@ namespace wi
 		const Texture* rt_first = nullptr; // not ping-ponged with read / write
 		const Texture* rt_read = &rtMain;
 		const Texture* rt_write = &rtPostprocess;
+
+		// rtPostprocess aliasing transition:
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Aliasing(&rtPrimitiveID, &rtPostprocess),
+				GPUBarrier::Image(&rtPostprocess, rtPostprocess.desc.layout, ResourceState::UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+			device->ClearUAV(&rtPostprocess, 0, cmd);
+			device->Barrier(GPUBarrier::Image(&rtPostprocess, ResourceState::UNORDERED_ACCESS, rtPostprocess.desc.layout), cmd);
+		}
 
 		// 1.) HDR post process chain
 		{

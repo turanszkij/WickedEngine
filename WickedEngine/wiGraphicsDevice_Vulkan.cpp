@@ -3700,7 +3700,7 @@ using namespace vulkan_internal;
 
 		return success;
 	}
-	bool GraphicsDevice_Vulkan::CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer) const
+	bool GraphicsDevice_Vulkan::CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer, const GPUResource* alias, uint64_t alias_offset) const
 	{
 		auto internal_state = std::make_shared<Buffer_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
@@ -3866,7 +3866,43 @@ using namespace vulkan_internal;
 				allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 			}
 
-			res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
+			if (alias == nullptr)
+			{
+				res = vmaCreateBuffer(
+					allocationhandler->allocator,
+					&bufferInfo,
+					&allocInfo,
+					&internal_state->resource,
+					&internal_state->allocation,
+					nullptr
+				);
+			}
+			else
+			{
+				// Aliasing: https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/resource_aliasing.html
+				if (alias->IsTexture())
+				{
+					auto alias_internal = to_internal((const Texture*)alias);
+					res = vmaCreateAliasingBuffer2(
+						allocationhandler->allocator,
+						alias_internal->allocation,
+						alias_offset,
+						&bufferInfo,
+						&internal_state->resource
+					);
+				}
+				else
+				{
+					auto alias_internal = to_internal((const GPUBuffer*)alias);
+					res = vmaCreateAliasingBuffer2(
+						allocationhandler->allocator,
+						alias_internal->allocation,
+						alias_offset,
+						&bufferInfo,
+						&internal_state->resource
+					);
+				}
+			}
 			assert(res == VK_SUCCESS);
 		}
 
@@ -3990,7 +4026,7 @@ using namespace vulkan_internal;
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture) const
+	bool GraphicsDevice_Vulkan::CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture, const GPUResource* alias, uint64_t alias_offset) const
 	{
 		auto internal_state = std::make_shared<Texture_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
@@ -4290,7 +4326,43 @@ using namespace vulkan_internal;
 					allocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 				}
 
-				res = vmaCreateImage(allocator, &imageInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
+				if (alias == nullptr)
+				{
+					res = vmaCreateImage(
+						allocator,
+						&imageInfo,
+						&allocInfo,
+						&internal_state->resource,
+						&internal_state->allocation,
+						nullptr
+					);
+				}
+				else
+				{
+					// Aliasing: https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/resource_aliasing.html
+					if (alias->IsTexture())
+					{
+						auto alias_internal = to_internal((const Texture*)alias);
+						res = vmaCreateAliasingImage2(
+							allocator,
+							alias_internal->allocation,
+							alias_offset,
+							&imageInfo,
+							&internal_state->resource
+						);
+					}
+					else
+					{
+						auto alias_internal = to_internal((const GPUBuffer*)alias);
+						res = vmaCreateAliasingImage2(
+							allocator,
+							alias_internal->allocation,
+							alias_offset,
+							&imageInfo,
+							&internal_state->resource
+						);
+					}
+				}
 				assert(res == VK_SUCCESS);
 
 				if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::SHARED))
@@ -8624,6 +8696,7 @@ using namespace vulkan_internal;
 			{
 			default:
 			case GPUBarrier::Type::MEMORY:
+			case GPUBarrier::Type::ALIASING:
 			{
 				VkMemoryBarrier2 barrierdesc = {};
 				barrierdesc.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
