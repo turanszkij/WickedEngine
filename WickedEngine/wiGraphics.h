@@ -395,16 +395,22 @@ namespace wi::graphics
 		PREDICATION = 1 << 5,
 		TRANSIENT_ATTACHMENT = 1 << 6,	// hint: used in renderpass, without needing to write content to memory (VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)
 		SPARSE = 1 << 7,	// sparse resource without backing memory allocation
-		SPARSE_TILE_POOL_BUFFER = 1 << 8,				// buffer only, makes it suitable for containing tile memory for sparse buffers
-		SPARSE_TILE_POOL_TEXTURE_NON_RT_DS = 1 << 9,	// buffer only, makes it suitable for containing tile memory for sparse textures that are non render targets nor depth stencils
-		SPARSE_TILE_POOL_TEXTURE_RT_DS = 1 << 10,		// buffer only, makes it suitable for containing tile memory for sparse textures that are either render targets or depth stencils
-		SPARSE_TILE_POOL = SPARSE_TILE_POOL_BUFFER | SPARSE_TILE_POOL_TEXTURE_NON_RT_DS | SPARSE_TILE_POOL_TEXTURE_RT_DS, // buffer only, makes it suitable for containing tile memory for all kinds of sparse resources. Requires GraphicsDeviceCapability::GENERIC_SPARSE_TILE_POOL to be supported
+		ALIASING_BUFFER = 1 << 8,			// memory allocation will be suitable for buffers
+		ALIASING_TEXTURE_NON_RT_DS = 1 << 9,// memory allocation will be suitable for textures that are non render targets nor depth stencils
+		ALIASING_TEXTURE_RT_DS = 1 << 10,	// memory allocation will be suitable for textures that are either render targets or depth stencils
+		ALIASING = ALIASING_BUFFER | ALIASING_TEXTURE_NON_RT_DS | ALIASING_TEXTURE_RT_DS, // memory allocation will be suitable for all kinds of resources. Requires GraphicsDeviceCapability::ALIASING_GENERIC to be supported
 		TYPED_FORMAT_CASTING = 1 << 11,	// enable casting formats between same type and different modifiers: eg. UNORM -> SRGB
 		TYPELESS_FORMAT_CASTING = 1 << 12,	// enable casting formats to other formats that have the same bit-width and channel layout: eg. R32_FLOAT -> R32_UINT
 		VIDEO_DECODE = 1 << 13,	// resource is usabe in video decoding operations
 		NO_DEFAULT_DESCRIPTORS = 1 << 14, // skips creation of default descriptors for resources
 		TEXTURE_COMPATIBLE_COMPRESSION = 1 << 15, // optimization that can enable sampling from compressed textures
 		SHARED = 1 << 16, // shared texture
+
+		// Compat:
+		SPARSE_TILE_POOL_BUFFER = ALIASING_BUFFER,
+		SPARSE_TILE_POOL_TEXTURE_NON_RT_DS = ALIASING_TEXTURE_NON_RT_DS,
+		SPARSE_TILE_POOL_TEXTURE_RT_DS = ALIASING_TEXTURE_RT_DS,
+		SPARSE_TILE_POOL = ALIASING,
 	};
 
 	enum class GraphicsDeviceCapability
@@ -427,13 +433,16 @@ namespace wi::graphics
 		SPARSE_TEXTURE2D = 1 << 14,
 		SPARSE_TEXTURE3D = 1 << 15,
 		SPARSE_NULL_MAPPING = 1 << 16,
-		GENERIC_SPARSE_TILE_POOL = 1 << 17, // allows using ResourceMiscFlag::SPARSE_TILE_POOL (non resource type specific version)
+		ALIASING_GENERIC = 1 << 17, // allows using ResourceMiscFlag::ALIASING (non resource type specific version)
 		DEPTH_RESOLVE_MIN_MAX = 1 << 18,
 		STENCIL_RESOLVE_MIN_MAX = 1 << 19,
 		CACHE_COHERENT_UMA = 1 << 20,	// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_feature_data_architecture
 		VIDEO_DECODE_H264 = 1 << 21,
 		R9G9B9E5_SHAREDEXP_RENDERABLE = 1 << 22, // indicates supporting R9G9B9E5_SHAREDEXP format for rendering to
 		COPY_BETWEEN_DIFFERENT_IMAGE_ASPECTS_NOT_SUPPORTED = 1 << 23, // indicates that CopyTexture src and dst ImageAspect must match
+
+		// Compat:
+		GENERIC_SPARSE_TILE_POOL = ALIASING_GENERIC,
 	};
 
 	enum class ResourceState

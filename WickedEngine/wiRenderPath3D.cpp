@@ -128,6 +128,7 @@ namespace wi
 			desc.height = internalResolution.y;
 			desc.sample_count = 1;
 			desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+			desc.misc_flags = ResourceMiscFlag::ALIASING_TEXTURE_RT_DS;
 			device->CreateTexture(&desc, nullptr, &rtPrimitiveID);
 			device->SetName(&rtPrimitiveID, "rtPrimitiveID");
 
@@ -135,6 +136,7 @@ namespace wi
 			{
 				desc.sample_count = getMSAASampleCount();
 				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+				desc.misc_flags = ResourceMiscFlag::NONE;
 				device->CreateTexture(&desc, nullptr, &rtPrimitiveID_render);
 				device->SetName(&rtPrimitiveID_render, "rtPrimitiveID_render");
 			}
@@ -191,6 +193,7 @@ namespace wi
 			desc.format = wi::renderer::format_rendertarget_main;
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
+			assert(ComputeTextureMemorySizeInBytes(desc) <= ComputeTextureMemorySizeInBytes(rtPrimitiveID.desc)); // Aliased check
 			device->CreateTexture(&desc, nullptr, &rtPostprocess, &rtPrimitiveID); // Aliased!
 			device->SetName(&rtPostprocess, "rtPostprocess");
 		}
