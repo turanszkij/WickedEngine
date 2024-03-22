@@ -31,8 +31,6 @@ namespace wi
 
 		PipelineState PSO, PSO_wire;
 
-		wi::fftgenerator::CSFFT512x512_Plan m_fft_plan;
-
 
 		void LoadShaders()
 		{
@@ -312,7 +310,7 @@ namespace wi
 
 
 		// ------------------------------------ Perform FFT -------------------------------------------
-		fft_512x512_c2c(m_fft_plan, buffer_Float_Dxyz, buffer_Float_Dxyz, buffer_Float2_Ht, cmd);
+		wi::fftgenerator::fft_512x512_c2c(buffer_Float_Dxyz, buffer_Float_Dxyz, buffer_Float2_Ht, cmd);
 
 
 
@@ -490,7 +488,6 @@ namespace wi
 
 		LoadShaders();
 		wi::fftgenerator::LoadShaders();
-		fft512x512_create_plan(m_fft_plan, 3);
 
 		wi::backlog::post("wi::Ocean Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}

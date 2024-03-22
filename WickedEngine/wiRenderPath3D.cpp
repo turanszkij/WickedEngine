@@ -287,7 +287,6 @@ namespace wi
 			}
 		}
 
-
 		// Other resources:
 		{
 			TextureDesc desc;
@@ -304,7 +303,6 @@ namespace wi
 			device->CreateTexture(&desc, nullptr, &debugUAV);
 			device->SetName(&debugUAV, "debugUAV");
 		}
-		wi::renderer::CreateVisibilityResources(visibilityResources, internalResolution);
 		wi::renderer::CreateTiledLightResources(tiledLightResources, internalResolution);
 		wi::renderer::CreateScreenSpaceShadowResources(screenspaceshadowResources, internalResolution);
 
@@ -315,8 +313,6 @@ namespace wi
 		setRaytracedDiffuseEnabled(raytracedDiffuseEnabled);
 		setFSREnabled(fsrEnabled);
 		setFSR2Enabled(fsr2Enabled);
-		setMotionBlurEnabled(motionBlurEnabled);
-		setDepthOfFieldEnabled(depthOfFieldEnabled);
 		setEyeAdaptionEnabled(eyeAdaptionEnabled);
 		setReflectionsEnabled(reflectionsEnabled);
 		setBloomEnabled(bloomEnabled);
@@ -452,7 +448,7 @@ namespace wi
 			rtAO = {};
 		}
 
-		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+		if (wi::renderer::GetRaytracedShadowsEnabled() && device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 		{
 			if (!rtshadowResources.denoised.IsValid())
 			{
@@ -598,17 +594,6 @@ namespace wi
 			rtShadow = {};
 		}
 
-		// Motion blur and depth of field recreation was possibly requested by FSR2 toggling on/off
-		//	Because these need to run either in display of internal resolution depending on FSR2 on/off
-		if (getMotionBlurEnabled() && !motionblurResources.IsValid())
-		{
-			setMotionBlurEnabled(true);
-		}
-		if (getDepthOfFieldEnabled() && !depthoffieldResources.IsValid())
-		{
-			setDepthOfFieldEnabled(true);
-		}
-
 		if (getFSR2Enabled())
 		{
 			// FSR2 also acts as a temporal AA, so we inform the shaders about it here
@@ -617,6 +602,66 @@ namespace wi
 			uint x = frameCB.frame_count % 4;
 			uint y = frameCB.frame_count / 4;
 			frameCB.temporalaa_samplerotation = (x & 0x000000FF) | ((y & 0x000000FF) << 8);
+		}
+
+		// Check whether visibility resources are required:
+		if (
+			visibility_shading_in_compute ||
+			getSSREnabled() ||
+			getRaytracedReflectionEnabled() ||
+			getRaytracedDiffuseEnabled() ||
+			wi::renderer::GetScreenSpaceShadowsEnabled() ||
+			wi::renderer::GetRaytracedShadowsEnabled() ||
+			wi::renderer::GetVXGIEnabled()
+			)
+		{
+			if (!visibilityResources.IsValid())
+			{
+				wi::renderer::CreateVisibilityResources(visibilityResources, internalResolution);
+			}
+		}
+		else
+		{
+			visibilityResources = {};
+		}
+
+		// Check for depth of field allocation:
+		if (getDepthOfFieldEnabled() &&
+			getDepthOfFieldStrength() > 0 &&
+			camera->aperture_size > 0
+			)
+		{
+			if (!depthoffieldResources.IsValid())
+			{
+				XMUINT2 resolution = GetInternalResolution();
+				if (getFSR2Enabled())
+				{
+					resolution = XMUINT2(GetPhysicalWidth(), GetPhysicalHeight());
+				}
+				wi::renderer::CreateDepthOfFieldResources(depthoffieldResources, resolution);
+			}
+		}
+		else
+		{
+			depthoffieldResources = {};
+		}
+
+		// Check for motion blur allocation:
+		if (getMotionBlurEnabled() && getMotionBlurStrength() > 0)
+		{
+			if (!motionblurResources.IsValid())
+			{
+				XMUINT2 resolution = GetInternalResolution();
+				if (getFSR2Enabled())
+				{
+					resolution = XMUINT2(GetPhysicalWidth(), GetPhysicalHeight());
+				}
+				wi::renderer::CreateMotionBlurResources(motionblurResources, resolution);
+			}
+		}
+		else
+		{
+			motionblurResources = {};
 		}
 
 		// Keep a copy of last frame's depth buffer for temporal disocclusion checks, so swap with current one every frame:
@@ -971,7 +1016,6 @@ namespace wi
 			if (rtVelocity.IsValid())
 			{
 				wi::renderer::Visibility_Velocity(
-					visibilityResources,
 					rtVelocity,
 					cmd
 				);
@@ -2442,38 +2486,10 @@ namespace wi
 	void RenderPath3D::setMotionBlurEnabled(bool value)
 	{
 		motionBlurEnabled = value;
-
-		if (value)
-		{
-			XMUINT2 resolution = GetInternalResolution();
-			if (getFSR2Enabled())
-			{
-				resolution = XMUINT2(GetPhysicalWidth(), GetPhysicalHeight());
-			}
-			wi::renderer::CreateMotionBlurResources(motionblurResources, resolution);
-		}
-		else
-		{
-			motionblurResources = {};
-		}
 	}
 	void RenderPath3D::setDepthOfFieldEnabled(bool value)
 	{
 		depthOfFieldEnabled = value;
-
-		if (value)
-		{
-			XMUINT2 resolution = GetInternalResolution();
-			if (getFSR2Enabled())
-			{
-				resolution = XMUINT2(GetPhysicalWidth(), GetPhysicalHeight());
-			}
-			wi::renderer::CreateDepthOfFieldResources(depthoffieldResources, resolution);
-		}
-		else
-		{
-			depthoffieldResources = {};
-		}
 	}
 	void RenderPath3D::setEyeAdaptionEnabled(bool value)
 	{

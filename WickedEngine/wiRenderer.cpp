@@ -10155,7 +10155,11 @@ void Visibility_Prepare(
 
 	BindCommonResources(cmd);
 
+	// Note: the tile_count here must be valid whether the VisibilityResources was created or not!
+	XMUINT2 tile_count = GetVisibilityTileCount(XMUINT2(input_primitiveID.desc.width, input_primitiveID.desc.height));
+
 	// Beginning barriers, clears:
+	if(res.IsValid())
 	{
 		ShaderTypeBin bins[SHADERTYPE_BIN_COUNT + 1];
 		for (uint i = 0; i < arraysize(bins); ++i)
@@ -10181,10 +10185,19 @@ void Visibility_Prepare(
 
 		device->BindResource(&input_primitiveID, 0, cmd);
 
-		device->BindUAV(&res.bins, 0, cmd);
-		device->BindUAV(&res.binned_tiles, 1, cmd);
-
 		GPUResource unbind;
+
+		if (res.IsValid())
+		{
+			device->BindUAV(&res.bins, 0, cmd);
+			device->BindUAV(&res.binned_tiles, 1, cmd);
+		}
+		else
+		{
+			device->BindUAV(&unbind, 0, cmd);
+			device->BindUAV(&unbind, 1, cmd);
+		}
+
 		if (res.depthbuffer)
 		{
 			device->BindUAV(res.depthbuffer, 3, cmd, 0);
@@ -10233,8 +10246,8 @@ void Visibility_Prepare(
 		device->BindComputeShader(&shaders[msaa ? CSTYPE_VISIBILITY_RESOLVE_MSAA : CSTYPE_VISIBILITY_RESOLVE], cmd);
 
 		device->Dispatch(
-			res.tile_count.x,
-			res.tile_count.y,
+			tile_count.x,
+			tile_count.y,
 			1,
 			cmd
 		);
@@ -10251,8 +10264,11 @@ void Visibility_Prepare(
 		{
 			barrier_stack.push_back(GPUBarrier::Image(res.primitiveID_resolved, ResourceState::UNORDERED_ACCESS, res.primitiveID_resolved->desc.layout));
 		}
-		barrier_stack.push_back(GPUBarrier::Buffer(&res.bins, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT));
-		barrier_stack.push_back(GPUBarrier::Buffer(&res.binned_tiles, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+		if (res.IsValid())
+		{
+			barrier_stack.push_back(GPUBarrier::Buffer(&res.bins, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT));
+			barrier_stack.push_back(GPUBarrier::Buffer(&res.binned_tiles, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+		}
 		barrier_stack_flush(cmd);
 
 		device->EventEnd(cmd);
@@ -10403,7 +10419,6 @@ void Visibility_Shade(
 	device->EventEnd(cmd);
 }
 void Visibility_Velocity(
-	const VisibilityResources& res,
 	const Texture& output,
 	CommandList cmd
 )
@@ -10962,7 +10977,6 @@ void Postprocess_Blur_Gaussian(
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
 				GPUBarrier::Image(&temp, ResourceState::UNORDERED_ACCESS, temp.desc.layout, mip_dst),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
@@ -11007,7 +11021,6 @@ void Postprocess_Blur_Gaussian(
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
 				GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout, mip_dst),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);

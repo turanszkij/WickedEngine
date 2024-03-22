@@ -367,7 +367,10 @@ namespace wi::renderer
 		const wi::graphics::Texture* depthbuffer = nullptr; // depth buffer that matches with post projection
 		const wi::graphics::Texture* lineardepth = nullptr; // depth buffer in linear space in [0,1] range
 		const wi::graphics::Texture* primitiveID_resolved = nullptr; // resolved from MSAA texture_visibility input
+
+		inline bool IsValid() const { return bins.IsValid(); }
 	};
+	void CreateVisibilityResourcesLightWeight(VisibilityResources& res, XMUINT2 resolution);
 	void CreateVisibilityResources(VisibilityResources& res, XMUINT2 resolution);
 	void Visibility_Prepare(
 		const VisibilityResources& res,
@@ -389,7 +392,6 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd
 	);
 	void Visibility_Velocity(
-		const VisibilityResources& res,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd
 	);
