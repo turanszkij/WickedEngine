@@ -27,8 +27,8 @@ namespace wi
 		rtSceneCopy = {};
 		rtSceneCopy_tmp = {};
 		rtWaterRipple = {};
+		rtParticleDistortion_render = {};
 		rtParticleDistortion = {};
-		rtParticleDistortion_Resolved = {};
 		rtVolumetricLights[0] = {};
 		rtVolumetricLights[1] = {};
 		rtBloom = {};
@@ -99,7 +99,6 @@ namespace wi
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
 			desc.sample_count = 1;
-
 			device->CreateTexture(&desc, nullptr, &rtMain);
 			device->SetName(&rtMain, "rtMain");
 
@@ -151,14 +150,20 @@ namespace wi
 			desc.format = Format::R16G16_FLOAT;
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
-			desc.sample_count = getMSAASampleCount();
+			desc.sample_count = 1;
+			desc.misc_flags = ResourceMiscFlag::ALIASING_TEXTURE_RT_DS;
 			device->CreateTexture(&desc, nullptr, &rtParticleDistortion);
 			device->SetName(&rtParticleDistortion, "rtParticleDistortion");
 			if (getMSAASampleCount() > 1)
 			{
-				desc.sample_count = 1;
-				device->CreateTexture(&desc, nullptr, &rtParticleDistortion_Resolved);
-				device->SetName(&rtParticleDistortion_Resolved, "rtParticleDistortion_Resolved");
+				desc.sample_count = getMSAASampleCount();
+				desc.misc_flags = ResourceMiscFlag::NONE;
+				device->CreateTexture(&desc, nullptr, &rtParticleDistortion_render);
+				device->SetName(&rtParticleDistortion_render, "rtParticleDistortion_render");
+			}
+			else
+			{
+				rtParticleDistortion_render = rtParticleDistortion;
 			}
 		}
 		{
@@ -515,7 +520,8 @@ namespace wi
 				desc.format = Format::R16G16_FLOAT;
 				desc.width = internalResolution.x / 8;
 				desc.height = internalResolution.y / 8;
-				device->CreateTexture(&desc, nullptr, &rtWaterRipple);
+				assert(ComputeTextureMemorySizeInBytes(desc) <= ComputeTextureMemorySizeInBytes(rtParticleDistortion.desc)); // aliasing check
+				device->CreateTexture(&desc, nullptr, &rtWaterRipple, &rtParticleDistortion); // aliased!
 				device->SetName(&rtWaterRipple, "rtWaterRipple");
 			}
 		}
@@ -561,7 +567,7 @@ namespace wi
 			{
 				TextureDesc desc;
 				desc.format = Format::R16G16_FLOAT;
-				desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+				desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET;
 				desc.width = internalResolution.x;
 				desc.height = internalResolution.y;
 				desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
@@ -795,7 +801,7 @@ namespace wi
 			};
 			if (visibility_shading_in_compute)
 			{
-				num_barriers = 3;
+				num_barriers++;
 			}
 			device->Barrier(barriers, num_barriers, cmd);
 
@@ -1630,6 +1636,10 @@ namespace wi
 
 	void RenderPath3D::RenderAO(CommandList cmd) const
 	{
+		if (rtAO.IsValid())
+		{
+			GetDevice()->Barrier(GPUBarrier::Aliasing(&rtParticleDistortion, &rtAO), cmd);
+		}
 
 		if (getAOEnabled())
 		{
@@ -1846,9 +1856,15 @@ namespace wi
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
+		if (rtAO.IsValid())
+		{
+			device->Barrier(GPUBarrier::Aliasing(&rtAO, &rtParticleDistortion), cmd);
+		}
+
 		// Water ripple rendering:
 		if (!scene->waterRipples.empty())
 		{
+			device->Barrier(GPUBarrier::Aliasing(&rtParticleDistortion, &rtWaterRipple), cmd);
 			RenderPassImage rp[] = {
 				RenderPassImage::RenderTarget(&rtWaterRipple, RenderPassImage::LoadOp::CLEAR),
 			};
@@ -1987,10 +2003,15 @@ namespace wi
 
 		// Distortion particles:
 		{
+			if (rtWaterRipple.IsValid())
+			{
+				device->Barrier(GPUBarrier::Aliasing(&rtWaterRipple, &rtParticleDistortion), cmd);
+			}
+
 			if (getMSAASampleCount() > 1)
 			{
 				RenderPassImage rp[] = {
-					RenderPassImage::RenderTarget(&rtParticleDistortion, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::RenderTarget(&rtParticleDistortion_render, RenderPassImage::LoadOp::CLEAR),
 					RenderPassImage::DepthStencil(
 						&depthBuffer_Main,
 						RenderPassImage::LoadOp::LOAD,
@@ -1999,7 +2020,7 @@ namespace wi
 						ResourceState::DEPTHSTENCIL,
 						ResourceState::DEPTHSTENCIL
 					),
-					RenderPassImage::Resolve(&rtParticleDistortion_Resolved)
+					RenderPassImage::Resolve(&rtParticleDistortion)
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 			}
@@ -2184,7 +2205,7 @@ namespace wi
 				getSaturation(),
 				getDitherEnabled(),
 				getColorGradingEnabled() ? (scene->weather.colorGradingMap.IsValid() ? &scene->weather.colorGradingMap.GetTexture() : nullptr) : nullptr,
-				getMSAASampleCount() > 1 ? &rtParticleDistortion_Resolved : &rtParticleDistortion,
+				&rtParticleDistortion,
 				getEyeAdaptionEnabled() ? &luminanceResources.luminance : nullptr,
 				getBloomEnabled() ? &bloomResources.texture_bloom : nullptr,
 				colorspace,
@@ -2276,7 +2297,7 @@ namespace wi
 			return;
 
 		TextureDesc desc;
-		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET; // render target binding for aliasing (in case resource heap tier < 2)
 		desc.format = Format::R8_UNORM;
 		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 
@@ -2303,7 +2324,8 @@ namespace wi
 		}
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
-		device->CreateTexture(&desc, nullptr, &rtAO);
+		assert(ComputeTextureMemorySizeInBytes(desc) <= ComputeTextureMemorySizeInBytes(rtParticleDistortion.desc)); // aliasing check
+		device->CreateTexture(&desc, nullptr, &rtAO, &rtParticleDistortion); // aliasing!
 		device->SetName(&rtAO, "rtAO");
 	}
 	void RenderPath3D::setSSREnabled(bool value)
