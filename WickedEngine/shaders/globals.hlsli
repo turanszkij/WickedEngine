@@ -612,9 +612,9 @@ float noise_gradient_3D(in float3 p)
 // Based on: https://www.shadertoy.com/view/MslGD8
 float2 hash_voronoi(float2 p)
 {
-    //p = mod(p, 4.0); // tile
+	//p = mod(p, 4.0); // tile
 	p = float2(dot(p, float2(127.1, 311.7)),
-             dot(p, float2(269.5, 183.3)));
+			 dot(p, float2(269.5, 183.3)));
 	return frac(sin(p) * 18.5453);
 }
 

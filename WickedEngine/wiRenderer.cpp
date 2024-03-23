@@ -12815,8 +12815,9 @@ void CreateSSRResources(SSRResources& res, XMUINT2 resolution)
 	tile_desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&tile_desc, nullptr, &res.texture_tile_minmax_roughness);
 
-	tile_desc.height = resolution.y;
-	device->CreateTexture(&tile_desc, nullptr, &res.texture_tile_minmax_roughness_horizontal);
+	TextureDesc tile_desc2 = tile_desc;
+	tile_desc2.height = resolution.y;
+	device->CreateTexture(&tile_desc2, nullptr, &res.texture_tile_minmax_roughness_horizontal);
 
 	GPUBufferDesc bufferdesc;
 	bufferdesc.stride = sizeof(PostprocessTileStatistics);
@@ -12888,8 +12889,8 @@ void Postprocess_SSR(
 
 	BindCommonResources(cmd);
 
-	int temporal_output = device->GetFrameCount() % 2;
-	int temporal_history = 1 - temporal_output;
+	const int temporal_output = res.frame % 2;
+	const int temporal_history = 1 - temporal_output;
 
 	{
 		GPUBarrier barriers[] = {
@@ -12910,6 +12911,35 @@ void Postprocess_SSR(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
+	if (res.frame == 0)
+	{
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&res.texture_temporal[temporal_history], res.texture_temporal[temporal_history].desc.layout, ResourceState::UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.texture_temporal_variance[temporal_history], res.texture_temporal_variance[temporal_history].desc.layout, ResourceState::UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+		device->ClearUAV(&res.texture_tile_minmax_roughness_horizontal, 0, cmd);
+		device->ClearUAV(&res.texture_tile_minmax_roughness, 0, cmd);
+		device->ClearUAV(&res.texture_resolve, 0, cmd);
+		device->ClearUAV(&res.texture_resolve_variance, 0, cmd);
+		device->ClearUAV(&res.texture_resolve_reprojectionDepth, 0, cmd);
+		device->ClearUAV(&res.texture_temporal[0], 0, cmd);
+		device->ClearUAV(&res.texture_temporal[1], 0, cmd);
+		device->ClearUAV(&res.texture_temporal_variance[0], 0, cmd);
+		device->ClearUAV(&res.texture_temporal_variance[1], 0, cmd);
+		device->ClearUAV(&res.texture_bilateral_temp, 0, cmd);
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Image(&res.texture_temporal[temporal_history], ResourceState::UNORDERED_ACCESS, res.texture_temporal[temporal_history].desc.layout),
+				GPUBarrier::Image(&res.texture_temporal_variance[temporal_history], ResourceState::UNORDERED_ACCESS, res.texture_temporal_variance[temporal_history].desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+	}
+
 	device->ClearUAV(&output, 0, cmd);
 
 	PostprocessTileStatistics tile_stats = {};
@@ -12926,7 +12956,6 @@ void Postprocess_SSR(
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
 			GPUBarrier::Buffer(&res.buffer_tile_tracing_statistics, ResourceState::COPY_DST, ResourceState::UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
@@ -13062,8 +13091,8 @@ void Postprocess_SSR(
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
-				std::max(1u, hierarchyDesc.width / POSTPROCESS_BLOCKSIZE),
-				std::max(1u, hierarchyDesc.height / POSTPROCESS_BLOCKSIZE),
+				std::max(1u, (hierarchyDesc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE),
+				std::max(1u, (hierarchyDesc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE),
 				1,
 				cmd
 			);
@@ -13268,6 +13297,7 @@ void Postprocess_SSR(
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Image(&res.texture_bilateral_temp, ResourceState::UNORDERED_ACCESS, res.texture_bilateral_temp.desc.layout),
+					GPUBarrier::Memory(&output),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
