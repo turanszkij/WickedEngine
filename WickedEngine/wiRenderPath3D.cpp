@@ -175,8 +175,8 @@ namespace wi
 			desc.mip_levels = std::min(8u, (uint32_t)std::log2(std::max(desc.width, desc.height)));
 			device->CreateTexture(&desc, nullptr, &rtSceneCopy);
 			device->SetName(&rtSceneCopy, "rtSceneCopy");
-			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			device->CreateTexture(&desc, nullptr, &rtSceneCopy_tmp);
+			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET; // render target for aliasing
+			device->CreateTexture(&desc, nullptr, &rtSceneCopy_tmp, &rtParticleDistortion); // aliased!
 			device->SetName(&rtSceneCopy_tmp, "rtSceneCopy_tmp");
 
 			for (uint32_t i = 0; i < rtSceneCopy.GetDesc().mip_levels; ++i)
@@ -191,6 +191,8 @@ namespace wi
 				subresource_index = device->CreateSubresource(&rtSceneCopy_tmp, SubresourceType::UAV, 0, 1, i, 1);
 				assert(subresource_index == i);
 			}
+
+			clearableTextures.push_back(&rtSceneCopy); // because this is used by SSR before it gets a chance to be normally rendered, it MUST be cleared!
 		}
 		{
 			TextureDesc desc;
@@ -785,6 +787,22 @@ namespace wi
 		wi::renderer::ProcessDeferredTextureRequests(cmd); // Execute it first thing in the frame here, on main thread, to not allow other thread steal it and execute on different command list!
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 			GraphicsDevice* device = wi::graphics::GetDevice();
+
+			// Initialization clears:
+			for (auto& x : clearableTextures)
+			{
+				device->Barrier(GPUBarrier::Image(x, x->desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+			}
+			for (auto& x : clearableTextures)
+			{
+				device->ClearUAV(x, 0, cmd);
+			}
+			for (auto& x : clearableTextures)
+			{
+				device->Barrier(GPUBarrier::Image(x, ResourceState::UNORDERED_ACCESS, x->desc.layout), cmd);
+			}
+			clearableTextures.clear();
+
 			wi::renderer::BindCameraCB(
 				*camera,
 				camera_previous,
@@ -1520,6 +1538,11 @@ namespace wi
 				device->Barrier(&barrier, 1, cmd);
 			}
 
+			if (rtAO.IsValid())
+			{
+				device->Barrier(GPUBarrier::Aliasing(&rtAO, &rtParticleDistortion), cmd);
+			}
+
 			device->EventEnd(cmd);
 		});
 
@@ -1843,11 +1866,24 @@ namespace wi
 		auto range = wi::profiler::BeginRangeGPU("Scene MIP Chain", cmd);
 		device->EventBegin("RenderSceneMIPChain", cmd);
 
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Aliasing(&rtParticleDistortion, &rtSceneCopy_tmp),
+				GPUBarrier::Image(&rtSceneCopy_tmp, rtSceneCopy_tmp.desc.layout, ResourceState::UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+			device->ClearUAV(&rtSceneCopy_tmp, 0, cmd);
+		}
+
 		wi::renderer::Postprocess_Downsample4x(rtMain, rtSceneCopy, cmd);
+
+		device->Barrier(GPUBarrier::Image(&rtSceneCopy_tmp, ResourceState::UNORDERED_ACCESS, rtSceneCopy_tmp.desc.layout), cmd);
 
 		wi::renderer::MIPGEN_OPTIONS mipopt;
 		mipopt.gaussian_temp = &rtSceneCopy_tmp;
 		wi::renderer::GenerateMipChain(rtSceneCopy, wi::renderer::MIPGENFILTER_GAUSSIAN, cmd, mipopt);
+
+		device->Barrier(GPUBarrier::Aliasing(&rtSceneCopy_tmp, &rtParticleDistortion), cmd);
 
 		device->EventEnd(cmd);
 		wi::profiler::EndRange(range);
@@ -1855,11 +1891,6 @@ namespace wi
 	void RenderPath3D::RenderTransparents(CommandList cmd) const
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
-
-		if (rtAO.IsValid())
-		{
-			device->Barrier(GPUBarrier::Aliasing(&rtAO, &rtParticleDistortion), cmd);
-		}
 
 		// Water ripple rendering:
 		if (!scene->waterRipples.empty())
