@@ -558,18 +558,18 @@ void PaintToolWindow::Update(float dt)
 						paintparams.revealTex = revealTex.GetTexture();
 					}
 
-					paintparams.cb.xPaintBrushCenter = center;
-					paintparams.cb.xPaintBrushRadius = (uint32_t)pressure_radius;
+					paintparams.push.xPaintBrushCenter = center;
+					paintparams.push.xPaintBrushRadius = (uint32_t)pressure_radius;
 					if (brushShapeComboBox.GetSelected() == 1)
 					{
-						paintparams.cb.xPaintBrushRadius = (uint)std::ceil((float(paintparams.cb.xPaintBrushRadius) * 2 / std::sqrt(2.0f))); // square shape, diagonal dispatch size
+						paintparams.push.xPaintBrushRadius = (uint)std::ceil((float(paintparams.push.xPaintBrushRadius) * 2 / std::sqrt(2.0f))); // square shape, diagonal dispatch size
 					}
-					paintparams.cb.xPaintBrushAmount = amount;
-					paintparams.cb.xPaintBrushSmoothness = smoothness;
-					paintparams.cb.xPaintBrushColor = color.rgba;
-					paintparams.cb.xPaintReveal = revealTex.IsValid() ? 1 : 0;
-					paintparams.cb.xPaintBrushRotation = brush_rotation;
-					paintparams.cb.xPaintBrushShape = (uint)brushShapeComboBox.GetSelected();
+					paintparams.push.xPaintBrushAmount = amount;
+					paintparams.push.xPaintBrushSmoothness = smoothness;
+					paintparams.push.xPaintBrushColor = color.rgba;
+					paintparams.push.xPaintReveal = revealTex.IsValid() ? 1 : 0;
+					paintparams.push.xPaintBrushRotation = brush_rotation;
+					paintparams.push.xPaintBrushShape = (uint)brushShapeComboBox.GetSelected();
 
 					wi::renderer::PaintIntoTexture(paintparams);
 				}

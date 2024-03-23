@@ -1255,7 +1255,7 @@ struct CopyTextureCB
 
 static const uint PAINT_TEXTURE_BLOCKSIZE = 8;
 
-struct PaintTextureCB
+struct PaintTexturePushConstants
 {
 	uint2 xPaintBrushCenter;
 	uint xPaintBrushRadius;
@@ -1267,9 +1267,9 @@ struct PaintTextureCB
 	float xPaintBrushRotation;
 
 	uint xPaintBrushShape;
-	uint padding0;
-	uint padding1;
-	uint padding2;
+	int texture_brush;
+	int texture_reveal;
+	int texture_output;
 };
 
 CBUFFER(PaintRadiusCB, CBSLOT_RENDERER_MISC)

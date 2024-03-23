@@ -3001,58 +3001,69 @@ void RenderImpostors(
 
 void ProcessDeferredTextureRequests(CommandList cmd)
 {
+	if(!painttextures.empty())
 	{
 		device->EventBegin("Paint Into Texture", cmd);
 
+		// batch begin barriers:
 		for (auto& params : painttextures)
 		{
-			device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_PAINT_TEXTURE), cmd);
+			barrier_stack.push_back(GPUBarrier::Image(&params.editTex, params.editTex.desc.layout, ResourceState::UNORDERED_ACCESS));
+		}
+		barrier_stack_flush(cmd);
 
+		// render splats:
+		device->BindComputeShader(&shaders[CSTYPE_PAINT_TEXTURE], cmd);
+		for (auto& params : painttextures)
+		{
+			// overwrites some params!
+			params.push.xPaintReveal = params.revealTex.IsValid() ? 1 : 0;
 			if (params.brushTex.IsValid())
 			{
-				device->BindResource(&params.brushTex, 0, cmd);
+				params.push.texture_brush = device->GetDescriptorIndex(&params.brushTex, SubresourceType::SRV);
 			}
 			else
 			{
-				device->BindResource(wi::texturehelper::getWhite(), 0, cmd);
+				params.push.texture_brush = -1;
 			}
 			if (params.revealTex.IsValid())
 			{
-				device->BindResource(&params.revealTex, 1, cmd);
+				params.push.texture_reveal = device->GetDescriptorIndex(&params.revealTex, SubresourceType::SRV);
 			}
 			else
 			{
-				device->BindResource(wi::texturehelper::getWhite(), 1, cmd);
+				params.push.texture_reveal = -1;
 			}
-			device->BindUAV(&params.editTex, 0, cmd);
+			params.push.texture_output = device->GetDescriptorIndex(&params.editTex, SubresourceType::UAV);
+			assert(params.push.texture_output >= 0);
 
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&params.editTex, params.editTex.desc.layout, ResourceState::UNORDERED_ACCESS),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
+			if (params.push.texture_output < 0)
+				continue;
 
-			params.cb.xPaintReveal = params.revealTex.IsValid() ? 1 : 0; // overwrite params!
+			device->PushConstants(&params.push, sizeof(params.push), cmd);
 
-			device->PushConstants(&params.cb, sizeof(params.cb), cmd);
-
-			const uint diameter = params.cb.xPaintBrushRadius * 2;
+			const uint diameter = params.push.xPaintBrushRadius * 2;
 			const uint dispatch_dim = (diameter + PAINT_TEXTURE_BLOCKSIZE - 1) / PAINT_TEXTURE_BLOCKSIZE;
 			device->Dispatch(dispatch_dim, dispatch_dim, 1, cmd);
+		}
 
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&params.editTex, ResourceState::UNORDERED_ACCESS, params.editTex.desc.layout),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
+		// ending barriers:
+		for (auto& params : painttextures)
+		{
+			barrier_stack.push_back(GPUBarrier::Image(&params.editTex, ResourceState::UNORDERED_ACCESS, params.editTex.desc.layout));
+		}
+		barrier_stack_flush(cmd);
 
+		// mipgen tasks after paint:
+		for (auto& params : painttextures)
+		{
 			if (params.editTex.desc.mip_levels > 1)
 			{
-				GenerateMipChain(params.editTex, wi::renderer::MIPGENFILTER::MIPGENFILTER_LINEAR, cmd);
+				GenerateMipChain(params.editTex, MIPGENFILTER::MIPGENFILTER_LINEAR, cmd);
 			}
 		}
+
+		// clear all paint tasks for this frame:
 		painttextures.clear();
 
 		device->EventEnd(cmd);
@@ -7901,7 +7912,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			{
 				desc.mip_levels = 1;
 				desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
-				desc.format = wi::renderer::format_depthbuffer_envprobe;
+				desc.format = format_depthbuffer_envprobe;
 				desc.layout = ResourceState::SHADER_RESOURCE;
 				desc.sample_count = required_sample_count;
 				if (required_sample_count == 1)
@@ -7927,7 +7938,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			{
 				desc.mip_levels = probe.texture.desc.mip_levels;
 				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-				desc.format = wi::renderer::format_rendertarget_envprobe;
+				desc.format = format_rendertarget_envprobe;
 				desc.layout = ResourceState::SHADER_RESOURCE;
 				desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
 				desc.sample_count = 1;
@@ -7960,7 +7971,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			{
 				desc.mip_levels = probe.texture.desc.mip_levels;
 				desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-				desc.format = wi::renderer::format_rendertarget_envprobe;
+				desc.format = format_rendertarget_envprobe;
 				desc.layout = ResourceState::SHADER_RESOURCE;
 				desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
 				desc.sample_count = 1;
@@ -8005,7 +8016,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 					desc.bind_flags = BindFlag::RENDER_TARGET;
 					desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
 					desc.layout = ResourceState::RENDERTARGET;
-					desc.format = wi::renderer::format_rendertarget_envprobe;
+					desc.format = format_rendertarget_envprobe;
 					device->CreateTexture(&desc, nullptr, &envrenderingColorBuffer_MSAA);
 					device->SetName(&envrenderingColorBuffer_MSAA, "envrenderingColorBuffer_MSAA");
 					render_textures[id_color_msaa.raw] = envrenderingColorBuffer_MSAA;
@@ -11603,8 +11614,8 @@ void Postprocess_MSAO(
 	SampleThickness[9] = sqrt(1.0f - 0.4f * 0.4f - 0.6f * 0.6f);
 	SampleThickness[10] = sqrt(1.0f - 0.4f * 0.4f - 0.8f * 0.8f);
 	SampleThickness[11] = sqrt(1.0f - 0.6f * 0.6f - 0.6f * 0.6f);
-	static float RejectionFalloff = 2.0f;
-	const float Accentuation = 0.1f * power;
+	const float RejectionFalloff = 2.0f * power;
+	const float Accentuation = 0.1f;
 
 	// The msao_compute will be called repeatedly, so create a local lambda for it:
 	auto msao_compute = [&](const Texture& write_result, const Texture& read_depth) 
@@ -14720,7 +14731,7 @@ void Postprocess_VolumetricClouds(
 		camera_previous_clouds.jitter = XMFLOAT2(0, 0);
 		camera_previous_clouds.UpdateCamera();
 
-		wi::renderer::BindCameraCB(camera_clouds, camera_previous_clouds, camera_reflection, cmd);
+		BindCameraCB(camera_clouds, camera_previous_clouds, camera_reflection, cmd);
 	}
 
 	BindCommonResources(cmd);

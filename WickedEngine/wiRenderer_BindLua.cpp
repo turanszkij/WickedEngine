@@ -561,8 +561,8 @@ namespace wi::lua::renderer
 				wi::lua::SError(L, "SetCenterPixel(Vector value): argument is not a Vector!");
 				return 0;
 			}
-			params.cb.xPaintBrushCenter.x = uint32_t(vec->data.x);
-			params.cb.xPaintBrushCenter.y = uint32_t(vec->data.y);
+			params.push.xPaintBrushCenter.x = uint32_t(vec->data.x);
+			params.push.xPaintBrushCenter.y = uint32_t(vec->data.y);
 			return 0;
 		}
 		int SetBrushColor(lua_State* L)
@@ -579,7 +579,7 @@ namespace wi::lua::renderer
 				wi::lua::SError(L, "SetBrushColor(Vector value): argument is not a Vector!");
 				return 0;
 			}
-			params.cb.xPaintBrushColor = wi::Color::fromFloat4(vec->data);
+			params.push.xPaintBrushColor = wi::Color::fromFloat4(vec->data);
 			return 0;
 		}
 		int SetBrushRadius(lua_State* L)
@@ -590,7 +590,7 @@ namespace wi::lua::renderer
 				wi::lua::SError(L, "SetBrushRadius(int value): not enough arguments!");
 				return 0;
 			}
-			params.cb.xPaintBrushRadius = wi::lua::SGetInt(L, 1);
+			params.push.xPaintBrushRadius = wi::lua::SGetInt(L, 1);
 			return 0;
 		}
 		int SetBrushAmount(lua_State* L)
@@ -601,7 +601,7 @@ namespace wi::lua::renderer
 				wi::lua::SError(L, "SetBrushAmount(float value): not enough arguments!");
 				return 0;
 			}
-			params.cb.xPaintBrushAmount = wi::lua::SGetFloat(L, 1);
+			params.push.xPaintBrushAmount = wi::lua::SGetFloat(L, 1);
 			return 0;
 		}
 		int SetBrushSmoothness(lua_State* L)
@@ -612,7 +612,7 @@ namespace wi::lua::renderer
 				wi::lua::SError(L, "SetBrushSmoothness(float value): not enough arguments!");
 				return 0;
 			}
-			params.cb.xPaintBrushSmoothness = wi::lua::SGetFloat(L, 1);
+			params.push.xPaintBrushSmoothness = wi::lua::SGetFloat(L, 1);
 			return 0;
 		}
 		int SetBrushRotation(lua_State* L)
@@ -623,7 +623,7 @@ namespace wi::lua::renderer
 				wi::lua::SError(L, "SetBrushRotation(float value): not enough arguments!");
 				return 0;
 			}
-			params.cb.xPaintBrushRotation = wi::lua::SGetFloat(L, 1);
+			params.push.xPaintBrushRotation = wi::lua::SGetFloat(L, 1);
 			return 0;
 		}
 		int SetBrushShape(lua_State* L)
@@ -634,7 +634,7 @@ namespace wi::lua::renderer
 				wi::lua::SError(L, "SetBrushShape(float value): not enough arguments!");
 				return 0;
 			}
-			params.cb.xPaintBrushShape = wi::lua::SGetInt(L, 1);
+			params.push.xPaintBrushShape = wi::lua::SGetInt(L, 1);
 			return 0;
 		}
 
