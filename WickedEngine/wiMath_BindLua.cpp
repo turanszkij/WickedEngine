@@ -27,6 +27,7 @@ namespace wi::lua
 		lunamethod(Vector_BindLua, QuaternionSlerp),
 		lunamethod(Vector_BindLua, Slerp),
 		lunamethod(Vector_BindLua, Clamp),
+		lunamethod(Vector_BindLua, QuaternionIdentity),
 		lunamethod(Vector_BindLua, QuaternionInverse),
 		lunamethod(Vector_BindLua, QuaternionNormalize),
 		lunamethod(Vector_BindLua, QuaternionMultiply),
@@ -426,6 +427,11 @@ namespace wi::lua
 	}
 
 
+	int Vector_BindLua::QuaternionIdentity(lua_State* L)
+	{
+		Luna<Vector_BindLua>::push(L, XMQuaternionIdentity());
+		return 1;
+	}
 	int Vector_BindLua::QuaternionInverse(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);

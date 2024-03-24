@@ -11,6 +11,7 @@
 #include "wiLua.h"
 #include "wiUnorderedMap.h"
 #include "wiVoxelGrid_BindLua.h"
+#include "wiAudio_BindLua.h"
 
 #include <string>
 
@@ -6160,6 +6161,10 @@ Luna<SoundComponent_BindLua>::FunctionType SoundComponent_BindLua::methods[] = {
 	lunamethod(SoundComponent_BindLua, Stop),
 	lunamethod(SoundComponent_BindLua, SetLooped),
 	lunamethod(SoundComponent_BindLua, SetDisable3D),
+	lunamethod(SoundComponent_BindLua, SetSound),
+	lunamethod(SoundComponent_BindLua, SetSoundInstance),
+	lunamethod(SoundComponent_BindLua, GetSound),
+	lunamethod(SoundComponent_BindLua, GetSoundInstance),
 	{ NULL, NULL }
 };
 Luna<SoundComponent_BindLua>::PropertyType SoundComponent_BindLua::properties[] = {
@@ -6221,6 +6226,54 @@ int SoundComponent_BindLua::SetDisable3D(lua_State* L)
 	component->SetDisable3D(value);
 
 	return 0;
+}
+int SoundComponent_BindLua::SetSound(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "SetSound(Sound sound): not enough arguments!");
+		return 0;
+	}
+
+	Sound_BindLua* sound = Luna<Sound_BindLua>::lightcheck(L, 1);
+	if (sound == nullptr)
+	{
+		wi::lua::SError(L, "SetSound(Sound sound): argument is not a Sound!");
+		return 0;
+	}
+
+	component->soundResource = sound->soundResource;
+	return 0;
+}
+int SoundComponent_BindLua::SetSoundInstance(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "SetSoundInstance(SoundInstance inst): not enough arguments!");
+		return 0;
+	}
+
+	SoundInstance_BindLua* inst = Luna<SoundInstance_BindLua>::lightcheck(L, 1);
+	if (inst == nullptr)
+	{
+		wi::lua::SError(L, "SetSoundInstance(SoundInstance inst): argument is not a SoundInstance!");
+		return 0;
+	}
+
+	component->soundinstance = inst->soundinstance;
+	return 0;
+}
+int SoundComponent_BindLua::GetSound(lua_State* L)
+{
+	Luna<Sound_BindLua>::push(L, component->soundResource);
+	return 1;
+}
+int SoundComponent_BindLua::GetSoundInstance(lua_State* L)
+{
+	Luna<SoundInstance_BindLua>::push(L, component->soundinstance);
+	return 1;
 }
 
 

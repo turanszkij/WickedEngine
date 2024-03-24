@@ -47,6 +47,10 @@ namespace wi::lua
 		{
 			soundResource.SetSound(sound);
 		}
+		Sound_BindLua(const wi::Resource resource)
+		{
+			soundResource = resource;
+		}
 
 		int IsValid(lua_State* L);
 
@@ -63,6 +67,10 @@ namespace wi::lua
 		static Luna<SoundInstance_BindLua>::PropertyType properties[];
 
 		SoundInstance_BindLua(lua_State* L);
+		SoundInstance_BindLua(const wi::audio::SoundInstance& instance)
+		{
+			soundinstance = instance;
+		}
 		~SoundInstance_BindLua() { }
 
 		int SetSubmixType(lua_State* L);

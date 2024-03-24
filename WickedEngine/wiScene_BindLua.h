@@ -1642,6 +1642,10 @@ namespace wi::lua::scene
 		int Stop(lua_State* L);
 		int SetLooped(lua_State* L);
 		int SetDisable3D(lua_State* L);
+		int SetSound(lua_State* L);
+		int SetSoundInstance(lua_State* L);
+		int GetSound(lua_State* L);
+		int GetSoundInstance(lua_State* L);
 	};
 
 	class ColliderComponent_BindLua

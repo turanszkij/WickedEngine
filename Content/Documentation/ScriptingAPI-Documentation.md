@@ -606,6 +606,7 @@ A four component floating point vector. Provides efficient calculations with SIM
 - Cross(Vector v1,v2) : Vector result
 - Lerp(Vector v1,v2, float t) : Vector result
 - Rotate(Vector v1,quaternion) : Vector result -- rotates the first argument 3D vector with the second argument quaternion
+- QuaternionIdentity() : Vector resultQuaternion -- return a quaternion representing identity orientation
 - QuaternionInverse(Vector quaternion) : Vector resultQuaternion
 - QuaternionMultiply(Vector quaternion1,quaternion2) : Vector resultQuaternion
 - QuaternionFromRollPitchYaw(Vector rotXYZ) : Vector resultQuaternion
@@ -1261,6 +1262,10 @@ Describes a Sound object.
 - IsPlaying() : bool result -- Check if sound is playing
 - IsLooped() : bool result -- Check if sound is looping
 - IsDisabled() : bool result -- Check if sound is disabled
+- SetSound(Sound sound)
+- SetSoundInstance(SoundInstance inst)
+- GetSound() : Sound
+- GetSoundInstance() : SoundInstance
 
 #### ColliderComponent
 Describes a Collider object.

@@ -50,6 +50,7 @@ namespace wi::lua
 		int Rotate(lua_State* L);
 
 
+		int QuaternionIdentity(lua_State* L);
 		int QuaternionInverse(lua_State* L);
 		int QuaternionNormalize(lua_State* L);
 		int QuaternionMultiply(lua_State* L);
