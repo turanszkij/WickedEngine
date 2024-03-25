@@ -3975,6 +3975,8 @@ void UpdateRenderData(
 			shaderentity.shadowAtlasMulAdd = decal.texMulAdd;
 			shaderentity.SetConeAngleCos(decal.slopeBlendPower);
 			shaderentity.SetDirection(decal.front);
+			shaderentity.SetAngleScale(decal.normal_strength);
+			shaderentity.SetLength(decal.displacement_strength);
 
 			shaderentity.SetIndices(matrixCounter, 0);
 			shadermatrix = XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world));
@@ -3994,10 +3996,16 @@ void UpdateRenderData(
 			{
 				surfacemap = device->GetDescriptorIndex(&decal.surfacemap.GetTexture(), SubresourceType::SRV);
 			}
+			int displacementmap = -1;
+			if (decal.displacementmap.IsValid())
+			{
+				displacementmap = device->GetDescriptorIndex(&decal.displacementmap.GetTexture(), SubresourceType::SRV);
+			}
+
 			shadermatrix.r[0] = XMVectorSetW(shadermatrix.r[0], *(float*)&texture);
 			shadermatrix.r[1] = XMVectorSetW(shadermatrix.r[1], *(float*)&normal);
-			shadermatrix.r[2] = XMVectorSetW(shadermatrix.r[2], decal.normal_strength);
-			shadermatrix.r[3] = XMVectorSetW(shadermatrix.r[3], *(float*)&surfacemap);
+			shadermatrix.r[2] = XMVectorSetW(shadermatrix.r[2], *(float*)&surfacemap);
+			shadermatrix.r[3] = XMVectorSetW(shadermatrix.r[3], *(float*)&displacementmap);
 
 			std::memcpy(matrixArray + matrixCounter, &shadermatrix, sizeof(XMMATRIX));
 			matrixCounter++;

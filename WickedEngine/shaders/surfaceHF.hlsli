@@ -465,7 +465,7 @@ struct Surface
 					uvsets,
 					V,
 					TBN,
-					material,
+					material.parallaxOcclusionMapping,
 					tex,
 					uv,
 					uv_dx,
@@ -666,10 +666,10 @@ struct Surface
 							continue;
 
 						float4x4 decalProjection = load_entitymatrix(decal.GetMatrixIndex());
-						int decalTexture = asint(decalProjection[3][0]);
-						int decalNormal = asint(decalProjection[3][1]);
-						float decalNormalStrength = decalProjection[3][2];
-						int decalSurfacemap = asint(decalProjection[3][3]);
+						const int decalTexture = asint(decalProjection[3][0]);
+						const int decalNormal = asint(decalProjection[3][1]);
+						const int decalSurfacemap = asint(decalProjection[3][2]);
+						const int decalDisplacementmap = asint(decalProjection[3][3]);
 						decalProjection[3] = float4(0, 0, 0, 1);
 						
 						// under here will be VGPR!
@@ -691,6 +691,27 @@ struct Surface
 								const float slopeBlend = decal.GetConeAngleCos() > 0 ? pow(saturate(dot(N, decal.GetDirection())), decal.GetConeAngleCos()) : 1;
 								decalColor.a *= edgeBlend * slopeBlend;
 								[branch]
+								if (decalDisplacementmap >= 0)
+								{
+									const float3 t = get_right(decalProjection);
+									const float3 b = -get_up(decalProjection);
+									const float3 n = N;
+									const float3x3 tbn = float3x3(t, b, n);
+									float4 inoutuv = uvw.xyxy;
+									ParallaxOcclusionMapping_Impl(
+										inoutuv,
+										V,
+										tbn,
+										decal.GetLength(),
+										bindless_textures[decalDisplacementmap],
+										uvw.xy,
+										decalDX,
+										decalDY,
+										sampler_linear_clamp
+									);
+									uvw.xy = saturate(inoutuv.xy);
+								}
+								[branch]
 								if (decalTexture >= 0)
 								{
 									decalColor *= bindless_textures[decalTexture].SampleGrad(sam, uvw.xy, decalDX, decalDY);
@@ -707,7 +728,7 @@ struct Surface
 								{
 									float3 decalBumpColor = float3(bindless_textures[decalNormal].SampleGrad(sam, uvw.xy, decalDX, decalDY).rg, 1);
 									decalBumpColor = decalBumpColor * 2 - 1;
-									decalBumpColor.rg *= decalNormalStrength;
+									decalBumpColor.rg *= decal.GetAngleScale();
 									decalBumpAccumulation.rgb = mad(1 - decalBumpAccumulation.a, decalColor.a * decalBumpColor.rgb, decalBumpAccumulation.rgb);
 									decalBumpAccumulation.a = mad(1 - decalColor.a, decalBumpAccumulation.a, decalColor.a);
 								}

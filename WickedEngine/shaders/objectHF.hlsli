@@ -530,7 +530,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 			uvsets,
 			surface.V,
 			TBN,
-			GetMaterial(),
+			GetMaterial().parallaxOcclusionMapping,
 			tex,
 			uv,
 			uv_dx,

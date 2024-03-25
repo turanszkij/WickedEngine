@@ -4361,7 +4361,9 @@ namespace wi::scene
 			decal.texture = material.textures[MaterialComponent::BASECOLORMAP].resource;
 			decal.normal = material.textures[MaterialComponent::NORMALMAP].resource;
 			decal.surfacemap = material.textures[MaterialComponent::SURFACEMAP].resource;
+			decal.displacementmap = material.textures[MaterialComponent::DISPLACEMENTMAP].resource;
 			decal.normal_strength = material.normalMapStrength;
+			decal.displacement_strength = material.parallaxOcclusionMapping;
 			decal.texMulAdd = material.texMulAdd;
 		}
 	}
@@ -4884,6 +4886,8 @@ namespace wi::scene
 				if (transform != nullptr)
 				{
 					instance3D.emitterPos = transform->GetPosition();
+					instance3D.emitterFront = transform->GetForward();
+					instance3D.emitterUp = transform->GetUp();
 					wi::audio::Update3D(&sound.soundinstance, instance3D);
 				}
 			}

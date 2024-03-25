@@ -1261,6 +1261,7 @@ namespace wi::scene
 		XMFLOAT4 color;
 		XMFLOAT3 front;
 		float normal_strength;
+		float displacement_strength;
 		XMFLOAT3 position;
 		float range;
 		XMFLOAT4X4 world;
@@ -1269,6 +1270,7 @@ namespace wi::scene
 		wi::Resource texture;
 		wi::Resource normal;
 		wi::Resource surfacemap;
+		wi::Resource displacementmap;
 
 		inline float GetOpacity() const { return color.w; }
 

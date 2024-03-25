@@ -1549,43 +1549,60 @@ enum class ColorSpace
 
 
 static const uint NUM_PARALLAX_OCCLUSION_STEPS = 32;
+static const float NUM_PARALLAX_OCCLUSION_STEPS_RCP = 1.0 / NUM_PARALLAX_OCCLUSION_STEPS;
 inline void ParallaxOcclusionMapping_Impl(
 	inout float4 uvsets,		// uvsets to modify
 	in float3 V,				// view vector (pointing towards camera)
 	in float3x3 TBN,			// tangent basis matrix (same that is used for normal mapping)
-	in ShaderMaterial material,	// material parameters
+	in float strength,			// material parameters
 	in Texture2D tex,			// displacement map texture
 	in float2 uv,				// uv to use for the displacement map
 	in float2 uv_dx,			// horizontal derivative of displacement map uv
-	in float2 uv_dy				// vertical derivative of displacement map uv
+	in float2 uv_dy,			// vertical derivative of displacement map uv
+	in SamplerState sam = sampler_linear_wrap
 )
 {
 	[branch]
-	if (material.parallaxOcclusionMapping > 0)
+	if (strength <= 0)
+		return;
+		
+	TBN[0] = normalize(TBN[0]);
+	TBN[1] = normalize(TBN[1]);
+	TBN[2] = normalize(TBN[2]);
+	V = normalize(mul(TBN, V));
+	float curLayerHeight = 0;
+	float2 dtex = strength * V.xy * NUM_PARALLAX_OCCLUSION_STEPS_RCP;
+	float2 currentTextureCoords = uv;
+	float heightFromTexture = 1 - tex.SampleGrad(sam, currentTextureCoords, uv_dx, uv_dy).r;
+	uint iter = 0;
+	[loop]
+	while (heightFromTexture > curLayerHeight && iter < NUM_PARALLAX_OCCLUSION_STEPS)
 	{
-		V = mul(TBN, V);
-		float layerHeight = 1.0 / NUM_PARALLAX_OCCLUSION_STEPS;
-		float curLayerHeight = 0;
-		float2 dtex = material.parallaxOcclusionMapping * V.xy / NUM_PARALLAX_OCCLUSION_STEPS;
-		float2 currentTextureCoords = uv;
-		float heightFromTexture = 1 - tex.SampleGrad(sampler_linear_wrap, currentTextureCoords, uv_dx, uv_dy).r;
-		uint iter = 0;
-		[loop]
-		while (heightFromTexture > curLayerHeight && iter < NUM_PARALLAX_OCCLUSION_STEPS)
-		{
-			curLayerHeight += layerHeight;
-			currentTextureCoords -= dtex;
-			heightFromTexture = 1 - tex.SampleGrad(sampler_linear_wrap, currentTextureCoords, uv_dx, uv_dy).r;
-			iter++;
-		}
-		float2 prevTCoords = currentTextureCoords + dtex;
-		float nextH = heightFromTexture - curLayerHeight;
-		float prevH = 1 - tex.SampleGrad(sampler_linear_wrap, prevTCoords, uv_dx, uv_dy).r - curLayerHeight + layerHeight;
-		float weight = nextH / (nextH - prevH);
-		float2 finalTextureCoords = mad(prevTCoords, weight, currentTextureCoords * (1.0 - weight));
-		float2 difference = finalTextureCoords - uv;
-		uvsets += difference.xyxy;
+		curLayerHeight += NUM_PARALLAX_OCCLUSION_STEPS_RCP;
+		currentTextureCoords -= dtex;
+		heightFromTexture = 1 - tex.SampleGrad(sam, currentTextureCoords, uv_dx, uv_dy).r;
+		iter++;
 	}
+	float2 prevTCoords = currentTextureCoords + dtex;
+	float nextH = heightFromTexture - curLayerHeight;
+	float prevH = 1 - tex.SampleGrad(sam, prevTCoords, uv_dx, uv_dy).r - curLayerHeight + NUM_PARALLAX_OCCLUSION_STEPS_RCP;
+	float weight = nextH / (nextH - prevH);
+	float2 finalTextureCoords = mad(prevTCoords, weight, currentTextureCoords * (1.0 - weight));
+	float2 difference = finalTextureCoords - uv;
+	uvsets += difference.xyxy;
+}
+
+inline float3 get_forward(float4x4 m)
+{
+	return float3(m[2][0], m[2][1], m[2][2]);
+}
+inline float3 get_up(float4x4 m)
+{
+	return float3(m[1][0], m[1][1], m[1][2]);
+}
+inline float3 get_right(float4x4 m)
+{
+	return float3(m[0][0], m[0][1], m[0][2]);
 }
 
 #endif // WI_SHADER_GLOBALS_HF
