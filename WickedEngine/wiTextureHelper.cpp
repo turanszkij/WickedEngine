@@ -96,16 +96,6 @@ namespace wi::texturehelper
 			const int width = 1;
 			const int height = 1;
 
-			struct vector4b
-			{
-				unsigned char r;
-				unsigned char g;
-				unsigned char b;
-				unsigned char a;
-
-				vector4b(unsigned char r = 0, unsigned char g = 0, unsigned char b = 0, unsigned char a = 0) :r(r), g(g), b(b), a(a) {}
-			};
-
 			TextureDesc texDesc;
 			texDesc.width = width;
 			texDesc.height = height;
@@ -118,16 +108,10 @@ namespace wi::texturehelper
 			texDesc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
 
 			SubresourceData pData[6];
-			vector4b d[6][width * height]; // 6 images of type vector4b = 4 * unsigned char
+			wi::Color d[6][width * height] = {}; // 6 images initialized to 0 (transparent black)
 
 			for (int cubeMapFaceIndex = 0; cubeMapFaceIndex < 6; cubeMapFaceIndex++)
 			{
-				// fill with black color  
-				for (int pix = 0; pix < width*height; ++pix)
-				{
-					d[cubeMapFaceIndex][pix] = vector4b(0, 0, 0, 0);
-				}
-
 				pData[cubeMapFaceIndex].data_ptr = &d[cubeMapFaceIndex][0];// description.data;
 				pData[cubeMapFaceIndex].row_pitch = width * 4;
 				pData[cubeMapFaceIndex].slice_pitch = 0;
@@ -146,7 +130,7 @@ namespace wi::texturehelper
 
 		// Blue Noise:
 		{
-			wi::vector<wi::Color> bluenoise(128 * 128);
+			wi::Color bluenoise[128 * 128];
 
 			for (int y = 0; y < 128; ++y)
 			{
@@ -161,7 +145,7 @@ namespace wi::texturehelper
 				}
 			}
 
-			CreateTexture(helperTextures[HELPERTEXTURE_BLUENOISE], (uint8_t*)bluenoise.data(), 128, 128, Format::R8G8B8A8_UNORM);
+			CreateTexture(helperTextures[HELPERTEXTURE_BLUENOISE], (const uint8_t*)bluenoise, 128, 128, Format::R8G8B8A8_UNORM);
 			device->SetName(&helperTextures[HELPERTEXTURE_BLUENOISE], "HELPERTEXTURE_BLUENOISE");
 		}
 
@@ -178,7 +162,7 @@ namespace wi::texturehelper
 			const uint32_t data_stride = GetFormatStride(desc.format);
 			const uint32_t block_size = GetFormatBlockSize(desc.format);
 			const uint8_t* src = waterriple;
-			wi::vector<SubresourceData> initdata(desc.mip_levels);
+			SubresourceData initdata[7] = {};
 			for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 			{
 				const uint32_t num_blocks_x = std::max(1u, desc.width >> mip) / block_size;
@@ -187,7 +171,7 @@ namespace wi::texturehelper
 				initdata[mip].row_pitch = num_blocks_x * data_stride;
 				src += num_blocks_x * num_blocks_y * data_stride;
 			}
-			device->CreateTexture(&desc, initdata.data(), &helperTextures[HELPERTEXTURE_WATERRIPPLE]);
+			device->CreateTexture(&desc, initdata, &helperTextures[HELPERTEXTURE_WATERRIPPLE]);
 			device->SetName(&helperTextures[HELPERTEXTURE_WATERRIPPLE], "HELPERTEXTURE_WATERRIPPLE");
 		}
 

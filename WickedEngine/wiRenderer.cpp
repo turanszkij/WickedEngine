@@ -4352,16 +4352,16 @@ void UpdateRenderData(
 	{
 		auto range = wi::profiler::BeginRangeGPU("Wind", cmd);
 		device->EventBegin("Wind", cmd);
+		device->ClearUAV(&textures[TEXTYPE_3D_WIND], 0, cmd);
+		device->ClearUAV(&textures[TEXTYPE_3D_WIND_PREV], 0, cmd);
+		barrier_stack.push_back(GPUBarrier::Memory(&textures[TEXTYPE_3D_WIND]));
+		barrier_stack.push_back(GPUBarrier::Memory(&textures[TEXTYPE_3D_WIND_PREV]));
+		barrier_stack_flush(cmd);
 		if (
-			vis.scene->weather.windDirection.x == 0 &&
-			vis.scene->weather.windDirection.y == 0 &&
-			vis.scene->weather.windDirection.z == 0
+			vis.scene->weather.windDirection.x != 0 ||
+			vis.scene->weather.windDirection.y != 0 ||
+			vis.scene->weather.windDirection.z != 0
 			)
-		{
-			device->ClearUAV(&textures[TEXTYPE_3D_WIND], 0, cmd);
-			device->ClearUAV(&textures[TEXTYPE_3D_WIND_PREV], 0, cmd);
-		}
-		else
 		{
 			device->BindComputeShader(&shaders[CSTYPE_WIND], cmd);
 			device->BindUAV(&textures[TEXTYPE_3D_WIND], 0, cmd);
@@ -12921,10 +12921,6 @@ void Postprocess_SSR(
 		GPUBarrier barriers[] = {
 			GPUBarrier::Image(&res.texture_tile_minmax_roughness_horizontal, res.texture_tile_minmax_roughness_horizontal.desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.texture_tile_minmax_roughness, res.texture_tile_minmax_roughness.desc.layout, ResourceState::UNORDERED_ACCESS),
-			GPUBarrier::Buffer(&res.buffer_tile_tracing_statistics, ResourceState::UNDEFINED, ResourceState::COPY_DST),
-			GPUBarrier::Buffer(&res.buffer_tiles_tracing_earlyexit, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS),
-			GPUBarrier::Buffer(&res.buffer_tiles_tracing_cheap, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS),
-			GPUBarrier::Buffer(&res.buffer_tiles_tracing_expensive, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.texture_resolve, res.texture_resolve.desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.texture_resolve_variance, res.texture_resolve_variance.desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.texture_resolve_reprojectionDepth, res.texture_resolve_reprojectionDepth.desc.layout, ResourceState::UNORDERED_ACCESS),
