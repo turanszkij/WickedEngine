@@ -2054,8 +2054,6 @@ namespace wi::scene
 		XMStoreFloat4x4(&InvView, _InvV);
 		XMStoreFloat3x3(&rotationMatrix, _InvV);
 		XMStoreFloat4x4(&InvVP, XMMatrixInverse(nullptr, _VP));
-		XMStoreFloat4x4(&Projection, _P);
-		XMStoreFloat4x4(&InvProjection, XMMatrixInverse(nullptr, _P));
 
 		frustum.Create(_VP);
 	}

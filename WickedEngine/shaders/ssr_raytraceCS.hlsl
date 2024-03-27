@@ -368,7 +368,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 
 	if (validHit)
 	{
-		const float3 Phit = reconstruct_position(jitterUV, hit.z, GetCamera().inverse_projection);
+		const float3 Phit = reconstruct_position(jitterUV, hit.z);
 		output_rayLengths[pixel] = distance(P, Phit);
 	}
 	else
