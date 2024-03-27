@@ -10,11 +10,11 @@ RWTexture2D<unorm float> output : register(u0);
 // Step size in number of pixels
 #define STEP_SIZE 4
 // Number of shared-memory samples per direction
-#define NUM_STEPS 8
+#define NUM_STEPS 16
 // The last sample has weight = exp(-KERNEL_FALLOFF)
-#define KERNEL_FALLOFF 3.0f
-#define TAN_ANGLE_BIAS 0
-#define DEPTH_FIX 2.0f
+#define KERNEL_FALLOFF 2.0
+#define TAN_ANGLE_BIAS 0.1
+#define DEPTH_FIX 0.4
 
 static const int TILE_BORDER = NUM_STEPS * STEP_SIZE;
 static const int CACHE_SIZE = TILE_BORDER + POSTPROCESS_HBAO_THREADCOUNT + TILE_BORDER;
@@ -47,16 +47,14 @@ void IntegrateDirection(inout float ao, float2 P, float tanT, int threadId, int 
 	float tanH = tanT;
 	float sinH = TanToSin(tanH);
 	float sinT = TanToSin(tanT);
-
-	[unroll]
+	
 	for (int sampleId = 0; sampleId < NUM_STEPS; ++sampleId)
 	{
 		float2 S = cache[threadId + sampleId * deltaX + deltaX];
 		float2 V = S - P;
 		float tanS = Tangent(V);
 		float d2 = dot(V, V);
-
-		[flatten]
+		
 		if ((d2 < DEPTH_FIX) && (tanS > tanH))
 		{
 			// Accumulate AO between the horizon and the sample
