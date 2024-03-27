@@ -33,6 +33,8 @@
 namespace wi::graphics
 {
 
+	GraphicsDevice* static_device = nullptr;
+
 namespace vulkan_internal
 {
 	// These shifts are made so that Vulkan resource bindings slots don't interfere with each other across shader stages:
@@ -600,7 +602,7 @@ namespace vulkan_internal
 	}
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsMessengerCallback(
-		VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, 
+		VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
 		VkDebugUtilsMessageTypeFlagsEXT message_type,
 		const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
 		void* user_data)
@@ -2411,7 +2413,7 @@ using namespace vulkan_internal;
 			}
 		}
 #endif // _WIN32
-		
+
 		if (validationMode != ValidationMode::Disabled)
 		{
 			// Determine the optimal validation layers to enable that are necessary for useful debugging
@@ -2902,7 +2904,7 @@ using namespace vulkan_internal;
 				queueFamiliesVideo[i].sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_VIDEO_PROPERTIES_KHR;
 			}
 			vkGetPhysicalDeviceQueueFamilyProperties2(physicalDevice, &queueFamilyCount, queueFamilies.data());
-			
+
 			// Query base queue families:
 			for (uint32_t i = 0; i < queueFamilyCount; ++i)
 			{
@@ -3147,7 +3149,7 @@ using namespace vulkan_internal;
 
 			res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &nullBuffer, &nullBufferAllocation, nullptr);
 			assert(res == VK_SUCCESS);
-			
+
 			VkBufferViewCreateInfo viewInfo = {};
 			viewInfo.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
 			viewInfo.format = VK_FORMAT_R32G32B32A32_SFLOAT;
@@ -3350,7 +3352,7 @@ using namespace vulkan_internal;
 			// Try to read pipeline cache file if exists.
 			wi::vector<uint8_t> pipelineData;
 
-			std::string cachePath = GetCachePath(); 
+			std::string cachePath = GetCachePath();
 			if (!wi::helper::FileRead(cachePath, pipelineData))
 			{
 				pipelineData.clear();
@@ -3614,7 +3616,7 @@ using namespace vulkan_internal;
 			res = vkGetPipelineCacheData(device, pipelineCache, &size, nullptr);
 			assert(res == VK_SUCCESS);
 
-			// Get data of pipeline cache 
+			// Get data of pipeline cache
 			wi::vector<uint8_t> data(size);
 			res = vkGetPipelineCacheData(device, pipelineCache, &size, data.data());
 			assert(res == VK_SUCCESS);
@@ -3623,7 +3625,7 @@ using namespace vulkan_internal;
 			std::string cachePath = GetCachePath();
 			wi::helper::FileWrite(cachePath, data.data(), size);
 
-			// Destroy Vulkan pipeline cache 
+			// Destroy Vulkan pipeline cache
 			vkDestroyPipelineCache(device, pipelineCache, nullptr);
 			pipelineCache = VK_NULL_HANDLE;
 		}
@@ -4006,7 +4008,7 @@ using namespace vulkan_internal;
 				dependencyInfo.pBufferMemoryBarriers = &barrier;
 
 				vkCmdPipelineBarrier2(cmd.transitionCommandBuffer, &dependencyInfo);
-				
+
 				copyAllocator.submit(cmd);
 			}
 		}
@@ -5380,7 +5382,7 @@ using namespace vulkan_internal;
 					default:
 						break;
 					}
-					
+
 				}
 
 				VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
@@ -6359,7 +6361,7 @@ using namespace vulkan_internal;
 		info.referencePictureFormat = info.pictureFormat;
 		info.pVideoProfile = &video_capability_h264.profile;
 		info.pStdHeaderVersion = &video_capability_h264.video_capabilities.stdHeaderVersion;
-		
+
 		res = vkCreateVideoSessionKHR(device, &info, nullptr, &internal_state->video_session);
 		assert(res == VK_SUCCESS);
 
@@ -6940,7 +6942,7 @@ using namespace vulkan_internal;
 		VkResult res = vkGetRayTracingShaderGroupHandlesKHR(device, to_internal(rtpso)->pipeline, group_index, 1, SHADER_IDENTIFIER_SIZE, dest);
 		assert(res == VK_SUCCESS);
 	}
-	
+
 	void GraphicsDevice_Vulkan::SetName(GPUResource* pResource, const char* name) const
 	{
 		if (!debugUtils || pResource == nullptr || !pResource->IsValid())
@@ -7246,7 +7248,7 @@ using namespace vulkan_internal;
 		}
 		allocationhandler->destroylocker.unlock();
 
-		// Destroy Vulkan pipeline cache 
+		// Destroy Vulkan pipeline cache
 		vkDestroyPipelineCache(device, pipelineCache, nullptr);
 		pipelineCache = VK_NULL_HANDLE;
 
@@ -7562,7 +7564,7 @@ using namespace vulkan_internal;
 			assert(0);
 		}
 		commandlist.prev_swapchains.push_back(*swapchain);
-		
+
 		VkRenderingInfo info = {};
 		info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
 		info.renderArea.offset.x = 0;
@@ -7801,7 +7803,7 @@ using namespace vulkan_internal;
 				barrier.newLayout = _ConvertImageLayout(image.layout);
 
 				assert(barrier.newLayout != VK_IMAGE_LAYOUT_UNDEFINED);
-				
+
 				barrier.srcStageMask = _ConvertPipelineStage(image.layout_before);
 				barrier.dstStageMask = _ConvertPipelineStage(image.layout);
 				barrier.srcAccessMask = _ParseResourceState(image.layout_before);
@@ -8955,7 +8957,7 @@ using namespace vulkan_internal;
 		raygen.deviceAddress += desc->ray_generation.offset;
 		raygen.size = desc->ray_generation.size;
 		raygen.stride = raygen.size; // raygen specifically must be size == stride
-		
+
 		VkStridedDeviceAddressRegionKHR miss = {};
 		miss.deviceAddress = desc->miss.buffer ? to_internal(desc->miss.buffer)->address : 0;
 		miss.deviceAddress += desc->miss.offset;
@@ -8980,8 +8982,8 @@ using namespace vulkan_internal;
 			&miss,
 			&hitgroup,
 			&callable,
-			desc->width, 
-			desc->height, 
+			desc->width,
+			desc->height,
 			desc->depth
 		);
 	}

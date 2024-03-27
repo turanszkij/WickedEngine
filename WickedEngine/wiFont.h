@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 #include "wiColor.h"
@@ -19,7 +19,7 @@ namespace wi::font
 		WIFALIGN_BOTTOM		// bottom alignment (vertical)
 	};
 
-	static constexpr int WIFONTSIZE_DEFAULT = 16;
+	inline constexpr int WIFONTSIZE_DEFAULT = 16;
 
 	struct Cursor
 	{
