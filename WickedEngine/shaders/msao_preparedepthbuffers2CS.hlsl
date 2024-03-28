@@ -13,7 +13,10 @@ RWTexture2DArray<float> DS16xAtlas : register(u3);
 [numthreads(8, 8, 1)]
 void main(uint3 Gid : SV_GroupID, uint GI : SV_GroupIndex, uint3 GTid : SV_GroupThreadID, uint3 DTid : SV_DispatchThreadID)
 {
-    float m1 = DS4x[DTid.xy << 1];
+	uint2 dim;
+	DS4x.GetDimensions(dim.x, dim.y);
+
+    float m1 = DS4x[min(DTid.xy << 1, dim - 1)];
 
     uint2 st = DTid.xy;
     uint2 stAtlas = st >> 2;
