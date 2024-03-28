@@ -80,8 +80,8 @@ float3 get_position_view_space(float2 uv)
 
 // constants
 static const uint g_ao_directions = 3;
-static const uint g_ao_steps      = 2;
-static const float g_ao_radius    = 3.0f;
+static const uint g_ao_steps      = 4;
+static const float g_ao_radius    = 4.0f;
 static const float g_ao_intensity = 4.0f;
 
 // derived constants
