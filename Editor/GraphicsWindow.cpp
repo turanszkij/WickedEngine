@@ -13,7 +13,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 1640));
+	SetSize(XMFLOAT2(580, 1660));
 
 	float step = 21;
 	float itemheight = 18;
@@ -940,6 +940,22 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	AddWidget(&raytracedDiffuseCheckBox);
 	raytracedDiffuseCheckBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::RAYTRACING));
 
+	ssgiCheckBox.Create("SSGI: ");
+	ssgiCheckBox.SetTooltip("Enable Screen Space Global Illumination, this can add a light bounce effect coming from objects on the screen.");
+	ssgiCheckBox.SetScriptTip("RenderPath3D::SetSSGIEnabled(bool value)");
+	ssgiCheckBox.SetSize(XMFLOAT2(hei, hei));
+	ssgiCheckBox.SetPos(XMFLOAT2(x + 140, y));
+	if (editor->main->config.GetSection("graphics").Has("ssgi"))
+	{
+		editor->renderPath->setSSGIEnabled(editor->main->config.GetSection("graphics").GetBool("ssgi"));
+	}
+	ssgiCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		editor->renderPath->setSSGIEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("ssgi", args.bValue);
+		editor->main->config.Commit();
+		});
+	AddWidget(&ssgiCheckBox);
+
 	raytracedDiffuseRangeSlider.Create(1.0f, 100.0f, 1, 1000, "RTDiffuse.Range: ");
 	raytracedDiffuseRangeSlider.SetText("Range: ");
 	raytracedDiffuseRangeSlider.SetTooltip("Set Reflection ray length for Ray traced diffuse.");
@@ -1525,6 +1541,7 @@ void GraphicsWindow::Update()
 	raytracedReflectionsCheckBox.SetCheck(editor->renderPath->getRaytracedReflectionEnabled());
 	raytracedReflectionsRangeSlider.SetValue(editor->renderPath->getRaytracedReflectionsRange());
 	raytracedDiffuseCheckBox.SetCheck(editor->renderPath->getRaytracedDiffuseEnabled());
+	ssgiCheckBox.SetCheck(editor->renderPath->getSSGIEnabled());
 	raytracedDiffuseRangeSlider.SetValue(editor->renderPath->getRaytracedDiffuseRange());
 	screenSpaceShadowsCheckBox.SetCheck(wi::renderer::GetScreenSpaceShadowsEnabled());
 	screenSpaceShadowsRangeSlider.SetValue((float)editor->renderPath->getScreenSpaceShadowRange());
@@ -1787,6 +1804,8 @@ void GraphicsWindow::ResizeLayout()
 	ssrCheckBox.SetPos(XMFLOAT2(reflectionsRoughnessCutoffSlider.GetPos().x - ssrCheckBox.GetSize().x - 80, reflectionsRoughnessCutoffSlider.GetPos().y));
 	add_right(raytracedReflectionsRangeSlider);
 	raytracedReflectionsCheckBox.SetPos(XMFLOAT2(raytracedReflectionsRangeSlider.GetPos().x - raytracedReflectionsCheckBox.GetSize().x - 80, raytracedReflectionsRangeSlider.GetPos().y));
+	add_right(ssgiCheckBox);
+	ssgiCheckBox.SetPos(XMFLOAT2(raytracedReflectionsCheckBox.GetPos().x, ssgiCheckBox.GetPos().y));
 	add_right(raytracedDiffuseRangeSlider);
 	raytracedDiffuseCheckBox.SetPos(XMFLOAT2(raytracedDiffuseRangeSlider.GetPos().x - raytracedDiffuseCheckBox.GetSize().x - 80, raytracedDiffuseRangeSlider.GetPos().y));
 	add_right(screenSpaceShadowsStepCountSlider);

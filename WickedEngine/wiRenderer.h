@@ -553,6 +553,21 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd,
 		float range = 1000.0f
 	);
+	struct SSGIResources
+	{
+		mutable int frame = 0;
+		wi::graphics::Texture texture_rayIndirectDiffuse;
+		wi::graphics::Texture texture_temporal[2];
+		wi::graphics::Texture texture_temporal_variance[2];
+		wi::graphics::Texture texture_bilateral_temp;
+	};
+	void CreateSSGIResources(SSGIResources& res, XMUINT2 resolution);
+	void Postprocess_SSGI(
+		const SSGIResources& res,
+		const wi::graphics::Texture& input,
+		const wi::graphics::Texture& output,
+		wi::graphics::CommandList cmd
+	);
 	struct RTReflectionResources
 	{
 		mutable int frame = 0;
