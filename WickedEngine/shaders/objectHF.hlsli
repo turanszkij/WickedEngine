@@ -896,8 +896,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	if (GetCamera().texture_ssgi_index >= 0)
 	{
 		float4 ssgi = bindless_textures[GetCamera().texture_ssgi_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0);
-		surface.ssgi = ssgi.rgb * GetFrame().gi_boost; // ssgi will be applied on top of occlusion
-		surface.occlusion *= ssgi.a;
+		lighting.indirect.diffuse += ssgi.rgb;
 	}
 #endif // CARTOON
 #endif // TRANSPARENT

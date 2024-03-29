@@ -12496,17 +12496,17 @@ void CreateSSGIResources(SSGIResources& res, XMUINT2 resolution)
 	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 	desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 
-	desc.format = Format::R16G16B16A16_FLOAT;
+	desc.format = Format::R11G11B10_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_rayIndirectDiffuse);
 
-	desc.format = Format::R16G16B16A16_FLOAT;
+	desc.format = Format::R11G11B10_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal[0]);
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal[1]);
 	desc.format = Format::R16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal_variance[0]);
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal_variance[1]);
 
-	desc.format = Format::R16G16B16A16_FLOAT;
+	desc.format = Format::R11G11B10_FLOAT;
 	desc.width = resolution.x;
 	desc.height = resolution.y;
 	device->CreateTexture(&desc, nullptr, &res.texture_bilateral_temp);

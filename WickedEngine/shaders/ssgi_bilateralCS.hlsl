@@ -13,7 +13,7 @@ static const float depthThreshold = 10000.0;
 static const float normalThreshold = 1.0;
 static const float varianceEstimateThreshold = 0.015; // Larger variance values use stronger blur
 static const float varianceExitThreshold = 0.0025; // Variance needs to be higher than this value to accept blur
-static const uint2 bilateralMinMaxRadius = uint2(2, 4); // Chosen by variance
+static const uint2 bilateralMinMaxRadius = uint2(0, 2); // Chosen by variance
 
 #define BILATERAL_SIGMA 0.9
 
@@ -41,7 +41,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float sigma = radius * BILATERAL_SIGMA;
 	int effectiveRadius = min(sigma * 2.0, radius);
 
-	//if (variance > varianceExitThreshold && effectiveRadius > 0)
+	if (variance > varianceExitThreshold && effectiveRadius > 0)
 	{
 		float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 		float3 P = reconstruct_position(uv, depth);

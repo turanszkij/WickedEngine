@@ -60,7 +60,7 @@ namespace wi
 		AO ao = AO_DISABLED;
 		bool fxaaEnabled = false;
 		bool ssrEnabled = false;
-		bool ssgiEnabled = true;
+		bool ssgiEnabled = false;
 		bool raytracedReflectionsEnabled = false;
 		bool raytracedDiffuseEnabled = false;
 		bool reflectionsEnabled = true;
