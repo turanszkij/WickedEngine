@@ -944,7 +944,7 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)surfel_integrateCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)ssr_bilateralCS.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)ssr_upsampleCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)ssr_depthHierarchyCS.hlsl">
@@ -1010,7 +1010,7 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)rtdiffuse_temporalCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)rtdiffuse_bilateralCS.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)rtdiffuse_upsampleCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)virtualTextureTileRequestsCS.hlsl">
@@ -1151,7 +1151,10 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)ssgi_temporalCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)ssgi_bilateralCS.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)ssgi_upsampleCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)ssgi_prepareinputCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

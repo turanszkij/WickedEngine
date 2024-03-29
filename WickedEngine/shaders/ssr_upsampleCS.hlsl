@@ -34,8 +34,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		return;
 	}
 
-	float2 direction = postprocess.params0.xy;
-
 	const float linearDepth = texture_lineardepth[DTid.xy];
 	const float3 N = decode_oct(texture_normal[DTid.xy]);
 
@@ -58,40 +56,44 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 		float4 result = 0;
 		float weightSum = 0.0f;
-
-		for (int r = -effectiveRadius; r <= effectiveRadius; r++)
+		
+		for(uint d = 0; d < 2; ++d)
 		{
-			const int2 sampleCoord = DTid.xy + (direction * r); // Left to right diameter directionally
-
-			if (all(and(sampleCoord >= int2(0, 0), sampleCoord < (int2) postprocess.resolution)))
+			const int2 direction = d < 1 ? int2(1, 0) : int2(0, 1);
+			for (int r = -effectiveRadius; r <= effectiveRadius; r++)
 			{
-				const float sampleDepth = texture_depth[sampleCoord];
-				const float4 sampleColor = texture_temporal[sampleCoord];
+				const int2 sampleCoord = DTid.xy + (direction * r); // Left to right diameter directionally
 
-				const float3 sampleN = decode_oct(texture_normal[sampleCoord]);
-				const float sampleRoughness = texture_roughness[sampleCoord];
-
-				float2 sampleUV = (sampleCoord + 0.5) * postprocess.resolution_rcp;
-				float3 sampleP = reconstruct_position(sampleUV, sampleDepth);
-
-				// Don't let invalid roughness samples interfere
-				if (NeedReflection(sampleRoughness, sampleDepth, ssr_roughness_cutoff))
+				if (all(and(sampleCoord >= int2(0, 0), sampleCoord < (int2) postprocess.resolution)))
 				{
-					float3 dq = P - sampleP;
-					float planeError = max(abs(dot(dq, sampleN)), abs(dot(dq, N)));
-					float relativeDepthDifference = planeError / (linearDepth * GetCamera().z_far);
-					float bilateralDepthWeight = exp(-sqr(relativeDepthDifference) * depthThreshold);
+					const float sampleDepth = texture_depth[sampleCoord];
+					const float4 sampleColor = texture_temporal[sampleCoord];
 
-					float normalError = pow(saturate(dot(sampleN, N)), 4.0);
-					float bilateralNormalWeight = saturate(1.0 - (1.0 - normalError) * normalThreshold);
+					const float3 sampleN = decode_oct(texture_normal[sampleCoord]);
+					const float sampleRoughness = texture_roughness[sampleCoord];
 
-					float bilateralWeight = bilateralDepthWeight * bilateralNormalWeight;
+					float2 sampleUV = (sampleCoord + 0.5) * postprocess.resolution_rcp;
+					float3 sampleP = reconstruct_position(sampleUV, sampleDepth);
 
-					float gaussian = exp(-sqr(r / sigma));
-					float weight = (r == 0) ? 1.0 : gaussian * bilateralWeight; // Skip center gaussian peak
+					// Don't let invalid roughness samples interfere
+					if (NeedReflection(sampleRoughness, sampleDepth, ssr_roughness_cutoff))
+					{
+						float3 dq = P - sampleP;
+						float planeError = max(abs(dot(dq, sampleN)), abs(dot(dq, N)));
+						float relativeDepthDifference = planeError / (linearDepth * GetCamera().z_far);
+						float bilateralDepthWeight = exp(-sqr(relativeDepthDifference) * depthThreshold);
 
-					result += sampleColor * weight;
-					weightSum += weight;
+						float normalError = pow(saturate(dot(sampleN, N)), 4.0);
+						float bilateralNormalWeight = saturate(1.0 - (1.0 - normalError) * normalThreshold);
+
+						float bilateralWeight = bilateralDepthWeight * bilateralNormalWeight;
+
+						float gaussian = exp(-sqr(r / sigma));
+						float weight = (r == 0) ? 1.0 : gaussian * bilateralWeight; // Skip center gaussian peak
+
+						result += sampleColor * weight;
+						weightSum += weight;
+					}
 				}
 			}
 		}

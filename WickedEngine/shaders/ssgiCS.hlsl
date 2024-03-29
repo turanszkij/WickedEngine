@@ -8,7 +8,7 @@ Texture2D<float4> input : register(t0);
 
 RWTexture2D<float4> output : register(u0);
 
-static const uint DOWNSAMPLE = 2;
+static const uint DOWNSAMPLE = 4;
 
 // SSGI based on: https://github.com/PanosK92/SpartanEngine/blob/1986a7053abd9e17c2d1564eb0f751a89116b7e6/data/shaders/ssgi.hlsl#L53
 //	Modified for Wicked Engine by removing ambient occlusion, and adding large scale occlusion support
@@ -18,8 +18,8 @@ static const uint g_ao_directions = 3;
 static const uint g_ao_steps      = 4;
 static const float g_ao_radius    = 8.0f;
 
-static const uint depth_test_count = 1;
-static const float depth_tests[] = {0.33};
+static const uint depth_test_count = 3;
+static const float depth_tests[] = {0.125, 0.25, 0.75};
 
 // derived constants
 static const float ao_samples        = (float)(g_ao_directions * g_ao_steps);
@@ -98,14 +98,13 @@ float3 compute_diffuse(
 	float3 origin_normal,
 	uint2 sample_pixel,
 	float2 origin_uv,
-	float2 sample_uv,
-	float2 velocity
+	float2 sample_uv
 )
 {
 	float3 sample_position  = get_position_view_space(sample_pixel);
     float3 origin_to_sample = sample_position - origin_position;
     float distance2         = dot(origin_to_sample, origin_to_sample);
-    float occlusion         = saturate(dot(origin_normal, origin_to_sample)) /** rsqrt(distance2)*/;
+    float occlusion         = saturate(dot(origin_normal, origin_to_sample)) * rsqrt(distance2);
     float falloff           = saturate(distance2 * ao_negInvRadius2 + 1.0f);
 
 	float result = occlusion * falloff;
@@ -116,21 +115,22 @@ float3 compute_diffuse(
 	{
 		float origin_z = origin_position.z * GetCamera().z_far_rcp;
 		float sample_z = sample_position.z * GetCamera().z_far_rcp;
+		float bias = 0.1 * GetCamera().z_far_rcp;
 		for(uint i = 0; i < depth_test_count; ++i)
 		{
 			float t = depth_tests[i];
-			float z = lerp(origin_z, sample_z, t);
+			float z = lerp(origin_z, sample_z, t) - bias;
 			float2 uv = lerp(origin_uv, sample_uv, t);
 			float diff = texture_lineardepth.SampleCmpLevelZero(sampler_cmp_depth, uv, z);
 			if(diff > 0)
 			{
-				return result * max(0, input.SampleLevel(sampler_linear_clamp, uv + velocity, 0).rgb * 0.8); // add some energy loss because texture contains full scene color
+				return result * input.SampleLevel(sampler_linear_clamp, uv, 0).rgb;
 			}
 		}
 	}
 #endif
 
-    return result * max(0, input.SampleLevel(sampler_linear_clamp, sample_uv + velocity, 0).rgb * 0.8); // add some energy loss because texture contains full scene color
+    return result * input.SampleLevel(sampler_linear_clamp, sample_uv, 0).rgb;
 }
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
@@ -139,8 +139,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const uint2 pixel = DTid.xy;
     if (any(int2(pixel) >= postprocess.resolution))
         return;
-		
-	const float2 velocity = texture_velocity[pixel * DOWNSAMPLE];
 		
     float3 diffuse_bounce = 0;
 	
@@ -169,11 +167,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
             float2 uv_offset = round(max(step_offset * (step_index + ray_offset), 1 + step_index)) * rotation_direction;
 			float2 uv = origin_uv + uv_offset;
 			uint2 sample_pixel = uv * postprocess.resolution;
-            diffuse_bounce += compute_diffuse(origin_position, origin_normal, sample_pixel, origin_uv, uv, velocity);
+            diffuse_bounce += compute_diffuse(origin_position, origin_normal, sample_pixel, origin_uv, uv);
         }
     }
 	
-    diffuse_bounce *= ao_samples_rcp * 8.0f * GetFrame().gi_boost;
+    diffuse_bounce *= ao_samples_rcp * 8 * GetFrame().gi_boost;
 	
     output[pixel] = float4(diffuse_bounce, 1);
 }

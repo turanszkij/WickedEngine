@@ -141,7 +141,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint3 DTid : SV
 		return;
 	}
 
-	const float depth = texture_depth[DTid.xy * 2];
+	const float depth = texture_depth[DTid.xy * 4];
 
 	// Welford's online algorithm:
 	//  https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
@@ -166,7 +166,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint3 DTid : SV
 	float4 variance = (m2 / 9.0) - (mean * mean);
 	float4 stddev = sqrt(max(variance, 0.0f));
 
-	float2 velocity = texture_velocity[DTid.xy * 2];
+	float2 velocity = texture_velocity[DTid.xy * 4];
 
 	float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 
