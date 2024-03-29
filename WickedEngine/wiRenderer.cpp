@@ -12703,8 +12703,8 @@ void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution)
 	device->CreateTexture(&desc, nullptr, &res.texture_rayLengths);
 	device->SetName(&res.texture_rayLengths, "ssr_rayLengths");
 
-	desc.width = resolution.x;
-	desc.height = resolution.y;
+	desc.width = resolution.x / 2;
+	desc.height = resolution.y / 2;
 	desc.format = Format::R16G16B16A16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_resolve);
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal[0]);
@@ -12872,17 +12872,11 @@ void Postprocess_RTReflection(
 		//device->EventEnd(cmd);
 	}
 
-	// Upscale to full-res:
-	postprocess.resolution.x = desc.width;
-	postprocess.resolution.y = desc.height;
-	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
-	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-
 	// Resolve pass:
 	{
 		device->EventBegin("RTReflection - spatial resolve", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_RESOLVE], cmd);
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		const GPUResource* resarray[] = {
 			&res.texture_rayIndirectSpecular,
@@ -12931,6 +12925,7 @@ void Postprocess_RTReflection(
 	{
 		device->EventBegin("RTReflection - temporal resolve", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_TEMPORAL], cmd);
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		const GPUResource* resarray[] = {
 			&res.texture_resolve,
@@ -12974,11 +12969,16 @@ void Postprocess_RTReflection(
 		device->EventEnd(cmd);
 	}
 
+	// Upscale to full-res:
+	postprocess.resolution.x = desc.width;
+	postprocess.resolution.y = desc.height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+
 	// Bilateral blur pass:
 	{
 		device->EventBegin("RTReflection - upsample", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_UPSAMPLE], cmd);
-
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		const GPUResource* resarray[] = {
@@ -13059,8 +13059,8 @@ void CreateSSRResources(SSRResources& res, XMUINT2 resolution)
 	device->CreateTexture(&desc, nullptr, &res.texture_rayLengths);
 	device->SetName(&res.texture_rayLengths, "ssr_rayLengths");
 
-	desc.width = resolution.x;
-	desc.height = resolution.y;
+	desc.width = resolution.x / 2;
+	desc.height = resolution.y / 2;
 	desc.format = Format::R16G16B16A16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_resolve);
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal[0]);
@@ -13384,12 +13384,6 @@ void Postprocess_SSR(
 		device->EventEnd(cmd);
 	}
 
-	// Upscale to full-res:
-	postprocess.resolution.x = desc.width;
-	postprocess.resolution.y = desc.height;
-	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
-	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-
 	// Resolve pass:
 	{
 		device->EventBegin("SSR - spatial resolve", cmd);
@@ -13469,11 +13463,16 @@ void Postprocess_SSR(
 		device->EventEnd(cmd);
 	}
 
+	// Upscale to full-res:
+	postprocess.resolution.x = desc.width;
+	postprocess.resolution.y = desc.height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+
 	// Bilateral blur pass:
 	{
 		device->EventBegin("SSR - upsample", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_UPSAMPLE], cmd);
-
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		const GPUResource* resarray[] = {

@@ -20,27 +20,22 @@ static const uint2 bilateralMinMaxRadius = uint2(0, 2); // Chosen by variance
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-#if 0 // Debug
-	output[DTid.xy] = float4((texture_resolve_variance[DTid.xy] > varianceEstimateThreshold).rrr, 1.0);
-	return;
-#endif
-
 	const float depth = texture_depth[DTid.xy];
 	const float roughness = texture_roughness[DTid.xy];
 
 	if (!NeedReflection(roughness, depth, ssr_roughness_cutoff))
 	{
-		output[DTid.xy] = texture_temporal[DTid.xy];
+		output[DTid.xy] = 0;
 		return;
 	}
 
 	const float linearDepth = texture_lineardepth[DTid.xy];
 	const float3 N = decode_oct(texture_normal[DTid.xy]);
-
-	float4 outputColor = texture_temporal[DTid.xy];
-
-
-	float variance = texture_resolve_variance[DTid.xy];
+	
+	const float2 uv = (DTid.xy + 0.5) * postprocess.resolution_rcp;
+	float4 outputColor = texture_temporal.SampleLevel(sampler_linear_clamp, uv, 0);
+	
+	float variance = texture_resolve_variance.SampleLevel(sampler_linear_clamp, uv, 0);
 	bool strongBlur = variance > varianceEstimateThreshold;
 
 	float radius = strongBlur ? bilateralMinMaxRadius.y : bilateralMinMaxRadius.x;
@@ -51,7 +46,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	if (variance > varianceExitThreshold && effectiveRadius > 0)
 	{
-		float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 		float3 P = reconstruct_position(uv, depth);
 
 		float4 result = 0;
@@ -67,12 +61,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				if (all(and(sampleCoord >= int2(0, 0), sampleCoord < (int2) postprocess.resolution)))
 				{
 					const float sampleDepth = texture_depth[sampleCoord];
-					const float4 sampleColor = texture_temporal[sampleCoord];
-
+					
+					float2 sampleUV = (sampleCoord + 0.5) * postprocess.resolution_rcp;
+					const float4 sampleColor = texture_temporal.SampleLevel(sampler_linear_clamp, sampleUV, 0);
+					
 					const float3 sampleN = decode_oct(texture_normal[sampleCoord]);
 					const float sampleRoughness = texture_roughness[sampleCoord];
 
-					float2 sampleUV = (sampleCoord + 0.5) * postprocess.resolution_rcp;
 					float3 sampleP = reconstruct_position(sampleUV, sampleDepth);
 
 					// Don't let invalid roughness samples interfere
