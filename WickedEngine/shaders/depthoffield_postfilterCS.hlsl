@@ -9,66 +9,6 @@ Texture2D<float> texture_alpha : register(t1);
 RWTexture2D<float3> output_postfilter : register(u0);
 RWTexture2D<unorm float> output_alpha : register(u1);
 
-#ifndef __PSSL__
-float min3(float a, float b, float c)
-{
-	return min(min(a, b), c);
-}
-float max3(float a, float b, float c)
-{
-	return max(max(a, b), c);
-}
-float2 min3(float2 a, float2 b, float2 c)
-{
-	return float2(min3(a.x, b.x, c.x), min3(a.y, b.y, c.y));
-}
-float3 min3(float3 a, float3 b, float3 c)
-{
-	return float3(min3(a.x, b.x, c.x), min3(a.y, b.y, c.y), min3(a.z, b.z, c.z));
-}
-float4 min3(float4 a, float4 b, float4 c)
-{
-	return float4(min3(a.x, b.x, c.x), min3(a.y, b.y, c.y), min3(a.z, b.z, c.z), min3(a.w, b.w, c.w));
-}
-float2 max3(float2 a, float2 b, float2 c)
-{
-	return float2(max3(a.x, b.x, c.x), max3(a.y, b.y, c.y));
-}
-float3 max3(float3 a, float3 b, float3 c)
-{
-	return float3(max3(a.x, b.x, c.x), max3(a.y, b.y, c.y), max3(a.z, b.z, c.z));
-}
-float4 max3(float4 a, float4 b, float4 c)
-{
-	return float4(max3(a.x, b.x, c.x), max3(a.y, b.y, c.y), max3(a.z, b.z, c.z), max3(a.w, b.w, c.w));
-}
-float min4(float4 values)
-{
-	return min(min3(values.x, values.y, values.z), values.w);
-}
-float max4(float4 values)
-{
-	return max(max3(values.x, values.y, values.z), values.w);
-}
-
-float med3(float a, float b, float c)
-{
-	return max(min(a, b), min(max(a, b), c));
-}
-float2 med3(float2 a, float2 b, float2 c)
-{
-	return float2(med3(a.x, b.x, c.x), med3(a.y, b.y, c.y));
-}
-float3 med3(float3 a, float3 b, float3 c)
-{
-	return float3(med3(a.x, b.x, c.x), med3(a.y, b.y, c.y), med3(a.z, b.z, c.z));
-}
-float4 med3(float4 a, float4 b, float4 c)
-{
-	return float4(med3(a.x, b.x, c.x), med3(a.y, b.y, c.y), med3(a.z, b.z, c.z), med3(a.w, b.w, c.w));
-}
-#endif // __PSSL__
-
 static const float2 squareOffsets[] =
 {
 	{  -1.0, -1.0 },

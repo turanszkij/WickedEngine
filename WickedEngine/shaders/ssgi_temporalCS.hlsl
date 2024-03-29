@@ -134,7 +134,7 @@ float4 SamplePreviousColor(float2 prevUV, float2 size, float depth, out float di
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint3 DTid : SV_DispatchThreadID)
 {
-	if ((uint) rtdiffuse_frame == 0)
+	if ((uint) ssgi_frame == 0)
 	{
 		float4 color = texture_color_current[DTid.xy];
 		output_color[DTid.xy] = color;

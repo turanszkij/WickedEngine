@@ -2,8 +2,6 @@
 #define WI_SURFACE_HF
 #include "globals.hlsli"
 
-#define max3(v) max(max(v.x, v.y), v.z)
-
 // hard coded value for surfaces with simplified lighting:
 //	occlusion = 1
 //	roughness = 1
