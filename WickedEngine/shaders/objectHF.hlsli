@@ -895,8 +895,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (GetCamera().texture_ssgi_index >= 0)
 	{
-		float4 ssgi = bindless_textures[GetCamera().texture_ssgi_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0);
-		lighting.indirect.diffuse += ssgi.rgb;
+		surface.ssgi = bindless_textures[GetCamera().texture_ssgi_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0);
 	}
 #endif // CARTOON
 #endif // TRANSPARENT

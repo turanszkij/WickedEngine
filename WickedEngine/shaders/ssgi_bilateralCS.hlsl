@@ -9,11 +9,11 @@ Texture2D<float> texture_resolve_variance : register(t1);
 
 RWTexture2D<float4> output : register(u0);
 
-static const float depthThreshold = 10000.0;
+static const float depthThreshold = 1000.0;
 static const float normalThreshold = 1.0;
 static const float varianceEstimateThreshold = 0.015; // Larger variance values use stronger blur
 static const float varianceExitThreshold = 0.0025; // Variance needs to be higher than this value to accept blur
-static const uint2 bilateralMinMaxRadius = uint2(0, 2); // Chosen by variance
+static const uint2 bilateralMinMaxRadius = uint2(0, 4); // Chosen by variance
 
 #define BILATERAL_SIGMA 0.9
 

@@ -115,8 +115,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	[branch]
 	if (GetCamera().texture_ssgi_index >= 0)
 	{
-		float4 ssgi = bindless_textures[GetCamera().texture_ssgi_index].SampleLevel(sampler_linear_clamp, surface.screenUV, 0);
-		lighting.indirect.diffuse = ssgi.rgb;
+		surface.ssgi = bindless_textures[GetCamera().texture_ssgi_index].SampleLevel(sampler_linear_clamp, surface.screenUV, 0);
 	}
 	[branch]
 	if (GetCamera().texture_ao_index >= 0)

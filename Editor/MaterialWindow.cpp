@@ -280,7 +280,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&alphaRefSlider);
 
-	emissiveSlider.Create(0, 1, 0.0f, 1000, "Emissive: ");
+	emissiveSlider.Create(0, 10, 0.0f, 1000, "Emissive: ");
 	emissiveSlider.SetTooltip("Adjust the light emission of the surface. The color of the light emitted is that of the color of the material.");
 	emissiveSlider.SetSize(XMFLOAT2(wid, hei));
 	emissiveSlider.SetPos(XMFLOAT2(x, y += step));
