@@ -554,11 +554,18 @@ namespace wi::renderer
 	);
 	struct SSGIResources
 	{
-		mutable int frame = 0;
 		wi::graphics::Texture texture_preparedInput;
-		wi::graphics::Texture texture_rayIndirectDiffuse;
-		wi::graphics::Texture texture_temporal[2];
-		wi::graphics::Texture texture_temporal_variance[2];
+		wi::graphics::Texture texture_atlas2x_depth;
+		wi::graphics::Texture texture_atlas2x_normal;
+		wi::graphics::Texture texture_atlas4x_depth;
+		wi::graphics::Texture texture_atlas4x_normal;
+		wi::graphics::Texture texture_atlas8x_depth;
+		wi::graphics::Texture texture_atlas8x_normal;
+		wi::graphics::Texture texture_atlas16x_depth;
+		wi::graphics::Texture texture_atlas16x_normal;
+		wi::graphics::Texture texture_depth_mips;
+		wi::graphics::Texture texture_normal_mips;
+		wi::graphics::Texture texture_diffuse_mips;
 	};
 	void CreateSSGIResources(SSGIResources& res, XMUINT2 resolution);
 	void Postprocess_SSGI(

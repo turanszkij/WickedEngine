@@ -1041,8 +1041,8 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_NORMALSFROMDEPTH], "normalsfromdepthCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SCREENSPACESHADOW], "screenspaceshadowCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSGI_PREPAREINPUT], "ssgi_prepareinputCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSGI_DEINTERLEAVE], "ssgi_deinterleaveCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSGI], "ssgiCS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSGI_TEMPORAL], "ssgi_temporalCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSGI_UPSAMPLE], "ssgi_upsampleCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_RTDIFFUSE_SPATIAL], "rtdiffuse_spatialCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_RTDIFFUSE_TEMPORAL], "rtdiffuse_temporalCS.cso"); });
@@ -12443,8 +12443,6 @@ void Postprocess_RTDiffuse(
 }
 void CreateSSGIResources(SSGIResources& res, XMUINT2 resolution)
 {
-	res.frame = 0;
-
 	TextureDesc desc;
 	desc.type = TextureDesc::Type::TEXTURE_2D;
 	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
@@ -12455,15 +12453,59 @@ void CreateSSGIResources(SSGIResources& res, XMUINT2 resolution)
 	desc.height = std::max(1u, resolution.y / 8 / 8);
 	device->CreateTexture(&desc, nullptr, &res.texture_preparedInput);
 
-	desc.width = resolution.x / 4;
-	desc.height = resolution.y / 4;
-	device->CreateTexture(&desc, nullptr, &res.texture_rayIndirectDiffuse);
+	desc.width = (resolution.x + 7) / 8;
+	desc.height = (resolution.y + 7) / 8;
+	desc.array_size = 16;
+	desc.format = Format::R32_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.texture_atlas2x_depth);
+	desc.format = Format::R16G16_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.texture_atlas2x_normal);
 
-	device->CreateTexture(&desc, nullptr, &res.texture_temporal[0]);
-	device->CreateTexture(&desc, nullptr, &res.texture_temporal[1]);
-	desc.format = Format::R16_FLOAT;
-	device->CreateTexture(&desc, nullptr, &res.texture_temporal_variance[0]);
-	device->CreateTexture(&desc, nullptr, &res.texture_temporal_variance[1]);
+	desc.width = (resolution.x + 15) / 16;
+	desc.height = (resolution.y + 15) / 16;
+	desc.array_size = 16;
+	desc.format = Format::R32_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.texture_atlas4x_depth);
+	desc.format = Format::R16G16_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.texture_atlas4x_normal);
+
+	desc.width = (resolution.x + 31) / 32;
+	desc.height = (resolution.y + 31) / 32;
+	desc.array_size = 16;
+	desc.format = Format::R32_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.texture_atlas8x_depth);
+	desc.format = Format::R16G16_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.texture_atlas8x_normal);
+
+	desc.width = (resolution.x + 63) / 64;
+	desc.height = (resolution.y + 63) / 64;
+	desc.array_size = 16;
+	desc.format = Format::R32_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.texture_atlas16x_depth);
+	desc.format = Format::R16G16_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.texture_atlas16x_normal);
+
+	desc.array_size = 1;
+	desc.mip_levels = 4;
+	desc.width = (resolution.x + 1) / 2;
+	desc.height = (resolution.y + 1) / 2;
+	desc.format = Format::R32_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.texture_depth_mips);
+	desc.format = Format::R16G16_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.texture_normal_mips);
+	desc.format = Format::R11G11B10_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.texture_diffuse_mips);
+
+	for (uint32_t i = 0; i < desc.mip_levels; ++i)
+	{
+		int subresource_index;
+		subresource_index = device->CreateSubresource(&res.texture_depth_mips, SubresourceType::UAV, 0, 1, i, 1);
+		assert(subresource_index == i);
+		subresource_index = device->CreateSubresource(&res.texture_normal_mips, SubresourceType::UAV, 0, 1, i, 1);
+		assert(subresource_index == i);
+		subresource_index = device->CreateSubresource(&res.texture_diffuse_mips, SubresourceType::UAV, 0, 1, i, 1);
+		assert(subresource_index == i);
+	}
 }
 void Postprocess_SSGI(
 	const SSGIResources& res,
@@ -12475,56 +12517,67 @@ void Postprocess_SSGI(
 	device->EventBegin("Postprocess_SSGI", cmd);
 	auto profilerRange = wi::profiler::BeginRangeGPU("SSGI", cmd);
 
-	int temporal_output = res.frame % 2;
-	int temporal_history = 1 - temporal_output;
-
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Image(&res.texture_preparedInput, res.texture_preparedInput.desc.layout, ResourceState::UNORDERED_ACCESS),
-			GPUBarrier::Image(&res.texture_rayIndirectDiffuse, res.texture_rayIndirectDiffuse.desc.layout, ResourceState::UNORDERED_ACCESS),
-			GPUBarrier::Image(&res.texture_temporal[temporal_output], res.texture_temporal[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
-			GPUBarrier::Image(&res.texture_temporal_variance[temporal_output], res.texture_temporal_variance[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
-			GPUBarrier::Image(&res.texture_temporal[temporal_history], res.texture_temporal[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
-			GPUBarrier::Image(&res.texture_temporal_variance[temporal_history], res.texture_temporal_variance[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_atlas2x_depth, res.texture_atlas2x_depth.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_atlas2x_normal, res.texture_atlas2x_normal.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_atlas4x_depth, res.texture_atlas4x_depth.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_atlas4x_normal, res.texture_atlas4x_normal.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_atlas8x_depth, res.texture_atlas8x_depth.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_atlas8x_normal, res.texture_atlas8x_normal.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_atlas16x_depth, res.texture_atlas16x_depth.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_atlas16x_normal, res.texture_atlas16x_normal.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_depth_mips, res.texture_depth_mips.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_normal_mips, res.texture_normal_mips.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_diffuse_mips, res.texture_diffuse_mips.desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
 	device->ClearUAV(&res.texture_preparedInput, 0, cmd);
-	device->ClearUAV(&res.texture_rayIndirectDiffuse, 0, cmd);
-	device->ClearUAV(&res.texture_temporal[temporal_output], 0, cmd);
-	device->ClearUAV(&res.texture_temporal_variance[temporal_output], 0, cmd);
-	if (res.frame == 0)
-	{
-		device->ClearUAV(&res.texture_temporal[temporal_history], 0, cmd);
-		device->ClearUAV(&res.texture_temporal_variance[temporal_history], 0, cmd);
-	}
+	device->ClearUAV(&res.texture_atlas2x_depth, 0, cmd);
+	device->ClearUAV(&res.texture_atlas2x_normal, 0, cmd);
+	device->ClearUAV(&res.texture_atlas4x_depth, 0, cmd);
+	device->ClearUAV(&res.texture_atlas4x_normal, 0, cmd);
+	device->ClearUAV(&res.texture_atlas8x_depth, 0, cmd);
+	device->ClearUAV(&res.texture_atlas8x_normal, 0, cmd);
+	device->ClearUAV(&res.texture_atlas16x_depth, 0, cmd);
+	device->ClearUAV(&res.texture_atlas16x_normal, 0, cmd);
+	device->ClearUAV(&res.texture_depth_mips, 0, cmd);
+	device->ClearUAV(&res.texture_normal_mips, 0, cmd);
+	device->ClearUAV(&res.texture_diffuse_mips, 0, cmd);
 	device->ClearUAV(&output, 0, cmd);
 
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Memory(&res.texture_preparedInput),
-			GPUBarrier::Memory(&res.texture_rayIndirectDiffuse),
-			GPUBarrier::Memory(&res.texture_temporal[temporal_output]),
-			GPUBarrier::Memory(&res.texture_temporal_variance[temporal_output]),
-			GPUBarrier::Image(&res.texture_temporal[temporal_history], ResourceState::UNORDERED_ACCESS, res.texture_temporal[temporal_output].desc.layout),
-			GPUBarrier::Image(&res.texture_temporal_variance[temporal_history], ResourceState::UNORDERED_ACCESS, res.texture_temporal_variance[temporal_output].desc.layout),
-			GPUBarrier::Memory(&output),
+			GPUBarrier::Memory(&res.texture_atlas2x_depth),
+			GPUBarrier::Memory(&res.texture_atlas2x_normal),
+			GPUBarrier::Memory(&res.texture_atlas4x_depth),
+			GPUBarrier::Memory(&res.texture_atlas4x_normal),
+			GPUBarrier::Memory(&res.texture_atlas8x_depth),
+			GPUBarrier::Memory(&res.texture_atlas8x_normal),
+			GPUBarrier::Memory(&res.texture_atlas16x_depth),
+			GPUBarrier::Memory(&res.texture_atlas16x_normal),
+			GPUBarrier::Memory(&res.texture_depth_mips),
+			GPUBarrier::Memory(&res.texture_normal_mips),
+			GPUBarrier::Memory(&res.texture_diffuse_mips),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
 	BindCommonResources(cmd);
 
-	PostProcess postprocess;
+	PostProcess postprocess = {};
 
 	{
 		device->EventBegin("SSGI - prepare input", cmd);
-
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSGI_PREPAREINPUT], cmd);
 
 		const TextureDesc& desc = res.texture_preparedInput.GetDesc();
+
 		postprocess.resolution.x = desc.width * 8;
 		postprocess.resolution.y = desc.height * 8;
 		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
@@ -12548,120 +12601,207 @@ void Postprocess_SSGI(
 			cmd
 		);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.texture_preparedInput, ResourceState::UNORDERED_ACCESS, res.texture_rayIndirectDiffuse.desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
+		device->EventEnd(cmd);
+	}
+
+	{
+		device->EventBegin("SSGI - deinterleave", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSGI_DEINTERLEAVE], cmd);
+
+		const GPUResource* uavs[] = {
+			&res.texture_atlas2x_depth,
+			&res.texture_atlas2x_normal,
+			&res.texture_atlas4x_depth,
+			&res.texture_atlas4x_normal,
+			&res.texture_atlas8x_depth,
+			&res.texture_atlas8x_normal,
+			&res.texture_atlas16x_depth,
+			&res.texture_atlas16x_normal,
+		};
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+		device->BindUAV(&res.texture_depth_mips, arraysize(uavs) + 0, cmd, 0);
+		device->BindUAV(&res.texture_normal_mips, arraysize(uavs) + 1, cmd, 0);
+		device->BindUAV(&res.texture_depth_mips, arraysize(uavs) + 2, cmd, 1);
+		device->BindUAV(&res.texture_normal_mips, arraysize(uavs) + 3, cmd, 1);
+		device->BindUAV(&res.texture_depth_mips, arraysize(uavs) + 4, cmd, 2);
+		device->BindUAV(&res.texture_normal_mips, arraysize(uavs) + 5, cmd, 2);
+		device->BindUAV(&res.texture_depth_mips, arraysize(uavs) + 6, cmd, 3);
+		device->BindUAV(&res.texture_normal_mips, arraysize(uavs) + 7, cmd, 3);
+
+		const TextureDesc& desc = res.texture_atlas4x_depth.GetDesc();
+		device->Dispatch(
+			desc.width,
+			desc.height,
+			1,
+			cmd
+		);
 
 		device->EventEnd(cmd);
 	}
 
-	const TextureDesc& desc = output.desc;
-
-	// Render half-res:
-	postprocess.resolution.x = desc.width / 4;
-	postprocess.resolution.y = desc.height / 4;
-	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
-	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-	ssgi_frame = (float)res.frame;
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&res.texture_preparedInput, ResourceState::UNORDERED_ACCESS, res.texture_preparedInput.desc.layout),
+			GPUBarrier::Image(&res.texture_atlas2x_depth, ResourceState::UNORDERED_ACCESS, res.texture_atlas2x_depth.desc.layout),
+			GPUBarrier::Image(&res.texture_atlas2x_normal, ResourceState::UNORDERED_ACCESS, res.texture_atlas2x_normal.desc.layout),
+			GPUBarrier::Image(&res.texture_atlas4x_depth, ResourceState::UNORDERED_ACCESS, res.texture_atlas4x_depth.desc.layout),
+			GPUBarrier::Image(&res.texture_atlas4x_normal, ResourceState::UNORDERED_ACCESS, res.texture_atlas4x_normal.desc.layout),
+			GPUBarrier::Image(&res.texture_atlas8x_depth, ResourceState::UNORDERED_ACCESS, res.texture_atlas8x_depth.desc.layout),
+			GPUBarrier::Image(&res.texture_atlas8x_normal, ResourceState::UNORDERED_ACCESS, res.texture_atlas8x_normal.desc.layout),
+			GPUBarrier::Image(&res.texture_atlas16x_depth, ResourceState::UNORDERED_ACCESS, res.texture_atlas16x_depth.desc.layout),
+			GPUBarrier::Image(&res.texture_atlas16x_normal, ResourceState::UNORDERED_ACCESS, res.texture_atlas16x_normal.desc.layout),
+			GPUBarrier::Image(&res.texture_depth_mips, ResourceState::UNORDERED_ACCESS, res.texture_depth_mips.desc.layout),
+			GPUBarrier::Image(&res.texture_normal_mips, ResourceState::UNORDERED_ACCESS, res.texture_normal_mips.desc.layout),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 
 	{
-		device->EventBegin("SSGI", cmd);
-
+		device->EventBegin("SSGI - diffuse", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSGI], cmd);
 
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-
-		const GPUResource* resarray[] = {
-			&res.texture_preparedInput,
-		};
-		device->BindResources(resarray, 0, arraysize(resarray), cmd);
-
-		const GPUResource* uavs[] = {
-			&res.texture_rayIndirectDiffuse,
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-		device->Dispatch(
-			(postprocess.resolution.x + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(postprocess.resolution.y + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			1,
-			cmd
-		);
-
+		// 2x:
 		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.texture_rayIndirectDiffuse, ResourceState::UNORDERED_ACCESS, res.texture_rayIndirectDiffuse.desc.layout),
+			const GPUResource* resarray[] = {
+				&res.texture_preparedInput,
+				&res.texture_atlas2x_depth,
+				&res.texture_atlas2x_normal,
 			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
+			device->BindResources(resarray, 0, arraysize(resarray), cmd);
+			device->BindUAV(&res.texture_diffuse_mips, 0, cmd, 0);
+
+			const TextureDesc& desc = res.texture_atlas2x_depth.GetDesc();
+
+			postprocess.resolution.x = desc.width;
+			postprocess.resolution.y = desc.height;
+			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+			postprocess.params0.x = 1; // range
+			postprocess.params0.y = 1.4f; // spread
+			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+			device->Dispatch(
+				(desc.width + 7) / 8,
+				(desc.height + 7) / 8,
+				16,
+				cmd
+			);
+		}
+		// 4x:
+		{
+			const GPUResource* resarray[] = {
+				&res.texture_preparedInput,
+				&res.texture_atlas4x_depth,
+				&res.texture_atlas4x_normal,
+			};
+			device->BindResources(resarray, 0, arraysize(resarray), cmd);
+			device->BindUAV(&res.texture_diffuse_mips, 0, cmd, 1);
+
+			const TextureDesc& desc = res.texture_atlas4x_depth.GetDesc();
+
+			postprocess.resolution.x = desc.width;
+			postprocess.resolution.y = desc.height;
+			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+			postprocess.params0.x = 4; // range
+			postprocess.params0.y = 1.8f; // spread
+			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+			device->Dispatch(
+				(desc.width + 7) / 8,
+				(desc.height + 7) / 8,
+				16,
+				cmd
+			);
+		}
+		// 8x:
+		{
+			const GPUResource* resarray[] = {
+				&res.texture_preparedInput,
+				&res.texture_atlas8x_depth,
+				&res.texture_atlas8x_normal,
+			};
+			device->BindResources(resarray, 0, arraysize(resarray), cmd);
+			device->BindUAV(&res.texture_diffuse_mips, 0, cmd, 2);
+
+			const TextureDesc& desc = res.texture_atlas8x_depth.GetDesc();
+
+			postprocess.resolution.x = desc.width;
+			postprocess.resolution.y = desc.height;
+			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+			postprocess.params0.x = 6; // range
+			postprocess.params0.y = 1.2f; // spread
+			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+			device->Dispatch(
+				(desc.width + 7) / 8,
+				(desc.height + 7) / 8,
+				16,
+				cmd
+			);
+		}
+		// 16x:
+		{
+			const GPUResource* resarray[] = {
+				&res.texture_preparedInput,
+				&res.texture_atlas16x_depth,
+				&res.texture_atlas16x_normal,
+			};
+			device->BindResources(resarray, 0, arraysize(resarray), cmd);
+			device->BindUAV(&res.texture_diffuse_mips, 0, cmd, 3);
+
+			const TextureDesc& desc = res.texture_atlas16x_depth.GetDesc();
+
+			postprocess.resolution.x = desc.width;
+			postprocess.resolution.y = desc.height;
+			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+			postprocess.params0.x = 8; // range
+			postprocess.params0.y = 0.75f; // spread
+			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+			device->Dispatch(
+				(desc.width + 7) / 8,
+				(desc.height + 7) / 8,
+				16,
+				cmd
+			);
 		}
 
 		device->EventEnd(cmd);
 	}
 
-	// Temporal pass:
 	{
-		device->EventBegin("SSGI - temporal resolve", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSGI_TEMPORAL], cmd);
-
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-
-		const GPUResource* resarray[] = {
-			&res.texture_rayIndirectDiffuse,
-			&res.texture_temporal[temporal_history],
-			&res.texture_temporal_variance[temporal_history],
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&res.texture_diffuse_mips, ResourceState::UNORDERED_ACCESS, res.texture_diffuse_mips.desc.layout),
 		};
-		device->BindResources(resarray, 0, arraysize(resarray), cmd);
-
-		const GPUResource* uavs[] = {
-			&res.texture_temporal[temporal_output],
-			&res.texture_temporal_variance[temporal_output],
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-		device->Dispatch(
-			(postprocess.resolution.x + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(postprocess.resolution.y + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			1,
-			cmd
-		);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.texture_temporal[temporal_output], ResourceState::UNORDERED_ACCESS, res.texture_temporal[temporal_output].desc.layout),
-				GPUBarrier::Image(&res.texture_temporal_variance[temporal_output], ResourceState::UNORDERED_ACCESS, res.texture_temporal_variance[temporal_output].desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->EventEnd(cmd);
+		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	// Full res:
-	postprocess.resolution.x = desc.width;
-	postprocess.resolution.y = desc.height;
-	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
-	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-
-	// Bilateral blur pass:
 	{
 		device->EventBegin("SSGI - upsample", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSGI_UPSAMPLE], cmd);
 
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-
 		const GPUResource* resarray[] = {
-			&res.texture_temporal[temporal_output],
-			&res.texture_temporal_variance[temporal_output],
+			&res.texture_depth_mips,
+			&res.texture_normal_mips,
+			&res.texture_diffuse_mips,
 		};
 		device->BindResources(resarray, 0, arraysize(resarray), cmd);
 
 		const GPUResource* uavs[] = {
-			&output,
+			&output
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+		const TextureDesc& desc = output.desc;
+		postprocess.resolution.x = desc.width;
+		postprocess.resolution.y = desc.height;
+		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		device->Dispatch(
 			(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -12679,8 +12819,6 @@ void Postprocess_SSGI(
 
 		device->EventEnd(cmd);
 	}
-
-	res.frame++;
 
 	wi::profiler::EndRange(profilerRange);
 	device->EventEnd(cmd);
