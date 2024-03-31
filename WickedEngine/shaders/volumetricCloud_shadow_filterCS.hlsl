@@ -30,7 +30,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 			if (all(and(neighborCoord >= int2(0, 0), neighborCoord < (int2) postprocess.resolution)))
 			{
-				float3 neighborResult = input[neighborCoord];
+				const float2 neighborUV = (neighborCoord + 0.5) * postprocess.resolution_rcp;
+				float3 neighborResult = input.SampleLevel(sampler_linear_clamp, neighborUV, 0);
 				
 				filteredResult += neighborResult;
 				sum += 1.0;
