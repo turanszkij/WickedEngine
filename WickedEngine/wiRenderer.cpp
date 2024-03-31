@@ -12450,6 +12450,9 @@ void CreateSSGIResources(SSGIResources& res, XMUINT2 resolution)
 	desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 	desc.format = Format::R11G11B10_FLOAT;
 
+	resolution.x = AlignTo(resolution.x, 64u);
+	resolution.y = AlignTo(resolution.y, 64u);
+
 	desc.width = std::max(1u, resolution.x / 8 / 8);
 	desc.height = std::max(1u, resolution.y / 8 / 8);
 	device->CreateTexture(&desc, nullptr, &res.texture_preparedInput);
@@ -12687,12 +12690,12 @@ void Postprocess_SSGI(
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 			postprocess.params0.x = 1; // range
-			postprocess.params0.y = 1.4f; // spread
+			postprocess.params0.y = 14; // spread
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
-				(desc.width + 7) / 8,
-				(desc.height + 7) / 8,
+				(desc.width + 15) / 16,
+				(desc.height + 15) / 16,
 				16,
 				cmd
 			);
@@ -12713,13 +12716,13 @@ void Postprocess_SSGI(
 			postprocess.resolution.y = desc.height;
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-			postprocess.params0.x = 4; // range
-			postprocess.params0.y = 1.8f; // spread
+			postprocess.params0.x = 2; // range
+			postprocess.params0.y = 7; // spread
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
-				(desc.width + 7) / 8,
-				(desc.height + 7) / 8,
+				(desc.width + 15) / 16,
+				(desc.height + 15) / 16,
 				16,
 				cmd
 			);
@@ -12740,13 +12743,13 @@ void Postprocess_SSGI(
 			postprocess.resolution.y = desc.height;
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-			postprocess.params0.x = 6; // range
-			postprocess.params0.y = 1.2f; // spread
+			postprocess.params0.x = 3; // range
+			postprocess.params0.y = 5; // spread
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
-				(desc.width + 7) / 8,
-				(desc.height + 7) / 8,
+				(desc.width + 15) / 16,
+				(desc.height + 15) / 16,
 				16,
 				cmd
 			);
@@ -12767,13 +12770,13 @@ void Postprocess_SSGI(
 			postprocess.resolution.y = desc.height;
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-			postprocess.params0.x = 8; // range
-			postprocess.params0.y = 0.75f; // spread
+			postprocess.params0.x = 7; // range
+			postprocess.params0.y = 2; // spread
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
-				(desc.width + 7) / 8,
-				(desc.height + 7) / 8,
+				(desc.width + 15) / 16,
+				(desc.height + 15) / 16,
 				16,
 				cmd
 			);
@@ -12807,6 +12810,8 @@ void Postprocess_SSGI(
 			postprocess.resolution.y = desc.height >> 2;
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+			postprocess.params0.x = 4; // range
+			postprocess.params0.y = 2; // spread
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
@@ -12838,6 +12843,8 @@ void Postprocess_SSGI(
 			postprocess.resolution.y = desc.height >> 1;
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+			postprocess.params0.x = 2; // range
+			postprocess.params0.y = 2; // spread
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
@@ -12869,6 +12876,8 @@ void Postprocess_SSGI(
 			postprocess.resolution.y = desc.height;
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+			postprocess.params0.x = 1; // range
+			postprocess.params0.y = 4; // spread
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
@@ -12896,15 +12905,17 @@ void Postprocess_SSGI(
 			device->BindUAV(&output, 0, cmd);
 
 			const TextureDesc& desc = output.desc;
-			postprocess.resolution.x = desc.width;
-			postprocess.resolution.y = desc.height;
+			postprocess.resolution.x = AlignTo(desc.width, 64u);	// align = uv correction!
+			postprocess.resolution.y = AlignTo(desc.height, 64u);	// align = uv correction!
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+			postprocess.params0.x = 1; // range
+			postprocess.params0.y = 2; // spread
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
-				(postprocess.resolution.x + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-				(postprocess.resolution.y + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				(desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 				1,
 				cmd
 			);

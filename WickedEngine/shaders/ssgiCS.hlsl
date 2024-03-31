@@ -2,8 +2,6 @@
 #include "stochasticSSRHF.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
-#define OCCLUSION_TEST
-
 PUSHCONSTANT(postprocess, PostProcess);
 
 Texture2D<float4> input : register(t0);
@@ -11,6 +9,18 @@ Texture2DArray<float> input_depth : register(t1);
 Texture2DArray<float2> input_normal : register(t2);
 
 RWTexture2D<float4> output_diffuse : register(u0);
+
+static const uint THREADCOUNT = 16;
+static const int TILE_BORDER = 18;
+static const int TILE_SIZE = TILE_BORDER + THREADCOUNT + TILE_BORDER;
+groupshared uint cache_xy[TILE_SIZE * TILE_SIZE];
+groupshared float cache_z[TILE_SIZE * TILE_SIZE];
+groupshared uint cache_rgb[TILE_SIZE * TILE_SIZE];
+
+inline uint coord_to_cache(int2 coord)
+{
+	return flatten2D(clamp(TILE_BORDER + coord, 0, TILE_SIZE - 1), TILE_SIZE);
+}
 
 static const float radius = 14;
 static const float radius2 = radius * radius;
@@ -27,66 +37,122 @@ static const float depth_tests[] = {0.125, 0.25, 0.75};
 float3 compute_diffuse(
 	float3 origin_position,
 	float3 origin_normal,
-	float2 origin_uv,
-	float2 sample_uv,
-	uint layer
+	int2 GTid,
+	int2 offset
 )
 {
-	float sample_depth = input_depth.SampleLevel(sampler_point_clamp, float3(sample_uv, layer), 0);
-	float3 sample_position = reconstruct_position(sample_uv, sample_depth, GetCamera().inverse_projection);
-    float3 origin_to_sample = sample_position - origin_position;
-    float distance2 = dot(origin_to_sample, origin_to_sample);
+	const int2 sampleLoc = GTid + offset;
+	const uint t = coord_to_cache(sampleLoc);
+	float3 sample_position;
+	sample_position.z = cache_z[t];
+	if(sample_position.z > GetCamera().z_far - 1)
+		return 0;
+	sample_position.xy = unpack_half2(cache_xy[t]);
+    const float3 origin_to_sample = sample_position - origin_position;
+    const float distance2 = dot(origin_to_sample, origin_to_sample);
     float occlusion = saturate(dot(origin_normal, origin_to_sample));
     occlusion *= saturate(distance2 * radius2_rcp_negative + 1.0f);
-	//occlusion /= max(0.001, distance2 * 0.05);
 	
-#ifdef OCCLUSION_TEST
 	if(occlusion > 0)
 	{
 		const float origin_z = origin_position.z;
 		const float sample_z = sample_position.z;
-		for(uint i = 0; i < depth_test_count; ++i)
+
+#if 1
+		// DDA occlusion:
+		int2 start = GTid;
+		int2 goal = sampleLoc;
+	
+		const int dx = int(goal.x) - int(start.x);
+		const int dy = int(goal.y) - int(start.y);
+
+		int step = max(abs(dx), abs(dy));
+		//step = (step + 1) / 2; // reduce steps
+
+		const float x_incr = float(dx) / step;
+		const float y_incr = float(dy) / step;
+
+		float x = float(start.x);
+		float y = float(start.y);
+
+		for (int i = 0; i < step - 1; i++)
 		{
-			const float t = depth_tests[i];
-			const float z = lerp(origin_z, sample_z, t);
-			const float2 uv = lerp(origin_uv, sample_uv, t);
-			const float depth = input_depth.SampleLevel(sampler_point_clamp, float3(uv, layer), 0);
-			const float lineardepth = compute_lineardepth(depth);
-			if(lineardepth < z - 0.1)
+			x += x_incr;
+			y += y_incr;
+			
+			int2 loc = int2(round(x), round(y));
+			const uint tt = coord_to_cache(loc);
+			
+			float dt = float(i) / float(step);
+			float z = lerp(origin_z, sample_z, dt);
+
+			const float sz = cache_z[tt];
+			if(sz < z - 0.1)
 			{
-				return occlusion * input.SampleLevel(sampler_linear_clamp, uv, 0).rgb;
+				return occlusion * Unpack_R11G11B10_FLOAT(cache_rgb[tt]);
 			}
 		}
+#else
+		// Simple occlusion:
+		for (uint i = 0; i < depth_test_count; ++i)
+		{
+			const float dt = depth_tests[i];
+			const float z = lerp(origin_z, sample_z, dt);
+			const int2 loc = round(lerp(float2(GTid), float2(sampleLoc), dt));
+			const uint tt = coord_to_cache(loc);
+			const float sz = cache_z[tt];
+			if (sz < z - 0.1)
+			{
+				return occlusion * Unpack_R11G11B10_FLOAT(cache_rgb[tt]);
+			}
+		}
+#endif
 	}
-#endif // OCCLUSION_TEST
 
-    return occlusion * input.SampleLevel(sampler_linear_clamp, sample_uv, 0).rgb;
+    return occlusion * Unpack_R11G11B10_FLOAT(cache_rgb[t]);
 }
 
-[numthreads(8, 8, 1)]
-void main(uint3 DTid : SV_DispatchThreadID)
+[numthreads(THREADCOUNT, THREADCOUNT, 1)]
+void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint2 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
 	const uint layer = DTid.z;
-	const uint2 pixel = DTid.xy;
-	const float2 uv = (pixel + 0.5) * postprocess.resolution_rcp;
+	
+	const int2 tile_upperleft = Gid.xy * THREADCOUNT - TILE_BORDER;
+	for(uint t = groupIndex; t < TILE_SIZE * TILE_SIZE; t += THREADCOUNT * THREADCOUNT)
+	{
+		const int2 pixel = tile_upperleft + unflatten2D(t, TILE_SIZE);
+		const float depth = input_depth[uint3(pixel, layer)];
+		const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
+		const float3 P = reconstruct_position(uv, depth, GetCamera().inverse_projection);
+		const float3 color = input.SampleLevel(sampler_linear_clamp, uv, 0).rgb;
+		cache_xy[t] = pack_half2(P.xy);
+		cache_z[t] = P.z;
+		cache_rgb[t] = Pack_R11G11B10_FLOAT(color.rgb);
+	}
+	GroupMemoryBarrierWithGroupSync();
 
-	const float depth = input_depth[uint3(pixel, layer)];
-	const float3 P = reconstruct_position(uv, depth, GetCamera().inverse_projection);
+	const uint t = coord_to_cache(GTid.xy);
+	float3 P;
+	P.z = cache_z[t];
+	if(P.z > GetCamera().z_far - 1)
+		return;
+
+	P.xy = unpack_half2(cache_xy[t]);
+	
+	const uint2 pixel = DTid.xy;
 	const float3 N = mul((float3x3)GetCamera().view, decode_oct(input_normal[uint3(pixel, layer)].rg));
 	
 	float3 diffuse = 0;
 	float sum = 0;
-	int range = int(postprocess.params0.x);
-	float spread = postprocess.params0.y * 2;
-	spread += dither(pixel);
+	const int range = int(postprocess.params0.x);
+	const float spread = postprocess.params0.y + dither(pixel);
 	for(int x = -range; x <= range; ++x)
 	{
 		for(int y = -range; y <= range; ++y)
 		{
-			const float2 offset = float2(x, y) * spread * postprocess.resolution_rcp;
-			const float2 sample_uv = uv + offset;
-			const float weight = 1;
-			diffuse += compute_diffuse(P, N, uv, sample_uv, layer) * weight;
+			const int2 offset = round(float2(x, y) * spread);
+			const float weight = saturate(1 - pow((abs(x) / float(range)) * (abs(y) / float(range)), 2));
+			diffuse += compute_diffuse(P, N, GTid, offset) * weight;
 			sum += weight;
 		}
 	}
@@ -94,7 +160,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	{
 		diffuse = diffuse / sum;
 	}
-	
+
+	// Interleave:
     uint2 OutPixel = DTid.xy << 2 | uint2(DTid.z & 3, DTid.z >> 2);
     output_diffuse[OutPixel] = float4(diffuse, 1);
 }
