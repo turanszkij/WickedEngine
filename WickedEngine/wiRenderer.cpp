@@ -12784,7 +12784,7 @@ void Postprocess_SSGI(
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&res.texture_diffuse_mips, ResourceState::UNORDERED_ACCESS, res.texture_diffuse_mips.desc.layout),
+			GPUBarrier::Image(&res.texture_diffuse_mips, ResourceState::UNORDERED_ACCESS, res.texture_diffuse_mips.desc.layout, 3),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -12819,7 +12819,6 @@ void Postprocess_SSGI(
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Image(&res.texture_diffuse_mips, ResourceState::UNORDERED_ACCESS, res.texture_diffuse_mips.desc.layout, 2),
-					GPUBarrier::Image(&res.texture_diffuse_mips, res.texture_diffuse_mips.desc.layout, ResourceState::UNORDERED_ACCESS, 1),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -12851,7 +12850,6 @@ void Postprocess_SSGI(
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Image(&res.texture_diffuse_mips, ResourceState::UNORDERED_ACCESS, res.texture_diffuse_mips.desc.layout, 1),
-					GPUBarrier::Image(&res.texture_diffuse_mips, res.texture_diffuse_mips.desc.layout, ResourceState::UNORDERED_ACCESS, 0),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
