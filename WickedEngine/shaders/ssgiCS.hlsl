@@ -60,14 +60,14 @@ float3 compute_diffuse(
 
 #if 1
 		// DDA occlusion:
-		int2 start = GTid;
-		int2 goal = sampleLoc;
+		const int2 start = GTid;
+		const int2 goal = sampleLoc;
 	
 		const int dx = int(goal.x) - int(start.x);
 		const int dy = int(goal.y) - int(start.y);
 
 		int step = max(abs(dx), abs(dy));
-		//step = (step + 1) / 2; // reduce steps
+		step = (step + 1) / 2; // reduce steps
 
 		const float x_incr = float(dx) / step;
 		const float y_incr = float(dy) / step;

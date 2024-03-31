@@ -28,7 +28,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 
 	float3 result = 0;
 	float sum = 0;
-#if 0
+#if 1
 	const int range = int(postprocess.params0.x);
 	const float spread = postprocess.params0.y;
 #else
