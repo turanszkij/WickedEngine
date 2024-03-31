@@ -12,12 +12,17 @@ Texture2DArray<float2> input_normal : register(t2);
 
 RWTexture2D<float4> output_diffuse : register(u0);
 
-static const float radius = 20;
+static const float radius = 14;
 static const float radius2 = radius * radius;
 static const float radius2_rcp_negative  = -rcp(radius2);
 
+#if 0
+static const uint depth_test_count = 1;
+static const float depth_tests[] = {0.33};
+#else
 static const uint depth_test_count = 3;
 static const float depth_tests[] = {0.125, 0.25, 0.75};
+#endif
 
 float3 compute_diffuse(
 	float3 origin_position,
@@ -69,16 +74,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float3 P = reconstruct_position(uv, depth, GetCamera().inverse_projection);
 	const float3 N = mul((float3x3)GetCamera().view, decode_oct(input_normal[uint3(pixel, layer)].rg));
 	
-	const float rotation = PI * 0.25;
-	const float2x2 rot = float2x2(
-		cos(rotation), -sin(rotation),
-		sin(rotation), cos(rotation)
-	);
-	
 	float3 diffuse = 0;
 	float sum = 0;
 	int range = int(postprocess.params0.x);
-	float spread = postprocess.params0.y;
+	float spread = postprocess.params0.y * 2;
+	spread += dither(pixel);
 	for(int x = -range; x <= range; ++x)
 	{
 		for(int y = -range; y <= range; ++y)
@@ -94,8 +94,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	{
 		diffuse = diffuse / sum;
 	}
-
-	//diffuse *= 3;
 	
     uint2 OutPixel = DTid.xy << 2 | uint2(DTid.z & 3, DTid.z >> 2);
     output_diffuse[OutPixel] = float4(diffuse, 1);

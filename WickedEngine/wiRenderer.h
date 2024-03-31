@@ -571,6 +571,8 @@ namespace wi::renderer
 	void Postprocess_SSGI(
 		const SSGIResources& res,
 		const wi::graphics::Texture& input,
+		const wi::graphics::Texture& input_depth,
+		const wi::graphics::Texture& input_normal,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd
 	);

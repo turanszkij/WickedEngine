@@ -46,7 +46,7 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	
 	color = clamp(color, 0, 65000);
 
-	// Reduce with MAX filter:
+	// Reduce and filter:
 
 	color = max(color, QuadReadAcrossX(color));
 	color = max(color, QuadReadAcrossY(color));
@@ -55,10 +55,10 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	uint lane_index = WaveGetLaneIndex();
 	if(all(GTid % 4 == 0))
 	{
-		color = max(color, WaveReadLaneAt(color, lane_index + 0x08));
-		color = max(color, WaveReadLaneAt(color, lane_index + 0x04));
-		color = max(color, WaveReadLaneAt(color, lane_index + 0x0c));
-		shared_colors[GTid.x / 4][GTid.y / 4] = color;
+		float3 color0 = max(color, WaveReadLaneAt(color, lane_index + 0x08));
+		float3 color1 = max(color, WaveReadLaneAt(color, lane_index + 0x04));
+		float3 color2 = max(color, WaveReadLaneAt(color, lane_index + 0x0c));
+		shared_colors[GTid.x / 4][GTid.y / 4] = (color + color0 + color1 + color2) / 4.0;
 	}
 	
 	GroupMemoryBarrierWithGroupSync();
@@ -66,7 +66,7 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	if(groupIndex == 0)
 	{
 		float3 finalColor = 0;
-#if 1
+#if 0
 		finalColor = max(finalColor, shared_colors[0][0]);
 		finalColor = max(finalColor, shared_colors[1][0]);
 		finalColor = max(finalColor, shared_colors[0][1]);

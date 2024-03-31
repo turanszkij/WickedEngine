@@ -1,5 +1,3 @@
-// This is a modified version of the SSAO from Microsoft MiniEngine at https://github.com/Microsoft/DirectX-Graphics-Samples
-
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 

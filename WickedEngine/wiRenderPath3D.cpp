@@ -1746,6 +1746,8 @@ namespace wi
 			wi::renderer::Postprocess_SSGI(
 				ssgiResources,
 				rtSceneCopy,
+				depthBuffer_Copy,
+				visibilityResources.texture_normals,
 				rtSSGI,
 				cmd
 			);

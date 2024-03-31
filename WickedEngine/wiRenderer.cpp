@@ -12500,9 +12500,15 @@ void CreateSSGIResources(SSGIResources& res, XMUINT2 resolution)
 	for (uint32_t i = 0; i < desc.mip_levels; ++i)
 	{
 		int subresource_index;
+		subresource_index = device->CreateSubresource(&res.texture_depth_mips, SubresourceType::SRV, 0, 1, i, 1);
+		assert(subresource_index == i);
 		subresource_index = device->CreateSubresource(&res.texture_depth_mips, SubresourceType::UAV, 0, 1, i, 1);
 		assert(subresource_index == i);
+		subresource_index = device->CreateSubresource(&res.texture_normal_mips, SubresourceType::SRV, 0, 1, i, 1);
+		assert(subresource_index == i);
 		subresource_index = device->CreateSubresource(&res.texture_normal_mips, SubresourceType::UAV, 0, 1, i, 1);
+		assert(subresource_index == i);
+		subresource_index = device->CreateSubresource(&res.texture_diffuse_mips, SubresourceType::SRV, 0, 1, i, 1);
 		assert(subresource_index == i);
 		subresource_index = device->CreateSubresource(&res.texture_diffuse_mips, SubresourceType::UAV, 0, 1, i, 1);
 		assert(subresource_index == i);
@@ -12511,6 +12517,8 @@ void CreateSSGIResources(SSGIResources& res, XMUINT2 resolution)
 void Postprocess_SSGI(
 	const SSGIResources& res,
 	const Texture& input,
+	const Texture& input_depth,
+	const Texture& input_normal,
 	const Texture& output,
 	CommandList cmd
 )
@@ -12785,37 +12793,130 @@ void Postprocess_SSGI(
 		device->EventBegin("SSGI - upsample", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSGI_UPSAMPLE], cmd);
 
-		const GPUResource* resarray[] = {
-			&res.texture_depth_mips,
-			&res.texture_normal_mips,
-			&res.texture_diffuse_mips,
-		};
-		device->BindResources(resarray, 0, arraysize(resarray), cmd);
-
-		const GPUResource* uavs[] = {
-			&output
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-		const TextureDesc& desc = output.desc;
-		postprocess.resolution.x = desc.width;
-		postprocess.resolution.y = desc.height;
-		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
-		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-
-		device->Dispatch(
-			(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			1,
-			cmd
-		);
-
+		// 16x -> 8x
 		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
+			device->BindResource(&res.texture_depth_mips, 0, cmd, 3);
+			device->BindResource(&res.texture_normal_mips, 1, cmd, 3);
+			device->BindResource(&res.texture_diffuse_mips, 2, cmd, 3);
+			device->BindResource(&res.texture_depth_mips, 3, cmd, 2);
+			device->BindResource(&res.texture_normal_mips, 4, cmd, 2);
+			device->BindUAV(&res.texture_diffuse_mips, 0, cmd, 2);
+
+			const TextureDesc& desc = res.texture_diffuse_mips.desc;
+			postprocess.resolution.x = desc.width >> 2;
+			postprocess.resolution.y = desc.height >> 2;
+			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+			device->Dispatch(
+				(postprocess.resolution.x + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				(postprocess.resolution.y + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				1,
+				cmd
+			);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&res.texture_diffuse_mips, ResourceState::UNORDERED_ACCESS, res.texture_diffuse_mips.desc.layout, 2),
+					GPUBarrier::Image(&res.texture_diffuse_mips, res.texture_diffuse_mips.desc.layout, ResourceState::UNORDERED_ACCESS, 1),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+		}
+
+		// 8x -> 4x
+		{
+			device->BindResource(&res.texture_depth_mips, 0, cmd, 2);
+			device->BindResource(&res.texture_normal_mips, 1, cmd, 2);
+			device->BindResource(&res.texture_diffuse_mips, 2, cmd, 2);
+			device->BindResource(&res.texture_depth_mips, 3, cmd, 1);
+			device->BindResource(&res.texture_normal_mips, 4, cmd, 1);
+			device->BindUAV(&res.texture_diffuse_mips, 0, cmd, 1);
+
+			const TextureDesc& desc = res.texture_diffuse_mips.desc;
+			postprocess.resolution.x = desc.width >> 1;
+			postprocess.resolution.y = desc.height >> 1;
+			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+			device->Dispatch(
+				(postprocess.resolution.x + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				(postprocess.resolution.y + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				1,
+				cmd
+			);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&res.texture_diffuse_mips, ResourceState::UNORDERED_ACCESS, res.texture_diffuse_mips.desc.layout, 1),
+					GPUBarrier::Image(&res.texture_diffuse_mips, res.texture_diffuse_mips.desc.layout, ResourceState::UNORDERED_ACCESS, 0),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+		}
+
+		// 4x -> 2x
+		{
+			device->BindResource(&res.texture_depth_mips, 0, cmd, 1);
+			device->BindResource(&res.texture_normal_mips, 1, cmd, 1);
+			device->BindResource(&res.texture_diffuse_mips, 2, cmd, 1);
+			device->BindResource(&res.texture_depth_mips, 3, cmd, 0);
+			device->BindResource(&res.texture_normal_mips, 4, cmd, 0);
+			device->BindUAV(&res.texture_diffuse_mips, 0, cmd, 0);
+
+			const TextureDesc& desc = res.texture_diffuse_mips.desc;
+			postprocess.resolution.x = desc.width;
+			postprocess.resolution.y = desc.height;
+			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+			device->Dispatch(
+				(postprocess.resolution.x + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				(postprocess.resolution.y + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				1,
+				cmd
+			);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&res.texture_diffuse_mips, ResourceState::UNORDERED_ACCESS, res.texture_diffuse_mips.desc.layout, 0),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+		}
+
+		// 2x -> output
+		{
+			device->BindResource(&res.texture_depth_mips, 0, cmd, 0);
+			device->BindResource(&res.texture_normal_mips, 1, cmd, 0);
+			device->BindResource(&res.texture_diffuse_mips, 2, cmd, 0);
+			device->BindResource(&input_depth, 3, cmd);
+			device->BindResource(&input_normal, 4, cmd);
+			device->BindUAV(&output, 0, cmd);
+
+			const TextureDesc& desc = output.desc;
+			postprocess.resolution.x = desc.width;
+			postprocess.resolution.y = desc.height;
+			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+			device->Dispatch(
+				(postprocess.resolution.x + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				(postprocess.resolution.y + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				1,
+				cmd
+			);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
 		}
 
 		device->EventEnd(cmd);
