@@ -40,10 +40,11 @@ float3 compute_diffuse(
 {
 	const int2 sampleLoc = GTid + offset;
 	const uint t = coord_to_cache(sampleLoc);
+	uint c = cache_rgb[t];
+	if(c == 0)
+		return 0; // early exit if pixel doesn't have lighting
 	float3 sample_position;
 	sample_position.z = cache_z[t];
-	if(sample_position.z > GetCamera().z_far - 1)
-		return 0;
 	sample_position.xy = unpack_half2(cache_xy[t]);
     const float3 origin_to_sample = sample_position - origin_position;
     float occlusion = saturate(dot(origin_normal, origin_to_sample));	// normal falloff
@@ -90,7 +91,7 @@ float3 compute_diffuse(
 		}
 	}
 
-    return occlusion * Unpack_R11G11B10_FLOAT(cache_rgb[t]);
+    return occlusion * Unpack_R11G11B10_FLOAT(c);
 }
 
 [numthreads(THREADCOUNT, THREADCOUNT, 1)]
