@@ -10,8 +10,13 @@ Texture2DArray<float2> input_normal : register(t2);
 
 RWTexture2D<float4> output_diffuse : register(u0);
 
+#ifdef WIDE
 static const uint THREADCOUNT = 16;
 static const int TILE_BORDER = 18;
+#else
+static const uint THREADCOUNT = 8;
+static const int TILE_BORDER = 4;
+#endif // WIDE
 static const int TILE_SIZE = TILE_BORDER + THREADCOUNT + TILE_BORDER;
 groupshared uint cache_xy[TILE_SIZE * TILE_SIZE];
 groupshared float cache_z[TILE_SIZE * TILE_SIZE];
@@ -145,13 +150,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint2 GTid :
 	float3 diffuse = 0;
 	float sum = 0;
 	const int range = int(postprocess.params0.x);
-	const float spread = postprocess.params0.y + dither(pixel);
+	const float range_rcp2 = postprocess.params0.y;
+	const float spread = postprocess.params0.z /*+ dither(pixel)*/;
 	for(int x = -range; x <= range; ++x)
 	{
 		for(int y = -range; y <= range; ++y)
 		{
-			const int2 offset = round(float2(x, y) * spread);
-			const float weight = saturate(1 - pow((abs(x) / float(range)) * (abs(y) / float(range)), 2));
+			const float2 foffset = float2(x, y) * spread;
+			const int2 offset = round(foffset);
+			const float weight = saturate(1 - abs(x) * abs(y) * range_rcp2);
 			diffuse += compute_diffuse(P, N, GTid, offset) * weight;
 			sum += weight;
 		}

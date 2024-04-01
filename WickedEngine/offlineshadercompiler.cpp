@@ -488,6 +488,10 @@ int main(int argc, char* argv[])
 		shaders.back().permutations.emplace_back().defines = x;
 	}
 
+	// permutations for ssgiCS:
+	shaders.push_back({ "ssgiCS", wi::graphics::ShaderStage::CS });
+	shaders.back().permutations.emplace_back().defines = {"WIDE"};
+
 	wi::jobsystem::Initialize();
 	wi::jobsystem::context ctx;
 

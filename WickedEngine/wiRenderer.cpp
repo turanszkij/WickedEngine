@@ -1043,6 +1043,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSGI_PREPAREINPUT], "ssgi_prepareinputCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSGI_DEINTERLEAVE], "ssgi_deinterleaveCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSGI], "ssgiCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSGI_WIDE], "ssgiCS.cso", wi::graphics::ShaderModel::SM_5_0, { "WIDE" }); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSGI_UPSAMPLE], "ssgi_upsampleCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_RTDIFFUSE_SPATIAL], "rtdiffuse_spatialCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_RTDIFFUSE_TEMPORAL], "rtdiffuse_temporalCS.cso"); });
@@ -12671,6 +12672,7 @@ void Postprocess_SSGI(
 
 	{
 		device->EventBegin("SSGI - diffuse", cmd);
+
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSGI], cmd);
 
 		// 2x:
@@ -12690,12 +12692,13 @@ void Postprocess_SSGI(
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 			postprocess.params0.x = 1; // range
-			postprocess.params0.y = 14; // spread
+			postprocess.params0.y = std::pow(1.0f / postprocess.params0.x, 2.0f); // range_rcp2
+			postprocess.params0.z = 2; // spread
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
-				(desc.width + 15) / 16,
-				(desc.height + 15) / 16,
+				(desc.width + 7) / 8,
+				(desc.height + 7) / 8,
 				16,
 				cmd
 			);
@@ -12717,16 +12720,21 @@ void Postprocess_SSGI(
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 			postprocess.params0.x = 2; // range
-			postprocess.params0.y = 7; // spread
+			postprocess.params0.y = std::pow(1.0f / postprocess.params0.x, 2.0f); // range_rcp2
+			postprocess.params0.z = 2; // spread
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
-				(desc.width + 15) / 16,
-				(desc.height + 15) / 16,
+				(desc.width + 7) / 8,
+				(desc.height + 7) / 8,
 				16,
 				cmd
 			);
 		}
+
+		// Switch to wide sampling shader:
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSGI_WIDE], cmd);
+
 		// 8x:
 		{
 			const GPUResource* resarray[] = {
@@ -12743,8 +12751,9 @@ void Postprocess_SSGI(
 			postprocess.resolution.y = desc.height;
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-			postprocess.params0.x = 3; // range
-			postprocess.params0.y = 5; // spread
+			postprocess.params0.x = 4; // range
+			postprocess.params0.y = std::pow(1.0f / postprocess.params0.x, 2.0f); // range_rcp2
+			postprocess.params0.z = 4; // spread
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
@@ -12770,8 +12779,9 @@ void Postprocess_SSGI(
 			postprocess.resolution.y = desc.height;
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-			postprocess.params0.x = 7; // range
-			postprocess.params0.y = 2; // spread
+			postprocess.params0.x = 8; // range
+			postprocess.params0.y = std::pow(1.0f / postprocess.params0.x, 2.0f); // range_rcp2
+			postprocess.params0.z = 2; // spread
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
