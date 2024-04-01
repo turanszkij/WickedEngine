@@ -2,21 +2,17 @@
 #include "ShaderInterop_Postprocess.h"
 
 RWTexture2DArray<float>		atlas2x_depth : register(u0);
-RWTexture2DArray<float2>	atlas2x_normal : register(u1);
-RWTexture2DArray<float>		atlas4x_depth : register(u2);
-RWTexture2DArray<float2>	atlas4x_normal : register(u3);
-RWTexture2DArray<float>		atlas8x_depth : register(u4);
-RWTexture2DArray<float2>	atlas8x_normal : register(u5);
-RWTexture2DArray<float>		atlas16x_depth : register(u6);
-RWTexture2DArray<float2>	atlas16x_normal : register(u7);
-RWTexture2D<float>			regular2x_depth : register(u8);
-RWTexture2D<float2>			regular2x_normal : register(u9);
-RWTexture2D<float>			regular4x_depth : register(u10);
-RWTexture2D<float2>			regular4x_normal : register(u11);
-RWTexture2D<float>			regular8x_depth : register(u12);
-RWTexture2D<float2>			regular8x_normal : register(u13);
-RWTexture2D<float>			regular16x_depth : register(u14);
-RWTexture2D<float2>			regular16x_normal : register(u15);
+RWTexture2DArray<float>		atlas4x_depth : register(u1);
+RWTexture2DArray<float>		atlas8x_depth : register(u2);
+RWTexture2DArray<float>		atlas16x_depth : register(u3);
+RWTexture2D<float>			regular2x_depth : register(u4);
+RWTexture2D<float2>			regular2x_normal : register(u5);
+RWTexture2D<float>			regular4x_depth : register(u6);
+RWTexture2D<float2>			regular4x_normal : register(u7);
+RWTexture2D<float>			regular8x_depth : register(u8);
+RWTexture2D<float2>			regular8x_normal : register(u9);
+RWTexture2D<float>			regular16x_depth : register(u10);
+RWTexture2D<float2>			regular16x_normal : register(u11);
 
 groupshared float shared_depths[256];
 groupshared float2 shared_normals[256];
@@ -49,7 +45,6 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex, uint3 GTid : 
     uint2 st = DTid.xy;
     uint slice = flatten2D(st % 4, 4);
     atlas2x_depth[uint3(st >> 2, slice)] = depth;
-    atlas2x_normal[uint3(st >> 2, slice)] = normal;
     regular2x_depth[st] = depth;
     regular2x_normal[st] = normal;
 
@@ -58,7 +53,6 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex, uint3 GTid : 
         st = DTid.xy >> 1;
         slice = flatten2D(st % 4, 4);
         atlas4x_depth[uint3(st >> 2, slice)] = depth;
-        atlas4x_normal[uint3(st >> 2, slice)] = normal;
 		regular4x_depth[st] = depth;
 		regular4x_normal[st] = normal;
 		
@@ -67,7 +61,6 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex, uint3 GTid : 
 			st = DTid.xy >> 2;
 			slice = flatten2D(st % 4, 4);
 			atlas8x_depth[uint3(st >> 2, slice)] = depth;
-			atlas8x_normal[uint3(st >> 2, slice)] = normal;
 			regular8x_depth[st] = depth;
 			regular8x_normal[st] = normal;
 			
@@ -76,7 +69,6 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex, uint3 GTid : 
 				st = DTid.xy >> 3;
 				slice = flatten2D(st % 4, 4);
 				atlas16x_depth[uint3(st >> 2, slice)] = depth;
-				atlas16x_normal[uint3(st >> 2, slice)] = normal;
 				regular16x_depth[st] = depth;
 				regular16x_normal[st] = normal;
 			}

@@ -28,8 +28,17 @@ inline uint coord_to_cache(int2 coord)
 	return flatten2D(clamp(TILE_BORDER + coord, 0, TILE_SIZE - 1), TILE_SIZE);
 }
 
-static const float depthRejection = 6;
-static const float depthRejection_rcp = rcp(depthRejection);
+static const float radius = 14;
+static const float radius2 = radius * radius;
+static const float radius2_rcp_negative  = -rcp(radius2);
+
+#if 0
+static const uint depth_test_count = 1;
+static const float depth_tests[] = {0.33};
+#else
+static const uint depth_test_count = 3;
+static const float depth_tests[] = {0.125, 0.25, 0.75};
+#endif
 
 float3 compute_diffuse(
 	float3 origin_position,
@@ -46,14 +55,16 @@ float3 compute_diffuse(
 		return 0;
 	sample_position.xy = unpack_half2(cache_xy[t]);
     const float3 origin_to_sample = sample_position - origin_position;
-    float occlusion = saturate(dot(origin_normal, origin_to_sample));	// normal falloff
-    occlusion *= saturate(1 + origin_to_sample.z * depthRejection_rcp);	// depth falloff
+    const float distance2 = dot(origin_to_sample, origin_to_sample);
+    float occlusion = saturate(dot(origin_normal, origin_to_sample));
+    occlusion *= saturate(distance2 * radius2_rcp_negative + 1.0f);
 	
 	if(occlusion > 0)
 	{
 		const float origin_z = origin_position.z;
 		const float sample_z = sample_position.z;
-		
+
+#if 1
 		// DDA occlusion:
 		const int2 start = GTid;
 		const int2 goal = sampleLoc;
@@ -88,6 +99,21 @@ float3 compute_diffuse(
 				return occlusion * Unpack_R11G11B10_FLOAT(cache_rgb[tt]);
 			}
 		}
+#else
+		// Simple occlusion:
+		for (uint i = 0; i < depth_test_count; ++i)
+		{
+			const float dt = depth_tests[i];
+			const float z = lerp(origin_z, sample_z, dt);
+			const int2 loc = round(lerp(float2(GTid), float2(sampleLoc), dt));
+			const uint tt = coord_to_cache(loc);
+			const float sz = cache_z[tt];
+			if (sz < z - 0.1)
+			{
+				return occlusion * Unpack_R11G11B10_FLOAT(cache_rgb[tt]);
+			}
+		}
+#endif
 	}
 
     return occlusion * Unpack_R11G11B10_FLOAT(cache_rgb[t]);
