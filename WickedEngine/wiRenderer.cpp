@@ -1040,7 +1040,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_LINEARDEPTH], "lineardepthCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_NORMALSFROMDEPTH], "normalsfromdepthCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SCREENSPACESHADOW], "screenspaceshadowCS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSGI_PREPAREINPUT], "ssgi_prepareinputCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSGI_DEINTERLEAVE], "ssgi_deinterleaveCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSGI], "ssgiCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSGI_WIDE], "ssgiCS.cso", wi::graphics::ShaderModel::SM_5_0, { "WIDE" }); });
@@ -12454,33 +12453,37 @@ void CreateSSGIResources(SSGIResources& res, XMUINT2 resolution)
 	resolution.x = AlignTo(resolution.x, 64u);
 	resolution.y = AlignTo(resolution.y, 64u);
 
-	desc.width = std::max(1u, resolution.x / 8 / 8);
-	desc.height = std::max(1u, resolution.y / 8 / 8);
-	device->CreateTexture(&desc, nullptr, &res.texture_preparedInput);
-
 	desc.width = (resolution.x + 7) / 8;
 	desc.height = (resolution.y + 7) / 8;
 	desc.array_size = 16;
 	desc.format = Format::R32_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_atlas2x_depth);
+	desc.format = Format::R11G11B10_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.texture_atlas2x_color);
 
 	desc.width = (resolution.x + 15) / 16;
 	desc.height = (resolution.y + 15) / 16;
 	desc.array_size = 16;
 	desc.format = Format::R32_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_atlas4x_depth);
+	desc.format = Format::R11G11B10_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.texture_atlas4x_color);
 
 	desc.width = (resolution.x + 31) / 32;
 	desc.height = (resolution.y + 31) / 32;
 	desc.array_size = 16;
 	desc.format = Format::R32_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_atlas8x_depth);
+	desc.format = Format::R11G11B10_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.texture_atlas8x_color);
 
 	desc.width = (resolution.x + 63) / 64;
 	desc.height = (resolution.y + 63) / 64;
 	desc.array_size = 16;
 	desc.format = Format::R32_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_atlas16x_depth);
+	desc.format = Format::R11G11B10_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.texture_atlas16x_color);
 
 	desc.array_size = 1;
 	desc.mip_levels = 4;
@@ -12524,11 +12527,14 @@ void Postprocess_SSGI(
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&res.texture_preparedInput, res.texture_preparedInput.desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.texture_atlas2x_depth, res.texture_atlas2x_depth.desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.texture_atlas4x_depth, res.texture_atlas4x_depth.desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.texture_atlas8x_depth, res.texture_atlas8x_depth.desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.texture_atlas16x_depth, res.texture_atlas16x_depth.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_atlas2x_color, res.texture_atlas2x_color.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_atlas4x_color, res.texture_atlas4x_color.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_atlas8x_color, res.texture_atlas8x_color.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_atlas16x_color, res.texture_atlas16x_color.desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.texture_depth_mips, res.texture_depth_mips.desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.texture_normal_mips, res.texture_normal_mips.desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.texture_diffuse_mips, res.texture_diffuse_mips.desc.layout, ResourceState::UNORDERED_ACCESS),
@@ -12537,11 +12543,14 @@ void Postprocess_SSGI(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	device->ClearUAV(&res.texture_preparedInput, 0, cmd);
 	device->ClearUAV(&res.texture_atlas2x_depth, 0, cmd);
 	device->ClearUAV(&res.texture_atlas4x_depth, 0, cmd);
 	device->ClearUAV(&res.texture_atlas8x_depth, 0, cmd);
 	device->ClearUAV(&res.texture_atlas16x_depth, 0, cmd);
+	device->ClearUAV(&res.texture_atlas2x_color, 0, cmd);
+	device->ClearUAV(&res.texture_atlas4x_color, 0, cmd);
+	device->ClearUAV(&res.texture_atlas8x_color, 0, cmd);
+	device->ClearUAV(&res.texture_atlas16x_color, 0, cmd);
 	device->ClearUAV(&res.texture_depth_mips, 0, cmd);
 	device->ClearUAV(&res.texture_normal_mips, 0, cmd);
 	device->ClearUAV(&res.texture_diffuse_mips, 0, cmd);
@@ -12549,11 +12558,14 @@ void Postprocess_SSGI(
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(&res.texture_preparedInput),
 			GPUBarrier::Memory(&res.texture_atlas2x_depth),
 			GPUBarrier::Memory(&res.texture_atlas4x_depth),
 			GPUBarrier::Memory(&res.texture_atlas8x_depth),
 			GPUBarrier::Memory(&res.texture_atlas16x_depth),
+			GPUBarrier::Memory(&res.texture_atlas2x_color),
+			GPUBarrier::Memory(&res.texture_atlas4x_color),
+			GPUBarrier::Memory(&res.texture_atlas8x_color),
+			GPUBarrier::Memory(&res.texture_atlas16x_color),
 			GPUBarrier::Memory(&res.texture_depth_mips),
 			GPUBarrier::Memory(&res.texture_normal_mips),
 		};
@@ -12565,46 +12577,20 @@ void Postprocess_SSGI(
 	PostProcess postprocess = {};
 
 	{
-		device->EventBegin("SSGI - prepare input", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSGI_PREPAREINPUT], cmd);
-
-		const TextureDesc& desc = res.texture_preparedInput.GetDesc();
-
-		postprocess.resolution.x = desc.width * 8;
-		postprocess.resolution.y = desc.height * 8;
-		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
-		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-
-		const GPUResource* resarray[] = {
-			&input,
-		};
-		device->BindResources(resarray, 0, arraysize(resarray), cmd);
-
-		const GPUResource* uavs[] = {
-			&res.texture_preparedInput,
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-		device->Dispatch(
-			(postprocess.resolution.x + 7) / 8,
-			(postprocess.resolution.y + 7) / 8,
-			1,
-			cmd
-		);
-
-		device->EventEnd(cmd);
-	}
-
-	{
 		device->EventBegin("SSGI - deinterleave", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSGI_DEINTERLEAVE], cmd);
+
+		device->BindResource(&input, 0, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_atlas2x_depth,
 			&res.texture_atlas4x_depth,
 			&res.texture_atlas8x_depth,
 			&res.texture_atlas16x_depth,
+			&res.texture_atlas2x_color,
+			&res.texture_atlas4x_color,
+			&res.texture_atlas8x_color,
+			&res.texture_atlas16x_color,
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
@@ -12631,11 +12617,14 @@ void Postprocess_SSGI(
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Memory(&res.texture_diffuse_mips),
-			GPUBarrier::Image(&res.texture_preparedInput, ResourceState::UNORDERED_ACCESS, res.texture_preparedInput.desc.layout),
 			GPUBarrier::Image(&res.texture_atlas2x_depth, ResourceState::UNORDERED_ACCESS, res.texture_atlas2x_depth.desc.layout),
 			GPUBarrier::Image(&res.texture_atlas4x_depth, ResourceState::UNORDERED_ACCESS, res.texture_atlas4x_depth.desc.layout),
 			GPUBarrier::Image(&res.texture_atlas8x_depth, ResourceState::UNORDERED_ACCESS, res.texture_atlas8x_depth.desc.layout),
 			GPUBarrier::Image(&res.texture_atlas16x_depth, ResourceState::UNORDERED_ACCESS, res.texture_atlas16x_depth.desc.layout),
+			GPUBarrier::Image(&res.texture_atlas2x_color, ResourceState::UNORDERED_ACCESS, res.texture_atlas2x_color.desc.layout),
+			GPUBarrier::Image(&res.texture_atlas4x_color, ResourceState::UNORDERED_ACCESS, res.texture_atlas4x_color.desc.layout),
+			GPUBarrier::Image(&res.texture_atlas8x_color, ResourceState::UNORDERED_ACCESS, res.texture_atlas8x_color.desc.layout),
+			GPUBarrier::Image(&res.texture_atlas16x_color, ResourceState::UNORDERED_ACCESS, res.texture_atlas16x_color.desc.layout),
 			GPUBarrier::Image(&res.texture_depth_mips, ResourceState::UNORDERED_ACCESS, res.texture_depth_mips.desc.layout),
 			GPUBarrier::Image(&res.texture_normal_mips, ResourceState::UNORDERED_ACCESS, res.texture_normal_mips.desc.layout),
 		};
@@ -12650,11 +12639,11 @@ void Postprocess_SSGI(
 		// 2x:
 		{
 			const GPUResource* resarray[] = {
-				&res.texture_preparedInput,
 				&res.texture_atlas2x_depth,
+				&res.texture_atlas2x_color,
 			};
 			device->BindResources(resarray, 0, arraysize(resarray), cmd);
-			device->BindResource(&res.texture_normal_mips, 2, cmd, 0);
+			device->BindResource(&res.texture_normal_mips, arraysize(resarray) + 0, cmd, 0);
 			device->BindUAV(&res.texture_diffuse_mips, 0, cmd, 0);
 
 			const TextureDesc& desc = res.texture_atlas2x_depth.GetDesc();
@@ -12678,11 +12667,11 @@ void Postprocess_SSGI(
 		// 4x:
 		{
 			const GPUResource* resarray[] = {
-				&res.texture_preparedInput,
 				&res.texture_atlas4x_depth,
+				&res.texture_atlas4x_color,
 			};
 			device->BindResources(resarray, 0, arraysize(resarray), cmd);
-			device->BindResource(&res.texture_normal_mips, 2, cmd, 1);
+			device->BindResource(&res.texture_normal_mips, arraysize(resarray) + 0, cmd, 1);
 			device->BindUAV(&res.texture_diffuse_mips, 0, cmd, 1);
 
 			const TextureDesc& desc = res.texture_atlas4x_depth.GetDesc();
@@ -12710,11 +12699,11 @@ void Postprocess_SSGI(
 		// 8x:
 		{
 			const GPUResource* resarray[] = {
-				&res.texture_preparedInput,
 				&res.texture_atlas8x_depth,
+				&res.texture_atlas8x_color,
 			};
 			device->BindResources(resarray, 0, arraysize(resarray), cmd);
-			device->BindResource(&res.texture_normal_mips, 2, cmd, 2);
+			device->BindResource(&res.texture_normal_mips, arraysize(resarray) + 0, cmd, 2);
 			device->BindUAV(&res.texture_diffuse_mips, 0, cmd, 2);
 
 			const TextureDesc& desc = res.texture_atlas8x_depth.GetDesc();
@@ -12738,11 +12727,11 @@ void Postprocess_SSGI(
 		// 16x:
 		{
 			const GPUResource* resarray[] = {
-				&res.texture_preparedInput,
 				&res.texture_atlas16x_depth,
+				&res.texture_atlas16x_color,
 			};
 			device->BindResources(resarray, 0, arraysize(resarray), cmd);
-			device->BindResource(&res.texture_normal_mips, 2, cmd, 3);
+			device->BindResource(&res.texture_normal_mips, arraysize(resarray) + 0, cmd, 3);
 			device->BindUAV(&res.texture_diffuse_mips, 0, cmd, 3);
 
 			const TextureDesc& desc = res.texture_atlas16x_depth.GetDesc();

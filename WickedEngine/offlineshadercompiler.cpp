@@ -67,7 +67,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"ffx-fsr2/ffx_fsr2_accumulate_pass", wi::graphics::ShaderStage::CS},
 	{"ffx-fsr2/ffx_fsr2_rcas_pass", wi::graphics::ShaderStage::CS},
 	{"ssaoCS", wi::graphics::ShaderStage::CS},
-	{"ssgi_prepareinputCS", wi::graphics::ShaderStage::CS},
 	{"ssgi_deinterleaveCS", wi::graphics::ShaderStage::CS},
 	{"ssgiCS", wi::graphics::ShaderStage::CS},
 	{"ssgi_upsampleCS", wi::graphics::ShaderStage::CS},

@@ -4,8 +4,8 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-Texture2D<float4> input : register(t0);
-Texture2DArray<float> input_depth : register(t1);
+Texture2DArray<float> input_depth : register(t0);
+Texture2DArray<float3> input_color : register(t1);
 Texture2D<float2> input_normal : register(t2);
 
 RWTexture2D<float4> output_diffuse : register(u0);
@@ -28,7 +28,7 @@ inline uint coord_to_cache(int2 coord)
 	return flatten2D(clamp(TILE_BORDER + coord, 0, TILE_SIZE - 1), TILE_SIZE);
 }
 
-static const float depthRejection = 6;
+static const float depthRejection = 8;
 static const float depthRejection_rcp = rcp(depthRejection);
 
 float3 compute_diffuse(
@@ -112,7 +112,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint2 GTid :
 		const float depth = input_depth[uint3(pixel, layer)];
 		const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
 		const float3 P = reconstruct_position(uv, depth, GetCamera().inverse_projection);
-		const float3 color = input.SampleLevel(sampler_linear_clamp, uv, 0).rgb;
+		const float3 color = input_color[uint3(pixel, layer)];
 		const uint pkcolor = Pack_R11G11B10_FLOAT(color.rgb);
 		cache_xy[t] = pack_half2(P.xy);
 		cache_z[t] = P.z;
@@ -142,7 +142,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint2 GTid :
 	float3 diffuse = 0;
 	float sum = 0;
 	const int range = int(postprocess.params0.x);
-	const float spread = postprocess.params0.y /*+ dither(pixel)*/;
+	const float spread = postprocess.params0.y + dither(pixel);
 	const float rangespread_rcp2 = postprocess.params0.z;
 	
 	for(int x = -range; x <= range; ++x)
