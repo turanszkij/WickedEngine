@@ -1749,7 +1749,8 @@ namespace wi
 				depthBuffer_Copy,
 				visibilityResources.texture_normals,
 				rtSSGI,
-				cmd
+				cmd,
+				getSSGIDepthRejection()
 			);
 		}
 	}

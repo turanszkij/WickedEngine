@@ -940,22 +940,6 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	AddWidget(&raytracedDiffuseCheckBox);
 	raytracedDiffuseCheckBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::RAYTRACING));
 
-	ssgiCheckBox.Create("SSGI: ");
-	ssgiCheckBox.SetTooltip("Enable Screen Space Global Illumination, this can add a light bounce effect coming from objects on the screen.");
-	ssgiCheckBox.SetScriptTip("RenderPath3D::SetSSGIEnabled(bool value)");
-	ssgiCheckBox.SetSize(XMFLOAT2(hei, hei));
-	ssgiCheckBox.SetPos(XMFLOAT2(x + 140, y));
-	if (editor->main->config.GetSection("graphics").Has("ssgi"))
-	{
-		editor->renderPath->setSSGIEnabled(editor->main->config.GetSection("graphics").GetBool("ssgi"));
-	}
-	ssgiCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		editor->renderPath->setSSGIEnabled(args.bValue);
-		editor->main->config.GetSection("graphics").Set("ssgi", args.bValue);
-		editor->main->config.Commit();
-		});
-	AddWidget(&ssgiCheckBox);
-
 	raytracedDiffuseRangeSlider.Create(1.0f, 100.0f, 1, 1000, "RTDiffuse.Range: ");
 	raytracedDiffuseRangeSlider.SetText("Range: ");
 	raytracedDiffuseRangeSlider.SetTooltip("Set Reflection ray length for Ray traced diffuse.");
@@ -972,6 +956,38 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&raytracedDiffuseRangeSlider);
 	raytracedDiffuseRangeSlider.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::RAYTRACING));
+
+	ssgiCheckBox.Create("SSGI: ");
+	ssgiCheckBox.SetTooltip("Enable Screen Space Global Illumination, this can add a light bounce effect coming from objects on the screen.");
+	ssgiCheckBox.SetScriptTip("RenderPath3D::SetSSGIEnabled(bool value)");
+	ssgiCheckBox.SetSize(XMFLOAT2(hei, hei));
+	ssgiCheckBox.SetPos(XMFLOAT2(x + 140, y));
+	if (editor->main->config.GetSection("graphics").Has("ssgi"))
+	{
+		editor->renderPath->setSSGIEnabled(editor->main->config.GetSection("graphics").GetBool("ssgi"));
+	}
+	ssgiCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		editor->renderPath->setSSGIEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("ssgi", args.bValue);
+		editor->main->config.Commit();
+		});
+	AddWidget(&ssgiCheckBox);
+
+	ssgiDepthRejectionSlider.Create(0.1f, 100.0f, 8, 1000, "SSGI.DepthRejection");
+	ssgiDepthRejectionSlider.SetText("Depth: ");
+	ssgiDepthRejectionSlider.SetTooltip("SSGI depth rejection distance.");
+	ssgiDepthRejectionSlider.SetSize(XMFLOAT2(mod_wid, hei));
+	ssgiDepthRejectionSlider.SetPos(XMFLOAT2(x + 100, y));
+	if (editor->main->config.GetSection("graphics").Has("ssgi_depthrejection"))
+	{
+		editor->renderPath->setSSGIDepthRejection(editor->main->config.GetSection("graphics").GetFloat("ssgi_depthrejection"));
+	}
+	ssgiDepthRejectionSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->renderPath->setSSGIDepthRejection(args.fValue);
+		editor->main->config.GetSection("graphics").Set("ssgi_depthrejection", args.fValue);
+		editor->main->config.Commit();
+		});
+	AddWidget(&ssgiDepthRejectionSlider);
 
 	screenSpaceShadowsCheckBox.Create("Screen Shadows: ");
 	screenSpaceShadowsCheckBox.SetTooltip("Enable screen space contact shadows. This can add small shadows details to shadow maps in screen space.");
@@ -1545,6 +1561,7 @@ void GraphicsWindow::Update()
 	raytracedDiffuseRangeSlider.SetValue(editor->renderPath->getRaytracedDiffuseRange());
 	screenSpaceShadowsCheckBox.SetCheck(wi::renderer::GetScreenSpaceShadowsEnabled());
 	screenSpaceShadowsRangeSlider.SetValue((float)editor->renderPath->getScreenSpaceShadowRange());
+	ssgiDepthRejectionSlider.SetValue((float)editor->renderPath->getSSGIDepthRejection());
 	screenSpaceShadowsStepCountSlider.SetValue((float)editor->renderPath->getScreenSpaceShadowSampleCount());
 	eyeAdaptionCheckBox.SetCheck(editor->renderPath->getEyeAdaptionEnabled());
 	eyeAdaptionKeySlider.SetValue(editor->renderPath->getEyeAdaptionKey());
@@ -1804,8 +1821,8 @@ void GraphicsWindow::ResizeLayout()
 	ssrCheckBox.SetPos(XMFLOAT2(reflectionsRoughnessCutoffSlider.GetPos().x - ssrCheckBox.GetSize().x - 80, reflectionsRoughnessCutoffSlider.GetPos().y));
 	add_right(raytracedReflectionsRangeSlider);
 	raytracedReflectionsCheckBox.SetPos(XMFLOAT2(raytracedReflectionsRangeSlider.GetPos().x - raytracedReflectionsCheckBox.GetSize().x - 80, raytracedReflectionsRangeSlider.GetPos().y));
-	add_right(ssgiCheckBox);
-	ssgiCheckBox.SetPos(XMFLOAT2(raytracedReflectionsCheckBox.GetPos().x, ssgiCheckBox.GetPos().y));
+	add_right(ssgiDepthRejectionSlider);
+	ssgiCheckBox.SetPos(XMFLOAT2(ssgiDepthRejectionSlider.GetPos().x - ssgiCheckBox.GetSize().x - 80, ssgiDepthRejectionSlider.GetPos().y));
 	add_right(raytracedDiffuseRangeSlider);
 	raytracedDiffuseCheckBox.SetPos(XMFLOAT2(raytracedDiffuseRangeSlider.GetPos().x - raytracedDiffuseCheckBox.GetSize().x - 80, raytracedDiffuseRangeSlider.GetPos().y));
 	add_right(screenSpaceShadowsStepCountSlider);

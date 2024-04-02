@@ -12506,7 +12506,8 @@ void Postprocess_SSGI(
 	const Texture& input_depth,
 	const Texture& input_normal,
 	const Texture& output,
-	CommandList cmd
+	CommandList cmd,
+	float depthRejection
 )
 {
 	device->EventBegin("Postprocess_SSGI", cmd);
@@ -12595,6 +12596,8 @@ void Postprocess_SSGI(
 
 	{
 		device->EventBegin("SSGI - diffuse", cmd);
+
+		postprocess.params0.w = 1.0f / depthRejection;
 
 		// Wide sampling passes:
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSGI_WIDE], cmd);

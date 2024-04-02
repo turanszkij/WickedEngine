@@ -568,7 +568,8 @@ namespace wi::renderer
 		const wi::graphics::Texture& input_depth,
 		const wi::graphics::Texture& input_normal,
 		const wi::graphics::Texture& output,
-		wi::graphics::CommandList cmd
+		wi::graphics::CommandList cmd,
+		float depthRejection = 8
 	);
 	struct RTReflectionResources
 	{

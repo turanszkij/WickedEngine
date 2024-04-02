@@ -28,9 +28,6 @@ inline uint coord_to_cache(int2 coord)
 	return flatten2D(clamp(coord, 0, TILE_SIZE - 1), TILE_SIZE);
 }
 
-static const float depthRejection = 8;
-static const float depthRejection_rcp = rcp(depthRejection);
-
 float3 compute_diffuse(
 	float3 origin_position,
 	float3 origin_normal,
@@ -46,8 +43,8 @@ float3 compute_diffuse(
 	sample_position.z = cache_z[t];
 	sample_position.xy = unpack_half2(cache_xy[t]);
     const float3 origin_to_sample = sample_position - origin_position;
-    float occlusion = saturate(dot(origin_normal, origin_to_sample));	// normal falloff
-    occlusion *= saturate(1 + origin_to_sample.z * depthRejection_rcp);	// depth falloff
+    float occlusion = saturate(dot(origin_normal, origin_to_sample));		// normal falloff
+    occlusion *= saturate(1 + origin_to_sample.z * postprocess.params0.w);	// depth rejection
 	
 	if(occlusion > 0)
 	{

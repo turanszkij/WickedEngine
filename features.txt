@@ -88,6 +88,7 @@ Humanoid rig
 Animation retargeting
 Video decoding: H264
 3D path finding
+Screen Space Global Illumination (SSGI)
 
 GLTF 2.0 - KHR extensions supported:
 KHR_materials_unlit
