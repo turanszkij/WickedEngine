@@ -554,14 +554,9 @@ namespace wi::renderer
 	);
 	struct SSGIResources
 	{
-		wi::graphics::Texture texture_atlas2x_depth;
-		wi::graphics::Texture texture_atlas4x_depth;
-		wi::graphics::Texture texture_atlas8x_depth;
-		wi::graphics::Texture texture_atlas16x_depth;
-		wi::graphics::Texture texture_atlas2x_color;
-		wi::graphics::Texture texture_atlas4x_color;
-		wi::graphics::Texture texture_atlas8x_color;
-		wi::graphics::Texture texture_atlas16x_color;
+		mutable bool cleared = false;
+		wi::graphics::Texture texture_atlas_depth;
+		wi::graphics::Texture texture_atlas_color;
 		wi::graphics::Texture texture_depth_mips;
 		wi::graphics::Texture texture_normal_mips;
 		wi::graphics::Texture texture_diffuse_mips;

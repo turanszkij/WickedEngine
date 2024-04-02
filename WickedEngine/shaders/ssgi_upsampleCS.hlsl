@@ -42,8 +42,8 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	const int range = int(postprocess.params0.x);
 	const float spread = postprocess.params0.y;
 #else
-	const int range = 1;
-	const float spread = 8;
+	const int range = 2;
+	const float spread = 6;
 #endif
 	for(int x = -range; x <= range; ++x)
 	{

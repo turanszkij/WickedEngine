@@ -12,7 +12,7 @@ RWTexture2D<float4> output_diffuse : register(u0);
 
 #ifdef WIDE
 static const uint THREADCOUNT = 16;
-static const int TILE_BORDER = 18;
+static const int TILE_BORDER = 16;
 #else
 static const uint THREADCOUNT = 8;
 static const int TILE_BORDER = 4;
@@ -25,7 +25,7 @@ groupshared uint group_valid;
 
 inline uint coord_to_cache(int2 coord)
 {
-	return flatten2D(clamp(TILE_BORDER + coord, 0, TILE_SIZE - 1), TILE_SIZE);
+	return flatten2D(clamp(coord, 0, TILE_SIZE - 1), TILE_SIZE);
 }
 
 static const float depthRejection = 8;
@@ -34,11 +34,10 @@ static const float depthRejection_rcp = rcp(depthRejection);
 float3 compute_diffuse(
 	float3 origin_position,
 	float3 origin_normal,
-	int2 GTid,
-	int2 offset
+	int2 originLoc, // coord in cache
+	int2 sampleLoc // coord in cache
 )
 {
-	const int2 sampleLoc = GTid + offset;
 	const uint t = coord_to_cache(sampleLoc);
 	uint c = cache_rgb[t];
 	if(c == 0)
@@ -56,7 +55,7 @@ float3 compute_diffuse(
 		const float sample_z = sample_position.z;
 		
 		// DDA occlusion:
-		const int2 start = GTid;
+		const int2 start = originLoc;
 		const int2 goal = sampleLoc;
 	
 		const int dx = int(goal.x) - int(start.x);
@@ -86,7 +85,8 @@ float3 compute_diffuse(
 			const float sz = cache_z[tt];
 			if(sz < z - 0.1)
 			{
-				return occlusion * Unpack_R11G11B10_FLOAT(cache_rgb[tt]);
+				c = cache_rgb[tt];
+				break;
 			}
 		}
 	}
@@ -127,7 +127,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint2 GTid :
 	if (group_valid == 0)
 		return; // if no valid color was cached, whole group can exit early
 
-	const uint t = coord_to_cache(GTid.xy);
+	const int2 originLoc = GTid.xy + TILE_BORDER;
+	const uint t = coord_to_cache(originLoc);
 	float3 P;
 	P.z = cache_z[t];
 	
@@ -137,23 +138,26 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint2 GTid :
 
 	P.xy = unpack_half2(cache_xy[t]);
 	
-	const uint2 pixel = DTid.xy;
 	const float3 N = mul((float3x3)GetCamera().view, decode_oct(input_normal[interleaved_pixel].rg));
 	
 	float3 diffuse = 0;
 	float sum = 0;
 	const int range = int(postprocess.params0.x);
-	const float spread = postprocess.params0.y + dither(pixel);
+	const float spread = postprocess.params0.y /*+ dither(DTid.xy)*/;
 	const float rangespread_rcp2 = postprocess.params0.z;
-	
+
+	const int2 pixel_base = Gid.xy * THREADCOUNT + GTid;
 	for(int x = -range; x <= range; ++x)
 	{
 		for(int y = -range; y <= range; ++y)
 		{
+			const int2 pixel = pixel_base + int2(x, y);
+			if(any(pixel < 0) || any(pixel >= postprocess.resolution))
+				continue; // to not lose energy when sampling outside of textures, we skip those offsets
 			const float2 foffset = float2(x, y) * spread;
 			const int2 offset = round(foffset);
 			const float weight = saturate(1 - abs(foffset.x) * abs(foffset.y) * rangespread_rcp2);
-			diffuse += compute_diffuse(P, N, GTid, offset) * weight;
+			diffuse += compute_diffuse(P, N, originLoc, originLoc + offset) * weight;
 			sum += weight;
 		}
 	}
