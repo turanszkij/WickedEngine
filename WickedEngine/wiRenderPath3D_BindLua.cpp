@@ -27,6 +27,7 @@ namespace wi::lua
 		lunamethod(RenderPath3D_BindLua, SetAO),
 		lunamethod(RenderPath3D_BindLua, SetAOPower),
 		lunamethod(RenderPath3D_BindLua, SetSSREnabled),
+		lunamethod(RenderPath3D_BindLua, SetSSGIEnabled),
 		lunamethod(RenderPath3D_BindLua, SetRaytracedDiffuseEnabled),
 		lunamethod(RenderPath3D_BindLua, SetRaytracedReflectionsEnabled),
 		lunamethod(RenderPath3D_BindLua, SetShadowsEnabled),
@@ -133,6 +134,19 @@ namespace wi::lua
 			((RenderPath3D*)component)->setSSREnabled(wi::lua::SGetBool(L, 1));
 		else
 			wi::lua::SError(L, "SetSSREnabled(bool value) not enough arguments!");
+		return 0;
+	}
+	int RenderPath3D_BindLua::SetSSGIEnabled(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetSSGIEnabled(bool value) component is null!");
+			return 0;
+		}
+		if (wi::lua::SGetArgCount(L) > 0)
+			((RenderPath3D*)component)->setSSGIEnabled(wi::lua::SGetBool(L, 1));
+		else
+			wi::lua::SError(L, "SetSSGIEnabled(bool value) not enough arguments!");
 		return 0;
 	}
 	int RenderPath3D_BindLua::SetRaytracedDiffuseEnabled(lua_State* L)

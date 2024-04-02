@@ -7379,24 +7379,68 @@ using namespace dx12_internal;
 	}
 	void GraphicsDevice_DX12::ClearUAV(const GPUResource* resource, uint32_t value, CommandList cmd)
 	{
-		auto internal_state = to_internal(resource);
-		// We cannot clear eg. a StructuredBuffer, so in those cases we must clear the RAW view with uav_raw
-		const SingleDescriptor& descriptor = internal_state->uav_raw.IsValid() ? internal_state->uav_raw : internal_state->uav;
-		D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle = descriptorheap_res.start_gpu;
-		gpu_handle.ptr += descriptor.index * resource_descriptor_size;
-		D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle = descriptor.handle;
-
 		const UINT values[4] = { value,value,value,value };
 
-		CommandList_DX12& commandlist = GetCommandList(cmd);
-		commandlist.GetGraphicsCommandList()->ClearUnorderedAccessViewUint(
-			gpu_handle,
-			cpu_handle,
-			internal_state->resource.Get(),
-			values,
-			0,
-			nullptr
-		);
+		auto internal_state = to_internal(resource);
+		if (internal_state->uav_raw.IsValid())
+		{
+			// We cannot clear eg. a StructuredBuffer, so in those cases we must clear the RAW view with uav_raw
+			const SingleDescriptor& descriptor = internal_state->uav_raw;
+			D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle = descriptorheap_res.start_gpu;
+			gpu_handle.ptr += descriptor.index * resource_descriptor_size;
+			D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle = descriptor.handle;
+
+			CommandList_DX12& commandlist = GetCommandList(cmd);
+			commandlist.GetGraphicsCommandList()->ClearUnorderedAccessViewUint(
+				gpu_handle,
+				cpu_handle,
+				internal_state->resource.Get(),
+				values,
+				0,
+				nullptr
+			);
+		}
+		else
+		{
+			if (internal_state->subresources_uav.empty())
+			{
+				const SingleDescriptor& descriptor = internal_state->uav;
+				D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle = descriptorheap_res.start_gpu;
+				gpu_handle.ptr += descriptor.index * resource_descriptor_size;
+				D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle = descriptor.handle;
+
+				CommandList_DX12& commandlist = GetCommandList(cmd);
+				commandlist.GetGraphicsCommandList()->ClearUnorderedAccessViewUint(
+					gpu_handle,
+					cpu_handle,
+					internal_state->resource.Get(),
+					values,
+					0,
+					nullptr
+				);
+			}
+			else
+			{
+				// This is clearing every subresource (for example every mip since they can't be referenced by single UAV)
+				for (auto& uav : internal_state->subresources_uav)
+				{
+					const SingleDescriptor& descriptor = uav;
+					D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle = descriptorheap_res.start_gpu;
+					gpu_handle.ptr += descriptor.index * resource_descriptor_size;
+					D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle = descriptor.handle;
+
+					CommandList_DX12& commandlist = GetCommandList(cmd);
+					commandlist.GetGraphicsCommandList()->ClearUnorderedAccessViewUint(
+						gpu_handle,
+						cpu_handle,
+						internal_state->resource.Get(),
+						values,
+						0,
+						nullptr
+					);
+				}
+			}
+		}
 	}
 	void GraphicsDevice_DX12::VideoDecode(const VideoDecoder* video_decoder, const VideoDecodeOperation* op, CommandList cmd)
 	{

@@ -87,14 +87,13 @@ uint3 hash33(uint3 x)
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
-	const uint2 tracingCoord = DTid.xy / 2;
 
-	const float depth = texture_depth[DTid.xy];
-	const float roughness = texture_roughness[DTid.xy];
+	const float depth = texture_depth[DTid.xy * 2];
+	const float roughness = texture_roughness[DTid.xy * 2];
 
 	if (!NeedReflection(roughness, depth, ssr_roughness_cutoff))
 	{
-		texture_resolve[DTid.xy] = texture_rayIndirectSpecular[tracingCoord];
+		texture_resolve[DTid.xy] = texture_rayIndirectSpecular[DTid.xy];
 		texture_resolve_variance[DTid.xy] = 0.0;
 		texture_reprojectionDepth[DTid.xy] = 0.0;
 		return;
@@ -102,7 +101,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	// Everthing in world space:
 	const float3 P = reconstruct_position(uv, depth);
-	const float3 N = decode_oct(texture_normal[DTid.xy]);
+	const float3 N = decode_oct(texture_normal[DTid.xy * 2]);
 	const float3 V = normalize(GetCamera().position - P);
 	const float NdotV = saturate(dot(N, V));
 
@@ -123,16 +122,15 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	for (int i = 0; i < sampleCount; i++)
 	{
 		float2 offset = (hammersley2d_random(i, sampleCount, random) - 0.5) * resolveSpatialSize;
-
-		int2 neighborTracingCoord = tracingCoord + offset;
+		
 		int2 neighborCoord = DTid.xy + offset;
 
-		float neighborDepth = texture_depth[neighborCoord];
+		float neighborDepth = texture_depth[neighborCoord * 2];
 		if (neighborDepth > 0.0)
 		{
-			float weight = GetWeight(neighborTracingCoord, V, N, roughness, NdotV);
+			float weight = GetWeight(neighborCoord, V, N, roughness, NdotV);
 
-			float4 sampleColor = texture_rayIndirectSpecular[neighborTracingCoord];
+			float4 sampleColor = texture_rayIndirectSpecular[neighborCoord];
 			sampleColor.rgb *= rcp(1 + Luminance(sampleColor.rgb));
 
 			result += sampleColor * weight;
@@ -142,7 +140,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 			if (weight > 0.001)
 			{
-				float neighborRayLength = texture_rayLength[neighborTracingCoord];
+				float neighborRayLength = texture_rayLength[neighborCoord];
 				closestRayLength = max(closestRayLength, neighborRayLength);
 			}
 		}
@@ -155,7 +153,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float resolveVariance = S / weightSum;
 
 	// Convert to post-projection depth so we can construct dual source reprojection buffers later
-	const float lineardepth = texture_lineardepth[DTid.xy] * GetCamera().z_far;
+	const float lineardepth = texture_lineardepth[DTid.xy * 2] * GetCamera().z_far;
 	float reprojectionDepth = compute_inverse_lineardepth(lineardepth + closestRayLength, GetCamera().z_near, GetCamera().z_far);
 
 	texture_resolve[DTid.xy] = max(result, 0.00001f);

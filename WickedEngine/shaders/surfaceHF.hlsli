@@ -2,8 +2,6 @@
 #define WI_SURFACE_HF
 #include "globals.hlsli"
 
-#define max3(v) max(max(v.x, v.y), v.z)
-
 // hard coded value for surfaces with simplified lighting:
 //	occlusion = 1
 //	roughness = 1
@@ -100,6 +98,7 @@ struct Surface
 	float hit_depth;
 	float3 gi;
 	float3 bumpColor;
+	float3 ssgi;
 
 	// These will be computed when calling Update():
 	float NdotV;			// cos(angle between normal and view vector)
@@ -147,6 +146,7 @@ struct Surface
 		flags = 0;
 		gi = 0;
 		bumpColor = 0;
+		ssgi = 0;
 
 		uid_validate = 0;
 		hit_depth = 0;

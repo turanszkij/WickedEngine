@@ -543,7 +543,6 @@ namespace wi::renderer
 		wi::graphics::Texture texture_spatial_variance;
 		wi::graphics::Texture texture_temporal[2];
 		wi::graphics::Texture texture_temporal_variance[2];
-		wi::graphics::Texture texture_bilateral_temp;
 	};
 	void CreateRTDiffuseResources(RTDiffuseResources& res, XMUINT2 resolution);
 	void Postprocess_RTDiffuse(
@@ -552,6 +551,29 @@ namespace wi::renderer
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
 		float range = 1000.0f
+	);
+	struct SSGIResources
+	{
+		wi::graphics::Texture texture_atlas2x_depth;
+		wi::graphics::Texture texture_atlas4x_depth;
+		wi::graphics::Texture texture_atlas8x_depth;
+		wi::graphics::Texture texture_atlas16x_depth;
+		wi::graphics::Texture texture_atlas2x_color;
+		wi::graphics::Texture texture_atlas4x_color;
+		wi::graphics::Texture texture_atlas8x_color;
+		wi::graphics::Texture texture_atlas16x_color;
+		wi::graphics::Texture texture_depth_mips;
+		wi::graphics::Texture texture_normal_mips;
+		wi::graphics::Texture texture_diffuse_mips;
+	};
+	void CreateSSGIResources(SSGIResources& res, XMUINT2 resolution);
+	void Postprocess_SSGI(
+		const SSGIResources& res,
+		const wi::graphics::Texture& input,
+		const wi::graphics::Texture& input_depth,
+		const wi::graphics::Texture& input_normal,
+		const wi::graphics::Texture& output,
+		wi::graphics::CommandList cmd
 	);
 	struct RTReflectionResources
 	{
@@ -564,7 +586,6 @@ namespace wi::renderer
 		wi::graphics::Texture texture_resolve_reprojectionDepth;
 		wi::graphics::Texture texture_temporal[2];
 		wi::graphics::Texture texture_temporal_variance[2];
-		wi::graphics::Texture texture_bilateral_temp;
 	};
 	void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution);
 	void Postprocess_RTReflection(
@@ -589,7 +610,6 @@ namespace wi::renderer
 		wi::graphics::Texture texture_resolve_reprojectionDepth;
 		wi::graphics::Texture texture_temporal[2];
 		wi::graphics::Texture texture_temporal_variance[2];
-		wi::graphics::Texture texture_bilateral_temp;
 		wi::graphics::GPUBuffer buffer_tile_tracing_statistics;
 		wi::graphics::GPUBuffer buffer_tiles_tracing_earlyexit;
 		wi::graphics::GPUBuffer buffer_tiles_tracing_cheap;

@@ -60,6 +60,7 @@ namespace wi
 		AO ao = AO_DISABLED;
 		bool fxaaEnabled = false;
 		bool ssrEnabled = false;
+		bool ssgiEnabled = false;
 		bool raytracedReflectionsEnabled = false;
 		bool raytracedDiffuseEnabled = false;
 		bool reflectionsEnabled = true;
@@ -94,6 +95,7 @@ namespace wi
 		wi::graphics::Texture rtReflection; // contains the scene rendered for planar reflections
 		wi::graphics::Texture rtRaytracedDiffuse; // raytraced diffuse screen space texture
 		wi::graphics::Texture rtSSR; // standard screen-space reflection results
+		wi::graphics::Texture rtSSGI; // standard screen-space GI results
 		wi::graphics::Texture rtSceneCopy; // contains the rendered scene that can be fed into transparent pass for distortion effect
 		wi::graphics::Texture rtSceneCopy_tmp; // temporary for gaussian mipchain
 		wi::graphics::Texture rtWaterRipple; // water ripple sprite normal maps are rendered into this
@@ -129,6 +131,7 @@ namespace wi
 		wi::renderer::RTDiffuseResources rtdiffuseResources;
 		wi::renderer::RTReflectionResources rtreflectionResources;
 		wi::renderer::SSRResources ssrResources;
+		wi::renderer::SSGIResources ssgiResources;
 		wi::renderer::RTShadowResources rtshadowResources;
 		wi::renderer::ScreenSpaceShadowResources screenspaceshadowResources;
 		wi::renderer::DepthOfFieldResources depthoffieldResources;
@@ -156,6 +159,7 @@ namespace wi
 
 		virtual void RenderAO(wi::graphics::CommandList cmd) const;
 		virtual void RenderSSR(wi::graphics::CommandList cmd) const;
+		virtual void RenderSSGI(wi::graphics::CommandList cmd) const;
 		virtual void RenderOutline(wi::graphics::CommandList cmd) const;
 		virtual void RenderLightShafts(wi::graphics::CommandList cmd) const;
 		virtual void RenderVolumetrics(wi::graphics::CommandList cmd) const;
@@ -236,6 +240,7 @@ namespace wi
 		constexpr bool getAOEnabled() const { return ao != AO_DISABLED; }
 		constexpr AO getAO() const { return ao; }
 		constexpr bool getSSREnabled() const { return ssrEnabled; }
+		constexpr bool getSSGIEnabled() const { return ssgiEnabled; }
 		constexpr bool getRaytracedDiffuseEnabled() const { return raytracedDiffuseEnabled; }
 		constexpr bool getRaytracedReflectionEnabled() const { return raytracedReflectionsEnabled; }
 		constexpr bool getShadowsEnabled() const { return shadowsEnabled; }
@@ -289,6 +294,7 @@ namespace wi
 
 		void setAO(AO value);
 		void setSSREnabled(bool value);
+		void setSSGIEnabled(bool value);
 		void setRaytracedReflectionsEnabled(bool value);
 		void setRaytracedDiffuseEnabled(bool value);
 		void setMotionBlurEnabled(bool value);

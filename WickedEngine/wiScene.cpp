@@ -1835,10 +1835,15 @@ namespace wi::scene
 					}
 					else if (channel.path == AnimationComponent::AnimationChannel::Path::WEIGHTS)
 					{
-						ObjectComponent* object = objects.GetComponent(channel.target);
-						if (object == nullptr)
-							continue;
-						target_mesh = meshes.GetComponent(object->meshID);
+						target_mesh = meshes.GetComponent(channel.target);
+						if (target_mesh == nullptr)
+						{
+							// Also try going through object's mesh reference:
+							ObjectComponent* object = objects.GetComponent(channel.target);
+							if (object == nullptr)
+								continue;
+							target_mesh = meshes.GetComponent(object->meshID);
+						}
 						if (target_mesh == nullptr)
 							continue;
 						animation.morph_weights_temp.resize(target_mesh->morph_targets.size());

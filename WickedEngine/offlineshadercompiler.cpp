@@ -67,17 +67,20 @@ wi::vector<ShaderEntry> shaders = {
 	{"ffx-fsr2/ffx_fsr2_accumulate_pass", wi::graphics::ShaderStage::CS},
 	{"ffx-fsr2/ffx_fsr2_rcas_pass", wi::graphics::ShaderStage::CS},
 	{"ssaoCS", wi::graphics::ShaderStage::CS},
+	{"ssgi_deinterleaveCS", wi::graphics::ShaderStage::CS},
+	{"ssgiCS", wi::graphics::ShaderStage::CS},
+	{"ssgi_upsampleCS", wi::graphics::ShaderStage::CS},
 	{"rtdiffuseCS", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_5},
 	{"rtdiffuse_spatialCS", wi::graphics::ShaderStage::CS},
 	{"rtdiffuse_temporalCS", wi::graphics::ShaderStage::CS},
-	{"rtdiffuse_bilateralCS", wi::graphics::ShaderStage::CS},
+	{"rtdiffuse_upsampleCS", wi::graphics::ShaderStage::CS},
 	{"rtreflectionCS", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_5},
 	{"ssr_tileMaxRoughness_horizontalCS", wi::graphics::ShaderStage::CS},
 	{"ssr_tileMaxRoughness_verticalCS", wi::graphics::ShaderStage::CS},
 	{"ssr_depthHierarchyCS", wi::graphics::ShaderStage::CS},
 	{"ssr_resolveCS", wi::graphics::ShaderStage::CS},
 	{"ssr_temporalCS", wi::graphics::ShaderStage::CS},
-	{"ssr_bilateralCS", wi::graphics::ShaderStage::CS},
+	{"ssr_upsampleCS", wi::graphics::ShaderStage::CS},
 	{"ssr_raytraceCS", wi::graphics::ShaderStage::CS},
 	{"ssr_raytraceCS_cheap", wi::graphics::ShaderStage::CS},
 	{"ssr_raytraceCS_earlyexit", wi::graphics::ShaderStage::CS},
@@ -483,6 +486,10 @@ int main(int argc, char* argv[])
 	{
 		shaders.back().permutations.emplace_back().defines = x;
 	}
+
+	// permutations for ssgiCS:
+	shaders.push_back({ "ssgiCS", wi::graphics::ShaderStage::CS });
+	shaders.back().permutations.emplace_back().defines = {"WIDE"};
 
 	wi::jobsystem::Initialize();
 	wi::jobsystem::context ctx;

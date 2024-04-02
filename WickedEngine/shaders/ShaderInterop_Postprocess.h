@@ -55,6 +55,7 @@ static const uint SSR_TILESIZE = 32;
 
 #define rtdiffuse_range ssao_range
 #define rtdiffuse_frame ssr_frame
+#define ssgi_frame ssr_frame
 
 #define rtreflection_range ssao_range
 #define rtreflection_roughness_cutoff ssr_roughness_cutoff

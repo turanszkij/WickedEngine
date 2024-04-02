@@ -63,6 +63,7 @@ public:
 	wi::gui::Slider raytracedReflectionsRangeSlider;
 	wi::gui::CheckBox raytracedDiffuseCheckBox;
 	wi::gui::Slider raytracedDiffuseRangeSlider;
+	wi::gui::CheckBox ssgiCheckBox;
 	wi::gui::CheckBox screenSpaceShadowsCheckBox;
 	wi::gui::Slider screenSpaceShadowsStepCountSlider;
 	wi::gui::Slider screenSpaceShadowsRangeSlider;
