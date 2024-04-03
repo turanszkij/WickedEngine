@@ -2108,6 +2108,8 @@ namespace wi
 
 			device->RenderPassEnd(cmd);
 		}
+
+		wi::renderer::Postprocess_Downsample4x(rtMain, rtSceneCopy, cmd);
 	}
 	void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 	{
