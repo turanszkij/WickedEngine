@@ -12695,8 +12695,8 @@ void Postprocess_SSGI(
 			postprocess.resolution.y = desc.height;
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-			postprocess.params0.x = 1; // range
-			postprocess.params0.y = 4; // spread
+			postprocess.params0.x = 2; // range
+			postprocess.params0.y = 2; // spread
 			postprocess.params0.z = std::pow(1.0f / (postprocess.params0.x * postprocess.params0.y), 2.0f); // rangespread_rcp2
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
