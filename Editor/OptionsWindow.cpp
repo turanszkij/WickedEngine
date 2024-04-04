@@ -307,6 +307,8 @@ void OptionsWindow::Create(EditorComponent* _editor)
 	filterCombo.AddItem(ICON_SPRITE, (uint64_t)Filter::Sprite);
 	filterCombo.AddItem(ICON_FONT, (uint64_t)Filter::Font);
 	filterCombo.AddItem(ICON_VOXELGRID, (uint64_t)Filter::VoxelGrid);
+	filterCombo.AddItem(ICON_RIGIDBODY, (uint64_t)Filter::RigidBody);
+	filterCombo.AddItem(ICON_SOFTBODY, (uint64_t)Filter::SoftBody);
 	filterCombo.SetTooltip("Apply filtering to the Entities by components");
 	filterCombo.OnSelect([&](wi::gui::EventArgs args) {
 		filter = (Filter)args.userdata;
@@ -757,7 +759,9 @@ bool OptionsWindow::CheckEntityFilter(wi::ecs::Entity entity)
 		has_flag(filter, Filter::Video) && scene.videos.Contains(entity) ||
 		has_flag(filter, Filter::Sprite) && scene.sprites.Contains(entity) ||
 		has_flag(filter, Filter::Font) && scene.fonts.Contains(entity) ||
-		has_flag(filter, Filter::VoxelGrid) && scene.voxel_grids.Contains(entity)
+		has_flag(filter, Filter::VoxelGrid) && scene.voxel_grids.Contains(entity) ||
+		has_flag(filter, Filter::RigidBody) && scene.rigidbodies.Contains(entity) ||
+		has_flag(filter, Filter::SoftBody) && scene.softbodies.Contains(entity)
 		)
 	{
 		valid = true;

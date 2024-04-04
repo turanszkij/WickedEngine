@@ -50,6 +50,8 @@ public:
 		Sprite = 1 << 23,
 		Font = 1 << 24,
 		VoxelGrid = 1 << 25,
+		RigidBody = 1 << 26,
+		SoftBody = 1 << 27,
 
 		All = ~0ull,
 	} filter = Filter::All;
