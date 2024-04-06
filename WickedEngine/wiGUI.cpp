@@ -2630,7 +2630,7 @@ namespace wi::gui
 		items.clear();
 
 		selected = -1;
-		firstItemVisible = 0;
+		//firstItemVisible = 0;
 	}
 	void ComboBox::SetMaxVisibleItemCount(int value)
 	{
