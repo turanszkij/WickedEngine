@@ -12770,7 +12770,7 @@ void Postprocess_SSGI(
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 			postprocess.params0.x = 2; // range
-			postprocess.params0.y = 8; // spread
+			postprocess.params0.y = 6; // spread
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
@@ -12803,7 +12803,7 @@ void Postprocess_SSGI(
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 			postprocess.params0.x = 1; // range
-			postprocess.params0.y = 8; // spread
+			postprocess.params0.y = 4; // spread
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
@@ -12836,7 +12836,7 @@ void Postprocess_SSGI(
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 			postprocess.params0.x = 1; // range
-			postprocess.params0.y = 8; // spread
+			postprocess.params0.y = 2; // spread
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(

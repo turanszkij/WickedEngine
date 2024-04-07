@@ -149,7 +149,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint2 GTid :
 		for(int y = -range; y <= range; ++y)
 		{
 			const int2 pixel = pixel_base + int2(x, y);
-			if(any(pixel < 0) || any(pixel >= postprocess.resolution))
+			if(any(pixel < 0) || any(pixel >= postprocess.resolution) || (x == 0 && y == 0))
 				continue; // to not lose energy when sampling outside of textures, we skip those offsets
 			const float2 foffset = float2(x, y) * spread;
 			const int2 offset = round(foffset);

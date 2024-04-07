@@ -25,26 +25,28 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	const float depth = input_depth_high[pixel];
 	const float linearDepth = compute_lineardepth(depth);
 	const float3 N = decode_oct(input_normal_high[pixel].rg);
-
+	
 #if 1
+	const int range = int(postprocess.params0.x);
+	float spread = postprocess.params0.y;
+#else
+	const int range = 2;
+	float spread = 2;
+#endif
+
+#if 0
 	const float3 P = reconstruct_position(uv, depth);
 	const float3 ddxP = P - QuadReadAcrossX(P);
 	const float3 ddyP = P - QuadReadAcrossY(P);
-	const float curve = saturate(1 - pow(1 - max(dot(ddxP, ddxP), dot(ddyP, ddyP)), 32));
+	const float curve = saturate(1 - pow(1 - max(dot(ddxP, ddxP), dot(ddyP, ddyP)), 64));
 	const float normalPow = lerp(normalThreshold, 1, curve);
+	//spread *= 1 + curve;
 #else
 	const float normalPow = normalThreshold;
 #endif
 
 	float3 result = 0;
 	float sum = 0;
-#if 1
-	const int range = int(postprocess.params0.x);
-	const float spread = postprocess.params0.y;
-#else
-	const int range = 2;
-	const float spread = 6;
-#endif
 	for(int x = -range; x <= range; ++x)
 	{
 		for(int y = -range; y <= range; ++y)
@@ -59,7 +61,7 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 			float bilateralDepthWeight = 1 - saturate(abs(sampleLinearDepth - linearDepth) * depthThreshold);
 
 			const float3 sampleN = decode_oct(input_normal_low.SampleLevel(sampler_linear_clamp, sample_uv, 0));
-			float normalError = pow(saturate(dot(sampleN, N)), normalPow);
+			float normalError = pow(saturate(dot(sampleN, N)), normalPow) + 0.001;
 			float bilateralNormalWeight = normalError;
 
 			float weight = bilateralDepthWeight * bilateralNormalWeight;
