@@ -1044,6 +1044,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSGI], "ssgiCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSGI_WIDE], "ssgiCS.cso", wi::graphics::ShaderModel::SM_5_0, { "WIDE" }); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSGI_UPSAMPLE], "ssgi_upsampleCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSGI_UPSAMPLE_WIDE], "ssgi_upsampleCS.cso", wi::graphics::ShaderModel::SM_5_0, { "WIDE" }); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_RTDIFFUSE_SPATIAL], "rtdiffuse_spatialCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_RTDIFFUSE_TEMPORAL], "rtdiffuse_temporalCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_RTDIFFUSE_UPSAMPLE], "rtdiffuse_upsampleCS.cso"); });
@@ -12720,7 +12721,8 @@ void Postprocess_SSGI(
 
 	{
 		device->EventBegin("SSGI - upsample", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSGI_UPSAMPLE], cmd);
+
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSGI_UPSAMPLE_WIDE], cmd);
 
 		// 16x -> 8x
 		{
@@ -12736,8 +12738,12 @@ void Postprocess_SSGI(
 			postprocess.resolution.y = desc.height >> 2;
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-			postprocess.params0.x = 2; // range
-			postprocess.params0.y = 4; // spread
+			postprocess.params0.x = 3; // range
+			postprocess.params0.y = 2; // spread
+			postprocess.params1.x = float(desc.width >> 3);
+			postprocess.params1.y = float(desc.height >> 3);
+			postprocess.params1.z = 1.0f / postprocess.params1.x;
+			postprocess.params1.w = 1.0f / postprocess.params1.y;
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
@@ -12770,7 +12776,11 @@ void Postprocess_SSGI(
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 			postprocess.params0.x = 2; // range
-			postprocess.params0.y = 6; // spread
+			postprocess.params0.y = 3; // spread
+			postprocess.params1.x = float(desc.width >> 2);
+			postprocess.params1.y = float(desc.height >> 2);
+			postprocess.params1.z = 1.0f / postprocess.params1.x;
+			postprocess.params1.w = 1.0f / postprocess.params1.y;
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
@@ -12788,6 +12798,8 @@ void Postprocess_SSGI(
 			}
 		}
 
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSGI_UPSAMPLE], cmd);
+
 		// 4x -> 2x
 		{
 			device->BindResource(&res.texture_depth_mips, 0, cmd, 1);
@@ -12803,7 +12815,11 @@ void Postprocess_SSGI(
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 			postprocess.params0.x = 1; // range
-			postprocess.params0.y = 4; // spread
+			postprocess.params0.y = 2; // spread
+			postprocess.params1.x = float(desc.width >> 1);
+			postprocess.params1.y = float(desc.height >> 1);
+			postprocess.params1.z = 1.0f / postprocess.params1.x;
+			postprocess.params1.w = 1.0f / postprocess.params1.y;
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
@@ -12836,7 +12852,12 @@ void Postprocess_SSGI(
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 			postprocess.params0.x = 1; // range
-			postprocess.params0.y = 2; // spread
+			postprocess.params0.y = 1; // spread
+			const TextureDesc& desc2 = res.texture_diffuse_mips.desc;
+			postprocess.params1.x = float(desc2.width);
+			postprocess.params1.y = float(desc2.height);
+			postprocess.params1.z = 1.0f / postprocess.params1.x;
+			postprocess.params1.w = 1.0f / postprocess.params1.y;
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
