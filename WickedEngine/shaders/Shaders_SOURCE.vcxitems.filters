@@ -800,9 +800,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)shadowGS_transparent_emulation.hlsl">
       <Filter>GS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)upsample_bilateral_uint4CS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)rtshadow_denoise_temporalCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>

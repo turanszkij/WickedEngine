@@ -3,12 +3,45 @@
 #include "volumetricLightHF.hlsli"
 #include "fogHF.hlsli"
 
+// https://github.com/dong-zhan/ray-tracer/blob/master/ray%20cone%20intersect.hlsl
+//p: ray o
+//v: ray dir
+//pa: cone apex
+//va: cone dir
+//sina2: sin(half apex angle) squared
+//cosa2 : cos(half apex angle) squared
+bool intersectInfiniteCone(float3 p, float3 v, float3 pa, float3 va, float sina2, float cosa2, out float tnear, out float tfar)
+{
+	tnear = 0;
+	tfar = 0;
+
+	float3 dp = p - pa;
+	float vva = dot(v, va);
+	float dpva = dot(dp, va);
+	
+	float3 v_vvava = v - vva * va;
+	float3 dpvava = dp - dot(dp, va) * va;
+
+	float A = cosa2 * dot(v_vvava, v_vvava) - sina2 * vva * vva;
+	float B = 2 * cosa2 * dot(v_vvava, dpvava) - 2 * sina2 * vva * dpva;
+	float C = cosa2 * dot(dpvava, dpvava) - sina2 * dpva * dpva;
+
+	float disc = B*B - 4 * A*C;
+	if (disc < 0.0001)return false;
+
+	float sqrtDisc = sqrt( disc );
+	tnear = (-B - sqrtDisc ) / (2*A);
+	tfar = (-B + sqrtDisc ) / (2*A);
+	return true;
+}
+
 float4 main(VertexToPixel input) : SV_TARGET
 {
 	ShaderEntity light = load_entity(GetFrame().lightarray_offset + (uint)g_xColor.x);
 
 	float2 ScreenCoord = input.pos2D.xy / input.pos2D.w * float2(0.5f, -0.5f) + 0.5f;
-	float depth = max(input.pos.z, texture_depth.SampleLevel(sampler_point_clamp, ScreenCoord, 0));
+	float4 depths = texture_depth.GatherRed(sampler_point_clamp, ScreenCoord);
+	float depth = max(input.pos.z, max(depths.x, max(depths.y, max(depths.z, depths.w))));
 	float3 P = reconstruct_position(ScreenCoord, depth);
 	float3 V = GetCamera().position - P;
 	float cameraDistance = length(V);
@@ -18,10 +51,21 @@ float4 main(VertexToPixel input) : SV_TARGET
 	float3 accumulation = 0;
 
 	float3 rayEnd = GetCamera().position;
-	// todo: rayEnd should be clamped to the closest cone intersection point when camera is outside volume
+
+	if(g_xColor.w > 0)
+	{
+		// If camera is outside light volume, do a cone trace to determine closest point on cone:
+		float tnear = 0;
+		float tfar = 0;
+		if(intersectInfiniteCone(GetCamera().position, -V, light.position, light.GetDirection(), g_xColor.y, g_xColor.z, tnear, tfar))
+		{
+			rayEnd = GetCamera().position - V * max(0, tnear);
+			//return float4(1,0,0,1);
+		}
+	}
 	
 	const uint sampleCount = 16;
-	const float stepSize = length(P - rayEnd) / sampleCount;
+	const float stepSize = distance(rayEnd, P) / sampleCount;
 
 	// dither ray start to help with undersampling:
 	P = P + V * stepSize * dither(input.pos.xy);

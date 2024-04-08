@@ -8,7 +8,8 @@ float4 main(VertexToPixel input) : SV_TARGET
 	ShaderEntity light = load_entity(GetFrame().lightarray_offset + (uint)g_xColor.x);
 
 	float2 ScreenCoord = input.pos2D.xy / input.pos2D.w * float2(0.5f, -0.5f) + 0.5f;
-	float depth = max(input.pos.z, texture_depth.SampleLevel(sampler_point_clamp, ScreenCoord, 0));
+	float4 depths = texture_depth.GatherRed(sampler_point_clamp, ScreenCoord);
+	float depth = max(input.pos.z, max(depths.x, max(depths.y, max(depths.z, depths.w))));
 	float3 P = reconstruct_position(ScreenCoord, depth);
 	float3 V = GetCamera().position - P;
 	float cameraDistance = length(V);
@@ -26,7 +27,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 	}
 
 	const uint sampleCount = 16;
-	const float stepSize = length(P - rayEnd) / sampleCount;
+	const float stepSize = distance(rayEnd, P) / sampleCount;
 
 	// dither ray start to help with undersampling:
 	P = P + V * stepSize * dither(input.pos.xy);

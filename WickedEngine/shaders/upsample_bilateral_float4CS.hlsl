@@ -8,6 +8,8 @@
 PUSHCONSTANT(postprocess, PostProcess);
 
 Texture2D<UPSAMPLE_FORMAT> input : register(t0);
+Texture2D<float> input_lineardepth_high : register(t1);
+Texture2D<float> input_lineardepth_low : register(t2);
 
 // Note: this post process can be either a pixel shader or compute shader, depending on use case
 
@@ -27,63 +29,58 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #endif // USE_PIXELSHADER
 
 	const float threshold = postprocess.params0.x;
-	const float lowres_depthchain_mip = postprocess.params0.w;
+	const uint lowres_depthchain_mip = uint(postprocess.params0.w);
 	const float2 lowres_size = postprocess.params1.xy;
 	const float2 lowres_texel_size = postprocess.params1.zw;
+	
+	const float lineardepth_highres = input_lineardepth_high[pixel] * GetCamera().z_far;
+	
+	UPSAMPLE_FORMAT color = 0;
+	float sum = 0;
 
-	const float2 uv00 = uv - lowres_texel_size * 0.5;
-	const float2 uv10 = float2(uv00.x + lowres_texel_size.x, uv00.y);
-	const float2 uv01 = float2(uv00.x, uv00.y + lowres_texel_size.y);
-	const float2 uv11 = float2(uv00.x + lowres_texel_size.x, uv00.y + lowres_texel_size.y);
+	int2 lowres_pixel = int2(float2(pixel) * postprocess.params0.w);
 
-	const float4 lineardepth_highres = texture_lineardepth[pixel].xxxx;
-	const float4 lineardepth_lowres = float4(
-		texture_lineardepth.SampleLevel(sampler_point_clamp, uv00, lowres_depthchain_mip),
-		texture_lineardepth.SampleLevel(sampler_point_clamp, uv10, lowres_depthchain_mip),
-		texture_lineardepth.SampleLevel(sampler_point_clamp, uv01, lowres_depthchain_mip),
-		texture_lineardepth.SampleLevel(sampler_point_clamp, uv11, lowres_depthchain_mip)
-	);
+	const int range = 1;
+	for(int x = -range; x <= range; ++x)
+	for(int y = -range; y <= range; ++y)
+	{
+#ifdef UPSAMPLE_DISABLE_FILTERING
+		const float sample_lineardepth = input_lineardepth_low[lowres_pixel + int2(x, y)] * GetCamera().z_far;
+		const float weight = 1 - saturate(abs(sample_lineardepth - lineardepth_highres) * threshold);
+		if(weight > sum)
+		{
+			sum = weight;
+			color = input[lowres_pixel + int2(x, y)];
+		}
+#else
+		const float4 zzzz = input_lineardepth_low.GatherRed(sampler_linear_clamp, uv, int2(x, y)) * GetCamera().z_far;
+		const float4 wwww = max(0.001, 1 - saturate(abs(zzzz - lineardepth_highres) * threshold));
+		const float4 rrrr = input.GatherRed(sampler_linear_clamp, uv, int2(x, y));
+		const float4 gggg = input.GatherGreen(sampler_linear_clamp, uv, int2(x, y));
+		const float4 bbbb = input.GatherBlue(sampler_linear_clamp, uv, int2(x, y));
+		const float4 aaaa = input.GatherAlpha(sampler_linear_clamp, uv, int2(x, y));
+		
+		float2 sam_pixel = uv * lowres_size + int2(x, y) + (-0.5 + 1.0 / 512.0); // (1.0 / 512.0) correction is described here: https://www.reedbeta.com/blog/texture-gathers-and-coordinate-precision/
+		float2 sam_pixel_frac = frac(sam_pixel);
 
-	const float4 depth_diff = abs(lineardepth_highres - lineardepth_lowres) * GetCamera().z_far;
-	const float accum_diff = dot(depth_diff, float4(1, 1, 1, 1));
-
-	UPSAMPLE_FORMAT color;
+		color += (UPSAMPLE_FORMAT)float4(
+			bilinear(rrrr * wwww, sam_pixel_frac),
+			bilinear(gggg * wwww, sam_pixel_frac),
+			bilinear(bbbb * wwww, sam_pixel_frac),
+			bilinear(aaaa * wwww, sam_pixel_frac)
+		);
+		
+		float weight = bilinear(wwww, sam_pixel_frac);
+		sum += weight;
+#endif // UPSAMPLE_DISABLE_FILTERING
+	}
 
 #ifndef UPSAMPLE_DISABLE_FILTERING
-	[branch]
-	if (accum_diff < threshold)
+	if(sum > 0)
 	{
-		// small error, take bilinear sample:
-		color = input.SampleLevel(sampler_linear_clamp, uv, 0);
+		color /= sum;
 	}
-	else
 #endif // UPSAMPLE_DISABLE_FILTERING
-	{
-		// large error:
-
-		// find nearest sample to current depth:
-		float min_depth_diff = depth_diff[0];
-		float2 uv_nearest = uv00;
-
-		if (depth_diff[1] < min_depth_diff)
-		{
-			uv_nearest = uv10;
-			min_depth_diff = depth_diff[1];
-		}
-
-		if (depth_diff[2] < min_depth_diff)
-		{
-			uv_nearest = uv01;
-			min_depth_diff = depth_diff[2];
-		}
-
-		if (depth_diff[3] < min_depth_diff)
-		{
-			uv_nearest = uv11;
-			min_depth_diff = depth_diff[3];
-		}
-		color = input[floor(uv_nearest * lowres_size)];
-	}
 
 #ifdef USE_PIXELSHADER
 	return color;

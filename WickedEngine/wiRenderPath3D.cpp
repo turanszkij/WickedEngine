@@ -29,8 +29,7 @@ namespace wi
 		rtWaterRipple = {};
 		rtParticleDistortion_render = {};
 		rtParticleDistortion = {};
-		rtVolumetricLights[0] = {};
-		rtVolumetricLights[1] = {};
+		rtVolumetricLights = {};
 		rtBloom = {};
 		rtBloom_tmp = {};
 		rtAO = {};
@@ -1862,26 +1861,18 @@ namespace wi
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
 			RenderPassImage rp[] = {
-				RenderPassImage::RenderTarget(&rtVolumetricLights[0], RenderPassImage::LoadOp::CLEAR),
+				RenderPassImage::RenderTarget(&rtVolumetricLights, RenderPassImage::LoadOp::CLEAR),
 			};
 			device->RenderPassBegin(rp, arraysize(rp), cmd);
 
 			Viewport vp;
-			vp.width = (float)rtVolumetricLights[0].GetDesc().width;
-			vp.height = (float)rtVolumetricLights[0].GetDesc().height;
+			vp.width = (float)rtVolumetricLights.GetDesc().width;
+			vp.height = (float)rtVolumetricLights.GetDesc().height;
 			device->BindViewports(1, &vp, cmd);
 
 			wi::renderer::DrawVolumeLights(visibility_main, cmd);
 
 			device->RenderPassEnd(cmd);
-
-			wi::renderer::Postprocess_Blur_Bilateral(
-				rtVolumetricLights[0],
-				rtLinearDepth,
-				rtVolumetricLights[1],
-				rtVolumetricLights[0],
-				cmd
-			);
 
 			wi::profiler::EndRange(range);
 		}
@@ -2027,7 +2018,7 @@ namespace wi
 		{
 			device->EventBegin("Contribute Volumetric Lights", cmd);
 			wi::renderer::Postprocess_Upsample_Bilateral(
-				rtVolumetricLights[0],
+				rtVolumetricLights,
 				rtLinearDepth,
 				rtMain,
 				cmd,
@@ -2676,15 +2667,12 @@ namespace wi
 			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			desc.width = internalResolution.x / 2;
 			desc.height = internalResolution.y / 2;
-			device->CreateTexture(&desc, nullptr, &rtVolumetricLights[0]);
-			device->SetName(&rtVolumetricLights[0], "rtVolumetricLights[0]");
-			device->CreateTexture(&desc, nullptr, &rtVolumetricLights[1]);
-			device->SetName(&rtVolumetricLights[1], "rtVolumetricLights[1]");
+			device->CreateTexture(&desc, nullptr, &rtVolumetricLights);
+			device->SetName(&rtVolumetricLights, "rtVolumetricLights");
 		}
 		else
 		{
-			rtVolumetricLights[0] = {};
-			rtVolumetricLights[1] = {};
+			rtVolumetricLights = {};
 		}
 	}
 	void RenderPath3D::setLightShaftsEnabled(bool value)
