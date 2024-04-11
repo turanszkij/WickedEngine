@@ -46,7 +46,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		const float2 brush_uv_quad_y = QuadReadAcrossY(brush_uv);
 		const float2 brush_uv_dx = brush_uv - brush_uv_quad_x;
 		const float2 brush_uv_dy = brush_uv - brush_uv_quad_y;
-		brush_color = texture_brush.SampleGrad(sampler_linear_clamp, brush_uv, brush_uv_dx, brush_uv_dy) * unpack_rgba(push.xPaintBrushColor);
+		brush_color = texture_brush.SampleGrad(sampler_linear_clamp, brush_uv, brush_uv_dx, brush_uv_dy);
 	}
 
 	[branch]
@@ -69,6 +69,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 			brush_color *= reveal_color;
 		}
 		brush_color.a *= affection;
+		brush_color *= unpack_rgba(push.xPaintBrushColor);
 		float4 prevColor = texture_output[pixel];
 		texture_output[pixel] = lerp(prevColor, brush_color, brush_color.a);
 	}

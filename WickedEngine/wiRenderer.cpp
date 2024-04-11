@@ -3049,6 +3049,8 @@ void ProcessDeferredTextureRequests(CommandList cmd)
 			const uint diameter = params.push.xPaintBrushRadius * 2;
 			const uint dispatch_dim = (diameter + PAINT_TEXTURE_BLOCKSIZE - 1) / PAINT_TEXTURE_BLOCKSIZE;
 			device->Dispatch(dispatch_dim, dispatch_dim, 1, cmd);
+
+			device->Barrier(GPUBarrier::Memory(&params.editTex), cmd);
 		}
 
 		// ending barriers:
