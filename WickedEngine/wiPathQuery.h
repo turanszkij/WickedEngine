@@ -58,6 +58,21 @@ namespace wi
 
 		bool is_succesful() const;
 
+		// Search for a cover location that can hide the subject from observer.
+		//	observer:		location to hide from
+		//	subject:		location of who wants to hide
+		//	direction:		subject's search direction
+		//	max_distance:	maximum search distance
+		//	voxelgrid:		voxel grid to perform the search in
+		//	returns whether a suitable cover was found or not
+		bool search_cover(
+			const XMFLOAT3& observer,
+			const XMFLOAT3& subject,
+			const XMFLOAT3& direction,
+			float max_distance,
+			const wi::VoxelGrid& voxelgrid
+		);
+
 		// Gets the next upcoming waypoint between start and goal that was used in process():
 		XMFLOAT3 get_next_waypoint() const;
 
@@ -66,6 +81,10 @@ namespace wi
 
 		// Gets the result waypoint at specified index (direction: start -> goal)
 		XMFLOAT3 get_waypoint(size_t index) const;
+
+		XMFLOAT3 get_goal() const;
+
+		bool is_voxel_valid(const VoxelGrid& voxelgrid, XMUINT3 coord) const;
 
 		bool debug_voxels = true;
 		mutable float debugtimer = 0;

@@ -6,6 +6,7 @@ namespace wi::lua
 {
 	Luna<PathQuery_BindLua>::FunctionType PathQuery_BindLua::methods[] = {
 		lunamethod(PathQuery_BindLua, Process),
+		lunamethod(PathQuery_BindLua, SearchCover),
 		lunamethod(PathQuery_BindLua, IsSuccessful),
 		lunamethod(PathQuery_BindLua, GetNextWaypoint),
 		lunamethod(PathQuery_BindLua, SetDebugDrawWaypointsEnabled),
@@ -17,6 +18,7 @@ namespace wi::lua
 		lunamethod(PathQuery_BindLua, GetAgentHeight),
 		lunamethod(PathQuery_BindLua, GetWaypointCount),
 		lunamethod(PathQuery_BindLua, GetWaypoint),
+		lunamethod(PathQuery_BindLua, GetGoal),
 		{ NULL, NULL }
 	};
 	Luna<PathQuery_BindLua>::PropertyType PathQuery_BindLua::properties[] = {
@@ -53,6 +55,52 @@ namespace wi::lua
 		pathquery.process(start->GetFloat3(), goal->GetFloat3(), *voxelgrid->voxelgrid);
 
 		return 0;
+	}
+	int PathQuery_BindLua::SearchCover(lua_State* L)
+	{
+		int args = wi::lua::SGetArgCount(L);
+		if (args < 5)
+		{
+			wi::lua::SError(L, "PathQuery::SearchCover(Vector observer,subject,direction, float max_distance, VoxelGrid voxelgrid) not enough arguments!");
+			return 0;
+		}
+		Vector_BindLua* observer = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (observer == nullptr)
+		{
+			wi::lua::SError(L, "PathQuery::SearchCover(Vector observer,subject,direction, float max_distance, VoxelGrid voxelgrid) first argument is not a Vector!");
+			return 0;
+		}
+		Vector_BindLua* subject = Luna<Vector_BindLua>::lightcheck(L, 2);
+		if (subject == nullptr)
+		{
+			wi::lua::SError(L, "PathQuery::SearchCover(Vector observer,subject,direction, float max_distance, VoxelGrid voxelgrid) second argument is not a Vector!");
+			return 0;
+		}
+		Vector_BindLua* direction = Luna<Vector_BindLua>::lightcheck(L, 3);
+		if (direction == nullptr)
+		{
+			wi::lua::SError(L, "PathQuery::SearchCover(Vector observer,subject,direction, float max_distance, VoxelGrid voxelgrid) third argument is not a Vector!");
+			return 0;
+		}
+		float max_distance = wi::lua::SGetFloat(L, 4);
+		VoxelGrid_BindLua* voxelgrid = Luna<VoxelGrid_BindLua>::lightcheck(L, 5);
+		if (voxelgrid == nullptr)
+		{
+			wi::lua::SError(L, "PathQuery::SearchCover(Vector observer,subject,direction, float max_distance, VoxelGrid voxelgrid) fifth argument is not a VoxelGrid!");
+			return 0;
+		}
+
+		bool result = pathquery.search_cover(
+			observer->GetFloat3(),
+			subject->GetFloat3(),
+			direction->GetFloat3(),
+			max_distance,
+			*voxelgrid->voxelgrid
+		);
+
+		wi::lua::SSetBool(L, result);
+
+		return 1;
 	}
 	int PathQuery_BindLua::IsSuccessful(lua_State* L)
 	{
@@ -138,6 +186,11 @@ namespace wi::lua
 		}
 		int index = wi::lua::SGetInt(L, 1);
 		Luna<Vector_BindLua>::push(L, pathquery.get_waypoint(size_t(index)));
+		return 1;
+	}
+	int PathQuery_BindLua::GetGoal(lua_State* L)
+	{
+		Luna<Vector_BindLua>::push(L, pathquery.get_goal());
 		return 1;
 	}
 

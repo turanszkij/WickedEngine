@@ -317,6 +317,12 @@ namespace wi
 		XMStoreUInt3(&coord, world_to_uvw(XMLoadFloat3(&worldpos), XMLoadFloat3(&center), XMLoadFloat3(&resolution_rcp), XMLoadFloat3(&voxelSize_rcp)) * XMLoadUInt3(&resolution));
 		return coord;
 	}
+	XMINT3 VoxelGrid::world_to_coord_signed(const XMFLOAT3& worldpos) const
+	{
+		XMFLOAT3 coord;
+		XMStoreFloat3(&coord, world_to_uvw(XMLoadFloat3(&worldpos), XMLoadFloat3(&center), XMLoadFloat3(&resolution_rcp), XMLoadFloat3(&voxelSize_rcp)) * XMLoadUInt3(&resolution));
+		return XMINT3((int)coord.x, (int)coord.y, (int)coord.z);
+	}
 	XMFLOAT3 VoxelGrid::coord_to_world(const XMUINT3& coord) const
 	{
 		XMFLOAT3 worldpos;
