@@ -71,6 +71,9 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		brush_color.a *= affection;
 		brush_color *= unpack_rgba(push.xPaintBrushColor);
 		float4 prevColor = texture_output[pixel];
-		texture_output[pixel] = lerp(prevColor, brush_color, brush_color.a);
+		float4 color = 0;
+		color.rgb = prevColor.rgb * (1 - brush_color.a) + brush_color.rgb * brush_color.a;
+		color.a = prevColor.a * (1 - brush_color.a) + brush_color.a;
+		texture_output[pixel] = color;
 	}
 }
