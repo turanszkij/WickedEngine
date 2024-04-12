@@ -3021,7 +3021,6 @@ void ProcessDeferredTextureRequests(CommandList cmd)
 		for (auto& params : painttextures)
 		{
 			// overwrites some params!
-			params.push.xPaintReveal = params.revealTex.IsValid() ? 1 : 0;
 			if (params.brushTex.IsValid())
 			{
 				params.push.texture_brush = device->GetDescriptorIndex(&params.brushTex, SubresourceType::SRV);
