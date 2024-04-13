@@ -246,8 +246,9 @@ namespace wi
 		XMFLOAT3 goal_world;
 		XMStoreFloat3(&goal_world, XMLoadFloat3(&subject) + XMLoadFloat3(&direction) * max_distance);
 
-		const XMINT3 start = voxelgrid.world_to_coord_signed(subject);
-		const XMINT3 goal = voxelgrid.world_to_coord_signed(goal_world);
+		XMINT3 start = voxelgrid.world_to_coord_signed(observer);
+		XMINT3 goal = voxelgrid.world_to_coord_signed(goal_world);
+		start.y = goal.y;
 		XMUINT3 observer_coord = voxelgrid.world_to_coord(observer);
 		if (!flying)
 		{
