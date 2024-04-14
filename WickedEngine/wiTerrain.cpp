@@ -663,7 +663,6 @@ namespace wi::terrain
 
 		// Check whether there are any materials that would write to virtual textures:
 		bool virtual_texture_any = false;
-		bool virtual_texture_available[TEXTURESLOT_COUNT] = {};
 
 		if (scene->materials.GetCount() > 0)
 		{
@@ -673,17 +672,16 @@ namespace wi::terrain
 				if (material == nullptr)
 					continue;
 
-				for (int i = 0; i < TEXTURESLOT_COUNT; ++i)
+				for (int i = 0; i < TEXTURESLOT_COUNT && !virtual_texture_any; ++i)
 				{
-					virtual_texture_available[i] = false;
 					switch (i)
 					{
 					case MaterialComponent::BASECOLORMAP:
 					case MaterialComponent::NORMALMAP:
 					case MaterialComponent::SURFACEMAP:
+					case MaterialComponent::EMISSIVEMAP:
 						if (material->textures[i].resource.IsValid())
 						{
-							virtual_texture_available[i] = true;
 							virtual_texture_any = true;
 						}
 						break;
@@ -691,8 +689,10 @@ namespace wi::terrain
 						break;
 					}
 				}
+
+				if (virtual_texture_any)
+					break;
 			}
-			virtual_texture_available[MaterialComponent::SURFACEMAP] = true; // this is always needed to bake individual material properties
 
 			if (grassEntity != INVALID_ENTITY)
 			{
@@ -899,6 +899,7 @@ namespace wi::terrain
 					material.SetRoughness(1);
 					material.SetMetalness(1);
 					material.SetReflectance(1);
+					material.SetEmissiveStrength(100);
 
 					MeshComponent& mesh = generator->scene.meshes.Create(chunk_data.entity);
 					mesh.SetQuantizedPositionsDisabled(true); // connecting meshes quantization is not correct because mismatching AABBs
@@ -1307,6 +1308,8 @@ namespace wi::terrain
 					switch (map_type)
 					{
 					default:
+					case MaterialComponent::BASECOLORMAP:
+					case MaterialComponent::EMISSIVEMAP:
 						desc.format = Format::BC1_UNORM_SRGB;
 						desc_raw_block.format = Format::R32G32_UINT;
 						break;
@@ -1609,7 +1612,7 @@ namespace wi::terrain
 
 		for (const VirtualTexture* vt : virtual_textures_in_use)
 		{
-			for (uint32_t map_type = 0; map_type < 3; map_type++)
+			for (uint32_t map_type = 0; map_type < arraysize(atlas.maps); map_type++)
 			{
 				switch (map_type)
 				{
@@ -1624,6 +1627,10 @@ namespace wi::terrain
 				case MaterialComponent::SURFACEMAP:
 					device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_SURFACEMAP), cmd);
 					device->BindUAV(&atlas.maps[MaterialComponent::SURFACEMAP].texture_raw_block, 0, cmd);
+					break;
+				case MaterialComponent::EMISSIVEMAP:
+					device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_EMISSIVEMAP), cmd);
+					device->BindUAV(&atlas.maps[MaterialComponent::EMISSIVEMAP].texture_raw_block, 0, cmd);
 					break;
 				default:
 					assert(0);

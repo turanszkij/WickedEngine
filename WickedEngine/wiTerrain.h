@@ -60,7 +60,7 @@ namespace wi::terrain
 			wi::graphics::Texture texture;
 			wi::graphics::Texture texture_raw_block;
 		};
-		Map maps[3];
+		Map maps[4];
 		wi::graphics::GPUBuffer tile_pool;
 
 		struct Tile

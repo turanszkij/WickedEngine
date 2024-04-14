@@ -29,6 +29,7 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	modeComboBox.SetSize(XMFLOAT2(wid, hei));
 	modeComboBox.AddItem(ICON_DISABLED " Disabled", MODE_DISABLED);
 	modeComboBox.AddItem(ICON_MATERIAL " Texture", MODE_TEXTURE);
+	modeComboBox.AddItem(ICON_TERRAIN " Terrain material", MODE_TERRAIN_MATERIAL);
 	modeComboBox.AddItem(ICON_MESH " Vertexcolor", MODE_VERTEXCOLOR);
 	modeComboBox.AddItem(ICON_MESH " Sculpting - Add", MODE_SCULPTING_ADD);
 	modeComboBox.AddItem(ICON_MESH " Sculpting - Subtract", MODE_SCULPTING_SUBTRACT);
@@ -38,7 +39,6 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	modeComboBox.AddItem(ICON_HAIR " Hairparticle - Remove Triangle", MODE_HAIRPARTICLE_REMOVE_TRIANGLE);
 	modeComboBox.AddItem(ICON_HAIR " Hairparticle - Length (Alpha)", MODE_HAIRPARTICLE_LENGTH);
 	modeComboBox.AddItem(ICON_MESH " Wind weight (Alpha)", MODE_WIND);
-	modeComboBox.AddItem(ICON_TERRAIN " Terrain material", MODE_TERRAIN_MATERIAL);
 	modeComboBox.SetSelected(0);
 	modeComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		switch (args.userdata)

@@ -1476,9 +1476,8 @@ void TerrainWindow::SetupAssets()
 		currentScene.Component_Attach(materialEntity, entity);
 		mat.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/lava.jpg";
 		mat.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/lava_nor.jpg";
-		mat.textures[MaterialComponent::EMISSIVEMAP].name = wi::helper::GetCurrentPath() + "/terrain/lava_nor.emi";
+		mat.textures[MaterialComponent::EMISSIVEMAP].name = wi::helper::GetCurrentPath() + "/terrain/lava_emi.jpg";
 		mat.roughness = 0.8f;
-		mat.SetEmissiveStrength(10);
 		mat.CreateRenderData();
 		terrain_preset.materialEntities.push_back(materialEntity);
 	}

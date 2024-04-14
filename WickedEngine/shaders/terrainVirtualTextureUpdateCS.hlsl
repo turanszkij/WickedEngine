@@ -7,12 +7,15 @@ PUSHCONSTANT(push, TerrainVirtualTexturePush);
 Texture2DArray<float> blendmap : register(t0);
 ByteAddressBuffer blendmap_buffer : register(t1);
 
-#if !defined(UPDATE_NORMALMAP) && !defined(UPDATE_SURFACEMAP)
+#if !defined(UPDATE_NORMALMAP) && !defined(UPDATE_SURFACEMAP) && !defined(UPDATE_EMISSIVEMAP)
 #define UPDATE_BASECOLORMAP
+#endif
+
+#if defined(UPDATE_BASECOLORMAP) || defined(UPDATE_EMISSIVEMAP)
 RWTexture2D<uint2> output : register(u0);
 #else
 RWTexture2D<uint4> output : register(u0);
-#endif // UPDATE_NORMALMAP
+#endif
 
 static const uint2 block_offsets[16] = {
 	uint2(0, 0), uint2(1, 0), uint2(2, 0), uint2(3, 0),
@@ -34,6 +37,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #ifdef UPDATE_BASECOLORMAP
 	float3 block_rgb[16];
 #endif // UPDATE_BASECOLORMAP
+		
+#ifdef UPDATE_EMISSIVEMAP
+	float3 block_rgb[16];
+#endif // UPDATE_EMISSIVEMAP
 
 #ifdef UPDATE_NORMALMAP
 	float block_x[16];
@@ -114,6 +121,24 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			}
 			total_color = lerp(total_color, surface, weight);
 #endif // UPDATE_SURFACEMAP
+
+#ifdef UPDATE_EMISSIVEMAP
+			float4 emissiveColor = 0;
+			[branch]
+			if (material.textures[EMISSIVEMAP].IsValid())
+			{
+				Texture2D tex = bindless_textures[material.textures[EMISSIVEMAP].texture_descriptor];
+				float2 dim = 0;
+				tex.GetDimensions(dim.x, dim.y);
+				float2 diff = dim * push.resolution_rcp;
+				float lod = log2(max(diff.x, diff.y));
+				float2 overscale = lod < 0 ? diff : 1;
+				float4 emissiveMap = tex.SampleLevel(sampler_linear_wrap, uv / overscale, lod);
+				emissiveColor.rgb = emissiveMap.rgb * emissiveMap.a;
+				emissiveColor.a = emissiveMap.a;
+			}
+			total_color = lerp(total_color, emissiveColor, weight);
+#endif // UPDATE_EMISSIVEMAP
 		}
 
 #ifdef UPDATE_BASECOLORMAP
@@ -129,6 +154,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		block_rgb[idx] = total_color.rgb;
 		block_a[idx] = total_color.a;
 #endif // UPDATE_SURFACEMAP
+
+#ifdef UPDATE_EMISSIVEMAP
+		block_rgb[idx] = ApplySRGBCurve_Fast(total_color.rgb);
+#endif // UPDATE_EMISSIVEMAP
 	}
 
 	const uint2 write_coord = push.write_offset + DTid.xy;
@@ -144,5 +173,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #ifdef UPDATE_SURFACEMAP
 	output[write_coord] = CompressBC3Block(block_rgb, block_a);
 #endif // UPDATE_SURFACEMAP
+
+#ifdef UPDATE_EMISSIVEMAP
+	output[write_coord] = CompressBC1Block(block_rgb);
+#endif // UPDATE_EMISSIVEMAP
 }
 
