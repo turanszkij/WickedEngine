@@ -1254,7 +1254,13 @@ void TerrainWindow::Create(EditorComponent* _editor)
 								p.x -= aabb._min.x;
 								p.z -= aabb._min.z;
 								int coord = int(p.x) + int(p.z) * width;
-								dest[coord] = chunk_data.region_weights[i++];
+								dest[coord] = wi::Color(
+									chunk_data.blendmap_layers[0].pixels[i],
+									chunk_data.blendmap_layers[1].pixels[i],
+									chunk_data.blendmap_layers[2].pixels[i],
+									chunk_data.blendmap_layers[3].pixels[i]
+								);
+								i++;
 							}
 						}
 					}
@@ -1443,6 +1449,40 @@ void TerrainWindow::SetupAssets()
 	material_LowAltitude->CreateRenderData();
 	material_HighAltitude->CreateRenderData();
 
+	// Extra material: pavingstone
+	{
+		Entity materialEntity = CreateEntity();
+		MaterialComponent& mat = currentScene.materials.Create(materialEntity);
+		currentScene.Component_Attach(materialEntity, entity);
+		mat.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/pavingstone.jpg";
+		mat.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/pavingstone_nor.jpg";
+		mat.CreateRenderData();
+		terrain_preset.materialEntities.push_back(materialEntity);
+	}
+	// Extra material: tactilepaving
+	{
+		Entity materialEntity = CreateEntity();
+		MaterialComponent& mat = currentScene.materials.Create(materialEntity);
+		currentScene.Component_Attach(materialEntity, entity);
+		mat.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/tactilepaving.jpg";
+		mat.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/tactilepaving_nor.jpg";
+		mat.CreateRenderData();
+		terrain_preset.materialEntities.push_back(materialEntity);
+	}
+	// Extra material: lava
+	{
+		Entity materialEntity = CreateEntity();
+		MaterialComponent& mat = currentScene.materials.Create(materialEntity);
+		currentScene.Component_Attach(materialEntity, entity);
+		mat.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/lava.jpg";
+		mat.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/lava_nor.jpg";
+		mat.textures[MaterialComponent::EMISSIVEMAP].name = wi::helper::GetCurrentPath() + "/terrain/lava_nor.emi";
+		mat.roughness = 0.8f;
+		mat.SetEmissiveStrength(10);
+		mat.CreateRenderData();
+		terrain_preset.materialEntities.push_back(materialEntity);
+	}
+
 	std::string terrain_path = wi::helper::GetCurrentPath() + "/terrain/";
 	wi::config::File config;
 	config.Open(std::string(terrain_path + "props.ini").c_str());
@@ -1582,6 +1622,8 @@ void TerrainWindow::SetupAssets()
 
 	terrain = &terrain_preset;
 	presetCombo.SetSelected(0);
+
+	editor->optionsWnd.paintToolWnd.RecreateTerrainMaterialButtons();
 }
 
 void TerrainWindow::Update(const wi::Canvas& canvas, float dt)

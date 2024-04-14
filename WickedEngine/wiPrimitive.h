@@ -87,6 +87,8 @@ namespace wi::primitive
 		{
 			assert(radius >= 0);
 		}
+		bool intersects(const XMVECTOR& P) const;
+		bool intersects(const XMFLOAT3& P) const;
 		bool intersects(const AABB& b) const;
 		bool intersects(const Sphere& b) const;
 		bool intersects(const Sphere& b, float& dist) const;

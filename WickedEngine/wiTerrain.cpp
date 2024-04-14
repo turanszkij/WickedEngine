@@ -13,7 +13,6 @@
 #include <mutex>
 #include <string>
 #include <atomic>
-#include <random>
 
 using namespace wi::ecs;
 using namespace wi::scene;
@@ -398,6 +397,8 @@ namespace wi::terrain
 		grass_properties.viewDistance = chunk_width;
 
 		generator = std::make_shared<Generator>();
+
+		materialEntities.resize(MATERIAL_COUNT);
 	}
 	Terrain::~Terrain()
 	{
@@ -411,8 +412,8 @@ namespace wi::terrain
 		generator->scene.Clear();
 
 		// save material parameters:
-		wi::scene::MaterialComponent materials[MATERIAL_COUNT];
-		for (int i = 0; i < MATERIAL_COUNT; ++i)
+		materials.resize(materialEntities.size());
+		for (int i = 0; i < materialEntities.size(); ++i)
 		{
 			MaterialComponent* material = scene->materials.GetComponent(materialEntities[i]);
 			if (material == nullptr)
@@ -488,7 +489,7 @@ namespace wi::terrain
 
 		// Restore surface source materials:
 		{
-			for (int i = 0; i < MATERIAL_COUNT; ++i)
+			for (size_t i = 0; i < materialEntities.size(); ++i)
 			{
 				if (materialEntities[i] == INVALID_ENTITY)
 				{
@@ -499,7 +500,7 @@ namespace wi::terrain
 				{
 					scene->materials.Create(materialEntities[i]);
 				}
-				if (!scene->names.Contains(materialEntities[i]))
+				if (i < MATERIAL_COUNT && !scene->names.Contains(materialEntities[i]))
 				{
 					NameComponent& name = scene->names.Create(materialEntities[i]);
 					switch (i)
@@ -883,6 +884,7 @@ namespace wi::terrain
 					ObjectComponent& object = *generator->scene.objects.GetComponent(chunk_data.entity);
 					object.lod_distance_multiplier = lod_multiplier;
 					object.filterMask |= wi::enums::FILTER_NAVIGATION_MESH;
+					object.filterMask |= wi::enums::FILTER_TERRAIN;
 					generator->scene.Component_Attach(chunk_data.entity, chunkGroupEntity);
 
 					TransformComponent& transform = *generator->scene.transforms.GetComponent(chunk_data.entity);
@@ -914,7 +916,12 @@ namespace wi::terrain
 					mesh.vertex_normals.resize(vertexCount);
 					mesh.vertex_tangents.resize(vertexCount);
 					mesh.vertex_uvset_0.resize(vertexCount);
-					chunk_data.region_weights.resize(vertexCount);
+
+					chunk_data.blendmap_layers.reserve(4);
+					chunk_data.blendmap_layers.emplace_back().pixels.resize(vertexCount);
+					chunk_data.blendmap_layers.emplace_back().pixels.resize(vertexCount);
+					chunk_data.blendmap_layers.emplace_back().pixels.resize(vertexCount);
+					chunk_data.blendmap_layers.emplace_back().pixels.resize(vertexCount);
 
 					chunk_data.mesh_vertex_positions = mesh.vertex_positions.data();
 
@@ -950,8 +957,8 @@ namespace wi::terrain
 							corners[i] = XMVectorSet(world_pos.x, height, world_pos.y, 0);
 						}
 						const float height = XMVectorGetY(corners[0]);
-						const XMVECTOR T = XMVectorSubtract(corners[2], corners[1]);
-						const XMVECTOR B = XMVectorSubtract(corners[1], corners[0]);
+						const XMVECTOR T = XMVectorSubtract(corners[1], corners[2]);
+						const XMVECTOR B = XMVectorSubtract(corners[0], corners[1]);
 						const XMVECTOR N = XMVector3Normalize(XMVector3Cross(T, B));
 						XMFLOAT3 normal;
 						XMStoreFloat3(&normal, N);
@@ -965,17 +972,18 @@ namespace wi::terrain
 						const float region_low_altitude = bottomLevel == 0 ? 0 : std::pow(wi::math::saturate(wi::math::InverseLerp(0, bottomLevel, height)), region2);
 						const float region_high_altitude = topLevel == 0 ? 0 : std::pow(wi::math::saturate(wi::math::InverseLerp(0, topLevel, height)), region3);
 
-						XMFLOAT4 materialBlendWeights(region_base, 0, 0, 0);
-						materialBlendWeights = wi::math::Lerp(materialBlendWeights, XMFLOAT4(0, 1, 0, 0), region_slope);
-						materialBlendWeights = wi::math::Lerp(materialBlendWeights, XMFLOAT4(0, 0, 1, 0), region_low_altitude);
-						materialBlendWeights = wi::math::Lerp(materialBlendWeights, XMFLOAT4(0, 0, 0, 1), region_high_altitude);
+						XMFLOAT4 materialBlendWeights(region_base, region_slope, region_low_altitude, region_high_altitude);
+
 						const float weight_norm = 1.0f / (materialBlendWeights.x + materialBlendWeights.y + materialBlendWeights.z + materialBlendWeights.w);
 						materialBlendWeights.x *= weight_norm;
 						materialBlendWeights.y *= weight_norm;
 						materialBlendWeights.z *= weight_norm;
 						materialBlendWeights.w *= weight_norm;
 
-						chunk_data.region_weights[index] = wi::Color::fromFloat4(materialBlendWeights);
+						chunk_data.blendmap_layers[0].pixels[index] = uint8_t(materialBlendWeights.x * 255);
+						chunk_data.blendmap_layers[1].pixels[index] = uint8_t(materialBlendWeights.y * 255);
+						chunk_data.blendmap_layers[2].pixels[index] = uint8_t(materialBlendWeights.z * 255);
+						chunk_data.blendmap_layers[3].pixels[index] = uint8_t(materialBlendWeights.w * 255);
 
 						mesh.vertex_positions[index] = XMFLOAT3(x, height, z);
 						mesh.vertex_normals[index] = normal;
@@ -1000,7 +1008,7 @@ namespace wi::terrain
 						}
 						});
 					wi::jobsystem::Wait(ctx); // wait until chunk's vertex buffer is fully generated
-
+					
 					object.SetCastShadow(slope_cast_shadow.load());
 					mesh.SetDoubleSidedShadow(slope_cast_shadow.load());
 
@@ -1092,9 +1100,9 @@ namespace wi::terrain
 									const XMFLOAT3& pos0 = chunk_data.mesh_vertex_positions[ind0];
 									const XMFLOAT3& pos1 = chunk_data.mesh_vertex_positions[ind1];
 									const XMFLOAT3& pos2 = chunk_data.mesh_vertex_positions[ind2];
-									const XMFLOAT4 region0 = chunk_data.region_weights[ind0];
-									const XMFLOAT4 region1 = chunk_data.region_weights[ind1];
-									const XMFLOAT4 region2 = chunk_data.region_weights[ind2];
+									const XMFLOAT4 region0 = wi::Color(chunk_data.blendmap_layers[0].pixels[ind0], chunk_data.blendmap_layers[1].pixels[ind0], chunk_data.blendmap_layers[2].pixels[ind0], chunk_data.blendmap_layers[3].pixels[ind0]);
+									const XMFLOAT4 region1 = wi::Color(chunk_data.blendmap_layers[0].pixels[ind1], chunk_data.blendmap_layers[1].pixels[ind1], chunk_data.blendmap_layers[2].pixels[ind1], chunk_data.blendmap_layers[3].pixels[ind1]);
+									const XMFLOAT4 region2 = wi::Color(chunk_data.blendmap_layers[0].pixels[ind2], chunk_data.blendmap_layers[1].pixels[ind2], chunk_data.blendmap_layers[2].pixels[ind2], chunk_data.blendmap_layers[3].pixels[ind2]);
 									// random barycentric coords on the triangle:
 									float f = rng.next_float();
 									float g = rng.next_float();
@@ -1214,20 +1222,27 @@ namespace wi::terrain
 
 	void Terrain::CreateChunkRegionTexture(ChunkData& chunk_data)
 	{
-		if (!chunk_data.region_weights_texture.IsValid())
+		if (chunk_data.blendmap.IsValid() && chunk_data.blendmap.desc.array_size == (uint32_t)chunk_data.blendmap_layers.size())
+			return;
+
+		GraphicsDevice* device = GetDevice();
+		TextureDesc desc;
+		desc.width = (uint32_t)chunk_width;
+		desc.height = (uint32_t)chunk_width;
+		desc.array_size = (uint32_t)chunk_data.blendmap_layers.size();
+		desc.format = Format::R8_UNORM;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE;
+
+		wi::vector<SubresourceData> data(chunk_data.blendmap_layers.size());
+		for (size_t i = 0; i < chunk_data.blendmap_layers.size(); ++i)
 		{
-			GraphicsDevice* device = GetDevice();
-			TextureDesc desc;
-			desc.width = (uint32_t)chunk_width;
-			desc.height = (uint32_t)chunk_width;
-			desc.format = Format::R8G8B8A8_UNORM;
-			desc.bind_flags = BindFlag::SHADER_RESOURCE;
-			SubresourceData data;
-			data.data_ptr = chunk_data.region_weights.data();
-			data.row_pitch = chunk_width * sizeof(chunk_data.region_weights[0]);
-			bool success = device->CreateTexture(&desc, &data, &chunk_data.region_weights_texture);
-			assert(success);
+			data[i].data_ptr = chunk_data.blendmap_layers[i].pixels.data();
+			data[i].row_pitch = chunk_width * sizeof(uint8_t);
 		}
+
+		bool success = device->CreateTexture(&desc, data.data(), &chunk_data.blendmap);
+		assert(success);
+		device->SetName(&chunk_data.blendmap, "wi::terrain::ChunkData::blendmap");
 	}
 
 	void Terrain::UpdateVirtualTexturesCPU()
@@ -1427,7 +1442,7 @@ namespace wi::terrain
 					}
 					material->textures[map_type].lod_clamp = (float)vt.lod_count - 2;
 				}
-				vt.region_weights_texture = chunk_data.region_weights_texture;
+				vt.blendmap = chunk_data.blendmap;
 			}
 
 			virtual_textures_in_use.push_back(&vt);
@@ -1590,40 +1605,42 @@ namespace wi::terrain
 		device->EventEnd(cmd);
 
 		device->EventBegin("Render Tile Regions", cmd);
+		wi::renderer::BindCommonResources(cmd);
 
-		ShaderMaterial materials[MATERIAL_COUNT];
-		for (size_t i = 0; i < MATERIAL_COUNT && scene->materials.GetCount() > 0; ++i)
+		for (const VirtualTexture* vt : virtual_textures_in_use)
 		{
-			const MaterialComponent* material = scene->materials.GetComponent(materialEntities[i]);
-			if (material == nullptr)
-				continue;
-			material->WriteShaderMaterial(&materials[i]);
-		}
-		device->BindDynamicConstantBuffer(materials, 0, cmd);
-
-		for (uint32_t map_type = 0; map_type < 3; map_type++)
-		{
-			switch (map_type)
+			for (uint32_t map_type = 0; map_type < 3; map_type++)
 			{
-			case MaterialComponent::BASECOLORMAP:
-				device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_BASECOLORMAP), cmd);
-				device->BindUAV(&atlas.maps[MaterialComponent::BASECOLORMAP].texture_raw_block, 0, cmd);
-				break;
-			case MaterialComponent::NORMALMAP:
-				device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_NORMALMAP), cmd);
-				device->BindUAV(&atlas.maps[MaterialComponent::NORMALMAP].texture_raw_block, 0, cmd);
-				break;
-			case MaterialComponent::SURFACEMAP:
-				device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_SURFACEMAP), cmd);
-				device->BindUAV(&atlas.maps[MaterialComponent::SURFACEMAP].texture_raw_block, 0, cmd);
-				break;
-			default:
-				assert(0);
-				break;
-			}
+				switch (map_type)
+				{
+				case MaterialComponent::BASECOLORMAP:
+					device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_BASECOLORMAP), cmd);
+					device->BindUAV(&atlas.maps[MaterialComponent::BASECOLORMAP].texture_raw_block, 0, cmd);
+					break;
+				case MaterialComponent::NORMALMAP:
+					device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_NORMALMAP), cmd);
+					device->BindUAV(&atlas.maps[MaterialComponent::NORMALMAP].texture_raw_block, 0, cmd);
+					break;
+				case MaterialComponent::SURFACEMAP:
+					device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_SURFACEMAP), cmd);
+					device->BindUAV(&atlas.maps[MaterialComponent::SURFACEMAP].texture_raw_block, 0, cmd);
+					break;
+				default:
+					assert(0);
+					break;
+				}
 
-			for (const VirtualTexture* vt : virtual_textures_in_use)
-			{
+				auto mem = device->AllocateGPU(sizeof(uint) * vt->blendmap.desc.array_size, cmd);
+				const uint blendcount = std::min(vt->blendmap.desc.array_size, uint(materialEntities.size()));
+				for (uint i = 0; i < blendcount; ++i)
+				{
+					const uint material_index = (uint)scene->materials.GetIndex(materialEntities[i]);
+					std::memcpy((uint*)mem.data + i, &material_index, sizeof(uint)); // force memcpy to avoid uncached write into GPU pointer!
+				}
+				const uint blendmap_buffer_offset = (uint)mem.offset;
+				device->BindResource(&vt->blendmap, 0, cmd);
+				device->BindResource(&mem.buffer, 1, cmd);
+
 				for (auto& request : vt->update_requests)
 				{
 					uint request_lod_resolution = std::max(1u, vt->resolution >> request.lod);
@@ -1637,7 +1654,7 @@ namespace wi::terrain
 						int(request.x * SVT_TILE_SIZE) - int(SVT_TILE_BORDER),
 						int(request.y * SVT_TILE_SIZE) - int(SVT_TILE_BORDER)
 					);
-					push.region_weights_textureRO = device->GetDescriptorIndex(&vt->region_weights_texture, SubresourceType::SRV);
+					push.blendmap_buffer_offset = blendmap_buffer_offset;
 
 					if (request_lod_resolution < SVT_TILE_SIZE)
 					{
@@ -1925,7 +1942,8 @@ namespace wi::terrain
 				seri.version = terrain_version;
 
 				archive >> chunk_data.grass_density_current;
-				archive >> chunk_data.region_weights;
+				//chunk_data.blendmaps.emplace_back();
+				//archive >> chunk_data.blendmaps.back().pixels;
 				archive >> chunk_data.sphere.center;
 				archive >> chunk_data.sphere.radius;
 				archive >> chunk_data.position;
@@ -2052,7 +2070,7 @@ namespace wi::terrain
 				seri.version = terrain_version;
 
 				archive << chunk_data.grass_density_current;
-				archive << chunk_data.region_weights;
+				//archive << chunk_data.blendmaps[0].pixels;
 				archive << chunk_data.sphere.center;
 				archive << chunk_data.sphere.radius;
 				archive << chunk_data.position;

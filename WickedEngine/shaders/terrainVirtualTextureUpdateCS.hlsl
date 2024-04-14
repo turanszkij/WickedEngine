@@ -2,15 +2,10 @@
 #include "BlockCompress.hlsli"
 #include "ColorSpaceUtility.hlsli"
 
-static const uint region_count = 4;
-
 PUSHCONSTANT(push, TerrainVirtualTexturePush);
 
-struct Terrain
-{
-	ShaderMaterial materials[region_count];
-};
-ConstantBuffer<Terrain> terrain : register(b0);
+Texture2DArray<float> blendmap : register(t0);
+ByteAddressBuffer blendmap_buffer : register(t1);
 
 #if !defined(UPDATE_NORMALMAP) && !defined(UPDATE_SURFACEMAP)
 #define UPDATE_BASECOLORMAP
@@ -32,8 +27,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if (DTid.x >= push.write_size || DTid.y >= push.write_size)
 		return;
 
-	Texture2D<float4> region_weights_texture = bindless_textures[push.region_weights_textureRO];
-
+	uint2 dim;
+	uint array_size;
+	blendmap.GetDimensions(dim.x, dim.y, array_size);
+		
 #ifdef UPDATE_BASECOLORMAP
 	float3 block_rgb[16];
 #endif // UPDATE_BASECOLORMAP
@@ -53,16 +50,17 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		const uint2 block_offset = block_offsets[idx];
 		const int2 pixel = push.offset + DTid.xy * 4 + block_offset;
 		const float2 uv = (pixel.xy + 0.5f) * push.resolution_rcp;
-
-		float4 region_weights = region_weights_texture.SampleLevel(sampler_linear_clamp, uv, 0);
-
-		float weight_sum = 0;
+		
 		float4 total_color = 0;
-		for (uint i = 0; i < region_count; ++i)
+		
+		for(uint blendmap_index = 0; blendmap_index < array_size; ++blendmap_index)
 		{
-			float weight = region_weights[i];
+			float weight = blendmap.SampleLevel(sampler_linear_clamp, float3(uv, blendmap_index), 0);
+			if(weight == 0)
+				continue;
 
-			ShaderMaterial material = terrain.materials[i];
+			uint materialIndex = blendmap_buffer.Load(push.blendmap_buffer_offset + blendmap_index * sizeof(uint));
+			ShaderMaterial material = load_material(materialIndex);
 
 #ifdef UPDATE_BASECOLORMAP
 			float4 baseColor = material.baseColor;
@@ -78,7 +76,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				float4 baseColorMap = tex.SampleLevel(sampler_linear_wrap, uv / overscale, lod);
 				baseColor *= baseColorMap;
 			}
-			total_color += baseColor * weight;
+			total_color = lerp(total_color, baseColor, weight);
 			//if (DTid.x < 2 || DTid.y < 2)
 			//	total_color = 0;
 #endif // UPDATE_BASECOLORMAP
@@ -97,7 +95,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				float2 normalMap = tex.SampleLevel(sampler_linear_wrap, uv / overscale, lod).rg;
 				normal = normalMap;
 			}
-			total_color += float4(normal.rg, 1, 1) * weight;
+			total_color = lerp(total_color, float4(normal.rg, 1, 1), weight);
 #endif // UPDATE_NORMALMAP
 
 #ifdef UPDATE_SURFACEMAP
@@ -114,12 +112,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				float4 surfaceMap = tex.SampleLevel(sampler_linear_wrap, uv / overscale, lod);
 				surface *= surfaceMap;
 			}
-			total_color += surface * weight;
+			total_color = lerp(total_color, surface, weight);
 #endif // UPDATE_SURFACEMAP
-
-			weight_sum += weight;
 		}
-		total_color /= weight_sum;
 
 #ifdef UPDATE_BASECOLORMAP
 		block_rgb[idx] = ApplySRGBCurve_Fast(total_color.rgb);

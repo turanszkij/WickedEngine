@@ -5,9 +5,6 @@ class PaintToolWindow : public wi::gui::Window
 {
 	float rot = 0;
 	float stroke_dist = 0;
-	bool history_needs_recording_start = false;
-	bool history_needs_recording_end = false;
-	size_t history_redo_jump_position = 0;
 	size_t history_textureIndex = 0;
 	struct TextureSlot
 	{
@@ -17,6 +14,8 @@ class PaintToolWindow : public wi::gui::Window
 	wi::vector<TextureSlot> history_textures;
 	TextureSlot GetEditTextureSlot(const wi::scene::MaterialComponent& material, int* uvset = nullptr);
 	void ReplaceEditTextureSlot(wi::scene::MaterialComponent& material, const TextureSlot& textureslot);
+
+	wi::unordered_map<wi::ecs::Entity, wi::Archive> historyStartDatas;
 
 	struct SculptingIndex
 	{
@@ -65,6 +64,7 @@ public:
 	void DrawBrush(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const;
 
 	XMFLOAT2 pos = XMFLOAT2(0, 0);
+	wi::scene::PickResult brushIntersect;
 
 	enum MODE
 	{
@@ -78,6 +78,7 @@ public:
 		MODE_HAIRPARTICLE_ADD_TRIANGLE,
 		MODE_HAIRPARTICLE_REMOVE_TRIANGLE,
 		MODE_HAIRPARTICLE_LENGTH,
+		MODE_TERRAIN_MATERIAL,
 		MODE_WIND,
 	};
 	MODE GetMode() const;
@@ -90,9 +91,15 @@ public:
 		Z
 	};
 
+	wi::vector<wi::gui::Button> terrain_material_buttons;
+	size_t terrain_material_layer = 0;
+
 	wi::Archive* currentHistory = nullptr;
-	void RecordHistory(bool start, wi::graphics::CommandList cmd = wi::graphics::CommandList());
+	void WriteHistoryData(wi::ecs::Entity entity, wi::Archive& archive, wi::graphics::CommandList cmd = wi::graphics::CommandList());
+	void RecordHistory(wi::ecs::Entity entity, wi::graphics::CommandList cmd = wi::graphics::CommandList());
 	void ConsumeHistoryOperation(wi::Archive& archive, bool undo);
 
 	void ResizeLayout() override;
+
+	void RecreateTerrainMaterialButtons();
 };

@@ -27,7 +27,7 @@ namespace wi
 		void CreateEmpty(); // creates new archive in write mode
 
 	public:
-		// Create empty arhive for writing
+		// Create empty archive for writing
 		Archive();
 		Archive(const Archive&) = default;
 		Archive(Archive&&) = default;
@@ -219,6 +219,16 @@ namespace wi
 			for (const T& x : data)
 			{
 				(*this) << x;
+			}
+			return *this;
+		}
+		inline Archive& operator<<(const wi::Archive& other)
+		{
+			// Here we will use the << operator so that non-specified types will have compile error!
+			//	Note: version is skipped, only data is appended
+			for (size_t i = sizeof(version); i < other.pos; ++i)
+			{
+				(*this) << other.data_ptr[i];
 			}
 			return *this;
 		}

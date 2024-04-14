@@ -6,6 +6,7 @@
 #include "wiECS.h"
 #include "wiColor.h"
 #include "wiHairParticle.h"
+#include "wiVector.h"
 
 #include <memory>
 
@@ -151,6 +152,11 @@ namespace wi::terrain
 			atlas.free_residency(residency);
 		}
 
+		void invalidate()
+		{
+			resolution = 0;
+		}
+
 		// Attach this data to Virtual Texture because we will record these by separate CPU thread:
 		struct UpdateRequest
 		{
@@ -161,7 +167,12 @@ namespace wi::terrain
 			uint8_t tile_y = 0;
 		};
 		mutable wi::vector<UpdateRequest> update_requests;
-		wi::graphics::Texture region_weights_texture;
+		wi::graphics::Texture blendmap;
+	};
+
+	struct BlendmapLayer
+	{
+		wi::vector<uint8_t> pixels;
 	};
 
 	struct ChunkData
@@ -173,12 +184,21 @@ namespace wi::terrain
 		float prop_density_current = 1;
 		wi::HairParticleSystem grass;
 		float grass_density_current = 1;
-		wi::vector<wi::Color> region_weights;
-		wi::graphics::Texture region_weights_texture;
+		wi::vector<BlendmapLayer> blendmap_layers;
+		wi::graphics::Texture blendmap;
 		wi::primitive::Sphere sphere;
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 		bool visible = true;
 		std::shared_ptr<VirtualTexture> vt;
+
+		void enable_blendmap_layer(size_t materialIndex)
+		{
+			while (blendmap_layers.size() < materialIndex + 1)
+			{
+				blendmap_layers.emplace_back().pixels.resize(vertexCount);
+				std::fill(blendmap_layers.back().pixels.begin(), blendmap_layers.back().pixels.end(), 0);
+			}
+		}
 	};
 
 	struct Prop
@@ -217,7 +237,7 @@ namespace wi::terrain
 		wi::ecs::Entity terrainEntity = wi::ecs::INVALID_ENTITY;
 		wi::ecs::Entity chunkGroupEntity = wi::ecs::INVALID_ENTITY;
 		wi::scene::Scene* scene = nullptr;
-		wi::ecs::Entity materialEntities[MATERIAL_COUNT] = {};
+		wi::vector<wi::ecs::Entity> materialEntities = {};
 		wi::ecs::Entity grassEntity = wi::ecs::INVALID_ENTITY;
 		wi::scene::WeatherComponent weather;
 		wi::HairParticleSystem grass_properties;
@@ -290,6 +310,9 @@ namespace wi::terrain
 		void WritebackTileRequestsGPU(wi::graphics::CommandList cmd) const;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+
+	private:
+		wi::vector<wi::scene::MaterialComponent> materials; // temp storage allocation
 	};
 
 	struct Modifier
