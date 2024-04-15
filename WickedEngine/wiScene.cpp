@@ -5130,7 +5130,7 @@ namespace wi::scene
 						if (distance < result.distance && distance >= ray.TMin && distance <= ray.TMax)
 						{
 							XMVECTOR nor;
-							if (mesh->vertex_normals.empty())
+							if (softbody != nullptr || mesh->vertex_normals.empty()) // Note: for soft body we compute it instead of loading the simulated normals
 							{
 								nor = XMVector3Cross(p2 - p1, p1 - p0);
 							}

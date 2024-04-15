@@ -556,7 +556,7 @@ void PaintToolWindow::Update(float dt)
 				vertex_uvset[brushIntersect.vertexID2].y * v;
 			uv.x = uv.x * material->texMulAdd.x + material->texMulAdd.z;
 			uv.y = uv.y * material->texMulAdd.y + material->texMulAdd.w;
-			uint2 center = XMUINT2(uint32_t(uv.x * desc.width), uint32_t(uv.y * desc.height));
+			uint2 center = XMUINT2(uint32_t(int(uv.x * desc.width) % desc.width), uint32_t(int(uv.y * desc.height) % desc.height));
 
 			if (painting)
 			{
@@ -1157,85 +1157,108 @@ void PaintToolWindow::Update(float dt)
 			const Sphere sphere = Sphere(brushIntersect.position, radius);
 			const XMVECTOR CENTER = XMLoadFloat3(&sphere.center);
 
-			const Entity hairEntity = brushIntersect.entity;
-			wi::HairParticleSystem* hair = scene.hairs.GetComponent(hairEntity);
-			if (hair == nullptr || hair->meshID == INVALID_ENTITY)
-				break;
-
-			MeshComponent* mesh = scene.meshes.GetComponent(hair->meshID);
-			if (mesh == nullptr)
-				break;
-
-			const ArmatureComponent* armature = mesh->IsSkinned() ? scene.armatures.GetComponent(mesh->armatureID) : nullptr;
-
-			const TransformComponent* transform = scene.transforms.GetComponent(brushIntersect.entity);
-			if (transform == nullptr)
-				break;
-
-			const XMMATRIX W = XMLoadFloat4x4(&transform->world);
-
-			if (painting)
+			for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 			{
-				for (size_t j = 0; j < mesh->vertex_positions.size(); ++j)
+				wi::HairParticleSystem& hair = scene.hairs[i];
+				if (hair.meshID == INVALID_ENTITY || !sphere.intersects(hair.aabb))
+					continue;
+
+				const Entity hairEntity = scene.hairs.GetEntity(i);
+				MeshComponent* mesh = scene.meshes.GetComponent(hair.meshID);
+				if (mesh == nullptr)
+					break;
+
+				const ArmatureComponent* armature = mesh->IsSkinned() ? scene.armatures.GetComponent(mesh->armatureID) : nullptr;
+
+				const TransformComponent* transform = scene.transforms.GetComponent(brushIntersect.entity);
+				if (transform == nullptr)
+					break;
+
+				const XMMATRIX W = XMLoadFloat4x4(&transform->world);
+
+				if (painting)
 				{
-					XMVECTOR P, N;
-					if (armature == nullptr)
+					for (size_t j = 0; j < mesh->vertex_positions.size(); ++j)
 					{
-						P = XMLoadFloat3(&mesh->vertex_positions[j]);
-						N = XMLoadFloat3(&mesh->vertex_normals[j]);
-					}
-					else
-					{
-						P = wi::scene::SkinVertex(*mesh, *armature, (uint32_t)j, &N);
-					}
-					P = XMVector3Transform(P, W);
-					N = XMVector3Normalize(XMVector3TransformNormal(N, W));
-
-					if (!backfaces && XMVectorGetX(XMVector3Dot(F, N)) > 0)
-						continue;
-
-					const float dist = wi::math::Distance(P, CENTER);
-					if (dist <= pressure_radius)
-					{
-						RecordHistory(hairEntity);
-						switch (mode)
+						XMVECTOR P, N;
+						if (armature == nullptr)
 						{
-						case MODE_HAIRPARTICLE_ADD_TRIANGLE:
-							hair->vertex_lengths[j] = 1.0f;
-							break;
-						case MODE_HAIRPARTICLE_REMOVE_TRIANGLE:
-							hair->vertex_lengths[j] = 0;
-							break;
-						case MODE_HAIRPARTICLE_LENGTH:
-							if (hair->vertex_lengths[j] > 0) // don't change distribution
-							{
-								const float affection = amount * wi::math::SmoothStep(0, smoothness, 1 - dist / pressure_radius);
-								hair->vertex_lengths[j] = wi::math::Lerp(hair->vertex_lengths[j], color_float.w, affection);
-								// don't let it "remove" the vertex by keeping its length above zero:
-								//	(because if removed, distribution also changes which might be distracting)
-								hair->vertex_lengths[j] = wi::math::Clamp(hair->vertex_lengths[j], 1.0f / 255.0f, 1.0f);
-							}
-							break;
+							P = XMLoadFloat3(&mesh->vertex_positions[j]);
+							N = XMLoadFloat3(&mesh->vertex_normals[j]);
 						}
-						hair->_flags |= wi::HairParticleSystem::REBUILD_BUFFERS;
+						else
+						{
+							P = wi::scene::SkinVertex(*mesh, *armature, (uint32_t)j, &N);
+						}
+						P = XMVector3Transform(P, W);
+						N = XMVector3Normalize(XMVector3TransformNormal(N, W));
+
+						if (!backfaces && XMVectorGetX(XMVector3Dot(F, N)) > 0)
+							continue;
+
+						const float dist = wi::math::Distance(P, CENTER);
+						if (dist <= pressure_radius)
+						{
+							RecordHistory(hairEntity);
+							switch (mode)
+							{
+							case MODE_HAIRPARTICLE_ADD_TRIANGLE:
+								hair.vertex_lengths[j] = 1.0f;
+								break;
+							case MODE_HAIRPARTICLE_REMOVE_TRIANGLE:
+								hair.vertex_lengths[j] = 0;
+								break;
+							case MODE_HAIRPARTICLE_LENGTH:
+								if (hair.vertex_lengths[j] > 0) // don't change distribution
+								{
+									const float affection = amount * wi::math::SmoothStep(0, smoothness, 1 - dist / pressure_radius);
+									hair.vertex_lengths[j] = wi::math::Lerp(hair.vertex_lengths[j], color_float.w, affection);
+									// don't let it "remove" the vertex by keeping its length above zero:
+									//	(because if removed, distribution also changes which might be distracting)
+									hair.vertex_lengths[j] = wi::math::Clamp(hair.vertex_lengths[j], 1.0f / 255.0f, 1.0f);
+								}
+								break;
+							}
+							hair._flags |= wi::HairParticleSystem::REBUILD_BUFFERS;
+						}
 					}
 				}
-			}
 
-			if (wireframe)
-			{
-				uint32_t first_subset = 0;
-				uint32_t last_subset = 0;
-				mesh->GetLODSubsetRange(0, first_subset, last_subset);
-				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+				if (wireframe)
 				{
-					const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
-					for (size_t j = 0; j < subset.indexCount; j += 3)
+					uint32_t first_subset = 0;
+					uint32_t last_subset = 0;
+					mesh->GetLODSubsetRange(0, first_subset, last_subset);
+					for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+					{
+						const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+						for (size_t j = 0; j < subset.indexCount; j += 3)
+						{
+							const uint32_t triangle[] = {
+								mesh->indices[j + 0],
+								mesh->indices[j + 1],
+								mesh->indices[j + 2],
+							};
+							const XMVECTOR P[arraysize(triangle)] = {
+								XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[0]), W),
+								XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[1]), W),
+								XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[2]), W),
+							};
+
+							wi::renderer::RenderableTriangle tri;
+							XMStoreFloat3(&tri.positionA, P[0]);
+							XMStoreFloat3(&tri.positionB, P[1]);
+							XMStoreFloat3(&tri.positionC, P[2]);
+							wi::renderer::DrawTriangle(tri, true);
+						}
+					}
+
+					for (size_t j = 0; j < hair.indices.size() && wireframe; j += 3)
 					{
 						const uint32_t triangle[] = {
-							mesh->indices[j + 0],
-							mesh->indices[j + 1],
-							mesh->indices[j + 2],
+							hair.indices[j + 0],
+							hair.indices[j + 1],
+							hair.indices[j + 2],
 						};
 						const XMVECTOR P[arraysize(triangle)] = {
 							XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[0]), W),
@@ -1247,29 +1270,9 @@ void PaintToolWindow::Update(float dt)
 						XMStoreFloat3(&tri.positionA, P[0]);
 						XMStoreFloat3(&tri.positionB, P[1]);
 						XMStoreFloat3(&tri.positionC, P[2]);
-						wi::renderer::DrawTriangle(tri, true);
+						tri.colorA = tri.colorB = tri.colorC = XMFLOAT4(1, 0, 1, 0.9f);
+						wi::renderer::DrawTriangle(tri, false);
 					}
-				}
-
-				for (size_t j = 0; j < hair->indices.size() && wireframe; j += 3)
-				{
-					const uint32_t triangle[] = {
-						hair->indices[j + 0],
-						hair->indices[j + 1],
-						hair->indices[j + 2],
-					};
-					const XMVECTOR P[arraysize(triangle)] = {
-						XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[0]), W),
-						XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[1]), W),
-						XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[2]), W),
-					};
-
-					wi::renderer::RenderableTriangle tri;
-					XMStoreFloat3(&tri.positionA, P[0]);
-					XMStoreFloat3(&tri.positionB, P[1]);
-					XMStoreFloat3(&tri.positionC, P[2]);
-					tri.colorA = tri.colorB = tri.colorC = XMFLOAT4(1, 0, 1, 0.9f);
-					wi::renderer::DrawTriangle(tri, false);
 				}
 			}
 		}
