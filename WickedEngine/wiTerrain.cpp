@@ -1949,8 +1949,33 @@ namespace wi::terrain
 				seri.version = terrain_version;
 
 				archive >> chunk_data.grass_density_current;
-				//chunk_data.blendmaps.emplace_back();
-				//archive >> chunk_data.blendmaps.back().pixels;
+				if (terrain_version >= 5)
+				{
+					size_t blendmapCount = 0;
+					archive >> blendmapCount;
+					chunk_data.blendmap_layers.resize(blendmapCount);
+					for (size_t i = 0; i < chunk_data.blendmap_layers.size(); ++i)
+					{
+						archive >> chunk_data.blendmap_layers[i].pixels;
+					}
+				}
+				else
+				{
+					wi::vector<wi::Color> blendmap4;
+					archive >> blendmap4;
+					chunk_data.blendmap_layers.resize(4);
+					for (size_t i = 0; i < 4; ++i)
+					{
+						chunk_data.blendmap_layers[i].pixels.resize(blendmap4.size());
+					}
+					for (size_t i = 0; i < blendmap4.size(); ++i)
+					{
+						chunk_data.blendmap_layers[0].pixels[i] = blendmap4[i].getR();
+						chunk_data.blendmap_layers[1].pixels[i] = blendmap4[i].getG();
+						chunk_data.blendmap_layers[2].pixels[i] = blendmap4[i].getB();
+						chunk_data.blendmap_layers[3].pixels[i] = blendmap4[i].getA();
+					}
+				}
 				archive >> chunk_data.sphere.center;
 				archive >> chunk_data.sphere.radius;
 				archive >> chunk_data.position;
@@ -2077,7 +2102,11 @@ namespace wi::terrain
 				seri.version = terrain_version;
 
 				archive << chunk_data.grass_density_current;
-				//archive << chunk_data.blendmaps[0].pixels;
+				archive << chunk_data.blendmap_layers.size();
+				for (size_t i = 0; i < chunk_data.blendmap_layers.size(); ++i)
+				{
+					archive << chunk_data.blendmap_layers[i].pixels;
+				}
 				archive << chunk_data.sphere.center;
 				archive << chunk_data.sphere.radius;
 				archive << chunk_data.position;
@@ -2119,7 +2148,32 @@ namespace wi::terrain
 
 		// Caution: seri.version changes must be handled carefully!
 
-		if (terrain_version >= 4)
+		if (terrain_version >= 5)
+		{
+			if (archive.IsReadMode())
+			{
+				SerializeEntity(archive, chunkGroupEntity, seri);
+				size_t materialCount = 0;
+				archive >> materialCount;
+				materialEntities.resize(materialCount);
+				for (size_t i = 0; i < materialEntities.size(); ++i)
+				{
+					SerializeEntity(archive, materialEntities[i], seri);
+				}
+				SerializeEntity(archive, grassEntity, seri);
+			}
+			else
+			{
+				SerializeEntity(archive, chunkGroupEntity, seri);
+				archive << materialEntities.size();
+				for (size_t i = 0; i < materialEntities.size(); ++i)
+				{
+					SerializeEntity(archive, materialEntities[i], seri);
+				}
+				SerializeEntity(archive, grassEntity, seri);
+			}
+		}
+		else if (terrain_version >= 4)
 		{
 			SerializeEntity(archive, chunkGroupEntity, seri);
 			for (size_t i = 0; i < MATERIAL_COUNT; ++i)
