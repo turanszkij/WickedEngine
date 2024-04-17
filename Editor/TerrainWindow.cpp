@@ -1419,6 +1419,8 @@ void TerrainWindow::SetupAssets()
 	// Customize terrain generator before it's initialized:
 	Scene& currentScene = editor->GetCurrentScene();
 
+	terrain_preset.materialEntities.clear();
+	terrain_preset.materialEntities.resize(wi::terrain::MATERIAL_COUNT);
 	for (int i = 0; i < wi::terrain::MATERIAL_COUNT; ++i)
 	{
 		terrain_preset.materialEntities[i] = CreateEntity();
@@ -1453,6 +1455,7 @@ void TerrainWindow::SetupAssets()
 	{
 		Entity materialEntity = CreateEntity();
 		MaterialComponent& mat = currentScene.materials.Create(materialEntity);
+		currentScene.names.Create(materialEntity) = "Paving Stone";
 		currentScene.Component_Attach(materialEntity, entity);
 		mat.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/pavingstone.jpg";
 		mat.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/pavingstone_nor.jpg";
@@ -1463,6 +1466,7 @@ void TerrainWindow::SetupAssets()
 	{
 		Entity materialEntity = CreateEntity();
 		MaterialComponent& mat = currentScene.materials.Create(materialEntity);
+		currentScene.names.Create(materialEntity) = "Tactile Paving";
 		currentScene.Component_Attach(materialEntity, entity);
 		mat.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/tactilepaving.jpg";
 		mat.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/tactilepaving_nor.jpg";
@@ -1473,6 +1477,7 @@ void TerrainWindow::SetupAssets()
 	{
 		Entity materialEntity = CreateEntity();
 		MaterialComponent& mat = currentScene.materials.Create(materialEntity);
+		currentScene.names.Create(materialEntity) = "Lava";
 		currentScene.Component_Attach(materialEntity, entity);
 		mat.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/lava.jpg";
 		mat.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/lava_nor.jpg";
