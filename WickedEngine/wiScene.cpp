@@ -16,6 +16,7 @@
 
 #include "shaders/ShaderInterop_SurfelGI.h"
 #include "shaders/ShaderInterop_DDGI.h"
+#include <mutex>
 
 using namespace wi::ecs;
 using namespace wi::enums;
@@ -1061,31 +1062,55 @@ namespace wi::scene
 	{
 		if (recursive)
 		{
-			wi::vector<Entity> entities_to_remove;
-			for (size_t i = 0; i < hierarchy.GetCount(); ++i)
-			{
-				const HierarchyComponent& hier = hierarchy[i];
-				if (hier.parentID == entity)
-				{
-					Entity child = hierarchy.GetEntity(i);
-					entities_to_remove.push_back(child);
-				}
-			}
-			for (auto& child : entities_to_remove)
-			{
-				Entity_Remove(child);
-			}
-		}
+			wi::jobsystem::context ctx;
+			wi::jobsystem::Dispatch(ctx, 1, 1, [&](wi::jobsystem::JobArgs args) {
 
-		for (auto& entry : componentLibrary.entries)
-		{
-			if (keep_sorted)
+				wi::vector<Entity> entities_to_remove;
+				entities_to_remove.push_back(entity);
+
+				wi::vector<Entity> entities_to_probe = entities_to_remove;
+				while (!entities_to_probe.empty()) {
+					Entity entity = entities_to_probe.back();
+					for (size_t i = 0; i < hierarchy.GetCount(); ++i)
+					{
+						const HierarchyComponent& hier = hierarchy[i];
+						if (hier.parentID == entity)
+						{
+							Entity child = hierarchy.GetEntity(i);
+							if (std::find(entities_to_remove.begin(), entities_to_remove.end(), child) != entities_to_remove.end())
+							{
+								entities_to_remove.insert(entities_to_remove.begin(), child);
+								entities_to_probe.push_back(child);
+							}
+						}
+					}
+					entities_to_probe.pop_back();
+				}
+
+				for (auto& entry : componentLibrary.entries)
+				{
+					if (keep_sorted)
+					{
+						entry.second.component_manager->Remove_KeepSorted(entities_to_remove);
+					}
+					else
+					{
+						entry.second.component_manager->Remove(entities_to_remove);
+					}
+				}
+			});
+		}
+		else {
+			for (auto& entry : componentLibrary.entries)
 			{
-				entry.second.component_manager->Remove_KeepSorted(entity);
-			}
-			else
-			{
-				entry.second.component_manager->Remove(entity);
+				if (keep_sorted)
+				{
+					entry.second.component_manager->Remove_KeepSorted(entity);
+				}
+				else
+				{
+					entry.second.component_manager->Remove(entity);
+				}
 			}
 		}
 	}
@@ -5060,12 +5085,10 @@ namespace wi::scene
 
 		if (filterMask & FILTER_OBJECT_ALL)
 		{
-			for (size_t objectIndex = 0; objectIndex < aabb_objects.size(); ++objectIndex)
+			for (size_t objectIndex = 0; objectIndex < aabb_objects.size() && objectIndex < objects.GetCount(); ++objectIndex)
 			{
 				const AABB& aabb = aabb_objects[objectIndex];
 				if (!ray.intersects(aabb) || (layerMask & aabb.layerMask) == 0)
-					continue;
-				if (objectIndex >= objects.GetCount())
 					continue;
 				const ObjectComponent& object = objects[objectIndex];
 				if (object.meshID == INVALID_ENTITY)
@@ -5730,11 +5753,8 @@ namespace wi::scene
 
 		if (filterMask & FILTER_OBJECT_ALL)
 		{
-			for (size_t objectIndex = 0; objectIndex < aabb_objects.size(); ++objectIndex)
+			for (size_t objectIndex = 0; objectIndex < aabb_objects.size() && objectIndex < objects.GetCount(); ++objectIndex)
 			{
-				if (objectIndex >= objects.GetCount())
-					break;
-
 				const AABB& aabb = aabb_objects[objectIndex];
 				if (capsule_aabb.intersects(aabb) == AABB::INTERSECTION_TYPE::OUTSIDE || (layerMask & aabb.layerMask) == 0)
 					continue;
