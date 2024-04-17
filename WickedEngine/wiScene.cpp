@@ -5065,7 +5065,8 @@ namespace wi::scene
 				const AABB& aabb = aabb_objects[objectIndex];
 				if (!ray.intersects(aabb) || (layerMask & aabb.layerMask) == 0)
 					continue;
-
+				if (objectIndex >= objects.GetCount())
+					continue;
 				const ObjectComponent& object = objects[objectIndex];
 				if (object.meshID == INVALID_ENTITY)
 					continue;
