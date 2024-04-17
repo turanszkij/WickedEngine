@@ -1831,6 +1831,7 @@ Path finding operations can be made by using a voxel grid and path queries. The 
 #### PathQuery
 - [constructor] PathQuery()
 - Process(Vector start,goal, VoxelGrid voxelgrid) -- computes the path from start to goal on a voxel grid and stores the result
+- SearchCover(Vector observer,subject,direction, float max_distance, VoxelGrid voxelgrid) -- searches for a cover for subject position to hide from observer. The search will be in a specific direction, within the specified distance (approximately, within voxel precision)
 - IsSuccesful() : bool -- returns whether the last call to Process() was succesfully able to find a path
 - GetNextWaypoint() : Vector -- Get the next waypoint on the path from the starting location. This requires that Process() has been called beforehand.
 - SetDebugDrawWaypointsEnabled(bool value) -- Enable/disable waypoint debug rendering when using DrawPathQuery(). If enabled, voxel waypoints will be drawn in blue, simplified voxel waypoints will be drawn in pink 
@@ -1841,7 +1842,8 @@ Path finding operations can be made by using a voxel grid and path queries. The 
 - SetAgentHeight(int value) -- Set the navigation height requirement in voxels. This means how many voxels the query will keep away from obstacles vertically.
 - GetAgentHeight(int value) : int
 - GetWaypointCount() : int -- returns the number of waypoints that were computed in Process()
-- GetWaypoint(int index) : Vector returns the waypoint at specified index (direction: start -> goal)
+- GetWaypoint(int index) : Vector -- returns the waypoint at specified index (direction: start -> goal)
+- GetGoal() : Vector -- returns goal position
 
 ### TrailRenderer
 - [constructor] TrailRenderer()

@@ -469,6 +469,14 @@ inline float4 attribute_at_bary(in float4 a0, in float4 a1, in float4 a2, in flo
 	return mad(a0, 1 - bary.x - bary.y, mad(a1, bary.x, a2 * bary.y));
 }
 
+// bilinear interpolation of gathered values based on pixel fraction
+inline float bilinear(float4 gather, float2 pixel_frac)
+{
+	const float top_row = lerp(gather.w, gather.z, pixel_frac.x);
+	const float bottom_row = lerp(gather.x, gather.y, pixel_frac.x);
+	return lerp(top_row, bottom_row, pixel_frac.y);
+}
+
 inline bool is_saturated(float a) { return a == saturate(a); }
 inline bool is_saturated(float2 a) { return all(a == saturate(a)); }
 inline bool is_saturated(float3 a) { return all(a == saturate(a)); }

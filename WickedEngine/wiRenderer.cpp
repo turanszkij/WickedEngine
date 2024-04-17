@@ -1035,7 +1035,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_UNORM1], "upsample_bilateral_unorm1CS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_FLOAT4], "upsample_bilateral_float4CS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_UNORM4], "upsample_bilateral_unorm4CS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_UINT4], "upsample_bilateral_uint4CS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_DOWNSAMPLE4X], "downsample4xCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_LINEARDEPTH], "lineardepthCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_NORMALSFROMDEPTH], "normalsfromdepthCS.cso"); });
@@ -1044,6 +1043,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSGI], "ssgiCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSGI_WIDE], "ssgiCS.cso", wi::graphics::ShaderModel::SM_5_0, { "WIDE" }); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSGI_UPSAMPLE], "ssgi_upsampleCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSGI_UPSAMPLE_WIDE], "ssgi_upsampleCS.cso", wi::graphics::ShaderModel::SM_5_0, { "WIDE" }); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_RTDIFFUSE_SPATIAL], "rtdiffuse_spatialCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_RTDIFFUSE_TEMPORAL], "rtdiffuse_temporalCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_RTDIFFUSE_UPSAMPLE], "rtdiffuse_upsampleCS.cso"); });
@@ -3021,7 +3021,6 @@ void ProcessDeferredTextureRequests(CommandList cmd)
 		for (auto& params : painttextures)
 		{
 			// overwrites some params!
-			params.push.xPaintReveal = params.revealTex.IsValid() ? 1 : 0;
 			if (params.brushTex.IsValid())
 			{
 				params.push.texture_brush = device->GetDescriptorIndex(&params.brushTex, SubresourceType::SRV);
@@ -3049,6 +3048,8 @@ void ProcessDeferredTextureRequests(CommandList cmd)
 			const uint diameter = params.push.xPaintBrushRadius * 2;
 			const uint dispatch_dim = (diameter + PAINT_TEXTURE_BLOCKSIZE - 1) / PAINT_TEXTURE_BLOCKSIZE;
 			device->Dispatch(dispatch_dim, dispatch_dim, 1, cmd);
+
+			device->Barrier(GPUBarrier::Memory(&params.editTex), cmd);
 		}
 
 		// ending barriers:
@@ -5474,6 +5475,7 @@ void DrawVolumeLights(
 		BindCommonResources(cmd);
 
 		XMMATRIX VP = vis.camera->GetViewProjection();
+		const XMVECTOR CamPos = vis.camera->GetEye();
 
 		for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 		{
@@ -5519,11 +5521,21 @@ void DrawVolumeLights(
 					{
 						MiscCB miscCb;
 						miscCb.g_xColor.x = float(i);
+						miscCb.g_xColor.y = std::pow(std::sin(light.outerConeAngle), 2.0f);
+						miscCb.g_xColor.z = std::pow(std::cos(light.outerConeAngle), 2.0f);
+
+						const XMVECTOR LightPos = XMLoadFloat3(&light.position);
+						const XMVECTOR LightDirection = XMLoadFloat3(&light.direction);
+						const XMVECTOR L = XMVector3Normalize(LightPos - CamPos);
+						const float spot_factor = XMVectorGetX(XMVector3Dot(L, LightDirection));
+						const float spot_cutoff = std::cos(light.outerConeAngle);
+						miscCb.g_xColor.w = (spot_factor < spot_cutoff) ? 1.0f : 0.0f;
+
 						const float coneS = (const float)(light.outerConeAngle * 2 / XM_PIDIV4);
 						XMStoreFloat4x4(&miscCb.g_xTransform, 
-							XMMatrixScaling(coneS*light.GetRange(), light.GetRange(), coneS*light.GetRange())*
-							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
-							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) *
+							XMMatrixScaling(coneS * light.GetRange(), light.GetRange(), coneS * light.GetRange()) *
+							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)) *
+							XMMatrixTranslationFromVector(LightPos) *
 							VP
 						);
 						device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
@@ -12720,7 +12732,8 @@ void Postprocess_SSGI(
 
 	{
 		device->EventBegin("SSGI - upsample", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSGI_UPSAMPLE], cmd);
+
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSGI_UPSAMPLE_WIDE], cmd);
 
 		// 16x -> 8x
 		{
@@ -12736,8 +12749,12 @@ void Postprocess_SSGI(
 			postprocess.resolution.y = desc.height >> 2;
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-			postprocess.params0.x = 2; // range
-			postprocess.params0.y = 4; // spread
+			postprocess.params0.x = 3; // range
+			postprocess.params0.y = 2; // spread
+			postprocess.params1.x = float(desc.width >> 3);
+			postprocess.params1.y = float(desc.height >> 3);
+			postprocess.params1.z = 1.0f / postprocess.params1.x;
+			postprocess.params1.w = 1.0f / postprocess.params1.y;
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
@@ -12770,7 +12787,11 @@ void Postprocess_SSGI(
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 			postprocess.params0.x = 2; // range
-			postprocess.params0.y = 8; // spread
+			postprocess.params0.y = 3; // spread
+			postprocess.params1.x = float(desc.width >> 2);
+			postprocess.params1.y = float(desc.height >> 2);
+			postprocess.params1.z = 1.0f / postprocess.params1.x;
+			postprocess.params1.w = 1.0f / postprocess.params1.y;
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
@@ -12788,6 +12809,8 @@ void Postprocess_SSGI(
 			}
 		}
 
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSGI_UPSAMPLE], cmd);
+
 		// 4x -> 2x
 		{
 			device->BindResource(&res.texture_depth_mips, 0, cmd, 1);
@@ -12803,7 +12826,11 @@ void Postprocess_SSGI(
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 			postprocess.params0.x = 1; // range
-			postprocess.params0.y = 8; // spread
+			postprocess.params0.y = 2; // spread
+			postprocess.params1.x = float(desc.width >> 1);
+			postprocess.params1.y = float(desc.height >> 1);
+			postprocess.params1.z = 1.0f / postprocess.params1.x;
+			postprocess.params1.w = 1.0f / postprocess.params1.y;
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
@@ -12836,7 +12863,12 @@ void Postprocess_SSGI(
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 			postprocess.params0.x = 1; // range
-			postprocess.params0.y = 8; // spread
+			postprocess.params0.y = 1; // spread
+			const TextureDesc& desc2 = res.texture_diffuse_mips.desc;
+			postprocess.params1.x = float(desc2.width);
+			postprocess.params1.y = float(desc2.height);
+			postprocess.params1.z = 1.0f / postprocess.params1.x;
+			postprocess.params1.w = 1.0f / postprocess.params1.y;
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
@@ -16397,21 +16429,22 @@ void Postprocess_Upsample_Bilateral(
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 	postprocess.params0.x = threshold;
-	postprocess.params0.y = 1.0f / (float)input.GetDesc().width;
-	postprocess.params0.z = 1.0f / (float)input.GetDesc().height;
-	// select mip from lowres depth mipchain:
-	postprocess.params0.w = std::floor(std::max(1.0f, log2f(std::max((float)desc.width / (float)input.GetDesc().width, (float)desc.height / (float)input.GetDesc().height))));
-	postprocess.params1.x = (float)input.GetDesc().width;
-	postprocess.params1.y = (float)input.GetDesc().height;
+	postprocess.params0.w = float(input.desc.width) / float(output.desc.width);
+	postprocess.params1.x = (float)input.desc.width;
+	postprocess.params1.y = (float)input.desc.height;
 	postprocess.params1.z = 1.0f / postprocess.params1.x;
 	postprocess.params1.w = 1.0f / postprocess.params1.y;
+
+	const int mip = (int)std::floor(std::max(1.0f, log2f(std::max((float)desc.width / (float)input.GetDesc().width, (float)desc.height / (float)input.GetDesc().height))));
+
+	device->BindResource(&input, 0, cmd);
+	device->BindResource(&lineardepth, 1, cmd);
+	device->BindResource(&lineardepth, 2, cmd, std::min((int)lineardepth.desc.mip_levels - 1, mip));
 
 	if (pixelshader)
 	{
 		device->BindPipelineState(&PSO_upsample_bilateral, cmd);
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-
-		device->BindResource(&input, 0, cmd);
 
 		device->Draw(3, 0, cmd);
 	}
@@ -16439,17 +16472,12 @@ void Postprocess_Upsample_Bilateral(
 		case Format::R32G32B32A32_FLOAT:
 			cs = CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_FLOAT4;
 			break;
-		case Format::R32G32B32A32_UINT:
-			cs = CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_UINT4;
-			break;
 		default:
 			assert(0); // implement format!
 			break;
 		}
 		device->BindComputeShader(&shaders[cs], cmd);
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-
-		device->BindResource(&input, 0, cmd);
 
 		const GPUResource* uavs[] = {
 			&output,

@@ -191,7 +191,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"skyAtmosphere_skyViewLutCS", wi::graphics::ShaderStage::CS },
 	{"skyAtmosphere_multiScatteredLuminanceLutCS", wi::graphics::ShaderStage::CS },
 	{"skyAtmosphere_skyLuminanceLutCS", wi::graphics::ShaderStage::CS },
-	{"upsample_bilateral_uint4CS", wi::graphics::ShaderStage::CS },
 	{"screenspaceshadowCS", wi::graphics::ShaderStage::CS },
 	{"rtshadowCS", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_5 },
 	{"rtshadow_denoise_tileclassificationCS", wi::graphics::ShaderStage::CS },
@@ -489,7 +488,10 @@ int main(int argc, char* argv[])
 
 	// permutations for ssgiCS:
 	shaders.push_back({ "ssgiCS", wi::graphics::ShaderStage::CS });
-	shaders.back().permutations.emplace_back().defines = {"WIDE"};
+	shaders.back().permutations.emplace_back().defines = { "WIDE" };
+	// permutations for ssgi_upsampleCS:
+	shaders.push_back({ "ssgi_upsampleCS", wi::graphics::ShaderStage::CS });
+	shaders.back().permutations.emplace_back().defines = { "WIDE" };
 
 	wi::jobsystem::Initialize();
 	wi::jobsystem::context ctx;

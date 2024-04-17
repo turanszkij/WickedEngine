@@ -73,7 +73,7 @@ float3 compute_diffuse(
 			x += x_incr;
 			y += y_incr;
 			
-			const int2 loc = int2(round(x), round(y));
+			const int2 loc = int2(x, y);
 			const uint tt = coord_to_cache(loc);
 			
 			const float dt = float(i) / float(step);
@@ -104,18 +104,46 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint2 GTid :
 	GroupMemoryBarrierWithGroupSync();
 	
 	const int2 tile_upperleft = Gid.xy * THREADCOUNT - TILE_BORDER;
-	for(uint t = groupIndex; t < TILE_SIZE * TILE_SIZE; t += THREADCOUNT * THREADCOUNT)
+	for(uint x = GTid.x * 2; x < TILE_SIZE; x += THREADCOUNT * 2)
+	for(uint y = GTid.y * 2; y < TILE_SIZE; y += THREADCOUNT * 2)
 	{
-		const int2 pixel = tile_upperleft + unflatten2D(t, TILE_SIZE);
-		const float depth = input_depth[uint3(pixel, layer)];
-		const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
-		const float3 P = reconstruct_position(uv, depth, GetCamera().inverse_projection);
-		const float3 color = input_color[uint3(pixel, layer)];
-		const uint pkcolor = Pack_R11G11B10_FLOAT(color.rgb);
-		cache_xy[t] = pack_half2(P.xy);
-		cache_z[t] = P.z;
-		cache_rgb[t] = pkcolor;
-		if(pkcolor)
+		const int2 pixel = tile_upperleft + int2(x, y);
+		const float3 uvw = float3((pixel + 0.5f) * postprocess.resolution_rcp, layer);
+		const float4 depths = input_depth.GatherRed(sampler_linear_clamp, uvw);
+		const float4 reds = input_color.GatherRed(sampler_linear_clamp, uvw);
+		const float4 greens = input_color.GatherGreen(sampler_linear_clamp, uvw);
+		const float4 blues = input_color.GatherBlue(sampler_linear_clamp, uvw);
+		const float2 uv0 = (pixel + 0.5 + int2(0, 0)) * postprocess.resolution_rcp;
+		const float2 uv1 = (pixel + 0.5 + int2(1, 0)) * postprocess.resolution_rcp;
+		const float2 uv2 = (pixel + 0.5 + int2(0, 1)) * postprocess.resolution_rcp;
+		const float2 uv3 = (pixel + 0.5 + int2(1, 1)) * postprocess.resolution_rcp;
+		const float3 P0 = reconstruct_position(uv0, depths.w, GetCamera().inverse_projection);
+		const float3 P1 = reconstruct_position(uv1, depths.z, GetCamera().inverse_projection);
+		const float3 P2 = reconstruct_position(uv2, depths.x, GetCamera().inverse_projection);
+		const float3 P3 = reconstruct_position(uv3, depths.y, GetCamera().inverse_projection);
+		const uint C0 = Pack_R11G11B10_FLOAT(float3(reds.w, greens.w, blues.w));
+		const uint C1 = Pack_R11G11B10_FLOAT(float3(reds.z, greens.z, blues.z));
+		const uint C2 = Pack_R11G11B10_FLOAT(float3(reds.x, greens.x, blues.x));
+		const uint C3 = Pack_R11G11B10_FLOAT(float3(reds.y, greens.y, blues.y));
+		
+		const uint t = coord_to_cache(int2(x, y));
+		cache_xy[t] = pack_half2(P0.xy);
+		cache_z[t] = P0.z;
+		cache_rgb[t] = C0;
+		
+		cache_xy[t + 1] = pack_half2(P1.xy);
+		cache_z[t + 1] = P1.z;
+		cache_rgb[t + 1] = C1;
+		
+		cache_xy[t + TILE_SIZE] = pack_half2(P2.xy);
+		cache_z[t + TILE_SIZE] = P2.z;
+		cache_rgb[t + TILE_SIZE] = C2;
+		
+		cache_xy[t + TILE_SIZE + 1] = pack_half2(P3.xy);
+		cache_z[t + TILE_SIZE + 1] = P3.z;
+		cache_rgb[t + TILE_SIZE + 1] = C3;
+		
+		if(C0 || C1 || C2 || C3)
 			InterlockedOr(group_valid, 1u);
 	}
 	GroupMemoryBarrierWithGroupSync();
@@ -143,17 +171,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint2 GTid :
 	const float spread = postprocess.params0.y /*+ dither(DTid.xy)*/;
 	const float rangespread_rcp2 = postprocess.params0.z;
 
-	const int2 pixel_base = Gid.xy * THREADCOUNT + GTid;
 	for(int x = -range; x <= range; ++x)
 	{
 		for(int y = -range; y <= range; ++y)
 		{
-			const int2 pixel = pixel_base + int2(x, y);
-			if(any(pixel < 0) || any(pixel >= postprocess.resolution))
-				continue; // to not lose energy when sampling outside of textures, we skip those offsets
-			const float2 foffset = float2(x, y) * spread;
-			const int2 offset = round(foffset);
-			const float weight = saturate(1 - abs(foffset.x) * abs(foffset.y) * rangespread_rcp2);
+			const int2 offset = int2(x, y) * spread;
+			const float weight = saturate(1 - abs(offset.x) * abs(offset.y) * rangespread_rcp2);
 			diffuse += compute_diffuse(P, N, originLoc, originLoc + offset) * weight;
 			sum += weight;
 		}

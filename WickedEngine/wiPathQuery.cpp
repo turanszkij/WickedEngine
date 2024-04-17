@@ -2,8 +2,10 @@
 #include "wiRenderer.h"
 #include "wiEventHandler.h"
 #include "wiProfiler.h"
+#include "wiPrimitive.h"
 
 using namespace wi::graphics;
+using namespace wi::primitive;
 
 namespace wi
 {
@@ -26,54 +28,6 @@ namespace wi
 		debuggoalnode = voxelgrid.coord_to_world(goal.coord());
 		debugvoxelsize = voxelgrid.voxelSize;
 
-		auto is_voxel_valid = [&](XMUINT3 coord) {
-			if (flying)
-			{
-				// Flying checks:
-
-				// Center voxel must be within voxel grid:
-				if (!voxelgrid.is_coord_valid(coord))
-					return false;
-
-				// Neighbor voxels around center must be empty according to agent width and height:
-				for (int x = -agent_width; x <= agent_width; ++x)
-				{
-					for (int z = -agent_width; z <= agent_width; ++z)
-					{
-						for (int y = 0; y < agent_height; ++y)
-						{
-							XMUINT3 neighbor_coord = XMUINT3(uint32_t(coord.x + x), uint32_t(coord.y - y), uint32_t(coord.z + z));
-							if (voxelgrid.check_voxel(neighbor_coord))
-								return false;
-						}
-					}
-				}
-			}
-			else
-			{
-				// Grounded checks:
-
-				// Center voxel must be ground (valid):
-				if (!voxelgrid.check_voxel(coord))
-					return false;
-
-				// Neighbor voxels above center must be empty according to agent width and height:
-				for (int x = -agent_width; x <= agent_width; ++x)
-				{
-					for (int z = -agent_width; z <= agent_width; ++z)
-					{
-						for (int y = 0; y < 0 + agent_height; ++y)
-						{
-							// Note that we check above ground only (-1 on Y)!
-							XMUINT3 neighbor_coord = XMUINT3(uint32_t(coord.x + x), uint32_t(coord.y - y - 1), uint32_t(coord.z + z));
-							if (voxelgrid.check_voxel(neighbor_coord))
-								return false;
-						}
-					}
-				}
-			}
-			return true;
-		};
 		auto cost_to_goal = [&](XMUINT3 coord, XMUINT3 goal) {
 			// manhattan distance:
 			return std::abs(int(coord.x) - int(goal.x)) + std::abs(int(coord.y) - int(goal.y)) + std::abs(int(coord.z) - int(goal.z));
@@ -97,7 +51,7 @@ namespace wi
 			for (int i = 0; i < step; i++)
 			{
 				XMUINT3 coord = XMUINT3(uint32_t(std::round(x)), uint32_t(std::round(y)), uint32_t(std::round(z)));
-				if (!is_voxel_valid(coord))
+				if (!is_voxel_valid(voxelgrid, coord))
 					return false;
 				x += x_incr;
 				y += y_incr;
@@ -106,7 +60,7 @@ namespace wi
 			return true;
 		};
 
-		if (!is_voxel_valid(goal.coord()))
+		if (!is_voxel_valid(voxelgrid, goal.coord()))
 		{
 			// If goal is unreachable because it is not a valid voxel, check immediate neighborhood:
 			//	This works better than abandoning when goal happens to be in an invalid voxel because
@@ -125,7 +79,7 @@ namespace wi
 							continue;
 						}
 						XMUINT3 neighbor_coord = XMUINT3(uint32_t(goal.x + x), uint32_t(goal.y + y), uint32_t(goal.z + z));
-						if (is_voxel_valid(neighbor_coord))
+						if (is_voxel_valid(voxelgrid, neighbor_coord))
 						{
 							goal = Node::create(neighbor_coord);
 							found = true;
@@ -213,7 +167,7 @@ namespace wi
 
 			for (uint32_t i = 0; i < neighbor_count; ++i)
 			{
-				if (!is_voxel_valid(neighbors[i]))
+				if (!is_voxel_valid(voxelgrid, neighbors[i]))
 					continue;
 				Node next = Node::create(neighbors[i]);
 				uint16_t new_cost = cost_so_far[current] + cost_to_goal(current.coord(), next.coord());
@@ -281,6 +235,81 @@ namespace wi
 		}
 	}
 
+	bool PathQuery::search_cover(
+		const XMFLOAT3& observer,
+		const XMFLOAT3& subject,
+		const XMFLOAT3& direction,
+		float max_distance,
+		const wi::VoxelGrid& voxelgrid
+	)
+	{
+		XMFLOAT3 goal_world;
+		XMStoreFloat3(&goal_world, XMLoadFloat3(&subject) + XMLoadFloat3(&direction) * max_distance);
+
+		XMINT3 start = voxelgrid.world_to_coord_signed(observer);
+		XMINT3 goal = voxelgrid.world_to_coord_signed(goal_world);
+		start.y = goal.y;
+		XMUINT3 observer_coord = voxelgrid.world_to_coord(observer);
+		if (!flying)
+		{
+			// place visibility start check above ground if not flying
+			observer_coord.y -= 1;
+		}
+		const XMFLOAT3 observer_point = voxelgrid.coord_to_world(observer_coord);
+
+		auto is_cover = [&](const XMUINT3& coord) {
+			if (!is_voxel_valid(voxelgrid, coord))
+				return false;
+			XMUINT3 visibility_coord = coord;
+			if (visibility_coord.y > 0 && !flying)
+			{
+				// place visibility end check above ground if not flying
+				visibility_coord.y -= 1;
+			}
+			XMFLOAT3 center = voxelgrid.coord_to_world(visibility_coord);
+			float width = agent_width * voxelgrid.voxelSize.x * 2;
+			float height = agent_height * voxelgrid.voxelSize.y * 2;
+			AABB subject_aabb(XMFLOAT3(center.x - width, center.y, center.z - width), XMFLOAT3(center.x + width, center.y + height, center.z + width));
+			if (voxelgrid.is_visible(observer_point, subject_aabb))
+				return false;
+			process(subject, voxelgrid.coord_to_world(coord), voxelgrid);
+			return is_succesful();
+		};
+
+		const int dx = int(goal.x) - int(start.x);
+		const int dy = int(goal.y) - int(start.y);
+		const int dz = int(goal.z) - int(start.z);
+
+		const int step = std::max(std::abs(dx), std::max(std::abs(dy), std::abs(dz)));
+
+		const float x_incr = float(dx) / step;
+		const float y_incr = float(dy) / step;
+		const float z_incr = float(dz) / step;
+
+		float x = float(start.x);
+		float y = float(start.y);
+		float z = float(start.z);
+
+		for (int i = 0; i < step; i++)
+		{
+			XMUINT3 coord = XMUINT3(uint32_t(std::round(x)), uint32_t(std::round(y)), uint32_t(std::round(z)));
+			if (coord.x == goal.x && coord.y == goal.y && coord.z == goal.z)
+				return false;
+			if (!voxelgrid.is_coord_valid(coord))
+				return false;
+
+			if (is_cover(coord))
+			{
+				return true;
+			}
+
+			x += x_incr;
+			y += y_incr;
+			z += z_incr;
+		}
+		return false;
+	}
+
 	bool PathQuery::is_succesful() const
 	{
 		return !result_path_goal_to_start.empty();
@@ -306,6 +335,64 @@ namespace wi
 		if (results.size() <= index)
 			return process_startpos;
 		return results[results.size() - 1 - index]; // return results in direction: start -> goal
+	}
+
+	XMFLOAT3 PathQuery::get_goal() const
+	{
+		const wi::vector<XMFLOAT3>& results = result_path_goal_to_start_simplified.empty() ? result_path_goal_to_start : result_path_goal_to_start_simplified;
+		if (results.empty())
+			return process_startpos;
+		return results.front();
+	}
+
+	bool PathQuery::is_voxel_valid(const VoxelGrid& voxelgrid, XMUINT3 coord) const
+	{
+		if (flying)
+		{
+			// Flying checks:
+
+			// Center voxel must be within voxel grid:
+			if (!voxelgrid.is_coord_valid(coord))
+				return false;
+
+			// Neighbor voxels around center must be empty according to agent width and height:
+			for (int x = -agent_width; x <= agent_width; ++x)
+			{
+				for (int z = -agent_width; z <= agent_width; ++z)
+				{
+					for (int y = 0; y < agent_height; ++y)
+					{
+						XMUINT3 neighbor_coord = XMUINT3(uint32_t(coord.x + x), uint32_t(coord.y - y), uint32_t(coord.z + z));
+						if (voxelgrid.check_voxel(neighbor_coord))
+							return false;
+					}
+				}
+			}
+		}
+		else
+		{
+			// Grounded checks:
+
+			// Center voxel must be ground (valid):
+			if (!voxelgrid.check_voxel(coord))
+				return false;
+
+			// Neighbor voxels above center must be empty according to agent width and height:
+			for (int x = -agent_width; x <= agent_width; ++x)
+			{
+				for (int z = -agent_width; z <= agent_width; ++z)
+				{
+					for (int y = 0; y < 0 + agent_height; ++y)
+					{
+						// Note that we check above ground only (-1 on Y)!
+						XMUINT3 neighbor_coord = XMUINT3(uint32_t(coord.x + x), uint32_t(coord.y - y - 1), uint32_t(coord.z + z));
+						if (voxelgrid.check_voxel(neighbor_coord))
+							return false;
+					}
+				}
+			}
+		}
+		return true;
 	}
 
 	namespace PathQuery_internal

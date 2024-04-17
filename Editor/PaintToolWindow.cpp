@@ -176,6 +176,12 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	pressureCheckBox.SetCheckText(ICON_PEN);
 	AddWidget(&pressureCheckBox);
 
+	alphaCheckBox.Create("Redirect alpha: ");
+	alphaCheckBox.SetTooltip("The red color will be redirected to write alpha channel. Alpha value controls the blending like normally.");
+	alphaCheckBox.SetSize(XMFLOAT2(hei, hei));
+	alphaCheckBox.SetPos(XMFLOAT2(x - 20 + 200, y));
+	AddWidget(&alphaCheckBox);
+
 	axisCombo.Create("Axis Lock: ");
 	axisCombo.SetTooltip("You can lock modification to an axis here.");
 	axisCombo.SetPos(XMFLOAT2(x, y));
@@ -567,7 +573,7 @@ void PaintToolWindow::Update(float dt)
 					paintparams.push.xPaintBrushAmount = amount;
 					paintparams.push.xPaintBrushSmoothness = smoothness;
 					paintparams.push.xPaintBrushColor = color.rgba;
-					paintparams.push.xPaintReveal = revealTex.IsValid() ? 1 : 0;
+					paintparams.push.xPaintRedirectAlpha = alphaCheckBox.GetCheck();
 					paintparams.push.xPaintBrushRotation = brush_rotation;
 					paintparams.push.xPaintBrushShape = (uint)brushShapeComboBox.GetSelected();
 
@@ -1650,6 +1656,7 @@ void PaintToolWindow::ResizeLayout()
 	add_right(backfaceCheckBox);
 	wireCheckBox.SetPos(XMFLOAT2(backfaceCheckBox.GetPos().x - wireCheckBox.GetSize().x - 100, backfaceCheckBox.GetPos().y));
 	add_right(pressureCheckBox);
+	alphaCheckBox.SetPos(XMFLOAT2(pressureCheckBox.GetPos().x - alphaCheckBox.GetSize().x - 100, pressureCheckBox.GetPos().y));
 	add(textureSlotComboBox);
 	add(brushShapeComboBox);
 	add(axisCombo);

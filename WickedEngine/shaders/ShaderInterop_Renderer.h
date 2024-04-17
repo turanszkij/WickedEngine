@@ -1264,7 +1264,7 @@ struct PaintTexturePushConstants
 
 	float xPaintBrushSmoothness;
 	uint xPaintBrushColor;
-	uint xPaintReveal;
+	uint xPaintRedirectAlpha;
 	float xPaintBrushRotation;
 
 	uint xPaintBrushShape;
