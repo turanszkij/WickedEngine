@@ -863,6 +863,20 @@ namespace wi::terrain
 			UpdateVirtualTexturesCPU();
 		}
 
+		const uint64_t required_chunk_buffer_size = sizeof(ShaderTerrainChunk) * (chunk_buffer_range * 2 + 1) * (chunk_buffer_range * 2 + 1);
+		if (chunk_buffer.desc.size < required_chunk_buffer_size)
+		{
+			GPUBufferDesc desc;
+			desc.usage = Usage::DEFAULT;
+			desc.size = required_chunk_buffer_size;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE;
+			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+			desc.stride = sizeof(ShaderTerrainChunk);
+			bool success = device->CreateBuffer(&desc, nullptr, &chunk_buffer);
+			assert(success);
+			device->SetName(&chunk_buffer, "wi::terrain::Terrain::chunk_buffer");
+		}
+
 		// Start the generation on a background thread and keep it running until the next frame
 		wi::jobsystem::Execute(generator->workload, [=](wi::jobsystem::JobArgs args) {
 
@@ -926,6 +940,8 @@ namespace wi::terrain
 
 					chunk_data.mesh_vertex_positions = mesh.vertex_positions.data();
 
+					chunk_data.heightmap_data.resize(vertexCount);
+
 					wi::HairParticleSystem grass = grass_properties;
 					grass.vertex_lengths.resize(vertexCount);
 					std::atomic<uint32_t> grass_valid_vertex_count{ 0 };
@@ -953,6 +969,10 @@ namespace wi::terrain
 							for (auto& modifier : modifiers)
 							{
 								modifier->Apply(world_pos, height);
+							}
+							if (i == 0)
+							{
+								chunk_data.heightmap_data[index] = uint16_t(height * 65535);
 							}
 							height = wi::math::Lerp(bottomLevel, topLevel, height);
 							corners[i] = XMVectorSet(world_pos.x, height, world_pos.y, 0);
@@ -1032,10 +1052,11 @@ namespace wi::terrain
 						chunk_data.grass.CreateFromMesh(mesh);
 					}
 
+					wi::jobsystem::Wait(ctx); // wait until mesh.CreateRenderData() async task finishes
+
 					// Create the textures for virtual texture update:
 					CreateChunkRegionTexture(chunk_data);
 
-					wi::jobsystem::Wait(ctx); // wait until mesh.CreateRenderData() async task finishes
 					generated_something = true;
 				}
 
@@ -1223,27 +1244,45 @@ namespace wi::terrain
 
 	void Terrain::CreateChunkRegionTexture(ChunkData& chunk_data)
 	{
-		if (chunk_data.blendmap.IsValid() && chunk_data.blendmap.desc.array_size == (uint32_t)chunk_data.blendmap_layers.size())
-			return;
-
 		GraphicsDevice* device = GetDevice();
-		TextureDesc desc;
-		desc.width = (uint32_t)chunk_width;
-		desc.height = (uint32_t)chunk_width;
-		desc.array_size = (uint32_t)chunk_data.blendmap_layers.size();
-		desc.format = Format::R8_UNORM;
-		desc.bind_flags = BindFlag::SHADER_RESOURCE;
 
-		wi::vector<SubresourceData> data(chunk_data.blendmap_layers.size());
-		for (size_t i = 0; i < chunk_data.blendmap_layers.size(); ++i)
+		if (!chunk_data.heightmap.IsValid())
 		{
-			data[i].data_ptr = chunk_data.blendmap_layers[i].pixels.data();
-			data[i].row_pitch = chunk_width * sizeof(uint8_t);
+			TextureDesc desc;
+			desc.width = (uint32_t)chunk_width;
+			desc.height = (uint32_t)chunk_width;
+			desc.format = Format::R16_UNORM;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE;
+
+			SubresourceData data;
+			data.data_ptr = chunk_data.heightmap_data.data();
+			data.row_pitch = chunk_width * sizeof(uint16_t);
+
+			bool success = device->CreateTexture(&desc, &data, &chunk_data.heightmap);
+			assert(success);
+			device->SetName(&chunk_data.heightmap, "wi::terrain::ChunkData::heightmap");
 		}
 
-		bool success = device->CreateTexture(&desc, data.data(), &chunk_data.blendmap);
-		assert(success);
-		device->SetName(&chunk_data.blendmap, "wi::terrain::ChunkData::blendmap");
+		if (!chunk_data.blendmap.IsValid() || chunk_data.blendmap.desc.array_size != (uint32_t)chunk_data.blendmap_layers.size())
+		{
+			TextureDesc desc;
+			desc.width = (uint32_t)chunk_width;
+			desc.height = (uint32_t)chunk_width;
+			desc.array_size = (uint32_t)chunk_data.blendmap_layers.size();
+			desc.format = Format::R8_UNORM;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE;
+
+			wi::vector<SubresourceData> data(chunk_data.blendmap_layers.size());
+			for (size_t i = 0; i < chunk_data.blendmap_layers.size(); ++i)
+			{
+				data[i].data_ptr = chunk_data.blendmap_layers[i].pixels.data();
+				data[i].row_pitch = chunk_width * sizeof(uint8_t);
+			}
+
+			bool success = device->CreateTexture(&desc, data.data(), &chunk_data.blendmap);
+			assert(success);
+			device->SetName(&chunk_data.blendmap, "wi::terrain::ChunkData::blendmap");
+		}
 	}
 
 	void Terrain::UpdateVirtualTexturesCPU()
@@ -1561,6 +1600,37 @@ namespace wi::terrain
 		device->EventBegin("Terrain - UpdateVirtualTexturesGPU", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Terrain - UpdateVirtualTexturesGPU", cmd);
 
+		if (chunk_buffer.IsValid())
+		{
+			device->EventBegin("Update chunk buffer", cmd);
+			auto mem = device->AllocateGPU(chunk_buffer.desc.size, cmd);
+			ShaderTerrainChunk* shader_chunks = (ShaderTerrainChunk*)mem.data;
+			for (int y = -chunk_buffer_range; y <= chunk_buffer_range; ++y)
+			{
+				for (int x = -chunk_buffer_range; x <= chunk_buffer_range; ++x)
+				{
+					ShaderTerrainChunk shader_chunk;
+					shader_chunk.init();
+
+					auto chunk = center_chunk;
+					chunk.x += x;
+					chunk.z += y;
+					auto it = chunks.find(chunk);
+					if (it != chunks.end())
+					{
+						const auto& chunk_data = it->second;
+						shader_chunk.heightmap = device->GetDescriptorIndex(&chunk_data.heightmap, SubresourceType::SRV);
+						shader_chunk.materialID = (uint)scene->materials.GetIndex(chunk_data.entity);
+					}
+
+					const uint idx = (x + chunk_buffer_range) + (y + chunk_buffer_range) * (chunk_buffer_range * 2 + 1);
+					std::memcpy(shader_chunks + idx, &shader_chunk, sizeof(shader_chunk));
+				}
+			}
+			device->CopyBuffer(&chunk_buffer, 0, &mem.buffer, mem.offset, chunk_buffer.desc.size, cmd);
+			device->EventEnd(cmd);
+		}
+
 		device->Barrier(virtual_texture_barriers_before_update.data(), (uint32_t)virtual_texture_barriers_before_update.size(), cmd);
 
 		device->EventBegin("Clear Metadata", cmd);
@@ -1813,6 +1883,30 @@ namespace wi::terrain
 		device->EventEnd(cmd);
 	}
 
+	ShaderTerrain Terrain::GetShaderTerrain() const
+	{
+		GraphicsDevice* device = GetDevice();
+
+		ShaderTerrain shader_terrain;
+		shader_terrain.init();
+
+		auto it = chunks.find(center_chunk);
+		if (it != chunks.end())
+		{
+			const auto& chunk_data = it->second;
+			shader_terrain.chunk_size = chunk_half_width * 2 * chunk_scale;
+			shader_terrain.center_chunk_pos.x = center_chunk.x * shader_terrain.chunk_size - shader_terrain.chunk_size * 0.5f;
+			shader_terrain.center_chunk_pos.y = 0;
+			shader_terrain.center_chunk_pos.z = center_chunk.z * shader_terrain.chunk_size - shader_terrain.chunk_size * 0.5f;
+			shader_terrain.chunk_buffer = device->GetDescriptorIndex(&chunk_buffer, SubresourceType::SRV);
+			shader_terrain.chunk_buffer_range = chunk_buffer_range;
+			shader_terrain.min_height = bottomLevel;
+			shader_terrain.max_height = topLevel;
+		}
+
+		return shader_terrain;
+	}
+
 	void Terrain::Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri)
 	{
 		Generation_Cancel();
@@ -1958,6 +2052,7 @@ namespace wi::terrain
 					{
 						archive >> chunk_data.blendmap_layers[i].pixels;
 					}
+					archive >> chunk_data.heightmap_data;
 				}
 				else
 				{
@@ -2107,6 +2202,7 @@ namespace wi::terrain
 				{
 					archive << chunk_data.blendmap_layers[i].pixels;
 				}
+				archive << chunk_data.heightmap_data;
 				archive << chunk_data.sphere.center;
 				archive << chunk_data.sphere.radius;
 				archive << chunk_data.position;

@@ -190,6 +190,8 @@ namespace wi::terrain
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 		bool visible = true;
 		std::shared_ptr<VirtualTexture> vt;
+		wi::vector<uint16_t> heightmap_data;
+		wi::graphics::Texture heightmap;
 
 		void enable_blendmap_layer(size_t materialIndex)
 		{
@@ -259,6 +261,9 @@ namespace wi::terrain
 		wi::graphics::Sampler sampler;
 		VirtualTextureAtlas atlas;
 
+		int chunk_buffer_range = 3; // how many chunks to upload to GPU in X and Z directions
+		wi::graphics::GPUBuffer chunk_buffer;
+
 		constexpr bool IsCenterToCamEnabled() const { return _flags & CENTER_TO_CAM; }
 		constexpr bool IsRemovalEnabled() const { return _flags & REMOVAL; }
 		constexpr bool IsGrassEnabled() const { return _flags & GRASS; }
@@ -308,6 +313,8 @@ namespace wi::terrain
 		void CopyVirtualTexturePageStatusGPU(wi::graphics::CommandList cmd) const;
 		void AllocateVirtualTextureTileRequestsGPU(wi::graphics::CommandList cmd) const;
 		void WritebackTileRequestsGPU(wi::graphics::CommandList cmd) const;
+
+		ShaderTerrain GetShaderTerrain() const;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 

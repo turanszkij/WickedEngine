@@ -222,7 +222,7 @@ struct Surface
 			// Metallic-roughness workflow:
 			if (material.IsOcclusionEnabled_Primary())
 			{
-				occlusion = surfaceMap.r;
+				occlusion *= surfaceMap.r;
 			}
 			roughness = surfaceMap.g;
 			const float metalness = surfaceMap.b;

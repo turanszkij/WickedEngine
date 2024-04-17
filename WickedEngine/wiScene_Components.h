@@ -182,6 +182,7 @@ namespace wi::scene
 		float alphaRef = 1.0f;
 		float anisotropy_strength = 0;
 		float anisotropy_rotation = 0; //radians, counter-clockwise
+		float blend_with_terrain_height = 0;
 
 		XMFLOAT4 sheenColor = XMFLOAT4(1, 1, 1, 1);
 		float sheenRoughness = 0;

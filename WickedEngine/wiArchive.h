@@ -107,9 +107,19 @@ namespace wi
 			_write((int8_t)data);
 			return *this;
 		}
+		inline Archive& operator<<(short data)
+		{
+			_write((int16_t)data);
+			return *this;
+		}
 		inline Archive& operator<<(unsigned char data)
 		{
 			_write((uint8_t)data);
+			return *this;
+		}
+		inline Archive& operator<<(unsigned short data)
+		{
+			_write((uint16_t)data);
 			return *this;
 		}
 		inline Archive& operator<<(int data)
@@ -248,11 +258,25 @@ namespace wi
 			data = (char)temp;
 			return *this;
 		}
+		inline Archive& operator>>(short& data)
+		{
+			int16_t temp;
+			_read(temp);
+			data = (short)temp;
+			return *this;
+		}
 		inline Archive& operator>>(unsigned char& data)
 		{
 			uint8_t temp;
 			_read(temp);
 			data = (unsigned char)temp;
+			return *this;
+		}
+		inline Archive& operator>>(unsigned short& data)
+		{
+			uint16_t temp;
+			_read(temp);
+			data = (unsigned short)temp;
 			return *this;
 		}
 		inline Archive& operator>>(int& data)

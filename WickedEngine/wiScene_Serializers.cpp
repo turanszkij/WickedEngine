@@ -237,6 +237,11 @@ namespace wi::scene
 				archive >> textures[TRANSPARENCYMAP].uvset;
 			}
 
+			if (seri.GetVersion() >= 4)
+			{
+				archive >> blend_with_terrain_height;
+			}
+
 			for (auto& x : textures)
 			{
 				if (!x.name.empty())
@@ -380,6 +385,11 @@ namespace wi::scene
 			{
 				archive << wi::helper::GetPathRelative(dir, textures[TRANSPARENCYMAP].name);
 				archive << textures[TRANSPARENCYMAP].uvset;
+			}
+
+			if (seri.GetVersion() >= 4)
+			{
+				archive << blend_with_terrain_height;
 			}
 		}
 	}

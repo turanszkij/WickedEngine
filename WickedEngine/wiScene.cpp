@@ -909,6 +909,12 @@ namespace wi::scene
 		shaderscene.ddgi.cell_size_rcp.y = 1.0f / shaderscene.ddgi.cell_size.y;
 		shaderscene.ddgi.cell_size_rcp.z = 1.0f / shaderscene.ddgi.cell_size.z;
 		shaderscene.ddgi.max_distance = std::max(shaderscene.ddgi.cell_size.x, std::max(shaderscene.ddgi.cell_size.y, shaderscene.ddgi.cell_size.z)) * 1.5f;
+
+		shaderscene.terrain.init();
+		if (terrains.GetCount() > 0)
+		{
+			shaderscene.terrain = terrains[0].GetShaderTerrain();
+		}
 	}
 	void Scene::Clear()
 	{

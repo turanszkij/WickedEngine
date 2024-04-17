@@ -1303,5 +1303,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ffx-shadows-dnsr\ffx_denoiser_shadows_util.h">
       <Filter>ffx-shadows-dnsr</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Terrain.h">
+      <Filter>interop</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
