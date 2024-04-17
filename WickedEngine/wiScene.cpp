@@ -5065,7 +5065,8 @@ namespace wi::scene
 				const AABB& aabb = aabb_objects[objectIndex];
 				if (!ray.intersects(aabb) || (layerMask & aabb.layerMask) == 0)
 					continue;
-
+				if (objectIndex >= objects.GetCount())
+					continue;
 				const ObjectComponent& object = objects[objectIndex];
 				if (object.meshID == INVALID_ENTITY)
 					continue;
@@ -5731,10 +5732,13 @@ namespace wi::scene
 		{
 			for (size_t objectIndex = 0; objectIndex < aabb_objects.size(); ++objectIndex)
 			{
+				if (objectIndex >= objects.GetCount())
+					break;
+
 				const AABB& aabb = aabb_objects[objectIndex];
 				if (capsule_aabb.intersects(aabb) == AABB::INTERSECTION_TYPE::OUTSIDE || (layerMask & aabb.layerMask) == 0)
 					continue;
-
+				
 				const ObjectComponent& object = objects[objectIndex];
 
 				if (object.meshID == INVALID_ENTITY)
