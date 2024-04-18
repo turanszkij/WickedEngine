@@ -667,7 +667,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 					surfaceMap = lerp(surfaceMap, terrain_surfaceMap, blend);
 					surface.emissiveColor += terrain_emissiveMap * terrain_material.GetEmissive() * blend;
 					input.nor = lerp(input.nor, terrain_normal, blend);
-					TBN = float3x3(surface.T.xyz, bitangent, input.nor);
+					TBN[2] = input.nor;
 					surface.N = normalize(input.nor);
 				}
 			}

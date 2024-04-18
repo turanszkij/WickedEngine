@@ -623,6 +623,92 @@ struct Surface
 			surfaceMap = surfacemap_simple;
 		}
 
+		emissiveColor = material.GetEmissive() * Unpack_R11G11B10_FLOAT(inst.emissive);
+		if (is_emittedparticle)
+		{
+			emissiveColor *= baseColor.rgb * baseColor.a;
+		}
+		else
+		{
+			[branch]
+			if (material.textures[EMISSIVEMAP].IsValid())
+			{
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+				float4 emissiveMap = material.textures[EMISSIVEMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy);
+#else
+				float lod = 0;
+#ifdef SURFACE_LOAD_MIPCONE
+				lod = compute_texture_lod(material.textures[EMISSIVEMAP].GetTexture(), material.textures[EMISSIVEMAP].GetUVSet() == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+#endif // SURFACE_LOAD_MIPCONE
+				float4 emissiveMap = material.textures[EMISSIVEMAP].SampleLevel(sam, uvsets, lod);
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
+				emissiveColor *= emissiveMap.rgb * emissiveMap.a;
+			}
+		}
+
+		if (material.options & SHADERMATERIAL_OPTION_BIT_ADDITIVE)
+		{
+			emissiveColor += baseColor.rgb * baseColor.a;
+		}
+
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+#ifdef TERRAINBLENDED
+		[branch]
+		if (material.blend_with_terrain_height_rcp > 0)
+		{
+			// Blend object into terrain material:
+			ShaderTerrain terrain = GetScene().terrain;
+			[branch]
+			if(terrain.chunk_buffer >= 0)
+			{
+				int2 chunk_coord = floor((P.xz - terrain.center_chunk_pos.xz) / terrain.chunk_size);
+				if(chunk_coord.x >= -terrain.chunk_buffer_range && chunk_coord.x <= terrain.chunk_buffer_range && chunk_coord.y >= -terrain.chunk_buffer_range && chunk_coord.y <= terrain.chunk_buffer_range)
+				{
+					uint chunk_idx = flatten2D(chunk_coord + terrain.chunk_buffer_range, terrain.chunk_buffer_range * 2 + 1);
+					ShaderTerrainChunk chunk = bindless_structured_terrain_chunks[terrain.chunk_buffer][chunk_idx];
+				
+					[branch]
+					if(chunk.heightmap >= 0)
+					{
+						Texture2D terrain_heightmap = bindless_textures[NonUniformResourceIndex(chunk.heightmap)];
+						float2 chunk_min = terrain.center_chunk_pos.xz + chunk_coord * terrain.chunk_size;
+						float2 chunk_max = terrain.center_chunk_pos.xz + terrain.chunk_size + chunk_coord * terrain.chunk_size;
+						float2 terrain_uv = saturate(inverse_lerp(chunk_min, chunk_max, P.xz));
+						float terrain_height0 = terrain_heightmap.SampleLevel(sampler_linear_clamp, terrain_uv, 0).r;
+						float terrain_height1 = terrain_heightmap.SampleLevel(sampler_linear_clamp, terrain_uv, 0, int2(1, 0)).r;
+						float terrain_height2 = terrain_heightmap.SampleLevel(sampler_linear_clamp, terrain_uv, 0, int2(0, 1)).r;
+						float3 P0 = float3(0, terrain_height0, 0); 
+						float3 P1 = float3(1, terrain_height1, 0); 
+						float3 P2 = float3(0, terrain_height2, 1);
+						float3 terrain_normal = normalize(cross(P2 - P0, P1 - P0));
+						float terrain_height = lerp(terrain.min_height, terrain.max_height, terrain_height0);
+						float object_height = P.y;
+						float diff = (object_height - terrain_height) * material.blend_with_terrain_height_rcp;
+						float blend = 1 - pow(saturate(diff), 2);
+						//blend *= lerp(1, saturate((noise_gradient_3D(P * 2) * 0.5 + 0.5) * 2), saturate(diff));
+						//terrain_uv = lerp(saturate(inverse_lerp(chunk_min, chunk_max, P.xz - N.xz * diff)), terrain_uv, saturate(N.y)); // uv stretching improvement: stretch in normal direction if normal gets horizontal
+						ShaderMaterial terrain_material = load_material(chunk.materialID);
+						terrain_uv = mad(terrain_uv, terrain_material.texMulAdd.xy, terrain_material.texMulAdd.zw);
+						float2 terrain_uv_dx = terrain_uv - saturate(inverse_lerp(chunk_min, chunk_max, (P - P_dx).xz));
+						float2 terrain_uv_dy = terrain_uv - saturate(inverse_lerp(chunk_min, chunk_max, (P - P_dy).xz));
+						float4 terrain_baseColor = terrain_material.textures[BASECOLORMAP].SampleGrad(sam, terrain_uv.xyxy, terrain_uv_dx.xyxy, terrain_uv_dy.xyxy);
+						float4 terrain_bumpColor = terrain_material.textures[NORMALMAP].SampleGrad(sam, terrain_uv.xyxy, terrain_uv_dx.xyxy, terrain_uv_dy.xyxy);
+						float4 terrain_surfaceMap = terrain_material.textures[SURFACEMAP].SampleGrad(sam, terrain_uv.xyxy, terrain_uv_dx.xyxy, terrain_uv_dy.xyxy);
+						float3 terrain_emissiveMap = terrain_material.textures[EMISSIVEMAP].SampleGrad(sam, terrain_uv.xyxy, terrain_uv_dx.xyxy, terrain_uv_dy.xyxy).rgb;
+						baseColor = lerp(baseColor, terrain_baseColor, blend);
+						bumpColor = lerp(bumpColor, terrain_bumpColor.rgb * 2 - 1, blend);
+						surfaceMap = lerp(surfaceMap, terrain_surfaceMap, blend);
+						emissiveColor += terrain_emissiveMap * terrain_material.GetEmissive() * blend;
+						Nunnormalized = lerp(Nunnormalized, terrain_normal, blend);
+						TBN[2] = Nunnormalized;
+						N = normalize(Nunnormalized);
+					}
+				}
+			}
+		}
+#endif // TERRAINBLENDED
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
+
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
 		// I need to copy the decal code here because include resolve issues:
 #ifndef DISABLE_DECALS
@@ -780,34 +866,6 @@ struct Surface
 		}
 
 		create(material, baseColor, surfaceMap, specularMap);
-
-		emissiveColor = material.GetEmissive() * Unpack_R11G11B10_FLOAT(inst.emissive);
-		if (is_emittedparticle)
-		{
-			emissiveColor *= baseColor.rgb * baseColor.a;
-		}
-		else
-		{
-			[branch]
-			if (material.textures[EMISSIVEMAP].IsValid())
-			{
-#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
-				float4 emissiveMap = material.textures[EMISSIVEMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy);
-#else
-				float lod = 0;
-#ifdef SURFACE_LOAD_MIPCONE
-				lod = compute_texture_lod(material.textures[EMISSIVEMAP].GetTexture(), material.textures[EMISSIVEMAP].GetUVSet() == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
-#endif // SURFACE_LOAD_MIPCONE
-				float4 emissiveMap = material.textures[EMISSIVEMAP].SampleLevel(sam, uvsets, lod);
-#endif // SURFACE_LOAD_QUAD_DERIVATIVES
-				emissiveColor *= emissiveMap.rgb * emissiveMap.a;
-			}
-		}
-
-		if (material.options & SHADERMATERIAL_OPTION_BIT_ADDITIVE)
-		{
-			emissiveColor += baseColor.rgb * baseColor.a;
-		}
 
 		transmission = material.transmission;
 		[branch]
