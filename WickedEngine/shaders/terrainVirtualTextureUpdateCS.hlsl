@@ -59,8 +59,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		const float2 uv = (pixel.xy + 0.5f) * push.resolution_rcp;
 		
 		float4 total_color = 0;
-		
-		for(uint blendmap_index = 0; blendmap_index < array_size; ++blendmap_index)
+		float accumulation = 0;
+
+		// Note: blending is front-to back with early exit like decals
+		for(int blendmap_index = array_size - 1; blendmap_index >= 0; blendmap_index--)
 		{
 			float weight = blendmap.SampleLevel(sampler_linear_clamp, float3(uv, blendmap_index), 0);
 			if(weight == 0)
@@ -83,13 +85,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				float4 baseColorMap = tex.SampleLevel(sampler_linear_wrap, uv / overscale, lod);
 				baseColor *= baseColorMap;
 			}
-			total_color = lerp(total_color, baseColor, weight);
-			//if (DTid.x < 2 || DTid.y < 2)
-			//	total_color = 0;
+			total_color = mad(1 - accumulation, weight * baseColor, total_color);
+			accumulation = mad(1 - weight, accumulation, weight);
+			if(accumulation >= 1)
+				break;
 #endif // UPDATE_BASECOLORMAP
 
 #ifdef UPDATE_NORMALMAP
-			float2 normal = float2(0.5, 0.5);
 			[branch]
 			if (material.textures[NORMALMAP].IsValid())
 			{
@@ -100,9 +102,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				float lod = log2(max(diff.x, diff.y));
 				float2 overscale = lod < 0 ? diff : 1;
 				float2 normalMap = tex.SampleLevel(sampler_linear_wrap, uv / overscale, lod).rg;
-				normal = normalMap;
+				total_color.rg = mad(1 - accumulation, weight * normalMap, total_color.rg);
+				accumulation = mad(1 - weight, accumulation, weight);
+				if(accumulation >= 1)
+					break;
 			}
-			total_color = lerp(total_color, float4(normal.rg, 1, 1), weight);
 #endif // UPDATE_NORMALMAP
 
 #ifdef UPDATE_SURFACEMAP
@@ -119,7 +123,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				float4 surfaceMap = tex.SampleLevel(sampler_linear_wrap, uv / overscale, lod);
 				surface *= surfaceMap;
 			}
-			total_color = lerp(total_color, surface, weight);
+			total_color = mad(1 - accumulation, weight * surface, total_color);
+			accumulation = mad(1 - weight, accumulation, weight);
+			if(accumulation >= 1)
+				break;
 #endif // UPDATE_SURFACEMAP
 
 #ifdef UPDATE_EMISSIVEMAP
@@ -137,7 +144,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				emissiveColor.rgb = emissiveMap.rgb * emissiveMap.a;
 				emissiveColor.a = emissiveMap.a;
 			}
-			total_color = lerp(total_color, emissiveColor, weight);
+			total_color = mad(1 - accumulation, weight * emissiveColor, total_color);
+			accumulation = mad(1 - weight, accumulation, weight);
+			if(accumulation >= 1)
+				break;
 #endif // UPDATE_EMISSIVEMAP
 		}
 

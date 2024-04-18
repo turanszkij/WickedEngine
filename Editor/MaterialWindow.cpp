@@ -476,7 +476,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&clearcoatRoughnessSlider);
 
-	blendTerrainSlider.Create(0, 10, 0, 1000, "Blend with terrain: ");
+	blendTerrainSlider.Create(0, 2, 0, 1000, "Blend with terrain: ");
 	blendTerrainSlider.SetTooltip("Blend with terrain height.");
 	blendTerrainSlider.SetSize(XMFLOAT2(wid, hei));
 	blendTerrainSlider.SetPos(XMFLOAT2(x, y += step));
@@ -835,6 +835,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		shaderTypeComboBox.AddItem("Cloth", MaterialComponent::SHADERTYPE_PBR_CLOTH);
 		shaderTypeComboBox.AddItem("Clear coat", MaterialComponent::SHADERTYPE_PBR_CLEARCOAT);
 		shaderTypeComboBox.AddItem("Cloth + Clear coat", MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT);
+		shaderTypeComboBox.AddItem("Terrain blended", MaterialComponent::SHADERTYPE_PBR_TERRAINBLENDED);
 		shaderTypeComboBox.AddItem("Water", MaterialComponent::SHADERTYPE_WATER);
 		shaderTypeComboBox.AddItem("Cartoon", MaterialComponent::SHADERTYPE_CARTOON);
 		shaderTypeComboBox.AddItem("Unlit", MaterialComponent::SHADERTYPE_UNLIT);

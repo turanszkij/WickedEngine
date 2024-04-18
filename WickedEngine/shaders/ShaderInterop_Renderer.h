@@ -423,7 +423,7 @@ struct ShaderTypeBin
 	uint4 padding; // 32-byte alignment
 #endif // __SCE__ || __PSSL__
 };
-static const uint SHADERTYPE_BIN_COUNT = 10;
+static const uint SHADERTYPE_BIN_COUNT = 11;
 
 struct VisibilityTile
 {

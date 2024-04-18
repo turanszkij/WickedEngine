@@ -25,6 +25,27 @@ CC0 1.0 Public Domain Dedication (https://creativecommons.org/publicdomain/zero/
 Rock048 by ambientCG
 https://ambientcg.com/a/Rock048
 
+Rock texture:
+https://ambientcg.com/view?id=Rock051
+
+Ground texture:
+https://ambientcg.com/view?id=Ground068
+
+Ground2 texture:
+https://ambientcg.com/view?id=Ground072
+
+Bricks texture:
+https://ambientcg.com/view?id=Bricks059
+
+Drak rock texture:
+https://ambientcg.com/view?id=Rock035
+
+Metal plate texture:
+https://ambientcg.com/view?id=DiamondPlate008C
+
+Foil texture:
+https://ambientcg.com/view?id=Foil002
+
 Tactile Paving texture:
 https://ambientcg.com/view?id=TactilePaving003
 

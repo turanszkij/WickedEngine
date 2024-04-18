@@ -4111,7 +4111,7 @@ namespace wi::scene
 						uint32_t doublesided : 1;	// bool
 						uint32_t tessellation : 1;	// bool
 						uint32_t alphatest : 1;		// bool
-						uint32_t customshader : 10;
+						uint32_t customshader : 8;
 						uint32_t sort_priority : 4;
 					} bits;
 					uint32_t value;

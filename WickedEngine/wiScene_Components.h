@@ -144,6 +144,7 @@ namespace wi::scene
 			SHADERTYPE_PBR_CLOTH,
 			SHADERTYPE_PBR_CLEARCOAT,
 			SHADERTYPE_PBR_CLOTH_CLEARCOAT,
+			SHADERTYPE_PBR_TERRAINBLENDED,
 			SHADERTYPE_COUNT
 		} shaderType = SHADERTYPE_PBR;
 		static_assert(SHADERTYPE_COUNT == SHADERTYPE_BIN_COUNT, "These values must match!");
@@ -159,6 +160,7 @@ namespace wi::scene
 			{"SHEEN"}, // SHADERTYPE_PBR_CLOTH,
 			{"CLEARCOAT"}, // SHADERTYPE_PBR_CLEARCOAT,
 			{"SHEEN", "CLEARCOAT"}, // SHADERTYPE_PBR_CLOTH_CLEARCOAT,
+			{"TERRAINBLENDED"}, //SHADERTYPE_PBR_TERRAINBLENDED
 		};
 		static_assert(SHADERTYPE_COUNT == arraysize(shaderTypeDefines), "These values must match!");
 

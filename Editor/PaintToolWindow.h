@@ -94,6 +94,10 @@ public:
 	wi::vector<wi::gui::Button> terrain_material_buttons;
 	size_t terrain_material_layer = 0;
 
+	float texture_paint_radius = 50;
+	float vertex_paint_radius = 0.1f;
+	float terrain_paint_radius = 5;
+
 	wi::Archive* currentHistory = nullptr;
 	void WriteHistoryData(wi::ecs::Entity entity, wi::Archive& archive, wi::graphics::CommandList cmd = wi::graphics::CommandList());
 	void RecordHistory(wi::ecs::Entity entity, wi::graphics::CommandList cmd = wi::graphics::CommandList());

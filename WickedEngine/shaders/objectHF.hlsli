@@ -640,7 +640,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // OBJECTSHADER_USE_EMISSIVE
 
 #ifdef OBJECTSHADER_USE_UVSETS
-#ifdef EARLY_DEPTH_STENCIL
+#ifdef TERRAINBLENDED
 	[branch]
 	if (GetMaterial().blend_with_terrain_height_rcp > 0)
 	{
@@ -681,7 +681,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 			surface.N = normalize(input.nor);
 		}
 	}
-#endif // EARLY_DEPTH_STENCIL
+#endif // TERRAINBLENDED
 #endif // OBJECTSHADER_USE_UVSETS
 
 	[branch]

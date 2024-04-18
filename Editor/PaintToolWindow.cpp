@@ -29,8 +29,8 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	modeComboBox.SetSize(XMFLOAT2(wid, hei));
 	modeComboBox.AddItem(ICON_DISABLED " Disabled", MODE_DISABLED);
 	modeComboBox.AddItem(ICON_MATERIAL " Texture", MODE_TEXTURE);
-	modeComboBox.AddItem(ICON_TERRAIN " Terrain material", MODE_TERRAIN_MATERIAL);
 	modeComboBox.AddItem(ICON_MESH " Vertexcolor", MODE_VERTEXCOLOR);
+	modeComboBox.AddItem(ICON_TERRAIN " Terrain material", MODE_TERRAIN_MATERIAL);
 	modeComboBox.AddItem(ICON_MESH " Sculpting - Add", MODE_SCULPTING_ADD);
 	modeComboBox.AddItem(ICON_MESH " Sculpting - Subtract", MODE_SCULPTING_SUBTRACT);
 	modeComboBox.AddItem(ICON_SOFTBODY " Softbody - Pinning", MODE_SOFTBODY_PINNING);
@@ -50,10 +50,10 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 			infoLabel.SetText("In texture paint mode, you can paint on textures. Brush will be applied in texture space.\nREMEMBER to save texture when finished to save texture file!\nREMEMBER to save scene to retain new texture bindings on materials!");
 			break;
 		case MODE_TERRAIN_MATERIAL:
-			infoLabel.SetText("You can paint terrain material layers.");
+			infoLabel.SetText("You can paint terrain material layers. The paintable materials are those which are referenced by the terrain.");
 			break;
 		case MODE_VERTEXCOLOR:
-			infoLabel.SetText("In vertex color mode, you can paint colors on selected geometry (per vertex). \"Use vertex colors\" will be automatically enabled for the selected material, or all materials if the whole object is selected. If there is no vertexcolors vertex buffer, one will be created with white as default for every vertex.");
+			infoLabel.SetText("In vertex color mode, you can paint colors on geometry (per vertex). \"Use vertex colors\" will be automatically enabled for the affected materials. If there is no vertexcolors vertex buffer, one will be created with white as default for every vertex.");
 			break;
 		case MODE_SCULPTING_ADD:
 			infoLabel.SetText("In sculpt - ADD mode, you can modify vertex positions by ADD operation along normal vector (average normal of vertices touched by brush).");
@@ -62,10 +62,10 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 			infoLabel.SetText("In sculpt - SUBTRACT mode, you can modify vertex positions by SUBTRACT operation along normal vector (average normal of vertices touched by brush).");
 			break;
 		case MODE_SOFTBODY_PINNING:
-			infoLabel.SetText("In soft body pinning mode, the selected object's soft body vertices can be pinned down (so they will be fixed and drive physics)");
+			infoLabel.SetText("In soft body pinning mode, the soft body vertices can be pinned down (so they will be fixed and drive physics)");
 			break;
 		case MODE_SOFTBODY_PHYSICS:
-			infoLabel.SetText("In soft body physics mode, the selected object's soft body vertices can be unpinned (so they will be simulated by physics)");
+			infoLabel.SetText("In soft body physics mode, the soft body vertices can be unpinned (so they will be simulated by physics)");
 			break;
 		case MODE_HAIRPARTICLE_ADD_TRIANGLE:
 			infoLabel.SetText("In hair particle add triangle mode, you can add triangles to the hair base mesh.\nThis will modify random distribution of hair!");
@@ -80,6 +80,32 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 			infoLabel.SetText("Paint the wind affection amount onto the vertices. Use the Alpha channel to control the amount.");
 			break;
 		}
+
+		if (args.userdata == MODE_TEXTURE)
+		{
+			radiusSlider.SetRange(1, 200);
+			radiusSlider.SetValue(texture_paint_radius);
+		}
+		else if (args.userdata == MODE_TERRAIN_MATERIAL)
+		{
+			radiusSlider.SetRange(1, 100);
+			radiusSlider.SetValue(terrain_paint_radius);
+		}
+		else
+		{
+			radiusSlider.SetRange(0, 10);
+			radiusSlider.SetValue(vertex_paint_radius);
+		}
+
+		if (args.userdata == MODE_TERRAIN_MATERIAL)
+		{
+			SetSize(XMFLOAT2(GetSize().x, 1200));
+		}
+		else
+		{
+			SetSize(XMFLOAT2(GetSize().x, 800));
+		}
+
 	});
 	AddWidget(&modeComboBox);
 
@@ -97,6 +123,20 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	radiusSlider.SetTooltip("Set the brush radius in pixel units");
 	radiusSlider.SetSize(XMFLOAT2(wid, hei));
 	radiusSlider.SetPos(XMFLOAT2(x, y += step));
+	radiusSlider.OnSlide([this](wi::gui::EventArgs args) {
+		if (GetMode() == MODE_TEXTURE)
+		{
+			texture_paint_radius = args.fValue;
+		}
+		else if (GetMode() == MODE_TERRAIN_MATERIAL)
+		{
+			terrain_paint_radius = args.fValue;
+		}
+		else
+		{
+			vertex_paint_radius = args.fValue;
+		}
+	});
 	AddWidget(&radiusSlider);
 
 	amountSlider.Create(0, 1, 1, 10000, "Power: ");
@@ -695,7 +735,10 @@ void PaintToolWindow::Update(float dt)
 					{
 						chunk_data.blendmap = {};
 						terrain->CreateChunkRegionTexture(chunk_data);
-						chunk_data.vt->invalidate();
+						if (chunk_data.vt != nullptr)
+						{
+							chunk_data.vt->invalidate();
+						}
 					}
 				}
 			}
