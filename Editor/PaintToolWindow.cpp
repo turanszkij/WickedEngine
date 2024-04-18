@@ -727,8 +727,16 @@ void PaintToolWindow::Update(float dt)
 							const float affection = amount * wi::math::SmoothStep(0, smoothness, 1 - dist / pressure_radius);
 
 							float vcol = float(pixels[j]) / 255.0f;
-							vcol = wi::math::Lerp(vcol, color.toFloat4().x, affection);
+							vcol = wi::math::Lerp(vcol, 1, affection);
 							pixels[j] = uint8_t(vcol * 255);
+
+							// blend out layers above:
+							for (size_t l = terrain_material_layer + 1; l < chunk_data.blendmap_layers.size(); ++l)
+							{
+								vcol = float(chunk_data.blendmap_layers[l].pixels[j]) / 255.0f;
+								vcol = wi::math::Lerp(vcol, 0, affection);
+								chunk_data.blendmap_layers[l].pixels[j] = uint8_t(vcol * 255);
+							}
 						}
 					}
 					if (rebuild)
