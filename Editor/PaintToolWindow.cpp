@@ -757,27 +757,30 @@ void PaintToolWindow::Update(float dt)
 		case MODE_WIND:
 		{
 			Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor, camera);
-			brushIntersect = wi::scene::Pick(pickRay, ~0u, ~0u, scene);
+			brushIntersect = wi::scene::Pick(pickRay, wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
 			if (brushIntersect.entity == INVALID_ENTITY)
 				break;
 
 			const Sphere sphere = Sphere(brushIntersect.position, radius);
 			const XMVECTOR CENTER = XMLoadFloat3(&sphere.center);
 
-			ObjectComponent* object = scene.objects.GetComponent(brushIntersect.entity);
-			if (object == nullptr || object->meshID == INVALID_ENTITY)
-				break;
-
-			MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
-			if (mesh == nullptr)
-				break;
-
-			MaterialComponent* material = brushIntersect.subsetIndex >= 0 && brushIntersect.subsetIndex < (int)mesh->subsets.size() ? scene.materials.GetComponent(mesh->subsets[brushIntersect.subsetIndex].materialID) : nullptr;
-			if (material == nullptr)
+			for (size_t objectIndex = 0; objectIndex < scene.objects.GetCount(); ++objectIndex)
 			{
+				if (!sphere.intersects(scene.aabb_objects[objectIndex]))
+					continue;
+
+				Entity entity = scene.objects.GetEntity(objectIndex);
+				ObjectComponent& object = scene.objects[objectIndex];
+				if (object.meshID == INVALID_ENTITY)
+					continue;
+
+				MeshComponent* mesh = scene.meshes.GetComponent(object.meshID);
+				if (mesh == nullptr)
+					continue;
+
 				for (auto& x : mesh->subsets)
 				{
-					material = scene.materials.GetComponent(x.materialID);
+					MaterialComponent* material = scene.materials.GetComponent(x.materialID);
 					if (material != nullptr)
 					{
 						switch (mode)
@@ -791,148 +794,132 @@ void PaintToolWindow::Update(float dt)
 						}
 					}
 				}
-				material = nullptr;
-			}
-			else
-			{
+
+				const ArmatureComponent* armature = mesh->IsSkinned() ? scene.armatures.GetComponent(mesh->armatureID) : nullptr;
+
+				const TransformComponent* transform = scene.transforms.GetComponent(entity);
+				if (transform == nullptr)
+					continue;
+
+				const XMMATRIX W = XMLoadFloat4x4(&transform->world);
+
+				bool rebuild = false;
+
 				switch (mode)
 				{
 				case MODE_VERTEXCOLOR:
-					material->SetUseVertexColors(true);
+					if (mesh->vertex_colors.empty())
+					{
+						mesh->vertex_colors.resize(mesh->vertex_positions.size());
+						std::fill(mesh->vertex_colors.begin(), mesh->vertex_colors.end(), wi::Color::White().rgba); // fill white
+						rebuild = true;
+					}
 					break;
 				case MODE_WIND:
-					material->SetUseWind(true);
+					if (mesh->vertex_windweights.empty())
+					{
+						mesh->vertex_windweights.resize(mesh->vertex_positions.size());
+						std::fill(mesh->vertex_windweights.begin(), mesh->vertex_windweights.end(), 0xFF); // fill max affection
+						rebuild = true;
+					}
 					break;
 				}
-			}
 
-			const ArmatureComponent* armature = mesh->IsSkinned() ? scene.armatures.GetComponent(mesh->armatureID) : nullptr;
-
-			const TransformComponent* transform = scene.transforms.GetComponent(brushIntersect.entity);
-			if (transform == nullptr)
-				break;
-
-			const XMMATRIX W = XMLoadFloat4x4(&transform->world);
-
-			bool rebuild = false;
-
-			switch (mode)
-			{
-			case MODE_VERTEXCOLOR:
-				if (mesh->vertex_colors.empty())
+				if (painting)
 				{
-					mesh->vertex_colors.resize(mesh->vertex_positions.size());
-					std::fill(mesh->vertex_colors.begin(), mesh->vertex_colors.end(), wi::Color::White().rgba); // fill white
-					rebuild = true;
-				}
-				break;
-			case MODE_WIND:
-				if (mesh->vertex_windweights.empty())
-				{
-					mesh->vertex_windweights.resize(mesh->vertex_positions.size());
-					std::fill(mesh->vertex_windweights.begin(), mesh->vertex_windweights.end(), 0xFF); // fill max affection
-					rebuild = true;
-				}
-				break;
-			}
-
-			if (painting)
-			{
-				Sphere sphere = Sphere(brushIntersect.position, radius);
-				const XMVECTOR CENTER = XMLoadFloat3(&sphere.center);
-
-				for (size_t j = 0; j < mesh->vertex_positions.size(); ++j)
-				{
-					XMVECTOR P, N;
-					if (armature == nullptr)
+					for (size_t j = 0; j < mesh->vertex_positions.size(); ++j)
 					{
-						P = XMLoadFloat3(&mesh->vertex_positions[j]);
-						N = XMLoadFloat3(&mesh->vertex_normals[j]);
-					}
-					else
-					{
-						P = wi::scene::SkinVertex(*mesh, *armature, (uint32_t)j, &N);
-					}
-					P = XMVector3Transform(P, W);
-					N = XMVector3Normalize(XMVector3TransformNormal(N, W));
-
-					if (!backfaces && XMVectorGetX(XMVector3Dot(F, N)) > 0)
-						continue;
-
-					const float dist = wi::math::Distance(P, CENTER);
-					if (dist <= pressure_radius)
-					{
-						RecordHistory(object->meshID);
-						rebuild = true;
-						const float affection = amount * wi::math::SmoothStep(0, smoothness, 1 - dist / pressure_radius);
-
-						switch (mode)
+						XMVECTOR P, N;
+						if (armature == nullptr)
 						{
-						case MODE_VERTEXCOLOR:
-						{
-							wi::Color vcol = mesh->vertex_colors[j];
-							vcol = wi::Color::lerp(vcol, color, affection);
-							mesh->vertex_colors[j] = vcol.rgba;
-						}
-						break;
-						case MODE_WIND:
-						{
-							wi::Color vcol = wi::Color(0, 0, 0, mesh->vertex_windweights[j]);
-							vcol = wi::Color::lerp(vcol, color, affection);
-							mesh->vertex_windweights[j] = vcol.getA();
-						}
-						break;
-						}
-					}
-				}
-			}
-
-			if (wireframe)
-			{
-				uint32_t first_subset = 0;
-				uint32_t last_subset = 0;
-				mesh->GetLODSubsetRange(0, first_subset, last_subset);
-				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
-				{
-					const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
-					for (size_t j = 0; j < subset.indexCount; j += 3)
-					{
-						const uint32_t triangle[] = {
-							mesh->indices[j + 0],
-							mesh->indices[j + 1],
-							mesh->indices[j + 2],
-						};
-
-						const XMVECTOR P[arraysize(triangle)] = {
-							XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[0]), W),
-							XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[1]), W),
-							XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[2]), W),
-						};
-
-						wi::renderer::RenderableTriangle tri;
-						XMStoreFloat3(&tri.positionA, P[0]);
-						XMStoreFloat3(&tri.positionB, P[1]);
-						XMStoreFloat3(&tri.positionC, P[2]);
-						if (mode == MODE_WIND)
-						{
-							tri.colorA = wi::Color(mesh->vertex_windweights[triangle[0]], 0, 0, 255);
-							tri.colorB = wi::Color(mesh->vertex_windweights[triangle[1]], 0, 0, 255);
-							tri.colorC = wi::Color(mesh->vertex_windweights[triangle[2]], 0, 0, 255);
+							P = XMLoadFloat3(&mesh->vertex_positions[j]);
+							N = XMLoadFloat3(&mesh->vertex_normals[j]);
 						}
 						else
 						{
-							tri.colorA.w = 0.8f;
-							tri.colorB.w = 0.8f;
-							tri.colorC.w = 0.8f;
+							P = wi::scene::SkinVertex(*mesh, *armature, (uint32_t)j, &N);
 						}
-						wi::renderer::DrawTriangle(tri, true);
+						P = XMVector3Transform(P, W);
+						N = XMVector3Normalize(XMVector3TransformNormal(N, W));
+
+						if (!backfaces && XMVectorGetX(XMVector3Dot(F, N)) > 0)
+							continue;
+
+						const float dist = wi::math::Distance(P, CENTER);
+						if (dist <= pressure_radius)
+						{
+							RecordHistory(object.meshID);
+							rebuild = true;
+							const float affection = amount * wi::math::SmoothStep(0, smoothness, 1 - dist / pressure_radius);
+
+							switch (mode)
+							{
+							case MODE_VERTEXCOLOR:
+							{
+								wi::Color vcol = mesh->vertex_colors[j];
+								vcol = wi::Color::lerp(vcol, color, affection);
+								mesh->vertex_colors[j] = vcol.rgba;
+							}
+							break;
+							case MODE_WIND:
+							{
+								wi::Color vcol = wi::Color(0, 0, 0, mesh->vertex_windweights[j]);
+								vcol = wi::Color::lerp(vcol, color, affection);
+								mesh->vertex_windweights[j] = vcol.getA();
+							}
+							break;
+							}
+						}
 					}
 				}
-			}
 
-			if (rebuild)
-			{
-				mesh->CreateRenderData();
+				if (wireframe)
+				{
+					uint32_t first_subset = 0;
+					uint32_t last_subset = 0;
+					mesh->GetLODSubsetRange(0, first_subset, last_subset);
+					for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+					{
+						const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+						for (size_t j = 0; j < subset.indexCount; j += 3)
+						{
+							const uint32_t triangle[] = {
+								mesh->indices[j + 0],
+								mesh->indices[j + 1],
+								mesh->indices[j + 2],
+							};
+
+							const XMVECTOR P[arraysize(triangle)] = {
+								XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[0]), W),
+								XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[1]), W),
+								XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[2]), W),
+							};
+
+							wi::renderer::RenderableTriangle tri;
+							XMStoreFloat3(&tri.positionA, P[0]);
+							XMStoreFloat3(&tri.positionB, P[1]);
+							XMStoreFloat3(&tri.positionC, P[2]);
+							if (mode == MODE_WIND)
+							{
+								tri.colorA = wi::Color(mesh->vertex_windweights[triangle[0]], 0, 0, 255);
+								tri.colorB = wi::Color(mesh->vertex_windweights[triangle[1]], 0, 0, 255);
+								tri.colorC = wi::Color(mesh->vertex_windweights[triangle[2]], 0, 0, 255);
+							}
+							else
+							{
+								tri.colorA.w = 0.8f;
+								tri.colorB.w = 0.8f;
+								tri.colorC.w = 0.8f;
+							}
+							wi::renderer::DrawTriangle(tri, true);
+						}
+					}
+				}
+
+				if (rebuild)
+				{
+					mesh->CreateRenderData();
+				}
 			}
 		}
 		break;
@@ -941,157 +928,164 @@ void PaintToolWindow::Update(float dt)
 		case MODE_SCULPTING_SUBTRACT:
 		{
 			Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor, camera);
-			brushIntersect = wi::scene::Pick(pickRay, ~0u, ~0u, scene);
+			brushIntersect = wi::scene::Pick(pickRay, wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
 			if (brushIntersect.entity == INVALID_ENTITY)
 				break;
 
 			const Sphere sphere = Sphere(brushIntersect.position, radius);
 			const XMVECTOR CENTER = XMLoadFloat3(&sphere.center);
 
-			ObjectComponent* object = scene.objects.GetComponent(brushIntersect.entity);
-			if (object == nullptr || object->meshID == INVALID_ENTITY)
-				break;
-
-			MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
-			if (mesh == nullptr)
-				break;
-
-			const ArmatureComponent* armature = mesh->IsSkinned() ? scene.armatures.GetComponent(mesh->armatureID) : nullptr;
-
-			const TransformComponent* transform = scene.transforms.GetComponent(brushIntersect.entity);
-			if (transform == nullptr)
-				break;
-
-			const XMMATRIX W = XMLoadFloat4x4(&transform->world);
-
-			XMVECTOR sculptDir;
-			AxisLock axis_lock = (AxisLock)axisCombo.GetItemUserData(axisCombo.GetSelected());
-			switch (axis_lock)
+			for (size_t objectIndex = 0; objectIndex < scene.objects.GetCount(); ++objectIndex)
 			{
-			default:
-			case PaintToolWindow::AxisLock::Disabled:
-				if (sculpting_normal.x < FLT_EPSILON && sculpting_normal.y < FLT_EPSILON && sculpting_normal.z < FLT_EPSILON)
+				if (!sphere.intersects(scene.aabb_objects[objectIndex]))
+					continue;
+
+				Entity entity = scene.objects.GetEntity(objectIndex);
+				ObjectComponent& object = scene.objects[objectIndex];
+				if (object.meshID == INVALID_ENTITY)
+					continue;
+
+				MeshComponent* mesh = scene.meshes.GetComponent(object.meshID);
+				if (mesh == nullptr)
+					continue;
+
+				const ArmatureComponent* armature = mesh->IsSkinned() ? scene.armatures.GetComponent(mesh->armatureID) : nullptr;
+
+				const TransformComponent* transform = scene.transforms.GetComponent(entity);
+				if (transform == nullptr)
+					continue;
+
+				const XMMATRIX W = XMLoadFloat4x4(&transform->world);
+
+				XMVECTOR sculptDir;
+				AxisLock axis_lock = (AxisLock)axisCombo.GetItemUserData(axisCombo.GetSelected());
+				switch (axis_lock)
 				{
-					sculpting_normal = editor->hovered.normal;
-				}
-				sculptDir = XMVector3TransformNormal(XMVector3Normalize(XMLoadFloat3(&sculpting_normal)), XMMatrixInverse(nullptr, W));
-				break;
-			case PaintToolWindow::AxisLock::X:
-				sculpting_normal = XMFLOAT3(1, 0, 0);
-				sculptDir = XMLoadFloat3(&sculpting_normal);
-				break;
-			case PaintToolWindow::AxisLock::Y:
-				sculpting_normal = XMFLOAT3(0, 1, 0);
-				sculptDir = XMLoadFloat3(&sculpting_normal);
-				break;
-			case PaintToolWindow::AxisLock::Z:
-				sculpting_normal = XMFLOAT3(0, 0, 1);
-				sculptDir = XMLoadFloat3(&sculpting_normal);
-				break;
-			}
-
-			bool rebuild = false;
-			if (painting)
-			{
-				sculpting_indices.clear();
-				sculpting_indices.reserve(mesh->vertex_positions.size());
-
-				for (size_t j = 0; j < mesh->vertex_positions.size(); ++j)
-				{
-					XMVECTOR P, N;
-					if (armature == nullptr)
+				default:
+				case PaintToolWindow::AxisLock::Disabled:
+					if (sculpting_normal.x < FLT_EPSILON && sculpting_normal.y < FLT_EPSILON && sculpting_normal.z < FLT_EPSILON)
 					{
-						P = XMLoadFloat3(&mesh->vertex_positions[j]);
-						N = XMLoadFloat3(&mesh->vertex_normals[j]);
+						sculpting_normal = editor->hovered.normal;
 					}
-					else
-					{
-						P = wi::scene::SkinVertex(*mesh, *armature, (uint32_t)j, &N);
-					}
-					P = XMVector3Transform(P, W);
-					N = XMVector3Normalize(XMVector3TransformNormal(N, W));
-
-					const float dotN = XMVectorGetX(XMVector3Dot(F, N));
-					if (!backfaces && dotN > 0)
-						continue;
-
-					const float dist = wi::math::Distance(P, CENTER);
-					if (dist <= pressure_radius)
-					{
-						const float affection = amount * wi::math::SmoothStep(0, smoothness, 1 - dist / pressure_radius);
-						sculpting_indices.push_back({ j, affection });
-					}
+					sculptDir = XMVector3TransformNormal(XMVector3Normalize(XMLoadFloat3(&sculpting_normal)), XMMatrixInverse(nullptr, W));
+					break;
+				case PaintToolWindow::AxisLock::X:
+					sculpting_normal = XMFLOAT3(1, 0, 0);
+					sculptDir = XMLoadFloat3(&sculpting_normal);
+					break;
+				case PaintToolWindow::AxisLock::Y:
+					sculpting_normal = XMFLOAT3(0, 1, 0);
+					sculptDir = XMLoadFloat3(&sculpting_normal);
+					break;
+				case PaintToolWindow::AxisLock::Z:
+					sculpting_normal = XMFLOAT3(0, 0, 1);
+					sculptDir = XMLoadFloat3(&sculpting_normal);
+					break;
 				}
 
-				if (!sculpting_indices.empty())
+				bool rebuild = false;
+				if (painting)
 				{
-					RecordHistory(object->meshID);
-					rebuild = true;
+					sculpting_indices.clear();
+					sculpting_indices.reserve(mesh->vertex_positions.size());
 
-					for (auto& x : sculpting_indices)
+					for (size_t j = 0; j < mesh->vertex_positions.size(); ++j)
 					{
-						XMVECTOR PL = XMLoadFloat3(&mesh->vertex_positions[x.ind]);
-						switch (mode)
+						XMVECTOR P, N;
+						if (armature == nullptr)
 						{
-						case MODE_SCULPTING_ADD:
-							PL += sculptDir * x.affection;
-							break;
-						case MODE_SCULPTING_SUBTRACT:
-							PL -= sculptDir * x.affection;
-							break;
+							P = XMLoadFloat3(&mesh->vertex_positions[j]);
+							N = XMLoadFloat3(&mesh->vertex_normals[j]);
 						}
-						XMStoreFloat3(&mesh->vertex_positions[x.ind], PL);
-					}
-				}
-			}
+						else
+						{
+							P = wi::scene::SkinVertex(*mesh, *armature, (uint32_t)j, &N);
+						}
+						P = XMVector3Transform(P, W);
+						N = XMVector3Normalize(XMVector3TransformNormal(N, W));
 
-			if (wireframe)
-			{
-				uint32_t first_subset = 0;
-				uint32_t last_subset = 0;
-				mesh->GetLODSubsetRange(0, first_subset, last_subset);
-				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
-				{
-					const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
-					for (size_t j = 0; j < subset.indexCount; j += 3)
+						const float dotN = XMVectorGetX(XMVector3Dot(F, N));
+						if (!backfaces && dotN > 0)
+							continue;
+
+						const float dist = wi::math::Distance(P, CENTER);
+						if (dist <= pressure_radius)
+						{
+							const float affection = amount * wi::math::SmoothStep(0, smoothness, 1 - dist / pressure_radius);
+							sculpting_indices.push_back({ j, affection });
+						}
+					}
+
+					if (!sculpting_indices.empty())
 					{
-						const uint32_t triangle[] = {
-							mesh->indices[j + 0],
-							mesh->indices[j + 1],
-							mesh->indices[j + 2],
-						};
-						const XMVECTOR P[arraysize(triangle)] = {
-							XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[0]), W),
-							XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[1]), W),
-							XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[2]), W),
-						};
+						RecordHistory(object.meshID);
+						rebuild = true;
 
-						wi::renderer::RenderableTriangle tri;
-						XMStoreFloat3(&tri.positionA, P[0]);
-						XMStoreFloat3(&tri.positionB, P[1]);
-						XMStoreFloat3(&tri.positionC, P[2]);
-						tri.colorA.w = 0.8f;
-						tri.colorB.w = 0.8f;
-						tri.colorC.w = 0.8f;
-						wi::renderer::DrawTriangle(tri, true);
+						for (auto& x : sculpting_indices)
+						{
+							XMVECTOR PL = XMLoadFloat3(&mesh->vertex_positions[x.ind]);
+							switch (mode)
+							{
+							case MODE_SCULPTING_ADD:
+								PL += sculptDir * x.affection;
+								break;
+							case MODE_SCULPTING_SUBTRACT:
+								PL -= sculptDir * x.affection;
+								break;
+							}
+							XMStoreFloat3(&mesh->vertex_positions[x.ind], PL);
+						}
 					}
-
-					wi::renderer::RenderableLine sculpt_dir_line;
-					sculpt_dir_line.color_start = XMFLOAT4(0, 1, 0, 1);
-					sculpt_dir_line.color_end = XMFLOAT4(0, 1, 0, 1);
-					sculpt_dir_line.start = editor->hovered.position;
-					XMStoreFloat3(
-						&sculpt_dir_line.end,
-						XMLoadFloat3(&sculpt_dir_line.start) +
-						XMVector3Normalize(XMLoadFloat3(&sculpting_normal))
-					);
-					wi::renderer::DrawLine(sculpt_dir_line);
 				}
-			}
 
-			if (rebuild)
-			{
-				mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
+				if (wireframe)
+				{
+					uint32_t first_subset = 0;
+					uint32_t last_subset = 0;
+					mesh->GetLODSubsetRange(0, first_subset, last_subset);
+					for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+					{
+						const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+						for (size_t j = 0; j < subset.indexCount; j += 3)
+						{
+							const uint32_t triangle[] = {
+								mesh->indices[j + 0],
+								mesh->indices[j + 1],
+								mesh->indices[j + 2],
+							};
+							const XMVECTOR P[arraysize(triangle)] = {
+								XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[0]), W),
+								XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[1]), W),
+								XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[2]), W),
+							};
+
+							wi::renderer::RenderableTriangle tri;
+							XMStoreFloat3(&tri.positionA, P[0]);
+							XMStoreFloat3(&tri.positionB, P[1]);
+							XMStoreFloat3(&tri.positionC, P[2]);
+							tri.colorA.w = 0.8f;
+							tri.colorB.w = 0.8f;
+							tri.colorC.w = 0.8f;
+							wi::renderer::DrawTriangle(tri, true);
+						}
+
+						wi::renderer::RenderableLine sculpt_dir_line;
+						sculpt_dir_line.color_start = XMFLOAT4(0, 1, 0, 1);
+						sculpt_dir_line.color_end = XMFLOAT4(0, 1, 0, 1);
+						sculpt_dir_line.start = editor->hovered.position;
+						XMStoreFloat3(
+							&sculpt_dir_line.end,
+							XMLoadFloat3(&sculpt_dir_line.start) +
+							XMVector3Normalize(XMLoadFloat3(&sculpting_normal))
+						);
+						wi::renderer::DrawLine(sculpt_dir_line);
+					}
+				}
+
+				if (rebuild)
+				{
+					mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
+				}
 			}
 		}
 		break;
@@ -1100,96 +1094,103 @@ void PaintToolWindow::Update(float dt)
 		case MODE_SOFTBODY_PHYSICS:
 		{
 			Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor, camera);
-			brushIntersect = wi::scene::Pick(pickRay, ~0u, ~0u, scene);
+			brushIntersect = wi::scene::Pick(pickRay, wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
 			if (brushIntersect.entity == INVALID_ENTITY)
 				break;
 
 			const Sphere sphere = Sphere(brushIntersect.position, radius);
 			const XMVECTOR CENTER = XMLoadFloat3(&sphere.center);
 
-			ObjectComponent* object = scene.objects.GetComponent(brushIntersect.entity);
-			if (object == nullptr || object->meshID == INVALID_ENTITY)
-				break;
-
-			const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
-			if (mesh == nullptr)
-				break;
-
-			SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(object->meshID);
-			if (softbody == nullptr || !softbody->HasVertices())
-				break;
-
-			// Painting:
-			if (painting)
+			for (size_t objectIndex = 0; objectIndex < scene.objects.GetCount(); ++objectIndex)
 			{
-				size_t j = 0;
-				for (auto& ind : softbody->physicsToGraphicsVertexMapping)
-				{
-					XMVECTOR P = softbody->vertex_positions_simulation[ind].LoadPOS();
+				if (!sphere.intersects(scene.aabb_objects[objectIndex]))
+					continue;
 
-					const float dist = wi::math::Distance(P, CENTER);
-					if (dist <= pressure_radius)
+				Entity entity = scene.objects.GetEntity(objectIndex);
+				ObjectComponent& object = scene.objects[objectIndex];
+				if (object.meshID == INVALID_ENTITY)
+					continue;
+
+				const MeshComponent* mesh = scene.meshes.GetComponent(object.meshID);
+				if (mesh == nullptr)
+					continue;
+
+				SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(object.meshID);
+				if (softbody == nullptr || !softbody->HasVertices())
+					continue;
+
+				// Painting:
+				if (painting)
+				{
+					size_t j = 0;
+					for (auto& ind : softbody->physicsToGraphicsVertexMapping)
 					{
-						RecordHistory(object->meshID);
-						softbody->weights[j] = (mode == MODE_SOFTBODY_PINNING ? 0.0f : 1.0f);
-						softbody->_flags |= SoftBodyPhysicsComponent::FORCE_RESET;
+						XMVECTOR P = softbody->vertex_positions_simulation[ind].LoadPOS();
+
+						const float dist = wi::math::Distance(P, CENTER);
+						if (dist <= pressure_radius)
+						{
+							RecordHistory(object.meshID);
+							softbody->weights[j] = (mode == MODE_SOFTBODY_PINNING ? 0.0f : 1.0f);
+							softbody->_flags |= SoftBodyPhysicsComponent::FORCE_RESET;
+						}
+						j++;
 					}
-					j++;
 				}
-			}
 
-			// Visualizing:
-			const XMMATRIX W = XMLoadFloat4x4(&softbody->worldMatrix);
-			uint32_t first_subset = 0;
-			uint32_t last_subset = 0;
-			mesh->GetLODSubsetRange(0, first_subset, last_subset);
-			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
-			{
-				const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
-				for (size_t j = 0; j < subset.indexCount; j += 3)
+				// Visualizing:
+				const XMMATRIX W = XMLoadFloat4x4(&softbody->worldMatrix);
+				uint32_t first_subset = 0;
+				uint32_t last_subset = 0;
+				mesh->GetLODSubsetRange(0, first_subset, last_subset);
+				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 				{
-					const uint32_t graphicsIndex0 = mesh->indices[j + 0];
-					const uint32_t graphicsIndex1 = mesh->indices[j + 1];
-					const uint32_t graphicsIndex2 = mesh->indices[j + 2];
-					const uint32_t physicsIndex0 = softbody->graphicsToPhysicsVertexMapping[graphicsIndex0];
-					const uint32_t physicsIndex1 = softbody->graphicsToPhysicsVertexMapping[graphicsIndex1];
-					const uint32_t physicsIndex2 = softbody->graphicsToPhysicsVertexMapping[graphicsIndex2];
-					const float weight0 = softbody->weights[physicsIndex0];
-					const float weight1 = softbody->weights[physicsIndex1];
-					const float weight2 = softbody->weights[physicsIndex2];
-					wi::renderer::RenderableTriangle tri;
-					if (softbody->HasVertices())
+					const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+					for (size_t j = 0; j < subset.indexCount; j += 3)
 					{
-						tri.positionA = softbody->vertex_positions_simulation[graphicsIndex0].GetPOS();
-						tri.positionB = softbody->vertex_positions_simulation[graphicsIndex1].GetPOS();
-						tri.positionC = softbody->vertex_positions_simulation[graphicsIndex2].GetPOS();
-					}
-					else
-					{
-						XMStoreFloat3(&tri.positionA, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[graphicsIndex0]), W));
-						XMStoreFloat3(&tri.positionB, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[graphicsIndex1]), W));
-						XMStoreFloat3(&tri.positionC, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[graphicsIndex2]), W));
-					}
-					if (weight0 == 0)
-						tri.colorA = XMFLOAT4(1, 1, 0, 1);
-					else
-						tri.colorA = XMFLOAT4(1, 1, 1, 1);
-					if (weight1 == 0)
-						tri.colorB = XMFLOAT4(1, 1, 0, 1);
-					else
-						tri.colorB = XMFLOAT4(1, 1, 1, 1);
-					if (weight2 == 0)
-						tri.colorC = XMFLOAT4(1, 1, 0, 1);
-					else
-						tri.colorC = XMFLOAT4(1, 1, 1, 1);
-					if (wireframe)
-					{
-						wi::renderer::DrawTriangle(tri, true);
-					}
-					if (weight0 == 0 && weight1 == 0 && weight2 == 0)
-					{
-						tri.colorA = tri.colorB = tri.colorC = XMFLOAT4(1, 0, 0, 0.8f);
-						wi::renderer::DrawTriangle(tri);
+						const uint32_t graphicsIndex0 = mesh->indices[j + 0];
+						const uint32_t graphicsIndex1 = mesh->indices[j + 1];
+						const uint32_t graphicsIndex2 = mesh->indices[j + 2];
+						const uint32_t physicsIndex0 = softbody->graphicsToPhysicsVertexMapping[graphicsIndex0];
+						const uint32_t physicsIndex1 = softbody->graphicsToPhysicsVertexMapping[graphicsIndex1];
+						const uint32_t physicsIndex2 = softbody->graphicsToPhysicsVertexMapping[graphicsIndex2];
+						const float weight0 = softbody->weights[physicsIndex0];
+						const float weight1 = softbody->weights[physicsIndex1];
+						const float weight2 = softbody->weights[physicsIndex2];
+						wi::renderer::RenderableTriangle tri;
+						if (softbody->HasVertices())
+						{
+							tri.positionA = softbody->vertex_positions_simulation[graphicsIndex0].GetPOS();
+							tri.positionB = softbody->vertex_positions_simulation[graphicsIndex1].GetPOS();
+							tri.positionC = softbody->vertex_positions_simulation[graphicsIndex2].GetPOS();
+						}
+						else
+						{
+							XMStoreFloat3(&tri.positionA, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[graphicsIndex0]), W));
+							XMStoreFloat3(&tri.positionB, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[graphicsIndex1]), W));
+							XMStoreFloat3(&tri.positionC, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[graphicsIndex2]), W));
+						}
+						if (weight0 == 0)
+							tri.colorA = XMFLOAT4(1, 1, 0, 1);
+						else
+							tri.colorA = XMFLOAT4(1, 1, 1, 1);
+						if (weight1 == 0)
+							tri.colorB = XMFLOAT4(1, 1, 0, 1);
+						else
+							tri.colorB = XMFLOAT4(1, 1, 1, 1);
+						if (weight2 == 0)
+							tri.colorC = XMFLOAT4(1, 1, 0, 1);
+						else
+							tri.colorC = XMFLOAT4(1, 1, 1, 1);
+						if (wireframe)
+						{
+							wi::renderer::DrawTriangle(tri, true);
+						}
+						if (weight0 == 0 && weight1 == 0 && weight2 == 0)
+						{
+							tri.colorA = tri.colorB = tri.colorC = XMFLOAT4(1, 0, 0, 0.8f);
+							wi::renderer::DrawTriangle(tri);
+						}
 					}
 				}
 			}
@@ -1201,7 +1202,7 @@ void PaintToolWindow::Update(float dt)
 		case MODE_HAIRPARTICLE_LENGTH:
 		{
 			Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor, camera);
-			brushIntersect = wi::scene::Pick(pickRay, ~0u, ~0u, scene);
+			brushIntersect = wi::scene::Pick(pickRay, wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
 			if (brushIntersect.entity == INVALID_ENTITY)
 				break;
 
@@ -1217,13 +1218,13 @@ void PaintToolWindow::Update(float dt)
 				const Entity hairEntity = scene.hairs.GetEntity(i);
 				MeshComponent* mesh = scene.meshes.GetComponent(hair.meshID);
 				if (mesh == nullptr)
-					break;
+					continue;
 
 				const ArmatureComponent* armature = mesh->IsSkinned() ? scene.armatures.GetComponent(mesh->armatureID) : nullptr;
 
-				const TransformComponent* transform = scene.transforms.GetComponent(brushIntersect.entity);
+				const TransformComponent* transform = scene.transforms.GetComponent(hairEntity);
 				if (transform == nullptr)
-					break;
+					continue;
 
 				const XMMATRIX W = XMLoadFloat4x4(&transform->world);
 
@@ -1583,7 +1584,11 @@ void PaintToolWindow::WriteHistoryData(Entity entity, wi::Archive& archive, Comm
 					{
 						found = true;
 						archive << terrain_material_layer;
-						archive << chunk_data.blendmap_layers[terrain_material_layer].pixels;
+						archive << chunk_data.blendmap_layers.size();
+						for (size_t l = terrain_material_layer; l < chunk_data.blendmap_layers.size(); ++l)
+						{
+							archive << chunk_data.blendmap_layers[l].pixels;
+						}
 						break;
 					}
 				}
@@ -1746,9 +1751,6 @@ void PaintToolWindow::ConsumeHistoryOperation(wi::Archive& archive, bool undo)
 		break;
 		case PaintToolWindow::MODE_TERRAIN_MATERIAL:
 		{
-			archive >> terrain_material_layer;
-			wi::vector<uint8_t> pixels;
-			archive >> pixels;
 			for (size_t i = 0; i < scene.terrains.GetCount(); ++i)
 			{
 				wi::terrain::Terrain& terrain = scene.terrains[i];
@@ -1757,9 +1759,19 @@ void PaintToolWindow::ConsumeHistoryOperation(wi::Archive& archive, bool undo)
 					auto& chunk_data = chunk.second;
 					if (chunk_data.entity == entity)
 					{
-						chunk_data.blendmap_layers[terrain_material_layer].pixels = pixels;
+						archive >> terrain_material_layer;
+						size_t count = 0;
+						archive >> count;
+						chunk_data.blendmap_layers.resize(count);
+						for (size_t l = terrain_material_layer; l < count; ++l)
+						{
+							archive >> chunk_data.blendmap_layers[l].pixels;
+						}
 						chunk_data.blendmap = {};
-						chunk_data.vt->invalidate();
+						if (chunk_data.vt != nullptr)
+						{
+							chunk_data.vt->invalidate();
+						}
 						break;
 					}
 				}
