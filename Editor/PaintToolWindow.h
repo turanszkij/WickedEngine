@@ -52,6 +52,7 @@ public:
 	wi::gui::CheckBox wireCheckBox;
 	wi::gui::CheckBox pressureCheckBox;
 	wi::gui::CheckBox alphaCheckBox;
+	wi::gui::CheckBox terrainCheckBox;
 	wi::gui::ColorPicker colorPicker;
 	wi::gui::ComboBox textureSlotComboBox;
 	wi::gui::ComboBox brushShapeComboBox;

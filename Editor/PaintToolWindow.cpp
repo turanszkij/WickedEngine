@@ -227,6 +227,13 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	alphaCheckBox.SetPos(XMFLOAT2(x - 20 + 200, y));
 	AddWidget(&alphaCheckBox);
 
+	terrainCheckBox.Create("Terrain only: ");
+	terrainCheckBox.SetTooltip("Terrain specific sculpting mode.");
+	terrainCheckBox.SetSize(XMFLOAT2(hei, hei));
+	terrainCheckBox.SetPos(XMFLOAT2(x - 20 + 200, y));
+	terrainCheckBox.SetCheckText(ICON_TERRAIN);
+	AddWidget(&terrainCheckBox);
+
 	axisCombo.Create("Axis Lock: ");
 	axisCombo.SetTooltip("You can lock modification to an axis here.");
 	axisCombo.SetPos(XMFLOAT2(x, y));
@@ -431,10 +438,12 @@ void PaintToolWindow::Update(float dt)
 	if (GetMode() == MODE_SCULPTING_ADD || GetMode() == MODE_SCULPTING_SUBTRACT)
 	{
 		axisCombo.SetVisible(true);
+		terrainCheckBox.SetVisible(true);
 	}
 	else
 	{
 		axisCombo.SetVisible(false);
+		terrainCheckBox.SetVisible(false);
 	}
 
 	rot -= dt;
@@ -472,6 +481,7 @@ void PaintToolWindow::Update(float dt)
 	const XMFLOAT4 color_float = color.toFloat4();
 	const bool backfaces = backfaceCheckBox.GetCheck();
 	const bool wireframe = wireCheckBox.GetCheck();
+	const bool terrain_only = terrainCheckBox.GetCheck();
 	const float spacing = spacingSlider.GetValue();
 	const size_t stabilizer = (size_t)stabilizerSlider.GetValue();
 	CommandList cmd;
@@ -506,6 +516,8 @@ void PaintToolWindow::Update(float dt)
 
 	int substep_count = (int)std::ceil(wi::math::Distance(pos, posNew) / (radius * pressureNew));
 	substep_count = std::max(1, std::min(100, substep_count));
+
+	wi::jobsystem::context ctx;
 
 	for (int substep = 0; substep < substep_count; ++substep)
 	{
@@ -928,7 +940,7 @@ void PaintToolWindow::Update(float dt)
 		case MODE_SCULPTING_SUBTRACT:
 		{
 			Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor, camera);
-			brushIntersect = wi::scene::Pick(pickRay, wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
+			brushIntersect = wi::scene::Pick(pickRay, terrain_only ? wi::enums::FILTER_TERRAIN : wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
 			if (brushIntersect.entity == INVALID_ENTITY)
 				break;
 
@@ -943,6 +955,8 @@ void PaintToolWindow::Update(float dt)
 				Entity entity = scene.objects.GetEntity(objectIndex);
 				ObjectComponent& object = scene.objects[objectIndex];
 				if (object.meshID == INVALID_ENTITY)
+					continue;
+				if (terrain_only && (object.GetFilterMask() & wi::enums::FILTER_TERRAIN) == 0)
 					continue;
 
 				MeshComponent* mesh = scene.meshes.GetComponent(object.meshID);
@@ -1016,6 +1030,24 @@ void PaintToolWindow::Update(float dt)
 						}
 					}
 
+					wi::terrain::Terrain* terrain = nullptr;
+					wi::terrain::ChunkData* chunk_data = nullptr;
+					if (object.GetFilterMask() & wi::enums::FILTER_TERRAIN)
+					{
+						for (size_t i = 0; i < scene.terrains.GetCount(); ++i)
+						{
+							for (auto& it : scene.terrains[i].chunks)
+							{
+								if (it.second.entity == entity)
+								{
+									terrain = &scene.terrains[i];
+									chunk_data = &it.second;
+									break;
+								}
+							}
+						}
+					}
+
 					if (!sculpting_indices.empty())
 					{
 						RecordHistory(object.meshID);
@@ -1034,7 +1066,26 @@ void PaintToolWindow::Update(float dt)
 								break;
 							}
 							XMStoreFloat3(&mesh->vertex_positions[x.ind], PL);
+
+							if (chunk_data != nullptr)
+							{
+								float height = mesh->vertex_positions[x.ind].y;
+								chunk_data->heightmap_data[x.ind] = uint16_t(wi::math::InverseLerp(terrain->bottomLevel, terrain->topLevel, height) * 65535);
+							}
 						}
+
+						wi::jobsystem::Execute(ctx, [=](wi::jobsystem::JobArgs args) {
+							if (mesh->bvh.IsValid())
+							{
+								mesh->BuildBVH();
+							}
+
+							if (chunk_data != nullptr)
+							{
+								chunk_data->heightmap = {};
+								terrain->CreateChunkRegionTexture(*chunk_data);
+							}
+						});
 					}
 				}
 
@@ -1084,7 +1135,9 @@ void PaintToolWindow::Update(float dt)
 
 				if (rebuild)
 				{
-					mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
+					wi::jobsystem::Execute(ctx, [=](wi::jobsystem::JobArgs args) {
+						mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
+					});
 				}
 			}
 		}
@@ -1331,6 +1384,8 @@ void PaintToolWindow::Update(float dt)
 		break;
 
 		}
+
+		wi::jobsystem::Wait(ctx);
 	}
 
 	while (strokes.size() > stabilizer)
@@ -1716,6 +1771,31 @@ void PaintToolWindow::ConsumeHistoryOperation(wi::Archive& archive, bool undo)
 			mesh->vertex_normals = archive_mesh.vertex_normals;
 
 			mesh->CreateRenderData();
+
+			if (mesh->bvh.IsValid())
+			{
+				mesh->BuildBVH();
+			}
+
+			// refresh terrain heightmap in case this mesh was a terrain chunk:
+			for (size_t i = 0; i < scene.terrains.GetCount(); ++i)
+			{
+				wi::terrain::Terrain& terrain = scene.terrains[i];
+				for (auto& it : terrain.chunks)
+				{
+					wi::terrain::ChunkData& chunk_data = it.second;
+					if (chunk_data.entity == entity)
+					{
+						for (size_t v = 0; v < chunk_data.heightmap_data.size(); ++v)
+						{
+							chunk_data.heightmap_data[v] = uint16_t(wi::math::InverseLerp(terrain.bottomLevel, terrain.topLevel, mesh->vertex_positions[v].y) * 65535);
+						}
+						chunk_data.heightmap = {};
+						terrain.CreateChunkRegionTexture(chunk_data);
+						break;
+					}
+				}
+			}
 		}
 		break;
 		case PaintToolWindow::MODE_SOFTBODY_PINNING:
@@ -1854,6 +1934,7 @@ void PaintToolWindow::ResizeLayout()
 	wireCheckBox.SetPos(XMFLOAT2(backfaceCheckBox.GetPos().x - wireCheckBox.GetSize().x - 100, backfaceCheckBox.GetPos().y));
 	add_right(pressureCheckBox);
 	alphaCheckBox.SetPos(XMFLOAT2(pressureCheckBox.GetPos().x - alphaCheckBox.GetSize().x - 100, pressureCheckBox.GetPos().y));
+	terrainCheckBox.SetPos(XMFLOAT2(pressureCheckBox.GetPos().x - terrainCheckBox.GetSize().x - 100, pressureCheckBox.GetPos().y));
 	add(textureSlotComboBox);
 	add(brushShapeComboBox);
 	add(axisCombo);
