@@ -31,6 +31,9 @@
 #define SVT_FEEDBACK
 #endif // EARLY_DEPTH_STENCIL
 
+#ifdef TERRAINBLENDED
+#define TEXTURE_SLOT_NONUNIFORM
+#endif // TERRAINBLENDED
 
 #include "globals.hlsli"
 #include "brdf.hlsli"
@@ -601,6 +604,77 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 
+#ifdef OBJECTSHADER_USE_EMISSIVE
+	// Emissive map:
+	surface.emissiveColor = GetMaterial().GetEmissive();
+
+#ifdef OBJECTSHADER_USE_UVSETS
+	[branch]
+	if (any(surface.emissiveColor) && GetMaterial().textures[EMISSIVEMAP].IsValid())
+	{
+		float4 emissiveMap = GetMaterial().textures[EMISSIVEMAP].Sample(sampler_objectshader, uvsets);
+		surface.emissiveColor *= emissiveMap.rgb * emissiveMap.a;
+	}
+#endif // OBJECTSHADER_USE_UVSETS
+
+	surface.emissiveColor *= Unpack_R11G11B10_FLOAT(meshinstance.emissive);
+#endif // OBJECTSHADER_USE_EMISSIVE
+
+#ifdef OBJECTSHADER_USE_UVSETS
+#ifdef TERRAINBLENDED
+	[branch]
+	if (GetMaterial().blend_with_terrain_height_rcp > 0)
+	{
+		// Blend object into terrain material:
+		ShaderTerrain terrain = GetScene().terrain;
+		[branch]
+		if(terrain.chunk_buffer >= 0)
+		{
+			int2 chunk_coord = floor((surface.P.xz - terrain.center_chunk_pos.xz) / terrain.chunk_size);
+			if(chunk_coord.x >= -terrain.chunk_buffer_range && chunk_coord.x <= terrain.chunk_buffer_range && chunk_coord.y >= -terrain.chunk_buffer_range && chunk_coord.y <= terrain.chunk_buffer_range)
+			{
+				uint chunk_idx = flatten2D(chunk_coord + terrain.chunk_buffer_range, terrain.chunk_buffer_range * 2 + 1);
+				ShaderTerrainChunk chunk = bindless_structured_terrain_chunks[terrain.chunk_buffer][chunk_idx];
+				
+				[branch]
+				if(chunk.heightmap >= 0)
+				{
+					Texture2D terrain_heightmap = bindless_textures[NonUniformResourceIndex(chunk.heightmap)];
+					float2 chunk_min = terrain.center_chunk_pos.xz + chunk_coord * terrain.chunk_size;
+					float2 chunk_max = terrain.center_chunk_pos.xz + terrain.chunk_size + chunk_coord * terrain.chunk_size;
+					float2 terrain_uv = saturate(inverse_lerp(chunk_min, chunk_max, surface.P.xz));
+					float terrain_height0 = terrain_heightmap.SampleLevel(sampler_linear_clamp, terrain_uv, 0).r;
+					float terrain_height1 = terrain_heightmap.SampleLevel(sampler_linear_clamp, terrain_uv, 0, int2(1, 0)).r;
+					float terrain_height2 = terrain_heightmap.SampleLevel(sampler_linear_clamp, terrain_uv, 0, int2(0, 1)).r;
+					float3 P0 = float3(0, terrain_height0, 0); 
+					float3 P1 = float3(1, terrain_height1, 0); 
+					float3 P2 = float3(0, terrain_height2, 1);
+					float3 terrain_normal = normalize(cross(P2 - P0, P1 - P0));
+					float terrain_height = lerp(terrain.min_height, terrain.max_height, terrain_height0);
+					float object_height = surface.P.y;
+					float diff = (object_height - terrain_height) * GetMaterial().blend_with_terrain_height_rcp;
+					float blend = 1 - pow(saturate(diff), 2);
+					//blend *= lerp(1, saturate((noise_gradient_3D(surface.P * 2) * 0.5 + 0.5) * 2), saturate(diff));
+					//terrain_uv = lerp(saturate(inverse_lerp(chunk_min, chunk_max, surface.P.xz - surface.N.xz * diff)), terrain_uv, saturate(surface.N.y)); // uv stretching improvement: stretch in normal direction if normal gets horizontal
+					ShaderMaterial terrain_material = load_material(chunk.materialID);
+					terrain_uv = mad(terrain_uv, terrain_material.texMulAdd.xy, terrain_material.texMulAdd.zw);
+					float4 terrain_baseColor = terrain_material.textures[BASECOLORMAP].Sample(sampler_objectshader, terrain_uv.xyxy);
+					float4 terrain_bumpColor = terrain_material.textures[NORMALMAP].Sample(sampler_objectshader, terrain_uv.xyxy);
+					float4 terrain_surfaceMap = terrain_material.textures[SURFACEMAP].Sample(sampler_objectshader, terrain_uv.xyxy);
+					float3 terrain_emissiveMap = terrain_material.textures[EMISSIVEMAP].Sample(sampler_objectshader, terrain_uv.xyxy).rgb;
+					surface.baseColor = lerp(surface.baseColor, terrain_baseColor, blend);
+					surface.bumpColor = lerp(surface.bumpColor, terrain_bumpColor.rgb * 2 - 1, blend);
+					surfaceMap = lerp(surfaceMap, terrain_surfaceMap, blend);
+					surface.emissiveColor += terrain_emissiveMap * terrain_material.GetEmissive() * blend;
+					input.nor = lerp(input.nor, terrain_normal, blend);
+					TBN[2] = input.nor;
+					surface.N = normalize(input.nor);
+				}
+			}
+		}
+	}
+#endif // TERRAINBLENDED
+#endif // OBJECTSHADER_USE_UVSETS
 
 	[branch]
 	if (!GetMaterial().IsUsingSpecularGlossinessWorkflow())
@@ -652,25 +726,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 
 	surface.create(GetMaterial(), surface.baseColor, surfaceMap, specularMap);
-
-
-
-
-#ifdef OBJECTSHADER_USE_EMISSIVE
-	// Emissive map:
-	surface.emissiveColor = GetMaterial().GetEmissive();
-
-#ifdef OBJECTSHADER_USE_UVSETS
-	[branch]
-	if (any(surface.emissiveColor) && GetMaterial().textures[EMISSIVEMAP].IsValid())
-	{
-		float4 emissiveMap = GetMaterial().textures[EMISSIVEMAP].Sample(sampler_objectshader, uvsets);
-		surface.emissiveColor *= emissiveMap.rgb * emissiveMap.a;
-	}
-#endif // OBJECTSHADER_USE_UVSETS
-
-	surface.emissiveColor *= Unpack_R11G11B10_FLOAT(meshinstance.emissive);
-#endif // OBJECTSHADER_USE_EMISSIVE
+	
 
 
 #ifdef OBJECTSHADER_USE_UVSETS

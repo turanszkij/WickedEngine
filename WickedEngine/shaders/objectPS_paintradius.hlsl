@@ -7,13 +7,13 @@
 float4 main(PixelInput input) : SV_TARGET
 {
 	float4 uvsets = input.GetUVSets();
-	const float2 pixel = (xPaintRadUVSET == 0 ? uvsets.xy : uvsets.zw) * xPaintRadResolution;
+	const float2 pixel = frac((xPaintRadUVSET == 0 ? uvsets.xy : uvsets.zw)) * xPaintRadResolution;
 
 	const float2x2 rot = float2x2(
 		cos(xPaintRadBrushRotation), -sin(xPaintRadBrushRotation),
 		sin(xPaintRadBrushRotation), cos(xPaintRadBrushRotation)
 		);
-	const float2 diff = mul(xPaintRadCenter - pixel, rot);
+	const float2 diff = mul((xPaintRadCenter % xPaintRadResolution) - pixel, rot);
 
 	float dist = 0;
 	switch (xPaintRadBrushShape)

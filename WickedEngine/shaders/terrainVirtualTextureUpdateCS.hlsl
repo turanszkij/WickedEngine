@@ -2,22 +2,20 @@
 #include "BlockCompress.hlsli"
 #include "ColorSpaceUtility.hlsli"
 
-static const uint region_count = 4;
-
 PUSHCONSTANT(push, TerrainVirtualTexturePush);
 
-struct Terrain
-{
-	ShaderMaterial materials[region_count];
-};
-ConstantBuffer<Terrain> terrain : register(b0);
+Texture2DArray<float> blendmap : register(t0);
+ByteAddressBuffer blendmap_buffer : register(t1);
 
-#if !defined(UPDATE_NORMALMAP) && !defined(UPDATE_SURFACEMAP)
+#if !defined(UPDATE_NORMALMAP) && !defined(UPDATE_SURFACEMAP) && !defined(UPDATE_EMISSIVEMAP)
 #define UPDATE_BASECOLORMAP
+#endif
+
+#if defined(UPDATE_BASECOLORMAP) || defined(UPDATE_EMISSIVEMAP)
 RWTexture2D<uint2> output : register(u0);
 #else
 RWTexture2D<uint4> output : register(u0);
-#endif // UPDATE_NORMALMAP
+#endif
 
 static const uint2 block_offsets[16] = {
 	uint2(0, 0), uint2(1, 0), uint2(2, 0), uint2(3, 0),
@@ -32,11 +30,17 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if (DTid.x >= push.write_size || DTid.y >= push.write_size)
 		return;
 
-	Texture2D<float4> region_weights_texture = bindless_textures[push.region_weights_textureRO];
-
+	uint2 dim;
+	uint array_size;
+	blendmap.GetDimensions(dim.x, dim.y, array_size);
+		
 #ifdef UPDATE_BASECOLORMAP
 	float3 block_rgb[16];
 #endif // UPDATE_BASECOLORMAP
+		
+#ifdef UPDATE_EMISSIVEMAP
+	float3 block_rgb[16];
+#endif // UPDATE_EMISSIVEMAP
 
 #ifdef UPDATE_NORMALMAP
 	float block_x[16];
@@ -53,16 +57,19 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		const uint2 block_offset = block_offsets[idx];
 		const int2 pixel = push.offset + DTid.xy * 4 + block_offset;
 		const float2 uv = (pixel.xy + 0.5f) * push.resolution_rcp;
-
-		float4 region_weights = region_weights_texture.SampleLevel(sampler_linear_clamp, uv, 0);
-
-		float weight_sum = 0;
+		
 		float4 total_color = 0;
-		for (uint i = 0; i < region_count; ++i)
-		{
-			float weight = region_weights[i];
+		float accumulation = 0;
 
-			ShaderMaterial material = terrain.materials[i];
+		// Note: blending is front-to back with early exit like decals
+		for(int blendmap_index = array_size - 1; blendmap_index >= 0; blendmap_index--)
+		{
+			float weight = blendmap.SampleLevel(sampler_linear_clamp, float3(uv, blendmap_index), 0);
+			if(weight == 0)
+				continue;
+
+			uint materialIndex = blendmap_buffer.Load(push.blendmap_buffer_offset + blendmap_index * sizeof(uint));
+			ShaderMaterial material = load_material(materialIndex);
 
 #ifdef UPDATE_BASECOLORMAP
 			float4 baseColor = material.baseColor;
@@ -78,13 +85,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				float4 baseColorMap = tex.SampleLevel(sampler_linear_wrap, uv / overscale, lod);
 				baseColor *= baseColorMap;
 			}
-			total_color += baseColor * weight;
-			//if (DTid.x < 2 || DTid.y < 2)
-			//	total_color = 0;
+			total_color = mad(1 - accumulation, weight * baseColor, total_color);
+			accumulation = mad(1 - weight, accumulation, weight);
+			if(accumulation >= 1)
+				break;
 #endif // UPDATE_BASECOLORMAP
 
 #ifdef UPDATE_NORMALMAP
-			float2 normal = float2(0.5, 0.5);
 			[branch]
 			if (material.textures[NORMALMAP].IsValid())
 			{
@@ -95,9 +102,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				float lod = log2(max(diff.x, diff.y));
 				float2 overscale = lod < 0 ? diff : 1;
 				float2 normalMap = tex.SampleLevel(sampler_linear_wrap, uv / overscale, lod).rg;
-				normal = normalMap;
+				total_color.rg = mad(1 - accumulation, weight * normalMap, total_color.rg);
+				accumulation = mad(1 - weight, accumulation, weight);
+				if(accumulation >= 1)
+					break;
 			}
-			total_color += float4(normal.rg, 1, 1) * weight;
 #endif // UPDATE_NORMALMAP
 
 #ifdef UPDATE_SURFACEMAP
@@ -114,12 +123,33 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				float4 surfaceMap = tex.SampleLevel(sampler_linear_wrap, uv / overscale, lod);
 				surface *= surfaceMap;
 			}
-			total_color += surface * weight;
+			total_color = mad(1 - accumulation, weight * surface, total_color);
+			accumulation = mad(1 - weight, accumulation, weight);
+			if(accumulation >= 1)
+				break;
 #endif // UPDATE_SURFACEMAP
 
-			weight_sum += weight;
+#ifdef UPDATE_EMISSIVEMAP
+			float4 emissiveColor = 0;
+			[branch]
+			if (material.textures[EMISSIVEMAP].IsValid())
+			{
+				Texture2D tex = bindless_textures[material.textures[EMISSIVEMAP].texture_descriptor];
+				float2 dim = 0;
+				tex.GetDimensions(dim.x, dim.y);
+				float2 diff = dim * push.resolution_rcp;
+				float lod = log2(max(diff.x, diff.y));
+				float2 overscale = lod < 0 ? diff : 1;
+				float4 emissiveMap = tex.SampleLevel(sampler_linear_wrap, uv / overscale, lod);
+				emissiveColor.rgb = emissiveMap.rgb * emissiveMap.a;
+				emissiveColor.a = emissiveMap.a;
+			}
+			total_color = mad(1 - accumulation, weight * emissiveColor, total_color);
+			accumulation = mad(1 - weight, accumulation, weight);
+			if(accumulation >= 1)
+				break;
+#endif // UPDATE_EMISSIVEMAP
 		}
-		total_color /= weight_sum;
 
 #ifdef UPDATE_BASECOLORMAP
 		block_rgb[idx] = ApplySRGBCurve_Fast(total_color.rgb);
@@ -134,6 +164,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		block_rgb[idx] = total_color.rgb;
 		block_a[idx] = total_color.a;
 #endif // UPDATE_SURFACEMAP
+
+#ifdef UPDATE_EMISSIVEMAP
+		block_rgb[idx] = ApplySRGBCurve_Fast(total_color.rgb);
+#endif // UPDATE_EMISSIVEMAP
 	}
 
 	const uint2 write_coord = push.write_offset + DTid.xy;
@@ -149,5 +183,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #ifdef UPDATE_SURFACEMAP
 	output[write_coord] = CompressBC3Block(block_rgb, block_a);
 #endif // UPDATE_SURFACEMAP
+
+#ifdef UPDATE_EMISSIVEMAP
+	output[write_coord] = CompressBC1Block(block_rgb);
+#endif // UPDATE_EMISSIVEMAP
 }
 

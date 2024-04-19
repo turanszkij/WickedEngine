@@ -6,6 +6,7 @@
 #include "wiECS.h"
 #include "wiColor.h"
 #include "wiHairParticle.h"
+#include "wiVector.h"
 
 #include <memory>
 
@@ -59,7 +60,7 @@ namespace wi::terrain
 			wi::graphics::Texture texture;
 			wi::graphics::Texture texture_raw_block;
 		};
-		Map maps[3];
+		Map maps[4];
 		wi::graphics::GPUBuffer tile_pool;
 
 		struct Tile
@@ -151,6 +152,11 @@ namespace wi::terrain
 			atlas.free_residency(residency);
 		}
 
+		void invalidate()
+		{
+			resolution = 0;
+		}
+
 		// Attach this data to Virtual Texture because we will record these by separate CPU thread:
 		struct UpdateRequest
 		{
@@ -161,7 +167,12 @@ namespace wi::terrain
 			uint8_t tile_y = 0;
 		};
 		mutable wi::vector<UpdateRequest> update_requests;
-		wi::graphics::Texture region_weights_texture;
+		wi::graphics::Texture blendmap;
+	};
+
+	struct BlendmapLayer
+	{
+		wi::vector<uint8_t> pixels;
 	};
 
 	struct ChunkData
@@ -173,12 +184,23 @@ namespace wi::terrain
 		float prop_density_current = 1;
 		wi::HairParticleSystem grass;
 		float grass_density_current = 1;
-		wi::vector<wi::Color> region_weights;
-		wi::graphics::Texture region_weights_texture;
+		wi::vector<BlendmapLayer> blendmap_layers;
+		wi::graphics::Texture blendmap;
 		wi::primitive::Sphere sphere;
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 		bool visible = true;
 		std::shared_ptr<VirtualTexture> vt;
+		wi::vector<uint16_t> heightmap_data;
+		wi::graphics::Texture heightmap;
+
+		void enable_blendmap_layer(size_t materialIndex)
+		{
+			while (blendmap_layers.size() < materialIndex + 1)
+			{
+				blendmap_layers.emplace_back().pixels.resize(vertexCount);
+				std::fill(blendmap_layers.back().pixels.begin(), blendmap_layers.back().pixels.end(), 0);
+			}
+		}
 	};
 
 	struct Prop
@@ -217,7 +239,7 @@ namespace wi::terrain
 		wi::ecs::Entity terrainEntity = wi::ecs::INVALID_ENTITY;
 		wi::ecs::Entity chunkGroupEntity = wi::ecs::INVALID_ENTITY;
 		wi::scene::Scene* scene = nullptr;
-		wi::ecs::Entity materialEntities[MATERIAL_COUNT] = {};
+		wi::vector<wi::ecs::Entity> materialEntities = {};
 		wi::ecs::Entity grassEntity = wi::ecs::INVALID_ENTITY;
 		wi::scene::WeatherComponent weather;
 		wi::HairParticleSystem grass_properties;
@@ -238,6 +260,9 @@ namespace wi::terrain
 		wi::vector<const VirtualTexture*> virtual_textures_in_use;
 		wi::graphics::Sampler sampler;
 		VirtualTextureAtlas atlas;
+
+		int chunk_buffer_range = 3; // how many chunks to upload to GPU in X and Z directions
+		wi::graphics::GPUBuffer chunk_buffer;
 
 		constexpr bool IsCenterToCamEnabled() const { return _flags & CENTER_TO_CAM; }
 		constexpr bool IsRemovalEnabled() const { return _flags & REMOVAL; }
@@ -289,7 +314,12 @@ namespace wi::terrain
 		void AllocateVirtualTextureTileRequestsGPU(wi::graphics::CommandList cmd) const;
 		void WritebackTileRequestsGPU(wi::graphics::CommandList cmd) const;
 
+		ShaderTerrain GetShaderTerrain() const;
+
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+
+	private:
+		wi::vector<wi::scene::MaterialComponent> materials; // temp storage allocation
 	};
 
 	struct Modifier

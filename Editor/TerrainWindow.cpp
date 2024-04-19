@@ -1102,6 +1102,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 			{
 				terrain->materialEntities[i] = INVALID_ENTITY;
 			}
+			editor->optionsWnd.paintToolWnd.RecreateTerrainMaterialButtons();
 		});
 
 		AddWidget(&materialCombos[i]);
@@ -1254,7 +1255,13 @@ void TerrainWindow::Create(EditorComponent* _editor)
 								p.x -= aabb._min.x;
 								p.z -= aabb._min.z;
 								int coord = int(p.x) + int(p.z) * width;
-								dest[coord] = chunk_data.region_weights[i++];
+								dest[coord] = wi::Color(
+									chunk_data.blendmap_layers[0].pixels[i],
+									chunk_data.blendmap_layers[1].pixels[i],
+									chunk_data.blendmap_layers[2].pixels[i],
+									chunk_data.blendmap_layers[3].pixels[i]
+								);
+								i++;
 							}
 						}
 					}
@@ -1413,6 +1420,8 @@ void TerrainWindow::SetupAssets()
 	// Customize terrain generator before it's initialized:
 	Scene& currentScene = editor->GetCurrentScene();
 
+	terrain_preset.materialEntities.clear();
+	terrain_preset.materialEntities.resize(wi::terrain::MATERIAL_COUNT);
 	for (int i = 0; i < wi::terrain::MATERIAL_COUNT; ++i)
 	{
 		terrain_preset.materialEntities[i] = CreateEntity();
@@ -1438,10 +1447,127 @@ void TerrainWindow::SetupAssets()
 	material_LowAltitude->textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/low_altitude_nor.jpg";
 	material_HighAltitude->textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/high_altitude.jpg";
 	material_HighAltitude->textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/high_altitude_nor.jpg";
-	material_Base->CreateRenderData();
-	material_Slope->CreateRenderData();
-	material_LowAltitude->CreateRenderData();
-	material_HighAltitude->CreateRenderData();
+
+	// Extra material: rock
+	{
+		Entity materialEntity = CreateEntity();
+		MaterialComponent& mat = currentScene.materials.Create(materialEntity);
+		currentScene.names.Create(materialEntity) = "Rock";
+		currentScene.Component_Attach(materialEntity, entity);
+		mat.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/rock.jpg";
+		mat.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/rock_nor.jpg";
+		mat.roughness = 0.9f;
+		terrain_preset.materialEntities.push_back(materialEntity);
+	}
+	// Extra material: ground
+	{
+		Entity materialEntity = CreateEntity();
+		MaterialComponent& mat = currentScene.materials.Create(materialEntity);
+		currentScene.names.Create(materialEntity) = "Ground";
+		currentScene.Component_Attach(materialEntity, entity);
+		mat.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/ground.jpg";
+		mat.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/ground_nor.jpg";
+		mat.roughness = 0.9f;
+		terrain_preset.materialEntities.push_back(materialEntity);
+	}
+	// Extra material: ground2
+	{
+		Entity materialEntity = CreateEntity();
+		MaterialComponent& mat = currentScene.materials.Create(materialEntity);
+		currentScene.names.Create(materialEntity) = "Ground2";
+		currentScene.Component_Attach(materialEntity, entity);
+		mat.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/ground2.jpg";
+		mat.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/ground2_nor.jpg";
+		mat.roughness = 0.9f;
+		terrain_preset.materialEntities.push_back(materialEntity);
+	}
+	// Extra material: bricks
+	{
+		Entity materialEntity = CreateEntity();
+		MaterialComponent& mat = currentScene.materials.Create(materialEntity);
+		currentScene.names.Create(materialEntity) = "Bricks";
+		currentScene.Component_Attach(materialEntity, entity);
+		mat.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/bricks.jpg";
+		mat.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/bricks_nor.jpg";
+		mat.roughness = 0.9f;
+		terrain_preset.materialEntities.push_back(materialEntity);
+	}
+	// Extra material: darkrock
+	{
+		Entity materialEntity = CreateEntity();
+		MaterialComponent& mat = currentScene.materials.Create(materialEntity);
+		currentScene.names.Create(materialEntity) = "Dark Rock";
+		currentScene.Component_Attach(materialEntity, entity);
+		mat.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/darkrock.jpg";
+		mat.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/darkrock_nor.jpg";
+		mat.roughness = 0.8f;
+		terrain_preset.materialEntities.push_back(materialEntity);
+	}
+	// Extra material: metalplate
+	{
+		Entity materialEntity = CreateEntity();
+		MaterialComponent& mat = currentScene.materials.Create(materialEntity);
+		currentScene.names.Create(materialEntity) = "Metal Plate";
+		currentScene.Component_Attach(materialEntity, entity);
+		mat.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/metalplate.jpg";
+		mat.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/metalplate_nor.jpg";
+		mat.metalness = 1;
+		mat.roughness = 0.5f;
+		terrain_preset.materialEntities.push_back(materialEntity);
+	}
+	// Extra material: foil
+	{
+		Entity materialEntity = CreateEntity();
+		MaterialComponent& mat = currentScene.materials.Create(materialEntity);
+		currentScene.names.Create(materialEntity) = "Foil";
+		currentScene.Component_Attach(materialEntity, entity);
+		mat.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/foil.jpg";
+		mat.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/foil_nor.jpg";
+		mat.metalness = 1;
+		mat.roughness = 0.01f;
+		terrain_preset.materialEntities.push_back(materialEntity);
+	}
+	// Extra material: pavingstone
+	{
+		Entity materialEntity = CreateEntity();
+		MaterialComponent& mat = currentScene.materials.Create(materialEntity);
+		currentScene.names.Create(materialEntity) = "Paving Stone";
+		currentScene.Component_Attach(materialEntity, entity);
+		mat.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/pavingstone.jpg";
+		mat.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/pavingstone_nor.jpg";
+		terrain_preset.materialEntities.push_back(materialEntity);
+	}
+	// Extra material: tactilepaving
+	{
+		Entity materialEntity = CreateEntity();
+		MaterialComponent& mat = currentScene.materials.Create(materialEntity);
+		currentScene.names.Create(materialEntity) = "Tactile Paving";
+		currentScene.Component_Attach(materialEntity, entity);
+		mat.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/tactilepaving.jpg";
+		mat.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/tactilepaving_nor.jpg";
+		terrain_preset.materialEntities.push_back(materialEntity);
+	}
+	// Extra material: lava
+	{
+		Entity materialEntity = CreateEntity();
+		MaterialComponent& mat = currentScene.materials.Create(materialEntity);
+		currentScene.names.Create(materialEntity) = "Lava";
+		currentScene.Component_Attach(materialEntity, entity);
+		mat.textures[MaterialComponent::BASECOLORMAP].name = wi::helper::GetCurrentPath() + "/terrain/lava.jpg";
+		mat.textures[MaterialComponent::NORMALMAP].name = wi::helper::GetCurrentPath() + "/terrain/lava_nor.jpg";
+		mat.textures[MaterialComponent::EMISSIVEMAP].name = wi::helper::GetCurrentPath() + "/terrain/lava_emi.jpg";
+		mat.roughness = 0.8f;
+		terrain_preset.materialEntities.push_back(materialEntity);
+	}
+
+	wi::jobsystem::context ctx;
+	wi::jobsystem::Dispatch(ctx, (uint32_t)terrain_preset.materialEntities.size(), 1, [&](wi::jobsystem::JobArgs args) {
+		Entity entity = terrain_preset.materialEntities[args.jobIndex];
+		MaterialComponent* material = currentScene.materials.GetComponent(entity);
+		if (material == nullptr)
+			return;
+		material->CreateRenderData();
+	});
 
 	std::string terrain_path = wi::helper::GetCurrentPath() + "/terrain/";
 	wi::config::File config;
@@ -1536,6 +1662,8 @@ void TerrainWindow::SetupAssets()
 		scene->Entity_Remove(entity); // The entities will be placed by terrain generator, we don't need the default object that the scene has anymore
 	}
 
+	wi::jobsystem::Wait(ctx);
+
 	for (auto& it : prop_scenes)
 	{
 		editor->GetCurrentScene().Merge(it.second);
@@ -1582,6 +1710,8 @@ void TerrainWindow::SetupAssets()
 
 	terrain = &terrain_preset;
 	presetCombo.SetSelected(0);
+
+	editor->optionsWnd.paintToolWnd.RecreateTerrainMaterialButtons();
 }
 
 void TerrainWindow::Update(const wi::Canvas& canvas, float dt)

@@ -27,7 +27,7 @@ namespace wi
 		void CreateEmpty(); // creates new archive in write mode
 
 	public:
-		// Create empty arhive for writing
+		// Create empty archive for writing
 		Archive();
 		Archive(const Archive&) = default;
 		Archive(Archive&&) = default;
@@ -107,9 +107,19 @@ namespace wi
 			_write((int8_t)data);
 			return *this;
 		}
+		inline Archive& operator<<(short data)
+		{
+			_write((int16_t)data);
+			return *this;
+		}
 		inline Archive& operator<<(unsigned char data)
 		{
 			_write((uint8_t)data);
+			return *this;
+		}
+		inline Archive& operator<<(unsigned short data)
+		{
+			_write((uint16_t)data);
 			return *this;
 		}
 		inline Archive& operator<<(int data)
@@ -222,6 +232,16 @@ namespace wi
 			}
 			return *this;
 		}
+		inline Archive& operator<<(const wi::Archive& other)
+		{
+			// Here we will use the << operator so that non-specified types will have compile error!
+			//	Note: version is skipped, only data is appended
+			for (size_t i = sizeof(version); i < other.pos; ++i)
+			{
+				(*this) << other.data_ptr[i];
+			}
+			return *this;
+		}
 
 		// Read operations
 		inline Archive& operator>>(bool& data)
@@ -238,11 +258,25 @@ namespace wi
 			data = (char)temp;
 			return *this;
 		}
+		inline Archive& operator>>(short& data)
+		{
+			int16_t temp;
+			_read(temp);
+			data = (short)temp;
+			return *this;
+		}
 		inline Archive& operator>>(unsigned char& data)
 		{
 			uint8_t temp;
 			_read(temp);
 			data = (unsigned char)temp;
+			return *this;
+		}
+		inline Archive& operator>>(unsigned short& data)
+		{
+			uint16_t temp;
+			_read(temp);
+			data = (unsigned short)temp;
 			return *this;
 		}
 		inline Archive& operator>>(int& data)

@@ -3,6 +3,7 @@
 #include "ShaderInterop.h"
 #include "ShaderInterop_Weather.h"
 #include "ShaderInterop_VXGI.h"
+#include "ShaderInterop_Terrain.h"
 
 struct ShaderScene
 {
@@ -59,6 +60,8 @@ struct ShaderScene
 		float smooth_backface;
 	};
 	DDGI ddgi;
+
+	ShaderTerrain terrain;
 };
 
 static const uint SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS = 1 << 0;
@@ -340,7 +343,7 @@ struct ShaderMaterial
 	float		anisotropy_strength;
 	float		anisotropy_rotation_sin;
 	float		anisotropy_rotation_cos;
-	float		padding0;
+	float		blend_with_terrain_height_rcp;
 
 	int			sampler_descriptor;
 	uint		options;
@@ -420,7 +423,7 @@ struct ShaderTypeBin
 	uint4 padding; // 32-byte alignment
 #endif // __SCE__ || __PSSL__
 };
-static const uint SHADERTYPE_BIN_COUNT = 10;
+static const uint SHADERTYPE_BIN_COUNT = 11;
 
 struct VisibilityTile
 {
@@ -1361,10 +1364,10 @@ struct TerrainVirtualTexturePush
 {
 	int2 offset;
 	uint2 write_offset;
+
 	uint write_size;
 	float resolution_rcp;
-	int region_weights_textureRO;
-	int padding;
+	uint blendmap_buffer_offset;
 };
 struct VirtualTextureResidencyUpdateCB
 {

@@ -218,6 +218,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"terrainVirtualTextureUpdateCS", wi::graphics::ShaderStage::CS },
 	{"terrainVirtualTextureUpdateCS_normalmap", wi::graphics::ShaderStage::CS },
 	{"terrainVirtualTextureUpdateCS_surfacemap", wi::graphics::ShaderStage::CS },
+	{"terrainVirtualTextureUpdateCS_emissivemap", wi::graphics::ShaderStage::CS },
 	{"meshlet_prepareCS", wi::graphics::ShaderStage::CS },
 	{"impostor_prepareCS", wi::graphics::ShaderStage::CS },
 	{"virtualTextureTileRequestsCS", wi::graphics::ShaderStage::CS },

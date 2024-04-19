@@ -9,7 +9,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_MATERIAL " Material", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(300, 1360));
+	SetSize(XMFLOAT2(300, 1380));
 
 	closeButton.SetTooltip("Delete MaterialComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -476,6 +476,19 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&clearcoatRoughnessSlider);
 
+	blendTerrainSlider.Create(0, 2, 0, 1000, "Blend with terrain: ");
+	blendTerrainSlider.SetTooltip("Blend with terrain height.");
+	blendTerrainSlider.SetSize(XMFLOAT2(wid, hei));
+	blendTerrainSlider.SetPos(XMFLOAT2(x, y += step));
+	blendTerrainSlider.OnSlide([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
+		if (material != nullptr)
+		{
+			material->blend_with_terrain_height = args.fValue;
+		}
+		});
+	AddWidget(&blendTerrainSlider);
+
 
 	// 
 	hei = 20;
@@ -822,6 +835,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		shaderTypeComboBox.AddItem("Cloth", MaterialComponent::SHADERTYPE_PBR_CLOTH);
 		shaderTypeComboBox.AddItem("Clear coat", MaterialComponent::SHADERTYPE_PBR_CLEARCOAT);
 		shaderTypeComboBox.AddItem("Cloth + Clear coat", MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT);
+		shaderTypeComboBox.AddItem("Terrain blended", MaterialComponent::SHADERTYPE_PBR_TERRAINBLENDED);
 		shaderTypeComboBox.AddItem("Water", MaterialComponent::SHADERTYPE_WATER);
 		shaderTypeComboBox.AddItem("Cartoon", MaterialComponent::SHADERTYPE_CARTOON);
 		shaderTypeComboBox.AddItem("Unlit", MaterialComponent::SHADERTYPE_UNLIT);
@@ -883,6 +897,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		sheenRoughnessSlider.SetValue(material->sheenRoughness);
 		clearcoatSlider.SetValue(material->clearcoat);
 		clearcoatRoughnessSlider.SetValue(material->clearcoatRoughness);
+		blendTerrainSlider.SetValue(material->blend_with_terrain_height);
 
 		shadingRateComboBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING));
 
@@ -989,6 +1004,7 @@ void MaterialWindow::ResizeLayout()
 	add(sheenRoughnessSlider);
 	add(clearcoatSlider);
 	add(clearcoatRoughnessSlider);
+	add(blendTerrainSlider);
 	add(colorComboBox);
 	add_fullwidth(colorPicker);
 	add(textureSlotComboBox);

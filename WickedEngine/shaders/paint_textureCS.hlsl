@@ -4,8 +4,11 @@
 PUSHCONSTANT(push, PaintTexturePushConstants);
 
 [numthreads(PAINT_TEXTURE_BLOCKSIZE, PAINT_TEXTURE_BLOCKSIZE, 1)]
-void main( uint3 DTid : SV_DispatchThreadID )
+void main(uint groupIndex : SV_GroupIndex, uint2 Gid : SV_GroupID)
 {
+	const uint2 GTid = remap_lane_8x8(groupIndex);
+	const uint2 DTid = Gid * PAINT_TEXTURE_BLOCKSIZE + GTid;
+	
 	RWTexture2D<float4> texture_output = bindless_rwtextures[push.texture_output];
 	
 	float2 dim;

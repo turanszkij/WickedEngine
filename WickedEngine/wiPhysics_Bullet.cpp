@@ -1435,7 +1435,7 @@ namespace wi::physics
 					}
 
 					// Update tangent vectors:
-					if (!mesh.vertex_uvset_0.empty() && !mesh.vertex_normals.empty())
+					if (!mesh.vertex_uvset_0.empty() && !physicscomponent->vertex_normals_simulation.empty())
 					{
 						uint32_t first_subset = 0;
 						uint32_t last_subset = 0;

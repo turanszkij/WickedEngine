@@ -236,6 +236,18 @@ namespace wi::primitive
 
 
 
+	bool Sphere::intersects(const XMVECTOR& P) const
+	{
+		float distsq = wi::math::DistanceSquared(XMLoadFloat3(&center), P);
+		float radiussq = radius * radius;
+		return distsq < radiussq;
+	}
+	bool Sphere::intersects(const XMFLOAT3& P) const
+	{
+		float distsq = wi::math::DistanceSquared(center, P);
+		float radiussq = radius * radius;
+		return distsq < radiussq;
+	}
 	bool Sphere::intersects(const AABB& b) const
 	{
 		if (!b.IsValid())

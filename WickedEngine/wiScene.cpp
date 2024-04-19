@@ -909,6 +909,12 @@ namespace wi::scene
 		shaderscene.ddgi.cell_size_rcp.y = 1.0f / shaderscene.ddgi.cell_size.y;
 		shaderscene.ddgi.cell_size_rcp.z = 1.0f / shaderscene.ddgi.cell_size.z;
 		shaderscene.ddgi.max_distance = std::max(shaderscene.ddgi.cell_size.x, std::max(shaderscene.ddgi.cell_size.y, shaderscene.ddgi.cell_size.z)) * 1.5f;
+
+		shaderscene.terrain.init();
+		if (terrains.GetCount() > 0)
+		{
+			shaderscene.terrain = terrains[0].GetShaderTerrain();
+		}
 	}
 	void Scene::Clear()
 	{
@@ -4105,7 +4111,7 @@ namespace wi::scene
 						uint32_t doublesided : 1;	// bool
 						uint32_t tessellation : 1;	// bool
 						uint32_t alphatest : 1;		// bool
-						uint32_t customshader : 10;
+						uint32_t customshader : 8;
 						uint32_t sort_priority : 4;
 					} bits;
 					uint32_t value;
@@ -5130,7 +5136,7 @@ namespace wi::scene
 						if (distance < result.distance && distance >= ray.TMin && distance <= ray.TMax)
 						{
 							XMVECTOR nor;
-							if (mesh->vertex_normals.empty())
+							if (softbody != nullptr || mesh->vertex_normals.empty()) // Note: for soft body we compute it instead of loading the simulated normals
 							{
 								nor = XMVector3Cross(p2 - p1, p1 - p0);
 							}

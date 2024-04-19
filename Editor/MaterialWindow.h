@@ -46,6 +46,7 @@ public:
 	wi::gui::Slider sheenRoughnessSlider;
 	wi::gui::Slider clearcoatSlider;
 	wi::gui::Slider clearcoatRoughnessSlider;
+	wi::gui::Slider blendTerrainSlider;
 
 	wi::gui::ComboBox colorComboBox;
 	wi::gui::ColorPicker colorPicker;

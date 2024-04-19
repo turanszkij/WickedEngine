@@ -2707,6 +2707,10 @@ namespace wi::gui
 	{
 		return selected;
 	}
+	uint64_t ComboBox::GetSelectedUserdata() const
+	{
+		return GetItemUserData(GetSelected());
+	}
 	void ComboBox::SetColor(wi::Color color, int id)
 	{
 		Widget::SetColor(color, id);
