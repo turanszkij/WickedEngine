@@ -6,13 +6,12 @@
 static const uint SURFEL_CAPACITY = 100000;
 static const uint SQRT_SURFEL_CAPACITY = (uint)ceil(sqrt((float)SURFEL_CAPACITY));
 static const uint SURFEL_MOMENT_RESOLUTION = 4;
-static const uint SURFEL_MOMENT_TEXELS = 1 + SURFEL_MOMENT_RESOLUTION + 1; // with border padding
-static const uint SURFEL_MOMENT_ATLAS_TEXELS = SQRT_SURFEL_CAPACITY * SURFEL_MOMENT_TEXELS;
+static const uint SURFEL_MOMENT_ATLAS_TEXELS = SQRT_SURFEL_CAPACITY * SURFEL_MOMENT_RESOLUTION;
 static const uint3 SURFEL_GRID_DIMENSIONS = uint3(128, 64, 128);
 static const uint SURFEL_TABLE_SIZE = SURFEL_GRID_DIMENSIONS.x * SURFEL_GRID_DIMENSIONS.y * SURFEL_GRID_DIMENSIONS.z;
 static const float SURFEL_MAX_RADIUS = 2;
 static const float SURFEL_RECYCLE_DISTANCE = 0; // if surfel is behind camera and farther than this distance, it starts preparing for recycling
-static const uint SURFEL_RECYCLE_TIME = 60; // if surfel is preparing for recycling, this is how many frames it takes to recycle it
+static const uint SURFEL_RECYCLE_TIME = 60; // if surfel is preparing for recycling, this is how many frames it takes to recycle it.
 static const uint SURFEL_STATS_OFFSET_COUNT = 0;
 static const uint SURFEL_STATS_OFFSET_NEXTCOUNT = SURFEL_STATS_OFFSET_COUNT + 4;
 static const uint SURFEL_STATS_OFFSET_DEADCOUNT = SURFEL_STATS_OFFSET_NEXTCOUNT + 4;
@@ -32,22 +31,19 @@ static const uint SURFEL_RAY_BOOST_MAX = 32; // max amount of rays per surfel
 #define SURFEL_GRID_CULLING // if defined, surfels will not be added to grid cells that they do not intersect
 #define SURFEL_USE_HASHING // if defined, hashing will be used to retrieve surfels, hashing is good because it supports infinite world trivially, but slower due to hash collisions
 #define SURFEL_ENABLE_INFINITE_BOUNCES // if defined, previous frame's surfel data will be sampled at ray tracing hit points
-//#define SURFEL_ENABLE_IRRADIANCE_SHARING // if defined, surfels will pull color from nearby surfels, this can smooth out the GI a bit
+
+#ifdef __cplusplus
+static_assert(SURFEL_RECYCLE_TIME < 256, "Must be < 256 as lifetime is packed at 8 bits!");
+#endif // __cplusplus
 
 // This per-surfel surfel structure will be accessed rapidly on GI lookup, so keep it as small as possible
 //	But also ensure that it is 16-byte aligned for structured buffer access performance
 struct Surfel
 {
 	float3 position;
-	uint normal;
-	float3 color;
-	uint data; // 24bit rayOffset, 8bit rayCount
+	uint normal; // top 8 bits free
 
-#ifndef __cplusplus
 	inline float GetRadius() { return SURFEL_MAX_RADIUS; }
-	inline uint GetRayOffset() { return data & 0xFFFFFF; }
-	inline uint GetRayCount() { return (data >> 24u) & 0xFF; }
-#endif // __cplusplus
 };
 // This per-surfel structure will store all additional persistent data per surfel that isn't needed at GI lookup
 struct SurfelData
@@ -56,17 +52,54 @@ struct SurfelData
 	uint bary;
 	uint uid;
 
-	float3 mean;
-	uint life_recycle; // 16bit life frames, 16bit recycle frames
+	uint raydata; // 24bit rayOffset, 8bit rayCount
+	uint properties; // 8bit life frames, 8bit recycle frames, 1bit backface normal
+	int padding0;
+	int padding1;
 
+	inline uint GetRayOffset() { return raydata & 0xFFFFFF; }
+	inline uint GetRayCount() { return (raydata >> 24u) & 0xFF; }
+
+	uint GetLife() { return properties & 0xFF; }
+	uint GetRecycle() { return (properties >> 8u) & 0xFF; }
+	bool IsBackfaceNormal() { return (properties >> 9u) & 0x1; }
+
+	void SetLife(uint value) { properties |= value & 0xFF; }
+	void SetRecycle(uint value) { properties |= (value & 0xFF) << 8u; }
+	void SetBackfaceNormal(bool value) { if (value) properties |= 1u << 9u; else properties &= ~(1u << 9u); }
+};
+struct SurfelVarianceData
+{
+	float3 mean;
 	float3 shortMean;
 	float vbbr;
-
 	float3 variance;
 	float inconsistency;
+};
+struct SurfelVarianceDataPacked
+{
+	uint4 data;
 
-	uint GetLife() { return life_recycle & 0xFFFF; }
-	uint GetRecycle() { return (life_recycle >> 16u) & 0xFFFF; }
+#ifndef __cplusplus
+	inline void store(SurfelVarianceData varianceData)
+	{
+		data.x = PackRGBE(varianceData.mean);
+		data.y = PackRGBE(varianceData.shortMean);
+		data.z = PackRGBE(varianceData.variance);
+		data.w = pack_half2(float2(varianceData.vbbr, varianceData.inconsistency));
+	}
+	inline SurfelVarianceData load()
+	{
+		SurfelVarianceData varianceData;
+		varianceData.mean = UnpackRGBE(data.x);
+		varianceData.shortMean = UnpackRGBE(data.y);
+		varianceData.variance = UnpackRGBE(data.z);
+		float2 other = unpack_half2(data.w);
+		varianceData.vbbr = other.x;
+		varianceData.inconsistency = other.y;
+		return varianceData;
+	}
+#endif // __cplusplus
 };
 struct SurfelRayData
 {
@@ -115,7 +148,6 @@ enum SURFEL_DEBUG
 	SURFEL_DEBUG_POINT,
 	SURFEL_DEBUG_RANDOM,
 	SURFEL_DEBUG_HEATMAP,
-	SURFEL_DEBUG_INCONSISTENCY,
 
 	SURFEL_DEBUG_FORCE_UINT = 0xFFFFFFFF,
 };
@@ -224,16 +256,16 @@ static const int3 surfel_neighbor_offsets[27] = {
 
 float2 surfel_moment_pixel(uint surfel_index, float3 normal, float3 direction)
 {
-	uint2 moments_pixel = unflatten2D(surfel_index, SQRT_SURFEL_CAPACITY) * SURFEL_MOMENT_TEXELS;
+	uint2 moments_pixel = unflatten2D(surfel_index, SQRT_SURFEL_CAPACITY) * SURFEL_MOMENT_RESOLUTION;
 	float3 hemi = mul(get_tangentspace(normal), direction);
 	hemi = normalize(hemi);
 	hemi.z = saturate(hemi.z);
 	float2 moments_uv = encode_hemioct(hemi) * 0.5 + 0.5;
-	return moments_pixel + 1 + moments_uv * SURFEL_MOMENT_RESOLUTION;
+	return moments_pixel + clamp(moments_uv * SURFEL_MOMENT_RESOLUTION, 0.5, SURFEL_MOMENT_RESOLUTION - 0.5);
 }
 float2 surfel_moment_uv(uint surfel_index, float3 normal, float3 direction)
 {
-	return (surfel_moment_pixel(surfel_index, normal, direction) + 0.5) / SURFEL_MOMENT_ATLAS_TEXELS;
+	return surfel_moment_pixel(surfel_index, normal, direction) / SURFEL_MOMENT_ATLAS_TEXELS;
 }
 float surfel_moment_weight(float2 moments, float dist)
 {
@@ -250,7 +282,7 @@ float surfel_moment_weight(float2 moments, float dist)
 
 void MultiscaleMeanEstimator(
 	float3 y,
-	inout SurfelData data,
+	inout SurfelVarianceData data,
 	float shortWindowBlend = 0.08f
 )
 {

@@ -2221,7 +2221,6 @@ namespace wi::scene
 			archive >> data;
 			if(!data.empty())
 			{
-
 				TextureDesc desc;
 				desc.width = DDGI_COLOR_TEXELS * grid_dimensions.x * grid_dimensions.y;
 				desc.height = DDGI_COLOR_TEXELS * grid_dimensions.z;
@@ -2240,8 +2239,8 @@ namespace wi::scene
 				initdata.data_ptr = data.data();
 				initdata.row_pitch = desc.width * GetFormatStride(desc.format);
 
-				device->CreateTexture(&desc, &initdata, &color_texture[0]);
-				device->SetName(&color_texture[0], "ddgi.color_texture[serialized]");
+				device->CreateTexture(&desc, &initdata, &color_texture);
+				device->SetName(&color_texture, "ddgi.color_texture[serialized]");
 			}
 
 			// depth texture:
@@ -2258,8 +2257,8 @@ namespace wi::scene
 				initdata.data_ptr = data.data();
 				initdata.row_pitch = desc.width * GetFormatStride(desc.format);
 
-				device->CreateTexture(&desc, &initdata, &depth_texture[0]);
-				device->SetName(&depth_texture[0], "ddgi.depth_texture[seriaized]");
+				device->CreateTexture(&desc, &initdata, &depth_texture);
+				device->SetName(&depth_texture, "ddgi.depth_texture[serialized]");
 			}
 
 			// offset buffer:
@@ -2288,17 +2287,17 @@ namespace wi::scene
 			}
 
 			wi::vector<uint8_t> data;
-			if (color_texture[0].IsValid())
+			if (color_texture.IsValid())
 			{
-				bool success = wi::helper::saveTextureToMemory(color_texture[0], data);
+				bool success = wi::helper::saveTextureToMemory(color_texture, data);
 				assert(success);
 			}
 			archive << data;
 
 			data.clear();
-			if (depth_texture[0].IsValid())
+			if (depth_texture.IsValid())
 			{
-				bool success = wi::helper::saveTextureToMemory(depth_texture[0], data);
+				bool success = wi::helper::saveTextureToMemory(depth_texture, data);
 				assert(success);
 			}
 			archive << data;

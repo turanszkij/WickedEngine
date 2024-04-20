@@ -162,7 +162,6 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	surfelGIDebugComboBox.AddItem("Point", SURFEL_DEBUG_POINT);
 	surfelGIDebugComboBox.AddItem("Random", SURFEL_DEBUG_RANDOM);
 	surfelGIDebugComboBox.AddItem("Heatmap", SURFEL_DEBUG_HEATMAP);
-	surfelGIDebugComboBox.AddItem("Inconsist.", SURFEL_DEBUG_INCONSISTENCY);
 	surfelGIDebugComboBox.OnSelect([](wi::gui::EventArgs args) {
 		wi::renderer::SetSurfelGIDebugEnabled((SURFEL_DEBUG)args.userdata);
 	});
