@@ -37,25 +37,14 @@ RWTexture2D<unorm float4> debugUAV : register(u5);
 
 void write_result(uint2 DTid, float4 color)
 {
-#ifdef SURFEL_COVERAGE_HALFRES
-	result[DTid * 2 + uint2(0, 0)] = color.rgb;
-	result[DTid * 2 + uint2(1, 0)] = color.rgb;
-	result[DTid * 2 + uint2(0, 1)] = color.rgb;
-	result[DTid * 2 + uint2(1, 1)] = color.rgb;
-#else
 	result[DTid] = color.rgb;
-#endif // SURFEL_COVERAGE_HALFRES
 }
 void write_debug(uint2 DTid, float4 debug)
 {
-#ifdef SURFEL_COVERAGE_HALFRES
 	debugUAV[DTid * 2 + uint2(0, 0)] = debug;
 	debugUAV[DTid * 2 + uint2(1, 0)] = debug;
 	debugUAV[DTid * 2 + uint2(0, 1)] = debug;
 	debugUAV[DTid * 2 + uint2(1, 1)] = debug;
-#else
-	debugUAV[DTid] = debug;
-#endif // SURFEL_COVERAGE_HALFRES
 }
 
 groupshared uint GroupMinSurfelCount;
@@ -68,12 +57,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		GroupMinSurfelCount = ~0;
 	}
 	GroupMemoryBarrierWithGroupSync();
-
-#ifdef SURFEL_COVERAGE_HALFRES
+	
 	uint2 pixel = DTid.xy * 2;
-#else
-	uint2 pixel = DTid.xy;
-#endif // SURFEL_COVERAGE_HALFRES
 
 	const float depth = texture_depth[pixel];
 	if (depth == 0)
@@ -104,7 +89,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		return;
 	}
 
-	const float3 N = surface.facenormal;
+	const float3 N = surface.N;
 
 	float coverage = 0;
 
@@ -255,11 +240,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 			// Slow down the propagation by chance
 			//	Closer surfaces have less chance to avoid excessive clumping of surfels
 			const float lineardepth = compute_lineardepth(depth) * GetCamera().z_far_rcp;
-#ifdef SURFEL_COVERAGE_HALFRES
 			const float chance = pow(1 - lineardepth, 8);
-#else
-			const float chance = pow(1 - lineardepth, 4);
-#endif // SURFEL_COVERAGE_HALFRES
 
 			//if (blue_noise(Gid.xy).x < chance)
 			//	return;

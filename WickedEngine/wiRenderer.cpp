@@ -10499,23 +10499,40 @@ void Visibility_Velocity(
 void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution)
 {
 	TextureDesc desc;
-	desc.width = resolution.x;
-	desc.height = resolution.y;
 	desc.format = Format::R11G11B10_FLOAT;
 	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 	desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+	desc.width = resolution.x / 2;
+	desc.height = resolution.y / 2;
+	device->CreateTexture(&desc, nullptr, &res.result_halfres);
+	device->SetName(&res.result_halfres, "surfelGI.result_halfres");
+	desc.width = resolution.x;
+	desc.height = resolution.y;
 	device->CreateTexture(&desc, nullptr, &res.result);
 	device->SetName(&res.result, "surfelGI.result");
 }
 void SurfelGI_Coverage(
 	const SurfelGIResources& res,
 	const Scene& scene,
+	const Texture& lineardepth,
 	const Texture& debugUAV,
 	CommandList cmd
 )
 {
 	device->EventBegin("SurfelGI - Coverage", cmd);
 	auto prof_range = wi::profiler::BeginRangeGPU("SurfelGI - Coverage", cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Buffer(&scene.surfelStatsBuffer, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.result_halfres, res.result_halfres.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.result, res.result.desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+	device->ClearUAV(&res.result_halfres, 0, cmd);
+	device->ClearUAV(&res.result, 0, cmd);
+	device->Barrier(GPUBarrier::Memory(), cmd);
 
 
 	// Coverage:
@@ -10537,38 +10554,21 @@ void SurfelGI_Coverage(
 			&scene.surfelDeadBuffer,
 			&scene.surfelAliveBuffer[1],
 			&scene.surfelStatsBuffer,
-			&res.result,
+			&res.result_halfres,
 			&debugUAV
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Buffer(&scene.surfelStatsBuffer, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.result, res.result.desc.layout, ResourceState::UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-#ifdef SURFEL_COVERAGE_HALFRES
 		device->Dispatch(
-			(res.result.desc.width / 2 + 15) / 16,
-			(res.result.desc.height / 2 + 15) / 16,
+			(res.result_halfres.desc.width + 15) / 16,
+			(res.result_halfres.desc.height + 15) / 16,
 			1,
 			cmd
 		);
-#else
-		device->Dispatch(
-			(res.result.desc.width + 15) / 16,
-			(res.result.desc.height + 15) / 16,
-			1,
-			cmd
-		);
-#endif // SURFEL_COVERAGE_HALFRES
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
+				GPUBarrier::Image(&res.result_halfres, ResourceState::UNORDERED_ACCESS, res.result_halfres.desc.layout),
 				GPUBarrier::Image(&res.result, ResourceState::UNORDERED_ACCESS, res.result.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
@@ -10592,6 +10592,14 @@ void SurfelGI_Coverage(
 		device->EventEnd(cmd);
 	}
 
+	Postprocess_Upsample_Bilateral(
+		res.result_halfres,
+		lineardepth,
+		res.result,
+		cmd,
+		false,
+		2
+	);
 
 	wi::profiler::EndRange(prof_range);
 	device->EventEnd(cmd);

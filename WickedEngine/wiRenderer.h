@@ -399,12 +399,14 @@ namespace wi::renderer
 	// Surfel GI: diffuse GI with ray tracing from surfels
 	struct SurfelGIResources
 	{
+		wi::graphics::Texture result_halfres;
 		wi::graphics::Texture result;
 	};
 	void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution);
 	void SurfelGI_Coverage(
 		const SurfelGIResources& res,
 		const wi::scene::Scene& scene,
+		const wi::graphics::Texture& lineardepth,
 		const wi::graphics::Texture& debugUAV,
 		wi::graphics::CommandList cmd
 	);

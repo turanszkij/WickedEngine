@@ -1059,6 +1059,7 @@ namespace wi
 				wi::renderer::SurfelGI_Coverage(
 					surfelGIResources,
 					*scene,
+					rtLinearDepth,
 					debugUAV,
 					cmd
 				);

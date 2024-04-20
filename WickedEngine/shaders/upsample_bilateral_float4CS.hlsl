@@ -11,6 +11,13 @@ Texture2D<UPSAMPLE_FORMAT> input : register(t0);
 Texture2D<float> input_lineardepth_high : register(t1);
 Texture2D<float> input_lineardepth_low : register(t2);
 
+static const float2 offsets[] = {
+	float2(-0.5, -0.5),
+	float2(0.5, -0.5),
+	float2(-0.5, 0.5),
+	float2(0.5, 0.5),
+};
+
 // Note: this post process can be either a pixel shader or compute shader, depending on use case
 
 #ifdef USE_PIXELSHADER
@@ -40,27 +47,17 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	int2 lowres_pixel = int2(float2(pixel) * postprocess.params0.w);
 
-	const int range = 1;
-	for(int x = -range; x <= range; ++x)
-	for(int y = -range; y <= range; ++y)
+	for(uint i = 0; i < 4; ++i)
 	{
-#ifdef UPSAMPLE_DISABLE_FILTERING
-		const float sample_lineardepth = input_lineardepth_low[lowres_pixel + int2(x, y)] * GetCamera().z_far;
-		const float weight = 1 - saturate(abs(sample_lineardepth - lineardepth_highres) * threshold);
-		if(weight > sum)
-		{
-			sum = weight;
-			color = input[lowres_pixel + int2(x, y)];
-		}
-#else
-		const float4 zzzz = input_lineardepth_low.GatherRed(sampler_linear_clamp, uv, int2(x, y)) * GetCamera().z_far;
+		const float2 sample_uv = uv + offsets[i] * lowres_texel_size;
+		const float4 zzzz = input_lineardepth_low.GatherRed(sampler_linear_clamp, sample_uv) * GetCamera().z_far;
 		const float4 wwww = max(0.001, 1 - saturate(abs(zzzz - lineardepth_highres) * threshold));
-		const float4 rrrr = input.GatherRed(sampler_linear_clamp, uv, int2(x, y));
-		const float4 gggg = input.GatherGreen(sampler_linear_clamp, uv, int2(x, y));
-		const float4 bbbb = input.GatherBlue(sampler_linear_clamp, uv, int2(x, y));
-		const float4 aaaa = input.GatherAlpha(sampler_linear_clamp, uv, int2(x, y));
+		const float4 rrrr = input.GatherRed(sampler_linear_clamp, sample_uv);
+		const float4 gggg = input.GatherGreen(sampler_linear_clamp, sample_uv);
+		const float4 bbbb = input.GatherBlue(sampler_linear_clamp, sample_uv);
+		const float4 aaaa = input.GatherAlpha(sampler_linear_clamp, sample_uv);
 		
-		float2 sam_pixel = uv * lowres_size + int2(x, y) + (-0.5 + 1.0 / 512.0); // (1.0 / 512.0) correction is described here: https://www.reedbeta.com/blog/texture-gathers-and-coordinate-precision/
+		float2 sam_pixel = sample_uv * lowres_size + (-0.5 + 1.0 / 512.0); // (1.0 / 512.0) correction is described here: https://www.reedbeta.com/blog/texture-gathers-and-coordinate-precision/
 		float2 sam_pixel_frac = frac(sam_pixel);
 
 		color += (UPSAMPLE_FORMAT)float4(
@@ -72,15 +69,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		
 		float weight = bilinear(wwww, sam_pixel_frac);
 		sum += weight;
-#endif // UPSAMPLE_DISABLE_FILTERING
 	}
-
-#ifndef UPSAMPLE_DISABLE_FILTERING
+	
 	if(sum > 0)
 	{
 		color /= sum;
 	}
-#endif // UPSAMPLE_DISABLE_FILTERING
 
 #ifdef USE_PIXELSHADER
 	return color;

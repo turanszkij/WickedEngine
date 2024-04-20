@@ -29,7 +29,6 @@ static const float SURFEL_TARGET_COVERAGE = 0.5f; // how many surfels should aff
 static const uint SURFEL_CELL_LIMIT = ~0; // limit the amount of allocated surfels in a cell
 static const uint SURFEL_RAY_BUDGET = 500000; // max number of rays per frame
 static const uint SURFEL_RAY_BOOST_MAX = 32; // max amount of rays per surfel
-#define SURFEL_COVERAGE_HALFRES // runs the coverage shader in half resolution for improved performance
 #define SURFEL_GRID_CULLING // if defined, surfels will not be added to grid cells that they do not intersect
 #define SURFEL_USE_HASHING // if defined, hashing will be used to retrieve surfels, hashing is good because it supports infinite world trivially, but slower due to hash collisions
 #define SURFEL_ENABLE_INFINITE_BOUNCES // if defined, previous frame's surfel data will be sampled at ray tracing hit points
