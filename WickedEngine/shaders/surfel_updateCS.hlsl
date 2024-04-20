@@ -2,7 +2,6 @@
 #include "ShaderInterop_SurfelGI.h"
 #include "brdf.hlsli"
 
-StructuredBuffer<SurfelData> surfelDataBuffer : register(t0);
 StructuredBuffer<uint> surfelAliveBuffer_CURRENT : register(t1);
 
 RWStructuredBuffer<Surfel> surfelBuffer : register(u0);
@@ -11,6 +10,7 @@ RWStructuredBuffer<uint> surfelAliveBuffer_NEXT : register(u2);
 RWStructuredBuffer<uint> surfelDeadBuffer : register(u3);
 RWByteAddressBuffer surfelStatsBuffer : register(u4);
 RWStructuredBuffer<SurfelRayDataPacked> surfelRayBuffer : register(u5);
+RWStructuredBuffer<SurfelData> surfelDataBuffer : register(u6);
 
 [numthreads(SURFEL_INDIRECT_NUMTHREADS, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
@@ -33,9 +33,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	surface.uid_validate = surfel_data.uid;
 	if (surface.load(prim, unpack_half2(surfel_data.bary)))
 	{
+		if(surfel_data.IsBackfaceNormal())
+		{
+			surface.facenormal = -surface.facenormal;
+		}
 		surfel.normal = pack_unitvector(surface.facenormal);
 		surfel.position = surface.P;
-		surfel.color = surfel_data.mean;
 
 		int3 center_cell = surfel_cell(surfel.position);
 		for (uint i = 0; i < 27; ++i)
@@ -68,9 +71,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		surfelAliveBuffer_NEXT[aliveCount] = surfel_index;
 
 		// Determine ray count for surfel:
-		uint rayCountRequest = saturate(surfel_data.inconsistency) * SURFEL_RAY_BOOST_MAX;
+		uint rayCountRequest = SURFEL_RAY_BOOST_MAX;
 		const uint recycle = surfel_data.GetRecycle();
-		if (recycle > 0)
+		if (recycle > 10)
 		{
 			rayCountRequest = 1;
 		}
@@ -87,11 +90,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		rayCount = clamp(rayCount, 0, SURFEL_RAY_BUDGET - rayOffset);
 		rayCount &= 0xFF;
 
-		surfel.data = 0;
-		surfel.data |= rayOffset & 0xFFFFFF;
-		surfel.data |= rayCount << 24u;
+		surfel_data.raydata = 0;
+		surfel_data.raydata |= rayOffset & 0xFFFFFF;
+		surfel_data.raydata |= rayCount << 24u;
 
 		surfelBuffer[surfel_index] = surfel;
+		surfelDataBuffer[surfel_index] = surfel_data;
 
 		SurfelRayData initialRayData = (SurfelRayData)0;
 		initialRayData.surfelIndex = surfel_index;

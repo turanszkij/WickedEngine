@@ -1,5 +1,6 @@
 #include "globals.hlsli"
 #include "ShaderInterop_SurfelGI.h"
+#include "raytracingHF.hlsli"
 #include "brdf.hlsli"
 
 PUSHCONSTANT(push, SurfelDebugPushConstants);
@@ -27,6 +28,7 @@ StructuredBuffer<Surfel> surfelBuffer : register(t0);
 StructuredBuffer<SurfelGridCell> surfelGridBuffer : register(t1);
 StructuredBuffer<uint> surfelCellBuffer : register(t2);
 Texture2D<float2> surfelMomentsTexture : register(t3);
+Texture2D<float4> surfelIrradianceTexture : register(t4);
 
 RWStructuredBuffer<SurfelData> surfelDataBuffer : register(u0);
 RWStructuredBuffer<uint> surfelDeadBuffer : register(u1);
@@ -75,7 +77,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	rng.init(pixel, GetFrame().frame_count);
 
 	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
-	const float3 P = reconstruct_position(uv, depth);
+	const float2 clipspace = uv_to_clipspace(uv);
+	RayDesc ray = CreateCameraRay(clipspace);
 
 	uint primitiveID = texture_primitiveID[pixel];
 
@@ -84,7 +87,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 	Surface surface;
 	surface.init();
-	if (!surface.load(prim, P))
+	if (!surface.load(prim, ray.Origin, ray.Direction))
 	{
 		return;
 	}
@@ -93,7 +96,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 	float coverage = 0;
 
-	int3 gridpos = surfel_cell(P);
+	int3 gridpos = surfel_cell(surface.P);
 	if (!surfel_cellvalid(gridpos))
 	{
 		write_debug(DTid.xy, 0);
@@ -107,7 +110,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		uint surfel_index = surfelCellBuffer[cell.offset + i];
 		Surfel surfel = surfelBuffer[surfel_index];
 
-		float3 L = P - surfel.position;
+		float3 L = surface.P - surfel.position;
 		float dist2 = dot(L, L);
 		if (dist2 < sqr(surfel.GetRadius()))
 		{
@@ -122,14 +125,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 				contribution *= saturate(1 - dist / surfel.GetRadius());
 				contribution = smoothstep(0, 1, contribution);
 				coverage += contribution;
-
+				
 				float2 moments = surfelMomentsTexture.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, L / dist), 0);
 				contribution *= surfel_moment_weight(moments, dist);
 
 				// contribution based on life can eliminate black popping surfels, but the surfel_data must be accessed...
-				contribution = lerp(0, contribution, surfelDataBuffer[surfel_index].GetLife() / 2.0f);
+				contribution = lerp(0, contribution, saturate(surfelDataBuffer[surfel_index].GetLife() / 2.0f));
 
-				color += float4(surfel.color, 1) * contribution;
+				color += surfelIrradianceTexture.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, N), 0) * contribution;
+				//color += float4(surfel.color, 1) * contribution;
 
 				switch (push.debug)
 				{
@@ -139,9 +143,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 					break;
 				case SURFEL_DEBUG_RANDOM:
 					debug += float4(random_color(surfel_index), 1) * contribution;
-					break;
-				case SURFEL_DEBUG_INCONSISTENCY:
-					debug += float4(surfelDataBuffer[surfel_index].inconsistency.xxx, 1) * contribution;
 					break;
 				default:
 					break;
@@ -182,6 +183,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	case SURFEL_DEBUG_COLOR:
 		debug = color;
 		debug.rgb = tonemap(debug.rgb);
+		debug.a = 1;
 		break;
 	case SURFEL_DEBUG_RANDOM:
 		if (debug.a > 0)
@@ -204,22 +206,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 				float3(1,0,0),
 			};
 			const uint mapTexLen = 5;
-			const uint maxHeat = 50;
+			const uint maxHeat = 100;
 			float l = saturate((float)cell.count / maxHeat) * mapTexLen;
 			float3 a = mapTex[floor(l)];
 			float3 b = mapTex[ceil(l)];
 			float4 heatmap = float4(lerp(a, b, l - floor(l)), 0.8);
 			debug = heatmap;
-		}
-		break;
-	case SURFEL_DEBUG_INCONSISTENCY:
-		if (debug.a > 0)
-		{
-			debug /= debug.a;
-		}
-		else
-		{
-			debug = 0;
 		}
 		break;
 	default:
@@ -248,8 +240,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 			if (rng.next_float() < chance)
 				return;
 
-
-
 			// new particle index retrieved from dead list (pop):
 			int deadCount;
 			surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_DEADCOUNT, -1, deadCount);
@@ -268,7 +258,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 				surfel_data.primitiveID = prim.pack2();
 				surfel_data.bary = pack_half2(surface.bary.xy);
 				surfel_data.uid = surface.inst.uid;
-				surfel_data.inconsistency = 1;
+				surfel_data.SetBackfaceNormal(surface.flags & SURFACE_FLAG_BACKFACE);
 				surfelDataBuffer[newSurfelIndex] = surfel_data;
 			}
 		}
