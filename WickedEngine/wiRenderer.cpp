@@ -127,7 +127,7 @@ SURFEL_DEBUG SURFELGI_DEBUG = SURFEL_DEBUG_NONE;
 bool DDGI_ENABLED = false;
 bool DDGI_DEBUG_ENABLED = false;
 uint32_t DDGI_RAYCOUNT = 128u;
-float DDGI_BLEND_SPEED = 0.02f;
+float DDGI_BLEND_SPEED = 0.1f;
 float GI_BOOST = 1.0f;
 std::atomic<size_t> SHADER_ERRORS{ 0 };
 std::atomic<size_t> SHADER_MISSING{ 0 };
@@ -7398,11 +7398,7 @@ void DrawDebugWorld(
 
 	if (GetRaytraceDebugBVHVisualizerEnabled())
 	{
-		//PE: Check if debug BVH is possible. or it will crash.
-		if (GetSurfelGIEnabled() || GetDDGIEnabled() )
-		{
-			RayTraceSceneBVH(scene, cmd);
-		}
+		RayTraceSceneBVH(scene, cmd);
 	}
 
 	if (!debugTextStorage.empty())
@@ -9710,6 +9706,8 @@ void RayTraceScene(
 }
 void RayTraceSceneBVH(const Scene& scene, CommandList cmd)
 {
+	if (!scene.BVH.IsValid())
+		return;
 	device->EventBegin("RayTraceSceneBVH", cmd);
 	device->BindPipelineState(&PSO_debug[DEBUGRENDERING_RAYTRACE_BVH], cmd);
 	device->Draw(3, 0, cmd);
@@ -10849,6 +10847,12 @@ void DDGI(
 	auto prof_range = wi::profiler::BeginRangeGPU("DDGI", cmd);
 	device->EventBegin("DDGI", cmd);
 
+	if (scene.ddgi.frame_index == 0)
+	{
+		device->ClearUAV(&scene.ddgi.variance_buffer, 0, cmd);
+		device->Barrier(GPUBarrier::Memory(&scene.ddgi.variance_buffer), cmd);
+	}
+
 	BindCommonResources(cmd);
 
 	DDGIPushConstants push;
@@ -10910,6 +10914,7 @@ void DDGI(
 
 		const GPUResource* uavs[] = {
 			&scene.ddgi.color_texture_rw,
+			&scene.ddgi.variance_buffer,
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 

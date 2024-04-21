@@ -558,6 +558,10 @@ namespace wi::scene
 			}
 			std::swap(surfelgi.aliveBuffer[0], surfelgi.aliveBuffer[1]);
 		}
+		else
+		{
+			surfelgi = {};
+		}
 
 		if (wi::renderer::GetDDGIEnabled())
 		{
@@ -582,6 +586,12 @@ namespace wi::scene
 				buf.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 				device->CreateBuffer(&buf, nullptr, &ddgi.offset_buffer);
 				device->SetName(&ddgi.offset_buffer, "ddgi.offset_buffer");
+
+				buf.stride = sizeof(DDGIVarianceDataPacked);
+				buf.size = buf.stride * probe_count * DDGI_COLOR_RESOLUTION * DDGI_COLOR_RESOLUTION;
+				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+				device->CreateBuffer(&buf, nullptr, &ddgi.variance_buffer);
+				device->SetName(&ddgi.variance_buffer, "ddgi.variance_buffer");
 
 				TextureDesc tex;
 				tex.width = DDGI_COLOR_TEXELS * ddgi.grid_dimensions.x * ddgi.grid_dimensions.y;
@@ -648,6 +658,10 @@ namespace wi::scene
 			ddgi.grid_max.x += 1;
 			ddgi.grid_max.y += 1;
 			ddgi.grid_max.z += 1;
+		}
+		else if (ddgi.color_texture_rw.IsValid()) // if color_texture_rw is valid, it means DDGI was not from serialization, so it will be deleted when DDGI is disabled
+		{
+			ddgi = {};
 		}
 
 		if (wi::renderer::GetVXGIEnabled())

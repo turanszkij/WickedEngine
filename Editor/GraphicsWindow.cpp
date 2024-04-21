@@ -197,7 +197,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&ddgiRayCountSlider);
 
-	ddgiBlendSpeedSlider.Create(0, 0.1f, 0.02f, 1000, "DDGI Blend Speed: ");
+	ddgiBlendSpeedSlider.Create(0, 0.2f, 0.1f, 1000, "DDGI Blend Speed: ");
 	ddgiBlendSpeedSlider.SetTooltip("Adjust the contribution of newly traced rays. Higher values will make the DDGI update faster, but can result in increased flickering.");
 	ddgiBlendSpeedSlider.SetSize(XMFLOAT2(wid, itemheight));
 	ddgiBlendSpeedSlider.SetPos(XMFLOAT2(x, y += step));

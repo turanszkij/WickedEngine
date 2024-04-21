@@ -21,6 +21,7 @@ RWByteAddressBuffer ddgiOffsetBuffer:register(u1);
 #else
 static const uint THREADCOUNT = DDGI_COLOR_RESOLUTION;
 RWTexture2D<uint> output : register(u0);	// raw uint alias for Format::R9G9B9E5_SHAREDEXP
+RWStructuredBuffer<DDGIVarianceDataPacked> varianceBuffer : register(u1);
 #endif // DDGI_UPDATE_DEPTH
 
 static const uint CACHE_SIZE = THREADCOUNT * THREADCOUNT;
@@ -130,18 +131,11 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 	}
 
 #ifdef DDGI_UPDATE_DEPTH
-	const float2 prev_result = bindless_textures[GetScene().ddgi.depth_texture][pixel_current].xy;
-#else
-	const float3 prev_result = bindless_textures[GetScene().ddgi.color_texture][pixel_current].rgb;
-#endif // DDGI_UPDATE_DEPTH
-
+	const float2 prev_result = output[pixel_current].xy;
 	if (push.frameIndex > 0)
 	{
-		result = lerp(prev_result, result, push.blendSpeed);
+		result = lerp(prev_result, result, 0.05);
 	}
-
-#ifdef DDGI_UPDATE_DEPTH
-
 	output[pixel_current] = result;
 
 	DeviceMemoryBarrierWithGroupSync();
@@ -169,6 +163,17 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 #endif // __PSSL__
 	}
 #else
+
+	const uint idx = flatten2D(GTid.xy, DDGI_COLOR_RESOLUTION);
+	const uint variance_data_index = probeIndex * DDGI_COLOR_RESOLUTION * DDGI_COLOR_RESOLUTION + idx;
+	DDGIVarianceData varianceData = varianceBuffer[variance_data_index].load();
+	if (push.frameIndex == 0)
+	{
+		varianceData = (DDGIVarianceData)0;
+	}
+	MultiscaleMeanEstimator(result, varianceData, push.blendSpeed);
+	varianceBuffer[variance_data_index].store(varianceData);
+	result = varianceData.mean;
 
 	output[pixel_current] = PackRGBE(result);
 
