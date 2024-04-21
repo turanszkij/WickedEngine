@@ -206,7 +206,7 @@ struct Surface
 		if (GetFrame().options & OPTION_BIT_FORCE_DIFFUSE_LIGHTING)
 #endif // ENVMAPRENDERING
 		{
-			f0 = material.metalness = material.reflectance = 0;
+			f0 = material.metalness = material.reflectance = surfaceMap.b = surfaceMap.a = 0;
 		}
 
 		[branch]
