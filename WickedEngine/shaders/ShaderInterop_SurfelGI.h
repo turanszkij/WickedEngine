@@ -24,16 +24,17 @@ static const uint SURFEL_INDIRECT_OFFSET_RAYTRACE = wi::graphics::AlignTo(SURFEL
 static const uint SURFEL_INDIRECT_OFFSET_INTEGRATE = wi::graphics::AlignTo(SURFEL_INDIRECT_OFFSET_RAYTRACE + 4 * 3, IndirectDispatchArgsAlignment);
 static const uint SURFEL_INDIRECT_SIZE = SURFEL_INDIRECT_OFFSET_INTEGRATE + 4 * 3;
 static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
-static const float SURFEL_TARGET_COVERAGE = 0.5f; // how many surfels should affect a pixel fully, higher values will increase quality and cost
+static const float SURFEL_TARGET_COVERAGE = 0.8f; // how many surfels should affect a pixel fully, higher values will increase quality and cost
 static const uint SURFEL_CELL_LIMIT = ~0; // limit the amount of allocated surfels in a cell
 static const uint SURFEL_RAY_BUDGET = 500000; // max number of rays per frame
-static const uint SURFEL_RAY_BOOST_MAX = 32; // max amount of rays per surfel
+static const uint SURFEL_RAY_BOOST_MAX = 64; // max amount of rays per surfel
 #define SURFEL_GRID_CULLING // if defined, surfels will not be added to grid cells that they do not intersect
 #define SURFEL_USE_HASHING // if defined, hashing will be used to retrieve surfels, hashing is good because it supports infinite world trivially, but slower due to hash collisions
 #define SURFEL_ENABLE_INFINITE_BOUNCES // if defined, previous frame's surfel data will be sampled at ray tracing hit points
 
 #ifdef __cplusplus
-static_assert(SURFEL_RECYCLE_TIME < 256, "Must be < 256 as lifetime is packed at 8 bits!");
+static_assert(SURFEL_RECYCLE_TIME < 256, "Must be < 256 because it is packed at 8 bits!");
+static_assert(SURFEL_RAY_BOOST_MAX < 256, "Must be < 256 because it is packed at 8 bits!");
 #endif // __cplusplus
 
 // This per-surfel surfel structure will be accessed rapidly on GI lookup, so keep it as small as possible
@@ -54,7 +55,7 @@ struct SurfelData
 
 	uint raydata; // 24bit rayOffset, 8bit rayCount
 	uint properties; // 8bit life frames, 8bit recycle frames, 1bit backface normal
-	int padding0;
+	float max_inconsistency;
 	int padding1;
 
 	inline uint GetRayOffset() { return raydata & 0xFFFFFF; }
@@ -148,6 +149,7 @@ enum SURFEL_DEBUG
 	SURFEL_DEBUG_POINT,
 	SURFEL_DEBUG_RANDOM,
 	SURFEL_DEBUG_HEATMAP,
+	SURFEL_DEBUG_INCONSISTENCY,
 
 	SURFEL_DEBUG_FORCE_UINT = 0xFFFFFFFF,
 };

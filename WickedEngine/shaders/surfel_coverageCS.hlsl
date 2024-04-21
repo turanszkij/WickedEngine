@@ -144,6 +144,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 				case SURFEL_DEBUG_RANDOM:
 					debug += float4(random_color(surfel_index), 1) * contribution;
 					break;
+				case SURFEL_DEBUG_INCONSISTENCY:
+					debug += float4(surfelDataBuffer[surfel_index].max_inconsistency.xxx, 1) * contribution;
+					break;
 				default:
 					break;
 				}
@@ -212,6 +215,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 			float3 b = mapTex[ceil(l)];
 			float4 heatmap = float4(lerp(a, b, l - floor(l)), 0.8);
 			debug = heatmap;
+		}
+		break;
+	case SURFEL_DEBUG_INCONSISTENCY:
+		if (debug.a > 0)
+		{
+			debug /= debug.a;
+		}
+		else
+		{
+			debug = 0;
 		}
 		break;
 	default:

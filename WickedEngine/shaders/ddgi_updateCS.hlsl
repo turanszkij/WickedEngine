@@ -134,7 +134,7 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 	const float2 prev_result = output[pixel_current].xy;
 	if (push.frameIndex > 0)
 	{
-		result = lerp(prev_result, result, 0.05);
+		result = lerp(prev_result, result, 0.02);
 	}
 	output[pixel_current] = result;
 
@@ -170,6 +170,9 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 	if (push.frameIndex == 0)
 	{
 		varianceData = (DDGIVarianceData)0;
+		varianceData.mean = result;
+		varianceData.shortMean = result;
+		varianceData.inconsistency = 1;
 	}
 	MultiscaleMeanEstimator(result, varianceData, push.blendSpeed);
 	varianceBuffer[variance_data_index].store(varianceData);

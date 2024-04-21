@@ -22,6 +22,7 @@ static const uint THREADCOUNT = 8;
 static const uint CACHE_SIZE = THREADCOUNT * THREADCOUNT;
 groupshared SurfelRayData ray_cache[CACHE_SIZE];
 groupshared float3 shared_texels[16];
+groupshared float shared_inconsistency[CACHE_SIZE];
 
 [numthreads(THREADCOUNT, THREADCOUNT, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
@@ -106,6 +107,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	
 	const uint2 moments_topleft = unflatten2D(surfel_index, SQRT_SURFEL_CAPACITY) * SURFEL_MOMENT_RESOLUTION;
 
+	float inconsistency = 0;
+	
 	if(GTid.x < SURFEL_MOMENT_RESOLUTION && GTid.y < SURFEL_MOMENT_RESOLUTION)
 	{
 		uint2 moments_pixel = moments_topleft + GTid.xy;
@@ -123,50 +126,73 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		if (life == 0)
 		{
 			varianceData = (SurfelVarianceData)0;
+			varianceData.mean = result;
+			varianceData.shortMean = result;
+			varianceData.inconsistency = 1;
 		}
 		MultiscaleMeanEstimator(result, varianceData, 0.1);
 		surfelVarianceBuffer[variance_data_index].store(varianceData);
 		result = varianceData.mean;
+		inconsistency = varianceData.inconsistency;
 
 		shared_texels[idx] = result;
 	}
+
+	const uint lane_count_per_wave = WaveGetLaneCount();
+	if(WaveIsFirstLane())
+	{
+		float wave_max_inconsistency = WaveActiveMax(inconsistency);
+		shared_inconsistency[groupIndex / lane_count_per_wave] = wave_max_inconsistency;
+	}
+	
 	GroupMemoryBarrierWithGroupSync();
 
-	if (groupIndex > 0)
-		return;
+	// below this, we switch to bigger per-surfel tasks done by just a few select threads:
 
-	life++;
-
-	float3 cam_to_surfel = surfel.position - GetCamera().position;
-	if (length(cam_to_surfel) > SURFEL_RECYCLE_DISTANCE)
+	if (groupIndex == 0)
 	{
-		ShaderSphere sphere;
-		sphere.center = surfel.position;
-		sphere.radius = surfel.GetRadius();
+		surfelIrradianceTexture[moments_topleft / 4] = CompressBC6H(shared_texels);
+	}
+	else if(groupIndex == 1)
+	{
+		life++;
 
-		if (GetCamera().frustum.intersects(sphere))
+		float3 cam_to_surfel = surfel.position - GetCamera().position;
+		if (length(cam_to_surfel) > SURFEL_RECYCLE_DISTANCE)
 		{
-			recycle = 0;
+			ShaderSphere sphere;
+			sphere.center = surfel.position;
+			sphere.radius = surfel.GetRadius();
+
+			if (GetCamera().frustum.intersects(sphere))
+			{
+				recycle = 0;
+			}
+			else
+			{
+				recycle++;
+			}
 		}
 		else
 		{
-			recycle++;
+			recycle = 0;
 		}
+
+		life = clamp(life, 0, 255);
+		recycle = clamp(recycle, 0, 255);
+
+		surfel_data.properties = 0;
+		surfel_data.SetLife(life);
+		surfel_data.SetRecycle(recycle);
+		surfel_data.SetBackfaceNormal(backface);
+		
+		const uint wave_count_per_group = THREADCOUNT * THREADCOUNT / lane_count_per_wave;
+		surfel_data.max_inconsistency = 0;
+		for(uint i = 0; i < wave_count_per_group; ++i)
+		{
+			surfel_data.max_inconsistency = max(surfel_data.max_inconsistency, shared_inconsistency[i]);
+		}
+
+		surfelDataBuffer[surfel_index] = surfel_data;
 	}
-	else
-	{
-		recycle = 0;
-	}
-
-	life = clamp(life, 0, 255);
-	recycle = clamp(recycle, 0, 255);
-
-	surfel_data.properties = 0;
-	surfel_data.SetLife(life);
-	surfel_data.SetRecycle(recycle);
-	surfel_data.SetBackfaceNormal(backface);
-
-	surfelDataBuffer[surfel_index] = surfel_data;
-	
-	surfelIrradianceTexture[moments_topleft / 4] = CompressBC6H(shared_texels);
 }

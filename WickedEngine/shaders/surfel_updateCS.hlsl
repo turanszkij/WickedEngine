@@ -71,7 +71,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		surfelAliveBuffer_NEXT[aliveCount] = surfel_index;
 
 		// Determine ray count for surfel:
-		uint rayCountRequest = SURFEL_RAY_BOOST_MAX;
+		uint rayCountRequest = saturate(surfel_data.max_inconsistency) * SURFEL_RAY_BOOST_MAX;
 		const uint recycle = surfel_data.GetRecycle();
 		if (recycle > 10)
 		{
