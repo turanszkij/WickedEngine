@@ -525,6 +525,7 @@ namespace wi::scene
 				tex.width = SURFEL_MOMENT_ATLAS_TEXELS / 4;
 				tex.height = SURFEL_MOMENT_ATLAS_TEXELS / 4;
 				tex.format = Format::R32G32B32A32_UINT;
+				tex.layout = ResourceState::UNORDERED_ACCESS;
 				device->CreateTexture(&tex, nullptr, &surfelgi.irradianceTexture_rw);
 				device->SetName(&surfelgi.irradianceTexture_rw, "surfelgi.irradianceTexture_rw");
 
@@ -596,10 +597,8 @@ namespace wi::scene
 				TextureDesc tex;
 				tex.width = DDGI_COLOR_TEXELS * ddgi.grid_dimensions.x * ddgi.grid_dimensions.y;
 				tex.height = DDGI_COLOR_TEXELS * ddgi.grid_dimensions.z;
-				//tex.format = Format::R11G11B10_FLOAT; // not enough precision with this format, causes green hue in GI
-				//tex.format = Format::R16G16B16A16_FLOAT; // this is trivial to use but fat
-				tex.format = Format::R9G9B9E5_SHAREDEXP; // must be packed manually as uint32, good quality and fast to sample
-				tex.misc_flags = ResourceMiscFlag::SPARSE; // sparse aliasing to write R9G9B9E5_SHAREDEXP as uint
+				tex.format = Format::BC6H_UF16;
+				tex.misc_flags = ResourceMiscFlag::SPARSE; // sparse aliasing to write BC6H_UF16 as uint
 				tex.width = std::max(128u, tex.width);		// force non-packed mip behaviour
 				tex.height = std::max(128u, tex.height);	// force non-packed mip behaviour
 				tex.bind_flags = BindFlag::SHADER_RESOURCE;
@@ -607,7 +606,9 @@ namespace wi::scene
 				device->CreateTexture(&tex, nullptr, &ddgi.color_texture);
 				device->SetName(&ddgi.color_texture, "ddgi.color_texture");
 
-				tex.format = Format::R32_UINT; // packed R9G9B9E5_SHAREDEXP
+				tex.format = Format::R32G32B32A32_UINT; // packed BC6H_UF16
+				tex.width /= 4;
+				tex.height /= 4;
 				tex.bind_flags = BindFlag::UNORDERED_ACCESS;
 				tex.layout = ResourceState::UNORDERED_ACCESS;
 				device->CreateTexture(&tex, nullptr, &ddgi.color_texture_rw);

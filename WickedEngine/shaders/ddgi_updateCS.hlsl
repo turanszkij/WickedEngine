@@ -1,5 +1,6 @@
 #include "globals.hlsli"
 #include "ShaderInterop_DDGI.h"
+#include "bc6h.hlsli"
 
 // This shader collects all traced rays (one probe per thread group) and integrates them
 //	Rays are first gathered to shared memory
@@ -16,19 +17,22 @@ static const float WEIGHT_EPSILON = 0.0001;
 
 #ifdef DDGI_UPDATE_DEPTH
 static const uint THREADCOUNT = DDGI_DEPTH_RESOLUTION;
+static const uint RESOLUTION = DDGI_DEPTH_RESOLUTION;
 RWTexture2D<float2> output : register(u0);
 RWByteAddressBuffer ddgiOffsetBuffer:register(u1);
 #else
-static const uint THREADCOUNT = DDGI_COLOR_RESOLUTION;
-RWTexture2D<uint> output : register(u0);	// raw uint alias for Format::R9G9B9E5_SHAREDEXP
+static const uint THREADCOUNT = 8;
+static const uint RESOLUTION = DDGI_COLOR_RESOLUTION;
+RWTexture2D<uint4> output : register(u0);	// raw uint alias for BC6H
 RWStructuredBuffer<DDGIVarianceDataPacked> varianceBuffer : register(u1);
+groupshared float3 shared_texels[DDGI_COLOR_TEXELS * DDGI_COLOR_TEXELS];
 #endif // DDGI_UPDATE_DEPTH
 
 static const uint CACHE_SIZE = THREADCOUNT * THREADCOUNT;
 groupshared DDGIRayData ray_cache[CACHE_SIZE];
 
 [numthreads(THREADCOUNT, THREADCOUNT, 1)]
-void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
+void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
 	const uint probeIndex = Gid.x;
 	const uint3 probeCoord = ddgi_probe_coord(probeIndex);
@@ -61,7 +65,7 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 	const uint2 pixel_current = pixel_topleft + GTid.xy;
 	const uint2 copy_coord = pixel_topleft - 1;
 
-	const float3 texel_direction = decode_oct(((GTid.xy + 0.5) / (float2)THREADCOUNT) * 2 - 1);
+	const float3 texel_direction = decode_oct(((GTid.xy + 0.5) / (float2)RESOLUTION) * 2 - 1);
 
 	float total_weight = 0;
 
@@ -141,7 +145,7 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 	DeviceMemoryBarrierWithGroupSync();
 
 	// Copy depth borders:
-	for (uint index = groupIndex; index < 68; index += THREADCOUNT * THREADCOUNT)
+	for (uint index = groupIndex; index < arraysize(DDGI_DEPTH_BORDER_OFFSETS); index += THREADCOUNT * THREADCOUNT)
 	{
 		uint2 src_coord = copy_coord + DDGI_DEPTH_BORDER_OFFSETS[index].xy;
 		uint2 dst_coord = copy_coord + DDGI_DEPTH_BORDER_OFFSETS[index].zw;
@@ -164,30 +168,47 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 	}
 #else
 
-	const uint idx = flatten2D(GTid.xy, DDGI_COLOR_RESOLUTION);
-	const uint variance_data_index = probeIndex * DDGI_COLOR_RESOLUTION * DDGI_COLOR_RESOLUTION + idx;
-	DDGIVarianceData varianceData = varianceBuffer[variance_data_index].load();
-	if (push.frameIndex == 0)
+	if(GTid.x < DDGI_COLOR_RESOLUTION && GTid.y < DDGI_COLOR_RESOLUTION)
 	{
-		varianceData = (DDGIVarianceData)0;
-		varianceData.mean = result;
-		varianceData.shortMean = result;
-		varianceData.inconsistency = 1;
+		const uint idx = flatten2D(GTid.xy, DDGI_COLOR_RESOLUTION);
+		const uint variance_data_index = probeIndex * DDGI_COLOR_RESOLUTION * DDGI_COLOR_RESOLUTION + idx;
+		DDGIVarianceData varianceData = varianceBuffer[variance_data_index].load();
+		if (push.frameIndex == 0)
+		{
+			varianceData = (DDGIVarianceData)0;
+			varianceData.mean = result;
+			varianceData.shortMean = result;
+			varianceData.inconsistency = 1;
+		}
+		MultiscaleMeanEstimator(result, varianceData, push.blendSpeed);
+		varianceBuffer[variance_data_index].store(varianceData);
+		result = varianceData.mean;
+
+		shared_texels[flatten2D(1 + GTid, DDGI_COLOR_TEXELS)] = result;
 	}
-	MultiscaleMeanEstimator(result, varianceData, push.blendSpeed);
-	varianceBuffer[variance_data_index].store(varianceData);
-	result = varianceData.mean;
 
-	output[pixel_current] = PackRGBE(result);
-
-	DeviceMemoryBarrierWithGroupSync();
+	GroupMemoryBarrierWithGroupSync();
 
 	// Copy color borders:
-	for (uint index = groupIndex; index < 36; index += THREADCOUNT * THREADCOUNT)
+	for (uint index = groupIndex; index < arraysize(DDGI_COLOR_BORDER_OFFSETS); index += THREADCOUNT * THREADCOUNT)
 	{
-		uint2 src_coord = copy_coord + DDGI_COLOR_BORDER_OFFSETS[index].xy;
-		uint2 dst_coord = copy_coord + DDGI_COLOR_BORDER_OFFSETS[index].zw;
-		output[dst_coord] = output[src_coord];
+		uint src_coord = flatten2D(DDGI_COLOR_BORDER_OFFSETS[index].xy, DDGI_COLOR_TEXELS);
+		uint dst_coord = flatten2D(DDGI_COLOR_BORDER_OFFSETS[index].zw, DDGI_COLOR_TEXELS);
+		shared_texels[dst_coord] = shared_texels[src_coord];
 	}
+	
+	GroupMemoryBarrierWithGroupSync();
+
+	if(all(GTid % 4 == 0))
+	{
+		float3 texels[16];
+		for(int y = 0; y < 4; ++y)
+		for(int x = 0; x < 4; ++x)
+		{
+			texels[x + y * 4] = shared_texels[flatten2D(GTid + int2(x, y), DDGI_COLOR_TEXELS)];
+		}
+		output[pixel_current / 4] = CompressBC6H(texels);
+	}
+	
 #endif // DDGI_UPDATE_DEPTH
 }

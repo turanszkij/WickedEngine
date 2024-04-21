@@ -272,6 +272,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 				surfel_data.bary = pack_half2(surface.bary.xy);
 				surfel_data.uid = surface.inst.uid;
 				surfel_data.SetBackfaceNormal(surface.flags & SURFACE_FLAG_BACKFACE);
+				surfel_data.max_inconsistency = 1;
 				surfelDataBuffer[newSurfelIndex] = surfel_data;
 			}
 		}

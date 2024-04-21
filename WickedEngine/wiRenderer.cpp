@@ -10622,7 +10622,6 @@ void SurfelGI(
 		scene.surfelgi.cleared = true;
 		GPUBarrier barriers[] = {
 			GPUBarrier::Image(&scene.surfelgi.momentsTexture, scene.surfelgi.momentsTexture.desc.layout, ResourceState::UNORDERED_ACCESS),
-			GPUBarrier::Image(&scene.surfelgi.irradianceTexture_rw, scene.surfelgi.irradianceTexture_rw.desc.layout, ResourceState::UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 		device->ClearUAV(&scene.surfelgi.momentsTexture, 0, cmd);
@@ -10633,6 +10632,7 @@ void SurfelGI(
 			std::swap(x.image.layout_before, x.image.layout_after);
 		}
 		device->Barrier(barriers, arraysize(barriers), cmd);
+		device->Barrier(GPUBarrier::Memory(), cmd);
 	}
 
 	// Grid reset:
@@ -10808,7 +10808,6 @@ void SurfelGI(
 			GPUBarrier barriers[] = {
 				GPUBarrier::Buffer(&scene.surfelgi.dataBuffer, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
 				GPUBarrier::Image(&scene.surfelgi.momentsTexture, scene.surfelgi.momentsTexture.desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&scene.surfelgi.irradianceTexture_rw, scene.surfelgi.irradianceTexture_rw.desc.layout, ResourceState::UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -10818,7 +10817,7 @@ void SurfelGI(
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Image(&scene.surfelgi.momentsTexture, ResourceState::UNORDERED_ACCESS, scene.surfelgi.momentsTexture.desc.layout),
-				GPUBarrier::Image(&scene.surfelgi.irradianceTexture_rw, ResourceState::UNORDERED_ACCESS, scene.surfelgi.irradianceTexture_rw.desc.layout),
+				GPUBarrier::Memory(&scene.surfelgi.irradianceTexture_rw),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -10849,8 +10848,12 @@ void DDGI(
 
 	if (scene.ddgi.frame_index == 0)
 	{
+		device->Barrier(GPUBarrier::Image(&scene.ddgi.depth_texture, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS), cmd);
+		device->ClearUAV(&scene.ddgi.depth_texture, 0, cmd);
+		device->ClearUAV(&scene.ddgi.color_texture_rw, 0, cmd);
 		device->ClearUAV(&scene.ddgi.variance_buffer, 0, cmd);
 		device->Barrier(GPUBarrier::Memory(&scene.ddgi.variance_buffer), cmd);
+		device->Barrier(GPUBarrier::Image(&scene.ddgi.depth_texture, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE), cmd);
 	}
 
 	BindCommonResources(cmd);

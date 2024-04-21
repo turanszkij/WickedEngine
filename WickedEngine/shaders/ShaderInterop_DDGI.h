@@ -4,7 +4,7 @@
 #include "ShaderInterop_Renderer.h"
 
 static const uint DDGI_MAX_RAYCOUNT = 512; // affects global ray buffer size
-static const uint DDGI_COLOR_RESOLUTION = 8; // this should not be modified, border update code is fixed
+static const uint DDGI_COLOR_RESOLUTION = 6; // this should not be modified, border update code is fixed
 static const uint DDGI_COLOR_TEXELS = 1 + DDGI_COLOR_RESOLUTION + 1; // with border
 static const uint DDGI_DEPTH_RESOLUTION = 16; // this should not be modified, border update code is fixed
 static const uint DDGI_DEPTH_TEXELS = 1 + DDGI_DEPTH_RESOLUTION + 1; // with border
@@ -303,43 +303,77 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 }
 
 // Border offsets from: https://github.com/diharaw/hybrid-rendering/blob/master/src/shaders/gi/gi_border_update.glsl
-static const uint4 DDGI_COLOR_BORDER_OFFSETS[36] = {
-	uint4(8, 1, 1, 0),
-	uint4(7, 1, 2, 0),
-	uint4(6, 1, 3, 0),
-	uint4(5, 1, 4, 0),
-	uint4(4, 1, 5, 0),
-	uint4(3, 1, 6, 0),
-	uint4(2, 1, 7, 0),
-	uint4(1, 1, 8, 0),
-	uint4(8, 8, 1, 9),
-	uint4(7, 8, 2, 9),
-	uint4(6, 8, 3, 9),
-	uint4(5, 8, 4, 9),
-	uint4(4, 8, 5, 9),
-	uint4(3, 8, 6, 9),
-	uint4(2, 8, 7, 9),
-	uint4(1, 8, 8, 9),
-	uint4(1, 8, 0, 1),
-	uint4(1, 7, 0, 2),
-	uint4(1, 6, 0, 3),
-	uint4(1, 5, 0, 4),
-	uint4(1, 4, 0, 5),
-	uint4(1, 3, 0, 6),
-	uint4(1, 2, 0, 7),
-	uint4(1, 1, 0, 8),
-	uint4(8, 8, 9, 1),
-	uint4(8, 7, 9, 2),
-	uint4(8, 6, 9, 3),
-	uint4(8, 5, 9, 4),
-	uint4(8, 4, 9, 5),
-	uint4(8, 3, 9, 6),
-	uint4(8, 2, 9, 7),
-	uint4(8, 1, 9, 8),
-	uint4(8, 8, 0, 0),
-	uint4(1, 8, 9, 0),
-	uint4(8, 1, 0, 9),
-	uint4(1, 1, 9, 9)
+//static const uint4 DDGI_COLOR_BORDER_OFFSETS[36] = {
+//	uint4(8, 1, 1, 0),
+//	uint4(7, 1, 2, 0),
+//	uint4(6, 1, 3, 0),
+//	uint4(5, 1, 4, 0),
+//	uint4(4, 1, 5, 0),
+//	uint4(3, 1, 6, 0),
+//	uint4(2, 1, 7, 0),
+//	uint4(1, 1, 8, 0),
+//	uint4(8, 8, 1, 9),
+//	uint4(7, 8, 2, 9),
+//	uint4(6, 8, 3, 9),
+//	uint4(5, 8, 4, 9),
+//	uint4(4, 8, 5, 9),
+//	uint4(3, 8, 6, 9),
+//	uint4(2, 8, 7, 9),
+//	uint4(1, 8, 8, 9),
+//	uint4(1, 8, 0, 1),
+//	uint4(1, 7, 0, 2),
+//	uint4(1, 6, 0, 3),
+//	uint4(1, 5, 0, 4),
+//	uint4(1, 4, 0, 5),
+//	uint4(1, 3, 0, 6),
+//	uint4(1, 2, 0, 7),
+//	uint4(1, 1, 0, 8),
+//	uint4(8, 8, 9, 1),
+//	uint4(8, 7, 9, 2),
+//	uint4(8, 6, 9, 3),
+//	uint4(8, 5, 9, 4),
+//	uint4(8, 4, 9, 5),
+//	uint4(8, 3, 9, 6),
+//	uint4(8, 2, 9, 7),
+//	uint4(8, 1, 9, 8),
+//	uint4(8, 8, 0, 0),
+//	uint4(1, 8, 9, 0),
+//	uint4(8, 1, 0, 9),
+//	uint4(1, 1, 9, 9)
+//};
+static const uint4 DDGI_COLOR_BORDER_OFFSETS[] = {
+	uint4(6, 1, 1, 0),
+	uint4(5, 1, 2, 0),
+	uint4(4, 1, 3, 0),
+	uint4(3, 1, 4, 0),
+	uint4(2, 1, 5, 0),
+	uint4(1, 1, 6, 0),
+
+	uint4(6, 6, 1, 7),
+	uint4(5, 6, 2, 7),
+	uint4(4, 6, 3, 7),
+	uint4(3, 6, 4, 7),
+	uint4(2, 6, 5, 7),
+	uint4(1, 6, 6, 7),
+
+	uint4(1, 1, 0, 6),
+	uint4(1, 2, 0, 5),
+	uint4(1, 3, 0, 4),
+	uint4(1, 4, 0, 3),
+	uint4(1, 5, 0, 2),
+	uint4(1, 6, 0, 1),
+
+	uint4(6, 1, 7, 6),
+	uint4(6, 2, 7, 5),
+	uint4(6, 3, 7, 4),
+	uint4(6, 4, 7, 3),
+	uint4(6, 5, 7, 2),
+	uint4(6, 6, 7, 1),
+
+	uint4(1, 1, 7, 7),
+	uint4(6, 1, 0, 7),
+	uint4(1, 6, 7, 0),
+	uint4(6, 6, 0, 0),
 };
 static const uint4 DDGI_DEPTH_BORDER_OFFSETS[68] = {
 	uint4(16, 1, 1, 0),

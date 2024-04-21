@@ -378,6 +378,7 @@ static const float SKY_UNIT_TO_M = rcp(M_TO_SKY_UNIT);
 
 #define sqr(a) ((a)*(a))
 #define pow5(x) pow(x, 5)
+#define arraysize(a) (sizeof(a) / sizeof(a[0]))
 
 template<typename T>
 float max3(T v)
