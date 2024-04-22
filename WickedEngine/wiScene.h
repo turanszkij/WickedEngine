@@ -192,6 +192,7 @@ namespace wi::scene
 			wi::graphics::GPUBuffer ray_buffer;
 			wi::graphics::GPUBuffer offset_buffer;
 			wi::graphics::GPUBuffer variance_buffer;
+			wi::graphics::GPUBuffer raycount_buffer;
 			wi::graphics::GPUBuffer sparse_tile_pool;
 			wi::graphics::Texture color_texture;
 			wi::graphics::Texture color_texture_rw; // alias of color_texture

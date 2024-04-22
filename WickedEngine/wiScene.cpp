@@ -514,9 +514,11 @@ namespace wi::scene
 
 				tex.bind_flags = BindFlag::SHADER_RESOURCE;
 				tex.misc_flags = ResourceMiscFlag::SPARSE;
+				tex.format = Format::BC6H_UF16;
 				tex.width = SURFEL_MOMENT_ATLAS_TEXELS;
 				tex.height = SURFEL_MOMENT_ATLAS_TEXELS;
-				tex.format = Format::BC6H_UF16;
+				tex.width = std::max(256u, tex.width);		// force non-packed mip behaviour
+				tex.height = std::max(256u, tex.height);	// force non-packed mip behaviour
 				device->CreateTexture(&tex, nullptr, &surfelgi.irradianceTexture);
 				device->SetName(&surfelgi.irradianceTexture, "surfelgi.irradianceTexture");
 
@@ -594,13 +596,20 @@ namespace wi::scene
 				device->CreateBuffer(&buf, nullptr, &ddgi.variance_buffer);
 				device->SetName(&ddgi.variance_buffer, "ddgi.variance_buffer");
 
+				buf.stride = sizeof(uint8_t);
+				buf.size = buf.stride * probe_count;
+				buf.misc_flags = ResourceMiscFlag::NONE;
+				buf.format = Format::R8_UINT;
+				device->CreateBuffer(&buf, nullptr, &ddgi.raycount_buffer);
+				device->SetName(&ddgi.raycount_buffer, "ddgi.raycount_buffer");
+
 				TextureDesc tex;
 				tex.width = DDGI_COLOR_TEXELS * ddgi.grid_dimensions.x * ddgi.grid_dimensions.y;
 				tex.height = DDGI_COLOR_TEXELS * ddgi.grid_dimensions.z;
 				tex.format = Format::BC6H_UF16;
 				tex.misc_flags = ResourceMiscFlag::SPARSE; // sparse aliasing to write BC6H_UF16 as uint
-				tex.width = std::max(128u, tex.width);		// force non-packed mip behaviour
-				tex.height = std::max(128u, tex.height);	// force non-packed mip behaviour
+				tex.width = std::max(256u, tex.width);		// force non-packed mip behaviour
+				tex.height = std::max(256u, tex.height);	// force non-packed mip behaviour
 				tex.bind_flags = BindFlag::SHADER_RESOURCE;
 				tex.layout = ResourceState::SHADER_RESOURCE;
 				device->CreateTexture(&tex, nullptr, &ddgi.color_texture);

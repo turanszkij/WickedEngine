@@ -5,10 +5,11 @@
 
 static const uint DDGI_MAX_RAYCOUNT = 512; // affects global ray buffer size
 static const uint DDGI_COLOR_RESOLUTION = 6; // this should not be modified, border update code is fixed
-static const uint DDGI_COLOR_TEXELS = 1 + DDGI_COLOR_RESOLUTION + 1; // with border
+static const uint DDGI_COLOR_TEXELS = 1 + DDGI_COLOR_RESOLUTION + 1; // with border. NOTE: this must be 4x4 block aligned for BC6!
 static const uint DDGI_DEPTH_RESOLUTION = 16; // this should not be modified, border update code is fixed
 static const uint DDGI_DEPTH_TEXELS = 1 + DDGI_DEPTH_RESOLUTION + 1; // with border
 static const float DDGI_KEEP_DISTANCE = 0.1f; // how much distance should probes keep from surfaces
+static const uint DDGI_RAY_BUCKET_COUNT = 32; // ray count per bucket
 
 #define DDGI_LINEAR_BLENDING
 
@@ -302,45 +303,6 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 	return 0;
 }
 
-// Border offsets from: https://github.com/diharaw/hybrid-rendering/blob/master/src/shaders/gi/gi_border_update.glsl
-//static const uint4 DDGI_COLOR_BORDER_OFFSETS[36] = {
-//	uint4(8, 1, 1, 0),
-//	uint4(7, 1, 2, 0),
-//	uint4(6, 1, 3, 0),
-//	uint4(5, 1, 4, 0),
-//	uint4(4, 1, 5, 0),
-//	uint4(3, 1, 6, 0),
-//	uint4(2, 1, 7, 0),
-//	uint4(1, 1, 8, 0),
-//	uint4(8, 8, 1, 9),
-//	uint4(7, 8, 2, 9),
-//	uint4(6, 8, 3, 9),
-//	uint4(5, 8, 4, 9),
-//	uint4(4, 8, 5, 9),
-//	uint4(3, 8, 6, 9),
-//	uint4(2, 8, 7, 9),
-//	uint4(1, 8, 8, 9),
-//	uint4(1, 8, 0, 1),
-//	uint4(1, 7, 0, 2),
-//	uint4(1, 6, 0, 3),
-//	uint4(1, 5, 0, 4),
-//	uint4(1, 4, 0, 5),
-//	uint4(1, 3, 0, 6),
-//	uint4(1, 2, 0, 7),
-//	uint4(1, 1, 0, 8),
-//	uint4(8, 8, 9, 1),
-//	uint4(8, 7, 9, 2),
-//	uint4(8, 6, 9, 3),
-//	uint4(8, 5, 9, 4),
-//	uint4(8, 4, 9, 5),
-//	uint4(8, 3, 9, 6),
-//	uint4(8, 2, 9, 7),
-//	uint4(8, 1, 9, 8),
-//	uint4(8, 8, 0, 0),
-//	uint4(1, 8, 9, 0),
-//	uint4(8, 1, 0, 9),
-//	uint4(1, 1, 9, 9)
-//};
 static const uint4 DDGI_COLOR_BORDER_OFFSETS[] = {
 	uint4(6, 1, 1, 0),
 	uint4(5, 1, 2, 0),

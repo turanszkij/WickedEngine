@@ -187,7 +187,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		surfel_data.SetBackfaceNormal(backface);
 		
 		const uint wave_count_per_group = THREADCOUNT * THREADCOUNT / lane_count_per_wave;
-		surfel_data.max_inconsistency = 0;
+		surfel_data.max_inconsistency = inconsistency;
 		for(uint i = 0; i < wave_count_per_group; ++i)
 		{
 			surfel_data.max_inconsistency = max(surfel_data.max_inconsistency, shared_inconsistency[i]);

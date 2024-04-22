@@ -12,6 +12,7 @@
 PUSHCONSTANT(push, DDGIPushConstants);
 
 StructuredBuffer<DDGIRayDataPacked> ddgiRayBuffer : register(t0);
+Buffer<uint> ddgiRayCountBuffer : register(t1);
 
 static const float WEIGHT_EPSILON = 0.0001;
 
@@ -20,12 +21,13 @@ static const uint THREADCOUNT = DDGI_DEPTH_RESOLUTION;
 static const uint RESOLUTION = DDGI_DEPTH_RESOLUTION;
 RWTexture2D<float2> output : register(u0);
 RWByteAddressBuffer ddgiOffsetBuffer:register(u1);
+groupshared uint shared_depths[DDGI_DEPTH_RESOLUTION * DDGI_DEPTH_RESOLUTION];
 #else
 static const uint THREADCOUNT = 8;
 static const uint RESOLUTION = DDGI_COLOR_RESOLUTION;
 RWTexture2D<uint4> output : register(u0);	// raw uint alias for BC6H
 RWStructuredBuffer<DDGIVarianceDataPacked> varianceBuffer : register(u1);
-groupshared float3 shared_texels[DDGI_COLOR_TEXELS * DDGI_COLOR_TEXELS];
+groupshared uint shared_texels[DDGI_COLOR_TEXELS * DDGI_COLOR_TEXELS];
 #endif // DDGI_UPDATE_DEPTH
 
 static const uint CACHE_SIZE = THREADCOUNT * THREADCOUNT;
@@ -69,7 +71,7 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 
 	float total_weight = 0;
 
-	uint remaining_rays = push.rayCount;
+	uint remaining_rays = min(ddgiRayCountBuffer[probeIndex] * DDGI_RAY_BUCKET_COUNT, DDGI_MAX_RAYCOUNT);
 	uint offset = 0;
 
 	while (remaining_rays > 0)
@@ -140,16 +142,17 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 	{
 		result = lerp(prev_result, result, 0.02);
 	}
+	shared_depths[flatten2D(GTid, DDGI_DEPTH_RESOLUTION)] = pack_half2(result);
 	output[pixel_current] = result;
 
-	DeviceMemoryBarrierWithGroupSync();
+	GroupMemoryBarrierWithGroupSync();
 
 	// Copy depth borders:
 	for (uint index = groupIndex; index < arraysize(DDGI_DEPTH_BORDER_OFFSETS); index += THREADCOUNT * THREADCOUNT)
 	{
-		uint2 src_coord = copy_coord + DDGI_DEPTH_BORDER_OFFSETS[index].xy;
+		uint src_coord = flatten2D(DDGI_DEPTH_BORDER_OFFSETS[index].xy - 1, DDGI_DEPTH_RESOLUTION);
 		uint2 dst_coord = copy_coord + DDGI_DEPTH_BORDER_OFFSETS[index].zw;
-		output[dst_coord] = output[src_coord];
+		output[dst_coord] = unpack_half2(shared_depths[src_coord]);
 	}
 
 	[branch]
@@ -184,7 +187,7 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 		varianceBuffer[variance_data_index].store(varianceData);
 		result = varianceData.mean;
 
-		shared_texels[flatten2D(1 + GTid, DDGI_COLOR_TEXELS)] = result;
+		shared_texels[flatten2D(1 + GTid, DDGI_COLOR_TEXELS)] = PackRGBE(result);
 	}
 
 	GroupMemoryBarrierWithGroupSync();
@@ -199,13 +202,13 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 	
 	GroupMemoryBarrierWithGroupSync();
 
-	if(all(GTid % 4 == 0))
+	if(all((GTid % 4) == 0))
 	{
 		float3 texels[16];
 		for(int y = 0; y < 4; ++y)
 		for(int x = 0; x < 4; ++x)
 		{
-			texels[x + y * 4] = shared_texels[flatten2D(GTid + int2(x, y), DDGI_COLOR_TEXELS)];
+			texels[x + y * 4] = UnpackRGBE(shared_texels[flatten2D(GTid + int2(x, y), DDGI_COLOR_TEXELS)]);
 		}
 		output[pixel_current / 4] = CompressBC6H(texels);
 	}

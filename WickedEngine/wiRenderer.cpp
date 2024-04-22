@@ -126,7 +126,7 @@ bool SURFELGI = false;
 SURFEL_DEBUG SURFELGI_DEBUG = SURFEL_DEBUG_NONE;
 bool DDGI_ENABLED = false;
 bool DDGI_DEBUG_ENABLED = false;
-uint32_t DDGI_RAYCOUNT = 128u;
+uint32_t DDGI_RAYCOUNT = 256u;
 float DDGI_BLEND_SPEED = 0.1f;
 float GI_BOOST = 1.0f;
 std::atomic<size_t> SHADER_ERRORS{ 0 };
@@ -10852,7 +10852,7 @@ void DDGI(
 		device->ClearUAV(&scene.ddgi.depth_texture, 0, cmd);
 		device->ClearUAV(&scene.ddgi.color_texture_rw, 0, cmd);
 		device->ClearUAV(&scene.ddgi.variance_buffer, 0, cmd);
-		device->Barrier(GPUBarrier::Memory(&scene.ddgi.variance_buffer), cmd);
+		device->Barrier(GPUBarrier::Memory(), cmd);
 		device->Barrier(GPUBarrier::Image(&scene.ddgi.depth_texture, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE), cmd);
 	}
 
@@ -10884,8 +10884,14 @@ void DDGI(
 		XMStoreFloat4x4(&cb.g_xTransform, XMMatrixRotationAxis(axis, angle));
 		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MiscCB), cmd);
 
+		const GPUResource* res[] = {
+			&scene.ddgi.variance_buffer,
+		};
+		device->BindResources(res, 0, arraysize(res), cmd);
+
 		const GPUResource* uavs[] = {
-			&scene.ddgi.ray_buffer
+			&scene.ddgi.ray_buffer,
+			&scene.ddgi.raycount_buffer,
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
@@ -10899,6 +10905,8 @@ void DDGI(
 			GPUBarrier::Buffer(&scene.ddgi.ray_buffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 			GPUBarrier::Image(&scene.ddgi.depth_texture, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Buffer(&scene.ddgi.offset_buffer, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Buffer(&scene.ddgi.variance_buffer, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Buffer(&scene.ddgi.raycount_buffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -10912,6 +10920,7 @@ void DDGI(
 
 		const GPUResource* res[] = {
 			&scene.ddgi.ray_buffer,
+			&scene.ddgi.raycount_buffer,
 		};
 		device->BindResources(res, 0, arraysize(res), cmd);
 
@@ -10935,6 +10944,7 @@ void DDGI(
 
 		const GPUResource* res[] = {
 			&scene.ddgi.ray_buffer,
+			&scene.ddgi.raycount_buffer,
 		};
 		device->BindResources(res, 0, arraysize(res), cmd);
 
