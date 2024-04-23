@@ -9,7 +9,7 @@ static const uint DDGI_COLOR_TEXELS = 1 + DDGI_COLOR_RESOLUTION + 1; // with bor
 static const uint DDGI_DEPTH_RESOLUTION = 16; // this should not be modified, border update code is fixed
 static const uint DDGI_DEPTH_TEXELS = 1 + DDGI_DEPTH_RESOLUTION + 1; // with border
 static const float DDGI_KEEP_DISTANCE = 0.1f; // how much distance should probes keep from surfaces
-static const uint DDGI_RAY_BUCKET_COUNT = 32; // ray count per bucket
+static const uint DDGI_RAY_BUCKET_COUNT = 4; // ray count per bucket
 
 #define DDGI_LINEAR_BLENDING
 

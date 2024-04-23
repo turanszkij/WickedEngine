@@ -603,6 +603,13 @@ namespace wi::scene
 				device->CreateBuffer(&buf, nullptr, &ddgi.raycount_buffer);
 				device->SetName(&ddgi.raycount_buffer, "ddgi.raycount_buffer");
 
+				buf.stride = sizeof(uint32_t);
+				buf.size = buf.stride * (probe_count * DDGI_MAX_RAYCOUNT + 4); // +4: counter/indirect dispatch args
+				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+				buf.format = Format::UNKNOWN;
+				device->CreateBuffer(&buf, nullptr, &ddgi.rayallocation_buffer);
+				device->SetName(&ddgi.rayallocation_buffer, "ddgi.rayallocation_buffer");
+
 				TextureDesc tex;
 				tex.width = DDGI_COLOR_TEXELS * ddgi.grid_dimensions.x * ddgi.grid_dimensions.y;
 				tex.height = DDGI_COLOR_TEXELS * ddgi.grid_dimensions.z;

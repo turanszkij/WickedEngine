@@ -9,15 +9,15 @@
 
 PUSHCONSTANT(push, DDGIPushConstants);
 
-StructuredBuffer<DDGIVarianceDataPacked> varianceBuffer : register(t0);
+StructuredBuffer<uint> rayallocationBuffer : register(t0);
+Buffer<uint> raycountBuffer : register(t1);
 
 RWStructuredBuffer<DDGIRayDataPacked> rayBuffer : register(u0);
-RWBuffer<uint> raycountBuffer : register(u1);
 
 groupshared float shared_inconsistency[DDGI_COLOR_RESOLUTION * DDGI_COLOR_RESOLUTION];
 groupshared uint shared_rayCount;
 
-static const uint THREADCOUNT = DDGI_RAY_BUCKET_COUNT;
+static const uint THREADCOUNT = 32;
 
 // spherical fibonacci: https://github.com/diharaw/hybrid-rendering/blob/master/src/shaders/gi/gi_ray_trace.rgen
 #define madfrac(A, B) ((A) * (B)-floor((A) * (B)))
@@ -33,49 +33,21 @@ float3 spherical_fibonacci(float i, float n)
 [numthreads(THREADCOUNT, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
-	const uint probeIndex = Gid.x;
+	const uint allocCount = rayallocationBuffer[3];
+	if(DTid.x >= allocCount)
+		return;
+	const uint rayAlloc = rayallocationBuffer[4 + DTid.x];
+	const uint probeIndex = rayAlloc & 0xFFFFF;
+	const uint rayIndex = rayAlloc >> 20u;
+	const uint rayCount = raycountBuffer[probeIndex] * DDGI_RAY_BUCKET_COUNT;
 	const uint3 probeCoord = ddgi_probe_coord(probeIndex);
 	const float3 probePos = ddgi_probe_position(probeCoord);
-
-	float inconsistency = 0;
-	for(uint i = groupIndex; i < DDGI_COLOR_RESOLUTION * DDGI_COLOR_RESOLUTION; i += THREADCOUNT)
-	{
-		inconsistency = max(inconsistency, varianceBuffer[probeIndex * DDGI_COLOR_RESOLUTION * DDGI_COLOR_RESOLUTION + i].load().inconsistency);
-	}
-	
-	const uint lane_count_per_wave = WaveGetLaneCount();
-	if(WaveIsFirstLane())
-	{
-		float wave_max_inconsistency = WaveActiveMax(inconsistency);
-		shared_inconsistency[groupIndex / lane_count_per_wave] = wave_max_inconsistency;
-	}
-
-	GroupMemoryBarrierWithGroupSync();
-
-	if(groupIndex == 0)
-	{
-		const uint wave_count_per_group = THREADCOUNT / lane_count_per_wave;
-		float max_inconsistency = inconsistency;
-		for(uint i = 0; i < wave_count_per_group; ++i)
-		{
-			max_inconsistency = max(max_inconsistency, shared_inconsistency[i]);
-		}
-		uint rayCount = align(saturate(max_inconsistency) * push.rayCount, DDGI_RAY_BUCKET_COUNT);
-		rayCount = clamp(rayCount, DDGI_RAY_BUCKET_COUNT, DDGI_MAX_RAYCOUNT);
-		raycountBuffer[probeIndex] = rayCount / DDGI_RAY_BUCKET_COUNT;
-		shared_rayCount = rayCount;
-	}
-
-	GroupMemoryBarrierWithGroupSync();
-
-	uint rayCount = shared_rayCount;
 
 	RNG rng;
 	rng.init(DTid.xx, GetFrame().frame_count);
 
 	const float3x3 random_orientation = (float3x3)g_xTransform;
-
-	for (uint rayIndex = groupIndex; rayIndex < rayCount; rayIndex += THREADCOUNT)
+	
 	{
 		RayDesc ray;
 		ray.Origin = probePos;
@@ -146,7 +118,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			}
 
 			if (!surface.load(prim, q.CommittedTriangleBarycentrics()))
-				break;
+				return;
 
 #else
 
@@ -160,7 +132,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			}
 
 			if (!surface.load(hit.primitiveID, hit.bary))
-				break;
+				return;
 
 #endif // RTAPI
 

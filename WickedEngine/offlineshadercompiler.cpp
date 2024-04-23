@@ -211,6 +211,8 @@ wi::vector<ShaderEntry> shaders = {
 	{"surfel_raytraceCS_rtapi", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_5 },
 	{"surfel_raytraceCS", wi::graphics::ShaderStage::CS },
 	{"surfel_integrateCS", wi::graphics::ShaderStage::CS },
+	{"ddgi_rayallocationCS", wi::graphics::ShaderStage::CS },
+	{"ddgi_indirectprepareCS", wi::graphics::ShaderStage::CS },
 	{"ddgi_raytraceCS", wi::graphics::ShaderStage::CS },
 	{"ddgi_raytraceCS_rtapi", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_5 },
 	{"ddgi_updateCS", wi::graphics::ShaderStage::CS },
