@@ -4,7 +4,7 @@
 #include "ShaderInterop_Weather.h"
 #include "ShaderInterop_VXGI.h"
 #include "ShaderInterop_Terrain.h"
-#include "ShaderInterop_Voxelgrid.h"
+#include "ShaderInterop_VoxelGrid.h"
 
 struct ShaderScene
 {
