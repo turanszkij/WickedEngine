@@ -1315,5 +1315,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Terrain.h">
       <Filter>interop</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_VoxelGrid.h">
+      <Filter>interop</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

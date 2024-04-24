@@ -4,6 +4,7 @@
 #include "ShaderInterop_Weather.h"
 #include "ShaderInterop_VXGI.h"
 #include "ShaderInterop_Terrain.h"
+#include "ShaderInterop_Voxelgrid.h"
 
 struct ShaderScene
 {
@@ -62,6 +63,8 @@ struct ShaderScene
 	DDGI ddgi;
 
 	ShaderTerrain terrain;
+
+	ShaderVoxelGrid voxelgrid;
 };
 
 static const uint SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS = 1 << 0;

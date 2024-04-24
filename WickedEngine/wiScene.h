@@ -282,6 +282,8 @@ namespace wi::scene
 		void PutWaterRipple(const XMFLOAT3& pos);
 		void PutWaterRipple(const std::string& image, const XMFLOAT3& pos);
 
+		wi::graphics::GPUBuffer voxelgrid_gpu; // primary CPU voxelgrid uploaded to GPU
+
 		// Animation processing optimizer:
 		struct AnimationQueue
 		{

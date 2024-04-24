@@ -33,6 +33,39 @@ groupshared uint shared_texels[DDGI_COLOR_TEXELS * DDGI_COLOR_TEXELS];
 static const uint CACHE_SIZE = THREADCOUNT * THREADCOUNT;
 groupshared DDGIRayData ray_cache[CACHE_SIZE];
 
+static const int3 voxel_neighbors[] = {
+	// First priority is direct straight neighbors:
+	int3(-1, 0, 0),
+	int3(1, 0, 0),
+	int3(0, -1, 0),
+	int3(0, 1, 0),
+	int3(0, 0, -1),
+	int3(0, 0, 1),
+
+	// Second priority is diagonal neighbors:
+	int3(-1, 0, -1),
+	int3(1, 0, -1),
+	int3(-1, 0, 1),
+	int3(1, 0, 1),
+	int3(-1, -1, -1),
+	int3(1, -1, -1),
+	int3(-1, -1, 1),
+	int3(1, -1, 1),
+	int3(-1, 1, -1),
+	int3(1, 1, -1),
+	int3(-1, 1, 1),
+	int3(1, 1, 1),
+};
+int3 get_nearby_empty_voxel(ShaderVoxelGrid voxelgrid, uint3 coord)
+{
+	for(uint i = 0; i < arraysize(voxel_neighbors); ++i)
+	{
+		if(!voxelgrid.check_voxel(coord + voxel_neighbors[i]))
+			return voxel_neighbors[i];
+	}
+	return 0;
+}
+
 [numthreads(THREADCOUNT, THREADCOUNT, 1)]
 void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
@@ -158,7 +191,20 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 	[branch]
 	if (groupIndex == 0)
 	{
+		[branch]
+		if(GetScene().voxelgrid.IsValid())
+		{
+			// If there is a voxel grid, that can help offset the probes when they are stuck in closed spaces:
+			ShaderVoxelGrid voxelgrid = GetScene().voxelgrid;
+			uint3 coord = voxelgrid.world_to_coord(ddgi_probe_position_rest(probeCoord));
+			if(voxelgrid.check_voxel(coord))
+			{
+				probeOffsetNew += get_nearby_empty_voxel(voxelgrid, coord) * voxelgrid.voxelSize * 2;
+			}
+		}
+
 		probeOffset = lerp(probeOffset, probeOffsetNew, 0.01);
+		
 		const float3 limit = ddgi_cellsize() * 0.5;
 		probeOffset = clamp(probeOffset, -limit, limit);
 		DDGIProbeOffset ofs;

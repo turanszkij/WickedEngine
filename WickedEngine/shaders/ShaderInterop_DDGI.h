@@ -126,9 +126,13 @@ inline uint ddgi_probe_index(uint3 probeCoord)
 {
 	return flatten3D(probeCoord, GetScene().ddgi.grid_dimensions);
 }
+inline float3 ddgi_probe_position_rest(uint3 probeCoord)
+{
+	return GetScene().ddgi.grid_min + probeCoord * ddgi_cellsize();
+}
 inline float3 ddgi_probe_position(uint3 probeCoord)
 {
-	float3 pos = GetScene().ddgi.grid_min + probeCoord * ddgi_cellsize();
+	float3 pos = ddgi_probe_position_rest(probeCoord);
 	[branch]
 	if (GetScene().ddgi.offset_buffer >= 0)
 	{

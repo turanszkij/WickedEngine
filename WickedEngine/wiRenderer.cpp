@@ -3931,6 +3931,13 @@ void UpdateRenderData(
 		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->skinningBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 	}
 
+	if (vis.scene->voxelgrid_gpu.IsValid() && vis.scene->voxel_grids.GetCount() > 0)
+	{
+		VoxelGrid& voxelgrid = vis.scene->voxel_grids[0];
+		device->UpdateBuffer(&vis.scene->voxelgrid_gpu, voxelgrid.voxels.data(), cmd, voxelgrid.voxels.size() * sizeof(uint64_t));
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->voxelgrid_gpu, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+	}
+
 	// Fill Entity Array with decals + envprobes + lights in the frustum:
 	{
 		// Reserve temporary entity array for GPU data upload:

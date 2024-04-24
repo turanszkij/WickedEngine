@@ -971,6 +971,29 @@ namespace wi::scene
 		{
 			shaderscene.terrain = terrains[0].GetShaderTerrain();
 		}
+
+		shaderscene.voxelgrid.init();
+		if (voxel_grids.GetCount() > 0)
+		{
+			VoxelGrid& voxelgrid = voxel_grids[0];
+			const uint64_t required_size = voxelgrid.voxels.size() * sizeof(uint64_t);
+			if (voxelgrid_gpu.desc.size < required_size)
+			{
+				GPUBufferDesc desc;
+				desc.size = required_size;
+				desc.bind_flags = BindFlag::SHADER_RESOURCE;
+				desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+				device->CreateBuffer(&desc, nullptr, &voxelgrid_gpu);
+				device->SetName(&voxelgrid_gpu, "voxelgrid_gpu");
+			}
+			shaderscene.voxelgrid.buffer = device->GetDescriptorIndex(&voxelgrid_gpu, SubresourceType::SRV);
+			shaderscene.voxelgrid.resolution = voxelgrid.resolution;
+			shaderscene.voxelgrid.resolution_div4 = voxelgrid.resolution_div4;
+			shaderscene.voxelgrid.resolution_rcp = voxelgrid.resolution_rcp;
+			shaderscene.voxelgrid.center = voxelgrid.center;
+			shaderscene.voxelgrid.voxelSize = voxelgrid.voxelSize;
+			shaderscene.voxelgrid.voxelSize_rcp = voxelgrid.voxelSize_rcp;
+		}
 	}
 	void Scene::Clear()
 	{
