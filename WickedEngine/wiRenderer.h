@@ -623,6 +623,7 @@ namespace wi::renderer
 	);
 	struct RTShadowResources
 	{
+		wi::graphics::Texture raytraced;
 		wi::graphics::Texture temporal[2];
 		wi::graphics::Texture normals;
 
@@ -1004,7 +1005,7 @@ namespace wi::renderer
 
 
 
-	void SetTransparentShadowsEnabled(float value);
+	void SetTransparentShadowsEnabled(bool value);
 	float GetTransparentShadowsEnabled();
 	void SetWireRender(bool value);
 	bool IsWireRender();

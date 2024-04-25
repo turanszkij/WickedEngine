@@ -46,11 +46,11 @@ float4x4 FFX_DNSR_Shadows_GetReprojectionMatrix()
 
 float FFX_DNSR_Shadows_ReadDepth(uint2 did)
 {
-	return texture_depth[did];
+	return texture_depth[did * 2];
 }
 float FFX_DNSR_Shadows_ReadPreviousDepth(int2 idx)
 {
-	return texture_depth_history[idx];
+	return texture_depth_history[idx * 2];
 }
 float3 FFX_DNSR_Shadows_ReadNormals(uint2 did)
 {
@@ -70,7 +70,7 @@ float FFX_DNSR_Shadows_ReadHistory(float2 history_uv)
 }
 float2 FFX_DNSR_Shadows_ReadVelocity(uint2 did)
 {
-	return -texture_velocity[did].xy;
+	return -texture_velocity[did * 2].xy;
 }
 
 void FFX_DNSR_Shadows_WriteReprojectionResults(uint2 did, float2 value)

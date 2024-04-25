@@ -33,7 +33,7 @@ float FFX_DNSR_Shadows_GetDepthSimilaritySigma()
 
 float FFX_DNSR_Shadows_ReadDepth(uint2 did)
 {
-	return texture_depth[did];
+	return texture_depth[did * 2];
 }
 float16_t3 FFX_DNSR_Shadows_ReadNormals(uint2 did)
 {

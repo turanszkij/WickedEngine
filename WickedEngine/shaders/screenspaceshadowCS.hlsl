@@ -7,11 +7,22 @@
 PUSHCONSTANT(postprocess, PostProcess);
 
 static const uint MAX_RTSHADOWS = 16;
-RWTexture2D<uint4> output : register(u0);
 
 #ifdef RTSHADOW
+RWTexture2D<uint4> output : register(u0);
 RWTexture2D<float3> output_normals : register(u1);
 RWStructuredBuffer<uint4> output_tiles : register(u2);
+static const uint DOWNSAMPLE = 2;
+#else
+static const uint DOWNSAMPLE = 1;
+RWTexture2DArray<unorm float> output : register(u0);
+float load_shadow(in uint shadow_index, in uint4 shadow_mask)
+{
+	uint mask_shift = (shadow_index % 4) * 8;
+	uint mask_bucket = shadow_index / 4;
+	uint mask = (shadow_mask[mask_bucket] >> mask_shift) & 0xFF;
+	return mask / 255.0;
+}
 #endif // RTSHADOW
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
@@ -36,7 +47,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 #endif // RTSHADOW
 
 	float3 P = reconstruct_position(uv, depth);
-	float3 N = decode_oct(texture_normal[DTid.xy]);
+	float3 N = decode_oct(texture_normal[DTid.xy * DOWNSAMPLE]);
 
 	Surface surface;
 	surface.init();
@@ -45,10 +56,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 
 	const float4 bluenoise = blue_noise(DTid.xy);
 
-	const uint2 tileIndex = uint2(floor(DTid.xy / TILED_CULLING_BLOCKSIZE));
+	const uint2 tileIndex = uint2(floor(DTid.xy * DOWNSAMPLE / TILED_CULLING_BLOCKSIZE));
 	const uint flatTileIndex = flatten2D(tileIndex, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
 
-	uint shadow_mask[4] = {0,0,0,0}; // FXC issue: can't dynamically index into uint4, unless unrolling all loops
+	uint4 shadow_mask = 0;
 	uint shadow_index = 0;
 
 	RayDesc ray;
@@ -307,7 +318,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		uint bit = ((shadow_mask[0] >> (i * 8)) & 0xFF) ? (1u << lane_index) : 0;
 		InterlockedOr(output_tiles[flatTileIdx][i], bit);
 	}
+	output[DTid.xy] = uint4(shadow_mask[0], shadow_mask[1], shadow_mask[2], shadow_mask[3]);
+#else
+	for(uint i = 0; i < 16; ++i)
+	{
+		output[uint3(DTid.xy, i)] = load_shadow(i, shadow_mask);
+	}
 #endif // RTSHADOW
 
-	output[DTid.xy] = uint4(shadow_mask[0], shadow_mask[1], shadow_mask[2], shadow_mask[3]);
 }

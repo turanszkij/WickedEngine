@@ -196,6 +196,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"rtshadow_denoise_tileclassificationCS", wi::graphics::ShaderStage::CS },
 	{"rtshadow_denoise_filterCS", wi::graphics::ShaderStage::CS },
 	{"rtshadow_denoise_temporalCS", wi::graphics::ShaderStage::CS },
+	{"rtshadow_upsampleCS", wi::graphics::ShaderStage::CS },
 	{"rtaoCS", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_5 },
 	{"rtao_denoise_tileclassificationCS", wi::graphics::ShaderStage::CS },
 	{"rtao_denoise_filterCS", wi::graphics::ShaderStage::CS },
