@@ -1716,6 +1716,7 @@ namespace wi
 				wi::renderer::Postprocess_RTAO(
 					rtaoResources,
 					*scene,
+					rtLinearDepth,
 					rtAO,
 					cmd,
 					getAORange(),
@@ -2368,8 +2369,8 @@ namespace wi
 			wi::renderer::CreateMSAOResources(msaoResources, internalResolution);
 			break;
 		case RenderPath3D::AO_RTAO:
-			desc.width = internalResolution.x / 2;
-			desc.height = internalResolution.y / 2;
+			desc.width = internalResolution.x;
+			desc.height = internalResolution.y;
 			wi::renderer::CreateRTAOResources(rtaoResources, internalResolution);
 			break;
 		default:

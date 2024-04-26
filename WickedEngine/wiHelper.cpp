@@ -161,7 +161,7 @@ namespace wi::helper
 
 		if (stagingTex.mapped_data != nullptr)
 		{
-			texturedata.resize(stagingTex.mapped_size);
+			texturedata.resize(ComputeTextureMemorySizeInBytes(desc));
 
 			const uint32_t data_stride = GetFormatStride(desc.format);
 			const uint32_t block_size = GetFormatBlockSize(desc.format);

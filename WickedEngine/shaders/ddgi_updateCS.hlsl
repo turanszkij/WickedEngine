@@ -20,7 +20,7 @@ static const float WEIGHT_EPSILON = 0.0001;
 static const uint THREADCOUNT = DDGI_DEPTH_RESOLUTION;
 static const uint RESOLUTION = DDGI_DEPTH_RESOLUTION;
 RWTexture2D<float2> output : register(u0);
-RWByteAddressBuffer ddgiOffsetBuffer:register(u1);
+RWTexture3D<float4> ddgiOffsetTexture : register(u1);
 groupshared uint shared_depths[DDGI_DEPTH_RESOLUTION * DDGI_DEPTH_RESOLUTION];
 #else
 static const uint THREADCOUNT = 8;
@@ -74,18 +74,13 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 	const float maxDistance = ddgi_max_distance();
 
 #ifdef DDGI_UPDATE_DEPTH
+	uint3 probe_offset_pixel = ddgi_probe_offset_pixel(probeCoord);
 	[branch]
 	if (groupIndex == 0 && push.frameIndex == 0)
 	{
-		DDGIProbeOffset ofs;
-		ofs.store(float3(0, 0, 0));
-#ifdef __PSSL__
-		ddgiOffsetBuffer.TypedStore<DDGIProbeOffset>(probeIndex * sizeof(DDGIProbeOffset), ofs);
-#else
-		ddgiOffsetBuffer.Store<DDGIProbeOffset>(probeIndex * sizeof(DDGIProbeOffset), ofs);
-#endif // __PSSL__
+		ddgiOffsetTexture[probe_offset_pixel] = 0.5; // this will be zero when transformed to signed (it is stored in unorm)
 	}
-	float3 probeOffset = ddgiOffsetBuffer.Load<DDGIProbeOffset>(probeIndex * sizeof(DDGIProbeOffset)).load();
+	const float3 probe_limit = ddgi_cellsize() * 0.5;
 	float3 probeOffsetNew = 0;
 	const float probeOffsetDistance = maxDistance * DDGI_KEEP_DISTANCE;
 #endif // DDGI_UPDATE_DEPTH
@@ -202,18 +197,12 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 				probeOffsetNew += get_nearby_empty_voxel(voxelgrid, coord) * voxelgrid.voxelSize * 2;
 			}
 		}
-
-		probeOffset = lerp(probeOffset, probeOffsetNew, 0.01);
 		
-		const float3 limit = ddgi_cellsize() * 0.5;
-		probeOffset = clamp(probeOffset, -limit, limit);
-		DDGIProbeOffset ofs;
-		ofs.store(probeOffset);
-#ifdef __PSSL__
-		ddgiOffsetBuffer.TypedStore<DDGIProbeOffset>(probeIndex * sizeof(DDGIProbeOffset), ofs);
-#else
-		ddgiOffsetBuffer.Store<DDGIProbeOffset>(probeIndex * sizeof(DDGIProbeOffset), ofs);
-#endif // __PSSL__
+		float3 probeOffset = (ddgiOffsetTexture[probe_offset_pixel].xyz - 0.5) * ddgi_cellsize();
+		probeOffset = lerp(probeOffset, probeOffsetNew, 0.01);
+		probeOffset = clamp(probeOffset, -probe_limit, probe_limit);
+		probeOffset = inverse_lerp(-probe_limit, probe_limit, probeOffset);
+		ddgiOffsetTexture[probe_offset_pixel] = float4(probeOffset, 0);
 	}
 #else
 

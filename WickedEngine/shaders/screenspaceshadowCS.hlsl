@@ -7,22 +7,15 @@
 PUSHCONSTANT(postprocess, PostProcess);
 
 static const uint MAX_RTSHADOWS = 16;
+static const uint DOWNSAMPLE = 2;
+
+static const float thickness = 0.5;
+
+RWTexture2D<uint4> output : register(u0);
 
 #ifdef RTSHADOW
-RWTexture2D<uint4> output : register(u0);
 RWTexture2D<float3> output_normals : register(u1);
 RWStructuredBuffer<uint4> output_tiles : register(u2);
-static const uint DOWNSAMPLE = 2;
-#else
-static const uint DOWNSAMPLE = 1;
-RWTexture2DArray<unorm float> output : register(u0);
-float load_shadow(in uint shadow_index, in uint4 shadow_mask)
-{
-	uint mask_shift = (shadow_index % 4) * 8;
-	uint mask_bucket = shadow_index / 4;
-	uint mask = (shadow_mask[mask_bucket] >> mask_shift) & 0xFF;
-	return mask / 255.0;
-}
 #endif // RTSHADOW
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
@@ -71,7 +64,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 
 	const float range = postprocess.params0.x;
 	const uint samplecount = postprocess.params0.y;
-	const float thickness = 0.1;
 	const float stepsize = range / samplecount;
 	const float offset = abs(dither(DTid.xy + GetTemporalAASampleRotation()));
 #endif // RTSHADOW
@@ -262,21 +254,19 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 						[loop]
 						for (uint i = 0; i < samplecount; ++i)
 						{
-							rayPos += ray.Direction * stepsize;
-
 							float4 proj = mul(GetCamera().projection, float4(rayPos, 1));
 							proj.xyz /= proj.w;
 							proj.xy = proj.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
-
+							
 							[branch]
 							if (is_saturated(proj.xy))
 							{
 								const float ray_depth_real = proj.w;
 								const float ray_depth_sample = texture_lineardepth.SampleLevel(sampler_point_clamp, proj.xy, 1) * GetCamera().z_far;
 								const float ray_depth_delta = ray_depth_real - ray_depth_sample;
-								if (ray_depth_delta > 0 && ray_depth_delta < thickness)
+								if (ray_depth_delta > 0.02 && ray_depth_delta < thickness)
 								{
-									occlusion = 1;
+									occlusion = 1 - pow(float(i) / float(samplecount), 8);
 
 									// screen edge fade:
 									float2 fade = max(12 * abs(proj.xy - 0.5) - 5, 0);
@@ -285,6 +275,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 									break;
 								}
 							}
+							
+							rayPos += ray.Direction * stepsize;
 						}
 						float shadow = 1 - occlusion;
 #endif // RTSHADOW
@@ -320,10 +312,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	}
 	output[DTid.xy] = uint4(shadow_mask[0], shadow_mask[1], shadow_mask[2], shadow_mask[3]);
 #else
-	for(uint i = 0; i < 16; ++i)
-	{
-		output[uint3(DTid.xy, i)] = load_shadow(i, shadow_mask);
-	}
+	output[DTid.xy] = shadow_mask;
 #endif // RTSHADOW
 
 }

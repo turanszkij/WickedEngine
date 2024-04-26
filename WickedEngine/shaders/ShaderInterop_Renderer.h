@@ -55,7 +55,7 @@ struct ShaderScene
 		float max_distance;
 
 		float3 grid_extents_rcp;
-		int offset_buffer;
+		int offset_texture;
 
 		float3 cell_size_rcp;
 		float smooth_backface;

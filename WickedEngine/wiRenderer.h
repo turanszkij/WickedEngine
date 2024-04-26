@@ -521,6 +521,7 @@ namespace wi::renderer
 	struct RTAOResources
 	{
 		wi::graphics::Texture normals;
+		wi::graphics::Texture denoised;
 
 		mutable int frame = 0;
 		wi::graphics::GPUBuffer tiles;
@@ -532,6 +533,7 @@ namespace wi::renderer
 	void Postprocess_RTAO(
 		const RTAOResources& res,
 		const wi::scene::Scene& scene,
+		const wi::graphics::Texture& lineardepth,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
 		float range = 1.0f,
@@ -645,7 +647,7 @@ namespace wi::renderer
 	);
 	struct ScreenSpaceShadowResources
 	{
-		int placeholder = 0;
+		wi::graphics::Texture lowres;
 	};
 	void CreateScreenSpaceShadowResources(ScreenSpaceShadowResources& res, XMUINT2 resolution);
 	void Postprocess_ScreenSpaceShadow(

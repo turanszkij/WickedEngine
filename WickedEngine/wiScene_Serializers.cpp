@@ -2239,7 +2239,7 @@ namespace wi::scene
 				}
 				else
 				{
-					wi::backlog::post("The serialized DDGI structure is different from current version, discarding data.", wi::backlog::LogLevel::Warning);
+					wi::backlog::post("The serialized DDGI irradiance data structure is different from current version, discarding irradiance data.", wi::backlog::LogLevel::Warning);
 				}
 			}
 
@@ -2251,7 +2251,7 @@ namespace wi::scene
 				desc.width = DDGI_DEPTH_TEXELS * grid_dimensions.x * grid_dimensions.y;
 				desc.height = DDGI_DEPTH_TEXELS * grid_dimensions.z;
 				desc.format = Format::R16G16_FLOAT;
-				desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+				desc.bind_flags = BindFlag::SHADER_RESOURCE;
 
 				SubresourceData initdata;
 				initdata.data_ptr = data.data();
@@ -2261,17 +2261,33 @@ namespace wi::scene
 				device->SetName(&depth_texture, "ddgi.depth_texture[serialized]");
 			}
 
-			// offset buffer:
+			// offset texture:
 			archive >> data;
 			if(!data.empty())
 			{
-				GPUBufferDesc desc;
-				desc.stride = sizeof(DDGIProbeOffset);
-				desc.size = desc.stride * grid_dimensions.x * grid_dimensions.y * grid_dimensions.z;
-				desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
-				desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-				device->CreateBuffer(&desc, data.data(), &offset_buffer);
-				device->SetName(&offset_buffer, "ddgi.offset_buffer[serialized]");
+				TextureDesc desc;
+				desc.type = TextureDesc::Type::TEXTURE_3D;
+				desc.width = grid_dimensions.x;
+				desc.height = grid_dimensions.z;
+				desc.depth = grid_dimensions.y;
+				desc.format = Format::R10G10B10A2_UNORM;
+				desc.bind_flags = BindFlag::SHADER_RESOURCE;
+
+				const size_t required_size = ComputeTextureMemorySizeInBytes(desc);
+				if (data.size() == required_size)
+				{
+					SubresourceData initdata;
+					initdata.data_ptr = data.data();
+					initdata.row_pitch = desc.width * GetFormatStride(desc.format);
+					initdata.slice_pitch = initdata.row_pitch * desc.height;
+
+					device->CreateTexture(&desc, &initdata, &offset_texture);
+					device->SetName(&offset_texture, "ddgi.offset_texture[serialized]");
+				}
+				else
+				{
+					wi::backlog::post("The serialized DDGI probe offset structure is different from current version, discarding probe offset data.", wi::backlog::LogLevel::Warning);
+				}
 			}
 		}
 		else
@@ -2302,49 +2318,13 @@ namespace wi::scene
 			}
 			archive << data;
 
-			// Download and serialize offset buffer:
-			if(offset_buffer.IsValid())
+			data.clear();
+			if (offset_texture.IsValid())
 			{
-				GPUBufferDesc desc = offset_buffer.desc;
-				desc.usage = wi::graphics::Usage::READBACK;
-				desc.bind_flags = {};
-				desc.misc_flags = {};
-				GPUBuffer staging;
-				bool success = device->CreateBuffer(&desc, nullptr, &staging);
+				bool success = wi::helper::saveTextureToMemory(offset_texture, data);
 				assert(success);
-
-				CommandList cmd = device->BeginCommandList();
-
-				{
-					GPUBarrier barriers[] = {
-						GPUBarrier::Buffer(&offset_buffer,ResourceState::SHADER_RESOURCE,ResourceState::COPY_SRC),
-					};
-					device->Barrier(barriers, arraysize(barriers), cmd);
-				}
-
-				device->CopyResource(&staging, &offset_buffer, cmd);
-
-				{
-					GPUBarrier barriers[] = {
-						GPUBarrier::Buffer(&offset_buffer,ResourceState::COPY_SRC,ResourceState::SHADER_RESOURCE),
-					};
-					device->Barrier(barriers, arraysize(barriers), cmd);
-				}
-
-				device->SubmitCommandLists();
-				device->WaitForGPU();
-
-				// serialize like vector<uint8_t>:
-				archive << staging.mapped_size;
-				for (size_t i = 0; i < staging.mapped_size; ++i)
-				{
-					archive << ((uint8_t*)staging.mapped_data)[i];
-				}
 			}
-			else
-			{
-				archive << size_t(0);
-			}
+			archive << data;
 		}
 	}
 

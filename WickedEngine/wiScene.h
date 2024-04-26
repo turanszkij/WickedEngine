@@ -190,7 +190,6 @@ namespace wi::scene
 			float3 grid_max = float3(1, 1, 1);
 			float smooth_backface = 0.01f; // smoothness of backface test
 			wi::graphics::GPUBuffer ray_buffer;
-			wi::graphics::GPUBuffer offset_buffer;
 			wi::graphics::GPUBuffer variance_buffer;
 			wi::graphics::GPUBuffer raycount_buffer;
 			wi::graphics::GPUBuffer rayallocation_buffer;
@@ -198,6 +197,7 @@ namespace wi::scene
 			wi::graphics::Texture color_texture;
 			wi::graphics::Texture color_texture_rw; // alias of color_texture
 			wi::graphics::Texture depth_texture;
+			wi::graphics::Texture offset_texture;
 
 			void Serialize(wi::Archive& archive);
 		} ddgi;

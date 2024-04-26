@@ -49,22 +49,6 @@ struct DDGIRayDataPacked
 #endif // __cplusplus
 };
 
-struct DDGIProbeOffset
-{
-	uint2 data;
-
-#ifndef __cplusplus
-	inline void store(float3 offset)
-	{
-		data = pack_half3(offset);
-	}
-	inline float3 load()
-	{
-		return unpack_half3(data);
-	}
-#endif // __cplusplus
-};
-
 struct DDGIVarianceData
 {
 	float3 mean;
@@ -100,7 +84,6 @@ struct DDGIVarianceDataPacked
 };
 
 #ifndef __cplusplus
-
 inline float3 ddgi_cellsize()
 {
 	return GetScene().ddgi.cell_size;
@@ -126,6 +109,10 @@ inline uint ddgi_probe_index(uint3 probeCoord)
 {
 	return flatten3D(probeCoord, GetScene().ddgi.grid_dimensions);
 }
+inline uint3 ddgi_probe_offset_pixel(uint3 probeCoord)
+{
+	return probeCoord.xzy;
+}
 inline float3 ddgi_probe_position_rest(uint3 probeCoord)
 {
 	return GetScene().ddgi.grid_min + probeCoord * ddgi_cellsize();
@@ -134,9 +121,11 @@ inline float3 ddgi_probe_position(uint3 probeCoord)
 {
 	float3 pos = ddgi_probe_position_rest(probeCoord);
 	[branch]
-	if (GetScene().ddgi.offset_buffer >= 0)
+	if (GetScene().ddgi.offset_texture >= 0)
 	{
-		pos += bindless_buffers[GetScene().ddgi.offset_buffer].Load<DDGIProbeOffset>(ddgi_probe_index(probeCoord) * sizeof(DDGIProbeOffset)).load();
+		float3 offset = bindless_textures3D[GetScene().ddgi.offset_texture][ddgi_probe_offset_pixel(probeCoord)].xyz;
+		offset = (offset - 0.5) * ddgi_cellsize();
+		pos += offset;
 	}
 	return pos;
 }

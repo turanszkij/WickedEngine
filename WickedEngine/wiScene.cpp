@@ -583,13 +583,6 @@ namespace wi::scene
 				device->CreateBuffer(&buf, nullptr, &ddgi.ray_buffer);
 				device->SetName(&ddgi.ray_buffer, "ddgi.ray_buffer");
 
-				buf.stride = sizeof(DDGIProbeOffset);
-				buf.size = buf.stride * probe_count;
-				buf.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
-				buf.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-				device->CreateBuffer(&buf, nullptr, &ddgi.offset_buffer);
-				device->SetName(&ddgi.offset_buffer, "ddgi.offset_buffer");
-
 				buf.stride = sizeof(DDGIVarianceDataPacked);
 				buf.size = buf.stride * probe_count * DDGI_COLOR_RESOLUTION * DDGI_COLOR_RESOLUTION;
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
@@ -666,6 +659,16 @@ namespace wi::scene
 				tex.layout = ResourceState::SHADER_RESOURCE;
 				device->CreateTexture(&tex, nullptr, &ddgi.depth_texture);
 				device->SetName(&ddgi.depth_texture, "ddgi.depth_texture");
+
+				tex.type = TextureDesc::Type::TEXTURE_3D;
+				tex.width = ddgi.grid_dimensions.x;
+				tex.height = ddgi.grid_dimensions.z;
+				tex.depth = ddgi.grid_dimensions.y;
+				tex.format = Format::R10G10B10A2_UNORM;
+				tex.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+				tex.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+				device->CreateTexture(&tex, nullptr, &ddgi.offset_texture);
+				device->SetName(&ddgi.offset_texture, "ddgi.offset_texture");
 			}
 			ddgi.grid_min = bounds.getMin();
 			ddgi.grid_min.x -= 1;
@@ -949,7 +952,7 @@ namespace wi::scene
 		shaderscene.ddgi.depth_texture_resolution_rcp = float2(1.0f / shaderscene.ddgi.depth_texture_resolution.x, 1.0f / shaderscene.ddgi.depth_texture_resolution.y);
 		shaderscene.ddgi.color_texture = device->GetDescriptorIndex(&ddgi.color_texture, SubresourceType::SRV);
 		shaderscene.ddgi.depth_texture = device->GetDescriptorIndex(&ddgi.depth_texture, SubresourceType::SRV);
-		shaderscene.ddgi.offset_buffer = device->GetDescriptorIndex(&ddgi.offset_buffer, SubresourceType::SRV);
+		shaderscene.ddgi.offset_texture = device->GetDescriptorIndex(&ddgi.offset_texture, SubresourceType::SRV);
 		shaderscene.ddgi.grid_min = ddgi.grid_min;
 		shaderscene.ddgi.grid_extents.x = abs(ddgi.grid_max.x - ddgi.grid_min.x);
 		shaderscene.ddgi.grid_extents.y = abs(ddgi.grid_max.y - ddgi.grid_min.y);
