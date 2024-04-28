@@ -56,6 +56,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		rayCount = align(rayCount, DDGI_RAY_BUCKET_COUNT);
 		rayCount = clamp(rayCount, DDGI_RAY_BUCKET_COUNT, DDGI_MAX_RAYCOUNT);
+
+		if(push.frameIndex == 0)
+			rayCount = DDGI_MAX_RAYCOUNT;
+		
 		raycountBuffer[probeIndex] = rayCount / DDGI_RAY_BUCKET_COUNT;
 		shared_rayCount = rayCount;
 

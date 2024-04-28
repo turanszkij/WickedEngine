@@ -3664,6 +3664,7 @@ void EditorComponent::RegisterRecentlyUsed(const std::string& filename)
 		recent.Set(std::to_string(i).c_str(), recentFilenames[i]);
 	}
 	main->config.Commit();
+	contentBrowserWnd.RefreshContent();
 }
 
 void EditorComponent::Open(const std::string& filename)
@@ -3820,6 +3821,8 @@ void EditorComponent::Save(const std::string& filename)
 		wi::Archive archive = dump_to_header ? wi::Archive() : wi::Archive(filename, false);
 		if (archive.IsOpen())
 		{
+			archive.SetThumbnailAndResetPos(CreateThumbnailScreenshot());
+
 			Scene& scene = GetCurrentScene();
 
 			wi::resourcemanager::Mode embed_mode = (wi::resourcemanager::Mode)optionsWnd.generalWnd.saveModeComboBox.GetItemUserData(optionsWnd.generalWnd.saveModeComboBox.GetSelected());
@@ -3875,6 +3878,93 @@ void EditorComponent::SaveAs()
 			Save(filename);
 			});
 		});
+}
+
+Texture EditorComponent::CreateThumbnailScreenshot() const
+{
+	GraphicsDevice* device = GetDevice();
+	CommandList cmd = device->BeginCommandList();
+	static const uint32_t target_width = 256;
+	static const uint32_t target_height = 128;
+
+	Texture thumbnail = *renderPath->GetLastPostprocessRT();
+
+	// Overestimate actual size with aspect (note that downscale factor will be 4x later):
+	uint32_t current_width = target_width;
+	uint32_t current_height = target_height;
+	while (current_width < thumbnail.desc.width || current_height < thumbnail.desc.height)
+	{
+		current_width *= 4;
+		current_height *= 4;
+	}
+
+	// Crop target:
+	{
+		TextureDesc desc = thumbnail.desc;
+		desc.width = current_width;
+		desc.height = current_height;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::RENDER_TARGET | BindFlag::UNORDERED_ACCESS;
+		Texture upsized;
+		device->CreateTexture(&desc, nullptr, &upsized);
+
+		Viewport vp;
+		vp.width = (float)desc.width;
+		vp.height = (float)desc.height;
+		device->BindViewports(1, &vp, cmd);
+
+		RenderPassImage rp = RenderPassImage::RenderTarget(&upsized, RenderPassImage::LoadOp::CLEAR);
+		device->RenderPassBegin(&rp, 1, cmd);
+
+		wi::Canvas canvas;
+		canvas.width = desc.width;
+		canvas.height = desc.height;
+		wi::image::SetCanvas(canvas);
+
+		wi::image::Params fx;
+		fx.blendFlag = wi::enums::BLENDMODE_OPAQUE;
+
+		const float canvas_aspect = canvas.GetLogicalWidth() / canvas.GetLogicalHeight();
+		const float image_aspect = float(thumbnail.desc.width) / float(thumbnail.desc.height);
+
+		if (canvas_aspect > image_aspect)
+		{
+			// display aspect is wider than image:
+			fx.siz.x = canvas.GetLogicalWidth();
+			fx.siz.y = canvas.GetLogicalHeight() / image_aspect * canvas_aspect;
+		}
+		else
+		{
+			// image aspect is wider or equal to display
+			fx.siz.x = canvas.GetLogicalWidth() / canvas_aspect * image_aspect;
+			fx.siz.y = canvas.GetLogicalHeight();
+		}
+
+		fx.pos = XMFLOAT3(canvas.GetLogicalWidth() * 0.5f, canvas.GetLogicalHeight() * 0.5f, 0);
+		fx.pivot = XMFLOAT2(0.5f, 0.5f);
+
+		wi::image::Draw(&thumbnail, fx, cmd);
+
+		device->RenderPassEnd(cmd);
+
+		wi::image::SetCanvas(*this);
+
+		thumbnail = upsized;
+	}
+
+	// Downsize until target size is reached:
+	while (thumbnail.desc.width > target_width || thumbnail.desc.height > target_height)
+	{
+		TextureDesc desc = thumbnail.desc;
+		desc.width = std::max(target_width, desc.width / 4u);
+		desc.height = std::max(target_height, desc.height / 4u);
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::RENDER_TARGET | BindFlag::UNORDERED_ACCESS;
+		Texture downsized;
+		device->CreateTexture(&desc, nullptr, &downsized);
+		wi::renderer::Postprocess_Downsample4x(thumbnail, downsized, cmd);
+		thumbnail = downsized;
+	}
+
+	return thumbnail;
 }
 
 void EditorComponent::PostSaveText(const std::string& message, const std::string& filename, float time_seconds)

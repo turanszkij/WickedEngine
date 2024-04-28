@@ -1155,7 +1155,7 @@ namespace wi::terrain
 									const float chance = std::pow(((float*)&region)[prop.region], prop.region_power) * noise;
 									if (chance > prop.threshold)
 									{
-										wi::Archive archive = wi::Archive(prop.data.data());
+										wi::Archive archive = wi::Archive(prop.data.data(), prop.data.size());
 										EntitySerializer seri;
 										Entity entity = generator->scene.Entity_Serialize(
 											archive,
@@ -1974,7 +1974,7 @@ namespace wi::terrain
 					{
 						// Serialize the prop data in read mode and remap internal entity references:
 						Scene tmp_scene;
-						wi::Archive tmp_archive = wi::Archive(prop.data.data());
+						wi::Archive tmp_archive = wi::Archive(prop.data.data(), prop.data.size());
 						Entity entity = tmp_scene.Entity_Serialize(
 							tmp_archive,
 							seri,

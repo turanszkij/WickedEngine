@@ -597,7 +597,6 @@
     <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_round_bump.png" />
     <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_round_ddn.png" />
     <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_round_spec.png" />
-    <Image Include="$(MSBuildThisFileDirectory)models\Sponza\thumbnail.png" />
     <Image Include="$(MSBuildThisFileDirectory)models\waterNormalMap.jpg" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\footprint.dds" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\grassparticle.png" />
