@@ -148,6 +148,8 @@ public:
 	void SaveAs();
 	bool deleting = false;
 
+	wi::graphics::Texture CreateThumbnailScreenshot() const;
+
 	std::string save_text_message = "";
 	std::string save_text_filename = "";
 	float save_text_alpha = 0; // seconds until save text disappears

@@ -71,8 +71,14 @@ namespace wi
 		// If the archive was opened from a file, this will return the file's name
 		//	The file's name will include the directory as well
 		const std::string& GetSourceFileName() const;
-		wi::graphics::Texture CreateThumbnail() const;
-		void AttachThumbnailAndResetPos(const wi::graphics::Texture& texture);
+
+		// If Archive contains thumbnail image data, then creates a Texture from it:
+		wi::graphics::Texture CreateThumbnailTexture() const;
+
+		// Set a Texture as the thumbnail. This resets the archive, so you should usually do this before writing data:
+		void SetThumbnailAndResetPos(const wi::graphics::Texture& texture);
+
+		// Open just the tumbnail data from an archive, and return it as a Texture:
 		static wi::graphics::Texture PeekThumbnail(const std::string& filename);
 
 		// Appends the current archive write offset as uint64_t to the archive

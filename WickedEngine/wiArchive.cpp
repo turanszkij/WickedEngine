@@ -1,7 +1,6 @@
 #include "wiArchive.h"
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
-#include "wiRenderer.h"
 
 #include "Utility/stb_image.h"
 
@@ -125,7 +124,7 @@ namespace wi
 		return fileName;
 	}
 
-	wi::graphics::Texture Archive::CreateThumbnail() const
+	wi::graphics::Texture Archive::CreateThumbnailTexture() const
 	{
 		if (thumbnail_data_size == 0)
 			return {};
@@ -141,30 +140,10 @@ namespace wi
 		return texture;
 	}
 
-	void Archive::AttachThumbnailAndResetPos(const wi::graphics::Texture& texture)
+	void Archive::SetThumbnailAndResetPos(const wi::graphics::Texture& texture)
 	{
-		using namespace wi::graphics;
-		GraphicsDevice* device = GetDevice();
-		CommandList cmd;
-		static const uint32_t target_width = 480;
-		static const uint32_t target_height = 272;
-		Texture src = texture;
-		while (src.desc.width > target_width || src.desc.height > target_height)
-		{
-			TextureDesc desc = src.desc;
-			desc.width = std::max(target_width, desc.width / 4u);
-			desc.height = std::max(target_height, desc.height / 4u);
-			Texture downsized;
-			device->CreateTexture(&desc, nullptr, &downsized);
-			if (!cmd.IsValid())
-			{
-				cmd = device->BeginCommandList();
-			}
-			wi::renderer::Postprocess_Downsample4x(src, downsized, cmd);
-			src = downsized;
-		}
 		wi::vector<uint8_t> thumbnail_data;
-		wi::helper::saveTextureToMemoryFile(src, "JPG", thumbnail_data);
+		wi::helper::saveTextureToMemoryFile(texture, "JPG", thumbnail_data);
 		thumbnail_data_size = thumbnail_data.size();
 		thumbnail_data_ptr = thumbnail_data.data();
 		SetReadModeAndResetPos(false); // start over in write mode with thumbnail image data
@@ -176,7 +155,7 @@ namespace wi
 
 		size_t required_size = sizeof(uint64_t) * 2; // version and thumbnail data size
 
-		wi::helper::FileRead(filename, filedata, required_size);
+		wi::helper::FileRead(filename, filedata, required_size); // read only up to version and thumbnail data size
 		if (filedata.empty())
 			return {};
 
@@ -184,16 +163,18 @@ namespace wi
 			wi::Archive archive(filedata.data(), filedata.size());
 			if (archive.IsOpen())
 			{
+				if (archive.thumbnail_data_size == 0)
+					return {};
 				required_size += archive.thumbnail_data_size;
 			}
 		}
 
-		wi::helper::FileRead(filename, filedata, required_size);
+		wi::helper::FileRead(filename, filedata, required_size); // read up to end of thumbnail data
 		if (filedata.empty())
 			return {};
 
 		wi::Archive archive(filedata.data(), filedata.size());
-		return archive.CreateThumbnail();
+		return archive.CreateThumbnailTexture();
 	}
 
 }
