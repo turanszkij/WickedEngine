@@ -3664,6 +3664,7 @@ void EditorComponent::RegisterRecentlyUsed(const std::string& filename)
 		recent.Set(std::to_string(i).c_str(), recentFilenames[i]);
 	}
 	main->config.Commit();
+	contentBrowserWnd.RefreshContent();
 }
 
 void EditorComponent::Open(const std::string& filename)
@@ -3820,6 +3821,8 @@ void EditorComponent::Save(const std::string& filename)
 		wi::Archive archive = dump_to_header ? wi::Archive() : wi::Archive(filename, false);
 		if (archive.IsOpen())
 		{
+			archive.AttachThumbnailAndResetPos(*renderPath->GetLastPostprocessRT());
+
 			Scene& scene = GetCurrentScene();
 
 			wi::resourcemanager::Mode embed_mode = (wi::resourcemanager::Mode)optionsWnd.generalWnd.saveModeComboBox.GetItemUserData(optionsWnd.generalWnd.saveModeComboBox.GetSelected());

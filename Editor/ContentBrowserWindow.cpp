@@ -324,6 +324,7 @@ void ContentBrowserWindow::AddItem(const std::string& filename, const std::strin
 
 	std::string itemname = wi::helper::GetFileNameFromPath(filename);
 	std::string foldername = wi::helper::GetDirectoryFromPath(filename);
+	std::string ext = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
 
 	wi::gui::Button& button = itemButtons.emplace_back();
 	button.Create(icon);
@@ -340,17 +341,32 @@ void ContentBrowserWindow::AddItem(const std::string& filename, const std::strin
 	button.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
 	button.font_description.params.v_align = wi::font::WIFALIGN_TOP;
 	button.font.params.size = 42;
-	std::string thumbnailName = foldername + "/thumbnail.png";
-	if (wi::helper::FileExists(thumbnailName))
+	if (ext.compare("WISCENE") == 0)
 	{
-		wi::Resource thumbnail = wi::resourcemanager::Load(thumbnailName);
-		if (thumbnail.IsValid())
+		wi::graphics::Texture archiveThumbnail = wi::Archive::PeekThumbnail(filename);
+		if (archiveThumbnail.IsValid())
 		{
 			for (int i = 0; i < arraysize(sprites); ++i)
 			{
-				button.sprites[i].textureResource = thumbnail;
+				button.sprites[i].textureResource.SetTexture(archiveThumbnail);
 			}
 			button.SetText("");
+		}
+	}
+	else
+	{
+		std::string thumbnailName = foldername + "/thumbnail.png";
+		if (wi::helper::FileExists(thumbnailName))
+		{
+			wi::Resource thumbnail = wi::resourcemanager::Load(thumbnailName);
+			if (thumbnail.IsValid())
+			{
+				for (int i = 0; i < arraysize(sprites); ++i)
+				{
+					button.sprites[i].textureResource = thumbnail;
+				}
+				button.SetText("");
+			}
 		}
 	}
 }

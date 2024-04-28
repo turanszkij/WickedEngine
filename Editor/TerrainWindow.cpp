@@ -283,7 +283,7 @@ PropWindow::PropWindow(wi::terrain::Prop* prop, wi::scene::Scene* scene)
 
 	if(!prop->data.empty()) // extract object name
 	{
-		wi::Archive archive = wi::Archive(prop->data.data());
+		wi::Archive archive = wi::Archive(prop->data.data(), prop->data.size());
 		EntitySerializer serializer;
 		entity = scene->Entity_Serialize(
 			archive,

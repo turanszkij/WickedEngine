@@ -1,5 +1,6 @@
 This file contains changelog of wi::Archive versions
 
+91: thumbnail image support for Archive
 90: resource serialization resource name list and improvements
 89: distortion particles must use the normal map slot from now on
 88: volumetric clouds second layer
