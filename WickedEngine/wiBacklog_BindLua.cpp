@@ -19,7 +19,22 @@ namespace wi::lua::backlog
 
 		for (int i = 1; i <= argc; i++)
 		{
-			ss += wi::lua::SGetString(L, i);
+			if (wi::lua::SIsString(L, i))
+			{
+				ss += wi::lua::SGetString(L, i);
+			}
+			else if (wi::lua::SIsNumber(L, i))
+			{
+				double arg = wi::lua::SGetDouble(L, i);
+				ss += std::to_string(arg);
+			}
+			else if (wi::lua::SIsBool(L, i)) {
+				bool arg = wi::lua::SGetBool(L, i);
+				ss += arg ? "true" : "false";
+			}
+			else if (wi::lua::SIsNil(L, i)) {
+				ss += "nil";
+			}
 		}
 
 		if (!ss.empty())
