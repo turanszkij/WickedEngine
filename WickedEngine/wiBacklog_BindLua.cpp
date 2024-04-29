@@ -35,10 +35,6 @@ namespace wi::lua::backlog
 			else if (wi::lua::SIsNil(L, i)) {
 				ss += "nil";
 			}
-
-			if (i < argc) {
-				ss += " ";
-			}
 		}
 
 		if (!ss.empty())
