@@ -337,6 +337,25 @@ namespace wi::lua
 	{
 		return lua_isnumber(L, stackpos) != 0;
 	}
+	bool SIsBool(lua_State* L, int stackpos)
+	{
+		return lua_isboolean(L, stackpos);
+	}
+	bool SIsCFunction(lua_State* L, int stackpos)
+	{
+		return lua_iscfunction(L, stackpos);
+	}
+	bool SIsUserdata(lua_State* L, int stackpos)
+	{
+		return lua_isuserdata(L, stackpos);
+	}
+	bool SIsNil(lua_State* L, int stackpos) {
+		return lua_isnil(L, stackpos);
+	}
+	int SGetType(lua_State* L, int stackpos)
+	{
+		return lua_type(L, stackpos);
+	}
 	int SGetInt(lua_State* L, int stackpos)
 	{
 		return static_cast<int>(SGetLongLong(L, stackpos));

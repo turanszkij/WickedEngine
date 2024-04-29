@@ -62,10 +62,20 @@ namespace wi::lua
 
 	//get string from lua on stack position
 	const char* SGetString(lua_State* L, int stackpos);
-	//check if a value is string on the stack position
+	//check if a value is a string on the stack position
 	bool SIsString(lua_State* L, int stackpos);
-	//check if a value is number on the stack position
+	//check if a value is a number on the stack position
 	bool SIsNumber(lua_State* L, int stackpos);
+	//check if a value is a bool on the stack position
+	bool SIsBool(lua_State* L, int stackpos);
+	//check if a value is a c function on the stack position
+	bool SIsCFunction(lua_State* L, int stackpos);
+	//check if a value is a userdata on the stack position
+	bool SIsUserdata(lua_State* L, int stackpos);
+	//check if a value is nil on the stack position
+	bool SIsNil(lua_State* L, int stackpos);
+	//get lua.h type int on the stack position
+	int SGetType(lua_State* L, int stackpos);
 	//get int from lua on stack position
 	int SGetInt(lua_State* L, int stackpos);
 	//get long from lua on stack position
