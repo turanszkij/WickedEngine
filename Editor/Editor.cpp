@@ -717,12 +717,23 @@ void EditorComponent::Load()
 	};
 	wi::helper::GetFileNamesInDirectory("fonts/", load_font, "TTF");
 
-	size_t current_recent = 0;
-	auto& recent = main->config.GetSection("recent");
-	while (recent.Has(std::to_string(current_recent).c_str()))
 	{
-		recentFilenames.push_back(recent.GetText(std::to_string(current_recent).c_str()));
-		current_recent++;
+		size_t current_recent = 0;
+		auto& recent = main->config.GetSection("recent");
+		while (recent.Has(std::to_string(current_recent).c_str()))
+		{
+			recentFilenames.push_back(recent.GetText(std::to_string(current_recent).c_str()));
+			current_recent++;
+		}
+	}
+	{
+		size_t current_recent = 0;
+		auto& recent = main->config.GetSection("recent_folders");
+		while (recent.Has(std::to_string(current_recent).c_str()))
+		{
+			recentFolders.push_back(recent.GetText(std::to_string(current_recent).c_str()));
+			current_recent++;
+		}
 	}
 
 	RenderPath2D::Load();
@@ -3642,26 +3653,52 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 
 void EditorComponent::RegisterRecentlyUsed(const std::string& filename)
 {
-	for (size_t i = 0; i < recentFilenames.size();)
 	{
-		if (recentFilenames[i].compare(filename) == 0)
+		for (size_t i = 0; i < recentFilenames.size();)
 		{
-			recentFilenames.erase(recentFilenames.begin() + i);
+			if (recentFilenames[i].compare(filename) == 0)
+			{
+				recentFilenames.erase(recentFilenames.begin() + i);
+			}
+			else
+			{
+				i++;
+			}
 		}
-		else
+		while (recentFilenames.size() >= maxRecentFilenames)
 		{
-			i++;
+			recentFilenames.erase(recentFilenames.begin());
+		}
+		recentFilenames.push_back(filename);
+		auto& recent = main->config.GetSection("recent");
+		for (size_t i = 0; i < recentFilenames.size(); ++i)
+		{
+			recent.Set(std::to_string(i).c_str(), recentFilenames[i]);
 		}
 	}
-	while (recentFilenames.size() >= maxRecentFilenames)
 	{
-		recentFilenames.erase(recentFilenames.begin());
-	}
-	recentFilenames.push_back(filename);
-	auto& recent = main->config.GetSection("recent");
-	for (size_t i = 0; i < recentFilenames.size(); ++i)
-	{
-		recent.Set(std::to_string(i).c_str(), recentFilenames[i]);
+		std::string folder = wi::helper::GetDirectoryFromPath(filename);
+		for (size_t i = 0; i < recentFolders.size();)
+		{
+			if (recentFolders[i].compare(folder) == 0)
+			{
+				recentFolders.erase(recentFolders.begin() + i);
+			}
+			else
+			{
+				i++;
+			}
+		}
+		while (recentFolders.size() >= maxRecentFolders)
+		{
+			recentFolders.erase(recentFolders.begin());
+		}
+		recentFolders.push_back(folder);
+		auto& recent = main->config.GetSection("recent_folders");
+		for (size_t i = 0; i < recentFolders.size(); ++i)
+		{
+			recent.Set(std::to_string(i).c_str(), recentFolders[i]);
+		}
 	}
 	main->config.Commit();
 	contentBrowserWnd.RefreshContent();

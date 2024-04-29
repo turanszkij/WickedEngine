@@ -130,6 +130,7 @@ void ContentBrowserWindow::ResizeLayout()
 	openFolderButton.SetSize(XMFLOAT2(separator - padding * 2, openFolderButton.GetSize().y));
 	openFolderButton.AttachTo(this);
 
+	size_t seli = 0;
 	for (auto& x : folderButtons)
 	{
 		x.Detach();
@@ -137,6 +138,9 @@ void ContentBrowserWindow::ResizeLayout()
 		x.SetSize(XMFLOAT2(separator - padding * 2, x.GetSize().y));
 		y += x.GetSize().y + padding;
 		x.AttachTo(this);
+		seli++;
+		if (seli == SELECTION_RECENTFOLDER_BEGIN)
+			y += x.GetSize().y + padding;
 	}
 
 	y = padding + 10;
@@ -181,6 +185,7 @@ void ContentBrowserWindow::RefreshContent()
 	{
 		wi::gui::Button& button = folderButtons[SELECTION_RECENT];
 		button.Create("Recently Used");
+		button.SetTooltip("List all recently used files, not grouped by folders.");
 		button.SetLocalizationEnabled(false);
 		button.SetSize(XMFLOAT2(wid, hei));
 		button.OnClick([this](wi::gui::EventArgs args) {
@@ -196,6 +201,7 @@ void ContentBrowserWindow::RefreshContent()
 	{
 		wi::gui::Button& button = folderButtons[SELECTION_SCRIPTS];
 		button.Create("Scripts");
+		button.SetTooltip(content_folder + "scripts");
 		button.SetLocalizationEnabled(false);
 		button.SetSize(XMFLOAT2(wid, hei));
 		button.OnClick([this](wi::gui::EventArgs args) {
@@ -211,6 +217,7 @@ void ContentBrowserWindow::RefreshContent()
 	{
 		wi::gui::Button& button = folderButtons[SELECTION_MODELS];
 		button.Create("Models");
+		button.SetTooltip(content_folder + "models");
 		button.SetLocalizationEnabled(false);
 		button.SetSize(XMFLOAT2(wid, hei));
 		button.OnClick([this](wi::gui::EventArgs args) {
@@ -220,6 +227,26 @@ void ContentBrowserWindow::RefreshContent()
 		if (current_selection == SELECTION_COUNT)
 		{
 			current_selection = SELECTION_MODELS;
+		}
+	}
+
+	for (size_t i = 0; i < editor->recentFolders.size(); ++i)
+	{
+		wi::gui::Button& button = folderButtons[SELECTION_RECENTFOLDER_BEGIN + i];
+		std::string folder = editor->recentFolders[i];
+		folder = folder.substr(0, folder.find_last_of("/\\"));
+		folder = folder.substr(folder.find_last_of("/\\"));
+		button.Create(folder);
+		button.SetTooltip(editor->recentFolders[i]); // full folder name!
+		button.SetLocalizationEnabled(false);
+		button.SetSize(XMFLOAT2(wid, hei));
+		button.OnClick([this, i](wi::gui::EventArgs args) {
+			SetSelection((SELECTION)(SELECTION_RECENTFOLDER_BEGIN + i));
+		});
+		AddWidget(&button, wi::gui::Window::AttachmentOptions::NONE);
+		if (current_selection == SELECTION_COUNT)
+		{
+			current_selection = (SELECTION)(SELECTION_RECENTFOLDER_BEGIN + i);
 		}
 	}
 
@@ -244,7 +271,6 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 
 		switch (selection)
 		{
-		default:
 		case SELECTION_SCRIPTS:
 			AddItems(content_folder + "scripts/", "lua", ICON_SCRIPT);
 			openFolderButton.OnClick([this](wi::gui::EventArgs args) {
@@ -287,6 +313,21 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 				{
 					AddItem(filename, ICON_OBJECT);
 				}
+			}
+			break;
+		default:
+			{
+				size_t i = selection - SELECTION_RECENTFOLDER_BEGIN;
+				i = std::min(i, editor->recentFolders.size() - 1);
+				const std::string& folder = editor->recentFolders[i];
+				AddItems(folder + "/", "wiscene", ICON_OBJECT);
+				AddItems(folder + "/", "gltf", ICON_OBJECT);
+				AddItems(folder + "/", "glb", ICON_OBJECT);
+				AddItems(folder + "/", "obj", ICON_OBJECT);
+				openFolderButton.OnClick([this, folder](wi::gui::EventArgs args) {
+					wi::helper::OpenUrl(folder);
+				});
+				AddWidget(&openFolderButton, wi::gui::Window::AttachmentOptions::NONE);
 			}
 			break;
 		}
