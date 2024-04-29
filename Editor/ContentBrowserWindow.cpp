@@ -233,11 +233,14 @@ void ContentBrowserWindow::RefreshContent()
 	for (size_t i = 0; i < editor->recentFolders.size(); ++i)
 	{
 		wi::gui::Button& button = folderButtons[SELECTION_RECENTFOLDER_BEGIN + i];
-		std::string folder = editor->recentFolders[i];
-		folder = folder.substr(0, folder.find_last_of("/\\"));
+		std::string folder = editor->recentFolders[editor->recentFolders.size() - 1 - i];
+		while (!folder.empty() && (folder.back() == '/' || folder.back() == '\\'))
+		{
+			folder.pop_back();
+		}
 		folder = folder.substr(folder.find_last_of("/\\"));
 		button.Create(folder);
-		button.SetTooltip(editor->recentFolders[i]); // full folder name!
+		button.SetTooltip(editor->recentFolders[editor->recentFolders.size() - 1 - i]); // full folder name!
 		button.SetLocalizationEnabled(false);
 		button.SetSize(XMFLOAT2(wid, hei));
 		button.OnClick([this, i](wi::gui::EventArgs args) {
@@ -280,6 +283,7 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 			break;
 		case SELECTION_MODELS:
 			AddItems(content_folder + "models/", "wiscene", ICON_OBJECT);
+			AddItems(content_folder + "models/", "vrm", ICON_HUMANOID);
 			AddItems(content_folder + "models/", "gltf", ICON_OBJECT);
 			AddItems(content_folder + "models/", "glb", ICON_OBJECT);
 			AddItems(content_folder + "models/", "obj", ICON_OBJECT);
@@ -301,6 +305,10 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 				{
 					AddItem(filename, ICON_OBJECT);
 				}
+				if (!ext.compare("VRM"))
+				{
+					AddItem(filename, ICON_HUMANOID);
+				}
 				if (!ext.compare("GLTF"))
 				{
 					AddItem(filename, ICON_OBJECT);
@@ -319,8 +327,9 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 			{
 				size_t i = selection - SELECTION_RECENTFOLDER_BEGIN;
 				i = std::min(i, editor->recentFolders.size() - 1);
-				const std::string& folder = editor->recentFolders[i];
+				const std::string& folder = editor->recentFolders[editor->recentFolders.size() - 1 - i];
 				AddItems(folder + "/", "wiscene", ICON_OBJECT);
+				AddItems(folder + "/", "vrm", ICON_HUMANOID);
 				AddItems(folder + "/", "gltf", ICON_OBJECT);
 				AddItems(folder + "/", "glb", ICON_OBJECT);
 				AddItems(folder + "/", "obj", ICON_OBJECT);

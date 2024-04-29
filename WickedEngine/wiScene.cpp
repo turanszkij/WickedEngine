@@ -6564,26 +6564,27 @@ namespace wi::scene
 					Entity bone_source = humanoid_source.bones[humanoidBoneIndex];
 					if (bone_source == channel.target)
 					{
-						retarget_valid = true;
-						found = true;
 						Entity bone_dest = humanoid_dest->bones[humanoidBoneIndex];
-
-						auto& retarget_channel = animation.channels.emplace_back();
-						retarget_channel = channel;
-						retarget_channel.target = bone_dest;
-						retarget_channel.samplerIndex = (int)animation.samplers.size();
-
-						auto& sampler = animation_source->samplers[channel.samplerIndex];
-
-						auto& retarget_sampler = animation.samplers.emplace_back();
-						retarget_sampler = sampler;
-						retarget_sampler.backwards_compatibility_data = {};
-						retarget_sampler.scene = src_scene == this ? nullptr : src_scene;
 
 						TransformComponent* transform_source = src_scene->transforms.GetComponent(bone_source);
 						TransformComponent* transform_dest = transforms.GetComponent(bone_dest);
 						if (transform_source != nullptr && transform_dest != nullptr)
 						{
+							retarget_valid = true;
+							found = true;
+
+							auto& retarget_channel = animation.channels.emplace_back();
+							retarget_channel = channel;
+							retarget_channel.target = bone_dest;
+							retarget_channel.samplerIndex = (int)animation.samplers.size();
+
+							auto& sampler = animation_source->samplers[channel.samplerIndex];
+
+							auto& retarget_sampler = animation.samplers.emplace_back();
+							retarget_sampler = sampler;
+							retarget_sampler.backwards_compatibility_data = {};
+							retarget_sampler.scene = src_scene == this ? nullptr : src_scene;
+
 							XMMATRIX srcParentMatrix = src_scene->ComputeParentMatrixRecursive(bone_source);
 							XMMATRIX srcMatrix = transform_source->GetLocalMatrix() * srcParentMatrix;
 							XMMATRIX inverseSrcMatrix = XMMatrixInverse(nullptr, srcMatrix);
@@ -6657,6 +6658,7 @@ namespace wi::scene
 								XMStoreFloat4x4(&retarget.srcRelativeParentMatrix, srcRelativeParentMatrix);
 							}
 						}
+
 						break;
 					}
 				}
