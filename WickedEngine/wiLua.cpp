@@ -107,12 +107,17 @@ namespace wi::lua
 				std::string command = std::string(filedata.begin(), filedata.end());
 				PID = AttachScriptParameters(command, filename, PID, customparameters_prepend, customparameters_append);
 
+				lua_settop(L, 0);
+
 				int status = luaL_loadstring(L, command.c_str());
 				if (status == 0)
 				{
 					status = lua_pcall(L, 0, LUA_MULTRET, 0);
-					auto return_PID = std::to_string(PID);
-					SSetString(L, return_PID);
+				}
+
+				if (status == 0)
+				{
+					return lua_gettop(L);
 				}
 				else
 				{
@@ -134,7 +139,7 @@ namespace wi::lua
 			SError(L, "dofile(string filename) not enough arguments!");
 		}
 
-		return 1;
+		return 0;
 	}
 	int Internal_DoBinaryFile(lua_State* L)
 	{
