@@ -38,6 +38,7 @@ enum class FileType
 	GLTF,
 	GLB,
 	VRM,
+	FBX,
 	IMAGE,
 	VIDEO,
 	SOUND,
@@ -49,6 +50,7 @@ static wi::unordered_map<std::string, FileType> filetypes = {
 	{"GLTF", FileType::GLTF},
 	{"GLB", FileType::GLB},
 	{"VRM", FileType::VRM},
+	{"FBX", FileType::FBX},
 };
 
 void Editor::Initialize()
@@ -393,6 +395,7 @@ void EditorComponent::Load()
 		params.extensions.push_back("gltf");
 		params.extensions.push_back("glb");
 		params.extensions.push_back("vrm");
+		params.extensions.push_back("fbx");
 		params.extensions.push_back("lua");
 		auto ext_video = wi::resourcemanager::GetSupportedVideoExtensions();
 		for (auto& x : ext_video)
@@ -594,7 +597,7 @@ void EditorComponent::Load()
 		ss += "\nTips\n";
 		ss += "-------\n";
 		ss += "You can find sample scenes in the Content/models directory. Try to load one.\n";
-		ss += "You can also import models from .OBJ, .GLTF, .GLB, .VRM files.\n";
+		ss += "You can also import models from .OBJ, .GLTF, .GLB, .VRM, .FBX files.\n";
 		ss += "You can find a program configuration file at Editor/config.ini\n";
 		ss += "You can find sample LUA scripts in the Content/scripts directory. Try to load one.\n";
 		ss += "You can find a startup script in startup.lua (this will be executed on program start, if exists)\n";
@@ -3789,6 +3792,12 @@ void EditorComponent::Open(std::string filename)
 		{
 			Scene scene;
 			ImportModel_GLTF(filename, scene);
+			GetCurrentScene().Merge(scene);
+		}
+		else if (type == FileType::FBX)
+		{
+			Scene scene;
+			ImportModel_FBX(filename, scene);
 			GetCurrentScene().Merge(scene);
 		}
 	});
