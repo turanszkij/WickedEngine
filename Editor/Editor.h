@@ -145,7 +145,7 @@ public:
 	size_t maxRecentFolders = 5;
 	void RegisterRecentlyUsed(const std::string& filename);
 
-	void Open(const std::string& filename);
+	void Open(std::string filename);
 	void Save(const std::string& filename);
 	void SaveAs();
 	bool deleting = false;

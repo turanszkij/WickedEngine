@@ -3704,7 +3704,7 @@ void EditorComponent::RegisterRecentlyUsed(const std::string& filename)
 	contentBrowserWnd.RefreshContent();
 }
 
-void EditorComponent::Open(const std::string& filename)
+void EditorComponent::Open(std::string filename)
 {
 	std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
 
