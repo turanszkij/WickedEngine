@@ -19,6 +19,7 @@ set (SOURCE_FILES
 	MeshWindow.cpp
 	ModelImporter_GLTF.cpp
 	ModelImporter_OBJ.cpp
+	ModelImporter_FBX.cpp
 	NameWindow.cpp
 	ObjectWindow.cpp
 	PaintToolWindow.cpp
