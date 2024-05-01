@@ -380,7 +380,7 @@ void EditorComponent::Load()
 	openButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	openButton.SetShadowRadius(2);
 	openButton.font.params.shadowColor = wi::Color::Transparent();
-	openButton.SetTooltip("Open a scene, import a model or execute a Lua script...\nSupported file types: .wiscene, .obj, .gltf, .glb, .vrm, .lua");
+	openButton.SetTooltip("Open a scene, import an asset or execute a Lua script...\nSupported file types: .wiscene, .obj, .gltf, .glb, .vrm, .fbx, .lua, images, videos, sounds, etc.");
 #ifdef PLATFORM_WINDOWS_DESKTOP
 	openButton.SetTooltip(openButton.GetTooltip() + "\nYou can also drag and drop a file onto the window to open it in the Editor.");
 #endif // PLATFORM_WINDOWS_DESKTOP
@@ -389,7 +389,7 @@ void EditorComponent::Load()
 	openButton.OnClick([&](wi::gui::EventArgs args) {
 		wi::helper::FileDialogParams params;
 		params.type = wi::helper::FileDialogParams::OPEN;
-		params.description = ".wiscene, .obj, .gltf, .glb, .vrm, .lua, .mp4, .png, ...";
+		params.description = ".wiscene, .obj, .gltf, .glb, .vrm, .fbx, .lua, .mp4, .png, ...";
 		params.extensions.push_back("wiscene");
 		params.extensions.push_back("obj");
 		params.extensions.push_back("gltf");
@@ -425,7 +425,7 @@ void EditorComponent::Load()
 	contentBrowserButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	contentBrowserButton.SetShadowRadius(2);
 	contentBrowserButton.font.params.shadowColor = wi::Color::Transparent();
-	contentBrowserButton.SetTooltip("Browse sample content.");
+	contentBrowserButton.SetTooltip("Browse content.");
 	contentBrowserButton.SetColor(wi::Color(50, 100, 255, 180), wi::gui::WIDGETSTATE::IDLE);
 	contentBrowserButton.SetColor(wi::Color(120, 160, 255, 255), wi::gui::WIDGETSTATE::FOCUS);
 	contentBrowserButton.OnClick([&](wi::gui::EventArgs args) {

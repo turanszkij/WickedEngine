@@ -11,6 +11,8 @@ using namespace wi::graphics;
 using namespace wi::scene;
 using namespace wi::ecs;
 
+void Import_Mixamo_Bone(Scene& scene, Entity armatureEntity, Entity boneEntity);
+
 void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 {
 	ufbx_load_opts opts = {};
@@ -55,6 +57,33 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 		transform.translation_local.z = node->local_transform.translation.z;
 	}
 
+	wi::vector<wi::Resource> embedded_resources;
+	auto preload_embedded_texture = [&](ufbx_texture* texture) {
+		if (texture->content.data == nullptr)
+			return;
+
+		std::string filename = texture->filename.data;
+		if (filename.empty())
+		{
+			// Force some image resource name:
+			do {
+				filename.clear();
+				filename += "fbximport_" + std::to_string(wi::random::GetRandom(std::numeric_limits<uint32_t>::max())) + ".png";
+			} while (wi::resourcemanager::Contains(filename)); // this is to avoid overwriting an existing imported image
+		}
+
+		auto resource = wi::resourcemanager::Load(
+			filename,
+			wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA | wi::resourcemanager::Flags::IMPORT_DELAY,
+			(const uint8_t*)texture->content.data,
+			texture->content.size
+		);
+
+		if (!resource.IsValid())
+			return;
+		embedded_resources.push_back(resource); //retain embedded resource for whole import session
+	};
+
 	for (const ufbx_material* material : fbxscene->materials)
 	{
 		Entity entity = CreateEntity();
@@ -70,22 +99,37 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 		if (material->pbr.base_color.texture != nullptr)
 		{
 			materialcomponent.textures[MaterialComponent::BASECOLORMAP].name = material->pbr.base_color.texture->filename.data;
+			preload_embedded_texture(material->pbr.base_color.texture);
 		}
 		if (material->pbr.normal_map.texture != nullptr)
 		{
 			materialcomponent.textures[MaterialComponent::NORMALMAP].name = material->pbr.normal_map.texture->filename.data;
+			preload_embedded_texture(material->pbr.normal_map.texture);
 		}
 		if (material->fbx.specular_factor.texture != nullptr) // not from pbr.
 		{
 			materialcomponent.textures[MaterialComponent::SPECULARMAP].name = material->fbx.specular_factor.texture->filename.data;
+			preload_embedded_texture(material->fbx.specular_factor.texture);
 		}
 		if (material->pbr.displacement_map.texture != nullptr)
 		{
 			materialcomponent.textures[MaterialComponent::DISPLACEMENTMAP].name = material->pbr.displacement_map.texture->filename.data;
+			preload_embedded_texture(material->pbr.displacement_map.texture);
+			if (material->pbr.displacement_map.has_value)
+			{
+				materialcomponent.displacementMapping = material->pbr.displacement_map.value_real;
+			}
 		}
 		if (material->pbr.ambient_occlusion.texture != nullptr)
 		{
 			materialcomponent.textures[MaterialComponent::OCCLUSIONMAP].name = material->pbr.ambient_occlusion.texture->filename.data;
+			preload_embedded_texture(material->pbr.ambient_occlusion.texture);
+			materialcomponent.SetOcclusionEnabled_Secondary(true);
+		}
+		if (material->pbr.emission_color.texture != nullptr)
+		{
+			materialcomponent.textures[MaterialComponent::EMISSIVEMAP].name = material->pbr.emission_color.texture->filename.data;
+			preload_embedded_texture(material->pbr.emission_color.texture);
 		}
 
 		if (
@@ -103,6 +147,15 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 			)
 		{
 			materialcomponent.SetUseSpecularGlossinessWorkflow(true);
+		}
+
+		if (material->pbr.emission_color.has_value)
+		{
+			materialcomponent.emissiveColor = XMFLOAT4(material->pbr.emission_color.value_vec4.v);
+		}
+		if (material->pbr.emission_factor.has_value)
+		{
+			materialcomponent.emissiveColor.w = material->pbr.emission_factor.value_real;
 		}
 
 		materialcomponent.CreateRenderData();
@@ -376,7 +429,8 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 			continue;
 		for (const ufbx_skin_cluster* cluster : skin->clusters)
 		{
-			armature->boneCollection.push_back(node_lookup[cluster->bone_node]);
+			Entity boneEntity = node_lookup[cluster->bone_node];
+			armature->boneCollection.push_back(boneEntity);
 
 			XMFLOAT4X4 inverseBindMatrix = wi::math::IDENTITY_MATRIX;
 			inverseBindMatrix._11 = cluster->geometry_to_bone.m00;
@@ -396,24 +450,325 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 			inverseBindMatrix._43 = cluster->geometry_to_bone.m23;
 
 			armature->inverseBindMatrices.push_back(inverseBindMatrix);
+
+			Import_Mixamo_Bone(scene, entity, boneEntity);
 		}
 	}
 
-	for (const ufbx_anim_stack* anim_stack : fbxscene->anim_stacks)
+	for (const ufbx_anim_stack* stack : fbxscene->anim_stacks)
 	{
-		for (const ufbx_anim_layer* layer : anim_stack->layers)
+		ufbx_baked_anim* bake = ufbx_bake_anim(fbxscene, stack->anim, nullptr, nullptr);
+		assert(bake != nullptr);
+		if (bake == nullptr)
+			continue;
+
+		Entity entity = CreateEntity();
+		scene.Component_Attach(entity, rootEntity);
+		AnimationComponent& animcomponent = scene.animations.Create(entity);
+		animcomponent.start = (float)bake->playback_time_begin;
+		animcomponent.end = (float)bake->playback_time_end;
+
+		for (const ufbx_baked_node& bake_node : bake->nodes)
 		{
-			Entity entity = CreateEntity();
-			scene.Component_Attach(entity, rootEntity);
-			if (layer->name.length > 0)
+			ufbx_node* scene_node = fbxscene->nodes[bake_node.typed_id];
+			Entity target = node_lookup[scene_node];
+
+			// Translation:
 			{
-				scene.names.Create(entity) = layer->name.data;
+				Entity animDataEntity = CreateEntity();
+				AnimationDataComponent& animationdata = scene.animation_datas.Create(animDataEntity);
+				scene.Component_Attach(animDataEntity, entity);
+				for (const ufbx_baked_vec3& keyframe : bake_node.translation_keys)
+				{
+					animationdata.keyframe_times.push_back((float)keyframe.time);
+					animationdata.keyframe_data.push_back(keyframe.value.x);
+					animationdata.keyframe_data.push_back(keyframe.value.y);
+					animationdata.keyframe_data.push_back(keyframe.value.z);
+				}
+				AnimationComponent::AnimationChannel& channel = animcomponent.channels.emplace_back();
+				channel.target = target;
+				channel.path = AnimationComponent::AnimationChannel::Path::TRANSLATION;
+				channel.samplerIndex = (int)animcomponent.samplers.size();
+				AnimationComponent::AnimationSampler& sampler = animcomponent.samplers.emplace_back();
+				sampler.mode = AnimationComponent::AnimationSampler::Mode::LINEAR;
+				sampler.data = animDataEntity;
 			}
-			AnimationComponent& animcomponent = scene.animations.Create(entity);
-			animcomponent.start = (float)layer->anim->time_begin;
-			animcomponent.end = (float)layer->anim->time_end;
+
+			// Rotation:
+			{
+				Entity animDataEntity = CreateEntity();
+				AnimationDataComponent& animationdata = scene.animation_datas.Create(animDataEntity);
+				scene.Component_Attach(animDataEntity, entity);
+				for (const ufbx_baked_quat& keyframe : bake_node.rotation_keys)
+				{
+					animationdata.keyframe_times.push_back((float)keyframe.time);
+					animationdata.keyframe_data.push_back(keyframe.value.x);
+					animationdata.keyframe_data.push_back(keyframe.value.y);
+					animationdata.keyframe_data.push_back(keyframe.value.z);
+					animationdata.keyframe_data.push_back(keyframe.value.w);
+				}
+				AnimationComponent::AnimationChannel& channel = animcomponent.channels.emplace_back();
+				channel.target = target;
+				channel.path = AnimationComponent::AnimationChannel::Path::ROTATION;
+				channel.samplerIndex = (int)animcomponent.samplers.size();
+				AnimationComponent::AnimationSampler& sampler = animcomponent.samplers.emplace_back();
+				sampler.mode = AnimationComponent::AnimationSampler::Mode::LINEAR;
+				sampler.data = animDataEntity;
+			}
+
+			// Scale:
+			{
+				Entity animDataEntity = CreateEntity();
+				AnimationDataComponent& animationdata = scene.animation_datas.Create(animDataEntity);
+				scene.Component_Attach(animDataEntity, entity);
+				for (const ufbx_baked_vec3& keyframe : bake_node.scale_keys)
+				{
+					animationdata.keyframe_times.push_back((float)keyframe.time);
+					animationdata.keyframe_data.push_back(keyframe.value.x);
+					animationdata.keyframe_data.push_back(keyframe.value.y);
+					animationdata.keyframe_data.push_back(keyframe.value.z);
+				}
+				AnimationComponent::AnimationChannel& channel = animcomponent.channels.emplace_back();
+				channel.target = target;
+				channel.path = AnimationComponent::AnimationChannel::Path::SCALE;
+				channel.samplerIndex = (int)animcomponent.samplers.size();
+				AnimationComponent::AnimationSampler& sampler = animcomponent.samplers.emplace_back();
+				sampler.mode = AnimationComponent::AnimationSampler::Mode::LINEAR;
+				sampler.data = animDataEntity;
+			}
+
 		}
+
+		ufbx_free_baked_anim(bake);
 	}
 
 	ufbx_free_scene(fbxscene);
+}
+
+void Import_Mixamo_Bone(Scene& scene, Entity armatureEntity, Entity boneEntity)
+{
+	auto get_humanoid = [&]() -> HumanoidComponent& {
+		if (scene.humanoids.GetCount() == 0)
+		{
+			scene.humanoids.Create(armatureEntity);
+		}
+		// Note: it seems there are multiple armatures for multiple body parts in some FBX from Mixamo,
+		//	but there should be only one humanoid, so we don't create humanoids for each armature
+		HumanoidComponent& component = scene.humanoids[0];
+		return component;
+	};
+
+	const NameComponent* namecomponent = scene.names.GetComponent(boneEntity);
+	if (namecomponent == nullptr)
+		return;
+	const std::string& name = namecomponent->name;
+
+	if (!name.compare("mixamorig:Hips"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::Hips)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:Spine"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::Spine)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:Spine1"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::Chest)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:Spine2"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::UpperChest)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:Neck"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::Neck)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:Head"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::Head)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftShoulder"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftShoulder)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightShoulder"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightShoulder)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftArm"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftUpperArm)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightArm"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightUpperArm)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftForeArm"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftLowerArm)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightForeArm"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightLowerArm)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftHand"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftHand)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightHand"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightHand)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftHandThumb1"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftThumbMetacarpal)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightHandThumb1"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightThumbMetacarpal)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftHandThumb2"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftThumbProximal)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightHandThumb2"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightThumbProximal)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftHandThumb3"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftThumbDistal)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightHandThumb3"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightThumbDistal)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftHandIndex1"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftIndexProximal)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightHandIndex1"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightIndexProximal)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftHandIndex2"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftIndexIntermediate)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightHandIndex2"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightIndexIntermediate)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftHandIndex3"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftIndexDistal)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightHandIndex3"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightIndexDistal)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftHandMiddle1"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftMiddleProximal)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightHandMiddle1"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightMiddleProximal)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftHandMiddle2"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftMiddleIntermediate)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightHandMiddle2"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightMiddleIntermediate)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftHandMiddle3"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftMiddleDistal)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightHandMiddle3"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightMiddleDistal)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftHandRing1"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftRingProximal)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightHandRing1"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightRingProximal)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftHandRing2"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftRingIntermediate)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightHandRing2"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightRingIntermediate)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftHandRing3"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftRingDistal)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightHandRing3"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightRingDistal)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftHandPinky1"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftLittleProximal)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightHandPinky1"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightLittleProximal)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftHandPinky2"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftLittleIntermediate)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightHandPinky2"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightLittleIntermediate)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftHandPinky3"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftLittleDistal)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightHandPinky3"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightLittleDistal)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftUpLeg"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftUpperLeg)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightUpLeg"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightUpperLeg)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftLeg"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftLowerLeg)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightLeg"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightLowerLeg)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftFoot"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftFoot)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightFoot"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightFoot)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:LeftToeBase"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftToes)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightToeBase"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightToes)] = boneEntity;
+	}
 }
