@@ -286,6 +286,7 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 			AddItems(content_folder + "models/", "vrm", ICON_HUMANOID);
 			AddItems(content_folder + "models/", "gltf", ICON_OBJECT);
 			AddItems(content_folder + "models/", "glb", ICON_OBJECT);
+			AddItems(content_folder + "models/", "fbx", ICON_OBJECT);
 			AddItems(content_folder + "models/", "obj", ICON_OBJECT);
 			openFolderButton.OnClick([this](wi::gui::EventArgs args) {
 				wi::helper::OpenUrl(content_folder + "models/");
@@ -317,6 +318,10 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 				{
 					AddItem(filename, ICON_OBJECT);
 				}
+				if (!ext.compare("FBX"))
+				{
+					AddItem(filename, ICON_OBJECT);
+				}
 				if (!ext.compare("OBJ"))
 				{
 					AddItem(filename, ICON_OBJECT);
@@ -332,6 +337,7 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 				AddItems(folder + "/", "vrm", ICON_HUMANOID);
 				AddItems(folder + "/", "gltf", ICON_OBJECT);
 				AddItems(folder + "/", "glb", ICON_OBJECT);
+				AddItems(folder + "/", "fbx", ICON_OBJECT);
 				AddItems(folder + "/", "obj", ICON_OBJECT);
 				openFolderButton.OnClick([this, folder](wi::gui::EventArgs args) {
 					wi::helper::OpenUrl(folder);

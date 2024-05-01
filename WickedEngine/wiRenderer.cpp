@@ -4413,7 +4413,10 @@ void UpdateRenderData(
 			Entity entity = vis.scene->meshes.GetEntity(i);
 			const MeshComponent& mesh = vis.scene->meshes[i];
 
-			if ((mesh.IsSkinned() || mesh.active_morph_count > 0) && mesh.streamoutBuffer.IsValid())
+			if (
+				(mesh.IsSkinned() || !mesh.morph_targets.empty()) && // Note: even if all morphs are inactive, the skinning must be done
+				mesh.streamoutBuffer.IsValid()
+				)
 			{
 				const SoftBodyPhysicsComponent* softbody = vis.scene->softbodies.GetComponent(entity);
 				if (softbody != nullptr && softbody->physicsobject != nullptr)

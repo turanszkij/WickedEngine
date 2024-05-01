@@ -32,7 +32,7 @@ You can get the full source code by using Git version control and cloning https:
 - Linux
 - UWP
 - Xbox Series X|S
-- PlayStation 5 [in progress]
+- PlayStation 5
 
 ### How to build: 
 
@@ -207,6 +207,7 @@ In addition, the Editor supports the importing of some common model formats (the
 - <b>OBJ</b>
 - <b>GLTF 2.0</b>
 - <b>VRM</b>
+- <b>FBX</b>
 
 The preferred workflow is to import models into the Editor, and save them as <b>WISCENE</b>, then any Wicked Engine application can open them.<br/>
 

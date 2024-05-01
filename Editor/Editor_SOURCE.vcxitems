@@ -98,6 +98,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)MeshWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ModelImporter_FBX.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ModelImporter_GLTF.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ModelImporter_OBJ.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)NameWindow.cpp" />
@@ -189,6 +190,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)tiny_obj_loader.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)TransformWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Translator.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ufbx.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)VideoWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)VoxelGridWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)WeatherWindow.h" />
