@@ -184,12 +184,24 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 			scene.names.Create(entity) = mesh->name.data;
 		}
 		MeshComponent& meshcomponent = scene.meshes.Create(entity);
+		uint32_t vertexOffset = 0;
 		wi::vector<uint32_t> tri_indices(mesh->max_face_triangles * 3);
 		const ufbx_skin_deformer* skin = nullptr;
 		if (mesh->skin_deformers.count > 0)
 		{
 			skin = mesh->skin_deformers[0];
 			meshcomponent.armatureID = skin_lookup[skin];
+		}
+		for (const ufbx_blend_deformer* deformer : mesh->blend_deformers)
+		{
+			meshcomponent.morph_targets.resize(deformer->channels.count);
+			for (size_t i = 0; i < deformer->channels.count; ++i)
+			{
+				ufbx_blend_channel* channel = deformer->channels[i];
+				if (channel == nullptr)
+					continue;
+				meshcomponent.morph_targets[i].weight = channel->weight;
+			}
 		}
 		for (const ufbx_mesh_part& part : mesh->material_parts)
 		{
@@ -198,9 +210,9 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 			wi::vector<XMFLOAT2> uvset0;
 			wi::vector<XMFLOAT2> uvset1;
 			wi::vector<wi::Color> colors;
-
 			wi::vector<XMUINT4> boneindices;
 			wi::vector<XMFLOAT4> boneweights;
+			wi::vector<MeshComponent::MorphTarget> morphs(meshcomponent.morph_targets.size());
 
 			for (uint32_t face_index : part.face_indices)
 			{
@@ -208,7 +220,9 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 				uint32_t num_tris = ufbx_triangulate_face(tri_indices.data(), tri_indices.size(), mesh, face);
 				for (size_t i = 0; i < num_tris * 3; i++)
 				{
-					uint32_t index = tri_indices[i];
+					const uint32_t index = tri_indices[i];
+					const uint32_t vertex = mesh->vertex_indices[index];
+
 					if (mesh->vertex_position.exists)
 					{
 						positions.push_back(XMFLOAT3(mesh->vertex_position[index].v));
@@ -237,7 +251,6 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 						boneindices.emplace_back();
 						boneweights.emplace_back();
 
-						uint32_t vertex = mesh->vertex_indices[index];
 						ufbx_skin_vertex skin_vertex = skin->vertices[vertex];
 						uint32_t num_weights = skin_vertex.num_weights;
 						num_weights = std::min(num_weights, 4u);
@@ -257,6 +270,21 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 							{
 								(&boneweights.back().x)[i] /= total_weight;
 							}
+						}
+					}
+
+					for (const ufbx_blend_deformer* deformer : mesh->blend_deformers)
+					{
+						for (size_t i = 0; i < deformer->channels.count; ++i)
+						{
+							ufbx_blend_channel* channel = deformer->channels[i];
+							if (channel == nullptr)
+								continue;
+							ufbx_blend_shape* shape = channel->target_shape;
+							if (shape == nullptr)
+								continue;
+							ufbx_vec3 vertex_offset = ufbx_get_blend_shape_vertex_offset(shape, vertex);
+							morphs[i].vertex_positions.push_back(XMFLOAT3(vertex_offset.v));
 						}
 					}
 				}
@@ -295,6 +323,10 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 			{
 				streams.push_back({ boneweights.data(), boneweights.size(), sizeof(boneweights[0]) });
 			}
+			for (MeshComponent::MorphTarget& morph : morphs)
+			{
+				streams.push_back({ morph.vertex_positions.data(), morph.vertex_positions.size(), sizeof(morph.vertex_positions[0]) });
+			}
 
 			const size_t num_vertices = ufbx_generate_indices(streams.data(), streams.size(), indices.data(), indices.size(), nullptr, nullptr);
 
@@ -303,7 +335,11 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 			subset.indexCount = uint32_t(indices.size());
 			subset.materialID = material_lookup[mesh->materials[part.index]];
 
-			meshcomponent.indices.insert(meshcomponent.indices.begin(), indices.begin(), indices.end());
+			for (uint32_t index : indices)
+			{
+				meshcomponent.indices.push_back(vertexOffset + index);
+			}
+			vertexOffset += num_vertices;
 
 			if (!positions.empty())
 			{
@@ -340,7 +376,19 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 				boneweights.resize(num_vertices);
 				meshcomponent.vertex_boneweights.insert(meshcomponent.vertex_boneweights.end(), boneweights.begin(), boneweights.end());
 			}
+			for (size_t i = 0; i < morphs.size(); ++i)
+			{
+				morphs[i].vertex_positions.resize(num_vertices);
+				meshcomponent.morph_targets[i].vertex_positions.insert(meshcomponent.morph_targets[i].vertex_positions.end(), morphs[i].vertex_positions.begin(), morphs[i].vertex_positions.end());
+			}
 		}
+
+		if (meshcomponent.vertex_normals.empty())
+		{
+			meshcomponent.vertex_normals.resize(meshcomponent.vertex_positions.size());
+			meshcomponent.ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
+		}
+
 		meshcomponent.CreateRenderData();
 	}
 
@@ -543,6 +591,8 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 	}
 
 	ufbx_free_scene(fbxscene);
+
+	scene.Update(0);
 }
 
 void Import_Mixamo_Bone(Scene& scene, Entity armatureEntity, Entity boneEntity)
