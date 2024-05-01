@@ -339,7 +339,7 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 			{
 				meshcomponent.indices.push_back(vertexOffset + index);
 			}
-			vertexOffset += num_vertices;
+			vertexOffset += (uint32_t)num_vertices;
 
 			if (!positions.empty())
 			{
