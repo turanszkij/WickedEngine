@@ -91,10 +91,18 @@ namespace wi::lua
 
 		if (argc > 0)
 		{
-			uint32_t PID = 0;
+			uint32_t PID;
 
 			std::string filename = SGetString(L, 1);
-			if(argc >= 2) PID = SGetInt(L, 2);
+			if (argc >= 2)
+			{
+				PID = SGetInt(L, 2);
+			}
+			else
+			{
+				PID = GeneratePID();
+			}
+				
 			std::string customparameters_prepend;
 			if(argc >= 3) customparameters_prepend = SGetString(L, 3);
 			std::string customparameters_append;
@@ -117,6 +125,8 @@ namespace wi::lua
 
 				if (status == 0)
 				{
+					SSetString(L, std::to_string(PID));
+					lua_insert(L, 1);
 					return lua_gettop(L);
 				}
 				else
