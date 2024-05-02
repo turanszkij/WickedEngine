@@ -333,12 +333,12 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 				size_t i = selection - SELECTION_RECENTFOLDER_BEGIN;
 				i = std::min(i, editor->recentFolders.size() - 1);
 				const std::string& folder = editor->recentFolders[editor->recentFolders.size() - 1 - i];
-				AddItems(folder + "/", "wiscene", ICON_OBJECT);
-				AddItems(folder + "/", "vrm", ICON_HUMANOID);
-				AddItems(folder + "/", "gltf", ICON_OBJECT);
-				AddItems(folder + "/", "glb", ICON_OBJECT);
-				AddItems(folder + "/", "fbx", ICON_OBJECT);
-				AddItems(folder + "/", "obj", ICON_OBJECT);
+				AddItems(folder, "wiscene", ICON_OBJECT);
+				AddItems(folder, "vrm", ICON_HUMANOID);
+				AddItems(folder, "gltf", ICON_OBJECT);
+				AddItems(folder, "glb", ICON_OBJECT);
+				AddItems(folder, "fbx", ICON_OBJECT);
+				AddItems(folder, "obj", ICON_OBJECT);
 				openFolderButton.OnClick([this, folder](wi::gui::EventArgs args) {
 					wi::helper::OpenUrl(folder);
 				});

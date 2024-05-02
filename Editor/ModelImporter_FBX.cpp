@@ -13,6 +13,49 @@ using namespace wi::ecs;
 
 void Import_Mixamo_Bone(Scene& scene, Entity armatureEntity, Entity boneEntity);
 
+// File callbacks are implemented for platforms that don't support default c++ filesystem correctly (like UWP)
+struct FileDataStream
+{
+	wi::vector<uint8_t> data;
+	size_t offset = 0;
+};
+size_t read_cb(void* user, void* data, size_t size)
+{
+	FileDataStream* datastream = (FileDataStream*)user;
+	uint8_t* src = datastream->data.data() + datastream->offset;
+	size = std::min(size, datastream->data.size() - datastream->offset);
+	std::memcpy(data, src, size);
+	datastream->offset += size;
+	return size;
+}
+bool skip_cb(void* user, size_t size)
+{
+	FileDataStream* datastream = (FileDataStream*)user;
+	size = std::min(size, datastream->data.size() - datastream->offset);
+	datastream->offset += size;
+	return true;
+}
+void close_cb(void* user)
+{
+	FileDataStream* datastream = (FileDataStream*)user;
+	delete datastream;
+}
+bool open_file_cb(void* user, ufbx_stream* stream, const char* path, size_t path_len, const ufbx_open_file_info* info)
+{
+	wi::vector<uint8_t> filedata;
+	if (wi::helper::FileRead(path, filedata))
+	{
+		FileDataStream* datastream = new FileDataStream;
+		datastream->data = std::move(filedata);
+		stream->user = datastream;
+		stream->read_fn = read_cb;
+		stream->skip_fn = skip_cb;
+		stream->close_fn = close_cb;
+		return true;
+	}
+	return false;
+}
+
 void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 {
 	ufbx_load_opts opts = {};
@@ -23,6 +66,8 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 	opts.space_conversion = UFBX_SPACE_CONVERSION_TRANSFORM_ROOT;
 	//opts.space_conversion = UFBX_SPACE_CONVERSION_ADJUST_TRANSFORMS;
 	//opts.space_conversion = UFBX_SPACE_CONVERSION_MODIFY_GEOMETRY;
+	opts.generate_missing_normals = true;
+	opts.open_file_cb.fn = open_file_cb;
 	ufbx_error error = {};
 	ufbx_scene* fbxscene = ufbx_load_file(filename.c_str(), &opts, &error);
 	if (fbxscene == nullptr)
@@ -381,12 +426,6 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 				morphs[i].vertex_positions.resize(num_vertices);
 				meshcomponent.morph_targets[i].vertex_positions.insert(meshcomponent.morph_targets[i].vertex_positions.end(), morphs[i].vertex_positions.begin(), morphs[i].vertex_positions.end());
 			}
-		}
-
-		if (meshcomponent.vertex_normals.empty())
-		{
-			meshcomponent.vertex_normals.resize(meshcomponent.vertex_positions.size());
-			meshcomponent.ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
 		}
 
 		meshcomponent.CreateRenderData();
