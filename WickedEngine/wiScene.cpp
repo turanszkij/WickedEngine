@@ -3528,11 +3528,8 @@ namespace wi::scene
 			XMVECTOR tail_next = tail_current + inertia + dt * (stiffness + external);
 			XMVECTOR to_tail = XMVector3Normalize(tail_next - position_root);
 
-			if (!spring.IsStretchEnabled())
-			{
-				// Limit offset to keep distance from parent:
-				tail_next = position_root + to_tail * boneLength;
-			}
+			// Limit offset to keep distance from parent:
+			tail_next = position_root + to_tail * boneLength;
 
 #if 1
 			// Collider checks:
@@ -3569,11 +3566,8 @@ namespace wi::scene
 						tail_next = tail_next - XMLoadFloat3(&direction) * dist;
 						to_tail = XMVector3Normalize(tail_next - position_root);
 
-						if (!spring.IsStretchEnabled())
-						{
-							// Limit offset to keep distance from parent:
-							tail_next = position_root + to_tail * boneLength;
-						}
+						// Limit offset to keep distance from parent:
+						tail_next = position_root + to_tail * boneLength;
 
 						XMStoreFloat3(&tail_sphere.center, tail_next);
 						tail_sphere.radius = hitRadius;
