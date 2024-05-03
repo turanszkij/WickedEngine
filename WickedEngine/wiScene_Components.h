@@ -1623,7 +1623,7 @@ namespace wi::scene
 			EMPTY = 0,
 			RESET = 1 << 0,
 			DISABLED = 1 << 1,
-			STRETCH_ENABLED = 1 << 2,
+			_DEPRECATED_STRETCH_ENABLED = 1 << 2,
 			GRAVITY_ENABLED = 1 << 3,
 		};
 		uint32_t _flags = RESET | GRAVITY_ENABLED;
@@ -1642,12 +1642,10 @@ namespace wi::scene
 
 		inline void Reset(bool value = true) { if (value) { _flags |= RESET; } else { _flags &= ~RESET; } }
 		inline void SetDisabled(bool value = true) { if (value) { _flags |= DISABLED; } else { _flags &= ~DISABLED; } }
-		inline void SetStretchEnabled(bool value) { if (value) { _flags |= STRETCH_ENABLED; } else { _flags &= ~STRETCH_ENABLED; } }
 		inline void SetGravityEnabled(bool value) { if (value) { _flags |= GRAVITY_ENABLED; } else { _flags &= ~GRAVITY_ENABLED; } }
 
 		inline bool IsResetting() const { return _flags & RESET; }
 		inline bool IsDisabled() const { return _flags & DISABLED; }
-		inline bool IsStretchEnabled() const { return _flags & STRETCH_ENABLED; }
 		inline bool IsGravityEnabled() const { return _flags & GRAVITY_ENABLED; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
