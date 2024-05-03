@@ -76,7 +76,8 @@ namespace wi::lua
 		std::string filepath = filename;
 		std::replace(filepath.begin(), filepath.end(), '\\', '/');
 
-		std::string dynamic_inject = "local function script_file() return \"" + filepath + "\" end;";
+		std::string dynamic_inject = "--" + filepath + "\n";
+		dynamic_inject += "local function script_file() return \"" + filepath + "\" end;";
 		dynamic_inject += "local function script_pid() return \"" + std::to_string(PID) + "\" end;";
 		dynamic_inject += "local function script_dir() return \"" + wi::helper::GetDirectoryFromPath(filepath) + "\" end;";
 		dynamic_inject += persistent_inject;
