@@ -142,11 +142,6 @@ namespace wi::lua
 				{
 					status = lua_pcall(L, 0, LUA_MULTRET, 0);
 				}
-				else
-				{
-					PostErrorMsg(L);
-					return 0;
-				}
 
 				if (status == 0)
 				{
