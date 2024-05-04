@@ -50,6 +50,25 @@ namespace wi::lua
 		return luainternal;
 	}
 
+	void PostErrorMsg(lua_State* L)
+	{
+		const char* str = lua_tostring(L, -1);
+
+		if (str == nullptr)
+			return;
+
+		std::string ss;
+		ss += WILUA_ERROR_PREFIX;
+		ss += str;
+		wi::backlog::post(ss, wi::backlog::LogLevel::Error);
+		lua_pop(L, 1); // remove error message
+	}
+
+	void PostErrorMsg()
+	{
+		PostErrorMsg(lua_internal().m_luaState);
+	}
+
 	uint32_t GeneratePID()
 	{
 		static std::atomic<uint32_t> scriptpid_next{ 0 + 1 };
@@ -76,7 +95,8 @@ namespace wi::lua
 		std::string filepath = filename;
 		std::replace(filepath.begin(), filepath.end(), '\\', '/');
 
-		std::string dynamic_inject = "local function script_file() return \"" + filepath + "\" end;";
+		std::string dynamic_inject = "--[[" + filepath + "--]]";
+		dynamic_inject += "local function script_file() return \"" + filepath + "\" end;";
 		dynamic_inject += "local function script_pid() return \"" + std::to_string(PID) + "\" end;";
 		dynamic_inject += "local function script_dir() return \"" + wi::helper::GetDirectoryFromPath(filepath) + "\" end;";
 		dynamic_inject += persistent_inject;
@@ -131,16 +151,8 @@ namespace wi::lua
 				}
 				else
 				{
-					const char* str = lua_tostring(L, -1);
-
-					if (str == nullptr)
-						return 0;
-
-					std::string ss;
-					ss += WILUA_ERROR_PREFIX;
-					ss += str;
-					wi::backlog::post(ss, wi::backlog::LogLevel::Error);
-					lua_pop(L, 1); // remove error message
+					PostErrorMsg(L);
+					return 0;
 				}
 			}
 		}
@@ -231,17 +243,6 @@ namespace wi::lua
 		return lua_internal().m_luaState;
 	}
 
-	void PostErrorMsg()
-	{
-		const char* str = lua_tostring(lua_internal().m_luaState, -1);
-		if (str == nullptr)
-			return;
-		std::string ss;
-		ss += WILUA_ERROR_PREFIX;
-		ss += str;
-		wi::backlog::post(ss, wi::backlog::LogLevel::Error);
-		lua_pop(lua_internal().m_luaState, 1); // remove error message
-	}
 	bool RunScript()
 	{
 		if(lua_pcall(lua_internal().m_luaState, 0, LUA_MULTRET, 0) != LUA_OK)
