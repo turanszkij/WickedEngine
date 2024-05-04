@@ -263,20 +263,6 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			break;
 		case ADD_SPRING:
 			scene.springs.Create(entity);
-
-			// Springs are special because they are computed in ordered fashion
-			//	So if we add a new spring that was parent of an other one, we move it in memory before the child
-			for (size_t i = 0; i < scene.springs.GetCount(); ++i)
-			{
-				Entity other = scene.springs.GetEntity(i);
-				const HierarchyComponent* hier = scene.hierarchy.GetComponent(other);
-				if (hier != nullptr && hier->parentID == entity)
-				{
-					size_t entity_index = scene.springs.GetCount() - 1; // last added entity (the parent)
-					scene.springs.MoveItem(entity_index, i); // will be moved before
-					break;
-				}
-			}
 			break;
 		case ADD_IK:
 			scene.inverse_kinematics.Create(entity);

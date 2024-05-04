@@ -1640,6 +1640,12 @@ namespace wi::scene
 		XMFLOAT3 currentTail = {};
 		XMFLOAT3 boneAxis = {};
 
+		// These are maintained for top-down chained update by spring dependency system:
+		wi::vector<SpringComponent*> children;
+		wi::ecs::Entity entity;
+		TransformComponent* transform = nullptr;
+		TransformComponent* parent_transform = nullptr;
+
 		inline void Reset(bool value = true) { if (value) { _flags |= RESET; } else { _flags &= ~RESET; } }
 		inline void SetDisabled(bool value = true) { if (value) { _flags |= DISABLED; } else { _flags &= ~DISABLED; } }
 		inline void SetGravityEnabled(bool value) { if (value) { _flags |= GRAVITY_ENABLED; } else { _flags &= ~GRAVITY_ENABLED; } }
