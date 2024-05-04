@@ -3411,7 +3411,7 @@ namespace wi::scene
 				colliders_gpu[index] = collider;
 			}
 
-		});
+			});
 
 		wi::jobsystem::Wait(ctx);
 		collider_count_cpu = collider_allocator_cpu.load();
@@ -3490,6 +3490,17 @@ namespace wi::scene
 				spring.prevTail = spring.currentTail;
 			}
 
+			if (hier != nullptr)
+			{
+				// fixup spring locations by snapping position to parent's tail:
+				//	(This is done after resetting code intentionally)
+				const SpringComponent* parent_spring = springs.GetComponent(hier->parentID);
+				if (parent_spring != nullptr)
+				{
+					position_root = XMLoadFloat3(&parent_spring->currentTail);
+				}
+			}
+
 			XMVECTOR boneAxis = XMLoadFloat3(&spring.boneAxis);
 			boneAxis = XMVector3TransformNormal(boneAxis, parentWorldMatrix);
 
@@ -3499,15 +3510,6 @@ namespace wi::scene
 			const float stiffnessForce = spring.stiffnessForce;
 			const XMVECTOR gravityDir = XMLoadFloat3(&spring.gravityDir);
 			const float gravityPower = spring.gravityPower;
-
-#if 0
-			// Debug axis:
-			wi::renderer::RenderableLine line;
-			line.color_start = line.color_end = XMFLOAT4(1, 1, 0, 1);
-			XMStoreFloat3(&line.start, position_root);
-			XMStoreFloat3(&line.end, position_root + boneAxis * boneLength);
-			wi::renderer::DrawLine(line);
-#endif
 
 			const XMVECTOR tail_current = XMLoadFloat3(&spring.currentTail);
 			const XMVECTOR tail_prev = XMLoadFloat3(&spring.prevTail);
@@ -3572,7 +3574,7 @@ namespace wi::scene
 						XMStoreFloat3(&tail_sphere.center, tail_next);
 						tail_sphere.radius = hitRadius;
 					}
-				});
+					});
 			}
 #endif
 
@@ -3583,11 +3585,28 @@ namespace wi::scene
 			const XMVECTOR axis = XMVector3Normalize(XMVector3Cross(boneAxis, to_tail));
 			const float angle = XMScalarACos(XMVectorGetX(XMVector3Dot(boneAxis, to_tail)));
 			const XMVECTOR Q = XMQuaternionNormalize(XMQuaternionRotationNormal(axis, angle));
-			TransformComponent tmp = transform;
-			tmp.ApplyTransform();
-			tmp.Rotate(Q);
-			tmp.UpdateTransform();
-			transform.world = tmp.world; // only store world space result, not modifying actual local space!
+
+			// Modify world matrix:
+			XMMATRIX M = XMLoadFloat4x4(&transform.world);
+			XMVECTOR S, R, T;
+			XMMatrixDecompose(&S, &R, &T, M);
+
+			T = position_root;
+			R = XMQuaternionMultiply(R, Q);
+			R = XMQuaternionNormalize(R);
+
+			M = XMMatrixScalingFromVector(S) * XMMatrixRotationQuaternion(R) * XMMatrixTranslationFromVector(T);
+
+			XMStoreFloat4x4(&transform.world, M);
+
+#if 0
+			// Debug axis:
+			wi::renderer::RenderableLine line;
+			line.color_start = line.color_end = XMFLOAT4(1, 1, 0, 1);
+			XMStoreFloat3(&line.start, position_root);
+			line.end = spring.currentTail;
+			wi::renderer::DrawLine(line);
+#endif
 
 		}
 
