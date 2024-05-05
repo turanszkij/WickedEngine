@@ -18,6 +18,10 @@ bld/
 [Bb]in/
 [Oo]bj/
 
+# Python build results
+*.pyc
+*.cpython*.so
+
 # Roslyn cache directories
 *.ide/
 

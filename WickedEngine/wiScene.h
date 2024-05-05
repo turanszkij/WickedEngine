@@ -336,7 +336,7 @@ namespace wi::scene
 		//	seri		: serializer state for entity component system
 		//	entity		: if archive is in write mode, this is the entity to serialize. If archive is in read mode, it should be INVALID_ENTITY
 		//	flags		: specify options as EntitySerializeFlags bits to control internal behaviour
-		// 
+		//
 		//	Returns either the new entity that was read, or the original entity that was written
 		wi::ecs::Entity Entity_Serialize(
 			wi::Archive& archive,
@@ -358,10 +358,10 @@ namespace wi::scene
 			const std::string& name
 		);
 		wi::ecs::Entity Entity_CreateLight(
-			const std::string& name, 
-			const XMFLOAT3& position = XMFLOAT3(0, 0, 0), 
-			const XMFLOAT3& color = XMFLOAT3(1, 1, 1), 
-			float intensity = 1, 
+			const std::string& name,
+			const XMFLOAT3& position = XMFLOAT3(0, 0, 0),
+			const XMFLOAT3& color = XMFLOAT3(1, 1, 1),
+			float intensity = 1,
 			float range = 10,
 			LightComponent::LightType type = LightComponent::POINT,
 			float outerConeAngle = XM_PIDIV4,

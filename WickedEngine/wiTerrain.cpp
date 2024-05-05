@@ -1425,8 +1425,9 @@ namespace wi::terrain
 					coordinate.y = 0;
 					commands[0].coordinates = &coordinate;
 					SparseRegionSize region;
-					region.width = atlas.maps[map_type].texture.desc.width / atlas.maps[map_type].texture.sparse_properties->tile_width;
-					region.height = atlas.maps[map_type].texture.desc.height / atlas.maps[map_type].texture.sparse_properties->tile_height;
+					const SparseTextureProperties* sparse_properties = atlas.maps[map_type].texture.sparse_properties;
+					region.width = atlas.maps[map_type].texture.desc.width / sparse_properties->tile_width;
+					region.height = atlas.maps[map_type].texture.desc.height / sparse_properties->tile_height;
 					commands[0].sizes = &region;
 					TileRangeFlags flags = {};
 					commands[0].range_flags = &flags;

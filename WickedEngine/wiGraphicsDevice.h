@@ -23,10 +23,10 @@ namespace wi::graphics
 	// Descriptor binding counts:
 	//	It's OK increase these limits if not enough
 	//	But it's better to refactor shaders to use bindless descriptors if they require more resources
-	static constexpr uint32_t DESCRIPTORBINDER_CBV_COUNT = 14;
-	static constexpr uint32_t DESCRIPTORBINDER_SRV_COUNT = 16;
-	static constexpr uint32_t DESCRIPTORBINDER_UAV_COUNT = 16;
-	static constexpr uint32_t DESCRIPTORBINDER_SAMPLER_COUNT = 8;
+	inline static constexpr uint32_t DESCRIPTORBINDER_CBV_COUNT = 14;
+	inline static constexpr uint32_t DESCRIPTORBINDER_SRV_COUNT = 16;
+	inline static constexpr uint32_t DESCRIPTORBINDER_UAV_COUNT = 16;
+	inline static constexpr uint32_t DESCRIPTORBINDER_SAMPLER_COUNT = 8;
 	struct DescriptorBindingTable
 	{
 		GPUBuffer CBV[DESCRIPTORBINDER_CBV_COUNT];
@@ -270,7 +270,7 @@ namespace wi::graphics
 			inline bool IsValid() const { return data != nullptr && buffer.IsValid(); }
 		};
 
-		// Allocates temporary memory that the CPU can write and GPU can read. 
+		// Allocates temporary memory that the CPU can write and GPU can read.
 		//	It is only alive for one frame and automatically invalidated after that.
 		GPUAllocation AllocateGPU(uint64_t dataSize, CommandList cmd)
 		{
@@ -355,13 +355,13 @@ namespace wi::graphics
 	};
 
 
+	extern GraphicsDevice* static_device;
 	// This is a helper to get access to a global device instance
 	//	- The engine uses this, but it is not necessary to use a single global device object
 	//	- This is not a lifetime managing object, just a way to globally expose a reference to an object by pointer
 	inline GraphicsDevice*& GetDevice()
 	{
-		static GraphicsDevice* device = nullptr;
-		return device;
+		return static_device;
 	}
 
 }

@@ -96,7 +96,7 @@ set(HEADER_FILES_vulkan
 install(FILES ${HEADER_FILES_vulkan}
 		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/Utility/vulkan/")
 
-		
+
 set(HEADER_FILES_vk_video
 		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vk_video/vulkan_video_codec_h264std.h
 		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vk_video/vulkan_video_codec_h264std_decode.h
@@ -139,5 +139,5 @@ add_library(Utility STATIC
 
 set_target_properties("Utility" PROPERTIES
 	FOLDER "ThirdParty"
-	POSITION_INDEPENDENT_CODE ${WICKED_DYNAMIC_LIBRARY}
+	POSITION_INDEPENDENT_CODE ${WICKED_PIC_CODE}
 )

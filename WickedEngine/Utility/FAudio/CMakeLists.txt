@@ -1,6 +1,6 @@
 # CMake Project for FAudio
 # Written by @NeroBurner
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.5)
 project(FAudio C)
 
 # Options
@@ -94,7 +94,7 @@ set_target_properties(FAudio PROPERTIES
 	OUTPUT_NAME "FAudio"
 	VERSION ${LIB_VERSION}
 	SOVERSION ${LIB_MAJOR_VERSION}
-	POSITION_INDEPENDENT_CODE ${WICKED_DYNAMIC_LIBRARY}
+	POSITION_INDEPENDENT_CODE ${WICKED_PIC_CODE}
 )
 
 # SDL2 Dependency

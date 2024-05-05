@@ -24,16 +24,16 @@ namespace wi
 
 namespace wi::renderer
 {
-	constexpr wi::graphics::Format format_depthbuffer_main = wi::graphics::Format::D32_FLOAT_S8X24_UINT;
-	constexpr wi::graphics::Format format_rendertarget_main = wi::graphics::Format::R11G11B10_FLOAT;
-	constexpr wi::graphics::Format format_idbuffer = wi::graphics::Format::R32_UINT;
-	constexpr wi::graphics::Format format_rendertarget_shadowmap = wi::graphics::Format::R16G16B16A16_FLOAT;
-	constexpr wi::graphics::Format format_depthbuffer_shadowmap = wi::graphics::Format::D16_UNORM;
-	constexpr wi::graphics::Format format_rendertarget_envprobe = wi::graphics::Format::R11G11B10_FLOAT;
-	constexpr wi::graphics::Format format_depthbuffer_envprobe = wi::graphics::Format::D16_UNORM;
+	inline constexpr wi::graphics::Format format_depthbuffer_main = wi::graphics::Format::D32_FLOAT_S8X24_UINT;
+	inline constexpr wi::graphics::Format format_rendertarget_main = wi::graphics::Format::R11G11B10_FLOAT;
+	inline constexpr wi::graphics::Format format_idbuffer = wi::graphics::Format::R32_UINT;
+	inline constexpr wi::graphics::Format format_rendertarget_shadowmap = wi::graphics::Format::R16G16B16A16_FLOAT;
+	inline constexpr wi::graphics::Format format_depthbuffer_shadowmap = wi::graphics::Format::D16_UNORM;
+	inline constexpr wi::graphics::Format format_rendertarget_envprobe = wi::graphics::Format::R11G11B10_FLOAT;
+	inline constexpr wi::graphics::Format format_depthbuffer_envprobe = wi::graphics::Format::D16_UNORM;
 
-	constexpr uint8_t raytracing_inclusion_mask_shadow = 1 << 0;
-	constexpr uint8_t raytracing_inclusion_mask_reflection = 1 << 1;
+	inline constexpr uint8_t raytracing_inclusion_mask_shadow = 1 << 0;
+	inline constexpr uint8_t raytracing_inclusion_mask_reflection = 1 << 1;
 
 	constexpr uint32_t CombineStencilrefs(wi::enums::STENCILREF engineStencilRef, uint8_t userStencilRef)
 	{
@@ -267,7 +267,7 @@ namespace wi::renderer
 	// Draw Soft offscreen particles.
 	void DrawSoftParticles(
 		const Visibility& vis,
-		bool distortion, 
+		bool distortion,
 		wi::graphics::CommandList cmd
 	);
 	// Draw the sprites and fonts from the scene
@@ -804,7 +804,7 @@ namespace wi::renderer
 		const wi::graphics::GPUBuffer* buffer_luminance = nullptr,
 		const wi::graphics::Texture* texture_bloom = nullptr,
 		wi::graphics::ColorSpace display_colorspace = wi::graphics::ColorSpace::SRGB,
-		Tonemap tonemap = Tonemap::Reinhard 
+		Tonemap tonemap = Tonemap::Reinhard
 	);
 	void Postprocess_FSR(
 		const wi::graphics::Texture& input,
@@ -1197,7 +1197,7 @@ namespace wi::renderer
 		uint32_t filterMask = wi::enums::FILTER_OPAQUE;
 		wi::graphics::PipelineState pso[wi::enums::RENDERPASS_COUNT] = {};
 	};
-	// Registers a custom shader that can be set to materials. 
+	// Registers a custom shader that can be set to materials.
 	//	Returns the ID of the custom shader that can be used with MaterialComponent::SetCustomShaderID()
 	int RegisterCustomShader(const CustomShader& customShader);
 	const wi::vector<CustomShader>& GetCustomShaders();
