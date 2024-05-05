@@ -58,15 +58,6 @@ void SpringWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&disabledCheckBox);
 
-	stretchCheckBox.Create("Stretch enabled: ");
-	stretchCheckBox.SetTooltip("Stretch means that length from parent transform won't be preserved.");
-	stretchCheckBox.SetPos(XMFLOAT2(x, y += step));
-	stretchCheckBox.SetSize(XMFLOAT2(hei, hei));
-	stretchCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		editor->GetCurrentScene().springs.GetComponent(entity)->SetStretchEnabled(args.bValue);
-		});
-	AddWidget(&stretchCheckBox);
-
 	gravityCheckBox.Create("Gravity enabled: ");
 	gravityCheckBox.SetTooltip("Whether global gravity should affect the spring");
 	gravityCheckBox.SetPos(XMFLOAT2(x, y += step));
@@ -103,6 +94,15 @@ void SpringWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&windSlider);
 
+	gravitySlider.Create(0, 1, 0, 100000, "Gravity affection: ");
+	gravitySlider.SetTooltip("How much the global gravity effect affects the spring");
+	gravitySlider.SetPos(XMFLOAT2(x, y += step));
+	gravitySlider.SetSize(XMFLOAT2(siz, hei));
+	gravitySlider.OnSlide([&](wi::gui::EventArgs args) {
+		editor->GetCurrentScene().springs.GetComponent(entity)->gravityPower = args.fValue;
+		});
+	AddWidget(&gravitySlider);
+
 
 	SetMinimized(true);
 	SetVisible(false);
@@ -121,11 +121,11 @@ void SpringWindow::SetEntity(Entity entity)
 		SetEnabled(true);
 
 		disabledCheckBox.SetCheck(spring->IsDisabled());
-		stretchCheckBox.SetCheck(spring->IsStretchEnabled());
 		gravityCheckBox.SetCheck(spring->IsGravityEnabled());
 		stiffnessSlider.SetValue(spring->stiffnessForce);
 		dragSlider.SetValue(spring->dragForce);
 		windSlider.SetValue(spring->windForce);
+		gravitySlider.SetValue(spring->gravityPower);
 	}
 	else
 	{
@@ -175,10 +175,10 @@ void SpringWindow::ResizeLayout()
 	add_fullwidth(resetAllButton);
 	add_right(debugCheckBox);
 	add_right(disabledCheckBox);
-	add_right(stretchCheckBox);
 	add_right(gravityCheckBox);
 	add(stiffnessSlider);
 	add(dragSlider);
 	add(windSlider);
+	add(gravitySlider);
 
 }

@@ -296,6 +296,11 @@ namespace wi::scene
 		wi::jobsystem::context animation_dependency_scan_workload;
 		void ScanAnimationDependencies();
 
+		wi::vector<SpringComponent*> spring_queues; // these indicate which chains can be updated on separate threads
+		wi::jobsystem::context spring_dependency_scan_workload;
+		void ScanSpringDependencies();
+		void UpdateSpringsTopDownRecursive(SpringComponent* parent_spring, SpringComponent& spring);
+
 		// Update all components by a given timestep (in seconds):
 		//	This is an expensive function, prefer to call it only once per frame!
 		virtual void Update(float dt);
