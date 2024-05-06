@@ -8,8 +8,9 @@ option(USE_LIBCXX "Link WickedEngine to llvm libc++ library - only available wit
 option(WICKED_EDITOR "Build WickedEngine editor" ON)
 option(WICKED_TESTS "Build WickedEngine tests" ON)
 option(WICKED_IMGUI_EXAMPLE "Build WickedEngine imgui example" ON)
-option(WICKED_LINUX_TEMPLATE "Build WickedEngine Linux template" ON)
 
+include(CMakeDependentOption)
+cmake_dependent_option(WICKED_LINUX_TEMPLATE "Build WickedEngine Linux template" ON "UNIX" OFF)
 
 # Configure CMake global variables
 set(CMAKE_CXX_STANDARD 17)
