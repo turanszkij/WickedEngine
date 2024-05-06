@@ -9004,6 +9004,13 @@ void ComputeTiledLightCulling(
 
 		device->Dispatch(res.tileCount.x, res.tileCount.y, 1, cmd);
 
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Buffer(&res.entityTiles, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
 		device->EventEnd(cmd);
 	}
 
