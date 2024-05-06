@@ -804,7 +804,7 @@ void Import_Mixamo_Bone(Scene& scene, Entity rootEntity, Entity boneEntity)
 	auto get_humanoid = [&]() -> HumanoidComponent& {
 		if (scene.humanoids.GetCount() == 0)
 		{
-			scene.humanoids.Create(rootEntity).default_look_direction = XMFLOAT3(0, 0, -1);
+			scene.humanoids.Create(rootEntity);
 		}
 		// Note: it seems there are multiple armatures for multiple body parts in some FBX from Mixamo,
 		//	but there should be only one humanoid, so we don't create humanoids for each armature

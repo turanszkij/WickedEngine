@@ -3057,6 +3057,8 @@ namespace wi::scene
 					for (size_t humanoid_idx = 0; (humanoid_idx < humanoids.GetCount()) && !constrain; ++humanoid_idx)
 					{
 						const HumanoidComponent& humanoid = humanoids[humanoid_idx];
+						Entity humanoidEntity = humanoids.GetEntity(humanoid_idx);
+						const float facing = GetHumanoidDefaultFacing(humanoid, humanoidEntity);
 						int bone_type_idx = 0;
 						for (auto& bone : humanoid.bones)
 						{
@@ -3081,7 +3083,24 @@ namespace wi::scene
 								}
 							}
 							if (constrain)
+							{
+								// Constraint swapping fixes for flipped model orientations:
+								if (facing < 0)
+								{
+									// Note: this is a fix for VRM 1.0 and Mixamo model
+									std::swap(constraint_min, constraint_max);
+								}
+								const TransformComponent* bone_transform = transforms.GetComponent(bone);
+								if (bone_transform != nullptr)
+								{
+									if (bone_transform->GetForward().z < 0)
+									{
+										// Note: this is a fix for FBX Mixamo models
+										std::swap(constraint_min, constraint_max);
+									}
+								}
 								break;
+							}
 							bone_type_idx++;
 						}
 					}
@@ -3092,13 +3111,14 @@ namespace wi::scene
 						// Apply constrained rotation:
 						Q = XMQuaternionIdentity();
 						XMMATRIX W = XMLoadFloat4x4(&parent_transform.world);
+						const float iteration_count_rcp = 1.0f / (float)ik.iteration_count;
 						for (int axis_idx = 0; axis_idx < 3; ++axis_idx)
 						{
 							XMFLOAT3 axis_floats = XMFLOAT3(0, 0, 0);
 							((float*)&axis_floats)[axis_idx] = 1;
 							XMVECTOR axis = XMLoadFloat3(&axis_floats);
-							const float axis_min = ((float*)&constraint_min)[axis_idx] / (float)ik.iteration_count;
-							const float axis_max = ((float*)&constraint_max)[axis_idx] / (float)ik.iteration_count;
+							const float axis_min = ((float*)&constraint_min)[axis_idx] * iteration_count_rcp;
+							const float axis_max = ((float*)&constraint_max)[axis_idx] * iteration_count_rcp;
 							axis = XMVector3Normalize(XMVector3TransformNormal(axis, W));
 							const XMVECTOR projA = XMVector3Normalize(dir_parent_to_ik - axis * XMVector3Dot(axis, dir_parent_to_ik));
 							const XMVECTOR projB = XMVector3Normalize(dir_parent_to_target - axis * XMVector3Dot(axis, dir_parent_to_target));
@@ -3170,6 +3190,7 @@ namespace wi::scene
 
 		for (size_t i = 0; i < humanoids.GetCount(); ++i)
 		{
+			Entity humanoidEntity = humanoids.GetEntity(i);
 			HumanoidComponent& humanoid = humanoids[i];
 
 			// The head is always taken as reference frame transform even for the eyes:
@@ -3184,7 +3205,7 @@ namespace wi::scene
 
 			const XMVECTOR UP = XMVectorSet(0, 1, 0, 0);
 			const XMVECTOR SIDE = XMVectorSet(1, 0, 0, 0);
-			const XMVECTOR FORWARD = XMLoadFloat3(&humanoid.default_look_direction);
+			const XMVECTOR FORWARD = XMVectorSet(0, 0, GetHumanoidDefaultFacing(humanoid, humanoidEntity), 0);
 
 			struct LookAtSource
 			{
@@ -6502,9 +6523,9 @@ namespace wi::scene
 		return INVALID_ENTITY;
 	}
 
-	XMMATRIX Scene::FindBoneRestPose(wi::ecs::Entity bone) const
+	XMMATRIX Scene::GetRestPose(wi::ecs::Entity entity) const
 	{
-		if (bone != INVALID_ENTITY)
+		if (entity != INVALID_ENTITY)
 		{
 			for (size_t i = 0; i < armatures.GetCount(); ++i)
 			{
@@ -6513,7 +6534,7 @@ namespace wi::scene
 				for (auto& x : armature.boneCollection)
 				{
 					boneIndex++;
-					if (x == bone)
+					if (x == entity)
 					{
 						XMMATRIX inverseBindMatrix = XMLoadFloat4x4(armature.inverseBindMatrices.data() + boneIndex);
 						XMMATRIX bindMatrix = XMMatrixInverse(nullptr, inverseBindMatrix);
@@ -6521,8 +6542,34 @@ namespace wi::scene
 					}
 				}
 			}
+
+			const TransformComponent* transform = transforms.GetComponent(entity);
+			if (transform != nullptr)
+			{
+				return XMLoadFloat4x4(&transform->world);
+			}
 		}
 		return XMMatrixIdentity();
+	}
+
+	float Scene::GetHumanoidDefaultFacing(const HumanoidComponent& humanoid, Entity humanoidEntity) const
+	{
+		Entity left_shoulder = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftUpperArm];
+		Entity right_shoulder = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightUpperArm];
+		XMVECTOR left_shoulder_pos = GetRestPose(left_shoulder).r[3];
+		XMVECTOR right_shoulder_pos = GetRestPose(right_shoulder).r[3];
+		const TransformComponent* transform = transforms.GetComponent(humanoidEntity);
+		if (transform != nullptr)
+		{
+			XMVECTOR S = transform->GetScaleV();
+			left_shoulder_pos *= S;
+			right_shoulder_pos *= S;
+		}
+		if (XMVectorGetX(right_shoulder_pos) < XMVectorGetX(left_shoulder_pos))
+		{
+			return -1;
+		}
+		return 1;
 	}
 
 	void Scene::ScanAnimationDependencies()
@@ -6647,19 +6694,23 @@ namespace wi::scene
 		Entity entity = spring.entity;
 		TransformComponent& transform = *spring.transform;
 
-		XMMATRIX parentWorldMatrix = XMMatrixIdentity();
-		if (spring.parent_transform != nullptr)
-		{
-			transform.UpdateTransform_Parented(*spring.parent_transform);
-			parentWorldMatrix = XMLoadFloat4x4(&spring.parent_transform->world);
-		}
-
-		XMVECTOR position_root = transform.GetPositionV();
-
 		if (spring.IsResetting())
 		{
 			spring.Reset(false);
 
+			// Note: the spring resetting works on the rest pose, not the current pose!
+
+			XMMATRIX parentWorldMatrix = XMMatrixIdentity();
+			{
+				const HierarchyComponent* hier = hierarchy.GetComponent(entity);
+				if (hier != nullptr)
+				{
+					parentWorldMatrix = GetRestPose(hier->parentID);
+				}
+			}
+			XMMATRIX parentWorldMatrixInverse = XMMatrixInverse(nullptr, parentWorldMatrix);
+
+			XMVECTOR position_root = GetRestPose(entity).r[3];
 			XMVECTOR tail = position_root + XMVectorSet(0, 1, 0, 0);
 			// Search for child to find the rest pose tail position:
 			bool child_found = false;
@@ -6669,8 +6720,7 @@ namespace wi::scene
 				Entity child = hierarchy.GetEntity(j);
 				if (hier.parentID == entity && transforms.Contains(child))
 				{
-					const TransformComponent& child_transform = *transforms.GetComponent(child);
-					tail = child_transform.GetPositionV();
+					tail = GetRestPose(child).r[3];
 					child_found = true;
 					break;
 				}
@@ -6678,22 +6728,26 @@ namespace wi::scene
 			if (!child_found)
 			{
 				// No child, try to guess tail position compared to parent (if it has parent):
-				const HierarchyComponent* hier = hierarchy.GetComponent(entity);
-				if (hier != nullptr && transforms.Contains(hier->parentID))
-				{
-					const TransformComponent& parent_transform = *transforms.GetComponent(hier->parentID);
-					XMVECTOR ab = position_root - parent_transform.GetPositionV();
-					tail = position_root + ab;
-				}
+				const XMVECTOR parent_pos = parentWorldMatrix.r[3];
+				const XMVECTOR ab = position_root - parent_pos;
+				tail = position_root + ab;
 			}
 
 			XMVECTOR axis = tail - position_root;
-			XMMATRIX parentWorldMatrixInverse = XMMatrixInverse(nullptr, parentWorldMatrix);
 			axis = XMVector3TransformNormal(axis, parentWorldMatrixInverse);
 			XMStoreFloat3(&spring.boneAxis, axis);
 			XMStoreFloat3(&spring.currentTail, tail);
 			spring.prevTail = spring.currentTail;
 		}
+
+		XMMATRIX parentWorldMatrix = XMMatrixIdentity();
+		if (spring.parent_transform != nullptr)
+		{
+			transform.UpdateTransform_Parented(*spring.parent_transform);
+			parentWorldMatrix = XMLoadFloat4x4(&spring.parent_transform->world);
+		}
+
+		XMVECTOR position_root = transform.GetPositionV();
 
 		// fixup spring locations by snapping position to parent's tail:
 		//	(This is done after resetting code intentionally)

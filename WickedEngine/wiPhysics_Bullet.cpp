@@ -577,15 +577,7 @@ namespace wi::physics
 #endif
 
 			//Detect which way humanoid is facing in rest pose:
-			float facing = 1;
-			Entity left_shoulder = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftUpperArm];
-			Entity right_shoulder = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightUpperArm];
-			const XMVECTOR& left_shoulder_pos = scene.FindBoneRestPose(left_shoulder).r[3];
-			const XMVECTOR& right_shoulder_pos = scene.FindBoneRestPose(right_shoulder).r[3];
-			if (XMVectorGetX(right_shoulder_pos) < XMVectorGetX(left_shoulder_pos))
-			{
-				facing = -1;
-			}
+			const float facing = scene.GetHumanoidDefaultFacing(humanoid, humanoidEntity);
 
 			// Whole ragdoll will take a uniform scaling:
 			const XMMATRIX scaleMatrix = XMMatrixScaling(scale, scale, scale);
@@ -668,8 +660,8 @@ namespace wi::physics
 				// Calculations here will be done in armature local space.
 				//	Unfortunately since humanoid can be separate from armature, we use a "find" utility to find bone rest matrix in armature
 				//	Note that current scaling of character is applied here separately from rest pose
-				XMMATRIX restA = scene.FindBoneRestPose(entityA) * scaleMatrix;
-				XMMATRIX restB = scene.FindBoneRestPose(entityB) * scaleMatrix;
+				XMMATRIX restA = scene.GetRestPose(entityA) * scaleMatrix;
+				XMMATRIX restB = scene.GetRestPose(entityB) * scaleMatrix;
 				XMVECTOR rootA = restA.r[3];
 				XMVECTOR rootB = restB.r[3];
 

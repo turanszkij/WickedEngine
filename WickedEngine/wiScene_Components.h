@@ -1935,7 +1935,6 @@ namespace wi::scene
 		constexpr void SetLookAtEnabled(bool value = true) { if (value) { _flags |= LOOKAT; } else { _flags &= ~LOOKAT; } }
 		constexpr void SetRagdollPhysicsEnabled(bool value = true) { if (value) { _flags |= RAGDOLL_PHYSICS; } else { _flags &= ~RAGDOLL_PHYSICS; } }
 
-		XMFLOAT3 default_look_direction = XMFLOAT3(0, 0, 1);
 		XMFLOAT2 head_rotation_max = XMFLOAT2(XM_PI / 3.0f, XM_PI / 6.0f);
 		float head_rotation_speed = 0.1f;
 		XMFLOAT2 eye_rotation_max = XMFLOAT2(XM_PI / 20.0f, XM_PI / 20.0f);

@@ -2791,7 +2791,6 @@ void Import_Extension_VRMC(LoaderState& state)
 				state.scene->names.Create(entity) = "humanoid";
 			}
 			HumanoidComponent& component = state.scene->humanoids.Create(entity);
-			component.default_look_direction = XMFLOAT3(0, 0, -1);
 
 			const auto& humanoid = ext_vrm->second.Get("humanoid");
 			if (humanoid.Has("humanBones"))
@@ -3233,7 +3232,6 @@ void Import_Mixamo_Bone(LoaderState& state, Entity boneEntity, const tinygltf::N
 		if (component == nullptr)
 		{
 			component = &state.scene->humanoids.Create(state.rootEntity);
-			component->default_look_direction = XMFLOAT3(0, 0, -1);
 		}
 		return *component;
 	};

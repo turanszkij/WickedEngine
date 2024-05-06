@@ -513,8 +513,13 @@ namespace wi::scene
 		wi::ecs::Entity RetargetAnimation(wi::ecs::Entity dst, wi::ecs::Entity src, bool bake_data, const Scene* src_scene = nullptr);
 
 		// If you don't know which armature the bone is contained int, this function can be used to find the first such armature and return the bone's rest matrix
-		//	If not found, return identity matrix
-		XMMATRIX FindBoneRestPose(wi::ecs::Entity bone) const;
+		//	If not found, and entity has a transform, it returns transform matrix
+		//	Otherwise, returns identity matrix
+		XMMATRIX GetRestPose(wi::ecs::Entity entity) const;
+		XMMATRIX FindBoneRestPose(wi::ecs::Entity bone) { return GetRestPose(bone); }; // back-compat of GetRestPose
+
+		// Returns 1 if humanoid's default facing direction is forward, -1 if it's backward
+		float GetHumanoidDefaultFacing(const HumanoidComponent& humanoid, wi::ecs::Entity humanoidEntity) const;
 
 		// All triangles of the object will be injected into the voxel grid
 		//	subtract: if false (default), voxels will be added, if true then voxels will be removed

@@ -88,7 +88,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.AddItem("Transform " ICON_TRANSFORM, ADD_TRANSFORM);
 	newComponentCombo.AddItem("Light " ICON_POINTLIGHT, ADD_LIGHT);
 	newComponentCombo.AddItem("Material " ICON_MATERIAL, ADD_MATERIAL);
-	newComponentCombo.AddItem("Spring", ADD_SPRING);
+	newComponentCombo.AddItem("Spring " ICON_SPRING, ADD_SPRING);
 	newComponentCombo.AddItem("Inverse Kinematics " ICON_IK, ADD_IK);
 	newComponentCombo.AddItem("Sound " ICON_SOUND, ADD_SOUND);
 	newComponentCombo.AddItem("Environment Probe " ICON_ENVIRONMENTPROBE, ADD_ENVPROBE);
