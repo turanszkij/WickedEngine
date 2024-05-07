@@ -420,7 +420,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 					float shadow_mask = 1;
 #if defined(SHADOW_MASK_ENABLED) && !defined(TRANSPARENT)
 					[branch]
-					if (light.IsCastingShadow() && (GetFrame().options & OPTION_BIT_SHADOW_MASK) && GetCamera().texture_rtshadow_index >= 0)
+					if (light.IsCastingShadow() && (GetFrame().options & OPTION_BIT_SHADOW_MASK) && (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) && GetCamera().texture_rtshadow_index >= 0)
 					{
 						
 						uint shadow_index = entity_index - GetFrame().lightarray_offset;

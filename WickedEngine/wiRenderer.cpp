@@ -9838,6 +9838,8 @@ void BindCameraCB(
 	cb.init();
 	ShaderCamera& shadercam = cb.cameras[0];
 
+	shadercam.options = camera.shadercamera_options;
+
 	XMStoreFloat4x4(&shadercam.view_projection, camera.GetViewProjection());
 	XMStoreFloat4x4(&shadercam.view, camera.GetView());
 	XMStoreFloat4x4(&shadercam.projection, camera.GetProjection());
