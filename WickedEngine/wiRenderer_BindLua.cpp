@@ -238,6 +238,7 @@ namespace wi::lua::renderer
 				wi::renderer::RenderableLine line;
 				XMStoreFloat3(&line.start, XMLoadFloat4(&a->data));
 				XMStoreFloat3(&line.end, XMLoadFloat4(&b->data));
+				bool depth = false;
 				if (argc > 2)
 				{
 					Vector_BindLua* c = Luna<Vector_BindLua>::lightcheck(L, 3);
@@ -247,15 +248,20 @@ namespace wi::lua::renderer
 						XMStoreFloat4(&line.color_end, XMLoadFloat4(&c->data));
 					}
 					else
-						wi::lua::SError(L, "DrawLine(Vector origin,end, opt Vector color) one or more arguments are not vectors!");
+						wi::lua::SError(L, "DrawLine(Vector origin,end, opt Vector color, opt bool depth = false) one or more arguments are not vectors!");
+
+					if (argc > 3)
+					{
+						depth = wi::lua::SGetBool(L, 4);
+					}
 				}
-				wi::renderer::DrawLine(line);
+				wi::renderer::DrawLine(line, depth);
 			}
 			else
-				wi::lua::SError(L, "DrawLine(Vector origin,end, opt Vector color) one or more arguments are not vectors!");
+				wi::lua::SError(L, "DrawLine(Vector origin,end, opt Vector color, opt bool depth = false) one or more arguments are not vectors!");
 		}
 		else
-			wi::lua::SError(L, "DrawLine(Vector origin,end, opt Vector color) not enough arguments!");
+			wi::lua::SError(L, "DrawLine(Vector origin,end, opt Vector color, opt bool depth = false) not enough arguments!");
 
 		return 0;
 	}
@@ -269,6 +275,7 @@ namespace wi::lua::renderer
 			{
 				wi::renderer::RenderablePoint point;
 				XMStoreFloat3(&point.position, XMLoadFloat4(&a->data));
+				bool depth = false;
 				if (argc > 1)
 				{
 					point.size = wi::lua::SGetFloat(L, 2);
@@ -280,15 +287,20 @@ namespace wi::lua::renderer
 						{
 							point.color = color->data;
 						}
+
+						if (argc > 3)
+						{
+							depth = wi::lua::SGetBool(L, 4);
+						}
 					}
 				}
-				wi::renderer::DrawPoint(point);
+				wi::renderer::DrawPoint(point, depth);
 			}
 			else
-				wi::lua::SError(L, "DrawPoint(Vector origin, opt float size, opt Vector color) first argument must be a Vector type!");
+				wi::lua::SError(L, "DrawPoint(Vector origin, opt float size, opt Vector color, opt bool depth = false) first argument must be a Vector type!");
 		}
 		else
-			wi::lua::SError(L, "DrawPoint(Vector origin, opt float size, opt Vector color) not enough arguments!");
+			wi::lua::SError(L, "DrawPoint(Vector origin, opt float size, opt Vector color, opt bool depth = false) not enough arguments!");
 
 		return 0;
 	}
@@ -305,7 +317,12 @@ namespace wi::lua::renderer
 					Vector_BindLua* color = Luna<Vector_BindLua>::lightcheck(L, 2);
 					if (color)
 					{
-						wi::renderer::DrawBox(m->data, color->data);
+						bool depth = true;
+						if (argc > 2)
+						{
+							depth = wi::lua::SGetBool(L, 3);
+						}
+						wi::renderer::DrawBox(m->data, color->data, depth);
 						return 0;
 					}
 				}
@@ -313,10 +330,10 @@ namespace wi::lua::renderer
 				wi::renderer::DrawBox(m->data);
 			}
 			else
-				wi::lua::SError(L, "DrawBox(Matrix boxMatrix, opt Vector color) first argument must be a Matrix type!");
+				wi::lua::SError(L, "DrawBox(Matrix boxMatrix, opt Vector color, opt bool depth = true) first argument must be a Matrix type!");
 		}
 		else
-			wi::lua::SError(L, "DrawBox(Matrix boxMatrix, opt Vector color) not enough arguments!");
+			wi::lua::SError(L, "DrawBox(Matrix boxMatrix, opt Vector color, opt bool depth = true) not enough arguments!");
 
 		return 0;
 	}
@@ -333,7 +350,12 @@ namespace wi::lua::renderer
 					Vector_BindLua* color = Luna<Vector_BindLua>::lightcheck(L, 2);
 					if (color)
 					{
-						wi::renderer::DrawSphere(sphere->sphere, color->data);
+						bool depth = true;
+						if (argc > 2)
+						{
+							depth = wi::lua::SGetBool(L, 3);
+						}
+						wi::renderer::DrawSphere(sphere->sphere, color->data, depth);
 						return 0;
 					}
 				}
@@ -341,10 +363,10 @@ namespace wi::lua::renderer
 				wi::renderer::DrawSphere(sphere->sphere);
 			}
 			else
-				wi::lua::SError(L, "DrawSphere(Sphere sphere, opt Vector color) first argument must be a Matrix type!");
+				wi::lua::SError(L, "DrawSphere(Sphere sphere, opt Vector color, opt bool depth = true) first argument must be a Matrix type!");
 		}
 		else
-			wi::lua::SError(L, "DrawSphere(Sphere sphere, opt Vector color) not enough arguments!");
+			wi::lua::SError(L, "DrawSphere(Sphere sphere, opt Vector color, opt bool depth = true) not enough arguments!");
 
 		return 0;
 	}
@@ -361,7 +383,12 @@ namespace wi::lua::renderer
 					Vector_BindLua* color = Luna<Vector_BindLua>::lightcheck(L, 2);
 					if (color)
 					{
-						wi::renderer::DrawCapsule(capsule->capsule, color->data);
+						bool depth = true;
+						if (argc > 2)
+						{
+							depth = wi::lua::SGetBool(L, 3);
+						}
+						wi::renderer::DrawCapsule(capsule->capsule, color->data, depth);
 						return 0;
 					}
 				}
@@ -369,10 +396,10 @@ namespace wi::lua::renderer
 				wi::renderer::DrawCapsule(capsule->capsule);
 			}
 			else
-				wi::lua::SError(L, "DrawCapsule(Capsule capsule, opt Vector color) first argument must be a Matrix type!");
+				wi::lua::SError(L, "DrawCapsule(Capsule capsule, opt Vector color, opt bool depth = true) first argument must be a Matrix type!");
 		}
 		else
-			wi::lua::SError(L, "DrawCapsule(Capsule capsule, opt Vector color) not enough arguments!");
+			wi::lua::SError(L, "DrawCapsule(Capsule capsule, opt Vector color, opt bool depth = true) not enough arguments!");
 
 		return 0;
 	}

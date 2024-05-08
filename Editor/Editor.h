@@ -99,6 +99,9 @@ public:
 	wi::Color backgroundEntityColor = wi::Color::Black();
 	wi::Color dummyColor = wi::Color::White();
 
+	const wi::Color springDebugColor = wi::Color(255, 70, 165, 255);
+	const wi::Color ikDebugColor = wi::Color(49, 190, 103, 255);
+
 	wi::graphics::Texture editor_depthbuffer;
 
 	Translator translator;

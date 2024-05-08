@@ -6725,7 +6725,7 @@ namespace wi::scene
 					break;
 				}
 			}
-			if (!child_found)
+			if (!child_found && parent_spring != nullptr)
 			{
 				// No child, try to guess tail position compared to parent (if it has parent):
 				const XMVECTOR parent_pos = parentWorldMatrix.r[3];

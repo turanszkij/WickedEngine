@@ -147,11 +147,11 @@ You can use the Renderer with the following functions, all of which are in the g
 - SetDebugCamerasEnabled(bool value)
 - SetVSyncEnabled(opt bool enabled)
 - SetOcclusionCullingEnabled(bool enabled)
-- DrawLine(Vector origin,end, opt Vector color)
-- DrawPoint(Vector origin, opt float size, opt Vector color)
-- DrawBox(Matrix boxMatrix, opt Vector color)
-- DrawSphere(Sphere sphere, opt Vector color)
-- DrawCapsule(Capsule capsule, opt Vector color)
+- DrawLine(Vector origin,end, opt Vector color, opt bool depth = false)
+- DrawPoint(Vector origin, opt float size, opt Vector color, opt bool depth = false)
+- DrawBox(Matrix boxMatrix, opt Vector color, opt bool depth = true)
+- DrawSphere(Sphere sphere, opt Vector color, opt bool depth = true)
+- DrawCapsule(Capsule capsule, opt Vector color, opt bool depth = true)
 - DrawDebugText(string text, opt Vector position, opt Vector color, opt float scaling, opt int flags)
 	DrawDebugText flags, these can be combined with binary OR operator:
 	[outer]DEBUG_TEXT_DEPTH_TEST		-- text can be occluded by geometry

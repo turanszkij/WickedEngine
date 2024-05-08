@@ -13,7 +13,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 
 	wi::gui::Window::Create("General", wi::gui::Window::WindowControls::COLLAPSE);
 
-	SetSize(XMFLOAT2(580, 680));
+	SetSize(XMFLOAT2(580, 700));
 
 	physicsDebugCheckBox.Create("Physics visualizer: ");
 	physicsDebugCheckBox.SetTooltip("Visualize the physics world");
@@ -44,7 +44,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	aabbDebugCheckBox.SetCheck(wi::renderer::GetToDrawDebugPartitionTree());
 	AddWidget(&aabbDebugCheckBox);
 
-	boneLinesCheckBox.Create("Bone line visualizer: ");
+	boneLinesCheckBox.Create(ICON_ARMATURE " Bone line visualizer: ");
 	boneLinesCheckBox.SetTooltip("Visualize bones of armatures");
 	boneLinesCheckBox.SetScriptTip("SetDebugBonesEnabled(bool enabled)");
 	boneLinesCheckBox.OnClick([](wi::gui::EventArgs args) {
@@ -53,7 +53,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	boneLinesCheckBox.SetCheck(wi::renderer::GetToDrawDebugBoneLines());
 	AddWidget(&boneLinesCheckBox);
 
-	debugEmittersCheckBox.Create("Emitter visualizer: ");
+	debugEmittersCheckBox.Create(ICON_EMITTER " Emitter visualizer: ");
 	debugEmittersCheckBox.SetTooltip("Visualize emitters");
 	debugEmittersCheckBox.SetScriptTip("SetDebugEmittersEnabled(bool enabled)");
 	debugEmittersCheckBox.OnClick([](wi::gui::EventArgs args) {
@@ -62,7 +62,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	debugEmittersCheckBox.SetCheck(wi::renderer::GetToDrawDebugEmitters());
 	AddWidget(&debugEmittersCheckBox);
 
-	debugForceFieldsCheckBox.Create("Force Field visualizer: ");
+	debugForceFieldsCheckBox.Create(ICON_FORCE " Force Field visualizer: ");
 	debugForceFieldsCheckBox.SetTooltip("Visualize force fields");
 	debugForceFieldsCheckBox.SetScriptTip("SetDebugForceFieldsEnabled(bool enabled)");
 	debugForceFieldsCheckBox.OnClick([](wi::gui::EventArgs args) {
@@ -79,7 +79,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	debugRaytraceBVHCheckBox.SetCheck(wi::renderer::GetRaytraceDebugBVHVisualizerEnabled());
 	AddWidget(&debugRaytraceBVHCheckBox);
 
-	envProbesCheckBox.Create("Env probe visualizer: ");
+	envProbesCheckBox.Create(ICON_ENVIRONMENTPROBE " Env probe visualizer: ");
 	envProbesCheckBox.SetTooltip("Toggle visualization of environment probes as reflective spheres");
 	envProbesCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetToDrawDebugEnvProbes(args.bValue);
@@ -87,7 +87,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	envProbesCheckBox.SetCheck(wi::renderer::GetToDrawDebugEnvProbes());
 	AddWidget(&envProbesCheckBox);
 
-	cameraVisCheckBox.Create("Camera visualizer: ");
+	cameraVisCheckBox.Create(ICON_CAMERA " Camera visualizer: ");
 	cameraVisCheckBox.SetTooltip("Toggle visualization of camera proxies in the scene");
 	cameraVisCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetToDrawDebugCameras(args.bValue);
@@ -95,13 +95,21 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	cameraVisCheckBox.SetCheck(wi::renderer::GetToDrawDebugCameras());
 	AddWidget(&cameraVisCheckBox);
 
-	colliderVisCheckBox.Create("Collider visualizer: ");
+	colliderVisCheckBox.Create(ICON_COLLIDER " Collider visualizer: ");
 	colliderVisCheckBox.SetTooltip("Toggle visualization of colliders in the scene");
 	colliderVisCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetToDrawDebugColliders(args.bValue);
 		});
 	colliderVisCheckBox.SetCheck(wi::renderer::GetToDrawDebugColliders());
 	AddWidget(&colliderVisCheckBox);
+
+	springVisCheckBox.Create(ICON_SPRING " Spring visualizer: ");
+	springVisCheckBox.SetTooltip("Toggle visualization of springs in the scene");
+	springVisCheckBox.OnClick([](wi::gui::EventArgs args) {
+		wi::renderer::SetToDrawDebugSprings(args.bValue);
+		});
+	springVisCheckBox.SetCheck(wi::renderer::GetToDrawDebugSprings());
+	AddWidget(&springVisCheckBox);
 
 	gridHelperCheckBox.Create("Grid helper: ");
 	gridHelperCheckBox.SetTooltip("Toggle showing of unit visualizer grid in the world origin");
@@ -237,7 +245,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&bonePickerOpacitySlider);
 
-	skeletonsVisibleCheckBox.Create("Skeletons always visible: ");
+	skeletonsVisibleCheckBox.Create(ICON_BONE " Skeletons always visible: ");
 	skeletonsVisibleCheckBox.SetTooltip("Armature skeletons will be always visible, even when not selected.");
 	AddWidget(&skeletonsVisibleCheckBox);
 
@@ -765,6 +773,7 @@ void GeneralWindow::ResizeLayout()
 	add_right(envProbesCheckBox);
 	add_right(cameraVisCheckBox);
 	add_right(colliderVisCheckBox);
+	add_right(springVisCheckBox);
 
 	y += jump;
 

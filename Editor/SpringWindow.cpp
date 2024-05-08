@@ -43,17 +43,13 @@ void SpringWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&resetAllButton);
 
-	debugCheckBox.Create("DEBUG: ");
-	debugCheckBox.SetTooltip("Enabling this will visualize springs as small yellow X-es in the scene");
-	debugCheckBox.SetPos(XMFLOAT2(x, y += step));
-	debugCheckBox.SetSize(XMFLOAT2(hei, hei));
-	AddWidget(&debugCheckBox);
-
 	disabledCheckBox.Create("Disabled: ");
 	disabledCheckBox.SetTooltip("Disable simulation.");
 	disabledCheckBox.SetPos(XMFLOAT2(x, y += step));
 	disabledCheckBox.SetSize(XMFLOAT2(hei, hei));
 	disabledCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		if (!editor->GetCurrentScene().springs.Contains(entity))
+			return;
 		editor->GetCurrentScene().springs.GetComponent(entity)->SetDisabled(args.bValue);
 		});
 	AddWidget(&disabledCheckBox);
@@ -63,6 +59,8 @@ void SpringWindow::Create(EditorComponent* _editor)
 	gravityCheckBox.SetPos(XMFLOAT2(x, y += step));
 	gravityCheckBox.SetSize(XMFLOAT2(hei, hei));
 	gravityCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		if (!editor->GetCurrentScene().springs.Contains(entity))
+			return;
 		editor->GetCurrentScene().springs.GetComponent(entity)->SetGravityEnabled(args.bValue);
 		});
 	AddWidget(&gravityCheckBox);
@@ -72,6 +70,8 @@ void SpringWindow::Create(EditorComponent* _editor)
 	stiffnessSlider.SetPos(XMFLOAT2(x, y += step));
 	stiffnessSlider.SetSize(XMFLOAT2(siz, hei));
 	stiffnessSlider.OnSlide([&](wi::gui::EventArgs args) {
+		if (!editor->GetCurrentScene().springs.Contains(entity))
+			return;
 		editor->GetCurrentScene().springs.GetComponent(entity)->stiffnessForce = args.fValue;
 		});
 	AddWidget(&stiffnessSlider);
@@ -81,6 +81,8 @@ void SpringWindow::Create(EditorComponent* _editor)
 	dragSlider.SetPos(XMFLOAT2(x, y += step));
 	dragSlider.SetSize(XMFLOAT2(siz, hei));
 	dragSlider.OnSlide([&](wi::gui::EventArgs args) {
+		if (!editor->GetCurrentScene().springs.Contains(entity))
+			return;
 		editor->GetCurrentScene().springs.GetComponent(entity)->dragForce = args.fValue;
 		});
 	AddWidget(&dragSlider);
@@ -90,6 +92,8 @@ void SpringWindow::Create(EditorComponent* _editor)
 	windSlider.SetPos(XMFLOAT2(x, y += step));
 	windSlider.SetSize(XMFLOAT2(siz, hei));
 	windSlider.OnSlide([&](wi::gui::EventArgs args) {
+		if (!editor->GetCurrentScene().springs.Contains(entity))
+			return;
 		editor->GetCurrentScene().springs.GetComponent(entity)->windForce = args.fValue;
 		});
 	AddWidget(&windSlider);
@@ -99,9 +103,22 @@ void SpringWindow::Create(EditorComponent* _editor)
 	gravitySlider.SetPos(XMFLOAT2(x, y += step));
 	gravitySlider.SetSize(XMFLOAT2(siz, hei));
 	gravitySlider.OnSlide([&](wi::gui::EventArgs args) {
+		if (!editor->GetCurrentScene().springs.Contains(entity))
+			return;
 		editor->GetCurrentScene().springs.GetComponent(entity)->gravityPower = args.fValue;
 		});
 	AddWidget(&gravitySlider);
+
+	hitradiusSlider.Create(0, 1, 0, 100000, "Collision hit radius: ");
+	hitradiusSlider.SetTooltip("The radius of the spring's collision sphere, that will be checked against colliders.");
+	hitradiusSlider.SetPos(XMFLOAT2(x, y += step));
+	hitradiusSlider.SetSize(XMFLOAT2(siz, hei));
+	hitradiusSlider.OnSlide([&](wi::gui::EventArgs args) {
+		if (!editor->GetCurrentScene().springs.Contains(entity))
+			return;
+		editor->GetCurrentScene().springs.GetComponent(entity)->hitRadius = args.fValue;
+		});
+	AddWidget(&hitradiusSlider);
 
 
 	SetMinimized(true);
@@ -126,13 +143,12 @@ void SpringWindow::SetEntity(Entity entity)
 		dragSlider.SetValue(spring->dragForce);
 		windSlider.SetValue(spring->windForce);
 		gravitySlider.SetValue(spring->gravityPower);
+		hitradiusSlider.SetValue(spring->hitRadius);
 	}
 	else
 	{
 		SetEnabled(false);
 	}
-
-	debugCheckBox.SetEnabled(true);
 }
 
 void SpringWindow::ResizeLayout()
@@ -173,12 +189,12 @@ void SpringWindow::ResizeLayout()
 	};
 
 	add_fullwidth(resetAllButton);
-	add_right(debugCheckBox);
 	add_right(disabledCheckBox);
 	add_right(gravityCheckBox);
 	add(stiffnessSlider);
 	add(dragSlider);
 	add(windSlider);
 	add(gravitySlider);
+	add(hitradiusSlider);
 
 }

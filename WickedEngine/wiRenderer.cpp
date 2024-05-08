@@ -106,6 +106,7 @@ bool debugEnvProbes = false;
 bool debugForceFields = false;
 bool debugCameras = false;
 bool debugColliders = false;
+bool debugSprings = false;
 bool gridHelper = false;
 bool advancedLightCulling = true;
 bool variableRateShadingClassification = false;
@@ -142,13 +143,20 @@ int max_shadow_resolution_2D = 1024;
 int max_shadow_resolution_cube = 256;
 
 wi::vector<std::pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes;
+wi::vector<std::pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes_depth;
 wi::vector<std::pair<Sphere, XMFLOAT4>> renderableSpheres;
+wi::vector<std::pair<Sphere, XMFLOAT4>> renderableSpheres_depth;
 wi::vector<std::pair<Capsule, XMFLOAT4>> renderableCapsules;
+wi::vector<std::pair<Capsule, XMFLOAT4>> renderableCapsules_depth;
 wi::vector<RenderableLine> renderableLines;
+wi::vector<RenderableLine> renderableLines_depth;
 wi::vector<RenderableLine2D> renderableLines2D;
 wi::vector<RenderablePoint> renderablePoints;
+wi::vector<RenderablePoint> renderablePoints_depth;
 wi::vector<RenderableTriangle> renderableTriangles_solid;
 wi::vector<RenderableTriangle> renderableTriangles_wireframe;
+wi::vector<RenderableTriangle> renderableTriangles_solid_depth;
+wi::vector<RenderableTriangle> renderableTriangles_wireframe_depth;
 wi::vector<uint8_t> debugTextStorage; // A stream of DebugText struct + text characters
 wi::vector<PaintRadius> paintrads;
 wi::vector<PaintTextureParams> painttextures;
@@ -637,9 +645,13 @@ enum DEBUGRENDERING
 	DEBUGRENDERING_DDGI,
 	DEBUGRENDERING_GRID,
 	DEBUGRENDERING_CUBE,
+	DEBUGRENDERING_CUBE_DEPTH,
 	DEBUGRENDERING_LINES,
+	DEBUGRENDERING_LINES_DEPTH,
 	DEBUGRENDERING_TRIANGLE_SOLID,
 	DEBUGRENDERING_TRIANGLE_WIREFRAME,
+	DEBUGRENDERING_TRIANGLE_SOLID_DEPTH,
+	DEBUGRENDERING_TRIANGLE_WIREFRAME_DEPTH,
 	DEBUGRENDERING_EMITTER,
 	DEBUGRENDERING_PAINTRADIUS,
 	DEBUGRENDERING_VOXEL,
@@ -1532,6 +1544,15 @@ void LoadShaders()
 			desc.vs = &shaders[VSTYPE_VERTEXCOLOR];
 			desc.ps = &shaders[PSTYPE_VERTEXCOLOR];
 			desc.il = &inputLayouts[ILTYPE_VERTEXCOLOR];
+			desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
+			desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
+			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+			desc.pt = PrimitiveTopology::LINELIST;
+			break;
+		case DEBUGRENDERING_CUBE_DEPTH:
+			desc.vs = &shaders[VSTYPE_VERTEXCOLOR];
+			desc.ps = &shaders[PSTYPE_VERTEXCOLOR];
+			desc.il = &inputLayouts[ILTYPE_VERTEXCOLOR];
 			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 			desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
 			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
@@ -1546,7 +1567,34 @@ void LoadShaders()
 			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 			desc.pt = PrimitiveTopology::LINELIST;
 			break;
+		case DEBUGRENDERING_LINES_DEPTH:
+			desc.vs = &shaders[VSTYPE_VERTEXCOLOR];
+			desc.ps = &shaders[PSTYPE_VERTEXCOLOR];
+			desc.il = &inputLayouts[ILTYPE_VERTEXCOLOR];
+			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+			desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
+			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+			desc.pt = PrimitiveTopology::LINELIST;
+			break;
 		case DEBUGRENDERING_TRIANGLE_SOLID:
+			desc.vs = &shaders[VSTYPE_VERTEXCOLOR];
+			desc.ps = &shaders[PSTYPE_VERTEXCOLOR];
+			desc.il = &inputLayouts[ILTYPE_VERTEXCOLOR];
+			desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
+			desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+			desc.pt = PrimitiveTopology::TRIANGLELIST;
+			break;
+		case DEBUGRENDERING_TRIANGLE_WIREFRAME:
+			desc.vs = &shaders[VSTYPE_VERTEXCOLOR];
+			desc.ps = &shaders[PSTYPE_VERTEXCOLOR];
+			desc.il = &inputLayouts[ILTYPE_VERTEXCOLOR];
+			desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
+			desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
+			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+			desc.pt = PrimitiveTopology::TRIANGLELIST;
+			break;
+		case DEBUGRENDERING_TRIANGLE_SOLID_DEPTH:
 			desc.vs = &shaders[VSTYPE_VERTEXCOLOR];
 			desc.ps = &shaders[PSTYPE_VERTEXCOLOR];
 			desc.il = &inputLayouts[ILTYPE_VERTEXCOLOR];
@@ -1555,7 +1603,7 @@ void LoadShaders()
 			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 			desc.pt = PrimitiveTopology::TRIANGLELIST;
 			break;
-		case DEBUGRENDERING_TRIANGLE_WIREFRAME:
+		case DEBUGRENDERING_TRIANGLE_WIREFRAME_DEPTH:
 			desc.vs = &shaders[VSTYPE_VERTEXCOLOR];
 			desc.ps = &shaders[PSTYPE_VERTEXCOLOR];
 			desc.il = &inputLayouts[ILTYPE_VERTEXCOLOR];
@@ -6306,7 +6354,7 @@ void DrawDebugWorld(
 
 	if (debugCameras)
 	{
-		device->EventBegin("DebugCameras", cmd);
+		device->EventBegin("Debug Cameras", cmd);
 
 		static GPUBuffer wirecamVB;
 		static GPUBuffer wirecamIB;
@@ -6407,6 +6455,7 @@ void DrawDebugWorld(
 
 	if (GetToDrawDebugColliders())
 	{
+		const XMFLOAT4 colliderColor = wi::Color(88, 218, 83, 255);
 		for (size_t i = 0; i < scene.colliders.GetCount(); ++i)
 		{
 			ColliderComponent& collider = scene.colliders[i];
@@ -6414,16 +6463,16 @@ void DrawDebugWorld(
 			{
 			default:
 			case ColliderComponent::Shape::Sphere:
-				DrawSphere(collider.sphere, XMFLOAT4(1, 0, 1, 1));
+				DrawSphere(collider.sphere, colliderColor, false);
 				break;
 			case ColliderComponent::Shape::Capsule:
-				DrawCapsule(collider.capsule, XMFLOAT4(1, 0, 1, 1));
+				DrawCapsule(collider.capsule, colliderColor, false);
 				break;
 			case ColliderComponent::Shape::Plane:
 				{
 					RenderableLine line;
-					line.color_start = XMFLOAT4(1, 0, 1, 1);
-					line.color_end = XMFLOAT4(1, 0, 1, 1);
+					line.color_start = colliderColor;
+					line.color_end = colliderColor;
 					XMMATRIX planeMatrix = XMMatrixInverse(nullptr, XMLoadFloat4x4(&collider.plane.projection));
 					XMVECTOR P0 = XMVector3Transform(XMVectorSet(-1, 0, -1, 1), planeMatrix);
 					XMVECTOR P1 = XMVector3Transform(XMVectorSet(1, 0, -1, 1), planeMatrix);
@@ -6431,24 +6480,47 @@ void DrawDebugWorld(
 					XMVECTOR P3 = XMVector3Transform(XMVectorSet(-1, 0, 1, 1), planeMatrix);
 					XMStoreFloat3(&line.start, P0);
 					XMStoreFloat3(&line.end, P1);
-					DrawLine(line);
+					DrawLine(line, false);
 					XMStoreFloat3(&line.start, P1);
 					XMStoreFloat3(&line.end, P2);
-					DrawLine(line);
+					DrawLine(line, false);
 					XMStoreFloat3(&line.start, P2);
 					XMStoreFloat3(&line.end, P3);
-					DrawLine(line);
+					DrawLine(line, false);
 					XMStoreFloat3(&line.start, P3);
 					XMStoreFloat3(&line.end, P0);
-					DrawLine(line);
+					DrawLine(line, false);
 					XMVECTOR O = XMLoadFloat3(&collider.plane.origin);
 					XMVECTOR N = XMLoadFloat3(&collider.plane.normal);
 					XMStoreFloat3(&line.start, O);
 					XMStoreFloat3(&line.end, O + N);
-					DrawLine(line);
+					DrawLine(line, false);
 				}
 				break;
 			}
+		}
+	}
+
+	if (GetToDrawDebugSprings())
+	{
+		const XMFLOAT4 springDebugColor = wi::Color(255, 70, 165, 255);
+		for (size_t i = 0; i < scene.springs.GetCount(); ++i)
+		{
+			Entity entity = scene.springs.GetEntity(i);
+			const SpringComponent& spring = scene.springs[i];
+			const TransformComponent* transform = scene.transforms.GetComponent(entity);
+			if (transform != nullptr)
+			{
+				wi::renderer::RenderableLine line;
+				line.start = transform->GetPosition();
+				line.end = spring.currentTail;
+				line.color_end = line.color_start = springDebugColor;
+				wi::renderer::DrawLine(line, false);
+			}
+			wi::primitive::Sphere sphere;
+			sphere.center = spring.currentTail;
+			sphere.radius = spring.hitRadius;
+			wi::renderer::DrawSphere(sphere, springDebugColor, false);
 		}
 	}
 
@@ -6625,159 +6697,135 @@ void DrawDebugWorld(
 		device->EventEnd(cmd);
 	}
 
-	if (!renderableTriangles_solid.empty())
+	if(
+		!renderableTriangles_solid.empty() ||
+		!renderableTriangles_wireframe.empty() ||
+		!renderableTriangles_solid_depth.empty() ||
+		!renderableTriangles_wireframe_depth.empty()
+		)
 	{
-		device->EventBegin("DebugTriangles (Solid)", cmd);
+		device->EventBegin("Debug Triangles", cmd);
+
+		auto draw_triangle = [&](wi::vector<RenderableTriangle>& dbg) {
+			if (dbg.empty())
+				return;
+			MiscCB sb;
+			XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
+			sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+
+			struct Vertex
+			{
+				XMFLOAT4 position;
+				XMFLOAT4 color;
+			};
+			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(Vertex) * dbg.size() * 3, cmd);
+
+			int i = 0;
+			for (auto& triangle : dbg)
+			{
+				Vertex vertices[3];
+				vertices[0].position = XMFLOAT4(triangle.positionA.x, triangle.positionA.y, triangle.positionA.z, 1);
+				vertices[0].color = triangle.colorA;
+				vertices[1].position = XMFLOAT4(triangle.positionB.x, triangle.positionB.y, triangle.positionB.z, 1);
+				vertices[1].color = triangle.colorB;
+				vertices[2].position = XMFLOAT4(triangle.positionC.x, triangle.positionC.y, triangle.positionC.z, 1);
+				vertices[2].color = triangle.colorC;
+
+				memcpy((void*)((size_t)mem.data + i * sizeof(vertices)), vertices, sizeof(vertices));
+				i++;
+			}
+
+			const GPUBuffer* vbs[] = {
+				&mem.buffer,
+			};
+			const uint32_t strides[] = {
+				sizeof(Vertex),
+			};
+			const uint64_t offsets[] = {
+				mem.offset,
+			};
+			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+			device->Draw(3 * i, 0, cmd);
+
+			dbg.clear();
+		};
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_TRIANGLE_SOLID], cmd);
-
-		MiscCB sb;
-		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
-		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
-
-		struct Vertex
-		{
-			XMFLOAT4 position;
-			XMFLOAT4 color;
-		};
-		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(Vertex) * renderableTriangles_solid.size() * 3, cmd);
-
-		int i = 0;
-		for (auto& triangle : renderableTriangles_solid)
-		{
-			Vertex vertices[3];
-			vertices[0].position = XMFLOAT4(triangle.positionA.x, triangle.positionA.y, triangle.positionA.z, 1);
-			vertices[0].color = triangle.colorA;
-			vertices[1].position = XMFLOAT4(triangle.positionB.x, triangle.positionB.y, triangle.positionB.z, 1);
-			vertices[1].color = triangle.colorB;
-			vertices[2].position = XMFLOAT4(triangle.positionC.x, triangle.positionC.y, triangle.positionC.z, 1);
-			vertices[2].color = triangle.colorC;
-
-			memcpy((void*)((size_t)mem.data + i * sizeof(vertices)), vertices, sizeof(vertices));
-			i++;
-		}
-
-		const GPUBuffer* vbs[] = {
-			&mem.buffer,
-		};
-		const uint32_t strides[] = {
-			sizeof(Vertex),
-		};
-		const uint64_t offsets[] = {
-			mem.offset,
-		};
-		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
-
-		device->Draw(3 * i, 0, cmd);
-
-		renderableTriangles_solid.clear();
-
-		device->EventEnd(cmd);
-	}
-
-	if (!renderableTriangles_wireframe.empty())
-	{
-		device->EventBegin("DebugTriangles (Wireframe)", cmd);
+		draw_triangle(renderableTriangles_solid);
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_TRIANGLE_WIREFRAME], cmd);
+		draw_triangle(renderableTriangles_wireframe);
 
-		MiscCB sb;
-		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
-		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_TRIANGLE_SOLID_DEPTH], cmd);
+		draw_triangle(renderableTriangles_solid_depth);
 
-		struct Vertex
-		{
-			XMFLOAT4 position;
-			XMFLOAT4 color;
-		};
-		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(Vertex) * renderableTriangles_wireframe.size() * 3, cmd);
-
-		int i = 0;
-		for (auto& triangle : renderableTriangles_wireframe)
-		{
-			Vertex vertices[3];
-			vertices[0].position = XMFLOAT4(triangle.positionA.x, triangle.positionA.y, triangle.positionA.z, 1);
-			vertices[0].color = triangle.colorA;
-			vertices[1].position = XMFLOAT4(triangle.positionB.x, triangle.positionB.y, triangle.positionB.z, 1);
-			vertices[1].color = triangle.colorB;
-			vertices[2].position = XMFLOAT4(triangle.positionC.x, triangle.positionC.y, triangle.positionC.z, 1);
-			vertices[2].color = triangle.colorC;
-
-			memcpy((void*)((size_t)mem.data + i * sizeof(vertices)), vertices, sizeof(vertices));
-			i++;
-		}
-
-		const GPUBuffer* vbs[] = {
-			&mem.buffer,
-		};
-		const uint32_t strides[] = {
-			sizeof(Vertex),
-		};
-		const uint64_t offsets[] = {
-			mem.offset,
-		};
-		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
-
-		device->Draw(3 * i, 0, cmd);
-
-		renderableTriangles_wireframe.clear();
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_TRIANGLE_WIREFRAME_DEPTH], cmd);
+		draw_triangle(renderableTriangles_wireframe_depth);
 
 		device->EventEnd(cmd);
 	}
 
-	if (!renderableLines.empty())
+	if(!renderableLines.empty() || !renderableLines_depth.empty())
 	{
-		device->EventBegin("DebugLines", cmd);
+		device->EventBegin("Debug Lines - 3D", cmd);
+
+		auto draw_line = [&](wi::vector<RenderableLine>& dbg) {
+			if (dbg.empty())
+				return;
+			MiscCB sb;
+			XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
+			sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+
+			struct LineSegment
+			{
+				XMFLOAT4 a, colorA, b, colorB;
+			};
+			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(LineSegment) * dbg.size(), cmd);
+
+			int i = 0;
+			for (auto& line : dbg)
+			{
+				LineSegment segment;
+				segment.a = XMFLOAT4(line.start.x, line.start.y, line.start.z, 1);
+				segment.b = XMFLOAT4(line.end.x, line.end.y, line.end.z, 1);
+				segment.colorA = line.color_start;
+				segment.colorB = line.color_end;
+
+				memcpy((void*)((size_t)mem.data + i * sizeof(LineSegment)), &segment, sizeof(LineSegment));
+				i++;
+			}
+
+			const GPUBuffer* vbs[] = {
+				&mem.buffer,
+			};
+			const uint32_t strides[] = {
+				sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+			};
+			const uint64_t offsets[] = {
+				mem.offset,
+			};
+			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+			device->Draw(2 * i, 0, cmd);
+
+			dbg.clear();
+		};
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_LINES], cmd);
+		draw_line(renderableLines);
 
-		MiscCB sb;
-		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
-		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
-
-		struct LineSegment
-		{
-			XMFLOAT4 a, colorA, b, colorB;
-		};
-		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(LineSegment) * renderableLines.size(), cmd);
-
-		int i = 0;
-		for (auto& line : renderableLines)
-		{
-			LineSegment segment;
-			segment.a = XMFLOAT4(line.start.x, line.start.y, line.start.z, 1);
-			segment.b = XMFLOAT4(line.end.x, line.end.y, line.end.z, 1);
-			segment.colorA = line.color_start;
-			segment.colorB = line.color_end;
-
-			memcpy((void*)((size_t)mem.data + i * sizeof(LineSegment)), &segment, sizeof(LineSegment));
-			i++;
-		}
-
-		const GPUBuffer* vbs[] = {
-			&mem.buffer,
-		};
-		const uint32_t strides[] = {
-			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-		};
-		const uint64_t offsets[] = {
-			mem.offset,
-		};
-		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
-
-		device->Draw(2 * i, 0, cmd);
-
-		renderableLines.clear();
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_LINES_DEPTH], cmd);
+		draw_line(renderableLines_depth);
 
 		device->EventEnd(cmd);
 	}
 
 	if (!renderableLines2D.empty())
 	{
-		device->EventBegin("DebugLines - 2D", cmd);
+		device->EventBegin("Debug Lines - 2D", cmd);
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_LINES], cmd);
 
@@ -6823,74 +6871,80 @@ void DrawDebugWorld(
 		device->EventEnd(cmd);
 	}
 
-	if (!renderablePoints.empty())
+	if(!renderablePoints.empty() || !renderablePoints_depth.empty())
 	{
-		device->EventBegin("DebugPoints", cmd);
+		device->EventBegin("Debug Points", cmd);
+
+		auto draw_point = [&](wi::vector<RenderablePoint>& dbg) {
+			if (dbg.empty())
+				return;
+			MiscCB sb;
+			XMStoreFloat4x4(&sb.g_xTransform, camera.GetProjection()); // only projection, we will expand in view space on CPU below to be camera facing!
+			sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+
+			// Will generate 2 line segments for each point forming a cross section:
+			struct LineSegment
+			{
+				XMFLOAT4 a, colorA, b, colorB;
+			};
+			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(LineSegment) * dbg.size() * 2, cmd);
+
+			XMMATRIX V = camera.GetView();
+
+			int i = 0;
+			for (auto& point : dbg)
+			{
+				LineSegment segment;
+				segment.colorA = segment.colorB = point.color;
+
+				// the cross section will be transformed to view space and expanded here:
+				XMVECTOR _c = XMLoadFloat3(&point.position);
+				_c = XMVector3Transform(_c, V);
+
+				XMVECTOR _a = _c + XMVectorSet(-1, -1, 0, 0) * point.size;
+				XMVECTOR _b = _c + XMVectorSet(1, 1, 0, 0) * point.size;
+				XMStoreFloat4(&segment.a, _a);
+				XMStoreFloat4(&segment.b, _b);
+				memcpy((void*)((size_t)mem.data + i * sizeof(LineSegment)), &segment, sizeof(LineSegment));
+				i++;
+
+				_a = _c + XMVectorSet(-1, 1, 0, 0) * point.size;
+				_b = _c + XMVectorSet(1, -1, 0, 0) * point.size;
+				XMStoreFloat4(&segment.a, _a);
+				XMStoreFloat4(&segment.b, _b);
+				memcpy((void*)((size_t)mem.data + i * sizeof(LineSegment)), &segment, sizeof(LineSegment));
+				i++;
+			}
+
+			const GPUBuffer* vbs[] = {
+				&mem.buffer,
+			};
+			const uint32_t strides[] = {
+				sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+			};
+			const uint64_t offsets[] = {
+				mem.offset,
+			};
+			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+			device->Draw(2 * i, 0, cmd);
+
+			dbg.clear();
+		};
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_LINES], cmd);
+		draw_point(renderablePoints);
 
-		MiscCB sb;
-		XMStoreFloat4x4(&sb.g_xTransform, camera.GetProjection()); // only projection, we will expand in view space on CPU below to be camera facing!
-		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
-
-		// Will generate 2 line segments for each point forming a cross section:
-		struct LineSegment
-		{
-			XMFLOAT4 a, colorA, b, colorB;
-		};
-		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(LineSegment) * renderablePoints.size() * 2, cmd);
-
-		XMMATRIX V = camera.GetView();
-
-		int i = 0;
-		for (auto& point : renderablePoints)
-		{
-			LineSegment segment;
-			segment.colorA = segment.colorB = point.color;
-
-			// the cross section will be transformed to view space and expanded here:
-			XMVECTOR _c = XMLoadFloat3(&point.position);
-			_c = XMVector3Transform(_c, V);
-
-			XMVECTOR _a = _c + XMVectorSet(-1, -1, 0, 0) * point.size;
-			XMVECTOR _b = _c + XMVectorSet(1, 1, 0, 0) * point.size;
-			XMStoreFloat4(&segment.a, _a);
-			XMStoreFloat4(&segment.b, _b);
-			memcpy((void*)((size_t)mem.data + i * sizeof(LineSegment)), &segment, sizeof(LineSegment));
-			i++;
-
-			_a = _c + XMVectorSet(-1, 1, 0, 0) * point.size;
-			_b = _c + XMVectorSet(1, -1, 0, 0) * point.size;
-			XMStoreFloat4(&segment.a, _a);
-			XMStoreFloat4(&segment.b, _b);
-			memcpy((void*)((size_t)mem.data + i * sizeof(LineSegment)), &segment, sizeof(LineSegment));
-			i++;
-		}
-
-		const GPUBuffer* vbs[] = {
-			&mem.buffer,
-		};
-		const uint32_t strides[] = {
-			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-		};
-		const uint64_t offsets[] = {
-			mem.offset,
-		};
-		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
-
-		device->Draw(2 * i, 0, cmd);
-
-		renderablePoints.clear();
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_LINES_DEPTH], cmd);
+		draw_point(renderablePoints_depth);
 
 		device->EventEnd(cmd);
 	}
 
-	if (!renderableBoxes.empty())
+	if(!renderableBoxes.empty() || !renderableBoxes_depth.empty())
 	{
-		device->EventBegin("DebugBoxes", cmd);
-
-		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
+		device->EventBegin("Debug Boxes", cmd);
 
 		const GPUBuffer* vbs[] = {
 			&wirecubeVB,
@@ -6901,25 +6955,36 @@ void DrawDebugWorld(
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
 		device->BindIndexBuffer(&wirecubeIB, IndexBufferFormat::UINT16, 0, cmd);
 
-		MiscCB sb;
+		auto draw_box = [&](wi::vector<std::pair<XMFLOAT4X4, XMFLOAT4>>& dbg) {
+			if (dbg.empty())
+				return;
 
-		for (auto& x : renderableBoxes)
-		{
-			XMStoreFloat4x4(&sb.g_xTransform, XMLoadFloat4x4(&x.first)*camera.GetViewProjection());
-			sb.g_xColor = x.second;
+			MiscCB sb;
 
-			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+			for (auto& x : dbg)
+			{
+				XMStoreFloat4x4(&sb.g_xTransform, XMLoadFloat4x4(&x.first) * camera.GetViewProjection());
+				sb.g_xColor = x.second;
 
-			device->DrawIndexed(24, 0, 0, cmd);
-		}
-		renderableBoxes.clear();
+				device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+
+				device->DrawIndexed(24, 0, 0, cmd);
+			}
+			dbg.clear();
+		};
+
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
+		draw_box(renderableBoxes);
+
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE_DEPTH], cmd);
+		draw_box(renderableBoxes_depth);
 
 		device->EventEnd(cmd);
 	}
 
-	if (!renderableSpheres.empty())
+	if (!renderableSpheres.empty() || !renderableSpheres_depth.empty())
 	{
-		device->EventBegin("DebugSpheres", cmd);
+		device->EventBegin("Debug Spheres", cmd);
 
 		static GPUBuffer wiresphereVB;
 		static GPUBuffer wiresphereIB;
@@ -6987,8 +7052,6 @@ void DrawDebugWorld(
 			device->CreateBuffer(&bd, indices.data(), &wiresphereIB);
 		}
 
-		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
-
 		const GPUBuffer* vbs[] = {
 			&wiresphereVB,
 		};
@@ -6998,125 +7061,142 @@ void DrawDebugWorld(
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
 		device->BindIndexBuffer(&wiresphereIB, IndexBufferFormat::UINT16, 0, cmd);
 
-		MiscCB sb;
+		auto draw_sphere = [&](wi::vector<std::pair<Sphere, XMFLOAT4>>& dbg) {
+			if (dbg.empty())
+				return;
 
-		for (auto& x : renderableSpheres)
-		{
-			const Sphere& sphere = x.first;
-			XMStoreFloat4x4(&sb.g_xTransform,
-				XMMatrixScaling(sphere.radius, sphere.radius, sphere.radius) *
-				XMMatrixTranslation(sphere.center.x, sphere.center.y, sphere.center.z) *
-				camera.GetViewProjection()
-			);
-			sb.g_xColor = x.second;
+			MiscCB sb;
+			for (auto& x : dbg)
+			{
+				const Sphere& sphere = x.first;
+				XMStoreFloat4x4(&sb.g_xTransform,
+					XMMatrixScaling(sphere.radius, sphere.radius, sphere.radius) *
+					XMMatrixTranslation(sphere.center.x, sphere.center.y, sphere.center.z) *
+					camera.GetViewProjection()
+				);
+				sb.g_xColor = x.second;
 
-			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+				device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
-			device->DrawIndexed((uint32_t)(wiresphereIB.GetDesc().size / sizeof(uint16_t)), 0, 0, cmd);
-		}
-		renderableSpheres.clear();
-
-		device->EventEnd(cmd);
-	}
-
-	if (!renderableCapsules.empty())
-	{
-		device->EventBegin("DebugCapsules", cmd);
+				device->DrawIndexed((uint32_t)(wiresphereIB.GetDesc().size / sizeof(uint16_t)), 0, 0, cmd);
+			}
+			dbg.clear();
+		};
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
+		draw_sphere(renderableSpheres);
 
-		MiscCB sb;
-		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
-		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
-
-		const int segmentcount = 18 + 1 + 18 + 1;
-		const int linecount = (int)renderableCapsules.size() * segmentcount;
-
-		struct LineSegment
-		{
-			XMFLOAT4 a, colorA, b, colorB;
-		};
-		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(LineSegment) * (size_t)linecount, cmd);
-
-		XMVECTOR Eye = camera.GetEye();
-		XMVECTOR Unit = XMVectorSet(0, 1, 0, 0);
-
-		LineSegment* linearray = (LineSegment*)mem.data;
-		int j = 0;
-		for (auto& it : renderableCapsules)
-		{
-			const Capsule& capsule = it.first;
-			const float radius = capsule.radius;
-
-			XMVECTOR Base = XMLoadFloat3(&capsule.base);
-			XMVECTOR Tip = XMLoadFloat3(&capsule.tip);
-			XMVECTOR Radius = XMVectorReplicate(capsule.radius);
-			XMVECTOR Normal = XMVector3Normalize(Tip - Base);
-			XMVECTOR Tangent = XMVector3Normalize(XMVector3Cross(Normal, Base - Eye));
-			XMVECTOR Binormal = XMVector3Normalize(XMVector3Cross(Tangent, Normal));
-			XMVECTOR LineEndOffset = Normal * Radius;
-			XMVECTOR A = Base + LineEndOffset;
-			XMVECTOR B = Tip - LineEndOffset;
-			XMVECTOR AB = Unit * XMVector3Length(B - A);
-			XMMATRIX M = { Tangent,Normal,Binormal,XMVectorSetW(A, 1) };
-
-			for (int i = 0; i < segmentcount; i += 1)
-			{
-				const float angle0 = XM_PIDIV2 + (float)i / (float)segmentcount * XM_2PI;
-				const float angle1 = XM_PIDIV2 + (float)(i + 1) / (float)segmentcount * XM_2PI;
-				XMVECTOR a, b;
-				if (i < 18)
-				{
-
-					a = XMVectorSet(sinf(angle0) * radius, cosf(angle0) * radius, 0, 1);
-					b = XMVectorSet(sinf(angle1) * radius, cosf(angle1) * radius, 0, 1);
-				}
-				else if (i == 18)
-				{
-					a = XMVectorSet(sinf(angle0) * radius, cosf(angle0) * radius, 0, 1);
-					b = AB + XMVectorSet(sinf(angle1) * radius, cosf(angle1) * radius, 0, 1);
-				}
-				else if (i > 18 && i < 18 + 1 + 18)
-				{
-					a = AB + XMVectorSet(sinf(angle0) * radius, cosf(angle0) * radius, 0, 1);
-					b = AB + XMVectorSet(sinf(angle1) * radius, cosf(angle1) * radius, 0, 1);
-				}
-				else
-				{
-					a = AB + XMVectorSet(sinf(angle0) * radius, cosf(angle0) * radius, 0, 1);
-					b = XMVectorSet(sinf(angle1) * radius, cosf(angle1) * radius, 0, 1);
-				}
-				a = XMVector3Transform(a, M);
-				b = XMVector3Transform(b, M);
-				LineSegment line;
-				XMStoreFloat4(&line.a, a);
-				XMStoreFloat4(&line.b, b);
-				line.colorA = line.colorB = it.second;
-				std::memcpy(linearray + j, &line, sizeof(line));
-				j++;
-			}
-
-		}
-
-		const GPUBuffer* vbs[] = {
-			&mem.buffer,
-		};
-		const uint32_t strides[] = {
-			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-		};
-		const uint64_t offsets[] = {
-			mem.offset,
-		};
-		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
-
-		device->Draw(linecount * 2, 0, cmd);
-
-		renderableCapsules.clear();
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE_DEPTH], cmd);
+		draw_sphere(renderableSpheres_depth);
 
 		device->EventEnd(cmd);
 	}
 
+	if (!renderableCapsules.empty() || !renderableCapsules_depth.empty())
+	{
+		device->EventBegin("Debug Capsules", cmd);
+
+		auto draw_capsule = [&](wi::vector<std::pair<Capsule, XMFLOAT4>>& dbg) {
+			if (dbg.empty())
+				return;
+			MiscCB sb;
+			XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
+			sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+
+			const int segmentcount = 18 + 1 + 18 + 1;
+			const int linecount = (int)dbg.size() * segmentcount;
+
+			struct LineSegment
+			{
+				XMFLOAT4 a, colorA, b, colorB;
+			};
+			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(LineSegment) * (size_t)linecount, cmd);
+
+			XMVECTOR Eye = camera.GetEye();
+			XMVECTOR Unit = XMVectorSet(0, 1, 0, 0);
+
+			LineSegment* linearray = (LineSegment*)mem.data;
+			int j = 0;
+			for (auto& it : dbg)
+			{
+				const Capsule& capsule = it.first;
+				const float radius = capsule.radius;
+
+				XMVECTOR Base = XMLoadFloat3(&capsule.base);
+				XMVECTOR Tip = XMLoadFloat3(&capsule.tip);
+				XMVECTOR Radius = XMVectorReplicate(capsule.radius);
+				XMVECTOR Normal = XMVector3Normalize(Tip - Base);
+				XMVECTOR Tangent = XMVector3Normalize(XMVector3Cross(Normal, Base - Eye));
+				XMVECTOR Binormal = XMVector3Normalize(XMVector3Cross(Tangent, Normal));
+				XMVECTOR LineEndOffset = Normal * Radius;
+				XMVECTOR A = Base + LineEndOffset;
+				XMVECTOR B = Tip - LineEndOffset;
+				XMVECTOR AB = Unit * XMVector3Length(B - A);
+				XMMATRIX M = { Tangent,Normal,Binormal,XMVectorSetW(A, 1) };
+
+				for (int i = 0; i < segmentcount; i += 1)
+				{
+					const float angle0 = XM_PIDIV2 + (float)i / (float)segmentcount * XM_2PI;
+					const float angle1 = XM_PIDIV2 + (float)(i + 1) / (float)segmentcount * XM_2PI;
+					XMVECTOR a, b;
+					if (i < 18)
+					{
+
+						a = XMVectorSet(sinf(angle0) * radius, cosf(angle0) * radius, 0, 1);
+						b = XMVectorSet(sinf(angle1) * radius, cosf(angle1) * radius, 0, 1);
+					}
+					else if (i == 18)
+					{
+						a = XMVectorSet(sinf(angle0) * radius, cosf(angle0) * radius, 0, 1);
+						b = AB + XMVectorSet(sinf(angle1) * radius, cosf(angle1) * radius, 0, 1);
+					}
+					else if (i > 18 && i < 18 + 1 + 18)
+					{
+						a = AB + XMVectorSet(sinf(angle0) * radius, cosf(angle0) * radius, 0, 1);
+						b = AB + XMVectorSet(sinf(angle1) * radius, cosf(angle1) * radius, 0, 1);
+					}
+					else
+					{
+						a = AB + XMVectorSet(sinf(angle0) * radius, cosf(angle0) * radius, 0, 1);
+						b = XMVectorSet(sinf(angle1) * radius, cosf(angle1) * radius, 0, 1);
+					}
+					a = XMVector3Transform(a, M);
+					b = XMVector3Transform(b, M);
+					LineSegment line;
+					XMStoreFloat4(&line.a, a);
+					XMStoreFloat4(&line.b, b);
+					line.colorA = line.colorB = it.second;
+					std::memcpy(linearray + j, &line, sizeof(line));
+					j++;
+				}
+
+			}
+
+			const GPUBuffer* vbs[] = {
+				&mem.buffer,
+			};
+			const uint32_t strides[] = {
+				sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+			};
+			const uint64_t offsets[] = {
+				mem.offset,
+			};
+			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+
+			device->Draw(linecount * 2, 0, cmd);
+
+			dbg.clear();
+		};
+
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
+		draw_capsule(renderableCapsules);
+
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE_DEPTH], cmd);
+		draw_capsule(renderableCapsules_depth);
+
+		device->EventEnd(cmd);
+	}
 
 	if (debugEnvProbes)
 	{
@@ -17163,39 +17243,68 @@ Ray GetPickRay(long cursorX, long cursorY, const wi::Canvas& canvas, const Camer
 	return Ray(lineStart, rayDirection);
 }
 
-void DrawBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color)
+void DrawBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color, bool depth)
 {
-	renderableBoxes.push_back(std::make_pair(boxMatrix,color));
+	if(depth)
+		renderableBoxes_depth.push_back(std::make_pair(boxMatrix, color));
+	else
+		renderableBoxes.push_back(std::make_pair(boxMatrix,color));
 }
-void DrawSphere(const Sphere& sphere, const XMFLOAT4& color)
+void DrawSphere(const Sphere& sphere, const XMFLOAT4& color, bool depth)
 {
-	renderableSpheres.push_back(std::make_pair(sphere, color));
+	if(depth)
+		renderableSpheres_depth.push_back(std::make_pair(sphere, color));
+	else
+		renderableSpheres.push_back(std::make_pair(sphere, color));
 }
-void DrawCapsule(const Capsule& capsule, const XMFLOAT4& color)
+void DrawCapsule(const Capsule& capsule, const XMFLOAT4& color, bool depth)
 {
-	renderableCapsules.push_back(std::make_pair(capsule, color));
+	if(depth)
+		renderableCapsules_depth.push_back(std::make_pair(capsule, color));
+	else
+		renderableCapsules.push_back(std::make_pair(capsule, color));
 }
-void DrawLine(const RenderableLine& line)
+void DrawLine(const RenderableLine& line, bool depth)
 {
-	renderableLines.push_back(line);
+	if(depth)
+		renderableLines_depth.push_back(line);
+	else
+		renderableLines.push_back(line);
 }
 void DrawLine(const RenderableLine2D& line)
 {
 	renderableLines2D.push_back(line);
 }
-void DrawPoint(const RenderablePoint& point)
+void DrawPoint(const RenderablePoint& point, bool depth)
 {
-	renderablePoints.push_back(point);
+	if(depth)
+		renderablePoints_depth.push_back(point);
+	else
+		renderablePoints.push_back(point);
 }
-void DrawTriangle(const RenderableTriangle& triangle, bool wireframe)
+void DrawTriangle(const RenderableTriangle& triangle, bool wireframe, bool depth)
 {
-	if (wireframe)
+	if(depth)
 	{
-		renderableTriangles_wireframe.push_back(triangle);
+		if (wireframe)
+		{
+			renderableTriangles_wireframe_depth.push_back(triangle);
+		}
+		else
+		{
+			renderableTriangles_solid_depth.push_back(triangle);
+		}
 	}
 	else
 	{
-		renderableTriangles_solid.push_back(triangle);
+		if (wireframe)
+		{
+			renderableTriangles_wireframe.push_back(triangle);
+		}
+		else
+		{
+			renderableTriangles_solid.push_back(triangle);
+		}
 	}
 }
 void DrawDebugText(const char* text, const DebugTextParams& params)
@@ -17264,6 +17373,8 @@ void SetToDrawDebugCameras(bool param) { debugCameras = param; }
 bool GetToDrawDebugCameras() { return debugCameras; }
 void SetToDrawDebugColliders(bool param) { debugColliders = param; }
 bool GetToDrawDebugColliders() { return debugColliders; }
+void SetToDrawDebugSprings(bool param) { debugSprings = param; }
+bool GetToDrawDebugSprings() { return debugSprings; }
 bool GetToDrawGridHelper() { return gridHelper; }
 void SetToDrawGridHelper(bool value) { gridHelper = value; }
 bool GetToDrawVoxelHelper() { return VXGI_DEBUG; }
