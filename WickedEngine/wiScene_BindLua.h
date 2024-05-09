@@ -34,6 +34,7 @@ namespace wi::lua::scene
 		int Update(lua_State* L);
 		int Clear(lua_State* L);
 		int Merge(lua_State* L);
+		int Instantiate(lua_State* L);
 
 		int UpdateHierarchy(lua_State* L);
 

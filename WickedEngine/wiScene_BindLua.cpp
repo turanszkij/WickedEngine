@@ -514,6 +514,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Update),
 	lunamethod(Scene_BindLua, Clear),
 	lunamethod(Scene_BindLua, Merge),
+	lunamethod(Scene_BindLua, Instantiate),
 	lunamethod(Scene_BindLua, UpdateHierarchy),
 	lunamethod(Scene_BindLua, Intersects),
 	lunamethod(Scene_BindLua, IntersectsFirst),
@@ -710,6 +711,33 @@ int Scene_BindLua::Merge(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "Scene::Merge(Scene other) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Instantiate(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Scene_BindLua* other = Luna<Scene_BindLua>::lightcheck(L, 1);
+		if (other)
+		{
+			bool attached = argc > 1 ? wi::lua::SGetBool(L, 2) : false;
+
+			Entity rootEntity = scene->Instantiate(*other->scene, attached);
+
+			wi::lua::SSetLongLong(L, rootEntity);
+
+			return 1;
+		}
+		else
+		{
+			wi::lua::SError(L, "Scene::Instantiate(Scene prefab, opt bool attached) first argument is not of type Scene!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Instantiate(Scene prefab, opt bool attached) not enough arguments!");
 	}
 	return 0;
 }
