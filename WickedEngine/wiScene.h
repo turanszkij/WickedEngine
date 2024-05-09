@@ -309,6 +309,11 @@ namespace wi::scene
 		// Merge an other scene into this.
 		//	The contents of the other scene will be lost (and moved to this)!
 		virtual void Merge(Scene& other);
+		// Create a copy of prefab and merge it into this.
+		//	prefab		: source scene to be copied from
+		//	attached	: if true, everything from prefab will be attached to a root entity
+		//	returns new root entity if attached is set to true, otherwise returns INVALID_ENTITY
+		virtual wi::ecs::Entity Instantiate(Scene& prefab, bool attached = false);
 		// Finds all entities in the scene that have any components attached
 		void FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities) const;
 

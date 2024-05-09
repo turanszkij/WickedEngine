@@ -1130,6 +1130,42 @@ namespace wi::scene
 		collider_count_gpu = collider_allocator_gpu.load();
 		collider_bvh.Build(aabb_colliders_cpu, collider_count_cpu);
 	}
+	Entity Scene::Instantiate(Scene& prefab, bool attached)
+	{
+		// Duplicate prefab into tmp scene
+		Scene tmp;
+		wi::Archive archive;
+
+		archive.SetReadModeAndResetPos(false);
+		prefab.Serialize(archive);
+
+		archive.SetReadModeAndResetPos(true);
+		tmp.Serialize(archive);
+
+		Entity rootEntity = INVALID_ENTITY;
+
+		if (attached)
+		{
+			// Create root entity
+			rootEntity = CreateEntity();
+			tmp.transforms.Create(rootEntity);
+			tmp.layers.Create(rootEntity).layerMask = ~0;
+
+			// Parent all unparented transforms to new root entity
+			for (size_t i = 0; i < tmp.transforms.GetCount(); ++i)
+			{
+				Entity entity = tmp.transforms.GetEntity(i);
+				if (entity != rootEntity && !tmp.hierarchy.Contains(entity))
+				{
+					tmp.Component_Attach(entity, rootEntity);
+				}
+			}
+		}
+
+		Merge(tmp);
+
+		return rootEntity;
+	}
 	void Scene::FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities) const
 	{
 		for (auto& entry : componentLibrary.entries)
