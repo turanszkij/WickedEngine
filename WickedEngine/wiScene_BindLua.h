@@ -44,6 +44,7 @@ namespace wi::lua::scene
 		int FindAllEntities(lua_State* L);
 		int Entity_FindByName(lua_State* L);
 		int Entity_Remove(lua_State* L);
+		int Entity_Remove_Async(lua_State* L);
 		int Entity_Duplicate(lua_State* L);
 		int Entity_IsDescendant(lua_State* L);
 

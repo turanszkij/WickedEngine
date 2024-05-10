@@ -22,6 +22,7 @@ This is a reference and explanation of Lua scripting features in Wicked Engine.
 		3. [SoundInstance3D](#soundinstance3d)
 	7. [Vector](#vector)
 	8. [Matrix](#matrix)
+	8. [Async](#async)
 	9. [Scene](#scene)
 		1. [Entity](#entity)
 		2. [Scene](#scene)
@@ -641,6 +642,13 @@ A four by four matrix, efficient calculations with SIMD support.
 - GetRight(Matrix mat) : Vector -- returns right direction of parameter matrix
 
 
+### Async
+The Async object can be used for tracking or Wait for completion of functions that are running on background threads. 
+
+- [constructor]Async() -- constructs a new Async tracker object
+- Wait() -- wait for completion of async tasks on this tracker
+- IsCompleted() : bool -- checks if all async tasks on this tracker have been completed
+
 ### Scene System (using entity-component system)
 Manipulate the 3D scene with these components.
 
@@ -676,11 +684,13 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Clear()  -- deletes every entity and component inside the scene
 - Merge(Scene other)  -- moves contents from an other scene into this one. The other scene will be empty after this operation (contents are moved, not copied)
 - UpdateHierarchy()	-- updates the full scene hierarchy system. Useful if you modified for example a parent transform and children immediately need up to date result in the script
+- Instantiate(Scene prefab, opt bool attached = false) : Entity  -- Duplicates everything in the prefab scene into the current scene. If attached parameter is st to `true` then everything in prefab scene will be attached to a common root entity (with TransformComponent and LayerComponent) and the function will return that root entity.
 
 - CreateEntity() : int entity  -- creates an empty entity and returns it
 - FindAllEntities() : table[entities] -- returns a table with all the entities present in the given scene
 - Entity_FindByName(string value, opt Entity ancestor = INVALID_ENTITY) : int entity  -- returns an entity ID if it exists, and INVALID_ENTITY otherwise. You can specify an ancestor entity if you only want to find entities that are descendants of ancestor entity
 - Entity_Remove(Entity entity, bool recursive = true, bool keep_sorted = false)  -- removes an entity and deletes all its components if it exists. If recursive is specified, then all children will be removed as well (enabled by default). If keep_sorted is specified, then component order will be kept (disabled by default, slower)
+- Entity_Remove_Async(Async async, Entity entity, bool recursive = true, bool keep_sorted = false)  -- Same as Entity_Remove, but it runs on a background thread, status can be tracked by the [Async](#async) object that you provide
 - Entity_Duplicate(Entity entity) : int entity  -- duplicates all of an entity's components and creates a new entity with them. Returns the clone entity handle
 - Entity_IsDescendant(Entity entity, Entity ancestor) : bool result	-- Check whether entity is a descendant of ancestor. Returns `true` if entity is in the hierarchy tree of ancestor, `false` otherwise
 

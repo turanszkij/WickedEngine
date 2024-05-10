@@ -24,6 +24,7 @@
 #include "wiVoxelGrid_BindLua.h"
 #include "wiPathQuery_BindLua.h"
 #include "wiTrailRenderer_BindLua.h"
+#include "wiAsync_BindLua.h"
 #include "wiTimer.h"
 #include "wiVector.h"
 
@@ -234,6 +235,7 @@ namespace wi::lua
 		VoxelGrid_BindLua::Bind();
 		PathQuery_BindLua::Bind();
 		TrailRenderer_BindLua::Bind();
+		Async_BindLua::Bind();
 
 		wi::backlog::post("wi::lua Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}

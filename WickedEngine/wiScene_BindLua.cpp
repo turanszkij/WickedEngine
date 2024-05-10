@@ -12,6 +12,7 @@
 #include "wiUnorderedMap.h"
 #include "wiVoxelGrid_BindLua.h"
 #include "wiAudio_BindLua.h"
+#include "wiAsync_BindLua.h"
 
 #include <string>
 
@@ -521,6 +522,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, FindAllEntities),
 	lunamethod(Scene_BindLua, Entity_FindByName),
 	lunamethod(Scene_BindLua, Entity_Remove),
+	lunamethod(Scene_BindLua, Entity_Remove_Async),
 	lunamethod(Scene_BindLua, Entity_Duplicate),
 	lunamethod(Scene_BindLua, Entity_IsDescendant),
 	lunamethod(Scene_BindLua, Component_CreateName),
@@ -809,6 +811,40 @@ int Scene_BindLua::Entity_Remove(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "Scene::Entity_Remove(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Entity_Remove_Async(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		Async_BindLua* async = Luna<Async_BindLua>::lightcheck(L, 1);
+		if (async == nullptr)
+		{
+			wi::lua::SError(L, "Scene::Entity_Remove_Async(Async async, Entity entity) first argument is not an Async!");
+			return 0;
+		}
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 2);
+		bool recursive = true;
+		bool keep_sorted = false;
+
+		if (argc > 2)
+		{
+			recursive = wi::lua::SGetBool(L, 3);
+			if (argc > 3)
+			{
+				keep_sorted = wi::lua::SGetBool(L, 4);
+			}
+		}
+
+		wi::jobsystem::Execute(async->ctx, [=](wi::jobsystem::JobArgs args) {
+			scene->Entity_Remove(entity, recursive, keep_sorted);
+		});
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Entity_Remove_Async(Async async, Entity entity) not enough arguments!");
 	}
 	return 0;
 }
