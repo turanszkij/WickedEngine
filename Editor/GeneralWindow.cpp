@@ -437,20 +437,6 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->optionsWnd.paintToolWnd.brushTextureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 		editor->optionsWnd.paintToolWnd.revealTextureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 		editor->aboutLabel.sprites[wi::gui::FOCUS] = editor->aboutLabel.sprites[wi::gui::IDLE];
-		for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
-		{
-			editor->optionsWnd.sprites[i].params.enableCornerRounding();
-			editor->optionsWnd.sprites[i].params.corners_rounding[1].radius = 10;
-			editor->optionsWnd.resizeDragger_UpperRight.sprites[i].params.enableCornerRounding();
-			editor->optionsWnd.resizeDragger_UpperRight.sprites[i].params.corners_rounding[1].radius = 10;
-		}
-		for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
-		{
-			editor->componentsWnd.sprites[i].params.enableCornerRounding();
-			editor->componentsWnd.sprites[i].params.corners_rounding[0].radius = 10;
-			editor->componentsWnd.resizeDragger_UpperLeft.sprites[i].params.enableCornerRounding();
-			editor->componentsWnd.resizeDragger_UpperLeft.sprites[i].params.corners_rounding[0].radius = 10;
-		}
 		int scene_id = 0;
 		for (auto& editorscene : editor->scenes)
 		{
@@ -485,6 +471,24 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->newSceneButton.sprites[i].params.corners_rounding[1].radius = 10;
 			editor->newSceneButton.sprites[i].params.corners_rounding[2].radius = 10;
 			editor->newSceneButton.sprites[i].params.corners_rounding[3].radius = 10;
+
+			editor->dummyButton.sprites[i].params.enableCornerRounding();
+			editor->dummyButton.sprites[i].params.corners_rounding[0].radius = 10;
+			editor->dummyButton.sprites[i].params.corners_rounding[1].radius = 10;
+			editor->dummyButton.sprites[i].params.corners_rounding[2].radius = 10;
+			editor->dummyButton.sprites[i].params.corners_rounding[3].radius = 10;
+
+			editor->physicsButton.sprites[i].params.enableCornerRounding();
+			editor->physicsButton.sprites[i].params.corners_rounding[0].radius = 10;
+			editor->physicsButton.sprites[i].params.corners_rounding[1].radius = 10;
+			editor->physicsButton.sprites[i].params.corners_rounding[2].radius = 10;
+			editor->physicsButton.sprites[i].params.corners_rounding[3].radius = 10;
+
+			editor->navtestButton.sprites[i].params.enableCornerRounding();
+			editor->navtestButton.sprites[i].params.corners_rounding[0].radius = 10;
+			editor->navtestButton.sprites[i].params.corners_rounding[1].radius = 10;
+			editor->navtestButton.sprites[i].params.corners_rounding[2].radius = 10;
+			editor->navtestButton.sprites[i].params.corners_rounding[3].radius = 10;
 		}
 		for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
 		{
@@ -532,9 +536,11 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->stopButton.sprites[i].params.corners_rounding[3].radius = 40;
 
 			editor->translateButton.sprites[i].params.enableCornerRounding();
-			editor->translateButton.sprites[i].params.corners_rounding[2].radius = 40;
+			editor->translateButton.sprites[i].params.corners_rounding[0].radius = 40;
+			editor->translateButton.sprites[i].params.corners_rounding[1].radius = 40;
 
 			editor->scaleButton.sprites[i].params.enableCornerRounding();
+			editor->scaleButton.sprites[i].params.corners_rounding[2].radius = 40;
 			editor->scaleButton.sprites[i].params.corners_rounding[3].radius = 40;
 
 			editor->dummyButton.sprites[i].params.enableCornerRounding();

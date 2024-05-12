@@ -141,61 +141,7 @@ void EditorComponent::ResizeBuffers()
 	init(main->canvas);
 	RenderPath2D::ResizeBuffers();
 
-	GraphicsDevice* device = wi::graphics::GetDevice();
-
-	renderPath->init(*this);
-	renderPath->ResizeBuffers();
-
-	if(renderPath->GetDepthStencil() != nullptr)
-	{
-		bool success = false;
-
-		XMUINT2 internalResolution = GetInternalResolution();
-
-		TextureDesc desc;
-		desc.width = internalResolution.x;
-		desc.height = internalResolution.y;
-
-		desc.format = Format::R8_UNORM;
-		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-		if (renderPath->getMSAASampleCount() > 1)
-		{
-			desc.sample_count = renderPath->getMSAASampleCount();
-			success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline_MSAA);
-			assert(success);
-			desc.sample_count = 1;
-		}
-		success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[0]);
-		assert(success);
-		success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[1]);
-		assert(success);
-	}
-
-	{
-		TextureDesc desc;
-		desc.width = renderPath->GetRenderResult().GetDesc().width;
-		desc.height = renderPath->GetRenderResult().GetDesc().height;
-		desc.format = Format::R8_UNORM;
-		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-		desc.swizzle.r = ComponentSwizzle::R;
-		desc.swizzle.g = ComponentSwizzle::R;
-		desc.swizzle.b = ComponentSwizzle::R;
-		desc.swizzle.a = ComponentSwizzle::R;
-		device->CreateTexture(&desc, nullptr, &rt_dummyOutline);
-		device->SetName(&rt_dummyOutline, "rt_dummyOutline");
-	}
-
-	{
-		TextureDesc desc;
-		desc.width = renderPath->GetRenderResult().GetDesc().width;
-		desc.height = renderPath->GetRenderResult().GetDesc().height;
-		desc.format = Format::D32_FLOAT;
-		desc.bind_flags = BindFlag::DEPTH_STENCIL;
-		desc.layout = ResourceState::DEPTHSTENCIL;
-		desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
-		device->CreateTexture(&desc, nullptr, &editor_depthbuffer);
-		device->SetName(&editor_depthbuffer, "editor_depthbuffer");
-	}
+	ResizeViewport3D();
 }
 void EditorComponent::ResizeLayout()
 {
@@ -206,11 +152,14 @@ void EditorComponent::ResizeLayout()
 	float screenW = GetLogicalWidth();
 	float screenH = GetLogicalHeight();
 
-	optionsWnd.SetPos(XMFLOAT2(0, screenH - optionsWnd.GetScale().y));
-	optionsWnd.scale_local = wi::math::Clamp(optionsWnd.scale_local, XMFLOAT3(1, 1, 1), XMFLOAT3(screenW, screenH, 1));
+	topmenuWnd.SetSize(XMFLOAT2(screenW, 25));
+	topmenuWnd.SetPos(XMFLOAT2(0, 0));
 
-	componentsWnd.SetPos(XMFLOAT2(screenW - componentsWnd.GetScale().x, screenH - componentsWnd.GetScale().y));
-	componentsWnd.scale_local = wi::math::Clamp(componentsWnd.scale_local, XMFLOAT3(1, 1, 1), XMFLOAT3(screenW, screenH, 1));
+	optionsWnd.SetSize(XMFLOAT2(300, screenH));
+	optionsWnd.SetPos(XMFLOAT2(0, topmenuWnd.scale_local.y + topmenuWnd.GetShadowRadius()));
+
+	componentsWnd.SetSize(XMFLOAT2(200, screenH));
+	componentsWnd.SetPos(XMFLOAT2(screenW - componentsWnd.scale_local.x, optionsWnd.GetPos().y));
 
 	aboutWindow.SetSize(XMFLOAT2(screenW / 2.0f, screenH / 1.5f));
 	aboutWindow.SetPos(XMFLOAT2(screenW / 2.0f - aboutWindow.scale.x / 2.0f, screenH / 2.0f - aboutWindow.scale.y / 2.0f));
@@ -221,6 +170,12 @@ void EditorComponent::ResizeLayout()
 }
 void EditorComponent::Load()
 {
+	topmenuWnd.Create("", wi::gui::Window::WindowControls::NONE);
+	topmenuWnd.SetShadowRadius(2);
+	GetGUI().AddWidget(&topmenuWnd);
+	topmenuWnd.scrollbar_horizontal.Detach();
+	topmenuWnd.scrollbar_vertical.Detach();
+
 	newSceneButton.Create("+");
 	newSceneButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	newSceneButton.SetTooltip("New scene");
@@ -341,7 +296,7 @@ void EditorComponent::Load()
 			});
 		}
 	});
-	GetGUI().AddWidget(&playButton);
+	topmenuWnd.AddWidget(&playButton);
 
 	if (main->config.Has("last_script_path"))
 	{
@@ -359,7 +314,7 @@ void EditorComponent::Load()
 	stopButton.OnClick([&](wi::gui::EventArgs args) {
 		wi::lua::KillProcesses();
 	});
-	GetGUI().AddWidget(&stopButton);
+	topmenuWnd.AddWidget(&stopButton);
 
 
 
@@ -373,7 +328,7 @@ void EditorComponent::Load()
 	saveButton.OnClick([&](wi::gui::EventArgs args) {
 		SaveAs();
 		});
-	GetGUI().AddWidget(&saveButton);
+	topmenuWnd.AddWidget(&saveButton);
 
 
 	openButton.Create("Open");
@@ -418,7 +373,7 @@ void EditorComponent::Load()
 				});
 			});
 		});
-	GetGUI().AddWidget(&openButton);
+	topmenuWnd.AddWidget(&openButton);
 
 
 	contentBrowserButton.Create("Content Browser");
@@ -435,7 +390,7 @@ void EditorComponent::Load()
 			contentBrowserWnd.RefreshContent();
 		}
 	});
-	GetGUI().AddWidget(&contentBrowserButton);
+	topmenuWnd.AddWidget(&contentBrowserButton);
 
 
 	logButton.Create("Backlog");
@@ -448,7 +403,7 @@ void EditorComponent::Load()
 	logButton.OnClick([&](wi::gui::EventArgs args) {
 		wi::backlog::Toggle();
 		});
-	GetGUI().AddWidget(&logButton);
+	topmenuWnd.AddWidget(&logButton);
 
 
 	profilerButton.Create("Profiler");
@@ -462,7 +417,7 @@ void EditorComponent::Load()
 		profilerWnd.SetVisible(!wi::profiler::IsEnabled());
 		wi::profiler::SetEnabled(!wi::profiler::IsEnabled());
 	});
-	GetGUI().AddWidget(&profilerButton);
+	topmenuWnd.AddWidget(&profilerButton);
 
 
 	cinemaButton.Create("Cinema");
@@ -481,7 +436,7 @@ void EditorComponent::Load()
 		wi::profiler::SetEnabled(false);
 		profilerWnd.SetVisible(false);
 	});
-	GetGUI().AddWidget(&cinemaButton);
+	topmenuWnd.AddWidget(&cinemaButton);
 
 
 	fullscreenButton.Create("Full screen");
@@ -523,7 +478,7 @@ void EditorComponent::Load()
 
 		});
 	});
-	GetGUI().AddWidget(&fullscreenButton);
+	topmenuWnd.AddWidget(&fullscreenButton);
 
 
 	bugButton.Create("Bug report");
@@ -536,7 +491,7 @@ void EditorComponent::Load()
 	bugButton.OnClick([](wi::gui::EventArgs args) {
 		wi::helper::OpenUrl("https://github.com/turanszkij/WickedEngine/issues/new");
 	});
-	GetGUI().AddWidget(&bugButton);
+	topmenuWnd.AddWidget(&bugButton);
 
 
 	aboutButton.Create("About");
@@ -549,7 +504,7 @@ void EditorComponent::Load()
 	aboutButton.OnClick([&](wi::gui::EventArgs args) {
 		aboutWindow.SetVisible(!aboutWindow.IsVisible());
 		});
-	GetGUI().AddWidget(&aboutButton);
+	topmenuWnd.AddWidget(&aboutButton);
 
 	{
 		std::string ss;
@@ -671,7 +626,7 @@ void EditorComponent::Load()
 	exitButton.OnClick([this](wi::gui::EventArgs args) {
 		wi::platform::Exit();
 		});
-	GetGUI().AddWidget(&exitButton);
+	topmenuWnd.AddWidget(&exitButton);
 
 	optionsWnd.Create(this);
 	GetGUI().AddWidget(&optionsWnd);
@@ -833,28 +788,24 @@ void EditorComponent::Update(float dt)
 	{
 		deleting = wi::input::Press(wi::input::KEYBOARD_BUTTON_DELETE);
 		translator.interactable = true;
-		XMFLOAT4 currentMouse = wi::input::GetPointer();
-		static XMFLOAT4 originalMouse = XMFLOAT4(0, 0, 0, 0);
-		static bool camControlStart = true;
+		currentMouse = wi::input::GetPointer();
 		if (camControlStart)
 		{
-			originalMouse = wi::input::GetPointer();
+			originalMouse = currentMouse;
 		}
+
+		// After originalMouse is saved, currentMouse is remapped inside 3D viewport:
+		//	originalMouse shouldn't be remapped, because that will be used to reset mouse position
+		currentMouse.x -= renderPath->PhysicalToLogical((uint32_t)viewport3D.top_left_x);
+		currentMouse.y -= renderPath->PhysicalToLogical((uint32_t)viewport3D.top_left_y);
 
 		float xDif = 0, yDif = 0;
 
 		if (wi::input::Down(wi::input::MOUSE_BUTTON_MIDDLE))
 		{
 			camControlStart = false;
-#if 0
-			// Mouse delta from previous frame:
-			xDif = currentMouse.x - originalMouse.x;
-			yDif = currentMouse.y - originalMouse.y;
-#else
-			// Mouse delta from hardware read:
 			xDif = wi::input::GetMouseState().delta_position.x;
 			yDif = wi::input::GetMouseState().delta_position.y;
-#endif
 			xDif = 0.1f * xDif * (1.0f / 60.0f);
 			yDif = 0.1f * yDif * (1.0f / 60.0f);
 			wi::input::SetPointer(originalMouse);
@@ -976,7 +927,7 @@ void EditorComponent::Update(float dt)
 		inspector_mode = wi::input::Down((wi::input::BUTTON)'I');
 
 		// Begin picking:
-		pickRay = wi::renderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, *this, camera);
+		pickRay = wi::renderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, *renderPath, camera);
 		{
 			hovered = wi::scene::PickResult();
 
@@ -1970,9 +1921,10 @@ void EditorComponent::Update(float dt)
 
 	if (optionsWnd.paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED)
 	{
-		translator.Update(camera, *this);
+		translator.Update(camera, currentMouse, *renderPath);
 	}
 
+	ResizeViewport3D();
 	renderPath->colorspace = colorspace;
 	renderPath->Update(dt);
 
@@ -3242,11 +3194,10 @@ void EditorComponent::Render() const
 				wi::font::Draw(str, params, cmd);
 			}
 
-
 			optionsWnd.paintToolWnd.DrawBrush(*this, cmd);
 			if (optionsWnd.paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED)
 			{
-				translator.Draw(GetCurrentEditorScene().camera, cmd);
+				translator.Draw(GetCurrentEditorScene().camera, currentMouse, cmd);
 			}
 
 			device->RenderPassEnd(cmd);
@@ -3260,7 +3211,15 @@ void EditorComponent::Render() const
 }
 void EditorComponent::Compose(CommandList cmd) const
 {
+	GetDevice()->BindViewports(1, &viewport3D, cmd);
 	renderPath->Compose(cmd);
+
+	Viewport vp;
+	vp.top_left_x = 0;
+	vp.top_left_y = 0;
+	vp.width = (float)GetPhysicalWidth();
+	vp.height = (float)GetPhysicalHeight();
+	GetDevice()->BindViewports(1, &vp, cmd);
 
 	RenderPath2D::Compose(cmd);
 
@@ -3294,6 +3253,93 @@ void EditorComponent::Compose(CommandList cmd) const
 		}
 	}
 #endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
+}
+
+void EditorComponent::ResizeViewport3D()
+{
+	uint32_t width = GetPhysicalWidth();
+	uint32_t height = GetPhysicalHeight();
+	if (GetGUI().IsVisible())
+	{
+		width = width - LogicalToPhysical(optionsWnd.scale_local.x + componentsWnd.scale_local.x);
+		height = height - LogicalToPhysical(topmenuWnd.scale_local.y);
+	}
+	if (renderPath->width == width && renderPath->height == height)
+		return;
+
+	renderPath->width = width;
+	renderPath->height = height;
+	renderPath->dpi = dpi;
+	renderPath->scaling = scaling;
+	renderPath->ResizeBuffers();
+
+	if (GetGUI().IsVisible())
+	{
+		viewport3D.top_left_x = (float)LogicalToPhysical(optionsWnd.scale_local.x);
+		viewport3D.top_left_y = (float)LogicalToPhysical(topmenuWnd.scale_local.y);
+	}
+	else
+	{
+		viewport3D.top_left_x = 0;
+		viewport3D.top_left_y = 0;
+	}
+	viewport3D.width = (float)renderPath->width;
+	viewport3D.height = (float)renderPath->height;
+
+	main->infoDisplay.rect.from_viewport(viewport3D);
+
+	GraphicsDevice* device = wi::graphics::GetDevice();
+
+	if (renderPath->GetDepthStencil() != nullptr)
+	{
+		bool success = false;
+
+		XMUINT2 internalResolution = renderPath->GetInternalResolution();
+
+		TextureDesc desc;
+		desc.width = internalResolution.x;
+		desc.height = internalResolution.y;
+
+		desc.format = Format::R8_UNORM;
+		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+		if (renderPath->getMSAASampleCount() > 1)
+		{
+			desc.sample_count = renderPath->getMSAASampleCount();
+			success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline_MSAA);
+			assert(success);
+			desc.sample_count = 1;
+		}
+		success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[0]);
+		assert(success);
+		success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[1]);
+		assert(success);
+	}
+
+	{
+		TextureDesc desc;
+		desc.width = renderPath->GetRenderResult().GetDesc().width;
+		desc.height = renderPath->GetRenderResult().GetDesc().height;
+		desc.format = Format::R8_UNORM;
+		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+		desc.swizzle.r = ComponentSwizzle::R;
+		desc.swizzle.g = ComponentSwizzle::R;
+		desc.swizzle.b = ComponentSwizzle::R;
+		desc.swizzle.a = ComponentSwizzle::R;
+		device->CreateTexture(&desc, nullptr, &rt_dummyOutline);
+		device->SetName(&rt_dummyOutline, "rt_dummyOutline");
+	}
+
+	{
+		TextureDesc desc;
+		desc.width = renderPath->GetRenderResult().GetDesc().width;
+		desc.height = renderPath->GetRenderResult().GetDesc().height;
+		desc.format = Format::D32_FLOAT;
+		desc.bind_flags = BindFlag::DEPTH_STENCIL;
+		desc.layout = ResourceState::DEPTHSTENCIL;
+		desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
+		device->CreateTexture(&desc, nullptr, &editor_depthbuffer);
+		device->SetName(&editor_depthbuffer, "editor_depthbuffer");
+	}
 }
 
 void EditorComponent::ClearSelected()
@@ -4072,7 +4118,6 @@ void EditorComponent::UpdateTopMenuAnimation()
 {
 	float screenW = GetLogicalWidth();
 	float screenH = GetLogicalHeight();
-	float hei = 25;
 	float wid_idle = 40;
 	float wid_focus = wid_idle * 2.5f;
 	float padding = 4;
@@ -4209,6 +4254,8 @@ void EditorComponent::UpdateTopMenuAnimation()
 		exitButton.SetText(exitButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_EXIT " Exit" : ICON_EXIT);
 	}
 
+	float hei = topmenuWnd.GetSize().y;
+
 	exitButton.SetSize(XMFLOAT2(wi::math::Lerp(exitButton.GetSize().x, exitButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	aboutButton.SetSize(XMFLOAT2(wi::math::Lerp(aboutButton.GetSize().x, aboutButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	fullscreenButton.SetSize(XMFLOAT2(wi::math::Lerp(fullscreenButton.GetSize().x, fullscreenButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
@@ -4234,26 +4281,59 @@ void EditorComponent::UpdateTopMenuAnimation()
 
 	float static_pos = screenW - wid_idle * 12;
 
-	dummyButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
-	dummyButton.SetPos(XMFLOAT2(static_pos - dummyButton.GetSize().x - 20, 0));
-	navtestButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
-	navtestButton.SetPos(XMFLOAT2(dummyButton.GetPos().x - navtestButton.GetSize().x - padding, 0));
-
-	physicsButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
-	physicsButton.SetPos(XMFLOAT2(navtestButton.GetPos().x - physicsButton.GetSize().x - 20, 0));
-
 	stopButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
-	stopButton.SetPos(XMFLOAT2(physicsButton.GetPos().x - stopButton.GetSize().x - 20, 0));
+	stopButton.SetPos(XMFLOAT2(static_pos - stopButton.GetSize().x - 20, 0));
 	playButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
 	playButton.SetPos(XMFLOAT2(stopButton.GetPos().x - playButton.GetSize().x - padding, 0));
 
-	scaleButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
-	scaleButton.SetPos(XMFLOAT2(playButton.GetPos().x - scaleButton.GetSize().x - 20, 0));
-	rotateButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
-	rotateButton.SetPos(XMFLOAT2(scaleButton.GetPos().x - rotateButton.GetSize().x - padding, 0));
-	translateButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
-	translateButton.SetPos(XMFLOAT2(rotateButton.GetPos().x - translateButton.GetSize().x - padding, 0));
 
+	float ofs = componentsWnd.GetPos().x - componentsWnd.GetShadowRadius() - 4;
+	float y = topmenuWnd.GetPos().y + topmenuWnd.GetSize().y + topmenuWnd.GetShadowRadius() + 4;
+	hei = 18;
+	wid_idle = 105;
+	for (int i = 0; i < int(scenes.size()); ++i)
+	{
+		auto& editorscene = scenes[i];
+		editorscene->tabSelectButton.SetSize(XMFLOAT2(wid_idle, hei));
+		editorscene->tabCloseButton.SetSize(XMFLOAT2(hei, hei));
+		ofs -= editorscene->tabCloseButton.GetSize().x;
+		editorscene->tabCloseButton.SetPos(XMFLOAT2(ofs, y));
+		ofs -= editorscene->tabSelectButton.GetSize().x;
+		editorscene->tabSelectButton.SetPos(XMFLOAT2(ofs, y));
+		ofs -= 4;
+	}
+	newSceneButton.SetSize(XMFLOAT2(hei, hei));
+	ofs -= newSceneButton.GetSize().x;
+	newSceneButton.SetPos(XMFLOAT2(ofs, y));
+
+	hei = 20;
+	padding = 8;
+	ofs = componentsWnd.GetPos().x - componentsWnd.GetShadowRadius() - 4 - hei;
+	y += newSceneButton.GetSize().y + padding;
+
+	translateButton.SetSize(XMFLOAT2(hei, hei));
+	translateButton.SetPos(XMFLOAT2(ofs, y));
+	y += translateButton.GetSize().y + translateButton.GetShadowRadius();
+
+	rotateButton.SetSize(XMFLOAT2(hei, hei));
+	rotateButton.SetPos(XMFLOAT2(ofs, y));
+	y += rotateButton.GetSize().y + rotateButton.GetShadowRadius();
+
+	scaleButton.SetSize(XMFLOAT2(hei, hei));
+	scaleButton.SetPos(XMFLOAT2(ofs, y));
+	y += scaleButton.GetSize().y + padding;
+
+	dummyButton.SetSize(XMFLOAT2(hei, hei));
+	dummyButton.SetPos(XMFLOAT2(ofs, y));
+	y += dummyButton.GetSize().y + padding;
+
+	navtestButton.SetSize(XMFLOAT2(hei, hei));
+	navtestButton.SetPos(XMFLOAT2(ofs, y));
+	y += navtestButton.GetSize().y + padding;
+
+	physicsButton.SetSize(XMFLOAT2(hei, hei));
+	physicsButton.SetPos(XMFLOAT2(ofs, y));
+	y += physicsButton.GetSize().y + padding;
 
 	XMFLOAT4 color_on = playButton.sprites[wi::gui::FOCUS].params.color;
 	XMFLOAT4 color_off = playButton.sprites[wi::gui::IDLE].params.color;
@@ -4303,25 +4383,6 @@ void EditorComponent::UpdateTopMenuAnimation()
 	{
 		physicsButton.sprites[wi::gui::IDLE].params.color = color_off;
 	}
-
-	float ofs = screenW - 2;
-	float y = exitButton.GetPos().y + exitButton.GetSize().y + 5;
-	hei = 18;
-	wid_idle = 105;
-	for (int i = 0; i < int(scenes.size()); ++i)
-	{
-		auto& editorscene = scenes[i];
-		editorscene->tabSelectButton.SetSize(XMFLOAT2(wid_idle, hei));
-		editorscene->tabCloseButton.SetSize(XMFLOAT2(hei, hei));
-		ofs -= editorscene->tabCloseButton.GetSize().x;
-		editorscene->tabCloseButton.SetPos(XMFLOAT2(ofs, y));
-		ofs -= editorscene->tabSelectButton.GetSize().x;
-		editorscene->tabSelectButton.SetPos(XMFLOAT2(ofs, y));
-		ofs -= 4;
-	}
-	newSceneButton.SetSize(XMFLOAT2(hei, hei));
-	ofs -= newSceneButton.GetSize().x;
-	newSceneButton.SetPos(XMFLOAT2(ofs, y));
 }
 
 void EditorComponent::SetCurrentScene(int index)

@@ -13,8 +13,8 @@ private:
 	bool has_selected_transform = false;
 public:
 
-	void Update(const wi::scene::CameraComponent& camera, const wi::Canvas& canvas);
-	void Draw(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd) const;
+	void Update(const wi::scene::CameraComponent& camera, const XMFLOAT4& currentMouse, const wi::Canvas& canvas);
+	void Draw(const wi::scene::CameraComponent& camera, const XMFLOAT4& currentMouse, wi::graphics::CommandList cmd) const;
 
 	// Attach selection to translator temporarily
 	void PreTranslate();

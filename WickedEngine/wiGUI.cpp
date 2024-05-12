@@ -2927,7 +2927,7 @@ namespace wi::gui
 			AddWidget(&collapseButton, AttachmentOptions::NONE);
 		}
 
-		if (!has_flag(window_controls, WindowControls::MOVE))
+		if (!has_flag(window_controls, WindowControls::MOVE) && !name.empty())
 		{
 			// Simple title bar
 			label.Create(name);
@@ -3036,45 +3036,50 @@ namespace wi::gui
 
 		uint32_t priority = 0;
 
-		// Compute scrollable area:
-		float scroll_length_horizontal = 0;
-		float scroll_length_vertical = 0;
-		for (auto& widget : widgets)
-		{
-			if (!widget->IsVisible())
-				continue;
-			if (widget->parent == &scrollable_area)
-			{
-				XMFLOAT2 size = widget->GetSize();
-				scroll_length_horizontal = std::max(scroll_length_horizontal, widget->translation_local.x + size.x);
-				scroll_length_vertical = std::max(scroll_length_vertical, widget->translation_local.y + size.y);
-			}
-		}
-		scrollbar_horizontal.SetListLength(scroll_length_horizontal);
-		scrollbar_vertical.SetListLength(scroll_length_vertical);
-		scrollbar_horizontal.Update(canvas, 0);
-		scrollbar_vertical.Update(canvas, 0);
+		scrollable_area.scissorRect = scissorRect;
+
 		scrollable_area.Detach();
 		scrollable_area.ClearTransform();
 		scrollable_area.Translate(translation);
-		scrollable_area.Translate(XMFLOAT3(scrollbar_horizontal.GetOffset(), control_size + 1 + scrollbar_vertical.GetOffset(), 0));
-		scrollable_area.AttachTo(this);
-		scrollable_area.scissorRect = scissorRect;
-		scrollable_area.scissorRect.left += 1;
-		scrollable_area.scissorRect.top += (int32_t)control_size;
-		if (scrollbar_horizontal.parent != nullptr && scrollbar_horizontal.IsScrollbarRequired())
-		{
-			scrollable_area.scissorRect.bottom -= (int32_t)control_size + 1;
-		}
-		if (scrollbar_vertical.parent != nullptr && scrollbar_vertical.IsScrollbarRequired())
-		{
-			scrollable_area.scissorRect.right -= (int32_t)control_size + 1;
-		}
-		scrollable_area.active_area.pos.x = float(scrollable_area.scissorRect.left);
-		scrollable_area.active_area.pos.y = float(scrollable_area.scissorRect.top);
-		scrollable_area.active_area.siz.x = float(scrollable_area.scissorRect.right) - float(scrollable_area.scissorRect.left);
-		scrollable_area.active_area.siz.y = float(scrollable_area.scissorRect.bottom) - float(scrollable_area.scissorRect.top);
 
+		// Compute scrollable area:
+		if (scrollbar_horizontal.parent != nullptr || scrollbar_vertical.parent != nullptr)
+		{
+			float scroll_length_horizontal = 0;
+			float scroll_length_vertical = 0;
+			for (auto& widget : widgets)
+			{
+				if (!widget->IsVisible())
+					continue;
+				if (widget->parent == &scrollable_area)
+				{
+					XMFLOAT2 size = widget->GetSize();
+					scroll_length_horizontal = std::max(scroll_length_horizontal, widget->translation_local.x + size.x);
+					scroll_length_vertical = std::max(scroll_length_vertical, widget->translation_local.y + size.y);
+				}
+			}
+			scrollbar_horizontal.SetListLength(scroll_length_horizontal);
+			scrollbar_vertical.SetListLength(scroll_length_vertical);
+			scrollbar_horizontal.Update(canvas, 0);
+			scrollbar_vertical.Update(canvas, 0);
+			scrollable_area.Translate(XMFLOAT3(scrollbar_horizontal.GetOffset(), control_size + 1 + scrollbar_vertical.GetOffset(), 0));
+			scrollable_area.scissorRect.left += 1;
+			scrollable_area.scissorRect.top += (int32_t)control_size;
+			if (scrollbar_horizontal.parent != nullptr && scrollbar_horizontal.IsScrollbarRequired())
+			{
+				scrollable_area.scissorRect.bottom -= (int32_t)control_size + 1;
+			}
+			if (scrollbar_vertical.parent != nullptr && scrollbar_vertical.IsScrollbarRequired())
+			{
+				scrollable_area.scissorRect.right -= (int32_t)control_size + 1;
+			}
+			scrollable_area.active_area.pos.x = float(scrollable_area.scissorRect.left);
+			scrollable_area.active_area.pos.y = float(scrollable_area.scissorRect.top);
+			scrollable_area.active_area.siz.x = float(scrollable_area.scissorRect.right) - float(scrollable_area.scissorRect.left);
+			scrollable_area.active_area.siz.y = float(scrollable_area.scissorRect.bottom) - float(scrollable_area.scissorRect.top);
+		}
+
+		scrollable_area.AttachTo(this);
 
 		bool focus = false;
 		for (size_t i = 0; i < widgets.size(); ++i)

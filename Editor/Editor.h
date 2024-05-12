@@ -62,6 +62,7 @@ public:
 	ComponentsWindow componentsWnd;
 	ProfilerWindow profilerWnd;
 	ContentBrowserWindow contentBrowserWnd;
+	wi::gui::Window topmenuWnd;
 
 	wi::primitive::Ray pickRay;
 	wi::physics::PickDragOperation physicsDragOp;
@@ -80,6 +81,12 @@ public:
 	void Render() const override;
 	void Compose(wi::graphics::CommandList cmd) const override;
 
+	wi::graphics::Viewport viewport3D;
+	void ResizeViewport3D();
+
+	bool camControlStart = true;
+	XMFLOAT4 originalMouse = XMFLOAT4(0, 0, 0, 0);
+	XMFLOAT4 currentMouse = XMFLOAT4(0, 0, 0, 0);
 
 	enum EDITORSTENCILREF
 	{

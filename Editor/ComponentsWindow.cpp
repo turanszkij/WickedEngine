@@ -9,10 +9,9 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 
-	wi::gui::Window::Create("Components ", wi::gui::Window::WindowControls::RESIZE_TOPLEFT);
+	wi::gui::Window::Create("Components", wi::gui::Window::WindowControls::NONE);
 	font.params.h_align = wi::font::WIFALIGN_RIGHT;
 	SetShadowRadius(2);
-
 
 	materialWnd.Create(editor);
 	weatherWnd.Create(editor);

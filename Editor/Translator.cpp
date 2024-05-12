@@ -104,7 +104,7 @@ namespace Translator_Internal
 }
 using namespace Translator_Internal;
 
-void Translator::Update(const CameraComponent& camera, const wi::Canvas& canvas)
+void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMouse, const wi::Canvas& canvas)
 {
 	if (selected.empty())
 	{
@@ -116,7 +116,6 @@ void Translator::Update(const CameraComponent& camera, const wi::Canvas& canvas)
 	dragStarted = false;
 	dragEnded = false;
 
-	XMFLOAT4 pointer = wi::input::GetPointer();
 	XMVECTOR pos = transform.GetPositionV();
 
 	// Non recursive selection will be computed to not apply recursive operations two times
@@ -144,7 +143,7 @@ void Translator::Update(const CameraComponent& camera, const wi::Canvas& canvas)
 		if (!has_selected_transform)
 			return;
 
-		const Ray ray = wi::renderer::GetPickRay((long)pointer.x, (long)pointer.y, canvas, camera);
+		const Ray ray = wi::renderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, canvas, camera);
 		const XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
 		const XMVECTOR rayDir = XMLoadFloat3(&ray.direction);
 
@@ -491,7 +490,7 @@ void Translator::Update(const CameraComponent& camera, const wi::Canvas& canvas)
 		dragging = false;
 	}
 }
-void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
+void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMouse, CommandList cmd) const
 {
 	if (!IsEnabled() || selected.empty() || !has_selected_transform)
 	{
@@ -1025,10 +1024,9 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 			device->Draw(vertexCount, 0, cmd);
 		}
 
-		XMFLOAT4 pointer = wi::input::GetPointer();
 		wi::font::Params params;
-		params.posX = pointer.x - 20;
-		params.posY = pointer.y + 20;
+		params.posX = currentMouse.x - 20;
+		params.posY = currentMouse.y + 20;
 		params.v_align = wi::font::WIFALIGN_TOP;
 		params.h_align = wi::font::WIFALIGN_RIGHT;
 		params.scaling = 0.8f;

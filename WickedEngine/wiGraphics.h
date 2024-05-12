@@ -769,6 +769,14 @@ namespace wi::graphics
 		int32_t top = 0;
 		int32_t right = 0;
 		int32_t bottom = 0;
+
+		constexpr void from_viewport(const Viewport& vp)
+		{
+			left = int32_t(vp.top_left_x);
+			right = int32_t(vp.top_left_x + vp.width);
+			top = int32_t(vp.top_left_y);
+			bottom = int32_t(vp.top_left_y + vp.height);
+		}
 	};
 
 	struct Box
