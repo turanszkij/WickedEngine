@@ -370,7 +370,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			theme_color_idle = wi::Color(46, 52, 64, 255);
 			theme_color_focus = wi::Color(59, 66, 82, 255);
 			dark_point = wi::Color(46, 52, 64, 255);
-			theme.shadow_color = wi::Color(46, 52, 64, 200);
+			theme.shadow_color = wi::Color(106, 112, 124, 200);
 			theme.font.color = wi::Color(236, 239, 244, 255);
 			theme.font.shadow_color = wi::Color::Shadow();
 			break;
@@ -440,17 +440,18 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		int scene_id = 0;
 		for (auto& editorscene : editor->scenes)
 		{
-			for (int i = 0; i < arraysize(editorscene->tabSelectButton.sprites); ++i)
+			if (scene_id > 0)
 			{
-				editorscene->tabSelectButton.sprites[i].params.enableCornerRounding();
-				editorscene->tabSelectButton.sprites[i].params.corners_rounding[0].radius = 10;
-				editorscene->tabSelectButton.sprites[i].params.corners_rounding[2].radius = 10;
+				for (int i = 0; i < arraysize(editorscene->tabSelectButton.sprites); ++i)
+				{
+					editorscene->tabSelectButton.sprites[i].params.enableCornerRounding();
+					editorscene->tabSelectButton.sprites[i].params.corners_rounding[0].radius = 10;
+				}
 			}
 			for (int i = 0; i < arraysize(editorscene->tabCloseButton.sprites); ++i)
 			{
 				editorscene->tabCloseButton.sprites[i].params.enableCornerRounding();
 				editorscene->tabCloseButton.sprites[i].params.corners_rounding[1].radius = 10;
-				editorscene->tabCloseButton.sprites[i].params.corners_rounding[3].radius = 10;
 			}
 
 			if (editor->current_scene == scene_id)
@@ -467,10 +468,10 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		for (int i = 0; i < arraysize(editor->newSceneButton.sprites); ++i)
 		{
 			editor->newSceneButton.sprites[i].params.enableCornerRounding();
-			editor->newSceneButton.sprites[i].params.corners_rounding[0].radius = 10;
-			editor->newSceneButton.sprites[i].params.corners_rounding[1].radius = 10;
-			editor->newSceneButton.sprites[i].params.corners_rounding[2].radius = 10;
-			editor->newSceneButton.sprites[i].params.corners_rounding[3].radius = 10;
+			editor->newSceneButton.sprites[i].params.corners_rounding[0].radius = 20;
+			editor->newSceneButton.sprites[i].params.corners_rounding[1].radius = 20;
+			editor->newSceneButton.sprites[i].params.corners_rounding[2].radius = 20;
+			editor->newSceneButton.sprites[i].params.corners_rounding[3].radius = 20;
 
 			editor->dummyButton.sprites[i].params.enableCornerRounding();
 			editor->dummyButton.sprites[i].params.corners_rounding[0].radius = 10;
@@ -527,31 +528,31 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
 		{
 			editor->saveButton.sprites[i].params.enableCornerRounding();
-			editor->saveButton.sprites[i].params.corners_rounding[2].radius = 10;
+			editor->saveButton.sprites[i].params.corners_rounding[0].radius = 10;
 
 			editor->playButton.sprites[i].params.enableCornerRounding();
-			editor->playButton.sprites[i].params.corners_rounding[2].radius = 40;
+			editor->playButton.sprites[i].params.corners_rounding[0].radius = 10;
 
 			editor->stopButton.sprites[i].params.enableCornerRounding();
-			editor->stopButton.sprites[i].params.corners_rounding[3].radius = 40;
+			editor->stopButton.sprites[i].params.corners_rounding[1].radius = 10;
 
 			editor->translateButton.sprites[i].params.enableCornerRounding();
-			editor->translateButton.sprites[i].params.corners_rounding[0].radius = 40;
-			editor->translateButton.sprites[i].params.corners_rounding[1].radius = 40;
+			editor->translateButton.sprites[i].params.corners_rounding[0].radius = 10;
+			editor->translateButton.sprites[i].params.corners_rounding[1].radius = 10;
 
 			editor->scaleButton.sprites[i].params.enableCornerRounding();
-			editor->scaleButton.sprites[i].params.corners_rounding[2].radius = 40;
-			editor->scaleButton.sprites[i].params.corners_rounding[3].radius = 40;
+			editor->scaleButton.sprites[i].params.corners_rounding[2].radius = 10;
+			editor->scaleButton.sprites[i].params.corners_rounding[3].radius = 10;
 
 			editor->dummyButton.sprites[i].params.enableCornerRounding();
-			editor->dummyButton.sprites[i].params.corners_rounding[3].radius = 40;
+			editor->dummyButton.sprites[i].params.corners_rounding[3].radius = 10;
 
 			editor->navtestButton.sprites[i].params.enableCornerRounding();
-			editor->navtestButton.sprites[i].params.corners_rounding[2].radius = 40;
+			editor->navtestButton.sprites[i].params.corners_rounding[2].radius = 10;
 
 			editor->physicsButton.sprites[i].params.enableCornerRounding();
-			editor->physicsButton.sprites[i].params.corners_rounding[2].radius = 40;
-			editor->physicsButton.sprites[i].params.corners_rounding[3].radius = 40;
+			editor->physicsButton.sprites[i].params.corners_rounding[2].radius = 10;
+			editor->physicsButton.sprites[i].params.corners_rounding[3].radius = 10;
 		}
 		editor->componentsWnd.weatherWnd.default_sky_horizon = dark_point;
 		editor->componentsWnd.weatherWnd.default_sky_zenith = theme_color_idle;

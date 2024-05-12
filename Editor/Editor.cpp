@@ -152,7 +152,7 @@ void EditorComponent::ResizeLayout()
 	float screenW = GetLogicalWidth();
 	float screenH = GetLogicalHeight();
 
-	topmenuWnd.SetSize(XMFLOAT2(screenW, 25));
+	topmenuWnd.SetSize(XMFLOAT2(screenW, 30));
 	topmenuWnd.SetPos(XMFLOAT2(0, 0));
 
 	optionsWnd.SetSize(XMFLOAT2(300, screenH));
@@ -182,7 +182,7 @@ void EditorComponent::Load()
 	newSceneButton.OnClick([&](wi::gui::EventArgs args) {
 		NewScene();
 		});
-	GetGUI().AddWidget(&newSceneButton);
+	topmenuWnd.AddWidget(&newSceneButton);
 
 	translateButton.Create(ICON_TRANSLATE);
 	rotateButton.Create(ICON_ROTATE);
@@ -3261,8 +3261,15 @@ void EditorComponent::ResizeViewport3D()
 	uint32_t height = GetPhysicalHeight();
 	if (GetGUI().IsVisible())
 	{
-		width = width - LogicalToPhysical(optionsWnd.scale_local.x + componentsWnd.scale_local.x);
-		height = height - LogicalToPhysical(topmenuWnd.scale_local.y);
+		if (componentsWnd.IsVisible())
+		{
+			width -= LogicalToPhysical(componentsWnd.scale_local.x);
+		}
+		if (optionsWnd.IsVisible())
+		{
+			width -= LogicalToPhysical(optionsWnd.scale_local.x);
+		}
+		height -= LogicalToPhysical(topmenuWnd.scale_local.y);
 	}
 	if (renderPath->width == width && renderPath->height == height)
 		return;
@@ -3273,15 +3280,15 @@ void EditorComponent::ResizeViewport3D()
 	renderPath->scaling = scaling;
 	renderPath->ResizeBuffers();
 
+	viewport3D.top_left_x = 0;
+	viewport3D.top_left_y = 0;
 	if (GetGUI().IsVisible())
 	{
-		viewport3D.top_left_x = (float)LogicalToPhysical(optionsWnd.scale_local.x);
+		if (optionsWnd.IsVisible())
+		{
+			viewport3D.top_left_x = (float)LogicalToPhysical(optionsWnd.scale_local.x);
+		}
 		viewport3D.top_left_y = (float)LogicalToPhysical(topmenuWnd.scale_local.y);
-	}
-	else
-	{
-		viewport3D.top_left_x = 0;
-		viewport3D.top_left_y = 0;
 	}
 	viewport3D.width = (float)renderPath->width;
 	viewport3D.height = (float)renderPath->height;
@@ -4254,7 +4261,8 @@ void EditorComponent::UpdateTopMenuAnimation()
 		exitButton.SetText(exitButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_EXIT " Exit" : ICON_EXIT);
 	}
 
-	float hei = topmenuWnd.GetSize().y;
+	float hei = topmenuWnd.GetSize().y - topmenuWnd.GetShadowRadius() - 2;
+	float y = topmenuWnd.GetShadowRadius() + 2;
 
 	exitButton.SetSize(XMFLOAT2(wi::math::Lerp(exitButton.GetSize().x, exitButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	aboutButton.SetSize(XMFLOAT2(wi::math::Lerp(aboutButton.GetSize().x, aboutButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
@@ -4267,49 +4275,55 @@ void EditorComponent::UpdateTopMenuAnimation()
 	openButton.SetSize(XMFLOAT2(wi::math::Lerp(openButton.GetSize().x, openButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	saveButton.SetSize(XMFLOAT2(wi::math::Lerp(saveButton.GetSize().x, saveButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 
-	exitButton.SetPos(XMFLOAT2(screenW - exitButton.GetSize().x, 0));
-	aboutButton.SetPos(XMFLOAT2(exitButton.GetPos().x - aboutButton.GetSize().x - padding, 0));
-	bugButton.SetPos(XMFLOAT2(aboutButton.GetPos().x - bugButton.GetSize().x - padding, 0));
-	fullscreenButton.SetPos(XMFLOAT2(bugButton.GetPos().x - fullscreenButton.GetSize().x - padding, 0));
-	cinemaButton.SetPos(XMFLOAT2(fullscreenButton.GetPos().x - cinemaButton.GetSize().x - padding, 0));
-	profilerButton.SetPos(XMFLOAT2(cinemaButton.GetPos().x - profilerButton.GetSize().x - padding, 0));
-	logButton.SetPos(XMFLOAT2(profilerButton.GetPos().x - logButton.GetSize().x - padding, 0));
-	contentBrowserButton.SetPos(XMFLOAT2(logButton.GetPos().x - contentBrowserButton.GetSize().x - padding, 0));
-	openButton.SetPos(XMFLOAT2(contentBrowserButton.GetPos().x - openButton.GetSize().x - padding, 0));
-	saveButton.SetPos(XMFLOAT2(openButton.GetPos().x - saveButton.GetSize().x - padding, 0));
+	exitButton.SetPos(XMFLOAT2(screenW - exitButton.GetSize().x, y));
+	aboutButton.SetPos(XMFLOAT2(exitButton.GetPos().x - aboutButton.GetSize().x - padding, y));
+	bugButton.SetPos(XMFLOAT2(aboutButton.GetPos().x - bugButton.GetSize().x - padding, y));
+	fullscreenButton.SetPos(XMFLOAT2(bugButton.GetPos().x - fullscreenButton.GetSize().x - padding, y));
+	cinemaButton.SetPos(XMFLOAT2(fullscreenButton.GetPos().x - cinemaButton.GetSize().x - padding, y));
+	profilerButton.SetPos(XMFLOAT2(cinemaButton.GetPos().x - profilerButton.GetSize().x - padding, y));
+	logButton.SetPos(XMFLOAT2(profilerButton.GetPos().x - logButton.GetSize().x - padding, y));
+	contentBrowserButton.SetPos(XMFLOAT2(logButton.GetPos().x - contentBrowserButton.GetSize().x - padding, y));
+	openButton.SetPos(XMFLOAT2(contentBrowserButton.GetPos().x - openButton.GetSize().x - padding, y));
+	saveButton.SetPos(XMFLOAT2(openButton.GetPos().x - saveButton.GetSize().x - padding, y));
 
 
 	float static_pos = screenW - wid_idle * 12;
 
 	stopButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
-	stopButton.SetPos(XMFLOAT2(static_pos - stopButton.GetSize().x - 20, 0));
+	stopButton.SetPos(XMFLOAT2(static_pos - stopButton.GetSize().x - 20, y));
 	playButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
-	playButton.SetPos(XMFLOAT2(stopButton.GetPos().x - playButton.GetSize().x - padding, 0));
+	playButton.SetPos(XMFLOAT2(stopButton.GetPos().x - playButton.GetSize().x - padding, y));
 
-
-	float ofs = componentsWnd.GetPos().x - componentsWnd.GetShadowRadius() - 4;
-	float y = topmenuWnd.GetPos().y + topmenuWnd.GetSize().y + topmenuWnd.GetShadowRadius() + 4;
-	hei = 18;
+	float ofs = 0;
 	wid_idle = 105;
+	float mid = 0;
 	for (int i = 0; i < int(scenes.size()); ++i)
 	{
 		auto& editorscene = scenes[i];
+		editorscene->tabSelectButton.SetShadowRadius(topmenuWnd.GetShadowRadius());
+		editorscene->tabCloseButton.SetShadowRadius(topmenuWnd.GetShadowRadius());
 		editorscene->tabSelectButton.SetSize(XMFLOAT2(wid_idle, hei));
 		editorscene->tabCloseButton.SetSize(XMFLOAT2(hei, hei));
-		ofs -= editorscene->tabCloseButton.GetSize().x;
-		editorscene->tabCloseButton.SetPos(XMFLOAT2(ofs, y));
-		ofs -= editorscene->tabSelectButton.GetSize().x;
 		editorscene->tabSelectButton.SetPos(XMFLOAT2(ofs, y));
-		ofs -= 4;
+		ofs += editorscene->tabSelectButton.GetSize().x + editorscene->tabSelectButton.GetShadowRadius();
+		editorscene->tabCloseButton.SetPos(XMFLOAT2(ofs, y));
+		ofs += editorscene->tabCloseButton.GetSize().x + editorscene->tabCloseButton.GetShadowRadius();
+		ofs += padding;
+		mid = editorscene->tabSelectButton.GetPos().y + editorscene->tabSelectButton.GetSize().y * 0.5f;
 	}
+	hei = 22;
+	newSceneButton.SetShadowRadius(0);
 	newSceneButton.SetSize(XMFLOAT2(hei, hei));
-	ofs -= newSceneButton.GetSize().x;
-	newSceneButton.SetPos(XMFLOAT2(ofs, y));
+	newSceneButton.SetPos(XMFLOAT2(ofs, mid - hei * 0.5f));
 
-	hei = 20;
+	hei = 22;
 	padding = 8;
-	ofs = componentsWnd.GetPos().x - componentsWnd.GetShadowRadius() - 4 - hei;
-	y += newSceneButton.GetSize().y + padding;
+	ofs = screenW - 4 - hei;
+	if (componentsWnd.IsVisible())
+	{
+		ofs -= componentsWnd.GetSize().x + componentsWnd.GetShadowRadius();
+	}
+	y = topmenuWnd.GetSize().y + padding;
 
 	translateButton.SetSize(XMFLOAT2(hei, hei));
 	translateButton.SetPos(XMFLOAT2(ofs, y));
@@ -4323,6 +4337,10 @@ void EditorComponent::UpdateTopMenuAnimation()
 	scaleButton.SetPos(XMFLOAT2(ofs, y));
 	y += scaleButton.GetSize().y + padding;
 
+	physicsButton.SetSize(XMFLOAT2(hei, hei));
+	physicsButton.SetPos(XMFLOAT2(ofs, y));
+	y += physicsButton.GetSize().y + padding;
+
 	dummyButton.SetSize(XMFLOAT2(hei, hei));
 	dummyButton.SetPos(XMFLOAT2(ofs, y));
 	y += dummyButton.GetSize().y + padding;
@@ -4330,10 +4348,6 @@ void EditorComponent::UpdateTopMenuAnimation()
 	navtestButton.SetSize(XMFLOAT2(hei, hei));
 	navtestButton.SetPos(XMFLOAT2(ofs, y));
 	y += navtestButton.GetSize().y + padding;
-
-	physicsButton.SetSize(XMFLOAT2(hei, hei));
-	physicsButton.SetPos(XMFLOAT2(ofs, y));
-	y += physicsButton.GetSize().y + padding;
 
 	XMFLOAT4 color_on = playButton.sprites[wi::gui::FOCUS].params.color;
 	XMFLOAT4 color_off = playButton.sprites[wi::gui::IDLE].params.color;
@@ -4468,8 +4482,8 @@ void EditorComponent::RefreshSceneList()
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 				if (scenes.size() > 1)
 				{
-					GetGUI().RemoveWidget(&scenes[i]->tabSelectButton);
-					GetGUI().RemoveWidget(&scenes[i]->tabCloseButton);
+					topmenuWnd.RemoveWidget(&scenes[i]->tabSelectButton);
+					topmenuWnd.RemoveWidget(&scenes[i]->tabCloseButton);
 					scenes.erase(scenes.begin() + i);
 				}
 				SetCurrentScene(std::max(0, i - 1));
@@ -4487,8 +4501,8 @@ void EditorComponent::NewScene()
 	editorscene->tabCloseButton.Create("X");
 	editorscene->tabCloseButton.SetLocalizationEnabled(false);
 	editorscene->tabCloseButton.SetTooltip("Close scene. This operation cannot be undone!");
-	GetGUI().AddWidget(&editorscene->tabSelectButton);
-	GetGUI().AddWidget(&editorscene->tabCloseButton);
+	topmenuWnd.AddWidget(&editorscene->tabSelectButton);
+	topmenuWnd.AddWidget(&editorscene->tabCloseButton);
 	SetCurrentScene(scene_id);
 	RefreshSceneList();
 	UpdateTopMenuAnimation();
