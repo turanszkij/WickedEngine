@@ -15807,10 +15807,13 @@ void Postprocess_Tonemap(
 
 	assert(texture_colorgradinglut == nullptr || texture_colorgradinglut->desc.type == TextureDesc::Type::TEXTURE_3D); // This must be a 3D lut
 
+	XMHALF4 exposure_brightness_contrast_saturation = XMHALF4(exposure, brightness, contrast, saturation);
+
 	PushConstantsTonemap tonemap_push = {};
 	tonemap_push.resolution_rcp.x = 1.0f / desc.width;
 	tonemap_push.resolution_rcp.y = 1.0f / desc.height;
-	tonemap_push.exposure = exposure;
+	tonemap_push.exposure_brightness_contrast_saturation.x = uint(exposure_brightness_contrast_saturation.v);
+	tonemap_push.exposure_brightness_contrast_saturation.y = uint(exposure_brightness_contrast_saturation.v >> 32ull);
 	tonemap_push.flags = 0;
 	if (dither)
 	{
@@ -15820,9 +15823,6 @@ void Postprocess_Tonemap(
 	{
 		tonemap_push.flags |= TONEMAP_FLAG_ACES;
 	}
-	tonemap_push.brightness = brightness;
-	tonemap_push.contrast = contrast;
-	tonemap_push.saturation = saturation;
 	tonemap_push.texture_input = device->GetDescriptorIndex(&input, SubresourceType::SRV);
 	tonemap_push.buffer_input_luminance = device->GetDescriptorIndex((buffer_luminance == nullptr) ? &luminance_dummy : buffer_luminance, SubresourceType::SRV);
 	tonemap_push.texture_input_distortion = device->GetDescriptorIndex(texture_distortion, SubresourceType::SRV);

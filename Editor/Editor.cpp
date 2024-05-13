@@ -3521,7 +3521,10 @@ void EditorComponent::ResizeViewport3D()
 	width = std::max(64, width);
 	height = std::max(64, height);
 	if (renderPath->width == width && renderPath->height == height)
+	{
+		main->infoDisplay.rect.from_viewport(viewport3D);
 		return;
+	}
 
 	renderPath->width = width;
 	renderPath->height = height;

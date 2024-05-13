@@ -256,6 +256,8 @@ namespace wi
 	{
 		auto range = wi::profiler::BeginRangeCPU("Update");
 
+		infoDisplay.rect = {};
+
 		wi::lua::SetDeltaTime(double(dt));
 		wi::lua::Update();
 
