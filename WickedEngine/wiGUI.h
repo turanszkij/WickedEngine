@@ -622,19 +622,41 @@ namespace wi::gui
 		std::function<void(EventArgs args)> onCollapse;
 		std::function<void()> onResize;
 
+		float resizehitboxwidth = 6;
+		enum RESIZE_STATE
+		{
+			RESIZE_STATE_NONE,
+
+			RESIZE_STATE_LEFT,
+			RESIZE_STATE_TOP,
+			RESIZE_STATE_RIGHT,
+			RESIZE_STATE_BOTTOM,
+
+			RESIZE_STATE_TOPLEFT,
+			RESIZE_STATE_TOPRIGHT,
+			RESIZE_STATE_BOTTOMRIGHT,
+			RESIZE_STATE_BOTTOMLEFT,
+		} resize_state = RESIZE_STATE_NONE;
+		XMFLOAT2 resize_begin = XMFLOAT2(0, 0);
+		float resize_blink_timer = 0;
+
 	public:
 		enum class WindowControls
 		{
 			NONE = 0,
-			RESIZE_TOPLEFT = 1 << 0,
-			RESIZE_TOPRIGHT = 1 << 1,
-			RESIZE_BOTTOMLEFT = 1 << 2,
-			RESIZE_BOTTOMRIGHT = 1 << 3,
-			MOVE = 1 << 4,
-			CLOSE = 1 << 5,
-			COLLAPSE = 1 << 6,
+			RESIZE_LEFT = 1 << 0,
+			RESIZE_TOP = 1 << 1,
+			RESIZE_RIGHT = 1 << 2,
+			RESIZE_BOTTOM = 1 << 3,
+			RESIZE_TOPLEFT = 1 << 4,
+			RESIZE_TOPRIGHT = 1 << 5,
+			RESIZE_BOTTOMLEFT = 1 << 6,
+			RESIZE_BOTTOMRIGHT = 1 << 7,
+			MOVE = 1 << 8,
+			CLOSE = 1 << 9,
+			COLLAPSE = 1 << 10,
 
-			RESIZE = RESIZE_TOPLEFT | RESIZE_TOPRIGHT | RESIZE_BOTTOMLEFT | RESIZE_BOTTOMRIGHT,
+			RESIZE = RESIZE_LEFT | RESIZE_TOP | RESIZE_RIGHT | RESIZE_BOTTOM | RESIZE_TOPLEFT | RESIZE_TOPRIGHT | RESIZE_BOTTOMLEFT | RESIZE_BOTTOMRIGHT,
 			CLOSE_AND_COLLAPSE = CLOSE | COLLAPSE,
 			ALL = RESIZE | MOVE | CLOSE | COLLAPSE,
 		};
@@ -675,14 +697,11 @@ namespace wi::gui
 
 		Button closeButton;
 		Button collapseButton;
-		Button resizeDragger_UpperLeft;
-		Button resizeDragger_UpperRight;
-		Button resizeDragger_BottomLeft;
-		Button resizeDragger_BottomRight;
 		Button moveDragger;
 		Label label;
 		ScrollBar scrollbar_vertical;
 		ScrollBar scrollbar_horizontal;
+		WindowControls controls;
 
 		void ExportLocalization(wi::Localization& localization) const override;
 		void ImportLocalization(const wi::Localization& localization) override;

@@ -33,6 +33,10 @@ struct ImageConstants
 	float2 b1;
 	float2 b2;
 	float2 b3;
+
+	float2 angular_softness_direction;
+	float angular_softness_scale;
+	float angular_softness_offset;
 };
 CONSTANTBUFFER(image, ImageConstants, CBSLOT_IMAGE);
 

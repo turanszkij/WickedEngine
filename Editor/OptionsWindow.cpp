@@ -9,7 +9,7 @@ void OptionsWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 
-	wi::gui::Window::Create("Options", wi::gui::Window::WindowControls::NONE);
+	wi::gui::Window::Create("Options", wi::gui::Window::WindowControls::RESIZE_RIGHT);
 	SetShadowRadius(2);
 
 	enum NEW_THING

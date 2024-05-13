@@ -155,10 +155,10 @@ void EditorComponent::ResizeLayout()
 	topmenuWnd.SetSize(XMFLOAT2(screenW, 30));
 	topmenuWnd.SetPos(XMFLOAT2(0, 0));
 
-	optionsWnd.SetSize(XMFLOAT2(300, screenH));
+	optionsWnd.SetSize(XMFLOAT2(optionsWnd.GetSize().x, screenH));
 	optionsWnd.SetPos(XMFLOAT2(0, topmenuWnd.scale_local.y + topmenuWnd.GetShadowRadius()));
 
-	componentsWnd.SetSize(XMFLOAT2(200, screenH));
+	componentsWnd.SetSize(XMFLOAT2(componentsWnd.GetSize().x, screenH));
 	componentsWnd.SetPos(XMFLOAT2(screenW - componentsWnd.scale_local.x, optionsWnd.GetPos().y));
 
 	aboutWindow.SetSize(XMFLOAT2(screenW / 2.0f, screenH / 1.5f));
@@ -592,25 +592,6 @@ void EditorComponent::Load()
 				aboutWindow.sprites[i].params.corners_rounding[1].radius = 10;
 				aboutWindow.sprites[i].params.corners_rounding[2].radius = 10;
 				aboutWindow.sprites[i].params.corners_rounding[3].radius = 10;
-				aboutWindow.resizeDragger_UpperLeft.sprites[i].params.enableCornerRounding();
-				aboutWindow.resizeDragger_UpperLeft.sprites[i].params.corners_rounding[0].radius = 10;
-				aboutWindow.resizeDragger_UpperRight.sprites[i].params.enableCornerRounding();
-				aboutWindow.resizeDragger_UpperRight.sprites[i].params.corners_rounding[1].radius = 10;
-				aboutWindow.resizeDragger_BottomLeft.sprites[i].params.enableCornerRounding();
-				aboutWindow.resizeDragger_BottomLeft.sprites[i].params.corners_rounding[2].radius = 10;
-				aboutWindow.resizeDragger_BottomRight.sprites[i].params.enableCornerRounding();
-				aboutWindow.resizeDragger_BottomRight.sprites[i].params.corners_rounding[3].radius = 10;
-
-				if (aboutWindow.IsCollapsed())
-				{
-					aboutWindow.resizeDragger_UpperLeft.sprites[i].params.corners_rounding[2].radius = 10;
-					aboutWindow.resizeDragger_UpperRight.sprites[i].params.corners_rounding[3].radius = 10;
-				}
-				else
-				{
-					aboutWindow.resizeDragger_UpperLeft.sprites[i].params.corners_rounding[2].radius = 0;
-					aboutWindow.resizeDragger_UpperRight.sprites[i].params.corners_rounding[3].radius = 0;
-				}
 			}
 		});
 		GetGUI().AddWidget(&aboutWindow);
@@ -759,7 +740,6 @@ void EditorComponent::Update(float dt)
 	outlineTimer += dt;
 
 	CheckBonePickingEnabled();
-	UpdateTopMenuAnimation();
 
 	save_text_alpha = std::max(0.0f, save_text_alpha - std::min(dt, 0.033f)); // after saving, dt can become huge
 
@@ -1918,6 +1898,8 @@ void EditorComponent::Update(float dt)
 	wi::profiler::EndRange(profrange);
 
 	RenderPath2D::Update(dt);
+
+	UpdateTopMenuAnimation();
 
 	if (optionsWnd.paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED)
 	{
@@ -3257,8 +3239,8 @@ void EditorComponent::Compose(CommandList cmd) const
 
 void EditorComponent::ResizeViewport3D()
 {
-	uint32_t width = GetPhysicalWidth();
-	uint32_t height = GetPhysicalHeight();
+	int width = GetPhysicalWidth();
+	int height = GetPhysicalHeight();
 	if (GetGUI().IsVisible())
 	{
 		if (componentsWnd.IsVisible())
@@ -3271,6 +3253,8 @@ void EditorComponent::ResizeViewport3D()
 		}
 		height -= LogicalToPhysical(topmenuWnd.scale_local.y);
 	}
+	width = std::max(64, width);
+	height = std::max(64, height);
 	if (renderPath->width == width && renderPath->height == height)
 		return;
 
@@ -4318,7 +4302,7 @@ void EditorComponent::UpdateTopMenuAnimation()
 
 	hei = 22;
 	padding = 8;
-	ofs = screenW - 4 - hei;
+	ofs = screenW - padding - hei;
 	if (componentsWnd.IsVisible())
 	{
 		ofs -= componentsWnd.GetSize().x + componentsWnd.GetShadowRadius();
@@ -4327,26 +4311,32 @@ void EditorComponent::UpdateTopMenuAnimation()
 
 	translateButton.SetSize(XMFLOAT2(hei, hei));
 	translateButton.SetPos(XMFLOAT2(ofs, y));
+	translateButton.Update(*this, 0);
 	y += translateButton.GetSize().y + translateButton.GetShadowRadius();
 
 	rotateButton.SetSize(XMFLOAT2(hei, hei));
 	rotateButton.SetPos(XMFLOAT2(ofs, y));
+	rotateButton.Update(*this, 0);
 	y += rotateButton.GetSize().y + rotateButton.GetShadowRadius();
 
 	scaleButton.SetSize(XMFLOAT2(hei, hei));
 	scaleButton.SetPos(XMFLOAT2(ofs, y));
+	scaleButton.Update(*this, 0);
 	y += scaleButton.GetSize().y + padding;
 
 	physicsButton.SetSize(XMFLOAT2(hei, hei));
 	physicsButton.SetPos(XMFLOAT2(ofs, y));
+	physicsButton.Update(*this, 0);
 	y += physicsButton.GetSize().y + padding;
 
 	dummyButton.SetSize(XMFLOAT2(hei, hei));
 	dummyButton.SetPos(XMFLOAT2(ofs, y));
+	dummyButton.Update(*this, 0);
 	y += dummyButton.GetSize().y + padding;
 
 	navtestButton.SetSize(XMFLOAT2(hei, hei));
 	navtestButton.SetPos(XMFLOAT2(ofs, y));
+	navtestButton.Update(*this, 0);
 	y += navtestButton.GetSize().y + padding;
 
 	XMFLOAT4 color_on = playButton.sprites[wi::gui::FOCUS].params.color;
@@ -4397,6 +4387,8 @@ void EditorComponent::UpdateTopMenuAnimation()
 	{
 		physicsButton.sprites[wi::gui::IDLE].params.color = color_off;
 	}
+
+
 }
 
 void EditorComponent::SetCurrentScene(int index)

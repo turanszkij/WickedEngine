@@ -49,25 +49,6 @@ void ProfilerWindow::Update(const wi::Canvas& canvas, float dt)
 		sprites[i].params.corners_rounding[1].radius = 10;
 		sprites[i].params.corners_rounding[2].radius = 10;
 		sprites[i].params.corners_rounding[3].radius = 10;
-		resizeDragger_UpperLeft.sprites[i].params.enableCornerRounding();
-		resizeDragger_UpperLeft.sprites[i].params.corners_rounding[0].radius = 10;
-		resizeDragger_UpperRight.sprites[i].params.enableCornerRounding();
-		resizeDragger_UpperRight.sprites[i].params.corners_rounding[1].radius = 10;
-		resizeDragger_BottomLeft.sprites[i].params.enableCornerRounding();
-		resizeDragger_BottomLeft.sprites[i].params.corners_rounding[2].radius = 10;
-		resizeDragger_BottomRight.sprites[i].params.enableCornerRounding();
-		resizeDragger_BottomRight.sprites[i].params.corners_rounding[3].radius = 10;
-
-		if (IsCollapsed())
-		{
-			resizeDragger_UpperLeft.sprites[i].params.corners_rounding[2].radius = 10;
-			resizeDragger_UpperRight.sprites[i].params.corners_rounding[3].radius = 10;
-		}
-		else
-		{
-			resizeDragger_UpperLeft.sprites[i].params.corners_rounding[2].radius = 0;
-			resizeDragger_UpperRight.sprites[i].params.corners_rounding[3].radius = 0;
-		}
 	}
 }
 void ProfilerWindow::ResizeLayout()

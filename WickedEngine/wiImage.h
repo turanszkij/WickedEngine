@@ -4,6 +4,7 @@
 #include "wiEnums.h"
 #include "wiColor.h"
 #include "wiCanvas.h"
+#include "wiPrimitive.h"
 
 namespace wi::image
 {
@@ -76,6 +77,9 @@ namespace wi::image
 		float hdr_scaling = 1.0f; // a scaling value for use by linear output mapping
 		float mask_alpha_range_start = 0; // constrain mask alpha to not go below this level
 		float mask_alpha_range_end = 1; // constrain mask alpha to not go above this level
+		XMFLOAT2 angular_softness_direction = XMFLOAT2(0, 1);
+		float angular_softness_inner_angle = 0;
+		float angular_softness_outer_angle = 0;
 
 		// you can deform the image by its corners (0: top left, 1: top right, 2: bottom left, 3: bottom right)
 		XMFLOAT2 corners[4] = {
@@ -185,6 +189,14 @@ namespace wi::image
 				enableBackground();
 			}
 		}
+
+		Params(
+			const wi::primitive::Hitbox2D& hitbox, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1)
+		) :
+			pos(XMFLOAT3(hitbox.pos.x, hitbox.pos.y, 0)),
+			siz(hitbox.siz),
+			color(color)
+		{}
 	};
 
 
