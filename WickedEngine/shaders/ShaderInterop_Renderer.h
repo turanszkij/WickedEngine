@@ -982,6 +982,12 @@ struct FrameCB
 	VXGI vxgi;
 };
 
+enum SHADERCAMERA_OPTIONS
+{
+	SHADERCAMERA_OPTION_NONE = 0,
+	SHADERCAMERA_OPTION_USE_SHADOW_MASK = 1 << 0,
+};
+
 struct ShaderCamera
 {
 	float4x4	view_projection;
@@ -1067,6 +1073,9 @@ struct ShaderCamera
 	int texture_depth_index_prev;
 	int texture_vxgi_diffuse_index;
 	int texture_vxgi_specular_index;
+
+	uint3 padding;
+	uint options;
 
 #ifdef __cplusplus
 	void init()

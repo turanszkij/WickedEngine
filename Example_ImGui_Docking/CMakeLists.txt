@@ -18,8 +18,6 @@ set (SOURCE_FILES
 	ImGui/imstb_rectpack.h
 	ImGui/imstb_textedit.h
 	ImGui/imstb_truetype.h
-	ImGui/imgui_impl_sdl.cpp
-	ImGui/imgui_impl_sdl.h
 	ImGui/ImGuizmo.cpp
 	ImGui/ImGuizmo.h
 	ImGui/IconsMaterialDesign.h
@@ -31,6 +29,8 @@ if (WIN32)
 		main_Windows.cpp
 		main_Windows.h
 		Tests.rc
+		ImGui/imgui_impl_win32.cpp
+		ImGui/imgui_impl_win32.h
 	)
 
 	add_executable(Example_ImGui_Docking WIN32 ${SOURCE_FILES})
@@ -42,6 +42,8 @@ if (WIN32)
 else()
 	list (APPEND SOURCE_FILES
 		main_SDL2.cpp
+		ImGui/imgui_impl_sdl.cpp
+		ImGui/imgui_impl_sdl.h
 	)
 
 	add_executable(Example_ImGui_Docking ${SOURCE_FILES})

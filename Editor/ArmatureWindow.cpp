@@ -143,7 +143,6 @@ void ArmatureWindow::Create(EditorComponent* _editor)
 
 		HumanoidComponent humanoid;
 		bool found_anything = false;
-		humanoid.default_look_direction = XMFLOAT3(0, 0, -1);
 
 		for (size_t i = 0; i < armature->boneCollection.size(); ++i)
 		{

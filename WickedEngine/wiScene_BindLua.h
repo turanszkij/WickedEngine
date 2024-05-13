@@ -34,6 +34,7 @@ namespace wi::lua::scene
 		int Update(lua_State* L);
 		int Clear(lua_State* L);
 		int Merge(lua_State* L);
+		int Instantiate(lua_State* L);
 
 		int UpdateHierarchy(lua_State* L);
 
@@ -43,6 +44,7 @@ namespace wi::lua::scene
 		int FindAllEntities(lua_State* L);
 		int Entity_FindByName(lua_State* L);
 		int Entity_Remove(lua_State* L);
+		int Entity_Remove_Async(lua_State* L);
 		int Entity_Duplicate(lua_State* L);
 		int Entity_IsDescendant(lua_State* L);
 

@@ -57,6 +57,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		const uint2 block_offset = block_offsets[idx];
 		const int2 pixel = push.offset + DTid.xy * 4 + block_offset;
 		const float2 uv = (pixel.xy + 0.5f) * push.resolution_rcp;
+		const float2 uv2 = float2(uv.x, 1 - uv.y);
 		
 		float4 total_color = 0;
 		float accumulation = 0;
@@ -82,7 +83,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				float2 diff = dim * push.resolution_rcp;
 				float lod = log2(max(diff.x, diff.y));
 				float2 overscale = lod < 0 ? diff : 1;
-				float4 baseColorMap = tex.SampleLevel(sampler_linear_wrap, uv / overscale, lod);
+				float4 baseColorMap = tex.SampleLevel(sampler_linear_wrap, uv2 / overscale, lod);
 				baseColor *= baseColorMap;
 			}
 			total_color = mad(1 - accumulation, weight * baseColor, total_color);
@@ -101,7 +102,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				float2 diff = dim * push.resolution_rcp;
 				float lod = log2(max(diff.x, diff.y));
 				float2 overscale = lod < 0 ? diff : 1;
-				float2 normalMap = tex.SampleLevel(sampler_linear_wrap, uv / overscale, lod).rg;
+				float2 normalMap = tex.SampleLevel(sampler_linear_wrap, uv2 / overscale, lod).rg;
 				total_color.rg = mad(1 - accumulation, weight * normalMap, total_color.rg);
 				accumulation = mad(1 - weight, accumulation, weight);
 				if(accumulation >= 1)
@@ -120,7 +121,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				float2 diff = dim * push.resolution_rcp;
 				float lod = log2(max(diff.x, diff.y));
 				float2 overscale = lod < 0 ? diff : 1;
-				float4 surfaceMap = tex.SampleLevel(sampler_linear_wrap, uv / overscale, lod);
+				float4 surfaceMap = tex.SampleLevel(sampler_linear_wrap, uv2 / overscale, lod);
 				surface *= surfaceMap;
 			}
 			total_color = mad(1 - accumulation, weight * surface, total_color);
@@ -140,7 +141,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				float2 diff = dim * push.resolution_rcp;
 				float lod = log2(max(diff.x, diff.y));
 				float2 overscale = lod < 0 ? diff : 1;
-				float4 emissiveMap = tex.SampleLevel(sampler_linear_wrap, uv / overscale, lod);
+				float4 emissiveMap = tex.SampleLevel(sampler_linear_wrap, uv2 / overscale, lod);
 				emissiveColor.rgb = emissiveMap.rgb * emissiveMap.a;
 				emissiveColor.a = emissiveMap.a;
 			}

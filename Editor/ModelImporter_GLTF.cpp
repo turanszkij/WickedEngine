@@ -16,11 +16,6 @@ using namespace wi::graphics;
 using namespace wi::scene;
 using namespace wi::ecs;
 
-
-// Transform the data from glTF space to engine-space:
-static const bool transform_to_LH = true;
-
-
 namespace tinygltf
 {
 
@@ -148,7 +143,7 @@ struct LoaderState
 void Import_Extension_VRM(LoaderState& state);
 void Import_Extension_VRMC(LoaderState& state);
 void VRM_ToonMaterialCustomize(const std::string& name, MaterialComponent& material);
-void Import_Mixamo_Bone(LoaderState& state, Entity armatureEntity, Entity boneEntity, const tinygltf::Node& node);
+void Import_Mixamo_Bone(LoaderState& state, Entity boneEntity, const tinygltf::Node& node);
 
 // Recursively loads nodes and resolves hierarchy:
 void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
@@ -1664,7 +1659,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 			armature.boneCollection[i] = boneEntity;
 
-			Import_Mixamo_Bone(state, armatureEntity, boneEntity, state.gltfModel.nodes[jointIndex]);
+			Import_Mixamo_Bone(state, boneEntity, state.gltfModel.nodes[jointIndex]);
 		}
 	}
 
@@ -2796,7 +2791,6 @@ void Import_Extension_VRMC(LoaderState& state)
 				state.scene->names.Create(entity) = "humanoid";
 			}
 			HumanoidComponent& component = state.scene->humanoids.Create(entity);
-			component.default_look_direction = XMFLOAT3(0, 0, -1);
 
 			const auto& humanoid = ext_vrm->second.Get("humanoid");
 			if (humanoid.Has("humanBones"))
@@ -3231,14 +3225,13 @@ void VRM_ToonMaterialCustomize(const std::string& name, MaterialComponent& mater
 	}
 }
 
-void Import_Mixamo_Bone(LoaderState& state, Entity armatureEntity, Entity boneEntity, const tinygltf::Node& node)
+void Import_Mixamo_Bone(LoaderState& state, Entity boneEntity, const tinygltf::Node& node)
 {
 	auto get_humanoid = [&]() -> HumanoidComponent& {
-		HumanoidComponent* component = state.scene->humanoids.GetComponent(armatureEntity);
+		HumanoidComponent* component = state.scene->humanoids.GetComponent(state.rootEntity);
 		if (component == nullptr)
 		{
-			component = &state.scene->humanoids.Create(armatureEntity);
-			component->default_look_direction = XMFLOAT3(0, 0, -1);
+			component = &state.scene->humanoids.Create(state.rootEntity);
 		}
 		return *component;
 	};

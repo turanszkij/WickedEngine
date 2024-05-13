@@ -26,6 +26,7 @@ public:
 	wi::gui::CheckBox envProbesCheckBox;
 	wi::gui::CheckBox cameraVisCheckBox;
 	wi::gui::CheckBox colliderVisCheckBox;
+	wi::gui::CheckBox springVisCheckBox;
 	wi::gui::CheckBox freezeCullingCameraCheckBox;
 	wi::gui::CheckBox disableAlbedoMapsCheckBox;
 	wi::gui::CheckBox forceDiffuseLightingCheckBox;

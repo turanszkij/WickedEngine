@@ -1025,6 +1025,8 @@ namespace wi::renderer
 	bool GetToDrawDebugCameras();
 	void SetToDrawDebugColliders(bool param);
 	bool GetToDrawDebugColliders();
+	void SetToDrawDebugSprings(bool param);
+	bool GetToDrawDebugSprings();
 	bool GetToDrawGridHelper();
 	void SetToDrawGridHelper(bool value);
 	bool GetToDrawVoxelHelper();
@@ -1086,11 +1088,11 @@ namespace wi::renderer
 
 
 	// Add box to render in next frame. It will be rendered in DrawDebugWorld()
-	void DrawBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color = XMFLOAT4(1,1,1,1));
+	void DrawBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color = XMFLOAT4(1,1,1,1), bool depth = true);
 	// Add sphere to render in next frame. It will be rendered in DrawDebugWorld()
-	void DrawSphere(const wi::primitive::Sphere& sphere, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1));
+	void DrawSphere(const wi::primitive::Sphere& sphere, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1), bool depth = true);
 	// Add capsule to render in next frame. It will be rendered in DrawDebugWorld()
-	void DrawCapsule(const wi::primitive::Capsule& capsule, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1));
+	void DrawCapsule(const wi::primitive::Capsule& capsule, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1), bool depth = true);
 
 	struct RenderableLine
 	{
@@ -1100,7 +1102,7 @@ namespace wi::renderer
 		XMFLOAT4 color_end = XMFLOAT4(1, 1, 1, 1);
 	};
 	// Add line to render in the next frame. It will be rendered in DrawDebugWorld()
-	void DrawLine(const RenderableLine& line);
+	void DrawLine(const RenderableLine& line, bool depth = false);
 
 	struct RenderableLine2D
 	{
@@ -1119,7 +1121,7 @@ namespace wi::renderer
 		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
 	};
 	// Add point to render in the next frame. It will be rendered in DrawDebugWorld() as an X
-	void DrawPoint(const RenderablePoint& point);
+	void DrawPoint(const RenderablePoint& point, bool depth = false);
 
 	struct RenderableTriangle
 	{
@@ -1131,7 +1133,7 @@ namespace wi::renderer
 		XMFLOAT4 colorC = XMFLOAT4(1, 1, 1, 1);
 	};
 	// Add triangle to render in the next frame. It will be rendered in DrawDebugWorld()
-	void DrawTriangle(const RenderableTriangle& triangle, bool wireframe = false);
+	void DrawTriangle(const RenderableTriangle& triangle, bool wireframe = false, bool depth = true);
 
 	struct DebugTextParams
 	{

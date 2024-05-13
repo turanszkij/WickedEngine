@@ -306,8 +306,10 @@ namespace wi::primitive
 		A -= N * b.radius;
 		B += N * b.radius;
 		XMVECTOR C = XMLoadFloat3(&center);
-		dist = wi::math::GetPointSegmentDistance(C, A, B);
-		XMStoreFloat3(&direction, (C - wi::math::ClosestPointOnLineSegment(A, B, C)) / dist);
+		XMVECTOR D = C - wi::math::ClosestPointOnLineSegment(A, B, C);
+		dist = XMVectorGetX(XMVector3Length(D));
+		D /= dist;
+		XMStoreFloat3(&direction, D);
 		dist = dist - radius - b.radius;
 		return dist < 0;
 	}

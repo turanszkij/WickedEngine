@@ -296,6 +296,11 @@ namespace wi::scene
 		wi::jobsystem::context animation_dependency_scan_workload;
 		void ScanAnimationDependencies();
 
+		wi::vector<SpringComponent*> spring_queues; // these indicate which chains can be updated on separate threads
+		wi::jobsystem::context spring_dependency_scan_workload;
+		void ScanSpringDependencies();
+		void UpdateSpringsTopDownRecursive(SpringComponent* parent_spring, SpringComponent& spring);
+
 		// Update all components by a given timestep (in seconds):
 		//	This is an expensive function, prefer to call it only once per frame!
 		virtual void Update(float dt);
@@ -304,6 +309,11 @@ namespace wi::scene
 		// Merge an other scene into this.
 		//	The contents of the other scene will be lost (and moved to this)!
 		virtual void Merge(Scene& other);
+		// Create a copy of prefab and merge it into this.
+		//	prefab		: source scene to be copied from
+		//	attached	: if true, everything from prefab will be attached to a root entity
+		//	returns new root entity if attached is set to true, otherwise returns INVALID_ENTITY
+		virtual wi::ecs::Entity Instantiate(Scene& prefab, bool attached = false);
 		// Finds all entities in the scene that have any components attached
 		void FindAllEntities(wi::unordered_set<wi::ecs::Entity>& entities) const;
 
@@ -508,8 +518,13 @@ namespace wi::scene
 		wi::ecs::Entity RetargetAnimation(wi::ecs::Entity dst, wi::ecs::Entity src, bool bake_data, const Scene* src_scene = nullptr);
 
 		// If you don't know which armature the bone is contained int, this function can be used to find the first such armature and return the bone's rest matrix
-		//	If not found, return identity matrix
-		XMMATRIX FindBoneRestPose(wi::ecs::Entity bone) const;
+		//	If not found, and entity has a transform, it returns transform matrix
+		//	Otherwise, returns identity matrix
+		XMMATRIX GetRestPose(wi::ecs::Entity entity) const;
+		XMMATRIX FindBoneRestPose(wi::ecs::Entity bone) { return GetRestPose(bone); }; // back-compat of GetRestPose
+
+		// Returns 1 if humanoid's default facing direction is forward, -1 if it's backward
+		float GetHumanoidDefaultFacing(const HumanoidComponent& humanoid, wi::ecs::Entity humanoidEntity) const;
 
 		// All triangles of the object will be injected into the voxel grid
 		//	subtract: if false (default), voxels will be added, if true then voxels will be removed

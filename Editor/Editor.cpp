@@ -2047,11 +2047,16 @@ void EditorComponent::Update(float dt)
 	}
 
 	bool force_collider_visualizer = false;
+	bool force_spring_visualizer = false;
 	for (auto& x : translator.selected)
 	{
 		if (scene.colliders.Contains(x.entity))
 		{
 			force_collider_visualizer = true;
+		}
+		if (scene.springs.Contains(x.entity))
+		{
+			force_spring_visualizer = true;
 		}
 	}
 	if (force_collider_visualizer)
@@ -2061,6 +2066,14 @@ void EditorComponent::Update(float dt)
 	else
 	{
 		wi::renderer::SetToDrawDebugColliders(optionsWnd.generalWnd.colliderVisCheckBox.GetCheck());
+	}
+	if (force_spring_visualizer)
+	{
+		wi::renderer::SetToDrawDebugSprings(true);
+	}
+	else
+	{
+		wi::renderer::SetToDrawDebugSprings(optionsWnd.generalWnd.springVisCheckBox.GetCheck());
 	}
 }
 void EditorComponent::PostUpdate()
@@ -2145,19 +2158,6 @@ void EditorComponent::Render() const
 				XMFLOAT4X4 hoverBox;
 				XMStoreFloat4x4(&hoverBox, hair->aabb.getAsBoxMatrix());
 				wi::renderer::DrawBox(hoverBox, XMFLOAT4(0, 0.5f, 0, 0.5f));
-			}
-		}
-
-		// Spring visualizer:
-		if (componentsWnd.springWnd.debugCheckBox.GetCheck())
-		{
-			for (size_t i = 0; i < scene.springs.GetCount(); ++i)
-			{
-				const SpringComponent& spring = scene.springs[i];
-				wi::primitive::Sphere sphere;
-				sphere.center = spring.currentTail;
-				sphere.radius = spring.hitRadius;
-				wi::renderer::DrawSphere(sphere, XMFLOAT4(1, 1, 0, 1));
 			}
 		}
 	}
@@ -2990,54 +2990,63 @@ void EditorComponent::Render() const
 							const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 							XMVECTOR a = transform.GetPositionV();
 							XMVECTOR b = a + XMVectorSet(0, 0.1f, 0, 0);
-							// Search for child to connect bone tip:
-							bool child_found = false;
-							for (size_t h = 0; (h < scene.humanoids.GetCount()) && !child_found; ++h)
+							const SpringComponent* spring = scene.springs.GetComponent(entity);
+							if (spring != nullptr)
 							{
-								const HumanoidComponent& humanoid = scene.humanoids[h];
-								int bodypart = 0;
-								for (Entity child : humanoid.bones)
+								// Spring has information about bone tip already:
+								b = XMLoadFloat3(&spring->currentTail);
+							}
+							else
+							{
+								// Search for child to connect bone tip:
+								bool child_found = false;
+								for (size_t h = 0; (h < scene.humanoids.GetCount()) && !child_found; ++h)
 								{
-									const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(child);
-									if (hierarchy != nullptr && hierarchy->parentID == entity && scene.transforms.Contains(child))
+									const HumanoidComponent& humanoid = scene.humanoids[h];
+									int bodypart = 0;
+									for (Entity child : humanoid.bones)
 									{
-										if (bodypart == int(HumanoidComponent::HumanoidBone::Hips))
+										const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(child);
+										if (hierarchy != nullptr && hierarchy->parentID == entity && scene.transforms.Contains(child))
 										{
-											// skip root-hip connection
+											if (bodypart == int(HumanoidComponent::HumanoidBone::Hips))
+											{
+												// skip root-hip connection
+												child_found = true;
+												break;
+											}
+											const TransformComponent& child_transform = *scene.transforms.GetComponent(child);
+											b = child_transform.GetPositionV();
 											child_found = true;
 											break;
 										}
-										const TransformComponent& child_transform = *scene.transforms.GetComponent(child);
-										b = child_transform.GetPositionV();
-										child_found = true;
-										break;
+										bodypart++;
 									}
-									bodypart++;
 								}
-							}
-							if (!child_found)
-							{
-								for (Entity child : armature.boneCollection)
+								if (!child_found)
 								{
-									const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(child);
-									if (hierarchy != nullptr && hierarchy->parentID == entity && scene.transforms.Contains(child))
+									for (Entity child : armature.boneCollection)
 									{
-										const TransformComponent& child_transform = *scene.transforms.GetComponent(child);
-										b = child_transform.GetPositionV();
-										child_found = true;
-										break;
+										const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(child);
+										if (hierarchy != nullptr && hierarchy->parentID == entity && scene.transforms.Contains(child))
+										{
+											const TransformComponent& child_transform = *scene.transforms.GetComponent(child);
+											b = child_transform.GetPositionV();
+											child_found = true;
+											break;
+										}
 									}
 								}
-							}
-							if (!child_found)
-							{
-								// No child, try to guess bone tip compared to parent (if it has parent):
-								const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(entity);
-								if (hierarchy != nullptr && scene.transforms.Contains(hierarchy->parentID))
+								if (!child_found)
 								{
-									const TransformComponent& parent_transform = *scene.transforms.GetComponent(hierarchy->parentID);
-									XMVECTOR ab = a - parent_transform.GetPositionV();
-									b = a + ab;
+									// No child, try to guess bone tip compared to parent (if it has parent):
+									const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(entity);
+									if (hierarchy != nullptr && scene.transforms.Contains(hierarchy->parentID))
+									{
+										const TransformComponent& parent_transform = *scene.transforms.GetComponent(hierarchy->parentID);
+										XMVECTOR ab = a - parent_transform.GetPositionV();
+										b = a + ab;
+									}
 								}
 							}
 							XMVECTOR ab = XMVector3Normalize(b - a);
@@ -3050,13 +3059,13 @@ void EditorComponent::Render() const
 							XMStoreFloat3(&capsule.tip, b);
 							XMFLOAT4 color = inactiveEntityColor;
 
-							if (scene.springs.Contains(entity))
+							if (spring != nullptr)
 							{
-								color = wi::Color(255, 70, 165, uint8_t(color.w * 255));
+								color = springDebugColor;
 							}
-							if (scene.inverse_kinematics.Contains(entity))
+							else if (scene.inverse_kinematics.Contains(entity))
 							{
-								color = wi::Color(49, 190, 103, uint8_t(color.w * 255));
+								color = ikDebugColor;
 							}
 
 							if (hovered.entity == entity)

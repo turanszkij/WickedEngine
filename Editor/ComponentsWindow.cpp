@@ -88,7 +88,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.AddItem("Transform " ICON_TRANSFORM, ADD_TRANSFORM);
 	newComponentCombo.AddItem("Light " ICON_POINTLIGHT, ADD_LIGHT);
 	newComponentCombo.AddItem("Material " ICON_MATERIAL, ADD_MATERIAL);
-	newComponentCombo.AddItem("Spring", ADD_SPRING);
+	newComponentCombo.AddItem("Spring " ICON_SPRING, ADD_SPRING);
 	newComponentCombo.AddItem("Inverse Kinematics " ICON_IK, ADD_IK);
 	newComponentCombo.AddItem("Sound " ICON_SOUND, ADD_SOUND);
 	newComponentCombo.AddItem("Environment Probe " ICON_ENVIRONMENTPROBE, ADD_ENVPROBE);
@@ -263,20 +263,6 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			break;
 		case ADD_SPRING:
 			scene.springs.Create(entity);
-
-			// Springs are special because they are computed in ordered fashion
-			//	So if we add a new spring that was parent of an other one, we move it in memory before the child
-			for (size_t i = 0; i < scene.springs.GetCount(); ++i)
-			{
-				Entity other = scene.springs.GetEntity(i);
-				const HierarchyComponent* hier = scene.hierarchy.GetComponent(other);
-				if (hier != nullptr && hier->parentID == entity)
-				{
-					size_t entity_index = scene.springs.GetCount() - 1; // last added entity (the parent)
-					scene.springs.MoveItem(entity_index, i); // will be moved before
-					break;
-				}
-			}
 			break;
 		case ADD_IK:
 			scene.inverse_kinematics.Create(entity);

@@ -1986,6 +1986,7 @@ namespace wi::scene
 	}
 	void HumanoidComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
+		XMFLOAT3 default_look_direction = XMFLOAT3(0, 0, 1);
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;

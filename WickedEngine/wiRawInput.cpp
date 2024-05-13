@@ -305,12 +305,13 @@ namespace wi::input::rawinput
 				for (USHORT i = 0; i < Caps.NumberInputValueCaps; i++)
 				{
 					ULONG value;
-					status = HidP_GetUsageValue(
+					if(HidP_GetUsageValue(
 						HidP_Input, pValueCaps[i].UsagePage, 0,
 						pValueCaps[i].Range.UsageMin, &value, pPreparsedData,
-						(PCHAR)raw.data.hid.bRawData, raw.data.hid.dwSizeHid
-					);
-					assert(status == HIDP_STATUS_SUCCESS);
+						(PCHAR)raw.data.hid.bRawData, raw.data.hid.dwSizeHid) != HIDP_STATUS_SUCCESS)
+					{
+						continue;
+					}
 
 					switch (pValueCaps[i].Range.UsageMin)
 					{
