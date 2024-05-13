@@ -55,7 +55,6 @@ public:
 
 		All = ~0ull,
 	} filter = Filter::All;
-	wi::gui::ComboBox newCombo;
 	wi::gui::ComboBox filterCombo;
 	wi::gui::TextInputField filterInput;
 	wi::gui::CheckBox filterCaseCheckBox;

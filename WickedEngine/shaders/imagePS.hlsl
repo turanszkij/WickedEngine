@@ -66,7 +66,16 @@ float4 main(VertextoPixel input) : SV_TARGET
 	if (image.angular_softness_scale > 0)
 	{
 		float2 direction = normalize(uvsets.xy - 0.5);
-		color.a *= saturate(mad(dot(direction, image.angular_softness_direction), image.angular_softness_scale, image.angular_softness_offset));
+		float dp = dot(direction, image.angular_softness_direction);
+		if (image.flags & IMAGE_FLAG_ANGULAR_DOUBLESIDED)
+		{
+			dp = abs(dp);
+		}
+		else
+		{
+			dp = saturate(dp);
+		}
+		color.a *= saturate(mad(dp, image.angular_softness_scale, image.angular_softness_offset));
 	}
 
 	return color;

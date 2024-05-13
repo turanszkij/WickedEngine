@@ -58,6 +58,7 @@ namespace wi::image
 			OUTPUT_COLOR_SPACE_LINEAR = 1 << 7,
 			CORNER_ROUNDING = 1 << 8,
 			DEPTH_TEST = 1 << 9,
+			ANGULAR_DOUBLESIDED = 1 << 10,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -121,6 +122,7 @@ namespace wi::image
 		constexpr bool isLinearOutputMappingEnabled() const { return _flags & OUTPUT_COLOR_SPACE_LINEAR; }
 		constexpr bool isCornerRoundingEnabled() const { return _flags & CORNER_ROUNDING; }
 		constexpr bool isDepthTestEnabled() const { return _flags & DEPTH_TEST; }
+		constexpr bool isAngularSmoothnessDoubleSided() const { return _flags & ANGULAR_DOUBLESIDED; }
 
 		// enables draw rectangle for base texture (cutout texture outside draw rectangle)
 		constexpr void enableDrawRect(const XMFLOAT4& rect) { _flags |= DRAWRECT; drawRect = rect; }
@@ -141,6 +143,7 @@ namespace wi::image
 		constexpr void enableLinearOutputMapping(float scaling = 1.0f) { _flags |= OUTPUT_COLOR_SPACE_LINEAR; hdr_scaling = scaling; }
 		constexpr void enableCornerRounding() { _flags |= CORNER_ROUNDING; }
 		constexpr void enableDepthTest() { _flags |= DEPTH_TEST; }
+		constexpr void enableAngularSmoothnessDoubleSided() { _flags |= ANGULAR_DOUBLESIDED; }
 
 		// disable draw rectangle for base texture (whole texture will be drawn, no cutout)
 		constexpr void disableDrawRect() { _flags &= ~DRAWRECT; }
@@ -154,6 +157,7 @@ namespace wi::image
 		constexpr void disableLinearOutputMapping() { _flags &= ~OUTPUT_COLOR_SPACE_LINEAR; }
 		constexpr void disableCornerRounding() { _flags &= ~CORNER_ROUNDING; }
 		constexpr void disableDepthTest() { _flags &= ~DEPTH_TEST; }
+		constexpr void disableAngularSmoothnessDoubleSided() { _flags &= ~ANGULAR_DOUBLESIDED; }
 
 		Params() = default;
 

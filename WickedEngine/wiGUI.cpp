@@ -325,6 +325,39 @@ namespace wi::gui
 
 		sprites[state].Update(dt);
 		font.Update(dt);
+
+		angular_highlight_timer += dt * 2;
+	}
+	void Widget::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const
+	{
+		if (!IsVisible())
+		{
+			return;
+		}
+
+		if (angular_highlight_width > 0)
+		{
+			wi::image::Params fx;
+			fx.color = angular_highlight_color;
+			fx.pos.x = translation.x - angular_highlight_width;
+			fx.pos.y = translation.y - angular_highlight_width;
+			fx.siz.x = scale.x + angular_highlight_width * 2;
+			fx.siz.y = scale.y + angular_highlight_width * 2;
+			if (sprites[state].params.isCornerRoundingEnabled())
+			{
+				fx.enableCornerRounding();
+				fx.corners_rounding[0] = sprites[state].params.corners_rounding[0];
+				fx.corners_rounding[1] = sprites[state].params.corners_rounding[1];
+				fx.corners_rounding[2] = sprites[state].params.corners_rounding[2];
+				fx.corners_rounding[3] = sprites[state].params.corners_rounding[3];
+			}
+			fx.angular_softness_outer_angle = XM_PI * 0.6f;
+			fx.angular_softness_inner_angle = 0;
+			XMStoreFloat2(&fx.angular_softness_direction, XMVector2Normalize(XMVectorSet(std::sin(angular_highlight_timer), std::cos(angular_highlight_timer), 0, 0)));
+			fx.enableAngularSmoothnessDoubleSided();
+			fx.border_soften = 0.1f;
+			wi::image::Draw(nullptr, fx, cmd);
+		}
 	}
 	void Widget::RenderTooltip(const wi::Canvas& canvas, CommandList cmd) const
 	{
@@ -906,6 +939,7 @@ namespace wi::gui
 	}
 	void Button::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
+		Widget::Render(canvas, cmd);
 		if (!IsVisible())
 		{
 			return;
@@ -1115,6 +1149,7 @@ namespace wi::gui
 	}
 	void ScrollBar::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
+		Widget::Render(canvas, cmd);
 		if (!IsVisible())
 		{
 			return;
@@ -1270,6 +1305,7 @@ namespace wi::gui
 	}
 	void Label::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
+		Widget::Render(canvas, cmd);
 		if (!IsVisible())
 		{
 			return;
@@ -1560,6 +1596,7 @@ namespace wi::gui
 	}
 	void TextInputField::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
+		Widget::Render(canvas, cmd);
 		if (!IsVisible())
 		{
 			return;
@@ -1917,6 +1954,7 @@ namespace wi::gui
 	}
 	void Slider::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
+		Widget::Render(canvas, cmd);
 		if (!IsVisible())
 		{
 			return;
@@ -2087,6 +2125,7 @@ namespace wi::gui
 	}
 	void CheckBox::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
+		Widget::Render(canvas, cmd);
 		if (!IsVisible())
 		{
 			return;
@@ -2233,6 +2272,21 @@ namespace wi::gui
 		}
 		return 1;
 	}
+	float ComboBox::GetDropX(const wi::Canvas& canvas) const
+	{
+		if (fixed_drop_width && translation.x > canvas.GetLogicalWidth() * 0.5f)
+		{
+			// in this case, left-align the drop down:
+			float x = translation.x + scale.x - fixed_drop_width;
+			if (HasScrollbar())
+			{
+				x -= 1 + scale.y;
+			}
+			x = std::max(0.0f, x);
+			return x;
+		}
+		return translation.x;
+	}
 	float ComboBox::GetItemOffset(const wi::Canvas& canvas, int index) const
 	{
 		index = std::max(firstItemVisible, index) - firstItemVisible;
@@ -2250,6 +2304,9 @@ namespace wi::gui
 		}
 
 		Widget::Update(canvas, dt);
+
+		const float drop_width = fixed_drop_width > 0 ? fixed_drop_width : scale.x;
+		const float drop_x = GetDropX(canvas);
 
 		if (IsEnabled() && dt > 0)
 		{
@@ -2275,7 +2332,11 @@ namespace wi::gui
 
 			hitBox.pos.x = translation.x;
 			hitBox.pos.y = translation.y;
-			hitBox.siz.x = scale.x + scale.y + 1; // + drop-down indicator arrow + little offset
+			hitBox.siz.x = scale.x;
+			if (drop_arrow)
+			{
+				hitBox.siz.x += scale.y + 1; // + drop-down indicator arrow + little offset
+			}
 			hitBox.siz.y = scale.y;
 
 			Hitbox2D pointerHitbox = GetPointerHitbox();
@@ -2323,7 +2384,7 @@ namespace wi::gui
 				{
 					if (combostate != COMBOSTATE_SELECTING && combostate != COMBOSTATE_INACTIVE)
 					{
-						if (combostate == COMBOSTATE_SCROLLBAR_GRABBED || pointerHitbox.intersects(Hitbox2D(XMFLOAT2(translation.x + scale.x + 1, translation.y + scale.y + drop_offset), XMFLOAT2(scale.y, (float)std::min(maxVisibleItemCount, (int)items.size()) * scale.y))))
+						if (combostate == COMBOSTATE_SCROLLBAR_GRABBED || pointerHitbox.intersects(Hitbox2D(XMFLOAT2(drop_x + drop_width + 1, translation.y + scale.y + drop_offset), XMFLOAT2(scale.y, (float)std::min(maxVisibleItemCount, (int)items.size()) * scale.y))))
 						{
 							if (click_down)
 							{
@@ -2370,9 +2431,9 @@ namespace wi::gui
 					for (int i = firstItemVisible; i < (firstItemVisible + std::min(maxVisibleItemCount, (int)items.size())); ++i)
 					{
 						Hitbox2D itembox;
-						itembox.pos.x = translation.x;
+						itembox.pos.x = drop_x;
 						itembox.pos.y = translation.y + GetItemOffset(canvas, i);
-						itembox.siz.x = scale.x;
+						itembox.siz.x = drop_width;
 						itembox.siz.y = scale.y;
 						if (pointerHitbox.intersects(itembox))
 						{
@@ -2410,11 +2471,15 @@ namespace wi::gui
 	}
 	void ComboBox::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
+		Widget::Render(canvas, cmd);
 		if (!IsVisible())
 		{
 			return;
 		}
 		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		const float drop_width = fixed_drop_width > 0 ? fixed_drop_width : scale.x;
+		const float drop_x = GetDropX(canvas);
 
 		// shadow:
 		if (shadow > 0)
@@ -2422,7 +2487,11 @@ namespace wi::gui
 			wi::image::Params fx = sprites[state].params;
 			fx.pos.x -= shadow;
 			fx.pos.y -= shadow;
-			fx.siz.x += shadow * 2 + 1 + scale.y;
+			fx.siz.x += shadow * 2;
+			if (drop_arrow)
+			{
+				fx.siz.x += 1 + scale.y;
+			}
 			fx.siz.y += shadow * 2;
 			fx.color = shadow_color;
 			if (fx.isCornerRoundingEnabled())
@@ -2446,56 +2515,60 @@ namespace wi::gui
 
 		font.Draw(cmd);
 
-		struct Vertex
+		const float drop_offset = GetDropOffset(canvas);
+
+		if (drop_arrow)
 		{
-			XMFLOAT4 pos;
-			XMFLOAT4 col;
-		};
-		static GPUBuffer vb_triangle;
-		if (!vb_triangle.IsValid())
-		{
-			Vertex vertices[3];
-			vertices[0].col = XMFLOAT4(1, 1, 1, 1);
-			vertices[1].col = XMFLOAT4(1, 1, 1, 1);
-			vertices[2].col = XMFLOAT4(1, 1, 1, 1);
-			wi::math::ConstructTriangleEquilateral(1, vertices[0].pos, vertices[1].pos, vertices[2].pos);
-
-			GPUBufferDesc desc;
-			desc.bind_flags = BindFlag::VERTEX_BUFFER;
-			desc.size = sizeof(vertices);
-			device->CreateBuffer(&desc, &vertices, &vb_triangle);
-		}
-		const XMMATRIX Projection = canvas.GetProjection();
-
-		float drop_offset = GetDropOffset(canvas);
-
-		// control-arrow-background
-		wi::image::Params fx = sprites[state].params;
-		fx.pos = XMFLOAT3(translation.x + scale.x + 1, translation.y, 0);
-		fx.siz = XMFLOAT2(scale.y, scale.y);
-		wi::image::Draw(nullptr, fx, cmd);
-
-		// control-arrow-triangle
-		{
-			device->BindPipelineState(&gui_internal().PSO_colored, cmd);
-
-			MiscCB cb;
-			cb.g_xColor = font.params.color;
-			XMStoreFloat4x4(&cb.g_xTransform, XMMatrixScaling(scale.y * 0.25f, scale.y * 0.25f, 1) *
-				XMMatrixRotationZ(drop_offset < 0 ? -XM_PIDIV2 : XM_PIDIV2) *
-				XMMatrixTranslation(translation.x + scale.x + 1 + scale.y * 0.5f, translation.y + scale.y * 0.5f, 0) *
-				Projection
-			);
-			device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
-			const GPUBuffer* vbs[] = {
-				&vb_triangle,
+			struct Vertex
+			{
+				XMFLOAT4 pos;
+				XMFLOAT4 col;
 			};
-			const uint32_t strides[] = {
-				sizeof(Vertex),
-			};
-			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
+			static GPUBuffer vb_triangle;
+			if (!vb_triangle.IsValid())
+			{
+				Vertex vertices[3];
+				vertices[0].col = XMFLOAT4(1, 1, 1, 1);
+				vertices[1].col = XMFLOAT4(1, 1, 1, 1);
+				vertices[2].col = XMFLOAT4(1, 1, 1, 1);
+				wi::math::ConstructTriangleEquilateral(1, vertices[0].pos, vertices[1].pos, vertices[2].pos);
 
-			device->Draw(3, 0, cmd);
+				GPUBufferDesc desc;
+				desc.bind_flags = BindFlag::VERTEX_BUFFER;
+				desc.size = sizeof(vertices);
+				device->CreateBuffer(&desc, &vertices, &vb_triangle);
+			}
+			const XMMATRIX Projection = canvas.GetProjection();
+
+			// control-arrow-background
+			wi::image::Params fx = sprites[state].params;
+			fx.disableCornerRounding();
+			fx.pos = XMFLOAT3(translation.x + scale.x + 1, translation.y, 0);
+			fx.siz = XMFLOAT2(scale.y, scale.y);
+			wi::image::Draw(nullptr, fx, cmd);
+
+			// control-arrow-triangle
+			{
+				device->BindPipelineState(&gui_internal().PSO_colored, cmd);
+
+				MiscCB cb;
+				cb.g_xColor = font.params.color;
+				XMStoreFloat4x4(&cb.g_xTransform, XMMatrixScaling(scale.y * 0.25f, scale.y * 0.25f, 1) *
+					XMMatrixRotationZ(drop_offset < 0 ? -XM_PIDIV2 : XM_PIDIV2) *
+					XMMatrixTranslation(translation.x + scale.x + 1 + scale.y * 0.5f, translation.y + scale.y * 0.5f, 0) *
+					Projection
+				);
+				device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
+				const GPUBuffer* vbs[] = {
+					&vb_triangle,
+				};
+				const uint32_t strides[] = {
+					sizeof(Vertex),
+				};
+				device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
+
+				device->Draw(3, 0, cmd);
+			}
 		}
 
 		ApplyScissor(canvas, scissorRect, cmd);
@@ -2508,20 +2581,20 @@ namespace wi::gui
 		// drop-down
 		if (state == ACTIVE)
 		{
-
 			if (HasScrollbar())
 			{
 				Rect rect;
-				rect.left = int(translation.x + scale.x + 1);
-				rect.right = int(translation.x + scale.x + 1 + scale.y);
+				rect.left = int(drop_x + drop_width + 1);
+				rect.right = int(drop_x + drop_width + 1 + scale.y);
 				rect.top = int(translation.y + scale.y + drop_offset);
 				rect.bottom = int(translation.y + scale.y + drop_offset + scale.y * maxVisibleItemCount);
 				ApplyScissor(canvas, rect, cmd, false);
 
 				// control-scrollbar-base
 				{
-					fx = sprites[state].params;
-					fx.pos = XMFLOAT3(translation.x + scale.x + 1, translation.y + scale.y + drop_offset, 0);
+					wi::image::Params fx = sprites[state].params;
+					fx.disableCornerRounding();
+					fx.pos = XMFLOAT3(drop_x + drop_width + 1, translation.y + scale.y + drop_offset, 0);
 					fx.siz = XMFLOAT2(scale.y, scale.y * maxVisibleItemCount);
 					fx.color = drop_color;
 					wi::image::Draw(nullptr, fx, cmd);
@@ -2541,7 +2614,7 @@ namespace wi::gui
 					wi::image::Draw(
 						wi::texturehelper::getWhite(),
 						wi::image::Params(
-							translation.x + scale.x + 1,
+							drop_x + drop_width + 1,
 							translation.y + scale.y + drop_offset + scrollbar_delta,
 							scale.y,
 							scale.y,
@@ -2553,8 +2626,8 @@ namespace wi::gui
 			}
 
 			Rect rect;
-			rect.left = int(translation.x);
-			rect.right = rect.left + int(scale.x);
+			rect.left = int(drop_x);
+			rect.right = rect.left + int(drop_width);
 			rect.top = int(translation.y + scale.y + drop_offset);
 			rect.bottom = rect.top + int(scale.y * maxVisibleItemCount);
 			ApplyScissor(canvas, rect, cmd, false);
@@ -2562,9 +2635,10 @@ namespace wi::gui
 			// control-list
 			for (int i = firstItemVisible; i < (firstItemVisible + std::min(maxVisibleItemCount, (int)items.size())); ++i)
 			{
-				fx = sprites[state].params;
-				fx.pos = XMFLOAT3(translation.x, translation.y + GetItemOffset(canvas, i), 0);
-				fx.siz = XMFLOAT2(scale.x, scale.y);
+				wi::image::Params fx = sprites[state].params;
+				fx.disableCornerRounding();
+				fx.pos = XMFLOAT3(drop_x, translation.y + GetItemOffset(canvas, i), 0);
+				fx.siz = XMFLOAT2(drop_width, scale.y);
 				fx.color = drop_color;
 				if (hovered == i)
 				{
@@ -2580,7 +2654,7 @@ namespace wi::gui
 				wi::image::Draw(nullptr, fx, cmd);
 
 				wi::font::Params fp = wi::font::Params(
-					translation.x + scale.x * 0.5f,
+					drop_x + drop_width * 0.5f,
 					translation.y + scale.y * 0.5f + GetItemOffset(canvas, i),
 					wi::font::WIFONTSIZE_DEFAULT,
 					wi::font::WIFALIGN_CENTER,
@@ -3351,6 +3425,7 @@ namespace wi::gui
 	}
 	void Window::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
+		Widget::Render(canvas, cmd);
 		if (!IsVisible())
 		{
 			return;
@@ -4898,6 +4973,7 @@ namespace wi::gui
 	}
 	void TreeList::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
+		Widget::Render(canvas, cmd);
 		if (!IsVisible())
 		{
 			return;

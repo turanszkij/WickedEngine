@@ -25,6 +25,8 @@ public:
 
 	wi::gui::Button newSceneButton;
 
+	wi::gui::ComboBox newEntityCombo;
+
 	wi::gui::Button translateButton;
 	wi::gui::Button rotateButton;
 	wi::gui::Button scaleButton;

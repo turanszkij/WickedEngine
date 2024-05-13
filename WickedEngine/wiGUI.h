@@ -264,6 +264,9 @@ namespace wi::gui
 		mutable wi::Sprite tooltipSprite;
 		mutable wi::SpriteFont tooltipFont;
 		mutable wi::SpriteFont scripttipFont;
+		float angular_highlight_width = 0;
+		float angular_highlight_timer = 0;
+		XMFLOAT4 angular_highlight_color = XMFLOAT4(1, 1, 1, 1);
 
 	public:
 		Widget();
@@ -295,7 +298,7 @@ namespace wi::gui
 
 		virtual void ResizeLayout() {};
 		virtual void Update(const wi::Canvas& canvas, float dt);
-		virtual void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const {}
+		virtual void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const;
 		virtual void RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const;
 
 		// last param default: set color for all states
@@ -338,6 +341,11 @@ namespace wi::gui
 		void SetLocalizationEnabled(bool value) { localization_enabled = value ? LocalizationEnabled::All : LocalizationEnabled::None; }
 		virtual void ExportLocalization(wi::Localization& localization) const;
 		virtual void ImportLocalization(const wi::Localization& localization);
+
+		void SetAngularHighlightWidth(float value) { angular_highlight_width = value; };
+		float GetAngularHighlightWidth() const { return angular_highlight_width; };
+		void SetAngularHighlightColor(const XMFLOAT4& value) { angular_highlight_color = value; };
+		XMFLOAT4 GetAngularHighlightColor() const { return angular_highlight_color; };
 	};
 
 	// Clickable, draggable box
@@ -547,6 +555,8 @@ namespace wi::gui
 		int selected = -1;
 		int maxVisibleItemCount = 8;
 		int firstItemVisible = 0;
+		bool drop_arrow = true;
+		float fixed_drop_width = 0; // 0 = not fixed, takes width from base scale
 
 		// While the widget is active (rolled down) these are the inner states that control behaviour
 		enum COMBOSTATE
@@ -573,6 +583,7 @@ namespace wi::gui
 		std::wstring invalid_selection_text;
 
 		float GetDropOffset(const wi::Canvas& canvas) const;
+		float GetDropX(const wi::Canvas& canvas) const;
 		float GetItemOffset(const wi::Canvas& canvas, int index) const;
 	public:
 		void Create(const std::string& name);
@@ -608,6 +619,11 @@ namespace wi::gui
 
 		void ExportLocalization(wi::Localization& localization) const override;
 		void ImportLocalization(const wi::Localization& localization) override;
+
+		void SetDropArrowEnabled(bool value) { drop_arrow = value; }
+		bool IsDropArrowEnabled(bool value) const { return drop_arrow; }
+		void SetFixedDropWidth(float value) { fixed_drop_width = value; }
+		float GetFixedDropWidth(float value) const { return fixed_drop_width; }
 	};
 
 	// Widget container

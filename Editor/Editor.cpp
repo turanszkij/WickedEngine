@@ -184,6 +184,271 @@ void EditorComponent::Load()
 		});
 	topmenuWnd.AddWidget(&newSceneButton);
 
+	enum NEW_THING
+	{
+		NEW_TRANSFORM,
+		NEW_MATERIAL,
+		NEW_POINTLIGHT,
+		NEW_SPOTLIGHT,
+		NEW_DIRECTIONALLIGHT,
+		NEW_ENVIRONMENTPROBE,
+		NEW_FORCE,
+		NEW_DECAL,
+		NEW_SOUND,
+		NEW_VIDEO,
+		NEW_WEATHER,
+		NEW_EMITTER,
+		NEW_HAIR,
+		NEW_CAMERA,
+		NEW_CUBE,
+		NEW_PLANE,
+		NEW_SPHERE,
+		NEW_ANIMATION,
+		NEW_SCRIPT,
+		NEW_COLLIDER,
+		NEW_TERRAIN,
+		NEW_SPRITE,
+		NEW_FONT,
+		NEW_VOXELGRID,
+	};
+
+	newEntityCombo.Create("");
+	newEntityCombo.SetShadowRadius(0);
+	newEntityCombo.SetInvalidSelectionText("+");
+	newEntityCombo.SetDropArrowEnabled(false);
+	newEntityCombo.SetFixedDropWidth(200);
+	newEntityCombo.SetMaxVisibleItemCount(16);
+	newEntityCombo.SetAngularHighlightWidth(3);
+	newEntityCombo.AddItem("Transform " ICON_TRANSFORM, NEW_TRANSFORM);
+	newEntityCombo.AddItem("Material " ICON_MATERIAL, NEW_MATERIAL);
+	newEntityCombo.AddItem("Point Light " ICON_POINTLIGHT, NEW_POINTLIGHT);
+	newEntityCombo.AddItem("Spot Light " ICON_SPOTLIGHT, NEW_SPOTLIGHT);
+	newEntityCombo.AddItem("Directional Light " ICON_DIRECTIONALLIGHT, NEW_DIRECTIONALLIGHT);
+	newEntityCombo.AddItem("Environment Probe " ICON_ENVIRONMENTPROBE, NEW_ENVIRONMENTPROBE);
+	newEntityCombo.AddItem("Force " ICON_FORCE, NEW_FORCE);
+	newEntityCombo.AddItem("Decal " ICON_DECAL, NEW_DECAL);
+	newEntityCombo.AddItem("Sound " ICON_SOUND, NEW_SOUND);
+	newEntityCombo.AddItem("Video " ICON_VIDEO, NEW_VIDEO);
+	newEntityCombo.AddItem("Weather " ICON_WEATHER, NEW_WEATHER);
+	newEntityCombo.AddItem("Emitter " ICON_EMITTER, NEW_EMITTER);
+	newEntityCombo.AddItem("HairParticle " ICON_HAIR, NEW_HAIR);
+	newEntityCombo.AddItem("Camera " ICON_CAMERA, NEW_CAMERA);
+	newEntityCombo.AddItem("Cube " ICON_CUBE, NEW_CUBE);
+	newEntityCombo.AddItem("Plane " ICON_SQUARE, NEW_PLANE);
+	newEntityCombo.AddItem("Sphere " ICON_CIRCLE, NEW_SPHERE);
+	newEntityCombo.AddItem("Animation " ICON_ANIMATION, NEW_ANIMATION);
+	newEntityCombo.AddItem("Script " ICON_SCRIPT, NEW_SCRIPT);
+	newEntityCombo.AddItem("Collider " ICON_COLLIDER, NEW_COLLIDER);
+	newEntityCombo.AddItem("Terrain " ICON_TERRAIN, NEW_TERRAIN);
+	newEntityCombo.AddItem("Sprite " ICON_SPRITE, NEW_SPRITE);
+	newEntityCombo.AddItem("Font " ICON_FONT, NEW_FONT);
+	newEntityCombo.AddItem("Voxel Grid " ICON_VOXELGRID, NEW_VOXELGRID);
+	newEntityCombo.OnSelect([this](wi::gui::EventArgs args) {
+		newEntityCombo.SetSelectedWithoutCallback(-1);
+		const EditorComponent::EditorScene& editorscene = GetCurrentEditorScene();
+		const CameraComponent& camera = editorscene.camera;
+		Scene& scene = GetCurrentScene();
+		PickResult pick;
+
+		XMFLOAT3 in_front_of_camera;
+		XMStoreFloat3(&in_front_of_camera, XMVectorAdd(camera.GetEye(), camera.GetAt() * 4));
+
+		switch (args.userdata)
+		{
+		case NEW_TRANSFORM:
+			pick.entity = scene.Entity_CreateTransform("transform");
+			break;
+		case NEW_MATERIAL:
+			pick.entity = scene.Entity_CreateMaterial("material");
+			break;
+		case NEW_POINTLIGHT:
+			pick.entity = scene.Entity_CreateLight("pointlight", in_front_of_camera, XMFLOAT3(1, 1, 1), 2, 60);
+			scene.lights.GetComponent(pick.entity)->type = LightComponent::POINT;
+			scene.lights.GetComponent(pick.entity)->intensity = 20;
+			break;
+		case NEW_SPOTLIGHT:
+			pick.entity = scene.Entity_CreateLight("spotlight", in_front_of_camera, XMFLOAT3(1, 1, 1), 2, 60);
+			scene.lights.GetComponent(pick.entity)->type = LightComponent::SPOT;
+			scene.lights.GetComponent(pick.entity)->intensity = 100;
+			break;
+		case NEW_DIRECTIONALLIGHT:
+			pick.entity = scene.Entity_CreateLight("dirlight", XMFLOAT3(0, 3, 0), XMFLOAT3(1, 1, 1), 2, 60);
+			scene.lights.GetComponent(pick.entity)->type = LightComponent::DIRECTIONAL;
+			scene.lights.GetComponent(pick.entity)->intensity = 10;
+			break;
+		case NEW_ENVIRONMENTPROBE:
+			pick.entity = scene.Entity_CreateEnvironmentProbe("envprobe", in_front_of_camera);
+			break;
+		case NEW_FORCE:
+			pick.entity = scene.Entity_CreateForce("force");
+			break;
+		case NEW_DECAL:
+			pick.entity = scene.Entity_CreateDecal("decal", "");
+			if (scene.materials.Contains(pick.entity))
+			{
+				MaterialComponent* decal_material = scene.materials.GetComponent(pick.entity);
+				decal_material->textures[MaterialComponent::BASECOLORMAP].resource.SetTexture(*wi::texturehelper::getLogo());
+			}
+			scene.transforms.GetComponent(pick.entity)->RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
+			break;
+		case NEW_SOUND:
+		{
+			wi::helper::FileDialogParams params;
+			params.type = wi::helper::FileDialogParams::OPEN;
+			params.description = "Sound";
+			params.extensions = wi::resourcemanager::GetSupportedSoundExtensions();
+			wi::helper::FileDialog(params, [=](std::string fileName) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					Entity entity = GetCurrentScene().Entity_CreateSound(wi::helper::GetFileNameFromPath(fileName), fileName);
+
+					wi::Archive& archive = AdvanceHistory();
+					archive << EditorComponent::HISTORYOP_ADD;
+					RecordSelection(archive);
+
+					ClearSelected();
+					AddSelected(entity);
+
+					RecordSelection(archive);
+					RecordEntity(archive, entity);
+
+					optionsWnd.RefreshEntityTree();
+					componentsWnd.soundWnd.SetEntity(entity);
+					});
+				});
+			return;
+		}
+		break;
+		case NEW_VIDEO:
+		{
+			wi::helper::FileDialogParams params;
+			params.type = wi::helper::FileDialogParams::OPEN;
+			params.description = "Video";
+			params.extensions = wi::resourcemanager::GetSupportedVideoExtensions();
+			wi::helper::FileDialog(params, [=](std::string fileName) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					Entity entity = GetCurrentScene().Entity_CreateVideo(wi::helper::GetFileNameFromPath(fileName), fileName);
+
+					wi::Archive& archive = AdvanceHistory();
+					archive << EditorComponent::HISTORYOP_ADD;
+					RecordSelection(archive);
+
+					ClearSelected();
+					AddSelected(entity);
+
+					RecordSelection(archive);
+					RecordEntity(archive, entity);
+
+					optionsWnd.RefreshEntityTree();
+					componentsWnd.videoWnd.SetEntity(entity);
+					});
+				});
+			return;
+		}
+		break;
+		case NEW_WEATHER:
+			pick.entity = CreateEntity();
+			scene.weathers.Create(pick.entity);
+			scene.names.Create(pick.entity) = "weather";
+			break;
+		case NEW_EMITTER:
+			pick.entity = scene.Entity_CreateEmitter("emitter");
+			break;
+		case NEW_HAIR:
+			pick.entity = scene.Entity_CreateHair("hair");
+			break;
+		case NEW_CAMERA:
+			pick.entity = scene.Entity_CreateCamera("camera", camera.width, camera.height);
+			*scene.cameras.GetComponent(pick.entity) = camera;
+			*scene.transforms.GetComponent(pick.entity) = editorscene.camera_transform;
+			break;
+		case NEW_CUBE:
+			pick.entity = scene.Entity_CreateCube("cube");
+			pick.subsetIndex = 0;
+			break;
+		case NEW_PLANE:
+			pick.entity = scene.Entity_CreatePlane("plane");
+			pick.subsetIndex = 0;
+			break;
+		case NEW_SPHERE:
+			pick.entity = scene.Entity_CreateSphere("sphere");
+			pick.subsetIndex = 0;
+			break;
+		case NEW_ANIMATION:
+			pick.entity = CreateEntity();
+			scene.animations.Create(pick.entity);
+			scene.names.Create(pick.entity) = "animation";
+			break;
+		case NEW_SCRIPT:
+			pick.entity = CreateEntity();
+			scene.scripts.Create(pick.entity);
+			scene.names.Create(pick.entity) = "script";
+			break;
+		case NEW_COLLIDER:
+			pick.entity = CreateEntity();
+			scene.colliders.Create(pick.entity);
+			scene.transforms.Create(pick.entity);
+			scene.names.Create(pick.entity) = "collider";
+			break;
+		case NEW_TERRAIN:
+			componentsWnd.terrainWnd.entity = pick.entity;
+			componentsWnd.terrainWnd.SetupAssets();
+			pick.entity = CreateEntity();
+			scene.terrains.Create(pick.entity) = componentsWnd.terrainWnd.terrain_preset;
+			scene.names.Create(pick.entity) = "terrain";
+			break;
+		case NEW_SPRITE:
+		{
+			pick.entity = CreateEntity();
+			wi::Sprite& sprite = scene.sprites.Create(pick.entity);
+			sprite.params.pivot = XMFLOAT2(0.5f, 0.5f);
+			sprite.anim.repeatable = true;
+			scene.transforms.Create(pick.entity).Translate(XMFLOAT3(0, 2, 0));
+			scene.names.Create(pick.entity) = "sprite";
+		}
+		break;
+		case NEW_FONT:
+		{
+			pick.entity = CreateEntity();
+			wi::SpriteFont& font = scene.fonts.Create(pick.entity);
+			font.SetText("Text");
+			font.params.h_align = wi::font::Alignment::WIFALIGN_CENTER;
+			font.params.v_align = wi::font::Alignment::WIFALIGN_CENTER;
+			font.params.scaling = 0.1f;
+			font.params.size = 26;
+			font.anim.typewriter.looped = true;
+			scene.transforms.Create(pick.entity).Translate(XMFLOAT3(0, 2, 0));
+			scene.names.Create(pick.entity) = "font";
+		}
+		break;
+		case NEW_VOXELGRID:
+		{
+			pick.entity = CreateEntity();
+			scene.voxel_grids.Create(pick.entity).init(64, 64, 64);
+			scene.transforms.Create(pick.entity).Scale(XMFLOAT3(0.25f, 0.25f, 0.25f));
+			scene.names.Create(pick.entity) = "voxelgrid";
+		}
+		break;
+		default:
+			break;
+		}
+		if (pick.entity != INVALID_ENTITY)
+		{
+			wi::Archive& archive = AdvanceHistory();
+			archive << EditorComponent::HISTORYOP_ADD;
+			RecordSelection(archive);
+
+			ClearSelected();
+			AddSelected(pick);
+
+			RecordSelection(archive);
+			RecordEntity(archive, pick.entity);
+		}
+		optionsWnd.RefreshEntityTree();
+	});
+	newEntityCombo.SetEnabled(true);
+	newEntityCombo.SetTooltip("Create a new entity");
+	GetGUI().AddWidget(&newEntityCombo);
+
 	translateButton.Create(ICON_TRANSLATE);
 	rotateButton.Create(ICON_ROTATE);
 	scaleButton.Create(ICON_SCALE);
@@ -4338,6 +4603,14 @@ void EditorComponent::UpdateTopMenuAnimation()
 	navtestButton.SetPos(XMFLOAT2(ofs, y));
 	navtestButton.Update(*this, 0);
 	y += navtestButton.GetSize().y + padding;
+
+
+	newEntityCombo.SetSize(XMFLOAT2(hei, hei));
+	ofs -= padding * 2 + newEntityCombo.GetSize().x;
+	y = topmenuWnd.GetSize().y + padding;
+	newEntityCombo.SetPos(XMFLOAT2(ofs, y));
+	newEntityCombo.Update(*this, 0);
+
 
 	XMFLOAT4 color_on = playButton.sprites[wi::gui::FOCUS].params.color;
 	XMFLOAT4 color_off = playButton.sprites[wi::gui::IDLE].params.color;

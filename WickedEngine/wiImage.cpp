@@ -144,6 +144,10 @@ namespace wi::image
 		{
 			image.flags |= IMAGE_FLAG_FULLSCREEN;
 		}
+		if (params.isAngularSmoothnessDoubleSided())
+		{
+			image.flags |= IMAGE_FLAG_ANGULAR_DOUBLESIDED;
+		}
 
 		image.border_soften = params.border_soften;
 		image.mask_alpha_range =  XMConvertFloatToHalf(params.mask_alpha_range_start) | (XMConvertFloatToHalf(params.mask_alpha_range_end) << 16u);

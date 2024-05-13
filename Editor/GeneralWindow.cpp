@@ -432,6 +432,11 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		}
 
 		// customize individual elements:
+		XMFLOAT4 highlight = theme_color_focus;
+		highlight.x *= 2;
+		highlight.y *= 2;
+		highlight.z *= 2;
+		editor->newEntityCombo.SetAngularHighlightColor(highlight);
 		editor->componentsWnd.materialWnd.textureSlotButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 		editor->componentsWnd.spriteWnd.textureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 		editor->optionsWnd.paintToolWnd.brushTextureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
@@ -472,6 +477,12 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->newSceneButton.sprites[i].params.corners_rounding[1].radius = 20;
 			editor->newSceneButton.sprites[i].params.corners_rounding[2].radius = 20;
 			editor->newSceneButton.sprites[i].params.corners_rounding[3].radius = 20;
+
+			editor->newEntityCombo.sprites[i].params.enableCornerRounding();
+			editor->newEntityCombo.sprites[i].params.corners_rounding[0].radius = 20;
+			editor->newEntityCombo.sprites[i].params.corners_rounding[1].radius = 20;
+			editor->newEntityCombo.sprites[i].params.corners_rounding[2].radius = 20;
+			editor->newEntityCombo.sprites[i].params.corners_rounding[3].radius = 20;
 
 			editor->dummyButton.sprites[i].params.enableCornerRounding();
 			editor->dummyButton.sprites[i].params.corners_rounding[0].radius = 10;
