@@ -452,18 +452,9 @@ namespace wi::terrain
 		}
 		chunks.clear();
 
-		wi::vector<Entity> entities_to_remove;
-		for (size_t i = 0; i < scene->hierarchy.GetCount(); ++i)
+		if (chunkGroupEntity != INVALID_ENTITY)
 		{
-			const HierarchyComponent& hier = scene->hierarchy[i];
-			if (hier.parentID == terrainEntity)
-			{
-				entities_to_remove.push_back(scene->hierarchy.GetEntity(i));
-			}
-		}
-		for (Entity x : entities_to_remove)
-		{
-			scene->Entity_Remove(x);
+			scene->Entity_Remove(chunkGroupEntity);
 		}
 
 		perlin_noise.init(seed);
@@ -481,18 +472,6 @@ namespace wi::terrain
 		if (!weather.IsOceanEnabled())
 		{
 			scene->ocean = {};
-		}
-
-		{
-			Entity sunEntity = scene->Entity_CreateLight("sun");
-			scene->Component_Attach(sunEntity, terrainEntity);
-			LightComponent& light = *scene->lights.GetComponent(sunEntity);
-			light.SetType(LightComponent::LightType::DIRECTIONAL);
-			light.intensity = 16;
-			light.SetCastShadow(true);
-			TransformComponent& transform = *scene->transforms.GetComponent(sunEntity);
-			transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV4, 0, XM_PIDIV4));
-			transform.Translate(XMFLOAT3(0, 4, 0));
 		}
 
 		// Restore surface source materials:
