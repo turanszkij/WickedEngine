@@ -179,6 +179,7 @@ BOOL CreateEditorWindow(int nCmdShow)
 	editor.SetWindow(hWnd);
 
 	ShowWindow(hWnd, nCmdShow);
+	SendMessage(hWnd, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
 	UpdateWindow(hWnd);
 
 	DragAcceptFiles(hWnd, TRUE);
