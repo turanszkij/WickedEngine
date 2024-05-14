@@ -551,8 +551,8 @@ void ComponentsWindow::ResizeLayout()
 		pos.y += filterCombo.GetSize().y;
 		pos.y += padding;
 
-		entityTree.SetPos(pos);
-		entityTree.SetSize(XMFLOAT2(width, wi::math::Clamp(entityTree.GetSize().y, 0, height - pos.y - 50)));
+		entityTree.SetPos(XMFLOAT2(pos.x - padding, pos.y));
+		entityTree.SetSize(XMFLOAT2(width + padding * 2, wi::math::Clamp(entityTree.GetSize().y, 0, height - pos.y - 50)));
 		pos.y += entityTree.GetSize().y;
 		pos.y += padding * 3;
 	}
