@@ -2946,6 +2946,7 @@ namespace wi::gui
 		scrollbar_horizontal.sprites_knob[ScrollBar::SCROLLBAR_HOVER].params.color = wi::Color(180, 180, 180, 180);
 		scrollbar_horizontal.sprites_knob[ScrollBar::SCROLLBAR_GRABBED].params.color = wi::Color::White();
 		scrollbar_horizontal.knob_inset_border = XMFLOAT2(2, 4);
+		scrollbar_horizontal.SetOverScroll(0.1f);
 		AddWidget(&scrollbar_horizontal);
 
 		scrollbar_vertical.SetVertical(true);
@@ -2954,6 +2955,7 @@ namespace wi::gui
 		scrollbar_vertical.sprites_knob[ScrollBar::SCROLLBAR_HOVER].params.color = wi::Color(180, 180, 180, 180);
 		scrollbar_vertical.sprites_knob[ScrollBar::SCROLLBAR_GRABBED].params.color = wi::Color::White();
 		scrollbar_vertical.knob_inset_border = XMFLOAT2(4, 2);
+		scrollbar_vertical.SetOverScroll(0.1f);
 		AddWidget(&scrollbar_vertical);
 
 		scrollable_area.ClearTransform();
@@ -3187,15 +3189,17 @@ namespace wi::gui
 		}
 
 		// Corner rounding update for control widgets:
-		if (sprites[state].params.isCornerRoundingEnabled())
+		for (int i = 0; i < arraysize(moveDragger.sprites); ++i)
 		{
-			for (int i = 0; i < arraysize(moveDragger.sprites); ++i)
-			{
-				moveDragger.sprites[i].params.disableCornerRounding();
-				label.sprites[i].params.disableCornerRounding();
-				collapseButton.sprites[i].params.disableCornerRounding();
-				closeButton.sprites[i].params.disableCornerRounding();
+			moveDragger.sprites[i].params.disableCornerRounding();
+			label.sprites[i].params.disableCornerRounding();
+			collapseButton.sprites[i].params.disableCornerRounding();
+			closeButton.sprites[i].params.disableCornerRounding();
+			scrollbar_horizontal.sprites[i].params.disableCornerRounding();
+			scrollbar_vertical.sprites[i].params.disableCornerRounding();
 
+			if (sprites[state].params.isCornerRoundingEnabled())
+			{
 				// Left side:
 				if (closeButton.parent)
 				{
@@ -3277,6 +3281,11 @@ namespace wi::gui
 						label.sprites[i].params.corners_rounding[3].radius = 0;
 					}
 				}
+
+				scrollbar_horizontal.sprites[i].params.enableCornerRounding();
+				scrollbar_horizontal.sprites[i].params.corners_rounding[3].radius = sprites[state].params.corners_rounding[3].radius;
+				scrollbar_vertical.sprites[i].params.enableCornerRounding();
+				scrollbar_vertical.sprites[i].params.corners_rounding[3].radius = sprites[state].params.corners_rounding[3].radius;
 			}
 		}
 
@@ -3887,20 +3896,17 @@ namespace wi::gui
 		if (scrollbar_horizontal.parent != nullptr)
 		{
 			scrollbar_horizontal.Detach();
-			float offset = 0;
-			scrollbar_horizontal.SetSize(XMFLOAT2(GetWidgetAreaSize().x - control_size * (offset + 1), control_size));
-			scrollbar_horizontal.SetPos(XMFLOAT2(translation.x + control_size * offset, translation.y + scale.y - control_size));
+			scrollbar_horizontal.SetSize(XMFLOAT2(GetWidgetAreaSize().x - control_size, control_size));
+			scrollbar_horizontal.SetPos(XMFLOAT2(translation.x + control_size, translation.y + scale.y - control_size));
 			scrollbar_horizontal.AttachTo(this);
-			scrollbar_horizontal.SetSafeArea(scrollbar_horizontal.scale.y);
+			scrollbar_horizontal.SetSafeArea(control_size * 2);
 		}
 		if (scrollbar_vertical.parent != nullptr)
 		{
 			scrollbar_vertical.Detach();
-			float offset = 2;
-			scrollbar_vertical.SetSize(XMFLOAT2(control_size, GetWidgetAreaSize().y - (control_size + 1) * offset));
-			scrollbar_vertical.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y + 1 + control_size));
+			scrollbar_vertical.SetSize(XMFLOAT2(control_size, GetWidgetAreaSize().y - control_size));
+			scrollbar_vertical.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y + control_size));
 			scrollbar_vertical.AttachTo(this);
-			scrollbar_vertical.SetSafeArea(scrollbar_vertical.scale.x);
 		}
 
 		if (onResize)

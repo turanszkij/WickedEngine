@@ -530,6 +530,7 @@ void ComponentsWindow::ResizeLayout()
 	const float padding = 4;
 	XMFLOAT2 pos = XMFLOAT2(padding, padding);
 	const float width = GetWidgetAreaSize().x - padding * 2;
+	const float height = GetWidgetAreaSize().y - padding * 2;
 	editor->main->config.GetSection("layout").Set("components.width", GetSize().x);
 	editor->main->config.GetSection("layout").Set("components.height", GetSize().y);
 
@@ -551,7 +552,7 @@ void ComponentsWindow::ResizeLayout()
 		pos.y += padding;
 
 		entityTree.SetPos(pos);
-		entityTree.SetSize(XMFLOAT2(width, entityTree.GetSize().y));
+		entityTree.SetSize(XMFLOAT2(width, wi::math::Clamp(entityTree.GetSize().y, 0, height - pos.y - 50)));
 		pos.y += entityTree.GetSize().y;
 		pos.y += padding * 3;
 	}

@@ -155,10 +155,10 @@ void EditorComponent::ResizeLayout()
 	topmenuWnd.SetSize(XMFLOAT2(screenW, 30));
 	topmenuWnd.SetPos(XMFLOAT2(0, 0));
 
-	optionsWnd.SetSize(XMFLOAT2(optionsWnd.GetSize().x, screenH));
+	optionsWnd.SetSize(XMFLOAT2(optionsWnd.GetSize().x, screenH - topmenuWnd.GetSize().y));
 	optionsWnd.SetPos(XMFLOAT2(0, topmenuWnd.scale_local.y + topmenuWnd.GetShadowRadius()));
 
-	componentsWnd.SetSize(XMFLOAT2(componentsWnd.GetSize().x, screenH));
+	componentsWnd.SetSize(XMFLOAT2(componentsWnd.GetSize().x, screenH - topmenuWnd.GetSize().y));
 	componentsWnd.SetPos(XMFLOAT2(screenW - componentsWnd.scale_local.x, optionsWnd.GetPos().y));
 
 	aboutWindow.SetSize(XMFLOAT2(screenW / 2.0f, screenH / 1.5f));

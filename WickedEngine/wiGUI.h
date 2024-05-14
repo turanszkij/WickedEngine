@@ -404,7 +404,7 @@ namespace wi::gui
 		//	1: full extra offset
 		void SetOverScroll(float amount) { overscroll = amount; }
 		// Check whether the scrollbar is required (when the items don't fit and scrolling could be used)
-		bool IsScrollbarRequired() const { return scrollbar_granularity < 0.999f; }
+		bool IsScrollbarRequired() const { return scrollbar_granularity < 1; }
 		void SetSafeArea(float value) { safe_area = value; }
 
 		enum SCROLLBAR_STATE
