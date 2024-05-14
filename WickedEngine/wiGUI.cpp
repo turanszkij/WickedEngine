@@ -326,7 +326,7 @@ namespace wi::gui
 		sprites[state].Update(dt);
 		font.Update(dt);
 
-		angular_highlight_timer += dt * 2;
+		angular_highlight_timer += dt;
 	}
 	void Widget::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const
 	{
@@ -354,7 +354,7 @@ namespace wi::gui
 			fx.angular_softness_outer_angle = XM_PI * 0.6f;
 			fx.angular_softness_inner_angle = 0;
 			XMStoreFloat2(&fx.angular_softness_direction, XMVector2Normalize(XMVectorSet(std::sin(angular_highlight_timer), std::cos(angular_highlight_timer), 0, 0)));
-			fx.enableAngularSmoothnessDoubleSided();
+			fx.enableAngularSoftnessDoubleSided();
 			fx.border_soften = 0.1f;
 			wi::image::Draw(nullptr, fx, cmd);
 		}

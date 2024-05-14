@@ -2334,6 +2334,9 @@ namespace wi
 	{
 		ao = value;
 
+		if (!rtParticleDistortion.IsValid())
+			return; // ResizeBuffers hasn't been called yet
+
 		rtAO = {};
 		ssaoResources = {};
 		msaoResources = {};

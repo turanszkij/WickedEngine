@@ -144,9 +144,13 @@ namespace wi::image
 		{
 			image.flags |= IMAGE_FLAG_FULLSCREEN;
 		}
-		if (params.isAngularSmoothnessDoubleSided())
+		if (params.isAngularSoftnessDoubleSided())
 		{
 			image.flags |= IMAGE_FLAG_ANGULAR_DOUBLESIDED;
+		}
+		if (params.isAngularSoftnessInverse())
+		{
+			image.flags |= IMAGE_FLAG_ANGULAR_INVERSE;
 		}
 
 		image.border_soften = params.border_soften;

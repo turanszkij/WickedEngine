@@ -9,6 +9,7 @@ static const uint IMAGE_FLAG_FULLSCREEN = 1u << 3u;
 static const uint IMAGE_FLAG_MIRROR = 1u << 4u;
 static const uint IMAGE_FLAG_CORNER_ROUNDING = 1u << 5u;
 static const uint IMAGE_FLAG_ANGULAR_DOUBLESIDED = 1u << 6u;
+static const uint IMAGE_FLAG_ANGULAR_INVERSE = 1u << 7u;
 
 struct ImageConstants
 {
