@@ -1031,39 +1031,40 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 		params.h_align = wi::font::WIFALIGN_RIGHT;
 		params.scaling = 0.8f;
 		params.shadowColor = wi::Color::Black();
-		std::string str;
+
+		char text[256] = {};
+
 		if (isTranslator)
 		{
-			str += "Offset = " + std::to_string(transform.translation_local.x - transform_start.translation_local.x) + ", " + std::to_string(transform.translation_local.y - transform_start.translation_local.y) + ", " + std::to_string(transform.translation_local.z - transform_start.translation_local.z);
+			snprintf(text, arraysize(text), "Offset = %.2f, %.2f, %.2f", transform.translation_local.x - transform_start.translation_local.x, transform.translation_local.y - transform_start.translation_local.y, transform.translation_local.z - transform_start.translation_local.z);
 		}
 		if (isRotator)
 		{
 			switch (state)
 			{
 			case Translator::TRANSLATOR_X:
-				str += "Axis = X";
+				snprintf(text, arraysize(text), "Axis = X\nAngle = %.2f degrees", wi::math::RadiansToDegrees(angle));
 				break;
 			case Translator::TRANSLATOR_Y:
-				str += "Axis = Y";
+				snprintf(text, arraysize(text), "Axis = Y\nAngle = %.2f degrees", wi::math::RadiansToDegrees(angle));
 				break;
 			case Translator::TRANSLATOR_Z:
-				str += "Axis = Z";
+				snprintf(text, arraysize(text), "Axis = Z\nAngle = %.2f degrees", wi::math::RadiansToDegrees(angle));
 				break;
 			case Translator::TRANSLATOR_XYZ:
-				str += "Axis = Screen";
+				snprintf(text, arraysize(text), "Axis = Screen\nAngle = %.2f degrees", wi::math::RadiansToDegrees(angle));
 				break;
 			default:
 				break;
 			}
-			str += "\nAngle = " + std::to_string(int(angle / XM_PI * 180)) + " degrees";
 		}
 		if (isScalator)
 		{
-			str += "Scaling = " + std::to_string(transform.scale_local.x / transform_start.scale_local.x) + ", " + std::to_string(transform.scale_local.y / transform_start.scale_local.y) + ", " + std::to_string(transform.scale_local.z / transform_start.scale_local.z);
+			snprintf(text, arraysize(text), "Scaling = %.2f, %.2f, %.2f", transform.scale_local.x / transform_start.scale_local.x, transform.scale_local.y / transform_start.scale_local.y, transform.scale_local.z / transform_start.scale_local.z);
 		}
 		params.shadowColor.setA(uint8_t(opacity * 255.0f));
 		params.color.setA(uint8_t(opacity * 255.0f));
-		wi::font::Draw(str, params, cmd);
+		wi::font::Draw(text, params, cmd);
 	}
 
 	device->EventEnd(cmd);

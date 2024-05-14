@@ -553,7 +553,7 @@ void ComponentsWindow::ResizeLayout()
 		entityTree.SetPos(pos);
 		entityTree.SetSize(XMFLOAT2(width, entityTree.GetSize().y));
 		pos.y += entityTree.GetSize().y;
-		pos.y += padding * 2;
+		pos.y += padding * 3;
 	}
 
 	if (!editor->translator.selected.empty())

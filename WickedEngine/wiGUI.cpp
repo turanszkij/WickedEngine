@@ -3026,21 +3026,21 @@ namespace wi::gui
 			Hitbox2D bottomlefthitbox;
 			if (has_flag(controls, WindowControls::RESIZE_LEFT))
 			{
-				lefthitbox = Hitbox2D(XMFLOAT2(translation.x - resizehitboxwidth * 0.5f, translation.y), XMFLOAT2(resizehitboxwidth, vscale));
+				lefthitbox = Hitbox2D(XMFLOAT2(translation.x - resizehitboxwidth, translation.y), XMFLOAT2(resizehitboxwidth, vscale));
 			}
 			if (has_flag(controls, WindowControls::RESIZE_RIGHT))
 			{
-				righthitbox = Hitbox2D(XMFLOAT2(translation.x + scale.x - resizehitboxwidth * 0.5f, translation.y), XMFLOAT2(resizehitboxwidth, vscale));
+				righthitbox = Hitbox2D(XMFLOAT2(translation.x + scale.x, translation.y), XMFLOAT2(resizehitboxwidth, vscale));
 			}
 			if (!IsCollapsed())
 			{
 				if (has_flag(controls, WindowControls::RESIZE_TOP))
 				{
-					tophitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y - resizehitboxwidth * 0.5f), XMFLOAT2(scale.x, resizehitboxwidth));
+					tophitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y - resizehitboxwidth), XMFLOAT2(scale.x, resizehitboxwidth));
 				}
 				if (has_flag(controls, WindowControls::RESIZE_BOTTOM))
 				{
-					bottomhitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y + vscale - resizehitboxwidth * 0.5f), XMFLOAT2(scale.x, resizehitboxwidth));
+					bottomhitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y + vscale), XMFLOAT2(scale.x, resizehitboxwidth));
 				}
 				if (has_flag(controls, WindowControls::RESIZE_TOPLEFT))
 				{
@@ -3111,7 +3111,6 @@ namespace wi::gui
 					focus = true;
 				}
 				resize_begin = pointerHitbox.pos;
-				resize_blink_timer = 0;
 			}
 			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
 			{
@@ -3180,6 +3179,10 @@ namespace wi::gui
 				)
 			{
 				resize_blink_timer += dt;
+			}
+			else
+			{
+				resize_blink_timer = 0;
 			}
 		}
 
@@ -3493,21 +3496,21 @@ namespace wi::gui
 			Hitbox2D bottomlefthitbox;
 			if (has_flag(controls, WindowControls::RESIZE_LEFT))
 			{
-				lefthitbox = Hitbox2D(XMFLOAT2(translation.x - resizehitboxwidth * 0.5f, translation.y), XMFLOAT2(resizehitboxwidth, vscale));
+				lefthitbox = Hitbox2D(XMFLOAT2(translation.x - resizehitboxwidth, translation.y), XMFLOAT2(resizehitboxwidth, vscale));
 			}
 			if (has_flag(controls, WindowControls::RESIZE_RIGHT))
 			{
-				righthitbox = Hitbox2D(XMFLOAT2(translation.x + scale.x - resizehitboxwidth * 0.5f, translation.y), XMFLOAT2(resizehitboxwidth, vscale));
+				righthitbox = Hitbox2D(XMFLOAT2(translation.x + scale.x, translation.y), XMFLOAT2(resizehitboxwidth, vscale));
 			}
 			if (!IsCollapsed())
 			{
 				if (has_flag(controls, WindowControls::RESIZE_TOP))
 				{
-					tophitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y - resizehitboxwidth * 0.5f), XMFLOAT2(scale.x, resizehitboxwidth));
+					tophitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y - resizehitboxwidth), XMFLOAT2(scale.x, resizehitboxwidth));
 				}
 				if (has_flag(controls, WindowControls::RESIZE_BOTTOM))
 				{
-					bottomhitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y + vscale - resizehitboxwidth * 0.5f), XMFLOAT2(scale.x, resizehitboxwidth));
+					bottomhitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y + vscale), XMFLOAT2(scale.x, resizehitboxwidth));
 				}
 				if (has_flag(controls, WindowControls::RESIZE_TOPLEFT))
 				{
@@ -3893,7 +3896,7 @@ namespace wi::gui
 		if (scrollbar_vertical.parent != nullptr)
 		{
 			scrollbar_vertical.Detach();
-			float offset = 1;
+			float offset = 2;
 			scrollbar_vertical.SetSize(XMFLOAT2(control_size, GetWidgetAreaSize().y - (control_size + 1) * offset));
 			scrollbar_vertical.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y + 1 + control_size));
 			scrollbar_vertical.AttachTo(this);
@@ -4834,7 +4837,7 @@ namespace wi::gui
 		if (IsEnabled())
 		{
 			float vscale = scale.y;
-			Hitbox2D bottomhitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y + vscale - resizehitboxwidth * 0.5f), XMFLOAT2(scale.x, resizehitboxwidth));
+			Hitbox2D bottomhitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y + vscale), XMFLOAT2(scale.x, resizehitboxwidth));
 			
 			if (resize_state == RESIZE_STATE_NONE && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
 			{
@@ -4844,7 +4847,6 @@ namespace wi::gui
 					Activate();
 				}
 				resize_begin = pointerHitbox.pos;
-				resize_blink_timer = 0;
 			}
 			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
 			{
@@ -4880,6 +4882,10 @@ namespace wi::gui
 				)
 			{
 				resize_blink_timer += dt;
+			}
+			else
+			{
+				resize_blink_timer = 0;
 			}
 		}
 
@@ -5078,7 +5084,7 @@ namespace wi::gui
 		{
 			// hitboxes are recomputed because window transform might have changed since update!!
 			float vscale = scale.y;
-			Hitbox2D bottomhitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y + vscale - resizehitboxwidth * 0.5f), XMFLOAT2(scale.x, resizehitboxwidth));
+			Hitbox2D bottomhitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y + vscale), XMFLOAT2(scale.x, resizehitboxwidth));
 			
 			const Hitbox2D pointerHitbox = GetPointerHitbox();
 
