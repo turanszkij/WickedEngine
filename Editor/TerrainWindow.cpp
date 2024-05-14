@@ -1708,6 +1708,17 @@ void TerrainWindow::SetupAssets()
 		grass->frameStart = grass_config.GetInt("frameStart");
 	}
 
+	{
+		Entity sunEntity = currentScene.Entity_CreateLight("sun");
+		LightComponent& light = *currentScene.lights.GetComponent(sunEntity);
+		light.SetType(LightComponent::LightType::DIRECTIONAL);
+		light.intensity = 16;
+		light.SetCastShadow(true);
+		TransformComponent& transform = *currentScene.transforms.GetComponent(sunEntity);
+		transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV4, 0, XM_PIDIV4));
+		transform.Translate(XMFLOAT3(0, 4, 0));
+	}
+
 	terrain = &terrain_preset;
 	presetCombo.SetSelected(0);
 
