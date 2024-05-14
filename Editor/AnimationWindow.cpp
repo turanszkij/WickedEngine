@@ -21,7 +21,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 
 		editor->RecordEntity(archive, entity);
 
-		editor->optionsWnd.RefreshEntityTree();
+		editor->componentsWnd.RefreshEntityTree();
 		});
 
 	float x = 80;
@@ -922,7 +922,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 			}
 			scene.names.Create(retarget_entity) = name;
 
-			editor->optionsWnd.RefreshEntityTree();
+			editor->componentsWnd.RefreshEntityTree();
 		}
 	});
 	AddWidget(&retargetCombo);

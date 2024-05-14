@@ -431,6 +431,7 @@ namespace wi::gui
 	class Label : public Widget
 	{
 	protected:
+		bool wrap_enabled = true;
 	public:
 		void Create(const std::string& name);
 
@@ -442,6 +443,8 @@ namespace wi::gui
 
 		float scrollbar_width = 18;
 		ScrollBar scrollbar;
+
+		void SetWrapEnabled(bool value) { wrap_enabled = value; }
 	};
 
 	// Text input box
@@ -621,9 +624,9 @@ namespace wi::gui
 		void ImportLocalization(const wi::Localization& localization) override;
 
 		void SetDropArrowEnabled(bool value) { drop_arrow = value; }
-		bool IsDropArrowEnabled(bool value) const { return drop_arrow; }
+		bool IsDropArrowEnabled() const { return drop_arrow; }
 		void SetFixedDropWidth(float value) { fixed_drop_width = value; }
-		float GetFixedDropWidth(float value) const { return fixed_drop_width; }
+		float GetFixedDropWidth() const { return fixed_drop_width; }
 	};
 
 	// Widget container
@@ -788,6 +791,16 @@ namespace wi::gui
 
 		float GetItemOffset(int index) const;
 		bool DoesItemHaveChildren(int index) const;
+
+		float resizehitboxwidth = 6;
+		enum RESIZE_STATE
+		{
+			RESIZE_STATE_NONE,
+			RESIZE_STATE_BOTTOM,
+		} resize_state = RESIZE_STATE_NONE;
+		XMFLOAT2 resize_begin = XMFLOAT2(0, 0);
+		float resize_blink_timer = 0;
+
 	public:
 		void Create(const std::string& name);
 

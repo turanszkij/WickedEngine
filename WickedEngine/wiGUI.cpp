@@ -1235,7 +1235,14 @@ namespace wi::gui
 		}
 		Widget::Update(canvas, dt);
 
-		font.params.h_wrap = scale.x;
+		if (wrap_enabled)
+		{
+			font.params.h_wrap = scale.x;
+		}
+		else
+		{
+			font.params.h_wrap = -1;
+		}
 
 		switch (font.params.h_align)
 		{
@@ -1264,11 +1271,14 @@ namespace wi::gui
 			break;
 		}
 
-		scrollbar.SetListLength(font.TextHeight());
-		scrollbar.ClearTransform();
-		scrollbar.SetPos(XMFLOAT2(translation.x + scale.x - scrollbar_width, translation.y));
-		scrollbar.SetSize(XMFLOAT2(scrollbar_width, scale.y));
-		scrollbar.Update(canvas, dt);
+		if (scrollbar.IsEnabled())
+		{
+			scrollbar.SetListLength(font.TextHeight());
+			scrollbar.ClearTransform();
+			scrollbar.SetPos(XMFLOAT2(translation.x + scale.x - scrollbar_width, translation.y));
+			scrollbar.SetSize(XMFLOAT2(scrollbar_width, scale.y));
+			scrollbar.Update(canvas, dt);
+		}
 
 		if (IsEnabled() && dt > 0)
 		{
@@ -1278,7 +1288,7 @@ namespace wi::gui
 			}
 
 			Hitbox2D pointerHitbox = GetPointerHitbox();
-			if (scroll_allowed && scrollbar.IsScrollbarRequired() && pointerHitbox.intersects(hitBox))
+			if (scroll_allowed && scrollbar.IsEnabled() && scrollbar.IsScrollbarRequired() && pointerHitbox.intersects(hitBox))
 			{
 				scroll_allowed = false;
 				state = FOCUS;
@@ -1296,12 +1306,14 @@ namespace wi::gui
 			}
 		}
 
-		if (scrollbar.IsScrollbarRequired())
+		if (scrollbar.IsEnabled())
 		{
-			font.params.h_wrap = scale.x - scrollbar_width;
+			if (scrollbar.IsScrollbarRequired())
+			{
+				font.params.h_wrap = scale.x - scrollbar_width;
+			}
+			font.params.posY += scrollbar.GetOffset();
 		}
-
-		font.params.posY += scrollbar.GetOffset();
 	}
 	void Label::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
@@ -1338,7 +1350,10 @@ namespace wi::gui
 		sprites[IDLE].Draw(cmd);
 		font.Draw(cmd);
 
-		scrollbar.Render(canvas, cmd);
+		if (scrollbar.IsEnabled())
+		{
+			scrollbar.Render(canvas, cmd);
+		}
 	}
 	void Label::SetColor(wi::Color color, int id)
 	{
@@ -2305,7 +2320,7 @@ namespace wi::gui
 
 		Widget::Update(canvas, dt);
 
-		const float drop_width = fixed_drop_width > 0 ? fixed_drop_width : scale.x;
+		const float drop_width = fixed_drop_width > 0 ? fixed_drop_width : (IsDropArrowEnabled() ? scale.x : (scale.x - 1 - scale.y));
 		const float drop_x = GetDropX(canvas);
 
 		if (IsEnabled() && dt > 0)
@@ -2478,7 +2493,7 @@ namespace wi::gui
 		}
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
-		const float drop_width = fixed_drop_width > 0 ? fixed_drop_width : scale.x;
+		const float drop_width = fixed_drop_width > 0 ? fixed_drop_width : (IsDropArrowEnabled() ? scale.x : (scale.x - 1 - scale.y));
 		const float drop_x = GetDropX(canvas);
 
 		// shadow:
@@ -2920,6 +2935,8 @@ namespace wi::gui
 			label.SetShadowRadius(0);
 			label.SetText(name);
 			label.font.params.h_align = wi::font::WIFALIGN_LEFT;
+			label.scrollbar.SetEnabled(false);
+			label.SetWrapEnabled(false);
 			AddWidget(&label, AttachmentOptions::NONE);
 		}
 
@@ -3867,7 +3884,7 @@ namespace wi::gui
 		if (scrollbar_horizontal.parent != nullptr)
 		{
 			scrollbar_horizontal.Detach();
-			float offset = 1;
+			float offset = 0;
 			scrollbar_horizontal.SetSize(XMFLOAT2(GetWidgetAreaSize().x - control_size * (offset + 1), control_size));
 			scrollbar_horizontal.SetPos(XMFLOAT2(translation.x + control_size * offset, translation.y + scale.y - control_size));
 			scrollbar_horizontal.AttachTo(this);
@@ -3876,7 +3893,7 @@ namespace wi::gui
 		if (scrollbar_vertical.parent != nullptr)
 		{
 			scrollbar_vertical.Detach();
-			float offset = 2;
+			float offset = 1;
 			scrollbar_vertical.SetSize(XMFLOAT2(control_size, GetWidgetAreaSize().y - (control_size + 1) * offset));
 			scrollbar_vertical.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y + 1 + control_size));
 			scrollbar_vertical.AttachTo(this);
@@ -4811,6 +4828,61 @@ namespace wi::gui
 
 		Widget::Update(canvas, dt);
 
+		Hitbox2D pointerHitbox = GetPointerHitbox();
+
+		// Resizer updates:
+		if (IsEnabled())
+		{
+			float vscale = scale.y;
+			Hitbox2D bottomhitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y + vscale - resizehitboxwidth * 0.5f), XMFLOAT2(scale.x, resizehitboxwidth));
+			
+			if (resize_state == RESIZE_STATE_NONE && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+			{
+				if (pointerHitbox.intersects(bottomhitbox))
+				{
+					resize_state = RESIZE_STATE_BOTTOM;
+					Activate();
+				}
+				resize_begin = pointerHitbox.pos;
+				resize_blink_timer = 0;
+			}
+			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+			{
+				if (resize_state != RESIZE_STATE_NONE)
+				{
+					auto saved_parent = this->parent;
+					this->Detach();
+					float deltaX = pointerHitbox.pos.x - resize_begin.x;
+					float deltaY = pointerHitbox.pos.y - resize_begin.y;
+
+					switch (resize_state)
+					{
+					case RESIZE_STATE_BOTTOM:
+						this->Scale(XMFLOAT3(1, (scale.y + deltaY) / scale.y, 1));
+						break;
+					default:
+						break;
+					}
+
+					this->scale_local = wi::math::Max(this->scale_local, XMFLOAT3(item_height() * 3, item_height() * 3, 1)); // don't allow resize to negative or too small
+					this->AttachTo(saved_parent);
+					resize_begin = pointerHitbox.pos;
+				}
+			}
+			else
+			{
+				resize_state = RESIZE_STATE_NONE;
+			}
+
+			if (
+				resize_state != RESIZE_STATE_NONE ||
+				pointerHitbox.intersects(bottomhitbox)
+				)
+			{
+				resize_blink_timer += dt;
+			}
+		}
+
 		// compute control-list height
 		float scroll_length = 0;
 		{
@@ -4854,7 +4926,6 @@ namespace wi::gui
 			}
 
 			Hitbox2D hitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y), XMFLOAT2(scale.x, scale.y));
-			Hitbox2D pointerHitbox = GetPointerHitbox();
 
 			if (state == IDLE && hitbox.intersects(pointerHitbox))
 			{
@@ -5000,6 +5071,43 @@ namespace wi::gui
 				}
 			}
 			wi::image::Draw(nullptr, fx, cmd);
+		}
+
+		// resize indicator:
+		if (IsEnabled())
+		{
+			// hitboxes are recomputed because window transform might have changed since update!!
+			float vscale = scale.y;
+			Hitbox2D bottomhitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y + vscale - resizehitboxwidth * 0.5f), XMFLOAT2(scale.x, resizehitboxwidth));
+			
+			const Hitbox2D pointerHitbox = GetPointerHitbox();
+
+			wi::image::Params fx = sprites[state].params;
+			fx.blendFlag = wi::enums::BLENDMODE_ALPHA;
+			fx.pos.x -= resizehitboxwidth;
+			fx.pos.y -= resizehitboxwidth;
+			fx.siz.x += resizehitboxwidth * 2;
+			fx.siz.y = scale.y + resizehitboxwidth * 2;
+			fx.color = resize_state == RESIZE_STATE_NONE ? sprites[FOCUS].params.color : sprites[ACTIVE].params.color;
+			if (fx.isCornerRoundingEnabled())
+			{
+				for (auto& corner_rounding : fx.corners_rounding)
+				{
+					if (corner_rounding.radius > 0)
+					{
+						corner_rounding.radius += resizehitboxwidth;
+					}
+				}
+			}
+			//fx.border_soften = 0.01f;
+
+			if (resize_state == RESIZE_STATE_BOTTOM || pointerHitbox.intersects(bottomhitbox))
+			{
+				fx.angular_softness_outer_angle = XM_PI * 0.25f;
+				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(0.0f, 0.24f, std::abs(std::sin(resize_blink_timer * 4)));
+				fx.angular_softness_direction = XMFLOAT2(0, 1);
+				wi::image::Draw(nullptr, fx, cmd);
+			}
 		}
 
 		// control-base

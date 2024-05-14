@@ -22,7 +22,7 @@ void ArmatureWindow::Create(EditorComponent* _editor)
 
 		editor->RecordEntity(archive, entity);
 
-		editor->optionsWnd.RefreshEntityTree();
+		editor->componentsWnd.RefreshEntityTree();
 		});
 
 	float x = 60;
@@ -217,7 +217,7 @@ void ArmatureWindow::Create(EditorComponent* _editor)
 		// record NEW selection state...
 		editor->RecordSelection(archive);
 
-		editor->optionsWnd.RefreshEntityTree();
+		editor->componentsWnd.RefreshEntityTree();
 
 		});
 	AddWidget(&boneList);

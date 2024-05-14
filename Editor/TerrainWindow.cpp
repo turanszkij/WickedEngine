@@ -646,7 +646,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 
 		editor->RecordEntity(archive, entity);
 
-		editor->optionsWnd.RefreshEntityTree();
+		editor->componentsWnd.RefreshEntityTree();
 		});
 
 	float x = 140;
@@ -937,7 +937,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 
 		generate_callback();
 
-		editor->optionsWnd.RefreshEntityTree();
+		editor->componentsWnd.RefreshEntityTree();
 
 		});
 	AddWidget(&presetCombo);

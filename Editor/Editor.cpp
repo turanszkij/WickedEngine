@@ -311,7 +311,7 @@ void EditorComponent::Load()
 					RecordSelection(archive);
 					RecordEntity(archive, entity);
 
-					optionsWnd.RefreshEntityTree();
+					componentsWnd.RefreshEntityTree();
 					componentsWnd.soundWnd.SetEntity(entity);
 					});
 				});
@@ -338,7 +338,7 @@ void EditorComponent::Load()
 					RecordSelection(archive);
 					RecordEntity(archive, entity);
 
-					optionsWnd.RefreshEntityTree();
+					componentsWnd.RefreshEntityTree();
 					componentsWnd.videoWnd.SetEntity(entity);
 					});
 				});
@@ -443,7 +443,7 @@ void EditorComponent::Load()
 			RecordSelection(archive);
 			RecordEntity(archive, pick.entity);
 		}
-		optionsWnd.RefreshEntityTree();
+		componentsWnd.RefreshEntityTree();
 	});
 	newEntityCombo.SetEnabled(true);
 	newEntityCombo.SetTooltip("Create a new entity");
@@ -876,6 +876,7 @@ void EditorComponent::Load()
 
 	optionsWnd.Create(this);
 	GetGUI().AddWidget(&optionsWnd);
+	//optionsWnd.SetVisible(false);
 
 	componentsWnd.Create(this);
 	GetGUI().AddWidget(&componentsWnd);
@@ -1176,7 +1177,7 @@ void EditorComponent::Update(float dt)
 		{
 			hovered = wi::scene::PickResult();
 
-			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Light))
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Light))
 			{
 				for (size_t i = 0; i < scene.lights.GetCount(); ++i)
 				{
@@ -1226,7 +1227,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Decal))
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Decal))
 			{
 				for (size_t i = 0; i < scene.decals.GetCount(); ++i)
 				{
@@ -1245,7 +1246,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Force))
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Force))
 			{
 				for (size_t i = 0; i < scene.forces.GetCount(); ++i)
 				{
@@ -1264,7 +1265,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Emitter))
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Emitter))
 			{
 				for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
 				{
@@ -1283,7 +1284,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Hairparticle))
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Hairparticle))
 			{
 				for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 				{
@@ -1302,7 +1303,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::EnvironmentProbe))
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::EnvironmentProbe))
 			{
 				for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 				{
@@ -1323,7 +1324,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Camera))
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Camera))
 			{
 				for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
 				{
@@ -1342,7 +1343,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Armature))
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Armature))
 			{
 				for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
 				{
@@ -1361,7 +1362,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Sound))
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Sound))
 			{
 				for (size_t i = 0; i < scene.sounds.GetCount(); ++i)
 				{
@@ -1380,7 +1381,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Video))
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Video))
 			{
 				for (size_t i = 0; i < scene.videos.GetCount(); ++i)
 				{
@@ -1399,7 +1400,7 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::VoxelGrid))
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::VoxelGrid))
 			{
 				for (size_t i = 0; i < scene.voxel_grids.GetCount(); ++i)
 				{
@@ -1615,7 +1616,7 @@ void EditorComponent::Update(float dt)
 							RecordSelection(archive);
 							RecordEntity(archive, entity);
 
-							optionsWnd.RefreshEntityTree();
+							componentsWnd.RefreshEntityTree();
 						}
 						else if (translator.selected.empty())
 						{
@@ -1706,7 +1707,7 @@ void EditorComponent::Update(float dt)
 			// record NEW selection state...
 			RecordSelection(archive);
 
-			optionsWnd.RefreshEntityTree();
+			componentsWnd.RefreshEntityTree();
 		}
 
 	}
@@ -1792,7 +1793,7 @@ void EditorComponent::Update(float dt)
 			RecordSelection(archive);
 			RecordEntity(archive, addedEntities);
 
-			optionsWnd.RefreshEntityTree();
+			componentsWnd.RefreshEntityTree();
 		}
 		// Duplicate Instances
 		if (wi::input::Press((wi::input::BUTTON)'D'))
@@ -1820,7 +1821,7 @@ void EditorComponent::Update(float dt)
 			RecordSelection(archive);
 			RecordEntity(archive, addedEntities);
 
-			optionsWnd.RefreshEntityTree();
+			componentsWnd.RefreshEntityTree();
 		}
 		// Put Instances
 		if (clipboard.IsOpen() && hovered.subsetIndex >= 0 && wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
@@ -1866,7 +1867,7 @@ void EditorComponent::Update(float dt)
 			RecordSelection(archive);
 			RecordEntity(archive, addedEntities);
 
-			optionsWnd.RefreshEntityTree();
+			componentsWnd.RefreshEntityTree();
 		}
 		// Undo
 		if (wi::input::Press((wi::input::BUTTON)'Z') &&
@@ -1875,7 +1876,7 @@ void EditorComponent::Update(float dt)
 		{
 			ConsumeHistoryOperation(true);
 
-			optionsWnd.RefreshEntityTree();
+			componentsWnd.RefreshEntityTree();
 		}
 		// Redo
 		if (wi::input::Press((wi::input::BUTTON)'Y') ||
@@ -1885,7 +1886,7 @@ void EditorComponent::Update(float dt)
 		{
 			ConsumeHistoryOperation(false);
 
-			optionsWnd.RefreshEntityTree();
+			componentsWnd.RefreshEntityTree();
 		}
 	}
 
@@ -1932,7 +1933,7 @@ void EditorComponent::Update(float dt)
 
 		ClearSelected();
 
-		optionsWnd.RefreshEntityTree();
+		componentsWnd.RefreshEntityTree();
 	}
 
 	// Update window data bindings...
@@ -2708,7 +2709,7 @@ void EditorComponent::Render() const
 			fp.shadowColor = backgroundEntityColor;
 			fp.shadow_softness = 1;
 
-			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Light))
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Light))
 			{
 				for (size_t i = 0; i < scene.lights.GetCount(); ++i)
 				{
@@ -2856,7 +2857,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Decal))
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Decal))
 			{
 				for (size_t i = 0; i < scene.decals.GetCount(); ++i)
 				{
@@ -2888,7 +2889,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Force))
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Force))
 			{
 				for (size_t i = 0; i < scene.forces.GetCount(); ++i)
 				{
@@ -2919,7 +2920,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Camera))
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Camera))
 			{
 				for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
 				{
@@ -2950,7 +2951,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Armature))
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Armature))
 			{
 				for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
 				{
@@ -2981,7 +2982,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Emitter))
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Emitter))
 			{
 				for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
 				{
@@ -3012,7 +3013,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Hairparticle))
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Hairparticle))
 			{
 				for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 				{
@@ -3043,7 +3044,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Sound))
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Sound))
 			{
 				for (size_t i = 0; i < scene.sounds.GetCount(); ++i)
 				{
@@ -3073,7 +3074,7 @@ void EditorComponent::Render() const
 					wi::font::Draw(ICON_SOUND, fp, cmd);
 				}
 			}
-			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::Video))
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Video))
 			{
 				for (size_t i = 0; i < scene.videos.GetCount(); ++i)
 				{
@@ -3103,7 +3104,7 @@ void EditorComponent::Render() const
 					wi::font::Draw(ICON_VIDEO, fp, cmd);
 				}
 			}
-			if (has_flag(optionsWnd.filter, OptionsWindow::Filter::VoxelGrid))
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::VoxelGrid))
 			{
 				for (size_t i = 0; i < scene.voxel_grids.GetCount(); ++i)
 				{
@@ -3965,7 +3966,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 		scene.Update(0);
 	}
 
-	optionsWnd.RefreshEntityTree();
+	componentsWnd.RefreshEntityTree();
 }
 
 void EditorComponent::RegisterRecentlyUsed(const std::string& filename)
@@ -4041,20 +4042,20 @@ void EditorComponent::Open(std::string filename)
 		main->config.Commit();
 		playButton.SetScriptTip("dofile(\"" + last_script_path + "\")");
 		wi::lua::RunFile(filename);
-		optionsWnd.RefreshEntityTree();
+		componentsWnd.RefreshEntityTree();
 		RegisterRecentlyUsed(filename);
 		return;
 	}
 	if (type == FileType::VIDEO)
 	{
 		GetCurrentScene().Entity_CreateVideo(wi::helper::GetFileNameFromPath(filename), filename);
-		optionsWnd.RefreshEntityTree();
+		componentsWnd.RefreshEntityTree();
 		return;
 	}
 	if (type == FileType::SOUND)
 	{
 		GetCurrentScene().Entity_CreateSound(wi::helper::GetFileNameFromPath(filename), filename);
-		optionsWnd.RefreshEntityTree();
+		componentsWnd.RefreshEntityTree();
 		return;
 	}
 	if (type == FileType::IMAGE)
@@ -4076,7 +4077,7 @@ void EditorComponent::Open(std::string filename)
 		sprite.anim.repeatable = true;
 		scene.transforms.Create(entity).Translate(XMFLOAT3(0, 2, 0));
 		scene.names.Create(entity) = wi::helper::GetFileNameFromPath(filename);
-		optionsWnd.RefreshEntityTree();
+		componentsWnd.RefreshEntityTree();
 		return;
 	}
 
@@ -4155,7 +4156,7 @@ void EditorComponent::Open(std::string filename)
 
 		main->ActivatePath(this, 0.2f, wi::Color::Black());
 		componentsWnd.weatherWnd.Update();
-		optionsWnd.RefreshEntityTree();
+		componentsWnd.RefreshEntityTree();
 		RefreshSceneList();
 		});
 	main->ActivatePath(&main->loader, 0.2f, wi::Color::Black());
@@ -4674,7 +4675,7 @@ void EditorComponent::SetCurrentScene(int index)
 	this->renderPath->camera = &scenes[current_scene].get()->camera;
 	wi::lua::scene::SetGlobalScene(renderPath->scene);
 	wi::lua::scene::SetGlobalCamera(renderPath->camera);
-	optionsWnd.RefreshEntityTree();
+	componentsWnd.RefreshEntityTree();
 	RefreshSceneList();
 }
 void EditorComponent::RefreshSceneList()
@@ -4743,7 +4744,7 @@ void EditorComponent::RefreshSceneList()
 			componentsWnd.fontWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.voxelGridWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 
-			optionsWnd.RefreshEntityTree();
+			componentsWnd.RefreshEntityTree();
 			ResetHistory();
 			scenes[i]->path.clear();
 

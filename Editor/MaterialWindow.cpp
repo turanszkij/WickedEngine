@@ -22,7 +22,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 
 		editor->RecordEntity(archive, entity);
 
-		editor->optionsWnd.RefreshEntityTree();
+		editor->componentsWnd.RefreshEntityTree();
 		});
 
 	float hei = 18;
@@ -505,7 +505,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		{
 			*name = args.sValue;
 
-			editor->optionsWnd.RefreshEntityTree();
+			editor->componentsWnd.RefreshEntityTree();
 		}
 		});
 	AddWidget(&materialNameField);
