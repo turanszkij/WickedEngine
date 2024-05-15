@@ -11,8 +11,8 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 
-	wi::gui::Window::Create("Paint Tool", wi::gui::Window::WindowControls::COLLAPSE);
-	SetSize(XMFLOAT2(360, 800));
+	wi::gui::Window::Create("Paint Tool " ICON_PAINTTOOL, wi::gui::Window::WindowControls::CLOSE | wi::gui::Window::WindowControls::RESIZE_RIGHT);
+	SetSize(XMFLOAT2(300, 800));
 
 	float x = 105;
 	float y = 0;
@@ -388,9 +388,7 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&revealTextureButton);
 
-	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 550, 50, 0));
-
-	SetMinimized(true);
+	SetVisible(false);
 }
 
 void PaintToolWindow::Update(float dt)

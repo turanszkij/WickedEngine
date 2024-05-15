@@ -38,7 +38,6 @@ set (SOURCE_FILES
 	HierarchyWindow.cpp
 	ExpressionWindow.cpp
 	ArmatureWindow.cpp
-	OptionsWindow.cpp
 	ComponentsWindow.cpp
 	TerrainWindow.cpp
 	HumanoidWindow.cpp

@@ -463,7 +463,7 @@ void LightWindow::RefreshCascades()
 	addCascadeButton.SetEnabled(true);
 
 	// refresh theme:
-	editor->optionsWnd.generalWnd.themeCombo.SetSelected(editor->optionsWnd.generalWnd.themeCombo.GetSelected());
+	editor->generalWnd.themeCombo.SetSelected(editor->generalWnd.themeCombo.GetSelected());
 
 }
 

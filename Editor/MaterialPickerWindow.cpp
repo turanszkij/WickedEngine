@@ -8,13 +8,13 @@ using namespace wi::scene;
 void MaterialPickerWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Materials", wi::gui::Window::WindowControls::COLLAPSE);
+	wi::gui::Window::Create("Materials " ICON_MATERIALBROWSER, wi::gui::Window::WindowControls::CLOSE | wi::gui::Window::WindowControls::RESIZE_RIGHT);
 	SetSize(XMFLOAT2(300, 400));
 
 	zoomSlider.Create(10, 100, 100, 100 - 10, "Zoom: ");
 	AddWidget(&zoomSlider);
 
-	SetCollapsed(true);
+	SetVisible(false);
 }
 
 void MaterialPickerWindow::RecreateButtons()

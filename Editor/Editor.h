@@ -1,10 +1,14 @@
 #pragma once
 #include "Translator.h"
 #include "wiScene_BindLua.h"
-#include "OptionsWindow.h"
 #include "ComponentsWindow.h"
 #include "ProfilerWindow.h"
 #include "ContentBrowserWindow.h"
+#include "GraphicsWindow.h"
+#include "CameraWindow.h"
+#include "MaterialPickerWindow.h"
+#include "PaintToolWindow.h"
+#include "GeneralWindow.h"
 #include "IconDefinitions.h"
 
 class EditorLoadingScreen : public wi::LoadingScreen
@@ -60,11 +64,22 @@ public:
 	wi::gui::Window aboutWindow;
 	wi::gui::Label aboutLabel;
 
-	OptionsWindow optionsWnd;
 	ComponentsWindow componentsWnd;
 	ProfilerWindow profilerWnd;
 	ContentBrowserWindow contentBrowserWnd;
 	wi::gui::Window topmenuWnd;
+
+	wi::gui::Button generalButton;
+	wi::gui::Button graphicsButton;
+	wi::gui::Button cameraButton;
+	wi::gui::Button materialsButton;
+	wi::gui::Button paintToolButton;
+
+	GeneralWindow generalWnd;
+	GraphicsWindow graphicsWnd;
+	CameraWindow cameraWnd;
+	MaterialPickerWindow materialPickerWnd;
+	PaintToolWindow paintToolWnd;
 
 	wi::primitive::Ray pickRay;
 	wi::physics::PickDragOperation physicsDragOp;
@@ -128,7 +143,7 @@ public:
 	bool bone_picking = false;
 	void CheckBonePickingEnabled();
 
-	void UpdateTopMenuAnimation();
+	void UpdateDynamicWidgets();
 
 	wi::Archive clipboard;
 

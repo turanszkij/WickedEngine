@@ -136,7 +136,7 @@ void EditorLoadingScreen::Update(float dt)
 
 void EditorComponent::ResizeBuffers()
 {
-	optionsWnd.graphicsWnd.UpdateSwapChainFormats(&main->swapChain);
+	graphicsWnd.UpdateSwapChainFormats(&main->swapChain);
 
 	init(main->canvas);
 	RenderPath2D::ResizeBuffers();
@@ -155,11 +155,8 @@ void EditorComponent::ResizeLayout()
 	topmenuWnd.SetSize(XMFLOAT2(screenW, 30));
 	topmenuWnd.SetPos(XMFLOAT2(0, 0));
 
-	optionsWnd.SetSize(XMFLOAT2(optionsWnd.GetSize().x, screenH - topmenuWnd.GetSize().y));
-	optionsWnd.SetPos(XMFLOAT2(0, topmenuWnd.scale_local.y + topmenuWnd.GetShadowRadius()));
-
 	componentsWnd.SetSize(XMFLOAT2(componentsWnd.GetSize().x, screenH - topmenuWnd.GetSize().y));
-	componentsWnd.SetPos(XMFLOAT2(screenW - componentsWnd.scale_local.x, optionsWnd.GetPos().y));
+	componentsWnd.SetPos(XMFLOAT2(screenW - componentsWnd.scale_local.x, topmenuWnd.scale_local.y + topmenuWnd.GetShadowRadius()));
 
 	aboutWindow.SetSize(XMFLOAT2(screenW / 2.0f, screenH / 1.5f));
 	aboutWindow.SetPos(XMFLOAT2(screenW / 2.0f - aboutWindow.scale.x / 2.0f, screenH / 2.0f - aboutWindow.scale.y / 2.0f));
@@ -175,6 +172,86 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&topmenuWnd);
 	topmenuWnd.scrollbar_horizontal.Detach();
 	topmenuWnd.scrollbar_vertical.Detach();
+
+	generalButton.Create(ICON_GENERALOPTIONS);
+	generalButton.OnClick([this](wi::gui::EventArgs args) {
+		generalWnd.SetVisible(!generalWnd.IsVisible());
+		graphicsWnd.SetVisible(false);
+		cameraWnd.SetVisible(false);
+		materialPickerWnd.SetVisible(false);
+		paintToolWnd.SetVisible(false);
+	});
+	generalButton.SetShadowRadius(0);
+	generalButton.SetTooltip("General options");
+	generalButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
+	GetGUI().AddWidget(&generalButton);
+
+	graphicsButton.Create(ICON_GRAPHICSOPTIONS);
+	graphicsButton.OnClick([this](wi::gui::EventArgs args) {
+		generalWnd.SetVisible(false);
+		graphicsWnd.SetVisible(!graphicsWnd.IsVisible());
+		cameraWnd.SetVisible(false);
+		materialPickerWnd.SetVisible(false);
+		paintToolWnd.SetVisible(false);
+	});
+	graphicsButton.SetShadowRadius(0);
+	graphicsButton.SetTooltip("Graphics options");
+	graphicsButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
+	GetGUI().AddWidget(&graphicsButton);
+
+	cameraButton.Create(ICON_CAMERAOPTIONS);
+	cameraButton.OnClick([this](wi::gui::EventArgs args) {
+		generalWnd.SetVisible(false);
+		graphicsWnd.SetVisible(false);
+		cameraWnd.SetVisible(!cameraWnd.IsVisible());
+		materialPickerWnd.SetVisible(false);
+		paintToolWnd.SetVisible(false);
+	});
+	cameraButton.SetShadowRadius(0);
+	cameraButton.SetTooltip("Camera options");
+	cameraButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
+	GetGUI().AddWidget(&cameraButton);
+
+	materialsButton.Create(ICON_MATERIALBROWSER);
+	materialsButton.OnClick([this](wi::gui::EventArgs args) {
+		generalWnd.SetVisible(false);
+		graphicsWnd.SetVisible(false);
+		cameraWnd.SetVisible(false);
+		materialPickerWnd.SetVisible(!materialPickerWnd.IsVisible());
+		paintToolWnd.SetVisible(false);
+	});
+	materialsButton.SetShadowRadius(0);
+	materialsButton.SetTooltip("Material browser");
+	materialsButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
+	GetGUI().AddWidget(&materialsButton);
+
+	paintToolButton.Create(ICON_PAINTTOOL);
+	paintToolButton.OnClick([this](wi::gui::EventArgs args) {
+		generalWnd.SetVisible(false);
+		graphicsWnd.SetVisible(false);
+		cameraWnd.SetVisible(false);
+		materialPickerWnd.SetVisible(false);
+		paintToolWnd.SetVisible(!paintToolWnd.IsVisible());
+	});
+	paintToolButton.SetShadowRadius(0);
+	paintToolButton.SetTooltip("Paint tool");
+	paintToolButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
+	GetGUI().AddWidget(&paintToolButton);
+
+	graphicsWnd.Create(this);
+	GetGUI().AddWidget(&graphicsWnd);
+
+	cameraWnd.Create(this);
+	GetGUI().AddWidget(&cameraWnd);
+
+	paintToolWnd.Create(this);
+	GetGUI().AddWidget(&paintToolWnd);
+
+	materialPickerWnd.Create(this);
+	GetGUI().AddWidget(&materialPickerWnd);
+
+	generalWnd.Create(this);
+	GetGUI().AddWidget(&generalWnd);
 
 	newSceneButton.Create("+");
 	newSceneButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
@@ -874,10 +951,6 @@ void EditorComponent::Load()
 		});
 	topmenuWnd.AddWidget(&exitButton);
 
-	optionsWnd.Create(this);
-	GetGUI().AddWidget(&optionsWnd);
-	//optionsWnd.SetVisible(false);
-
 	componentsWnd.Create(this);
 	GetGUI().AddWidget(&componentsWnd);
 
@@ -890,31 +963,31 @@ void EditorComponent::Load()
 	std::string theme = main->config.GetSection("options").GetText("theme");
 	if(theme.empty())
 	{
-		optionsWnd.generalWnd.themeCombo.SetSelected(0);
+		generalWnd.themeCombo.SetSelected(0);
 	}
 	else if (!theme.compare("Dark"))
 	{
-		optionsWnd.generalWnd.themeCombo.SetSelected(0);
+		generalWnd.themeCombo.SetSelected(0);
 	}
 	else if (!theme.compare("Bright"))
 	{
-		optionsWnd.generalWnd.themeCombo.SetSelected(1);
+		generalWnd.themeCombo.SetSelected(1);
 	}
 	else if (!theme.compare("Soft"))
 	{
-		optionsWnd.generalWnd.themeCombo.SetSelected(2);
+		generalWnd.themeCombo.SetSelected(2);
 	}
 	else if (!theme.compare("Hacking"))
 	{
-		optionsWnd.generalWnd.themeCombo.SetSelected(3);
+		generalWnd.themeCombo.SetSelected(3);
 	}
 	else if (!theme.compare("Nord"))
 	{
-		optionsWnd.generalWnd.themeCombo.SetSelected(4);
+		generalWnd.themeCombo.SetSelected(4);
 	}
 
 	SetDefaultLocalization();
-	optionsWnd.generalWnd.RefreshLanguageSelectionAfterWholeGUIWasInitialized();
+	generalWnd.RefreshLanguageSelectionAfterWholeGUIWasInitialized();
 
 	auto load_font = [this](std::string filename) {
 		font_datas.emplace_back().name = filename;
@@ -999,7 +1072,9 @@ void EditorComponent::Update(float dt)
 		scene.Entity_Remove(grass_interaction_entity);
 	}
 
-	optionsWnd.Update(dt);
+	cameraWnd.Update();
+	paintToolWnd.Update(dt);
+	graphicsWnd.Update();
 	componentsWnd.Update(dt);
 
 	// Pulsating selection color update:
@@ -1089,16 +1164,16 @@ void EditorComponent::Update(float dt)
 		xDif += rightStick.x * jostickrotspeed;
 		yDif += rightStick.y * jostickrotspeed;
 
-		xDif *= optionsWnd.cameraWnd.rotationspeedSlider.GetValue();
-		yDif *= optionsWnd.cameraWnd.rotationspeedSlider.GetValue();
+		xDif *= cameraWnd.rotationspeedSlider.GetValue();
+		yDif *= cameraWnd.rotationspeedSlider.GetValue();
 
 
-		if (optionsWnd.cameraWnd.fpsCheckBox.GetCheck())
+		if (cameraWnd.fpsCheckBox.GetCheck())
 		{
 			// FPS Camera
 			const float clampedDT = std::min(dt, 0.1f); // if dt > 100 millisec, don't allow the camera to jump too far...
 
-			const float speed = ((wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) ? 10.0f : 1.0f) + rightTrigger.x * 10.0f) * optionsWnd.cameraWnd.movespeedSlider.GetValue() * clampedDT;
+			const float speed = ((wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) ? 10.0f : 1.0f) + rightTrigger.x * 10.0f) * cameraWnd.movespeedSlider.GetValue() * clampedDT;
 			XMVECTOR move = XMLoadFloat3(&editorscene.cam_move);
 			XMVECTOR moveNew = XMVectorSet(0, 0, 0, 0);
 
@@ -1116,7 +1191,7 @@ void EditorComponent::Update(float dt)
 			moveNew += XMVectorSet(leftStick.x, 0, leftStick.y, 0);
 			moveNew *= speed;
 
-			move = XMVectorLerp(move, moveNew, optionsWnd.cameraWnd.accelerationSlider.GetValue() * clampedDT / 0.0166f); // smooth the movement a bit
+			move = XMVectorLerp(move, moveNew, cameraWnd.accelerationSlider.GetValue() * clampedDT / 0.0166f); // smooth the movement a bit
 			float moveLength = XMVectorGetX(XMVector3Length(move));
 
 			if (moveLength < 0.0001f)
@@ -1507,7 +1582,7 @@ void EditorComponent::Update(float dt)
 				if (
 					wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) ||
 					wi::input::Down(wi::input::MOUSE_BUTTON_RIGHT) ||
-					optionsWnd.paintToolWnd.GetMode() != PaintToolWindow::MODE_DISABLED ||
+					paintToolWnd.GetMode() != PaintToolWindow::MODE_DISABLED ||
 					inspector_mode
 					)
 				{
@@ -1522,11 +1597,11 @@ void EditorComponent::Update(float dt)
 		{
 			camera.focal_length = hovered.distance;
 			camera.SetDirty();
-			optionsWnd.cameraWnd.focalLengthSlider.SetValue(camera.focal_length);
+			cameraWnd.focalLengthSlider.SetValue(camera.focal_length);
 		}
 
 		// Interactions only when paint tool is disabled:
-		if (optionsWnd.paintToolWnd.GetMode() == PaintToolWindow::MODE_DISABLED)
+		if (paintToolWnd.GetMode() == PaintToolWindow::MODE_DISABLED)
 		{
 			// Interact:
 			if (wi::input::Down((wi::input::BUTTON)'P'))
@@ -1726,7 +1801,7 @@ void EditorComponent::Update(float dt)
 		if (wi::input::Press((wi::input::BUTTON)'W'))
 		{
 			wi::renderer::SetWireRender(!wi::renderer::IsWireRender());
-			optionsWnd.generalWnd.wireFrameCheckBox.SetCheck(wi::renderer::IsWireRender());
+			generalWnd.wireFrameCheckBox.SetCheck(wi::renderer::IsWireRender());
 		}
 		// Enable transform tool
 		if (wi::input::Press((wi::input::BUTTON)'T'))
@@ -1939,7 +2014,7 @@ void EditorComponent::Update(float dt)
 	// Update window data bindings...
 	if (translator.selected.empty())
 	{
-		optionsWnd.cameraWnd.SetEntity(INVALID_ENTITY);
+		cameraWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.objectWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.emitterWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.hairWnd.SetEntity(INVALID_ENTITY);
@@ -1977,7 +2052,7 @@ void EditorComponent::Update(float dt)
 		const wi::scene::PickResult& picked = translator.selected.back();
 
 		assert(picked.entity != INVALID_ENTITY);
-		optionsWnd.cameraWnd.SetEntity(picked.entity);
+		cameraWnd.SetEntity(picked.entity);
 		componentsWnd.emitterWnd.SetEntity(picked.entity);
 		componentsWnd.hairWnd.SetEntity(picked.entity);
 		componentsWnd.lightWnd.SetEntity(picked.entity);
@@ -2120,19 +2195,19 @@ void EditorComponent::Update(float dt)
 	componentsWnd.hairWnd.UpdateData();
 
 	// Follow camera proxy:
-	if (optionsWnd.cameraWnd.followCheckBox.IsEnabled() && optionsWnd.cameraWnd.followCheckBox.GetCheck())
+	if (cameraWnd.followCheckBox.IsEnabled() && cameraWnd.followCheckBox.GetCheck())
 	{
-		TransformComponent* proxy = scene.transforms.GetComponent(optionsWnd.cameraWnd.entity);
+		TransformComponent* proxy = scene.transforms.GetComponent(cameraWnd.entity);
 		if (proxy != nullptr)
 		{
-			editorscene.camera_transform.Lerp(editorscene.camera_transform, *proxy, 1.0f - optionsWnd.cameraWnd.followSlider.GetValue());
+			editorscene.camera_transform.Lerp(editorscene.camera_transform, *proxy, 1.0f - cameraWnd.followSlider.GetValue());
 			editorscene.camera_transform.UpdateTransform();
 		}
 
-		CameraComponent* proxy_camera = scene.cameras.GetComponent(optionsWnd.cameraWnd.entity);
+		CameraComponent* proxy_camera = scene.cameras.GetComponent(cameraWnd.entity);
 		if (proxy_camera != nullptr)
 		{
-			editorscene.camera.Lerp(editorscene.camera, *proxy_camera, 1.0f - optionsWnd.cameraWnd.followSlider.GetValue());
+			editorscene.camera.Lerp(editorscene.camera, *proxy_camera, 1.0f - cameraWnd.followSlider.GetValue());
 		}
 	}
 
@@ -2142,7 +2217,7 @@ void EditorComponent::Update(float dt)
 	wi::RenderPath3D_PathTracing* pathtracer = dynamic_cast<wi::RenderPath3D_PathTracing*>(renderPath.get());
 	if (pathtracer != nullptr)
 	{
-		pathtracer->setTargetSampleCount((int)optionsWnd.graphicsWnd.pathTraceTargetSlider.GetValue());
+		pathtracer->setTargetSampleCount((int)graphicsWnd.pathTraceTargetSlider.GetValue());
 
 		std::string ss;
 		ss += "Sample count: " + std::to_string(pathtracer->getCurrentSampleCount()) + "\n";
@@ -2158,16 +2233,16 @@ void EditorComponent::Update(float dt)
 		{
 			ss += "Denoiser not available!\nTo find out how to enable the denoiser, visit the documentation.";
 		}
-		optionsWnd.graphicsWnd.pathTraceStatisticsLabel.SetText(ss);
+		graphicsWnd.pathTraceStatisticsLabel.SetText(ss);
 	}
 
 	wi::profiler::EndRange(profrange);
 
 	RenderPath2D::Update(dt);
 
-	UpdateTopMenuAnimation();
+	UpdateDynamicWidgets();
 
-	if (optionsWnd.paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED)
+	if (paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED)
 	{
 		translator.Update(camera, currentMouse, *renderPath);
 	}
@@ -2265,7 +2340,7 @@ void EditorComponent::Update(float dt)
 	}
 	else
 	{
-		wi::renderer::SetToDrawDebugColliders(optionsWnd.generalWnd.colliderVisCheckBox.GetCheck());
+		wi::renderer::SetToDrawDebugColliders(generalWnd.colliderVisCheckBox.GetCheck());
 	}
 	if (force_spring_visualizer)
 	{
@@ -2273,7 +2348,7 @@ void EditorComponent::Update(float dt)
 	}
 	else
 	{
-		wi::renderer::SetToDrawDebugSprings(optionsWnd.generalWnd.springVisCheckBox.GetCheck());
+		wi::renderer::SetToDrawDebugSprings(generalWnd.springVisCheckBox.GetCheck());
 	}
 }
 void EditorComponent::PostUpdate()
@@ -3281,7 +3356,7 @@ void EditorComponent::Render() const
 								}
 							}
 
-							color.w *= optionsWnd.generalWnd.bonePickerOpacitySlider.GetValue();
+							color.w *= generalWnd.bonePickerOpacitySlider.GetValue();
 
 							XMVECTOR Base = XMLoadFloat3(&capsule.base);
 							XMVECTOR Tip = XMLoadFloat3(&capsule.tip);
@@ -3364,7 +3439,7 @@ void EditorComponent::Render() const
 				}
 			}
 
-			if (optionsWnd.generalWnd.nameDebugCheckBox.GetCheck())
+			if (generalWnd.nameDebugCheckBox.GetCheck())
 			{
 				device->EventBegin("Debug Names", cmd);
 				struct DebugNameEntitySorter
@@ -3442,8 +3517,8 @@ void EditorComponent::Render() const
 				wi::font::Draw(str, params, cmd);
 			}
 
-			optionsWnd.paintToolWnd.DrawBrush(*this, cmd);
-			if (optionsWnd.paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED)
+			paintToolWnd.DrawBrush(*this, cmd);
+			if (paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED)
 			{
 				translator.Draw(GetCurrentEditorScene().camera, currentMouse, cmd);
 			}
@@ -3513,9 +3588,25 @@ void EditorComponent::ResizeViewport3D()
 		{
 			width -= LogicalToPhysical(componentsWnd.scale_local.x);
 		}
-		if (optionsWnd.IsVisible())
+		if (generalWnd.IsVisible())
 		{
-			width -= LogicalToPhysical(optionsWnd.scale_local.x);
+			width -= LogicalToPhysical(generalWnd.scale_local.x);
+		}
+		if (graphicsWnd.IsVisible())
+		{
+			width -= LogicalToPhysical(graphicsWnd.scale_local.x);
+		}
+		if (cameraWnd.IsVisible())
+		{
+			width -= LogicalToPhysical(cameraWnd.scale_local.x);
+		}
+		if (materialPickerWnd.IsVisible())
+		{
+			width -= LogicalToPhysical(materialPickerWnd.scale_local.x);
+		}
+		if (paintToolWnd.IsVisible())
+		{
+			width -= LogicalToPhysical(paintToolWnd.scale_local.x);
 		}
 		height -= LogicalToPhysical(topmenuWnd.scale_local.y);
 	}
@@ -3537,9 +3628,25 @@ void EditorComponent::ResizeViewport3D()
 	viewport3D.top_left_y = 0;
 	if (GetGUI().IsVisible())
 	{
-		if (optionsWnd.IsVisible())
+		if (generalWnd.IsVisible())
 		{
-			viewport3D.top_left_x = (float)LogicalToPhysical(optionsWnd.scale_local.x);
+			viewport3D.top_left_x = (float)LogicalToPhysical(generalWnd.scale_local.x);
+		}
+		if (graphicsWnd.IsVisible())
+		{
+			viewport3D.top_left_x = (float)LogicalToPhysical(graphicsWnd.scale_local.x);
+		}
+		if (cameraWnd.IsVisible())
+		{
+			viewport3D.top_left_x = (float)LogicalToPhysical(cameraWnd.scale_local.x);
+		}
+		if (materialPickerWnd.IsVisible())
+		{
+			viewport3D.top_left_x = (float)LogicalToPhysical(materialPickerWnd.scale_local.x);
+		}
+		if (paintToolWnd.IsVisible())
+		{
+			viewport3D.top_left_x = (float)LogicalToPhysical(paintToolWnd.scale_local.x);
 		}
 		viewport3D.top_left_y = (float)LogicalToPhysical(topmenuWnd.scale_local.y);
 	}
@@ -3950,7 +4057,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 			}
 			break;
 		case HISTORYOP_PAINTTOOL:
-			optionsWnd.paintToolWnd.ConsumeHistoryOperation(archive, undo);
+			paintToolWnd.ConsumeHistoryOperation(archive, undo);
 			break;
 		case HISTORYOP_NONE:
 		default:
@@ -4177,7 +4284,7 @@ void EditorComponent::Save(const std::string& filename)
 
 	if(type == FileType::WISCENE)
 	{
-		const bool dump_to_header = optionsWnd.generalWnd.saveModeComboBox.GetSelected() == 2;
+		const bool dump_to_header = generalWnd.saveModeComboBox.GetSelected() == 2;
 
 		wi::Archive archive = dump_to_header ? wi::Archive() : wi::Archive(filename, false);
 		if (archive.IsOpen())
@@ -4186,7 +4293,7 @@ void EditorComponent::Save(const std::string& filename)
 
 			Scene& scene = GetCurrentScene();
 
-			wi::resourcemanager::Mode embed_mode = (wi::resourcemanager::Mode)optionsWnd.generalWnd.saveModeComboBox.GetItemUserData(optionsWnd.generalWnd.saveModeComboBox.GetSelected());
+			wi::resourcemanager::Mode embed_mode = (wi::resourcemanager::Mode)generalWnd.saveModeComboBox.GetItemUserData(generalWnd.saveModeComboBox.GetSelected());
 			wi::resourcemanager::SetMode(embed_mode);
 
 			scene.Serialize(archive);
@@ -4216,7 +4323,7 @@ void EditorComponent::Save(const std::string& filename)
 }
 void EditorComponent::SaveAs()
 {
-	const bool dump_to_header = optionsWnd.generalWnd.saveModeComboBox.GetSelected() == 2;
+	const bool dump_to_header = generalWnd.saveModeComboBox.GetSelected() == 2;
 
 	wi::helper::FileDialogParams params;
 	params.type = wi::helper::FileDialogParams::SAVE;
@@ -4338,7 +4445,7 @@ void EditorComponent::PostSaveText(const std::string& message, const std::string
 
 void EditorComponent::CheckBonePickingEnabled()
 {
-	if (optionsWnd.generalWnd.skeletonsVisibleCheckBox.GetCheck())
+	if (generalWnd.skeletonsVisibleCheckBox.GetCheck())
 	{
 		bone_picking = true;
 		return;
@@ -4374,7 +4481,7 @@ void EditorComponent::CheckBonePickingEnabled()
 	}
 }
 
-void EditorComponent::UpdateTopMenuAnimation()
+void EditorComponent::UpdateDynamicWidgets()
 {
 	float screenW = GetLogicalWidth();
 	float screenH = GetLogicalHeight();
@@ -4666,6 +4773,61 @@ void EditorComponent::UpdateTopMenuAnimation()
 	}
 
 
+
+	ofs = padding;
+	if (generalWnd.IsVisible())
+	{
+		generalWnd.SetPos(XMFLOAT2(0, topmenuWnd.scale_local.y + topmenuWnd.GetShadowRadius()));
+		generalWnd.SetSize(XMFLOAT2(generalWnd.scale_local.x, screenH - topmenuWnd.scale_local.y - topmenuWnd.GetShadowRadius()));
+		ofs += generalWnd.scale_local.x + generalWnd.GetShadowRadius();
+	}
+	if (graphicsWnd.IsVisible())
+	{
+		graphicsWnd.SetPos(XMFLOAT2(0, topmenuWnd.scale_local.y + topmenuWnd.GetShadowRadius()));
+		graphicsWnd.SetSize(XMFLOAT2(graphicsWnd.scale_local.x, screenH - topmenuWnd.scale_local.y - topmenuWnd.GetShadowRadius()));
+		ofs += graphicsWnd.scale_local.x + graphicsWnd.GetShadowRadius();
+	}
+	if (cameraWnd.IsVisible())
+	{
+		cameraWnd.SetPos(XMFLOAT2(0, topmenuWnd.scale_local.y + topmenuWnd.GetShadowRadius()));
+		cameraWnd.SetSize(XMFLOAT2(cameraWnd.scale_local.x, screenH - topmenuWnd.scale_local.y - topmenuWnd.GetShadowRadius()));
+		ofs += cameraWnd.scale_local.x + cameraWnd.GetShadowRadius();
+	}
+	if (materialPickerWnd.IsVisible())
+	{
+		materialPickerWnd.SetPos(XMFLOAT2(0, topmenuWnd.scale_local.y + topmenuWnd.GetShadowRadius()));
+		materialPickerWnd.SetSize(XMFLOAT2(materialPickerWnd.scale_local.x, screenH - topmenuWnd.scale_local.y - topmenuWnd.GetShadowRadius()));
+		ofs += materialPickerWnd.scale_local.x + materialPickerWnd.GetShadowRadius();
+	}
+	if (paintToolWnd.IsVisible())
+	{
+		paintToolWnd.SetPos(XMFLOAT2(0, topmenuWnd.scale_local.y + topmenuWnd.GetShadowRadius()));
+		paintToolWnd.SetSize(XMFLOAT2(paintToolWnd.scale_local.x, screenH - topmenuWnd.scale_local.y - topmenuWnd.GetShadowRadius()));
+		ofs += paintToolWnd.scale_local.x + paintToolWnd.GetShadowRadius();
+	}
+	y = padding + topmenuWnd.GetSize().y + topmenuWnd.GetShadowRadius();
+	hei = 40;
+
+	generalButton.SetPos(XMFLOAT2(ofs, y));
+	generalButton.SetSize(XMFLOAT2(hei, hei));
+	y += hei + padding;
+
+	graphicsButton.SetPos(XMFLOAT2(ofs, y));
+	graphicsButton.SetSize(XMFLOAT2(hei, hei));
+	y += hei + padding;
+
+	cameraButton.SetPos(XMFLOAT2(ofs, y));
+	cameraButton.SetSize(XMFLOAT2(hei, hei));
+	y += hei + padding;
+
+	materialsButton.SetPos(XMFLOAT2(ofs, y));
+	materialsButton.SetSize(XMFLOAT2(hei, hei));
+	y += hei + padding;
+
+	paintToolButton.SetPos(XMFLOAT2(ofs, y));
+	paintToolButton.SetSize(XMFLOAT2(hei, hei));
+	y += hei + padding;
+
 }
 
 void EditorComponent::SetCurrentScene(int index)
@@ -4680,7 +4842,7 @@ void EditorComponent::SetCurrentScene(int index)
 }
 void EditorComponent::RefreshSceneList()
 {
-	optionsWnd.generalWnd.themeCombo.SetSelected(optionsWnd.generalWnd.themeCombo.GetSelected());
+	generalWnd.themeCombo.SetSelected(generalWnd.themeCombo.GetSelected());
 	for (int i = 0; i < int(scenes.size()); ++i)
 	{
 		auto& editorscene = scenes[i];
@@ -4712,7 +4874,7 @@ void EditorComponent::RefreshSceneList()
 			translator.selected.clear();
 			wi::scene::Scene& scene = scenes[i]->scene;
 			wi::renderer::ClearWorld(scene);
-			optionsWnd.cameraWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			cameraWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.objectWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.meshWnd.SetEntity(wi::ecs::INVALID_ENTITY, -1);
 			componentsWnd.lightWnd.SetEntity(wi::ecs::INVALID_ENTITY);
@@ -4774,8 +4936,8 @@ void EditorComponent::NewScene()
 	topmenuWnd.AddWidget(&editorscene->tabCloseButton);
 	SetCurrentScene(scene_id);
 	RefreshSceneList();
-	UpdateTopMenuAnimation();
-	optionsWnd.cameraWnd.ResetCam();
+	UpdateDynamicWidgets();
+	cameraWnd.ResetCam();
 }
 
 void EditorComponent::FocusCameraOnSelected()
@@ -4866,5 +5028,5 @@ void EditorComponent::SetLocalization(wi::Localization& loc)
 }
 void EditorComponent::ReloadLanguage()
 {
-	optionsWnd.generalWnd.languageCombo.SetSelected(optionsWnd.generalWnd.languageCombo.GetSelected());
+	generalWnd.languageCombo.SetSelected(generalWnd.languageCombo.GetSelected());
 }

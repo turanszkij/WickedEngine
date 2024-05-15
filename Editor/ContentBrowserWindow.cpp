@@ -332,7 +332,7 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 		}
 
 		// Refresh theme:
-		editor->optionsWnd.generalWnd.themeCombo.SetSelected(editor->optionsWnd.generalWnd.themeCombo.GetSelected());
+		editor->generalWnd.themeCombo.SetSelected(editor->generalWnd.themeCombo.GetSelected());
 
 	});
 }

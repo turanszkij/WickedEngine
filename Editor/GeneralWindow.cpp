@@ -11,9 +11,9 @@ void GeneralWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 
-	wi::gui::Window::Create("General", wi::gui::Window::WindowControls::COLLAPSE);
+	wi::gui::Window::Create("General Options " ICON_GENERALOPTIONS, wi::gui::Window::WindowControls::CLOSE | wi::gui::Window::WindowControls::RESIZE_RIGHT);
 
-	SetSize(XMFLOAT2(580, 700));
+	SetSize(XMFLOAT2(300, 700));
 
 	physicsDebugCheckBox.Create("Physics visualizer: ");
 	physicsDebugCheckBox.SetTooltip("Visualize the physics world");
@@ -440,8 +440,8 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->componentsWnd.newComponentCombo.SetAngularHighlightColor(highlight);
 		editor->componentsWnd.materialWnd.textureSlotButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 		editor->componentsWnd.spriteWnd.textureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
-		editor->optionsWnd.paintToolWnd.brushTextureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
-		editor->optionsWnd.paintToolWnd.revealTextureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
+		editor->paintToolWnd.brushTextureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
+		editor->paintToolWnd.revealTextureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 		editor->aboutLabel.sprites[wi::gui::FOCUS] = editor->aboutLabel.sprites[wi::gui::IDLE];
 		int scene_id = 0;
 		for (auto& editorscene : editor->scenes)
@@ -484,6 +484,36 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->newEntityCombo.sprites[i].params.corners_rounding[1].radius = 20;
 			editor->newEntityCombo.sprites[i].params.corners_rounding[2].radius = 20;
 			editor->newEntityCombo.sprites[i].params.corners_rounding[3].radius = 20;
+
+			editor->generalButton.sprites[i].params.enableCornerRounding();
+			editor->generalButton.sprites[i].params.corners_rounding[0].radius = 20;
+			editor->generalButton.sprites[i].params.corners_rounding[1].radius = 20;
+			editor->generalButton.sprites[i].params.corners_rounding[2].radius = 20;
+			editor->generalButton.sprites[i].params.corners_rounding[3].radius = 20;
+
+			editor->graphicsButton.sprites[i].params.enableCornerRounding();
+			editor->graphicsButton.sprites[i].params.corners_rounding[0].radius = 20;
+			editor->graphicsButton.sprites[i].params.corners_rounding[1].radius = 20;
+			editor->graphicsButton.sprites[i].params.corners_rounding[2].radius = 20;
+			editor->graphicsButton.sprites[i].params.corners_rounding[3].radius = 20;
+
+			editor->cameraButton.sprites[i].params.enableCornerRounding();
+			editor->cameraButton.sprites[i].params.corners_rounding[0].radius = 20;
+			editor->cameraButton.sprites[i].params.corners_rounding[1].radius = 20;
+			editor->cameraButton.sprites[i].params.corners_rounding[2].radius = 20;
+			editor->cameraButton.sprites[i].params.corners_rounding[3].radius = 20;
+
+			editor->materialsButton.sprites[i].params.enableCornerRounding();
+			editor->materialsButton.sprites[i].params.corners_rounding[0].radius = 20;
+			editor->materialsButton.sprites[i].params.corners_rounding[1].radius = 20;
+			editor->materialsButton.sprites[i].params.corners_rounding[2].radius = 20;
+			editor->materialsButton.sprites[i].params.corners_rounding[3].radius = 20;
+
+			editor->paintToolButton.sprites[i].params.enableCornerRounding();
+			editor->paintToolButton.sprites[i].params.corners_rounding[0].radius = 20;
+			editor->paintToolButton.sprites[i].params.corners_rounding[1].radius = 20;
+			editor->paintToolButton.sprites[i].params.corners_rounding[2].radius = 20;
+			editor->paintToolButton.sprites[i].params.corners_rounding[3].radius = 20;
 
 			editor->componentsWnd.newComponentCombo.sprites[i].params.enableCornerRounding();
 			editor->componentsWnd.newComponentCombo.sprites[i].params.corners_rounding[0].radius = 20;
@@ -693,6 +723,8 @@ void GeneralWindow::Create(EditorComponent* _editor)
 
 		});
 	AddWidget(&ktxConvButton);
+
+	SetVisible(false);
 }
 
 void GeneralWindow::RefreshLanguageSelectionAfterWholeGUIWasInitialized()

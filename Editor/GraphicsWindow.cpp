@@ -7,13 +7,13 @@ using namespace wi::graphics;
 void GraphicsWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Graphics", wi::gui::Window::WindowControls::COLLAPSE);
+	wi::gui::Window::Create("Graphics Options " ICON_GRAPHICSOPTIONS, wi::gui::Window::WindowControls::CLOSE | wi::gui::Window::WindowControls::RESIZE_RIGHT);
 
 	wi::renderer::SetToDrawDebugEnvProbes(true);
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 1660));
+	SetSize(XMFLOAT2(300, 1660));
 
 	float step = 21;
 	float itemheight = 18;
@@ -1417,8 +1417,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	fsr2Combo.SetSelected(fsr2_preset);
 	AddWidget(&fsr2Combo);
 
-	Translate(XMFLOAT3(100, 50, 0));
-	SetMinimized(true);
+	SetVisible(false);
 }
 
 void GraphicsWindow::UpdateSwapChainFormats(wi::graphics::SwapChain* swapChain)

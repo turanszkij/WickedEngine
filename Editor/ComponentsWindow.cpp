@@ -1208,7 +1208,7 @@ void ComponentsWindow::RefreshEntityTree()
 	if (editor == nullptr)
 		return;
 	const Scene& scene = editor->GetCurrentScene();
-	editor->optionsWnd.materialPickerWnd.RecreateButtons();
+	editor->materialPickerWnd.RecreateButtons();
 
 	for (int i = 0; i < entityTree.GetItemCount(); ++i)
 	{

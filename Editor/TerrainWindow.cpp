@@ -545,7 +545,7 @@ void PropsWindow::AddWindow(wi::terrain::Prop& prop)
 
 	windows.emplace_back().reset(wnd);
 
-	editor->optionsWnd.generalWnd.themeCombo.SetSelected(editor->optionsWnd.generalWnd.themeCombo.GetSelected()); // theme refresh
+	editor->generalWnd.themeCombo.SetSelected(editor->generalWnd.themeCombo.GetSelected()); // theme refresh
 }
 
 void PropsWindow::Update(const wi::Canvas& canvas, float dt)
@@ -1102,7 +1102,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 			{
 				terrain->materialEntities[i] = INVALID_ENTITY;
 			}
-			editor->optionsWnd.paintToolWnd.RecreateTerrainMaterialButtons();
+			editor->paintToolWnd.RecreateTerrainMaterialButtons();
 		});
 
 		AddWidget(&materialCombos[i]);
@@ -1410,7 +1410,7 @@ void TerrainWindow::AddModifier(ModifierWindow* modifier_window)
 		modifiers_to_remove.push_back(modifier_window);
 		});
 
-	editor->optionsWnd.generalWnd.themeCombo.SetSelected(editor->optionsWnd.generalWnd.themeCombo.GetSelected()); // theme refresh
+	editor->generalWnd.themeCombo.SetSelected(editor->generalWnd.themeCombo.GetSelected()); // theme refresh
 }
 void TerrainWindow::SetupAssets()
 {
@@ -1722,7 +1722,7 @@ void TerrainWindow::SetupAssets()
 	terrain = &terrain_preset;
 	presetCombo.SetSelected(0);
 
-	editor->optionsWnd.paintToolWnd.RecreateTerrainMaterialButtons();
+	editor->paintToolWnd.RecreateTerrainMaterialButtons();
 }
 
 void TerrainWindow::Update(const wi::Canvas& canvas, float dt)
