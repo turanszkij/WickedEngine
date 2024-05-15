@@ -535,7 +535,7 @@ void ComponentsWindow::ResizeLayout()
 	wi::gui::Window::ResizeLayout();
 	const wi::scene::Scene& scene = editor->GetCurrentScene();
 	float padding = 2;
-	XMFLOAT2 pos = XMFLOAT2(padding, padding);
+	XMFLOAT2 pos = XMFLOAT2(padding, 0);
 	const float width = GetWidgetAreaSize().x - padding;
 	const float height = GetWidgetAreaSize().y - padding * 2;
 	editor->main->config.GetSection("layout").Set("components.width", GetSize().x);

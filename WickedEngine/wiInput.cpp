@@ -51,7 +51,7 @@ namespace wi::input
 	Pen pen;
 	bool pen_override = false;
 	bool double_click = false;
-	wi::Timer doubleclick_timter;
+	wi::Timer doubleclick_timer;
 
 	const KeyboardState& GetKeyboardState() { return keyboard; }
 	const MouseState& GetMouseState() { return mouse; }
@@ -434,7 +434,7 @@ namespace wi::input
 		double_click = false;
 		if (Press(MOUSE_BUTTON_LEFT))
 		{
-			double elapsed = doubleclick_timter.record_elapsed_seconds();
+			double elapsed = doubleclick_timer.record_elapsed_seconds();
 			if (elapsed < 0.5)
 			{
 				double_click = true;

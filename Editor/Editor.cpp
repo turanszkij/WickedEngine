@@ -3615,6 +3615,7 @@ void EditorComponent::ResizeViewport3D()
 	if (renderPath->width == width && renderPath->height == height)
 	{
 		main->infoDisplay.rect.from_viewport(viewport3D);
+		main->infoDisplay.rect.left = LogicalToPhysical(generalButton.translation_local.x + generalButton.scale_local.x + 10);
 		return;
 	}
 
@@ -3654,6 +3655,7 @@ void EditorComponent::ResizeViewport3D()
 	viewport3D.height = (float)renderPath->height;
 
 	main->infoDisplay.rect.from_viewport(viewport3D);
+	main->infoDisplay.rect.left = LogicalToPhysical(generalButton.translation_local.x + generalButton.scale_local.x + 10);
 
 	GraphicsDevice* device = wi::graphics::GetDevice();
 
@@ -4810,22 +4812,27 @@ void EditorComponent::UpdateDynamicWidgets()
 
 	generalButton.SetPos(XMFLOAT2(ofs, y));
 	generalButton.SetSize(XMFLOAT2(hei, hei));
+	generalButton.Update(*this, 0);
 	y += hei + padding;
 
 	graphicsButton.SetPos(XMFLOAT2(ofs, y));
 	graphicsButton.SetSize(XMFLOAT2(hei, hei));
+	graphicsButton.Update(*this, 0);
 	y += hei + padding;
 
 	cameraButton.SetPos(XMFLOAT2(ofs, y));
 	cameraButton.SetSize(XMFLOAT2(hei, hei));
+	cameraButton.Update(*this, 0);
 	y += hei + padding;
 
 	materialsButton.SetPos(XMFLOAT2(ofs, y));
 	materialsButton.SetSize(XMFLOAT2(hei, hei));
+	materialsButton.Update(*this, 0);
 	y += hei + padding;
 
 	paintToolButton.SetPos(XMFLOAT2(ofs, y));
 	paintToolButton.SetSize(XMFLOAT2(hei, hei));
+	paintToolButton.Update(*this, 0);
 	y += hei + padding;
 
 }
