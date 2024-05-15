@@ -1631,7 +1631,7 @@ void GraphicsWindow::ResizeLayout()
 		if (!widget.IsVisible())
 			return;
 		const float margin_left = 155;
-		const float margin_right = 45;
+		const float margin_right = 50;
 		widget.SetPos(XMFLOAT2(margin_left, y));
 		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
 		y += widget.GetSize().y;
@@ -1640,7 +1640,7 @@ void GraphicsWindow::ResizeLayout()
 	auto add_right = [&](wi::gui::Widget& widget) {
 		if (!widget.IsVisible())
 			return;
-		const float margin_right = 45;
+		const float margin_right = 50;
 		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
 		y += widget.GetSize().y;
 		y += padding;

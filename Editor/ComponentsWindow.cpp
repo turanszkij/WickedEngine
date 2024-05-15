@@ -116,6 +116,12 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&entityTree);
 
+	if (editor->main->config.GetSection("layout").Has("entities.height"))
+	{
+		float height = editor->main->config.GetSection("layout").GetFloat("entities.height");
+		entityTree.SetSize(XMFLOAT2(entityTree.GetSize().x, height));
+	}
+
 	materialWnd.Create(editor);
 	weatherWnd.Create(editor);
 	objectWnd.Create(editor);
@@ -535,6 +541,7 @@ void ComponentsWindow::ResizeLayout()
 	const float width = GetWidgetAreaSize().x - padding;
 	const float height = GetWidgetAreaSize().y - padding * 2;
 	editor->main->config.GetSection("layout").Set("components.width", GetSize().x);
+	editor->main->config.GetSection("layout").Set("entities.height", entityTree.GetSize().y);
 
 	// Entities:
 	{
