@@ -6392,7 +6392,7 @@ void DrawDebugWorld(
 			device->CreateBuffer(&bd, indices, &wirecamIB);
 		}
 
-		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE_DEPTH], cmd);
 
 		const GPUBuffer* vbs[] = {
 			&wirecamVB,
@@ -6528,7 +6528,7 @@ void DrawDebugWorld(
 	{
 		device->EventBegin("DebugPartitionTree", cmd);
 
-		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE_DEPTH], cmd);
 
 		const GPUBuffer* vbs[] = {
 			&wirecubeVB,
@@ -7221,7 +7221,7 @@ void DrawDebugWorld(
 
 		// Local proxy boxes:
 
-		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE_DEPTH], cmd);
 
 		const GPUBuffer* vbs[] = {
 			&wirecubeVB,
@@ -7375,7 +7375,7 @@ void DrawDebugWorld(
 			if (mesh == nullptr)
 			{
 				// No mesh, just draw a box:
-				device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
+				device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE_DEPTH], cmd);
 				const GPUBuffer* vbs[] = {
 					&wirecubeVB,
 				};

@@ -5041,7 +5041,18 @@ namespace wi::gui
 								{
 									ClearSelection();
 								}
-								Select(i);
+								if (wi::input::IsDoubleClicked() && onDoubleClick != nullptr)
+								{
+									EventArgs args;
+									args.iValue = i;
+									args.sValue = items[i].name;
+									args.userdata = items[i].userdata;
+									onDoubleClick(args);
+								}
+								else
+								{
+									Select(i);
+								}
 								Activate();
 							}
 						}
@@ -5244,6 +5255,10 @@ namespace wi::gui
 	void TreeList::OnDelete(std::function<void(EventArgs args)> func)
 	{
 		onDelete = func;
+	}
+	void TreeList::OnDoubleClick(std::function<void(EventArgs args)> func)
+	{
+		onDoubleClick = func;
 	}
 	void TreeList::AddItem(const Item& item)
 	{

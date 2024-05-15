@@ -111,6 +111,9 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		//	We don't delete here, because this callback will execute once for each item
 		editor->deleting = true;
 		});
+	entityTree.OnDoubleClick([this](wi::gui::EventArgs args) {
+		editor->FocusCameraOnSelected();
+		});
 	AddWidget(&entityTree);
 
 	materialWnd.Create(editor);

@@ -50,6 +50,8 @@ namespace wi::input
 	MouseState mouse;
 	Pen pen;
 	bool pen_override = false;
+	bool double_click = false;
+	wi::Timer doubleclick_timter;
 
 	const KeyboardState& GetKeyboardState() { return keyboard; }
 	const MouseState& GetMouseState() { return mouse; }
@@ -429,6 +431,16 @@ namespace wi::input
 			}
 		}
 
+		double_click = false;
+		if (Press(MOUSE_BUTTON_LEFT))
+		{
+			double elapsed = doubleclick_timter.record_elapsed_seconds();
+			if (elapsed < 0.5)
+			{
+				double_click = true;
+			}
+		}
+
 		wi::profiler::EndRange(range);
 	}
 
@@ -747,6 +759,11 @@ namespace wi::input
 #elif SDL2
 		SDL_ShowCursor(value ? SDL_DISABLE : SDL_ENABLE);
 #endif // _WIN32
+	}
+
+	bool IsDoubleClicked()
+	{
+		return double_click;
 	}
 
 	XMFLOAT4 GetAnalog(GAMEPAD_ANALOG analog, int playerindex)

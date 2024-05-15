@@ -181,6 +181,9 @@ namespace wi::input
 	// send various feedback to the controller
 	void SetControllerFeedback(const ControllerFeedback& data, int playerindex = 0);
 
+	// Check if left mouse button was double clicked in the current frame:
+	bool IsDoubleClicked();
+
 	struct Pen
 	{
 		XMFLOAT2 position = {};

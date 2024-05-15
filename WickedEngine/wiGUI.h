@@ -780,6 +780,7 @@ namespace wi::gui
 	protected:
 		std::function<void(EventArgs args)> onSelect;
 		std::function<void(EventArgs args)> onDelete;
+		std::function<void(EventArgs args)> onDoubleClick;
 		int item_highlight = -1;
 		int opener_highlight = -1;
 
@@ -823,6 +824,7 @@ namespace wi::gui
 
 		void OnSelect(std::function<void(EventArgs args)> func);
 		void OnDelete(std::function<void(EventArgs args)> func);
+		void OnDoubleClick(std::function<void(EventArgs args)> func);
 
 		ScrollBar scrollbar;
 	};
