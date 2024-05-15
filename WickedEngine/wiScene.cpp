@@ -4844,7 +4844,7 @@ namespace wi::scene
 		{
 			SoundComponent& sound = sounds[i];
 
-			if (!sound.soundinstance.IsValid())
+			if (!sound.soundinstance.IsValid() && sound.soundResource.IsValid())
 			{
 				sound.soundinstance.SetLooped(sound.IsLooped());
 				wi::audio::CreateSoundInstance(&sound.soundResource.GetSound(), &sound.soundinstance);
