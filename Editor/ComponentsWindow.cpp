@@ -518,10 +518,6 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	{
 		size.x = editor->main->config.GetSection("layout").GetFloat("components.width");
 	}
-	if (editor->main->config.GetSection("layout").Has("components.height"))
-	{
-		size.y = editor->main->config.GetSection("layout").GetFloat("components.height");
-	}
 	SetSize(size);
 }
 void ComponentsWindow::Update(float dt)
@@ -539,7 +535,6 @@ void ComponentsWindow::ResizeLayout()
 	const float width = GetWidgetAreaSize().x - padding;
 	const float height = GetWidgetAreaSize().y - padding * 2;
 	editor->main->config.GetSection("layout").Set("components.width", GetSize().x);
-	editor->main->config.GetSection("layout").Set("components.height", GetSize().y);
 
 	// Entities:
 	{
