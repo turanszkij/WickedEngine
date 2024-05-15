@@ -4716,7 +4716,7 @@ void EditorComponent::UpdateDynamicWidgets()
 	y += navtestButton.GetSize().y + padding;
 
 
-	newEntityCombo.SetSize(XMFLOAT2(hei, hei));
+	newEntityCombo.SetSize(XMFLOAT2(hei * 1.4f, hei * 1.4f));
 	ofs -= padding * 2 + newEntityCombo.GetSize().x;
 	y = topmenuWnd.GetSize().y + padding;
 	newEntityCombo.SetPos(XMFLOAT2(ofs, y));

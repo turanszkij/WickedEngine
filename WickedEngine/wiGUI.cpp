@@ -2261,7 +2261,7 @@ namespace wi::gui
 
 
 
-
+	static constexpr float combo_height() { return 20; };
 	void ComboBox::Create(const std::string& name)
 	{
 		SetName(name);
@@ -2280,7 +2280,7 @@ namespace wi::gui
 	{
 		float screenheight = canvas.GetLogicalHeight();
 		int visible_items = std::min(maxVisibleItemCount, int(items.size()) - firstItemVisible);
-		float total_height = (visible_items + 1) * scale.y;
+		float total_height = scale.y + visible_items * combo_height();
 		if (translation.y + total_height > screenheight)
 		{
 			return -total_height - 1;
@@ -2305,7 +2305,7 @@ namespace wi::gui
 	float ComboBox::GetItemOffset(const wi::Canvas& canvas, int index) const
 	{
 		index = std::max(firstItemVisible, index) - firstItemVisible;
-		return scale.y * (index + 1) + GetDropOffset(canvas);
+		return scale.y + combo_height() * index + GetDropOffset(canvas);
 	}
 	bool ComboBox::HasScrollbar() const
 	{
@@ -2390,7 +2390,7 @@ namespace wi::gui
 			}
 
 			const float scrollbar_begin = translation.y + scale.y + drop_offset + scale.y * 0.5f;
-			const float scrollbar_end = scrollbar_begin + std::max(0.0f, (float)std::min(maxVisibleItemCount, (int)items.size()) - 1) * scale.y;
+			const float scrollbar_end = scrollbar_begin + std::max(0.0f, (float)std::min(maxVisibleItemCount, (int)items.size()) - 1) * combo_height();
 
 			if (state == ACTIVE)
 			{
@@ -2399,7 +2399,7 @@ namespace wi::gui
 				{
 					if (combostate != COMBOSTATE_SELECTING && combostate != COMBOSTATE_INACTIVE)
 					{
-						if (combostate == COMBOSTATE_SCROLLBAR_GRABBED || pointerHitbox.intersects(Hitbox2D(XMFLOAT2(drop_x + drop_width + 1, translation.y + scale.y + drop_offset), XMFLOAT2(scale.y, (float)std::min(maxVisibleItemCount, (int)items.size()) * scale.y))))
+						if (combostate == COMBOSTATE_SCROLLBAR_GRABBED || pointerHitbox.intersects(Hitbox2D(XMFLOAT2(drop_x + drop_width + 1, translation.y + scale.y + drop_offset), XMFLOAT2(scale.y, (float)std::min(maxVisibleItemCount, (int)items.size()) * combo_height()))))
 						{
 							if (click_down)
 							{
@@ -2449,7 +2449,7 @@ namespace wi::gui
 						itembox.pos.x = drop_x;
 						itembox.pos.y = translation.y + GetItemOffset(canvas, i);
 						itembox.siz.x = drop_width;
-						itembox.siz.y = scale.y;
+						itembox.siz.y = combo_height();
 						if (pointerHitbox.intersects(itembox))
 						{
 							hovered = i;
@@ -2602,7 +2602,7 @@ namespace wi::gui
 				rect.left = int(drop_x + drop_width + 1);
 				rect.right = int(drop_x + drop_width + 1 + scale.y);
 				rect.top = int(translation.y + scale.y + drop_offset);
-				rect.bottom = int(translation.y + scale.y + drop_offset + scale.y * maxVisibleItemCount);
+				rect.bottom = int(translation.y + scale.y + drop_offset + combo_height() * maxVisibleItemCount);
 				ApplyScissor(canvas, rect, cmd, false);
 
 				// control-scrollbar-base
@@ -2610,7 +2610,7 @@ namespace wi::gui
 					wi::image::Params fx = sprites[state].params;
 					fx.disableCornerRounding();
 					fx.pos = XMFLOAT3(drop_x + drop_width + 1, translation.y + scale.y + drop_offset, 0);
-					fx.siz = XMFLOAT2(scale.y, scale.y * maxVisibleItemCount);
+					fx.siz = XMFLOAT2(scale.y, combo_height() * maxVisibleItemCount);
 					fx.color = drop_color;
 					wi::image::Draw(nullptr, fx, cmd);
 				}
@@ -2632,7 +2632,7 @@ namespace wi::gui
 							drop_x + drop_width + 1,
 							translation.y + scale.y + drop_offset + scrollbar_delta,
 							scale.y,
-							scale.y,
+							combo_height(),
 							col
 						),
 						cmd
@@ -2644,7 +2644,7 @@ namespace wi::gui
 			rect.left = int(drop_x);
 			rect.right = rect.left + int(drop_width);
 			rect.top = int(translation.y + scale.y + drop_offset);
-			rect.bottom = rect.top + int(scale.y * maxVisibleItemCount);
+			rect.bottom = rect.top + int(combo_height() * maxVisibleItemCount);
 			ApplyScissor(canvas, rect, cmd, false);
 
 			// control-list
@@ -2653,7 +2653,7 @@ namespace wi::gui
 				wi::image::Params fx = sprites[state].params;
 				fx.disableCornerRounding();
 				fx.pos = XMFLOAT3(drop_x, translation.y + GetItemOffset(canvas, i), 0);
-				fx.siz = XMFLOAT2(drop_width, scale.y);
+				fx.siz = XMFLOAT2(drop_width, combo_height());
 				fx.color = drop_color;
 				if (hovered == i)
 				{
@@ -2670,7 +2670,7 @@ namespace wi::gui
 
 				wi::font::Params fp = wi::font::Params(
 					drop_x + drop_width * 0.5f,
-					translation.y + scale.y * 0.5f + GetItemOffset(canvas, i),
+					translation.y + combo_height() * 0.5f + GetItemOffset(canvas, i),
 					wi::font::WIFONTSIZE_DEFAULT,
 					wi::font::WIFALIGN_CENTER,
 					wi::font::WIFALIGN_CENTER,
