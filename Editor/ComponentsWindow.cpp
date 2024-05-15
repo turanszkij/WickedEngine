@@ -14,6 +14,8 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	SetShadowRadius(2);
 
 	filterCombo.Create("");
+	filterCombo.SetShadowRadius(0);
+	filterCombo.SetMaxVisibleItemCount(16);
 	filterCombo.AddItem("*", (uint64_t)Filter::All);
 	filterCombo.AddItem(ICON_TRANSFORM, (uint64_t)Filter::Transform);
 	filterCombo.AddItem(ICON_MATERIAL, (uint64_t)Filter::Material);
@@ -53,6 +55,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 
 
 	filterInput.Create("");
+	filterInput.SetShadowRadius(0);
 	filterInput.SetTooltip("Search entities by name");
 	filterInput.SetDescription(ICON_SEARCH "  ");
 	filterInput.SetCancelInputEnabled(false);
@@ -63,6 +66,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	AddWidget(&filterInput);
 
 	filterCaseCheckBox.Create("");
+	filterCaseCheckBox.SetShadowRadius(0);
 	filterCaseCheckBox.SetCheckText("Aa");
 	filterCaseCheckBox.SetUnCheckText("a");
 	filterCaseCheckBox.SetTooltip("Toggle case-sensitive name filtering");
@@ -527,26 +531,26 @@ void ComponentsWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
 	const wi::scene::Scene& scene = editor->GetCurrentScene();
-	const float padding = 4;
+	float padding = 2;
 	XMFLOAT2 pos = XMFLOAT2(padding, padding);
-	const float width = GetWidgetAreaSize().x - padding * 2;
+	const float width = GetWidgetAreaSize().x - padding;
 	const float height = GetWidgetAreaSize().y - padding * 2;
 	editor->main->config.GetSection("layout").Set("components.width", GetSize().x);
 	editor->main->config.GetSection("layout").Set("components.height", GetSize().y);
 
 	// Entities:
 	{
-		float x_off = 30;
+		float x_off = 25;
 		float filterHeight = filterCombo.GetSize().y;
 		float filterComboWidth = 30;
 
 		filterInput.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
 		filterInput.SetSize(XMFLOAT2(width - x_off - filterHeight - 5 - filterComboWidth - filterHeight, filterCombo.GetScale().y));
 
-		filterCaseCheckBox.SetPos(XMFLOAT2(filterInput.GetPos().x + filterInput.GetSize().x + 2, pos.y));
+		filterCaseCheckBox.SetPos(XMFLOAT2(filterInput.GetPos().x + filterInput.GetSize().x + 1, pos.y));
 		filterCaseCheckBox.SetSize(XMFLOAT2(filterHeight, filterHeight));
 
-		filterCombo.SetPos(XMFLOAT2(filterCaseCheckBox.GetPos().x + filterCaseCheckBox.GetSize().x + 2, pos.y));
+		filterCombo.SetPos(XMFLOAT2(filterCaseCheckBox.GetPos().x + filterCaseCheckBox.GetSize().x + 1, pos.y));
 		filterCombo.SetSize(XMFLOAT2(filterComboWidth, filterHeight));
 		pos.y += filterCombo.GetSize().y;
 		pos.y += padding;
@@ -554,21 +558,24 @@ void ComponentsWindow::ResizeLayout()
 		entityTree.SetPos(XMFLOAT2(pos.x - padding, pos.y));
 		entityTree.SetSize(XMFLOAT2(width + padding * 2, wi::math::Clamp(entityTree.GetSize().y, 0, height - pos.y - 50)));
 		pos.y += entityTree.GetSize().y;
-		pos.y += padding * 3;
+		pos.y += padding * 4;
 	}
 
 	if (!editor->translator.selected.empty())
 	{
 		newComponentCombo.SetVisible(true);
 		newComponentCombo.SetSize(XMFLOAT2(20, 20));
-		newComponentCombo.SetPos(XMFLOAT2(pos.x + width  - 20, pos.y));
+		newComponentCombo.SetPos(XMFLOAT2(pos.x + width - 30, pos.y));
 		pos.y += newComponentCombo.GetSize().y;
-		pos.y += padding * 2;
+		pos.y += padding * 4;
 	}
 	else
 	{
 		newComponentCombo.SetVisible(false);
 	}
+
+	padding = 1;
+	pos.x = 0;
 
 	if (scene.names.Contains(nameWnd.entity))
 	{
