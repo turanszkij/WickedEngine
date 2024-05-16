@@ -4822,7 +4822,9 @@ namespace wi::gui
 	Hitbox2D TreeList::GetHitbox_ItemOpener(int visible_count, int level) const
 	{
 		XMFLOAT2 pos = XMFLOAT2(translation.x + 2 + level * item_height(), translation.y + GetItemOffset(visible_count) + item_height() * 0.5f);
-		return Hitbox2D(XMFLOAT2(pos.x, pos.y - item_height() * 0.25f), XMFLOAT2(item_height() * 0.5f, item_height() * 0.5f));
+		Hitbox2D hb = Hitbox2D(XMFLOAT2(pos.x, pos.y - item_height() * 0.25f), XMFLOAT2(item_height() * 0.5f, item_height() * 0.5f));
+		HitboxConstrain(hb);
+		return hb;
 	}
 	bool TreeList::HasScrollbar() const
 	{
@@ -4837,11 +4839,11 @@ namespace wi::gui
 
 		Widget::Update(canvas, dt);
 
-		Hitbox2D pointerHitbox = GetPointerHitbox();
-
 		// Resizer updates:
 		if (IsEnabled())
 		{
+			Hitbox2D pointerHitbox = GetPointerHitbox(false);
+
 			float vscale = scale.y;
 			Hitbox2D bottomhitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y + vscale), XMFLOAT2(scale.x, resizehitboxwidth));
 			
@@ -4894,6 +4896,13 @@ namespace wi::gui
 				resize_blink_timer = 0;
 			}
 		}
+
+		active_area.pos.x = float(scissorRect.left);
+		active_area.pos.y = float(scissorRect.top);
+		active_area.siz.x = float(scissorRect.right) - float(scissorRect.left);
+		active_area.siz.y = float(scissorRect.bottom) - float(scissorRect.top);
+
+		Hitbox2D pointerHitbox = GetPointerHitbox();
 
 		// compute control-list height
 		float scroll_length = 0;
@@ -5103,7 +5112,7 @@ namespace wi::gui
 			float vscale = scale.y;
 			Hitbox2D bottomhitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y + vscale), XMFLOAT2(scale.x, resizehitboxwidth));
 			
-			const Hitbox2D pointerHitbox = GetPointerHitbox();
+			const Hitbox2D pointerHitbox = GetPointerHitbox(false);
 
 			wi::image::Params fx = sprites[state].params;
 			fx.blendFlag = wi::enums::BLENDMODE_ALPHA;

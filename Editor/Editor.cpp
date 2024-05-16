@@ -4939,11 +4939,11 @@ void EditorComponent::FocusCameraOnSelected()
 	for (auto& x : translator.selected)
 	{
 		TransformComponent* transform = scene.transforms.GetComponent(x.entity);
-		if (transform != nullptr)
-		{
-			centerV = XMVectorAdd(centerV, transform->GetPositionV());
-			count += 1.0f;
-		}
+		if (transform == nullptr)
+			continue;
+
+		centerV = XMVectorAdd(centerV, transform->GetPositionV());
+		count += 1.0f;
 
 		if (scene.objects.Contains(x.entity))
 		{
@@ -4978,6 +4978,8 @@ void EditorComponent::FocusCameraOnSelected()
 	{
 		centerV /= count;
 	}
+	else
+		return;
 
 	float focus_offset = 5;
 	if (aabb.getArea() > 0)
