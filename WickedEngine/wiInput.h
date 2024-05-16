@@ -206,5 +206,19 @@ namespace wi::input
 	};
 	const wi::vector<Touch>& GetTouches();
 
+	enum CURSOR
+	{
+		CURSOR_DEFAULT,
+		CURSOR_TEXTINPUT,
+		CURSOR_RESIZEALL,
+		CURSOR_RESIZE_NS,
+		CURSOR_RESIZE_EW,
+		CURSOR_RESIZE_NESW,
+		CURSOR_RESIZE_NWSE,
+		CURSOR_HAND,
+		CURSOR_NOTALLOWED,
+	};
+	void SetCursor(CURSOR cursor);
+
 };
 

@@ -1694,7 +1694,6 @@ namespace wi::gui
 		{
 			font.Draw(cmd);
 		}
-
 	}
 	void TextInputField::OnInputAccepted(std::function<void(EventArgs args)> func)
 	{
@@ -3570,6 +3569,7 @@ namespace wi::gui
 				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(0.0f, 0.025f, std::abs(std::sin(resize_blink_timer * 4)));
 				XMStoreFloat2(&fx.angular_softness_direction, XMVector2Normalize(XMVectorSet(-1, -1, 0, 0)));
 				wi::image::Draw(nullptr, fx, cmd);
+				wi::input::SetCursor(wi::input::CURSOR_RESIZE_NWSE);
 			}
 			else if (resize_state == RESIZE_STATE_TOPRIGHT || pointerHitbox.intersects(toprighthitbox))
 			{
@@ -3577,6 +3577,7 @@ namespace wi::gui
 				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(0.0f, 0.025f, std::abs(std::sin(resize_blink_timer * 4)));
 				XMStoreFloat2(&fx.angular_softness_direction, XMVector2Normalize(XMVectorSet(1, -1, 0, 0)));
 				wi::image::Draw(nullptr, fx, cmd);
+				wi::input::SetCursor(wi::input::CURSOR_RESIZE_NESW);
 			}
 			else if (resize_state == RESIZE_STATE_BOTTOMRIGHT || pointerHitbox.intersects(bottomrighthitbox))
 			{
@@ -3584,6 +3585,7 @@ namespace wi::gui
 				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(0.0f, 0.025f, std::abs(std::sin(resize_blink_timer * 4)));
 				XMStoreFloat2(&fx.angular_softness_direction, XMVector2Normalize(XMVectorSet(1, 1, 0, 0)));
 				wi::image::Draw(nullptr, fx, cmd);
+				wi::input::SetCursor(wi::input::CURSOR_RESIZE_NWSE);
 			}
 			else if (resize_state == RESIZE_STATE_BOTTOMLEFT || pointerHitbox.intersects(bottomlefthitbox))
 			{
@@ -3591,6 +3593,7 @@ namespace wi::gui
 				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(0.0f, 0.025f, std::abs(std::sin(resize_blink_timer * 4)));
 				XMStoreFloat2(&fx.angular_softness_direction, XMVector2Normalize(XMVectorSet(-1, 1, 0, 0)));
 				wi::image::Draw(nullptr, fx, cmd);
+				wi::input::SetCursor(wi::input::CURSOR_RESIZE_NESW);
 			}
 			else if (resize_state == RESIZE_STATE_LEFT || pointerHitbox.intersects(lefthitbox))
 			{
@@ -3598,6 +3601,7 @@ namespace wi::gui
 				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(0.0f, 0.24f, std::abs(std::sin(resize_blink_timer * 4)));
 				fx.angular_softness_direction = XMFLOAT2(-1, 0);
 				wi::image::Draw(nullptr, fx, cmd);
+				wi::input::SetCursor(wi::input::CURSOR_RESIZE_EW);
 			}
 			else if (resize_state == RESIZE_STATE_RIGHT || pointerHitbox.intersects(righthitbox))
 			{
@@ -3605,6 +3609,7 @@ namespace wi::gui
 				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(0.0f, 0.24f, std::abs(std::sin(resize_blink_timer * 4)));
 				fx.angular_softness_direction = XMFLOAT2(1, 0);
 				wi::image::Draw(nullptr, fx, cmd);
+				wi::input::SetCursor(wi::input::CURSOR_RESIZE_EW);
 			}
 			else if (resize_state == RESIZE_STATE_TOP || pointerHitbox.intersects(tophitbox))
 			{
@@ -3612,6 +3617,7 @@ namespace wi::gui
 				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(0.0f, 0.24f, std::abs(std::sin(resize_blink_timer * 4)));
 				fx.angular_softness_direction = XMFLOAT2(0, -1);
 				wi::image::Draw(nullptr, fx, cmd);
+				wi::input::SetCursor(wi::input::CURSOR_RESIZE_NS);
 			}
 			else if (resize_state == RESIZE_STATE_BOTTOM || pointerHitbox.intersects(bottomhitbox))
 			{
@@ -3619,6 +3625,7 @@ namespace wi::gui
 				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(0.0f, 0.24f, std::abs(std::sin(resize_blink_timer * 4)));
 				fx.angular_softness_direction = XMFLOAT2(0, 1);
 				wi::image::Draw(nullptr, fx, cmd);
+				wi::input::SetCursor(wi::input::CURSOR_RESIZE_NS);
 			}
 		}
 
@@ -5139,6 +5146,7 @@ namespace wi::gui
 				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(0.0f, 0.24f, std::abs(std::sin(resize_blink_timer * 4)));
 				fx.angular_softness_direction = XMFLOAT2(0, 1);
 				wi::image::Draw(nullptr, fx, cmd);
+				wi::input::SetCursor(wi::input::CURSOR_RESIZE_NS);
 			}
 		}
 
