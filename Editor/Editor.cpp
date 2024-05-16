@@ -4760,6 +4760,21 @@ void EditorComponent::UpdateDynamicWidgets()
 
 
 
+	if (wi::backlog::GetUnseenLogLevelMax() >= wi::backlog::LogLevel::Error)
+	{
+		logButton.sprites[wi::gui::IDLE].params.color = wi::Color::Error();
+	}
+	else if (wi::backlog::GetUnseenLogLevelMax() >= wi::backlog::LogLevel::Warning)
+	{
+		logButton.sprites[wi::gui::IDLE].params.color = wi::Color::Warning();
+	}
+	else
+	{
+		logButton.sprites[wi::gui::IDLE].params.color = color_off;
+	}
+
+
+
 	ofs = padding;
 	if (generalWnd.IsVisible())
 	{
