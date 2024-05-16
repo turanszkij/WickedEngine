@@ -12,6 +12,7 @@
 <entry id="8">Információ</entry>
 <entry id="9">Kilépés</entry>
 <entry id="10">Névtelen jelenet</entry>
+<entry id="11">Tartalmak</entry>
 <section name="gui">
 	<section name="+" hint="Button">
 		<entry id="1" hint="tooltip">Új jelenet</entry>

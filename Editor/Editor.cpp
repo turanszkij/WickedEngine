@@ -133,6 +133,8 @@ void EditorComponent::ResizeLayout()
 }
 void EditorComponent::Load()
 {
+	wi::gui::CheckBox::SetCheckTextGlobal(ICON_CHECK);
+
 	loadmodel_workload.priority = wi::jobsystem::Priority::Low;
 
 	loadmodel_font.SetText("Loading model...");
