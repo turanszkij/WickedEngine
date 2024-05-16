@@ -139,7 +139,7 @@ void EditorComponent::Load()
 	loadmodel_font.anim.typewriter.time = 2;
 	loadmodel_font.anim.typewriter.looped = true;
 	loadmodel_font.anim.typewriter.character_start = 13;
-	loadmodel_font.params.size = 28;
+	loadmodel_font.params.size = 22;
 	loadmodel_font.params.h_align = wi::font::WIFALIGN_LEFT;
 	loadmodel_font.params.v_align = wi::font::WIFALIGN_TOP;
 	AddFont(&loadmodel_font);
@@ -196,6 +196,10 @@ void EditorComponent::Load()
 		cameraWnd.SetVisible(false);
 		materialPickerWnd.SetVisible(!materialPickerWnd.IsVisible());
 		paintToolWnd.SetVisible(false);
+		if (materialPickerWnd.IsVisible())
+		{
+			materialPickerWnd.RecreateButtons();
+		}
 	});
 	materialsButton.SetShadowRadius(0);
 	materialsButton.SetTooltip("Material browser");
@@ -4243,10 +4247,10 @@ void EditorComponent::Open(std::string filename)
 					}
 				}
 			}
+			RefreshSceneList();
 
 			componentsWnd.weatherWnd.Update();
 			componentsWnd.RefreshEntityTree();
-			RefreshSceneList();
 			wi::backlog::post("[Editor] finished loading model: " + filename);
 		});
 	});
@@ -4762,30 +4766,55 @@ void EditorComponent::UpdateDynamicWidgets()
 		generalWnd.SetPos(XMFLOAT2(0, topmenuWnd.scale_local.y + topmenuWnd.GetShadowRadius()));
 		generalWnd.SetSize(XMFLOAT2(generalWnd.scale_local.x, screenH - topmenuWnd.scale_local.y - topmenuWnd.GetShadowRadius()));
 		ofs += generalWnd.scale_local.x + generalWnd.GetShadowRadius();
+		generalButton.sprites[wi::gui::IDLE].params.color = color_on;
+	}
+	else
+	{
+		generalButton.sprites[wi::gui::IDLE].params.color = color_off;
 	}
 	if (graphicsWnd.IsVisible())
 	{
 		graphicsWnd.SetPos(XMFLOAT2(0, topmenuWnd.scale_local.y + topmenuWnd.GetShadowRadius()));
 		graphicsWnd.SetSize(XMFLOAT2(graphicsWnd.scale_local.x, screenH - topmenuWnd.scale_local.y - topmenuWnd.GetShadowRadius()));
 		ofs += graphicsWnd.scale_local.x + graphicsWnd.GetShadowRadius();
+		graphicsButton.sprites[wi::gui::IDLE].params.color = color_on;
+	}
+	else
+	{
+		graphicsButton.sprites[wi::gui::IDLE].params.color = color_off;
 	}
 	if (cameraWnd.IsVisible())
 	{
 		cameraWnd.SetPos(XMFLOAT2(0, topmenuWnd.scale_local.y + topmenuWnd.GetShadowRadius()));
 		cameraWnd.SetSize(XMFLOAT2(cameraWnd.scale_local.x, screenH - topmenuWnd.scale_local.y - topmenuWnd.GetShadowRadius()));
 		ofs += cameraWnd.scale_local.x + cameraWnd.GetShadowRadius();
+		cameraButton.sprites[wi::gui::IDLE].params.color = color_on;
+	}
+	else
+	{
+		cameraButton.sprites[wi::gui::IDLE].params.color = color_off;
 	}
 	if (materialPickerWnd.IsVisible())
 	{
 		materialPickerWnd.SetPos(XMFLOAT2(0, topmenuWnd.scale_local.y + topmenuWnd.GetShadowRadius()));
 		materialPickerWnd.SetSize(XMFLOAT2(materialPickerWnd.scale_local.x, screenH - topmenuWnd.scale_local.y - topmenuWnd.GetShadowRadius()));
 		ofs += materialPickerWnd.scale_local.x + materialPickerWnd.GetShadowRadius();
+		materialsButton.sprites[wi::gui::IDLE].params.color = color_on;
+	}
+	else
+	{
+		materialsButton.sprites[wi::gui::IDLE].params.color = color_off;
 	}
 	if (paintToolWnd.IsVisible())
 	{
 		paintToolWnd.SetPos(XMFLOAT2(0, topmenuWnd.scale_local.y + topmenuWnd.GetShadowRadius()));
 		paintToolWnd.SetSize(XMFLOAT2(paintToolWnd.scale_local.x, screenH - topmenuWnd.scale_local.y - topmenuWnd.GetShadowRadius()));
 		ofs += paintToolWnd.scale_local.x + paintToolWnd.GetShadowRadius();
+		paintToolButton.sprites[wi::gui::IDLE].params.color = color_on;
+	}
+	else
+	{
+		paintToolButton.sprites[wi::gui::IDLE].params.color = color_off;
 	}
 	y = padding + topmenuWnd.GetSize().y + topmenuWnd.GetShadowRadius();
 	hei = 40;
