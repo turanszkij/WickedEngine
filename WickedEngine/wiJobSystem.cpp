@@ -62,12 +62,12 @@ namespace wi::jobsystem
 	{
 		uint32_t numCores = 0;
 		uint32_t numThreads = 0;
-		std::unique_ptr<JobQueue[]> jobQueuePerThread;
+		std::unique_ptr<JobQueue[]> jobQueuePerThread[int(Priority::Count)];
 		std::atomic_bool alive{ true };
 		std::condition_variable wakeCondition;
 		std::mutex wakeMutex;
 		std::atomic<uint32_t> nextQueue{ 0 };
-		wi::vector<std::thread> threads;
+		wi::vector<std::thread> threads[int(Priority::Count)];
 		void ShutDown()
 		{
 			alive.store(false); // indicate that new jobs cannot be started from this point
@@ -78,14 +78,20 @@ namespace wi::jobsystem
 					wakeCondition.notify_all(); // wakes up sleeping worker threads
 				}
 				});
-			for (auto& thread : threads)
+			for (auto& thread : threads[int(Priority::High)])
+			{
+				thread.join();
+			}
+			for (auto& thread : threads[int(Priority::Low)])
 			{
 				thread.join();
 			}
 			wake_loop = false;
 			waker.join();
-			jobQueuePerThread.reset();
-			threads.clear();
+			jobQueuePerThread[int(Priority::High)].reset();
+			jobQueuePerThread[int(Priority::Low)].reset();
+			threads[int(Priority::High)].clear();
+			threads[int(Priority::Low)].clear();
 			numCores = 0;
 			numThreads = 0;
 		}
@@ -97,12 +103,12 @@ namespace wi::jobsystem
 
 	// Start working on a job queue
 	//	After the job queue is finished, it can switch to an other queue and steal jobs from there
-	inline void work(uint32_t startingQueue)
+	inline void work(uint32_t startingQueue, Priority priority)
 	{
 		Job job;
 		for (uint32_t i = 0; i < internal_state.numThreads; ++i)
 		{
-			JobQueue& job_queue = internal_state.jobQueuePerThread[startingQueue % internal_state.numThreads];
+			JobQueue& job_queue = internal_state.jobQueuePerThread[int(priority)][startingQueue % internal_state.numThreads];
 			while (job_queue.pop_front(job))
 			{
 				JobArgs args;
@@ -146,65 +152,95 @@ namespace wi::jobsystem
 
 		// Calculate the actual number of worker threads we want (-1 main thread):
 		internal_state.numThreads = std::min(maxThreadCount, std::max(1u, internal_state.numCores - 1));
-		internal_state.jobQueuePerThread.reset(new JobQueue[internal_state.numThreads]);
-		internal_state.threads.reserve(internal_state.numThreads);
+		internal_state.jobQueuePerThread[int(Priority::High)].reset(new JobQueue[internal_state.numThreads]);
+		internal_state.jobQueuePerThread[int(Priority::Low)].reset(new JobQueue[internal_state.numThreads]);
+		internal_state.threads[int(Priority::High)].reserve(internal_state.numThreads);
+		internal_state.threads[int(Priority::Low)].reserve(internal_state.numThreads);
 
 		for (uint32_t threadID = 0; threadID < internal_state.numThreads; ++threadID)
 		{
-			internal_state.threads.emplace_back([threadID] {
+			for (int prio = 0; prio < int(Priority::Count); ++prio)
+			{
+				const Priority priority = (Priority)prio;
+				internal_state.threads[prio].emplace_back([threadID, priority] {
 
-				while (internal_state.alive.load())
-				{
-					work(threadID);
+					while (internal_state.alive.load())
+					{
+						work(threadID, priority);
 
-					// finished with jobs, put to sleep
-					std::unique_lock<std::mutex> lock(internal_state.wakeMutex);
-					internal_state.wakeCondition.wait(lock);
-				}
+						// finished with jobs, put to sleep
+						std::unique_lock<std::mutex> lock(internal_state.wakeMutex);
+						internal_state.wakeCondition.wait(lock);
+					}
 
-			});
-			std::thread& worker = internal_state.threads.back();
+					});
+				std::thread& worker = internal_state.threads[prio].back();
 
 #ifdef _WIN32
-			// Do Windows-specific thread setup:
-			HANDLE handle = (HANDLE)worker.native_handle();
+				// Do Windows-specific thread setup:
+				HANDLE handle = (HANDLE)worker.native_handle();
 
-			// Put each thread on to dedicated core:
-			DWORD_PTR affinityMask = 1ull << threadID;
-			DWORD_PTR affinity_result = SetThreadAffinityMask(handle, affinityMask);
-			assert(affinity_result > 0);
+				// Put each thread on to dedicated core:
+				DWORD_PTR affinityMask = 1ull << threadID;
+				DWORD_PTR affinity_result = SetThreadAffinityMask(handle, affinityMask);
+				assert(affinity_result > 0);
 
-			//// Increase thread priority:
-			//BOOL priority_result = SetThreadPriority(handle, THREAD_PRIORITY_HIGHEST);
-			//assert(priority_result != 0);
+				if (priority == Priority::High)
+				{
+					BOOL priority_result = SetThreadPriority(handle, THREAD_PRIORITY_NORMAL);
+					assert(priority_result != 0);
 
-			// Name the thread:
-			std::wstring wthreadname = L"wi::jobsystem_" + std::to_wstring(threadID);
-			HRESULT hr = SetThreadDescription(handle, wthreadname.c_str());
-			assert(SUCCEEDED(hr));
+					std::wstring wthreadname = L"wi::jobsystem_" + std::to_wstring(threadID);
+					HRESULT hr = SetThreadDescription(handle, wthreadname.c_str());
+					assert(SUCCEEDED(hr));
+				}
+				else
+				{
+					BOOL priority_result = SetThreadPriority(handle, THREAD_PRIORITY_LOWEST);
+					assert(priority_result != 0);
+
+					std::wstring wthreadname = L"wi::jobsystem_lowprio_" + std::to_wstring(threadID);
+					HRESULT hr = SetThreadDescription(handle, wthreadname.c_str());
+					assert(SUCCEEDED(hr));
+				}
+
 #elif defined(PLATFORM_LINUX)
 #define handle_error_en(en, msg) \
                do { errno = en; perror(msg); } while (0)
 
-			int ret;
-			cpu_set_t cpuset;
-			CPU_ZERO(&cpuset);
-			size_t cpusetsize = sizeof(cpuset);
+				int ret;
+				cpu_set_t cpuset;
+				CPU_ZERO(&cpuset);
+				size_t cpusetsize = sizeof(cpuset);
 
-			CPU_SET(threadID, &cpuset);
-			ret = pthread_setaffinity_np(worker.native_handle(), cpusetsize, &cpuset);
-			if (ret != 0)
-				handle_error_en(ret, std::string(" pthread_setaffinity_np[" + std::to_string(threadID) + ']').c_str());
+				CPU_SET(threadID, &cpuset);
+				ret = pthread_setaffinity_np(worker.native_handle(), cpusetsize, &cpuset);
+				if (ret != 0)
+					handle_error_en(ret, std::string(" pthread_setaffinity_np[" + std::to_string(threadID) + ']').c_str());
 
-			// Name the thread
-			std::string thread_name = "wi::job::" + std::to_string(threadID);
-			ret = pthread_setname_np(worker.native_handle(), thread_name.c_str());
-			if (ret != 0)
-				handle_error_en(ret, std::string(" pthread_setname_np[" + std::to_string(threadID) + ']').c_str());
+
+				if (priority == Priority::High)
+				{
+					std::string thread_name = "wi::job::" + std::to_string(threadID);
+					ret = pthread_setname_np(worker.native_handle(), thread_name.c_str());
+					if (ret != 0)
+						handle_error_en(ret, std::string(" pthread_setname_np[" + std::to_string(threadID) + ']').c_str());
+				}
+				else
+				{
+					// TODO: set lower priority
+
+					std::string thread_name = "wi::job_low::" + std::to_string(threadID);
+					ret = pthread_setname_np(worker.native_handle(), thread_name.c_str());
+					if (ret != 0)
+						handle_error_en(ret, std::string(" pthread_setname_np[" + std::to_string(threadID) + ']').c_str());
+				}
+
 #undef handle_error_en
 #elif defined(PLATFORM_PS5)
-			wi::jobsystem::ps5::SetupWorker(worker, threadID);
+				wi::jobsystem::ps5::SetupWorker(worker, threadID);
 #endif // _WIN32
+			}
 		}
 
 		wi::backlog::post("wi::jobsystem Initialized with [" + std::to_string(internal_state.numCores) + " cores] [" + std::to_string(internal_state.numThreads) + " threads] (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
@@ -233,7 +269,7 @@ namespace wi::jobsystem
 		job.groupJobEnd = 1;
 		job.sharedmemory_size = 0;
 
-		internal_state.jobQueuePerThread[internal_state.nextQueue.fetch_add(1) % internal_state.numThreads].push_back(job);
+		internal_state.jobQueuePerThread[int(ctx.priority)][internal_state.nextQueue.fetch_add(1) % internal_state.numThreads].push_back(job);
 		internal_state.wakeCondition.notify_one();
 	}
 
@@ -261,7 +297,7 @@ namespace wi::jobsystem
 			job.groupJobOffset = groupID * groupSize;
 			job.groupJobEnd = std::min(job.groupJobOffset + groupSize, jobCount);
 
-			internal_state.jobQueuePerThread[internal_state.nextQueue.fetch_add(1) % internal_state.numThreads].push_back(job);
+			internal_state.jobQueuePerThread[int(ctx.priority)][internal_state.nextQueue.fetch_add(1) % internal_state.numThreads].push_back(job);
 		}
 
 		internal_state.wakeCondition.notify_all();
@@ -287,7 +323,7 @@ namespace wi::jobsystem
 			internal_state.wakeCondition.notify_all();
 
 			// work() will pick up any jobs that are on stand by and execute them on this thread:
-			work(internal_state.nextQueue.fetch_add(1) % internal_state.numThreads);
+			work(internal_state.nextQueue.fetch_add(1) % internal_state.numThreads, ctx.priority);
 
 			while (IsBusy(ctx))
 			{

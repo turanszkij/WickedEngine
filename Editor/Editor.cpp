@@ -95,43 +95,9 @@ void Editor::Initialize()
 
 	wi::renderer::SetOcclusionCullingEnabled(true);
 
-	loader.Load();
-
 	renderComponent.main = this;
-
-	loader.addLoadingComponent(&renderComponent, this, 0.2f);
-
-	ActivatePath(&loader);
-}
-
-void EditorLoadingScreen::Load()
-{
-	font = wi::SpriteFont("Loading...", wi::font::Params(0, 0, 36, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_CENTER));
-	font.anim.typewriter.time = 2;
-	font.anim.typewriter.looped = true;
-	font.anim.typewriter.character_start = 7;
-	AddFont(&font);
-
-	sprite.anim.opa = 1;
-	sprite.anim.repeatable = true;
-	sprite.params.siz = XMFLOAT2(128, 128);
-	sprite.params.pivot = XMFLOAT2(0.5f, 1.0f);
-	sprite.params.quality = wi::image::QUALITY_LINEAR;
-	sprite.params.blendFlag = wi::enums::BLENDMODE_ALPHA;
-	AddSprite(&sprite);
-
-	wi::gui::CheckBox::SetCheckTextGlobal(ICON_CHECK);
-
-	LoadingScreen::Load();
-}
-void EditorLoadingScreen::Update(float dt)
-{
-	font.params.posX = GetLogicalWidth()*0.5f - font.TextWidth() * 0.5f;
-	font.params.posY = GetLogicalHeight()*0.5f;
-	sprite.params.pos = XMFLOAT3(GetLogicalWidth()*0.5f, GetLogicalHeight()*0.5f - font.TextHeight(), 0);
-	sprite.textureResource.SetTexture(*wi::texturehelper::getLogo()); // use embedded asset
-
-	LoadingScreen::Update(dt);
+	renderComponent.Load();
+	ActivatePath(&renderComponent, 0.2f);
 }
 
 void EditorComponent::ResizeBuffers()
@@ -167,6 +133,17 @@ void EditorComponent::ResizeLayout()
 }
 void EditorComponent::Load()
 {
+	loadmodel_workload.priority = wi::jobsystem::Priority::Low;
+
+	loadmodel_font.SetText("Loading model...");
+	loadmodel_font.anim.typewriter.time = 2;
+	loadmodel_font.anim.typewriter.looped = true;
+	loadmodel_font.anim.typewriter.character_start = 13;
+	loadmodel_font.params.size = 28;
+	loadmodel_font.params.h_align = wi::font::WIFALIGN_LEFT;
+	loadmodel_font.params.v_align = wi::font::WIFALIGN_TOP;
+	AddFont(&loadmodel_font);
+
 	topmenuWnd.Create("", wi::gui::Window::WindowControls::NONE);
 	topmenuWnd.SetShadowRadius(2);
 	GetGUI().AddWidget(&topmenuWnd);
@@ -1060,6 +1037,8 @@ void EditorComponent::Update(float dt)
 			PostSaveText("Screenshot saved: ", filename);
 		}
 	}
+
+	loadmodel_font.SetHidden(!wi::jobsystem::IsBusy(loadmodel_workload));
 
 	Scene& scene = GetCurrentScene();
 	EditorScene& editorscene = GetCurrentEditorScene();
@@ -3616,6 +3595,9 @@ void EditorComponent::ResizeViewport3D()
 	{
 		main->infoDisplay.rect.from_viewport(viewport3D);
 		main->infoDisplay.rect.left = LogicalToPhysical(generalButton.translation_local.x + generalButton.scale_local.x + 10);
+		loadmodel_font.params.posX = PhysicalToLogical(uint32_t(viewport3D.top_left_x + viewport3D.width * 0.5f));
+		loadmodel_font.params.posX -= wi::font::TextWidth(loadmodel_font.GetText(), loadmodel_font.params) * 0.5f;
+		loadmodel_font.params.posY = PhysicalToLogical(uint32_t(viewport3D.top_left_y)) + 15;
 		return;
 	}
 
@@ -3656,6 +3638,10 @@ void EditorComponent::ResizeViewport3D()
 
 	main->infoDisplay.rect.from_viewport(viewport3D);
 	main->infoDisplay.rect.left = LogicalToPhysical(generalButton.translation_local.x + generalButton.scale_local.x + 10);
+
+	loadmodel_font.params.posX = PhysicalToLogical(uint32_t(viewport3D.top_left_x + viewport3D.width * 0.5f));
+	loadmodel_font.params.posX -= wi::font::TextWidth(loadmodel_font.GetText(), loadmodel_font.params) * 0.5f;
+	loadmodel_font.params.posY = PhysicalToLogical(uint32_t(viewport3D.top_left_y)) + 15;
 
 	GraphicsDevice* device = wi::graphics::GetDevice();
 
@@ -4194,82 +4180,76 @@ void EditorComponent::Open(std::string filename)
 
 	size_t camera_count_prev = GetCurrentScene().cameras.GetCount();
 
-	main->loader.addLoadingFunction([=](wi::jobsystem::JobArgs args) {
-
-		if (type == FileType::WISCENE) // engine-serialized
+	wi::jobsystem::Execute(loadmodel_workload, [=] (wi::jobsystem::JobArgs) {
+		wi::backlog::post("[Editor] started loading model: " + filename);
+		std::shared_ptr<Scene> scene = std::make_shared<Scene>();
+		if (type == FileType::WISCENE)
 		{
-			Scene scene;
-			wi::scene::LoadModel(scene, filename);
-			GetCurrentScene().Merge(scene);
-			if (GetCurrentEditorScene().path.empty())
-			{
-				GetCurrentEditorScene().path = filename;
-			}
+			wi::scene::LoadModel(*scene, filename);
 		}
-		else if (type == FileType::OBJ) // wavefront-obj
+		else if (type == FileType::OBJ)
 		{
-			Scene scene;
-			ImportModel_OBJ(filename, scene);
-			GetCurrentScene().Merge(scene);
+			ImportModel_OBJ(filename, *scene);
 		}
-		else if (type == FileType::GLTF || type == FileType::GLB || type == FileType::VRM) // gltf, vrm
+		else if (type == FileType::GLTF || type == FileType::GLB || type == FileType::VRM)
 		{
-			Scene scene;
-			ImportModel_GLTF(filename, scene);
-			GetCurrentScene().Merge(scene);
+			ImportModel_GLTF(filename, *scene);
 		}
 		else if (type == FileType::FBX)
 		{
-			Scene scene;
-			ImportModel_FBX(filename, scene);
-			GetCurrentScene().Merge(scene);
+			ImportModel_FBX(filename, *scene);
 		}
-	});
-	main->loader.onFinished([=] {
 
-		// Detect when the new scene contains a new camera, and snap the camera onto it:
-		size_t camera_count = GetCurrentScene().cameras.GetCount();
-		if (camera_count > 0 && camera_count > camera_count_prev)
-		{
-			Entity entity = GetCurrentScene().cameras.GetEntity(camera_count_prev);
-			if (entity != INVALID_ENTITY)
+		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=] (uint64_t userdata) {
+
+			if (type == FileType::WISCENE && GetCurrentEditorScene().path.empty())
 			{
-				CameraComponent* cam = GetCurrentScene().cameras.GetComponent(entity);
-				if (cam != nullptr)
+				GetCurrentEditorScene().path = filename;
+			}
+			GetCurrentScene().Merge(*scene);
+
+			// Detect when the new scene contains a new camera, and snap the camera onto it:
+			size_t camera_count = GetCurrentScene().cameras.GetCount();
+			if (camera_count > 0 && camera_count > camera_count_prev)
+			{
+				Entity entity = GetCurrentScene().cameras.GetEntity(camera_count_prev);
+				if (entity != INVALID_ENTITY)
 				{
-					EditorScene& editorscene = GetCurrentEditorScene();
-					editorscene.camera.Eye = cam->Eye;
-					editorscene.camera.At = cam->At;
-					editorscene.camera.Up = cam->Up;
-					editorscene.camera.fov = cam->fov;
-					editorscene.camera.zNearP = cam->zNearP;
-					editorscene.camera.zFarP = cam->zFarP;
-					editorscene.camera.focal_length = cam->focal_length;
-					editorscene.camera.aperture_size = cam->aperture_size;
-					editorscene.camera.aperture_shape = cam->aperture_shape;
-					// camera aspect should be always for the current screen
-					editorscene.camera.width = (float)renderPath->GetInternalResolution().x;
-					editorscene.camera.height = (float)renderPath->GetInternalResolution().y;
-
-					TransformComponent* camera_transform = GetCurrentScene().transforms.GetComponent(entity);
-					if (camera_transform != nullptr)
+					CameraComponent* cam = GetCurrentScene().cameras.GetComponent(entity);
+					if (cam != nullptr)
 					{
-						editorscene.camera_transform = *camera_transform;
-						editorscene.camera.TransformCamera(editorscene.camera_transform);
-					}
+						EditorScene& editorscene = GetCurrentEditorScene();
+						editorscene.camera.Eye = cam->Eye;
+						editorscene.camera.At = cam->At;
+						editorscene.camera.Up = cam->Up;
+						editorscene.camera.fov = cam->fov;
+						editorscene.camera.zNearP = cam->zNearP;
+						editorscene.camera.zFarP = cam->zFarP;
+						editorscene.camera.focal_length = cam->focal_length;
+						editorscene.camera.aperture_size = cam->aperture_size;
+						editorscene.camera.aperture_shape = cam->aperture_shape;
+						// camera aspect should be always for the current screen
+						editorscene.camera.width = (float)renderPath->GetInternalResolution().x;
+						editorscene.camera.height = (float)renderPath->GetInternalResolution().y;
 
-					editorscene.camera.UpdateCamera();
+						TransformComponent* camera_transform = GetCurrentScene().transforms.GetComponent(entity);
+						if (camera_transform != nullptr)
+						{
+							editorscene.camera_transform = *camera_transform;
+							editorscene.camera.TransformCamera(editorscene.camera_transform);
+						}
+
+						editorscene.camera.UpdateCamera();
+					}
 				}
 			}
-		}
 
-		main->ActivatePath(this, 0.2f, wi::Color::Black());
-		componentsWnd.weatherWnd.Update();
-		componentsWnd.RefreshEntityTree();
-		RefreshSceneList();
+			componentsWnd.weatherWnd.Update();
+			componentsWnd.RefreshEntityTree();
+			RefreshSceneList();
+			wi::backlog::post("[Editor] finished loading model: " + filename);
 		});
-	main->ActivatePath(&main->loader, 0.2f, wi::Color::Black());
-	ResetHistory();
+	});
 }
 void EditorComponent::Save(const std::string& filename)
 {

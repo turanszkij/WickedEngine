@@ -432,6 +432,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		}
 
 		// customize individual elements:
+		editor->loadmodel_font.params.color = theme.font.color;
 		XMFLOAT4 highlight = theme_color_focus;
 		highlight.x *= 2;
 		highlight.y *= 2;

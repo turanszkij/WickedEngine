@@ -11,16 +11,6 @@
 #include "GeneralWindow.h"
 #include "IconDefinitions.h"
 
-class EditorLoadingScreen : public wi::LoadingScreen
-{
-private:
-	wi::Sprite sprite;
-	wi::SpriteFont font;
-public:
-	void Load() override;
-	void Update(float dt) override;
-};
-
 class Editor;
 class EditorComponent : public wi::RenderPath2D
 {
@@ -224,13 +214,15 @@ public:
 		wi::vector<uint8_t> filedata;
 	};
 	wi::vector<FontData> font_datas;
+
+	wi::jobsystem::context loadmodel_workload;
+	wi::SpriteFont loadmodel_font;
 };
 
 class Editor : public wi::Application
 {
 public:
 	EditorComponent renderComponent;
-	EditorLoadingScreen loader;
 	wi::config::File config;
 
 	void Initialize() override;

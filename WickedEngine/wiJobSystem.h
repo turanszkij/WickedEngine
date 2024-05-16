@@ -20,10 +20,18 @@ namespace wi::jobsystem
 
 	uint32_t GetThreadCount();
 
+	enum class Priority
+	{
+		High,	// Default
+		Low,	// Use this when you need the results after a few frames, not blocking high priority tasks
+		Count
+	};
+
 	// Defines a state of execution, can be waited on
 	struct context
 	{
 		std::atomic<uint32_t> counter{ 0 };
+		Priority priority = Priority::High;
 	};
 
 	// Add a task to execute asynchronously. Any idle thread will execute this.
