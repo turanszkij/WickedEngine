@@ -411,7 +411,7 @@ Requires Tier2 support for variable shading rate</entry>
 Note that DDGI probes that were loaded with the scene will still be active if this is turned off, but they won't be updated.</entry>
 		</section>
 	</section>
-	<section name="General Options " hint="Window">
+	<section name="General" hint="Window">
 		<entry id="0" hint="text">一般設定</entry>
 		<section name="AABB visualizer: " hint="CheckBox">
 			<entry id="0" hint="text">AABB visualizer: </entry>

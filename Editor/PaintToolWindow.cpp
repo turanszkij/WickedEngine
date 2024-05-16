@@ -11,7 +11,8 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 
-	wi::gui::Window::Create("Paint Tool " ICON_PAINTTOOL, wi::gui::Window::WindowControls::CLOSE | wi::gui::Window::WindowControls::RESIZE_RIGHT);
+	wi::gui::Window::Create("Paint Tool", wi::gui::Window::WindowControls::CLOSE | wi::gui::Window::WindowControls::RESIZE_RIGHT);
+	SetText("Paint Tool " ICON_PAINTTOOL);
 	SetSize(XMFLOAT2(300, 800));
 
 	float x = 105;

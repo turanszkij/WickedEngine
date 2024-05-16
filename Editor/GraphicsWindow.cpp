@@ -7,7 +7,8 @@ using namespace wi::graphics;
 void GraphicsWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Graphics Options " ICON_GRAPHICSOPTIONS, wi::gui::Window::WindowControls::CLOSE | wi::gui::Window::WindowControls::RESIZE_RIGHT);
+	wi::gui::Window::Create("Graphics", wi::gui::Window::WindowControls::CLOSE | wi::gui::Window::WindowControls::RESIZE_RIGHT);
+	SetText("Graphics Options " ICON_GRAPHICSOPTIONS);
 
 	wi::renderer::SetToDrawDebugEnvProbes(true);
 	wi::renderer::SetToDrawGridHelper(true);

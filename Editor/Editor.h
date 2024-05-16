@@ -239,18 +239,16 @@ enum class EditorLocalization
 	// Top menu:
 	Save,
 	Open,
-	ContentBrowser,
 	Backlog,
 	Profiler,
-	Cinema,
+	__REMOVED_Cinema,
 	FullScreen,
 	Windowed,
 	BugReport,
 	About,
 	Exit,
-
-	// Other:
 	UntitledScene,
+	ContentBrowser,
 
 	Count
 };
@@ -258,7 +256,6 @@ static const char* EditorLocalizationStrings[] = {
 	// Top menu:
 	"Save",
 	"Open",
-	"Content",
 	"Backlog",
 	"Profiler",
 	"Cinema",
@@ -267,8 +264,7 @@ static const char* EditorLocalizationStrings[] = {
 	"Bug report",
 	"About",
 	"Exit",
-
-	// Other:
-	"Untitled scene"
+	"Untitled scene",
+	"Content",
 };
 static_assert(arraysize(EditorLocalizationStrings) == size_t(EditorLocalization::Count));

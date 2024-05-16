@@ -9,7 +9,8 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 
-	wi::gui::Window::Create("Entity - Component System", wi::gui::Window::WindowControls::RESIZE_LEFT);
+	wi::gui::Window::Create("Components ", wi::gui::Window::WindowControls::RESIZE_LEFT);
+	SetText("Entity - Component System");
 	font.params.h_align = wi::font::WIFALIGN_RIGHT;
 	SetShadowRadius(2);
 

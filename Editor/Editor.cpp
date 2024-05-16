@@ -272,7 +272,7 @@ void EditorComponent::Load()
 		NEW_VOXELGRID,
 	};
 
-	newEntityCombo.Create("");
+	newEntityCombo.Create("New: ");
 	newEntityCombo.SetShadowRadius(0);
 	newEntityCombo.SetInvalidSelectionText("+");
 	newEntityCombo.SetDropArrowEnabled(false);
@@ -4707,6 +4707,7 @@ void EditorComponent::UpdateDynamicWidgets()
 	y = topmenuWnd.GetSize().y + padding;
 	newEntityCombo.SetPos(XMFLOAT2(ofs, y));
 	newEntityCombo.Update(*this, 0);
+	newEntityCombo.SetText(""); // override localization
 
 
 	XMFLOAT4 color_on = playButton.sprites[wi::gui::FOCUS].params.color;

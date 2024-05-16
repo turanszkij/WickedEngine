@@ -11,7 +11,8 @@ void GeneralWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 
-	wi::gui::Window::Create("General Options " ICON_GENERALOPTIONS, wi::gui::Window::WindowControls::CLOSE | wi::gui::Window::WindowControls::RESIZE_RIGHT);
+	wi::gui::Window::Create("General", wi::gui::Window::WindowControls::CLOSE | wi::gui::Window::WindowControls::RESIZE_RIGHT);
+	SetText("General Options " ICON_GENERALOPTIONS);
 
 	SetSize(XMFLOAT2(300, 700));
 
