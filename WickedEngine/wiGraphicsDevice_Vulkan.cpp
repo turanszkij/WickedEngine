@@ -1173,10 +1173,7 @@ namespace vulkan_internal
 				//	the color space change will not be applied
 				res = vkDeviceWaitIdle(device);
 				assert(res == VK_SUCCESS);
-				{
-					std::scoped_lock lock(allocationhandler->destroylocker);
-					allocationhandler->destroyer_swapchains.emplace_back(internal_state->swapChain, allocationhandler->framecount);
-				}
+				vkDestroySwapchainKHR(device, internal_state->swapChain, nullptr);
 				internal_state->swapChain = nullptr;
 			}
 		}
