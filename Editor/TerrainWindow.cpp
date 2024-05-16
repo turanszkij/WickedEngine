@@ -67,6 +67,7 @@ PerlinModifierWindow::PerlinModifierWindow() : ModifierWindow("Perlin Noise")
 	AddWidget(&octavesSlider);
 
 	SetSize(XMFLOAT2(200, 140));
+	SetCollapsed(true);
 }
 void PerlinModifierWindow::ResizeLayout()
 {
@@ -140,6 +141,7 @@ VoronoiModifierWindow::VoronoiModifierWindow() : ModifierWindow("Voronoi Noise")
 	AddWidget(&perturbationSlider);
 
 	SetSize(XMFLOAT2(200, 200));
+	SetCollapsed(true);
 }
 void VoronoiModifierWindow::ResizeLayout()
 {
@@ -238,6 +240,7 @@ HeightmapModifierWindow::HeightmapModifierWindow() : ModifierWindow("Heightmap")
 	AddWidget(&loadButton);
 
 	SetSize(XMFLOAT2(200, 180));
+	SetCollapsed(true);
 }
 void HeightmapModifierWindow::ResizeLayout()
 {
@@ -604,6 +607,17 @@ void PropsWindow::ResizeLayout()
 		y += padding;
 	};
 
+	auto add_fullwidth = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+		};
+
 	auto add_window = [&](wi::gui::Window& widget) {
 		const float margin_left = padding;
 		const float margin_right = padding;
@@ -614,7 +628,7 @@ void PropsWindow::ResizeLayout()
 		widget.SetEnabled(true);
 	};
 
-	add(addButton);
+	add_fullwidth(addButton);
 
 	for(auto& window : windows)
 	{

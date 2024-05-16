@@ -53,6 +53,7 @@ namespace wi::input
 	bool double_click = false;
 	wi::Timer doubleclick_timer;
 	XMFLOAT2 doubleclick_prevpos = XMFLOAT2(0, 0);
+	CURSOR cursor_current = CURSOR_DEFAULT;
 	CURSOR cursor_next = CURSOR_DEFAULT;
 
 	const KeyboardState& GetKeyboardState() { return keyboard; }
@@ -446,6 +447,7 @@ namespace wi::input
 		}
 
 		// Cursor update:
+		if(cursor_next != cursor_current || cursor_next != CURSOR_DEFAULT)
 		{
 #ifdef PLATFORM_WINDOWS_DESKTOP
 			static HCURSOR cursor_table[] = {
@@ -477,8 +479,9 @@ namespace wi::input
 			SDL_SetCursor(cursor_table[cursor_next] ? cursor_table[cursor_next] : cursor_table[CURSOR_DEFAULT]);
 #endif // SDL2
 
-			cursor_next = CURSOR_DEFAULT;
+			cursor_current = cursor_next;
 		}
+		cursor_next = CURSOR_DEFAULT;
 
 		wi::profiler::EndRange(range);
 	}

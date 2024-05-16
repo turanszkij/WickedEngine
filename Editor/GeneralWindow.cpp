@@ -539,6 +539,12 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->navtestButton.sprites[i].params.corners_rounding[1].radius = 10;
 			editor->navtestButton.sprites[i].params.corners_rounding[2].radius = 10;
 			editor->navtestButton.sprites[i].params.corners_rounding[3].radius = 10;
+
+			editor->cinemaButton.sprites[i].params.enableCornerRounding();
+			editor->cinemaButton.sprites[i].params.corners_rounding[0].radius = 10;
+			editor->cinemaButton.sprites[i].params.corners_rounding[1].radius = 10;
+			editor->cinemaButton.sprites[i].params.corners_rounding[2].radius = 10;
+			editor->cinemaButton.sprites[i].params.corners_rounding[3].radius = 10;
 		}
 		for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
 		{

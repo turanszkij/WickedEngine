@@ -743,7 +743,7 @@ void EditorComponent::Load()
 	topmenuWnd.AddWidget(&profilerButton);
 
 
-	cinemaButton.Create("Cinema");
+	cinemaButton.Create(ICON_CINEMA_MODE);
 	cinemaButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	cinemaButton.SetShadowRadius(2);
 	cinemaButton.font.params.shadowColor = wi::Color::Transparent();
@@ -759,7 +759,7 @@ void EditorComponent::Load()
 		wi::profiler::SetEnabled(false);
 		profilerWnd.SetVisible(false);
 	});
-	topmenuWnd.AddWidget(&cinemaButton);
+	GetGUI().AddWidget(&cinemaButton);
 
 
 	fullscreenButton.Create("Full screen");
@@ -3597,8 +3597,11 @@ void EditorComponent::ResizeViewport3D()
 	height = std::max(64, height);
 	if (renderPath->width == width && renderPath->height == height)
 	{
-		main->infoDisplay.rect.from_viewport(viewport3D);
-		main->infoDisplay.rect.left = LogicalToPhysical(generalButton.translation_local.x + generalButton.scale_local.x + 10);
+		if (GetGUI().IsVisible())
+		{
+			main->infoDisplay.rect.from_viewport(viewport3D);
+			main->infoDisplay.rect.left = LogicalToPhysical(generalButton.translation_local.x + generalButton.scale_local.x + 10);
+		}
 		loadmodel_font.params.posX = PhysicalToLogical(uint32_t(viewport3D.top_left_x + viewport3D.width * 0.5f));
 		loadmodel_font.params.posX -= wi::font::TextWidth(loadmodel_font.GetText(), loadmodel_font.params) * 0.5f;
 		loadmodel_font.params.posY = PhysicalToLogical(uint32_t(viewport3D.top_left_y)) + 15;
@@ -3640,8 +3643,11 @@ void EditorComponent::ResizeViewport3D()
 	viewport3D.width = (float)renderPath->width;
 	viewport3D.height = (float)renderPath->height;
 
-	main->infoDisplay.rect.from_viewport(viewport3D);
-	main->infoDisplay.rect.left = LogicalToPhysical(generalButton.translation_local.x + generalButton.scale_local.x + 10);
+	if (GetGUI().IsVisible())
+	{
+		main->infoDisplay.rect.from_viewport(viewport3D);
+		main->infoDisplay.rect.left = LogicalToPhysical(generalButton.translation_local.x + generalButton.scale_local.x + 10);
+	}
 
 	loadmodel_font.params.posX = PhysicalToLogical(uint32_t(viewport3D.top_left_x + viewport3D.width * 0.5f));
 	loadmodel_font.params.posX -= wi::font::TextWidth(loadmodel_font.GetText(), loadmodel_font.params) * 0.5f;
@@ -4525,17 +4531,6 @@ void EditorComponent::UpdateDynamicWidgets()
 		logButton.SetText(logButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_BACKLOG " Backlog" : ICON_BACKLOG);
 	}
 
-	if (cinemaButton.GetState() > wi::gui::WIDGETSTATE::IDLE && current_localization.Get((size_t)EditorLocalization::Cinema) != nullptr)
-	{
-		tmp = ICON_CINEMA_MODE " ";
-		tmp += current_localization.Get((size_t)EditorLocalization::Cinema);
-		cinemaButton.SetText(tmp);
-	}
-	else
-	{
-		cinemaButton.SetText(cinemaButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? ICON_CINEMA_MODE " Cinema" : ICON_CINEMA_MODE);
-	}
-
 	if (profilerButton.GetState() > wi::gui::WIDGETSTATE::IDLE && current_localization.Get((size_t)EditorLocalization::Profiler) != nullptr)
 	{
 		tmp = ICON_PROFILER " ";
@@ -4615,7 +4610,6 @@ void EditorComponent::UpdateDynamicWidgets()
 	fullscreenButton.SetSize(XMFLOAT2(wi::math::Lerp(fullscreenButton.GetSize().x, fullscreenButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	bugButton.SetSize(XMFLOAT2(wi::math::Lerp(bugButton.GetSize().x, bugButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	profilerButton.SetSize(XMFLOAT2(wi::math::Lerp(profilerButton.GetSize().x, profilerButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
-	cinemaButton.SetSize(XMFLOAT2(wi::math::Lerp(cinemaButton.GetSize().x, cinemaButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	logButton.SetSize(XMFLOAT2(wi::math::Lerp(logButton.GetSize().x, logButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	contentBrowserButton.SetSize(XMFLOAT2(wi::math::Lerp(contentBrowserButton.GetSize().x, contentBrowserButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
 	openButton.SetSize(XMFLOAT2(wi::math::Lerp(openButton.GetSize().x, openButton.GetState() > wi::gui::WIDGETSTATE::IDLE ? wid_focus : wid_idle, lerp), hei));
@@ -4625,8 +4619,7 @@ void EditorComponent::UpdateDynamicWidgets()
 	aboutButton.SetPos(XMFLOAT2(exitButton.GetPos().x - aboutButton.GetSize().x - padding, y));
 	bugButton.SetPos(XMFLOAT2(aboutButton.GetPos().x - bugButton.GetSize().x - padding, y));
 	fullscreenButton.SetPos(XMFLOAT2(bugButton.GetPos().x - fullscreenButton.GetSize().x - padding, y));
-	cinemaButton.SetPos(XMFLOAT2(fullscreenButton.GetPos().x - cinemaButton.GetSize().x - padding, y));
-	profilerButton.SetPos(XMFLOAT2(cinemaButton.GetPos().x - profilerButton.GetSize().x - padding, y));
+	profilerButton.SetPos(XMFLOAT2(fullscreenButton.GetPos().x - profilerButton.GetSize().x - padding, y));
 	logButton.SetPos(XMFLOAT2(profilerButton.GetPos().x - logButton.GetSize().x - padding, y));
 	contentBrowserButton.SetPos(XMFLOAT2(logButton.GetPos().x - contentBrowserButton.GetSize().x - padding, y));
 	openButton.SetPos(XMFLOAT2(contentBrowserButton.GetPos().x - openButton.GetSize().x - padding, y));
@@ -4662,7 +4655,7 @@ void EditorComponent::UpdateDynamicWidgets()
 	newSceneButton.SetSize(XMFLOAT2(hei, hei));
 	newSceneButton.SetPos(XMFLOAT2(ofs, mid - hei * 0.5f));
 
-	hei = 22;
+	hei = 24;
 	padding = 8;
 	ofs = screenW - padding - hei;
 	if (componentsWnd.IsVisible())
@@ -4700,6 +4693,11 @@ void EditorComponent::UpdateDynamicWidgets()
 	navtestButton.SetPos(XMFLOAT2(ofs, y));
 	navtestButton.Update(*this, 0);
 	y += navtestButton.GetSize().y + padding;
+
+	cinemaButton.SetSize(XMFLOAT2(hei, hei));
+	cinemaButton.SetPos(XMFLOAT2(ofs, y));
+	cinemaButton.Update(*this, 0);
+	y += cinemaButton.GetSize().y + padding;
 
 
 	newEntityCombo.SetSize(XMFLOAT2(hei * 1.4f, hei * 1.4f));
