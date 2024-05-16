@@ -4,6 +4,7 @@
 
 [![Github Build Status](https://github.com/turanszkij/WickedEngine/workflows/Build/badge.svg)](https://github.com/turanszkij/WickedEngine/actions)
 [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
+[![Forum](https://img.shields.io/badge/forum--blue)](https://wickedengine.net/forum/)
 <a href="https://twitter.com/intent/follow?screen_name=turanszkij"><img src="https://img.shields.io/twitter/follow/turanszkij.svg?style=social" alt="follow on Twitter"></a>
 <br/>
 [![Steam](https://img.shields.io/badge/-Steam-383838.svg?style=for-the-badge&logo=steam)](https://store.steampowered.com/app/1967460/Wicked_Engine/)
@@ -13,15 +14,15 @@
 <br/>
 <img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/videoprojectors.gif" width="320px"/>
 Wicked Engine is an open-source 3D engine with modern graphics. Use this as a C++ framework for your graphics projects, a standalone 3D editor, LUA scripting or just for learning.<br/>
-This project is hosted on <a href="https://github.com/turanszkij/WickedEngine/">GitHub</a>.
 
-- [Documentation](Content/Documentation/WickedEngine-Documentation.md)<br/>
-- [Scripting API Documentation](Content/Documentation/ScriptingAPI-Documentation.md)<br/>
+- [Website](https://wickedengine.net/)<br/>
+- [Forum](https://wickedengine.net/forum/)<br/>
 - [Features](features.txt)<br/>
-- [Devblog](https://wickedengine.net/)<br/>
 - [Videos](https://www.youtube.com/playlist?list=PLLN-1FTGyLU_HJoC5zx6hJkB3D2XLiaxS)<br/>
+- [C++ Documentation](Content/Documentation/WickedEngine-Documentation.md)<br/>
+- [Lua Documentation](Content/Documentation/ScriptingAPI-Documentation.md)<br/>
 
-You can get the full source code by using Git version control and cloning https://github.com/turanszkij/WickedEngine.git, or downloading it as zip. You can also download prebuilt and packaged version of the Editor here (requires Github sign in): [![Github Build Status](https://github.com/turanszkij/WickedEngine/workflows/Build/badge.svg)](https://github.com/turanszkij/WickedEngine/actions)
+You can get the full source code by using Git version control and cloning https://github.com/turanszkij/WickedEngine.git, or downloading it as zip. You can also download nightly packaged builds of the Editor here (requires Github sign in): [![Github Build Status](https://github.com/turanszkij/WickedEngine/workflows/Build/badge.svg)](https://github.com/turanszkij/WickedEngine/actions)
 <br/>
 <br/>
 
@@ -203,7 +204,7 @@ The native model format is the <b>WISCENE</b> format. Any application using Wick
 
 <img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/character_lookat.gif" width="320px"/>
 
-In addition, the Editor supports the importing of some common model formats (the list will potentially grow): 
+In addition, the Editor supports importing some common model formats: 
 - <b>OBJ</b>
 - <b>GLTF 2.0</b>
 - <b>VRM</b>
@@ -214,7 +215,7 @@ The preferred workflow is to import models into the Editor, and save them as <b>
 <img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/snowstorm.gif" width="320px"/>
 
 ### Graphics API:
-The default renderer is `DirectX 12` on Windows and `Vulkan` on Linux. The `DirectX 11` renderer is no longer available starting from version 0.57.0, but it can be found on the <a href="https://github.com/turanszkij/WickedEngine/tree/dx11-backup">dx11-backup branch</a>.
+The default renderer is `DirectX 12` on Windows and `Vulkan` on Linux.
 You can specify command line arguments (without any prefix) to switch between render devices or other settings. Currently the list of options:
 <table>
   <tr>
@@ -222,16 +223,12 @@ You can specify command line arguments (without any prefix) to switch between re
 	<th>Description</th>
   </tr>
   <tr>
-	<td>dx12</td>
-	<td>Use DirectX 12 rendering device</td>
-  </tr>
-  <tr>
 	<td>vulkan</td>
-	<td>Use Vulkan rendering device</td>
+	<td>Use the Vulkan rendering device on Windows</td>
   </tr>
   <tr>
 	<td>debugdevice</td>
-	<td>Use debug layer for graphics API validation. Performance will be degraded, but graphics warnings and errors will be written to "Output" window</td>
+	<td>Use debug layer for graphics API validation. Performance will be degraded, but graphics warnings and errors will be written to the "Output" window</td>
   </tr>
   <tr>
 	<td>gpuvalidation</td>
@@ -271,9 +268,10 @@ If you are having trouble getting the applications to run, make sure that you sa
 
 <img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/weather.gif" width="320px"/>
 
-- If you experience crashes, follow these steps to find out the problem:
+- If you experience crashes, you can try these to find out the problem:
 	- make sure your environment is up to date, with latest graphics drivers and operating system updates.
-	- see if there is a wiBackLog.txt in your user temp folder (for example: C:\Users\username\AppData\Local\Temp), and request help on Discord or Github issue
-	- build the engine in Debug mode and try to run it, see where it crashes, provide call stack on Discord or Github issue
+	- see if there is a wiBackLog.txt in your user temp folder (for example: C:\Users\username\AppData\Local\Temp)
+	- request help on the [Forum](https://wickedengine.net/forum/), [Discord](https://discord.gg/CFjRYmE) or [Github issue](https://github.com/turanszkij/WickedEngine/issues)
+	- build the engine in Debug mode and try to run it, see where it crashes
 	- run the engine with the `debugdevice` command argument and post the text from your console output window when the crash happens
 		- for very advanced users, using `gpuvalidation` with `debugdevice` will print additional graphics debug information
