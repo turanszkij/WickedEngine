@@ -52,6 +52,7 @@ namespace wi::input
 	bool pen_override = false;
 	bool double_click = false;
 	wi::Timer doubleclick_timer;
+	XMFLOAT2 doubleclick_prevpos = XMFLOAT2(0, 0);
 
 	const KeyboardState& GetKeyboardState() { return keyboard; }
 	const MouseState& GetMouseState() { return mouse; }
@@ -434,11 +435,13 @@ namespace wi::input
 		double_click = false;
 		if (Press(MOUSE_BUTTON_LEFT))
 		{
+			XMFLOAT2 pos = mouse.position;
 			double elapsed = doubleclick_timer.record_elapsed_seconds();
-			if (elapsed < 0.5)
+			if (elapsed < 0.5 && wi::math::Distance(doubleclick_prevpos, pos) < 5)
 			{
 				double_click = true;
 			}
+			doubleclick_prevpos = pos;
 		}
 
 		wi::profiler::EndRange(range);

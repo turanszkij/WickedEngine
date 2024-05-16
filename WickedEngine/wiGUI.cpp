@@ -5045,11 +5045,6 @@ namespace wi::gui
 							SetTooltip(item.name);
 							if (clicked)
 							{
-								if (!wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) && !wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL)
-									&& !wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) && !wi::input::Down(wi::input::KEYBOARD_BUTTON_RSHIFT))
-								{
-									ClearSelection();
-								}
 								if (wi::input::IsDoubleClicked() && onDoubleClick != nullptr)
 								{
 									EventArgs args;
@@ -5060,6 +5055,11 @@ namespace wi::gui
 								}
 								else
 								{
+									if (!wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) && !wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL)
+										&& !wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) && !wi::input::Down(wi::input::KEYBOARD_BUTTON_RSHIFT))
+									{
+										ClearSelection();
+									}
 									Select(i);
 								}
 								Activate();

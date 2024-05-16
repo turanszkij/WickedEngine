@@ -4984,7 +4984,7 @@ void EditorComponent::FocusCameraOnSelected()
 	float focus_offset = 5;
 	if (aabb.getArea() > 0)
 	{
-		focus_offset = aabb.getRadius() * 1.5f;
+		focus_offset = aabb.getRadius() * 2;
 		XMFLOAT3 aabb_center = aabb.getCenter();
 		centerV = XMLoadFloat3(&aabb_center);
 	}
