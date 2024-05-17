@@ -2040,6 +2040,7 @@ void PaintToolWindow::RecreateTerrainMaterialButtons()
 		button.Create("");
 		AddWidget(&button);
 		button.SetVisible(false);
+		button.SetEnabled(true);
 		button.SetText("");
 		button.SetTooltip("");
 

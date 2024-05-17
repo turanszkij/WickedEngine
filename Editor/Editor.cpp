@@ -1095,10 +1095,12 @@ void EditorComponent::Update(float dt)
 			translator.Update(camera, currentMouse, *renderPath);
 		}
 
-		bool leftmouse_select =
-			!translator.IsInteracting() &&
-			paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED &&
-			(!componentsWnd.decalWnd.IsEnabled() || !componentsWnd.decalWnd.placementCheckBox.GetCheck()) &&
+		// This check whether pressing left mouse can modify selection:
+		const bool leftmouse_select =
+			!translator.IsInteracting() && // translator shouldn't be active
+			paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED && // paint tool shouldn't be active
+			(!componentsWnd.decalWnd.IsEnabled() || !componentsWnd.decalWnd.placementCheckBox.GetCheck()) && // decal placement shouldn't be active
+			!(wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) && wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT)) && // instance placement shouldn't be active
 			wi::input::Press(wi::input::MOUSE_BUTTON_LEFT);
 
 		deleting = wi::input::Press(wi::input::KEYBOARD_BUTTON_DELETE);
