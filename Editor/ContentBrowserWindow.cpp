@@ -9,9 +9,7 @@ void ContentBrowserWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 	control_size = 30;
 
-	wi::gui::Window::WindowControls controls = wi::gui::Window::WindowControls::ALL;
-	controls &= ~wi::gui::Window::WindowControls::RESIZE_BOTTOMLEFT;
-	wi::gui::Window::Create("Content Browser", controls);
+	wi::gui::Window::Create("Content Browser");
 
 	RemoveWidget(&scrollbar_horizontal);
 
@@ -49,25 +47,6 @@ void ContentBrowserWindow::Update(const wi::Canvas& canvas, float dt)
 		sprites[i].params.corners_rounding[1].radius = radius;
 		sprites[i].params.corners_rounding[2].radius = radius;
 		sprites[i].params.corners_rounding[3].radius = radius;
-		resizeDragger_UpperLeft.sprites[i].params.enableCornerRounding();
-		resizeDragger_UpperLeft.sprites[i].params.corners_rounding[0].radius = radius;
-		resizeDragger_UpperRight.sprites[i].params.enableCornerRounding();
-		resizeDragger_UpperRight.sprites[i].params.corners_rounding[1].radius = radius;
-		resizeDragger_BottomLeft.sprites[i].params.enableCornerRounding();
-		resizeDragger_BottomLeft.sprites[i].params.corners_rounding[2].radius = radius;
-		resizeDragger_BottomRight.sprites[i].params.enableCornerRounding();
-		resizeDragger_BottomRight.sprites[i].params.corners_rounding[3].radius = radius;
-
-		if (IsCollapsed())
-		{
-			resizeDragger_UpperLeft.sprites[i].params.corners_rounding[2].radius = radius;
-			resizeDragger_UpperRight.sprites[i].params.corners_rounding[3].radius = radius;
-		}
-		else
-		{
-			resizeDragger_UpperLeft.sprites[i].params.corners_rounding[2].radius = 0;
-			resizeDragger_UpperRight.sprites[i].params.corners_rounding[3].radius = 0;
-		}
 
 		openFolderButton.sprites[i].params.enableCornerRounding();
 		openFolderButton.sprites[i].params.corners_rounding[0].radius = radius;
@@ -353,7 +332,7 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 		}
 
 		// Refresh theme:
-		editor->optionsWnd.generalWnd.themeCombo.SetSelected(editor->optionsWnd.generalWnd.themeCombo.GetSelected());
+		editor->generalWnd.themeCombo.SetSelected(editor->generalWnd.themeCombo.GetSelected());
 
 	});
 }

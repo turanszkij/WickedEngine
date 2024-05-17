@@ -125,11 +125,7 @@ static const uint TONEMAP_FLAG_ACES = 1 << 1;
 struct PushConstantsTonemap
 {
 	float2 resolution_rcp;
-	float exposure;
-	uint flags;
-	float brightness;
-	float contrast;
-	float saturation;
+	uint2 exposure_brightness_contrast_saturation;
 
 	int texture_input;
 	int buffer_input_luminance;
@@ -139,6 +135,7 @@ struct PushConstantsTonemap
 	int texture_bloom;
 	int texture_output;
 	uint display_colorspace;
+	uint flags;
 };
 
 struct PostprocessTileStatistics

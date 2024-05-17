@@ -4,6 +4,7 @@
 #include "wiEnums.h"
 #include "wiColor.h"
 #include "wiCanvas.h"
+#include "wiPrimitive.h"
 
 namespace wi::image
 {
@@ -57,6 +58,8 @@ namespace wi::image
 			OUTPUT_COLOR_SPACE_LINEAR = 1 << 7,
 			CORNER_ROUNDING = 1 << 8,
 			DEPTH_TEST = 1 << 9,
+			ANGULAR_DOUBLESIDED = 1 << 10,
+			ANGULAR_INVERSE = 1 << 11,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -76,6 +79,9 @@ namespace wi::image
 		float hdr_scaling = 1.0f; // a scaling value for use by linear output mapping
 		float mask_alpha_range_start = 0; // constrain mask alpha to not go below this level
 		float mask_alpha_range_end = 1; // constrain mask alpha to not go above this level
+		XMFLOAT2 angular_softness_direction = XMFLOAT2(0, 1);
+		float angular_softness_inner_angle = 0;
+		float angular_softness_outer_angle = 0;
 
 		// you can deform the image by its corners (0: top left, 1: top right, 2: bottom left, 3: bottom right)
 		XMFLOAT2 corners[4] = {
@@ -117,6 +123,8 @@ namespace wi::image
 		constexpr bool isLinearOutputMappingEnabled() const { return _flags & OUTPUT_COLOR_SPACE_LINEAR; }
 		constexpr bool isCornerRoundingEnabled() const { return _flags & CORNER_ROUNDING; }
 		constexpr bool isDepthTestEnabled() const { return _flags & DEPTH_TEST; }
+		constexpr bool isAngularSoftnessDoubleSided() const { return _flags & ANGULAR_DOUBLESIDED; }
+		constexpr bool isAngularSoftnessInverse() const { return _flags & ANGULAR_INVERSE; }
 
 		// enables draw rectangle for base texture (cutout texture outside draw rectangle)
 		constexpr void enableDrawRect(const XMFLOAT4& rect) { _flags |= DRAWRECT; drawRect = rect; }
@@ -137,6 +145,8 @@ namespace wi::image
 		constexpr void enableLinearOutputMapping(float scaling = 1.0f) { _flags |= OUTPUT_COLOR_SPACE_LINEAR; hdr_scaling = scaling; }
 		constexpr void enableCornerRounding() { _flags |= CORNER_ROUNDING; }
 		constexpr void enableDepthTest() { _flags |= DEPTH_TEST; }
+		constexpr void enableAngularSoftnessDoubleSided() { _flags |= ANGULAR_DOUBLESIDED; }
+		constexpr void enableAngularSoftnessInverse() { _flags |= ANGULAR_INVERSE; }
 
 		// disable draw rectangle for base texture (whole texture will be drawn, no cutout)
 		constexpr void disableDrawRect() { _flags &= ~DRAWRECT; }
@@ -150,6 +160,8 @@ namespace wi::image
 		constexpr void disableLinearOutputMapping() { _flags &= ~OUTPUT_COLOR_SPACE_LINEAR; }
 		constexpr void disableCornerRounding() { _flags &= ~CORNER_ROUNDING; }
 		constexpr void disableDepthTest() { _flags &= ~DEPTH_TEST; }
+		constexpr void disableAngularSoftnessDoubleSided() { _flags &= ~ANGULAR_DOUBLESIDED; }
+		constexpr void disableAngularSoftnessInverse() { _flags &= ~ANGULAR_INVERSE; }
 
 		Params() = default;
 
@@ -185,6 +197,14 @@ namespace wi::image
 				enableBackground();
 			}
 		}
+
+		Params(
+			const wi::primitive::Hitbox2D& hitbox, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1)
+		) :
+			pos(XMFLOAT3(hitbox.pos.x, hitbox.pos.y, 0)),
+			siz(hitbox.siz),
+			color(color)
+		{}
 	};
 
 

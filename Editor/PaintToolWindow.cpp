@@ -11,8 +11,9 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 
-	wi::gui::Window::Create("Paint Tool", wi::gui::Window::WindowControls::COLLAPSE);
-	SetSize(XMFLOAT2(360, 800));
+	wi::gui::Window::Create("Paint Tool", wi::gui::Window::WindowControls::CLOSE | wi::gui::Window::WindowControls::RESIZE_RIGHT);
+	SetText("Paint Tool " ICON_PAINTTOOL);
+	SetSize(XMFLOAT2(300, 800));
 
 	float x = 105;
 	float y = 0;
@@ -388,9 +389,7 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&revealTextureButton);
 
-	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 550, 50, 0));
-
-	SetMinimized(true);
+	SetVisible(false);
 }
 
 void PaintToolWindow::Update(float dt)
@@ -469,9 +468,8 @@ void PaintToolWindow::Update(float dt)
 		}
 	}
 
-	auto pointer = wi::input::GetPointer();
-	posNew = XMFLOAT2(pointer.x, pointer.y);
-	float pressureNew = pressureCheckBox.GetCheck() ? pointer.w : 1.0f;
+	posNew = XMFLOAT2(editor->currentMouse.x, editor->currentMouse.y);
+	float pressureNew = pressureCheckBox.GetCheck() ? editor->currentMouse.w : 1.0f;
 
 	const MODE mode = GetMode();
 	const float radius = radiusSlider.GetValue();
@@ -549,7 +547,7 @@ void PaintToolWindow::Update(float dt)
 		{
 		case MODE_TEXTURE:
 		{
-			wi::primitive::Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor, camera);
+			wi::primitive::Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor->renderPath, camera);
 			brushIntersect = wi::scene::Pick(pickRay, ~0u, ~0u, scene);
 
 			ObjectComponent* object = scene.objects.GetComponent(brushIntersect.entity);
@@ -669,7 +667,7 @@ void PaintToolWindow::Update(float dt)
 
 		case MODE_TERRAIN_MATERIAL:
 		{
-			Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor, camera);
+			Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor->renderPath, camera);
 			brushIntersect = wi::scene::Pick(pickRay, wi::enums::FILTER_TERRAIN, ~0u, scene);
 			if (brushIntersect.entity == INVALID_ENTITY)
 				break;
@@ -768,7 +766,7 @@ void PaintToolWindow::Update(float dt)
 		case MODE_VERTEXCOLOR:
 		case MODE_WIND:
 		{
-			Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor, camera);
+			Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor->renderPath, camera);
 			brushIntersect = wi::scene::Pick(pickRay, wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
 			if (brushIntersect.entity == INVALID_ENTITY)
 				break;
@@ -939,7 +937,7 @@ void PaintToolWindow::Update(float dt)
 		case MODE_SCULPTING_ADD:
 		case MODE_SCULPTING_SUBTRACT:
 		{
-			Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor, camera);
+			Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor->renderPath, camera);
 			brushIntersect = wi::scene::Pick(pickRay, terrain_only ? wi::enums::FILTER_TERRAIN : wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
 			if (brushIntersect.entity == INVALID_ENTITY)
 				break;
@@ -979,7 +977,7 @@ void PaintToolWindow::Update(float dt)
 				case PaintToolWindow::AxisLock::Disabled:
 					if (sculpting_normal.x < FLT_EPSILON && sculpting_normal.y < FLT_EPSILON && sculpting_normal.z < FLT_EPSILON)
 					{
-						sculpting_normal = editor->hovered.normal;
+						sculpting_normal = brushIntersect.normal;
 					}
 					sculptDir = XMVector3TransformNormal(XMVector3Normalize(XMLoadFloat3(&sculpting_normal)), XMMatrixInverse(nullptr, W));
 					break;
@@ -1123,7 +1121,7 @@ void PaintToolWindow::Update(float dt)
 						wi::renderer::RenderableLine sculpt_dir_line;
 						sculpt_dir_line.color_start = XMFLOAT4(0, 1, 0, 1);
 						sculpt_dir_line.color_end = XMFLOAT4(0, 1, 0, 1);
-						sculpt_dir_line.start = editor->hovered.position;
+						sculpt_dir_line.start = brushIntersect.position;
 						XMStoreFloat3(
 							&sculpt_dir_line.end,
 							XMLoadFloat3(&sculpt_dir_line.start) +
@@ -1146,7 +1144,7 @@ void PaintToolWindow::Update(float dt)
 		case MODE_SOFTBODY_PINNING:
 		case MODE_SOFTBODY_PHYSICS:
 		{
-			Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor, camera);
+			Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor->renderPath, camera);
 			brushIntersect = wi::scene::Pick(pickRay, wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
 			if (brushIntersect.entity == INVALID_ENTITY)
 				break;
@@ -1254,7 +1252,7 @@ void PaintToolWindow::Update(float dt)
 		case MODE_HAIRPARTICLE_REMOVE_TRIANGLE:
 		case MODE_HAIRPARTICLE_LENGTH:
 		{
-			Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor, camera);
+			Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor->renderPath, camera);
 			brushIntersect = wi::scene::Pick(pickRay, wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
 			if (brushIntersect.entity == INVALID_ENTITY)
 				break;
@@ -1508,6 +1506,8 @@ void PaintToolWindow::DrawBrush(const wi::Canvas& canvas, CommandList cmd) const
 
 PaintToolWindow::MODE PaintToolWindow::GetMode() const
 {
+	if (!IsVisible())
+		return MODE_DISABLED;
 	return (MODE)modeComboBox.GetSelectedUserdata();
 }
 
@@ -2040,6 +2040,7 @@ void PaintToolWindow::RecreateTerrainMaterialButtons()
 		button.Create("");
 		AddWidget(&button);
 		button.SetVisible(false);
+		button.SetEnabled(true);
 		button.SetText("");
 		button.SetTooltip("");
 

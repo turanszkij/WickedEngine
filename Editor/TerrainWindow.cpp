@@ -67,6 +67,7 @@ PerlinModifierWindow::PerlinModifierWindow() : ModifierWindow("Perlin Noise")
 	AddWidget(&octavesSlider);
 
 	SetSize(XMFLOAT2(200, 140));
+	SetCollapsed(true);
 }
 void PerlinModifierWindow::ResizeLayout()
 {
@@ -140,6 +141,7 @@ VoronoiModifierWindow::VoronoiModifierWindow() : ModifierWindow("Voronoi Noise")
 	AddWidget(&perturbationSlider);
 
 	SetSize(XMFLOAT2(200, 200));
+	SetCollapsed(true);
 }
 void VoronoiModifierWindow::ResizeLayout()
 {
@@ -238,6 +240,7 @@ HeightmapModifierWindow::HeightmapModifierWindow() : ModifierWindow("Heightmap")
 	AddWidget(&loadButton);
 
 	SetSize(XMFLOAT2(200, 180));
+	SetCollapsed(true);
 }
 void HeightmapModifierWindow::ResizeLayout()
 {
@@ -545,7 +548,7 @@ void PropsWindow::AddWindow(wi::terrain::Prop& prop)
 
 	windows.emplace_back().reset(wnd);
 
-	editor->optionsWnd.generalWnd.themeCombo.SetSelected(editor->optionsWnd.generalWnd.themeCombo.GetSelected()); // theme refresh
+	editor->generalWnd.themeCombo.SetSelected(editor->generalWnd.themeCombo.GetSelected()); // theme refresh
 }
 
 void PropsWindow::Update(const wi::Canvas& canvas, float dt)
@@ -604,6 +607,17 @@ void PropsWindow::ResizeLayout()
 		y += padding;
 	};
 
+	auto add_fullwidth = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+		};
+
 	auto add_window = [&](wi::gui::Window& widget) {
 		const float margin_left = padding;
 		const float margin_right = padding;
@@ -614,7 +628,7 @@ void PropsWindow::ResizeLayout()
 		widget.SetEnabled(true);
 	};
 
-	add(addButton);
+	add_fullwidth(addButton);
 
 	for(auto& window : windows)
 	{
@@ -646,7 +660,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 
 		editor->RecordEntity(archive, entity);
 
-		editor->optionsWnd.RefreshEntityTree();
+		editor->componentsWnd.RefreshEntityTree();
 		});
 
 	float x = 140;
@@ -937,7 +951,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 
 		generate_callback();
 
-		editor->optionsWnd.RefreshEntityTree();
+		editor->componentsWnd.RefreshEntityTree();
 
 		});
 	AddWidget(&presetCombo);
@@ -1102,7 +1116,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 			{
 				terrain->materialEntities[i] = INVALID_ENTITY;
 			}
-			editor->optionsWnd.paintToolWnd.RecreateTerrainMaterialButtons();
+			editor->paintToolWnd.RecreateTerrainMaterialButtons();
 		});
 
 		AddWidget(&materialCombos[i]);
@@ -1410,7 +1424,7 @@ void TerrainWindow::AddModifier(ModifierWindow* modifier_window)
 		modifiers_to_remove.push_back(modifier_window);
 		});
 
-	editor->optionsWnd.generalWnd.themeCombo.SetSelected(editor->optionsWnd.generalWnd.themeCombo.GetSelected()); // theme refresh
+	editor->generalWnd.themeCombo.SetSelected(editor->generalWnd.themeCombo.GetSelected()); // theme refresh
 }
 void TerrainWindow::SetupAssets()
 {
@@ -1722,7 +1736,7 @@ void TerrainWindow::SetupAssets()
 	terrain = &terrain_preset;
 	presetCombo.SetSelected(0);
 
-	editor->optionsWnd.paintToolWnd.RecreateTerrainMaterialButtons();
+	editor->paintToolWnd.RecreateTerrainMaterialButtons();
 }
 
 void TerrainWindow::Update(const wi::Canvas& canvas, float dt)

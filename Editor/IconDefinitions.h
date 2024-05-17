@@ -3,6 +3,7 @@
 
 // These map the Font Awesome icon definitions to editor:
 //	These definitions will help to change icons that are scattered throughout the editor code
+//	Search available icons: https://fontawesome.com/search?q=paper&o=r&m=free
 #define ICON_LAYER				ICON_FA_LAYER_GROUP
 #define ICON_TRANSFORM			ICON_FA_LOCATION_DOT
 #define ICON_MESH				ICON_FA_CUBE
@@ -73,6 +74,7 @@
 #define ICON_STOP				ICON_FA_STOP
 #define ICON_PEN				ICON_FA_PEN
 #define ICON_FILTER				ICON_FA_FILTER
+#define ICON_SEARCH				ICON_FA_MAGNIFYING_GLASS
 #define ICON_SAVE_EMBED			ICON_FA_FILE_ZIPPER
 #define ICON_SAVE_NO_EMBED		ICON_FA_FILE
 #define ICON_SAVE_HEADER		ICON_FA_FILE_CODE
@@ -83,3 +85,9 @@
 #define ICON_SOFT				ICON_FA_LEAF
 #define ICON_HACKING			ICON_FA_COMPUTER
 #define ICON_NORD			    ICON_FA_MOUNTAIN
+
+#define ICON_GENERALOPTIONS		ICON_FA_GEAR
+#define ICON_GRAPHICSOPTIONS	ICON_FA_DISPLAY
+#define ICON_CAMERAOPTIONS		ICON_CAMERA
+#define ICON_MATERIALBROWSER	ICON_MATERIAL
+#define ICON_PAINTTOOL			ICON_FA_PAINTBRUSH

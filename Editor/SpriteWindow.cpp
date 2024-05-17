@@ -23,7 +23,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 
 		editor->RecordEntity(archive, entity);
 
-		editor->optionsWnd.RefreshEntityTree();
+		editor->componentsWnd.RefreshEntityTree();
 	});
 
 	textureButton.Create("Base Texture");

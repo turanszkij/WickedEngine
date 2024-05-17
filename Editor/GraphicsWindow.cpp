@@ -7,13 +7,14 @@ using namespace wi::graphics;
 void GraphicsWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create("Graphics", wi::gui::Window::WindowControls::COLLAPSE);
+	wi::gui::Window::Create("Graphics", wi::gui::Window::WindowControls::CLOSE | wi::gui::Window::WindowControls::RESIZE_RIGHT);
+	SetText("Graphics Options " ICON_GRAPHICSOPTIONS);
 
 	wi::renderer::SetToDrawDebugEnvProbes(true);
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 1660));
+	SetSize(XMFLOAT2(300, 1660));
 
 	float step = 21;
 	float itemheight = 18;
@@ -1417,8 +1418,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	fsr2Combo.SetSelected(fsr2_preset);
 	AddWidget(&fsr2Combo);
 
-	Translate(XMFLOAT3(100, 50, 0));
-	SetMinimized(true);
+	SetVisible(false);
 }
 
 void GraphicsWindow::UpdateSwapChainFormats(wi::graphics::SwapChain* swapChain)
@@ -1632,7 +1632,7 @@ void GraphicsWindow::ResizeLayout()
 		if (!widget.IsVisible())
 			return;
 		const float margin_left = 155;
-		const float margin_right = 45;
+		const float margin_right = 50;
 		widget.SetPos(XMFLOAT2(margin_left, y));
 		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
 		y += widget.GetSize().y;
@@ -1641,7 +1641,7 @@ void GraphicsWindow::ResizeLayout()
 	auto add_right = [&](wi::gui::Widget& widget) {
 		if (!widget.IsVisible())
 			return;
-		const float margin_right = 45;
+		const float margin_right = 50;
 		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
 		y += widget.GetSize().y;
 		y += padding;

@@ -50,6 +50,11 @@ namespace wi::input
 	MouseState mouse;
 	Pen pen;
 	bool pen_override = false;
+	bool double_click = false;
+	wi::Timer doubleclick_timer;
+	XMFLOAT2 doubleclick_prevpos = XMFLOAT2(0, 0);
+	CURSOR cursor_current = CURSOR_DEFAULT;
+	CURSOR cursor_next = CURSOR_DEFAULT;
 
 	const KeyboardState& GetKeyboardState() { return keyboard; }
 	const MouseState& GetMouseState() { return mouse; }
@@ -429,6 +434,55 @@ namespace wi::input
 			}
 		}
 
+		double_click = false;
+		if (Press(MOUSE_BUTTON_LEFT))
+		{
+			XMFLOAT2 pos = mouse.position;
+			double elapsed = doubleclick_timer.record_elapsed_seconds();
+			if (elapsed < 0.5 && wi::math::Distance(doubleclick_prevpos, pos) < 5)
+			{
+				double_click = true;
+			}
+			doubleclick_prevpos = pos;
+		}
+
+		// Cursor update:
+		if(cursor_next != cursor_current || cursor_next != CURSOR_DEFAULT)
+		{
+#ifdef PLATFORM_WINDOWS_DESKTOP
+			static HCURSOR cursor_table[] = {
+				::LoadCursor(nullptr, IDC_ARROW),
+				::LoadCursor(nullptr, IDC_IBEAM),
+				::LoadCursor(nullptr, IDC_SIZEALL),
+				::LoadCursor(nullptr, IDC_SIZENS),
+				::LoadCursor(nullptr, IDC_SIZEWE),
+				::LoadCursor(nullptr, IDC_SIZENESW),
+				::LoadCursor(nullptr, IDC_SIZENWSE),
+				::LoadCursor(nullptr, IDC_HAND),
+				::LoadCursor(nullptr, IDC_NO)
+			};
+			::SetCursor(cursor_table[cursor_next]);
+#endif // PLATFORM_WINDOWS_DESKTOP
+
+#ifdef SDL2
+			static SDL_Cursor* cursor_table[] = {
+				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW),
+				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM),
+				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL),
+				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS),
+				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE),
+				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW),
+				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE),
+				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND),
+				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NO),
+			};
+			SDL_SetCursor(cursor_table[cursor_next] ? cursor_table[cursor_next] : cursor_table[CURSOR_DEFAULT]);
+#endif // SDL2
+
+			cursor_current = cursor_next;
+		}
+		cursor_next = CURSOR_DEFAULT;
+
 		wi::profiler::EndRange(range);
 	}
 
@@ -749,6 +803,11 @@ namespace wi::input
 #endif // _WIN32
 	}
 
+	bool IsDoubleClicked()
+	{
+		return double_click;
+	}
+
 	XMFLOAT4 GetAnalog(GAMEPAD_ANALOG analog, int playerindex)
 	{
 		if (playerindex < (int)controllers.size())
@@ -803,6 +862,11 @@ namespace wi::input
 	const wi::vector<Touch>& GetTouches()
 	{
 		return touches;
+	}
+
+	void SetCursor(CURSOR cursor)
+	{
+		cursor_next = cursor;
 	}
 
 }

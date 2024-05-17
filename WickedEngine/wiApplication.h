@@ -116,6 +116,8 @@ namespace wi
 			int size = 16;
 			// display default color grading helper texture in top left corner of the screen
 			bool colorgrading_helper = false;
+			// rect to specify where to render the information
+			wi::graphics::Rect rect;
 		};
 		// display all-time engine information text
 		InfoDisplayer infoDisplay;

@@ -13,8 +13,8 @@ private:
 	bool has_selected_transform = false;
 public:
 
-	void Update(const wi::scene::CameraComponent& camera, const wi::Canvas& canvas);
-	void Draw(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd) const;
+	void Update(const wi::scene::CameraComponent& camera, const XMFLOAT4& currentMouse, const wi::Canvas& canvas);
+	void Draw(const wi::scene::CameraComponent& camera, const XMFLOAT4& currentMouse, wi::graphics::CommandList cmd) const;
 
 	// Attach selection to translator temporarily
 	void PreTranslate();
@@ -49,7 +49,6 @@ public:
 
 	float dist = 1;
 
-	bool interactable = true;
 	bool isTranslator = true;
 	bool isScalator = false;
 	bool isRotator = false;
@@ -73,6 +72,8 @@ public:
 	bool IsDragStarted() const { return dragStarted; };
 	// Check if the drag ended in this exact frame
 	bool IsDragEnded() const { return dragEnded; };
+
+	bool IsInteracting() const { return state != TRANSLATOR_IDLE; }
 
 	wi::scene::TransformComponent transform_start;
 	wi::vector<XMFLOAT4X4> matrices_start;

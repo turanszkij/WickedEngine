@@ -103,7 +103,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)ModelImporter_OBJ.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)NameWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ObjectWindow.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)OptionsWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)PaintToolWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)GraphicsWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ProfilerWindow.cpp" />
@@ -173,7 +172,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ModelImporter.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)NameWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ObjectWindow.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)OptionsWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)PaintToolWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)GraphicsWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ProfilerWindow.h" />

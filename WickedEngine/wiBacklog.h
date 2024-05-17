@@ -53,6 +53,8 @@ namespace wi::backlog
 
 	void SetLogLevel(LogLevel newLevel);
 
+	LogLevel GetUnseenLogLevelMax();
+
 
 	// These are no longer used, but kept here to not break user code:
 	inline void input(const char input) {}

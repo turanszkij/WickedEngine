@@ -1635,11 +1635,6 @@ namespace wi
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
-		// Set scissor on Compose, because some post processes don't handle scissoring (eg. Bloom) and those should be cut off:
-		//	Note that on expensive render operations we also used scissor to avoid wasted processing
-		Rect scissor = GetScissorNativeResolution();
-		device->BindScissorRects(1, &scissor, cmd);
-
 		wi::image::Params fx;
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		fx.quality = wi::image::QUALITY_LINEAR;
@@ -1659,13 +1654,6 @@ namespace wi
 			fx.blendFlag = BLENDMODE_PREMULTIPLIED;
 			wi::image::Draw(&debugUAV, fx, cmd);
 		}
-
-		// Restore full resolution scissor:
-		scissor.left = 0;
-		scissor.top = 0;
-		scissor.right = GetPhysicalWidth();
-		scissor.bottom = GetPhysicalHeight();
-		device->BindScissorRects(1, &scissor, cmd);
 
 		RenderPath2D::Compose(cmd);
 	}
@@ -2345,6 +2333,9 @@ namespace wi
 	void RenderPath3D::setAO(AO value)
 	{
 		ao = value;
+
+		if (!rtParticleDistortion.IsValid())
+			return; // ResizeBuffers hasn't been called yet
 
 		rtAO = {};
 		ssaoResources = {};

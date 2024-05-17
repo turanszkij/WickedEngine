@@ -2078,6 +2078,7 @@ namespace wi::scene
 
 		// With this we will ensure that serialized entities are unique and persistent across the scene:
 		EntitySerializer seri;
+		seri.ctx.priority = wi::jobsystem::Priority::Low; // serialization tasks will be low priority to not block rendering if scene loading is asynchronous
 
 		if(archive.GetVersion() >= 84)
 		{

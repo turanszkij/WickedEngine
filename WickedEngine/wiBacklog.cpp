@@ -46,6 +46,7 @@ namespace wi::backlog
 	bool locked = false;
 	bool blockLuaExec = false;
 	LogLevel logLevel = LogLevel::Default;
+	LogLevel unseen = LogLevel::None;
 
 	std::string getTextWithoutLock()
 	{
@@ -321,6 +322,7 @@ namespace wi::backlog
 			}
 			params.cursor = wi::font::Draw(x.text, params, cmd);
 		}
+		unseen = LogLevel::None;
 	}
 
 	std::string getText()
@@ -384,6 +386,8 @@ namespace wi::backlog
 				wi::helper::DebugOut(str, wi::helper::DebugLevel::Error);
 				break;
 			}
+
+			unseen = std::max(unseen, level);
 
 			// lock released on block end
 		}
@@ -462,5 +466,10 @@ namespace wi::backlog
 	void SetLogLevel(LogLevel newLevel)
 	{
 		logLevel = newLevel;
+	}
+
+	LogLevel GetUnseenLogLevelMax()
+	{
+		return unseen;
 	}
 }

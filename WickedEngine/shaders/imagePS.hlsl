@@ -56,11 +56,34 @@ float4 main(VertextoPixel input) : SV_TARGET
 		color.rgb = RemoveSRGBCurve_Fast(color.rgb);
 		color.rgb *= image.hdr_scaling;
 	}
-
+	
+	[branch]
 	if (image.border_soften > 0)
 	{
 		float edge = max(abs(input.edge.x), abs(input.edge.y));
 		color.a *= smoothstep(0, image.border_soften, 1 - edge);
+	}
+
+	[branch]
+	if (image.angular_softness_scale > 0)
+	{
+		float2 direction = normalize(uvsets.xy - 0.5);
+		float dp = dot(direction, image.angular_softness_direction);
+		if (image.flags & IMAGE_FLAG_ANGULAR_DOUBLESIDED)
+		{
+			dp = abs(dp);
+		}
+		else
+		{
+			dp = saturate(dp);
+		}
+		float angular = saturate(mad(dp, image.angular_softness_scale, image.angular_softness_offset));
+		if (image.flags & IMAGE_FLAG_ANGULAR_INVERSE)
+		{
+			angular = 1 - angular;
+		}
+		angular = smoothstep(0, 1, angular);
+		color.a *= angular;
 	}
 
 	return color;
