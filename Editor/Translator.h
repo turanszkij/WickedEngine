@@ -49,7 +49,6 @@ public:
 
 	float dist = 1;
 
-	bool interactable = true;
 	bool isTranslator = true;
 	bool isScalator = false;
 	bool isRotator = false;
@@ -73,6 +72,8 @@ public:
 	bool IsDragStarted() const { return dragStarted; };
 	// Check if the drag ended in this exact frame
 	bool IsDragEnded() const { return dragEnded; };
+
+	bool IsInteracting() const { return state != TRANSLATOR_IDLE; }
 
 	wi::scene::TransformComponent transform_start;
 	wi::vector<XMFLOAT4X4> matrices_start;

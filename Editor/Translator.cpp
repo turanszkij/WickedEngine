@@ -285,7 +285,7 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 			}
 		}
 
-		if (dragging || (state != TRANSLATOR_IDLE && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) && interactable))
+		if (dragging || (state != TRANSLATOR_IDLE && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT)))
 		{
 			// Dragging operation:
 			if (isRotator)

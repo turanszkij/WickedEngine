@@ -560,7 +560,7 @@ void EditorComponent::Load()
 
 	dummyButton.Create(ICON_DUMMY);
 	dummyButton.SetShadowRadius(2);
-	dummyButton.SetTooltip("Toggle reference dummy visualizer\n - Use the reference dummy to get an idea about object sizes compared to a human character size.\n - Position the dummy by clicking on something with the left mouse button while the dummy is active and nothing is selected.\n - Pressing this button while Ctrl key is held down will reset dummy position to the origin.\n - Pressing this button while the Shift key is held down will switch between male and female dummies.");
+	dummyButton.SetTooltip("Toggle reference dummy visualizer\n - Use the reference dummy to get an idea about object sizes compared to a human character size.\n - Position the dummy by clicking on something with the middle mouse button while the dummy is active.\n - Pressing this button while Ctrl key is held down will reset dummy position to the origin.\n - Pressing this button while the Shift key is held down will switch between male and female dummies.");
 	dummyButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	dummyButton.OnClick([&](wi::gui::EventArgs args) {
 		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL))
@@ -841,9 +841,9 @@ void EditorComponent::Load()
 		ss += "\n\nControls\n";
 		ss += "------------\n";
 		ss += "Move camera: WASD, or Contoller left stick or D-pad\n";
-		ss += "Look: Middle mouse button / arrow keys / controller right stick\n";
-		ss += "Select: Right mouse button\n";
-		ss += "Interact with physics/water: Left mouse button when nothing is selected\n";
+		ss += "Look: Right mouse button / arrow keys / controller right stick\n";
+		ss += "Select: Left mouse button\n";
+		ss += "Interact with physics/water/grass: Middle mouse button\n";
 		ss += "Faster camera: Left Shift button or controller R2/RT\n";
 		ss += "Snap transform: Left Ctrl (hold while transforming)\n";
 		ss += "Camera up: E\n";
@@ -1087,13 +1087,21 @@ void EditorComponent::Update(float dt)
 		}
 	}
 
-	translator.interactable = false;
-
 	// Camera control:
 	if (!wi::backlog::isActive() && !GetGUI().HasFocus())
 	{
+		if (paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED)
+		{
+			translator.Update(camera, currentMouse, *renderPath);
+		}
+
+		bool leftmouse_select =
+			!translator.IsInteracting() &&
+			paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED &&
+			(!componentsWnd.decalWnd.IsEnabled() || !componentsWnd.decalWnd.placementCheckBox.GetCheck()) &&
+			wi::input::Press(wi::input::MOUSE_BUTTON_LEFT);
+
 		deleting = wi::input::Press(wi::input::KEYBOARD_BUTTON_DELETE);
-		translator.interactable = true;
 		currentMouse = wi::input::GetPointer();
 		if (camControlStart)
 		{
@@ -1107,7 +1115,7 @@ void EditorComponent::Update(float dt)
 
 		float xDif = 0, yDif = 0;
 
-		if (wi::input::Down(wi::input::MOUSE_BUTTON_MIDDLE))
+		if (wi::input::Down(wi::input::MOUSE_BUTTON_RIGHT))
 		{
 			camControlStart = false;
 			xDif = wi::input::GetMouseState().delta_position.x;
@@ -1564,14 +1572,16 @@ void EditorComponent::Update(float dt)
 			if (hovered.entity == INVALID_ENTITY)
 			{
 				// Object picking only when mouse button down, because it can be slow with high polycount
-				if (
-					wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) ||
-					wi::input::Down(wi::input::MOUSE_BUTTON_RIGHT) ||
-					paintToolWnd.GetMode() != PaintToolWindow::MODE_DISABLED ||
-					inspector_mode
-					)
+				if (!translator.IsInteracting() && paintToolWnd.GetMode() == PaintToolWindow::MODE_DISABLED)
 				{
-					hovered = wi::scene::Pick(pickRay, wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
+					if (
+						wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) ||
+						wi::input::Down(wi::input::MOUSE_BUTTON_MIDDLE) ||
+						inspector_mode
+						)
+					{
+						hovered = wi::scene::Pick(pickRay, wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
+					}
 				}
 			}
 		}
@@ -1583,15 +1593,15 @@ void EditorComponent::Update(float dt)
 			camera.focal_length = hovered.distance;
 			camera.SetDirty();
 			cameraWnd.focalLengthSlider.SetValue(camera.focal_length);
+			hovered = {};
 		}
 
-		// Interactions only when paint tool is disabled:
-		if (paintToolWnd.GetMode() == PaintToolWindow::MODE_DISABLED)
+		// Interactions:
 		{
 			// Interact:
 			if (wi::input::Down((wi::input::BUTTON)'P'))
 			{
-				if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+				if (wi::input::Press(wi::input::MOUSE_BUTTON_MIDDLE))
 				{
 					// Physics impulse tester:
 					wi::physics::RayIntersectionResult result = wi::physics::Intersects(scene, pickRay);
@@ -1624,7 +1634,7 @@ void EditorComponent::Update(float dt)
 			else
 			{
 				// Physics pick dragger:
-				if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+				if (wi::input::Down(wi::input::MOUSE_BUTTON_MIDDLE))
 				{
 					wi::physics::PickDrag(scene, pickRay, physicsDragOp);
 				}
@@ -1634,10 +1644,40 @@ void EditorComponent::Update(float dt)
 				}
 			}
 
-			// Other:
-			if (hovered.entity != INVALID_ENTITY && wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+			// Decal placement:
+			if (componentsWnd.decalWnd.IsEnabled() && componentsWnd.decalWnd.placementCheckBox.GetCheck() && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
 			{
-				if (dummy_enabled && translator.selected.empty())
+				// if not water, put a decal on it:
+				Entity entity = scene.Entity_CreateDecal("editorDecal", "");
+				// material and decal parameters will be copied from selected:
+				if (scene.decals.Contains(componentsWnd.decalWnd.entity))
+				{
+					*scene.decals.GetComponent(entity) = *scene.decals.GetComponent(componentsWnd.decalWnd.entity);
+				}
+				if (scene.materials.Contains(componentsWnd.decalWnd.entity))
+				{
+					*scene.materials.GetComponent(entity) = *scene.materials.GetComponent(componentsWnd.decalWnd.entity);
+				}
+				// place it on picked surface:
+				TransformComponent& transform = *scene.transforms.GetComponent(entity);
+				transform.MatrixTransform(hovered.orientation);
+				transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
+				scene.Component_Attach(entity, hovered.entity);
+
+				wi::Archive& archive = AdvanceHistory();
+				archive << EditorComponent::HISTORYOP_ADD;
+				RecordSelection(archive);
+				RecordSelection(archive);
+				RecordEntity(archive, entity);
+
+				componentsWnd.RefreshEntityTree();
+				hovered = {};
+			}
+
+			// Other:
+			if (hovered.entity != INVALID_ENTITY && wi::input::Down(wi::input::MOUSE_BUTTON_MIDDLE))
+			{
+				if (dummy_enabled)
 				{
 					dummy_pos = hovered.position;
 				}
@@ -1646,39 +1686,12 @@ void EditorComponent::Update(float dt)
 					const ObjectComponent* object = scene.objects.GetComponent(hovered.entity);
 					if (object != nullptr)
 					{
-						if (translator.selected.empty() && object->GetFilterMask() & wi::enums::FILTER_WATER)
+						if (object->GetFilterMask() & wi::enums::FILTER_WATER)
 						{
 							// if water, then put a water ripple onto it:
 							scene.PutWaterRipple(hovered.position);
 						}
-						else if (componentsWnd.decalWnd.IsEnabled() && componentsWnd.decalWnd.placementCheckBox.GetCheck() && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
-						{
-							// if not water, put a decal on it:
-							Entity entity = scene.Entity_CreateDecal("editorDecal", "");
-							// material and decal parameters will be copied from selected:
-							if (scene.decals.Contains(componentsWnd.decalWnd.entity))
-							{
-								*scene.decals.GetComponent(entity) = *scene.decals.GetComponent(componentsWnd.decalWnd.entity);
-							}
-							if (scene.materials.Contains(componentsWnd.decalWnd.entity))
-							{
-								*scene.materials.GetComponent(entity) = *scene.materials.GetComponent(componentsWnd.decalWnd.entity);
-							}
-							// place it on picked surface:
-							TransformComponent& transform = *scene.transforms.GetComponent(entity);
-							transform.MatrixTransform(hovered.orientation);
-							transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
-							scene.Component_Attach(entity, hovered.entity);
-
-							wi::Archive& archive = AdvanceHistory();
-							archive << EditorComponent::HISTORYOP_ADD;
-							RecordSelection(archive);
-							RecordSelection(archive);
-							RecordEntity(archive, entity);
-
-							componentsWnd.RefreshEntityTree();
-						}
-						else if (translator.selected.empty())
+						else
 						{
 							// Check for interactive grass (hair particle that is child of hovered object:
 							for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
@@ -1710,9 +1723,8 @@ void EditorComponent::Update(float dt)
 		}
 
 		// Select...
-		if (wi::input::Press(wi::input::MOUSE_BUTTON_RIGHT) || selectAll || clear_selected)
+		if (leftmouse_select || selectAll || clear_selected)
 		{
-
 			wi::Archive& archive = AdvanceHistory();
 			archive << HISTORYOP_SELECTION;
 			// record PREVIOUS selection state...
@@ -2226,11 +2238,6 @@ void EditorComponent::Update(float dt)
 	RenderPath2D::Update(dt);
 
 	UpdateDynamicWidgets();
-
-	if (paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED)
-	{
-		translator.Update(camera, currentMouse, *renderPath);
-	}
 
 	ResizeViewport3D();
 	renderPath->colorspace = colorspace;

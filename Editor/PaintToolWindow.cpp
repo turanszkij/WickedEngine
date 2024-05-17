@@ -977,7 +977,7 @@ void PaintToolWindow::Update(float dt)
 				case PaintToolWindow::AxisLock::Disabled:
 					if (sculpting_normal.x < FLT_EPSILON && sculpting_normal.y < FLT_EPSILON && sculpting_normal.z < FLT_EPSILON)
 					{
-						sculpting_normal = editor->hovered.normal;
+						sculpting_normal = brushIntersect.normal;
 					}
 					sculptDir = XMVector3TransformNormal(XMVector3Normalize(XMLoadFloat3(&sculpting_normal)), XMMatrixInverse(nullptr, W));
 					break;
@@ -1121,7 +1121,7 @@ void PaintToolWindow::Update(float dt)
 						wi::renderer::RenderableLine sculpt_dir_line;
 						sculpt_dir_line.color_start = XMFLOAT4(0, 1, 0, 1);
 						sculpt_dir_line.color_end = XMFLOAT4(0, 1, 0, 1);
-						sculpt_dir_line.start = editor->hovered.position;
+						sculpt_dir_line.start = brushIntersect.position;
 						XMStoreFloat3(
 							&sculpt_dir_line.end,
 							XMLoadFloat3(&sculpt_dir_line.start) +
@@ -1506,6 +1506,8 @@ void PaintToolWindow::DrawBrush(const wi::Canvas& canvas, CommandList cmd) const
 
 PaintToolWindow::MODE PaintToolWindow::GetMode() const
 {
+	if (!IsVisible())
+		return MODE_DISABLED;
 	return (MODE)modeComboBox.GetSelectedUserdata();
 }
 
