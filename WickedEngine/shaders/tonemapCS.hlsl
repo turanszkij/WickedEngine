@@ -62,10 +62,10 @@ float4x4 saturationMatrix(float saturation)
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	if(!GetCamera().is_pixel_inside_scissor(DTid.xy))
-		return;
-
 	float2 uv = (DTid.xy + 0.5f) * tonemap_push.resolution_rcp;
+	
+	if(!GetCamera().is_uv_inside_scissor(uv)) // Note: uv scissoring is used because this supports upscaled resolution (FSR 2)
+		return;
 	
 	float4 exposure_brightness_contrast_saturation = unpack_half4(tonemap_push.exposure_brightness_contrast_saturation);
 	float exposure = exposure_brightness_contrast_saturation.x;
