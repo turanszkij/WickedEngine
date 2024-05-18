@@ -1311,10 +1311,7 @@ void TerrainWindow::SetEntity(Entity entity)
 	wi::scene::Scene& scene = editor->GetCurrentScene();
 	terrain = scene.terrains.GetComponent(entity);
 	if (terrain == nullptr)
-	{
-		entity = INVALID_ENTITY;
-		terrain = &terrain_preset;
-	}
+		return;
 
 	propsWindow->terrain = terrain;
 
@@ -1428,11 +1425,14 @@ void TerrainWindow::AddModifier(ModifierWindow* modifier_window)
 }
 void TerrainWindow::SetupAssets()
 {
-	if (!terrain_preset.props.empty())
-		return;
-
 	// Customize terrain generator before it's initialized:
 	Scene& currentScene = editor->GetCurrentScene();
+
+	Entity terrainEntity = CreateEntity();
+	wi::terrain::Terrain& terrain_preset = currentScene.terrains.Create(terrainEntity);
+	currentScene.names.Create(terrainEntity) = "terrain";
+
+	SetEntity(terrainEntity);
 
 	terrain_preset.materialEntities.clear();
 	terrain_preset.materialEntities.resize(wi::terrain::MATERIAL_COUNT);
@@ -1733,7 +1733,6 @@ void TerrainWindow::SetupAssets()
 		transform.Translate(XMFLOAT3(0, 4, 0));
 	}
 
-	terrain = &terrain_preset;
 	presetCombo.SetSelected(0);
 
 	editor->paintToolWnd.RecreateTerrainMaterialButtons();

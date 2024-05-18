@@ -450,11 +450,8 @@ void EditorComponent::Load()
 			scene.names.Create(pick.entity) = "collider";
 			break;
 		case NEW_TERRAIN:
-			componentsWnd.terrainWnd.entity = pick.entity;
 			componentsWnd.terrainWnd.SetupAssets();
-			pick.entity = CreateEntity();
-			scene.terrains.Create(pick.entity) = componentsWnd.terrainWnd.terrain_preset;
-			scene.names.Create(pick.entity) = "terrain";
+			pick.entity = componentsWnd.terrainWnd.entity;
 			break;
 		case NEW_SPRITE:
 		{
@@ -580,7 +577,7 @@ void EditorComponent::Load()
 
 	navtestButton.Create(ICON_NAVIGATION);
 	navtestButton.SetShadowRadius(2);
-	navtestButton.SetTooltip("Toggle navigation testing. When enabled, you can visualize path finding results.\nYou can put down START and GOAL waypoints inside voxel grids to test path finding.\nControls:\n----------\nF5 + left click: put START to surface\nF6 + left click: put GOAL to surface\nF7 + left click: put START to air\nF8 + left click: put GOAL to air");
+	navtestButton.SetTooltip("Toggle navigation testing. When enabled, you can visualize path finding results.\nYou can put down START and GOAL waypoints inside voxel grids to test path finding.\nControls:\n----------\nF5 + middle click: put START to surface\nF6 + middle click: put GOAL to surface\nF7 + middle click: put START to air\nF8 + middle click: put GOAL to air");
 	navtestButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	navtestButton.OnClick([&](wi::gui::EventArgs args) {
 		navtest_enabled = !navtest_enabled;
@@ -2255,12 +2252,12 @@ void EditorComponent::Update(float dt)
 		{
 			navtest_goal_pick = hovered;
 		}
-		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_F7) && wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_F7) && wi::input::Down(wi::input::MOUSE_BUTTON_MIDDLE))
 		{
 			navtest_start_pick.entity = INVALID_ENTITY;
 			XMStoreFloat3(&navtest_start_pick.position, XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction) * 2);
 		}
-		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_F8) && wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_F8) && wi::input::Down(wi::input::MOUSE_BUTTON_MIDDLE))
 		{
 			navtest_goal_pick.entity = INVALID_ENTITY;
 			XMStoreFloat3(&navtest_goal_pick.position, XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction) * 2);
@@ -4910,7 +4907,6 @@ void EditorComponent::RefreshSceneList()
 			});
 		editorscene->tabCloseButton.OnClick([this, i](wi::gui::EventArgs args) {
 			wi::lua::KillProcesses();
-			componentsWnd.terrainWnd.terrain_preset.props.clear();
 
 			translator.selected.clear();
 			wi::scene::Scene& scene = scenes[i]->scene;
