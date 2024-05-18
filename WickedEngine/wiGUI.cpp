@@ -3180,6 +3180,7 @@ namespace wi::gui
 				)
 			{
 				resize_blink_timer += dt;
+				force_disable = true;
 			}
 			else
 			{
@@ -3450,6 +3451,9 @@ namespace wi::gui
 		{
 			state = IDLE;
 		}
+
+		if (state == IDLE && resize_blink_timer > 0)
+			state = FOCUS;
 	}
 	void Window::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
@@ -3490,7 +3494,6 @@ namespace wi::gui
 		}
 
 		// resize indicator:
-		if (IsEnabled())
 		{
 			// hitboxes are recomputed because window transform might have changed since update!!
 			float vscale = IsCollapsed() ? control_size : scale.y;
@@ -4860,6 +4863,7 @@ namespace wi::gui
 				{
 					resize_state = RESIZE_STATE_BOTTOM;
 					Activate();
+					force_disable = true;
 				}
 				resize_begin = pointerHitbox.pos;
 			}
@@ -5077,6 +5081,9 @@ namespace wi::gui
 			}
 		}
 
+		if (state == IDLE && resize_blink_timer > 0)
+			state = FOCUS;
+
 		sprites[state].params.siz.y = item_height();
 		font.params.posX = translation.x + 2;
 		font.params.posY = translation.y + sprites[state].params.siz.y * 0.5f;
@@ -5113,7 +5120,6 @@ namespace wi::gui
 		}
 
 		// resize indicator:
-		if (IsEnabled())
 		{
 			// hitboxes are recomputed because window transform might have changed since update!!
 			float vscale = scale.y;
