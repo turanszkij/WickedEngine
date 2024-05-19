@@ -7902,8 +7902,8 @@ using namespace vulkan_internal;
 	{
 		assert(rects != nullptr);
 		VkRect2D scissors[16];
-		assert(numRects < arraysize(scissors));
-		assert(numRects < properties2.properties.limits.maxViewports);
+		assert(numRects <= arraysize(scissors));
+		assert(numRects <= properties2.properties.limits.maxViewports);
 		for(uint32_t i = 0; i < numRects; ++i)
 		{
 			scissors[i].extent.width = abs(rects[i].right - rects[i].left);
