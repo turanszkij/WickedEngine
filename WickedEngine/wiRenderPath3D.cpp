@@ -191,7 +191,12 @@ namespace wi
 				assert(subresource_index == i);
 			}
 
-			clearableTextures.push_back(&rtSceneCopy); // because this is used by SSR and SSGI before it gets a chance to be normally rendered, it MUST be cleared!
+			// because this is used by SSR and SSGI before it gets a chance to be normally rendered, it MUST be cleared!
+			CommandList cmd = device->BeginCommandList();
+			device->Barrier(GPUBarrier::Image(&rtSceneCopy, rtSceneCopy.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+			device->ClearUAV(&rtSceneCopy, 0, cmd);
+			device->Barrier(GPUBarrier::Image(&rtSceneCopy, ResourceState::UNORDERED_ACCESS, rtSceneCopy.desc.layout), cmd);
+			device->SubmitCommandLists();
 		}
 		{
 			TextureDesc desc;
@@ -806,21 +811,6 @@ namespace wi
 		wi::renderer::ProcessDeferredTextureRequests(cmd); // Execute it first thing in the frame here, on main thread, to not allow other thread steal it and execute on different command list!
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 			GraphicsDevice* device = wi::graphics::GetDevice();
-
-			// Initialization clears:
-			for (auto& x : clearableTextures)
-			{
-				device->Barrier(GPUBarrier::Image(x, x->desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
-			}
-			for (auto& x : clearableTextures)
-			{
-				device->ClearUAV(x, 0, cmd);
-			}
-			for (auto& x : clearableTextures)
-			{
-				device->Barrier(GPUBarrier::Image(x, ResourceState::UNORDERED_ACCESS, x->desc.layout), cmd);
-			}
-			clearableTextures.clear();
 
 			wi::renderer::BindCameraCB(
 				*camera,

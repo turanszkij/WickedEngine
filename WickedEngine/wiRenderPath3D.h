@@ -85,8 +85,6 @@ namespace wi
 
 		uint32_t msaaSampleCount = 1;
 
-		mutable wi::vector<const wi::graphics::Texture*> clearableTextures;
-
 	public:
 		wi::graphics::Texture rtMain;
 		wi::graphics::Texture rtMain_render; // can be MSAA
