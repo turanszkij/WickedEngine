@@ -29,6 +29,7 @@ namespace wi
 	static DepthStencilState dss_default, dss_equal;
 	static RasterizerState rs, ncrs, wirers, rs_shadow;
 	static BlendState bs;
+	static BlendState bs_shadow;
 	static PipelineState PSO[RENDERPASS_COUNT];
 	static PipelineState PSO_wire;
 
@@ -588,6 +589,7 @@ namespace wi
 					case RENDERPASS_SHADOW:
 						desc.ps = &ps_shadow;
 						desc.rs = &rs_shadow;
+						desc.bs = &bs_shadow;
 						break;
 					}
 
@@ -680,6 +682,9 @@ namespace wi
 		bld.render_target[0].blend_enable = false;
 		bld.alpha_to_coverage_enable = false;
 		bs = bld;
+
+		bld.render_target[0].render_target_write_mask = ColorWrite::DISABLE;
+		bs_shadow = bld;
 
 		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { HairParticleSystem_Internal::LoadShaders(); });
 		HairParticleSystem_Internal::LoadShaders();

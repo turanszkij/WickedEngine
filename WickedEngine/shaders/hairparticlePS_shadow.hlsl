@@ -3,7 +3,7 @@
 #include "hairparticleHF.hlsli"
 #include "ShaderInterop_HairParticle.h"
 
-void main(VertexToPixel input) : SV_Target
+void main(VertexToPixel input)
 {
 	// Distance dithered fade:
 	clip(dither(input.pos.xy) - input.fade);

@@ -5795,6 +5795,7 @@ void DrawShadowmaps(
 
 				const uint32_t cascade_count = std::min((uint32_t)light.cascade_distances.size(), max_viewport_count);
 				Viewport* viewports = (Viewport*)alloca(sizeof(Viewport) * cascade_count);
+				Rect* scissors = (Rect*)alloca(sizeof(Rect) * cascade_count);
 				SHCAM* shcams = (SHCAM*)alloca(sizeof(SHCAM) * cascade_count);
 				CreateDirLightShadowCams(light, *vis.camera, shcams, cascade_count, shadow_rect);
 
@@ -5843,12 +5844,15 @@ void DrawShadowmaps(
 						vp.top_left_y = float(shadow_rect.y);
 						vp.width = float(shadow_rect.w);
 						vp.height = float(shadow_rect.h);
-						vp.min_depth = 0.0f;
-						vp.max_depth = 1.0f;
+						vp.min_depth = 0;
+						vp.max_depth = 1;
+
+						scissors[cascade].from_viewport(vp);
 					}
 
 					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 					device->BindViewports(cascade_count, viewports, cmd);
+					device->BindScissorRects(cascade_count, scissors, cmd);
 
 					renderQueue.sort_opaque();
 					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_OPAQUE, cmd, 0, cascade_count);
@@ -5871,9 +5875,13 @@ void DrawShadowmaps(
 						vp.top_left_y = float(shadow_rect.y);
 						vp.width = float(shadow_rect.w);
 						vp.height = float(shadow_rect.h);
-						vp.min_depth = 0.0f;
-						vp.max_depth = 1.0f;
+						vp.min_depth = 0;
+						vp.max_depth = 1;
 						device->BindViewports(1, &vp, cmd);
+
+						Rect scissor;
+						scissor.from_viewport(vp);
+						device->BindScissorRects(1, &scissor, cmd);
 
 						for (uint32_t hairIndex : vis.visibleHairs)
 						{
@@ -5942,9 +5950,13 @@ void DrawShadowmaps(
 					vp.top_left_y = float(shadow_rect.y);
 					vp.width = float(shadow_rect.w);
 					vp.height = float(shadow_rect.h);
-					vp.min_depth = 0.0f;
-					vp.max_depth = 1.0f;
+					vp.min_depth = 0;
+					vp.max_depth = 1;
 					device->BindViewports(1, &vp, cmd);
+
+					Rect scissor;
+					scissor.from_viewport(vp);
+					device->BindScissorRects(1, &scissor, cmd);
 
 					renderQueue.sort_opaque();
 					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_OPAQUE, cmd);
@@ -5970,9 +5982,13 @@ void DrawShadowmaps(
 					vp.top_left_y = float(shadow_rect.y);
 					vp.width = float(shadow_rect.w);
 					vp.height = float(shadow_rect.h);
-					vp.min_depth = 0.0f;
-					vp.max_depth = 1.0f;
+					vp.min_depth = 0;
+					vp.max_depth = 1;
 					device->BindViewports(1, &vp, cmd);
+
+					Rect scissor;
+					scissor.from_viewport(vp);
+					device->BindScissorRects(1, &scissor, cmd);
 
 					for (uint32_t hairIndex : vis.visibleHairs)
 					{
@@ -6002,6 +6018,7 @@ void DrawShadowmaps(
 				SHCAM cameras[6];
 				CreateCubemapCameras(light.position, zNearP, zFarP, cameras, arraysize(cameras));
 				Viewport vp[arraysize(cameras)];
+				Rect scissors[arraysize(cameras)];
 				Frustum frusta[arraysize(cameras)];
 				uint32_t camera_count = 0;
 
@@ -6023,8 +6040,9 @@ void DrawShadowmaps(
 					vp[shcam].top_left_y = float(shadow_rect.y);
 					vp[shcam].width = float(shadow_rect.w);
 					vp[shcam].height = float(shadow_rect.h);
-					vp[shcam].min_depth = 0.0f;
-					vp[shcam].max_depth = 1.0f;
+					vp[shcam].min_depth = 0;
+					vp[shcam].max_depth = 1;
+					scissors[shcam].from_viewport(vp[shcam]);
 				}
 
 				renderQueue.init();
@@ -6073,6 +6091,7 @@ void DrawShadowmaps(
 
 					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 					device->BindViewports(arraysize(vp), vp, cmd);
+					device->BindScissorRects(arraysize(scissors), scissors, cmd);
 
 					renderQueue.sort_opaque();
 					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_OPAQUE, cmd, 0, camera_count);
@@ -6103,6 +6122,10 @@ void DrawShadowmaps(
 						vp.min_depth = 0;
 						vp.max_depth = 1;
 						device->BindViewports(1, &vp, cmd);
+
+						Rect scissor;
+						scissor.from_viewport(vp);
+						device->BindScissorRects(1, &scissor, cmd);
 
 						for (uint32_t hairIndex : vis.visibleHairs)
 						{
@@ -6164,11 +6187,15 @@ void DrawShadowmaps(
 				vp.top_left_y = float(vis.rain_blocker_shadow_rect.y);
 				vp.width = float(vis.rain_blocker_shadow_rect.w);
 				vp.height = float(vis.rain_blocker_shadow_rect.h);
-				vp.min_depth = 0.0f;
-				vp.max_depth = 1.0f;
+				vp.min_depth = 0;
+				vp.max_depth = 1;
 
 				device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 				device->BindViewports(1, &vp, cmd);
+
+				Rect scissor;
+				scissor.from_viewport(vp);
+				device->BindScissorRects(1, &scissor, cmd);
 
 				renderQueue.sort_opaque();
 				RenderMeshes(vis, renderQueue, RENDERPASS_RAINBLOCKER, FILTER_OBJECT_ALL, cmd, 0, 1);

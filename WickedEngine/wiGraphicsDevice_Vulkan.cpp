@@ -913,8 +913,6 @@ namespace vulkan_internal
 		VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
 		VkPipelineRasterizationStateCreateInfo rasterizer = {};
 		VkPipelineRasterizationDepthClipStateCreateInfoEXT depthclip = {};
-		VkViewport viewport = {};
-		VkRect2D scissor = {};
 		VkPipelineViewportStateCreateInfo viewportState = {};
 		VkPipelineDepthStencilStateCreateInfo depthstencil = {};
 		VkSampleMask samplemask = {};
@@ -3284,8 +3282,9 @@ using namespace vulkan_internal;
 		TIMESTAMP_FREQUENCY = uint64_t(1.0 / double(properties2.properties.limits.timestampPeriod) * 1000 * 1000 * 1000);
 
 		// Dynamic PSO states:
-		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_VIEWPORT);
-		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_SCISSOR);
+		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_RASTERIZER_DISCARD_ENABLE);
+		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_VIEWPORT_WITH_COUNT);
+		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_SCISSOR_WITH_COUNT);
 		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_STENCIL_REFERENCE);
 		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_BLEND_CONSTANTS);
 		if (CheckCapability(GraphicsDeviceCapability::DEPTH_BOUNDS_TEST))
@@ -5556,26 +5555,12 @@ using namespace vulkan_internal;
 
 		pipelineInfo.pRasterizationState = &rasterizer;
 
-
-		// Viewport, Scissor:
-		VkViewport& viewport = internal_state->viewport;
-		viewport.x = 0;
-		viewport.y = 0;
-		viewport.width = 65535;
-		viewport.height = 65535;
-		viewport.minDepth = 0;
-		viewport.maxDepth = 1;
-
-		VkRect2D& scissor = internal_state->scissor;
-		scissor.extent.width = 65535;
-		scissor.extent.height = 65535;
-
 		VkPipelineViewportStateCreateInfo& viewportState = internal_state->viewportState;
 		viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-		viewportState.viewportCount = 1;
-		viewportState.pViewports = &viewport;
-		viewportState.scissorCount = 1;
-		viewportState.pScissors = &scissor;
+		viewportState.viewportCount = 0;
+		viewportState.pViewports = nullptr;
+		viewportState.scissorCount = 0;
+		viewportState.pScissors = nullptr;
 
 		pipelineInfo.pViewportState = &viewportState;
 
@@ -7069,15 +7054,20 @@ using namespace vulkan_internal;
 
 		if (queue == QUEUE_GRAPHICS)
 		{
-			VkRect2D scissors[16];
-			for (int i = 0; i < arraysize(scissors); ++i)
-			{
-				scissors[i].offset.x = 0;
-				scissors[i].offset.y = 0;
-				scissors[i].extent.width = 65535;
-				scissors[i].extent.height = 65535;
-			}
-			vkCmdSetScissor(commandlist.GetCommandBuffer(), 0, arraysize(scissors), scissors);
+			vkCmdSetRasterizerDiscardEnable(commandlist.GetCommandBuffer(), VK_FALSE);
+
+			VkViewport vp = {};
+			vp.width = 1;
+			vp.height = 1;
+			vp.maxDepth = 1;
+			vkCmdSetViewportWithCount(commandlist.GetCommandBuffer(), 1, &vp);
+
+			VkRect2D scissor;
+			scissor.offset.x = 0;
+			scissor.offset.y = 0;
+			scissor.extent.width = 65535;
+			scissor.extent.height = 65535;
+			vkCmdSetScissorWithCount(commandlist.GetCommandBuffer(), 1, &scissor);
 
 			float blendConstants[] = { 1,1,1,1 };
 			vkCmdSetBlendConstants(commandlist.GetCommandBuffer(), blendConstants);
@@ -7089,7 +7079,6 @@ using namespace vulkan_internal;
 				vkCmdSetDepthBounds(commandlist.GetCommandBuffer(), 0.0f, 1.0f);
 			}
 
-			// Silence validation about uninitialized stride:
 			const VkDeviceSize zero = {};
 			vkCmdBindVertexBuffers2(commandlist.GetCommandBuffer(), 0, 1, &nullBuffer, &zero, &zero, &zero);
 		}
@@ -7912,7 +7901,7 @@ using namespace vulkan_internal;
 			scissors[i].offset.y = std::max(0, rects[i].top);
 		}
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		vkCmdSetScissor(commandlist.GetCommandBuffer(), 0, numRects, scissors);
+		vkCmdSetScissorWithCount(commandlist.GetCommandBuffer(), numRects, scissors);
 	}
 	void GraphicsDevice_Vulkan::BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd)
 	{
@@ -7930,7 +7919,7 @@ using namespace vulkan_internal;
 			vp[i].maxDepth = pViewports[i].max_depth;
 		}
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		vkCmdSetViewport(commandlist.GetCommandBuffer(), 0, NumViewports, vp);
+		vkCmdSetViewportWithCount(commandlist.GetCommandBuffer(), NumViewports, vp);
 	}
 	void GraphicsDevice_Vulkan::BindResource(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
