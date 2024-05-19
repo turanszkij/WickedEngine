@@ -237,6 +237,7 @@ namespace wi::primitive
 		Hitbox2D(const XMFLOAT2& newPos, const XMFLOAT2 newSiz) :pos(newPos), siz(newSiz) {}
 		~Hitbox2D() {};
 
+		bool intersects(const XMFLOAT2& b) const;
 		bool intersects(const Hitbox2D& b) const;
 	};
 

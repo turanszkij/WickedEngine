@@ -142,8 +142,7 @@ public:
 
 	EditorComponent* editor = nullptr;
 	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
-	wi::terrain::Terrain terrain_preset;
-	wi::terrain::Terrain* terrain = &terrain_preset;
+	wi::terrain::Terrain* terrain = nullptr;
 	void SetEntity(wi::ecs::Entity entity);
 	void AddModifier(ModifierWindow* modifier_window);
 	void SetupAssets();

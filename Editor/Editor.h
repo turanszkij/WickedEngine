@@ -89,6 +89,7 @@ public:
 	void Compose(wi::graphics::CommandList cmd) const override;
 
 	wi::graphics::Viewport viewport3D;
+	wi::primitive::Hitbox2D viewport3D_hitbox;
 	void ResizeViewport3D();
 
 	bool camControlStart = true;

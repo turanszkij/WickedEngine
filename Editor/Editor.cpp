@@ -107,6 +107,8 @@ void EditorComponent::ResizeBuffers()
 	init(main->canvas);
 	RenderPath2D::ResizeBuffers();
 
+	renderPath->width = 0; // force resize buffers
+	renderPath->height = 0;// force resize buffers
 	ResizeViewport3D();
 }
 void EditorComponent::ResizeLayout()
@@ -1092,20 +1094,21 @@ void EditorComponent::Update(float dt)
 			translator.Update(camera, currentMouse, *renderPath);
 		}
 
-		// This check whether pressing left mouse can modify selection:
-		const bool leftmouse_select =
-			!translator.IsInteracting() && // translator shouldn't be active
-			paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED && // paint tool shouldn't be active
-			(!componentsWnd.decalWnd.IsEnabled() || !componentsWnd.decalWnd.placementCheckBox.GetCheck()) && // decal placement shouldn't be active
-			!(wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) && wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT)) && // instance placement shouldn't be active
-			wi::input::Press(wi::input::MOUSE_BUTTON_LEFT);
-
 		deleting = wi::input::Press(wi::input::KEYBOARD_BUTTON_DELETE);
 		currentMouse = wi::input::GetPointer();
 		if (camControlStart)
 		{
 			originalMouse = currentMouse;
 		}
+
+		// This check whether pressing left mouse can modify selection:
+		const bool leftmouse_select =
+			!translator.IsInteracting() && // translator shouldn't be active
+			paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED && // paint tool shouldn't be active
+			(!componentsWnd.decalWnd.IsEnabled() || !componentsWnd.decalWnd.placementCheckBox.GetCheck()) && // decal placement shouldn't be active
+			!(wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) && wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT)) && // instance placement shouldn't be active
+			viewport3D_hitbox.intersects(XMFLOAT2(currentMouse.x, currentMouse.y)) &&
+			wi::input::Press(wi::input::MOUSE_BUTTON_LEFT);
 
 		// After originalMouse is saved, currentMouse is remapped inside 3D viewport:
 		//	originalMouse shouldn't be remapped, because that will be used to reset mouse position
@@ -3603,116 +3606,114 @@ void EditorComponent::ResizeViewport3D()
 	}
 	width = std::max(64, width);
 	height = std::max(64, height);
-	if (renderPath->width == width && renderPath->height == height)
+	if (renderPath->width != width || renderPath->height != height || rt_selectionOutline_MSAA.desc.sample_count != renderPath->getMSAASampleCount())
 	{
+		renderPath->width = width;
+		renderPath->height = height;
+		renderPath->dpi = dpi;
+		renderPath->scaling = scaling;
+		renderPath->ResizeBuffers();
+
+		viewport3D.top_left_x = 0;
+		viewport3D.top_left_y = 0;
 		if (GetGUI().IsVisible())
 		{
-			main->infoDisplay.rect.from_viewport(viewport3D);
-			main->infoDisplay.rect.left = LogicalToPhysical(generalButton.translation_local.x + generalButton.scale_local.x + 10);
+			if (generalWnd.IsVisible())
+			{
+				viewport3D.top_left_x = (float)LogicalToPhysical(generalWnd.scale_local.x);
+			}
+			if (graphicsWnd.IsVisible())
+			{
+				viewport3D.top_left_x = (float)LogicalToPhysical(graphicsWnd.scale_local.x);
+			}
+			if (cameraWnd.IsVisible())
+			{
+				viewport3D.top_left_x = (float)LogicalToPhysical(cameraWnd.scale_local.x);
+			}
+			if (materialPickerWnd.IsVisible())
+			{
+				viewport3D.top_left_x = (float)LogicalToPhysical(materialPickerWnd.scale_local.x);
+			}
+			if (paintToolWnd.IsVisible())
+			{
+				viewport3D.top_left_x = (float)LogicalToPhysical(paintToolWnd.scale_local.x);
+			}
+			viewport3D.top_left_y = (float)LogicalToPhysical(topmenuWnd.scale_local.y);
 		}
-		loadmodel_font.params.posX = PhysicalToLogical(uint32_t(viewport3D.top_left_x + viewport3D.width * 0.5f));
-		loadmodel_font.params.posX -= wi::font::TextWidth(loadmodel_font.GetText(), loadmodel_font.params) * 0.5f;
-		loadmodel_font.params.posY = PhysicalToLogical(uint32_t(viewport3D.top_left_y)) + 15;
-		return;
-	}
+		viewport3D.width = (float)renderPath->width;
+		viewport3D.height = (float)renderPath->height;
 
-	renderPath->width = width;
-	renderPath->height = height;
-	renderPath->dpi = dpi;
-	renderPath->scaling = scaling;
-	renderPath->ResizeBuffers();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 
-	viewport3D.top_left_x = 0;
-	viewport3D.top_left_y = 0;
-	if (GetGUI().IsVisible())
-	{
-		if (generalWnd.IsVisible())
+		if (renderPath->GetDepthStencil() != nullptr)
 		{
-			viewport3D.top_left_x = (float)LogicalToPhysical(generalWnd.scale_local.x);
+			bool success = false;
+
+			XMUINT2 internalResolution = renderPath->GetInternalResolution();
+
+			TextureDesc desc;
+			desc.width = internalResolution.x;
+			desc.height = internalResolution.y;
+
+			desc.format = Format::R8_UNORM;
+			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+			if (renderPath->getMSAASampleCount() > 1)
+			{
+				desc.sample_count = renderPath->getMSAASampleCount();
+				success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline_MSAA);
+				assert(success);
+				desc.sample_count = 1;
+			}
+			else
+			{
+				rt_selectionOutline_MSAA = {};
+			}
+			success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[0]);
+			assert(success);
+			success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[1]);
+			assert(success);
 		}
-		if (graphicsWnd.IsVisible())
+
 		{
-			viewport3D.top_left_x = (float)LogicalToPhysical(graphicsWnd.scale_local.x);
+			TextureDesc desc;
+			desc.width = renderPath->GetRenderResult().GetDesc().width;
+			desc.height = renderPath->GetRenderResult().GetDesc().height;
+			desc.format = Format::R8_UNORM;
+			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+			desc.swizzle.r = ComponentSwizzle::R;
+			desc.swizzle.g = ComponentSwizzle::R;
+			desc.swizzle.b = ComponentSwizzle::R;
+			desc.swizzle.a = ComponentSwizzle::R;
+			device->CreateTexture(&desc, nullptr, &rt_dummyOutline);
+			device->SetName(&rt_dummyOutline, "rt_dummyOutline");
 		}
-		if (cameraWnd.IsVisible())
+
 		{
-			viewport3D.top_left_x = (float)LogicalToPhysical(cameraWnd.scale_local.x);
+			TextureDesc desc;
+			desc.width = renderPath->GetRenderResult().GetDesc().width;
+			desc.height = renderPath->GetRenderResult().GetDesc().height;
+			desc.format = Format::D32_FLOAT;
+			desc.bind_flags = BindFlag::DEPTH_STENCIL;
+			desc.layout = ResourceState::DEPTHSTENCIL;
+			desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
+			device->CreateTexture(&desc, nullptr, &editor_depthbuffer);
+			device->SetName(&editor_depthbuffer, "editor_depthbuffer");
 		}
-		if (materialPickerWnd.IsVisible())
-		{
-			viewport3D.top_left_x = (float)LogicalToPhysical(materialPickerWnd.scale_local.x);
-		}
-		if (paintToolWnd.IsVisible())
-		{
-			viewport3D.top_left_x = (float)LogicalToPhysical(paintToolWnd.scale_local.x);
-		}
-		viewport3D.top_left_y = (float)LogicalToPhysical(topmenuWnd.scale_local.y);
 	}
-	viewport3D.width = (float)renderPath->width;
-	viewport3D.height = (float)renderPath->height;
 
 	if (GetGUI().IsVisible())
 	{
 		main->infoDisplay.rect.from_viewport(viewport3D);
 		main->infoDisplay.rect.left = LogicalToPhysical(generalButton.translation_local.x + generalButton.scale_local.x + 10);
 	}
-
 	loadmodel_font.params.posX = PhysicalToLogical(uint32_t(viewport3D.top_left_x + viewport3D.width * 0.5f));
 	loadmodel_font.params.posX -= wi::font::TextWidth(loadmodel_font.GetText(), loadmodel_font.params) * 0.5f;
 	loadmodel_font.params.posY = PhysicalToLogical(uint32_t(viewport3D.top_left_y)) + 15;
 
-	GraphicsDevice* device = wi::graphics::GetDevice();
-
-	if (renderPath->GetDepthStencil() != nullptr)
-	{
-		bool success = false;
-
-		XMUINT2 internalResolution = renderPath->GetInternalResolution();
-
-		TextureDesc desc;
-		desc.width = internalResolution.x;
-		desc.height = internalResolution.y;
-
-		desc.format = Format::R8_UNORM;
-		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-		if (renderPath->getMSAASampleCount() > 1)
-		{
-			desc.sample_count = renderPath->getMSAASampleCount();
-			success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline_MSAA);
-			assert(success);
-			desc.sample_count = 1;
-		}
-		success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[0]);
-		assert(success);
-		success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[1]);
-		assert(success);
-	}
-
-	{
-		TextureDesc desc;
-		desc.width = renderPath->GetRenderResult().GetDesc().width;
-		desc.height = renderPath->GetRenderResult().GetDesc().height;
-		desc.format = Format::R8_UNORM;
-		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-		desc.swizzle.r = ComponentSwizzle::R;
-		desc.swizzle.g = ComponentSwizzle::R;
-		desc.swizzle.b = ComponentSwizzle::R;
-		desc.swizzle.a = ComponentSwizzle::R;
-		device->CreateTexture(&desc, nullptr, &rt_dummyOutline);
-		device->SetName(&rt_dummyOutline, "rt_dummyOutline");
-	}
-
-	{
-		TextureDesc desc;
-		desc.width = renderPath->GetRenderResult().GetDesc().width;
-		desc.height = renderPath->GetRenderResult().GetDesc().height;
-		desc.format = Format::D32_FLOAT;
-		desc.bind_flags = BindFlag::DEPTH_STENCIL;
-		desc.layout = ResourceState::DEPTHSTENCIL;
-		desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
-		device->CreateTexture(&desc, nullptr, &editor_depthbuffer);
-		device->SetName(&editor_depthbuffer, "editor_depthbuffer");
-	}
+	viewport3D_hitbox = Hitbox2D(
+		XMFLOAT2(PhysicalToLogical(uint32_t(viewport3D.top_left_x)), PhysicalToLogical(uint32_t(viewport3D.top_left_y))),
+		XMFLOAT2(PhysicalToLogical(uint32_t(viewport3D.width)), PhysicalToLogical(uint32_t(viewport3D.height)))
+	);
 }
 
 void EditorComponent::ClearSelected()

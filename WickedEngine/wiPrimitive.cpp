@@ -882,6 +882,18 @@ namespace wi::primitive
 
 
 
+	bool Hitbox2D::intersects(const XMFLOAT2& b) const
+	{
+		if (pos.x + siz.x < b.x)
+			return false;
+		else if (pos.x > b.x)
+			return false;
+		else if (pos.y + siz.y < b.y)
+			return false;
+		else if (pos.y > b.y)
+			return false;
+		return true;
+	}
 	bool Hitbox2D::intersects(const Hitbox2D& b) const
 	{
 		return wi::math::Collision2D(pos, siz, b.pos, b.siz);
