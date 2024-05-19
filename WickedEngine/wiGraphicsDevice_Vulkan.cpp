@@ -5002,6 +5002,7 @@ using namespace vulkan_internal;
 			createInfo.magFilter = VK_FILTER_LINEAR;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 			createInfo.anisotropyEnable = true;
+			createInfo.maxAnisotropy = std::min(16.0f, std::max(1.0f, static_cast<float>(desc->max_anisotropy)));
 			createInfo.compareEnable = false;
 			break;
 		case Filter::COMPARISON_MIN_MAG_MIP_POINT:
@@ -5065,6 +5066,7 @@ using namespace vulkan_internal;
 			createInfo.magFilter = VK_FILTER_LINEAR;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 			createInfo.anisotropyEnable = true;
+			createInfo.maxAnisotropy = std::min(16.0f, std::max(1.0f, static_cast<float>(desc->max_anisotropy)));
 			createInfo.compareEnable = true;
 			break;
 		default:
@@ -5114,7 +5116,6 @@ using namespace vulkan_internal;
 		createInfo.addressModeU = _ConvertTextureAddressMode(desc->address_u, features_1_2);
 		createInfo.addressModeV = _ConvertTextureAddressMode(desc->address_v, features_1_2);
 		createInfo.addressModeW = _ConvertTextureAddressMode(desc->address_w, features_1_2);
-		createInfo.maxAnisotropy = static_cast<float>(desc->max_anisotropy);
 		createInfo.compareOp = _ConvertComparisonFunc(desc->comparison_func);
 		createInfo.minLod = desc->min_lod;
 		createInfo.maxLod = desc->max_lod;

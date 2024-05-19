@@ -3361,15 +3361,18 @@ using namespace dx12_internal;
 			);
 			assert(SUCCEEDED(hr));
 
-			hr = device->CreatePlacedResource(
-				internal_state->allocation->GetHeap(),
-				internal_state->allocation->GetOffset(),
-				&resourceDesc,
-				resourceState,
-				nullptr,
-				PPV_ARGS(internal_state->resource)
-			);
-			assert(SUCCEEDED(hr));
+			if (allocationDesc.ExtraHeapFlags == D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS || allocationDesc.ExtraHeapFlags == D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES)
+			{
+				hr = device->CreatePlacedResource(
+					internal_state->allocation->GetHeap(),
+					internal_state->allocation->GetOffset(),
+					&resourceDesc,
+					resourceState,
+					nullptr,
+					PPV_ARGS(internal_state->resource)
+				);
+				assert(SUCCEEDED(hr));
+			}
 		}
 		else if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE))
 		{
@@ -3414,7 +3417,10 @@ using namespace dx12_internal;
 		if (!SUCCEEDED(hr))
 			return false;
 
-		internal_state->gpu_address = internal_state->resource->GetGPUVirtualAddress();
+		if (internal_state->resource != nullptr)
+		{
+			internal_state->gpu_address = internal_state->resource->GetGPUVirtualAddress();
+		}
 
 		if (desc->usage == Usage::READBACK)
 		{

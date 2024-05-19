@@ -171,6 +171,7 @@ wi::vector<std::pair<Texture, Texture>> deferredBCQueue;
 static const uint32_t vertexCount_uvsphere = arraysize(UVSPHERE);
 static const uint32_t vertexCount_cone = arraysize(CONE);
 
+std::atomic_bool initialized{ false };
 
 bool volumetric_clouds_precomputed = false;
 Texture texture_shapeNoise;
@@ -2494,7 +2495,10 @@ const GPUBuffer& GetIndexBufferForQuads(uint32_t max_quad_count)
 
 void ModifyObjectSampler(const SamplerDesc& desc)
 {
-	device->CreateSampler(&desc, &samplers[SAMPLER_OBJECTSHADER]);
+	if (initialized.load())
+	{
+		device->CreateSampler(&desc, &samplers[SAMPLER_OBJECTSHADER]);
+	}
 }
 
 const std::string& GetShaderPath()
@@ -2533,6 +2537,7 @@ void Initialize()
 	LoadShaders();
 
 	wi::backlog::post("wi::renderer Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+	initialized.store(true);
 }
 void ClearWorld(Scene& scene)
 {
