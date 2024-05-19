@@ -3282,7 +3282,6 @@ using namespace vulkan_internal;
 		TIMESTAMP_FREQUENCY = uint64_t(1.0 / double(properties2.properties.limits.timestampPeriod) * 1000 * 1000 * 1000);
 
 		// Dynamic PSO states:
-		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_RASTERIZER_DISCARD_ENABLE);
 		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_VIEWPORT_WITH_COUNT);
 		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_SCISSOR_WITH_COUNT);
 		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_STENCIL_REFERENCE);
