@@ -17,6 +17,7 @@ namespace wi
 		wi::graphics::Texture rtStenciled;
 		wi::graphics::Texture rtStenciled_resolved;
 		wi::graphics::Texture rtFinal;
+		wi::graphics::Texture rtFinal_MSAA;
 
 		wi::gui::GUI GUI;
 
@@ -24,6 +25,8 @@ namespace wi
 		float current_layoutscale{};
 
 		float hdr_scaling = 9.0f;
+
+		uint32_t msaaSampleCount = 1;
 
 	public:
 		// Delete GPU resources and initialize them to default
@@ -37,6 +40,9 @@ namespace wi
 		void FixedUpdate() override;
 		void Render() const override;
 		void Compose(wi::graphics::CommandList cmd) const override;
+
+		virtual void setMSAASampleCount(uint32_t value) { msaaSampleCount = value; }
+		constexpr uint32_t getMSAASampleCount() const { return msaaSampleCount; }
 
 		const wi::graphics::Texture& GetRenderResult() const { return rtFinal; }
 		virtual const wi::graphics::Texture* GetDepthStencil() const { return nullptr; }

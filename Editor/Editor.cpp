@@ -96,6 +96,7 @@ void Editor::Initialize()
 	wi::renderer::SetOcclusionCullingEnabled(true);
 
 	renderComponent.main = this;
+	renderComponent.setMSAASampleCount(4);
 	renderComponent.Load();
 	ActivatePath(&renderComponent, 0.2f);
 }
@@ -2703,15 +2704,18 @@ void EditorComponent::Render() const
 			const Texture& render_result = renderPath->GetRenderResult();
 			RenderPassImage rp[] = {
 				RenderPassImage::RenderTarget(
-					&render_result,
+					&editor_rendertarget,
 					RenderPassImage::LoadOp::CLEAR,
-					RenderPassImage::StoreOp::STORE
+					RenderPassImage::StoreOp::DONTCARE,
+					ResourceState::RENDERTARGET,
+					ResourceState::RENDERTARGET
 				),
 				RenderPassImage::DepthStencil(
 					&editor_depthbuffer,
 					RenderPassImage::LoadOp::CLEAR,
 					RenderPassImage::StoreOp::DONTCARE
 				),
+				RenderPassImage::Resolve(&render_result),
 			};
 			device->RenderPassBegin(rp, arraysize(rp), cmd);
 
@@ -3693,12 +3697,20 @@ void EditorComponent::ResizeViewport3D()
 			TextureDesc desc;
 			desc.width = renderPath->GetRenderResult().GetDesc().width;
 			desc.height = renderPath->GetRenderResult().GetDesc().height;
+			desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
+			desc.sample_count = getMSAASampleCount();
+
 			desc.format = Format::D32_FLOAT;
 			desc.bind_flags = BindFlag::DEPTH_STENCIL;
 			desc.layout = ResourceState::DEPTHSTENCIL;
-			desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
 			device->CreateTexture(&desc, nullptr, &editor_depthbuffer);
 			device->SetName(&editor_depthbuffer, "editor_depthbuffer");
+
+			desc.format = Format::R8G8B8A8_UNORM;
+			desc.bind_flags = BindFlag::RENDER_TARGET;
+			desc.layout = ResourceState::RENDERTARGET;
+			device->CreateTexture(&desc, nullptr, &editor_rendertarget);
+			device->SetName(&editor_rendertarget, "editor_rendertarget");
 		}
 	}
 

@@ -83,8 +83,6 @@ namespace wi
 		bool fsrEnabled = false;
 		bool fsr2Enabled = false;
 
-		uint32_t msaaSampleCount = 1;
-
 	public:
 		wi::graphics::Texture rtMain;
 		wi::graphics::Texture rtMain_render; // can be MSAA
@@ -263,8 +261,6 @@ namespace wi
 		constexpr bool getFSREnabled() const { return fsrEnabled; }
 		constexpr bool getFSR2Enabled() const { return fsr2Enabled; }
 
-		constexpr uint32_t getMSAASampleCount() const { return msaaSampleCount; }
-
 		constexpr void setExposure(float value) { exposure = value; }
 		constexpr void setBrightness(float value) { brightness = value; }
 		constexpr void setContrast(float value) { contrast = value; }
@@ -318,8 +314,6 @@ namespace wi
 		void setFSREnabled(bool value);
 		void setFSR2Enabled(bool value);
 		void setFSR2Preset(FSR2_Preset preset); // this will modify resolution scaling and sampler lod bias
-
-		virtual void setMSAASampleCount(uint32_t value) { msaaSampleCount = value; }
 
 		struct CustomPostprocess
 		{

@@ -118,6 +118,7 @@ public:
 	const wi::Color ikDebugColor = wi::Color(49, 190, 103, 255);
 
 	wi::graphics::Texture editor_depthbuffer;
+	wi::graphics::Texture editor_rendertarget;
 
 	Translator translator;
 	wi::scene::PickResult hovered;

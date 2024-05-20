@@ -14,6 +14,7 @@ namespace wi
 		current_layoutscale = 0; // invalidate layout
 
 		rtFinal = {};
+		rtFinal_MSAA = {};
 		rtStenciled = {};
 		rtStenciled_resolved = {};
 	}
@@ -26,7 +27,7 @@ namespace wi
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		const Texture* dsv = GetDepthStencil();
-		if (dsv != nullptr && (resolutionScale != 1.0f || dsv->GetDesc().sample_count > 1))
+		if (dsv != nullptr && (resolutionScale != 1.0f || dsv->GetDesc().sample_count != msaaSampleCount))
 		{
 			TextureDesc desc = GetDepthStencil()->GetDesc();
 			desc.layout = ResourceState::SHADER_RESOURCE;
@@ -55,6 +56,16 @@ namespace wi
 			desc.height = GetPhysicalHeight();
 			device->CreateTexture(&desc, nullptr, &rtFinal);
 			device->SetName(&rtFinal, "rtFinal");
+
+			if (getMSAASampleCount() > 1)
+			{
+				desc.sample_count = getMSAASampleCount();
+				desc.bind_flags = BindFlag::RENDER_TARGET;
+				desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
+				desc.layout = ResourceState::RENDERTARGET;
+				device->CreateTexture(&desc, nullptr, &rtFinal_MSAA);
+				device->SetName(&rtFinal_MSAA, "rtFinal_MSAA");
+			}
 		}
 	}
 	void RenderPath2D::ResizeLayout()
@@ -201,22 +212,64 @@ namespace wi
 
 		if (dsv != nullptr && !rtStenciled.IsValid())
 		{
-			RenderPassImage rp[] = {
-				RenderPassImage::RenderTarget(&rtFinal, RenderPassImage::LoadOp::CLEAR),
-				RenderPassImage::DepthStencil(
-					dsv,
-					RenderPassImage::LoadOp::LOAD,
-					RenderPassImage::StoreOp::STORE
-				),
-			};
-			device->RenderPassBegin(rp, arraysize(rp), cmd);
+			if (rtFinal_MSAA.IsValid())
+			{
+				RenderPassImage rp[] = {
+					RenderPassImage::RenderTarget(
+						&rtFinal_MSAA,
+						RenderPassImage::LoadOp::CLEAR,
+						RenderPassImage::StoreOp::DONTCARE,
+						ResourceState::RENDERTARGET,
+						ResourceState::RENDERTARGET
+					),
+					RenderPassImage::DepthStencil(
+						dsv,
+						RenderPassImage::LoadOp::LOAD,
+						RenderPassImage::StoreOp::STORE
+					),
+					RenderPassImage::Resolve(&rtFinal),
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
+			}
+			else
+			{
+				RenderPassImage rp[] = {
+					RenderPassImage::RenderTarget(&rtFinal, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::DepthStencil(
+						dsv,
+						RenderPassImage::LoadOp::LOAD,
+						RenderPassImage::StoreOp::STORE
+					),
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
+			}
 		}
 		else
 		{
-			RenderPassImage rp[] = {
-				RenderPassImage::RenderTarget(&rtFinal, RenderPassImage::LoadOp::CLEAR),
-			};
-			device->RenderPassBegin(rp, arraysize(rp), cmd);
+			if (rtFinal_MSAA.IsValid())
+			{
+				RenderPassImage rp[] = {
+					RenderPassImage::RenderTarget(
+						&rtFinal_MSAA,
+						RenderPassImage::LoadOp::CLEAR,
+						RenderPassImage::StoreOp::DONTCARE,
+						ResourceState::RENDERTARGET,
+						ResourceState::RENDERTARGET
+					),
+					RenderPassImage::Resolve(&rtFinal),
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
+			}
+			else
+			{
+				RenderPassImage rp[] = {
+					RenderPassImage::RenderTarget(
+						&rtFinal,
+						RenderPassImage::LoadOp::CLEAR
+					),
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
+			}
 		}
 
 		Viewport vp;
