@@ -553,10 +553,14 @@ The Dump to header () option will use embedding and create a C++ header file 
 			<entry id="13">カメラ </entry>
 			<entry id="14">三乗 </entry>
 			<entry id="15">プレーぬ </entry>
-			<entry id="16">アニメーション </entry>
-			<entry id="17">スクリプト </entry>
-			<entry id="18">コライダー </entry>
-			<entry id="19">地形 </entry>
+			<entry id="16">球 </entry>
+			<entry id="17">アニメーション </entry>
+			<entry id="18">スクリプト </entry>
+			<entry id="19">コライダー </entry>
+			<entry id="20">地形 </entry>
+			<entry id="21">スプライト </entry>
+			<entry id="22">フォント </entry>
+			<entry id="23">ヴぉクセル　グリッド </entry>
 		</section>
 	</section>
 	<section name="Materials" hint="Window">

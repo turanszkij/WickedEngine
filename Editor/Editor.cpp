@@ -277,6 +277,7 @@ void EditorComponent::Load()
 	newEntityCombo.Create("New: ");
 	newEntityCombo.SetShadowRadius(0);
 	newEntityCombo.SetInvalidSelectionText("+");
+	newEntityCombo.selected_font.params.size = 28;
 	newEntityCombo.SetDropArrowEnabled(false);
 	newEntityCombo.SetFixedDropWidth(200);
 	newEntityCombo.SetMaxVisibleItemCount(16);

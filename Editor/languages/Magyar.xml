@@ -547,15 +547,19 @@ The Dump to header () option will use embedding and create a C++ header file 
 			<entry id="8">Hang </entry>
 			<entry id="9">Videó </entry>
 			<entry id="10">Időjárás </entry>
-			<entry id="11">Emitter </entry>
+			<entry id="11">Részecske </entry>
 			<entry id="12">Haj Részecske </entry>
 			<entry id="13">Kamera </entry>
 			<entry id="14">Kocka </entry>
 			<entry id="15">Sík </entry>
-			<entry id="16">Animáció </entry>
-			<entry id="17">Szkript </entry>
-			<entry id="18">Ütköző </entry>
-			<entry id="19">Terep </entry>
+			<entry id="16">Gömb </entry>
+			<entry id="17">Animáció </entry>
+			<entry id="18">Szkript </entry>
+			<entry id="19">Ütköző </entry>
+			<entry id="20">Terep </entry>
+			<entry id="21">Kép </entry>
+			<entry id="22">Szöveg </entry>
+			<entry id="23">Voxel Rács </entry>
 		</section>
 	</section>
 	<section name="Materials" hint="Window">
