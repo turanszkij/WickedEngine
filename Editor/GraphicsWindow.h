@@ -110,5 +110,7 @@ public:
 	void Update();
 
 	void ResizeLayout() override;
+
+	void ApplySamplerSettings();
 };
 

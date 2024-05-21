@@ -1002,10 +1002,12 @@ void EditorComponent::Load()
 }
 void EditorComponent::Start()
 {
+	// Start() is called after system initialization is complete, while Load() can be while initialization is still not finished
+	//	Therefore we initialize things in Start which would need to be after system initializations:
+
 	// Font icon is from #include "FontAwesomeV6.h"
 	//	We will not directly use this font style, but let the font renderer fall back on it
 	//	when an icon character is not found in the default font.
-	//	This is added on main thread, not inside Load(), to avoid conflict with font system intialization
 	wi::font::AddFontStyle("FontAwesomeV6", font_awesome_v6, font_awesome_v6_size);
 
 	// Add other fonts that were loaded from fonts directory as fallback fonts:
@@ -1013,6 +1015,8 @@ void EditorComponent::Start()
 	{
 		wi::font::AddFontStyle(x.name, x.filedata.data(), x.filedata.size());
 	}
+
+	graphicsWnd.ApplySamplerSettings();
 
 	RenderPath2D::Start();
 }
