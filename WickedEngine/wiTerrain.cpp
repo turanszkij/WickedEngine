@@ -1233,7 +1233,7 @@ namespace wi::terrain
 	{
 		GraphicsDevice* device = GetDevice();
 
-		if (!chunk_data.heightmap.IsValid())
+		if (!chunk_data.heightmap.IsValid() && !chunk_data.heightmap_data.empty())
 		{
 			TextureDesc desc;
 			desc.width = (uint32_t)chunk_width;
@@ -1901,9 +1901,9 @@ namespace wi::terrain
 		// Note: separate component types serialized within terrain must NOT use the version of the terrain, but their own!
 		ComponentLibrary& library = *seri.componentlibrary;
 		const uint64_t terrain_version = seri.GetVersion();
-		const uint64_t grass_version = library.GetVersion("wi::scene::Scene::hairs");
-		const uint64_t material_version = library.GetVersion("wi::scene::Scene::materials");
-		const uint64_t weather_version = library.GetVersion("wi::scene::Scene::weathers");
+		const uint64_t grass_version = seri.GetVersion("wi::scene::Scene::hairs");
+		const uint64_t material_version = seri.GetVersion("wi::scene::Scene::materials");
+		const uint64_t weather_version = seri.GetVersion("wi::scene::Scene::weathers");
 
 		if (archive.IsReadMode())
 		{
