@@ -1534,6 +1534,7 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - SetCropRight(float value) -- Sets cropping from right of the screen in logical units
 - SetCropBottom(float value) -- Sets cropping from bottom of the screen in logical units
 
+```lua
 FSR2_Preset = {
 	Quality = 0,			-- 1.5x scaling, -1.58 sampler LOD bias
 	Balanced = 1,			-- 1.7x scaling, -1.76 sampler LOD bias
@@ -1545,6 +1546,7 @@ Tonemap = {
 	Reinhard = 0,
 	ACES = 1,
 }
+```
 
 #### LoadingScreen
 It is a RenderPath2D but one that internally manages resource loading and can display information about the process.
@@ -1557,6 +1559,16 @@ It inherits functions from RenderPath2D.
 - GetProgress() : int -- returns percentage of loading complete (0% - 100%)
 - SetBackgroundTexture(Texture tex) -- set a full screen background texture that wil be displayed when loading screen is active
 - GetBackgroundTexture() : Texture
+- SetBackgroundMode(BackgroundMode mode) -- sets the alignment of the background image
+- GetBackgroundMode() : int
+
+```lua
+BackgroundMode = {
+	Fill,	-- fill the whole screen, will cut off parts of the image if aspects don't match
+	Fit,	-- fit the image completely inside the screen, will result in black bars on screen if aspects don't match
+	Stretch	-- fill the whole screen, and stretch the image if needed
+}
+```
 
 ### Primitives
 
