@@ -84,26 +84,52 @@ namespace wi
 			const float canvas_aspect = GetLogicalWidth() / GetLogicalHeight();
 			const float image_aspect = float(desc.width) / float(desc.height);
 
-			if (canvas_aspect > image_aspect)
+			switch (background_mode)
 			{
-				// display aspect is wider than image:
-				fx.siz.x = GetLogicalWidth() / canvas_aspect * image_aspect;
-				fx.siz.y = GetLogicalHeight();
-			}
-			else
-			{
-				// image aspect is wider or equal to display
-				fx.siz.x = GetLogicalWidth();
-				fx.siz.y = GetLogicalHeight() * canvas_aspect / image_aspect;
+			default:
+			case wi::LoadingScreen::BackgroundMode::Fill:
+				if (canvas_aspect > image_aspect)
+				{
+					// display aspect is wider than image:
+					fx.siz.x = GetLogicalWidth();
+					fx.siz.y = GetLogicalHeight() / image_aspect * canvas_aspect;
+				}
+				else
+				{
+					// image aspect is wider or equal to display
+					fx.siz.x = GetLogicalWidth() / canvas_aspect * image_aspect;
+					fx.siz.y = GetLogicalHeight();
+				}
+				fx.pos = XMFLOAT3(GetLogicalWidth() * 0.5f, GetLogicalHeight() * 0.5f, 0);
+				fx.pivot = XMFLOAT2(0.5f, 0.5f);
+				break;
+			case wi::LoadingScreen::BackgroundMode::Fit:
+				if (canvas_aspect > image_aspect)
+				{
+					// display aspect is wider than image:
+					fx.siz.x = GetLogicalWidth() / canvas_aspect * image_aspect;
+					fx.siz.y = GetLogicalHeight();
+				}
+				else
+				{
+					// image aspect is wider or equal to display
+					fx.siz.x = GetLogicalWidth();
+					fx.siz.y = GetLogicalHeight() * canvas_aspect / image_aspect;
+				}
+				fx.pos = XMFLOAT3(GetLogicalWidth() * 0.5f, GetLogicalHeight() * 0.5f, 0);
+				fx.pivot = XMFLOAT2(0.5f, 0.5f);
+				break;
+			case wi::LoadingScreen::BackgroundMode::Stretch:
+				fx.enableFullScreen();
+				break;
 			}
 
-			fx.pos = XMFLOAT3(GetLogicalWidth() * 0.5f, GetLogicalHeight() * 0.5f, 0);
-			fx.pivot = XMFLOAT2(0.5f, 0.5f);
 			fx.blendFlag = wi::enums::BLENDMODE_ALPHA;
 			if (colorspace != ColorSpace::SRGB)
 			{
 				fx.enableLinearOutputMapping(hdr_scaling);
 			}
+
 			wi::image::Draw(&tex, fx, cmd);
 		}
 

@@ -37,6 +37,8 @@ namespace wi::lua
 		lunamethod(LoadingScreen_BindLua, GetProgress),
 		lunamethod(LoadingScreen_BindLua, SetBackgroundTexture),
 		lunamethod(LoadingScreen_BindLua, GetBackgroundTexture),
+		lunamethod(LoadingScreen_BindLua, SetBackgroundMode),
+		lunamethod(LoadingScreen_BindLua, GetBackgroundMode),
 		{ NULL, NULL }
 	};
 	Luna<LoadingScreen_BindLua>::PropertyType LoadingScreen_BindLua::properties[] = {
@@ -271,6 +273,34 @@ namespace wi::lua
 		Luna<Texture_BindLua>::push(L, loading->backgroundTexture);
 		return 1;
 	}
+	int LoadingScreen_BindLua::SetBackgroundMode(lua_State* L)
+	{
+		LoadingScreen* loading = dynamic_cast<LoadingScreen*>(component);
+		if (loading == nullptr)
+		{
+			wi::lua::SError(L, "SetBackgroundMode(int mode): loading screen is not valid!");
+			return 0;
+		}
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "SetBackgroundMode(int mode): not enough arguments!");
+			return 0;
+		}
+		loading->background_mode = (LoadingScreen::BackgroundMode)wi::lua::SGetInt(L, 1);
+		return 0;
+	}
+	int LoadingScreen_BindLua::GetBackgroundMode(lua_State* L)
+	{
+		LoadingScreen* loading = dynamic_cast<LoadingScreen*>(component);
+		if (loading == nullptr)
+		{
+			wi::lua::SError(L, "GetBackgroundMode(): loading screen is not valid!");
+			return 0;
+		}
+		wi::lua::SSetInt(L, (int)loading->background_mode);
+		return 1;
+	}
 
 	void LoadingScreen_BindLua::Bind()
 	{
@@ -279,6 +309,14 @@ namespace wi::lua
 		{
 			initialized = true;
 			Luna<LoadingScreen_BindLua>::Register(wi::lua::GetLuaState());
+
+			wi::lua::RunText(R"(
+BackgroundMode = {
+	Fill = 0,
+	Fit = 1,
+	Stretch = 2
+}
+)");
 		}
 	}
 

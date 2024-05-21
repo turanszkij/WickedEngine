@@ -31,6 +31,8 @@ namespace wi::lua
 		int GetProgress(lua_State* L);
 		int SetBackgroundTexture(lua_State* L);
 		int GetBackgroundTexture(lua_State* L);
+		int SetBackgroundMode(lua_State* L);
+		int GetBackgroundMode(lua_State* L);
 
 		static void Bind();
 	};

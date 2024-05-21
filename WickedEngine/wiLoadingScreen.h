@@ -22,6 +22,13 @@ namespace wi
 	public:
 		wi::Resource backgroundTexture;
 
+		enum class BackgroundMode
+		{
+			Fill,	// fill the whole screen, will cut off parts of the image if aspects don't match
+			Fit,	// fit the image completely inside the screen, will result in black bars on screen if aspects don't match
+			Stretch	// fill the whole screen, and stretch the image if needed
+		} background_mode = BackgroundMode::Fill;
+
 		//Add a loading task which should be executed
 		void addLoadingFunction(std::function<void(wi::jobsystem::JobArgs)> loadingFunction);
 		//Helper for loading a whole renderable component
