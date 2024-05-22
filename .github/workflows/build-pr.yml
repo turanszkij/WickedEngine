@@ -12,13 +12,13 @@ jobs:
     - name: Build
       shell: cmd
       run: |
-        "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine/WickedEngine_Windows.vcxproj /m /p:Configuration=Release /p:Platform=x64
-        "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine/OfflineShaderCompiler.vcxproj /m /p:Configuration=Release /p:Platform=x64
         cd "WickedEngine"
+        "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine_Windows.vcxproj /m /p:Configuration=Release /p:Platform=x64
+        "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" OfflineShaderCompiler.vcxproj /m /p:Configuration=Release /p:Platform=x64
         "../BUILD/x64/Release/OfflineShaderCompiler/OfflineShaderCompiler.exe" hlsl6 spirv shaderdump strip_reflection
-        cd ..
-        "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine/WickedEngine_Windows.vcxproj /t:rebuild /m /p:Configuration=Release /p:Platform=x64
-        "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" Editor/Editor_Windows.vcxproj /t:rebuild /m /p:Configuration=Release /p:Platform=x64
+        "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine_Windows.vcxproj /t:rebuild /m /p:Configuration=Release /p:Platform=x64
+        cd ../Editor
+        "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" Editor_Windows.vcxproj /t:rebuild /m /p:Configuration=Release /p:Platform=x64
     
     - name: Move files
       shell: cmd
