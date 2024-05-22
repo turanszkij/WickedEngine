@@ -110,6 +110,7 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 	{
 		transform.ClearTransform();
 		transform.UpdateTransform();
+		state = TRANSLATOR_IDLE;
 		return;
 	}
 
@@ -141,7 +142,10 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 	{
 		PreTranslate();
 		if (!has_selected_transform)
+		{
+			state = TRANSLATOR_IDLE;
 			return;
+		}
 
 		const Ray ray = wi::renderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, canvas, camera);
 		const XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
@@ -385,7 +389,10 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 				plane = XMPlaneFromPointNormal(pos, XMVector3Normalize(planeNormal));
 
 				if (XMVectorGetX(XMVectorAbs(XMVector3Dot(planeNormal, rayDir))) < 0.001f)
+				{
+					state = TRANSLATOR_IDLE;
 					return;
+				}
 				XMVECTOR intersection = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir * camera.zFarP);
 
 				if (!dragging)
@@ -488,6 +495,7 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 			dragEnded = true;
 		}
 		dragging = false;
+		state = TRANSLATOR_IDLE;
 	}
 }
 void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMouse, CommandList cmd) const
