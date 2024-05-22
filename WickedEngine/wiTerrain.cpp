@@ -1669,6 +1669,8 @@ namespace wi::terrain
 
 		for (const VirtualTexture* vt : virtual_textures_in_use)
 		{
+			if (vt->update_requests.empty())
+				continue;
 			for (uint32_t map_type = 0; map_type < arraysize(atlas.maps); map_type++)
 			{
 				switch (map_type)
@@ -1761,9 +1763,6 @@ namespace wi::terrain
 					}
 				}
 			}
-		}
-		for (const VirtualTexture* vt : virtual_textures_in_use)
-		{
 			vt->update_requests.clear();
 		}
 		device->EventEnd(cmd);
