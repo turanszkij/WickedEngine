@@ -1462,6 +1462,11 @@ void TerrainWindow::SetupAssets()
 		// Usually in source download, the assets are one level outside of Editor:
 		asset_path = wi::helper::GetCurrentPath() + "/../Content/terrain/";
 	}
+	if (!wi::helper::DirectoryExists(asset_path))
+	{
+		// In UWP or older Editor content, it's not in Content folder:
+		asset_path = wi::helper::GetCurrentPath() + "/terrain/";
+	}
 
 	material_Base->textures[MaterialComponent::BASECOLORMAP].name = asset_path + "base.jpg";
 	material_Base->textures[MaterialComponent::NORMALMAP].name = asset_path + "base_nor.jpg";
