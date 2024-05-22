@@ -10,10 +10,6 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
-    - uses: nuget/setup-nuget@v2
-      with:
-        nuget-api-key: ${{ secrets.NuGetAPIKey }}
-    - run: nuget restore WickedEngine.sln
     - name: Build
       shell: cmd
       run: |
@@ -21,7 +17,8 @@ jobs:
         cd "WickedEngine"
         "../BUILD/x64/Release/OfflineShaderCompiler/OfflineShaderCompiler.exe" hlsl6 spirv shaderdump strip_reflection
         cd ..
-        "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /t:rebuild /m /p:Configuration=Release /p:Platform=x64
+        "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /t:clean /m /p:Configuration=Release /p:Platform=x64
+        "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /t:Editor_Windows /m /p:Configuration=Release /p:Platform=x64
     
     - name: Move files
       shell: cmd
@@ -29,18 +26,14 @@ jobs:
         move BUILD\x64\Release\Editor_Windows\Editor_Windows.exe .\
         move Editor\config.ini .\
         move Editor\startup.lua .\
-        move Editor\terrain .\
         move Editor\languages .\
         move Editor\fonts .\
-        move Content\Documentation .\
         
     - name: Package Editor
       uses: actions/upload-artifact@v4
       with:
         name: Editor (Windows)
         path: |
-          Documentation/
-          terrain/
           languages/
           fonts/
           config.ini
@@ -77,18 +70,14 @@ jobs:
         mv build/Editor/WickedEngineEditor ./
         mv Editor/config.ini ./
         mv Editor/startup.lua ./
-        mv Editor/terrain ./
         mv Editor/languages ./
         mv Editor/fonts ./
-        mv Content/Documentation ./
         
     - name: Package Editor
       uses: actions/upload-artifact@v4
       with:
         name: Editor (Linux)
         path: |
-          Documentation/
-          terrain/
           languages/
           fonts/
           config.ini
@@ -104,5 +93,7 @@ jobs:
       with:
         name: Content
         path: |
+          Content/Documentation
           Content/models
           Content/scripts
+          Content/terrain

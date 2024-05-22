@@ -37,6 +37,9 @@
     <Filter Include="scripts\dungeon_generator\assets">
       <UniqueIdentifier>{a8242a40-dd2a-46f8-95a9-1b7431c79043}</UniqueIdentifier>
     </Filter>
+    <Filter Include="terrain">
+      <UniqueIdentifier>{f61a70fd-1b03-4bb7-a044-2442d8557486}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)scripts\camera_animation_clamped.lua">
@@ -251,6 +254,15 @@
     </None>
     <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\animations.wiscene">
       <Filter>scripts\character_controller\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)terrain\grass.ini">
+      <Filter>terrain</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)terrain\props.ini">
+      <Filter>terrain</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)terrain\props.wiscene">
+      <Filter>terrain</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -581,6 +593,96 @@
     <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\thumbnail.png">
       <Filter>scripts\fighting_game</Filter>
     </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\base.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\base_nor.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\bricks.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\bricks_nor.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\darkrock.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\darkrock_nor.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\foil.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\foil_nor.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\grassparticle.dds">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\ground.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\ground_nor.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\ground2.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\ground2_nor.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\high_altitude.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\high_altitude_nor.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\lava.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\lava_emi.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\lava_nor.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\low_altitude.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\low_altitude_nor.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\metalplate.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\metalplate_nor.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\pavingstone.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\pavingstone_nor.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\rock.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\rock_nor.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\slope.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\slope_nor.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\tactilepaving.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\tactilepaving_nor.jpg">
+      <Filter>terrain</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Media Include="$(MSBuildThisFileDirectory)models\water.wav">
@@ -593,6 +695,9 @@
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)models\Sponza\copyright.txt">
       <Filter>models\Sponza</Filter>
+    </Text>
+    <Text Include="$(MSBuildThisFileDirectory)terrain\licenses.txt">
+      <Filter>terrain</Filter>
     </Text>
   </ItemGroup>
 </Project>

@@ -502,6 +502,18 @@
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)terrain\grass.ini">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)terrain\props.ini">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)terrain\props.wiscene">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="$(MSBuildThisFileDirectory)models\billboardredflowers.png" />
@@ -613,6 +625,36 @@
     <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\ripple.png" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\smoke0.png" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\thumbnail.png" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\base.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\base_nor.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\bricks.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\bricks_nor.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\darkrock.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\darkrock_nor.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\foil.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\foil_nor.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\grassparticle.dds" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\ground.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\ground2.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\ground2_nor.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\ground_nor.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\high_altitude.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\high_altitude_nor.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\lava.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\lava_emi.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\lava_nor.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\low_altitude.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\low_altitude_nor.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\metalplate.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\metalplate_nor.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\pavingstone.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\pavingstone_nor.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\rock.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\rock_nor.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\slope.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\slope_nor.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\tactilepaving.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\tactilepaving_nor.jpg" />
   </ItemGroup>
   <ItemGroup>
     <Media Include="$(MSBuildThisFileDirectory)models\water.wav" />
@@ -620,5 +662,6 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)models\Sponza\copyright.txt" />
+    <Text Include="$(MSBuildThisFileDirectory)terrain\licenses.txt" />
   </ItemGroup>
 </Project>

@@ -25,18 +25,14 @@ jobs:
         move BUILD\x64\Release\Editor_Windows\Editor_Windows.exe .\
         move Editor\config.ini .\
         move Editor\startup.lua .\
-        move Editor\terrain .\
         move Editor\languages .\
         move Editor\fonts .\
-        move Content\Documentation .\
         
     - name: Package Editor
       uses: actions/upload-artifact@v4
       with:
         name: Editor (Windows)
         path: |
-          Documentation/
-          terrain/
           languages/
           fonts/
           config.ini
@@ -74,18 +70,14 @@ jobs:
         mv build/Editor/WickedEngineEditor ./
         mv Editor/config.ini ./
         mv Editor/startup.lua ./
-        mv Editor/terrain ./
         mv Editor/languages ./
         mv Editor/fonts ./
-        mv Content/Documentation ./
         
     - name: Package Editor
       uses: actions/upload-artifact@v4
       with:
         name: Editor (Linux)
         path: |
-          Documentation/
-          terrain/
           languages/
           fonts/
           config.ini
@@ -101,5 +93,7 @@ jobs:
       with:
         name: Content
         path: |
+          Content/Documentation
           Content/models
           Content/scripts
+          Content/terrain
