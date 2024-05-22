@@ -471,6 +471,9 @@ void PaintToolWindow::Update(float dt)
 	posNew = XMFLOAT2(editor->currentMouse.x, editor->currentMouse.y);
 	float pressureNew = pressureCheckBox.GetCheck() ? editor->currentMouse.w : 1.0f;
 
+	// Mouse wheel scroll adjusts brush radius:
+	radiusSlider.SetValue(std::max(0.1f, radiusSlider.GetValue() + editor->currentMouse.z));
+
 	const MODE mode = GetMode();
 	const float radius = radiusSlider.GetValue();
 	const float amount = amountSlider.GetValue();

@@ -1309,16 +1309,16 @@ void TerrainWindow::Create(EditorComponent* _editor)
 void TerrainWindow::SetEntity(Entity entity)
 {
 	wi::scene::Scene& scene = editor->GetCurrentScene();
-	terrain = scene.terrains.GetComponent(entity);
-	if (terrain == nullptr)
-		return;
-
-	propsWindow->terrain = terrain;
 
 	if (this->entity == entity)
 		return;
 
 	this->entity = entity;
+
+	terrain = scene.terrains.GetComponent(entity);
+	propsWindow->terrain = terrain;
+	if (terrain == nullptr)
+		return;
 
 	for (auto& x : modifiers)
 	{
@@ -1406,6 +1406,8 @@ void TerrainWindow::SetEntity(Entity entity)
 	}
 
 	propsWindow->Rebuild();
+
+	editor->paintToolWnd.RecreateTerrainMaterialButtons();
 }
 void TerrainWindow::AddModifier(ModifierWindow* modifier_window)
 {
