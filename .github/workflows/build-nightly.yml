@@ -67,7 +67,7 @@ jobs:
         
     - name: Move files
       run: |
-        mv build/Editor/WickedEngineEditor ./
+        mv build/Editor/WickedEngineEditor ./Editor_Linux
         mv Editor/config.ini ./
         mv Editor/startup.lua ./
         mv Editor/languages ./
@@ -82,7 +82,7 @@ jobs:
           fonts/
           config.ini
           startup.lua
-          WickedEngineEditor
+          Editor_Linux
 
   content:
     runs-on: windows-latest
