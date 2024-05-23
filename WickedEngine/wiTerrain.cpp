@@ -219,7 +219,7 @@ namespace wi::terrain
 			td.width = granularity;
 			td.height = granularity;
 
-			td.format = Format::R32_UINT;
+			td.format = Format::R8G8B8A8_UINT;
 			td.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			td.usage = Usage::DEFAULT;
 			td.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
