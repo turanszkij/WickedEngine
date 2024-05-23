@@ -56,7 +56,7 @@ namespace wi::lua::renderer
 	int SetShadowProps2D(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);
-		if (argc > 1)
+		if (argc > 0)
 		{
 			wi::renderer::SetShadowProps2D(wi::lua::SGetInt(L, 1));
 		}
@@ -67,7 +67,7 @@ namespace wi::lua::renderer
 	int SetShadowPropsCube(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);
-		if (argc > 1)
+		if (argc > 0)
 		{
 			wi::renderer::SetShadowPropsCube(wi::lua::SGetInt(L, 1));
 		}
