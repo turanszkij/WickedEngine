@@ -63,6 +63,9 @@ namespace wi::terrain
 		Map maps[4];
 		wi::graphics::GPUBuffer tile_pool;
 
+		uint8_t physical_tile_count_x = 0;
+		uint8_t physical_tile_count_y = 0;
+
 		struct Tile
 		{
 			uint8_t x = 0xFF;
@@ -71,8 +74,16 @@ namespace wi::terrain
 			{
 				return x != 0xFF && y != 0xFF;
 			}
+			constexpr operator uint16_t() const { return uint16_t(uint16_t(x) | (uint16_t(y) << 8u)); }
 		};
 		wi::vector<Tile> free_tiles;
+
+		struct PhysicalTile
+		{
+			const Tile* last_used = nullptr;
+			uint64_t free_frames = 0;
+		};
+		wi::vector<PhysicalTile> physical_tiles;
 
 		struct Residency
 		{
@@ -92,20 +103,37 @@ namespace wi::terrain
 		};
 		wi::unordered_map<uint32_t, wi::vector<std::shared_ptr<Residency>>> free_residencies; // per resolution residencies
 
-		Tile allocate_tile()
+		bool allocate_tile(Tile& tile)
 		{
 			if (free_tiles.empty())
-				return {};
-			Tile tile = free_tiles.back();
+				return false;
+			tile = free_tiles.back();
 			free_tiles.pop_back();
-			return tile;
+			PhysicalTile& physical_tile = physical_tiles[tile.x + tile.y * physical_tile_count_x];
+			physical_tile.last_used = &tile;
+			physical_tile.free_frames = 0;
+			return true;
 		}
-		void free_tile(Tile& tile)
+		bool request_residency(const Tile& tile)
+		{
+			if (check_tile_resident(tile))
+			{
+				physical_tiles[tile.x + tile.y * physical_tile_count_x].free_frames = 0;
+				return true;
+			}
+			return false;
+		}
+		bool check_tile_resident(const Tile& tile) const
 		{
 			if (!tile.IsValid())
-				return;
-			free_tiles.push_back(tile);
-			tile = {};
+				return false;
+			return physical_tiles[tile.x + tile.y * physical_tile_count_x].last_used == &tile;
+		}
+		uint64_t get_tile_frames(const Tile& tile) const
+		{
+			if (!tile.IsValid())
+				return false;
+			return physical_tiles[tile.x + tile.y * physical_tile_count_x].free_frames;
 		}
 		std::shared_ptr<Residency> allocate_residency(uint32_t resolution)
 		{
@@ -144,10 +172,6 @@ namespace wi::terrain
 
 		void free(VirtualTextureAtlas& atlas)
 		{
-			for (auto& tile : tiles)
-			{
-				atlas.free_tile(tile);
-			}
 			tiles.clear();
 			atlas.free_residency(residency);
 		}
@@ -156,6 +180,15 @@ namespace wi::terrain
 		{
 			resolution = 0;
 		}
+
+		struct AllocationRequest
+		{
+			uint32_t x = 0;
+			uint32_t y = 0;
+			uint32_t lod = 0;
+			uint32_t tile_index = 0;
+		};
+		wi::vector<AllocationRequest> allocation_requests;
 
 		// Attach this data to Virtual Texture because we will record these by separate CPU thread:
 		struct UpdateRequest
@@ -257,7 +290,7 @@ namespace wi::terrain
 		wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_after_update;
 		wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_before_allocation;
 		wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_after_allocation;
-		wi::vector<const VirtualTexture*> virtual_textures_in_use;
+		wi::vector<VirtualTexture*> virtual_textures_in_use;
 		wi::graphics::Sampler sampler;
 		VirtualTextureAtlas atlas;
 

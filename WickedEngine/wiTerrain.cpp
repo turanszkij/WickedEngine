@@ -184,6 +184,8 @@ namespace wi::terrain
 		std::atomic_bool cancelled{ false };
 	};
 
+	wi::jobsystem::context virtual_texture_ctx;
+
 	static std::mutex locker;
 
 	void weight_norm(XMFLOAT4& weights)
@@ -276,7 +278,7 @@ namespace wi::terrain
 			}
 			{
 				GPUBufferDesc bd;
-				bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+				bd.format = Format::R16_UINT;
 				bd.usage = Usage::DEFAULT;
 				bd.bind_flags = BindFlag::SHADER_RESOURCE;
 				bd.size = sizeof(uint32_t) * tile_count;
@@ -328,9 +330,7 @@ namespace wi::terrain
 			tile_count += 1; // packed mip chain
 			lod_count += 1; // packed mip chain
 			tiles.resize(tile_count);
-			tiles[tile_count - 1] = atlas.allocate_tile();
-			tiles[tile_count - 2] = atlas.allocate_tile();
-			if (tiles[tile_count - 1].IsValid())
+			if (atlas.allocate_tile(tiles[tile_count - 1]))
 			{
 				// packed mip tail update:
 				UpdateRequest& request = update_requests.emplace_back();
@@ -340,7 +340,7 @@ namespace wi::terrain
 				request.x = 0;
 				request.y = 0;
 			}
-			if (tiles[tile_count - 2].IsValid())
+			if (atlas.allocate_tile(tiles[tile_count - 2]))
 			{
 				// last nonpacked mip update:
 				UpdateRequest& request = update_requests.emplace_back();
@@ -355,8 +355,7 @@ namespace wi::terrain
 		{
 			// far away chunks only have 1 tile
 			tiles.resize(tile_count);
-			tiles.back() = atlas.allocate_tile();
-			if (tiles.back().IsValid())
+			if (atlas.allocate_tile(tiles.back()))
 			{
 				// update the only tile there is:
 				UpdateRequest& request = update_requests.emplace_back();
@@ -368,7 +367,6 @@ namespace wi::terrain
 			}
 		}
 		locker.unlock();
-
 	}
 
 	Terrain::Terrain()
@@ -1293,7 +1291,6 @@ namespace wi::terrain
 			assert(success);
 		}
 
-		wi::jobsystem::context ctx;
 		for (auto& it : chunks)
 		{
 			const Chunk& chunk = it.first;
@@ -1376,18 +1373,21 @@ namespace wi::terrain
 				bool success = device->CreateBuffer(&tile_pool_desc, nullptr, &atlas.tile_pool);
 				assert(success);
 
-				const uint32_t physical_tile_count_x = physical_width / SVT_TILE_SIZE_PADDED;
-				const uint32_t physical_tile_count_y = physical_height / SVT_TILE_SIZE_PADDED;
+				atlas.physical_tile_count_x = uint8_t(physical_width / SVT_TILE_SIZE_PADDED);
+				atlas.physical_tile_count_y = uint8_t(physical_height / SVT_TILE_SIZE_PADDED);
+				atlas.physical_tiles.resize(size_t(atlas.physical_tile_count_x) * size_t(atlas.physical_tile_count_y));
 
+				uint64_t init_frames = 0;
 				atlas.free_tiles.clear();
-				atlas.free_tiles.reserve(physical_tile_count_x * physical_tile_count_y);
-				for (uint8_t y = 0; y < physical_tile_count_y; ++y)
+				atlas.free_tiles.reserve(atlas.physical_tile_count_x * atlas.physical_tile_count_y);
+				for (uint8_t y = 0; y < atlas.physical_tile_count_y; ++y)
 				{
-					for (uint8_t x = 0; x < physical_tile_count_x; ++x)
+					for (uint8_t x = 0; x < atlas.physical_tile_count_x; ++x)
 					{
 						VirtualTextureAtlas::Tile& tile = atlas.free_tiles.emplace_back();
 						tile.x = x;
 						tile.y = y;
+						atlas.physical_tiles[x + y * atlas.physical_tile_count_x].free_frames = ++init_frames;
 					}
 				}
 
@@ -1476,100 +1476,8 @@ namespace wi::terrain
 
 			virtual_textures_in_use.push_back(&vt);
 
-
 			if (vt.residency == nullptr)
 				continue;
-
-			// Process each virtual texture on a background thread:
-			wi::jobsystem::Execute(ctx, [this, &vt](wi::jobsystem::JobArgs args) {
-
-				const uint32_t width = vt.residency->feedbackMap.desc.width;
-				const uint32_t height = vt.residency->feedbackMap.desc.height;
-
-				// We must only access persistently mapped resources by CPU that the GPU is not using currently:
-				vt.residency->cpu_resource_id = (vt.residency->cpu_resource_id + 1) % arraysize(vt.residency->allocationBuffer_CPU_readback);
-				const bool data_available_CPU = vt.residency->data_available_CPU[vt.residency->cpu_resource_id]; // indicates whether any GPU data is readable at this point or not
-				vt.residency->data_available_CPU[vt.residency->cpu_resource_id] = true;
-
-				// Perform the allocations and deallocations:
-				//	GPU writes allocation requests by virtualTextureTileAllocateCS.hlsl compute shader
-				if (data_available_CPU)
-				{
-					uint32_t page_count = 0;
-					uint32_t lod_offsets[10] = {};
-					for (uint32_t i = 0; i < vt.lod_count; ++i)
-					{
-						const uint32_t l_width = std::max(1u, width >> i);
-						const uint32_t l_height = std::max(1u, height >> i);
-						lod_offsets[i] = page_count;
-						page_count += l_width * l_height;
-					}
-
-					uint32_t allocation_count = *(const uint32_t*)vt.residency->allocationBuffer_CPU_readback[vt.residency->cpu_resource_id].mapped_data;
-					allocation_count = std::min(uint32_t(vt.tiles.size() - 1), allocation_count);
-					//allocation_count = std::min(100u, allocation_count);
-					const uint32_t* allocation_requests = ((const uint32_t*)vt.residency->allocationBuffer_CPU_readback[vt.residency->cpu_resource_id].mapped_data) + 1; // +1 offset of the allocation counter
-					for (uint32_t i = 0; i < allocation_count; ++i)
-					{
-						const uint32_t allocation_request = allocation_requests[i];
-						const uint8_t x = (allocation_request >> 24u) & 0xFF;
-						const uint8_t y = (allocation_request >> 16u) & 0xFF;
-						const uint8_t lod = (allocation_request >> 8u) & 0xFF;
-						const bool allocate = allocation_request & 0x1;
-						const bool must_be_always_resident = (int)lod >= ((int)vt.lod_count - 2);
-						if (lod >= vt.lod_count)
-							continue;
-						const uint32_t l_offset = lod_offsets[lod];
-						const uint32_t l_width = std::max(1u, width >> lod);
-						const uint32_t l_height = std::max(1u, height >> lod);
-						const uint32_t l_index = l_offset + x + y * l_width;
-						if (x >= l_width || y >= l_height)
-							continue;
-						VirtualTextureAtlas::Tile& tile = vt.tiles[l_index];
-
-						if (allocate)
-						{
-							if (tile.IsValid())
-							{
-								continue;
-							}
-							locker.lock();
-							tile = atlas.allocate_tile();
-							locker.unlock();
-
-							if (tile.IsValid())
-							{
-								VirtualTexture::UpdateRequest& request = vt.update_requests.emplace_back();
-								request.x = x;
-								request.y = y;
-								request.lod = lod;
-								request.tile_x = tile.x;
-								request.tile_y = tile.y;
-							}
-						}
-						else if (!must_be_always_resident)
-						{
-							if (!tile.IsValid())
-							{
-								continue;
-							}
-							locker.lock();
-							atlas.free_tile(tile);
-							locker.unlock();
-						}
-					}
-				}
-
-				// Update page buffer for GPU:
-				uint32_t* page_buffer = (uint32_t*)vt.residency->pageBuffer_CPU_upload[vt.residency->cpu_resource_id].mapped_data;
-				for (size_t i = 0; i < vt.tiles.size(); ++i)
-				{
-					uint32_t page = uint32_t(uint32_t(vt.tiles[i].x) | (uint32_t(vt.tiles[i].y) << 8u));
-					// force memcpy into uncached memory to avoid read stall by mistake:
-					std::memcpy(page_buffer + i, &page, sizeof(page));
-				}
-
-			});
 
 			virtual_texture_barriers_before_update.push_back(GPUBarrier::Buffer(&vt.residency->pageBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE_COMPUTE));
 			virtual_texture_barriers_before_update.push_back(GPUBarrier::Image(&vt.residency->feedbackMap, vt.residency->feedbackMap.desc.layout, ResourceState::UNORDERED_ACCESS));
@@ -1578,11 +1486,158 @@ namespace wi::terrain
 			virtual_texture_barriers_before_allocation.push_back(GPUBarrier::Image(&vt.residency->feedbackMap, ResourceState::UNORDERED_ACCESS, vt.residency->feedbackMap.desc.layout));
 			virtual_texture_barriers_after_allocation.push_back(GPUBarrier::Buffer(&vt.residency->allocationBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC));
 		}
-		wi::jobsystem::Wait(ctx);
+
+		wi::jobsystem::Execute(virtual_texture_ctx, [this](wi::jobsystem::JobArgs args) {
+
+			// Update state of physical tiles:
+			for (auto& x : atlas.physical_tiles)
+			{
+				x.free_frames++;
+			}
+
+			for (VirtualTexture* vt : virtual_textures_in_use)
+			{
+				// Last two tiles (last non-packed and last packed mip) always kept resident:
+				if (vt->tiles.size() > 0)
+				{
+					atlas.request_residency(vt->tiles[vt->tiles.size() - 1]);
+					if (vt->tiles.size() > 1)
+					{
+						atlas.request_residency(vt->tiles[vt->tiles.size() - 2]);
+					}
+				}
+				if (vt->residency == nullptr)
+					continue;
+
+				const uint32_t width = vt->residency->feedbackMap.desc.width;
+				const uint32_t height = vt->residency->feedbackMap.desc.height;
+
+				// We must only access persistently mapped resources by CPU that the GPU is not using currently:
+				vt->residency->cpu_resource_id = (vt->residency->cpu_resource_id + 1) % arraysize(vt->residency->allocationBuffer_CPU_readback);
+				const bool data_available_CPU = vt->residency->data_available_CPU[vt->residency->cpu_resource_id]; // indicates whether any GPU data is readable at this point or not
+				vt->residency->data_available_CPU[vt->residency->cpu_resource_id] = true;
+
+				// Perform the allocations and deallocations:
+				//	GPU writes allocation requests by virtualTextureTileAllocateCS.hlsl compute shader
+				if (data_available_CPU)
+				{
+					uint32_t page_count = 0;
+					uint32_t lod_offsets[10] = {};
+					for (uint32_t i = 0; i < vt->lod_count; ++i)
+					{
+						const uint32_t l_width = std::max(1u, width >> i);
+						const uint32_t l_height = std::max(1u, height >> i);
+						lod_offsets[i] = page_count;
+						page_count += l_width * l_height;
+					}
+
+					uint32_t allocation_count = *(const uint32_t*)vt->residency->allocationBuffer_CPU_readback[vt->residency->cpu_resource_id].mapped_data;
+					allocation_count = std::min(uint32_t(vt->tiles.size() - 1), allocation_count);
+					//allocation_count = std::min(100u, allocation_count);
+					const uint32_t* allocation_requests = ((const uint32_t*)vt->residency->allocationBuffer_CPU_readback[vt->residency->cpu_resource_id].mapped_data) + 1; // +1 offset of the allocation counter
+					for (uint32_t i = 0; i < allocation_count; ++i)
+					{
+						const uint32_t allocation_request = allocation_requests[i];
+						const uint8_t x = (allocation_request >> 24u) & 0xFF;
+						const uint8_t y = (allocation_request >> 16u) & 0xFF;
+						const uint8_t lod = (allocation_request >> 8u) & 0xFF;
+						const bool allocate = allocation_request & 0x1;
+						const bool must_be_always_resident = (int)lod >= ((int)vt->lod_count - 2);
+						if (lod >= vt->lod_count)
+							continue;
+						const uint32_t l_offset = lod_offsets[lod];
+						const uint32_t l_width = std::max(1u, width >> lod);
+						const uint32_t l_height = std::max(1u, height >> lod);
+						const uint32_t l_index = l_offset + x + y * l_width;
+						if (x >= l_width || y >= l_height)
+							continue;
+
+						if (allocate || must_be_always_resident)
+						{
+							VirtualTextureAtlas::Tile& tile = vt->tiles[l_index];
+							if (!atlas.request_residency(tile))
+							{
+								VirtualTexture::AllocationRequest& request = vt->allocation_requests.emplace_back();
+								request.x = x;
+								request.y = y;
+								request.lod = lod;
+								request.tile_index = l_index;
+							}
+						}
+					}
+				}
+			}
+
+			// Free unused tiles:
+			atlas.free_tiles.clear();
+			for (uint8_t y = 0; y < atlas.physical_tile_count_y; ++y)
+			{
+				for (uint8_t x = 0; x < atlas.physical_tile_count_x; ++x)
+				{
+					if (atlas.physical_tiles[x + y * atlas.physical_tile_count_x].free_frames > 0)
+					{
+						VirtualTextureAtlas::Tile& tile = atlas.free_tiles.emplace_back();
+						tile.x = x;
+						tile.y = y;
+					}
+				}
+			}
+			std::sort(atlas.free_tiles.begin(), atlas.free_tiles.end(), [&](const VirtualTextureAtlas::Tile& a, const VirtualTextureAtlas::Tile& b) {
+				return atlas.get_tile_frames(a) < atlas.get_tile_frames(b);
+			});
+
+			// Fulfill new allocation requests:
+			for (VirtualTexture* vt : virtual_textures_in_use)
+			{
+				if (vt->residency == nullptr)
+					continue;
+
+				for (auto& alloc_request : vt->allocation_requests)
+				{
+					VirtualTextureAtlas::Tile& tile = vt->tiles[alloc_request.tile_index];
+					if (atlas.allocate_tile(tile))
+					{
+						VirtualTexture::UpdateRequest& request = vt->update_requests.emplace_back();
+						request.x = (uint16_t)alloc_request.x;
+						request.y = (uint16_t)alloc_request.y;
+						request.lod = (uint16_t)alloc_request.lod;
+						request.tile_x = tile.x;
+						request.tile_y = tile.y;
+					}
+				}
+				vt->allocation_requests.clear();
+			}
+
+			for (VirtualTexture* vt : virtual_textures_in_use)
+			{
+				if (vt->residency == nullptr)
+					continue;
+
+				// Update page buffer for GPU:
+				//	This must be after VirtualTextureAtlas::physical_tiles is no longer being updated inside virtual_texture_ctx job!
+				uint16_t* page_buffer = (uint16_t*)vt->residency->pageBuffer_CPU_upload[vt->residency->cpu_resource_id].mapped_data;
+				for (size_t i = 0; i < vt->tiles.size(); ++i)
+				{
+					if (!atlas.check_tile_resident(vt->tiles[i]))
+					{
+						vt->tiles[i] = {};
+					}
+					else
+					{
+						int asd = 90;
+						asd = asd;
+					}
+					uint16_t page = vt->tiles[i];
+					// force memcpy into uncached memory to avoid read stall by mistake:
+					std::memcpy(page_buffer + i, &page, sizeof(page));
+				}
+			}
+		});
 	}
 
 	void Terrain::UpdateVirtualTexturesGPU(CommandList cmd) const
 	{
+		wi::jobsystem::Wait(virtual_texture_ctx);
 		GraphicsDevice* device = GetDevice();
 		device->EventBegin("Terrain - UpdateVirtualTexturesGPU", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Terrain - UpdateVirtualTexturesGPU", cmd);
@@ -1775,6 +1830,7 @@ namespace wi::terrain
 
 	void Terrain::CopyVirtualTexturePageStatusGPU(CommandList cmd) const
 	{
+		wi::jobsystem::Wait(virtual_texture_ctx);
 		GraphicsDevice* device = GetDevice();
 		device->EventBegin("Terrain - CopyVirtualTexturePageStatusGPU", cmd);
 		for (const VirtualTexture* vt : virtual_textures_in_use)
@@ -1788,6 +1844,7 @@ namespace wi::terrain
 
 	void Terrain::AllocateVirtualTextureTileRequestsGPU(CommandList cmd) const
 	{
+		wi::jobsystem::Wait(virtual_texture_ctx);
 		GraphicsDevice* device = GetDevice();
 
 		device->EventBegin("Terrain - AllocateVirtualTextureTileRequestsGPU", cmd);
@@ -1855,6 +1912,7 @@ namespace wi::terrain
 
 	void Terrain::WritebackTileRequestsGPU(CommandList cmd) const
 	{
+		wi::jobsystem::Wait(virtual_texture_ctx);
 		GraphicsDevice* device = GetDevice();
 
 		device->EventBegin("Terrain - WritebackTileRequestsGPU", cmd);
