@@ -9,7 +9,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	if (DTid.x >= cb.width || DTid.y >= cb.height)
 		return;
 
-	ByteAddressBuffer pageBuffer = bindless_buffers[cb.pageBufferRO];
+	Buffer<uint> pageBuffer = bindless_buffers_uint[cb.pageBufferRO];
 
 	uint minLod = 0xFF;
 	uint tile_x = 0;
@@ -26,7 +26,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		const uint l_height = max(1u, cb.height >> lod);
 		const uint l_page_offset = lod_offset;
 		const uint l_index = l_page_offset + l_x + l_y * l_width;
-		const uint page = pageBuffer.Load(l_index * sizeof(uint));
+		const uint page = pageBuffer[l_index];
 		lod_pages[lod] = page;
 		if (page == 0xFFFF)
 		{

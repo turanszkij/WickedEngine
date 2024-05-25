@@ -201,7 +201,7 @@ struct ShaderTextureSlot
 		// Mip - more detailed:
 		float4 value0;
 		{
-			uint lod0 = floor(clamped_lod);
+			uint lod0 = uint(clamped_lod);
 			const uint packed_mip_idx = packed_mips ? uint(virtual_lod - max_nonpacked_lod - 1) : 0;
 			uint2 tile_pixel_upperleft = tile * SVT_TILE_SIZE_PADDED + SVT_TILE_BORDER + SVT_PACKED_MIP_OFFSETS[packed_mip_idx];
 			uint2 virtual_lod_dim = max(4u, virtual_image_dim >> lod0);
@@ -215,7 +215,7 @@ struct ShaderTextureSlot
 		// Mip - less detailed:
 		float4 value1;
 		{
-			uint lod1 = ceil(clamped_lod);
+			uint lod1 = uint(clamped_lod + 1);
 			packed_mips = uint(lod1) > max_nonpacked_lod;
 			const uint packed_mip_idx = packed_mips ? uint(lod1 - max_nonpacked_lod - 1) : 0;
 			residency = residency_map.Load(uint3(pixel >> lod1, min(max_nonpacked_lod, lod1)));
@@ -229,7 +229,7 @@ struct ShaderTextureSlot
 			value1 = tex.SampleLevel(sam, atlas_uv, 0);
 		}
 
-		return lerp(value0, value1, frac(virtual_lod)); // custom trilinear filtering
+		return lerp(value0, value1, frac(clamped_lod)); // custom trilinear filtering
 	}
 	float4 Sample(in SamplerState sam, in float4 uvsets)
 	{
