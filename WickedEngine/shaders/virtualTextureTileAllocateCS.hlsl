@@ -36,46 +36,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 	const uint page = pageBuffer[DTid.x];
 	const uint requestMinLod = requestBuffer.Load(DTid.x * sizeof(uint));
-	const bool must_be_always_resident = lod >= ((int)push.lodCount - 2);
 
 	const uint l_width = max(1u, push.width >> lod);
 	const uint l_index = DTid.x - lod_offsets[lod];
 	const uint x = l_index % l_width;
 	const uint y = l_index / l_width;
 
-	if (requestMinLod <= lod || must_be_always_resident)
+	if (requestMinLod <= lod)
 	{
-		// Allocate:
+		// Allocation request:
 		uint allocationIndex = 0;
 		allocationBuffer.InterlockedAdd(0, 1, allocationIndex);
-		allocationBuffer.Store((1 + allocationIndex) * sizeof(uint), ((x & 0xFF) << 24u) | ((y & 0xFF) << 16u) | ((lod & 0xFF) << 8u) | 1u);
-	}
-	else if(requestMinLod > lod && !must_be_always_resident)
-	{
-		if (lod > 0)
-		{
-			// Check if LOD above is fully non-resident, otherwise we mustn't deallocate this
-			const uint ll_x = x << 1;
-			const uint ll_y = y << 1;
-			const uint upper_lod = lod - 1;
-			const uint ll_width = max(1u, push.width >> upper_lod);
-			const uint ll_offset = lod_offsets[upper_lod];
-			const uint ll_index_0 = ll_offset + flatten2D(uint2(ll_x + 0, ll_y + 0), ll_width);
-			const uint ll_index_1 = ll_offset + flatten2D(uint2(ll_x + 1, ll_y + 0), ll_width);
-			const uint ll_index_2 = ll_offset + flatten2D(uint2(ll_x + 0, ll_y + 1), ll_width);
-			const uint ll_index_3 = ll_offset + flatten2D(uint2(ll_x + 1, ll_y + 1), ll_width);
-			if (pageBuffer[ll_index_0] != 0xFFFF)
-				return;
-			if (pageBuffer[ll_index_1] != 0xFFFF)
-				return;
-			if (pageBuffer[ll_index_2] != 0xFFFF)
-				return;
-			if (pageBuffer[ll_index_3] != 0xFFFF)
-				return;
-		}
-		// Deallocate:
-		uint allocationIndex = 0;
-		allocationBuffer.InterlockedAdd(0, 1, allocationIndex);
-		allocationBuffer.Store((1 + allocationIndex) * sizeof(uint), ((x & 0xFF) << 24u) | ((y & 0xFF) << 16u) | ((lod & 0xFF) << 8u) | 0u);
+		allocationBuffer.Store((1 + allocationIndex) * sizeof(uint), ((x & 0xFF) << 24u) | ((y & 0xFF) << 16u) | ((lod & 0xFF) << 8u));
 	}
 }
