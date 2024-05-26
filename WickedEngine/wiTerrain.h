@@ -97,6 +97,7 @@ namespace wi::terrain
 			bool data_available_CPU[wi::graphics::GraphicsDevice::GetBufferCount() + 1] = {};
 			int cpu_resource_id = 0;
 			uint32_t resolution = 0;
+			bool residency_cleared = false;
 
 			void init(uint32_t resolution);
 			void reset();
@@ -132,7 +133,7 @@ namespace wi::terrain
 		uint64_t get_tile_frames(const Tile& tile) const
 		{
 			if (!tile.IsValid())
-				return false;
+				return ~0ull;
 			return physical_tiles[tile.x + tile.y * physical_tile_count_x].free_frames;
 		}
 		std::shared_ptr<Residency> allocate_residency(uint32_t resolution)

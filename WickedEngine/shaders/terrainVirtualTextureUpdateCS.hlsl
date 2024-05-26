@@ -4,17 +4,8 @@
 
 PUSHCONSTANT(push, TerrainVirtualTexturePush);
 
-Texture2DArray<float> blendmap : register(t0);
-ByteAddressBuffer blendmap_buffer : register(t1);
-
 #if !defined(UPDATE_NORMALMAP) && !defined(UPDATE_SURFACEMAP) && !defined(UPDATE_EMISSIVEMAP)
 #define UPDATE_BASECOLORMAP
-#endif
-
-#if defined(UPDATE_BASECOLORMAP) || defined(UPDATE_EMISSIVEMAP)
-RWTexture2D<uint2> output : register(u0);
-#else
-RWTexture2D<uint4> output : register(u0);
 #endif
 
 static const uint2 block_offsets[16] = {
@@ -30,9 +21,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if (DTid.x >= push.write_size || DTid.y >= push.write_size)
 		return;
 
-	uint2 dim;
-	uint array_size;
-	blendmap.GetDimensions(dim.x, dim.y, array_size);
+	Texture2DArray blendmap = bindless_textures2DArray[push.blendmap_texture];
+	ByteAddressBuffer blendmap_buffer = bindless_buffers[push.blendmap_buffer];
+	
+#if defined(UPDATE_BASECOLORMAP) || defined(UPDATE_EMISSIVEMAP)
+	RWTexture2D<uint2> output = bindless_rwtextures_uint2[push.output_texture];
+#else
+	RWTexture2D<uint4> output = bindless_rwtextures_uint4[push.output_texture];
+#endif
 		
 #ifdef UPDATE_BASECOLORMAP
 	float3 block_rgb[16];
@@ -63,9 +59,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		float accumulation = 0;
 
 		// Note: blending is front-to back with early exit like decals
-		for(int blendmap_index = array_size - 1; blendmap_index >= 0; blendmap_index--)
+		for(int blendmap_index = push.blendmap_layers - 1; blendmap_index >= 0; blendmap_index--)
 		{
-			float weight = blendmap.SampleLevel(sampler_linear_clamp, float3(uv, blendmap_index), 0);
+			float weight = blendmap.SampleLevel(sampler_linear_clamp, float3(uv, blendmap_index), 0).r;
 			if(weight == 0)
 				continue;
 

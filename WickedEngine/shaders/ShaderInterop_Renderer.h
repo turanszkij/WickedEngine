@@ -1382,7 +1382,13 @@ struct TerrainVirtualTexturePush
 
 	uint write_size;
 	float resolution_rcp;
+	int blendmap_buffer;
 	uint blendmap_buffer_offset;
+
+	int blendmap_texture;
+	uint blendmap_layers;
+	int output_texture;
+	int padding0;
 };
 struct VirtualTextureResidencyUpdateCB
 {

@@ -229,6 +229,7 @@ namespace wi::terrain
 			bool success = device->CreateTexture(&td, nullptr, &residencyMap);
 			assert(success);
 			device->SetName(&residencyMap, "VirtualTexture::residencyMap");
+			residency_cleared = false;
 
 			for (uint32_t i = 0; i < lod_count; ++i)
 			{
@@ -304,6 +305,7 @@ namespace wi::terrain
 			data_available_CPU[i] = false;
 		}
 		cpu_resource_id = 0;
+		residency_cleared = false;
 	}
 
 	void VirtualTexture::init(VirtualTextureAtlas& atlas, uint resolution)
@@ -1351,9 +1353,11 @@ namespace wi::terrain
 
 					bool success = device->CreateTexture(&desc, nullptr, &atlas.maps[map_type].texture);
 					assert(success);
+					device->SetName(&atlas.maps[map_type].texture, "VirtualTextureAtlas::texture");
 
 					success = device->CreateTexture(&desc_raw_block, nullptr, &atlas.maps[map_type].texture_raw_block);
 					assert(success);
+					device->SetName(&atlas.maps[map_type].texture_raw_block, "VirtualTextureAtlas::texture_raw_block");
 
 					assert(atlas.maps[map_type].texture.sparse_properties->total_tile_count == atlas.maps[map_type].texture_raw_block.sparse_properties->total_tile_count);
 					assert(atlas.maps[map_type].texture.sparse_page_size == atlas.maps[map_type].texture_raw_block.sparse_page_size);
@@ -1674,8 +1678,15 @@ namespace wi::terrain
 			device->ClearUAV(&vt->residency->feedbackMap, 0xFF, cmd);
 			device->ClearUAV(&vt->residency->requestBuffer, 0xFF, cmd);
 			device->ClearUAV(&vt->residency->allocationBuffer, 0, cmd);
+			if (!vt->residency->residency_cleared)
+			{
+				vt->residency->residency_cleared = true;
+				device->ClearUAV(&vt->residency->residencyMap, 0, cmd);
+			}
 		}
 		device->EventEnd(cmd);
+
+		device->Barrier(GPUBarrier::Memory(), cmd);
 
 		device->EventBegin("Update Residency Maps", cmd);
 		device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_VIRTUALTEXTURE_RESIDENCYUPDATE), cmd);
@@ -1719,28 +1730,37 @@ namespace wi::terrain
 				continue;
 			for (uint32_t map_type = 0; map_type < arraysize(atlas.maps); map_type++)
 			{
+				TerrainVirtualTexturePush push = {};
+
 				switch (map_type)
 				{
 				case MaterialComponent::BASECOLORMAP:
 					device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_BASECOLORMAP), cmd);
-					device->BindUAV(&atlas.maps[MaterialComponent::BASECOLORMAP].texture_raw_block, 0, cmd);
+					push.output_texture = device->GetDescriptorIndex(&atlas.maps[MaterialComponent::BASECOLORMAP].texture_raw_block, SubresourceType::UAV);
 					break;
 				case MaterialComponent::NORMALMAP:
 					device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_NORMALMAP), cmd);
-					device->BindUAV(&atlas.maps[MaterialComponent::NORMALMAP].texture_raw_block, 0, cmd);
+					push.output_texture = device->GetDescriptorIndex(&atlas.maps[MaterialComponent::NORMALMAP].texture_raw_block, SubresourceType::UAV);
 					break;
 				case MaterialComponent::SURFACEMAP:
 					device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_SURFACEMAP), cmd);
-					device->BindUAV(&atlas.maps[MaterialComponent::SURFACEMAP].texture_raw_block, 0, cmd);
+					push.output_texture = device->GetDescriptorIndex(&atlas.maps[MaterialComponent::SURFACEMAP].texture_raw_block, SubresourceType::UAV);
 					break;
 				case MaterialComponent::EMISSIVEMAP:
 					device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_EMISSIVEMAP), cmd);
-					device->BindUAV(&atlas.maps[MaterialComponent::EMISSIVEMAP].texture_raw_block, 0, cmd);
+					push.output_texture = device->GetDescriptorIndex(&atlas.maps[MaterialComponent::EMISSIVEMAP].texture_raw_block, SubresourceType::UAV);
 					break;
 				default:
 					assert(0);
 					break;
 				}
+				if (push.output_texture < 0)
+					continue;
+
+				push.blendmap_texture = device->GetDescriptorIndex(&vt->blendmap, SubresourceType::SRV);
+				push.blendmap_layers = vt->blendmap.desc.array_size;
+				if (push.blendmap_texture < 0)
+					continue;
 
 				auto mem = device->AllocateGPU(sizeof(uint) * vt->blendmap.desc.array_size, cmd);
 				const uint blendcount = std::min(vt->blendmap.desc.array_size, uint(materialEntities.size()));
@@ -1749,9 +1769,11 @@ namespace wi::terrain
 					const uint material_index = (uint)scene->materials.GetIndex(materialEntities[i]);
 					std::memcpy((uint*)mem.data + i, &material_index, sizeof(uint)); // force memcpy to avoid uncached write into GPU pointer!
 				}
-				const uint blendmap_buffer_offset = (uint)mem.offset;
-				device->BindResource(&vt->blendmap, 0, cmd);
-				device->BindResource(&mem.buffer, 1, cmd);
+
+				push.blendmap_buffer = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
+				if (push.blendmap_buffer < 0)
+					continue;
+				push.blendmap_buffer_offset = (uint)mem.offset;
 
 				for (auto& request : vt->update_requests)
 				{
@@ -1761,17 +1783,14 @@ namespace wi::terrain
 						request.tile_y * SVT_TILE_SIZE_PADDED / 4
 					);
 
-					TerrainVirtualTexturePush push;
 					push.offset = int2(
 						int(request.x * SVT_TILE_SIZE) - int(SVT_TILE_BORDER),
 						int(request.y * SVT_TILE_SIZE) - int(SVT_TILE_BORDER)
 					);
-					push.blendmap_buffer_offset = blendmap_buffer_offset;
 
 					if (request_lod_resolution < SVT_TILE_SIZE)
 					{
 						// packed mips
-
 						uint32_t tail_mip_idx = 0;
 						while (request_lod_resolution >= 4u)
 						{
@@ -1866,8 +1885,7 @@ namespace wi::terrain
 			device->EventEnd(cmd);
 		}
 
-		GPUBarrier memory_barrier = GPUBarrier::Memory();
-		device->Barrier(&memory_barrier, 1, cmd);
+		device->Barrier(GPUBarrier::Memory(), cmd);
 
 		{
 			device->EventBegin("Tile Allocation Requests", cmd);
