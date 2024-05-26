@@ -684,7 +684,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Clear()  -- deletes every entity and component inside the scene
 - Merge(Scene other)  -- moves contents from an other scene into this one. The other scene will be empty after this operation (contents are moved, not copied)
 - UpdateHierarchy()	-- updates the full scene hierarchy system. Useful if you modified for example a parent transform and children immediately need up to date result in the script
-- Instantiate(Scene prefab, opt bool attached = false) : Entity  -- Duplicates everything in the prefab scene into the current scene. If attached parameter is st to `true` then everything in prefab scene will be attached to a common root entity (with TransformComponent and LayerComponent) and the function will return that root entity.
+- Instantiate(Scene prefab, opt bool attached = false) : Entity  -- Duplicates everything in the prefab scene into the current scene. If attached parameter is set to `true` then everything in prefab scene will be attached to a common root entity (with TransformComponent and LayerComponent) and the function will return that root entity.
 
 - CreateEntity() : int entity  -- creates an empty entity and returns it
 - FindAllEntities() : table[entities] -- returns a table with all the entities present in the given scene
