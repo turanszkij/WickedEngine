@@ -1290,9 +1290,7 @@ namespace dx12_internal
 					// bindless free:
 					if (index >= 0)
 					{
-						allocationhandler->destroylocker.lock();
 						allocationhandler->destroyer_bindless_res.push_back(std::make_pair(index, allocationhandler->framecount));
-						allocationhandler->destroylocker.unlock();
 					}
 					break;
 				case D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER:
@@ -1301,9 +1299,7 @@ namespace dx12_internal
 					// bindless free:
 					if (index >= 0)
 					{
-						allocationhandler->destroylocker.lock();
 						allocationhandler->destroyer_bindless_sam.push_back(std::make_pair(index, allocationhandler->framecount));
-						allocationhandler->destroylocker.unlock();
 					}
 					break;
 				case D3D12_DESCRIPTOR_HEAP_TYPE_RTV:
@@ -1318,6 +1314,9 @@ namespace dx12_internal
 					break;
 				}
 			}
+			handle = {};
+			index = -1;
+			type = {};
 		}
 
 		// These will allow to use D3D12CalcSubresource() and loop over D3D12 subresource indices which the descriptor includes:
@@ -1346,24 +1345,30 @@ namespace dx12_internal
 		wi::vector<UINT> numRows;
 		SparseTextureProperties sparse_texture_properties;
 
-		virtual ~Resource_DX12()
+		void destroy_subresources()
 		{
-			allocationhandler->destroylocker.lock();
-			uint64_t framecount = allocationhandler->framecount;
-			if (allocation) allocationhandler->destroyer_allocations.push_back(std::make_pair(allocation, framecount));
-			if (resource) allocationhandler->destroyer_resources.push_back(std::make_pair(resource, framecount));
-			allocationhandler->destroylocker.unlock();
-
 			srv.destroy();
 			uav.destroy();
 			for (auto& x : subresources_srv)
 			{
 				x.destroy();
 			}
+			subresources_srv.clear();
 			for (auto& x : subresources_uav)
 			{
 				x.destroy();
 			}
+			subresources_uav.clear();
+		}
+
+		virtual ~Resource_DX12()
+		{
+			allocationhandler->destroylocker.lock();
+			uint64_t framecount = allocationhandler->framecount;
+			if (allocation) allocationhandler->destroyer_allocations.push_back(std::make_pair(allocation, framecount));
+			if (resource) allocationhandler->destroyer_resources.push_back(std::make_pair(resource, framecount));
+			destroy_subresources();
+			allocationhandler->destroylocker.unlock();
 		}
 	};
 	struct Texture_DX12 : public Resource_DX12
@@ -4663,7 +4668,7 @@ using namespace dx12_internal;
 		return SUCCEEDED(hr);
 	}
 
-	int GraphicsDevice_DX12::CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change, const ImageAspect* aspect, const Swizzle* swizzle) const
+	int GraphicsDevice_DX12::CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change, const ImageAspect* aspect, const Swizzle* swizzle, float min_lod_clamp) const
 	{
 		auto internal_state = to_internal(texture);
 
@@ -4738,12 +4743,14 @@ using namespace dx12_internal;
 							srv_desc.TextureCubeArray.NumCubes = std::min(texture->desc.array_size, sliceCount) / 6;
 							srv_desc.TextureCubeArray.MostDetailedMip = firstMip;
 							srv_desc.TextureCubeArray.MipLevels = mipCount;
+							srv_desc.TextureCubeArray.ResourceMinLODClamp = min_lod_clamp;
 						}
 						else
 						{
 							srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
 							srv_desc.TextureCube.MostDetailedMip = firstMip;
 							srv_desc.TextureCube.MipLevels = mipCount;
+							srv_desc.TextureCube.ResourceMinLODClamp = min_lod_clamp;
 						}
 					}
 					else
@@ -4762,6 +4769,7 @@ using namespace dx12_internal;
 							srv_desc.Texture2DArray.MostDetailedMip = firstMip;
 							srv_desc.Texture2DArray.MipLevels = mipCount;
 							srv_desc.Texture2DArray.PlaneSlice = plane;
+							srv_desc.Texture2DArray.ResourceMinLODClamp = min_lod_clamp;
 						}
 					}
 				}
@@ -4777,6 +4785,7 @@ using namespace dx12_internal;
 						srv_desc.Texture2D.MostDetailedMip = firstMip;
 						srv_desc.Texture2D.MipLevels = mipCount;
 						srv_desc.Texture2D.PlaneSlice = plane;
+						srv_desc.Texture2D.ResourceMinLODClamp = min_lod_clamp;
 					}
 				}
 			}
@@ -4785,6 +4794,7 @@ using namespace dx12_internal;
 				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
 				srv_desc.Texture3D.MostDetailedMip = firstMip;
 				srv_desc.Texture3D.MipLevels = mipCount;
+				srv_desc.Texture3D.ResourceMinLODClamp = min_lod_clamp;
 			}
 
 			SingleDescriptor descriptor;
@@ -5143,6 +5153,14 @@ using namespace dx12_internal;
 		}
 
 		return -1;
+	}
+
+	void GraphicsDevice_DX12::DeleteSubresources(GPUResource* resource)
+	{
+		auto internal_state = to_internal(resource);
+		internal_state->allocationhandler->destroylocker.lock();
+		internal_state->destroy_subresources();
+		internal_state->allocationhandler->destroylocker.unlock();
 	}
 
 	int GraphicsDevice_DX12::GetDescriptorIndex(const GPUResource* resource, SubresourceType type, int subresource) const

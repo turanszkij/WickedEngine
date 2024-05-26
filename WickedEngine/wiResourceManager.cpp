@@ -4,6 +4,8 @@
 #include "wiTextureHelper.h"
 #include "wiUnorderedMap.h"
 #include "wiBacklog.h"
+#include "wiJobSystem.h"
+#include "wiInput.h"
 
 #include "Utility/qoi.h"
 #include "Utility/stb_image.h"
@@ -18,6 +20,21 @@ using namespace wi::graphics;
 
 namespace wi
 {
+	struct StreamingTexture
+	{
+		struct StreamingSubresourceData
+		{
+			size_t data_offset = 0;
+			uint32_t row_pitch = 0;
+			uint32_t slice_pitch = 0;
+		};
+		StreamingSubresourceData streaming_data[16] = {};
+		uint32_t mip_count = 0; // mip count of full resource
+		int mip_offset = 0; // mip offset relative to mip_count
+		float min_lod_clamp_absolute = 0; // relative to mip_count of full resource
+	};
+	static constexpr size_t streaming_texture_min_size = 4096; // 4KB is the minimum texture memory alignment
+
 	struct ResourceInternal
 	{
 		resourcemanager::Flags flags = resourcemanager::Flags::NONE;
@@ -28,6 +45,12 @@ namespace wi
 		wi::video::Video video;
 		wi::vector<uint8_t> filedata;
 		int font_style = -1;
+
+		std::string name;
+		std::string streaming_filename;
+		size_t streaming_filesize = 0;
+		size_t streaming_fileoffset = 0;
+		StreamingTexture streaming_texture;
 	};
 
 	const wi::vector<uint8_t>& Resource::GetFileData() const
@@ -233,7 +256,14 @@ namespace wi
 			return ret;
 		}
 
-		Resource Load(const std::string& name, Flags flags, const uint8_t* filedata, size_t filesize)
+		Resource Load(
+			const std::string& name,
+			Flags flags,
+			const uint8_t* filedata,
+			size_t filesize,
+			const std::string& streaming_filename,
+			size_t streaming_fileoffset
+		)
 		{
 			if (mode == Mode::DISCARD_FILEDATA_AFTER_LOAD)
 			{
@@ -255,6 +285,20 @@ namespace wi
 			{
 				resource = std::make_shared<ResourceInternal>();
 				resources[name] = resource;
+				resource->name = name;
+
+				// Rememeber the streaming file parameters, which is either the resource filename,
+				//	or it can be a specific filename and offset in the case when the file contained multiple resources
+				if (streaming_filename.empty())
+				{
+					resource->streaming_filename = name;
+				}
+				else
+				{
+					resource->streaming_filename = streaming_filename;
+				}
+				resource->streaming_filesize = filesize;
+				resource->streaming_fileoffset = streaming_fileoffset;
 			}
 			else
 			{
@@ -316,6 +360,7 @@ namespace wi
 					GraphicsDevice* device = wi::graphics::GetDevice();
 					if (!ext.compare("KTX2"))
 					{
+						flags &= ~Flags::STREAMING; // disable streaming
 						basist::ktx2_transcoder transcoder;
 						if (transcoder.init(filedata, (uint32_t)filesize))
 						{
@@ -458,6 +503,7 @@ namespace wi
 					}
 					else if (!ext.compare("BASIS"))
 					{
+						flags &= ~Flags::STREAMING; // disable streaming
 						basist::basisu_transcoder transcoder;
 						if (transcoder.validate_header(filedata, (uint32_t)filesize))
 						{
@@ -589,8 +635,6 @@ namespace wi
 					}
 					else if (!ext.compare("DDS"))
 					{
-						// Load dds
-
 						tinyddsloader::DDSFile dds;
 						auto result = dds.Load(filedata, filesize);
 
@@ -611,6 +655,11 @@ namespace wi
 							if (dds.IsCubemap())
 							{
 								desc.misc_flags |= ResourceMiscFlag::TEXTURECUBE;
+							}
+							if (desc.mip_levels == 1 || desc.depth > 1 || desc.array_size > 1)
+							{
+								// don't allow streaming for single mip, array and 3D textures
+								flags &= ~Flags::STREAMING;
 							}
 
 							auto ddsFormat = dds.GetFormat();
@@ -693,17 +742,26 @@ namespace wi
 								desc.swizzle.a = ComponentSwizzle::ONE;
 							}
 
-							wi::vector<SubresourceData> InitData;
+							wi::vector<SubresourceData> initdata;
+							initdata.reserve(desc.array_size * desc.mip_levels);
 							for (uint32_t arrayIndex = 0; arrayIndex < desc.array_size; ++arrayIndex)
 							{
 								for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 								{
 									auto imageData = dds.GetImageData(mip, arrayIndex);
-									SubresourceData subresourceData;
+									SubresourceData& subresourceData = initdata.emplace_back();
 									subresourceData.data_ptr = imageData->m_mem;
 									subresourceData.row_pitch = imageData->m_memPitch;
 									subresourceData.slice_pitch = imageData->m_memSlicePitch;
-									InitData.push_back(subresourceData);
+
+									if (has_flag(flags, Flags::STREAMING))
+									{
+										// For streaming, remember relative memory offsets for mip levels:
+										auto& streaming_data = resource->streaming_texture.streaming_data[mip];
+										streaming_data.data_offset = (size_t)subresourceData.data_ptr - (size_t)filedata;
+										streaming_data.row_pitch = subresourceData.row_pitch;
+										streaming_data.slice_pitch = subresourceData.slice_pitch;
+									}
 								}
 							}
 
@@ -736,7 +794,21 @@ namespace wi
 								desc.height = AlignTo(desc.height, GetFormatBlockSize(desc.format));
 							}
 
-							success = device->CreateTexture(&desc, InitData.data(), &resource->texture);
+							resource->streaming_texture.mip_count = desc.mip_levels;
+							resource->streaming_texture.mip_offset = 0;
+							if (has_flag(flags, Flags::STREAMING))
+							{
+								while (desc.mip_levels > 1 && desc.depth == 1 && desc.array_size == 1 && ComputeTextureMemorySizeInBytes(desc) > streaming_texture_min_size)
+								{
+									desc.width >>= 1;
+									desc.height >>= 1;
+									desc.mip_levels -= 1;
+									resource->streaming_texture.mip_offset++;
+								}
+								resource->streaming_texture.min_lod_clamp_absolute = (float)resource->streaming_texture.mip_offset;
+							}
+
+							success = device->CreateTexture(&desc, initdata.data() + resource->streaming_texture.mip_offset, &resource->texture);
 							device->SetName(&resource->texture, name.c_str());
 
 							Format srgb_format = GetFormatSRGB(desc.format);
@@ -750,12 +822,18 @@ namespace wi
 									&srgb_format
 								);
 							}
+
+							if (!has_flag(flags, Flags::STREAMING))
+							{
+								resource->streaming_texture = {};
+							}
 						}
 						else assert(0); // failed to load DDS
 
 					}
 					else if (!ext.compare("HDR"))
 					{
+						flags &= ~Flags::STREAMING; // disable streaming
 						int height, width, channels; // stb_image
 						float* data = stbi_loadf_from_memory(filedata, (int)filesize, &width, &height, &channels, 0);
 						static constexpr bool allow_packing = true; // we now always assume that we won't need full precision float textures, so pack them for memory saving
@@ -846,6 +924,7 @@ namespace wi
 					else
 					{
 						// qoi, png, tga, jpg, etc. loader:
+						flags &= ~Flags::STREAMING; // disable streaming
 						int height = 0, width = 0, channels = 0;
 						bool is_16bit = false;
 						Format format = Format::R8G8B8A8_UNORM;
@@ -1015,7 +1094,7 @@ namespace wi
 								desc.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;
 
 								uint32_t mipwidth = width;
-								SubresourceData init_data[32]; // don't support more than 32 mips anyway
+								SubresourceData init_data[16];
 								for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 								{
 									init_data[mip].data_ptr = rgba; // attention! we don't fill the mips here correctly, just always point to the mip0 data by default. Mip levels will be created using compute shader when needed!
@@ -1172,6 +1251,212 @@ namespace wi
 			locker.unlock();
 		}
 
+		wi::jobsystem::context streaming_ctx;
+		wi::vector<std::shared_ptr<ResourceInternal>> streaming_texture_jobs;
+		struct StreamingTextureReplace
+		{
+			std::shared_ptr<ResourceInternal> resource;
+			Texture texture;
+			int srgb_subresource = -1;
+		};
+		std::mutex streaming_replacement_mutex;
+		wi::vector<StreamingTextureReplace> streaming_texture_replacements;
+		bool debug_streaming_shortage = false;
+
+		void UpdateStreamingResources(float dt)
+		{
+			// If any streaming replacement requests arrived, replace the resources here (main thread):
+			streaming_replacement_mutex.lock();
+			for (auto& replace : streaming_texture_replacements)
+			{
+				replace.resource->texture = replace.texture;
+				replace.resource->srgb_subresource = replace.srgb_subresource;
+			}
+			streaming_texture_replacements.clear();
+			streaming_replacement_mutex.unlock();
+
+#if 1
+			// Update resource min lod clamps smoothly:
+			GraphicsDevice* device = GetDevice();
+			locker.lock();
+			for (auto& x : resources)
+			{
+				std::weak_ptr<ResourceInternal>& weak_resource = x.second;
+				std::shared_ptr<ResourceInternal> resource = weak_resource.lock();
+				if (resource != nullptr && resource->texture.IsValid() && has_flag(resource->flags, Flags::STREAMING))
+				{
+					TextureDesc& desc = resource->texture.desc;
+					const float mip_offset = float(resource->streaming_texture.mip_count - desc.mip_levels); // compute here, because other thread could modify StreamingSubresourceData::mip_offset
+					float min_lod_clamp_absolute_next = resource->streaming_texture.min_lod_clamp_absolute - dt * 2;
+					min_lod_clamp_absolute_next = std::max(mip_offset, min_lod_clamp_absolute_next);
+					if (wi::math::float_equal(min_lod_clamp_absolute_next, resource->streaming_texture.min_lod_clamp_absolute))
+						continue;
+					resource->streaming_texture.min_lod_clamp_absolute = min_lod_clamp_absolute_next;
+
+					float min_lod_clamp_relative = min_lod_clamp_absolute_next - mip_offset;
+
+					device->DeleteSubresources(&resource->texture);
+
+					device->CreateSubresource(
+						&resource->texture,
+						SubresourceType::SRV,
+						0, -1,
+						0, -1,
+						nullptr,
+						nullptr,
+						nullptr,
+						min_lod_clamp_relative
+					);
+					resource->srgb_subresource = -1;
+
+					Format srgb_format = GetFormatSRGB(desc.format);
+					if (srgb_format != Format::UNKNOWN && srgb_format != desc.format)
+					{
+						resource->srgb_subresource = device->CreateSubresource(
+							&resource->texture,
+							SubresourceType::SRV,
+							0, -1,
+							0, -1,
+							&srgb_format,
+							nullptr,
+							nullptr,
+							min_lod_clamp_relative
+						);
+					}
+				}
+			}
+			locker.unlock();
+#endif
+
+			// If previous streaming jobs were not finished, we cancel this until next frame:
+			if (wi::jobsystem::IsBusy(streaming_ctx))
+				return;
+
+			streaming_texture_jobs.clear();
+
+#if 1
+			if (wi::input::Press((wi::input::BUTTON)'R'))
+			{
+				debug_streaming_shortage = !debug_streaming_shortage;
+			}
+#endif
+
+			// Gather the streaming jobs:
+			locker.lock();
+			for (auto& x : resources)
+			{
+				std::weak_ptr<ResourceInternal>& weak_resource = x.second;
+				std::shared_ptr<ResourceInternal> resource = weak_resource.lock();
+				if (resource != nullptr && resource->texture.IsValid() && has_flag(resource->flags, Flags::STREAMING))
+				{
+					streaming_texture_jobs.push_back(resource);
+				}
+			}
+			locker.unlock();
+
+			// One low priority thread will be responsible for streaming, to not cause any hitching while rendering:
+			streaming_ctx.priority = wi::jobsystem::Priority::Low;
+			wi::jobsystem::Execute(streaming_ctx, [](wi::jobsystem::JobArgs args) {
+				for(auto& resource : streaming_texture_jobs)
+				{
+					TextureDesc desc = resource->texture.desc;
+					GraphicsDevice* device = GetDevice();
+					const GraphicsDevice::MemoryUsage memory_usage = device->GetMemoryUsage();
+					const double memory_percent = double(memory_usage.usage) / double(memory_usage.budget);
+					const bool shortage = debug_streaming_shortage || memory_percent > 0.75;
+
+					if (shortage)
+					{
+						if (ComputeTextureMemorySizeInBytes(desc) < streaming_texture_min_size)
+						{
+							// Don't reduce the texture below, because of 4KB alignment, this would not reduce memory usage further
+							continue;
+						}
+						// Dropping mip levels:
+						desc.width >>= 1;
+						desc.height >>= 1;
+						desc.mip_levels--;
+						resource->streaming_texture.mip_offset++;
+					}
+					else
+					{
+						if (resource->streaming_texture.mip_offset == 0)
+						{
+							// There aren't any more mip levels, cancel
+							continue;
+						}
+						// Mip level streaming IN:
+						desc.width <<= 1;
+						desc.height <<= 1;
+						desc.mip_levels++;
+						resource->streaming_texture.mip_offset--;
+					}
+					if (desc.mip_levels <= resource->streaming_texture.mip_count)
+					{
+						// memory offset of the first mip level in current streaming range:
+						const size_t mip_offset = resource->streaming_texture.streaming_data[resource->streaming_texture.mip_offset].data_offset;
+						const uint8_t* firstmipdata = resource->filedata.data();
+
+						wi::vector<uint8_t> streaming_file; // keep it outside of scope to not get destroyed if it gets loaded
+						if (firstmipdata == nullptr)
+						{
+							// If file data is not available, then open the file partially with the streaming file parameters:
+							size_t filesize = resource->streaming_filesize - mip_offset;
+							size_t fileoffset = resource->streaming_fileoffset + mip_offset;
+							if (!wi::helper::FileRead(
+								resource->streaming_filename,
+								streaming_file,
+								filesize,
+								fileoffset
+							))
+							{
+								continue;
+							}
+							firstmipdata = streaming_file.data();
+						}
+						else
+						{
+							// If file data is available, we can use that for streaming:
+							firstmipdata += mip_offset;
+						}
+
+						// Convert relative to absolute GPU initialization data
+						SubresourceData initdata[16] = {};
+						for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
+						{
+							auto& streaming_data = resource->streaming_texture.streaming_data[resource->streaming_texture.mip_offset + mip];
+							initdata[mip].data_ptr = firstmipdata + streaming_data.data_offset - mip_offset;
+							initdata[mip].row_pitch = streaming_data.row_pitch;
+							initdata[mip].slice_pitch = streaming_data.slice_pitch;
+						}
+
+						// The replacement struct will store the newly created texture until replacement can be made later:
+						StreamingTextureReplace replace;
+						replace.resource = resource;
+						replace.srgb_subresource = -1;
+						bool success = device->CreateTexture(&desc, initdata, &replace.texture);
+						assert(success);
+						device->SetName(&replace.texture, resource->name.c_str());
+
+						Format srgb_format = GetFormatSRGB(desc.format);
+						if (srgb_format != Format::UNKNOWN && srgb_format != desc.format)
+						{
+							replace.srgb_subresource = device->CreateSubresource(
+								&replace.texture,
+								SubresourceType::SRV,
+								0, -1,
+								0, -1,
+								&srgb_format
+							);
+						}
+
+						streaming_replacement_mutex.lock();
+						streaming_texture_replacements.push_back(replace);
+						streaming_replacement_mutex.unlock();
+					}
+				}
+			});
+		}
 
 		void Serialize_READ(wi::Archive& archive, ResourceSerializer& seri)
 		{
@@ -1200,17 +1485,26 @@ namespace wi
 				resource.flags = (Flags)flags_temp;
 				archive >> resource.filedata;
 
+				size_t file_offset = archive.GetPos() - resource.filedata.size();
+
 				resource.name = archive.GetSourceDirectory() + resource.name;
 				resource.flags |= Flags::IMPORT_DELAY; // delay resource creation, to be able to receive additional flags (this way only file data is loaded)
 
 				// "Loading" the resource can happen asynchronously to serialization of file data, to improve performance
-				wi::jobsystem::Execute(ctx, [i, &temp_resources, &seri_locker, &seri](wi::jobsystem::JobArgs args) {
+				wi::jobsystem::Execute(ctx, [i, &temp_resources, &seri_locker, &seri, &archive, file_offset](wi::jobsystem::JobArgs args) {
 					auto& tmp_resource = temp_resources[i];
-					auto res = Load(tmp_resource.name, tmp_resource.flags, tmp_resource.filedata.data(), tmp_resource.filedata.size());
+					auto res = Load(
+						tmp_resource.name,
+						tmp_resource.flags,
+						tmp_resource.filedata.data(),
+						tmp_resource.filedata.size(),
+						archive.GetSourceFileName(),
+						file_offset
+					);
 					seri_locker.lock();
 					seri.resources.push_back(res);
 					seri_locker.unlock();
-					});
+				});
 			}
 
 			wi::jobsystem::Wait(ctx);

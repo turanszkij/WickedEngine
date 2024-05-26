@@ -41,7 +41,6 @@ namespace wi::jobsystem
 			std::scoped_lock lock(locker);
 			queue.push_back(item);
 		}
-
 		inline bool pop_front(Job& item)
 		{
 			std::scoped_lock lock(locker);
@@ -53,7 +52,6 @@ namespace wi::jobsystem
 			queue.pop_front();
 			return true;
 		}
-
 	};
 
 	// This structure is responsible to stop worker thread loops.
@@ -157,11 +155,11 @@ namespace wi::jobsystem
 		internal_state.threads[int(Priority::High)].reserve(internal_state.numThreads);
 		internal_state.threads[int(Priority::Low)].reserve(internal_state.numThreads);
 
-		for (uint32_t threadID = 0; threadID < internal_state.numThreads; ++threadID)
+		for (int prio = 0; prio < int(Priority::Count); ++prio)
 		{
-			for (int prio = 0; prio < int(Priority::Count); ++prio)
+			const Priority priority = (Priority)prio;
+			for (uint32_t threadID = 0; threadID < internal_state.numThreads; ++threadID)
 			{
-				const Priority priority = (Priority)prio;
 				internal_state.threads[prio].emplace_back([threadID, priority] {
 
 					while (internal_state.alive.load())
@@ -173,7 +171,7 @@ namespace wi::jobsystem
 						internal_state.wakeCondition.wait(lock);
 					}
 
-					});
+				});
 				std::thread& worker = internal_state.threads[prio].back();
 
 #ifdef _WIN32
@@ -199,7 +197,7 @@ namespace wi::jobsystem
 					BOOL priority_result = SetThreadPriority(handle, THREAD_PRIORITY_LOWEST);
 					assert(priority_result != 0);
 
-					std::wstring wthreadname = L"wi::jobsystem_lowprio_" + std::to_wstring(threadID);
+					std::wstring wthreadname = L"wi::jobsystem_low_" + std::to_wstring(threadID);
 					HRESULT hr = SetThreadDescription(handle, wthreadname.c_str());
 					assert(SUCCEEDED(hr));
 				}
@@ -221,7 +219,7 @@ namespace wi::jobsystem
 
 				if (priority == Priority::High)
 				{
-					std::string thread_name = "wi::job::" + std::to_string(threadID);
+					std::string thread_name = "wi::job_" + std::to_string(threadID);
 					ret = pthread_setname_np(worker.native_handle(), thread_name.c_str());
 					if (ret != 0)
 						handle_error_en(ret, std::string(" pthread_setname_np[" + std::to_string(threadID) + ']').c_str());
@@ -230,7 +228,7 @@ namespace wi::jobsystem
 				{
 					// TODO: set lower priority
 
-					std::string thread_name = "wi::job_low::" + std::to_string(threadID);
+					std::string thread_name = "wi::job_low_" + std::to_string(threadID);
 					ret = pthread_setname_np(worker.native_handle(), thread_name.c_str());
 					if (ret != 0)
 						handle_error_en(ret, std::string(" pthread_setname_np[" + std::to_string(threadID) + ']').c_str());

@@ -1010,7 +1010,7 @@ namespace wi::helper
 	}
 
 	template<template<typename T, typename A> typename vector_interface>
-	bool FileRead_Impl(const std::string& fileName, vector_interface<uint8_t, std::allocator<uint8_t>>& data, size_t max_read)
+	bool FileRead_Impl(const std::string& fileName, vector_interface<uint8_t, std::allocator<uint8_t>>& data, size_t max_read, size_t offset)
 	{
 #ifndef PLATFORM_UWP
 #if defined(PLATFORM_LINUX) || defined(PLATFORM_PS5)
@@ -1024,7 +1024,7 @@ namespace wi::helper
 		{
 			size_t dataSize = (size_t)file.tellg();
 			dataSize = std::min(dataSize, max_read);
-			file.seekg(0, file.beg);
+			file.seekg((std::streampos)offset);
 			data.resize(dataSize);
 			file.read((char*)data.data(), dataSize);
 			file.close();
@@ -1088,14 +1088,14 @@ namespace wi::helper
 		wi::backlog::post("File not found: " + fileName, wi::backlog::LogLevel::Warning);
 		return false;
 	}
-	bool FileRead(const std::string& fileName, wi::vector<uint8_t>& data, size_t max_read)
+	bool FileRead(const std::string& fileName, wi::vector<uint8_t>& data, size_t max_read, size_t offset)
 	{
-		return FileRead_Impl(fileName, data, max_read);
+		return FileRead_Impl(fileName, data, max_read, offset);
 	}
 #if WI_VECTOR_TYPE
-	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data, size_t max_read)
+	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data, size_t max_read, size_t offset)
 	{
-		return FileRead_Impl(fileName, data, max_read);
+		return FileRead_Impl(fileName, data, max_read, offset);
 	}
 #endif // WI_VECTOR_TYPE
 

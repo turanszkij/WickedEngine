@@ -263,6 +263,8 @@ namespace wi
 
 		wi::backlog::Update(canvas, dt);
 
+		wi::resourcemanager::UpdateStreamingResources(dt);
+
 		if (GetActivePath() != nullptr)
 		{
 			GetActivePath()->Update(dt);

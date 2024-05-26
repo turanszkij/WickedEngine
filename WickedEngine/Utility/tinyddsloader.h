@@ -3,6 +3,8 @@
 // Distributed under the MIT License (http://opensource.org/licenses/MIT)
 //
 
+// Modified for Wicked Engine, DDS data is not copied internally, just memory mapped
+
 #ifndef TINYDDSLOADER_H_
 #define TINYDDSLOADER_H_
 
@@ -233,7 +235,7 @@ public:
         uint32_t m_width;
         uint32_t m_height;
         uint32_t m_depth;
-        void* m_mem;
+        const void* m_mem;
         uint32_t m_memPitch;
         uint32_t m_memSlicePitch;
     };
@@ -283,10 +285,7 @@ public:
     static DXGIFormat GetDXGIFormat(const PixelFormat& pf);
     static uint32_t GetBitsPerPixel(DXGIFormat fmt);
 
-    Result Load(const char* filepath);
-    Result Load(std::istream& input);
     Result Load(const uint8_t* data, size_t size);
-    Result Load(std::vector<uint8_t>&& dds);
 
     const ImageData* GetImageData(uint32_t mipIdx = 0,
                                   uint32_t arrayIdx = 0) const {
@@ -315,7 +314,8 @@ private:
     bool FlipCompressedImage(ImageData& imageData);
 
 private:
-    std::vector<uint8_t> m_dds;
+    const uint8_t* m_dds = nullptr;
+	size_t m_dds_size = 0;
     std::vector<ImageData> m_imageDatas;
 
     uint32_t m_height;
@@ -691,62 +691,23 @@ uint32_t DDSFile::GetBitsPerPixel(DXGIFormat fmt) {
     }
 }
 
-Result DDSFile::Load(const char* filepath) {
-    std::ifstream ifs(filepath, std::ios_base::binary);
-    if (!ifs.is_open()) {
-        return Result::ErrorFileOpen;
-    }
+Result DDSFile::Load(const uint8_t* dds_data, size_t dds_size) {
 
-    return Load(ifs);
-}
-
-Result DDSFile::Load(std::istream& input) {
-    m_dds.clear();
-
-    input.seekg(0, std::ios_base::beg);
-    auto begPos = input.tellg();
-    input.seekg(0, std::ios_base::end);
-    auto endPos = input.tellg();
-    input.seekg(0, std::ios_base::beg);
-
-    auto fileSize = endPos - begPos;
-    if (fileSize == 0) {
-        return Result::ErrorRead;
-    }
-    std::vector<uint8_t> dds((size_t)fileSize);
-
-    input.read(reinterpret_cast<char*>(dds.data()), fileSize);
-
-    if (input.bad()) {
-        return Result::ErrorRead;
-    }
-
-	return Load(std::move(dds));
-}
-
-Result DDSFile::Load(const uint8_t* data, size_t size) {
-    std::vector<uint8_t> dds(data, data + size);
-    return Load(std::move(dds));
-}
-
-Result DDSFile::Load(std::vector<uint8_t>&& dds) {
-    m_dds.clear();
-
-    if (dds.size() < 4) {
+    if (dds_size < 4) {
         return Result::ErrorSize;
     }
 
     for (int i = 0; i < 4; i++) {
-        if (dds[i] != Magic[i]) {
+        if (dds_data[i] != Magic[i]) {
             return Result::ErrorMagicWord;
         }
     }
 
-    if ((sizeof(uint32_t) + sizeof(Header)) >= dds.size()) {
+    if ((sizeof(uint32_t) + sizeof(Header)) >= dds_size) {
         return Result::ErrorSize;
     }
     auto header =
-        reinterpret_cast<const Header*>(dds.data() + sizeof(uint32_t));
+        reinterpret_cast<const Header*>(dds_data + sizeof(uint32_t));
 
     if (header->m_size != sizeof(Header) ||
         header->m_pixelFormat.m_size != sizeof(PixelFormat)) {
@@ -757,7 +718,7 @@ Result DDSFile::Load(std::vector<uint8_t>&& dds) {
          uint32_t(PixelFormatFlagBits::FourCC)) &&
         (MakeFourCC('D', 'X', '1', '0') == header->m_pixelFormat.m_fourCC)) {
         if ((sizeof(uint32_t) + sizeof(Header) + sizeof(HeaderDXT10)) >=
-            dds.size()) {
+			dds_size) {
             return Result::ErrorSize;
         }
         dxt10Header = true;
@@ -853,8 +814,8 @@ Result DDSFile::Load(std::vector<uint8_t>&& dds) {
     }
 
     std::vector<ImageData> imageDatas(m_mipCount * m_arraySize);
-    uint8_t* srcBits = dds.data() + offset;
-    uint8_t* endBits = dds.data() + dds.size();
+    const uint8_t* srcBits = dds_data + offset;
+    const uint8_t* endBits = dds_data + dds_size;
     uint32_t idx = 0;
     for (uint32_t j = 0; j < m_arraySize; j++) {
         uint32_t w = m_width;
@@ -883,7 +844,8 @@ Result DDSFile::Load(std::vector<uint8_t>&& dds) {
         }
     }
 
-    m_dds = std::move(dds);
+	m_dds = dds_data;
+	m_dds_size = dds_size;
     m_imageDatas = std::move(imageDatas);
 
     return Result::Success;
