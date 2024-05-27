@@ -5,7 +5,6 @@
 #include "wiUnorderedMap.h"
 #include "wiBacklog.h"
 #include "wiJobSystem.h"
-#include "wiInput.h"
 
 #include "Utility/qoi.h"
 #include "Utility/stb_image.h"
@@ -30,7 +29,6 @@ namespace wi
 		};
 		StreamingSubresourceData streaming_data[16] = {};
 		uint32_t mip_count = 0; // mip count of full resource
-		int mip_offset = 0; // mip offset relative to mip_count
 		float min_lod_clamp_absolute = 0; // relative to mip_count of full resource
 	};
 	static constexpr size_t streaming_texture_min_size = 4096; // 4KB is the minimum texture memory alignment
@@ -51,6 +49,7 @@ namespace wi
 		size_t streaming_filesize = 0;
 		size_t streaming_fileoffset = 0;
 		StreamingTexture streaming_texture;
+		std::atomic_bool stream_in{ false };
 	};
 
 	const wi::vector<uint8_t>& Resource::GetFileData() const
@@ -153,6 +152,25 @@ namespace wi
 		}
 		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		resourceinternal->flags |= resourcemanager::Flags::IMPORT_DELAY; // this will cause resource to be recreated, but let using old file data like delayed loading
+	}
+
+	void Resource::StreamIn()
+	{
+		if (internal_state == nullptr)
+		{
+			internal_state = std::make_shared<ResourceInternal>();
+		}
+		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
+		resourceinternal->stream_in.store(true);
+	}
+	void Resource::StreamOut()
+	{
+		if (internal_state == nullptr)
+		{
+			internal_state = std::make_shared<ResourceInternal>();
+		}
+		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
+		resourceinternal->stream_in.store(false);
 	}
 
 	namespace resourcemanager
@@ -269,6 +287,10 @@ namespace wi
 			{
 				flags &= ~Flags::IMPORT_RETAIN_FILEDATA;
 			}
+
+#ifdef PLATFORM_UWP
+			flags &= ~Flags::STREAMING; // disable streaming on UWP because of crappy file API that can't seek
+#endif // PLATFORM_UWP
 
 			locker.lock();
 			std::weak_ptr<ResourceInternal>& weak_resource = resources[name];
@@ -795,7 +817,7 @@ namespace wi
 							}
 
 							resource->streaming_texture.mip_count = desc.mip_levels;
-							resource->streaming_texture.mip_offset = 0;
+							int mip_offset = 0;
 							if (has_flag(flags, Flags::STREAMING))
 							{
 								while (desc.mip_levels > 1 && desc.depth == 1 && desc.array_size == 1 && ComputeTextureMemorySizeInBytes(desc) > streaming_texture_min_size)
@@ -803,12 +825,12 @@ namespace wi
 									desc.width >>= 1;
 									desc.height >>= 1;
 									desc.mip_levels -= 1;
-									resource->streaming_texture.mip_offset++;
+									mip_offset++;
 								}
-								resource->streaming_texture.min_lod_clamp_absolute = (float)resource->streaming_texture.mip_offset;
+								resource->streaming_texture.min_lod_clamp_absolute = (float)mip_offset;
 							}
 
-							success = device->CreateTexture(&desc, initdata.data() + resource->streaming_texture.mip_offset, &resource->texture);
+							success = device->CreateTexture(&desc, initdata.data() + mip_offset, &resource->texture);
 							device->SetName(&resource->texture, name.c_str());
 
 							Format srgb_format = GetFormatSRGB(desc.format);
@@ -1261,7 +1283,17 @@ namespace wi
 		};
 		std::mutex streaming_replacement_mutex;
 		wi::vector<StreamingTextureReplace> streaming_texture_replacements;
-		bool debug_streaming_shortage = false;
+		float streaming_threshold = 0.8f;
+
+		void SetStreamingMemoryThreshold(float value)
+		{
+			streaming_threshold = value;
+		}
+
+		float GetStreamingMemoryThreshold()
+		{
+			return streaming_threshold;
+		}
 
 		void UpdateStreamingResources(float dt)
 		{
@@ -1275,7 +1307,6 @@ namespace wi
 			streaming_texture_replacements.clear();
 			streaming_replacement_mutex.unlock();
 
-#if 1
 			// Update resource min lod clamps smoothly:
 			GraphicsDevice* device = GetDevice();
 			locker.lock();
@@ -1285,15 +1316,15 @@ namespace wi
 				std::shared_ptr<ResourceInternal> resource = weak_resource.lock();
 				if (resource != nullptr && resource->texture.IsValid() && has_flag(resource->flags, Flags::STREAMING))
 				{
-					TextureDesc& desc = resource->texture.desc;
-					const float mip_offset = float(resource->streaming_texture.mip_count - desc.mip_levels); // compute here, because other thread could modify StreamingSubresourceData::mip_offset
+					const TextureDesc& desc = resource->texture.desc;
+					const float mip_offset = float(resource->streaming_texture.mip_count - desc.mip_levels);
 					float min_lod_clamp_absolute_next = resource->streaming_texture.min_lod_clamp_absolute - dt * 2;
 					min_lod_clamp_absolute_next = std::max(mip_offset, min_lod_clamp_absolute_next);
 					if (wi::math::float_equal(min_lod_clamp_absolute_next, resource->streaming_texture.min_lod_clamp_absolute))
 						continue;
 					resource->streaming_texture.min_lod_clamp_absolute = min_lod_clamp_absolute_next;
 
-					float min_lod_clamp_relative = min_lod_clamp_absolute_next - mip_offset;
+					const float min_lod_clamp_relative = min_lod_clamp_absolute_next - mip_offset;
 
 					device->DeleteSubresources(&resource->texture);
 
@@ -1326,20 +1357,12 @@ namespace wi
 				}
 			}
 			locker.unlock();
-#endif
 
 			// If previous streaming jobs were not finished, we cancel this until next frame:
 			if (wi::jobsystem::IsBusy(streaming_ctx))
 				return;
 
 			streaming_texture_jobs.clear();
-
-#if 1
-			if (wi::input::Press((wi::input::BUTTON)'R'))
-			{
-				debug_streaming_shortage = !debug_streaming_shortage;
-			}
-#endif
 
 			// Gather the streaming jobs:
 			locker.lock();
@@ -1362,25 +1385,14 @@ namespace wi
 					TextureDesc desc = resource->texture.desc;
 					GraphicsDevice* device = GetDevice();
 					const GraphicsDevice::MemoryUsage memory_usage = device->GetMemoryUsage();
-					const double memory_percent = double(memory_usage.usage) / double(memory_usage.budget);
-					const bool shortage = debug_streaming_shortage || memory_percent > 0.75;
+					const float memory_percent = float(double(memory_usage.usage) / double(memory_usage.budget));
+					const bool memory_shortage = memory_percent > streaming_threshold;
+					const bool stream_in = memory_shortage ? false : resource->stream_in.load();
 
-					if (shortage)
+					int mip_offset = int(resource->streaming_texture.mip_count - desc.mip_levels);
+					if (stream_in)
 					{
-						if (ComputeTextureMemorySizeInBytes(desc) < streaming_texture_min_size)
-						{
-							// Don't reduce the texture below, because of 4KB alignment, this would not reduce memory usage further
-							continue;
-						}
-						// Dropping mip levels:
-						desc.width >>= 1;
-						desc.height >>= 1;
-						desc.mip_levels--;
-						resource->streaming_texture.mip_offset++;
-					}
-					else
-					{
-						if (resource->streaming_texture.mip_offset == 0)
+						if (mip_offset == 0)
 						{
 							// There aren't any more mip levels, cancel
 							continue;
@@ -1389,20 +1401,33 @@ namespace wi
 						desc.width <<= 1;
 						desc.height <<= 1;
 						desc.mip_levels++;
-						resource->streaming_texture.mip_offset--;
+						mip_offset--;
+					}
+					else
+					{
+						if (ComputeTextureMemorySizeInBytes(desc) <= streaming_texture_min_size)
+						{
+							// Don't reduce the texture below, because of 4KB alignment, this would not reduce memory usage further
+							continue;
+						}
+						// Mip level streaming OUT:
+						desc.width >>= 1;
+						desc.height >>= 1;
+						desc.mip_levels--;
+						mip_offset++;
 					}
 					if (desc.mip_levels <= resource->streaming_texture.mip_count)
 					{
 						// memory offset of the first mip level in current streaming range:
-						const size_t mip_offset = resource->streaming_texture.streaming_data[resource->streaming_texture.mip_offset].data_offset;
+						const size_t mip_data_offset = resource->streaming_texture.streaming_data[mip_offset].data_offset;
 						const uint8_t* firstmipdata = resource->filedata.data();
 
 						wi::vector<uint8_t> streaming_file; // keep it outside of scope to not get destroyed if it gets loaded
 						if (firstmipdata == nullptr)
 						{
 							// If file data is not available, then open the file partially with the streaming file parameters:
-							size_t filesize = resource->streaming_filesize - mip_offset;
-							size_t fileoffset = resource->streaming_fileoffset + mip_offset;
+							size_t filesize = resource->streaming_filesize - mip_data_offset;
+							size_t fileoffset = resource->streaming_fileoffset + mip_data_offset;
 							if (!wi::helper::FileRead(
 								resource->streaming_filename,
 								streaming_file,
@@ -1417,15 +1442,15 @@ namespace wi
 						else
 						{
 							// If file data is available, we can use that for streaming:
-							firstmipdata += mip_offset;
+							firstmipdata += mip_data_offset;
 						}
 
 						// Convert relative to absolute GPU initialization data
 						SubresourceData initdata[16] = {};
 						for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 						{
-							auto& streaming_data = resource->streaming_texture.streaming_data[resource->streaming_texture.mip_offset + mip];
-							initdata[mip].data_ptr = firstmipdata + streaming_data.data_offset - mip_offset;
+							auto& streaming_data = resource->streaming_texture.streaming_data[mip_offset + mip];
+							initdata[mip].data_ptr = firstmipdata + streaming_data.data_offset - mip_data_offset;
 							initdata[mip].row_pitch = streaming_data.row_pitch;
 							initdata[mip].slice_pitch = streaming_data.slice_pitch;
 						}

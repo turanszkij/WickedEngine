@@ -3778,6 +3778,18 @@ namespace wi::scene
 				material.WriteShaderTextureSlot(materialArrayMapped + args.jobIndex, EMISSIVEMAP, descriptor);
 			}
 
+			for (auto& slot : material.textures)
+			{
+				if (slot.resource.IsValid())
+				{
+					if (material.stream_in > 0)
+						slot.resource.StreamIn();
+					else
+						slot.resource.StreamOut();
+				}
+			}
+			material.stream_in = std::max(0l, material.stream_in - 1l);
+
 		});
 	}
 	void Scene::RunImpostorUpdateSystem(wi::jobsystem::context& ctx)
@@ -4010,6 +4022,8 @@ namespace wi::scene
 					}
 				}
 
+				const bool visible = !occlusion_result.IsOccluded() && camera.frustum.CheckBoxFast(aabb);
+
 				ImpostorComponent* impostor = impostors.GetComponent(object.meshID);
 				if (impostor != nullptr)
 				{
@@ -4108,6 +4122,11 @@ namespace wi::scene
 						if (customshader >= 0)
 						{
 							sort_bits.bits.customshader |= 1 << customshader;
+						}
+
+						if (visible)
+						{
+							AtomicOr((volatile long*)& material->stream_in, 1l);
 						}
 					}
 				}

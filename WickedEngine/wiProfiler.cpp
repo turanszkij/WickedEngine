@@ -423,8 +423,8 @@ namespace wi::profiler
 			}
 
 			float graph_max = 33;
-			float graph_max_gpu_memory = float(double(gpu_memory_usage.budget) / (1024.0 * 1024.0 * 1024.0)); // Gigabytes
-			float graph_max_cpu_memory = float(double(cpu_memory_usage.total_physical) / (1024.0 * 1024.0 * 1024.0)); // Gigabytes
+			float graph_max_gpu_memory = 0;
+			float graph_max_cpu_memory = 0;
 			for (uint32_t i = graph_vertex_count - 1; i > 0; --i)
 			{
 				cpu_graph[i] = cpu_graph[i - 1];
@@ -434,6 +434,7 @@ namespace wi::profiler
 				graph_max = std::max(graph_max, cpu_graph[i]);
 				graph_max = std::max(graph_max, gpu_graph[i]);
 				graph_max_gpu_memory = std::max(graph_max_gpu_memory, gpu_memory_graph[i]);
+				graph_max_cpu_memory = std::max(graph_max_cpu_memory, cpu_memory_graph[i]);
 			}
 			cpu_graph[0] = ranges[cpu_frame].time;
 			gpu_graph[0] = ranges[gpu_frame].time;
@@ -443,7 +444,7 @@ namespace wi::profiler
 			graph_max = std::max(graph_max, gpu_graph[0]);
 			graph_max_gpu_memory = std::max(graph_max_gpu_memory, gpu_memory_graph[0]);
 			graph_max_cpu_memory = std::max(graph_max_cpu_memory, cpu_memory_graph[0]);
-			const float graph_max_memory = std::max(graph_max_cpu_memory, graph_max_gpu_memory);
+			const float graph_max_memory = std::max(graph_max_cpu_memory, graph_max_gpu_memory) * 1.1f;
 
 			struct Vertex
 			{

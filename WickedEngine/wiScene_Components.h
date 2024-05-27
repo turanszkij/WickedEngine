@@ -243,6 +243,7 @@ namespace wi::scene
 		// Non-serialized attributes:
 		uint32_t layerMask = ~0u;
 		int sampler_descriptor = -1; // optional
+		long stream_in = 0;
 
 		// User stencil value can be in range [0, 15]
 		inline void SetUserStencilRef(uint8_t value)

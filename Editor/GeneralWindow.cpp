@@ -14,7 +14,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	wi::gui::Window::Create("General", wi::gui::Window::WindowControls::CLOSE | wi::gui::Window::WindowControls::RESIZE_RIGHT);
 	SetText("General Options " ICON_GENERALOPTIONS);
 
-	SetSize(XMFLOAT2(300, 700));
+	SetSize(XMFLOAT2(300, 740));
 
 	physicsDebugCheckBox.Create("Physics visualizer: ");
 	physicsDebugCheckBox.SetTooltip("Visualize the physics world");
@@ -561,6 +561,12 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			eliminateCoarseCascadesButton.sprites[i].params.corners_rounding[2].radius = 8;
 			eliminateCoarseCascadesButton.sprites[i].params.corners_rounding[3].radius = 8;
 
+			ddsConvButton.sprites[i].params.enableCornerRounding();
+			ddsConvButton.sprites[i].params.corners_rounding[0].radius = 8;
+			ddsConvButton.sprites[i].params.corners_rounding[1].radius = 8;
+			ddsConvButton.sprites[i].params.corners_rounding[2].radius = 8;
+			ddsConvButton.sprites[i].params.corners_rounding[3].radius = 8;
+
 			ktxConvButton.sprites[i].params.enableCornerRounding();
 			ktxConvButton.sprites[i].params.corners_rounding[0].radius = 8;
 			ktxConvButton.sprites[i].params.corners_rounding[1].radius = 8;
@@ -684,6 +690,53 @@ void GeneralWindow::Create(EditorComponent* _editor)
 
 		});
 	AddWidget(&eliminateCoarseCascadesButton);
+
+
+	ddsConvButton.Create("DDS Convert");
+	ddsConvButton.SetTooltip("All material textures in the scene will be converted to DDS format.\nDDS format is optimal for GPU and can be streamed.");
+	ddsConvButton.SetSize(XMFLOAT2(100, 18));
+	ddsConvButton.OnClick([=](wi::gui::EventArgs args) {
+
+		Scene& scene = editor->GetCurrentScene();
+
+		wi::unordered_map<std::string, wi::Resource> conv;
+		for (uint32_t i = 0; i < scene.materials.GetCount(); ++i)
+		{
+			MaterialComponent& material = scene.materials[i];
+			for (auto& x : material.textures)
+			{
+				if (x.GetGPUResource() == nullptr)
+					continue;
+				if (wi::helper::GetExtensionFromFileName(x.name).compare("DDS"))
+				{
+					x.name = wi::helper::ReplaceExtension(x.name, "DDS");
+					conv[x.name] = x.resource;
+				}
+			}
+		}
+
+		for (auto& x : conv)
+		{
+			wi::vector<uint8_t> filedata;
+			if (wi::helper::saveTextureToMemory(x.second.GetTexture(), filedata))
+			{
+				x.second.SetFileData(std::move(filedata));
+				wi::vector<uint8_t> filedata_dds;
+				if (wi::helper::saveTextureToMemoryFile(x.second.GetFileData(), x.second.GetTexture().desc, "DDS", filedata_dds))
+				{
+					x.second = wi::resourcemanager::Load(x.first, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA, filedata_dds.data(), filedata_dds.size());
+				}
+			}
+		}
+
+		for (uint32_t i = 0; i < scene.materials.GetCount(); ++i)
+		{
+			MaterialComponent& material = scene.materials[i];
+			material.CreateRenderData();
+		}
+
+		});
+	AddWidget(&ddsConvButton);
 
 
 	ktxConvButton.Create("KTX2 Convert");
@@ -850,5 +903,6 @@ void GeneralWindow::ResizeLayout()
 	width = prev_width;
 
 	add_fullwidth(eliminateCoarseCascadesButton);
+	add_fullwidth(ddsConvButton);
 	add_fullwidth(ktxConvButton);
 }

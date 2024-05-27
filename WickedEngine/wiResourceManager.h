@@ -40,6 +40,11 @@ namespace wi
 		// Resource marked for recreate on resourcemanager::Load()
 		//	It keeps embedded file data if exists
 		void SetOutdated();
+
+		// Let the streaming system know that high detail of this resource is required
+		void StreamIn();
+		// Tet the streaming system know that this resource memory can be reduced
+		void StreamOut();
 	};
 
 	namespace resourcemanager
@@ -90,6 +95,14 @@ namespace wi
 		// Invalidate all resources
 		void Clear();
 
+		// Set threshold relative to memory budget for streaming
+		//	If memory usage is below threshold, streaming will work regularly
+		//	If memory usage is above threshold, streaming will try to reduce usage
+		void SetStreamingMemoryThreshold(float value);
+		float GetStreamingMemoryThreshold();
+
+		// Update all streaming resources, call it once per frame on the main thread
+		//	Launching or finalizing background streaming jobs is attempted here
 		void UpdateStreamingResources(float dt);
 
 		struct ResourceSerializer
