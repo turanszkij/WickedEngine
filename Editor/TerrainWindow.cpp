@@ -1477,6 +1477,11 @@ void TerrainWindow::SetupAssets()
 	material_HighAltitude->textures[MaterialComponent::BASECOLORMAP].name = asset_path + "high_altitude.jpg";
 	material_HighAltitude->textures[MaterialComponent::NORMALMAP].name = asset_path + "high_altitude_nor.jpg";
 
+	material_Base->SetTextureStreamingDisabled();
+	material_Slope->SetTextureStreamingDisabled();
+	material_LowAltitude->SetTextureStreamingDisabled();
+	material_HighAltitude->SetTextureStreamingDisabled();
+
 	// Extra material: rock
 	{
 		Entity materialEntity = CreateEntity();
@@ -1486,6 +1491,7 @@ void TerrainWindow::SetupAssets()
 		mat.textures[MaterialComponent::BASECOLORMAP].name = asset_path + "rock.jpg";
 		mat.textures[MaterialComponent::NORMALMAP].name = asset_path + "rock_nor.jpg";
 		mat.roughness = 0.9f;
+		mat.SetTextureStreamingDisabled();
 		terrain_preset.materialEntities.push_back(materialEntity);
 	}
 	// Extra material: ground
@@ -1497,6 +1503,7 @@ void TerrainWindow::SetupAssets()
 		mat.textures[MaterialComponent::BASECOLORMAP].name = asset_path + "ground.jpg";
 		mat.textures[MaterialComponent::NORMALMAP].name = asset_path + "ground_nor.jpg";
 		mat.roughness = 0.9f;
+		mat.SetTextureStreamingDisabled();
 		terrain_preset.materialEntities.push_back(materialEntity);
 	}
 	// Extra material: ground2
@@ -1508,6 +1515,7 @@ void TerrainWindow::SetupAssets()
 		mat.textures[MaterialComponent::BASECOLORMAP].name = asset_path + "ground2.jpg";
 		mat.textures[MaterialComponent::NORMALMAP].name = asset_path + "ground2_nor.jpg";
 		mat.roughness = 0.9f;
+		mat.SetTextureStreamingDisabled();
 		terrain_preset.materialEntities.push_back(materialEntity);
 	}
 	// Extra material: bricks
@@ -1519,6 +1527,7 @@ void TerrainWindow::SetupAssets()
 		mat.textures[MaterialComponent::BASECOLORMAP].name = asset_path + "bricks.jpg";
 		mat.textures[MaterialComponent::NORMALMAP].name = asset_path + "bricks_nor.jpg";
 		mat.roughness = 0.9f;
+		mat.SetTextureStreamingDisabled();
 		terrain_preset.materialEntities.push_back(materialEntity);
 	}
 	// Extra material: darkrock
@@ -1530,6 +1539,7 @@ void TerrainWindow::SetupAssets()
 		mat.textures[MaterialComponent::BASECOLORMAP].name = asset_path + "darkrock.jpg";
 		mat.textures[MaterialComponent::NORMALMAP].name = asset_path + "darkrock_nor.jpg";
 		mat.roughness = 0.8f;
+		mat.SetTextureStreamingDisabled();
 		terrain_preset.materialEntities.push_back(materialEntity);
 	}
 	// Extra material: metalplate
@@ -1542,6 +1552,7 @@ void TerrainWindow::SetupAssets()
 		mat.textures[MaterialComponent::NORMALMAP].name = asset_path + "metalplate_nor.jpg";
 		mat.metalness = 1;
 		mat.roughness = 0.5f;
+		mat.SetTextureStreamingDisabled();
 		terrain_preset.materialEntities.push_back(materialEntity);
 	}
 	// Extra material: foil
@@ -1554,6 +1565,7 @@ void TerrainWindow::SetupAssets()
 		mat.textures[MaterialComponent::NORMALMAP].name = asset_path + "foil_nor.jpg";
 		mat.metalness = 1;
 		mat.roughness = 0.01f;
+		mat.SetTextureStreamingDisabled();
 		terrain_preset.materialEntities.push_back(materialEntity);
 	}
 	// Extra material: pavingstone
@@ -1564,6 +1576,7 @@ void TerrainWindow::SetupAssets()
 		currentScene.Component_Attach(materialEntity, entity);
 		mat.textures[MaterialComponent::BASECOLORMAP].name = asset_path + "pavingstone.jpg";
 		mat.textures[MaterialComponent::NORMALMAP].name = asset_path + "pavingstone_nor.jpg";
+		mat.SetTextureStreamingDisabled();
 		terrain_preset.materialEntities.push_back(materialEntity);
 	}
 	// Extra material: tactilepaving
@@ -1574,6 +1587,7 @@ void TerrainWindow::SetupAssets()
 		currentScene.Component_Attach(materialEntity, entity);
 		mat.textures[MaterialComponent::BASECOLORMAP].name = asset_path + "tactilepaving.jpg";
 		mat.textures[MaterialComponent::NORMALMAP].name = asset_path + "tactilepaving_nor.jpg";
+		mat.SetTextureStreamingDisabled();
 		terrain_preset.materialEntities.push_back(materialEntity);
 	}
 	// Extra material: lava
@@ -1586,6 +1600,7 @@ void TerrainWindow::SetupAssets()
 		mat.textures[MaterialComponent::NORMALMAP].name = asset_path + "lava_nor.jpg";
 		mat.textures[MaterialComponent::EMISSIVEMAP].name = asset_path + "lava_emi.jpg";
 		mat.roughness = 0.8f;
+		mat.SetTextureStreamingDisabled();
 		terrain_preset.materialEntities.push_back(materialEntity);
 	}
 

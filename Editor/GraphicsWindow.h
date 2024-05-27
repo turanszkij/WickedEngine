@@ -16,6 +16,7 @@ public:
 	wi::gui::CheckBox occlusionCullingCheckBox;
 	wi::gui::CheckBox visibilityComputeShadingCheckBox;
 	wi::gui::Slider resolutionScaleSlider;
+	wi::gui::Slider streamingSlider;
 	wi::gui::Slider GIBoostSlider;
 	wi::gui::CheckBox surfelGICheckBox;
 	wi::gui::ComboBox surfelGIDebugComboBox;

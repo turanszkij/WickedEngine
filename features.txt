@@ -66,7 +66,7 @@ Particle - Depth Buffer collisions
 Ocean simulation (FFT)
 Translucent colored shadows
 Refraction caustics
-Local parallax-corrected environment maps
+Parallax-corrected environment maps
 Volumetric light scattering
 Smooth Particle Hydrodynamics (SPH) Fluid Simulation
 Ray tracing, path tracing (on GPU)
@@ -83,12 +83,14 @@ Surfel GI
 HDR display output
 Dynamic Diffuse Global Illumination (DDGI)
 Procedural terrain generator
+Virtual textures
 Expressions
 Humanoid rig
 Animation retargeting
 Video decoding: H264
 3D path finding
 Screen Space Global Illumination (SSGI)
+Texture streaming
 
 GLTF 2.0 - KHR extensions supported:
 KHR_materials_unlit

@@ -40,6 +40,11 @@ namespace wi
 		// Resource marked for recreate on resourcemanager::Load()
 		//	It keeps embedded file data if exists
 		void SetOutdated();
+
+		// Let the streaming system know that high detail of this resource is required
+		void StreamIn();
+		// Tet the streaming system know that this resource memory can be reduced
+		void StreamOut();
 	};
 
 	namespace resourcemanager
@@ -67,6 +72,7 @@ namespace wi
 			IMPORT_NORMALMAP = 1 << 2, // image import will try to use optimal normal map encoding
 			IMPORT_BLOCK_COMPRESSED = 1 << 3, // image import will request block compression for uncompressed or transcodable formats
 			IMPORT_DELAY = 1 << 4, // delay importing resource until later, for example when proper flags can be determined
+			STREAMING = 1 << 5, // use streaming if possible
 		};
 
 		// Load a resource
@@ -74,16 +80,30 @@ namespace wi
 		//	flags : specify flags that modify behaviour (optional)
 		//	filedata : pointer to file data, if file was loaded manually (optional)
 		//	filesize : size of file data, if file was loaded manually (optional)
+		//	streaming_filename : if name is not the name of source file, set the source file name here for streaming (streaming can reopen this file on demand)
+		//	streaming_fileoffset : if using streaming_filename, you can give the offset for the resource within the file here
 		Resource Load(
 			const std::string& name,
 			Flags flags = Flags::NONE,
 			const uint8_t* filedata = nullptr,
-			size_t filesize = 0
+			size_t filesize = 0,
+			const std::string& streaming_filename = "",
+			size_t streaming_fileoffset = 0
 		);
 		// Check if a resource is currently loaded
 		bool Contains(const std::string& name);
 		// Invalidate all resources
 		void Clear();
+
+		// Set threshold relative to memory budget for streaming
+		//	If memory usage is below threshold, streaming will work regularly
+		//	If memory usage is above threshold, streaming will try to reduce usage
+		void SetStreamingMemoryThreshold(float value);
+		float GetStreamingMemoryThreshold();
+
+		// Update all streaming resources, call it once per frame on the main thread
+		//	Launching or finalizing background streaming jobs is attempted here
+		void UpdateStreamingResources(float dt);
 
 		struct ResourceSerializer
 		{

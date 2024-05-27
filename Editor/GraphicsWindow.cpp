@@ -14,7 +14,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(300, 1660));
+	SetSize(XMFLOAT2(300, 1680));
 
 	float step = 21;
 	float itemheight = 18;
@@ -62,6 +62,15 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->main->config.Commit();
 		});
 	AddWidget(&resolutionScaleSlider);
+
+	streamingSlider.Create(0.1f, 1.0f, wi::resourcemanager::GetStreamingMemoryThreshold(), 100, "Streaming Threshold: ");
+	streamingSlider.SetTooltip("Adjust the threshold for texture streaming (percent of available video memory).\nIf VRAM is used above the budget, the streaming system will try to reduce textures.\nNote: only DDS textures support streaming.");
+	streamingSlider.SetSize(XMFLOAT2(wid, itemheight));
+	streamingSlider.SetPos(XMFLOAT2(x, y += step));
+	streamingSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::resourcemanager::SetStreamingMemoryThreshold(args.fValue);
+	});
+	AddWidget(&streamingSlider);
 
 	renderPathComboBox.Create("Render Path: ");
 	renderPathComboBox.SetSize(XMFLOAT2(wid, itemheight));
@@ -1514,6 +1523,7 @@ void GraphicsWindow::Update()
 	GIBoostSlider.SetValue(wi::renderer::GetGIBoost());
 	visibilityComputeShadingCheckBox.SetCheck(editor->renderPath->visibility_shading_in_compute);
 	resolutionScaleSlider.SetValue(editor->resolutionScale);
+	streamingSlider.SetValue(wi::resourcemanager::GetStreamingMemoryThreshold());
 	MSAAComboBox.SetSelectedByUserdataWithoutCallback(editor->renderPath->getMSAASampleCount());
 	tonemapCombo.SetSelected((int)editor->renderPath->getTonemap());
 	exposureSlider.SetValue(editor->renderPath->getExposure());
@@ -1655,6 +1665,7 @@ void GraphicsWindow::ResizeLayout()
 	add(swapchainComboBox);
 	add(renderPathComboBox);
 	add(resolutionScaleSlider);
+	add(streamingSlider);
 	add(speedMultiplierSlider);
 	add(textureQualityComboBox);
 	add(mipLodBiasSlider);

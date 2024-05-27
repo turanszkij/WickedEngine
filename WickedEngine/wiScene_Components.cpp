@@ -457,6 +457,10 @@ namespace wi::scene
 		{
 			flags |= wi::resourcemanager::Flags::IMPORT_BLOCK_COMPRESSED;
 		}
+		if (!IsTextureStreamingDisabled())
+		{
+			flags |= wi::resourcemanager::Flags::STREAMING;
+		}
 		switch (slot)
 		{
 		case NORMALMAP:

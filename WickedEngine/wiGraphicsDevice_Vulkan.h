@@ -71,6 +71,7 @@ namespace wi::graphics
 		VkPhysicalDeviceFragmentShadingRateFeaturesKHR fragment_shading_rate_features = {};
 		VkPhysicalDeviceConditionalRenderingFeaturesEXT conditional_rendering_features = {};
 		VkPhysicalDeviceDepthClipEnableFeaturesEXT depth_clip_enable_features = {};
+		VkPhysicalDeviceImageViewMinLodFeaturesEXT image_view_min_lod_features = {};
 		VkPhysicalDeviceMeshShaderFeaturesEXT mesh_shader_features = {};
 
 		VkVideoDecodeH264ProfileInfoKHR decode_h264_profile = {};
@@ -299,8 +300,10 @@ namespace wi::graphics
 		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const override;
 		bool CreateVideoDecoder(const VideoDesc* desc, VideoDecoder* video_decoder) const override;
 
-		int CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change = nullptr, const ImageAspect* aspect = nullptr, const Swizzle* swizzle = nullptr) const override;
+		int CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change = nullptr, const ImageAspect* aspect = nullptr, const Swizzle* swizzle = nullptr, float min_lod_clamp = 0) const override;
 		int CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size = ~0, const Format* format_change = nullptr, const uint32_t* structuredbuffer_stride_change = nullptr) const override;
+
+		void DeleteSubresources(GPUResource* resource) override;
 
 		int GetDescriptorIndex(const GPUResource* resource, SubresourceType type, int subresource = -1) const override;
 		int GetDescriptorIndex(const Sampler* sampler) const override;

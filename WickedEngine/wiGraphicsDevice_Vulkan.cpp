@@ -661,6 +661,63 @@ namespace vulkan_internal
 		wi::vector<BufferSubresource> subresources_uav;
 		VkDeviceAddress address = 0;
 
+		void destroy_subresources()
+		{
+			uint64_t framecount = allocationhandler->framecount;
+			if (srv.IsValid())
+			{
+				if (srv.is_typed)
+				{
+					allocationhandler->destroyer_bufferviews.push_back(std::make_pair(srv.buffer_view, framecount));
+					allocationhandler->destroyer_bindlessUniformTexelBuffers.push_back(std::make_pair(srv.index, framecount));
+				}
+				else
+				{
+					allocationhandler->destroyer_bindlessStorageBuffers.push_back(std::make_pair(srv.index, framecount));
+				}
+				srv = {};
+			}
+			if (uav.IsValid())
+			{
+				if (uav.is_typed)
+				{
+					allocationhandler->destroyer_bufferviews.push_back(std::make_pair(uav.buffer_view, framecount));
+					allocationhandler->destroyer_bindlessStorageTexelBuffers.push_back(std::make_pair(uav.index, framecount));
+				}
+				else
+				{
+					allocationhandler->destroyer_bindlessStorageBuffers.push_back(std::make_pair(uav.index, framecount));
+				}
+				uav = {};
+			}
+			for (auto& x : subresources_srv)
+			{
+				if (x.is_typed)
+				{
+					allocationhandler->destroyer_bufferviews.push_back(std::make_pair(x.buffer_view, framecount));
+					allocationhandler->destroyer_bindlessUniformTexelBuffers.push_back(std::make_pair(x.index, framecount));
+				}
+				else
+				{
+					allocationhandler->destroyer_bindlessStorageBuffers.push_back(std::make_pair(x.index, framecount));
+				}
+			}
+			subresources_srv.clear();
+			for (auto& x : subresources_uav)
+			{
+				if (x.is_typed)
+				{
+					allocationhandler->destroyer_bufferviews.push_back(std::make_pair(x.buffer_view, framecount));
+					allocationhandler->destroyer_bindlessStorageTexelBuffers.push_back(std::make_pair(x.index, framecount));
+				}
+				else
+				{
+					allocationhandler->destroyer_bindlessStorageBuffers.push_back(std::make_pair(x.index, framecount));
+				}
+			}
+			subresources_uav.clear();
+		}
+
 		~Buffer_Vulkan()
 		{
 			if (allocationhandler == nullptr)
@@ -675,54 +732,7 @@ namespace vulkan_internal
 			{
 				allocationhandler->destroyer_allocations.push_back(std::make_pair(allocation, framecount));
 			}
-			if (srv.IsValid())
-			{
-				if (srv.is_typed)
-				{
-					allocationhandler->destroyer_bufferviews.push_back(std::make_pair(srv.buffer_view, framecount));
-					allocationhandler->destroyer_bindlessUniformTexelBuffers.push_back(std::make_pair(srv.index, framecount));
-				}
-				else
-				{
-					allocationhandler->destroyer_bindlessStorageBuffers.push_back(std::make_pair(srv.index, framecount));
-				}
-			}
-			if (uav.IsValid())
-			{
-				if (uav.is_typed)
-				{
-					allocationhandler->destroyer_bufferviews.push_back(std::make_pair(uav.buffer_view, framecount));
-					allocationhandler->destroyer_bindlessStorageTexelBuffers.push_back(std::make_pair(uav.index, framecount));
-				}
-				else
-				{
-					allocationhandler->destroyer_bindlessStorageBuffers.push_back(std::make_pair(uav.index, framecount));
-				}
-			}
-			for (auto& x : subresources_srv)
-			{
-				if (x.is_typed)
-				{
-					allocationhandler->destroyer_bufferviews.push_back(std::make_pair(x.buffer_view, framecount));
-					allocationhandler->destroyer_bindlessUniformTexelBuffers.push_back(std::make_pair(x.index, framecount));
-				}
-				else
-				{
-					allocationhandler->destroyer_bindlessStorageBuffers.push_back(std::make_pair(x.index, framecount));
-				}
-			}
-			for (auto& x : subresources_uav)
-			{
-				if (x.is_typed)
-				{
-					allocationhandler->destroyer_bufferviews.push_back(std::make_pair(x.buffer_view, framecount));
-					allocationhandler->destroyer_bindlessStorageTexelBuffers.push_back(std::make_pair(x.index, framecount));
-				}
-				else
-				{
-					allocationhandler->destroyer_bindlessStorageBuffers.push_back(std::make_pair(x.index, framecount));
-				}
-			}
+			destroy_subresources();
 			allocationhandler->destroylocker.unlock();
 		}
 	};
@@ -761,6 +771,55 @@ namespace vulkan_internal
 
 		VkImageView video_decode_view = VK_NULL_HANDLE;
 
+		void destroy_subresources()
+		{
+			uint64_t framecount = allocationhandler->framecount;
+			if (srv.IsValid())
+			{
+				allocationhandler->destroyer_imageviews.push_back(std::make_pair(srv.image_view, framecount));
+				allocationhandler->destroyer_bindlessSampledImages.push_back(std::make_pair(srv.index, framecount));
+				srv = {};
+			}
+			if (uav.IsValid())
+			{
+				allocationhandler->destroyer_imageviews.push_back(std::make_pair(uav.image_view, framecount));
+				allocationhandler->destroyer_bindlessStorageImages.push_back(std::make_pair(uav.index, framecount));
+				uav = {};
+			}
+			if (rtv.IsValid())
+			{
+				allocationhandler->destroyer_imageviews.push_back(std::make_pair(rtv.image_view, framecount));
+				rtv = {};
+			}
+			if (dsv.IsValid())
+			{
+				allocationhandler->destroyer_imageviews.push_back(std::make_pair(dsv.image_view, framecount));
+				dsv = {};
+			}
+			for (auto x : subresources_srv)
+			{
+				allocationhandler->destroyer_imageviews.push_back(std::make_pair(x.image_view, framecount));
+				allocationhandler->destroyer_bindlessSampledImages.push_back(std::make_pair(x.index, framecount));
+			}
+			subresources_srv.clear();
+			for (auto x : subresources_uav)
+			{
+				allocationhandler->destroyer_imageviews.push_back(std::make_pair(x.image_view, framecount));
+				allocationhandler->destroyer_bindlessStorageImages.push_back(std::make_pair(x.index, framecount));
+			}
+			subresources_uav.clear();
+			for (auto x : subresources_rtv)
+			{
+				allocationhandler->destroyer_imageviews.push_back(std::make_pair(x.image_view, framecount));
+			}
+			subresources_rtv.clear();
+			for (auto x : subresources_dsv)
+			{
+				allocationhandler->destroyer_imageviews.push_back(std::make_pair(x.image_view, framecount));
+			}
+			subresources_dsv.clear();
+		}
+
 		~Texture_Vulkan()
 		{
 			if (allocationhandler == nullptr)
@@ -779,46 +838,11 @@ namespace vulkan_internal
 			{
 				allocationhandler->destroyer_allocations.push_back(std::make_pair(allocation, framecount));
 			}
-			if (srv.IsValid())
-			{
-				allocationhandler->destroyer_imageviews.push_back(std::make_pair(srv.image_view, framecount));
-				allocationhandler->destroyer_bindlessSampledImages.push_back(std::make_pair(srv.index, framecount));
-			}
-			if (uav.IsValid())
-			{
-				allocationhandler->destroyer_imageviews.push_back(std::make_pair(uav.image_view, framecount));
-				allocationhandler->destroyer_bindlessStorageImages.push_back(std::make_pair(uav.index, framecount));
-			}
-			if (rtv.IsValid())
-			{
-				allocationhandler->destroyer_imageviews.push_back(std::make_pair(rtv.image_view, framecount));
-			}
-			if (dsv.IsValid())
-			{
-				allocationhandler->destroyer_imageviews.push_back(std::make_pair(dsv.image_view, framecount));
-			}
-			for (auto x : subresources_srv)
-			{
-				allocationhandler->destroyer_imageviews.push_back(std::make_pair(x.image_view, framecount));
-				allocationhandler->destroyer_bindlessSampledImages.push_back(std::make_pair(x.index, framecount));
-			}
-			for (auto x : subresources_uav)
-			{
-				allocationhandler->destroyer_imageviews.push_back(std::make_pair(x.image_view, framecount));
-				allocationhandler->destroyer_bindlessStorageImages.push_back(std::make_pair(x.index, framecount));
-			}
-			for (auto x : subresources_rtv)
-			{
-				allocationhandler->destroyer_imageviews.push_back(std::make_pair(x.image_view, framecount));
-			}
-			for (auto x : subresources_dsv)
-			{
-				allocationhandler->destroyer_imageviews.push_back(std::make_pair(x.image_view, framecount));
-			}
 			if (video_decode_view != VK_NULL_HANDLE)
 			{
 				allocationhandler->destroyer_imageviews.push_back(std::make_pair(video_decode_view, framecount));
 			}
+			destroy_subresources();
 			allocationhandler->destroylocker.unlock();
 		}
 	};
@@ -2575,6 +2599,13 @@ using namespace vulkan_internal;
 
 				enabled_deviceExtensions = required_deviceExtensions;
 
+				if (checkExtensionSupport(VK_EXT_IMAGE_VIEW_MIN_LOD_EXTENSION_NAME, available_deviceExtensions))
+				{
+					enabled_deviceExtensions.push_back(VK_EXT_IMAGE_VIEW_MIN_LOD_EXTENSION_NAME);
+					image_view_min_lod_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_VIEW_MIN_LOD_FEATURES_EXT;
+					*features_chain = &image_view_min_lod_features;
+					features_chain = &image_view_min_lod_features.pNext;
+				}
 				if (checkExtensionSupport(VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME, available_deviceExtensions))
 				{
 					enabled_deviceExtensions.push_back(VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME);
@@ -6404,7 +6435,7 @@ using namespace vulkan_internal;
 		return true;
 	}
 
-	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change, const ImageAspect* aspect, const Swizzle* swizzle) const
+	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change, const ImageAspect* aspect, const Swizzle* swizzle, float min_lod_clamp) const
 	{
 		auto internal_state = to_internal(texture);
 
@@ -6515,6 +6546,14 @@ using namespace vulkan_internal;
 			viewUsageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_USAGE_CREATE_INFO;
 			viewUsageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
 			view_desc.pNext = &viewUsageInfo;
+
+			VkImageViewMinLodCreateInfoEXT min_lod_info = {};
+			min_lod_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_MIN_LOD_CREATE_INFO_EXT;
+			min_lod_info.minLod = min_lod_clamp;
+			if (min_lod_clamp > 0 && image_view_min_lod_features.minLod == VK_TRUE)
+			{
+				viewUsageInfo.pNext = &min_lod_info;
+			}
 
 			VkResult res = vkCreateImageView(device, &view_desc, nullptr, &subresource.image_view);
 
@@ -6790,6 +6829,24 @@ using namespace vulkan_internal;
 			break;
 		}
 		return -1;
+	}
+
+	void GraphicsDevice_Vulkan::DeleteSubresources(GPUResource* resource)
+	{
+		if (resource->IsTexture())
+		{
+			auto internal_state = to_internal((Texture*)resource);
+			internal_state->allocationhandler->destroylocker.lock();
+			internal_state->destroy_subresources();
+			internal_state->allocationhandler->destroylocker.unlock();
+		}
+		else if (resource->IsBuffer())
+		{
+			auto internal_state = to_internal((GPUBuffer*)resource);
+			internal_state->allocationhandler->destroylocker.lock();
+			internal_state->destroy_subresources();
+			internal_state->allocationhandler->destroylocker.unlock();
+		}
 	}
 
 	int GraphicsDevice_Vulkan::GetDescriptorIndex(const GPUResource* resource, SubresourceType type, int subresource) const
