@@ -1284,6 +1284,7 @@ namespace wi
 		std::mutex streaming_replacement_mutex;
 		wi::vector<StreamingTextureReplace> streaming_texture_replacements;
 		float streaming_threshold = 0.8f;
+		float streaming_fade_speed = 4;
 
 		void SetStreamingMemoryThreshold(float value)
 		{
@@ -1318,7 +1319,7 @@ namespace wi
 				{
 					const TextureDesc& desc = resource->texture.desc;
 					const float mip_offset = float(resource->streaming_texture.mip_count - desc.mip_levels);
-					float min_lod_clamp_absolute_next = resource->streaming_texture.min_lod_clamp_absolute - dt * 2;
+					float min_lod_clamp_absolute_next = resource->streaming_texture.min_lod_clamp_absolute - dt * streaming_fade_speed;
 					min_lod_clamp_absolute_next = std::max(mip_offset, min_lod_clamp_absolute_next);
 					if (wi::math::float_equal(min_lod_clamp_absolute_next, resource->streaming_texture.min_lod_clamp_absolute))
 						continue;

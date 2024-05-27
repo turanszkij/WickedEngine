@@ -4126,7 +4126,7 @@ namespace wi::scene
 
 						if (visible)
 						{
-							AtomicOr((volatile long*)& material->stream_in, 1l);
+							AtomicOr((volatile long*)& material->stream_in, 0xFF); // 0xFF : for next 255 frames, material will be in stream IN state
 						}
 					}
 				}
