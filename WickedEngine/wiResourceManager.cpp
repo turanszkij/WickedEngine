@@ -321,6 +321,14 @@ namespace wi
 				}
 				resource->streaming_filesize = filesize;
 				resource->streaming_fileoffset = streaming_fileoffset;
+
+				if (resource->filedata.empty() && (has_flag(flags, Flags::IMPORT_RETAIN_FILEDATA) || has_flag(flags, Flags::IMPORT_DELAY)))
+				{
+					// resource was loaded with external filedata, and we want to retain filedata
+					//	this must also happen when using IMPORT_DELAY!
+					resource->filedata.resize(filesize);
+					std::memcpy(resource->filedata.data(), filedata, filesize);
+				}
 			}
 			else
 			{
@@ -1231,17 +1239,10 @@ namespace wi
 			{
 				resource->flags = flags;
 
-				if (resource->filedata.empty() && (has_flag(flags, Flags::IMPORT_RETAIN_FILEDATA) || has_flag(flags, Flags::IMPORT_DELAY)))
+				if (!resource->filedata.empty() && !has_flag(flags, Flags::IMPORT_RETAIN_FILEDATA) && !has_flag(flags, Flags::IMPORT_DELAY))
 				{
-					// resource was loaded with external filedata, and we want to retain filedata
-					//	this must also happen when using IMPORT_DELAY!
-					resource->filedata.resize(filesize);
-					std::memcpy(resource->filedata.data(), filedata, filesize);
-				}
-				else if (!resource->filedata.empty() && has_flag(flags, Flags::IMPORT_RETAIN_FILEDATA) == 0)
-				{
-					// resource was loaded using file name, and we want to discard filedata
-					resource->filedata.clear();
+					// file data can be discarded:
+					resource->filedata = {}; // not just clear but destroy vector with deallocating data
 				}
 
 				Resource retVal;
@@ -1378,6 +1379,9 @@ namespace wi
 			}
 			locker.unlock();
 
+			if (streaming_texture_jobs.empty())
+				return;
+
 			// One low priority thread will be responsible for streaming, to not cause any hitching while rendering:
 			streaming_ctx.priority = wi::jobsystem::Priority::Low;
 			wi::jobsystem::Execute(streaming_ctx, [](wi::jobsystem::JobArgs args) {
@@ -1494,13 +1498,14 @@ namespace wi
 			{
 				std::string name;
 				Flags flags = Flags::NONE;
-				wi::vector<uint8_t> filedata;
+				const uint8_t* filedata = nullptr;
+				size_t filesize = 0;
 			};
 			wi::vector<TempResource> temp_resources;
 			temp_resources.resize(serializable_count);
 
 			wi::jobsystem::context ctx;
-			std::mutex seri_locker;
+			ctx.priority = wi::jobsystem::Priority::Low;
 			for (size_t i = 0; i < serializable_count; ++i)
 			{
 				auto& resource = temp_resources[i];
@@ -1509,24 +1514,31 @@ namespace wi
 				uint32_t flags_temp;
 				archive >> flags_temp;
 				resource.flags = (Flags)flags_temp;
-				archive >> resource.filedata;
 
-				size_t file_offset = archive.GetPos() - resource.filedata.size();
+				// We don't read the file data from archive into a vector like usual, instead map the vector,
+				//  this is much faster and we don't need to retain this data after archive lifetime
+				archive.MapVector(resource.filedata, resource.filesize);
+
+				size_t file_offset = archive.GetPos() - resource.filesize;
 
 				resource.name = archive.GetSourceDirectory() + resource.name;
 				resource.flags |= Flags::IMPORT_DELAY; // delay resource creation, to be able to receive additional flags (this way only file data is loaded)
 
+				if (Contains(resource.name))
+					continue;
+
 				// "Loading" the resource can happen asynchronously to serialization of file data, to improve performance
-				wi::jobsystem::Execute(ctx, [i, &temp_resources, &seri_locker, &seri, &archive, file_offset](wi::jobsystem::JobArgs args) {
+				wi::jobsystem::Execute(ctx, [i, &temp_resources, &seri, &archive, file_offset](wi::jobsystem::JobArgs args) {
 					auto& tmp_resource = temp_resources[i];
 					auto res = Load(
 						tmp_resource.name,
 						tmp_resource.flags,
-						tmp_resource.filedata.data(),
-						tmp_resource.filedata.size(),
+						tmp_resource.filedata,
+						tmp_resource.filesize,
 						archive.GetSourceFileName(),
 						file_offset
 					);
+					static std::mutex seri_locker;
 					seri_locker.lock();
 					seri.resources.push_back(res);
 					seri_locker.unlock();

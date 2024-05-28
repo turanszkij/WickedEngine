@@ -7969,7 +7969,7 @@ using namespace vulkan_internal;
 		{
 			vp[i].x = pViewports[i].top_left_x;
 			vp[i].y = pViewports[i].top_left_y + pViewports[i].height;
-			vp[i].width = pViewports[i].width;
+			vp[i].width = std::max(1.0f, pViewports[i].width); // must be > 0 according to validation layer
 			vp[i].height = -pViewports[i].height;
 			vp[i].minDepth = pViewports[i].min_depth;
 			vp[i].maxDepth = pViewports[i].max_depth;

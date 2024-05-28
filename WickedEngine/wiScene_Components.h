@@ -324,6 +324,10 @@ namespace wi::scene
 		inline void SetVertexAODisabled(bool value = true) { if (value) { _flags |= DISABLE_VERTEXAO; } else { _flags &= ~DISABLE_VERTEXAO; } }
 		inline void SetTextureStreamingDisabled(bool value = true) { if (value) { _flags |= DISABLE_TEXTURE_STREAMING; } else { _flags &= ~DISABLE_TEXTURE_STREAMING; } }
 
+		// Mark the material to stream in
+		//	For the next 255 frames the material will be in stream IN phase
+		inline void StreamIn() const { AtomicOr((volatile long*)&stream_in, 0xFF); }
+
 		// The MaterialComponent will be written to ShaderMaterial (a struct that is optimized for GPU use)
 		void WriteShaderMaterial(ShaderMaterial* dest) const;
 		void WriteShaderTextureSlot(ShaderMaterial* dest, int slot, int descriptor);

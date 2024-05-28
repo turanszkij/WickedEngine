@@ -106,6 +106,14 @@ namespace wi
 			pos = jump_pos;
 		}
 
+		// This is like reading a vector<uint8_t>, but instead of copying the data, it returns the memory mapped pointer and size
+		inline void MapVector(const uint8_t*& data, size_t& size)
+		{
+			(*this) >> size;
+			data = data_ptr + pos;
+			pos += size;
+		}
+
 		// It could be templated but we have to be extremely careful of different datasizes on different platforms
 		// because serialized data should be interchangeable!
 		// So providing exact copy operations for exact types enforces platform agnosticism

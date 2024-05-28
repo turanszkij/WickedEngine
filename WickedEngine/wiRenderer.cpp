@@ -6024,6 +6024,15 @@ void DrawShadowmaps(
 
 				for (uint32_t shcam = 0; shcam < arraysize(cameras); ++shcam)
 				{
+					// always set up viewport and scissor just to be safe, even if this one is skipped:
+					vp[shcam].top_left_x = float(shadow_rect.x + shcam * shadow_rect.w);
+					vp[shcam].top_left_y = float(shadow_rect.y);
+					vp[shcam].width = float(shadow_rect.w);
+					vp[shcam].height = float(shadow_rect.h);
+					vp[shcam].min_depth = 0;
+					vp[shcam].max_depth = 1;
+					scissors[shcam].from_viewport(vp[shcam]);
+
 					// Check if cubemap face frustum is visible from main camera, otherwise, it will be skipped:
 					if (cam_frustum.Intersects(cameras[shcam].boundingfrustum))
 					{
@@ -6036,13 +6045,6 @@ void DrawShadowmaps(
 						frusta[camera_count] = cameras[shcam].frustum;
 						camera_count++;
 					}
-					vp[shcam].top_left_x = float(shadow_rect.x + shcam * shadow_rect.w);
-					vp[shcam].top_left_y = float(shadow_rect.y);
-					vp[shcam].width = float(shadow_rect.w);
-					vp[shcam].height = float(shadow_rect.h);
-					vp[shcam].min_depth = 0;
-					vp[shcam].max_depth = 1;
-					scissors[shcam].from_viewport(vp[shcam]);
 				}
 
 				renderQueue.init();

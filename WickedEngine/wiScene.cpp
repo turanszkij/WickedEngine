@@ -4126,7 +4126,7 @@ namespace wi::scene
 
 						if (visible)
 						{
-							AtomicOr((volatile long*)& material->stream_in, 0xFF); // 0xFF : for next 255 frames, material will be in stream IN state
+							material->StreamIn();
 						}
 					}
 				}
@@ -4529,6 +4529,12 @@ namespace wi::scene
 				}
 			}
 
+			MaterialComponent* material = materials.GetComponent(entity);
+			if (material != nullptr && camera.frustum.CheckBoxFast(hair.aabb))
+			{
+				material->StreamIn();
+			}
+
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
 			uint32_t indexCount = hair.GetParticleCount() * 6;
@@ -4629,6 +4635,7 @@ namespace wi::scene
 				{
 					material->shaderType = MaterialComponent::SHADERTYPE_UNLIT;
 				}
+				material->StreamIn(); // we can't determine on CPU now if particle system is visible because it's entirely GPU generated
 			}
 
 			const LayerComponent* layer = layers.GetComponent(entity);
