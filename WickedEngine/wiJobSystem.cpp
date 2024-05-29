@@ -62,8 +62,8 @@ namespace wi::jobsystem
 		uint32_t numThreads = 0;
 		std::unique_ptr<JobQueue[]> jobQueuePerThread[int(Priority::Count)];
 		std::atomic_bool alive{ true };
-		std::condition_variable wakeCondition;
-		std::mutex wakeMutex;
+		std::condition_variable wakeCondition[int(Priority::Count)];
+		std::mutex wakeMutex[int(Priority::Count)];
 		std::atomic<uint32_t> nextQueue{ 0 };
 		wi::vector<std::thread> threads[int(Priority::Count)];
 		void ShutDown()
@@ -73,9 +73,12 @@ namespace wi::jobsystem
 			std::thread waker([&] {
 				while (wake_loop)
 				{
-					wakeCondition.notify_all(); // wakes up sleeping worker threads
+					for (auto& x : wakeCondition)
+					{
+						x.notify_all(); // wakes up sleeping worker threads
+					}
 				}
-				});
+			});
 			for (auto& thread : threads[int(Priority::High)])
 			{
 				thread.join();
@@ -167,8 +170,8 @@ namespace wi::jobsystem
 						work(threadID, priority);
 
 						// finished with jobs, put to sleep
-						std::unique_lock<std::mutex> lock(internal_state.wakeMutex);
-						internal_state.wakeCondition.wait(lock);
+						std::unique_lock<std::mutex> lock(internal_state.wakeMutex[int(priority)]);
+						internal_state.wakeCondition[int(priority)].wait(lock);
 					}
 
 				});
@@ -268,7 +271,7 @@ namespace wi::jobsystem
 		job.sharedmemory_size = 0;
 
 		internal_state.jobQueuePerThread[int(ctx.priority)][internal_state.nextQueue.fetch_add(1) % internal_state.numThreads].push_back(job);
-		internal_state.wakeCondition.notify_one();
+		internal_state.wakeCondition[int(ctx.priority)].notify_one();
 	}
 
 	void Dispatch(context& ctx, uint32_t jobCount, uint32_t groupSize, const std::function<void(JobArgs)>& task, size_t sharedmemory_size)
@@ -298,7 +301,7 @@ namespace wi::jobsystem
 			internal_state.jobQueuePerThread[int(ctx.priority)][internal_state.nextQueue.fetch_add(1) % internal_state.numThreads].push_back(job);
 		}
 
-		internal_state.wakeCondition.notify_all();
+		internal_state.wakeCondition[int(ctx.priority)].notify_all();
 	}
 
 	uint32_t DispatchGroupCount(uint32_t jobCount, uint32_t groupSize)
@@ -318,7 +321,7 @@ namespace wi::jobsystem
 		if (IsBusy(ctx))
 		{
 			// Wake any threads that might be sleeping:
-			internal_state.wakeCondition.notify_all();
+			internal_state.wakeCondition[int(ctx.priority)].notify_all();
 
 			// work() will pick up any jobs that are on stand by and execute them on this thread:
 			work(internal_state.nextQueue.fetch_add(1) % internal_state.numThreads, ctx.priority);
