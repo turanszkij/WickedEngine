@@ -41,10 +41,8 @@ namespace wi
 		//	It keeps embedded file data if exists
 		void SetOutdated();
 
-		// Let the streaming system know that high detail of this resource is required
-		void StreamIn();
-		// Tet the streaming system know that this resource memory can be reduced
-		void StreamOut();
+		// Let the streaming system know the required resolution of this resource
+		void StreamRequestResolution(uint32_t resolution);
 	};
 
 	namespace resourcemanager

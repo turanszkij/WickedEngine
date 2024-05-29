@@ -4826,7 +4826,28 @@ void UpdateRenderDataAsync(
 		vis.scene->terrains[i].UpdateVirtualTexturesGPU(cmd);
 	}
 
+	if (vis.scene->textureStreamingFeedbackBuffer.IsValid())
+	{
+		device->ClearUAV(&vis.scene->textureStreamingFeedbackBuffer, 0, cmd);
+	}
+
 	device->EventEnd(cmd);
+}
+
+void TextureStreamingReadbackCopy(
+	const wi::scene::Scene& scene,
+	wi::graphics::CommandList cmd
+)
+{
+	if (scene.textureStreamingFeedbackBuffer.IsValid())
+	{
+		device->Barrier(GPUBarrier::Buffer(&scene.textureStreamingFeedbackBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC), cmd);
+		device->CopyResource(
+			&scene.textureStreamingFeedbackBuffer_readback[device->GetBufferIndex()],
+			&scene.textureStreamingFeedbackBuffer,
+			cmd
+		);
+	}
 }
 
 void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)

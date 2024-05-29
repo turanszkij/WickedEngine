@@ -13,10 +13,10 @@ struct ShaderScene
 	int materialbuffer;
 	int meshletbuffer;
 
+	int texturestreamingbuffer;
 	int globalenvmap; // static sky, not guaranteed to be cubemap, mipmaps or format, just whatever is imported
 	int globalprobe; // rendered probe with guaranteed mipmaps, hdr, etc.
 	int impostorInstanceOffset;
-	int padding0;
 
 	int TLAS;
 	int BVH_counter;

@@ -1614,7 +1614,8 @@ namespace wi
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 
-			});
+			wi::renderer::TextureStreamingReadbackCopy(*scene, cmd);
+		});
 
 		RenderPath2D::Render();
 

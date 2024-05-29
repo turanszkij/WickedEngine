@@ -465,6 +465,10 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	float4 uvsets = input.GetUVSets();
 #endif // OBJECTSHADER_USE_UVSETS
 
+#ifdef TILEDFORWARD
+	write_mipmap_feedback(push.materialIndex, ddx_coarse(uvsets), ddy_coarse(uvsets));
+#endif // TILEDFORWARD
+
 #ifndef DISABLE_ALPHATEST
 #ifndef TRANSPARENT
 #ifndef ENVMAPRENDERING

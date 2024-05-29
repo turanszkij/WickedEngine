@@ -126,6 +126,9 @@ namespace wi::scene
 		ShaderMaterial* materialArrayMapped = nullptr;
 		size_t materialArraySize = 0;
 		wi::graphics::GPUBuffer materialBuffer;
+		wi::graphics::GPUBuffer textureStreamingFeedbackBuffer;
+		wi::graphics::GPUBuffer textureStreamingFeedbackBuffer_readback[wi::graphics::GraphicsDevice::GetBufferCount()];
+		const uint32_t* textureStreamingFeedbackMapped = nullptr;
 
 		// Meshlets:
 		wi::graphics::GPUBuffer meshletBuffer;

@@ -9,6 +9,8 @@
 float4 main(VertexToPixel input) : SV_Target
 {
 	ShaderMaterial material = HairGetMaterial();
+	
+	write_mipmap_feedback(HairGetGeometry().materialIndex, ddx_coarse(input.tex.xyxy), ddy_coarse(input.tex.xyxy));
 
 	float4 color = 1;
 

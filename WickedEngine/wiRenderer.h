@@ -194,6 +194,12 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd
 	);
 
+	// Copies the texture streaming requests from GPU to CPU
+	void TextureStreamingReadbackCopy(
+		const wi::scene::Scene& scene,
+		wi::graphics::CommandList cmd
+	);
+
 	void UpdateRaytracingAccelerationStructures(const wi::scene::Scene& scene, wi::graphics::CommandList cmd);
 
 	// Binds all common constant buffers and samplers that may be used in all shaders

@@ -310,6 +310,27 @@ inline float4x4 load_entitymatrix(uint matrixIndex)
 {
 	return bindless_structured_matrix[GetFrame().buffer_entity_index][SHADER_ENTITY_COUNT + matrixIndex];
 }
+inline void write_mipmap_feedback(uint materialIndex, float4 uvsets_dx, float4 uvsets_dy)
+{
+	[branch]
+	if(WaveIsFirstLane() && GetScene().texturestreamingbuffer >= 0)
+	{
+		const float lod0 = get_lod(65536u, uvsets_dx.xy, uvsets_dy.xy);
+		const float lod1 = get_lod(65536u, uvsets_dx.zw, uvsets_dy.zw);
+		const float lod = min(lod0, lod1);
+		const uint resolution = 65536u >> uint(max(0, lod));
+		InterlockedMax(bindless_rwbuffers_uint[GetScene().texturestreamingbuffer][materialIndex], resolution);
+	}
+}
+inline void write_mipmap_feedback(uint materialIndex, float lod)
+{
+	[branch]
+	if(WaveIsFirstLane() && GetScene().texturestreamingbuffer >= 0)
+	{
+		const uint resolution = 65536u >> uint(max(0, lod));
+		InterlockedMax(bindless_rwbuffers_uint[GetScene().texturestreamingbuffer][materialIndex], resolution);
+	}
+}
 
 struct PrimitiveID
 {

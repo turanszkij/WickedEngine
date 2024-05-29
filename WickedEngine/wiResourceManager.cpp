@@ -49,7 +49,8 @@ namespace wi
 		size_t streaming_filesize = 0;
 		size_t streaming_fileoffset = 0;
 		StreamingTexture streaming_texture;
-		std::atomic_bool stream_in{ false };
+		std::atomic<uint32_t> streaming_resolution{ 0 };
+		uint32_t streaming_unload_delay = 0;
 	};
 
 	const wi::vector<uint8_t>& Resource::GetFileData() const
@@ -154,23 +155,25 @@ namespace wi
 		resourceinternal->flags |= resourcemanager::Flags::IMPORT_DELAY; // this will cause resource to be recreated, but let using old file data like delayed loading
 	}
 
-	void Resource::StreamIn()
+	// https://stackoverflow.com/questions/16190078/how-to-atomically-update-a-maximum-value
+	template<typename T>
+	void atomic_max(std::atomic<T>& maximum_value, T const& value) noexcept
 	{
-		if (internal_state == nullptr)
+		T prev_value = maximum_value;
+		while (prev_value < value &&
+			!maximum_value.compare_exchange_weak(prev_value, value))
 		{
-			internal_state = std::make_shared<ResourceInternal>();
 		}
-		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
-		resourceinternal->stream_in.store(true);
 	}
-	void Resource::StreamOut()
+
+	void Resource::StreamRequestResolution(uint32_t resolution)
 	{
 		if (internal_state == nullptr)
 		{
 			internal_state = std::make_shared<ResourceInternal>();
 		}
 		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
-		resourceinternal->stream_in.store(false);
+		atomic_max(resourceinternal->streaming_resolution, resolution);
 	}
 
 	namespace resourcemanager
@@ -1388,33 +1391,35 @@ namespace wi
 				for(auto& resource : streaming_texture_jobs)
 				{
 					TextureDesc desc = resource->texture.desc;
+					const uint32_t requested_resolution = resource->streaming_resolution.load();
+					resource->streaming_resolution.store(0);
 					GraphicsDevice* device = GetDevice();
 					const GraphicsDevice::MemoryUsage memory_usage = device->GetMemoryUsage();
 					const float memory_percent = float(double(memory_usage.usage) / double(memory_usage.budget));
 					const bool memory_shortage = memory_percent > streaming_threshold;
-					const bool stream_in = memory_shortage ? false : resource->stream_in.load();
+					const bool stream_in = memory_shortage ? false : (requested_resolution >= std::min(desc.width, desc.height));
 
 					int mip_offset = int(resource->streaming_texture.mip_count - desc.mip_levels);
 					if (stream_in)
 					{
+						resource->streaming_unload_delay = 0; // unloading will be immediately halted
 						if (mip_offset == 0)
-						{
-							// There aren't any more mip levels, cancel
-							continue;
-						}
+							continue; // There aren't any more mip levels, cancel
 						// Mip level streaming IN:
 						desc.width <<= 1;
 						desc.height <<= 1;
+						if (requested_resolution < std::min(desc.width, desc.height))
+							continue; // Increased resolution would be too much, cancel
 						desc.mip_levels++;
 						mip_offset--;
 					}
 					else
 					{
+						resource->streaming_unload_delay++; // one more frame that this wants to unload
+						if (!memory_shortage && resource->streaming_unload_delay < 255)
+							continue; // only unload mips if it's been wanting to unload for a couple frames, or there is memory shortage
 						if (ComputeTextureMemorySizeInBytes(desc) <= streaming_texture_min_size)
-						{
-							// Don't reduce the texture below, because of 4KB alignment, this would not reduce memory usage further
-							continue;
-						}
+							continue; // Don't reduce the texture below, because of 4KB alignment, this would not reduce memory usage further
 						// Mip level streaming OUT:
 						desc.width >>= 1;
 						desc.height >>= 1;

@@ -419,11 +419,13 @@ struct Surface
 #ifdef SURFACE_LOAD_MIPCONE
 			lod_constant0 = 0.5 * log2(twice_uv_area(uv0.xy, uv1.xy, uv2.xy) * triangle_constant);
 			lod_constant1 = 0.5 * log2(twice_uv_area(uv0.zw, uv1.zw, uv2.zw) * triangle_constant);
+			write_mipmap_feedback(geometry.materialIndex, min(lod_constant0, lod_constant1));
 #endif // SURFACE_LOAD_MIPCONE
 
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
 			uvsets_dx = uvsets - attribute_at_bary(uv0, uv1, uv2, bary_quad_x);
 			uvsets_dy = uvsets - attribute_at_bary(uv0, uv1, uv2, bary_quad_y);
+			write_mipmap_feedback(geometry.materialIndex, uvsets_dx, uvsets_dy);
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 		}
 

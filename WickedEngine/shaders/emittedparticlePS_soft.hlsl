@@ -20,6 +20,8 @@ float4 main(VertextoPixel input) : SV_TARGET
 		return 0;
 	}
 	
+	write_mipmap_feedback(EmitterGetGeometry().materialIndex, ddx_coarse(input.tex.xyxy), ddy_coarse(input.tex.xyxy));
+	
 	ShaderMaterial material = EmitterGetMaterial();
 
 	float4 color = 1;

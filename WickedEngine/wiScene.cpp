@@ -131,6 +131,28 @@ namespace wi::scene
 		}
 		materialArrayMapped = (ShaderMaterial*)materialUploadBuffer[device->GetBufferIndex()].mapped_data;
 
+		if (textureStreamingFeedbackBuffer.desc.size < materialArraySize * sizeof(uint32_t))
+		{
+			GPUBufferDesc desc;
+			desc.stride = sizeof(uint32_t);
+			desc.size = desc.stride * materialArraySize * 2; // *2 to grow fast
+			desc.bind_flags = BindFlag::UNORDERED_ACCESS;
+			desc.format = Format::R32_UINT;
+			device->CreateBuffer(&desc, nullptr, &textureStreamingFeedbackBuffer);
+			device->SetName(&textureStreamingFeedbackBuffer, "Scene::textureStreamingFeedbackBuffer");
+
+			// Readback buffer shouldn't be used by shaders:
+			desc.usage = Usage::READBACK;
+			desc.bind_flags = BindFlag::NONE;
+			desc.misc_flags = ResourceMiscFlag::NONE;
+			for (int i = 0; i < arraysize(materialUploadBuffer); ++i)
+			{
+				device->CreateBuffer(&desc, nullptr, &textureStreamingFeedbackBuffer_readback[i]);
+				device->SetName(&textureStreamingFeedbackBuffer_readback[i], "Scene::textureStreamingFeedbackBuffer_readback");
+			}
+		}
+		textureStreamingFeedbackMapped = (const uint32_t*)textureStreamingFeedbackBuffer_readback[device->GetBufferIndex()].mapped_data;
+
 		// Occlusion culling read:
 		if(wi::renderer::GetOcclusionCullingEnabled() && !wi::renderer::GetFreezeCullingCameraEnabled())
 		{
@@ -875,6 +897,7 @@ namespace wi::scene
 			shaderscene.materialbuffer = device->GetDescriptorIndex(&materialBuffer, SubresourceType::SRV);
 		}
 		shaderscene.meshletbuffer = device->GetDescriptorIndex(&meshletBuffer, SubresourceType::SRV);
+		shaderscene.texturestreamingbuffer = device->GetDescriptorIndex(&textureStreamingFeedbackBuffer, SubresourceType::UAV);
 		if (weather.skyMap.IsValid())
 		{
 			shaderscene.globalenvmap = device->GetDescriptorIndex(&weather.skyMap.GetTexture(), SubresourceType::SRV, weather.skyMap.GetTextureSRGBSubresource());
@@ -3778,17 +3801,17 @@ namespace wi::scene
 				material.WriteShaderTextureSlot(materialArrayMapped + args.jobIndex, EMISSIVEMAP, descriptor);
 			}
 
-			for (auto& slot : material.textures)
+			if (textureStreamingFeedbackMapped != nullptr)
 			{
-				if (slot.resource.IsValid())
+				for (auto& slot : material.textures)
 				{
-					if (material.stream_in > 0)
-						slot.resource.StreamIn();
-					else
-						slot.resource.StreamOut();
+					if (slot.resource.IsValid())
+					{
+						uint32_t request = textureStreamingFeedbackMapped[args.jobIndex];
+						slot.resource.StreamRequestResolution(request);
+					}
 				}
 			}
-			material.stream_in = std::max(0l, material.stream_in - 1l);
 
 		});
 	}
@@ -4022,8 +4045,6 @@ namespace wi::scene
 					}
 				}
 
-				const bool visible = !occlusion_result.IsOccluded() && camera.frustum.CheckBoxFast(aabb);
-
 				ImpostorComponent* impostor = impostors.GetComponent(object.meshID);
 				if (impostor != nullptr)
 				{
@@ -4122,11 +4143,6 @@ namespace wi::scene
 						if (customshader >= 0)
 						{
 							sort_bits.bits.customshader |= 1 << customshader;
-						}
-
-						if (visible)
-						{
-							material->StreamIn();
 						}
 					}
 				}
@@ -4529,12 +4545,6 @@ namespace wi::scene
 				}
 			}
 
-			MaterialComponent* material = materials.GetComponent(entity);
-			if (material != nullptr && camera.frustum.CheckBoxFast(hair.aabb))
-			{
-				material->StreamIn();
-			}
-
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
 			uint32_t indexCount = hair.GetParticleCount() * 6;
@@ -4635,7 +4645,6 @@ namespace wi::scene
 				{
 					material->shaderType = MaterialComponent::SHADERTYPE_UNLIT;
 				}
-				material->StreamIn(); // we can't determine on CPU now if particle system is visible because it's entirely GPU generated
 			}
 
 			const LayerComponent* layer = layers.GetComponent(entity);
