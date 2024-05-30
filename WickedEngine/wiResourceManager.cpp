@@ -1380,12 +1380,11 @@ namespace wi
 				for(auto& resource : streaming_texture_jobs)
 				{
 					TextureDesc desc = resource->texture.desc;
-					unsigned long requested_resolution = (unsigned long)resource->streaming_resolution.load();
+					uint32_t requested_resolution = resource->streaming_resolution.fetch_and(0); // set to zero while returning prev value
 					if (requested_resolution > 0)
 					{
-						requested_resolution = 1ul << (31ul - firstbithigh(requested_resolution)); // largest power of two
+						requested_resolution = 1ul << (31ul - firstbithigh((unsigned long)requested_resolution)); // largest power of two
 					}
-					resource->streaming_resolution.store(0);
 					GraphicsDevice* device = GetDevice();
 					const GraphicsDevice::MemoryUsage memory_usage = device->GetMemoryUsage();
 					const float memory_percent = float(double(memory_usage.usage) / double(memory_usage.budget));
