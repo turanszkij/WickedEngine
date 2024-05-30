@@ -236,6 +236,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\minimp4.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\pugiconfig.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\pugixml.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\WinAdapter.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAsync_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiBVH.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAllocator.h" />
