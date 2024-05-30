@@ -323,13 +323,11 @@ inline void write_mipmap_feedback(uint materialIndex, float4 uvsets_dx, float4 u
 		InterlockedOr(bindless_rwbuffers_uint[GetScene().texturestreamingbuffer][materialIndex], mask);
 	}
 }
-inline void write_mipmap_feedback(uint materialIndex, float lod_uvset0, float lod_uvset1)
+inline void write_mipmap_feedback(uint materialIndex, uint resolution0, uint resolution1)
 {
 	[branch]
 	if(WaveIsFirstLane() && GetScene().texturestreamingbuffer >= 0)
 	{
-		const uint resolution0 = 65536u >> uint(max(0, lod_uvset0));
-		const uint resolution1 = 65536u >> uint(max(0, lod_uvset1));
 		const uint mask = resolution0 | (resolution1 << 16u);
 		InterlockedOr(bindless_rwbuffers_uint[GetScene().texturestreamingbuffer][materialIndex], mask);
 	}
@@ -1505,16 +1503,19 @@ float twice_uv_area(float2 t0, float2 t1, float2 t2)
 	return abs((t1.x - t0.x) * (t2.y - t0.y) - (t2.x - t0.x) * (t1.y - t0.y));
 }
 // https://media.contentapi.ea.com/content/dam/ea/seed/presentations/2019-ray-tracing-gems-chapter-20-akenine-moller-et-al.pdf
+float compute_texture_lod(uint width, uint height, float triangle_constant, float3 ray_direction, float3 surf_normal, float cone_width)
+{
+	float lambda = triangle_constant;
+	lambda += log2(abs(cone_width));
+	lambda += 0.5 * log2(float(width) * float(height));
+	lambda -= log2(abs(dot(normalize(ray_direction), surf_normal)));
+	return lambda;
+}
 float compute_texture_lod(Texture2D tex, float triangle_constant, float3 ray_direction, float3 surf_normal, float cone_width)
 {
 	uint w, h;
 	tex.GetDimensions(w, h);
-
-	float lambda = triangle_constant;
-	lambda += log2(abs(cone_width));
-	lambda += 0.5 * log2(float(w) * float(h));
-	lambda -= log2(abs(dot(normalize(ray_direction), surf_normal)));
-	return lambda;
+	return compute_texture_lod(w, h, triangle_constant, ray_direction, surf_normal, cone_width);
 }
 float pixel_cone_spread_angle_from_image_height(float image_height)
 {

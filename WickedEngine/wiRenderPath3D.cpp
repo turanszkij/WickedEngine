@@ -352,6 +352,8 @@ namespace wi
 
 		RenderPath2D::Update(dt);
 
+		float update_speed = 0;
+
 		const bool hw_raytrace = device->CheckCapability(GraphicsDeviceCapability::RAYTRACING);
 		if (getSceneUpdateEnabled())
 		{
@@ -365,10 +367,11 @@ namespace wi
 			{
 				scene->SetAccelerationStructureUpdateRequested(true);
 			}
-
 			scene->camera = *camera;
-			scene->Update(dt * wi::renderer::GetGameSpeed());
+			update_speed = dt * wi::renderer::GetGameSpeed();
 		}
+
+		scene->Update(update_speed);
 
 		// Frustum culling for main camera:
 		visibility_main.layerMask = getLayerMask();
