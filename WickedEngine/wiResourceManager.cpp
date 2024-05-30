@@ -155,25 +155,14 @@ namespace wi
 		resourceinternal->flags |= resourcemanager::Flags::IMPORT_DELAY; // this will cause resource to be recreated, but let using old file data like delayed loading
 	}
 
-	// https://stackoverflow.com/questions/16190078/how-to-atomically-update-a-maximum-value
-	template<typename T>
-	void atomic_max(std::atomic<T>& maximum_value, T const& value) noexcept
-	{
-		T prev_value = maximum_value;
-		while (prev_value < value &&
-			!maximum_value.compare_exchange_weak(prev_value, value))
-		{
-		}
-	}
-
-	void Resource::StreamRequestResolution(uint32_t resolution)
+	void Resource::StreamingRequestResolution(uint32_t resolution)
 	{
 		if (internal_state == nullptr)
 		{
 			internal_state = std::make_shared<ResourceInternal>();
 		}
 		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
-		atomic_max(resourceinternal->streaming_resolution, resolution);
+		resourceinternal->streaming_resolution.fetch_or(resolution);
 	}
 
 	namespace resourcemanager
@@ -1391,7 +1380,11 @@ namespace wi
 				for(auto& resource : streaming_texture_jobs)
 				{
 					TextureDesc desc = resource->texture.desc;
-					const uint32_t requested_resolution = resource->streaming_resolution.load();
+					unsigned long requested_resolution = (unsigned long)resource->streaming_resolution.load();
+					if (requested_resolution > 0)
+					{
+						requested_resolution = 1ul << (31ul - firstbithigh(requested_resolution)); // largest power of two
+					}
 					resource->streaming_resolution.store(0);
 					GraphicsDevice* device = GetDevice();
 					const GraphicsDevice::MemoryUsage memory_usage = device->GetMemoryUsage();

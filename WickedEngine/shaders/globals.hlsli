@@ -315,20 +315,23 @@ inline void write_mipmap_feedback(uint materialIndex, float4 uvsets_dx, float4 u
 	[branch]
 	if(WaveIsFirstLane() && GetScene().texturestreamingbuffer >= 0)
 	{
-		const float lod0 = get_lod(65536u, uvsets_dx.xy, uvsets_dy.xy);
-		const float lod1 = get_lod(65536u, uvsets_dx.zw, uvsets_dy.zw);
-		const float lod = min(lod0, lod1);
-		const uint resolution = 65536u >> uint(max(0, lod));
-		InterlockedMax(bindless_rwbuffers_uint[GetScene().texturestreamingbuffer][materialIndex], resolution);
+		const float lod_uvset0 = get_lod(65536u, uvsets_dx.xy, uvsets_dy.xy);
+		const float lod_uvset1 = get_lod(65536u, uvsets_dx.zw, uvsets_dy.zw);
+		const uint resolution0 = 65536u >> uint(max(0, lod_uvset0));
+		const uint resolution1 = 65536u >> uint(max(0, lod_uvset1));
+		const uint mask = resolution0 | (resolution1 << 16u);
+		InterlockedOr(bindless_rwbuffers_uint[GetScene().texturestreamingbuffer][materialIndex], mask);
 	}
 }
-inline void write_mipmap_feedback(uint materialIndex, float lod)
+inline void write_mipmap_feedback(uint materialIndex, float lod_uvset0, float lod_uvset1)
 {
 	[branch]
 	if(WaveIsFirstLane() && GetScene().texturestreamingbuffer >= 0)
 	{
-		const uint resolution = 65536u >> uint(max(0, lod));
-		InterlockedMax(bindless_rwbuffers_uint[GetScene().texturestreamingbuffer][materialIndex], resolution);
+		const uint resolution0 = 65536u >> uint(max(0, lod_uvset0));
+		const uint resolution1 = 65536u >> uint(max(0, lod_uvset1));
+		const uint mask = resolution0 | (resolution1 << 16u);
+		InterlockedOr(bindless_rwbuffers_uint[GetScene().texturestreamingbuffer][materialIndex], mask);
 	}
 }
 

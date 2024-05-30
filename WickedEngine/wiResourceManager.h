@@ -42,7 +42,7 @@ namespace wi
 		void SetOutdated();
 
 		// Let the streaming system know the required resolution of this resource
-		void StreamRequestResolution(uint32_t resolution);
+		void StreamingRequestResolution(uint32_t resolution);
 	};
 
 	namespace resourcemanager

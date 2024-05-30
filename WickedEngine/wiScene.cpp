@@ -3803,12 +3803,14 @@ namespace wi::scene
 
 			if (textureStreamingFeedbackMapped != nullptr)
 			{
+				const uint32_t request_packed = textureStreamingFeedbackMapped[args.jobIndex];
+				const uint32_t request_uvset0 = request_packed & 0xFFFF;
+				const uint32_t request_uvset1 = (request_packed >> 16u) & 0xFFFF;
 				for (auto& slot : material.textures)
 				{
 					if (slot.resource.IsValid())
 					{
-						uint32_t request = textureStreamingFeedbackMapped[args.jobIndex];
-						slot.resource.StreamRequestResolution(request);
+						slot.resource.StreamingRequestResolution(slot.uvset == 0 ? request_uvset0 : request_uvset1);
 					}
 				}
 			}
