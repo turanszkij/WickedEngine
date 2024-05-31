@@ -313,14 +313,18 @@ inline float4x4 load_entitymatrix(uint matrixIndex)
 inline void write_mipmap_feedback(uint materialIndex, float4 uvsets_dx, float4 uvsets_dy)
 {
 	[branch]
-	if(WaveIsFirstLane() && GetScene().texturestreamingbuffer >= 0)
+	if(GetScene().texturestreamingbuffer >= 0)
 	{
 		const float lod_uvset0 = get_lod(65536u, uvsets_dx.xy, uvsets_dy.xy);
 		const float lod_uvset1 = get_lod(65536u, uvsets_dx.zw, uvsets_dy.zw);
 		const uint resolution0 = 65536u >> uint(max(0, lod_uvset0));
 		const uint resolution1 = 65536u >> uint(max(0, lod_uvset1));
 		const uint mask = resolution0 | (resolution1 << 16u);
-		InterlockedOr(bindless_rwbuffers_uint[GetScene().texturestreamingbuffer][materialIndex], mask);
+		const uint wave_mask = WaveActiveBitOr(mask);
+		if(WaveIsFirstLane())
+		{
+			InterlockedOr(bindless_rwbuffers_uint[GetScene().texturestreamingbuffer][materialIndex], wave_mask);
+		}
 	}
 }
 inline void write_mipmap_feedback(uint materialIndex, uint resolution0, uint resolution1)
