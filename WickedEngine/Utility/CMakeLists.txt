@@ -18,7 +18,6 @@ set(HEADER_FILES
 		${CMAKE_CURRENT_SOURCE_DIR}/liberation_sans.h
 		${CMAKE_CURRENT_SOURCE_DIR}/portable-file-dialogs.h
 		${CMAKE_CURRENT_SOURCE_DIR}/sal.h
-		${CMAKE_CURRENT_SOURCE_DIR}/tinyddsloader.h
 		${CMAKE_CURRENT_SOURCE_DIR}/robin_hood.h
 		${CMAKE_CURRENT_SOURCE_DIR}/spirv_reflect.h
 		${CMAKE_CURRENT_SOURCE_DIR}/stb_image.h
@@ -35,7 +34,7 @@ set(HEADER_FILES
 		${CMAKE_CURRENT_SOURCE_DIR}/pugixml.hpp
 		${CMAKE_CURRENT_SOURCE_DIR}/pugiconfig.hpp
 		${CMAKE_CURRENT_SOURCE_DIR}/h264.h
-		${CMAKE_CURRENT_SOURCE_DIR}/dds_write.h
+		${CMAKE_CURRENT_SOURCE_DIR}/dds.h
 		${CMAKE_CURRENT_SOURCE_DIR}/lodepng.h
 		)
 install(FILES ${HEADER_FILES}
