@@ -4,7 +4,7 @@
 #include "wiRandom.h"
 
 #include "Utility/stb_image.h"
-#include "Utility/dds_write.h"
+#include "Utility/dds.h"
 
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NO_FS
@@ -1976,10 +1976,10 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				}
 
 				wi::vector<uint8_t> dds;
-				dds.resize(sizeof(dds_write::Header) + wholeDataSize);
-				dds_write::write_header(
+				dds.resize(sizeof(dds::Header) + wholeDataSize);
+				dds::write_header(
 					dds.data(),
-					dds_write::DXGI_FORMAT_R9G9B9E5_SHAREDEXP,
+					dds::DXGI_FORMAT_R9G9B9E5_SHAREDEXP,
 					desc.width,
 					desc.height,
 					desc.mip_levels,
@@ -1987,7 +1987,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					true
 				);
 
-				size_t offset = sizeof(dds_write::Header);
+				size_t offset = sizeof(dds::Header);
 				for (auto& x : hdr_datas)
 				{
 					std::memcpy(dds.data() + offset, x.data(), x.size() * sizeof(XMFLOAT3SE));

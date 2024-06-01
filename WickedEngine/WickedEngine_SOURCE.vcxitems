@@ -229,7 +229,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btTransformUtil.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btVector3.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)CommonInclude.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dds_write.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dds.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dxva.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\h264.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\lodepng.h" />
@@ -264,7 +264,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image_write.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_truetype.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\tinyddsloader.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\vk_mem_alloc.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\volk.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiArchive.h" />

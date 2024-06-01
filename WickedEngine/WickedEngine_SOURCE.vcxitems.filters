@@ -972,9 +972,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork.h">
       <Filter>ENGINE\Network</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\tinyddsloader.h">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\vk_mem_alloc.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
@@ -1119,7 +1116,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dxva.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dds_write.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dds.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\lodepng.h">
