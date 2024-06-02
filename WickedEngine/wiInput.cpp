@@ -754,7 +754,7 @@ namespace wi::input
 	}
 	void SetPointer(const XMFLOAT4& props)
 	{
-#ifdef PLATFORM_WINDOWS_DESKTOP
+#if defined(PLATFORM_WINDOWS_DESKTOP)
 		HWND hWnd = window;
 		const float dpiscaling = (float)GetDpiForWindow(hWnd) / 96.0f;
 		POINT p;
@@ -762,17 +762,28 @@ namespace wi::input
 		p.y = (LONG)(props.y * dpiscaling);
 		ClientToScreen(hWnd, &p);
 		SetCursorPos(p.x, p.y);
-#endif // PLATFORM_WINDOWS_DESKTOP
-
-#ifdef PLATFORM_UWP
+#elif defined(PLATFORM_UWP)
 		auto window = winrt::Windows::UI::Core::CoreWindow::GetForCurrentThread();
 		auto& bounds = window.Bounds();
 		window.PointerPosition(winrt::Windows::Foundation::Point(props.x + bounds.X, props.y + bounds.Y));
-#endif // PLATFORM_UWP
-
-#ifdef SDL2
+#elif defined(SDL2)
+	// Keeping with the trend of 'Set Pointer' API on different platforms, 
+	// SDL_WarpMouseInWindow is used in the case of SDL2. This unfortunately 
+	// causes SDL2 to generate a mouse event for the delta between the old 
+	// and new positions leading to 'rubber banding'. 
+	// The current solution is to artifically generate a motion event of our own
+	// which will 'undo' this unwanted motion event during the mouse motion
+	// accumulation in wiSDLInput.cpp Update()
+	XMFLOAT4 currentPointer = GetPointer();
+	SDL_MouseMotionEvent motionEvent = {0};
+	motionEvent.type = SDL_MOUSEMOTION;
+	motionEvent.x = motionEvent.y = 0; // doesn't matter
+	motionEvent.xrel = currentPointer.x - props.x;
+	motionEvent.yrel = currentPointer.y - props.y;
+	SDL_PushEvent((SDL_Event*)&motionEvent);
 	SDL_WarpMouseInWindow(window, props.x, props.y);
-#endif // _WIN32
+
+#endif // SDL2
 	}
 	void HidePointer(bool value)
 	{
