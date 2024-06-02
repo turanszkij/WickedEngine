@@ -790,10 +790,11 @@ namespace wi
 								desc.height = AlignTo(desc.height, GetFormatBlockSize(desc.format));
 							}
 
-							resource->streaming_texture.mip_count = desc.mip_levels;
 							int mip_offset = 0;
 							if (has_flag(flags, Flags::STREAMING))
 							{
+								// Remember full mipcount for streaming:
+								resource->streaming_texture.mip_count = desc.mip_levels;
 								// For streaming, remember relative memory offsets for mip levels:
 								for (uint32_t slice = 0; slice < desc.array_size; ++slice)
 								{
@@ -828,11 +829,6 @@ namespace wi
 									0, -1,
 									&srgb_format
 								);
-							}
-
-							if (!has_flag(flags, Flags::STREAMING))
-							{
-								resource->streaming_texture = {};
 							}
 						}
 						else assert(0); // failed to load DDS
