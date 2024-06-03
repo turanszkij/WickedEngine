@@ -273,6 +273,7 @@ namespace dds
 		DXGI_FORMAT_V408 = 132,
 		DXGI_FORMAT_SAMPLER_FEEDBACK_MIN_MIP_OPAQUE,
 		DXGI_FORMAT_SAMPLER_FEEDBACK_MIP_REGION_USED_OPAQUE,
+		D3DFMT_R8G8B8, // Note: you will need to handle conversion of this legacy format yourself
 		DXGI_FORMAT_FORCE_DWORD = 0xffffffff
 	};
 	enum D3D10_RESOURCE_DIMENSION {
@@ -330,7 +331,7 @@ namespace dds
 		// returns the width of the texture in pixels
 		constexpr unsigned width() const
 		{
-			if(header.dwFlags & DDSD_WIDTH)
+			if (header.dwFlags & DDSD_WIDTH)
 				return header.dwWidth;
 			return 1;
 		}
@@ -349,15 +350,17 @@ namespace dds
 		// returns the mipmap levels in the texture per slice
 		constexpr unsigned mip_levels() const
 		{
-			if ((header.dwFlags & DDSD_MIPMAPCOUNT) && (header.dwCaps & DDSCAPS_COMPLEX))
-				return header.dwMipMapCount > 0 ? header.dwMipMapCount : 1;
-			return 1;
+			return header.dwMipMapCount > 0 ? header.dwMipMapCount : 1;
 		}
 		// returns the number of slices in the texture
 		constexpr unsigned array_size() const
 		{
 			if (!is_dx10())
+			{
+				if (is_cubemap())
+					return 6;
 				return 1;
+			}
 			unsigned count = 0;
 			if (is_cubemap())
 				count = header10.arraySize * 6;
@@ -410,7 +413,7 @@ namespace dds
 						}
 						break;
 					case 24:
-						break;
+						return D3DFMT_R8G8B8;
 					case 16:
 						if (header.ddspf.dwRBitMask == 0x7c00 && header.ddspf.dwGBitMask == 0x03e0 &&
 							header.ddspf.dwBBitMask == 0x001f && header.ddspf.dwABitMask == 0x8000) {
@@ -532,18 +535,19 @@ namespace dds
 		// returns tru if the texture is a cubemap, false otherwise
 		constexpr bool is_cubemap() const
 		{
-			if (!is_dx10())
-				return false;
+			if (is_dx10())
+			{
+				return header10.miscFlag & DDS_RESOURCE_MISC_TEXTURECUBE;
+			}
 			return
-				(header.dwCaps & DDSCAPS_COMPLEX) &&
+				(header.dwCaps2 & DDSCAPS2_CUBEMAP) &&
 				(header.dwCaps2 & DDSCAPS2_CUBEMAP_POSITIVEX) &&
 				(header.dwCaps2 & DDSCAPS2_CUBEMAP_NEGATIVEX) &&
 				(header.dwCaps2 & DDSCAPS2_CUBEMAP_POSITIVEY) &&
 				(header.dwCaps2 & DDSCAPS2_CUBEMAP_NEGATIVEY) &&
 				(header.dwCaps2 & DDSCAPS2_CUBEMAP_POSITIVEZ) &&
-				(header.dwCaps2 & DDSCAPS2_CUBEMAP_NEGATIVEZ) &&
-				(header10.miscFlag & DDS_RESOURCE_MISC_TEXTURECUBE)
-			;
+				(header.dwCaps2 & DDSCAPS2_CUBEMAP_NEGATIVEZ)
+				;
 		}
 		// returns true if the texture is one dimensional, false otherwise
 		constexpr bool is_1d() const
@@ -636,6 +640,7 @@ namespace dds
 			case DXGI_FORMAT_AYUV:
 			case DXGI_FORMAT_Y410:
 			case DXGI_FORMAT_YUY2:
+			case D3DFMT_R8G8B8: // need to be expanded with alpha
 				return 32;
 
 			case DXGI_FORMAT_P010:
