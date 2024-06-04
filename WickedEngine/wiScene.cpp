@@ -5021,6 +5021,8 @@ namespace wi::scene
 		if ((filterMask & FILTER_COLLIDER) && collider_bvh.IsValid())
 		{
 			collider_bvh.Intersects(ray, 0, [&](uint32_t collider_index) {
+				if (colliders.GetCount() <= collider_index)
+					return;
 				const ColliderComponent& collider = colliders_cpu[collider_index];
 
 				if ((collider.layerMask & layerMask) == 0)
@@ -5246,6 +5248,8 @@ namespace wi::scene
 		if ((filterMask & FILTER_COLLIDER) && collider_bvh.IsValid())
 		{
 			collider_bvh.IntersectsFirst(ray, [&](uint32_t collider_index) {
+				if (colliders.GetCount() <= collider_index)
+					return false;
 				const ColliderComponent& collider = colliders_cpu[collider_index];
 
 				if ((collider.layerMask & layerMask) == 0)
@@ -5413,6 +5417,8 @@ namespace wi::scene
 		if ((filterMask & FILTER_COLLIDER) && collider_bvh.IsValid())
 		{
 			collider_bvh.Intersects(sphere, 0, [&](uint32_t collider_index) {
+				if (colliders.GetCount() <= collider_index)
+					return;
 				const ColliderComponent& collider = colliders_cpu[collider_index];
 
 				if ((collider.layerMask & layerMask) == 0)
@@ -5694,6 +5700,8 @@ namespace wi::scene
 		if ((filterMask & FILTER_COLLIDER) && collider_bvh.IsValid())
 		{
 			collider_bvh.Intersects(capsule_aabb, 0, [&](uint32_t collider_index) {
+				if (colliders.GetCount() <= collider_index)
+					return;
 				const ColliderComponent& collider = colliders_cpu[collider_index];
 
 				if ((collider.layerMask & layerMask) == 0)
@@ -6877,6 +6885,8 @@ namespace wi::scene
 		if (colliders_cpu != nullptr)
 		{
 			collider_bvh.Intersects(tail_sphere, 0, [&](uint32_t collider_index) {
+				if (colliders.GetCount() <= collider_index)
+					return;
 				const ColliderComponent& collider = colliders_cpu[collider_index];
 
 				float dist = 0;

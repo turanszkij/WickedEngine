@@ -50,6 +50,8 @@ namespace wi
 		initialized = true;
 
 		wi::initializer::InitializeComponentsAsync();
+
+		alwaysactive = wi::arguments::HasArgument("alwaysactive");
 	}
 
 	void Application::ActivatePath(RenderPath* component, float fadeSeconds, wi::Color fadeColor)
@@ -132,7 +134,7 @@ namespace wi
 			}
 		}
 
-		if (!is_window_active && !wi::arguments::HasArgument("alwaysactive"))
+		if (!is_window_active && !alwaysactive)
 		{
 			// If the application is not active, disable Update loops:
 			deltaTimeAccumulator = 0;

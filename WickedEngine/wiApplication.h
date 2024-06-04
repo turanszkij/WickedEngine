@@ -29,6 +29,7 @@ namespace wi
 		bool frameskip = true;
 		bool framerate_lock = false;
 		bool initialized = false;
+		bool alwaysactive = false;
 
 		wi::FadeManager fadeManager;
 

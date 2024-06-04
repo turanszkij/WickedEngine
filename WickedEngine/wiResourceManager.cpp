@@ -762,19 +762,6 @@ namespace wi
 								desc.swizzle.a = ComponentSwizzle::ONE;
 							}
 
-							wi::vector<SubresourceData> initdata;
-							initdata.reserve(desc.array_size * desc.mip_levels);
-							for (uint32_t slice = 0; slice < desc.array_size; ++slice)
-							{
-								for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
-								{
-									SubresourceData& subresourceData = initdata.emplace_back();
-									subresourceData.data_ptr = filedata + header.mip_offset(mip, slice);
-									subresourceData.row_pitch = header.row_pitch(mip);
-									subresourceData.slice_pitch = header.slice_pitch(mip);
-								}
-							}
-
 							if (header.is_1d())
 							{
 								desc.type = TextureDesc::Type::TEXTURE_1D;
@@ -788,6 +775,33 @@ namespace wi
 							{
 								desc.width = AlignTo(desc.width, GetFormatBlockSize(desc.format));
 								desc.height = AlignTo(desc.height, GetFormatBlockSize(desc.format));
+							}
+
+							wi::vector<SubresourceData> initdata_heap;
+							SubresourceData initdata_stack[16] = {};
+							SubresourceData* initdata = nullptr;
+
+							// Determine if we need heap allocation for initdata, or it is small enough for stack:
+							if (desc.array_size * desc.mip_levels < arraysize(initdata_stack))
+							{
+								initdata = initdata_stack;
+							}
+							else
+							{
+								initdata_heap.resize(desc.array_size * desc.mip_levels);
+								initdata = initdata_heap.data();
+							}
+
+							uint32_t subresource_index = 0;
+							for (uint32_t slice = 0; slice < desc.array_size; ++slice)
+							{
+								for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
+								{
+									SubresourceData& subresourceData = initdata_stack[subresource_index++];
+									subresourceData.data_ptr = filedata + header.mip_offset(mip, slice);
+									subresourceData.row_pitch = header.row_pitch(mip);
+									subresourceData.slice_pitch = header.slice_pitch(mip);
+								}
 							}
 
 							int mip_offset = 0;
@@ -806,6 +820,7 @@ namespace wi
 										streaming_data.slice_pitch = header.slice_pitch(mip);
 									}
 								}
+								// Reduce mip map count that will be uploaded to GPU:
 								while (desc.mip_levels > 1 && desc.depth == 1 && desc.array_size == 1 && ComputeTextureMemorySizeInBytes(desc) > streaming_texture_min_size)
 								{
 									desc.width >>= 1;
@@ -816,7 +831,7 @@ namespace wi
 								resource->streaming_texture.min_lod_clamp_absolute = (float)mip_offset;
 							}
 
-							success = device->CreateTexture(&desc, initdata.data() + mip_offset, &resource->texture);
+							success = device->CreateTexture(&desc, initdata + mip_offset, &resource->texture);
 							device->SetName(&resource->texture, name.c_str());
 
 							Format srgb_format = GetFormatSRGB(desc.format);

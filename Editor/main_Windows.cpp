@@ -278,20 +278,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		editor.is_window_active = true;
 		if (wi::shadercompiler::GetRegisteredShaderCount() > 0)
 		{
-			std::thread([] {
-				wi::backlog::post("[Shader check] Started checking " + std::to_string(wi::shadercompiler::GetRegisteredShaderCount()) + " registered shaders for changes...");
-				if (wi::shadercompiler::CheckRegisteredShadersOutdated())
-				{
-					wi::backlog::post("[Shader check] Changes detected, initiating reload...");
-					wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [](uint64_t userdata) {
-						wi::renderer::ReloadShaders();
-						});
-				}
-				else
-				{
-					wi::backlog::post("[Shader check] All up to date");
-				}
-				}).detach();
+			static wi::jobsystem::context shader_check_ctx;
+			if (!wi::jobsystem::IsBusy(shader_check_ctx))
+			{
+				shader_check_ctx.priority = wi::jobsystem::Priority::Low;
+				wi::jobsystem::Execute(shader_check_ctx, [](wi::jobsystem::JobArgs args) {
+					wi::backlog::post("[Shader check] Started checking " + std::to_string(wi::shadercompiler::GetRegisteredShaderCount()) + " registered shaders for changes...");
+					if (wi::shadercompiler::CheckRegisteredShadersOutdated())
+					{
+						wi::backlog::post("[Shader check] Changes detected, initiating reload...");
+						wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [](uint64_t userdata) {
+							wi::renderer::ReloadShaders();
+							});
+					}
+					else
+					{
+						wi::backlog::post("[Shader check] All up to date");
+					}
+				});
+			}
 		}
 		editor.renderComponent.ReloadLanguage();
 		break;

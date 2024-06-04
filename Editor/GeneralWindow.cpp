@@ -279,7 +279,6 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		{
 			editor->SetLocalization(editor->default_localization);
 			editor->main->config.GetSection("options").Set("language", "English");
-			editor->main->config.Commit();
 			return;
 		}
 
@@ -289,7 +288,6 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		{
 			editor->SetLocalization(editor->current_localization);
 			editor->main->config.GetSection("options").Set("language", language);
-			editor->main->config.Commit();
 		}
 		else
 		{
@@ -376,8 +374,6 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			theme.font.shadow_color = wi::Color::Shadow();
 			break;
 		}
-	
-		editor->main->config.Commit();
 
 		theme.tooltipImage = theme.image;
 		theme.tooltipImage.color = theme_color_idle;

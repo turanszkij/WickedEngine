@@ -229,7 +229,7 @@ public:
 
 	void Initialize() override;
 
-	~Editor()
+	~Editor() override
 	{
 		config.Commit();
 	}

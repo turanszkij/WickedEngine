@@ -1525,7 +1525,7 @@ void GraphicsWindow::Update()
 	resolutionScaleSlider.SetValue(editor->resolutionScale);
 	streamingSlider.SetValue(wi::resourcemanager::GetStreamingMemoryThreshold());
 	MSAAComboBox.SetSelectedByUserdataWithoutCallback(editor->renderPath->getMSAASampleCount());
-	tonemapCombo.SetSelected((int)editor->renderPath->getTonemap());
+	tonemapCombo.SetSelectedByUserdataWithoutCallback((int)editor->renderPath->getTonemap());
 	exposureSlider.SetValue(editor->renderPath->getExposure());
 	brightnessSlider.SetValue(editor->renderPath->getBrightness());
 	contrastSlider.SetValue(editor->renderPath->getContrast());

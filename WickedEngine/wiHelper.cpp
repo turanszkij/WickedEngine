@@ -1022,7 +1022,7 @@ namespace wi::helper
 #endif // PLATFORM_LINUX || PLATFORM_PS5
 		if (file.is_open())
 		{
-			size_t dataSize = (size_t)file.tellg();
+			size_t dataSize = (size_t)file.tellg() - offset;
 			dataSize = std::min(dataSize, max_read);
 			file.seekg((std::streampos)offset);
 			data.resize(dataSize);
@@ -1169,6 +1169,7 @@ namespace wi::helper
 		}
 #endif // PLATFORM_UWP
 
+		wi::backlog::post("File couln't be written: " + fileName, wi::backlog::LogLevel::Error);
 		return false;
 	}
 
