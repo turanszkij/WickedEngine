@@ -1169,7 +1169,6 @@ namespace wi::helper
 		}
 #endif // PLATFORM_UWP
 
-		wi::backlog::post("File couln't be written: " + fileName, wi::backlog::LogLevel::Error);
 		return false;
 	}
 
