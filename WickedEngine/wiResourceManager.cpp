@@ -44,11 +44,16 @@ namespace wi
 		wi::vector<uint8_t> filedata;
 		int font_style = -1;
 
+		// Original filename:
 		std::string filename;
+
+		// Container file is different from original filename when
+		//	multiple resources are embedded inside one file:
 		std::string container_filename;
 		size_t container_filesize = 0;
 		size_t container_fileoffset = 0;
 
+		// Streaming parameters:
 		StreamingTexture streaming_texture;
 		std::atomic<uint32_t> streaming_resolution{ 0 };
 		uint32_t streaming_unload_delay = 0;
@@ -56,7 +61,7 @@ namespace wi
 
 	const wi::vector<uint8_t>& Resource::GetFileData() const
 	{
-		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
+		const ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		return resourceinternal->filedata;
 	}
 	const wi::graphics::Texture& Resource::GetTexture() const
@@ -1598,8 +1603,11 @@ namespace wi
 						resource->container_filename = archive.GetSourceFileName();
 						resource->container_fileoffset = archive.GetPos() - resource->filedata.size();
 						resource->container_filesize = resource->filedata.size();
-						resource->filedata.clear();
-						resource->filedata.shrink_to_fit();
+						if (!has_flag(resource->flags, Flags::IMPORT_RETAIN_FILEDATA))
+						{
+							resource->filedata.clear();
+							resource->filedata.shrink_to_fit();
+						}
 					}
 				}
 			}

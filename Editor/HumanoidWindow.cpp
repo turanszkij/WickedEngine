@@ -513,8 +513,7 @@ void HumanoidWindow::Update(const wi::Canvas& canvas, float dt)
 	{
 		Scene& scene = editor->GetCurrentScene();
 		const CameraComponent& camera = editor->GetCurrentEditorScene().camera;
-		const wi::input::MouseState& mouse = wi::input::GetMouseState();
-		wi::primitive::Ray ray = wi::renderer::GetPickRay((long)mouse.position.x, (long)mouse.position.y, canvas, camera);
+		wi::primitive::Ray ray = editor->pickRay;
 
 		for (size_t i = 0; i < scene.humanoids.GetCount(); ++i)
 		{
