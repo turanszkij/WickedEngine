@@ -715,8 +715,8 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			wi::vector<uint8_t> filedata;
 			if (wi::helper::saveTextureToMemoryFile(x.second.GetTexture(), "DDS", filedata))
 			{
-				x.second.SetFileData(std::move(filedata));
 				x.second = wi::resourcemanager::Load(x.first, wi::resourcemanager::Flags::NONE, filedata.data(), filedata.size());
+				x.second.SetFileData(std::move(filedata));
 			}
 		}
 
@@ -758,8 +758,8 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			wi::vector<uint8_t> filedata;
 			if (wi::helper::saveTextureToMemoryFile(x.second.GetTexture(), "KTX2", filedata))
 			{
-				x.second.SetFileData(std::move(filedata));
 				x.second = wi::resourcemanager::Load(x.first, wi::resourcemanager::Flags::NONE, filedata.data(), filedata.size());
+				x.second.SetFileData(std::move(filedata));
 			}
 		}
 
