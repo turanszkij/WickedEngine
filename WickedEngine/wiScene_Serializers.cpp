@@ -892,7 +892,7 @@ namespace wi::scene
 					if (!lensFlareNames[i].empty())
 					{
 						lensFlareNames[i] = dir + lensFlareNames[i];
-						lensFlareRimTextures[i] = wi::resourcemanager::Load(lensFlareNames[i], wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+						lensFlareRimTextures[i] = wi::resourcemanager::Load(lensFlareNames[i]);
 					}
 				}
 			});
@@ -1271,7 +1271,7 @@ namespace wi::scene
 				if (!skyMapName.empty())
 				{
 					skyMapName = dir + skyMapName;
-					skyMap = wi::resourcemanager::Load(skyMapName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					skyMap = wi::resourcemanager::Load(skyMapName);
 				}
 			}
 			if (archive.GetVersion() >= 40)
@@ -1284,7 +1284,7 @@ namespace wi::scene
 				if (!colorGradingMapName.empty())
 				{
 					colorGradingMapName = dir + colorGradingMapName;
-					colorGradingMap = wi::resourcemanager::Load(colorGradingMapName, wi::resourcemanager::Flags::IMPORT_COLORGRADINGLUT | wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					colorGradingMap = wi::resourcemanager::Load(colorGradingMapName, wi::resourcemanager::Flags::IMPORT_COLORGRADINGLUT);
 				}
 			}
 
@@ -1416,7 +1416,7 @@ namespace wi::scene
 				if (!volumetricCloudsWeatherMapFirstName.empty())
 				{
 					volumetricCloudsWeatherMapFirstName = dir + volumetricCloudsWeatherMapFirstName;
-					volumetricCloudsWeatherMapFirst = wi::resourcemanager::Load(volumetricCloudsWeatherMapFirstName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					volumetricCloudsWeatherMapFirst = wi::resourcemanager::Load(volumetricCloudsWeatherMapFirstName);
 				}
 			}
 
@@ -1426,7 +1426,7 @@ namespace wi::scene
 				if (!volumetricCloudsWeatherMapSecondName.empty())
 				{
 					volumetricCloudsWeatherMapSecondName = dir + volumetricCloudsWeatherMapSecondName;
-					volumetricCloudsWeatherMapSecond = wi::resourcemanager::Load(volumetricCloudsWeatherMapSecondName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					volumetricCloudsWeatherMapSecond = wi::resourcemanager::Load(volumetricCloudsWeatherMapSecondName);
 				}
 
 				archive >> volumetricCloudParameters.layerFirst.curlNoiseHeightFraction;
@@ -1736,7 +1736,7 @@ namespace wi::scene
 				if (!filename.empty())
 				{
 					filename = dir + filename;
-					soundResource = wi::resourcemanager::Load(filename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					soundResource = wi::resourcemanager::Load(filename);
 					// Note: sound instance can't be created yet, as soundResource is not necessarily ready at this point
 					//	Consider when multiple threads are loading the same sound, one thread will be loading the data,
 					//	the others return early with the resource that will be containing the data once it has been loaded.
@@ -1774,7 +1774,7 @@ namespace wi::scene
 				if (!filename.empty())
 				{
 					filename = dir + filename;
-					videoResource = wi::resourcemanager::Load(filename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					videoResource = wi::resourcemanager::Load(filename);
 					wi::video::CreateVideoInstance(&videoResource.GetVideo(), &videoinstance);
 				}
 			});

@@ -313,7 +313,7 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 				// Register into resource manager:
 				material->textures[sel].resource = wi::resourcemanager::Load(
 					material->textures[sel].name,
-					wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA,
+					wi::resourcemanager::Flags::NONE,
 					texturefiledata.data(),
 					texturefiledata.size()
 				);

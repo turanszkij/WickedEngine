@@ -452,7 +452,7 @@ namespace wi::scene
 	}
 	wi::resourcemanager::Flags MaterialComponent::GetTextureSlotResourceFlags(TEXTURESLOT slot)
 	{
-		wi::resourcemanager::Flags flags = wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA;
+		wi::resourcemanager::Flags flags = wi::resourcemanager::Flags::NONE;
 		if (!IsPreferUncompressedTexturesEnabled())
 		{
 			flags |= wi::resourcemanager::Flags::IMPORT_BLOCK_COMPRESSED;
@@ -2131,7 +2131,7 @@ namespace wi::scene
 	void ScriptComponent::CreateFromFile(const std::string& filename)
 	{
 		this->filename = filename;
-		resource = wi::resourcemanager::Load(filename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+		resource = wi::resourcemanager::Load(filename);
 		script.clear(); // will be created on first Update()
 	}
 

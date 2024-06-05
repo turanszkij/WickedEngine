@@ -1482,7 +1482,7 @@ namespace wi::scene
 		{
 			SoundComponent& sound = sounds.Create(entity);
 			sound.filename = filename;
-			sound.soundResource = wi::resourcemanager::Load(filename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+			sound.soundResource = wi::resourcemanager::Load(filename);
 			wi::audio::CreateSoundInstance(&sound.soundResource.GetSound(), &sound.soundinstance);
 		}
 
@@ -1505,7 +1505,7 @@ namespace wi::scene
 		{
 			VideoComponent& video = videos.Create(entity);
 			video.filename = filename;
-			video.videoResource = wi::resourcemanager::Load(filename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+			video.videoResource = wi::resourcemanager::Load(filename);
 			wi::video::CreateVideoInstance(&video.videoResource.GetVideo(), &video.videoinstance);
 		}
 

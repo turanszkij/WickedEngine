@@ -42,6 +42,7 @@ enum class FileType
 	IMAGE,
 	VIDEO,
 	SOUND,
+	HEADER,
 };
 static wi::unordered_map<std::string, FileType> filetypes = {
 	{"LUA", FileType::LUA},
@@ -51,6 +52,7 @@ static wi::unordered_map<std::string, FileType> filetypes = {
 	{"GLB", FileType::GLB},
 	{"VRM", FileType::VRM},
 	{"FBX", FileType::FBX},
+	{"H", FileType::HEADER},
 };
 
 void Editor::Initialize()
@@ -4300,9 +4302,9 @@ void EditorComponent::Save(const std::string& filename)
 	if (type == FileType::INVALID)
 		return;
 
-	if(type == FileType::WISCENE)
+	if(type == FileType::WISCENE || type == FileType::HEADER)
 	{
-		const bool dump_to_header = generalWnd.saveModeComboBox.GetSelected() == 2;
+		const bool dump_to_header = type == FileType::HEADER;
 
 		wi::Archive archive = dump_to_header ? wi::Archive() : wi::Archive(filename, false);
 		if (archive.IsOpen())
@@ -4341,29 +4343,20 @@ void EditorComponent::Save(const std::string& filename)
 }
 void EditorComponent::SaveAs()
 {
-	const bool dump_to_header = generalWnd.saveModeComboBox.GetSelected() == 2;
-
 	wi::helper::FileDialogParams params;
 	params.type = wi::helper::FileDialogParams::SAVE;
-	if (dump_to_header)
-	{
-		params.description = "C++ header (.h)";
-		params.extensions.push_back("h");
-	}
-	else
-	{
-		params.description = "Wicked Scene (.wiscene) | GLTF Model (.gltf) | GLTF Binary Model (.glb)";
-		params.extensions.push_back("wiscene");
-		params.extensions.push_back("gltf");
-		params.extensions.push_back("glb");
-	}
+	params.description = "Wicked Scene (.wiscene) | GLTF Model (.gltf) | GLTF Binary Model (.glb) | C++ header (.h)";
+	params.extensions.push_back("wiscene");
+	params.extensions.push_back("gltf");
+	params.extensions.push_back("glb");
+	params.extensions.push_back("h");
 	wi::helper::FileDialog(params, [=](std::string fileName) {
 		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 			auto extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
-			std::string filename = (!extension.compare("GLTF") || !extension.compare("GLB")) ? fileName : wi::helper::ForceExtension(fileName, params.extensions.front());
+			std::string filename = (!extension.compare("GLTF") || !extension.compare("GLB") || !extension.compare("H")) ? fileName : wi::helper::ForceExtension(fileName, params.extensions.front());
 			Save(filename);
-			});
 		});
+	});
 }
 
 Texture EditorComponent::CreateThumbnailScreenshot() const

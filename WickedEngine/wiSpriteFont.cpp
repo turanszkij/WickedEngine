@@ -155,7 +155,7 @@ namespace wi
 					if (!fontStyleName.empty())
 					{
 						fontStyleName = dir + fontStyleName;
-						fontStyleResource = wi::resourcemanager::Load(fontStyleName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+						fontStyleResource = wi::resourcemanager::Load(fontStyleName);
 						params.style = fontStyleResource.GetFontStyle();
 					}
 				});

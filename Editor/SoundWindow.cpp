@@ -73,7 +73,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 			wi::helper::FileDialog(params, [=](std::string fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					sound->filename = fileName;
-					sound->soundResource = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					sound->soundResource = wi::resourcemanager::Load(fileName);
 					wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
 					filenameLabel.SetText(wi::helper::GetFileNameFromPath(sound->filename));
 					});

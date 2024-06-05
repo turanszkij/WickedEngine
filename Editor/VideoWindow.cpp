@@ -69,7 +69,7 @@ void VideoWindow::Create(EditorComponent* _editor)
 			wi::helper::FileDialog(params, [=](std::string fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					video->filename = fileName;
-					video->videoResource = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					video->videoResource = wi::resourcemanager::Load(fileName);
 					wi::video::CreateVideoInstance(&video->videoResource.GetVideo(), &video->videoinstance);
 					filenameLabel.SetText(wi::helper::GetFileNameFromPath(video->filename));
 					});

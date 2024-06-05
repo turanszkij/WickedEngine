@@ -674,7 +674,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					auto& weather = GetWeather();
 					weather.skyMapName = fileName;
-					weather.skyMap = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					weather.skyMap = wi::resourcemanager::Load(fileName);
 					skyButton.SetText(wi::helper::GetFileNameFromPath(fileName));
 				});
 			});
@@ -709,7 +709,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					auto& weather = GetWeather();
 					weather.colorGradingMapName = fileName;
-					weather.colorGradingMap = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_COLORGRADINGLUT | wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					weather.colorGradingMap = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_COLORGRADINGLUT);
 					colorgradingButton.SetText(wi::helper::GetFileNameFromPath(fileName));
 					});
 				});
@@ -741,7 +741,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					auto& weather = GetWeather();
 					weather.volumetricCloudsWeatherMapFirstName = fileName;
-					weather.volumetricCloudsWeatherMapFirst = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					weather.volumetricCloudsWeatherMapFirst = wi::resourcemanager::Load(fileName);
 					volumetricCloudsWeatherMapFirstButton.SetText(wi::helper::GetFileNameFromPath(fileName));
 					});
 				});
@@ -773,7 +773,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					auto& weather = GetWeather();
 					weather.volumetricCloudsWeatherMapSecondName = fileName;
-					weather.volumetricCloudsWeatherMapSecond = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					weather.volumetricCloudsWeatherMapSecond = wi::resourcemanager::Load(fileName);
 					volumetricCloudsWeatherMapSecondButton.SetText(wi::helper::GetFileNameFromPath(fileName));
 					});
 				});
