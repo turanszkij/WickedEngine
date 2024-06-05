@@ -797,7 +797,7 @@ namespace wi
 							{
 								for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 								{
-									SubresourceData& subresourceData = initdata_stack[subresource_index++];
+									SubresourceData& subresourceData = initdata[subresource_index++];
 									subresourceData.data_ptr = filedata + header.mip_offset(mip, slice);
 									subresourceData.row_pitch = header.row_pitch(mip);
 									subresourceData.slice_pitch = header.slice_pitch(mip);
