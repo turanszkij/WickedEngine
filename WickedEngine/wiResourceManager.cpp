@@ -343,10 +343,18 @@ namespace wi
 
 			if (filedata == nullptr || filesize == 0)
 			{
-				if (resource->filedata.empty() && !wi::helper::FileRead(name, resource->filedata))
+				if (resource->filedata.empty())
 				{
-					resource.reset();
-					return Resource();
+					if (wi::helper::FileRead(name, resource->filedata))
+					{
+						resource->container_fileoffset = 0;
+						resource->container_filesize = resource->filedata.size();
+					}
+					else
+					{
+						resource.reset();
+						return Resource();
+					}
 				}
 				filedata = resource->filedata.data();
 				filesize = resource->filedata.size();
