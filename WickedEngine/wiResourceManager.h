@@ -70,10 +70,10 @@ namespace wi
 		{
 			NONE = 0,
 			IMPORT_COLORGRADINGLUT = 1 << 0, // image import will convert resource to 3D color grading LUT
-			IMPORT_RETAIN_FILEDATA = 1 << 1, // file data of the resource will be kept in memory
+			IMPORT_RETAIN_FILEDATA = 1 << 1, // file data of the resource will be kept in memory, you will be able to use Resource::GetFileData()
 			IMPORT_NORMALMAP = 1 << 2, // image import will try to use optimal normal map encoding
 			IMPORT_BLOCK_COMPRESSED = 1 << 3, // image import will request block compression for uncompressed or transcodable formats
-			IMPORT_DELAY = 1 << 4, // delay importing resource until later, for example when proper flags can be determined
+			IMPORT_DELAY = 1 << 4, // delay importing resource until later, for example when proper flags can be determined. If you use this without IMPORT_RETAIN_FILEDATA, then you must provide data pointer explicitly and ensure it is not deleted until it's reused
 			STREAMING = 1 << 5, // use streaming if possible
 		};
 

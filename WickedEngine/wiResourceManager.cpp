@@ -53,6 +53,11 @@ namespace wi
 		size_t container_filesize = 0;
 		size_t container_fileoffset = 0;
 
+		// If resource is using IMPORT_DELAY flag but not RETAIN_FILEDATA,
+		//	we save data pointer of file data for later reuse:
+		const uint8_t* delayed_import_data = nullptr;
+		size_t delayed_import_size = 0;
+
 		// Streaming parameters:
 		StreamingTexture streaming_texture;
 		std::atomic<uint32_t> streaming_resolution{ 0 };
@@ -319,8 +324,17 @@ namespace wi
 				{
 					// resource was loaded with external filedata, and we want to retain filedata
 					//	this must also happen when using IMPORT_DELAY!
-					resource->filedata.resize(filesize);
-					std::memcpy(resource->filedata.data(), filedata, filesize);
+					if (has_flag(flags, Flags::IMPORT_RETAIN_FILEDATA))
+					{
+						resource->filedata.resize(filesize);
+						std::memcpy(resource->filedata.data(), filedata, filesize);
+					}
+					else
+					{
+						// delayed import without retain filedata:
+						resource->delayed_import_data = filedata;
+						resource->delayed_import_size = filesize;
+					}
 				}
 			}
 			else
@@ -330,6 +344,14 @@ namespace wi
 					// If this is not an IMPORT_DELAY load, but this resource load was incomplete, using IMPORT_DELAY,
 					//	then continue loading it as normal from existing file data and remove IMPORT_DELAY flag from it
 					resource->flags &= ~Flags::IMPORT_DELAY;
+					if (resource->delayed_import_data != nullptr)
+					{
+						// If this resource had a saved delayed import pointer, then use that and reset the pointer:
+						filedata = resource->delayed_import_data;
+						filesize = resource->delayed_import_size;
+						resource->delayed_import_data = nullptr;
+						resource->delayed_import_size = 0;
+					}
 				}
 				else
 				{
@@ -1509,8 +1531,6 @@ namespace wi
 			wi::vector<TempResource> temp_resources;
 			temp_resources.resize(serializable_count);
 
-			wi::jobsystem::context ctx;
-			ctx.priority = wi::jobsystem::Priority::Low;
 			for (size_t i = 0; i < serializable_count; ++i)
 			{
 				auto& resource = temp_resources[i];
@@ -1528,29 +1548,22 @@ namespace wi
 
 				resource.name = archive.GetSourceDirectory() + resource.name;
 				resource.flags |= Flags::IMPORT_DELAY; // delay resource creation, to be able to receive additional flags (this way only file data is loaded)
+				resource.flags &= ~Flags::IMPORT_RETAIN_FILEDATA; // don't need to retain file data, we will keep it alive through the whole serialization
 
 				if (Contains(resource.name))
 					continue;
 
-				// "Loading" the resource can happen asynchronously to serialization of file data, to improve performance
-				wi::jobsystem::Execute(ctx, [i, &temp_resources, &seri, &archive, file_offset](wi::jobsystem::JobArgs args) {
-					auto& tmp_resource = temp_resources[i];
-					auto res = Load(
-						tmp_resource.name,
-						tmp_resource.flags,
-						tmp_resource.filedata,
-						tmp_resource.filesize,
-						archive.GetSourceFileName(),
-						file_offset
-					);
-					static std::mutex seri_locker;
-					seri_locker.lock();
-					seri.resources.push_back(res);
-					seri_locker.unlock();
-				});
+				// This will not do much, since we use IMPORT_DELAY it will just remember data pointers for each resource basically
+				auto res = Load(
+					resource.name,
+					resource.flags,
+					resource.filedata,
+					resource.filesize,
+					archive.GetSourceFileName(),
+					file_offset
+				);
+				seri.resources.push_back(res);
 			}
-
-			wi::jobsystem::Wait(ctx);
 		}
 		void Serialize_WRITE(wi::Archive& archive, const wi::unordered_set<std::string>& resource_names)
 		{
@@ -1608,13 +1621,18 @@ namespace wi
 						archive << (uint32_t)resource->flags;
 						archive << resource->filedata;
 
-						resource->container_filename = archive.GetSourceFileName();
-						resource->container_fileoffset = archive.GetPos() - resource->filedata.size();
-						resource->container_filesize = resource->filedata.size();
-						if (!has_flag(resource->flags, Flags::IMPORT_RETAIN_FILEDATA))
+						if (!archive.GetSourceFileName().empty())
 						{
-							resource->filedata.clear();
-							resource->filedata.shrink_to_fit();
+							// Refresh the container file properties to the current file:
+							//	The old file offsets could get stale otherwise if it's overwritten
+							resource->container_filename = archive.GetSourceFileName();
+							resource->container_fileoffset = archive.GetPos() - resource->filedata.size();
+							resource->container_filesize = resource->filedata.size();
+							if (!has_flag(resource->flags, Flags::IMPORT_RETAIN_FILEDATA))
+							{
+								resource->filedata.clear();
+								resource->filedata.shrink_to_fit();
+							}
 						}
 					}
 				}
