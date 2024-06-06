@@ -343,10 +343,6 @@ namespace wi
 				infodisplay_str += "[32-bit]";
 #endif // _ARM
 
-#ifdef PLATFORM_UWP
-				infodisplay_str += "[UWP]";
-#endif // PLATFORM_UWP
-
 #ifdef WICKEDENGINE_BUILD_DX12
 				if (dynamic_cast<GraphicsDevice_DX12*>(graphicsDevice.get()))
 				{

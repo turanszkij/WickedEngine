@@ -696,7 +696,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiPrimitive.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiPrimitive_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiJobSystem.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_UWP.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_Windows.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiPhysics_Bullet.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLua.cpp" />

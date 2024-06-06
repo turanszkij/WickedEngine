@@ -5,27 +5,15 @@ VisualStudioVersion = 17.2.32616.157
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Editor_Windows", "Editor\Editor_Windows.vcxproj", "{5FE97B9B-A445-4EEA-A42D-9DE60B891D48}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Editor_UWP", "Editor\Editor_UWP.vcxproj", "{FA78BFAD-4B23-4A6B-92FA-A48CE56BED03}"
-	ProjectSection(ProjectDependencies) = postProject
-		{60DA258F-E95F-4CF4-A46B-17D80644464B} = {60DA258F-E95F-4CF4-A46B-17D80644464B}
-	EndProjectSection
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Editor_SOURCE", "Editor\Editor_SOURCE.vcxitems", "{867FEBCA-09C4-4FE7-8A4C-4D9B1C27E7D0}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Tests", "Tests\Tests.vcxproj", "{3A9EA3D0-A795-46ED-A737-7164E90DC309}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Template_Windows", "Template_Windows\Template_Windows.vcxproj", "{76AA3D37-3252-4785-9334-3FC6B8CC07DE}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Template_UWP", "Template_UWP\Template_UWP.vcxproj", "{C222218B-B6D1-406B-B2C0-8C1CED4A8D19}"
-	ProjectSection(ProjectDependencies) = postProject
-		{60DA258F-E95F-4CF4-A46B-17D80644464B} = {60DA258F-E95F-4CF4-A46B-17D80644464B}
-	EndProjectSection
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WickedEngine_SOURCE", "WickedEngine\WickedEngine_SOURCE.vcxitems", "{45D41ACC-2C3C-43D2-BC10-02AA73FFC7C7}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WickedEngine_Windows", "WickedEngine\WickedEngine_Windows.vcxproj", "{06163DCB-B183-4ED9-9C62-13EF1658E049}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WickedEngine_UWP", "WickedEngine\WickedEngine_UWP.vcxproj", "{60DA258F-E95F-4CF4-A46B-17D80644464B}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Supplementary", "Supplementary", "{BF8FCAB8-D7D3-4DAE-92DE-4B5037E9A0ED}"
 	ProjectSection(SolutionItems) = preProject
@@ -57,17 +45,6 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Example_ImGui_Docking", "Example_ImGui_Docking\Example_ImGui_Docking.vcxproj", "{5646F9FB-C9E3-4DA4-8AAA-EB7A46DD777E}"
 EndProject
 Global
-	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		WickedEngine\WickedEngine_SOURCE.vcxitems*{06163dcb-b183-4ed9-9c62-13ef1658e049}*SharedItemsImports = 4
-		WickedEngine\WickedEngine_SOURCE.vcxitems*{45d41acc-2c3c-43d2-bc10-02aa73ffc7c7}*SharedItemsImports = 9
-		Editor\Editor_SOURCE.vcxitems*{5fe97b9b-a445-4eea-a42d-9de60b891d48}*SharedItemsImports = 4
-		WickedEngine\WickedEngine_SOURCE.vcxitems*{60da258f-e95f-4cf4-a46b-17d80644464b}*SharedItemsImports = 4
-		Editor\Editor_SOURCE.vcxitems*{867febca-09c4-4fe7-8a4c-4d9b1c27e7d0}*SharedItemsImports = 9
-		WickedEngine\shaders\Shaders_SOURCE.vcxitems*{92e86448-0724-4387-abac-96e63edf4190}*SharedItemsImports = 9
-		Content\Content.vcxitems*{c48f6bff-f91b-4db5-98b5-15287dfb7c95}*SharedItemsImports = 9
-		Content\Content.vcxitems*{fa78bfad-4b23-4a6b-92fa-a48ce56bed03}*SharedItemsImports = 4
-		Editor\Editor_SOURCE.vcxitems*{fa78bfad-4b23-4a6b-92fa-a48ce56bed03}*SharedItemsImports = 4
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
 		Release|x64 = Release|x64
@@ -77,12 +54,6 @@ Global
 		{5FE97B9B-A445-4EEA-A42D-9DE60B891D48}.Debug|x64.Build.0 = Debug|x64
 		{5FE97B9B-A445-4EEA-A42D-9DE60B891D48}.Release|x64.ActiveCfg = Release|x64
 		{5FE97B9B-A445-4EEA-A42D-9DE60B891D48}.Release|x64.Build.0 = Release|x64
-		{FA78BFAD-4B23-4A6B-92FA-A48CE56BED03}.Debug|x64.ActiveCfg = Debug|x64
-		{FA78BFAD-4B23-4A6B-92FA-A48CE56BED03}.Debug|x64.Build.0 = Debug|x64
-		{FA78BFAD-4B23-4A6B-92FA-A48CE56BED03}.Debug|x64.Deploy.0 = Debug|x64
-		{FA78BFAD-4B23-4A6B-92FA-A48CE56BED03}.Release|x64.ActiveCfg = Release|x64
-		{FA78BFAD-4B23-4A6B-92FA-A48CE56BED03}.Release|x64.Build.0 = Release|x64
-		{FA78BFAD-4B23-4A6B-92FA-A48CE56BED03}.Release|x64.Deploy.0 = Release|x64
 		{3A9EA3D0-A795-46ED-A737-7164E90DC309}.Debug|x64.ActiveCfg = Debug|x64
 		{3A9EA3D0-A795-46ED-A737-7164E90DC309}.Debug|x64.Build.0 = Debug|x64
 		{3A9EA3D0-A795-46ED-A737-7164E90DC309}.Release|x64.ActiveCfg = Release|x64
@@ -91,20 +62,10 @@ Global
 		{76AA3D37-3252-4785-9334-3FC6B8CC07DE}.Debug|x64.Build.0 = Debug|x64
 		{76AA3D37-3252-4785-9334-3FC6B8CC07DE}.Release|x64.ActiveCfg = Release|x64
 		{76AA3D37-3252-4785-9334-3FC6B8CC07DE}.Release|x64.Build.0 = Release|x64
-		{C222218B-B6D1-406B-B2C0-8C1CED4A8D19}.Debug|x64.ActiveCfg = Debug|x64
-		{C222218B-B6D1-406B-B2C0-8C1CED4A8D19}.Debug|x64.Build.0 = Debug|x64
-		{C222218B-B6D1-406B-B2C0-8C1CED4A8D19}.Debug|x64.Deploy.0 = Debug|x64
-		{C222218B-B6D1-406B-B2C0-8C1CED4A8D19}.Release|x64.ActiveCfg = Release|x64
-		{C222218B-B6D1-406B-B2C0-8C1CED4A8D19}.Release|x64.Build.0 = Release|x64
-		{C222218B-B6D1-406B-B2C0-8C1CED4A8D19}.Release|x64.Deploy.0 = Release|x64
 		{06163DCB-B183-4ED9-9C62-13EF1658E049}.Debug|x64.ActiveCfg = Debug|x64
 		{06163DCB-B183-4ED9-9C62-13EF1658E049}.Debug|x64.Build.0 = Debug|x64
 		{06163DCB-B183-4ED9-9C62-13EF1658E049}.Release|x64.ActiveCfg = Release|x64
 		{06163DCB-B183-4ED9-9C62-13EF1658E049}.Release|x64.Build.0 = Release|x64
-		{60DA258F-E95F-4CF4-A46B-17D80644464B}.Debug|x64.ActiveCfg = Debug|x64
-		{60DA258F-E95F-4CF4-A46B-17D80644464B}.Debug|x64.Build.0 = Debug|x64
-		{60DA258F-E95F-4CF4-A46B-17D80644464B}.Release|x64.ActiveCfg = Release|x64
-		{60DA258F-E95F-4CF4-A46B-17D80644464B}.Release|x64.Build.0 = Release|x64
 		{3B74A7FE-CED7-4723-8824-AC708A865B98}.Debug|x64.ActiveCfg = Debug|x64
 		{3B74A7FE-CED7-4723-8824-AC708A865B98}.Debug|x64.Build.0 = Debug|x64
 		{3B74A7FE-CED7-4723-8824-AC708A865B98}.Release|x64.ActiveCfg = Release|x64
@@ -127,5 +88,13 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E3FF044A-B72E-4ED5-BE05-AB641BA048CD}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		WickedEngine\WickedEngine_SOURCE.vcxitems*{06163dcb-b183-4ed9-9c62-13ef1658e049}*SharedItemsImports = 4
+		WickedEngine\WickedEngine_SOURCE.vcxitems*{45d41acc-2c3c-43d2-bc10-02aa73ffc7c7}*SharedItemsImports = 9
+		Editor\Editor_SOURCE.vcxitems*{5fe97b9b-a445-4eea-a42d-9de60b891d48}*SharedItemsImports = 4
+		Editor\Editor_SOURCE.vcxitems*{867febca-09c4-4fe7-8a4c-4d9b1c27e7d0}*SharedItemsImports = 9
+		WickedEngine\shaders\Shaders_SOURCE.vcxitems*{92e86448-0724-4387-abac-96e63edf4190}*SharedItemsImports = 9
+		Content\Content.vcxitems*{c48f6bff-f91b-4db5-98b5-15287dfb7c95}*SharedItemsImports = 9
 	EndGlobalSection
 EndGlobal

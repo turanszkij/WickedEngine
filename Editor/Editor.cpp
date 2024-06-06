@@ -14,8 +14,6 @@ using namespace wi::ecs;
 #if defined(PLATFORM_WINDOWS_DESKTOP)
 extern BOOL CreateEditorWindow(int nCmdShow);
 extern bool window_recreating;
-#elif defined(PLATFORM_UWP)
-#include "winrt/Windows.UI.ViewManagement.h"
 #elif defined(PLATFORM_LINUX)
 #include "sdl2.h"
 #endif // PLATFORM_WINDOWS
@@ -787,16 +785,6 @@ void EditorComponent::Load()
 			DestroyWindow(main->window);
 			main->window = {};
 			CreateEditorWindow(SW_SHOWNORMAL);
-#elif defined(PLATFORM_UWP)
-			auto applicationView = winrt::Windows::UI::ViewManagement::ApplicationView::GetForCurrentView();
-			if (applicationView.IsFullScreenMode())
-			{
-				applicationView.ExitFullScreenMode();
-			}
-			else
-			{
-				applicationView.TryEnterFullScreenMode();
-			}
 #elif defined(PLATFORM_LINUX)
 			SDL_SetWindowFullscreen(main->window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 #endif // PLATFORM_WINDOWS_DESKTOP

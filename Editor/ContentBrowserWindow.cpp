@@ -140,9 +140,6 @@ void ContentBrowserWindow::ResizeLayout()
 
 void ContentBrowserWindow::RefreshContent()
 {
-#ifdef PLATFORM_UWP
-	content_folder = wi::helper::GetCurrentPath() + "/";
-#else
 	content_folder = wi::helper::GetCurrentPath() + "/Content/";
 	wi::helper::MakePathAbsolute(content_folder);
 	if (!wi::helper::FileExists(content_folder))
@@ -150,7 +147,6 @@ void ContentBrowserWindow::RefreshContent()
 		content_folder = wi::helper::GetCurrentPath() + "/../Content/";
 		wi::helper::MakePathAbsolute(content_folder);
 	}
-#endif // PLATFORM_UWP
 
 	float hei = 25;
 	float wid = 120;
