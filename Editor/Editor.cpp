@@ -81,9 +81,6 @@ void Editor::Initialize()
 
 	Application::Initialize();
 
-	// With this mode, file data for resources will be kept around. This allows serializing embedded resource data inside scenes
-	wi::resourcemanager::SetMode(wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
-
 	infoDisplay.active = true;
 	infoDisplay.watermark = false; // can be toggled instead on gui
 	//infoDisplay.fpsinfo = true;
