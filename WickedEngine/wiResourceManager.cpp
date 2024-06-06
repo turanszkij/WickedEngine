@@ -311,7 +311,7 @@ namespace wi
 				resource->container_filesize = filesize;
 				resource->container_fileoffset = container_fileoffset;
 
-				if (resource->filedata.empty() && (has_flag(flags, Flags::IMPORT_RETAIN_FILEDATA) || has_flag(flags, Flags::IMPORT_DELAY)))
+				if (filedata != nullptr && resource->filedata.empty() && (has_flag(flags, Flags::IMPORT_RETAIN_FILEDATA) || has_flag(flags, Flags::IMPORT_DELAY)))
 				{
 					// resource was loaded with external filedata, and we want to retain filedata
 					//	this must also happen when using IMPORT_DELAY!

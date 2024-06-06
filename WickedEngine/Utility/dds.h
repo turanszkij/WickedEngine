@@ -331,16 +331,12 @@ namespace dds
 		// returns the width of the texture in pixels
 		constexpr unsigned width() const
 		{
-			if (header.dwFlags & DDSD_WIDTH)
-				return header.dwWidth;
-			return 1;
+			return header.dwWidth < 1 ? 1 : header.dwWidth;
 		}
 		// returns the height of the texture in pixels
 		constexpr unsigned height() const
 		{
-			if (header.dwFlags & DDSD_HEIGHT)
-				return header.dwHeight;
-			return 1;
+			return header.dwHeight < 1 ? 1 : header.dwHeight;
 		}
 		// returns the depth of the texture in pixels
 		constexpr unsigned depth() const
