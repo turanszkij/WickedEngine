@@ -73,7 +73,7 @@ namespace wi
 			IMPORT_RETAIN_FILEDATA = 1 << 1, // file data of the resource will be kept in memory, you will be able to use Resource::GetFileData()
 			IMPORT_NORMALMAP = 1 << 2, // image import will try to use optimal normal map encoding
 			IMPORT_BLOCK_COMPRESSED = 1 << 3, // image import will request block compression for uncompressed or transcodable formats
-			IMPORT_DELAY = 1 << 4, // delay importing resource until later, for example when proper flags can be determined. If you use this without IMPORT_RETAIN_FILEDATA, then you must provide data pointer explicitly and ensure it is not deleted until it's reused
+			IMPORT_DELAY = 1 << 4, // delay importing resource until later, for example when proper flags can be determined.
 			STREAMING = 1 << 5, // use streaming if possible
 		};
 
@@ -88,7 +88,7 @@ namespace wi
 			const std::string& name,
 			Flags flags = Flags::NONE,
 			const uint8_t* filedata = nullptr,
-			size_t filesize = 0,
+			size_t filesize = ~0ull,
 			const std::string& container_filename = "",
 			size_t container_fileoffset = 0
 		);
