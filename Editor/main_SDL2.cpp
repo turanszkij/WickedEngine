@@ -4,7 +4,7 @@
 #include "sdl2.h"
 #include <fstream>
 
-#include "Assets/Icon.c"
+#include "icon.c"
 
 using namespace std;
 
