@@ -1199,7 +1199,7 @@ void Example_ImGuiRenderer::Update(float dt)
 				wi::helper::screenshot(myswapChain, name);
 
 				MaterialComponent::TextureMap tm;
-				tm.resource = wi::resourcemanager::Load(name, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+				tm.resource = wi::resourcemanager::Load(name);
 				tm.name = name;
 				screenshots.push_back(tm);
 			}

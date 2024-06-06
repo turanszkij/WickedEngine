@@ -44,10 +44,16 @@ namespace wi
 		wi::vector<uint8_t> filedata;
 		int font_style = -1;
 
-		std::string name;
-		std::string streaming_filename;
-		size_t streaming_filesize = 0;
-		size_t streaming_fileoffset = 0;
+		// Original filename:
+		std::string filename;
+
+		// Container file is different from original filename when
+		//	multiple resources are embedded inside one file:
+		std::string container_filename;
+		size_t container_filesize = ~0ull;
+		size_t container_fileoffset = 0;
+
+		// Streaming parameters:
 		StreamingTexture streaming_texture;
 		std::atomic<uint32_t> streaming_resolution{ 0 };
 		uint32_t streaming_unload_delay = 0;
@@ -169,7 +175,7 @@ namespace wi
 	{
 		static std::mutex locker;
 		static std::unordered_map<std::string, std::weak_ptr<ResourceInternal>> resources;
-		static Mode mode = Mode::DISCARD_FILEDATA_AFTER_LOAD;
+		static Mode mode = Mode::NO_EMBEDDING;
 
 		void SetMode(Mode param)
 		{
@@ -271,15 +277,10 @@ namespace wi
 			Flags flags,
 			const uint8_t* filedata,
 			size_t filesize,
-			const std::string& streaming_filename,
-			size_t streaming_fileoffset
+			const std::string& container_filename,
+			size_t container_fileoffset
 		)
 		{
-			if (mode == Mode::DISCARD_FILEDATA_AFTER_LOAD)
-			{
-				flags &= ~Flags::IMPORT_RETAIN_FILEDATA;
-			}
-
 #ifdef PLATFORM_UWP
 			flags &= ~Flags::STREAMING; // disable streaming on UWP because of crappy file API that can't seek
 #endif // PLATFORM_UWP
@@ -299,20 +300,20 @@ namespace wi
 			{
 				resource = std::make_shared<ResourceInternal>();
 				resources[name] = resource;
-				resource->name = name;
+				resource->filename = name;
 
 				// Rememeber the streaming file parameters, which is either the resource filename,
 				//	or it can be a specific filename and offset in the case when the file contained multiple resources
-				if (streaming_filename.empty())
+				if (container_filename.empty())
 				{
-					resource->streaming_filename = name;
+					resource->container_filename = name;
 				}
 				else
 				{
-					resource->streaming_filename = streaming_filename;
+					resource->container_filename = container_filename;
 				}
-				resource->streaming_filesize = filesize;
-				resource->streaming_fileoffset = streaming_fileoffset;
+				resource->container_filesize = filesize;
+				resource->container_fileoffset = container_fileoffset;
 
 				if (resource->filedata.empty() && (has_flag(flags, Flags::IMPORT_RETAIN_FILEDATA) || has_flag(flags, Flags::IMPORT_DELAY)))
 				{
@@ -342,10 +343,18 @@ namespace wi
 
 			if (filedata == nullptr || filesize == 0)
 			{
-				if (resource->filedata.empty() && !wi::helper::FileRead(name, resource->filedata))
+				if (resource->filedata.empty())
 				{
-					resource.reset();
-					return Resource();
+					if (wi::helper::FileRead(resource->container_filename, resource->filedata, resource->container_filesize, resource->container_fileoffset))
+					{
+						resource->container_fileoffset = 0;
+						resource->container_filesize = resource->filedata.size();
+					}
+					else
+					{
+						resource.reset();
+						return Resource();
+					}
 				}
 				filedata = resource->filedata.data();
 				filesize = resource->filedata.size();
@@ -1223,15 +1232,16 @@ namespace wi
 				};
 			}
 
+			if (!resource->filedata.empty() && !has_flag(flags, Flags::IMPORT_RETAIN_FILEDATA) && !has_flag(flags, Flags::IMPORT_DELAY))
+			{
+				// file data can be discarded:
+				resource->filedata.clear();
+				resource->filedata.shrink_to_fit();
+			}
+
 			if (success)
 			{
 				resource->flags = flags;
-
-				if (!resource->filedata.empty() && !has_flag(flags, Flags::IMPORT_RETAIN_FILEDATA) && !has_flag(flags, Flags::IMPORT_DELAY))
-				{
-					// file data can be discarded:
-					resource->filedata = {}; // not just clear but destroy vector with deallocating data
-				}
 
 				Resource retVal;
 				retVal.internal_state = resource;
@@ -1420,14 +1430,14 @@ namespace wi
 						const size_t mip_data_offset = resource->streaming_texture.streaming_data[mip_offset].data_offset;
 						const uint8_t* firstmipdata = resource->filedata.data();
 
-						wi::vector<uint8_t> streaming_file; // keep it outside of scope to not get destroyed if it gets loaded
+						static wi::vector<uint8_t> streaming_file; // make this static to not reallocate for each file loading
 						if (firstmipdata == nullptr)
 						{
 							// If file data is not available, then open the file partially with the streaming file parameters:
-							size_t filesize = resource->streaming_filesize - mip_data_offset;
-							size_t fileoffset = resource->streaming_fileoffset + mip_data_offset;
+							size_t filesize = resource->container_filesize - mip_data_offset;
+							size_t fileoffset = resource->container_fileoffset + mip_data_offset;
 							if (!wi::helper::FileRead(
-								resource->streaming_filename,
+								resource->container_filename,
 								streaming_file,
 								filesize,
 								fileoffset
@@ -1459,7 +1469,7 @@ namespace wi
 						replace.srgb_subresource = -1;
 						bool success = device->CreateTexture(&desc, initdata, &replace.texture);
 						assert(success);
-						device->SetName(&replace.texture, resource->name.c_str());
+						device->SetName(&replace.texture, resource->filename.c_str());
 
 						Format srgb_format = GetFormatSRGB(desc.format);
 						if (srgb_format != Format::UNKNOWN && srgb_format != desc.format)
@@ -1499,6 +1509,7 @@ namespace wi
 
 			wi::jobsystem::context ctx;
 			ctx.priority = wi::jobsystem::Priority::Low;
+
 			for (size_t i = 0; i < serializable_count; ++i)
 			{
 				auto& resource = temp_resources[i];
@@ -1516,6 +1527,7 @@ namespace wi
 
 				resource.name = archive.GetSourceDirectory() + resource.name;
 				resource.flags |= Flags::IMPORT_DELAY; // delay resource creation, to be able to receive additional flags (this way only file data is loaded)
+				resource.flags &= ~Flags::IMPORT_RETAIN_FILEDATA; // don't need to retain file data, we will keep it alive through the whole serialization
 
 				if (Contains(resource.name))
 					continue;
@@ -1537,7 +1549,6 @@ namespace wi
 					seri_locker.unlock();
 				});
 			}
-
 			wi::jobsystem::Wait(ctx);
 		}
 		void Serialize_WRITE(wi::Archive& archive, const wi::unordered_set<std::string>& resource_names)
@@ -1547,7 +1558,7 @@ namespace wi
 			locker.lock();
 			size_t serializable_count = 0;
 
-			if (mode == Mode::ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING)
+			if (mode == Mode::NO_EMBEDDING)
 			{
 				// Simply not serialize any embedded resources
 				serializable_count = 0;
@@ -1562,7 +1573,7 @@ namespace wi
 					if (it == resources.end())
 						continue;
 					std::shared_ptr<ResourceInternal> resource = it->second.lock();
-					if (resource != nullptr && !resource->filedata.empty())
+					if (resource != nullptr)
 					{
 						serializable_count++;
 					}
@@ -1577,14 +1588,38 @@ namespace wi
 						continue;
 					std::shared_ptr<ResourceInternal> resource = it->second.lock();
 
-					if (resource != nullptr && !resource->filedata.empty())
+					if (resource != nullptr)
 					{
 						std::string name = it->first;
 						wi::helper::MakePathRelative(archive.GetSourceDirectory(), name);
 
+						if (resource->filedata.empty())
+						{
+							wi::helper::FileRead(
+								resource->container_filename,
+								resource->filedata,
+								resource->container_filesize,
+								resource->container_fileoffset
+							);
+						}
+
 						archive << name;
 						archive << (uint32_t)resource->flags;
 						archive << resource->filedata;
+
+						if (!archive.GetSourceFileName().empty())
+						{
+							// Refresh the container file properties to the current file:
+							//	The old file offsets could get stale otherwise if it's overwritten
+							resource->container_filename = archive.GetSourceFileName();
+							resource->container_fileoffset = archive.GetPos() - resource->filedata.size();
+							resource->container_filesize = resource->filedata.size();
+							if (!has_flag(resource->flags, Flags::IMPORT_RETAIN_FILEDATA))
+							{
+								resource->filedata.clear();
+								resource->filedata.shrink_to_fit();
+							}
+						}
 					}
 				}
 			}

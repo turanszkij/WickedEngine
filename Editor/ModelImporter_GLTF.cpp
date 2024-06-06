@@ -1942,6 +1942,8 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 						size_t filesize = imagefiledata.size();
 						int width, height, bpp;
 						wi::Color* rgba = (wi::Color*)stbi_load_from_memory(filedata, (int)filesize, &width, &height, &bpp, 4);
+						if (rgba == nullptr)
+							continue;
 						wi::vector<XMFLOAT3SE>& hdr_data = hdr_datas[idx];
 						hdr_data.resize(width * height);
 						for (int y = 0; y < height; ++y)

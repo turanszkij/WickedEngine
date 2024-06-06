@@ -205,12 +205,12 @@ namespace wi
 					if (!textureName.empty())
 					{
 						textureName = dir + textureName;
-						textureResource = wi::resourcemanager::Load(textureName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+						textureResource = wi::resourcemanager::Load(textureName);
 					}
 					if (!maskName.empty())
 					{
 						maskName = dir + maskName;
-						maskResource = wi::resourcemanager::Load(maskName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+						maskResource = wi::resourcemanager::Load(maskName);
 					}
 				});
 			}

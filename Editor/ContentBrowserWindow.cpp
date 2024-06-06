@@ -357,6 +357,9 @@ void ContentBrowserWindow::AddItem(const std::string& filename, const std::strin
 {
 	static const XMFLOAT2 siz = XMFLOAT2(240, 120);
 
+	if (!wi::helper::FileExists(filename))
+		return;
+
 	std::string itemname = wi::helper::GetFileNameFromPath(filename);
 	std::string foldername = wi::helper::GetDirectoryFromPath(filename);
 	std::string ext = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));

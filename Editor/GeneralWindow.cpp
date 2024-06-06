@@ -206,9 +206,8 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	otherinfoCheckBox.SetCheck(editor->main->infoDisplay.heap_allocation_counter);
 
 	saveModeComboBox.Create("Save Mode: ");
-	saveModeComboBox.AddItem("Embed resources " ICON_SAVE_EMBED, (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
-	saveModeComboBox.AddItem("No embedding " ICON_SAVE_NO_EMBED, (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING);
-	saveModeComboBox.AddItem("Dump to header " ICON_SAVE_HEADER, (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
+	saveModeComboBox.AddItem("Embed resources " ICON_SAVE_EMBED, (uint64_t)wi::resourcemanager::Mode::EMBED_FILE_DATA);
+	saveModeComboBox.AddItem("No embedding " ICON_SAVE_NO_EMBED, (uint64_t)wi::resourcemanager::Mode::NO_EMBEDDING);
 	saveModeComboBox.SetTooltip("Choose whether to embed resources (textures, sounds...) in the scene file when saving, or keep them as separate files.\nThe Dump to header (" ICON_SAVE_HEADER ") option will use embedding and create a C++ header file with byte data of the scene to be used with wi::Archive serialization.");
 	saveModeComboBox.SetColor(wi::Color(50, 180, 100, 180), wi::gui::IDLE);
 	saveModeComboBox.SetColor(wi::Color(50, 220, 140, 255), wi::gui::FOCUS);
@@ -714,14 +713,10 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		for (auto& x : conv)
 		{
 			wi::vector<uint8_t> filedata;
-			if (wi::helper::saveTextureToMemory(x.second.GetTexture(), filedata))
+			if (wi::helper::saveTextureToMemoryFile(x.second.GetTexture(), "DDS", filedata))
 			{
+				x.second = wi::resourcemanager::Load(x.first, wi::resourcemanager::Flags::NONE, filedata.data(), filedata.size());
 				x.second.SetFileData(std::move(filedata));
-				wi::vector<uint8_t> filedata_dds;
-				if (wi::helper::saveTextureToMemoryFile(x.second.GetFileData(), x.second.GetTexture().desc, "DDS", filedata_dds))
-				{
-					x.second = wi::resourcemanager::Load(x.first, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA, filedata_dds.data(), filedata_dds.size());
-				}
 			}
 		}
 
@@ -761,14 +756,10 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		for (auto& x : conv)
 		{
 			wi::vector<uint8_t> filedata;
-			if (wi::helper::saveTextureToMemory(x.second.GetTexture(), filedata))
+			if (wi::helper::saveTextureToMemoryFile(x.second.GetTexture(), "KTX2", filedata))
 			{
+				x.second = wi::resourcemanager::Load(x.first, wi::resourcemanager::Flags::NONE, filedata.data(), filedata.size());
 				x.second.SetFileData(std::move(filedata));
-				wi::vector<uint8_t> filedata_ktx2;
-				if (wi::helper::saveTextureToMemoryFile(x.second.GetFileData(), x.second.GetTexture().desc, "KTX2", filedata_ktx2))
-				{
-					x.second = wi::resourcemanager::Load(x.first, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA, filedata_ktx2.data(), filedata_ktx2.size());
-				}
 			}
 		}
 

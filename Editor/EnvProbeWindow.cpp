@@ -106,7 +106,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 			wi::helper::FileDialog(params, [=](std::string fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 
-					wi::Resource resource = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					wi::Resource resource = wi::resourcemanager::Load(fileName);
 					if (has_flag(resource.GetTexture().GetDesc().misc_flags, wi::graphics::ResourceMiscFlag::TEXTURECUBE))
 					{
 						probe->textureName = fileName;

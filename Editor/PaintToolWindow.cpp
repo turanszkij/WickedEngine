@@ -313,7 +313,7 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 				// Register into resource manager:
 				material->textures[sel].resource = wi::resourcemanager::Load(
 					material->textures[sel].name,
-					wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA,
+					wi::resourcemanager::Flags::NONE,
 					texturefiledata.data(),
 					texturefiledata.size()
 				);
@@ -550,7 +550,7 @@ void PaintToolWindow::Update(float dt)
 		{
 		case MODE_TEXTURE:
 		{
-			wi::primitive::Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor->renderPath, camera);
+			Ray pickRay = editor->pickRay;
 			brushIntersect = wi::scene::Pick(pickRay, ~0u, ~0u, scene);
 
 			ObjectComponent* object = scene.objects.GetComponent(brushIntersect.entity);
@@ -670,7 +670,7 @@ void PaintToolWindow::Update(float dt)
 
 		case MODE_TERRAIN_MATERIAL:
 		{
-			Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor->renderPath, camera);
+			Ray pickRay = editor->pickRay;
 			brushIntersect = wi::scene::Pick(pickRay, wi::enums::FILTER_TERRAIN, ~0u, scene);
 			if (brushIntersect.entity == INVALID_ENTITY)
 				break;
@@ -769,7 +769,7 @@ void PaintToolWindow::Update(float dt)
 		case MODE_VERTEXCOLOR:
 		case MODE_WIND:
 		{
-			Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor->renderPath, camera);
+			Ray pickRay = editor->pickRay;
 			brushIntersect = wi::scene::Pick(pickRay, wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
 			if (brushIntersect.entity == INVALID_ENTITY)
 				break;
@@ -940,7 +940,7 @@ void PaintToolWindow::Update(float dt)
 		case MODE_SCULPTING_ADD:
 		case MODE_SCULPTING_SUBTRACT:
 		{
-			Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor->renderPath, camera);
+			Ray pickRay = editor->pickRay;
 			brushIntersect = wi::scene::Pick(pickRay, terrain_only ? wi::enums::FILTER_TERRAIN : wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
 			if (brushIntersect.entity == INVALID_ENTITY)
 				break;
@@ -1147,7 +1147,7 @@ void PaintToolWindow::Update(float dt)
 		case MODE_SOFTBODY_PINNING:
 		case MODE_SOFTBODY_PHYSICS:
 		{
-			Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor->renderPath, camera);
+			Ray pickRay = editor->pickRay;
 			brushIntersect = wi::scene::Pick(pickRay, wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
 			if (brushIntersect.entity == INVALID_ENTITY)
 				break;
@@ -1255,7 +1255,7 @@ void PaintToolWindow::Update(float dt)
 		case MODE_HAIRPARTICLE_REMOVE_TRIANGLE:
 		case MODE_HAIRPARTICLE_LENGTH:
 		{
-			Ray pickRay = wi::renderer::GetPickRay((long)pos.x, (long)pos.y, *editor->renderPath, camera);
+			Ray pickRay = editor->pickRay;
 			brushIntersect = wi::scene::Pick(pickRay, wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
 			if (brushIntersect.entity == INVALID_ENTITY)
 				break;
