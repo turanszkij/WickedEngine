@@ -1,3 +1,12 @@
+The following license (MIT) applies to WickedEngine's main code. Third party code
+may be licensed under different terms (see third_party_software.txt). Except
+for dxil.dll/libdxil.so, all those licenses are OSI approved. The files
+dxil.dll and libdxil.so are licensed under a free but proprietary license,
+but are only needed during development (compiling DX12 shaders). Any build of
+WickedEngine that doesn't require on-the-fly compiling of DX12 shaders does
+not depend on proprietary code.
+
+
 Copyright (c) 2024 Turánszki János
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
