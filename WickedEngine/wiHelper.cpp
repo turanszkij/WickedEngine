@@ -25,19 +25,8 @@
 #if defined(_WIN32)
 #include <direct.h>
 #include <Psapi.h> // GetProcessMemoryInfo
-#ifdef PLATFORM_UWP
-#include <winrt/Windows.UI.Popups.h>
-#include <winrt/Windows.Storage.h>
-#include <winrt/Windows.Storage.Pickers.h>
-#include <winrt/Windows.Storage.AccessCache.h>
-#include <winrt/Windows.Storage.Streams.h>
-#include <winrt/Windows.Foundation.h>
-#include <winrt/Windows.Foundation.Collections.h>
-#include <winrt/Windows.System.h>
-#else
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
-#endif // PLATFORM_UWP
 #elif defined(PLATFORM_PS5)
 #else
 #include "Utility/portable-file-dialogs.h"
@@ -72,16 +61,6 @@ namespace wi::helper
 #ifdef PLATFORM_WINDOWS_DESKTOP
 		MessageBoxA(GetActiveWindow(), msg.c_str(), caption.c_str(), 0);
 #endif // PLATFORM_WINDOWS_DESKTOP
-
-#ifdef PLATFORM_UWP
-		std::wstring wmessage, wcaption;
-		StringConvert(msg, wmessage);
-		StringConvert(caption, wcaption);
-		// UWP can only show message box on main thread:
-		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-			winrt::Windows::UI::Popups::MessageDialog(wmessage, wcaption).ShowAsync();
-			});
-#endif // PLATFORM_UWP
 
 #ifdef SDL2
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, caption.c_str(), msg.c_str(), NULL);
@@ -970,16 +949,6 @@ namespace wi::helper
 			return;
 		}
 
-#ifdef PLATFORM_UWP
-
-		size_t found = path.rfind(rootdir);
-		if (found != std::string::npos)
-		{
-			path = path.substr(found + rootdir.length());
-		}
-
-#else
-
 		std::filesystem::path filepath = ToNativeString(path);
 		if (filepath.is_absolute())
 		{
@@ -990,8 +959,6 @@ namespace wi::helper
 				path = relative.generic_u8string();
 			}
 		}
-
-#endif // PLATFORM_UWP
 
 	}
 
@@ -1012,7 +979,6 @@ namespace wi::helper
 	template<template<typename T, typename A> typename vector_interface>
 	bool FileRead_Impl(const std::string& fileName, vector_interface<uint8_t, std::allocator<uint8_t>>& data, size_t max_read, size_t offset)
 	{
-#ifndef PLATFORM_UWP
 #if defined(PLATFORM_LINUX) || defined(PLATFORM_PS5)
 		std::string filepath = fileName;
 		std::replace(filepath.begin(), filepath.end(), '\\', '/'); // Linux cannot handle backslash in file path, need to convert it to forward slash
@@ -1020,6 +986,7 @@ namespace wi::helper
 #else
 		std::ifstream file(ToNativeString(fileName), std::ios::binary | std::ios::ate);
 #endif // PLATFORM_LINUX || PLATFORM_PS5
+
 		if (file.is_open())
 		{
 			size_t dataSize = (size_t)file.tellg() - offset;
@@ -1030,60 +997,6 @@ namespace wi::helper
 			file.close();
 			return true;
 		}
-#else
-		using namespace winrt::Windows::Storage;
-		using namespace winrt::Windows::Storage::Streams;
-		using namespace winrt::Windows::Foundation;
-		std::wstring wstr;
-		std::filesystem::path filepath = fileName;
-		filepath = std::filesystem::absolute(filepath);
-		StringConvert(filepath.string(), wstr);
-		bool success = false;
-
-		auto async_helper = [&]() -> IAsyncAction {
-			try
-			{
-				auto file = co_await StorageFile::GetFileFromPathAsync(wstr);
-				auto buffer = co_await FileIO::ReadBufferAsync(file);
-				auto reader = DataReader::FromBuffer(buffer);
-				size_t dataSize = (size_t)buffer.Length();
-				dataSize = std::min(dataSize, max_read);
-				data.resize((size_t)dataSize);
-				for (auto& x : data)
-				{
-					x = reader.ReadByte();
-				}
-				success = true;
-			}
-			catch (winrt::hresult_error const& ex)
-			{
-				switch (ex.code())
-				{
-				case E_ACCESSDENIED:
-					wi::backlog::post("Opening file failed: " + fileName + " | Reason: Permission Denied!");
-					break;
-				default:
-					break;
-				}
-			}
-
-		};
-
-		if (winrt::impl::is_sta_thread())
-		{
-			std::thread([&] { async_helper().get(); }).join(); // can't block coroutine from ui thread
-		}
-		else
-		{
-			async_helper().get();
-		}
-
-		if (success)
-		{
-			return true;
-		}
-
-#endif // PLATFORM_UWP
 
 		wi::backlog::post("File not found: " + fileName, wi::backlog::LogLevel::Warning);
 		return false;
@@ -1106,7 +1019,6 @@ namespace wi::helper
 			return false;
 		}
 
-#ifndef PLATFORM_UWP
 		std::ofstream file(ToNativeString(fileName), std::ios::binary | std::ios::trunc);
 		if (file.is_open())
 		{
@@ -1114,158 +1026,20 @@ namespace wi::helper
 			file.close();
 			return true;
 		}
-#else
-
-		using namespace winrt::Windows::Storage;
-		using namespace winrt::Windows::Storage::Streams;
-		using namespace winrt::Windows::Foundation;
-		std::wstring wstr;
-		std::filesystem::path filepath = fileName;
-		filepath = std::filesystem::absolute(filepath);
-		StringConvert(filepath.string(), wstr);
-
-		CREATEFILE2_EXTENDED_PARAMETERS params = {};
-		params.dwSize = (DWORD)size;
-		params.dwFileAttributes = FILE_ATTRIBUTE_NORMAL;
-		HANDLE filehandle = CreateFile2FromAppW(wstr.c_str(), GENERIC_READ | GENERIC_WRITE, 0, CREATE_ALWAYS, &params);
-		assert(filehandle);
-		CloseHandle(filehandle);
-
-		bool success = false;
-		auto async_helper = [&]() -> IAsyncAction {
-			try
-			{
-				auto file = co_await StorageFile::GetFileFromPathAsync(wstr);
-				winrt::array_view<const uint8_t> dataarray(data, (winrt::array_view<const uint8_t>::size_type)size);
-				co_await FileIO::WriteBytesAsync(file, dataarray);
-				success = true;
-			}
-			catch (winrt::hresult_error const& ex)
-			{
-				switch (ex.code())
-				{
-				case E_ACCESSDENIED:
-					wi::backlog::post("Opening file failed: " + fileName + " | Reason: Permission Denied!");
-					break;
-				default:
-					break;
-				}
-			}
-
-		};
-
-		if (winrt::impl::is_sta_thread())
-		{
-			std::thread([&] { async_helper().get(); }).join(); // can't block coroutine from ui thread
-		}
-		else
-		{
-			async_helper().get();
-		}
-
-		if (success)
-		{
-			return true;
-		}
-#endif // PLATFORM_UWP
 
 		return false;
 	}
 
 	bool FileExists(const std::string& fileName)
 	{
-#ifndef PLATFORM_UWP
 		bool exists = std::filesystem::exists(ToNativeString(fileName));
 		return exists;
-#else
-		using namespace winrt::Windows::Storage;
-		using namespace winrt::Windows::Storage::Streams;
-		using namespace winrt::Windows::Foundation;
-		std::wstring wstr;
-		std::filesystem::path filepath = fileName;
-		filepath = std::filesystem::absolute(filepath);
-		StringConvert(filepath.string(), wstr);
-		bool success = false;
-
-		auto async_helper = [&]() -> IAsyncAction {
-			try
-			{
-				auto file = co_await StorageFile::GetFileFromPathAsync(wstr);
-				success = true;
-			}
-			catch (winrt::hresult_error const& ex)
-			{
-				switch (ex.code())
-				{
-				case E_ACCESSDENIED:
-					wi::backlog::post("Opening file failed: " + fileName + " | Reason: Permission Denied!");
-					break;
-				default:
-					break;
-				}
-			}
-
-		};
-
-		if (winrt::impl::is_sta_thread())
-		{
-			std::thread([&] { async_helper().get(); }).join(); // can't block coroutine from ui thread
-		}
-		else
-		{
-			async_helper().get();
-		}
-
-		return success;
-#endif // PLATFORM_UWP
 	}
 
 	bool DirectoryExists(const std::string& fileName)
 	{
-#ifndef PLATFORM_UWP
 		bool exists = std::filesystem::exists(ToNativeString(fileName));
 		return exists;
-#else
-		using namespace winrt::Windows::Storage;
-		using namespace winrt::Windows::Storage::Streams;
-		using namespace winrt::Windows::Foundation;
-		std::wstring wstr;
-		std::filesystem::path filepath = fileName;
-		filepath = std::filesystem::absolute(filepath);
-		StringConvert(filepath.string(), wstr);
-		bool success = false;
-
-		auto async_helper = [&]() -> IAsyncAction {
-			try
-			{
-				auto file = co_await StorageFolder::GetFolderFromPathAsync(wstr);
-				success = true;
-			}
-			catch (winrt::hresult_error const& ex)
-			{
-				switch (ex.code())
-				{
-				case E_ACCESSDENIED:
-					wi::backlog::post("Opening folder failed: " + fileName + " | Reason: Permission Denied!");
-					break;
-				default:
-					break;
-				}
-			}
-
-			};
-
-		if (winrt::impl::is_sta_thread())
-		{
-			std::thread([&] { async_helper().get(); }).join(); // can't block coroutine from ui thread
-		}
-		else
-		{
-			async_helper().get();
-		}
-
-		return success;
-#endif // PLATFORM_UWP
 	}
 
 	uint64_t FileTimestamp(const std::string& fileName)
@@ -1389,81 +1163,6 @@ namespace wi::helper
 
 			}).detach();
 #endif // PLATFORM_WINDOWS_DESKTOP
-
-#ifdef PLATFORM_UWP
-		auto filedialoghelper = [](FileDialogParams params, std::function<void(std::string fileName)> onSuccess) -> winrt::fire_and_forget {
-
-			using namespace winrt::Windows::Storage;
-			using namespace winrt::Windows::Storage::Pickers;
-			using namespace winrt::Windows::Storage::AccessCache;
-
-			switch (params.type)
-			{
-			default:
-			case FileDialogParams::OPEN:
-			{
-				FileOpenPicker picker;
-				picker.ViewMode(PickerViewMode::List);
-				picker.SuggestedStartLocation(PickerLocationId::Objects3D);
-
-				for (auto& x : params.extensions)
-				{
-					std::wstring wstr;
-					StringConvert(x, wstr);
-					wstr = L"." + wstr;
-					picker.FileTypeFilter().Append(wstr);
-				}
-
-				auto file = co_await picker.PickSingleFileAsync();
-
-				if (file)
-				{
-					auto futureaccess = StorageApplicationPermissions::FutureAccessList();
-					futureaccess.Clear();
-					futureaccess.Add(file);
-					std::wstring wstr = file.Path().data();
-					std::string str;
-					StringConvert(wstr, str);
-
-					onSuccess(str);
-				}
-			}
-			break;
-			case FileDialogParams::SAVE:
-			{
-				FileSavePicker picker;
-				picker.SuggestedStartLocation(PickerLocationId::Objects3D);
-
-				std::wstring wdesc;
-				StringConvert(params.description, wdesc);
-				winrt::Windows::Foundation::Collections::IVector<winrt::hstring> extensions{ winrt::single_threaded_vector<winrt::hstring>() };
-				for (auto& x : params.extensions)
-				{
-					std::wstring wstr;
-					StringConvert(x, wstr);
-					wstr = L"." + wstr;
-					extensions.Append(wstr);
-				}
-				picker.FileTypeChoices().Insert(wdesc, extensions);
-
-				auto file = co_await picker.PickSaveFileAsync();
-				if (file)
-				{
-					auto futureaccess = StorageApplicationPermissions::FutureAccessList();
-					futureaccess.Clear();
-					futureaccess.Add(file);
-					std::wstring wstr = file.Path().data();
-					std::string str;
-					StringConvert(wstr, str);
-					onSuccess(str);
-				}
-			}
-			break;
-			}
-		};
-		filedialoghelper(params, onSuccess);
-
-#endif // PLATFORM_UWP
 
 #ifdef PLATFORM_LINUX
 		if (!pfd::settings::available()) {
@@ -1703,10 +1402,6 @@ namespace wi::helper
 
 	void OpenUrl(const std::string& url)
 	{
-#ifdef PLATFORM_UWP
-		winrt::Windows::System::Launcher::LaunchUriAsync(winrt::Windows::Foundation::Uri(winrt::to_hstring(url)));
-		return;
-#endif // PLATFORM_UWP
 
 #ifdef PLATFORM_WINDOWS_DESKTOP
 		std::string op = "start \"\" \"" + url + "\"";

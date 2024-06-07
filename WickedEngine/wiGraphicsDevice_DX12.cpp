@@ -53,11 +53,6 @@ namespace dx12_internal
 	static PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer = nullptr;
 #endif // PLATFORM_WINDOWS_DESKTOP
 
-#ifdef PLATFORM_UWP
-#pragma comment(lib,"d3d12.lib")
-#pragma comment(lib,"dxgi.lib")
-#endif // PLATFORM_UWP
-
 	// Engine -> Native converters
 	constexpr uint32_t _ParseColorWriteMask(ColorWrite value)
 	{

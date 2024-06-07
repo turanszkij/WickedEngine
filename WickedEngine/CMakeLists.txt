@@ -199,7 +199,6 @@ add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
 	wiNetwork_BindLua.cpp
 	wiNetwork_Linux.cpp
 	wiNetwork_Windows.cpp
-	wiNetwork_UWP.cpp
 	wiOcean.cpp
 	wiPhysics_Bullet.cpp
 	wiPhysics_BindLua.cpp

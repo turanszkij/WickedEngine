@@ -13,14 +13,6 @@
 #include <windows.h>
 #include <tchar.h>
 
-#if WINAPI_FAMILY == WINAPI_FAMILY_APP
-#define PLATFORM_UWP
-#define wiLoadLibrary(name) LoadPackagedLibrary(_T(name),0)
-#define wiGetProcAddress(handle,name) GetProcAddress(handle, name)
-#include <winrt/Windows.UI.Core.h>
-#include <winrt/Windows.Graphics.Display.h>
-#include <winrt/Windows.ApplicationModel.Core.h>
-#else
 #if WINAPI_FAMILY == WINAPI_FAMILY_GAMES
 #define PLATFORM_XBOX
 #else
@@ -28,7 +20,6 @@
 #endif // WINAPI_FAMILY_GAMES
 #define wiLoadLibrary(name) LoadLibraryA(name)
 #define wiGetProcAddress(handle,name) GetProcAddress(handle, name)
-#endif // WINAPI_FAMILY_APP
 #elif defined(__SCE__)
 #define PLATFORM_PS5
 #else
@@ -49,11 +40,7 @@ typedef void* HMODULE;
 namespace wi::platform
 {
 #ifdef _WIN32
-#ifdef PLATFORM_UWP
-	using window_type = const winrt::Windows::UI::Core::CoreWindow*;
-#else
 	using window_type = HWND;
-#endif // PLATFORM_UWP
 #elif SDL2
 	using window_type = SDL_Window*;
 #else
@@ -63,11 +50,7 @@ namespace wi::platform
 	inline void Exit()
 	{
 #ifdef _WIN32
-#ifndef PLATFORM_UWP
 		PostQuitMessage(0);
-#else
-		winrt::Windows::ApplicationModel::Core::CoreApplication::Exit();
-#endif // PLATFORM_UWP
 #endif // _WIN32
 #ifdef SDL2
 		SDL_Event quit_event;
@@ -98,13 +81,6 @@ namespace wi::platform
 		dest->width = int(rect.right - rect.left);
 		dest->height = int(rect.bottom - rect.top);
 #endif // PLATFORM_WINDOWS_DESKTOP || PLATFORM_XBOX
-
-#ifdef PLATFORM_UWP
-		dest->dpi = winrt::Windows::Graphics::Display::DisplayInformation::GetForCurrentView().LogicalDpi();
-		float dpiscale = dest->dpi / 96.f;
-		dest->width = uint32_t(window->Bounds().Width * dpiscale);
-		dest->height = uint32_t(window->Bounds().Height * dpiscale);
-#endif // PLATFORM_UWP
 
 #ifdef PLATFORM_LINUX
 		int window_width, window_height;

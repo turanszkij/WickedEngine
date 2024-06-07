@@ -281,10 +281,6 @@ namespace wi
 			size_t container_fileoffset
 		)
 		{
-#ifdef PLATFORM_UWP
-			flags &= ~Flags::STREAMING; // disable streaming on UWP because of crappy file API that can't seek
-#endif // PLATFORM_UWP
-
 			locker.lock();
 			std::weak_ptr<ResourceInternal>& weak_resource = resources[name];
 			std::shared_ptr<ResourceInternal> resource = weak_resource.lock();

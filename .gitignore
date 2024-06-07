@@ -196,7 +196,6 @@ ModelManifest.xml
 /WickedEngine/Release_RT
 /WickedEngine/Debug_RT
 /Debug_RT/WickedEngine
-/WickedEngine/Debug_UWP
 /.vs/WickedEngine/v15
 /.vs/WickedEngine/v15
 /.vs/WickedEngine/v15/Browse.VC.db
@@ -209,11 +208,6 @@ ModelManifest.xml
 
 # CMake build cache files
 .cache/
-
-# WINRT Generated files
-/Editor/Generated Files/winrt
-/Template_UWP/Generated Files/winrt
-/WickedEngine/Generated Files/winrt
 
 *.cso
 *.wishadermeta

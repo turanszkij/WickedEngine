@@ -1826,9 +1826,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_Windows.cpp">
       <Filter>ENGINE\Network</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_UWP.cpp">
-      <Filter>ENGINE\Network</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInput.cpp">
       <Filter>ENGINE\Input</Filter>
     </ClCompile>

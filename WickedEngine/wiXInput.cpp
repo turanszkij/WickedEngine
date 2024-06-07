@@ -2,10 +2,10 @@
 
 #if __has_include("xinput.h")
 
-#if defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_UWP)
+#if defined(PLATFORM_WINDOWS_DESKTOP)
 #include <xinput.h>
 #pragma comment(lib,"xinput.lib")
-#endif // PLATFORM_WINDOWS_DESKTOP || PLATFORM_UWP
+#endif // PLATFORM_WINDOWS_DESKTOP
 
 #ifdef PLATFORM_XBOX
 #include <XInputOnGameInput.h>
