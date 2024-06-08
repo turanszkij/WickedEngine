@@ -38,6 +38,9 @@ namespace wi::math
 
 	constexpr float saturate(float x) { return std::min(std::max(x, 0.0f), 1.0f); }
 
+	template <typename T>
+	constexpr T sqr(T x) { return x * x; }
+
 	inline float Length(const XMFLOAT2& v)
 	{
 		return std::sqrt(v.x*v.x + v.y*v.y);
@@ -340,9 +343,9 @@ namespace wi::math
 	inline XMVECTOR GetQuadraticBezierPos(const XMVECTOR& a, const XMVECTOR& b, const XMVECTOR& c, float t)
 	{
 		// XMVECTOR optimized version
-		const float param0 = std::pow(1 - t, 2.0f);
+		const float param0 = sqr(1 - t);
 		const float param1 = 2 * (1 - t) * t;
-		const float param2 = std::pow(t, 2.0f);
+		const float param2 = sqr(t);
 		const XMVECTOR param = XMVectorSet(param0, param1, param2, 1);
 		const XMMATRIX M = XMMATRIX(a, b, c, XMVectorSet(0, 0, 0, 1));
 		return XMVector3TransformNormal(param, M);

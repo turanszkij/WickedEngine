@@ -40,9 +40,9 @@ namespace wi::math
 	}
 	XMFLOAT3 GetQuadraticBezierPos(const XMFLOAT3& a, const XMFLOAT3&b, const XMFLOAT3& c, float t){
 		float param0, param1, param2;
-		param0 = powf(1 - t, 2);
-		param1 = 2 * (1 - t)*t;
-		param2 = powf(t, 2);
+		param0 = sqr(1 - t);
+		param1 = 2 * (1 - t) * t;
+		param2 = sqr(t);
 		float x = param0*a.x + param1*b.x + param2*c.x;
 		float y = param0*a.y + param1*b.y + param2*c.y;
 		float z = param0*a.z + param1*b.z + param2*c.z;

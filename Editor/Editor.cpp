@@ -2185,6 +2185,7 @@ void EditorComponent::Update(float dt)
 
 	componentsWnd.emitterWnd.UpdateData();
 	componentsWnd.hairWnd.UpdateData();
+	componentsWnd.humanoidWnd.UpdateHumanoids();
 
 	// Follow camera proxy:
 	if (cameraWnd.followCheckBox.IsEnabled() && cameraWnd.followCheckBox.GetCheck())

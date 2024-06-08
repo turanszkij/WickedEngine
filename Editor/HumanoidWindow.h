@@ -26,7 +26,8 @@ public:
 	wi::gui::Slider ragdollHeadSizeSlider;
 	wi::gui::TreeList boneList;
 
-	void Update(const wi::Canvas& canvas, float dt) override;
 	void ResizeLayout() override;
+
+	void UpdateHumanoids();
 };
 

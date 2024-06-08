@@ -741,11 +741,11 @@ namespace dds
 		// returns the size of a specific mipmap in bytes
 		constexpr unsigned long long mip_size(unsigned mip) const
 		{
-			const unsigned bpe = bits_per_element();
-			const unsigned blocksize = block_size();
-			unsigned num_blocks_x = (width() + blocksize - 1) / blocksize;
-			unsigned num_blocks_y = (height() + blocksize - 1) / blocksize;
-			unsigned num_elements_z = depth();
+			const unsigned long long bpe = bits_per_element();
+			const unsigned long long blocksize = block_size();
+			unsigned long long num_blocks_x = (width() + blocksize - 1) / blocksize;
+			unsigned long long num_blocks_y = (height() + blocksize - 1) / blocksize;
+			unsigned long long num_elements_z = depth();
 			num_blocks_x >>= mip;
 			num_blocks_y >>= mip;
 			num_elements_z >>= mip;
@@ -797,24 +797,24 @@ namespace dds
 		// returns the size of one row in a specific mip level in bytes
 		constexpr unsigned row_pitch(unsigned mip) const
 		{
-			const unsigned bpe = bits_per_element();
-			const unsigned blocksize = block_size();
-			unsigned num_blocks_x = (width() + blocksize - 1) / blocksize;
+			const unsigned long long bpe = bits_per_element();
+			const unsigned long long blocksize = block_size();
+			unsigned long long num_blocks_x = (width() + blocksize - 1) / blocksize;
 			num_blocks_x >>= mip;
 			num_blocks_x = num_blocks_x < 1 ? 1 : num_blocks_x;
-			return num_blocks_x * bpe / 8;
+			return unsigned(num_blocks_x * bpe / 8);
 		}
 		// returns the size of a specific slice at a specific mip level in bytes
 		constexpr unsigned slice_pitch(unsigned mip) const
 		{
-			const unsigned blocksize = block_size();
-			unsigned num_blocks_y = (width() + blocksize - 1) / blocksize;
-			unsigned num_elements_z = depth();
+			const unsigned long long blocksize = block_size();
+			unsigned long long num_blocks_y = (width() + blocksize - 1) / blocksize;
+			unsigned long long num_elements_z = depth();
 			num_blocks_y >>= mip;
 			num_elements_z >>= mip;
 			num_blocks_y = num_blocks_y < 1 ? 1 : num_blocks_y;
 			num_elements_z = num_elements_z < 1 ? 1 : num_elements_z;
-			return row_pitch(mip) * num_blocks_y * num_elements_z;
+			return unsigned(row_pitch(mip) * num_blocks_y * num_elements_z);
 		}
 	};
 
