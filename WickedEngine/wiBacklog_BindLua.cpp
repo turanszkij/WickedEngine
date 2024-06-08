@@ -1,6 +1,7 @@
 #include "wiBacklog_BindLua.h"
 #include "wiBacklog.h"
 #include "wiLua.h"
+#include "wiMath_BindLua.h"
 
 #include <string>
 
@@ -34,6 +35,27 @@ namespace wi::lua::backlog
 			}
 			else if (wi::lua::SIsNil(L, i)) {
 				ss += "nil";
+			}
+			else
+			{
+				Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, i);
+				if (vec != nullptr)
+				{
+					ss += "Vector(" + std::to_string(vec->data.x) + ", " + std::to_string(vec->data.y) + ", " + std::to_string(vec->data.z) + ", " + std::to_string(vec->data.w) + ")";
+				}
+				else
+				{
+					Matrix_BindLua* mat = Luna<Matrix_BindLua>::lightcheck(L, i);
+					if (mat != nullptr)
+					{
+						ss += "Matrix(\n";
+						ss += "\t" + std::to_string(mat->data._11) + ", " + std::to_string(mat->data._12) + ", " + std::to_string(mat->data._13) + ", " + std::to_string(mat->data._14) + "\n";
+						ss += "\t" + std::to_string(mat->data._21) + ", " + std::to_string(mat->data._22) + ", " + std::to_string(mat->data._23) + ", " + std::to_string(mat->data._24) + "\n";
+						ss += "\t" + std::to_string(mat->data._31) + ", " + std::to_string(mat->data._32) + ", " + std::to_string(mat->data._33) + ", " + std::to_string(mat->data._34) + "\n";
+						ss += "\t" + std::to_string(mat->data._41) + ", " + std::to_string(mat->data._42) + ", " + std::to_string(mat->data._43) + ", " + std::to_string(mat->data._44) + "\n";
+						ss += ")";
+					}
+				}
 			}
 		}
 
