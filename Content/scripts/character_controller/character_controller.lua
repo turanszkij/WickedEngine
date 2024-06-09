@@ -317,6 +317,8 @@ local function Character(model_entity, start_position, face, controllable, anim_
 		face_next = Vector(0,0,1), -- forward direction in current frame
 		movement_velocity = Vector(),
 		velocity = Vector(),
+		leaning_next = 0, -- leaning sideways when turning
+		leaning = 0, -- leaning sideways when turning (smoothed)
 		savedPointerPos = Vector(),
 		walk_speed = 0.1,
 		jog_speed = 0.2,
@@ -435,7 +437,7 @@ local function Character(model_entity, start_position, face, controllable, anim_
 		end,
 		MoveDirection = function(self,dir)
 			local rotation_matrix = matrix.Multiply(matrix.RotationY(self.target_rot_horizontal), matrix.RotationX(self.target_rot_vertical))
-			dir = vector.Transform(dir.Normalize(), rotation_matrix)
+			dir = vector.TransformNormal(dir.Normalize(), rotation_matrix)
 			dir.SetY(0)
 			local dot = vector.Dot(self.face, dir)
 			if(dot < 0) then
@@ -465,10 +467,12 @@ local function Character(model_entity, start_position, face, controllable, anim_
 			local humanoid = scene.Component_GetHumanoid(self.humanoid)
 			humanoid.SetLookAtEnabled(false)
 
+			local face_rotation = matrix.LookTo(Vector(),self.face)
+
 			local model_transform = scene.Component_GetTransform(self.model)
 			local savedPos = model_transform.GetPosition()
 			model_transform.ClearTransform()
-			model_transform.MatrixTransform(matrix.LookTo(Vector(),self.face):Inverse())
+			model_transform.MatrixTransform(matrix.Inverse(face_rotation))
 			model_transform.Scale(self.scale)
 			model_transform.Rotate(self.rotation)
 			model_transform.Translate(savedPos)
@@ -765,6 +769,8 @@ local function Character(model_entity, start_position, face, controllable, anim_
 				self.face = vector.Lerp(self.face, self.face_next, 0.1) -- smooth the turning in fixed update
 				self.face.SetY(0)
 				self.face = self.face.Normalize()
+				self.leaning_next = math.lerp(self.leaning_next, vector.TransformNormal(vector.Subtract(self.face_next, self.face), face_rotation).GetX() * self.velocity.Length() * 0.08, 0.05)
+				self.leaning = math.lerp(self.leaning, self.leaning_next, 0.05)
 
 				-- Animation blending
 				if current_anim ~= nil then
@@ -790,6 +796,7 @@ local function Character(model_entity, start_position, face, controllable, anim_
 			end
 
 			model_transform.Translate(vector.Subtract(capsulepos, original_capsulepos)) -- transform by the capsule offset
+			model_transform.Rotate(Vector(0, 0, self.leaning * math.pi))
 			model_transform.UpdateTransform()
 
 			self.movement_velocity = Vector()
