@@ -1241,7 +1241,8 @@ void ComponentsWindow::RefreshEntityTree()
 	//	Note that PushToEntityTree will add children recursively, so this is all we need
 	for (auto& x : entitytree_temp_items)
 	{
-		if (!scene.hierarchy.Contains(x))
+		const HierarchyComponent* hier = scene.hierarchy.GetComponent(x);
+		if (hier == nullptr || hier->parentID == INVALID_ENTITY)
 		{
 			PushToEntityTree(x, 0);
 		}

@@ -1228,7 +1228,7 @@ namespace wi
 				};
 			}
 
-			if (!resource->filedata.empty() && !has_flag(flags, Flags::IMPORT_RETAIN_FILEDATA) && !has_flag(flags, Flags::IMPORT_DELAY))
+			if (!resource->filedata.empty() && !has_flag(resource->flags, Flags::IMPORT_RETAIN_FILEDATA) && !has_flag(flags, Flags::IMPORT_RETAIN_FILEDATA) && !has_flag(flags, Flags::IMPORT_DELAY))
 			{
 				// file data can be discarded:
 				resource->filedata.clear();
