@@ -1079,14 +1079,14 @@ void EditorComponent::Update(float dt)
 		}
 	}
 
+	if (!wi::backlog::isActive() && paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED)
+	{
+		translator.Update(camera, currentMouse, *renderPath);
+	}
+
 	// Camera control:
 	if (!wi::backlog::isActive() && !GetGUI().HasFocus())
 	{
-		if (paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED)
-		{
-			translator.Update(camera, currentMouse, *renderPath);
-		}
-
 		deleting = wi::input::Press(wi::input::KEYBOARD_BUTTON_DELETE);
 		currentMouse = wi::input::GetPointer();
 		if (camControlStart)
