@@ -341,12 +341,7 @@ namespace wi
 			{
 				if (resource->filedata.empty())
 				{
-					if (wi::helper::FileRead(resource->container_filename, resource->filedata, resource->container_filesize, resource->container_fileoffset))
-					{
-						resource->container_fileoffset = 0;
-						resource->container_filesize = resource->filedata.size();
-					}
-					else
+					if (!wi::helper::FileRead(resource->container_filename, resource->filedata, resource->container_filesize, resource->container_fileoffset))
 					{
 						resource.reset();
 						return Resource();
@@ -355,6 +350,8 @@ namespace wi
 				filedata = resource->filedata.data();
 				filesize = resource->filedata.size();
 			}
+
+			flags |= resource->flags;
 
 			bool success = false;
 
@@ -1228,7 +1225,7 @@ namespace wi
 				};
 			}
 
-			if (!resource->filedata.empty() && !has_flag(resource->flags, Flags::IMPORT_RETAIN_FILEDATA) && !has_flag(flags, Flags::IMPORT_RETAIN_FILEDATA) && !has_flag(flags, Flags::IMPORT_DELAY))
+			if (!resource->filedata.empty() && !has_flag(flags, Flags::IMPORT_RETAIN_FILEDATA) && !has_flag(flags, Flags::IMPORT_DELAY))
 			{
 				// file data can be discarded:
 				resource->filedata.clear();
@@ -1496,7 +1493,6 @@ namespace wi
 			struct TempResource
 			{
 				std::string name;
-				Flags flags = Flags::NONE;
 				const uint8_t* filedata = nullptr;
 				size_t filesize = 0;
 			};
@@ -1513,7 +1509,9 @@ namespace wi
 				archive >> resource.name;
 				uint32_t flags_temp;
 				archive >> flags_temp;
-				resource.flags = (Flags)flags_temp;
+				// Note: flags not applied here, but they must be read
+				//	We don't apply the flags, because they will be requested later by for example materials
+				//	If we would apply flags here, then flags from previous session would be applied, that maybe we no longer want (for example RETAIN_FILEDATA)
 
 				// We don't read the file data from archive into a vector like usual, instead map the vector,
 				//  this is much faster and we don't need to retain this data after archive lifetime
@@ -1522,8 +1520,6 @@ namespace wi
 				size_t file_offset = archive.GetPos() - resource.filesize;
 
 				resource.name = archive.GetSourceDirectory() + resource.name;
-				resource.flags |= Flags::IMPORT_DELAY; // delay resource creation, to be able to receive additional flags (this way only file data is loaded)
-				resource.flags &= ~Flags::IMPORT_RETAIN_FILEDATA; // don't need to retain file data, we will keep it alive through the whole serialization
 
 				if (Contains(resource.name))
 					continue;
@@ -1533,7 +1529,7 @@ namespace wi
 					auto& tmp_resource = temp_resources[i];
 					auto res = Load(
 						tmp_resource.name,
-						tmp_resource.flags,
+						Flags::IMPORT_DELAY,
 						tmp_resource.filedata,
 						tmp_resource.filesize,
 						archive.GetSourceFileName(),
