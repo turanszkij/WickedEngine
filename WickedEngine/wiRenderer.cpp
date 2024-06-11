@@ -14621,10 +14621,14 @@ void Postprocess_LightShafts(
 }
 void CreateDepthOfFieldResources(DepthOfFieldResources& res, XMUINT2 resolution)
 {
+	XMUINT2 tile_count = {};
+	tile_count.x = (resolution.x + DEPTHOFFIELD_TILESIZE - 1) / DEPTHOFFIELD_TILESIZE;
+	tile_count.y = (resolution.y + DEPTHOFFIELD_TILESIZE - 1) / DEPTHOFFIELD_TILESIZE;
+
 	TextureDesc tile_desc;
 	tile_desc.type = TextureDesc::Type::TEXTURE_2D;
-	tile_desc.width = (resolution.x + DEPTHOFFIELD_TILESIZE - 1) / DEPTHOFFIELD_TILESIZE;
-	tile_desc.height = (resolution.y + DEPTHOFFIELD_TILESIZE - 1) / DEPTHOFFIELD_TILESIZE;
+	tile_desc.width = tile_count.x;
+	tile_desc.height = tile_count.y;
 	tile_desc.format = Format::R16G16_FLOAT;
 	tile_desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 	device->CreateTexture(&tile_desc, nullptr, &res.texture_tilemax);
@@ -14632,7 +14636,7 @@ void CreateDepthOfFieldResources(DepthOfFieldResources& res, XMUINT2 resolution)
 	tile_desc.format = Format::R16_FLOAT;
 	device->CreateTexture(&tile_desc, nullptr, &res.texture_tilemin);
 
-	tile_desc.height = resolution.x;
+	tile_desc.height = resolution.y;
 	tile_desc.format = Format::R16G16_FLOAT;
 	device->CreateTexture(&tile_desc, nullptr, &res.texture_tilemax_horizontal);
 	tile_desc.format = Format::R16_FLOAT;
@@ -14661,7 +14665,7 @@ void CreateDepthOfFieldResources(DepthOfFieldResources& res, XMUINT2 resolution)
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tile_statistics);
 
 	bufferdesc.stride = sizeof(uint);
-	bufferdesc.size = tile_desc.width * tile_desc.height * bufferdesc.stride;
+	bufferdesc.size = tile_count.x * tile_count.y * bufferdesc.stride;
 	bufferdesc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 	bufferdesc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_earlyexit);
@@ -15057,22 +15061,23 @@ void Postprocess_Outline(
 }
 void CreateMotionBlurResources(MotionBlurResources& res, XMUINT2 resolution)
 {
+	XMUINT2 tile_count = {};
+	tile_count.x = (resolution.x + MOTIONBLUR_TILESIZE - 1) / MOTIONBLUR_TILESIZE;
+	tile_count.y = (resolution.y + MOTIONBLUR_TILESIZE - 1) / MOTIONBLUR_TILESIZE;
+
 	TextureDesc tile_desc;
 	tile_desc.type = TextureDesc::Type::TEXTURE_2D;
-	tile_desc.width = (resolution.x + MOTIONBLUR_TILESIZE - 1) / MOTIONBLUR_TILESIZE;
-	tile_desc.height = (resolution.y + MOTIONBLUR_TILESIZE - 1) / MOTIONBLUR_TILESIZE;
 	tile_desc.format = Format::R16G16_FLOAT;
 	tile_desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+
+	tile_desc.width = tile_count.x;
+	tile_desc.height = tile_count.y;
 	device->CreateTexture(&tile_desc, nullptr, &res.texture_tilemax);
+	device->CreateTexture(&tile_desc, nullptr, &res.texture_tilemin);
 	device->CreateTexture(&tile_desc, nullptr, &res.texture_neighborhoodmax);
 
-	tile_desc.format = Format::R16_FLOAT;
-	device->CreateTexture(&tile_desc, nullptr, &res.texture_tilemin);
-
-	tile_desc.format = Format::R16G16_FLOAT;
 	tile_desc.height = resolution.y;
 	device->CreateTexture(&tile_desc, nullptr, &res.texture_tilemax_horizontal);
-	tile_desc.format = Format::R16_FLOAT;
 	device->CreateTexture(&tile_desc, nullptr, &res.texture_tilemin_horizontal);
 
 
@@ -15084,7 +15089,7 @@ void CreateMotionBlurResources(MotionBlurResources& res, XMUINT2 resolution)
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tile_statistics);
 
 	bufferdesc.stride = sizeof(uint);
-	bufferdesc.size = tile_desc.width * tile_desc.height * bufferdesc.stride;
+	bufferdesc.size = tile_count.x * tile_count.y * bufferdesc.stride;
 	bufferdesc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 	bufferdesc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_earlyexit);

@@ -15,6 +15,11 @@ static const uint tile_replicate = sqr(MOTIONBLUR_TILESIZE / POSTPROCESS_BLOCKSI
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
+	uint2 dim;
+	output.GetDimensions(dim.x, dim.y);
+	if(any(DTid.xy >= dim))
+		return;
+
 	float max_magnitude = 0;
 	float2 max_velocity = 0;
 	float min_magnitude = 100000;

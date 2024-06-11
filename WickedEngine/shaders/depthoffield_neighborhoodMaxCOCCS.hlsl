@@ -15,11 +15,15 @@ static const uint tile_replicate = sqr(DEPTHOFFIELD_TILESIZE / 2 / POSTPROCESS_B
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
+	uint2 dim;
+	output.GetDimensions(dim.x, dim.y);
+	if(any(DTid.xy >= dim))
+		return;
+
 	float min_depth = 1;
 	float max_coc = 0;
 	float min_coc = 1000000;
-
-	int2 dim;
+	
 	tile_mindepth_maxcoc.GetDimensions(dim.x, dim.y);
 
 	for (int x = -1; x <= 1; ++x)
