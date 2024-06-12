@@ -6809,9 +6809,9 @@ namespace wi::scene
 					break;
 				}
 			}
-			if (!child_found && parent_spring != nullptr)
+			if (!child_found)
 			{
-				// No child, try to guess tail position compared to parent (if it has parent):
+				// No child, try to guess tail position compared to parent:
 				const XMVECTOR parent_pos = parentWorldMatrix.r[3];
 				const XMVECTOR ab = position_root - parent_pos;
 				tail = position_root + ab;
@@ -6882,7 +6882,7 @@ namespace wi::scene
 		XMStoreFloat3(&tail_sphere.center, tail_next);
 		tail_sphere.radius = hitRadius;
 
-		if (colliders_cpu != nullptr)
+		if (colliders_cpu != nullptr && collider_bvh.IsValid())
 		{
 			collider_bvh.Intersects(tail_sphere, 0, [&](uint32_t collider_index) {
 				if (colliders.GetCount() <= collider_index)

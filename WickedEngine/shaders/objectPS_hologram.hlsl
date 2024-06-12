@@ -6,6 +6,8 @@ float4 main(PixelInput input) : SV_TARGET
 {
 	float4 uvsets = input.GetUVSets();
 	
+	write_mipmap_feedback(push.materialIndex, ddx_coarse(uvsets), ddy_coarse(uvsets));
+	
 	float4 color;
 	[branch]
 	if (GetMaterial().textures[BASECOLORMAP].IsValid() && (GetFrame().options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)

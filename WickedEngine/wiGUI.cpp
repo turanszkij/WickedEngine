@@ -3180,7 +3180,6 @@ namespace wi::gui
 				)
 			{
 				resize_blink_timer += dt;
-				force_disable = true;
 			}
 			else
 			{

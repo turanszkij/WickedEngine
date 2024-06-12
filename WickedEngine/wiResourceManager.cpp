@@ -31,7 +31,8 @@ namespace wi
 		uint32_t mip_count = 0; // mip count of full resource
 		float min_lod_clamp_absolute = 0; // relative to mip_count of full resource
 	};
-	static constexpr size_t streaming_texture_min_size = 4096; // 4KB is the minimum texture memory alignment
+	//static constexpr size_t streaming_texture_min_size = 4096; // 4KB is the minimum texture memory alignment
+	static constexpr size_t streaming_texture_min_size = 64 * 1024; // 64KB is the usual texture memory alignment, this allows higher base tex size than 4KB
 
 	struct ResourceInternal
 	{
@@ -977,7 +978,7 @@ namespace wi
 								case 2:
 									format = Format::R16G16_UNORM;
 									bc_format = Format::BC5_UNORM;
-									swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::ONE, ComponentSwizzle::ONE };
+									swizzle = { ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::G };
 									break;
 								case 3:
 								{
@@ -1023,7 +1024,7 @@ namespace wi
 								case 2:
 									format = Format::R8G8_UNORM;
 									bc_format = Format::BC5_UNORM;
-									swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::ONE, ComponentSwizzle::ONE };
+									swizzle = { ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::G };
 									break;
 								case 3:
 								{
