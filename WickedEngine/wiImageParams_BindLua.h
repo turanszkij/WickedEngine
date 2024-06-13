@@ -33,6 +33,7 @@ namespace wi::lua
 		int IsMirrorEnabled(lua_State* L);
 		int IsBackgroundBlurEnabled(lua_State* L);
 		int IsBackgroundEnabled(lua_State* L);
+		int IsDistortionMaskEnabled(lua_State* L);
 
 		int SetPos(lua_State* L);
 		int SetSize(lua_State* L);
@@ -58,6 +59,8 @@ namespace wi::lua
 		int DisableBackgroundBlur(lua_State* L);
 		int EnableBackground(lua_State* L);
 		int DisableBackground(lua_State* L);
+		int EnableDistortionMask(lua_State* L);
+		int DisableDistortionMask(lua_State* L);
 		int SetMaskAlphaRange(lua_State* L);
 		int GetMaskAlphaRange(lua_State* L);
 

@@ -529,9 +529,9 @@ namespace wi::scene
 			constexpr void FromFULL(const wi::primitive::AABB& aabb, XMFLOAT3 pos, uint8_t wind)
 			{
 				pos = wi::math::InverseLerp(aabb._min, aabb._max, pos); // UNORM remap
-				x = uint32_t(wi::math::saturate(pos.x) * 1023.0f);
-				y = uint32_t(wi::math::saturate(pos.y) * 1023.0f);
-				z = uint32_t(wi::math::saturate(pos.z) * 1023.0f);
+				x = uint32_t(saturate(pos.x) * 1023.0f);
+				y = uint32_t(saturate(pos.y) * 1023.0f);
+				z = uint32_t(saturate(pos.z) * 1023.0f);
 				w = uint32_t((float(wind) / 255.0f) * 3);
 			}
 			inline XMVECTOR LoadPOS(const wi::primitive::AABB& aabb) const

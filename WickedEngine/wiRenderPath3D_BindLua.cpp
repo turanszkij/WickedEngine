@@ -66,6 +66,8 @@ namespace wi::lua
 		lunamethod(RenderPath3D_BindLua, SetCropRight),
 		lunamethod(RenderPath3D_BindLua, SetCropBottom),
 
+		lunamethod(RenderPath3D_BindLua, GetLastPostProcessRT),
+
 		lunamethod(RenderPath2D_BindLua, CopyFrom),
 		{ NULL, NULL }
 	};
@@ -620,6 +622,15 @@ namespace wi::lua
 	{
 		((RenderPath3D*)component)->crop_bottom = wi::lua::SGetFloat(L, 1);
 		return 0;
+	}
+
+	int RenderPath3D_BindLua::GetLastPostProcessRT(lua_State* L)
+	{
+		const wi::graphics::Texture* tex = ((RenderPath3D*)component)->GetLastPostprocessRT();
+		if (tex == nullptr)
+			return 0;
+		Luna<Texture_BindLua>::push(L, *tex);
+		return 1;
 	}
 
 static const std::string value_bindings = R"(

@@ -245,7 +245,7 @@ namespace wi::texturehelper
 
 	bool CreateTexture(
 		Texture& texture,
-		const uint8_t* data,
+		const void* data,
 		uint32_t width,
 		uint32_t height,
 		Format format,
@@ -322,7 +322,7 @@ namespace wi::texturehelper
 					const XMFLOAT2 uv = XMFLOAT2((float(x) + 0.5f) / float(width), (float(y) + 0.5f) / float(height));
 					const XMVECTOR point_on_line = wi::math::ClosestPointOnLineSegment(a, b, XMLoadFloat2(&uv));
 					const float uv_distance = XMVectorGetX(XMVector3Length(point_on_line - a));
-					float gradient = wi::math::saturate(wi::math::InverseLerp(0, distance, uv_distance));
+					float gradient = saturate(wi::math::InverseLerp(0, distance, uv_distance));
 					if (has_flag(flags, GradientFlags::Inverse))
 					{
 						gradient = 1 - gradient;
@@ -335,7 +335,7 @@ namespace wi::texturehelper
 					{
 						gradient *= perlin.compute(uv.x * perlin_scale2.x, uv.y * perlin_scale2.y, 0, perlin_octaves, perlin_persistence) * 0.5f + 0.5f;
 					}
-					gradient = wi::math::saturate(gradient);
+					gradient = saturate(gradient);
 					if (has_flag(flags, GradientFlags::R16Unorm))
 					{
 						data16[x + y * width] = uint16_t(gradient * 65535);
@@ -360,7 +360,7 @@ namespace wi::texturehelper
 				{
 					const XMFLOAT2 uv = XMFLOAT2((float(x) + 0.5f) / float(width), (float(y) + 0.5f) / float(height));
 					const float uv_distance = wi::math::Clamp(XMVectorGetX(XMVector3Length(XMLoadFloat2(&uv) - a)), 0, distance);
-					float gradient = wi::math::saturate(wi::math::InverseLerp(0, distance, uv_distance));
+					float gradient = saturate(wi::math::InverseLerp(0, distance, uv_distance));
 					if (has_flag(flags, GradientFlags::Inverse))
 					{
 						gradient = 1 - gradient;
@@ -373,7 +373,7 @@ namespace wi::texturehelper
 					{
 						gradient *= perlin.compute(uv.x * perlin_scale2.x, uv.y * perlin_scale2.y, 0, perlin_octaves, perlin_persistence) * 0.5f + 0.5f;
 					}
-					gradient = wi::math::saturate(gradient);
+					gradient = saturate(gradient);
 					if (has_flag(flags, GradientFlags::R16Unorm))
 					{
 						data16[x + y * width] = uint16_t(gradient * 65535);
@@ -410,7 +410,7 @@ namespace wi::texturehelper
 					{
 						gradient *= perlin.compute(uv.x * perlin_scale2.x, uv.y * perlin_scale2.y, 0, perlin_octaves, perlin_persistence) * 0.5f + 0.5f;
 					}
-					gradient = wi::math::saturate(gradient);
+					gradient = saturate(gradient);
 					if (has_flag(flags, GradientFlags::R16Unorm))
 					{
 						data16[x + y * width] = uint16_t(gradient * 65535);
@@ -463,6 +463,56 @@ namespace wi::texturehelper
 
 		Texture texture;
 		CreateTexture(texture, data.data(), width, height, Format::R8_UNORM, swizzle);
+		return texture;
+	}
+
+	wi::graphics::Texture CreateLensDistortionNormalMap(
+		uint32_t width,
+		uint32_t height,
+		const XMFLOAT2& uv_start,
+		float radius,
+		float squish,
+		float blend,
+		float edge_smoothness
+	)
+	{
+		XMFLOAT2 offset = XMFLOAT2(uv_start.x * 2 - 1, uv_start.y * 2 - 1);
+		float scale = 1.0f / (radius * 2);
+		float edge = 1.0f - edge_smoothness;
+
+		wi::vector<wi::Color16> data(width * height);
+		for (uint32_t y = 0; y < height; ++y)
+		{
+			for (uint32_t x = 0; x < width; ++x)
+			{
+				XMFLOAT2 uv = XMFLOAT2(float(x) / float(width - 1) * 2 - 1, float(y) / float(height - 1) * 2 - 1);
+
+				uv.x -= offset.x;
+				uv.y -= offset.y;
+				uv.x *= scale;
+				uv.y *= scale;
+
+				if (width > height)
+					uv.x *= float(width) / float(height);
+				else
+					uv.y *= float(height) / float(width);
+
+				const float d = wi::math::Length(uv);
+				const float dp = std::pow(saturate(d), squish);
+				uv.x = uv.x * dp;
+				uv.y = uv.y * dp;
+
+				XMFLOAT4 color = XMFLOAT4(uv.x * 0.5f + 0.5f, uv.y * 0.5f + 0.5f, 1, 1);
+				float s = smoothstep(1.0f, edge, d) * blend;
+				color.x = lerp(0.5f, color.x, s);
+				color.y = lerp(0.5f, color.y, s);
+				color.z = lerp(1.0f, color.z, s);
+				data[x + y * width] = wi::Color16::fromFloat4(color);
+			}
+		}
+
+		Texture texture;
+		CreateTexture(texture, data.data(), width, height, Format::R16G16B16A16_UNORM);
 		return texture;
 	}
 

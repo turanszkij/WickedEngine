@@ -20,6 +20,7 @@ namespace wi::lua
 		lunamethod(ImageParams_BindLua, IsMirrorEnabled),
 		lunamethod(ImageParams_BindLua, IsBackgroundBlurEnabled),
 		lunamethod(ImageParams_BindLua, IsBackgroundEnabled),
+		lunamethod(ImageParams_BindLua, IsDistortionMaskEnabled),
 
 		lunamethod(ImageParams_BindLua, SetPos),
 		lunamethod(ImageParams_BindLua, SetSize),
@@ -45,6 +46,8 @@ namespace wi::lua
 		lunamethod(ImageParams_BindLua, DisableBackgroundBlur),
 		lunamethod(ImageParams_BindLua, EnableBackground),
 		lunamethod(ImageParams_BindLua, DisableBackground),
+		lunamethod(ImageParams_BindLua, EnableDistortionMask),
+		lunamethod(ImageParams_BindLua, DisableDistortionMask),
 		lunamethod(ImageParams_BindLua, SetMaskAlphaRange),
 		lunamethod(ImageParams_BindLua, GetMaskAlphaRange),
 		{ nullptr, nullptr }
@@ -145,6 +148,11 @@ namespace wi::lua
 	int ImageParams_BindLua::IsBackgroundEnabled(lua_State* L)
 	{
 		wi::lua::SSetBool(L, params.isBackgroundEnabled());
+		return 1;
+	}
+	int ImageParams_BindLua::IsDistortionMaskEnabled(lua_State* L)
+	{
+		wi::lua::SSetBool(L, params.isDistortionMaskEnabled());
 		return 1;
 	}
 
@@ -431,6 +439,16 @@ namespace wi::lua
 	int ImageParams_BindLua::DisableBackground(lua_State* L)
 	{
 		params.disableBackground();
+		return 0;
+	}
+	int ImageParams_BindLua::EnableDistortionMask(lua_State* L)
+	{
+		params.enableDistortionMask();
+		return 0;
+	}
+	int ImageParams_BindLua::DisableDistortionMask(lua_State* L)
+	{
+		params.disableDistortionMask();
 		return 0;
 	}
 	int ImageParams_BindLua::SetMaskAlphaRange(lua_State* L)

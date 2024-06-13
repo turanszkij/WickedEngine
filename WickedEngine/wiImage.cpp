@@ -85,7 +85,14 @@ namespace wi::image
 		image.texture_mask_index = device->GetDescriptorIndex(params.maskMap, SubresourceType::SRV, params.mask_subresource);
 		if (params.isBackgroundEnabled())
 		{
-			image.texture_background_index = device->GetDescriptorIndex(&backgroundTexture, SubresourceType::SRV);
+			if (params.backgroundMap != nullptr)
+			{
+				image.texture_background_index = device->GetDescriptorIndex(params.backgroundMap, SubresourceType::SRV, params.background_subresource);
+			}
+			else
+			{
+				image.texture_background_index = device->GetDescriptorIndex(&backgroundTexture, SubresourceType::SRV);
+			}
 		}
 		else
 		{
@@ -151,6 +158,10 @@ namespace wi::image
 		if (params.isAngularSoftnessInverse())
 		{
 			image.flags |= IMAGE_FLAG_ANGULAR_INVERSE;
+		}
+		if (params.isDistortionMaskEnabled())
+		{
+			image.flags |= IMAGE_FLAG_DISTORTION_MASK;
 		}
 
 		image.border_soften = params.border_soften;

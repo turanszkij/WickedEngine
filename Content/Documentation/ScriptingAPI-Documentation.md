@@ -197,6 +197,8 @@ Render images on the screen.
 - GetTexture() : Texture
 - SetMaskTexture(Texture texture)
 - GetMaskTexture() : Texture
+- SetBackgroundTexture(Texture texture)
+- GetBackgroundTexture() : Texture
 - SetHidden(bool value)
 - IsHidden() : bool
 
@@ -232,7 +234,8 @@ Specify Sprite properties, like position, size, etc.
 - IsDrawRectEnabled() : bool result
 - IsDrawRect2Enabled() : bool result
 - IsMirrorEnabled() : bool result
-- IsBackgroundBlurEnabled() : bool result
+- IsBackgroundEnabled() : bool result
+- IsDistortionMaskEnabled() : bool result
 - SetPos(Vector pos)
 - SetSize(Vector size)
 - SetPivot(Vector value)
@@ -254,8 +257,10 @@ Specify Sprite properties, like position, size, etc.
 - DisableDrawRect2()
 - EnableMirror()
 - DisableMirror()
-- EnableBackgroundBlur(opt float mip = 0)
-- DisableBackgroundBlur()
+- EnableBackground()
+- DisableBackground()
+- EnableDistortionMask()
+- DisableDistortionMask()
 - SetMaskAlphaRange(float start, end)
 - GetMaskAlphaRange() : float start, end
 
@@ -1533,6 +1538,7 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - SetCropTop(float value) -- Sets cropping from top of the screen in logical units
 - SetCropRight(float value) -- Sets cropping from right of the screen in logical units
 - SetCropBottom(float value) -- Sets cropping from bottom of the screen in logical units
+- GetLastPostProcessRT() : Texture -- returns the last post process render texture
 
 ```lua
 FSR2_Preset = {

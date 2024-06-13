@@ -657,7 +657,7 @@ namespace wi
 					B *= width;
 
 					Vertex vert;
-					vert.color = wi::math::Lerp(color0, color1, wi::math::saturate(std::sin(segmenti + debugtimer) * 0.5f + 0.5f));
+					vert.color = wi::math::Lerp(color0, color1, saturate(std::sin(segmenti + debugtimer) * 0.5f + 0.5f));
 
 					XMStoreFloat4(&vert.position, XMVectorSetW(P - B + topalign, 1));
 					std::memcpy(vertices + numVertices, &vert, sizeof(vert));
