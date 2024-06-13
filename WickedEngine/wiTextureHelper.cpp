@@ -466,14 +466,6 @@ namespace wi::texturehelper
 		return texture;
 	}
 
-	// Create a lens distortion normal map (16-bit precision)
-	//	width		: texture width in pixels
-	//	height		: texture height in pixels
-	//	uv_start	: center of lens in uv-space [0,1]
-	//	radius		: radius of lens in uv_space [0,1]
-	//	squish		: squish the lens (higher value is more squished down)
-	//	blend		: blend out the distortion by a constant amount
-	//	edge_smoothness : smoothen the edge of the circle
 	wi::graphics::Texture CreateLensDistortionNormalMap(
 		uint32_t width,
 		uint32_t height,
