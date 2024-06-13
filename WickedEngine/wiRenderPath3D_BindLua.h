@@ -71,6 +71,8 @@ namespace wi::lua
 		int SetCropRight(lua_State* L);
 		int SetCropBottom(lua_State* L);
 
+		int GetLastPostProcessRT(lua_State* L);
+
 		static void Bind();
 	};
 

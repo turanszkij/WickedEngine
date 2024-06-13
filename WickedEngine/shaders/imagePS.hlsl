@@ -30,12 +30,26 @@ float4 main(VertextoPixel input) : SV_TARGET
 	const float2 mask_alpha_range = unpack_half2(image.mask_alpha_range);
 	mask.a = smoothstep(mask_alpha_range.x, mask_alpha_range.y, mask.a);
 	
-	color *= mask;
+	if(image.flags & IMAGE_FLAG_DISTORTION_MASK)
+	{
+		// Only mask alpha is used for multiplying, rg is used for distorting background:
+		color.a *= mask.a;
+	}
+	else
+	{
+		color *= mask;
+	}
 
 	[branch]
 	if (image.texture_background_index >= 0)
 	{
-		float3 background = bindless_textures[image.texture_background_index].Sample(sam, input.uv_screen()).rgb;
+		Texture2D backgroundTexture = bindless_textures[image.texture_background_index];
+		float2 uv_screen = input.uv_screen();
+		if(image.flags & IMAGE_FLAG_DISTORTION_MASK)
+		{
+			uv_screen += mask.rg * 2 - 1;
+		}
+		float3 background = backgroundTexture.Sample(sam, uv_screen).rgb;
 		color = float4(lerp(background, color.rgb, color.a), mask.a);
 	}
 

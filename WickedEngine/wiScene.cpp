@@ -2210,7 +2210,7 @@ namespace wi::scene
 							{
 								t = (animation.timer - left) / (right - left);
 							}
-							t = wi::math::saturate(t);
+							t = saturate(t);
 
 							switch (path_data_type)
 							{
@@ -2290,7 +2290,7 @@ namespace wi::scene
 							{
 								t = (animation.timer - left) / (right - left);
 							}
-							t = wi::math::saturate(t);
+							t = saturate(t);
 
 							const float t2 = t * t;
 							const float t3 = t2 * t;
@@ -2775,12 +2775,12 @@ namespace wi::scene
 					if (blink_state < 0.5f)
 					{
 						// closing
-						expression.weight = wi::math::Lerp(0, 1, wi::math::saturate(blink_state * 2));
+						expression.weight = wi::math::Lerp(0, 1, saturate(blink_state * 2));
 					}
 					else
 					{
 						// opening
-						expression.weight = wi::math::Lerp(1, 0, wi::math::saturate((blink_state - 0.5f) * 2));
+						expression.weight = wi::math::Lerp(1, 0, saturate((blink_state - 0.5f) * 2));
 					}
 					if (expression_mastering.blink_timer >= 1 + all_blink_length)
 					{
@@ -2797,10 +2797,10 @@ namespace wi::scene
 				// Roll new random look direction for next look away event:
 				float vertical = wi::random::GetRandom(-1.0f, 1.0f);
 				float horizontal = wi::random::GetRandom(-1.0f, 1.0f);
-				expression_mastering.look_weights[0] = wi::math::saturate(vertical);
-				expression_mastering.look_weights[1] = wi::math::saturate(-vertical);
-				expression_mastering.look_weights[2] = wi::math::saturate(horizontal);
-				expression_mastering.look_weights[3] = wi::math::saturate(-horizontal);
+				expression_mastering.look_weights[0] = saturate(vertical);
+				expression_mastering.look_weights[1] = saturate(-vertical);
+				expression_mastering.look_weights[2] = saturate(horizontal);
+				expression_mastering.look_weights[3] = saturate(-horizontal);
 			}
 			expression_mastering.look_timer += expression_mastering.look_frequency * dt;
 			if (expression_mastering.look_timer >= 1)
@@ -2821,11 +2821,11 @@ namespace wi::scene
 						float look_state = wi::math::InverseLerp(0, expression_mastering.look_length * expression_mastering.look_frequency, expression_mastering.look_timer - 1);
 						if (look_state < 0.25f)
 						{
-							expression.weight = wi::math::Lerp(0, weight, wi::math::saturate(look_state * 4));
+							expression.weight = wi::math::Lerp(0, weight, saturate(look_state * 4));
 						}
 						else
 						{
-							expression.weight = wi::math::Lerp(weight, 0, wi::math::saturate((look_state - 0.75f) * 4));
+							expression.weight = wi::math::Lerp(weight, 0, saturate((look_state - 0.75f) * 4));
 						}
 						expression.SetDirty();
 					}
@@ -3004,7 +3004,7 @@ namespace wi::scene
 				if (mouth >= 0 && mouth < expression_mastering.expressions.size())
 				{
 					ExpressionComponent::Expression& expression = expression_mastering.expressions[mouth];
-					expression.weight *= 1 - wi::math::saturate(overrideMouthBlend);
+					expression.weight *= 1 - saturate(overrideMouthBlend);
 				}
 			}
 			const int blinks[] = {
@@ -3017,7 +3017,7 @@ namespace wi::scene
 				if (blink >= 0 && blink < expression_mastering.expressions.size())
 				{
 					ExpressionComponent::Expression& expression = expression_mastering.expressions[blink];
-					expression.weight *= 1 - wi::math::saturate(overrideBlinkBlend);
+					expression.weight *= 1 - saturate(overrideBlinkBlend);
 				}
 			}
 			const int looks[] = {
@@ -3031,7 +3031,7 @@ namespace wi::scene
 				if (look >= 0 && look < expression_mastering.expressions.size())
 				{
 					ExpressionComponent::Expression& expression = expression_mastering.expressions[look];
-					expression.weight *= 1 - wi::math::saturate(overrideLookBlend);
+					expression.weight *= 1 - saturate(overrideLookBlend);
 				}
 			}
 
@@ -5068,7 +5068,8 @@ namespace wi::scene
 
 		if (filterMask & FILTER_OBJECT_ALL)
 		{
-			for (size_t objectIndex = 0; objectIndex < aabb_objects.size(); ++objectIndex)
+			const size_t objectCount = std::min(objects.GetCount(), aabb_objects.size());
+			for (size_t objectIndex = 0; objectIndex < objectCount; ++objectIndex)
 			{
 				const AABB& aabb = aabb_objects[objectIndex];
 				if (!ray.intersects(aabb) || (layerMask & aabb.layerMask) == 0)
@@ -5286,7 +5287,8 @@ namespace wi::scene
 
 		if (filterMask & FILTER_OBJECT_ALL)
 		{
-			for (size_t objectIndex = 0; objectIndex < aabb_objects.size(); ++objectIndex)
+			const size_t objectCount = std::min(objects.GetCount(), aabb_objects.size());
+			for (size_t objectIndex = 0; objectIndex < objectCount; ++objectIndex)
 			{
 				const AABB& aabb = aabb_objects[objectIndex];
 				if (!ray.intersects(aabb) || (layerMask & aabb.layerMask) == 0)
@@ -5460,7 +5462,8 @@ namespace wi::scene
 
 		if (filterMask & FILTER_OBJECT_ALL)
 		{
-			for (size_t objectIndex = 0; objectIndex < aabb_objects.size(); ++objectIndex)
+			const size_t objectCount = std::min(objects.GetCount(), aabb_objects.size());
+			for (size_t objectIndex = 0; objectIndex < objectCount; ++objectIndex)
 			{
 				const AABB& aabb = aabb_objects[objectIndex];
 				if (!sphere.intersects(aabb) || (layerMask & aabb.layerMask) == 0)
@@ -5743,7 +5746,8 @@ namespace wi::scene
 
 		if (filterMask & FILTER_OBJECT_ALL)
 		{
-			for (size_t objectIndex = 0; objectIndex < aabb_objects.size(); ++objectIndex)
+			const size_t objectCount = std::min(objects.GetCount(), aabb_objects.size());
+			for (size_t objectIndex = 0; objectIndex < objectCount; ++objectIndex)
 			{
 				const AABB& aabb = aabb_objects[objectIndex];
 				if (capsule_aabb.intersects(aabb) == AABB::INTERSECTION_TYPE::OUTSIDE || (layerMask & aabb.layerMask) == 0)

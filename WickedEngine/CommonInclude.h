@@ -13,6 +13,42 @@
 #define NOMINMAX
 #endif // NOMINMAX
 
+// Simple common math helpers:
+
+template <typename T>
+constexpr T sqr(T x) { return x * x; }
+
+template <typename T>
+constexpr T clamp(T x, T a, T b)
+{
+	return x < a ? a : (x > b ? b : x);
+}
+
+template <typename T>
+constexpr T saturate(T x)
+{
+	return clamp(x, T(0), T(1));
+}
+
+template <typename T>
+constexpr float lerp(T x, T y, T a)
+{
+	return x * (1 - a) + y * a;
+}
+
+template <typename T>
+constexpr T inverse_lerp(T value1, T value2, T pos)
+{
+	return value2 == value1 ? T(0) : ((pos - value1) / (value2 - value1));
+}
+
+template <typename T>
+constexpr T smoothstep(T edge0, T edge1, T x)
+{
+	const T t = saturate((x - edge0) / (edge1 - edge0));
+	return t * t * (T(3) - T(2) * t);
+}
+
 // CPU intrinsics:
 #if defined(_WIN32)
 // Windows, Xbox:

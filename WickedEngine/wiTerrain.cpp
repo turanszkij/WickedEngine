@@ -970,14 +970,14 @@ namespace wi::terrain
 						XMFLOAT3 normal;
 						XMStoreFloat3(&normal, N);
 
-						const float slope_amount = 1.0f - wi::math::saturate(normal.y);
+						const float slope_amount = 1.0f - saturate(normal.y);
 						if (slope_amount > 0.1f)
 							slope_cast_shadow.store(true);
 
 						const float region_base = 1;
 						const float region_slope = std::pow(slope_amount, region1);
-						const float region_low_altitude = bottomLevel == 0 ? 0 : std::pow(wi::math::saturate(wi::math::InverseLerp(0, bottomLevel, height)), region2);
-						const float region_high_altitude = topLevel == 0 ? 0 : std::pow(wi::math::saturate(wi::math::InverseLerp(0, topLevel, height)), region3);
+						const float region_low_altitude = bottomLevel == 0 ? 0 : std::pow(saturate(wi::math::InverseLerp(0, bottomLevel, height)), region2);
+						const float region_high_altitude = topLevel == 0 ? 0 : std::pow(saturate(wi::math::InverseLerp(0, topLevel, height)), region3);
 
 						XMFLOAT4 materialBlendWeights(region_base, region_slope, region_low_altitude, region_high_altitude);
 

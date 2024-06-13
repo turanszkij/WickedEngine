@@ -443,7 +443,7 @@ namespace wi::terrain
 				p.y += std::cos(angle) * perturbation;
 			}
 			wi::noise::voronoi::Result res = wi::noise::voronoi::compute(p.x, p.y, (float)seed);
-			float weight = std::pow(1 - wi::math::saturate((res.distance - shape) * fade), std::max(0.0001f, falloff));
+			float weight = std::pow(1 - saturate((res.distance - shape) * fade), std::max(0.0001f, falloff));
 			Blend(height, weight);
 		}
 	};

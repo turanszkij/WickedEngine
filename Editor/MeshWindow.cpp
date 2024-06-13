@@ -749,7 +749,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 			{
 				const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
 
-				float threshold = wi::math::Lerp(0, 0.9f, wi::math::saturate(lodQualitySlider.GetValue()));
+				float threshold = wi::math::Lerp(0, 0.9f, saturate(lodQualitySlider.GetValue()));
 				for (size_t i = 1; i < lod_count; ++i)
 				{
 					wi::vector<unsigned int>& lod = lods[i].subsets[subsetIndex].indices;

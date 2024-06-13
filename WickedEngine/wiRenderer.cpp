@@ -16372,7 +16372,7 @@ void Postprocess_FSR2(
 
 	// convert delta time to seconds and clamp to [0, 1].
 	//context->constants.deltaTime = std::max(0.0f, std::min(1.0f, params->frameTimeDelta / 1000.0f));
-	fsr2_constants.deltaTime = wi::math::saturate(dt);
+	fsr2_constants.deltaTime = saturate(dt);
 
 	fsr2_constants.frameIndex++;
 

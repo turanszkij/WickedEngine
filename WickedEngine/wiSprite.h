@@ -46,6 +46,7 @@ namespace wi
 		wi::image::Params params;
 		wi::Resource textureResource;
 		wi::Resource maskResource;
+		wi::Resource backgroundResource;
 
 		const wi::graphics::Texture* GetTexture() const;
 

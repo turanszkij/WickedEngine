@@ -22,7 +22,7 @@ namespace wi::texturehelper
 
 	bool CreateTexture(
 		wi::graphics::Texture& texture,
-		const uint8_t* data,
+		const void* data,
 		uint32_t width,
 		uint32_t height,
 		wi::graphics::Format format = wi::graphics::Format::R8G8B8A8_UNORM,
@@ -64,6 +64,17 @@ namespace wi::texturehelper
 		const XMFLOAT2& direction = XMFLOAT2(0, 1),
 		bool counter_clockwise = false,
 		wi::graphics::Swizzle swizzle = { wi::graphics::ComponentSwizzle::R, wi::graphics::ComponentSwizzle::R, wi::graphics::ComponentSwizzle::R, wi::graphics::ComponentSwizzle::R }
+	);
+
+	// Create a lens distortion normal map
+	wi::graphics::Texture CreateLensDistortionNormalMap(
+		uint32_t width,
+		uint32_t height,
+		const XMFLOAT2& uv_start = XMFLOAT2(0.5f, 0.5f),
+		float radius = 0.5f,
+		float squish = 1,
+		float blend = 1,
+		float edge_smoothness = 0.04f
 	);
 };
 
