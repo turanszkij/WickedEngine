@@ -430,7 +430,9 @@ namespace wi::scene
 		// Detaches all children from an entity (if there are any):
 		void Component_DetachChildren(wi::ecs::Entity parent);
 
-		void Serialize(wi::Archive& archive);
+		// Read/write whole scene into an archive
+		//	serialize_resources	:	you can disable resource serialization (useful for instantiation, when resources were already loaded)
+		void Serialize(wi::Archive& archive, bool serialize_resources = true);
 
 		void RunAnimationUpdateSystem(wi::jobsystem::context& ctx);
 		void RunTransformUpdateSystem(wi::jobsystem::context& ctx);

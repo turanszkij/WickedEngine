@@ -1292,7 +1292,7 @@ namespace wi
 		void UpdateStreamingResources(float dt)
 		{
 			// If any streaming replacement requests arrived, replace the resources here (main thread):
-			streaming_replacement_mutex.lock();
+			streaming_replacement_mutex.lock(); // streaming_replacement_mutex is not a long lock, it can only be held by the single streaming thread, so we don't need to try_lock
 			for (auto& replace : streaming_texture_replacements)
 			{
 				replace.resource->texture = replace.texture;
@@ -1303,7 +1303,8 @@ namespace wi
 
 			// Update resource min lod clamps smoothly:
 			GraphicsDevice* device = GetDevice();
-			locker.lock();
+			if (!locker.try_lock()) // Use try lock as this is on the main thread which shouldn't hitch on long locking!
+				return; // Streaming is not that important, we can abandon it if some resource loading is holding the lock
 			for (auto& x : resources)
 			{
 				std::weak_ptr<ResourceInternal>& weak_resource = x.second;
@@ -1350,16 +1351,17 @@ namespace wi
 					}
 				}
 			}
-			locker.unlock();
 
 			// If previous streaming jobs were not finished, we cancel this until next frame:
 			if (wi::jobsystem::IsBusy(streaming_ctx))
+			{
+				locker.unlock();
 				return;
+			}
 
 			streaming_texture_jobs.clear();
 
 			// Gather the streaming jobs:
-			locker.lock();
 			for (auto& x : resources)
 			{
 				std::weak_ptr<ResourceInternal>& weak_resource = x.second;
@@ -1375,7 +1377,7 @@ namespace wi
 				return;
 
 			// One low priority thread will be responsible for streaming, to not cause any hitching while rendering:
-			streaming_ctx.priority = wi::jobsystem::Priority::Low;
+			streaming_ctx.priority = wi::jobsystem::Priority::Streaming;
 			wi::jobsystem::Execute(streaming_ctx, [](wi::jobsystem::JobArgs args) {
 				for(auto& resource : streaming_texture_jobs)
 				{
