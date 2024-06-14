@@ -1160,10 +1160,10 @@ namespace wi::scene
 		wi::Archive archive;
 
 		archive.SetReadModeAndResetPos(false);
-		prefab.Serialize(archive);
+		prefab.Serialize(archive, false);
 
 		archive.SetReadModeAndResetPos(true);
-		tmp.Serialize(archive);
+		tmp.Serialize(archive, false);
 
 		Entity rootEntity = INVALID_ENTITY;
 

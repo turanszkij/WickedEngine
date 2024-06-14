@@ -158,10 +158,17 @@ namespace wi::ecs
 		// Perform deep copy of all the contents of "other" into this
 		inline void Copy(const ComponentManager<Component>& other)
 		{
-			Clear();
-			components = other.components;
-			entities = other.entities;
-			lookup = other.lookup;
+			components.reserve(GetCount() + other.GetCount());
+			entities.reserve(GetCount() + other.GetCount());
+			lookup.reserve(GetCount() + other.GetCount());
+			for (size_t i = 0; i < other.GetCount(); ++i)
+			{
+				Entity entity = other.entities[i];
+				assert(!Contains(entity));
+				entities.push_back(entity);
+				lookup[entity] = components.size();
+				components.push_back(other.components[i]);
+			}
 		}
 
 		// Merge in an other component manager of the same type to this.
