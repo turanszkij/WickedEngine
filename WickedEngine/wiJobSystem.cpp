@@ -288,7 +288,9 @@ namespace wi::jobsystem
 			}
 		}
 
-		wi::backlog::post("wi::jobsystem Initialized with " + std::to_string(internal_state.numCores) + " cores (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		char msg[256] = {};
+		snprintf(msg, arraysize(msg), "wi::jobsystem Initialized with %d cores in %.2f ms\n\tHigh priority threads: %d\n\tLow priority threads: %d\n\tStreaming threads: %d", internal_state.numCores, timer.elapsed(), GetThreadCount(Priority::High), GetThreadCount(Priority::Low), GetThreadCount(Priority::Streaming));
+		wi::backlog::post(msg);
 	}
 
 	void ShutDown()
