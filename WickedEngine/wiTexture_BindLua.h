@@ -23,6 +23,7 @@ namespace wi::lua
 
 		int GetLogo(lua_State* L);
 		int CreateGradientTexture(lua_State* L);
+		int CreateLensDistortionNormalMap(lua_State* L);
 		int Save(lua_State* L);
 
 		static void Bind();

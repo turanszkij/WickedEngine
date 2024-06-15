@@ -480,7 +480,7 @@ namespace wi::texturehelper
 		float scale = 1.0f / (radius * 2);
 		float edge = 1.0f - edge_smoothness;
 
-		wi::vector<wi::Color16> data(width * height);
+		wi::vector<uint32_t> data(width * height);
 		for (uint32_t y = 0; y < height; ++y)
 		{
 			for (uint32_t x = 0; x < width; ++x)
@@ -502,17 +502,16 @@ namespace wi::texturehelper
 				uv.x = uv.x * dp;
 				uv.y = uv.y * dp;
 
-				XMFLOAT4 color = XMFLOAT4(uv.x * 0.5f + 0.5f, uv.y * 0.5f + 0.5f, 1, 1);
+				XMFLOAT2 color = XMFLOAT2(uv.x * 0.5f + 0.5f, uv.y * 0.5f + 0.5f);
 				float s = smoothstep(1.0f, edge, d) * blend;
 				color.x = lerp(0.5f, color.x, s);
 				color.y = lerp(0.5f, color.y, s);
-				color.z = lerp(1.0f, color.z, s);
-				data[x + y * width] = wi::Color16::fromFloat4(color);
+				data[x + y * width] = (uint32_t(color.x * 65535) & 0xFFFF) | (uint32_t(color.y * 65535) & 0xFFFF) << 16u;
 			}
 		}
 
 		Texture texture;
-		CreateTexture(texture, data.data(), width, height, Format::R16G16B16A16_UNORM);
+		CreateTexture(texture, data.data(), width, height, Format::R16G16_UNORM);
 		return texture;
 	}
 

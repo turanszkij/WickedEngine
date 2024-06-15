@@ -11,6 +11,7 @@ namespace wi::lua
 	Luna<Texture_BindLua>::FunctionType Texture_BindLua::methods[] = {
 		lunamethod(Texture_BindLua, GetLogo),
 		lunamethod(Texture_BindLua, CreateGradientTexture),
+		lunamethod(Texture_BindLua, CreateLensDistortionNormalMap),
 		lunamethod(Texture_BindLua, Save),
 		{ NULL, NULL }
 	};
@@ -117,6 +118,66 @@ namespace wi::lua
 			perlin_seed,
 			perlin_octaves,
 			perlin_persistence
+		);
+		Luna<Texture_BindLua>::push(L, texture);
+		return 1;
+	}
+	int Texture_BindLua::CreateLensDistortionNormalMap(lua_State* L)
+	{
+		uint32_t width = 256;
+		uint32_t height = 256;
+		XMFLOAT2 uv_start = XMFLOAT2(0.5f, 0.5f);
+		float radius = 0.5f;
+		float squish = 1;
+		float blend = 1;
+		float edge_smoothness = 0.04f;
+
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			width = (uint32_t)wi::lua::SGetInt(L, 1);
+			if (argc > 1)
+			{
+				height = (uint32_t)wi::lua::SGetInt(L, 2);
+				if (argc > 2)
+				{
+					Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 3);
+					if (v1)
+					{
+						uv_start = v1->GetFloat2();
+					}
+					else
+					{
+						wi::lua::SError(L, "CreateLensDistortionNormalMap() uv_start argument is not a vector!");
+					}
+
+					if (argc > 3)
+					{
+						radius = wi::lua::SGetFloat(L, 4);
+						if (argc > 4)
+						{
+							squish = wi::lua::SGetFloat(L, 5);
+							if (argc > 5)
+							{
+								blend = wi::lua::SGetFloat(L, 6);
+								if (argc > 6)
+								{
+									edge_smoothness = wi::lua::SGetFloat(L, 7);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		wi::graphics::Texture texture = wi::texturehelper::CreateLensDistortionNormalMap(
+			width, height,
+			uv_start,
+			radius,
+			squish,
+			blend,
+			edge_smoothness
 		);
 		Luna<Texture_BindLua>::push(L, texture);
 		return 1;

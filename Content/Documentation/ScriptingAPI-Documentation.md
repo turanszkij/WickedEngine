@@ -440,6 +440,14 @@ Just holds texture information in VRAM.
 	int perlin_seed = 1234, 
 	int perlin_octaves = 8, 
 	float perlin_persistence = 0.5) -- creates a gradient texture from parameters
+- CreateLensDistortionNormalMap(
+	int width = 256,
+	int height = 256,
+	Vector uv_start = Vecctor(0.5, 0.5),
+	float radius = 0.5,
+	float squish = 1,
+	float blend = 1,
+	float edge_smoothness = 0.04) -- creates a lens distortion normal map (16-bit precision)
 - Save(string filename) -- saves texture into a file. Provide the extension in the filename, it should be one of the following: .JPG, .PNG, .TGA, .BMP, .DDS, .KTX2, .BASIS
 
 ```lua

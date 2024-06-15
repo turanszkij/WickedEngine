@@ -430,6 +430,26 @@ namespace wi::helper
 				unsigned error = lodepng::encode(filedata, src_bigendian, desc.width, desc.height, LCT_GREY, 16);
 				return error == 0;
 			}
+			if (desc.format == Format::R16G16_UNORM || desc.format == Format::R16G16_UINT)
+			{
+				// Specialized handling for 16-bit PNG:
+				//	Two channel RG data is expanded to RGBA (2-channel PNG is not good because that is interpreted as red and alpha)
+				wi::vector<uint8_t> src_bigendian = texturedata;
+				const uint32_t* src_rg = (const uint32_t*)src_bigendian.data();
+				wi::vector<wi::Color16> dest_rgba(desc.width * desc.height);
+				for (uint32_t i = 0; i < desc.width * desc.height; ++i)
+				{
+					uint32_t rg = src_rg[i];
+					wi::Color16& rgba = dest_rgba[i];
+					uint16_t r = rg & 0xFFFF;
+					r = (r >> 8) | ((r & 0xFF) << 8); // little endian to big endian
+					uint16_t g = (rg >> 16u) & 0xFFFF;
+					g = (g >> 8) | ((g & 0xFF) << 8); // little endian to big endian
+					rgba = wi::Color16(r, g, 0xFFFF, 0xFFFF);
+				}
+				unsigned error = lodepng::encode(filedata, (const unsigned char*)dest_rgba.data(), desc.width, desc.height, LCT_RGBA, 16);
+				return error == 0;
+			}
 			if (desc.format == Format::R16G16B16A16_UNORM || desc.format == Format::R16G16B16A16_UINT)
 			{
 				// Specialized handling for 16-bit PNG:
