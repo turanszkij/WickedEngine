@@ -300,8 +300,6 @@ void LightWindow::Create(EditorComponent* _editor)
 
 void LightWindow::SetEntity(Entity entity)
 {
-	if (this->entity == entity)
-		return;
 	this->entity = entity;
 
 	const LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
@@ -345,29 +343,6 @@ void LightWindow::SetEntity(Entity entity)
 			}
 			lensflare_Button[i].SetEnabled(true);
 		}
-	}
-	else
-	{
-		rangeSlider.SetEnabled(false);
-		radiusSlider.SetEnabled(false);
-		lengthSlider.SetEnabled(false);
-		outerConeAngleSlider.SetEnabled(false);
-		innerConeAngleSlider.SetEnabled(false);
-		shadowCheckBox.SetEnabled(false);
-		haloCheckBox.SetEnabled(false);
-		volumetricsCheckBox.SetEnabled(false);
-		staticCheckBox.SetEnabled(false);
-		volumetricCloudsCheckBox.SetEnabled(false);
-		intensitySlider.SetEnabled(false);
-		colorPicker.SetEnabled(false);
-		shadowResolutionComboBox.SetEnabled(false);
-
-		for (size_t i = 0; i < arraysize(lensflare_Button); ++i)
-		{
-			lensflare_Button[i].SetEnabled(false);
-		}
-
-		RefreshCascades();
 	}
 }
 void LightWindow::SetLightType(LightComponent::LightType type)

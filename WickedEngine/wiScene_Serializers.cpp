@@ -2029,7 +2029,7 @@ namespace wi::scene
 		}
 	}
 
-	void Scene::Serialize(wi::Archive& archive, bool serialize_resources)
+	void Scene::Serialize(wi::Archive& archive)
 	{
 		wi::Timer timer;
 
@@ -2048,7 +2048,7 @@ namespace wi::scene
 		size_t jump_before = 0;
 		size_t jump_after = 0;
 		size_t original_pos = 0;
-		if (archive.GetVersion() >= 90 && serialize_resources)
+		if (archive.GetVersion() >= 90)
 		{
 			if (archive.IsReadMode())
 			{
@@ -2066,7 +2066,7 @@ namespace wi::scene
 
 		// Keeping this alive to keep serialized resources alive until entity serialization ends:
 		wi::resourcemanager::ResourceSerializer resource_seri;
-		if (archive.IsReadMode() && archive.GetVersion() >= 63 && serialize_resources)
+		if (archive.IsReadMode() && archive.GetVersion() >= 63)
 		{
 			wi::resourcemanager::Serialize_READ(archive, resource_seri);
 			if (archive.GetVersion() >= 90)
@@ -2183,7 +2183,7 @@ namespace wi::scene
 			}
 		}
 
-		if (archive.GetVersion() >= 90 && serialize_resources)
+		if (archive.GetVersion() >= 90)
 		{
 			if (archive.IsReadMode())
 			{
@@ -2197,7 +2197,9 @@ namespace wi::scene
 			}
 		}
 
-		wi::backlog::post("Scene serialize took " + std::to_string(timer.elapsed_seconds()) + " sec");
+		char text[64] = {};
+		snprintf(text, arraysize(text), "Scene::Serialize took %.2f seconds", timer.elapsed_seconds());
+		wi::backlog::post(text);
 	}
 
 	void Scene::DDGI::Serialize(wi::Archive& archive)

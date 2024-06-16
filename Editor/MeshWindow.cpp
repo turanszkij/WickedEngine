@@ -309,13 +309,13 @@ void MeshWindow::Create(EditorComponent* _editor)
 	AddWidget(&recenterToBottomButton);
 
 	mergeButton.Create("Merge Selected");
-	mergeButton.SetTooltip("Merges selected objects/meshes into one.\nAll selected object transformations will be applied to meshes and allmeshes will be baked into a single mesh.");
+	mergeButton.SetTooltip("Merges selected objects/meshes into one.\nAll selected object transformations will be applied to meshes and all meshes will be baked into a single mesh.");
 	mergeButton.SetSize(XMFLOAT2(mod_wid, hei));
 	mergeButton.SetPos(XMFLOAT2(mod_x, y += step));
 	mergeButton.OnClick([=](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
-		MeshComponent merged_mesh;
 		ObjectComponent merged_object;
+		MeshComponent merged_mesh;
 		bool valid_normals = false;
 		bool valid_uvset_0 = false;
 		bool valid_uvset_1 = false;
@@ -326,6 +326,36 @@ void MeshWindow::Create(EditorComponent* _editor)
 		bool valid_windweights = false;
 		wi::unordered_set<Entity> entities_to_remove;
 		Entity prev_subset_material = INVALID_ENTITY;
+
+		// Search for first object with a mesh from selection, that will be the base:
+		Entity baseEntityParent = INVALID_ENTITY;
+		Entity baseEntity = INVALID_ENTITY;
+		TransformComponent* baseTransform = nullptr;
+		ObjectComponent* baseObject = nullptr;
+		MeshComponent* baseMesh = nullptr;
+		for (auto& picked : editor->translator.selected)
+		{
+			ObjectComponent* object = scene.objects.GetComponent(picked.entity);
+			if (object == nullptr)
+				continue;
+			MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+			if (mesh == nullptr)
+				continue;
+			baseEntity = picked.entity;
+			HierarchyComponent* hier = scene.hierarchy.GetComponent(baseEntity);
+			if (hier != nullptr)
+			{
+				baseEntityParent = hier->parentID;
+			}
+			baseTransform = scene.transforms.GetComponent(picked.entity);
+			baseObject = object;
+			baseMesh = mesh;
+		}
+		if (baseObject == nullptr)
+			return;
+		merged_object.meshID = baseObject->meshID;
+
+		// Merge all other meshes into the base object:
 		for (auto& picked : editor->translator.selected)
 		{
 			ObjectComponent* object = scene.objects.GetComponent(picked.entity);
@@ -454,21 +484,28 @@ void MeshWindow::Create(EditorComponent* _editor)
 			{
 				merged_mesh.armatureID = mesh->armatureID;
 			}
-			entities_to_remove.insert(picked.entity);
 
-			// Only remove mesh if it is no longer used by any other objects:
-			bool mesh_still_used = false;
-			for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+			if (object != baseObject) // don't remove base object
 			{
-				if (entities_to_remove.count(scene.objects.GetEntity(i)) == 0 && scene.objects[i].meshID == object->meshID)
-				{
-					mesh_still_used = true;
-					break;
-				}
+				entities_to_remove.insert(picked.entity);
 			}
-			if (!mesh_still_used)
+
+			if (mesh != baseMesh)
 			{
-				entities_to_remove.insert(object->meshID);
+				// Only remove mesh if it is no longer used by any other objects:
+				bool mesh_still_used = false;
+				for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+				{
+					if (entities_to_remove.count(scene.objects.GetEntity(i)) == 0 && scene.objects[i].meshID == object->meshID)
+					{
+						mesh_still_used = true;
+						break;
+					}
+				}
+				if (!mesh_still_used)
+				{
+					entities_to_remove.insert(object->meshID);
+				}
 			}
 		}
 
@@ -491,14 +528,15 @@ void MeshWindow::Create(EditorComponent* _editor)
 			if (!valid_windweights)
 				merged_mesh.vertex_windweights.clear();
 
-			Entity merged_object_entity = scene.Entity_CreateObject("mergedObject");
-			Entity merged_mesh_entity = scene.Entity_CreateMesh("mergedMesh");
-			ObjectComponent* object = scene.objects.GetComponent(merged_object_entity);
-			*object = std::move(merged_object);
-			object->meshID = merged_mesh_entity;
-			MeshComponent* mesh = scene.meshes.GetComponent(merged_mesh_entity);
-			*mesh = std::move(merged_mesh);
-			mesh->CreateRenderData();
+			*baseObject = std::move(merged_object);
+			*baseMesh = std::move(merged_mesh);
+			baseMesh->CreateRenderData();
+			scene.Component_Detach(baseEntity);
+			if (baseTransform != nullptr)
+			{
+				baseTransform->ClearTransform();
+			}
+			scene.Component_Attach(baseEntity, baseEntityParent);
 		}
 
 		for (auto& x : entities_to_remove)

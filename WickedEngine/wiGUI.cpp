@@ -5309,7 +5309,22 @@ namespace wi::gui
 	}
 	void TreeList::Select(int index)
 	{
-		items[index].selected = true;
+		int selected_count = 0;
+		for (auto& x : items)
+		{
+			if (x.selected)
+				selected_count++;
+		}
+
+		if (selected_count > 1)
+		{
+			// If multiple are selected, then we can deselect:
+			items[index].selected = !items[index].selected;
+		}
+		else
+		{
+			items[index].selected = true;
+		}
 
 		EventArgs args;
 		args.iValue = index;

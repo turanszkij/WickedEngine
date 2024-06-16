@@ -1155,15 +1155,21 @@ namespace wi::scene
 	}
 	Entity Scene::Instantiate(Scene& prefab, bool attached)
 	{
+		wi::Timer timer;
+
 		// Duplicate prefab into tmp scene
+		//	Note: we directly use componentLibrary.Serialize instead of serializing whole scene
+		//	Because prefab scene's resources are already in memory, and we don't need to handle them
+		//	Also other generic scene serialization can be skipped
 		Scene tmp;
 		wi::Archive archive;
+		EntitySerializer seri;
 
 		archive.SetReadModeAndResetPos(false);
-		prefab.Serialize(archive, false);
+		prefab.componentLibrary.Serialize(archive, seri);
 
 		archive.SetReadModeAndResetPos(true);
-		tmp.Serialize(archive, false);
+		tmp.componentLibrary.Serialize(archive, seri);
 
 		Entity rootEntity = INVALID_ENTITY;
 
@@ -1185,7 +1191,13 @@ namespace wi::scene
 			}
 		}
 
+		wi::jobsystem::Wait(seri.ctx); // wait for completion of component serializations background threads here
+
 		Merge(tmp);
+
+		char text[64] = {};
+		snprintf(text, arraysize(text), "Scene::Instantiate took %.2f ms", timer.elapsed_milliseconds());
+		wi::backlog::post(text);
 
 		return rootEntity;
 	}
