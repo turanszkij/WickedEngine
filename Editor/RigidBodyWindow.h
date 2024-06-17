@@ -22,6 +22,9 @@ public:
 	wi::gui::Slider physicsMeshLODSlider;
 	wi::gui::CheckBox disabledeactivationCheckBox;
 	wi::gui::CheckBox kinematicCheckBox;
+	wi::gui::Slider offsetXSlider;
+	wi::gui::Slider offsetYSlider;
+	wi::gui::Slider offsetZSlider;
 
 	void ResizeLayout() override;
 };

@@ -17,5 +17,7 @@ void main(PixelInput input)
 		alpha *= GetMaterial().textures[TRANSPARENCYMAP].Sample(sampler_point_wrap, input.GetUVSets()).r;
 	}
 	
-	clip(alpha - GetMaterial().alphaTest);
+	ShaderMeshInstance meshinstance = load_instance(input.GetInstanceIndex());
+	
+	clip(alpha - GetMaterial().alphaTest - meshinstance.alphaTest);
 }

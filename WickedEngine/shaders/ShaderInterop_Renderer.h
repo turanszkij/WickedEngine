@@ -579,7 +579,7 @@ struct ShaderMeshInstance
 	float radius;
 
 	int vb_ao;
-	int padding0;
+	float alphaTest;
 	int padding1;
 	int padding2;
 
@@ -604,6 +604,7 @@ struct ShaderMeshInstance
 		center = float3(0, 0, 0);
 		radius = 0;
 		vb_ao = -1;
+		alphaTest = 0;
 		transform.init();
 		transformInverseTranspose.init();
 		transformPrev.init();

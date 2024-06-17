@@ -1364,30 +1364,30 @@ Describes a Collider object.
 - GetRagdollHeadSize() : float
 
 [outer] HumanoidBone = {
-	Hips = 0,
-	Spine = 1,
+	Hips = 0,	-- included in ragdoll
+	Spine = 1,	-- included in ragdoll
 	Chest = 2,
 	UpperChest = 3,
-	Neck = 4,
-	Head = 5,
+	Neck = 4,	-- included in ragdoll
+	Head = 5,	-- included in ragdoll if Neck is not available
 	LeftEye = 6,
 	RightEye = 7,
 	Jaw = 8,
-	LeftUpperLeg = 9,
-	LeftLowerLeg = 10,
+	LeftUpperLeg = 9,	-- included in ragdoll
+	LeftLowerLeg = 10,	-- included in ragdoll
 	LeftFoot = 11,
 	LeftToes = 12,
-	RightUpperLeg = 13,
-	RightLowerLeg = 14,
+	RightUpperLeg = 13,	-- included in ragdoll
+	RightLowerLeg = 14,	-- included in ragdoll
 	RightFoot = 15,
 	RightToes = 16,
 	LeftShoulder = 17,
-	LeftUpperArm = 18,
-	LeftLowerArm = 19,
+	LeftUpperArm = 18,	-- included in ragdoll
+	LeftLowerArm = 19,	-- included in ragdoll
 	LeftHand = 20,
 	RightShoulder = 21,
-	RightUpperArm = 22,
-	RightLowerArm = 23,
+	RightUpperArm = 22,	-- included in ragdoll
+	RightLowerArm = 23,	-- included in ragdoll
 	RightHand = 24,
 	LeftThumbMetacarpal = 25,
 	LeftThumbProximal = 26,
@@ -1635,6 +1635,7 @@ Sphere defined by center Vector and radius. Can be intersected with other primit
 - [constructor]Sphere(Vector center, float radius)
 - Intersects(AABB aabb) : bool result
 - Intersects(Sphere sphere) : bool result
+- Intersects(Capsule capsule) : bool result
 - Intersects(Ray ray) : bool result
 - GetCenter() : Vector result
 - GetRadius() : float result

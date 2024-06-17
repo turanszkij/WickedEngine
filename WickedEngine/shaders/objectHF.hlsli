@@ -93,6 +93,7 @@ inline ShaderMaterial GetMaterial()
 #endif // OBJECTSHADER_LAYOUT_SHADOW
 
 #ifdef OBJECTSHADER_LAYOUT_SHADOW_TEX
+#define OBJECTSHADER_USE_INSTANCEINDEX
 #define OBJECTSHADER_USE_UVSETS
 #endif // OBJECTSHADER_LAYOUT_SHADOW_TEX
 
@@ -579,7 +580,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	// Alpha test is only done for transparents
 	//	- Prepass will write alpha coverage mask
 	//	- Opaque will use [earlydepthstencil] and COMPARISON_EQUAL depth test on top of depth prepass
-	clip(surface.baseColor.a - GetMaterial().alphaTest);
+	clip(surface.baseColor.a - GetMaterial().alphaTest - meshinstance.alphaTest);
 #endif // DISABLE_ALPHATEST
 #endif // TRANSPARENT
 
@@ -1025,7 +1026,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 	// end point:
 #ifdef PREPASS
-	coverage = AlphaToCoverage(color.a, GetMaterial().alphaTest, input.pos);
+	coverage = AlphaToCoverage(color.a, GetMaterial().alphaTest + meshinstance.alphaTest, input.pos);
 #ifndef DEPTHONLY
 	PrimitiveID prim;
 	prim.primitiveIndex = primitiveID;

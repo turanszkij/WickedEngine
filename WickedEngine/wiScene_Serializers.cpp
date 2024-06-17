@@ -702,6 +702,10 @@ namespace wi::scene
 			{
 				archive >> mesh_lod;
 			}
+			if (seri.GetVersion() >= 2)
+			{
+				archive >> local_offset;
+			}
 		}
 		else
 		{
@@ -728,6 +732,10 @@ namespace wi::scene
 			if (seri.GetVersion() >= 1)
 			{
 				archive << mesh_lod;
+			}
+			if (seri.GetVersion() >= 2)
+			{
+				archive << local_offset;
 			}
 		}
 	}

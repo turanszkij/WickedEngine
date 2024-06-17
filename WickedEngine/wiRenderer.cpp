@@ -2990,6 +2990,10 @@ void RenderMeshes(
 		{
 			instancedBatch.forceAlphatestForDithering = 1;
 		}
+		if (instance.alphaRef < 1)
+		{
+			instancedBatch.forceAlphatestForDithering = 1;
+		}
 
 		if (forwardLightmaskRequest)
 		{

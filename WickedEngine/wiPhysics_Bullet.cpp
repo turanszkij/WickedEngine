@@ -215,6 +215,9 @@ namespace wi::physics
 		case RigidBodyPhysicsComponent::CollisionShape::CAPSULE:
 			physicsobject.shape = std::make_unique<btCapsuleShape>(btScalar(physicscomponent.capsule.radius), btScalar(physicscomponent.capsule.height));
 			break;
+		case RigidBodyPhysicsComponent::CollisionShape::CYLINDER:
+			physicsobject.shape = std::make_unique<btCylinderShape>(btVector3(physicscomponent.box.halfextents.x, physicscomponent.box.halfextents.y, physicscomponent.box.halfextents.z));
+			break;
 
 		case RigidBodyPhysicsComponent::CollisionShape::CONVEX_HULL:
 			if(mesh != nullptr)
@@ -311,6 +314,13 @@ namespace wi::physics
 			XMFLOAT3 tra = {};
 			XMStoreFloat4(&rot, ROT);
 			XMStoreFloat3(&tra, TRA);
+
+			tra.x += physicscomponent.local_offset.x;
+			tra.y += physicscomponent.local_offset.y;
+			tra.z += physicscomponent.local_offset.z;
+
+			physicsobject.additionalTransform.setOrigin(btVector3(physicscomponent.local_offset.x, physicscomponent.local_offset.y, physicscomponent.local_offset.z));
+			physicsobject.additionalTransformInverse = physicsobject.additionalTransform.inverse();
 
 			//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
 			btTransform shapeTransform;

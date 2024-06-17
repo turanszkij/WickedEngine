@@ -462,6 +462,14 @@ namespace wi::lua::primitive
 				return 1;
 			}
 
+			Capsule_BindLua* _capsule = Luna<Capsule_BindLua>::lightcheck(L, 1);
+			if (_capsule)
+			{
+				bool intersects = sphere.intersects(_capsule->capsule);
+				wi::lua::SSetBool(L, intersects);
+				return 1;
+			}
+
 			Ray_BindLua* ray = Luna<Ray_BindLua>::lightcheck(L, 1);
 			if (ray)
 			{

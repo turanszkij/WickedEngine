@@ -18,6 +18,7 @@ public:
 	wi::gui::CheckBox notVisibleInMainCameraCheckBox;
 	wi::gui::CheckBox notVisibleInReflectionsCheckBox;
 	wi::gui::Slider ditherSlider;
+	wi::gui::Slider alphaRefSlider;
 	wi::gui::Slider cascadeMaskSlider;
 	wi::gui::Slider lodSlider;
 	wi::gui::Slider drawdistanceSlider;

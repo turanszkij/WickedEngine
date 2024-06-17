@@ -24,8 +24,10 @@ float4 main(PixelInput input) : SV_TARGET
 	}
 	
 	color *= input.color;
+	
+	ShaderMeshInstance meshinstance = load_instance(input.GetInstanceIndex());
 
-	clip(color.a - GetMaterial().alphaTest);
+	clip(color.a - GetMaterial().alphaTest - meshinstance.alphaTest);
 
 	float opacity = color.a;
 

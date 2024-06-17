@@ -257,7 +257,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_OBJECT " Object", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 820));
+	SetSize(XMFLOAT2(670, 840));
 
 	closeButton.SetTooltip("Delete ObjectComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -430,6 +430,19 @@ void ObjectWindow::Create(EditorComponent* _editor)
 		}
 	});
 	AddWidget(&ditherSlider);
+
+	alphaRefSlider.Create(0, 1, 0, 1000, "Alpha Ref: ");
+	alphaRefSlider.SetTooltip("Adjust alpha ref per instance.\nThis is an additional value on top of material's alpha ref, used for alpha testing (alpha cutout).");
+	alphaRefSlider.SetSize(XMFLOAT2(wid, hei));
+	alphaRefSlider.SetPos(XMFLOAT2(x, y += step));
+	alphaRefSlider.OnSlide([&](wi::gui::EventArgs args) {
+		ObjectComponent* object = editor->GetCurrentScene().objects.GetComponent(entity);
+		if (object != nullptr)
+		{
+			object->alphaRef = args.fValue;
+		}
+		});
+	AddWidget(&alphaRefSlider);
 
 	cascadeMaskSlider.Create(0, 3, 0, 3, "Cascade Mask: ");
 	cascadeMaskSlider.SetTooltip("How many shadow cascades to skip when rendering this object into shadow maps? (0: skip none, it will be in all cascades, 1: skip first (biggest cascade), ...etc...");
@@ -956,6 +969,7 @@ void ObjectWindow::SetEntity(Entity entity)
 		navmeshCheckBox.SetCheck(object->filterMask & wi::enums::FILTER_NAVIGATION_MESH);
 		cascadeMaskSlider.SetValue((float)object->cascadeMask);
 		ditherSlider.SetValue(object->GetTransparency());
+		alphaRefSlider.SetValue(object->alphaRef);
 		lodSlider.SetValue(object->lod_distance_multiplier);
 		drawdistanceSlider.SetValue(object->draw_distance);
 		sortPrioritySlider.SetValue((int)object->sort_priority);
@@ -1033,6 +1047,7 @@ void ObjectWindow::ResizeLayout()
 	add_right(notVisibleInReflectionsCheckBox);
 	add_right(navmeshCheckBox);
 	add(ditherSlider);
+	add(alphaRefSlider);
 	add(cascadeMaskSlider);
 	add(lodSlider);
 	add(drawdistanceSlider);

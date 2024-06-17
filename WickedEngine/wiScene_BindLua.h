@@ -771,6 +771,7 @@ namespace wi::lua::scene
 		int GetCascadeMask(lua_State* L);
 		int GetRendertypeMask(lua_State* L);
 		int GetColor(lua_State* L);
+		int GetAlphaRef(lua_State* L);
 		int GetEmissiveColor(lua_State* L);
 		int GetUserStencilRef(lua_State* L);
 		int GetLodDistanceMultiplier(lua_State* L);
@@ -783,6 +784,7 @@ namespace wi::lua::scene
 		int SetCascadeMask(lua_State* L);
 		int SetRendertypeMask(lua_State* L);
 		int SetColor(lua_State* L);
+		int SetAlphaRef(lua_State* L);
 		int SetEmissiveColor(lua_State* L);
 		int SetUserStencilRef(lua_State* L);
 		int SetLodDistanceMultiplier(lua_State* L);

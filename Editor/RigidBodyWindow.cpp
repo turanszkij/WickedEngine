@@ -9,7 +9,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_RIGIDBODY " Rigid Body Physics", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 300));
+	SetSize(XMFLOAT2(670, 400));
 
 	closeButton.SetTooltip("Delete RigidBodyPhysicsComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -38,6 +38,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	collisionShapeComboBox.AddItem("Box", RigidBodyPhysicsComponent::CollisionShape::BOX);
 	collisionShapeComboBox.AddItem("Sphere", RigidBodyPhysicsComponent::CollisionShape::SPHERE);
 	collisionShapeComboBox.AddItem("Capsule", RigidBodyPhysicsComponent::CollisionShape::CAPSULE);
+	collisionShapeComboBox.AddItem("Cylinder", RigidBodyPhysicsComponent::CollisionShape::CYLINDER);
 	collisionShapeComboBox.AddItem("Convex Hull", RigidBodyPhysicsComponent::CollisionShape::CONVEX_HULL);
 	collisionShapeComboBox.AddItem("Triangle Mesh", RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH);
 	collisionShapeComboBox.OnSelect([&](wi::gui::EventArgs args)
@@ -67,6 +68,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			switch (shape)
 			{
 			case RigidBodyPhysicsComponent::CollisionShape::BOX:
+			case RigidBodyPhysicsComponent::CollisionShape::CYLINDER:
 				XSlider.SetEnabled(true);
 				YSlider.SetEnabled(true);
 				ZSlider.SetEnabled(true);
@@ -120,6 +122,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			{
 			default:
 			case RigidBodyPhysicsComponent::CollisionShape::BOX:
+			case RigidBodyPhysicsComponent::CollisionShape::CYLINDER:
 				physicscomponent->box.halfextents.x = args.fValue;
 				break;
 			case RigidBodyPhysicsComponent::CollisionShape::SPHERE:
@@ -145,6 +148,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			{
 			default:
 			case RigidBodyPhysicsComponent::CollisionShape::BOX:
+			case RigidBodyPhysicsComponent::CollisionShape::CYLINDER:
 				physicscomponent->box.halfextents.y = args.fValue;
 				break;
 			case RigidBodyPhysicsComponent::CollisionShape::CAPSULE:
@@ -167,6 +171,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			{
 			default:
 			case RigidBodyPhysicsComponent::CollisionShape::BOX:
+			case RigidBodyPhysicsComponent::CollisionShape::CYLINDER:
 				physicscomponent->box.halfextents.z = args.fValue;
 				break;
 			}
@@ -300,6 +305,50 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 
 
 
+	offsetXSlider.Create(-10, 10, 0, 100000, "Local Offset X: ");
+	offsetXSlider.SetTooltip("Set a local offset relative to the object transform");
+	offsetXSlider.SetSize(XMFLOAT2(wid, hei));
+	offsetXSlider.SetPos(XMFLOAT2(x, y += step));
+	offsetXSlider.OnSlide([&](wi::gui::EventArgs args) {
+		RigidBodyPhysicsComponent* physicscomponent = editor->GetCurrentScene().rigidbodies.GetComponent(entity);
+		if (physicscomponent != nullptr)
+		{
+			physicscomponent->local_offset.x = args.fValue;
+			physicscomponent->physicsobject = {};
+		}
+	});
+	AddWidget(&offsetXSlider);
+
+	offsetYSlider.Create(-10, 10, 0, 100000, "Local Offset Y: ");
+	offsetYSlider.SetTooltip("Set a local offset relative to the object transform");
+	offsetYSlider.SetSize(XMFLOAT2(wid, hei));
+	offsetYSlider.SetPos(XMFLOAT2(x, y += step));
+	offsetYSlider.OnSlide([&](wi::gui::EventArgs args) {
+		RigidBodyPhysicsComponent* physicscomponent = editor->GetCurrentScene().rigidbodies.GetComponent(entity);
+		if (physicscomponent != nullptr)
+		{
+			physicscomponent->local_offset.y = args.fValue;
+			physicscomponent->physicsobject = {};
+		}
+	});
+	AddWidget(&offsetYSlider);
+
+	offsetZSlider.Create(-10, 10, 0, 100000, "Local Offset Z: ");
+	offsetZSlider.SetTooltip("Set a local offset relative to the object transform");
+	offsetZSlider.SetSize(XMFLOAT2(wid, hei));
+	offsetZSlider.SetPos(XMFLOAT2(x, y += step));
+	offsetZSlider.OnSlide([&](wi::gui::EventArgs args) {
+		RigidBodyPhysicsComponent* physicscomponent = editor->GetCurrentScene().rigidbodies.GetComponent(entity);
+		if (physicscomponent != nullptr)
+		{
+			physicscomponent->local_offset.z = args.fValue;
+			physicscomponent->physicsobject = {};
+		}
+	});
+	AddWidget(&offsetZSlider);
+
+
+
 	SetMinimized(true);
 	SetVisible(false);
 
@@ -324,6 +373,10 @@ void RigidBodyWindow::SetEntity(Entity entity)
 		lineardampingSlider.SetValue(physicsComponent->damping_linear);
 		angulardampingSlider.SetValue(physicsComponent->damping_angular);
 		physicsMeshLODSlider.SetValue(float(physicsComponent->mesh_lod));
+
+		offsetXSlider.SetValue(physicsComponent->local_offset.x);
+		offsetYSlider.SetValue(physicsComponent->local_offset.y);
+		offsetZSlider.SetValue(physicsComponent->local_offset.z);
 
 		kinematicCheckBox.SetCheck(physicsComponent->IsKinematic());
 		disabledeactivationCheckBox.SetCheck(physicsComponent->IsDisableDeactivation());
@@ -385,6 +438,9 @@ void RigidBodyWindow::ResizeLayout()
 	add(lineardampingSlider);
 	add(angulardampingSlider);
 	add(physicsMeshLODSlider);
+	add(offsetXSlider);
+	add(offsetYSlider);
+	add(offsetZSlider);
 	add_right(disabledeactivationCheckBox);
 	add_right(kinematicCheckBox);
 

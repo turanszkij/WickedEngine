@@ -826,6 +826,7 @@ namespace wi::scene
 		wi::vector<uint8_t> lightmapTextureData;
 		uint32_t sort_priority = 0; // increase to draw earlier (currently 4 bits will be used)
 		wi::vector<uint8_t> vertex_ao;
+		float alphaRef = 1;
 
 		// Non-serialized attributes:
 		uint32_t filterMaskDynamic = 0;
@@ -911,6 +912,7 @@ namespace wi::scene
 			CAPSULE,
 			CONVEX_HULL,
 			TRIANGLE_MESH,
+			CYLINDER,
 			ENUM_FORCE_UINT32 = 0xFFFFFFFF
 		};
 		CollisionShape shape;
@@ -919,11 +921,12 @@ namespace wi::scene
 		float restitution = 0.0f;
 		float damping_linear = 0.0f;
 		float damping_angular = 0.0f;
+		XMFLOAT3 local_offset = XMFLOAT3(0, 0, 0);
 
 		struct BoxParams
 		{
 			XMFLOAT3 halfextents = XMFLOAT3(1, 1, 1);
-		} box;
+		} box; // also cylinder params
 		struct SphereParams
 		{
 			float radius = 1;

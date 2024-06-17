@@ -17,7 +17,7 @@ void HierarchyWindow::Create(EditorComponent* _editor)
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
 
-		editor->GetCurrentScene().hierarchy.Remove(entity);
+		editor->GetCurrentScene().Component_Detach(entity);
 
 		editor->RecordEntity(archive, entity);
 

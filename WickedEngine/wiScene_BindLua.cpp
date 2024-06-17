@@ -5093,6 +5093,7 @@ Luna<ObjectComponent_BindLua>::FunctionType ObjectComponent_BindLua::methods[] =
 	lunamethod(ObjectComponent_BindLua, GetCascadeMask),
 	lunamethod(ObjectComponent_BindLua, GetRendertypeMask),
 	lunamethod(ObjectComponent_BindLua, GetColor),
+	lunamethod(ObjectComponent_BindLua, GetAlphaRef),
 	lunamethod(ObjectComponent_BindLua, GetEmissiveColor),
 	lunamethod(ObjectComponent_BindLua, GetUserStencilRef),
 	lunamethod(ObjectComponent_BindLua, GetDrawDistance),
@@ -5104,6 +5105,7 @@ Luna<ObjectComponent_BindLua>::FunctionType ObjectComponent_BindLua::methods[] =
 	lunamethod(ObjectComponent_BindLua, SetCascadeMask),
 	lunamethod(ObjectComponent_BindLua, SetRendertypeMask),
 	lunamethod(ObjectComponent_BindLua, SetColor),
+	lunamethod(ObjectComponent_BindLua, SetAlphaRef),
 	lunamethod(ObjectComponent_BindLua, SetEmissiveColor),
 	lunamethod(ObjectComponent_BindLua, SetUserStencilRef),
 	lunamethod(ObjectComponent_BindLua, SetDrawDistance),
@@ -5140,6 +5142,11 @@ int ObjectComponent_BindLua::GetRendertypeMask(lua_State *L){
 int ObjectComponent_BindLua::GetColor(lua_State* L)
 {
 	Luna<Vector_BindLua>::push(L, XMLoadFloat4(&component->color));
+	return 1;
+}
+int ObjectComponent_BindLua::GetAlphaRef(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->alphaRef);
 	return 1;
 }
 int ObjectComponent_BindLua::GetEmissiveColor(lua_State* L)
@@ -5238,6 +5245,20 @@ int ObjectComponent_BindLua::SetColor(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "SetColor(Vector value) not enough arguments!");
+	}
+
+	return 0;
+}
+int ObjectComponent_BindLua::SetAlphaRef(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->alphaRef = wi::lua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wi::lua::SError(L, "SetAlphaRef(float value) not enough arguments!");
 	}
 
 	return 0;

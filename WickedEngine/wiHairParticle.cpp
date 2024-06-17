@@ -457,6 +457,9 @@ namespace wi
 			return;
 		}
 
+		if (renderPass == RENDERPASS_SHADOW && !material.IsCastingShadow())
+			return;
+
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		device->EventBegin("HairParticle - Draw", cmd);
 
