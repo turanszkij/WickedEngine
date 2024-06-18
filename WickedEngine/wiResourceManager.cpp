@@ -1557,6 +1557,8 @@ namespace wi
 					wi::vector<uint8_t> filedata;
 					if (wi::helper::FileRead(resourceinternal->filename, filedata))
 					{
+						if (resourceinternal->streaming_texture.mip_count > 1)
+							wi::jobsystem::Wait(streaming_ctx); // reloading a resource that is potentially streaming needs to wait for current streaming job to end
 						if (LoadResourceDirectly(resourceinternal->filename, resourceinternal->flags, filedata.data(), filedata.size(), resourceinternal.get()))
 						{
 							resourceinternal->timestamp = timestamp;
