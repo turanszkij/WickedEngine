@@ -1616,6 +1616,7 @@ Axis Aligned Bounding Box. Can be intersected with other primitives.
 - Intersects(AABB aabb) : bool result
 - Intersects(Sphere sphere) : bool result
 - Intersects(Ray ray) : bool result
+- Intersects(Vector point) : bool result
 - GetMin() : Vector result
 - GetMax() : Vector result
 - SetMin(Vector vector)
@@ -1637,6 +1638,7 @@ Sphere defined by center Vector and radius. Can be intersected with other primit
 - Intersects(Sphere sphere) : bool result
 - Intersects(Capsule capsule) : bool result
 - Intersects(Ray ray) : bool result
+- Intersects(Vector point) : bool result
 - GetCenter() : Vector result
 - GetRadius() : float result
 - SetCenter(Vector value)
