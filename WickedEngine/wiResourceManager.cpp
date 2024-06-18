@@ -1402,7 +1402,7 @@ namespace wi
 			{
 				std::weak_ptr<ResourceInternal>& weak_resource = x.second;
 				std::shared_ptr<ResourceInternal> resource = weak_resource.lock();
-				if (resource != nullptr && resource->texture.IsValid() && has_flag(resource->flags, Flags::STREAMING))
+				if (resource != nullptr && resource->texture.IsValid() && resource->streaming_texture.mip_count > 1)
 				{
 					streaming_texture_jobs.push_back(resource);
 				}
