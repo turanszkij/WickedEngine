@@ -1064,6 +1064,8 @@ namespace wi::helper
 
 	uint64_t FileTimestamp(const std::string& fileName)
 	{
+		if (!FileExists(fileName))
+			return 0;
 		auto tim = std::filesystem::last_write_time(ToNativeString(fileName));
 		return std::chrono::duration_cast<std::chrono::duration<uint64_t>>(tim.time_since_epoch()).count();
 	}

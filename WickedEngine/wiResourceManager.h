@@ -24,6 +24,7 @@ namespace wi
 		const wi::graphics::Texture& GetTexture() const;
 		const wi::audio::Sound& GetSound() const;
 		const std::string& GetScript() const;
+		size_t GetScriptHash() const;
 		const wi::video::Video& GetVideo() const;
 		int GetTextureSRGBSubresource() const;
 		int GetFontStyle() const;
@@ -38,7 +39,6 @@ namespace wi
 		void SetVideo(const wi::video::Video& script);
 
 		// Resource marked for recreate on resourcemanager::Load()
-		//	It keeps embedded file data if exists
 		void SetOutdated();
 
 		// Let the streaming system know the required resolution of this resource
@@ -106,6 +106,12 @@ namespace wi
 		// Update all streaming resources, call it once per frame on the main thread
 		//	Launching or finalizing background streaming jobs is attempted here
 		void UpdateStreamingResources(float dt);
+
+		// Returns true if any of the loaded resources are outdated compared to their files
+		bool CheckResourcesOutdated();
+
+		// Reload all resources that are outdated
+		void ReloadOutdatedResources();
 
 		struct ResourceSerializer
 		{

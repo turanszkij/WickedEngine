@@ -97,6 +97,50 @@ void Editor::Initialize()
 	renderComponent.Load();
 	ActivatePath(&renderComponent, 0.2f);
 }
+void Editor::HotReload()
+{
+	if (!wi::initializer::IsInitializeFinished())
+		return;
+
+	static wi::jobsystem::context hotreload_ctx;
+	wi::jobsystem::Wait(hotreload_ctx);
+	hotreload_ctx.priority = wi::jobsystem::Priority::Low;
+
+	if (wi::shadercompiler::GetRegisteredShaderCount() > 0)
+	{
+		wi::jobsystem::Execute(hotreload_ctx, [](wi::jobsystem::JobArgs args) {
+			wi::backlog::post("[Shader check] Started checking " + std::to_string(wi::shadercompiler::GetRegisteredShaderCount()) + " registered shaders for changes...");
+			if (wi::shadercompiler::CheckRegisteredShadersOutdated())
+			{
+				wi::backlog::post("[Shader check] Changes detected, initiating reload...");
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [](uint64_t userdata) {
+					wi::renderer::ReloadShaders();
+				});
+			}
+			else
+			{
+				wi::backlog::post("[Shader check] All up to date");
+			}
+		});
+	}
+
+	wi::jobsystem::Execute(hotreload_ctx, [](wi::jobsystem::JobArgs args) {
+		wi::backlog::post("[Resource check] Started checking resource manager for changes...");
+		if (wi::resourcemanager::CheckResourcesOutdated())
+		{
+			wi::backlog::post("[Resource check] Changes detected, initiating reload...");
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [](uint64_t userdata) {
+				wi::resourcemanager::ReloadOutdatedResources();
+			});
+		}
+		else
+		{
+			wi::backlog::post("[Resource check] All up to date");
+		}
+	});
+
+	renderComponent.ReloadLanguage();
+}
 
 void EditorComponent::ResizeBuffers()
 {
