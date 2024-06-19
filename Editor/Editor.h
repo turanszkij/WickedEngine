@@ -229,6 +229,8 @@ public:
 
 	void Initialize() override;
 
+	void HotReload();
+
 	~Editor() override
 	{
 		config.Commit();

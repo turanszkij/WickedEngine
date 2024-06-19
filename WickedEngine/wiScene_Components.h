@@ -1716,6 +1716,7 @@ namespace wi::scene
 		// Non-serialized attributes:
 		wi::vector<uint8_t> script; // compiled script binary data
 		wi::Resource resource;
+		size_t script_hash = 0;
 
 		inline void Play() { _flags |= PLAYING; }
 		inline void SetPlayOnce(bool once = true) { if (once) { _flags |= PLAY_ONCE; } else { _flags &= ~PLAY_ONCE; } }
