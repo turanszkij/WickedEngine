@@ -55,10 +55,6 @@ add_subdirectory(Utility)
 add_compile_definitions(JPH_DEBUG_RENDERER=1)
 set(PHYSICS_REPO_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 include(${PHYSICS_REPO_ROOT}/Jolt/Jolt.cmake)
-target_link_libraries(WickedEngineEditor PUBLIC
-	WickedEngine_Windows
-	meshoptimizer
-)
 
 set(HEADER_FILES
 		WickedEngine.h
@@ -254,6 +250,7 @@ target_include_directories(${TARGET_NAME} SYSTEM PUBLIC
 
 set(WICKEDENGINE_STATIC_LIBRARIES
 	Bullet
+	Jolt
 	LUA
 	Utility
 )
@@ -272,7 +269,6 @@ else ()
 	target_compile_definitions(${TARGET_NAME} PUBLIC WI_UNORDERED_MAP_TYPE=2)
 
 	target_link_libraries(${TARGET_NAME} PUBLIC
-		Jolt
 		Threads::Threads
 		SDL2::SDL2
 		$<$<BOOL:${OpenImageDenoise_FOUND}>:OpenImageDenoise> # links OpenImageDenoise only if it's found
