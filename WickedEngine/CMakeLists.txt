@@ -49,9 +49,10 @@ else ()
 endif()
 
 add_subdirectory(BULLET)
-add_subdirectory(Jolt)
 add_subdirectory(LUA)
 add_subdirectory(Utility)
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/Jolt/Jolt.cmake)
 
 set(HEADER_FILES
 		WickedEngine.h
