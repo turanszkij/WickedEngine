@@ -26,7 +26,10 @@
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyActivationListener.h>
+
+#ifdef JPH_DEBUG_RENDERER
 #include <Jolt/Renderer/DebugRendererSimple.h>
+#endif // JPH_DEBUG_RENDERER
 
 #include <iostream>
 #include <cstdarg>
@@ -241,7 +244,7 @@ namespace wi::physics
 			{
 				if (physics_scene == nullptr)
 					return;
-				BodyInterface& body_interface = ((PhysicsScene*)physics_scene.get())->physics_system.GetBodyInterface();
+				BodyInterface& body_interface = ((PhysicsScene*)physics_scene.get())->physics_system.GetBodyInterfaceNoLock();
 				body_interface.RemoveBody(body->GetID());
 				body_interface.DestroyBody(body->GetID());
 			}
@@ -424,7 +427,7 @@ namespace wi::physics
 				settings.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
 				settings.mMassPropertiesOverride.mMass = physicscomponent.mass;
 
-				BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface();
+				BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
 
 				physicsobject.body = body_interface.CreateBody(settings);
 				if (physicsobject.body == nullptr)
@@ -493,10 +496,7 @@ namespace wi::physics
 		auto range = wi::profiler::BeginRangeCPU("Physics");
 
 		PhysicsScene& physics_scene = GetPhysicsScene(scene);
-		BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface();
-
-		static TempAllocatorImpl temp_allocator(10 * 1024 * 1024);
-		static JobSystemThreadPool job_system(cMaxPhysicsJobs, cMaxPhysicsBarriers, thread::hardware_concurrency() - 1);
+		BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
 
 		// System will register rigidbodies to objects:
 		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), 64, [&](wi::jobsystem::JobArgs args) {
@@ -559,6 +559,9 @@ namespace wi::physics
 		// Perform internal simulation step:
 		if (IsSimulationEnabled())
 		{
+			static TempAllocatorImpl temp_allocator(10 * 1024 * 1024);
+			static JobSystemThreadPool job_system(cMaxPhysicsJobs, cMaxPhysicsBarriers, thread::hardware_concurrency() - 1);
+
 			int steps = std::min((int)std::ceil(dt / TIMESTEP), ACCURACY);
 			physics_scene.physics_system.Update(dt, steps, &temp_allocator, &job_system);
 		}
