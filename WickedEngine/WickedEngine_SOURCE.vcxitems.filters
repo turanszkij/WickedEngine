@@ -55,6 +55,9 @@
     <Filter Include="ENGINE\Video">
       <UniqueIdentifier>{7cb35feb-169d-4eb9-b90c-61418a8e99df}</UniqueIdentifier>
     </Filter>
+    <Filter Include="JOLT">
+      <UniqueIdentifier>{ea901057-ebb6-4eed-ac17-c98111e6c4bd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)LUA\lapi.h">
@@ -1146,6 +1149,873 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\WinAdapter.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\AABBTree\AABBTreeBuilder.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\AABBTree\AABBTreeToBuffer.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\AABox.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\AABox4.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\AABoxCast.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\ActiveEdgeMode.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\ActiveEdges.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\AllowedDOFs.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\ConstraintPart\AngleConstraintPart.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\ARMNeon.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\Array.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\Atomics.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\ConstraintPart\AxisConstraintPart.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\BackFaceMode.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\Body.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\BodyAccess.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\BodyActivationListener.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\BodyCreationSettings.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\BodyFilter.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\BodyID.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\BodyInterface.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\BodyLock.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\BodyLockInterface.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\BodyLockMulti.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\BodyManager.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\BodyPair.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\BodyType.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\BoxShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\BroadPhase\BroadPhase.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\BroadPhase\BroadPhaseBruteForce.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\BroadPhase\BroadPhaseLayer.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\BroadPhase\BroadPhaseLayerInterfaceMask.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\BroadPhase\BroadPhaseLayerInterfaceTable.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\BroadPhase\BroadPhaseQuadTree.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\BroadPhase\BroadPhaseQuery.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\ByteBuffer.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\CalculateSolverSteps.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\CapsuleShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CastConvexVsTriangles.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CastResult.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CastSphereVsTriangles.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Character\Character.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Character\CharacterBase.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Character\CharacterVirtual.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\ClipPoly.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\ClosestPoint.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CollectFacesMode.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CollideConvexVsTriangles.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CollidePointResult.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CollideShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CollideSoftBodyVerticesVsTriangles.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CollideSphereVsTriangles.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CollisionCollector.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CollisionCollectorImpl.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CollisionDispatch.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CollisionGroup.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\Color.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\CompoundShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\CompoundShapeVisitors.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\ConeConstraint.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\ConfigurationString.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\Constraint.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\ConstraintManager.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\ContactConstraintManager.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\ContactListener.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\ConvexHullBuilder.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\ConvexHullBuilder2D.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\ConvexHullShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\ConvexShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\ConvexSupport.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\Core.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\CylinderShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Renderer\DebugRenderer.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Renderer\DebugRendererPlayback.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Renderer\DebugRendererRecorder.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Renderer\DebugRendererSimple.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\DecoratedShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\DeterminismLog.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\DistanceConstraint.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\DMat44.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\Double3.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\ConstraintPart\DualAxisConstraintPart.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\DVec3.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\DynMatrix.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\EActivation.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\EigenValueSymmetric.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\Ellipse.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\EPAConvexHullBuilder.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\EPAPenetrationDepth.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\EPhysicsUpdateError.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\EstimateCollisionResponse.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\Factory.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\FindRoot.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\FixedConstraint.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\FixedSizeFreeList.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\Float2.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\Float3.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\Float4.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\FPControlWord.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\FPException.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\FPFlushDenormals.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\GaussianElimination.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\GearConstraint.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\ConstraintPart\GearConstraintPart.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\GetPrimitiveTypeOfType.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\GetTrianglesContext.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\GJKClosestPoint.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\GroupFilter.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\GroupFilterTable.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\HalfFloat.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\HashCombine.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\HeightFieldShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\HingeConstraint.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\ConstraintPart\HingeRotationConstraintPart.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\ConstraintPart\IndependentAxisConstraintPart.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\IndexedTriangle.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\Indexify.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\InsertionSort.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\InternalEdgeRemovingCollector.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\IslandBuilder.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\IssueReporting.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\JobSystem.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\JobSystemSingleThreaded.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\JobSystemThreadPool.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\JobSystemWithBarrier.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Jolt.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\LargeIslandSplitter.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\LinearCurve.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\LockFreeHashMap.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\ManifoldBetweenTwoFaces.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\MassProperties.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\Mat44.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\Math.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\MathTypes.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\Matrix.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\Memory.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\MeshShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\MortonCode.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\MotionProperties.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\MotionQuality.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\MotionType.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\MotorcycleController.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\MotorSettings.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\MutableCompoundShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\Mutex.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\MutexArray.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\NarrowPhaseQuery.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\NarrowPhaseStats.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\AABBTree\NodeCodec\NodeCodecQuadTreeHalfFloat.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\NonCopyable.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\ObjectLayer.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\ObjectLayerPairFilterMask.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\ObjectLayerPairFilterTable.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\ObjectStream.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\ObjectStreamBinaryIn.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\ObjectStreamBinaryOut.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\ObjectStreamIn.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\ObjectStreamOut.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\ObjectStreamTextIn.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\ObjectStreamTextOut.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\ObjectStreamTypes.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\BroadPhase\ObjectVsBroadPhaseLayerFilterMask.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\BroadPhase\ObjectVsBroadPhaseLayerFilterTable.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\OffsetCenterOfMassShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\OrientedBox.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\PathConstraint.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\PathConstraintPath.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\PathConstraintPathHermite.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\PhysicsLock.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\PhysicsMaterial.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\PhysicsMaterialSimple.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\PhysicsScene.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\PhysicsSettings.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\PhysicsStepListener.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\PhysicsSystem.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\PhysicsUpdateContext.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\Plane.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\PointConstraint.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\ConstraintPart\PointConstraintPart.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\PolyhedronSubmergedVolumeCalculator.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\Profiler.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\PulleyConstraint.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\BroadPhase\QuadTree.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\Quat.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\QuickSort.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\RackAndPinionConstraint.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\ConstraintPart\RackAndPinionConstraintPart.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Ragdoll\Ragdoll.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\RayAABox.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\RayAABox8.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\RayCapsule.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\RayCast.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\RayCylinder.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\RaySphere.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\RayTriangle.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\RayTriangle8.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\Real.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\Reference.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\RegisterTypes.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\Result.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\RotatedTranslatedShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\ConstraintPart\RotationEulerConstraintPart.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\ConstraintPart\RotationQuatConstraintPart.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\RTTI.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\ScaledShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\ScaleHelpers.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\ScopeExit.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\Semaphore.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\SerializableAttribute.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\SerializableAttributeEnum.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\SerializableAttributeTyped.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\SerializableObject.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\Shape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\ShapeCast.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\ShapeFilter.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\SixDOFConstraint.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Skeleton\SkeletalAnimation.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Skeleton\Skeleton.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Skeleton\SkeletonMapper.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Skeleton\SkeletonPose.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\SliderConstraint.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\SoftBody\SoftBodyContactListener.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\SoftBody\SoftBodyCreationSettings.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\SoftBody\SoftBodyManifold.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\SoftBody\SoftBodyMotionProperties.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\SoftBody\SoftBodyShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\SoftBody\SoftBodySharedSettings.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\SoftBody\SoftBodyUpdateContext.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\SoftBody\SoftBodyVertex.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\SortReverseAndStore.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\Sphere.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\SphereShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\ConstraintPart\SpringPart.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\SpringSettings.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\StateRecorder.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\StateRecorderImpl.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\StaticArray.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\StaticCompoundShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\STLAlignedAllocator.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\STLAllocator.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\STLTempAllocator.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\StreamIn.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\StreamOut.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\StreamUtils.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\StreamWrapper.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\StringTools.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\SubShapeID.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\SubShapeIDPair.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\SwingTwistConstraint.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\ConstraintPart\SwingTwistConstraintPart.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\Swizzle.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\TaperedCapsuleShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\TempAllocator.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\TickCounter.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\TrackedVehicleController.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\TransformedShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Geometry\Triangle.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\AABBTree\TriangleCodec\TriangleCodecIndexed8BitPackSOA4Flags.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\TriangleGrouper\TriangleGrouper.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\TriangleGrouper\TriangleGrouperClosestCentroid.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\TriangleGrouper\TriangleGrouperMorton.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\TriangleShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\TriangleSplitter\TriangleSplitter.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\TriangleSplitter\TriangleSplitterBinning.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\TriangleSplitter\TriangleSplitterFixedLeafSize.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\TriangleSplitter\TriangleSplitterLongestAxis.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\TriangleSplitter\TriangleSplitterMean.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\TriangleSplitter\TriangleSplitterMorton.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\Trigonometry.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\TwoBodyConstraint.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\TypeDeclarations.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\UnorderedMap.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\UnorderedSet.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\UVec4.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\UVec8.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\Vec3.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\Vec4.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\Vec8.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Math\Vector.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\VehicleAntiRollBar.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\VehicleCollisionTester.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\VehicleConstraint.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\VehicleController.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\VehicleDifferential.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\VehicleEngine.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\VehicleTrack.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\VehicleTransmission.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\Wheel.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\WheeledVehicleController.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1919,9 +2789,420 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiAsync_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="$(MSBuildThisFileDirectory)ArchiveVersionHistory.txt" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\AABBTree\AABBTreeBuilder.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\Body.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\BodyAccess.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\BodyCreationSettings.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\BodyInterface.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\BodyManager.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\BoxShape.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\BroadPhase\BroadPhase.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\BroadPhase\BroadPhaseBruteForce.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\BroadPhase\BroadPhaseQuadTree.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\CapsuleShape.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CastConvexVsTriangles.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CastSphereVsTriangles.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Character\Character.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Character\CharacterBase.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Character\CharacterVirtual.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CollideConvexVsTriangles.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CollideSphereVsTriangles.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CollisionDispatch.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CollisionGroup.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Core\Color.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\CompoundShape.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\ConeConstraint.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\Constraint.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\ConstraintManager.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\ContactConstraintManager.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Geometry\ConvexHullBuilder.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Geometry\ConvexHullBuilder2D.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\ConvexHullShape.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\ConvexShape.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\CylinderShape.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Renderer\DebugRenderer.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Renderer\DebugRendererPlayback.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Renderer\DebugRendererRecorder.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Renderer\DebugRendererSimple.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\DecoratedShape.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\DeterminismLog.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\DistanceConstraint.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\EstimateCollisionResponse.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Core\Factory.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\FixedConstraint.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\GearConstraint.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\GroupFilter.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\GroupFilterTable.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\HeightFieldShape.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\HingeConstraint.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Geometry\Indexify.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\IslandBuilder.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Core\IssueReporting.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Core\JobSystemSingleThreaded.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Core\JobSystemThreadPool.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Core\JobSystemWithBarrier.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\LargeIslandSplitter.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Core\LinearCurve.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\ManifoldBetweenTwoFaces.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\MassProperties.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Core\Memory.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\MeshShape.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\MotionProperties.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\MotorcycleController.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\MotorSettings.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\MutableCompoundShape.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\NarrowPhaseQuery.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\NarrowPhaseStats.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\ObjectStream.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\ObjectStreamBinaryIn.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\ObjectStreamBinaryOut.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\ObjectStreamIn.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\ObjectStreamOut.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\ObjectStreamTextIn.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\ObjectStreamTextOut.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\OffsetCenterOfMassShape.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Geometry\OrientedBox.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\PathConstraint.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\PathConstraintPath.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\PathConstraintPathHermite.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\PhysicsLock.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\PhysicsMaterial.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\PhysicsMaterialSimple.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\PhysicsScene.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\PhysicsSystem.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\PhysicsUpdateContext.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\PointConstraint.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Core\Profiler.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\PulleyConstraint.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\BroadPhase\QuadTree.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\RackAndPinionConstraint.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Ragdoll\Ragdoll.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\RegisterTypes.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\RotatedTranslatedShape.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Core\RTTI.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\ScaledShape.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Core\Semaphore.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\SerializableObject.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\Shape.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\SixDOFConstraint.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Skeleton\SkeletalAnimation.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Skeleton\Skeleton.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Skeleton\SkeletonMapper.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Skeleton\SkeletonPose.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\SliderConstraint.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\SoftBody\SoftBodyCreationSettings.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\SoftBody\SoftBodyMotionProperties.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\SoftBody\SoftBodyShape.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\SoftBody\SoftBodySharedSettings.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\SphereShape.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\SpringSettings.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\StateRecorderImpl.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\StaticCompoundShape.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Core\StringTools.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\SwingTwistConstraint.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\TaperedCapsuleShape.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Core\TickCounter.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\TrackedVehicleController.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\TransformedShape.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\TriangleGrouper\TriangleGrouperClosestCentroid.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\TriangleGrouper\TriangleGrouperMorton.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\TriangleShape.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\TriangleSplitter\TriangleSplitter.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\TriangleSplitter\TriangleSplitterBinning.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\TriangleSplitter\TriangleSplitterFixedLeafSize.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\TriangleSplitter\TriangleSplitterLongestAxis.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\TriangleSplitter\TriangleSplitterMean.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\TriangleSplitter\TriangleSplitterMorton.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\TwoBodyConstraint.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\TypeDeclarations.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Math\Vec3.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\VehicleAntiRollBar.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\VehicleCollisionTester.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\VehicleConstraint.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\VehicleController.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\VehicleDifferential.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\VehicleEngine.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\VehicleTrack.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\VehicleTransmission.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\Wheel.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\WheeledVehicleController.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiPhysics_Jolt.cpp">
+      <Filter>ENGINE\Physics</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)Utility\DirectXCollision.inl">
@@ -1942,5 +3223,53 @@
     <None Include="$(MSBuildThisFileDirectory)Utility\DirectXPackedVector.inl">
       <Filter>UTILITY</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\Body.inl">
+      <Filter>JOLT</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Jolt\Math\DMat44.inl">
+      <Filter>JOLT</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Jolt\Math\DVec3.inl">
+      <Filter>JOLT</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Jolt\Core\FixedSizeFreeList.inl">
+      <Filter>JOLT</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Jolt\Core\JobSystem.inl">
+      <Filter>JOLT</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Jolt\Core\LockFreeHashMap.inl">
+      <Filter>JOLT</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Jolt\Math\Mat44.inl">
+      <Filter>JOLT</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\MotionProperties.inl">
+      <Filter>JOLT</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Jolt\Core\Profiler.inl">
+      <Filter>JOLT</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Jolt\Math\Quat.inl">
+      <Filter>JOLT</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Jolt\Math\UVec4.inl">
+      <Filter>JOLT</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Jolt\Math\UVec8.inl">
+      <Filter>JOLT</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Jolt\Math\Vec3.inl">
+      <Filter>JOLT</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Jolt\Math\Vec4.inl">
+      <Filter>JOLT</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)Jolt\Math\Vec8.inl">
+      <Filter>JOLT</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)ArchiveVersionHistory.txt" />
   </ItemGroup>
 </Project>

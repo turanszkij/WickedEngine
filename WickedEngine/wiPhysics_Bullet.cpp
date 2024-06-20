@@ -1,4 +1,6 @@
 #include "wiPhysics.h"
+
+#if PHYSICSENGINE == PHYSICSENGINE_BULLET
 #include "wiScene.h"
 #include "wiProfiler.h"
 #include "wiBacklog.h"
@@ -1871,3 +1873,5 @@ namespace wi::physics
 		}
 	}
 }
+
+#endif // PHYSICSENGINE

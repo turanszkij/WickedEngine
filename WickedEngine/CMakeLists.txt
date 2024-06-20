@@ -49,6 +49,7 @@ else ()
 endif()
 
 add_subdirectory(BULLET)
+add_subdirectory(Jolt)
 add_subdirectory(LUA)
 add_subdirectory(Utility)
 
