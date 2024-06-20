@@ -8,7 +8,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_EMITTER " Emitter", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(300, 980));
+	SetSize(XMFLOAT2(300, 1080));
 
 	closeButton.SetTooltip("Delete EmittedParticleSystem");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -42,6 +42,24 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	});
 	restartButton.SetTooltip("Restart particle system emitter");
 	AddWidget(&restartButton);
+
+	burstButton.Create("Burst");
+	burstButton.OnClick([&](wi::gui::EventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->Burst(std::atoi(burstCountInput.GetValue().c_str()));
+		}
+	});
+	burstButton.SetTooltip("Emit a set number of particles at once.");
+	AddWidget(&burstButton);
+
+	burstCountInput.Create("");
+	burstCountInput.SetValue(100);
+	burstCountInput.SetSize(XMFLOAT2(itemheight * 4, itemheight));
+	burstCountInput.SetCancelInputEnabled(false);
+	burstCountInput.SetTooltip("Specify burst count (number of particles to burst).");
+	AddWidget(&burstCountInput);
 
 	meshComboBox.Create("Mesh: ");
 	meshComboBox.SetSize(XMFLOAT2(wid, itemheight));
@@ -217,7 +235,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 
 
 	infoLabel.Create("EmitterInfo");
-	infoLabel.SetSize(XMFLOAT2(GetSize().x - 20, 120));
+	infoLabel.SetSize(XMFLOAT2(GetSize().x - 20, 160));
 	infoLabel.SetPos(XMFLOAT2(10, y += step));
 	AddWidget(&infoLabel);
 
@@ -830,6 +848,10 @@ void EmitterWindow::ResizeLayout()
 
 	add_fullwidth(infoLabel);
 	add_fullwidth(restartButton);
+	burstCountInput.SetPos(XMFLOAT2(width - padding - burstCountInput.GetSize().x, y));
+	y += burstCountInput.GetSize().y + padding;
+	burstButton.SetPos(XMFLOAT2(padding, burstCountInput.GetPos().y));
+	burstButton.SetSize(XMFLOAT2(width - padding * 3 - burstCountInput.GetSize().x, burstCountInput.GetSize().y));
 	add(meshComboBox);
 	add(shaderTypeComboBox);
 	add_right(sortCheckBox);

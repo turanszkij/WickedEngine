@@ -1541,6 +1541,7 @@ namespace wi::physics
 		if (physicscomponent.physicsobject != nullptr)
 		{
 			GetRigidBody(physicscomponent).rigidBody->setLinearVelocity(btVector3(velocity.x, velocity.y, velocity.z));
+			GetRigidBody(physicscomponent).rigidBody->forceActivationState(ACTIVE_TAG);
 		}
 	}
 	void SetAngularVelocity(
@@ -1551,6 +1552,7 @@ namespace wi::physics
 		if (physicscomponent.physicsobject != nullptr)
 		{
 			GetRigidBody(physicscomponent).rigidBody->setAngularVelocity(btVector3(velocity.x, velocity.y, velocity.z));
+			GetRigidBody(physicscomponent).rigidBody->forceActivationState(ACTIVE_TAG);
 		}
 	}
 
@@ -1562,6 +1564,7 @@ namespace wi::physics
 		if (physicscomponent.physicsobject != nullptr)
 		{
 			GetRigidBody(physicscomponent).rigidBody->applyCentralForce(btVector3(force.x, force.y, force.z));
+			GetRigidBody(physicscomponent).rigidBody->forceActivationState(ACTIVE_TAG);
 		}
 	}
 	void ApplyForceAt(
@@ -1573,6 +1576,7 @@ namespace wi::physics
 		if (physicscomponent.physicsobject != nullptr)
 		{
 			GetRigidBody(physicscomponent).rigidBody->applyForce(btVector3(force.x, force.y, force.z), btVector3(at.x, at.y, at.z));
+			GetRigidBody(physicscomponent).rigidBody->forceActivationState(ACTIVE_TAG);
 		}
 	}
 
@@ -1584,6 +1588,7 @@ namespace wi::physics
 		if (physicscomponent.physicsobject != nullptr)
 		{
 			GetRigidBody(physicscomponent).rigidBody->applyCentralImpulse(btVector3(impulse.x, impulse.y, impulse.z));
+			GetRigidBody(physicscomponent).rigidBody->forceActivationState(ACTIVE_TAG);
 		}
 	}
 	void ApplyImpulse(
@@ -1603,6 +1608,7 @@ namespace wi::physics
 		if (physicscomponent.physicsobject != nullptr)
 		{
 			GetRigidBody(physicscomponent).rigidBody->applyImpulse(btVector3(impulse.x, impulse.y, impulse.z), btVector3(at.x, at.y, at.z));
+			GetRigidBody(physicscomponent).rigidBody->forceActivationState(ACTIVE_TAG);
 		}
 	}
 	void ApplyImpulseAt(
@@ -1660,6 +1666,7 @@ namespace wi::physics
 		if (ragdoll.rigidbodies[bodypart] == nullptr || ragdoll.rigidbodies[bodypart]->rigidBody == nullptr)
 			return;
 		ragdoll.rigidbodies[bodypart]->rigidBody->applyImpulse(btVector3(impulse.x, impulse.y, impulse.z), btVector3(at.x, at.y, at.z));
+		ragdoll.rigidbodies[bodypart]->rigidBody->forceActivationState(ACTIVE_TAG);
 	}
 
 	void ApplyTorque(
@@ -1670,6 +1677,7 @@ namespace wi::physics
 		if (physicscomponent.physicsobject != nullptr)
 		{
 			GetRigidBody(physicscomponent).rigidBody->applyTorque(btVector3(torque.x, torque.y, torque.z));
+			GetRigidBody(physicscomponent).rigidBody->forceActivationState(ACTIVE_TAG);
 		}
 	}
 	void ApplyTorqueImpulse(
@@ -1680,6 +1688,7 @@ namespace wi::physics
 		if (physicscomponent.physicsobject != nullptr)
 		{
 			GetRigidBody(physicscomponent).rigidBody->applyTorqueImpulse(btVector3(torque.x, torque.y, torque.z));
+			GetRigidBody(physicscomponent).rigidBody->forceActivationState(ACTIVE_TAG);
 		}
 	}
 
@@ -1778,6 +1787,7 @@ namespace wi::physics
 		std::shared_ptr<void> physics_scene;
 		std::unique_ptr<btGeneric6DofConstraint> constraint;
 		float pick_distance = 0;
+		btRigidBody* rigidbody = nullptr;
 		~PickDragOperation_Bullet()
 		{
 			btSoftRigidDynamicsWorld& dynamicsWorld = ((PhysicsScene*)physics_scene.get())->dynamicsWorld;
@@ -1814,6 +1824,7 @@ namespace wi::physics
 			btVector3 dir = (rayTo - rayFrom).normalize();
 			newPivotB = rayFrom + dir * internal_state->pick_distance;
 			internal_state->constraint->getFrameOffsetA().setOrigin(newPivotB);
+			internal_state->rigidbody->forceActivationState(ACTIVE_TAG);
 		}
 		else
 		{
@@ -1829,6 +1840,7 @@ namespace wi::physics
 			auto internal_state = std::make_shared<PickDragOperation_Bullet>();
 			internal_state->physics_scene = scene.physics_scene;
 			internal_state->pick_distance = (btVector3(result.position.x, result.position.y, result.position.z) - rayFrom).length();
+			internal_state->rigidbody = rigidbody;
 
 			btTransform transform;
 			transform.setIdentity();

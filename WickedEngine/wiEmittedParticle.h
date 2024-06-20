@@ -64,9 +64,13 @@ namespace wi
 
 		uint32_t MAX_PARTICLES = 1000;
 
+		mutable wi::vector<EmitLocation> emit_locations;
+
 	public:
 		void UpdateCPU(const wi::scene::TransformComponent& transform, float dt);
 		void Burst(int num);
+		void Burst(int num, const XMFLOAT3& position, const wi::Color& color = wi::Color::White());
+		void Burst(int num, const XMFLOAT4X4& transform, const wi::Color& color = wi::Color::White());
 		void Restart();
 
 		// Must have a transform and material component, but mesh is optional

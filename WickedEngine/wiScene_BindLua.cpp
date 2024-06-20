@@ -4597,7 +4597,59 @@ int EmitterComponent_BindLua::Burst(lua_State* L)
 	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		component->Burst(wi::lua::SGetInt(L, 1));
+		if (argc > 1)
+		{
+			Matrix_BindLua* mat = Luna<Matrix_BindLua>::lightcheck(L, 2);
+			if (mat != nullptr)
+			{
+				XMFLOAT4X4 transform = mat->data;
+				wi::Color color = wi::Color::White();
+				if (argc > 2)
+				{
+					Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 3);
+					if (vec != nullptr)
+					{
+						color = wi::Color::fromFloat4(vec->data);
+					}
+					else
+					{
+						wi::lua::SError(L, "Burst(int value, Matrix transform, opt Vector color = Vector(1,1,1,1) third argument is not a Vector!");
+					}
+				}
+				component->Burst(wi::lua::SGetInt(L, 1), transform, color);
+			}
+			else
+			{
+				Vector_BindLua* pos = Luna<Vector_BindLua>::lightcheck(L, 2);
+				if (pos != nullptr)
+				{
+					wi::Color color = wi::Color::White();
+					if (argc > 2)
+					{
+						Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 3);
+						if (vec != nullptr)
+						{
+							color = wi::Color::fromFloat4(vec->data);
+						}
+						else
+						{
+							wi::lua::SError(L, "Burst(int value, Vector position, opt Vector color = Vector(1,1,1,1) third argument is not a Vector!");
+						}
+					}
+					component->Burst(wi::lua::SGetInt(L, 1), pos->GetFloat3(), color);
+				}
+				else
+				{
+					wi::lua::SError(L, "Burst(int value, Vector position, opt Vector color = Vector(1,1,1,1) second argument is not a Matrix!");
+					wi::lua::SError(L, "Burst(int value, Matrix transform, opt Vector color = Vector(1,1,1,1) second argument is not a Matrix!");
+					return 0;
+				}
+			}
+		}
+		else
+		{
+			component->Burst(wi::lua::SGetInt(L, 1));
+		}
 	}
 	else
 	{

@@ -343,6 +343,14 @@ namespace wi
 		emit += burst;
 		burst = 0;
 
+		if ((uint)emit > 0)
+		{
+			EmitLocation& location = emit_locations.emplace_back();
+			location.transform.init();
+			location.count = (uint)emit;
+			location.color = wi::Color::White();
+		}
+
 		worldMatrix = transform.world;
 
 		// Swap CURRENT alivelist with NEW alivelist
@@ -358,6 +366,29 @@ namespace wi
 			return;
 
 		burst += num;
+	}
+	void EmittedParticleSystem::Burst(int num, const XMFLOAT3& position, const wi::Color& color)
+	{
+		if (IsPaused() || num <= 0)
+			return;
+
+		XMFLOAT4X4 transform;
+		XMStoreFloat4x4(&transform, XMMatrixTranslation(position.x, position.y, position.z));
+
+		EmitLocation& location = emit_locations.emplace_back();
+		location.count = (uint)num;
+		location.transform.Create(transform);
+		location.color = color;
+	}
+	void EmittedParticleSystem::Burst(int num, const XMFLOAT4X4& transform, const wi::Color& color)
+	{
+		if (IsPaused() || num <= 0)
+			return;
+
+		EmitLocation& location = emit_locations.emplace_back();
+		location.count = (uint)num;
+		location.transform.Create(transform);
+		location.color = color;
 	}
 	void EmittedParticleSystem::Restart()
 	{
@@ -377,8 +408,22 @@ namespace wi
 
 		if (!IsPaused() && dt > 0)
 		{
+			auto alloc = device->AllocateGPU(sizeof(EmitLocation) * emit_locations.size(), cmd);
+			const XMMATRIX W = XMLoadFloat4x4(&worldMatrix);
+			for (size_t i = 0; i < emit_locations.size(); ++i)
+			{
+				EmitLocation& location = emit_locations[i];
+				XMFLOAT4X4 mat = location.transform.GetMatrix();
+				XMMATRIX M = XMMatrixTranspose(XMLoadFloat4x4(&mat));
+				M = M * W;
+				XMStoreFloat4x4(&mat, M);
+				location.transform.Create(mat);
+				std::memcpy((EmitLocation*)alloc.data + i, &location, sizeof(location));
+			}
+			device->BindResource(&alloc.buffer, 0, cmd);
+
 			EmittedParticleCB cb;
-			cb.xEmitterTransform.Create(worldMatrix);
+			cb.xEmitBufferOffset = (uint)alloc.offset;
 			if (mesh == nullptr || !IsFormatUnorm(mesh->position_format) || mesh->so_pos.IsValid())
 			{
 				cb.xEmitterBaseMeshUnormRemap.init();
@@ -389,7 +434,6 @@ namespace wi
 				XMStoreFloat4x4(&unormRemap, mesh->aabb.getUnormRemapMatrix());
 				cb.xEmitterBaseMeshUnormRemap.Create(unormRemap);
 			}
-			cb.xEmitCount = (uint32_t)emit;
 			if (mesh == nullptr)
 			{
 				cb.xEmitterMeshGeometryOffset = 0;
@@ -494,25 +538,30 @@ namespace wi
 
 			GPUBarrier barrier_indirect_uav = GPUBarrier::Buffer(&indirectBuffers, ResourceState::INDIRECT_ARGUMENT, ResourceState::UNORDERED_ACCESS);
 			GPUBarrier barrier_uav_indirect = GPUBarrier::Buffer(&indirectBuffers, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT);
-			GPUBarrier barrier_memory = GPUBarrier::Memory();
 
 			device->Barrier(&barrier_indirect_uav, 1, cmd);
 
-			// kick off updating, set up state
+			// emit the required amounts
+			device->EventBegin("Emit", cmd);
+			device->BindComputeShader(mesh == nullptr ? (IsVolumeEnabled() ? &emitCS_VOLUME : &emitCS) : &emitCS_FROMMESH, cmd);
+			uint bufferoffset = (uint)alloc.offset;
+			for (auto& location : emit_locations)
+			{
+				device->PushConstants(&bufferoffset, sizeof(bufferoffset), cmd);
+				device->Dispatch((location.count + 63u) / 64u, 1, 1, cmd);
+				bufferoffset += sizeof(EmitLocation);
+			}
+			emit_locations.clear();
+			device->Barrier(GPUBarrier::Memory(), cmd);
+			device->EventEnd(cmd);
+
+			// kick off indirect updating
 			device->EventBegin("KickOff Update", cmd);
 			device->BindComputeShader(&kickoffUpdateCS, cmd);
 			device->Dispatch(1, 1, 1, cmd);
-			device->Barrier(&barrier_memory, 1, cmd);
 			device->EventEnd(cmd);
 
 			device->Barrier(&barrier_uav_indirect, 1, cmd);
-
-			// emit the required amount if there are free slots in dead list
-			device->EventBegin("Emit", cmd);
-			device->BindComputeShader(mesh == nullptr ? (IsVolumeEnabled() ? &emitCS_VOLUME : &emitCS) : &emitCS_FROMMESH, cmd);
-			device->DispatchIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHEMIT, cmd);
-			device->Barrier(&barrier_memory, 1, cmd);
-			device->EventEnd(cmd);
 
 			if (IsSPHEnabled())
 			{
@@ -525,7 +574,7 @@ namespace wi
 				// Reset grid cell offset buffer with invalid offsets (max uint):
 				device->EventBegin("Grid - Reset", cmd);
 				device->ClearUAV(&sphGridCells, 0, cmd);
-				device->Barrier(&barrier_memory, 1, cmd);
+				device->Barrier(GPUBarrier::Memory(), cmd);
 				device->EventEnd(cmd);
 
 				// Assign particles into partitioning grid:
@@ -614,7 +663,7 @@ namespace wi
 				};
 				device->BindUAVs(uav_density, 0, arraysize(uav_density), cmd);
 				device->DispatchIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
-				device->Barrier(&barrier_memory, 1, cmd);
+				device->Barrier(GPUBarrier::Memory(), cmd);
 				device->EventEnd(cmd);
 
 				// 6.) Compute particle pressure forces:
@@ -633,7 +682,7 @@ namespace wi
 				};
 				device->BindUAVs(uav_force, 0, arraysize(uav_force), cmd);
 				device->DispatchIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
-				device->Barrier(&barrier_memory, 1, cmd);
+				device->Barrier(GPUBarrier::Memory(), cmd);
 				device->EventEnd(cmd);
 
 

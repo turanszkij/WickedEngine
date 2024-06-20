@@ -4,6 +4,8 @@
 #include "wiScene.h"
 #include "wiMath_BindLua.h"
 
+#include <memory>
+
 namespace wi::lua::scene
 {
 	// If the application doesn't use the global scene, but manages it manually,
@@ -20,7 +22,7 @@ namespace wi::lua::scene
 	class Scene_BindLua
 	{
 	private:
-		wi::scene::Scene owning;
+		std::unique_ptr<wi::scene::Scene> owning; // GetScene() is too slow if scene object is always constructed
 	public:
 		wi::scene::Scene* scene = nullptr;
 
@@ -29,7 +31,7 @@ namespace wi::lua::scene
 		static Luna<Scene_BindLua>::PropertyType properties[];
 
 		Scene_BindLua(wi::scene::Scene* scene) :scene(scene) {}
-		Scene_BindLua(lua_State* L) : scene(&owning) {}
+		Scene_BindLua(lua_State* L) : owning(std::make_unique<wi::scene::Scene>()), scene(owning.get()) {}
 
 		int Update(lua_State* L);
 		int Clear(lua_State* L);

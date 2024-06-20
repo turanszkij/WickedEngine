@@ -4014,13 +4014,11 @@ void UpdateRenderData(
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
-				assert(0); // too many entities!
 				entityCounter--;
 				break;
 			}
 			if (matrixCounter >= MATRIXARRAY_COUNT)
 			{
-				assert(0); // too many decals, can't upload the rest to matrixarray!
 				matrixCounter--;
 				break;
 			}
@@ -4096,13 +4094,11 @@ void UpdateRenderData(
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
-				assert(0); // too many entities!
 				entityCounter--;
 				break;
 			}
 			if (matrixCounter >= MATRIXARRAY_COUNT)
 			{
-				assert(0); // too many probes, can't upload the rest to matrixarray!
 				matrixCounter--;
 				break;
 			}
@@ -4155,7 +4151,6 @@ void UpdateRenderData(
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
-				assert(0); // too many entities!
 				entityCounter--;
 				break;
 			}
@@ -4270,7 +4265,6 @@ void UpdateRenderData(
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
-				assert(0); // too many entities!
 				entityCounter--;
 				break;
 			}
@@ -4313,7 +4307,6 @@ void UpdateRenderData(
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
-				assert(0); // too many entities!
 				entityCounter--;
 				break;
 			}

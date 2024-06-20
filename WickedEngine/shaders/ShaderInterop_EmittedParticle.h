@@ -28,8 +28,7 @@ struct ParticleCounters
 };
 static const uint PARTICLECOUNTER_OFFSET_ALIVECOUNT = 0;
 static const uint PARTICLECOUNTER_OFFSET_DEADCOUNT = PARTICLECOUNTER_OFFSET_ALIVECOUNT + 4;
-static const uint PARTICLECOUNTER_OFFSET_REALEMITCOUNT = PARTICLECOUNTER_OFFSET_DEADCOUNT + 4;
-static const uint PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION = PARTICLECOUNTER_OFFSET_REALEMITCOUNT + 4;
+static const uint PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION = PARTICLECOUNTER_OFFSET_DEADCOUNT + 4;
 static const uint PARTICLECOUNTER_OFFSET_CULLEDCOUNT = PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION + 4;
 static const uint PARTICLECOUNTER_OFFSET_CELLALLOCATOR = PARTICLECOUNTER_OFFSET_CULLEDCOUNT + 4;
 
@@ -42,10 +41,7 @@ static const uint EMITTER_OPTION_BIT_TAKE_COLOR_FROM_MESH = 1 << 5;
 
 CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 {
-	ShaderTransform	xEmitterTransform;
-	ShaderTransform xEmitterBaseMeshUnormRemap;
-
-	uint		xEmitCount;
+	uint		xEmitBufferOffset;
 	float		xEmitterRandomness;
 	float		xParticleRandomColorFactor;
 	float		xParticleSize;
@@ -93,13 +89,22 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 
 	float3		xParticleVelocity;
 	float		xParticleDrag;
+
+	ShaderTransform xEmitterBaseMeshUnormRemap;
 };
 
-static const uint THREADCOUNT_EMIT = 256;
+struct EmitLocation
+{
+	ShaderTransform transform;
+	uint count;
+	uint color;
+	int padding0;
+	int padding1;
+};
+
 static const uint THREADCOUNT_MESH_SHADER = 32;
 
-static const uint ARGUMENTBUFFER_OFFSET_DISPATCHEMIT = 0;
-static const uint ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION = wi::graphics::AlignTo(ARGUMENTBUFFER_OFFSET_DISPATCHEMIT + (3 * 4), IndirectDispatchArgsAlignment);
+static const uint ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION = 0;
 static const uint ARGUMENTBUFFER_OFFSET_DRAWPARTICLES = wi::graphics::AlignTo(ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION + (3 * 4), IndirectDrawArgsAlignment);
 
 

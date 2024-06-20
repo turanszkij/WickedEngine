@@ -1057,6 +1057,8 @@ TextureSlot = {
 </br>
 
 - Burst(int value)  -- spawns a specific amount of particles immediately
+- Burst(int value, Vector position, opt Vector color = Vector(1,1,1,1))  -- spawns a specific amount of particles immediately at specified location and color multiplier
+- Burst(int value, Matrix transform, opt Vector color = Vector(1,1,1,1))  -- spawns a specific amount of particles immediately at specified location and color multiplier
 - SetEmitCount(float value)  -- set the emitted particle count per second
 - SetSize(float value)  -- set particle starting size
 - SetLife(float value)  -- set particle lifetime

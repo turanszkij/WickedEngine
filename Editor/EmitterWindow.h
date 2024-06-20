@@ -17,6 +17,8 @@ public:
 	wi::EmittedParticleSystem* GetEmitter();
 
 	wi::gui::Button restartButton;
+	wi::gui::Button burstButton;
+	wi::gui::TextInputField burstCountInput;
 	wi::gui::ComboBox meshComboBox;
 	wi::gui::ComboBox shaderTypeComboBox;
 	wi::gui::Label infoLabel;
