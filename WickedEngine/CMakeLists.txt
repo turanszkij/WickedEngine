@@ -52,7 +52,8 @@ add_subdirectory(BULLET)
 add_subdirectory(LUA)
 add_subdirectory(Utility)
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/Jolt/Jolt.cmake)
+set(PHYSICS_REPO_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
+include(${PHYSICS_REPO_ROOT}/Jolt/Jolt.cmake)
 
 set(HEADER_FILES
 		WickedEngine.h
