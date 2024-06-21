@@ -29,6 +29,7 @@
 #include <Jolt/Physics/SoftBody/SoftBodySharedSettings.h>
 #include <Jolt/Physics/SoftBody/SoftBodyCreationSettings.h>
 #include <Jolt/Physics/SoftBody/SoftBodyMotionProperties.h>
+#include <Jolt/Physics/Constraints/DistanceConstraint.h>
 #include <Jolt/Physics/Constraints/SixDOFConstraint.h>
 
 #ifdef JPH_DEBUG_RENDERER
@@ -405,11 +406,13 @@ namespace wi::physics
 					motionType,
 					Layers::MOVING
 				);
+				settings.mRestitution = physicscomponent.restitution;
 				settings.mFriction = physicscomponent.friction;
 				settings.mLinearDamping = physicscomponent.damping_linear;
 				settings.mAngularDamping = physicscomponent.damping_angular;
 				settings.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
 				settings.mMassPropertiesOverride.mMass = physicscomponent.mass;
+				settings.mAllowSleeping = !physicscomponent.IsDisableDeactivation();
 
 				BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
 
@@ -461,7 +464,7 @@ namespace wi::physics
 				XMStoreFloat3(&position, P);
 				physicsobject.shared_settings.mVertices[i].mPosition = Float3(position.x, position.y, position.z);
 				physicsobject.shared_settings.mVertices[i].mInvMass = physicscomponent.weights[i];
-				physicsobject.shared_settings.mVertices[i].mInvMass = 0.5f;
+				physicsobject.shared_settings.mVertices[i].mInvMass = 0.025f;
 			}
 
 			uint32_t first_subset = 0;
@@ -670,8 +673,7 @@ namespace wi::physics
 		{
 			static TempAllocatorImpl temp_allocator(10 * 1024 * 1024);
 			static JobSystemThreadPool job_system(cMaxPhysicsJobs, cMaxPhysicsBarriers, thread::hardware_concurrency() - 1);
-
-			const int steps = std::min((int)std::ceil(dt / TIMESTEP), ACCURACY);
+			const int steps = ::clamp(int(dt / TIMESTEP), 1, ACCURACY);
 			physics_scene.physics_system.Update(dt, steps, &temp_allocator, &job_system);
 		}
 
@@ -1074,15 +1076,19 @@ namespace wi::physics
 	struct PickDragOperation_Jolt
 	{
 		std::shared_ptr<void> physics_scene;
-		Ref<SixDOFConstraint> constraint;
+		Ref<TwoBodyConstraint> constraint;
 		float pick_distance = 0;
-		Body* rigidbody = nullptr;
+		Body* bodyA = nullptr;
+		Body* bodyB = nullptr;
 		~PickDragOperation_Jolt()
 		{
 			if (physics_scene == nullptr)
 				return;
 			PhysicsScene& physics_scene = *((PhysicsScene*)this->physics_scene.get());
 			physics_scene.physics_system.RemoveConstraint(constraint);
+			BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
+			body_interface.RemoveBody(bodyA->GetID());
+			body_interface.DestroyBody(bodyA->GetID());
 		}
 	};
 	void PickDrag(
@@ -1094,17 +1100,15 @@ namespace wi::physics
 		if (scene.physics_scene == nullptr)
 			return;
 		PhysicsScene& physics_scene = *((PhysicsScene*)scene.physics_scene.get());
+		BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
 
 		if (op.IsValid())
 		{
 			// Continue dragging:
 			PickDragOperation_Jolt* internal_state = (PickDragOperation_Jolt*)op.internal_state.get();
-			Vec3 oldPivotInB = internal_state->constraint->GetConstraintToBody1Matrix().GetTranslation();
 			const float dist = internal_state->pick_distance;
-			Vec3 newPivotB = Vec3(ray.origin.x + ray.direction.x * dist, ray.origin.y + ray.direction.y * dist, ray.origin.z + ray.direction.z * dist);
-			internal_state->constraint->GetConstraintToBody1Matrix().SetTranslation(newPivotB);
-			BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
-			body_interface.ActivateBody(internal_state->rigidbody->GetID());
+			Vec3 pos = Vec3(ray.origin.x + ray.direction.x * dist, ray.origin.y + ray.direction.y * dist, ray.origin.z + ray.direction.z * dist);
+			body_interface.MoveKinematic(internal_state->bodyA->GetID(), pos, Quat::sIdentity(), scene.dt);
 		}
 		else
 		{
@@ -1119,15 +1123,27 @@ namespace wi::physics
 			auto internal_state = std::make_shared<PickDragOperation_Jolt>();
 			internal_state->physics_scene = scene.physics_scene;
 			internal_state->pick_distance = wi::math::Distance(ray.origin, result.position);
-			internal_state->rigidbody = body;
+			internal_state->bodyB = body;
 
-			Mat44 transform = Mat44::sIdentity();
-			transform.SetTranslation(Vec3(result.position_local.x, result.position_local.y, result.position_local.z));
+			Vec3 pos = Vec3(result.position.x, result.position.y, result.position.z);
 
+			internal_state->bodyA = body_interface.CreateBody(BodyCreationSettings(new SphereShape(0.01f), pos, Quat::sIdentity(), EMotionType::Kinematic, Layers::MOVING));
+			body_interface.AddBody(internal_state->bodyA->GetID(), EActivation::Activate);
+
+#if 0
+			DistanceConstraintSettings settings;
+			settings.mPoint1 = settings.mPoint2 = pos;
+#else
 			SixDOFConstraintSettings settings;
-			internal_state->constraint = new SixDOFConstraint(*body, *body, settings);
-			internal_state->constraint->SetTranslationLimits(Vec3(0, 0, 0), Vec3(0, 0, 0));
-			internal_state->constraint->SetRotationLimits(Vec3(0, 0, 0), Vec3(0, 0, 0));
+			settings.mPosition1 = settings.mPosition2 = pos;
+			for (int i = 0; i < SixDOFConstraintSettings::EAxis::Num; ++i)
+			{
+				settings.mLimitMin[i] = 0;
+				settings.mLimitMax[i] = 0;
+			}
+#endif
+
+			internal_state->constraint = settings.Create(*internal_state->bodyA, *internal_state->bodyB);
 			physics_scene.physics_system.AddConstraint(internal_state->constraint);
 
 			op.internal_state = internal_state;
