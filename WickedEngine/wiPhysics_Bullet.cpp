@@ -218,7 +218,7 @@ namespace wi::physics
 			physicsobject.shape = std::make_unique<btCapsuleShape>(btScalar(physicscomponent.capsule.radius), btScalar(physicscomponent.capsule.height));
 			break;
 		case RigidBodyPhysicsComponent::CollisionShape::CYLINDER:
-			physicsobject.shape = std::make_unique<btCylinderShape>(btVector3(physicscomponent.box.halfextents.x, physicscomponent.box.halfextents.y, physicscomponent.box.halfextents.z));
+			physicsobject.shape = std::make_unique<btCylinderShape>(btVector3(physicscomponent.capsule.radius, physicscomponent.capsule.height, physicscomponent.capsule.radius));
 			break;
 
 		case RigidBodyPhysicsComponent::CollisionShape::CONVEX_HULL:
@@ -353,12 +353,6 @@ namespace wi::physics
 			physicsobject.physics_scene = scene.physics_scene;
 			GetPhysicsScene(scene).dynamicsWorld.addRigidBody(physicsobject.rigidBody.get());
 
-			if (isDynamic)
-			{
-				// We must detach dynamic objects, because their physics object is created in world space
-				//	and attachment would apply double transformation to the transform
-				scene.Component_Detach(entity);
-			}
 		}
 	}
 	void AddSoftBody(

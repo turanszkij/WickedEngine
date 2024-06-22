@@ -706,6 +706,12 @@ namespace wi::scene
 			{
 				archive >> local_offset;
 			}
+			if (shape == CollisionShape::CYLINDER && seri.GetVersion() < 3)
+			{
+				// convert old assumption that was used in Bullet Physics:
+				capsule.height = box.halfextents.y;
+				capsule.radius = box.halfextents.x;
+			}
 		}
 		else
 		{

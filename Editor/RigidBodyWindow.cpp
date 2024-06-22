@@ -68,7 +68,6 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			switch (shape)
 			{
 			case RigidBodyPhysicsComponent::CollisionShape::BOX:
-			case RigidBodyPhysicsComponent::CollisionShape::CYLINDER:
 				XSlider.SetEnabled(true);
 				YSlider.SetEnabled(true);
 				ZSlider.SetEnabled(true);
@@ -87,11 +86,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 				XSlider.SetValue(physicscomponent->sphere.radius);
 				break;
 			case RigidBodyPhysicsComponent::CollisionShape::CAPSULE:
-				if (physicscomponent->shape != RigidBodyPhysicsComponent::CollisionShape::CAPSULE)
-				{
-					physicscomponent->physicsobject = nullptr;
-					physicscomponent->shape = RigidBodyPhysicsComponent::CollisionShape::CAPSULE;
-				}
+			case RigidBodyPhysicsComponent::CollisionShape::CYLINDER:
 				XSlider.SetEnabled(true);
 				YSlider.SetEnabled(true);
 				XSlider.SetText("Height");
@@ -122,13 +117,13 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			{
 			default:
 			case RigidBodyPhysicsComponent::CollisionShape::BOX:
-			case RigidBodyPhysicsComponent::CollisionShape::CYLINDER:
 				physicscomponent->box.halfextents.x = args.fValue;
 				break;
 			case RigidBodyPhysicsComponent::CollisionShape::SPHERE:
 				physicscomponent->sphere.radius = args.fValue;
 				break;
 			case RigidBodyPhysicsComponent::CollisionShape::CAPSULE:
+			case RigidBodyPhysicsComponent::CollisionShape::CYLINDER:
 				physicscomponent->capsule.height = args.fValue;
 				break;
 			}
@@ -148,10 +143,10 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			{
 			default:
 			case RigidBodyPhysicsComponent::CollisionShape::BOX:
-			case RigidBodyPhysicsComponent::CollisionShape::CYLINDER:
 				physicscomponent->box.halfextents.y = args.fValue;
 				break;
 			case RigidBodyPhysicsComponent::CollisionShape::CAPSULE:
+			case RigidBodyPhysicsComponent::CollisionShape::CYLINDER:
 				physicscomponent->capsule.radius = args.fValue;
 				break;
 			}
@@ -207,7 +202,6 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		if (physicscomponent != nullptr)
 		{
 			physicscomponent->friction = args.fValue;
-			physicscomponent->physicsobject = {};
 		}
 		});
 	AddWidget(&frictionSlider);
@@ -221,7 +215,6 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		if (physicscomponent != nullptr)
 		{
 			physicscomponent->restitution = args.fValue;
-			physicscomponent->physicsobject = {};
 		}
 		});
 	AddWidget(&restitutionSlider);

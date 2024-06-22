@@ -917,16 +917,16 @@ namespace wi::scene
 		};
 		CollisionShape shape;
 		float mass = 1.0f;
-		float friction = 0.5f;
-		float restitution = 0.0f;
-		float damping_linear = 0.0f;
-		float damping_angular = 0.0f;
+		float friction = 0.2f;
+		float restitution = 0.1f;
+		float damping_linear = 0.05f;
+		float damping_angular = 0.05f;
 		XMFLOAT3 local_offset = XMFLOAT3(0, 0, 0);
 
 		struct BoxParams
 		{
 			XMFLOAT3 halfextents = XMFLOAT3(1, 1, 1);
-		} box; // also cylinder params
+		} box;
 		struct SphereParams
 		{
 			float radius = 1;
@@ -935,7 +935,7 @@ namespace wi::scene
 		{
 			float radius = 1;
 			float height = 1;
-		} capsule;
+		} capsule; // also cylinder params
 
 		// This will force LOD level for rigid body if it is a TRIANGLE_MESH shape:
 		//	The geometry for LOD level will be taken from MeshComponent.
