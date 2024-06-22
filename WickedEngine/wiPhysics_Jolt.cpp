@@ -46,9 +46,6 @@ JPH_SUPPRESS_WARNINGS
 // All Jolt symbols are in the JPH namespace
 using namespace JPH;
 
-// If you want your code to compile using single or double precision write 0.0_r to get a Real value that compiles to double or float depending if JPH_DOUBLE_PRECISION is set or not.
-using namespace JPH::literals;
-
 using namespace wi::ecs;
 using namespace wi::scene;
 
@@ -65,6 +62,9 @@ namespace wi::physics
 		int softbodyIterationCount = 5;
 		float TIMESTEP = 1.0f / 120.0f;
 		std::mutex physicsLock;
+
+		inline Vec3 cast(const XMFLOAT3& v) { return Vec3(v.x, v.y, v.z); }
+		inline Quat cast(const XMFLOAT4& v) { return Quat(v.x, v.y, v.z, v.w); }
 
 		namespace Layers
 		{
@@ -272,7 +272,7 @@ namespace wi::physics
 			{
 			case RigidBodyPhysicsComponent::CollisionShape::BOX:
 			{
-				BoxShapeSettings settings(Vec3Arg(physicscomponent.box.halfextents.x * transform.scale_local.x, physicscomponent.box.halfextents.y * transform.scale_local.y, physicscomponent.box.halfextents.z * transform.scale_local.z));
+				BoxShapeSettings settings(Vec3(physicscomponent.box.halfextents.x * transform.scale_local.x, physicscomponent.box.halfextents.y * transform.scale_local.y, physicscomponent.box.halfextents.z * transform.scale_local.z));
 				settings.SetEmbedded();
 				shape_result = settings.Create();
 			}
@@ -382,7 +382,7 @@ namespace wi::physics
 				tra.y += physicscomponent.local_offset.y;
 				tra.z += physicscomponent.local_offset.z;
 
-				physicsobject.additionalTransform.SetTranslation(Vec3(physicscomponent.local_offset.x, physicscomponent.local_offset.y, physicscomponent.local_offset.z));
+				physicsobject.additionalTransform.SetTranslation(cast(physicscomponent.local_offset));
 				physicsobject.additionalTransformInverse = physicsobject.additionalTransform.Inversed();
 
 				EMotionType motionType;
@@ -401,8 +401,8 @@ namespace wi::physics
 
 				BodyCreationSettings settings(
 					physicsobject.shape.GetPtr(),
-					Vec3Arg(tra.x, tra.y, tra.z),
-					QuatArg(rot.x, rot.y, rot.z, rot.w),
+					cast(tra),
+					cast(rot),
 					motionType,
 					Layers::MOVING
 				);
@@ -523,7 +523,7 @@ namespace wi::physics
 		RegisterTypes();
 
 		char text[256] = {};
-		snprintf(text, arraysize(text), "wi::physics Initialized [Jolt] (%d ms)", (int)std::round(timer.elapsed()));
+		snprintf(text, arraysize(text), "wi::physics Initialized [Jolt Physics %d.%d.%d] (%d ms)", JPH_VERSION_MAJOR, JPH_VERSION_MINOR, JPH_VERSION_PATCH, (int)std::round(timer.elapsed()));
 		wi::backlog::post(text);
 	}
 
@@ -555,6 +555,8 @@ namespace wi::physics
 
 		PhysicsScene& physics_scene = GetPhysicsScene(scene);
 		BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
+
+		physics_scene.physics_system.SetGravity(cast(scene.weather.gravity));
 
 		// System will register rigidbodies to objects:
 		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), 64, [&](wi::jobsystem::JobArgs args) {
@@ -604,8 +606,8 @@ namespace wi::physics
 
 					body_interface.SetPositionAndRotation(
 						body->GetID(),
-						RVec3Arg(position.x, position.y, position.z),
-						QuatArg(rotation.x, rotation.y, rotation.z, rotation.w),
+						cast(position),
+						cast(rotation),
 						EActivation::Activate
 					);
 				}
@@ -880,7 +882,7 @@ namespace wi::physics
 	{
 		if (physicscomponent.physicsobject != nullptr)
 		{
-			GetRigidBody(physicscomponent).body->SetLinearVelocity(Vec3Arg(velocity.x, velocity.y, velocity.z));
+			GetRigidBody(physicscomponent).body->SetLinearVelocity(cast(velocity));
 		}
 	}
 	void SetAngularVelocity(
@@ -890,7 +892,7 @@ namespace wi::physics
 	{
 		if (physicscomponent.physicsobject != nullptr)
 		{
-			GetRigidBody(physicscomponent).body->SetAngularVelocity(Vec3Arg(velocity.x, velocity.y, velocity.z));
+			GetRigidBody(physicscomponent).body->SetAngularVelocity(cast(velocity));
 		}
 	}
 
@@ -901,7 +903,7 @@ namespace wi::physics
 	{
 		if (physicscomponent.physicsobject != nullptr)
 		{
-			GetRigidBody(physicscomponent).body->AddForce(Vec3Arg(force.x, force.y, force.z));
+			GetRigidBody(physicscomponent).body->AddForce(cast(force));
 		}
 	}
 	void ApplyForceAt(
@@ -912,7 +914,7 @@ namespace wi::physics
 	{
 		if (physicscomponent.physicsobject != nullptr)
 		{
-			GetRigidBody(physicscomponent).body->AddForce(Vec3Arg(force.x, force.y, force.z), Vec3Arg(at.x, at.y, at.z));
+			GetRigidBody(physicscomponent).body->AddForce(cast(force), cast(at));
 		}
 	}
 
@@ -923,7 +925,7 @@ namespace wi::physics
 	{
 		if (physicscomponent.physicsobject != nullptr)
 		{
-			GetRigidBody(physicscomponent).body->AddImpulse(Vec3Arg(impulse.x, impulse.y, impulse.z));
+			GetRigidBody(physicscomponent).body->AddImpulse(cast(impulse));
 		}
 	}
 	void ApplyImpulse(
@@ -943,8 +945,8 @@ namespace wi::physics
 		if (physicscomponent.physicsobject != nullptr)
 		{
 			RigidBody& physicsobject = GetRigidBody(physicscomponent);
-			Vec3 at_world = physicsobject.body->GetCenterOfMassTransform().Inversed() * Vec3(at.x, at.y, at.z);
-			physicsobject.body->AddImpulse(Vec3Arg(impulse.x, impulse.y, impulse.z), at_world);
+			Vec3 at_world = physicsobject.body->GetCenterOfMassTransform().Inversed() * cast(at);
+			physicsobject.body->AddImpulse(cast(impulse), at_world);
 		}
 	}
 	void ApplyImpulseAt(
@@ -964,7 +966,7 @@ namespace wi::physics
 	{
 		if (physicscomponent.physicsobject != nullptr)
 		{
-			GetRigidBody(physicscomponent).body->AddTorque(Vec3Arg(torque.x, torque.y, torque.z));
+			GetRigidBody(physicscomponent).body->AddTorque(cast(torque));
 		}
 	}
 	void ApplyTorqueImpulse(
@@ -974,7 +976,7 @@ namespace wi::physics
 	{
 		if (physicscomponent.physicsobject != nullptr)
 		{
-			GetRigidBody(physicscomponent).body->AddTorque(Vec3Arg(torque.x, torque.y, torque.z));
+			GetRigidBody(physicscomponent).body->AddTorque(cast(torque));
 		}
 	}
 
@@ -1125,7 +1127,7 @@ namespace wi::physics
 			internal_state->pick_distance = wi::math::Distance(ray.origin, result.position);
 			internal_state->bodyB = body;
 
-			Vec3 pos = Vec3(result.position.x, result.position.y, result.position.z);
+			Vec3 pos = cast(result.position);
 
 			internal_state->bodyA = body_interface.CreateBody(BodyCreationSettings(new SphereShape(0.01f), pos, Quat::sIdentity(), EMotionType::Kinematic, Layers::MOVING));
 			body_interface.AddBody(internal_state->bodyA->GetID(), EActivation::Activate);
