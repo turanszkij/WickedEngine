@@ -1808,14 +1808,17 @@ namespace wi::physics
 
 		PhysicsScene& physics_scene = *(PhysicsScene*)scene.physics_scene.get();
 
-		const float tmin = wi::math::Clamp(ray.TMin, 0, 1000000);
-		const float tmax = wi::math::Clamp(ray.TMax, 0, 1000000);
+		const float tmin = clamp(ray.TMin, 0.0f, 1000000.0f);
+		const float tmax = clamp(ray.TMax, 0.0f, 1000000.0f);
 		const float range = tmax - tmin;
 
 		RRayCast inray{
-			Vec3(ray.origin.x + ray.direction.x * tmin, ray.origin.y + ray.direction.y * tmin, ray.origin.z + ray.direction.z * tmin),
-			Vec3(ray.direction.x * range, ray.direction.y * range, ray.direction.z * range)
+			cast(ray.origin),
+			cast(ray.direction).Normalized()
 		};
+
+		inray.mOrigin = inray.mOrigin + inray.mDirection * tmin;
+		inray.mDirection = inray.mDirection * range;
 
 		RayCastSettings settings;
 		settings.mBackFaceMode = EBackFaceMode::CollideWithBackFaces;
@@ -1837,14 +1840,13 @@ namespace wi::physics
 		const Body& body = lock.GetBody();
 		const uint64_t userdata = body.GetUserData();
 
+		const Vec3 position = inray.GetPointOnRay(collector.mHit.mFraction);
+		const Vec3 position_local = body.GetCenterOfMassTransform().Inversed() * position;
+		const Vec3 normal = body.GetWorldSpaceSurfaceNormal(collector.mHit.mSubShapeID2, position);
+
 		if (body.IsRigidBody())
 		{
 			const RigidBody* physicsobject = (RigidBody*)userdata;
-
-			const Vec3 position = inray.GetPointOnRay(collector.mHit.mFraction);
-			const Vec3 position_local = body.GetCenterOfMassTransform().Inversed() * position;
-			const Vec3 normal = body.GetWorldSpaceSurfaceNormal(collector.mHit.mSubShapeID2, position);
-
 			result.entity = physicsobject->entity;
 			result.position = cast(position);
 			result.position_local = cast(position_local);
@@ -1856,11 +1858,6 @@ namespace wi::physics
 		else // soft body
 		{
 			const SoftBody* physicsobject = (SoftBody*)userdata;
-
-			const Vec3 position = inray.GetPointOnRay(collector.mHit.mFraction);
-			const Vec3 position_local = body.GetCenterOfMassTransform().Inversed() * position;
-			const Vec3 normal = body.GetWorldSpaceSurfaceNormal(collector.mHit.mSubShapeID2, position);
-
 			result.entity = physicsobject->entity;
 			result.position = cast(position);
 			result.position_local = cast(position_local);
