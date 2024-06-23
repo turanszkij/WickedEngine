@@ -48,7 +48,6 @@ else ()
 	endif()
 endif()
 
-add_subdirectory(BULLET)
 add_subdirectory(LUA)
 add_subdirectory(Utility)
 
@@ -204,7 +203,6 @@ add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
 	wiNetwork_Linux.cpp
 	wiNetwork_Windows.cpp
 	wiOcean.cpp
-	wiPhysics_Bullet.cpp
 	wiPhysics_Jolt.cpp
 	wiPhysics_BindLua.cpp
 	wiProfiler.cpp
@@ -249,7 +247,6 @@ target_include_directories(${TARGET_NAME} SYSTEM PUBLIC
 )
 
 set(WICKEDENGINE_STATIC_LIBRARIES
-	Bullet
 	Jolt
 	LUA
 	Utility

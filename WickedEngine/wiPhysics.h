@@ -6,12 +6,6 @@
 
 #include <memory>
 
-#define PHYSICSENGINE_BULLET 1
-#define PHYSICSENGINE_JOLT 2
-
-//#define PHYSICSENGINE PHYSICSENGINE_BULLET
-#define PHYSICSENGINE PHYSICSENGINE_JOLT
-
 namespace wi::physics
 {
 	// Initializes the physics engine

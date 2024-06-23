@@ -1,6 +1,5 @@
 #include "wiPhysics.h"
 
-#if PHYSICSENGINE == PHYSICSENGINE_JOLT
 #include "wiScene.h"
 #include "wiProfiler.h"
 #include "wiBacklog.h"
@@ -383,7 +382,6 @@ namespace wi::physics
 				physicsobject.physics_scene = scene.physics_scene;
 				physicsobject.entity = entity;
 				PhysicsScene& physics_scene = GetPhysicsScene(scene);
-				const bool isDynamic = (physicscomponent.mass != 0.f && !physicscomponent.IsKinematic());
 
 				physicsobject.shape = shape_result.Get();
 
@@ -393,19 +391,7 @@ namespace wi::physics
 				physicsobject.additionalTransform.SetTranslation(local_offset);
 				physicsobject.additionalTransformInverse = physicsobject.additionalTransform.Inversed();
 
-				EMotionType motionType;
-				if (isDynamic)
-				{
-					motionType = EMotionType::Dynamic;
-				}
-				else if (physicscomponent.IsKinematic())
-				{
-					motionType = EMotionType::Kinematic;
-				}
-				else
-				{
-					motionType = EMotionType::Static;
-				}
+				const EMotionType motionType = physicscomponent.IsKinematic() ? EMotionType::Kinematic : (physicscomponent.mass == 0 ? EMotionType::Static : EMotionType::Dynamic);
 
 				BodyCreationSettings settings(
 					physicsobject.shape.GetPtr(),
@@ -433,7 +419,7 @@ namespace wi::physics
 					return;
 				}
 
-				if (isDynamic)
+				if (motionType == EMotionType::Dynamic)
 				{
 					// We must detach dynamic objects, because their physics object is created in world space
 					//	and attachment would apply double transformation to the transform
@@ -1965,5 +1951,3 @@ namespace wi::physics
 	}
 
 }
-
-#endif // PHYSICSENGINE
