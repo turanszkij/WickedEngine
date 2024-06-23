@@ -282,11 +282,14 @@ namespace wi::physics
 		{
 			ShapeSettings::ShapeResult shape_result;
 
+			// The default convex radius caused issues when creating small box shape, etc, so I decrease it:
+			const float convexRadius = 0.001f;
+
 			switch (physicscomponent.shape)
 			{
 			case RigidBodyPhysicsComponent::CollisionShape::BOX:
 			{
-				BoxShapeSettings settings(Vec3(physicscomponent.box.halfextents.x * transform.scale_local.x, physicscomponent.box.halfextents.y * transform.scale_local.y, physicscomponent.box.halfextents.z * transform.scale_local.z));
+				BoxShapeSettings settings(Vec3(physicscomponent.box.halfextents.x * transform.scale_local.x, physicscomponent.box.halfextents.y * transform.scale_local.y, physicscomponent.box.halfextents.z * transform.scale_local.z), convexRadius);
 				settings.SetEmbedded();
 				shape_result = settings.Create();
 			}
@@ -307,7 +310,7 @@ namespace wi::physics
 			break;
 			case RigidBodyPhysicsComponent::CollisionShape::CYLINDER:
 			{
-				CylinderShapeSettings settings(physicscomponent.capsule.height * transform.scale_local.y, physicscomponent.capsule.radius * transform.scale_local.x);
+				CylinderShapeSettings settings(physicscomponent.capsule.height * transform.scale_local.y, physicscomponent.capsule.radius * transform.scale_local.x, convexRadius);
 				settings.SetEmbedded();
 				shape_result = settings.Create();
 			}
@@ -322,7 +325,7 @@ namespace wi::physics
 				{
 					points.push_back(Vec3(pos.x * transform.scale_local.x, pos.y * transform.scale_local.y, pos.z * transform.scale_local.z));
 				}
-				ConvexHullShapeSettings settings(points);
+				ConvexHullShapeSettings settings(points, convexRadius);
 				settings.SetEmbedded();
 				shape_result = settings.Create();
 			}
@@ -371,6 +374,7 @@ namespace wi::physics
 			if (!shape_result.IsValid())
 			{
 				physicscomponent.physicsobject = nullptr;
+				wi::backlog::post("AddRigidBody failed: shape couldn't be created!", wi::backlog::LogLevel::Error);
 				return;
 			}
 			else
@@ -417,6 +421,7 @@ namespace wi::physics
 				settings.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
 				settings.mMassPropertiesOverride.mMass = physicscomponent.mass;
 				settings.mAllowSleeping = !physicscomponent.IsDisableDeactivation();
+				settings.mUserData = (uint64_t)&physicsobject;
 
 				BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface(); // locking version because this is called from job system!
 
@@ -424,11 +429,18 @@ namespace wi::physics
 				if (physicsobject.bodyID.IsInvalid())
 				{
 					physicscomponent.physicsobject = nullptr;
+					wi::backlog::post("AddRigidBody failed: body couldn't be created!", wi::backlog::LogLevel::Error);
 					return;
 				}
 
-				body_interface.SetUserData(physicsobject.bodyID, (uint64_t)&physicsobject);
-
+				if (isDynamic)
+				{
+					// We must detach dynamic objects, because their physics object is created in world space
+					//	and attachment would apply double transformation to the transform
+					scene.locker.lock();
+					scene.Component_Detach(entity);
+					scene.locker.unlock();
+				}
 			}
 		}
 		void AddSoftBody(
@@ -475,8 +487,8 @@ namespace wi::physics
 				{
 					SoftBodySharedSettings::Face& face = physicsobject.shared_settings.mFaces.emplace_back();
 					face.mVertex[0] = physicscomponent.graphicsToPhysicsVertexMapping[indices[i + 0]];
-					face.mVertex[1] = physicscomponent.graphicsToPhysicsVertexMapping[indices[i + 1]];
-					face.mVertex[2] = physicscomponent.graphicsToPhysicsVertexMapping[indices[i + 2]];
+					face.mVertex[2] = physicscomponent.graphicsToPhysicsVertexMapping[indices[i + 1]];
+					face.mVertex[1] = physicscomponent.graphicsToPhysicsVertexMapping[indices[i + 2]];
 				}
 			}
 
@@ -490,6 +502,8 @@ namespace wi::physics
 			settings.mFriction = physicscomponent.friction;
 			settings.mRestitution = physicscomponent.restitution;
 			settings.mUpdatePosition = false;
+			settings.mAllowSleeping = false;
+			settings.mUserData = (uint64_t)&physicsobject;
 
 			BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface(); // locking version because this is called from job system!
 
@@ -498,12 +512,11 @@ namespace wi::physics
 			if (physicsobject.bodyID.IsInvalid())
 			{
 				physicscomponent.physicsobject = nullptr;
+				wi::backlog::post("AddSoftBody failed: body couldn't be created!", wi::backlog::LogLevel::Error);
 				return;
 			}
 
 			physicsobject.simulation_normals.resize(physicsobject.shared_settings.mVertices.size());
-
-			body_interface.SetUserData(physicsobject.bodyID, (uint64_t)&physicsobject);
 		}
 
 		struct Ragdoll
@@ -1103,6 +1116,7 @@ namespace wi::physics
 
 		physics_scene.physics_system.SetGravity(cast(scene.weather.gravity));
 		const Vec3 wind = cast(scene.weather.windDirection);
+		const bool has_wind = !wind.IsNearZero();
 
 		// System will register rigidbodies to objects:
 		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), 64, [&](wi::jobsystem::JobArgs args) {
@@ -1131,16 +1145,22 @@ namespace wi::physics
 				body_interface.SetFriction(physicsobject.bodyID, physicscomponent.friction);
 				body_interface.SetRestitution(physicsobject.bodyID, physicscomponent.restitution);
 
-				EMotionType prevMotionType = body_interface.GetMotionType(physicsobject.bodyID);
-				if (physicscomponent.IsKinematic() && prevMotionType != EMotionType::Kinematic)
+				const EMotionType prevMotionType = body_interface.GetMotionType(physicsobject.bodyID);
+				const EMotionType requiredMotionType = physicscomponent.IsKinematic() ? EMotionType::Kinematic : (physicscomponent.mass == 0 ? EMotionType::Static : EMotionType::Dynamic);
+
+				if (prevMotionType != requiredMotionType)
 				{
-					// It became kinematic when it wasn't before:
-					body_interface.SetMotionType(physicsobject.bodyID, EMotionType::Kinematic, EActivation::Activate);
-				}
-				if (!physicscomponent.IsKinematic() && prevMotionType == EMotionType::Kinematic)
-				{
-					// It became non-kinematic when it was kinematic before:
-					body_interface.SetMotionType(physicsobject.bodyID, physicscomponent.mass == 0 ? EMotionType::Static : EMotionType::Dynamic, EActivation::Activate);
+					// Changed motion type:
+					body_interface.SetMotionType(physicsobject.bodyID, requiredMotionType, EActivation::Activate);
+
+					if (requiredMotionType == EMotionType::Dynamic)
+					{
+						// We must detach dynamic objects, because their physics object is created in world space
+						//	and attachment would apply double transformation to the transform
+						scene.locker.lock();
+						scene.Component_Detach(entity);
+						scene.locker.unlock();
+					}
 				}
 
 				if (physicscomponent.IsKinematic())
@@ -1188,7 +1208,10 @@ namespace wi::physics
 				body_interface.SetRestitution(physicsobject.bodyID, physicscomponent.restitution);
 
 				// Add wind:
-				body_interface.AddForce(physicsobject.bodyID, wind, EActivation::Activate);
+				if (has_wind)
+				{
+					body_interface.AddForce(physicsobject.bodyID, wind, EActivation::Activate);
+				}
 
 				// This is different from rigid bodies, because soft body is a per mesh component (no TransformComponent). World matrix is propagated down from single mesh instance (ObjectUpdateSystem).
 				XMMATRIX worldMatrix = XMLoadFloat4x4(&physicscomponent.worldMatrix);
@@ -1352,7 +1375,7 @@ namespace wi::physics
 				Vec3 x1 = soft_vertices[f.mVertex[0]].mPosition;
 				Vec3 x2 = soft_vertices[f.mVertex[1]].mPosition;
 				Vec3 x3 = soft_vertices[f.mVertex[2]].mPosition;
-				Vec3 n = -(x2 - x1).Cross(x3 - x1);
+				Vec3 n = (x2 - x1).Cross(x3 - x1);
 				physicsobject.simulation_normals[f.mVertex[0]] += n;
 				physicsobject.simulation_normals[f.mVertex[1]] += n;
 				physicsobject.simulation_normals[f.mVertex[2]] += n;
