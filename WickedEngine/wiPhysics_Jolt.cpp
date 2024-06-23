@@ -349,8 +349,8 @@ namespace wi::physics
 						Triangle triangle;
 						triangle.mMaterialIndex = 0;
 						triangle.mV[0] = Float3(mesh->vertex_positions[indices[i + 0]].x * transform.scale_local.x, mesh->vertex_positions[indices[i + 0]].y * transform.scale_local.y, mesh->vertex_positions[indices[i + 0]].z * transform.scale_local.z);
-						triangle.mV[1] = Float3(mesh->vertex_positions[indices[i + 1]].x * transform.scale_local.x, mesh->vertex_positions[indices[i + 1]].y * transform.scale_local.y, mesh->vertex_positions[indices[i + 1]].z * transform.scale_local.z);
-						triangle.mV[2] = Float3(mesh->vertex_positions[indices[i + 2]].x * transform.scale_local.x, mesh->vertex_positions[indices[i + 2]].y * transform.scale_local.y, mesh->vertex_positions[indices[i + 2]].z * transform.scale_local.z);
+						triangle.mV[2] = Float3(mesh->vertex_positions[indices[i + 1]].x * transform.scale_local.x, mesh->vertex_positions[indices[i + 1]].y * transform.scale_local.y, mesh->vertex_positions[indices[i + 1]].z * transform.scale_local.z);
+						triangle.mV[1] = Float3(mesh->vertex_positions[indices[i + 2]].x * transform.scale_local.x, mesh->vertex_positions[indices[i + 2]].y * transform.scale_local.y, mesh->vertex_positions[indices[i + 2]].z * transform.scale_local.z);
 						trianglelist.push_back(triangle);
 					}
 				}
@@ -533,7 +533,6 @@ namespace wi::physics
 			Skeleton skeleton;
 			RagdollSettings settings;
 			Ref<JPH::Ragdoll> ragdoll;
-			uint bodyparts[BODYPART_COUNT] = {};
 			bool state_active = false;
 			Entity saved_parents[BODYPART_COUNT] = {};
 			float scale = 1;
@@ -546,9 +545,10 @@ namespace wi::physics
 
 				Vec3 positions[BODYPART_COUNT] = {};
 				Vec3 constraint_positions[BODYPART_COUNT] = {};
-#if 1
+				Mat44 final_transforms[BODYPART_COUNT] = {};
+#if 0
 				// slow speed and visualizer to aid debugging:
-				//wi::renderer::SetGameSpeed(0.1f);
+				wi::renderer::SetGameSpeed(0.1f);
 				SetDebugDrawEnabled(true);
 #endif
 
@@ -779,63 +779,70 @@ namespace wi::physics
 
 					positions[c] = mat.GetTranslation();
 					constraint_positions[c] = root;
+					final_transforms[c] = Mat44::sTranslation(cast(tra)) * Mat44::sRotation(cast(rot));
+					final_transforms[c] = final_transforms[c] * physicsobject.restBasisInverse;
+					final_transforms[c] = final_transforms[c] * physicsobject.additionalTransform;
 				}
 
 				skeleton.SetEmbedded();
-				uint lower_body = skeleton.AddJoint("LowerBody");
-				uint upper_body = skeleton.AddJoint("UpperBody", lower_body);
-				/*uint head =*/ skeleton.AddJoint("Head", upper_body);
-				uint upper_arm_l = skeleton.AddJoint("UpperArmL", upper_body);
-				uint upper_arm_r = skeleton.AddJoint("UpperArmR", upper_body);
-				/*uint lower_arm_l =*/ skeleton.AddJoint("LowerArmL", upper_arm_l);
-				/*uint lower_arm_r =*/ skeleton.AddJoint("LowerArmR", upper_arm_r);
-				uint upper_leg_l = skeleton.AddJoint("UpperLegL", lower_body);
-				uint upper_leg_r = skeleton.AddJoint("UpperLegR", lower_body);
-				/*uint lower_leg_l =*/ skeleton.AddJoint("LowerLegL", upper_leg_l);
-				/*uint lower_leg_r =*/ skeleton.AddJoint("LowerLegR", upper_leg_r);
+
+				uint bodyparts[BODYPART_COUNT] = {};
+				bodyparts[BODYPART_PELVIS] = skeleton.AddJoint("LowerBody");
+				bodyparts[BODYPART_SPINE] = skeleton.AddJoint("UpperBody", bodyparts[BODYPART_PELVIS]);
+				bodyparts[BODYPART_HEAD] = skeleton.AddJoint("Head", bodyparts[BODYPART_SPINE]);
+				bodyparts[BODYPART_LEFT_UPPER_LEG] = skeleton.AddJoint("UpperLegL", bodyparts[BODYPART_PELVIS]);
+				bodyparts[BODYPART_LEFT_LOWER_LEG] = skeleton.AddJoint("LowerLegL", bodyparts[BODYPART_LEFT_UPPER_LEG]);
+				bodyparts[BODYPART_RIGHT_UPPER_LEG] = skeleton.AddJoint("UpperLegR", bodyparts[BODYPART_PELVIS]);
+				bodyparts[BODYPART_RIGHT_LOWER_LEG] = skeleton.AddJoint("LowerLegR", bodyparts[BODYPART_RIGHT_UPPER_LEG]);
+				bodyparts[BODYPART_LEFT_UPPER_ARM] = skeleton.AddJoint("UpperArmL", bodyparts[BODYPART_SPINE]);
+				bodyparts[BODYPART_LEFT_LOWER_ARM] = skeleton.AddJoint("LowerArmL", bodyparts[BODYPART_LEFT_UPPER_ARM]);
+				bodyparts[BODYPART_RIGHT_UPPER_ARM] = skeleton.AddJoint("UpperArmR", bodyparts[BODYPART_SPINE]);
+				bodyparts[BODYPART_RIGHT_LOWER_ARM] = skeleton.AddJoint("LowerArmR", bodyparts[BODYPART_RIGHT_UPPER_ARM]);
 
 				// Constraint limits
-				float twist_angle[] = {
+				const float twist_angle[] = {
 					0.0f,		// Lower Body (unused, there's no parent)
 					5.0f,		// Upper Body
 					90.0f,		// Head
-					45.0f,		// Upper Arm L
-					45.0f,		// Upper Arm R
-					45.0f,		// Lower Arm L
-					45.0f,		// Lower Arm R
 					45.0f,		// Upper Leg L
-					45.0f,		// Upper Leg R
 					45.0f,		// Lower Leg L
+					45.0f,		// Upper Leg R
 					45.0f,		// Lower Leg R
-				};
-
-				float normal_angle[] = {
-					0.0f,		// Lower Body (unused, there's no parent)
-					10.0f,		// Upper Body
-					45.0f,		// Head
-					90.0f,		// Upper Arm L
-					90.0f,		// Upper Arm R
-					0.0f,		// Lower Arm L
-					0.0f,		// Lower Arm R
-					45.0f,		// Upper Leg L
-					45.0f,		// Upper Leg R
-					0.0f,		// Lower Leg L
-					0.0f,		// Lower Leg R
-				};
-
-				float plane_angle[] = {
-					0.0f,		// Lower Body (unused, there's no parent)
-					10.0f,		// Upper Body
-					45.0f,		// Head
 					45.0f,		// Upper Arm L
+					45.0f,		// Lower Arm L
 					45.0f,		// Upper Arm R
-					90.0f,		// Lower Arm L
-					90.0f,		// Lower Arm R
-					45.0f,		// Upper Leg L
-					45.0f,		// Upper Leg R
-					60.0f,		// Lower Leg L (cheating here, a knee is not symmetric, we should have rotated the twist axis)
-					60.0f,		// Lower Leg R
+					45.0f,		// Lower Arm R
 				};
+
+				const float normal_angle[] = {
+					0.0f,		// Lower Body (unused, there's no parent)
+					10.0f,		// Upper Body
+					45.0f,		// Head
+					45.0f,		// Upper Leg L
+					0.0f,		// Lower Leg L
+					45.0f,		// Upper Leg R
+					0.0f,		// Lower Leg R
+					90.0f,		// Upper Arm L
+					0.0f,		// Lower Arm L
+					90.0f,		// Upper Arm R
+					0.0f,		// Lower Arm R
+				};
+
+				const float plane_angle[] = {
+					0.0f,		// Lower Body (unused, there's no parent)
+					10.0f,		// Upper Body
+					45.0f,		// Head
+					45.0f,		// Upper Leg L
+					60.0f,		// Lower Leg L (cheating here, a knee is not symmetric, we should have rotated the twist axis)
+					45.0f,		// Upper Leg R
+					60.0f,		// Lower Leg R
+					45.0f,		// Upper Arm L
+					90.0f,		// Lower Arm L
+					45.0f,		// Upper Arm R
+					90.0f,		// Lower Arm R
+				};
+
+				static bool fixpose = false; // enable to fix the pose to rest pose, useful for debugging
 
 				settings.SetEmbedded();
 				settings.mSkeleton = &skeleton;
@@ -856,15 +863,18 @@ namespace wi::physics
 						constraint->mDrawConstraintSize = 0.1f;
 						constraint->mPosition1 = constraint->mPosition2 = constraint_positions[p];
 						constraint->mTwistAxis1 = constraint->mTwistAxis2 = (positions[p] - constraint_positions[p]).Normalized();
-						constraint->mPlaneAxis1 = constraint->mPlaneAxis2 = Vec3::sAxisZ();
+						constraint->mPlaneAxis1 = constraint->mPlaneAxis2 = Vec3::sAxisZ() * facing;
 						constraint->mTwistMinAngle = -DegreesToRadians(twist_angle[p]);
 						constraint->mTwistMaxAngle = DegreesToRadians(twist_angle[p]);
 						constraint->mNormalHalfConeAngle = DegreesToRadians(normal_angle[p]);
 						constraint->mPlaneHalfConeAngle = DegreesToRadians(plane_angle[p]);
 
-						//constraint->mTwistMinAngle = constraint->mTwistMaxAngle = 0;
-						//constraint->mNormalHalfConeAngle = 0;
-						//constraint->mPlaneHalfConeAngle = 0;
+						if (fixpose)
+						{
+							constraint->mTwistMinAngle = constraint->mTwistMaxAngle = 0;
+							constraint->mNormalHalfConeAngle = 0;
+							constraint->mPlaneHalfConeAngle = 0;
+						}
 
 						part.mToParent = constraint;
 					}
@@ -880,6 +890,7 @@ namespace wi::physics
 				settings.CalculateBodyIndexToConstraintIndex();
 
 				ragdoll = settings.CreateRagdoll(0, 0, &physics_system);
+				ragdoll->SetPose(Vec3::sZero(), final_transforms);
 				ragdoll->AddToPhysicsSystem(EActivation::Activate);
 
 				const int count = (int)ragdoll->GetBodyCount();
@@ -887,31 +898,6 @@ namespace wi::physics
 				{
 					rigidbodies[index]->bodyID = ragdoll->GetBodyID(index);
 					body_interface.SetUserData(rigidbodies[index]->bodyID, (uint64_t)rigidbodies[index].get());
-				}
-
-				// For all body parts, we now apply the current world space pose:
-				for (auto& x : rigidbodies)
-				{
-					RigidBody& physicsobject = *x.get();
-					Entity entity = physicsobject.entity;
-					const TransformComponent* transform = scene.transforms.GetComponent(entity);
-					if (transform == nullptr)
-						continue;
-
-					XMVECTOR SCA = {};
-					XMVECTOR ROT = {};
-					XMVECTOR TRA = {};
-					XMMatrixDecompose(&SCA, &ROT, &TRA, XMLoadFloat4x4(&transform->world));
-					XMFLOAT4 rot = {};
-					XMFLOAT3 tra = {};
-					XMStoreFloat4(&rot, ROT);
-					XMStoreFloat3(&tra, TRA);
-
-					Mat44 m = Mat44::sTranslation(cast(tra)) * Mat44::sRotation(cast(rot));
-					m = m * x->restBasisInverse;
-					m = m * x->additionalTransform;
-
-					body_interface.SetPositionAndRotation(x->bodyID, m.GetTranslation(), m.GetQuaternion().Normalized(), EActivation::Activate);
 				}
 			}
 			~Ragdoll()
@@ -1599,6 +1585,7 @@ namespace wi::physics
 		RigidBody& physicsobject = *ragdoll.rigidbodies[bodypart];
 		PhysicsScene& physics_scene = *(PhysicsScene*)physicsobject.physics_scene.get();
 		BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
+		body_interface.SetMotionType(physicsobject.bodyID, EMotionType::Dynamic, EActivation::Activate);
 		body_interface.AddImpulse(physicsobject.bodyID, cast(impulse));
 	}
 	void ApplyImpulseAt(
@@ -1674,6 +1661,7 @@ namespace wi::physics
 		PhysicsScene& physics_scene = *(PhysicsScene*)physicsobject.physics_scene.get();
 		BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
 		Vec3 at_world = body_interface.GetCenterOfMassTransform(physicsobject.bodyID) * cast(at);
+		body_interface.SetMotionType(physicsobject.bodyID, EMotionType::Dynamic, EActivation::Activate);
 		body_interface.AddImpulse(physicsobject.bodyID, cast(impulse), at_world);
 	}
 
