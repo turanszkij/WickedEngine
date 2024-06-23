@@ -21,6 +21,7 @@
 #include <Jolt/Physics/Collision/Shape/CylinderShape.h>
 #include <Jolt/Physics/Collision/Shape/ConvexHullShape.h>
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 #include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/CastResult.h>
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
@@ -64,7 +65,8 @@ namespace wi::physics
 
 		inline Vec3 cast(const XMFLOAT3& v) { return Vec3(v.x, v.y, v.z); }
 		inline Quat cast(const XMFLOAT4& v) { return Quat(v.x, v.y, v.z, v.w); }
-		inline Mat44 cast(const XMFLOAT4X4& v) {
+		inline Mat44 cast(const XMFLOAT4X4& v)
+		{
 			return Mat44(
 				Vec4(v._11, v._12, v._13, v._14),
 				Vec4(v._21, v._22, v._23, v._24),
@@ -74,6 +76,12 @@ namespace wi::physics
 		}
 		inline XMFLOAT3 cast(Vec3Arg v) { return XMFLOAT3(v.GetX(), v.GetY(), v.GetZ()); }
 		inline XMFLOAT4 cast(QuatArg v) { return XMFLOAT4(v.GetX(), v.GetY(), v.GetZ(), v.GetW()); }
+		inline XMFLOAT4X4 cast(Mat44 v)
+		{
+			XMFLOAT4X4 ret;
+			v.StoreFloat4x4((Float4*)&ret);
+			return ret;
+		}
 
 		namespace Layers
 		{
@@ -210,6 +218,9 @@ namespace wi::physics
 
 			Mat44 additionalTransform = Mat44::sIdentity();
 			Mat44 additionalTransformInverse = Mat44::sIdentity();
+
+			Mat44 restBasis = Mat44::sIdentity();
+			Mat44 restBasisInverse = Mat44::sIdentity();
 
 			// for trace hit reporting:
 			wi::ecs::Entity humanoid_ragdoll_entity = wi::ecs::INVALID_ENTITY;
@@ -533,12 +544,11 @@ namespace wi::physics
 				PhysicsSystem& physics_system = ((PhysicsScene*)physics_scene.get())->physics_system;
 				BodyInterface& body_interface = physics_system.GetBodyInterface(); // locking version because this is called from job system!
 
-				Vec3 roots[BODYPART_COUNT] = {};
-				Mat44 transforms[BODYPART_COUNT] = {};
-
-#if 0
+				Vec3 positions[BODYPART_COUNT] = {};
+				Vec3 constraint_positions[BODYPART_COUNT] = {};
+#if 1
 				// slow speed and visualizer to aid debugging:
-				wi::renderer::SetGameSpeed(0.1f);
+				//wi::renderer::SetGameSpeed(0.1f);
 				SetDebugDrawEnabled(true);
 #endif
 
@@ -689,20 +699,26 @@ namespace wi::physics
 					shape_settings.SetEmbedded();
 					shape_result = shape_settings.Create();
 
-					physicsobject.shape = shape_result.Get();
+					RotatedTranslatedShapeSettings rtshape_settings;
+					rtshape_settings.SetEmbedded();
+					rtshape_settings.mInnerShapePtr = shape_result.Get();
+					rtshape_settings.mPosition = Vec3::sZero();
+					rtshape_settings.mRotation = Quat::sIdentity();
 
-					Quat local_rotation = Quat::sIdentity();
 					switch (c)
 					{
 					case BODYPART_LEFT_UPPER_ARM:
 					case BODYPART_LEFT_LOWER_ARM:
 					case BODYPART_RIGHT_UPPER_ARM:
 					case BODYPART_RIGHT_LOWER_ARM:
-						local_rotation = Quat::sRotation(Vec3::sAxisZ(), 0.5f * JPH_PI);
+						rtshape_settings.mRotation = Quat::sRotation(Vec3::sAxisZ(), 0.5f * JPH_PI).Normalized();
 						break;
 					default:
 						break;
 					}
+
+					shape_result = rtshape_settings.Create();
+					physicsobject.shape = shape_result.Get();
 
 					// capsule offset on axis is performed because otherwise capsule center would be in the bone root position
 					//	which is not what we want. Instead the bone is moved on its axis so it resides between root and tail
@@ -735,36 +751,48 @@ namespace wi::physics
 						break;
 					}
 
-					physicsobject.additionalTransform = Mat44::sTranslation(local_offset) * Mat44::sRotation(local_rotation);
+					physicsobject.additionalTransform.SetTranslation(local_offset);
 					physicsobject.additionalTransformInverse = physicsobject.additionalTransform.Inversed();
 
-					XMFLOAT4X4 _resta;
-					XMStoreFloat4x4(&_resta, restA);
+					// Get the translation and rotation part of rest matrix:
+					XMVECTOR SCA = {};
+					XMVECTOR ROT = {};
+					XMVECTOR TRA = {};
+					XMMatrixDecompose(&SCA, &ROT, &TRA, restA);
+					XMFLOAT4 rot = {};
+					XMFLOAT3 tra = {};
+					XMStoreFloat4(&rot, ROT);
+					XMStoreFloat3(&tra, TRA);
 
-					Mat44 mat = cast(_resta);
+					Vec3 root = cast(tra);
+
+					Mat44 mat = Mat44::sTranslation(root);
 					mat = mat * physicsobject.additionalTransform;
+
+					physicsobject.restBasis = Mat44::sRotation(cast(rot));
+					physicsobject.restBasisInverse = physicsobject.restBasis.Inversed();
 
 					physicsobject.humanoid_ragdoll_entity = humanoidEntity;
 					physicsobject.humanoid_bone = humanoid_bone;
 
 					physicsobject.physics_scene = scene.physics_scene;
 
-					roots[c] = Vec3(XMVectorGetX(rootA), XMVectorGetY(rootA), XMVectorGetZ(rootA));
-					transforms[c] = mat;
+					positions[c] = mat.GetTranslation();
+					constraint_positions[c] = root;
 				}
 
 				skeleton.SetEmbedded();
-				bodyparts[BODYPART_PELVIS] = skeleton.AddJoint("LowerBody");
-				bodyparts[BODYPART_SPINE] = skeleton.AddJoint("UpperBody", bodyparts[BODYPART_PELVIS]);
-				bodyparts[BODYPART_HEAD] = skeleton.AddJoint("Head", bodyparts[BODYPART_SPINE]);
-				bodyparts[BODYPART_LEFT_UPPER_ARM] = skeleton.AddJoint("UpperArmL", bodyparts[BODYPART_SPINE]);
-				bodyparts[BODYPART_RIGHT_UPPER_ARM] = skeleton.AddJoint("UpperArmR", bodyparts[BODYPART_SPINE]);
-				bodyparts[BODYPART_LEFT_LOWER_ARM] = skeleton.AddJoint("LowerArmL", bodyparts[BODYPART_LEFT_UPPER_ARM]);
-				bodyparts[BODYPART_RIGHT_LOWER_ARM] = skeleton.AddJoint("LowerArmR", bodyparts[BODYPART_RIGHT_UPPER_ARM]);
-				bodyparts[BODYPART_LEFT_UPPER_LEG] = skeleton.AddJoint("UpperLegL", bodyparts[BODYPART_PELVIS]);
-				bodyparts[BODYPART_RIGHT_UPPER_LEG] = skeleton.AddJoint("UpperLegR", bodyparts[BODYPART_PELVIS]);
-				bodyparts[BODYPART_LEFT_LOWER_LEG] = skeleton.AddJoint("LowerLegL", bodyparts[BODYPART_LEFT_UPPER_LEG]);
-				bodyparts[BODYPART_RIGHT_LOWER_LEG] = skeleton.AddJoint("LowerLegR", bodyparts[BODYPART_RIGHT_UPPER_LEG]);
+				uint lower_body = skeleton.AddJoint("LowerBody");
+				uint upper_body = skeleton.AddJoint("UpperBody", lower_body);
+				/*uint head =*/ skeleton.AddJoint("Head", upper_body);
+				uint upper_arm_l = skeleton.AddJoint("UpperArmL", upper_body);
+				uint upper_arm_r = skeleton.AddJoint("UpperArmR", upper_body);
+				/*uint lower_arm_l =*/ skeleton.AddJoint("LowerArmL", upper_arm_l);
+				/*uint lower_arm_r =*/ skeleton.AddJoint("LowerArmR", upper_arm_r);
+				uint upper_leg_l = skeleton.AddJoint("UpperLegL", lower_body);
+				uint upper_leg_r = skeleton.AddJoint("UpperLegR", lower_body);
+				/*uint lower_leg_l =*/ skeleton.AddJoint("LowerLegL", upper_leg_l);
+				/*uint lower_leg_r =*/ skeleton.AddJoint("LowerLegR", upper_leg_r);
 
 				// Constraint limits
 				float twist_angle[] = {
@@ -811,26 +839,24 @@ namespace wi::physics
 
 				settings.SetEmbedded();
 				settings.mSkeleton = &skeleton;
-				settings.mParts.resize(BODYPART_COUNT);
-				for (int p = 0; p < BODYPART_COUNT; ++p)
+				settings.mParts.resize(skeleton.GetJointCount());
+				for (int p = 0; p < skeleton.GetJointCount(); ++p)
 				{
 					RagdollSettings::Part& part = settings.mParts[p];
 					part.SetShape(rigidbodies[p]->shape);
-					part.mPosition = transforms[p].GetTranslation();
-					part.mRotation = transforms[p].GetQuaternion().Normalized();
-					//part.mRotation = rotations[p];
+					part.mPosition = positions[p];
+					part.mRotation = Quat::sIdentity();
 					part.mMotionType = EMotionType::Kinematic;
 					part.mObjectLayer = Layers::MOVING;
-					//part.mRestitution = 0.1f;
 					
 					// First part is the root, doesn't have a parent and doesn't have a constraint
-					if (p > BODYPART_PELVIS)
+					if (p > 0)
 					{
 						Ref<SwingTwistConstraintSettings> constraint = new SwingTwistConstraintSettings;
 						constraint->mDrawConstraintSize = 0.1f;
-						constraint->mPosition1 = constraint->mPosition2 = roots[p];
-						constraint->mTwistAxis1 = constraint->mTwistAxis2 = (part.mPosition - roots[p]).Normalized();
-						constraint->mPlaneAxis1 = constraint->mPlaneAxis2 = -Vec3::sAxisZ();
+						constraint->mPosition1 = constraint->mPosition2 = constraint_positions[p];
+						constraint->mTwistAxis1 = constraint->mTwistAxis2 = (positions[p] - constraint_positions[p]).Normalized();
+						constraint->mPlaneAxis1 = constraint->mPlaneAxis2 = Vec3::sAxisZ();
 						constraint->mTwistMinAngle = -DegreesToRadians(twist_angle[p]);
 						constraint->mTwistMaxAngle = DegreesToRadians(twist_angle[p]);
 						constraint->mNormalHalfConeAngle = DegreesToRadians(normal_angle[p]);
@@ -854,7 +880,6 @@ namespace wi::physics
 				settings.CalculateBodyIndexToConstraintIndex();
 
 				ragdoll = settings.CreateRagdoll(0, 0, &physics_system);
-				//ragdoll->SetPose(Vec3::sZero(), transforms);
 				ragdoll->AddToPhysicsSystem(EActivation::Activate);
 
 				const int count = (int)ragdoll->GetBodyCount();
@@ -862,6 +887,31 @@ namespace wi::physics
 				{
 					rigidbodies[index]->bodyID = ragdoll->GetBodyID(index);
 					body_interface.SetUserData(rigidbodies[index]->bodyID, (uint64_t)rigidbodies[index].get());
+				}
+
+				// For all body parts, we now apply the current world space pose:
+				for (auto& x : rigidbodies)
+				{
+					RigidBody& physicsobject = *x.get();
+					Entity entity = physicsobject.entity;
+					const TransformComponent* transform = scene.transforms.GetComponent(entity);
+					if (transform == nullptr)
+						continue;
+
+					XMVECTOR SCA = {};
+					XMVECTOR ROT = {};
+					XMVECTOR TRA = {};
+					XMMatrixDecompose(&SCA, &ROT, &TRA, XMLoadFloat4x4(&transform->world));
+					XMFLOAT4 rot = {};
+					XMFLOAT3 tra = {};
+					XMStoreFloat4(&rot, ROT);
+					XMStoreFloat3(&tra, TRA);
+
+					Mat44 m = Mat44::sTranslation(cast(tra)) * Mat44::sRotation(cast(rot));
+					m = m * x->restBasisInverse;
+					m = m * x->additionalTransform;
+
+					body_interface.SetPositionAndRotation(x->bodyID, m.GetTranslation(), m.GetQuaternion().Normalized(), EActivation::Activate);
 				}
 			}
 			~Ragdoll()
@@ -996,6 +1046,8 @@ namespace wi::physics
 	{
 		if (!IsEnabled() || dt <= 0)
 			return;
+
+		wi::jobsystem::Wait(ctx);
 
 		auto range = wi::profiler::BeginRangeCPU("Physics");
 
@@ -1156,8 +1208,20 @@ namespace wi::physics
 				for (auto& rb : ragdoll.rigidbodies)
 				{
 					TransformComponent& transform = *scene.transforms.GetComponent(rb->entity);
-					Mat44 m = cast(transform.world);
+
+					XMVECTOR SCA = {};
+					XMVECTOR ROT = {};
+					XMVECTOR TRA = {};
+					XMMatrixDecompose(&SCA, &ROT, &TRA, XMLoadFloat4x4(&transform.world));
+					XMFLOAT4 rot = {};
+					XMFLOAT3 tra = {};
+					XMStoreFloat4(&rot, ROT);
+					XMStoreFloat3(&tra, TRA);
+
+					Mat44 m = Mat44::sTranslation(cast(tra)) * Mat44::sRotation(cast(rot));
+					m = m * rb->restBasisInverse;
 					m = m * rb->additionalTransform;
+
 					body_interface.MoveKinematic(
 						rb->bodyID,
 						m.GetTranslation(),
@@ -1358,6 +1422,7 @@ namespace wi::physics
 						continue;
 					Mat44 mat = body_interface.GetWorldTransform(rb->bodyID);
 					mat = mat * rb->additionalTransformInverse;
+					mat = mat * rb->restBasis;
 					transform->translation_local = cast(mat.GetTranslation());
 					transform->rotation_local = cast(mat.GetQuaternion().Normalized());
 					transform->SetDirty();
