@@ -34,6 +34,7 @@
 #include <Jolt/Physics/Constraints/DistanceConstraint.h>
 #include <Jolt/Physics/Constraints/SixDOFConstraint.h>
 #include <Jolt/Physics/Constraints/SwingTwistConstraint.h>
+#include <Jolt/Physics/Constraints/HingeConstraint.h>
 #include <Jolt/Physics/Ragdoll/Ragdoll.h>
 #include <Jolt/Skeleton/Skeleton.h>
 
@@ -543,6 +544,7 @@ namespace wi::physics
 				PhysicsSystem& physics_system = ((PhysicsScene*)physics_scene.get())->physics_system;
 				BodyInterface& body_interface = physics_system.GetBodyInterface(); // locking version because this is called from job system!
 
+				float masses[BODYPART_COUNT] = {};
 				Vec3 positions[BODYPART_COUNT] = {};
 				Vec3 constraint_positions[BODYPART_COUNT] = {};
 				Mat44 final_transforms[BODYPART_COUNT] = {};
@@ -777,12 +779,15 @@ namespace wi::physics
 
 					physicsobject.physics_scene = scene.physics_scene;
 
+					masses[c] = mass;
 					positions[c] = mat.GetTranslation();
 					constraint_positions[c] = root;
 					final_transforms[c] = Mat44::sTranslation(cast(tra)) * Mat44::sRotation(cast(rot));
 					final_transforms[c] = final_transforms[c] * physicsobject.restBasisInverse;
 					final_transforms[c] = final_transforms[c] * physicsobject.additionalTransform;
 				}
+
+				// For constraint setup, see examples in Jolt/Samples/Utils/RagdollLoader.cpp
 
 				skeleton.SetEmbedded();
 
@@ -816,7 +821,7 @@ namespace wi::physics
 
 				const float normal_angle[] = {
 					0.0f,		// Lower Body (unused, there's no parent)
-					10.0f,		// Upper Body
+					40.0f,		// Upper Body
 					45.0f,		// Head
 					45.0f,		// Upper Leg L
 					0.0f,		// Lower Leg L
@@ -830,7 +835,7 @@ namespace wi::physics
 
 				const float plane_angle[] = {
 					0.0f,		// Lower Body (unused, there's no parent)
-					10.0f,		// Upper Body
+					40.0f,		// Upper Body
 					45.0f,		// Head
 					45.0f,		// Upper Leg L
 					60.0f,		// Lower Leg L (cheating here, a knee is not symmetric, we should have rotated the twist axis)
@@ -842,6 +847,7 @@ namespace wi::physics
 					90.0f,		// Lower Arm R
 				};
 
+				static float constraint_dbg = 0.1f;
 				static bool fixpose = false; // enable to fix the pose to rest pose, useful for debugging
 
 				settings.SetEmbedded();
@@ -855,38 +861,93 @@ namespace wi::physics
 					part.mRotation = Quat::sIdentity();
 					part.mMotionType = EMotionType::Kinematic;
 					part.mObjectLayer = Layers::MOVING;
+					part.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
+					part.mMassPropertiesOverride.mMass = masses[p];
 					
 					// First part is the root, doesn't have a parent and doesn't have a constraint
 					if (p > 0)
 					{
-						Ref<SwingTwistConstraintSettings> constraint = new SwingTwistConstraintSettings;
-						constraint->mDrawConstraintSize = 0.1f;
-						constraint->mPosition1 = constraint->mPosition2 = constraint_positions[p];
-						constraint->mTwistAxis1 = constraint->mTwistAxis2 = (positions[p] - constraint_positions[p]).Normalized();
-						constraint->mPlaneAxis1 = constraint->mPlaneAxis2 = Vec3::sAxisZ() * facing;
-						constraint->mTwistMinAngle = -DegreesToRadians(twist_angle[p]);
-						constraint->mTwistMaxAngle = DegreesToRadians(twist_angle[p]);
-						constraint->mNormalHalfConeAngle = DegreesToRadians(normal_angle[p]);
-						constraint->mPlaneHalfConeAngle = DegreesToRadians(plane_angle[p]);
-
-						if (fixpose)
+						if (p == BODYPART_LEFT_LOWER_LEG || p == BODYPART_RIGHT_LOWER_LEG)
 						{
-							constraint->mTwistMinAngle = constraint->mTwistMaxAngle = 0;
-							constraint->mNormalHalfConeAngle = 0;
-							constraint->mPlaneHalfConeAngle = 0;
+							Ref<HingeConstraintSettings> constraint = new HingeConstraintSettings;
+							constraint->mDrawConstraintSize = constraint_dbg;
+							constraint->mPoint1 = constraint->mPoint2 = constraint_positions[p];
+							constraint->mHingeAxis1 = constraint->mHingeAxis2 = Vec3::sAxisX() * facing;
+							constraint->mNormalAxis1 = constraint->mNormalAxis2 = -Vec3::sAxisY();
+							if (fixpose)
+							{
+								constraint->mLimitsMin = constraint->mLimitsMax = 0;
+							}
+							else
+							{
+								constraint->mLimitsMin = 0;
+								constraint->mLimitsMax = JPH_PI * 0.8f;
+							}
+							part.mToParent = constraint;
 						}
-
-						part.mToParent = constraint;
+						else if (p == BODYPART_LEFT_LOWER_ARM)
+						{
+							Ref<HingeConstraintSettings> constraint = new HingeConstraintSettings;
+							constraint->mDrawConstraintSize = constraint_dbg;
+							constraint->mPoint1 = constraint->mPoint2 = constraint_positions[p];
+							constraint->mHingeAxis1 = constraint->mHingeAxis2 = Vec3::sAxisY();
+							constraint->mNormalAxis1 = constraint->mNormalAxis2 = (constraint_positions[p] - constraint_positions[p - 1]).Normalized();
+							if (fixpose)
+							{
+								constraint->mLimitsMin = constraint->mLimitsMax = 0;
+							}
+							else
+							{
+								constraint->mLimitsMin = 0;
+								constraint->mLimitsMax = JPH_PI * 0.6f;
+							}
+							part.mToParent = constraint;
+						}
+						else if (p == BODYPART_RIGHT_LOWER_ARM)
+						{
+							Ref<HingeConstraintSettings> constraint = new HingeConstraintSettings;
+							constraint->mDrawConstraintSize = constraint_dbg;
+							constraint->mPoint1 = constraint->mPoint2 = constraint_positions[p];
+							constraint->mHingeAxis1 = constraint->mHingeAxis2 = -Vec3::sAxisY();
+							constraint->mNormalAxis1 = constraint->mNormalAxis2 = (constraint_positions[p] - constraint_positions[p - 1]).Normalized();
+							if (fixpose)
+							{
+								constraint->mLimitsMin = constraint->mLimitsMax = 0;
+							}
+							else
+							{
+								constraint->mLimitsMin = 0;
+								constraint->mLimitsMax = JPH_PI * 0.6f;
+							}
+							part.mToParent = constraint;
+						}
+						else
+						{
+							Ref<SwingTwistConstraintSettings> constraint = new SwingTwistConstraintSettings;
+							constraint->mDrawConstraintSize = constraint_dbg;
+							constraint->mPosition1 = constraint->mPosition2 = constraint_positions[p];
+							constraint->mTwistAxis1 = constraint->mTwistAxis2 = (positions[p] - constraint_positions[p]).Normalized();
+							constraint->mPlaneAxis1 = constraint->mPlaneAxis2 = Vec3::sAxisZ() * facing;
+							if (fixpose)
+							{
+								constraint->mTwistMinAngle = constraint->mTwistMaxAngle = 0;
+								constraint->mNormalHalfConeAngle = 0;
+								constraint->mPlaneHalfConeAngle = 0;
+							}
+							else
+							{
+								constraint->mTwistMinAngle = -DegreesToRadians(twist_angle[p]);
+								constraint->mTwistMaxAngle = DegreesToRadians(twist_angle[p]);
+								constraint->mNormalHalfConeAngle = DegreesToRadians(normal_angle[p]);
+								constraint->mPlaneHalfConeAngle = DegreesToRadians(plane_angle[p]);
+							}
+							part.mToParent = constraint;
+						}
 					}
 				}
 
-				// Optional: Stabilize the inertia of the limbs
 				settings.Stabilize();
-
-				// Disable parent child collisions so that we don't get collisions between constrained bodies
 				settings.DisableParentChildCollisions();
-
-				// Calculate the map needed for GetBodyIndexToConstraintIndex()
 				settings.CalculateBodyIndexToConstraintIndex();
 
 				ragdoll = settings.CreateRagdoll(0, 0, &physics_system);
