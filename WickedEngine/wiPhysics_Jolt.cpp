@@ -949,7 +949,8 @@ namespace wi::physics
 				settings.DisableParentChildCollisions();
 				settings.CalculateBodyIndexToConstraintIndex();
 
-				ragdoll = settings.CreateRagdoll(0, 0, &physics_system);
+				static std::atomic<uint32_t> collisionGroupID{}; // generate unique collision group for each ragdoll to enable collision between them
+				ragdoll = settings.CreateRagdoll(collisionGroupID.fetch_add(1), 0, &physics_system);
 				ragdoll->SetPose(Vec3::sZero(), final_transforms);
 				ragdoll->AddToPhysicsSystem(EActivation::Activate);
 
