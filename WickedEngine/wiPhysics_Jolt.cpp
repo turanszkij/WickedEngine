@@ -219,6 +219,7 @@ namespace wi::physics
 			Mat44 additionalTransform = Mat44::sIdentity();
 			Mat44 additionalTransformInverse = Mat44::sIdentity();
 
+			// This is to fixup ragdolls that are applied to skeletons from different kinds of model imports
 			Mat44 restBasis = Mat44::sIdentity();
 			Mat44 restBasisInverse = Mat44::sIdentity();
 
@@ -529,12 +530,12 @@ namespace wi::physics
 			};
 
 			std::shared_ptr<void> physics_scene;
-			std::shared_ptr<RigidBody> rigidbodies[BODYPART_COUNT];
+			RigidBody rigidbodies[BODYPART_COUNT];
+			Entity saved_parents[BODYPART_COUNT] = {};
 			Skeleton skeleton;
 			RagdollSettings settings;
 			Ref<JPH::Ragdoll> ragdoll;
 			bool state_active = false;
-			Entity saved_parents[BODYPART_COUNT] = {};
 			float scale = 1;
 
 			Ragdoll(Scene& scene, HumanoidComponent& humanoid, Entity humanoidEntity, float scale)
@@ -643,8 +644,7 @@ namespace wi::physics
 					XMVECTOR rootB = restB.r[3];
 
 					// Every bone will be a rigid body:
-					rigidbodies[c] = std::make_unique<RigidBody>();
-					RigidBody& physicsobject = *rigidbodies[c];
+					RigidBody& physicsobject = rigidbodies[c];
 					physicsobject.entity = entityA;
 
 					float mass = scale;
@@ -855,7 +855,7 @@ namespace wi::physics
 				for (int p = 0; p < skeleton.GetJointCount(); ++p)
 				{
 					RagdollSettings::Part& part = settings.mParts[p];
-					part.SetShape(rigidbodies[p]->shape);
+					part.SetShape(rigidbodies[p].shape);
 					part.mPosition = positions[p];
 					part.mRotation = Quat::sIdentity();
 					part.mMotionType = EMotionType::Kinematic;
@@ -957,8 +957,8 @@ namespace wi::physics
 				const int count = (int)ragdoll->GetBodyCount();
 				for (int index = 0; index < count; ++index)
 				{
-					rigidbodies[index]->bodyID = ragdoll->GetBodyID(index);
-					body_interface.SetUserData(rigidbodies[index]->bodyID, (uint64_t)rigidbodies[index].get());
+					rigidbodies[index].bodyID = ragdoll->GetBodyID(index);
+					body_interface.SetUserData(rigidbodies[index].bodyID, (uint64_t)&rigidbodies[index]);
 				}
 			}
 			~Ragdoll()
@@ -970,7 +970,7 @@ namespace wi::physics
 				const int count = (int)ragdoll->GetBodyCount();
 				for (int index = 0; index < count; ++index)
 				{
-					rigidbodies[index]->bodyID = {}; // will be removed by ragdoll
+					rigidbodies[index].bodyID = {}; // will be removed by ragdoll
 				}
 
 				ragdoll->RemoveFromPhysicsSystem();
@@ -996,10 +996,10 @@ namespace wi::physics
 				int c = 0;
 				for (auto& x : rigidbodies)
 				{
-					body_interface.SetMotionType(x->bodyID, EMotionType::Dynamic, EActivation::Activate);
+					body_interface.SetMotionType(x.bodyID, EMotionType::Dynamic, EActivation::Activate);
 
 					// Save parenting information to be able to restore it:
-					const HierarchyComponent* hier = scene.hierarchy.GetComponent(x->entity);
+					const HierarchyComponent* hier = scene.hierarchy.GetComponent(x.entity);
 					if (hier != nullptr)
 					{
 						saved_parents[c] = hier->parentID;
@@ -1010,7 +1010,7 @@ namespace wi::physics
 					}
 
 					// detach bone because it will be simulated in world space:
-					scene.Component_Detach(x->entity);
+					scene.Component_Detach(x.entity);
 
 					c++;
 				}
@@ -1041,11 +1041,11 @@ namespace wi::physics
 				int c = 0;
 				for (auto& x : rigidbodies)
 				{
-					body_interface.SetMotionType(x->bodyID, EMotionType::Kinematic, EActivation::Activate);
+					body_interface.SetMotionType(x.bodyID, EMotionType::Kinematic, EActivation::Activate);
 
 					if (saved_parents[c] != INVALID_ENTITY)
 					{
-						scene.Component_Attach(x->entity, saved_parents[c]);
+						scene.Component_Attach(x.entity, saved_parents[c]);
 					}
 					c++;
 				}
@@ -1264,7 +1264,7 @@ namespace wi::physics
 
 				for (auto& rb : ragdoll.rigidbodies)
 				{
-					TransformComponent& transform = *scene.transforms.GetComponent(rb->entity);
+					TransformComponent& transform = *scene.transforms.GetComponent(rb.entity);
 
 					XMVECTOR SCA = {};
 					XMVECTOR ROT = {};
@@ -1276,11 +1276,11 @@ namespace wi::physics
 					XMStoreFloat3(&tra, TRA);
 
 					Mat44 m = Mat44::sTranslation(cast(tra)) * Mat44::sRotation(cast(rot));
-					m = m * rb->restBasisInverse;
-					m = m * rb->additionalTransform;
+					m = m * rb.restBasisInverse;
+					m = m * rb.additionalTransform;
 
 					body_interface.MoveKinematic(
-						rb->bodyID,
+						rb.bodyID,
 						m.GetTranslation(),
 						m.GetQuaternion().Normalized(),
 						dt
@@ -1474,12 +1474,12 @@ namespace wi::physics
 			{
 				for (auto& rb : ragdoll.rigidbodies)
 				{
-					TransformComponent* transform = scene.transforms.GetComponent(rb->entity);
+					TransformComponent* transform = scene.transforms.GetComponent(rb.entity);
 					if (transform == nullptr)
 						continue;
-					Mat44 mat = body_interface.GetWorldTransform(rb->bodyID);
-					mat = mat * rb->additionalTransformInverse;
-					mat = mat * rb->restBasis;
+					Mat44 mat = body_interface.GetWorldTransform(rb.bodyID);
+					mat = mat * rb.additionalTransformInverse;
+					mat = mat * rb.restBasis;
 					transform->translation_local = cast(mat.GetTranslation());
 					transform->rotation_local = cast(mat.GetQuaternion().Normalized());
 					transform->SetDirty();
@@ -1651,9 +1651,9 @@ namespace wi::physics
 			return;
 
 		Ragdoll& ragdoll = *(Ragdoll*)humanoid.ragdoll.get();
-		if (ragdoll.rigidbodies[bodypart] == nullptr || ragdoll.rigidbodies[bodypart]->bodyID.IsInvalid())
+		if (ragdoll.rigidbodies[bodypart].bodyID.IsInvalid())
 			return;
-		RigidBody& physicsobject = *ragdoll.rigidbodies[bodypart];
+		RigidBody& physicsobject = ragdoll.rigidbodies[bodypart];
 		PhysicsScene& physics_scene = *(PhysicsScene*)physicsobject.physics_scene.get();
 		BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
 		body_interface.SetMotionType(physicsobject.bodyID, EMotionType::Dynamic, EActivation::Activate);
@@ -1726,9 +1726,9 @@ namespace wi::physics
 			return;
 
 		Ragdoll& ragdoll = *(Ragdoll*)humanoid.ragdoll.get();
-		if (ragdoll.rigidbodies[bodypart] == nullptr || ragdoll.rigidbodies[bodypart]->bodyID.IsInvalid())
+		if (ragdoll.rigidbodies[bodypart].bodyID.IsInvalid())
 			return;
-		RigidBody& physicsobject = *ragdoll.rigidbodies[bodypart];
+		RigidBody& physicsobject = ragdoll.rigidbodies[bodypart];
 		PhysicsScene& physics_scene = *(PhysicsScene*)physicsobject.physics_scene.get();
 		BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
 		Vec3 at_world = body_interface.GetCenterOfMassTransform(physicsobject.bodyID) * cast(at);
