@@ -805,12 +805,10 @@ namespace wi::physics
 					positions[c] = mat.GetTranslation();
 					constraint_positions[c] = root;
 					final_transforms[c] = Mat44::sTranslation(cast(tra)) * Mat44::sRotation(cast(rot));
+					physicsobject.prev_position = final_transforms[c].GetTranslation();
+					physicsobject.prev_rotation = final_transforms[c].GetQuaternion().Normalized();
 					final_transforms[c] = final_transforms[c] * physicsobject.restBasisInverse;
 					final_transforms[c] = final_transforms[c] * physicsobject.additionalTransform;
-
-					mat = Mat44::sTranslation(cast(tra)) * Mat44::sRotation(cast(rot));
-					physicsobject.prev_position = mat.GetTranslation();
-					physicsobject.prev_rotation = mat.GetQuaternion().Normalized();
 				}
 
 				// For constraint setup, see examples in Jolt/Samples/Utils/RagdollLoader.cpp
