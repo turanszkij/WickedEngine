@@ -1805,7 +1805,9 @@ Playstation button codes:
 - SetEnabled(bool value)	-- Enable/disable the physics engine all together
 - IsEnabled() : bool
 - SetSimulationEnabled(bool value)	-- Enable/disable the physics simulation. Physics engine state will be updated but not simulated
-- IsSimulationEnabeld() : bool
+- IsSimulationEnabled() : bool
+- SetInterpolationEnabled(bool value)	-- Enable/disable the physics interpolation. When enabled, simulation's fixed frame rate will be interpolated to match the variable frame rate of rendering
+- IsInterpolationEnabled() : bool
 - SetDebugDrawEnabled(bool value)	-- Enable/disable debug drawing of physics objects
 - IsDebugDrawEnabled() : bool
 - SetAccuracy(int value)	-- Set the accuracy of the simulation. This value corresponds to maximum simulation step count. Higher values will be slower but more accurate.

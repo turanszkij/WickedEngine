@@ -19,6 +19,8 @@ namespace wi::lua
 		int IsEnabled(lua_State* L);
 		int SetSimulationEnabled(lua_State* L);
 		int IsSimulationEnabled(lua_State* L);
+		int SetInterpolationEnabled(lua_State* L);
+		int IsInterpolationEnabled(lua_State* L);
 		int SetDebugDrawEnabled(lua_State* L);
 		int IsDebugDrawEnabled(lua_State* L);
 		int SetAccuracy(lua_State* L);

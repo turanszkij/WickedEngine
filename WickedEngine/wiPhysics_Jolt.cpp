@@ -31,7 +31,7 @@
 #include <Jolt/Physics/SoftBody/SoftBodyMotionProperties.h>
 #include <Jolt/Physics/SoftBody/SoftBodyShape.h>
 #include <Jolt/Physics/Constraints/DistanceConstraint.h>
-#include <Jolt/Physics/Constraints/SixDOFConstraint.h>
+#include <Jolt/Physics/Constraints/FixedConstraint.h>
 #include <Jolt/Physics/Constraints/SwingTwistConstraint.h>
 #include <Jolt/Physics/Constraints/HingeConstraint.h>
 #include <Jolt/Physics/Ragdoll/Ragdoll.h>
@@ -59,9 +59,10 @@ namespace wi::physics
 		bool ENABLED = true;
 		bool SIMULATION_ENABLED = true;
 		bool DEBUGDRAW_ENABLED = false;
-		int ACCURACY = 8;
-		int softbodyIterationCount = 5;
-		float TIMESTEP = 1.0f / 120.0f;
+		int ACCURACY = 4;
+		int softbodyIterationCount = 6;
+		float TIMESTEP = 1.0f / 60.0f;
+		bool INTERPOLATION = true;
 
 		inline Vec3 cast(const XMFLOAT3& v) { return Vec3(v.x, v.y, v.z); }
 		inline Quat cast(const XMFLOAT4& v) { return Quat(v.x, v.y, v.z, v.w); }
@@ -183,6 +184,12 @@ namespace wi::physics
 			BPLayerInterfaceImpl broad_phase_layer_interface;
 			ObjectVsBroadPhaseLayerFilterImpl object_vs_broadphase_layer_filter;
 			ObjectLayerPairFilterImpl object_vs_object_layer_filter;
+			float accumulator = 0;
+			float alpha = 0;
+			float GetKinematicDT(float dt) const
+			{
+				return clamp(accumulator + dt, 0.0f, TIMESTEP * ACCURACY);
+			}
 		};
 		PhysicsScene& GetPhysicsScene(Scene& scene)
 		{
@@ -216,6 +223,11 @@ namespace wi::physics
 			BodyID bodyID;
 			Entity entity = INVALID_ENTITY;
 
+			// Interpolation state:
+			Vec3 prev_position = Vec3::sZero();
+			Quat prev_rotation = Quat::sIdentity();
+
+			// Local body offset:
 			Mat44 additionalTransform = Mat44::sIdentity();
 			Mat44 additionalTransformInverse = Mat44::sIdentity();
 
@@ -392,12 +404,15 @@ namespace wi::physics
 				physicsobject.additionalTransform.SetTranslation(local_offset);
 				physicsobject.additionalTransformInverse = physicsobject.additionalTransform.Inversed();
 
-				const EMotionType motionType = physicscomponent.IsKinematic() ? EMotionType::Kinematic : (physicscomponent.mass == 0 ? EMotionType::Static : EMotionType::Dynamic);
+				physicsobject.prev_position = mat.GetTranslation();
+				physicsobject.prev_rotation = mat.GetQuaternion().Normalized();
+
+				const EMotionType motionType = physicscomponent.mass == 0 ? EMotionType::Static : (physicscomponent.IsKinematic() ? EMotionType::Kinematic : EMotionType::Dynamic);
 
 				BodyCreationSettings settings(
 					physicsobject.shape.GetPtr(),
-					local_offset + mat.GetTranslation(),
-					mat.GetQuaternion().Normalized(),
+					local_offset + physicsobject.prev_position,
+					physicsobject.prev_rotation,
 					motionType,
 					Layers::MOVING
 				);
@@ -406,8 +421,16 @@ namespace wi::physics
 				settings.mLinearDamping = physicscomponent.damping_linear;
 				settings.mAngularDamping = physicscomponent.damping_angular;
 				settings.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
-				settings.mMassPropertiesOverride.mMass = physicscomponent.mass;
+				if (motionType == EMotionType::Dynamic)
+				{
+					settings.mMassPropertiesOverride.mMass = physicscomponent.mass;
+				}
+				else
+				{
+					settings.mMassPropertiesOverride.mMass = 1;
+				}
 				settings.mAllowSleeping = !physicscomponent.IsDisableDeactivation();
+				settings.mMotionQuality = EMotionQuality::LinearCast;
 				settings.mUserData = (uint64_t)&physicsobject;
 
 				BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface(); // locking version because this is called from job system!
@@ -445,7 +468,7 @@ namespace wi::physics
 
 			physicsobject.shared_settings.SetEmbedded();
 
-			XMMATRIX worldMatrix = XMLoadFloat4x4(&physicscomponent.worldMatrix);
+			const XMMATRIX worldMatrix = XMLoadFloat4x4(&physicscomponent.worldMatrix);
 
 			const size_t vertexCount = physicscomponent.physicsToGraphicsVertexMapping.size();
 			physicsobject.shared_settings.mVertices.resize(vertexCount);
@@ -782,6 +805,8 @@ namespace wi::physics
 					positions[c] = mat.GetTranslation();
 					constraint_positions[c] = root;
 					final_transforms[c] = Mat44::sTranslation(cast(tra)) * Mat44::sRotation(cast(rot));
+					physicsobject.prev_position = final_transforms[c].GetTranslation();
+					physicsobject.prev_rotation = final_transforms[c].GetQuaternion().Normalized();
 					final_transforms[c] = final_transforms[c] * physicsobject.restBasisInverse;
 					final_transforms[c] = final_transforms[c] * physicsobject.additionalTransform;
 				}
@@ -859,6 +884,7 @@ namespace wi::physics
 					part.mPosition = positions[p];
 					part.mRotation = Quat::sIdentity();
 					part.mMotionType = EMotionType::Kinematic;
+					part.mMotionQuality = EMotionQuality::LinearCast;
 					part.mObjectLayer = Layers::MOVING;
 					part.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
 					part.mMassPropertiesOverride.mMass = masses[p];
@@ -1076,6 +1102,9 @@ namespace wi::physics
 	bool IsSimulationEnabled() { return ENABLED && SIMULATION_ENABLED; }
 	void SetSimulationEnabled(bool value) { SIMULATION_ENABLED = value; }
 
+	bool IsInterpolationEnabled() { return INTERPOLATION; }
+	void SetInterpolationEnabled(bool value) { INTERPOLATION = value; }
+
 	bool IsDebugDrawEnabled() { return DEBUGDRAW_ENABLED; }
 	void SetDebugDrawEnabled(bool value) { DEBUGDRAW_ENABLED = value; }
 
@@ -1099,28 +1128,26 @@ namespace wi::physics
 		auto range = wi::profiler::BeginRangeCPU("Physics");
 
 		PhysicsScene& physics_scene = GetPhysicsScene(scene);
-		BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
-
 		physics_scene.physics_system.SetGravity(cast(scene.weather.gravity));
-		const Vec3 wind = cast(scene.weather.windDirection);
-		const bool has_wind = !wind.IsNearZero();
 
 		// System will register rigidbodies to objects:
-		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), 64, [&](wi::jobsystem::JobArgs args) {
+		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), 64, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
 
 			RigidBodyPhysicsComponent& physicscomponent = scene.rigidbodies[args.jobIndex];
 			Entity entity = scene.rigidbodies.GetEntity(args.jobIndex);
 
 			if (physicscomponent.physicsobject == nullptr && scene.transforms.Contains(entity))
 			{
-				TransformComponent& transform = *scene.transforms.GetComponent(entity);
+				TransformComponent* transform = scene.transforms.GetComponent(entity);
+				if (transform == nullptr)
+					return;
 				const ObjectComponent* object = scene.objects.GetComponent(entity);
 				const MeshComponent* mesh = nullptr;
 				if (object != nullptr)
 				{
 					mesh = scene.meshes.GetComponent(object->meshID);
 				}
-				AddRigidBody(scene, entity, physicscomponent, transform, mesh);
+				AddRigidBody(scene, entity, physicscomponent, *transform, mesh);
 			}
 
 			if (physicscomponent.physicsobject != nullptr)
@@ -1129,18 +1156,19 @@ namespace wi::physics
 				if (physicsobject.bodyID.IsInvalid())
 					return;
 
+				BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface(); // locking, these jobs can be adding bodies
 				body_interface.SetFriction(physicsobject.bodyID, physicscomponent.friction);
 				body_interface.SetRestitution(physicsobject.bodyID, physicscomponent.restitution);
 
 				const EMotionType prevMotionType = body_interface.GetMotionType(physicsobject.bodyID);
-				const EMotionType requiredMotionType = physicscomponent.IsKinematic() ? EMotionType::Kinematic : (physicscomponent.mass == 0 ? EMotionType::Static : EMotionType::Dynamic);
+				const EMotionType currentMotionType = physicscomponent.mass == 0 ? EMotionType::Static : (physicscomponent.IsKinematic() ? EMotionType::Kinematic : EMotionType::Dynamic);
 
-				if (prevMotionType != requiredMotionType)
+				if (prevMotionType != currentMotionType)
 				{
 					// Changed motion type:
-					body_interface.SetMotionType(physicsobject.bodyID, requiredMotionType, EActivation::Activate);
+					body_interface.SetMotionType(physicsobject.bodyID, currentMotionType, EActivation::Activate);
 
-					if (requiredMotionType == EMotionType::Dynamic)
+					if (currentMotionType == EMotionType::Dynamic)
 					{
 						// We must detach dynamic objects, because their physics object is created in world space
 						//	and attachment would apply double transformation to the transform
@@ -1150,30 +1178,47 @@ namespace wi::physics
 					}
 				}
 
-				if (physicscomponent.IsKinematic())
+				if (currentMotionType == EMotionType::Kinematic)
 				{
-					TransformComponent& transform = *scene.transforms.GetComponent(entity);
+					TransformComponent* transform = scene.transforms.GetComponent(entity);
+					if (transform == nullptr)
+						return;
 
 					body_interface.MoveKinematic(
 						physicsobject.bodyID,
-						cast(transform.GetPosition()),
-						cast(transform.GetRotation()),
-						dt
+						cast(transform->GetPosition()),
+						cast(transform->GetRotation()),
+						physics_scene.GetKinematicDT(scene.dt)
+					);
+				}
+				else if (currentMotionType == EMotionType::Static)
+				{
+					TransformComponent* transform = scene.transforms.GetComponent(entity);
+					if (transform == nullptr)
+						return;
+
+					body_interface.SetPositionAndRotation(
+						physicsobject.bodyID,
+						cast(transform->GetPosition()),
+						cast(transform->GetRotation()),
+						EActivation::Activate
 					);
 				}
 			}
 		});
 
 		// System will register softbodies to meshes and update physics engine state:
-		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.softbodies.GetCount(), 1, [&](wi::jobsystem::JobArgs args) {
+		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.softbodies.GetCount(), 1, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
 
 			SoftBodyPhysicsComponent& physicscomponent = scene.softbodies[args.jobIndex];
 			Entity entity = scene.softbodies.GetEntity(args.jobIndex);
 			if (!scene.meshes.Contains(entity))
 				return;
-			MeshComponent& mesh = *scene.meshes.GetComponent(entity);
-			const ArmatureComponent* armature = mesh.IsSkinned() ? scene.armatures.GetComponent(mesh.armatureID) : nullptr;
-			mesh.SetDynamic(true);
+			MeshComponent* mesh = scene.meshes.GetComponent(entity);
+			if (mesh == nullptr)
+				return;
+			const ArmatureComponent* armature = mesh->IsSkinned() ? scene.armatures.GetComponent(mesh->armatureID) : nullptr;
+			mesh->SetDynamic(true);
 
 			if (physicscomponent._flags & SoftBodyPhysicsComponent::FORCE_RESET)
 			{
@@ -1182,7 +1227,7 @@ namespace wi::physics
 			}
 			if (physicscomponent._flags & SoftBodyPhysicsComponent::SAFE_TO_REGISTER && physicscomponent.physicsobject == nullptr)
 			{
-				AddSoftBody(scene, entity, physicscomponent, mesh);
+				AddSoftBody(scene, entity, physicscomponent, *mesh);
 			}
 
 			if (physicscomponent.physicsobject != nullptr)
@@ -1191,11 +1236,13 @@ namespace wi::physics
 				if (physicsobject.bodyID.IsInvalid())
 					return;
 
+				BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface(); // locking, these jobs can be adding bodies
 				body_interface.SetFriction(physicsobject.bodyID, physicscomponent.friction);
 				body_interface.SetRestitution(physicsobject.bodyID, physicscomponent.restitution);
 
 				// Add wind:
-				if (has_wind)
+				const Vec3 wind = cast(scene.weather.windDirection);
+				if (!wind.IsNearZero())
 				{
 					body_interface.AddForce(physicsobject.bodyID, wind, EActivation::Activate);
 				}
@@ -1217,8 +1264,8 @@ namespace wi::physics
 					if (weight == 0)
 					{
 						uint32_t graphicsInd = physicscomponent.physicsToGraphicsVertexMapping[ind];
-						XMFLOAT3 position = mesh.vertex_positions[graphicsInd];
-						XMVECTOR P = armature == nullptr ? XMLoadFloat3(&position) : wi::scene::SkinVertex(mesh, *armature, graphicsInd);
+						XMFLOAT3 position = mesh->vertex_positions[graphicsInd];
+						XMVECTOR P = armature == nullptr ? XMLoadFloat3(&position) : wi::scene::SkinVertex(*mesh, *armature, graphicsInd);
 						P = XMVector3Transform(P, worldMatrix);
 						XMStoreFloat3(&position, P);
 
@@ -1230,10 +1277,9 @@ namespace wi::physics
 		});
 
 		// Ragdoll management:
-		for (size_t i = 0; i < scene.humanoids.GetCount(); ++i)
-		{
-			HumanoidComponent& humanoid = scene.humanoids[i];
-			Entity humanoidEntity = scene.humanoids.GetEntity(i);
+		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.humanoids.GetCount(), 1, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
+			HumanoidComponent& humanoid = scene.humanoids[args.jobIndex];
+			Entity humanoidEntity = scene.humanoids.GetEntity(args.jobIndex);
 			float scale = 1;
 			if (scene.transforms.Contains(humanoidEntity))
 			{
@@ -1262,14 +1308,17 @@ namespace wi::physics
 			{
 				ragdoll.Deactivate(scene);
 
+				BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface(); // locking, these jobs can be adding bodies
 				for (auto& rb : ragdoll.rigidbodies)
 				{
-					TransformComponent& transform = *scene.transforms.GetComponent(rb.entity);
+					TransformComponent* transform = scene.transforms.GetComponent(rb.entity);
+					if (transform == nullptr)
+						return;
 
 					XMVECTOR SCA = {};
 					XMVECTOR ROT = {};
 					XMVECTOR TRA = {};
-					XMMatrixDecompose(&SCA, &ROT, &TRA, XMLoadFloat4x4(&transform.world));
+					XMMatrixDecompose(&SCA, &ROT, &TRA, XMLoadFloat4x4(&transform->world));
 					XMFLOAT4 rot = {};
 					XMFLOAT3 tra = {};
 					XMStoreFloat4(&rot, ROT);
@@ -1283,11 +1332,11 @@ namespace wi::physics
 						rb.bodyID,
 						m.GetTranslation(),
 						m.GetQuaternion().Normalized(),
-						dt
+						physics_scene.GetKinematicDT(scene.dt)
 					);
 				}
 			}
-		}
+		});
 
 		wi::jobsystem::Wait(ctx);
 
@@ -1298,35 +1347,90 @@ namespace wi::physics
 		{
 			static TempAllocatorImpl temp_allocator(10 * 1024 * 1024);
 			static JobSystemThreadPool job_system(cMaxPhysicsJobs, cMaxPhysicsBarriers, thread::hardware_concurrency() - 1);
-			const int steps = ::clamp(int(dt / TIMESTEP), 1, ACCURACY);
-			physics_scene.physics_system.Update(dt, steps, &temp_allocator, &job_system);
+
+			physics_scene.accumulator += dt;
+			physics_scene.accumulator = clamp(physics_scene.accumulator, 0.0f, TIMESTEP * ACCURACY);
+			while (physics_scene.accumulator >= TIMESTEP)
+			{
+				const float next_accumulator = physics_scene.accumulator - TIMESTEP;
+				if (IsInterpolationEnabled() && next_accumulator < TIMESTEP)
+				{
+					// On the last step, save previous locations, this is only needed for interpolation:
+					//	We don't only save it for dynamic objects that will be interpolated, because on the next frame maybe simulation doesn't run
+					//	but object types can change!
+					wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), 64, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
+						RigidBodyPhysicsComponent& physicscomponent = scene.rigidbodies[args.jobIndex];
+						if (physicscomponent.physicsobject == nullptr)
+							return;
+						RigidBody& rb = GetRigidBody(physicscomponent);
+						BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
+						Mat44 mat = body_interface.GetWorldTransform(rb.bodyID);
+						mat = mat * rb.additionalTransformInverse;
+						rb.prev_position = mat.GetTranslation();
+						rb.prev_rotation = mat.GetQuaternion().Normalized();
+					});
+					wi::jobsystem::Dispatch(ctx, (uint32_t)scene.humanoids.GetCount(), 1, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
+						HumanoidComponent& humanoid = scene.humanoids[args.jobIndex];
+						if (humanoid.ragdoll == nullptr)
+							return;
+						Ragdoll& ragdoll = *(Ragdoll*)humanoid.ragdoll.get();
+						BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
+						for (auto& rb : ragdoll.rigidbodies)
+						{
+							TransformComponent* transform = scene.transforms.GetComponent(rb.entity);
+							if (transform == nullptr)
+								continue;
+							Mat44 mat = body_interface.GetWorldTransform(rb.bodyID);
+							mat = mat * rb.additionalTransformInverse;
+							mat = mat * rb.restBasis;
+							rb.prev_position = mat.GetTranslation();
+							rb.prev_rotation = mat.GetQuaternion().Normalized();
+						}
+					});
+					wi::jobsystem::Wait(ctx);
+				}
+
+				physics_scene.physics_system.Update(TIMESTEP, 1, &temp_allocator, &job_system);
+				physics_scene.accumulator = next_accumulator;
+			}
+			physics_scene.alpha = physics_scene.accumulator / TIMESTEP;
 		}
 
 		// Feedback physics objects to system:
-		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), 64, [&](wi::jobsystem::JobArgs args) {
+		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), 64, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
 
 			RigidBodyPhysicsComponent& physicscomponent = scene.rigidbodies[args.jobIndex];
-			if (physicscomponent.physicsobject == nullptr || physicscomponent.IsKinematic())
+			if (physicscomponent.physicsobject == nullptr)
 				return;
-
-			Entity entity = scene.rigidbodies.GetEntity(args.jobIndex);
-			TransformComponent& transform = *scene.transforms.GetComponent(entity);
-
 			RigidBody& physicsobject = GetRigidBody(physicscomponent);
 			if (physicsobject.bodyID.IsInvalid())
 				return;
+			BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
+			if (body_interface.GetMotionType(physicsobject.bodyID) != EMotionType::Dynamic)
+				return;
 
-			RMat44 world = body_interface.GetWorldTransform(physicsobject.bodyID);
-			world = world * physicsobject.additionalTransformInverse;
-			RVec3 position = world.GetTranslation();
-			Quat rotation = world.GetQuaternion();
+			Entity entity = scene.rigidbodies.GetEntity(args.jobIndex);
+			TransformComponent* transform = scene.transforms.GetComponent(entity);
+			if (transform == nullptr)
+				return;
 
-			transform.translation_local = XMFLOAT3(position.GetX(), position.GetY(), position.GetZ());
-			transform.rotation_local = XMFLOAT4(rotation.GetX(), rotation.GetY(), rotation.GetZ(), rotation.GetW());
-			transform.SetDirty();
+			Mat44 mat = body_interface.GetWorldTransform(physicsobject.bodyID);
+			mat = mat * physicsobject.additionalTransformInverse;
+			Vec3 position = mat.GetTranslation();
+			Quat rotation = mat.GetQuaternion().Normalized();
+
+			if (IsInterpolationEnabled())
+			{
+				position = position * physics_scene.alpha + physicsobject.prev_position * (1 - physics_scene.alpha);
+				rotation = physicsobject.prev_rotation.SLERP(rotation, physics_scene.alpha);
+			}
+
+			transform->translation_local = cast(position);
+			transform->rotation_local = cast(rotation);
+			transform->SetDirty();
 		});
 		
-		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.softbodies.GetCount(), 1, [&](wi::jobsystem::JobArgs args) {
+		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.softbodies.GetCount(), 1, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
 
 			SoftBodyPhysicsComponent& physicscomponent = scene.softbodies[args.jobIndex];
 			if (physicscomponent.physicsobject == nullptr)
@@ -1344,7 +1448,9 @@ namespace wi::physics
 
 			const Body& body = lock.GetBody();
 
-			MeshComponent& mesh = *scene.meshes.GetComponent(entity);
+			MeshComponent* mesh = scene.meshes.GetComponent(entity);
+			if (mesh == nullptr)
+				return;
 
 			physicscomponent.aabb = wi::primitive::AABB();
 
@@ -1369,7 +1475,7 @@ namespace wi::physics
 			}
 
 			// Soft body simulation nodes will update graphics mesh:
-			for (size_t ind = 0; ind < mesh.vertex_positions.size(); ++ind)
+			for (size_t ind = 0; ind < mesh->vertex_positions.size(); ++ind)
 			{
 				uint32_t physicsInd = physicscomponent.graphicsToPhysicsVertexMapping[ind];
 
@@ -1384,27 +1490,27 @@ namespace wi::physics
 			}
 
 			// Update tangent vectors:
-			if (!mesh.vertex_uvset_0.empty() && !physicscomponent.vertex_normals_simulation.empty())
+			if (!mesh->vertex_uvset_0.empty() && !physicscomponent.vertex_normals_simulation.empty())
 			{
 				uint32_t first_subset = 0;
 				uint32_t last_subset = 0;
-				mesh.GetLODSubsetRange(0, first_subset, last_subset);
+				mesh->GetLODSubsetRange(0, first_subset, last_subset);
 				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 				{
-					const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
+					const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
 					for (size_t i = 0; i < subset.indexCount; i += 3)
 					{
-						const uint32_t i0 = mesh.indices[i + 0];
-						const uint32_t i1 = mesh.indices[i + 1];
-						const uint32_t i2 = mesh.indices[i + 2];
+						const uint32_t i0 = mesh->indices[i + 0];
+						const uint32_t i1 = mesh->indices[i + 1];
+						const uint32_t i2 = mesh->indices[i + 2];
 
 						const XMFLOAT3 v0 = physicscomponent.vertex_positions_simulation[i0].GetPOS();
 						const XMFLOAT3 v1 = physicscomponent.vertex_positions_simulation[i1].GetPOS();
 						const XMFLOAT3 v2 = physicscomponent.vertex_positions_simulation[i2].GetPOS();
 
-						const XMFLOAT2 u0 = mesh.vertex_uvset_0[i0];
-						const XMFLOAT2 u1 = mesh.vertex_uvset_0[i1];
-						const XMFLOAT2 u2 = mesh.vertex_uvset_0[i2];
+						const XMFLOAT2 u0 = mesh->vertex_uvset_0[i0];
+						const XMFLOAT2 u1 = mesh->vertex_uvset_0[i1];
+						const XMFLOAT2 u2 = mesh->vertex_uvset_0[i2];
 
 						const XMVECTOR nor0 = physicscomponent.vertex_normals_simulation[i0].LoadNOR();
 						const XMVECTOR nor1 = physicscomponent.vertex_normals_simulation[i1].LoadNOR();
@@ -1460,18 +1566,17 @@ namespace wi::physics
 				}
 			}
 
-			mesh.aabb = physicscomponent.aabb;
+			mesh->aabb = physicscomponent.aabb;
 		});
 
-		for (size_t i = 0; i < scene.humanoids.GetCount(); ++i)
-		{
-			HumanoidComponent& humanoid = scene.humanoids[i];
+		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.humanoids.GetCount(), 1, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
+			HumanoidComponent& humanoid = scene.humanoids[args.jobIndex];
 			if (humanoid.ragdoll == nullptr)
-				continue;
-			Entity humanoidEntity = scene.humanoids.GetEntity(i);
+				return;
 			Ragdoll& ragdoll = *(Ragdoll*)humanoid.ragdoll.get();
 			if (humanoid.IsRagdollPhysicsEnabled())
 			{
+				BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
 				for (auto& rb : ragdoll.rigidbodies)
 				{
 					TransformComponent* transform = scene.transforms.GetComponent(rb.entity);
@@ -1480,12 +1585,21 @@ namespace wi::physics
 					Mat44 mat = body_interface.GetWorldTransform(rb.bodyID);
 					mat = mat * rb.additionalTransformInverse;
 					mat = mat * rb.restBasis;
-					transform->translation_local = cast(mat.GetTranslation());
-					transform->rotation_local = cast(mat.GetQuaternion().Normalized());
+					Vec3 position = mat.GetTranslation();
+					Quat rotation = mat.GetQuaternion().Normalized();
+
+					if (IsInterpolationEnabled())
+					{
+						position = position * physics_scene.alpha + rb.prev_position * (1 - physics_scene.alpha);
+						rotation = rb.prev_rotation.SLERP(rotation, physics_scene.alpha);
+					}
+
+					transform->translation_local = cast(position);
+					transform->rotation_local = cast(rotation);
 					transform->SetDirty();
 				}
 			}
-		}
+		});
 
 #ifdef JPH_DEBUG_RENDERER
 		if (IsDebugDrawEnabled())
@@ -1904,7 +2018,8 @@ namespace wi::physics
 			PickDragOperation_Jolt* internal_state = (PickDragOperation_Jolt*)op.internal_state.get();
 			const float dist = internal_state->pick_distance;
 			Vec3 pos = Vec3(ray.origin.x + ray.direction.x * dist, ray.origin.y + ray.direction.y * dist, ray.origin.z + ray.direction.z * dist);
-			body_interface.MoveKinematic(internal_state->bodyA->GetID(), pos, Quat::sIdentity(), scene.dt);
+			//body_interface.SetPosition(internal_state->bodyA->GetID(), pos, EActivation::Activate);
+			body_interface.MoveKinematic(internal_state->bodyA->GetID(), pos, Quat::sIdentity(), physics_scene.GetKinematicDT(scene.dt));
 		}
 		else
 		{
@@ -1931,14 +2046,9 @@ namespace wi::physics
 			settings.SetEmbedded();
 			settings.mPoint1 = settings.mPoint2 = pos;
 #else
-			SixDOFConstraintSettings settings;
+			FixedConstraintSettings settings;
 			settings.SetEmbedded();
-			settings.mPosition1 = settings.mPosition2 = pos;
-			for (int i = 0; i < SixDOFConstraintSettings::EAxis::Num; ++i)
-			{
-				settings.mLimitMin[i] = 0;
-				settings.mLimitMax[i] = 0;
-			}
+			settings.mAutoDetectPoint = true;
 #endif
 
 			internal_state->constraint = settings.Create(*internal_state->bodyA, *internal_state->bodyB);

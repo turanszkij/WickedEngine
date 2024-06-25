@@ -20,6 +20,12 @@ namespace wi::physics
 	void SetSimulationEnabled(bool value);
 	bool IsSimulationEnabled();
 
+	// Enable/disable the physics interpolation.
+	//	When enabled, physics simulation's fixed frame rate will be
+	//	interpolated to match the variable frame rate of rendering
+	void SetInterpolationEnabled(bool value);
+	bool IsInterpolationEnabled();
+
 	// Enable/disable debug drawing of physics objects
 	void SetDebugDrawEnabled(bool value);
 	bool IsDebugDrawEnabled();
