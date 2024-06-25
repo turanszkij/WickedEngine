@@ -18,7 +18,7 @@ jobs:
         "../BUILD/x64/Release/OfflineShaderCompiler/OfflineShaderCompiler.exe" hlsl6 spirv shaderdump strip_reflection
         cd ..
         "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /t:clean /m /p:Configuration=Release /p:Platform=x64
-        "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /t:Editor_Windows /m /p:Configuration=Release /p:Platform=x64 /LTCG
+        "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /t:Editor_Windows /m /p:Configuration=Release /p:Platform=x64
     
     - name: Move files
       shell: cmd
