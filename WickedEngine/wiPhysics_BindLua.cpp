@@ -11,6 +11,8 @@ namespace wi::lua
 		lunamethod(Physics_BindLua, IsEnabled),
 		lunamethod(Physics_BindLua, SetSimulationEnabled),
 		lunamethod(Physics_BindLua, IsSimulationEnabled),
+		lunamethod(Physics_BindLua, SetInterpolationEnabled),
+		lunamethod(Physics_BindLua, IsInterpolationEnabled),
 		lunamethod(Physics_BindLua, SetDebugDrawEnabled),
 		lunamethod(Physics_BindLua, IsDebugDrawEnabled),
 		lunamethod(Physics_BindLua, SetAccuracy),
@@ -66,6 +68,22 @@ namespace wi::lua
 	int Physics_BindLua::IsSimulationEnabled(lua_State* L)
 	{
 		wi::lua::SSetBool(L, wi::physics::IsSimulationEnabled());
+		return 1;
+	}
+	int Physics_BindLua::SetInterpolationEnabled(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::physics::SetInterpolationEnabled(wi::lua::SGetBool(L, 1));
+		}
+		else
+			wi::lua::SError(L, "SetInterpolationEnabled(bool value) not enough arguments!");
+		return 0;
+	}
+	int Physics_BindLua::IsInterpolationEnabled(lua_State* L)
+	{
+		wi::lua::SSetBool(L, wi::physics::IsInterpolationEnabled());
 		return 1;
 	}
 	int Physics_BindLua::SetDebugDrawEnabled(lua_State* L)
