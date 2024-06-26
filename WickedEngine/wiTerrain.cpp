@@ -808,18 +808,6 @@ namespace wi::terrain
 						rigidbody->mesh_lod = lod_required;
 						rigidbody->physicsobject = {}; // will be recreated
 					}
-					else
-					{
-						if (dist < physics_generation)
-						{
-							wi::physics::SetActivationState(*rigidbody, wi::physics::ActivationState::Active);
-						}
-						else
-						{
-							//scene->rigidbodies.Remove(chunk_data.entity);
-							wi::physics::SetActivationState(*rigidbody, wi::physics::ActivationState::Inactive);
-						}
-					}
 				}
 				else
 				{
@@ -827,8 +815,7 @@ namespace wi::terrain
 					{
 						RigidBodyPhysicsComponent& newrigidbody = scene->rigidbodies.Create(chunk_data.entity);
 						newrigidbody.shape = RigidBodyPhysicsComponent::TRIANGLE_MESH;
-						//newrigidbody.SetDisableDeactivation(true);
-						newrigidbody.SetKinematic(true);
+						newrigidbody.mass = 0; // terrain chunks are static
 						newrigidbody.mesh_lod = lod_required;
 					}
 				}

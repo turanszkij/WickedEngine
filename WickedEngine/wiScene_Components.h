@@ -902,6 +902,7 @@ namespace wi::scene
 			EMPTY = 0,
 			DISABLE_DEACTIVATION = 1 << 0,
 			KINEMATIC = 1 << 1,
+			START_DEACTIVATED = 1 << 2,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -916,7 +917,7 @@ namespace wi::scene
 			ENUM_FORCE_UINT32 = 0xFFFFFFFF
 		};
 		CollisionShape shape;
-		float mass = 1.0f;
+		float mass = 1.0f; // Set to 0 to make body static
 		float friction = 0.2f;
 		float restitution = 0.1f;
 		float damping_linear = 0.05f;
@@ -947,9 +948,11 @@ namespace wi::scene
 
 		inline void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
 		inline void SetKinematic(bool value) { if (value) { _flags |= KINEMATIC; } else { _flags &= ~KINEMATIC; } }
+		inline void SetStartDeactivated(bool value) { if (value) { _flags |= START_DEACTIVATED; } else { _flags &= ~START_DEACTIVATED; } }
 
 		inline bool IsDisableDeactivation() const { return _flags & DISABLE_DEACTIVATION; }
 		inline bool IsKinematic() const { return _flags & KINEMATIC; }
+		inline bool IsStartDeactivated() const { return _flags & START_DEACTIVATED; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

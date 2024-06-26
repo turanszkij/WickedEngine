@@ -10,6 +10,8 @@ public:
 	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 	void SetEntity(wi::ecs::Entity entity);
 
+	void RefreshShapeType();
+
 	wi::gui::ComboBox collisionShapeComboBox;
 	wi::gui::Slider XSlider;
 	wi::gui::Slider YSlider;
@@ -20,6 +22,7 @@ public:
 	wi::gui::Slider lineardampingSlider;
 	wi::gui::Slider angulardampingSlider;
 	wi::gui::Slider physicsMeshLODSlider;
+	wi::gui::CheckBox startDeactivatedCheckBox;
 	wi::gui::CheckBox disabledeactivationCheckBox;
 	wi::gui::CheckBox kinematicCheckBox;
 	wi::gui::Slider offsetXSlider;

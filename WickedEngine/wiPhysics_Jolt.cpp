@@ -64,6 +64,12 @@ namespace wi::physics
 		float TIMESTEP = 1.0f / 60.0f;
 		bool INTERPOLATION = true;
 
+		const uint cMaxBodies = 65536;
+		const uint cNumBodyMutexes = 0;
+		const uint cMaxBodyPairs = 65536;
+		const uint cMaxContactConstraints = 65536;
+		const EMotionQuality cMotionQuality = EMotionQuality::LinearCast;
+
 		inline Vec3 cast(const XMFLOAT3& v) { return Vec3(v.x, v.y, v.z); }
 		inline Quat cast(const XMFLOAT4& v) { return Quat(v.x, v.y, v.z, v.w); }
 		inline Mat44 cast(const XMFLOAT4X4& v)
@@ -197,10 +203,6 @@ namespace wi::physics
 			{
 				auto physics_scene = std::make_shared<PhysicsScene>();
 
-				const uint cMaxBodies = 65536;
-				const uint cNumBodyMutexes = 0;
-				const uint cMaxBodyPairs = 65536;
-				const uint cMaxContactConstraints = 10240;
 				physics_scene->physics_system.Init(
 					cMaxBodies,
 					cNumBodyMutexes,
@@ -343,8 +345,8 @@ namespace wi::physics
 			}
 			else
 			{
-				wi::backlog::post("Convex Hull physics requested, but no MeshComponent provided!", wi::backlog::LogLevel::Error);
-				assert(0);
+				wi::backlog::post("AddRigidBody failed: convex hull physics requested, but no MeshComponent provided!", wi::backlog::LogLevel::Error);
+				return;
 			}
 			break;
 
@@ -377,8 +379,8 @@ namespace wi::physics
 			}
 			else
 			{
-				wi::backlog::post("Triangle Mesh physics requested, but no MeshComponent provided!", wi::backlog::LogLevel::Error);
-				assert(0);
+				wi::backlog::post("AddRigidBody failed: triangle mesh physics requested, but no MeshComponent provided!", wi::backlog::LogLevel::Error);
+				return;
 			}
 			break;
 			}
@@ -430,12 +432,14 @@ namespace wi::physics
 					settings.mMassPropertiesOverride.mMass = 1;
 				}
 				settings.mAllowSleeping = !physicscomponent.IsDisableDeactivation();
-				settings.mMotionQuality = EMotionQuality::LinearCast;
+				settings.mMotionQuality = cMotionQuality;
 				settings.mUserData = (uint64_t)&physicsobject;
 
 				BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface(); // locking version because this is called from job system!
 
-				physicsobject.bodyID = body_interface.CreateAndAddBody(settings, EActivation::Activate);
+				const EActivation activation = physicscomponent.IsStartDeactivated() ? EActivation::DontActivate : EActivation::Activate;
+
+				physicsobject.bodyID = body_interface.CreateAndAddBody(settings, activation);
 				if (physicsobject.bodyID.IsInvalid())
 				{
 					physicscomponent.physicsobject = nullptr;
@@ -884,7 +888,7 @@ namespace wi::physics
 					part.mPosition = positions[p];
 					part.mRotation = Quat::sIdentity();
 					part.mMotionType = EMotionType::Kinematic;
-					part.mMotionQuality = EMotionQuality::LinearCast;
+					part.mMotionQuality = cMotionQuality;
 					part.mObjectLayer = Layers::MOVING;
 					part.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
 					part.mMassPropertiesOverride.mMass = masses[p];
@@ -1178,29 +1182,40 @@ namespace wi::physics
 					}
 				}
 
-				if (currentMotionType == EMotionType::Kinematic)
-				{
-					TransformComponent* transform = scene.transforms.GetComponent(entity);
-					if (transform == nullptr)
-						return;
+				TransformComponent* transform = scene.transforms.GetComponent(entity);
+				if (transform == nullptr)
+					return;
 
-					body_interface.MoveKinematic(
-						physicsobject.bodyID,
-						cast(transform->GetPosition()),
-						cast(transform->GetRotation()),
-						physics_scene.GetKinematicDT(scene.dt)
-					);
+				if (IsSimulationEnabled())
+				{
+					if (currentMotionType == EMotionType::Kinematic)
+					{
+						body_interface.MoveKinematic(
+							physicsobject.bodyID,
+							cast(transform->GetPosition()),
+							cast(transform->GetRotation()),
+							physics_scene.GetKinematicDT(scene.dt)
+						);
+					}
+					else if (currentMotionType == EMotionType::Static)
+					{
+						body_interface.SetPositionAndRotation(
+							physicsobject.bodyID,
+							cast(transform->GetPosition()),
+							cast(transform->GetRotation()),
+							EActivation::DontActivate
+						);
+					}
 				}
-				else if (currentMotionType == EMotionType::Static)
+				else if (currentMotionType != EMotionType::Dynamic)
 				{
-					TransformComponent* transform = scene.transforms.GetComponent(entity);
-					if (transform == nullptr)
-						return;
-
+					// Simulation is disabled, update physics state immediately:
+					physicsobject.prev_position = cast(transform->GetPosition());
+					physicsobject.prev_rotation = cast(transform->GetRotation());
 					body_interface.SetPositionAndRotation(
 						physicsobject.bodyID,
-						cast(transform->GetPosition()),
-						cast(transform->GetRotation()),
+						physicsobject.prev_position,
+						physicsobject.prev_rotation,
 						EActivation::Activate
 					);
 				}
@@ -1240,11 +1255,14 @@ namespace wi::physics
 				body_interface.SetFriction(physicsobject.bodyID, physicscomponent.friction);
 				body_interface.SetRestitution(physicsobject.bodyID, physicscomponent.restitution);
 
-				// Add wind:
-				const Vec3 wind = cast(scene.weather.windDirection);
-				if (!wind.IsNearZero())
+				if (IsSimulationEnabled())
 				{
-					body_interface.AddForce(physicsobject.bodyID, wind, EActivation::Activate);
+					// Add wind:
+					const Vec3 wind = cast(scene.weather.windDirection);
+					if (!wind.IsNearZero())
+					{
+						body_interface.AddForce(physicsobject.bodyID, wind, EActivation::Activate);
+					}
 				}
 
 				// This is different from rigid bodies, because soft body is a per mesh component (no TransformComponent). World matrix is propagated down from single mesh instance (ObjectUpdateSystem).
@@ -1300,14 +1318,43 @@ namespace wi::physics
 				humanoid.ragdoll = std::make_shared<Ragdoll>(scene, humanoid, humanoidEntity, scale);
 			}
 			Ragdoll& ragdoll = *(Ragdoll*)humanoid.ragdoll.get();
-			if (humanoid.IsRagdollPhysicsEnabled())
-			{
-				ragdoll.Activate(scene, humanoidEntity);
-			}
-			else
-			{
-				ragdoll.Deactivate(scene);
 
+			if (IsSimulationEnabled())
+			{
+				if (humanoid.IsRagdollPhysicsEnabled())
+				{
+					ragdoll.Activate(scene, humanoidEntity);
+				}
+				else
+				{
+					ragdoll.Deactivate(scene);
+
+					BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface(); // locking, these jobs can be adding bodies
+					for (auto& rb : ragdoll.rigidbodies)
+					{
+						TransformComponent* transform = scene.transforms.GetComponent(rb.entity);
+						if (transform == nullptr)
+							return;
+
+						const Vec3 position = cast(transform->GetPosition());
+						const Quat rotation = cast(transform->GetRotation());
+
+						Mat44 m = Mat44::sTranslation(position) * Mat44::sRotation(rotation);
+						m = m * rb.restBasisInverse;
+						m = m * rb.additionalTransform;
+
+						body_interface.MoveKinematic(
+							rb.bodyID,
+							m.GetTranslation(),
+							m.GetQuaternion().Normalized(),
+							physics_scene.GetKinematicDT(scene.dt)
+						);
+					}
+				}
+			}
+			else if(!humanoid.IsRagdollPhysicsEnabled())
+			{
+				// Simulation is disabled, update physics state immediately:
 				BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface(); // locking, these jobs can be adding bodies
 				for (auto& rb : ragdoll.rigidbodies)
 				{
@@ -1315,24 +1362,21 @@ namespace wi::physics
 					if (transform == nullptr)
 						return;
 
-					XMVECTOR SCA = {};
-					XMVECTOR ROT = {};
-					XMVECTOR TRA = {};
-					XMMatrixDecompose(&SCA, &ROT, &TRA, XMLoadFloat4x4(&transform->world));
-					XMFLOAT4 rot = {};
-					XMFLOAT3 tra = {};
-					XMStoreFloat4(&rot, ROT);
-					XMStoreFloat3(&tra, TRA);
+					const Vec3 position = cast(transform->GetPosition());
+					const Quat rotation = cast(transform->GetRotation());
 
-					Mat44 m = Mat44::sTranslation(cast(tra)) * Mat44::sRotation(cast(rot));
+					Mat44 m = Mat44::sTranslation(position) * Mat44::sRotation(rotation);
 					m = m * rb.restBasisInverse;
 					m = m * rb.additionalTransform;
 
-					body_interface.MoveKinematic(
+					rb.prev_position = m.GetTranslation();
+					rb.prev_rotation = m.GetQuaternion().Normalized();
+
+					body_interface.SetPositionAndRotation(
 						rb.bodyID,
-						m.GetTranslation(),
-						m.GetQuaternion().Normalized(),
-						physics_scene.GetKinematicDT(scene.dt)
+						rb.prev_position,
+						rb.prev_rotation,
+						EActivation::DontActivate
 					);
 				}
 			}
@@ -1345,7 +1389,8 @@ namespace wi::physics
 		// Perform internal simulation step:
 		if (IsSimulationEnabled())
 		{
-			static TempAllocatorImpl temp_allocator(10 * 1024 * 1024);
+			//static TempAllocatorImpl temp_allocator(10 * 1024 * 1024);
+			static TempAllocatorMalloc temp_allocator; // 10-100 MB was not enough for large simulation, I don't want to reserve more memory up front
 			static JobSystemThreadPool job_system(cMaxPhysicsJobs, cMaxPhysicsBarriers, thread::hardware_concurrency() - 1);
 
 			physics_scene.accumulator += dt;

@@ -23,7 +23,7 @@ void LightWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->componentsWnd.RefreshEntityTree();
-		});
+	});
 
 	float x = 130;
 	float y = 0;
@@ -39,12 +39,16 @@ void LightWindow::Create(EditorComponent* _editor)
 	colorPicker.SetVisible(true);
 	colorPicker.SetEnabled(false);
 	colorPicker.OnColorChanged([&](wi::gui::EventArgs args) {
-		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
-		if (light != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			light->color = args.color.toFloat3();
+			LightComponent* light = scene.lights.GetComponent(x.entity);
+			if (light != nullptr)
+			{
+				light->color = args.color.toFloat3();
+			}
 		}
-		});
+	});
 	AddWidget(&colorPicker);
 
 	float mod_wid = colorPicker.GetScale().x;
@@ -54,10 +58,14 @@ void LightWindow::Create(EditorComponent* _editor)
 	intensitySlider.SetSize(XMFLOAT2(wid, hei));
 	intensitySlider.SetPos(XMFLOAT2(x, y));
 	intensitySlider.OnSlide([&](wi::gui::EventArgs args) {
-		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
-		if (light != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			light->intensity = args.fValue;
+			LightComponent* light = scene.lights.GetComponent(x.entity);
+			if (light != nullptr)
+			{
+				light->intensity = args.fValue;
+			}
 		}
 	});
 	intensitySlider.SetEnabled(false);
@@ -68,10 +76,14 @@ void LightWindow::Create(EditorComponent* _editor)
 	rangeSlider.SetSize(XMFLOAT2(wid, hei));
 	rangeSlider.SetPos(XMFLOAT2(x, y += step));
 	rangeSlider.OnSlide([&](wi::gui::EventArgs args) {
-		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
-		if (light != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			light->range = args.fValue;
+			LightComponent* light = scene.lights.GetComponent(x.entity);
+			if (light != nullptr)
+			{
+				light->range = args.fValue;
+			}
 		}
 	});
 	rangeSlider.SetEnabled(false);
@@ -82,12 +94,16 @@ void LightWindow::Create(EditorComponent* _editor)
 	radiusSlider.SetSize(XMFLOAT2(wid, hei));
 	radiusSlider.SetPos(XMFLOAT2(x, y += step));
 	radiusSlider.OnSlide([&](wi::gui::EventArgs args) {
-		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
-		if (light != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			light->radius = args.fValue;
+			LightComponent* light = scene.lights.GetComponent(x.entity);
+			if (light != nullptr)
+			{
+				light->radius = args.fValue;
+			}
 		}
-		});
+	});
 	radiusSlider.SetEnabled(false);
 	radiusSlider.SetTooltip("[Experimental] Adjust the radius of the light source.\nFor directional light, this will only affect ray traced shadow softness.");
 	AddWidget(&radiusSlider);
@@ -96,12 +112,16 @@ void LightWindow::Create(EditorComponent* _editor)
 	lengthSlider.SetSize(XMFLOAT2(wid, hei));
 	lengthSlider.SetPos(XMFLOAT2(x, y += step));
 	lengthSlider.OnSlide([&](wi::gui::EventArgs args) {
-		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
-		if (light != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			light->length = args.fValue;
+			LightComponent* light = scene.lights.GetComponent(x.entity);
+			if (light != nullptr)
+			{
+				light->length = args.fValue;
+			}
 		}
-		});
+	});
 	lengthSlider.SetEnabled(false);
 	lengthSlider.SetTooltip("[Experimental] Adjust the length of the light source.\nWith this you can make capsule light out of a point light.");
 	AddWidget(&lengthSlider);
@@ -110,10 +130,14 @@ void LightWindow::Create(EditorComponent* _editor)
 	outerConeAngleSlider.SetSize(XMFLOAT2(wid, hei));
 	outerConeAngleSlider.SetPos(XMFLOAT2(x, y += step));
 	outerConeAngleSlider.OnSlide([&](wi::gui::EventArgs args) {
-		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
-		if (light != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			light->outerConeAngle = args.fValue;
+			LightComponent* light = scene.lights.GetComponent(x.entity);
+			if (light != nullptr)
+			{
+				light->outerConeAngle = args.fValue;
+			}
 		}
 	});
 	outerConeAngleSlider.SetEnabled(false);
@@ -124,12 +148,16 @@ void LightWindow::Create(EditorComponent* _editor)
 	innerConeAngleSlider.SetSize(XMFLOAT2(wid, hei));
 	innerConeAngleSlider.SetPos(XMFLOAT2(x, y += step));
 	innerConeAngleSlider.OnSlide([&](wi::gui::EventArgs args) {
-		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
-		if (light != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			light->innerConeAngle = args.fValue;
+			LightComponent* light = scene.lights.GetComponent(x.entity);
+			if (light != nullptr)
+			{
+				light->innerConeAngle = args.fValue;
+			}
 		}
-		});
+	});
 	innerConeAngleSlider.SetEnabled(false);
 	innerConeAngleSlider.SetTooltip("Adjust the inner cone aperture for spotlight.\n(The inner cone will always be inside the outer cone)");
 	AddWidget(&innerConeAngleSlider);
@@ -138,10 +166,14 @@ void LightWindow::Create(EditorComponent* _editor)
 	shadowCheckBox.SetSize(XMFLOAT2(hei, hei));
 	shadowCheckBox.SetPos(XMFLOAT2(x, y += step));
 	shadowCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
-		if (light != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			light->SetCastShadow(args.bValue);
+			LightComponent* light = scene.lights.GetComponent(x.entity);
+			if (light != nullptr)
+			{
+				light->SetCastShadow(args.bValue);
+			}
 		}
 	});
 	shadowCheckBox.SetEnabled(false);
@@ -152,10 +184,14 @@ void LightWindow::Create(EditorComponent* _editor)
 	volumetricsCheckBox.SetSize(XMFLOAT2(hei, hei));
 	volumetricsCheckBox.SetPos(XMFLOAT2(x, y += step));
 	volumetricsCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
-		if (light != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			light->SetVolumetricsEnabled(args.bValue);
+			LightComponent* light = scene.lights.GetComponent(x.entity);
+			if (light != nullptr)
+			{
+				light->SetVolumetricsEnabled(args.bValue);
+			}
 		}
 	});
 	volumetricsCheckBox.SetEnabled(false);
@@ -166,10 +202,14 @@ void LightWindow::Create(EditorComponent* _editor)
 	haloCheckBox.SetSize(XMFLOAT2(hei, hei));
 	haloCheckBox.SetPos(XMFLOAT2(x, y += step));
 	haloCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
-		if (light != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			light->SetVisualizerEnabled(args.bValue);
+			LightComponent* light = scene.lights.GetComponent(x.entity);
+			if (light != nullptr)
+			{
+				light->SetVisualizerEnabled(args.bValue);
+			}
 		}
 	});
 	haloCheckBox.SetEnabled(false);
@@ -180,10 +220,14 @@ void LightWindow::Create(EditorComponent* _editor)
 	staticCheckBox.SetSize(XMFLOAT2(hei, hei));
 	staticCheckBox.SetPos(XMFLOAT2(x, y += step));
 	staticCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
-		if (light != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			light->SetStatic(args.bValue);
+			LightComponent* light = scene.lights.GetComponent(x.entity);
+			if (light != nullptr)
+			{
+				light->SetStatic(args.bValue);
+			}
 		}
 	});
 	staticCheckBox.SetEnabled(false);
@@ -194,10 +238,14 @@ void LightWindow::Create(EditorComponent* _editor)
 	volumetricCloudsCheckBox.SetSize(XMFLOAT2(hei, hei));
 	volumetricCloudsCheckBox.SetPos(XMFLOAT2(x, y += step));
 	volumetricCloudsCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
-		if (light != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			light->SetVolumetricCloudsEnabled(args.bValue);
+			LightComponent* light = scene.lights.GetComponent(x.entity);
+			if (light != nullptr)
+			{
+				light->SetVolumetricCloudsEnabled(args.bValue);
+			}
 		}
 	});
 	volumetricCloudsCheckBox.SetEnabled(false);
@@ -208,11 +256,17 @@ void LightWindow::Create(EditorComponent* _editor)
 	typeSelectorComboBox.SetSize(XMFLOAT2(wid, hei));
 	typeSelectorComboBox.SetPos(XMFLOAT2(x, y += step));
 	typeSelectorComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
-		if (light != nullptr && args.iValue >= 0)
+		if (args.iValue < 0)
+			return;
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			light->SetType((LightComponent::LightType)args.iValue);
-			SetLightType(light->GetType());
+			LightComponent* light = scene.lights.GetComponent(x.entity);
+			if (light != nullptr)
+			{
+				light->SetType((LightComponent::LightType)args.iValue);
+				SetLightType(light->GetType());
+			}
 		}
 	});
 	typeSelectorComboBox.AddItem("Directional");
@@ -235,11 +289,16 @@ void LightWindow::Create(EditorComponent* _editor)
 	shadowResolutionComboBox.AddItem("1024", 1024);
 	shadowResolutionComboBox.AddItem("2048", 2048);
 	shadowResolutionComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
-		if (light == nullptr)
-			return;
-		light->forced_shadow_resolution = int(args.userdata);
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			LightComponent* light = scene.lights.GetComponent(x.entity);
+			if (light != nullptr)
+			{
+				light->forced_shadow_resolution = int(args.userdata);
+			}
+		}
+	});
 	shadowResolutionComboBox.SetSelected(0);
 	AddWidget(&shadowResolutionComboBox);
 
