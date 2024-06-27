@@ -948,9 +948,11 @@ namespace wi::lua::scene
 
 		int SetDisableDeactivation(lua_State* L);
 		int SetKinematic(lua_State* L);
+		int SetStartDeactivated(lua_State* L);
 
 		int IsDisableDeactivation(lua_State* L);
 		int IsKinematic(lua_State* L);
+		int IsStartDeactivated(lua_State* L);
 	};
 
 	class SoftBodyPhysicsComponent_BindLua
@@ -969,6 +971,7 @@ namespace wi::lua::scene
 			Mass = wi::lua::FloatProperty(&component->mass);
 			Friction = wi::lua::FloatProperty(&component->friction);
 			Restitution = wi::lua::FloatProperty(&component->restitution);
+			VertexRadius = wi::lua::FloatProperty(&component->vertex_radius);
 		}
 
 		SoftBodyPhysicsComponent_BindLua(wi::scene::SoftBodyPhysicsComponent* component) :component(component)
@@ -983,13 +986,19 @@ namespace wi::lua::scene
 		wi::lua::FloatProperty Mass;
 		wi::lua::FloatProperty Friction;
 		wi::lua::FloatProperty Restitution;
+		wi::lua::FloatProperty VertexRadius;
 
 		PropertyFunction(Mass)
 		PropertyFunction(Friction)
 		PropertyFunction(Restitution)
+		PropertyFunction(VertexRadius)
 
+		int SetDetail(lua_State* L);
+		int GetDetail(lua_State* L);
 		int SetDisableDeactivation(lua_State* L);
 		int IsDisableDeactivation(lua_State* L);
+		int SetWindEnabled(lua_State* L);
+		int IsWindEnabled(lua_State* L);
 		int CreateFromMesh(lua_State* L);
 	};
 

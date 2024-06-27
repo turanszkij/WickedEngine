@@ -1460,20 +1460,21 @@ namespace wi::scene
 					XMFLOAT3& v1 = vertex_positions[i1];
 					XMFLOAT3& v2 = vertex_positions[i2];
 
+
 					bool match_pos0 =
-						fabs(v_search_pos.x - v0.x) < FLT_EPSILON &&
-						fabs(v_search_pos.y - v0.y) < FLT_EPSILON &&
-						fabs(v_search_pos.z - v0.z) < FLT_EPSILON;
+						wi::math::float_equal(v_search_pos.x, v0.x) &&
+						wi::math::float_equal(v_search_pos.y, v0.y) &&
+						wi::math::float_equal(v_search_pos.z, v0.z);
 
 					bool match_pos1 =
-						fabs(v_search_pos.x - v1.x) < FLT_EPSILON &&
-						fabs(v_search_pos.y - v1.y) < FLT_EPSILON &&
-						fabs(v_search_pos.z - v1.z) < FLT_EPSILON;
+						wi::math::float_equal(v_search_pos.x, v1.x) &&
+						wi::math::float_equal(v_search_pos.y, v1.y) &&
+						wi::math::float_equal(v_search_pos.z, v1.z);
 
 					bool match_pos2 =
-						fabs(v_search_pos.x - v2.x) < FLT_EPSILON &&
-						fabs(v_search_pos.y - v2.y) < FLT_EPSILON &&
-						fabs(v_search_pos.z - v2.z) < FLT_EPSILON;
+						wi::math::float_equal(v_search_pos.x, v2.x) &&
+						wi::math::float_equal(v_search_pos.y, v2.y) &&
+						wi::math::float_equal(v_search_pos.z, v2.z);
 
 					if (match_pos0 || match_pos1 || match_pos2)
 					{
@@ -1520,21 +1521,21 @@ namespace wi::scene
 						const XMFLOAT2& at1 = vertex_atlas.empty() ? XMFLOAT2(0, 0) : vertex_atlas[ind1];
 
 						const bool duplicated_pos =
-							fabs(p0.x - p1.x) < FLT_EPSILON &&
-							fabs(p0.y - p1.y) < FLT_EPSILON &&
-							fabs(p0.z - p1.z) < FLT_EPSILON;
+							wi::math::float_equal(p0.x, p1.x) &&
+							wi::math::float_equal(p0.y, p1.y) &&
+							wi::math::float_equal(p0.z, p1.z);
 
 						const bool duplicated_uv0 =
-							fabs(u00.x - u01.x) < FLT_EPSILON &&
-							fabs(u00.y - u01.y) < FLT_EPSILON;
+							wi::math::float_equal(u00.x, u01.x) &&
+							wi::math::float_equal(u00.y, u01.y);
 
 						const bool duplicated_uv1 =
-							fabs(u10.x - u11.x) < FLT_EPSILON &&
-							fabs(u10.y - u11.y) < FLT_EPSILON;
+							wi::math::float_equal(u10.x, u11.x) &&
+							wi::math::float_equal(u10.y, u11.y);
 
 						const bool duplicated_atl =
-							fabs(at0.x - at1.x) < FLT_EPSILON &&
-							fabs(at0.y - at1.y) < FLT_EPSILON;
+							wi::math::float_equal(at0.x, at1.x) &&
+							wi::math::float_equal(at0.y, at1.y);
 
 						if (duplicated_pos && duplicated_uv0 && duplicated_uv1 && duplicated_atl)
 						{
@@ -2008,9 +2009,9 @@ namespace wi::scene
 				const XMFLOAT3& position = mesh.vertex_positions[i];
 
 				size_t hashes[] = {
-					std::hash<float>{}(position.x),
-					std::hash<float>{}(position.y),
-					std::hash<float>{}(position.z),
+					std::hash<int>{}(int(position.x * detail)),
+					std::hash<int>{}(int(position.y * detail)),
+					std::hash<int>{}(int(position.z * detail)),
 				};
 				size_t vertexHash = (((hashes[0] ^ (hashes[1] << 1) >> 1) ^ (hashes[2] << 1)) >> 1);
 

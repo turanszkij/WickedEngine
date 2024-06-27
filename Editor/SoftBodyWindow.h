@@ -11,9 +11,12 @@ public:
 	void SetEntity(wi::ecs::Entity entity);
 
 	wi::gui::Label infoLabel;
+	wi::gui::Slider detailSlider;
 	wi::gui::Slider massSlider;
 	wi::gui::Slider frictionSlider;
 	wi::gui::Slider restitutionSlider;
+	wi::gui::Slider vertexRadiusSlider;
+	wi::gui::CheckBox windCheckbox;
 
 	void ResizeLayout() override;
 };

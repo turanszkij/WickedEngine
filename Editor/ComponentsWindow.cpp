@@ -220,238 +220,247 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.AddItem("Voxel Grid " ICON_VOXELGRID, ADD_VOXELGRID);
 	newComponentCombo.OnSelect([=](wi::gui::EventArgs args) {
 		newComponentCombo.SetSelectedWithoutCallback(-1);
-		if (editor->translator.selected.empty())
-			return;
-		Scene& scene = editor->GetCurrentScene();
-		Entity entity = editor->translator.selected.back().entity;
-		if (args.userdata == ADD_SOFTBODY)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		wi::vector<Entity> entities;
+		for (auto& x : editor->translator.selected)
 		{
-			// explanation: for softbody, we want to create it for the MeshComponent, if it's also selected together with the object:
-			ObjectComponent* object = scene.objects.GetComponent(entity);
-			if (object != nullptr)
+			Entity entity = x.entity;
+			if (args.userdata == ADD_SOFTBODY)
 			{
-				entity = object->meshID;
+				// explanation: for softbody, we want to create it for the MeshComponent, if it's also selected together with the object:
+				ObjectComponent* object = scene.objects.GetComponent(entity);
+				if (object != nullptr)
+				{
+					entity = object->meshID;
+				}
 			}
-		}
-		if (entity == INVALID_ENTITY)
-		{
-			assert(0);
-			return;
-		}
+			if (entity == INVALID_ENTITY)
+				continue;
 
-		// Can early exit before creating history entry!
-		switch (args.userdata)
-		{
-		case ADD_NAME:
-			if (scene.names.Contains(entity))
-				return;
-			break;
-		case ADD_LAYER:
-			if (scene.layers.Contains(entity))
-				return;
-			break;
-		case ADD_TRANSFORM:
-			if (scene.transforms.Contains(entity))
-				return;
-			break;
-		case ADD_LIGHT:
-			if (scene.lights.Contains(entity))
-				return;
-			break;
-		case ADD_MATERIAL:
-			if (scene.materials.Contains(entity))
-				return;
-			break;
-		case ADD_SPRING:
-			if (scene.springs.Contains(entity))
-				return;
-			break;
-		case ADD_IK:
-			if (scene.inverse_kinematics.Contains(entity))
-				return;
-			break;
-		case ADD_SOUND:
-			if (scene.sounds.Contains(entity))
-				return;
-			break;
-		case ADD_ENVPROBE:
-			if (scene.probes.Contains(entity))
-				return;
-			break;
-		case ADD_EMITTER:
-			if (scene.emitters.Contains(entity))
-				return;
-			break;
-		case ADD_HAIR:
-			if (scene.hairs.Contains(entity))
-				return;
-			break;
-		case ADD_DECAL:
-			if (scene.decals.Contains(entity))
-				return;
-			break;
-		case ADD_WEATHER:
-			if (scene.weathers.Contains(entity))
-				return;
-			break;
-		case ADD_FORCE:
-			if (scene.forces.Contains(entity))
-				return;
-			break;
-		case ADD_ANIMATION:
-			if (scene.animations.Contains(entity))
-				return;
-			break;
-		case ADD_SCRIPT:
-			if (scene.scripts.Contains(entity))
-				return;
-			break;
-		case ADD_RIGIDBODY:
-			if (scene.rigidbodies.Contains(entity))
-				return;
-			break;
-		case ADD_SOFTBODY:
-			if (scene.softbodies.Contains(entity))
-				return;
-			break;
-		case ADD_COLLIDER:
-			if (scene.colliders.Contains(entity))
-				return;
-			break;
-		case ADD_HIERARCHY:
-			if (scene.hierarchy.Contains(entity))
-				return;
-			break;
-		case ADD_CAMERA:
-			if (scene.cameras.Contains(entity))
-				return;
-			break;
-		case ADD_OBJECT:
-			if (scene.objects.Contains(entity))
-				return;
-			break;
-		case ADD_VIDEO:
-			if (scene.videos.Contains(entity))
-				return;
-			break;
-		case ADD_SPRITE:
-			if (scene.sprites.Contains(entity))
-				return;
-			break;
-		case ADD_FONT:
-			if (scene.fonts.Contains(entity))
-				return;
-			break;
-		case ADD_VOXELGRID:
-			if (scene.voxel_grids.Contains(entity))
-				return;
-			break;
-		default:
-			return;
+			// Can early exit before creating history entry!
+			bool valid = true;
+			switch (args.userdata)
+			{
+			case ADD_NAME:
+				if (scene.names.Contains(entity))
+					valid = false;
+				break;
+			case ADD_LAYER:
+				if (scene.layers.Contains(entity))
+					valid = false;
+				break;
+			case ADD_TRANSFORM:
+				if (scene.transforms.Contains(entity))
+					valid = false;
+				break;
+			case ADD_LIGHT:
+				if (scene.lights.Contains(entity))
+					valid = false;
+				break;
+			case ADD_MATERIAL:
+				if (scene.materials.Contains(entity))
+					valid = false;
+				break;
+			case ADD_SPRING:
+				if (scene.springs.Contains(entity))
+					valid = false;
+				break;
+			case ADD_IK:
+				if (scene.inverse_kinematics.Contains(entity))
+					valid = false;
+				break;
+			case ADD_SOUND:
+				if (scene.sounds.Contains(entity))
+					valid = false;
+				break;
+			case ADD_ENVPROBE:
+				if (scene.probes.Contains(entity))
+					valid = false;
+				break;
+			case ADD_EMITTER:
+				if (scene.emitters.Contains(entity))
+					valid = false;
+				break;
+			case ADD_HAIR:
+				if (scene.hairs.Contains(entity))
+					valid = false;
+				break;
+			case ADD_DECAL:
+				if (scene.decals.Contains(entity))
+					valid = false;
+				break;
+			case ADD_WEATHER:
+				if (scene.weathers.Contains(entity))
+					valid = false;
+				break;
+			case ADD_FORCE:
+				if (scene.forces.Contains(entity))
+					valid = false;
+				break;
+			case ADD_ANIMATION:
+				if (scene.animations.Contains(entity))
+					valid = false;
+				break;
+			case ADD_SCRIPT:
+				if (scene.scripts.Contains(entity))
+					valid = false;
+				break;
+			case ADD_RIGIDBODY:
+				if (scene.rigidbodies.Contains(entity))
+					valid = false;
+				break;
+			case ADD_SOFTBODY:
+				if (scene.softbodies.Contains(entity))
+					valid = false;
+				break;
+			case ADD_COLLIDER:
+				if (scene.colliders.Contains(entity))
+					valid = false;
+				break;
+			case ADD_HIERARCHY:
+				if (scene.hierarchy.Contains(entity))
+					valid = false;
+				break;
+			case ADD_CAMERA:
+				if (scene.cameras.Contains(entity))
+					valid = false;
+				break;
+			case ADD_OBJECT:
+				if (scene.objects.Contains(entity))
+					valid = false;
+				break;
+			case ADD_VIDEO:
+				if (scene.videos.Contains(entity))
+					valid = false;
+				break;
+			case ADD_SPRITE:
+				if (scene.sprites.Contains(entity))
+					valid = false;
+				break;
+			case ADD_FONT:
+				if (scene.fonts.Contains(entity))
+					valid = false;
+				break;
+			case ADD_VOXELGRID:
+				if (scene.voxel_grids.Contains(entity))
+					valid = false;
+				break;
+			default:
+				valid = false;
+				break;
+			}
+
+			if (valid)
+			{
+				entities.push_back(entity);
+			}
 		}
 
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
-		editor->RecordEntity(archive, entity);
+		editor->RecordEntity(archive, entities);
 
-		switch (args.userdata)
+		for (Entity entity : entities)
 		{
-		case ADD_NAME:
-			scene.names.Create(entity);
-			break;
-		case ADD_LAYER:
-			scene.layers.Create(entity);
-			break;
-		case ADD_TRANSFORM:
-			scene.transforms.Create(entity);
-			break;
-		case ADD_LIGHT:
-			scene.lights.Create(entity);
-			break;
-		case ADD_MATERIAL:
-			scene.materials.Create(entity);
-			break;
-		case ADD_SPRING:
-			scene.springs.Create(entity);
-			break;
-		case ADD_IK:
-			scene.inverse_kinematics.Create(entity);
-			break;
-		case ADD_SOUND:
-			scene.sounds.Create(entity);
-			break;
-		case ADD_ENVPROBE:
-			scene.probes.Create(entity);
-			break;
-		case ADD_EMITTER:
-			if (!scene.materials.Contains(entity))
+			switch (args.userdata)
+			{
+			case ADD_NAME:
+				scene.names.Create(entity);
+				break;
+			case ADD_LAYER:
+				scene.layers.Create(entity);
+				break;
+			case ADD_TRANSFORM:
+				scene.transforms.Create(entity);
+				break;
+			case ADD_LIGHT:
+				scene.lights.Create(entity);
+				break;
+			case ADD_MATERIAL:
 				scene.materials.Create(entity);
-			scene.emitters.Create(entity);
-			break;
-		case ADD_HAIR:
-			if (!scene.materials.Contains(entity))
-				scene.materials.Create(entity);
-			scene.hairs.Create(entity);
-			break;
-		case ADD_DECAL:
-			if (!scene.materials.Contains(entity))
-				scene.materials.Create(entity);
-			scene.decals.Create(entity);
-			break;
-		case ADD_WEATHER:
-			scene.weathers.Create(entity);
-			break;
-		case ADD_FORCE:
-			scene.forces.Create(entity);
-			break;
-		case ADD_ANIMATION:
-			scene.animations.Create(entity);
-			break;
-		case ADD_SCRIPT:
-			scene.scripts.Create(entity);
-			break;
-		case ADD_RIGIDBODY:
+				break;
+			case ADD_SPRING:
+				scene.springs.Create(entity);
+				break;
+			case ADD_IK:
+				scene.inverse_kinematics.Create(entity);
+				break;
+			case ADD_SOUND:
+				scene.sounds.Create(entity);
+				break;
+			case ADD_ENVPROBE:
+				scene.probes.Create(entity);
+				break;
+			case ADD_EMITTER:
+				if (!scene.materials.Contains(entity))
+					scene.materials.Create(entity);
+				scene.emitters.Create(entity);
+				break;
+			case ADD_HAIR:
+				if (!scene.materials.Contains(entity))
+					scene.materials.Create(entity);
+				scene.hairs.Create(entity);
+				break;
+			case ADD_DECAL:
+				if (!scene.materials.Contains(entity))
+					scene.materials.Create(entity);
+				scene.decals.Create(entity);
+				break;
+			case ADD_WEATHER:
+				scene.weathers.Create(entity);
+				break;
+			case ADD_FORCE:
+				scene.forces.Create(entity);
+				break;
+			case ADD_ANIMATION:
+				scene.animations.Create(entity);
+				break;
+			case ADD_SCRIPT:
+				scene.scripts.Create(entity);
+				break;
+			case ADD_RIGIDBODY:
 			{
 				RigidBodyPhysicsComponent& rigidbody = scene.rigidbodies.Create(entity);
-				rigidbody.SetKinematic(true); // Set it to kinematic so that it doesn't immediately fall
+				rigidbody.SetKinematic(true); // Set it to kinematic so that it can be easily placed
 			}
 			break;
-		case ADD_SOFTBODY:
-			scene.softbodies.Create(entity);
-			break;
-		case ADD_COLLIDER:
-			scene.colliders.Create(entity);
-			break;
-		case ADD_HIERARCHY:
-			scene.hierarchy.Create(entity);
-			break;
-		case ADD_CAMERA:
-			scene.cameras.Create(entity);
-			break;
-		case ADD_OBJECT:
-			scene.objects.Create(entity);
-			break;
-		case ADD_VIDEO:
-			scene.videos.Create(entity);
-			break;
-		case ADD_SPRITE:
-			scene.sprites.Create(entity);
-			break;
-		case ADD_FONT:
-			scene.fonts.Create(entity);
-			break;
-		case ADD_VOXELGRID:
-			scene.voxel_grids.Create(entity);
-			break;
-		default:
-			break;
+			case ADD_SOFTBODY:
+				scene.softbodies.Create(entity);
+				break;
+			case ADD_COLLIDER:
+				scene.colliders.Create(entity);
+				break;
+			case ADD_HIERARCHY:
+				scene.hierarchy.Create(entity);
+				break;
+			case ADD_CAMERA:
+				scene.cameras.Create(entity);
+				break;
+			case ADD_OBJECT:
+				scene.objects.Create(entity);
+				break;
+			case ADD_VIDEO:
+				scene.videos.Create(entity);
+				break;
+			case ADD_SPRITE:
+				scene.sprites.Create(entity);
+				break;
+			case ADD_FONT:
+				scene.fonts.Create(entity);
+				break;
+			case ADD_VOXELGRID:
+				scene.voxel_grids.Create(entity);
+				break;
+			default:
+				break;
+			}
 		}
 
-		editor->RecordEntity(archive, entity);
+		editor->RecordEntity(archive, entities);
 
 		RefreshEntityTree();
 
-		});
+	});
 	AddWidget(&newComponentCombo);
 
 

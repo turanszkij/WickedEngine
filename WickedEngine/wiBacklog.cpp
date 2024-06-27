@@ -336,7 +336,7 @@ namespace wi::backlog
 		entries.clear();
 		scroll = 0;
 	}
-	void post(const std::string& input, LogLevel level)
+	void post(const char* input, LogLevel level)
 	{
 		if (logLevel > level)
 		{
@@ -396,6 +396,10 @@ namespace wi::backlog
 		{
 			write_logfile(); // will lock mutex
 		}
+	}
+	void post(const std::string& input, LogLevel level)
+	{
+		post(input.c_str(), level);
 	}
 
 	void historyPrev()
