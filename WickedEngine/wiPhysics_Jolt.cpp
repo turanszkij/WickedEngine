@@ -526,7 +526,6 @@ namespace wi::physics
 
 			if (physicsobject.bodyID.IsInvalid())
 			{
-				physicscomponent.physicsobject = nullptr;
 				wi::backlog::post("AddSoftBody failed: body couldn't be created! This could mean that there are too many physics objects.", wi::backlog::LogLevel::Error);
 				return;
 			}

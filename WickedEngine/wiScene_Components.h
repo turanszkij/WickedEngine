@@ -973,7 +973,7 @@ namespace wi::scene
 		float friction = 0.5f;
 		float restitution = 0.0f;
 		float vertex_radius = 0.2f; // how much distance vertices keep from other physics bodies
-		float detail = 10;
+		float detail = 100; // precision to keep within a unit
 		wi::vector<uint32_t> physicsToGraphicsVertexMapping; // maps graphics vertex index to physics vertex index of the same position
 		wi::vector<uint32_t> graphicsToPhysicsVertexMapping; // maps a physics vertex index to first graphics vertex index of the same position
 		wi::vector<float> weights; // weight per physics vertex controlling the mass. (0: disable weight (no physics, only animation), 1: default weight)
