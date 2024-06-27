@@ -172,6 +172,22 @@ void ContentBrowserWindow::RefreshContent()
 			current_selection = SELECTION_RECENT;
 		}
 	}
+	if (wi::helper::DirectoryExists(content_folder + "models"))
+	{
+		wi::gui::Button& button = folderButtons[SELECTION_MODELS];
+		button.Create("Models");
+		button.SetTooltip(content_folder + "models");
+		button.SetLocalizationEnabled(false);
+		button.SetSize(XMFLOAT2(wid, hei));
+		button.OnClick([this](wi::gui::EventArgs args) {
+			SetSelection(SELECTION_MODELS);
+			});
+		AddWidget(&button, wi::gui::Window::AttachmentOptions::NONE);
+		if (current_selection == SELECTION_COUNT)
+		{
+			current_selection = SELECTION_MODELS;
+		}
+	}
 	if (wi::helper::DirectoryExists(content_folder + "scripts"))
 	{
 		wi::gui::Button& button = folderButtons[SELECTION_SCRIPTS];
@@ -186,22 +202,6 @@ void ContentBrowserWindow::RefreshContent()
 		if (current_selection == SELECTION_COUNT)
 		{
 			current_selection = SELECTION_SCRIPTS;
-		}
-	}
-	if (wi::helper::DirectoryExists(content_folder + "models"))
-	{
-		wi::gui::Button& button = folderButtons[SELECTION_MODELS];
-		button.Create("Models");
-		button.SetTooltip(content_folder + "models");
-		button.SetLocalizationEnabled(false);
-		button.SetSize(XMFLOAT2(wid, hei));
-		button.OnClick([this](wi::gui::EventArgs args) {
-			SetSelection(SELECTION_MODELS);
-		});
-		AddWidget(&button, wi::gui::Window::AttachmentOptions::NONE);
-		if (current_selection == SELECTION_COUNT)
-		{
-			current_selection = SELECTION_MODELS;
 		}
 	}
 

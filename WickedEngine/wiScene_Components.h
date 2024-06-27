@@ -965,12 +965,15 @@ namespace wi::scene
 			SAFE_TO_REGISTER = 1 << 0,
 			DISABLE_DEACTIVATION = 1 << 1,
 			FORCE_RESET = 1 << 2,
+			WIND = 1 << 3,
 		};
 		uint32_t _flags = DISABLE_DEACTIVATION;
 
 		float mass = 1.0f;
 		float friction = 0.5f;
 		float restitution = 0.0f;
+		float vertex_radius = 0.2f; // how much distance vertices keep from other physics bodies
+		float detail = 100; // precision to keep within a unit
 		wi::vector<uint32_t> physicsToGraphicsVertexMapping; // maps graphics vertex index to physics vertex index of the same position
 		wi::vector<uint32_t> graphicsToPhysicsVertexMapping; // maps a physics vertex index to first graphics vertex index of the same position
 		wi::vector<float> weights; // weight per physics vertex controlling the mass. (0: disable weight (no physics, only animation), 1: default weight)
@@ -985,8 +988,18 @@ namespace wi::scene
 		wi::primitive::AABB aabb;
 
 		inline void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
+		inline void SetWindEnabled(bool value) { if (value) { _flags |= WIND; } else { _flags &= ~DISABLE_DEACTIVATION; } }
 
 		inline bool IsDisableDeactivation() const { return _flags & DISABLE_DEACTIVATION; }
+		inline bool IsWindEnabled() const { return _flags & WIND; }
+
+		void SetDetail(float value)
+		{
+			detail = value;
+			physicsToGraphicsVertexMapping.clear();
+			physicsToGraphicsVertexMapping.shrink_to_fit();
+			physicsobject = {};
+		}
 
 		inline bool HasVertices() const
 		{

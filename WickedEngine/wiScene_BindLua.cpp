@@ -5675,8 +5675,10 @@ int ScriptComponent_BindLua::Stop(lua_State* L)
 Luna<RigidBodyPhysicsComponent_BindLua>::FunctionType RigidBodyPhysicsComponent_BindLua::methods[] = {
 	lunamethod(RigidBodyPhysicsComponent_BindLua, IsDisableDeactivation),
 	lunamethod(RigidBodyPhysicsComponent_BindLua, IsKinematic),
+	lunamethod(RigidBodyPhysicsComponent_BindLua, IsStartDeactivated),
 	lunamethod(RigidBodyPhysicsComponent_BindLua, SetDisableDeactivation),
 	lunamethod(RigidBodyPhysicsComponent_BindLua, SetKinematic),
+	lunamethod(RigidBodyPhysicsComponent_BindLua, SetStartDeactivated),
 	{ NULL, NULL }
 };
 Luna<RigidBodyPhysicsComponent_BindLua>::PropertyType RigidBodyPhysicsComponent_BindLua::properties[] = {
@@ -5732,6 +5734,25 @@ int RigidBodyPhysicsComponent_BindLua::SetKinematic(lua_State* L)
 	}
 	return 0;
 }
+int RigidBodyPhysicsComponent_BindLua::IsStartDeactivated(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsStartDeactivated());
+	return 1;
+}
+int RigidBodyPhysicsComponent_BindLua::SetStartDeactivated(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		bool value = wi::lua::SGetBool(L, 1);
+		component->SetStartDeactivated(value);
+	}
+	else
+	{
+		wi::lua::SError(L, "SetStartDeactivated(bool value) not enough arguments!");
+	}
+	return 0;
+}
 
 
 
@@ -5740,8 +5761,12 @@ int RigidBodyPhysicsComponent_BindLua::SetKinematic(lua_State* L)
 
 
 Luna<SoftBodyPhysicsComponent_BindLua>::FunctionType SoftBodyPhysicsComponent_BindLua::methods[] = {
+	lunamethod(SoftBodyPhysicsComponent_BindLua, SetDetail),
+	lunamethod(SoftBodyPhysicsComponent_BindLua, GetDetail),
 	lunamethod(SoftBodyPhysicsComponent_BindLua, SetDisableDeactivation),
 	lunamethod(SoftBodyPhysicsComponent_BindLua, IsDisableDeactivation),
+	lunamethod(SoftBodyPhysicsComponent_BindLua, SetWindEnabled),
+	lunamethod(SoftBodyPhysicsComponent_BindLua, IsWindEnabled),
 	lunamethod(SoftBodyPhysicsComponent_BindLua, CreateFromMesh),
 	{ NULL, NULL }
 };
@@ -5749,9 +5774,21 @@ Luna<SoftBodyPhysicsComponent_BindLua>::PropertyType SoftBodyPhysicsComponent_Bi
 	lunaproperty(SoftBodyPhysicsComponent_BindLua, Mass),
 	lunaproperty(SoftBodyPhysicsComponent_BindLua, Friction),
 	lunaproperty(SoftBodyPhysicsComponent_BindLua, Restitution),
+	lunaproperty(SoftBodyPhysicsComponent_BindLua, VertexRadius),
 	{ NULL, NULL }
 };
 
+int SoftBodyPhysicsComponent_BindLua::SetDetail(lua_State* L)
+{
+	float value = wi::lua::SGetFloat(L, 1);
+	component->SetDetail(value);
+	return 0;
+}
+int SoftBodyPhysicsComponent_BindLua::GetDetail(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->detail);
+	return 1;
+}
 int SoftBodyPhysicsComponent_BindLua::SetDisableDeactivation(lua_State *L)
 {
 	bool value = wi::lua::SGetBool(L, 1);
@@ -5763,10 +5800,24 @@ int SoftBodyPhysicsComponent_BindLua::IsDisableDeactivation(lua_State *L)
 	wi::lua::SSetBool(L, component->IsDisableDeactivation());
 	return 1;
 }
+int SoftBodyPhysicsComponent_BindLua::SetWindEnabled(lua_State* L)
+{
+	bool value = wi::lua::SGetBool(L, 1);
+	component->SetWindEnabled(value);
+	return 0;
+}
+int SoftBodyPhysicsComponent_BindLua::IsWindEnabled(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsWindEnabled());
+	return 1;
+}
 int SoftBodyPhysicsComponent_BindLua::CreateFromMesh(lua_State *L)
 {
-	//TODO
-	//wi::lua::SSetBool(L, component->IsDisableDeactivation());
+	MeshComponent_BindLua* mesh = Luna<MeshComponent_BindLua>::lightcheck(L, 1);
+	if (mesh != nullptr)
+	{
+		component->CreateFromMesh(*mesh->component);
+	}
 	return 0;
 }
 

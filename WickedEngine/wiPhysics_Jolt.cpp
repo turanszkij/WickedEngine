@@ -258,6 +258,7 @@ namespace wi::physics
 
 			SoftBodySharedSettings shared_settings;
 			Array<Vec3> simulation_normals;
+			Array<Vec3> position_offsets;
 
 			~SoftBody()
 			{
@@ -387,8 +388,9 @@ namespace wi::physics
 
 			if (!shape_result.IsValid())
 			{
-				physicscomponent.physicsobject = nullptr;
-				wi::backlog::post("AddRigidBody failed: shape couldn't be created!", wi::backlog::LogLevel::Error);
+				char text[1024] = {};
+				snprintf(text, arraysize(text), "AddRigidBody failed, shape_result: %s", shape_result.GetError().c_str());
+				wi::backlog::post(text, wi::backlog::LogLevel::Error);
 				return;
 			}
 			else
@@ -442,8 +444,7 @@ namespace wi::physics
 				physicsobject.bodyID = body_interface.CreateAndAddBody(settings, activation);
 				if (physicsobject.bodyID.IsInvalid())
 				{
-					physicscomponent.physicsobject = nullptr;
-					wi::backlog::post("AddRigidBody failed: body couldn't be created!", wi::backlog::LogLevel::Error);
+					wi::backlog::post("AddRigidBody failed: body couldn't be created! This could mean that there are too many physics objects.", wi::backlog::LogLevel::Error);
 					return;
 				}
 
@@ -471,6 +472,7 @@ namespace wi::physics
 			PhysicsScene& physics_scene = GetPhysicsScene(scene);
 
 			physicsobject.shared_settings.SetEmbedded();
+			physicsobject.shared_settings.mVertexRadius = physicscomponent.vertex_radius;
 
 			const XMMATRIX worldMatrix = XMLoadFloat4x4(&physicscomponent.worldMatrix);
 
@@ -508,7 +510,6 @@ namespace wi::physics
 
 			SoftBodySharedSettings::VertexAttributes vertexAttributes = { 1.0e-5f, 1.0e-5f, 1.0e-5f };
 			physicsobject.shared_settings.CreateConstraints(&vertexAttributes, 1);
-
 			physicsobject.shared_settings.Optimize();
 
 			SoftBodyCreationSettings settings(&physicsobject.shared_settings, Vec3::sZero(), Quat::sIdentity(), Layers::MOVING);
@@ -525,12 +526,25 @@ namespace wi::physics
 
 			if (physicsobject.bodyID.IsInvalid())
 			{
-				physicscomponent.physicsobject = nullptr;
-				wi::backlog::post("AddSoftBody failed: body couldn't be created!", wi::backlog::LogLevel::Error);
+				wi::backlog::post("AddSoftBody failed: body couldn't be created! This could mean that there are too many physics objects.", wi::backlog::LogLevel::Error);
 				return;
 			}
 
 			physicsobject.simulation_normals.resize(physicsobject.shared_settings.mVertices.size());
+
+			physicsobject.position_offsets.resize(mesh.vertex_positions.size());
+			for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
+			{
+				XMFLOAT3 position = mesh.vertex_positions[i];
+				XMVECTOR P = XMLoadFloat3(&position);
+				P = XMVector3Transform(P, worldMatrix);
+				XMStoreFloat3(&position, P);
+
+				uint32_t physicsInd = physicscomponent.graphicsToPhysicsVertexMapping[i];
+				Float3 physicsPosF3 = physicsobject.shared_settings.mVertices[physicsInd].mPosition;
+				Vec3 physicsPos(physicsPosF3.x, physicsPosF3.y, physicsPosF3.z);
+				physicsobject.position_offsets[i] = cast(position) - physicsPos;
+			}
 		}
 
 		struct Ragdoll
@@ -1188,12 +1202,18 @@ namespace wi::physics
 
 				if (IsSimulationEnabled())
 				{
+					const Vec3 position = cast(transform->GetPosition());
+					const Quat rotation = cast(transform->GetRotation());
+
+					Mat44 m = Mat44::sTranslation(position) * Mat44::sRotation(rotation);
+					m = m * physicsobject.additionalTransform;
+
 					if (currentMotionType == EMotionType::Kinematic)
 					{
 						body_interface.MoveKinematic(
 							physicsobject.bodyID,
-							cast(transform->GetPosition()),
-							cast(transform->GetRotation()),
+							m.GetTranslation(),
+							m.GetQuaternion().Normalized(),
 							physics_scene.GetKinematicDT(scene.dt)
 						);
 					}
@@ -1201,8 +1221,8 @@ namespace wi::physics
 					{
 						body_interface.SetPositionAndRotation(
 							physicsobject.bodyID,
-							cast(transform->GetPosition()),
-							cast(transform->GetRotation()),
+							m.GetTranslation(),
+							m.GetQuaternion().Normalized(),
 							EActivation::DontActivate
 						);
 					}
@@ -1255,7 +1275,7 @@ namespace wi::physics
 				body_interface.SetFriction(physicsobject.bodyID, physicscomponent.friction);
 				body_interface.SetRestitution(physicsobject.bodyID, physicscomponent.restitution);
 
-				if (IsSimulationEnabled())
+				if (IsSimulationEnabled() && physicscomponent.IsWindEnabled())
 				{
 					// Add wind:
 					const Vec3 wind = cast(scene.weather.windDirection);
@@ -1384,7 +1404,8 @@ namespace wi::physics
 
 		wi::jobsystem::Wait(ctx);
 
-		//physics_scene.physics_system.OptimizeBroadPhase();
+		static wi::jobsystem::context broadphase_optimization_ctx;
+		wi::jobsystem::Wait(broadphase_optimization_ctx);
 		
 		// Perform internal simulation step:
 		if (IsSimulationEnabled())
@@ -1440,6 +1461,11 @@ namespace wi::physics
 			}
 			physics_scene.alpha = physics_scene.accumulator / TIMESTEP;
 		}
+
+		broadphase_optimization_ctx.priority = wi::jobsystem::Priority::Streaming;
+		wi::jobsystem::Execute(broadphase_optimization_ctx, [&](wi::jobsystem::JobArgs args) {
+			physics_scene.physics_system.OptimizeBroadPhase();
+		});
 
 		// Feedback physics objects to system:
 		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), 64, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
@@ -1522,9 +1548,10 @@ namespace wi::physics
 			// Soft body simulation nodes will update graphics mesh:
 			for (size_t ind = 0; ind < mesh->vertex_positions.size(); ++ind)
 			{
+				const Vec3& offset = physicsobject.position_offsets[ind];
 				uint32_t physicsInd = physicscomponent.graphicsToPhysicsVertexMapping[ind];
 
-				const XMFLOAT3 position = cast(soft_vertices[physicsInd].mPosition);
+				const XMFLOAT3 position = cast(soft_vertices[physicsInd].mPosition + offset);
 				const XMFLOAT3 normal = cast(physicsobject.simulation_normals[physicsInd]);
 
 				physicscomponent.vertex_positions_simulation[ind].FromFULL(position);

@@ -138,7 +138,7 @@ You can use the Renderer with the following functions, all of which are in the g
 - SetShadowPropsCube(int resolution)
 - SetDebugPartitionTreeEnabled(bool enabled)
 - SetDebugBonesEnabled(bool enabled)
-- SetDebugEittersEnabled(bool enabled)
+- SetDebugEmittersEnabled(bool enabled)
 - SetDebugEnvProbesEnabled(bool enabled)
 - SetDebugForceFieldsEnabled(bool enabled)
 - SetDebugCamerasEnabled(bool value)
@@ -1201,7 +1201,7 @@ A lua script bound to an entity
 #### RigidBodyPhysicsComponent
 Describes a Rigid Body Physics object.
 - Shape : int
-- Mass : float
+- Mass : float	-- Set mass to 0 to have completely static rigid body (if you want to move it, it's better to use `SetKinematic(true)` as it will be moved continuously with the physics update rate)
 - Friction : float
 - Restitution : float
 - LinearDamping : float
@@ -1216,14 +1216,25 @@ Describes a Rigid Body Physics object.
 
 - IsDisableDeactivation() : bool return -- Check if the rigidbody is able to deactivate after inactivity
 - IsKinematic() : bool return -- Check if the rigidbody is movable or just static
-- SetDisableDeactivation(bool value = true) -- Sets if the rigidbody is able to deactivate after inactivity
-- SetKinematic(bool value = true) -- Sets if the rigidbody is movable or just static
+- IsStartDeactivated() : bool return -- Checks whether rigid body is set to be deactivated when added to simulation
+- SetDisableDeactivation(bool value) -- Sets if the rigidbody is able to deactivate after inactivity
+- SetKinematic(bool value) -- Set the rigid body to be kinematic (which means it is optimized for being moved by the system or user logic, not the physics engine)
+- SetStartDeactivated(bool value) -- If true, rigid body will be deactivated when added to the simulation (if it's dynamic, it won't fall)
 
 #### SoftBodyPhysicsComponent
 Describes a Soft Body Physics object.
 - Mass : float
 - Friction : float
 - Restitution : float
+- VertexRadius : float -- how much distance vertices keep from other physics bodies
+
+- SetDetail(float value) -- Set how much detail the soft body simulation has compared to the graphics mesh. Setting this will rebuild the soft body, so individual physics vertex settings will be lost.
+- GetDetail() : float
+- SetDisableDeactivation(bool value)
+- IsDisableDeactivation() : bool
+- SetWindEnabled(bool value)
+- IsWindEnabled() : bool
+- CreateFromMesh(MeshComponent mesh)
 
 #### ForceFieldComponent
 Describes a Force Field effector.

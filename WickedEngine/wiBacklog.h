@@ -33,6 +33,7 @@ namespace wi::backlog
 
 	std::string getText();
 	void clear();
+	void post(const char* input, LogLevel level = LogLevel::Default);
 	void post(const std::string& input, LogLevel level = LogLevel::Default);
 
 	void historyPrev();

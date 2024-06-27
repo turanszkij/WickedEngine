@@ -772,6 +772,16 @@ namespace wi::scene
 				friction = 0.5f;
 			}
 
+			if (seri.version >= 1)
+			{
+				archive >> vertex_radius;
+				archive >> detail;
+			}
+			else
+			{
+				SetWindEnabled(true);
+			}
+
 			_flags &= ~SAFE_TO_REGISTER;
 		}
 		else
@@ -786,6 +796,12 @@ namespace wi::scene
 			if (archive.GetVersion() >= 57)
 			{
 				archive << restitution;
+			}
+
+			if (seri.version >= 1)
+			{
+				archive << vertex_radius;
+				archive << detail;
 			}
 		}
 	}

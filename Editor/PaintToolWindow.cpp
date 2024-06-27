@@ -1173,14 +1173,13 @@ void PaintToolWindow::Update(float dt)
 				if (softbody == nullptr || !softbody->HasVertices())
 					continue;
 
-				// Painting:
-				if (painting)
+				size_t j = 0;
+				for (auto& ind : softbody->physicsToGraphicsVertexMapping)
 				{
-					size_t j = 0;
-					for (auto& ind : softbody->physicsToGraphicsVertexMapping)
-					{
-						XMVECTOR P = softbody->vertex_positions_simulation[ind].LoadPOS();
+					XMVECTOR P = softbody->vertex_positions_simulation[ind].LoadPOS();
 
+					if (painting)
+					{
 						const float dist = wi::math::Distance(P, CENTER);
 						if (dist <= pressure_radius)
 						{
@@ -1188,64 +1187,22 @@ void PaintToolWindow::Update(float dt)
 							softbody->weights[j] = (mode == MODE_SOFTBODY_PINNING ? 0.0f : 1.0f);
 							softbody->_flags |= SoftBodyPhysicsComponent::FORCE_RESET;
 						}
-						j++;
 					}
-				}
 
-				// Visualizing:
-				const XMMATRIX W = XMLoadFloat4x4(&softbody->worldMatrix);
-				uint32_t first_subset = 0;
-				uint32_t last_subset = 0;
-				mesh->GetLODSubsetRange(0, first_subset, last_subset);
-				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
-				{
-					const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
-					for (size_t j = 0; j < subset.indexCount; j += 3)
+					wi::renderer::RenderablePoint point;
+					point.size = 0.01f;
+					XMStoreFloat3(&point.position, P);
+					if (softbody->weights[j] == 0)
 					{
-						const uint32_t graphicsIndex0 = mesh->indices[j + 0];
-						const uint32_t graphicsIndex1 = mesh->indices[j + 1];
-						const uint32_t graphicsIndex2 = mesh->indices[j + 2];
-						const uint32_t physicsIndex0 = softbody->graphicsToPhysicsVertexMapping[graphicsIndex0];
-						const uint32_t physicsIndex1 = softbody->graphicsToPhysicsVertexMapping[graphicsIndex1];
-						const uint32_t physicsIndex2 = softbody->graphicsToPhysicsVertexMapping[graphicsIndex2];
-						const float weight0 = softbody->weights[physicsIndex0];
-						const float weight1 = softbody->weights[physicsIndex1];
-						const float weight2 = softbody->weights[physicsIndex2];
-						wi::renderer::RenderableTriangle tri;
-						if (softbody->HasVertices())
-						{
-							tri.positionA = softbody->vertex_positions_simulation[graphicsIndex0].GetPOS();
-							tri.positionB = softbody->vertex_positions_simulation[graphicsIndex1].GetPOS();
-							tri.positionC = softbody->vertex_positions_simulation[graphicsIndex2].GetPOS();
-						}
-						else
-						{
-							XMStoreFloat3(&tri.positionA, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[graphicsIndex0]), W));
-							XMStoreFloat3(&tri.positionB, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[graphicsIndex1]), W));
-							XMStoreFloat3(&tri.positionC, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[graphicsIndex2]), W));
-						}
-						if (weight0 == 0)
-							tri.colorA = XMFLOAT4(1, 1, 0, 1);
-						else
-							tri.colorA = XMFLOAT4(1, 1, 1, 1);
-						if (weight1 == 0)
-							tri.colorB = XMFLOAT4(1, 1, 0, 1);
-						else
-							tri.colorB = XMFLOAT4(1, 1, 1, 1);
-						if (weight2 == 0)
-							tri.colorC = XMFLOAT4(1, 1, 0, 1);
-						else
-							tri.colorC = XMFLOAT4(1, 1, 1, 1);
-						if (wireframe)
-						{
-							wi::renderer::DrawTriangle(tri, true);
-						}
-						if (weight0 == 0 && weight1 == 0 && weight2 == 0)
-						{
-							tri.colorA = tri.colorB = tri.colorC = XMFLOAT4(1, 0, 0, 0.8f);
-							wi::renderer::DrawTriangle(tri);
-						}
+						point.color = XMFLOAT4(1, 0, 0, 1);
 					}
+					else
+					{
+						point.color = XMFLOAT4(0, 1, 0, 1);
+					}
+					wi::renderer::DrawPoint(point);
+
+					j++;
 				}
 			}
 		}

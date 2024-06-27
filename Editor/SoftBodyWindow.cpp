@@ -8,9 +8,9 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_SOFTBODY " Soft Body Physics", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(580, 200));
+	SetSize(XMFLOAT2(580, 260));
 
-	closeButton.SetTooltip("Delete MeshComponent");
+	closeButton.SetTooltip("Delete SoftBodyPhysicsComponent");
 	OnClose([=](wi::gui::EventArgs args) {
 
 		wi::Archive& archive = editor->AdvanceHistory();
@@ -22,7 +22,7 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->componentsWnd.RefreshEntityTree();
-		});
+	});
 
 	float x = 95;
 	float y = 0;
@@ -35,18 +35,57 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 	infoLabel.SetSize(XMFLOAT2(100, 90));
 	AddWidget(&infoLabel);
 
+	detailSlider.Create(10, 100, 1, 90, "Detail: ");
+	detailSlider.SetTooltip("Set the detail to keep between simulation and graphics mesh. This will recreate the soft body, vertex changes will be lost.\nLower = less detailed, higher = more detailed.");
+	detailSlider.SetSize(XMFLOAT2(wid, hei));
+	detailSlider.SetPos(XMFLOAT2(x, y));
+	detailSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(x.entity);
+			if (physicscomponent == nullptr)
+			{
+				// Try also getting it through object's mesh:
+				ObjectComponent* object = scene.objects.GetComponent(x.entity);
+				if (object != nullptr)
+				{
+					physicscomponent = scene.softbodies.GetComponent(object->meshID);
+				}
+			}
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->SetDetail(args.fValue);
+			}
+		}
+	});
+	AddWidget(&detailSlider);
+
 	massSlider.Create(0, 10, 1, 100000, "Mass: ");
 	massSlider.SetTooltip("Set the mass amount for the physics engine.");
 	massSlider.SetSize(XMFLOAT2(wid, hei));
 	massSlider.SetPos(XMFLOAT2(x, y));
 	massSlider.OnSlide([&](wi::gui::EventArgs args) {
-		SoftBodyPhysicsComponent* physicscomponent = editor->GetCurrentScene().softbodies.GetComponent(entity);
-		if (physicscomponent != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			physicscomponent->physicsobject = {};
-			physicscomponent->mass = args.fValue;
+			SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(x.entity);
+			if (physicscomponent == nullptr)
+			{
+				// Try also getting it through object's mesh:
+				ObjectComponent* object = scene.objects.GetComponent(x.entity);
+				if (object != nullptr)
+				{
+					physicscomponent = scene.softbodies.GetComponent(object->meshID);
+				}
+			}
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->physicsobject = {};
+				physicscomponent->mass = args.fValue;
+			}
 		}
-		});
+	});
 	AddWidget(&massSlider);
 
 	frictionSlider.Create(0, 1, 0.5f, 100000, "Friction: ");
@@ -54,12 +93,25 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 	frictionSlider.SetSize(XMFLOAT2(wid, hei));
 	frictionSlider.SetPos(XMFLOAT2(x, y += step));
 	frictionSlider.OnSlide([&](wi::gui::EventArgs args) {
-		SoftBodyPhysicsComponent* physicscomponent = editor->GetCurrentScene().softbodies.GetComponent(entity);
-		if (physicscomponent != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			physicscomponent->friction = args.fValue;
+			SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(x.entity);
+			if (physicscomponent == nullptr)
+			{
+				// Try also getting it through object's mesh:
+				ObjectComponent* object = scene.objects.GetComponent(x.entity);
+				if (object != nullptr)
+				{
+					physicscomponent = scene.softbodies.GetComponent(object->meshID);
+				}
+			}
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->friction = args.fValue;
+			}
 		}
-		});
+	});
 	AddWidget(&frictionSlider);
 
 	restitutionSlider.Create(0, 1, 0, 100000, "Restitution: ");
@@ -67,13 +119,79 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 	restitutionSlider.SetSize(XMFLOAT2(wid, hei));
 	restitutionSlider.SetPos(XMFLOAT2(x, y += step));
 	restitutionSlider.OnSlide([&](wi::gui::EventArgs args) {
-		SoftBodyPhysicsComponent* physicscomponent = editor->GetCurrentScene().softbodies.GetComponent(entity);
-		if (physicscomponent != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			physicscomponent->restitution = args.fValue;
+			SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(x.entity);
+			if (physicscomponent == nullptr)
+			{
+				// Try also getting it through object's mesh:
+				ObjectComponent* object = scene.objects.GetComponent(x.entity);
+				if (object != nullptr)
+				{
+					physicscomponent = scene.softbodies.GetComponent(object->meshID);
+				}
+			}
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->restitution = args.fValue;
+			}
 		}
-		});
+	});
 	AddWidget(&restitutionSlider);
+
+	vertexRadiusSlider.Create(0, 1, 0, 100000, "Vertex Radius: ");
+	vertexRadiusSlider.SetTooltip("Set how much distance vertices should keep from other physics bodies.");
+	vertexRadiusSlider.SetSize(XMFLOAT2(wid, hei));
+	vertexRadiusSlider.SetPos(XMFLOAT2(x, y += step));
+	vertexRadiusSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(x.entity);
+			if (physicscomponent == nullptr)
+			{
+				// Try also getting it through object's mesh:
+				ObjectComponent* object = scene.objects.GetComponent(x.entity);
+				if (object != nullptr)
+				{
+					physicscomponent = scene.softbodies.GetComponent(object->meshID);
+				}
+			}
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->physicsobject = {};
+				physicscomponent->vertex_radius = args.fValue;
+			}
+		}
+	});
+	AddWidget(&vertexRadiusSlider);
+
+	windCheckbox.Create("Wind: ");
+	windCheckbox.SetTooltip("Enable/disable wind force on this soft body.");
+	windCheckbox.SetSize(XMFLOAT2(hei, hei));
+	windCheckbox.SetPos(XMFLOAT2(x, y += step));
+	windCheckbox.OnClick([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(x.entity);
+			if (physicscomponent == nullptr)
+			{
+				// Try also getting it through object's mesh:
+				ObjectComponent* object = scene.objects.GetComponent(x.entity);
+				if (object != nullptr)
+				{
+					physicscomponent = scene.softbodies.GetComponent(object->meshID);
+				}
+			}
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->SetWindEnabled(args.bValue);
+			}
+		}
+	});
+	AddWidget(&windCheckbox);
 
 
 
@@ -92,9 +210,12 @@ void SoftBodyWindow::SetEntity(Entity entity)
 	const SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(entity);
 	if (physicscomponent != nullptr)
 	{
+		detailSlider.SetValue(physicscomponent->detail);
 		massSlider.SetValue(physicscomponent->mass);
 		frictionSlider.SetValue(physicscomponent->friction);
 		restitutionSlider.SetValue(physicscomponent->restitution);
+		vertexRadiusSlider.SetValue(physicscomponent->vertex_radius);
+		windCheckbox.SetCheck(physicscomponent->IsWindEnabled());
 	}
 }
 
@@ -136,8 +257,11 @@ void SoftBodyWindow::ResizeLayout()
 	};
 
 	add_fullwidth(infoLabel);
+	add(detailSlider);
 	add(massSlider);
 	add(frictionSlider);
 	add(restitutionSlider);
+	add(vertexRadiusSlider);
+	add_right(windCheckbox);
 
 }
