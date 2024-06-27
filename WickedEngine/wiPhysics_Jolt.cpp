@@ -257,7 +257,7 @@ namespace wi::physics
 			Entity entity = INVALID_ENTITY;
 
 			SoftBodySharedSettings shared_settings;
-			Array<Vec3> normals_recompute;
+			Array<Vec3> simulation_normals;
 			Array<Vec3> position_offsets;
 
 			~SoftBody()
@@ -531,7 +531,8 @@ namespace wi::physics
 				return;
 			}
 
-			physicsobject.normals_recompute.resize(mesh.vertex_positions.size());
+			physicsobject.simulation_normals.resize(physicsobject.shared_settings.mVertices.size());
+
 			physicsobject.position_offsets.resize(mesh.vertex_positions.size());
 			for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
 			{
@@ -1529,6 +1530,22 @@ namespace wi::physics
 			const Array<SoftBodyMotionProperties::Vertex>& soft_vertices = motion->GetVertices();
 			const Array<SoftBodySharedSettings::Face>& soft_faces = motion->GetFaces();
 
+			// Recompute normals: (Note: normalization will happen on final storage)
+			for (auto& n : physicsobject.simulation_normals)
+			{
+				n = Vec3::sZero();
+			}
+			for (auto& f : soft_faces)
+			{
+				Vec3 x1 = soft_vertices[f.mVertex[0]].mPosition;
+				Vec3 x2 = soft_vertices[f.mVertex[1]].mPosition;
+				Vec3 x3 = soft_vertices[f.mVertex[2]].mPosition;
+				Vec3 n = (x2 - x1).Cross(x3 - x1);
+				physicsobject.simulation_normals[f.mVertex[0]] += n;
+				physicsobject.simulation_normals[f.mVertex[1]] += n;
+				physicsobject.simulation_normals[f.mVertex[2]] += n;
+			}
+
 			// Soft body simulation nodes will update graphics mesh:
 			for (size_t ind = 0; ind < mesh->vertex_positions.size(); ++ind)
 			{
@@ -1536,41 +1553,13 @@ namespace wi::physics
 				uint32_t physicsInd = physicscomponent.graphicsToPhysicsVertexMapping[ind];
 
 				const XMFLOAT3 position = cast(soft_vertices[physicsInd].mPosition + offset);
+				const XMFLOAT3 normal = cast(physicsobject.simulation_normals[physicsInd]);
+
 				physicscomponent.vertex_positions_simulation[ind].FromFULL(position);
+				physicscomponent.vertex_normals_simulation[ind].FromFULL(normal); // normalizes internally
 
 				physicscomponent.aabb._min = wi::math::Min(physicscomponent.aabb._min, position);
 				physicscomponent.aabb._max = wi::math::Max(physicscomponent.aabb._max, position);
-			}
-
-			// Recompute normals: (Note: normalization will happen on final storage)
-			for (auto& n : physicsobject.normals_recompute)
-			{
-				n = Vec3::sZero();
-			}
-			uint32_t first_subset = 0;
-			uint32_t last_subset = 0;
-			mesh->GetLODSubsetRange(0, first_subset, last_subset);
-			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
-			{
-				const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
-				for (size_t i = 0; i < subset.indexCount; i += 3)
-				{
-					const uint32_t i0 = mesh->indices[i + 0];
-					const uint32_t i1 = mesh->indices[i + 2];
-					const uint32_t i2 = mesh->indices[i + 1];
-					Vec3 x1 = cast(physicscomponent.vertex_positions_simulation[i0].GetPOS());
-					Vec3 x2 = cast(physicscomponent.vertex_positions_simulation[i1].GetPOS());
-					Vec3 x3 = cast(physicscomponent.vertex_positions_simulation[i2].GetPOS());
-					Vec3 n = (x2 - x1).Cross(x3 - x1);
-					physicsobject.normals_recompute[i0] += n;
-					physicsobject.normals_recompute[i1] += n;
-					physicsobject.normals_recompute[i2] += n;
-				}
-			}
-			for (size_t ind = 0; ind < mesh->vertex_positions.size(); ++ind)
-			{
-				const XMFLOAT3 normal = cast(physicsobject.normals_recompute[ind]);
-				physicscomponent.vertex_normals_simulation[ind].FromFULL(normal); // normalizes internally
 			}
 
 			// Update tangent vectors:
