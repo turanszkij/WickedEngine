@@ -1496,8 +1496,12 @@ namespace wi::scene
 			}
 
 			// 3.) Find duplicated vertices by POSITION and UV0 and UV1 and ATLAS and SUBSET and remove them:
-			for (auto& subset : subsets)
+			uint32_t first_subset = 0;
+			uint32_t last_subset = 0;
+			GetLODSubsetRange(0, first_subset, last_subset);
+			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 			{
+				const MeshComponent::MeshSubset& subset = subsets[subsetIndex];
 				for (uint32_t i = 0; i < subset.indexCount - 1; i++)
 				{
 					uint32_t ind0 = indices[subset.indexOffset + (uint32_t)i];
@@ -1980,7 +1984,6 @@ namespace wi::scene
 	{
 		vertex_positions_simulation.resize(mesh.vertex_positions.size());
 		vertex_normals_simulation.resize(mesh.vertex_normals.size());
-		vertex_tangents_tmp.resize(mesh.vertex_tangents.size());
 		vertex_tangents_simulation.resize(mesh.vertex_tangents.size());
 
 		XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());

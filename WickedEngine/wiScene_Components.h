@@ -983,7 +983,6 @@ namespace wi::scene
 		XMFLOAT4X4 worldMatrix = wi::math::IDENTITY_MATRIX;
 		wi::vector<MeshComponent::Vertex_POS32> vertex_positions_simulation; // graphics vertices after simulation (world space)
 		wi::vector<MeshComponent::Vertex_NOR> vertex_normals_simulation;
-		wi::vector<XMFLOAT4>vertex_tangents_tmp;
 		wi::vector<MeshComponent::Vertex_TAN> vertex_tangents_simulation;
 		wi::primitive::AABB aabb;
 

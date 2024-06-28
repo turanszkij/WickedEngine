@@ -259,6 +259,7 @@ namespace wi::physics
 			SoftBodySharedSettings shared_settings;
 			Array<Vec3> simulation_normals;
 			Array<Vec3> position_offsets;
+			wi::vector<XMFLOAT4> vertex_tangents_tmp;
 
 			~SoftBody()
 			{
@@ -517,7 +518,7 @@ namespace wi::physics
 			settings.mFriction = physicscomponent.friction;
 			settings.mRestitution = physicscomponent.restitution;
 			settings.mUpdatePosition = false;
-			settings.mAllowSleeping = false;
+			settings.mAllowSleeping = !physicscomponent.IsDisableDeactivation();
 			settings.mUserData = (uint64_t)&physicsobject;
 
 			BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface(); // locking version because this is called from job system!
@@ -532,6 +533,7 @@ namespace wi::physics
 
 			physicsobject.simulation_normals.resize(physicsobject.shared_settings.mVertices.size());
 
+			physicsobject.vertex_tangents_tmp.resize(mesh.vertex_tangents.size());
 			physicsobject.position_offsets.resize(mesh.vertex_positions.size());
 			for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
 			{
@@ -1615,26 +1617,26 @@ namespace wi::physics
 						XMFLOAT3 t;
 						XMStoreFloat3(&t, tangent);
 
-						physicscomponent.vertex_tangents_tmp[i0].x += t.x;
-						physicscomponent.vertex_tangents_tmp[i0].y += t.y;
-						physicscomponent.vertex_tangents_tmp[i0].z += t.z;
-						physicscomponent.vertex_tangents_tmp[i0].w = sign;
+						physicsobject.vertex_tangents_tmp[i0].x += t.x;
+						physicsobject.vertex_tangents_tmp[i0].y += t.y;
+						physicsobject.vertex_tangents_tmp[i0].z += t.z;
+						physicsobject.vertex_tangents_tmp[i0].w = sign;
 
-						physicscomponent.vertex_tangents_tmp[i1].x += t.x;
-						physicscomponent.vertex_tangents_tmp[i1].y += t.y;
-						physicscomponent.vertex_tangents_tmp[i1].z += t.z;
-						physicscomponent.vertex_tangents_tmp[i1].w = sign;
+						physicsobject.vertex_tangents_tmp[i1].x += t.x;
+						physicsobject.vertex_tangents_tmp[i1].y += t.y;
+						physicsobject.vertex_tangents_tmp[i1].z += t.z;
+						physicsobject.vertex_tangents_tmp[i1].w = sign;
 
-						physicscomponent.vertex_tangents_tmp[i2].x += t.x;
-						physicscomponent.vertex_tangents_tmp[i2].y += t.y;
-						physicscomponent.vertex_tangents_tmp[i2].z += t.z;
-						physicscomponent.vertex_tangents_tmp[i2].w = sign;
+						physicsobject.vertex_tangents_tmp[i2].x += t.x;
+						physicsobject.vertex_tangents_tmp[i2].y += t.y;
+						physicsobject.vertex_tangents_tmp[i2].z += t.z;
+						physicsobject.vertex_tangents_tmp[i2].w = sign;
 					}
 				}
 
 				for (size_t i = 0; i < physicscomponent.vertex_tangents_simulation.size(); ++i)
 				{
-					physicscomponent.vertex_tangents_simulation[i].FromFULL(physicscomponent.vertex_tangents_tmp[i]);
+					physicscomponent.vertex_tangents_simulation[i].FromFULL(physicsobject.vertex_tangents_tmp[i]);
 				}
 			}
 
