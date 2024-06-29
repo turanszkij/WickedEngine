@@ -238,8 +238,6 @@ static const BindlessResource<StructuredBuffer<ShaderMeshInstance>> bindless_str
 static const BindlessResource<StructuredBuffer<ShaderGeometry>> bindless_structured_geometry;
 static const BindlessResource<StructuredBuffer<ShaderMeshlet>> bindless_structured_meshlet;
 static const BindlessResource<StructuredBuffer<ShaderMaterial>> bindless_structured_material;
-static const BindlessResource<StructuredBuffer<ShaderEntity>> bindless_structured_entity;
-static const BindlessResource<StructuredBuffer<float4x4>> bindless_structured_matrix;
 static const BindlessResource<StructuredBuffer<uint>> bindless_structured_uint;
 static const BindlessResource<StructuredBuffer<ShaderTerrainChunk>> bindless_structured_terrain_chunks;
 #elif defined(__spirv__)
@@ -247,8 +245,6 @@ static const BindlessResource<StructuredBuffer<ShaderTerrainChunk>> bindless_str
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderGeometry> bindless_structured_geometry[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMeshlet> bindless_structured_meshlet[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMaterial> bindless_structured_material[];
-[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderEntity> bindless_structured_entity[];
-[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<float4x4> bindless_structured_matrix[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<uint> bindless_structured_uint[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderTerrainChunk> bindless_structured_terrain_chunks[];
 #else
@@ -256,10 +252,8 @@ StructuredBuffer<ShaderMeshInstance> bindless_structured_meshinstance[] : regist
 StructuredBuffer<ShaderGeometry> bindless_structured_geometry[] : register(space38);
 StructuredBuffer<ShaderMeshlet> bindless_structured_meshlet[] : register(space39);
 StructuredBuffer<ShaderMaterial> bindless_structured_material[] : register(space40);
-StructuredBuffer<ShaderEntity> bindless_structured_entity[] : register(space41);
-StructuredBuffer<float4x4> bindless_structured_matrix[] : register(space42);
-StructuredBuffer<uint> bindless_structured_uint[] : register(space43);
-StructuredBuffer<ShaderTerrainChunk> bindless_structured_terrain_chunks[] : register(space44);
+StructuredBuffer<uint> bindless_structured_uint[] : register(space41);
+StructuredBuffer<ShaderTerrainChunk> bindless_structured_terrain_chunks[] : register(space42);
 #endif // __spirv__
 
 inline FrameCB GetFrame()
@@ -304,11 +298,11 @@ uint load_entitytile(uint tileIndex)
 }
 inline ShaderEntity load_entity(uint entityIndex)
 {
-	return bindless_structured_entity[GetFrame().buffer_entity_index][entityIndex];
+	return GetFrame().entityArray[entityIndex];
 }
 inline float4x4 load_entitymatrix(uint matrixIndex)
 {
-	return bindless_structured_matrix[GetFrame().buffer_entity_index][SHADER_ENTITY_COUNT + matrixIndex];
+	return GetFrame().matrixArray[matrixIndex];
 }
 inline void write_mipmap_feedback(uint materialIndex, float4 uvsets_dx, float4 uvsets_dy)
 {

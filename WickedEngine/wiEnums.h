@@ -81,7 +81,6 @@ namespace wi::enums
 	enum BUFFERTYPES
 	{
 		BUFFERTYPE_FRAMECB,
-		BUFFERTYPE_ENTITY,
 		BUFFERTYPE_COUNT
 	};
 

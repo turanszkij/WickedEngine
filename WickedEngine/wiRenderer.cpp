@@ -1964,14 +1964,6 @@ void LoadBuffers()
 	device->CreateBuffer(&bd, nullptr, &buffers[BUFFERTYPE_FRAMECB]);
 	device->SetName(&buffers[BUFFERTYPE_FRAMECB], "buffers[BUFFERTYPE_FRAMECB]");
 
-	static_assert(sizeof(ShaderEntity) == sizeof(float4x4)); // stores both entities and matrices in same structured buffer
-	bd.stride = sizeof(ShaderEntity);
-	bd.size = bd.stride * (SHADER_ENTITY_COUNT +  MATRIXARRAY_COUNT);
-	bd.bind_flags = BindFlag::SHADER_RESOURCE;
-	bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-	device->CreateBuffer(&bd, nullptr, &buffers[BUFFERTYPE_ENTITY]);
-	device->SetName(&buffers[BUFFERTYPE_ENTITY], "buffers[BUFFERTYPE_ENTITY]");
-
 	{
 		TextureDesc desc;
 		desc.bind_flags = BindFlag::SHADER_RESOURCE;
@@ -3833,7 +3825,6 @@ void UpdatePerFrameData(
 	frameCB.texture_cameravolumelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_SKYATMOSPHERE_CAMERAVOLUMELUT], SubresourceType::SRV);
 	frameCB.texture_wind_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_WIND], SubresourceType::SRV);
 	frameCB.texture_wind_prev_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_WIND_PREV], SubresourceType::SRV);
-	frameCB.buffer_entity_index = device->GetDescriptorIndex(&buffers[BUFFERTYPE_ENTITY], SubresourceType::SRV);
 
 	frameCB.texture_shadowatlas_index = device->GetDescriptorIndex(&shadowMapAtlas, SubresourceType::SRV);
 	frameCB.texture_shadowatlas_transparent_index = device->GetDescriptorIndex(&shadowMapAtlas_Transparent, SubresourceType::SRV);
@@ -3903,6 +3894,351 @@ void UpdatePerFrameData(
 		device->CreateTexture(&texture_desc, nullptr, &texture_weatherMap);
 		device->SetName(&texture_weatherMap, "texture_weatherMap");
 
+	}
+
+	// Fill Entity Array with decals + envprobes + lights in the frustum:
+	{
+		ShaderEntity* entityArray = frameCB.entityArray;
+		float4x4* matrixArray = frameCB.matrixArray;
+
+		uint32_t entityCounter = 0;
+		uint32_t matrixCounter = 0;
+
+		// Write decals into entity array:
+		const size_t decal_iterations = std::min((size_t)MAX_SHADER_DECAL_COUNT, vis.visibleDecals.size());
+		for (size_t i = 0; i < decal_iterations; ++i)
+		{
+			if (entityCounter == SHADER_ENTITY_COUNT)
+			{
+				entityCounter--;
+				break;
+			}
+			if (matrixCounter >= MATRIXARRAY_COUNT)
+			{
+				matrixCounter--;
+				break;
+			}
+			ShaderEntity shaderentity = {};
+			XMMATRIX shadermatrix;
+
+			const uint32_t decalIndex = vis.visibleDecals[vis.visibleDecals.size() - 1 - i]; // note: reverse order, for correct blending!
+			const DecalComponent& decal = vis.scene->decals[decalIndex];
+
+			shaderentity.layerMask = ~0u;
+
+			Entity entity = vis.scene->decals.GetEntity(decalIndex);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				shaderentity.layerMask = layer->layerMask;
+			}
+
+			shaderentity.SetType(ENTITY_TYPE_DECAL);
+			if (decal.IsBaseColorOnlyAlpha())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA);
+			}
+			shaderentity.position = decal.position;
+			shaderentity.SetRange(decal.range);
+			float emissive_mul = 1 + decal.emissive;
+			shaderentity.SetColor(float4(decal.color.x * emissive_mul, decal.color.y * emissive_mul, decal.color.z * emissive_mul, decal.color.w));
+			shaderentity.shadowAtlasMulAdd = decal.texMulAdd;
+			shaderentity.SetConeAngleCos(decal.slopeBlendPower);
+			shaderentity.SetDirection(decal.front);
+			shaderentity.SetAngleScale(decal.normal_strength);
+			shaderentity.SetLength(decal.displacement_strength);
+
+			shaderentity.SetIndices(matrixCounter, 0);
+			shadermatrix = XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world));
+
+			int texture = -1;
+			if (decal.texture.IsValid())
+			{
+				texture = device->GetDescriptorIndex(&decal.texture.GetTexture(), SubresourceType::SRV, decal.texture.GetTextureSRGBSubresource());
+			}
+			int normal = -1;
+			if (decal.normal.IsValid())
+			{
+				normal = device->GetDescriptorIndex(&decal.normal.GetTexture(), SubresourceType::SRV);
+			}
+			int surfacemap = -1;
+			if (decal.surfacemap.IsValid())
+			{
+				surfacemap = device->GetDescriptorIndex(&decal.surfacemap.GetTexture(), SubresourceType::SRV);
+			}
+			int displacementmap = -1;
+			if (decal.displacementmap.IsValid())
+			{
+				displacementmap = device->GetDescriptorIndex(&decal.displacementmap.GetTexture(), SubresourceType::SRV);
+			}
+
+			shadermatrix.r[0] = XMVectorSetW(shadermatrix.r[0], *(float*)&texture);
+			shadermatrix.r[1] = XMVectorSetW(shadermatrix.r[1], *(float*)&normal);
+			shadermatrix.r[2] = XMVectorSetW(shadermatrix.r[2], *(float*)&surfacemap);
+			shadermatrix.r[3] = XMVectorSetW(shadermatrix.r[3], *(float*)&displacementmap);
+
+			XMStoreFloat4x4(matrixArray + matrixCounter, shadermatrix);
+			matrixCounter++;
+
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			entityCounter++;
+		}
+
+		// Write environment probes into entity array:
+		const size_t probe_iterations = std::min((size_t)MAX_SHADER_PROBE_COUNT, vis.visibleEnvProbes.size());
+		for (size_t i = 0; i < probe_iterations; ++i)
+		{
+			if (entityCounter == SHADER_ENTITY_COUNT)
+			{
+				entityCounter--;
+				break;
+			}
+			if (matrixCounter >= MATRIXARRAY_COUNT)
+			{
+				matrixCounter--;
+				break;
+			}
+			ShaderEntity shaderentity = {};
+			XMMATRIX shadermatrix;
+
+			const uint32_t probeIndex = vis.visibleEnvProbes[vis.visibleEnvProbes.size() - 1 - i]; // note: reverse order, for correct blending!
+			const EnvironmentProbeComponent& probe = vis.scene->probes[probeIndex];
+
+			shaderentity = {}; // zero out!
+			shaderentity.layerMask = ~0u;
+
+			Entity entity = vis.scene->probes.GetEntity(probeIndex);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				shaderentity.layerMask = layer->layerMask;
+			}
+
+			shaderentity.SetType(ENTITY_TYPE_ENVMAP);
+			shaderentity.position = probe.position;
+			shaderentity.SetRange(probe.range);
+
+			shaderentity.SetIndices(matrixCounter, 0);
+			shadermatrix = XMLoadFloat4x4(&probe.inverseMatrix);
+
+			int texture = -1;
+			if (probe.texture.IsValid())
+			{
+				texture = device->GetDescriptorIndex(&probe.texture, SubresourceType::SRV);
+			}
+
+			shadermatrix.r[0] = XMVectorSetW(shadermatrix.r[0], *(float*)&texture);
+			shadermatrix.r[1] = XMVectorSetW(shadermatrix.r[1], 0);
+			shadermatrix.r[2] = XMVectorSetW(shadermatrix.r[2], 0);
+			shadermatrix.r[3] = XMVectorSetW(shadermatrix.r[3], 0);
+
+			XMStoreFloat4x4(matrixArray + matrixCounter, shadermatrix);
+			matrixCounter++;
+
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			entityCounter++;
+		}
+
+		// Write lights into entity array:
+		const XMFLOAT2 atlas_dim_rcp = XMFLOAT2(1.0f / float(shadowMapAtlas.desc.width), 1.0f / float(shadowMapAtlas.desc.height));
+		ShaderEntity shaderentity;
+
+		for (uint32_t lightIndex : vis.visibleLights)
+		{
+			if (entityCounter == SHADER_ENTITY_COUNT)
+			{
+				entityCounter--;
+				break;
+			}
+			shaderentity = {};
+
+			const LightComponent& light = vis.scene->lights[lightIndex];
+
+			shaderentity.layerMask = ~0u;
+
+			Entity entity = vis.scene->lights.GetEntity(lightIndex);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				shaderentity.layerMask = layer->layerMask;
+			}
+
+			shaderentity.SetType(light.GetType());
+			shaderentity.position = light.position;
+			shaderentity.SetRange(light.GetRange());
+			shaderentity.SetRadius(light.radius);
+			shaderentity.SetLength(light.length);
+			shaderentity.SetDirection(light.direction);
+			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
+
+			// mark as no shadow by default:
+			shaderentity.indices = ~0;
+
+			bool shadow = light.IsCastingShadow() && !light.IsStatic();
+			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
+
+			if (shadow)
+			{
+				shaderentity.shadowAtlasMulAdd.x = shadow_rect.w * atlas_dim_rcp.x;
+				shaderentity.shadowAtlasMulAdd.y = shadow_rect.h * atlas_dim_rcp.y;
+				shaderentity.shadowAtlasMulAdd.z = shadow_rect.x * atlas_dim_rcp.x;
+				shaderentity.shadowAtlasMulAdd.w = shadow_rect.y * atlas_dim_rcp.y;
+				shaderentity.SetIndices(matrixCounter, 0);
+			}
+
+			switch (light.GetType())
+			{
+			case LightComponent::DIRECTIONAL:
+			{
+				const uint cascade_count = std::min((uint)light.cascade_distances.size(), MATRIXARRAY_COUNT - matrixCounter);
+				shaderentity.SetShadowCascadeCount(cascade_count);
+
+				if (shadow && !light.cascade_distances.empty())
+				{
+					SHCAM* shcams = (SHCAM*)alloca(sizeof(SHCAM) * cascade_count);
+					CreateDirLightShadowCams(light, *vis.camera, shcams, cascade_count, shadow_rect);
+					for (size_t cascade = 0; cascade < cascade_count; ++cascade)
+					{
+						XMStoreFloat4x4(&matrixArray[matrixCounter++], shcams[cascade].view_projection);
+					}
+				}
+			}
+			break;
+			case LightComponent::POINT:
+			{
+				if (shadow)
+				{
+					const float FarZ = 0.1f;	// watch out: reversed depth buffer! Also, light near plane is constant for simplicity, this should match on cpu side!
+					const float NearZ = std::max(1.0f, light.GetRange()); // watch out: reversed depth buffer!
+					const float fRange = FarZ / (FarZ - NearZ);
+					const float cubemapDepthRemapNear = fRange;
+					const float cubemapDepthRemapFar = -fRange * NearZ;
+					shaderentity.SetCubeRemapNear(cubemapDepthRemapNear);
+					shaderentity.SetCubeRemapFar(cubemapDepthRemapFar);
+				}
+			}
+			break;
+			case LightComponent::SPOT:
+			{
+				const float outerConeAngle = light.outerConeAngle;
+				const float innerConeAngle = std::min(light.innerConeAngle, outerConeAngle);
+				const float outerConeAngleCos = std::cos(outerConeAngle);
+				const float innerConeAngleCos = std::cos(innerConeAngle);
+
+				// https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual#inner-and-outer-cone-angles
+				const float lightAngleScale = 1.0f / std::max(0.001f, innerConeAngleCos - outerConeAngleCos);
+				const float lightAngleOffset = -outerConeAngleCos * lightAngleScale;
+
+				shaderentity.SetConeAngleCos(outerConeAngleCos);
+				shaderentity.SetAngleScale(lightAngleScale);
+				shaderentity.SetAngleOffset(lightAngleOffset);
+
+				if (shadow)
+				{
+					SHCAM shcam;
+					CreateSpotLightShadowCam(light, shcam);
+					XMStoreFloat4x4(&matrixArray[matrixCounter++], shcam.view_projection);
+				}
+			}
+			break;
+			}
+
+			if (light.IsStatic())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_STATIC);
+			}
+
+			if (light.IsVolumetricCloudsEnabled())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS);
+			}
+
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			entityCounter++;
+		}
+
+		// Write colliders into entity array:
+		for (size_t i = 0; i < vis.scene->collider_count_gpu; ++i)
+		{
+			if (entityCounter == SHADER_ENTITY_COUNT)
+			{
+				entityCounter--;
+				break;
+			}
+			ShaderEntity shaderentity = {};
+
+			const ColliderComponent& collider = vis.scene->colliders_gpu[i];
+			shaderentity.layerMask = collider.layerMask;
+
+			switch (collider.shape)
+			{
+			case ColliderComponent::Shape::Sphere:
+				shaderentity.SetType(ENTITY_TYPE_COLLIDER_SPHERE);
+				shaderentity.position = collider.sphere.center;
+				shaderentity.SetRange(collider.sphere.radius);
+				break;
+			case ColliderComponent::Shape::Capsule:
+				shaderentity.SetType(ENTITY_TYPE_COLLIDER_CAPSULE);
+				shaderentity.position = collider.capsule.base;
+				shaderentity.SetColliderTip(collider.capsule.tip);
+				shaderentity.SetRange(collider.capsule.radius);
+				break;
+			case ColliderComponent::Shape::Plane:
+				shaderentity.SetType(ENTITY_TYPE_COLLIDER_PLANE);
+				shaderentity.position = collider.plane.origin;
+				shaderentity.SetDirection(collider.plane.normal);
+				shaderentity.SetIndices(matrixCounter, ~0u);
+				matrixArray[matrixCounter++] = collider.plane.projection;
+				break;
+			default:
+				assert(0);
+				break;
+			}
+
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			entityCounter++;
+		}
+
+		// Write force fields into entity array:
+		for (size_t i = 0; i < vis.scene->forces.GetCount(); ++i)
+		{
+			if (entityCounter == SHADER_ENTITY_COUNT)
+			{
+				entityCounter--;
+				break;
+			}
+			ShaderEntity shaderentity = {};
+
+			const ForceFieldComponent& force = vis.scene->forces[i];
+
+			shaderentity.layerMask = ~0u;
+
+			Entity entity = vis.scene->forces.GetEntity(i);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				shaderentity.layerMask = layer->layerMask;
+			}
+
+			switch (force.type)
+			{
+			default:
+			case ForceFieldComponent::Type::Point:
+				shaderentity.SetType(ENTITY_TYPE_FORCEFIELD_POINT);
+				break;
+			case ForceFieldComponent::Type::Plane:
+				shaderentity.SetType(ENTITY_TYPE_FORCEFIELD_PLANE);
+				break;
+			}
+			shaderentity.position = force.position;
+			shaderentity.SetGravity(force.gravity);
+			shaderentity.SetRange(std::max(0.001f, force.GetRange()));
+			// The default planar force field is facing upwards, and thus the pull direction is downwards:
+			shaderentity.SetDirection(force.direction);
+
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			entityCounter++;
+		}
 	}
 }
 void UpdateRenderData(
@@ -3995,382 +4331,6 @@ void UpdateRenderData(
 		VoxelGrid& voxelgrid = vis.scene->voxel_grids[0];
 		device->UpdateBuffer(&vis.scene->voxelgrid_gpu, voxelgrid.voxels.data(), cmd, voxelgrid.voxels.size() * sizeof(uint64_t));
 		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->voxelgrid_gpu, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-	}
-
-	// Fill Entity Array with decals + envprobes + lights in the frustum:
-	{
-		// Reserve temporary entity array for GPU data upload:
-		auto allocation_entityarray = device->AllocateGPU(sizeof(ShaderEntity) * SHADER_ENTITY_COUNT, cmd);
-		auto allocation_matrixarray = device->AllocateGPU(sizeof(XMMATRIX) * MATRIXARRAY_COUNT, cmd);
-		ShaderEntity* entityArray = (ShaderEntity*)allocation_entityarray.data;
-		XMMATRIX* matrixArray = (XMMATRIX*)allocation_matrixarray.data;
-
-		uint32_t entityCounter = 0;
-		uint32_t matrixCounter = 0;
-
-		// Write decals into entity array:
-		const size_t decal_iterations = std::min((size_t)MAX_SHADER_DECAL_COUNT, vis.visibleDecals.size());
-		for (size_t i = 0; i < decal_iterations; ++i)
-		{
-			if (entityCounter == SHADER_ENTITY_COUNT)
-			{
-				entityCounter--;
-				break;
-			}
-			if (matrixCounter >= MATRIXARRAY_COUNT)
-			{
-				matrixCounter--;
-				break;
-			}
-			ShaderEntity shaderentity = {};
-			XMMATRIX shadermatrix;
-
-			const uint32_t decalIndex = vis.visibleDecals[vis.visibleDecals.size() - 1 - i]; // note: reverse order, for correct blending!
-			const DecalComponent& decal = vis.scene->decals[decalIndex];
-
-			shaderentity.layerMask = ~0u;
-
-			Entity entity = vis.scene->decals.GetEntity(decalIndex);
-			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-			if (layer != nullptr)
-			{
-				shaderentity.layerMask = layer->layerMask;
-			}
-
-			shaderentity.SetType(ENTITY_TYPE_DECAL);
-			if (decal.IsBaseColorOnlyAlpha())
-			{
-				shaderentity.SetFlags(ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA);
-			}
-			shaderentity.position = decal.position;
-			shaderentity.SetRange(decal.range);
-			float emissive_mul = 1 + decal.emissive;
-			shaderentity.SetColor(float4(decal.color.x * emissive_mul, decal.color.y * emissive_mul, decal.color.z * emissive_mul, decal.color.w));
-			shaderentity.shadowAtlasMulAdd = decal.texMulAdd;
-			shaderentity.SetConeAngleCos(decal.slopeBlendPower);
-			shaderentity.SetDirection(decal.front);
-			shaderentity.SetAngleScale(decal.normal_strength);
-			shaderentity.SetLength(decal.displacement_strength);
-
-			shaderentity.SetIndices(matrixCounter, 0);
-			shadermatrix = XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world));
-
-			int texture = -1;
-			if (decal.texture.IsValid())
-			{
-				texture = device->GetDescriptorIndex(&decal.texture.GetTexture(), SubresourceType::SRV, decal.texture.GetTextureSRGBSubresource());
-			}
-			int normal = -1;
-			if (decal.normal.IsValid())
-			{
-				normal = device->GetDescriptorIndex(&decal.normal.GetTexture(), SubresourceType::SRV);
-			}
-			int surfacemap = -1;
-			if (decal.surfacemap.IsValid())
-			{
-				surfacemap = device->GetDescriptorIndex(&decal.surfacemap.GetTexture(), SubresourceType::SRV);
-			}
-			int displacementmap = -1;
-			if (decal.displacementmap.IsValid())
-			{
-				displacementmap = device->GetDescriptorIndex(&decal.displacementmap.GetTexture(), SubresourceType::SRV);
-			}
-
-			shadermatrix.r[0] = XMVectorSetW(shadermatrix.r[0], *(float*)&texture);
-			shadermatrix.r[1] = XMVectorSetW(shadermatrix.r[1], *(float*)&normal);
-			shadermatrix.r[2] = XMVectorSetW(shadermatrix.r[2], *(float*)&surfacemap);
-			shadermatrix.r[3] = XMVectorSetW(shadermatrix.r[3], *(float*)&displacementmap);
-
-			std::memcpy(matrixArray + matrixCounter, &shadermatrix, sizeof(XMMATRIX));
-			matrixCounter++;
-
-			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
-			entityCounter++;
-		}
-
-		// Write environment probes into entity array:
-		const size_t probe_iterations = std::min((size_t)MAX_SHADER_PROBE_COUNT, vis.visibleEnvProbes.size());
-		for (size_t i = 0; i < probe_iterations; ++i)
-		{
-			if (entityCounter == SHADER_ENTITY_COUNT)
-			{
-				entityCounter--;
-				break;
-			}
-			if (matrixCounter >= MATRIXARRAY_COUNT)
-			{
-				matrixCounter--;
-				break;
-			}
-			ShaderEntity shaderentity = {};
-			XMMATRIX shadermatrix;
-
-			const uint32_t probeIndex = vis.visibleEnvProbes[vis.visibleEnvProbes.size() - 1 - i]; // note: reverse order, for correct blending!
-			const EnvironmentProbeComponent& probe = vis.scene->probes[probeIndex];
-
-			shaderentity = {}; // zero out!
-			shaderentity.layerMask = ~0u;
-
-			Entity entity = vis.scene->probes.GetEntity(probeIndex);
-			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-			if (layer != nullptr)
-			{
-				shaderentity.layerMask = layer->layerMask;
-			}
-
-			shaderentity.SetType(ENTITY_TYPE_ENVMAP);
-			shaderentity.position = probe.position;
-			shaderentity.SetRange(probe.range);
-
-			shaderentity.SetIndices(matrixCounter, 0);
-			shadermatrix = XMLoadFloat4x4(&probe.inverseMatrix);
-
-			int texture = -1;
-			if (probe.texture.IsValid())
-			{
-				texture = device->GetDescriptorIndex(&probe.texture, SubresourceType::SRV);
-			}
-
-			shadermatrix.r[0] = XMVectorSetW(shadermatrix.r[0], *(float*)&texture);
-			shadermatrix.r[1] = XMVectorSetW(shadermatrix.r[1], 0);
-			shadermatrix.r[2] = XMVectorSetW(shadermatrix.r[2], 0);
-			shadermatrix.r[3] = XMVectorSetW(shadermatrix.r[3], 0);
-
-			std::memcpy(matrixArray + matrixCounter, &shadermatrix, sizeof(XMMATRIX));
-			matrixCounter++;
-
-			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
-			entityCounter++;
-		}
-
-		// Write lights into entity array:
-		const XMFLOAT2 atlas_dim_rcp = XMFLOAT2(1.0f / float(shadowMapAtlas.desc.width), 1.0f / float(shadowMapAtlas.desc.height));
-		ShaderEntity shaderentity;
-
-		for (uint32_t lightIndex : vis.visibleLights)
-		{
-			if (entityCounter == SHADER_ENTITY_COUNT)
-			{
-				entityCounter--;
-				break;
-			}
-			shaderentity = {};
-
-			const LightComponent& light = vis.scene->lights[lightIndex];
-
-			shaderentity.layerMask = ~0u;
-
-			Entity entity = vis.scene->lights.GetEntity(lightIndex);
-			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-			if (layer != nullptr)
-			{
-				shaderentity.layerMask = layer->layerMask;
-			}
-
-			shaderentity.SetType(light.GetType());
-			shaderentity.position = light.position;
-			shaderentity.SetRange(light.GetRange());
-			shaderentity.SetRadius(light.radius);
-			shaderentity.SetLength(light.length);
-			shaderentity.SetDirection(light.direction);
-			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
-
-			// mark as no shadow by default:
-			shaderentity.indices = ~0;
-
-			bool shadow = light.IsCastingShadow() && !light.IsStatic();
-			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
-
-			if (shadow)
-			{
-				shaderentity.shadowAtlasMulAdd.x = shadow_rect.w * atlas_dim_rcp.x;
-				shaderentity.shadowAtlasMulAdd.y = shadow_rect.h * atlas_dim_rcp.y;
-				shaderentity.shadowAtlasMulAdd.z = shadow_rect.x * atlas_dim_rcp.x;
-				shaderentity.shadowAtlasMulAdd.w = shadow_rect.y * atlas_dim_rcp.y;
-				shaderentity.SetIndices(matrixCounter, 0);
-			}
-
-			switch (light.GetType())
-			{
-			case LightComponent::DIRECTIONAL:
-			{
-				shaderentity.SetShadowCascadeCount((uint)light.cascade_distances.size());
-
-				if (shadow && !light.cascade_distances.empty())
-				{
-					SHCAM* shcams = (SHCAM*)alloca(sizeof(SHCAM) * light.cascade_distances.size());
-					CreateDirLightShadowCams(light, *vis.camera, shcams, light.cascade_distances.size(), shadow_rect);
-					for (size_t cascade = 0; cascade < light.cascade_distances.size(); ++cascade)
-					{
-						std::memcpy(&matrixArray[matrixCounter++], &shcams[cascade].view_projection, sizeof(XMMATRIX));
-					}
-				}
-			}
-			break;
-			case LightComponent::POINT:
-			{
-				if (shadow)
-				{
-					const float FarZ = 0.1f;	// watch out: reversed depth buffer! Also, light near plane is constant for simplicity, this should match on cpu side!
-					const float NearZ = std::max(1.0f, light.GetRange()); // watch out: reversed depth buffer!
-					const float fRange = FarZ / (FarZ - NearZ);
-					const float cubemapDepthRemapNear = fRange;
-					const float cubemapDepthRemapFar = -fRange * NearZ;
-					shaderentity.SetCubeRemapNear(cubemapDepthRemapNear);
-					shaderentity.SetCubeRemapFar(cubemapDepthRemapFar);
-				}
-			}
-			break;
-			case LightComponent::SPOT:
-			{
-				const float outerConeAngle = light.outerConeAngle;
-				const float innerConeAngle = std::min(light.innerConeAngle, outerConeAngle);
-				const float outerConeAngleCos = std::cos(outerConeAngle);
-				const float innerConeAngleCos = std::cos(innerConeAngle);
-
-				// https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual#inner-and-outer-cone-angles
-				const float lightAngleScale = 1.0f / std::max(0.001f, innerConeAngleCos - outerConeAngleCos);
-				const float lightAngleOffset = -outerConeAngleCos * lightAngleScale;
-
-				shaderentity.SetConeAngleCos(outerConeAngleCos);
-				shaderentity.SetAngleScale(lightAngleScale);
-				shaderentity.SetAngleOffset(lightAngleOffset);
-
-				if (shadow)
-				{
-					SHCAM shcam;
-					CreateSpotLightShadowCam(light, shcam);
-					std::memcpy(&matrixArray[matrixCounter++], &shcam.view_projection, sizeof(XMMATRIX));
-				}
-			}
-			break;
-			}
-
-			if (light.IsStatic())
-			{
-				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_STATIC);
-			}
-
-			if (light.IsVolumetricCloudsEnabled())
-			{
-				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS);
-			}
-
-			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
-			entityCounter++;
-		}
-
-		// Write colliders into entity array:
-		for (size_t i = 0; i < vis.scene->collider_count_gpu; ++i)
-		{
-			if (entityCounter == SHADER_ENTITY_COUNT)
-			{
-				entityCounter--;
-				break;
-			}
-			ShaderEntity shaderentity = {};
-
-			const ColliderComponent& collider = vis.scene->colliders_gpu[i];
-			shaderentity.layerMask = collider.layerMask;
-
-			switch (collider.shape)
-			{
-			case ColliderComponent::Shape::Sphere:
-				shaderentity.SetType(ENTITY_TYPE_COLLIDER_SPHERE);
-				shaderentity.position = collider.sphere.center;
-				shaderentity.SetRange(collider.sphere.radius);
-				break;
-			case ColliderComponent::Shape::Capsule:
-				shaderentity.SetType(ENTITY_TYPE_COLLIDER_CAPSULE);
-				shaderentity.position = collider.capsule.base;
-				shaderentity.SetColliderTip(collider.capsule.tip);
-				shaderentity.SetRange(collider.capsule.radius);
-				break;
-			case ColliderComponent::Shape::Plane:
-				shaderentity.SetType(ENTITY_TYPE_COLLIDER_PLANE);
-				shaderentity.position = collider.plane.origin;
-				shaderentity.SetDirection(collider.plane.normal);
-				shaderentity.SetIndices(matrixCounter, ~0u);
-				std::memcpy(&matrixArray[matrixCounter++], &collider.plane.projection, sizeof(collider.plane.projection));
-				break;
-			default:
-				assert(0);
-				break;
-			}
-
-			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
-			entityCounter++;
-		}
-
-		// Write force fields into entity array:
-		for (size_t i = 0; i < vis.scene->forces.GetCount(); ++i)
-		{
-			if (entityCounter == SHADER_ENTITY_COUNT)
-			{
-				entityCounter--;
-				break;
-			}
-			ShaderEntity shaderentity = {};
-
-			const ForceFieldComponent& force = vis.scene->forces[i];
-
-			shaderentity.layerMask = ~0u;
-
-			Entity entity = vis.scene->forces.GetEntity(i);
-			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-			if (layer != nullptr)
-			{
-				shaderentity.layerMask = layer->layerMask;
-			}
-
-			switch (force.type)
-			{
-			default:
-			case ForceFieldComponent::Type::Point:
-				shaderentity.SetType(ENTITY_TYPE_FORCEFIELD_POINT);
-				break;
-			case ForceFieldComponent::Type::Plane:
-				shaderentity.SetType(ENTITY_TYPE_FORCEFIELD_PLANE);
-				break;
-			}
-			shaderentity.position = force.position;
-			shaderentity.SetGravity(force.gravity);
-			shaderentity.SetRange(std::max(0.001f, force.GetRange()));
-			// The default planar force field is facing upwards, and thus the pull direction is downwards:
-			shaderentity.SetDirection(force.direction);
-
-			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
-			entityCounter++;
-		}
-
-		// Issue GPU entity array update:
-		if (entityCounter > 0 || matrixCounter > 0)
-		{
-			if (entityCounter > 0)
-			{
-				device->CopyBuffer(
-					&buffers[BUFFERTYPE_ENTITY],
-					0,
-					&allocation_entityarray.buffer,
-					allocation_entityarray.offset,
-					sizeof(ShaderEntity) * entityCounter,
-					cmd
-				);
-			}
-			if (matrixCounter > 0)
-			{
-				device->CopyBuffer(
-					&buffers[BUFFERTYPE_ENTITY],
-					sizeof(ShaderEntity) * SHADER_ENTITY_COUNT,
-					&allocation_matrixarray.buffer,
-					allocation_matrixarray.offset,
-					sizeof(XMMATRIX) * matrixCounter,
-					cmd
-				);
-			}
-			barrier_stack.push_back(GPUBarrier::Buffer(&buffers[BUFFERTYPE_ENTITY], ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-		}
-
 	}
 
 	// Soft body updates:

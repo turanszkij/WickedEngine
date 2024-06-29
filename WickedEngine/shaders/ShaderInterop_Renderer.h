@@ -971,7 +971,7 @@ struct FrameCB
 	int			texture_cameravolumelut_index;
 	int			texture_wind_index;
 	int			texture_wind_prev_index;
-	int			buffer_entity_index;
+	int			padding1;
 
 	float4		rain_blocker_mad;
 	float4x4	rain_blocker_matrix;
@@ -984,6 +984,9 @@ struct FrameCB
 	ShaderScene scene;
 
 	VXGI vxgi;
+
+	ShaderEntity entityArray[SHADER_ENTITY_COUNT];
+	float4x4 matrixArray[SHADER_ENTITY_COUNT];
 };
 
 enum SHADERCAMERA_OPTIONS
