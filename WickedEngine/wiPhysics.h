@@ -116,6 +116,11 @@ namespace wi::physics
 		ActivationState state
 	);
 
+	XMFLOAT3 GetSoftBodyNodePosition(
+		wi::scene::SoftBodyPhysicsComponent& physicscomponent,
+		uint32_t physicsIndex
+	);
+
 	struct RayIntersectionResult
 	{
 		wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;

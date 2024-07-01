@@ -782,6 +782,22 @@ namespace wi::scene
 				SetWindEnabled(true);
 			}
 
+			if (seri.version >= 2)
+			{
+				archive >> pressure;
+			}
+			else
+			{
+				// Convert weights from per-physics to per-graphics vertex:
+				//	Per graphics vertex is better, because regenerating soft body with different detail will keep the pinning
+				wi::vector<float> weights2(graphicsToPhysicsVertexMapping.size());
+				for (size_t i = 0; i < weights2.size(); ++i)
+				{
+					weights2[i] = weights[graphicsToPhysicsVertexMapping[i]];
+				}
+				std::swap(weights, weights2);
+			}
+
 			_flags &= ~SAFE_TO_REGISTER;
 		}
 		else
@@ -802,6 +818,10 @@ namespace wi::scene
 			{
 				archive << vertex_radius;
 				archive << detail;
+			}
+			if (seri.version >= 2)
+			{
+				archive << pressure;
 			}
 		}
 	}

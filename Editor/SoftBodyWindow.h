@@ -14,6 +14,7 @@ public:
 	wi::gui::Slider detailSlider;
 	wi::gui::Slider massSlider;
 	wi::gui::Slider frictionSlider;
+	wi::gui::Slider pressureSlider;
 	wi::gui::Slider restitutionSlider;
 	wi::gui::Slider vertexRadiusSlider;
 	wi::gui::CheckBox windCheckbox;

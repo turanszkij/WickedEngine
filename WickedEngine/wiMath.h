@@ -310,6 +310,16 @@ namespace wi::math
 		XMVECTOR binormal = XMVector3Normalize(XMVector3Cross(normal, tangent));
 		return XMMATRIX(tangent, binormal, normal, XMVectorSet(0,0,0,1));
 	}
+	inline XMMATRIX GetOrientation(XMVECTOR P, XMVECTOR N)
+	{
+		// Choose a helper vector for the cross product
+		XMVECTOR helper = std::abs(XMVectorGetX(N)) > 0.99 ? XMVectorSet(0, 0, 1, 0) : XMVectorSet(1, 0, 0, 0);
+
+		// Generate vectors
+		XMVECTOR T = XMVector3Normalize(XMVector3Cross(N, helper));
+		XMVECTOR B = XMVector3Normalize(XMVector3Cross(N, T));
+		return XMMATRIX(T, B, N, XMVectorSetW(P, 1));
+	}
 	inline XMFLOAT3 HemispherePoint_Uniform(float u, float v)
 	{
 		float phi = v * 2 * PI;

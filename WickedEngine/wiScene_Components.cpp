@@ -1982,33 +1982,21 @@ namespace wi::scene
 
 	void SoftBodyPhysicsComponent::CreateFromMesh(const MeshComponent& mesh)
 	{
-		vertex_positions_simulation.resize(mesh.vertex_positions.size());
-		vertex_normals_simulation.resize(mesh.vertex_normals.size());
-		vertex_tangents_simulation.resize(mesh.vertex_tangents.size());
-
-		XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
-		XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
-		XMMATRIX W = XMLoadFloat4x4(&worldMatrix);
-		for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
+		if (weights.size() != mesh.vertex_positions.size())
 		{
-			XMFLOAT3 pos = mesh.vertex_positions[i];
-			XMStoreFloat3(&pos, XMVector3Transform(XMLoadFloat3(&pos), W));
-			vertex_positions_simulation[i].FromFULL(pos);
-			_min = wi::math::Min(_min, pos);
-			_max = wi::math::Max(_max, pos);
+			weights.resize(mesh.vertex_positions.size());
+			std::fill(weights.begin(), weights.end(), 1.0f);
 		}
-		aabb = AABB(_min, _max);
-
 		if (physicsToGraphicsVertexMapping.empty())
 		{
 			// Create a mapping that maps unique vertex positions to all vertex indices that share that. Unique vertex positions will make up the physics mesh:
 			wi::unordered_map<size_t, uint32_t> uniquePositions;
 			graphicsToPhysicsVertexMapping.resize(mesh.vertex_positions.size());
 			physicsToGraphicsVertexMapping.clear();
-			weights.clear();
 
 			for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
 			{
+				const bool pinned = weights[i] == 0;
 				const XMFLOAT3& position = mesh.vertex_positions[i];
 
 				size_t hashes[] = {
@@ -2018,16 +2006,13 @@ namespace wi::scene
 				};
 				size_t vertexHash = (((hashes[0] ^ (hashes[1] << 1) >> 1) ^ (hashes[2] << 1)) >> 1);
 
-				if (uniquePositions.count(vertexHash) == 0)
+				if (pinned || uniquePositions.count(vertexHash) == 0)
 				{
 					uniquePositions[vertexHash] = (uint32_t)physicsToGraphicsVertexMapping.size();
 					physicsToGraphicsVertexMapping.push_back((uint32_t)i);
 				}
 				graphicsToPhysicsVertexMapping[i] = uniquePositions[vertexHash];
 			}
-
-			weights.resize(physicsToGraphicsVertexMapping.size());
-			std::fill(weights.begin(), weights.end(), 1.0f);
 		}
 	}
 

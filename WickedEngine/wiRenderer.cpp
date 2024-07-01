@@ -4333,40 +4333,6 @@ void UpdateRenderData(
 		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->voxelgrid_gpu, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 	}
 
-	// Soft body updates:
-	for (size_t i = 0; i < vis.scene->softbodies.GetCount(); ++i)
-	{
-		Entity entity = vis.scene->softbodies.GetEntity(i);
-		const SoftBodyPhysicsComponent& softbody = vis.scene->softbodies[i];
-
-		const MeshComponent* mesh = vis.scene->meshes.GetComponent(entity);
-		if (mesh != nullptr && mesh->streamoutBuffer.IsValid() && softbody.HasVertices())
-		{
-			GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(mesh->so_pos.size + mesh->so_nor.size + mesh->so_tan.size, cmd);
-			uint8_t* dst = (uint8_t*)allocation.data;
-			uint64_t offset = allocation.offset;
-			std::memcpy(dst, softbody.vertex_positions_simulation.data(), mesh->so_pos.size);
-			device->CopyBuffer(&mesh->streamoutBuffer, mesh->so_pos.offset, &allocation.buffer, offset, mesh->so_pos.size, cmd);
-			dst += mesh->so_pos.size;
-			offset += mesh->so_pos.size;
-			if (!softbody.vertex_normals_simulation.empty())
-			{
-				std::memcpy(dst, softbody.vertex_normals_simulation.data(), mesh->so_nor.size);
-				device->CopyBuffer(&mesh->streamoutBuffer, mesh->so_nor.offset, &allocation.buffer, offset, mesh->so_nor.size, cmd);
-				dst += mesh->so_nor.size;
-				offset += mesh->so_nor.size;
-			}
-			if (!softbody.vertex_tangents_simulation.empty())
-			{
-				std::memcpy(dst, softbody.vertex_tangents_simulation.data(), mesh->so_tan.size);
-				device->CopyBuffer(&mesh->streamoutBuffer, mesh->so_tan.offset, &allocation.buffer, offset, mesh->so_tan.size, cmd);
-				dst += mesh->so_tan.size;
-				offset += mesh->so_tan.size;
-			}
-			barrier_stack.push_back(GPUBarrier::Buffer(&mesh->streamoutBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-		}
-	}
-
 	barrier_stack.push_back(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND], textures[TEXTYPE_3D_WIND].desc.layout, ResourceState::UNORDERED_ACCESS));
 	barrier_stack.push_back(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND_PREV], textures[TEXTYPE_3D_WIND_PREV].desc.layout, ResourceState::UNORDERED_ACCESS));
 
@@ -4424,18 +4390,10 @@ void UpdateRenderData(
 			const MeshComponent& mesh = vis.scene->meshes[i];
 
 			if (
-				(mesh.IsSkinned() || !mesh.morph_targets.empty()) && // Note: even if all morphs are inactive, the skinning must be done
+				(mesh.IsSkinned() || !mesh.morph_targets.empty() || mesh.vb_bon.IsValid()) && // Note: even if all morphs are inactive, the skinning must be done
 				mesh.streamoutBuffer.IsValid()
 				)
 			{
-				const SoftBodyPhysicsComponent* softbody = vis.scene->softbodies.GetComponent(entity);
-				if (softbody != nullptr && softbody->physicsobject != nullptr)
-				{
-					// If soft body simulation is active, don't perform skinning.
-					//	(Soft body animated vertices are skinned in simulation phase by physics system)
-					continue;
-				}
-
 				SkinningPushConstants push;
 				push.vb_pos_wind = mesh.vb_pos_wind.descriptor_srv;
 				push.vb_nor = mesh.vb_nor.descriptor_srv;
@@ -4451,7 +4409,15 @@ void UpdateRenderData(
 				}
 				else
 				{
-					push.bone_offset = ~0u;
+					const SoftBodyPhysicsComponent* softbody = vis.scene->softbodies.GetComponent(entity);
+					if (softbody != nullptr)
+					{
+						push.bone_offset = softbody->gpuBoneOffset;
+					}
+					else
+					{
+						push.bone_offset = ~0u;
+					}
 				}
 				push.vb_bon = mesh.vb_bon.descriptor_srv;
 				if (mesh.active_morph_count > 0)
