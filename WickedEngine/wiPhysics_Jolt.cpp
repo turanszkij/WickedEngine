@@ -531,22 +531,14 @@ namespace wi::physics
 				const uint32_t* indices = mesh.indices.data() + subset.indexOffset;
 				for (uint32_t i = 0; i < subset.indexCount; i += 3)
 				{
-					uint32_t physicsInd0 = physicscomponent.graphicsToPhysicsVertexMapping[indices[i + 0]];
-					uint32_t physicsInd1 = physicscomponent.graphicsToPhysicsVertexMapping[indices[i + 1]];
-					uint32_t physicsInd2 = physicscomponent.graphicsToPhysicsVertexMapping[indices[i + 2]];
-
-#if 1
-					Vec3 p0 = cast(physicsobject.shared_settings.mVertices[physicsInd0].mPosition);
-					Vec3 p1 = cast(physicsobject.shared_settings.mVertices[physicsInd1].mPosition);
-					Vec3 p2 = cast(physicsobject.shared_settings.mVertices[physicsInd2].mPosition);
-
-					if ((p0 - p1).LengthSq() == 0)
+					const uint32_t graphicsInd0 = indices[i + 0];
+					const uint32_t graphicsInd1 = indices[i + 1];
+					const uint32_t graphicsInd2 = indices[i + 2];
+					const uint32_t physicsInd0 = physicscomponent.graphicsToPhysicsVertexMapping[graphicsInd0];
+					const uint32_t physicsInd1 = physicscomponent.graphicsToPhysicsVertexMapping[graphicsInd1];
+					const uint32_t physicsInd2 = physicscomponent.graphicsToPhysicsVertexMapping[graphicsInd2];
+					if (physicsInd0 == physicsInd1 || physicsInd1 == physicsInd2 || physicsInd2 == physicsInd0)
 						continue;
-					if ((p0 - p2).LengthSq() == 0)
-						continue;
-					if ((p1 - p2).LengthSq() == 0)
-						continue;
-#endif
 
 					SoftBodySharedSettings::Face& face = physicsobject.shared_settings.mFaces.emplace_back();
 					face.mVertex[0] = physicsInd0;
@@ -589,7 +581,7 @@ namespace wi::physics
 					constexpr bool operator>(const Bone& other) const { return distance > other.distance; }
 				};
 				Bone bones[4];
-				void add(uint32_t index, float dist)
+				constexpr void add(uint32_t index, float dist)
 				{
 					if (bones[0].distance == 0)
 						return;
@@ -611,7 +603,7 @@ namespace wi::physics
 				{
 					std::sort(bones, bones + arraysize(bones), std::less<Bone>());
 				}
-				XMUINT4 get_indices() const
+				constexpr XMUINT4 get_indices() const
 				{
 					return XMUINT4(
 						(uint32_t)std::max(0, bones[0].index),
@@ -620,15 +612,15 @@ namespace wi::physics
 						(uint32_t)std::max(0, bones[3].index)
 					);
 				}
-				XMFLOAT4 get_weights() const
+				constexpr XMFLOAT4 get_weights() const
 				{
 					XMFLOAT4 weights = XMFLOAT4(0, 0, 0, 0);
 					weights.x = bones[0].index < 0 ? 0 : (bones[0].distance == 0 ? 1 : saturate(1.0f / bones[0].distance));
 					if (weights.x < 1)
 					{
-						weights.y = bones[1].index < 0 ? 0 : (bones[1].distance == 0 ? 1 : (1.0f / bones[1].distance));
-						weights.z = bones[2].index < 0 ? 0 : (bones[2].distance == 0 ? 1 : (1.0f / bones[2].distance));
-						weights.w = bones[3].index < 0 ? 0 : (bones[3].distance == 0 ? 1 : (1.0f / bones[3].distance));
+						weights.y = bones[1].index < 0 ? 0 : (bones[1].distance == 0 ? 1 : saturate(1.0f / bones[1].distance));
+						weights.z = bones[2].index < 0 ? 0 : (bones[2].distance == 0 ? 1 : saturate(1.0f / bones[2].distance));
+						weights.w = bones[3].index < 0 ? 0 : (bones[3].distance == 0 ? 1 : saturate(1.0f / bones[3].distance));
 					}
 					const float sum = weights.x + weights.y + weights.z + weights.w;
 					if (sum > 0)
@@ -1664,7 +1656,7 @@ namespace wi::physics
 				Vec3 x3 = soft_vertices[f.mVertex[2]].mPosition;
 				Vec3 x21 = x2 - x1;
 				Vec3 x31 = x3 - x1;
-				Vec3 n = x21.Cross(x31).NormalizedOr(Vec3::sAxisY());
+				Vec3 n = x21.Cross(x31);
 				physicsobject.simulation_normals[f.mVertex[0]] += n;
 				physicsobject.simulation_normals[f.mVertex[1]] += n;
 				physicsobject.simulation_normals[f.mVertex[2]] += n;
@@ -1673,7 +1665,7 @@ namespace wi::physics
 			for (size_t i = 0; i < soft_vertices.size(); ++i)
 			{
 				XMFLOAT3 physicsPos = cast(soft_vertices[i].mPosition);
-				XMFLOAT3 physicsNor = cast(physicsobject.simulation_normals[i].NormalizedOr(Vec3::sAxisY()));
+				XMFLOAT3 physicsNor = cast(physicsobject.simulation_normals[i].Normalized());
 				XMVECTOR P = XMLoadFloat3(&physicsPos);
 				XMVECTOR N = XMLoadFloat3(&physicsNor);
 				XMMATRIX W = wi::math::GetOrientation(P, N);

@@ -1206,7 +1206,7 @@ void PaintToolWindow::Update(float dt)
 						const float weight0 = softbody->weights[i0];
 						const float weight1 = softbody->weights[i1];
 						const float weight2 = softbody->weights[i2];
-						XMVECTOR N0, N1, N2;
+						XMVECTOR N0 = XMVectorZero(), N1 = XMVectorZero(), N2 = XMVectorZero();
 						wi::renderer::RenderableTriangle tri;
 						XMStoreFloat3(&tri.positionA, SkinVertex(*mesh, *softbody, i0, &N0) + N0 * 0.01f);
 						XMStoreFloat3(&tri.positionB, SkinVertex(*mesh, *softbody, i1, &N1) + N1 * 0.01f);
