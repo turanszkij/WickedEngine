@@ -615,12 +615,16 @@ namespace wi::physics
 				constexpr XMFLOAT4 get_weights() const
 				{
 					XMFLOAT4 weights = XMFLOAT4(0, 0, 0, 0);
-					weights.x = bones[0].index < 0 ? 0 : (bones[0].distance == 0 ? 1 : saturate(1.0f / bones[0].distance));
-					if (weights.x < 1)
+					if (bones[0].distance == 0)
 					{
-						weights.y = bones[1].index < 0 ? 0 : (bones[1].distance == 0 ? 1 : saturate(1.0f / bones[1].distance));
-						weights.z = bones[2].index < 0 ? 0 : (bones[2].distance == 0 ? 1 : saturate(1.0f / bones[2].distance));
-						weights.w = bones[3].index < 0 ? 0 : (bones[3].distance == 0 ? 1 : saturate(1.0f / bones[3].distance));
+						weights = XMFLOAT4(1, 0, 0, 0);
+					}
+					else
+					{
+						weights.x = bones[0].index < 0 ? 0 : (bones[0].distance == 0 ? 1 : (1.0f / bones[0].distance));
+						weights.y = bones[1].index < 0 ? 0 : (bones[1].distance == 0 ? 1 : (1.0f / bones[1].distance));
+						weights.z = bones[2].index < 0 ? 0 : (bones[2].distance == 0 ? 1 : (1.0f / bones[2].distance));
+						weights.w = bones[3].index < 0 ? 0 : (bones[3].distance == 0 ? 1 : (1.0f / bones[3].distance));
 					}
 					const float sum = weights.x + weights.y + weights.z + weights.w;
 					if (sum > 0)
