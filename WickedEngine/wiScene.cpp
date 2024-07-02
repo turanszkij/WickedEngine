@@ -6305,37 +6305,49 @@ namespace wi::scene
 	XMVECTOR SkinVertex(const MeshComponent& mesh, const wi::vector<ShaderTransform>& boneData, uint32_t index, XMVECTOR* N)
 	{
 		XMVECTOR P = XMLoadFloat3(&mesh.vertex_positions[index]);
-		const XMUINT4& ind = mesh.vertex_boneindices[index];
-		const XMFLOAT4& wei = mesh.vertex_boneweights[index];
 
-		const XMFLOAT4X4 mat[] = {
-			boneData[ind.x].GetMatrix(),
-			boneData[ind.y].GetMatrix(),
-			boneData[ind.z].GetMatrix(),
-			boneData[ind.w].GetMatrix(),
-		};
-		const XMMATRIX M[] = {
-			XMMatrixTranspose(XMLoadFloat4x4(&mat[0])),
-			XMMatrixTranspose(XMLoadFloat4x4(&mat[1])),
-			XMMatrixTranspose(XMLoadFloat4x4(&mat[2])),
-			XMMatrixTranspose(XMLoadFloat4x4(&mat[3])),
-		};
+		const uint32_t influence_div4 = mesh.GetBoneInfluenceDiv4();
 
-		XMVECTOR skinned;
-		skinned = XMVector3Transform(P, M[0]) * wei.x;
-		skinned += XMVector3Transform(P, M[1]) * wei.y;
-		skinned += XMVector3Transform(P, M[2]) * wei.z;
-		skinned += XMVector3Transform(P, M[3]) * wei.w;
-		P = skinned;
+		XMVECTOR skinnedP = XMVectorZero();
+		XMVECTOR skinnedN = XMVectorZero();
+		for (uint32_t influence = 0; influence < influence_div4; ++influence)
+		{
+			const XMUINT4& ind = influence == 0 ? mesh.vertex_boneindices[index] : mesh.vertex_boneindices2[index];
+			const XMFLOAT4& wei = influence == 0 ? mesh.vertex_boneweights[index]: mesh.vertex_boneweights2[index];
+
+			const XMFLOAT4X4 mat[] = {
+				boneData[ind.x].GetMatrix(),
+				boneData[ind.y].GetMatrix(),
+				boneData[ind.z].GetMatrix(),
+				boneData[ind.w].GetMatrix(),
+			};
+			const XMMATRIX M[] = {
+				XMMatrixTranspose(XMLoadFloat4x4(&mat[0])),
+				XMMatrixTranspose(XMLoadFloat4x4(&mat[1])),
+				XMMatrixTranspose(XMLoadFloat4x4(&mat[2])),
+				XMMatrixTranspose(XMLoadFloat4x4(&mat[3])),
+			};
+
+			skinnedP += XMVector3Transform(P, M[0]) * wei.x;
+			skinnedP += XMVector3Transform(P, M[1]) * wei.y;
+			skinnedP += XMVector3Transform(P, M[2]) * wei.z;
+			skinnedP += XMVector3Transform(P, M[3]) * wei.w;
+
+			if (N != nullptr)
+			{
+				*N = XMLoadFloat3(&mesh.vertex_normals[index]);
+				skinnedN += XMVector3TransformNormal(*N, M[0]) * wei.x;
+				skinnedN += XMVector3TransformNormal(*N, M[1]) * wei.y;
+				skinnedN += XMVector3TransformNormal(*N, M[2]) * wei.z;
+				skinnedN += XMVector3TransformNormal(*N, M[3]) * wei.w;
+			}
+		}
+
+		P = skinnedP;
 
 		if (N != nullptr)
 		{
-			*N = XMLoadFloat3(&mesh.vertex_normals[index]);
-			skinned = XMVector3TransformNormal(*N, M[0]) * wei.x;
-			skinned += XMVector3TransformNormal(*N, M[1]) * wei.y;
-			skinned += XMVector3TransformNormal(*N, M[2]) * wei.z;
-			skinned += XMVector3TransformNormal(*N, M[3]) * wei.w;
-			*N = XMVector3Normalize(skinned);
+			*N = XMVector3Normalize(skinnedN);
 		}
 
 		return P;

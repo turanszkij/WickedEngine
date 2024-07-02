@@ -472,6 +472,12 @@ namespace wi::scene
 				archive >> subsets_per_lod;
 			}
 
+			if (seri.GetVersion() >= 3)
+			{
+				archive >> vertex_boneindices2;
+				archive >> vertex_boneweights2;
+			}
+
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				CreateRenderData();
 
@@ -552,6 +558,12 @@ namespace wi::scene
 			if (archive.GetVersion() >= 76)
 			{
 				archive << subsets_per_lod;
+			}
+
+			if (seri.GetVersion() >= 3)
+			{
+				archive << vertex_boneindices2;
+				archive << vertex_boneweights2;
 			}
 
 		}

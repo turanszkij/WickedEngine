@@ -1327,7 +1327,7 @@ struct SkinningPushConstants
 	uint vertexCount;
 
 	float3 aabb_max;
-	float padding;
+	uint influence_div4;
 };
 
 struct DebugObjectPushConstants

@@ -4443,6 +4443,7 @@ void UpdateRenderData(
 					push.aabb_max = {};
 				}
 				push.vertexCount = (uint)mesh.vertex_positions.size();
+				push.influence_div4 = mesh.GetBoneInfluenceDiv4();
 				device->PushConstants(&push, sizeof(push), cmd);
 
 				device->Dispatch(((uint32_t)mesh.vertex_positions.size() + 63) / 64, 1, 1, cmd);

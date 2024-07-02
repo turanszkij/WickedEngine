@@ -58,9 +58,11 @@ namespace wi::physics
 	{
 		XMVECTOR T = P2 - P1;
 		XMVECTOR B = P1 - P0;
-		XMVECTOR N = XMVector3Normalize(XMVector3Cross(B, T));
-		T = XMVector3Normalize(XMVector3Cross(N, B));
-		B = XMVector3Normalize(XMVector3Cross(N, T));
+		XMVECTOR N = XMVector3Cross(B, T);
+		T = XMVector3Cross(B, N);
+		T = XMVector3Normalize(T);
+		B = XMVector3Normalize(B);
+		N = XMVector3Normalize(N);
 		return XMMATRIX(T, B, N, XMVectorSetW(P0, 1));
 	}
 
@@ -548,8 +550,8 @@ namespace wi::physics
 				XMStoreFloat3(&position, P);
 				physicsobject.shared_settings.mVertices[i].mPosition = Float3(position.x, position.y, position.z);
 
-				float weight = physicscomponent.weights[graphicsInd];
-				physicsobject.shared_settings.mVertices[i].mInvMass = weight == 0 ? 0 : 1.0f / weight;
+				float weight = physicscomponent.weights[graphicsInd] * physicscomponent.mass;
+				physicsobject.shared_settings.mVertices[i].mInvMass = weight == 0 ? 0 : 1.0f / (1.0f + weight);
 
 				// The soft body node will have a bind matrix similar to an armature bone:
 				XMVECTOR P0 = XMLoadFloat3(&mesh.vertex_positions[graphicsInd]);
@@ -584,96 +586,108 @@ namespace wi::physics
 			}
 
 			// BoneQueue is used for assigning the highest weighted 4 bones (soft body nodes) to a graphics vertex
+			static constexpr int influence = 8;
 			struct BoneQueue
 			{
 				struct Bone
 				{
-					int index = -1;
-					float distance = 1000000;
-					constexpr bool operator<(const Bone& other) const { return distance < other.distance; }
-					constexpr bool operator>(const Bone& other) const { return distance > other.distance; }
+					uint32_t index = 0;
+					float weight = 0;
+					constexpr bool operator<(const Bone& other) const { return weight < other.weight; }
+					constexpr bool operator>(const Bone& other) const { return weight > other.weight; }
 				};
-				Bone bones[4];
-				constexpr void add(uint32_t index, float dist)
+				Bone bones[influence];
+				constexpr void add(uint32_t index, float weight)
 				{
-					if (bones[0].distance == 0)
-						return;
-					int maxi = 0;
-					for (int i = 1; i < 4; ++i)
+					int mini = 0;
+					for (int i = 1; i < arraysize(bones); ++i)
 					{
-						if (bones[i].distance > bones[maxi].distance)
+						if (bones[i].weight < bones[mini].weight)
 						{
-							maxi = i;
+							mini = i;
 						}
 					}
-					if (dist < bones[maxi].distance)
+					if (weight > bones[mini].weight)
 					{
-						bones[maxi].distance = dist;
-						bones[maxi].index = index;
+						bones[mini].weight = weight;
+						bones[mini].index = index;
 					}
 				}
 				void finalize()
 				{
-					std::sort(bones, bones + arraysize(bones), std::less<Bone>());
+					std::sort(bones, bones + arraysize(bones), std::greater<Bone>());
+					// Note: normalization of bone weights will be done in MeshComponent::CreateRenderData()
 				}
 				constexpr XMUINT4 get_indices() const
 				{
 					return XMUINT4(
-						(uint32_t)std::max(0, bones[0].index),
-						(uint32_t)std::max(0, bones[1].index),
-						(uint32_t)std::max(0, bones[2].index),
-						(uint32_t)std::max(0, bones[3].index)
+						influence < 1 ? 0 : bones[0].index,
+						influence < 2 ? 0 : bones[1].index,
+						influence < 3 ? 0 : bones[2].index,
+						influence < 4 ? 0 : bones[3].index
+					);
+				}
+				constexpr XMUINT4 get_indices2() const
+				{
+					return XMUINT4(
+						influence < 5 ? 0 : bones[4].index,
+						influence < 6 ? 0 : bones[5].index,
+						influence < 7 ? 0 : bones[6].index,
+						influence < 8 ? 0 : bones[7].index
 					);
 				}
 				constexpr XMFLOAT4 get_weights() const
 				{
-					XMFLOAT4 weights = XMFLOAT4(0, 0, 0, 0);
-					if (bones[0].distance == 0)
-					{
-						weights = XMFLOAT4(1, 0, 0, 0);
-					}
-					else
-					{
-						weights.x = bones[0].index < 0 ? 0 : (bones[0].distance == 0 ? 1 : (1.0f / bones[0].distance));
-						weights.y = bones[1].index < 0 ? 0 : (bones[1].distance == 0 ? 1 : (1.0f / bones[1].distance));
-						weights.z = bones[2].index < 0 ? 0 : (bones[2].distance == 0 ? 1 : (1.0f / bones[2].distance));
-						weights.w = bones[3].index < 0 ? 0 : (bones[3].distance == 0 ? 1 : (1.0f / bones[3].distance));
-					}
-					const float sum = weights.x + weights.y + weights.z + weights.w;
-					if (sum > 0)
-					{
-						const float norm = 1.0f / sum;
-						weights.x *= norm;
-						weights.y *= norm;
-						weights.z *= norm;
-						weights.w *= norm;
-					}
-					return weights;
+					return XMFLOAT4(
+						influence < 1 ? 0 : bones[0].weight,
+						influence < 2 ? 0 : bones[1].weight,
+						influence < 3 ? 0 : bones[2].weight,
+						influence < 4 ? 0 : bones[3].weight
+					);
+				}
+				constexpr XMFLOAT4 get_weights2() const
+				{
+					return XMFLOAT4(
+						influence < 5 ? 0 : bones[4].weight,
+						influence < 6 ? 0 : bones[5].weight,
+						influence < 7 ? 0 : bones[6].weight,
+						influence < 8 ? 0 : bones[7].weight
+					);
 				}
 			};
 
 			// Create skinning bone vertex data:
 			mesh.vertex_boneindices.resize(mesh.vertex_positions.size());
 			mesh.vertex_boneweights.resize(mesh.vertex_positions.size());
+			if (influence > 4)
+			{
+				mesh.vertex_boneindices2.resize(mesh.vertex_positions.size());
+				mesh.vertex_boneweights2.resize(mesh.vertex_positions.size());
+			}
 			wi::jobsystem::context ctx;
 			wi::jobsystem::Dispatch(ctx, (uint32_t)mesh.vertex_positions.size(), 64, [&](wi::jobsystem::JobArgs args) {
-				XMFLOAT3 position = mesh.vertex_positions[args.jobIndex];
-				XMVECTOR P = XMLoadFloat3(&position);
-				P = XMVector3Transform(P, worldMatrix);
+				const XMFLOAT3 position = mesh.vertex_positions[args.jobIndex];
 
 				BoneQueue bones;
-				for (size_t j = 0; j < vertexCount; ++j)
+				for (size_t physicsInd = 0; physicsInd < vertexCount; ++physicsInd)
 				{
-					Float3 p2 = physicsobject.shared_settings.mVertices[j].mPosition;
-					XMFLOAT3 position2 = XMFLOAT3(p2.x, p2.y, p2.z);
-					XMVECTOR P2 = XMLoadFloat3(&position2);
-					float dist = wi::math::DistanceSquared(P, P2);
-					bones.add((uint32_t)j, dist);
+					const uint32_t graphicsInd = physicscomponent.physicsToGraphicsVertexMapping[physicsInd];
+					const XMFLOAT3 position2 = mesh.vertex_positions[graphicsInd];
+					const float dist = wi::math::DistanceSquared(position, position2);
+					// Note: 0.01 correction is carefully tweaked so that cloth_test and sponza curtains look good
+					// (larger values blow up the curtains, lower values make the shading of the cloth look bad)
+					const float weight = 1.0f / (0.01f + dist);
+					bones.add((uint32_t)physicsInd, weight);
 				}
 
 				bones.finalize();
 				mesh.vertex_boneindices[args.jobIndex] = bones.get_indices();
 				mesh.vertex_boneweights[args.jobIndex] = bones.get_weights();
+				if (influence > 4)
+				{
+					mesh.vertex_boneindices2[args.jobIndex] = bones.get_indices2();
+					mesh.vertex_boneweights2[args.jobIndex] = bones.get_weights2();
+				}
 			});
 			wi::jobsystem::Wait(ctx);
 			mesh.CreateRenderData();

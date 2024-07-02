@@ -832,7 +832,8 @@ namespace wi::scene
 			AlignTo(uv_count * sizeof(Vertex_UVS), alignment) +
 			AlignTo(vertex_atlas.size() * sizeof(Vertex_TEX), alignment) +
 			AlignTo(vertex_colors.size() * sizeof(Vertex_COL), alignment) +
-			AlignTo(vertex_boneindices.size() * sizeof(Vertex_BON), alignment)
+			AlignTo(vertex_boneindices.size() * sizeof(Vertex_BON), alignment) +
+			AlignTo(vertex_boneindices2.size() * sizeof(Vertex_BON), alignment)
 			;
 
 		constexpr Format morph_format = Format::R16G16B16A16_FLOAT;
@@ -1025,29 +1026,69 @@ namespace wi::scene
 				}
 			}
 
-			// skinning buffers:
+			// bone reference buffers (skinning, soft body):
 			if (!vertex_boneindices.empty())
 			{
 				vb_bon.offset = buffer_offset;
-				vb_bon.size = vertex_boneindices.size() * sizeof(Vertex_BON);
+				const size_t influence_div4 = GetBoneInfluenceDiv4();
+				vb_bon.size = (vertex_boneindices.size() + vertex_boneindices2.size()) * sizeof(Vertex_BON);
 				Vertex_BON* vertices = (Vertex_BON*)(buffer_data + buffer_offset);
 				buffer_offset += AlignTo(vb_bon.size, alignment);
-				assert(vertex_boneindices.size() == vertex_boneweights.size());
+				assert(vertex_boneindices.size() == vertex_boneweights.size()); // must have same number of indices as weights
+				assert(vertex_boneindices2.empty() || vertex_boneindices2.size() == vertex_boneindices.size()); // if second influence stream exists, it must be as large as the first
+				assert(vertex_boneindices2.size() == vertex_boneweights2.size()); // must have same number of indices as weights
 				for (size_t i = 0; i < vertex_boneindices.size(); ++i)
 				{
-					XMFLOAT4& wei = vertex_boneweights[i];
-					// normalize bone weights
-					float len = wei.x + wei.y + wei.z + wei.w;
-					if (len > 0)
+					// Normalize weights:
+					//	Note: if multiple influence streams are present,
+					//	we have to normalize them together, not separately
+					float weights[8] = {};
+					weights[0] = vertex_boneweights[i].x;
+					weights[1] = vertex_boneweights[i].y;
+					weights[2] = vertex_boneweights[i].z;
+					weights[3] = vertex_boneweights[i].w;
+					if (influence_div4 > 1)
 					{
-						wei.x /= len;
-						wei.y /= len;
-						wei.z /= len;
-						wei.w /= len;
+						weights[4] = vertex_boneweights2[i].x;
+						weights[5] = vertex_boneweights2[i].y;
+						weights[6] = vertex_boneweights2[i].z;
+						weights[7] = vertex_boneweights2[i].w;
 					}
+					float sum = 0;
+					for (auto& weight : weights)
+					{
+						sum += weight;
+					}
+					if (sum > 0)
+					{
+						const float norm = 1.0f / sum;
+						for (auto& weight : weights)
+						{
+							weight *= norm;
+						}
+					}
+					// Store back normalized weights:
+					vertex_boneweights[i].x = weights[0];
+					vertex_boneweights[i].y = weights[1];
+					vertex_boneweights[i].z = weights[2];
+					vertex_boneweights[i].w = weights[3];
+					if (influence_div4 > 1)
+					{
+						vertex_boneweights2[i].x = weights[4];
+						vertex_boneweights2[i].y = weights[5];
+						vertex_boneweights2[i].z = weights[6];
+						vertex_boneweights2[i].w = weights[7];
+					}
+
 					Vertex_BON vert;
-					vert.FromFULL(vertex_boneindices[i], wei);
-					std::memcpy(vertices + i, &vert, sizeof(vert));
+					vert.FromFULL(vertex_boneindices[i], vertex_boneweights[i]);
+					std::memcpy(vertices + (i * influence_div4 + 0), &vert, sizeof(vert));
+
+					if (influence_div4 > 1)
+					{
+						vert.FromFULL(vertex_boneindices2[i], vertex_boneweights2[i]);
+						std::memcpy(vertices + (i * influence_div4 + 1), &vert, sizeof(vert));
+					}
 				}
 			}
 

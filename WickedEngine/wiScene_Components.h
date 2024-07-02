@@ -366,6 +366,8 @@ namespace wi::scene
 		wi::vector<XMFLOAT2> vertex_uvset_1;
 		wi::vector<XMUINT4> vertex_boneindices;
 		wi::vector<XMFLOAT4> vertex_boneweights;
+		wi::vector<XMUINT4> vertex_boneindices2;
+		wi::vector<XMFLOAT4> vertex_boneweights2;
 		wi::vector<XMFLOAT2> vertex_atlas;
 		wi::vector<uint32_t> vertex_colors;
 		wi::vector<uint8_t> vertex_windweights;
@@ -516,6 +518,20 @@ namespace wi::scene
 		void Recenter();
 		void RecenterToBottom();
 		wi::primitive::Sphere GetBoundingSphere() const;
+
+		uint32_t GetBoneInfluenceDiv4() const
+		{
+			uint32_t influence_div4 = 0;
+			if (!vertex_boneindices.empty())
+			{
+				influence_div4++;
+			}
+			if (!vertex_boneindices2.empty())
+			{
+				influence_div4++;
+			}
+			return influence_div4;
+		}
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 
