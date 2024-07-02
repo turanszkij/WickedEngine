@@ -39,7 +39,7 @@ Directional lights + cascaded shadow maps
 Spotlights + shadow maps
 Point lights + shadow cubemaps
 Soft shadows (PCF)
-BULLET Physics: rigid body, soft body
+Physics: rigid body, soft body, ragdoll
 3D Audio (Xaudio2)
 Input: keyboard, mouse, controller (rawinput, xinput), touch
 Controller feedback (vibration, LED)

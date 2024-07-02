@@ -366,6 +366,8 @@ namespace wi::scene
 		wi::vector<XMFLOAT2> vertex_uvset_1;
 		wi::vector<XMUINT4> vertex_boneindices;
 		wi::vector<XMFLOAT4> vertex_boneweights;
+		wi::vector<XMUINT4> vertex_boneindices2;
+		wi::vector<XMFLOAT4> vertex_boneweights2;
 		wi::vector<XMFLOAT2> vertex_atlas;
 		wi::vector<uint32_t> vertex_colors;
 		wi::vector<uint8_t> vertex_windweights;
@@ -516,6 +518,20 @@ namespace wi::scene
 		void Recenter();
 		void RecenterToBottom();
 		wi::primitive::Sphere GetBoundingSphere() const;
+
+		uint32_t GetBoneInfluenceDiv4() const
+		{
+			uint32_t influence_div4 = 0;
+			if (!vertex_boneindices.empty())
+			{
+				influence_div4++;
+			}
+			if (!vertex_boneindices2.empty())
+			{
+				influence_div4++;
+			}
+			return influence_div4;
+		}
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 
@@ -972,8 +988,9 @@ namespace wi::scene
 		float mass = 1.0f;
 		float friction = 0.5f;
 		float restitution = 0.0f;
+		float pressure = 0.0f;
 		float vertex_radius = 0.2f; // how much distance vertices keep from other physics bodies
-		float detail = 100; // precision to keep within a unit
+		float detail = 1000; // precision to keep within a unit
 		wi::vector<uint32_t> physicsToGraphicsVertexMapping; // maps graphics vertex index to physics vertex index of the same position
 		wi::vector<uint32_t> graphicsToPhysicsVertexMapping; // maps a physics vertex index to first graphics vertex index of the same position
 		wi::vector<float> weights; // weight per physics vertex controlling the mass. (0: disable weight (no physics, only animation), 1: default weight)
@@ -981,13 +998,12 @@ namespace wi::scene
 		// Non-serialized attributes:
 		std::shared_ptr<void> physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
 		XMFLOAT4X4 worldMatrix = wi::math::IDENTITY_MATRIX;
-		wi::vector<MeshComponent::Vertex_POS32> vertex_positions_simulation; // graphics vertices after simulation (world space)
-		wi::vector<MeshComponent::Vertex_NOR> vertex_normals_simulation;
-		wi::vector<MeshComponent::Vertex_TAN> vertex_tangents_simulation;
+		uint32_t gpuBoneOffset = 0;
+		wi::vector<ShaderTransform> boneData; // simulated soft body nodes as bone matrices that can be fed into skinning
 		wi::primitive::AABB aabb;
 
 		inline void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
-		inline void SetWindEnabled(bool value) { if (value) { _flags |= WIND; } else { _flags &= ~DISABLE_DEACTIVATION; } }
+		inline void SetWindEnabled(bool value) { if (value) { _flags |= WIND; } else { _flags &= ~WIND; } }
 
 		inline bool IsDisableDeactivation() const { return _flags & DISABLE_DEACTIVATION; }
 		inline bool IsWindEnabled() const { return _flags & WIND; }
@@ -998,11 +1014,6 @@ namespace wi::scene
 			physicsToGraphicsVertexMapping.clear();
 			physicsToGraphicsVertexMapping.shrink_to_fit();
 			physicsobject = {};
-		}
-
-		inline bool HasVertices() const
-		{
-			return !vertex_positions_simulation.empty();
 		}
 
 		// Create physics represenation of graphics mesh

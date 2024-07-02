@@ -1120,6 +1120,8 @@ namespace wi::renderer
 	// Add 2D line to render in the next frame. It will be rendered in DrawDebugWorld() in screen space
 	void DrawLine(const RenderableLine2D& line);
 
+	void DrawAxis(const XMMATRIX& matrix, float size, bool depth = false);
+
 	struct RenderablePoint
 	{
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);

@@ -74,6 +74,18 @@ namespace wi::math
 		XMStoreFloat(&Distance, length);
 		return Distance;
 	}
+	inline float Dot(const XMFLOAT2& v1, const XMFLOAT2& v2)
+	{
+		XMVECTOR vector1 = XMLoadFloat2(&v1);
+		XMVECTOR vector2 = XMLoadFloat2(&v2);
+		return XMVectorGetX(XMVector2Dot(vector1, vector2));
+	}
+	inline float Dot(const XMFLOAT3& v1, const XMFLOAT3& v2)
+	{
+		XMVECTOR vector1 = XMLoadFloat3(&v1);
+		XMVECTOR vector2 = XMLoadFloat3(&v2);
+		return XMVectorGetX(XMVector3Dot(vector1, vector2));
+	}
 	inline float Distance(const XMFLOAT2& v1, const XMFLOAT2& v2)
 	{
 		XMVECTOR vector1 = XMLoadFloat2(&v1);

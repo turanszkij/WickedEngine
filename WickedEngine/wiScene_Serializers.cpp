@@ -472,6 +472,12 @@ namespace wi::scene
 				archive >> subsets_per_lod;
 			}
 
+			if (seri.GetVersion() >= 3)
+			{
+				archive >> vertex_boneindices2;
+				archive >> vertex_boneweights2;
+			}
+
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				CreateRenderData();
 
@@ -552,6 +558,12 @@ namespace wi::scene
 			if (archive.GetVersion() >= 76)
 			{
 				archive << subsets_per_lod;
+			}
+
+			if (seri.GetVersion() >= 3)
+			{
+				archive << vertex_boneindices2;
+				archive << vertex_boneweights2;
 			}
 
 		}
@@ -782,6 +794,22 @@ namespace wi::scene
 				SetWindEnabled(true);
 			}
 
+			if (seri.version >= 2)
+			{
+				archive >> pressure;
+			}
+			else
+			{
+				// Convert weights from per-physics to per-graphics vertex:
+				//	Per graphics vertex is better, because regenerating soft body with different detail will keep the pinning
+				wi::vector<float> weights2(graphicsToPhysicsVertexMapping.size());
+				for (size_t i = 0; i < weights2.size(); ++i)
+				{
+					weights2[i] = weights[graphicsToPhysicsVertexMapping[i]];
+				}
+				std::swap(weights, weights2);
+			}
+
 			_flags &= ~SAFE_TO_REGISTER;
 		}
 		else
@@ -802,6 +830,10 @@ namespace wi::scene
 			{
 				archive << vertex_radius;
 				archive << detail;
+			}
+			if (seri.version >= 2)
+			{
+				archive << pressure;
 			}
 		}
 	}

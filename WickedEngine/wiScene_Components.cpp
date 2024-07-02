@@ -832,7 +832,8 @@ namespace wi::scene
 			AlignTo(uv_count * sizeof(Vertex_UVS), alignment) +
 			AlignTo(vertex_atlas.size() * sizeof(Vertex_TEX), alignment) +
 			AlignTo(vertex_colors.size() * sizeof(Vertex_COL), alignment) +
-			AlignTo(vertex_boneindices.size() * sizeof(Vertex_BON), alignment)
+			AlignTo(vertex_boneindices.size() * sizeof(Vertex_BON), alignment) +
+			AlignTo(vertex_boneindices2.size() * sizeof(Vertex_BON), alignment)
 			;
 
 		constexpr Format morph_format = Format::R16G16B16A16_FLOAT;
@@ -1025,29 +1026,69 @@ namespace wi::scene
 				}
 			}
 
-			// skinning buffers:
+			// bone reference buffers (skinning, soft body):
 			if (!vertex_boneindices.empty())
 			{
 				vb_bon.offset = buffer_offset;
-				vb_bon.size = vertex_boneindices.size() * sizeof(Vertex_BON);
+				const size_t influence_div4 = GetBoneInfluenceDiv4();
+				vb_bon.size = (vertex_boneindices.size() + vertex_boneindices2.size()) * sizeof(Vertex_BON);
 				Vertex_BON* vertices = (Vertex_BON*)(buffer_data + buffer_offset);
 				buffer_offset += AlignTo(vb_bon.size, alignment);
-				assert(vertex_boneindices.size() == vertex_boneweights.size());
+				assert(vertex_boneindices.size() == vertex_boneweights.size()); // must have same number of indices as weights
+				assert(vertex_boneindices2.empty() || vertex_boneindices2.size() == vertex_boneindices.size()); // if second influence stream exists, it must be as large as the first
+				assert(vertex_boneindices2.size() == vertex_boneweights2.size()); // must have same number of indices as weights
 				for (size_t i = 0; i < vertex_boneindices.size(); ++i)
 				{
-					XMFLOAT4& wei = vertex_boneweights[i];
-					// normalize bone weights
-					float len = wei.x + wei.y + wei.z + wei.w;
-					if (len > 0)
+					// Normalize weights:
+					//	Note: if multiple influence streams are present,
+					//	we have to normalize them together, not separately
+					float weights[8] = {};
+					weights[0] = vertex_boneweights[i].x;
+					weights[1] = vertex_boneweights[i].y;
+					weights[2] = vertex_boneweights[i].z;
+					weights[3] = vertex_boneweights[i].w;
+					if (influence_div4 > 1)
 					{
-						wei.x /= len;
-						wei.y /= len;
-						wei.z /= len;
-						wei.w /= len;
+						weights[4] = vertex_boneweights2[i].x;
+						weights[5] = vertex_boneweights2[i].y;
+						weights[6] = vertex_boneweights2[i].z;
+						weights[7] = vertex_boneweights2[i].w;
 					}
+					float sum = 0;
+					for (auto& weight : weights)
+					{
+						sum += weight;
+					}
+					if (sum > 0)
+					{
+						const float norm = 1.0f / sum;
+						for (auto& weight : weights)
+						{
+							weight *= norm;
+						}
+					}
+					// Store back normalized weights:
+					vertex_boneweights[i].x = weights[0];
+					vertex_boneweights[i].y = weights[1];
+					vertex_boneweights[i].z = weights[2];
+					vertex_boneweights[i].w = weights[3];
+					if (influence_div4 > 1)
+					{
+						vertex_boneweights2[i].x = weights[4];
+						vertex_boneweights2[i].y = weights[5];
+						vertex_boneweights2[i].z = weights[6];
+						vertex_boneweights2[i].w = weights[7];
+					}
+
 					Vertex_BON vert;
-					vert.FromFULL(vertex_boneindices[i], wei);
-					std::memcpy(vertices + i, &vert, sizeof(vert));
+					vert.FromFULL(vertex_boneindices[i], vertex_boneweights[i]);
+					std::memcpy(vertices + (i * influence_div4 + 0), &vert, sizeof(vert));
+
+					if (influence_div4 > 1)
+					{
+						vert.FromFULL(vertex_boneindices2[i], vertex_boneweights2[i]);
+						std::memcpy(vertices + (i * influence_div4 + 1), &vert, sizeof(vert));
+					}
 				}
 			}
 
@@ -1982,33 +2023,21 @@ namespace wi::scene
 
 	void SoftBodyPhysicsComponent::CreateFromMesh(const MeshComponent& mesh)
 	{
-		vertex_positions_simulation.resize(mesh.vertex_positions.size());
-		vertex_normals_simulation.resize(mesh.vertex_normals.size());
-		vertex_tangents_simulation.resize(mesh.vertex_tangents.size());
-
-		XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
-		XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
-		XMMATRIX W = XMLoadFloat4x4(&worldMatrix);
-		for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
+		if (weights.size() != mesh.vertex_positions.size())
 		{
-			XMFLOAT3 pos = mesh.vertex_positions[i];
-			XMStoreFloat3(&pos, XMVector3Transform(XMLoadFloat3(&pos), W));
-			vertex_positions_simulation[i].FromFULL(pos);
-			_min = wi::math::Min(_min, pos);
-			_max = wi::math::Max(_max, pos);
+			weights.resize(mesh.vertex_positions.size());
+			std::fill(weights.begin(), weights.end(), 1.0f);
 		}
-		aabb = AABB(_min, _max);
-
 		if (physicsToGraphicsVertexMapping.empty())
 		{
 			// Create a mapping that maps unique vertex positions to all vertex indices that share that. Unique vertex positions will make up the physics mesh:
 			wi::unordered_map<size_t, uint32_t> uniquePositions;
 			graphicsToPhysicsVertexMapping.resize(mesh.vertex_positions.size());
 			physicsToGraphicsVertexMapping.clear();
-			weights.clear();
 
 			for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
 			{
+				const bool pinned = weights[i] == 0;
 				const XMFLOAT3& position = mesh.vertex_positions[i];
 
 				size_t hashes[] = {
@@ -2018,16 +2047,13 @@ namespace wi::scene
 				};
 				size_t vertexHash = (((hashes[0] ^ (hashes[1] << 1) >> 1) ^ (hashes[2] << 1)) >> 1);
 
-				if (uniquePositions.count(vertexHash) == 0)
+				if (pinned || uniquePositions.count(vertexHash) == 0)
 				{
 					uniquePositions[vertexHash] = (uint32_t)physicsToGraphicsVertexMapping.size();
 					physicsToGraphicsVertexMapping.push_back((uint32_t)i);
 				}
 				graphicsToPhysicsVertexMapping[i] = uniquePositions[vertexHash];
 			}
-
-			weights.resize(physicsToGraphicsVertexMapping.size());
-			std::fill(weights.begin(), weights.end(), 1.0f);
 		}
 	}
 

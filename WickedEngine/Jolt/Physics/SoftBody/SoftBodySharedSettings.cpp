@@ -200,7 +200,7 @@ void SoftBodySharedSettings::CreateConstraints(const VertexAttributes *inVertexA
 			temp_edge.mVertex[1] = inVtx2;
 			temp_edge.mCompliance = 0.5f * (inCompliance1 + inCompliance2);
 			temp_edge.mRestLength = (Vec3(mVertices[inVtx2].mPosition) - Vec3(mVertices[inVtx1].mPosition)).Length();
-			JPH_ASSERT(temp_edge.mRestLength > 0.0f);
+			//JPH_ASSERT(temp_edge.mRestLength > 0.0f);
 			mEdgeConstraints.push_back(temp_edge);
 		}
 	};

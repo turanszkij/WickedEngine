@@ -258,6 +258,8 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 			wi::vector<wi::Color> colors;
 			wi::vector<XMUINT4> boneindices;
 			wi::vector<XMFLOAT4> boneweights;
+			wi::vector<XMUINT4> boneindices2;
+			wi::vector<XMFLOAT4> boneweights2;
 			wi::vector<MeshComponent::MorphTarget> morphs(meshcomponent.morph_targets.size());
 
 			for (uint32_t face_index : part.face_indices)
@@ -299,24 +301,29 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 
 						ufbx_skin_vertex skin_vertex = skin->vertices[vertex];
 						uint32_t num_weights = skin_vertex.num_weights;
-						num_weights = std::min(num_weights, 4u);
+						num_weights = std::min(num_weights, 8u);
 
-						float total_weight = 0;
+						if (num_weights > 4)
+						{
+							boneindices2.resize(boneindices.size());
+							boneweights2.resize(boneweights.size());
+						}
+
 						for (uint32_t i = 0; i < num_weights; ++i)
 						{
 							ufbx_skin_weight skin_weight = skin->weights[skin_vertex.weight_begin + i];
-							(&boneindices.back().x)[i] = skin_weight.cluster_index;
-							(&boneweights.back().x)[i] = skin_weight.weight;
-							total_weight += skin_weight.weight;
-						}
-
-						if (total_weight > 0)
-						{
-							for (uint32_t i = 0; i < num_weights; ++i)
+							if (i < 4)
 							{
-								(&boneweights.back().x)[i] /= total_weight;
+								(&boneindices.back().x)[i] = skin_weight.cluster_index;
+								(&boneweights.back().x)[i] = skin_weight.weight;
+							}
+							else
+							{
+								(&boneindices2.back().x)[i] = skin_weight.cluster_index;
+								(&boneweights2.back().x)[i] = skin_weight.weight;
 							}
 						}
+						// Note: normalization of bone weights will be done in MeshComponent::CreateRenderData()
 					}
 
 					for (const ufbx_blend_deformer* deformer : mesh->blend_deformers)
@@ -369,6 +376,18 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 			{
 				streams.push_back({ boneweights.data(), boneweights.size(), sizeof(boneweights[0]) });
 			}
+			assert(boneindices.size() == boneweights.size());
+			if (!boneindices2.empty())
+			{
+				boneindices2.resize(boneindices.size()); // ensure same size as first bone stream, we only resized so far on demand
+				streams.push_back({ boneindices2.data(), boneindices2.size(), sizeof(boneindices2[0]) });
+			}
+			if (!boneweights2.empty())
+			{
+				boneweights2.resize(boneweights.size()); // ensure same size as first bone stream, we only resized so far on demand
+				streams.push_back({ boneweights2.data(), boneweights2.size(), sizeof(boneweights2[0]) });
+			}
+			assert(boneindices2.size() == boneweights2.size());
 			for (MeshComponent::MorphTarget& morph : morphs)
 			{
 				streams.push_back({ morph.vertex_positions.data(), morph.vertex_positions.size(), sizeof(morph.vertex_positions[0]) });
@@ -421,6 +440,16 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 			{
 				boneweights.resize(num_vertices);
 				meshcomponent.vertex_boneweights.insert(meshcomponent.vertex_boneweights.end(), boneweights.begin(), boneweights.end());
+			}
+			if (!boneindices2.empty())
+			{
+				boneindices2.resize(num_vertices);
+				meshcomponent.vertex_boneindices2.insert(meshcomponent.vertex_boneindices2.end(), boneindices2.begin(), boneindices2.end());
+			}
+			if (!boneweights2.empty())
+			{
+				boneweights2.resize(num_vertices);
+				meshcomponent.vertex_boneweights2.insert(meshcomponent.vertex_boneweights2.end(), boneweights2.begin(), boneweights2.end());
 			}
 			for (size_t i = 0; i < morphs.size(); ++i)
 			{
