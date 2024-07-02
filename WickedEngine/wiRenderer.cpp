@@ -2854,7 +2854,7 @@ void RenderMeshes(
 			const PipelineState* pso = nullptr;
 			const PipelineState* pso_backside = nullptr; // only when separate backside rendering is required (transparent doublesided)
 			{
-				if (IsWireRender())
+				if (IsWireRender() && renderPass != RENDERPASS_ENVMAPCAPTURE)
 				{
 					switch (renderPass)
 					{
