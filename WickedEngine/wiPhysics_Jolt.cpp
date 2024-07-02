@@ -54,6 +54,14 @@ using namespace wi::scene;
 
 namespace wi::physics
 {
+	inline XMMATRIX GetOrientation(XMVECTOR P0, XMVECTOR P1, XMVECTOR P2)
+	{
+		XMVECTOR T = XMVector3Normalize(P2 - P1);
+		XMVECTOR B = XMVector3Normalize(P1 - P0);
+		XMVECTOR N = XMVector3Normalize(XMVector3Cross(T, B));
+		return XMMATRIX(T, B, N, XMVectorSetW(P0, 1));
+	}
+
 	namespace jolt
 	{
 		bool ENABLED = true;
@@ -258,8 +266,18 @@ namespace wi::physics
 			Entity entity = INVALID_ENTITY;
 
 			SoftBodySharedSettings shared_settings;
-			Array<Vec3> simulation_normals;
 			wi::vector<XMFLOAT4X4> inverseBindMatrices;
+			struct Neighbors
+			{
+				uint32_t left = 0;
+				uint32_t right = 0;
+				constexpr void set(uint32_t l, uint32_t r)
+				{
+					left = l;
+					right = r;
+				}
+			};
+			wi::vector<Neighbors> physicsNeighbors;
 
 			~SoftBody()
 			{
@@ -482,45 +500,7 @@ namespace wi::physics
 				return;
 			}
 
-			const XMMATRIX worldMatrix = XMLoadFloat4x4(&physicscomponent.worldMatrix);
-
-			physicsobject.shared_settings.mVertices.resize(vertexCount);
-			physicsobject.inverseBindMatrices.resize(vertexCount);
-			physicsobject.simulation_normals.resize(vertexCount);
-			physicscomponent.boneData.resize(vertexCount);
-			for (size_t i = 0; i < vertexCount; ++i)
-			{
-				uint32_t graphicsInd = physicscomponent.physicsToGraphicsVertexMapping[i];
-
-				XMFLOAT3 position = mesh.vertex_positions[graphicsInd];
-				XMVECTOR P = XMLoadFloat3(&position);
-				XMFLOAT3 normal = mesh.vertex_normals[graphicsInd];
-				XMVECTOR N = XMLoadFloat3(&normal);
-				N = XMVector3Normalize(N);
-
-				// The soft body node will have a bind matrix similar to an armature bone:
-				XMMATRIX B = wi::math::GetOrientation(P, N);
-				B = XMMatrixInverse(nullptr, B);
-				XMStoreFloat4x4(&physicsobject.inverseBindMatrices[i], B);
-
-				P = XMVector3Transform(P, worldMatrix);
-				XMStoreFloat3(&position, P);
-				physicsobject.shared_settings.mVertices[i].mPosition = Float3(position.x, position.y, position.z);
-
-				float weight = physicscomponent.weights[graphicsInd];
-				physicsobject.shared_settings.mVertices[i].mInvMass = weight == 0 ? 0 : 1.0f / weight;
-
-				// initial bone data, will be used before simulation ran on it:
-				N = XMVector3TransformNormal(N, worldMatrix);
-				N = XMVector3Normalize(N);
-				XMStoreFloat3(&normal, N);
-				physicsobject.simulation_normals[i] = cast(normal);
-				XMMATRIX W = wi::math::GetOrientation(P, N);
-				XMMATRIX M = B * W;
-				XMFLOAT4X4 boneData;
-				XMStoreFloat4x4(&boneData, M);
-				physicscomponent.boneData[i].Create(boneData);
-			}
+			physicsobject.physicsNeighbors.resize(vertexCount);
 
 			uint32_t first_subset = 0;
 			uint32_t last_subset = 0;
@@ -544,7 +524,38 @@ namespace wi::physics
 					face.mVertex[0] = physicsInd0;
 					face.mVertex[2] = physicsInd1;
 					face.mVertex[1] = physicsInd2;
+
+					physicsobject.physicsNeighbors[physicsInd0].set(physicsInd2, physicsInd1);
+					physicsobject.physicsNeighbors[physicsInd1].set(physicsInd0, physicsInd2);
+					physicsobject.physicsNeighbors[physicsInd2].set(physicsInd1, physicsInd0);
 				}
+			}
+
+			const XMMATRIX worldMatrix = XMLoadFloat4x4(&physicscomponent.worldMatrix);
+
+			physicsobject.shared_settings.mVertices.resize(vertexCount);
+			physicsobject.inverseBindMatrices.resize(vertexCount);
+			physicscomponent.boneData.resize(vertexCount);
+			for (size_t i = 0; i < vertexCount; ++i)
+			{
+				uint32_t graphicsInd = physicscomponent.physicsToGraphicsVertexMapping[i];
+
+				XMFLOAT3 position = mesh.vertex_positions[graphicsInd];
+				XMVECTOR P = XMLoadFloat3(&position);
+				P = XMVector3Transform(P, worldMatrix);
+				XMStoreFloat3(&position, P);
+				physicsobject.shared_settings.mVertices[i].mPosition = Float3(position.x, position.y, position.z);
+
+				float weight = physicscomponent.weights[graphicsInd];
+				physicsobject.shared_settings.mVertices[i].mInvMass = weight == 0 ? 0 : 1.0f / weight;
+
+				// The soft body node will have a bind matrix similar to an armature bone:
+				XMVECTOR P0 = XMLoadFloat3(&mesh.vertex_positions[graphicsInd]);
+				XMVECTOR P1 = XMLoadFloat3(&mesh.vertex_positions[physicscomponent.physicsToGraphicsVertexMapping[physicsobject.physicsNeighbors[i].left]]);
+				XMVECTOR P2 = XMLoadFloat3(&mesh.vertex_positions[physicscomponent.physicsToGraphicsVertexMapping[physicsobject.physicsNeighbors[i].right]]);
+				XMMATRIX B = GetOrientation(P0, P1, P2);
+				B = XMMatrixInverse(nullptr, B);
+				XMStoreFloat4x4(&physicsobject.inverseBindMatrices[i], B);
 			}
 
 			SoftBodySharedSettings::VertexAttributes vertexAttributes = { 1.0e-5f, 1.0e-5f, 1.0e-5f };
@@ -615,12 +626,16 @@ namespace wi::physics
 				constexpr XMFLOAT4 get_weights() const
 				{
 					XMFLOAT4 weights = XMFLOAT4(0, 0, 0, 0);
-					weights.x = bones[0].index < 0 ? 0 : (bones[0].distance == 0 ? 1 : saturate(1.0f / bones[0].distance));
-					if (weights.x < 1)
+					if (bones[0].distance == 0)
 					{
-						weights.y = bones[1].index < 0 ? 0 : (bones[1].distance == 0 ? 1 : saturate(1.0f / bones[1].distance));
-						weights.z = bones[2].index < 0 ? 0 : (bones[2].distance == 0 ? 1 : saturate(1.0f / bones[2].distance));
-						weights.w = bones[3].index < 0 ? 0 : (bones[3].distance == 0 ? 1 : saturate(1.0f / bones[3].distance));
+						weights = XMFLOAT4(1, 0, 0, 0);
+					}
+					else
+					{
+						weights.x = bones[0].index < 0 ? 0 : (bones[0].distance == 0 ? 1 : (1.0f / bones[0].distance));
+						weights.y = bones[1].index < 0 ? 0 : (bones[1].distance == 0 ? 1 : (1.0f / bones[1].distance));
+						weights.z = bones[2].index < 0 ? 0 : (bones[2].distance == 0 ? 1 : (1.0f / bones[2].distance));
+						weights.w = bones[3].index < 0 ? 0 : (bones[3].distance == 0 ? 1 : (1.0f / bones[3].distance));
 					}
 					const float sum = weights.x + weights.y + weights.z + weights.w;
 					if (sum > 0)
@@ -1642,33 +1657,17 @@ namespace wi::physics
 
 			const SoftBodyMotionProperties* motion = (const SoftBodyMotionProperties*)body.GetMotionProperties();
 			const Array<SoftBodyMotionProperties::Vertex>& soft_vertices = motion->GetVertices();
-			const Array<SoftBodySharedSettings::Face>& soft_faces = motion->GetFaces();
 
-			// Recompute normals:
-			for (auto& n : physicsobject.simulation_normals)
-			{
-				n = Vec3::sZero();
-			}
-			for (auto& f : soft_faces)
-			{
-				Vec3 x1 = soft_vertices[f.mVertex[0]].mPosition;
-				Vec3 x2 = soft_vertices[f.mVertex[1]].mPosition;
-				Vec3 x3 = soft_vertices[f.mVertex[2]].mPosition;
-				Vec3 x21 = x2 - x1;
-				Vec3 x31 = x3 - x1;
-				Vec3 n = x21.Cross(x31);
-				physicsobject.simulation_normals[f.mVertex[0]] += n;
-				physicsobject.simulation_normals[f.mVertex[1]] += n;
-				physicsobject.simulation_normals[f.mVertex[2]] += n;
-			}
 			// Update bone matrices from physics vertices:
 			for (size_t i = 0; i < soft_vertices.size(); ++i)
 			{
-				XMFLOAT3 physicsPos = cast(soft_vertices[i].mPosition);
-				XMFLOAT3 physicsNor = cast(physicsobject.simulation_normals[i].Normalized());
-				XMVECTOR P = XMLoadFloat3(&physicsPos);
-				XMVECTOR N = XMLoadFloat3(&physicsNor);
-				XMMATRIX W = wi::math::GetOrientation(P, N);
+				XMFLOAT3 p0 = cast(soft_vertices[i].mPosition);
+				XMFLOAT3 p1 = cast(soft_vertices[physicsobject.physicsNeighbors[i].left].mPosition);
+				XMFLOAT3 p2 = cast(soft_vertices[physicsobject.physicsNeighbors[i].right].mPosition);
+				XMVECTOR P0 = XMLoadFloat3(&p0);
+				XMVECTOR P1 = XMLoadFloat3(&p1);
+				XMVECTOR P2 = XMLoadFloat3(&p2);
+				XMMATRIX W = GetOrientation(P0, P1, P2);
 				XMMATRIX B = XMLoadFloat4x4(&physicsobject.inverseBindMatrices[i]);
 				XMMATRIX M = B * W;
 				XMFLOAT4X4 boneData;
@@ -1678,17 +1677,18 @@ namespace wi::physics
 #if 0
 				scene.locker.lock();
 				wi::renderer::RenderableLine line;
-				line.start = line.end = physicsPos;
-				line.end.x += physicsNor.x * 0.1f;
-				line.end.y += physicsNor.y * 0.1f;
-				line.end.z += physicsNor.z * 0.1f;
+				line.start = p0;
+				line.end = p1;
 				line.color_start = line.color_end = XMFLOAT4(1, 0, 0, 1);
+				wi::renderer::DrawLine(line, false);
+				line.end = p2;
+				line.color_start = line.color_end = XMFLOAT4(0, 1, 0, 1);
 				wi::renderer::DrawLine(line, false);
 				scene.locker.unlock();
 #endif
 
-				physicscomponent.aabb._min = wi::math::Min(physicscomponent.aabb._min, physicsPos);
-				physicscomponent.aabb._max = wi::math::Max(physicscomponent.aabb._max, physicsPos);
+				physicscomponent.aabb._min = wi::math::Min(physicscomponent.aabb._min, p0);
+				physicscomponent.aabb._max = wi::math::Max(physicscomponent.aabb._max, p0);
 			}
 
 			scene.skinningAllocator.fetch_add(uint32_t(physicscomponent.boneData.size() * sizeof(ShaderTransform)));
