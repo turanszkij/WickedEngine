@@ -298,8 +298,21 @@ void HairParticleWindow::UpdateData()
 	for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
 	{
 		Entity entity = scene.meshes.GetEntity(i);
-		const NameComponent& name = *scene.names.GetComponent(entity);
-		meshComboBox.AddItem(name.name);
+		const NameComponent* name = scene.names.GetComponent(entity);
+		std::string name_string;
+		if (name == nullptr)
+		{
+			name_string = "[no_name] " + std::to_string(entity);
+		}
+		else if (name->name.empty())
+		{
+			name_string = "[name_empty] " + std::to_string(entity);
+		}
+		else
+		{
+			name_string = name->name;
+		}
+		meshComboBox.AddItem(name_string);
 
 		if (hair->meshID == entity)
 		{
