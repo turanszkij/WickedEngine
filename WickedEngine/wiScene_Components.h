@@ -987,7 +987,7 @@ namespace wi::scene
 		wi::primitive::AABB aabb;
 
 		inline void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
-		inline void SetWindEnabled(bool value) { if (value) { _flags |= WIND; } else { _flags &= ~DISABLE_DEACTIVATION; } }
+		inline void SetWindEnabled(bool value) { if (value) { _flags |= WIND; } else { _flags &= ~WIND; } }
 
 		inline bool IsDisableDeactivation() const { return _flags & DISABLE_DEACTIVATION; }
 		inline bool IsWindEnabled() const { return _flags & WIND; }
