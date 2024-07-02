@@ -56,9 +56,11 @@ namespace wi::physics
 {
 	inline XMMATRIX GetOrientation(XMVECTOR P0, XMVECTOR P1, XMVECTOR P2)
 	{
-		XMVECTOR T = XMVector3Normalize(P2 - P1);
-		XMVECTOR B = XMVector3Normalize(P1 - P0);
-		XMVECTOR N = XMVector3Normalize(XMVector3Cross(T, B));
+		XMVECTOR T = P2 - P1;
+		XMVECTOR B = P1 - P0;
+		XMVECTOR N = XMVector3Normalize(XMVector3Cross(B, T));
+		T = XMVector3Normalize(XMVector3Cross(N, B));
+		B = XMVector3Normalize(XMVector3Cross(N, T));
 		return XMMATRIX(T, B, N, XMVectorSetW(P0, 1));
 	}
 
@@ -1676,14 +1678,7 @@ namespace wi::physics
 
 #if 0
 				scene.locker.lock();
-				wi::renderer::RenderableLine line;
-				line.start = p0;
-				line.end = p1;
-				line.color_start = line.color_end = XMFLOAT4(1, 0, 0, 1);
-				wi::renderer::DrawLine(line, false);
-				line.end = p2;
-				line.color_start = line.color_end = XMFLOAT4(0, 1, 0, 1);
-				wi::renderer::DrawLine(line, false);
+				wi::renderer::DrawAxis(W, 0.05f, false);
 				scene.locker.unlock();
 #endif
 

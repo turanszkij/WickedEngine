@@ -17258,6 +17258,34 @@ void DrawLine(const RenderableLine2D& line)
 {
 	renderableLines2D.push_back(line);
 }
+void DrawAxis(const XMMATRIX& matrix, float size, bool depth)
+{
+	RenderableLine line;
+
+	// X
+	line.start = XMFLOAT3(0, 0, 0);
+	line.end = XMFLOAT3(size, 0, 0);
+	line.color_start = line.color_end = XMFLOAT4(1, 0.2f, 0.2f, 1);
+	XMStoreFloat3(&line.start, XMVector3Transform(XMLoadFloat3(&line.start), matrix));
+	XMStoreFloat3(&line.end, XMVector3Transform(XMLoadFloat3(&line.end), matrix));
+	DrawLine(line, depth);
+
+	// Y
+	line.start = XMFLOAT3(0, 0, 0);
+	line.end = XMFLOAT3(0, size, 0);
+	line.color_start = line.color_end = XMFLOAT4(0.2f, 1, 0.2f, 1);
+	XMStoreFloat3(&line.start, XMVector3Transform(XMLoadFloat3(&line.start), matrix));
+	XMStoreFloat3(&line.end, XMVector3Transform(XMLoadFloat3(&line.end), matrix));
+	DrawLine(line, depth);
+
+	// Z
+	line.start = XMFLOAT3(0, 0, 0);
+	line.end = XMFLOAT3(0, 0, size);
+	line.color_start = line.color_end = XMFLOAT4(0.2f, 0.2f, 1, 1);
+	XMStoreFloat3(&line.start, XMVector3Transform(XMLoadFloat3(&line.start), matrix));
+	XMStoreFloat3(&line.end, XMVector3Transform(XMLoadFloat3(&line.end), matrix));
+	DrawLine(line, depth);
+}
 void DrawPoint(const RenderablePoint& point, bool depth)
 {
 	if(depth)
