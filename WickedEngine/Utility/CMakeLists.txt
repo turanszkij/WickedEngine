@@ -136,7 +136,6 @@ add_library(Utility STATIC
 		${HEADER_FILES_spirv}
 		${HEADER_FILES_vulkan}
 		${HEADER_FILES_zstd}
-		meshoptimizer
 		)
 
 set_target_properties("Utility" PROPERTIES
