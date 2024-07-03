@@ -123,14 +123,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 			{
 				min16float weisum = 0;
 			
-				for (min16uint i = 0; ((i < 4) && (weisum < 1.0f)); ++i)
+				for (min16uint i = 0; ((i < 4) && (weisum < 1.0)); ++i)
 				{
 					float4x4 m = skinningbuffer.Load<ShaderTransform>(push.bone_offset + ind[i] * sizeof(ShaderTransform)).GetMatrix();
 					min16float weight = wei[i];
 
 					p += mul(m, float4(pos.xyz, 1)) * weight;
-					n += min16float3(mul((min16float3x3)m, nor.xyz) * weight);
-					t += min16float3(mul((min16float3x3)m, tan.xyz) * weight);
+					n += min16float3(mul((min16float3x3)m, nor.xyz)) * weight;
+					t += min16float3(mul((min16float3x3)m, tan.xyz)) * weight;
 					weisum += weight;
 				}
 			}

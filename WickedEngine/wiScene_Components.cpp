@@ -2040,14 +2040,13 @@ namespace wi::scene
 				const bool pinned = weights[i] == 0;
 				const XMFLOAT3& position = mesh.vertex_positions[i];
 
-				size_t hashes[] = {
-					std::hash<int>{}(int(position.x * detail)),
-					std::hash<int>{}(int(position.y * detail)),
-					std::hash<int>{}(int(position.z * detail)),
-				};
-				size_t vertexHash = (((hashes[0] ^ (hashes[1] << 1) >> 1) ^ (hashes[2] << 1)) >> 1);
+				size_t vertexHash = 0;
+				wi::helper::hash_combine(vertexHash, int(position.x * detail));
+				wi::helper::hash_combine(vertexHash, int(position.y * detail));
+				wi::helper::hash_combine(vertexHash, int(position.z * detail));
+				wi::helper::hash_combine(vertexHash, pinned);
 
-				if (pinned || uniquePositions.count(vertexHash) == 0)
+				if (uniquePositions.count(vertexHash) == 0)
 				{
 					uniquePositions[vertexHash] = (uint32_t)physicsToGraphicsVertexMapping.size();
 					physicsToGraphicsVertexMapping.push_back((uint32_t)i);

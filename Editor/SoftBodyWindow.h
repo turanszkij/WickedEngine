@@ -11,6 +11,7 @@ public:
 	void SetEntity(wi::ecs::Entity entity);
 
 	wi::gui::Label infoLabel;
+	wi::gui::Button resetButton;
 	wi::gui::Slider detailSlider;
 	wi::gui::Slider massSlider;
 	wi::gui::Slider frictionSlider;

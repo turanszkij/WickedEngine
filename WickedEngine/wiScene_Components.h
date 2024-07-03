@@ -967,7 +967,7 @@ namespace wi::scene
 			EMPTY = 0,
 			SAFE_TO_REGISTER = 1 << 0,
 			DISABLE_DEACTIVATION = 1 << 1,
-			FORCE_RESET = 1 << 2,
+			_DEPRECATED_FORCE_RESET = 1 << 2,
 			WIND = 1 << 3,
 		};
 		uint32_t _flags = DISABLE_DEACTIVATION;
@@ -995,12 +995,17 @@ namespace wi::scene
 		inline bool IsDisableDeactivation() const { return _flags & DISABLE_DEACTIVATION; }
 		inline bool IsWindEnabled() const { return _flags & WIND; }
 
-		void SetDetail(float value)
+		void Reset()
 		{
-			detail = value;
 			physicsToGraphicsVertexMapping.clear();
 			physicsToGraphicsVertexMapping.shrink_to_fit();
 			physicsobject = {};
+		}
+
+		void SetDetail(float value)
+		{
+			detail = value;
+			Reset();
 		}
 
 		// Create physics represenation of graphics mesh

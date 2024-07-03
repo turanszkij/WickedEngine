@@ -516,17 +516,30 @@ namespace wi::physics
 					const uint32_t physicsInd0 = physicscomponent.graphicsToPhysicsVertexMapping[graphicsInd0];
 					const uint32_t physicsInd1 = physicscomponent.graphicsToPhysicsVertexMapping[graphicsInd1];
 					const uint32_t physicsInd2 = physicscomponent.graphicsToPhysicsVertexMapping[graphicsInd2];
-					if (physicsInd0 == physicsInd1 || physicsInd1 == physicsInd2 || physicsInd2 == physicsInd0)
-						continue;
 
+					// Skip faces that are a single point:
+					//	Note: we don't skip zero-area, because zero area can still be a valid line connection
+					if (physicsInd0 == physicsInd1 && physicsInd1 == physicsInd2 && physicsInd2 == physicsInd0)
+						continue;
 					SoftBodySharedSettings::Face& face = physicsobject.shared_settings.mFaces.emplace_back();
 					face.mVertex[0] = physicsInd0;
 					face.mVertex[2] = physicsInd1;
 					face.mVertex[1] = physicsInd2;
 
-					physicsobject.physicsNeighbors[physicsInd0].set(physicsInd2, physicsInd1);
-					physicsobject.physicsNeighbors[physicsInd1].set(physicsInd0, physicsInd2);
-					physicsobject.physicsNeighbors[physicsInd2].set(physicsInd1, physicsInd0);
+					// Don't allow zero area physics face to be a bone binding:
+					//	Note: zero area triangle would produce incorrect matrix in GetOrientation()
+					const uint32_t physicsToGraphicsInd0 = physicscomponent.physicsToGraphicsVertexMapping[physicsInd0];
+					const uint32_t physicsToGraphicsInd1 = physicscomponent.physicsToGraphicsVertexMapping[physicsInd1];
+					const uint32_t physicsToGraphicsInd2 = physicscomponent.physicsToGraphicsVertexMapping[physicsInd2];
+					const XMVECTOR P0 = XMLoadFloat3(&mesh.vertex_positions[physicsToGraphicsInd0]);
+					const XMVECTOR P1 = XMLoadFloat3(&mesh.vertex_positions[physicsToGraphicsInd1]);
+					const XMVECTOR P2 = XMLoadFloat3(&mesh.vertex_positions[physicsToGraphicsInd2]);
+					if (wi::math::TriangleArea(P0, P1, P2) > 0)
+					{
+						physicsobject.physicsNeighbors[physicsInd0].set(physicsInd2, physicsInd1);
+						physicsobject.physicsNeighbors[physicsInd1].set(physicsInd0, physicsInd2);
+						physicsobject.physicsNeighbors[physicsInd2].set(physicsInd1, physicsInd0);
+					}
 				}
 			}
 
@@ -580,7 +593,7 @@ namespace wi::physics
 				return;
 			}
 
-			// BoneQueue is used for assigning the highest weighted 4 bones (soft body nodes) to a graphics vertex
+			// BoneQueue is used for assigning the highest weighted fixed number of bones (soft body nodes) to a graphics vertex
 			static constexpr int influence = 8;
 			struct BoneQueue
 			{
@@ -1396,11 +1409,6 @@ namespace wi::physics
 			const ArmatureComponent* armature = mesh->IsSkinned() ? scene.armatures.GetComponent(mesh->armatureID) : nullptr;
 			mesh->SetDynamic(true);
 
-			if (physicscomponent._flags & SoftBodyPhysicsComponent::FORCE_RESET)
-			{
-				physicscomponent._flags &= ~SoftBodyPhysicsComponent::FORCE_RESET;
-				physicscomponent.physicsobject = nullptr;
-			}
 			if (physicscomponent._flags & SoftBodyPhysicsComponent::SAFE_TO_REGISTER && physicscomponent.physicsobject == nullptr)
 			{
 				AddSoftBody(scene, entity, physicscomponent, *mesh);

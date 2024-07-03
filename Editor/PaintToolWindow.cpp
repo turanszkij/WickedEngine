@@ -1185,7 +1185,7 @@ void PaintToolWindow::Update(float dt)
 						{
 							RecordHistory(object.meshID);
 							softbody->weights[j] = (mode == MODE_SOFTBODY_PINNING ? 0.0f : 1.0f);
-							softbody->_flags |= SoftBodyPhysicsComponent::FORCE_RESET;
+							softbody->Reset();
 						}
 					}
 				}
@@ -1799,8 +1799,7 @@ void PaintToolWindow::ConsumeHistoryOperation(wi::Archive& archive, bool undo)
 			archive >> archive_softbody.weights;
 
 			softbody->weights = archive_softbody.weights;
-
-			softbody->_flags |= SoftBodyPhysicsComponent::FORCE_RESET;
+			softbody->Reset();
 		}
 		break;
 		case PaintToolWindow::MODE_HAIRPARTICLE_ADD_TRIANGLE:

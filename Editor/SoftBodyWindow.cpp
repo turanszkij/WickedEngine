@@ -8,7 +8,7 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_SOFTBODY " Soft Body Physics", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(580, 280));
+	SetSize(XMFLOAT2(580, 300));
 
 	closeButton.SetTooltip("Delete SoftBodyPhysicsComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -34,6 +34,32 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 	infoLabel.SetText("Soft body physics must be used together with a MeshComponent, otherwise it will have no effect.\nYou can use the Paint Tool to pin or soften soft body vertices.");
 	infoLabel.SetSize(XMFLOAT2(100, 90));
 	AddWidget(&infoLabel);
+
+	resetButton.Create("Reset");
+	resetButton.SetTooltip("Set the detail to keep between simulation and graphics mesh.\nLower = less detailed, higher = more detailed.");
+	resetButton.SetSize(XMFLOAT2(wid, hei));
+	resetButton.SetPos(XMFLOAT2(x, y));
+	resetButton.OnClick([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(x.entity);
+			if (physicscomponent == nullptr)
+			{
+				// Try also getting it through object's mesh:
+				ObjectComponent* object = scene.objects.GetComponent(x.entity);
+				if (object != nullptr)
+				{
+					physicscomponent = scene.softbodies.GetComponent(object->meshID);
+				}
+			}
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->Reset();
+			}
+		}
+	});
+	AddWidget(&resetButton);
 
 	detailSlider.Create(4, 100, 1, 90, "Detail: ");
 	detailSlider.SetTooltip("Set the detail to keep between simulation and graphics mesh.\nLower = less detailed, higher = more detailed.");
@@ -285,6 +311,7 @@ void SoftBodyWindow::ResizeLayout()
 	};
 
 	add_fullwidth(infoLabel);
+	add_fullwidth(resetButton);
 	add(detailSlider);
 	add(massSlider);
 	add(frictionSlider);

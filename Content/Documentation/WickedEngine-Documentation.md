@@ -1227,9 +1227,6 @@ The [ObjectComponent](#objectcomponent)'s transform matrix is used as a manipula
 
 The pinned vertices can also be manipulated via <b>skinning animation</b>. If the soft body mesh is skinned and an animation is playing, then the pinned vertices will follow the animation.
 
-<b>Deactivation</b> happens after a while for soft bodies that participated in the simulation for a while, this means after that they will no longer participate in the simulation. This behaviour can be disabled with the `SoftBodyPhysicsComponent::DISABLE_DEACTIVATION` flag.
-
-<b>Resetting</b> a soft body can be accomplished by setting the `SoftBodyPhysicsComponent::FORCE_RESET` flag. This means that the next physics update will reset the soft body mesh to the initial pose.
 
 
 
