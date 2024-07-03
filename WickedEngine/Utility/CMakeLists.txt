@@ -4,7 +4,7 @@ if (PLATFORM MATCHES "SDL2")
 endif()
 
 add_subdirectory(meshoptimizer)
-target_link_libraries(WickedEngineEditor PUBLIC
+target_link_libraries(${TARGET_NAME} PUBLIC
 	meshoptimizer
 )
 
