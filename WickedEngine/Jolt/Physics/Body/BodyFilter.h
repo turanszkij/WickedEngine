@@ -76,7 +76,7 @@ public:
 	/// Filter function. Returns true if we should collide with inBodyID
 	virtual bool			ShouldCollide(const BodyID &inBodyID) const override
 	{
-		return std::find(mBodyIDs.begin(), mBodyIDs.end(), inBodyID) == mBodyIDs.end();
+		return find(mBodyIDs.begin(), mBodyIDs.end(), inBodyID) == mBodyIDs.end();
 	}
 
 private:

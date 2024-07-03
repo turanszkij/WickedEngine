@@ -46,7 +46,7 @@ public:
 	virtual uint					GetSubShapeIDBitsRecursive() const override					{ return 0; } // Convex shapes don't have sub shapes
 
 	// See Shape::GetMaterial
-	virtual const PhysicsMaterial *	GetMaterial([[maybe_unused]] const SubShapeID &inSubShapeID) const override	{ JPH_ASSERT(inSubShapeID.IsEmpty(), "Invalid subshape ID"); return GetMaterial(); }
+	virtual const PhysicsMaterial *	GetMaterial(const SubShapeID &inSubShapeID) const override	{ JPH_ASSERT(inSubShapeID.IsEmpty(), "Invalid subshape ID"); return GetMaterial(); }
 
 	// See Shape::CastRay
 	virtual bool					CastRay(const RayCast &inRay, const SubShapeIDCreator &inSubShapeIDCreator, RayCastResult &ioHit) const override;
@@ -132,7 +132,7 @@ protected:
 	virtual void					RestoreBinaryState(StreamIn &inStream) override;
 
 	/// Vertex list that forms a unit sphere
-	static const StaticArray<Vec3, 384> sUnitSphereTriangles;
+	static const std::vector<Vec3>	sUnitSphereTriangles;
 
 private:
 	// Class for GetTrianglesStart/Next

@@ -162,12 +162,10 @@ public:
 	/// Cast inObject of this type to object of type inRTTI, returns nullptr if the cast is unsuccessful
 	const void *				CastTo(const void *inObject, const RTTI *inRTTI) const;
 
-#ifdef JPH_OBJECT_STREAM
 	/// Attribute access
 	void						AddAttribute(const SerializableAttribute &inAttribute);
 	int							GetAttributeCount() const;
 	const SerializableAttribute & GetAttribute(int inIdx) const;
-#endif // JPH_OBJECT_STREAM
 
 protected:
 	/// Base class information
@@ -182,9 +180,7 @@ protected:
 	StaticArray<BaseClass, 4>	mBaseClasses;												///< Names of base classes
 	pCreateObjectFunction		mCreate;													///< Pointer to a function that will create a new instance of this class
 	pDestructObjectFunction		mDestruct;													///< Pointer to a function that will destruct an object of this class
-#ifdef JPH_OBJECT_STREAM
 	StaticArray<SerializableAttribute, 32> mAttributes;										///< All attributes of this class
-#endif // JPH_OBJECT_STREAM
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -384,27 +380,31 @@ inline bool IsKindOf(const Ref<Type> &inObject, const RTTI *inRTTI)
 }
 
 /// Cast inObject to DstType, asserts on failure
-template <class DstType, class SrcType, std::enable_if_t<std::is_base_of_v<DstType, SrcType> || std::is_base_of_v<SrcType, DstType>, bool> = true>
+template <class DstType, class SrcType>
 inline const DstType *StaticCast(const SrcType *inObject)
 {
+	JPH_ASSERT(IsKindOf(inObject, JPH_RTTI(DstType)), "Invalid cast");
 	return static_cast<const DstType *>(inObject);
 }
 
-template <class DstType, class SrcType, std::enable_if_t<std::is_base_of_v<DstType, SrcType> || std::is_base_of_v<SrcType, DstType>, bool> = true>
+template <class DstType, class SrcType>
 inline DstType *StaticCast(SrcType *inObject)
 {
+	JPH_ASSERT(IsKindOf(inObject, JPH_RTTI(DstType)), "Invalid cast");
 	return static_cast<DstType *>(inObject);
 }
 
-template <class DstType, class SrcType, std::enable_if_t<std::is_base_of_v<DstType, SrcType> || std::is_base_of_v<SrcType, DstType>, bool> = true>
-inline const DstType *StaticCast(const RefConst<SrcType> &inObject)
+template <class DstType, class SrcType>
+inline RefConst<DstType> StaticCast(RefConst<SrcType> &inObject)
 {
+	JPH_ASSERT(IsKindOf(inObject, JPH_RTTI(DstType)), "Invalid cast");
 	return static_cast<const DstType *>(inObject.GetPtr());
 }
 
-template <class DstType, class SrcType, std::enable_if_t<std::is_base_of_v<DstType, SrcType> || std::is_base_of_v<SrcType, DstType>, bool> = true>
-inline DstType *StaticCast(const Ref<SrcType> &inObject)
+template <class DstType, class SrcType>
+inline Ref<DstType> StaticCast(Ref<SrcType> &inObject)
 {
+	JPH_ASSERT(IsKindOf(inObject, JPH_RTTI(DstType)), "Invalid cast");
 	return static_cast<DstType *>(inObject.GetPtr());
 }
 
@@ -422,13 +422,13 @@ inline DstType *DynamicCast(SrcType *inObject)
 }
 
 template <class DstType, class SrcType>
-inline const DstType *DynamicCast(const RefConst<SrcType> &inObject)
+inline RefConst<DstType> DynamicCast(RefConst<SrcType> &inObject)
 {
 	return inObject != nullptr? reinterpret_cast<const DstType *>(inObject->CastTo(JPH_RTTI(DstType))) : nullptr;
 }
 
 template <class DstType, class SrcType>
-inline DstType *DynamicCast(const Ref<SrcType> &inObject)
+inline Ref<DstType> DynamicCast(Ref<SrcType> &inObject)
 {
 	return inObject != nullptr? const_cast<DstType *>(reinterpret_cast<const DstType *>(inObject->CastTo(JPH_RTTI(DstType)))) : nullptr;
 }

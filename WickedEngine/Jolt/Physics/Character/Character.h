@@ -5,7 +5,6 @@
 #pragma once
 
 #include <Jolt/Physics/Character/CharacterBase.h>
-#include <Jolt/Physics/Collision/ObjectLayer.h>
 #include <Jolt/Physics/EActivation.h>
 
 JPH_NAMESPACE_BEGIN

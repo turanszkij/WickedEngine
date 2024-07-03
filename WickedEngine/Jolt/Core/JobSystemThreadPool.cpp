@@ -318,9 +318,6 @@ void JobSystemThreadPool::ThreadMain(int inThreadIndex)
 
 	JPH_PROFILE_THREAD_START(name);
 
-	// Call the thread init function
-	mThreadInitFunction(inThreadIndex);
-
 	atomic<uint> &head = mHeads[inThreadIndex];
 
 	while (!mQuit)
@@ -350,9 +347,6 @@ void JobSystemThreadPool::ThreadMain(int inThreadIndex)
 			}
 		}
 	}
-
-	// Call the thread exit function
-	mThreadExitFunction(inThreadIndex);
 
 	JPH_PROFILE_THREAD_END();
 }

@@ -4,8 +4,8 @@
 
 #include <Jolt/Jolt.h>
 
-#include <Jolt/Physics/Ragdoll/Ragdoll.h>
 #include <Jolt/Physics/Constraints/SwingTwistConstraint.h>
+#include <Jolt/Physics/Ragdoll/Ragdoll.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/Physics/Body/BodyLockMulti.h>
 #include <Jolt/Physics/Collision/GroupFilterTable.h>
@@ -341,7 +341,7 @@ RagdollSettings::RagdollResult RagdollSettings::sRestoreFromBinaryState(StreamIn
 				result.SetError(constraint_result.GetError());
 				return result;
 			}
-			p.mToParent = DynamicCast<TwoBodyConstraintSettings>(constraint_result.Get());
+			p.mToParent = DynamicCast<TwoBodyConstraintSettings>(constraint_result.Get().GetPtr());
 		}
 	}
 
@@ -361,7 +361,7 @@ RagdollSettings::RagdollResult RagdollSettings::sRestoreFromBinaryState(StreamIn
 			result.SetError(constraint_result.GetError());
 			return result;
 		}
-		c.mConstraint = DynamicCast<TwoBodyConstraintSettings>(constraint_result.Get());
+		c.mConstraint = DynamicCast<TwoBodyConstraintSettings>(constraint_result.Get().GetPtr());
 	}
 
 	// Create mapping tables
@@ -622,21 +622,15 @@ void Ragdoll::DriveToPoseUsingMotors(const SkeletonPose &inPose)
 		int constraint_idx = mRagdollSettings->GetConstraintIndexForBodyIndex(i);
 		if (constraint_idx >= 0)
 		{
+			SwingTwistConstraint *constraint = (SwingTwistConstraint *)mConstraints[constraint_idx].GetPtr();
+
 			// Get desired rotation of this body relative to its parent
-			const SkeletalAnimation::JointState &joint_state = inPose.GetJoint(i);
+			Quat joint_transform = inPose.GetJoint(i).mRotation;
 
 			// Drive constraint to target
-			TwoBodyConstraint *constraint = mConstraints[constraint_idx];
-			EConstraintSubType sub_type = constraint->GetSubType();
-			if (sub_type == EConstraintSubType::SwingTwist)
-			{
-				SwingTwistConstraint *st_constraint = static_cast<SwingTwistConstraint *>(constraint);
-				st_constraint->SetSwingMotorState(EMotorState::Position);
-				st_constraint->SetTwistMotorState(EMotorState::Position);
-				st_constraint->SetTargetOrientationBS(joint_state.mRotation);
-			}
-			else
-				JPH_ASSERT(false, "Constraint type not implemented!");
+			constraint->SetSwingMotorState(EMotorState::Position);
+			constraint->SetTwistMotorState(EMotorState::Position);
+			constraint->SetTargetOrientationBS(joint_transform);
 		}
 	}
 }

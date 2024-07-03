@@ -152,7 +152,7 @@ public:
 		{
 			// Destruct triangle
 			inT->~Triangle();
-#ifdef JPH_DEBUG
+#ifdef _DEBUG
 			memset(inT, 0xcd, sizeof(Triangle));
 #endif
 

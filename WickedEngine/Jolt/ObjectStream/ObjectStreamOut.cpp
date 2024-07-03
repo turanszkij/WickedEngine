@@ -9,8 +9,6 @@
 #include <Jolt/ObjectStream/ObjectStreamBinaryOut.h>
 #include <Jolt/ObjectStream/TypeDeclarations.h>
 
-#ifdef JPH_OBJECT_STREAM
-
 JPH_NAMESPACE_BEGIN
 
 ObjectStreamOut::ObjectStreamOut(ostream &inStream) :
@@ -164,5 +162,3 @@ void ObjectStreamOut::WritePointerData(const RTTI *inRTTI, const void *inPointer
 }
 
 JPH_NAMESPACE_END
-
-#endif // JPH_OBJECT_STREAM

@@ -6,8 +6,6 @@
 
 #include <Jolt/ObjectStream/ObjectStreamIn.h>
 
-#ifdef JPH_OBJECT_STREAM
-
 JPH_NAMESPACE_BEGIN
 
 /// Implementation of ObjectStream text input stream.
@@ -49,5 +47,3 @@ private:
 };
 
 JPH_NAMESPACE_END
-
-#endif // JPH_OBJECT_STREAM

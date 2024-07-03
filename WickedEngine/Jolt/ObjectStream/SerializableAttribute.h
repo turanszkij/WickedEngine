@@ -4,8 +4,6 @@
 
 #pragma once
 
-#ifdef JPH_OBJECT_STREAM
-
 JPH_NAMESPACE_BEGIN
 
 class RTTI;
@@ -107,5 +105,3 @@ private:
 };
 
 JPH_NAMESPACE_END
-
-#endif // JPH_OBJECT_STREAM

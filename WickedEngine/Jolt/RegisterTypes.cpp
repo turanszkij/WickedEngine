@@ -93,12 +93,11 @@ void RegisterTypesInternal(uint64 inVersionID)
 		check_bit(8, "JPH_DISABLE_CUSTOM_ALLOCATOR");
 		check_bit(9, "JPH_OBJECT_LAYER_BITS");
 		check_bit(10, "JPH_ENABLE_ASSERTS");
-		check_bit(11, "JPH_OBJECT_STREAM");
 		std::abort();
 	}
 
 #ifndef JPH_DISABLE_CUSTOM_ALLOCATOR
-	JPH_ASSERT(Allocate != nullptr && Reallocate != nullptr && Free != nullptr && AlignedAllocate != nullptr && AlignedFree != nullptr, "Need to supply an allocator first or call RegisterDefaultAllocator()");
+	JPH_ASSERT(Allocate != nullptr && Free != nullptr && AlignedAllocate != nullptr && AlignedFree != nullptr, "Need to supply an allocator first or call RegisterDefaultAllocator()");
 #endif // !JPH_DISABLE_CUSTOM_ALLOCATOR
 
 	JPH_ASSERT(Factory::sInstance != nullptr, "Need to create a factory first!");

@@ -150,10 +150,6 @@ public:
 	float								GetPenetrationRecoverySpeed() const						{ return mPenetrationRecoverySpeed; }
 	void								SetPenetrationRecoverySpeed(float inSpeed)				{ mPenetrationRecoverySpeed = inSpeed; }
 
-	/// Set to indicate that extra effort should be made to try to remove ghost contacts (collisions with internal edges of a mesh). This is more expensive but makes bodies move smoother over a mesh with convex edges.
-	bool								GetEnhancedInternalEdgeRemoval() const					{ return mEnhancedInternalEdgeRemoval; }
-	void								SetEnhancedInternalEdgeRemoval(bool inApply)			{ mEnhancedInternalEdgeRemoval = inApply; }
-
 	/// Character padding
 	float								GetCharacterPadding() const								{ return mCharacterPadding; }
 
@@ -319,7 +315,7 @@ public:
 		bool							mCanPushCharacter = true;								///< When true, the velocity of the contact point can push the character
 	};
 
-	using TempContactList = Array<Contact, STLTempAllocator<Contact>>;
+	using TempContactList = std::vector<Contact, STLTempAllocator<Contact>>;
 	using ContactList = Array<Contact>;
 
 	/// Access to the internal list of contacts that the character has found.
@@ -348,7 +344,7 @@ private:
 		SubShapeID						mSubShapeID;											///< Sub shape of body we're colliding with
 	};
 
-	using IgnoredContactList = Array<IgnoredContact, STLTempAllocator<IgnoredContact>>;
+	using IgnoredContactList = std::vector<IgnoredContact, STLTempAllocator<IgnoredContact>>;
 
 	// A constraint that limits the movement of the character
 	struct Constraint
@@ -361,7 +357,7 @@ private:
 		bool							mIsSteepSlope = false;									///< If this constraint belongs to a steep slope
 	};
 
-	using ConstraintList = Array<Constraint, STLTempAllocator<Constraint>>;
+	using ConstraintList = std::vector<Constraint, STLTempAllocator<Constraint>>;
 
 	// Collision collector that collects hits for CollideShape
 	class ContactCollector : public CollideShapeCollector
@@ -471,7 +467,6 @@ private:
 	uint								mMaxNumHits;											// Max num hits to collect in order to avoid excess of contact points collection
 	float								mHitReductionCosMaxAngle;								// Cos(angle) where angle is the maximum angle between two hits contact normals that are allowed to be merged during hit reduction. Default is around 2.5 degrees. Set to -1 to turn off.
 	float								mPenetrationRecoverySpeed;								// This value governs how fast a penetration will be resolved, 0 = nothing is resolved, 1 = everything in one update
-	bool								mEnhancedInternalEdgeRemoval;							// Set to indicate that extra effort should be made to try to remove ghost contacts (collisions with internal edges of a mesh). This is more expensive but makes bodies move smoother over a mesh with convex edges.
 
 	// Character mass (kg)
 	float								mMass;

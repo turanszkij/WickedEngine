@@ -497,17 +497,9 @@ Vec4 Vec4::operator - () const
 #if defined(JPH_USE_SSE)
 	return _mm_sub_ps(_mm_setzero_ps(), mValue);
 #elif defined(JPH_USE_NEON)
-	#ifdef JPH_CROSS_PLATFORM_DETERMINISTIC
-		return vsubq_f32(vdupq_n_f32(0), mValue);
-	#else
-		return vnegq_f32(mValue);
-	#endif
+	return vnegq_f32(mValue);
 #else
-	#ifdef JPH_CROSS_PLATFORM_DETERMINISTIC
-		return Vec4(0.0f - mF32[0], 0.0f - mF32[1], 0.0f - mF32[2], 0.0f - mF32[3]);
-	#else
-		return Vec4(-mF32[0], -mF32[1], -mF32[2], -mF32[3]);
-	#endif
+	return Vec4(-mF32[0], -mF32[1], -mF32[2], -mF32[3]);
 #endif
 }
 

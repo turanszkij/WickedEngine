@@ -107,7 +107,7 @@ bool RackAndPinionConstraint::SolvePositionConstraint(float inDeltaTime, float i
 	float rotation;
 	if (mPinionConstraint->GetSubType() == EConstraintSubType::Hinge)
 	{
-		rotation = StaticCast<HingeConstraint>(mPinionConstraint)->GetCurrentAngle();
+		rotation = static_cast<const HingeConstraint *>(mPinionConstraint.GetPtr())->GetCurrentAngle();
 	}
 	else
 	{
@@ -118,7 +118,7 @@ bool RackAndPinionConstraint::SolvePositionConstraint(float inDeltaTime, float i
 	float translation;
 	if (mRackConstraint->GetSubType() == EConstraintSubType::Slider)
 	{
-		translation = StaticCast<SliderConstraint>(mRackConstraint)->GetCurrentPosition();
+		translation = static_cast<const SliderConstraint *>(mRackConstraint.GetPtr())->GetCurrentPosition();
 	}
 	else
 	{

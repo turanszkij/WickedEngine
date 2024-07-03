@@ -13,8 +13,6 @@ JPH_SUPPRESS_WARNINGS_STD_BEGIN
 #include <fstream>
 JPH_SUPPRESS_WARNINGS_STD_END
 
-#ifdef JPH_OBJECT_STREAM
-
 JPH_NAMESPACE_BEGIN
 
 /// ObjectStreamIn contains all logic for reading an object from disk. It is the base
@@ -144,5 +142,3 @@ private:
 };
 
 JPH_NAMESPACE_END
-
-#endif // JPH_OBJECT_STREAM

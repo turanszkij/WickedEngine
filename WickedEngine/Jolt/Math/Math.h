@@ -10,13 +10,13 @@ JPH_NAMESPACE_BEGIN
 static constexpr float JPH_PI = 3.14159265358979323846f;
 
 /// Convert a value from degrees to radians
-JPH_INLINE constexpr float DegreesToRadians(float inV)
+constexpr float DegreesToRadians(float inV)
 {
 	return inV * (JPH_PI / 180.0f);
 }
 
 /// Convert a value from radians to degrees
-JPH_INLINE constexpr float RadiansToDegrees(float inV)
+constexpr float RadiansToDegrees(float inV)
 {
 	return inV * (180.0f / JPH_PI);
 }
@@ -42,28 +42,28 @@ inline float CenterAngleAroundZero(float inV)
 
 /// Clamp a value between two values
 template <typename T>
-JPH_INLINE constexpr T Clamp(T inV, T inMin, T inMax)
+constexpr T Clamp(T inV, T inMin, T inMax)
 {
 	return min(max(inV, inMin), inMax);
 }
 
 /// Square a value
 template <typename T>
-JPH_INLINE constexpr T Square(T inV)
+constexpr T Square(T inV)
 {
 	return inV * inV;
 }
 
 /// Returns \f$inV^3\f$.
 template <typename T>
-JPH_INLINE constexpr T Cubed(T inV)
+constexpr T Cubed(T inV)
 {
 	return inV * inV * inV;
 }
 
 /// Get the sign of a value
 template <typename T>
-JPH_INLINE constexpr T Sign(T inV)
+constexpr T Sign(T inV)
 {
 	return inV < 0? T(-1) : T(1);
 }

@@ -9,8 +9,6 @@
 #include <Jolt/Physics/SoftBody/SoftBodyContactListener.h>
 #include <Jolt/Physics/SoftBody/SoftBodyManifold.h>
 #include <Jolt/Physics/PhysicsSystem.h>
-#include <Jolt/Physics/Body/BodyManager.h>
-#include <Jolt/Core/ScopeExit.h>
 #ifdef JPH_DEBUG_RENDERER
 	#include <Jolt/Renderer/DebugRenderer.h>
 #endif // JPH_DEBUG_RENDERER
@@ -127,47 +125,32 @@ void SoftBodyMotionProperties::DetermineCollidingShapes(const SoftBodyUpdateCont
 				if (body.IsRigidBody() // TODO: We should support soft body vs soft body
 					&& soft_body.GetCollisionGroup().CanCollide(body.GetCollisionGroup()))
 				{
+					// Call the contact listener to see if we should accept this contact
+					// If there is no contact listener then we can ignore the contact if the other body is a sensor
 					SoftBodyContactSettings settings;
 					settings.mIsSensor = body.IsSensor();
-
-					if (mContext.mContactListener == nullptr)
+					if (mContext.mContactListener == nullptr? !settings.mIsSensor : mContext.mContactListener->OnSoftBodyContactValidate(soft_body, body, settings) == SoftBodyValidateResult::AcceptContact)
 					{
-						// If we have no contact listener, we can ignore sensors
-						if (settings.mIsSensor)
-							return;
+						CollidingShape cs;
+						cs.mCenterOfMassTransform = (mInverseTransform * body.GetCenterOfMassTransform()).ToMat44();
+						cs.mShape = body.GetShape();
+						cs.mBodyID = inResult;
+						cs.mMotionType = body.GetMotionType();
+						cs.mIsSensor = settings.mIsSensor;
+						cs.mUpdateVelocities = false;
+						cs.mFriction = mCombineFriction(soft_body, SubShapeID(), body, SubShapeID());
+						cs.mRestitution = mCombineRestitution(soft_body, SubShapeID(), body, SubShapeID());
+						if (cs.mMotionType == EMotionType::Dynamic)
+						{
+							const MotionProperties *mp = body.GetMotionProperties();
+							cs.mInvMass = settings.mInvMassScale2 * mp->GetInverseMass();
+							cs.mInvInertia = settings.mInvInertiaScale2 * mp->GetInverseInertiaForRotation(cs.mCenterOfMassTransform.GetRotation());
+							cs.mSoftBodyInvMassScale = settings.mInvMassScale1;
+							cs.mOriginalLinearVelocity = cs.mLinearVelocity = mInverseTransform.Multiply3x3(mp->GetLinearVelocity());
+							cs.mOriginalAngularVelocity = cs.mAngularVelocity = mInverseTransform.Multiply3x3(mp->GetAngularVelocity());
+						}
+						mHits.push_back(cs);
 					}
-					else
-					{
-						// Call the contact listener to see if we should accept this contact
-						if (mContext.mContactListener->OnSoftBodyContactValidate(soft_body, body, settings) != SoftBodyValidateResult::AcceptContact)
-							return;
-
-						// Check if there will be any interaction
-						if (!settings.mIsSensor
-							&& settings.mInvMassScale1 == 0.0f
-							&& (body.GetMotionType() != EMotionType::Dynamic || settings.mInvMassScale2 == 0.0f))
-							return;
-					}
-
-					CollidingShape cs;
-					cs.mCenterOfMassTransform = (mInverseTransform * body.GetCenterOfMassTransform()).ToMat44();
-					cs.mShape = body.GetShape();
-					cs.mBodyID = inResult;
-					cs.mMotionType = body.GetMotionType();
-					cs.mIsSensor = settings.mIsSensor;
-					cs.mUpdateVelocities = false;
-					cs.mFriction = mCombineFriction(soft_body, SubShapeID(), body, SubShapeID());
-					cs.mRestitution = mCombineRestitution(soft_body, SubShapeID(), body, SubShapeID());
-					cs.mSoftBodyInvMassScale = settings.mInvMassScale1;
-					if (cs.mMotionType == EMotionType::Dynamic)
-					{
-						const MotionProperties *mp = body.GetMotionProperties();
-						cs.mInvMass = settings.mInvMassScale2 * mp->GetInverseMass();
-						cs.mInvInertia = settings.mInvInertiaScale2 * mp->GetInverseInertiaForRotation(cs.mCenterOfMassTransform.GetRotation());
-						cs.mOriginalLinearVelocity = cs.mLinearVelocity = mInverseTransform.Multiply3x3(mp->GetLinearVelocity());
-						cs.mOriginalAngularVelocity = cs.mAngularVelocity = mInverseTransform.Multiply3x3(mp->GetAngularVelocity());
-					}
-					mHits.push_back(cs);
 				}
 			}
 		}
@@ -244,12 +227,11 @@ void SoftBodyMotionProperties::IntegratePositions(const SoftBodyUpdateContext &i
 
 	// Integrate
 	Vec3 sub_step_gravity = inContext.mGravity * dt;
-	Vec3 sub_step_impulse = GetAccumulatedForce() * dt;
 	for (Vertex &v : mVertices)
 		if (v.mInvMass > 0.0f)
 		{
 			// Gravity
-			v.mVelocity += sub_step_gravity + sub_step_impulse * v.mInvMass;
+			v.mVelocity += sub_step_gravity;
 
 			// Damping
 			v.mVelocity *= linear_damping;
@@ -266,18 +248,18 @@ void SoftBodyMotionProperties::IntegratePositions(const SoftBodyUpdateContext &i
 		}
 }
 
-void SoftBodyMotionProperties::ApplyDihedralBendConstraints(const SoftBodyUpdateContext &inContext, uint inStartIndex, uint inEndIndex)
+void SoftBodyMotionProperties::ApplyBendConstraints(const SoftBodyUpdateContext &inContext)
 {
 	JPH_PROFILE_FUNCTION();
 
 	float inv_dt_sq = 1.0f / Square(inContext.mSubStepDeltaTime);
 
-	for (const DihedralBend *b = mSettings->mDihedralBendConstraints.data() + inStartIndex, *b_end = mSettings->mDihedralBendConstraints.data() + inEndIndex; b < b_end; ++b)
+	for (const DihedralBend &b : mSettings->mDihedralBendConstraints)
 	{
-		Vertex &v0 = mVertices[b->mVertex[0]];
-		Vertex &v1 = mVertices[b->mVertex[1]];
-		Vertex &v2 = mVertices[b->mVertex[2]];
-		Vertex &v3 = mVertices[b->mVertex[3]];
+		Vertex &v0 = mVertices[b.mVertex[0]];
+		Vertex &v1 = mVertices[b.mVertex[1]];
+		Vertex &v2 = mVertices[b.mVertex[2]];
+		Vertex &v3 = mVertices[b.mVertex[3]];
 
 		// Get positions
 		Vec3 x0 = v0.mPosition;
@@ -316,7 +298,7 @@ void SoftBodyMotionProperties::ApplyDihedralBendConstraints(const SoftBodyUpdate
 		// As per "Strain Based Dynamics" Appendix A we need to negate the gradients when (n1 x n2) . e > 0, instead we make sure that the sign of the constraint equation is correct
 		float sign = Sign(n2.Cross(n1).Dot(e));
 		float d = n1.Dot(n2) / sqrt(n1_len_sq_n2_len_sq);
-		float c = sign * ACosApproximate(d) - b->mInitialAngle;
+		float c = sign * ACos(d) - b.mInitialAngle;
 
 		// Ensure the range is -PI to PI
 		if (c > JPH_PI)
@@ -344,7 +326,7 @@ void SoftBodyMotionProperties::ApplyDihedralBendConstraints(const SoftBodyUpdate
 		float w3 = v3.mInvMass;
 
 		// Calculate -lambda
-		float denom = w0 * d0c.LengthSq() + w1 * d1c.LengthSq() + w2 * d2c.LengthSq() + w3 * d3c.LengthSq() + b->mCompliance * inv_dt_sq;
+		float denom = w0 * d0c.LengthSq() + w1 * d1c.LengthSq() + w2 * d2c.LengthSq() + w3 * d3c.LengthSq() + b.mCompliance * inv_dt_sq;
 		if (denom < 1.0e-12f)
 			continue;
 		float minus_lambda = c / denom;
@@ -357,19 +339,19 @@ void SoftBodyMotionProperties::ApplyDihedralBendConstraints(const SoftBodyUpdate
 	}
 }
 
-void SoftBodyMotionProperties::ApplyVolumeConstraints(const SoftBodyUpdateContext &inContext, uint inStartIndex, uint inEndIndex)
+void SoftBodyMotionProperties::ApplyVolumeConstraints(const SoftBodyUpdateContext &inContext)
 {
 	JPH_PROFILE_FUNCTION();
 
 	float inv_dt_sq = 1.0f / Square(inContext.mSubStepDeltaTime);
 
 	// Satisfy volume constraints
-	for (const Volume *v = mSettings->mVolumeConstraints.data() + inStartIndex, *v_end = mSettings->mVolumeConstraints.data() + inEndIndex; v < v_end; ++v)
+	for (const Volume &v : mSettings->mVolumeConstraints)
 	{
-		Vertex &v1 = mVertices[v->mVertex[0]];
-		Vertex &v2 = mVertices[v->mVertex[1]];
-		Vertex &v3 = mVertices[v->mVertex[2]];
-		Vertex &v4 = mVertices[v->mVertex[3]];
+		Vertex &v1 = mVertices[v.mVertex[0]];
+		Vertex &v2 = mVertices[v.mVertex[1]];
+		Vertex &v3 = mVertices[v.mVertex[2]];
+		Vertex &v4 = mVertices[v.mVertex[3]];
 
 		Vec3 x1 = v1.mPosition;
 		Vec3 x2 = v2.mPosition;
@@ -380,7 +362,7 @@ void SoftBodyMotionProperties::ApplyVolumeConstraints(const SoftBodyUpdateContex
 		Vec3 x1x2 = x2 - x1;
 		Vec3 x1x3 = x3 - x1;
 		Vec3 x1x4 = x4 - x1;
-		float c = abs(x1x2.Cross(x1x3).Dot(x1x4)) - v->mSixRestVolume;
+		float c = abs(x1x2.Cross(x1x3).Dot(x1x4)) - v.mSixRestVolume;
 
 		// Calculate gradient of constraint equation
 		Vec3 d1c = (x4 - x2).Cross(x3 - x2);
@@ -395,7 +377,7 @@ void SoftBodyMotionProperties::ApplyVolumeConstraints(const SoftBodyUpdateContex
 		float w4 = v4.mInvMass;
 
 		// Calculate -lambda
-		float denom = w1 * d1c.LengthSq() + w2 * d2c.LengthSq() + w3 * d3c.LengthSq() + w4 * d4c.LengthSq() + v->mCompliance * inv_dt_sq;
+		float denom = w1 * d1c.LengthSq() + w2 * d2c.LengthSq() + w3 * d3c.LengthSq() + w4 * d4c.LengthSq() + v.mCompliance * inv_dt_sq;
 		if (denom < 1.0e-12f)
 			continue;
 		float minus_lambda = c / denom;
@@ -408,66 +390,57 @@ void SoftBodyMotionProperties::ApplyVolumeConstraints(const SoftBodyUpdateContex
 	}
 }
 
-void SoftBodyMotionProperties::ApplySkinConstraints(const SoftBodyUpdateContext &inContext, uint inStartIndex, uint inEndIndex)
+void SoftBodyMotionProperties::ApplySkinConstraints([[maybe_unused]] const SoftBodyUpdateContext &inContext)
 {
 	// Early out if nothing to do
 	if (mSettings->mSkinnedConstraints.empty() || !mEnableSkinConstraints)
 		return;
 
-	JPH_PROFILE_FUNCTION();
-
-	// We're going to iterate multiple times over the skin constraints, update the skinned position accordingly.
-	// If we don't do this, the simulation will see a big jump and the first iteration will cause a big velocity change in the system.
-	float factor = mSkinStatePreviousPositionValid? inContext.mNextIteration.load(std::memory_order_relaxed) / float(mNumIterations) : 1.0f;
-	float prev_factor = 1.0f - factor;
+	JPH_ASSERT(mSkinStateTransform == inContext.mCenterOfMassTransform, "Skinning state is stale, artifacts will show!");
 
 	// Apply the constraints
 	Vertex *vertices = mVertices.data();
 	const SkinState *skin_states = mSkinState.data();
-	for (const Skinned *s = mSettings->mSkinnedConstraints.data() + inStartIndex, *s_end = mSettings->mSkinnedConstraints.data() + inEndIndex; s < s_end; ++s)
+	for (const Skinned &s : mSettings->mSkinnedConstraints)
 	{
-		Vertex &vertex = vertices[s->mVertex];
-		const SkinState &skin_state = skin_states[s->mVertex];
-		float max_distance = s->mMaxDistance * mSkinnedMaxDistanceMultiplier;
-
-		// Calculate the skinned position by interpolating from previous to current position
-		Vec3 skin_pos = prev_factor * skin_state.mPreviousPosition + factor * skin_state.mPosition;
-
+		Vertex &vertex = vertices[s.mVertex];
+		const SkinState &skin_state = skin_states[s.mVertex];
+		float max_distance = s.mMaxDistance * mSkinnedMaxDistanceMultiplier;
 		if (max_distance > 0.0f)
 		{
 			// Move vertex if it violated the back stop
-			if (s->mBackStopDistance < max_distance)
+			if (s.mBackStopDistance < max_distance)
 			{
 				// Center of the back stop sphere
-				Vec3 center = skin_pos - skin_state.mNormal * (s->mBackStopDistance + s->mBackStopRadius);
+				Vec3 center = skin_state.mPosition - skin_state.mNormal * (s.mBackStopDistance + s.mBackStopRadius);
 
 				// Check if we're inside the back stop sphere
 				Vec3 delta = vertex.mPosition - center;
 				float delta_len_sq = delta.LengthSq();
-				if (delta_len_sq < Square(s->mBackStopRadius))
+				if (delta_len_sq < Square(s.mBackStopRadius))
 				{
 					// Push the vertex to the surface of the back stop sphere
 					float delta_len = sqrt(delta_len_sq);
 					vertex.mPosition = delta_len > 0.0f?
-						center + delta * (s->mBackStopRadius / delta_len)
-						: center + skin_state.mNormal * s->mBackStopRadius;
+						center + delta * (s.mBackStopRadius / delta_len)
+						: center + skin_state.mNormal * s.mBackStopRadius;
 				}
 			}
 
 			// Clamp vertex distance to max distance from skinned position
 			if (max_distance < FLT_MAX)
 			{
-				Vec3 delta = vertex.mPosition - skin_pos;
+				Vec3 delta = vertex.mPosition - skin_state.mPosition;
 				float delta_len_sq = delta.LengthSq();
 				float max_distance_sq = Square(max_distance);
 				if (delta_len_sq > max_distance_sq)
-					vertex.mPosition = skin_pos + delta * sqrt(max_distance_sq / delta_len_sq);
+					vertex.mPosition = skin_state.mPosition + delta * sqrt(max_distance_sq / delta_len_sq);
 			}
 		}
 		else
 		{
 			// Kinematic: Just update the vertex position
-			vertex.mPosition = skin_pos;
+			vertex.mPosition = skin_state.mPosition;
 		}
 	}
 }
@@ -479,10 +452,12 @@ void SoftBodyMotionProperties::ApplyEdgeConstraints(const SoftBodyUpdateContext 
 	float inv_dt_sq = 1.0f / Square(inContext.mSubStepDeltaTime);
 
 	// Satisfy edge constraints
-	for (const Edge *e = mSettings->mEdgeConstraints.data() + inStartIndex, *e_end = mSettings->mEdgeConstraints.data() + inEndIndex; e < e_end; ++e)
+	const Array<Edge> &edge_constraints = mSettings->mEdgeConstraints;
+	for (uint i = inStartIndex; i < inEndIndex; ++i)
 	{
-		Vertex &v0 = mVertices[e->mVertex[0]];
-		Vertex &v1 = mVertices[e->mVertex[1]];
+		const Edge &e = edge_constraints[i];
+		Vertex &v0 = mVertices[e.mVertex[0]];
+		Vertex &v1 = mVertices[e.mVertex[1]];
 
 		// Get positions
 		Vec3 x0 = v0.mPosition;
@@ -493,33 +468,33 @@ void SoftBodyMotionProperties::ApplyEdgeConstraints(const SoftBodyUpdateContext 
 		float length = delta.Length();
 
 		// Apply correction
-		float denom = length * (v0.mInvMass + v1.mInvMass + e->mCompliance * inv_dt_sq);
+		float denom = length * (v0.mInvMass + v1.mInvMass + e.mCompliance * inv_dt_sq);
 		if (denom < 1.0e-12f)
 			continue;
-		Vec3 correction = delta * (length - e->mRestLength) / denom;
+		Vec3 correction = delta * (length - e.mRestLength) / denom;
 		v0.mPosition = x0 + v0.mInvMass * correction;
 		v1.mPosition = x1 - v1.mInvMass * correction;
 	}
 }
 
-void SoftBodyMotionProperties::ApplyLRAConstraints(uint inStartIndex, uint inEndIndex)
+void SoftBodyMotionProperties::ApplyLRAConstraints()
 {
 	JPH_PROFILE_FUNCTION();
 
 	// Satisfy LRA constraints
 	Vertex *vertices = mVertices.data();
-	for (const LRA *lra = mSettings->mLRAConstraints.data() + inStartIndex, *lra_end = mSettings->mLRAConstraints.data() + inEndIndex; lra < lra_end; ++lra)
+	for (const LRA &lra : mSettings->mLRAConstraints)
 	{
-		JPH_ASSERT(lra->mVertex[0] < mVertices.size());
-		JPH_ASSERT(lra->mVertex[1] < mVertices.size());
-		const Vertex &vertex0 = vertices[lra->mVertex[0]];
-		Vertex &vertex1 = vertices[lra->mVertex[1]];
+		JPH_ASSERT(lra.mVertex[0] < mVertices.size());
+		JPH_ASSERT(lra.mVertex[1] < mVertices.size());
+		const Vertex &vertex0 = vertices[lra.mVertex[0]];
+		Vertex &vertex1 = vertices[lra.mVertex[1]];
 
 		Vec3 x0 = vertex0.mPosition;
 		Vec3 delta = vertex1.mPosition - x0;
 		float delta_len_sq = delta.LengthSq();
-		if (delta_len_sq > Square(lra->mMaxDistance))
-			vertex1.mPosition = x0 + delta * lra->mMaxDistance / sqrt(delta_len_sq);
+		if (delta_len_sq > Square(lra.mMaxDistance))
+			vertex1.mPosition = x0 + delta * lra.mMaxDistance / sqrt(delta_len_sq);
 	}
 }
 
@@ -592,36 +567,34 @@ void SoftBodyMotionProperties::ApplyCollisionConstraintsAndUpdateVelocities(cons
 							Vec3 r2_cross_n = r2.Cross(contact_normal);
 							float w2 = cs.mInvMass + r2_cross_n.Dot(cs.mInvInertia * r2_cross_n);
 							float w1_plus_w2 = vertex_inv_mass + w2;
-							if (w1_plus_w2 > 0.0f)
-							{
-								// Calculate delta relative velocity due to friction (modified equation 31)
-								Vec3 dv;
-								if (v_tangential_length > 0.0f)
-									dv = v_tangential * min(cs.mFriction * projected_distance / (v_tangential_length * dt), 1.0f);
-								else
-									dv = Vec3::sZero();
 
-								// Calculate delta relative velocity due to restitution (equation 35)
-								dv += v_normal;
-								float prev_v_normal = (prev_v - v2).Dot(contact_normal);
-								if (prev_v_normal < restitution_treshold)
-									dv += cs.mRestitution * prev_v_normal * contact_normal;
+							// Calculate delta relative velocity due to friction (modified equation 31)
+							Vec3 dv;
+							if (v_tangential_length > 0.0f)
+								dv = v_tangential * min(cs.mFriction * projected_distance / (v_tangential_length * dt), 1.0f);
+							else
+								dv = Vec3::sZero();
 
-								// Calculate impulse
-								Vec3 p = dv / w1_plus_w2;
+							// Calculate delta relative velocity due to restitution (equation 35)
+							dv += v_normal;
+							float prev_v_normal = (prev_v - v2).Dot(contact_normal);
+							if (prev_v_normal < restitution_treshold)
+								dv += cs.mRestitution * prev_v_normal * contact_normal;
 
-								// Apply impulse to particle
-								v.mVelocity -= p * vertex_inv_mass;
+							// Calculate impulse
+							Vec3 p = dv / w1_plus_w2;
 
-								// Apply impulse to rigid body
-								cs.mLinearVelocity += p * cs.mInvMass;
-								cs.mAngularVelocity += cs.mInvInertia * r2.Cross(p);
+							// Apply impulse to particle
+							v.mVelocity -= p * vertex_inv_mass;
 
-								// Mark that the velocities of the body we hit need to be updated
-								cs.mUpdateVelocities = true;
-							}
+							// Apply impulse to rigid body
+							cs.mLinearVelocity += p * cs.mInvMass;
+							cs.mAngularVelocity += cs.mInvInertia * r2.Cross(p);
+
+							// Mark that the velocities of the body we hit need to be updated
+							cs.mUpdateVelocities = true;
 						}
-						else if (cs.mSoftBodyInvMassScale > 0.0f)
+						else
 						{
 							// Body is not movable, equations are simpler
 
@@ -700,11 +673,6 @@ void SoftBodyMotionProperties::UpdateSoftBodyState(SoftBodyUpdateContext &ioCont
 		for (Vertex &v : mVertices)
 			v.mPosition -= delta;
 
-		// Update the skin state too since we will use this position as the previous position in the next update
-		for (SkinState &s : mSkinState)
-			s.mPosition -= delta;
-		JPH_IF_DEBUG_RENDERER(mSkinStateTransform.SetTranslation(mSkinStateTransform.GetTranslation() + ioContext.mDeltaPosition);)
-
 		// Offset bounds to match new position
 		mLocalBounds.Translate(-delta);
 		mLocalPredictedBounds.Translate(-delta);
@@ -725,12 +693,6 @@ void SoftBodyMotionProperties::UpdateSoftBodyState(SoftBodyUpdateContext &ioCont
 	}
 	else
 		ioContext.mCanSleep = ECanSleep::CannotSleep;
-
-	// If SkinVertices is not called after this then don't use the previous position as the skin is static
-	mSkinStatePreviousPositionValid = false;
-
-	// Reset force accumulator
-	ResetForce();
 }
 
 void SoftBodyMotionProperties::UpdateRigidBodyVelocities(const SoftBodyUpdateContext &inContext, BodyInterface &inBodyInterface)
@@ -775,6 +737,10 @@ void SoftBodyMotionProperties::StartNextIteration(const SoftBodyUpdateContext &i
 	ApplyPressure(ioContext);
 
 	IntegratePositions(ioContext);
+
+	ApplyBendConstraints(ioContext);
+
+	ApplyVolumeConstraints(ioContext);
 }
 
 SoftBodyMotionProperties::EStatus SoftBodyMotionProperties::ParallelDetermineCollisionPlanes(SoftBodyUpdateContext &ioContext)
@@ -797,7 +763,7 @@ SoftBodyMotionProperties::EStatus SoftBodyMotionProperties::ParallelDetermineCol
 				JPH_IF_ENABLE_ASSERTS(uint iteration =) ioContext.mNextIteration.fetch_add(1, memory_order_relaxed);
 				JPH_ASSERT(iteration == 0);
 				StartNextIteration(ioContext);
-				ioContext.mState.store(SoftBodyUpdateContext::EState::ApplyConstraints, memory_order_release);
+				ioContext.mState.store(SoftBodyUpdateContext::EState::ApplyEdgeConstraints, memory_order_release);
 			}
 			return EStatus::DidWork;
 		}
@@ -805,84 +771,76 @@ SoftBodyMotionProperties::EStatus SoftBodyMotionProperties::ParallelDetermineCol
 	return EStatus::NoWork;
 }
 
-void SoftBodyMotionProperties::ProcessGroup(const SoftBodyUpdateContext &ioContext, uint inGroupIndex)
+SoftBodyMotionProperties::EStatus SoftBodyMotionProperties::ParallelApplyEdgeConstraints(SoftBodyUpdateContext &ioContext, const PhysicsSettings &inPhysicsSettings)
 {
-	// Determine start and end
-	SoftBodySharedSettings::UpdateGroup start { 0, 0, 0, 0, 0 };
-	const SoftBodySharedSettings::UpdateGroup &prev = inGroupIndex > 0? mSettings->mUpdateGroups[inGroupIndex - 1] : start;
-	const SoftBodySharedSettings::UpdateGroup &current = mSettings->mUpdateGroups[inGroupIndex];
-
-	// Process volume constraints
-	ApplyVolumeConstraints(ioContext, prev.mVolumeEndIndex, current.mVolumeEndIndex);
-
-	// Process bend constraints
-	ApplyDihedralBendConstraints(ioContext, prev.mDihedralBendEndIndex, current.mDihedralBendEndIndex);
-
-	// Process skinned constraints
-	ApplySkinConstraints(ioContext, prev.mSkinnedEndIndex, current.mSkinnedEndIndex);
-
-	// Process edges
-	ApplyEdgeConstraints(ioContext, prev.mEdgeEndIndex, current.mEdgeEndIndex);
-
-	// Process LRA constraints
-	ApplyLRAConstraints(prev.mLRAEndIndex, current.mLRAEndIndex);
-}
-
-SoftBodyMotionProperties::EStatus SoftBodyMotionProperties::ParallelApplyConstraints(SoftBodyUpdateContext &ioContext, const PhysicsSettings &inPhysicsSettings)
-{
-	uint num_groups = (uint)mSettings->mUpdateGroups.size();
-	JPH_ASSERT(num_groups > 0, "SoftBodySharedSettings::Optimize should have been called!");
-	--num_groups; // Last group is the non-parallel group, we don't want to execute it in parallel
-
 	// Do a relaxed read first to see if there is any work to do (this prevents us from doing expensive atomic operations and also prevents us from continuously incrementing the counter and overflowing it)
-	uint next_group = ioContext.mNextConstraintGroup.load(memory_order_relaxed);
-	if (next_group < num_groups || (num_groups == 0 && next_group == 0))
+	uint num_groups = (uint)mSettings->mEdgeGroupEndIndices.size();
+	JPH_ASSERT(num_groups > 0, "SoftBodySharedSettings::Optimize should have been called!");
+	uint32 edge_group, edge_start_idx;
+	SoftBodyUpdateContext::sGetEdgeGroupAndStartIdx(ioContext.mNextEdgeConstraint.load(memory_order_relaxed), edge_group, edge_start_idx);
+	if (edge_group < num_groups)
 	{
-		// Fetch the next group process
-		next_group = ioContext.mNextConstraintGroup.fetch_add(1, memory_order_acquire);
-		if (next_group < num_groups || (num_groups == 0 && next_group == 0))
+		uint edge_group_size = mSettings->GetEdgeGroupSize(edge_group);
+		if (edge_start_idx < edge_group_size || edge_group_size == 0)
 		{
-			uint num_groups_processed = 0;
-			if (num_groups > 0)
+			// Fetch the next batch of edges to process
+			uint64 next_edge_batch = ioContext.mNextEdgeConstraint.fetch_add(SoftBodyUpdateContext::cEdgeConstraintBatch, memory_order_acquire);
+			SoftBodyUpdateContext::sGetEdgeGroupAndStartIdx(next_edge_batch, edge_group, edge_start_idx);
+			if (edge_group < num_groups)
 			{
-				// Process this group
-				ProcessGroup(ioContext, next_group);
-
-				// Increment total number of groups processed
-				num_groups_processed = ioContext.mNumConstraintGroupsProcessed.fetch_add(1, memory_order_relaxed) + 1;
-			}
-
-			if (num_groups_processed >= num_groups)
-			{
-				// Finish the iteration
-				JPH_PROFILE("FinishIteration");
-
-				// Process non-parallel group
-				ProcessGroup(ioContext, num_groups);
-
-				ApplyCollisionConstraintsAndUpdateVelocities(ioContext);
-
-				uint iteration = ioContext.mNextIteration.fetch_add(1, memory_order_relaxed);
-				if (iteration < mNumIterations)
+				bool non_parallel_group = edge_group == num_groups - 1; // Last group is the non-parallel group and goes as a whole
+				edge_group_size = mSettings->GetEdgeGroupSize(edge_group);
+				if (non_parallel_group? edge_start_idx == 0 : edge_start_idx < edge_group_size)
 				{
-					// Start a new iteration
-					StartNextIteration(ioContext);
+					// Process edges
+					uint num_edges_to_process = non_parallel_group? edge_group_size : min(SoftBodyUpdateContext::cEdgeConstraintBatch, edge_group_size - edge_start_idx);
+					if (edge_group > 0)
+						edge_start_idx += mSettings->mEdgeGroupEndIndices[edge_group - 1];
+					ApplyEdgeConstraints(ioContext, edge_start_idx, edge_start_idx + num_edges_to_process);
 
-					// Reset group logic
-					ioContext.mNumConstraintGroupsProcessed.store(0, memory_order_relaxed);
-					ioContext.mNextConstraintGroup.store(0, memory_order_release);
-				}
-				else
-				{
-					// On final iteration we update the state
-					UpdateSoftBodyState(ioContext, inPhysicsSettings);
+					// Test if we're at the end of this group
+					uint edge_constraints_processed = ioContext.mNumEdgeConstraintsProcessed.fetch_add(num_edges_to_process, memory_order_relaxed) + num_edges_to_process;
+					if (edge_constraints_processed >= edge_group_size)
+					{
+						// Non parallel group is the last group (which is also the only group that can be empty)
+						if (non_parallel_group || mSettings->GetEdgeGroupSize(edge_group + 1) == 0)
+						{
+							// Finish the iteration
+							ApplyLRAConstraints();
 
-					ioContext.mState.store(SoftBodyUpdateContext::EState::Done, memory_order_release);
-					return EStatus::Done;
+							ApplyCollisionConstraintsAndUpdateVelocities(ioContext);
+
+							ApplySkinConstraints(ioContext);
+
+							uint iteration = ioContext.mNextIteration.fetch_add(1, memory_order_relaxed);
+							if (iteration < mNumIterations)
+							{
+								// Start a new iteration
+								StartNextIteration(ioContext);
+
+								// Reset next edge to process
+								ioContext.mNumEdgeConstraintsProcessed.store(0, memory_order_relaxed);
+								ioContext.mNextEdgeConstraint.store(0, memory_order_release);
+							}
+							else
+							{
+								// On final iteration we update the state
+								UpdateSoftBodyState(ioContext, inPhysicsSettings);
+
+								ioContext.mState.store(SoftBodyUpdateContext::EState::Done, memory_order_release);
+								return EStatus::Done;
+							}
+						}
+						else
+						{
+							// Next group
+							ioContext.mNumEdgeConstraintsProcessed.store(0, memory_order_relaxed);
+							ioContext.mNextEdgeConstraint.store(SoftBodyUpdateContext::sGetEdgeGroupStart(edge_group + 1), memory_order_release);
+						}
+					}
+					return EStatus::DidWork;
 				}
 			}
-
-			return EStatus::DidWork;
 		}
 	}
 	return EStatus::NoWork;
@@ -895,8 +853,8 @@ SoftBodyMotionProperties::EStatus SoftBodyMotionProperties::ParallelUpdate(SoftB
 	case SoftBodyUpdateContext::EState::DetermineCollisionPlanes:
 		return ParallelDetermineCollisionPlanes(ioContext);
 
-	case SoftBodyUpdateContext::EState::ApplyConstraints:
-		return ParallelApplyConstraints(ioContext, inPhysicsSettings);
+	case SoftBodyUpdateContext::EState::ApplyEdgeConstraints:
+		return ParallelApplyEdgeConstraints(ioContext, inPhysicsSettings);
 
 	case SoftBodyUpdateContext::EState::Done:
 		return EStatus::Done;
@@ -907,20 +865,19 @@ SoftBodyMotionProperties::EStatus SoftBodyMotionProperties::ParallelUpdate(SoftB
 	}
 }
 
-void SoftBodyMotionProperties::SkinVertices([[maybe_unused]] RMat44Arg inCenterOfMassTransform, const Mat44 *inJointMatrices, [[maybe_unused]] uint inNumJoints, bool inHardSkinAll, TempAllocator &ioTempAllocator)
+void SoftBodyMotionProperties::SkinVertices(RMat44Arg inCenterOfMassTransform, const Mat44 *inJointMatrices, [[maybe_unused]] uint inNumJoints, bool inHardSkinAll, TempAllocator &ioTempAllocator)
 {
 	// Calculate the skin matrices
 	uint num_skin_matrices = uint(mSettings->mInvBindMatrices.size());
 	uint skin_matrices_size = num_skin_matrices * sizeof(Mat44);
 	Mat44 *skin_matrices = (Mat44 *)ioTempAllocator.Allocate(skin_matrices_size);
-	JPH_SCOPE_EXIT([&ioTempAllocator, skin_matrices, skin_matrices_size]{ ioTempAllocator.Free(skin_matrices, skin_matrices_size); });
 	const Mat44 *skin_matrices_end = skin_matrices + num_skin_matrices;
 	const InvBind *inv_bind_matrix = mSettings->mInvBindMatrices.data();
 	for (Mat44 *s = skin_matrices; s < skin_matrices_end; ++s, ++inv_bind_matrix)
 		*s = inJointMatrices[inv_bind_matrix->mJointIndex] * inv_bind_matrix->mInvBind;
 
 	// Skin the vertices
-	JPH_IF_DEBUG_RENDERER(mSkinStateTransform = inCenterOfMassTransform;)
+	mSkinStateTransform = inCenterOfMassTransform;
 	JPH_IF_ENABLE_ASSERTS(uint num_vertices = uint(mSettings->mVertices.size());)
 	JPH_ASSERT(mSkinState.size() == num_vertices);
 	const SoftBodySharedSettings::Vertex *in_vertices = mSettings->mVertices.data();
@@ -941,9 +898,7 @@ void SoftBodyMotionProperties::SkinVertices([[maybe_unused]] RMat44Arg inCenterO
 			JPH_ASSERT(w.mInvBindIndex < num_skin_matrices);
 			pos += w.mWeight * (skin_matrices[w.mInvBindIndex] * bind_pos);
 		}
-		SkinState &skin_state = mSkinState[s.mVertex];
-		skin_state.mPreviousPosition = skin_state.mPosition;
-		skin_state.mPosition = pos;
+		mSkinState[s.mVertex].mPosition = pos;
 	}
 
 	// Calculate the normals
@@ -970,15 +925,15 @@ void SoftBodyMotionProperties::SkinVertices([[maybe_unused]] RMat44Arg inCenterO
 		mSkinState[s.mVertex].mNormal = normal;
 	}
 
+	ioTempAllocator.Free(skin_matrices, skin_matrices_size);
+
 	if (inHardSkinAll)
 	{
 		// Hard skin all vertices and reset their velocities
 		for (const Skinned &s : mSettings->mSkinnedConstraints)
 		{
 			Vertex &vertex = mVertices[s.mVertex];
-			SkinState &skin_state = mSkinState[s.mVertex];
-			skin_state.mPreviousPosition = skin_state.mPosition;
-			vertex.mPosition = skin_state.mPosition;
+			vertex.mPosition = mSkinState[s.mVertex].mPosition;
 			vertex.mVelocity = Vec3::sZero();
 		}
 	}
@@ -992,9 +947,6 @@ void SoftBodyMotionProperties::SkinVertices([[maybe_unused]] RMat44Arg inCenterO
 				vertex.mPosition = mSkinState[s.mVertex].mPosition;
 			}
 	}
-
-	// Indicate that the previous positions are valid for the coming update
-	mSkinStatePreviousPositionValid = true;
 }
 
 void SoftBodyMotionProperties::CustomUpdate(float inDeltaTime, Body &ioSoftBody, PhysicsSystem &inSystem)
@@ -1037,115 +989,60 @@ void SoftBodyMotionProperties::DrawVertexVelocities(DebugRenderer *inRenderer, R
 		inRenderer->DrawArrow(inCenterOfMassTransform * v.mPosition, inCenterOfMassTransform * (v.mPosition + v.mVelocity), Color::sYellow, 0.01f);
 }
 
-template <typename GetEndIndex, typename DrawConstraint>
-inline void SoftBodyMotionProperties::DrawConstraints(ESoftBodyConstraintColor inConstraintColor, const GetEndIndex &inGetEndIndex, const DrawConstraint &inDrawConstraint, ColorArg inBaseColor) const
+void SoftBodyMotionProperties::DrawEdgeConstraints(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform) const
 {
-	uint start = 0;
-	for (uint i = 0; i < (uint)mSettings->mUpdateGroups.size(); ++i)
+	for (const Edge &e : mSettings->mEdgeConstraints)
+		inRenderer->DrawLine(inCenterOfMassTransform * mVertices[e.mVertex[0]].mPosition, inCenterOfMassTransform * mVertices[e.mVertex[1]].mPosition, Color::sWhite);
+}
+
+void SoftBodyMotionProperties::DrawBendConstraints(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform) const
+{
+	for (const DihedralBend &b : mSettings->mDihedralBendConstraints)
 	{
-		uint end = inGetEndIndex(mSettings->mUpdateGroups[i]);
+		RVec3 x0 = inCenterOfMassTransform * mVertices[b.mVertex[0]].mPosition;
+		RVec3 x1 = inCenterOfMassTransform * mVertices[b.mVertex[1]].mPosition;
+		RVec3 x2 = inCenterOfMassTransform * mVertices[b.mVertex[2]].mPosition;
+		RVec3 x3 = inCenterOfMassTransform * mVertices[b.mVertex[3]].mPosition;
+		RVec3 c_edge = 0.5_r * (x0 + x1);
+		RVec3 c0 = (x0 + x1 + x2) / 3.0_r;
+		RVec3 c1 = (x0 + x1 + x3) / 3.0_r;
 
-		Color base_color;
-		if (inConstraintColor != ESoftBodyConstraintColor::ConstraintType)
-			base_color = Color::sGetDistinctColor((uint)mSettings->mUpdateGroups.size() - i - 1); // Ensure that color 0 is always the last group
-		else
-			base_color = inBaseColor;
-
-		for (uint idx = start; idx < end; ++idx)
-		{
-			Color color = inConstraintColor == ESoftBodyConstraintColor::ConstraintOrder? base_color * (float(idx - start) / (end - start)) : base_color;
-			inDrawConstraint(idx, color);
-		}
-
-		start = end;
+		inRenderer->DrawArrow(0.9_r * x0 + 0.1_r * x1, 0.1_r * x0 + 0.9_r * x1, Color::sDarkGreen, 0.01f);
+		inRenderer->DrawLine(c_edge, 0.1_r * c_edge + 0.9_r * c0, Color::sGreen);
+		inRenderer->DrawLine(c_edge, 0.1_r * c_edge + 0.9_r * c1, Color::sGreen);
 	}
 }
 
-void SoftBodyMotionProperties::DrawEdgeConstraints(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform, ESoftBodyConstraintColor inConstraintColor) const
+void SoftBodyMotionProperties::DrawVolumeConstraints(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform) const
 {
-	DrawConstraints(inConstraintColor,
-		[](const SoftBodySharedSettings::UpdateGroup &inGroup) {
-			return inGroup.mEdgeEndIndex;
-		},
-		[this, inRenderer, &inCenterOfMassTransform](uint inIndex, ColorArg inColor) {
-			const Edge &e = mSettings->mEdgeConstraints[inIndex];
-			inRenderer->DrawLine(inCenterOfMassTransform * mVertices[e.mVertex[0]].mPosition, inCenterOfMassTransform * mVertices[e.mVertex[1]].mPosition, inColor);
-		},
-		Color::sWhite);
+	for (const Volume &v : mSettings->mVolumeConstraints)
+	{
+		RVec3 x1 = inCenterOfMassTransform * mVertices[v.mVertex[0]].mPosition;
+		RVec3 x2 = inCenterOfMassTransform * mVertices[v.mVertex[1]].mPosition;
+		RVec3 x3 = inCenterOfMassTransform * mVertices[v.mVertex[2]].mPosition;
+		RVec3 x4 = inCenterOfMassTransform * mVertices[v.mVertex[3]].mPosition;
+
+		inRenderer->DrawTriangle(x1, x3, x2, Color::sYellow, DebugRenderer::ECastShadow::On);
+		inRenderer->DrawTriangle(x2, x3, x4, Color::sYellow, DebugRenderer::ECastShadow::On);
+		inRenderer->DrawTriangle(x1, x4, x3, Color::sYellow, DebugRenderer::ECastShadow::On);
+		inRenderer->DrawTriangle(x1, x2, x4, Color::sYellow, DebugRenderer::ECastShadow::On);
+	}
 }
 
-void SoftBodyMotionProperties::DrawBendConstraints(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform, ESoftBodyConstraintColor inConstraintColor) const
+void SoftBodyMotionProperties::DrawSkinConstraints(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform) const
 {
-	DrawConstraints(inConstraintColor,
-		[](const SoftBodySharedSettings::UpdateGroup &inGroup) {
-			return inGroup.mDihedralBendEndIndex;
-		},
-		[this, inRenderer, &inCenterOfMassTransform](uint inIndex, ColorArg inColor) {
-			const DihedralBend &b = mSettings->mDihedralBendConstraints[inIndex];
-
-			RVec3 x0 = inCenterOfMassTransform * mVertices[b.mVertex[0]].mPosition;
-			RVec3 x1 = inCenterOfMassTransform * mVertices[b.mVertex[1]].mPosition;
-			RVec3 x2 = inCenterOfMassTransform * mVertices[b.mVertex[2]].mPosition;
-			RVec3 x3 = inCenterOfMassTransform * mVertices[b.mVertex[3]].mPosition;
-			RVec3 c_edge = 0.5_r * (x0 + x1);
-			RVec3 c0 = (x0 + x1 + x2) / 3.0_r;
-			RVec3 c1 = (x0 + x1 + x3) / 3.0_r;
-
-			inRenderer->DrawArrow(0.9_r * x0 + 0.1_r * x1, 0.1_r * x0 + 0.9_r * x1, inColor, 0.01f);
-			inRenderer->DrawLine(c_edge, 0.1_r * c_edge + 0.9_r * c0, inColor);
-			inRenderer->DrawLine(c_edge, 0.1_r * c_edge + 0.9_r * c1, inColor);
-		},
-		Color::sGreen);
+	for (const Skinned &s : mSettings->mSkinnedConstraints)
+	{
+		const SkinState &skin_state = mSkinState[s.mVertex];
+		DebugRenderer::sInstance->DrawArrow(mSkinStateTransform * skin_state.mPosition, mSkinStateTransform * (skin_state.mPosition + 0.1f * skin_state.mNormal), Color::sOrange, 0.01f);
+		DebugRenderer::sInstance->DrawLine(mSkinStateTransform * skin_state.mPosition, inCenterOfMassTransform * mVertices[s.mVertex].mPosition, Color::sBlue);
+	}
 }
 
-void SoftBodyMotionProperties::DrawVolumeConstraints(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform, ESoftBodyConstraintColor inConstraintColor) const
+void SoftBodyMotionProperties::DrawLRAConstraints(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform) const
 {
-	DrawConstraints(inConstraintColor,
-		[](const SoftBodySharedSettings::UpdateGroup &inGroup) {
-			return inGroup.mVolumeEndIndex;
-		},
-		[this, inRenderer, &inCenterOfMassTransform](uint inIndex, ColorArg inColor) {
-			const Volume &v = mSettings->mVolumeConstraints[inIndex];
-
-			RVec3 x1 = inCenterOfMassTransform * mVertices[v.mVertex[0]].mPosition;
-			RVec3 x2 = inCenterOfMassTransform * mVertices[v.mVertex[1]].mPosition;
-			RVec3 x3 = inCenterOfMassTransform * mVertices[v.mVertex[2]].mPosition;
-			RVec3 x4 = inCenterOfMassTransform * mVertices[v.mVertex[3]].mPosition;
-
-			inRenderer->DrawTriangle(x1, x3, x2, inColor, DebugRenderer::ECastShadow::On);
-			inRenderer->DrawTriangle(x2, x3, x4, inColor, DebugRenderer::ECastShadow::On);
-			inRenderer->DrawTriangle(x1, x4, x3, inColor, DebugRenderer::ECastShadow::On);
-			inRenderer->DrawTriangle(x1, x2, x4, inColor, DebugRenderer::ECastShadow::On);
-		},
-		Color::sYellow);
-}
-
-void SoftBodyMotionProperties::DrawSkinConstraints(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform, ESoftBodyConstraintColor inConstraintColor) const
-{
-	DrawConstraints(inConstraintColor,
-		[](const SoftBodySharedSettings::UpdateGroup &inGroup) {
-			return inGroup.mSkinnedEndIndex;
-		},
-		[this, inRenderer, &inCenterOfMassTransform](uint inIndex, ColorArg inColor) {
-			const Skinned &s = mSettings->mSkinnedConstraints[inIndex];
-			const SkinState &skin_state = mSkinState[s.mVertex];
-			inRenderer->DrawArrow(mSkinStateTransform * skin_state.mPosition, mSkinStateTransform * (skin_state.mPosition + 0.1f * skin_state.mNormal), inColor, 0.01f);
-			inRenderer->DrawLine(mSkinStateTransform * skin_state.mPosition, inCenterOfMassTransform * mVertices[s.mVertex].mPosition, Color::sBlue);
-		},
-		Color::sOrange);
-}
-
-void SoftBodyMotionProperties::DrawLRAConstraints(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform, ESoftBodyConstraintColor inConstraintColor) const
-{
-	DrawConstraints(inConstraintColor,
-		[](const SoftBodySharedSettings::UpdateGroup &inGroup) {
-			return inGroup.mLRAEndIndex;
-		},
-		[this, inRenderer, &inCenterOfMassTransform](uint inIndex, ColorArg inColor) {
-			const LRA &l = mSettings->mLRAConstraints[inIndex];
-			inRenderer->DrawLine(inCenterOfMassTransform * mVertices[l.mVertex[0]].mPosition, inCenterOfMassTransform * mVertices[l.mVertex[1]].mPosition, inColor);
-		},
-		Color::sGrey);
+	for (const LRA &l : mSettings->mLRAConstraints)
+		inRenderer->DrawLine(inCenterOfMassTransform * mVertices[l.mVertex[0]].mPosition, inCenterOfMassTransform * mVertices[l.mVertex[1]].mPosition, Color::sGrey);
 }
 
 void SoftBodyMotionProperties::DrawPredictedBounds(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform) const
@@ -1166,13 +1063,6 @@ void SoftBodyMotionProperties::SaveState(StateRecorder &inStream) const
 		inStream.Write(v.mVelocity);
 	}
 
-	for (const SkinState &s : mSkinState)
-	{
-		inStream.Write(s.mPreviousPosition);
-		inStream.Write(s.mPosition);
-		inStream.Write(s.mNormal);
-	}
-
 	inStream.Write(mLocalBounds.mMin);
 	inStream.Write(mLocalBounds.mMax);
 	inStream.Write(mLocalPredictedBounds.mMin);
@@ -1188,13 +1078,6 @@ void SoftBodyMotionProperties::RestoreState(StateRecorder &inStream)
 		inStream.Read(v.mPreviousPosition);
 		inStream.Read(v.mPosition);
 		inStream.Read(v.mVelocity);
-	}
-
-	for (SkinState &s : mSkinState)
-	{
-		inStream.Read(s.mPreviousPosition);
-		inStream.Read(s.mPosition);
-		inStream.Read(s.mNormal);
 	}
 
 	inStream.Read(mLocalBounds.mMin);

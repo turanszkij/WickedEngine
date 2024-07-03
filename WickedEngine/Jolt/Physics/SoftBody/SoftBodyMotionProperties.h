@@ -23,7 +23,6 @@ class SoftBodyCreationSettings;
 class TempAllocator;
 #ifdef JPH_DEBUG_RENDERER
 class DebugRenderer;
-enum class ESoftBodyConstraintColor;
 #endif // JPH_DEBUG_RENDERER
 
 /// This class contains the runtime information of a soft body.
@@ -99,11 +98,11 @@ public:
 	/// Draw the state of a soft body
 	void								DrawVertices(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform) const;
 	void								DrawVertexVelocities(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform) const;
-	void								DrawEdgeConstraints(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform, ESoftBodyConstraintColor inConstraintColor) const;
-	void								DrawBendConstraints(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform, ESoftBodyConstraintColor inConstraintColor) const;
-	void								DrawVolumeConstraints(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform, ESoftBodyConstraintColor inConstraintColor) const;
-	void								DrawSkinConstraints(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform, ESoftBodyConstraintColor inConstraintColor) const;
-	void								DrawLRAConstraints(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform, ESoftBodyConstraintColor inConstraintColor) const;
+	void								DrawEdgeConstraints(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform) const;
+	void								DrawBendConstraints(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform) const;
+	void								DrawVolumeConstraints(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform) const;
+	void								DrawSkinConstraints(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform) const;
+	void								DrawLRAConstraints(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform) const;
 	void								DrawPredictedBounds(DebugRenderer *inRenderer, RMat44Arg inCenterOfMassTransform) const;
 #endif // JPH_DEBUG_RENDERER
 
@@ -191,9 +190,8 @@ private:
 	// Information about the state of all skinned vertices
 	struct SkinState
 	{
-		Vec3							mPreviousPosition = Vec3::sZero();			///< Previous position of the skinned vertex, used to interpolate between the previous and current position
-		Vec3							mPosition = Vec3::sNaN();					///< Current position of the skinned vertex
-		Vec3							mNormal = Vec3::sNaN();						///< Normal of the skinned vertex
+		Vec3							mPosition = Vec3::sNaN();
+		Vec3							mNormal = Vec3::sNaN();
 	};
 
 	/// Do a narrow phase check and determine the closest feature that we can collide with
@@ -206,19 +204,19 @@ private:
 	void								IntegratePositions(const SoftBodyUpdateContext &inContext);
 
 	/// Enforce all bend constraints
-	void								ApplyDihedralBendConstraints(const SoftBodyUpdateContext &inContext, uint inStartIndex, uint inEndIndex);
+	void								ApplyBendConstraints(const SoftBodyUpdateContext &inContext);
 
 	/// Enforce all volume constraints
-	void								ApplyVolumeConstraints(const SoftBodyUpdateContext &inContext, uint inStartIndex, uint inEndIndex);
+	void								ApplyVolumeConstraints(const SoftBodyUpdateContext &inContext);
 
 	/// Enforce all skin constraints
-	void								ApplySkinConstraints(const SoftBodyUpdateContext &inContext, uint inStartIndex, uint inEndIndex);
+	void								ApplySkinConstraints(const SoftBodyUpdateContext &inContext);
 
 	/// Enforce all edge constraints
 	void								ApplyEdgeConstraints(const SoftBodyUpdateContext &inContext, uint inStartIndex, uint inEndIndex);
 
 	/// Enforce all LRA constraints
-	void								ApplyLRAConstraints(uint inStartIndex, uint inEndIndex);
+	void								ApplyLRAConstraints();
 
 	/// Enforce all collision constraints & update all velocities according the XPBD algorithm
 	void								ApplyCollisionConstraintsAndUpdateVelocities(const SoftBodyUpdateContext &inContext);
@@ -232,23 +230,13 @@ private:
 	/// Helper function for ParallelUpdate that works on batches of collision planes
 	EStatus								ParallelDetermineCollisionPlanes(SoftBodyUpdateContext &ioContext);
 
-	/// Helper function for ParallelUpdate that works on batches of constraints
-	EStatus								ParallelApplyConstraints(SoftBodyUpdateContext &ioContext, const PhysicsSettings &inPhysicsSettings);
-
-	/// Helper function to update a single group of constraints
-	void								ProcessGroup(const SoftBodyUpdateContext &ioContext, uint inGroupIndex);
+	/// Helper function for ParallelUpdate that works on batches of edges
+	EStatus								ParallelApplyEdgeConstraints(SoftBodyUpdateContext &ioContext, const PhysicsSettings &inPhysicsSettings);
 
 	/// Returns 6 times the volume of the soft body
 	float								GetVolumeTimesSix() const;
 
-#ifdef JPH_DEBUG_RENDERER
-	/// Helper function to draw constraints
-	template <typename GetEndIndex, typename DrawConstraint>
-		inline void						DrawConstraints(ESoftBodyConstraintColor inConstraintColor, const GetEndIndex &inGetEndIndex, const DrawConstraint &inDrawConstraint, ColorArg inBaseColor) const;
-
 	RMat44								mSkinStateTransform = RMat44::sIdentity();	///< The matrix that transforms mSkinState to world space
-#endif // JPH_DEBUG_RENDERER
-
 	RefConst<SoftBodySharedSettings>	mSettings;									///< Configuration of the particles and constraints
 	Array<Vertex>						mVertices;									///< Current state of all vertices in the simulation
 	Array<CollidingShape>				mCollidingShapes;							///< List of colliding shapes retrieved during the last update
@@ -261,7 +249,6 @@ private:
 	bool								mUpdatePosition;							///< Update the position of the body while simulating (set to false for something that is attached to the static world)
 	bool								mHasContact = false;						///< True if the soft body has collided with anything in the last update
 	bool								mEnableSkinConstraints = true;				///< If skin constraints are enabled
-	bool								mSkinStatePreviousPositionValid = false;	///< True if the skinning was updated in the last update so that the previous position of the skin state is valid
 };
 
 JPH_NAMESPACE_END

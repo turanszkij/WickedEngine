@@ -4,8 +4,6 @@
 
 #include <Jolt/Jolt.h>
 
-#ifdef JPH_OBJECT_STREAM
-
 #include <Jolt/ObjectStream/ObjectStreamTextIn.h>
 
 JPH_NAMESPACE_BEGIN
@@ -392,5 +390,3 @@ bool ObjectStreamTextIn::ReadWord(String &outWord)
 }
 
 JPH_NAMESPACE_END
-
-#endif // JPH_OBJECT_STREAM

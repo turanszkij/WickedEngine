@@ -68,8 +68,7 @@ public:
 	}
 
 	/// Helper function that creates a vertex list of a half unit sphere (top part)
-	template <class A>
-	static void		sCreateHalfUnitSphereTop(A &ioVertices, int inDetailLevel)
+	static void		sCreateHalfUnitSphereTop(std::vector<Vec3> &ioVertices, int inDetailLevel)
 	{
 		sCreateUnitSphereHelper(ioVertices,  Vec3::sAxisX(),  Vec3::sAxisY(),  Vec3::sAxisZ(), inDetailLevel);
 		sCreateUnitSphereHelper(ioVertices,  Vec3::sAxisY(), -Vec3::sAxisX(),  Vec3::sAxisZ(), inDetailLevel);
@@ -78,8 +77,7 @@ public:
 	}
 
 	/// Helper function that creates a vertex list of a half unit sphere (bottom part)
-	template <class A>
-	static void		sCreateHalfUnitSphereBottom(A &ioVertices, int inDetailLevel)
+	static void		sCreateHalfUnitSphereBottom(std::vector<Vec3> &ioVertices, int inDetailLevel)
 	{
 		sCreateUnitSphereHelper(ioVertices, -Vec3::sAxisX(), -Vec3::sAxisY(),  Vec3::sAxisZ(), inDetailLevel);
 		sCreateUnitSphereHelper(ioVertices, -Vec3::sAxisY(),  Vec3::sAxisX(),  Vec3::sAxisZ(), inDetailLevel);
@@ -88,8 +86,7 @@ public:
 	}
 
 	/// Helper function that creates an open cylinder of half height 1 and radius 1
-	template <class A>
-	static void		sCreateUnitOpenCylinder(A &ioVertices, int inDetailLevel)
+	static void		sCreateUnitOpenCylinder(std::vector<Vec3> &ioVertices, int inDetailLevel)
 	{
 		const Vec3 bottom_offset(0.0f, -2.0f, 0.0f);
 		int num_verts = 4 * (1 << inDetailLevel);
@@ -115,8 +112,7 @@ public:
 
 private:
 	/// Recursive helper function for creating a sphere
-	template <class A>
-	static void		sCreateUnitSphereHelper(A &ioVertices, Vec3Arg inV1, Vec3Arg inV2, Vec3Arg inV3, int inLevel)
+	static void		sCreateUnitSphereHelper(std::vector<Vec3> &ioVertices, Vec3Arg inV1, Vec3Arg inV2, Vec3Arg inV3, int inLevel)
 	{
 		Vec3 center1 = (inV1 + inV2).Normalized();
 		Vec3 center2 = (inV2 + inV3).Normalized();

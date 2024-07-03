@@ -108,14 +108,13 @@ public:
 	// See: TempAllocator
 	virtual void *					Allocate(uint inSize) override
 	{
-		return inSize > 0? AlignedAllocate(inSize, JPH_RVECTOR_ALIGNMENT) : nullptr;
+		return AlignedAllocate(inSize, JPH_RVECTOR_ALIGNMENT);
 	}
 
 	// See: TempAllocator
 	virtual void					Free(void *inAddress, [[maybe_unused]] uint inSize) override
 	{
-		if (inAddress != nullptr)
-			AlignedFree(inAddress);
+		AlignedFree(inAddress);
 	}
 };
 

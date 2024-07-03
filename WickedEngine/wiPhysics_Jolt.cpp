@@ -1283,7 +1283,9 @@ namespace wi::physics
 					const Vec3 wind = cast(scene.weather.windDirection);
 					if (!wind.IsNearZero())
 					{
-						body_interface.AddForce(physicsobject.bodyID, wind, EActivation::Activate);
+						body_interface.AddForce(physicsobject.bodyID, wind);
+						// in the next Jolt version after 5.0.0 this will probably become
+						// body_interface.AddForce(physicsobject.bodyID, wind, EActivation::Activate);
 					}
 				}
 
@@ -1934,7 +1936,11 @@ namespace wi::physics
 			RigidBody& physicsobject = GetRigidBody(physicscomponent);
 			PhysicsScene& physics_scene = *(PhysicsScene*)physicsobject.physics_scene.get();
 			BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
-			body_interface.AddTorque(physicsobject.bodyID, cast(torque), EActivation::Activate);
+
+			body_interface.AddTorque(physicsobject.bodyID, cast(torque));
+
+			// in the next Jolt release after 5.0.0 this will probably become
+			// body_interface.AddTorque(physicsobject.bodyID, cast(torque), EActivation::Activate);
 		}
 	}
 	void ApplyTorqueImpulse(
