@@ -681,22 +681,26 @@ namespace wi::scene
 
 			constexpr void FromFULL(const XMUINT4& boneIndices, const XMFLOAT4& boneWeights)
 			{
-				packed.x = (boneIndices.x & 0xFFFFFF) | ((uint32_t(boneWeights.x * 255) & 0xFF) << 24u);
-				packed.y = (boneIndices.y & 0xFFFFFF) | ((uint32_t(boneWeights.y * 255) & 0xFF) << 24u);
-				packed.z = (boneIndices.z & 0xFFFFFF) | ((uint32_t(boneWeights.z * 255) & 0xFF) << 24u);
-				packed.w = (boneIndices.w & 0xFFFFFF) | ((uint32_t(boneWeights.w * 255) & 0xFF) << 24u);
+				// Note:
+				//	- Indices are packed at 20 bits which allow indexing >1 million bones per mesh
+				//	- Weights are packed at 12 bits which allow 4096 distinct values, this was tweaked to
+				//		retain good precision with a high bone count stanford bunny soft body simulation where regular 8 bit weights was not enough
+				packed.x = (boneIndices.x & 0xFFFFF) | ((uint32_t(boneWeights.x * 4095) & 0xFFF) << 20u);
+				packed.y = (boneIndices.y & 0xFFFFF) | ((uint32_t(boneWeights.y * 4095) & 0xFFF) << 20u);
+				packed.z = (boneIndices.z & 0xFFFFF) | ((uint32_t(boneWeights.z * 4095) & 0xFFF) << 20u);
+				packed.w = (boneIndices.w & 0xFFFFF) | ((uint32_t(boneWeights.w * 4095) & 0xFFF) << 20u);
 			}
 			constexpr XMUINT4 GetInd_FULL() const
 			{
-				return XMUINT4(packed.x & 0xFFFFFF, packed.y & 0xFFFFFF, packed.z & 0xFFFFFF, packed.w & 0xFFFFFF);
+				return XMUINT4(packed.x & 0xFFFFF, packed.y & 0xFFFFF, packed.z & 0xFFFFF, packed.w & 0xFFFFF);
 			}
 			constexpr XMFLOAT4 GetWei_FULL() const
 			{
 				return XMFLOAT4(
-					float(packed.x >> 24u) / 255.0f,
-					float(packed.y >> 24u) / 255.0f,
-					float(packed.z >> 24u) / 255.0f,
-					float(packed.w >> 24u) / 255.0f
+					float(packed.x >> 20u) / 4095.0f,
+					float(packed.y >> 20u) / 4095.0f,
+					float(packed.z >> 20u) / 4095.0f,
+					float(packed.w >> 20u) / 4095.0f
 				);
 			}
 		};

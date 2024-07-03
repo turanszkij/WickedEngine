@@ -109,15 +109,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 				// Manual type-conversion for bone props:
 				uint4 ind_wei_u = bindless_buffers[push.vb_bon].Load4((vertexID * push.influence_div4 + influence) * sizeof(uint4));
 
-				ind.x = min16uint(ind_wei_u.x & 0xFFFFFF);
-				ind.y = min16uint(ind_wei_u.y & 0xFFFFFF);
-				ind.z = min16uint(ind_wei_u.z & 0xFFFFFF);
-				ind.w = min16uint(ind_wei_u.w & 0xFFFFFF);
+				ind.x = min16uint(ind_wei_u.x & 0xFFFFF);
+				ind.y = min16uint(ind_wei_u.y & 0xFFFFF);
+				ind.z = min16uint(ind_wei_u.z & 0xFFFFF);
+				ind.w = min16uint(ind_wei_u.w & 0xFFFFF);
 
-				wei.x = min16float(float((ind_wei_u.x >> 24) & 0xFF) / 255.0);
-				wei.y = min16float(float((ind_wei_u.y >> 24) & 0xFF) / 255.0);
-				wei.z = min16float(float((ind_wei_u.z >> 24) & 0xFF) / 255.0);
-				wei.w = min16float(float((ind_wei_u.w >> 24) & 0xFF) / 255.0);
+				wei.x = min16float(float((ind_wei_u.x >> 20) & 0xFFF) / 4095.0);
+				wei.y = min16float(float((ind_wei_u.y >> 20) & 0xFFF) / 4095.0);
+				wei.z = min16float(float((ind_wei_u.z >> 20) & 0xFFF) / 4095.0);
+				wei.w = min16float(float((ind_wei_u.w >> 20) & 0xFFF) / 4095.0);
 			}
 			if (any(wei))
 			{
