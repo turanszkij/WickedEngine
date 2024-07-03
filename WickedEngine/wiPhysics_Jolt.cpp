@@ -498,11 +498,6 @@ namespace wi::physics
 
 			physicscomponent.CreateFromMesh(mesh);
 			const size_t vertexCount = physicscomponent.physicsToGraphicsVertexMapping.size();
-			if (vertexCount > 65536)
-			{
-				wi::backlog::post("AddSoftBody error: physics vertex count can not be larger than 65536, try to reduce the soft body detail setting!", wi::backlog::LogLevel::Warning);
-				return;
-			}
 
 			physicsobject.physicsNeighbors.resize(vertexCount);
 

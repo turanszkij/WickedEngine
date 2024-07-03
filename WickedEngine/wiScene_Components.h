@@ -677,39 +677,26 @@ namespace wi::scene
 		};
 		struct Vertex_BON
 		{
-			uint16_t ind0 = 0;
-			uint16_t ind1 = 0;
-			uint16_t ind2 = 0;
-			uint16_t ind3 = 0;
-
-			uint16_t wei0 = 0;
-			uint16_t wei1 = 1;
-			uint16_t wei2 = 2;
-			uint16_t wei3 = 3;
+			XMUINT4 packed = XMUINT4(0, 0, 0, 0);
 
 			constexpr void FromFULL(const XMUINT4& boneIndices, const XMFLOAT4& boneWeights)
 			{
-				ind0 = uint16_t(boneIndices.x);
-				ind1 = uint16_t(boneIndices.y);
-				ind2 = uint16_t(boneIndices.z);
-				ind3 = uint16_t(boneIndices.w);
-
-				wei0 = uint16_t(boneWeights.x * 65535.0f);
-				wei1 = uint16_t(boneWeights.y * 65535.0f);
-				wei2 = uint16_t(boneWeights.z * 65535.0f);
-				wei3 = uint16_t(boneWeights.w * 65535.0f);
+				packed.x = (boneIndices.x & 0xFFFFFF) | ((uint32_t(boneWeights.x * 255) & 0xFF) << 24u);
+				packed.y = (boneIndices.y & 0xFFFFFF) | ((uint32_t(boneWeights.y * 255) & 0xFF) << 24u);
+				packed.z = (boneIndices.z & 0xFFFFFF) | ((uint32_t(boneWeights.z * 255) & 0xFF) << 24u);
+				packed.w = (boneIndices.w & 0xFFFFFF) | ((uint32_t(boneWeights.w * 255) & 0xFF) << 24u);
 			}
 			constexpr XMUINT4 GetInd_FULL() const
 			{
-				return XMUINT4(ind0, ind1, ind2, ind3);
+				return XMUINT4(packed.x & 0xFFFFFF, packed.y & 0xFFFFFF, packed.z & 0xFFFFFF, packed.w & 0xFFFFFF);
 			}
 			constexpr XMFLOAT4 GetWei_FULL() const
 			{
 				return XMFLOAT4(
-					float(wei0) / 65535.0f,
-					float(wei1) / 65535.0f,
-					float(wei2) / 65535.0f,
-					float(wei3) / 65535.0f
+					float(packed.x >> 24u) / 255.0f,
+					float(packed.y >> 24u) / 255.0f,
+					float(packed.z >> 24u) / 255.0f,
+					float(packed.w >> 24u) / 255.0f
 				);
 			}
 		};
@@ -990,7 +977,7 @@ namespace wi::scene
 		float restitution = 0.0f;
 		float pressure = 0.0f;
 		float vertex_radius = 0.2f; // how much distance vertices keep from other physics bodies
-		float detail = 1000; // precision to keep within a unit
+		float detail = 10; // precision to keep within a unit
 		wi::vector<uint32_t> physicsToGraphicsVertexMapping; // maps graphics vertex index to physics vertex index of the same position
 		wi::vector<uint32_t> graphicsToPhysicsVertexMapping; // maps a physics vertex index to first graphics vertex index of the same position
 		wi::vector<float> weights; // weight per physics vertex controlling the mass. (0: disable weight (no physics, only animation), 1: default weight)

@@ -35,7 +35,7 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 	infoLabel.SetSize(XMFLOAT2(100, 90));
 	AddWidget(&infoLabel);
 
-	detailSlider.Create(10, 1000, 1, 90, "Detail: ");
+	detailSlider.Create(4, 100, 1, 90, "Detail: ");
 	detailSlider.SetTooltip("Set the detail to keep between simulation and graphics mesh.\nLower = less detailed, higher = more detailed.");
 	detailSlider.SetSize(XMFLOAT2(wid, hei));
 	detailSlider.SetPos(XMFLOAT2(x, y));
