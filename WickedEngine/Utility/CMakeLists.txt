@@ -4,9 +4,6 @@ if (PLATFORM MATCHES "SDL2")
 endif()
 
 add_subdirectory(meshoptimizer)
-target_link_libraries(${TARGET_NAME} PUBLIC
-	meshoptimizer
-)
 
 set(HEADER_FILES
 		${CMAKE_CURRENT_SOURCE_DIR}/DirectXCollision.h
