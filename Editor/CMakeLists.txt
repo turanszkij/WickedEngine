@@ -51,8 +51,6 @@ set (SOURCE_FILES
 	EmbeddedResources.cpp
 )
 
-add_subdirectory(meshoptimizer)
-
 if (WIN32)
 	list (APPEND SOURCE_FILES
 		Editor.rc
@@ -62,7 +60,6 @@ if (WIN32)
 
 	target_link_libraries(WickedEngineEditor PUBLIC
 		WickedEngine_Windows
-		meshoptimizer
 	)
 
 	set_property(TARGET WickedEngineEditor PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -72,7 +69,6 @@ else ()
 
 	target_link_libraries(WickedEngineEditor PUBLIC
 		WickedEngine
-		meshoptimizer
 	)
 	set(LIB_DXCOMPILER "libdxcompiler.so")
 

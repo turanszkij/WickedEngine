@@ -3,6 +3,11 @@ if (PLATFORM MATCHES "SDL2")
 	add_subdirectory(FAudio)
 endif()
 
+add_subdirectory(meshoptimizer)
+target_link_libraries(WickedEngineEditor PUBLIC
+	meshoptimizer
+)
+
 set(HEADER_FILES
 		${CMAKE_CURRENT_SOURCE_DIR}/DirectXCollision.h
 		${CMAKE_CURRENT_SOURCE_DIR}/DirectXColors.h

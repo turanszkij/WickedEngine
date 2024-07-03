@@ -810,6 +810,11 @@ namespace wi::scene
 				std::swap(weights, weights2);
 			}
 
+			if (seri.version >= 3)
+			{
+				archive >> physicsFaces;
+			}
+
 			_flags &= ~SAFE_TO_REGISTER;
 		}
 		else
@@ -834,6 +839,11 @@ namespace wi::scene
 			if (seri.version >= 2)
 			{
 				archive << pressure;
+			}
+
+			if (seri.version >= 3)
+			{
+				archive << physicsFaces;
 			}
 		}
 	}

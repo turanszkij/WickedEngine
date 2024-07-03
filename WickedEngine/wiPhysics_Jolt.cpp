@@ -497,50 +497,29 @@ namespace wi::physics
 			physicsobject.shared_settings.mVertexRadius = physicscomponent.vertex_radius;
 
 			physicscomponent.CreateFromMesh(mesh);
+			if (physicscomponent.physicsFaces.empty())
+			{
+				wi::backlog::post("AddSoftBody failed: physics faces are empty, this means generating physics mesh has failed, try to change settings.", wi::backlog::LogLevel::Error);
+				return;
+			}
 			const size_t vertexCount = physicscomponent.physicsToGraphicsVertexMapping.size();
 
 			physicsobject.physicsNeighbors.resize(vertexCount);
 
-			uint32_t first_subset = 0;
-			uint32_t last_subset = 0;
-			mesh.GetLODSubsetRange(0, first_subset, last_subset);
-			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+			for (size_t i = 0; i < physicscomponent.physicsFaces.size(); i += 3)
 			{
-				const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
-				const uint32_t* indices = mesh.indices.data() + subset.indexOffset;
-				for (uint32_t i = 0; i < subset.indexCount; i += 3)
-				{
-					const uint32_t graphicsInd0 = indices[i + 0];
-					const uint32_t graphicsInd1 = indices[i + 1];
-					const uint32_t graphicsInd2 = indices[i + 2];
-					const uint32_t physicsInd0 = physicscomponent.graphicsToPhysicsVertexMapping[graphicsInd0];
-					const uint32_t physicsInd1 = physicscomponent.graphicsToPhysicsVertexMapping[graphicsInd1];
-					const uint32_t physicsInd2 = physicscomponent.graphicsToPhysicsVertexMapping[graphicsInd2];
+				const uint32_t physicsInd0 = physicscomponent.graphicsToPhysicsVertexMapping[i + 0];
+				const uint32_t physicsInd1 = physicscomponent.graphicsToPhysicsVertexMapping[i + 1];
+				const uint32_t physicsInd2 = physicscomponent.graphicsToPhysicsVertexMapping[i + 2];
 
-					// Skip faces that are a single point:
-					//	Note: we don't skip zero-area, because zero area can still be a valid line connection
-					if (physicsInd0 == physicsInd1 && physicsInd1 == physicsInd2 && physicsInd2 == physicsInd0)
-						continue;
-					SoftBodySharedSettings::Face& face = physicsobject.shared_settings.mFaces.emplace_back();
-					face.mVertex[0] = physicsInd0;
-					face.mVertex[2] = physicsInd1;
-					face.mVertex[1] = physicsInd2;
+				SoftBodySharedSettings::Face& face = physicsobject.shared_settings.mFaces.emplace_back();
+				face.mVertex[0] = physicsInd0;
+				face.mVertex[2] = physicsInd1;
+				face.mVertex[1] = physicsInd2;
 
-					// Don't allow zero area physics face to be a bone binding:
-					//	Note: zero area triangle would produce incorrect matrix in GetOrientation()
-					const uint32_t physicsToGraphicsInd0 = physicscomponent.physicsToGraphicsVertexMapping[physicsInd0];
-					const uint32_t physicsToGraphicsInd1 = physicscomponent.physicsToGraphicsVertexMapping[physicsInd1];
-					const uint32_t physicsToGraphicsInd2 = physicscomponent.physicsToGraphicsVertexMapping[physicsInd2];
-					const XMVECTOR P0 = XMLoadFloat3(&mesh.vertex_positions[physicsToGraphicsInd0]);
-					const XMVECTOR P1 = XMLoadFloat3(&mesh.vertex_positions[physicsToGraphicsInd1]);
-					const XMVECTOR P2 = XMLoadFloat3(&mesh.vertex_positions[physicsToGraphicsInd2]);
-					if (wi::math::TriangleArea(P0, P1, P2) > 0)
-					{
-						physicsobject.physicsNeighbors[physicsInd0].set(physicsInd2, physicsInd1);
-						physicsobject.physicsNeighbors[physicsInd1].set(physicsInd0, physicsInd2);
-						physicsobject.physicsNeighbors[physicsInd2].set(physicsInd1, physicsInd0);
-					}
-				}
+				physicsobject.physicsNeighbors[physicsInd0].set(physicsInd2, physicsInd1);
+				physicsobject.physicsNeighbors[physicsInd1].set(physicsInd0, physicsInd2);
+				physicsobject.physicsNeighbors[physicsInd2].set(physicsInd1, physicsInd0);
 			}
 
 			const XMMATRIX worldMatrix = XMLoadFloat4x4(&physicscomponent.worldMatrix);
@@ -592,113 +571,6 @@ namespace wi::physics
 				wi::backlog::post("AddSoftBody failed: body couldn't be created! This could mean that there are too many physics objects.", wi::backlog::LogLevel::Error);
 				return;
 			}
-
-			// BoneQueue is used for assigning the highest weighted fixed number of bones (soft body nodes) to a graphics vertex
-			static constexpr int influence = 8;
-			struct BoneQueue
-			{
-				struct Bone
-				{
-					uint32_t index = 0;
-					float weight = 0;
-					constexpr bool operator<(const Bone& other) const { return weight < other.weight; }
-					constexpr bool operator>(const Bone& other) const { return weight > other.weight; }
-				};
-				Bone bones[influence];
-				constexpr void add(uint32_t index, float weight)
-				{
-					int mini = 0;
-					for (int i = 1; i < arraysize(bones); ++i)
-					{
-						if (bones[i].weight < bones[mini].weight)
-						{
-							mini = i;
-						}
-					}
-					if (weight > bones[mini].weight)
-					{
-						bones[mini].weight = weight;
-						bones[mini].index = index;
-					}
-				}
-				void finalize()
-				{
-					std::sort(bones, bones + arraysize(bones), std::greater<Bone>());
-					// Note: normalization of bone weights will be done in MeshComponent::CreateRenderData()
-				}
-				constexpr XMUINT4 get_indices() const
-				{
-					return XMUINT4(
-						influence < 1 ? 0 : bones[0].index,
-						influence < 2 ? 0 : bones[1].index,
-						influence < 3 ? 0 : bones[2].index,
-						influence < 4 ? 0 : bones[3].index
-					);
-				}
-				constexpr XMUINT4 get_indices2() const
-				{
-					return XMUINT4(
-						influence < 5 ? 0 : bones[4].index,
-						influence < 6 ? 0 : bones[5].index,
-						influence < 7 ? 0 : bones[6].index,
-						influence < 8 ? 0 : bones[7].index
-					);
-				}
-				constexpr XMFLOAT4 get_weights() const
-				{
-					return XMFLOAT4(
-						influence < 1 ? 0 : bones[0].weight,
-						influence < 2 ? 0 : bones[1].weight,
-						influence < 3 ? 0 : bones[2].weight,
-						influence < 4 ? 0 : bones[3].weight
-					);
-				}
-				constexpr XMFLOAT4 get_weights2() const
-				{
-					return XMFLOAT4(
-						influence < 5 ? 0 : bones[4].weight,
-						influence < 6 ? 0 : bones[5].weight,
-						influence < 7 ? 0 : bones[6].weight,
-						influence < 8 ? 0 : bones[7].weight
-					);
-				}
-			};
-
-			// Create skinning bone vertex data:
-			mesh.vertex_boneindices.resize(mesh.vertex_positions.size());
-			mesh.vertex_boneweights.resize(mesh.vertex_positions.size());
-			if (influence > 4)
-			{
-				mesh.vertex_boneindices2.resize(mesh.vertex_positions.size());
-				mesh.vertex_boneweights2.resize(mesh.vertex_positions.size());
-			}
-			wi::jobsystem::context ctx;
-			wi::jobsystem::Dispatch(ctx, (uint32_t)mesh.vertex_positions.size(), 64, [&](wi::jobsystem::JobArgs args) {
-				const XMFLOAT3 position = mesh.vertex_positions[args.jobIndex];
-
-				BoneQueue bones;
-				for (size_t physicsInd = 0; physicsInd < vertexCount; ++physicsInd)
-				{
-					const uint32_t graphicsInd = physicscomponent.physicsToGraphicsVertexMapping[physicsInd];
-					const XMFLOAT3 position2 = mesh.vertex_positions[graphicsInd];
-					const float dist = wi::math::DistanceSquared(position, position2);
-					// Note: 0.01 correction is carefully tweaked so that cloth_test and sponza curtains look good
-					// (larger values blow up the curtains, lower values make the shading of the cloth look bad)
-					const float weight = 1.0f / (0.01f + dist);
-					bones.add((uint32_t)physicsInd, weight);
-				}
-
-				bones.finalize();
-				mesh.vertex_boneindices[args.jobIndex] = bones.get_indices();
-				mesh.vertex_boneweights[args.jobIndex] = bones.get_weights();
-				if (influence > 4)
-				{
-					mesh.vertex_boneindices2[args.jobIndex] = bones.get_indices2();
-					mesh.vertex_boneweights2[args.jobIndex] = bones.get_weights2();
-				}
-			});
-			wi::jobsystem::Wait(ctx);
-			mesh.CreateRenderData();
 		}
 
 		struct Ragdoll

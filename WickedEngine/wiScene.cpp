@@ -4076,11 +4076,6 @@ namespace wi::scene
 
 						// soft body manipulated with the object matrix
 						softbody->worldMatrix = transform.world;
-
-						if (softbody->graphicsToPhysicsVertexMapping.empty())
-						{
-							softbody->CreateFromMesh(mesh);
-						}
 					}
 
 					if (softbody->physicsobject != nullptr)

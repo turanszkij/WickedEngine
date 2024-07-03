@@ -8,7 +8,7 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_SOFTBODY " Soft Body Physics", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(580, 300));
+	SetSize(XMFLOAT2(580, 320));
 
 	closeButton.SetTooltip("Delete SoftBodyPhysicsComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -18,6 +18,18 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->GetCurrentScene().softbodies.Remove(entity);
+
+		MeshComponent* mesh = editor->GetCurrentScene().meshes.GetComponent(entity);
+		if (mesh != nullptr && mesh->armatureID == INVALID_ENTITY)
+		{
+			// When removing soft body, and mesh also doesn't have an armature,
+			//	then remove the bone vertex buffers
+			mesh->vertex_boneindices.clear();
+			mesh->vertex_boneweights.clear();
+			mesh->vertex_boneindices2.clear();
+			mesh->vertex_boneweights2.clear();
+			mesh->CreateRenderData();
+		}
 
 		editor->RecordEntity(archive, entity);
 
@@ -61,7 +73,7 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&resetButton);
 
-	detailSlider.Create(4, 100, 1, 90, "Detail: ");
+	detailSlider.Create(0.001f, 1, 1, 1000, "LOD Detail: ");
 	detailSlider.SetTooltip("Set the detail to keep between simulation and graphics mesh.\nLower = less detailed, higher = more detailed.");
 	detailSlider.SetSize(XMFLOAT2(wid, hei));
 	detailSlider.SetPos(XMFLOAT2(x, y));
@@ -87,7 +99,7 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&detailSlider);
 
-	massSlider.Create(0, 10, 1, 100000, "Mass: ");
+	massSlider.Create(0, 100, 1, 100000, "Mass: ");
 	massSlider.SetTooltip("Set the mass amount for the physics engine.");
 	massSlider.SetSize(XMFLOAT2(wid, hei));
 	massSlider.SetPos(XMFLOAT2(x, y));

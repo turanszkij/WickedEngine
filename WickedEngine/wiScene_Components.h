@@ -981,7 +981,8 @@ namespace wi::scene
 		float restitution = 0.0f;
 		float pressure = 0.0f;
 		float vertex_radius = 0.2f; // how much distance vertices keep from other physics bodies
-		float detail = 10; // precision to keep within a unit
+		float detail = 1; // LOD target detail [0,1]
+		wi::vector<uint32_t> physicsFaces; // physics vertex connectivity
 		wi::vector<uint32_t> physicsToGraphicsVertexMapping; // maps graphics vertex index to physics vertex index of the same position
 		wi::vector<uint32_t> graphicsToPhysicsVertexMapping; // maps a physics vertex index to first graphics vertex index of the same position
 		wi::vector<float> weights; // weight per physics vertex controlling the mass. (0: disable weight (no physics, only animation), 1: default weight)
@@ -1001,19 +1002,20 @@ namespace wi::scene
 
 		void Reset()
 		{
+			physicsFaces.clear();
 			physicsToGraphicsVertexMapping.clear();
-			physicsToGraphicsVertexMapping.shrink_to_fit();
+			graphicsToPhysicsVertexMapping.clear();
 			physicsobject = {};
 		}
 
-		void SetDetail(float value)
+		void SetDetail(float loddetail)
 		{
-			detail = value;
+			detail = loddetail;
 			Reset();
 		}
 
 		// Create physics represenation of graphics mesh
-		void CreateFromMesh(const MeshComponent& mesh);
+		void CreateFromMesh(MeshComponent& mesh);
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

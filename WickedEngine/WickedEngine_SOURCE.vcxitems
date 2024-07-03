@@ -309,6 +309,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dxva.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\h264.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\lodepng.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\meshoptimizer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\minimp4.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\pugiconfig.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\pugixml.hpp" />
@@ -594,6 +595,22 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\TriangleSplitter\TriangleSplitterMean.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\TriangleSplitter\TriangleSplitterMorton.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\lodepng.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\allocator.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\clusterizer.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\indexcodec.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\indexgenerator.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\overdrawanalyzer.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\overdrawoptimizer.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\quantization.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\simplifier.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\spatialorder.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\stripifier.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vcacheanalyzer.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vcacheoptimizer.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vertexcodec.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vertexfilter.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vfetchanalyzer.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vfetchoptimizer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\pugixml.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiAsync_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiConfig.cpp" />
@@ -806,6 +823,7 @@
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</DeploymentContent>
     </Text>
+    <Text Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)Jolt\Core\FixedSizeFreeList.inl" />

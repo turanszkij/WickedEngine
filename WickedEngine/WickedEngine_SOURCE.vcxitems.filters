@@ -55,6 +55,9 @@
     <Filter Include="JOLT">
       <UniqueIdentifier>{ea901057-ebb6-4eed-ac17-c98111e6c4bd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="UTILITY\meshoptimizer">
+      <UniqueIdentifier>{5634b6ae-7f51-48ed-8a33-a5be8a31a56b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)LUA\lapi.h">
@@ -1374,6 +1377,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Vehicle\WheeledVehicleController.h">
       <Filter>JOLT</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\meshoptimizer.h">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -2138,6 +2144,54 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiPhysics_Jolt.cpp">
       <Filter>ENGINE\Physics</Filter>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\allocator.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\clusterizer.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\indexcodec.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\indexgenerator.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\overdrawanalyzer.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\overdrawoptimizer.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\quantization.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\simplifier.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\spatialorder.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\stripifier.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vcacheanalyzer.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vcacheoptimizer.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vertexcodec.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vertexfilter.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vfetchanalyzer.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vfetchoptimizer.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)Utility\DirectXCollision.inl">
@@ -2206,5 +2260,8 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)ArchiveVersionHistory.txt" />
+    <Text Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\CMakeLists.txt">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </Text>
   </ItemGroup>
 </Project>
