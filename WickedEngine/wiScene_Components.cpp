@@ -2029,7 +2029,7 @@ namespace wi::scene
 			weights.resize(mesh.vertex_positions.size());
 			std::fill(weights.begin(), weights.end(), 1.0f);
 		}
-		if (physicsFaces.empty())
+		if (physicsIndices.empty())
 		{
 			bool pinning_required = false;
 			wi::vector<uint32_t> source;
@@ -2046,7 +2046,7 @@ namespace wi::scene
 					pinning_required |= weights[indices[i]] == 0;
 				}
 			}
-			physicsFaces.resize(source.size());
+			physicsIndices.resize(source.size());
 
 			if (pinning_required)
 			{
@@ -2074,7 +2074,7 @@ namespace wi::scene
 				while (result == 0 && tries < 100)
 				{
 					result = meshopt_simplify(
-						&physicsFaces[0],
+						&physicsIndices[0],
 						&shadow_indices[0],
 						shadow_indices.size(),
 						(const float*)&mesh.vertex_positions[0],
@@ -2086,7 +2086,7 @@ namespace wi::scene
 					target_error *= 0.5f;
 				}
 				assert(result > 0);
-				physicsFaces.resize(result);
+				physicsIndices.resize(result);
 			}
 			else
 			{
@@ -2098,7 +2098,7 @@ namespace wi::scene
 				while (result == 0 && tries < 100)
 				{
 					result = meshopt_simplifySloppy(
-						&physicsFaces[0],
+						&physicsIndices[0],
 						&source[0],
 						source.size(),
 						(const float*)&mesh.vertex_positions[0],
@@ -2110,23 +2110,23 @@ namespace wi::scene
 					target_error *= 0.5f;
 				}
 				assert(result > 0);
-				physicsFaces.resize(result);
+				physicsIndices.resize(result);
 			}
 
-			physicsFaces.shrink_to_fit();
+			physicsIndices.shrink_to_fit();
 
+			// Remap physics indices to point to physics indices:
 			physicsToGraphicsVertexMapping.clear();
-			graphicsToPhysicsVertexMapping.resize(physicsFaces.size());
 			wi::unordered_map<uint32_t, size_t> physicsVertices;
-			for (size_t i = 0; i < physicsFaces.size(); ++i)
+			for (size_t i = 0; i < physicsIndices.size(); ++i)
 			{
-				const uint32_t graphicsInd = physicsFaces[i];
+				const uint32_t graphicsInd = physicsIndices[i];
 				if (physicsVertices.count(graphicsInd) == 0)
 				{
 					physicsVertices[graphicsInd] = physicsToGraphicsVertexMapping.size();
 					physicsToGraphicsVertexMapping.push_back(graphicsInd);
 				}
-				graphicsToPhysicsVertexMapping[i] = (uint32_t)physicsVertices[graphicsInd];
+				physicsIndices[i] = (uint32_t)physicsVertices[graphicsInd];
 			}
 			physicsToGraphicsVertexMapping.shrink_to_fit();
 

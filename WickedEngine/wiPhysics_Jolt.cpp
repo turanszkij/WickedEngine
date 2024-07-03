@@ -497,7 +497,7 @@ namespace wi::physics
 			physicsobject.shared_settings.mVertexRadius = physicscomponent.vertex_radius;
 
 			physicscomponent.CreateFromMesh(mesh);
-			if (physicscomponent.physicsFaces.empty())
+			if (physicscomponent.physicsIndices.empty())
 			{
 				wi::backlog::post("AddSoftBody failed: physics faces are empty, this means generating physics mesh has failed, try to change settings.", wi::backlog::LogLevel::Error);
 				return;
@@ -506,11 +506,11 @@ namespace wi::physics
 
 			physicsobject.physicsNeighbors.resize(vertexCount);
 
-			for (size_t i = 0; i < physicscomponent.physicsFaces.size(); i += 3)
+			for (size_t i = 0; i < physicscomponent.physicsIndices.size(); i += 3)
 			{
-				const uint32_t physicsInd0 = physicscomponent.graphicsToPhysicsVertexMapping[i + 0];
-				const uint32_t physicsInd1 = physicscomponent.graphicsToPhysicsVertexMapping[i + 1];
-				const uint32_t physicsInd2 = physicscomponent.graphicsToPhysicsVertexMapping[i + 2];
+				const uint32_t physicsInd0 = physicscomponent.physicsIndices[i + 0];
+				const uint32_t physicsInd1 = physicscomponent.physicsIndices[i + 1];
+				const uint32_t physicsInd2 = physicscomponent.physicsIndices[i + 2];
 
 				SoftBodySharedSettings::Face& face = physicsobject.shared_settings.mFaces.emplace_back();
 				face.mVertex[0] = physicsInd0;

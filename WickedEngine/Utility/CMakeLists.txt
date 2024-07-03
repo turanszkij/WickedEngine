@@ -38,6 +38,7 @@ set(HEADER_FILES
 		${CMAKE_CURRENT_SOURCE_DIR}/h264.h
 		${CMAKE_CURRENT_SOURCE_DIR}/dds.h
 		${CMAKE_CURRENT_SOURCE_DIR}/lodepng.h
+		${CMAKE_CURRENT_SOURCE_DIR}/meshoptimizer/allocator.cpp
 		)
 install(FILES ${HEADER_FILES}
 		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/Utility/")
@@ -118,6 +119,21 @@ set (SOURCE_FILES
 	samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp.cpp
 	pugixml.cpp
 	lodepng.cpp
+	meshoptimizer/allocator.cpp
+	meshoptimizer/clusterizer.cpp
+	meshoptimizer/indexcodec.cpp
+	meshoptimizer/indexgenerator.cpp
+	meshoptimizer/overdrawanalyzer.cpp
+	meshoptimizer/overdrawoptimizer.cpp
+	meshoptimizer/simplifier.cpp
+	meshoptimizer/spatialorder.cpp
+	meshoptimizer/stripifier.cpp
+	meshoptimizer/vcacheanalyzer.cpp
+	meshoptimizer/vcacheoptimizer.cpp
+	meshoptimizer/vertexcodec.cpp
+	meshoptimizer/vertexfilter.cpp
+	meshoptimizer/vfetchanalyzer.cpp
+	meshoptimizer/vfetchoptimizer.cpp
 )
 
 if (WIN32)

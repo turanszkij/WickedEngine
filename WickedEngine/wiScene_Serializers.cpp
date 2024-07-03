@@ -759,6 +759,8 @@ namespace wi::scene
 	}
 	void SoftBodyPhysicsComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
+		wi::vector<uint32_t> graphicsToPhysicsVertexMapping;
+
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
@@ -812,7 +814,7 @@ namespace wi::scene
 
 			if (seri.version >= 3)
 			{
-				archive >> physicsFaces;
+				archive >> physicsIndices;
 			}
 
 			_flags &= ~SAFE_TO_REGISTER;
@@ -843,7 +845,7 @@ namespace wi::scene
 
 			if (seri.version >= 3)
 			{
-				archive << physicsFaces;
+				archive << physicsIndices;
 			}
 		}
 	}
