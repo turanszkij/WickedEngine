@@ -366,6 +366,8 @@ namespace wi::scene
 		wi::vector<XMFLOAT2> vertex_uvset_1;
 		wi::vector<XMUINT4> vertex_boneindices;
 		wi::vector<XMFLOAT4> vertex_boneweights;
+		wi::vector<XMUINT4> vertex_boneindices2;
+		wi::vector<XMFLOAT4> vertex_boneweights2;
 		wi::vector<XMFLOAT2> vertex_atlas;
 		wi::vector<uint32_t> vertex_colors;
 		wi::vector<uint8_t> vertex_windweights;
@@ -517,6 +519,20 @@ namespace wi::scene
 		void RecenterToBottom();
 		wi::primitive::Sphere GetBoundingSphere() const;
 
+		uint32_t GetBoneInfluenceDiv4() const
+		{
+			uint32_t influence_div4 = 0;
+			if (!vertex_boneindices.empty())
+			{
+				influence_div4++;
+			}
+			if (!vertex_boneindices2.empty())
+			{
+				influence_div4++;
+			}
+			return influence_div4;
+		}
+
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 
 		struct Vertex_POS10
@@ -661,39 +677,30 @@ namespace wi::scene
 		};
 		struct Vertex_BON
 		{
-			uint16_t ind0 = 0;
-			uint16_t ind1 = 0;
-			uint16_t ind2 = 0;
-			uint16_t ind3 = 0;
-
-			uint16_t wei0 = 0;
-			uint16_t wei1 = 1;
-			uint16_t wei2 = 2;
-			uint16_t wei3 = 3;
+			XMUINT4 packed = XMUINT4(0, 0, 0, 0);
 
 			constexpr void FromFULL(const XMUINT4& boneIndices, const XMFLOAT4& boneWeights)
 			{
-				ind0 = uint16_t(boneIndices.x);
-				ind1 = uint16_t(boneIndices.y);
-				ind2 = uint16_t(boneIndices.z);
-				ind3 = uint16_t(boneIndices.w);
-
-				wei0 = uint16_t(boneWeights.x * 65535.0f);
-				wei1 = uint16_t(boneWeights.y * 65535.0f);
-				wei2 = uint16_t(boneWeights.z * 65535.0f);
-				wei3 = uint16_t(boneWeights.w * 65535.0f);
+				// Note:
+				//	- Indices are packed at 20 bits which allow indexing >1 million bones per mesh
+				//	- Weights are packed at 12 bits which allow 4096 distinct values, this was tweaked to
+				//		retain good precision with a high bone count stanford bunny soft body simulation where regular 8 bit weights was not enough
+				packed.x = (boneIndices.x & 0xFFFFF) | ((uint32_t(boneWeights.x * 4095) & 0xFFF) << 20u);
+				packed.y = (boneIndices.y & 0xFFFFF) | ((uint32_t(boneWeights.y * 4095) & 0xFFF) << 20u);
+				packed.z = (boneIndices.z & 0xFFFFF) | ((uint32_t(boneWeights.z * 4095) & 0xFFF) << 20u);
+				packed.w = (boneIndices.w & 0xFFFFF) | ((uint32_t(boneWeights.w * 4095) & 0xFFF) << 20u);
 			}
 			constexpr XMUINT4 GetInd_FULL() const
 			{
-				return XMUINT4(ind0, ind1, ind2, ind3);
+				return XMUINT4(packed.x & 0xFFFFF, packed.y & 0xFFFFF, packed.z & 0xFFFFF, packed.w & 0xFFFFF);
 			}
 			constexpr XMFLOAT4 GetWei_FULL() const
 			{
 				return XMFLOAT4(
-					float(wei0) / 65535.0f,
-					float(wei1) / 65535.0f,
-					float(wei2) / 65535.0f,
-					float(wei3) / 65535.0f
+					float(packed.x >> 20u) / 4095.0f,
+					float(packed.y >> 20u) / 4095.0f,
+					float(packed.z >> 20u) / 4095.0f,
+					float(packed.w >> 20u) / 4095.0f
 				);
 			}
 		};
@@ -964,7 +971,7 @@ namespace wi::scene
 			EMPTY = 0,
 			SAFE_TO_REGISTER = 1 << 0,
 			DISABLE_DEACTIVATION = 1 << 1,
-			FORCE_RESET = 1 << 2,
+			_DEPRECATED_FORCE_RESET = 1 << 2,
 			WIND = 1 << 3,
 		};
 		uint32_t _flags = DISABLE_DEACTIVATION;
@@ -972,41 +979,41 @@ namespace wi::scene
 		float mass = 1.0f;
 		float friction = 0.5f;
 		float restitution = 0.0f;
+		float pressure = 0.0f;
 		float vertex_radius = 0.2f; // how much distance vertices keep from other physics bodies
-		float detail = 100; // precision to keep within a unit
+		float detail = 1; // LOD target detail [0,1]
+		wi::vector<uint32_t> physicsIndices; // physics vertex connectivity
 		wi::vector<uint32_t> physicsToGraphicsVertexMapping; // maps graphics vertex index to physics vertex index of the same position
-		wi::vector<uint32_t> graphicsToPhysicsVertexMapping; // maps a physics vertex index to first graphics vertex index of the same position
 		wi::vector<float> weights; // weight per physics vertex controlling the mass. (0: disable weight (no physics, only animation), 1: default weight)
 
 		// Non-serialized attributes:
 		std::shared_ptr<void> physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
 		XMFLOAT4X4 worldMatrix = wi::math::IDENTITY_MATRIX;
-		wi::vector<MeshComponent::Vertex_POS32> vertex_positions_simulation; // graphics vertices after simulation (world space)
-		wi::vector<MeshComponent::Vertex_NOR> vertex_normals_simulation;
-		wi::vector<MeshComponent::Vertex_TAN> vertex_tangents_simulation;
+		uint32_t gpuBoneOffset = 0;
+		wi::vector<ShaderTransform> boneData; // simulated soft body nodes as bone matrices that can be fed into skinning
 		wi::primitive::AABB aabb;
 
 		inline void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
-		inline void SetWindEnabled(bool value) { if (value) { _flags |= WIND; } else { _flags &= ~DISABLE_DEACTIVATION; } }
+		inline void SetWindEnabled(bool value) { if (value) { _flags |= WIND; } else { _flags &= ~WIND; } }
 
 		inline bool IsDisableDeactivation() const { return _flags & DISABLE_DEACTIVATION; }
 		inline bool IsWindEnabled() const { return _flags & WIND; }
 
-		void SetDetail(float value)
+		void Reset()
 		{
-			detail = value;
+			physicsIndices.clear();
 			physicsToGraphicsVertexMapping.clear();
-			physicsToGraphicsVertexMapping.shrink_to_fit();
 			physicsobject = {};
 		}
 
-		inline bool HasVertices() const
+		void SetDetail(float loddetail)
 		{
-			return !vertex_positions_simulation.empty();
+			detail = loddetail;
+			Reset();
 		}
 
 		// Create physics represenation of graphics mesh
-		void CreateFromMesh(const MeshComponent& mesh);
+		void CreateFromMesh(MeshComponent& mesh);
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

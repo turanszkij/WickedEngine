@@ -32,7 +32,7 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 	float wid = 220;
 
 	infoLabel.Create("");
-	infoLabel.SetSize(XMFLOAT2(100, 50));
+	infoLabel.SetSize(XMFLOAT2(100, 80));
 	infoLabel.SetText("This window will stay open even if you select other entities until it is collapsed, so you can select other bone entities.");
 	AddWidget(&infoLabel);
 

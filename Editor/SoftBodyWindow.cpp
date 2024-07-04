@@ -8,7 +8,7 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_SOFTBODY " Soft Body Physics", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(580, 260));
+	SetSize(XMFLOAT2(580, 320));
 
 	closeButton.SetTooltip("Delete SoftBodyPhysicsComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -18,6 +18,18 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->GetCurrentScene().softbodies.Remove(entity);
+
+		MeshComponent* mesh = editor->GetCurrentScene().meshes.GetComponent(entity);
+		if (mesh != nullptr && mesh->armatureID == INVALID_ENTITY)
+		{
+			// When removing soft body, and mesh also doesn't have an armature,
+			//	then remove the bone vertex buffers
+			mesh->vertex_boneindices.clear();
+			mesh->vertex_boneweights.clear();
+			mesh->vertex_boneindices2.clear();
+			mesh->vertex_boneweights2.clear();
+			mesh->CreateRenderData();
+		}
 
 		editor->RecordEntity(archive, entity);
 
@@ -35,8 +47,34 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 	infoLabel.SetSize(XMFLOAT2(100, 90));
 	AddWidget(&infoLabel);
 
-	detailSlider.Create(10, 100, 1, 90, "Detail: ");
-	detailSlider.SetTooltip("Set the detail to keep between simulation and graphics mesh. This will recreate the soft body, vertex changes will be lost.\nLower = less detailed, higher = more detailed.");
+	resetButton.Create("Reset");
+	resetButton.SetTooltip("Set the detail to keep between simulation and graphics mesh.\nLower = less detailed, higher = more detailed.");
+	resetButton.SetSize(XMFLOAT2(wid, hei));
+	resetButton.SetPos(XMFLOAT2(x, y));
+	resetButton.OnClick([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(x.entity);
+			if (physicscomponent == nullptr)
+			{
+				// Try also getting it through object's mesh:
+				ObjectComponent* object = scene.objects.GetComponent(x.entity);
+				if (object != nullptr)
+				{
+					physicscomponent = scene.softbodies.GetComponent(object->meshID);
+				}
+			}
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->Reset();
+			}
+		}
+	});
+	AddWidget(&resetButton);
+
+	detailSlider.Create(0.001f, 1, 1, 1000, "LOD Detail: ");
+	detailSlider.SetTooltip("Set the detail to keep between simulation and graphics mesh.\nLower = less detailed, higher = more detailed.");
 	detailSlider.SetSize(XMFLOAT2(wid, hei));
 	detailSlider.SetPos(XMFLOAT2(x, y));
 	detailSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -61,7 +99,7 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&detailSlider);
 
-	massSlider.Create(0, 10, 1, 100000, "Mass: ");
+	massSlider.Create(0, 100, 1, 100000, "Mass: ");
 	massSlider.SetTooltip("Set the mass amount for the physics engine.");
 	massSlider.SetSize(XMFLOAT2(wid, hei));
 	massSlider.SetPos(XMFLOAT2(x, y));
@@ -140,6 +178,33 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&restitutionSlider);
 
+	pressureSlider.Create(0, 100000, 0, 100000, "Pressure: ");
+	pressureSlider.SetTooltip("Set the pressure amount for the physics engine.");
+	pressureSlider.SetSize(XMFLOAT2(wid, hei));
+	pressureSlider.SetPos(XMFLOAT2(x, y += step));
+	pressureSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(x.entity);
+			if (physicscomponent == nullptr)
+			{
+				// Try also getting it through object's mesh:
+				ObjectComponent* object = scene.objects.GetComponent(x.entity);
+				if (object != nullptr)
+				{
+					physicscomponent = scene.softbodies.GetComponent(object->meshID);
+				}
+			}
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->pressure = args.fValue;
+				physicscomponent->physicsobject = {};
+			}
+		}
+		});
+	AddWidget(&pressureSlider);
+
 	vertexRadiusSlider.Create(0, 1, 0, 100000, "Vertex Radius: ");
 	vertexRadiusSlider.SetTooltip("Set how much distance vertices should keep from other physics bodies.");
 	vertexRadiusSlider.SetSize(XMFLOAT2(wid, hei));
@@ -214,6 +279,7 @@ void SoftBodyWindow::SetEntity(Entity entity)
 		massSlider.SetValue(physicscomponent->mass);
 		frictionSlider.SetValue(physicscomponent->friction);
 		restitutionSlider.SetValue(physicscomponent->restitution);
+		pressureSlider.SetValue(physicscomponent->pressure);
 		vertexRadiusSlider.SetValue(physicscomponent->vertex_radius);
 		windCheckbox.SetCheck(physicscomponent->IsWindEnabled());
 	}
@@ -257,10 +323,12 @@ void SoftBodyWindow::ResizeLayout()
 	};
 
 	add_fullwidth(infoLabel);
+	add_fullwidth(resetButton);
 	add(detailSlider);
 	add(massSlider);
 	add(frictionSlider);
 	add(restitutionSlider);
+	add(pressureSlider);
 	add(vertexRadiusSlider);
 	add_right(windCheckbox);
 

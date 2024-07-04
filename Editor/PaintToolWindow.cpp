@@ -1170,39 +1170,69 @@ void PaintToolWindow::Update(float dt)
 					continue;
 
 				SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(object.meshID);
-				if (softbody == nullptr || !softbody->HasVertices())
+				if (softbody == nullptr || softbody->physicsobject == nullptr)
 					continue;
 
-				size_t j = 0;
-				for (auto& ind : softbody->physicsToGraphicsVertexMapping)
+				// Painting:
+				if (painting)
 				{
-					XMVECTOR P = softbody->vertex_positions_simulation[ind].LoadPOS();
-
-					if (painting)
+					for (size_t j = 0; j < mesh->vertex_positions.size(); ++j)
 					{
+						XMVECTOR P = SkinVertex(*mesh, *softbody, (uint32_t)j);
+
 						const float dist = wi::math::Distance(P, CENTER);
 						if (dist <= pressure_radius)
 						{
 							RecordHistory(object.meshID);
 							softbody->weights[j] = (mode == MODE_SOFTBODY_PINNING ? 0.0f : 1.0f);
-							softbody->_flags |= SoftBodyPhysicsComponent::FORCE_RESET;
+							softbody->Reset();
 						}
 					}
+				}
 
-					wi::renderer::RenderablePoint point;
-					point.size = 0.01f;
-					XMStoreFloat3(&point.position, P);
-					if (softbody->weights[j] == 0)
+				// Visualizing:
+				const XMMATRIX W = XMLoadFloat4x4(&softbody->worldMatrix);
+				uint32_t first_subset = 0;
+				uint32_t last_subset = 0;
+				mesh->GetLODSubsetRange(0, first_subset, last_subset);
+				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+				{
+					const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+					for (size_t j = 0; j < subset.indexCount; j += 3)
 					{
-						point.color = XMFLOAT4(1, 0, 0, 1);
+						const uint32_t i0 = mesh->indices[j + 0];
+						const uint32_t i1 = mesh->indices[j + 1];
+						const uint32_t i2 = mesh->indices[j + 2];
+						const float weight0 = softbody->weights[i0];
+						const float weight1 = softbody->weights[i1];
+						const float weight2 = softbody->weights[i2];
+						XMVECTOR N0 = XMVectorZero(), N1 = XMVectorZero(), N2 = XMVectorZero();
+						wi::renderer::RenderableTriangle tri;
+						XMStoreFloat3(&tri.positionA, SkinVertex(*mesh, *softbody, i0, &N0) + N0 * 0.01f);
+						XMStoreFloat3(&tri.positionB, SkinVertex(*mesh, *softbody, i1, &N1) + N1 * 0.01f);
+						XMStoreFloat3(&tri.positionC, SkinVertex(*mesh, *softbody, i2, &N2) + N2 * 0.01f);
+						if (weight0 == 0)
+							tri.colorA = XMFLOAT4(1, 1, 0, 1);
+						else
+							tri.colorA = XMFLOAT4(1, 1, 1, 1);
+						if (weight1 == 0)
+							tri.colorB = XMFLOAT4(1, 1, 0, 1);
+						else
+							tri.colorB = XMFLOAT4(1, 1, 1, 1);
+						if (weight2 == 0)
+							tri.colorC = XMFLOAT4(1, 1, 0, 1);
+						else
+							tri.colorC = XMFLOAT4(1, 1, 1, 1);
+						if (wireframe)
+						{
+							wi::renderer::DrawTriangle(tri, true);
+						}
+						if (weight0 == 0 && weight1 == 0 && weight2 == 0)
+						{
+							tri.colorA = tri.colorB = tri.colorC = XMFLOAT4(1, 0, 0, 0.8f);
+							wi::renderer::DrawTriangle(tri);
+						}
 					}
-					else
-					{
-						point.color = XMFLOAT4(0, 1, 0, 1);
-					}
-					wi::renderer::DrawPoint(point);
-
-					j++;
 				}
 			}
 		}
@@ -1769,8 +1799,7 @@ void PaintToolWindow::ConsumeHistoryOperation(wi::Archive& archive, bool undo)
 			archive >> archive_softbody.weights;
 
 			softbody->weights = archive_softbody.weights;
-
-			softbody->_flags |= SoftBodyPhysicsComponent::FORCE_RESET;
+			softbody->Reset();
 		}
 		break;
 		case PaintToolWindow::MODE_HAIRPARTICLE_ADD_TRIANGLE:

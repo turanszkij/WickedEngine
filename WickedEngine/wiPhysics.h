@@ -97,10 +97,6 @@ namespace wi::physics
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& torque
 	);
-	void ApplyTorqueImpulse(
-		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
-		const XMFLOAT3& torque
-	);
 
 	enum class ActivationState
 	{
@@ -116,6 +112,11 @@ namespace wi::physics
 		ActivationState state
 	);
 
+	XMFLOAT3 GetSoftBodyNodePosition(
+		wi::scene::SoftBodyPhysicsComponent& physicscomponent,
+		uint32_t physicsIndex
+	);
+
 	struct RayIntersectionResult
 	{
 		wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
@@ -124,6 +125,7 @@ namespace wi::physics
 		XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
 		wi::ecs::Entity humanoid_ragdoll_entity = wi::ecs::INVALID_ENTITY;
 		wi::scene::HumanoidComponent::HumanoidBone humanoid_bone = wi::scene::HumanoidComponent::HumanoidBone::Count;
+		int softbody_triangleID = -1;
 		const void* physicsobject = nullptr;
 		constexpr bool IsValid() const { return entity != wi::ecs::INVALID_ENTITY; }
 	};

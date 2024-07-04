@@ -667,6 +667,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, GetWeather),
 	lunamethod(Scene_BindLua, SetWeather),
 	lunamethod(Scene_BindLua, RetargetAnimation),
+	lunamethod(Scene_BindLua, ResetPose),
 	lunamethod(Scene_BindLua, VoxelizeObject),
 	lunamethod(Scene_BindLua, VoxelizeScene),
 	{ NULL, NULL }
@@ -3144,6 +3145,20 @@ int Scene_BindLua::RetargetAnimation(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "RetargetAnimation(Entity dst, Entity src, bool bake_data, Scene src_scene = nil) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::ResetPose(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+		scene->ResetPose(entity);
+	}
+	else
+	{
+		wi::lua::SError(L, "ResetPose(Entity entity) not enough arguments!");
 	}
 	return 0;
 }

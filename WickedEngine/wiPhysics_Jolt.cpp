@@ -54,6 +54,18 @@ using namespace wi::scene;
 
 namespace wi::physics
 {
+	inline XMMATRIX GetOrientation(XMVECTOR P0, XMVECTOR P1, XMVECTOR P2)
+	{
+		XMVECTOR T = P2 - P1;
+		XMVECTOR B = P1 - P0;
+		XMVECTOR N = XMVector3Cross(B, T);
+		T = XMVector3Cross(B, N);
+		T = XMVector3Normalize(T);
+		B = XMVector3Normalize(B);
+		N = XMVector3Normalize(N);
+		return XMMATRIX(T, B, N, XMVectorSetW(P0, 1));
+	}
+
 	namespace jolt
 	{
 		bool ENABLED = true;
@@ -70,6 +82,7 @@ namespace wi::physics
 		const uint cMaxContactConstraints = 65536;
 		const EMotionQuality cMotionQuality = EMotionQuality::LinearCast;
 
+		inline Vec3 cast(const Float3& v) { return Vec3(v.x, v.y, v.z); }
 		inline Vec3 cast(const XMFLOAT3& v) { return Vec3(v.x, v.y, v.z); }
 		inline Quat cast(const XMFLOAT4& v) { return Quat(v.x, v.y, v.z, v.w); }
 		inline Mat44 cast(const XMFLOAT4X4& v)
@@ -257,13 +270,22 @@ namespace wi::physics
 			Entity entity = INVALID_ENTITY;
 
 			SoftBodySharedSettings shared_settings;
-			Array<Vec3> simulation_normals;
-			Array<Vec3> position_offsets;
-			wi::vector<XMFLOAT4> vertex_tangents_tmp;
+			wi::vector<XMFLOAT4X4> inverseBindMatrices;
+			struct Neighbors
+			{
+				uint32_t left = 0;
+				uint32_t right = 0;
+				constexpr void set(uint32_t l, uint32_t r)
+				{
+					left = l;
+					right = r;
+				}
+			};
+			wi::vector<Neighbors> physicsNeighbors;
 
 			~SoftBody()
 			{
-				if (physics_scene == nullptr)
+				if (physics_scene == nullptr || bodyID.IsInvalid())
 					return;
 				BodyInterface& body_interface = ((PhysicsScene*)physics_scene.get())->physics_system.GetBodyInterface(); // locking version because destructor can be called from any thread
 				body_interface.RemoveBody(bodyID);
@@ -463,22 +485,49 @@ namespace wi::physics
 			wi::scene::Scene& scene,
 			Entity entity,
 			wi::scene::SoftBodyPhysicsComponent& physicscomponent,
-			const wi::scene::MeshComponent& mesh
+			wi::scene::MeshComponent& mesh
 		)
 		{
 			SoftBody& physicsobject = GetSoftBody(physicscomponent);
 			physicsobject.physics_scene = scene.physics_scene;
 			physicsobject.entity = entity;
-			physicscomponent.CreateFromMesh(mesh);
 			PhysicsScene& physics_scene = GetPhysicsScene(scene);
 
 			physicsobject.shared_settings.SetEmbedded();
 			physicsobject.shared_settings.mVertexRadius = physicscomponent.vertex_radius;
 
+			physicscomponent.CreateFromMesh(mesh);
+			if (physicscomponent.physicsIndices.empty())
+			{
+				wi::backlog::post("AddSoftBody failed: physics faces are empty, this means generating physics mesh has failed, try to change settings.", wi::backlog::LogLevel::Error);
+				return;
+			}
+			const size_t vertexCount = physicscomponent.physicsToGraphicsVertexMapping.size();
+
+			physicsobject.physicsNeighbors.resize(vertexCount);
+
+			for (size_t i = 0; i < physicscomponent.physicsIndices.size(); i += 3)
+			{
+				const uint32_t physicsInd0 = physicscomponent.physicsIndices[i + 0];
+				const uint32_t physicsInd1 = physicscomponent.physicsIndices[i + 1];
+				const uint32_t physicsInd2 = physicscomponent.physicsIndices[i + 2];
+
+				SoftBodySharedSettings::Face& face = physicsobject.shared_settings.mFaces.emplace_back();
+				face.mVertex[0] = physicsInd0;
+				face.mVertex[2] = physicsInd1;
+				face.mVertex[1] = physicsInd2;
+
+				physicsobject.physicsNeighbors[physicsInd0].set(physicsInd2, physicsInd1);
+				physicsobject.physicsNeighbors[physicsInd1].set(physicsInd0, physicsInd2);
+				physicsobject.physicsNeighbors[physicsInd2].set(physicsInd1, physicsInd0);
+			}
+
 			const XMMATRIX worldMatrix = XMLoadFloat4x4(&physicscomponent.worldMatrix);
 
-			const size_t vertexCount = physicscomponent.physicsToGraphicsVertexMapping.size();
 			physicsobject.shared_settings.mVertices.resize(vertexCount);
+			physicsobject.inverseBindMatrices.resize(vertexCount);
+			physicscomponent.boneData.resize(vertexCount);
+			const float distributed_mass = physicscomponent.mass / vertexCount;
 			for (size_t i = 0; i < vertexCount; ++i)
 			{
 				uint32_t graphicsInd = physicscomponent.physicsToGraphicsVertexMapping[i];
@@ -489,24 +538,16 @@ namespace wi::physics
 				XMStoreFloat3(&position, P);
 				physicsobject.shared_settings.mVertices[i].mPosition = Float3(position.x, position.y, position.z);
 
-				float weight = physicscomponent.weights[i];
-				physicsobject.shared_settings.mVertices[i].mInvMass = weight == 0 ? 0 : 1.0f / weight;
-			}
+				float weight = physicscomponent.weights[graphicsInd] * distributed_mass;
+				physicsobject.shared_settings.mVertices[i].mInvMass = weight == 0 ? 0 : 1.0f / (1.0f + weight);
 
-			uint32_t first_subset = 0;
-			uint32_t last_subset = 0;
-			mesh.GetLODSubsetRange(0, first_subset, last_subset);
-			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
-			{
-				const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
-				const uint32_t* indices = mesh.indices.data() + subset.indexOffset;
-				for (uint32_t i = 0; i < subset.indexCount; i += 3)
-				{
-					SoftBodySharedSettings::Face& face = physicsobject.shared_settings.mFaces.emplace_back();
-					face.mVertex[0] = physicscomponent.graphicsToPhysicsVertexMapping[indices[i + 0]];
-					face.mVertex[2] = physicscomponent.graphicsToPhysicsVertexMapping[indices[i + 1]];
-					face.mVertex[1] = physicscomponent.graphicsToPhysicsVertexMapping[indices[i + 2]];
-				}
+				// The soft body node will have a bind matrix similar to an armature bone:
+				XMVECTOR P0 = XMLoadFloat3(&mesh.vertex_positions[graphicsInd]);
+				XMVECTOR P1 = XMLoadFloat3(&mesh.vertex_positions[physicscomponent.physicsToGraphicsVertexMapping[physicsobject.physicsNeighbors[i].left]]);
+				XMVECTOR P2 = XMLoadFloat3(&mesh.vertex_positions[physicscomponent.physicsToGraphicsVertexMapping[physicsobject.physicsNeighbors[i].right]]);
+				XMMATRIX B = GetOrientation(P0, P1, P2);
+				B = XMMatrixInverse(nullptr, B);
+				XMStoreFloat4x4(&physicsobject.inverseBindMatrices[i], B);
 			}
 
 			SoftBodySharedSettings::VertexAttributes vertexAttributes = { 1.0e-5f, 1.0e-5f, 1.0e-5f };
@@ -517,6 +558,7 @@ namespace wi::physics
 			settings.mNumIterations = (uint32)softbodyIterationCount;
 			settings.mFriction = physicscomponent.friction;
 			settings.mRestitution = physicscomponent.restitution;
+			settings.mPressure = physicscomponent.pressure;
 			settings.mUpdatePosition = false;
 			settings.mAllowSleeping = !physicscomponent.IsDisableDeactivation();
 			settings.mUserData = (uint64_t)&physicsobject;
@@ -529,23 +571,6 @@ namespace wi::physics
 			{
 				wi::backlog::post("AddSoftBody failed: body couldn't be created! This could mean that there are too many physics objects.", wi::backlog::LogLevel::Error);
 				return;
-			}
-
-			physicsobject.simulation_normals.resize(physicsobject.shared_settings.mVertices.size());
-
-			physicsobject.vertex_tangents_tmp.resize(mesh.vertex_tangents.size());
-			physicsobject.position_offsets.resize(mesh.vertex_positions.size());
-			for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
-			{
-				XMFLOAT3 position = mesh.vertex_positions[i];
-				XMVECTOR P = XMLoadFloat3(&position);
-				P = XMVector3Transform(P, worldMatrix);
-				XMStoreFloat3(&position, P);
-
-				uint32_t physicsInd = physicscomponent.graphicsToPhysicsVertexMapping[i];
-				Float3 physicsPosF3 = physicsobject.shared_settings.mVertices[physicsInd].mPosition;
-				Vec3 physicsPos(physicsPosF3.x, physicsPosF3.y, physicsPosF3.z);
-				physicsobject.position_offsets[i] = cast(position) - physicsPos;
 			}
 		}
 
@@ -1257,11 +1282,6 @@ namespace wi::physics
 			const ArmatureComponent* armature = mesh->IsSkinned() ? scene.armatures.GetComponent(mesh->armatureID) : nullptr;
 			mesh->SetDynamic(true);
 
-			if (physicscomponent._flags & SoftBodyPhysicsComponent::FORCE_RESET)
-			{
-				physicscomponent._flags &= ~SoftBodyPhysicsComponent::FORCE_RESET;
-				physicscomponent.physicsobject = nullptr;
-			}
 			if (physicscomponent._flags & SoftBodyPhysicsComponent::SAFE_TO_REGISTER && physicscomponent.physicsobject == nullptr)
 			{
 				AddSoftBody(scene, entity, physicscomponent, *mesh);
@@ -1297,13 +1317,13 @@ namespace wi::physics
 				SoftBodyMotionProperties* motion = (SoftBodyMotionProperties*)body.GetMotionProperties();
 
 				// System controls zero weight soft body nodes:
-				for (size_t ind = 0; ind < physicscomponent.weights.size(); ++ind)
+				for (size_t ind = 0; ind < physicscomponent.physicsToGraphicsVertexMapping.size(); ++ind)
 				{
-					float weight = physicscomponent.weights[ind];
+					uint32_t graphicsInd = physicscomponent.physicsToGraphicsVertexMapping[ind];
+					float weight = physicscomponent.weights[graphicsInd];
 
 					if (weight == 0)
 					{
-						uint32_t graphicsInd = physicscomponent.physicsToGraphicsVertexMapping[ind];
 						XMFLOAT3 position = mesh->vertex_positions[graphicsInd];
 						XMVECTOR P = armature == nullptr ? XMLoadFloat3(&position) : wi::scene::SkinVertex(*mesh, *armature, graphicsInd);
 						P = XMVector3Transform(P, worldMatrix);
@@ -1529,118 +1549,34 @@ namespace wi::physics
 
 			const SoftBodyMotionProperties* motion = (const SoftBodyMotionProperties*)body.GetMotionProperties();
 			const Array<SoftBodyMotionProperties::Vertex>& soft_vertices = motion->GetVertices();
-			const Array<SoftBodySharedSettings::Face>& soft_faces = motion->GetFaces();
 
-			// Recompute normals: (Note: normalization will happen on final storage)
-			for (auto& n : physicsobject.simulation_normals)
+			// Update bone matrices from physics vertices:
+			for (size_t i = 0; i < soft_vertices.size(); ++i)
 			{
-				n = Vec3::sZero();
-			}
-			for (auto& f : soft_faces)
-			{
-				Vec3 x1 = soft_vertices[f.mVertex[0]].mPosition;
-				Vec3 x2 = soft_vertices[f.mVertex[1]].mPosition;
-				Vec3 x3 = soft_vertices[f.mVertex[2]].mPosition;
-				Vec3 n = (x2 - x1).Cross(x3 - x1);
-				physicsobject.simulation_normals[f.mVertex[0]] += n;
-				physicsobject.simulation_normals[f.mVertex[1]] += n;
-				physicsobject.simulation_normals[f.mVertex[2]] += n;
-			}
+				XMFLOAT3 p0 = cast(soft_vertices[i].mPosition);
+				XMFLOAT3 p1 = cast(soft_vertices[physicsobject.physicsNeighbors[i].left].mPosition);
+				XMFLOAT3 p2 = cast(soft_vertices[physicsobject.physicsNeighbors[i].right].mPosition);
+				XMVECTOR P0 = XMLoadFloat3(&p0);
+				XMVECTOR P1 = XMLoadFloat3(&p1);
+				XMVECTOR P2 = XMLoadFloat3(&p2);
+				XMMATRIX W = GetOrientation(P0, P1, P2);
+				XMMATRIX B = XMLoadFloat4x4(&physicsobject.inverseBindMatrices[i]);
+				XMMATRIX M = B * W;
+				XMFLOAT4X4 boneData;
+				XMStoreFloat4x4(&boneData, M);
+				physicscomponent.boneData[i].Create(boneData);
 
-			// Soft body simulation nodes will update graphics mesh:
-			for (size_t ind = 0; ind < mesh->vertex_positions.size(); ++ind)
-			{
-				const Vec3& offset = physicsobject.position_offsets[ind];
-				uint32_t physicsInd = physicscomponent.graphicsToPhysicsVertexMapping[ind];
+#if 0
+				scene.locker.lock();
+				wi::renderer::DrawAxis(W, 0.05f, false);
+				scene.locker.unlock();
+#endif
 
-				const XMFLOAT3 position = cast(soft_vertices[physicsInd].mPosition + offset);
-				const XMFLOAT3 normal = cast(physicsobject.simulation_normals[physicsInd]);
-
-				physicscomponent.vertex_positions_simulation[ind].FromFULL(position);
-				physicscomponent.vertex_normals_simulation[ind].FromFULL(normal); // normalizes internally
-
-				physicscomponent.aabb._min = wi::math::Min(physicscomponent.aabb._min, position);
-				physicscomponent.aabb._max = wi::math::Max(physicscomponent.aabb._max, position);
+				physicscomponent.aabb._min = wi::math::Min(physicscomponent.aabb._min, p0);
+				physicscomponent.aabb._max = wi::math::Max(physicscomponent.aabb._max, p0);
 			}
 
-			// Update tangent vectors:
-			if (!mesh->vertex_uvset_0.empty() && !physicscomponent.vertex_normals_simulation.empty())
-			{
-				uint32_t first_subset = 0;
-				uint32_t last_subset = 0;
-				mesh->GetLODSubsetRange(0, first_subset, last_subset);
-				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
-				{
-					const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
-					for (size_t i = 0; i < subset.indexCount; i += 3)
-					{
-						const uint32_t i0 = mesh->indices[i + 0];
-						const uint32_t i1 = mesh->indices[i + 1];
-						const uint32_t i2 = mesh->indices[i + 2];
-
-						const XMFLOAT3 v0 = physicscomponent.vertex_positions_simulation[i0].GetPOS();
-						const XMFLOAT3 v1 = physicscomponent.vertex_positions_simulation[i1].GetPOS();
-						const XMFLOAT3 v2 = physicscomponent.vertex_positions_simulation[i2].GetPOS();
-
-						const XMFLOAT2 u0 = mesh->vertex_uvset_0[i0];
-						const XMFLOAT2 u1 = mesh->vertex_uvset_0[i1];
-						const XMFLOAT2 u2 = mesh->vertex_uvset_0[i2];
-
-						const XMVECTOR nor0 = physicscomponent.vertex_normals_simulation[i0].LoadNOR();
-						const XMVECTOR nor1 = physicscomponent.vertex_normals_simulation[i1].LoadNOR();
-						const XMVECTOR nor2 = physicscomponent.vertex_normals_simulation[i2].LoadNOR();
-
-						const XMVECTOR facenormal = XMVector3Normalize(XMVectorAdd(XMVectorAdd(nor0, nor1), nor2));
-
-						const float x1 = v1.x - v0.x;
-						const float x2 = v2.x - v0.x;
-						const float y1 = v1.y - v0.y;
-						const float y2 = v2.y - v0.y;
-						const float z1 = v1.z - v0.z;
-						const float z2 = v2.z - v0.z;
-
-						const float s1 = u1.x - u0.x;
-						const float s2 = u2.x - u0.x;
-						const float t1 = u1.y - u0.y;
-						const float t2 = u2.y - u0.y;
-
-						const float r = 1.0f / (s1 * t2 - s2 * t1);
-						const XMVECTOR sdir = XMVectorSet((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,
-							(t2 * z1 - t1 * z2) * r, 0);
-						const XMVECTOR tdir = XMVectorSet((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
-							(s1 * z2 - s2 * z1) * r, 0);
-
-						XMVECTOR tangent;
-						tangent = XMVector3Normalize(XMVectorSubtract(sdir, XMVectorMultiply(facenormal, XMVector3Dot(facenormal, sdir))));
-						float sign = XMVectorGetX(XMVector3Dot(XMVector3Cross(tangent, facenormal), tdir)) < 0.0f ? -1.0f : 1.0f;
-
-						XMFLOAT3 t;
-						XMStoreFloat3(&t, tangent);
-
-						physicsobject.vertex_tangents_tmp[i0].x += t.x;
-						physicsobject.vertex_tangents_tmp[i0].y += t.y;
-						physicsobject.vertex_tangents_tmp[i0].z += t.z;
-						physicsobject.vertex_tangents_tmp[i0].w = sign;
-
-						physicsobject.vertex_tangents_tmp[i1].x += t.x;
-						physicsobject.vertex_tangents_tmp[i1].y += t.y;
-						physicsobject.vertex_tangents_tmp[i1].z += t.z;
-						physicsobject.vertex_tangents_tmp[i1].w = sign;
-
-						physicsobject.vertex_tangents_tmp[i2].x += t.x;
-						physicsobject.vertex_tangents_tmp[i2].y += t.y;
-						physicsobject.vertex_tangents_tmp[i2].z += t.z;
-						physicsobject.vertex_tangents_tmp[i2].w = sign;
-					}
-				}
-
-				for (size_t i = 0; i < physicscomponent.vertex_tangents_simulation.size(); ++i)
-				{
-					physicscomponent.vertex_tangents_simulation[i].FromFULL(physicsobject.vertex_tangents_tmp[i]);
-				}
-			}
-
-			mesh->aabb = physicscomponent.aabb;
+			scene.skinningAllocator.fetch_add(uint32_t(physicscomponent.boneData.size() * sizeof(ShaderTransform)));
 		});
 
 		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.humanoids.GetCount(), 1, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
@@ -1709,6 +1645,7 @@ namespace wi::physics
 			settings.mDrawCenterOfMassTransform = false;
 			settings.mDrawShape = true;
 			settings.mDrawSoftBodyVertices = true;
+			settings.mDrawSoftBodyEdgeConstraints = true;
 			settings.mDrawShapeWireframe = true;
 			settings.mDrawShapeColor = BodyManager::EShapeColor::ShapeTypeColor;
 			physics_scene.physics_system.DrawBodies(settings, &debug_renderer);
@@ -1937,13 +1874,6 @@ namespace wi::physics
 			body_interface.AddTorque(physicsobject.bodyID, cast(torque), EActivation::Activate);
 		}
 	}
-	void ApplyTorqueImpulse(
-		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
-		const XMFLOAT3& torque
-	)
-	{
-		ApplyTorque(physicscomponent, torque);
-	}
 
 	void SetActivationState(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
@@ -1986,6 +1916,26 @@ namespace wi::physics
 		}
 	}
 
+	XMFLOAT3 GetSoftBodyNodePosition(
+		wi::scene::SoftBodyPhysicsComponent& physicscomponent,
+		uint32_t physicsIndex
+	)
+	{
+		SoftBody& physicsobject = GetSoftBody(physicscomponent);
+		if (physicsobject.bodyID.IsInvalid() || physicsobject.physics_scene == nullptr)
+			return XMFLOAT3(0, 0, 0);
+
+		const PhysicsScene& physics_scene = *(const PhysicsScene*)physicsobject.physics_scene.get();
+		BodyLockRead lock(physics_scene.physics_system.GetBodyLockInterfaceNoLock(), physicsobject.bodyID);
+		if (!lock.Succeeded())
+			return XMFLOAT3(0, 0, 0);
+
+		const Body& body = lock.GetBody();
+		const SoftBodyMotionProperties* motion = (const SoftBodyMotionProperties*)body.GetMotionProperties();
+		const Array<SoftBodyMotionProperties::Vertex>& soft_vertices = motion->GetVertices();
+		return cast(soft_vertices[physicsIndex].mPosition);
+	}
+
 	RayIntersectionResult Intersects(
 		const wi::scene::Scene& scene,
 		wi::primitive::Ray ray
@@ -2010,7 +1960,7 @@ namespace wi::physics
 		inray.mDirection = inray.mDirection * range;
 
 		RayCastSettings settings;
-		settings.mBackFaceMode = EBackFaceMode::IgnoreBackFaces;
+		settings.mBackFaceMode = EBackFaceMode::CollideWithBackFaces;
 		settings.mTreatConvexAsSolid = false;
 
 		ClosestHitCollisionCollector<CastRayCollector> collector;
@@ -2052,6 +2002,8 @@ namespace wi::physics
 			result.position_local = cast(position_local);
 			result.normal = cast(normal);
 			result.physicsobject = &body;
+			const SoftBodyShape* shape = (const SoftBodyShape*)body.GetShape();
+			result.softbody_triangleID = (int)shape->GetFaceIndex(collector.mHit.mSubShapeID2);
 		}
 
 		return result;
@@ -2064,15 +2016,28 @@ namespace wi::physics
 		float pick_distance = 0;
 		Body* bodyA = nullptr;
 		Body* bodyB = nullptr;
+		int softBodyVertex = -1;
+		Vec3 softBodyVertexOffset = Vec3::sZero();
+		float prevInvMass = 0;
 		~PickDragOperation_Jolt()
 		{
-			if (physics_scene == nullptr)
+			if (physics_scene == nullptr || bodyB == nullptr)
 				return;
 			PhysicsScene& physics_scene = *((PhysicsScene*)this->physics_scene.get());
-			physics_scene.physics_system.RemoveConstraint(constraint);
 			BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
-			body_interface.RemoveBody(bodyA->GetID());
-			body_interface.DestroyBody(bodyA->GetID());
+			if (bodyA != nullptr)
+			{
+				// Rigid body constraint removal
+				physics_scene.physics_system.RemoveConstraint(constraint);
+				body_interface.RemoveBody(bodyA->GetID());
+				body_interface.DestroyBody(bodyA->GetID());
+			}
+			if (bodyB->IsSoftBody() && softBodyVertex >= 0)
+			{
+				SoftBodyMotionProperties* motion = (SoftBodyMotionProperties*)bodyB->GetMotionProperties();
+				SoftBodyMotionProperties::Vertex& node = motion->GetVertex((uint)softBodyVertex);
+				node.mInvMass = prevInvMass;
+			}
 		}
 	};
 	void PickDrag(
@@ -2092,8 +2057,19 @@ namespace wi::physics
 			PickDragOperation_Jolt* internal_state = (PickDragOperation_Jolt*)op.internal_state.get();
 			const float dist = internal_state->pick_distance;
 			Vec3 pos = Vec3(ray.origin.x + ray.direction.x * dist, ray.origin.y + ray.direction.y * dist, ray.origin.z + ray.direction.z * dist);
-			//body_interface.SetPosition(internal_state->bodyA->GetID(), pos, EActivation::Activate);
-			body_interface.MoveKinematic(internal_state->bodyA->GetID(), pos, Quat::sIdentity(), physics_scene.GetKinematicDT(scene.dt));
+			if (internal_state->softBodyVertex >= 0)
+			{
+				// Soft body vertex:
+				SoftBodyMotionProperties* motion = (SoftBodyMotionProperties*)internal_state->bodyB->GetMotionProperties();
+				SoftBodyMotionProperties::Vertex& node = motion->GetVertex((uint)internal_state->softBodyVertex);
+				node.mPosition = pos + internal_state->softBodyVertexOffset;
+			}
+			else
+			{
+				// Rigid body constraint:
+				//body_interface.SetPosition(internal_state->bodyA->GetID(), pos, EActivation::Activate);
+				body_interface.MoveKinematic(internal_state->bodyA->GetID(), pos, Quat::sIdentity(), physics_scene.GetKinematicDT(scene.dt));
+			}
 		}
 		else
 		{
@@ -2102,31 +2078,41 @@ namespace wi::physics
 			if (!result.IsValid())
 				return;
 			Body* body = (Body*)result.physicsobject;
-			if (!body->IsRigidBody())
-				return;
 
 			auto internal_state = std::make_shared<PickDragOperation_Jolt>();
 			internal_state->physics_scene = scene.physics_scene;
 			internal_state->pick_distance = wi::math::Distance(ray.origin, result.position);
 			internal_state->bodyB = body;
 
-			Vec3 pos = cast(result.position);
+			if (body->IsRigidBody())
+			{
+				Vec3 pos = cast(result.position);
 
-			internal_state->bodyA = body_interface.CreateBody(BodyCreationSettings(new SphereShape(0.01f), pos, Quat::sIdentity(), EMotionType::Kinematic, Layers::MOVING));
-			body_interface.AddBody(internal_state->bodyA->GetID(), EActivation::Activate);
+				internal_state->bodyA = body_interface.CreateBody(BodyCreationSettings(new SphereShape(0.01f), pos, Quat::sIdentity(), EMotionType::Kinematic, Layers::MOVING));
+				body_interface.AddBody(internal_state->bodyA->GetID(), EActivation::Activate);
 
 #if 0
-			DistanceConstraintSettings settings;
-			settings.SetEmbedded();
-			settings.mPoint1 = settings.mPoint2 = pos;
+				DistanceConstraintSettings settings;
+				settings.SetEmbedded();
+				settings.mPoint1 = settings.mPoint2 = pos;
 #else
-			FixedConstraintSettings settings;
-			settings.SetEmbedded();
-			settings.mAutoDetectPoint = true;
+				FixedConstraintSettings settings;
+				settings.SetEmbedded();
+				settings.mAutoDetectPoint = true;
 #endif
 
-			internal_state->constraint = settings.Create(*internal_state->bodyA, *internal_state->bodyB);
-			physics_scene.physics_system.AddConstraint(internal_state->constraint);
+				internal_state->constraint = settings.Create(*internal_state->bodyA, *internal_state->bodyB);
+				physics_scene.physics_system.AddConstraint(internal_state->constraint);
+			}
+			else if (body->IsSoftBody())
+			{
+				SoftBodyMotionProperties* motion = (SoftBodyMotionProperties*)body->GetMotionProperties();
+				internal_state->softBodyVertex = (int)motion->GetFace((uint)result.softbody_triangleID).mVertex[0];
+				SoftBodyVertex& vertex = motion->GetVertex((uint)internal_state->softBodyVertex);
+				internal_state->prevInvMass = vertex.mInvMass;
+				vertex.mInvMass = 0;
+				internal_state->softBodyVertexOffset = vertex.mPosition - cast(result.position);
+			}
 
 			op.internal_state = internal_state;
 		}

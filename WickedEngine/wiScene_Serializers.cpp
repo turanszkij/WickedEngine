@@ -472,6 +472,12 @@ namespace wi::scene
 				archive >> subsets_per_lod;
 			}
 
+			if (seri.GetVersion() >= 3)
+			{
+				archive >> vertex_boneindices2;
+				archive >> vertex_boneweights2;
+			}
+
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				CreateRenderData();
 
@@ -552,6 +558,12 @@ namespace wi::scene
 			if (archive.GetVersion() >= 76)
 			{
 				archive << subsets_per_lod;
+			}
+
+			if (seri.GetVersion() >= 3)
+			{
+				archive << vertex_boneindices2;
+				archive << vertex_boneweights2;
 			}
 
 		}
@@ -747,6 +759,8 @@ namespace wi::scene
 	}
 	void SoftBodyPhysicsComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
+		wi::vector<uint32_t> graphicsToPhysicsVertexMapping;
+
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
@@ -772,7 +786,7 @@ namespace wi::scene
 				friction = 0.5f;
 			}
 
-			if (seri.version >= 1)
+			if (seri.GetVersion() >= 1)
 			{
 				archive >> vertex_radius;
 				archive >> detail;
@@ -780,6 +794,27 @@ namespace wi::scene
 			else
 			{
 				SetWindEnabled(true);
+			}
+
+			if (seri.GetVersion() >= 2)
+			{
+				archive >> pressure;
+			}
+			else
+			{
+				// Convert weights from per-physics to per-graphics vertex:
+				//	Per graphics vertex is better, because regenerating soft body with different detail will keep the pinning
+				wi::vector<float> weights2(graphicsToPhysicsVertexMapping.size());
+				for (size_t i = 0; i < weights2.size(); ++i)
+				{
+					weights2[i] = weights[graphicsToPhysicsVertexMapping[i]];
+				}
+				std::swap(weights, weights2);
+			}
+
+			if (seri.GetVersion() >= 3)
+			{
+				archive >> physicsIndices;
 			}
 
 			_flags &= ~SAFE_TO_REGISTER;
@@ -798,10 +833,19 @@ namespace wi::scene
 				archive << restitution;
 			}
 
-			if (seri.version >= 1)
+			if (seri.GetVersion() >= 1)
 			{
 				archive << vertex_radius;
 				archive << detail;
+			}
+			if (seri.GetVersion() >= 2)
+			{
+				archive << pressure;
+			}
+
+			if (seri.GetVersion() >= 3)
+			{
+				archive << physicsIndices;
 			}
 		}
 	}

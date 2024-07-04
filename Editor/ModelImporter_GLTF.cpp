@@ -3203,6 +3203,12 @@ void Import_Extension_VRMC(LoaderState& state)
 
 		}
 	}
+
+	auto ext_vrmc_springbone_extended_collider = state.gltfModel.extensions.find("VRMC_springBone_extended_collider");
+	if (ext_vrmc_springbone_extended_collider != state.gltfModel.extensions.end())
+	{
+		wi::backlog::post("VRMC_springBone_extended_collider extension found in model, but it is not implemented yet in the importer.", wi::backlog::LogLevel::Warning);
+	}
 }
 
 void VRM_ToonMaterialCustomize(const std::string& name, MaterialComponent& material)
