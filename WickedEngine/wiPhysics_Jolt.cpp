@@ -1959,7 +1959,7 @@ namespace wi::physics
 		inray.mDirection = inray.mDirection * range;
 
 		RayCastSettings settings;
-		settings.mBackFaceMode = EBackFaceMode::IgnoreBackFaces;
+		settings.mBackFaceMode = EBackFaceMode::CollideWithBackFaces;
 		settings.mTreatConvexAsSolid = false;
 
 		ClosestHitCollisionCollector<CastRayCollector> collector;
@@ -2001,6 +2001,8 @@ namespace wi::physics
 			result.position_local = cast(position_local);
 			result.normal = cast(normal);
 			result.physicsobject = &body;
+			const SoftBodyShape* shape = (const SoftBodyShape*)body.GetShape();
+			result.softbody_triangleID = (int)shape->GetFaceIndex(collector.mHit.mSubShapeID2);
 		}
 
 		return result;
@@ -2013,15 +2015,28 @@ namespace wi::physics
 		float pick_distance = 0;
 		Body* bodyA = nullptr;
 		Body* bodyB = nullptr;
+		int softBodyVertex = -1;
+		Vec3 softBodyVertexOffset = Vec3::sZero();
+		float prevInvMass = 0;
 		~PickDragOperation_Jolt()
 		{
-			if (physics_scene == nullptr)
+			if (physics_scene == nullptr || bodyB == nullptr)
 				return;
 			PhysicsScene& physics_scene = *((PhysicsScene*)this->physics_scene.get());
-			physics_scene.physics_system.RemoveConstraint(constraint);
 			BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
-			body_interface.RemoveBody(bodyA->GetID());
-			body_interface.DestroyBody(bodyA->GetID());
+			if (bodyA != nullptr)
+			{
+				// Rigid body constraint removal
+				physics_scene.physics_system.RemoveConstraint(constraint);
+				body_interface.RemoveBody(bodyA->GetID());
+				body_interface.DestroyBody(bodyA->GetID());
+			}
+			if (bodyB->IsSoftBody() && softBodyVertex >= 0)
+			{
+				SoftBodyMotionProperties* motion = (SoftBodyMotionProperties*)bodyB->GetMotionProperties();
+				SoftBodyMotionProperties::Vertex& node = motion->GetVertex((uint)softBodyVertex);
+				node.mInvMass = prevInvMass;
+			}
 		}
 	};
 	void PickDrag(
@@ -2041,8 +2056,19 @@ namespace wi::physics
 			PickDragOperation_Jolt* internal_state = (PickDragOperation_Jolt*)op.internal_state.get();
 			const float dist = internal_state->pick_distance;
 			Vec3 pos = Vec3(ray.origin.x + ray.direction.x * dist, ray.origin.y + ray.direction.y * dist, ray.origin.z + ray.direction.z * dist);
-			//body_interface.SetPosition(internal_state->bodyA->GetID(), pos, EActivation::Activate);
-			body_interface.MoveKinematic(internal_state->bodyA->GetID(), pos, Quat::sIdentity(), physics_scene.GetKinematicDT(scene.dt));
+			if (internal_state->softBodyVertex >= 0)
+			{
+				// Soft body vertex:
+				SoftBodyMotionProperties* motion = (SoftBodyMotionProperties*)internal_state->bodyB->GetMotionProperties();
+				SoftBodyMotionProperties::Vertex& node = motion->GetVertex((uint)internal_state->softBodyVertex);
+				node.mPosition = pos + internal_state->softBodyVertexOffset;
+			}
+			else
+			{
+				// Rigid body constraint:
+				//body_interface.SetPosition(internal_state->bodyA->GetID(), pos, EActivation::Activate);
+				body_interface.MoveKinematic(internal_state->bodyA->GetID(), pos, Quat::sIdentity(), physics_scene.GetKinematicDT(scene.dt));
+			}
 		}
 		else
 		{
@@ -2051,31 +2077,41 @@ namespace wi::physics
 			if (!result.IsValid())
 				return;
 			Body* body = (Body*)result.physicsobject;
-			if (!body->IsRigidBody())
-				return;
 
 			auto internal_state = std::make_shared<PickDragOperation_Jolt>();
 			internal_state->physics_scene = scene.physics_scene;
 			internal_state->pick_distance = wi::math::Distance(ray.origin, result.position);
 			internal_state->bodyB = body;
 
-			Vec3 pos = cast(result.position);
+			if (body->IsRigidBody())
+			{
+				Vec3 pos = cast(result.position);
 
-			internal_state->bodyA = body_interface.CreateBody(BodyCreationSettings(new SphereShape(0.01f), pos, Quat::sIdentity(), EMotionType::Kinematic, Layers::MOVING));
-			body_interface.AddBody(internal_state->bodyA->GetID(), EActivation::Activate);
+				internal_state->bodyA = body_interface.CreateBody(BodyCreationSettings(new SphereShape(0.01f), pos, Quat::sIdentity(), EMotionType::Kinematic, Layers::MOVING));
+				body_interface.AddBody(internal_state->bodyA->GetID(), EActivation::Activate);
 
 #if 0
-			DistanceConstraintSettings settings;
-			settings.SetEmbedded();
-			settings.mPoint1 = settings.mPoint2 = pos;
+				DistanceConstraintSettings settings;
+				settings.SetEmbedded();
+				settings.mPoint1 = settings.mPoint2 = pos;
 #else
-			FixedConstraintSettings settings;
-			settings.SetEmbedded();
-			settings.mAutoDetectPoint = true;
+				FixedConstraintSettings settings;
+				settings.SetEmbedded();
+				settings.mAutoDetectPoint = true;
 #endif
 
-			internal_state->constraint = settings.Create(*internal_state->bodyA, *internal_state->bodyB);
-			physics_scene.physics_system.AddConstraint(internal_state->constraint);
+				internal_state->constraint = settings.Create(*internal_state->bodyA, *internal_state->bodyB);
+				physics_scene.physics_system.AddConstraint(internal_state->constraint);
+			}
+			else if (body->IsSoftBody())
+			{
+				SoftBodyMotionProperties* motion = (SoftBodyMotionProperties*)body->GetMotionProperties();
+				internal_state->softBodyVertex = (int)motion->GetFace((uint)result.softbody_triangleID).mVertex[0];
+				SoftBodyVertex& vertex = motion->GetVertex((uint)internal_state->softBodyVertex);
+				internal_state->prevInvMass = vertex.mInvMass;
+				vertex.mInvMass = 0;
+				internal_state->softBodyVertexOffset = vertex.mPosition - cast(result.position);
+			}
 
 			op.internal_state = internal_state;
 		}
