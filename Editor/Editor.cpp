@@ -1615,7 +1615,6 @@ void EditorComponent::Update(float dt)
 				{
 					if (
 						wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) ||
-						wi::input::Down(wi::input::MOUSE_BUTTON_MIDDLE) ||
 						inspector_mode
 						)
 					{
@@ -1714,50 +1713,53 @@ void EditorComponent::Update(float dt)
 			}
 
 			// Other:
-			if (hovered.entity != INVALID_ENTITY && wi::input::Down(wi::input::MOUSE_BUTTON_MIDDLE))
+			if (wi::input::Down(wi::input::MOUSE_BUTTON_MIDDLE))
 			{
-				if (dummy_enabled)
+				hovered = wi::scene::Pick(pickRay, wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
+				if (hovered.entity != INVALID_ENTITY)
 				{
-					dummy_pos = hovered.position;
-				}
-				else
-				{
-					const ObjectComponent* object = scene.objects.GetComponent(hovered.entity);
-					if (object != nullptr)
+					if (dummy_enabled)
 					{
-						if (object->GetFilterMask() & wi::enums::FILTER_WATER)
+						dummy_pos = hovered.position;
+					}
+					else
+					{
+						const ObjectComponent* object = scene.objects.GetComponent(hovered.entity);
+						if (object != nullptr)
 						{
-							// if water, then put a water ripple onto it:
-							scene.PutWaterRipple(hovered.position);
-						}
-						else
-						{
-							// Check for interactive grass (hair particle that is child of hovered object:
-							for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+							if (object->GetFilterMask() & wi::enums::FILTER_WATER)
 							{
-								Entity entity = scene.hairs.GetEntity(i);
-								HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
-								if (hier != nullptr && hier->parentID == hovered.entity)
+								// if water, then put a water ripple onto it:
+								scene.PutWaterRipple(hovered.position);
+							}
+							else
+							{
+								// Check for interactive grass (hair particle that is child of hovered object:
+								for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 								{
-									XMVECTOR P = XMLoadFloat3(&hovered.position);
-									P += XMLoadFloat3(&hovered.normal) * 2;
-									if (grass_interaction_entity == INVALID_ENTITY)
+									Entity entity = scene.hairs.GetEntity(i);
+									HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
+									if (hier != nullptr && hier->parentID == hovered.entity)
 									{
-										grass_interaction_entity = CreateEntity();
+										XMVECTOR P = XMLoadFloat3(&hovered.position);
+										P += XMLoadFloat3(&hovered.normal) * 2;
+										if (grass_interaction_entity == INVALID_ENTITY)
+										{
+											grass_interaction_entity = CreateEntity();
+										}
+										ForceFieldComponent& force = scene.forces.Create(grass_interaction_entity);
+										TransformComponent& transform = scene.transforms.Create(grass_interaction_entity);
+										force.type = ForceFieldComponent::Type::Point;
+										force.gravity = -80;
+										force.range = 3;
+										transform.Translate(P);
+										break;
 									}
-									ForceFieldComponent& force = scene.forces.Create(grass_interaction_entity);
-									TransformComponent& transform = scene.transforms.Create(grass_interaction_entity);
-									force.type = ForceFieldComponent::Type::Point;
-									force.gravity = -80;
-									force.range = 3;
-									transform.Translate(P);
-									break;
 								}
 							}
 						}
 					}
 				}
-
 			}
 		}
 
@@ -2285,6 +2287,10 @@ void EditorComponent::Update(float dt)
 
 	if (navtest_enabled)
 	{
+		if (wi::input::Down(wi::input::MOUSE_BUTTON_MIDDLE))
+		{
+			hovered = wi::scene::Pick(pickRay, wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
+		}
 		if (hovered.entity != INVALID_ENTITY && wi::input::Down(wi::input::KEYBOARD_BUTTON_F5))
 		{
 			navtest_start_pick = hovered;
