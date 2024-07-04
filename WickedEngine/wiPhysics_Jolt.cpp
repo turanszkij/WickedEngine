@@ -527,6 +527,7 @@ namespace wi::physics
 			physicsobject.shared_settings.mVertices.resize(vertexCount);
 			physicsobject.inverseBindMatrices.resize(vertexCount);
 			physicscomponent.boneData.resize(vertexCount);
+			const float distributed_mass = physicscomponent.mass / vertexCount;
 			for (size_t i = 0; i < vertexCount; ++i)
 			{
 				uint32_t graphicsInd = physicscomponent.physicsToGraphicsVertexMapping[i];
@@ -537,7 +538,7 @@ namespace wi::physics
 				XMStoreFloat3(&position, P);
 				physicsobject.shared_settings.mVertices[i].mPosition = Float3(position.x, position.y, position.z);
 
-				float weight = physicscomponent.weights[graphicsInd] * physicscomponent.mass;
+				float weight = physicscomponent.weights[graphicsInd] * distributed_mass;
 				physicsobject.shared_settings.mVertices[i].mInvMass = weight == 0 ? 0 : 1.0f / (1.0f + weight);
 
 				// The soft body node will have a bind matrix similar to an armature bone:
