@@ -93,7 +93,12 @@ void Editor::Initialize()
 	wi::renderer::SetOcclusionCullingEnabled(true);
 
 	renderComponent.main = this;
-	renderComponent.setMSAASampleCount(4);
+	uint32_t msaa = 4;
+	if (config.Has("gui_antialiasing"))
+	{
+		msaa = std::max(1u, (uint32_t)config.GetInt("gui_antialiasing"));
+	}
+	renderComponent.setMSAASampleCount(msaa);
 	renderComponent.Load();
 	ActivatePath(&renderComponent, 0.2f);
 }
@@ -2570,7 +2575,7 @@ void EditorComponent::Render() const
 				if (renderPath->getMSAASampleCount() > 1)
 				{
 					RenderPassImage rp[] = {
-						RenderPassImage::RenderTarget(&rt_selectionOutline_MSAA, RenderPassImage::LoadOp::CLEAR),
+						RenderPassImage::RenderTarget(&rt_selectionOutline_MSAA, RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE),
 						RenderPassImage::Resolve(&rt_selectionOutline[0]),
 						RenderPassImage::DepthStencil(
 							renderPath->GetDepthStencil(),
@@ -2605,7 +2610,7 @@ void EditorComponent::Render() const
 				if (renderPath->getMSAASampleCount() > 1)
 				{
 					RenderPassImage rp[] = {
-						RenderPassImage::RenderTarget(&rt_selectionOutline_MSAA, RenderPassImage::LoadOp::CLEAR),
+						RenderPassImage::RenderTarget(&rt_selectionOutline_MSAA, RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE),
 						RenderPassImage::Resolve(&rt_selectionOutline[1]),
 						RenderPassImage::DepthStencil(
 							renderPath->GetDepthStencil(),
@@ -2750,22 +2755,40 @@ void EditorComponent::Render() const
 		// Full resolution:
 		{
 			const Texture& render_result = renderPath->GetRenderResult();
-			RenderPassImage rp[] = {
-				RenderPassImage::RenderTarget(
-					&editor_rendertarget,
-					RenderPassImage::LoadOp::CLEAR,
-					RenderPassImage::StoreOp::STORE,
-					ResourceState::RENDERTARGET,
-					ResourceState::RENDERTARGET
-				),
-				RenderPassImage::DepthStencil(
-					&editor_depthbuffer,
-					RenderPassImage::LoadOp::CLEAR,
-					RenderPassImage::StoreOp::DONTCARE
-				),
-				RenderPassImage::Resolve(&render_result),
-			};
-			device->RenderPassBegin(rp, arraysize(rp), cmd);
+			if (getMSAASampleCount() > 1)
+			{
+				RenderPassImage rp[] = {
+					RenderPassImage::RenderTarget(
+						&editor_rendertarget,
+						RenderPassImage::LoadOp::CLEAR,
+						RenderPassImage::StoreOp::DONTCARE,
+						ResourceState::RENDERTARGET,
+						ResourceState::RENDERTARGET
+					),
+					RenderPassImage::DepthStencil(
+						&editor_depthbuffer,
+						RenderPassImage::LoadOp::CLEAR,
+						RenderPassImage::StoreOp::DONTCARE
+					),
+					RenderPassImage::Resolve(&render_result),
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
+			}
+			else
+			{
+				RenderPassImage rp[] = {
+					RenderPassImage::RenderTarget(
+						&render_result,
+						RenderPassImage::LoadOp::CLEAR
+					),
+					RenderPassImage::DepthStencil(
+						&editor_depthbuffer,
+						RenderPassImage::LoadOp::CLEAR,
+						RenderPassImage::StoreOp::DONTCARE
+					),
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
+			}
 
 			Viewport vp;
 			vp.width = (float)editor_depthbuffer.GetDesc().width;
@@ -3754,11 +3777,14 @@ void EditorComponent::ResizeViewport3D()
 			device->CreateTexture(&desc, nullptr, &editor_depthbuffer);
 			device->SetName(&editor_depthbuffer, "editor_depthbuffer");
 
-			desc.format = Format::R8G8B8A8_UNORM;
-			desc.bind_flags = BindFlag::RENDER_TARGET;
-			desc.layout = ResourceState::RENDERTARGET;
-			device->CreateTexture(&desc, nullptr, &editor_rendertarget);
-			device->SetName(&editor_rendertarget, "editor_rendertarget");
+			if (getMSAASampleCount() > 1)
+			{
+				desc.format = Format::R8G8B8A8_UNORM;
+				desc.bind_flags = BindFlag::RENDER_TARGET;
+				desc.layout = ResourceState::RENDERTARGET;
+				device->CreateTexture(&desc, nullptr, &editor_rendertarget);
+				device->SetName(&editor_rendertarget, "editor_rendertarget");
+			}
 		}
 	}
 
