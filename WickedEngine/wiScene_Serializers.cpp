@@ -786,7 +786,7 @@ namespace wi::scene
 				friction = 0.5f;
 			}
 
-			if (seri.version >= 1)
+			if (seri.GetVersion() >= 1)
 			{
 				archive >> vertex_radius;
 				archive >> detail;
@@ -796,7 +796,7 @@ namespace wi::scene
 				SetWindEnabled(true);
 			}
 
-			if (seri.version >= 2)
+			if (seri.GetVersion() >= 2)
 			{
 				archive >> pressure;
 			}
@@ -812,7 +812,7 @@ namespace wi::scene
 				std::swap(weights, weights2);
 			}
 
-			if (seri.version >= 3)
+			if (seri.GetVersion() >= 3)
 			{
 				archive >> physicsIndices;
 			}
@@ -833,17 +833,17 @@ namespace wi::scene
 				archive << restitution;
 			}
 
-			if (seri.version >= 1)
+			if (seri.GetVersion() >= 1)
 			{
 				archive << vertex_radius;
 				archive << detail;
 			}
-			if (seri.version >= 2)
+			if (seri.GetVersion() >= 2)
 			{
 				archive << pressure;
 			}
 
-			if (seri.version >= 3)
+			if (seri.GetVersion() >= 3)
 			{
 				archive << physicsIndices;
 			}

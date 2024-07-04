@@ -27,7 +27,6 @@ namespace wi::lua
 		lunamethod(Physics_BindLua, ApplyImpulse),
 		lunamethod(Physics_BindLua, ApplyImpulseAt),
 		lunamethod(Physics_BindLua, ApplyTorque),
-		lunamethod(Physics_BindLua, ApplyTorqueImpulse),
 		lunamethod(Physics_BindLua, SetActivationState),
 		lunamethod(Physics_BindLua, Intersects),
 		lunamethod(Physics_BindLua, PickDrag),
@@ -372,32 +371,6 @@ namespace wi::lua
 		}
 		else
 			wi::lua::SError(L, "ApplyTorque(RigidBodyPhysicsComponent component, Vector torque) not enough arguments!");
-		return 0;
-	}
-	int Physics_BindLua::ApplyTorqueImpulse(lua_State* L)
-	{
-		int argc = wi::lua::SGetArgCount(L);
-		if (argc > 1)
-		{
-			scene::RigidBodyPhysicsComponent_BindLua* component = Luna<scene::RigidBodyPhysicsComponent_BindLua>::lightcheck(L, 1);
-			if (component == nullptr)
-			{
-				wi::lua::SError(L, "ApplyTorqueImpulse(RigidBodyPhysicsComponent component, Vector torque) first argument is not a RigidBodyPhysicsComponent!");
-				return 0;
-			}
-			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 2);
-			if (vec == nullptr)
-			{
-				wi::lua::SError(L, "ApplyTorqueImpulse(RigidBodyPhysicsComponent component, Vector torque) second argument is not a Vector!");
-				return 0;
-			}
-			wi::physics::ApplyTorqueImpulse(
-				*component->component,
-				*(XMFLOAT3*)vec
-			);
-		}
-		else
-			wi::lua::SError(L, "ApplyTorqueImpulse(RigidBodyPhysicsComponent component, Vector torque) not enough arguments!");
 		return 0;
 	}
 	int Physics_BindLua::SetActivationState(lua_State* L)

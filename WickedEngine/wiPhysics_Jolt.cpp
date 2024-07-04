@@ -1873,13 +1873,6 @@ namespace wi::physics
 			body_interface.AddTorque(physicsobject.bodyID, cast(torque), EActivation::Activate);
 		}
 	}
-	void ApplyTorqueImpulse(
-		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
-		const XMFLOAT3& torque
-	)
-	{
-		ApplyTorque(physicscomponent, torque);
-	}
 
 	void SetActivationState(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,

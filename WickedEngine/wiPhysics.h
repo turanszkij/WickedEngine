@@ -97,10 +97,6 @@ namespace wi::physics
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& torque
 	);
-	void ApplyTorqueImpulse(
-		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
-		const XMFLOAT3& torque
-	);
 
 	enum class ActivationState
 	{

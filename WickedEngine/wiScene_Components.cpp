@@ -2068,7 +2068,7 @@ namespace wi::scene
 				);
 
 				size_t result = 0;
-				size_t target_index_count = size_t(shadow_indices.size() * detail) / 3 * 3;
+				size_t target_index_count = size_t(shadow_indices.size() * saturate(detail)) / 3 * 3;
 				float target_error = 1 - saturate(detail);
 				int tries = 0;
 				while (result == 0 && tries < 100)
