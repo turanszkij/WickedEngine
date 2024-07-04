@@ -1960,7 +1960,7 @@ namespace wi::physics
 		inray.mDirection = inray.mDirection * range;
 
 		RayCastSettings settings;
-		settings.mBackFaceMode = EBackFaceMode::CollideWithBackFaces;
+		settings.mBackFaceMode = EBackFaceMode::IgnoreBackFaces;
 		settings.mTreatConvexAsSolid = false;
 
 		ClosestHitCollisionCollector<CastRayCollector> collector;
