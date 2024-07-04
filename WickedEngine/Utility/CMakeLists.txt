@@ -3,8 +3,6 @@ if (PLATFORM MATCHES "SDL2")
 	add_subdirectory(FAudio)
 endif()
 
-add_subdirectory(meshoptimizer)
-
 set(HEADER_FILES
 		${CMAKE_CURRENT_SOURCE_DIR}/DirectXCollision.h
 		${CMAKE_CURRENT_SOURCE_DIR}/DirectXColors.h
@@ -38,7 +36,7 @@ set(HEADER_FILES
 		${CMAKE_CURRENT_SOURCE_DIR}/h264.h
 		${CMAKE_CURRENT_SOURCE_DIR}/dds.h
 		${CMAKE_CURRENT_SOURCE_DIR}/lodepng.h
-		${CMAKE_CURRENT_SOURCE_DIR}/meshoptimizer/allocator.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/meshoptimizer/meshoptimizer.h
 		)
 install(FILES ${HEADER_FILES}
 		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/Utility/")
