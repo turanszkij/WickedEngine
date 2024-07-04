@@ -1637,6 +1637,7 @@ void EditorComponent::Update(float dt)
 		// Interactions:
 		{
 			// Interact:
+			bool interaction_happened = false;
 			if (wi::input::Down((wi::input::BUTTON)'P'))
 			{
 				if (wi::input::Press(wi::input::MOUSE_BUTTON_MIDDLE))
@@ -1645,6 +1646,7 @@ void EditorComponent::Update(float dt)
 					wi::physics::RayIntersectionResult result = wi::physics::Intersects(scene, pickRay);
 					if (result.IsValid())
 					{
+						interaction_happened = true;
 						XMFLOAT3 impulse;
 						XMStoreFloat3(&impulse, XMVector3Normalize(XMLoadFloat3(&pickRay.direction)) * 20);
 						if (result.humanoid_ragdoll_entity != INVALID_ENTITY)
@@ -1675,6 +1677,10 @@ void EditorComponent::Update(float dt)
 				if (wi::input::Down(wi::input::MOUSE_BUTTON_MIDDLE))
 				{
 					wi::physics::PickDrag(scene, pickRay, physicsDragOp);
+					if (physicsDragOp.IsValid())
+					{
+						interaction_happened = true;
+					}
 				}
 				else
 				{
@@ -1713,7 +1719,7 @@ void EditorComponent::Update(float dt)
 			}
 
 			// Other:
-			if (wi::input::Down(wi::input::MOUSE_BUTTON_MIDDLE))
+			if (!interaction_happened && wi::input::Down(wi::input::MOUSE_BUTTON_MIDDLE))
 			{
 				hovered = wi::scene::Pick(pickRay, wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
 				if (hovered.entity != INVALID_ENTITY)
