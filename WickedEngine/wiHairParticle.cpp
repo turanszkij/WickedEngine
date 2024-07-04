@@ -85,6 +85,8 @@ namespace wi
 				}
 			}
 		}
+
+		_flags |= REBUILD_BUFFERS;
 	}
 
 	void HairParticleSystem::CreateRenderData()
