@@ -2765,11 +2765,17 @@ namespace wi::gui
 	}
 	void ComboBox::SetItemText(int index, const std::string& text)
 	{
-		items[index].name = text;
+		if (index >= 0 && index < items.size())
+		{
+			items[index].name = text;
+		}
 	}
 	void ComboBox::SetItemUserdata(int index, uint64_t userdata)
 	{
-		items[index].userdata = userdata;
+		if (index >= 0 && index < items.size())
+		{
+			items[index].userdata = userdata;
+		}
 	}
 	void ComboBox::SetInvalidSelectionText(const std::string& text)
 	{
@@ -2777,7 +2783,7 @@ namespace wi::gui
 	}
 	std::string ComboBox::GetItemText(int index) const
 	{
-		if (index >= 0)
+		if (index >= 0 && index < items.size())
 		{
 			return items[index].name;
 		}
@@ -2785,7 +2791,7 @@ namespace wi::gui
 	}
 	uint64_t ComboBox::GetItemUserData(int index) const
 	{
-		if (index >= 0)
+		if (index >= 0 && index < items.size())
 		{
 			return items[index].userdata;
 		}
