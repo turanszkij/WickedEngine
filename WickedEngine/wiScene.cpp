@@ -6264,6 +6264,46 @@ namespace wi::scene
 		return result;
 	}
 
+	void Scene::ResetPose(wi::ecs::Entity entity)
+	{
+		// All child armatures will be also calling ResetPose, in case you give a parent entity of them, for convenience:
+		for (size_t i = 0; i < armatures.GetCount(); ++i)
+		{
+			Entity armatureEntity = armatures.GetEntity(i);
+			if (Entity_IsDescendant(armatureEntity, entity))
+			{
+				ResetPose(armatureEntity);
+			}
+		}
+
+		const ArmatureComponent* armature = armatures.GetComponent(entity);
+		if (armature == nullptr)
+			return;
+
+		XMMATRIX W = XMMatrixIdentity();
+		const TransformComponent* armature_transform = transforms.GetComponent(entity);
+		if (armature_transform != nullptr)
+		{
+			W = XMLoadFloat4x4(&armature_transform->world);
+		}
+
+		for (size_t i = 0; i < armature->boneCollection.size(); ++i)
+		{
+			Entity bone = armature->boneCollection[i];
+			TransformComponent* transform = transforms.GetComponent(bone);
+			if (transform != nullptr)
+			{
+				transform->ClearTransform();
+				transform->MatrixTransform(XMMatrixInverse(nullptr, XMLoadFloat4x4(&armature->inverseBindMatrices[i])) * W);
+				transform->UpdateTransform();
+				const HierarchyComponent* hier = hierarchy.GetComponent(bone);
+				if (hier != nullptr && hier->parentID != INVALID_ENTITY)
+				{
+					Component_Attach(bone, hier->parentID, false);
+				}
+			}
+		}
+	}
 
 	void Scene::PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
 	{

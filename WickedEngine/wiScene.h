@@ -539,6 +539,10 @@ namespace wi::scene
 
 		// Get the current position on the surface of an object, tracked by the triangle barycentrics
 		XMFLOAT3 GetPositionOnSurface(wi::ecs::Entity objectEntity, int vertexID0, int vertexID1, int vertexID2, const XMFLOAT2& bary) const;
+
+		// Resets pose of the specified entity to bind pose
+		//	this will search for all armatures that are descendants of the entity and set all bone matrices to the their bind matrix
+		void ResetPose(wi::ecs::Entity entity);
 	};
 
 	// Returns skinned vertex position

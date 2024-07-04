@@ -32,7 +32,7 @@ void ArmatureWindow::Create(EditorComponent* _editor)
 	float wid = 220;
 
 	infoLabel.Create("");
-	infoLabel.SetSize(XMFLOAT2(100, 50));
+	infoLabel.SetSize(XMFLOAT2(100, 80));
 	infoLabel.SetText("This window will stay open even if you select other entities until it is collapsed, so you can select other bone entities.");
 	AddWidget(&infoLabel);
 
@@ -41,27 +41,8 @@ void ArmatureWindow::Create(EditorComponent* _editor)
 	resetPoseButton.SetSize(XMFLOAT2(wid, hei));
 	resetPoseButton.OnClick([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
-		const ArmatureComponent* armature = scene.armatures.GetComponent(entity);
-		if (armature == nullptr)
-			return;
-
-		for (size_t i = 0; i < armature->boneCollection.size(); ++i)
-		{
-			Entity bone = armature->boneCollection[i];
-			TransformComponent* transform = scene.transforms.GetComponent(bone);
-			if (transform != nullptr)
-			{
-				transform->ClearTransform();
-				transform->MatrixTransform(XMMatrixInverse(nullptr, XMLoadFloat4x4(&armature->inverseBindMatrices[i])));
-				transform->UpdateTransform();
-				const HierarchyComponent* hier = scene.hierarchy.GetComponent(bone);
-				if (hier != nullptr && hier->parentID != INVALID_ENTITY)
-				{
-					scene.Component_Attach(bone, hier->parentID, false);
-				}
-			}
-		}
-		});
+		scene.ResetPose(entity);
+	});
 	AddWidget(&resetPoseButton);
 
 	createHumanoidButton.Create("Try to create humanoid rig");
