@@ -367,6 +367,8 @@ PipelineState PSO_object_wire_tessellation;
 wi::vector<CustomShader> customShaders;
 int RegisterCustomShader(const CustomShader& customShader)
 {
+	static std::mutex locker;
+	std::scoped_lock lck(locker);
 	int result = (int)customShaders.size();
 	customShaders.push_back(customShader);
 	return result;
@@ -1209,33 +1211,6 @@ void LoadShaders()
 
 	wi::jobsystem::Wait(ctx);
 
-	// Clear custom shaders (Custom shaders coming from user will need to be handled by the user in case of shader reload):
-	customShaders.clear();
-
-	// Hologram sample shader will be registered as custom shader:
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
-		SHADERTYPE realVS = GetVSTYPE(RENDERPASS_MAIN, false, false, true);
-
-		PipelineStateDesc desc;
-		desc.vs = &shaders[realVS];
-		desc.ps = &shaders[PSTYPE_OBJECT_HOLOGRAM];
-
-		desc.bs = &blendStates[BSTYPE_ADDITIVE];
-		desc.rs = &rasterizers[RSTYPE_FRONT];
-		desc.dss = &depthStencils[DSSTYPE_HOLOGRAM];
-		desc.pt = PrimitiveTopology::TRIANGLELIST;
-
-		PipelineState pso;
-		device->CreatePipelineState(&desc, &pso);
-
-		CustomShader customShader;
-		customShader.name = "Hologram";
-		customShader.filterMask = FILTER_TRANSPARENT;
-		customShader.pso[RENDERPASS_MAIN] = pso;
-		RegisterCustomShader(customShader);
-		});
-
-
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		PipelineStateDesc desc;
 		desc.vs = &shaders[VSTYPE_OBJECT_SIMPLE];
@@ -1721,6 +1696,37 @@ void LoadShaders()
 		});
 	};
 #endif // RTREFLECTION_WITH_RAYTRACING_PIPELINE
+
+	// Clear custom shaders (Custom shaders coming from user will need to be handled by the user in case of shader reload):
+	customShaders.clear();
+
+	// Hologram sample shader will be registered as custom shader:
+	//	It's best to register all custom shaders from the same thread, so under here
+	//	or after engine has been completely initialized
+	//	This is because RegisterCustomShader() will give out IDs in increasing order
+	//	and you can keep the order stable by ensuring they are registered in order.
+	{
+		SHADERTYPE realVS = GetVSTYPE(RENDERPASS_MAIN, false, false, true);
+
+		PipelineStateDesc desc;
+		desc.vs = &shaders[realVS];
+		desc.ps = &shaders[PSTYPE_OBJECT_HOLOGRAM];
+
+		desc.bs = &blendStates[BSTYPE_ADDITIVE];
+		desc.rs = &rasterizers[RSTYPE_FRONT];
+		desc.dss = &depthStencils[DSSTYPE_HOLOGRAM];
+		desc.pt = PrimitiveTopology::TRIANGLELIST;
+
+		PipelineState pso;
+		device->CreatePipelineState(&desc, &pso);
+
+		CustomShader customShader;
+		customShader.name = "Hologram";
+		customShader.filterMask = FILTER_TRANSPARENT;
+		customShader.pso[RENDERPASS_MAIN] = pso;
+		RegisterCustomShader(customShader);
+	}
+
 
 	wi::jobsystem::Wait(ctx);
 
