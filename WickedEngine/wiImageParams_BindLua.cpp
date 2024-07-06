@@ -13,6 +13,7 @@ namespace wi::lua
 		lunamethod(ImageParams_BindLua, GetRotation),
 		lunamethod(ImageParams_BindLua, GetTexOffset),
 		lunamethod(ImageParams_BindLua, GetTexOffset2),
+		lunamethod(ImageParams_BindLua, GetBorderSoften),
 		lunamethod(ImageParams_BindLua, GetDrawRect),
 		lunamethod(ImageParams_BindLua, GetDrawRect2),
 		lunamethod(ImageParams_BindLua, IsDrawRectEnabled),
@@ -114,6 +115,11 @@ namespace wi::lua
 	int ImageParams_BindLua::GetTexOffset2(lua_State* L)
 	{
 		Luna<Vector_BindLua>::push(L, XMLoadFloat2(&params.texOffset2));
+		return 1;
+	}
+	int ImageParams_BindLua::GetBorderSoften(lua_State* L)
+	{
+		wi::lua::SSetFloat(L, params.border_soften);
 		return 1;
 	}
 	int ImageParams_BindLua::GetDrawRect(lua_State* L)
