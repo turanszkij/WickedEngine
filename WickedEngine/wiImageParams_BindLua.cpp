@@ -36,6 +36,7 @@ namespace wi::lua
 		lunamethod(ImageParams_BindLua, SetRotation),
 		lunamethod(ImageParams_BindLua, SetTexOffset),
 		lunamethod(ImageParams_BindLua, SetTexOffset2),
+		lunamethod(ImageParams_BindLua, SetBorderSoften),
 		lunamethod(ImageParams_BindLua, EnableDrawRect),
 		lunamethod(ImageParams_BindLua, EnableDrawRect2),
 		lunamethod(ImageParams_BindLua, DisableDrawRect),
@@ -360,6 +361,19 @@ namespace wi::lua
 		else
 		{
 			wi::lua::SError(L, "SetTexOffset2(Vector value) not enough arguments!");
+		}
+		return 0;
+	}
+	int ImageParams_BindLua::SetBorderSoften(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			params.border_soften = wi::lua::SGetFloat(L, 1);
+		}
+		else
+		{
+			wi::lua::SError(L, "SetBorderSoften(float alpha) not enough arguments!");
 		}
 		return 0;
 	}

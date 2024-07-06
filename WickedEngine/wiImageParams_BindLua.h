@@ -49,6 +49,7 @@ namespace wi::lua
 		int SetRotation(lua_State* L);
 		int SetTexOffset(lua_State* L);
 		int SetTexOffset2(lua_State* L);
+		int SetBorderSoften(lua_State* L);
 		int EnableDrawRect(lua_State* L);
 		int EnableDrawRect2(lua_State* L);
 		int DisableDrawRect(lua_State* L);
