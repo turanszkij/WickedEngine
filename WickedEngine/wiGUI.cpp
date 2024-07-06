@@ -1209,7 +1209,13 @@ namespace wi::gui
 			}
 		}
 	}
-
+	void ScrollBar::SetOffset(float offset)
+	{
+		float scrollbar_size = vertical ? scale.y : scale.x;
+		scrollbar_delta = wi::math::Clamp(offset, 0.0f, std::max(0.0f, list_length - scrollbar_size));
+		scrollbar_value = scrollbar_delta / std::max(1.0f, list_length - scrollbar_size); // Added to update scrollbar_value
+		list_offset = -scrollbar_value * (list_length - scrollbar_size * (1.0f - overscroll)); // Updated with correct scrollbar_value
+	}
 
 
 
@@ -5297,6 +5303,15 @@ namespace wi::gui
 		Item item;
 		item.name = name;
 		AddItem(item);
+	}
+	void TreeList::ScrollToItem(int index)
+	{
+		float itemOffset = GetItemOffset(index);
+		float visibleAreaHeight = GetHitbox_ListArea().siz.y;
+		float targetOffset = itemOffset - (visibleAreaHeight / 2.0f);
+		float maxScroll = std::max(0.0f, (float)items.size() * item_height() - visibleAreaHeight);
+
+		scrollbar.SetOffset(wi::math::Clamp(targetOffset, 0.0f, maxScroll));
 	}
 	void TreeList::ClearItems()
 	{

@@ -1008,6 +1008,18 @@ void ComponentsWindow::ResizeLayout()
 	}
 }
 
+void ComponentsWindow::ScrollToEntity(wi::ecs::Entity entity)
+{
+	for (int i = 0; i < entityTree.GetItemCount(); ++i)
+	{
+		const wi::gui::TreeList::Item& item = entityTree.GetItem(i);
+		if ((Entity)item.userdata == entity)
+		{
+			entityTree.ScrollToItem(i);
+			break;
+		}
+	}
+}
 
 void ComponentsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 {

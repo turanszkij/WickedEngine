@@ -3820,9 +3820,8 @@ void EditorComponent::AddSelected(const PickResult& picked)
 	bool removal = false;
 	for (size_t i = 0; i < translator.selected.size(); ++i)
 	{
-		if(translator.selected[i] == picked)
+		if (translator.selected[i] == picked)
 		{
-			// If already selected, it will be deselected now:
 			translator.selected[i] = translator.selected.back();
 			translator.selected.pop_back();
 			removal = true;
@@ -3833,6 +3832,11 @@ void EditorComponent::AddSelected(const PickResult& picked)
 	if (!removal)
 	{
 		translator.selected.push_back(picked);
+	}
+
+	if (!translator.selected.empty())
+	{
+		componentsWnd.ScrollToEntity(translator.selected.front().entity);
 	}
 }
 bool EditorComponent::IsSelected(Entity entity) const

@@ -118,6 +118,7 @@ public:
 	void PushToEntityTree(wi::ecs::Entity entity, int level);
 	void RefreshEntityTree();
 	bool CheckEntityFilter(wi::ecs::Entity entity);
+	void ScrollToEntity(wi::ecs::Entity entity);
 };
 
 template<>

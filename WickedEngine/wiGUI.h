@@ -406,6 +406,7 @@ namespace wi::gui
 		// Check whether the scrollbar is required (when the items don't fit and scrolling could be used)
 		bool IsScrollbarRequired() const { return scrollbar_granularity < 1; }
 		void SetSafeArea(float value) { safe_area = value; }
+		void SetOffset(float offset);
 
 		enum SCROLLBAR_STATE
 		{
@@ -807,6 +808,7 @@ namespace wi::gui
 
 		void AddItem(const Item& item);
 		void AddItem(const std::string& name);
+		void ScrollToItem(int index);
 		void ClearItems();
 		bool HasScrollbar() const;
 

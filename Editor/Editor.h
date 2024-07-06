@@ -128,6 +128,7 @@ public:
 	void ClearSelected();
 	void AddSelected(wi::ecs::Entity entity);
 	void AddSelected(const wi::scene::PickResult& picked);
+	void ScrollToSelectedEntity(wi::ecs::Entity entity);
 	bool IsSelected(wi::ecs::Entity entity) const;
 	bool selectAll = false;
 	wi::unordered_set<wi::ecs::Entity> selectAllStorage;
