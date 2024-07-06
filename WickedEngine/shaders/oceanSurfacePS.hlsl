@@ -32,7 +32,7 @@ float4 main(PSIn input) : SV_TARGET
 	[branch]
 	if (GetCamera().texture_waterriples_index >= 0)
 	{
-		gradient.rg += bindless_textures_float2[GetCamera().texture_waterriples_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rg * 0.1;
+		gradient.rg += bindless_textures_float2[GetCamera().texture_waterriples_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rg * 0.01;
 	}
 
 	Surface surface;
@@ -119,7 +119,7 @@ float4 main(PSIn input) : SV_TARGET
 
 #if 1
 	// FOAM:
-	float foam_shore = saturate(exp(-water_depth * 2));
+	float foam_shore = saturate(exp(-water_depth * 4));
 	float foam_simplex = 0;
 	foam_simplex += smoothstep(0, 0.8, noise_simplex_2D(surface.P.xz * 1 + GetTime()));
 	foam_simplex += smoothstep(0, 0.8, noise_simplex_2D(surface.P.xz * 2 + GetTime()));
