@@ -4742,7 +4742,7 @@ void UpdateRenderDataAsync(
 		if (!occluded)
 		{
 			auto range = wi::profiler::BeginRangeGPU("Ocean - Simulate", cmd);
-			vis.scene->ocean.UpdateDisplacementMap(vis.scene->weather.oceanParameters, cmd);
+			vis.scene->ocean.UpdateDisplacementMap(cmd);
 			wi::profiler::EndRange(range);
 		}
 	}
@@ -6186,7 +6186,7 @@ void DrawScene(
 	{
 		if (!occlusion || !vis.scene->ocean.IsOccluded())
 		{
-			vis.scene->ocean.Render(*vis.camera, vis.scene->weather.oceanParameters, cmd);
+			vis.scene->ocean.Render(*vis.camera, cmd);
 		}
 	}
 

@@ -410,6 +410,7 @@ local function Character(model_entity, start_position, face, controllable, anim_
 
 			self.root = self.humanoid
 			
+			scene.ResetPose(self.model)
 			self.anims[States.IDLE] = scene.RetargetAnimation(self.humanoid, animations.IDLE, false, anim_scene)
 			self.anims[States.WALK] = scene.RetargetAnimation(self.humanoid, animations.WALK, false, anim_scene)
 			self.anims[States.JOG] = scene.RetargetAnimation(self.humanoid, animations.JOG, false, anim_scene)
@@ -548,14 +549,26 @@ local function Character(model_entity, start_position, face, controllable, anim_
 				local neck_pos = scene.Component_GetTransform(self.neck).GetPosition()
 				local water_threshold = 0.1
 				neck_pos = vector.Add(neck_pos, Vector(0, -water_threshold, 0))
-				local swim_ray = Ray(neck_pos, Vector(0,1,0), 0, 100)
-				local water_entity, water_pos, water_normal, water_distance = scene.Intersects(swim_ray, FILTER_WATER)
-				if water_entity ~= INVALID_ENTITY then
+				local oceanpos = scene.GetOceanPosAt(neck_pos)
+				local water_distance = oceanpos.GetY() - neck_pos.GetY()
+				if water_distance > 0 then
+					-- Ocean determined to be above neck:
 					model_transform.Translate(Vector(0,water_distance - water_threshold,0))
 					model_transform.UpdateTransform()
 					self.velocity.SetY(0)
 					swimming = true
 					self.state = States.SWIM_IDLE
+				else
+					-- Ray trace water mesh:
+					local swim_ray = Ray(neck_pos, Vector(0,1,0), 0, 100)
+					local water_entity, water_pos, water_normal, water_distance = scene.Intersects(swim_ray, FILTER_WATER)
+					if water_entity ~= INVALID_ENTITY then
+						model_transform.Translate(Vector(0,water_distance - water_threshold,0))
+						model_transform.UpdateTransform()
+						self.velocity.SetY(0)
+						swimming = true
+						self.state = States.SWIM_IDLE
+					end
 				end
 			end
 
@@ -803,9 +816,14 @@ local function Character(model_entity, start_position, face, controllable, anim_
 			
 			-- try to put water ripple:
 			if self.velocity.Length() > 0.01 and self.state ~= States.SWIM_IDLE then
-				local w,wp = scene.Intersects(capsule, FILTER_WATER)
-				if w ~= INVALID_ENTITY then
-					PutWaterRipple(wp)
+				local oceanpos = scene.GetOceanPosAt(self.position)
+				if self.position.GetY() < oceanpos.GetY() then
+					PutWaterRipple(Vector(self.position.GetX(), oceanpos.GetY(), self.position.GetZ()))
+				else
+					local w,wp = scene.Intersects(capsule, FILTER_WATER)
+					if w ~= INVALID_ENTITY then
+						PutWaterRipple(wp)
+					end
 				end
 			end
 
@@ -1187,6 +1205,8 @@ runProcess(function()
 	--path.SetFSR2Enabled(true)
 	--path.SetFSR2Preset(FSR2_Preset.Performance)
 	--SetProfilerEnabled(true)
+	SetDebugEnvProbesEnabled(false)
+	SetGridHelperEnabled(false)
 
 	-- Configure a simple loading progress bar:
     local loadingbar = Sprite()
@@ -1558,7 +1578,6 @@ runProcess(function()
 			voxelgrid.ClearData()
 			scene.VoxelizeScene(voxelgrid, false, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~(Layers.Player | Layers.NPC)) -- player and npc layers not included in voxelization
 		end
-
 		
 		-- Do some debug draw geometry:
 			

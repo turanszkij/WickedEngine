@@ -4762,6 +4762,11 @@ namespace wi::scene
 			ocean.occlusionQueries[queryheap_idx] = -1; // invalidate query
 		}
 
+		if (ocean.IsValid())
+		{
+			ocean.params = weather.oceanParameters;
+		}
+
 		if (weather.rain_amount > 0)
 		{
 			GraphicsDevice* device = wi::graphics::GetDevice();
@@ -6303,6 +6308,13 @@ namespace wi::scene
 				}
 			}
 		}
+	}
+
+	XMFLOAT3 Scene::GetOceanPosAt(const XMFLOAT3& worldPosition) const
+	{
+		if (!ocean.IsValid())
+			return worldPosition;
+		return ocean.GetDisplacedPosition(worldPosition);
 	}
 
 	void Scene::PutWaterRipple(const std::string& image, const XMFLOAT3& pos)

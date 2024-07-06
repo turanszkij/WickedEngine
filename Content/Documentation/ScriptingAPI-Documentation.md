@@ -844,6 +844,8 @@ The scene holds components. Entity handles can be used to retrieve associated co
 
 - ResetPose(Entity entity)	-- resets the pose of the specified entity to bind pose. The bind pose is taken from the bind matrices of bones of an ArmatureComponent. If the entity does not have an armature, then it will find the child armatures of the entity.
 
+- GetOceanPosAt(Vector worldPosition)	-- returns the approximate position on the ocean surface seen from a position in world space. If current weather doesn't have ocean enabled, returns the world position itself. The result position is approximate because it involves reading back from GPU to the CPU, so the result can be delayed compared to the current GPU simulation. Note that the input position to this function will be taken on the XZ plane and modified by the displacement map's XZ value, and the Y (vertical) position will be taken from the ocean water height and displacement map only.
+
 - VoxelizeObject(int objectIndex, VoxelGrid voxelgrid, opt bool subtract = false, opt int lod = 0) -- voxelizes a single object into the voxel grid. Subtract parameter controls whether the voxels are added (true) or removed (false). Lod argument selects object's level of detail
 - VoxelizeScene(VoxelGrid voxelgrid, opt bool subtract = false, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) -- voxelizes all entities in the scene which intersect the voxel grid volume and match the filterMask and layerMask. Subtract parameter controls whether the voxels are added (true) or removed (false). Lod argument selects object's level of detail
 

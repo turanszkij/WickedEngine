@@ -24,8 +24,16 @@ float4 main(PSIn input) : SV_TARGET
 	const float gradient_fade = saturate(dist * 0.001);
 	const float4 gradientNear = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv);
 	const float4 gradientFar = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv * 0.125);
-	const float4 gradient = lerp(gradientNear, gradientFar, gradient_fade);
+	float4 gradient = lerp(gradientNear, gradientFar, gradient_fade);
 	const float sss_amount = gradient.a;
+	
+	float2 ScreenCoord = pixel * GetCamera().internal_resolution_rcp;
+	
+	[branch]
+	if (GetCamera().texture_waterriples_index >= 0)
+	{
+		gradient.rg += bindless_textures_float2[GetCamera().texture_waterriples_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rg * 0.1;
+	}
 
 	Surface surface;
 	surface.init();
@@ -47,7 +55,6 @@ float4 main(PSIn input) : SV_TARGET
 
 	TiledLighting(surface, lighting, GetFlatTileIndex(pixel));
 
-	float2 ScreenCoord = surface.pixel * GetCamera().internal_resolution_rcp;
 	const float bump_strength = 0.1;
 	
 	float4 water_plane = GetCamera().reflection_plane;
