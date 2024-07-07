@@ -1527,8 +1527,6 @@ namespace wi
 				wi::profiler::EndRange(range); // Opaque Scene
 			}
 
-			RenderOutline(cmd);
-
 			// Blend Aerial Perspective on top:
 			if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
 			{
@@ -1545,6 +1543,8 @@ namespace wi
 			{
 				wi::renderer::Postprocess_VolumetricClouds_Upsample(volumetriccloudResources, cmd);
 			}
+
+			RenderOutline(cmd);
 
 			device->RenderPassEnd(cmd);
 
@@ -1961,14 +1961,44 @@ namespace wi
 		Rect scissor = GetScissorInternalResolution();
 		device->BindScissorRects(1, &scissor, cmd);
 
+		Viewport vp;
+		vp.width = (float)depthBuffer_Main.GetDesc().width;
+		vp.height = (float)depthBuffer_Main.GetDesc().height;
+		vp.min_depth = 0;
+		vp.max_depth = 1;
+		device->BindViewports(1, &vp, cmd);
+
+		// Note: volumetrics and light shafts are blended before transparent scene, because they used depth of the opaques
+
+		if (getVolumeLightsEnabled() && visibility_main.IsRequestedVolumetricLights())
+		{
+			device->EventBegin("Contribute Volumetric Lights", cmd);
+			wi::renderer::Postprocess_Upsample_Bilateral(
+				rtVolumetricLights,
+				rtLinearDepth,
+				rtMain,
+				cmd,
+				true,
+				1.5f
+			);
+			device->EventEnd(cmd);
+		}
+
+		XMVECTOR sunDirection = XMLoadFloat3(&scene->weather.sunDirection);
+		if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, camera->GetAt())) > 0)
+		{
+			device->EventBegin("Contribute LightShafts", cmd);
+			wi::image::Params fx;
+			fx.enableFullScreen();
+			fx.blendFlag = BLENDMODE_ADDITIVE;
+			wi::image::Draw(&rtSun[1], fx, cmd);
+			device->EventEnd(cmd);
+		}
+
 		// Transparent scene
 		{
 			auto range = wi::profiler::BeginRangeGPU("Transparent Scene", cmd);
 			device->EventBegin("Transparent Scene", cmd);
-
-			Viewport vp;
-			vp.width = (float)depthBuffer_Main.GetDesc().width;
-			vp.height = (float)depthBuffer_Main.GetDesc().height;
 
 			// Foreground:
 			vp.min_depth = 1 - foreground_depth_range;
@@ -2008,31 +2038,6 @@ namespace wi
 
 		wi::renderer::DrawSoftParticles(visibility_main, false, cmd);
 		wi::renderer::DrawSpritesAndFonts(*scene, *camera, false, cmd);
-
-		if (getVolumeLightsEnabled() && visibility_main.IsRequestedVolumetricLights())
-		{
-			device->EventBegin("Contribute Volumetric Lights", cmd);
-			wi::renderer::Postprocess_Upsample_Bilateral(
-				rtVolumetricLights,
-				rtLinearDepth,
-				rtMain,
-				cmd,
-				true,
-				1.5f
-			);
-			device->EventEnd(cmd);
-		}
-
-		XMVECTOR sunDirection = XMLoadFloat3(&scene->weather.sunDirection);
-		if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, camera->GetAt())) > 0)
-		{
-			device->EventBegin("Contribute LightShafts", cmd);
-			wi::image::Params fx;
-			fx.enableFullScreen();
-			fx.blendFlag = BLENDMODE_ADDITIVE;
-			wi::image::Draw(&rtSun[1], fx, cmd);
-			device->EventEnd(cmd);
-		}
 
 		if (getLensFlareEnabled())
 		{
