@@ -4762,6 +4762,11 @@ namespace wi::scene
 			ocean.occlusionQueries[queryheap_idx] = -1; // invalidate query
 		}
 
+		if (ocean.IsValid())
+		{
+			ocean.params = weather.oceanParameters;
+		}
+
 		if (weather.rain_amount > 0)
 		{
 			GraphicsDevice* device = wi::graphics::GetDevice();
@@ -5207,9 +5212,9 @@ namespace wi::scene
 					Ray ray_local = Ray(rayOrigin_local, rayDirection_local);
 
 					mesh->bvh.Intersects(ray_local, 0, [&](uint32_t index) {
-						const uint32_t userdata = mesh->bvh_leaf_aabbs[index].userdata;
-						const uint32_t triangleIndex = userdata & 0xFFFFFF;
-						const uint32_t subsetIndex = userdata >> 24u;
+						const AABB& leaf = mesh->bvh_leaf_aabbs[index];
+						const uint32_t triangleIndex = leaf.layerMask;
+						const uint32_t subsetIndex = leaf.userdata;
 						const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
 						if (subset.indexCount == 0)
 							return;
@@ -5370,9 +5375,9 @@ namespace wi::scene
 					Ray ray_local = Ray(rayOrigin_local, rayDirection_local);
 
 					mesh->bvh.IntersectsFirst(ray_local, [&](uint32_t index) {
-						const uint32_t userdata = mesh->bvh_leaf_aabbs[index].userdata;
-						const uint32_t triangleIndex = userdata & 0xFFFFFF;
-						const uint32_t subsetIndex = userdata >> 24u;
+						const AABB& leaf = mesh->bvh_leaf_aabbs[index];
+						const uint32_t triangleIndex = leaf.layerMask;
+						const uint32_t subsetIndex = leaf.userdata;
 						const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
 						if (subset.indexCount == 0)
 							return false;
@@ -5646,9 +5651,9 @@ namespace wi::scene
 					Sphere sphere_local = Sphere(center_local, radius_local);
 
 					mesh->bvh.Intersects(sphere_local, 0, [&](uint32_t index) {
-						const uint32_t userdata = mesh->bvh_leaf_aabbs[index].userdata;
-						const uint32_t triangleIndex = userdata & 0xFFFFFF;
-						const uint32_t subsetIndex = userdata >> 24u;
+						const AABB& leaf = mesh->bvh_leaf_aabbs[index];
+						const uint32_t triangleIndex = leaf.layerMask;
+						const uint32_t subsetIndex = leaf.userdata;
 						const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
 						if (subset.indexCount == 0)
 							return;
@@ -6042,9 +6047,9 @@ namespace wi::scene
 					AABB capsule_local_aabb = Capsule(base_local, tip_local, radius_local).getAABB();
 
 					mesh->bvh.Intersects(capsule_local_aabb, 0, [&](uint32_t index){
-						const uint32_t userdata = mesh->bvh_leaf_aabbs[index].userdata;
-						const uint32_t triangleIndex = userdata & 0xFFFFFF;
-						const uint32_t subsetIndex = userdata >> 24u;
+						const AABB& leaf = mesh->bvh_leaf_aabbs[index];
+						const uint32_t triangleIndex = leaf.layerMask;
+						const uint32_t subsetIndex = leaf.userdata;
 						const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
 						if (subset.indexCount == 0)
 							return;
@@ -6303,6 +6308,13 @@ namespace wi::scene
 				}
 			}
 		}
+	}
+
+	XMFLOAT3 Scene::GetOceanPosAt(const XMFLOAT3& worldPosition) const
+	{
+		if (!ocean.IsValid())
+			return worldPosition;
+		return ocean.GetDisplacedPosition(worldPosition);
 	}
 
 	void Scene::PutWaterRipple(const std::string& image, const XMFLOAT3& pos)

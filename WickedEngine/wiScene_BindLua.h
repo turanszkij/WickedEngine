@@ -196,6 +196,7 @@ namespace wi::lua::scene
 
 		int RetargetAnimation(lua_State* L);
 		int ResetPose(lua_State* L);
+		int GetOceanPosAt(lua_State* L);
 
 		int VoxelizeObject(lua_State* L);
 		int VoxelizeScene(lua_State* L);

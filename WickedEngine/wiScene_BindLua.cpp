@@ -668,6 +668,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, SetWeather),
 	lunamethod(Scene_BindLua, RetargetAnimation),
 	lunamethod(Scene_BindLua, ResetPose),
+	lunamethod(Scene_BindLua, GetOceanPosAt),
 	lunamethod(Scene_BindLua, VoxelizeObject),
 	lunamethod(Scene_BindLua, VoxelizeScene),
 	{ NULL, NULL }
@@ -3159,6 +3160,26 @@ int Scene_BindLua::ResetPose(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "ResetPose(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::GetOceanPosAt(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (v == nullptr)
+		{
+			wi::lua::SError(L, "GetOceanPosAt(Vector worldPos) first argument is not a Vector!");
+			return 0;
+		}
+		Luna<Vector_BindLua>::push(L, scene->GetOceanPosAt(v->GetFloat3()));
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "GetOceanPosAt(Vector worldPos) not enough arguments!");
 	}
 	return 0;
 }

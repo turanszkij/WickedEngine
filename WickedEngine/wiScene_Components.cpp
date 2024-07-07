@@ -1338,7 +1338,6 @@ namespace wi::scene
 		GetLODSubsetRange(0, first_subset, last_subset);
 		for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 		{
-			assert(subsetIndex <= 0xFF); // must fit into 8 bits userdata packing
 			const MeshComponent::MeshSubset& subset = subsets[subsetIndex];
 			if (subset.indexCount == 0)
 				continue;
@@ -1346,7 +1345,6 @@ namespace wi::scene
 			const uint32_t triangleCount = subset.indexCount / 3;
 			for (uint32_t triangleIndex = 0; triangleIndex < triangleCount; ++triangleIndex)
 			{
-				assert(triangleIndex <= 0xFFFFFF); // must fit into 24 bits userdata packing
 				const uint32_t i0 = indices[indexOffset + triangleIndex * 3 + 0];
 				const uint32_t i1 = indices[indexOffset + triangleIndex * 3 + 1];
 				const uint32_t i2 = indices[indexOffset + triangleIndex * 3 + 2];
@@ -1354,7 +1352,8 @@ namespace wi::scene
 				const XMFLOAT3& p1 = vertex_positions[i1];
 				const XMFLOAT3& p2 = vertex_positions[i2];
 				AABB aabb = wi::primitive::AABB(wi::math::Min(p0, wi::math::Min(p1, p2)), wi::math::Max(p0, wi::math::Max(p1, p2)));
-				aabb.userdata = (triangleIndex & 0xFFFFFF) | ((subsetIndex & 0xFF) << 24u);
+				aabb.layerMask = triangleIndex;
+				aabb.userdata = subsetIndex;
 				bvh_leaf_aabbs.push_back(aabb);
 			}
 		}

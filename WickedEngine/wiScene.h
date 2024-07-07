@@ -543,6 +543,12 @@ namespace wi::scene
 		// Resets pose of the specified entity to bind pose
 		//	this will search for all armatures that are descendants of the entity and set all bone matrices to the their bind matrix
 		void ResetPose(wi::ecs::Entity entity);
+
+		// Returns the approximate position on the ocean surface seen from a position in world space.
+		//	If current weather doesn't have ocean enabled, returns the world position itself.
+		//	The result position is approximate because it involves reading back from GPU to the CPU, so the result can be delayed compared to the current GPU simulation.
+		//	Note that the input position to this function will be taken on the XZ plane and modified by the displacement map's XZ value, and the Y (vertical) position will be taken from the ocean water height and displacement map only.
+		XMFLOAT3 GetOceanPosAt(const XMFLOAT3& worldPosition) const;
 	};
 
 	// Returns skinned vertex position
