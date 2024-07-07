@@ -1527,8 +1527,6 @@ namespace wi
 				wi::profiler::EndRange(range); // Opaque Scene
 			}
 
-			RenderOutline(cmd);
-
 			// Blend Aerial Perspective on top:
 			if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
 			{
@@ -1545,6 +1543,8 @@ namespace wi
 			{
 				wi::renderer::Postprocess_VolumetricClouds_Upsample(volumetriccloudResources, cmd);
 			}
+
+			RenderOutline(cmd);
 
 			device->RenderPassEnd(cmd);
 
