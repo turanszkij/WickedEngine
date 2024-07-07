@@ -225,6 +225,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	qualityCombo.AddItem("Nearest Neighbor", wi::image::QUALITY_NEAREST);
 	qualityCombo.AddItem("Linear", wi::image::QUALITY_LINEAR);
 	qualityCombo.AddItem("Anisotropic", wi::image::QUALITY_ANISOTROPIC);
+	qualityCombo.AddItem("Bicubic", wi::image::QUALITY_BICUBIC);
 	qualityCombo.OnSelect([=](wi::gui::EventArgs args) {
 		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
 		if (sprite == nullptr)

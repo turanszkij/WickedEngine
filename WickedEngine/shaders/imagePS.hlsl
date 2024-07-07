@@ -5,12 +5,22 @@ float4 main(VertextoPixel input) : SV_TARGET
 	SamplerState sam = bindless_samplers[image.sampler_index];
 
 	float4 uvsets = input.compute_uvs();
+	float2 texSize;
+	bindless_textures[image.texture_base_index].GetDimensions(texSize.x, texSize.y);
 
 	float4 color = unpack_half4(image.packed_color);
 	[branch]
 	if (image.texture_base_index >= 0)
 	{
-		float4 tex = bindless_textures[image.texture_base_index].Sample(sam, uvsets.xy);
+		float4 tex;
+        if (image.flags & IMAGE_FLAG_BICUBIC_FILTERING)
+        {
+            tex = SampleBicubic(bindless_textures[image.texture_base_index], sam, uvsets.xy, texSize);
+        }
+        else
+        {
+            tex = bindless_textures[image.texture_base_index].Sample(sam, uvsets.xy);
+        }
 
 		if (image.flags & IMAGE_FLAG_EXTRACT_NORMALMAP)
 		{

@@ -11,6 +11,7 @@ static const uint IMAGE_FLAG_CORNER_ROUNDING = 1u << 5u;
 static const uint IMAGE_FLAG_ANGULAR_DOUBLESIDED = 1u << 6u;
 static const uint IMAGE_FLAG_ANGULAR_INVERSE = 1u << 7u;
 static const uint IMAGE_FLAG_DISTORTION_MASK = 1u << 8u;
+static const uint IMAGE_FLAG_BICUBIC_FILTERING = 1u << 9u;
 
 struct ImageConstants
 {

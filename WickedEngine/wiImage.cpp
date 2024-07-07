@@ -77,6 +77,15 @@ namespace wi::image
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
 				sampler = &samplers[SAMPLER_ANISO_CLAMP];
 		}
+		else if (params.quality == QUALITY_BICUBIC)
+		{
+			if (params.sampleFlag == SAMPLEMODE_MIRROR)
+				sampler = &samplers[SAMPLER_LINEAR_MIRROR];
+			else if (params.sampleFlag == SAMPLEMODE_WRAP)
+				sampler = &samplers[SAMPLER_LINEAR_WRAP];
+			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
+				sampler = &samplers[SAMPLER_LINEAR_CLAMP];
+		}
 
 		ImageConstants image = {};
 		image.buffer_index = -1;
@@ -162,6 +171,10 @@ namespace wi::image
 		if (params.isDistortionMaskEnabled())
 		{
 			image.flags |= IMAGE_FLAG_DISTORTION_MASK;
+		}
+		if (params.quality == QUALITY_BICUBIC)
+		{
+		    image.flags |= IMAGE_FLAG_BICUBIC_FILTERING;
 		}
 
 		image.border_soften = params.border_soften;
