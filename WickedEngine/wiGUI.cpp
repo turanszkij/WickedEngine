@@ -5311,7 +5311,11 @@ namespace wi::gui
 		float targetOffset = itemOffset - (visibleAreaHeight / 2.0f);
 		float maxScroll = std::max(0.0f, (float)items.size() * item_height() - visibleAreaHeight);
 
-		scrollbar.SetOffset(wi::math::Clamp(targetOffset, 0.0f, maxScroll));
+		// Only set the offset if the target offset is newer (greater) than the previous offset
+		if (targetOffset > previousOffset) {
+			scrollbar.SetOffset(wi::math::Clamp(targetOffset, 0.0f, maxScroll));
+			previousOffset = targetOffset; // Update the previous offset
+		}
 	}
 	void TreeList::ClearItems()
 	{
