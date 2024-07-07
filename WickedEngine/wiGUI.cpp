@@ -5308,14 +5308,26 @@ namespace wi::gui
 	{
 		float itemOffset = GetItemOffset(index);
 		float visibleAreaHeight = GetHitbox_ListArea().siz.y;
-		float targetOffset = itemOffset - (visibleAreaHeight / 2.0f);
-		float maxScroll = std::max(0.0f, (float)items.size() * item_height() - visibleAreaHeight);
+		float itemHeight = item_height();
+		float itemTopOffset = itemOffset;
+		float itemBottomOffset = itemOffset + itemHeight;
+		float maxScroll = std::max(0.0f, (float)items.size() * itemHeight - visibleAreaHeight);
 
-		// Only set the offset if the target offset is newer (greater) than the previous offset
-		if (targetOffset > previousOffset) {
-			scrollbar.SetOffset(wi::math::Clamp(targetOffset, 0.0f, maxScroll));
+		// Check if the item is within the visible area
+		bool isVisible = (itemTopOffset >= previousOffset) && (itemBottomOffset <= previousOffset + visibleAreaHeight);
+
+		// Only adjust if the new index is not within the visible area
+		if (!isVisible) {
+			float targetOffset = itemOffset - (visibleAreaHeight / 2.0f);
+
+			// Clamp the target offset to valid range
+			targetOffset = wi::math::Clamp(targetOffset, 0.0f, maxScroll);
+
+			scrollbar.SetOffset(targetOffset);
 			previousOffset = targetOffset; // Update the previous offset
 		}
+
+		previousIndex = index; // Update the previous index
 	}
 	void TreeList::ClearItems()
 	{

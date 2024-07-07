@@ -793,6 +793,7 @@ namespace wi::gui
 
 		float GetItemOffset(int index) const;
 		float previousOffset = 0.0f;
+		int previousIndex = -1;
 		bool DoesItemHaveChildren(int index) const;
 
 		float resizehitboxwidth = 6;
