@@ -9,7 +9,7 @@ void LightWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_POINTLIGHT " Light", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(650, 860));
+	SetSize(XMFLOAT2(650, 900));
 
 	closeButton.SetTooltip("Delete LightComponent");
 	OnClose([=](wi::gui::EventArgs args) {
