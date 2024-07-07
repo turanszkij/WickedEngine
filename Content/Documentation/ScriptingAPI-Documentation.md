@@ -229,6 +229,7 @@ Specify Sprite properties, like position, size, etc.
 - GetMipLevel() : float result
 - GetTexOffset() : Vector result
 - GetTexOffset2() : Vector result
+- GetBorderSoften() : float result
 - GetDrawRect() : Vector result
 - GetDrawRect2() : Vector result
 - IsDrawRectEnabled() : bool result
@@ -251,6 +252,7 @@ Specify Sprite properties, like position, size, etc.
 - SetMipLevel(float mipLevel)
 - SetTexOffset()
 - SetTexOffset2()
+- SetBorderSoften(float alpha)
 - EnableDrawRect(Vector value)
 - EnableDrawRect2(Vector value)
 - DisableDrawRect()
