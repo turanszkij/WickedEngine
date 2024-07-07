@@ -795,6 +795,7 @@ namespace wi::gui
 		float previousOffset = 0.0f;
 		int previousIndex = -1;
 		bool DoesItemHaveChildren(int index) const;
+		std::vector<int> GetChildrenIndices(int index) const;
 
 		float resizehitboxwidth = 6;
 		enum RESIZE_STATE

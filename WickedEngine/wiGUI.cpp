@@ -4815,6 +4815,20 @@ namespace wi::gui
 			return true;
 		return false;
 	}
+	std::vector<int> TreeList::GetChildrenIndices(int index) const
+	{
+		std::vector<int> childrenIndices;
+		int level = items[index].level;
+		for (int i = index + 1; i < items.size(); ++i) {
+			if (items[i].level == level + 1) {
+				childrenIndices.push_back(i);
+			}
+			else if (items[i].level <= level) {
+				break;
+			}
+		}
+		return childrenIndices;
+	}
 	float TreeList::GetItemOffset(int index) const
 	{
 		return 2 + scrollbar.GetOffset() + index * item_height();
@@ -5316,9 +5330,18 @@ namespace wi::gui
 		// Check if the item is within the visible area
 		bool isVisible = (itemTopOffset >= previousOffset) && (itemBottomOffset <= previousOffset + visibleAreaHeight);
 
-		// Only adjust if the new index is not within the visible area
+		// Check for children visibility if the item is not visible
 		if (!isVisible) {
 			float targetOffset = itemOffset - (visibleAreaHeight / 2.0f);
+
+			// If the item has children, adjust the targetOffset to ensure they are visible
+			if (DoesItemHaveChildren(index)) {
+				std::vector<int> childrenIndices = GetChildrenIndices(index);
+				float childrenBottomOffset = GetItemOffset(childrenIndices.back()) + itemHeight;
+				if (childrenBottomOffset > targetOffset + visibleAreaHeight) {
+					targetOffset = childrenBottomOffset - visibleAreaHeight;
+				}
+			}
 
 			// Clamp the target offset to valid range
 			targetOffset = wi::math::Clamp(targetOffset, 0.0f, maxScroll);
