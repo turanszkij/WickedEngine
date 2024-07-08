@@ -633,7 +633,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 				}
 
 				// Generate shadow indices for position-only stream:
-				wi::vector<uint32_t> shadow_indices(indices.size() * 2); // *2 fixes some weird memory oob write issue with a specific model
+				wi::vector<uint32_t> shadow_indices(indices.size());
 				meshopt_generateShadowIndexBuffer(
 					shadow_indices.data(), indices.data(), indices.size(),
 					vertices.data(), vertices.size(), sizeof(XMFLOAT3), sizeof(XMFLOAT3)
