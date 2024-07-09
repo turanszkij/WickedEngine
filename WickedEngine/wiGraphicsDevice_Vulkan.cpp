@@ -4487,6 +4487,7 @@ using namespace vulkan_internal;
 					}
 
 					copyOffset += dst_slicepitch * depth;
+					copyOffset = AlignTo(copyOffset, VkDeviceSize(4)); // fix for validation: on transfer queue the srcOffset must be 4-byte aligned
 
 					width = std::max(1u, width / 2);
 					height = std::max(1u, height / 2);

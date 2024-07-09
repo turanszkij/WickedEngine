@@ -341,10 +341,13 @@ struct ShaderWind
 struct ShaderOcean
 {
 	float4 water_color;
+	float4 extinction_color;
 	float water_height;
 	float patch_size_rcp;
 	int texture_displacementmap;
 	int texture_gradientmap;
+
+	bool IsValid() { return texture_displacementmap >= 0; }
 };
 
 struct ShaderWeather

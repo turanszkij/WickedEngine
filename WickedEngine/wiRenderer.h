@@ -200,6 +200,12 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd
 	);
 
+	// Updates the ocean, can be on async compute
+	void UpdateOcean(
+		const Visibility& vis,
+		wi::graphics::CommandList cmd
+	);
+
 	void UpdateRaytracingAccelerationStructures(const wi::scene::Scene& scene, wi::graphics::CommandList cmd);
 
 	// Binds all common constant buffers and samplers that may be used in all shaders

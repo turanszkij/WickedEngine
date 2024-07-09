@@ -31,6 +31,7 @@ CBUFFER(Ocean_Simulation_PerFrameCB, CBSLOT_OTHER_OCEAN_SIMULATION_PERFRAME)
 CBUFFER(Ocean_RenderCB, CBSLOT_OTHER_OCEAN_RENDER)
 {
 	float4		xOceanWaterColor;
+	float4		xOceanExtinctionColor;
 	float4		xOceanScreenSpaceParams;
 
 	float		xOceanTexelLength;

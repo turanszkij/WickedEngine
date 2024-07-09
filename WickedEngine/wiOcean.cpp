@@ -368,12 +368,7 @@ namespace wi
 		device->BindResources(cs_srvs, 0, 1, cmd);
 		device->Barrier(GPUBarrier::Image(&displacementMap, displacementMap.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
 		device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, cmd);
-		device->Barrier(GPUBarrier::Image(&displacementMap, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC), cmd);
-
-		device->CopyResource(&displacementMap_readback[displacement_readback_index], &displacementMap, cmd);
-		displacement_readback_valid[displacement_readback_index] = true;
-		displacement_readback_index = (displacement_readback_index + 1) % device->GetBufferCount();
-		device->Barrier(GPUBarrier::Image(&displacementMap, ResourceState::COPY_SRC, displacementMap.desc.layout), cmd);
+		device->Barrier(GPUBarrier::Image(&displacementMap, ResourceState::UNORDERED_ACCESS, displacementMap.desc.layout), cmd);
 
 		// Update gradient map:
 		device->BindComputeShader(&updateGradientFoldingCS, cmd);
@@ -381,21 +376,17 @@ namespace wi
 		device->BindUAVs(cs_uavs, 0, 1, cmd);
 		cs_srvs[0] = &displacementMap;
 		device->BindResources(cs_srvs, 0, 1, cmd);
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&gradientMap, gradientMap.desc.layout, ResourceState::UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
+		device->Barrier(GPUBarrier::Image(&gradientMap, gradientMap.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
 		device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, cmd);
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&gradientMap, ResourceState::UNORDERED_ACCESS, gradientMap.desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
+		device->Barrier(GPUBarrier::Image(&gradientMap, ResourceState::UNORDERED_ACCESS, gradientMap.desc.layout), cmd);
 
 		wi::renderer::GenerateMipChain(gradientMap, wi::renderer::MIPGENFILTER_LINEAR, cmd);
+
+		device->Barrier(GPUBarrier::Image(&displacementMap, displacementMap.desc.layout, ResourceState::COPY_SRC), cmd);
+		device->CopyResource(&displacementMap_readback[displacement_readback_index], &displacementMap, cmd);
+		displacement_readback_valid[displacement_readback_index] = true;
+		displacement_readback_index = (displacement_readback_index + 1) % device->GetBufferCount();
+		device->Barrier(GPUBarrier::Image(&displacementMap, ResourceState::COPY_SRC, displacementMap.desc.layout), cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -455,6 +446,7 @@ namespace wi
 
 		Ocean_RenderCB cb;
 		cb.xOceanWaterColor = params.waterColor;
+		cb.xOceanExtinctionColor = XMFLOAT4(1 - params.extinctionColor.x, 1 - params.extinctionColor.y, 1 - params.extinctionColor.z, 1);
 		cb.xOceanTexelLength = params.patch_length / params.dmap_dim;
 		cb.xOceanScreenSpaceParams = XMFLOAT4((float)dim.x, (float)dim.y, 1.0f / (float)dim.x, 1.0f / (float)dim.y);
 		cb.xOceanPatchSizeRecip = 1.0f / params.patch_length;

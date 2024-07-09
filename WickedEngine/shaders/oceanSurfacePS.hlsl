@@ -25,7 +25,6 @@ float4 main(PSIn input) : SV_TARGET
 	const float4 gradientNear = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv);
 	const float4 gradientFar = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv * 0.125);
 	float4 gradient = lerp(gradientNear, gradientFar, gradient_fade);
-	const float sss_amount = gradient.a;
 	
 	float2 ScreenCoord = pixel * GetCamera().internal_resolution_rcp;
 	
@@ -46,8 +45,9 @@ float4 main(PSIn input) : SV_TARGET
 	surface.P = input.pos3D;
 	surface.N = normalize(float3(gradient.x, xOceanTexelLength * 2, gradient.y));
 	surface.V = V;
-	//surface.sss = color * sss_amount;
-	//surface.sss_inv = 1.0f / ((1 + surface.sss) * (1 + surface.sss));
+	surface.sss = 1;
+	surface.sss_inv = 1.0f / ((1 + surface.sss) * (1 + surface.sss));
+	surface.extinction = xOceanExtinctionColor.rgb;
 	surface.update();
 
 	Lighting lighting;
@@ -113,13 +113,18 @@ float4 main(PSIn input) : SV_TARGET
 		if (camera_above_water)
 			water_depth = -water_depth;
 		// Water fog computation:
-		surface.refraction.a = saturate(exp(-water_depth * color.a));
+		float waterfog = saturate(exp(-water_depth * color.a));
+		float3 transmittance = saturate(exp(-water_depth * surface.extinction * color.a));
+		surface.refraction.a = waterfog;
+		surface.refraction.rgb *= transmittance;
 		color.a = 1;
 	}
-
+	
 #if 1
 	// FOAM:
 	float foam_shore = saturate(exp(-water_depth * 4));
+	float foam_wave = pow(saturate(gradient.a), 4) * saturate(exp(-water_depth * 0.1));
+	float foam_combined = saturate(foam_shore + foam_wave);
 	float foam_simplex = 0;
 	foam_simplex += smoothstep(0, 0.8, noise_simplex_2D(surface.P.xz * 1 + GetTime()));
 	foam_simplex += smoothstep(0, 0.8, noise_simplex_2D(surface.P.xz * 2 + GetTime()));
@@ -129,8 +134,8 @@ float4 main(PSIn input) : SV_TARGET
 	foam_voronoi += smoothstep(0.5, 0.8, noise_voronoi(surface.P.xz * 2, GetTime()).x);
 	foam_voronoi += smoothstep(0.5, 0.8, noise_voronoi(surface.P.xz * 4, GetTime()).x);
 	float foam = 0;
-	foam += foam_voronoi * foam_simplex * foam_shore;
-	foam += smoothstep(0.5, 0.6, foam_shore + 0.2);
+	foam += foam_voronoi * foam_simplex * foam_combined;
+	foam += smoothstep(0.5, 0.6, saturate(foam_combined + 0.2));
 	foam *= 2;
 	foam = saturate(foam);
 	surface.albedo = lerp(surface.albedo, 1, foam);

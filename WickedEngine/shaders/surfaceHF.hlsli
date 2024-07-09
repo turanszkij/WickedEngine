@@ -99,6 +99,7 @@ struct Surface
 	float3 gi;
 	float3 bumpColor;
 	float3 ssgi;
+	float3 extinction;
 
 	// These will be computed when calling Update():
 	float NdotV;			// cos(angle between normal and view vector)
@@ -147,6 +148,7 @@ struct Surface
 		gi = 0;
 		bumpColor = 0;
 		ssgi = 0;
+		extinction = 0;
 
 		uid_validate = 0;
 		hit_depth = 0;

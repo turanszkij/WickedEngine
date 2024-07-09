@@ -120,7 +120,12 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 			lighting.direct.diffuse = mad(light_color, BRDF_GetDiffuse(surface, surface_to_light), lighting.direct.diffuse);
 			lighting.direct.specular = mad(light_color, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);
 
-#ifndef WATER
+#ifdef WATER
+			// Water extinction scattering:
+			const float scattering = ComputeScattering(saturate(dot(L, -surface.V)));
+			lighting.direct.specular += scattering * light_color * (1 - surface.extinction) * (1 - sqr(1 - saturate(1 - surface.N.y)));
+#else
+			// On non-water surfaces there can be procedural caustic if it's under ocean:
 			const ShaderOcean ocean = GetWeather().ocean;
 			if (ocean.texture_displacementmap >= 0)
 			{

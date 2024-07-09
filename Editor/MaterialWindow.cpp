@@ -518,6 +518,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	colorComboBox.AddItem("Emissive color");
 	colorComboBox.AddItem("Subsurface color");
 	colorComboBox.AddItem("Sheen color");
+	colorComboBox.AddItem("Extinction color");
 	colorComboBox.SetTooltip("Choose the destination data of the color picker.");
 	AddWidget(&colorComboBox);
 
@@ -549,6 +550,9 @@ void MaterialWindow::Create(EditorComponent* _editor)
 				break;
 			case 4:
 				material->SetSheenColor(args.color.toFloat3());
+				break;
+			case 5:
+				material->SetExtinctionColor(args.color.toFloat4());
 				break;
 			}
 		}
@@ -873,6 +877,9 @@ void MaterialWindow::SetEntity(Entity entity)
 			break;
 		case 4:
 			colorPicker.SetPickColor(wi::Color::fromFloat3(XMFLOAT3(material->sheenColor.x, material->sheenColor.y, material->sheenColor.z)));
+			break;
+		case 5:
+			colorPicker.SetPickColor(wi::Color::fromFloat4(material->extinctionColor));
 			break;
 		}
 

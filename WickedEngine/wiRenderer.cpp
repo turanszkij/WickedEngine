@@ -4731,22 +4731,6 @@ void UpdateRenderDataAsync(
 		wi::profiler::EndRange(range);
 	}
 
-	// Compute water simulation:
-	if (vis.scene->weather.IsOceanEnabled())
-	{
-		bool occluded = false;
-		if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
-		{
-			occluded = vis.scene->ocean.IsOccluded();
-		}
-		if (!occluded)
-		{
-			auto range = wi::profiler::BeginRangeGPU("Ocean - Simulate", cmd);
-			vis.scene->ocean.UpdateDisplacementMap(cmd);
-			wi::profiler::EndRange(range);
-		}
-	}
-
 	for (size_t i = 0; i < vis.scene->terrains.GetCount(); ++i)
 	{
 		vis.scene->terrains[i].UpdateVirtualTexturesGPU(cmd);
@@ -4773,6 +4757,25 @@ void TextureStreamingReadbackCopy(
 			&scene.textureStreamingFeedbackBuffer,
 			cmd
 		);
+	}
+}
+
+void UpdateOcean(
+	const Visibility& vis,
+	CommandList cmd
+)
+{
+	bool occluded = false;
+	if (vis.flags & wi::renderer::Visibility::ALLOW_OCCLUSION_CULLING)
+	{
+		occluded = vis.scene->ocean.IsOccluded();
+	}
+	if (!occluded)
+	{
+		auto range = wi::profiler::BeginRangeGPU("Ocean - Simulate", cmd);
+		wi::renderer::BindCommonResources(cmd);
+		vis.scene->ocean.UpdateDisplacementMap(cmd);
+		wi::profiler::EndRange(range);
 	}
 }
 
@@ -6206,42 +6209,45 @@ void DrawScene(
 		filterMask = FILTER_ALL;
 	}
 
-	static thread_local RenderQueue renderQueue;
-	renderQueue.init();
-	for (uint32_t instanceIndex : vis.visibleObjects)
+	if (opaque || transparent)
 	{
-		if (occlusion && vis.scene->occlusion_results_objects[instanceIndex].IsOccluded())
-			continue;
-
-		const ObjectComponent& object = vis.scene->objects[instanceIndex];
-		if (!object.IsRenderable())
-			continue;
-		if (foreground != object.IsForeground())
-			continue;
-		if (maincamera && object.IsNotVisibleInMainCamera())
-			continue;
-		if (skip_planar_reflection_objects && object.IsNotVisibleInReflections())
-			continue;
-		if ((object.GetFilterMask() & filterMask) == 0)
-			continue;
-
-		const float distance = wi::math::Distance(vis.camera->Eye, object.center);
-		if (distance > object.fadeDistance + object.radius)
-			continue;
-
-		renderQueue.add(object.mesh_index, instanceIndex, distance, object.sort_bits);
-	}
-	if (!renderQueue.empty())
-	{
-		if (transparent)
+		static thread_local RenderQueue renderQueue;
+		renderQueue.init();
+		for (uint32_t instanceIndex : vis.visibleObjects)
 		{
-			renderQueue.sort_transparent();
+			if (occlusion && vis.scene->occlusion_results_objects[instanceIndex].IsOccluded())
+				continue;
+
+			const ObjectComponent& object = vis.scene->objects[instanceIndex];
+			if (!object.IsRenderable())
+				continue;
+			if (foreground != object.IsForeground())
+				continue;
+			if (maincamera && object.IsNotVisibleInMainCamera())
+				continue;
+			if (skip_planar_reflection_objects && object.IsNotVisibleInReflections())
+				continue;
+			if ((object.GetFilterMask() & filterMask) == 0)
+				continue;
+
+			const float distance = wi::math::Distance(vis.camera->Eye, object.center);
+			if (distance > object.fadeDistance + object.radius)
+				continue;
+
+			renderQueue.add(object.mesh_index, instanceIndex, distance, object.sort_bits);
 		}
-		else
+		if (!renderQueue.empty())
 		{
-			renderQueue.sort_opaque();
+			if (transparent)
+			{
+				renderQueue.sort_transparent();
+			}
+			else
+			{
+				renderQueue.sort_opaque();
+			}
+			RenderMeshes(vis, renderQueue, renderPass, filterMask, cmd, flags);
 		}
-		RenderMeshes(vis, renderQueue, renderPass, filterMask, cmd, flags);
 	}
 
 	if (impostor)

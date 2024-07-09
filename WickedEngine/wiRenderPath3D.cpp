@@ -1331,6 +1331,14 @@ namespace wi
 			});
 		}
 
+		if (scene->weather.IsOceanEnabled())
+		{
+			// Ocean simulation can be updated async to opaque passes:
+			CommandList cmd_ocean = device->BeginCommandList(QUEUE_COMPUTE);
+			device->WaitCommandList(cmd_ocean, cmd);
+			wi::renderer::UpdateOcean(visibility_main, cmd_ocean);
+		}
+
 		// Main camera opaque color pass:
 		cmd = device->BeginCommandList();
 		device->WaitCommandList(cmd, cmd_maincamera_compute_effects);
@@ -1968,6 +1976,14 @@ namespace wi
 		vp.max_depth = 1;
 		device->BindViewports(1, &vp, cmd);
 
+		// Draw only the ocean first, fog and lightshafts will be blended on top:
+		wi::renderer::DrawScene(
+			visibility_main,
+			RENDERPASS_MAIN,
+			cmd,
+			wi::renderer::DRAWSCENE_OCEAN
+		);
+
 		// Note: volumetrics and light shafts are blended before transparent scene, because they used depth of the opaques
 
 		if (getVolumeLightsEnabled() && visibility_main.IsRequestedVolumetricLights())
@@ -2024,7 +2040,6 @@ namespace wi
 				wi::renderer::DRAWSCENE_TRANSPARENT |
 				wi::renderer::DRAWSCENE_TESSELLATION |
 				wi::renderer::DRAWSCENE_OCCLUSIONCULLING |
-				wi::renderer::DRAWSCENE_OCEAN |
 				wi::renderer::DRAWSCENE_MAINCAMERA
 			);
 

@@ -32,7 +32,8 @@ namespace wi
 			float choppy_scale = 1.3f;
 
 
-			XMFLOAT4 waterColor = XMFLOAT4(0.0f, 3.0f / 255.0f, 31.0f / 255.0f, 1);
+			XMFLOAT4 waterColor = XMFLOAT4(0.0f, 2.0f / 255.0f, 6.0f / 255.0f, 0.6f);
+			XMFLOAT4 extinctionColor = XMFLOAT4(0, 0.9f, 1, 1);
 			float waterHeight = 0.0f;
 			uint32_t surfaceDetail = 4;
 			float surfaceDisplacementTolerance = 2;

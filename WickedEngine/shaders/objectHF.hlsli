@@ -828,9 +828,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // OBJECTSHADER_USE_UVSETS
 #endif // CLEARCOAT
 
-
 	surface.sss = GetMaterial().subsurfaceScattering;
 	surface.sss_inv = GetMaterial().subsurfaceScattering_inv;
+
+#ifdef WATER
+	surface.extinction = GetMaterial().GetSheenColor().rgb; // Note: sheen color is repurposed as extinction color for water
+#endif // WATER
 
 	surface.pixel = pixel;
 	surface.screenUV = ScreenCoord;
@@ -996,7 +999,10 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 		if(camera_above_water)
 			water_depth = -water_depth;
 		// Water fog computation:
-		surface.refraction.a = saturate(exp(-water_depth * color.a));
+		float waterfog = saturate(exp(-water_depth * color.a));
+		float3 transmittance = saturate(exp(-water_depth * surface.extinction * color.a));
+		surface.refraction.a = waterfog;
+		surface.refraction.rgb *= transmittance;
 		color.a = 1;
 	}
 #endif // WATER

@@ -292,7 +292,14 @@ namespace wi::scene
 		material.subsurfaceScattering = sss;
 		material.subsurfaceScattering_inv = sss_inv;
 
-		material.sheenColor_r11g11b10 = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(sheenColor.x, sheenColor.y, sheenColor.z));
+		if (shaderType == SHADERTYPE_WATER)
+		{
+			material.sheenColor_r11g11b10 = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(1 - extinctionColor.x, 1 - extinctionColor.y, 1 - extinctionColor.z));
+		}
+		else
+		{
+			material.sheenColor_r11g11b10 = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(sheenColor.x, sheenColor.y, sheenColor.z));
+		}
 		material.sheenRoughness = sheenRoughness;
 		material.clearcoat = clearcoat;
 		material.clearcoatRoughness = clearcoatRoughness;

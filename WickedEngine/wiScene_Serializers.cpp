@@ -236,10 +236,13 @@ namespace wi::scene
 				archive >> textures[TRANSPARENCYMAP].name;
 				archive >> textures[TRANSPARENCYMAP].uvset;
 			}
-
 			if (seri.GetVersion() >= 4)
 			{
 				archive >> blend_with_terrain_height;
+			}
+			if (seri.GetVersion() >= 5)
+			{
+				archive >> extinctionColor;
 			}
 
 			for (auto& x : textures)
@@ -386,10 +389,13 @@ namespace wi::scene
 				archive << wi::helper::GetPathRelative(dir, textures[TRANSPARENCYMAP].name);
 				archive << textures[TRANSPARENCYMAP].uvset;
 			}
-
 			if (seri.GetVersion() >= 4)
 			{
 				archive << blend_with_terrain_height;
+			}
+			if (seri.GetVersion() >= 5)
+			{
+				archive << extinctionColor;
 			}
 		}
 	}
@@ -1565,6 +1571,10 @@ namespace wi::scene
 				archive >> rain_splash_scale;
 				archive >> rain_color;
 			}
+			if (seri.GetVersion() >= 6)
+			{
+				archive >> oceanParameters.extinctionColor;
+			}
 		}
 		else
 		{
@@ -1784,6 +1794,10 @@ namespace wi::scene
 				archive << rain_scale;
 				archive << rain_splash_scale;
 				archive << rain_color;
+			}
+			if (seri.GetVersion() >= 6)
+			{
+				archive << oceanParameters.extinctionColor;
 			}
 		}
 	}

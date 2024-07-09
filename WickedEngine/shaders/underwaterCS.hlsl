@@ -66,8 +66,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		}
 		float water_depth = ocean_pos.y - surface_position.y;
 		water_depth = max(min(lineardepth, ocean_dist), water_depth);
-		
-		color.rgb = lerp(ocean.water_color.rgb, color.rgb, saturate(exp(-water_depth * ocean.water_color.a)));
+
+		float waterfog = saturate(exp(-water_depth * ocean.water_color.a));
+		float3 transmittance = saturate(exp(-water_depth * ocean.extinction_color.rgb * ocean.water_color.a));
+		color.rgb *= transmittance;
+		color.rgb = lerp(ocean.water_color.rgb, color.rgb, waterfog);
 		//color = float4(1, 0, 0, 1);
 	}
 

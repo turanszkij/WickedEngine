@@ -173,6 +173,7 @@ namespace wi::scene
 		XMFLOAT4 specularColor = XMFLOAT4(1, 1, 1, 1);
 		XMFLOAT4 emissiveColor = XMFLOAT4(1, 1, 1, 0);
 		XMFLOAT4 subsurfaceScattering = XMFLOAT4(1, 1, 1, 0);
+		XMFLOAT4 extinctionColor = XMFLOAT4(0, 0.9f, 1, 1);
 		XMFLOAT4 texMulAdd = XMFLOAT4(1, 1, 0, 0);
 		float roughness = 0.2f;
 		float reflectance = 0.02f;
@@ -310,6 +311,11 @@ namespace wi::scene
 		inline void SetSheenColor(const XMFLOAT3& value)
 		{
 			sheenColor = XMFLOAT4(value.x, value.y, value.z, sheenColor.w);
+			SetDirty();
+		}
+		inline void SetExtinctionColor(const XMFLOAT4& value)
+		{
+			extinctionColor = XMFLOAT4(value.x, value.y, value.z, value.w);
 			SetDirty();
 		}
 		inline void SetSheenRoughness(float value) { sheenRoughness = value; SetDirty(); }

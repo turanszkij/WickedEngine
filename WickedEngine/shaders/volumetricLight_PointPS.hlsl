@@ -2,6 +2,7 @@
 #define TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK // fix the lack of depth testing
 #include "volumetricLightHF.hlsli"
 #include "fogHF.hlsli"
+#include "oceanSurfaceHF.hlsli"
 
 float4 main(VertexToPixel input) : SV_TARGET
 {
@@ -14,6 +15,19 @@ float4 main(VertexToPixel input) : SV_TARGET
 	float3 V = GetCamera().position - P;
 	float cameraDistance = length(V);
 	V /= cameraDistance;
+
+	// Fix for ocean: because ocean is not in linear depth, we trace it instead
+	const ShaderOcean ocean = GetWeather().ocean;
+	if(ocean.IsValid() && V.y > 0)
+	{
+		float3 ocean_surface_pos = intersectPlaneClampInfinite(GetCamera().position, V, float3(0, 1, 0), ocean.water_height);
+		float dist = distance(ocean_surface_pos, GetCamera().position);
+		if(dist < cameraDistance)
+		{
+			P = ocean_surface_pos;
+			cameraDistance = dist;
+		}
+	}
 
 	float marchedDistance = 0;
 	float3 accumulation = 0;

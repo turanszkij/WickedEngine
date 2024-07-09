@@ -568,6 +568,16 @@ inline float GetTimePrev() { return GetFrame().time_previous; }
 inline uint2 GetTemporalAASampleRotation() { return uint2((GetFrame().temporalaa_samplerotation >> 0u) & 0x000000FF, (GetFrame().temporalaa_samplerotation >> 8) & 0x000000FF); }
 inline bool IsStaticSky() { return GetScene().globalenvmap >= 0; }
 
+// Mie scaterring approximated with Henyey-Greenstein phase function.
+//	https://www.alexandre-pestana.com/volumetric-lights/
+#define G_SCATTERING 0.66
+float ComputeScattering(float lightDotView)
+{
+	float result = 1.0f - G_SCATTERING * G_SCATTERING;
+	result /= (4.0f * PI * pow(1.0f + G_SCATTERING * G_SCATTERING - (2.0f * G_SCATTERING) * lightDotView, 1.5f));
+	return result;
+}
+
 inline float3 tonemap(float3 x)
 {
 	return x / (x + 1); // Reinhard tonemap
