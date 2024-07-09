@@ -5320,38 +5320,52 @@ namespace wi::gui
 	}
 	void TreeList::ScrollToItem(int index)
 	{
-		float itemOffset = GetItemOffset(index);
-		float visibleAreaHeight = GetHitbox_ListArea().siz.y;
+		if (index < 0 || index >= items.size())
+			return;
+
 		float itemHeight = item_height();
-		float itemTopOffset = itemOffset;
-		float itemBottomOffset = itemOffset + itemHeight;
-		float maxScroll = std::max(0.0f, (float)items.size() * itemHeight - visibleAreaHeight);
+		float visibleHeight = GetHitbox_ListArea().siz.y;
+		float totalHeight = items.size() * itemHeight;
+		float maxScroll = std::max(0.0f, totalHeight - visibleHeight);
 
-		// Check if the item is within the visible area
-		bool isVisible = (itemTopOffset >= previousOffset) && (itemBottomOffset <= previousOffset + visibleAreaHeight);
+		// Calculate the ideal offset to bring the item into view
+		float idealOffset = (index * itemHeight) - (visibleHeight / 2) + (itemHeight / 2);
 
-		// Check for children visibility if the item is not visible
-		if (!isVisible) {
-			float targetOffset = itemOffset - (visibleAreaHeight / 2.0f);
+		// Clamp the ideal offset to be within valid scroll range
+		float newOffset = std::max(0.0f, std::min(idealOffset, maxScroll));
 
-			// If the item has children, adjust the targetOffset to ensure they are visible
-			if (DoesItemHaveChildren(index)) {
-				std::vector<int> childrenIndices = GetChildrenIndices(index);
-				float childrenBottomOffset = GetItemOffset(childrenIndices.back()) + itemHeight;
-				if (childrenBottomOffset > targetOffset + visibleAreaHeight) {
-					targetOffset = childrenBottomOffset - visibleAreaHeight;
-				}
-			}
+		// Smooth scrolling adjustment
+		float currentOffset = scrollbar.GetOffset();
+		float step = (newOffset - currentOffset) * 0.1f; // Adjust the 0.1f to control the smoothness of the scrolling
 
-			// Clamp the target offset to valid range
-			targetOffset = wi::math::Clamp(targetOffset, 0.0f, maxScroll);
-
-			scrollbar.SetOffset(targetOffset);
-			previousOffset = targetOffset; // Update the previous offset
+		if (std::abs(step) < 0.1f) // Adjust the threshold as needed
+		{
+			scrollbar.SetOffset(newOffset);
+		}
+		else
+		{
+			scrollbar.SetOffset(currentOffset + step);
 		}
 
-		previousIndex = index; // Update the previous index
+		// Debug output
+		wi::backlog::post("ScrollToItem: index=" + std::to_string(index) +
+			", newOffset=" + std::to_string(newOffset) +
+			", currentOffset=" + std::to_string(currentOffset) +
+			", step=" + std::to_string(step) +
+			", maxScroll=" + std::to_string(maxScroll) +
+			", totalHeight=" + std::to_string(totalHeight) +
+			", visibleHeight=" + std::to_string(visibleHeight));
+
+		// Additional Debug Information
+		wi::backlog::post("Item count=" + std::to_string(items.size()));
+		for (int i = 0; i < items.size(); ++i) {
+			wi::backlog::post("Item " + std::to_string(i) + ": name=" + items[i].name +
+				", level=" + std::to_string(items[i].level) +
+				", open=" + std::to_string(items[i].open) +
+				", selected=" + std::to_string(items[i].selected));
+		}
 	}
+
 	void TreeList::ClearItems()
 	{
 		items.clear();
