@@ -194,26 +194,45 @@ namespace wi
 			device->SetName(&displacementMap_readback[i], "displacementMap_readback[i]");
 		}
 
-
-		// Constant buffers
-		uint32_t actual_dim = params.dmap_dim;
-		uint32_t input_width = actual_dim + 4;
-		// We use full sized data here. The value "output_width" should be actual_dim/2+1 though.
-		uint32_t output_width = actual_dim;
-		uint32_t output_height = actual_dim;
-		uint32_t dtx_offset = actual_dim * actual_dim;
-		uint32_t dty_offset = actual_dim * actual_dim * 2;
-		Ocean_Simulation_ImmutableCB immutable_consts = { actual_dim, input_width, output_width, output_height, dtx_offset, dty_offset };
-
 		GPUBufferDesc cb_desc;
-		cb_desc.bind_flags = BindFlag::CONSTANT_BUFFER;
-		cb_desc.size = sizeof(Ocean_Simulation_ImmutableCB);
-		device->CreateBuffer(&cb_desc, &immutable_consts, &immutableCB);
-
 		cb_desc.usage = Usage::DEFAULT;
 		cb_desc.bind_flags = BindFlag::CONSTANT_BUFFER;
-		cb_desc.size = sizeof(Ocean_Simulation_PerFrameCB);
-		device->CreateBuffer(&cb_desc, nullptr, &perFrameCB);
+		cb_desc.size = sizeof(OceanCB);
+		device->CreateBuffer(&cb_desc, nullptr, &constantBuffer);
+
+		const uint2 dim = uint2(160 * params.surfaceDetail, 90 * params.surfaceDetail);
+
+		const uint index_count = (dim.x - 1) * (dim.y - 1) * 6;
+		const uint64_t indexbuffer_required_size = index_count * sizeof(uint32_t);
+		if (indexBuffer.GetDesc().size != indexbuffer_required_size)
+		{
+			wi::vector<uint32_t> index_data(index_count);
+			size_t counter = 0;
+			for (uint32_t x = 0; x < dim.x - 1; x++)
+			{
+				for (uint32_t y = 0; y < dim.y - 1; y++)
+				{
+					uint32_t lowerLeft = x + y * dim.x;
+					uint32_t lowerRight = (x + 1) + y * dim.x;
+					uint32_t topLeft = x + (y + 1) * dim.x;
+					uint32_t topRight = (x + 1) + (y + 1) * dim.x;
+
+					index_data[counter++] = topLeft;
+					index_data[counter++] = lowerLeft;
+					index_data[counter++] = lowerRight;
+
+					index_data[counter++] = topLeft;
+					index_data[counter++] = lowerRight;
+					index_data[counter++] = topRight;
+				}
+			}
+
+			GPUBufferDesc desc;
+			desc.bind_flags = BindFlag::INDEX_BUFFER;
+			desc.size = indexbuffer_required_size;
+			device->CreateBuffer(&desc, index_data.data(), &indexBuffer);
+			device->SetName(&indexBuffer, "Ocean::indexBuffer");
+		}
 	}
 
 	XMFLOAT3 Ocean::GetDisplacedPosition(const XMFLOAT3& worldPosition) const
@@ -307,6 +326,44 @@ namespace wi
 
 		device->EventBegin("Ocean Simulation", cmd);
 
+		const uint2 dim = uint2(160 * params.surfaceDetail, 90 * params.surfaceDetail);
+
+		OceanCB cb = {};
+
+		// Constant buffers
+		uint32_t actual_dim = params.dmap_dim;
+		uint32_t input_width = actual_dim + 4;
+		// We use full sized data here. The value "output_width" should be actual_dim/2+1 though.
+		uint32_t output_width = actual_dim;
+		uint32_t output_height = actual_dim;
+		uint32_t dtx_offset = actual_dim * actual_dim;
+		uint32_t dty_offset = actual_dim * actual_dim * 2;
+		cb.xOceanActualDim = actual_dim;
+		cb.xOceanInWidth = input_width;
+		cb.xOceanOutWidth = output_width;
+		cb.xOceanOutHeight = output_height;
+		cb.xOceanDtxAddressOffset = dtx_offset;
+		cb.xOceanDtyAddressOffset = dty_offset;
+
+		cb.xOceanTimeScale = params.time_scale;
+		cb.xOceanChoppyScale = params.choppy_scale;
+		cb.xOceanGridLen = params.dmap_dim / params.patch_length;
+
+		cb.xOceanWaterColor = params.waterColor;
+		cb.xOceanExtinctionColor = XMFLOAT4(1 - params.extinctionColor.x, 1 - params.extinctionColor.y, 1 - params.extinctionColor.z, 1);
+		cb.xOceanTexelLength = params.patch_length / params.dmap_dim;
+		cb.xOceanScreenSpaceParams = XMFLOAT4((float)dim.x, (float)dim.y, 1.0f / (float)dim.x, 1.0f / (float)dim.y);
+		cb.xOceanPatchSizeRecip = 1.0f / params.patch_length;
+		cb.xOceanMapHalfTexel = 0.5f / params.dmap_dim;
+		cb.xOceanWaterHeight = params.waterHeight;
+		cb.xOceanSurfaceDisplacementTolerance = std::max(1.0f, params.surfaceDisplacementTolerance);
+
+		device->Barrier(GPUBarrier::Buffer(&constantBuffer, ResourceState::CONSTANT_BUFFER, ResourceState::COPY_DST), cmd);
+		device->UpdateBuffer(&constantBuffer, &cb, cmd);
+		device->Barrier(GPUBarrier::Buffer(&constantBuffer, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER), cmd);
+
+		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(OceanCB), cmd);
+
 		// ---------------------------- H(0) -> H(t), D(x, t), D(y, t) --------------------------------
 
 		device->BindComputeShader(&updateSpectrumCS, cmd);
@@ -321,29 +378,6 @@ namespace wi
 		const GPUResource* cs0_uavs[1] = { &buffer_Float2_Ht };
 		device->BindUAVs(cs0_uavs, 0, arraysize(cs0_uavs), cmd);
 
-		Ocean_Simulation_PerFrameCB perFrameData;
-		perFrameData.g_TimeScale = params.time_scale;
-		perFrameData.g_ChoppyScale = params.choppy_scale;
-		perFrameData.g_GridLen = params.dmap_dim / params.patch_length;
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Buffer(&perFrameCB, ResourceState::CONSTANT_BUFFER, ResourceState::COPY_DST),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-		device->UpdateBuffer(&perFrameCB, &perFrameData, cmd);
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Buffer(&perFrameCB, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->BindConstantBuffer(&immutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), cmd);
-		device->BindConstantBuffer(&perFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), cmd);
-
-		// Run the CS
 		uint32_t group_count_x = (params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
 		uint32_t group_count_y = (params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
 		device->Dispatch(group_count_x, group_count_y, 1, cmd);
@@ -356,32 +390,41 @@ namespace wi
 
 
 
-		device->BindConstantBuffer(&immutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), cmd);
-		device->BindConstantBuffer(&perFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), cmd);
+		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(OceanCB), cmd);
 
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&displacementMap, displacementMap.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&gradientMap, gradientMap.desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
 
 		// Update displacement map:
 		device->BindComputeShader(&updateDisplacementMapCS, cmd);
-		const GPUResource* cs_uavs[] = { &displacementMap };
-		device->BindUAVs(cs_uavs, 0, 1, cmd);
-		const GPUResource* cs_srvs[1] = { &buffer_Float_Dxyz };
-		device->BindResources(cs_srvs, 0, 1, cmd);
-		device->Barrier(GPUBarrier::Image(&displacementMap, displacementMap.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
-		device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, cmd);
+		device->BindUAV(&displacementMap, 0, cmd);
+		device->BindResource(&buffer_Float_Dxyz, 0, cmd);
+		device->Dispatch(
+			(params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE,
+			(params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE,
+			1,
+			cmd
+		);
 		device->Barrier(GPUBarrier::Image(&displacementMap, ResourceState::UNORDERED_ACCESS, displacementMap.desc.layout), cmd);
 
 		// Update gradient map:
 		device->BindComputeShader(&updateGradientFoldingCS, cmd);
-		cs_uavs[0] = { &gradientMap };
-		device->BindUAVs(cs_uavs, 0, 1, cmd);
-		cs_srvs[0] = &displacementMap;
-		device->BindResources(cs_srvs, 0, 1, cmd);
-		device->Barrier(GPUBarrier::Image(&gradientMap, gradientMap.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
-		device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, cmd);
+		device->BindUAV(&gradientMap, 0, cmd);
+		device->BindResource(&displacementMap, 0, cmd);
+		device->Dispatch(
+			(params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE,
+			(params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE,
+			1,
+			cmd
+		);
 		device->Barrier(GPUBarrier::Image(&gradientMap, ResourceState::UNORDERED_ACCESS, gradientMap.desc.layout), cmd);
 
 		wi::renderer::GenerateMipChain(gradientMap, wi::renderer::MIPGENFILTER_LINEAR, cmd);
 
+		// Copy displacement map to readback:
 		device->Barrier(GPUBarrier::Image(&displacementMap, displacementMap.desc.layout, ResourceState::COPY_SRC), cmd);
 		device->CopyResource(&displacementMap_readback[displacement_readback_index], &displacementMap, cmd);
 		displacement_readback_valid[displacement_readback_index] = true;
@@ -409,59 +452,14 @@ namespace wi
 			device->BindPipelineState(&PSO, cmd);
 		}
 
-
-		const uint2 dim = uint2(160 * params.surfaceDetail, 90 * params.surfaceDetail);
-
-		const uint index_count = (dim.x - 1) * (dim.y - 1) * 6;
-		const uint64_t indexbuffer_required_size = index_count * sizeof(uint32_t);
-		if (indexBuffer.GetDesc().size != indexbuffer_required_size)
-		{
-			wi::vector<uint32_t> index_data(index_count);
-			size_t counter = 0;
-			for (uint32_t x = 0; x < dim.x - 1; x++)
-			{
-				for (uint32_t y = 0; y < dim.y - 1; y++)
-				{
-					uint32_t lowerLeft = x + y * dim.x;
-					uint32_t lowerRight = (x + 1) + y * dim.x;
-					uint32_t topLeft = x + (y + 1) * dim.x;
-					uint32_t topRight = (x + 1) + (y + 1) * dim.x;
-
-					index_data[counter++] = topLeft;
-					index_data[counter++] = lowerLeft;
-					index_data[counter++] = lowerRight;
-
-					index_data[counter++] = topLeft;
-					index_data[counter++] = lowerRight;
-					index_data[counter++] = topRight;
-				}
-			}
-
-			GPUBufferDesc desc;
-			desc.bind_flags = BindFlag::INDEX_BUFFER;
-			desc.size = indexbuffer_required_size;
-			device->CreateBuffer(&desc, index_data.data(), &indexBuffer);
-			device->SetName(&indexBuffer, "Ocean::indexBuffer");
-		}
-
-		Ocean_RenderCB cb;
-		cb.xOceanWaterColor = params.waterColor;
-		cb.xOceanExtinctionColor = XMFLOAT4(1 - params.extinctionColor.x, 1 - params.extinctionColor.y, 1 - params.extinctionColor.z, 1);
-		cb.xOceanTexelLength = params.patch_length / params.dmap_dim;
-		cb.xOceanScreenSpaceParams = XMFLOAT4((float)dim.x, (float)dim.y, 1.0f / (float)dim.x, 1.0f / (float)dim.y);
-		cb.xOceanPatchSizeRecip = 1.0f / params.patch_length;
-		cb.xOceanMapHalfTexel = 0.5f / params.dmap_dim;
-		cb.xOceanWaterHeight = params.waterHeight;
-		cb.xOceanSurfaceDisplacementTolerance = std::max(1.0f, params.surfaceDisplacementTolerance);
-
-		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
+		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(OceanCB), cmd);
 
 		device->BindResource(&displacementMap, 0, cmd);
 		device->BindResource(&gradientMap, 1, cmd);
 
 		device->BindIndexBuffer(&indexBuffer, IndexBufferFormat::UINT32, 0, cmd);
 
-		device->DrawIndexed(index_count, 0, 0, cmd);
+		device->DrawIndexed(uint32_t(indexBuffer.desc.size / sizeof(uint32_t)), 0, 0, cmd);
 
 		device->EventEnd(cmd);
 	}

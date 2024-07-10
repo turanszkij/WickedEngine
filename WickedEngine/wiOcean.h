@@ -91,8 +91,7 @@ namespace wi
 		wi::graphics::GPUBuffer buffer_Float_Dxyz;
 
 
-		wi::graphics::GPUBuffer immutableCB;
-		wi::graphics::GPUBuffer perFrameCB;
+		wi::graphics::GPUBuffer constantBuffer;
 		mutable wi::graphics::GPUBuffer indexBuffer;
 	};
 }

@@ -42,7 +42,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #endif
 
 		const float depth = texture_depth[DTid.xy];
-		const float lineardepth = compute_lineardepth(depth);
+		const float3 positionfromdepth = reconstruct_position(uv, depth);
+		const float distancefromdepth = distance(GetCamera().position, positionfromdepth);
 
 		// The ocean is not rendered into the lineardepth unfortunately, so we also trace it:
 		//	Otherwise the ocean surface could be same as infinite depth and incorrectly fogged
@@ -65,7 +66,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			surface_position += displacement;
 		}
 		float water_depth = ocean_pos.y - surface_position.y;
-		water_depth = max(min(lineardepth, ocean_dist), water_depth);
+		water_depth = max(min(distancefromdepth, ocean_dist), water_depth);
 
 		float waterfog = saturate(exp(-water_depth * ocean.water_color.a));
 		float3 transmittance = saturate(exp(-water_depth * ocean.extinction_color.rgb * ocean.water_color.a));

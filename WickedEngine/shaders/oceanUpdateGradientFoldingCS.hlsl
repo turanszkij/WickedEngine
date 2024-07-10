@@ -9,7 +9,7 @@ RWTexture2D<float4> output : register(u0);
 void main( uint3 DTid : SV_DispatchThreadID )
 {
 	// Sample neighbour texels
-	float2 one_texel = rcp(float2(g_OutWidth, g_OutHeight));
+	float2 one_texel = rcp(float2(xOceanOutWidth, xOceanOutHeight));
 	float2 uv = ((float2)DTid.xy + 0.5) * one_texel;
 
 	float2 tc_left = float2(uv.x - one_texel.x, uv.y);
@@ -26,8 +26,8 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	float2 gradient = { -(displace_right.z - displace_left.z), -(displace_front.z - displace_back.z) };
 
 	// Calculate Jacobian corelation from the partial differential of height field
-	float2 Dx = (displace_right.xy - displace_left.xy) * g_ChoppyScale * g_GridLen;
-	float2 Dy = (displace_front.xy - displace_back.xy) * g_ChoppyScale * g_GridLen;
+	float2 Dx = (displace_right.xy - displace_left.xy) * xOceanChoppyScale * xOceanGridLen;
+	float2 Dy = (displace_front.xy - displace_back.xy) * xOceanChoppyScale * xOceanGridLen;
 	float J = (1.0f + Dx.x) * (1.0f + Dy.y) - Dx.y * Dy.x;
 
 	// Practical subsurface scale calculation: max[0, (1 - J) + Amplitude * (2 * Coverage - 1)].

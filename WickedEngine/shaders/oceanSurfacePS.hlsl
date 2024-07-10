@@ -53,8 +53,6 @@ float4 main(PSIn input) : SV_TARGET
 	Lighting lighting;
 	lighting.create(0, 0, GetAmbient(surface.N), 0);
 
-	TiledLighting(surface, lighting, GetFlatTileIndex(pixel));
-
 	const float bump_strength = 0.1;
 	
 	float4 water_plane = GetCamera().reflection_plane;
@@ -122,7 +120,8 @@ float4 main(PSIn input) : SV_TARGET
 	
 #if 1
 	// FOAM:
-	float foam_shore = saturate(exp(-water_depth * 4));
+	float water_depth_diff = abs(texture_lineardepth[pixel] * GetCamera().z_far - lineardepth); // Note: for the shore foam, this is more accurate than water plane distance
+	float foam_shore = saturate(exp(-water_depth_diff * 4));
 	float foam_wave = pow(saturate(gradient.a), 4) * saturate(exp(-water_depth * 0.1));
 	float foam_combined = saturate(foam_shore + foam_wave);
 	float foam_simplex = 0;
@@ -135,11 +134,14 @@ float4 main(PSIn input) : SV_TARGET
 	foam_voronoi += smoothstep(0.5, 0.8, noise_voronoi(surface.P.xz * 4, GetTime()).x);
 	float foam = 0;
 	foam += foam_voronoi * foam_simplex * foam_combined;
-	foam += smoothstep(0.5, 0.6, saturate(foam_combined + 0.2));
+	foam += smoothstep(0.5, 0.6, saturate(foam_combined + 0.1));
 	foam *= 2;
 	foam = saturate(foam);
-	surface.albedo = lerp(surface.albedo, 1, foam);
+	surface.albedo = lerp(surface.albedo, 0.6, foam);
+	surface.refraction.a *= 1 - foam;
 #endif
+
+	TiledLighting(surface, lighting, GetFlatTileIndex(pixel));
 
 	ApplyLighting(surface, lighting, color);
 	
