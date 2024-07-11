@@ -6263,23 +6263,18 @@ namespace wi::scene
 			p0 = SkinVertex(*mesh, *armature, vertexID0);
 			p1 = SkinVertex(*mesh, *armature, vertexID1);
 			p2 = SkinVertex(*mesh, *armature, vertexID2);
-
-			P = XMVectorBaryCentric(p0, p1, p2, bary.x, bary.y);
-			const size_t objectIndex = objects.GetIndex(objectEntity);
-			const XMMATRIX objectMat = XMLoadFloat4x4(&matrix_objects[objectIndex]);
-			P = XMVector3Transform(P, objectMat);
-		}
+	    }
 		else
 		{
 			p0 = XMLoadFloat3(&mesh->vertex_positions[vertexID0]);
 			p1 = XMLoadFloat3(&mesh->vertex_positions[vertexID1]);
 			p2 = XMLoadFloat3(&mesh->vertex_positions[vertexID2]);
-
-			P = XMVectorBaryCentric(p0, p1, p2, bary.x, bary.y);
-			const size_t objectIndex = objects.GetIndex(objectEntity);
-			const XMMATRIX objectMat = XMLoadFloat4x4(&matrix_objects[objectIndex]);
-			P = XMVector3Transform(P, objectMat);
 		}
+
+		P = XMVectorBaryCentric(p0, p1, p2, bary.x, bary.y);
+		const size_t objectIndex = objects.GetIndex(objectEntity);
+		const XMMATRIX objectMat = XMLoadFloat4x4(&matrix_objects[objectIndex]);
+		P = XMVector3Transform(P, objectMat);
 
 		XMFLOAT3 result;
 		XMStoreFloat3(&result, P);
