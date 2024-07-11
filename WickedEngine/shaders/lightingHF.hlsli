@@ -139,6 +139,10 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 					caustic *= sqr(saturate((water_height - surface.P.y) * 0.5)); // fade out at shoreline
 					caustic *= light_color;
 					lighting.indirect.diffuse += caustic;
+
+					// fade out specular at depth, it looks weird when specular appears under ocean from wetmap
+					float water_depth = water_height - surface.P.y;
+					lighting.direct.specular *= saturate(exp(-water_depth * 10));
 				}
 			}
 #endif // WATER

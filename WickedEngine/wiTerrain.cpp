@@ -732,23 +732,16 @@ namespace wi::terrain
 				{
 					chunk_mesh->SetBVHEnabled(true);
 				}
-
-#if 0
-				// Test: remove off screen chunks
-				//	But the problem is that shadow casters shouldn't be removed outside view
-				if (chunk_visible && !chunk_mesh->generalBuffer.IsValid())
-				{
-					chunk_mesh->CreateRenderData();
-				}
-				else if (!chunk_visible && chunk_mesh->generalBuffer.IsValid())
-				{
-					chunk_mesh->DeleteRenderData();
-				}
-#endif
 			}
 			else
 			{
 				chunk_data.mesh_vertex_positions = nullptr;
+			}
+
+			ObjectComponent* chunk_object = scene->objects.GetComponent(chunk_data.entity);
+			if (chunk_object != nullptr)
+			{
+				chunk_object->SetWetmapEnabled(weather.IsOceanEnabled());
 			}
 
 			// chunk removal:

@@ -80,6 +80,7 @@ inline ShaderMaterial GetMaterial()
 //#define OBJECTSHADER_USE_ATLAS					- shader will use atlas
 //#define OBJECTSHADER_USE_NORMAL					- shader will use normals
 //#define OBJECTSHADER_USE_AO						- shader will use ambient occlusion
+//#define OBJECTSHADER_USE_WETMAP					- shader will use wetmap
 //#define OBJECTSHADER_USE_TANGENT					- shader will use tangents, normal mapping
 //#define OBJECTSHADER_USE_POSITION3D				- shader will use world space positions
 //#define OBJECTSHADER_USE_EMISSIVE					- shader will use emissive
@@ -116,6 +117,7 @@ inline ShaderMaterial GetMaterial()
 #define OBJECTSHADER_USE_COLOR
 #define OBJECTSHADER_USE_NORMAL
 #define OBJECTSHADER_USE_AO
+#define OBJECTSHADER_USE_WETMAP
 #define OBJECTSHADER_USE_TANGENT
 #define OBJECTSHADER_USE_POSITION3D
 #define OBJECTSHADER_USE_EMISSIVE
@@ -199,6 +201,14 @@ struct VertexInput
 			return 1;
 		return (min16float)bindless_buffers_float[GetInstance().vb_ao][vertexID];
 	}
+
+	min16float GetWetmap()
+	{
+		[branch]
+		if (GetInstance().vb_wetmap < 0)
+			return 0;
+		return (min16float)bindless_buffers_float[GetInstance().vb_wetmap][vertexID];
+	}
 };
 
 
@@ -211,6 +221,7 @@ struct VertexSurface
 	float3 normal;
 	min16float4 tangent;
 	min16float ao;
+	min16float wet;
 
 	inline void create(in ShaderMaterial material, in VertexInput input)
 	{
@@ -248,6 +259,8 @@ struct VertexSurface
 		atlas = input.GetAtlasUV();
 
 		position = mul(input.GetInstance().transform.GetMatrix(), position);
+
+		wet = input.GetWetmap();
 
 #ifndef DISABLE_WIND
 		[branch]
@@ -298,6 +311,10 @@ struct PixelInput
 #ifdef OBJECTSHADER_USE_AO
 	min16float ao : AMBIENT_OCCLUSION;
 #endif // OBJECTSHADER_USE_AO
+
+#ifdef OBJECTSHADER_USE_WETMAP
+	min16float wet : WET;
+#endif // OBJECTSHADER_USE_WETMAP
 
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 #ifdef VPRT_EMULATION
@@ -396,6 +413,10 @@ PixelInput main(VertexInput input)
 #ifdef OBJECTSHADER_USE_AO
 	Out.ao = surface.ao;
 #endif // OBJECTSHADER_USE_AO
+
+#ifdef OBJECTSHADER_USE_WETMAP
+	Out.wet = surface.wet;
+#endif // OBJECTSHADER_USE_WETMAP
 
 #ifdef OBJECTSHADER_USE_TANGENT
 	Out.tan = surface.tangent;
@@ -729,9 +750,18 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // OBJECTSHADER_USE_UVSETS
 
 
-
 	surface.create(GetMaterial(), surface.baseColor, surfaceMap, specularMap);
 	
+	
+
+#ifdef OBJECTSHADER_USE_WETMAP
+	if(input.wet > 0)
+	{
+		surface.albedo = lerp(surface.albedo, 0, input.wet);
+		surface.roughness = clamp(surface.roughness * sqr(1 - input.wet), 0.01, 1);
+		surface.N = normalize(lerp(surface.N, input.nor, input.wet));
+	}
+#endif // OBJECTSHADER_USE_WETMAP
 
 
 #ifdef OBJECTSHADER_USE_UVSETS

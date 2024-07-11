@@ -876,6 +876,22 @@ struct Surface
 
 		create(material, baseColor, surfaceMap, specularMap);
 
+		[branch]
+		if (inst.vb_wetmap >= 0)
+		{
+			Buffer<float> buf = bindless_buffers_float[NonUniformResourceIndex(inst.vb_wetmap)];
+			const float wet0 = buf[i0];
+			const float wet1 = buf[i1];
+			const float wet2 = buf[i2];
+			const float wet = attribute_at_bary(wet0, wet1, wet2, bary);
+			if(wet > 0)
+			{
+				albedo = lerp(albedo, 0, wet);
+				roughness = clamp(roughness * sqr(1 - wet), 0.01, 1);
+				N = normalize(lerp(N, facenormal, wet));
+			}
+		}
+
 		transmission = material.transmission;
 		[branch]
 		if (material.textures[TRANSMISSIONMAP].IsValid())

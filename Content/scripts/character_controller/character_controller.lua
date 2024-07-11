@@ -394,6 +394,14 @@ local function Character(model_entity, start_position, face, controllable, anim_
 				end
 			end
 
+			-- Enable wetmap for all objects of character, so it can get wet in the ocean (if the weather has it):
+			for i,entity in ipairs(scene.Entity_GetObjectArray()) do
+				if scene.Entity_IsDescendant(entity, self.model) then
+					local object = scene.Component_GetObject(entity)
+					object.SetWetmapEnabled(true)
+				end
+			end
+
 			-- Create a base capsule collider for character:
 			local collider = scene.Component_CreateCollider(self.model)
 			self.collider = self.model
@@ -533,7 +541,7 @@ local function Character(model_entity, start_position, face, controllable, anim_
 						self.state = States.IDLE
 					end
 				else
-					if self.velocity.Length() < 0.1 and self.state ~= States.SWIM_IDLE and self.state ~= States.SWIM and self.state ~= States.DANCE and self.state ~= States.WAVE then
+					if self.velocity.Length() < 0.1 and self.state ~= States.DANCE and self.state ~= States.WAVE then
 						self.state = States.IDLE
 					end
 				end
@@ -958,6 +966,7 @@ local function Character(model_entity, start_position, face, controllable, anim_
 					transform.Scale(0.1)
 					transform.Translate(collPos)
 					material.SetTexture(TextureSlot.BASECOLORMAP, footprint_texture)
+					material.SetBaseColor(Vector(0.1,0.1,0.1,1))
 					decal.SetSlopeBlendPower(2)
 					layer.SetLayerMask(~(Layers.Player | Layers.NPC))
 					scene.Component_Attach(entity, collEntity)
@@ -985,6 +994,7 @@ local function Character(model_entity, start_position, face, controllable, anim_
 					transform.Translate(collPos)
 					material.SetTexture(TextureSlot.BASECOLORMAP, footprint_texture)
 					material.SetTexMulAdd(Vector(-1, 1, 0, 0)) -- flip left footprint texture to be right
+					material.SetBaseColor(Vector(0.1,0.1,0.1,1))
 					decal.SetSlopeBlendPower(2)
 					layer.SetLayerMask(~(Layers.Player | Layers.NPC))
 					scene.Component_Attach(entity, collEntity)

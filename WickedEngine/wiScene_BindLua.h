@@ -783,6 +783,7 @@ namespace wi::lua::scene
 		int IsForeground(lua_State* L);
 		int IsNotVisibleInMainCamera(lua_State* L);
 		int IsNotVisibleInReflections(lua_State* L);
+		int IsWetmapEnabled(lua_State* L);
 
 		int SetMeshID(lua_State* L);
 		int SetCascadeMask(lua_State* L);
@@ -796,6 +797,7 @@ namespace wi::lua::scene
 		int SetForeground(lua_State* L);
 		int SetNotVisibleInMainCamera(lua_State* L);
 		int SetNotVisibleInReflections(lua_State* L);
+		int SetWetmapEnabled(lua_State* L);
 	};
 
 	class InverseKinematicsComponent_BindLua

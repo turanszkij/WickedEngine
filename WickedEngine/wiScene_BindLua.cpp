@@ -5188,6 +5188,7 @@ Luna<ObjectComponent_BindLua>::FunctionType ObjectComponent_BindLua::methods[] =
 	lunamethod(ObjectComponent_BindLua, IsForeground),
 	lunamethod(ObjectComponent_BindLua, IsNotVisibleInMainCamera),
 	lunamethod(ObjectComponent_BindLua, IsNotVisibleInReflections),
+	lunamethod(ObjectComponent_BindLua, IsWetmapEnabled),
 
 	lunamethod(ObjectComponent_BindLua, SetMeshID),
 	lunamethod(ObjectComponent_BindLua, SetCascadeMask),
@@ -5200,6 +5201,7 @@ Luna<ObjectComponent_BindLua>::FunctionType ObjectComponent_BindLua::methods[] =
 	lunamethod(ObjectComponent_BindLua, SetForeground),
 	lunamethod(ObjectComponent_BindLua, SetNotVisibleInMainCamera),
 	lunamethod(ObjectComponent_BindLua, SetNotVisibleInReflections),
+	lunamethod(ObjectComponent_BindLua, SetWetmapEnabled),
 	{ NULL, NULL }
 };
 Luna<ObjectComponent_BindLua>::PropertyType ObjectComponent_BindLua::properties[] = {
@@ -5270,6 +5272,11 @@ int ObjectComponent_BindLua::IsNotVisibleInMainCamera(lua_State* L)
 int ObjectComponent_BindLua::IsNotVisibleInReflections(lua_State* L)
 {
 	wi::lua::SSetBool(L, component->IsNotVisibleInReflections());
+	return 1;
+}
+int ObjectComponent_BindLua::IsWetmapEnabled(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsWetmapEnabled());
 	return 1;
 }
 
@@ -5459,6 +5466,21 @@ int ObjectComponent_BindLua::SetNotVisibleInReflections(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "SetNotVisibleInReflections(bool value) not enough arguments!");
+	}
+
+	return 0;
+}
+int ObjectComponent_BindLua::SetWetmapEnabled(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		float value = wi::lua::SGetBool(L, 1);
+		component->SetWetmapEnabled(value);
+	}
+	else
+	{
+		wi::lua::SError(L, "SetWetmapEnabled(bool value) not enough arguments!");
 	}
 
 	return 0;

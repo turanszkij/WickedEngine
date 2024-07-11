@@ -182,7 +182,12 @@ namespace wi
 
 		tex_desc.format = Format::R32G32B32A32_FLOAT;
 		tex_desc.mip_levels = 1;
-		device->CreateTexture(&tex_desc, nullptr, &displacementMap);
+		wi::vector<XMFLOAT4> displacementdata(tex_desc.width * tex_desc.height); // zero init the heightmap to be valid before first simulation
+		std::fill(displacementdata.begin(), displacementdata.end(), XMFLOAT4(0, 0, 0, 0));
+		SubresourceData initdata;
+		initdata.data_ptr = displacementdata.data();
+		initdata.row_pitch = tex_desc.width * sizeof(XMFLOAT4);
+		device->CreateTexture(&tex_desc, &initdata, &displacementMap);
 		device->SetName(&displacementMap, "displacementMap");
 
 		for (uint32_t i = 0; i < arraysize(displacementMap_readback); ++i)

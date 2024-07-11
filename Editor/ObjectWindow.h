@@ -17,6 +17,7 @@ public:
 	wi::gui::CheckBox foregroundCheckBox;
 	wi::gui::CheckBox notVisibleInMainCameraCheckBox;
 	wi::gui::CheckBox notVisibleInReflectionsCheckBox;
+	wi::gui::CheckBox wetmapCheckBox;
 	wi::gui::Slider ditherSlider;
 	wi::gui::Slider alphaRefSlider;
 	wi::gui::Slider cascadeMaskSlider;

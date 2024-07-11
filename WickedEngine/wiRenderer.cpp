@@ -1134,6 +1134,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VIRTUALTEXTURE_RESIDENCYUPDATE], "virtualTextureResidencyUpdateCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_WIND], "windCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_YUV_TO_RGB], "yuv_to_rgbCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_WETMAP_UPDATE], "wetmap_updateCS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT], "objectHS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT_PREPASS], "objectHS_prepass.cso"); });
@@ -9876,7 +9877,16 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 				cb.xTraceSampleIndex = object.lightmapIterationCount;
 				device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(RaytracingCB), cmd);
 
-				device->DrawIndexed((uint32_t)mesh.indices.size(), 0, 0, cmd);
+				uint32_t first_subset = 0;
+				uint32_t last_subset = 0;
+				mesh.GetLODSubsetRange(0, first_subset, last_subset);
+				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+				{
+					const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
+					if (subset.indexCount == 0)
+						continue;
+					device->DrawIndexed(subset.indexCount, subset.indexOffset, 0, cmd);
+				}
 				object.lightmapIterationCount++;
 
 				device->RenderPassEnd(cmd);
@@ -9887,6 +9897,41 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 
 		wi::profiler::EndRange(range);
 	}
+}
+
+void RefreshWetmaps(const Scene& scene, CommandList cmd)
+{
+	auto range = wi::profiler::BeginRangeGPU("Wetmap Processing", cmd);
+	device->EventBegin("RefreshWetmaps", cmd);
+
+	BindCommonResources(cmd);
+	device->BindComputeShader(&shaders[CSTYPE_WETMAP_UPDATE], cmd);
+
+	for (uint32_t objectIndex = 0; objectIndex < scene.objects.GetCount(); ++objectIndex)
+	{
+		const ObjectComponent& object = scene.objects[objectIndex];
+		if (!object.wetmap.IsValid())
+			continue;
+
+		uint32_t vertexCount = uint32_t(object.wetmap.desc.size / GetFormatStride(object.wetmap.desc.format));
+
+		WetmapPush push = {};
+		push.wetmap = device->GetDescriptorIndex(&object.wetmap, SubresourceType::UAV);
+
+		if (push.wetmap < 0)
+			continue;
+
+		push.instanceID = objectIndex;
+		push.iteration = object.wetmapIterationCount;
+		device->PushConstants(&push, sizeof(push), cmd);
+
+		device->Dispatch((vertexCount + 63u) / 64u, 1, 1, cmd);
+
+		object.wetmapIterationCount++;
+	}
+
+	device->EventEnd(cmd);
+	wi::profiler::EndRange(range);
 }
 
 void BindCommonResources(CommandList cmd)
