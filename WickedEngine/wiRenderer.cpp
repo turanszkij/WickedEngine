@@ -9901,6 +9901,9 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 
 void RefreshWetmaps(const Scene& scene, CommandList cmd)
 {
+	if (!scene.weather.IsOceanEnabled())
+		return;
+
 	auto range = wi::profiler::BeginRangeGPU("Wetmap Processing", cmd);
 	device->EventBegin("RefreshWetmaps", cmd);
 
