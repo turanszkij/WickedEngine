@@ -563,6 +563,7 @@ inline float3 GetHorizonColor() { return GetWeather().horizon.rgb; }
 inline float3 GetZenithColor() { return GetWeather().zenith.rgb; }
 inline float3 GetAmbientColor() { return GetWeather().ambient.rgb; }
 inline uint2 GetInternalResolution() { return GetCamera().internal_resolution; }
+inline float GetDeltaTime() { return GetFrame().delta_time; }
 inline float GetTime() { return GetFrame().time; }
 inline float GetTimePrev() { return GetFrame().time_previous; }
 inline uint2 GetTemporalAASampleRotation() { return uint2((GetFrame().temporalaa_samplerotation >> 0u) & 0x000000FF, (GetFrame().temporalaa_samplerotation >> 8) & 0x000000FF); }

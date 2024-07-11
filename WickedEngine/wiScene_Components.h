@@ -823,6 +823,7 @@ namespace wi::scene
 			FOREGROUND = 1 << 7,
 			NOT_VISIBLE_IN_MAIN_CAMERA = 1 << 8,
 			NOT_VISIBLE_IN_REFLECTIONS = 1 << 9,
+			WETMAP_ENABLED = 1 << 10,
 		};
 		uint32_t _flags = RENDERABLE | CAST_SHADOW;
 
@@ -848,6 +849,8 @@ namespace wi::scene
 		mutable uint32_t lightmapIterationCount = 0;
 		wi::graphics::GPUBuffer vb_ao;
 		int vb_ao_srv = -1;
+		wi::graphics::GPUBuffer wetmap;
+		mutable uint32_t wetmapIterationCount = 0;
 
 		XMFLOAT3 center = XMFLOAT3(0, 0, 0);
 		float radius = 0;
@@ -871,6 +874,7 @@ namespace wi::scene
 		inline void SetNotVisibleInMainCamera(bool value) { if (value) { _flags |= NOT_VISIBLE_IN_MAIN_CAMERA; } else { _flags &= ~NOT_VISIBLE_IN_MAIN_CAMERA; } }
 		// With this you can disable object rendering for reflections
 		inline void SetNotVisibleInReflections(bool value) { if (value) { _flags |= NOT_VISIBLE_IN_REFLECTIONS; } else { _flags &= ~NOT_VISIBLE_IN_REFLECTIONS; } }
+		inline void SetWetmapEnabled(bool value) { if (value) { _flags |= WETMAP_ENABLED; } else { _flags &= ~WETMAP_ENABLED; } }
 
 		inline bool IsRenderable() const { return (_flags & RENDERABLE) && (GetTransparency() < 0.99f); }
 		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
@@ -881,6 +885,7 @@ namespace wi::scene
 		inline bool IsForeground() const { return _flags & FOREGROUND; }
 		inline bool IsNotVisibleInMainCamera() const { return _flags & NOT_VISIBLE_IN_MAIN_CAMERA; }
 		inline bool IsNotVisibleInReflections() const { return _flags & NOT_VISIBLE_IN_REFLECTIONS; }
+		inline bool IsWetmapEnabled() const { return _flags & WETMAP_ENABLED; }
 
 		inline float GetTransparency() const { return 1 - color.w; }
 		inline uint32_t GetFilterMask() const { return filterMask | filterMaskDynamic; }

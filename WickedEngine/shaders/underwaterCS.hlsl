@@ -42,21 +42,19 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #endif
 
 		const float depth = texture_depth[DTid.xy];
-		const float3 positionfromdepth = reconstruct_position(uv, depth);
-		const float distancefromdepth = distance(GetCamera().position, positionfromdepth);
+		float3 surface_position = reconstruct_position(uv, depth);
+
+		const float3 V = normalize(GetCamera().position.xyz - unproj.xyz);
 
 		// The ocean is not rendered into the lineardepth unfortunately, so we also trace it:
 		//	Otherwise the ocean surface could be same as infinite depth and incorrectly fogged
-		const float3 o = GetCamera().position;
-		const float3 d = normalize(o.xyz - unproj.xyz);
-		float3 ocean_surface_pos = intersectPlaneClampInfinite(o, d, float3(0, 1, 0), ocean.water_height);
+		float3 ocean_surface_pos = intersectPlaneClampInfinite(GetCamera().position, V, float3(0, 1, 0), ocean.water_height);
 		float2 ocean_surface_uv = ocean_surface_pos.xz * ocean.patch_size_rcp;
 		Texture2D texture_displacementmap = bindless_textures[ocean.texture_displacementmap];
 		const float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, ocean_surface_uv, 0).xzy;
 		ocean_surface_pos += displacement;
-		const float ocean_dist = length(ocean_surface_pos - o);
+		const float ocean_dist = length(ocean_surface_pos - GetCamera().position);
 
-		float3 surface_position = reconstruct_position(uv, depth);
 		[branch]
 		if (ocean.texture_displacementmap >= 0)
 		{
@@ -65,13 +63,15 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			const float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, ocean_uv, 0).xzy;
 			surface_position += displacement;
 		}
+		const float distance_from_surface = distance(GetCamera().position, surface_position);
 		float water_depth = ocean_pos.y - surface_position.y;
-		water_depth = max(min(distancefromdepth, ocean_dist), water_depth);
+		water_depth = max(min(distance_from_surface, ocean_dist), water_depth);
 
 		float waterfog = saturate(exp(-water_depth * ocean.water_color.a));
 		float3 transmittance = saturate(exp(-water_depth * ocean.extinction_color.rgb * ocean.water_color.a));
 		color.rgb *= transmittance;
 		color.rgb = lerp(ocean.water_color.rgb, color.rgb, waterfog);
+		
 		//color = float4(1, 0, 0, 1);
 	}
 

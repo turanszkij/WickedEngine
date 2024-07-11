@@ -1159,6 +1159,8 @@ TextureSlot = {
 - IsNotVisibleInMainCamera() : bool
 - SetNotVisibleInReflections(bool value) -- you can set the object to not be visible in main camera, but it will remain visible in reflections and shadows, useful for vampires
 - IsNotVisibleInReflections() : bool
+- SetWetmapEnabled(bool value) -- enable wet map for the object, this will automatically track the wetness
+- IsWetmapEnabled() : bool
 
 #### InverseKinematicsComponent
 Describes an Inverse Kinematics effector.

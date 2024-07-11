@@ -1012,6 +1012,8 @@ namespace wi
 				cmd
 			);
 
+			wi::renderer::RefreshWetmaps(*scene, cmd);
+
 			wi::renderer::Visibility_Prepare(
 				visibilityResources,
 				rtPrimitiveID_render,

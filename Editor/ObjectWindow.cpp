@@ -257,7 +257,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_OBJECT " Object", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 840));
+	SetSize(XMFLOAT2(670, 880));
 
 	closeButton.SetTooltip("Delete ObjectComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -417,6 +417,24 @@ void ObjectWindow::Create(EditorComponent* _editor)
 		}
 		});
 	AddWidget(&notVisibleInReflectionsCheckBox);
+
+	wetmapCheckBox.Create("Wet map: ");
+	wetmapCheckBox.SetTooltip("If wetmap is enabled, wetness will be automatically tracked by graphics systems.");
+	wetmapCheckBox.SetSize(XMFLOAT2(hei, hei));
+	wetmapCheckBox.SetPos(XMFLOAT2(x, y += step));
+	wetmapCheckBox.SetCheck(true);
+	wetmapCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			ObjectComponent* object = scene.objects.GetComponent(x.entity);
+			if (object != nullptr)
+			{
+				object->SetWetmapEnabled(args.bValue);
+			}
+		}
+		});
+	AddWidget(&wetmapCheckBox);
 
 	ditherSlider.Create(0, 1, 0, 1000, "Transparency: ");
 	ditherSlider.SetTooltip("Adjust transparency of the object. Opaque materials will use dithered transparency in this case!");
@@ -966,6 +984,7 @@ void ObjectWindow::SetEntity(Entity entity)
 		foregroundCheckBox.SetCheck(object->IsForeground());
 		notVisibleInMainCameraCheckBox.SetCheck(object->IsNotVisibleInMainCamera());
 		notVisibleInReflectionsCheckBox.SetCheck(object->IsNotVisibleInReflections());
+		wetmapCheckBox.SetCheck(object->IsWetmapEnabled());
 		navmeshCheckBox.SetCheck(object->filterMask & wi::enums::FILTER_NAVIGATION_MESH);
 		cascadeMaskSlider.SetValue((float)object->cascadeMask);
 		ditherSlider.SetValue(object->GetTransparency());
@@ -1045,6 +1064,7 @@ void ObjectWindow::ResizeLayout()
 	add_right(foregroundCheckBox);
 	add_right(notVisibleInMainCameraCheckBox);
 	add_right(notVisibleInReflectionsCheckBox);
+	add_right(wetmapCheckBox);
 	add_right(navmeshCheckBox);
 	add(ditherSlider);
 	add(alphaRefSlider);

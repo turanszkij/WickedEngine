@@ -580,8 +580,8 @@ struct ShaderMeshInstance
 
 	int vb_ao;
 	float alphaTest;
-	int padding1;
-	int padding2;
+	int vb_wetmap;
+	int padding;
 
 	ShaderTransform transform;
 	ShaderTransform transformInverseTranspose; // This correctly handles non uniform scaling for normals
@@ -604,6 +604,7 @@ struct ShaderMeshInstance
 		center = float3(0, 0, 0);
 		radius = 0;
 		vb_ao = -1;
+		vb_wetmap = -1;
 		alphaTest = 0;
 		transform.init();
 		transformInverseTranspose.init();
@@ -1223,6 +1224,14 @@ struct LensFlarePush
 	float xLensFlareOffset;
 	float2 xLensFlareSize;
 	float2 xLensFlare_padding;
+};
+
+struct WetmapPush
+{
+	int wetmap;
+	uint iteration;
+	uint instanceID;
+	uint padding;
 };
 
 // MIP Generator params:

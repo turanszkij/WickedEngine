@@ -4000,6 +4000,7 @@ namespace wi::scene
 			Entity entity = objects.GetEntity(args.jobIndex);
 			ObjectComponent& object = objects[args.jobIndex];
 			AABB& aabb = aabb_objects[args.jobIndex];
+			GraphicsDevice* device = wi::graphics::GetDevice();
 
 			// Update occlusion culling status:
 			OcclusionResult& occlusion_result = occlusion_results_objects[args.jobIndex];
@@ -4045,6 +4046,21 @@ namespace wi::scene
 				// These will only be valid for a single frame:
 				object.mesh_index = (uint32_t)meshes.GetIndex(object.meshID);
 				const MeshComponent& mesh = meshes[object.mesh_index];
+
+				if (object.IsWetmapEnabled() && !object.wetmap.IsValid())
+				{
+					GPUBufferDesc desc;
+					desc.size = mesh.vertex_positions.size() * sizeof(uint16_t);
+					desc.format = Format::R16_UNORM;
+					desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+					device->CreateBuffer(&desc, nullptr, &object.wetmap);
+					device->SetName(&object.wetmap, "wetmap");
+					object.wetmapIterationCount = 0;
+				}
+				else if(!object.IsWetmapEnabled() && object.wetmap.IsValid())
+				{
+					object.wetmap = {};
+				}
 
 				const TransformComponent& transform = *transforms.GetComponent(entity);
 
@@ -4169,7 +4185,6 @@ namespace wi::scene
 				XMStoreFloat4x4(&transformIT, worldMatrixInverseTranspose);
 
 				// Create GPU instance data:
-				GraphicsDevice* device = wi::graphics::GetDevice();
 				ShaderMeshInstance inst;
 				inst.init();
 				XMFLOAT4X4 worldMatrixPrev = matrix_objects[args.jobIndex];
@@ -4205,6 +4220,7 @@ namespace wi::scene
 				inst.center = object.center;
 				inst.radius = object.radius;
 				inst.vb_ao = object.vb_ao_srv;
+				inst.vb_wetmap = device->GetDescriptorIndex(&object.wetmap, SubresourceType::SRV);
 				inst.alphaTest = 1 - object.alphaRef;
 				inst.SetUserStencilRef(object.userStencilRef);
 

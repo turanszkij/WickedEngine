@@ -138,6 +138,10 @@ PixelInput main(ConstantOutput input, float3 uvw : SV_DomainLocation, const Outp
 	output.ao = min16float(w * patch[0].ao + u * patch[1].ao + v * patch[2].ao);
 #endif // OBJECTSHADER_USE_NORMAL
 
+#ifdef OBJECTSHADER_USE_WETMAP
+	output.wet = min16float(w * patch[0].wet + u * patch[1].wet + v * patch[2].wet);
+#endif // OBJECTSHADER_USE_WETMAP
+
 #ifdef OBJECTSHADER_USE_TANGENT
 	output.tan = min16float4(normalize(w * patch[0].tan + u * patch[1].tan + v * patch[2].tan));
 #endif // OBJECTSHADER_USE_TANGENT

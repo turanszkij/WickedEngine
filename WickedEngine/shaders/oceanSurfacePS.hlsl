@@ -121,7 +121,7 @@ float4 main(PSIn input) : SV_TARGET
 #if 1
 	// FOAM:
 	float water_depth_diff = abs(texture_lineardepth[pixel] * GetCamera().z_far - lineardepth); // Note: for the shore foam, this is more accurate than water plane distance
-	float foam_shore = saturate(exp(-water_depth_diff * 4));
+	float foam_shore = saturate(exp(-water_depth_diff * 2));
 	float foam_wave = pow(saturate(gradient.a), 4) * saturate(exp(-water_depth * 0.1));
 	float foam_combined = saturate(foam_shore + foam_wave);
 	float foam_simplex = 0;
@@ -139,6 +139,7 @@ float4 main(PSIn input) : SV_TARGET
 	foam = saturate(foam);
 	surface.albedo = lerp(surface.albedo, 0.6, foam);
 	surface.refraction.a *= 1 - foam;
+	surface.refraction.a = saturate(surface.refraction.a + saturate(exp(-water_depth_diff * 4)));
 #endif
 
 	TiledLighting(surface, lighting, GetFlatTileIndex(pixel));

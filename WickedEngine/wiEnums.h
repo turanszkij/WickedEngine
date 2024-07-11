@@ -410,6 +410,7 @@ namespace wi::enums
 		CSTYPE_VIRTUALTEXTURE_RESIDENCYUPDATE,
 		CSTYPE_WIND,
 		CSTYPE_YUV_TO_RGB,
+		CSTYPE_WETMAP_UPDATE,
 
 
 		// raytracing pipelines:
