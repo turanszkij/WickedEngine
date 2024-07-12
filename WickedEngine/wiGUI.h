@@ -379,17 +379,19 @@ namespace wi::gui
 	class ScrollBar : public Widget
 	{
 	protected:
-		float scrollbar_delta = 0;
-		float scrollbar_length = 0;
-		float scrollbar_value = 0;
-		float scrollbar_granularity = 1;
-		float list_length = 0;
-		float list_offset = 0;
-		float overscroll = 0;
+		float scrollbar_delta = 0.0f;
+		float scrollbar_length = 0.0f;
+		float scrollbar_value = 0.0f;
+		float scrollbar_granularity = 1.0f;
+		float list_length = 0.0f;
+		float list_offset = 0.0f;
+		float target_offset = 0.0f;
+		float overscroll = 0.0f;
 		bool vertical = true;
-		float safe_area = 0;
+		bool scroll_to_item = false;
+		float safe_area = 0.0f;
 		XMFLOAT2 grab_pos = {};
-		float grab_delta = 0;
+		float grab_delta = 0.0f;
 
 	public:
 		// Set the list's length that will be scrollable and moving
@@ -406,7 +408,7 @@ namespace wi::gui
 		// Check whether the scrollbar is required (when the items don't fit and scrolling could be used)
 		bool IsScrollbarRequired() const { return scrollbar_granularity < 1; }
 		void SetSafeArea(float value) { safe_area = value; }
-		void SetOffset(float offset);
+		void SetTargetOffset(float offset);
 
 		enum SCROLLBAR_STATE
 		{
