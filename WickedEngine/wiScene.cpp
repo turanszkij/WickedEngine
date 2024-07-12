@@ -6257,6 +6257,7 @@ namespace wi::scene
 			p0 = SkinVertex(*mesh, *softbody, vertexID0);
 			p1 = SkinVertex(*mesh, *softbody, vertexID1);
 			p2 = SkinVertex(*mesh, *softbody, vertexID2);
+			P = XMVectorBaryCentric(p0, p1, p2, bary.x, bary.y);
 		}
 		else if (armature != nullptr && !armature->boneData.empty())
 		{
