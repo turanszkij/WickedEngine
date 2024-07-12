@@ -1647,7 +1647,7 @@ namespace wi::gui
 			font_input.Draw(cmd);
 
 			// caret:
-			if(std::fmod(caret_timer.elapsed_seconds(), 1) < 0.5f)
+			if (std::fmod(caret_timer.elapsed_seconds(), 1) < 0.5f)
 			{
 				wi::font::Params params = font_input.params;
 				XMFLOAT2 size = wi::font::TextSize(font_input.GetText().c_str(), caret_pos, font_input.params);
@@ -1660,7 +1660,7 @@ namespace wi::gui
 			}
 
 			// selection:
-			if(caret_pos != caret_begin)
+			if (caret_pos != caret_begin)
 			{
 				int start = std::min(caret_begin, caret_pos);
 				int end = std::max(caret_begin, caret_pos);
@@ -4225,7 +4225,7 @@ namespace wi::gui
 			XMFLOAT2 center = XMFLOAT2(translation.x + scale.x * 0.4f, translation.y + scale.y * 0.5f);
 			XMFLOAT2 pointer = GetPointerHitbox().pos;
 			float distance = wi::math::Distance(center, pointer);
-			bool hover_hue = (distance > colorpicker_radius * sca) && (distance < (colorpicker_radius + colorpicker_width)* sca);
+			bool hover_hue = (distance > colorpicker_radius * sca) && (distance < (colorpicker_radius + colorpicker_width) * sca);
 
 			float distTri = 0;
 			XMFLOAT4 A, B, C;
@@ -4704,7 +4704,7 @@ namespace wi::gui
 			y -= padding;
 			widget.SetPos(XMFLOAT2(margin_left, y));
 			widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
-		};
+			};
 		auto add_right = [&](wi::gui::Widget& widget) {
 			if (!widget.IsVisible())
 				return;
@@ -4712,7 +4712,7 @@ namespace wi::gui
 			y -= widget.GetSize().y;
 			y -= padding;
 			widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
-		};
+			};
 
 		add(alphaSlider);
 		y += alphaSlider.GetSize().y;
@@ -5159,7 +5159,7 @@ namespace wi::gui
 			// hitboxes are recomputed because window transform might have changed since update!!
 			float vscale = scale.y;
 			Hitbox2D bottomhitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y + vscale), XMFLOAT2(scale.x, resizehitboxwidth));
-			
+
 			const Hitbox2D pointerHitbox = GetPointerHitbox(false);
 
 			wi::image::Params fx = sprites[state].params;
@@ -5269,7 +5269,7 @@ namespace wi::gui
 			}
 
 			// opened flag triangle:
-			if(DoesItemHaveChildren(i))
+			if (DoesItemHaveChildren(i))
 			{
 				device->BindPipelineState(&gui_internal().PSO_colored, cmd);
 
