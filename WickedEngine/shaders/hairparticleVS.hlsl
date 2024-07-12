@@ -28,6 +28,7 @@ VertexToPixel main(uint vid : SV_VERTEXID)
 
 	Out.nor = min16float3(normal);
 	Out.tex = min16float2(uvsets.xy);
+	Out.wet = (min16float)bindless_buffers_float[inst.vb_wetmap][vertexID];
 	
 	return Out;
 }

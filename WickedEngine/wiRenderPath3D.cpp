@@ -805,7 +805,7 @@ namespace wi
 				{
 					scene->terrains[i].CopyVirtualTexturePageStatusGPU(cmd_copypages);
 				}
-				});
+			});
 		}
 
 		// Preparing the frame:
@@ -883,7 +883,7 @@ namespace wi
 				);
 			}
 
-			});
+		});
 
 		static const uint32_t drawscene_flags =
 			wi::renderer::DRAWSCENE_OPAQUE |
@@ -1011,8 +1011,6 @@ namespace wi
 				camera_reflection,
 				cmd
 			);
-
-			wi::renderer::RefreshWetmaps(*scene, cmd);
 
 			wi::renderer::Visibility_Prepare(
 				visibilityResources,
@@ -1629,6 +1627,13 @@ namespace wi
 
 			wi::renderer::TextureStreamingReadbackCopy(*scene, cmd);
 		});
+
+		if (scene->IsWetmapProcessingRequired())
+		{
+			CommandList cmd_wetmaps = device->BeginCommandList(QUEUE_COMPUTE);
+			device->WaitCommandList(cmd_wetmaps, cmd); // wait for transparents, it will be scheduled with late frame (GUI, etc)
+			wi::renderer::RefreshWetmaps(*scene, cmd_wetmaps);
+		}
 
 		RenderPath2D::Render();
 

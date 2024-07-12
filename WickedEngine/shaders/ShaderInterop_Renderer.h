@@ -1231,7 +1231,7 @@ struct WetmapPush
 	int wetmap;
 	uint iteration;
 	uint instanceID;
-	uint padding;
+	float rain_amount;
 };
 
 // MIP Generator params:

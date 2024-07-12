@@ -9901,7 +9901,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 
 void RefreshWetmaps(const Scene& scene, CommandList cmd)
 {
-	if (!scene.weather.IsOceanEnabled())
+	if (!scene.IsWetmapProcessingRequired())
 		return;
 
 	auto range = wi::profiler::BeginRangeGPU("Wetmap Processing", cmd);
@@ -9926,11 +9926,36 @@ void RefreshWetmaps(const Scene& scene, CommandList cmd)
 
 		push.instanceID = objectIndex;
 		push.iteration = object.wetmapIterationCount;
+		push.rain_amount = scene.weather.rain_amount;
 		device->PushConstants(&push, sizeof(push), cmd);
 
 		device->Dispatch((vertexCount + 63u) / 64u, 1, 1, cmd);
 
 		object.wetmapIterationCount++;
+	}
+
+	for (uint32_t hairIndex = 0; hairIndex < scene.hairs.GetCount(); ++hairIndex)
+	{
+		const wi::HairParticleSystem& hair = scene.hairs[hairIndex];
+		if (!hair.wetmap.IsValid())
+			continue;
+
+		uint32_t vertexCount = uint32_t(hair.wetmap.size / sizeof(uint16_t));
+
+		WetmapPush push = {};
+		push.wetmap = hair.wetmap.descriptor_uav;
+
+		if (push.wetmap < 0)
+			continue;
+
+		push.instanceID = uint32_t(scene.objects.GetCount() + hairIndex);
+		push.iteration = hair.wetmapIterationCount;
+		push.rain_amount = scene.weather.rain_amount;
+		device->PushConstants(&push, sizeof(push), cmd);
+
+		device->Dispatch((vertexCount + 63u) / 64u, 1, 1, cmd);
+
+		hair.wetmapIterationCount++;
 	}
 
 	device->EventEnd(cmd);

@@ -741,7 +741,7 @@ namespace wi::terrain
 			ObjectComponent* chunk_object = scene->objects.GetComponent(chunk_data.entity);
 			if (chunk_object != nullptr)
 			{
-				chunk_object->SetWetmapEnabled(weather.IsOceanEnabled());
+				chunk_object->SetWetmapEnabled(scene->IsWetmapProcessingRequired());
 			}
 
 			// chunk removal:

@@ -26,6 +26,7 @@ namespace wi
 		wi::scene::MeshComponent::BufferView vb_nor;
 		wi::scene::MeshComponent::BufferView vb_pos_raytracing;
 		wi::scene::MeshComponent::BufferView vb_uvs;
+		wi::scene::MeshComponent::BufferView wetmap;
 		wi::scene::MeshComponent::BufferView ib_culled;
 		wi::scene::MeshComponent::BufferView indirect_view;
 		wi::graphics::GPUBuffer primitiveBuffer;
@@ -101,6 +102,7 @@ namespace wi
 		uint32_t layerMask = ~0u;
 		mutable bool regenerate_frame = true;
 		wi::graphics::Format position_format = wi::graphics::Format::R16G16B16A16_UNORM;
+		mutable uint32_t wetmapIterationCount = 0;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 

@@ -9,6 +9,7 @@
 float4 main(VertexToPixel input) : SV_Target
 {
 	ShaderMaterial material = HairGetMaterial();
+	ShaderMeshInstance meshinstance = HairGetInstance();
 	
 	write_mipmap_feedback(HairGetGeometry().materialIndex, ddx_coarse(input.tex.xyxy), ddy_coarse(input.tex.xyxy));
 
@@ -55,6 +56,11 @@ float4 main(VertexToPixel input) : SV_Target
 #endif // TRANSPARENT
 #endif // ENVMAPRENDERING
 #endif // PREPASS
+
+	if(input.wet > 0)
+	{
+		surface.albedo = lerp(surface.albedo, 0, input.wet);
+	}
 
 	surface.update();
 

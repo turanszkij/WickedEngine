@@ -4615,6 +4615,7 @@ namespace wi::scene
 			inst.baseGeometryOffset = inst.geometryOffset;
 			inst.baseGeometryCount = inst.geometryCount;
 			inst.meshletOffset = meshletOffset;
+			inst.vb_wetmap = hair.wetmap.descriptor_srv;
 
 			XMFLOAT4X4 remapMatrix;
 			XMStoreFloat4x4(&remapMatrix, hair.aabb.getUnormRemapMatrix());
@@ -4902,6 +4903,12 @@ namespace wi::scene
 		{
 			rainMaterial = {};
 			rainEmitter = {};
+		}
+
+		wetmap_fadeout_time -= dt;
+		if (weather.IsOceanEnabled() || weather.rain_amount > 0)
+		{
+			wetmap_fadeout_time = 10; // allow 10 sec for remaining wetmaps to fade out
 		}
 	}
 	void Scene::RunSoundUpdateSystem(wi::jobsystem::context& ctx)
@@ -6333,6 +6340,11 @@ namespace wi::scene
 		if (!ocean.IsValid())
 			return worldPosition;
 		return ocean.GetDisplacedPosition(worldPosition);
+	}
+
+	bool Scene::IsWetmapProcessingRequired() const
+	{
+		return wetmap_fadeout_time > 0;
 	}
 
 	void Scene::PutWaterRipple(const std::string& image, const XMFLOAT3& pos)

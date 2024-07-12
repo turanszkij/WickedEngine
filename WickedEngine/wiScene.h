@@ -304,6 +304,9 @@ namespace wi::scene
 		void ScanSpringDependencies();
 		void UpdateSpringsTopDownRecursive(SpringComponent* parent_spring, SpringComponent& spring);
 
+		float wetmap_fadeout_time = 0;
+		bool IsWetmapProcessingRequired() const;
+
 		// Update all components by a given timestep (in seconds):
 		//	This is an expensive function, prefer to call it only once per frame!
 		virtual void Update(float dt);

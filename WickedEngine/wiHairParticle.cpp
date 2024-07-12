@@ -118,6 +118,7 @@ namespace wi
 			vb_pos[1].size = position_stride * 4 * particleCount;
 			vb_nor.size = sizeof(MeshComponent::Vertex_NOR) * 4 * particleCount;
 			vb_uvs.size = sizeof(MeshComponent::Vertex_UVS) * 4 * particleCount;
+			wetmap.size = sizeof(uint16_t) * 4 * particleCount;
 			ib_culled.size = GetFormatStride(ib_format) * 6 * particleCount;
 			indirect_view.size = sizeof(IndirectDrawArgsIndexedInstanced);
 			vb_pos_raytracing.size = position_stride * 4 * particleCount;
@@ -129,6 +130,7 @@ namespace wi
 				AlignTo(vb_pos[1].size, alignment) +
 				AlignTo(vb_nor.size, alignment) +
 				AlignTo(vb_uvs.size, alignment) +
+				AlignTo(wetmap.size, alignment) +
 				AlignTo(ib_culled.size, alignment) +
 				AlignTo(vb_pos_raytracing.size, alignment)
 			;
@@ -189,6 +191,15 @@ namespace wi
 			vb_uvs.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_uvs.subresource_srv);
 			vb_uvs.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_uvs.subresource_uav);
 			buffer_offset += vb_uvs.size;
+
+			constexpr Format wetmap_fmt = Format::R16_UNORM;
+			buffer_offset = AlignTo(buffer_offset, alignment);
+			wetmap.offset = buffer_offset;
+			wetmap.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, wetmap.offset, wetmap.size, &wetmap_fmt);
+			wetmap.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, wetmap.offset, wetmap.size, &wetmap_fmt);
+			wetmap.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, wetmap.subresource_srv);
+			wetmap.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, wetmap.subresource_uav);
+			buffer_offset += wetmap.size;
 
 			buffer_offset = AlignTo(buffer_offset, alignment);
 			ib_culled.offset = buffer_offset;

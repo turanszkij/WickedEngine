@@ -25,6 +25,7 @@ struct VertexToPixel
 	uint primitiveID : PRIMITIVEID;
 	float3 pos3D : POSITION3D;
 	min16float3 nor : NORMAL;
+	min16float wet : WET;
 };
 
 #endif // WI_HAIRPARTICLE_HF
