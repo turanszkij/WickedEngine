@@ -1229,7 +1229,7 @@ struct LensFlarePush
 struct WetmapPush
 {
 	int wetmap;
-	uint iteration;
+	uint padding;
 	uint instanceID;
 	float rain_amount;
 };

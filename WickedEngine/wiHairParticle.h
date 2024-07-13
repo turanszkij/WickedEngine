@@ -102,7 +102,6 @@ namespace wi
 		uint32_t layerMask = ~0u;
 		mutable bool regenerate_frame = true;
 		wi::graphics::Format position_format = wi::graphics::Format::R16G16B16A16_UNORM;
-		mutable uint32_t wetmapIterationCount = 0;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 

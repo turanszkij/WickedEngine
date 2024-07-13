@@ -1632,7 +1632,10 @@ namespace wi
 		{
 			CommandList cmd_wetmaps = device->BeginCommandList(QUEUE_COMPUTE);
 			device->WaitCommandList(cmd_wetmaps, cmd); // wait for transparents, it will be scheduled with late frame (GUI, etc)
-			wi::renderer::RefreshWetmaps(*scene, cmd_wetmaps);
+			// Note: GPU processing of this compute task can overlap with beginning of the next frame because no one is waiting for it
+			wi::jobsystem::Execute(ctx, [this, cmd_wetmaps](wi::jobsystem::JobArgs args) {
+				wi::renderer::RefreshWetmaps(*scene, cmd_wetmaps);
+			});
 		}
 
 		RenderPath2D::Render();

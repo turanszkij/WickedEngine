@@ -13,17 +13,22 @@ void main(uint DTid : SV_DispatchThreadID)
 	Buffer<float4> vb_pos_wind = bindless_buffers_float4[geometry.vb_pos_wind];
 	float3 world_pos = vb_pos_wind[DTid].xyz;
 	world_pos = mul(meshinstance.transform.GetMatrix(), float4(world_pos, 1)).xyz;
+
+	float drying = 0.1;
+	[branch]
+	if(geometry.vb_nor >= 0)
+	{
+		Buffer<float4> vb_nor = bindless_buffers_float4[geometry.vb_nor];
+		float3 normal = vb_nor[DTid].xyz;
+		normal = mul((float3x3)meshinstance.transformInverseTranspose.GetMatrix(), normal);
+		normal = normalize(normal);
+		drying *= lerp(10, 1, pow(saturate(normal.y), 8)); // modulate drying speed based on surface slope
+	}
 		
 	RWBuffer<float> wetmap = bindless_rwbuffers_float[push.wetmap];
 
-	float prev = 0;
-
-	if(push.iteration > 0)
-	{
-		prev = wetmap[DTid];
-	}
-	
-	float current = lerp(prev, 0, GetDeltaTime() * 0.2);
+	float prev = wetmap[DTid];
+	float current = lerp(prev, 0, GetDeltaTime() * drying);
 	
 	const ShaderOcean ocean = GetWeather().ocean;
 	float3 ocean_pos = float3(world_pos.x, ocean.water_height, world_pos.z);

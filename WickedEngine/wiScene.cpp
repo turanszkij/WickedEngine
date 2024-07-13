@@ -4053,9 +4053,10 @@ namespace wi::scene
 					desc.size = mesh.vertex_positions.size() * sizeof(uint16_t);
 					desc.format = Format::R16_UNORM;
 					desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-					device->CreateBuffer(&desc, nullptr, &object.wetmap);
+					wi::vector<uint8_t> zeroes(desc.size);
+					std::fill(zeroes.begin(), zeroes.end(), 0);
+					device->CreateBuffer(&desc, zeroes.data(), &object.wetmap);
 					device->SetName(&object.wetmap, "wetmap");
-					object.wetmapIterationCount = 0;
 				}
 				else if(!object.IsWetmapEnabled() && object.wetmap.IsValid())
 				{
@@ -4908,7 +4909,7 @@ namespace wi::scene
 		wetmap_fadeout_time -= dt;
 		if (weather.IsOceanEnabled() || weather.rain_amount > 0)
 		{
-			wetmap_fadeout_time = 10; // allow 10 sec for remaining wetmaps to fade out
+			wetmap_fadeout_time = 60; // allow 60 sec for remaining wetmaps to fade out
 		}
 	}
 	void Scene::RunSoundUpdateSystem(wi::jobsystem::context& ctx)

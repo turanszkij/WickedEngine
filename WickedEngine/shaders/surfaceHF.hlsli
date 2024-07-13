@@ -887,8 +887,11 @@ struct Surface
 			if(wet > 0)
 			{
 				albedo = lerp(albedo, 0, wet);
-				roughness = clamp(roughness * sqr(1 - wet), 0.01, 1);
-				N = normalize(lerp(N, facenormal, wet));
+				if(!is_hairparticle) // hair particle roughness modify doesn't look good because of copying surface normals
+				{
+					roughness = clamp(roughness * sqr(1 - wet), 0.01, 1);
+					N = normalize(lerp(N, facenormal, wet));
+				}
 			}
 		}
 
