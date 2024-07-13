@@ -4818,7 +4818,7 @@ namespace wi::scene
 			{
 				Texture gradientTex = wi::texturehelper::CreateGradientTexture(
 					wi::texturehelper::GradientType::Circular,
-					32, 32,
+					64, 64,
 					XMFLOAT2(0.5f, 0.5f), XMFLOAT2(0.5f, 0),
 					wi::texturehelper::GradientFlags::Smoothstep | wi::texturehelper::GradientFlags::Inverse
 				);
@@ -4831,7 +4831,21 @@ namespace wi::scene
 				wi::renderer::AddDeferredBlockCompression(gradientTex, gradientTexBC);
 				rainMaterial.textures[MaterialComponent::BASECOLORMAP].resource.SetTexture(gradientTexBC);
 			}
-			rainMaterial.shadingRate = ShadingRate::RATE_4X4;
+			if (!rainMaterial.textures[MaterialComponent::NORMALMAP].resource.IsValid())
+			{
+				Texture gradientTex = wi::texturehelper::CreateLensDistortionNormalMap(
+					32, 32
+				);
+				Texture gradientTexBC;
+				TextureDesc desc = gradientTex.GetDesc();
+				desc.format = Format::BC5_UNORM;
+				desc.swizzle = { wi::graphics::ComponentSwizzle::R,wi::graphics::ComponentSwizzle::G,wi::graphics::ComponentSwizzle::ONE,wi::graphics::ComponentSwizzle::ONE };
+				bool success = device->CreateTexture(&desc, nullptr, &gradientTexBC);
+				assert(success);
+				wi::renderer::AddDeferredBlockCompression(gradientTex, gradientTexBC);
+				rainMaterial.textures[MaterialComponent::NORMALMAP].resource.SetTexture(gradientTexBC);
+			}
+			//rainMaterial.shadingRate = ShadingRate::RATE_4X4;
 			TransformComponent transform;
 			transform.scale_local = XMFLOAT3(30, 30, 30);
 			transform.translation_local.x = camera.Eye.x + camera.At.x * 10;

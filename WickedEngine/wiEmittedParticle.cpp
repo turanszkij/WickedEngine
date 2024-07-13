@@ -807,7 +807,7 @@ namespace wi
 	}
 
 
-	void EmittedParticleSystem::Draw(const MaterialComponent& material, CommandList cmd) const
+	void EmittedParticleSystem::Draw(const MaterialComponent& material, CommandList cmd, const PARTICLESHADERTYPE* shadertype_override) const
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		device->EventBegin("EmittedParticle", cmd);
@@ -819,7 +819,7 @@ namespace wi
 		else
 		{
 			const wi::enums::BLENDMODE blendMode = material.GetBlendMode();
-			device->BindPipelineState(&PSO[blendMode][shaderType], cmd);
+			device->BindPipelineState(&PSO[blendMode][shadertype_override == nullptr ? shaderType : *shadertype_override], cmd);
 
 			device->BindShadingRate(material.shadingRate, cmd);
 		}

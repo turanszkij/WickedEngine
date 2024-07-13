@@ -1,4 +1,5 @@
 #define TRANSPARENT // uses transparent light lists
+#define LIGHTING_SCATTER
 #include "globals.hlsli"
 #include "emittedparticleHF.hlsli"
 #include "ShaderInterop_EmittedParticle.h"
@@ -19,6 +20,9 @@ float4 main(VertextoPixel input) : SV_TARGET
 	{
 		return 0;
 	}
+
+	float2 ScreenCoord = input.pos.xy * GetCamera().internal_resolution_rcp; // use pixel center!
+	uint2 pixel = input.pos.xy; // no longer pixel center!
 	
 	write_mipmap_feedback(EmitterGetGeometry().materialIndex, ddx_coarse(input.tex.xyxy), ddy_coarse(input.tex.xyxy));
 	
@@ -38,8 +42,6 @@ float4 main(VertextoPixel input) : SV_TARGET
 			color = lerp(color, color2, input.frameBlend);
 		}
 	}
-
-	uint2 pixel = input.pos.xy; // no longer pixel center!
 	
 	float4 inputColor;
 	inputColor.r = ((input.color >> 0)  & 0xFF) / 255.0f;
@@ -49,10 +51,29 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 	float opacity = color.a * inputColor.a;
 
+	float3 normal = 0;
+#ifndef EMITTEDPARTICLE_DISTORTION // the "distortion" shader is just using normal map as the color map and uses it for signed blending, this normal logic won't be used for that
+	[branch]
+	if (material.textures[NORMALMAP].IsValid())
+	{
+		normal = material.textures[NORMALMAP].Sample(sampler_linear_clamp, input.tex.xyxy).rgb;
+
+		[branch]
+		if (xEmitterOptions & EMITTER_OPTION_BIT_FRAME_BLENDING_ENABLED)
+		{
+			float3 normal2 = material.textures[NORMALMAP].Sample(sampler_linear_clamp, input.tex.zwzw).rgb;
+			normal = lerp(normal, normal2, input.frameBlend);
+		}
+
+		normal -= 0.5;
+		normal *= material.normalMapStrength;
+		normal *= opacity;
+	}
+#endif // EMITTEDPARTICLE_DISTORTION
+	
 	[branch]
 	if (GetCamera().texture_lineardepth_index >= 0)
 	{
-		float2 ScreenCoord = input.pos.xy * GetCamera().internal_resolution_rcp; // use pixel center!
 		float4 depthScene = texture_lineardepth.GatherRed(sampler_linear_clamp, ScreenCoord) * GetCamera().z_far;
 		float depthFragment = input.pos.w;
 		opacity *= saturate(1.0 / input.size * (max(max(depthScene.x, depthScene.y), max(depthScene.z, depthScene.w)) - depthFragment));
@@ -77,6 +98,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 		N.x = -cos(PI * input.unrotated_uv.x);
 		N.y = cos(PI * input.unrotated_uv.y);
 		N.z = -sin(PI * length(input.unrotated_uv));
+		N.xz += normal.rg;
 		N = mul((float3x3)GetCamera().inverse_view, N);
 		N = normalize(N);
 		
@@ -96,11 +118,13 @@ float4 main(VertextoPixel input) : SV_TARGET
 		surface.pixel = pixel;
 		surface.sss = material.subsurfaceScattering;
 		surface.sss_inv = material.subsurfaceScattering_inv;
+		surface.extinction = 0;
 		surface.update();
 
 		TiledLighting(surface, lighting, GetFlatTileIndex(pixel));
 
 		color.rgb *= lighting.direct.diffuse + lighting.indirect.diffuse;
+		color.rgb += lighting.indirect.specular;
 
 		//color.rgb = float3(unrotated_uv, 0);
 		//color.rgb = float3(input.tex, 0);

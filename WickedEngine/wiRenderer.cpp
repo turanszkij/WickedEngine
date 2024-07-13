@@ -5125,8 +5125,15 @@ void DrawSoftParticles(
 		}
 	}
 
-	if (!distortion && vis.scene->weather.rain_amount > 0)
+	if (distortion && vis.scene->weather.rain_amount > 0)
 	{
+		// Draw with distortion shader override:
+		EmittedParticleSystem::PARTICLESHADERTYPE shader = EmittedParticleSystem::PARTICLESHADERTYPE::SOFT_DISTORTION;
+		vis.scene->rainEmitter.Draw(vis.scene->rainMaterial, cmd, &shader);
+	}
+	else if (!distortion && vis.scene->weather.rain_amount > 0)
+	{
+		// Draw normally
 		vis.scene->rainEmitter.Draw(vis.scene->rainMaterial, cmd);
 	}
 

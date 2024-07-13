@@ -75,7 +75,7 @@ namespace wi
 
 		// Must have a transform and material component, but mesh is optional
 		void UpdateGPU(uint32_t instanceIndex, const wi::scene::MeshComponent* mesh, wi::graphics::CommandList cmd) const;
-		void Draw(const wi::scene::MaterialComponent& material, wi::graphics::CommandList cmd) const;
+		void Draw(const wi::scene::MaterialComponent& material, wi::graphics::CommandList cmd, const PARTICLESHADERTYPE* shadertype_override = nullptr) const;
 
 		void CreateRaytracingRenderData();
 

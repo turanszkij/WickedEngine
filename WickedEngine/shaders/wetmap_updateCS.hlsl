@@ -69,7 +69,7 @@ void main(uint DTid : SV_DispatchThreadID)
 			shadow /= 9.0;
 		}
 		
-		current = lerp(current, smoothstep(0, 1.4, sqrt(shadow)), GetDeltaTime() * 0.5);
+		current = lerp(current, smoothstep(0, 1.4, sqrt(shadow)), saturate(GetDeltaTime() * 0.5));
 	}
 	
 	wetmap[DTid] = current;
