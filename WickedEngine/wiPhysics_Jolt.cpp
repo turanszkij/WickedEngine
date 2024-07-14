@@ -1227,11 +1227,40 @@ namespace wi::physics
 				if (transform == nullptr)
 					return;
 
+				if (currentMotionType == EMotionType::Dynamic)
+				{
+					// Apply effects on dynamics if needed:
+					if (scene.weather.IsOceanEnabled())
+					{
+						const Vec3 com = body_interface.GetCenterOfMassPosition(physicsobject.bodyID);
+						const Vec3 surface_position = cast(scene.GetOceanPosAt(cast(com)));
+
+						if (com.GetY() <= surface_position.GetY())
+						{
+							const Vec3 p2 = cast(scene.GetOceanPosAt(cast(com + Vec3(0, 0, 0.1f))));
+							const Vec3 p3 = cast(scene.GetOceanPosAt(cast(com + Vec3(0.1f, 0, 0))));
+							const Vec3 surface_normal = Vec3(p2 - surface_position).Cross(Vec3(p3 - surface_position)).Normalized();
+
+							body_interface.ApplyBuoyancyImpulse(
+								physicsobject.bodyID,
+								surface_position,
+								surface_normal,
+								4.0f,
+								0.8f,
+								0.6f,
+								Vec3::sZero(),
+								physics_scene.physics_system.GetGravity(),
+								scene.dt
+							);
+						}
+					}
+				}
+
 				if (IsSimulationEnabled())
 				{
+					// Feedback system transform to kinematic and static physics objects:
 					const Vec3 position = cast(transform->GetPosition());
 					const Quat rotation = cast(transform->GetRotation());
-
 					Mat44 m = Mat44::sTranslation(position) * Mat44::sRotation(rotation);
 					m = m * physicsobject.additionalTransform;
 
@@ -1254,7 +1283,7 @@ namespace wi::physics
 						);
 					}
 				}
-				else if (currentMotionType != EMotionType::Dynamic)
+				else
 				{
 					// Simulation is disabled, update physics state immediately:
 					physicsobject.prev_position = cast(transform->GetPosition());
