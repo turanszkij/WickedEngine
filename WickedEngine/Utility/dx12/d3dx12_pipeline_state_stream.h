@@ -11,8 +11,8 @@
 #error D3DX12 requires C++
 #endif
 
-#include "d3d12.h"
 #include "d3dx12_default.h"
+#include "d3d12.h"
 #include "d3dx12_core.h"
 
 //------------------------------------------------------------------------------------------------
@@ -1494,3 +1494,4 @@ inline HRESULT D3DX12ParsePipelineStream(const D3D12_PIPELINE_STATE_STREAM_DESC&
 
     return S_OK;
 }
+
