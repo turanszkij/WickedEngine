@@ -1459,6 +1459,7 @@ namespace wi::physics
 		wi::jobsystem::Wait(broadphase_optimization_ctx);
 		
 		// Perform internal simulation step:
+		bool simulation_happened = false;
 		if (IsSimulationEnabled())
 		{
 			//static TempAllocatorImpl temp_allocator(10 * 1024 * 1024);
@@ -1507,16 +1508,20 @@ namespace wi::physics
 					wi::jobsystem::Wait(ctx);
 				}
 
+				simulation_happened = true;
 				physics_scene.physics_system.Update(TIMESTEP, 1, &temp_allocator, &job_system);
 				physics_scene.accumulator = next_accumulator;
 			}
 			physics_scene.alpha = physics_scene.accumulator / TIMESTEP;
 		}
 
-		broadphase_optimization_ctx.priority = wi::jobsystem::Priority::Streaming;
-		wi::jobsystem::Execute(broadphase_optimization_ctx, [&](wi::jobsystem::JobArgs args) {
-			physics_scene.physics_system.OptimizeBroadPhase();
-		});
+		if (simulation_happened)
+		{
+			broadphase_optimization_ctx.priority = wi::jobsystem::Priority::Streaming;
+			wi::jobsystem::Execute(broadphase_optimization_ctx, [&](wi::jobsystem::JobArgs args) {
+				physics_scene.physics_system.OptimizeBroadPhase();
+			});
+		}
 
 		// Feedback physics objects to system:
 		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), 64, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
@@ -1681,6 +1686,8 @@ namespace wi::physics
 			physics_scene.physics_system.DrawConstraints(&debug_renderer);
 		}
 #endif // JPH_DEBUG_RENDERER
+
+		wi::jobsystem::Wait(ctx);
 
 		wi::profiler::EndRange(range); // Physics
 	}

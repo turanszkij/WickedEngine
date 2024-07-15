@@ -287,7 +287,7 @@ namespace wi::gui
 		void SetSize(const XMFLOAT2& value);
 		XMFLOAT2 GetPos() const;
 		virtual XMFLOAT2 GetSize() const;
-		WIDGETSTATE GetState() const;
+		virtual WIDGETSTATE GetState() const;
 		virtual void SetEnabled(bool val);
 		bool IsEnabled() const;
 		virtual void SetVisible(bool val);
@@ -396,6 +396,7 @@ namespace wi::gui
 		void SetListLength(float size) { list_length = size; }
 		// The scrolling offset that should be applied to the list items
 		float GetOffset() const { return list_offset; }
+		void SetOffset(float value);
 		// This can be called by user for extra scrolling on top of base functionality
 		void Scroll(float amount) { scrollbar_delta -= amount; }
 		// How much the max scrolling will offset the list even further than it would be necessary for fitting
@@ -519,6 +520,7 @@ namespace wi::gui
 		void SetColor(wi::Color color, int id = -1) override;
 		void SetTheme(const Theme& theme, int id = -1) override;
 		const char* GetWidgetTypeName() const override { return "Slider"; }
+		WIDGETSTATE GetState() const override { return std::max(state, valueInputField.GetState()); };
 
 		void OnSlide(std::function<void(EventArgs args)> func);
 
@@ -802,6 +804,8 @@ namespace wi::gui
 		XMFLOAT2 resize_begin = XMFLOAT2(0, 0);
 		float resize_blink_timer = 0;
 
+		void ComputeScrollbarLength();
+
 	public:
 		void Create(const std::string& name);
 
@@ -812,6 +816,8 @@ namespace wi::gui
 
 		void ClearSelection();
 		void Select(int index);
+		void FocusOnItem(int index);
+		void FocusOnItemByUserdata(uint64_t userdata);
 
 		int GetItemCount() const { return (int)items.size(); }
 		const Item& GetItem(int index) const;

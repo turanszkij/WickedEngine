@@ -359,6 +359,7 @@ void LightWindow::Create(EditorComponent* _editor)
 
 void LightWindow::SetEntity(Entity entity)
 {
+	bool changed = this->entity != entity;
 	this->entity = entity;
 
 	const LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
@@ -384,23 +385,26 @@ void LightWindow::SetEntity(Entity entity)
 		volumetricCloudsCheckBox.SetCheck(light->IsVolumetricCloudsEnabled());
 		colorPicker.SetEnabled(true);
 		colorPicker.SetPickColor(wi::Color::fromFloat3(light->color));
-		typeSelectorComboBox.SetSelected((int)light->GetType());
+		typeSelectorComboBox.SetSelectedWithoutCallback((int)light->GetType());
 		shadowResolutionComboBox.SetSelectedByUserdataWithoutCallback(uint64_t(light->forced_shadow_resolution));
 		shadowResolutionComboBox.SetEnabled(true);
-		
-		SetLightType(light->GetType());
 
-		for (size_t i = 0; i < arraysize(lensflare_Button); ++i)
+		if (changed)
 		{
-			if (light->lensFlareRimTextures.size() > i && light->lensFlareRimTextures[i].IsValid() && !light->lensFlareNames[i].empty())
+			SetLightType(light->GetType());
+
+			for (size_t i = 0; i < arraysize(lensflare_Button); ++i)
 			{
-				lensflare_Button[i].SetText(wi::helper::GetFileNameFromPath(light->lensFlareNames[i]));
+				if (light->lensFlareRimTextures.size() > i && light->lensFlareRimTextures[i].IsValid() && !light->lensFlareNames[i].empty())
+				{
+					lensflare_Button[i].SetText(wi::helper::GetFileNameFromPath(light->lensFlareNames[i]));
+				}
+				else
+				{
+					lensflare_Button[i].SetText("");
+				}
+				lensflare_Button[i].SetEnabled(true);
 			}
-			else
-			{
-				lensflare_Button[i].SetText("");
-			}
-			lensflare_Button[i].SetEnabled(true);
 		}
 	}
 }

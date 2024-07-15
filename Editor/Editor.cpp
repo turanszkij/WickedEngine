@@ -1168,7 +1168,7 @@ void EditorComponent::Update(float dt)
 			yDif = 0.1f * yDif * (1.0f / 60.0f);
 			wi::input::SetPointer(originalMouse);
 			wi::input::HidePointer(true);
-	}
+		}
 		else
 		{
 			camControlStart = true;
@@ -1197,9 +1197,9 @@ void EditorComponent::Update(float dt)
 		const XMFLOAT4 rightStick = wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_THUMBSTICK_R, 0);
 		const XMFLOAT4 rightTrigger = wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_R, 0);
 
-		const float jostickrotspeed = 0.05f;
-		xDif += rightStick.x * jostickrotspeed;
-		yDif += rightStick.y * jostickrotspeed;
+		const float joystickrotspeed = 0.05f;
+		xDif += rightStick.x * joystickrotspeed;
+		yDif += rightStick.y * joystickrotspeed;
 
 		xDif *= cameraWnd.rotationspeedSlider.GetValue();
 		yDif *= cameraWnd.rotationspeedSlider.GetValue();
@@ -3833,6 +3833,7 @@ void EditorComponent::AddSelected(const PickResult& picked)
 	if (!removal)
 	{
 		translator.selected.push_back(picked);
+		componentsWnd.entityTree.FocusOnItemByUserdata(picked.entity);
 	}
 }
 bool EditorComponent::IsSelected(Entity entity) const

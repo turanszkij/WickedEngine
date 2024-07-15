@@ -1209,6 +1209,27 @@ namespace wi::gui
 			}
 		}
 	}
+	void ScrollBar::SetOffset(float value)
+	{
+		float scrollbar_begin;
+		float scrollbar_end;
+		float scrollbar_size;
+
+		if (vertical)
+		{
+			scrollbar_begin = translation.y;
+			scrollbar_end = scrollbar_begin + scale.y;
+			scrollbar_size = scrollbar_end - scrollbar_begin;
+		}
+		else
+		{
+			scrollbar_begin = translation.x;
+			scrollbar_end = scrollbar_begin + scale.x;
+			scrollbar_size = scrollbar_end - scrollbar_begin;
+		}
+
+		scrollbar_delta = lerp(0.0f, scrollbar_size - scrollbar_length, value / list_length);
+	}
 
 
 
@@ -1441,6 +1462,7 @@ namespace wi::gui
 			if (state == DEACTIVATING)
 			{
 				state = IDLE;
+				typing_active = false;
 			}
 
 			// hover the button
@@ -1473,7 +1495,6 @@ namespace wi::gui
 						args.iValue = atoi(args.sValue.c_str());
 						args.fValue = (float)atof(args.sValue.c_str());
 						onInputAccepted(args);
-						typing_active = false;
 					}
 
 					Deactivate();
@@ -1513,7 +1534,6 @@ namespace wi::gui
 					// cancel input
 					font_input.text.clear();
 					Deactivate();
-					typing_active = false;
 				}
 				else if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
 				{
@@ -3015,12 +3035,24 @@ namespace wi::gui
 			return;
 		}
 
-		bool focus = false;
+		const Widget* focus = nullptr;
+
+		// Pre-scan widgets to check if any is currently focused:
+		if (IsEnabled())
+		{
+			for (auto& widget : widgets)
+			{
+				if (widget->GetState() > IDLE)
+				{
+					focus = widget;
+				}
+			}
+		}
 
 		Hitbox2D pointerHitbox = GetPointerHitbox();
 
 		// Resizer updates:
-		if (IsEnabled())
+		if (IsEnabled() || !focus)
 		{
 			float vscale = IsCollapsed() ? control_size : scale.y;
 			Hitbox2D lefthitbox;
@@ -3073,49 +3105,49 @@ namespace wi::gui
 				{
 					resize_state = RESIZE_STATE_TOPLEFT;
 					Activate();
-					focus = true;
+					focus = this;
 				}
 				else if (pointerHitbox.intersects(toprighthitbox))
 				{
 					resize_state = RESIZE_STATE_TOPRIGHT;
 					Activate();
-					focus = true;
+					focus = this;
 				}
 				else if (pointerHitbox.intersects(bottomrighthitbox))
 				{
 					resize_state = RESIZE_STATE_BOTTOMRIGHT;
 					Activate();
-					focus = true;
+					focus = this;
 				}
 				else if (pointerHitbox.intersects(bottomlefthitbox))
 				{
 					resize_state = RESIZE_STATE_BOTTOMLEFT;
 					Activate();
-					focus = true;
+					focus = this;
 				}
 				else if (pointerHitbox.intersects(lefthitbox))
 				{
 					resize_state = RESIZE_STATE_LEFT;
 					Activate();
-					focus = true;
+					focus = this;
 				}
 				else if (pointerHitbox.intersects(righthitbox))
 				{
 					resize_state = RESIZE_STATE_RIGHT;
 					Activate();
-					focus = true;
+					focus = this;
 				}
 				else if (pointerHitbox.intersects(tophitbox))
 				{
 					resize_state = RESIZE_STATE_TOP;
 					Activate();
-					focus = true;
+					focus = this;
 				}
 				else if (pointerHitbox.intersects(bottomhitbox))
 				{
 					resize_state = RESIZE_STATE_BOTTOM;
 					Activate();
-					focus = true;
+					focus = this;
 				}
 				resize_begin = pointerHitbox.pos;
 			}
@@ -3362,7 +3394,9 @@ namespace wi::gui
 		for (size_t i = 0; i < widgets.size(); ++i)
 		{
 			Widget* widget = widgets[i]; // re index in loop, because widgets can be realloced while updating!
-			widget->force_disable = force_disable || focus;
+			widget->force_disable = force_disable;
+			if(focus != nullptr && focus != widget)
+				widget->force_disable = true;
 			widget->Update(canvas, dt);
 			widget->force_disable = false;
 
@@ -3374,11 +3408,6 @@ namespace wi::gui
 			else
 			{
 				widget->priority = ~0u;
-			}
-
-			if (widget->GetState() > IDLE)
-			{
-				focus = true;
 			}
 		}
 
@@ -4920,23 +4949,7 @@ namespace wi::gui
 
 		Hitbox2D pointerHitbox = GetPointerHitbox();
 
-		// compute control-list height
-		float scroll_length = 0;
-		{
-			int parent_level = 0;
-			bool parent_open = true;
-			for (const Item& item : items)
-			{
-				if (!parent_open && item.level > parent_level)
-				{
-					continue;
-				}
-				parent_open = item.open;
-				parent_level = item.level;
-				scroll_length += item_height();
-			}
-		}
-		scrollbar.SetListLength(scroll_length);
+		ComputeScrollbarLength();
 
 		const float scrollbar_width = 12;
 		scrollbar.SetSize(XMFLOAT2(scrollbar_width - 1, scale.y - 1 - item_height()));
@@ -5337,6 +5350,78 @@ namespace wi::gui
 		args.sValue = items[index].name;
 		args.userdata = items[index].userdata;
 		onSelect(args);
+	}
+	void TreeList::ComputeScrollbarLength()
+	{
+		float scroll_length = 0;
+		{
+			int parent_level = 0;
+			bool parent_open = true;
+			for (const Item& item : items)
+			{
+				if (!parent_open && item.level > parent_level)
+				{
+					continue;
+				}
+				parent_open = item.open;
+				parent_level = item.level;
+				scroll_length += item_height();
+			}
+		}
+		scrollbar.SetListLength(scroll_length);
+		scrollbar.Update({}, 0);
+	}
+	void TreeList::FocusOnItem(int index)
+	{
+		if (index < 0 || index >= items.size())
+			return;
+
+		// Open parent items of target:
+		int target = index;
+		int target_level = items[target].level;
+		while (target_level > 0)
+		{
+			if (items[target - 1].level == target_level - 1)
+			{
+				items[target - 1].open = true;
+				target_level--;
+			}
+			target--;
+		}
+
+		// Recompute scrollbar after opened tree leading to target item:
+		ComputeScrollbarLength();
+
+		// Count visible items before target:
+		int visible_count = 0;
+		int parent_level = 0;
+		bool parent_open = true;
+		for (int i = 0; i <= index; ++i)
+		{
+			auto& item = items[i];
+			if (!parent_open && item.level > parent_level)
+			{
+				continue;
+			}
+			visible_count++;
+			parent_open = item.open;
+			parent_level = item.level;
+		}
+
+		// Set scrollbar offset:
+		float offset = visible_count * item_height();
+		scrollbar.SetOffset(offset);
+	}
+	void TreeList::FocusOnItemByUserdata(uint64_t userdata)
+	{
+		for (size_t i = 0; i < items.size(); ++i)
+		{
+			if (items[i].userdata == userdata)
+			{
+				FocusOnItem(int(i));
+				break;
+			}
+		}
 	}
 	const TreeList::Item& TreeList::GetItem(int index) const
 	{
