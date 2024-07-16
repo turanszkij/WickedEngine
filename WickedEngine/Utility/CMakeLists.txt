@@ -72,7 +72,6 @@ install(FILES ${HEADER_FILES_spirv}
 
 set(HEADER_FILES_vulkan
 		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vk_layer.h
-		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vk_sdk_platform.h
 		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vulkan_directfb.h
 		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vulkan_ggp.h
 		${CMAKE_CURRENT_SOURCE_DIR}/vulkan/vulkan_ios.h

@@ -11,9 +11,9 @@
 #error D3DX12 requires C++
 #endif
 
+#include "d3dx12_property_format_table.h"
 #include "d3d12.h"
 #include "d3dx12_core.h"
-#include "d3dx12_property_format_table.h"
 //------------------------------------------------------------------------------------------------
 template <typename T, typename U, typename V>
 inline void D3D12DecomposeSubresource( UINT Subresource, UINT MipLevels, UINT ArraySize, _Out_ T& MipSlice, _Out_ U& ArraySlice, _Out_ V& PlaneSlice ) noexcept

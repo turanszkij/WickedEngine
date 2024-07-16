@@ -92,7 +92,7 @@ enum class DXCoreRuntimeFilterFlags : uint32_t
     D3D12 = 0x2
 };
 
-DEFINE_ENUM_FLAG_OPERATORS(DXCoreRuntimeFilterFlags);
+DEFINE_ENUM_FLAG_OPERATORS(DXCoreRuntimeFilterFlags)
 
 enum class DXCoreHardwareTypeFilterFlags : uint32_t
 {
@@ -103,7 +103,7 @@ enum class DXCoreHardwareTypeFilterFlags : uint32_t
     MediaAccelerator = 0x8
 };
 
-DEFINE_ENUM_FLAG_OPERATORS(DXCoreHardwareTypeFilterFlags);
+DEFINE_ENUM_FLAG_OPERATORS(DXCoreHardwareTypeFilterFlags)
 
 struct DXCoreHardwareID
 {
