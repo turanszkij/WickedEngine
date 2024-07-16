@@ -244,11 +244,11 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 				}
 #endif // DISABLE_AREA_LIGHTS
 
-				lighting.indirect.specular = mad(light_color, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);
+				lighting.direct.specular = mad(light_color, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);
 				
 #ifdef LIGHTING_SCATTER
 				const float scattering = ComputeScattering(saturate(dot(L, -surface.V)));
-				lighting.direct.specular += scattering * light_color * (1 - surface.extinction) * (1 - sqr(1 - saturate(1 - surface.N.y)));
+				lighting.indirect.specular += scattering * light_color * (1 - surface.extinction) * (1 - sqr(1 - saturate(1 - surface.N.y)));
 #endif // LIGHTING_SCATTER
 			}
 		}
