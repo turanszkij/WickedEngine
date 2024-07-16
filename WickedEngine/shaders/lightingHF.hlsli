@@ -47,7 +47,7 @@ inline void ApplyLighting(in Surface surface, in Lighting lighting, inout float4
 	color.rgb += surface.emissiveColor;
 }
 
-inline void light_directional(in ShaderEntity light, in Surface surface, inout Lighting lighting, in float shadow_mask = 1)
+inline void light_directional(in ShaderEntity light, in Surface surface, inout Lighting lighting, in min16float shadow_mask = 1)
 {
 	float3 L = light.GetDirection();
 
@@ -57,7 +57,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 	[branch]
 	if (any(surface_to_light.NdotL_sss))
 	{
-		float3 shadow = shadow_mask;
+		min16float3 shadow = shadow_mask;
 
 		[branch]
 		if (light.IsCastingShadow() && surface.IsReceiveShadow())
@@ -77,33 +77,23 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 				for (uint cascade = 0; cascade < light.GetShadowCascadeCount(); ++cascade)
 				{
 					// Project into shadow map space (no need to divide by .w because ortho projection!):
-					float3 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(surface.P, 1)).xyz;
-					float3 shadow_uv = clipspace_to_uv(shadow_pos);
+					const float4x4 cascade_projection = load_entitymatrix(light.GetMatrixIndex() + cascade);
+					const float3 shadow_pos = mul(cascade_projection, float4(surface.P, 1)).xyz;
+					const float3 shadow_uv = clipspace_to_uv(shadow_pos);
 
 					// Determine if pixel is inside current cascade bounds and compute shadow if it is:
 					[branch]
 					if (is_saturated(shadow_uv))
 					{
-						const float3 shadow_main = shadow_2D(light, shadow_pos, shadow_uv.xy, cascade);
-						const float3 cascade_edgefactor = saturate(saturate(abs(shadow_pos)) - 0.8) * 5.0; // fade will be on edge and inwards 20%
-						const float cascade_fade = max(cascade_edgefactor.x, max(cascade_edgefactor.y, cascade_edgefactor.z));
-
+						const float2 cascade_edgefactor = saturate(saturate(abs(shadow_pos.xy)) - 0.8) * 5.0; // fade will be on edge and inwards 10%
+						const float cascade_fade = max(cascade_edgefactor.x, cascade_edgefactor.y);
+						
 						// If we are on cascade edge threshold and not the last cascade, then fallback to a larger cascade:
 						[branch]
-						if (cascade_fade > 0 && cascade < light.GetShadowCascadeCount() - 1)
-						{
-							// Project into next shadow cascade (no need to divide by .w because ortho projection!):
-							cascade += 1;
-							shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(surface.P, 1)).xyz;
-							shadow_uv = clipspace_to_uv(shadow_pos);
-							const float3 shadow_fallback = shadow_2D(light, shadow_pos, shadow_uv.xy, cascade);
-
-							shadow *= lerp(shadow_main, shadow_fallback, cascade_fade);
-						}
-						else
-						{
-							shadow *= shadow_main;
-						}
+						if (cascade_fade > 0 && dither(surface.pixel + GetTemporalAASampleRotation()) < cascade_fade)
+							continue;
+						
+						shadow *= shadow_2D(light, shadow_pos, shadow_uv.xy, cascade);
 						break;
 					}
 				}
@@ -166,7 +156,7 @@ inline float attenuation_pointlight(in float dist, in float dist2, in float rang
 	dist_per_range *= dist_per_range; // pow4
 	return saturate(1 - dist_per_range) / max(0.0001, dist2);
 }
-inline void light_point(in ShaderEntity light, in Surface surface, inout Lighting lighting, in float shadow_mask = 1)
+inline void light_point(in ShaderEntity light, in Surface surface, inout Lighting lighting, in min16float shadow_mask = 1)
 {
 	float3 L = light.position - surface.P;
 
@@ -199,7 +189,7 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 		[branch]
 		if (any(surface_to_light.NdotL_sss))
 		{
-			float3 shadow = shadow_mask;
+			min16float3 shadow = shadow_mask;
 
 			[branch]
 			if (light.IsCastingShadow() && surface.IsReceiveShadow())
@@ -254,11 +244,11 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 				}
 #endif // DISABLE_AREA_LIGHTS
 
-				lighting.indirect.specular = mad(light_color, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);
+				lighting.direct.specular = mad(light_color, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);
 				
 #ifdef LIGHTING_SCATTER
 				const float scattering = ComputeScattering(saturate(dot(L, -surface.V)));
-				lighting.direct.specular += scattering * light_color * (1 - surface.extinction) * (1 - sqr(1 - saturate(1 - surface.N.y)));
+				lighting.indirect.specular += scattering * light_color * (1 - surface.extinction) * (1 - sqr(1 - saturate(1 - surface.N.y)));
 #endif // LIGHTING_SCATTER
 			}
 		}
@@ -273,7 +263,7 @@ inline float attenuation_spotlight(in float dist, in float dist2, in float range
 	attenuation *= angularAttenuation;
 	return attenuation;
 }
-inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting lighting, in float shadow_mask = 1)
+inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting lighting, in min16float shadow_mask = 1)
 {
 	float3 L = light.position - surface.P;
 	const float dist2 = dot(L, L);
@@ -298,7 +288,7 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 			[branch]
 			if (spot_factor > spot_cutoff)
 			{
-				float3 shadow = shadow_mask;
+				min16float3 shadow = shadow_mask;
 
 				[branch]
 				if (light.IsCastingShadow() && surface.IsReceiveShadow())

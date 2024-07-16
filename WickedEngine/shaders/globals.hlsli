@@ -514,10 +514,8 @@ inline float bilinear(float4 gather, float2 pixel_frac)
 	return lerp(top_row, bottom_row, pixel_frac.y);
 }
 
-inline bool is_saturated(float a) { return a == saturate(a); }
-inline bool is_saturated(float2 a) { return all(a == saturate(a)); }
-inline bool is_saturated(float3 a) { return all(a == saturate(a)); }
-inline bool is_saturated(float4 a) { return all(a == saturate(a)); }
+template<typename T>
+inline bool is_saturated(T a) { return all(a == saturate(a)); }
 
 inline uint align(uint value, uint alignment)
 {
@@ -542,6 +540,12 @@ inline float2 uv_to_clipspace(in float2 uv)
 	clipspace.y *= -1;
 	return clipspace;
 }
+inline min16float2 uv_to_clipspace(in min16float2 uv)
+{
+	min16float2 clipspace = uv * 2 - 1;
+	clipspace.y *= -1;
+	return clipspace;
+}
 inline float2 clipspace_to_uv(in float2 clipspace)
 {
 	return clipspace * float2(0.5, -0.5) + 0.5;
@@ -549,6 +553,14 @@ inline float2 clipspace_to_uv(in float2 clipspace)
 inline float3 clipspace_to_uv(in float3 clipspace)
 {
 	return clipspace * float3(0.5, -0.5, 0.5) + 0.5;
+}
+inline min16float2 clipspace_to_uv(in min16float2 clipspace)
+{
+	return clipspace * min16float2(0.5, -0.5) + 0.5;
+}
+inline min16float3 clipspace_to_uv(in min16float3 clipspace)
+{
+	return clipspace * min16float3(0.5, -0.5, 0.5) + 0.5;
 }
 
 template<typename T>
