@@ -137,6 +137,7 @@ namespace wi::shadercompiler
 			//L"-Gec", // Enable backward compatibility mode
 			//L"-Ges", // Enable strict mode
 			//L"-O0", // Optimization Level 0
+			//L"-Wno-conversion"
 		};
 
 		if (has_flag(input.flags, Flags::DISABLE_OPTIMIZATION))
