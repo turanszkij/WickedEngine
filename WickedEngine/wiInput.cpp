@@ -582,6 +582,9 @@ namespace wi::input
 			case KEYBOARD_BUTTON_DIVIDE:
 				keycode = VK_DIVIDE;
 				break;
+			case KEYBOARD_BUTTON_TAB:
+				keycode = VK_TAB;
+				break;
 #endif // _WIN32
 				default: break;
 			}
