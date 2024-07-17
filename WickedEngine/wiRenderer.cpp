@@ -4570,6 +4570,18 @@ void UpdateRenderDataAsync(
 
 	BindCommonResources(cmd);
 
+	// Wetmaps will be initialized:
+	for (uint32_t objectIndex = 0; objectIndex < vis.scene->objects.GetCount(); ++objectIndex)
+	{
+		const ObjectComponent& object = vis.scene->objects[objectIndex];
+		if (!object.wetmap.IsValid() || object.wetmap_cleared)
+			continue;
+		device->ClearUAV(&object.wetmap, 0, cmd);
+		object.wetmap_cleared = true;
+		barrier_stack.push_back(GPUBarrier::Buffer(&object.wetmap, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE));
+	}
+	barrier_stack_flush(cmd);
+
 	// Precompute static volumetric cloud textures:
 	if (!volumetric_clouds_precomputed && vis.scene->weather.IsVolumetricClouds())
 	{
@@ -4766,6 +4778,8 @@ void UpdateOcean(
 	CommandList cmd
 )
 {
+	if (!vis.scene->weather.IsOceanEnabled() || !vis.scene->ocean.IsValid())
+		return;
 	bool occluded = false;
 	if (vis.flags & wi::renderer::Visibility::ALLOW_OCCLUSION_CULLING)
 	{
@@ -16908,7 +16922,6 @@ void Postprocess_Downsample4x(
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
 			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);

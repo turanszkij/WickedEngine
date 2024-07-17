@@ -429,16 +429,27 @@ namespace wi
 
 		wi::renderer::GenerateMipChain(gradientMap, wi::renderer::MIPGENFILTER_LINEAR, cmd);
 
-		// Copy displacement map to readback:
+		// prepare for readback:
 		device->Barrier(GPUBarrier::Image(&displacementMap, displacementMap.desc.layout, ResourceState::COPY_SRC), cmd);
-		device->CopyResource(&displacementMap_readback[displacement_readback_index], &displacementMap, cmd);
-		displacement_readback_valid[displacement_readback_index] = true;
-		displacement_readback_index = (displacement_readback_index + 1) % device->GetBufferCount();
-		device->Barrier(GPUBarrier::Image(&displacementMap, ResourceState::COPY_SRC, displacementMap.desc.layout), cmd);
 
 		device->EventEnd(cmd);
 	}
 
+	void Ocean::CopyDisplacementMapReadback(wi::graphics::CommandList cmd) const
+	{
+		GraphicsDevice* device = wi::graphics::GetDevice();
+		device->EventBegin("Ocean Readback Copy", cmd);
+		device->CopyResource(&displacementMap_readback[displacement_readback_index], &displacementMap, cmd);
+		displacement_readback_valid[displacement_readback_index] = true;
+		displacement_readback_index = (displacement_readback_index + 1) % device->GetBufferCount();
+		device->EventEnd(cmd);
+	}
+
+	void Ocean::PrepareRender(wi::graphics::CommandList cmd) const
+	{
+		GraphicsDevice* device = wi::graphics::GetDevice();
+		device->Barrier(GPUBarrier::Image(&displacementMap, ResourceState::COPY_SRC, displacementMap.desc.layout), cmd);
+	}
 
 	void Ocean::Render(const CameraComponent& camera, CommandList cmd) const
 	{

@@ -3607,11 +3607,15 @@ using namespace vulkan_internal;
 			{
 				x.destroy();
 			}
-			vkDestroySemaphore(device, commandlist->semaphore, nullptr);
 		}
 		for (auto& x : pipelines_global)
 		{
 			vkDestroyPipeline(device, x.second, nullptr);
+		}
+
+		for (auto& x : wait_semaphore_pool)
+		{
+			vkDestroySemaphore(device, x, nullptr);
 		}
 
 		vmaDestroyBuffer(allocationhandler->allocator, nullBuffer, nullBufferAllocation);
@@ -7045,7 +7049,6 @@ using namespace vulkan_internal;
 		commandlist.reset(GetBufferIndex());
 		commandlist.queue = queue;
 		commandlist.id = cmd_current;
-		commandlist.waited_on.store(false);
 
 		if (commandlist.GetCommandBuffer() == VK_NULL_HANDLE)
 		{
@@ -7089,11 +7092,6 @@ using namespace vulkan_internal;
 
 				commandlist.binder_pools[buffer].init(this);
 			}
-
-			VkSemaphoreCreateInfo createInfo = {};
-			createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-			res = vkCreateSemaphore(device, &createInfo, nullptr, &commandlist.semaphore);
-			assert(res == VK_SUCCESS);
 
 			commandlist.binder.init(this);
 		}
@@ -7157,6 +7155,14 @@ using namespace vulkan_internal;
 				assert(res == VK_SUCCESS);
 
 				CommandQueue& queue = queues[commandlist.queue];
+				const bool dependency = !commandlist.signals.empty() || !commandlist.waits.empty() || !commandlist.wait_queues.empty();
+
+				if (dependency)
+				{
+					// If the current commandlist must resolve a dependency, then previous ones will be submitted before doing that:
+					//	This improves GPU utilization because not the whole batch of command lists will need to synchronize, but only the one that handles it
+					queue.submit(this, VK_NULL_HANDLE);
+				}
 
 				VkCommandBufferSubmitInfo& cbSubmitInfo = queue.submit_cmds.emplace_back();
 				cbSubmitInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
@@ -7183,29 +7189,58 @@ using namespace vulkan_internal;
 					signalSemaphore.value = 0; // not a timeline semaphore
 				}
 
-				if (commandlist.waited_on.load() || !commandlist.waits.empty())
+				if (dependency)
 				{
-					for (auto& wait : commandlist.waits)
+					std::scoped_lock lck(wait_locker);
+					for (auto& wait : commandlist.wait_queues)
 					{
-						// Wait for command list dependency:
-						CommandList_Vulkan& waitcommandlist = GetCommandList(wait);
+						CommandQueue& waitqueue = queues[wait.first];
+						VkSemaphore semaphore = wait.second;
+
+						VkSemaphoreSubmitInfo& signalSemaphore = waitqueue.submit_signalSemaphoreInfos.emplace_back();
+						signalSemaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+						signalSemaphore.semaphore = semaphore;
+						signalSemaphore.value = 0; // not a timeline semaphore
+						signalSemaphore.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+						waitqueue.submit(this, VK_NULL_HANDLE);
 
 						VkSemaphoreSubmitInfo& waitSemaphore = queue.submit_waitSemaphoreInfos.emplace_back();
 						waitSemaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-						waitSemaphore.semaphore = waitcommandlist.semaphore;
+						waitSemaphore.semaphore = semaphore;
 						waitSemaphore.value = 0; // not a timeline semaphore
 						waitSemaphore.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-					}
 
-					if (commandlist.waited_on.load())
+						// recycle semaphore
+						wait_semaphore_pool.push_back(semaphore);
+					}
+					commandlist.wait_queues.clear();
+
+					for (auto& wait : commandlist.waits)
+					{
+						// Wait for command list dependency:
+						VkSemaphoreSubmitInfo& waitSemaphore = queue.submit_waitSemaphoreInfos.emplace_back();
+						waitSemaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+						waitSemaphore.semaphore = wait;
+						waitSemaphore.value = 0; // not a timeline semaphore
+						waitSemaphore.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+
+						// semaphore is not recycled here, only the signals recycle themselves vecause wait will use the same
+					}
+					commandlist.waits.clear();
+
+					for (auto& signal : commandlist.signals)
 					{
 						// Signal this command list's completion:
 						VkSemaphoreSubmitInfo& signalSemaphore = queue.submit_signalSemaphoreInfos.emplace_back();
 						signalSemaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-						signalSemaphore.semaphore = commandlist.semaphore;
+						signalSemaphore.semaphore = signal;
 						signalSemaphore.value = 0; // not a timeline semaphore
 						signalSemaphore.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+
+						// recycle semaphore
+						wait_semaphore_pool.push_back(signal);
 					}
+					commandlist.signals.clear();
 
 					queue.submit(this, VK_NULL_HANDLE);
 				}
@@ -7556,8 +7591,35 @@ using namespace vulkan_internal;
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		CommandList_Vulkan& commandlist_wait_for = GetCommandList(wait_for);
 		assert(commandlist_wait_for.id < commandlist.id); // can't wait for future command list!
-		commandlist.waits.push_back(wait_for);
-		commandlist_wait_for.waited_on.store(true);
+		std::scoped_lock lck(wait_locker);
+		if (wait_semaphore_pool.empty())
+		{
+			VkSemaphore& sema = wait_semaphore_pool.emplace_back();
+			VkSemaphoreCreateInfo info = {};
+			info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+			VkResult res = vkCreateSemaphore(device, &info, nullptr, &sema);
+			assert(res == VK_SUCCESS);
+		}
+		VkSemaphore sema = wait_semaphore_pool.back();
+		wait_semaphore_pool.pop_back();
+		commandlist.waits.push_back(sema);
+		commandlist_wait_for.signals.push_back(sema);
+	}
+	void GraphicsDevice_Vulkan::WaitQueue(CommandList cmd, QUEUE_TYPE wait_for)
+	{
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		std::scoped_lock lck(wait_locker);
+		if (wait_semaphore_pool.empty())
+		{
+			VkSemaphore& sema = wait_semaphore_pool.emplace_back();
+			VkSemaphoreCreateInfo info = {};
+			info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+			VkResult res = vkCreateSemaphore(device, &info, nullptr, &sema);
+			assert(res == VK_SUCCESS);
+		}
+		VkSemaphore sema = wait_semaphore_pool.back();
+		wait_semaphore_pool.pop_back();
+		commandlist.wait_queues.push_back(std::make_pair(wait_for, sema));
 	}
 	void GraphicsDevice_Vulkan::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{

@@ -75,7 +75,6 @@ namespace wi::graphics
 		{
 			D3D12_COMMAND_QUEUE_DESC desc = {};
 			Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue;
-			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
 			wi::vector<ID3D12CommandList*> submit_cmds;
 		} queues[QUEUE_COUNT];
 
@@ -124,6 +123,14 @@ namespace wi::graphics
 			void flush(bool graphics, CommandList cmd);
 		};
 
+		struct Dependency
+		{
+			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
+			uint64_t fenceValue = 0;
+		};
+		wi::vector<Dependency> dependency_pool;
+		std::mutex dependency_locker;
+
 		struct CommandList_DX12
 		{
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[BUFFERCOUNT][QUEUE_COUNT];
@@ -133,8 +140,9 @@ namespace wi::graphics
 
 			QUEUE_TYPE queue = {};
 			uint32_t id = 0;
-			wi::vector<CommandList> waits;
-			std::atomic_bool waited_on{ false };
+			wi::vector<std::pair<QUEUE_TYPE, Dependency>> wait_queues;
+			wi::vector<Dependency> waits;
+			wi::vector<Dependency> signals;
 
 			DescriptorBinder binder;
 			GPULinearAllocator frame_allocators[BUFFERCOUNT];
@@ -176,7 +184,9 @@ namespace wi::graphics
 			void reset(uint32_t bufferindex)
 			{
 				buffer_index = bufferindex;
+				wait_queues.clear();
 				waits.clear();
+				signals.clear();
 				binder.reset();
 				frame_allocators[buffer_index].reset();
 				prev_pt = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
@@ -336,6 +346,7 @@ namespace wi::graphics
 		///////////////Thread-sensitive////////////////////////
 
 		void WaitCommandList(CommandList cmd, CommandList wait_for) override;
+		void WaitQueue(CommandList cmd, QUEUE_TYPE wait_for) override;
 		void RenderPassBegin(const SwapChain* swapchain, CommandList cmd) override;
 		void RenderPassBegin(const RenderPassImage* images, uint32_t image_count, CommandList cmd, RenderPassFlags flags = RenderPassFlags::NONE) override;
 		void RenderPassEnd(CommandList cmd) override;

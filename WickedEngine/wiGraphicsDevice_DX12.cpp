@@ -2461,15 +2461,6 @@ using namespace dx12_internal;
 			}
 			hr = queues[QUEUE_GRAPHICS].queue->SetName(L"QUEUE_GRAPHICS");
 			assert(SUCCEEDED(hr));
-			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(queues[QUEUE_GRAPHICS].fence));
-			assert(SUCCEEDED(hr));
-			if (FAILED(hr))
-			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateFence[QUEUE_GRAPHICS] failed! ERROR: 0x" << std::hex << hr;
-				wi::helper::messageBox(ss.str(), "Error!");
-				wi::platform::Exit();
-			}
 		}
 
 		{
@@ -2488,15 +2479,6 @@ using namespace dx12_internal;
 			}
 			hr = queues[QUEUE_COMPUTE].queue->SetName(L"QUEUE_COMPUTE");
 			assert(SUCCEEDED(hr));
-			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(queues[QUEUE_COMPUTE].fence));
-			assert(SUCCEEDED(hr));
-			if (FAILED(hr))
-			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateFence[QUEUE_COMPUTE] failed! ERROR: 0x" << std::hex << hr;
-				wi::helper::messageBox(ss.str(), "Error!");
-				wi::platform::Exit();
-			}
 		}
 
 		{
@@ -2515,15 +2497,6 @@ using namespace dx12_internal;
 			}
 			hr = queues[QUEUE_COPY].queue->SetName(L"QUEUE_COPY");
 			assert(SUCCEEDED(hr));
-			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(queues[QUEUE_COPY].fence));
-			assert(SUCCEEDED(hr));
-			if (FAILED(hr))
-			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateFence[QUEUE_COPY] failed! ERROR: 0x" << std::hex << hr;
-				wi::helper::messageBox(ss.str(), "Error!");
-				wi::platform::Exit();
-			}
 		}
 
 		if (SUCCEEDED(device.As(&video_device)))
@@ -2539,15 +2512,6 @@ using namespace dx12_internal;
 				capabilities |= GraphicsDeviceCapability::VIDEO_DECODE_H264;
 				hr = queues[QUEUE_VIDEO_DECODE].queue->SetName(L"QUEUE_VIDEO_DECODE");
 				assert(SUCCEEDED(hr));
-				hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(queues[QUEUE_VIDEO_DECODE].fence));
-				assert(SUCCEEDED(hr));
-				if (FAILED(hr))
-				{
-					std::stringstream ss("");
-					ss << "ID3D12Device::CreateFence[QUEUE_VIDEO_DECODE] failed! ERROR: 0x" << std::hex << hr;
-					wi::helper::messageBox(ss.str(), "Error!");
-					wi::platform::Exit();
-				}
 			}
 		}
 
@@ -3552,10 +3516,11 @@ using namespace dx12_internal;
 		{
 			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		}
-		if (has_flag(desc->misc_flags, ResourceMiscFlag::VIDEO_DECODE))
+		if (!has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL) && resourcedesc.SampleDesc.Count <= 1)
 		{
-			// Because video queue can only transition from/to VIDEO_ and COMMON states, we will use COMMON internally and rely on implicit transition for DPB textures
-			//	(See how the resource barrier on video queue overrides any user specified state into COMMON)
+			// The copy and video queues have much stricter requirements to supported resource states, but they support
+			//	implicit promotion from COMMON state. Because user is not allowed to set resource to COMMON state, we use this flag
+			//	so textures automatically decay to COMMON state at the queue submit when they are left in a read-only state
 			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
 		}
 
@@ -5261,7 +5226,6 @@ using namespace dx12_internal;
 		commandlist.reset(GetBufferIndex());
 		commandlist.queue = queue;
 		commandlist.id = cmd_current;
-		commandlist.waited_on.store(false);
 
 		if (commandlist.GetCommandList() == nullptr)
 		{
@@ -5382,20 +5346,61 @@ using namespace dx12_internal;
 				assert(SUCCEEDED(hr));
 
 				CommandQueue& queue = queues[commandlist.queue];
+				const bool dependency = !commandlist.signals.empty() || !commandlist.waits.empty() || !commandlist.wait_queues.empty();
+
+				if (dependency && !queue.submit_cmds.empty())
+				{
+					// If the current commandlist must resolve a dependency, then previous ones will be submitted before doing that:
+					//	This improves GPU utilization because not the whole batch of command lists will need to synchronize, but only the one that handles it
+					queue.queue->ExecuteCommandLists(
+						(UINT)queue.submit_cmds.size(),
+						queue.submit_cmds.data()
+					);
+					queue.submit_cmds.clear();
+				}
+
 				queue.submit_cmds.push_back(commandlist.GetCommandList());
 
-				if (commandlist.waited_on.load() || !commandlist.waits.empty())
+				if (dependency)
 				{
-					for (auto& wait : commandlist.waits)
+					std::scoped_lock lck(dependency_locker);
+					for (auto& wait : commandlist.wait_queues)
+					{
+						CommandQueue& waitqueue = queues[wait.first];
+						if (!waitqueue.submit_cmds.empty())
+						{
+							waitqueue.queue->ExecuteCommandLists(
+								(UINT)waitqueue.submit_cmds.size(),
+								waitqueue.submit_cmds.data()
+							);
+							waitqueue.submit_cmds.clear();
+						}
+						hr = waitqueue.queue->Signal(
+							wait.second.fence.Get(),
+							wait.second.fenceValue
+						);
+						assert(SUCCEEDED(hr));
+
+						hr = queue.queue->Wait(
+							wait.second.fence.Get(),
+							wait.second.fenceValue
+						);
+						assert(SUCCEEDED(hr));
+
+						dependency_pool.push_back(wait.second);
+					}
+					commandlist.wait_queues.clear();
+
+					for(auto& wait : commandlist.waits)
 					{
 						// record wait for signal on a previous submit:
-						const CommandList_DX12& waitcommandlist = GetCommandList(wait);
 						hr = queue.queue->Wait(
-							queues[waitcommandlist.queue].fence.Get(),
-							FRAMECOUNT * commandlists.size() + (uint64_t)waitcommandlist.id
+							wait.fence.Get(),
+							wait.fenceValue
 						);
 						assert(SUCCEEDED(hr));
 					}
+					commandlist.waits.clear();
 
 					if (!queue.submit_cmds.empty())
 					{
@@ -5406,14 +5411,18 @@ using namespace dx12_internal;
 						queue.submit_cmds.clear();
 					}
 
-					if (commandlist.waited_on.load())
+					for(auto& signal : commandlist.signals)
 					{
 						hr = queue.queue->Signal(
-							queue.fence.Get(),
-							FRAMECOUNT * commandlists.size() + (uint64_t)commandlist.id
+							signal.fence.Get(),
+							signal.fenceValue
 						);
 						assert(SUCCEEDED(hr));
+
+						// recycle dependency tracker:
+						dependency_pool.push_back(signal);
 					}
+					commandlist.signals.clear();
 				}
 
 				for (auto& x : commandlist.pipelines_worker)
@@ -5947,8 +5956,33 @@ using namespace dx12_internal;
 		CommandList_DX12& commandlist = GetCommandList(cmd);
 		CommandList_DX12& commandlist_wait_for = GetCommandList(wait_for);
 		assert(commandlist_wait_for.id < commandlist.id); // can't wait for future command list!
-		commandlist.waits.push_back(wait_for);
-		commandlist_wait_for.waited_on.store(true);
+		std::scoped_lock lck(dependency_locker);
+		if (dependency_pool.empty())
+		{
+			Dependency& dependency = dependency_pool.emplace_back();
+			HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(dependency.fence));
+			assert(SUCCEEDED(hr));
+		}
+		Dependency dependency = std::move(dependency_pool.back());
+		dependency_pool.pop_back();
+		dependency.fenceValue++;
+		commandlist.waits.push_back(dependency);
+		commandlist_wait_for.signals.push_back(dependency);
+	}
+	void GraphicsDevice_DX12::WaitQueue(CommandList cmd, QUEUE_TYPE wait_for)
+	{
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		std::scoped_lock lck(dependency_locker);
+		if (dependency_pool.empty())
+		{
+			Dependency& dependency = dependency_pool.emplace_back();
+			HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(dependency.fence));
+			assert(SUCCEEDED(hr));
+		}
+		Dependency dependency = std::move(dependency_pool.back());
+		dependency_pool.pop_back();
+		dependency.fenceValue++;
+		commandlist.wait_queues.push_back(std::make_pair(wait_for, dependency));
 	}
 	void GraphicsDevice_DX12::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{

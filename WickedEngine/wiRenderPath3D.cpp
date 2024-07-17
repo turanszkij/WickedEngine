@@ -800,6 +800,7 @@ namespace wi
 		if (scene->terrains.GetCount() > 0)
 		{
 			cmd_copypages = device->BeginCommandList(QUEUE_COPY);
+			device->WaitQueue(cmd_copypages, QUEUE_GRAPHICS); // sync to prev frame graphics
 			wi::jobsystem::Execute(ctx, [this, cmd_copypages](wi::jobsystem::JobArgs args) {
 				for (size_t i = 0; i < scene->terrains.GetCount(); ++i)
 				{
@@ -810,6 +811,7 @@ namespace wi
 
 		// Preparing the frame:
 		CommandList cmd = device->BeginCommandList();
+		device->WaitQueue(cmd, QUEUE_COMPUTE); // sync to prev frame compute
 		CommandList cmd_prepareframe = cmd;
 		wi::renderer::ProcessDeferredTextureRequests(cmd); // Execute it first thing in the frame here, on main thread, to not allow other thread steal it and execute on different command list!
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
@@ -1111,6 +1113,19 @@ namespace wi
 
 		});
 
+		CommandList cmd_ocean;
+		if (scene->weather.IsOceanEnabled() && scene->ocean.IsValid())
+		{
+			// Ocean simulation can be updated async to opaque passes:
+			cmd_ocean = device->BeginCommandList(QUEUE_COMPUTE);
+			wi::renderer::UpdateOcean(visibility_main, cmd_ocean);
+
+			// Copying to readback is done on copy queue to use DMA instead of compute warps:
+			CommandList cmd_oceancopy = device->BeginCommandList(QUEUE_COPY);
+			device->WaitCommandList(cmd_oceancopy, cmd_ocean);
+			scene->ocean.CopyDisplacementMapReadback(cmd_oceancopy);
+		}
+
 		// Shadow maps:
 		if (getShadowsEnabled())
 		{
@@ -1329,14 +1344,6 @@ namespace wi
 				wi::profiler::EndRange(range); // Planar Reflections
 				device->EventEnd(cmd);
 			});
-		}
-
-		if (scene->weather.IsOceanEnabled())
-		{
-			// Ocean simulation can be updated async to opaque passes:
-			CommandList cmd_ocean = device->BeginCommandList(QUEUE_COMPUTE);
-			device->WaitCommandList(cmd_ocean, cmd);
-			wi::renderer::UpdateOcean(visibility_main, cmd_ocean);
 		}
 
 		// Main camera opaque color pass:
@@ -1593,6 +1600,10 @@ namespace wi
 
 		// Transparents, post processes, etc:
 		cmd = device->BeginCommandList();
+		if (cmd_ocean.IsValid())
+		{
+			device->WaitCommandList(cmd, cmd_ocean);
+		}
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 
 			GraphicsDevice* device = wi::graphics::GetDevice();
@@ -1613,8 +1624,6 @@ namespace wi
 
 			RenderTransparents(cmd);
 
-			RenderPostprocessChain(cmd);
-
 			// Depth buffers expect a non-pixel shader resource state as they are generated on compute queue:
 			{
 				GPUBarrier barriers[] = {
@@ -1624,19 +1633,25 @@ namespace wi
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
-
-			wi::renderer::TextureStreamingReadbackCopy(*scene, cmd);
 		});
 
 		if (scene->IsWetmapProcessingRequired())
 		{
-			CommandList cmd_wetmaps = device->BeginCommandList(QUEUE_COMPUTE);
-			device->WaitCommandList(cmd_wetmaps, cmd); // wait for transparents, it will be scheduled with late frame (GUI, etc)
+			CommandList wetmap_cmd = device->BeginCommandList(QUEUE_COMPUTE);
+			device->WaitCommandList(wetmap_cmd, cmd); // wait for transparents, it will be scheduled with late frame (GUI, etc)
 			// Note: GPU processing of this compute task can overlap with beginning of the next frame because no one is waiting for it
-			wi::jobsystem::Execute(ctx, [this, cmd_wetmaps](wi::jobsystem::JobArgs args) {
-				wi::renderer::RefreshWetmaps(*scene, cmd_wetmaps);
+			wi::jobsystem::Execute(ctx, [this, wetmap_cmd](wi::jobsystem::JobArgs args) {
+				wi::renderer::RefreshWetmaps(*scene, wetmap_cmd);
 			});
 		}
+
+		cmd = device->BeginCommandList();
+		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
+
+			wi::renderer::TextureStreamingReadbackCopy(*scene, cmd);
+
+			RenderPostprocessChain(cmd);
+		});
 
 		RenderPath2D::Render();
 
@@ -1962,6 +1977,11 @@ namespace wi
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
+		if (scene->weather.IsOceanEnabled() && scene->ocean.IsValid())
+		{
+			scene->ocean.PrepareRender(cmd);
+		}
+
 		RenderPassImage rp[] = {
 			RenderPassImage::RenderTarget(&rtMain_render, RenderPassImage::LoadOp::LOAD),
 			RenderPassImage::DepthStencil(
@@ -2130,6 +2150,9 @@ namespace wi
 	void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		wi::renderer::BindCommonResources(cmd);
+		wi::renderer::BindCameraCB(*camera, camera_previous, camera_reflection, cmd);
 
 		const Texture* rt_first = nullptr; // not ping-ponged with read / write
 		const Texture* rt_read = &rtMain;

@@ -193,17 +193,20 @@ namespace wi::graphics
 			void reset();
 		};
 
+		wi::vector<VkSemaphore> wait_semaphore_pool; // Note: Vulkan is not capable of waiting multiple queues on one semaphore
+		std::mutex wait_locker;
+
 		struct CommandList_Vulkan
 		{
-			VkSemaphore semaphore = VK_NULL_HANDLE;
 			VkCommandPool commandPools[BUFFERCOUNT][QUEUE_COUNT] = {};
 			VkCommandBuffer commandBuffers[BUFFERCOUNT][QUEUE_COUNT] = {};
 			uint32_t buffer_index = 0;
 
 			QUEUE_TYPE queue = {};
 			uint32_t id = 0;
-			wi::vector<CommandList> waits;
-			std::atomic_bool waited_on{ false };
+			wi::vector<std::pair<QUEUE_TYPE, VkSemaphore>> wait_queues;
+			wi::vector<VkSemaphore> waits;
+			wi::vector<VkSemaphore> signals;
 
 			DescriptorBinder binder;
 			DescriptorBinderPool binder_pools[BUFFERCOUNT];
@@ -229,7 +232,9 @@ namespace wi::graphics
 			void reset(uint32_t bufferindex)
 			{
 				buffer_index = bufferindex;
+				wait_queues.clear();
 				waits.clear();
+				signals.clear();
 				binder_pools[buffer_index].reset();
 				binder.reset();
 				frame_allocators[buffer_index].reset();
@@ -370,6 +375,7 @@ namespace wi::graphics
 		///////////////Thread-sensitive////////////////////////
 
 		void WaitCommandList(CommandList cmd, CommandList wait_for) override;
+		void WaitQueue(CommandList cmd, QUEUE_TYPE wait_for) override;
 		void RenderPassBegin(const SwapChain* swapchain, CommandList cmd) override;
 		void RenderPassBegin(const RenderPassImage* images, uint32_t image_count, CommandList cmd, RenderPassFlags flags = RenderPassFlags::NONE) override;
 		void RenderPassEnd(CommandList cmd) override;

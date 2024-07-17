@@ -850,6 +850,7 @@ namespace wi::scene
 		wi::graphics::GPUBuffer vb_ao;
 		int vb_ao_srv = -1;
 		wi::graphics::GPUBuffer wetmap;
+		mutable bool wetmap_cleared = false;
 
 		XMFLOAT3 center = XMFLOAT3(0, 0, 0);
 		float radius = 0;

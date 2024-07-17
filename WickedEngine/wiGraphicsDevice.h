@@ -179,6 +179,7 @@ namespace wi::graphics
 		//	- These are not thread safe, only a single thread should use a single CommandList at one time
 
 		virtual void WaitCommandList(CommandList cmd, CommandList wait_for) = 0;
+		virtual void WaitQueue(CommandList cmd, QUEUE_TYPE wait_for) = 0;
 		virtual void RenderPassBegin(const SwapChain* swapchain, CommandList cmd) = 0;
 		virtual void RenderPassBegin(const RenderPassImage* images, uint32_t image_count, CommandList cmd, RenderPassFlags flags = RenderPassFlags::NONE) = 0;
 		virtual void RenderPassEnd(CommandList cmd) = 0;
