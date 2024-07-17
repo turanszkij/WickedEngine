@@ -1,5 +1,3 @@
-
-
 set (SOURCE_FILES
 	stdafx.cpp
 	Tests.cpp
@@ -16,7 +14,7 @@ if (WIN32)
 
 	add_executable(Tests WIN32 ${SOURCE_FILES})
 
-	target_link_libraries(Tests PUBLIC 
+	target_link_libraries(Tests PUBLIC
 		WickedEngine_Windows
 	)
 
@@ -28,7 +26,7 @@ else()
 
 	add_executable(Tests ${SOURCE_FILES})
 
-	target_link_libraries(Tests PUBLIC 
+	target_link_libraries(Tests PUBLIC
 		WickedEngine
 	)
 
@@ -38,7 +36,6 @@ endif ()
 if (MSVC)
 	set_property(TARGET Tests PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 endif ()
-
 
 # Copy content to build folder:
 add_custom_command(

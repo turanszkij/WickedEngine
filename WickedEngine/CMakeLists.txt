@@ -1,5 +1,6 @@
-set(MIN_OpenImageDenoise_VERSION "2.0")
+cmake_minimum_required(VERSION 3.12)
 
+set(MIN_OpenImageDenoise_VERSION "2.0")
 
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
@@ -55,189 +56,16 @@ add_compile_definitions(JPH_DEBUG_RENDERER=1)
 set(PHYSICS_REPO_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 include(${PHYSICS_REPO_ROOT}/Jolt/Jolt.cmake)
 
-set(HEADER_FILES
-		WickedEngine.h
-		CommonInclude.h
-		logo.h
-		sdl2.h
-		wiApplication.h
-		wiApplication_BindLua.h
-		wiArchive.h
-		wiArguments.h
-		wiAudio.h
-		wiAudio_BindLua.h
-		wiBacklog.h
-		wiBacklog_BindLua.h
-		wiCanvas.h
-		wiColor.h
-		wiECS.h
-		wiEmittedParticle.h
-		wiEnums.h
-		wiEventHandler.h
-		wiFadeManager.h
-		wiFFTGenerator.h
-		wiFont.h
-		wiGPUBVH.h
-		wiGPUSortLib.h
-		wiGraphics.h
-		wiGraphicsDevice.h
-		wiGraphicsDevice_DX12.h
-		wiGraphicsDevice_Vulkan.h
-		wiGUI.h
-		wiHairParticle.h
-		wiHelper.h
-		wiImage.h
-		wiImageParams_BindLua.h
-		wiInitializer.h
-		wiInput.h
-		wiInput_BindLua.h
-		wiJobSystem.h
-		wiLoadingScreen.h
-		wiLoadingScreen_BindLua.h
-		wiLua.h
-		wiLua_Globals.h
-		wiLuna.h
-		wiMath.h
-		wiMath_BindLua.h
-		wiNetwork.h
-		wiNetwork_BindLua.h
-		wiNoise.h
-		wiOcean.h
-		wiPhysics.h
-		wiPhysics_BindLua.h
-		wiPlatform.h
-		wiPrimitive.h
-		wiPrimitive_BindLua.h
-		wiProfiler.h
-		wiRandom.h
-		wiRawInput.h
-		wiRectPacker.h
-		wiRenderer.h
-		wiRenderer_BindLua.h
-		wiRenderPath.h
-		wiRenderPath2D.h
-		wiRenderPath2D_BindLua.h
-		wiRenderPath3D.h
-		wiRenderPath3D_BindLua.h
-		wiRenderPath3D_PathTracing.h
-		wiRenderPath_BindLua.h
-		wiResourceManager.h
-		wiScene.h
-		wiScene_BindLua.h
-		wiScene_Decl.h
-		wiScene_Components.h
-		wiSDLInput.h
-		wiShaderCompiler.h
-		wiSheenLUT.h
-		wiSpinLock.h
-		wiSprite.h
-		wiSprite_BindLua.h
-		wiSpriteAnim_BindLua.h
-		wiSpriteFont.h
-		wiSpriteFont_BindLua.h
-		wiTexture_BindLua.h
-		wiTextureHelper.h
-		wiTimer.h
-		wiUnorderedMap.h
-		wiUnorderedSet.h
-		wiVector.h
-		wiVersion.h
-		wiXInput.h
-		wiConfig.h
-		wiTerrain.h
-		wiAllocator.h
-		wiBVH.h
-		wiLocalization.h
-		wiVideo.h
-		wiVoxelGrid.h
-		wiPathQuery.h
- 		wiVoxelGrid_BindLua.h
-  		wiPathQuery_BindLua.h
-		wiTrailRenderer.h
-		wiTrailRenderer_BindLua.h
-		wiAsync_BindLua.h
-		)
+file(GLOB HEADER_FILES CONFIGURE_DEPENDS *.h)
+
+file(GLOB SOURCE_FILES CONFIGURE_DEPENDS *.cpp)
+list(REMOVE_ITEM SOURCE_FILES offlineshadercompiler.cpp)
 
 add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
-	wiLoadingScreen.cpp
-	wiLoadingScreen_BindLua.cpp
-	wiApplication.cpp
-	wiApplication_BindLua.cpp
-	wiRenderPath_BindLua.cpp
-	wiRenderPath2D.cpp
-	wiRenderPath2D_BindLua.cpp
-	wiRenderPath3D.cpp
-	wiRenderPath3D_BindLua.cpp
-	wiRenderPath3D_PathTracing.cpp
-	wiSpriteAnim_BindLua.cpp
-	wiTexture_BindLua.cpp
-	wiMath_BindLua.cpp
-	wiArchive.cpp
-	wiAudio.cpp
-	wiAudio_BindLua.cpp
-	wiBacklog.cpp
-	wiBacklog_BindLua.cpp
-	wiEmittedParticle.cpp
-	wiEventHandler.cpp
-	wiFadeManager.cpp
-	wiFFTGenerator.cpp
-	wiFont.cpp
-	wiGPUBVH.cpp
-	wiGPUSortLib.cpp
-	wiGraphicsDevice_DX12.cpp
-	wiGraphicsDevice_Vulkan.cpp
-	wiGUI.cpp
-	wiHairParticle.cpp
-	wiHelper.cpp
-	wiImage.cpp
-	wiImageParams_BindLua.cpp
-	wiInitializer.cpp
-	wiInput.cpp
-	wiInput_BindLua.cpp
-	wiPrimitive.cpp
-	wiPrimitive_BindLua.cpp
-	wiJobSystem.cpp
-	wiLua.cpp
-	wiMath.cpp
-	wiNetwork_BindLua.cpp
-	wiNetwork_Linux.cpp
-	wiNetwork_Windows.cpp
-	wiOcean.cpp
-	wiPhysics_Jolt.cpp
-	wiPhysics_BindLua.cpp
-	wiProfiler.cpp
-	wiRandom.cpp
-	wiRawInput.cpp
-	wiRenderer.cpp
-	wiRenderer_BindLua.cpp
-	wiResourceManager.cpp
-	wiScene.cpp
-	wiScene_Components.cpp
-	wiScene_BindLua.cpp
-	wiScene_Serializers.cpp
-	wiSDLInput.cpp
-	wiSprite.cpp
-	wiSprite_BindLua.cpp
-	wiSpriteFont.cpp
-	wiSpriteFont_BindLua.cpp
-	wiArguments.cpp
-	wiTextureHelper.cpp
-	wiVersion.cpp
-	wiXInput.cpp
-	wiShaderCompiler.cpp
-	wiConfig.cpp
-	wiTerrain.cpp
-	wiLocalization.cpp
-	wiVideo.cpp
-	wiVoxelGrid.cpp
-	wiPathQuery.cpp
- 	wiVoxelGrid_BindLua.cpp
-  	wiPathQuery_BindLua.cpp
-	wiTrailRenderer.cpp
-	wiTrailRenderer_BindLua.cpp
-	wiAsync_BindLua.cpp
+	${SOURCE_FILES}
 	${HEADER_FILES}
 )
+
 add_library(WickedEngine ALIAS ${TARGET_NAME})
 set_target_properties(${TARGET_NAME} PROPERTIES PUBLIC_HEADER "${HEADER_FILES}")
 
