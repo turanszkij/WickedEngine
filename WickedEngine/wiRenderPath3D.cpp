@@ -811,7 +811,7 @@ namespace wi
 
 		// Preparing the frame:
 		CommandList cmd = device->BeginCommandList();
-		device->WaitQueue(cmd, QUEUE_COMPUTE); // sync to prev frame compute
+		device->WaitQueue(cmd, QUEUE_COMPUTE); // sync to prev frame compute (disallow prev frame overlapping a compute task into updating global scene resources for this frame)
 		CommandList cmd_prepareframe = cmd;
 		wi::renderer::ProcessDeferredTextureRequests(cmd); // Execute it first thing in the frame here, on main thread, to not allow other thread steal it and execute on different command list!
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
@@ -839,7 +839,7 @@ namespace wi
 
 		});
 
-		//	async compute parallel with depth prepass
+		// async compute parallel with depth prepass
 		cmd = device->BeginCommandList(QUEUE_COMPUTE);
 		CommandList cmd_prepareframe_async = cmd;
 		device->WaitCommandList(cmd, cmd_prepareframe);
@@ -1132,7 +1132,7 @@ namespace wi
 			cmd = device->BeginCommandList();
 			wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 				wi::renderer::DrawShadowmaps(visibility_main, cmd);
-				});
+			});
 		}
 
 		if (wi::renderer::GetVXGIEnabled() && getSceneUpdateEnabled())
@@ -1641,7 +1641,7 @@ namespace wi
 			device->WaitCommandList(wetmap_cmd, cmd); // wait for transparents, it will be scheduled with late frame (GUI, etc)
 			// Note: GPU processing of this compute task can overlap with beginning of the next frame because no one is waiting for it
 			wi::jobsystem::Execute(ctx, [this, wetmap_cmd](wi::jobsystem::JobArgs args) {
-				wi::renderer::RefreshWetmaps(*scene, wetmap_cmd);
+				wi::renderer::RefreshWetmaps(visibility_main, wetmap_cmd);
 			});
 		}
 
@@ -2015,6 +2015,7 @@ namespace wi
 		);
 
 		// Note: volumetrics and light shafts are blended before transparent scene, because they used depth of the opaques
+		//	But the ocean is special, because it does have depth for them implicitly computed from ocean plane
 
 		if (getVolumeLightsEnabled() && visibility_main.IsRequestedVolumetricLights())
 		{

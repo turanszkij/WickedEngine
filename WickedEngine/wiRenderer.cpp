@@ -9920,9 +9920,9 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 	}
 }
 
-void RefreshWetmaps(const Scene& scene, CommandList cmd)
+void RefreshWetmaps(const Visibility& vis, CommandList cmd)
 {
-	if (!scene.IsWetmapProcessingRequired())
+	if (!vis.scene->IsWetmapProcessingRequired())
 		return;
 
 	device->EventBegin("RefreshWetmaps", cmd);
@@ -9930,43 +9930,44 @@ void RefreshWetmaps(const Scene& scene, CommandList cmd)
 	BindCommonResources(cmd);
 	device->BindComputeShader(&shaders[CSTYPE_WETMAP_UPDATE], cmd);
 
-	for (uint32_t objectIndex = 0; objectIndex < scene.objects.GetCount(); ++objectIndex)
+	WetmapPush push = {};
+	push.rain_amount = vis.scene->weather.rain_amount;
+
+	// Note: every object wetmap is updated, not just visible
+	for (uint32_t objectIndex = 0; objectIndex < vis.scene->objects.GetCount(); ++objectIndex)
 	{
-		const ObjectComponent& object = scene.objects[objectIndex];
+		const ObjectComponent& object = vis.scene->objects[objectIndex];
 		if (!object.wetmap.IsValid())
 			continue;
 
 		uint32_t vertexCount = uint32_t(object.wetmap.desc.size / GetFormatStride(object.wetmap.desc.format));
 
-		WetmapPush push = {};
 		push.wetmap = device->GetDescriptorIndex(&object.wetmap, SubresourceType::UAV);
 
 		if (push.wetmap < 0)
 			continue;
 
 		push.instanceID = objectIndex;
-		push.rain_amount = scene.weather.rain_amount;
 		device->PushConstants(&push, sizeof(push), cmd);
 
 		device->Dispatch((vertexCount + 63u) / 64u, 1, 1, cmd);
 	}
 
-	for (uint32_t hairIndex = 0; hairIndex < scene.hairs.GetCount(); ++hairIndex)
+	// Note: only visible hair particles will be updated, becasue invisible ones will not have valid vertices
+	for (uint32_t hairIndex : vis.visibleHairs)
 	{
-		const wi::HairParticleSystem& hair = scene.hairs[hairIndex];
+		const wi::HairParticleSystem& hair = vis.scene->hairs[hairIndex];
 		if (!hair.wetmap.IsValid())
 			continue;
 
 		uint32_t vertexCount = uint32_t(hair.wetmap.size / sizeof(uint16_t));
 
-		WetmapPush push = {};
 		push.wetmap = hair.wetmap.descriptor_uav;
 
 		if (push.wetmap < 0)
 			continue;
 
-		push.instanceID = uint32_t(scene.objects.GetCount() + hairIndex);
-		push.rain_amount = scene.weather.rain_amount;
+		push.instanceID = uint32_t(vis.scene->objects.GetCount() + hairIndex);
 		device->PushConstants(&push, sizeof(push), cmd);
 
 		device->Dispatch((vertexCount + 63u) / 64u, 1, 1, cmd);

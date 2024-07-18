@@ -120,6 +120,8 @@ namespace wi::graphics
 			bool sparse_binding_supported = false;
 			std::shared_ptr<std::mutex> locker;
 
+			void signal(VkSemaphore semaphore);
+			void wait(VkSemaphore semaphore);
 			void submit(GraphicsDevice_Vulkan* device, VkFence fence);
 
 		} queues[QUEUE_COUNT];
@@ -193,8 +195,28 @@ namespace wi::graphics
 			void reset();
 		};
 
-		wi::vector<VkSemaphore> wait_semaphore_pool; // Note: Vulkan is not capable of waiting multiple queues on one semaphore
-		std::mutex wait_locker;
+		wi::vector<VkSemaphore> semaphore_pool;
+		std::mutex semaphore_pool_locker;
+		VkSemaphore new_semaphore()
+		{
+			std::scoped_lock lck(semaphore_pool_locker);
+			if (semaphore_pool.empty())
+			{
+				VkSemaphore& sema = semaphore_pool.emplace_back();
+				VkSemaphoreCreateInfo info = {};
+				info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+				VkResult res = vkCreateSemaphore(device, &info, nullptr, &sema);
+				assert(res == VK_SUCCESS);
+			}
+			VkSemaphore semaphore = semaphore_pool.back();
+			semaphore_pool.pop_back();
+			return semaphore;
+		}
+		void free_semaphore(VkSemaphore semaphore)
+		{
+			std::scoped_lock lck(semaphore_pool_locker);
+			semaphore_pool.push_back(semaphore);
+		}
 
 		struct CommandList_Vulkan
 		{

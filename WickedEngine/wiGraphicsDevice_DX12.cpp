@@ -1610,7 +1610,38 @@ namespace dx12_internal
 }
 using namespace dx12_internal;
 
-	
+#ifdef PLATFORM_XBOX
+std::mutex queue_locker;
+#endif // PLATFORM_XBOX
+
+	void GraphicsDevice_DX12::CommandQueue::signal(const Semaphore& semaphore)
+	{
+		if (queue == nullptr)
+			return;
+		HRESULT hr = queue->Signal(semaphore.fence.Get(), semaphore.fenceValue);
+		assert(SUCCEEDED(hr));
+	}
+	void GraphicsDevice_DX12::CommandQueue::wait(const Semaphore& semaphore)
+	{
+		if (queue == nullptr)
+			return;
+		HRESULT hr = queue->Wait(semaphore.fence.Get(), semaphore.fenceValue);
+		assert(SUCCEEDED(hr));
+	}
+	void GraphicsDevice_DX12::CommandQueue::submit()
+	{
+		if (queue == nullptr)
+			return;
+		if (submit_cmds.empty())
+			return;
+
+		queue->ExecuteCommandLists(
+			(UINT)submit_cmds.size(),
+			submit_cmds.data()
+		);
+
+		submit_cmds.clear();
+	}
 
 	void GraphicsDevice_DX12::CopyAllocator::init(GraphicsDevice_DX12* device)
 	{
@@ -5363,64 +5394,41 @@ using namespace dx12_internal;
 
 				if (dependency)
 				{
-					std::scoped_lock lck(dependency_locker);
 					for (auto& wait : commandlist.wait_queues)
 					{
 						CommandQueue& waitqueue = queues[wait.first];
-						if (!waitqueue.submit_cmds.empty())
-						{
-							waitqueue.queue->ExecuteCommandLists(
-								(UINT)waitqueue.submit_cmds.size(),
-								waitqueue.submit_cmds.data()
-							);
-							waitqueue.submit_cmds.clear();
-						}
-						hr = waitqueue.queue->Signal(
-							wait.second.fence.Get(),
-							wait.second.fenceValue
-						);
-						assert(SUCCEEDED(hr));
+						const Semaphore& semaphore = wait.second;
 
-						hr = queue.queue->Wait(
-							wait.second.fence.Get(),
-							wait.second.fenceValue
-						);
-						assert(SUCCEEDED(hr));
+						// The WaitQueue operation will submit and signal the specified dependency queue:
+						waitqueue.submit();
+						waitqueue.signal(semaphore); // signals immediately after submit
 
-						dependency_pool.push_back(wait.second);
+						// The current queue will be waiting for the dependency queue to complete:
+						queue.wait(semaphore);
+
+						// recycle semaphore:
+						free_semaphore(semaphore);
 					}
 					commandlist.wait_queues.clear();
 
-					for(auto& wait : commandlist.waits)
+					for(auto& semaphore : commandlist.waits)
 					{
-						// record wait for signal on a previous submit:
-						hr = queue.queue->Wait(
-							wait.fence.Get(),
-							wait.fenceValue
-						);
-						assert(SUCCEEDED(hr));
+						// Wait for command list dependency:
+						queue.wait(semaphore);
+
+						// semaphore is not recycled here, only the signals recycle themselves vecause wait will use the same
 					}
 					commandlist.waits.clear();
 
-					if (!queue.submit_cmds.empty())
-					{
-						queue.queue->ExecuteCommandLists(
-							(UINT)queue.submit_cmds.size(),
-							queue.submit_cmds.data()
-						);
-						queue.submit_cmds.clear();
-					}
+					queue.submit();
 
-					for(auto& signal : commandlist.signals)
+					for(auto& semaphore : commandlist.signals)
 					{
-						hr = queue.queue->Signal(
-							signal.fence.Get(),
-							signal.fenceValue
-						);
-						assert(SUCCEEDED(hr));
+						// Signal this command list's completion:
+						queue.signal(semaphore);
 
-						// recycle dependency tracker:
-						dependency_pool.push_back(signal);
+						// recycle semaphore:
+						free_semaphore(semaphore);
 					}
 					commandlist.signals.clear();
 				}
@@ -5448,14 +5456,7 @@ using namespace dx12_internal;
 				if (queue.queue == nullptr)
 					continue;
 
-				if (!queue.submit_cmds.empty())
-				{
-					queue.queue->ExecuteCommandLists(
-						(UINT)queue.submit_cmds.size(),
-						queue.submit_cmds.data()
-					);
-					queue.submit_cmds.clear();
-				}
+				queue.submit();
 
 				hr = queue.queue->Signal(frame_fence[GetBufferIndex()][q].Get(), 1);
 				assert(SUCCEEDED(hr));
@@ -5956,33 +5957,14 @@ using namespace dx12_internal;
 		CommandList_DX12& commandlist = GetCommandList(cmd);
 		CommandList_DX12& commandlist_wait_for = GetCommandList(wait_for);
 		assert(commandlist_wait_for.id < commandlist.id); // can't wait for future command list!
-		std::scoped_lock lck(dependency_locker);
-		if (dependency_pool.empty())
-		{
-			Dependency& dependency = dependency_pool.emplace_back();
-			HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(dependency.fence));
-			assert(SUCCEEDED(hr));
-		}
-		Dependency dependency = std::move(dependency_pool.back());
-		dependency_pool.pop_back();
-		dependency.fenceValue++;
-		commandlist.waits.push_back(dependency);
-		commandlist_wait_for.signals.push_back(dependency);
+		Semaphore semaphore = new_semaphore();
+		commandlist.waits.push_back(semaphore);
+		commandlist_wait_for.signals.push_back(semaphore);
 	}
 	void GraphicsDevice_DX12::WaitQueue(CommandList cmd, QUEUE_TYPE wait_for)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
-		std::scoped_lock lck(dependency_locker);
-		if (dependency_pool.empty())
-		{
-			Dependency& dependency = dependency_pool.emplace_back();
-			HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(dependency.fence));
-			assert(SUCCEEDED(hr));
-		}
-		Dependency dependency = std::move(dependency_pool.back());
-		dependency_pool.pop_back();
-		dependency.fenceValue++;
-		commandlist.wait_queues.push_back(std::make_pair(wait_for, dependency));
+		commandlist.wait_queues.push_back(std::make_pair(wait_for, new_semaphore()));
 	}
 	void GraphicsDevice_DX12::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{
