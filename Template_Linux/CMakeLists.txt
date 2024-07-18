@@ -11,9 +11,9 @@ if (${INSTALLED_ENGINE})
     find_package(WickedEngine REQUIRED)
 endif()
 
-set (SOURCE_FILES
+set(SOURCE_FILES
     main.cpp
-    stdafx.h    
+    stdafx.h
 )
 
 set(LIB_DXCOMPILER "libdxcompiler.so")
