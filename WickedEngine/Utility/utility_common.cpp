@@ -20,6 +20,7 @@
 
 #define MINIMP4_IMPLEMENTATION
 #include "minimp4.h"
+#undef RETURN_ERROR
 
 #define H264_IMPLEMENTATION
 #include "h264.h"
