@@ -1346,6 +1346,51 @@ namespace wi
 			});
 		}
 
+		// Main camera weather compute effects depending on shadow maps, envmaps, etc, but don't depend on async surface pass:
+		if (scene->weather.IsRealisticSky() || scene->weather.IsVolumetricClouds())
+		{
+			cmd = device->BeginCommandList();
+			wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
+
+				wi::renderer::BindCameraCB(
+					*camera,
+					camera_previous,
+					camera_reflection,
+					cmd
+				);
+
+				if (scene->weather.IsRealisticSky())
+				{
+					wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
+
+					if (scene->weather.IsRealisticSkyAerialPerspective())
+					{
+						wi::renderer::ComputeSkyAtmosphereCameraVolumeLut(cmd);
+					}
+				}
+				if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
+				{
+					wi::renderer::Postprocess_AerialPerspective(
+						aerialperspectiveResources,
+						cmd
+					);
+				}
+				if (scene->weather.IsVolumetricClouds())
+				{
+					wi::renderer::Postprocess_VolumetricClouds(
+						volumetriccloudResources,
+						cmd,
+						*camera,
+						camera_previous,
+						camera_reflection,
+						wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
+						scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
+						scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
+					);
+				}
+			});
+		}
+
 		// Main camera opaque color pass:
 		cmd = device->BeginCommandList();
 		device->WaitCommandList(cmd, cmd_maincamera_compute_effects);
@@ -1361,17 +1406,6 @@ namespace wi
 				cmd
 			);
 
-			// This can't run in "main camera compute effects" async compute,
-			//	because it depends on shadow maps, and envmaps
-			if (scene->weather.IsRealisticSky())
-			{
-				wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
-
-				if (scene->weather.IsRealisticSkyAerialPerspective())
-				{
-					wi::renderer::ComputeSkyAtmosphereCameraVolumeLut(cmd);
-				}
-			}
 			if (getRaytracedReflectionEnabled())
 			{
 				wi::renderer::Postprocess_RTReflection(
@@ -1400,26 +1434,6 @@ namespace wi
 					*scene,
 					rtLinearDepth,
 					cmd
-				);
-			}
-			if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
-			{
-				wi::renderer::Postprocess_AerialPerspective(
-					aerialperspectiveResources,
-					cmd
-				);
-			}
-			if (scene->weather.IsVolumetricClouds())
-			{
-				wi::renderer::Postprocess_VolumetricClouds(
-					volumetriccloudResources,
-					cmd,
-					*camera,
-					camera_previous,
-					camera_reflection,
-					wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
-					scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
-					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
 				);
 			}
 
@@ -1645,11 +1659,16 @@ namespace wi
 			});
 		}
 
+		if (scene->textureStreamingFeedbackBuffer.IsValid())
+		{
+			CommandList cmd_texture_streaming = device->BeginCommandList(QUEUE_COPY);
+			device->WaitCommandList(cmd_texture_streaming, cmd); // wait for transparents, it will be scheduled with late frame (GUI, etc)
+			// Note: GPU processing of this copy task can overlap with beginning of the next frame because no one is waiting for it
+			wi::renderer::TextureStreamingReadbackCopy(*scene, cmd_texture_streaming);
+		}
+
 		cmd = device->BeginCommandList();
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
-
-			wi::renderer::TextureStreamingReadbackCopy(*scene, cmd);
-
 			RenderPostprocessChain(cmd);
 		});
 
