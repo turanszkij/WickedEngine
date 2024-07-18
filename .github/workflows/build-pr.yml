@@ -62,14 +62,14 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-        make -j$(nproc)
+        CCACHE_NODIRECT=1 make -j$(nproc)
         echo "---Generating Shader Dump---"
         cd WickedEngine
         ./offlineshadercompiler spirv rebuild shaderdump
         mv wiShaderDump.h ../../WickedEngine/
         cd ..
         echo "---Rebuilding with ShaderDump---"
-        make -B -j $(nproc)
+        CCACHE_NODIRECT=1 make -B -j $(nproc)
 
         
     - name: Move binaries
