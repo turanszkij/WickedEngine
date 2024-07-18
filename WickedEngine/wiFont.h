@@ -68,6 +68,8 @@ namespace wi::font
 			OUTPUT_COLOR_SPACE_HDR10_ST2084 = 1 << 1,
 			OUTPUT_COLOR_SPACE_LINEAR = 1 << 2,
 			DEPTH_TEST = 1 << 3,
+			FLIP_HORIZONTAL = 1 << 4,
+			FLIP_VERTICAL = 1 << 5,
 		};
 		uint32_t _flags = SDF_RENDERING;
 
@@ -75,6 +77,8 @@ namespace wi::font
 		constexpr bool isHDR10OutputMappingEnabled() const { return _flags & OUTPUT_COLOR_SPACE_HDR10_ST2084; }
 		constexpr bool isLinearOutputMappingEnabled() const { return _flags & OUTPUT_COLOR_SPACE_LINEAR; }
 		constexpr bool isDepthTestEnabled() const { return _flags & DEPTH_TEST; }
+		constexpr bool isFlippedHorizontally() const { return _flags & FLIP_HORIZONTAL; }
+		constexpr bool isFlippedVertically() const { return _flags & FLIP_VERTICAL; }
 
 		// enable Signed Distance Field (SDF) font rendering (enabled by default)
 		constexpr void enableSDFRendering() { _flags |= SDF_RENDERING; }
@@ -83,11 +87,15 @@ namespace wi::font
 		// enable linear output mapping, which means removing gamma curve and outputting in linear space (useful for blending in HDR space)
 		constexpr void enableLinearOutputMapping(float scaling = 1.0f) { _flags |= OUTPUT_COLOR_SPACE_LINEAR; hdr_scaling = scaling; }
 		constexpr void enableDepthTest() { _flags |= DEPTH_TEST; }
+		constexpr void enableFlipHorizontally() { _flags |= FLIP_HORIZONTAL; }
+		constexpr void enableFlipVertically() { _flags |= FLIP_VERTICAL; }
 
 		constexpr void disableSDFRendering() { _flags &= ~SDF_RENDERING; }
 		constexpr void disableHDR10OutputMapping() { _flags &= ~OUTPUT_COLOR_SPACE_HDR10_ST2084; }
 		constexpr void disableLinearOutputMapping() { _flags &= ~OUTPUT_COLOR_SPACE_LINEAR; }
 		constexpr void disableDepthTest() { _flags &= ~DEPTH_TEST; }
+		constexpr void disableFlipHorizontally() { _flags &= ~FLIP_HORIZONTAL; }
+		constexpr void disableFlipVertically() { _flags &= ~FLIP_VERTICAL; }
 
 		Params(
 			float posX = 0,

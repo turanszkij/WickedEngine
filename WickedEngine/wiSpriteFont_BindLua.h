@@ -32,6 +32,8 @@ namespace wi::lua
 		int SetShadowOffset(lua_State* L);
 		int SetHorizontalWrapping(lua_State* L);
 		int SetHidden(lua_State* L);
+		int SetFlippedHorizontally(lua_State* L);
+		int SetFlippedVertically(lua_State* L);
 
 		int GetText(lua_State* L);
 		int GetSize(lua_State* L);
@@ -47,6 +49,8 @@ namespace wi::lua
 		int GetShadowOffset(lua_State* L);
 		int GetHorizontalWrapping(lua_State* L);
 		int IsHidden(lua_State* L);
+		int IsFlippedHorizontally(lua_State* L);
+		int IsFlippedVertically(lua_State* L);
 
 		int TextSize(lua_State* L);
 
