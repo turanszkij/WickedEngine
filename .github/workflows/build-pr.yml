@@ -43,18 +43,25 @@ jobs:
   linux:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/cache@v4
+      with:
+        path: ~/.cache/ccache
+        key: ccache-${{ github.run_id }}
+        restore-keys: ccache
+        save-always: true
+
     - uses: actions/checkout@v4
 
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install libsdl2-dev
+        sudo apt install libsdl2-dev ccache
 
     - name: Build
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
         make -j$(nproc)
         echo "---Generating Shader Dump---"
         cd WickedEngine
