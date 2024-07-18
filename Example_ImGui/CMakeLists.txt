@@ -48,7 +48,7 @@ else()
 		WickedEngine
 		Threads::Threads
 	)
-	
+
 	# Copy shaders to build and source folders just to be safe:
 	add_custom_command(
 		TARGET Example_ImGui POST_BUILD
@@ -65,8 +65,9 @@ endif ()
 
 
 # Copy content to build folder:
+add_dependencies(Example_ImGui Content)
+
 add_custom_command(
 	TARGET Example_ImGui POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${WICKED_ROOT_DIR}/WickedEngine/${LIB_DXCOMPILER} ${CMAKE_CURRENT_BINARY_DIR}
-	COMMAND ${CMAKE_COMMAND} -E copy_directory ${WICKED_ROOT_DIR}/Content ${CMAKE_CURRENT_BINARY_DIR}/../Content
 )
