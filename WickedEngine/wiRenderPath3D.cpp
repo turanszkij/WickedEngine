@@ -1123,7 +1123,7 @@ namespace wi
 			// Copying to readback is done on copy queue to use DMA instead of compute warps:
 			CommandList cmd_oceancopy = device->BeginCommandList(QUEUE_COPY);
 			device->WaitCommandList(cmd_oceancopy, cmd_ocean);
-			scene->ocean.CopyDisplacementMapReadback(cmd_oceancopy);
+			wi::renderer::ReadbackOcean(visibility_main, cmd_ocean);
 		}
 
 		// Shadow maps:
@@ -1977,10 +1977,7 @@ namespace wi
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		if (scene->weather.IsOceanEnabled() && scene->ocean.IsValid())
-		{
-			scene->ocean.PrepareRender(cmd);
-		}
+		wi::renderer::OceanPrepareRender(visibility_main, cmd);
 
 		RenderPassImage rp[] = {
 			RenderPassImage::RenderTarget(&rtMain_render, RenderPassImage::LoadOp::LOAD),

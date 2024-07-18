@@ -4793,6 +4793,40 @@ void UpdateOcean(
 		wi::profiler::EndRange(range);
 	}
 }
+void ReadbackOcean(
+	const Visibility& vis,
+	CommandList cmd
+)
+{
+	if (!vis.scene->weather.IsOceanEnabled() || !vis.scene->ocean.IsValid())
+		return;
+	bool occluded = false;
+	if (vis.flags & wi::renderer::Visibility::ALLOW_OCCLUSION_CULLING)
+	{
+		occluded = vis.scene->ocean.IsOccluded();
+	}
+	if (!occluded)
+	{
+		vis.scene->ocean.CopyDisplacementMapReadback(cmd);
+	}
+}
+void OceanPrepareRender(
+	const Visibility& vis,
+	CommandList cmd
+)
+{
+	if (!vis.scene->weather.IsOceanEnabled() || !vis.scene->ocean.IsValid())
+		return;
+	bool occluded = false;
+	if (vis.flags & wi::renderer::Visibility::ALLOW_OCCLUSION_CULLING)
+	{
+		occluded = vis.scene->ocean.IsOccluded();
+	}
+	if (!occluded)
+	{
+		vis.scene->ocean.PrepareRender(cmd);
+	}
+}
 
 void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 {
