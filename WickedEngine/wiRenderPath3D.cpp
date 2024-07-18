@@ -1123,7 +1123,7 @@ namespace wi
 			// Copying to readback is done on copy queue to use DMA instead of compute warps:
 			CommandList cmd_oceancopy = device->BeginCommandList(QUEUE_COPY);
 			device->WaitCommandList(cmd_oceancopy, cmd_ocean);
-			wi::renderer::ReadbackOcean(visibility_main, cmd_ocean);
+			wi::renderer::ReadbackOcean(visibility_main, cmd_oceancopy);
 		}
 
 		// Shadow maps:
