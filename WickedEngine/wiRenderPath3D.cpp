@@ -1977,8 +1977,6 @@ namespace wi
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		wi::renderer::OceanPrepareRender(visibility_main, cmd);
-
 		RenderPassImage rp[] = {
 			RenderPassImage::RenderTarget(&rtMain_render, RenderPassImage::LoadOp::LOAD),
 			RenderPassImage::DepthStencil(

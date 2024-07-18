@@ -348,16 +348,20 @@ namespace vulkan_internal
 		case ResourceState::UNORDERED_ACCESS:
 			return VK_IMAGE_LAYOUT_GENERAL;
 		case ResourceState::COPY_SRC:
-			return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 		case ResourceState::COPY_DST:
-			return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			// we can't assume transfer layout because it's allowed for resource to be used by multiple queues like DX12 (decay to common state), so this is a workaround
+			//	the problem is that image copy commands will require specifying the current layout, but different queues can often use textures in different layouts
+			return VK_IMAGE_LAYOUT_GENERAL;
 		case ResourceState::SHADING_RATE_SOURCE:
 			return VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
 		case ResourceState::VIDEO_DECODE_SRC:
 		case ResourceState::VIDEO_DECODE_DST:
 			return VK_IMAGE_LAYOUT_VIDEO_DECODE_DPB_KHR;
 		default:
-			return VK_IMAGE_LAYOUT_UNDEFINED;
+			// combination of state flags will default to general
+			//	whether the combination of states is valid needs to be validated by the user
+			//	combining read-only states should be fine
+			return VK_IMAGE_LAYOUT_GENERAL;
 		}
 	}
 	constexpr VkShaderStageFlags _ConvertStageFlags(ShaderStage value)
@@ -741,6 +745,7 @@ namespace vulkan_internal
 		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VmaAllocation allocation = nullptr;
 		VkImage resource = VK_NULL_HANDLE;
+		VkImageLayout defaultLayout = VK_IMAGE_LAYOUT_GENERAL;
 		VkBuffer staging_resource = VK_NULL_HANDLE;
 		struct TextureSubresource
 		{
@@ -1868,8 +1873,7 @@ using namespace vulkan_internal;
 							auto texture_internal = to_internal((const Texture*)&resource);
 							auto& subresource_descriptor = subresource >= 0 ? texture_internal->subresources_srv[subresource] : texture_internal->srv;
 							imageInfos.back().imageView = subresource_descriptor.image_view;
-
-							imageInfos.back().imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+							imageInfos.back().imageLayout = texture_internal->defaultLayout;
 						}
 					}
 					break;
@@ -4080,6 +4084,7 @@ using namespace vulkan_internal;
 	{
 		auto internal_state = std::make_shared<Texture_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
+		internal_state->defaultLayout = _ConvertImageLayout(desc->layout);
 		texture->internal_state = internal_state;
 		texture->type = GPUResource::Type::TEXTURE;
 		texture->mapped_data = nullptr;
@@ -8481,7 +8486,7 @@ using namespace vulkan_internal;
 						commandlist.GetCommandBuffer(),
 						internal_state_src->staging_resource,
 						internal_state_dst->resource,
-						VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+						_ConvertImageLayout(ResourceState::COPY_DST),
 						1,
 						&copy
 					);
@@ -8519,7 +8524,7 @@ using namespace vulkan_internal;
 						vkCmdCopyImageToBuffer(
 							commandlist.GetCommandBuffer(),
 							internal_state_src->resource,
-							VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+							_ConvertImageLayout(ResourceState::COPY_SRC),
 							internal_state_dst->staging_resource,
 							1,
 							&copy
@@ -8582,8 +8587,8 @@ using namespace vulkan_internal;
 				copy.dstSubresource.mipLevel = 0;
 
 				vkCmdCopyImage(commandlist.GetCommandBuffer(),
-					internal_state_src->resource, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-					internal_state_dst->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					internal_state_src->resource, _ConvertImageLayout(ResourceState::COPY_SRC),
+					internal_state_dst->resource, _ConvertImageLayout(ResourceState::COPY_DST),
 					1, &copy
 				);
 			}
@@ -8679,9 +8684,9 @@ using namespace vulkan_internal;
 		vkCmdCopyImage(
 			commandlist.GetCommandBuffer(),
 			src_internal->resource,
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			_ConvertImageLayout(ResourceState::COPY_SRC),
 			dst_internal->resource,
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			_ConvertImageLayout(ResourceState::COPY_DST),
 			1,
 			&copy
 		);

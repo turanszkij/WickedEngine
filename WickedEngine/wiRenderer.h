@@ -210,11 +210,6 @@ namespace wi::renderer
 		const Visibility& vis,
 		wi::graphics::CommandList cmd
 	);
-	// Prepares rendering of ocean, must be on graphics queue
-	void OceanPrepareRender(
-		const Visibility& vis,
-		wi::graphics::CommandList cmd
-	);
 
 	void UpdateRaytracingAccelerationStructures(const wi::scene::Scene& scene, wi::graphics::CommandList cmd);
 
