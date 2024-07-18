@@ -216,10 +216,22 @@ namespace wi::font
 					vertexList[vertexID + 2].pos = float2(left, bottom);
 					vertexList[vertexID + 3].pos = float2(right, bottom);
 
-					vertexList[vertexID + 0].uv = float2(glyph.tc_left, glyph.tc_top);
-					vertexList[vertexID + 1].uv = float2(glyph.tc_right, glyph.tc_top);
-					vertexList[vertexID + 2].uv = float2(glyph.tc_left, glyph.tc_bottom);
-					vertexList[vertexID + 3].uv = float2(glyph.tc_right, glyph.tc_bottom);
+					float tc_left = glyph.tc_left;
+					float tc_right = glyph.tc_right;
+					float tc_top = glyph.tc_top;
+					float tc_bottom = glyph.tc_bottom;
+					if (params.isFlippedHorizontally())
+					{
+						std::swap(tc_left, tc_right);
+					}
+					if (params.isFlippedVertically())
+					{
+						std::swap(tc_top, tc_bottom);
+					}
+					vertexList[vertexID + 0].uv = float2(tc_left, tc_top);
+					vertexList[vertexID + 1].uv = float2(tc_right, tc_top);
+					vertexList[vertexID + 2].uv = float2(tc_left, tc_bottom);
+					vertexList[vertexID + 3].uv = float2(tc_right, tc_bottom);
 
 					int advance, lsb;
 					stbtt_GetCodepointHMetrics(&glyph.fontStyle->fontInfo, code, &advance, &lsb);

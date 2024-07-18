@@ -401,6 +401,8 @@ Gives you the ability to render text with a custom font.
 - SetShadowOffset(Vector value)
 - SetHorizontalWrapping(float value)
 - SetHidden(bool value)
+- SetFlippedHorizontally(bool value) -- enable flipping the letters horizontally
+- SetFlippedVertically(bool value) -- enable flipping the letters vertically
 - GetText() : string result
 - GetSize() : int result
 - GetPos() : Vector result
@@ -415,6 +417,8 @@ Gives you the ability to render text with a custom font.
 - GetShadowOffset() : Vector result
 - GetHorizontalWrapping() : float result
 - IsHidden() : bool result
+- IsFlippedHorizontally() : bool
+- IsFlippedVertically() : bool
 - TextSize() : Vector result -- returns text width and height in a Vector's X and Y components
 - SetTypewriterTime(float value) -- time to fully type the text in seconds (0: disable)
 - SetTypewriterLooped(bool value)) -- if true, typing starts over when finished

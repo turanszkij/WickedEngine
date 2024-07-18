@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.12)
 
 set(WICKED_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -47,6 +47,7 @@ endif()
 
 
 add_subdirectory(WickedEngine)
+add_subdirectory(Content)
 
 if (WICKED_EDITOR)
     add_subdirectory(Editor)
