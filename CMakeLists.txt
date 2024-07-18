@@ -47,6 +47,7 @@ endif()
 
 
 add_subdirectory(WickedEngine)
+add_subdirectory(Content)
 
 if (WICKED_EDITOR)
     add_subdirectory(Editor)
