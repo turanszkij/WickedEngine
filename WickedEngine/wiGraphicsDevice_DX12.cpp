@@ -5379,15 +5379,11 @@ std::mutex queue_locker;
 				CommandQueue& queue = queues[commandlist.queue];
 				const bool dependency = !commandlist.signals.empty() || !commandlist.waits.empty() || !commandlist.wait_queues.empty();
 
-				if (dependency && !queue.submit_cmds.empty())
+				if (dependency)
 				{
 					// If the current commandlist must resolve a dependency, then previous ones will be submitted before doing that:
 					//	This improves GPU utilization because not the whole batch of command lists will need to synchronize, but only the one that handles it
-					queue.queue->ExecuteCommandLists(
-						(UINT)queue.submit_cmds.size(),
-						queue.submit_cmds.data()
-					);
-					queue.submit_cmds.clear();
+					queue.submit();
 				}
 
 				queue.submit_cmds.push_back(commandlist.GetCommandList());
