@@ -1036,6 +1036,7 @@ namespace wi::scene
 
 		surfelgi = {};
 		ddgi = {};
+		ocean = {};
 
 		aabb_objects.clear();
 		aabb_lights.clear();
@@ -4757,6 +4758,10 @@ namespace wi::scene
 			if (weather.IsOceanEnabled() && !ocean.IsValid())
 			{
 				OceanRegenerate();
+			}
+			if (!weather.IsOceanEnabled())
+			{
+				ocean = {};
 			}
 
 			// Ocean occlusion status:

@@ -6224,7 +6224,7 @@ void DrawScene(
 
 	BindCommonResources(cmd);
 
-	if (ocean && !skip_planar_reflection_objects && vis.scene->weather.IsOceanEnabled())
+	if (ocean && !skip_planar_reflection_objects && vis.scene->weather.IsOceanEnabled() && vis.scene->ocean.IsValid())
 	{
 		if (!occlusion || !vis.scene->ocean.IsOccluded())
 		{
