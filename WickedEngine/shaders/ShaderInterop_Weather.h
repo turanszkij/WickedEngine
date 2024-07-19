@@ -147,36 +147,34 @@ struct VolumetricCloudLayer
 	float windUpAmount;
 	float coverageWindSpeed;
 
-	float coverageWindAngle;
 	float3 padding2;
+	float coverageWindAngle;
 };
 
 struct VolumetricCloudParameters
 {
 	float beerPowder;
 	float beerPowderPower;
-	float2 padding0;
-
 	float ambientGroundMultiplier; // [0; 1] Amount of ambient light to reach the bottom of clouds
 	float phaseG; // [-0.999; 0.999]
+
 	float phaseG2; // [-0.999; 0.999]
 	float phaseBlend; // [0; 1]
-
 	float multiScatteringScattering;
 	float multiScatteringExtinction;
+
 	float multiScatteringEccentricity;
 	float shadowStepLength;
-
 	float horizonBlendAmount;
 	float horizonBlendPower;
+
 	float cloudStartHeight;
 	float cloudThickness;
+	float animationMultiplier;
+	float padding0;
 
 	VolumetricCloudLayer layerFirst;
 	VolumetricCloudLayer layerSecond;
-
-	float animationMultiplier;
-	float3 padding1;
 
 	// Performance
 	int maxStepCount; // Maximum number of iterations. Higher gives better images but may be slow.
@@ -191,7 +189,8 @@ struct VolumetricCloudParameters
 
 	float shadowSampleCount;
 	float groundContributionSampleCount;
-	float2 padding2;
+	float padding1;
+	float padding2;
 
 	void init()
 	{
