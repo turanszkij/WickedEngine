@@ -51,24 +51,17 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - uses: actions/cache@v4
-      with:
-        path: ~/.cache/ccache
-        key: ccache-${{ github.run_id }}
-        restore-keys: ccache
-        save-always: true
-
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install libsdl2-dev ccache
+        sudo apt install libsdl2-dev
 
     - name: Initial compile
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-        CCACHE_NODIRECT=1 make -j$(nproc)
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+        make -j$(nproc)
       
     - name: Generate shader dump
       run: |
@@ -79,7 +72,7 @@ jobs:
     - name: Recompile with shader dump
       run: |
         cd build
-        CCACHE_NODIRECT=1 make -B -j $(nproc)
+        make -B -j $(nproc)
         
     - name: Move files
       run: |
