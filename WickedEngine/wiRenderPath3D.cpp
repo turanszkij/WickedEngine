@@ -800,6 +800,7 @@ namespace wi
 		if (scene->terrains.GetCount() > 0)
 		{
 			cmd_copypages = device->BeginCommandList(QUEUE_COPY);
+			device->WaitQueue(cmd_copypages, QUEUE_GRAPHICS); // sync to prev frame graphics
 			wi::jobsystem::Execute(ctx, [this, cmd_copypages](wi::jobsystem::JobArgs args) {
 				for (size_t i = 0; i < scene->terrains.GetCount(); ++i)
 				{
@@ -810,6 +811,7 @@ namespace wi
 
 		// Preparing the frame:
 		CommandList cmd = device->BeginCommandList();
+		device->WaitQueue(cmd, QUEUE_COMPUTE); // sync to prev frame compute (disallow prev frame overlapping a compute task into updating global scene resources for this frame)
 		CommandList cmd_prepareframe = cmd;
 		wi::renderer::ProcessDeferredTextureRequests(cmd); // Execute it first thing in the frame here, on main thread, to not allow other thread steal it and execute on different command list!
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
@@ -837,7 +839,7 @@ namespace wi
 
 		});
 
-		//	async compute parallel with depth prepass
+		// async compute parallel with depth prepass
 		cmd = device->BeginCommandList(QUEUE_COMPUTE);
 		CommandList cmd_prepareframe_async = cmd;
 		device->WaitCommandList(cmd, cmd_prepareframe);
@@ -1111,13 +1113,26 @@ namespace wi
 
 		});
 
+		CommandList cmd_ocean;
+		if (scene->weather.IsOceanEnabled() && scene->ocean.IsValid())
+		{
+			// Ocean simulation can be updated async to opaque passes:
+			cmd_ocean = device->BeginCommandList(QUEUE_COMPUTE);
+			wi::renderer::UpdateOcean(visibility_main, cmd_ocean);
+
+			// Copying to readback is done on copy queue to use DMA instead of compute warps:
+			CommandList cmd_oceancopy = device->BeginCommandList(QUEUE_COPY);
+			device->WaitCommandList(cmd_oceancopy, cmd_ocean);
+			wi::renderer::ReadbackOcean(visibility_main, cmd_oceancopy);
+		}
+
 		// Shadow maps:
 		if (getShadowsEnabled())
 		{
 			cmd = device->BeginCommandList();
 			wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 				wi::renderer::DrawShadowmaps(visibility_main, cmd);
-				});
+			});
 		}
 
 		if (wi::renderer::GetVXGIEnabled() && getSceneUpdateEnabled())
@@ -1331,12 +1346,49 @@ namespace wi
 			});
 		}
 
-		if (scene->weather.IsOceanEnabled())
+		// Main camera weather compute effects depending on shadow maps, envmaps, etc, but don't depend on async surface pass:
+		if (scene->weather.IsRealisticSky() || scene->weather.IsVolumetricClouds())
 		{
-			// Ocean simulation can be updated async to opaque passes:
-			CommandList cmd_ocean = device->BeginCommandList(QUEUE_COMPUTE);
-			device->WaitCommandList(cmd_ocean, cmd);
-			wi::renderer::UpdateOcean(visibility_main, cmd_ocean);
+			cmd = device->BeginCommandList();
+			wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
+
+				wi::renderer::BindCameraCB(
+					*camera,
+					camera_previous,
+					camera_reflection,
+					cmd
+				);
+
+				if (scene->weather.IsRealisticSky())
+				{
+					wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
+
+					if (scene->weather.IsRealisticSkyAerialPerspective())
+					{
+						wi::renderer::ComputeSkyAtmosphereCameraVolumeLut(cmd);
+					}
+				}
+				if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
+				{
+					wi::renderer::Postprocess_AerialPerspective(
+						aerialperspectiveResources,
+						cmd
+					);
+				}
+				if (scene->weather.IsVolumetricClouds())
+				{
+					wi::renderer::Postprocess_VolumetricClouds(
+						volumetriccloudResources,
+						cmd,
+						*camera,
+						camera_previous,
+						camera_reflection,
+						wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
+						scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
+						scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
+					);
+				}
+			});
 		}
 
 		// Main camera opaque color pass:
@@ -1354,17 +1406,6 @@ namespace wi
 				cmd
 			);
 
-			// This can't run in "main camera compute effects" async compute,
-			//	because it depends on shadow maps, and envmaps
-			if (scene->weather.IsRealisticSky())
-			{
-				wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
-
-				if (scene->weather.IsRealisticSkyAerialPerspective())
-				{
-					wi::renderer::ComputeSkyAtmosphereCameraVolumeLut(cmd);
-				}
-			}
 			if (getRaytracedReflectionEnabled())
 			{
 				wi::renderer::Postprocess_RTReflection(
@@ -1393,26 +1434,6 @@ namespace wi
 					*scene,
 					rtLinearDepth,
 					cmd
-				);
-			}
-			if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
-			{
-				wi::renderer::Postprocess_AerialPerspective(
-					aerialperspectiveResources,
-					cmd
-				);
-			}
-			if (scene->weather.IsVolumetricClouds())
-			{
-				wi::renderer::Postprocess_VolumetricClouds(
-					volumetriccloudResources,
-					cmd,
-					*camera,
-					camera_previous,
-					camera_reflection,
-					wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
-					scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
-					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
 				);
 			}
 
@@ -1593,6 +1614,10 @@ namespace wi
 
 		// Transparents, post processes, etc:
 		cmd = device->BeginCommandList();
+		if (cmd_ocean.IsValid())
+		{
+			device->WaitCommandList(cmd, cmd_ocean);
+		}
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 
 			GraphicsDevice* device = wi::graphics::GetDevice();
@@ -1613,8 +1638,6 @@ namespace wi
 
 			RenderTransparents(cmd);
 
-			RenderPostprocessChain(cmd);
-
 			// Depth buffers expect a non-pixel shader resource state as they are generated on compute queue:
 			{
 				GPUBarrier barriers[] = {
@@ -1624,19 +1647,23 @@ namespace wi
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
-
-			wi::renderer::TextureStreamingReadbackCopy(*scene, cmd);
 		});
 
 		if (scene->IsWetmapProcessingRequired())
 		{
-			CommandList cmd_wetmaps = device->BeginCommandList(QUEUE_COMPUTE);
-			device->WaitCommandList(cmd_wetmaps, cmd); // wait for transparents, it will be scheduled with late frame (GUI, etc)
+			CommandList wetmap_cmd = device->BeginCommandList(QUEUE_COMPUTE);
+			device->WaitCommandList(wetmap_cmd, cmd); // wait for transparents, it will be scheduled with late frame (GUI, etc)
 			// Note: GPU processing of this compute task can overlap with beginning of the next frame because no one is waiting for it
-			wi::jobsystem::Execute(ctx, [this, cmd_wetmaps](wi::jobsystem::JobArgs args) {
-				wi::renderer::RefreshWetmaps(*scene, cmd_wetmaps);
+			wi::jobsystem::Execute(ctx, [this, wetmap_cmd](wi::jobsystem::JobArgs args) {
+				wi::renderer::RefreshWetmaps(visibility_main, wetmap_cmd);
 			});
 		}
+
+		cmd = device->BeginCommandList();
+		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
+			RenderPostprocessChain(cmd);
+			wi::renderer::TextureStreamingReadbackCopy(*scene, cmd);
+		});
 
 		RenderPath2D::Render();
 
@@ -1995,6 +2022,7 @@ namespace wi
 		);
 
 		// Note: volumetrics and light shafts are blended before transparent scene, because they used depth of the opaques
+		//	But the ocean is special, because it does have depth for them implicitly computed from ocean plane
 
 		if (getVolumeLightsEnabled() && visibility_main.IsRequestedVolumetricLights())
 		{
@@ -2130,6 +2158,9 @@ namespace wi
 	void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		wi::renderer::BindCommonResources(cmd);
+		wi::renderer::BindCameraCB(*camera, camera_previous, camera_reflection, cmd);
 
 		const Texture* rt_first = nullptr; // not ping-ponged with read / write
 		const Texture* rt_read = &rtMain;

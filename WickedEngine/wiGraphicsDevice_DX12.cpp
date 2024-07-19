@@ -1610,7 +1610,38 @@ namespace dx12_internal
 }
 using namespace dx12_internal;
 
-	
+#ifdef PLATFORM_XBOX
+std::mutex queue_locker;
+#endif // PLATFORM_XBOX
+
+	void GraphicsDevice_DX12::CommandQueue::signal(const Semaphore& semaphore)
+	{
+		if (queue == nullptr)
+			return;
+		HRESULT hr = queue->Signal(semaphore.fence.Get(), semaphore.fenceValue);
+		assert(SUCCEEDED(hr));
+	}
+	void GraphicsDevice_DX12::CommandQueue::wait(const Semaphore& semaphore)
+	{
+		if (queue == nullptr)
+			return;
+		HRESULT hr = queue->Wait(semaphore.fence.Get(), semaphore.fenceValue);
+		assert(SUCCEEDED(hr));
+	}
+	void GraphicsDevice_DX12::CommandQueue::submit()
+	{
+		if (queue == nullptr)
+			return;
+		if (submit_cmds.empty())
+			return;
+
+		queue->ExecuteCommandLists(
+			(UINT)submit_cmds.size(),
+			submit_cmds.data()
+		);
+
+		submit_cmds.clear();
+	}
 
 	void GraphicsDevice_DX12::CopyAllocator::init(GraphicsDevice_DX12* device)
 	{
@@ -2461,15 +2492,6 @@ using namespace dx12_internal;
 			}
 			hr = queues[QUEUE_GRAPHICS].queue->SetName(L"QUEUE_GRAPHICS");
 			assert(SUCCEEDED(hr));
-			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(queues[QUEUE_GRAPHICS].fence));
-			assert(SUCCEEDED(hr));
-			if (FAILED(hr))
-			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateFence[QUEUE_GRAPHICS] failed! ERROR: 0x" << std::hex << hr;
-				wi::helper::messageBox(ss.str(), "Error!");
-				wi::platform::Exit();
-			}
 		}
 
 		{
@@ -2488,15 +2510,6 @@ using namespace dx12_internal;
 			}
 			hr = queues[QUEUE_COMPUTE].queue->SetName(L"QUEUE_COMPUTE");
 			assert(SUCCEEDED(hr));
-			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(queues[QUEUE_COMPUTE].fence));
-			assert(SUCCEEDED(hr));
-			if (FAILED(hr))
-			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateFence[QUEUE_COMPUTE] failed! ERROR: 0x" << std::hex << hr;
-				wi::helper::messageBox(ss.str(), "Error!");
-				wi::platform::Exit();
-			}
 		}
 
 		{
@@ -2515,15 +2528,6 @@ using namespace dx12_internal;
 			}
 			hr = queues[QUEUE_COPY].queue->SetName(L"QUEUE_COPY");
 			assert(SUCCEEDED(hr));
-			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(queues[QUEUE_COPY].fence));
-			assert(SUCCEEDED(hr));
-			if (FAILED(hr))
-			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateFence[QUEUE_COPY] failed! ERROR: 0x" << std::hex << hr;
-				wi::helper::messageBox(ss.str(), "Error!");
-				wi::platform::Exit();
-			}
 		}
 
 		if (SUCCEEDED(device.As(&video_device)))
@@ -2539,15 +2543,6 @@ using namespace dx12_internal;
 				capabilities |= GraphicsDeviceCapability::VIDEO_DECODE_H264;
 				hr = queues[QUEUE_VIDEO_DECODE].queue->SetName(L"QUEUE_VIDEO_DECODE");
 				assert(SUCCEEDED(hr));
-				hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(queues[QUEUE_VIDEO_DECODE].fence));
-				assert(SUCCEEDED(hr));
-				if (FAILED(hr))
-				{
-					std::stringstream ss("");
-					ss << "ID3D12Device::CreateFence[QUEUE_VIDEO_DECODE] failed! ERROR: 0x" << std::hex << hr;
-					wi::helper::messageBox(ss.str(), "Error!");
-					wi::platform::Exit();
-				}
 			}
 		}
 
@@ -3552,10 +3547,11 @@ using namespace dx12_internal;
 		{
 			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		}
-		if (has_flag(desc->misc_flags, ResourceMiscFlag::VIDEO_DECODE))
+		if (!has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL) && resourcedesc.SampleDesc.Count <= 1)
 		{
-			// Because video queue can only transition from/to VIDEO_ and COMMON states, we will use COMMON internally and rely on implicit transition for DPB textures
-			//	(See how the resource barrier on video queue overrides any user specified state into COMMON)
+			// The copy and video queues have much stricter requirements to supported resource states, but they support
+			//	implicit promotion from COMMON state. Because user is not allowed to set resource to COMMON state, we use this flag
+			//	so textures automatically decay to COMMON state at the queue submit when they are left in a read-only state
 			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
 		}
 
@@ -5261,7 +5257,6 @@ using namespace dx12_internal;
 		commandlist.reset(GetBufferIndex());
 		commandlist.queue = queue;
 		commandlist.id = cmd_current;
-		commandlist.waited_on.store(false);
 
 		if (commandlist.GetCommandList() == nullptr)
 		{
@@ -5382,38 +5377,56 @@ using namespace dx12_internal;
 				assert(SUCCEEDED(hr));
 
 				CommandQueue& queue = queues[commandlist.queue];
+				const bool dependency = !commandlist.signals.empty() || !commandlist.waits.empty() || !commandlist.wait_queues.empty();
+
+				if (dependency)
+				{
+					// If the current commandlist must resolve a dependency, then previous ones will be submitted before doing that:
+					//	This improves GPU utilization because not the whole batch of command lists will need to synchronize, but only the one that handles it
+					queue.submit();
+				}
+
 				queue.submit_cmds.push_back(commandlist.GetCommandList());
 
-				if (commandlist.waited_on.load() || !commandlist.waits.empty())
+				if (dependency)
 				{
-					for (auto& wait : commandlist.waits)
+					for (auto& wait : commandlist.wait_queues)
 					{
-						// record wait for signal on a previous submit:
-						const CommandList_DX12& waitcommandlist = GetCommandList(wait);
-						hr = queue.queue->Wait(
-							queues[waitcommandlist.queue].fence.Get(),
-							FRAMECOUNT * commandlists.size() + (uint64_t)waitcommandlist.id
-						);
-						assert(SUCCEEDED(hr));
-					}
+						CommandQueue& waitqueue = queues[wait.first];
+						const Semaphore& semaphore = wait.second;
 
-					if (!queue.submit_cmds.empty())
-					{
-						queue.queue->ExecuteCommandLists(
-							(UINT)queue.submit_cmds.size(),
-							queue.submit_cmds.data()
-						);
-						queue.submit_cmds.clear();
-					}
+						// The WaitQueue operation will submit and signal the specified dependency queue:
+						waitqueue.submit();
+						waitqueue.signal(semaphore); // signals immediately after submit
 
-					if (commandlist.waited_on.load())
-					{
-						hr = queue.queue->Signal(
-							queue.fence.Get(),
-							FRAMECOUNT * commandlists.size() + (uint64_t)commandlist.id
-						);
-						assert(SUCCEEDED(hr));
+						// The current queue will be waiting for the dependency queue to complete:
+						queue.wait(semaphore);
+
+						// recycle semaphore:
+						free_semaphore(semaphore);
 					}
+					commandlist.wait_queues.clear();
+
+					for(auto& semaphore : commandlist.waits)
+					{
+						// Wait for command list dependency:
+						queue.wait(semaphore);
+
+						// semaphore is not recycled here, only the signals recycle themselves vecause wait will use the same
+					}
+					commandlist.waits.clear();
+
+					queue.submit();
+
+					for(auto& semaphore : commandlist.signals)
+					{
+						// Signal this command list's completion:
+						queue.signal(semaphore);
+
+						// recycle semaphore:
+						free_semaphore(semaphore);
+					}
+					commandlist.signals.clear();
 				}
 
 				for (auto& x : commandlist.pipelines_worker)
@@ -5439,14 +5452,7 @@ using namespace dx12_internal;
 				if (queue.queue == nullptr)
 					continue;
 
-				if (!queue.submit_cmds.empty())
-				{
-					queue.queue->ExecuteCommandLists(
-						(UINT)queue.submit_cmds.size(),
-						queue.submit_cmds.data()
-					);
-					queue.submit_cmds.clear();
-				}
+				queue.submit();
 
 				hr = queue.queue->Signal(frame_fence[GetBufferIndex()][q].Get(), 1);
 				assert(SUCCEEDED(hr));
@@ -5947,8 +5953,14 @@ using namespace dx12_internal;
 		CommandList_DX12& commandlist = GetCommandList(cmd);
 		CommandList_DX12& commandlist_wait_for = GetCommandList(wait_for);
 		assert(commandlist_wait_for.id < commandlist.id); // can't wait for future command list!
-		commandlist.waits.push_back(wait_for);
-		commandlist_wait_for.waited_on.store(true);
+		Semaphore semaphore = new_semaphore();
+		commandlist.waits.push_back(semaphore);
+		commandlist_wait_for.signals.push_back(semaphore);
+	}
+	void GraphicsDevice_DX12::WaitQueue(CommandList cmd, QUEUE_TYPE wait_for)
+	{
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.wait_queues.push_back(std::make_pair(wait_for, new_semaphore()));
 	}
 	void GraphicsDevice_DX12::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{

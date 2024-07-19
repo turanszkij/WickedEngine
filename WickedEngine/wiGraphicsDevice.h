@@ -131,12 +131,14 @@ namespace wi::graphics
 		// Returns whether the graphics debug layer is enabled. It can be enabled when creating the device.
 		constexpr bool IsDebugDevice() const { return validationMode != ValidationMode::Disabled; }
 
+		// Get GPU-specific metrics:
 		constexpr size_t GetShaderIdentifierSize() const { return SHADER_IDENTIFIER_SIZE; }
 		constexpr size_t GetTopLevelAccelerationStructureInstanceSize() const { return TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE; }
 		constexpr uint32_t GetVariableRateShadingTileSize() const { return VARIABLE_RATE_SHADING_TILE_SIZE; }
 		constexpr uint64_t GetTimestampFrequency() const { return TIMESTAMP_FREQUENCY; }
 		constexpr uint64_t GetVideoDecodeBitstreamAlignment() const { return VIDEO_DECODE_BITSTREAM_ALIGNMENT; }
 
+		// Get information about the graphics device manufacturer:
 		constexpr uint32_t GetVendorId() const { return vendorId; }
 		constexpr uint32_t GetDeviceId() const { return deviceId; }
 		constexpr const std::string& GetAdapterName() const { return adapterName; }
@@ -178,7 +180,13 @@ namespace wi::graphics
 		//	- These commands are not immediately executed, but they begin executing on the GPU after calling SubmitCommandLists()
 		//	- These are not thread safe, only a single thread should use a single CommandList at one time
 
+		// Tell the command list to wait for an other command list which was started before it
+		//	The granularity of this is at least that the beginning of the command list will wait for the end of the other command list
+		//	On some platform like PS5 this can be implemented by waiting exactly at the wait insertion point within the command lists which is more precise
 		virtual void WaitCommandList(CommandList cmd, CommandList wait_for) = 0;
+		// Tell the command list to wait for the specified queue to finish processing
+		//	It is useful when you want to wait for a previous frame, or just don't know which command list to wait for
+		virtual void WaitQueue(CommandList cmd, QUEUE_TYPE wait_for) = 0;
 		virtual void RenderPassBegin(const SwapChain* swapchain, CommandList cmd) = 0;
 		virtual void RenderPassBegin(const RenderPassImage* images, uint32_t image_count, CommandList cmd, RenderPassFlags flags = RenderPassFlags::NONE) = 0;
 		virtual void RenderPassEnd(CommandList cmd) = 0;

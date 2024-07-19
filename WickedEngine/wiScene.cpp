@@ -1036,6 +1036,7 @@ namespace wi::scene
 
 		surfelgi = {};
 		ddgi = {};
+		ocean = {};
 
 		aabb_objects.clear();
 		aabb_lights.clear();
@@ -4053,10 +4054,9 @@ namespace wi::scene
 					desc.size = mesh.vertex_positions.size() * sizeof(uint16_t);
 					desc.format = Format::R16_UNORM;
 					desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-					wi::vector<uint8_t> zeroes(desc.size);
-					std::fill(zeroes.begin(), zeroes.end(), 0);
-					device->CreateBuffer(&desc, zeroes.data(), &object.wetmap);
+					device->CreateBuffer(&desc, nullptr, &object.wetmap);
 					device->SetName(&object.wetmap, "wetmap");
+					object.wetmap_cleared = false;
 				}
 				else if(!object.IsWetmapEnabled() && object.wetmap.IsValid())
 				{
@@ -4758,6 +4758,10 @@ namespace wi::scene
 			if (weather.IsOceanEnabled() && !ocean.IsValid())
 			{
 				OceanRegenerate();
+			}
+			if (!weather.IsOceanEnabled())
+			{
+				ocean = {};
 			}
 
 			// Ocean occlusion status:

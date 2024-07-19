@@ -43,6 +43,8 @@ namespace wi
 		void UpdateDisplacementMap(wi::graphics::CommandList cmd) const;
 		void Render(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd) const;
 
+		void CopyDisplacementMapReadback(wi::graphics::CommandList cmd) const;
+
 		const wi::graphics::Texture* getDisplacementMap() const;
 		const wi::graphics::Texture* getGradientMap() const;
 

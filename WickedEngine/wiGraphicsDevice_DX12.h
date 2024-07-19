@@ -71,17 +71,22 @@ namespace wi::graphics
 		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV = {};
 		D3D12_CPU_DESCRIPTOR_HANDLE nullSAM = {};
 
+		struct Semaphore
+		{
+			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
+			uint64_t fenceValue = 0;
+		};
+
 		struct CommandQueue
 		{
 			D3D12_COMMAND_QUEUE_DESC desc = {};
 			Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue;
-			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
 			wi::vector<ID3D12CommandList*> submit_cmds;
-		} queues[QUEUE_COUNT];
 
-#ifdef PLATFORM_XBOX
-		std::mutex queue_locker;
-#endif // PLATFORM_XBOX
+			void signal(const Semaphore& semaphore);
+			void wait(const Semaphore& semaphore);
+			void submit();
+		} queues[QUEUE_COUNT];
 
 		struct CopyAllocator
 		{
@@ -124,6 +129,28 @@ namespace wi::graphics
 			void flush(bool graphics, CommandList cmd);
 		};
 
+		wi::vector<Semaphore> semaphore_pool;
+		std::mutex semaphore_pool_locker;
+		Semaphore new_semaphore()
+		{
+			std::scoped_lock lck(semaphore_pool_locker);
+			if (semaphore_pool.empty())
+			{
+				Semaphore& dependency = semaphore_pool.emplace_back();
+				HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(dependency.fence));
+				assert(SUCCEEDED(hr));
+			}
+			Semaphore semaphore = std::move(semaphore_pool.back());
+			semaphore_pool.pop_back();
+			semaphore.fenceValue++;
+			return semaphore;
+		}
+		void free_semaphore(const Semaphore& semaphore)
+		{
+			std::scoped_lock lck(semaphore_pool_locker);
+			semaphore_pool.push_back(semaphore);
+		}
+
 		struct CommandList_DX12
 		{
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[BUFFERCOUNT][QUEUE_COUNT];
@@ -133,8 +160,9 @@ namespace wi::graphics
 
 			QUEUE_TYPE queue = {};
 			uint32_t id = 0;
-			wi::vector<CommandList> waits;
-			std::atomic_bool waited_on{ false };
+			wi::vector<std::pair<QUEUE_TYPE, Semaphore>> wait_queues;
+			wi::vector<Semaphore> waits;
+			wi::vector<Semaphore> signals;
 
 			DescriptorBinder binder;
 			GPULinearAllocator frame_allocators[BUFFERCOUNT];
@@ -176,7 +204,9 @@ namespace wi::graphics
 			void reset(uint32_t bufferindex)
 			{
 				buffer_index = bufferindex;
+				wait_queues.clear();
 				waits.clear();
+				signals.clear();
 				binder.reset();
 				frame_allocators[buffer_index].reset();
 				prev_pt = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
@@ -336,6 +366,7 @@ namespace wi::graphics
 		///////////////Thread-sensitive////////////////////////
 
 		void WaitCommandList(CommandList cmd, CommandList wait_for) override;
+		void WaitQueue(CommandList cmd, QUEUE_TYPE wait_for) override;
 		void RenderPassBegin(const SwapChain* swapchain, CommandList cmd) override;
 		void RenderPassBegin(const RenderPassImage* images, uint32_t image_count, CommandList cmd, RenderPassFlags flags = RenderPassFlags::NONE) override;
 		void RenderPassEnd(CommandList cmd) override;

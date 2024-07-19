@@ -205,6 +205,11 @@ namespace wi::renderer
 		const Visibility& vis,
 		wi::graphics::CommandList cmd
 	);
+	// Readback the ocean, can be on async compute or async copy
+	void ReadbackOcean(
+		const Visibility& vis,
+		wi::graphics::CommandList cmd
+	);
 
 	void UpdateRaytracingAccelerationStructures(const wi::scene::Scene& scene, wi::graphics::CommandList cmd);
 
@@ -312,7 +317,7 @@ namespace wi::renderer
 	// Call once per frame to render lightmaps
 	void RefreshLightmaps(const wi::scene::Scene& scene, wi::graphics::CommandList cmd);
 	// Call once per frame to render wetmaps
-	void RefreshWetmaps(const wi::scene::Scene& scene, wi::graphics::CommandList cmd);
+	void RefreshWetmaps(const Visibility& vis, wi::graphics::CommandList cmd);
 	// Run a compute shader that will resolve a MSAA depth buffer to a single-sample texture
 	void ResolveMSAADepthBuffer(const wi::graphics::Texture& dst, const wi::graphics::Texture& src, wi::graphics::CommandList cmd);
 	void DownsampleDepthBuffer(const wi::graphics::Texture& src, wi::graphics::CommandList cmd);
