@@ -10,7 +10,12 @@ option(WICKED_TESTS "Build WickedEngine tests" ON)
 option(WICKED_IMGUI_EXAMPLE "Build WickedEngine imgui example" ON)
 
 include(CMakeDependentOption)
-cmake_dependent_option(WICKED_LINUX_TEMPLATE "Build WickedEngine Linux template" ON "UNIX" OFF)
+
+if(UNIX)
+    cmake_dependent_option(WICKED_LINUX_TEMPLATE "Build WickedEngine Linux template" ON)
+elseif(WIN32)
+    cmake_dependent_option(WICKED_WINDOWS_TEMPLATE "Build WickedEngine Windows template" ON)
+endif()
 
 # Configure CMake global variables
 set(CMAKE_CXX_STANDARD 17)
@@ -64,4 +69,8 @@ endif()
 
 if (WICKED_LINUX_TEMPLATE)
     add_subdirectory(Template_Linux)
+endif()
+
+if (WICKED_WINDOWS_TEMPLATE)
+    add_subdirectory(Template_Windows)
 endif()
