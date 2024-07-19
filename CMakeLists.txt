@@ -12,9 +12,9 @@ option(WICKED_IMGUI_EXAMPLE "Build WickedEngine imgui example" ON)
 include(CMakeDependentOption)
 
 if(UNIX)
-    cmake_dependent_option(WICKED_LINUX_TEMPLATE "Build WickedEngine Linux template" ON)
+    option(WICKED_LINUX_TEMPLATE "Build WickedEngine Linux template" ON)
 elseif(WIN32)
-    cmake_dependent_option(WICKED_WINDOWS_TEMPLATE "Build WickedEngine Windows template" ON)
+    option(WICKED_WINDOWS_TEMPLATE "Build WickedEngine Windows template" ON)
 endif()
 
 # Configure CMake global variables
