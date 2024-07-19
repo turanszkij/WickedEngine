@@ -4764,6 +4764,7 @@ void TextureStreamingReadbackCopy(
 {
 	if (scene.textureStreamingFeedbackBuffer.IsValid())
 	{
+		device->Barrier(GPUBarrier::Buffer(&scene.textureStreamingFeedbackBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC), cmd);
 		device->CopyResource(
 			&scene.textureStreamingFeedbackBuffer_readback[device->GetBufferIndex()],
 			&scene.textureStreamingFeedbackBuffer,

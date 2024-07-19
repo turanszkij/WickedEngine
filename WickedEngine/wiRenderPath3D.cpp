@@ -1659,17 +1659,10 @@ namespace wi
 			});
 		}
 
-		if (scene->textureStreamingFeedbackBuffer.IsValid())
-		{
-			CommandList cmd_texture_streaming = device->BeginCommandList(QUEUE_COPY);
-			device->WaitCommandList(cmd_texture_streaming, cmd); // wait for transparents, it will be scheduled with late frame (GUI, etc)
-			// Note: GPU processing of this copy task can overlap with beginning of the next frame because no one is waiting for it
-			wi::renderer::TextureStreamingReadbackCopy(*scene, cmd_texture_streaming);
-		}
-
 		cmd = device->BeginCommandList();
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 			RenderPostprocessChain(cmd);
+			wi::renderer::TextureStreamingReadbackCopy(*scene, cmd);
 		});
 
 		RenderPath2D::Render();
