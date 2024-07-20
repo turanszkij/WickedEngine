@@ -19,7 +19,7 @@ inline void LightMapping(in int lightmap, in float2 ATLAS, inout Lighting lighti
 		lighting.indirect.diffuse = (half3)texture_lightmap.SampleLevel(sampler_linear_clamp, ATLAS, 0).rgb;
 #endif // LIGHTMAP_QUALITY_BICUBIC
 
-		surface.flags |= SURFACE_FLAG_GI_APPLIED;
+		surface.SetGIApplied(true);
 	}
 }
 
@@ -152,10 +152,10 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 	}
 
 	[branch]
-	if ((surface.flags & SURFACE_FLAG_GI_APPLIED) == 0 && GetScene().ddgi.color_texture >= 0)
+	if (!surface.IsGIApplied() && GetScene().ddgi.color_texture >= 0)
 	{
 		lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
-		surface.flags |= SURFACE_FLAG_GI_APPLIED;
+		surface.SetGIApplied(true);
 	}
 
 }
@@ -440,24 +440,24 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 
 #ifndef TRANSPARENT
 	[branch]
-	if ((surface.flags & SURFACE_FLAG_GI_APPLIED) == 0 && GetCamera().texture_rtdiffuse_index >= 0)
+	if (!surface.IsGIApplied() && GetCamera().texture_rtdiffuse_index >= 0)
 	{
 		lighting.indirect.diffuse = (half3)bindless_textures[GetCamera().texture_rtdiffuse_index][surface.pixel].rgb;
-		surface.flags |= SURFACE_FLAG_GI_APPLIED;
+		surface.SetGIApplied(true);
 	}
 
 	[branch]
-	if ((surface.flags & SURFACE_FLAG_GI_APPLIED) == 0 && GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && GetCamera().texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P)))
+	if (!surface.IsGIApplied() && GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && GetCamera().texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P)))
 	{
 		lighting.indirect.diffuse = (half3)bindless_textures[GetCamera().texture_surfelgi_index][surface.pixel].rgb;
-		surface.flags |= SURFACE_FLAG_GI_APPLIED;
+		surface.SetGIApplied(true);
 	}
 
 	[branch]
-	if ((surface.flags & SURFACE_FLAG_GI_APPLIED) == 0 && GetCamera().texture_vxgi_diffuse_index >= 0)
+	if (!surface.IsGIApplied() && GetCamera().texture_vxgi_diffuse_index >= 0)
 	{
 		lighting.indirect.diffuse = (half3)bindless_textures[GetCamera().texture_vxgi_diffuse_index][surface.pixel].rgb;
-		surface.flags |= SURFACE_FLAG_GI_APPLIED;
+		surface.SetGIApplied(true);
 	}
 	[branch]
 	if (GetCamera().texture_vxgi_specular_index >= 0)
@@ -468,10 +468,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 #endif // TRANSPARENT
 
 	[branch]
-	if ((surface.flags & SURFACE_FLAG_GI_APPLIED) == 0 && GetScene().ddgi.color_texture >= 0)
+	if (!surface.IsGIApplied() && GetScene().ddgi.color_texture >= 0)
 	{
 		lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
-		surface.flags |= SURFACE_FLAG_GI_APPLIED;
+		surface.SetGIApplied(true);
 	}
 
 }

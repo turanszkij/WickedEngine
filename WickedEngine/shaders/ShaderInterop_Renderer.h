@@ -590,8 +590,8 @@ struct alignas(16) ShaderMeshInstance
 	int vb_wetmap;
 	int lightmap;
 
+	float4 quaternion;
 	ShaderTransform transform;
-	ShaderTransform transformInverseTranspose; // This correctly handles non uniform scaling for normals
 	ShaderTransform transformPrev;
 
 	void init()
@@ -613,8 +613,8 @@ struct alignas(16) ShaderMeshInstance
 		vb_ao = -1;
 		vb_wetmap = -1;
 		alphaTest = 0;
+		quaternion = float4(0, 0, 0, 1);
 		transform.init();
-		transformInverseTranspose.init();
 		transformPrev.init();
 	}
 

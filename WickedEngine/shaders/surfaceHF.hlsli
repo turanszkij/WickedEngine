@@ -7,12 +7,12 @@
 //	roughness = 1
 //	metalness = 0
 //	reflectance = 0
-static const float4 surfacemap_simple = float4(1, 1, 0, 0);
+static const half4 surfacemap_simple = half4(1, 1, 0, 0);
 
-float3 F_Schlick(const float3 f0, float VoH)
+half3 F_Schlick(const half3 f0, half VoH)
 {
 	// Schlick 1994, "An Inexpensive BRDF Model for Physically-Based Rendering"
-	float f90 = saturate(50.0 * dot(f0, 0.33)); // reflectance at grazing angle
+	half f90 = saturate(50.0 * dot(f0, 0.33)); // reflectance at grazing angle
 	return f0 + (f90 - f0) * pow5(1.0 - VoH);
 }
 
@@ -62,19 +62,12 @@ struct AnisotropicSurface
 	half BdotV;
 };
 
-enum
-{
-	SURFACE_FLAG_BACKFACE = 1u << 0u,
-	SURFACE_FLAG_RECEIVE_SHADOW = 1u << 1u,
-	SURFACE_FLAG_GI_APPLIED = 1u << 2u,
-};
-
 struct Surface
 {
 	// Fill these yourself:
 	float3 P;				// world space position
 	float3 N;				// world space normal
-	float3 V;				// world space view vector
+	half3 V;				// world space view vector
 
 	half4 baseColor;
 	half3 albedo;			// diffuse light absorbtion value (rgb)
@@ -93,13 +86,17 @@ struct Surface
 	half4 sss_inv;			// 1 / (1 + sss)
 	uint layerMask;			// the engine-side layer mask
 	half3 facenormal;		// surface normal without normal map
-	uint flags;
 	uint uid_validate;
 	float hit_depth;
 	half3 gi;
 	half3 bumpColor;
 	half3 ssgi;
 	half3 extinction;
+
+	// It's good to use bools instead of flags in shaders, because bools of all lanes can be combined into one SGPR
+	bool receiveshadow;
+	bool is_backface;
+	bool gi_applied;
 
 	// These will be computed when calling Update():
 	half NdotV;				// cos(angle between normal and view vector)
@@ -144,11 +141,14 @@ struct Surface
 		sss_inv = 1;
 		layerMask = ~0;
 		facenormal = 0;
-		flags = 0;
 		gi = 0;
 		bumpColor = 0;
 		ssgi = 0;
 		extinction = 0;
+		
+		receiveshadow = true;
+		is_backface = false;
+		gi_applied = false;
 
 		uid_validate = 0;
 		hit_depth = 0;
@@ -179,11 +179,7 @@ struct Surface
 	{
 		sss = material.GetSSS();
 		sss_inv = material.GetSSSInverse();
-
-		if (material.IsReceiveShadow())
-		{
-			flags |= SURFACE_FLAG_RECEIVE_SHADOW;
-		}
+		SetReceiveShadow(material.IsReceiveShadow());
 	}
 
 	inline void create(
@@ -305,7 +301,13 @@ struct Surface
 		}
 	}
 
-	inline bool IsReceiveShadow() { return flags & SURFACE_FLAG_RECEIVE_SHADOW; }
+	inline bool IsReceiveShadow() { return receiveshadow; }
+	inline bool IsBackface() { return is_backface; }
+	inline bool IsGIApplied() { return gi_applied; }
+	
+	inline void SetReceiveShadow(bool value) { receiveshadow = value; }
+	inline void SetBackface(bool value) { is_backface = value; }
+	inline void SetGIApplied(bool value) { gi_applied = value; }
 
 
 	ShaderMeshInstance inst;
@@ -361,7 +363,6 @@ struct Surface
 		const bool is_hairparticle = geometry.flags & SHADERMESH_FLAG_HAIRPARTICLE;
 		const bool is_emittedparticle = geometry.flags & SHADERMESH_FLAG_EMITTEDPARTICLE;
 		const bool simple_lighting = is_hairparticle || is_emittedparticle;
-		const bool is_backface = flags & SURFACE_FLAG_BACKFACE;
 
 		half3 Nunnormalized = 0;
 		
@@ -369,9 +370,9 @@ struct Surface
 		if (geometry.vb_nor >= 0)
 		{
 			Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(geometry.vb_nor)];
-			half3 n0 = mul((half3x3)inst.transformInverseTranspose.GetMatrix(), buf[i0].xyz);
-			half3 n1 = mul((half3x3)inst.transformInverseTranspose.GetMatrix(), buf[i1].xyz);
-			half3 n2 = mul((half3x3)inst.transformInverseTranspose.GetMatrix(), buf[i2].xyz);
+			half3 n0 = mul(buf[i0].xyz, (half4)inst.quaternion);
+			half3 n1 = mul(buf[i1].xyz, (half4)inst.quaternion);
+			half3 n2 = mul(buf[i2].xyz, (half4)inst.quaternion);
 			n0 = any(n0) ? normalize(n0) : 0;
 			n1 = any(n1) ? normalize(n1) : 0;
 			n2 = any(n2) ? normalize(n2) : 0;
@@ -445,9 +446,9 @@ struct Surface
 			half4 t0 = buf[i0];
 			half4 t1 = buf[i1];
 			half4 t2 = buf[i2];
-			t0.xyz = mul((half3x3)inst.transformInverseTranspose.GetMatrix(), t0.xyz);
-			t1.xyz = mul((half3x3)inst.transformInverseTranspose.GetMatrix(), t1.xyz);
-			t2.xyz = mul((half3x3)inst.transformInverseTranspose.GetMatrix(), t2.xyz);
+			t0.xyz = mul(t0.xyz, (half4)inst.quaternion);
+			t1.xyz = mul(t1.xyz, (half4)inst.quaternion);
+			t2.xyz = mul(t2.xyz, (half4)inst.quaternion);
 			t0.xyz = any(t0.xyz) ? normalize(t0.xyz) : 0;
 			t1.xyz = any(t1.xyz) ? normalize(t1.xyz) : 0;
 			t2.xyz = any(t2.xyz) ? normalize(t2.xyz) : 0;
@@ -488,7 +489,7 @@ struct Surface
 			if (geometry.vb_tan >= 0 && material.textures[NORMALMAP].IsValid())
 			{
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
-				bumpColor = float3(material.textures[NORMALMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy).rg, 1);
+				bumpColor = half3(material.textures[NORMALMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy).rg, 1);
 #else
 				float lod = 0;
 #ifdef SURFACE_LOAD_MIPCONE
@@ -599,8 +600,7 @@ struct Surface
 
 			Texture2D<float4> tex = bindless_textures[NonUniformResourceIndex(inst.lightmap)];
 			gi = tex.SampleLevel(sampler_linear_clamp, atlas, 0).rgb;
-
-			flags |= SURFACE_FLAG_GI_APPLIED;
+			SetGIApplied(true);
 		}
 
 		half4 surfaceMap = 1;
@@ -1114,14 +1114,9 @@ struct Surface
 		}
 #endif // SURFACE_LOAD_ENABLE_WIND
 
-		bool is_backface;
 		bary = compute_barycentrics(rayOrigin, rayDirection, P0, P1, P2, hit_depth, is_backface);
 		P = rayOrigin + rayDirection * hit_depth;
 		V = -rayDirection;
-		if (is_backface)
-		{
-			flags |= SURFACE_FLAG_BACKFACE;
-		}
 
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
 		bary_quad_x = compute_barycentrics(rayOrigin, QuadReadAcrossX(rayDirection), P0, P1, P2);
@@ -1155,14 +1150,9 @@ struct Surface
 		}
 #endif // SURFACE_LOAD_ENABLE_WIND
 
-		bool is_backface;
 		bary = compute_barycentrics(rayOrigin, rayDirection, P0, P1, P2, hit_depth, is_backface);
 		P = rayOrigin + rayDirection * hit_depth;
 		V = -rayDirection;
-		if (is_backface)
-		{
-			flags |= SURFACE_FLAG_BACKFACE;
-		}
 
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
 		bary_quad_x = compute_barycentrics(rayOrigin, rayDirection_quad_x, P0, P1, P2);

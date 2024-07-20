@@ -88,7 +88,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 	surface.update();
 
-	if ((surface.flags & SURFACE_FLAG_GI_APPLIED) == 0)
+	if (!surface.IsGIApplied())
 	{
 		float3 ambient = GetAmbient(surface.N);
 		surface.gi = lerp(ambient, ambient * surface.sss.rgb, saturate(surface.sss.a));

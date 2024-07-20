@@ -36,7 +36,7 @@ float4 main(PSIn input) : SV_TARGET
 
 	Surface surface;
 	surface.init();
-	surface.flags |= SURFACE_FLAG_RECEIVE_SHADOW;
+	surface.SetReceiveShadow(true);
 	surface.pixel = pixel;
 	float depth = input.pos.z;
 	surface.albedo = color.rgb;

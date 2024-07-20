@@ -1088,11 +1088,11 @@ inline float find_max_depth(in float2 uv, in int radius, in float lod)
 // Caustic pattern from: https://www.shadertoy.com/view/XtKfRG
 inline half caustic_pattern(float2 uv, float time)
 {
-	float3 k = half3(uv, time);
+	float3 k = float3(uv, time);
 	half3x3 m = half3x3(-2, -1, 2, 3, -2, 1, 1, 2, 2);
-	half3 a = mul(k, m) * 0.5;
-	half3 b = mul(a, m) * 0.4;
-	half3 c = mul(b, m) * 0.3;
+	float3 a = mul(k, m) * 0.5;
+	float3 b = mul(a, m) * 0.4;
+	float3 c = mul(b, m) * 0.3;
 	return pow(min(min(length(0.5 - frac(a)), length(0.5 - frac(b))), length(0.5 - frac(c))), 7) * 25.;
 }
 
@@ -1309,20 +1309,20 @@ uint2 remap_lane_8x8(uint lane) {
 }
 
 
-static const float2x2 BayerMatrix2 =
+static const half2x2 BayerMatrix2 =
 {
 	1.0 / 5.0, 3.0 / 5.0,
 	4.0 / 5.0, 2.0 / 5.0
 };
 
-static const float3x3 BayerMatrix3 =
+static const half3x3 BayerMatrix3 =
 {
 	3.0 / 10.0, 7.0 / 10.0, 4.0 / 10.0,
 	6.0 / 10.0, 1.0 / 10.0, 9.0 / 10.0,
 	2.0 / 10.0, 8.0 / 10.0, 5.0 / 10.0
 };
 
-static const float4x4 BayerMatrix4 =
+static const half4x4 BayerMatrix4 =
 {
 	1.0 / 17.0, 9.0 / 17.0, 3.0 / 17.0, 11.0 / 17.0,
 	13.0 / 17.0, 5.0 / 17.0, 15.0 / 17.0, 7.0 / 17.0,
@@ -1330,7 +1330,7 @@ static const float4x4 BayerMatrix4 =
 	16.0 / 17.0, 8.0 / 17.0, 14.0 / 17.0, 6.0 / 17.0
 };
 
-static const float BayerMatrix8[8][8] =
+static const half BayerMatrix8[8][8] =
 {
 	{ 1.0 / 65.0, 49.0 / 65.0, 13.0 / 65.0, 61.0 / 65.0, 4.0 / 65.0, 52.0 / 65.0, 16.0 / 65.0, 64.0 / 65.0 },
 	{ 33.0 / 65.0, 17.0 / 65.0, 45.0 / 65.0, 29.0 / 65.0, 36.0 / 65.0, 20.0 / 65.0, 48.0 / 65.0, 32.0 / 65.0 },
@@ -1343,31 +1343,60 @@ static const float BayerMatrix8[8][8] =
 };
 
 
-inline float ditherMask2(in float2 pixel)
+inline half ditherMask2(in float2 pixel)
 {
 	return BayerMatrix2[pixel.x % 2][pixel.y % 2];
 }
 
-inline float ditherMask3(in float2 pixel)
+inline half ditherMask3(in float2 pixel)
 {
 	return BayerMatrix3[pixel.x % 3][pixel.y % 3];
 }
 
-inline float ditherMask4(in float2 pixel)
+inline half ditherMask4(in float2 pixel)
 {
 	return BayerMatrix4[pixel.x % 4][pixel.y % 4];
 }
 
-inline float ditherMask8(in float2 pixel)
+inline half ditherMask8(in float2 pixel)
 {
 	return BayerMatrix8[pixel.x % 8][pixel.y % 8];
 }
 
-inline float dither(in float2 pixel)
+inline half dither(in float2 pixel)
 {
 	return ditherMask8(pixel);
 }
 
+// Quaternion multiplication
+// http://mathworld.wolfram.com/Quaternion.html
+float4 qmul(float4 q1, float4 q2)
+{
+    return float4(
+        q2.xyz * q1.w + q1.xyz * q2.w + cross(q1.xyz, q2.xyz),
+        q1.w * q2.w - dot(q1.xyz, q2.xyz)
+    );
+}
+half4 qmul(half4 q1, half4 q2)
+{
+    return half4(
+        q2.xyz * q1.w + q1.xyz * q2.w + cross(q1.xyz, q2.xyz),
+        q1.w * q2.w - dot(q1.xyz, q2.xyz)
+    );
+}
+
+// Vector rotation with a quaternion
+// http://mathworld.wolfram.com/Quaternion.html
+float3 rotate_vector(float3 v, float4 r)
+{
+    float4 r_c = r * float4(-1, -1, -1, 1);
+    return qmul(r, qmul(float4(v, 0), r_c)).xyz;
+}
+half3 rotate_vector(half3 v, half4 r)
+{
+    half4 r_c = r * half4(-1, -1, -1, 1);
+    return qmul(r, qmul(half4(v, 0), r_c)).xyz;
+}
 
 inline float sphere_surface_area(in float radius)
 {

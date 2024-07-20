@@ -135,10 +135,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 
 			Surface surface;
 			surface.init();
-			if (!q.CommittedTriangleFrontFace())
-			{
-				surface.flags |= SURFACE_FLAG_BACKFACE;
-			}
+			surface.SetBackface(!q.CommittedTriangleFrontFace());
 			surface.V = -ray.Direction;
 			surface.raycone = raycone;
 			surface.hit_depth = q.CommittedRayT();
