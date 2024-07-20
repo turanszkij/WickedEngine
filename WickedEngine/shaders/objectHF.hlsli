@@ -21,7 +21,7 @@
 #define DISABLE_VOXELGI
 #endif // WATER
 
-#define LIGHTMAP_QUALITY_BICUBIC
+//#define LIGHTMAP_QUALITY_BICUBIC
 
 #ifdef DISABLE_ALPHATEST
 #define EARLY_DEPTH_STENCIL
@@ -58,7 +58,7 @@ inline ShaderMaterial GetMaterial()
 	return load_material(push.materialIndex);
 }
 
-#define sampler_objectshader			bindless_samplers[GetMaterial().sampler_descriptor]
+#define sampler_objectshader bindless_samplers[GetMaterial().sampler_descriptor]
 
 // Use these to compile this file as shader prototype:
 //#define OBJECTSHADER_COMPILE_VS				- compile vertex shader prototype

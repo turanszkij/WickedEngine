@@ -14,7 +14,7 @@ void main(uint DTid : SV_DispatchThreadID)
 	float3 world_pos = vb_pos_wind[DTid].xyz;
 	world_pos = mul(meshinstance.transform.GetMatrix(), float4(world_pos, 1)).xyz;
 
-	float drying = 0.1;
+	float drying = 0.02;
 	[branch]
 	if(geometry.vb_nor >= 0)
 	{
@@ -22,13 +22,15 @@ void main(uint DTid : SV_DispatchThreadID)
 		float3 normal = vb_nor[DTid].xyz;
 		normal = mul((float3x3)meshinstance.transformInverseTranspose.GetMatrix(), normal);
 		normal = normalize(normal);
-		drying *= lerp(10, 1, pow(saturate(normal.y), 8)); // modulate drying speed based on surface slope
+		drying *= lerp(4, 1, pow(saturate(normal.y), 8)); // modulate drying speed based on surface slope
 	}
 		
 	RWBuffer<float> wetmap = bindless_rwbuffers_float[push.wetmap];
 
 	float prev = wetmap[DTid];
-	float current = lerp(prev, 0, GetDeltaTime() * drying);
+	float current = prev;
+
+	bool drying_enabled = true;
 	
 	const ShaderOcean ocean = GetWeather().ocean;
 	float3 ocean_pos = float3(world_pos.x, ocean.water_height, world_pos.z);
@@ -44,6 +46,7 @@ void main(uint DTid : SV_DispatchThreadID)
 		{
 			float shore = saturate(exp(-(ocean_pos.y - world_pos.y) / meshinstance.radius * 100)); // note: instance radius will soften the shoreline, looks better with large triangles like terrain
 			current = max(current, smoothstep(0, 1.4, 1 - shore));
+			drying_enabled=false;
 		}
 	}
 
@@ -68,9 +71,15 @@ void main(uint DTid : SV_DispatchThreadID)
 			shadow += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, shadow_uv.xy, cmp, 2 * int2(1, 1)).r;
 			shadow /= 9.0;
 		}
+
+		if(shadow == 0)
+			drying_enabled = false;
 		
 		current = lerp(current, smoothstep(0, 1.4, sqrt(shadow)), saturate(GetDeltaTime() * 0.5));
 	}
+
+	if(drying_enabled)
+		current = lerp(current, 0, GetDeltaTime() * drying);
 	
 	wetmap[DTid] = current;
 }

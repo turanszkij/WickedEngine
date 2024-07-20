@@ -14,13 +14,13 @@
 // Number of clipmaps, each doubling in size:
 static const uint VXGI_CLIPMAP_COUNT = 6;
 
-struct VoxelClipMap
+struct alignas(16) VoxelClipMap
 {
 	float3 center;		// center of clipmap volume in world space
 	float voxelSize;	// half-extent of one voxel
 };
 
-struct VXGI
+struct alignas(16) VXGI
 {
 	uint	resolution;		// voxel grid resolution
 	float	resolution_rcp;	// 1.0 / voxel grid resolution
@@ -53,7 +53,7 @@ struct VXGI
 #endif // __cplusplus
 };
 
-struct VoxelizerCB
+struct alignas(16) VoxelizerCB
 {
 	int3 offsetfromPrevFrame;
 	int clipmap_index;
