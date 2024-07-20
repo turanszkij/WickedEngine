@@ -16,8 +16,8 @@
 
 struct LightingPart
 {
-	float3 diffuse;
-	float3 specular;
+	half3 diffuse;
+	half3 specular;
 };
 struct Lighting
 {
@@ -25,10 +25,10 @@ struct Lighting
 	LightingPart indirect;
 
 	inline void create(
-		in float3 diffuse_direct,
-		in float3 specular_direct,
-		in float3 diffuse_indirect,
-		in float3 specular_indirect
+		in half3 diffuse_direct,
+		in half3 specular_direct,
+		in half3 diffuse_indirect,
+		in half3 specular_indirect
 	)
 	{
 		direct.diffuse = diffuse_direct;
@@ -38,18 +38,18 @@ struct Lighting
 	}
 };
 
-inline void ApplyLighting(in Surface surface, in Lighting lighting, inout float4 color)
+inline void ApplyLighting(in Surface surface, in Lighting lighting, inout half4 color)
 {
-	float3 diffuse = lighting.direct.diffuse / PI + lighting.indirect.diffuse * GetFrame().gi_boost * (1 - surface.F) * surface.occlusion + surface.ssgi;
-	float3 specular = lighting.direct.specular + lighting.indirect.specular * surface.occlusion; // reminder: cannot apply surface.F for whole indirect specular, because multiple layers have separate fresnels (sheen, clearcoat)
+	half3 diffuse = lighting.direct.diffuse / PI + lighting.indirect.diffuse * GetFrame().gi_boost * (1 - surface.F) * surface.occlusion + surface.ssgi;
+	half3 specular = lighting.direct.specular + lighting.indirect.specular * surface.occlusion; // reminder: cannot apply surface.F for whole indirect specular, because multiple layers have separate fresnels (sheen, clearcoat)
 	color.rgb = lerp(surface.albedo * diffuse, surface.refraction.rgb, surface.refraction.a);
 	color.rgb += specular;
 	color.rgb += surface.emissiveColor;
 }
 
-inline void light_directional(in ShaderEntity light, in Surface surface, inout Lighting lighting, in min16float shadow_mask = 1)
+inline void light_directional(in ShaderEntity light, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
 {
-	float3 L = light.GetDirection();
+	half3 L = light.GetDirection();
 
 	SurfaceToLight surface_to_light;
 	surface_to_light.create(surface, L);
@@ -57,7 +57,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 	[branch]
 	if (any(surface_to_light.NdotL_sss))
 	{
-		min16float3 shadow = shadow_mask;
+		half3 shadow = shadow_mask;
 
 		[branch]
 		if (light.IsCastingShadow() && surface.IsReceiveShadow())
@@ -85,8 +85,8 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 					[branch]
 					if (is_saturated(shadow_uv))
 					{
-						const float2 cascade_edgefactor = saturate(saturate(abs(shadow_pos.xy)) - 0.8) * 5.0; // fade will be on edge and inwards 10%
-						const float cascade_fade = max(cascade_edgefactor.x, cascade_edgefactor.y);
+						const half2 cascade_edgefactor = saturate(saturate(abs(shadow_pos.xy)) - 0.8) * 5.0; // fade will be on edge and inwards 10%
+						const half cascade_fade = max(cascade_edgefactor.x, cascade_edgefactor.y);
 						
 						// If we are on cascade edge threshold and not the last cascade, then fallback to a larger cascade:
 						[branch]
@@ -103,7 +103,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 		[branch]
 		if (any(shadow))
 		{
-			float3 light_color = light.GetColor().rgb * shadow;
+			half3 light_color = light.GetColor().rgb * shadow;
 
 			[branch]
 			if (GetFrame().options & OPTION_BIT_REALISTIC_SKY)
@@ -115,7 +115,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 			lighting.direct.specular = mad(light_color, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);
 
 #ifdef LIGHTING_SCATTER
-			const float scattering = ComputeScattering(saturate(dot(L, -surface.V)));
+			const half scattering = ComputeScattering(saturate(dot(L, -surface.V)));
 			lighting.indirect.specular += scattering * light_color * (1 - surface.extinction) * (1 - sqr(1 - saturate(1 - surface.N.y)));
 #endif // LIGHTING_SCATTER
 			
@@ -130,7 +130,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 				float water_height = ocean.water_height + displacement.y;
 				if (surface.P.y < water_height)
 				{
-					float3 caustic = caustic_pattern(ocean_uv * 20, GetFrame().time);
+					half3 caustic = caustic_pattern(ocean_uv * 20, GetFrame().time);
 					caustic *= sqr(saturate((water_height - surface.P.y) * 0.5)); // fade out at shoreline
 					caustic *= light_color;
 					lighting.indirect.diffuse += caustic;
@@ -156,7 +156,7 @@ inline float attenuation_pointlight(in float dist, in float dist2, in float rang
 	dist_per_range *= dist_per_range; // pow4
 	return saturate(1 - dist_per_range) / max(0.0001, dist2);
 }
-inline void light_point(in ShaderEntity light, in Surface surface, inout Lighting lighting, in min16float shadow_mask = 1)
+inline void light_point(in ShaderEntity light, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
 {
 	float3 L = light.position - surface.P;
 
@@ -189,7 +189,7 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 		[branch]
 		if (any(surface_to_light.NdotL_sss))
 		{
-			min16float3 shadow = shadow_mask;
+			half3 shadow = shadow_mask;
 
 			[branch]
 			if (light.IsCastingShadow() && surface.IsReceiveShadow())
@@ -206,7 +206,7 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 			[branch]
 			if (any(shadow))
 			{
-				float3 light_color = light.GetColor().rgb * shadow;
+				half3 light_color = light.GetColor().rgb * shadow;
 				light_color *= attenuation_pointlight(dist, dist2, range, range2);
 
 				lighting.direct.diffuse = mad(light_color, BRDF_GetDiffuse(surface, surface_to_light), lighting.direct.diffuse);
@@ -247,7 +247,7 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 				lighting.direct.specular = mad(light_color, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);
 				
 #ifdef LIGHTING_SCATTER
-				const float scattering = ComputeScattering(saturate(dot(L, -surface.V)));
+				const half scattering = ComputeScattering(saturate(dot(L, -surface.V)));
 				lighting.indirect.specular += scattering * light_color * (1 - surface.extinction) * (1 - sqr(1 - saturate(1 - surface.N.y)));
 #endif // LIGHTING_SCATTER
 			}
@@ -263,7 +263,7 @@ inline float attenuation_spotlight(in float dist, in float dist2, in float range
 	attenuation *= angularAttenuation;
 	return attenuation;
 }
-inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting lighting, in min16float shadow_mask = 1)
+inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
 {
 	float3 L = light.position - surface.P;
 	const float dist2 = dot(L, L);
@@ -282,13 +282,13 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 		[branch]
 		if (any(surface_to_light.NdotL_sss))
 		{
-			const float spot_factor = dot(L, light.GetDirection());
-			const float spot_cutoff = light.GetConeAngleCos();
+			const half spot_factor = dot(L, light.GetDirection());
+			const half spot_cutoff = light.GetConeAngleCos();
 
 			[branch]
 			if (spot_factor > spot_cutoff)
 			{
-				min16float3 shadow = shadow_mask;
+				half3 shadow = shadow_mask;
 
 				[branch]
 				if (light.IsCastingShadow() && surface.IsReceiveShadow())
@@ -312,7 +312,7 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 				[branch]
 				if (any(shadow))
 				{
-					float3 light_color = light.GetColor().rgb * shadow;
+					half3 light_color = light.GetColor().rgb * shadow;
 					light_color *= attenuation_spotlight(dist, dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
 
 					lighting.direct.diffuse = mad(light_color, BRDF_GetDiffuse(surface, surface_to_light), lighting.direct.diffuse);
@@ -334,7 +334,7 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 					lighting.direct.specular = mad(light_color, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);
 					
 #ifdef LIGHTING_SCATTER
-					const float scattering = ComputeScattering(saturate(dot(L, -surface.V)));
+					const half scattering = ComputeScattering(saturate(dot(L, -surface.V)));
 					lighting.indirect.specular += scattering * light_color * (1 - surface.extinction) * (1 - sqr(1 - saturate(1 - surface.N.y)));
 #endif // LIGHTING_SCATTER
 				}
@@ -347,9 +347,9 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 // ENVIRONMENT MAPS
 
 
-inline float3 GetAmbient(in float3 N)
+inline half3 GetAmbient(in float3 N)
 {
-	float3 ambient;
+	half3 ambient;
 
 #ifdef ENVMAPRENDERING
 
@@ -368,7 +368,7 @@ inline float3 GetAmbient(in float3 N)
 		uint2 dim;
 		uint mips;
 		cubemap.GetDimensions(0, dim.x, dim.y, mips);
-		ambient = cubemap.SampleLevel(sampler_linear_clamp, N, mips).rgb;
+		ambient = (half3)cubemap.SampleLevel(sampler_linear_clamp, N, mips).rgb;
 	}
 	
 #endif // ENVMAPRENDERING
@@ -386,9 +386,9 @@ inline float3 GetAmbient(in float3 N)
 // surface:				surface descriptor
 // MIP:					mip level to sample
 // return:				color of the environment color (rgb)
-inline float3 EnvironmentReflection_Global(in Surface surface)
+inline half3 EnvironmentReflection_Global(in Surface surface)
 {
-	float3 envColor;
+	half3 envColor;
 
 #ifdef ENVMAPRENDERING
 
@@ -413,19 +413,19 @@ inline float3 EnvironmentReflection_Global(in Surface surface)
 	uint mips;
 	cubemap.GetDimensions(0, dim.x, dim.y, mips);
 
-	float MIP = surface.roughness * mips;
-	envColor = cubemap.SampleLevel(sampler_linear_clamp, surface.R, MIP).rgb * surface.F;
+	half MIP = surface.roughness * mips;
+	envColor = (half3)cubemap.SampleLevel(sampler_linear_clamp, surface.R, MIP).rgb * surface.F;
 
 #ifdef SHEEN
 	envColor *= surface.sheen.albedoScaling;
 	MIP = surface.sheen.roughness * mips;
-	envColor += cubemap.SampleLevel(sampler_linear_clamp, surface.R, MIP).rgb * surface.sheen.color * surface.sheen.DFG;
+	envColor += (half3)cubemap.SampleLevel(sampler_linear_clamp, surface.R, MIP).rgb * surface.sheen.color * surface.sheen.DFG;
 #endif // SHEEN
 
 #ifdef CLEARCOAT
 	envColor *= 1 - surface.clearcoat.F;
 	MIP = surface.clearcoat.roughness * mips;
-	envColor += cubemap.SampleLevel(sampler_linear_clamp, surface.clearcoat.R, MIP).rgb * surface.clearcoat.F;
+	envColor += (half3)cubemap.SampleLevel(sampler_linear_clamp, surface.clearcoat.R, MIP).rgb * surface.clearcoat.F;
 #endif // CLEARCOAT
 
 #endif // ENVMAPRENDERING
@@ -439,7 +439,7 @@ inline float3 EnvironmentReflection_Global(in Surface surface)
 // clipSpacePos:		world space pixel position transformed into OBB space by probeProjection matrix
 // MIP:					mip level to sample
 // return:				color of the environment map (rgb), blend factor of the environment map (a)
-inline float4 EnvironmentReflection_Local(in TextureCube cubemap, in Surface surface, in ShaderEntity probe, in float4x4 probeProjection, in float3 clipSpacePos)
+inline half4 EnvironmentReflection_Local(in TextureCube cubemap, in Surface surface, in ShaderEntity probe, in float4x4 probeProjection, in float3 clipSpacePos)
 {
 	// Perform parallax correction of reflection ray (R) into OBB:
 	float3 RayLS = mul((float3x3)probeProjection, surface.R);
@@ -455,13 +455,13 @@ inline float4 EnvironmentReflection_Local(in TextureCube cubemap, in Surface sur
 	cubemap.GetDimensions(0, dim.x, dim.y, mips);
 
 	// Sample cubemap texture:
-	float MIP = surface.roughness * mips;
-	float3 envColor = cubemap.SampleLevel(sampler_linear_clamp, R_parallaxCorrected, MIP).rgb * surface.F;
+	half MIP = surface.roughness * mips;
+	half3 envColor = (half3)cubemap.SampleLevel(sampler_linear_clamp, R_parallaxCorrected, MIP).rgb * surface.F;
 
 #ifdef SHEEN
 	envColor *= surface.sheen.albedoScaling;
 	MIP = surface.sheen.roughness * mips;
-	envColor += cubemap.SampleLevel(sampler_linear_clamp, R_parallaxCorrected, MIP).rgb * surface.sheen.color * surface.sheen.DFG;
+	envColor += (half3)cubemap.SampleLevel(sampler_linear_clamp, R_parallaxCorrected, MIP).rgb * surface.sheen.color * surface.sheen.DFG;
 #endif // SHEEN
 
 #ifdef CLEARCOAT
@@ -475,13 +475,13 @@ inline float4 EnvironmentReflection_Local(in TextureCube cubemap, in Surface sur
 
 	envColor *= 1 - surface.clearcoat.F;
 	MIP = surface.clearcoat.roughness * mips;
-	envColor += cubemap.SampleLevel(sampler_linear_clamp, R_parallaxCorrected, MIP).rgb * surface.clearcoat.F;
+	envColor += (half3)cubemap.SampleLevel(sampler_linear_clamp, R_parallaxCorrected, MIP).rgb * surface.clearcoat.F;
 #endif // CLEARCOAT
 
 	// blend out if close to any cube edge:
-	float edgeBlend = 1 - pow(saturate(max(abs(clipSpacePos.x), max(abs(clipSpacePos.y), abs(clipSpacePos.z)))), 8);
+	half edgeBlend = 1 - pow(saturate(max(abs(clipSpacePos.x), max(abs(clipSpacePos.y), abs(clipSpacePos.z)))), 8);
 
-	return float4(envColor, edgeBlend);
+	return half4(envColor, edgeBlend);
 }
 
 
@@ -496,15 +496,15 @@ inline void VoxelGI(inout Surface surface, inout Lighting lighting)
 		Texture3D<float4> voxels = bindless_textures3D[GetFrame().vxgi.texture_radiance];
 
 		// diffuse:
-		float4 trace = ConeTraceDiffuse(voxels, surface.P, surface.N);
+		half4 trace = ConeTraceDiffuse(voxels, surface.P, surface.N);
 		lighting.indirect.diffuse = mad(lighting.indirect.diffuse, 1 - trace.a, trace.rgb);
 
 		// specular:
 		[branch]
 		if (GetFrame().options & OPTION_BIT_VXGI_REFLECTIONS_ENABLED)
 		{
-			float roughnessBRDF = sqr(clamp(surface.roughness, 0.045, 1));
-			float4 trace = ConeTraceSpecular(voxels, surface.P, surface.N, surface.V, roughnessBRDF, surface.pixel);
+			half roughnessBRDF = sqr(clamp(surface.roughness, 0.045, 1));
+			half4 trace = ConeTraceSpecular(voxels, surface.P, surface.N, surface.V, roughnessBRDF, surface.pixel);
 			lighting.indirect.specular = mad(lighting.indirect.specular, 1 - trace.a, trace.rgb * surface.F);
 		}
 	}

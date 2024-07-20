@@ -383,28 +383,28 @@ struct alignas(16) ShaderMaterial
 	}
 
 #ifndef __cplusplus
-	inline float4 GetBaseColor() { return unpack_half4(baseColor); }
-	inline float4 GetSSS() { return unpack_half4(subsurfaceScattering); }
-	inline float4 GetSSSInverse() { return unpack_half4(subsurfaceScattering_inv); }
-	inline float3 GetEmissive() { return unpack_half3(emissive); }
-	inline float3 GetSpecular() { return unpack_half3(specular); }
-	inline float3 GetSheenColor() { return unpack_half3(sheenColor); }
-	inline float GetRoughness() { return unpack_half4(roughness_reflectance_metalness_refraction).x; }
-	inline float GetReflectance() { return unpack_half4(roughness_reflectance_metalness_refraction).y; }
-	inline float GetMetalness() { return unpack_half4(roughness_reflectance_metalness_refraction).z; }
-	inline float GetRefraction() { return unpack_half4(roughness_reflectance_metalness_refraction).w; }
-	inline float GetNormalMapStrength() { return unpack_half4(normalmap_pom_alphatest_displacement).x; }
-	inline float GetParallaxOcclusionMapping() { return unpack_half4(normalmap_pom_alphatest_displacement).y; }
-	inline float GetAlphaTest() { return unpack_half4(normalmap_pom_alphatest_displacement).z; }
-	inline float GetDisplacement() { return unpack_half4(normalmap_pom_alphatest_displacement).w; }
-	inline float GetTransmission() { return unpack_half4(transmission_sheenroughness_clearcoat_clearcoatroughness).x; }
-	inline float GetSheenRoughness() { return unpack_half4(transmission_sheenroughness_clearcoat_clearcoatroughness).y; }
-	inline float GetClearcoat() { return unpack_half4(transmission_sheenroughness_clearcoat_clearcoatroughness).z; }
-	inline float GetClearcoatRoughness() { return unpack_half4(transmission_sheenroughness_clearcoat_clearcoatroughness).w; }
-	inline float GetAnisotropy() { return unpack_half4(aniso_anisosin_anisocos_terrainblend).x; }
-	inline float GetAnisotropySin() { return unpack_half4(aniso_anisosin_anisocos_terrainblend).y; }
-	inline float GetAnisotropyCos() { return unpack_half4(aniso_anisosin_anisocos_terrainblend).z; }
-	inline float GetTerrainBlendRcp() { return unpack_half4(aniso_anisosin_anisocos_terrainblend).w; }
+	inline half4 GetBaseColor() { return unpack_half4(baseColor); }
+	inline half4 GetSSS() { return unpack_half4(subsurfaceScattering); }
+	inline half4 GetSSSInverse() { return unpack_half4(subsurfaceScattering_inv); }
+	inline half3 GetEmissive() { return unpack_half3(emissive); }
+	inline half3 GetSpecular() { return unpack_half3(specular); }
+	inline half3 GetSheenColor() { return unpack_half3(sheenColor); }
+	inline half GetRoughness() { return unpack_half4(roughness_reflectance_metalness_refraction).x; }
+	inline half GetReflectance() { return unpack_half4(roughness_reflectance_metalness_refraction).y; }
+	inline half GetMetalness() { return unpack_half4(roughness_reflectance_metalness_refraction).z; }
+	inline half GetRefraction() { return unpack_half4(roughness_reflectance_metalness_refraction).w; }
+	inline half GetNormalMapStrength() { return unpack_half4(normalmap_pom_alphatest_displacement).x; }
+	inline half GetParallaxOcclusionMapping() { return unpack_half4(normalmap_pom_alphatest_displacement).y; }
+	inline half GetAlphaTest() { return unpack_half4(normalmap_pom_alphatest_displacement).z; }
+	inline half GetDisplacement() { return unpack_half4(normalmap_pom_alphatest_displacement).w; }
+	inline half GetTransmission() { return unpack_half4(transmission_sheenroughness_clearcoat_clearcoatroughness).x; }
+	inline half GetSheenRoughness() { return unpack_half4(transmission_sheenroughness_clearcoat_clearcoatroughness).y; }
+	inline half GetClearcoat() { return unpack_half4(transmission_sheenroughness_clearcoat_clearcoatroughness).z; }
+	inline half GetClearcoatRoughness() { return unpack_half4(transmission_sheenroughness_clearcoat_clearcoatroughness).w; }
+	inline half GetAnisotropy() { return unpack_half4(aniso_anisosin_anisocos_terrainblend).x; }
+	inline half GetAnisotropySin() { return unpack_half4(aniso_anisosin_anisocos_terrainblend).y; }
+	inline half GetAnisotropyCos() { return unpack_half4(aniso_anisosin_anisocos_terrainblend).z; }
+	inline half GetTerrainBlendRcp() { return unpack_half4(aniso_anisosin_anisocos_terrainblend).w; }
 	inline uint GetStencilRef() { return options_stencilref >> 24u; }
 #endif // __cplusplus
 
@@ -628,8 +628,9 @@ struct alignas(16) ShaderMeshInstance
 	}
 
 #ifndef __cplusplus
-	inline float4 GetColor() { return unpack_rgba(color); }
-	inline float3 GetEmissive() { return unpack_half3(emissive); }
+	inline half4 GetColor() { return (half4)unpack_rgba(color); }
+	inline half3 GetEmissive() { return unpack_half3(emissive); }
+	inline half GetAlphaTest() { return (half)alphaTest; }
 #endif // __cplusplus
 };
 struct ShaderMeshInstancePointer
@@ -698,57 +699,57 @@ struct alignas(16) ShaderEntity
 	{
 		return (type8_flags8_range16 >> 8u) & 0xFF;
 	}
-	inline float GetRange()
+	inline half GetRange()
 	{
-		return f16tof32(type8_flags8_range16 >> 16u);
+		return (half)f16tof32(type8_flags8_range16 >> 16u);
 	}
-	inline float GetRadius()
+	inline half GetRadius()
 	{
-		return f16tof32(radius16_length16);
+		return (half)f16tof32(radius16_length16);
 	}
-	inline float GetLength()
+	inline half GetLength()
 	{
-		return f16tof32(radius16_length16 >> 16u);
+		return (half)f16tof32(radius16_length16 >> 16u);
 	}
-	inline float3 GetDirection()
+	inline half3 GetDirection()
 	{
-		return normalize(float3(
-			f16tof32(direction16_coneAngleCos16.x),
-			f16tof32(direction16_coneAngleCos16.x >> 16u),
-			f16tof32(direction16_coneAngleCos16.y)
+		return normalize(half3(
+			(half)f16tof32(direction16_coneAngleCos16.x),
+			(half)f16tof32(direction16_coneAngleCos16.x >> 16u),
+			(half)f16tof32(direction16_coneAngleCos16.y)
 		));
 	}
-	inline float GetConeAngleCos()
+	inline half GetConeAngleCos()
 	{
-		return f16tof32(direction16_coneAngleCos16.y >> 16u);
+		return (half)f16tof32(direction16_coneAngleCos16.y >> 16u);
 	}
 	inline uint GetShadowCascadeCount()
 	{
 		return direction16_coneAngleCos16.y >> 16u;
 	}
-	inline float GetAngleScale()
+	inline half GetAngleScale()
 	{
-		return f16tof32(remap);
+		return (half)f16tof32(remap);
 	}
-	inline float GetAngleOffset()
+	inline half GetAngleOffset()
 	{
-		return f16tof32(remap >> 16u);
+		return (half)f16tof32(remap >> 16u);
 	}
-	inline float GetCubemapDepthRemapNear()
+	inline half GetCubemapDepthRemapNear()
 	{
-		return f16tof32(remap);
+		return (half)f16tof32(remap);
 	}
-	inline float GetCubemapDepthRemapFar()
+	inline half GetCubemapDepthRemapFar()
 	{
-		return f16tof32(remap >> 16u);
+		return (half)f16tof32(remap >> 16u);
 	}
-	inline float4 GetColor()
+	inline half4 GetColor()
 	{
-		float4 retVal;
-		retVal.x = f16tof32(color.x);
-		retVal.y = f16tof32(color.x >> 16u);
-		retVal.z = f16tof32(color.y);
-		retVal.w = f16tof32(color.y >> 16u);
+		half4 retVal;
+		retVal.x = (half)f16tof32(color.x);
+		retVal.y = (half)f16tof32(color.x >> 16u);
+		retVal.z = (half)f16tof32(color.y);
+		retVal.w = (half)f16tof32(color.y >> 16u);
 		return retVal;
 	}
 	inline uint GetMatrixIndex()
@@ -763,7 +764,7 @@ struct alignas(16) ShaderEntity
 	{
 		return indices != ~0;
 	}
-	inline float GetGravity()
+	inline half GetGravity()
 	{
 		return GetConeAngleCos();
 	}

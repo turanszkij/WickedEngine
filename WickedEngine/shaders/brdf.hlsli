@@ -95,12 +95,12 @@ struct SurfaceToLight
 {
 	float3 L;		// surface to light vector (normalized)
 	float3 H;		// half-vector between view vector and light vector
-	float NdotL;	// cos angle between normal and light direction
-	float3 NdotL_sss;	// NdotL with subsurface parameters applied
-	float NdotH;	// cos angle between normal and half vector
-	float LdotH;	// cos angle between light direction and half vector
-	float VdotH;	// cos angle between view direction and half vector
-	float3 F;		// fresnel term computed from VdotH
+	half NdotL;		// cos angle between normal and light direction
+	half3 NdotL_sss;// NdotL with subsurface parameters applied
+	half NdotH;		// cos angle between normal and half vector
+	half LdotH;		// cos angle between light direction and half vector
+	half VdotH;		// cos angle between view direction and half vector
+	half3 F;		// fresnel term computed from VdotH
 
 #ifdef ANISOTROPIC
 	float TdotL;
@@ -157,23 +157,23 @@ struct SurfaceToLight
 
 // These are the functions that will be used by shaders:
 
-float3 BRDF_GetSpecular(in Surface surface, in SurfaceToLight surface_to_light)
+half3 BRDF_GetSpecular(in Surface surface, in SurfaceToLight surface_to_light)
 {
 #ifdef ANISOTROPIC
-	float D = D_GGX_Anisotropic(surface.aniso.at, surface.aniso.ab, surface_to_light.TdotH, surface_to_light.BdotH, surface_to_light.NdotH);
-	float Vis = V_SmithGGXCorrelated_Anisotropic(surface.aniso.at, surface.aniso.ab, surface.aniso.TdotV, surface.aniso.BdotV,
+	half D = D_GGX_Anisotropic(surface.aniso.at, surface.aniso.ab, surface_to_light.TdotH, surface_to_light.BdotH, surface_to_light.NdotH);
+	half Vis = V_SmithGGXCorrelated_Anisotropic(surface.aniso.at, surface.aniso.ab, surface.aniso.TdotV, surface.aniso.BdotV,
 		surface_to_light.TdotL, surface_to_light.BdotL, surface.NdotV, surface_to_light.NdotL);
 #else
-	float roughnessBRDF = sqr(clamp(surface.roughness, 0.045, 1));
-	float D = D_GGX(roughnessBRDF, surface_to_light.NdotH, surface_to_light.H);
-	float Vis = V_SmithGGXCorrelated(roughnessBRDF, surface.NdotV, surface_to_light.NdotL);
+	half roughnessBRDF = sqr(clamp(surface.roughness, 0.045, 1));
+	half D = D_GGX(roughnessBRDF, surface_to_light.NdotH, surface_to_light.H);
+	half Vis = V_SmithGGXCorrelated(roughnessBRDF, surface.NdotV, surface_to_light.NdotL);
 #endif // ANISOTROPIC
 
-	float3 specular = D * Vis * surface_to_light.F;
+	half3 specular = D * Vis * surface_to_light.F;
 
 #ifdef SHEEN
 	specular *= surface.sheen.albedoScaling;
-	float sheen_roughnessBRDF = sqr(clamp(surface.sheen.roughness, 0.045, 1));
+	half sheen_roughnessBRDF = sqr(clamp(surface.sheen.roughness, 0.045, 1));
 	D = D_Charlie(sheen_roughnessBRDF, surface_to_light.NdotH);
 	Vis = V_Neubelt(surface.NdotV, surface_to_light.NdotL);
 	specular += D * Vis * surface.sheen.color;
@@ -181,8 +181,8 @@ float3 BRDF_GetSpecular(in Surface surface, in SurfaceToLight surface_to_light)
 
 #ifdef CLEARCOAT
 	specular *= 1 - surface.clearcoat.F;
-	float NdotH = saturate(dot(surface.clearcoat.N, surface_to_light.H));
-	float clearcoat_roughnessBRDF = sqr(clamp(surface.clearcoat.roughness, 0.045, 1));
+	half NdotH = saturate(dot(surface.clearcoat.N, surface_to_light.H));
+	half clearcoat_roughnessBRDF = sqr(clamp(surface.clearcoat.roughness, 0.045, 1));
 	D = D_GGX(clearcoat_roughnessBRDF, NdotH, surface_to_light.H);
 	Vis = V_Kelemen(surface_to_light.LdotH);
 	specular += D * Vis * surface.clearcoat.F;
@@ -190,11 +190,11 @@ float3 BRDF_GetSpecular(in Surface surface, in SurfaceToLight surface_to_light)
 
 	return specular * surface_to_light.NdotL;
 }
-float3 BRDF_GetDiffuse(in Surface surface, in SurfaceToLight surface_to_light)
+half3 BRDF_GetDiffuse(in Surface surface, in SurfaceToLight surface_to_light)
 {
 	// Note: subsurface scattering will remove Fresnel (F), because otherwise
 	//	there would be artifact on backside where diffuse wraps
-	float3 diffuse = (1 - lerp(surface_to_light.F, 0, saturate(surface.sss.a)));
+	half3 diffuse = (1 - lerp(surface_to_light.F, 0, saturate(surface.sss.a)));
 
 #ifdef SHEEN
 	diffuse *= surface.sheen.albedoScaling;

@@ -231,6 +231,13 @@ RWTexture2D<uint4> bindless_rwtextures_uint4[] : register(space36);
 
 #endif // __spirv__
 
+#define half min16float
+#define half2 min16float2
+#define half3 min16float3
+#define half4 min16float4
+#define half3x3 min16float3x3
+#define half3x4 min16float3x4
+#define half4x4 min16float4x4
 
 inline uint pack_unitvector(in float3 value)
 {
@@ -287,32 +294,32 @@ inline float4 unpack_rgba(in uint value)
 	return retVal;
 }
 
-inline uint pack_half2(in float2 value)
+inline uint pack_half2(in half2 value)
 {
 	uint retVal = 0;
 	retVal = f32tof16(value.x) | (f32tof16(value.y) << 16u);
 	return retVal;
 }
-inline float2 unpack_half2(in uint value)
+inline half2 unpack_half2(in uint value)
 {
-	float2 retVal;
-	retVal.x = f16tof32(value.x);
-	retVal.y = f16tof32(value.x >> 16u);
+	half2 retVal;
+	retVal.x = (half)f16tof32(value.x);
+	retVal.y = (half)f16tof32(value.x >> 16u);
 	return retVal;
 }
-inline uint2 pack_half3(in float3 value)
+inline uint2 pack_half3(in half3 value)
 {
 	uint2 retVal = 0;
 	retVal.x = f32tof16(value.x) | (f32tof16(value.y) << 16u);
 	retVal.y = f32tof16(value.z);
 	return retVal;
 }
-inline float3 unpack_half3(in uint2 value)
+inline half3 unpack_half3(in uint2 value)
 {
-	float3 retVal;
-	retVal.x = f16tof32(value.x);
-	retVal.y = f16tof32(value.x >> 16u);
-	retVal.z = f16tof32(value.y);
+	half3 retVal;
+	retVal.x = (half)f16tof32(value.x);
+	retVal.y = (half)f16tof32(value.x >> 16u);
+	retVal.z = (half)f16tof32(value.y);
 	return retVal;
 }
 inline uint2 pack_half4(in float4 value)
@@ -322,13 +329,13 @@ inline uint2 pack_half4(in float4 value)
 	retVal.y = f32tof16(value.z) | (f32tof16(value.w) << 16u);
 	return retVal;
 }
-inline float4 unpack_half4(in uint2 value)
+inline half4 unpack_half4(in uint2 value)
 {
-	float4 retVal;
-	retVal.x = f16tof32(value.x);
-	retVal.y = f16tof32(value.x >> 16u);
-	retVal.z = f16tof32(value.y);
-	retVal.w = f16tof32(value.y >> 16u);
+	half4 retVal;
+	retVal.x = (half)f16tof32(value.x);
+	retVal.y = (half)f16tof32(value.x >> 16u);
+	retVal.z = (half)f16tof32(value.y);
+	retVal.w = (half)f16tof32(value.y >> 16u);
 	return retVal;
 }
 
@@ -603,19 +610,13 @@ float4 med3(float4 a, float4 b, float4 c)
 //	a2 : attribute at triangle corner 2
 //  bary : (u,v) barycentrics [same as you get from raytracing]; w is computed as 1 - u - w
 //	computation can be also written as: p0 * w + p1 * u + p2 * v
-inline float attribute_at_bary(in float a0, in float a1, in float a2, in float2 bary)
+template<typename T>
+inline T attribute_at_bary(in T a0, in T a1, in T a2, in float2 bary)
 {
 	return mad(a0, 1 - bary.x - bary.y, mad(a1, bary.x, a2 * bary.y));
 }
-inline float2 attribute_at_bary(in float2 a0, in float2 a1, in float2 a2, in float2 bary)
-{
-	return mad(a0, 1 - bary.x - bary.y, mad(a1, bary.x, a2 * bary.y));
-}
-inline float3 attribute_at_bary(in float3 a0, in float3 a1, in float3 a2, in float2 bary)
-{
-	return mad(a0, 1 - bary.x - bary.y, mad(a1, bary.x, a2 * bary.y));
-}
-inline float4 attribute_at_bary(in float4 a0, in float4 a1, in float4 a2, in float2 bary)
+template<typename T>
+inline T attribute_at_bary(in T a0, in T a1, in T a2, in half2 bary)
 {
 	return mad(a0, 1 - bary.x - bary.y, mad(a1, bary.x, a2 * bary.y));
 }
@@ -625,6 +626,12 @@ inline float bilinear(float4 gather, float2 pixel_frac)
 {
 	const float top_row = lerp(gather.w, gather.z, pixel_frac.x);
 	const float bottom_row = lerp(gather.x, gather.y, pixel_frac.x);
+	return lerp(top_row, bottom_row, pixel_frac.y);
+}
+inline half bilinear(half4 gather, half2 pixel_frac)
+{
+	const half top_row = lerp(gather.w, gather.z, pixel_frac.x);
+	const half bottom_row = lerp(gather.x, gather.y, pixel_frac.x);
 	return lerp(top_row, bottom_row, pixel_frac.y);
 }
 
@@ -654,9 +661,9 @@ inline float2 uv_to_clipspace(in float2 uv)
 	clipspace.y *= -1;
 	return clipspace;
 }
-inline min16float2 uv_to_clipspace(in min16float2 uv)
+inline half2 uv_to_clipspace(in half2 uv)
 {
-	min16float2 clipspace = uv * 2 - 1;
+	half2 clipspace = uv * 2 - 1;
 	clipspace.y *= -1;
 	return clipspace;
 }
@@ -668,13 +675,13 @@ inline float3 clipspace_to_uv(in float3 clipspace)
 {
 	return clipspace * float3(0.5, -0.5, 0.5) + 0.5;
 }
-inline min16float2 clipspace_to_uv(in min16float2 clipspace)
+inline half2 clipspace_to_uv(in half2 clipspace)
 {
-	return clipspace * min16float2(0.5, -0.5) + 0.5;
+	return clipspace * half2(0.5, -0.5) + 0.5;
 }
-inline min16float3 clipspace_to_uv(in min16float3 clipspace)
+inline half3 clipspace_to_uv(in half3 clipspace)
 {
-	return clipspace * min16float3(0.5, -0.5, 0.5) + 0.5;
+	return clipspace * half3(0.5, -0.5, 0.5) + 0.5;
 }
 
 template<typename T>
@@ -1079,13 +1086,13 @@ inline float find_max_depth(in float2 uv, in int radius, in float lod)
 }
 
 // Caustic pattern from: https://www.shadertoy.com/view/XtKfRG
-inline float caustic_pattern(float2 uv, float time)
+inline half caustic_pattern(float2 uv, float time)
 {
-	float3 k = float3(uv, time);
-	float3x3 m = float3x3(-2, -1, 2, 3, -2, 1, 1, 2, 2);
-	float3 a = mul(k, m) * 0.5;
-	float3 b = mul(a, m) * 0.4;
-	float3 c = mul(b, m) * 0.3;
+	float3 k = half3(uv, time);
+	half3x3 m = half3x3(-2, -1, 2, 3, -2, 1, 1, 2, 2);
+	half3 a = mul(k, m) * 0.5;
+	half3 b = mul(a, m) * 0.4;
+	half3 c = mul(b, m) * 0.3;
 	return pow(min(min(length(0.5 - frac(a)), length(0.5 - frac(b))), length(0.5 - frac(c))), 7) * 25.;
 }
 
@@ -1698,8 +1705,8 @@ static const float NUM_PARALLAX_OCCLUSION_STEPS_RCP = 1.0 / NUM_PARALLAX_OCCLUSI
 inline void ParallaxOcclusionMapping_Impl(
 	inout float4 uvsets,		// uvsets to modify
 	in float3 V,				// view vector (pointing towards camera)
-	in float3x3 TBN,			// tangent basis matrix (same that is used for normal mapping)
-	in float strength,			// material parameters
+	in half3x3 TBN,				// tangent basis matrix (same that is used for normal mapping)
+	in half strength,			// material parameters
 	in Texture2D tex,			// displacement map texture
 	in float2 uv,				// uv to use for the displacement map
 	in float2 uv_dx,			// horizontal derivative of displacement map uv

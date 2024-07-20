@@ -138,7 +138,7 @@ namespace wi::shadercompiler
 			//L"-Ges", // Enable strict mode
 			//L"-O0", // Optimization Level 0
 			//L"-enable-16bit-types",
-			//L"-Wno-conversion",
+			L"-Wno-conversion",
 		};
 
 		if (has_flag(input.flags, Flags::DISABLE_OPTIMIZATION))

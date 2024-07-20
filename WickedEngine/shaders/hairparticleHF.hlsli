@@ -20,12 +20,12 @@ struct VertexToPixel
 {
 	float4 pos : SV_POSITION;
 	float clip : SV_ClipDistance0;
-	min16float2 tex : TEXCOORD;
+	half2 tex : TEXCOORD;
 	nointerpolation float fade : DITHERFADE;
 	uint primitiveID : PRIMITIVEID;
 	float3 pos3D : POSITION3D;
-	min16float3 nor : NORMAL;
-	min16float wet : WET;
+	half3 nor : NORMAL;
+	half wet : WET;
 };
 
 #endif // WI_HAIRPARTICLE_HF
