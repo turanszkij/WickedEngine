@@ -5,12 +5,14 @@
 [earlydepthstencil]
 float4 main(PixelInput input) : SV_TARGET
 {
+	ShaderMaterial material = GetMaterial();
+
 	float4 uvsets = input.GetUVSets();
 	float4 color;
 	[branch]
-	if (GetMaterial().textures[BASECOLORMAP].IsValid())
+	if (material.textures[BASECOLORMAP].IsValid())
 	{
-		color = GetMaterial().textures[BASECOLORMAP].Sample(sampler_objectshader, uvsets);
+		color = material.textures[BASECOLORMAP].Sample(sampler_objectshader, uvsets);
 	}
 	else
 	{
@@ -18,27 +20,27 @@ float4 main(PixelInput input) : SV_TARGET
 	}
 	
 	[branch]
-	if (GetMaterial().textures[TRANSPARENCYMAP].IsValid())
+	if (material.textures[TRANSPARENCYMAP].IsValid())
 	{
-		color.a *= GetMaterial().textures[TRANSPARENCYMAP].Sample(sampler_objectshader, uvsets).r;
+		color.a *= material.textures[TRANSPARENCYMAP].Sample(sampler_objectshader, uvsets).r;
 	}
 	
 	color *= input.color;
 	
 	ShaderMeshInstance meshinstance = load_instance(input.GetInstanceIndex());
 
-	clip(color.a - GetMaterial().alphaTest - meshinstance.alphaTest);
+	clip(color.a - material.GetAlphaTest() - meshinstance.alphaTest);
 
 	float opacity = color.a;
 
 	[branch]
-	if (GetMaterial().transmission > 0)
+	if (material.GetTransmission() > 0)
 	{
-		float transmission = GetMaterial().transmission;
+		float transmission = material.GetTransmission();
 		[branch]
-		if (GetMaterial().textures[TRANSMISSIONMAP].IsValid())
+		if (material.textures[TRANSMISSIONMAP].IsValid())
 		{
-			float transmissionMap = GetMaterial().textures[TRANSMISSIONMAP].Sample(sampler_objectshader, uvsets).r;
+			float transmissionMap = material.textures[TRANSMISSIONMAP].Sample(sampler_objectshader, uvsets).r;
 			transmission *= transmissionMap;
 		}
 		opacity *= 1 - transmission;

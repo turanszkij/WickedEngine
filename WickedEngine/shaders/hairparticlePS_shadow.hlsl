@@ -13,6 +13,6 @@ void main(VertexToPixel input)
 	[branch]
 	if (material.textures[BASECOLORMAP].IsValid())
 	{
-		clip(material.textures[BASECOLORMAP].Sample(sampler_linear_clamp, input.tex.xyxy).a - material.alphaTest);
+		clip(material.textures[BASECOLORMAP].Sample(sampler_linear_clamp, input.tex.xyxy).a - material.GetAlphaTest());
 	}
 }

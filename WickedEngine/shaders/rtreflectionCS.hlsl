@@ -94,7 +94,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 
 		float alphatest = clamp(blue_noise(DTid.xy, q.CandidateTriangleRayT()).r, 0, 0.99);
 
-		if (surface.material.options & SHADERMATERIAL_OPTION_BIT_ADDITIVE)
+		if (surface.material.IsAdditive())
 		{
 			additive_dist.xyz += surface.emissiveColor;
 			additive_dist.w = min(additive_dist.w, q.CandidateTriangleRayT());

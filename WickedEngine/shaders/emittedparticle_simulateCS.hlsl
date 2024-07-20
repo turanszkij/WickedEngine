@@ -271,7 +271,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		// Write out render buffers:
 		//	These must be persistent, not culled (raytracing, surfels...)
 
-		float opacity = saturate(lerp(1, 0, lifeLerp) * EmitterGetMaterial().baseColor.a);
+		float opacity = saturate(lerp(1, 0, lifeLerp) * EmitterGetMaterial().GetBaseColor().a);
 		float4 particleColor = unpack_rgba(particle.color);
 		particleColor.a *= opacity;
 

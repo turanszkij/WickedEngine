@@ -177,8 +177,8 @@ struct Surface
 
 	inline void create(in ShaderMaterial material)
 	{
-		sss = material.subsurfaceScattering;
-		sss_inv = material.subsurfaceScattering_inv;
+		sss = material.GetSSS();
+		sss_inv = material.GetSSSInverse();
 
 		if (material.IsReceiveShadow())
 		{
@@ -194,7 +194,7 @@ struct Surface
 	)
 	{
 		baseColor = _baseColor;
-		if (material.options & SHADERMATERIAL_OPTION_BIT_TRANSPARENT || material.alphaTest > 0)
+		if (material.IsTransparent() || material.GetAlphaTest() > 0)
 		{
 			opacity = baseColor.a;
 		}
@@ -208,14 +208,14 @@ struct Surface
 		if (GetFrame().options & OPTION_BIT_FORCE_DIFFUSE_LIGHTING)
 #endif // ENVMAPRENDERING
 		{
-			f0 = material.metalness = material.reflectance = surfaceMap.b = surfaceMap.a = 0;
+			f0 = surfaceMap.b = surfaceMap.a = 0;
 		}
 
 		[branch]
 		if (material.IsUsingSpecularGlossinessWorkflow())
 		{
 			// Specular-glossiness workflow:
-			roughness = material.roughness * saturate(1 - surfaceMap.a);
+			roughness = material.GetRoughness() * saturate(1 - surfaceMap.a);
 			f0 *= surfaceMap.rgb;
 			albedo = baseColor.rgb;
 		}
@@ -474,7 +474,7 @@ struct Surface
 					uvsets,
 					V,
 					TBN,
-					material.parallaxOcclusionMapping,
+					material.GetParallaxOcclusionMapping(),
 					tex,
 					uv,
 					uv_dx,
@@ -497,13 +497,13 @@ struct Surface
 				bumpColor = float3(material.textures[NORMALMAP].SampleLevel(sam, uvsets, lod).rg, 1);
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 				bumpColor = bumpColor * 2 - 1;
-				bumpColor.rg *= material.normalMapStrength;
+				bumpColor.rg *= material.GetNormalMapStrength();
 			}
 
 
 #ifdef ANISOTROPIC
-			aniso.strength = material.anisotropy_strength;
-			aniso.direction = float2(material.anisotropy_rotation_cos, material.anisotropy_rotation_sin);
+			aniso.strength = material.GetAnisotropy();
+			aniso.direction = float2(material.GetAnisotropyCos(), material.GetAnisotropySin());
 
 			[branch]
 			if (material.textures[ANISOTROPYMAP].IsValid())
@@ -528,8 +528,8 @@ struct Surface
 
 		}
 
-		baseColor = is_emittedparticle ? 1 : material.baseColor;
-		baseColor *= unpack_rgba(inst.color);
+		baseColor = is_emittedparticle ? 1 : material.GetBaseColor();
+		baseColor *= inst.GetColor();
 		[branch]
 		if (material.textures[BASECOLORMAP].IsValid())
 		{
@@ -622,9 +622,9 @@ struct Surface
 		if (!material.IsUsingSpecularGlossinessWorkflow())
 		{
 			// Premultiply these before evaluating decals:
-			surfaceMap.g *= material.roughness;
-			surfaceMap.b *= material.metalness;
-			surfaceMap.a *= material.reflectance;
+			surfaceMap.g *= material.GetRoughness();
+			surfaceMap.b *= material.GetMetalness();
+			surfaceMap.a *= material.GetReflectance();
 		}
 
 		if (simple_lighting)
@@ -632,7 +632,7 @@ struct Surface
 			surfaceMap = surfacemap_simple;
 		}
 
-		emissiveColor = material.GetEmissive() * Unpack_R11G11B10_FLOAT(inst.emissive);
+		emissiveColor = material.GetEmissive() * inst.GetEmissive();
 		if (is_emittedparticle)
 		{
 			emissiveColor *= baseColor.rgb * baseColor.a;
@@ -655,7 +655,7 @@ struct Surface
 			}
 		}
 
-		if (material.options & SHADERMATERIAL_OPTION_BIT_ADDITIVE)
+		if (material.IsAdditive())
 		{
 			emissiveColor += baseColor.rgb * baseColor.a;
 		}
@@ -663,7 +663,7 @@ struct Surface
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
 #ifdef TERRAINBLENDED
 		[branch]
-		if (material.blend_with_terrain_height_rcp > 0)
+		if (material.GetTerrainBlendRcp() > 0)
 		{
 			// Blend object into terrain material:
 			ShaderTerrain terrain = GetScene().terrain;
@@ -692,7 +692,7 @@ struct Surface
 						float3 terrain_normal = normalize(cross(P2 - P0, P1 - P0));
 						float terrain_height = lerp(terrain.min_height, terrain.max_height, terrain_height0);
 						float object_height = P.y;
-						float diff = (object_height - terrain_height) * material.blend_with_terrain_height_rcp;
+						float diff = (object_height - terrain_height) * material.GetTerrainBlendRcp();
 						float blend = 1 - pow(saturate(diff), 2);
 						//blend *= lerp(1, saturate((noise_gradient_3D(P * 2) * 0.5 + 0.5) * 2), saturate(diff));
 						//terrain_uv = lerp(saturate(inverse_lerp(chunk_min, chunk_max, P.xz - N.xz * diff)), terrain_uv, saturate(N.y)); // uv stretching improvement: stretch in normal direction if normal gets horizontal
@@ -895,7 +895,7 @@ struct Surface
 			}
 		}
 
-		transmission = material.transmission;
+		transmission = material.GetTransmission();
 		[branch]
 		if (material.textures[TRANSMISSIONMAP].IsValid())
 		{
@@ -928,7 +928,7 @@ struct Surface
 
 #ifdef SHEEN
 		sheen.color = material.GetSheenColor();
-		sheen.roughness = material.sheenRoughness;
+		sheen.roughness = material.GetSheenRoughness();
 
 		[branch]
 		if (material.textures[SHEENCOLORMAP].IsValid())
@@ -960,8 +960,8 @@ struct Surface
 
 
 #ifdef CLEARCOAT
-		clearcoat.factor = material.clearcoat;
-		clearcoat.roughness = material.clearcoatRoughness;
+		clearcoat.factor = material.GetClearcoat();
+		clearcoat.roughness = material.GetClearcoatRoughness();
 		clearcoat.N = facenormal;
 
 		[branch]

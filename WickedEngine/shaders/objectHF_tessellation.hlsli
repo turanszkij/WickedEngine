@@ -37,7 +37,7 @@ ConstantOutput PatchConstantFunction(InputPatch<PixelInput, 3> patch)
 
 #if 1
 	// frustum culling:
-	float rad = GetMaterial().displacementMapping;
+	float rad = GetMaterial().GetDisplacement();
 	int culled[4];
 	[unroll]
 	for (int ip = 0; ip < 4; ++ip)
@@ -155,10 +155,10 @@ PixelInput main(ConstantOutput input, float3 uvw : SV_DomainLocation, const Outp
 #ifdef OBJECTSHADER_USE_UVSETS
 	// displacement mapping:
 	[branch]
-	if (GetMaterial().displacementMapping > 0 && GetMaterial().textures[DISPLACEMENTMAP].IsValid())
+	if (GetMaterial().GetDisplacement() > 0 && GetMaterial().textures[DISPLACEMENTMAP].IsValid())
 	{
 		float displacement = GetMaterial().textures[DISPLACEMENTMAP].SampleLevel(sampler_objectshader, output.uvsets, 0).r;
-		displacement *= GetMaterial().displacementMapping;
+		displacement *= GetMaterial().GetDisplacement();
 		output.pos.xyz += normalize(float3(output.nor)) * displacement;
 	}
 #endif // OBJECTSHADER_USE_UVSETS

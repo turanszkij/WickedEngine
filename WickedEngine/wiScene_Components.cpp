@@ -267,18 +267,16 @@ namespace wi::scene
 
 	void MaterialComponent::WriteShaderMaterial(ShaderMaterial* dest) const
 	{
+		using namespace wi::math;
+
 		ShaderMaterial material;
-		material.baseColor = baseColor;
-		material.emissive_r11g11b10 = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(emissiveColor.x * emissiveColor.w, emissiveColor.y * emissiveColor.w, emissiveColor.z * emissiveColor.w));
-		material.specular_r11g11b10 = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(specularColor.x * specularColor.w, specularColor.y * specularColor.w, specularColor.z * specularColor.w));
+		material.init();
+		material.baseColor = pack_half4(baseColor);
+		material.emissive = pack_half3(XMFLOAT3(emissiveColor.x * emissiveColor.w, emissiveColor.y * emissiveColor.w, emissiveColor.z * emissiveColor.w));
+		material.specular = pack_half3(XMFLOAT3(specularColor.x * specularColor.w, specularColor.y * specularColor.w, specularColor.z * specularColor.w));
 		material.texMulAdd = texMulAdd;
-		material.roughness = roughness;
-		material.reflectance = reflectance;
-		material.metalness = metalness;
-		material.refraction = refraction;
-		material.normalMapStrength = (textures[NORMALMAP].resource.IsValid() ? normalMapStrength : 0);
-		material.parallaxOcclusionMapping = parallaxOcclusionMapping;
-		material.displacementMapping = displacementMapping;
+		material.roughness_reflectance_metalness_refraction = pack_half4(roughness, reflectance, metalness, refraction);
+		material.normalmap_pom_alphatest_displacement = pack_half4(normalMapStrength, parallaxOcclusionMapping, 1 - alphaRef, displacementMapping);
 		XMFLOAT4 sss = subsurfaceScattering;
 		sss.x *= sss.w;
 		sss.y *= sss.w;
@@ -289,96 +287,88 @@ namespace wi::scene
 			sss_inv.z = 1.0f / ((1 + sss.z) * (1 + sss.z)),
 			sss_inv.w = 1.0f / ((1 + sss.w) * (1 + sss.w))
 		);
-		material.subsurfaceScattering = sss;
-		material.subsurfaceScattering_inv = sss_inv;
+		material.subsurfaceScattering = pack_half4(sss);
+		material.subsurfaceScattering_inv = pack_half4(sss_inv);
 
 		if (shaderType == SHADERTYPE_WATER)
 		{
-			material.sheenColor_r11g11b10 = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(1 - extinctionColor.x, 1 - extinctionColor.y, 1 - extinctionColor.z));
+			material.sheenColor = pack_half3(XMFLOAT3(1 - extinctionColor.x, 1 - extinctionColor.y, 1 - extinctionColor.z));
 		}
 		else
 		{
-			material.sheenColor_r11g11b10 = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(sheenColor.x, sheenColor.y, sheenColor.z));
+			material.sheenColor = pack_half3(XMFLOAT3(sheenColor.x, sheenColor.y, sheenColor.z));
 		}
-		material.sheenRoughness = sheenRoughness;
-		material.clearcoat = clearcoat;
-		material.clearcoatRoughness = clearcoatRoughness;
-		material.alphaTest = 1 - alphaRef;
+		material.transmission_sheenroughness_clearcoat_clearcoatroughness = pack_half4(transmission, sheenRoughness, clearcoat, clearcoatRoughness);
 		material.layerMask = layerMask;
-		material.transmission = transmission;
+		float _anisotropy_strength = 0;
+		float _anisotropy_rotation_sin = 0;
+		float _anisotropy_rotation_cos = 0;
+		float _blend_with_terrain_height_rcp = 0;
 		if (shaderType == SHADERTYPE_PBR_ANISOTROPIC)
 		{
-			material.anisotropy_strength = wi::math::Clamp(anisotropy_strength, 0, 0.99f);
-			material.anisotropy_rotation_sin = std::sin(anisotropy_rotation);
-			material.anisotropy_rotation_cos = std::cos(anisotropy_rotation);
-		}
-		else
-		{
-			material.anisotropy_strength = 0;
-			material.anisotropy_rotation_sin = 0;
-			material.anisotropy_rotation_cos = 0;
+			_anisotropy_strength = clamp(anisotropy_strength, 0.0f, 0.99f);
+			_anisotropy_rotation_sin = std::sin(anisotropy_rotation);
+			_anisotropy_rotation_cos = std::cos(anisotropy_rotation);
 		}
 		if (blend_with_terrain_height > 0)
 		{
-			material.blend_with_terrain_height_rcp = 1.0f / blend_with_terrain_height;
+			_blend_with_terrain_height_rcp = 1.0f / blend_with_terrain_height;
 		}
-		else
-		{
-			material.blend_with_terrain_height_rcp = 0;
-		}
-		material.stencilRef = wi::renderer::CombineStencilrefs(engineStencilRef, userStencilRef);
+		material.aniso_anisosin_anisocos_terrainblend = pack_half4(_anisotropy_strength, _anisotropy_rotation_sin, _anisotropy_rotation_cos, _blend_with_terrain_height_rcp);
 		material.shaderType = (uint)shaderType;
 		material.userdata = userdata;
 
-		material.options = 0;
+		material.options_stencilref = 0;
 		if (IsUsingVertexColors())
 		{
-			material.options |= SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS;
+			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS;
 		}
 		if (IsUsingSpecularGlossinessWorkflow())
 		{
-			material.options |= SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW;
+			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW;
 		}
 		if (IsOcclusionEnabled_Primary())
 		{
-			material.options |= SHADERMATERIAL_OPTION_BIT_OCCLUSION_PRIMARY;
+			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_OCCLUSION_PRIMARY;
 		}
 		if (IsOcclusionEnabled_Secondary())
 		{
-			material.options |= SHADERMATERIAL_OPTION_BIT_OCCLUSION_SECONDARY;
+			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_OCCLUSION_SECONDARY;
 		}
 		if (IsUsingWind())
 		{
-			material.options |= SHADERMATERIAL_OPTION_BIT_USE_WIND;
+			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_USE_WIND;
 		}
 		if (IsReceiveShadow())
 		{
-			material.options |= SHADERMATERIAL_OPTION_BIT_RECEIVE_SHADOW;
+			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_RECEIVE_SHADOW;
 		}
 		if (IsCastingShadow())
 		{
-			material.options |= SHADERMATERIAL_OPTION_BIT_CAST_SHADOW;
+			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_CAST_SHADOW;
 		}
 		if (IsDoubleSided())
 		{
-			material.options |= SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED;
+			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED;
 		}
 		if (GetFilterMask() & FILTER_TRANSPARENT)
 		{
-			material.options |= SHADERMATERIAL_OPTION_BIT_TRANSPARENT;
+			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_TRANSPARENT;
 		}
 		if (userBlendMode == BLENDMODE_ADDITIVE)
 		{
-			material.options |= SHADERMATERIAL_OPTION_BIT_ADDITIVE;
+			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_ADDITIVE;
 		}
 		if (shaderType == SHADERTYPE_UNLIT)
 		{
-			material.options |= SHADERMATERIAL_OPTION_BIT_UNLIT;
+			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_UNLIT;
 		}
 		if (!IsVertexAODisabled())
 		{
-			material.options |= SHADERMATERIAL_OPTION_BIT_USE_VERTEXAO;
+			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_USE_VERTEXAO;
 		}
+
+		material.options_stencilref |= wi::renderer::CombineStencilrefs(engineStencilRef, userStencilRef) << 24u;
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		for (int i = 0; i < TEXTURESLOT_COUNT; ++i)

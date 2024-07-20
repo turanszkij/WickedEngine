@@ -97,7 +97,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
 				break;
 
-			if (surface.material.options & SHADERMATERIAL_OPTION_BIT_ADDITIVE)
+			if (surface.material.IsAdditive())
 			{
 				additive_dist.xyz += energy * surface.emissiveColor;
 				additive_dist.w = min(additive_dist.w, q.CandidateTriangleRayT());
@@ -187,7 +187,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		{
 			primary_albedo = surface.albedo;
 			primary_normal = surface.N;
-			stencil = surface.material.stencilRef;
+			stencil = surface.material.GetStencilRef();
 			uint userStencilRefOverride = surface.inst.GetUserStencilRef();
 			if (userStencilRefOverride > 0)
 			{
@@ -379,7 +379,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		if (rng.next_float() < surface.transmission)
 		{
 			// Refraction
-			const float3 R = refract(ray.Direction, surface.N, 1 - surface.material.refraction);
+			const float3 R = refract(ray.Direction, surface.N, 1 - surface.material.GetRefraction());
 			float roughnessBRDF = sqr(clamp(surface.roughness, 0.045, 1));
 			ray.Direction = lerp(R, sample_hemisphere_cos(R, rng), roughnessBRDF);
 			energy *= surface.albedo / max(0.001, surface.transmission);

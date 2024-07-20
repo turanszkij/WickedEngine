@@ -69,7 +69,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			ShaderMaterial material = load_material(materialIndex);
 
 #ifdef UPDATE_BASECOLORMAP
-			float4 baseColor = material.baseColor;
+			float4 baseColor = material.GetBaseColor();
 			[branch]
 			if (material.textures[BASECOLORMAP].IsValid())
 			{
@@ -107,7 +107,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #endif // UPDATE_NORMALMAP
 
 #ifdef UPDATE_SURFACEMAP
-			float4 surface = float4(1, material.roughness, material.metalness, material.reflectance);
+			float4 surface = float4(1, material.GetRoughness(), material.GetMetalness(), material.GetReflectance());
 			[branch]
 			if (material.textures[SURFACEMAP].IsValid())
 			{

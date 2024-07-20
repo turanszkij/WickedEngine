@@ -66,7 +66,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 		}
 
 		normal -= 0.5;
-		normal *= material.normalMapStrength;
+		normal *= material.GetNormalMapStrength();
 		normal *= opacity;
 	}
 #endif // EMITTEDPARTICLE_DISTORTION
@@ -116,8 +116,8 @@ float4 main(VertextoPixel input) : SV_TARGET
 		surface.N = N;
 		surface.V = V;
 		surface.pixel = pixel;
-		surface.sss = material.subsurfaceScattering;
-		surface.sss_inv = material.subsurfaceScattering_inv;
+		surface.sss = material.GetSSS();
+		surface.sss_inv = material.GetSSSInverse();
 		surface.extinction = 0;
 		surface.update();
 
