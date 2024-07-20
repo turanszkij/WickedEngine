@@ -6,7 +6,7 @@
 #include "ShaderInterop_Terrain.h"
 #include "ShaderInterop_VoxelGrid.h"
 
-struct ShaderScene
+struct alignas(16) ShaderScene
 {
 	int instancebuffer;
 	int geometrybuffer;
@@ -34,7 +34,7 @@ struct ShaderScene
 
 	ShaderWeather weather;
 
-	struct DDGI
+	struct alignas(16) DDGI
 	{
 		uint3 grid_dimensions;
 		uint probe_count;
@@ -67,18 +67,21 @@ struct ShaderScene
 	ShaderVoxelGrid voxelgrid;
 };
 
-static const uint SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS = 1 << 0;
-static const uint SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW = 1 << 1;
-static const uint SHADERMATERIAL_OPTION_BIT_OCCLUSION_PRIMARY = 1 << 2;
-static const uint SHADERMATERIAL_OPTION_BIT_OCCLUSION_SECONDARY = 1 << 3;
-static const uint SHADERMATERIAL_OPTION_BIT_USE_WIND = 1 << 4;
-static const uint SHADERMATERIAL_OPTION_BIT_RECEIVE_SHADOW = 1 << 5;
-static const uint SHADERMATERIAL_OPTION_BIT_CAST_SHADOW = 1 << 6;
-static const uint SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED = 1 << 7;
-static const uint SHADERMATERIAL_OPTION_BIT_TRANSPARENT = 1 << 8;
-static const uint SHADERMATERIAL_OPTION_BIT_ADDITIVE = 1 << 9;
-static const uint SHADERMATERIAL_OPTION_BIT_UNLIT = 1 << 10;
-static const uint SHADERMATERIAL_OPTION_BIT_USE_VERTEXAO = 1 << 11;
+enum SHADERMATERIAL_OPTIONS
+{
+	SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS = 1 << 0,
+	SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW = 1 << 1,
+	SHADERMATERIAL_OPTION_BIT_OCCLUSION_PRIMARY = 1 << 2,
+	SHADERMATERIAL_OPTION_BIT_OCCLUSION_SECONDARY = 1 << 3,
+	SHADERMATERIAL_OPTION_BIT_USE_WIND = 1 << 4,
+	SHADERMATERIAL_OPTION_BIT_RECEIVE_SHADOW = 1 << 5,
+	SHADERMATERIAL_OPTION_BIT_CAST_SHADOW = 1 << 6,
+	SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED = 1 << 7,
+	SHADERMATERIAL_OPTION_BIT_TRANSPARENT = 1 << 8,
+	SHADERMATERIAL_OPTION_BIT_ADDITIVE = 1 << 9,
+	SHADERMATERIAL_OPTION_BIT_UNLIT = 1 << 10,
+	SHADERMATERIAL_OPTION_BIT_USE_VERTEXAO = 1 << 11,
+};
 
 // Same as MaterialComponent::TEXTURESLOT
 enum TEXTURESLOT
@@ -130,7 +133,7 @@ inline float get_lod(in uint2 dim, in float2 uv_dx, in float2 uv_dy)
 }
 #endif // __cplusplus
 
-struct ShaderTextureSlot
+struct alignas(16) ShaderTextureSlot
 {
 	uint uvset_lodclamp;
 	int texture_descriptor;
@@ -319,81 +322,59 @@ struct ShaderTextureSlot
 #endif // __cplusplus
 };
 
-struct ShaderMaterial
+struct alignas(16) ShaderMaterial
 {
-	float4		baseColor;
-	float4		subsurfaceScattering;
-	float4		subsurfaceScattering_inv;
-	float4		texMulAdd;
+	uint2 baseColor;
+	uint2 normalmap_pom_alphatest_displacement;
 
-	float		roughness;
-	float		reflectance;
-	float		metalness;
-	float		refraction;
+	uint2 roughness_reflectance_metalness_refraction;
+	uint2 emissive;
 
-	float		normalMapStrength;
-	float		parallaxOcclusionMapping;
-	float		alphaTest;
-	float		displacementMapping;
+	uint2 subsurfaceScattering;
+	uint2 subsurfaceScattering_inv;
 
-	float		transmission;
-	uint		emissive_r11g11b10;
-	uint		specular_r11g11b10;
-	uint		sheenColor_r11g11b10;
+	uint2 specular;
+	uint2 sheenColor;
 
-	float		sheenRoughness;
-	float		clearcoat;
-	float		clearcoatRoughness;
-	uint		stencilRef;
+	float4 texMulAdd;
 
-	float		anisotropy_strength;
-	float		anisotropy_rotation_sin;
-	float		anisotropy_rotation_cos;
-	float		blend_with_terrain_height_rcp;
+	uint2 transmission_sheenroughness_clearcoat_clearcoatroughness;
+	uint2 aniso_anisosin_anisocos_terrainblend;
 
-	int			sampler_descriptor;
-	uint		options;
-	uint		layerMask;
-	uint		shaderType;
+	int sampler_descriptor;
+	uint options_stencilref;
+	uint layerMask;
+	uint shaderType;
 
-	uint4		userdata;
+	uint4 userdata;
 
 	ShaderTextureSlot textures[TEXTURESLOT_COUNT];
 
 	void init()
 	{
-		baseColor = float4(1, 1, 1, 1);
-		subsurfaceScattering = float4(0, 0, 0, 0);
-		subsurfaceScattering_inv = float4(0, 0, 0, 0);
+		baseColor = uint2(0, 0);
+		normalmap_pom_alphatest_displacement = uint2(0, 0);
+
+		roughness_reflectance_metalness_refraction = uint2(0, 0);
+		emissive = uint2(0, 0);
+
+		subsurfaceScattering = uint2(0, 0);
+		subsurfaceScattering_inv = uint2(0, 0);
+
+		specular = uint2(0, 0);
+		sheenColor = uint2(0, 0);
+
 		texMulAdd = float4(1, 1, 0, 0);
 
-		roughness = 0;
-		reflectance = 0;
-		metalness = 0;
-		refraction = 0;
+		transmission_sheenroughness_clearcoat_clearcoatroughness = uint2(0, 0);
+		aniso_anisosin_anisocos_terrainblend = uint2(0, 0);
 
-		normalMapStrength = 0;
-		parallaxOcclusionMapping = 0;
-		alphaTest = 0;
-		displacementMapping = 0;
-
-		transmission = 0;
-		options = 0u;
-		emissive_r11g11b10 = 0;
-		specular_r11g11b10 = 0;
-
+		sampler_descriptor = -1;
+		options_stencilref = 0;
 		layerMask = ~0u;
-		sheenColor_r11g11b10 = 0;
-		sheenRoughness = 0;
-
-		clearcoat = 0;
-		clearcoatRoughness = 0;
-		stencilRef = 0;
 		shaderType = 0;
 
 		userdata = uint4(0, 0, 0, 0);
-
-		sampler_descriptor = -1;
 
 		for (int i = 0; i < TEXTURESLOT_COUNT; ++i)
 		{
@@ -402,24 +383,48 @@ struct ShaderMaterial
 	}
 
 #ifndef __cplusplus
-	float3 GetEmissive() { return Unpack_R11G11B10_FLOAT(emissive_r11g11b10); }
-	float3 GetSpecular() { return Unpack_R11G11B10_FLOAT(specular_r11g11b10); }
-	float3 GetSheenColor() { return Unpack_R11G11B10_FLOAT(sheenColor_r11g11b10); }
+	inline float4 GetBaseColor() { return unpack_half4(baseColor); }
+	inline float4 GetSSS() { return unpack_half4(subsurfaceScattering); }
+	inline float4 GetSSSInverse() { return unpack_half4(subsurfaceScattering_inv); }
+	inline float3 GetEmissive() { return unpack_half3(emissive); }
+	inline float3 GetSpecular() { return unpack_half3(specular); }
+	inline float3 GetSheenColor() { return unpack_half3(sheenColor); }
+	inline float GetRoughness() { return unpack_half4(roughness_reflectance_metalness_refraction).x; }
+	inline float GetReflectance() { return unpack_half4(roughness_reflectance_metalness_refraction).y; }
+	inline float GetMetalness() { return unpack_half4(roughness_reflectance_metalness_refraction).z; }
+	inline float GetRefraction() { return unpack_half4(roughness_reflectance_metalness_refraction).w; }
+	inline float GetNormalMapStrength() { return unpack_half4(normalmap_pom_alphatest_displacement).x; }
+	inline float GetParallaxOcclusionMapping() { return unpack_half4(normalmap_pom_alphatest_displacement).y; }
+	inline float GetAlphaTest() { return unpack_half4(normalmap_pom_alphatest_displacement).z; }
+	inline float GetDisplacement() { return unpack_half4(normalmap_pom_alphatest_displacement).w; }
+	inline float GetTransmission() { return unpack_half4(transmission_sheenroughness_clearcoat_clearcoatroughness).x; }
+	inline float GetSheenRoughness() { return unpack_half4(transmission_sheenroughness_clearcoat_clearcoatroughness).y; }
+	inline float GetClearcoat() { return unpack_half4(transmission_sheenroughness_clearcoat_clearcoatroughness).z; }
+	inline float GetClearcoatRoughness() { return unpack_half4(transmission_sheenroughness_clearcoat_clearcoatroughness).w; }
+	inline float GetAnisotropy() { return unpack_half4(aniso_anisosin_anisocos_terrainblend).x; }
+	inline float GetAnisotropySin() { return unpack_half4(aniso_anisosin_anisocos_terrainblend).y; }
+	inline float GetAnisotropyCos() { return unpack_half4(aniso_anisosin_anisocos_terrainblend).z; }
+	inline float GetTerrainBlendRcp() { return unpack_half4(aniso_anisosin_anisocos_terrainblend).w; }
+	inline uint GetStencilRef() { return options_stencilref >> 24u; }
 #endif // __cplusplus
 
-	inline bool IsUsingVertexColors() { return options & SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS; }
-	inline bool IsUsingVertexAO() { return options & SHADERMATERIAL_OPTION_BIT_USE_VERTEXAO; }
-	inline bool IsUsingSpecularGlossinessWorkflow() { return options & SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW; }
-	inline bool IsOcclusionEnabled_Primary() { return options & SHADERMATERIAL_OPTION_BIT_OCCLUSION_PRIMARY; }
-	inline bool IsOcclusionEnabled_Secondary() { return options & SHADERMATERIAL_OPTION_BIT_OCCLUSION_SECONDARY; }
-	inline bool IsUsingWind() { return options & SHADERMATERIAL_OPTION_BIT_USE_WIND; }
-	inline bool IsReceiveShadow() { return options & SHADERMATERIAL_OPTION_BIT_RECEIVE_SHADOW; }
-	inline bool IsCastingShadow() { return options & SHADERMATERIAL_OPTION_BIT_CAST_SHADOW; }
-	inline bool IsUnlit() { return options & SHADERMATERIAL_OPTION_BIT_UNLIT; }
+	inline uint GetOptions() { return options_stencilref; }
+	inline bool IsUsingVertexColors() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS; }
+	inline bool IsUsingVertexAO() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_USE_VERTEXAO; }
+	inline bool IsUsingSpecularGlossinessWorkflow() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW; }
+	inline bool IsOcclusionEnabled_Primary() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_OCCLUSION_PRIMARY; }
+	inline bool IsOcclusionEnabled_Secondary() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_OCCLUSION_SECONDARY; }
+	inline bool IsUsingWind() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_USE_WIND; }
+	inline bool IsReceiveShadow() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_RECEIVE_SHADOW; }
+	inline bool IsCastingShadow() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_CAST_SHADOW; }
+	inline bool IsUnlit() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_UNLIT; }
+	inline bool IsTransparent() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_TRANSPARENT; }
+	inline bool IsAdditive() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_ADDITIVE; }
+	inline bool IsDoubleSided() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED; }
 };
 
 // For binning shading based on shader types:
-struct ShaderTypeBin
+struct alignas(16) ShaderTypeBin
 {
 	uint dispatchX;
 	uint dispatchY;
@@ -431,7 +436,7 @@ struct ShaderTypeBin
 };
 static const uint SHADERTYPE_BIN_COUNT = 11;
 
-struct VisibilityTile
+struct alignas(16) VisibilityTile
 {
 	uint visibility_tile_id;
 	uint entity_flat_tile_index;
@@ -448,13 +453,16 @@ struct VisibilityTile
 	}
 };
 
-static const uint SHADERMESH_FLAG_DOUBLE_SIDED = 1 << 0;
-static const uint SHADERMESH_FLAG_HAIRPARTICLE = 1 << 1;
-static const uint SHADERMESH_FLAG_EMITTEDPARTICLE = 1 << 2;
+enum SHADERMESH_FLAGS
+{
+	SHADERMESH_FLAG_DOUBLE_SIDED = 1 << 0,
+	SHADERMESH_FLAG_HAIRPARTICLE = 1 << 1,
+	SHADERMESH_FLAG_EMITTEDPARTICLE = 1 << 2,
+};
 
 // This is equivalent to a Mesh + MeshSubset
 //	But because these are always loaded toghether by shaders, they are unrolled into one to reduce individual buffer loads
-struct ShaderGeometry
+struct alignas(16) ShaderGeometry
 {
 	int ib;
 	int vb_pos_wind;
@@ -518,7 +526,7 @@ inline uint triangle_count_to_meshlet_count(uint triangleCount)
 {
 	return (triangleCount + MESHLET_TRIANGLE_COUNT - 1u) / MESHLET_TRIANGLE_COUNT;
 }
-struct ShaderMeshlet
+struct alignas(16) ShaderMeshlet
 {
 	uint instanceIndex;
 	uint geometryIndex;
@@ -526,7 +534,7 @@ struct ShaderMeshlet
 	uint padding;
 };
 
-struct ShaderTransform
+struct alignas(16) ShaderTransform
 {
 	float4 mat0;
 	float4 mat1;
@@ -558,17 +566,16 @@ struct ShaderTransform
 	}
 };
 
-struct ShaderMeshInstance
+struct alignas(16) ShaderMeshInstance
 {
 	uint uid;
 	uint flags;	// high 8 bits: user stencilRef
 	uint layerMask;
 	uint geometryOffset;	// offset of all geometries for currently active LOD
 
-	uint geometryCount;		// number of all geometries in currently active LOD
+	uint2 emissive;
 	uint color;
-	uint emissive;
-	int lightmap;
+	uint geometryCount;		// number of all geometries in currently active LOD
 
 	uint meshletOffset; // offset in the global meshlet buffer for first subset (for LOD0)
 	float fadeDistance;
@@ -581,7 +588,7 @@ struct ShaderMeshInstance
 	int vb_ao;
 	float alphaTest;
 	int vb_wetmap;
-	int padding;
+	int lightmap;
 
 	ShaderTransform transform;
 	ShaderTransform transformInverseTranspose; // This correctly handles non uniform scaling for normals
@@ -593,7 +600,7 @@ struct ShaderMeshInstance
 		flags = 0;
 		layerMask = 0;
 		color = ~0u;
-		emissive = ~0u;
+		emissive = uint2(0, 0);
 		lightmap = -1;
 		geometryOffset = 0;
 		geometryCount = 0;
@@ -619,6 +626,11 @@ struct ShaderMeshInstance
 	{
 		return flags >> 24u;
 	}
+
+#ifndef __cplusplus
+	inline float4 GetColor() { return unpack_rgba(color); }
+	inline float3 GetEmissive() { return unpack_half3(emissive); }
+#endif // __cplusplus
 };
 struct ShaderMeshInstancePointer
 {
@@ -661,7 +673,7 @@ struct ObjectPushConstants
 // Warning: the size of this structure directly affects shader performance.
 //	Try to reduce it as much as possible!
 //	Keep it aligned to 16 bytes for best performance!
-struct ShaderEntity
+struct alignas(16) ShaderEntity
 {
 	float3 position;
 	uint type8_flags8_range16;
@@ -836,12 +848,12 @@ struct ShaderEntity
 #endif // __cplusplus
 };
 
-struct ShaderSphere
+struct alignas(16) ShaderSphere
 {
 	float3 center;
 	float radius;
 };
-struct ShaderFrustum
+struct alignas(16) ShaderFrustum
 {
 	// Frustum planes:
 	//	0 : near
@@ -883,10 +895,12 @@ enum SHADER_ENTITY_TYPE
 	ENTITY_TYPE_COUNT
 };
 
-static const uint ENTITY_FLAG_LIGHT_STATIC = 1 << 0;
-static const uint ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS = 1 << 1;
-
-static const uint ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA = 1 << 0;
+enum SHADER_ENTITY_FLAGS
+{
+	ENTITY_FLAG_LIGHT_STATIC = 1 << 0,
+	ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS = 1 << 1,
+	ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA = 1 << 0,
+};
 
 static const uint SHADER_ENTITY_COUNT = 256;
 static const uint SHADER_ENTITY_TILE_BUCKET_COUNT = SHADER_ENTITY_COUNT / 32;
@@ -905,28 +919,31 @@ static const uint VISIBILITY_TILED_CULLING_GRANULARITY = TILED_CULLING_BLOCKSIZE
 static const int impostorCaptureAngles = 36;
 
 // These option bits can be read from options constant buffer value:
-static const uint OPTION_BIT_TEMPORALAA_ENABLED = 1 << 0;
-static const uint OPTION_BIT_TRANSPARENTSHADOWS_ENABLED = 1 << 1;
-static const uint OPTION_BIT_VXGI_ENABLED = 1 << 2;
-static const uint OPTION_BIT_VXGI_REFLECTIONS_ENABLED = 1 << 3;
-static const uint OPTION_BIT_REALISTIC_SKY = 1 << 6;
-static const uint OPTION_BIT_HEIGHT_FOG = 1 << 7;
-static const uint OPTION_BIT_RAYTRACED_SHADOWS = 1 << 8;
-static const uint OPTION_BIT_SHADOW_MASK = 1 << 9;
-static const uint OPTION_BIT_SURFELGI_ENABLED = 1 << 10;
-static const uint OPTION_BIT_DISABLE_ALBEDO_MAPS = 1 << 11;
-static const uint OPTION_BIT_FORCE_DIFFUSE_LIGHTING = 1 << 12;
-static const uint OPTION_BIT_VOLUMETRICCLOUDS_CAST_SHADOW = 1 << 13;
-static const uint OPTION_BIT_OVERRIDE_FOG_COLOR = 1 << 14;
-static const uint OPTION_BIT_STATIC_SKY_SPHEREMAP = 1 << 15;
-static const uint OPTION_BIT_REALISTIC_SKY_AERIAL_PERSPECTIVE = 1 << 16;
-static const uint OPTION_BIT_REALISTIC_SKY_HIGH_QUALITY = 1 << 17;
-static const uint OPTION_BIT_REALISTIC_SKY_RECEIVE_SHADOW = 1 << 18;
-static const uint OPTION_BIT_VOLUMETRICCLOUDS_RECEIVE_SHADOW = 1 << 19;
+enum FRAME_OPTIONS
+{
+	OPTION_BIT_TEMPORALAA_ENABLED = 1 << 0,
+	OPTION_BIT_TRANSPARENTSHADOWS_ENABLED = 1 << 1,
+	OPTION_BIT_VXGI_ENABLED = 1 << 2,
+	OPTION_BIT_VXGI_REFLECTIONS_ENABLED = 1 << 3,
+	OPTION_BIT_REALISTIC_SKY = 1 << 6,
+	OPTION_BIT_HEIGHT_FOG = 1 << 7,
+	OPTION_BIT_RAYTRACED_SHADOWS = 1 << 8,
+	OPTION_BIT_SHADOW_MASK = 1 << 9,
+	OPTION_BIT_SURFELGI_ENABLED = 1 << 10,
+	OPTION_BIT_DISABLE_ALBEDO_MAPS = 1 << 11,
+	OPTION_BIT_FORCE_DIFFUSE_LIGHTING = 1 << 12,
+	OPTION_BIT_VOLUMETRICCLOUDS_CAST_SHADOW = 1 << 13,
+	OPTION_BIT_OVERRIDE_FOG_COLOR = 1 << 14,
+	OPTION_BIT_STATIC_SKY_SPHEREMAP = 1 << 15,
+	OPTION_BIT_REALISTIC_SKY_AERIAL_PERSPECTIVE = 1 << 16,
+	OPTION_BIT_REALISTIC_SKY_HIGH_QUALITY = 1 << 17,
+	OPTION_BIT_REALISTIC_SKY_RECEIVE_SHADOW = 1 << 18,
+	OPTION_BIT_VOLUMETRICCLOUDS_RECEIVE_SHADOW = 1 << 19,
+};
 
 // ---------- Common Constant buffers: -----------------
 
-struct FrameCB
+struct alignas(16) FrameCB
 {
 	uint		options;					// wi::renderer bool options packed into bitmask (OPTION_BIT_ values)
 	float		time;
@@ -996,7 +1013,7 @@ enum SHADERCAMERA_OPTIONS
 	SHADERCAMERA_OPTION_USE_SHADOW_MASK = 1 << 0,
 };
 
-struct ShaderCamera
+struct alignas(16) ShaderCamera
 {
 	float4x4	view_projection;
 
@@ -1177,7 +1194,7 @@ struct ShaderCamera
 #endif // __cplusplus
 };
 
-struct CameraCB
+struct alignas(16) CameraCB
 {
 	ShaderCamera cameras[16];
 

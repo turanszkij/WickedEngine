@@ -14,7 +14,7 @@ struct ShaderTerrainChunk
 		materialID = 0;
 	}
 };
-struct ShaderTerrain
+struct alignas(16) ShaderTerrain
 {
 	float3 center_chunk_pos;
 	float chunk_size;

@@ -47,11 +47,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	{
 		bvhprim.flags |= BVH_PRIMITIVE_FLAG_DOUBLE_SIDED;
 	}
-	if (material.options & SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED)
+	if (material.IsDoubleSided())
 	{
 		bvhprim.flags |= BVH_PRIMITIVE_FLAG_DOUBLE_SIDED;
 	}
-	if (material.options & SHADERMATERIAL_OPTION_BIT_TRANSPARENT || material.alphaTest > 0)
+	if (material.IsTransparent() || material.GetAlphaTest() > 0)
 	{
 		bvhprim.flags |= BVH_PRIMITIVE_FLAG_TRANSPARENT;
 	}

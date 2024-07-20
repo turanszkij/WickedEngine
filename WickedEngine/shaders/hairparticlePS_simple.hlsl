@@ -5,5 +5,5 @@ float4 main(VertexToPixel input) : SV_TARGET
 {
 	ShaderMaterial material = HairGetMaterial();
 
-	return material.baseColor;
+	return material.GetBaseColor();
 }

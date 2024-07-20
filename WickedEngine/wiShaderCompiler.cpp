@@ -137,7 +137,8 @@ namespace wi::shadercompiler
 			//L"-Gec", // Enable backward compatibility mode
 			//L"-Ges", // Enable strict mode
 			//L"-O0", // Optimization Level 0
-			//L"-Wno-conversion"
+			//L"-enable-16bit-types",
+			//L"-Wno-conversion",
 		};
 
 		if (has_flag(input.flags, Flags::DISABLE_OPTIMIZATION))
@@ -158,6 +159,7 @@ namespace wi::shadercompiler
 		case ShaderFormat::SPIRV:
 			args.push_back(L"-spirv");
 			args.push_back(L"-fspv-target-env=vulkan1.2");
+			//args.push_back(L"-fspv-target-env=vulkan1.3"); // this has some problem with RenderDoc AMD disassembly so it's not enabled for now
 			args.push_back(L"-fvk-use-dx-layout");
 			args.push_back(L"-fvk-use-dx-position-w");
 			//args.push_back(L"-fvk-b-shift"); args.push_back(L"0"); args.push_back(L"0");

@@ -30,6 +30,8 @@ using int4 = XMINT4;
 
 // Shader - side types:
 
+#define alignas(x)
+
 #define PASTE1(a, b) a##b
 #define PASTE(a, b) PASTE1(a, b)
 #define CBUFFER(name, slot) cbuffer name : register(PASTE(b, slot))

@@ -32,7 +32,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float3 emitPos = 0;
 	float3 nor = 0;
 	float3 velocity = xParticleVelocity;
-	float4 baseColor = EmitterGetMaterial().baseColor * unpack_rgba(location.color);
+	float4 baseColor = EmitterGetMaterial().GetBaseColor() * unpack_rgba(location.color);
 		
 #ifdef EMIT_FROM_MESH
 	// random subset of emitter mesh:
@@ -114,7 +114,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if(xEmitterOptions & EMITTER_OPTION_BIT_TAKE_COLOR_FROM_MESH)
 	{
 		ShaderMaterial material = load_material(geometry.materialIndex);
-		baseColor *= material.baseColor;
+		baseColor *= material.GetBaseColor();
 		
 		[branch]
 		if (geometry.vb_col >= 0 && material.IsUsingVertexColors())

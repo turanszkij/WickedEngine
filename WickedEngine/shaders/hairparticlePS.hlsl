@@ -20,7 +20,7 @@ float4 main(VertexToPixel input) : SV_Target
 	{
 		color = material.textures[BASECOLORMAP].Sample(sampler_linear_wrap, input.tex.xyxy);
 	}
-	color *= material.baseColor;
+	color *= material.GetBaseColor();
 
 	float3 V = GetCamera().position - input.pos3D;
 	float dist = length(V);

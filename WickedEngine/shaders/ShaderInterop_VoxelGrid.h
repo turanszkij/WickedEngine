@@ -2,7 +2,7 @@
 #define WI_SHADERINTEROP_VOXELGRID_H
 #include "ShaderInterop.h"
 
-struct ShaderVoxelGrid
+struct alignas(16) ShaderVoxelGrid
 {
 	uint3 resolution;
 	int buffer;

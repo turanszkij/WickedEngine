@@ -2,7 +2,7 @@
 #define WI_SHADERINTEROP_WEATHER_H
 #include "ShaderInterop.h"
 
-struct AtmosphereParameters
+struct alignas(16) AtmosphereParameters
 {
 	float2 padding0;
 	// Radius of the planet (center to ground)
@@ -21,10 +21,12 @@ struct AtmosphereParameters
 	float mieDensityExpScale;
 
 	// Mie scattering coefficients
-	float3 mieScattering;	float padding1;
+	float3 mieScattering;
+	float padding1;
 
 	// Mie extinction coefficients
-	float3 mieExtinction;	float padding2;
+	float3 mieExtinction;
+	float padding2;
 
 	// Mie absorption coefficients
 	float3 mieAbsorption;
@@ -41,10 +43,12 @@ struct AtmosphereParameters
 	float absorptionDensity1LinearTerm;
 
 	// This other medium only absorb light, e.g. useful to represent ozone in the earth atmosphere
-	float3 absorptionExtinction;	float padding4;
+	float3 absorptionExtinction;
+	float padding4;
 
 	// The albedo of the ground.
-	float3 groundAlbedo;	float padding5;
+	float3 groundAlbedo;
+	float padding5;
 
 	// Varying sample count for sky rendering based on the 'distanceSPPMaxInv' with min-max
 	float2 rayMarchMinMaxSPP;
@@ -101,7 +105,7 @@ struct AtmosphereParameters
 };
 
 
-struct VolumetricCloudLayer
+struct alignas(16) VolumetricCloudLayer
 {
 	// Lighting
 	float3 albedo; // Cloud albedo is normally very close to white
@@ -151,7 +155,7 @@ struct VolumetricCloudLayer
 	float coverageWindAngle;
 };
 
-struct VolumetricCloudParameters
+struct alignas(16) VolumetricCloudParameters
 {
 	float beerPowder;
 	float beerPowderPower;
@@ -318,7 +322,7 @@ struct VolumetricCloudParameters
 
 };
 
-struct ShaderFog
+struct alignas(16) ShaderFog
 {
 	float start;
 	float density;
@@ -326,7 +330,7 @@ struct ShaderFog
 	float height_end;
 };
 
-struct ShaderWind
+struct alignas(16) ShaderWind
 {
 	float3 direction;
 	float speed;
@@ -337,7 +341,7 @@ struct ShaderWind
 	float padding1;
 };
 
-struct ShaderOcean
+struct alignas(16) ShaderOcean
 {
 	float4 water_color;
 	float4 extinction_color;
@@ -349,7 +353,7 @@ struct ShaderOcean
 	bool IsValid() { return texture_displacementmap >= 0; }
 };
 
-struct ShaderWeather
+struct alignas(16) ShaderWeather
 {
 	float3 sun_color;
 	float stars; // number of stars (0: disable stars, >0: increase number of stars)

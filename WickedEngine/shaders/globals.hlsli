@@ -231,6 +231,120 @@ RWTexture2D<uint4> bindless_rwtextures_uint4[] : register(space36);
 
 #endif // __spirv__
 
+
+inline uint pack_unitvector(in float3 value)
+{
+	uint retVal = 0;
+	retVal |= (uint)((value.x * 0.5 + 0.5) * 255.0) << 0u;
+	retVal |= (uint)((value.y * 0.5 + 0.5) * 255.0) << 8u;
+	retVal |= (uint)((value.z * 0.5 + 0.5) * 255.0) << 16u;
+	return retVal;
+}
+inline float3 unpack_unitvector(in uint value)
+{
+	float3 retVal;
+	retVal.x = (float)((value >> 0u) & 0xFF) / 255.0 * 2 - 1;
+	retVal.y = (float)((value >> 8u) & 0xFF) / 255.0 * 2 - 1;
+	retVal.z = (float)((value >> 16u) & 0xFF) / 255.0 * 2 - 1;
+	return retVal;
+}
+
+inline uint pack_utangent(in float4 value)
+{
+	uint retVal = 0;
+	retVal |= (uint)((value.x) * 255.0) << 0u;
+	retVal |= (uint)((value.y) * 255.0) << 8u;
+	retVal |= (uint)((value.z) * 255.0) << 16u;
+	retVal |= (uint)((value.w) * 255.0) << 24u;
+	return retVal;
+}
+inline float4 unpack_utangent(in uint value)
+{
+	float4 retVal;
+	retVal.x = (float)((value >> 0u) & 0xFF) / 255.0;
+	retVal.y = (float)((value >> 8u) & 0xFF) / 255.0;
+	retVal.z = (float)((value >> 16u) & 0xFF) / 255.0;
+	retVal.w = (float)((value >> 24u) & 0xFF) / 255.0;
+	return retVal;
+}
+
+inline uint pack_rgba(in float4 value)
+{
+	uint retVal = 0;
+	retVal |= (uint)(value.x * 255.0) << 0u;
+	retVal |= (uint)(value.y * 255.0) << 8u;
+	retVal |= (uint)(value.z * 255.0) << 16u;
+	retVal |= (uint)(value.w * 255.0) << 24u;
+	return retVal;
+}
+inline float4 unpack_rgba(in uint value)
+{
+	float4 retVal;
+	retVal.x = (float)((value >> 0u) & 0xFF) / 255.0;
+	retVal.y = (float)((value >> 8u) & 0xFF) / 255.0;
+	retVal.z = (float)((value >> 16u) & 0xFF) / 255.0;
+	retVal.w = (float)((value >> 24u) & 0xFF) / 255.0;
+	return retVal;
+}
+
+inline uint pack_half2(in float2 value)
+{
+	uint retVal = 0;
+	retVal = f32tof16(value.x) | (f32tof16(value.y) << 16u);
+	return retVal;
+}
+inline float2 unpack_half2(in uint value)
+{
+	float2 retVal;
+	retVal.x = f16tof32(value.x);
+	retVal.y = f16tof32(value.x >> 16u);
+	return retVal;
+}
+inline uint2 pack_half3(in float3 value)
+{
+	uint2 retVal = 0;
+	retVal.x = f32tof16(value.x) | (f32tof16(value.y) << 16u);
+	retVal.y = f32tof16(value.z);
+	return retVal;
+}
+inline float3 unpack_half3(in uint2 value)
+{
+	float3 retVal;
+	retVal.x = f16tof32(value.x);
+	retVal.y = f16tof32(value.x >> 16u);
+	retVal.z = f16tof32(value.y);
+	return retVal;
+}
+inline uint2 pack_half4(in float4 value)
+{
+	uint2 retVal = 0;
+	retVal.x = f32tof16(value.x) | (f32tof16(value.y) << 16u);
+	retVal.y = f32tof16(value.z) | (f32tof16(value.w) << 16u);
+	return retVal;
+}
+inline float4 unpack_half4(in uint2 value)
+{
+	float4 retVal;
+	retVal.x = f16tof32(value.x);
+	retVal.y = f16tof32(value.x >> 16u);
+	retVal.z = f16tof32(value.y);
+	retVal.w = f16tof32(value.y >> 16u);
+	return retVal;
+}
+
+inline uint pack_pixel(uint2 value)
+{
+	return (value.x & 0xFFFF) | ((value.y & 0xFFFF) << 16u);
+}
+inline uint2 unpack_pixel(uint value)
+{
+	uint2 retVal;
+	retVal.x = value & 0xFFFF;
+	retVal.y = (value >> 16u) & 0xFFFF;
+	return retVal;
+}
+
+
 #include "ShaderInterop_Renderer.h"
 
 #if defined(__PSSL__)
@@ -1100,117 +1214,6 @@ float4 SampleTextureCatmullRom(in Texture2D<float4> tex, in SamplerState linearS
 	return result;
 }
 
-inline uint pack_unitvector(in float3 value)
-{
-	uint retVal = 0;
-	retVal |= (uint)((value.x * 0.5 + 0.5) * 255.0) << 0u;
-	retVal |= (uint)((value.y * 0.5 + 0.5) * 255.0) << 8u;
-	retVal |= (uint)((value.z * 0.5 + 0.5) * 255.0) << 16u;
-	return retVal;
-}
-inline float3 unpack_unitvector(in uint value)
-{
-	float3 retVal;
-	retVal.x = (float)((value >> 0u) & 0xFF) / 255.0 * 2 - 1;
-	retVal.y = (float)((value >> 8u) & 0xFF) / 255.0 * 2 - 1;
-	retVal.z = (float)((value >> 16u) & 0xFF) / 255.0 * 2 - 1;
-	return retVal;
-}
-
-inline uint pack_utangent(in float4 value)
-{
-	uint retVal = 0;
-	retVal |= (uint)((value.x) * 255.0) << 0u;
-	retVal |= (uint)((value.y) * 255.0) << 8u;
-	retVal |= (uint)((value.z) * 255.0) << 16u;
-	retVal |= (uint)((value.w) * 255.0) << 24u;
-	return retVal;
-}
-inline float4 unpack_utangent(in uint value)
-{
-	float4 retVal;
-	retVal.x = (float)((value >> 0u) & 0xFF) / 255.0;
-	retVal.y = (float)((value >> 8u) & 0xFF) / 255.0;
-	retVal.z = (float)((value >> 16u) & 0xFF) / 255.0;
-	retVal.w = (float)((value >> 24u) & 0xFF) / 255.0;
-	return retVal;
-}
-
-inline uint pack_rgba(in float4 value)
-{
-	uint retVal = 0;
-	retVal |= (uint)(value.x * 255.0) << 0u;
-	retVal |= (uint)(value.y * 255.0) << 8u;
-	retVal |= (uint)(value.z * 255.0) << 16u;
-	retVal |= (uint)(value.w * 255.0) << 24u;
-	return retVal;
-}
-inline float4 unpack_rgba(in uint value)
-{
-	float4 retVal;
-	retVal.x = (float)((value >> 0u) & 0xFF) / 255.0;
-	retVal.y = (float)((value >> 8u) & 0xFF) / 255.0;
-	retVal.z = (float)((value >> 16u) & 0xFF) / 255.0;
-	retVal.w = (float)((value >> 24u) & 0xFF) / 255.0;
-	return retVal;
-}
-
-inline uint pack_half2(in float2 value)
-{
-	uint retVal = 0;
-	retVal = f32tof16(value.x) | (f32tof16(value.y) << 16u);
-	return retVal;
-}
-inline float2 unpack_half2(in uint value)
-{
-	float2 retVal;
-	retVal.x = f16tof32(value.x);
-	retVal.y = f16tof32(value.x >> 16u);
-	return retVal;
-}
-inline uint2 pack_half3(in float3 value)
-{
-	uint2 retVal = 0;
-	retVal.x = f32tof16(value.x) | (f32tof16(value.y) << 16u);
-	retVal.y = f32tof16(value.z);
-	return retVal;
-}
-inline float3 unpack_half3(in uint2 value)
-{
-	float3 retVal;
-	retVal.x = f16tof32(value.x);
-	retVal.y = f16tof32(value.x >> 16u);
-	retVal.z = f16tof32(value.y);
-	return retVal;
-}
-inline uint2 pack_half4(in float4 value)
-{
-	uint2 retVal = 0;
-	retVal.x = f32tof16(value.x) | (f32tof16(value.y) << 16u);
-	retVal.y = f32tof16(value.z) | (f32tof16(value.w) << 16u);
-	return retVal;
-}
-inline float4 unpack_half4(in uint2 value)
-{
-	float4 retVal;
-	retVal.x = f16tof32(value.x);
-	retVal.y = f16tof32(value.x >> 16u);
-	retVal.z = f16tof32(value.y);
-	retVal.w = f16tof32(value.y >> 16u);
-	return retVal;
-}
-
-inline uint pack_pixel(uint2 value)
-{
-	return (value.x & 0xFFFF) | ((value.y & 0xFFFF) << 16u);
-}
-inline uint2 unpack_pixel(uint value)
-{
-	uint2 retVal;
-	retVal.x = value & 0xFFFF;
-	retVal.y = (value >> 16u) & 0xFFFF;
-	return retVal;
-}
 
 
 // Expands a 10-bit integer into 30 bits

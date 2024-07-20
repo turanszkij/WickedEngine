@@ -63,6 +63,8 @@ struct PSInput
 
 void main(PSInput input)
 {
+	ShaderMaterial material = GetMaterial();
+
 	float4 uvsets = input.GetUVSets();
 	float3 P = input.P;
 
@@ -86,23 +88,23 @@ void main(PSInput input)
 
 	float4 baseColor = input.color;
 	[branch]
-	if (GetMaterial().textures[BASECOLORMAP].IsValid() && (GetFrame().options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+	if (material.textures[BASECOLORMAP].IsValid() && (GetFrame().options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 	{
 		float lod_bias = 0;
-		if (GetMaterial().options & SHADERMATERIAL_OPTION_BIT_TRANSPARENT || GetMaterial().alphaTest > 0)
+		if (material.IsTransparent() || material.GetAlphaTest() > 0)
 		{
 			// If material is non opaque, then we apply bias to avoid sampling such a low
 			//	mip level in which alpha is completely gone (helps with trees)
 			lod_bias = -10;
 		}
-		baseColor *= GetMaterial().textures[BASECOLORMAP].SampleBias(sampler_linear_wrap, uvsets, lod_bias);
+		baseColor *= material.textures[BASECOLORMAP].SampleBias(sampler_linear_wrap, uvsets, lod_bias);
 	}
 
-	float3 emissiveColor = GetMaterial().GetEmissive();
+	float3 emissiveColor = material.GetEmissive();
 	[branch]
-	if (any(emissiveColor) && GetMaterial().textures[EMISSIVEMAP].IsValid())
+	if (any(emissiveColor) && material.textures[EMISSIVEMAP].IsValid())
 	{
-		float4 emissiveMap = GetMaterial().textures[EMISSIVEMAP].Sample(sampler_linear_wrap, uvsets);
+		float4 emissiveMap = material.textures[EMISSIVEMAP].Sample(sampler_linear_wrap, uvsets);
 		emissiveColor *= emissiveMap.rgb * emissiveMap.a;
 	}
 
@@ -115,11 +117,11 @@ void main(PSInput input)
 	surface.init();
 	surface.P = P;
 	surface.N = N;
-	surface.create(GetMaterial(), baseColor, 0, 0);
-	surface.roughness = GetMaterial().roughness;
-	surface.sss = GetMaterial().subsurfaceScattering;
-	surface.sss_inv = GetMaterial().subsurfaceScattering_inv;
-	surface.layerMask = GetMaterial().layerMask;
+	surface.create(material, baseColor, 0, 0);
+	surface.roughness = material.GetRoughness();
+	surface.sss = material.GetSSS();
+	surface.sss_inv = material.GetSSSInverse();
+	surface.layerMask = material.layerMask;
 	surface.update();
 
 	ForwardLighting(surface, lighting);
