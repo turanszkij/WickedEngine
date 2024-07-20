@@ -67,7 +67,7 @@ struct Surface
 	// Fill these yourself:
 	float3 P;				// world space position
 	float3 N;				// world space normal
-	half3 V;				// world space view vector
+	float3 V;				// world space view vector
 
 	half4 baseColor;
 	half3 albedo;			// diffuse light absorbtion value (rgb)
