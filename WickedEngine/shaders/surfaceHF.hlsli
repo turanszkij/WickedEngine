@@ -370,9 +370,9 @@ struct Surface
 		if (geometry.vb_nor >= 0)
 		{
 			Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(geometry.vb_nor)];
-			half3 n0 = mul(buf[i0].xyz, (half4)inst.quaternion);
-			half3 n1 = mul(buf[i1].xyz, (half4)inst.quaternion);
-			half3 n2 = mul(buf[i2].xyz, (half4)inst.quaternion);
+			half3 n0 = rotate_vector(buf[i0].xyz, (half4)inst.quaternion);
+			half3 n1 = rotate_vector(buf[i1].xyz, (half4)inst.quaternion);
+			half3 n2 = rotate_vector(buf[i2].xyz, (half4)inst.quaternion);
 			n0 = any(n0) ? normalize(n0) : 0;
 			n1 = any(n1) ? normalize(n1) : 0;
 			n2 = any(n2) ? normalize(n2) : 0;
@@ -446,9 +446,9 @@ struct Surface
 			half4 t0 = buf[i0];
 			half4 t1 = buf[i1];
 			half4 t2 = buf[i2];
-			t0.xyz = mul(t0.xyz, (half4)inst.quaternion);
-			t1.xyz = mul(t1.xyz, (half4)inst.quaternion);
-			t2.xyz = mul(t2.xyz, (half4)inst.quaternion);
+			t0.xyz = rotate_vector(t0.xyz, (half4)inst.quaternion);
+			t1.xyz = rotate_vector(t1.xyz, (half4)inst.quaternion);
+			t2.xyz = rotate_vector(t2.xyz, (half4)inst.quaternion);
 			t0.xyz = any(t0.xyz) ? normalize(t0.xyz) : 0;
 			t1.xyz = any(t1.xyz) ? normalize(t1.xyz) : 0;
 			t2.xyz = any(t2.xyz) ? normalize(t2.xyz) : 0;
