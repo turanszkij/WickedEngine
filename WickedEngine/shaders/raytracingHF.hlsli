@@ -35,6 +35,34 @@ inline RayDesc CreateCameraRay(float2 clipspace)
 	return ray;
 }
 
+void ray_clip_plane(inout RayDesc ray, float4 clip_plane)
+{
+	if(any(clip_plane))
+	{
+		float3 plane_normal = -clip_plane.xyz;
+		float3 plane_origin = plane_normal * clip_plane.w;
+		float t = trace_plane(ray.Origin, ray.Direction, plane_origin, plane_normal);
+		if(dot(float4(ray.Origin, 1), clip_plane) > 0)
+		{
+			if(t > 0)
+			{
+				ray.TMax = t;
+			}
+		}
+		else
+		{
+			if(t > 0)
+			{
+				ray.TMin = t;
+			}
+			else
+			{
+				ray.TMax = ray.TMin;
+			}
+		}
+	}
+}
+
 #ifndef RTAPI
 // Software raytracing implementation:
 
