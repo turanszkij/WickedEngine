@@ -20,7 +20,7 @@ struct VertextoPixel
 {
 	float4 pos : SV_POSITION;
 	float clip : SV_ClipDistance0;
-	half4 tex : TEXCOORD0;
+	float4 tex : TEXCOORD0;
 	float3 P : WORLDPOSITION;
 	half2 unrotated_uv : UNROTATED_UV;
 	nointerpolation half frameBlend : FRAMEBLEND;

@@ -20,7 +20,7 @@ struct VertexToPixel
 {
 	float4 pos : SV_POSITION;
 	float clip : SV_ClipDistance0;
-	half2 tex : TEXCOORD;
+	float2 tex : TEXCOORD;
 	nointerpolation float fade : DITHERFADE;
 	uint primitiveID : PRIMITIVEID;
 	float3 pos3D : POSITION3D;

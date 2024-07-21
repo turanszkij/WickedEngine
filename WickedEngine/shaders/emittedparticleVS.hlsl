@@ -43,7 +43,7 @@ VertextoPixel main(uint vid : SV_VertexID, uint instanceID : SV_InstanceID)
 	Out.pos = float4(position, 1);
 	Out.clip = dot(Out.pos, GetCamera().clip_plane);
 	Out.pos = mul(GetCamera().view_projection, Out.pos);
-	Out.tex = half4(uvsets);
+	Out.tex = uvsets;
 	Out.size = half(size);
 	Out.color = pack_rgba(color);
 	Out.unrotated_uv = half2(BILLBOARD[vertexID % 4].xy * float2(1, -1) * 0.5f + 0.5f);
