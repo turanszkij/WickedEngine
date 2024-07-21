@@ -539,7 +539,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	surface.T = input.tan;
 	surface.T.w = surface.T.w < 0 ? -1 : 1;
 	half3 bitangent = cross(surface.T.xyz, input.nor) * surface.T.w;
-	half3x3 TBN = half3x3(surface.T.xyz, bitangent, input.nor); // unnormalized TBN! http://www.mikktspace.com/
+	float3x3 TBN = float3x3(surface.T.xyz, bitangent, input.nor); // unnormalized TBN! http://www.mikktspace.com/
 	
 	surface.T.xyz = normalize(surface.T.xyz);
 

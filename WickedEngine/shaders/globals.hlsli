@@ -1267,40 +1267,40 @@ inline uint morton3D(in float3 pos)
 //	Journal of Computer Graphics Techniques Vol. 3, No. 2, 2014 http://jcgt.org
 
 // Returns +/-1
-float2 signNotZero(float2 v)
+half2 signNotZero(half2 v)
 {
-	return float2((v.x >= 0.0) ? +1.0 : -1.0, (v.y >= 0.0) ? +1.0 : -1.0);
+	return half2((v.x >= 0.0) ? +1.0 : -1.0, (v.y >= 0.0) ? +1.0 : -1.0);
 }
 // Assume normalized input. Output is on [-1, 1] for each component.
-float2 encode_oct(in float3 v)
+half2 encode_oct(in half3 v)
 {
 	// Project the sphere onto the octahedron, and then onto the xy plane
-	float2 p = v.xy * (1.0 / (abs(v.x) + abs(v.y) + abs(v.z)));
+	half2 p = v.xy * (1.0 / (abs(v.x) + abs(v.y) + abs(v.z)));
 	// Reflect the folds of the lower hemisphere over the diagonals
 	return (v.z <= 0.0) ? ((1.0 - abs(p.yx)) * signNotZero(p)) : p;
 }
-float3 decode_oct(float2 e)
+half3 decode_oct(half2 e)
 {
-	float3 v = float3(e.xy, 1.0 - abs(e.x) - abs(e.y));
+	half3 v = half3(e.xy, 1.0 - abs(e.x) - abs(e.y));
 	if (v.z < 0) v.xy = (1.0 - abs(v.yx)) * signNotZero(v.xy);
 	return normalize(v);
 }
 
 // Assume normalized input on +Z hemisphere.
 // Output is on [-1, 1].
-float2 encode_hemioct(in float3 v)
+half2 encode_hemioct(in half3 v)
 {
 	// Project the hemisphere onto the hemi-octahedron,
 	// and then into the xy plane
-	float2 p = v.xy * (1.0 / (abs(v.x) + abs(v.y) + v.z));
+	half2 p = v.xy * (1.0 / (abs(v.x) + abs(v.y) + v.z));
 	// Rotate and scale the center diamond to the unit square
-	return float2(p.x + p.y, p.x - p.y);
+	return half2(p.x + p.y, p.x - p.y);
 }
-float3 decode_hemioct(float2 e)
+half3 decode_hemioct(half2 e)
 {
 	// Rotate and scale the unit square back to the center diamond
-	float2 temp = float2(e.x + e.y, e.x - e.y) * 0.5;
-	float3 v = float3(temp, 1.0 - abs(temp.x) - abs(temp.y));
+	half2 temp = half2(e.x + e.y, e.x - e.y) * 0.5;
+	half3 v = half3(temp, 1.0 - abs(temp.x) - abs(temp.y));
 	return normalize(v);
 }
 

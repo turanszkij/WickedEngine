@@ -13,7 +13,7 @@ half D_GGX(half roughness, float NoH, const float3 h)
 	half a = NoH * roughness;
 	half k = roughness / (oneMinusNoHSquared + a * a);
 	half d = k * k * (1.0 / PI);
-	return d;
+	return saturateMediump(d);
 }
 
 half D_GGX_Anisotropic(float at, float ab, float ToH, float BoH, float NoH)
@@ -27,7 +27,7 @@ half D_GGX_Anisotropic(float at, float ab, float ToH, float BoH, float NoH)
 	highp float3 d = float3(ab * ToH, at * BoH, a2 * NoH);
 	highp float d2 = dot(d, d);
 	half b2 = a2 / d2;
-	return a2 * b2 * b2 * (1.0 / PI);
+	return saturateMediump(a2 * b2 * b2 * (1.0 / PI));
 }
 
 half D_Charlie(half roughness, half NoH)
@@ -36,7 +36,7 @@ half D_Charlie(half roughness, half NoH)
 	half invAlpha = 1.0 / roughness;
 	half cos2h = NoH * NoH;
 	half sin2h = max(1.0 - cos2h, 0.0078125); // 2^(-14/2), so sin2h^2 > 0 in fp16
-	return (2.0 + invAlpha) * pow(sin2h, invAlpha * 0.5) / (2.0 * PI);
+	return saturateMediump((2.0 + invAlpha) * pow(sin2h, invAlpha * 0.5) / (2.0 * PI));
 }
 
 half V_SmithGGXCorrelated(half roughness, half NoV, half NoL)
@@ -50,7 +50,7 @@ half V_SmithGGXCorrelated(half roughness, half NoV, half NoL)
 	// a2=0 => v = 1 / 4*NoL*NoV   => min=1/4, max=+inf
 	// a2=1 => v = 1 / 2*(NoL+NoV) => min=1/4, max=+inf
 	// clamp to the maximum value representable in mediump
-	return v;
+	return saturateMediump(v);
 }
 
 half V_SmithGGXCorrelated_Anisotropic(half at, half ab, half ToV, half BoV,
@@ -61,19 +61,19 @@ half V_SmithGGXCorrelated_Anisotropic(half at, half ab, half ToV, half BoV,
 	half lambdaV = NoL * length(half3(at * ToV, ab * BoV, NoV));
 	half lambdaL = NoV * length(half3(at * ToL, ab * BoL, NoL));
 	half v = 0.5 / (lambdaV + lambdaL);
-	return v;
+	return saturateMediump(v);
 }
 
 half V_Kelemen(half LoH)
 {
 	// Kelemen 2001, "A Microfacet Based Coupled Specular-Matte BRDF Model with Importance Sampling"
-	return 0.25 / (LoH * LoH);
+	return saturateMediump(0.25 / (LoH * LoH));
 }
 
 half V_Neubelt(half NoV, half NoL)
 {
 	// Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
-	return 1.0 / (4.0 * (NoL + NoV - NoL * NoV));
+	return saturateMediump(1.0 / (4.0 * (NoL + NoV - NoL * NoV)));
 }
 
 float iorToF0(half transmittedIor, half incidentIor)
