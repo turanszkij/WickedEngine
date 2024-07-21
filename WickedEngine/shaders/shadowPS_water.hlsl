@@ -26,7 +26,7 @@ float4 main(PixelInput input) : SV_TARGET
 
 	color.rgb = 1; // disable water shadow because it has already fog
 
-	color.rgb += caustic_pattern(uvsets.xy * 20, GetFrame().time);
+	color.rgb += texture_caustics.SampleLevel(sampler_linear_mirror, uvsets.xy, 0).rgb;
 
 	color.a = input.pos.z; // secondary depth
 

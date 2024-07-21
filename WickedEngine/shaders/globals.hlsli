@@ -511,6 +511,7 @@ struct PrimitiveID
 #define texture_cameravolumelut bindless_textures3D[GetFrame().texture_cameravolumelut_index]
 #define texture_wind bindless_textures3D[GetFrame().texture_wind_index]
 #define texture_wind_prev bindless_textures3D[GetFrame().texture_wind_prev_index]
+#define texture_caustics bindless_textures[GetFrame().texture_caustics_index]
 #define scene_acceleration_structure bindless_accelerationstructures[GetScene().TLAS]
 
 #define texture_depth bindless_textures_float[GetCamera().texture_depth_index]
@@ -1086,10 +1087,10 @@ inline float find_max_depth(in float2 uv, in int radius, in float lod)
 }
 
 // Caustic pattern from: https://www.shadertoy.com/view/XtKfRG
-inline half caustic_pattern(float2 uv, float time)
+inline float caustic_pattern(float2 uv, float time)
 {
 	float3 k = float3(uv, time);
-	half3x3 m = half3x3(-2, -1, 2, 3, -2, 1, 1, 2, 2);
+	float3x3 m = float3x3(-2, -1, 2, 3, -2, 1, 1, 2, 2);
 	float3 a = mul(k, m) * 0.5;
 	float3 b = mul(a, m) * 0.4;
 	float3 c = mul(b, m) * 0.3;

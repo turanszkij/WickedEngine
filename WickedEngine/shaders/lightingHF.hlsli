@@ -130,7 +130,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 				float water_height = ocean.water_height + displacement.y;
 				if (surface.P.y < water_height)
 				{
-					half3 caustic = caustic_pattern(ocean_uv * 20, GetFrame().time);
+					half3 caustic = texture_caustics.SampleLevel(sampler_linear_mirror, ocean_uv, 0).rgb;
 					caustic *= sqr(saturate((water_height - surface.P.y) * 0.5)); // fade out at shoreline
 					caustic *= light_color;
 					lighting.indirect.diffuse += caustic;

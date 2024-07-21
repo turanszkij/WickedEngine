@@ -472,7 +472,7 @@ void main(PixelInput input, in uint primitiveID : SV_PrimitiveID, out uint cover
 uint main(PixelInput input, in uint primitiveID : SV_PrimitiveID, out uint coverage : SV_Coverage) : SV_Target
 #endif // DEPTHONLY
 #else
-half4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
+float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // PREPASS
 
 
