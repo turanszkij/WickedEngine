@@ -52,6 +52,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	ray.Origin = ray.Origin + coc;
 	ray.Direction = focal_point - ray.Origin; // will be normalized before tracing!
 
+	ray_clip_plane(ray, GetCamera().clip_plane);
+
 	RayCone raycone = pixel_ray_cone_from_image_height(xTraceResolution.y);
 
 	float depth = 0;
