@@ -136,7 +136,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 					lighting.indirect.diffuse += caustic;
 
 					// fade out specular at depth, it looks weird when specular appears under ocean from wetmap
-					float water_depth = water_height - surface.P.y;
+					half water_depth = water_height - surface.P.y;
 					lighting.direct.specular *= saturate(exp(-water_depth * 10));
 				}
 			}
@@ -146,19 +146,20 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 	}
 }
 
-inline float attenuation_pointlight(in float dist, in float dist2, in float range, in float range2)
+inline half attenuation_pointlight(in half dist, in half dist2, in half range, in half range2)
 {
 	// GLTF recommendation: https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual#range-property
 	//return saturate(1 - pow(dist / range, 4)) / dist2;
 
 	// Removed pow(x, 4), and avoid zero divisions:
-	float dist_per_range = dist2 / max(0.0001, range2); // pow2
+	half dist_per_range = dist2 / max(0.0001, range2); // pow2
 	dist_per_range *= dist_per_range; // pow4
 	return saturate(1 - dist_per_range) / max(0.0001, dist2);
 }
 inline void light_point(in ShaderEntity light, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
 {
-	float3 L = light.position - surface.P;
+	float3 Lunnormalized = light.position - surface.P;
+	float3 LunnormalizedShadow = Lunnormalized;
 
 #ifndef DISABLE_AREA_LIGHTS
 	if (light.GetLength() > 0)
@@ -169,19 +170,19 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 			light.position + light.GetDirection() * light.GetLength() * 0.5,
 			surface.P
 		);
-		L = line_point - surface.P;
+		Lunnormalized = line_point - surface.P;
 	}
 #endif // DISABLE_AREA_LIGHTS
 
-	const float dist2 = dot(L, L);
-	const float range = light.GetRange();
-	const float range2 = range * range;
+	const half dist2 = dot(Lunnormalized, Lunnormalized);
+	const half range = light.GetRange();
+	const half range2 = range * range;
 
 	[branch]
 	if (dist2 < range2)
 	{
-		const float dist = sqrt(dist2);
-		L /= dist;
+		const half dist = sqrt(dist2);
+		half3 L = Lunnormalized / dist;
 
 		SurfaceToLight surface_to_light;
 		surface_to_light.create(surface, L);
@@ -199,7 +200,7 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 				if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0 || (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) == 0)
 #endif // SHADOW_MASK_ENABLED
 				{
-					shadow *= shadow_cube(light, light.position - surface.P);
+					shadow *= shadow_cube(light, LunnormalizedShadow);
 				}
 			}
 
@@ -223,23 +224,23 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 					float RdotLd = dot(surface.R, Ld);
 					float t = dot(surface.R, L0) * RdotLd - dot(L0, Ld);
 					t /= dot(Ld, Ld) - RdotLd * RdotLd;
-					L = (L0 + saturate(t) * Ld);
+					Lunnormalized = (L0 + saturate(t) * Ld);
 				}
 				else
 				{
-					L = light.position - surface.P;
+					Lunnormalized = light.position - surface.P;
 				}
 				if(light.GetRadius() > 0)
 				{
 					// Specular representative point on sphere:
-					float3 centerToRay = mad(dot(L, surface.R), surface.R, -L);
-					L = mad(centerToRay, saturate(light.GetRadius() / length(centerToRay)), L);
+					float3 centerToRay = mad(dot(Lunnormalized, surface.R), surface.R, -Lunnormalized);
+					Lunnormalized = mad(centerToRay, saturate(light.GetRadius() / length(centerToRay)), Lunnormalized);
 					// Energy conservation for radius:
 					light_color /= max(1, sphere_volume(light.GetRadius()));
 				}
 				if (light.GetLength() > 0 || light.GetRadius() > 0)
 				{
-					L = normalize(L);
+					L = normalize(Lunnormalized);
 					surface_to_light.create(surface, L); // recompute all surface-light vectors
 				}
 #endif // DISABLE_AREA_LIGHTS
@@ -255,26 +256,26 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 	}
 }
 
-inline float attenuation_spotlight(in float dist, in float dist2, in float range, in float range2, in float spot_factor, in float angle_scale, in float angle_offset)
+inline half attenuation_spotlight(in half dist, in half dist2, in half range, in half range2, in half spot_factor, in half angle_scale, in half angle_offset)
 {
-	float attenuation = attenuation_pointlight(dist, dist2, range, range2);
-	float angularAttenuation = saturate(mad(spot_factor, angle_scale, angle_offset));
+	half attenuation = attenuation_pointlight(dist, dist2, range, range2);
+	half angularAttenuation = saturate(mad(spot_factor, angle_scale, angle_offset));
 	angularAttenuation *= angularAttenuation;
 	attenuation *= angularAttenuation;
 	return attenuation;
 }
 inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
 {
-	float3 L = light.position - surface.P;
-	const float dist2 = dot(L, L);
-	const float range = light.GetRange();
-	const float range2 = range * range;
+	float3 Lunnormalized = light.position - surface.P;
+	const half dist2 = dot(Lunnormalized, Lunnormalized);
+	const half range = light.GetRange();
+	const half range2 = range * range;
 
 	[branch]
 	if (dist2 < range2)
 	{
-		const float dist = sqrt(dist2);
-		L /= dist;
+		const half dist = sqrt(dist2);
+		half3 L = Lunnormalized / dist;
 
 		SurfaceToLight surface_to_light;
 		surface_to_light.create(surface, L);
@@ -321,10 +322,10 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 					if (light.GetRadius() > 0)
 					{
 						// Specular representative point on sphere:
-						L = light.position - surface.P;
-						float3 centerToRay = mad(dot(L, surface.R), surface.R, -L);
-						L = mad(centerToRay, saturate(light.GetRadius() / length(centerToRay)), L);
-						L = normalize(L);
+						Lunnormalized = light.position - surface.P;
+						float3 centerToRay = mad(dot(Lunnormalized, surface.R), surface.R, -Lunnormalized);
+						Lunnormalized = mad(centerToRay, saturate(light.GetRadius() / length(centerToRay)), Lunnormalized);
+						L = normalize(Lunnormalized);
 						surface_to_light.create(surface, L); // recompute all surface-light vectors
 						// Energy conservation for radius:
 						light_color /= max(1, sphere_volume(light.GetRadius()));
@@ -442,13 +443,13 @@ inline half3 EnvironmentReflection_Global(in Surface surface)
 inline half4 EnvironmentReflection_Local(in TextureCube cubemap, in Surface surface, in ShaderEntity probe, in float4x4 probeProjection, in float3 clipSpacePos)
 {
 	// Perform parallax correction of reflection ray (R) into OBB:
-	float3 RayLS = mul((float3x3)probeProjection, surface.R);
-	float3 FirstPlaneIntersect = (float3(1, 1, 1) - clipSpacePos) / RayLS;
-	float3 SecondPlaneIntersect = (-float3(1, 1, 1) - clipSpacePos) / RayLS;
-	float3 FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
-	float Distance = min(FurthestPlane.x, min(FurthestPlane.y, FurthestPlane.z));
-	float3 IntersectPositionWS = surface.P + surface.R * Distance;
-	float3 R_parallaxCorrected = IntersectPositionWS - probe.position;
+	half3 RayLS = mul((half3x3)probeProjection, surface.R);
+	half3 FirstPlaneIntersect = (half3(1, 1, 1) - clipSpacePos) / RayLS;
+	half3 SecondPlaneIntersect = (-half3(1, 1, 1) - clipSpacePos) / RayLS;
+	half3 FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
+	half Distance = min(FurthestPlane.x, min(FurthestPlane.y, FurthestPlane.z));
+	half3 IntersectPositionWS = surface.P + surface.R * Distance;
+	half3 R_parallaxCorrected = IntersectPositionWS - probe.position;
 
 	uint2 dim;
 	uint mips;
@@ -503,7 +504,7 @@ inline void VoxelGI(inout Surface surface, inout Lighting lighting)
 		[branch]
 		if (GetFrame().options & OPTION_BIT_VXGI_REFLECTIONS_ENABLED)
 		{
-			half roughnessBRDF = sqr(clamp(surface.roughness, 0.045, 1));
+			half roughnessBRDF = sqr(clamp(surface.roughness, min_roughness, 1));
 			half4 trace = ConeTraceSpecular(voxels, surface.P, surface.N, surface.V, roughnessBRDF, surface.pixel);
 			lighting.indirect.specular = mad(lighting.indirect.specular, 1 - trace.a, trace.rgb * surface.F);
 		}

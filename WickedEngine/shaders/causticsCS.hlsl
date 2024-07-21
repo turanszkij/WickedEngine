@@ -12,8 +12,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float time = GetTime();
 	float4 caustics = float4(
 		caustic_pattern(uv + float2(0, 0), time),
-		caustic_pattern(uv + float2(dim_rcp.x * 4, 0), time),
-		caustic_pattern(uv + float2(0, dim_rcp.y * 4), time),
+		caustic_pattern(uv + float2(dim_rcp.x * 8, 0), time),
+		caustic_pattern(uv + float2(0, dim_rcp.y * 8), time),
 		1
 	);
 	output[DTid.xy] = caustics;

@@ -1,9 +1,132 @@
 #ifndef WI_SHADER_GLOBALS_HF
 #define WI_SHADER_GLOBALS_HF
+
+#if 1 // Enable / disable FP16 shader ops here
+#define half min16float
+#define half2 min16float2
+#define half3 min16float3
+#define half4 min16float4
+#define half3x3 min16float3x3
+#define half3x4 min16float3x4
+#define half4x4 min16float4x4
+#endif
+
 #include "ColorSpaceUtility.hlsli"
 #include "PixelPacking_R11G11B10.hlsli"
 #include "PixelPacking_RGBE.hlsli"
 #include "ShaderInterop.h"
+
+inline uint pack_unitvector(in half3 value)
+{
+	uint retVal = 0;
+	retVal |= (uint)((value.x * 0.5 + 0.5) * 255.0) << 0u;
+	retVal |= (uint)((value.y * 0.5 + 0.5) * 255.0) << 8u;
+	retVal |= (uint)((value.z * 0.5 + 0.5) * 255.0) << 16u;
+	return retVal;
+}
+inline half3 unpack_unitvector(in uint value)
+{
+	half3 retVal;
+	retVal.x = (half)((value >> 0u) & 0xFF) / 255.0 * 2 - 1;
+	retVal.y = (half)((value >> 8u) & 0xFF) / 255.0 * 2 - 1;
+	retVal.z = (half)((value >> 16u) & 0xFF) / 255.0 * 2 - 1;
+	return retVal;
+}
+
+inline uint pack_utangent(in half4 value)
+{
+	uint retVal = 0;
+	retVal |= (uint)((value.x) * 255.0) << 0u;
+	retVal |= (uint)((value.y) * 255.0) << 8u;
+	retVal |= (uint)((value.z) * 255.0) << 16u;
+	retVal |= (uint)((value.w) * 255.0) << 24u;
+	return retVal;
+}
+inline half4 unpack_utangent(in uint value)
+{
+	half4 retVal;
+	retVal.x = (half)((value >> 0u) & 0xFF) / 255.0;
+	retVal.y = (half)((value >> 8u) & 0xFF) / 255.0;
+	retVal.z = (half)((value >> 16u) & 0xFF) / 255.0;
+	retVal.w = (half)((value >> 24u) & 0xFF) / 255.0;
+	return retVal;
+}
+
+inline uint pack_rgba(in half4 value)
+{
+	uint retVal = 0;
+	retVal |= (uint)(value.x * 255.0) << 0u;
+	retVal |= (uint)(value.y * 255.0) << 8u;
+	retVal |= (uint)(value.z * 255.0) << 16u;
+	retVal |= (uint)(value.w * 255.0) << 24u;
+	return retVal;
+}
+inline half4 unpack_rgba(in uint value)
+{
+	half4 retVal;
+	retVal.x = (half)((value >> 0u) & 0xFF) / 255.0;
+	retVal.y = (half)((value >> 8u) & 0xFF) / 255.0;
+	retVal.z = (half)((value >> 16u) & 0xFF) / 255.0;
+	retVal.w = (half)((value >> 24u) & 0xFF) / 255.0;
+	return retVal;
+}
+
+inline uint pack_half2(in half2 value)
+{
+	uint retVal = 0;
+	retVal = f32tof16(value.x) | (f32tof16(value.y) << 16u);
+	return retVal;
+}
+inline half2 unpack_half2(in uint value)
+{
+	half2 retVal;
+	retVal.x = (half)f16tof32(value.x);
+	retVal.y = (half)f16tof32(value.x >> 16u);
+	return retVal;
+}
+inline uint2 pack_half3(in half3 value)
+{
+	uint2 retVal = 0;
+	retVal.x = f32tof16(value.x) | (f32tof16(value.y) << 16u);
+	retVal.y = f32tof16(value.z);
+	return retVal;
+}
+inline half3 unpack_half3(in uint2 value)
+{
+	half3 retVal;
+	retVal.x = (half)f16tof32(value.x);
+	retVal.y = (half)f16tof32(value.x >> 16u);
+	retVal.z = (half)f16tof32(value.y);
+	return retVal;
+}
+inline uint2 pack_half4(in float4 value)
+{
+	uint2 retVal = 0;
+	retVal.x = f32tof16(value.x) | (f32tof16(value.y) << 16u);
+	retVal.y = f32tof16(value.z) | (f32tof16(value.w) << 16u);
+	return retVal;
+}
+inline half4 unpack_half4(in uint2 value)
+{
+	half4 retVal;
+	retVal.x = (half)f16tof32(value.x);
+	retVal.y = (half)f16tof32(value.x >> 16u);
+	retVal.z = (half)f16tof32(value.y);
+	retVal.w = (half)f16tof32(value.y >> 16u);
+	return retVal;
+}
+
+inline uint pack_pixel(uint2 value)
+{
+	return (value.x & 0xFFFF) | ((value.y & 0xFFFF) << 16u);
+}
+inline uint2 unpack_pixel(uint value)
+{
+	uint2 retVal;
+	retVal.x = value & 0xFFFF;
+	retVal.y = (value >> 16u) & 0xFFFF;
+	return retVal;
+}
 
 // The root signature will affect shader compilation for DX12.
 //	The shader compiler will take the defined name: WICKED_ENGINE_DEFAULT_ROOTSIGNATURE and use it as root signature
@@ -231,127 +354,6 @@ RWTexture2D<uint4> bindless_rwtextures_uint4[] : register(space36);
 
 #endif // __spirv__
 
-#define half min16float
-#define half2 min16float2
-#define half3 min16float3
-#define half4 min16float4
-#define half3x3 min16float3x3
-#define half3x4 min16float3x4
-#define half4x4 min16float4x4
-
-inline uint pack_unitvector(in float3 value)
-{
-	uint retVal = 0;
-	retVal |= (uint)((value.x * 0.5 + 0.5) * 255.0) << 0u;
-	retVal |= (uint)((value.y * 0.5 + 0.5) * 255.0) << 8u;
-	retVal |= (uint)((value.z * 0.5 + 0.5) * 255.0) << 16u;
-	return retVal;
-}
-inline float3 unpack_unitvector(in uint value)
-{
-	float3 retVal;
-	retVal.x = (float)((value >> 0u) & 0xFF) / 255.0 * 2 - 1;
-	retVal.y = (float)((value >> 8u) & 0xFF) / 255.0 * 2 - 1;
-	retVal.z = (float)((value >> 16u) & 0xFF) / 255.0 * 2 - 1;
-	return retVal;
-}
-
-inline uint pack_utangent(in float4 value)
-{
-	uint retVal = 0;
-	retVal |= (uint)((value.x) * 255.0) << 0u;
-	retVal |= (uint)((value.y) * 255.0) << 8u;
-	retVal |= (uint)((value.z) * 255.0) << 16u;
-	retVal |= (uint)((value.w) * 255.0) << 24u;
-	return retVal;
-}
-inline float4 unpack_utangent(in uint value)
-{
-	float4 retVal;
-	retVal.x = (float)((value >> 0u) & 0xFF) / 255.0;
-	retVal.y = (float)((value >> 8u) & 0xFF) / 255.0;
-	retVal.z = (float)((value >> 16u) & 0xFF) / 255.0;
-	retVal.w = (float)((value >> 24u) & 0xFF) / 255.0;
-	return retVal;
-}
-
-inline uint pack_rgba(in float4 value)
-{
-	uint retVal = 0;
-	retVal |= (uint)(value.x * 255.0) << 0u;
-	retVal |= (uint)(value.y * 255.0) << 8u;
-	retVal |= (uint)(value.z * 255.0) << 16u;
-	retVal |= (uint)(value.w * 255.0) << 24u;
-	return retVal;
-}
-inline float4 unpack_rgba(in uint value)
-{
-	float4 retVal;
-	retVal.x = (float)((value >> 0u) & 0xFF) / 255.0;
-	retVal.y = (float)((value >> 8u) & 0xFF) / 255.0;
-	retVal.z = (float)((value >> 16u) & 0xFF) / 255.0;
-	retVal.w = (float)((value >> 24u) & 0xFF) / 255.0;
-	return retVal;
-}
-
-inline uint pack_half2(in half2 value)
-{
-	uint retVal = 0;
-	retVal = f32tof16(value.x) | (f32tof16(value.y) << 16u);
-	return retVal;
-}
-inline half2 unpack_half2(in uint value)
-{
-	half2 retVal;
-	retVal.x = (half)f16tof32(value.x);
-	retVal.y = (half)f16tof32(value.x >> 16u);
-	return retVal;
-}
-inline uint2 pack_half3(in half3 value)
-{
-	uint2 retVal = 0;
-	retVal.x = f32tof16(value.x) | (f32tof16(value.y) << 16u);
-	retVal.y = f32tof16(value.z);
-	return retVal;
-}
-inline half3 unpack_half3(in uint2 value)
-{
-	half3 retVal;
-	retVal.x = (half)f16tof32(value.x);
-	retVal.y = (half)f16tof32(value.x >> 16u);
-	retVal.z = (half)f16tof32(value.y);
-	return retVal;
-}
-inline uint2 pack_half4(in float4 value)
-{
-	uint2 retVal = 0;
-	retVal.x = f32tof16(value.x) | (f32tof16(value.y) << 16u);
-	retVal.y = f32tof16(value.z) | (f32tof16(value.w) << 16u);
-	return retVal;
-}
-inline half4 unpack_half4(in uint2 value)
-{
-	half4 retVal;
-	retVal.x = (half)f16tof32(value.x);
-	retVal.y = (half)f16tof32(value.x >> 16u);
-	retVal.z = (half)f16tof32(value.y);
-	retVal.w = (half)f16tof32(value.y >> 16u);
-	return retVal;
-}
-
-inline uint pack_pixel(uint2 value)
-{
-	return (value.x & 0xFFFF) | ((value.y & 0xFFFF) << 16u);
-}
-inline uint2 unpack_pixel(uint value)
-{
-	uint2 retVal;
-	retVal.x = value & 0xFFFF;
-	retVal.y = (value >> 16u) & 0xFFFF;
-	return retVal;
-}
-
-
 #include "ShaderInterop_Renderer.h"
 
 #if defined(__PSSL__)
@@ -522,17 +524,20 @@ struct PrimitiveID
 #define texture_normal bindless_textures_float2[GetCamera().texture_normal_index]
 #define texture_roughness bindless_textures_float[GetCamera().texture_roughness_index]
 
-static const float PI = 3.14159265358979323846;
-static const float SQRT2 = 1.41421356237309504880;
-static const float FLT_MAX = 3.402823466e+38;
-static const float FLT_EPSILON = 1.192092896e-07;
-static const float GOLDEN_RATIO = 1.6180339887;
-static const float M_TO_SKY_UNIT = 0.001f; // Engine units are in meters
-static const float SKY_UNIT_TO_M = rcp(M_TO_SKY_UNIT);
+// Note: defines can be better for choosing between half/float by compiler than "static const float"
+#define PI 3.14159265358979323846
+#define SQRT2 1.41421356237309504880
+#define FLT_MAX 3.402823466e+38
+#define FLT_EPSILON 1.192092896e-07
+#define GOLDEN_RATIO 1.6180339887
+#define M_TO_SKY_UNIT 0.001
+#define SKY_UNIT_TO_M rcp(M_TO_SKY_UNIT)
 
 #define sqr(a) ((a)*(a))
 #define pow5(x) pow(x, 5)
 #define arraysize(a) (sizeof(a) / sizeof(a[0]))
+#define saturateMediump(x) clamp(x, 0, 65000)
+#define highp
 
 template<typename T>
 float max3(T v)
@@ -706,10 +711,10 @@ inline bool IsStaticSky() { return GetScene().globalenvmap >= 0; }
 // Mie scaterring approximated with Henyey-Greenstein phase function.
 //	https://www.alexandre-pestana.com/volumetric-lights/
 #define G_SCATTERING 0.66
-float ComputeScattering(float lightDotView)
+half ComputeScattering(half lightDotView)
 {
-	float result = 1.0f - G_SCATTERING * G_SCATTERING;
-	result /= (4.0f * PI * pow(1.0f + G_SCATTERING * G_SCATTERING - (2.0f * G_SCATTERING) * lightDotView, 1.5f));
+	half result = 1.0 - G_SCATTERING * G_SCATTERING;
+	result /= (4.0 * PI * pow(1.0 + G_SCATTERING * G_SCATTERING - (2.0 * G_SCATTERING) * lightDotView, 1.5));
 	return result;
 }
 
@@ -717,7 +722,15 @@ inline float3 tonemap(float3 x)
 {
 	return x / (x + 1); // Reinhard tonemap
 }
+inline half3 tonemap(half3 x)
+{
+	return x / (x + 1); // Reinhard tonemap
+}
 inline float3 inverse_tonemap(float3 x)
+{
+	return x / (1 - x);
+}
+inline half3 inverse_tonemap(half3 x)
 {
 	return x / (1 - x);
 }

@@ -7,6 +7,6 @@ float4 main(PixelInput input) : SV_TARGET
 {
 	float3 normal = normalize(input.nor);
 	float3 color = GetStaticSkyColor(normal);
-	color = clamp(color, 0, 65000);
+	color = saturateMediump(color);
 	return float4(color, 1);
 }

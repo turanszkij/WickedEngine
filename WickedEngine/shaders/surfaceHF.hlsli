@@ -8,6 +8,7 @@
 //	metalness = 0
 //	reflectance = 0
 static const half4 surfacemap_simple = half4(1, 1, 0, 0);
+#define min_roughness 0.045
 
 half3 F_Schlick(const half3 f0, half VoH)
 {
@@ -41,7 +42,7 @@ struct ClearcoatSurface
 {
 	half factor;
 	half roughness;
-	half3 N;
+	float3 N;
 
 	// computed values:
 	half3 R;
@@ -55,8 +56,8 @@ struct AnisotropicSurface
 	half3 T;
 
 	// computed values:
-	half at;
-	half ab;
+	float at;
+	float ab;
 	half3 B;
 	half TdotV;
 	half BdotV;
@@ -284,7 +285,7 @@ struct Surface
 		aniso.B = cross(N, aniso.T);
 		aniso.TdotV = dot(aniso.T.xyz, V);
 		aniso.BdotV = dot(aniso.B, V);
-		half roughnessBRDF = sqr(clamp(roughness, 0.045, 1));
+		half roughnessBRDF = sqr(clamp(roughness, min_roughness, 1));
 		aniso.at = max(0, roughnessBRDF * (1 + aniso.strength));
 		aniso.ab = max(0, roughnessBRDF * (1 - aniso.strength));
 #endif // ANISOTROPIC

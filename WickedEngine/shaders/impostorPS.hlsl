@@ -9,15 +9,15 @@ float4 main(VSOut input) : SV_Target
 	float3 uv_nor = float3(input.uv, input.slice + 1);
 	float3 uv_sur = float3(input.uv, input.slice + 2);
 
-	float4 baseColor = impostorTex.Sample(sampler_linear_clamp, uv_col);
+	half4 baseColor = impostorTex.Sample(sampler_linear_clamp, uv_col);
 	baseColor *= unpack_rgba(input.instanceColor);
-	float3 N = impostorTex.Sample(sampler_linear_clamp, uv_nor).rgb * 2 - 1;
-	float4 surfaceparams = impostorTex.Sample(sampler_linear_clamp, uv_sur);
+	half3 N = impostorTex.Sample(sampler_linear_clamp, uv_nor).rgb * 2 - 1;
+	half4 surfaceparams = impostorTex.Sample(sampler_linear_clamp, uv_sur);
 
-	float occlusion = surfaceparams.r;
-	float roughness = surfaceparams.g;
-	float metalness = surfaceparams.b;
-	float reflectance = surfaceparams.a;
+	half occlusion = surfaceparams.r;
+	half roughness = surfaceparams.g;
+	half metalness = surfaceparams.b;
+	half reflectance = surfaceparams.a;
 
 	float3 V = GetCamera().position - input.pos3D;
 	float dist = length(V);
@@ -56,7 +56,7 @@ float4 main(VSOut input) : SV_Target
 
 	TiledLighting(surface, lighting, GetFlatTileIndex(pixel));
 
-	float4 color = 0;
+	half4 color = 0;
 
 	ApplyLighting(surface, lighting, color);
 

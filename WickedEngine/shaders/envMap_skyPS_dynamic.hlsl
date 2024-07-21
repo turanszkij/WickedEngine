@@ -17,6 +17,6 @@ float4 main(PixelInput input) : SV_TARGET
 	// No direct sun should be visible inside the probe capture:
 	float4 color = float4(GetDynamicSkyColor(input.pos.xy, normal, false, false, false, highQuality, false, receiveShadow), 1);
 
-	color = clamp(color, 0, 65000);
+	color = saturateMediump(color);
 	return float4(color.rgb, 1);
 }

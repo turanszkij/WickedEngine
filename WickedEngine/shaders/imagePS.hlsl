@@ -6,11 +6,11 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 	float4 uvsets = input.compute_uvs();
 
-	float4 color = unpack_half4(image.packed_color);
+	half4 color = unpack_half4(image.packed_color);
 	[branch]
 	if (image.texture_base_index >= 0)
 	{
-		float4 tex = bindless_textures[image.texture_base_index].Sample(sam, uvsets.xy);
+		half4 tex = bindless_textures[image.texture_base_index].Sample(sam, uvsets.xy);
 
 		if (image.flags & IMAGE_FLAG_EXTRACT_NORMALMAP)
 		{
@@ -20,14 +20,14 @@ float4 main(VertextoPixel input) : SV_TARGET
 		color *= tex;
 	}
 
-	float4 mask = 1;
+	half4 mask = 1;
 	[branch]
 	if (image.texture_mask_index >= 0)
 	{
 		mask = bindless_textures[image.texture_mask_index].Sample(sam, uvsets.zw);
 	}
 
-	const float2 mask_alpha_range = unpack_half2(image.mask_alpha_range);
+	const half2 mask_alpha_range = unpack_half2(image.mask_alpha_range);
 	mask.a = smoothstep(mask_alpha_range.x, mask_alpha_range.y, mask.a);
 	
 	if(image.flags & IMAGE_FLAG_DISTORTION_MASK)
@@ -49,17 +49,17 @@ float4 main(VertextoPixel input) : SV_TARGET
 		{
 			uv_screen += mask.rg * 2 - 1;
 		}
-		float3 background = backgroundTexture.Sample(sam, uv_screen).rgb;
-		color = float4(lerp(background, color.rgb, color.a), mask.a);
+		half3 background = backgroundTexture.Sample(sam, uv_screen).rgb;
+		color = half4(lerp(background, color.rgb, color.a), mask.a);
 	}
 
 	[branch]
 	if (image.flags & IMAGE_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084)
 	{
 		// https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12HDR/src/presentPS.hlsl
-		const float referenceWhiteNits = 80.0;
-		const float st2084max = 10000.0;
-		const float hdrScalar = referenceWhiteNits / st2084max;
+		const half referenceWhiteNits = 80.0;
+		const half st2084max = 10000.0;
+		const half hdrScalar = referenceWhiteNits / st2084max;
 		// The input is in Rec.709, but the display is Rec.2020
 		color.rgb = REC709toREC2020(color.rgb);
 		// Apply the ST.2084 curve to the result.
@@ -74,7 +74,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 	[branch]
 	if (image.border_soften > 0)
 	{
-		float edge = max(abs(input.edge.x), abs(input.edge.y));
+		half edge = max(abs(input.edge.x), abs(input.edge.y));
 		color.a *= smoothstep(0, image.border_soften, 1 - edge);
 	}
 

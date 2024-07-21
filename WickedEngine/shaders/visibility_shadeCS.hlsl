@@ -130,7 +130,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 	ApplyFog(surface.hit_depth, surface.V, color);
 
-	color = clamp(color, 0, 65000);
+	color = saturateMediump(color);
 
 	output[pixel] = float4(color.rgb, 1);
 
