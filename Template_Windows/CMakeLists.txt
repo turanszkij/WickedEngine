@@ -16,6 +16,10 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     WickedEngine_Windows
 )
 
+set_target_properties(${PROJECT_NAME} PROPERTIES
+WIN32_EXECUTABLE YES
+)
+
 set(PLATFORM "Windows")
 add_compile_definitions(WIN32 _WINDOWS)
 
