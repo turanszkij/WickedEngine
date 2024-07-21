@@ -21,7 +21,7 @@
 //
 // Orthogonal to color space though usually tightly coupled.  For instance, sRGB is both a
 // color space (defined by three basis vectors and a white point) and a gamma ramp.  Gamma
-// ramps are designed to reduce perceptual error when quantizing halfs to integers with a
+// ramps are designed to reduce perceptual error when quantizing floats to integers with a
 // limited number of bits.  More variation is needed in darker colors because our eyes are
 // more sensitive in the dark.  The way the curve helps is that it spreads out dark values
 // across more code words allowing for more variation.  Likewise, bright values are merged
@@ -34,25 +34,25 @@
 // are--the sRGB curve needs to be removed before involving the colors in linear mathematics such
 // as physically based lighting.
 
-half3 ApplySRGBCurve( half3 x )
+float3 ApplySRGBCurve( float3 x )
 {
     // Approximately pow(x, 1.0 / 2.2)
     return select(x < 0.0031308, 12.92 * x, 1.055 * pow(x, 1.0 / 2.4) - 0.055);
 }
 
-half3 RemoveSRGBCurve( half3 x )
+float3 RemoveSRGBCurve( float3 x )
 {
     // Approximately pow(x, 2.2)
 	return select(x < 0.04045, x / 12.92, pow((x + 0.055) / 1.055, 2.4));
 }
 
 // These functions avoid pow() to efficiently approximate sRGB with an error < 0.4%.
-half3 ApplySRGBCurve_Fast( half3 x )
+float3 ApplySRGBCurve_Fast( float3 x )
 {
 	return select(x < 0.0031308, 12.92 * x, 1.13005 * sqrt(x - 0.00228) - 0.13448 * x + 0.005719);
 }
 
-half3 RemoveSRGBCurve_Fast( half3 x )
+float3 RemoveSRGBCurve_Fast( float3 x )
 {
 	return select(x < 0.04045, x / 12.92, -7.43605 * x - 31.24297 * sqrt(-0.53792 * x + 1.279924) + 35.34864);
 }
@@ -60,37 +60,37 @@ half3 RemoveSRGBCurve_Fast( half3 x )
 // The OETF recommended for content shown on HDTVs.  This "gamma ramp" may increase contrast as
 // appropriate for viewing in a dark environment.  Always use this curve with Limited RGB as it is
 // used in conjunction with HDTVs.
-half3 ApplyREC709Curve( half3 x )
+float3 ApplyREC709Curve( float3 x )
 {
 	return select(x < 0.0181, 4.5 * x, 1.0993 * pow(x, 0.45) - 0.0993);
 }
 
-half3 RemoveREC709Curve( half3 x )
+float3 RemoveREC709Curve( float3 x )
 {
 	return select(x < 0.08145, x / 4.5, pow((x + 0.0993) / 1.0993, 1.0 / 0.45));
 }
 
 // This is the new HDR transfer function, also called "PQ" for perceptual quantizer.  Note that REC2084
 // does not also refer to a color space.  REC2084 is typically used with the REC2020 color space.
-half3 ApplyREC2084Curve(half3 L)
+float3 ApplyREC2084Curve(float3 L)
 {
-    half m1 = 2610.0 / 4096.0 / 4;
-    half m2 = 2523.0 / 4096.0 * 128;
-    half c1 = 3424.0 / 4096.0;
-    half c2 = 2413.0 / 4096.0 * 32;
-    half c3 = 2392.0 / 4096.0 * 32;
-    half3 Lp = pow(L, m1);
+    float m1 = 2610.0 / 4096.0 / 4;
+    float m2 = 2523.0 / 4096.0 * 128;
+    float c1 = 3424.0 / 4096.0;
+    float c2 = 2413.0 / 4096.0 * 32;
+    float c3 = 2392.0 / 4096.0 * 32;
+    float3 Lp = pow(L, m1);
     return pow((c1 + c2 * Lp) / (1 + c3 * Lp), m2);
 }
 
-half3 RemoveREC2084Curve(half3 N)
+float3 RemoveREC2084Curve(float3 N)
 {
-    half m1 = 2610.0 / 4096.0 / 4;
-    half m2 = 2523.0 / 4096.0 * 128;
-    half c1 = 3424.0 / 4096.0;
-    half c2 = 2413.0 / 4096.0 * 32;
-    half c3 = 2392.0 / 4096.0 * 32;
-    half3 Np = pow(N, 1 / m2);
+    float m1 = 2610.0 / 4096.0 / 4;
+    float m2 = 2523.0 / 4096.0 * 128;
+    float c1 = 3424.0 / 4096.0;
+    float c2 = 2413.0 / 4096.0 * 32;
+    float c3 = 2392.0 / 4096.0 * 32;
+    float3 Np = pow(N, 1 / m2);
     return pow(max(Np - c1, 0) / (c2 - c3 * Np), 1 / m1);
 }
 
@@ -117,9 +117,9 @@ half3 RemoveREC2084Curve(half3 N)
 // Note:  Rec.709 and sRGB share the same color primaries and white point.  Their only difference
 // is the transfer curve used.
 
-half3 REC709toREC2020( half3 RGB709 )
+float3 REC709toREC2020( float3 RGB709 )
 {
-    static const half3x3 ConvMat =
+    static const float3x3 ConvMat =
     {
         0.627402, 0.329292, 0.043306,
         0.069095, 0.919544, 0.011360,
@@ -128,9 +128,9 @@ half3 REC709toREC2020( half3 RGB709 )
     return mul(ConvMat, RGB709);
 }
 
-half3 REC2020toREC709(half3 RGB2020)
+float3 REC2020toREC709(float3 RGB2020)
 {
-    static const half3x3 ConvMat =
+    static const float3x3 ConvMat =
     {
         1.660496, -0.587656, -0.072840,
         -0.124547, 1.132895, -0.008348,
@@ -139,9 +139,9 @@ half3 REC2020toREC709(half3 RGB2020)
     return mul(ConvMat, RGB2020);
 }
 
-half3 REC709toDCIP3( half3 RGB709 )
+float3 REC709toDCIP3( float3 RGB709 )
 {
-    static const half3x3 ConvMat =
+    static const float3x3 ConvMat =
     {
         0.822458, 0.177542, 0.000000,
         0.033193, 0.966807, 0.000000,
@@ -150,9 +150,9 @@ half3 REC709toDCIP3( half3 RGB709 )
     return mul(ConvMat, RGB709);
 }
 
-half3 DCIP3toREC709( half3 RGBP3 )
+float3 DCIP3toREC709( float3 RGBP3 )
 {
-    static const half3x3 ConvMat =
+    static const float3x3 ConvMat =
     {
         1.224947, -0.224947, 0.000000,
         -0.042056, 1.042056, 0.000000,

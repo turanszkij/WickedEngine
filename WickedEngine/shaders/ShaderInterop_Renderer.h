@@ -438,18 +438,13 @@ static const uint SHADERTYPE_BIN_COUNT = 11;
 
 struct alignas(16) VisibilityTile
 {
+	uint64_t execution_mask;
 	uint visibility_tile_id;
 	uint entity_flat_tile_index;
-	uint execution_mask_0;
-	uint execution_mask_1;
 
 	inline bool check_thread_valid(uint groupIndex)
 	{
-		if (groupIndex < 32)
-		{
-			return execution_mask_0 & (1u << groupIndex);
-		}
-		return execution_mask_1 & (1u << (groupIndex - 32u));
+		return (execution_mask & (uint64_t(1) << uint64_t(groupIndex))) != 0;
 	}
 };
 

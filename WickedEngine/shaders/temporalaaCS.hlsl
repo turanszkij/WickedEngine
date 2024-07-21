@@ -110,5 +110,5 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	resolved.rgb = inverse_tonemap(resolved.rgb);
 #endif
 
-	output[DTid.xy] = resolved;
+	output[DTid.xy] = saturateMediump(resolved);
 }

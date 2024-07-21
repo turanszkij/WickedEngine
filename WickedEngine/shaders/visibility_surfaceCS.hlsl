@@ -19,9 +19,9 @@ PUSHCONSTANT(push, VisibilityPushConstants);
 
 StructuredBuffer<VisibilityTile> binned_tiles : register(t0);
 
-RWTexture2D<float4> output : register(u0);
-RWTexture2D<float2> output_normal : register(u1);
-RWTexture2D<unorm float> output_roughness : register(u2);
+RWTexture2D<half4> output : register(u0);
+RWTexture2D<half2> output_normal : register(u1);
+RWTexture2D<half> output_roughness : register(u2);
 RWTexture2D<uint4> output_payload_0 : register(u3);
 RWTexture2D<uint4> output_payload_1 : register(u4);
 
@@ -57,7 +57,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	}
 
 #ifdef UNLIT
-	float4 color = float4(surface.albedo, 1);
+	half4 color = half4(surface.albedo, 1);
 	ApplyFog(surface.hit_depth, surface.V, color);
 	output[pixel] = color;
 	return;

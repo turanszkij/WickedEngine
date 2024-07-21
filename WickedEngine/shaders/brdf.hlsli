@@ -5,7 +5,7 @@
 
 // BRDF functions source: https://github.com/google/filament/blob/main/shaders/src/brdf.fs
 
-half D_GGX(half roughness, highp float NoH, const highp float3 h)
+half D_GGX(half roughness, float NoH, const float3 h)
 {
 	// Walter et al. 2007, "Microfacet Models for Refraction through Rough Surfaces"
 	half oneMinusNoHSquared = 1.0 - NoH * NoH;
@@ -184,7 +184,6 @@ half3 BRDF_GetSpecular(in Surface surface, in SurfaceToLight surface_to_light)
 	specular += D * Vis * surface.clearcoat.F;
 #endif // CLEARCOAT
 
-	specular = clamp(specular, 0, 10000);
 	return specular * surface_to_light.NdotL;
 }
 half3 BRDF_GetDiffuse(in Surface surface, in SurfaceToLight surface_to_light)

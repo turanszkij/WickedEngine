@@ -532,11 +532,12 @@ struct PrimitiveID
 #define GOLDEN_RATIO 1.6180339887
 #define M_TO_SKY_UNIT 0.001
 #define SKY_UNIT_TO_M rcp(M_TO_SKY_UNIT)
+#define MEDIUMP_FLT_MAX 65504.0
 
 #define sqr(a) ((a)*(a))
 #define pow5(x) pow(x, 5)
 #define arraysize(a) (sizeof(a) / sizeof(a[0]))
-#define saturateMediump(x) clamp(x, 0, 65000)
+#define saturateMediump(x) min(x, MEDIUMP_FLT_MAX)
 #define highp
 
 template<typename T>
