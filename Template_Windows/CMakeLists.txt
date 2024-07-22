@@ -3,18 +3,25 @@ project(Template_Windows)
 
 file(GLOB SOURCE_FILES CONFIGURE_DEPENDS "*.cpp" "*.h")
 
-set(LIB_DXCOMPILER "libdxcompiler.dll")
+set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+set(LIB_DXCOMPILER "dxcompiler.dll")
+
+list(APPEND SOURCE_FILES
+${CMAKE_CURRENT_SOURCE_DIR}/TemplateWindows.rc
+)
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
-    # These are cmake generator expressions. They seem more dauting than they are
-    # Basically if the variable is ON it will give WickedEngine,
-    # if it's off, it will give WickedEngine::WickedEngine
-    $<$<NOT:$<BOOL:${INSTALLED_ENGINE}>>:WickedEngine>
-    $<$<BOOL:${INSTALLED_ENGINE}>:WickedEngine::WickedEngine>
+    WickedEngine_Windows
 )
 
+set_target_properties(${PROJECT_NAME} PROPERTIES
+WIN32_EXECUTABLE YES
+)
+
+set(PLATFORM "Windows")
+add_compile_definitions(WIN32 _WINDOWS)
 
 set(LIBDXCOMPILER_PATH "${WICKED_ROOT_DIR}/WickedEngine/${LIB_DXCOMPILER}")
 set(STARTUP_LUA "${WICKED_ROOT_DIR}/Editor/startup.lua")
