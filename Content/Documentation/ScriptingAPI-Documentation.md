@@ -946,8 +946,8 @@ Describes an orientation in 3D space.
 - Play()
 - Stop()
 - Pause()
-- SetLooped(bool value)
-- IsLooped() : bool result
+- SetLooped(bool value) -- Sets the animation to repeat continuously.
+- IsLooped() : bool -- Returns true if the animation is set to repeat continuously.
 - IsPlaying() : bool result
 - SetTimer(float value)
 - GetTimer() : float result
@@ -957,6 +957,12 @@ Describes an orientation in 3D space.
 - SetStart(float value)
 - GetEnd() : float result
 - SetEnd(float value)
+- SetPingPong(bool value) -- Sets the animation to play forward and then backwards repeatedly.
+- IsPingPong() : bool -- Returns true if the animation is set to play forward and then backwards repeatedly.
+- SetPlayOnce() -- Sets the animation to play once.
+- IsPlayingOnce() : bool -- Returns true if the animation is set to play once.
+
+
 
 #### MaterialComponent
 - _flags : int

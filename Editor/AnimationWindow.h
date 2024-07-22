@@ -12,8 +12,11 @@ public:
 
 	wi::gui::Label infoLabel;
 	wi::gui::ComboBox modeComboBox;
-	wi::gui::CheckBox loopedCheckBox;
+	wi::gui::Button loopTypeButton;
 	wi::gui::Button	playButton;
+	wi::gui::Button	playFromStartButton;
+	wi::gui::Button	backwardsButton;
+	wi::gui::Button	backwardsFromEndButton;
 	wi::gui::Button	stopButton;
 	wi::gui::Slider	timerSlider;
 	wi::gui::Slider	amountSlider;
@@ -35,4 +38,3 @@ public:
 
 	void ResizeLayout() override;
 };
-

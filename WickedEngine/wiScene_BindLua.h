@@ -368,6 +368,10 @@ namespace wi::lua::scene
 		int SetStart(lua_State* L);
 		int GetEnd(lua_State* L);
 		int SetEnd(lua_State* L);
+		int SetPingPong(lua_State* L);
+		int IsPingPong(lua_State* L);
+		int SetPlayOnce(lua_State* L);
+		int IsPlayingOnce(lua_State* L);
 
 		// For Rootmotion
 		int IsRootMotion(lua_State* L);
