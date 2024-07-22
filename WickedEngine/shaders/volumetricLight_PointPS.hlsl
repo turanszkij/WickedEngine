@@ -58,7 +58,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 		const float range = light.GetRange();
 		const float range2 = range * range;
-		float3 attenuation = attenuation_pointlight(dist, dist2, range, range2);
+		float3 attenuation = attenuation_pointlight(dist2, range, range2);
 
 		[branch]
 		if (light.IsCastingShadow())

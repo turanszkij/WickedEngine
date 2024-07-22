@@ -146,7 +146,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 	}
 }
 
-inline half attenuation_pointlight(in half dist, in half dist2, in half range, in half range2)
+inline half attenuation_pointlight(in half dist2, in half range, in half range2)
 {
 	// GLTF recommendation: https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual#range-property
 	//return saturate(1 - pow(dist / range, 4)) / dist2;
@@ -181,8 +181,8 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 	[branch]
 	if (dist2 < range2)
 	{
-		const half dist = sqrt(dist2);
-		half3 L = Lunnormalized / dist;
+		const half dist_rcp = rsqrt(dist2);
+		half3 L = Lunnormalized * dist_rcp;
 
 		SurfaceToLight surface_to_light;
 		surface_to_light.create(surface, L);
@@ -208,7 +208,7 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 			if (any(shadow))
 			{
 				half3 light_color = light.GetColor().rgb * shadow;
-				light_color *= attenuation_pointlight(dist, dist2, range, range2);
+				light_color *= attenuation_pointlight(dist2, range, range2);
 
 				lighting.direct.diffuse = mad(light_color, BRDF_GetDiffuse(surface, surface_to_light), lighting.direct.diffuse);
 
@@ -256,9 +256,9 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 	}
 }
 
-inline half attenuation_spotlight(in half dist, in half dist2, in half range, in half range2, in half spot_factor, in half angle_scale, in half angle_offset)
+inline half attenuation_spotlight(in half dist2, in half range, in half range2, in half spot_factor, in half angle_scale, in half angle_offset)
 {
-	half attenuation = attenuation_pointlight(dist, dist2, range, range2);
+	half attenuation = attenuation_pointlight(dist2, range, range2);
 	half angularAttenuation = saturate(mad(spot_factor, angle_scale, angle_offset));
 	angularAttenuation *= angularAttenuation;
 	attenuation *= angularAttenuation;
@@ -274,8 +274,8 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 	[branch]
 	if (dist2 < range2)
 	{
-		const half dist = sqrt(dist2);
-		half3 L = Lunnormalized / dist;
+		const half dist_rcp = rsqrt(dist2);
+		half3 L = Lunnormalized * dist_rcp;
 
 		SurfaceToLight surface_to_light;
 		surface_to_light.create(surface, L);
@@ -314,7 +314,7 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 				if (any(shadow))
 				{
 					half3 light_color = light.GetColor().rgb * shadow;
-					light_color *= attenuation_spotlight(dist, dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
+					light_color *= attenuation_spotlight(dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
 
 					lighting.direct.diffuse = mad(light_color, BRDF_GetDiffuse(surface, surface_to_light), lighting.direct.diffuse);
 
