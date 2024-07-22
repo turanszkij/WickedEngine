@@ -76,7 +76,7 @@ half V_Neubelt(half NoV, half NoL)
 	return saturateMediump(1.0 / (4.0 * (NoL + NoV - NoL * NoV)));
 }
 
-float iorToF0(half transmittedIor, half incidentIor)
+half iorToF0(half transmittedIor, half incidentIor)
 {
 	return sqr((transmittedIor - incidentIor) / (transmittedIor + incidentIor));
 }
@@ -105,7 +105,7 @@ struct SurfaceToLight
 	float BdotH;
 #endif // ANISOTROPIC
 
-	inline void create(in Surface surface, in float3 Lnormalized)
+	inline void create(in Surface surface, in half3 Lnormalized)
 	{
 		L = Lnormalized;
 		H = normalize(L + surface.V);

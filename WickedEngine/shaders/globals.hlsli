@@ -712,6 +712,12 @@ inline bool IsStaticSky() { return GetScene().globalenvmap >= 0; }
 // Mie scaterring approximated with Henyey-Greenstein phase function.
 //	https://www.alexandre-pestana.com/volumetric-lights/
 #define G_SCATTERING 0.66
+float ComputeScattering(float lightDotView)
+{
+	float result = 1.0 - G_SCATTERING * G_SCATTERING;
+	result /= (4.0 * PI * pow(1.0 + G_SCATTERING * G_SCATTERING - (2.0 * G_SCATTERING) * lightDotView, 1.5));
+	return result;
+}
 half ComputeScattering(half lightDotView)
 {
 	half result = 1.0 - G_SCATTERING * G_SCATTERING;
@@ -1417,7 +1423,15 @@ inline float sphere_surface_area(in float radius)
 {
 	return 4 * PI * radius * radius;
 }
+inline half sphere_surface_area(in half radius)
+{
+	return 4 * PI * radius * radius;
+}
 inline float sphere_volume(in float radius)
+{
+	return 4.0 / 3.0 * PI * radius * radius * radius;
+}
+inline half sphere_volume(in half radius)
 {
 	return 4.0 / 3.0 * PI * radius * radius * radius;
 }

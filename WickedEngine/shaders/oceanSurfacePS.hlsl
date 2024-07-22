@@ -153,6 +153,6 @@ float4 main(PSIn input) : SV_TARGET
 	
 	ApplyFog(dist, V, color);
 
-	return color;
+	return saturateMediump(color);
 }
 
