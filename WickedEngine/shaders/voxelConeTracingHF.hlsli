@@ -4,7 +4,7 @@
 
 // With help from: https://github.com/compix/VoxelConeTracingGI/blob/master/assets/shaders/voxelConeTracing/finalLightingPass.frag
 
-inline float4 SampleVoxelClipMap(in Texture3D<float4> voxels, in float3 P, in uint clipmap_index, float step_dist, in float3 face_offsets, in float3 direction_weights, uint precomputed_direction = 0)
+inline float4 SampleVoxelClipMap(in Texture3D voxels, in float3 P, in uint clipmap_index, float step_dist, in float3 face_offsets, in float3 direction_weights, uint precomputed_direction = 0)
 {
 	VoxelClipMap clipmap = GetFrame().vxgi.clipmaps[clipmap_index];
 	float3 tc = GetFrame().vxgi.world_to_clipmap(P, clipmap);
@@ -44,7 +44,7 @@ inline float4 SampleVoxelClipMap(in Texture3D<float4> voxels, in float3 P, in ui
 // coneDirection:	world-space cone direction in the direction to perform the trace
 // coneAperture:	cone width
 // precomputed_direction : avoid 3x anisotropic weight sampling, and instead directly use a slice that has precomputed cone direction weighted data
-inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, in float3 coneDirection, in float coneAperture, in float stepSize, bool use_sdf = false, uint precomputed_direction = 0)
+inline float4 ConeTrace(in Texture3D voxels, in float3 P, in float3 N, in float3 coneDirection, in float coneAperture, in float stepSize, bool use_sdf = false, uint precomputed_direction = 0)
 {
 	float3 color = 0;
 	float alpha = 0;
@@ -125,7 +125,7 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 // voxels:			3D Texture containing voxel scene with direct diffuse lighting (or direct + secondary indirect bounce)
 // P:				world-space position of receiving surface
 // N:				world-space normal vector of receiving surface
-inline float4 ConeTraceDiffuse(in Texture3D<float4> voxels, in float3 P, in float3 N)
+inline float4 ConeTraceDiffuse(in Texture3D voxels, in float3 P, in float3 N)
 {
 	float4 amount = 0;
 
@@ -152,7 +152,7 @@ inline float4 ConeTraceDiffuse(in Texture3D<float4> voxels, in float3 P, in floa
 // P:				world-space position of receiving surface
 // N:				world-space normal vector of receiving surface
 // V:				world-space view-vector (cameraPosition - P)
-inline float4 ConeTraceSpecular(in Texture3D<float4> voxels, in float3 P, in float3 N, in float3 V, in float roughness, in uint2 pixel)
+inline float4 ConeTraceSpecular(in Texture3D voxels, in float3 P, in float3 N, in float3 V, in float roughness, in uint2 pixel)
 {
 	float aperture = roughness;
 	float3 coneDirection = reflect(-V, N);

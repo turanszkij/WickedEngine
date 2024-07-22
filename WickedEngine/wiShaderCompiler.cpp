@@ -138,7 +138,7 @@ namespace wi::shadercompiler
 			//L"-Ges", // Enable strict mode
 			//L"-O0", // Optimization Level 0
 			//L"-enable-16bit-types",
-			//L"-Wno-conversion",
+			L"-Wno-conversion",
 		};
 
 		if (has_flag(input.flags, Flags::DISABLE_OPTIMIZATION))
@@ -172,11 +172,16 @@ namespace wi::shadercompiler
 			return;
 		}
 
+		ShaderModel minshadermodel = input.minshadermodel;
+
+		// global minshadermodel override:
+		//minshadermodel = std::max(minshadermodel, ShaderModel::SM_6_2);
+
 		args.push_back(L"-T");
 		switch (input.stage)
 		{
 		case ShaderStage::MS:
-			switch (input.minshadermodel)
+			switch (minshadermodel)
 			{
 			default:
 				args.push_back(L"ms_6_5");
@@ -190,7 +195,7 @@ namespace wi::shadercompiler
 			}
 			break;
 		case ShaderStage::AS:
-			switch (input.minshadermodel)
+			switch (minshadermodel)
 			{
 			default:
 				args.push_back(L"as_6_5");
@@ -204,7 +209,7 @@ namespace wi::shadercompiler
 			}
 			break;
 		case ShaderStage::VS:
-			switch (input.minshadermodel)
+			switch (minshadermodel)
 			{
 			default:
 				args.push_back(L"vs_6_0");
@@ -233,7 +238,7 @@ namespace wi::shadercompiler
 			}
 			break;
 		case ShaderStage::HS:
-			switch (input.minshadermodel)
+			switch (minshadermodel)
 			{
 			default:
 				args.push_back(L"hs_6_0");
@@ -262,7 +267,7 @@ namespace wi::shadercompiler
 			}
 			break;
 		case ShaderStage::DS:
-			switch (input.minshadermodel)
+			switch (minshadermodel)
 			{
 			default:
 				args.push_back(L"ds_6_0");
@@ -291,7 +296,7 @@ namespace wi::shadercompiler
 			}
 			break;
 		case ShaderStage::GS:
-			switch (input.minshadermodel)
+			switch (minshadermodel)
 			{
 			default:
 				args.push_back(L"gs_6_0");
@@ -320,7 +325,7 @@ namespace wi::shadercompiler
 			}
 			break;
 		case ShaderStage::PS:
-			switch (input.minshadermodel)
+			switch (minshadermodel)
 			{
 			default:
 				args.push_back(L"ps_6_0");
@@ -349,7 +354,7 @@ namespace wi::shadercompiler
 			}
 			break;
 		case ShaderStage::CS:
-			switch (input.minshadermodel)
+			switch (minshadermodel)
 			{
 			default:
 				args.push_back(L"cs_6_0");
@@ -378,7 +383,7 @@ namespace wi::shadercompiler
 			}
 			break;
 		case ShaderStage::LIB:
-			switch (input.minshadermodel)
+			switch (minshadermodel)
 			{
 			default:
 				args.push_back(L"lib_6_5");

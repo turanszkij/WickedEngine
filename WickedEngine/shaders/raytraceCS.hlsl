@@ -152,10 +152,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		prim.instanceIndex = q.CommittedInstanceID();
 		prim.subsetIndex = q.CommittedGeometryIndex();
 
-		if (!q.CommittedTriangleFrontFace())
-		{
-			surface.flags |= SURFACE_FLAG_BACKFACE;
-		}
+		surface.SetBackface(!q.CommittedTriangleFrontFace());
 
 		surface.hit_depth = q.CommittedRayT();
 		if (!surface.load(prim, q.CommittedTriangleBarycentrics()))
@@ -165,10 +162,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		// ray origin updated for next bounce:
 		ray.Origin = ray.Origin + ray.Direction * hit.distance;
 
-		if (hit.is_backface)
-		{
-			surface.flags |= SURFACE_FLAG_BACKFACE;
-		}
+		surface.SetBackface(hit.is_backface);
 
 		surface.hit_depth = hit.distance;
 		if (!surface.load(hit.primitiveID, hit.bary))
@@ -182,7 +176,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 		result += energy * surface.emissiveColor;
 
-		float roughnessBRDF = sqr(clamp(surface.roughness, 0.045, 1));
+		float roughnessBRDF = sqr(clamp(surface.roughness, min_roughness, 1));
 		raycone = raycone.propagate(roughnessBRDF, surface.hit_depth);
 
 		if (bounce == 0)
@@ -266,7 +260,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					if (any(surfaceToLight.NdotL_sss))
 					{
 						lightColor = light.GetColor().rgb;
-						lightColor *= attenuation_pointlight(dist, dist2, range, range2);
+						lightColor *= attenuation_pointlight(dist2, range, range2);
 					}
 				}
 			}
@@ -298,7 +292,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 						if (spot_factor > spot_cutoff)
 						{
 							lightColor = light.GetColor().rgb;
-							lightColor *= attenuation_spotlight(dist, dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
+							lightColor *= attenuation_spotlight(dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
 						}
 					}
 				}
@@ -382,7 +376,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		{
 			// Refraction
 			const float3 R = refract(ray.Direction, surface.N, 1 - surface.material.GetRefraction());
-			float roughnessBRDF = sqr(clamp(surface.roughness, 0.045, 1));
+			float roughnessBRDF = sqr(clamp(surface.roughness, min_roughness, 1));
 			ray.Direction = lerp(R, sample_hemisphere_cos(R, rng), roughnessBRDF);
 			energy *= surface.albedo / max(0.001, surface.transmission);
 

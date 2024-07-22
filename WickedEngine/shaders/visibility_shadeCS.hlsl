@@ -59,17 +59,17 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 	// Unpack primary payload:
 	uint4 payload_0 = input_payload_0[pixel];
-	float4 data0 = unpack_rgba(payload_0.x);
+	half4 data0 = unpack_rgba(payload_0.x);
 	surface.albedo = RemoveSRGBCurve_Fast(data0.rgb);
 	surface.occlusion = data0.a;
-	float4 data1 = unpack_rgba(payload_0.y);
+	half4 data1 = unpack_rgba(payload_0.y);
 	surface.f0 = RemoveSRGBCurve_Fast(data1.rgb);
 	surface.roughness = data1.a;
 	surface.N = decode_oct(unpack_half2(payload_0.z));
 	surface.emissiveColor = Unpack_R11G11B10_FLOAT(payload_0.w);
 
 	surface.opacity = 1;
-	surface.baseColor = float4(surface.albedo, surface.opacity);
+	surface.baseColor = half4(surface.albedo, surface.opacity);
 
 #ifdef ANISOTROPIC
 	surface.T = unpack_half4(input_payload_1[pixel].xy);
@@ -88,9 +88,9 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 	surface.update();
 
-	if ((surface.flags & SURFACE_FLAG_GI_APPLIED) == 0)
+	if (!surface.IsGIApplied())
 	{
-		float3 ambient = GetAmbient(surface.N);
+		half3 ambient = GetAmbient(surface.N);
 		surface.gi = lerp(ambient, ambient * surface.sss.rgb, saturate(surface.sss.a));
 	}
 
@@ -109,7 +109,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	[branch]
 	if (GetCamera().texture_ssr_index >= 0)
 	{
-		float4 ssr = bindless_textures[GetCamera().texture_ssr_index].SampleLevel(sampler_linear_clamp, surface.screenUV, 0);
+		half4 ssr = bindless_textures[GetCamera().texture_ssr_index].SampleLevel(sampler_linear_clamp, surface.screenUV, 0);
 		lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb * surface.F, ssr.a);
 	}
 	[branch]
@@ -124,14 +124,14 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	}
 #endif // CARTOON
 
-	float4 color = 0;
+	half4 color = 0;
 
 	ApplyLighting(surface, lighting, color);
 
 	ApplyFog(surface.hit_depth, surface.V, color);
 
-	color = clamp(color, 0, 65000);
+	color = saturateMediump(color);
 
-	output[pixel] = float4(color.rgb, 1);
+	output[pixel] = half4(color.rgb, 1);
 
 }

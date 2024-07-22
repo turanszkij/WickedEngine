@@ -11,8 +11,8 @@ struct VertextoPixel
 float4 main(VertextoPixel input) : SV_TARGET
 {
 	Texture2D tex = bindless_textures[font.texture_index];
-	float value = tex.SampleLevel(sampler_linear_clamp, input.uv, 0).r;
-	float4 color = font.color;
+	half value = tex.SampleLevel(sampler_linear_clamp, input.uv, 0).r;
+	half4 color = font.color;
 
 	[branch]
 	if (font.flags & FONT_FLAG_SDF_RENDERING)
@@ -22,7 +22,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 		w = max(w, 1.0 / 255.0); // min softness to avoid pixelated hard edge in magnification
 		w += font.softness;
 		w = saturate(w);
-		float mid = lerp(SDF::onedge_value_unorm, 0, font.bolden);
+		half mid = lerp(SDF::onedge_value_unorm, 0, font.bolden);
 		color.a *= smoothstep(saturate(mid - w), saturate(mid + w), value);
 	}
 	else
@@ -34,9 +34,9 @@ float4 main(VertextoPixel input) : SV_TARGET
 	if (font.flags & FONT_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084)
 	{
 		// https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12HDR/src/presentPS.hlsl
-		const float referenceWhiteNits = 80.0;
-		const float st2084max = 10000.0;
-		const float hdrScalar = referenceWhiteNits / st2084max;
+		const half referenceWhiteNits = 80.0;
+		const half st2084max = 10000.0;
+		const half hdrScalar = referenceWhiteNits / st2084max;
 		// The input is in Rec.709, but the display is Rec.2020
 		color.rgb = REC709toREC2020(color.rgb);
 		// Apply the ST.2084 curve to the result.

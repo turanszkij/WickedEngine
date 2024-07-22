@@ -96,10 +96,7 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 
 	Surface surface;
 	surface.init();
-	if (HitKind() != HIT_KIND_TRIANGLE_FRONT_FACE)
-	{
-		surface.flags |= SURFACE_FLAG_BACKFACE;
-	}
+	surface.SetBackface(HitKind() != HIT_KIND_TRIANGLE_FRONT_FACE);
 	if (!surface.load(prim, attr.barycentrics))
 		return;
 

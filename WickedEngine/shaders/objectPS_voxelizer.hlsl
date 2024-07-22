@@ -44,7 +44,7 @@ struct PSInput
 {
 	float4 pos : SV_POSITION;
 	centroid float4 uvsets : UVSETS;
-	centroid min16float4 color : COLOR;
+	centroid half4 color : COLOR;
 	centroid float3 N : NORMAL;
 	centroid float3 P : POSITION3D;
 

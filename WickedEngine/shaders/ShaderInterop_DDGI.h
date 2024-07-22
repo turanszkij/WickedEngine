@@ -152,16 +152,16 @@ inline float2 ddgi_probe_depth_uv(uint3 probeCoord, float3 direction)
 
 
 // Based on: https://github.com/diharaw/hybrid-rendering/blob/master/src/shaders/gi/gi_common.glsl
-float3 ddgi_sample_irradiance(float3 P, float3 N)
+half3 ddgi_sample_irradiance(float3 P, half3 N)
 {
 	uint3 base_grid_coord = ddgi_base_probe_coord(P);
 	float3 base_probe_pos = ddgi_probe_position(base_grid_coord);
 
-	float3 sum_irradiance = 0;
-	float sum_weight = 0;
+	half3 sum_irradiance = 0;
+	half sum_weight = 0;
 
 	// alpha is how far from the floor(currentVertex) position. on [0, 1] for each axis.
-	float3 alpha = saturate((P - base_probe_pos) * ddgi_cellsize_rcp());
+	half3 alpha = saturate((P - base_probe_pos) * ddgi_cellsize_rcp());
 
 	// Iterate over adjacent probe cage
 	for (uint i = 0; i < 8; ++i)
@@ -185,15 +185,15 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 		// then samples can pass through thin occluders to the other
 		// side (this can only happen if there are MULTIPLE occluders
 		// near each other, a wall surface won't pass through itself.)
-		float3 probe_to_point = P - probe_pos + N * 0.001;
-		float3 dir = normalize(-probe_to_point);
+		half3 probe_to_point = P - probe_pos + N * 0.001;
+		half3 dir = normalize(-probe_to_point);
 
 		// Compute the trilinear weights based on the grid cell vertex to smoothly
 		// transition between probes. Avoid ever going entirely to zero because that
 		// will cause problems at the border probes. This isn't really a lerp. 
 		// We're using 1-a when offset = 0 and a when offset = 1.
-		float3 trilinear = lerp(1.0 - alpha, alpha, offset);
-		float weight = 1.0;
+		half3 trilinear = lerp(1.0 - alpha, alpha, offset);
+		half weight = 1.0;
 
 		// Clamp all of the multiplies. We can't let the weight go to zero because then it would be 
 		// possible for *all* weights to be equally low and get normalized
@@ -205,7 +205,7 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 			// Computed without the biasing applied to the "dir" variable. 
 			// This test can cause reflection-map looking errors in the image
 			// (stuff looks shiny) if the transition is poor.
-			float3 true_direction_to_probe = normalize(probe_pos - P);
+			half3 true_direction_to_probe = normalize(probe_pos - P);
 
 			// The naive soft backface weight would ignore a probe when
 			// it is behind the surface. That's good for walls. But for small details inside of a
@@ -227,16 +227,16 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 			//float2 tex_coord = texture_coord_from_direction(-dir, p, ddgi.depth_texture_width, ddgi.depth_texture_height, ddgi.depth_probe_side_length);
 			float2 tex_coord = ddgi_probe_depth_uv(probe_grid_coord, -dir);
 
-			float dist_to_probe = length(probe_to_point);
+			half dist_to_probe = length(probe_to_point);
 
 			//float2 temp = textureLod(depth_texture, tex_coord, 0.0f).rg;
-			float2 temp = bindless_textures[GetScene().ddgi.depth_texture].SampleLevel(sampler_linear_clamp, tex_coord, 0).xy;
-			float mean = temp.x;
-			float variance = abs(sqr(temp.x) - temp.y);
+			half2 temp = bindless_textures[GetScene().ddgi.depth_texture].SampleLevel(sampler_linear_clamp, tex_coord, 0).xy;
+			half mean = temp.x;
+			half variance = abs(sqr(temp.x) - temp.y);
 
 			// http://www.punkuser.net/vsm/vsm_paper.pdf; equation 5
 			// Need the max in the denominator because biasing can cause a negative displacement
-			float chebyshev_weight = variance / (variance + sqr(max(dist_to_probe - mean, 0.0)));
+			half chebyshev_weight = variance / (variance + sqr(max(dist_to_probe - mean, 0.0)));
 
 			// Increase contrast in the weight 
 			chebyshev_weight = max(pow(chebyshev_weight, 3), 0.0);
@@ -246,22 +246,22 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 #endif
 
 		// Avoid zero weight
-		weight = max(0.000001, weight);
+		weight = max(0.01, weight);
 
-		float3 irradiance_dir = N;
+		half3 irradiance_dir = N;
 
 		//float2 tex_coord = texture_coord_from_direction(normalize(irradiance_dir), p, ddgi.irradiance_texture_width, ddgi.irradiance_texture_height, ddgi.irradiance_probe_side_length);
 		float2 tex_coord = ddgi_probe_color_uv(probe_grid_coord, irradiance_dir);
 
 		//float3 probe_irradiance = textureLod(irradiance_texture, tex_coord, 0.0f).rgb;
-		float3 probe_irradiance = bindless_textures[GetScene().ddgi.color_texture].SampleLevel(sampler_linear_clamp, tex_coord, 0).rgb;
+		half3 probe_irradiance = bindless_textures[GetScene().ddgi.color_texture].SampleLevel(sampler_linear_clamp, tex_coord, 0).rgb;
 
 		// A tiny bit of light is really visible due to log perception, so
 		// crush tiny weights but keep the curve continuous. This must be done
 		// before the trilinear weights, because those should be preserved.
-		const float crush_threshold = 0.2f;
+		const half crush_threshold = 0.2;
 		if (weight < crush_threshold)
-			weight *= weight * weight * (1.0f / sqr(crush_threshold));
+			weight *= weight * weight / sqr(crush_threshold);
 
 		// Trilinear weights
 		weight *= trilinear.x * trilinear.y * trilinear.z;
@@ -280,7 +280,7 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 
 	if (sum_weight > 0)
 	{
-		float3 net_irradiance = sum_irradiance / sum_weight;
+		half3 net_irradiance = sum_irradiance / sum_weight;
 
 		// Go back to linear irradiance
 #ifndef DDGI_LINEAR_BLENDING

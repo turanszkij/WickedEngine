@@ -60,7 +60,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 		return;
 	
 	float4 pos_wind = bindless_buffers_float4[push.vb_pos_wind][vertexID];
-	float3 nor = bindless_buffers_float4[push.vb_nor][vertexID].xyz;
+	half3 nor = bindless_buffers_float4[push.vb_nor][vertexID].xyz;
 	
 	float3 pos = pos_wind.xyz;
 	if(any(push.aabb_min) || any(push.aabb_max))
@@ -69,7 +69,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 		pos = lerp(push.aabb_min, push.aabb_max, pos);
 	}
 	
-	float4 tan = bindless_buffers_float4[push.vb_tan][vertexID];
+	half4 tan = bindless_buffers_float4[push.vb_tan][vertexID];
 
 	ByteAddressBuffer skinningbuffer = bindless_buffers[push.skinningbuffer_index];
 
@@ -97,40 +97,40 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	if (push.vb_bon >= 0 && push.bone_offset != ~0u)
 	{
 		float4 p = 0;
-		min16float3 n = 0;
-		min16float3 t = 0;
+		half3 n = 0;
+		half3 t = 0;
 		for (uint influence = 0; influence < push.influence_div4; ++influence)
 		{
-			min16uint4 ind = 0;
-			min16float4 wei = 0;
+			uint4 ind = 0;
+			half4 wei = 0;
 			[branch]
 			if (push.vb_bon >= 0)
 			{
 				// Manual type-conversion for bone props:
 				uint4 ind_wei_u = bindless_buffers[push.vb_bon].Load4((vertexID * push.influence_div4 + influence) * sizeof(uint4));
 
-				ind.x = min16uint(ind_wei_u.x & 0xFFFFF);
-				ind.y = min16uint(ind_wei_u.y & 0xFFFFF);
-				ind.z = min16uint(ind_wei_u.z & 0xFFFFF);
-				ind.w = min16uint(ind_wei_u.w & 0xFFFFF);
+				ind.x = uint(ind_wei_u.x & 0xFFFFF);
+				ind.y = uint(ind_wei_u.y & 0xFFFFF);
+				ind.z = uint(ind_wei_u.z & 0xFFFFF);
+				ind.w = uint(ind_wei_u.w & 0xFFFFF);
 
-				wei.x = min16float(float((ind_wei_u.x >> 20) & 0xFFF) / 4095.0);
-				wei.y = min16float(float((ind_wei_u.y >> 20) & 0xFFF) / 4095.0);
-				wei.z = min16float(float((ind_wei_u.z >> 20) & 0xFFF) / 4095.0);
-				wei.w = min16float(float((ind_wei_u.w >> 20) & 0xFFF) / 4095.0);
+				wei.x = half(float((ind_wei_u.x >> 20) & 0xFFF) / 4095.0);
+				wei.y = half(float((ind_wei_u.y >> 20) & 0xFFF) / 4095.0);
+				wei.z = half(float((ind_wei_u.z >> 20) & 0xFFF) / 4095.0);
+				wei.w = half(float((ind_wei_u.w >> 20) & 0xFFF) / 4095.0);
 			}
 			if (any(wei))
 			{
-				min16float weisum = 0;
+				half weisum = 0;
 			
-				for (min16uint i = 0; ((i < 4) && (weisum < 1.0)); ++i)
+				for (uint i = 0; ((i < 4) && (weisum < 1.0)); ++i)
 				{
 					float4x4 m = skinningbuffer.Load<ShaderTransform>(push.bone_offset + ind[i] * sizeof(ShaderTransform)).GetMatrix();
-					min16float weight = wei[i];
+					half weight = wei[i];
 
 					p += mul(m, float4(pos.xyz, 1)) * weight;
-					n += min16float3(mul((min16float3x3)m, nor.xyz)) * weight;
-					t += min16float3(mul((min16float3x3)m, tan.xyz)) * weight;
+					n += half3(mul((half3x3)m, nor.xyz)) * weight;
+					t += half3(mul((half3x3)m, tan.xyz)) * weight;
 					weisum += weight;
 				}
 			}

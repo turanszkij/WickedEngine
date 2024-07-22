@@ -26,9 +26,9 @@ VertexToPixel main(uint vid : SV_VERTEXID)
 	Out.pos3D = Out.pos.xyz;
 	Out.pos = mul(GetCamera().view_projection, Out.pos);
 
-	Out.nor = min16float3(normal);
-	Out.tex = min16float2(uvsets.xy);
-	Out.wet = (min16float)bindless_buffers_float[inst.vb_wetmap][vertexID];
+	Out.nor = half3(normal);
+	Out.tex = uvsets.xy;
+	Out.wet = (half)bindless_buffers_float[inst.vb_wetmap][vertexID];
 	
 	return Out;
 }

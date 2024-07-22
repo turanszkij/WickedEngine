@@ -46,12 +46,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	float3 pos0 = meshVertexBuffer_POS[i0].xyz;
 	float3 pos1 = meshVertexBuffer_POS[i1].xyz;
 	float3 pos2 = meshVertexBuffer_POS[i2].xyz;
-	float3 nor0 = meshVertexBuffer_NOR[i0].xyz;
-	float3 nor1 = meshVertexBuffer_NOR[i1].xyz;
-	float3 nor2 = meshVertexBuffer_NOR[i2].xyz;
-	float length0 = meshVertexBuffer_length[i0];
-	float length1 = meshVertexBuffer_length[i1];
-	float length2 = meshVertexBuffer_length[i2];
+	half3 nor0 = meshVertexBuffer_NOR[i0].xyz;
+	half3 nor1 = meshVertexBuffer_NOR[i1].xyz;
+	half3 nor2 = meshVertexBuffer_NOR[i2].xyz;
+	half length0 = meshVertexBuffer_length[i0];
+	half length1 = meshVertexBuffer_length[i1];
+	half length2 = meshVertexBuffer_length[i2];
 
 	// random barycentric coords:
 	float f = rng.next_float();
@@ -67,10 +67,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	// compute final surface position on triangle from barycentric coords:
 	float3 position = attribute_at_bary(pos0, pos1, pos2, bary);
 	position = mul(xHairBaseMeshUnormRemap.GetMatrix(), float4(position, 1)).xyz;
-	float3 target = normalize(attribute_at_bary(nor0, nor1, nor2, bary));
-	float3 tangent = normalize(mul(float3(hemispherepoint_cos(rng.next_float(), rng.next_float()).xy, 0), get_tangentspace(target)));
-	float3 binormal = cross(target, tangent);
-	float strand_length = attribute_at_bary(length0, length1, length2, bary);
+	half3 target = normalize(attribute_at_bary(nor0, nor1, nor2, bary));
+	half3 tangent = normalize(mul(half3(hemispherepoint_cos(rng.next_float(), rng.next_float()).xy, 0), get_tangentspace(target)));
+	half3 binormal = cross(target, tangent);
+	half strand_length = attribute_at_bary(length0, length1, length2, bary);
 
 	uint tangent_random = 0;
 	tangent_random |= (uint)((uint)(tangent.x * 127.5f + 127.5f) << 0);
@@ -90,7 +90,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	// Transform particle by the emitter object matrix:
 	const float4x4 worldMatrix = xHairTransform.GetMatrix();
 	float3 base = mul(worldMatrix, float4(position.xyz, 1)).xyz;
-	target = normalize(mul((float3x3)worldMatrix, target));
+	target = normalize(mul((half3x3)worldMatrix, target));
 	const float3 root = base;
 
 	float3 diff = GetCamera().position - root;
@@ -100,7 +100,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	// Bend down to camera up vector to avoid seeing flat planes from above
 	const float3 bend = GetCamera().up * (1 - saturate(dot(target, GetCamera().up))) * 0.8;
 
-	float3 normal = 0;
+	half3 normal = 0;
 
 	const float delta_time = clamp(GetFrame().delta_time, 0, 1.0 / 30.0); // clamp delta time to avoid simulation blowing up
 	
@@ -128,7 +128,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		float3 midpoint = lerp(base, tip, 0.5);
 
 		// Accumulate forces, apply colliders:
-		float3 force = 0;
+		half3 force = 0;
 		for (uint i = 0; i < GetFrame().forcefieldarray_count; ++i)
 		{
 			ShaderEntity entity = load_entity(GetFrame().forcefieldarray_offset + i);
@@ -212,7 +212,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		force *= delta_time;
 
 		// Simulation buffer load:
-		float3 velocity = f16tof32(simulationBuffer[particleID].normal_velocity >> 16u);
+		half3 velocity = f16tof32(simulationBuffer[particleID].normal_velocity >> 16u);
 
 		// Apply surface-movement-based velocity:
 		const float3 old_base = simulationBuffer[particleID].position;
@@ -222,8 +222,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		velocity += surface_velocity;
 
 		// Apply forces:
-		float3 newVelocity = velocity + force;
-		float3 newNormal = normal + newVelocity * delta_time;
+		half3 newVelocity = velocity + force;
+		half3 newNormal = normal + newVelocity * delta_time;
 		newNormal = normalize(newNormal);
 		if (dot(target, newNormal) > 0.5) // clamp the offset
 		{
@@ -244,7 +244,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		uint i0 = particleID * 6;
 
 		uint rand = (tangent_random >> 24) & 0x000000FF;
-		float3x3 TBN = float3x3(tangent, normalize(normal + bend), binormal); // don't derive binormal, because we want the shear!
+		half3x3 TBN = half3x3(tangent, normalize(normal + bend), binormal); // don't derive binormal, because we want the shear!
 		float3 rootposition = base - normal * 0.1 * len; // inset to the emitter a bit, to avoid disconnect:
 		float2 frame = float2(xHairAspect, 1) * len * 0.5;
 		const uint currentFrame = (xHairFrameStart + rand) % xHairFrameCount;
@@ -277,7 +277,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			position = inverse_lerp(geometry.aabb_min, geometry.aabb_max, position); // remap to UNORM
 			
 			vertexBuffer_POS[v0 + vertexID] = float4(position, 0);
-			vertexBuffer_NOR[v0 + vertexID] = float4(normalize(normal + wind), 0);
+			vertexBuffer_NOR[v0 + vertexID] = half4(normalize(normal + wind), 0);
 			vertexBuffer_UVS[v0 + vertexID] = uv.xyxy; // a second uv set could be used here
 			
 			if (distance_culled)

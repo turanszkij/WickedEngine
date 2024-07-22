@@ -8,15 +8,12 @@ Texture2D<float3> input_history : register(t1);
 
 RWTexture2D<float3> output : register(u0);
 
-// Neighborhood load optimization:
-#define USE_LDS
-
 // This hack can improve bright areas:
 #define HDR_CORRECTION
 
 static const uint TILE_BORDER = 1;
 static const uint TILE_SIZE = POSTPROCESS_BLOCKSIZE + TILE_BORDER * 2;
-groupshared uint tile_color[TILE_SIZE*TILE_SIZE];
+groupshared uint2 tile_color[TILE_SIZE*TILE_SIZE];
 groupshared float tile_depth[TILE_SIZE*TILE_SIZE];
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
@@ -29,19 +26,18 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 		return;
 	}
 	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
-	float3 neighborhoodMin = 100000;
-	float3 neighborhoodMax = -100000;
-	float3 current;
+	half3 neighborhoodMin = 10000;
+	half3 neighborhoodMax = -10000;
+	half3 current;
 	float bestDepth = 1;
-
-#ifdef USE_LDS
+	
 	const int2 tile_upperleft = Gid.xy * POSTPROCESS_BLOCKSIZE - TILE_BORDER;
 	for (uint t = groupIndex; t < TILE_SIZE * TILE_SIZE; t += POSTPROCESS_BLOCKSIZE * POSTPROCESS_BLOCKSIZE)
 	{
 		const uint2 pixel = tile_upperleft + unflatten2D(t, TILE_SIZE);
 		const float depth = texture_lineardepth[pixel];
-		const float3 color = input_current[pixel].rgb;
-		tile_color[t] = Pack_R11G11B10_FLOAT(color);
+		const half3 color = input_current[pixel].rgb;
+		tile_color[t] = pack_half3(color);
 		tile_depth[t] = depth;
 	}
 	GroupMemoryBarrierWithGroupSync();
@@ -55,7 +51,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 			const int2 offset = int2(x, y);
 			const uint idx = flatten2D(GTid.xy + TILE_BORDER + offset, TILE_SIZE);
 
-			const float3 neighbor = Unpack_R11G11B10_FLOAT(tile_color[idx]);
+			const half3 neighbor = unpack_half3(tile_color[idx]);
 			neighborhoodMin = min(neighborhoodMin, neighbor);
 			neighborhoodMax = max(neighborhoodMax, neighbor);
 			if (x == 0 && y == 0)
@@ -73,36 +69,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	}
 	const float2 velocity = texture_velocity[DTid.xy + bestOffset].xy;
 
-#else
-
-	// Search for best velocity and compute color clamping range in 3x3 neighborhood:
-	int2 bestPixel = int2(0, 0);
-	for (int x = -1; x <= 1; ++x)
-	{
-		for (int y = -1; y <= 1; ++y)
-		{
-			const int2 curPixel = DTid.xy + int2(x, y);
-
-			const float3 neighbor = input_current[curPixel].rgb;
-			neighborhoodMin = min(neighborhoodMin, neighbor);
-			neighborhoodMax = max(neighborhoodMax, neighbor);
-			if (x == 0 && y == 0)
-			{
-				current = neighbor;
-			}
-
-			const float depth = texture_lineardepth[curPixel];
-			if (depth < bestDepth)
-			{
-				bestDepth = depth;
-				bestPixel = curPixel;
-			}
-		}
-	}
-	const float2 velocity = texture_velocity[bestPixel].xy;
-
-#endif // USE_LDS
-
 	const float2 prevUV = GetCamera().clamp_uv_to_scissor(uv + velocity);
 
 #if 1
@@ -118,19 +84,19 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 #endif
 
 	// we cannot avoid the linear filter here because point sampling could sample irrelevant pixels but we try to correct it later:
-	float3 history = input_history.SampleLevel(sampler_linear_clamp, prevUV, 0).rgb;
+	half3 history = input_history.SampleLevel(sampler_linear_clamp, prevUV, 0).rgb;
 
 	// simple correction of image signal incoherency (eg. moving shadows or lighting changes):
 	history.rgb = clamp(history.rgb, neighborhoodMin, neighborhoodMax);
 
 	// the linear filtering can cause blurry image, try to account for that:
-	float subpixelCorrection = frac(max(abs(velocity.x) * GetCamera().internal_resolution.x, abs(velocity.y) * GetCamera().internal_resolution.y)) * 0.5f;
+	float subpixelCorrection = frac(max(abs(velocity.x) * GetCamera().internal_resolution.x, abs(velocity.y) * GetCamera().internal_resolution.y)) * 0.5;
 
 	// compute a nice blend factor:
-	float blendfactor = saturate(lerp(0.05f, 0.8f, subpixelCorrection));
+	float blendfactor = saturate(lerp(0.05, 0.8, subpixelCorrection));
 
 	// if information can not be found on the screen, revert to aliased image:
-	blendfactor = is_saturated(prevUV) ? blendfactor : 1.0f;
+	blendfactor = is_saturated(prevUV) ? blendfactor : 1.0;
 
 #ifdef HDR_CORRECTION
 	history.rgb = tonemap(history.rgb);
@@ -138,11 +104,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 #endif
 
 	// do the temporal super sampling by linearly accumulating previous samples with the current one:
-	float3 resolved = lerp(history.rgb, current.rgb, blendfactor);
+	half3 resolved = lerp(history.rgb, current.rgb, blendfactor);
 
 #ifdef HDR_CORRECTION
 	resolved.rgb = inverse_tonemap(resolved.rgb);
 #endif
 
-	output[DTid.xy] = resolved;
+	output[DTid.xy] = saturateMediump(resolved);
 }

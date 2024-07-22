@@ -13,7 +13,7 @@ float4 main(VertexToPixel input) : SV_Target
 	
 	write_mipmap_feedback(HairGetGeometry().materialIndex, ddx_coarse(input.tex.xyxy), ddy_coarse(input.tex.xyxy));
 
-	float4 color = 1;
+	half4 color = 1;
 
 	[branch]
 	if (material.textures[BASECOLORMAP].IsValid() && (GetFrame().options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
@@ -25,7 +25,7 @@ float4 main(VertexToPixel input) : SV_Target
 	float3 V = GetCamera().position - input.pos3D;
 	float dist = length(V);
 	V /= dist;
-	float emissive = 0;
+	half emissive = 0;
 
 	const uint2 pixel = input.pos.xy; // no longer pixel center!
 	const float2 ScreenCoord = input.pos.xy * GetCamera().internal_resolution_rcp; // use pixel center!
@@ -68,11 +68,9 @@ float4 main(VertexToPixel input) : SV_Target
 	lighting.create(0, 0, GetAmbient(surface.N), 0);
 
 	float depth = input.pos.z;
-	float3 reflection = 0;
 
 	TiledLighting(surface, lighting, GetFlatTileIndex(pixel));
-
-
+	
 	ApplyLighting(surface, lighting, color);
 
 #ifdef TRANSPARENT

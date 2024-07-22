@@ -135,10 +135,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 
 		Surface surface;
 		surface.init();
-		if (!q.CommittedTriangleFrontFace())
-		{
-			surface.flags |= SURFACE_FLAG_BACKFACE;
-		}
+		surface.SetBackface(!q.CommittedTriangleFrontFace());
 		surface.V = -ray.Direction;
 		surface.raycone = raycone;
 		surface.hit_depth = q.CommittedRayT();
@@ -159,7 +156,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 			surface.V = -q.WorldRayDirection();
 			surface.update();
 
-			if ((surface.flags & SURFACE_FLAG_GI_APPLIED) == 0)
+			if (!surface.IsGIApplied())
 			{
 				float3 ambient = GetAmbient(surface.N);
 				surface.gi = lerp(ambient, ambient * surface.sss.rgb, saturate(surface.sss.a));

@@ -1135,6 +1135,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_WIND], "windCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_YUV_TO_RGB], "yuv_to_rgbCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_WETMAP_UPDATE], "wetmap_updateCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_CAUSTICS], "causticsCS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT], "objectHS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT_PREPASS], "objectHS_prepass.cso"); });
@@ -2012,6 +2013,16 @@ void LoadBuffers()
 		device->SetName(&textures[TEXTYPE_3D_WIND], "textures[TEXTYPE_3D_WIND]");
 		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_3D_WIND_PREV]);
 		device->SetName(&textures[TEXTYPE_3D_WIND_PREV], "textures[TEXTYPE_3D_WIND_PREV]");
+	}
+	{
+		TextureDesc desc;
+		desc.type = TextureDesc::Type::TEXTURE_2D;
+		desc.format = Format::R8G8B8A8_UNORM;
+		desc.width = 256;
+		desc.height = 256;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_CAUSTICS]);
+		device->SetName(&textures[TEXTYPE_2D_CAUSTICS], "textures[TEXTYPE_2D_CAUSTICS]");
 	}
 	{
 		// Note: Create dummy shadow map atlas to avoid issue with AMD RX 6650 GPU
@@ -3828,6 +3839,7 @@ void UpdatePerFrameData(
 	frameCB.texture_cameravolumelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_SKYATMOSPHERE_CAMERAVOLUMELUT], SubresourceType::SRV);
 	frameCB.texture_wind_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_WIND], SubresourceType::SRV);
 	frameCB.texture_wind_prev_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_WIND_PREV], SubresourceType::SRV);
+	frameCB.texture_caustics_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_CAUSTICS], SubresourceType::SRV);
 
 	frameCB.texture_shadowatlas_index = device->GetDescriptorIndex(&shadowMapAtlas, SubresourceType::SRV);
 	frameCB.texture_shadowatlas_transparent_index = device->GetDescriptorIndex(&shadowMapAtlas_Transparent, SubresourceType::SRV);
@@ -4338,6 +4350,7 @@ void UpdateRenderData(
 
 	barrier_stack.push_back(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND], textures[TEXTYPE_3D_WIND].desc.layout, ResourceState::UNORDERED_ACCESS));
 	barrier_stack.push_back(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND_PREV], textures[TEXTYPE_3D_WIND_PREV].desc.layout, ResourceState::UNORDERED_ACCESS));
+	barrier_stack.push_back(GPUBarrier::Image(&textures[TEXTYPE_2D_CAUSTICS], textures[TEXTYPE_2D_CAUSTICS].desc.layout, ResourceState::UNORDERED_ACCESS));
 
 	// Flush buffer updates:
 	barrier_stack_flush(cmd);
@@ -4348,13 +4361,15 @@ void UpdateRenderData(
 	BindCommonResources(cmd);
 
 	{
-		auto range = wi::profiler::BeginRangeGPU("Wind", cmd);
-		device->EventBegin("Wind", cmd);
 		device->ClearUAV(&textures[TEXTYPE_3D_WIND], 0, cmd);
 		device->ClearUAV(&textures[TEXTYPE_3D_WIND_PREV], 0, cmd);
-		barrier_stack.push_back(GPUBarrier::Memory(&textures[TEXTYPE_3D_WIND]));
-		barrier_stack.push_back(GPUBarrier::Memory(&textures[TEXTYPE_3D_WIND_PREV]));
-		barrier_stack_flush(cmd);
+		device->ClearUAV(&textures[TEXTYPE_2D_CAUSTICS], 0, cmd);
+		device->Barrier(GPUBarrier::Memory(), cmd);
+	}
+
+	{
+		auto range = wi::profiler::BeginRangeGPU("Wind", cmd);
+		device->EventBegin("Wind", cmd);
 		if (
 			vis.scene->weather.windDirection.x != 0 ||
 			vis.scene->weather.windDirection.y != 0 ||
@@ -4369,6 +4384,17 @@ void UpdateRenderData(
 		}
 		barrier_stack.push_back(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_3D_WIND].desc.layout));
 		barrier_stack.push_back(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND_PREV], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_3D_WIND_PREV].desc.layout));
+		device->EventEnd(cmd);
+		wi::profiler::EndRange(range);
+	}
+	{
+		auto range = wi::profiler::BeginRangeGPU("Caustics", cmd);
+		device->EventBegin("Caustics", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_CAUSTICS], cmd);
+		device->BindUAV(&textures[TEXTYPE_2D_CAUSTICS], 0, cmd);
+		const TextureDesc& desc = textures[TEXTYPE_2D_CAUSTICS].GetDesc();
+		device->Dispatch(desc.width / 8, desc.height / 8, 1, cmd);
+		barrier_stack.push_back(GPUBarrier::Image(&textures[TEXTYPE_2D_CAUSTICS], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_2D_CAUSTICS].desc.layout));
 		device->EventEnd(cmd);
 		wi::profiler::EndRange(range);
 	}

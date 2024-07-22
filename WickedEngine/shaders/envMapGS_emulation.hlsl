@@ -7,12 +7,12 @@ struct GSInput
 	float4 pos : SV_POSITION;
 	uint instanceIndex_dither : INSTANCEINDEX_DITHER;
 	float4 uvsets : UVSETS;
-	min16float4 color : COLOR;
-	min16float4 tan : TANGENT;
+	half4 color : COLOR;
+	half4 tan : TANGENT;
 	float3 nor : NORMAL;
-	min16float2 atl : ATLAS;
+	half2 atl : ATLAS;
 	float3 pos3D : WORLDPOSITION;
-	min16float ao : AMBIENT_OCCLUSION;
+	half ao : AMBIENT_OCCLUSION;
 	uint RTIndex : RTINDEX;
 };
 
@@ -21,12 +21,12 @@ struct GSOutput
 	float4 pos : SV_POSITION;
 	uint instanceIndex_dither : INSTANCEINDEX_DITHER;
 	float4 uvsets : UVSETS;
-	min16float4 color : COLOR;
-	min16float4 tan : TANGENT;
+	half4 color : COLOR;
+	half4 tan : TANGENT;
 	float3 nor : NORMAL;
-	min16float2 atl : ATLAS;
+	half2 atl : ATLAS;
 	float3 pos3D : WORLDPOSITION;
-	min16float ao : AMBIENT_OCCLUSION;
+	half ao : AMBIENT_OCCLUSION;
 	uint RTIndex : SV_RenderTargetArrayIndex;
 };
 

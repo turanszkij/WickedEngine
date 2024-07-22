@@ -30,7 +30,7 @@ bool NeedReflection(float roughness, float depth, float roughness_cutoff)
 // Brian Karis, Epic Games "Real Shading in Unreal Engine 4"
 float4 ImportanceSampleGGX(float2 Xi, float Roughness)
 {
-	Roughness = clamp(Roughness, 0.045, 1);
+	Roughness = clamp(Roughness, min_roughness, 1);
 	float m = Roughness * Roughness;
 	float m2 = m * m;
 
@@ -76,7 +76,7 @@ float2 SampleDisk(float2 Xi)
 // http://jcgt.org/published/0007/04/01/paper.pdf
 float4 ImportanceSampleVisibleGGX(float2 diskXi, float roughness, float3 V)
 {
-	roughness = clamp(roughness, 0.045, 1);
+	roughness = clamp(roughness, min_roughness, 1);
 	float alphaRoughness = roughness * roughness;
 	float alphaRoughnessSq = alphaRoughness * alphaRoughness;
 
@@ -120,7 +120,7 @@ float4 ImportanceSampleVisibleGGX(float2 diskXi, float roughness, float3 V)
 
 float4 ReflectionDir_GGX(float3 V, float3 N, float roughness, float2 random2)
 {
-	roughness = clamp(roughness, 0.045, 1);
+	roughness = clamp(roughness, min_roughness, 1);
 	float4 H;
 	float3 L;
 	if (roughness > 0.05f)

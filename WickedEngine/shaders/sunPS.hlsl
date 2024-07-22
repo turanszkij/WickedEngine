@@ -10,5 +10,5 @@ float4 main(float4 pos : SV_POSITION, float2 clipspace : TEXCOORD) : SV_TARGET
 	const float3 origin = GetCamera().position;
 	const float3 direction = normalize(unprojected.xyz - origin);
 
-	return float4(clamp(GetDynamicSkyColor(direction, true, true), 0, 65000), 1);
+	return float4(saturateMediump(GetDynamicSkyColor(direction, true, true)), 1);
 }

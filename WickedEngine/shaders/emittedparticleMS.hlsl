@@ -23,14 +23,14 @@ struct VertextoPixel_MS
 {
 	float4 pos : SV_POSITION;
 	float clip : SV_ClipDistance0;
-	min16float4 tex : TEXCOORD0;
+	half4 tex : TEXCOORD0;
 	float3 P : WORLDPOSITION;
-	min16float2 unrotated_uv : UNROTATED_UV;
+	half2 unrotated_uv : UNROTATED_UV;
 };
 struct VertextoPixel_MS_PRIM
 {
-	nointerpolation min16float frameBlend : FRAMEBLEND;
-	nointerpolation min16float size : PARTICLESIZE;
+	nointerpolation half frameBlend : FRAMEBLEND;
+	nointerpolation half size : PARTICLESIZE;
 	nointerpolation uint color : PARTICLECOLOR;
 };
 
@@ -83,17 +83,17 @@ void main(
 		VertextoPixel_MS Out;
 		Out.P = position;
 		Out.clip = dot(Out.pos, GetCamera().clip_plane);
-		Out.tex = min16float4(uvsets);
+		Out.tex = half4(uvsets);
 		Out.pos = mul(GetCamera().view_projection, float4(position, 1));
-		Out.unrotated_uv = min16float2(BILLBOARD[i].xy * float2(1, -1) * 0.5f + 0.5f);
+		Out.unrotated_uv = half2(BILLBOARD[i].xy * float2(1, -1) * 0.5f + 0.5f);
 
 		verts[tig * BILLBOARD_VERTEXCOUNT + i] = Out;
 	}
 
 	VertextoPixel_MS_PRIM OutQuad;
 	OutQuad.color = pack_rgba(bindless_buffers_float4[geometry.vb_col][particleIndex * 4]);
-	OutQuad.size = min16float(size);
-	OutQuad.frameBlend = min16float(frameBlend);
+	OutQuad.size = half(size);
+	OutQuad.frameBlend = half(frameBlend);
 	sharedPrimitives[tig * 2 + 0] = OutQuad;
 	sharedPrimitives[tig * 2 + 1] = OutQuad;
 

@@ -1,9 +1,134 @@
 #ifndef WI_SHADER_GLOBALS_HF
 #define WI_SHADER_GLOBALS_HF
+
+// Enable / disable FP16 shader ops here
+//	Note: when using -enable-16bit-types compile flag, half will be always FP16
+#if 1
+#define half min16float
+#define half2 min16float2
+#define half3 min16float3
+#define half4 min16float4
+#define half3x3 min16float3x3
+#define half3x4 min16float3x4
+#define half4x4 min16float4x4
+#endif
+
 #include "ColorSpaceUtility.hlsli"
 #include "PixelPacking_R11G11B10.hlsli"
 #include "PixelPacking_RGBE.hlsli"
 #include "ShaderInterop.h"
+
+inline uint pack_unitvector(in half3 value)
+{
+	uint retVal = 0;
+	retVal |= (uint)((value.x * 0.5 + 0.5) * 255.0) << 0u;
+	retVal |= (uint)((value.y * 0.5 + 0.5) * 255.0) << 8u;
+	retVal |= (uint)((value.z * 0.5 + 0.5) * 255.0) << 16u;
+	return retVal;
+}
+inline half3 unpack_unitvector(in uint value)
+{
+	half3 retVal;
+	retVal.x = (half)((value >> 0u) & 0xFF) / 255.0 * 2 - 1;
+	retVal.y = (half)((value >> 8u) & 0xFF) / 255.0 * 2 - 1;
+	retVal.z = (half)((value >> 16u) & 0xFF) / 255.0 * 2 - 1;
+	return retVal;
+}
+
+inline uint pack_utangent(in half4 value)
+{
+	uint retVal = 0;
+	retVal |= (uint)((value.x) * 255.0) << 0u;
+	retVal |= (uint)((value.y) * 255.0) << 8u;
+	retVal |= (uint)((value.z) * 255.0) << 16u;
+	retVal |= (uint)((value.w) * 255.0) << 24u;
+	return retVal;
+}
+inline half4 unpack_utangent(in uint value)
+{
+	half4 retVal;
+	retVal.x = (half)((value >> 0u) & 0xFF) / 255.0;
+	retVal.y = (half)((value >> 8u) & 0xFF) / 255.0;
+	retVal.z = (half)((value >> 16u) & 0xFF) / 255.0;
+	retVal.w = (half)((value >> 24u) & 0xFF) / 255.0;
+	return retVal;
+}
+
+inline uint pack_rgba(in half4 value)
+{
+	uint retVal = 0;
+	retVal |= (uint)(value.x * 255.0) << 0u;
+	retVal |= (uint)(value.y * 255.0) << 8u;
+	retVal |= (uint)(value.z * 255.0) << 16u;
+	retVal |= (uint)(value.w * 255.0) << 24u;
+	return retVal;
+}
+inline half4 unpack_rgba(in uint value)
+{
+	half4 retVal;
+	retVal.x = (half)((value >> 0u) & 0xFF) / 255.0;
+	retVal.y = (half)((value >> 8u) & 0xFF) / 255.0;
+	retVal.z = (half)((value >> 16u) & 0xFF) / 255.0;
+	retVal.w = (half)((value >> 24u) & 0xFF) / 255.0;
+	return retVal;
+}
+
+inline uint pack_half2(in half2 value)
+{
+	uint retVal = 0;
+	retVal = f32tof16(value.x) | (f32tof16(value.y) << 16u);
+	return retVal;
+}
+inline half2 unpack_half2(in uint value)
+{
+	half2 retVal;
+	retVal.x = (half)f16tof32(value.x);
+	retVal.y = (half)f16tof32(value.x >> 16u);
+	return retVal;
+}
+inline uint2 pack_half3(in half3 value)
+{
+	uint2 retVal = 0;
+	retVal.x = f32tof16(value.x) | (f32tof16(value.y) << 16u);
+	retVal.y = f32tof16(value.z);
+	return retVal;
+}
+inline half3 unpack_half3(in uint2 value)
+{
+	half3 retVal;
+	retVal.x = (half)f16tof32(value.x);
+	retVal.y = (half)f16tof32(value.x >> 16u);
+	retVal.z = (half)f16tof32(value.y);
+	return retVal;
+}
+inline uint2 pack_half4(in float4 value)
+{
+	uint2 retVal = 0;
+	retVal.x = f32tof16(value.x) | (f32tof16(value.y) << 16u);
+	retVal.y = f32tof16(value.z) | (f32tof16(value.w) << 16u);
+	return retVal;
+}
+inline half4 unpack_half4(in uint2 value)
+{
+	half4 retVal;
+	retVal.x = (half)f16tof32(value.x);
+	retVal.y = (half)f16tof32(value.x >> 16u);
+	retVal.z = (half)f16tof32(value.y);
+	retVal.w = (half)f16tof32(value.y >> 16u);
+	return retVal;
+}
+
+inline uint pack_pixel(uint2 value)
+{
+	return (value.x & 0xFFFF) | ((value.y & 0xFFFF) << 16u);
+}
+inline uint2 unpack_pixel(uint value)
+{
+	uint2 retVal;
+	retVal.x = value & 0xFFFF;
+	retVal.y = (value >> 16u) & 0xFFFF;
+	return retVal;
+}
 
 // The root signature will affect shader compilation for DX12.
 //	The shader compiler will take the defined name: WICKED_ENGINE_DEFAULT_ROOTSIGNATURE and use it as root signature
@@ -231,120 +356,6 @@ RWTexture2D<uint4> bindless_rwtextures_uint4[] : register(space36);
 
 #endif // __spirv__
 
-
-inline uint pack_unitvector(in float3 value)
-{
-	uint retVal = 0;
-	retVal |= (uint)((value.x * 0.5 + 0.5) * 255.0) << 0u;
-	retVal |= (uint)((value.y * 0.5 + 0.5) * 255.0) << 8u;
-	retVal |= (uint)((value.z * 0.5 + 0.5) * 255.0) << 16u;
-	return retVal;
-}
-inline float3 unpack_unitvector(in uint value)
-{
-	float3 retVal;
-	retVal.x = (float)((value >> 0u) & 0xFF) / 255.0 * 2 - 1;
-	retVal.y = (float)((value >> 8u) & 0xFF) / 255.0 * 2 - 1;
-	retVal.z = (float)((value >> 16u) & 0xFF) / 255.0 * 2 - 1;
-	return retVal;
-}
-
-inline uint pack_utangent(in float4 value)
-{
-	uint retVal = 0;
-	retVal |= (uint)((value.x) * 255.0) << 0u;
-	retVal |= (uint)((value.y) * 255.0) << 8u;
-	retVal |= (uint)((value.z) * 255.0) << 16u;
-	retVal |= (uint)((value.w) * 255.0) << 24u;
-	return retVal;
-}
-inline float4 unpack_utangent(in uint value)
-{
-	float4 retVal;
-	retVal.x = (float)((value >> 0u) & 0xFF) / 255.0;
-	retVal.y = (float)((value >> 8u) & 0xFF) / 255.0;
-	retVal.z = (float)((value >> 16u) & 0xFF) / 255.0;
-	retVal.w = (float)((value >> 24u) & 0xFF) / 255.0;
-	return retVal;
-}
-
-inline uint pack_rgba(in float4 value)
-{
-	uint retVal = 0;
-	retVal |= (uint)(value.x * 255.0) << 0u;
-	retVal |= (uint)(value.y * 255.0) << 8u;
-	retVal |= (uint)(value.z * 255.0) << 16u;
-	retVal |= (uint)(value.w * 255.0) << 24u;
-	return retVal;
-}
-inline float4 unpack_rgba(in uint value)
-{
-	float4 retVal;
-	retVal.x = (float)((value >> 0u) & 0xFF) / 255.0;
-	retVal.y = (float)((value >> 8u) & 0xFF) / 255.0;
-	retVal.z = (float)((value >> 16u) & 0xFF) / 255.0;
-	retVal.w = (float)((value >> 24u) & 0xFF) / 255.0;
-	return retVal;
-}
-
-inline uint pack_half2(in float2 value)
-{
-	uint retVal = 0;
-	retVal = f32tof16(value.x) | (f32tof16(value.y) << 16u);
-	return retVal;
-}
-inline float2 unpack_half2(in uint value)
-{
-	float2 retVal;
-	retVal.x = f16tof32(value.x);
-	retVal.y = f16tof32(value.x >> 16u);
-	return retVal;
-}
-inline uint2 pack_half3(in float3 value)
-{
-	uint2 retVal = 0;
-	retVal.x = f32tof16(value.x) | (f32tof16(value.y) << 16u);
-	retVal.y = f32tof16(value.z);
-	return retVal;
-}
-inline float3 unpack_half3(in uint2 value)
-{
-	float3 retVal;
-	retVal.x = f16tof32(value.x);
-	retVal.y = f16tof32(value.x >> 16u);
-	retVal.z = f16tof32(value.y);
-	return retVal;
-}
-inline uint2 pack_half4(in float4 value)
-{
-	uint2 retVal = 0;
-	retVal.x = f32tof16(value.x) | (f32tof16(value.y) << 16u);
-	retVal.y = f32tof16(value.z) | (f32tof16(value.w) << 16u);
-	return retVal;
-}
-inline float4 unpack_half4(in uint2 value)
-{
-	float4 retVal;
-	retVal.x = f16tof32(value.x);
-	retVal.y = f16tof32(value.x >> 16u);
-	retVal.z = f16tof32(value.y);
-	retVal.w = f16tof32(value.y >> 16u);
-	return retVal;
-}
-
-inline uint pack_pixel(uint2 value)
-{
-	return (value.x & 0xFFFF) | ((value.y & 0xFFFF) << 16u);
-}
-inline uint2 unpack_pixel(uint value)
-{
-	uint2 retVal;
-	retVal.x = value & 0xFFFF;
-	retVal.y = (value >> 16u) & 0xFFFF;
-	return retVal;
-}
-
-
 #include "ShaderInterop_Renderer.h"
 
 #if defined(__PSSL__)
@@ -504,6 +515,7 @@ struct PrimitiveID
 #define texture_cameravolumelut bindless_textures3D[GetFrame().texture_cameravolumelut_index]
 #define texture_wind bindless_textures3D[GetFrame().texture_wind_index]
 #define texture_wind_prev bindless_textures3D[GetFrame().texture_wind_prev_index]
+#define texture_caustics bindless_textures[GetFrame().texture_caustics_index]
 #define scene_acceleration_structure bindless_accelerationstructures[GetScene().TLAS]
 
 #define texture_depth bindless_textures_float[GetCamera().texture_depth_index]
@@ -514,17 +526,21 @@ struct PrimitiveID
 #define texture_normal bindless_textures_float2[GetCamera().texture_normal_index]
 #define texture_roughness bindless_textures_float[GetCamera().texture_roughness_index]
 
-static const float PI = 3.14159265358979323846;
-static const float SQRT2 = 1.41421356237309504880;
-static const float FLT_MAX = 3.402823466e+38;
-static const float FLT_EPSILON = 1.192092896e-07;
-static const float GOLDEN_RATIO = 1.6180339887;
-static const float M_TO_SKY_UNIT = 0.001f; // Engine units are in meters
-static const float SKY_UNIT_TO_M = rcp(M_TO_SKY_UNIT);
+// Note: defines can be better for choosing between half/float by compiler than "static const float"
+#define PI 3.14159265358979323846
+#define SQRT2 1.41421356237309504880
+#define FLT_MAX 3.402823466e+38
+#define FLT_EPSILON 1.192092896e-07
+#define GOLDEN_RATIO 1.6180339887
+#define M_TO_SKY_UNIT 0.001
+#define SKY_UNIT_TO_M rcp(M_TO_SKY_UNIT)
+#define MEDIUMP_FLT_MAX 65504.0
 
 #define sqr(a) ((a)*(a))
 #define pow5(x) pow(x, 5)
 #define arraysize(a) (sizeof(a) / sizeof(a[0]))
+#define saturateMediump(x) min(x, MEDIUMP_FLT_MAX)
+#define highp
 
 template<typename T>
 float max3(T v)
@@ -603,19 +619,13 @@ float4 med3(float4 a, float4 b, float4 c)
 //	a2 : attribute at triangle corner 2
 //  bary : (u,v) barycentrics [same as you get from raytracing]; w is computed as 1 - u - w
 //	computation can be also written as: p0 * w + p1 * u + p2 * v
-inline float attribute_at_bary(in float a0, in float a1, in float a2, in float2 bary)
+template<typename T>
+inline T attribute_at_bary(in T a0, in T a1, in T a2, in float2 bary)
 {
 	return mad(a0, 1 - bary.x - bary.y, mad(a1, bary.x, a2 * bary.y));
 }
-inline float2 attribute_at_bary(in float2 a0, in float2 a1, in float2 a2, in float2 bary)
-{
-	return mad(a0, 1 - bary.x - bary.y, mad(a1, bary.x, a2 * bary.y));
-}
-inline float3 attribute_at_bary(in float3 a0, in float3 a1, in float3 a2, in float2 bary)
-{
-	return mad(a0, 1 - bary.x - bary.y, mad(a1, bary.x, a2 * bary.y));
-}
-inline float4 attribute_at_bary(in float4 a0, in float4 a1, in float4 a2, in float2 bary)
+template<typename T>
+inline T attribute_at_bary(in T a0, in T a1, in T a2, in half2 bary)
 {
 	return mad(a0, 1 - bary.x - bary.y, mad(a1, bary.x, a2 * bary.y));
 }
@@ -625,6 +635,12 @@ inline float bilinear(float4 gather, float2 pixel_frac)
 {
 	const float top_row = lerp(gather.w, gather.z, pixel_frac.x);
 	const float bottom_row = lerp(gather.x, gather.y, pixel_frac.x);
+	return lerp(top_row, bottom_row, pixel_frac.y);
+}
+inline half bilinear(half4 gather, half2 pixel_frac)
+{
+	const half top_row = lerp(gather.w, gather.z, pixel_frac.x);
+	const half bottom_row = lerp(gather.x, gather.y, pixel_frac.x);
 	return lerp(top_row, bottom_row, pixel_frac.y);
 }
 
@@ -654,9 +670,9 @@ inline float2 uv_to_clipspace(in float2 uv)
 	clipspace.y *= -1;
 	return clipspace;
 }
-inline min16float2 uv_to_clipspace(in min16float2 uv)
+inline half2 uv_to_clipspace(in half2 uv)
 {
-	min16float2 clipspace = uv * 2 - 1;
+	half2 clipspace = uv * 2 - 1;
 	clipspace.y *= -1;
 	return clipspace;
 }
@@ -668,13 +684,13 @@ inline float3 clipspace_to_uv(in float3 clipspace)
 {
 	return clipspace * float3(0.5, -0.5, 0.5) + 0.5;
 }
-inline min16float2 clipspace_to_uv(in min16float2 clipspace)
+inline half2 clipspace_to_uv(in half2 clipspace)
 {
-	return clipspace * min16float2(0.5, -0.5) + 0.5;
+	return clipspace * half2(0.5, -0.5) + 0.5;
 }
-inline min16float3 clipspace_to_uv(in min16float3 clipspace)
+inline half3 clipspace_to_uv(in half3 clipspace)
 {
-	return clipspace * min16float3(0.5, -0.5, 0.5) + 0.5;
+	return clipspace * half3(0.5, -0.5, 0.5) + 0.5;
 }
 
 template<typename T>
@@ -700,8 +716,14 @@ inline bool IsStaticSky() { return GetScene().globalenvmap >= 0; }
 #define G_SCATTERING 0.66
 float ComputeScattering(float lightDotView)
 {
-	float result = 1.0f - G_SCATTERING * G_SCATTERING;
-	result /= (4.0f * PI * pow(1.0f + G_SCATTERING * G_SCATTERING - (2.0f * G_SCATTERING) * lightDotView, 1.5f));
+	float result = 1.0 - G_SCATTERING * G_SCATTERING;
+	result /= (4.0 * PI * pow(1.0 + G_SCATTERING * G_SCATTERING - (2.0 * G_SCATTERING) * lightDotView, 1.5));
+	return result;
+}
+half ComputeScattering(half lightDotView)
+{
+	half result = 1.0 - G_SCATTERING * G_SCATTERING;
+	result /= (4.0 * PI * pow(1.0 + G_SCATTERING * G_SCATTERING - (2.0 * G_SCATTERING) * lightDotView, 1.5));
 	return result;
 }
 
@@ -709,7 +731,15 @@ inline float3 tonemap(float3 x)
 {
 	return x / (x + 1); // Reinhard tonemap
 }
+inline half3 tonemap(half3 x)
+{
+	return x / (x + 1); // Reinhard tonemap
+}
 inline float3 inverse_tonemap(float3 x)
+{
+	return x / (1 - x);
+}
+inline half3 inverse_tonemap(half3 x)
 {
 	return x / (1 - x);
 }
@@ -1245,40 +1275,40 @@ inline uint morton3D(in float3 pos)
 //	Journal of Computer Graphics Techniques Vol. 3, No. 2, 2014 http://jcgt.org
 
 // Returns +/-1
-float2 signNotZero(float2 v)
+half2 signNotZero(half2 v)
 {
-	return float2((v.x >= 0.0) ? +1.0 : -1.0, (v.y >= 0.0) ? +1.0 : -1.0);
+	return half2((v.x >= 0.0) ? +1.0 : -1.0, (v.y >= 0.0) ? +1.0 : -1.0);
 }
 // Assume normalized input. Output is on [-1, 1] for each component.
-float2 encode_oct(in float3 v)
+half2 encode_oct(in half3 v)
 {
 	// Project the sphere onto the octahedron, and then onto the xy plane
-	float2 p = v.xy * (1.0 / (abs(v.x) + abs(v.y) + abs(v.z)));
+	half2 p = v.xy * (1.0 / (abs(v.x) + abs(v.y) + abs(v.z)));
 	// Reflect the folds of the lower hemisphere over the diagonals
 	return (v.z <= 0.0) ? ((1.0 - abs(p.yx)) * signNotZero(p)) : p;
 }
-float3 decode_oct(float2 e)
+half3 decode_oct(half2 e)
 {
-	float3 v = float3(e.xy, 1.0 - abs(e.x) - abs(e.y));
+	half3 v = half3(e.xy, 1.0 - abs(e.x) - abs(e.y));
 	if (v.z < 0) v.xy = (1.0 - abs(v.yx)) * signNotZero(v.xy);
 	return normalize(v);
 }
 
 // Assume normalized input on +Z hemisphere.
 // Output is on [-1, 1].
-float2 encode_hemioct(in float3 v)
+half2 encode_hemioct(in half3 v)
 {
 	// Project the hemisphere onto the hemi-octahedron,
 	// and then into the xy plane
-	float2 p = v.xy * (1.0 / (abs(v.x) + abs(v.y) + v.z));
+	half2 p = v.xy * (1.0 / (abs(v.x) + abs(v.y) + v.z));
 	// Rotate and scale the center diamond to the unit square
-	return float2(p.x + p.y, p.x - p.y);
+	return half2(p.x + p.y, p.x - p.y);
 }
-float3 decode_hemioct(float2 e)
+half3 decode_hemioct(half2 e)
 {
 	// Rotate and scale the unit square back to the center diamond
-	float2 temp = float2(e.x + e.y, e.x - e.y) * 0.5;
-	float3 v = float3(temp, 1.0 - abs(temp.x) - abs(temp.y));
+	half2 temp = half2(e.x + e.y, e.x - e.y) * 0.5;
+	half3 v = half3(temp, 1.0 - abs(temp.x) - abs(temp.y));
 	return normalize(v);
 }
 
@@ -1302,20 +1332,20 @@ uint2 remap_lane_8x8(uint lane) {
 }
 
 
-static const float2x2 BayerMatrix2 =
+static const half2x2 BayerMatrix2 =
 {
 	1.0 / 5.0, 3.0 / 5.0,
 	4.0 / 5.0, 2.0 / 5.0
 };
 
-static const float3x3 BayerMatrix3 =
+static const half3x3 BayerMatrix3 =
 {
 	3.0 / 10.0, 7.0 / 10.0, 4.0 / 10.0,
 	6.0 / 10.0, 1.0 / 10.0, 9.0 / 10.0,
 	2.0 / 10.0, 8.0 / 10.0, 5.0 / 10.0
 };
 
-static const float4x4 BayerMatrix4 =
+static const half4x4 BayerMatrix4 =
 {
 	1.0 / 17.0, 9.0 / 17.0, 3.0 / 17.0, 11.0 / 17.0,
 	13.0 / 17.0, 5.0 / 17.0, 15.0 / 17.0, 7.0 / 17.0,
@@ -1323,7 +1353,7 @@ static const float4x4 BayerMatrix4 =
 	16.0 / 17.0, 8.0 / 17.0, 14.0 / 17.0, 6.0 / 17.0
 };
 
-static const float BayerMatrix8[8][8] =
+static const half BayerMatrix8[8][8] =
 {
 	{ 1.0 / 65.0, 49.0 / 65.0, 13.0 / 65.0, 61.0 / 65.0, 4.0 / 65.0, 52.0 / 65.0, 16.0 / 65.0, 64.0 / 65.0 },
 	{ 33.0 / 65.0, 17.0 / 65.0, 45.0 / 65.0, 29.0 / 65.0, 36.0 / 65.0, 20.0 / 65.0, 48.0 / 65.0, 32.0 / 65.0 },
@@ -1336,37 +1366,74 @@ static const float BayerMatrix8[8][8] =
 };
 
 
-inline float ditherMask2(in float2 pixel)
+inline half ditherMask2(in float2 pixel)
 {
 	return BayerMatrix2[pixel.x % 2][pixel.y % 2];
 }
 
-inline float ditherMask3(in float2 pixel)
+inline half ditherMask3(in float2 pixel)
 {
 	return BayerMatrix3[pixel.x % 3][pixel.y % 3];
 }
 
-inline float ditherMask4(in float2 pixel)
+inline half ditherMask4(in float2 pixel)
 {
 	return BayerMatrix4[pixel.x % 4][pixel.y % 4];
 }
 
-inline float ditherMask8(in float2 pixel)
+inline half ditherMask8(in float2 pixel)
 {
 	return BayerMatrix8[pixel.x % 8][pixel.y % 8];
 }
 
-inline float dither(in float2 pixel)
+inline half dither(in float2 pixel)
 {
 	return ditherMask8(pixel);
 }
 
+// Quaternion multiplication
+// http://mathworld.wolfram.com/Quaternion.html
+float4 qmul(float4 q1, float4 q2)
+{
+    return float4(
+        q2.xyz * q1.w + q1.xyz * q2.w + cross(q1.xyz, q2.xyz),
+        q1.w * q2.w - dot(q1.xyz, q2.xyz)
+    );
+}
+half4 qmul(half4 q1, half4 q2)
+{
+    return half4(
+        q2.xyz * q1.w + q1.xyz * q2.w + cross(q1.xyz, q2.xyz),
+        q1.w * q2.w - dot(q1.xyz, q2.xyz)
+    );
+}
+
+// Vector rotation with a quaternion
+// http://mathworld.wolfram.com/Quaternion.html
+float3 rotate_vector(float3 v, float4 r)
+{
+    float4 r_c = r * float4(-1, -1, -1, 1);
+    return qmul(r, qmul(float4(v, 0), r_c)).xyz;
+}
+half3 rotate_vector(half3 v, half4 r)
+{
+    half4 r_c = r * half4(-1, -1, -1, 1);
+    return qmul(r, qmul(half4(v, 0), r_c)).xyz;
+}
 
 inline float sphere_surface_area(in float radius)
 {
 	return 4 * PI * radius * radius;
 }
+inline half sphere_surface_area(in half radius)
+{
+	return 4 * PI * radius * radius;
+}
 inline float sphere_volume(in float radius)
+{
+	return 4.0 / 3.0 * PI * radius * radius * radius;
+}
+inline half sphere_volume(in half radius)
 {
 	return 4.0 / 3.0 * PI * radius * radius * radius;
 }
@@ -1698,8 +1765,8 @@ static const float NUM_PARALLAX_OCCLUSION_STEPS_RCP = 1.0 / NUM_PARALLAX_OCCLUSI
 inline void ParallaxOcclusionMapping_Impl(
 	inout float4 uvsets,		// uvsets to modify
 	in float3 V,				// view vector (pointing towards camera)
-	in float3x3 TBN,			// tangent basis matrix (same that is used for normal mapping)
-	in float strength,			// material parameters
+	in half3x3 TBN,				// tangent basis matrix (same that is used for normal mapping)
+	in half strength,			// material parameters
 	in Texture2D tex,			// displacement map texture
 	in float2 uv,				// uv to use for the displacement map
 	in float2 uv_dx,			// horizontal derivative of displacement map uv

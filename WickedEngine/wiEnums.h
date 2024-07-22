@@ -97,6 +97,7 @@ namespace wi::enums
 		TEXTYPE_2D_SHEENLUT,
 		TEXTYPE_3D_WIND,
 		TEXTYPE_3D_WIND_PREV,
+		TEXTYPE_2D_CAUSTICS,
 		TEXTYPE_COUNT
 	};
 
@@ -411,6 +412,7 @@ namespace wi::enums
 		CSTYPE_WIND,
 		CSTYPE_YUV_TO_RGB,
 		CSTYPE_WETMAP_UPDATE,
+		CSTYPE_CAUSTICS,
 
 
 		// raytracing pipelines:

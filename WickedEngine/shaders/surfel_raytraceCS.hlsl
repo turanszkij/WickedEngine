@@ -95,10 +95,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			prim.instanceIndex = q.CommittedInstanceID();
 			prim.subsetIndex = q.CommittedGeometryIndex();
 
-			if (!q.CommittedTriangleFrontFace())
-			{
-				surface.flags |= SURFACE_FLAG_BACKFACE;
-			}
+			surface.SetBackface(!q.CommittedTriangleFrontFace());
 			if(!surface.load(prim, q.CommittedTriangleBarycentrics()))
 				return;
 
@@ -108,10 +105,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			ray.Origin = ray.Origin + ray.Direction * hit.distance;
 			hit_depth = hit.distance;
 
-			if (hit.is_backface)
-			{
-				surface.flags |= SURFACE_FLAG_BACKFACE;
-			}
+			surface.SetBackface(hit.is_backface);
 
 			if (!surface.load(hit.primitiveID, hit.bary))
 				return;
@@ -183,7 +177,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 							const float3 lightColor = light.GetColor().rgb;
 
 							lighting.direct.diffuse = lightColor;
-							lighting.direct.diffuse *= attenuation_pointlight(dist, dist2, range, range2);
+							lighting.direct.diffuse *= attenuation_pointlight(dist2, range, range2);
 						}
 					}
 				}
@@ -216,7 +210,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 								const float3 lightColor = light.GetColor().rgb;
 
 								lighting.direct.diffuse = lightColor;
-								lighting.direct.diffuse *= attenuation_spotlight(dist, dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
+								lighting.direct.diffuse *= attenuation_spotlight(dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
 							}
 						}
 					}

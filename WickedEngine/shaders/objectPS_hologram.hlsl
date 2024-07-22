@@ -54,5 +54,5 @@ float4 main(PixelInput input) : SV_TARGET
 
 	color *= noise;
 
-	return color;
+	return saturateMediump(color);
 }

@@ -104,7 +104,7 @@ float4 main(Input input) : SV_TARGET
 							const float3 lightColor = light.GetColor().rgb;
 
 							lighting.direct.diffuse = lightColor;
-							lighting.direct.diffuse *= attenuation_pointlight(dist, dist2, range, range2);
+							lighting.direct.diffuse *= attenuation_pointlight(dist2, range, range2);
 						}
 					}
 				}
@@ -137,7 +137,7 @@ float4 main(Input input) : SV_TARGET
 								const float3 lightColor = light.GetColor().rgb;
 
 								lighting.direct.diffuse = lightColor;
-								lighting.direct.diffuse *= attenuation_spotlight(dist, dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
+								lighting.direct.diffuse *= attenuation_spotlight(dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
 							}
 						}
 					}
@@ -274,7 +274,7 @@ float4 main(Input input) : SV_TARGET
 		{
 			// Refraction
 			const float3 R = refract(ray.Direction, surface.N, 1 - surface.material.GetRefraction());
-			float roughnessBRDF = sqr(clamp(surface.roughness, 0.045, 1));
+			float roughnessBRDF = sqr(clamp(surface.roughness, min_roughness, 1));
 			ray.Direction = lerp(R, sample_hemisphere_cos(R, rng), roughnessBRDF);
 			energy *= surface.albedo / max(0.001, surface.transmission);
 
