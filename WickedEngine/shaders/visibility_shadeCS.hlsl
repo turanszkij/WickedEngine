@@ -27,7 +27,7 @@ StructuredBuffer<VisibilityTile> binned_tiles : register(t0);
 Texture2D<uint4> input_payload_0 : register(t2);
 Texture2D<uint4> input_payload_1 : register(t3);
 
-RWTexture2D<half4> output : register(u0);
+RWTexture2D<float4> output : register(u0);
 
 [numthreads(VISIBILITY_BLOCKSIZE, VISIBILITY_BLOCKSIZE, 1)]
 void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)

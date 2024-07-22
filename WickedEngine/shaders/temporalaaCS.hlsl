@@ -3,10 +3,10 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-Texture2D<half3> input_current : register(t0);
-Texture2D<half3> input_history : register(t1);
+Texture2D<float3> input_current : register(t0);
+Texture2D<float3> input_history : register(t1);
 
-RWTexture2D<half3> output : register(u0);
+RWTexture2D<float3> output : register(u0);
 
 // This hack can improve bright areas:
 #define HDR_CORRECTION

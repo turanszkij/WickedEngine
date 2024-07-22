@@ -1,7 +1,9 @@
 #ifndef WI_SHADER_GLOBALS_HF
 #define WI_SHADER_GLOBALS_HF
 
-#if 1 // Enable / disable FP16 shader ops here
+// Enable / disable FP16 shader ops here
+//	Note: when using -enable-16bit-types compile flag, half will be always FP16
+#if 1
 #define half min16float
 #define half2 min16float2
 #define half3 min16float3

@@ -5,7 +5,7 @@
 
 // BRDF functions source: https://github.com/google/filament/blob/main/shaders/src/brdf.fs
 
-half D_GGX(half roughness, float NoH, const float3 h)
+half D_GGX(half roughness, highp float NoH, const float3 h)
 {
 	// Walter et al. 2007, "Microfacet Models for Refraction through Rough Surfaces"
 	half oneMinusNoHSquared = 1.0 - NoH * NoH;
@@ -90,10 +90,10 @@ half f0ToIor(half f0)
 struct SurfaceToLight
 {
 	half3 L;		// surface to light vector (normalized)
-	half3 H;		// half-vector between view vector and light vector
+	highp float3 H;		// half-vector between view vector and light vector
 	half NdotL;		// cos angle between normal and light direction
 	half3 NdotL_sss;// NdotL with subsurface parameters applied
-	half NdotH;		// cos angle between normal and half vector
+	highp float NdotH;		// cos angle between normal and half vector
 	half LdotH;		// cos angle between light direction and half vector
 	half VdotH;		// cos angle between view direction and half vector
 	half3 F;		// fresnel term computed from VdotH

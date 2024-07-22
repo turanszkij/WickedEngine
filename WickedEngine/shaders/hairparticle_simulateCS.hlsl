@@ -11,8 +11,8 @@ static const float3 HAIRPATCH[] = {
 
 Buffer<uint> meshIndexBuffer : register(t0);
 Buffer<float4> meshVertexBuffer_POS : register(t1);
-Buffer<half4> meshVertexBuffer_NOR : register(t2);
-Buffer<half> meshVertexBuffer_length : register(t3);
+Buffer<float4> meshVertexBuffer_NOR : register(t2);
+Buffer<float> meshVertexBuffer_length : register(t3);
 
 RWStructuredBuffer<PatchSimulationData> simulationBuffer : register(u0);
 RWBuffer<float4> vertexBuffer_POS : register(u1);
@@ -20,7 +20,7 @@ RWBuffer<float4> vertexBuffer_UVS : register(u2);
 RWBuffer<uint> culledIndexBuffer : register(u3);
 RWStructuredBuffer<IndirectDrawArgsIndexedInstanced> indirectBuffer : register(u4);
 RWBuffer<float4> vertexBuffer_POS_RT : register(u5);
-RWBuffer<half4> vertexBuffer_NOR : register(u6);
+RWBuffer<float4> vertexBuffer_NOR : register(u6);
 
 [numthreads(THREADCOUNT_SIMULATEHAIR, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
