@@ -599,7 +599,7 @@ struct Surface
 			const float2 a2 = buf[i2];
 			float2 atlas = attribute_at_bary(a0, a1, a2, bary);
 
-			Texture2D<float4> tex = bindless_textures[NonUniformResourceIndex(inst.lightmap)];
+			Texture2D tex = bindless_textures[NonUniformResourceIndex(inst.lightmap)];
 			gi = tex.SampleLevel(sampler_linear_clamp, atlas, 0).rgb;
 			SetGIApplied(true);
 		}

@@ -494,7 +494,7 @@ inline void VoxelGI(inout Surface surface, inout Lighting lighting)
 	[branch]
 	if (GetFrame().vxgi.resolution != 0 && GetFrame().vxgi.texture_radiance >= 0)
 	{
-		Texture3D<float4> voxels = bindless_textures3D[GetFrame().vxgi.texture_radiance];
+		Texture3D voxels = bindless_textures3D[GetFrame().vxgi.texture_radiance];
 
 		// diffuse:
 		half4 trace = ConeTraceDiffuse(voxels, surface.P, surface.N);
