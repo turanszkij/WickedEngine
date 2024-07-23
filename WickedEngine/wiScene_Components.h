@@ -1993,4 +1993,37 @@ namespace wi::scene
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
+
+	struct MetadataComponent
+	{
+		enum FLAGS
+		{
+			NONE = 0,
+		};
+		uint32_t _flags = NONE;
+
+		enum class Preset
+		{
+			Custom,
+			Waypoint,
+			Enemy,
+			NPC,
+		};
+		Preset preset = Preset::Custom;
+
+		struct Value
+		{
+			union
+			{
+				int intValue;
+				bool boolValue;
+				float floatValue;
+				XMFLOAT4 vectorValue = XMFLOAT4(0, 0, 0, 0);
+			};
+			std::string stringValue;
+		};
+		wi::unordered_map<std::string, Value> values;
+
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+	};
 }

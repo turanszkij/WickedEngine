@@ -2116,6 +2116,42 @@ namespace wi::scene
 			}
 		}
 	}
+	void MetadataComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
+	{
+		if (archive.IsReadMode())
+		{
+			archive >> _flags;
+
+			int intpreset = 0;
+			archive >> intpreset;
+			preset = (Preset)intpreset;
+
+			size_t count = 0;
+			archive >> count;
+			values.reserve(count);
+			for (size_t i = 0; i < count; ++i)
+			{
+				std::string name;
+				archive >> name;
+				archive >> values[name].vectorValue; // serialize largest member of union
+				archive >> values[name].stringValue;
+			}
+		}
+		else
+		{
+			archive << _flags;
+
+			archive << (int)preset;
+
+			archive << values.size();
+			for (auto& x : values)
+			{
+				archive << x.first;
+				archive << x.second.vectorValue; // serialize largest member of union
+				archive << x.second.stringValue;
+			}
+		}
+	}
 
 	void Scene::Serialize(wi::Archive& archive)
 	{
