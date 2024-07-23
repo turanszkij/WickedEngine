@@ -22,7 +22,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->componentsWnd.RefreshEntityTree();
-		});
+	});
 
 	float x = 130;
 	float y = 0;
@@ -34,9 +34,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	restartButton.SetPos(XMFLOAT2(x, y));
 	restartButton.SetSize(XMFLOAT2(wid, itemheight));
 	restartButton.OnClick([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->Restart();
 		}
 	});
@@ -45,9 +48,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 
 	burstButton.Create("Burst");
 	burstButton.OnClick([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->Burst(std::atoi(burstCountInput.GetValue().c_str()));
 		}
 	});
@@ -66,9 +72,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	meshComboBox.SetPos(XMFLOAT2(x, y += step));
 	meshComboBox.SetEnabled(false);
 	meshComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			if (args.iValue == 0)
 			{
 				emitter->meshID = INVALID_ENTITY;
@@ -91,9 +100,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	shaderTypeComboBox.AddItem("DISTORTION", wi::EmittedParticleSystem::PARTICLESHADERTYPE::SOFT_DISTORTION);
 	shaderTypeComboBox.AddItem("LIGHTING", wi::EmittedParticleSystem::PARTICLESHADERTYPE::SOFT_LIGHTING);
 	shaderTypeComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->shaderType = (wi::EmittedParticleSystem::PARTICLESHADERTYPE)args.userdata;
 		}
 	});
@@ -106,9 +118,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	sortCheckBox.SetPos(XMFLOAT2(x, y += step));
 	sortCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	sortCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->SetSorted(args.bValue);
 		}
 	});
@@ -121,9 +136,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	depthCollisionsCheckBox.SetPos(XMFLOAT2(x, y += step));
 	depthCollisionsCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	depthCollisionsCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->SetDepthCollisionEnabled(args.bValue);
 		}
 	});
@@ -136,9 +154,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	sphCheckBox.SetPos(XMFLOAT2(x, y += step));
 	sphCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	sphCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->SetSPHEnabled(args.bValue);
 		}
 	});
@@ -151,9 +172,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	pauseCheckBox.SetPos(XMFLOAT2(x, y += step));
 	pauseCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	pauseCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->SetPaused(args.bValue);
 		}
 	});
@@ -177,12 +201,15 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	volumeCheckBox.SetPos(XMFLOAT2(x, y += step));
 	volumeCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	volumeCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->SetVolumeEnabled(args.bValue);
 		}
-		});
+	});
 	volumeCheckBox.SetCheck(false);
 	volumeCheckBox.SetTooltip("Enable volume for the emitter. Particles will be emitted inside volume.");
 	AddWidget(&volumeCheckBox);
@@ -192,12 +219,15 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	frameBlendingCheckBox.SetPos(XMFLOAT2(x, y += step));
 	frameBlendingCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	frameBlendingCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->SetFrameBlendingEnabled(args.bValue);
 		}
-		});
+	});
 	frameBlendingCheckBox.SetCheck(false);
 	frameBlendingCheckBox.SetTooltip("If sprite sheet animation is in effect, frames will be smoothly blended.");
 	AddWidget(&frameBlendingCheckBox);
@@ -207,12 +237,15 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	collidersDisabledCheckBox.SetPos(XMFLOAT2(x, y += step));
 	collidersDisabledCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	collidersDisabledCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->SetCollidersDisabled(args.bValue);
 		}
-		});
+	});
 	collidersDisabledCheckBox.SetCheck(false);
 	collidersDisabledCheckBox.SetTooltip("Simply disables all colliders for acting on this particle system");
 	AddWidget(&collidersDisabledCheckBox);
@@ -222,12 +255,15 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	takeColorCheckBox.SetPos(XMFLOAT2(x, y += step));
 	takeColorCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	takeColorCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->SetTakeColorFromMesh(args.bValue);
 		}
-		});
+	});
 	takeColorCheckBox.SetCheck(false);
 	takeColorCheckBox.SetTooltip("If it emits from a mesh, then particle color will be taken from mesh material surface.");
 	AddWidget(&takeColorCheckBox);
@@ -249,12 +285,15 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	frameRateInput.SetTooltip("Enter a value to enable looping sprite sheet animation (frames per second). Set 0 for animation along paritcle lifetime.");
 	frameRateInput.SetDescription("Frame Rate: ");
 	frameRateInput.OnInputAccepted([this](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->frameRate = args.fValue;
 		}
-		});
+	});
 	AddWidget(&frameRateInput);
 
 	framesXInput.Create("");
@@ -264,12 +303,15 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	framesXInput.SetTooltip("How many horizontal frames there are in the spritesheet.");
 	framesXInput.SetDescription("Frames: ");
 	framesXInput.OnInputAccepted([this](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->framesX = (uint32_t)args.iValue;
 		}
-		});
+	});
 	AddWidget(&framesXInput);
 
 	framesYInput.Create("");
@@ -278,12 +320,15 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	framesYInput.SetText("");
 	framesYInput.SetTooltip("How many vertical frames there are in the spritesheet.");
 	framesYInput.OnInputAccepted([this](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->framesY = (uint32_t)args.iValue;
 		}
-		});
+	});
 	AddWidget(&framesYInput);
 
 	frameCountInput.Create("");
@@ -293,12 +338,15 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	frameCountInput.SetTooltip("Enter a value to enable the random sprite sheet frame selection's max frame number.");
 	frameCountInput.SetDescription("Frame Count: ");
 	frameCountInput.OnInputAccepted([this](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->frameCount = (uint32_t)args.iValue;
 		}
-		});
+	});
 	AddWidget(&frameCountInput);
 
 	frameStartInput.Create("");
@@ -308,12 +356,15 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	frameStartInput.SetTooltip("Specifies the starting frame of the animation.");
 	frameStartInput.SetDescription("Start Frame: ");
 	frameStartInput.OnInputAccepted([this](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->frameStart = (uint32_t)args.iValue;
 		}
-		});
+	});
 	AddWidget(&frameStartInput);
 
 
@@ -326,12 +377,15 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	VelocityXInput.SetPos(XMFLOAT2(x, y += step));
 	VelocityXInput.SetSize(XMFLOAT2(38, itemheight));
 	VelocityXInput.OnInputAccepted([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->velocity.x = args.fValue;
 		}
-		});
+	});
 	AddWidget(&VelocityXInput);
 
 	VelocityYInput.Create("");
@@ -340,12 +394,15 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	VelocityYInput.SetPos(XMFLOAT2(x + 40, y));
 	VelocityYInput.SetSize(XMFLOAT2(38, itemheight));
 	VelocityYInput.OnInputAccepted([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->velocity.y = args.fValue;
 		}
-		});
+	});
 	AddWidget(&VelocityYInput);
 
 	VelocityZInput.Create("");
@@ -354,12 +411,15 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	VelocityZInput.SetPos(XMFLOAT2(x + 80, y));
 	VelocityZInput.SetSize(XMFLOAT2(38, itemheight));
 	VelocityZInput.OnInputAccepted([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->velocity.z = args.fValue;
 		}
-		});
+	});
 	AddWidget(&VelocityZInput);
 
 
@@ -371,12 +431,15 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	GravityXInput.SetPos(XMFLOAT2(x, y += step));
 	GravityXInput.SetSize(XMFLOAT2(38, itemheight));
 	GravityXInput.OnInputAccepted([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->gravity.x = args.fValue;
 		}
-		});
+	});
 	AddWidget(&GravityXInput);
 
 	GravityYInput.Create("");
@@ -385,12 +448,15 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	GravityYInput.SetPos(XMFLOAT2(x + 40, y));
 	GravityYInput.SetSize(XMFLOAT2(38, itemheight));
 	GravityYInput.OnInputAccepted([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->gravity.y = args.fValue;
 		}
-		});
+	});
 	AddWidget(&GravityYInput);
 
 	GravityZInput.Create("");
@@ -399,24 +465,30 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	GravityZInput.SetPos(XMFLOAT2(x + 80, y));
 	GravityZInput.SetSize(XMFLOAT2(38, itemheight));
 	GravityZInput.OnInputAccepted([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->gravity.z = args.fValue;
 		}
-		});
+	});
 	AddWidget(&GravityZInput);
 
 	maxParticlesSlider.Create(100.0f, 1000000.0f, 10000, 100000, "Max count: ");
 	maxParticlesSlider.SetSize(XMFLOAT2(wid, itemheight));
 	maxParticlesSlider.SetPos(XMFLOAT2(x, y += step));
 	maxParticlesSlider.OnSlide([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->SetMaxParticleCount((uint32_t)args.iValue);
 		}
-		});
+	});
 	maxParticlesSlider.SetEnabled(false);
 	maxParticlesSlider.SetTooltip("Set the maximum amount of particles this system can handle. This has an effect on the memory budget.");
 	AddWidget(&maxParticlesSlider);
@@ -425,9 +497,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	emitCountSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitCountSlider.SetPos(XMFLOAT2(x, y += step));
 	emitCountSlider.OnSlide([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->count = args.fValue;
 		}
 	});
@@ -439,9 +514,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	emitSizeSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitSizeSlider.SetPos(XMFLOAT2(x, y += step));
 	emitSizeSlider.OnSlide([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->size = args.fValue;
 		}
 	});
@@ -453,9 +531,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	emitRotationSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitRotationSlider.SetPos(XMFLOAT2(x, y += step));
 	emitRotationSlider.OnSlide([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->rotation = args.fValue;
 		}
 	});
@@ -467,9 +548,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	emitNormalSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitNormalSlider.SetPos(XMFLOAT2(x, y += step));
 	emitNormalSlider.OnSlide([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->normal_factor = args.fValue;
 		}
 	});
@@ -481,9 +565,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	emitScalingSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitScalingSlider.SetPos(XMFLOAT2(x, y += step));
 	emitScalingSlider.OnSlide([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->scaleX = args.fValue;
 		}
 	});
@@ -495,9 +582,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	emitLifeSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitLifeSlider.SetPos(XMFLOAT2(x, y += step));
 	emitLifeSlider.OnSlide([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->life = args.fValue;
 		}
 	});
@@ -509,9 +599,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	emitRandomnessSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitRandomnessSlider.SetPos(XMFLOAT2(x, y += step));
 	emitRandomnessSlider.OnSlide([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->random_factor = args.fValue;
 		}
 	});
@@ -523,9 +616,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	emitLifeRandomnessSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitLifeRandomnessSlider.SetPos(XMFLOAT2(x, y += step));
 	emitLifeRandomnessSlider.OnSlide([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->random_life = args.fValue;
 		}
 	});
@@ -537,9 +633,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	emitColorRandomnessSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitColorRandomnessSlider.SetPos(XMFLOAT2(x, y += step));
 	emitColorRandomnessSlider.OnSlide([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->random_color = args.fValue;
 		}
 		});
@@ -551,9 +650,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	emitMotionBlurSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitMotionBlurSlider.SetPos(XMFLOAT2(x, y += step));
 	emitMotionBlurSlider.OnSlide([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->motionBlurAmount = args.fValue;
 		}
 	});
@@ -565,9 +667,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	emitMassSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitMassSlider.SetPos(XMFLOAT2(x, y += step));
 	emitMassSlider.OnSlide([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->mass = args.fValue;
 		}
 	});
@@ -581,9 +686,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	timestepSlider.SetSize(XMFLOAT2(wid, itemheight));
 	timestepSlider.SetPos(XMFLOAT2(x, y += step));
 	timestepSlider.OnSlide([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->FIXED_TIMESTEP = args.fValue;
 		}
 	});
@@ -597,12 +705,15 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	dragSlider.SetSize(XMFLOAT2(wid, itemheight));
 	dragSlider.SetPos(XMFLOAT2(x, y += step));
 	dragSlider.OnSlide([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->drag = args.fValue;
 		}
-		});
+	});
 	dragSlider.SetEnabled(false);
 	dragSlider.SetTooltip("The velocity will be multiplied with this value, so lower than 1 will slow decelerate the particles.");
 	AddWidget(&dragSlider);
@@ -611,12 +722,15 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	restitutionSlider.SetSize(XMFLOAT2(wid, itemheight));
 	restitutionSlider.SetPos(XMFLOAT2(x, y += step));
 	restitutionSlider.OnSlide([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->restitution = args.fValue;
 		}
-		});
+	});
 	restitutionSlider.SetEnabled(false);
 	restitutionSlider.SetTooltip("If the particles have collision enabled, then after collision this is a multiplier for their bouncing velocities");
 	AddWidget(&restitutionSlider);
@@ -629,9 +743,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	sph_h_Slider.SetSize(XMFLOAT2(wid, itemheight));
 	sph_h_Slider.SetPos(XMFLOAT2(x, y += step));
 	sph_h_Slider.OnSlide([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->SPH_h = args.fValue;
 		}
 	});
@@ -643,9 +760,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	sph_K_Slider.SetSize(XMFLOAT2(wid, itemheight));
 	sph_K_Slider.SetPos(XMFLOAT2(x, y += step));
 	sph_K_Slider.OnSlide([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->SPH_K = args.fValue;
 		}
 	});
@@ -657,9 +777,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	sph_p0_Slider.SetSize(XMFLOAT2(wid, itemheight));
 	sph_p0_Slider.SetPos(XMFLOAT2(x, y += step));
 	sph_p0_Slider.OnSlide([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->SPH_p0 = args.fValue;
 		}
 	});
@@ -671,9 +794,12 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	sph_e_Slider.SetSize(XMFLOAT2(wid, itemheight));
 	sph_e_Slider.SetPos(XMFLOAT2(x, y += step));
 	sph_e_Slider.OnSlide([&](wi::gui::EventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
 			emitter->SPH_e = args.fValue;
 		}
 	});

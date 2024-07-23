@@ -22,7 +22,7 @@ void HierarchyWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->componentsWnd.RefreshEntityTree();
-		});
+	});
 
 	float x = 80;
 	float xx = x;
@@ -55,7 +55,7 @@ void HierarchyWindow::Create(EditorComponent* _editor)
 
 		editor->componentsWnd.RefreshEntityTree();
 
-		});
+	});
 	parentCombo.SetTooltip("Choose a parent entity (also works if selected entity has no transform)");
 	AddWidget(&parentCombo);
 

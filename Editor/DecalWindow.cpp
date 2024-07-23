@@ -23,7 +23,7 @@ void DecalWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->componentsWnd.RefreshEntityTree();
-		});
+	});
 
 	float x = 200;
 	float y = 0;
@@ -43,10 +43,12 @@ void DecalWindow::Create(EditorComponent* _editor)
 	onlyalphaCheckBox.SetSize(XMFLOAT2(hei, hei));
 	onlyalphaCheckBox.SetTooltip("You can enable this to only use alpha channel from basecolor map. Useful for blending normalmap-only decals.");
 	onlyalphaCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		Scene& scene = editor->GetCurrentScene();
-		DecalComponent* decal = scene.decals.GetComponent(entity);
-		if (decal != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			DecalComponent* decal = scene.decals.GetComponent(x.entity);
+			if (decal == nullptr)
+				continue;
 			decal->SetBaseColorOnlyAlpha(args.bValue);
 		}
 	});
@@ -56,10 +58,12 @@ void DecalWindow::Create(EditorComponent* _editor)
 	slopeBlendPowerSlider.SetSize(XMFLOAT2(100, hei));
 	slopeBlendPowerSlider.SetTooltip("Set a power factor for blending on surface slopes. 0 = no slope blend, increasing = more slope blend");
 	slopeBlendPowerSlider.OnSlide([=](wi::gui::EventArgs args) {
-		Scene& scene = editor->GetCurrentScene();
-		DecalComponent* decal = scene.decals.GetComponent(entity);
-		if (decal != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			DecalComponent* decal = scene.decals.GetComponent(x.entity);
+			if (decal == nullptr)
+				continue;
 			decal->slopeBlendPower = args.fValue;
 		}
 	});

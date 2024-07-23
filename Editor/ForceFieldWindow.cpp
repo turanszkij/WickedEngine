@@ -22,7 +22,7 @@ void ForceFieldWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->componentsWnd.RefreshEntityTree();
-		});
+	});
 
 	float x = 60;
 	float y = 0;
@@ -34,9 +34,12 @@ void ForceFieldWindow::Create(EditorComponent* _editor)
 	typeComboBox.SetPos(XMFLOAT2(x, y));
 	typeComboBox.SetSize(XMFLOAT2(wid, hei));
 	typeComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		ForceFieldComponent* force = editor->GetCurrentScene().forces.GetComponent(entity);
-		if (force != nullptr && args.iValue >= 0)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			ForceFieldComponent* force = scene.forces.GetComponent(x.entity);
+			if (force == nullptr)
+				continue;
 			switch (args.iValue)
 			{
 			case 0:
@@ -62,9 +65,12 @@ void ForceFieldWindow::Create(EditorComponent* _editor)
 	gravitySlider.SetSize(XMFLOAT2(wid, hei));
 	gravitySlider.SetPos(XMFLOAT2(x, y += step));
 	gravitySlider.OnSlide([&](wi::gui::EventArgs args) {
-		ForceFieldComponent* force = editor->GetCurrentScene().forces.GetComponent(entity);
-		if (force != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			ForceFieldComponent* force = scene.forces.GetComponent(x.entity);
+			if (force == nullptr)
+				continue;
 			force->gravity = args.fValue;
 		}
 	});
@@ -77,9 +83,12 @@ void ForceFieldWindow::Create(EditorComponent* _editor)
 	rangeSlider.SetSize(XMFLOAT2(wid, hei));
 	rangeSlider.SetPos(XMFLOAT2(x, y += step));
 	rangeSlider.OnSlide([&](wi::gui::EventArgs args) {
-		ForceFieldComponent* force = editor->GetCurrentScene().forces.GetComponent(entity);
-		if (force != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			ForceFieldComponent* force = scene.forces.GetComponent(x.entity);
+			if (force == nullptr)
+				continue;
 			force->range = args.fValue;
 		}
 	});

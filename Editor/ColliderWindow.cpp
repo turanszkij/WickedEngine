@@ -23,7 +23,7 @@ void ColliderWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->componentsWnd.RefreshEntityTree();
-		});
+	});
 
 	float x = 60;
 	float y = 4;
@@ -41,12 +41,14 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	cpuCheckBox.SetSize(XMFLOAT2(hei, hei));
 	cpuCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
-		ColliderComponent* collider = scene.colliders.GetComponent(entity);
-		if (collider == nullptr)
-			return;
-
-		collider->SetCPUEnabled(args.bValue);
-		});
+		for (auto& x : editor->translator.selected)
+		{
+			ColliderComponent* collider = scene.colliders.GetComponent(x.entity);
+			if (collider == nullptr)
+				continue;
+			collider->SetCPUEnabled(args.bValue);
+		}
+	});
 	AddWidget(&cpuCheckBox);
 
 	gpuCheckBox.Create("GPU: ");
@@ -54,12 +56,14 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	gpuCheckBox.SetSize(XMFLOAT2(hei, hei));
 	gpuCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
-		ColliderComponent* collider = scene.colliders.GetComponent(entity);
-		if (collider == nullptr)
-			return;
-
-		collider->SetGPUEnabled(args.bValue);
-		});
+		for (auto& x : editor->translator.selected)
+		{
+			ColliderComponent* collider = scene.colliders.GetComponent(x.entity);
+			if (collider == nullptr)
+				continue;
+			collider->SetGPUEnabled(args.bValue);
+		}
+	});
 	AddWidget(&gpuCheckBox);
 
 	shapeCombo.Create("Shape: ");
@@ -70,11 +74,13 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	shapeCombo.AddItem("Plane", (uint64_t)ColliderComponent::Shape::Plane);
 	shapeCombo.OnSelect([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
-		ColliderComponent* collider = scene.colliders.GetComponent(entity);
-		if (collider == nullptr)
-			return;
-
-		collider->shape = (ColliderComponent::Shape)args.userdata;
+		for (auto& x : editor->translator.selected)
+		{
+			ColliderComponent* collider = scene.colliders.GetComponent(x.entity);
+			if (collider == nullptr)
+				continue;
+			collider->shape = (ColliderComponent::Shape)args.userdata;
+		}
 	});
 	AddWidget(&shapeCombo);
 
@@ -83,12 +89,14 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	radiusSlider.SetPos(XMFLOAT2(x, y += step));
 	radiusSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
-		ColliderComponent* collider = scene.colliders.GetComponent(entity);
-		if (collider == nullptr)
-			return;
-
-		collider->radius = args.fValue;
-		});
+		for (auto& x : editor->translator.selected)
+		{
+			ColliderComponent* collider = scene.colliders.GetComponent(x.entity);
+			if (collider == nullptr)
+				continue;
+			collider->radius = args.fValue;
+		}
+	});
 	AddWidget(&radiusSlider);
 
 
@@ -100,12 +108,14 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	offsetX.SetPos(XMFLOAT2(x, y += step));
 	offsetX.OnSlide([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
-		ColliderComponent* collider = scene.colliders.GetComponent(entity);
-		if (collider == nullptr)
-			return;
-
-		collider->offset.x = args.fValue;
-		});
+		for (auto& x : editor->translator.selected)
+		{
+			ColliderComponent* collider = scene.colliders.GetComponent(x.entity);
+			if (collider == nullptr)
+				continue;
+			collider->offset.x = args.fValue;
+		}
+	});
 	AddWidget(&offsetX);
 
 	offsetY.Create(-10, 10, 0, 10000, "Offset Y: ");
@@ -113,12 +123,14 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	offsetY.SetPos(XMFLOAT2(x, y += step));
 	offsetY.OnSlide([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
-		ColliderComponent* collider = scene.colliders.GetComponent(entity);
-		if (collider == nullptr)
-			return;
-
-		collider->offset.y = args.fValue;
-		});
+		for (auto& x : editor->translator.selected)
+		{
+			ColliderComponent* collider = scene.colliders.GetComponent(x.entity);
+			if (collider == nullptr)
+				continue;
+			collider->offset.y = args.fValue;
+		}
+	});
 	AddWidget(&offsetY);
 
 	offsetZ.Create(-10, 10, 0, 10000, "Offset Z: ");
@@ -126,12 +138,14 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	offsetZ.SetPos(XMFLOAT2(x, y += step));
 	offsetZ.OnSlide([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
-		ColliderComponent* collider = scene.colliders.GetComponent(entity);
-		if (collider == nullptr)
-			return;
-
-		collider->offset.z = args.fValue;
-		});
+		for (auto& x : editor->translator.selected)
+		{
+			ColliderComponent* collider = scene.colliders.GetComponent(x.entity);
+			if (collider == nullptr)
+				continue;
+			collider->offset.z = args.fValue;
+		}
+	});
 	AddWidget(&offsetZ);
 
 
@@ -143,12 +157,14 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	tailX.SetPos(XMFLOAT2(x, y += step));
 	tailX.OnSlide([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
-		ColliderComponent* collider = scene.colliders.GetComponent(entity);
-		if (collider == nullptr)
-			return;
-
-		collider->tail.x = args.fValue;
-		});
+		for (auto& x : editor->translator.selected)
+		{
+			ColliderComponent* collider = scene.colliders.GetComponent(x.entity);
+			if (collider == nullptr)
+				continue;
+			collider->tail.x = args.fValue;
+		}
+	});
 	AddWidget(&tailX);
 
 	tailY.Create(-10, 10, 0, 10000, "Tail Y: ");
@@ -156,12 +172,14 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	tailY.SetPos(XMFLOAT2(x, y += step));
 	tailY.OnSlide([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
-		ColliderComponent* collider = scene.colliders.GetComponent(entity);
-		if (collider == nullptr)
-			return;
-
-		collider->tail.y = args.fValue;
-		});
+		for (auto& x : editor->translator.selected)
+		{
+			ColliderComponent* collider = scene.colliders.GetComponent(x.entity);
+			if (collider == nullptr)
+				continue;
+			collider->tail.y = args.fValue;
+		}
+	});
 	AddWidget(&tailY);
 
 	tailZ.Create(-10, 10, 0, 10000, "Tail Z: ");
@@ -169,12 +187,14 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	tailZ.SetPos(XMFLOAT2(x, y += step));
 	tailZ.OnSlide([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
-		ColliderComponent* collider = scene.colliders.GetComponent(entity);
-		if (collider == nullptr)
-			return;
-
-		collider->tail.z = args.fValue;
-		});
+		for (auto& x : editor->translator.selected)
+		{
+			ColliderComponent* collider = scene.colliders.GetComponent(x.entity);
+			if (collider == nullptr)
+				continue;
+			collider->tail.z = args.fValue;
+		}
+	});
 	AddWidget(&tailZ);
 
 

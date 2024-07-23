@@ -33,43 +33,47 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	textureButton.sprites[wi::gui::ACTIVE].params.color = wi::Color::White();
 	textureButton.sprites[wi::gui::DEACTIVATING].params.color = wi::Color::Gray();
 	textureButton.OnClick([this](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-
-		if (sprite->textureResource.IsValid())
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			wi::Archive& archive = editor->AdvanceHistory();
-			archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
-			editor->RecordEntity(archive, entity);
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
 
-			sprite->textureResource = {};
-			sprite->textureName = "";
-			sprite->params.siz = XMFLOAT2(1, 1);
-			sprite->params.image_subresource = -1;
+			if (sprite->textureResource.IsValid())
+			{
+				wi::Archive& archive = editor->AdvanceHistory();
+				archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+				editor->RecordEntity(archive, entity);
 
-			editor->RecordEntity(archive, entity);
-		}
-		else
-		{
-			wi::helper::FileDialogParams params;
-			params.type = wi::helper::FileDialogParams::OPEN;
-			params.description = "Texture";
-			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
-			wi::helper::FileDialog(params, [=](std::string fileName) {
-				sprite->textureResource = wi::resourcemanager::Load(fileName);
-				sprite->textureName = fileName;
-				textureButton.SetImage(sprite->textureResource);
-				if (sprite->textureResource.IsValid())
-				{
-					const TextureDesc& desc = sprite->textureResource.GetTexture().GetDesc();
-					sprite->params.siz = XMFLOAT2(1, float(desc.height) / float(desc.width));
-				}
-				else
-				{
-					sprite->params.siz = XMFLOAT2(1, 1);
-				}
-			});
+				sprite->textureResource = {};
+				sprite->textureName = "";
+				sprite->params.siz = XMFLOAT2(1, 1);
+				sprite->params.image_subresource = -1;
+
+				editor->RecordEntity(archive, entity);
+			}
+			else
+			{
+				wi::helper::FileDialogParams params;
+				params.type = wi::helper::FileDialogParams::OPEN;
+				params.description = "Texture";
+				params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
+				wi::helper::FileDialog(params, [=](std::string fileName) {
+					sprite->textureResource = wi::resourcemanager::Load(fileName);
+					sprite->textureName = fileName;
+					textureButton.SetImage(sprite->textureResource);
+					if (sprite->textureResource.IsValid())
+					{
+						const TextureDesc& desc = sprite->textureResource.GetTexture().GetDesc();
+						sprite->params.siz = XMFLOAT2(1, float(desc.height) / float(desc.width));
+					}
+					else
+					{
+						sprite->params.siz = XMFLOAT2(1, 1);
+					}
+					});
+			}
 		}
 	});
 	AddWidget(&textureButton);
@@ -81,144 +85,192 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	maskButton.sprites[wi::gui::ACTIVE].params.color = wi::Color::White();
 	maskButton.sprites[wi::gui::DEACTIVATING].params.color = wi::Color::Gray();
 	maskButton.OnClick([this](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-
-		if (sprite->maskResource.IsValid())
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			wi::Archive& archive = editor->AdvanceHistory();
-			archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
-			editor->RecordEntity(archive, entity);
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
 
-			sprite->maskResource = {};
-			sprite->maskName = "";
+			if (sprite->maskResource.IsValid())
+			{
+				wi::Archive& archive = editor->AdvanceHistory();
+				archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+				editor->RecordEntity(archive, entity);
 
-			editor->RecordEntity(archive, entity);
+				sprite->maskResource = {};
+				sprite->maskName = "";
+
+				editor->RecordEntity(archive, entity);
+			}
+			else
+			{
+				wi::helper::FileDialogParams params;
+				params.type = wi::helper::FileDialogParams::OPEN;
+				params.description = "Texture";
+				params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
+				wi::helper::FileDialog(params, [=](std::string fileName) {
+					sprite->maskResource = wi::resourcemanager::Load(fileName);
+					sprite->maskName = fileName;
+					maskButton.SetImage(sprite->maskResource);
+					});
+			}
 		}
-		else
-		{
-			wi::helper::FileDialogParams params;
-			params.type = wi::helper::FileDialogParams::OPEN;
-			params.description = "Texture";
-			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
-			wi::helper::FileDialog(params, [=](std::string fileName) {
-				sprite->maskResource = wi::resourcemanager::Load(fileName);
-				sprite->maskName = fileName;
-				maskButton.SetImage(sprite->maskResource);
-				});
-		}
-		});
+	});
 	AddWidget(&maskButton);
 
 	pivotXSlider.Create(0, 1, 0, 10000, "Pivot X: ");
 	pivotXSlider.SetTooltip("Horizontal pivot: 0: left, 0.5: center, 1: right");
 	pivotXSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->params.pivot.x = args.fValue;
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->params.pivot.x = args.fValue;
+		}
+	});
 	AddWidget(&pivotXSlider);
 
 	pivotYSlider.Create(0, 1, 0, 10000, "Pivot Y: ");
 	pivotYSlider.SetTooltip("Vertical pivot: 0: top, 0.5: center, 1: bottom");
 	pivotYSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->params.pivot.y = args.fValue;
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->params.pivot.y = args.fValue;
+		}
+	});
 	AddWidget(&pivotYSlider);
 
 	intensitySlider.Create(0, 100, 1, 10000, "Intensity: ");
 	intensitySlider.SetTooltip("Color multiplier");
 	intensitySlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->params.intensity = args.fValue;
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->params.intensity = args.fValue;
+		}
+	});
 	AddWidget(&intensitySlider);
 
 	rotationSlider.Create(0, 360, 0, 10000, "Rotation: ");
 	rotationSlider.SetTooltip("Z Rotation around pivot point. The editor input is in degrees.");
 	rotationSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->params.rotation = wi::math::DegreesToRadians(args.fValue);
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->params.rotation = wi::math::DegreesToRadians(args.fValue);
+		}
+	});
 	AddWidget(&rotationSlider);
 
 	alphaStartSlider.Create(0, 1, 0, 10000, "Mask Alpha Start: ");
 	alphaStartSlider.SetTooltip("Constrain mask alpha to not go below this level.");
 	alphaStartSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->params.mask_alpha_range_start = args.fValue;
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->params.mask_alpha_range_start = args.fValue;
+		}
+	});
 	AddWidget(&alphaStartSlider);
 
 	alphaEndSlider.Create(0, 1, 1, 10000, "Mask Alpha End: ");
 	alphaEndSlider.SetTooltip("Constrain mask alpha to not go above this level.");
 	alphaEndSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->params.mask_alpha_range_end = args.fValue;
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->params.mask_alpha_range_end = args.fValue;
+		}
+	});
 	AddWidget(&alphaEndSlider);
 
 	borderSoftenSlider.Create(0, 1, 0, 10000, "Border Soften: ");
 	borderSoftenSlider.SetTooltip("Soften the borders of the sprite.");
 	borderSoftenSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->params.border_soften = args.fValue;
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->params.border_soften = args.fValue;
+		}
+	});
 	AddWidget(&borderSoftenSlider);
 
 	cornerRounding0Slider.Create(0, 0.5f, 1, 10000, "Rounding 0: ");
 	cornerRounding0Slider.SetTooltip("Enable corner rounding for the lop left corner.");
 	cornerRounding0Slider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->params.corners_rounding[0].radius = args.fValue;
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->params.corners_rounding[0].radius = args.fValue;
+		}
+	});
 	AddWidget(&cornerRounding0Slider);
 
 	cornerRounding1Slider.Create(0, 0.5f, 0, 10000, "Rounding 1: ");
 	cornerRounding1Slider.SetTooltip("Enable corner rounding for the lop right corner.");
 	cornerRounding1Slider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->params.corners_rounding[1].radius = args.fValue;
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->params.corners_rounding[1].radius = args.fValue;
+		}
+	});
 	AddWidget(&cornerRounding1Slider);
 
 	cornerRounding2Slider.Create(0, 0.5f, 0, 10000, "Rounding 2: ");
 	cornerRounding2Slider.SetTooltip("Enable corner rounding for the bottom left corner.");
 	cornerRounding2Slider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->params.corners_rounding[2].radius = args.fValue;
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->params.corners_rounding[2].radius = args.fValue;
+		}
+	});
 	AddWidget(&cornerRounding2Slider);
 
 	cornerRounding3Slider.Create(0, 0.5f, 0, 10000, "Rounding 3: ");
 	cornerRounding3Slider.SetTooltip("Enable corner rounding for the bottom right corner.");
 	cornerRounding3Slider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->params.corners_rounding[3].radius = args.fValue;
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->params.corners_rounding[3].radius = args.fValue;
+		}
+	});
 	AddWidget(&cornerRounding3Slider);
 
 	qualityCombo.Create("Filtering: ");
@@ -226,11 +278,15 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	qualityCombo.AddItem("Linear", wi::image::QUALITY_LINEAR);
 	qualityCombo.AddItem("Anisotropic", wi::image::QUALITY_ANISOTROPIC);
 	qualityCombo.OnSelect([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->params.quality = (wi::image::QUALITY)args.userdata;
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->params.quality = (wi::image::QUALITY)args.userdata;
+		}
+	});
 	AddWidget(&qualityCombo);
 
 	samplemodeCombo.Create("Sampling: ");
@@ -238,11 +294,15 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	samplemodeCombo.AddItem("Mirror", wi::image::SAMPLEMODE_MIRROR);
 	samplemodeCombo.AddItem("Wrap", wi::image::SAMPLEMODE_WRAP);
 	samplemodeCombo.OnSelect([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->params.sampleFlag = (wi::image::SAMPLEMODE)args.userdata;
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->params.sampleFlag = (wi::image::SAMPLEMODE)args.userdata;
+		}
+	});
 	AddWidget(&samplemodeCombo);
 
 	blendModeCombo.Create("Blending: ");
@@ -252,169 +312,229 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	blendModeCombo.AddItem("Additive", wi::enums::BLENDMODE_ADDITIVE);
 	blendModeCombo.AddItem("Multiply", wi::enums::BLENDMODE_MULTIPLY);
 	blendModeCombo.OnSelect([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->params.blendFlag = (wi::enums::BLENDMODE)args.userdata;
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->params.blendFlag = (wi::enums::BLENDMODE)args.userdata;
+		}
+	});
 	AddWidget(&blendModeCombo);
 
 	hiddenCheckBox.Create("Hidden: ");
 	hiddenCheckBox.SetTooltip("Hide / unhide the sprite");
 	hiddenCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->SetHidden(args.bValue);
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->SetHidden(args.bValue);
+		}
+	});
 	AddWidget(&hiddenCheckBox);
 
 	cameraFacingCheckBox.Create("Camera Facing: ");
 	cameraFacingCheckBox.SetTooltip("Camera facing sprites will always rotate towards the camera.");
 	cameraFacingCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->SetCameraFacing(args.bValue);
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->SetCameraFacing(args.bValue);
+		}
+	});
 	AddWidget(&cameraFacingCheckBox);
 
 	cameraScalingCheckBox.Create("Camera Scaling: ");
 	cameraScalingCheckBox.SetTooltip("Camera scaling sprites will always keep the same size on screen, irrespective of the distance to the camera.");
 	cameraScalingCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->SetCameraScaling(args.bValue);
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->SetCameraScaling(args.bValue);
+		}
+	});
 	AddWidget(&cameraScalingCheckBox);
 
 	depthTestCheckBox.Create("Depth Test: ");
 	depthTestCheckBox.SetTooltip("Depth tested sprites will be clipped against geometry.");
 	depthTestCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		if (args.bValue)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			sprite->params.enableDepthTest();
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			if (args.bValue)
+			{
+				sprite->params.enableDepthTest();
+			}
+			else
+			{
+				sprite->params.disableDepthTest();
+			}
 		}
-		else
-		{
-			sprite->params.disableDepthTest();
-		}
-		});
+	});
 	AddWidget(&depthTestCheckBox);
 
 	distortionCheckBox.Create("Distortion: ");
 	distortionCheckBox.SetTooltip("The distortion effect will use the sprite as a normal map to distort the rendered image.\nUse the color alpha to control distortion amount.");
 	distortionCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		if (args.bValue)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			sprite->params.enableExtractNormalMap();
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			if (args.bValue)
+			{
+				sprite->params.enableExtractNormalMap();
+			}
+			else
+			{
+				sprite->params.disableExtractNormalMap();
+			}
 		}
-		else
-		{
-			sprite->params.disableExtractNormalMap();
-		}
-		});
+	});
 	AddWidget(&distortionCheckBox);
 
 	colorPicker.Create("Color", wi::gui::Window::WindowControls::NONE);
 	colorPicker.OnColorChanged([&](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->params.color = args.color;
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->params.color = args.color;
+		}
 	});
 	AddWidget(&colorPicker);
 
 	movingTexXSlider.Create(-1000, 1000, 0, 10000, "Scrolling X: ");
 	movingTexXSlider.SetTooltip("Scrolling animation's speed in X direction.");
 	movingTexXSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->anim.movingTexAnim.speedX = args.fValue;
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->anim.movingTexAnim.speedX = args.fValue;
+		}
+	});
 	AddWidget(&movingTexXSlider);
 
 	movingTexYSlider.Create(-1000, 1000, 0, 10000, "Scrolling Y: ");
 	movingTexYSlider.SetTooltip("Scrolling animation's speed in Y direction.");
 	movingTexYSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->anim.movingTexAnim.speedY = args.fValue;
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->anim.movingTexAnim.speedY = args.fValue;
+		}
+	});
 	AddWidget(&movingTexYSlider);
 
 	drawrectFrameRateSlider.Create(0, 60, 0, 60, "Spritesheet FPS: ");
 	drawrectFrameRateSlider.SetTooltip("Sprite Sheet animation's frame rate per second.");
 	drawrectFrameRateSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->anim.drawRectAnim.frameRate = args.fValue;
-		UpdateSpriteDrawRectParams(sprite);
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->anim.drawRectAnim.frameRate = args.fValue;
+			UpdateSpriteDrawRectParams(sprite);
+		}
+	});
 	AddWidget(&drawrectFrameRateSlider);
 
 	drawrectFrameCountInput.Create("");
 	drawrectFrameCountInput.SetDescription("frames: ");
 	drawrectFrameCountInput.SetTooltip("Set the total frame count of the sprite sheet animation (1 = only 1 frame, no animation).");
 	drawrectFrameCountInput.OnInputAccepted([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->anim.drawRectAnim.frameCount = args.iValue;
-		UpdateSpriteDrawRectParams(sprite);
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->anim.drawRectAnim.frameCount = args.iValue;
+			UpdateSpriteDrawRectParams(sprite);
+		}
+	});
 	AddWidget(&drawrectFrameCountInput);
 
 	drawrectHorizontalFrameCountInput.Create("");
 	drawrectHorizontalFrameCountInput.SetDescription("Horiz. frames: ");
 	drawrectHorizontalFrameCountInput.SetTooltip("Set the horizontal frame count of the sprite sheet animation.\n(optional, use if sprite sheet contains multiple rows, default = 0).");
 	drawrectHorizontalFrameCountInput.OnInputAccepted([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->anim.drawRectAnim.horizontalFrameCount = args.iValue;
-		UpdateSpriteDrawRectParams(sprite);
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->anim.drawRectAnim.horizontalFrameCount = args.iValue;
+			UpdateSpriteDrawRectParams(sprite);
+		}
+	});
 	AddWidget(&drawrectHorizontalFrameCountInput);
 
 	wobbleXSlider.Create(0, 1, 0, 10000, "Wobble X: ");
 	wobbleXSlider.SetTooltip("Wobble animation's amount in X direction.");
 	wobbleXSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->anim.wobbleAnim.amount.x = args.fValue;
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->anim.wobbleAnim.amount.x = args.fValue;
+		}
+	});
 	AddWidget(&wobbleXSlider);
 
 	wobbleYSlider.Create(0, 1, 0, 10000, "Wobble Y: ");
 	wobbleYSlider.SetTooltip("Wobble animation's amount in X direction.");
 	wobbleYSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->anim.wobbleAnim.amount.y = args.fValue;
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->anim.wobbleAnim.amount.y = args.fValue;
+		}
+	});
 	AddWidget(&wobbleYSlider);
 
 	wobbleSpeedSlider.Create(0, 4, 0, 10000, "Wobble Speed: ");
 	wobbleSpeedSlider.SetTooltip("Wobble animation's speed.");
 	wobbleSpeedSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::Sprite* sprite = editor->GetCurrentScene().sprites.GetComponent(entity);
-		if (sprite == nullptr)
-			return;
-		sprite->anim.wobbleAnim.speed = args.fValue;
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->anim.wobbleAnim.speed = args.fValue;
+		}
+	});
 	AddWidget(&wobbleSpeedSlider);
 
 	SetMinimized(true);
