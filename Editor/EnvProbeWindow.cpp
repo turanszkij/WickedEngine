@@ -24,7 +24,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->componentsWnd.RefreshEntityTree();
-		});
+	});
 
 	float x = 5, y = 0, step = 35;
 
@@ -40,9 +40,12 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	realTimeCheckBox.SetPos(XMFLOAT2(x + 100, y));
 	realTimeCheckBox.SetEnabled(false);
 	realTimeCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		EnvironmentProbeComponent* probe = editor->GetCurrentScene().probes.GetComponent(entity);
-		if (probe != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			EnvironmentProbeComponent* probe = scene.probes.GetComponent(x.entity);
+			if (probe == nullptr)
+				continue;
 			probe->SetRealTime(args.bValue);
 			probe->SetDirty();
 		}
@@ -54,13 +57,16 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	msaaCheckBox.SetPos(XMFLOAT2(x + 200, y));
 	msaaCheckBox.SetEnabled(false);
 	msaaCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		EnvironmentProbeComponent* probe = editor->GetCurrentScene().probes.GetComponent(entity);
-		if (probe != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			EnvironmentProbeComponent* probe = scene.probes.GetComponent(x.entity);
+			if (probe == nullptr)
+				continue;
 			probe->SetMSAA(args.bValue);
 			probe->SetDirty();
 		}
-		});
+	});
 	AddWidget(&msaaCheckBox);
 
 	refreshButton.Create("Refresh");
@@ -68,9 +74,12 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	refreshButton.SetPos(XMFLOAT2(x, y+= step));
 	refreshButton.SetEnabled(false);
 	refreshButton.OnClick([&](wi::gui::EventArgs args) {
-		EnvironmentProbeComponent* probe = editor->GetCurrentScene().probes.GetComponent(entity);
-		if (probe != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			EnvironmentProbeComponent* probe = scene.probes.GetComponent(x.entity);
+			if (probe == nullptr)
+				continue;
 			probe->SetDirty();
 		}
 	});
@@ -81,11 +90,13 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	refreshAllButton.SetPos(XMFLOAT2(x + 120, y));
 	refreshAllButton.SetEnabled(true);
 	refreshAllButton.OnClick([&](wi::gui::EventArgs args) {
-		Scene& scene = editor->GetCurrentScene();
-		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			EnvironmentProbeComponent& probe = scene.probes[i];
-			probe.SetDirty();
+			EnvironmentProbeComponent* probe = scene.probes.GetComponent(x.entity);
+			if (probe == nullptr)
+				continue;
+			probe->SetDirty();
 		}
 	});
 	AddWidget(&refreshAllButton);
@@ -95,33 +106,38 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	importButton.SetPos(XMFLOAT2(x, y += step));
 	importButton.SetEnabled(false);
 	importButton.OnClick([&](wi::gui::EventArgs args) {
-		Scene& scene = editor->GetCurrentScene();
-		EnvironmentProbeComponent* probe = scene.probes.GetComponent(entity);
-		if (probe != nullptr && probe->texture.IsValid())
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			wi::helper::FileDialogParams params;
-			params.type = wi::helper::FileDialogParams::OPEN;
-			params.description = "DDS";
-			params.extensions = { "DDS" };
-			wi::helper::FileDialog(params, [=](std::string fileName) {
-				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+			EnvironmentProbeComponent* probe = scene.probes.GetComponent(x.entity);
+			if (probe == nullptr)
+				continue;
+			if (probe != nullptr && probe->texture.IsValid())
+			{
+				wi::helper::FileDialogParams params;
+				params.type = wi::helper::FileDialogParams::OPEN;
+				params.description = "DDS";
+				params.extensions = { "DDS" };
+				wi::helper::FileDialog(params, [=](std::string fileName) {
+					wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 
-					wi::Resource resource = wi::resourcemanager::Load(fileName);
-					if (has_flag(resource.GetTexture().GetDesc().misc_flags, wi::graphics::ResourceMiscFlag::TEXTURECUBE))
-					{
-						probe->textureName = fileName;
-						probe->CreateRenderData();
-					}
-					else
-					{
-						wi::helper::messageBox("Error!", "The texture you tried to open is not a cubemap texture, so it won't be imported!");
-					}
+						wi::Resource resource = wi::resourcemanager::Load(fileName);
+						if (has_flag(resource.GetTexture().GetDesc().misc_flags, wi::graphics::ResourceMiscFlag::TEXTURECUBE))
+						{
+							probe->textureName = fileName;
+							probe->CreateRenderData();
+						}
+						else
+						{
+							wi::helper::messageBox("Error!", "The texture you tried to open is not a cubemap texture, so it won't be imported!");
+						}
 
+						});
 					});
-				});
 
+			}
 		}
-		});
+	});
 	AddWidget(&importButton);
 
 	exportButton.Create("Export Cubemap");
@@ -129,35 +145,40 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	exportButton.SetPos(XMFLOAT2(x, y += step));
 	exportButton.SetEnabled(false);
 	exportButton.OnClick([&](wi::gui::EventArgs args) {
-		Scene& scene = editor->GetCurrentScene();
-		EnvironmentProbeComponent* probe = scene.probes.GetComponent(entity);
-		if (probe != nullptr && probe->texture.IsValid())
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			wi::helper::FileDialogParams params;
-			params.type = wi::helper::FileDialogParams::SAVE;
-			params.description = "DDS";
-			params.extensions = { "DDS" };
-			wi::helper::FileDialog(params, [=](std::string fileName) {
-				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+			EnvironmentProbeComponent* probe = scene.probes.GetComponent(x.entity);
+			if (probe == nullptr)
+				continue;
+			if (probe != nullptr && probe->texture.IsValid())
+			{
+				wi::helper::FileDialogParams params;
+				params.type = wi::helper::FileDialogParams::SAVE;
+				params.description = "DDS";
+				params.extensions = { "DDS" };
+				wi::helper::FileDialog(params, [=](std::string fileName) {
+					wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 
-					std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
-					std::string filename_replaced = fileName;
-					if (extension != "DDS")
-					{
-						filename_replaced = wi::helper::ReplaceExtension(fileName, "DDS");
-					}
+						std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
+						std::string filename_replaced = fileName;
+						if (extension != "DDS")
+						{
+							filename_replaced = wi::helper::ReplaceExtension(fileName, "DDS");
+						}
 
-					bool success = wi::helper::saveTextureToFile(probe->texture, filename_replaced);
-					assert(success);
+						bool success = wi::helper::saveTextureToFile(probe->texture, filename_replaced);
+						assert(success);
 
-					if (success)
-					{
-						editor->PostSaveText("Exported environment cubemap: ", filename_replaced);
-					}
+						if (success)
+						{
+							editor->PostSaveText("Exported environment cubemap: ", filename_replaced);
+						}
 
+						});
 					});
-				});
 
+			}
 		}
 	});
 	AddWidget(&exportButton);
@@ -173,10 +194,12 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	resolutionCombo.AddItem("1024", 1024);
 	resolutionCombo.AddItem("2048", 2048);
 	resolutionCombo.OnSelect([&](wi::gui::EventArgs args) {
-		Scene& scene = editor->GetCurrentScene();
-		EnvironmentProbeComponent* probe = scene.probes.GetComponent(entity);
-		if (probe != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			EnvironmentProbeComponent* probe = scene.probes.GetComponent(x.entity);
+			if (probe == nullptr)
+				continue;
 			probe->resolution = (uint32_t)args.userdata;
 			probe->CreateRenderData();
 		}

@@ -82,7 +82,7 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->componentsWnd.RefreshEntityTree();
-		});
+	});
 
 	float x = 140;
 	float y = 0;
@@ -96,13 +96,16 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	farPlaneSlider.SetPos(XMFLOAT2(x, y));
 	farPlaneSlider.SetValue(editor->GetCurrentEditorScene().camera.zFarP);
 	farPlaneSlider.OnSlide([=](wi::gui::EventArgs args) {
-		Scene& scene = editor->GetCurrentScene();
-		CameraComponent* camera = scene.cameras.GetComponent(entity);
-		if (camera == nullptr)
-			return;
-		camera->zFarP = args.fValue;
-		camera->SetDirty();
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			CameraComponent* camera = scene.cameras.GetComponent(x.entity);
+			if (camera == nullptr)
+				continue;
+			camera->zFarP = args.fValue;
+			camera->SetDirty();
+		}
+	});
 	AddWidget(&farPlaneSlider);
 
 	nearPlaneSlider.Create(0.01f, 10, 0.1f, 10000, "Near Plane: ");
@@ -111,13 +114,16 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	nearPlaneSlider.SetPos(XMFLOAT2(x, y += step));
 	nearPlaneSlider.SetValue(editor->GetCurrentEditorScene().camera.zNearP);
 	nearPlaneSlider.OnSlide([=](wi::gui::EventArgs args) {
-		Scene& scene = editor->GetCurrentScene();
-		CameraComponent* camera = scene.cameras.GetComponent(entity);
-		if (camera == nullptr)
-			return;
-		camera->zNearP = args.fValue;
-		camera->SetDirty();
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			CameraComponent* camera = scene.cameras.GetComponent(x.entity);
+			if (camera == nullptr)
+				continue;
+			camera->zNearP = args.fValue;
+			camera->SetDirty();
+		}
+	});
 	AddWidget(&nearPlaneSlider);
 
 	fovSlider.Create(1, 179, 60, 10000, "FOV: ");
@@ -126,13 +132,16 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	fovSlider.SetPos(XMFLOAT2(x, y += step));
 	fovSlider.SetValue(editor->GetCurrentEditorScene().camera.fov / XM_PI * 180.f);
 	fovSlider.OnSlide([=](wi::gui::EventArgs args) {
-		Scene& scene = editor->GetCurrentScene();
-		CameraComponent* camera = scene.cameras.GetComponent(entity);
-		if (camera == nullptr)
-			return;
-		camera->fov = args.fValue / 180.f * XM_PI;
-		camera->SetDirty();
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			CameraComponent* camera = scene.cameras.GetComponent(x.entity);
+			if (camera == nullptr)
+				continue;
+			camera->fov = args.fValue / 180.f * XM_PI;
+			camera->SetDirty();
+		}
+	});
 	AddWidget(&fovSlider);
 
 	focalLengthSlider.Create(0.001f, 100, 1, 10000, "Focal Length: ");
@@ -140,13 +149,16 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	focalLengthSlider.SetSize(XMFLOAT2(wid, hei));
 	focalLengthSlider.SetPos(XMFLOAT2(x, y += step));
 	focalLengthSlider.OnSlide([=](wi::gui::EventArgs args) {
-		Scene& scene = editor->GetCurrentScene();
-		CameraComponent* camera = scene.cameras.GetComponent(entity);
-		if (camera == nullptr)
-			return;
-		camera->focal_length = args.fValue;
-		camera->SetDirty();
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			CameraComponent* camera = scene.cameras.GetComponent(x.entity);
+			if (camera == nullptr)
+				continue;
+			camera->focal_length = args.fValue;
+			camera->SetDirty();
+		}
+	});
 	AddWidget(&focalLengthSlider);
 
 	apertureSizeSlider.Create(0, 1, 0, 10000, "Aperture Size: ");
@@ -154,13 +166,16 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	apertureSizeSlider.SetSize(XMFLOAT2(wid, hei));
 	apertureSizeSlider.SetPos(XMFLOAT2(x, y += step));
 	apertureSizeSlider.OnSlide([=](wi::gui::EventArgs args) {
-		Scene& scene = editor->GetCurrentScene();
-		CameraComponent* camera = scene.cameras.GetComponent(entity);
-		if (camera == nullptr)
-			return;
-		camera->aperture_size = args.fValue;
-		camera->SetDirty();
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			CameraComponent* camera = scene.cameras.GetComponent(x.entity);
+			if (camera == nullptr)
+				continue;
+			camera->aperture_size = args.fValue;
+			camera->SetDirty();
+		}
+	});
 	AddWidget(&apertureSizeSlider);
 
 	apertureShapeXSlider.Create(0, 2, 1, 10000, "Aperture Shape X: ");
@@ -168,13 +183,16 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	apertureShapeXSlider.SetSize(XMFLOAT2(wid, hei));
 	apertureShapeXSlider.SetPos(XMFLOAT2(x, y += step));
 	apertureShapeXSlider.OnSlide([=](wi::gui::EventArgs args) {
-		Scene& scene = editor->GetCurrentScene();
-		CameraComponent* camera = scene.cameras.GetComponent(entity);
-		if (camera == nullptr)
-			return;
-		camera->aperture_shape.x = args.fValue;
-		camera->SetDirty();
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			CameraComponent* camera = scene.cameras.GetComponent(x.entity);
+			if (camera == nullptr)
+				continue;
+			camera->aperture_shape.x = args.fValue;
+			camera->SetDirty();
+		}
+	});
 	AddWidget(&apertureShapeXSlider);
 
 	apertureShapeYSlider.Create(0, 2, 1, 10000, "Aperture Shape Y: ");
@@ -182,13 +200,16 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	apertureShapeYSlider.SetSize(XMFLOAT2(wid, hei));
 	apertureShapeYSlider.SetPos(XMFLOAT2(x, y += step));
 	apertureShapeYSlider.OnSlide([=](wi::gui::EventArgs args) {
-		Scene& scene = editor->GetCurrentScene();
-		CameraComponent* camera = scene.cameras.GetComponent(entity);
-		if (camera == nullptr)
-			return;
-		camera->aperture_shape.y = args.fValue;
-		camera->SetDirty();
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			CameraComponent* camera = scene.cameras.GetComponent(x.entity);
+			if (camera == nullptr)
+				continue;
+			camera->aperture_shape.y = args.fValue;
+			camera->SetDirty();
+		}
+	});
 	AddWidget(&apertureShapeYSlider);
 
 

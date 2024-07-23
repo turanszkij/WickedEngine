@@ -22,7 +22,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->componentsWnd.RefreshEntityTree();
-		});
+	});
 
 	float x = 80;
 	float xx = x;

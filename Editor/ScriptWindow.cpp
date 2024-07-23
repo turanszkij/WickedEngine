@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "ScriptWindow.h"
 
+using namespace wi::scene;
+
 void ScriptWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
@@ -61,11 +63,13 @@ void ScriptWindow::Create(EditorComponent* _editor)
 	playonceCheckBox.SetSize(XMFLOAT2(hei, hei));
 	playonceCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
-		wi::scene::ScriptComponent* script = scene.scripts.GetComponent(entity);
-		if (script == nullptr)
-			return;
-
-		script->SetPlayOnce(args.bValue);
+		for (auto& x : editor->translator.selected)
+		{
+			ScriptComponent* script = scene.scripts.GetComponent(x.entity);
+			if (script == nullptr)
+				continue;
+			script->SetPlayOnce(args.bValue);
+		}
 	});
 	AddWidget(&playonceCheckBox);
 
@@ -74,17 +78,19 @@ void ScriptWindow::Create(EditorComponent* _editor)
 	playstopButton.SetSize(XMFLOAT2(wid, hei));
 	playstopButton.OnClick([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
-		wi::scene::ScriptComponent* script = scene.scripts.GetComponent(entity);
-		if (script == nullptr)
-			return;
-
-		if (script->IsPlaying())
+		for (auto& x : editor->translator.selected)
 		{
-			script->Stop();
-		}
-		else
-		{
-			script->Play();
+			ScriptComponent* script = scene.scripts.GetComponent(x.entity);
+			if (script == nullptr)
+				continue;
+			if (script->IsPlaying())
+			{
+				script->Stop();
+			}
+			else
+			{
+				script->Play();
+			}
 		}
 	});
 	AddWidget(&playstopButton);

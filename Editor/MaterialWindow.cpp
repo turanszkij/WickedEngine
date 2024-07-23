@@ -5,6 +5,26 @@ using namespace wi::graphics;
 using namespace wi::ecs;
 using namespace wi::scene;
 
+MaterialComponent* get_material(Scene& scene, PickResult x)
+{
+	MaterialComponent* material = scene.materials.GetComponent(x.entity);
+	if (material == nullptr)
+	{
+		// Material could be selected indirectly as part of selected subset:
+		ObjectComponent* object = scene.objects.GetComponent(x.entity);
+		if (object != nullptr && object->meshID != INVALID_ENTITY)
+		{
+			MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+			if (mesh != nullptr)
+			{
+				Entity materialID = mesh->subsets[x.subsetIndex].materialID;
+				material = scene.materials.GetComponent(materialID);
+			}
+		}
+	}
+	return material;
+};
+
 void MaterialWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
@@ -23,22 +43,28 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->componentsWnd.RefreshEntityTree();
-		});
+	});
 
 	float hei = 18;
 	float step = hei + 2;
 	float x = 150, y = 0;
 	float wid = 130;
 
+
 	shadowReceiveCheckBox.Create("Receive Shadow: ");
 	shadowReceiveCheckBox.SetTooltip("Receives shadow or not?");
 	shadowReceiveCheckBox.SetPos(XMFLOAT2(x, y));
 	shadowReceiveCheckBox.SetSize(XMFLOAT2(hei, hei));
 	shadowReceiveCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetReceiveShadow(args.bValue);
-		});
+		}
+	});
 	AddWidget(&shadowReceiveCheckBox);
 
 	shadowCasterCheckBox.Create("Cast Shadow: ");
@@ -46,9 +72,14 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	shadowCasterCheckBox.SetPos(XMFLOAT2(x, y += step));
 	shadowCasterCheckBox.SetSize(XMFLOAT2(hei, hei));
 	shadowCasterCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetCastShadow(args.bValue);
+		}
 	});
 	AddWidget(&shadowCasterCheckBox);
 
@@ -57,9 +88,14 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	useVertexColorsCheckBox.SetPos(XMFLOAT2(x, y += step));
 	useVertexColorsCheckBox.SetSize(XMFLOAT2(hei, hei));
 	useVertexColorsCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetUseVertexColors(args.bValue);
+		}
 	});
 	AddWidget(&useVertexColorsCheckBox);
 
@@ -68,10 +104,14 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	specularGlossinessCheckBox.SetPos(XMFLOAT2(x, y += step));
 	specularGlossinessCheckBox.SetSize(XMFLOAT2(hei, hei));
 	specularGlossinessCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetUseSpecularGlossinessWorkflow(args.bValue);
-		SetEntity(entity);
+		}
 	});
 	AddWidget(&specularGlossinessCheckBox);
 
@@ -80,9 +120,14 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	occlusionPrimaryCheckBox.SetPos(XMFLOAT2(x, y += step));
 	occlusionPrimaryCheckBox.SetSize(XMFLOAT2(hei, hei));
 	occlusionPrimaryCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetOcclusionEnabled_Primary(args.bValue);
+		}
 	});
 	AddWidget(&occlusionPrimaryCheckBox);
 
@@ -91,9 +136,14 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	occlusionSecondaryCheckBox.SetPos(XMFLOAT2(x, y += step));
 	occlusionSecondaryCheckBox.SetSize(XMFLOAT2(hei, hei));
 	occlusionSecondaryCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetOcclusionEnabled_Secondary(args.bValue);
+		}
 	});
 	AddWidget(&occlusionSecondaryCheckBox);
 
@@ -102,10 +152,15 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	vertexAOCheckBox.SetPos(XMFLOAT2(x, y += step));
 	vertexAOCheckBox.SetSize(XMFLOAT2(hei, hei));
 	vertexAOCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetVertexAODisabled(!args.bValue);
-		});
+		}
+	});
 	AddWidget(&vertexAOCheckBox);
 
 	windCheckBox.Create("Wind: ");
@@ -113,10 +168,15 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	windCheckBox.SetPos(XMFLOAT2(x, y += step));
 	windCheckBox.SetSize(XMFLOAT2(hei, hei));
 	windCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetUseWind(args.bValue);
-		});
+		}
+	});
 	AddWidget(&windCheckBox);
 
 	doubleSidedCheckBox.Create("Double sided: ");
@@ -124,10 +184,15 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	doubleSidedCheckBox.SetPos(XMFLOAT2(x, y += step));
 	doubleSidedCheckBox.SetSize(XMFLOAT2(hei, hei));
 	doubleSidedCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetDoubleSided(args.bValue);
-		});
+		}
+	});
 	AddWidget(&doubleSidedCheckBox);
 
 	outlineCheckBox.Create("Cartoon Outline: ");
@@ -135,10 +200,15 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	outlineCheckBox.SetPos(XMFLOAT2(x, y += step));
 	outlineCheckBox.SetSize(XMFLOAT2(hei, hei));
 	outlineCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetOutlineEnabled(args.bValue);
-		});
+		}
+	});
 	AddWidget(&outlineCheckBox);
 
 	preferUncompressedCheckBox.Create("Prefer Uncompressed Textures: ");
@@ -146,11 +216,16 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	preferUncompressedCheckBox.SetPos(XMFLOAT2(x, y += step));
 	preferUncompressedCheckBox.SetSize(XMFLOAT2(hei, hei));
 	preferUncompressedCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetPreferUncompressedTexturesEnabled(args.bValue);
-			textureSlotComboBox.SetSelected(textureSlotComboBox.GetSelected());
-		});
+		}
+		textureSlotComboBox.SetSelected(textureSlotComboBox.GetSelected()); // update
+	});
 	AddWidget(&preferUncompressedCheckBox);
 
 
@@ -159,9 +234,12 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	shaderTypeComboBox.SetPos(XMFLOAT2(x, y += step));
 	shaderTypeComboBox.SetSize(XMFLOAT2(wid, hei));
 	shaderTypeComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			if (args.iValue >= MaterialComponent::SHADERTYPE_COUNT)
 			{
 				material->SetCustomShaderID(args.iValue - MaterialComponent::SHADERTYPE_COUNT);
@@ -174,7 +252,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 				blendModeComboBox.SetEnabled(true);
 			}
 		}
-		});
+	});
 	shaderTypeComboBox.SetEnabled(false);
 	shaderTypeComboBox.SetMaxVisibleItemCount(5);
 	AddWidget(&shaderTypeComboBox);
@@ -183,12 +261,15 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	blendModeComboBox.SetPos(XMFLOAT2(x, y += step));
 	blendModeComboBox.SetSize(XMFLOAT2(wid, hei));
 	blendModeComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr && args.iValue >= 0)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->userBlendMode = (wi::enums::BLENDMODE)args.iValue;
 		}
-		});
+	});
 	blendModeComboBox.AddItem("Opaque");
 	blendModeComboBox.AddItem("Alpha");
 	blendModeComboBox.AddItem("Premultiplied");
@@ -203,12 +284,15 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	shadingRateComboBox.SetPos(XMFLOAT2(x, y += step));
 	shadingRateComboBox.SetSize(XMFLOAT2(wid, hei));
 	shadingRateComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->shadingRate = (ShadingRate)args.iValue;
 		}
-		});
+	});
 	shadingRateComboBox.AddItem("1X1");
 	shadingRateComboBox.AddItem("1X2");
 	shadingRateComboBox.AddItem("2X1");
@@ -230,9 +314,14 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	normalMapSlider.SetSize(XMFLOAT2(wid, hei));
 	normalMapSlider.SetPos(XMFLOAT2(x, y += step));
 	normalMapSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetNormalMapStrength(args.fValue);
+		}
 	});
 	AddWidget(&normalMapSlider);
 
@@ -241,9 +330,14 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	roughnessSlider.SetSize(XMFLOAT2(wid, hei));
 	roughnessSlider.SetPos(XMFLOAT2(x, y += step));
 	roughnessSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetRoughness(args.fValue);
+		}
 	});
 	AddWidget(&roughnessSlider);
 
@@ -252,9 +346,14 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	reflectanceSlider.SetSize(XMFLOAT2(wid, hei));
 	reflectanceSlider.SetPos(XMFLOAT2(x, y += step));
 	reflectanceSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetReflectance(args.fValue);
+		}
 	});
 	AddWidget(&reflectanceSlider);
 
@@ -263,9 +362,14 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	metalnessSlider.SetSize(XMFLOAT2(wid, hei));
 	metalnessSlider.SetPos(XMFLOAT2(x, y += step));
 	metalnessSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetMetalness(args.fValue);
+		}
 	});
 	AddWidget(&metalnessSlider);
 
@@ -274,9 +378,14 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	alphaRefSlider.SetSize(XMFLOAT2(wid, hei));
 	alphaRefSlider.SetPos(XMFLOAT2(x, y += step));
 	alphaRefSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetAlphaRef(args.fValue);
+		}
 	});
 	AddWidget(&alphaRefSlider);
 
@@ -285,9 +394,14 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	emissiveSlider.SetSize(XMFLOAT2(wid, hei));
 	emissiveSlider.SetPos(XMFLOAT2(x, y += step));
 	emissiveSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetEmissiveStrength(args.fValue);
+		}
 	});
 	AddWidget(&emissiveSlider);
 
@@ -296,10 +410,15 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	transmissionSlider.SetSize(XMFLOAT2(wid, hei));
 	transmissionSlider.SetPos(XMFLOAT2(x, y += step));
 	transmissionSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetTransmissionAmount(args.fValue);
-		});
+		}
+	});
 	AddWidget(&transmissionSlider);
 
 	refractionSlider.Create(0, 1, 0, 1000, "Refraction: ");
@@ -307,10 +426,15 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	refractionSlider.SetSize(XMFLOAT2(wid, hei));
 	refractionSlider.SetPos(XMFLOAT2(x, y += step));
 	refractionSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetRefractionAmount(args.fValue);
-		});
+		}
+	});
 	AddWidget(&refractionSlider);
 
 	pomSlider.Create(0, 1.0f, 0.0f, 1000, "Par Occl Mapping: ");
@@ -318,9 +442,14 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	pomSlider.SetSize(XMFLOAT2(wid, hei));
 	pomSlider.SetPos(XMFLOAT2(x, y += step));
 	pomSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetParallaxOcclusionMapping(args.fValue);
+		}
 	});
 	AddWidget(&pomSlider);
 
@@ -329,10 +458,15 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	anisotropyStrengthSlider.SetSize(XMFLOAT2(wid, hei));
 	anisotropyStrengthSlider.SetPos(XMFLOAT2(x, y += step));
 	anisotropyStrengthSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->anisotropy_strength = args.fValue;
-		});
+		}
+	});
 	AddWidget(&anisotropyStrengthSlider);
 
 	anisotropyRotationSlider.Create(0, 360, 0.0f, 360, "Anisotropy Rot: ");
@@ -340,10 +474,15 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	anisotropyRotationSlider.SetSize(XMFLOAT2(wid, hei));
 	anisotropyRotationSlider.SetPos(XMFLOAT2(x, y += step));
 	anisotropyRotationSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->anisotropy_rotation = wi::math::DegreesToRadians(args.fValue);
-		});
+		}
+	});
 	AddWidget(&anisotropyRotationSlider);
 
 
@@ -352,9 +491,14 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	displacementMappingSlider.SetSize(XMFLOAT2(wid, hei));
 	displacementMappingSlider.SetPos(XMFLOAT2(x, y += step));
 	displacementMappingSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetDisplacementMapping(args.fValue);
+		}
 	});
 	AddWidget(&displacementMappingSlider);
 
@@ -363,9 +507,14 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	subsurfaceScatteringSlider.SetSize(XMFLOAT2(wid, hei));
 	subsurfaceScatteringSlider.SetPos(XMFLOAT2(x, y += step));
 	subsurfaceScatteringSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetSubsurfaceScatteringAmount(args.fValue);
+		}
 	});
 	AddWidget(&subsurfaceScatteringSlider);
 
@@ -374,9 +523,12 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	texAnimFrameRateSlider.SetSize(XMFLOAT2(wid, hei));
 	texAnimFrameRateSlider.SetPos(XMFLOAT2(x, y += step));
 	texAnimFrameRateSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->texAnimFrameRate = args.fValue;
 		}
 	});
@@ -387,9 +539,12 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	texAnimDirectionSliderU.SetSize(XMFLOAT2(wid, hei));
 	texAnimDirectionSliderU.SetPos(XMFLOAT2(x, y += step));
 	texAnimDirectionSliderU.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->texAnimDirection.x = args.fValue;
 		}
 	});
@@ -400,9 +555,12 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	texAnimDirectionSliderV.SetSize(XMFLOAT2(wid, hei));
 	texAnimDirectionSliderV.SetPos(XMFLOAT2(x, y += step));
 	texAnimDirectionSliderV.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->texAnimDirection.y = args.fValue;
 		}
 	});
@@ -413,9 +571,12 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	texMulSliderX.SetSize(XMFLOAT2(wid, hei));
 	texMulSliderX.SetPos(XMFLOAT2(x, y += step));
 	texMulSliderX.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetDirty();
 			material->texMulAdd.x = args.fValue;
 		}
@@ -427,9 +588,12 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	texMulSliderY.SetSize(XMFLOAT2(wid, hei));
 	texMulSliderY.SetPos(XMFLOAT2(x, y += step));
 	texMulSliderY.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetDirty();
 			material->texMulAdd.y = args.fValue;
 		}
@@ -442,12 +606,15 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	sheenRoughnessSlider.SetSize(XMFLOAT2(wid, hei));
 	sheenRoughnessSlider.SetPos(XMFLOAT2(x, y += step));
 	sheenRoughnessSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetSheenRoughness(args.fValue);
 		}
-		});
+	});
 	AddWidget(&sheenRoughnessSlider);
 
 	clearcoatSlider.Create(0, 1, 0, 1000, "Clearcoat: ");
@@ -455,12 +622,15 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	clearcoatSlider.SetSize(XMFLOAT2(wid, hei));
 	clearcoatSlider.SetPos(XMFLOAT2(x, y += step));
 	clearcoatSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetClearcoatFactor(args.fValue);
 		}
-		});
+	});
 	AddWidget(&clearcoatSlider);
 
 	clearcoatRoughnessSlider.Create(0, 1, 0, 1000, "Clearcoat Roughness: ");
@@ -468,12 +638,15 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	clearcoatRoughnessSlider.SetSize(XMFLOAT2(wid, hei));
 	clearcoatRoughnessSlider.SetPos(XMFLOAT2(x, y += step));
 	clearcoatRoughnessSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->SetClearcoatRoughness(args.fValue);
 		}
-		});
+	});
 	AddWidget(&clearcoatRoughnessSlider);
 
 	blendTerrainSlider.Create(0, 2, 0, 1000, "Blend with terrain: ");
@@ -481,12 +654,15 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	blendTerrainSlider.SetSize(XMFLOAT2(wid, hei));
 	blendTerrainSlider.SetPos(XMFLOAT2(x, y += step));
 	blendTerrainSlider.OnSlide([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			material->blend_with_terrain_height = args.fValue;
 		}
-		});
+	});
 	AddWidget(&blendTerrainSlider);
 
 
@@ -500,14 +676,17 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	materialNameField.SetPos(XMFLOAT2(10, y += step));
 	materialNameField.SetSize(XMFLOAT2(300, hei));
 	materialNameField.OnInputAccepted([=](wi::gui::EventArgs args) {
-		NameComponent* name = editor->GetCurrentScene().names.GetComponent(entity);
-		if (name != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			NameComponent* name = scene.names.GetComponent(x.entity);
+			if (name == nullptr)
+				continue;
 			*name = args.sValue;
 
 			editor->componentsWnd.RefreshEntityTree();
 		}
-		});
+	});
 	AddWidget(&materialNameField);
 
 	colorComboBox.Create("Color picker mode: ");
@@ -527,9 +706,12 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	colorPicker.SetVisible(true);
 	colorPicker.SetEnabled(true);
 	colorPicker.OnColorChanged([&](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			switch (colorComboBox.GetSelected())
 			{
 			default:
@@ -556,7 +738,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 				break;
 			}
 		}
-		});
+	});
 	AddWidget(&colorPicker);
 
 
@@ -759,13 +941,16 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	textureSlotUvsetField.SetPos(XMFLOAT2(x + textureSlotLabel.GetScale().x + 2, y));
 	textureSlotUvsetField.SetSize(XMFLOAT2(hei, hei));
 	textureSlotUvsetField.OnInputAccepted([this](wi::gui::EventArgs args) {
-		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-		if (material != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
 			int slot = textureSlotComboBox.GetSelected();
 			material->textures[slot].uvset = (uint32_t)args.iValue;
 		}
-		});
+	});
 	AddWidget(&textureSlotUvsetField);
 
 
@@ -829,7 +1014,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		texMulSliderX.SetValue(material->texMulAdd.x);
 		texMulSliderY.SetValue(material->texMulAdd.y);
 		alphaRefSlider.SetValue(material->alphaRef);
-		blendModeComboBox.SetSelected((int)material->userBlendMode);
+		blendModeComboBox.SetSelectedWithoutCallback((int)material->userBlendMode);
 
 		shaderTypeComboBox.ClearItems();
 		shaderTypeComboBox.AddItem("PBR", MaterialComponent::SHADERTYPE_PBR);
@@ -849,13 +1034,13 @@ void MaterialWindow::SetEntity(Entity entity)
 		}
 		if (material->GetCustomShaderID() >= 0)
 		{
-			shaderTypeComboBox.SetSelected(MaterialComponent::SHADERTYPE_COUNT + material->GetCustomShaderID());
+			shaderTypeComboBox.SetSelectedWithoutCallback(MaterialComponent::SHADERTYPE_COUNT + material->GetCustomShaderID());
 		}
 		else
 		{
-			shaderTypeComboBox.SetSelectedByUserdata(material->shaderType);
+			shaderTypeComboBox.SetSelectedByUserdataWithoutCallback(material->shaderType);
 		}
-		shadingRateComboBox.SetSelected((int)material->shadingRate);
+		shadingRateComboBox.SetSelectedWithoutCallback((int)material->shadingRate);
 
 		colorComboBox.SetEnabled(true);
 		colorPicker.SetEnabled(true);

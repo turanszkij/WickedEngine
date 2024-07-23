@@ -35,10 +35,12 @@ void IKWindow::Create(EditorComponent* _editor)
 	targetCombo.SetPos(XMFLOAT2(x, y));
 	targetCombo.SetEnabled(false);
 	targetCombo.OnSelect([&](wi::gui::EventArgs args) {
-		Scene& scene = editor->GetCurrentScene();
-		InverseKinematicsComponent* ik = scene.inverse_kinematics.GetComponent(entity);
-		if (ik != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
+			InverseKinematicsComponent* ik = scene.inverse_kinematics.GetComponent(x.entity);
+			if (ik == nullptr)
+				continue;
 			if (args.iValue == 0)
 			{
 				ik->target = INVALID_ENTITY;
@@ -48,7 +50,7 @@ void IKWindow::Create(EditorComponent* _editor)
 				ik->target = scene.transforms.GetEntity(args.iValue - 1);
 			}
 		}
-		});
+	});
 	targetCombo.SetTooltip("Choose a target entity (with transform) that the IK will follow");
 	AddWidget(&targetCombo);
 
@@ -57,8 +59,15 @@ void IKWindow::Create(EditorComponent* _editor)
 	disabledCheckBox.SetPos(XMFLOAT2(x, y += step));
 	disabledCheckBox.SetSize(XMFLOAT2(hei, hei));
 	disabledCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		editor->GetCurrentScene().inverse_kinematics.GetComponent(entity)->SetDisabled(args.bValue);
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			InverseKinematicsComponent* ik = scene.inverse_kinematics.GetComponent(x.entity);
+			if (ik == nullptr)
+				continue;
+			ik->SetDisabled(args.bValue);
+		}
+	});
 	AddWidget(&disabledCheckBox);
 
 	chainLengthSlider.Create(0, 10, 0, 10, "Chain Length: ");
@@ -66,8 +75,15 @@ void IKWindow::Create(EditorComponent* _editor)
 	chainLengthSlider.SetPos(XMFLOAT2(x, y += step));
 	chainLengthSlider.SetSize(XMFLOAT2(siz, hei));
 	chainLengthSlider.OnSlide([&](wi::gui::EventArgs args) {
-		editor->GetCurrentScene().inverse_kinematics.GetComponent(entity)->chain_length = args.iValue;
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			InverseKinematicsComponent* ik = scene.inverse_kinematics.GetComponent(x.entity);
+			if (ik == nullptr)
+				continue;
+			ik->chain_length = args.iValue;
+		}
+	});
 	AddWidget(&chainLengthSlider);
 
 	iterationCountSlider.Create(0, 10, 1, 10, "Iteration Count: ");
@@ -75,8 +91,15 @@ void IKWindow::Create(EditorComponent* _editor)
 	iterationCountSlider.SetPos(XMFLOAT2(x, y += step));
 	iterationCountSlider.SetSize(XMFLOAT2(siz, hei));
 	iterationCountSlider.OnSlide([&](wi::gui::EventArgs args) {
-		editor->GetCurrentScene().inverse_kinematics.GetComponent(entity)->iteration_count = args.iValue;
-		});
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			InverseKinematicsComponent* ik = scene.inverse_kinematics.GetComponent(x.entity);
+			if (ik == nullptr)
+				continue;
+			ik->iteration_count = args.iValue;
+		}
+	});
 	AddWidget(&iterationCountSlider);
 
 	SetMinimized(true);

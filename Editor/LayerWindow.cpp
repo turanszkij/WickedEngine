@@ -22,7 +22,7 @@ void LayerWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->componentsWnd.RefreshEntityTree();
-		});
+	});
 
 	float x = 30;
 	float y = 0;
@@ -44,23 +44,25 @@ void LayerWindow::Create(EditorComponent* _editor)
 		layers[i].SetText(std::to_string(i) + ": ");
 		layers[i].SetPos(XMFLOAT2(x + 20 + (i % 5) * 50, y + (i / 5) * step));
 		layers[i].OnClick([=](wi::gui::EventArgs args) {
-
-			LayerComponent* layer = editor->GetCurrentScene().layers.GetComponent(entity);
-			if (layer == nullptr)
+			wi::scene::Scene& scene = editor->GetCurrentScene();
+			for (auto& x : editor->translator.selected)
 			{
-				layer = &editor->GetCurrentScene().layers.Create(entity);
-			}
+				LayerComponent* layer = scene.layers.GetComponent(x.entity);
+				if (layer == nullptr)
+				{
+					layer = &editor->GetCurrentScene().layers.Create(x.entity);
+				}
 
-			if (args.bValue)
-			{
-				layer->layerMask |= 1 << i;
+				if (args.bValue)
+				{
+					layer->layerMask |= 1 << i;
+				}
+				else
+				{
+					layer->layerMask &= ~(1 << i);
+				}
 			}
-			else
-			{
-				layer->layerMask &= ~(1 << i);
-			}
-
-			});
+		});
 		AddWidget(&layers[i]);
 	}
 
@@ -69,28 +71,36 @@ void LayerWindow::Create(EditorComponent* _editor)
 	enableAllButton.Create("ALL " ICON_CHECK);
 	enableAllButton.SetPos(XMFLOAT2(x, y));
 	enableAllButton.OnClick([this](wi::gui::EventArgs args) {
-		LayerComponent* layer = editor->GetCurrentScene().layers.GetComponent(entity);
-		if (layer == nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			layer = &editor->GetCurrentScene().layers.Create(entity);
+			LayerComponent* layer = scene.layers.GetComponent(x.entity);
+			if (layer == nullptr)
+			{
+				layer = &editor->GetCurrentScene().layers.Create(x.entity);
+			}
+			if (layer == nullptr)
+				return;
+			layer->layerMask = ~0;
 		}
-		if (layer == nullptr)
-			return;
-		layer->layerMask = ~0;
 	});
 	AddWidget(&enableAllButton);
 
 	enableNoneButton.Create("NONE " ICON_DISABLED);
 	enableNoneButton.SetPos(XMFLOAT2(x + 120, y));
 	enableNoneButton.OnClick([this](wi::gui::EventArgs args) {
-		LayerComponent* layer = editor->GetCurrentScene().layers.GetComponent(entity);
-		if (layer == nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			layer = &editor->GetCurrentScene().layers.Create(entity);
+			LayerComponent* layer = scene.layers.GetComponent(x.entity);
+			if (layer == nullptr)
+			{
+				layer = &editor->GetCurrentScene().layers.Create(x.entity);
+			}
+			if (layer == nullptr)
+				return;
+			layer->layerMask = 0;
 		}
-		if (layer == nullptr)
-			return;
-		layer->layerMask = 0;
 	});
 	AddWidget(&enableNoneButton);
 
