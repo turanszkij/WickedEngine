@@ -6,15 +6,15 @@ Texture2D<float4> texture_displacementmap : register(t0);
 PSIn main(uint vertexID : SV_VertexID)
 {
 	PSIn Out;
-
-	// Retrieve grid dimensions and 1/gridDimensions:
+	
 	float2 dim = xOceanScreenSpaceParams.xy;
 	float2 invdim = xOceanScreenSpaceParams.zw;
 	uint2 grid_coord = unflatten2D(vertexID, dim.xy);
-
+	
 	// Assemble screen space grid:
-	Out.pos = float4((grid_coord + 0.5) * invdim, 0, 1);
-	Out.pos.xy = Out.pos.xy * 2 - 1;
+	Out.pos = float4(grid_coord / float2(dim - 1), 1, 1);
+	Out.pos.xy = uv_to_clipspace(Out.pos.xy);
+	float4 originalpos = Out.pos;
 	Out.pos.xy *= max(1, xOceanSurfaceDisplacementTolerance); // extrude screen space grid to tolerate displacement
 
 	// Perform ray tracing of screen grid and plane surface to unproject to world space:
@@ -24,7 +24,7 @@ PSIn main(uint vertexID : SV_VertexID)
 	const float3 d = normalize(o.xyz - unproj.xyz);
 
 	float3 worldPos = intersectPlaneClampInfinite(o, d, float3(0, 1, 0), xOceanWaterHeight);
-
+	
 	float2 uv = worldPos.xz * xOceanPatchSizeRecip;
 	if (grid_coord.x > 0 && grid_coord.x < dim.x - 1 && grid_coord.y > 0 && grid_coord.y < dim.y - 1) // don't displace the side edges, to avoid holes
 	{

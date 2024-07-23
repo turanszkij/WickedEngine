@@ -8,6 +8,7 @@ struct PSIn
 	float4 pos		: SV_POSITION;
 	float3 pos3D	: WORLDPOSITION;
 	float2 uv		: TEXCOORD0;
+	uint behind : BEHIND;
 };
 
 float3 intersectPlaneClampInfinite(in float3 rayOrigin, in float3 rayDirection, in float3 planeNormal, float planeHeight)
