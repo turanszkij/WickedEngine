@@ -2681,12 +2681,46 @@ namespace wi::scene
 
 				}
 
-				if (animation.IsLooped() && animation.timer > animation.end)
+				if (animation.timer > animation.end && animation.speed > 0)
 				{
-					animation.timer = animation.start;
-					for (auto& channel : animation.channels)
+					if (animation.IsLooped())
 					{
-						channel.next_event = 0;
+						animation.timer = animation.start;
+						for (auto& channel : animation.channels)
+						{
+							channel.next_event = 0;
+						}
+					}
+					else if (animation.IsPingPong())
+					{
+						animation.timer = animation.end;
+						animation.speed = -animation.speed;
+					}
+					else
+					{
+						animation.timer = animation.end;
+						animation.Pause();
+					}
+				}
+				else if (animation.timer < animation.start && animation.speed < 0)
+				{
+					if (animation.IsLooped())
+					{
+						animation.timer = animation.end;
+						for (auto& channel : animation.channels)
+						{
+							channel.next_event = 0;
+						}
+					}
+					else if (animation.IsPingPong())
+					{
+						animation.timer = animation.start;
+						animation.speed = -animation.speed;
+					}
+					else
+					{
+						animation.timer = animation.start;
+						animation.Pause();
 					}
 				}
 

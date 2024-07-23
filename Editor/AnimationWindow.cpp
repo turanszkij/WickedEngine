@@ -12,7 +12,6 @@ void AnimationWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete AnimationComponent");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -29,6 +28,8 @@ void AnimationWindow::Create(EditorComponent* _editor)
 	float hei = 18;
 	float wid = 200;
 	float step = hei + 4;
+	float padding = 4;
+	float lastDirection = 1;
 
 	infoLabel.Create("");
 	infoLabel.SetSize(XMFLOAT2(100, 50));
@@ -71,24 +72,72 @@ void AnimationWindow::Create(EditorComponent* _editor)
 	modeComboBox.SetTooltip("Choose how animation data is interpreted between keyframes.\nNote that Cubic spline sampling requires spline animation data, otherwise, it will fall back to Linear!\nCurrently spline animation data creation is not supported, but it can be imported from GLTF/VRM models.");
 	AddWidget(&modeComboBox);
 
-	loopedCheckBox.Create("Looped: ");
-	loopedCheckBox.SetTooltip("Toggle animation looping behaviour.");
-	loopedCheckBox.SetSize(XMFLOAT2(hei, hei));
-	loopedCheckBox.SetPos(XMFLOAT2(x, y += step));
-	loopedCheckBox.OnClick([&](wi::gui::EventArgs args) {
+	loopTypeButton.Create("LoopType");
+	loopTypeButton.SetText(ICON_LOOP);
+	loopTypeButton.SetDescription("Loop type: ");
+	loopTypeButton.SetSize(XMFLOAT2(hei, hei));
+	loopTypeButton.SetPos(XMFLOAT2(x, y += step));
+	loopTypeButton.OnClick([&](wi::gui::EventArgs args) {
 		AnimationComponent* animation = editor->GetCurrentScene().animations.GetComponent(entity);
 		if (animation != nullptr)
 		{
-			animation->SetLooped(args.bValue);
+			if (animation->IsLooped())
+			{
+				animation->SetPingPong();
+			}
+			else if (animation->IsPingPong())
+			{
+				animation->SetPlayOnce();
+			}
+			else
+			{
+				animation->SetLooped();
+			}
 		}
 	});
-	loopedCheckBox.SetCheckText(ICON_LOOP);
-	AddWidget(&loopedCheckBox);
+	AddWidget(&loopTypeButton);
 
-	playButton.Create(ICON_PLAY);
-	playButton.SetSize(XMFLOAT2(100, hei));
-	playButton.SetPos(XMFLOAT2(loopedCheckBox.GetPos().x + loopedCheckBox.GetSize().x + 5, y));
-	playButton.OnClick([&](wi::gui::EventArgs args) {
+	backwardsButton.Create("Backwards");
+	backwardsButton.SetText(ICON_PLAY);
+	backwardsButton.font.params.enableFlipHorizontally();
+	backwardsButton.SetTooltip("Play the animation backwards from the current position.");
+	backwardsButton.SetSize(XMFLOAT2(30, hei));
+	backwardsButton.SetPos(XMFLOAT2(loopTypeButton.GetPos().x + loopTypeButton.GetSize().x + padding, y));
+	backwardsButton.OnClick([&](wi::gui::EventArgs args) {
+		AnimationComponent* animation = editor->GetCurrentScene().animations.GetComponent(entity);
+		if (animation != nullptr)
+		{
+			if (animation->timer > animation->start) // Only play backwards if it is not in the start position.
+			{
+				animation->speed = -speedSlider.GetValue();
+				animation->Play();
+			}
+		}
+	});
+	AddWidget(&backwardsButton);
+
+	backwardsFromEndButton.Create("BackwardsFromEnd");
+	backwardsFromEndButton.SetText(ICON_BACKWARD);
+	backwardsFromEndButton.SetTooltip("Play the animation backwards starting from the end.");
+	backwardsFromEndButton.SetSize(backwardsButton.GetSize());
+	backwardsFromEndButton.SetPos(XMFLOAT2(backwardsButton.GetPos().x + backwardsButton.GetSize().x + padding, y));
+	backwardsFromEndButton.OnClick([&](wi::gui::EventArgs args) {
+		AnimationComponent* animation = editor->GetCurrentScene().animations.GetComponent(entity);
+		if (animation != nullptr)
+		{
+			animation->timer = animation->end;
+			animation->speed = -speedSlider.GetValue();
+			animation->Play();
+		}
+	});
+	AddWidget(&backwardsFromEndButton);
+
+	stopButton.Create("Stop");
+	stopButton.SetText(ICON_STOP);
+	stopButton.SetTooltip("Stop.");
+	stopButton.SetSize(backwardsButton.GetSize());
+	stopButton.SetPos(XMFLOAT2(backwardsButton.GetPos().x + backwardsButton.GetSize().x * 2 + padding * 2, y));
+	stopButton.OnClick([&](wi::gui::EventArgs args) {
 		AnimationComponent* animation = editor->GetCurrentScene().animations.GetComponent(entity);
 		if (animation != nullptr)
 		{
@@ -98,24 +147,46 @@ void AnimationWindow::Create(EditorComponent* _editor)
 			}
 			else
 			{
+				animation->Stop();
+			}
+		}
+	});
+	AddWidget(&stopButton);
+
+	playFromStartButton.Create("PlayFromStart");
+	playFromStartButton.SetText(ICON_FORWARD);
+	playFromStartButton.SetTooltip("Play the animation from the beginning.");
+	playFromStartButton.SetSize(backwardsButton.GetSize());
+	playFromStartButton.SetPos(XMFLOAT2(backwardsButton.GetPos().x + backwardsButton.GetSize().x * 3 + padding * 3, y));
+	playFromStartButton.OnClick([&](wi::gui::EventArgs args) {
+		AnimationComponent* animation = editor->GetCurrentScene().animations.GetComponent(entity);
+		if (animation != nullptr)
+		{
+			animation->timer = animation->start;
+			animation->speed = speedSlider.GetValue();
+			animation->Play();
+
+		}
+	});
+	AddWidget(&playFromStartButton);
+
+	playButton.Create("Play");
+	playButton.SetText(ICON_PLAY);
+	playButton.SetTooltip("Play the animation from the current position.");
+	playButton.SetSize(backwardsButton.GetSize());
+	playButton.SetPos(XMFLOAT2(backwardsButton.GetPos().x + backwardsButton.GetSize().x * 4 + padding * 4, y));
+	playButton.OnClick([&](wi::gui::EventArgs args) {
+		AnimationComponent* animation = editor->GetCurrentScene().animations.GetComponent(entity);
+		if (animation != nullptr)
+		{
+			if (animation->timer < animation->end) // Only play forward if it is not in the end position.
+			{
+				animation->speed = speedSlider.GetValue();
 				animation->Play();
 			}
 		}
 	});
 	AddWidget(&playButton);
-
-	stopButton.Create(ICON_STOP);
-	stopButton.SetTooltip("Stop");
-	stopButton.SetSize(XMFLOAT2(70, hei));
-	stopButton.SetPos(XMFLOAT2(playButton.GetPos().x + playButton.GetSize().x + 5, y));
-	stopButton.OnClick([&](wi::gui::EventArgs args) {
-		AnimationComponent* animation = editor->GetCurrentScene().animations.GetComponent(entity);
-		if (animation != nullptr)
-		{
-			animation->Stop();
-		}
-	});
-	AddWidget(&stopButton);
 
 	timerSlider.Create(0, 1, 0, 100000, "Timer: ");
 	timerSlider.SetSize(XMFLOAT2(wid, hei));
@@ -152,7 +223,9 @@ void AnimationWindow::Create(EditorComponent* _editor)
 		AnimationComponent* animation = editor->GetCurrentScene().animations.GetComponent(entity);
 		if (animation != nullptr)
 		{
-			animation->speed = args.fValue;
+			// Adjusts the new animation speed based on the previous direction of animation->speed.
+			lastDirection = std::signbit(animation->speed) ? -1 : 1;
+			animation->speed = args.fValue * lastDirection;
 		}
 	});
 	speedSlider.SetEnabled(false);
@@ -969,7 +1042,6 @@ void AnimationWindow::Create(EditorComponent* _editor)
 	rootBoneComboBox.SetTooltip("Choose the root bone to evaluate root motion from.");
 	AddWidget(&rootBoneComboBox);
 
-
 	SetMinimized(true);
 	SetVisible(false);
 
@@ -1049,13 +1121,29 @@ void AnimationWindow::Update()
 
 	if (animation.IsPlaying())
 	{
-		playButton.SetText(ICON_PAUSE);
-		playButton.SetTooltip("Pause");
+		stopButton.SetText(ICON_PAUSE);
+		stopButton.SetTooltip("Pause");
 	}
 	else
 	{
-		playButton.SetText(ICON_PLAY);
-		playButton.SetTooltip("Play");
+		stopButton.SetText(ICON_STOP);
+		stopButton.SetTooltip("Stop");
+	}
+
+	if (animation.IsLooped())
+	{
+		loopTypeButton.SetText(ICON_LOOP);
+		loopTypeButton.SetTooltip("Looping is enabled. The animation will repeat continuously.");
+	}
+	else if (animation.IsPingPong())
+	{
+		loopTypeButton.SetText(ICON_PINGPONG);
+		loopTypeButton.SetTooltip("Ping-Pong is enabled. The animation will play forward and then backwards repeatedly.");
+	}
+	else
+	{
+		loopTypeButton.SetText("-");
+		loopTypeButton.SetTooltip("No loop. The animation will play once.");
 	}
 
 	if(!animation.samplers.empty())
@@ -1067,15 +1155,12 @@ void AnimationWindow::Update()
 		modeComboBox.SetSelectedByUserdataWithoutCallback(AnimationComponent::AnimationSampler().mode);
 	}
 
-	loopedCheckBox.SetCheck(animation.IsLooped());
-
 	rootMotionCheckBox.SetCheck(animation.IsRootMotion());
 	rootBoneComboBox.SetSelectedByUserdataWithoutCallback(animation.rootMotionBone);
 
 	timerSlider.SetRange(animation.start, animation.end);
 	timerSlider.SetValue(animation.timer);
 	amountSlider.SetValue(animation.amount);
-	speedSlider.SetValue(animation.speed);
 	startInput.SetValue(animation.start);
 	endInput.SetValue(animation.end);
 }
@@ -1281,14 +1366,20 @@ void AnimationWindow::ResizeLayout()
 	add_fullwidth(infoLabel);
 	add(modeComboBox);
 
-	loopedCheckBox.SetPos(XMFLOAT2(margin_left, y));
-	const float l = loopedCheckBox.GetPos().x + loopedCheckBox.GetSize().x + padding;
-	const float r = width - margin_right - padding;
+	loopTypeButton.SetPos(XMFLOAT2(margin_left, y));
+	const float l = loopTypeButton.GetPos().x + loopTypeButton.GetSize().x + padding;
+	const float r = width - margin_right - padding * 4;
 	const float diff = r - l;
-	playButton.SetSize(XMFLOAT2(diff * 0.5f, playButton.GetSize().y));
-	stopButton.SetSize(playButton.GetSize());
-	playButton.SetPos(XMFLOAT2(loopedCheckBox.GetPos().x + loopedCheckBox.GetSize().x + padding, y));
-	stopButton.SetPos(XMFLOAT2(playButton.GetPos().x + playButton.GetSize().x + padding, y));
+	backwardsButton.SetSize(XMFLOAT2(diff/5, backwardsButton.GetSize().y));
+	backwardsFromEndButton.SetSize(backwardsButton.GetSize());
+	stopButton.SetSize(backwardsButton.GetSize());
+	playFromStartButton.SetSize(backwardsButton.GetSize());
+	playButton.SetSize(backwardsButton.GetSize());
+	backwardsButton.SetPos(XMFLOAT2(loopTypeButton.GetPos().x + loopTypeButton.GetSize().x + padding, y));
+	backwardsFromEndButton.SetPos(XMFLOAT2(backwardsButton.GetPos().x + backwardsButton.GetSize().x + padding, y));
+	stopButton.SetPos(XMFLOAT2(backwardsButton.GetPos().x + backwardsButton.GetSize().x * 2 + padding * 2, y));
+	playFromStartButton.SetPos(XMFLOAT2(backwardsButton.GetPos().x + backwardsButton.GetSize().x * 3 + padding * 3, y));
+	playButton.SetPos(XMFLOAT2(backwardsButton.GetPos().x + backwardsButton.GetSize().x * 4 + padding * 4, y));
 	y += stopButton.GetSize().y;
 	y += padding;
 
