@@ -2011,8 +2011,10 @@ namespace wi::scene
 		{
 			Custom,
 			Waypoint,
+			Player,
 			Enemy,
 			NPC,
+			Pickup,
 		};
 		Preset preset = Preset::Custom;
 

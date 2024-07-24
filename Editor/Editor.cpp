@@ -2095,6 +2095,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.spriteWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.fontWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.voxelGridWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.metadataWnd.SetEntity(INVALID_ENTITY);
 	}
 	else
 	{
@@ -2129,6 +2130,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.spriteWnd.SetEntity(picked.entity);
 		componentsWnd.fontWnd.SetEntity(picked.entity);
 		componentsWnd.voxelGridWnd.SetEntity(picked.entity);
+		componentsWnd.metadataWnd.SetEntity(picked.entity);
 
 		if (picked.subsetIndex >= 0)
 		{
@@ -5008,6 +5010,7 @@ void EditorComponent::RefreshSceneList()
 			componentsWnd.spriteWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.fontWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.voxelGridWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.metadataWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 
 			componentsWnd.RefreshEntityTree();
 			ResetHistory();

@@ -224,7 +224,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 		if (animation != nullptr)
 		{
 			// Adjusts the new animation speed based on the previous direction of animation->speed.
-			lastDirection = std::signbit(animation->speed) ? -1 : 1;
+			lastDirection = std::signbit(animation->speed) ? -1.0f : 1.0f;
 			animation->speed = args.fValue * lastDirection;
 		}
 	});

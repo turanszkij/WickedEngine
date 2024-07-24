@@ -48,6 +48,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)VoxelGridWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ContentBrowserWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ModelImporter_FBX.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)MetadataWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
@@ -102,6 +103,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)VoxelGridWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ContentBrowserWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ufbx.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)MetadataWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />

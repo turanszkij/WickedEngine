@@ -46,6 +46,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	filterCombo.AddItem(ICON_VOXELGRID, (uint64_t)Filter::VoxelGrid);
 	filterCombo.AddItem(ICON_RIGIDBODY, (uint64_t)Filter::RigidBody);
 	filterCombo.AddItem(ICON_SOFTBODY, (uint64_t)Filter::SoftBody);
+	filterCombo.AddItem(ICON_METADATA, (uint64_t)Filter::Metadata);
 	filterCombo.SetTooltip("Apply filtering to the Entities by components");
 	filterCombo.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	filterCombo.OnSelect([&](wi::gui::EventArgs args) {
@@ -154,6 +155,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	spriteWnd.Create(editor);
 	fontWnd.Create(editor);
 	voxelGridWnd.Create(editor);
+	metadataWnd.Create(editor);
 
 	enum ADD_THING
 	{
@@ -183,6 +185,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		ADD_SPRITE,
 		ADD_FONT,
 		ADD_VOXELGRID,
+		ADD_METADATA,
 	};
 
 	newComponentCombo.Create("Add component  ");
@@ -218,6 +221,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.AddItem("Sprite " ICON_SPRITE, ADD_SPRITE);
 	newComponentCombo.AddItem("Font " ICON_FONT, ADD_FONT);
 	newComponentCombo.AddItem("Voxel Grid " ICON_VOXELGRID, ADD_VOXELGRID);
+	newComponentCombo.AddItem("Metadata " ICON_METADATA, ADD_METADATA);
 	newComponentCombo.OnSelect([=](wi::gui::EventArgs args) {
 		newComponentCombo.SetSelectedWithoutCallback(-1);
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -345,6 +349,10 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 				if (scene.voxel_grids.Contains(entity))
 					valid = false;
 				break;
+			case ADD_METADATA:
+				if (scene.metadatas.Contains(entity))
+					valid = false;
+				break;
 			default:
 				valid = false;
 				break;
@@ -451,6 +459,9 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			case ADD_VOXELGRID:
 				scene.voxel_grids.Create(entity);
 				break;
+			case ADD_METADATA:
+				scene.metadatas.Create(entity);
+				break;
 			default:
 				break;
 			}
@@ -495,6 +506,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	AddWidget(&spriteWnd);
 	AddWidget(&fontWnd);
 	AddWidget(&voxelGridWnd);
+	AddWidget(&metadataWnd);
 
 	materialWnd.SetVisible(false);
 	weatherWnd.SetVisible(false);
@@ -527,6 +539,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	spriteWnd.SetVisible(false);
 	fontWnd.SetVisible(false);
 	voxelGridWnd.SetVisible(false);
+	metadataWnd.SetVisible(false);
 
 	XMFLOAT2 size = XMFLOAT2(338, 500);
 	if (editor->main->config.GetSection("layout").Has("components.width"))
@@ -1006,6 +1019,19 @@ void ComponentsWindow::ResizeLayout()
 	{
 		voxelGridWnd.SetVisible(false);
 	}
+
+	if (scene.metadatas.Contains(metadataWnd.entity))
+	{
+		metadataWnd.SetVisible(true);
+		metadataWnd.SetPos(pos);
+		metadataWnd.SetSize(XMFLOAT2(width, metadataWnd.GetScale().y));
+		pos.y += metadataWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		metadataWnd.SetVisible(false);
+	}
 }
 
 
@@ -1149,6 +1175,10 @@ void ComponentsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 		if (scene.voxel_grids.Contains(entity))
 		{
 			item.name += ICON_VOXELGRID " ";
+		}
+		if (scene.metadatas.Contains(entity))
+		{
+			item.name += ICON_METADATA " ";
 		}
 		if (scene.lights.Contains(entity))
 		{
@@ -1294,7 +1324,8 @@ bool ComponentsWindow::CheckEntityFilter(wi::ecs::Entity entity)
 		has_flag(filter, Filter::Font) && scene.fonts.Contains(entity) ||
 		has_flag(filter, Filter::VoxelGrid) && scene.voxel_grids.Contains(entity) ||
 		has_flag(filter, Filter::RigidBody) && scene.rigidbodies.Contains(entity) ||
-		has_flag(filter, Filter::SoftBody) && scene.softbodies.Contains(entity)
+		has_flag(filter, Filter::SoftBody) && scene.softbodies.Contains(entity) ||
+		has_flag(filter, Filter::Metadata) && scene.metadatas.Contains(entity)
 		)
 	{
 		valid = true;
