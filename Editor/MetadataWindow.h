@@ -11,7 +11,7 @@ public:
 	void SetEntity(wi::ecs::Entity entity);
 
 	wi::gui::ComboBox presetCombo;
-	wi::gui::Button addButton;
+	wi::gui::ComboBox addCombo;
 
 	struct Entry
 	{

@@ -47,6 +47,7 @@ This is a reference and explanation of Lua scripting features in Wicked Engine.
 		19. [ExpressionComponent](#expressioncomponent)
 		19. [HumanoidComponent](#humanoidcomponent)
 		19. [DecalComponent](#decalcomponent)
+		19. [MetadataComponent](#metadatacomponent)
 	10. [Canvas](#canvas)
 	11. [High Level Interface](#high-level-interface)
 		1. [Application](#application)
@@ -734,6 +735,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_CreateSprite(Entity entity) : Sprite result  -- attach a Sprite to an entity. The returned component is associated with the entity and can be manipulated
 - Component_CreateFont(Entity entity) : SpriteFont result  -- attach a SpriteFont to an entity. The returned component is associated with the entity and can be manipulated
 - Component_CreateVoxelGrid(Entity entity) : VoxelGrid result  -- attach a VoxelGrid to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateMetadata(Entity entity) : MetadataComponent result  -- attach a MetadataComponent to an entity. The returned component is associated with the entity and can be manipulated
 
 - Component_GetName(Entity entity) : NameComponent? result  -- query the name component of the entity (if exists)
 - Component_GetLayer(Entity entity) : LayerComponent? result  -- query the layer component of the entity (if exists)
@@ -757,7 +759,8 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_GetHumanoid(Entity entity) : HumanoidComponent? result  -- query the HumanoidComponent of the entity (if exists)
 - Component_GetDecal(Entity entity) : DecalComponent? result  -- query the DecalComponent of the entity (if exists)
 - Component_GetSprite(Entity entity) : Sprite? result  -- query the Sprite of the entity (if exists)
-- Component_GetVoxexlGrid(Entity entity) : VoxelGrid? result  -- query the VoxelGrid of the entity (if exists)
+- Component_GetVoxelGrid(Entity entity) : VoxelGrid? result  -- query the VoxelGrid of the entity (if exists)
+- Component_GetMetadata(Entity entity) : MetadataComponent? result  -- query the MetadataComponent of the entity (if exists)
 
 - Component_GetNameArray() : NameComponent[] result  -- returns the array of all components of this type
 - Component_GetLayerArray() : LayerComponent[] result  -- returns the array of all components of this type
@@ -784,6 +787,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_GetSpriteArray() : Sprite[] result  -- returns the array of all components of this type
 - Component_GetFontArray() : SpriteFont[] result  -- returns the array of all components of this type
 - Component_GetVoxelGridArray() : VoxelGrid[] result  -- returns the array of all components of this type
+- Component_GetMetadataArray() : MetadataComponent[] result  -- returns the array of all components of this type
 
 - Entity_GetNameArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetLayerArray() : Entity[] result  -- returns the array of all entities that have this component type
@@ -811,6 +815,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Entity_GetSpriteArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetFontArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetVoxelGridArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetMetadataArray() : Entity[] result  -- returns the array of all entities that have this component type
 
 - Component_RemoveName(Entity entity)  -- remove the name component of the entity (if exists)
 - Component_RemoveLayer(Entity entity)  -- remove the layer component of the entity (if exists)
@@ -837,6 +842,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_RemoveSprite(Entity entity)  -- remove the Sprite of the entity (if exists)
 - Component_RemoveFont(Entity entity)  -- remove the SpriteFont of the entity (if exists)
 - Component_RemoveVoxelGrid(Entity entity)  -- remove the VoxelGrid of the entity (if exists)
+- Component_RemoveMetadata(Entity entity)  -- remove the MetadataComponent of the entity (if exists)
 
 - Component_Attach(Entity entity,parent, opt bool child_already_in_local_space = false)  -- attaches entity to parent (adds a hierarchy component to entity). From now on, entity will inherit certain properties from parent, such as transform (entity will move with parent) or layer (entity's layer will be a sublayer of parent's layer). If child_already_in_local_space is false, then child will be transformed into parent's local space, if true, it will be used as-is.
 - Component_Detach(Entity entity)  -- detaches entity from parent (if hierarchycomponent exists for it). Restores entity's original layer, and applies current transformation to entity
@@ -1460,6 +1466,30 @@ The decal component is a textured sticker that can be put down onto meshes. Most
 - IsBaseColorOnlyAlpha() : bool
 - SetSlopeBlendPower(float value)
 - GetSlopeBlendPower() : float
+
+#### MetadataComponent
+The metadata component can store and retrieve an arbitrary amount of named user values for an entity
+
+- GetPreset() : int
+- GetBool(string name) : bool
+- GetInt(string name) : int
+- GetFloat(string name) : float
+- GetString(string name) : string
+
+- SetPreset(int preset)
+- SetBool(string name, bool value)
+- SetInt(string name, int value)
+- SetFloat(string name, float value)
+- SetString(string name, string value)
+
+[outer] MetadataPreset = {
+	Custom = 0,
+	Waypoint = 1,
+	Player = 2,
+	Enemy = 3,
+	NPC = 4,
+	Pickup = 5,
+}
 
 
 ## Canvas

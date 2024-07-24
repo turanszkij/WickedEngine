@@ -43,20 +43,41 @@ void MetadataWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&presetCombo);
 
-	addButton.Create("");
-	addButton.SetText("+");
-	addButton.OnClick([this](wi::gui::EventArgs args) {
+	addCombo.Create("");
+	addCombo.SetInvalidSelectionText("+");
+	addCombo.SetDropArrowEnabled(false);
+	addCombo.AddItem("bool");
+	addCombo.AddItem("int");
+	addCombo.AddItem("float");
+	addCombo.AddItem("string");
+	addCombo.OnSelect([this](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
 		{
 			MetadataComponent* metadata = scene.metadatas.GetComponent(x.entity);
 			if (metadata == nullptr)
 				continue;
-			metadata->bool_values["name"] = false;
-			RefreshEntries();
+			switch (args.iValue)
+			{
+			default:
+			case 0:
+				metadata->bool_values["name"] = false;
+				break;
+			case 1:
+				metadata->int_values["name"] = 0;
+				break;
+			case 2:
+				metadata->float_values["name"] = 0.0f;
+				break;
+			case 3:
+				metadata->string_values["name"] = "value";
+				break;
+			}
 		}
+		addCombo.SetSelectedWithoutCallback(-1);
+		RefreshEntries();
 	});
-	AddWidget(&addButton);
+	AddWidget(&addCombo);
 
 	SetMinimized(true);
 	SetVisible(false);
@@ -82,6 +103,8 @@ void MetadataWindow::SetEntity(Entity entity)
 		{
 			RefreshEntries();
 		}
+
+		SetEnabled(true);
 	}
 }
 
@@ -126,10 +149,13 @@ void MetadataWindow::RefreshEntries()
 
 		entry.is_bool = true;
 		entry.check.Create("");
-		entry.check.SetText(" = ");
+		entry.check.SetText(" = (bool) ");
 		entry.check.SetCheck(x.second);
-		entry.check.OnClick([metadata, name](wi::gui::EventArgs args) {
+		entry.check.OnClick([metadata, name, this](wi::gui::EventArgs args) {
 			metadata->bool_values[name] = args.bValue;
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
+				RefreshEntries();
+				});
 		});
 		AddWidget(&entry.check);
 
@@ -142,6 +168,129 @@ void MetadataWindow::RefreshEntries()
 				RefreshEntries();
 			});
 		});
+		AddWidget(&entry.remove);
+	}
+
+	for (auto& x : metadata->int_values)
+	{
+		std::string name = x.first;
+		Entry& entry = entries.emplace_back();
+		entry.name.Create("");
+		entry.name.SetText(name);
+		entry.name.OnInputAccepted([metadata, name, this](wi::gui::EventArgs args) {
+			auto value = metadata->int_values[name];
+			metadata->int_values.erase(name);
+			metadata->int_values[args.sValue] = value;
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
+				RefreshEntries();
+				});
+			});
+		AddWidget(&entry.name);
+
+		entry.is_bool = false;
+		entry.value.Create("");
+		entry.value.SetDescription(" = (int) ");
+		entry.value.SetSize(XMFLOAT2(60, entry.value.GetSize().y));
+		entry.value.SetValue(metadata->int_values[name]);
+		entry.value.OnInputAccepted([metadata, name, this](wi::gui::EventArgs args) {
+			metadata->int_values[name] = args.iValue;
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
+				RefreshEntries();
+				});
+			});
+		AddWidget(&entry.value);
+
+		entry.remove.Create("");
+		entry.remove.SetText("X");
+		entry.remove.SetSize(XMFLOAT2(entry.remove.GetSize().y, entry.remove.GetSize().y));
+		entry.remove.OnClick([metadata, name, this](wi::gui::EventArgs args) {
+			metadata->int_values.erase(name);
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
+				RefreshEntries();
+				});
+			});
+		AddWidget(&entry.remove);
+	}
+
+	for (auto& x : metadata->float_values)
+	{
+		std::string name = x.first;
+		Entry& entry = entries.emplace_back();
+		entry.name.Create("");
+		entry.name.SetText(name);
+		entry.name.OnInputAccepted([metadata, name, this](wi::gui::EventArgs args) {
+			auto value = metadata->float_values[name];
+			metadata->float_values.erase(name);
+			metadata->float_values[args.sValue] = value;
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
+				RefreshEntries();
+				});
+			});
+		AddWidget(&entry.name);
+
+		entry.is_bool = false;
+		entry.value.Create("");
+		entry.value.SetDescription(" = (float) ");
+		entry.value.SetSize(XMFLOAT2(60, entry.value.GetSize().y));
+		entry.value.SetValue(metadata->float_values[name]);
+		entry.value.OnInputAccepted([metadata, name, this](wi::gui::EventArgs args) {
+			metadata->float_values[name] = args.fValue;
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
+				RefreshEntries();
+				});
+			});
+		AddWidget(&entry.value);
+
+		entry.remove.Create("");
+		entry.remove.SetText("X");
+		entry.remove.SetSize(XMFLOAT2(entry.remove.GetSize().y, entry.remove.GetSize().y));
+		entry.remove.OnClick([metadata, name, this](wi::gui::EventArgs args) {
+			metadata->float_values.erase(name);
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
+				RefreshEntries();
+				});
+			});
+		AddWidget(&entry.remove);
+	}
+
+	for (auto& x : metadata->string_values)
+	{
+		std::string name = x.first;
+		Entry& entry = entries.emplace_back();
+		entry.name.Create("");
+		entry.name.SetText(name);
+		entry.name.OnInputAccepted([metadata, name, this](wi::gui::EventArgs args) {
+			auto value = metadata->string_values[name];
+			metadata->string_values.erase(name);
+			metadata->string_values[args.sValue] = value;
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
+				RefreshEntries();
+				});
+			});
+		AddWidget(&entry.name);
+
+		entry.is_bool = false;
+		entry.value.Create("");
+		entry.value.SetDescription(" = (string) ");
+		entry.value.SetSize(XMFLOAT2(120, entry.value.GetSize().y));
+		entry.value.SetValue(metadata->string_values[name]);
+		entry.value.OnInputAccepted([metadata, name, this](wi::gui::EventArgs args) {
+			metadata->string_values[name] = args.sValue;
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
+				RefreshEntries();
+				});
+			});
+		AddWidget(&entry.value);
+
+		entry.remove.Create("");
+		entry.remove.SetText("X");
+		entry.remove.SetSize(XMFLOAT2(entry.remove.GetSize().y, entry.remove.GetSize().y));
+		entry.remove.OnClick([metadata, name, this](wi::gui::EventArgs args) {
+			metadata->string_values.erase(name);
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
+				RefreshEntries();
+				});
+			});
 		AddWidget(&entry.remove);
 	}
 
@@ -186,7 +335,7 @@ void MetadataWindow::ResizeLayout()
 		};
 
 	add(presetCombo);
-	add_fullwidth(addButton);
+	add_fullwidth(addCombo);
 
 	for (auto& entry : entries)
 	{
@@ -200,10 +349,10 @@ void MetadataWindow::ResizeLayout()
 		}
 		else
 		{
-			entry.value.SetSize(XMFLOAT2((width - padding * 2 - entry.remove.GetSize().x) * 0.4f, entry.value.GetSize().y));
+			entry.value.SetSize(XMFLOAT2(wi::font::TextWidth(entry.value.GetCurrentInputValue(), entry.value.font.params) + 10, entry.value.GetSize().y));
 			entry.value.SetPos(XMFLOAT2(width - padding - entry.value.GetSize().x, y));
 
-			entry.name.SetSize(XMFLOAT2(width - wi::font::TextWidth(entry.check.GetText(), entry.check.font.params) - padding * 3 - entry.value.GetSize().x - entry.remove.GetSize().x, entry.name.GetSize().y));
+			entry.name.SetSize(XMFLOAT2(width - wi::font::TextWidth(entry.value.GetDescription(), entry.value.font.params) - padding * 3 - entry.value.GetSize().x - entry.remove.GetSize().x, entry.name.GetSize().y));
 		}
 
 		entry.name.SetPos(XMFLOAT2(entry.remove.GetPos().x + entry.remove.GetSize().x + padding, y));
