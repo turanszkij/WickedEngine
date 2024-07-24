@@ -4010,6 +4010,10 @@ Luna<AnimationComponent_BindLua>::FunctionType AnimationComponent_BindLua::metho
 	lunamethod(AnimationComponent_BindLua, SetStart),
 	lunamethod(AnimationComponent_BindLua, GetEnd),
 	lunamethod(AnimationComponent_BindLua, SetEnd),
+	lunamethod(AnimationComponent_BindLua, SetPingPong),
+	lunamethod(AnimationComponent_BindLua, IsPingPong),
+	lunamethod(AnimationComponent_BindLua, SetPlayOnce),
+	lunamethod(AnimationComponent_BindLua, IsPlayingOnce),
 	lunamethod(AnimationComponent_BindLua, IsRootMotion),
 	lunamethod(AnimationComponent_BindLua, RootMotionOn),
 	lunamethod(AnimationComponent_BindLua, RootMotionOff),
@@ -4142,6 +4146,35 @@ int AnimationComponent_BindLua::SetEnd(lua_State* L)
 		wi::lua::SError(L, "SetEnd(float value) not enough arguments!");
 	}
 	return 0;
+}
+int AnimationComponent_BindLua::SetPingPong(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		bool value = wi::lua::SGetBool(L, 1);
+		component->SetPingPong(value);
+	}
+	else
+	{
+		wi::lua::SError(L, "SetPingPong(bool value) not enough arguments!");
+	}
+	return 0;
+}
+int AnimationComponent_BindLua::IsPingPong(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsPingPong());
+	return 1;
+}
+int AnimationComponent_BindLua::SetPlayOnce(lua_State* L)
+{
+	component->SetPlayOnce();
+	return 0;
+}
+int AnimationComponent_BindLua::IsPlayingOnce(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsPlayingOnce());
+	return 1;
 }
 
 int AnimationComponent_BindLua::IsRootMotion(lua_State* L)

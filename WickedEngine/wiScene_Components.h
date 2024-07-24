@@ -1342,7 +1342,8 @@ namespace wi::scene
 			EMPTY = 0,
 			PLAYING = 1 << 0,
 			LOOPED = 1 << 1,
-			ROOT_MOTION = 1 << 2
+			ROOT_MOTION = 1 << 2,
+			PING_PONG = 1 << 3,
 		};
 		uint32_t _flags = LOOPED;
 		float start = 0;
@@ -1481,6 +1482,8 @@ namespace wi::scene
 
 		inline bool IsPlaying() const { return _flags & PLAYING; }
 		inline bool IsLooped() const { return _flags & LOOPED; }
+		inline bool IsPingPong() const { return _flags & PING_PONG; }
+		inline bool IsPlayingOnce() const { return (_flags & (LOOPED | PING_PONG)) == 0; }
 		inline float GetLength() const { return end - start; }
 		inline bool IsEnded() const { return timer >= end; }
 		inline bool IsRootMotion() const { return _flags & ROOT_MOTION; }
@@ -1488,7 +1491,9 @@ namespace wi::scene
 		inline void Play() { _flags |= PLAYING; }
 		inline void Pause() { _flags &= ~PLAYING; }
 		inline void Stop() { Pause(); timer = 0.0f; last_update_time = timer; }
-		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
+		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; _flags &= ~PING_PONG; } else { _flags &= ~LOOPED; } }
+		inline void SetPingPong(bool value = true) { if (value) { _flags |= PING_PONG; _flags &= ~LOOPED; } else { _flags &= ~PING_PONG; } }
+		inline void SetPlayOnce() { _flags &= ~(LOOPED | PING_PONG); }
 
 		inline void RootMotionOn() { _flags |= ROOT_MOTION; }
 		inline void RootMotionOff() { _flags &= ~ROOT_MOTION; }

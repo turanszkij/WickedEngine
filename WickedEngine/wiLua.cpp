@@ -202,6 +202,9 @@ namespace wi::lua
 
 	void Initialize()
 	{
+		if (lua_internal().m_luaState != nullptr)
+			return; // already initialized
+
 		wi::Timer timer;
 
 		lua_internal().m_luaState = luaL_newstate();
