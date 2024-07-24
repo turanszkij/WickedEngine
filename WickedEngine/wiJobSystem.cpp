@@ -30,6 +30,32 @@ namespace wi::jobsystem
 		uint32_t groupJobOffset;
 		uint32_t groupJobEnd;
 		uint32_t sharedmemory_size;
+		inline void execute()
+		{
+			JobArgs args;
+			args.groupID = groupID;
+			if (sharedmemory_size > 0)
+			{
+				thread_local static wi::vector<uint8_t> shared_allocation_data;
+				shared_allocation_data.reserve(sharedmemory_size);
+				args.sharedmemory = shared_allocation_data.data();
+			}
+			else
+			{
+				args.sharedmemory = nullptr;
+			}
+
+			for (uint32_t j = groupJobOffset; j < groupJobEnd; ++j)
+			{
+				args.jobIndex = j;
+				args.groupIndex = j - groupJobOffset;
+				args.isFirstJobInGroup = (j == groupJobOffset);
+				args.isLastJobInGroup = (j == groupJobEnd - 1);
+				task(args);
+			}
+
+			ctx->counter.fetch_sub(1);
+		}
 	};
 	struct JobQueue
 	{
@@ -72,29 +98,7 @@ namespace wi::jobsystem
 				JobQueue& job_queue = jobQueuePerThread[startingQueue % numThreads];
 				while (job_queue.pop_front(job))
 				{
-					JobArgs args;
-					args.groupID = job.groupID;
-					if (job.sharedmemory_size > 0)
-					{
-						thread_local static wi::vector<uint8_t> shared_allocation_data;
-						shared_allocation_data.reserve(job.sharedmemory_size);
-						args.sharedmemory = shared_allocation_data.data();
-					}
-					else
-					{
-						args.sharedmemory = nullptr;
-					}
-
-					for (uint32_t j = job.groupJobOffset; j < job.groupJobEnd; ++j)
-					{
-						args.jobIndex = j;
-						args.groupIndex = j - job.groupJobOffset;
-						args.isFirstJobInGroup = (j == job.groupJobOffset);
-						args.isLastJobInGroup = (j == job.groupJobEnd - 1);
-						job.task(args);
-					}
-
-					job.ctx->counter.fetch_sub(1);
+					job.execute();
 				}
 				startingQueue++; // go to next queue
 			}
@@ -305,6 +309,8 @@ namespace wi::jobsystem
 
 	void Execute(context& ctx, const std::function<void(JobArgs)>& task)
 	{
+		PriorityResources& res = internal_state.resources[int(ctx.priority)];
+
 		// Context state is updated:
 		ctx.counter.fetch_add(1);
 
@@ -316,7 +322,13 @@ namespace wi::jobsystem
 		job.groupJobEnd = 1;
 		job.sharedmemory_size = 0;
 
-		PriorityResources& res = internal_state.resources[int(ctx.priority)];
+		if (res.numThreads <= 1)
+		{
+			// If job system is not yet initialized, or only has one threads, job will be executed immediately here instead of thread:
+			job.execute();
+			return;
+		}
+
 		res.jobQueuePerThread[res.nextQueue.fetch_add(1) % res.numThreads].push_back(job);
 		res.wakeCondition.notify_one();
 	}
@@ -346,10 +358,21 @@ namespace wi::jobsystem
 			job.groupJobOffset = groupID * groupSize;
 			job.groupJobEnd = std::min(job.groupJobOffset + groupSize, jobCount);
 
-			res.jobQueuePerThread[res.nextQueue.fetch_add(1) % res.numThreads].push_back(job);
+			if (res.numThreads <= 1)
+			{
+				// If job system is not yet initialized, or only has one threads, job will be executed immediately here instead of thread:
+				job.execute();
+			}
+			else
+			{
+				res.jobQueuePerThread[res.nextQueue.fetch_add(1) % res.numThreads].push_back(job);
+			}
 		}
 
-		res.wakeCondition.notify_all();
+		if (res.numThreads > 1)
+		{
+			res.wakeCondition.notify_all();
+		}
 	}
 
 	uint32_t DispatchGroupCount(uint32_t jobCount, uint32_t groupSize)

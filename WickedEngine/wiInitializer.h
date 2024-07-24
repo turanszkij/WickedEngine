@@ -29,4 +29,6 @@ namespace wi::initializer
 	// Check if systems have been initialized or not
 	//	system : specify to check a specific system, or leave default to check all systems
 	bool IsInitializeFinished(INITIALIZED_SYSTEM system = INITIALIZED_SYSTEM_COUNT);
+	// Wait for all system initializations to finish
+	void WaitForInitializationsToFinish();
 }

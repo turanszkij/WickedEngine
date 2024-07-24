@@ -52,6 +52,11 @@ namespace wi
 		wi::initializer::InitializeComponentsAsync();
 
 		alwaysactive = wi::arguments::HasArgument("alwaysactive");
+
+		// Note: lua is always initialized immediately on main thread by wi::initializer, so this is safe to do:
+		assert(wi::initializer::IsInitializeFinished(wi::initializer::INITIALIZED_SYSTEM_LUA));
+		Luna<wi::lua::Application_BindLua>::push_global(wi::lua::GetLuaState(), "main", this);
+		Luna<wi::lua::Application_BindLua>::push_global(wi::lua::GetLuaState(), "application", this);
 	}
 
 	void Application::ActivatePath(RenderPath* component, float fadeSeconds, wi::Color fadeColor)
@@ -114,8 +119,6 @@ namespace wi
 		if (!startup_script)
 		{
 			startup_script = true;
-			Luna<wi::lua::Application_BindLua>::push_global(wi::lua::GetLuaState(), "main", this);
-			Luna<wi::lua::Application_BindLua>::push_global(wi::lua::GetLuaState(), "application", this);
 			std::string startup_lua_filename = wi::helper::GetCurrentPath() + "/startup.lua";
 			if (wi::helper::FileExists(startup_lua_filename))
 			{
@@ -511,6 +514,10 @@ namespace wi
 			if (wi::renderer::GetShaderErrorCount() > 0)
 			{
 				params.cursor = wi::font::Draw(std::to_string(wi::renderer::GetShaderErrorCount()) + " shader compilation errors! Check the backlog for more information!\n", params, cmd);
+			}
+			if (wi::backlog::GetUnseenLogLevelMax() >= wi::backlog::LogLevel::Error)
+			{
+				params.cursor = wi::font::Draw("Errors found, check the backlog for more information!", params, cmd);
 			}
 
 			if (infoDisplay.colorgrading_helper)
