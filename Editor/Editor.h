@@ -114,6 +114,9 @@ public:
 	wi::Color backgroundEntityColor = wi::Color::Black();
 	wi::Color dummyColor = wi::Color::White();
 
+	wi::graphics::Texture rt_metadataDummies_MSAA;
+	wi::graphics::Texture rt_metadataDummies;
+
 	const wi::Color springDebugColor = wi::Color(255, 70, 165, 255);
 	const wi::Color ikDebugColor = wi::Color(49, 190, 103, 255);
 

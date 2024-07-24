@@ -19,15 +19,6 @@ extern bool window_recreating;
 #include "sdl2.h"
 #endif // PLATFORM_WINDOWS
 
-namespace dummy_female
-{
-#include "dummy_female.h"
-}
-namespace dummy_male
-{
-#include "dummy_male.h"
-}
-
 enum class FileType
 {
 	INVALID,
@@ -2456,6 +2447,13 @@ void EditorComponent::PostUpdate()
 void EditorComponent::Render() const
 {
 	const Scene& scene = GetCurrentScene();
+	const CameraComponent& camera = GetCurrentEditorScene().camera;
+
+	// remove camera jittering
+	CameraComponent cam = *renderPath->camera;
+	cam.jitter = XMFLOAT2(0, 0);
+	cam.UpdateCamera();
+	const XMMATRIX VP = cam.GetViewProjection();
 
 	// Hovered item boxes:
 	if (GetGUI().IsVisible())
@@ -2665,12 +2663,6 @@ void EditorComponent::Render() const
 			device->EventEnd(cmd);
 		}
 
-		// remove camera jittering
-		CameraComponent cam = *renderPath->camera;
-		cam.jitter = XMFLOAT2(0, 0);
-		cam.UpdateCamera();
-		const XMMATRIX VP = cam.GetViewProjection();
-
 		// Reference dummy render:
 		if(dummy_enabled)
 		{
@@ -2685,16 +2677,67 @@ void EditorComponent::Render() const
 			vp.height = (float)rt_dummyOutline.GetDesc().height;
 			device->BindViewports(1, &vp, cmd);
 
-			static DummyVisualizer dummies[2];
-			dummies[dummy_male].Draw(
-				dummy_male ? dummy_male::vertices : dummy_female::vertices,
-				dummy_male ? arraysize(dummy_male::vertices) : arraysize(dummy_female::vertices),
-				dummy_male ? dummy_male::indices : dummy_female::indices,
-				dummy_male ? arraysize(dummy_male::indices) : arraysize(dummy_female::indices),
-				XMMatrixTranslation(dummy_pos.x, dummy_pos.y, dummy_pos.z) * VP,
-				XMFLOAT4(1, 1, 1, 1),
-				cmd
-			);
+			if (dummy_male)
+			{
+				dummy::draw_male(XMMatrixTranslation(dummy_pos.x, dummy_pos.y, dummy_pos.z) * VP, XMFLOAT4(1, 1, 1, 1), cmd);
+			}
+			else
+			{
+				dummy::draw_female(XMMatrixTranslation(dummy_pos.x, dummy_pos.y, dummy_pos.z)* VP, XMFLOAT4(1, 1, 1, 1), cmd);
+			}
+
+			device->RenderPassEnd(cmd);
+			device->EventEnd(cmd);
+		}
+
+		if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Metadata) && scene.metadatas.GetCount() > 0)
+		{
+			device->EventBegin("Metadata Dummy", cmd);
+			if (renderPath->getMSAASampleCount() > 1)
+			{
+				RenderPassImage rp[] = {
+					RenderPassImage::RenderTarget(&rt_metadataDummies_MSAA, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::DepthStencil(renderPath->GetDepthStencil()),
+					RenderPassImage::Resolve(&rt_metadataDummies)
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
+			}
+			else
+			{
+				RenderPassImage rp[] = {
+					RenderPassImage::RenderTarget(&rt_metadataDummies, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::DepthStencil(renderPath->GetDepthStencil()),
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
+			}
+
+			Viewport vp;
+			vp.width = (float)rt_metadataDummies.GetDesc().width;
+			vp.height = (float)rt_metadataDummies.GetDesc().height;
+			device->BindViewports(1, &vp, cmd);
+
+			for (size_t i = 0; i < scene.metadatas.GetCount(); ++i)
+			{
+				Entity entity = scene.metadatas.GetEntity(i);
+				if (!scene.transforms.Contains(entity))
+					continue;
+				const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+				const MetadataComponent& metadata = scene.metadatas[i];
+				switch (metadata.preset)
+				{
+				default:
+					break;
+				case MetadataComponent::Preset::Enemy:
+					dummy::draw_male(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(1, 0.2f, 0.2f, 1), cmd);
+					break;
+				case MetadataComponent::Preset::Player:
+					dummy::draw_female(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(0.2f, 1, 0.2f, 1), cmd);
+					break;
+				case MetadataComponent::Preset::NPC:
+					dummy::draw_female(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(1, 1, 0.2f, 1), cmd);
+					break;
+				}
+			}
 
 			device->RenderPassEnd(cmd);
 			device->EventEnd(cmd);
@@ -2774,16 +2817,6 @@ void EditorComponent::Render() const
 				dummyColorBlinking.w = wi::math::Lerp(0.4f, 1, selectionColorIntensity);
 				wi::renderer::Postprocess_Outline(rt_dummyOutline, cmd, 0.1f, 1, dummyColorBlinking);
 			}
-
-			const CameraComponent& camera = GetCurrentEditorScene().camera;
-
-			const Scene& scene = GetCurrentScene();
-
-			// remove camera jittering
-			CameraComponent cam = *renderPath->camera;
-			cam.jitter = XMFLOAT2(0, 0);
-			cam.UpdateCamera();
-			const XMMATRIX VP = cam.GetViewProjection();
 
 			MiscCB sb;
 			XMStoreFloat4x4(&sb.g_xTransform, VP);
@@ -3223,12 +3256,17 @@ void EditorComponent::Render() const
 						}
 					}
 
-
 					wi::font::Draw(ICON_VOXELGRID, fp, cmd);
 				}
 			}
 			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Metadata))
 			{
+				wi::image::Params fx;
+				fx.enableFullScreen();
+				fx.blendFlag = wi::enums::BLENDMODE_ALPHA;
+				fx.color.w = wi::math::Lerp(0.2f, 0.6f, selectionColorIntensity);
+				wi::image::Draw(&rt_metadataDummies, fx, cmd);
+
 				for (size_t i = 0; i < scene.metadatas.GetCount(); ++i)
 				{
 					Entity entity = scene.metadatas.GetEntity(i);
@@ -3252,7 +3290,6 @@ void EditorComponent::Render() const
 							break;
 						}
 					}
-
 
 					wi::font::Draw(ICON_METADATA, fp, cmd);
 				}
@@ -3699,11 +3736,11 @@ void EditorComponent::ResizeViewport3D()
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
+		XMUINT2 internalResolution = renderPath->GetInternalResolution();
+
 		if (renderPath->GetDepthStencil() != nullptr)
 		{
 			bool success = false;
-
-			XMUINT2 internalResolution = renderPath->GetInternalResolution();
 
 			TextureDesc desc;
 			desc.width = internalResolution.x;
@@ -3762,6 +3799,25 @@ void EditorComponent::ResizeViewport3D()
 				desc.layout = ResourceState::RENDERTARGET;
 				device->CreateTexture(&desc, nullptr, &editor_rendertarget);
 				device->SetName(&editor_rendertarget, "editor_rendertarget");
+			}
+		}
+
+		{
+			TextureDesc desc;
+			desc.width = internalResolution.x;
+			desc.height = internalResolution.y;
+			desc.format = Format::R8G8B8A8_UNORM;
+			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+			device->CreateTexture(&desc, nullptr, &rt_metadataDummies);
+			device->SetName(&rt_metadataDummies, "rt_metadataDummies");
+
+			if (renderPath->getMSAASampleCount() > 1)
+			{
+				desc.sample_count = renderPath->getMSAASampleCount();
+				desc.bind_flags = BindFlag::RENDER_TARGET;
+				desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
+				device->CreateTexture(&desc, nullptr, &rt_metadataDummies_MSAA);
+				device->SetName(&rt_metadataDummies_MSAA, "rt_metadataDummies_MSAA");
 			}
 		}
 	}

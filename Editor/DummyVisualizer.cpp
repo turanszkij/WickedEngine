@@ -8,9 +8,9 @@ void DummyVisualizer::Draw(
 	uint32_t vertices_count,
 	const unsigned int* indices,
 	uint32_t indices_count,
-	XMMATRIX matrix,
-	XMFLOAT4 color,
-	CommandList cmd
+	const XMMATRIX& matrix,
+	const XMFLOAT4& color,
+	wi::graphics::CommandList cmd
 )
 {
 	GraphicsDevice* device = GetDevice();
@@ -55,7 +55,7 @@ void DummyVisualizer::Draw(
 
 			uint32_t* gpu_indices = (uint32_t*)(gpu_vertices + vertices_count);
 			std::memcpy(gpu_indices, indices, indices_count * sizeof(uint32_t));
-		};
+			};
 
 		GPUBufferDesc desc;
 		desc.size = indices_count * sizeof(uint32_t) + vertices_count * sizeof(Vertex);
@@ -83,4 +83,20 @@ void DummyVisualizer::Draw(
 	device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 	device->BindIndexBuffer(&buffer, IndexBufferFormat::UINT32, vertices_count * sizeof(Vertex), cmd);
 	device->DrawIndexed((uint32_t)indices_count, 0, 0, cmd);
+}
+
+namespace dummy
+{
+	void draw_male(const XMMATRIX& matrix, const XMFLOAT4& color, wi::graphics::CommandList cmd)
+	{
+#include "dummy_male.h"
+		static DummyVisualizer vis;
+		vis.Draw(vertices, arraysize(vertices), indices, arraysize(indices), matrix, color, cmd);
+	}
+	void draw_female(const XMMATRIX& matrix, const XMFLOAT4& color, wi::graphics::CommandList cmd)
+	{
+#include "dummy_female.h"
+		static DummyVisualizer vis;
+		vis.Draw(vertices, arraysize(vertices), indices, arraysize(indices), matrix, color, cmd);
+	}
 }
