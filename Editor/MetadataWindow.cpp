@@ -349,7 +349,7 @@ void MetadataWindow::ResizeLayout()
 		}
 		else
 		{
-			entry.value.SetSize(XMFLOAT2(wi::font::TextWidth(entry.value.GetCurrentInputValue(), entry.value.font.params) + 10, entry.value.GetSize().y));
+			entry.value.SetSize(XMFLOAT2(std::max(wi::font::TextWidth(entry.value.GetCurrentInputValue(), entry.value.font.params) + padding, entry.value.GetSize().y), entry.value.GetSize().y));
 			entry.value.SetPos(XMFLOAT2(width - padding - entry.value.GetSize().x, y));
 
 			entry.name.SetSize(XMFLOAT2(width - wi::font::TextWidth(entry.value.GetDescription(), entry.value.font.params) - padding * 3 - entry.value.GetSize().x - entry.remove.GetSize().x, entry.name.GetSize().y));

@@ -1531,6 +1531,25 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Metadata))
+			{
+				for (size_t i = 0; i < scene.metadatas.GetCount(); ++i)
+				{
+					Entity entity = scene.metadatas.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
+					float dis = XMVectorGetX(disV);
+					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					{
+						hovered = wi::scene::PickResult();
+						hovered.entity = entity;
+						hovered.distance = dis;
+					}
+				}
+			}
 			if (bone_picking)
 			{
 				for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
@@ -3279,6 +3298,36 @@ void EditorComponent::Render() const
 
 
 					wi::font::Draw(ICON_VOXELGRID, fp, cmd);
+				}
+			}
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Metadata))
+			{
+				for (size_t i = 0; i < scene.metadatas.GetCount(); ++i)
+				{
+					Entity entity = scene.metadatas.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					fp.position = transform.GetPosition();
+					fp.scaling = scaling * wi::math::Distance(transform.GetPosition(), camera.Eye);
+					fp.color = inactiveEntityColor;
+
+					if (hovered.entity == entity)
+					{
+						fp.color = hoveredEntityColor;
+					}
+					for (auto& picked : translator.selected)
+					{
+						if (picked.entity == entity)
+						{
+							fp.color = selectedEntityColor;
+							break;
+						}
+					}
+
+
+					wi::font::Draw(ICON_METADATA, fp, cmd);
 				}
 			}
 			if (bone_picking)
