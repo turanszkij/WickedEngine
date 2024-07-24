@@ -781,7 +781,7 @@ namespace wi::gui
 		OnDragStart([](EventArgs args) {});
 		OnDrag([](EventArgs args) {});
 		OnDragEnd([](EventArgs args) {});
-		SetSize(XMFLOAT2(100, 30));
+		SetSize(XMFLOAT2(100, 20));
 
 		font.params.h_align = wi::font::WIFALIGN_CENTER;
 		font.params.v_align = wi::font::WIFALIGN_CENTER;
@@ -1401,7 +1401,7 @@ namespace wi::gui
 		SetName(name);
 		SetText(name);
 		OnInputAccepted([](EventArgs args) {});
-		SetSize(XMFLOAT2(100, 30));
+		SetSize(XMFLOAT2(100, 20));
 
 		font.params.v_align = wi::font::WIFALIGN_CENTER;
 

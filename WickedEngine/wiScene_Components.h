@@ -2018,18 +2018,10 @@ namespace wi::scene
 		};
 		Preset preset = Preset::Custom;
 
-		struct Value
-		{
-			union
-			{
-				int intValue;
-				bool boolValue;
-				float floatValue;
-				XMFLOAT4 vectorValue = XMFLOAT4(0, 0, 0, 0);
-			};
-			std::string stringValue;
-		};
-		wi::unordered_map<std::string, Value> values;
+		wi::unordered_map<std::string, bool> bool_values;
+		wi::unordered_map<std::string, int> int_values;
+		wi::unordered_map<std::string, float> float_values;
+		wi::unordered_map<std::string, std::string> string_values;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

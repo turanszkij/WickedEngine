@@ -618,6 +618,17 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			}
 		}
 
+		for (auto& x : editor->componentsWnd.metadataWnd.entries)
+		{
+			x.remove.SetColor(wi::Color::Error(), wi::gui::WIDGETSTATE::FOCUS);
+			for (auto& sprite : x.remove.sprites)
+			{
+				sprite.params.enableCornerRounding();
+				sprite.params.corners_rounding[0].radius = 10;
+				sprite.params.corners_rounding[2].radius = 10;
+			}
+		}
+
 		editor->componentsWnd.transformWnd.resetTranslationButton.SetColor(wi::Color::Error(), wi::gui::WIDGETSTATE::FOCUS);
 		for (auto& sprite : editor->componentsWnd.transformWnd.resetTranslationButton.sprites)
 		{

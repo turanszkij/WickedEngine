@@ -2127,14 +2127,49 @@ namespace wi::scene
 			preset = (Preset)intpreset;
 
 			size_t count = 0;
+
 			archive >> count;
-			values.reserve(count);
+			bool_values.reserve(count);
 			for (size_t i = 0; i < count; ++i)
 			{
 				std::string name;
 				archive >> name;
-				archive >> values[name].vectorValue; // serialize largest member of union
-				archive >> values[name].stringValue;
+				bool value;
+				archive >> value;
+				bool_values[name] = value;
+			}
+
+			archive >> count;
+			int_values.reserve(count);
+			for (size_t i = 0; i < count; ++i)
+			{
+				std::string name;
+				archive >> name;
+				int value;
+				archive >> value;
+				int_values[name] = value;
+			}
+
+			archive >> count;
+			float_values.reserve(count);
+			for (size_t i = 0; i < count; ++i)
+			{
+				std::string name;
+				archive >> name;
+				float value;
+				archive >> value;
+				float_values[name] = value;
+			}
+
+			archive >> count;
+			string_values.reserve(count);
+			for (size_t i = 0; i < count; ++i)
+			{
+				std::string name;
+				archive >> name;
+				std::string value;
+				archive >> value;
+				string_values[name] = value;
 			}
 		}
 		else
@@ -2143,12 +2178,32 @@ namespace wi::scene
 
 			archive << (int)preset;
 
-			archive << values.size();
-			for (auto& x : values)
+			archive << bool_values.size();
+			for (auto& x : bool_values)
 			{
 				archive << x.first;
-				archive << x.second.vectorValue; // serialize largest member of union
-				archive << x.second.stringValue;
+				archive << x.second;
+			}
+
+			archive << int_values.size();
+			for (auto& x : int_values)
+			{
+				archive << x.first;
+				archive << x.second;
+			}
+
+			archive << float_values.size();
+			for (auto& x : float_values)
+			{
+				archive << x.first;
+				archive << x.second;
+			}
+
+			archive << string_values.size();
+			for (auto& x : string_values)
+			{
+				archive << x.first;
+				archive << x.second;
 			}
 		}
 	}
