@@ -22,6 +22,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)ComponentsWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ContentBrowserWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)DecalWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)DummyVisualizer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Editor.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)EmbeddedResources.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)EmitterWindow.cpp" />
@@ -90,6 +91,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ComponentsWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ContentBrowserWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)DecalWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)DummyVisualizer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Editor.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)EmitterWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)EnvProbeWindow.h" />
