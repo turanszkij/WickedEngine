@@ -74,10 +74,11 @@ namespace wi::gui
 		uint32_t priority = 0;
 
 		focus = false;
+		bool force_disable = false;
 		for (size_t i = 0; i < widgets.size(); ++i)
 		{
 			Widget* widget = widgets[i]; // re index in loop, because widgets can be realloced while updating!
-			widget->force_disable = focus;
+			widget->force_disable = force_disable;
 			widget->Update(canvas, dt);
 			widget->force_disable = false;
 
@@ -99,15 +100,19 @@ namespace wi::gui
 			{
 				focus = true;
 			}
+			if (widget->GetState() > FOCUS)
+			{
+				force_disable = true;
+			}
 		}
 
-		//Sort only if there are priority changes
 		if (priority > 0)
 		{
-			//Use std::stable_sort instead of std::sort to preserve UI element order with equal priorities
+			// Sort only if there are priority changes
+			//	Use std::stable_sort instead of std::sort to preserve UI element order with equal priorities
 			std::stable_sort(widgets.begin(), widgets.end(), [](const Widget* a, const Widget* b) {
 				return a->priority < b->priority;
-				});
+			});
 		}
 
 		wi::profiler::EndRange(range);
@@ -3035,24 +3040,10 @@ namespace wi::gui
 			return;
 		}
 
-		const Widget* focus = nullptr;
-
-		// Pre-scan widgets to check if any is currently focused:
-		if (IsEnabled())
-		{
-			for (auto& widget : widgets)
-			{
-				if (widget->GetState() > IDLE)
-				{
-					focus = widget;
-				}
-			}
-		}
-
 		Hitbox2D pointerHitbox = GetPointerHitbox();
 
 		// Resizer updates:
-		if (IsEnabled() || !focus)
+		if (IsEnabled())
 		{
 			float vscale = IsCollapsed() ? control_size : scale.y;
 			Hitbox2D lefthitbox;
@@ -3105,49 +3096,41 @@ namespace wi::gui
 				{
 					resize_state = RESIZE_STATE_TOPLEFT;
 					Activate();
-					focus = this;
 				}
 				else if (pointerHitbox.intersects(toprighthitbox))
 				{
 					resize_state = RESIZE_STATE_TOPRIGHT;
 					Activate();
-					focus = this;
 				}
 				else if (pointerHitbox.intersects(bottomrighthitbox))
 				{
 					resize_state = RESIZE_STATE_BOTTOMRIGHT;
 					Activate();
-					focus = this;
 				}
 				else if (pointerHitbox.intersects(bottomlefthitbox))
 				{
 					resize_state = RESIZE_STATE_BOTTOMLEFT;
 					Activate();
-					focus = this;
 				}
 				else if (pointerHitbox.intersects(lefthitbox))
 				{
 					resize_state = RESIZE_STATE_LEFT;
 					Activate();
-					focus = this;
 				}
 				else if (pointerHitbox.intersects(righthitbox))
 				{
 					resize_state = RESIZE_STATE_RIGHT;
 					Activate();
-					focus = this;
 				}
 				else if (pointerHitbox.intersects(tophitbox))
 				{
 					resize_state = RESIZE_STATE_TOP;
 					Activate();
-					focus = this;
 				}
 				else if (pointerHitbox.intersects(bottomhitbox))
 				{
 					resize_state = RESIZE_STATE_BOTTOM;
 					Activate();
-					focus = this;
 				}
 				resize_begin = pointerHitbox.pos;
 			}
@@ -3395,10 +3378,12 @@ namespace wi::gui
 		{
 			Widget* widget = widgets[i]; // re index in loop, because widgets can be realloced while updating!
 			widget->force_disable = force_disable;
-			if(focus != nullptr && focus != widget)
-				widget->force_disable = true;
 			widget->Update(canvas, dt);
 			widget->force_disable = false;
+			if (widget->GetState() > FOCUS)
+			{
+				force_disable = true;
+			}
 
 			if (widget->priority_change)
 			{
@@ -3410,12 +3395,16 @@ namespace wi::gui
 				widget->priority = ~0u;
 			}
 		}
+		force_disable = false;
 
-		if (priority > 0) //Sort only if there are priority changes
-			//Use std::stable_sort instead of std::sort to preserve UI element order with equal priorities
+		if (priority > 0)
+		{
+			// Sort only if there are priority changes
+			//	Use std::stable_sort instead of std::sort to preserve UI element order with equal priorities
 			std::stable_sort(widgets.begin(), widgets.end(), [](const Widget* a, const Widget* b) {
-			return a->priority < b->priority;
-				});
+				return a->priority < b->priority;
+			});
+		}
 
 		if (!IsMinimized() && IsVisible())
 		{
