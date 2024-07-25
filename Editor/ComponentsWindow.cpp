@@ -100,7 +100,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			{
 				wi::scene::PickResult pick;
 				pick.entity = (Entity)item.userdata;
-				editor->AddSelected(pick);
+				editor->AddSelected(pick, false);
 			}
 		}
 

@@ -3873,13 +3873,13 @@ void EditorComponent::ClearSelected()
 {
 	translator.selected.clear();
 }
-void EditorComponent::AddSelected(Entity entity)
+void EditorComponent::AddSelected(Entity entity, bool allow_refocus)
 {
 	wi::scene::PickResult res;
 	res.entity = entity;
-	AddSelected(res);
+	AddSelected(res, allow_refocus);
 }
-void EditorComponent::AddSelected(const PickResult& picked)
+void EditorComponent::AddSelected(const PickResult& picked, bool allow_refocus)
 {
 	wi::scene::Scene& scene = GetCurrentScene();
 
@@ -3899,7 +3899,10 @@ void EditorComponent::AddSelected(const PickResult& picked)
 	if (!removal)
 	{
 		translator.selected.push_back(picked);
-		componentsWnd.entityTree.FocusOnItemByUserdata(picked.entity);
+		if (allow_refocus)
+		{
+			componentsWnd.entityTree.FocusOnItemByUserdata(picked.entity);
+		}
 	}
 }
 bool EditorComponent::IsSelected(Entity entity) const

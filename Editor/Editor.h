@@ -131,8 +131,8 @@ public:
 	wi::ecs::Entity grass_interaction_entity = wi::ecs::INVALID_ENTITY;
 
 	void ClearSelected();
-	void AddSelected(wi::ecs::Entity entity);
-	void AddSelected(const wi::scene::PickResult& picked);
+	void AddSelected(wi::ecs::Entity entity, bool allow_refocus = true);
+	void AddSelected(const wi::scene::PickResult& picked, bool allow_refocus = true);
 	bool IsSelected(wi::ecs::Entity entity) const;
 	bool selectAll = false;
 	wi::unordered_set<wi::ecs::Entity> selectAllStorage;
