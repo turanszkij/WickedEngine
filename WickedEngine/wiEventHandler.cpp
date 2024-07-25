@@ -1,6 +1,5 @@
 #include "wiEventHandler.h"
 #include "wiUnorderedMap.h"
-#include "wiVector.h"
 
 #include <list>
 #include <mutex>
@@ -9,8 +8,9 @@ namespace wi::eventhandler
 {
 	struct EventManager
 	{
+		// Note: list is used because events can also add events from within and that mustn't cause invalidation like vector
 		wi::unordered_map<int, std::list<std::function<void(uint64_t)>*>> subscribers;
-		wi::unordered_map<int, wi::vector<std::function<void(uint64_t)>>> subscribers_once;
+		wi::unordered_map<int, std::list<std::function<void(uint64_t)>>> subscribers_once;
 		std::mutex locker;
 	};
 	std::shared_ptr<EventManager> manager = std::make_shared<EventManager>();

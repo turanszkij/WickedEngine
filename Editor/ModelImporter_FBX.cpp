@@ -207,6 +207,11 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 		materialcomponent.CreateRenderData();
 	}
 
+	if (fbxscene->materials.count == 0)
+	{
+		scene.Entity_CreateMaterial("fbximport_defaultmaterial");
+	}
+
 	for (const ufbx_skin_deformer* skin : fbxscene->skin_deformers)
 	{
 		Entity entity = CreateEntity();
@@ -398,7 +403,17 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 			MeshComponent::MeshSubset& subset = meshcomponent.subsets.emplace_back();
 			subset.indexOffset = (uint32_t)meshcomponent.indices.size();
 			subset.indexCount = uint32_t(indices.size());
-			subset.materialID = material_lookup[mesh->materials[part.index]];
+			if (material_lookup.empty())
+			{
+				if (scene.materials.GetCount() > 0)
+				{
+					subset.materialID = scene.materials.GetEntity(0);
+				}
+			}
+			else
+			{
+				subset.materialID = material_lookup[mesh->materials[part.index]];
+			}
 
 			for (uint32_t index : indices)
 			{

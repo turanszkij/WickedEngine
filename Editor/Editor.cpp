@@ -2679,11 +2679,11 @@ void EditorComponent::Render() const
 
 			if (dummy_male)
 			{
-				dummy::draw_male(XMMatrixTranslation(dummy_pos.x, dummy_pos.y, dummy_pos.z) * VP, XMFLOAT4(1, 1, 1, 1), cmd);
+				dummy::draw_male(XMMatrixTranslation(dummy_pos.x, dummy_pos.y, dummy_pos.z) * VP, XMFLOAT4(1, 1, 1, 1), false, cmd);
 			}
 			else
 			{
-				dummy::draw_female(XMMatrixTranslation(dummy_pos.x, dummy_pos.y, dummy_pos.z)* VP, XMFLOAT4(1, 1, 1, 1), cmd);
+				dummy::draw_female(XMMatrixTranslation(dummy_pos.x, dummy_pos.y, dummy_pos.z)* VP, XMFLOAT4(1, 1, 1, 1), false, cmd);
 			}
 
 			device->RenderPassEnd(cmd);
@@ -2716,6 +2716,10 @@ void EditorComponent::Render() const
 			vp.height = (float)rt_metadataDummies.GetDesc().height;
 			device->BindViewports(1, &vp, cmd);
 
+			static float tim = 0;
+			tim += scene.dt;
+			float sca = lerp(0.4f, 0.8f, std::abs(std::sin(tim * 2)));
+
 			for (size_t i = 0; i < scene.metadatas.GetCount(); ++i)
 			{
 				Entity entity = scene.metadatas.GetEntity(i);
@@ -2727,14 +2731,23 @@ void EditorComponent::Render() const
 				{
 				default:
 					break;
+				case MetadataComponent::Preset::Waypoint:
+					dummy::draw_waypoint(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(1, 0.2f, 0.5f, 1), true, cmd);
+					break;
 				case MetadataComponent::Preset::Enemy:
-					dummy::draw_soldier(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(1, 0.2f, 0.2f, 1), cmd);
+					dummy::draw_direction(XMMatrixRotationY(XM_PI) * XMMatrixTranslation(0, 0.1f, 0) * XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(1, 0.2f, 0.2f, 1), true, cmd);
+					dummy::draw_soldier(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(1, 0.2f, 0.2f, 1), true, cmd);
 					break;
 				case MetadataComponent::Preset::Player:
-					dummy::draw_male(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(0.2f, 1, 0.6f, 1), cmd);
+					dummy::draw_direction(XMMatrixRotationY(XM_PI) * XMMatrixTranslation(0, 0.1f, 0) * XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(0.2f, 1, 0.6f, 1), true, cmd);
+					dummy::draw_male(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(0.2f, 1, 0.6f, 1), true, cmd);
 					break;
 				case MetadataComponent::Preset::NPC:
-					dummy::draw_female(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(0.2f, 0.6f, 1, 1), cmd);
+					dummy::draw_direction(XMMatrixRotationY(XM_PI) * XMMatrixTranslation(0, 0.1f, 0) * XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(0.2f, 0.6f, 1, 1), true, cmd);
+					dummy::draw_female(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(0.2f, 0.6f, 1, 1), true, cmd);
+					break;
+				case MetadataComponent::Preset::Pickup:
+					dummy::draw_pickup(XMMatrixScaling(sca, sca, sca) * XMMatrixTranslation(0, 0.5f, 0) * XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(1, 0.8f, 0.4f, 1), true, cmd);
 					break;
 				}
 			}
@@ -2742,7 +2755,7 @@ void EditorComponent::Render() const
 			device->RenderPassEnd(cmd);
 
 			wi::renderer::Postprocess_Downsample4x(rt_metadataDummies, rt_metadataDummies_4x, cmd);
-			wi::renderer::Postprocess_Blur_Gaussian(rt_metadataDummies_4x, rt_metadataDummies_4xtemp, rt_metadataDummies_4x, cmd, -1, -1, true);
+			wi::renderer::Postprocess_Blur_Gaussian(rt_metadataDummies_4x, rt_metadataDummies_4xtemp, rt_metadataDummies_4x, cmd);
 
 			device->EventEnd(cmd);
 		}
@@ -3265,14 +3278,17 @@ void EditorComponent::Render() const
 			}
 			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Metadata))
 			{
-				wi::image::Params fx;
-				fx.enableFullScreen();
-				fx.blendFlag = wi::enums::BLENDMODE_PREMULTIPLIED;
-				fx.color.x = wi::math::Lerp(fx.color.x * 0.4f, fx.color.x, selectionColorIntensity);
-				fx.color.y = wi::math::Lerp(fx.color.y * 0.4f, fx.color.y, selectionColorIntensity);
-				fx.color.z = wi::math::Lerp(fx.color.z * 0.4f, fx.color.z, selectionColorIntensity);
-				fx.color.w = wi::math::Lerp(fx.color.w * 0.8f, fx.color.w, selectionColorIntensity);
-				wi::image::Draw(&rt_metadataDummies_4x, fx, cmd);
+				if (scene.metadatas.GetCount() > 0)
+				{
+					wi::image::Params fx;
+					fx.enableFullScreen();
+					fx.blendFlag = wi::enums::BLENDMODE_PREMULTIPLIED;
+					fx.color.x = wi::math::Lerp(fx.color.x * 0.4f, fx.color.x, selectionColorIntensity);
+					fx.color.y = wi::math::Lerp(fx.color.y * 0.4f, fx.color.y, selectionColorIntensity);
+					fx.color.z = wi::math::Lerp(fx.color.z * 0.4f, fx.color.z, selectionColorIntensity);
+					fx.color.w = wi::math::Lerp(fx.color.w * 0.8f, fx.color.w, selectionColorIntensity);
+					wi::image::Draw(&rt_metadataDummies_4x, fx, cmd);
+				}
 
 				for (size_t i = 0; i < scene.metadatas.GetCount(); ++i)
 				{
