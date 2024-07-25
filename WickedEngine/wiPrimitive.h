@@ -31,8 +31,10 @@ namespace wi::primitive
 
 		AABB(
 			const XMFLOAT3& _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()),
-			const XMFLOAT3& _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest())
-		) : _min(_min), _max(_max) {}
+			const XMFLOAT3& _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest()))
+			: _min(_min)
+			, _max(_max)
+		{}
 		void createFromHalfWidth(const XMFLOAT3& center, const XMFLOAT3& halfwidth);
 		AABB transform(const XMMATRIX& mat) const;
 		AABB transform(const XMFLOAT4X4& mat) const;
@@ -48,7 +50,7 @@ namespace wi::primitive
 		bool intersects(const Ray& ray) const;
 		bool intersects(const Sphere& sphere) const;
 		bool intersects(const BoundingFrustum& frustum) const;
-		AABB operator* (float a);
+		AABB operator*(float a);
 		static AABB Merge(const AABB& a, const AABB& b);
 
 		constexpr XMFLOAT3 getMin() const { return _min; }
@@ -57,14 +59,22 @@ namespace wi::primitive
 		{
 			switch (index)
 			{
-			case 0: return _min;
-			case 1: return XMFLOAT3(_min.x, _max.y, _min.z);
-			case 2: return XMFLOAT3(_min.x, _max.y, _max.z);
-			case 3: return XMFLOAT3(_min.x, _min.y, _max.z);
-			case 4: return XMFLOAT3(_max.x, _min.y, _min.z);
-			case 5: return XMFLOAT3(_max.x, _max.y, _min.z);
-			case 6: return _max;
-			case 7: return XMFLOAT3(_max.x, _min.y, _max.z);
+			case 0:
+				return _min;
+			case 1:
+				return XMFLOAT3(_min.x, _max.y, _min.z);
+			case 2:
+				return XMFLOAT3(_min.x, _max.y, _max.z);
+			case 3:
+				return XMFLOAT3(_min.x, _min.y, _max.z);
+			case 4:
+				return XMFLOAT3(_max.x, _min.y, _min.z);
+			case 5:
+				return XMFLOAT3(_max.x, _max.y, _min.z);
+			case 6:
+				return _max;
+			case 7:
+				return XMFLOAT3(_max.x, _min.y, _max.z);
 			}
 			assert(0);
 			return XMFLOAT3(0, 0, 0);
@@ -82,8 +92,13 @@ namespace wi::primitive
 	{
 		XMFLOAT3 center;
 		float radius;
-		Sphere() :center(XMFLOAT3(0, 0, 0)), radius(0) {}
-		Sphere(const XMFLOAT3& c, float r) :center(c), radius(r)
+		Sphere()
+			: center(XMFLOAT3(0, 0, 0))
+			, radius(0)
+		{}
+		Sphere(const XMFLOAT3& c, float r)
+			: center(c)
+			, radius(r)
 		{
 			assert(radius >= 0);
 		}
@@ -112,14 +127,17 @@ namespace wi::primitive
 		XMFLOAT3 tip = XMFLOAT3(0, 0, 0);
 		float radius = 0;
 		Capsule() = default;
-		Capsule(const XMFLOAT3& base, const XMFLOAT3& tip, float radius) :base(base), tip(tip), radius(radius)
+		Capsule(const XMFLOAT3& base, const XMFLOAT3& tip, float radius)
+			: base(base)
+			, tip(tip)
+			, radius(radius)
 		{
 			assert(radius >= 0);
 		}
-		Capsule(const Sphere& sphere, float height) :
-			base(XMFLOAT3(sphere.center.x, sphere.center.y - sphere.radius, sphere.center.z)),
-			tip(XMFLOAT3(base.x, base.y + height, base.z)),
-			radius(sphere.radius)
+		Capsule(const Sphere& sphere, float height)
+			: base(XMFLOAT3(sphere.center.x, sphere.center.y - sphere.radius, sphere.center.z))
+			, tip(XMFLOAT3(base.x, base.y + height, base.z))
+			, radius(sphere.radius)
 		{
 			assert(radius >= 0);
 		}
@@ -173,8 +191,8 @@ namespace wi::primitive
 		float TMax = std::numeric_limits<float>::max();
 		XMFLOAT3 direction_inverse;
 
-		Ray(const XMFLOAT3& newOrigin = XMFLOAT3(0, 0, 0), const XMFLOAT3& newDirection = XMFLOAT3(0, 0, 1), float newTMin = 0, float newTMax = std::numeric_limits<float>::max()) :
-			Ray(XMLoadFloat3(&newOrigin), XMLoadFloat3(&newDirection), newTMin, newTMax)
+		Ray(const XMFLOAT3& newOrigin = XMFLOAT3(0, 0, 0), const XMFLOAT3& newDirection = XMFLOAT3(0, 0, 1), float newTMin = 0, float newTMax = std::numeric_limits<float>::max())
+			: Ray(XMLoadFloat3(&newOrigin), XMLoadFloat3(&newDirection), newTMin, newTMax)
 		{}
 		Ray(const XMVECTOR& newOrigin, const XMVECTOR& newDirection, float newTMin = 0, float newTMax = std::numeric_limits<float>::max())
 		{
@@ -233,8 +251,14 @@ namespace wi::primitive
 		XMFLOAT2 pos;
 		XMFLOAT2 siz;
 
-		Hitbox2D() :pos(XMFLOAT2(0, 0)), siz(XMFLOAT2(0, 0)) {}
-		Hitbox2D(const XMFLOAT2& newPos, const XMFLOAT2 newSiz) :pos(newPos), siz(newSiz) {}
+		Hitbox2D()
+			: pos(XMFLOAT2(0, 0))
+			, siz(XMFLOAT2(0, 0))
+		{}
+		Hitbox2D(const XMFLOAT2& newPos, const XMFLOAT2 newSiz)
+			: pos(newPos)
+			, siz(newSiz)
+		{}
 		~Hitbox2D() {};
 
 		bool intersects(const XMFLOAT2& b) const;

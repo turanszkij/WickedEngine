@@ -112,7 +112,8 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 		if (filename.empty())
 		{
 			// Force some image resource name:
-			do {
+			do
+			{
 				filename.clear();
 				filename += "fbximport_" + std::to_string(wi::random::GetRandom(std::numeric_limits<uint32_t>::max())) + ".png";
 			} while (wi::resourcemanager::Contains(filename)); // this is to avoid overwriting an existing imported image
@@ -122,8 +123,7 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 			filename,
 			wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA | wi::resourcemanager::Flags::IMPORT_DELAY,
 			(const uint8_t*)texture->content.data,
-			texture->content.size
-		);
+			texture->content.size);
 
 		if (!resource.IsValid())
 			return;
@@ -180,8 +180,7 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 
 		if (
 			material->shader_type == UFBX_SHADER_3DS_MAX_PBR_METAL_ROUGH ||
-			material->shader_type == UFBX_SHADER_GLTF_MATERIAL
-			)
+			material->shader_type == UFBX_SHADER_GLTF_MATERIAL)
 		{
 			materialcomponent.roughness = material->pbr.roughness.value_real;
 			materialcomponent.metalness = material->pbr.metalness.value_real;
@@ -189,8 +188,7 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 		}
 
 		if (
-			material->shader_type == UFBX_SHADER_3DS_MAX_PBR_SPEC_GLOSS
-			)
+			material->shader_type == UFBX_SHADER_3DS_MAX_PBR_SPEC_GLOSS)
 		{
 			materialcomponent.SetUseSpecularGlossinessWorkflow(true);
 		}
@@ -668,7 +666,6 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 				sampler.mode = AnimationComponent::AnimationSampler::Mode::LINEAR;
 				sampler.data = animDataEntity;
 			}
-
 		}
 
 		ufbx_free_baked_anim(bake);

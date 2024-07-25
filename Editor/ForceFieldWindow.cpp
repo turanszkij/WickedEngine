@@ -12,7 +12,6 @@ void ForceFieldWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete ForceFieldComponent");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -118,14 +117,12 @@ void ForceFieldWindow::SetEntity(Entity entity)
 
 		gravitySlider.SetEnabled(true);
 		rangeSlider.SetEnabled(true);
-
 	}
 	else
 	{
 		gravitySlider.SetEnabled(false);
 		rangeSlider.SetEnabled(false);
 	}
-
 }
 
 void ForceFieldWindow::ResizeLayout()
@@ -168,6 +165,4 @@ void ForceFieldWindow::ResizeLayout()
 	add(typeComboBox);
 	add(gravitySlider);
 	add(rangeSlider);
-
-
 }

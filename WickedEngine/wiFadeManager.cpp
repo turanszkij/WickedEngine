@@ -57,7 +57,6 @@ namespace wi
 			opacity = 0.0f;
 			onFade = [] {};
 		}
-
 	}
 
 }

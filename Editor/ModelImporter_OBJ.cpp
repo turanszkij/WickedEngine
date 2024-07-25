@@ -11,16 +11,19 @@ using namespace wi::ecs;
 
 struct membuf : std::streambuf
 {
-	membuf(char* begin, char* end) {
+	membuf(char* begin, char* end)
+	{
 		this->setg(begin, begin, end);
 	}
 };
 
 // Custom material file reader:
-class MaterialFileReader : public tinyobj::MaterialReader {
+class MaterialFileReader : public tinyobj::MaterialReader
+{
 public:
 	explicit MaterialFileReader(const std::string& mtl_basedir)
-		: m_mtlBaseDir(mtl_basedir) {}
+		: m_mtlBaseDir(mtl_basedir)
+	{}
 	virtual ~MaterialFileReader() {}
 	virtual bool operator()(const std::string& matId,
 		std::vector<tinyobj::material_t>* materials,
@@ -28,10 +31,12 @@ public:
 	{
 		std::string filepath;
 
-		if (!m_mtlBaseDir.empty()) {
+		if (!m_mtlBaseDir.empty())
+		{
 			filepath = std::string(m_mtlBaseDir) + matId;
 		}
-		else {
+		else
+		{
 			filepath = matId;
 		}
 
@@ -40,7 +45,8 @@ public:
 		{
 			std::string ss;
 			ss += "WARN: Material file [ " + filepath + " ] not found.\n";
-			if (err) {
+			if (err)
+			{
 				(*err) += ss;
 			}
 			return false;
@@ -52,8 +58,10 @@ public:
 		std::string warning;
 		LoadMtl(matMap, materials, &matIStream, &warning);
 
-		if (!warning.empty()) {
-			if (err) {
+		if (!warning.empty())
+		{
+			if (err)
+			{
 				(*err) += warning;
 			}
 		}
@@ -192,8 +200,7 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 					XMFLOAT3 pos = XMFLOAT3(
 						obj_attrib.vertices[index.vertex_index * 3 + 0],
 						obj_attrib.vertices[index.vertex_index * 3 + 1],
-						obj_attrib.vertices[index.vertex_index * 3 + 2]
-					);
+						obj_attrib.vertices[index.vertex_index * 3 + 2]);
 
 					XMFLOAT3 nor = XMFLOAT3(0, 0, 0);
 					if (!obj_attrib.normals.empty())
@@ -201,8 +208,7 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 						nor = XMFLOAT3(
 							obj_attrib.normals[index.normal_index * 3 + 0],
 							obj_attrib.normals[index.normal_index * 3 + 1],
-							obj_attrib.normals[index.normal_index * 3 + 2]
-						);
+							obj_attrib.normals[index.normal_index * 3 + 2]);
 					}
 
 					XMFLOAT2 tex = XMFLOAT2(0, 0);
@@ -210,8 +216,7 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 					{
 						tex = XMFLOAT2(
 							obj_attrib.texcoords[index.texcoord_index * 2 + 0],
-							1 - obj_attrib.texcoords[index.texcoord_index * 2 + 1]
-						);
+							1 - obj_attrib.texcoords[index.texcoord_index * 2 + 1]);
 					}
 
 					int materialIndex = std::max(0, shape.mesh.material_ids[i / 3]); // this indexes the material library
@@ -249,7 +254,6 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 			}
 			mesh.CreateRenderData();
 		}
-
 	}
 	else
 	{

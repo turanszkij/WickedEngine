@@ -17,4 +17,3 @@ public:
 	void Update(const wi::Canvas& canvas, float dt) override;
 	void ResizeLayout() override;
 };
-

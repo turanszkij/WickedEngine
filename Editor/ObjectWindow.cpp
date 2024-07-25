@@ -7,9 +7,9 @@
 using namespace wi::ecs;
 using namespace wi::scene;
 
-static void SetPixel(uint8_t *dest, int destWidth, int x, int y, const uint8_t *color)
+static void SetPixel(uint8_t* dest, int destWidth, int x, int y, const uint8_t* color)
 {
-	uint8_t *pixel = &dest[x * 4 + y * (destWidth * 4)];
+	uint8_t* pixel = &dest[x * 4 + y * (destWidth * 4)];
 	pixel[0] = color[0];
 	pixel[1] = color[1];
 	pixel[2] = color[2];
@@ -17,7 +17,7 @@ static void SetPixel(uint8_t *dest, int destWidth, int x, int y, const uint8_t *
 }
 
 // https://github.com/miloyip/line/blob/master/line_bresenham.c
-static void RasterizeLine(uint8_t *dest, int destWidth, const int *p1, const int *p2, const uint8_t *color)
+static void RasterizeLine(uint8_t* dest, int destWidth, const int* p1, const int* p2, const uint8_t* color)
 {
 	const int dx = abs(p2[0] - p1[0]), sx = p1[0] < p2[0] ? 1 : -1;
 	const int dy = abs(p2[1] - p1[1]), sy = p1[1] < p2[1] ? 1 : -1;
@@ -28,25 +28,35 @@ static void RasterizeLine(uint8_t *dest, int destWidth, const int *p1, const int
 	while (SetPixel(dest, destWidth, current[0], current[1], color), current[0] != p2[0] || current[1] != p2[1])
 	{
 		const int e2 = err;
-		if (e2 > -dx) { err -= dy; current[0] += sx; }
-		if (e2 < dy) { err += dx; current[1] += sy; }
+		if (e2 > -dx)
+		{
+			err -= dy;
+			current[0] += sx;
+		}
+		if (e2 < dy)
+		{
+			err += dx;
+			current[1] += sy;
+		}
 	}
 }
 
 // https://github.com/ssloy/tinyrenderer/wiki/Lesson-2:-Triangle-rasterization-and-back-face-culling
-static void RasterizeTriangle(uint8_t *dest, int destWidth, const int *t0, const int *t1, const int *t2, const uint8_t *color)
+static void RasterizeTriangle(uint8_t* dest, int destWidth, const int* t0, const int* t1, const int* t2, const uint8_t* color)
 {
 	if (t0[1] > t1[1]) std::swap(t0, t1);
 	if (t0[1] > t2[1]) std::swap(t0, t2);
 	if (t1[1] > t2[1]) std::swap(t1, t2);
 	int total_height = t2[1] - t0[1];
-	for (int i = 0; i < total_height; i++) {
+	for (int i = 0; i < total_height; i++)
+	{
 		bool second_half = i > t1[1] - t0[1] || t1[1] == t0[1];
 		int segment_height = second_half ? t2[1] - t1[1] : t1[1] - t0[1];
 		float alpha = (float)i / total_height;
 		float beta = (float)(i - (second_half ? t1[1] - t0[1] : 0)) / segment_height;
 		int A[2], B[2];
-		for (int j = 0; j < 2; j++) {
+		for (int j = 0; j < 2; j++)
+		{
 			A[j] = int(t0[j] + (t2[j] - t0[j]) * alpha);
 			B[j] = int(second_half ? t1[j] + (t2[j] - t1[j]) * beta : t0[j] + (t1[j] - t0[j]) * beta);
 		}
@@ -73,11 +83,13 @@ static Atlas_Dim GenerateMeshAtlas(MeshComponent& meshcomponent, uint32_t resolu
 		mesh.vertexCount = (int)meshcomponent.vertex_positions.size();
 		mesh.vertexPositionData = meshcomponent.vertex_positions.data();
 		mesh.vertexPositionStride = sizeof(float) * 3;
-		if (!meshcomponent.vertex_normals.empty()) {
+		if (!meshcomponent.vertex_normals.empty())
+		{
 			mesh.vertexNormalData = meshcomponent.vertex_normals.data();
 			mesh.vertexNormalStride = sizeof(float) * 3;
 		}
-		if (!meshcomponent.vertex_uvset_0.empty()) {
+		if (!meshcomponent.vertex_uvset_0.empty())
+		{
 			mesh.vertexUvData = meshcomponent.vertex_uvset_0.data();
 			mesh.vertexUvStride = sizeof(float) * 2;
 		}
@@ -85,7 +97,8 @@ static Atlas_Dim GenerateMeshAtlas(MeshComponent& meshcomponent, uint32_t resolu
 		mesh.indexData = meshcomponent.indices.data();
 		mesh.indexFormat = xatlas::IndexFormat::UInt32;
 		xatlas::AddMeshError::Enum error = xatlas::AddMesh(atlas, mesh);
-		if (error != xatlas::AddMeshError::Success) {
+		if (error != xatlas::AddMeshError::Success)
+		{
 			wi::helper::messageBox(xatlas::StringForEnum(error), "Adding mesh to xatlas failed!");
 			return dim;
 		}
@@ -150,7 +163,7 @@ static Atlas_Dim GenerateMeshAtlas(MeshComponent& meshcomponent, uint32_t resolu
 		for (uint32_t j = 0; j < mesh.indexCount; ++j)
 		{
 			const uint32_t ind = mesh.indexArray[j];
-			const xatlas::Vertex &v = mesh.vertexArray[ind];
+			const xatlas::Vertex& v = mesh.vertexArray[ind];
 			meshcomponent.indices[j] = ind;
 			atlas[ind].x = v.uv[0] / float(dim.width);
 			atlas[ind].y = v.uv[1] / float(dim.height);
@@ -216,7 +229,6 @@ static Atlas_Dim GenerateMeshAtlas(MeshComponent& meshcomponent, uint32_t resolu
 			meshcomponent.vertex_boneweights = boneweights;
 		}
 		meshcomponent.CreateRenderData();
-
 	}
 
 	//// DEBUG
@@ -261,7 +273,6 @@ void ObjectWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete ObjectComponent");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -271,7 +282,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->componentsWnd.RefreshEntityTree();
-		});
+	});
 
 	float x = 140;
 	float y = 0;
@@ -294,7 +305,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 		object->meshID = (Entity)args.userdata;
 
 		editor->RecordEntity(archive, entity);
-		});
+	});
 	AddWidget(&meshCombo);
 
 	renderableCheckBox.Create("Renderable: ");
@@ -330,7 +341,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 				object->SetCastShadow(args.bValue);
 			}
 		}
-		});
+	});
 	AddWidget(&shadowCheckBox);
 
 	navmeshCheckBox.Create("Navmesh: ");
@@ -361,7 +372,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 				}
 			}
 		}
-		});
+	});
 	AddWidget(&navmeshCheckBox);
 
 	foregroundCheckBox.Create("Foreground: ");
@@ -379,7 +390,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 				object->SetForeground(args.bValue);
 			}
 		}
-		});
+	});
 	AddWidget(&foregroundCheckBox);
 
 	notVisibleInMainCameraCheckBox.Create("Not visible in main camera: ");
@@ -397,7 +408,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 				object->SetNotVisibleInMainCamera(args.bValue);
 			}
 		}
-		});
+	});
 	AddWidget(&notVisibleInMainCameraCheckBox);
 
 	notVisibleInReflectionsCheckBox.Create("Not visible in reflections: ");
@@ -415,7 +426,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 				object->SetNotVisibleInReflections(args.bValue);
 			}
 		}
-		});
+	});
 	AddWidget(&notVisibleInReflectionsCheckBox);
 
 	wetmapCheckBox.Create("Wet map: ");
@@ -433,7 +444,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 				object->SetWetmapEnabled(args.bValue);
 			}
 		}
-		});
+	});
 	AddWidget(&wetmapCheckBox);
 
 	ditherSlider.Create(0, 1, 0, 1000, "Transparency: ");
@@ -459,7 +470,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 		{
 			object->alphaRef = args.fValue;
 		}
-		});
+	});
 	AddWidget(&alphaRefSlider);
 
 	cascadeMaskSlider.Create(0, 3, 0, 3, "Cascade Mask: ");
@@ -485,7 +496,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 		{
 			object->lod_distance_multiplier = args.fValue;
 		}
-		});
+	});
 	AddWidget(&lodSlider);
 
 	drawdistanceSlider.Create(0, 1000, 1, 10000, "Draw Distance: ");
@@ -498,7 +509,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 		{
 			object->draw_distance = args.fValue;
 		}
-		});
+	});
 	AddWidget(&drawdistanceSlider);
 
 	sortPrioritySlider.Create(0, 15, 0, 15, "Sort Priority: ");
@@ -511,7 +522,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 		{
 			object->sort_priority = (uint8_t)args.iValue;
 		}
-		});
+	});
 	AddWidget(&sortPrioritySlider);
 
 	y += step;
@@ -524,7 +535,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	lightmapResolutionSlider.OnSlide([&](wi::gui::EventArgs args) {
 		// unfortunately, we must be pow2 with full float lightmap format, otherwise it could be unlimited (but accumulation blending would suffer then)
 		//	or at least for me, downloading the lightmap was glitching out when non-pow 2 and RGBA32_FLOAT format
-		lightmapResolutionSlider.SetValue(float(wi::math::GetNextPowerOfTwo(uint32_t(args.fValue)))); 
+		lightmapResolutionSlider.SetValue(float(wi::math::GetNextPowerOfTwo(uint32_t(args.fValue))));
 	});
 	AddWidget(&lightmapResolutionSlider);
 
@@ -562,7 +573,6 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	generateLightmapButton.SetPos(XMFLOAT2(x, y += step));
 	generateLightmapButton.SetSize(XMFLOAT2(wid, hei));
 	generateLightmapButton.OnClick([&](wi::gui::EventArgs args) {
-
 		Scene& scene = editor->GetCurrentScene();
 
 		enum UV_GEN_TYPE
@@ -590,7 +600,6 @@ void ObjectWindow::Create(EditorComponent* _editor)
 					gen_meshes[meshcomponent] = Atlas_Dim();
 				}
 			}
-
 		}
 
 		wi::jobsystem::context ctx;
@@ -634,7 +643,6 @@ void ObjectWindow::Create(EditorComponent* _editor)
 		}
 
 		scene.SetAccelerationStructureUpdateRequested(true);
-
 	});
 	AddWidget(&generateLightmapButton);
 
@@ -643,7 +651,6 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	stopLightmapGenButton.SetPos(XMFLOAT2(x, y += step));
 	stopLightmapGenButton.SetSize(XMFLOAT2(wid, hei));
 	stopLightmapGenButton.OnClick([&](wi::gui::EventArgs args) {
-
 		Scene& scene = editor->GetCurrentScene();
 
 		for (auto& x : this->editor->translator.selected)
@@ -655,7 +662,6 @@ void ObjectWindow::Create(EditorComponent* _editor)
 				objectcomponent->SaveLightmap();
 			}
 		}
-
 	});
 	AddWidget(&stopLightmapGenButton);
 
@@ -664,7 +670,6 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	clearLightmapButton.SetPos(XMFLOAT2(x, y += step));
 	clearLightmapButton.SetSize(XMFLOAT2(wid, hei));
 	clearLightmapButton.OnClick([&](wi::gui::EventArgs args) {
-
 		Scene& scene = editor->GetCurrentScene();
 
 		for (auto& x : this->editor->translator.selected)
@@ -675,7 +680,6 @@ void ObjectWindow::Create(EditorComponent* _editor)
 				objectcomponent->ClearLightmap();
 			}
 		}
-
 	});
 	AddWidget(&clearLightmapButton);
 
@@ -780,8 +784,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 								const XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
 								const XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
 
-								auto intersect_triangle = [&](uint32_t subsetIndex, uint32_t indexOffset, uint32_t triangleIndex)
-								{
+								auto intersect_triangle = [&](uint32_t subsetIndex, uint32_t indexOffset, uint32_t triangleIndex) {
 									const uint32_t i0 = mesh->indices[indexOffset + triangleIndex * 3 + 0];
 									const uint32_t i1 = mesh->indices[indexOffset + triangleIndex * 3 + 1];
 									const uint32_t i2 = mesh->indices[indexOffset + triangleIndex * 3 + 2];
@@ -874,7 +877,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 		}
 
 		SetEntity(entity);
-		});
+	});
 	AddWidget(&vertexAOButton);
 
 	vertexAORayCountSlider.Create(8, 1024, 256, 1024 - 8, "Ray count: ");
@@ -921,7 +924,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 				break;
 			}
 		}
-		});
+	});
 	AddWidget(&colorPicker);
 
 
@@ -1005,14 +1008,11 @@ void ObjectWindow::SetEntity(Entity entity)
 		}
 
 		lightmapBlockCompressionCheckBox.SetCheck(!object->IsLightmapDisableBlockCompression());
-
 	}
 	else
 	{
 		SetEnabled(false);
 	}
-
-
 }
 
 
@@ -1090,5 +1090,4 @@ void ObjectWindow::ResizeLayout()
 	add_fullwidth(vertexAOButton);
 	add(vertexAORayCountSlider);
 	add(vertexAORayLengthSlider);
-
 }

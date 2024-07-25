@@ -43,4 +43,3 @@ public:
 
 	void ResizeLayout() override;
 };
-

@@ -26,7 +26,7 @@ namespace wi
 		XMFLOAT3 voxelSize = XMFLOAT3(0.25f, 0.25f, 0.25f);
 		XMFLOAT3 voxelSize_rcp = XMFLOAT3(1.0f / 0.25f, 1.0f / 0.25f, 1.0f / 0.25f);
 
-		XMFLOAT4 debug_color = XMFLOAT4(0.4f, 1, 0.2f, 0.1f); // color of voxels in debug
+		XMFLOAT4 debug_color = XMFLOAT4(0.4f, 1, 0.2f, 0.1f);  // color of voxels in debug
 		XMFLOAT4 debug_color_extent = XMFLOAT4(1, 1, 0.2f, 1); // color of extent box in debug
 
 		void init(uint32_t dimX, uint32_t dimY, uint32_t dimZ);

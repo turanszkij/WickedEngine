@@ -84,7 +84,7 @@ namespace wi::jobsystem
 		uint32_t numThreads = 0;
 		wi::vector<std::thread> threads;
 		std::unique_ptr<JobQueue[]> jobQueuePerThread;
-		std::atomic<uint32_t> nextQueue{ 0 };
+		std::atomic<uint32_t> nextQueue { 0 };
 		std::condition_variable wakeCondition;
 		std::mutex wakeMutex;
 
@@ -111,7 +111,7 @@ namespace wi::jobsystem
 	{
 		uint32_t numCores = 0;
 		PriorityResources resources[int(Priority::Count)];
-		std::atomic_bool alive{ true };
+		std::atomic_bool alive { true };
 		void ShutDown()
 		{
 			alive.store(false); // indicate that new jobs cannot be started from this point
@@ -187,7 +187,6 @@ namespace wi::jobsystem
 			for (uint32_t threadID = 0; threadID < res.numThreads; ++threadID)
 			{
 				std::thread& worker = res.threads.emplace_back([threadID, &res] {
-
 					while (internal_state.alive.load())
 					{
 						res.work(threadID);
@@ -196,7 +195,6 @@ namespace wi::jobsystem
 						std::unique_lock<std::mutex> lock(res.wakeMutex);
 						res.wakeCondition.wait(lock);
 					}
-
 				});
 
 				auto handle = worker.native_handle();
@@ -246,7 +244,11 @@ namespace wi::jobsystem
 
 #elif defined(PLATFORM_LINUX)
 #define handle_error_en(en, msg) \
-               do { errno = en; perror(msg); } while (0)
+	do                           \
+	{                            \
+		errno = en;              \
+		perror(msg);             \
+	} while (0)
 
 				int ret;
 				cpu_set_t cpuset;

@@ -48,16 +48,19 @@ namespace wi::input
 	const KeyboardState& GetKeyboardState() { return keyboard; }
 	const MouseState& GetMouseState() { return mouse; }
 
-	struct Input 
+	struct Input
 	{
 		BUTTON button = BUTTON_NONE;
 		int playerIndex = 0;
 
-		bool operator<(const Input other) {
+		bool operator<(const Input other)
+		{
 			return (button != other.button || playerIndex != other.playerIndex);
 		}
-		struct LessComparer {
-			bool operator()(Input const& a, Input const& b) const {
+		struct LessComparer
+		{
+			bool operator()(Input const& a, Input const& b) const
+			{
 				return (a.button < b.button || a.playerIndex < b.playerIndex);
 			}
 		};
@@ -80,7 +83,7 @@ namespace wi::input
 		ControllerState state;
 	};
 	wi::vector<Controller> controllers;
-	std::atomic_bool initialized{ false };
+	std::atomic_bool initialized { false };
 
 	void Initialize()
 	{
@@ -118,12 +121,12 @@ namespace wi::input
 
 #if defined(_WIN32) && !defined(PLATFORM_XBOX)
 		wi::input::rawinput::GetMouseState(&mouse); // currently only the relative data can be used from this
-		wi::input::rawinput::GetKeyboardState(&keyboard); 
+		wi::input::rawinput::GetKeyboardState(&keyboard);
 
 		// apparently checking the mouse here instead of Down() avoids missing the button presses (review!)
-        mouse.left_button_press |= KEY_DOWN(VK_LBUTTON);
-        mouse.middle_button_press |= KEY_DOWN(VK_MBUTTON);
-        mouse.right_button_press |= KEY_DOWN(VK_RBUTTON);
+		mouse.left_button_press |= KEY_DOWN(VK_LBUTTON);
+		mouse.middle_button_press |= KEY_DOWN(VK_MBUTTON);
+		mouse.right_button_press |= KEY_DOWN(VK_RBUTTON);
 
 		// Since raw input doesn't contain absolute mouse position, we get it with regular winapi:
 		POINT p;
@@ -283,23 +286,23 @@ namespace wi::input
 			bool connected = false;
 			switch (controller.deviceType)
 			{
-				case Controller::XINPUT:
-					connected = wi::input::xinput::GetControllerState(&controller.state, controller.deviceIndex);
-					break;
-				case Controller::RAWINPUT:
-					connected = wi::input::rawinput::GetControllerState(&controller.state, controller.deviceIndex);
-					break;
-				case Controller::SDLINPUT:
-					connected = wi::input::sdlinput::GetControllerState(&controller.state, controller.deviceIndex);
-					break;
+			case Controller::XINPUT:
+				connected = wi::input::xinput::GetControllerState(&controller.state, controller.deviceIndex);
+				break;
+			case Controller::RAWINPUT:
+				connected = wi::input::rawinput::GetControllerState(&controller.state, controller.deviceIndex);
+				break;
+			case Controller::SDLINPUT:
+				connected = wi::input::sdlinput::GetControllerState(&controller.state, controller.deviceIndex);
+				break;
 #ifdef PLATFORM_PS5
-				case Controller::PS5:
-					connected = wi::input::ps5::GetControllerState(&controller.state, controller.deviceIndex);
-					break;
+			case Controller::PS5:
+				connected = wi::input::ps5::GetControllerState(&controller.state, controller.deviceIndex);
+				break;
 #endif // PLATFORM_PS5
-				case Controller::DISCONNECTED:
-					connected = false;
-					break;
+			case Controller::DISCONNECTED:
+				connected = false;
+				break;
 			}
 
 			if (!connected)
@@ -351,7 +354,7 @@ namespace wi::input
 		}
 
 		// Cursor update:
-		if(cursor_next != cursor_current || cursor_next != CURSOR_DEFAULT)
+		if (cursor_next != cursor_current || cursor_next != CURSOR_DEFAULT)
 		{
 #ifdef PLATFORM_WINDOWS_DESKTOP
 			static HCURSOR cursor_table[] = {
@@ -404,7 +407,7 @@ namespace wi::input
 			return false;
 		}
 
-		if(button > GAMEPAD_RANGE_START)
+		if (button > GAMEPAD_RANGE_START)
 		{
 			if (playerindex < (int)controllers.size())
 			{
@@ -412,23 +415,37 @@ namespace wi::input
 
 				switch (button)
 				{
-				case GAMEPAD_BUTTON_UP: return state.buttons & (1 << (GAMEPAD_BUTTON_UP - GAMEPAD_RANGE_START - 1));
-				case GAMEPAD_BUTTON_LEFT: return state.buttons & (1 << (GAMEPAD_BUTTON_LEFT - GAMEPAD_RANGE_START - 1));
-				case GAMEPAD_BUTTON_DOWN: return state.buttons & (1 << (GAMEPAD_BUTTON_DOWN - GAMEPAD_RANGE_START - 1));
-				case GAMEPAD_BUTTON_RIGHT: return state.buttons & (1 << (GAMEPAD_BUTTON_RIGHT - GAMEPAD_RANGE_START - 1));
-				case GAMEPAD_BUTTON_1: return state.buttons & (1 << (GAMEPAD_BUTTON_1 - GAMEPAD_RANGE_START - 1));
-				case GAMEPAD_BUTTON_2: return state.buttons & (1 << (GAMEPAD_BUTTON_2 - GAMEPAD_RANGE_START - 1));
-				case GAMEPAD_BUTTON_3: return state.buttons & (1 << (GAMEPAD_BUTTON_3 - GAMEPAD_RANGE_START - 1));
-				case GAMEPAD_BUTTON_4: return state.buttons & (1 << (GAMEPAD_BUTTON_4 - GAMEPAD_RANGE_START - 1));
-				case GAMEPAD_BUTTON_5: return state.buttons & (1 << (GAMEPAD_BUTTON_5 - GAMEPAD_RANGE_START - 1));
-				case GAMEPAD_BUTTON_6: return state.buttons & (1 << (GAMEPAD_BUTTON_6 - GAMEPAD_RANGE_START - 1));
-				case GAMEPAD_BUTTON_7: return state.buttons & (1 << (GAMEPAD_BUTTON_7 - GAMEPAD_RANGE_START - 1));
-				case GAMEPAD_BUTTON_8: return state.buttons & (1 << (GAMEPAD_BUTTON_8 - GAMEPAD_RANGE_START - 1));
-				case GAMEPAD_BUTTON_9: return state.buttons & (1 << (GAMEPAD_BUTTON_9 - GAMEPAD_RANGE_START - 1));
-				case GAMEPAD_BUTTON_10: return state.buttons & (1 << (GAMEPAD_BUTTON_10 - GAMEPAD_RANGE_START - 1));
-				default: break;
+				case GAMEPAD_BUTTON_UP:
+					return state.buttons & (1 << (GAMEPAD_BUTTON_UP - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_LEFT:
+					return state.buttons & (1 << (GAMEPAD_BUTTON_LEFT - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_DOWN:
+					return state.buttons & (1 << (GAMEPAD_BUTTON_DOWN - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_RIGHT:
+					return state.buttons & (1 << (GAMEPAD_BUTTON_RIGHT - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_1:
+					return state.buttons & (1 << (GAMEPAD_BUTTON_1 - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_2:
+					return state.buttons & (1 << (GAMEPAD_BUTTON_2 - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_3:
+					return state.buttons & (1 << (GAMEPAD_BUTTON_3 - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_4:
+					return state.buttons & (1 << (GAMEPAD_BUTTON_4 - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_5:
+					return state.buttons & (1 << (GAMEPAD_BUTTON_5 - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_6:
+					return state.buttons & (1 << (GAMEPAD_BUTTON_6 - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_7:
+					return state.buttons & (1 << (GAMEPAD_BUTTON_7 - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_8:
+					return state.buttons & (1 << (GAMEPAD_BUTTON_8 - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_9:
+					return state.buttons & (1 << (GAMEPAD_BUTTON_9 - GAMEPAD_RANGE_START - 1));
+				case GAMEPAD_BUTTON_10:
+					return state.buttons & (1 << (GAMEPAD_BUTTON_10 - GAMEPAD_RANGE_START - 1));
+				default:
+					break;
 				}
-
 			}
 		}
 		else if (playerindex == 0) // keyboard or mouse
@@ -438,15 +455,15 @@ namespace wi::input
 			switch (button)
 			{
 			case wi::input::MOUSE_BUTTON_LEFT:
-				if (mouse.left_button_press) 
+				if (mouse.left_button_press)
 					return true;
 				return false;
 			case wi::input::MOUSE_BUTTON_RIGHT:
-				if (mouse.right_button_press) 
+				if (mouse.right_button_press)
 					return true;
 				return false;
 			case wi::input::MOUSE_BUTTON_MIDDLE:
-				if (mouse.middle_button_press) 
+				if (mouse.middle_button_press)
 					return true;
 				return false;
 #ifdef _WIN32
@@ -471,7 +488,7 @@ namespace wi::input
 			case wi::input::KEYBOARD_BUTTON_LSHIFT:
 				keycode = VK_LSHIFT;
 				break;
-			case wi::input::KEYBOARD_BUTTON_F1: 
+			case wi::input::KEYBOARD_BUTTON_F1:
 				keycode = VK_F1;
 				break;
 			case wi::input::KEYBOARD_BUTTON_F2:
@@ -586,7 +603,8 @@ namespace wi::input
 				keycode = VK_TAB;
 				break;
 #endif // _WIN32
-				default: break;
+			default:
+				break;
 			}
 #if defined(_WIN32) && !defined(PLATFORM_XBOX)
 			return KEY_DOWN(keycode) || KEY_TOGGLE(keycode);
@@ -670,21 +688,21 @@ namespace wi::input
 		ClientToScreen(hWnd, &p);
 		SetCursorPos(p.x, p.y);
 #elif defined(SDL2)
-	// Keeping with the trend of 'Set Pointer' API on different platforms, 
-	// SDL_WarpMouseInWindow is used in the case of SDL2. This unfortunately 
-	// causes SDL2 to generate a mouse event for the delta between the old 
-	// and new positions leading to 'rubber banding'. 
-	// The current solution is to artifically generate a motion event of our own
-	// which will 'undo' this unwanted motion event during the mouse motion
-	// accumulation in wiSDLInput.cpp Update()
-	XMFLOAT4 currentPointer = GetPointer();
-	SDL_MouseMotionEvent motionEvent = {0};
-	motionEvent.type = SDL_MOUSEMOTION;
-	motionEvent.x = motionEvent.y = 0; // doesn't matter
-	motionEvent.xrel = currentPointer.x - props.x;
-	motionEvent.yrel = currentPointer.y - props.y;
-	SDL_PushEvent((SDL_Event*)&motionEvent);
-	SDL_WarpMouseInWindow(window, props.x, props.y);
+		// Keeping with the trend of 'Set Pointer' API on different platforms,
+		// SDL_WarpMouseInWindow is used in the case of SDL2. This unfortunately
+		// causes SDL2 to generate a mouse event for the delta between the old
+		// and new positions leading to 'rubber banding'.
+		// The current solution is to artifically generate a motion event of our own
+		// which will 'undo' this unwanted motion event during the mouse motion
+		// accumulation in wiSDLInput.cpp Update()
+		XMFLOAT4 currentPointer = GetPointer();
+		SDL_MouseMotionEvent motionEvent = { 0 };
+		motionEvent.type = SDL_MOUSEMOTION;
+		motionEvent.x = motionEvent.y = 0; // doesn't matter
+		motionEvent.xrel = currentPointer.x - props.x;
+		motionEvent.yrel = currentPointer.y - props.y;
+		SDL_PushEvent((SDL_Event*)&motionEvent);
+		SDL_WarpMouseInWindow(window, props.x, props.y);
 
 #endif // SDL2
 	}
@@ -693,11 +711,13 @@ namespace wi::input
 #ifdef _WIN32
 		if (value)
 		{
-			while (ShowCursor(false) >= 0) {};
+			while (ShowCursor(false) >= 0)
+			{};
 		}
 		else
 		{
-			while (ShowCursor(true) < 0) {};
+			while (ShowCursor(true) < 0)
+			{};
 		}
 #elif SDL2
 		SDL_ShowCursor(value ? SDL_DISABLE : SDL_ENABLE);
@@ -717,10 +737,14 @@ namespace wi::input
 
 			switch (analog)
 			{
-			case GAMEPAD_ANALOG_THUMBSTICK_L: return XMFLOAT4(state.thumbstick_L.x, state.thumbstick_L.y, 0, 0);
-			case GAMEPAD_ANALOG_THUMBSTICK_R: return XMFLOAT4(state.thumbstick_R.x, state.thumbstick_R.y, 0, 0);
-			case GAMEPAD_ANALOG_TRIGGER_L: return XMFLOAT4(state.trigger_L, 0, 0, 0);
-			case GAMEPAD_ANALOG_TRIGGER_R: return XMFLOAT4(state.trigger_R, 0, 0, 0);
+			case GAMEPAD_ANALOG_THUMBSTICK_L:
+				return XMFLOAT4(state.thumbstick_L.x, state.thumbstick_L.y, 0, 0);
+			case GAMEPAD_ANALOG_THUMBSTICK_R:
+				return XMFLOAT4(state.thumbstick_R.x, state.thumbstick_R.y, 0, 0);
+			case GAMEPAD_ANALOG_TRIGGER_L:
+				return XMFLOAT4(state.trigger_L, 0, 0, 0);
+			case GAMEPAD_ANALOG_TRIGGER_R:
+				return XMFLOAT4(state.trigger_R, 0, 0, 0);
 			}
 		}
 

@@ -82,9 +82,8 @@ namespace wi::shadercompiler
 				wi::backlog::post("wi::shadercompiler: could not load library " + library, wi::backlog::LogLevel::Error);
 #ifdef PLATFORM_LINUX
 				wi::backlog::post(dlerror(), wi::backlog::LogLevel::Error); // print dlopen() error detail: https://linux.die.net/man/3/dlerror
-#endif // PLATFORM_LINUX
+#endif																		// PLATFORM_LINUX
 			}
-
 		}
 	};
 	inline InternalState_DXC& dxc_compiler()
@@ -150,7 +149,8 @@ namespace wi::shadercompiler
 		{
 		case ShaderFormat::HLSL6:
 		case ShaderFormat::HLSL6_XS:
-			args.push_back(L"-rootsig-define"); args.push_back(L"WICKED_ENGINE_DEFAULT_ROOTSIGNATURE");
+			args.push_back(L"-rootsig-define");
+			args.push_back(L"WICKED_ENGINE_DEFAULT_ROOTSIGNATURE");
 			if (has_flag(input.flags, Flags::STRIP_REFLECTION))
 			{
 				args.push_back(L"-Qstrip_reflect"); // only valid in HLSL6 compiler
@@ -163,9 +163,15 @@ namespace wi::shadercompiler
 			args.push_back(L"-fvk-use-dx-layout");
 			args.push_back(L"-fvk-use-dx-position-w");
 			//args.push_back(L"-fvk-b-shift"); args.push_back(L"0"); args.push_back(L"0");
-			args.push_back(L"-fvk-t-shift"); args.push_back(L"1000"); args.push_back(L"0");
-			args.push_back(L"-fvk-u-shift"); args.push_back(L"2000"); args.push_back(L"0");
-			args.push_back(L"-fvk-s-shift"); args.push_back(L"3000"); args.push_back(L"0");
+			args.push_back(L"-fvk-t-shift");
+			args.push_back(L"1000");
+			args.push_back(L"0");
+			args.push_back(L"-fvk-u-shift");
+			args.push_back(L"2000");
+			args.push_back(L"0");
+			args.push_back(L"-fvk-s-shift");
+			args.push_back(L"3000");
+			args.push_back(L"0");
 			break;
 		default:
 			assert(0);
@@ -443,9 +449,9 @@ namespace wi::shadercompiler
 			CComPtr<IDxcIncludeHandler> dxcIncludeHandler;
 
 			HRESULT STDMETHODCALLTYPE LoadSource(
-				_In_z_ LPCWSTR pFilename,                                 // Candidate filename.
-				_COM_Outptr_result_maybenull_ IDxcBlob** ppIncludeSource  // Resultant source object for included file, nullptr if not found.
-			) override
+				_In_z_ LPCWSTR pFilename,								 // Candidate filename.
+				_COM_Outptr_result_maybenull_ IDxcBlob** ppIncludeSource // Resultant source object for included file, nullptr if not found.
+				) override
 			{
 				HRESULT hr = dxcIncludeHandler->LoadSource(pFilename, ppIncludeSource);
 				if (SUCCEEDED(hr))
@@ -486,11 +492,11 @@ namespace wi::shadercompiler
 
 		CComPtr<IDxcResult> pResults;
 		hr = dxcCompiler->Compile(
-			&Source,						// Source buffer.
-			args_raw.data(),			// Array of pointers to arguments.
-			(uint32_t)args.size(),		// Number of arguments.
+			&Source,				// Source buffer.
+			args_raw.data(),		// Array of pointers to arguments.
+			(uint32_t)args.size(),	// Number of arguments.
 			&includehandler,		// User-provided interface to handle #include directives (optional).
-			IID_PPV_ARGS(&pResults)	// Compiler output status, buffer, and errors.
+			IID_PPV_ARGS(&pResults) // Compiler output status, buffer, and errors.
 		);
 		assert(SUCCEEDED(hr));
 
@@ -592,9 +598,12 @@ namespace wi::shadercompiler
 		}
 
 		D3D_SHADER_MACRO defines[] = {
-			"HLSL5", "1",
-			"DISABLE_WAVE_INTRINSICS", "1",
-			NULL, NULL,
+			"HLSL5",
+			"1",
+			"DISABLE_WAVE_INTRINSICS",
+			"1",
+			NULL,
+			NULL,
 		};
 
 		const char* target = nullptr;
@@ -680,8 +689,7 @@ namespace wi::shadercompiler
 			Flags1,
 			0,
 			&code,
-			&errors
-		);
+			&errors);
 
 		if (errors)
 		{
@@ -731,7 +739,6 @@ namespace wi::shadercompiler
 			wi::shadercompiler::ps5::Compile(input, output);
 			break;
 #endif // SHADERCOMPILER_PS5_INCLUDED
-
 		}
 #endif // SHADERCOMPILER_ENABLED
 	}

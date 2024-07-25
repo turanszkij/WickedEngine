@@ -35,7 +35,6 @@ void VideoWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete VideoComponent");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -45,7 +44,7 @@ void VideoWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->componentsWnd.RefreshEntityTree();
-		});
+	});
 
 	float x = 60;
 	float y = 0;
@@ -72,10 +71,10 @@ void VideoWindow::Create(EditorComponent* _editor)
 					video->videoResource = wi::resourcemanager::Load(fileName);
 					wi::video::CreateVideoInstance(&video->videoResource.GetVideo(), &video->videoinstance);
 					filenameLabel.SetText(wi::helper::GetFileNameFromPath(video->filename));
-					});
 				});
+			});
 		}
-		});
+	});
 	AddWidget(&openButton);
 
 	filenameLabel.Create("Filename");
@@ -102,7 +101,7 @@ void VideoWindow::Create(EditorComponent* _editor)
 				playpauseButton.SetText(ICON_PAUSE);
 			}
 		}
-		});
+	});
 	AddWidget(&playpauseButton);
 
 	stopButton.Create(ICON_STOP);
@@ -118,7 +117,7 @@ void VideoWindow::Create(EditorComponent* _editor)
 			video->videoinstance.flags &= ~wi::video::VideoInstance::Flags::InitialFirstFrameDecoded;
 			video->videoinstance.flags &= ~wi::video::VideoInstance::Flags::Playing;
 		}
-		});
+	});
 	AddWidget(&stopButton);
 
 	loopedCheckbox.Create("Looped: ");
@@ -132,7 +131,7 @@ void VideoWindow::Create(EditorComponent* _editor)
 		{
 			video->SetLooped(args.bValue);
 		}
-		});
+	});
 	AddWidget(&loopedCheckbox);
 
 	timerSlider.Create(0, 1, 0, 100000, "Timer: ");
@@ -156,7 +155,7 @@ void VideoWindow::Create(EditorComponent* _editor)
 			video->videoinstance.flags |= wi::video::VideoInstance::Flags::DecoderReset;
 			video->videoinstance.flags &= ~wi::video::VideoInstance::Flags::InitialFirstFrameDecoded;
 		}
-		});
+	});
 	AddWidget(&timerSlider);
 
 	preview.SetSize(XMFLOAT2(160, 90));
@@ -305,4 +304,3 @@ void VideoWindow::ResizeLayout()
 
 	add_fullwidth(infoLabel);
 }
-

@@ -15,7 +15,9 @@
 #include "wiUnorderedSet.h"
 #include "wiBVH.h"
 
-#define ADJUST_FLAG(flag) if (value) _flags |= flag; else _flags &= ~flag;
+#define ADJUST_FLAG(flag)      \
+	if (value) _flags |= flag; \
+	else _flags &= ~flag;
 
 namespace wi::scene
 {
@@ -52,7 +54,7 @@ namespace wi::scene
 		uint32_t _flags = DIRTY;
 
 		XMFLOAT3 scale_local = XMFLOAT3(1, 1, 1);
-		XMFLOAT4 rotation_local = XMFLOAT4(0, 0, 0, 1);	// this is a quaternion
+		XMFLOAT4 rotation_local = XMFLOAT4(0, 0, 0, 1); // this is a quaternion
 		XMFLOAT3 translation_local = XMFLOAT3(0, 0, 0);
 
 		// Non-serialized attributes:
@@ -152,17 +154,17 @@ namespace wi::scene
 		static_assert(SHADERTYPE_COUNT == SHADERTYPE_BIN_COUNT, "These values must match!");
 
 		inline static const wi::vector<std::string> shaderTypeDefines[] = {
-			{}, // SHADERTYPE_PBR,
-			{"PLANARREFLECTION"}, // SHADERTYPE_PBR_PLANARREFLECTION,
-			{"PARALLAXOCCLUSIONMAPPING"}, // SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING,
-			{"ANISOTROPIC"}, // SHADERTYPE_PBR_ANISOTROPIC,
-			{"WATER"}, // SHADERTYPE_WATER,
-			{"CARTOON"}, // SHADERTYPE_CARTOON,
-			{"UNLIT"}, // SHADERTYPE_UNLIT,
-			{"SHEEN"}, // SHADERTYPE_PBR_CLOTH,
-			{"CLEARCOAT"}, // SHADERTYPE_PBR_CLEARCOAT,
-			{"SHEEN", "CLEARCOAT"}, // SHADERTYPE_PBR_CLOTH_CLEARCOAT,
-			{"TERRAINBLENDED"}, //SHADERTYPE_PBR_TERRAINBLENDED
+			{},								// SHADERTYPE_PBR,
+			{ "PLANARREFLECTION" },			// SHADERTYPE_PBR_PLANARREFLECTION,
+			{ "PARALLAXOCCLUSIONMAPPING" }, // SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING,
+			{ "ANISOTROPIC" },				// SHADERTYPE_PBR_ANISOTROPIC,
+			{ "WATER" },					// SHADERTYPE_WATER,
+			{ "CARTOON" },					// SHADERTYPE_CARTOON,
+			{ "UNLIT" },					// SHADERTYPE_UNLIT,
+			{ "SHEEN" },					// SHADERTYPE_PBR_CLOTH,
+			{ "CLEARCOAT" },				// SHADERTYPE_PBR_CLEARCOAT,
+			{ "SHEEN", "CLEARCOAT" },		// SHADERTYPE_PBR_CLOTH_CLEARCOAT,
+			{ "TERRAINBLENDED" },			//SHADERTYPE_PBR_TERRAINBLENDED
 		};
 		static_assert(SHADERTYPE_COUNT == arraysize(shaderTypeDefines), "These values must match!");
 
@@ -233,9 +235,9 @@ namespace wi::scene
 			}
 
 			// Non-serialized attributes:
-			float lod_clamp = 0;						// optional, can be used by texture streaming
-			int sparse_residencymap_descriptor = -1;	// optional, can be used by texture streaming
-			int sparse_feedbackmap_descriptor = -1;		// optional, can be used by texture streaming
+			float lod_clamp = 0;					 // optional, can be used by texture streaming
+			int sparse_residencymap_descriptor = -1; // optional, can be used by texture streaming
+			int sparse_feedbackmap_descriptor = -1;	 // optional, can be used by texture streaming
 		};
 		TextureMap textures[TEXTURESLOT_COUNT];
 
@@ -263,12 +265,39 @@ namespace wi::scene
 		inline void SetDirty(bool value = true) { ADJUST_FLAG(DIRTY); }
 		inline bool IsDirty() const { return _flags & DIRTY; }
 
-		inline void SetCastShadow(bool value) { SetDirty(); ADJUST_FLAG(CAST_SHADOW); }
-		inline void SetReceiveShadow(bool value) { SetDirty(); if (value) { _flags &= ~DISABLE_RECEIVE_SHADOW; } else { _flags |= DISABLE_RECEIVE_SHADOW; } }
-		inline void SetOcclusionEnabled_Primary(bool value) { SetDirty(); ADJUST_FLAG(OCCLUSION_PRIMARY); }
-		inline void SetOcclusionEnabled_Secondary(bool value) { SetDirty(); ADJUST_FLAG(OCCLUSION_SECONDARY); }
+		inline void SetCastShadow(bool value)
+		{
+			SetDirty();
+			ADJUST_FLAG(CAST_SHADOW);
+		}
+		inline void SetReceiveShadow(bool value)
+		{
+			SetDirty();
+			if (value)
+			{
+				_flags &= ~DISABLE_RECEIVE_SHADOW;
+			}
+			else
+			{
+				_flags |= DISABLE_RECEIVE_SHADOW;
+			}
+		}
+		inline void SetOcclusionEnabled_Primary(bool value)
+		{
+			SetDirty();
+			ADJUST_FLAG(OCCLUSION_PRIMARY);
+		}
+		inline void SetOcclusionEnabled_Secondary(bool value)
+		{
+			SetDirty();
+			ADJUST_FLAG(OCCLUSION_SECONDARY);
+		}
 
-		inline wi::enums::BLENDMODE GetBlendMode() const { if (userBlendMode == wi::enums::BLENDMODE_OPAQUE && (GetFilterMask() & wi::enums::FILTER_TRANSPARENT)) return wi::enums::BLENDMODE_ALPHA; else return userBlendMode; }
+		inline wi::enums::BLENDMODE GetBlendMode() const
+		{
+			if (userBlendMode == wi::enums::BLENDMODE_OPAQUE && (GetFilterMask() & wi::enums::FILTER_TRANSPARENT)) return wi::enums::BLENDMODE_ALPHA;
+			else return userBlendMode;
+		}
 		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
 		inline bool IsAlphaTestEnabled() const { return alphaRef <= 1.0f - 1.0f / 256.0f; }
 		inline bool IsUsingVertexColors() const { return _flags & USE_VERTEXCOLORS; }
@@ -284,18 +313,66 @@ namespace wi::scene
 		inline bool IsVertexAODisabled() const { return _flags & DISABLE_VERTEXAO; }
 		inline bool IsTextureStreamingDisabled() const { return _flags & DISABLE_TEXTURE_STREAMING; }
 
-		inline void SetBaseColor(const XMFLOAT4& value) { SetDirty(); baseColor = value; }
-		inline void SetSpecularColor(const XMFLOAT4& value) { SetDirty(); specularColor = value; }
-		inline void SetEmissiveColor(const XMFLOAT4& value) { SetDirty(); emissiveColor = value; }
-		inline void SetRoughness(float value) { SetDirty(); roughness = value; }
-		inline void SetReflectance(float value) { SetDirty(); reflectance = value; }
-		inline void SetMetalness(float value) { SetDirty(); metalness = value; }
-		inline void SetEmissiveStrength(float value) { SetDirty(); emissiveColor.w = value; }
-		inline void SetTransmissionAmount(float value) { SetDirty(); transmission = value; }
-		inline void SetRefractionAmount(float value) { SetDirty(); refraction = value; }
-		inline void SetNormalMapStrength(float value) { SetDirty(); normalMapStrength = value; }
-		inline void SetParallaxOcclusionMapping(float value) { SetDirty(); parallaxOcclusionMapping = value; }
-		inline void SetDisplacementMapping(float value) { SetDirty(); displacementMapping = value; }
+		inline void SetBaseColor(const XMFLOAT4& value)
+		{
+			SetDirty();
+			baseColor = value;
+		}
+		inline void SetSpecularColor(const XMFLOAT4& value)
+		{
+			SetDirty();
+			specularColor = value;
+		}
+		inline void SetEmissiveColor(const XMFLOAT4& value)
+		{
+			SetDirty();
+			emissiveColor = value;
+		}
+		inline void SetRoughness(float value)
+		{
+			SetDirty();
+			roughness = value;
+		}
+		inline void SetReflectance(float value)
+		{
+			SetDirty();
+			reflectance = value;
+		}
+		inline void SetMetalness(float value)
+		{
+			SetDirty();
+			metalness = value;
+		}
+		inline void SetEmissiveStrength(float value)
+		{
+			SetDirty();
+			emissiveColor.w = value;
+		}
+		inline void SetTransmissionAmount(float value)
+		{
+			SetDirty();
+			transmission = value;
+		}
+		inline void SetRefractionAmount(float value)
+		{
+			SetDirty();
+			refraction = value;
+		}
+		inline void SetNormalMapStrength(float value)
+		{
+			SetDirty();
+			normalMapStrength = value;
+		}
+		inline void SetParallaxOcclusionMapping(float value)
+		{
+			SetDirty();
+			parallaxOcclusionMapping = value;
+		}
+		inline void SetDisplacementMapping(float value)
+		{
+			SetDirty();
+			displacementMapping = value;
+		}
 		inline void SetSubsurfaceScatteringColor(XMFLOAT3 value)
 		{
 			SetDirty();
@@ -303,12 +380,36 @@ namespace wi::scene
 			subsurfaceScattering.y = value.y;
 			subsurfaceScattering.z = value.z;
 		}
-		inline void SetSubsurfaceScatteringAmount(float value) { SetDirty(); subsurfaceScattering.w = value; }
-		inline void SetOpacity(float value) { SetDirty(); baseColor.w = value; }
-		inline void SetAlphaRef(float value) { SetDirty();  alphaRef = value; }
-		inline void SetUseVertexColors(bool value) { SetDirty(); ADJUST_FLAG(USE_VERTEXCOLORS); }
-		inline void SetUseWind(bool value) { SetDirty(); ADJUST_FLAG(USE_WIND); }
-		inline void SetUseSpecularGlossinessWorkflow(bool value) { SetDirty(); ADJUST_FLAG(SPECULAR_GLOSSINESS_WORKFLOW); }
+		inline void SetSubsurfaceScatteringAmount(float value)
+		{
+			SetDirty();
+			subsurfaceScattering.w = value;
+		}
+		inline void SetOpacity(float value)
+		{
+			SetDirty();
+			baseColor.w = value;
+		}
+		inline void SetAlphaRef(float value)
+		{
+			SetDirty();
+			alphaRef = value;
+		}
+		inline void SetUseVertexColors(bool value)
+		{
+			SetDirty();
+			ADJUST_FLAG(USE_VERTEXCOLORS);
+		}
+		inline void SetUseWind(bool value)
+		{
+			SetDirty();
+			ADJUST_FLAG(USE_WIND);
+		}
+		inline void SetUseSpecularGlossinessWorkflow(bool value)
+		{
+			SetDirty();
+			ADJUST_FLAG(SPECULAR_GLOSSINESS_WORKFLOW);
+		}
 		inline void SetSheenColor(const XMFLOAT3& value)
 		{
 			sheenColor = XMFLOAT4(value.x, value.y, value.z, sheenColor.w);
@@ -319,14 +420,30 @@ namespace wi::scene
 			extinctionColor = XMFLOAT4(value.x, value.y, value.z, value.w);
 			SetDirty();
 		}
-		inline void SetSheenRoughness(float value) { sheenRoughness = value; SetDirty(); }
-		inline void SetClearcoatFactor(float value) { clearcoat = value; SetDirty(); }
-		inline void SetClearcoatRoughness(float value) { clearcoatRoughness = value; SetDirty(); }
+		inline void SetSheenRoughness(float value)
+		{
+			sheenRoughness = value;
+			SetDirty();
+		}
+		inline void SetClearcoatFactor(float value)
+		{
+			clearcoat = value;
+			SetDirty();
+		}
+		inline void SetClearcoatRoughness(float value)
+		{
+			clearcoatRoughness = value;
+			SetDirty();
+		}
 		inline void SetCustomShaderID(int id) { customShaderID = id; }
 		inline void DisableCustomShader() { customShaderID = -1; }
 		inline void SetDoubleSided(bool value = true) { ADJUST_FLAG(DOUBLE_SIDED); }
 		inline void SetOutlineEnabled(bool value = true) { ADJUST_FLAG(OUTLINE); }
-		inline void SetPreferUncompressedTexturesEnabled(bool value = true) { ADJUST_FLAG(PREFER_UNCOMPRESSED_TEXTURES); CreateRenderData(true); }
+		inline void SetPreferUncompressedTexturesEnabled(bool value = true)
+		{
+			ADJUST_FLAG(PREFER_UNCOMPRESSED_TEXTURES);
+			CreateRenderData(true);
+		}
 		inline void SetVertexAODisabled(bool value = true) { ADJUST_FLAG(DISABLE_VERTEXAO); }
 		inline void SetTextureStreamingDisabled(bool value = true) { ADJUST_FLAG(DISABLE_TEXTURE_STREAMING); }
 
@@ -399,7 +516,7 @@ namespace wi::scene
 			wi::vector<XMFLOAT3> vertex_positions;
 			wi::vector<XMFLOAT3> vertex_normals;
 			wi::vector<uint32_t> sparse_indices_positions; // optional, these can be used to target vertices indirectly
-			wi::vector<uint32_t> sparse_indices_normals; // optional, these can be used to target vertices indirectly
+			wi::vector<uint32_t> sparse_indices_normals;   // optional, these can be used to target vertices indirectly
 			float weight = 0;
 
 			// Non-serialized attributes:
@@ -412,7 +529,7 @@ namespace wi::scene
 
 		// Non-serialized attributes:
 		wi::primitive::AABB aabb;
-		wi::graphics::GPUBuffer generalBuffer; // index buffer + all static vertex buffers
+		wi::graphics::GPUBuffer generalBuffer;	 // index buffer + all static vertex buffers
 		wi::graphics::GPUBuffer streamoutBuffer; // all dynamic vertex buffers
 		struct BufferView
 		{
@@ -468,7 +585,23 @@ namespace wi::scene
 		// Enable disable CPU-side BVH acceleration structure
 		//	true: BVH will be built immediately if it doesn't exist yet
 		//	false: BVH will be deleted immediately if it exists
-		inline void SetBVHEnabled(bool value) { if (value) { _flags |= BVH_ENABLED; if (!bvh.IsValid()) { BuildBVH(); } } else { _flags &= ~BVH_ENABLED; bvh = {}; bvh_leaf_aabbs.clear(); } }
+		inline void SetBVHEnabled(bool value)
+		{
+			if (value)
+			{
+				_flags |= BVH_ENABLED;
+				if (!bvh.IsValid())
+				{
+					BuildBVH();
+				}
+			}
+			else
+			{
+				_flags &= ~BVH_ENABLED;
+				bvh = {};
+				bvh_leaf_aabbs.clear();
+			}
+		}
 
 		// Disable quantization of position GPU data. You can use this if you notice inaccuracy in positions.
 		//	This should be enabled for connecting meshes like terrain chunks if their AABB is not consistent with each other
@@ -517,7 +650,7 @@ namespace wi::scene
 		{
 			COMPUTE_NORMALS_HARD,		// hard face normals, can result in additional vertices generated
 			COMPUTE_NORMALS_SMOOTH,		// smooth per vertex normals, this can remove/simplify geometry, but slow
-			COMPUTE_NORMALS_SMOOTH_FAST	// average normals, vertex count will be unchanged, fast
+			COMPUTE_NORMALS_SMOOTH_FAST // average normals, vertex count will be unchanged, fast
 		};
 		void ComputeNormals(COMPUTE_NORMALS compute);
 		void FlipCulling();
@@ -567,8 +700,7 @@ namespace wi::scene
 				XMFLOAT3 v = XMFLOAT3(
 					float(x) / 1023.0f,
 					float(y) / 1023.0f,
-					float(z) / 1023.0f
-				);
+					float(z) / 1023.0f);
 				return wi::math::Lerp(aabb._min, aabb._max, v);
 			}
 			constexpr uint8_t GetWind() const
@@ -602,8 +734,7 @@ namespace wi::scene
 				XMFLOAT3 v = XMFLOAT3(
 					float(x) / 65535.0f,
 					float(y) / 65535.0f,
-					float(z) / 65535.0f
-				);
+					float(z) / 65535.0f);
 				return wi::math::Lerp(aabb._min, aabb._max, v);
 			}
 			constexpr uint8_t GetWind() const
@@ -707,8 +838,7 @@ namespace wi::scene
 					float(packed.x >> 20u) / 4095.0f,
 					float(packed.y >> 20u) / 4095.0f,
 					float(packed.z >> 20u) / 4095.0f,
-					float(packed.w >> 20u) / 4095.0f
-				);
+					float(packed.w >> 20u) / 4095.0f);
 			}
 		};
 		struct Vertex_COL
@@ -740,8 +870,7 @@ namespace wi::scene
 				return XMFLOAT3(
 					float(x) / 127.5f,
 					float(y) / 127.5f,
-					float(z) / 127.5f
-				);
+					float(z) / 127.5f);
 			}
 			inline XMVECTOR LoadNOR() const
 			{
@@ -749,8 +878,7 @@ namespace wi::scene
 					float(x) / 127.5f,
 					float(y) / 127.5f,
 					float(z) / 127.5f,
-					0
-				);
+					0);
 			}
 			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R8G8B8A8_SNORM;
 		};
@@ -780,12 +908,10 @@ namespace wi::scene
 					float(x) / 127.5f,
 					float(y) / 127.5f,
 					float(z) / 127.5f,
-					float(w) / 127.5f
-				);
+					float(w) / 127.5f);
 			}
 			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R8G8B8A8_SNORM;
 		};
-
 	};
 
 	struct ImpostorComponent
@@ -900,7 +1026,7 @@ namespace wi::scene
 		}
 
 		void ClearLightmap();
-		void SaveLightmap(); // not thread safe if LIGHTMAP_BLOCK_COMPRESSION is enabled!
+		void SaveLightmap();	 // not thread safe if LIGHTMAP_BLOCK_COMPRESSION is enabled!
 		void CompressLightmap(); // not thread safe if LIGHTMAP_BLOCK_COMPRESSION is enabled!
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
@@ -992,11 +1118,11 @@ namespace wi::scene
 		float friction = 0.5f;
 		float restitution = 0.0f;
 		float pressure = 0.0f;
-		float vertex_radius = 0.2f; // how much distance vertices keep from other physics bodies
-		float detail = 1; // LOD target detail [0,1]
-		wi::vector<uint32_t> physicsIndices; // physics vertex connectivity
+		float vertex_radius = 0.2f;							 // how much distance vertices keep from other physics bodies
+		float detail = 1;									 // LOD target detail [0,1]
+		wi::vector<uint32_t> physicsIndices;				 // physics vertex connectivity
 		wi::vector<uint32_t> physicsToGraphicsVertexMapping; // maps graphics vertex index to physics vertex index of the same position
-		wi::vector<float> weights; // weight per physics vertex controlling the mass. (0: disable weight (no physics, only animation), 1: default weight)
+		wi::vector<float> weights;							 // weight per physics vertex controlling the mass. (0: disable weight (no physics, only animation), 1: default weight)
 
 		// Non-serialized attributes:
 		std::shared_ptr<void> physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
@@ -1084,7 +1210,7 @@ namespace wi::scene
 		float radius = 0.025f;
 		float length = 0;
 
-		wi::vector<float> cascade_distances = { 8,80,800 };
+		wi::vector<float> cascade_distances = { 8, 80, 800 };
 		wi::vector<std::string> lensFlareNames;
 
 		int forced_shadow_resolution = -1; // -1: disabled, greater: fixed shadow map resolution
@@ -1168,7 +1294,7 @@ namespace wi::scene
 		wi::primitive::Frustum frustum;
 		XMFLOAT4X4 InvView, InvProjection, InvVP;
 		XMFLOAT2 jitter;
-		XMFLOAT4 clipPlane = XMFLOAT4(0, 0, 0, 0); // default: no clip plane
+		XMFLOAT4 clipPlane = XMFLOAT4(0, 0, 0, 0);		   // default: no clip plane
 		XMFLOAT4 clipPlaneOriginal = XMFLOAT4(0, 0, 0, 0); // not reversed clip plane
 		wi::Canvas canvas;
 		wi::graphics::Rect scissor;
@@ -1233,7 +1359,7 @@ namespace wi::scene
 		};
 		uint32_t _flags = DIRTY;
 		uint32_t resolution = 128; // power of two
-		std::string textureName; // if texture is coming from an asset
+		std::string textureName;   // if texture is coming from an asset
 
 		// Non-serialized attributes:
 		wi::graphics::Texture texture;
@@ -1243,9 +1369,24 @@ namespace wi::scene
 		XMFLOAT4X4 inverseMatrix;
 		mutable bool render_dirty = false;
 
-		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; DeleteResource(); } else { _flags &= ~DIRTY; } }
+		inline void SetDirty(bool value = true)
+		{
+			if (value)
+			{
+				_flags |= DIRTY;
+				DeleteResource();
+			}
+			else
+			{
+				_flags &= ~DIRTY;
+			}
+		}
 		inline void SetRealTime(bool value) { ADJUST_FLAG(REALTIME); }
-		inline void SetMSAA(bool value) { ADJUST_FLAG(MSAA); SetDirty(); }
+		inline void SetMSAA(bool value)
+		{
+			ADJUST_FLAG(MSAA);
+			SetDirty();
+		}
 
 		inline bool IsDirty() const { return _flags & DIRTY; }
 		inline bool IsRealTime() const { return _flags & REALTIME; }
@@ -1274,7 +1415,7 @@ namespace wi::scene
 		} type = Type::Point;
 
 		float gravity = 0; // negative = deflector, positive = attractor
-		float range = 0; // affection range
+		float range = 0;   // affection range
 
 		// Non-serialized attributes:
 		XMFLOAT3 position;
@@ -1350,7 +1491,7 @@ namespace wi::scene
 		float start = 0;
 		float end = 0;
 		float timer = 0;
-		float amount = 1;	// blend amount
+		float amount = 1; // blend amount
 		float speed = 1;
 
 		struct AnimationChannel
@@ -1491,9 +1632,36 @@ namespace wi::scene
 
 		inline void Play() { _flags |= PLAYING; }
 		inline void Pause() { _flags &= ~PLAYING; }
-		inline void Stop() { Pause(); timer = 0.0f; last_update_time = timer; }
-		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; _flags &= ~PING_PONG; } else { _flags &= ~LOOPED; } }
-		inline void SetPingPong(bool value = true) { if (value) { _flags |= PING_PONG; _flags &= ~LOOPED; } else { _flags &= ~PING_PONG; } }
+		inline void Stop()
+		{
+			Pause();
+			timer = 0.0f;
+			last_update_time = timer;
+		}
+		inline void SetLooped(bool value = true)
+		{
+			if (value)
+			{
+				_flags |= LOOPED;
+				_flags &= ~PING_PONG;
+			}
+			else
+			{
+				_flags &= ~LOOPED;
+			}
+		}
+		inline void SetPingPong(bool value = true)
+		{
+			if (value)
+			{
+				_flags |= PING_PONG;
+				_flags &= ~LOOPED;
+			}
+			else
+			{
+				_flags &= ~PING_PONG;
+			}
+		}
 		inline void SetPlayOnce() { _flags &= ~(LOOPED | PING_PONG); }
 
 		inline void RootMotionOn() { _flags |= ROOT_MOTION; }
@@ -1653,8 +1821,8 @@ namespace wi::scene
 		uint32_t _flags = EMPTY;
 
 		wi::ecs::Entity target = wi::ecs::INVALID_ENTITY; // which entity to follow (must have a transform component)
-		uint32_t chain_length = 0; // recursive depth
-		uint32_t iteration_count = 1; // computation step count. Increase this too for greater chain length
+		uint32_t chain_length = 0;						  // recursive depth
+		uint32_t iteration_count = 1;					  // computation step count. Increase this too for greater chain length
 
 		inline void SetDisabled(bool value = true) { ADJUST_FLAG(DISABLED); }
 		inline bool IsDisabled() const { return _flags & DISABLED; }
@@ -1758,7 +1926,17 @@ namespace wi::scene
 		size_t script_hash = 0;
 
 		inline void Play() { _flags |= PLAYING; }
-		inline void SetPlayOnce(bool once = true) { if (once) { _flags |= PLAY_ONCE; } else { _flags &= ~PLAY_ONCE; } }
+		inline void SetPlayOnce(bool once = true)
+		{
+			if (once)
+			{
+				_flags |= PLAY_ONCE;
+			}
+			else
+			{
+				_flags &= ~PLAY_ONCE;
+			}
+		}
 		inline void Stop() { _flags &= ~PLAYING; }
 
 		inline bool IsPlaying() const { return _flags & PLAYING; }
@@ -1784,38 +1962,38 @@ namespace wi::scene
 		enum class Preset
 		{
 			// Emotions:
-			Happy,		// Changed from joy
-			Angry,		// anger
-			Sad,		// Changed from sorrow
-			Relaxed,	// Comfortable. Changed from fun
-			Surprised,	// surprised. Added new in VRM 1.0
+			Happy,	   // Changed from joy
+			Angry,	   // anger
+			Sad,	   // Changed from sorrow
+			Relaxed,   // Comfortable. Changed from fun
+			Surprised, // surprised. Added new in VRM 1.0
 
 			// Lip sync procedural:
 			//	Procedural: A value that can be automatically generated by the system.
 			//	- Analyze microphone input, generate from text, etc.
-			Aa,			// aa
-			Ih,			// i
-			Ou,			// u
-			Ee,			// eh
-			Oh,			// oh
+			Aa, // aa
+			Ih, // i
+			Ou, // u
+			Ee, // eh
+			Oh, // oh
 
 			// Blink procedural:
 			//	Procedural: A value that can be automatically generated by the system.
 			//	- Randomly blink, etc.
 			Blink,		// close both eyelids
 			BlinkLeft,	// Close the left eyelid
-			BlinkRight,	// Close right eyelid
+			BlinkRight, // Close right eyelid
 
 			// Gaze procedural:
 			//	Procedural: A value that can be automatically generated by the system.
 			//	- The VRM LookAt will generate a value for the gaze point from time to time (see LookAt Expression Type).
-			LookUp,		// For models where the line of sight moves with Expression instead of bone. See eye control.
-			LookDown,	// For models where the line of sight moves with Expression instead of bone. See eye control.
-			LookLeft,	// For models whose line of sight moves with Expression instead of bone. See eye control.
-			LookRight,	// For models where the line of sight moves with Expression instead of bone. See eye control.
+			LookUp,	   // For models where the line of sight moves with Expression instead of bone. See eye control.
+			LookDown,  // For models where the line of sight moves with Expression instead of bone. See eye control.
+			LookLeft,  // For models whose line of sight moves with Expression instead of bone. See eye control.
+			LookRight, // For models where the line of sight moves with Expression instead of bone. See eye control.
 
 			// Other:
-			Neutral,	// left for backwards compatibility.
+			Neutral, // left for backwards compatibility.
 
 			Count,
 		};
@@ -1828,11 +2006,11 @@ namespace wi::scene
 			Blend,
 		};
 
-		float blink_frequency = 0.3f;	// number of blinks per second
-		float blink_length = 0.1f;	// blink's completion time in seconds
+		float blink_frequency = 0.3f; // number of blinks per second
+		float blink_length = 0.1f;	  // blink's completion time in seconds
 		int blink_count = 2;
-		float look_frequency = 0;	// number of lookAt changes per second
-		float look_length = 0.6f;	// lookAt's completion time in seconds
+		float look_frequency = 0; // number of lookAt changes per second
+		float look_length = 0.6f; // lookAt's completion time in seconds
 
 		struct Expression
 		{
@@ -1881,7 +2059,18 @@ namespace wi::scene
 		constexpr bool IsForceTalkingEnabled() const { return _flags & FORCE_TALKING; }
 
 		// Force continuous talking animation, even if no voice is playing
-		inline void SetForceTalkingEnabled(bool value = true) { if (value) { _flags |= FORCE_TALKING; } else { _flags &= ~FORCE_TALKING; _flags |= TALKING_ENDED; } }
+		inline void SetForceTalkingEnabled(bool value = true)
+		{
+			if (value)
+			{
+				_flags |= FORCE_TALKING;
+			}
+			else
+			{
+				_flags &= ~FORCE_TALKING;
+				_flags |= TALKING_ENDED;
+			}
+		}
 
 		// Non-serialized attributes:
 		float blink_timer = 0;
@@ -1908,37 +2097,37 @@ namespace wi::scene
 		enum class HumanoidBone
 		{
 			// Torso:
-			Hips,			// Required
-			Spine,			// Required
+			Hips,  // Required
+			Spine, // Required
 			Chest,
 			UpperChest,
 			Neck,
 
 			// Head:
-			Head,			// Required
+			Head, // Required
 			LeftEye,
 			RightEye,
 			Jaw,
 
 			// Leg:
-			LeftUpperLeg,	// Required
-			LeftLowerLeg,	// Required
-			LeftFoot,		// Required
+			LeftUpperLeg, // Required
+			LeftLowerLeg, // Required
+			LeftFoot,	  // Required
 			LeftToes,
-			RightUpperLeg,	// Required
-			RightLowerLeg,	// Required
-			RightFoot,		// Required
+			RightUpperLeg, // Required
+			RightLowerLeg, // Required
+			RightFoot,	   // Required
 			RightToes,
 
 			// Arm:
 			LeftShoulder,
-			LeftUpperArm,	// Required
-			LeftLowerArm,	// Required
-			LeftHand,		// Required
+			LeftUpperArm, // Required
+			LeftLowerArm, // Required
+			LeftHand,	  // Required
 			RightShoulder,
-			RightUpperArm,	// Required
-			RightLowerArm,	// Required
-			RightHand,		// Required
+			RightUpperArm, // Required
+			RightLowerArm, // Required
+			RightHand,	   // Required
 
 			// Finger:
 			LeftThumbMetacarpal,
@@ -2024,8 +2213,8 @@ namespace wi::scene
 		struct OrderedNamedValues
 		{
 			wi::unordered_map<std::string, size_t> lookup; // name -> value hash lookup
-			wi::vector<std::string> names; // ordered names
-			wi::vector<T> values; // ordered values
+			wi::vector<std::string> names;				   // ordered names
+			wi::vector<T> values;						   // ordered values
 
 			void reserve(size_t capacity)
 			{

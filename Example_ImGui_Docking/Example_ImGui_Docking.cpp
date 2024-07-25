@@ -42,7 +42,7 @@ Shader imguiVS;
 Shader imguiPS;
 Texture fontTexture;
 Sampler sampler;
-InputLayout	imguiInputLayout;
+InputLayout imguiInputLayout;
 PipelineState imguiPSO;
 ImFont* customfont;
 ImFont* customfontlarge;
@@ -102,8 +102,7 @@ bool ImGui_Impl_CreateDeviceObjects()
 	// Store our identifier
 	io.Fonts->SetTexID((ImTextureID)&fontTexture);
 
-	imguiInputLayout.elements =
-	{
+	imguiInputLayout.elements = {
 		{ "POSITION", 0, Format::R32G32_FLOAT, 0, (uint32_t)IM_OFFSETOF(ImDrawVert, pos), InputClassification::PER_VERTEX_DATA },
 		{ "TEXCOORD", 0, Format::R32G32_FLOAT, 0, (uint32_t)IM_OFFSETOF(ImDrawVert, uv), InputClassification::PER_VERTEX_DATA },
 		{ "COLOR", 0, Format::R8G8B8A8_UNORM, 0, (uint32_t)IM_OFFSETOF(ImDrawVert, col), InputClassification::PER_VERTEX_DATA },
@@ -152,10 +151,10 @@ void Example_ImGui::Initialize()
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
-	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
-	#ifdef DPIAWARE
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // Enable Docking
+#ifdef DPIAWARE
 	io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports;
-	#endif
+#endif
 	//io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts; //PE: Not really usefull font dont look good.
 	//io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
 	//io.ConfigViewportsNoTaskBarIcon = true;
@@ -181,7 +180,7 @@ void Example_ImGui::Initialize()
 	ImGui_Impl_Data* bd = IM_NEW(ImGui_Impl_Data)();
 	io.BackendRendererUserData = (void*)bd;
 	io.BackendRendererName = "Wicked";
-	io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+	io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset; // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
 	Application::Initialize();
 
@@ -248,7 +247,7 @@ void Example_ImGui::Compose(wi::graphics::CommandList cmd)
 	// Setup orthographic projection matrix into our constant buffer
 	struct ImGuiConstants
 	{
-		float   mvp[4][4];
+		float mvp[4][4];
 	};
 
 	{
@@ -259,12 +258,11 @@ void Example_ImGui::Compose(wi::graphics::CommandList cmd)
 
 		ImGuiConstants constants;
 
-		float mvp[4][4] =
-		{
-			{ 2.0f / (R - L),   0.0f,           0.0f,       0.0f },
-			{ 0.0f,         2.0f / (T - B),     0.0f,       0.0f },
-			{ 0.0f,         0.0f,           0.5f,       0.0f },
-			{ (R + L) / (L - R),  (T + B) / (B - T),    0.5f,       1.0f },
+		float mvp[4][4] = {
+			{ 2.0f / (R - L), 0.0f, 0.0f, 0.0f },
+			{ 0.0f, 2.0f / (T - B), 0.0f, 0.0f },
+			{ 0.0f, 0.0f, 0.5f, 0.0f },
+			{ (R + L) / (L - R), (T + B) / (B - T), 0.5f, 1.0f },
 		};
 		memcpy(&constants.mvp, mvp, sizeof(mvp));
 
@@ -294,7 +292,7 @@ void Example_ImGui::Compose(wi::graphics::CommandList cmd)
 	device->BindSampler(&sampler, 0, cmd);
 
 	// Will project scissor/clipping rectangles into framebuffer space
-	ImVec2 clip_off = drawData->DisplayPos;         // (0,0) unless using multi-viewports
+	ImVec2 clip_off = drawData->DisplayPos;			// (0,0) unless using multi-viewports
 	ImVec2 clip_scale = drawData->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
 	//passEncoder->SetSampler(0, Sampler::LinearWrap());
@@ -393,7 +391,6 @@ void Example_ImGuiRenderer::Load()
 	wi::scene::LoadModel("../Content/models/bloom_test.wiscene");
 
 	RenderPath3D::Load();
-
 }
 
 #define DIVTWOPI 57.29577951307855
@@ -418,8 +415,7 @@ float bounds[] = { -1.5f, -1.5f, -1.5f, 1.5f, 1.5f, 1.5f };
 float boundsSnap[] = { 0.1f, 0.1f, 0.1f };
 bool boundSizing = false;
 bool boundSizingSnap = false;
-const float identityMatrix[16] =
-{   1.f, 0.f, 0.f, 0.f,
+const float identityMatrix[16] = { 1.f, 0.f, 0.f, 0.f,
 	0.f, 1.f, 0.f, 0.f,
 	0.f, 0.f, 1.f, 0.f,
 	0.f, 0.f, 0.f, 1.f };
@@ -440,7 +436,7 @@ void Example_ImGuiRenderer::Update(float dt)
 
 	IM_ASSERT(backendData != NULL);
 
-	#ifdef DPIAWARE
+#ifdef DPIAWARE
 	static float dpi_scale = 1.0;
 	if (dpi_scale != font_scale)
 	{
@@ -448,14 +444,14 @@ void Example_ImGuiRenderer::Update(float dt)
 		add_my_font("Roboto-Medium.ttf");
 		ImGui_Impl_CreateDeviceObjects();
 	}
-	#endif
+#endif
 
 	if (!fontTexture.IsValid())
 	{
 		ImGui_Impl_CreateDeviceObjects();
 	}
 
-	
+
 #ifdef _WIN32
 	ImGui_ImplWin32_NewFrame();
 #elif defined(SDL2)
@@ -463,9 +459,9 @@ void Example_ImGuiRenderer::Update(float dt)
 #endif
 	ImGui::NewFrame();
 
-	#ifdef DPIAWARE
+#ifdef DPIAWARE
 	dpi_scale = ImGui::GetWindowDpiScale();
-	#endif
+#endif
 
 	input_text_flags = 0;
 	if (input_text_disable > 0)
@@ -501,7 +497,7 @@ void Example_ImGuiRenderer::Update(float dt)
 		{
 			//Default docking setup.
 			ImGuiID dockspace_id = ImGui::GetID("MyDockspace");
-			ImGui::DockBuilderRemoveNode(dockspace_id); // Clear out existing layout
+			ImGui::DockBuilderRemoveNode(dockspace_id);							   // Clear out existing layout
 			ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace); // ImGuiDockNodeFlags_Dockspace); // Add empty node
 			ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->Size);
 
@@ -580,7 +576,7 @@ void Example_ImGuiRenderer::Update(float dt)
 					if (ImGuizmo::IsUsing())
 					{
 						//PE: Use matrix directly. (rotation_local is using quaternion from XMQuaternionRotationMatrix)
-						obj_tranform->world = (XMFLOAT4X4) &obj_world._11;
+						obj_tranform->world = (XMFLOAT4X4)&obj_world._11;
 						obj_tranform->ApplyTransform();
 
 						//PE: Decompose , can give some matrix->euler problems. just left here for reference.
@@ -599,7 +595,6 @@ void Example_ImGuiRenderer::Update(float dt)
 					//ImGuizmo::DrawGrid(fCamView, fCamProj, identityMatrix, 100.f);
 					//ImGuizmo::DrawCubes(fCamView, fCamProj, &obj_world._11, 1);
 					//ImGuizmo::ViewManipulate(fCamView, 1000.0, ImVec2(io.DisplaySize.x - 528, ImGui::GetWindowPos().y), ImVec2(128, 128), 0x10101010);
-
 				}
 			}
 		}
@@ -618,8 +613,7 @@ void Example_ImGuiRenderer::Update(float dt)
 	{
 		static int current_scene = 0;
 
-		const char* wiscene_items[] =
-		{
+		const char* wiscene_items[] = {
 			"bloom_test",
 			"playground",
 			"volumetric_test",
@@ -629,8 +623,7 @@ void Example_ImGuiRenderer::Update(float dt)
 			"Sponza",
 			"emitter_fire"
 		};
-		const char* wiscene_file_items[] =
-		{
+		const char* wiscene_file_items[] = {
 			"../Content/models/bloom_test.wiscene",
 			"../Content/models/playground.wiscene",
 			"../Content/models/volumetric_test.wiscene",
@@ -641,7 +634,7 @@ void Example_ImGuiRenderer::Update(float dt)
 			"../Content/models/emitter_fire.wiscene"
 		};
 
-		if (ImGui::CollapsingHeader(ICON_MD_PLAY_CIRCLE_OUTLINE"  Scene Demo", ImGuiTreeNodeFlags_DefaultOpen)) //ImGuiTreeNodeFlags_None
+		if (ImGui::CollapsingHeader(ICON_MD_PLAY_CIRCLE_OUTLINE "  Scene Demo", ImGuiTreeNodeFlags_DefaultOpen)) //ImGuiTreeNodeFlags_None
 		{
 			ImGui::Indent(4);
 			ImGui::PushItemWidth(-4);
@@ -661,7 +654,6 @@ void Example_ImGuiRenderer::Update(float dt)
 					scene.Clear();
 					wi::scene::LoadModel(wiscene_file_items[current_scene]);
 				}
-
 			}
 			ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2(0.0f, 3.0f));
 			ImGui::PopItemWidth();
@@ -675,11 +667,11 @@ void Example_ImGuiRenderer::Update(float dt)
 			ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2(0.0f, 3.0f));
 			auto size = scene.objects.GetCount();
 			static float use_fixed_height = 0;
-			if(size > 14) use_fixed_height = 263.0;
+			if (size > 14) use_fixed_height = 263.0;
 			bool bUseChild = false;
 			if (use_fixed_height > 0) bUseChild = true;
-			if(bUseChild) ImGui::BeginChild("##objectsc", ImVec2(0.0f, use_fixed_height), false, ImGuiWindowFlags_None); //ImGuiWindowFlags_AlwaysVerticalScrollbar
-			
+			if (bUseChild) ImGui::BeginChild("##objectsc", ImVec2(0.0f, use_fixed_height), false, ImGuiWindowFlags_None); //ImGuiWindowFlags_AlwaysVerticalScrollbar
+
 			for (int i = 0; i < size; i++)
 			{
 				Entity e = scene.objects.GetEntity(i);
@@ -687,7 +679,8 @@ void Example_ImGuiRenderer::Update(float dt)
 				if (name.name.empty()) name.name = std::to_string(e);
 
 				bool is_selected = false;
-				if (highlight_entity == e) is_selected = true;;
+				if (highlight_entity == e) is_selected = true;
+				;
 				std::string s = "Object " + std::to_string(i) + ": " + name.name;
 				ImGui::PushItemWidth(-4);
 				if (ImGui::Selectable(s.c_str(), is_selected))
@@ -707,7 +700,7 @@ void Example_ImGuiRenderer::Update(float dt)
 			ImGui::Indent(-4);
 		}
 
-		if (ImGui::CollapsingHeader( ICON_MD_TEXTURE "  Scene Materials", ImGuiTreeNodeFlags_DefaultOpen)) //ImGuiTreeNodeFlags_None
+		if (ImGui::CollapsingHeader(ICON_MD_TEXTURE "  Scene Materials", ImGuiTreeNodeFlags_DefaultOpen)) //ImGuiTreeNodeFlags_None
 		{
 			ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2(0.0f, 3.0f));
 
@@ -732,10 +725,10 @@ void Example_ImGuiRenderer::Update(float dt)
 							Texture* lpTexture = (Texture*)pScene->materials[i].textures[a].GetGPUResource();
 							if (lpTexture)
 							{
-								float iheight = (float) lpTexture->desc.height;
-								float iwidth = (float) lpTexture->desc.width;
+								float iheight = (float)lpTexture->desc.height;
+								float iwidth = (float)lpTexture->desc.width;
 								float height_ratio = iheight / iwidth;
-								float img_width = ImGui::GetContentRegionAvail().x - 2;// -12; //Padding
+								float img_width = ImGui::GetContentRegionAvail().x - 2; // -12; //Padding
 
 								ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 								ImGui::ImageButton(lpTexture, ImVec2(img_width, img_width * height_ratio));
@@ -781,8 +774,8 @@ void Example_ImGuiRenderer::Update(float dt)
 
 		if (!imgui_got_focus_last && !bIsUsingWidget)
 		{
-			long mouse_x = (long) ImGui::GetMousePos().x;
-			long mouse_y = (long) ImGui::GetMousePos().y;
+			long mouse_x = (long)ImGui::GetMousePos().x;
+			long mouse_y = (long)ImGui::GetMousePos().y;
 			wi::primitive::Ray pickRay = wi::renderer::GetPickRay((long)mouse_x, (long)mouse_y, *this);
 			if (ImGui::IsMouseClicked(0))
 			{
@@ -817,11 +810,11 @@ void Example_ImGuiRenderer::Update(float dt)
 		}
 
 		//PE: stop flickering when scrollbar goes on/off.
-		if (ImGui::GetCurrentWindow()->ScrollbarSizes.x > 0) {
+		if (ImGui::GetCurrentWindow()->ScrollbarSizes.x > 0)
+		{
 			ImGui::Text("");
 			ImGui::Text("");
 		}
-
 	}
 	ImGui::End();
 
@@ -850,7 +843,7 @@ void Example_ImGuiRenderer::Update(float dt)
 					ImGuizmo::DecomposeMatrixToComponents(&obj_world._11, matrixTranslation, matrixRotation, matrixScale);
 				}
 
-				#ifdef USEBOUNDSIZING
+#ifdef USEBOUNDSIZING
 				const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
 				if (mesh)
 				{
@@ -862,7 +855,7 @@ void Example_ImGuiRenderer::Update(float dt)
 					bounds[4] = aabb._max.y;
 					bounds[5] = aabb._max.z;
 				}
-				#endif
+#endif
 
 				if (ImGui::BeginTabBar("##translate_tabbar"))
 				{
@@ -938,7 +931,7 @@ void Example_ImGuiRenderer::Update(float dt)
 						ImGui::EndTabItem();
 					}
 
-					#ifdef USEBOUNDSIZING
+#ifdef USEBOUNDSIZING
 					flags = 0;
 					if (mCurrentGizmoOperation == ImGuizmo::BOUNDS) flags = ImGuiTabItemFlags_SetSelected;
 					if (ImGui::BeginTabItem(ICON_MD_FENCE " Bounds", NULL, flags))
@@ -976,9 +969,9 @@ void Example_ImGuiRenderer::Update(float dt)
 					{
 						boundSizing = false;
 					}
-					#else
+#else
 					boundSizing = false;
-					#endif
+#endif
 					flags = 0;
 					if (mCurrentGizmoOperation == ImGuizmo::UNIVERSAL) flags = ImGuiTabItemFlags_SetSelected;
 					if (ImGui::BeginTabItem("All", NULL, flags))
@@ -1027,7 +1020,7 @@ void Example_ImGuiRenderer::Update(float dt)
 				ImGui::EndTabBar();
 			}
 		}
-		
+
 		if (ImGui::CollapsingHeader(ICON_MD_SETTINGS "  Settings", ImGuiTreeNodeFlags_None)) //ImGuiTreeNodeFlags_DefaultOpen
 		{
 			ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2(0.0f, 3.0f));
@@ -1099,7 +1092,6 @@ void Example_ImGuiRenderer::Update(float dt)
 				if (ImGui::IsItemHovered()) ImGui::SetTooltip("Resolution Scale");
 				ImGui::PopItemWidth();
 			}
-
 		}
 
 		if (ImGui::CollapsingHeader(ICON_MD_VIDEOCAM "  Camera Transform", ImGuiTreeNodeFlags_None)) //ImGuiTreeNodeFlags_DefaultOpen
@@ -1181,12 +1173,12 @@ void Example_ImGuiRenderer::Update(float dt)
 		{
 			static std::vector<MaterialComponent::TextureMap> screenshots;
 
-			Texture* lpTexture = (Texture * ) lastPostprocessRT;
+			Texture* lpTexture = (Texture*)lastPostprocessRT;
 			if (lpTexture)
 			{
 				float img_width = ImGui::GetContentRegionAvail().x - 2;
-				float iheight = (float) lpTexture->desc.height;
-				float iwidth = (float) lpTexture->desc.width;
+				float iheight = (float)lpTexture->desc.height;
+				float iwidth = (float)lpTexture->desc.width;
 				float height_ratio = iheight / iwidth;
 				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 				ImGui::ImageButton(lpTexture, ImVec2(img_width, img_width * height_ratio));
@@ -1211,8 +1203,8 @@ void Example_ImGuiRenderer::Update(float dt)
 					{
 						Texture* lpTex = (Texture*)screenshots[i].GetGPUResource();
 						float img_width = ImGui::GetContentRegionAvail().x - 2;
-						float iheight = (float) lpTex->desc.height;
-						float iwidth = (float) lpTex->desc.width;
+						float iheight = (float)lpTex->desc.height;
+						float iwidth = (float)lpTex->desc.width;
 						float height_ratio = iheight / iwidth;
 						ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 						ImGui::ImageButton(lpTex, ImVec2(img_width, img_width * height_ratio));
@@ -1223,7 +1215,8 @@ void Example_ImGuiRenderer::Update(float dt)
 		}
 
 		//PE: stop flickering when scrollbar goes on/off.
-		if (ImGui::GetCurrentWindow()->ScrollbarSizes.x > 0) {
+		if (ImGui::GetCurrentWindow()->ScrollbarSizes.x > 0)
+		{
 			ImGui::Text("");
 			ImGui::Text("");
 		}
@@ -1237,7 +1230,6 @@ void Example_ImGuiRenderer::Update(float dt)
 		{
 			imgui_got_focus = true;
 		}
-
 	}
 	ImGui::End();
 
@@ -1250,37 +1242,49 @@ void Example_ImGuiRenderer::Update(float dt)
 		int columns = 7;
 		ImGui::BeginColumns("##debugger", columns, ImGuiOldColumnFlags_NoBorder | ImGuiOldColumnFlags_NoResize);
 
-		std::vector< wi::graphics::Texture > debug_textures;
-		std::vector< std::string > debug_texture_name;
+		std::vector<wi::graphics::Texture> debug_textures;
+		std::vector<std::string> debug_texture_name;
 
 		//PE: TODO , add shaders that are able to display things like rtPrimitiveID (divide option).
 
-		debug_textures.push_back(active_render->rtMain); debug_texture_name.push_back("rtMain");
+		debug_textures.push_back(active_render->rtMain);
+		debug_texture_name.push_back("rtMain");
 		//debug_textures.push_back(active_render->rtPrimitiveID); debug_texture_name.push_back("rtPrimitiveID"); //UINT shader option
-		debug_textures.push_back(active_render->rtBloom); debug_texture_name.push_back("rtBloom");
-		debug_textures.push_back(active_render->rtBloom_tmp); debug_texture_name.push_back("rtBloom_tmp");
+		debug_textures.push_back(active_render->rtBloom);
+		debug_texture_name.push_back("rtBloom");
+		debug_textures.push_back(active_render->rtBloom_tmp);
+		debug_texture_name.push_back("rtBloom_tmp");
 		//debug_textures.push_back(active_render->rtParticleDistortion); debug_texture_name.push_back("rtParticleDistortion"); //not visible
 		//debug_textures.push_back(active_render->rtVolumetricLights[0]); debug_texture_name.push_back("rtVolumetricLights[0]");  //UINT shader option
 		//debug_textures.push_back(active_render->rtVolumetricLights[1]); debug_texture_name.push_back("rtVolumetricLights[1]");  //UINT shader option
 		//debug_textures.push_back(active_render->rtWaterRipple); debug_texture_name.push_back("rtWaterRipple"); //not visible
-		debug_textures.push_back(active_render->rtSceneCopy); debug_texture_name.push_back("rtSceneCopy");
-		debug_textures.push_back(active_render->rtSceneCopy_tmp); debug_texture_name.push_back("rtSceneCopy_tmp");
-		debug_textures.push_back(active_render->rtReflection); debug_texture_name.push_back("rtReflection");
+		debug_textures.push_back(active_render->rtSceneCopy);
+		debug_texture_name.push_back("rtSceneCopy");
+		debug_textures.push_back(active_render->rtSceneCopy_tmp);
+		debug_texture_name.push_back("rtSceneCopy_tmp");
+		debug_textures.push_back(active_render->rtReflection);
+		debug_texture_name.push_back("rtReflection");
 		//debug_textures.push_back(active_render->rtSun[0]); debug_texture_name.push_back("rtSun[0]"); //not visible
 		//debug_textures.push_back(active_render->rtSun[1]); debug_texture_name.push_back("rtSun[1]"); //not visible
-		debug_textures.push_back(active_render->rtPostprocess); debug_texture_name.push_back("rtPostprocess");
-		debug_textures.push_back(active_render->rtShadingRate); debug_texture_name.push_back("rtShadingRate");
-		debug_textures.push_back(active_render->rtLinearDepth); debug_texture_name.push_back("rtLinearDepth");
+		debug_textures.push_back(active_render->rtPostprocess);
+		debug_texture_name.push_back("rtPostprocess");
+		debug_textures.push_back(active_render->rtShadingRate);
+		debug_texture_name.push_back("rtShadingRate");
+		debug_textures.push_back(active_render->rtLinearDepth);
+		debug_texture_name.push_back("rtLinearDepth");
 		//debug_textures.push_back(active_render->depthBuffer_Main); debug_texture_name.push_back("depthBuffer_Main");
 		//debug_textures.push_back(active_render->depthBuffer_Copy); debug_texture_name.push_back("depthBuffer_Copy");
 		//debug_textures.push_back(active_render->depthBuffer_Reflection); debug_texture_name.push_back("depthBuffer_Reflection"); //not visible
 		//debug_textures.push_back(active_render->debugUAV); debug_texture_name.push_back("debugUAV");
 		//debug_textures.push_back(active_render->rtVelocity); debug_texture_name.push_back("rtVelocity"); //not visible
-		debug_textures.push_back(active_render->rtSSR); debug_texture_name.push_back("rtSSR");
-		debug_textures.push_back(active_render->rtAO); debug_texture_name.push_back("rtAO");
-		debug_textures.push_back(active_render->rtShadow); debug_texture_name.push_back("rtShadow");
+		debug_textures.push_back(active_render->rtSSR);
+		debug_texture_name.push_back("rtSSR");
+		debug_textures.push_back(active_render->rtAO);
+		debug_texture_name.push_back("rtAO");
+		debug_textures.push_back(active_render->rtShadow);
+		debug_texture_name.push_back("rtShadow");
 
-		#define MAXDEBUGIMAGES 32
+#define MAXDEBUGIMAGES 32
 		static MaterialComponent::TextureMap tm[MAXDEBUGIMAGES];
 
 		int current_debug_image = 0;
@@ -1298,8 +1302,8 @@ void Example_ImGuiRenderer::Update(float dt)
 					ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2((ImGui::GetContentRegionAvail().x * 0.5f) - (ImGui::CalcTextSize(title.c_str()).x * 0.5f), 0.0f));
 					ImGui::Text("%s", title.c_str());
 					float img_width = ImGui::GetContentRegionAvail().x - 2.0f;
-					float iheight = (float) lpTexture->desc.height;
-					float iwidth = (float) lpTexture->desc.width;
+					float iheight = (float)lpTexture->desc.height;
+					float iwidth = (float)lpTexture->desc.width;
 					float height_ratio = iheight / iwidth;
 					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 					ImGui::ImageButton(lpTexture, ImVec2(img_width, img_width * height_ratio));
@@ -1330,7 +1334,6 @@ void Example_ImGuiRenderer::Update(float dt)
 		{
 			imgui_got_focus = true;
 		}
-
 	}
 	ImGui::End();
 
@@ -1357,11 +1360,11 @@ void Example_ImGuiRenderer::Update(float dt)
 		{
 			wi::lua::RunText(lua);
 			lua_history.push_back(lua);
-			#ifdef _WIN32
+#ifdef _WIN32
 			strcpy_s(lua, "");
-			#elif  __linux__
+#elif __linux__
 			strcpy(lua, "");
-			#endif
+#endif
 			bSetKeyBoardFocus = true;
 		}
 		if (ImGui::IsItemActive())
@@ -1385,12 +1388,13 @@ void Example_ImGuiRenderer::Update(float dt)
 			for (int i = 0; i < lua_history.size(); i++)
 			{
 				bool is_selected = false;
-				if (ImGui::Selectable(lua_history[i].c_str(), is_selected)) {
-					#ifdef _WIN32
+				if (ImGui::Selectable(lua_history[i].c_str(), is_selected))
+				{
+#ifdef _WIN32
 					strcpy_s(lua, lua_history[i].c_str());
-					#elif __linux__ 
+#elif __linux__
 					strcpy(lua, lua_history[i].c_str());
-					#endif
+#endif
 					bSetKeyBoardFocus = true;
 				}
 				if (is_selected)
@@ -1434,7 +1438,6 @@ void Example_ImGuiRenderer::Update(float dt)
 		{
 			imgui_got_focus = true;
 		}
-
 	}
 	ImGui::End();
 
@@ -1477,8 +1480,8 @@ void Example_ImGuiRenderer::Update(float dt)
 			wi::input::HidePointer(true);
 			camera_ang[0] += yDif;
 			camera_ang[1] += xDif;
-			if (camera_ang[0] < -89.999f)  camera_ang[0] = -89.999f;
-			if (camera_ang[0] > 89.999f)  camera_ang[0] = 89.999f;
+			if (camera_ang[0] < -89.999f) camera_ang[0] = -89.999f;
+			if (camera_ang[0] > 89.999f) camera_ang[0] = 89.999f;
 		}
 		else
 		{
@@ -1487,7 +1490,7 @@ void Example_ImGuiRenderer::Update(float dt)
 		}
 
 		float movespeed = CAMERAMOVESPEED;
-		
+
 		if (imgui_io.KeyShift)
 		{
 			movespeed *= 3.0; //Speed up camera.
@@ -1527,7 +1530,7 @@ void Example_ImGuiRenderer::Update(float dt)
 
 	camera_transform.ClearTransform();
 	camera_transform.Translate(XMFLOAT3(camera_pos[0], camera_pos[1], camera_pos[2]));
-	camera_transform.RotateRollPitchYaw(XMFLOAT3(camera_ang[0] / (float) DIVTWOPI, camera_ang[1] / (float) DIVTWOPI, camera_ang[2] / (float) DIVTWOPI));
+	camera_transform.RotateRollPitchYaw(XMFLOAT3(camera_ang[0] / (float)DIVTWOPI, camera_ang[1] / (float)DIVTWOPI, camera_ang[2] / (float)DIVTWOPI));
 	camera_transform.UpdateTransform();
 	camera.TransformCamera(camera_transform);
 	camera.UpdateCamera();
@@ -1547,14 +1550,14 @@ void Example_ImGuiRenderer::DisplayPerformanceData(bool* p_open)
 {
 	const float DISTANCE = 6.0f;
 	ImGuiViewport* viewport = ImGui::GetMainViewport();
-	ImVec2 window_pos = ImVec2( viewport->Pos.x + (viewport->Size.x * 0.5f) + DISTANCE, viewport->Pos.y + DISTANCE);
-	ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, ImVec2(0.5f,0.0f) );
+	ImVec2 window_pos = ImVec2(viewport->Pos.x + (viewport->Size.x * 0.5f) + DISTANCE, viewport->Pos.y + DISTANCE);
+	ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, ImVec2(0.5f, 0.0f));
 	ImGui::SetNextWindowViewport(viewport->ID);
 
 	ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
 	if (ImGui::Begin("##DisplayPerformanceData", p_open, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
 	{
-		ImGui::Text("Wicked Engine (%s) - FPS: %.1f", wi::version::GetVersionString(),ImGui::GetIO().Framerate);
+		ImGui::Text("Wicked Engine (%s) - FPS: %.1f", wi::version::GetVersionString(), ImGui::GetIO().Framerate);
 	}
 	ImGui::End();
 }
@@ -1570,19 +1573,21 @@ void Example_ImGuiRenderer::igTextTitle(const char* text)
 	if (customfontlarge) ImGui::PopFont();
 }
 
-void add_my_font(const char *fontpath)
+void add_my_font(const char* fontpath)
 {
 	//PE: Add all lang.
-	static const ImWchar Generic_ranges_everything[] =
-	{
-	   0x0020, 0xFFFF, // Everything test.
-	   0,
+	static const ImWchar Generic_ranges_everything[] = {
+		0x0020,
+		0xFFFF, // Everything test.
+		0,
 	};
-	static const ImWchar Generic_ranges_most_needed[] =
-	{
-		0x0020, 0x00FF, // Basic Latin + Latin Supplement
-		0x0100, 0x017F,	//0100 — 017F  	Latin Extended-A
-		0x0180, 0x024F,	//0180 — 024F  	Latin Extended-B
+	static const ImWchar Generic_ranges_most_needed[] = {
+		0x0020,
+		0x00FF, // Basic Latin + Latin Supplement
+		0x0100,
+		0x017F, //0100 — 017F  	Latin Extended-A
+		0x0180,
+		0x024F, //0180 — 024F  	Latin Extended-B
 		0,
 	};
 
@@ -1594,14 +1599,14 @@ void add_my_font(const char *fontpath)
 	customfont = io.Fonts->AddFontFromFileTTF(fontpath, FontSize * FONTUPSCALE, NULL, &Generic_ranges_everything[0]); //Set as default font.
 	if (customfont)
 	{
-		#ifdef INCLUDEICONFONT
+#ifdef INCLUDEICONFONT
 		ImFontConfig config;
 		config.MergeMode = true;
 		config.GlyphOffset = ImVec2(0, 3);
 		//config.GlyphMinAdvanceX = FontSize * FONTUPSCALE; // Use if you want to make the icon monospaced
 		static const ImWchar icon_ranges[] = { ICON_MIN_MD, ICON_MAX_16_MD, 0 };
 		io.Fonts->AddFontFromFileTTF(FONT_ICON_FILE_NAME_MD, FontSize * FONTUPSCALE, &config, icon_ranges);
-		#endif
+#endif
 
 		io.FontGlobalScale = 1.0f / FONTUPSCALE;
 		customfontlarge = io.Fonts->AddFontFromFileTTF(fontpath, 20 * font_scale * FONTUPSCALE, NULL, &Generic_ranges_most_needed[0]); //Set as default font.
@@ -1610,13 +1615,12 @@ void add_my_font(const char *fontpath)
 			customfontlarge = customfont;
 		}
 
-		#ifdef INCLUDEICONFONT
+#ifdef INCLUDEICONFONT
 		config.MergeMode = true;
 		config.GlyphOffset = ImVec2(0, 2);
 		//config.GlyphMinAdvanceX = 20 * font_scale * FONTUPSCALE; // Use if you want to make the icon monospaced
 		io.Fonts->AddFontFromFileTTF(FONT_ICON_FILE_NAME_MD, FontSize * FONTUPSCALE, &config, icon_ranges);
-		#endif
-
+#endif
 	}
 	else
 	{
@@ -1627,7 +1631,7 @@ void add_my_font(const char *fontpath)
 	defaultfont = io.Fonts->AddFontDefault();
 }
 
-void style_dark_ruda( void )
+void style_dark_ruda(void)
 {
 	// Dark Ruda style by Raikiri from ImThemes
 	ImGuiStyle& style = ImGui::GetStyle();
@@ -1721,4 +1725,3 @@ void style_dark_ruda( void )
 	style.Colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.800000011920929f, 0.800000011920929f, 0.800000011920929f, 0.2000000029802322f);
 	style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.800000011920929f, 0.800000011920929f, 0.800000011920929f, 0.3499999940395355f);
 }
-

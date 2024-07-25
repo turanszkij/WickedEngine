@@ -13,7 +13,6 @@ void ColliderWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete ColliderComponent");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -286,5 +285,4 @@ void ColliderWindow::ResizeLayout()
 	add(tailX);
 	add(tailY);
 	add(tailZ);
-
 }

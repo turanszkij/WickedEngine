@@ -68,7 +68,8 @@ namespace wi::lua
 		{ NULL, NULL }
 	};
 
-	SpriteFont_BindLua::SpriteFont_BindLua(const wi::SpriteFont& font) : font(font)
+	SpriteFont_BindLua::SpriteFont_BindLua(const wi::SpriteFont& font)
+		: font(font)
 	{
 	}
 	SpriteFont_BindLua::SpriteFont_BindLua(lua_State* L)
@@ -511,7 +512,6 @@ WIFALIGN_RIGHT = 2
 WIFALIGN_TOP = 3
 WIFALIGN_BOTTOM = 4
 )");
-
 		}
 	}
 

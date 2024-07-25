@@ -178,10 +178,8 @@ namespace wi
 							(push.primitiveCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE,
 							1,
 							1,
-							cmd
-						);
+							cmd);
 					}
-
 				}
 			}
 
@@ -204,8 +202,7 @@ namespace wi
 						(push.primitiveCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE,
 						1,
 						1,
-						cmd
-					);
+						cmd);
 				}
 			}
 
@@ -228,8 +225,7 @@ namespace wi
 						(push.primitiveCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE,
 						1,
 						1,
-						cmd
-					);
+						cmd);
 				}
 			}
 
@@ -374,7 +370,7 @@ namespace wi
 					uint nodeIndex = leafNodeOffset + i;
 					BVHNode& leaf = nodes[nodeIndex];
 					assert(leaf.LeftChildIndex == 0 && leaf.RightChildIndex == 0); // a leaf must have no children
-					assert(visitedLeafs.count(nodeIndex) > 0); // every leaf node must have been visited in the traversal above
+					assert(visitedLeafs.count(nodeIndex) > 0);					   // every leaf node must have been visited in the traversal above
 				}
 
 				// Validate flag buffer:
@@ -399,7 +395,6 @@ namespace wi
 			}
 		}
 #endif // BVH_VALIDATE
-
 	}
 
 	void GPUBVH::Clear()

@@ -15,22 +15,22 @@
 
 // Simple common math helpers:
 
-template <typename T>
+template<typename T>
 constexpr T sqr(T x) { return x * x; }
 
-template <typename T>
+template<typename T>
 constexpr T clamp(T x, T a, T b)
 {
 	return x < a ? a : (x > b ? b : x);
 }
 
-template <typename T>
+template<typename T>
 constexpr T saturate(T x)
 {
 	return clamp(x, T(0), T(1));
 }
 
-template <typename T>
+template<typename T>
 constexpr T frac(T x)
 {
 	T f = x - T(int(x));
@@ -38,26 +38,26 @@ constexpr T frac(T x)
 	return f;
 }
 
-template <typename T>
+template<typename T>
 constexpr float lerp(T x, T y, T a)
 {
 	return x * (1 - a) + y * a;
 }
 
-template <typename T>
+template<typename T>
 constexpr T inverse_lerp(T value1, T value2, T pos)
 {
 	return value2 == value1 ? T(0) : ((pos - value1) / (value2 - value1));
 }
 
-template <typename T>
+template<typename T>
 constexpr T smoothstep(T edge0, T edge1, T x)
 {
 	const T t = saturate((x - edge0) / (edge1 - edge0));
 	return t * t * (T(3) - T(2) * t);
 }
 
-template <typename float4, typename float2>
+template<typename float4, typename float2>
 constexpr float bilinear(float4 gather, float2 pixel_frac)
 {
 	const float top_row = lerp(gather.w, gather.z, pixel_frac.x);
@@ -244,7 +244,8 @@ inline unsigned long firstbitlow(unsigned long long value)
 // Enable enum flags:
 //	https://www.justsoftwaresolutions.co.uk/cplusplus/using-enum-classes-as-bitfields.html
 template<typename E>
-struct enable_bitmask_operators {
+struct enable_bitmask_operators
+{
 	static constexpr bool enable = false;
 };
 template<typename E>

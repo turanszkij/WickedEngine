@@ -144,12 +144,12 @@ public:
 
 	enum HistoryOperationType
 	{
-		HISTORYOP_TRANSLATOR,		// translator interaction
-		HISTORYOP_SELECTION,		// selection changed
-		HISTORYOP_ADD,				// entity added
-		HISTORYOP_DELETE,			// entity removed
-		HISTORYOP_COMPONENT_DATA,	// generic component data changed
-		HISTORYOP_PAINTTOOL,		// paint tool interaction
+		HISTORYOP_TRANSLATOR,	  // translator interaction
+		HISTORYOP_SELECTION,	  // selection changed
+		HISTORYOP_ADD,			  // entity added
+		HISTORYOP_DELETE,		  // entity removed
+		HISTORYOP_COMPONENT_DATA, // generic component data changed
+		HISTORYOP_PAINTTOOL,	  // paint tool interaction
 		HISTORYOP_NONE
 	};
 

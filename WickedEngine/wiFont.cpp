@@ -104,10 +104,10 @@ namespace wi::font
 		{
 			struct
 			{
-				uint32_t code : 16;		// character code range supported: 0 - 65535
-				uint32_t height : 10;	// height supported: 0 - 1023
-				uint32_t style : 5;		// number of font styles supported: 0 - 31
-				uint32_t sdf : 1;		// true or false
+				uint32_t code : 16;	  // character code range supported: 0 - 65535
+				uint32_t height : 10; // height supported: 0 - 1023
+				uint32_t style : 5;	  // number of font styles supported: 0 - 31
+				uint32_t sdf : 1;	  // true or false
 			} bits;
 			uint32_t raw;
 		};
@@ -408,8 +408,7 @@ namespace wi::font
 						&bitmap.width,
 						&bitmap.height,
 						&bitmap.xoff,
-						&bitmap.yoff
-					);
+						&bitmap.yoff);
 					bitmap.data.resize(bitmap.width * bitmap.height);
 					std::memcpy(bitmap.data.data(), data, bitmap.data.size());
 					stbtt_FreeSDF(data, nullptr);
@@ -424,8 +423,7 @@ namespace wi::font
 						&bitmap.width,
 						&bitmap.height,
 						&bitmap.xoff,
-						&bitmap.yoff
-					);
+						&bitmap.yoff);
 					bitmap.data.resize(bitmap.width * bitmap.height);
 					std::memcpy(bitmap.data.data(), data, bitmap.data.size());
 					stbtt_FreeBitmap(data, nullptr);
@@ -510,7 +508,6 @@ namespace wi::font
 				assert(0); // rect packing failure
 			}
 		}
-
 	}
 	const Texture* GetAtlas()
 	{

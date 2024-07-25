@@ -11,7 +11,6 @@ void ScriptWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete Script");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -52,8 +51,8 @@ void ScriptWindow::Create(EditorComponent* _editor)
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					script->CreateFromFile(fileName);
 					fileButton.SetText(wi::helper::GetFileNameFromPath(fileName));
-					});
 				});
+			});
 		}
 	});
 	AddWidget(&fileButton);

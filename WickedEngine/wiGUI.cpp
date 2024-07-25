@@ -427,8 +427,7 @@ namespace wi::gui
 					tooltipSprite.params.pos.y - tooltip_shadow,
 					tooltipSprite.params.siz.x + tooltip_shadow * 2,
 					tooltipSprite.params.siz.y + tooltip_shadow * 2,
-					tooltip_shadow_color
-				);
+					tooltip_shadow_color);
 				wi::image::Draw(nullptr, fx, cmd);
 			}
 
@@ -454,7 +453,7 @@ namespace wi::gui
 	{
 		if (value.length() <= 0)
 		{
-			static std::atomic<uint32_t> widgetID{ 0 };
+			static std::atomic<uint32_t> widgetID { 0 };
 			name = "widget_" + std::to_string(widgetID.fetch_add(1));
 		}
 		else
@@ -777,7 +776,6 @@ namespace wi::gui
 
 
 
-
 	void Button::Create(const std::string& name)
 	{
 		SetName(name);
@@ -1003,8 +1001,6 @@ namespace wi::gui
 
 
 
-
-
 	void ScrollBar::Update(const wi::Canvas& canvas, float dt)
 	{
 		if (!IsVisible())
@@ -1180,7 +1176,6 @@ namespace wi::gui
 		//GraphicsDevice* device = wi::graphics::GetDevice();
 		//device->BindScissorRects(1, &scissorRect, cmd);
 		//wi::image::Draw(nullptr, wi::image::Params(hitBox.pos.x, hitBox.pos.y, hitBox.siz.x, hitBox.siz.y, wi::Color(255,0,0,100)), cmd);
-
 	}
 	void ScrollBar::SetColor(wi::Color color, int id)
 	{
@@ -1235,7 +1230,6 @@ namespace wi::gui
 
 		scrollbar_delta = lerp(0.0f, scrollbar_size - scrollbar_length, value / list_length);
 	}
-
 
 
 
@@ -1391,7 +1385,6 @@ namespace wi::gui
 		Widget::SetTheme(theme, id);
 		scrollbar.SetTheme(theme, id);
 	}
-
 
 
 
@@ -1573,7 +1566,6 @@ namespace wi::gui
 					caret_begin = 0;
 					caret_pos = (int)font_input.GetText().size();
 				}
-
 			}
 
 			if (clicked && state == FOCUS)
@@ -1632,7 +1624,6 @@ namespace wi::gui
 			}
 			input_updated = false;
 		}
-
 	}
 	void TextInputField::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
@@ -1675,7 +1666,7 @@ namespace wi::gui
 			font_input.Draw(cmd);
 
 			// caret:
-			if(std::fmod(caret_timer.elapsed_seconds(), 1) < 0.5f)
+			if (std::fmod(caret_timer.elapsed_seconds(), 1) < 0.5f)
 			{
 				wi::font::Params params = font_input.params;
 				XMFLOAT2 size = wi::font::TextSize(font_input.GetText().c_str(), caret_pos, font_input.params);
@@ -1688,7 +1679,7 @@ namespace wi::gui
 			}
 
 			// selection:
-			if(caret_pos != caret_begin)
+			if (caret_pos != caret_begin)
 			{
 				int start = std::min(caret_begin, caret_pos);
 				int end = std::max(caret_begin, caret_pos);
@@ -1735,10 +1726,10 @@ namespace wi::gui
 			return;
 		switch (inputChar)
 		{
-		case '\b':	// BACKSPACE
-		case '\n':	// ENTER
-		case '\r':	// ENTER
-		case 127:	// DEL
+		case '\b': // BACKSPACE
+		case '\n': // ENTER
+		case '\r': // ENTER
+		case 127:  // DEL
 			return;
 		default:
 			break;
@@ -1819,7 +1810,6 @@ namespace wi::gui
 
 
 
-
 	void Slider::Create(float start, float end, float defaultValue, float step, const std::string& name)
 	{
 		this->start = start;
@@ -1853,7 +1843,7 @@ namespace wi::gui
 				this->end = std::max(this->end, args.fValue);
 			}
 			onSlide(args);
-			});
+		});
 
 		for (int i = IDLE; i < WIDGETSTATE_COUNT; ++i)
 		{
@@ -2080,7 +2070,6 @@ namespace wi::gui
 
 
 
-
 	std::wstring check_text_global;
 	void CheckBox::Create(const std::string& name)
 	{
@@ -2235,8 +2224,7 @@ namespace wi::gui
 					translation.x + scale.x * 0.25f,
 					translation.y + scale.y * 0.25f,
 					scale.x * 0.5f,
-					scale.y * 0.5f
-				);
+					scale.y * 0.5f);
 				params.color = font.params.color;
 				wi::image::Draw(nullptr, params, cmd);
 			}
@@ -2253,7 +2241,6 @@ namespace wi::gui
 			params.color = font.params.color;
 			wi::font::Draw(uncheck_text, params, cmd);
 		}
-
 	}
 	void CheckBox::OnClick(std::function<void(EventArgs args)> func)
 	{
@@ -2280,8 +2267,6 @@ namespace wi::gui
 	{
 		wi::helper::StringConvert(text, uncheck_text);
 	}
-
-
 
 
 
@@ -2592,11 +2577,7 @@ namespace wi::gui
 
 				MiscCB cb;
 				cb.g_xColor = font.params.color;
-				XMStoreFloat4x4(&cb.g_xTransform, XMMatrixScaling(scale.y * 0.25f, scale.y * 0.25f, 1) *
-					XMMatrixRotationZ(drop_offset < 0 ? -XM_PIDIV2 : XM_PIDIV2) *
-					XMMatrixTranslation(translation.x + scale.x + 1 + scale.y * 0.5f, translation.y + scale.y * 0.5f, 0) *
-					Projection
-				);
+				XMStoreFloat4x4(&cb.g_xTransform, XMMatrixScaling(scale.y * 0.25f, scale.y * 0.25f, 1) * XMMatrixRotationZ(drop_offset < 0 ? -XM_PIDIV2 : XM_PIDIV2) * XMMatrixTranslation(translation.x + scale.x + 1 + scale.y * 0.5f, translation.y + scale.y * 0.5f, 0) * Projection);
 				device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
 				const GPUBuffer* vbs[] = {
 					&vb_triangle,
@@ -2657,10 +2638,8 @@ namespace wi::gui
 							translation.y + scale.y + drop_offset + scrollbar_delta,
 							scale.y,
 							combo_height(),
-							col
-						),
-						cmd
-					);
+							col),
+						cmd);
 				}
 			}
 
@@ -2699,8 +2678,7 @@ namespace wi::gui
 					wi::font::WIFALIGN_CENTER,
 					wi::font::WIFALIGN_CENTER,
 					font.params.color,
-					font.params.shadowColor
-				);
+					font.params.shadowColor);
 				fp.style = font.params.style;
 				wi::font::Draw(items[i].name, fp, cmd);
 			}
@@ -2723,7 +2701,8 @@ namespace wi::gui
 	}
 	void ComboBox::RemoveItem(int index)
 	{
-		if (index < 0 || (size_t)index >= items.size()) {
+		if (index < 0 || (size_t)index >= items.size())
+		{
 			return;
 		}
 
@@ -2885,9 +2864,6 @@ namespace wi::gui
 
 
 
-
-
-
 	void Window::Create(const std::string& name, WindowControls window_controls)
 	{
 		SetColor(wi::Color::Ghost());
@@ -2917,7 +2893,7 @@ namespace wi::gui
 				this->Detach();
 				this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
 				this->AttachTo(saved_parent);
-				});
+			});
 			AddWidget(&moveDragger, AttachmentOptions::NONE);
 		}
 
@@ -2934,7 +2910,7 @@ namespace wi::gui
 				{
 					onClose(args);
 				}
-				});
+			});
 			closeButton.SetTooltip("Close window");
 			AddWidget(&closeButton, AttachmentOptions::NONE);
 		}
@@ -2952,7 +2928,7 @@ namespace wi::gui
 				{
 					onCollapse({});
 				}
-				});
+			});
 			collapseButton.SetTooltip("Collapse/Expand window");
 			AddWidget(&collapseButton, AttachmentOptions::NONE);
 		}
@@ -3197,8 +3173,7 @@ namespace wi::gui
 				pointerHitbox.intersects(lefthitbox) ||
 				pointerHitbox.intersects(righthitbox) ||
 				pointerHitbox.intersects(tophitbox) ||
-				pointerHitbox.intersects(bottomhitbox)
-				)
+				pointerHitbox.intersects(bottomhitbox))
 			{
 				resize_blink_timer += dt;
 			}
@@ -3710,8 +3685,7 @@ namespace wi::gui
 				x == &closeButton ||
 				x == &collapseButton ||
 				x == &moveDragger ||
-				x == &label
-				)
+				x == &label)
 			{
 				x->SetVisible(value);
 			}
@@ -3757,8 +3731,7 @@ namespace wi::gui
 				x == &closeButton ||
 				x == &collapseButton ||
 				x == &moveDragger ||
-				x == &label
-				)
+				x == &label)
 			{
 				continue;
 			}
@@ -3978,23 +3951,22 @@ namespace wi::gui
 
 
 
-
-
-
-	struct rgb {
-		float r;       // a fraction between 0 and 1
-		float g;       // a fraction between 0 and 1
-		float b;       // a fraction between 0 and 1
+	struct rgb
+	{
+		float r; // a fraction between 0 and 1
+		float g; // a fraction between 0 and 1
+		float b; // a fraction between 0 and 1
 	};
-	struct hsv {
-		float h;       // angle in degrees
-		float s;       // a fraction between 0 and 1
-		float v;       // a fraction between 0 and 1
+	struct hsv
+	{
+		float h; // angle in degrees
+		float s; // a fraction between 0 and 1
+		float v; // a fraction between 0 and 1
 	};
 	hsv rgb2hsv(rgb in)
 	{
-		hsv         out;
-		float		min, max, delta;
+		hsv out;
+		float min, max, delta;
 
 		min = in.r < in.g ? in.r : in.g;
 		min = min < in.b ? min : in.b;
@@ -4002,7 +3974,7 @@ namespace wi::gui
 		max = in.r > in.g ? in.r : in.g;
 		max = max > in.b ? max : in.b;
 
-		out.v = max;                                // v
+		out.v = max; // v
 		delta = max - min;
 		if (delta < 0.00001f)
 		{
@@ -4010,25 +3982,26 @@ namespace wi::gui
 			out.h = 0; // undefined, maybe nan?
 			return out;
 		}
-		if (max > 0.0f) { // NOTE: if Max is == 0, this divide would cause a crash
-			out.s = (delta / max);                  // s
+		if (max > 0.0f)
+		{						   // NOTE: if Max is == 0, this divide would cause a crash
+			out.s = (delta / max); // s
 		}
-		else {
+		else
+		{
 			// if max is 0, then r = g = b = 0
 			// s = 0, h is undefined
 			out.s = 0.0f;
-			out.h = NAN;                            // its now undefined
+			out.h = NAN; // its now undefined
 			return out;
 		}
-		if (in.r >= max)                           // > is bogus, just keeps compilor happy
-			out.h = (in.g - in.b) / delta;        // between yellow & magenta
+		if (in.r >= max)				   // > is bogus, just keeps compilor happy
+			out.h = (in.g - in.b) / delta; // between yellow & magenta
+		else if (in.g >= max)
+			out.h = 2.0f + (in.b - in.r) / delta; // between cyan & yellow
 		else
-			if (in.g >= max)
-				out.h = 2.0f + (in.b - in.r) / delta;  // between cyan & yellow
-			else
-				out.h = 4.0f + (in.r - in.g) / delta;  // between magenta & cyan
+			out.h = 4.0f + (in.r - in.g) / delta; // between magenta & cyan
 
-		out.h *= 60.0f;                              // degrees
+		out.h *= 60.0f; // degrees
 
 		if (out.h < 0.0f)
 			out.h += 360.0f;
@@ -4037,11 +4010,12 @@ namespace wi::gui
 	}
 	rgb hsv2rgb(hsv in)
 	{
-		float		hh, p, q, t, ff;
-		long        i;
-		rgb         out;
+		float hh, p, q, t, ff;
+		long i;
+		rgb out;
 
-		if (in.s <= 0.0f) {       // < is bogus, just shuts up warnings
+		if (in.s <= 0.0f)
+		{ // < is bogus, just shuts up warnings
 			out.r = in.v;
 			out.g = in.v;
 			out.b = in.v;
@@ -4056,7 +4030,8 @@ namespace wi::gui
 		q = in.v * (1.0f - (in.s * ff));
 		t = in.v * (1.0f - (in.s * (1.0f - ff)));
 
-		switch (i) {
+		switch (i)
+		{
 		case 0:
 			out.r = in.v;
 			out.g = t;
@@ -4118,7 +4093,7 @@ namespace wi::gui
 			color.setR((uint8_t)args.iValue);
 			SetPickColor(color);
 			FireEvents();
-			});
+		});
 		AddWidget(&text_R);
 
 		text_G.Create("G");
@@ -4133,7 +4108,7 @@ namespace wi::gui
 			color.setG((uint8_t)args.iValue);
 			SetPickColor(color);
 			FireEvents();
-			});
+		});
 		AddWidget(&text_G);
 
 		text_B.Create("B");
@@ -4148,7 +4123,7 @@ namespace wi::gui
 			color.setB((uint8_t)args.iValue);
 			SetPickColor(color);
 			FireEvents();
-			});
+		});
 		AddWidget(&text_B);
 
 
@@ -4162,7 +4137,7 @@ namespace wi::gui
 		text_H.OnInputAccepted([this](EventArgs args) {
 			hue = wi::math::Clamp(args.fValue, 0, 360.0f);
 			FireEvents();
-			});
+		});
 		AddWidget(&text_H);
 
 		text_S.Create("S");
@@ -4175,7 +4150,7 @@ namespace wi::gui
 		text_S.OnInputAccepted([this](EventArgs args) {
 			saturation = wi::math::Clamp(args.fValue / 100.0f, 0, 1);
 			FireEvents();
-			});
+		});
 		AddWidget(&text_S);
 
 		text_V.Create("V");
@@ -4188,7 +4163,7 @@ namespace wi::gui
 		text_V.OnInputAccepted([this](EventArgs args) {
 			luminance = wi::math::Clamp(args.fValue / 100.0f, 0, 1);
 			FireEvents();
-			});
+		});
 		AddWidget(&text_V);
 
 		text_hex.Create("Hex");
@@ -4202,7 +4177,7 @@ namespace wi::gui
 			wi::Color color(args.sValue.c_str());
 			SetPickColor(color);
 			FireEvents();
-			});
+		});
 		AddWidget(&text_hex);
 
 		alphaSlider.Create(0, 255, 255, 255, "");
@@ -4213,7 +4188,7 @@ namespace wi::gui
 		alphaSlider.SetTooltip("Value for ALPHA - TRANSPARENCY channel (0-255)");
 		alphaSlider.OnSlide([this](EventArgs args) {
 			FireEvents();
-			});
+		});
 		AddWidget(&alphaSlider);
 	}
 	static const float colorpicker_radius_triangle = 68;
@@ -4240,13 +4215,12 @@ namespace wi::gui
 
 			XMMATRIX W =
 				XMMatrixScaling(sca, sca, 1) *
-				XMMatrixTranslation(translation.x + scale.x * 0.4f, translation.y + scale.y * 0.5f, 0)
-				;
+				XMMatrixTranslation(translation.x + scale.x * 0.4f, translation.y + scale.y * 0.5f, 0);
 
 			XMFLOAT2 center = XMFLOAT2(translation.x + scale.x * 0.4f, translation.y + scale.y * 0.5f);
 			XMFLOAT2 pointer = GetPointerHitbox().pos;
 			float distance = wi::math::Distance(center, pointer);
-			bool hover_hue = (distance > colorpicker_radius * sca) && (distance < (colorpicker_radius + colorpicker_width)* sca);
+			bool hover_hue = (distance > colorpicker_radius * sca) && (distance < (colorpicker_radius + colorpicker_width) * sca);
 
 			float distTri = 0;
 			XMFLOAT4 A, B, C;
@@ -4379,22 +4353,22 @@ namespace wi::gui
 
 			// saturation
 			{
-				vertices_saturation.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(1,0,0,1) });	// hue
-				vertices_saturation.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(1,1,1,1) });	// white
-				vertices_saturation.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(0,0,0,1) });	// black
+				vertices_saturation.push_back({ XMFLOAT4(0, 0, 0, 0), XMFLOAT4(1, 0, 0, 1) }); // hue
+				vertices_saturation.push_back({ XMFLOAT4(0, 0, 0, 0), XMFLOAT4(1, 1, 1, 1) }); // white
+				vertices_saturation.push_back({ XMFLOAT4(0, 0, 0, 0), XMFLOAT4(0, 0, 0, 1) }); // black
 				wi::math::ConstructTriangleEquilateral(colorpicker_radius_triangle, vertices_saturation[0].pos, vertices_saturation[1].pos, vertices_saturation[2].pos);
 
 				// create alpha blended edge:
-				vertices_saturation.push_back(vertices_saturation[0]); // outer
-				vertices_saturation.push_back(vertices_saturation[0]); // inner
-				vertices_saturation.push_back(vertices_saturation[1]); // outer
-				vertices_saturation.push_back(vertices_saturation[1]); // inner
-				vertices_saturation.push_back(vertices_saturation[2]); // outer
-				vertices_saturation.push_back(vertices_saturation[2]); // inner
-				vertices_saturation.push_back(vertices_saturation[0]); // outer
-				vertices_saturation.push_back(vertices_saturation[0]); // inner
+				vertices_saturation.push_back(vertices_saturation[0]);																										 // outer
+				vertices_saturation.push_back(vertices_saturation[0]);																										 // inner
+				vertices_saturation.push_back(vertices_saturation[1]);																										 // outer
+				vertices_saturation.push_back(vertices_saturation[1]);																										 // inner
+				vertices_saturation.push_back(vertices_saturation[2]);																										 // outer
+				vertices_saturation.push_back(vertices_saturation[2]);																										 // inner
+				vertices_saturation.push_back(vertices_saturation[0]);																										 // outer
+				vertices_saturation.push_back(vertices_saturation[0]);																										 // inner
 				wi::math::ConstructTriangleEquilateral(colorpicker_radius_triangle + 4, vertices_saturation[3].pos, vertices_saturation[5].pos, vertices_saturation[7].pos); // extrude outer
-				vertices_saturation[9].pos = vertices_saturation[3].pos; // last outer
+				vertices_saturation[9].pos = vertices_saturation[3].pos;																									 // last outer
 			}
 			// hue
 			{
@@ -4470,8 +4444,8 @@ namespace wi::gui
 					float t = p * XM_2PI;
 					float x = cos(t);
 					float y = -sin(t);
-					vertices.push_back({ XMFLOAT4(_radius * x, _radius * y, 0, 1), XMFLOAT4(1,1,1,1) });
-					vertices.push_back({ XMFLOAT4((_radius + _width) * x, (_radius + _width) * y, 0, 1), XMFLOAT4(1,1,1,1) });
+					vertices.push_back({ XMFLOAT4(_radius * x, _radius * y, 0, 1), XMFLOAT4(1, 1, 1, 1) });
+					vertices.push_back({ XMFLOAT4((_radius + _width) * x, (_radius + _width) * y, 0, 1), XMFLOAT4(1, 1, 1, 1) });
 				}
 
 				GPUBufferDesc desc;
@@ -4486,28 +4460,28 @@ namespace wi::gui
 				float halfheight = 8.0f;
 				Vertex vertices[] = {
 					// left side:
-					{ XMFLOAT4(colorpicker_radius - boldness, -halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius, -halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius - boldness, halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius, halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(colorpicker_radius - boldness, -halfheight, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(colorpicker_radius, -halfheight, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(colorpicker_radius - boldness, halfheight, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(colorpicker_radius, halfheight, 0, 1), XMFLOAT4(1, 1, 1, 1) },
 
 					// bottom side:
-					{ XMFLOAT4(colorpicker_radius - boldness, halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius - boldness, halfheight - boldness, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, halfheight - boldness, 0, 1),XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(colorpicker_radius - boldness, halfheight, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(colorpicker_radius - boldness, halfheight - boldness, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, halfheight, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, halfheight - boldness, 0, 1), XMFLOAT4(1, 1, 1, 1) },
 
 					// right side:
-					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius + colorpicker_width, halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, -halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius + colorpicker_width, -halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, halfheight, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(colorpicker_radius + colorpicker_width, halfheight, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, -halfheight, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(colorpicker_radius + colorpicker_width, -halfheight, 0, 1), XMFLOAT4(1, 1, 1, 1) },
 
 					// top side:
-					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, -halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, -halfheight + boldness, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius - boldness, -halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius - boldness, -halfheight + boldness, 0, 1),XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, -halfheight, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, -halfheight + boldness, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(colorpicker_radius - boldness, -halfheight, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(colorpicker_radius - boldness, -halfheight + boldness, 0, 1), XMFLOAT4(1, 1, 1, 1) },
 				};
 
 				GPUBufferDesc desc;
@@ -4520,10 +4494,10 @@ namespace wi::gui
 			{
 				float _width = 50;
 				Vertex vertices[] = {
-					{ XMFLOAT4(-_width, _width, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(0, _width, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(-_width, 0, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(0, 0, 0, 1),XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(-_width, _width, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(0, _width, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(-_width, 0, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(0, 0, 0, 1), XMFLOAT4(1, 1, 1, 1) },
 				};
 
 				GPUBufferDesc desc;
@@ -4531,7 +4505,6 @@ namespace wi::gui
 				desc.size = sizeof(vertices);
 				device->CreateBuffer(&desc, vertices, &vb_preview);
 			}
-
 		}
 
 		const wi::Color final_color = GetPickColor();
@@ -4547,8 +4520,7 @@ namespace wi::gui
 
 		XMMATRIX W =
 			XMMatrixScaling(sca, sca, 1) *
-			XMMatrixTranslation(translation.x + scale.x * 0.4f, translation.y + scale.y * 0.5f, 0)
-			;
+			XMMatrixTranslation(translation.x + scale.x * 0.4f, translation.y + scale.y * 0.5f, 0);
 
 		MiscCB cb;
 
@@ -4561,13 +4533,17 @@ namespace wi::gui
 			rgb result = hsv2rgb(source);
 			vertices_saturation[0].col = XMFLOAT4(result.r, result.g, result.b, 1);
 
-			vertices_saturation[3].col = vertices_saturation[0].col; vertices_saturation[3].col.w = 0;
+			vertices_saturation[3].col = vertices_saturation[0].col;
+			vertices_saturation[3].col.w = 0;
 			vertices_saturation[4].col = vertices_saturation[0].col;
-			vertices_saturation[5].col = vertices_saturation[1].col; vertices_saturation[5].col.w = 0;
+			vertices_saturation[5].col = vertices_saturation[1].col;
+			vertices_saturation[5].col.w = 0;
 			vertices_saturation[6].col = vertices_saturation[1].col;
-			vertices_saturation[7].col = vertices_saturation[2].col; vertices_saturation[7].col.w = 0;
+			vertices_saturation[7].col = vertices_saturation[2].col;
+			vertices_saturation[7].col.w = 0;
 			vertices_saturation[8].col = vertices_saturation[2].col;
-			vertices_saturation[9].col = vertices_saturation[0].col; vertices_saturation[9].col.w = 0;
+			vertices_saturation[9].col = vertices_saturation[0].col;
+			vertices_saturation[9].col.w = 0;
 			vertices_saturation[10].col = vertices_saturation[0].col;
 
 			size_t alloc_size = sizeof(Vertex) * vertices_saturation.size();
@@ -4576,9 +4552,8 @@ namespace wi::gui
 
 			XMStoreFloat4x4(&cb.g_xTransform,
 				XMMatrixRotationZ(-angle) *
-				W *
-				Projection
-			);
+					W *
+					Projection);
 			cb.g_xColor = IsEnabled() ? float4(1, 1, 1, 1) : float4(0.5f, 0.5f, 0.5f, 1);
 			device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
 			const GPUBuffer* vbs[] = {
@@ -4598,8 +4573,7 @@ namespace wi::gui
 		{
 			XMStoreFloat4x4(&cb.g_xTransform,
 				W *
-				Projection
-			);
+					Projection);
 			cb.g_xColor = IsEnabled() ? float4(1, 1, 1, 1) : float4(0.5f, 0.5f, 0.5f, 1);
 			device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
 			const GPUBuffer* vbs[] = {
@@ -4617,9 +4591,8 @@ namespace wi::gui
 		{
 			XMStoreFloat4x4(&cb.g_xTransform,
 				XMMatrixRotationZ(-hue / 360.0f * XM_2PI) *
-				W *
-				Projection
-			);
+					W *
+					Projection);
 
 			hsv source;
 			source.h = hue;
@@ -4675,9 +4648,8 @@ namespace wi::gui
 
 			XMStoreFloat4x4(&cb.g_xTransform,
 				XMMatrixTranslationFromVector(picker_center) *
-				W *
-				Projection
-			);
+					W *
+					Projection);
 			cb.g_xColor = float4(1 - final_color.toFloat3().x, 1 - final_color.toFloat3().y, 1 - final_color.toFloat3().z, 1);
 			device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
 			const GPUBuffer* vbs[] = {
@@ -4694,8 +4666,7 @@ namespace wi::gui
 		{
 			XMStoreFloat4x4(&cb.g_xTransform,
 				XMMatrixTranslation(translation.x + scale.x - sca - 2, translation.y + control_size + 4 + 22, 0) *
-				Projection
-			);
+					Projection);
 			cb.g_xColor = final_color.toFloat4();
 			device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
 			const GPUBuffer* vbs[] = {
@@ -4794,7 +4765,6 @@ namespace wi::gui
 	{
 		onColorChanged = func;
 	}
-
 
 
 
@@ -4920,8 +4890,7 @@ namespace wi::gui
 
 			if (
 				resize_state != RESIZE_STATE_NONE ||
-				pointerHitbox.intersects(bottomhitbox)
-				)
+				pointerHitbox.intersects(bottomhitbox))
 			{
 				resize_blink_timer += dt;
 			}
@@ -5073,8 +5042,7 @@ namespace wi::gui
 								}
 								else
 								{
-									if (!wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) && !wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL)
-										&& !wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) && !wi::input::Down(wi::input::KEYBOARD_BUTTON_RSHIFT))
+									if (!wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) && !wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL) && !wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) && !wi::input::Down(wi::input::KEYBOARD_BUTTON_RSHIFT))
 									{
 										ClearSelection();
 									}
@@ -5235,23 +5203,17 @@ namespace wi::gui
 			// selected box:
 			if (item.selected || item_highlight == i)
 			{
-				wi::image::Draw(nullptr
-					, wi::image::Params(name_box.pos.x, name_box.pos.y, name_box.siz.x, name_box.siz.y,
-						sprites[item.selected ? FOCUS : IDLE].params.color), cmd);
+				wi::image::Draw(nullptr, wi::image::Params(name_box.pos.x, name_box.pos.y, name_box.siz.x, name_box.siz.y, sprites[item.selected ? FOCUS : IDLE].params.color), cmd);
 			}
 
 			// opened flag triangle:
-			if(DoesItemHaveChildren(i))
+			if (DoesItemHaveChildren(i))
 			{
 				device->BindPipelineState(&gui_internal().PSO_colored, cmd);
 
 				MiscCB cb;
 				cb.g_xColor = opener_highlight == i ? wi::Color::White().toFloat4() : sprites[FOCUS].params.color;
-				XMStoreFloat4x4(&cb.g_xTransform, XMMatrixScaling(item_height() * 0.3f, item_height() * 0.3f, 1) *
-					XMMatrixRotationZ(item.open ? XM_PIDIV2 : 0) *
-					XMMatrixTranslation(open_box.pos.x + open_box.siz.x * 0.5f, open_box.pos.y + open_box.siz.y * 0.25f, 0) *
-					Projection
-				);
+				XMStoreFloat4x4(&cb.g_xTransform, XMMatrixScaling(item_height() * 0.3f, item_height() * 0.3f, 1) * XMMatrixRotationZ(item.open ? XM_PIDIV2 : 0) * XMMatrixTranslation(open_box.pos.x + open_box.siz.x * 0.5f, open_box.pos.y + open_box.siz.y * 0.25f, 0) * Projection);
 				device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
 				const GPUBuffer* vbs[] = {
 					&vb_triangle,
@@ -5272,8 +5234,7 @@ namespace wi::gui
 				wi::font::WIFALIGN_LEFT,
 				wi::font::WIFALIGN_CENTER,
 				font.params.color,
-				font.params.shadowColor
-			);
+				font.params.shadowColor);
 			fp.style = font.params.style;
 			wi::font::Draw(item.name, fp, cmd);
 		}

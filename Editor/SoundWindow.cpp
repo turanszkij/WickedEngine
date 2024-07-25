@@ -39,7 +39,6 @@ void SoundWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete SoundComponent");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -76,8 +75,8 @@ void SoundWindow::Create(EditorComponent* _editor)
 					sound->soundResource = wi::resourcemanager::Load(fileName);
 					wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
 					filenameLabel.SetText(wi::helper::GetFileNameFromPath(sound->filename));
-					});
 				});
+			});
 		}
 	});
 	AddWidget(&openButton);
@@ -406,9 +405,8 @@ void WaveGraph::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) 
 	cb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 	XMStoreFloat4x4(&cb.g_xTransform,
 		XMMatrixScaling(GetSize().x, GetSize().y, 1) *
-		XMMatrixTranslation(GetPos().x, GetPos().y + GetSize().y, 0)*
-		canvas.GetProjection()
-	);
+			XMMatrixTranslation(GetPos().x, GetPos().y + GetSize().y, 0) *
+			canvas.GetProjection());
 	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MiscCB), cmd);
 
 	// Wave:
@@ -567,4 +565,3 @@ void SoundWindow::ResizeLayout()
 	y += 10;
 	add_fullwidth(waveGraph);
 }
-

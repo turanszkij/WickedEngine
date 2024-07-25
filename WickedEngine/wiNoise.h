@@ -31,7 +31,8 @@ namespace wi::noise
 		{
 			const uint8_t h = hash & 15;
 			const float u = h < 8 ? x : y;
-			const float v = h < 4 ? y : h == 12 || h == 14 ? x : z;
+			const float v = h < 4 ? y : h == 12 || h == 14 ? x
+														   : z;
 			return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
 		}
 		// returns noise in range [-1, 1]
@@ -129,8 +130,7 @@ namespace wi::noise
 				XMVectorGetX(XMVector2Dot(p, XMVectorSet(127.1f, 311.7f, 0, 0))),
 				XMVectorGetX(XMVector2Dot(p, XMVectorSet(269.5f, 183.3f, 0, 0))),
 				0,
-				0
-			);
+				0);
 			return fract(XMVectorSin(p) * 18.5453f);
 		}
 		struct Result

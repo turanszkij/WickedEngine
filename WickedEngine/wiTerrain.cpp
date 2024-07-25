@@ -181,7 +181,7 @@ namespace wi::terrain
 	{
 		wi::scene::Scene scene; // The background generation thread can safely add things to this, it will be merged into the main scene when it is safe to do so
 		wi::jobsystem::context workload;
-		std::atomic_bool cancelled{ false };
+		std::atomic_bool cancelled { false };
 	};
 
 	wi::jobsystem::context virtual_texture_ctx;
@@ -329,7 +329,7 @@ namespace wi::terrain
 			// close by chunks have residency and packed mips
 			residency = atlas.allocate_residency(resolution);
 			tile_count += 1; // packed mip chain
-			lod_count += 1; // packed mip chain
+			lod_count += 1;	 // packed mip chain
 			tiles.resize(tile_count);
 			if (atlas.allocate_tile(tiles[tile_count - 1]))
 			{
@@ -845,12 +845,10 @@ namespace wi::terrain
 
 		// Start the generation on a background thread and keep it running until the next frame
 		wi::jobsystem::Execute(generator->workload, [=](wi::jobsystem::JobArgs args) {
-
 			wi::Timer timer;
 			bool generated_something = false;
 
-			auto request_chunk = [&](int offset_x, int offset_z)
-			{
+			auto request_chunk = [&](int offset_x, int offset_z) {
 				Chunk chunk = center_chunk;
 				chunk.x += offset_x;
 				chunk.z += offset_z;
@@ -910,7 +908,7 @@ namespace wi::terrain
 
 					wi::HairParticleSystem grass = grass_properties;
 					grass.vertex_lengths.resize(vertexCount);
-					std::atomic<uint32_t> grass_valid_vertex_count{ 0 };
+					std::atomic<uint32_t> grass_valid_vertex_count { 0 };
 
 					// Shadow casting will only be enabled for sloped terrain chunks:
 					std::atomic_bool slope_cast_shadow;
@@ -990,9 +988,9 @@ namespace wi::terrain
 						{
 							grass.vertex_lengths[index] = 0;
 						}
-						});
+					});
 					wi::jobsystem::Wait(ctx); // wait until chunk's vertex buffer is fully generated
-					
+
 					object.SetCastShadow(slope_cast_shadow.load());
 					mesh.SetDoubleSidedShadow(slope_cast_shadow.load());
 
@@ -1074,8 +1072,7 @@ namespace wi::terrain
 									continue;
 								int gen_count = (int)rng.next_uint(
 									uint32_t(prop.min_count_per_chunk * chunk_data.prop_density_current),
-									std::max(1u, uint32_t(prop.max_count_per_chunk * chunk_data.prop_density_current))
-								);
+									std::max(1u, uint32_t(prop.max_count_per_chunk * chunk_data.prop_density_current)));
 								for (int i = 0; i < gen_count; ++i)
 								{
 									uint32_t tri = rng.next_uint(0, chunk_indices().lods[0].indexCount / 3); // random triangle on the chunk mesh
@@ -1120,8 +1117,7 @@ namespace wi::terrain
 											seri,
 											INVALID_ENTITY,
 											wi::scene::Scene::EntitySerializeFlags::RECURSIVE |
-											wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
-										);
+												wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES);
 										NameComponent* name = generator->scene.names.GetComponent(entity);
 										if (name != nullptr)
 										{
@@ -1156,7 +1152,6 @@ namespace wi::terrain
 				{
 					generator->cancelled.store(true);
 				}
-
 			};
 
 			// generate center chunk first:
@@ -1194,18 +1189,16 @@ namespace wi::terrain
 					z--;
 				}
 			}
-
-			});
-
+		});
 	}
 
 	void Terrain::Generation_Cancel()
 	{
 		if (generator == nullptr)
 			return;
-		generator->cancelled.store(true); // tell the generation thread that work must be stopped
+		generator->cancelled.store(true);		  // tell the generation thread that work must be stopped
 		wi::jobsystem::Wait(generator->workload); // waits until generation thread exits
-		generator->cancelled.store(false); // the next generation can run
+		generator->cancelled.store(false);		  // the next generation can run
 	}
 
 	void Terrain::CreateChunkRegionTexture(ChunkData& chunk_data)
@@ -1440,8 +1433,7 @@ namespace wi::terrain
 						auto tile = vt.tiles.back();
 						const float2 resolution_rcp = float2(
 							1.0f / (float)atlas.maps[map_type].texture.desc.width,
-							1.0f / (float)atlas.maps[map_type].texture.desc.height
-						);
+							1.0f / (float)atlas.maps[map_type].texture.desc.height);
 						if (map_type == 0)
 						{
 							material->texMulAdd.x = (float)SVT_TILE_SIZE * resolution_rcp.x;
@@ -1471,7 +1463,6 @@ namespace wi::terrain
 		}
 
 		wi::jobsystem::Execute(virtual_texture_ctx, [this](wi::jobsystem::JobArgs args) {
-
 			// Update state of physical tiles:
 			//	Potentially each physical tile is getting marked as unused here (free_frames > 0), unless GPU requested them to be resident
 			for (auto& x : atlas.physical_tiles)
@@ -1696,8 +1687,7 @@ namespace wi::terrain
 				(vt->residency->residencyMap.desc.width + 7u) / 8u,
 				(vt->residency->residencyMap.desc.height + 7u) / 8u,
 				1u,
-				cmd
-			);
+				cmd);
 		}
 		device->EventEnd(cmd);
 
@@ -1760,13 +1750,11 @@ namespace wi::terrain
 					uint request_lod_resolution = std::max(1u, vt->resolution >> request.lod);
 					const uint2 write_offset_original = uint2(
 						request.tile_x * SVT_TILE_SIZE_PADDED / 4,
-						request.tile_y * SVT_TILE_SIZE_PADDED / 4
-					);
+						request.tile_y * SVT_TILE_SIZE_PADDED / 4);
 
 					push.offset = int2(
 						int(request.x * SVT_TILE_SIZE) - int(SVT_TILE_BORDER),
-						int(request.y * SVT_TILE_SIZE) - int(SVT_TILE_BORDER)
-					);
+						int(request.y * SVT_TILE_SIZE) - int(SVT_TILE_BORDER));
 
 					if (request_lod_resolution < SVT_TILE_SIZE)
 					{
@@ -1785,8 +1773,7 @@ namespace wi::terrain
 								(push.write_size + 7u) / 8u,
 								(push.write_size + 7u) / 8u,
 								1,
-								cmd
-							);
+								cmd);
 
 							request_lod_resolution /= 2u;
 							tail_mip_idx++;
@@ -1803,8 +1790,7 @@ namespace wi::terrain
 							(push.write_size + 7u) / 8u,
 							(push.write_size + 7u) / 8u,
 							1,
-							cmd
-						);
+							cmd);
 					}
 				}
 			}
@@ -1859,8 +1845,7 @@ namespace wi::terrain
 					(std::max(1u, vt->residency->feedbackMap.desc.width / 2) + 7u) / 8u,
 					(std::max(1u, vt->residency->feedbackMap.desc.height / 2) + 7u) / 8u,
 					1u,
-					cmd
-				);
+					cmd);
 			}
 			device->EventEnd(cmd);
 		}
@@ -1888,8 +1873,7 @@ namespace wi::terrain
 					(push.threadCount + 63u) / 64u,
 					1u,
 					1u,
-					cmd
-				);
+					cmd);
 			}
 			device->EventEnd(cmd);
 		}
@@ -2004,8 +1988,7 @@ namespace wi::terrain
 							tmp_archive,
 							seri,
 							INVALID_ENTITY,
-							wi::scene::Scene::EntitySerializeFlags::RECURSIVE
-						);
+							wi::scene::Scene::EntitySerializeFlags::RECURSIVE);
 
 						// Serialize again with the remapped references:
 						wi::Archive remapped_archive;
@@ -2014,8 +1997,7 @@ namespace wi::terrain
 							remapped_archive,
 							seri,
 							entity,
-							wi::scene::Scene::EntitySerializeFlags::RECURSIVE
-						);
+							wi::scene::Scene::EntitySerializeFlags::RECURSIVE);
 
 						// Replace original data with remapped references for current session:
 						remapped_archive.WriteData(prop.data);
@@ -2041,8 +2023,7 @@ namespace wi::terrain
 						archive,
 						seri,
 						object_entity,
-						wi::scene::Scene::EntitySerializeFlags::RECURSIVE | wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
-					);
+						wi::scene::Scene::EntitySerializeFlags::RECURSIVE | wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES);
 					archive.WriteData(prop.data);
 				}
 				archive >> prop.min_count_per_chunk;
@@ -2121,36 +2102,36 @@ namespace wi::terrain
 				{
 				default:
 				case Modifier::Type::Perlin:
-					{
-						std::shared_ptr<PerlinModifier> modifier = std::make_shared<PerlinModifier>();
-						modifiers[i] = modifier;
-						archive >> modifier->octaves;
-						archive >> modifier->seed;
-						modifier->perlin_noise.Serialize(archive);
-					}
-					break;
+				{
+					std::shared_ptr<PerlinModifier> modifier = std::make_shared<PerlinModifier>();
+					modifiers[i] = modifier;
+					archive >> modifier->octaves;
+					archive >> modifier->seed;
+					modifier->perlin_noise.Serialize(archive);
+				}
+				break;
 				case Modifier::Type::Voronoi:
-					{
-						std::shared_ptr<VoronoiModifier> modifier = std::make_shared<VoronoiModifier>();
-						modifiers[i] = modifier;
-						archive >> modifier->fade;
-						archive >> modifier->shape;
-						archive >> modifier->falloff;
-						archive >> modifier->perturbation;
-						archive >> modifier->seed;
-						modifier->perlin_noise.Serialize(archive);
-					}
-					break;
+				{
+					std::shared_ptr<VoronoiModifier> modifier = std::make_shared<VoronoiModifier>();
+					modifiers[i] = modifier;
+					archive >> modifier->fade;
+					archive >> modifier->shape;
+					archive >> modifier->falloff;
+					archive >> modifier->perturbation;
+					archive >> modifier->seed;
+					modifier->perlin_noise.Serialize(archive);
+				}
+				break;
 				case Modifier::Type::Heightmap:
-					{
-						std::shared_ptr<HeightmapModifier> modifier = std::make_shared<HeightmapModifier>();
-						modifiers[i] = modifier;
-						archive >> modifier->scale;
-						archive >> modifier->data;
-						archive >> modifier->width;
-						archive >> modifier->height;
-					}
-					break;
+				{
+					std::shared_ptr<HeightmapModifier> modifier = std::make_shared<HeightmapModifier>();
+					modifiers[i] = modifier;
+					archive >> modifier->scale;
+					archive >> modifier->data;
+					archive >> modifier->width;
+					archive >> modifier->height;
+				}
+				break;
 				}
 
 				Modifier* modifier = modifiers[i].get();
@@ -2159,7 +2140,6 @@ namespace wi::terrain
 				archive >> modifier->weight;
 				archive >> modifier->frequency;
 			}
-
 		}
 		else
 		{

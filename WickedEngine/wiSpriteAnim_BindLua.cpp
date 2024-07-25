@@ -44,7 +44,8 @@ namespace wi::lua
 		{ nullptr, nullptr }
 	};
 
-	SpriteAnim_BindLua::SpriteAnim_BindLua(const wi::Sprite::Anim& anim) :anim(anim)
+	SpriteAnim_BindLua::SpriteAnim_BindLua(const wi::Sprite::Anim& anim)
+		: anim(anim)
 	{
 	}
 
@@ -96,7 +97,7 @@ namespace wi::lua
 		}
 		return 0;
 	}
-	int SpriteAnim_BindLua::SetWobbleAnimAmount(lua_State* L) 
+	int SpriteAnim_BindLua::SetWobbleAnimAmount(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
@@ -109,7 +110,7 @@ namespace wi::lua
 		}
 		return 0;
 	}
-	int SpriteAnim_BindLua::SetWobbleAnimSpeed(lua_State* L) 
+	int SpriteAnim_BindLua::SetWobbleAnimSpeed(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
@@ -289,7 +290,6 @@ namespace wi::lua
 
 
 
-
 	Luna<MovingTexAnim_BindLua>::FunctionType MovingTexAnim_BindLua::methods[] = {
 		lunamethod(MovingTexAnim_BindLua, SetSpeedX),
 		lunamethod(MovingTexAnim_BindLua, SetSpeedY),
@@ -304,7 +304,8 @@ namespace wi::lua
 		{ nullptr, nullptr }
 	};
 
-	MovingTexAnim_BindLua::MovingTexAnim_BindLua(const wi::Sprite::Anim::MovingTexAnim& anim) :anim(anim)
+	MovingTexAnim_BindLua::MovingTexAnim_BindLua(const wi::Sprite::Anim::MovingTexAnim& anim)
+		: anim(anim)
 	{
 	}
 
@@ -383,7 +384,8 @@ namespace wi::lua
 		{ NULL, NULL }
 	};
 
-	DrawRectAnim_BindLua::DrawRectAnim_BindLua(const wi::Sprite::Anim::DrawRectAnim& anim) :anim(anim)
+	DrawRectAnim_BindLua::DrawRectAnim_BindLua(const wi::Sprite::Anim::DrawRectAnim& anim)
+		: anim(anim)
 	{
 	}
 

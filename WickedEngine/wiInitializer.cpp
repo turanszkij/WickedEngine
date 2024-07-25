@@ -7,10 +7,10 @@
 
 namespace wi::initializer
 {
-	static std::atomic_bool initializationStarted{ false };
+	static std::atomic_bool initializationStarted { false };
 	static wi::jobsystem::context ctx;
 	static wi::Timer timer;
-	static std::atomic_bool systems[INITIALIZED_SYSTEM_COUNT]{};
+	static std::atomic_bool systems[INITIALIZED_SYSTEM_COUNT] {};
 
 	void InitializeComponentsImmediate()
 	{
@@ -64,14 +64,15 @@ namespace wi::initializer
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::TrailRenderer::Initialize(); systems[INITIALIZED_SYSTEM_TRAILRENDERER].store(true); });
 
 		// Initialize these immediately:
-		wi::lua::Initialize(); systems[INITIALIZED_SYSTEM_LUA].store(true);
-		wi::audio::Initialize(); systems[INITIALIZED_SYSTEM_AUDIO].store(true);
+		wi::lua::Initialize();
+		systems[INITIALIZED_SYSTEM_LUA].store(true);
+		wi::audio::Initialize();
+		systems[INITIALIZED_SYSTEM_AUDIO].store(true);
 
 		std::thread([] {
 			wi::jobsystem::Wait(ctx);
 			wi::backlog::post("\n[wi::initializer] Wicked Engine Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 		}).detach();
-
 	}
 
 	bool IsInitializeFinished(INITIALIZED_SYSTEM system)

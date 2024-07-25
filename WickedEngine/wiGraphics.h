@@ -16,10 +16,10 @@ namespace wi::graphics
 
 	enum class ValidationMode : uint8_t
 	{
-		Disabled,	// No validation is enabled
-		Enabled,	// CPU command validation
-		GPU,		// CPU and GPU-based validation
-		Verbose		// Print all warnings, errors and info messages
+		Disabled, // No validation is enabled
+		Enabled,  // CPU command validation
+		GPU,	  // CPU and GPU-based validation
+		Verbose	  // Print all warnings, errors and info messages
 	};
 
 	enum class AdapterType : uint8_t
@@ -39,25 +39,25 @@ namespace wi::graphics
 
 	enum class ShaderStage : uint8_t
 	{
-		MS,		// Mesh Shader
-		AS,		// Amplification Shader
-		VS,		// Vertex Shader
-		HS,		// Hull Shader
-		DS,		// Domain Shader
-		GS,		// Geometry Shader
-		PS,		// Pixel Shader
-		CS,		// Compute Shader
-		LIB,	// Shader Library
+		MS,	 // Mesh Shader
+		AS,	 // Amplification Shader
+		VS,	 // Vertex Shader
+		HS,	 // Hull Shader
+		DS,	 // Domain Shader
+		GS,	 // Geometry Shader
+		PS,	 // Pixel Shader
+		CS,	 // Compute Shader
+		LIB, // Shader Library
 		Count,
 	};
 	enum class ShaderFormat : uint8_t
 	{
-		NONE,		// Not used
-		HLSL5,		// DXBC
-		HLSL6,		// DXIL
-		SPIRV,		// SPIR-V
-		HLSL6_XS,	// XBOX Series Native
-		PS5,		// Playstation 5
+		NONE,	  // Not used
+		HLSL5,	  // DXBC
+		HLSL6,	  // DXIL
+		SPIRV,	  // SPIR-V
+		HLSL6_XS, // XBOX Series Native
+		PS5,	  // Playstation 5
 	};
 	enum class ShaderModel : uint8_t
 	{
@@ -94,8 +94,8 @@ namespace wi::graphics
 	};
 	enum class DepthWriteMask : uint8_t
 	{
-		ZERO,	// Disables depth write
-		ALL,	// Enables depth write
+		ZERO, // Disables depth write
+		ALL,  // Enables depth write
 	};
 	enum class StencilOp : uint8_t
 	{
@@ -127,7 +127,7 @@ namespace wi::graphics
 		INV_SRC1_COLOR,
 		SRC1_ALPHA,
 		INV_SRC1_ALPHA,
-	}; 
+	};
 	enum class BlendOp : uint8_t
 	{
 		ADD,
@@ -154,9 +154,9 @@ namespace wi::graphics
 	};
 	enum class Usage : uint8_t
 	{
-		DEFAULT,	// CPU no access, GPU read/write
-		UPLOAD,	    // CPU write, GPU read
-		READBACK,	// CPU read, GPU write
+		DEFAULT,  // CPU no access, GPU read/write
+		UPLOAD,	  // CPU write, GPU read
+		READBACK, // CPU read, GPU write
 	};
 	enum class TextureAddressMode : uint8_t
 	{
@@ -232,7 +232,7 @@ namespace wi::graphics
 		R32G32_FLOAT,
 		R32G32_UINT,
 		R32G32_SINT,
-		D32_FLOAT_S8X24_UINT,	// depth (32-bit) + stencil (8-bit) | SRV: R32_FLOAT (default or depth aspect), R8_UINT (stencil aspect)
+		D32_FLOAT_S8X24_UINT, // depth (32-bit) + stencil (8-bit) | SRV: R32_FLOAT (default or depth aspect), R8_UINT (stencil aspect)
 
 		R10G10B10A2_UNORM,
 		R10G10B10A2_UINT,
@@ -249,11 +249,11 @@ namespace wi::graphics
 		R16G16_UINT,
 		R16G16_SNORM,
 		R16G16_SINT,
-		D32_FLOAT,				// depth (32-bit) | SRV: R32_FLOAT
+		D32_FLOAT, // depth (32-bit) | SRV: R32_FLOAT
 		R32_FLOAT,
 		R32_UINT,
-		R32_SINT, 
-		D24_UNORM_S8_UINT,		// depth (24-bit) + stencil (8-bit) | SRV: R24_INTERNAL (default or depth aspect), R8_UINT (stencil aspect)
+		R32_SINT,
+		D24_UNORM_S8_UINT, // depth (24-bit) + stencil (8-bit) | SRV: R24_INTERNAL (default or depth aspect), R8_UINT (stencil aspect)
 		R9G9B9E5_SHAREDEXP,
 
 		R8G8_UNORM,
@@ -261,7 +261,7 @@ namespace wi::graphics
 		R8G8_SNORM,
 		R8G8_SINT,
 		R16_FLOAT,
-		D16_UNORM,				// depth (16-bit) | SRV: R16_UNORM
+		D16_UNORM, // depth (16-bit) | SRV: R16_UNORM
 		R16_UNORM,
 		R16_UINT,
 		R16_SNORM,
@@ -274,28 +274,28 @@ namespace wi::graphics
 
 		// Formats that are not usable in render pass must be below because formats in render pass must be encodable as 6 bits:
 
-		BC1_UNORM,			// Three color channels (5 bits:6 bits:5 bits), with 0 or 1 bit(s) of alpha
-		BC1_UNORM_SRGB,		// Three color channels (5 bits:6 bits:5 bits), with 0 or 1 bit(s) of alpha
-		BC2_UNORM,			// Three color channels (5 bits:6 bits:5 bits), with 4 bits of alpha
-		BC2_UNORM_SRGB,		// Three color channels (5 bits:6 bits:5 bits), with 4 bits of alpha
-		BC3_UNORM,			// Three color channels (5 bits:6 bits:5 bits) with 8 bits of alpha
-		BC3_UNORM_SRGB,		// Three color channels (5 bits:6 bits:5 bits) with 8 bits of alpha
-		BC4_UNORM,			// One color channel (8 bits)
-		BC4_SNORM,			// One color channel (8 bits)
-		BC5_UNORM,			// Two color channels (8 bits:8 bits)
-		BC5_SNORM,			// Two color channels (8 bits:8 bits)
-		BC6H_UF16,			// Three color channels (16 bits:16 bits:16 bits) in "half" floating point
-		BC6H_SF16,			// Three color channels (16 bits:16 bits:16 bits) in "half" floating point
-		BC7_UNORM,			// Three color channels (4 to 7 bits per channel) with 0 to 8 bits of alpha
-		BC7_UNORM_SRGB,		// Three color channels (4 to 7 bits per channel) with 0 to 8 bits of alpha
+		BC1_UNORM,		// Three color channels (5 bits:6 bits:5 bits), with 0 or 1 bit(s) of alpha
+		BC1_UNORM_SRGB, // Three color channels (5 bits:6 bits:5 bits), with 0 or 1 bit(s) of alpha
+		BC2_UNORM,		// Three color channels (5 bits:6 bits:5 bits), with 4 bits of alpha
+		BC2_UNORM_SRGB, // Three color channels (5 bits:6 bits:5 bits), with 4 bits of alpha
+		BC3_UNORM,		// Three color channels (5 bits:6 bits:5 bits) with 8 bits of alpha
+		BC3_UNORM_SRGB, // Three color channels (5 bits:6 bits:5 bits) with 8 bits of alpha
+		BC4_UNORM,		// One color channel (8 bits)
+		BC4_SNORM,		// One color channel (8 bits)
+		BC5_UNORM,		// Two color channels (8 bits:8 bits)
+		BC5_SNORM,		// Two color channels (8 bits:8 bits)
+		BC6H_UF16,		// Three color channels (16 bits:16 bits:16 bits) in "half" floating point
+		BC6H_SF16,		// Three color channels (16 bits:16 bits:16 bits) in "half" floating point
+		BC7_UNORM,		// Three color channels (4 to 7 bits per channel) with 0 to 8 bits of alpha
+		BC7_UNORM_SRGB, // Three color channels (4 to 7 bits per channel) with 0 to 8 bits of alpha
 
-		NV12,				// video YUV420; SRV Luminance aspect: R8_UNORM, SRV Chrominance aspect: R8G8_UNORM
+		NV12, // video YUV420; SRV Luminance aspect: R8_UNORM, SRV Chrominance aspect: R8G8_UNORM
 	};
 	enum class GpuQueryType : uint8_t
 	{
-		TIMESTAMP,			// retrieve time point of gpu execution
-		OCCLUSION,			// how many samples passed depth test?
-		OCCLUSION_BINARY,	// depth test passed or not?
+		TIMESTAMP,		  // retrieve time point of gpu execution
+		OCCLUSION,		  // how many samples passed depth test?
+		OCCLUSION_BINARY, // depth test passed or not?
 	};
 	enum class IndexBufferFormat : uint8_t
 	{
@@ -312,7 +312,7 @@ namespace wi::graphics
 
 	enum class ShadingRate : uint8_t
 	{
-		RATE_1X1,	// Default/full shading rate
+		RATE_1X1, // Default/full shading rate
 		RATE_1X2,
 		RATE_2X1,
 		RATE_2X2,
@@ -346,7 +346,7 @@ namespace wi::graphics
 
 	enum class VideoProfile : uint8_t
 	{
-		H264,	// AVC
+		H264, // AVC
 	};
 
 	enum class ComponentSwizzle : uint8_t
@@ -361,9 +361,9 @@ namespace wi::graphics
 
 	enum class ColorSpace : uint8_t
 	{
-		SRGB,			// SDR color space (8 or 10 bits per channel)
-		HDR10_ST2084,	// HDR10 color space (10 bits per channel)
-		HDR_LINEAR,		// HDR color space (16 bits per channel)
+		SRGB,		  // SDR color space (8 or 10 bits per channel)
+		HDR10_ST2084, // HDR10 color space (10 bits per channel)
+		HDR_LINEAR,	  // HDR color space (16 bits per channel)
 	};
 
 	// Flags ////////////////////////////////////////////
@@ -400,18 +400,18 @@ namespace wi::graphics
 		BUFFER_STRUCTURED = 1 << 3,
 		RAY_TRACING = 1 << 4,
 		PREDICATION = 1 << 5,
-		TRANSIENT_ATTACHMENT = 1 << 6,	// hint: used in renderpass, without needing to write content to memory (VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)
-		SPARSE = 1 << 7,	// sparse resource without backing memory allocation
-		ALIASING_BUFFER = 1 << 8,			// memory allocation will be suitable for buffers
-		ALIASING_TEXTURE_NON_RT_DS = 1 << 9,// memory allocation will be suitable for textures that are non render targets nor depth stencils
-		ALIASING_TEXTURE_RT_DS = 1 << 10,	// memory allocation will be suitable for textures that are either render targets or depth stencils
+		TRANSIENT_ATTACHMENT = 1 << 6,													  // hint: used in renderpass, without needing to write content to memory (VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)
+		SPARSE = 1 << 7,																  // sparse resource without backing memory allocation
+		ALIASING_BUFFER = 1 << 8,														  // memory allocation will be suitable for buffers
+		ALIASING_TEXTURE_NON_RT_DS = 1 << 9,											  // memory allocation will be suitable for textures that are non render targets nor depth stencils
+		ALIASING_TEXTURE_RT_DS = 1 << 10,												  // memory allocation will be suitable for textures that are either render targets or depth stencils
 		ALIASING = ALIASING_BUFFER | ALIASING_TEXTURE_NON_RT_DS | ALIASING_TEXTURE_RT_DS, // memory allocation will be suitable for all kinds of resources. Requires GraphicsDeviceCapability::ALIASING_GENERIC to be supported
-		TYPED_FORMAT_CASTING = 1 << 11,	// enable casting formats between same type and different modifiers: eg. UNORM -> SRGB
-		TYPELESS_FORMAT_CASTING = 1 << 12,	// enable casting formats to other formats that have the same bit-width and channel layout: eg. R32_FLOAT -> R32_UINT
-		VIDEO_DECODE = 1 << 13,	// resource is usabe in video decoding operations
-		NO_DEFAULT_DESCRIPTORS = 1 << 14, // skips creation of default descriptors for resources
-		TEXTURE_COMPATIBLE_COMPRESSION = 1 << 15, // optimization that can enable sampling from compressed textures
-		SHARED = 1 << 16, // shared texture
+		TYPED_FORMAT_CASTING = 1 << 11,													  // enable casting formats between same type and different modifiers: eg. UNORM -> SRGB
+		TYPELESS_FORMAT_CASTING = 1 << 12,												  // enable casting formats to other formats that have the same bit-width and channel layout: eg. R32_FLOAT -> R32_UINT
+		VIDEO_DECODE = 1 << 13,															  // resource is usabe in video decoding operations
+		NO_DEFAULT_DESCRIPTORS = 1 << 14,												  // skips creation of default descriptors for resources
+		TEXTURE_COMPATIBLE_COMPRESSION = 1 << 15,										  // optimization that can enable sampling from compressed textures
+		SHARED = 1 << 16,																  // shared texture
 
 		// Compat:
 		SPARSE_TILE_POOL_BUFFER = ALIASING_BUFFER,
@@ -443,9 +443,9 @@ namespace wi::graphics
 		ALIASING_GENERIC = 1 << 17, // allows using ResourceMiscFlag::ALIASING (non resource type specific version)
 		DEPTH_RESOLVE_MIN_MAX = 1 << 18,
 		STENCIL_RESOLVE_MIN_MAX = 1 << 19,
-		CACHE_COHERENT_UMA = 1 << 20,	// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_feature_data_architecture
+		CACHE_COHERENT_UMA = 1 << 20, // https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_feature_data_architecture
 		VIDEO_DECODE_H264 = 1 << 21,
-		R9G9B9E5_SHAREDEXP_RENDERABLE = 1 << 22, // indicates supporting R9G9B9E5_SHAREDEXP format for rendering to
+		R9G9B9E5_SHAREDEXP_RENDERABLE = 1 << 22,					  // indicates supporting R9G9B9E5_SHAREDEXP format for rendering to
 		COPY_BETWEEN_DIFFERENT_IMAGE_ASPECTS_NOT_SUPPORTED = 1 << 23, // indicates that CopyTexture src and dst ImageAspect must match
 
 		// Compat:
@@ -455,30 +455,30 @@ namespace wi::graphics
 	enum class ResourceState
 	{
 		// Common resource states:
-		UNDEFINED = 0,						// invalid state (don't preserve contents)
-		SHADER_RESOURCE = 1 << 0,			// shader resource, read only
-		SHADER_RESOURCE_COMPUTE = 1 << 1,	// shader resource, read only, non-pixel shader
-		UNORDERED_ACCESS = 1 << 2,			// shader resource, write enabled
-		COPY_SRC = 1 << 3,					// copy from
-		COPY_DST = 1 << 4,					// copy to
+		UNDEFINED = 0,					  // invalid state (don't preserve contents)
+		SHADER_RESOURCE = 1 << 0,		  // shader resource, read only
+		SHADER_RESOURCE_COMPUTE = 1 << 1, // shader resource, read only, non-pixel shader
+		UNORDERED_ACCESS = 1 << 2,		  // shader resource, write enabled
+		COPY_SRC = 1 << 3,				  // copy from
+		COPY_DST = 1 << 4,				  // copy to
 
 		// Texture specific resource states:
-		RENDERTARGET = 1 << 5,				// render target, write enabled
-		DEPTHSTENCIL = 1 << 6,				// depth stencil, write enabled
-		DEPTHSTENCIL_READONLY = 1 << 7,		// depth stencil, read only
-		SHADING_RATE_SOURCE = 1 << 8,		// shading rate control per tile
+		RENDERTARGET = 1 << 5,			// render target, write enabled
+		DEPTHSTENCIL = 1 << 6,			// depth stencil, write enabled
+		DEPTHSTENCIL_READONLY = 1 << 7, // depth stencil, read only
+		SHADING_RATE_SOURCE = 1 << 8,	// shading rate control per tile
 
 		// GPUBuffer specific resource states:
-		VERTEX_BUFFER = 1 << 9,				// vertex buffer, read only
-		INDEX_BUFFER = 1 << 10,				// index buffer, read only
-		CONSTANT_BUFFER = 1 << 11,			// constant buffer, read only
-		INDIRECT_ARGUMENT = 1 << 12,		// argument buffer to DrawIndirect() or DispatchIndirect()
+		VERTEX_BUFFER = 1 << 9,						 // vertex buffer, read only
+		INDEX_BUFFER = 1 << 10,						 // index buffer, read only
+		CONSTANT_BUFFER = 1 << 11,					 // constant buffer, read only
+		INDIRECT_ARGUMENT = 1 << 12,				 // argument buffer to DrawIndirect() or DispatchIndirect()
 		RAYTRACING_ACCELERATION_STRUCTURE = 1 << 13, // acceleration structure storage or scratch
-		PREDICATION = 1 << 14,				// storage for predication comparison value
+		PREDICATION = 1 << 14,						 // storage for predication comparison value
 
 		// Other:
-		VIDEO_DECODE_SRC = 1 << 15,			// video decode operation source (bitstream buffer or DPB texture)
-		VIDEO_DECODE_DST = 1 << 16,			// video decode operation destination DPB texture
+		VIDEO_DECODE_SRC = 1 << 15, // video decode operation source (bitstream buffer or DPB texture)
+		VIDEO_DECODE_DST = 1 << 16, // video decode operation destination DPB texture
 	};
 
 	enum class RenderPassFlags
@@ -633,8 +633,8 @@ namespace wi::graphics
 		uint64_t size = 0;
 		Usage usage = Usage::DEFAULT;
 		Format format = Format::UNKNOWN; // only needed for typed buffer!
-		uint32_t stride = 0; // only needed for structured buffer types!
-		uint64_t alignment = 0; // needed for tile pools
+		uint32_t stride = 0;			 // only needed for structured buffer types!
+		uint64_t alignment = 0;			 // needed for tile pools
 		BindFlag bind_flags = BindFlag::NONE;
 		ResourceMiscFlag misc_flags = ResourceMiscFlag::NONE;
 	};
@@ -647,30 +647,30 @@ namespace wi::graphics
 
 	struct PipelineStateDesc
 	{
-		const Shader*			vs = nullptr;
-		const Shader*			ps = nullptr;
-		const Shader*			hs = nullptr;
-		const Shader*			ds = nullptr;
-		const Shader*			gs = nullptr;
-		const Shader*			ms = nullptr;
-		const Shader*			as = nullptr;
-		const BlendState*		bs = nullptr;
-		const RasterizerState*	rs = nullptr;
+		const Shader* vs = nullptr;
+		const Shader* ps = nullptr;
+		const Shader* hs = nullptr;
+		const Shader* ds = nullptr;
+		const Shader* gs = nullptr;
+		const Shader* ms = nullptr;
+		const Shader* as = nullptr;
+		const BlendState* bs = nullptr;
+		const RasterizerState* rs = nullptr;
 		const DepthStencilState* dss = nullptr;
-		const InputLayout*		il = nullptr;
-		PrimitiveTopology		pt = PrimitiveTopology::TRIANGLELIST;
-		uint32_t                patch_control_points = 3;
-		uint32_t				sample_mask = 0xFFFFFFFF;
+		const InputLayout* il = nullptr;
+		PrimitiveTopology pt = PrimitiveTopology::TRIANGLELIST;
+		uint32_t patch_control_points = 3;
+		uint32_t sample_mask = 0xFFFFFFFF;
 	};
 
 	struct GPUBarrier
 	{
 		enum class Type
 		{
-			MEMORY,		// UAV accesses
-			IMAGE,		// image layout transition
-			BUFFER,		// buffer state transition
-			ALIASING,	// memory aliasing transition
+			MEMORY,	  // UAV accesses
+			IMAGE,	  // image layout transition
+			BUFFER,	  // buffer state transition
+			ALIASING, // memory aliasing transition
 		} type = Type::MEMORY;
 
 		struct Memory
@@ -752,13 +752,13 @@ namespace wi::graphics
 		Format format = Format::R10G10B10A2_UNORM;
 		bool fullscreen = false;
 		bool vsync = true;
-		float clear_color[4] = { 0,0,0,1 };
+		float clear_color[4] = { 0, 0, 0, 1 };
 		bool allow_hdr = true;
 	};
 
 	struct SubresourceData
 	{
-		const void* data_ptr = nullptr;	// pointer to the beginning of the subresource data (pointer to beginning of resource + subresource offset)
+		const void* data_ptr = nullptr; // pointer to the beginning of the subresource data (pointer to beginning of resource + subresource offset)
 		uint32_t row_pitch = 0;			// bytes between two rows of a texture (2D and 3D textures)
 		uint32_t slice_pitch = 0;		// bytes between two depth slices of a texture (3D textures only)
 	};
@@ -791,28 +791,28 @@ namespace wi::graphics
 
 	struct SparseTextureProperties
 	{
-		uint32_t tile_width = 0;				// width of 1 tile in texels
-		uint32_t tile_height = 0;				// height of 1 tile in texels
-		uint32_t tile_depth = 0;				// depth of 1 tile in texels
-		uint32_t total_tile_count = 0;			// number of tiles for entire resource
-		uint32_t packed_mip_start = 0;			// first mip of packed mipmap levels, these cannot be individually mapped and they cannot use a box mapping
-		uint32_t packed_mip_count = 0;			// number of packed mipmap levels, these cannot be individually mapped and they cannot use a box mapping
-		uint32_t packed_mip_tile_offset = 0;	// offset of the tiles for packed mip data relative to the entire resource
-		uint32_t packed_mip_tile_count = 0;		// how many tiles are required for the packed mipmaps
+		uint32_t tile_width = 0;			 // width of 1 tile in texels
+		uint32_t tile_height = 0;			 // height of 1 tile in texels
+		uint32_t tile_depth = 0;			 // depth of 1 tile in texels
+		uint32_t total_tile_count = 0;		 // number of tiles for entire resource
+		uint32_t packed_mip_start = 0;		 // first mip of packed mipmap levels, these cannot be individually mapped and they cannot use a box mapping
+		uint32_t packed_mip_count = 0;		 // number of packed mipmap levels, these cannot be individually mapped and they cannot use a box mapping
+		uint32_t packed_mip_tile_offset = 0; // offset of the tiles for packed mip data relative to the entire resource
+		uint32_t packed_mip_tile_count = 0;	 // how many tiles are required for the packed mipmaps
 	};
 
 	struct VideoDesc
 	{
-		uint32_t width = 0;					// must meet the codec specific alignment requirements
-		uint32_t height = 0;				// must meet the codec specific alignment requirements
-		uint32_t bit_rate = 0;				// can be 0, it means that decoding will be prepared for worst case
+		uint32_t width = 0;	   // must meet the codec specific alignment requirements
+		uint32_t height = 0;   // must meet the codec specific alignment requirements
+		uint32_t bit_rate = 0; // can be 0, it means that decoding will be prepared for worst case
 		Format format = Format::NV12;
 		VideoProfile profile = VideoProfile::H264;
-		const void* pps_datas = nullptr;	// array of picture parameter set structures. The structure type depends on video codec
-		size_t pps_count = 0;				// number of picture parameter set structures in the pps_datas array
-		const void* sps_datas = nullptr;	// array of sequence parameter set structures. The structure type depends on video codec
-		size_t sps_count = 0;				// number of sequence parameter set structures in the sps_datas array
-		uint32_t num_dpb_slots = 0;			// The number of decode picture buffer slots. Usually it is required to be at least number_of_reference_frames + 1
+		const void* pps_datas = nullptr; // array of picture parameter set structures. The structure type depends on video codec
+		size_t pps_count = 0;			 // number of picture parameter set structures in the pps_datas array
+		const void* sps_datas = nullptr; // array of sequence parameter set structures. The structure type depends on video codec
+		size_t sps_count = 0;			 // number of sequence parameter set structures in the sps_datas array
+		uint32_t num_dpb_slots = 0;		 // The number of decode picture buffer slots. Usually it is required to be at least number_of_reference_frames + 1
 	};
 
 
@@ -852,10 +852,10 @@ namespace wi::graphics
 		constexpr bool IsAccelerationStructure() const { return type == Type::RAYTRACING_ACCELERATION_STRUCTURE; }
 
 		// These are only valid if the resource was created with CPU access (USAGE::UPLOAD or USAGE::READBACK)
-		void* mapped_data = nullptr;	// for buffers, it is a pointer to the buffer data; for textures, it is a pointer to texture data with linear tiling;
-		size_t mapped_size = 0;			// for buffers, it is the full buffer size; for textures it is the full texture size including all subresources;
+		void* mapped_data = nullptr; // for buffers, it is a pointer to the buffer data; for textures, it is a pointer to texture data with linear tiling;
+		size_t mapped_size = 0;		 // for buffers, it is the full buffer size; for textures it is the full texture size including all subresources;
 
-		size_t sparse_page_size = 0ull;	// specifies the required alignment of backing allocation for sparse tile pool
+		size_t sparse_page_size = 0ull; // specifies the required alignment of backing allocation for sparse tile pool
 	};
 
 	struct GPUBuffer : public GPUResource
@@ -867,11 +867,11 @@ namespace wi::graphics
 
 	struct Texture : public GPUResource
 	{
-		TextureDesc	desc;
+		TextureDesc desc;
 
 		// These are only valid if the texture was created with CPU access (USAGE::UPLOAD or USAGE::READBACK)
-		const SubresourceData* mapped_subresources = nullptr;	// an array of subresource mappings in the following memory layout: slice0|mip0, slice0|mip1, slice0|mip2, ... sliceN|mipN
-		size_t mapped_subresource_count = 0;					// the array size of mapped_subresources (number of slices * number of miplevels)
+		const SubresourceData* mapped_subresources = nullptr; // an array of subresource mappings in the following memory layout: slice0|mip0, slice0|mip1, slice0|mip2, ... sliceN|mipN
+		size_t mapped_subresource_count = 0;				  // the array size of mapped_subresources (number of slices * number of miplevels)
 
 		// These are only valid if texture was created with ResourceMiscFlag::SPARSE flag:
 		const SparseTextureProperties* sparse_properties = nullptr;
@@ -882,7 +882,10 @@ namespace wi::graphics
 		int shared_handle = 0;
 #endif
 
-		constexpr const TextureDesc& GetDesc() const { return desc; }
+		constexpr const TextureDesc& GetDesc() const
+		{
+			return desc;
+		}
 	};
 
 	struct VideoDecoder : public GraphicsDeviceChild
@@ -903,18 +906,18 @@ namespace wi::graphics
 		uint64_t stream_offset = 0; // must be aligned with GraphicsDevice::GetVideoDecodeBitstreamAlignment()
 		uint64_t stream_size = 0;
 		VideoFrameType frame_type = VideoFrameType::Intra;
-		uint32_t reference_priority = 0; // nal_ref_idc from nal unit header
-		int decoded_frame_index = 0; // frame index in order of decoding
-		const void* slice_header = nullptr; // slice header for current frame
-		const void* pps = nullptr; // picture parameter set for current slice header
-		const void* sps = nullptr; // sequence parameter set for current picture parameter set
-		int poc[2] = {}; // PictureOrderCount Top and Bottom fields
-		uint32_t current_dpb = 0; // DPB slot for current output picture
-		uint8_t dpb_reference_count = 0; // number of references in dpb_reference_slots array
+		uint32_t reference_priority = 0;			  // nal_ref_idc from nal unit header
+		int decoded_frame_index = 0;				  // frame index in order of decoding
+		const void* slice_header = nullptr;			  // slice header for current frame
+		const void* pps = nullptr;					  // picture parameter set for current slice header
+		const void* sps = nullptr;					  // sequence parameter set for current picture parameter set
+		int poc[2] = {};							  // PictureOrderCount Top and Bottom fields
+		uint32_t current_dpb = 0;					  // DPB slot for current output picture
+		uint8_t dpb_reference_count = 0;			  // number of references in dpb_reference_slots array
 		const uint8_t* dpb_reference_slots = nullptr; // dpb slot indices that are used as reference pictures
-		const int* dpb_poc = nullptr; // for each DPB reference slot, indicate the PictureOrderCount
-		const int* dpb_framenum = nullptr; // for each DPB reference slot, indicate the framenum value
-		const Texture* DPB = nullptr; // DPB texture with arraysize = num_references + 1
+		const int* dpb_poc = nullptr;				  // for each DPB reference slot, indicate the PictureOrderCount
+		const int* dpb_framenum = nullptr;			  // for each DPB reference slot, indicate the framenum value
+		const Texture* DPB = nullptr;				  // DPB texture with arraysize = num_references + 1
 	};
 
 	struct RenderPassImage
@@ -940,8 +943,8 @@ namespace wi::graphics
 			STORE,
 			DONTCARE,
 		} storeop = StoreOp::STORE;
-		ResourceState layout_before = ResourceState::UNDEFINED;	// layout before the render pass
-		ResourceState layout = ResourceState::UNDEFINED;	// layout within the render pass
+		ResourceState layout_before = ResourceState::UNDEFINED; // layout before the render pass
+		ResourceState layout = ResourceState::UNDEFINED;		// layout within the render pass
 		ResourceState layout_after = ResourceState::UNDEFINED;	// layout after the render pass
 		enum class DepthResolveMode
 		{
@@ -955,8 +958,7 @@ namespace wi::graphics
 			StoreOp store_op = StoreOp::STORE,
 			ResourceState layout_before = ResourceState::SHADER_RESOURCE,
 			ResourceState layout_after = ResourceState::SHADER_RESOURCE,
-			int subresource_RTV = -1
-		)
+			int subresource_RTV = -1)
 		{
 			RenderPassImage image;
 			image.type = Type::RENDERTARGET;
@@ -977,8 +979,7 @@ namespace wi::graphics
 			ResourceState layout_before = ResourceState::DEPTHSTENCIL,
 			ResourceState layout = ResourceState::DEPTHSTENCIL,
 			ResourceState layout_after = ResourceState::DEPTHSTENCIL,
-			int subresource_DSV = -1
-		)
+			int subresource_DSV = -1)
 		{
 			RenderPassImage image;
 			image.type = Type::DEPTH_STENCIL;
@@ -996,8 +997,7 @@ namespace wi::graphics
 			const Texture* resource,
 			ResourceState layout_before = ResourceState::SHADER_RESOURCE,
 			ResourceState layout_after = ResourceState::SHADER_RESOURCE,
-			int subresource_SRV = -1
-		)
+			int subresource_SRV = -1)
 		{
 			RenderPassImage image;
 			image.type = Type::RESOLVE;
@@ -1014,8 +1014,7 @@ namespace wi::graphics
 			DepthResolveMode depth_resolve_mode = DepthResolveMode::Min,
 			ResourceState layout_before = ResourceState::SHADER_RESOURCE,
 			ResourceState layout_after = ResourceState::SHADER_RESOURCE,
-			int subresource_SRV = -1
-		)
+			int subresource_SRV = -1)
 		{
 			RenderPassImage image;
 			image.type = Type::RESOLVE_DEPTH;
@@ -1031,8 +1030,7 @@ namespace wi::graphics
 		static RenderPassImage ShadingRateSource(
 			const Texture* resource,
 			ResourceState layout_before = ResourceState::SHADING_RATE_SOURCE,
-			ResourceState layout_after = ResourceState::SHADING_RATE_SOURCE
-		)
+			ResourceState layout_after = ResourceState::SHADING_RATE_SOURCE)
 		{
 			RenderPassImage image;
 			image.type = Type::SHADING_RATE_SOURCE;
@@ -1195,7 +1193,6 @@ namespace wi::graphics
 					uint32_t count = 0;
 					uint32_t stride = 0;
 				} aabbs;
-
 			};
 			wi::vector<Geometry> geometries;
 		} bottom_level;
@@ -1299,29 +1296,29 @@ namespace wi::graphics
 		uint32_t y = 0;		// tile offset of texture in height
 		uint32_t z = 0;		// tile offset of 3D texture in depth
 		uint32_t mip = 0;	// mip level of texture resource
-		uint32_t slice = 0;	// array slice of texture resource
+		uint32_t slice = 0; // array slice of texture resource
 	};
 	struct SparseRegionSize
 	{
-		uint32_t width = 1;		// number of tiles to be mapped in X dimension (buffer or texture)
-		uint32_t height = 1;	// number of tiles to be mapped in Y dimension (texture only)
-		uint32_t depth = 1;		// number of tiles to be mapped in Z dimension (3D texture only)
+		uint32_t width = 1;	 // number of tiles to be mapped in X dimension (buffer or texture)
+		uint32_t height = 1; // number of tiles to be mapped in Y dimension (texture only)
+		uint32_t depth = 1;	 // number of tiles to be mapped in Z dimension (3D texture only)
 	};
 	enum class TileRangeFlags
 	{
-		None = 0,		// map page to tile memory
-		Null = 1 << 0,	// set page to null
+		None = 0,	   // map page to tile memory
+		Null = 1 << 0, // set page to null
 	};
 	struct SparseUpdateCommand
 	{
-		const GPUResource* sparse_resource = nullptr;			// the resource to do sparse mapping for (this requires resource to be created with ResourceMisc::SPARSE)
-		uint32_t num_resource_regions = 0;						// number of: coordinates, sizes
-		const SparseResourceCoordinate* coordinates = nullptr;	// mapping coordinates within sparse resource (num_resource_regions array size)
-		const SparseRegionSize* sizes = nullptr;				// mapping sizes within sparse resource (num_resource_regions array size)
-		const GPUBuffer* tile_pool = nullptr;					// this buffer must have been created with ResourceMisc::TILE_POOL
-		const TileRangeFlags* range_flags = nullptr;			// flags (num_ranges array size)
-		const uint32_t* range_start_offsets = nullptr;			// offset within tile pool (in pages) (num_ranges array size)
-		const uint32_t* range_tile_counts = nullptr;			// number of tiles to be mapped (num_ranges array size)
+		const GPUResource* sparse_resource = nullptr;		   // the resource to do sparse mapping for (this requires resource to be created with ResourceMisc::SPARSE)
+		uint32_t num_resource_regions = 0;					   // number of: coordinates, sizes
+		const SparseResourceCoordinate* coordinates = nullptr; // mapping coordinates within sparse resource (num_resource_regions array size)
+		const SparseRegionSize* sizes = nullptr;			   // mapping sizes within sparse resource (num_resource_regions array size)
+		const GPUBuffer* tile_pool = nullptr;				   // this buffer must have been created with ResourceMisc::TILE_POOL
+		const TileRangeFlags* range_flags = nullptr;		   // flags (num_ranges array size)
+		const uint32_t* range_start_offsets = nullptr;		   // offset within tile pool (in pages) (num_ranges array size)
+		const uint32_t* range_tile_counts = nullptr;		   // number of tiles to be mapped (num_ranges array size)
 	};
 
 
@@ -1420,7 +1417,7 @@ namespace wi::graphics
 	}
 	constexpr uint32_t GetFormatBlockSize(Format format)
 	{
-		if(IsFormatBlockCompressed(format))
+		if (IsFormatBlockCompressed(format))
 		{
 			return 4u;
 		}
@@ -1833,8 +1830,7 @@ namespace wi::graphics
 			if (
 				AlignTo(width, required_alignment) != width ||
 				AlignTo(height, required_alignment) != height ||
-				AlignTo(depth, required_alignment) != depth
-				)
+				AlignTo(depth, required_alignment) != depth)
 				break;
 			mips++;
 		}
@@ -1890,9 +1886,9 @@ namespace wi::graphics
 			STORE,
 			DONTCARE,
 		} storeop = StoreOp::STORE;
-		ResourceState initial_layout = ResourceState::UNDEFINED;	// layout before the render pass
-		ResourceState subpass_layout = ResourceState::UNDEFINED;	// layout within the render pass
-		ResourceState final_layout = ResourceState::UNDEFINED;		// layout after the render pass
+		ResourceState initial_layout = ResourceState::UNDEFINED; // layout before the render pass
+		ResourceState subpass_layout = ResourceState::UNDEFINED; // layout within the render pass
+		ResourceState final_layout = ResourceState::UNDEFINED;	 // layout after the render pass
 		enum class DepthResolveMode
 		{
 			Min,
@@ -1906,8 +1902,7 @@ namespace wi::graphics
 			ResourceState initial_layout = ResourceState::SHADER_RESOURCE,
 			ResourceState subpass_layout = ResourceState::RENDERTARGET,
 			ResourceState final_layout = ResourceState::SHADER_RESOURCE,
-			int subresource_RTV = -1
-		)
+			int subresource_RTV = -1)
 		{
 			RenderPassAttachment attachment;
 			attachment.type = Type::RENDERTARGET;
@@ -1928,8 +1923,7 @@ namespace wi::graphics
 			ResourceState initial_layout = ResourceState::DEPTHSTENCIL,
 			ResourceState subpass_layout = ResourceState::DEPTHSTENCIL,
 			ResourceState final_layout = ResourceState::DEPTHSTENCIL,
-			int subresource_DSV = -1
-		)
+			int subresource_DSV = -1)
 		{
 			RenderPassAttachment attachment;
 			attachment.type = Type::DEPTH_STENCIL;
@@ -1947,8 +1941,7 @@ namespace wi::graphics
 			const Texture& resource,
 			ResourceState initial_layout = ResourceState::SHADER_RESOURCE,
 			ResourceState final_layout = ResourceState::SHADER_RESOURCE,
-			int subresource_SRV = -1
-		)
+			int subresource_SRV = -1)
 		{
 			RenderPassAttachment attachment;
 			attachment.type = Type::RESOLVE;
@@ -1964,8 +1957,7 @@ namespace wi::graphics
 			DepthResolveMode depth_resolve_mode = DepthResolveMode::Min,
 			ResourceState initial_layout = ResourceState::SHADER_RESOURCE,
 			ResourceState final_layout = ResourceState::SHADER_RESOURCE,
-			int subresource_SRV = -1
-		)
+			int subresource_SRV = -1)
 		{
 			RenderPassAttachment attachment;
 			attachment.type = Type::RESOLVE_DEPTH;
@@ -1980,8 +1972,7 @@ namespace wi::graphics
 		static RenderPassAttachment ShadingRateSource(
 			const Texture& resource,
 			ResourceState initial_layout = ResourceState::SHADING_RATE_SOURCE,
-			ResourceState final_layout = ResourceState::SHADING_RATE_SOURCE
-		)
+			ResourceState final_layout = ResourceState::SHADING_RATE_SOURCE)
 		{
 			RenderPassAttachment attachment;
 			attachment.type = Type::SHADING_RATE_SOURCE;
@@ -2080,30 +2071,37 @@ namespace wi::graphics
 }
 
 template<>
-struct enable_bitmask_operators<wi::graphics::ColorWrite> {
+struct enable_bitmask_operators<wi::graphics::ColorWrite>
+{
 	static const bool enable = true;
 };
 template<>
-struct enable_bitmask_operators<wi::graphics::BindFlag> {
+struct enable_bitmask_operators<wi::graphics::BindFlag>
+{
 	static const bool enable = true;
 };
 template<>
-struct enable_bitmask_operators<wi::graphics::ResourceMiscFlag> {
+struct enable_bitmask_operators<wi::graphics::ResourceMiscFlag>
+{
 	static const bool enable = true;
 };
 template<>
-struct enable_bitmask_operators<wi::graphics::GraphicsDeviceCapability> {
+struct enable_bitmask_operators<wi::graphics::GraphicsDeviceCapability>
+{
 	static const bool enable = true;
 };
 template<>
-struct enable_bitmask_operators<wi::graphics::ResourceState> {
+struct enable_bitmask_operators<wi::graphics::ResourceState>
+{
 	static const bool enable = true;
 };
 template<>
-struct enable_bitmask_operators<wi::graphics::RenderPassDesc::Flags> {
+struct enable_bitmask_operators<wi::graphics::RenderPassDesc::Flags>
+{
 	static const bool enable = true;
 };
 template<>
-struct enable_bitmask_operators<wi::graphics::RenderPassFlags> {
+struct enable_bitmask_operators<wi::graphics::RenderPassFlags>
+{
 	static const bool enable = true;
 };

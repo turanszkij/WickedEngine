@@ -31,10 +31,11 @@ namespace wi::graphics
 	class GraphicsDevice_Vulkan final : public GraphicsDevice
 	{
 		friend struct CommandQueue;
+
 	protected:
 		bool debugUtils = false;
 		VkInstance instance = VK_NULL_HANDLE;
-	    VkDebugUtilsMessengerEXT debugUtilsMessenger = VK_NULL_HANDLE;
+		VkDebugUtilsMessengerEXT debugUtilsMessenger = VK_NULL_HANDLE;
 		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 		VkDevice device = VK_NULL_HANDLE;
 		wi::vector<VkQueueFamilyProperties2> queueFamilies;
@@ -88,23 +89,23 @@ namespace wi::graphics
 		VkPipelineDynamicStateCreateInfo dynamicStateInfo = {};
 		VkPipelineDynamicStateCreateInfo dynamicStateInfo_MeshShader = {};
 
-		VkBuffer		nullBuffer = VK_NULL_HANDLE;
-		VmaAllocation	nullBufferAllocation = VK_NULL_HANDLE;
-		VkBufferView	nullBufferView = VK_NULL_HANDLE;
-		VkSampler		nullSampler = VK_NULL_HANDLE;
-		VmaAllocation	nullImageAllocation1D = VK_NULL_HANDLE;
-		VmaAllocation	nullImageAllocation2D = VK_NULL_HANDLE;
-		VmaAllocation	nullImageAllocation3D = VK_NULL_HANDLE;
-		VkImage			nullImage1D = VK_NULL_HANDLE;
-		VkImage			nullImage2D = VK_NULL_HANDLE;
-		VkImage			nullImage3D = VK_NULL_HANDLE;
-		VkImageView		nullImageView1D = VK_NULL_HANDLE;
-		VkImageView		nullImageView1DArray = VK_NULL_HANDLE;
-		VkImageView		nullImageView2D = VK_NULL_HANDLE;
-		VkImageView		nullImageView2DArray = VK_NULL_HANDLE;
-		VkImageView		nullImageViewCube = VK_NULL_HANDLE;
-		VkImageView		nullImageViewCubeArray = VK_NULL_HANDLE;
-		VkImageView		nullImageView3D = VK_NULL_HANDLE;
+		VkBuffer nullBuffer = VK_NULL_HANDLE;
+		VmaAllocation nullBufferAllocation = VK_NULL_HANDLE;
+		VkBufferView nullBufferView = VK_NULL_HANDLE;
+		VkSampler nullSampler = VK_NULL_HANDLE;
+		VmaAllocation nullImageAllocation1D = VK_NULL_HANDLE;
+		VmaAllocation nullImageAllocation2D = VK_NULL_HANDLE;
+		VmaAllocation nullImageAllocation3D = VK_NULL_HANDLE;
+		VkImage nullImage1D = VK_NULL_HANDLE;
+		VkImage nullImage2D = VK_NULL_HANDLE;
+		VkImage nullImage3D = VK_NULL_HANDLE;
+		VkImageView nullImageView1D = VK_NULL_HANDLE;
+		VkImageView nullImageView1DArray = VK_NULL_HANDLE;
+		VkImageView nullImageView2D = VK_NULL_HANDLE;
+		VkImageView nullImageView2DArray = VK_NULL_HANDLE;
+		VkImageView nullImageViewCube = VK_NULL_HANDLE;
+		VkImageView nullImageViewCubeArray = VK_NULL_HANDLE;
+		VkImageView nullImageView3D = VK_NULL_HANDLE;
 
 		struct CommandQueue
 		{
@@ -402,14 +403,14 @@ namespace wi::graphics
 		void RenderPassBegin(const RenderPassImage* images, uint32_t image_count, CommandList cmd, RenderPassFlags flags = RenderPassFlags::NONE) override;
 		void RenderPassEnd(CommandList cmd) override;
 		void BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) override;
-		void BindViewports(uint32_t NumViewports, const Viewport *pViewports, CommandList cmd) override;
+		void BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd) override;
 		void BindResource(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
-		void BindResources(const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
+		void BindResources(const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
 		void BindUAV(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
-		void BindUAVs(const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
+		void BindUAVs(const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
 		void BindSampler(const Sampler* sampler, uint32_t slot, CommandList cmd) override;
 		void BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset = 0ull) override;
-		void BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint64_t* offsets, CommandList cmd) override;
+		void BindVertexBuffers(const GPUBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint64_t* offsets, CommandList cmd) override;
 		void BindIndexBuffer(const GPUBuffer* indexBuffer, const IndexBufferFormat format, uint64_t offset, CommandList cmd) override;
 		void BindStencilRef(uint32_t value, CommandList cmd) override;
 		void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) override;
@@ -629,7 +630,8 @@ namespace wi::graphics
 			void Update(uint64_t FRAMECOUNT, uint32_t BUFFERCOUNT)
 			{
 				const auto destroy = [&](auto&& queue, auto&& handler) {
-					while (!queue.empty()) {
+					while (!queue.empty())
+					{
 						if (queue.front().second + BUFFERCOUNT < FRAMECOUNT)
 						{
 							auto item = queue.front();
@@ -730,7 +732,6 @@ namespace wi::graphics
 			}
 		};
 		std::shared_ptr<AllocationHandler> allocationhandler;
-
 	};
 }
 

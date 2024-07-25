@@ -145,9 +145,9 @@ namespace wi::input
 	};
 	struct ControllerFeedback
 	{
-		float vibration_left = 0;	// left vibration motor (0: no vibration, 1: maximum vibration)
-		float vibration_right = 0;	// right vibration motor (0: no vibration, 1: maximum vibration)
-		wi::Color led_color;			// led color
+		float vibration_left = 0;  // left vibration motor (0: no vibration, 1: maximum vibration)
+		float vibration_right = 0; // right vibration motor (0: no vibration, 1: maximum vibration)
+		wi::Color led_color;	   // led color
 	};
 
 	// call once at app start
@@ -162,7 +162,7 @@ namespace wi::input
 
 	const KeyboardState& GetKeyboardState();
 	const MouseState& GetMouseState();
-	
+
 	// check if a button is down
 	bool Down(BUTTON button, int playerindex = 0);
 	// check if a button is pressed once
@@ -222,4 +222,3 @@ namespace wi::input
 	void SetCursor(CURSOR cursor);
 
 };
-

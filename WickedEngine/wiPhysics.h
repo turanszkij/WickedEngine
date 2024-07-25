@@ -44,59 +44,49 @@ namespace wi::physics
 	void RunPhysicsUpdateSystem(
 		wi::jobsystem::context& ctx,
 		wi::scene::Scene& scene,
-		float dt
-	);
+		float dt);
 
 	// Set linear velocity to rigid body
 	void SetLinearVelocity(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
-		const XMFLOAT3& velocity
-	);
+		const XMFLOAT3& velocity);
 	// Set angular velocity to rigid body
 	void SetAngularVelocity(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
-		const XMFLOAT3& velocity
-	);
+		const XMFLOAT3& velocity);
 
 	// Apply force at body center
 	void ApplyForce(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
-		const XMFLOAT3& force
-	);
+		const XMFLOAT3& force);
 	// Apply force at body local position
 	void ApplyForceAt(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& force,
-		const XMFLOAT3& at
-	);
+		const XMFLOAT3& at);
 
 	// Apply impulse at body center
 	void ApplyImpulse(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
-		const XMFLOAT3& impulse
-	);
+		const XMFLOAT3& impulse);
 	void ApplyImpulse(
 		wi::scene::HumanoidComponent& humanoid,
 		wi::scene::HumanoidComponent::HumanoidBone bone,
-		const XMFLOAT3& impulse
-	);
+		const XMFLOAT3& impulse);
 	// Apply impulse at body local position
 	void ApplyImpulseAt(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& impulse,
-		const XMFLOAT3& at
-	);
+		const XMFLOAT3& at);
 	void ApplyImpulseAt(
 		wi::scene::HumanoidComponent& humanoid,
 		wi::scene::HumanoidComponent::HumanoidBone bone,
 		const XMFLOAT3& impulse,
-		const XMFLOAT3& at
-	);
+		const XMFLOAT3& at);
 
 	void ApplyTorque(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
-		const XMFLOAT3& torque
-	);
+		const XMFLOAT3& torque);
 
 	enum class ActivationState
 	{
@@ -105,17 +95,14 @@ namespace wi::physics
 	};
 	void SetActivationState(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
-		ActivationState state
-	);
+		ActivationState state);
 	void SetActivationState(
 		wi::scene::SoftBodyPhysicsComponent& physicscomponent,
-		ActivationState state
-	);
+		ActivationState state);
 
 	XMFLOAT3 GetSoftBodyNodePosition(
 		wi::scene::SoftBodyPhysicsComponent& physicscomponent,
-		uint32_t physicsIndex
-	);
+		uint32_t physicsIndex);
 
 	struct RayIntersectionResult
 	{
@@ -131,8 +118,7 @@ namespace wi::physics
 	};
 	RayIntersectionResult Intersects(
 		const wi::scene::Scene& scene,
-		wi::primitive::Ray ray
-	);
+		wi::primitive::Ray ray);
 
 	struct PickDragOperation
 	{
@@ -142,6 +128,5 @@ namespace wi::physics
 	void PickDrag(
 		const wi::scene::Scene& scene,
 		wi::primitive::Ray ray,
-		PickDragOperation& op
-	);
+		PickDragOperation& op);
 }

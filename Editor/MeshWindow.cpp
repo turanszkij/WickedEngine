@@ -30,7 +30,6 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete MeshComponent");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -588,7 +587,6 @@ void MeshWindow::Create(EditorComponent* _editor)
 		{
 			scene.Entity_Remove(x);
 		}
-		
 	});
 	AddWidget(&mergeButton);
 
@@ -630,7 +628,6 @@ void MeshWindow::Create(EditorComponent* _editor)
 		params.type = wi::helper::FileDialogParams::TYPE::SAVE;
 		wi::helper::FileDialog(params, [=](std::string filename) {
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-
 				wi::scene::Scene& scene = editor->GetCurrentScene();
 				wi::vector<XMFLOAT3> vertices;
 				wi::vector<uint32_t> indices;
@@ -695,16 +692,14 @@ void MeshWindow::Create(EditorComponent* _editor)
 				wi::vector<uint32_t> shadow_indices(indices.size());
 				meshopt_generateShadowIndexBuffer(
 					shadow_indices.data(), indices.data(), indices.size(),
-					vertices.data(), vertices.size(), sizeof(XMFLOAT3), sizeof(XMFLOAT3)
-				);
+					vertices.data(), vertices.size(), sizeof(XMFLOAT3), sizeof(XMFLOAT3));
 
 				// De-duplicate vertices based on shadow index buffer:
 				wi::vector<unsigned int> remap(shadow_indices.size());
 				const size_t vertex_count = meshopt_generateVertexRemap(
 					remap.data(),
 					shadow_indices.data(), shadow_indices.size(),
-					vertices.data(), vertices.size(), sizeof(XMFLOAT3)
-				);
+					vertices.data(), vertices.size(), sizeof(XMFLOAT3));
 				wi::vector<XMFLOAT3> remapped_vertices(vertex_count);
 				wi::vector<uint32_t> remapped_indices(shadow_indices.size());
 				meshopt_remapIndexBuffer(remapped_indices.data(), shadow_indices.data(), shadow_indices.size(), remap.data());

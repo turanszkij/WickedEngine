@@ -17,8 +17,10 @@ namespace wi::lua::primitive
 		static Luna<Ray_BindLua>::FunctionType methods[];
 		static Luna<Ray_BindLua>::PropertyType properties[];
 
-		Ray_BindLua(const wi::primitive::Ray& ray) : ray(ray) {}
-		Ray_BindLua(lua_State *L);
+		Ray_BindLua(const wi::primitive::Ray& ray)
+			: ray(ray)
+		{}
+		Ray_BindLua(lua_State* L);
 
 		int Intersects(lua_State* L);
 		int GetOrigin(lua_State* L);
@@ -38,8 +40,10 @@ namespace wi::lua::primitive
 		static Luna<AABB_BindLua>::FunctionType methods[];
 		static Luna<AABB_BindLua>::PropertyType properties[];
 
-		AABB_BindLua(const wi::primitive::AABB& aabb) : aabb(aabb) {}
-		AABB_BindLua(lua_State *L);
+		AABB_BindLua(const wi::primitive::AABB& aabb)
+			: aabb(aabb)
+		{}
+		AABB_BindLua(lua_State* L);
 
 		int Intersects(lua_State* L);
 		int Intersects2D(lua_State* L);
@@ -62,8 +66,10 @@ namespace wi::lua::primitive
 		static Luna<Sphere_BindLua>::FunctionType methods[];
 		static Luna<Sphere_BindLua>::PropertyType properties[];
 
-		Sphere_BindLua(const wi::primitive::Sphere& sphere) : sphere(sphere) {}
-		Sphere_BindLua(lua_State *L);
+		Sphere_BindLua(const wi::primitive::Sphere& sphere)
+			: sphere(sphere)
+		{}
+		Sphere_BindLua(lua_State* L);
 
 		int Intersects(lua_State* L);
 		int GetCenter(lua_State* L);
@@ -82,7 +88,9 @@ namespace wi::lua::primitive
 		static Luna<Capsule_BindLua>::FunctionType methods[];
 		static Luna<Capsule_BindLua>::PropertyType properties[];
 
-		Capsule_BindLua(const wi::primitive::Capsule& capsule) : capsule(capsule) {}
+		Capsule_BindLua(const wi::primitive::Capsule& capsule)
+			: capsule(capsule)
+		{}
 		Capsule_BindLua(lua_State* L);
 
 		int Intersects(lua_State* L);

@@ -7,12 +7,11 @@ using namespace wi::scene;
 void TransformWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create(ICON_TRANSFORM " Transform" , wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	wi::gui::Window::Create(ICON_TRANSFORM " Transform", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
 	SetSize(XMFLOAT2(480, 260));
 
 	closeButton.SetTooltip("Delete TransformComponent\nNote that a lot of components won't work correctly without a TransformComponent!");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -49,7 +48,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 
 			editor->RecordEntity(archive, entity);
 		}
-		});
+	});
 	AddWidget(&clearButton);
 
 	txInput.Create("");
@@ -78,7 +77,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 			transform->translation_local.y = args.fValue;
 			transform->SetDirty();
 		}
-		});
+	});
 	AddWidget(&tyInput);
 
 	tzInput.Create("");
@@ -92,7 +91,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 			transform->translation_local.z = args.fValue;
 			transform->SetDirty();
 		}
-		});
+	});
 	AddWidget(&tzInput);
 
 	x = 250;
@@ -110,7 +109,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 			transform->scale_local.x = args.fValue;
 			transform->SetDirty();
 		}
-		});
+	});
 	AddWidget(&sxInput);
 
 	syInput.Create("");
@@ -124,7 +123,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 			transform->scale_local.y = args.fValue;
 			transform->SetDirty();
 		}
-		});
+	});
 	AddWidget(&syInput);
 
 	szInput.Create("");
@@ -138,7 +137,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 			transform->scale_local.z = args.fValue;
 			transform->SetDirty();
 		}
-		});
+	});
 	AddWidget(&szInput);
 
 	x = xx;
@@ -163,7 +162,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 			XMStoreFloat4(&transform->rotation_local, Q);
 			transform->SetDirty();
 		}
-		});
+	});
 	AddWidget(&rollInput);
 
 	pitchInput.Create("");
@@ -183,7 +182,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 			XMStoreFloat4(&transform->rotation_local, Q);
 			transform->SetDirty();
 		}
-		});
+	});
 	AddWidget(&pitchInput);
 
 	yawInput.Create("");
@@ -203,7 +202,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 			XMStoreFloat4(&transform->rotation_local, Q);
 			transform->SetDirty();
 		}
-		});
+	});
 	AddWidget(&yawInput);
 
 	x = 250;
@@ -223,7 +222,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 			XMStoreFloat4(&transform->rotation_local, XMLoadFloat4(&transform->rotation_local));
 			transform->SetDirty();
 		}
-		});
+	});
 	AddWidget(&rxInput);
 
 	ryInput.Create("");
@@ -239,7 +238,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 			XMStoreFloat4(&transform->rotation_local, XMLoadFloat4(&transform->rotation_local));
 			transform->SetDirty();
 		}
-		});
+	});
 	AddWidget(&ryInput);
 
 	rzInput.Create("");
@@ -255,7 +254,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 			XMStoreFloat4(&transform->rotation_local, XMLoadFloat4(&transform->rotation_local));
 			transform->SetDirty();
 		}
-		});
+	});
 	AddWidget(&rzInput);
 
 	rwInput.Create("");
@@ -271,7 +270,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 			XMStoreFloat4(&transform->rotation_local, XMLoadFloat4(&transform->rotation_local));
 			transform->SetDirty();
 		}
-		});
+	});
 	AddWidget(&rwInput);
 
 
@@ -288,7 +287,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 	snapScaleInput.SetValue(editor->translator.scale_snap);
 	snapScaleInput.OnInputAccepted([=](wi::gui::EventArgs args) {
 		editor->translator.scale_snap = args.fValue;
-		});
+	});
 	AddWidget(&snapScaleInput);
 
 	snapRotateInput.Create("");
@@ -299,7 +298,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 	snapRotateInput.SetValue(editor->translator.rotate_snap / XM_PI * 180);
 	snapRotateInput.OnInputAccepted([=](wi::gui::EventArgs args) {
 		editor->translator.rotate_snap = args.fValue / 180.0f * XM_PI;
-		});
+	});
 	AddWidget(&snapRotateInput);
 
 	snapTranslateInput.Create("");
@@ -310,7 +309,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 	snapTranslateInput.SetValue(editor->translator.translate_snap);
 	snapTranslateInput.OnInputAccepted([=](wi::gui::EventArgs args) {
 		editor->translator.translate_snap = args.fValue;
-		});
+	});
 	AddWidget(&snapTranslateInput);
 
 	resetTranslationButton.Create("ResetTranslation");
@@ -324,7 +323,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 			transform->translation_local = XMFLOAT3(0, 0, 0);
 			transform->SetDirty();
 		}
-		});
+	});
 	AddWidget(&resetTranslationButton);
 
 	resetScaleButton.Create("ResetScale");
@@ -338,7 +337,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 			transform->scale_local = XMFLOAT3(1, 1, 1);
 			transform->SetDirty();
 		}
-		});
+	});
 	AddWidget(&resetScaleButton);
 
 	resetRotationButton.Create("ResetRotation");
@@ -352,7 +351,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 			transform->rotation_local = XMFLOAT4(0, 0, 0, 1);
 			transform->SetDirty();
 		}
-		});
+	});
 	AddWidget(&resetRotationButton);
 
 
@@ -478,5 +477,4 @@ void TransformWindow::ResizeLayout()
 	add_right(snapScaleInput);
 	add_right(snapRotateInput);
 	add_right(snapTranslateInput);
-
 }

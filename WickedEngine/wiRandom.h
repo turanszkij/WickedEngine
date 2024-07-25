@@ -11,7 +11,9 @@ namespace wi::random
 	{
 		uint64_t state = 0;
 
-		inline RNG(uint64_t seed = 0) : state(seed) {}
+		inline RNG(uint64_t seed = 0)
+			: state(seed)
+		{}
 
 		// seeds the random number generator, seed should be non-zero number
 		inline void seed(uint64_t seed)
@@ -80,4 +82,3 @@ namespace wi::random
 	float GetRandom(float minValue, float maxValue);
 	float GetRandom(float maxValue);
 };
-

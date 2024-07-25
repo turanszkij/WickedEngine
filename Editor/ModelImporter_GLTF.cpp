@@ -19,11 +19,13 @@ using namespace wi::ecs;
 namespace tinygltf
 {
 
-	bool FileExists(const std::string& abs_filename, void*) {
+	bool FileExists(const std::string& abs_filename, void*)
+	{
 		return wi::helper::FileExists(abs_filename);
 	}
 
-	std::string ExpandFilePath(const std::string& filepath, void*) {
+	std::string ExpandFilePath(const std::string& filepath, void*)
+	{
 #ifdef _WIN32
 		DWORD len = ExpandEnvironmentStringsA(filepath.c_str(), NULL, 0);
 		char* str = new char[len];
@@ -44,24 +46,28 @@ namespace tinygltf
 		std::string s;
 		wordexp_t p;
 
-		if (filepath.empty()) {
+		if (filepath.empty())
+		{
 			return "";
 		}
 
 		// char** w;
 		int ret = wordexp(filepath.c_str(), &p, 0);
-		if (ret) {
+		if (ret)
+		{
 			// err
 			s = filepath;
 			return s;
 		}
 
 		// Use first element only.
-		if (p.we_wordv) {
+		if (p.we_wordv)
+		{
 			s = std::string(p.we_wordv[0]);
 			wordfree(&p);
 		}
-		else {
+		else
+		{
 			s = filepath;
 		}
 
@@ -72,18 +78,20 @@ namespace tinygltf
 	}
 
 	bool ReadWholeFile(std::vector<unsigned char>* out, std::string* err,
-		const std::string& filepath, void*) {
+		const std::string& filepath, void*)
+	{
 		return wi::helper::FileRead(filepath, *out);
 	}
 
 	bool WriteWholeFile(std::string* err, const std::string& filepath,
-		const std::vector<unsigned char>& contents, void*) {
+		const std::vector<unsigned char>& contents, void*)
+	{
 		return wi::helper::FileWrite(filepath, contents.data(), contents.size());
 	}
 
-	bool LoadImageData(Image *image, const int image_idx, std::string *err,
-		std::string *warn, int req_width, int req_height,
-		const unsigned char *bytes, int size, void *userdata)
+	bool LoadImageData(Image* image, const int image_idx, std::string* err,
+		std::string* warn, int req_width, int req_height,
+		const unsigned char* bytes, int size, void* userdata)
 	{
 		(void)warn;
 
@@ -91,7 +99,8 @@ namespace tinygltf
 		{
 			// Force some image resource name:
 			std::string ss;
-			do {
+			do
+			{
 				ss.clear();
 				ss += "gltfimport_" + std::to_string(wi::random::GetRandom(std::numeric_limits<uint32_t>::max())) + ".png";
 			} while (wi::resourcemanager::Contains(ss)); // this is to avoid overwriting an existing imported image
@@ -102,8 +111,7 @@ namespace tinygltf
 			image->uri,
 			wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA | wi::resourcemanager::Flags::IMPORT_DELAY,
 			(const uint8_t*)bytes,
-			(size_t)size
-		);
+			(size_t)size);
 
 		if (!resource.IsValid())
 		{
@@ -116,8 +124,8 @@ namespace tinygltf
 		return true;
 	}
 
-	bool WriteImageData(const std::string *basepath, const std::string *filename,
-		Image *image, bool embedImages, void *)
+	bool WriteImageData(const std::string* basepath, const std::string* filename,
+		Image* image, bool embedImages, void*)
 	{
 		assert(0); // TODO
 		return false;
@@ -131,12 +139,12 @@ struct LoaderState
 	std::string name;
 	tinygltf::Model gltfModel;
 	Scene* scene;
-	wi::unordered_map<int, Entity> entityMap;  // node -> entity
+	wi::unordered_map<int, Entity> entityMap; // node -> entity
 	Entity rootEntity = INVALID_ENTITY;
 
 	//Export states
-	wi::unordered_map<std::string, int> textureMap; // path -> textureid
-	wi::unordered_map<Entity, int> nodeMap;// entity -> node
+	wi::unordered_map<std::string, int> textureMap;					   // path -> textureid
+	wi::unordered_map<Entity, int> nodeMap;							   // entity -> node
 	wi::unordered_map<size_t, TransformComponent> transforms_original; // original transform states
 };
 
@@ -156,7 +164,7 @@ void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 	Scene& scene = *state.scene;
 	Entity entity = INVALID_ENTITY;
 
-	if(node.mesh >= 0)
+	if (node.mesh >= 0)
 	{
 		assert(node.mesh < (int)scene.meshes.GetCount());
 
@@ -283,28 +291,28 @@ void FlipZAxis(LoaderState& state)
 	Scene& wiscene = *state.scene;
 
 	// Flip mesh data first
-	for(size_t i = 0; i < wiscene.meshes.GetCount(); ++i)
+	for (size_t i = 0; i < wiscene.meshes.GetCount(); ++i)
 	{
 		auto& mesh = wiscene.meshes[i];
-		for(auto& v_pos : mesh.vertex_positions)
+		for (auto& v_pos : mesh.vertex_positions)
 		{
 			v_pos.z *= -1.f;
 		}
-		for(auto& v_norm : mesh.vertex_normals)
+		for (auto& v_norm : mesh.vertex_normals)
 		{
 			v_norm.z *= -1.f;
 		}
-		for(auto& v_tan : mesh.vertex_tangents)
+		for (auto& v_tan : mesh.vertex_tangents)
 		{
 			v_tan.z *= -1.f;
 		}
-		for(auto& v_morph : mesh.morph_targets)
+		for (auto& v_morph : mesh.morph_targets)
 		{
-			for(auto& v_morph_norm : v_morph.vertex_normals)
+			for (auto& v_morph_norm : v_morph.vertex_normals)
 			{
 				v_morph_norm.z *= -1.f;
 			}
-			for(auto& v_morph_pos : v_morph.vertex_positions)
+			for (auto& v_morph_pos : v_morph.vertex_positions)
 			{
 				v_morph_pos.z *= -1.f;
 			}
@@ -314,33 +322,33 @@ void FlipZAxis(LoaderState& state)
 
 	// Flip scene's transformComponents
 	bool state_restore = (state.transforms_original.size() > 0);
-	if(!state_restore)
+	if (!state_restore)
 	{
 		wi::unordered_map<wi::ecs::Entity, wi::ecs::Entity> hierarchy_list;
 		wi::unordered_map<size_t, wi::scene::TransformComponent> correction_queue;
 
-		for(size_t i = 0; i < wiscene.transforms.GetCount(); ++i)
+		for (size_t i = 0; i < wiscene.transforms.GetCount(); ++i)
 		{
 			auto transformEntity = wiscene.transforms.GetEntity(i);
-			if(transformEntity == state.rootEntity)
+			if (transformEntity == state.rootEntity)
 				continue;
 
 			correction_queue[i] = wiscene.transforms[i];
 
 			auto hierarchy = wiscene.hierarchy.GetComponent(transformEntity);
-			if(transformEntity != state.rootEntity && hierarchy != nullptr)
+			if (transformEntity != state.rootEntity && hierarchy != nullptr)
 			{
 				hierarchy_list[transformEntity] = hierarchy->parentID;
 				wiscene.Component_Detach(transformEntity);
 			}
 		}
 		state.transforms_original.insert(correction_queue.begin(), correction_queue.end());
-		for(auto& correction_pair : correction_queue)
+		for (auto& correction_pair : correction_queue)
 		{
 			auto& transform = wiscene.transforms[correction_pair.first];
 			auto& transform_original = correction_pair.second;
 
-			XMVECTOR V_S,V_R,V_T;
+			XMVECTOR V_S, V_R, V_T;
 			XMMatrixDecompose(&V_S, &V_R, &V_T, XMLoadFloat4x4(&transform_original.world));
 			XMFLOAT3 pos, scale;
 			XMFLOAT4 rot;
@@ -351,7 +359,7 @@ void FlipZAxis(LoaderState& state)
 			rot.x *= -1.f;
 			rot.y *= -1.f;
 
-			auto build_m = 
+			auto build_m =
 				XMMatrixScalingFromVector(XMLoadFloat3(&scale)) *
 				XMMatrixRotationQuaternion(XMLoadFloat4(&rot)) *
 				XMMatrixTranslationFromVector(XMLoadFloat3(&pos));
@@ -362,17 +370,17 @@ void FlipZAxis(LoaderState& state)
 			transform.world = build_m4;
 			transform.ApplyTransform();
 		}
-		for(auto& hierarchy_pair : hierarchy_list)
+		for (auto& hierarchy_pair : hierarchy_list)
 		{
 			wiscene.Component_Attach(hierarchy_pair.first, hierarchy_pair.second);
 		}
 	}
 	else
 	{
-		for(size_t i = 0; i < wiscene.transforms.GetCount(); ++i)
+		for (size_t i = 0; i < wiscene.transforms.GetCount(); ++i)
 		{
 			auto transform_original_find = state.transforms_original.find(i);
-			if(transform_original_find != state.transforms_original.end())
+			if (transform_original_find != state.transforms_original.end())
 			{
 				auto& transform = wiscene.transforms[i];
 				transform = transform_original_find->second;
@@ -382,14 +390,14 @@ void FlipZAxis(LoaderState& state)
 	}
 
 	// Flip armature's bind pose
-	for(size_t i = 0; i < wiscene.armatures.GetCount(); ++i)
+	for (size_t i = 0; i < wiscene.armatures.GetCount(); ++i)
 	{
 		auto& armature = wiscene.armatures[i];
-		for(int i = 0; i < armature.inverseBindMatrices.size(); ++i)
+		for (int i = 0; i < armature.inverseBindMatrices.size(); ++i)
 		{
 			auto& bind = armature.inverseBindMatrices[i];
-			
-			XMVECTOR V_S,V_R,V_T;
+
+			XMVECTOR V_S, V_R, V_T;
 			XMMatrixDecompose(&V_S, &V_R, &V_T, XMLoadFloat4x4(&bind));
 			XMFLOAT3 pos, scale;
 			XMFLOAT4 rot;
@@ -400,7 +408,7 @@ void FlipZAxis(LoaderState& state)
 			rot.x *= -1.f;
 			rot.y *= -1.f;
 
-			auto build_m = 
+			auto build_m =
 				XMMatrixScalingFromVector(XMLoadFloat3(&scale)) *
 				XMMatrixRotationQuaternion(XMLoadFloat4(&rot)) *
 				XMMatrixTranslationFromVector(XMLoadFloat3(&pos));
@@ -412,27 +420,27 @@ void FlipZAxis(LoaderState& state)
 	}
 
 	// Flip animation data for translation and rotation
-	for(size_t i = 0; i < wiscene.animations.GetCount(); ++i)
+	for (size_t i = 0; i < wiscene.animations.GetCount(); ++i)
 	{
 		auto& animation = wiscene.animations[i];
-		
-		for(auto& channel : animation.channels)
+
+		for (auto& channel : animation.channels)
 		{
 			auto data = wiscene.animation_datas.GetComponent(animation.samplers[channel.samplerIndex].data);
-			
-			if(channel.path == wi::scene::AnimationComponent::AnimationChannel::Path::TRANSLATION)
+
+			if (channel.path == wi::scene::AnimationComponent::AnimationChannel::Path::TRANSLATION)
 			{
-				for(size_t k = 0; k < data->keyframe_data.size()/3; ++k)
+				for (size_t k = 0; k < data->keyframe_data.size() / 3; ++k)
 				{
-					data->keyframe_data[k*3+2] *= -1.f;
+					data->keyframe_data[k * 3 + 2] *= -1.f;
 				}
 			}
-			if(channel.path == wi::scene::AnimationComponent::AnimationChannel::Path::ROTATION)
+			if (channel.path == wi::scene::AnimationComponent::AnimationChannel::Path::ROTATION)
 			{
-				for(size_t k = 0; k < data->keyframe_data.size()/4; ++k)
+				for (size_t k = 0; k < data->keyframe_data.size() / 4; ++k)
 				{
-					data->keyframe_data[k*4] *= -1.f;
-					data->keyframe_data[k*4+1] *= -1.f;
+					data->keyframe_data[k * 4] *= -1.f;
+					data->keyframe_data[k * 4 + 1] *= -1.f;
 				}
 			}
 		}
@@ -459,7 +467,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	wi::resourcemanager::ResourceSerializer seri; // keep this alive to not delete loaded images while importing gltf
 	loader.SetImageLoader(tinygltf::LoadImageData, &seri);
 	loader.SetImageWriter(tinygltf::WriteImageData, nullptr);
-	
+
 	LoaderState state;
 	state.scene = &scene;
 
@@ -475,11 +483,10 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			ret = loader.LoadASCIIFromString(
 				&state.gltfModel,
 				&err,
-				&warn, 
+				&warn,
 				reinterpret_cast<const char*>(filedata.data()),
 				static_cast<unsigned int>(filedata.size()),
-				basedir
-			);
+				basedir);
 		}
 		else
 		{
@@ -489,8 +496,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				&warn,
 				filedata.data(),
 				static_cast<unsigned int>(filedata.size()),
-				basedir
-			);
+				basedir);
 		}
 	}
 	else
@@ -1031,7 +1037,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			uint32_t vertexOffset = (uint32_t)mesh.vertex_positions.size();
 
 			const size_t index_remap[] = {
-				0,2,1
+				0, 2, 1
 			};
 
 			if (prim.indices >= 0)
@@ -1377,7 +1383,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				}
 				else if (!attr_name.compare("COLOR_0"))
 				{
-					if(material != nullptr)
+					if (material != nullptr)
 					{
 						material->SetUseVertexColors(true);
 					}
@@ -1621,9 +1627,9 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 		if (skin.inverseBindMatrices >= 0)
 		{
-			const tinygltf::Accessor &accessor = state.gltfModel.accessors[skin.inverseBindMatrices];
-			const tinygltf::BufferView &bufferView = state.gltfModel.bufferViews[accessor.bufferView];
-			const tinygltf::Buffer &buffer = state.gltfModel.buffers[bufferView.buffer];
+			const tinygltf::Accessor& accessor = state.gltfModel.accessors[skin.inverseBindMatrices];
+			const tinygltf::BufferView& bufferView = state.gltfModel.bufferViews[accessor.bufferView];
+			const tinygltf::Buffer& buffer = state.gltfModel.buffers[bufferView.buffer];
 			armature.inverseBindMatrices.resize(accessor.count);
 			memcpy(armature.inverseBindMatrices.data(), &buffer.data[accessor.byteOffset + bufferView.byteOffset], accessor.count * sizeof(XMFLOAT4X4));
 		}
@@ -1634,7 +1640,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	}
 
 	// Create transform hierarchy, assign objects, meshes, armatures, cameras:
-	const tinygltf::Scene &gltfScene = state.gltfModel.scenes[std::max(0, state.gltfModel.defaultScene)];
+	const tinygltf::Scene& gltfScene = state.gltfModel.scenes[std::max(0, state.gltfModel.defaultScene)];
 	for (size_t i = 0; i < gltfScene.nodes.size(); i++)
 	{
 		LoadNode(gltfScene.nodes[i], state.rootEntity, state);
@@ -1718,7 +1724,6 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					animationcomponent.start = std::min(animationcomponent.start, time);
 					animationcomponent.end = std::max(animationcomponent.end, time);
 				}
-
 			}
 
 			// AnimationSampler output = keyframe data
@@ -1764,12 +1769,11 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					}
 				}
 				break;
-				default: assert(0); break;
-
+				default:
+					assert(0);
+					break;
 				}
-
 			}
-
 		}
 
 		for (size_t i = 0; i < anim.channels.size(); ++i)
@@ -1801,7 +1805,6 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				animationcomponent.channels[i].path = AnimationComponent::AnimationChannel::Path::UNKNOWN;
 			}
 		}
-
 	}
 
 	// Create lights:
@@ -1986,8 +1989,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					desc.height,
 					desc.mip_levels,
 					desc.array_size,
-					true
-				);
+					true);
 
 				size_t offset = sizeof(dds::Header);
 				for (auto& x : hdr_datas)
@@ -1995,14 +1997,13 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					std::memcpy(dds.data() + offset, x.data(), x.size() * sizeof(XMFLOAT3SE));
 					offset += x.size() * sizeof(XMFLOAT3SE);
 				}
-				
+
 				weather.skyMapName = wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(fileName)) + "/EXT_lights_image_based_" + std::to_string(counter++) + ".dds";
 				weather.skyMap = wi::resourcemanager::Load(
 					weather.skyMapName,
 					wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA,
 					dds.data(),
-					dds.size()
-				);
+					dds.size());
 				weather.ambient = {}; // remove ambient if gltf has env lighting
 			}
 		}
@@ -2601,9 +2602,7 @@ void Import_Extension_VRM(LoaderState& state)
 				}
 			}
 		}
-
 	}
-
 }
 
 void Import_Extension_VRMC(LoaderState& state)
@@ -2776,7 +2775,6 @@ void Import_Extension_VRMC(LoaderState& state)
 						//	const auto& textureTransformBinds = vrm_expression.Get("textureTransformBinds");
 						//	// TODO: find example model and implement
 						//}
-
 					}
 				}
 			}
@@ -3033,10 +3031,8 @@ void Import_Extension_VRMC(LoaderState& state)
 					{
 						component.bones[size_t(HumanoidComponent::HumanoidBone::RightLittleDistal)] = boneID;
 					}
-
 				}
 			}
-
 		}
 	}
 
@@ -3200,7 +3196,6 @@ void Import_Extension_VRMC(LoaderState& state)
 			{
 				const auto& colliders = ext_vrmc_springbone->second.Get("colliders");
 			}
-
 		}
 	}
 
@@ -3225,8 +3220,7 @@ void VRM_ToonMaterialCustomize(const std::string& name, MaterialComponent& mater
 	if (name.find("EYE") != std::string::npos ||
 		name.find("FaceEyeline") != std::string::npos ||
 		name.find("FaceEyelash") != std::string::npos ||
-		name.find("FaceBrow") != std::string::npos
-		)
+		name.find("FaceBrow") != std::string::npos)
 	{
 		// Disable shadow casting for some elements on the face like eyes, eyebrows, etc:
 		material.SetCastShadow(false);
@@ -3473,22 +3467,17 @@ inline tinygltf::Value _ExportHelper_tovalue(float input)
 
 inline tinygltf::Value _ExportHelper_tovalue(XMFLOAT3 input)
 {
-	auto value_builder = tinygltf::Value(tinygltf::Value::Array({
-		tinygltf::Value(input.x), tinygltf::Value(input.y), tinygltf::Value(input.z)
-	}));
+	auto value_builder = tinygltf::Value(tinygltf::Value::Array({ tinygltf::Value(input.x), tinygltf::Value(input.y), tinygltf::Value(input.z) }));
 	return value_builder;
 }
 
 inline tinygltf::Value _ExportHelper_tovalue(XMFLOAT4 input)
 {
-	auto value_builder = tinygltf::Value(tinygltf::Value::Array({
-		tinygltf::Value(input.x), tinygltf::Value(input.y), tinygltf::Value(input.z), tinygltf::Value(input.w)
-	}));
+	auto value_builder = tinygltf::Value(tinygltf::Value::Array({ tinygltf::Value(input.x), tinygltf::Value(input.y), tinygltf::Value(input.z), tinygltf::Value(input.w) }));
 	return value_builder;
 }
 
-wi::vector<std::string> original_texture_extension_iterator = 
-{
+wi::vector<std::string> original_texture_extension_iterator = {
 	"png",
 	"jpg",
 	"jpeg",
@@ -3496,7 +3485,7 @@ wi::vector<std::string> original_texture_extension_iterator =
 
 inline std::string _ExportHelper_GetOriginalTexture(std::string texture_file)
 {
-	for(auto& ext : original_texture_extension_iterator)
+	for (auto& ext : original_texture_extension_iterator)
 	{
 		std::string target_file = wi::helper::ReplaceExtension(texture_file, ext);
 		wi::backlog::post(target_file);
@@ -3519,7 +3508,7 @@ inline tinygltf::TextureInfo _ExportHelper_StoreMaterialTexture(LoaderState& sta
 	int texture_index = -1;
 	auto find_texture_id = state.textureMap.find(texture_file);
 
-	if(find_texture_id == state.textureMap.end())
+	if (find_texture_id == state.textureMap.end())
 	{
 		std::string mime_type;
 		std::string src_extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(texture_file));
@@ -3576,8 +3565,7 @@ inline tinygltf::TextureInfo _ExportHelper_StoreMaterialTexture(LoaderState& sta
 					tex, 0, int(texMulAdd.z * tex.desc.width), int(texMulAdd.w * tex.desc.height),
 					cmd,
 					wi::renderer::BORDEREXPAND_DISABLE,
-					IsFormatSRGB(tex.desc.format)
-				); // copy that supports format conversion / decompression
+					IsFormatSRGB(tex.desc.format)); // copy that supports format conversion / decompression
 				tex = tex_decompressed;
 			}
 			if (wi::helper::saveTextureToMemory(tex, texturedata))
@@ -3592,7 +3580,7 @@ inline tinygltf::TextureInfo _ExportHelper_StoreMaterialTexture(LoaderState& sta
 			}
 		}
 		state.gltfModel.buffers.push_back(buffer_builder);
-			
+
 		tinygltf::BufferView bufferView_builder;
 		image_bufferView_index = (int)state.gltfModel.bufferViews.size();
 		bufferView_builder.buffer = buffer_index;
@@ -3742,8 +3730,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 					auto tile = vt.residency ? vt.tiles[vt.tiles.size() - 2] : vt.tiles.back(); // last nonpacked mip
 					const float2 resolution_rcp = float2(
 						1.0f / (float)terrain.atlas.maps[map_type].texture.desc.width,
-						1.0f / (float)terrain.atlas.maps[map_type].texture.desc.height
-					);
+						1.0f / (float)terrain.atlas.maps[map_type].texture.desc.height);
 					material->texMulAdd.x = (float)SVT_TILE_SIZE * resolution_rcp.x;
 					material->texMulAdd.y = (float)SVT_TILE_SIZE * resolution_rcp.y;
 					material->texMulAdd.z = ((float)tile.x * (float)SVT_TILE_SIZE_PADDED + SVT_TILE_BORDER) * resolution_rcp.x;
@@ -3754,7 +3741,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 	}
 
 	// Write Materials
-	for(size_t mt_id = 0; mt_id < wiscene.materials.GetCount(); ++mt_id)
+	for (size_t mt_id = 0; mt_id < wiscene.materials.GetCount(); ++mt_id)
 	{
 		auto& material = wiscene.materials[mt_id];
 		auto materialEntity = wiscene.materials.GetEntity(mt_id);
@@ -3762,61 +3749,56 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 		tinygltf::Material material_builder;
 
-		if(nameComponent != nullptr)
+		if (nameComponent != nullptr)
 		{
 			material_builder.name = nameComponent->name;
 		}
 
 		// Dielectric-Metallic Workflow (Base PBR)
 		// Textures
-		if(material.textures[wi::scene::MaterialComponent::BASECOLORMAP].resource.IsValid())
+		if (material.textures[wi::scene::MaterialComponent::BASECOLORMAP].resource.IsValid())
 		{
 			material_builder.pbrMetallicRoughness.baseColorTexture = _ExportHelper_StoreMaterialTexture(
-				state, 
-				wi::helper::GetDirectoryFromPath(filename), 
+				state,
+				wi::helper::GetDirectoryFromPath(filename),
 				material,
-				wi::scene::MaterialComponent::BASECOLORMAP
-			);
+				wi::scene::MaterialComponent::BASECOLORMAP);
 		}
-		if(material.textures[wi::scene::MaterialComponent::NORMALMAP].resource.IsValid())
+		if (material.textures[wi::scene::MaterialComponent::NORMALMAP].resource.IsValid())
 		{
 			auto normalTexInfo_pre = _ExportHelper_StoreMaterialTexture(
-				state, 
-				wi::helper::GetDirectoryFromPath(filename), 
+				state,
+				wi::helper::GetDirectoryFromPath(filename),
 				material,
-				wi::scene::MaterialComponent::NORMALMAP
-			);
+				wi::scene::MaterialComponent::NORMALMAP);
 			material_builder.normalTexture.index = normalTexInfo_pre.index;
 			material_builder.normalTexture.texCoord = normalTexInfo_pre.texCoord;
 		}
-		if(material.textures[wi::scene::MaterialComponent::OCCLUSIONMAP].resource.IsValid())
+		if (material.textures[wi::scene::MaterialComponent::OCCLUSIONMAP].resource.IsValid())
 		{
 			auto occlTexInfo_pre = _ExportHelper_StoreMaterialTexture(
-				state, 
-				wi::helper::GetDirectoryFromPath(filename), 
+				state,
+				wi::helper::GetDirectoryFromPath(filename),
 				material,
-				wi::scene::MaterialComponent::OCCLUSIONMAP
-			);
+				wi::scene::MaterialComponent::OCCLUSIONMAP);
 			material_builder.occlusionTexture.index = occlTexInfo_pre.index;
 			material_builder.occlusionTexture.texCoord = occlTexInfo_pre.texCoord;
 		}
-		if(material.textures[wi::scene::MaterialComponent::EMISSIVEMAP].resource.IsValid())
+		if (material.textures[wi::scene::MaterialComponent::EMISSIVEMAP].resource.IsValid())
 		{
 			material_builder.emissiveTexture = _ExportHelper_StoreMaterialTexture(
-				state, 
-				wi::helper::GetDirectoryFromPath(filename), 
+				state,
+				wi::helper::GetDirectoryFromPath(filename),
 				material,
-				wi::scene::MaterialComponent::EMISSIVEMAP
-			);
+				wi::scene::MaterialComponent::EMISSIVEMAP);
 		}
-		if(material.textures[wi::scene::MaterialComponent::SURFACEMAP].resource.IsValid())
+		if (material.textures[wi::scene::MaterialComponent::SURFACEMAP].resource.IsValid())
 		{
 			material_builder.pbrMetallicRoughness.metallicRoughnessTexture = _ExportHelper_StoreMaterialTexture(
-				state, 
-				wi::helper::GetDirectoryFromPath(filename), 
+				state,
+				wi::helper::GetDirectoryFromPath(filename),
 				material,
-				wi::scene::MaterialComponent::SURFACEMAP
-			);				
+				wi::scene::MaterialComponent::SURFACEMAP);
 		}
 		// Values
 		material_builder.pbrMetallicRoughness.baseColorFactor = {
@@ -3827,7 +3809,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		};
 		material_builder.pbrMetallicRoughness.roughnessFactor = { material.roughness };
 		material_builder.pbrMetallicRoughness.metallicFactor = { material.metalness };
-		material_builder.emissiveFactor = { 
+		material_builder.emissiveFactor = {
 			material.emissiveColor.x,
 			material.emissiveColor.y,
 			material.emissiveColor.z,
@@ -3837,13 +3819,13 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			material_builder.alphaMode = "MASK";
 			material_builder.alphaCutoff = 1.f - material.alphaRef;
 		}
-		switch(material.userBlendMode)
+		switch (material.userBlendMode)
 		{
-			case wi::enums::BLENDMODE_ALPHA:
-				material_builder.alphaMode = "BLEND";
-				break;
-			default:
-				break;
+		case wi::enums::BLENDMODE_ALPHA:
+			material_builder.alphaMode = "BLEND";
+			break;
+		default:
+			break;
 		}
 		material_builder.doubleSided = material.IsDoubleSided();
 
@@ -3857,7 +3839,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		if (material.GetEmissiveStrength() != 1.0f)
 		{
 			tinygltf::Value::Object KHR_materials_emissive_strength_builder = {
-				{"emissiveStrength", tinygltf::Value(double(material.GetEmissiveStrength()))}
+				{ "emissiveStrength", tinygltf::Value(double(material.GetEmissiveStrength())) }
 			};
 			material_builder.extensions["KHR_materials_emissive_strength"] = tinygltf::Value(KHR_materials_emissive_strength_builder);
 		}
@@ -3867,7 +3849,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		if (material.transmission > 0 || material.textures[wi::scene::MaterialComponent::TRANSMISSIONMAP].resource.IsValid())
 		{
 			tinygltf::Value::Object KHR_materials_transmission_builder = {
-				{"transmissionFactor", tinygltf::Value(double(material.transmission))}
+				{ "transmissionFactor", tinygltf::Value(double(material.transmission)) }
 			};
 			// Textures
 			if (material.textures[wi::scene::MaterialComponent::TRANSMISSIONMAP].resource.IsValid())
@@ -3876,101 +3858,73 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 					state,
 					wi::helper::GetDirectoryFromPath(filename),
 					material,
-					wi::scene::MaterialComponent::TRANSMISSIONMAP
-				);
-				KHR_materials_transmission_builder["transmissionTexture"] = tinygltf::Value({
-						{"index",tinygltf::Value(transmissionTexInfo_pre.index)},
-						{"texCoord",tinygltf::Value(transmissionTexInfo_pre.texCoord)}
-					});
+					wi::scene::MaterialComponent::TRANSMISSIONMAP);
+				KHR_materials_transmission_builder["transmissionTexture"] = tinygltf::Value({ { "index", tinygltf::Value(transmissionTexInfo_pre.index) },
+					{ "texCoord", tinygltf::Value(transmissionTexInfo_pre.texCoord) } });
 			}
 			material_builder.extensions["KHR_materials_transmission"] = tinygltf::Value(KHR_materials_transmission_builder);
 		}
 
 		// Specular-glosiness extension (KHR_materials_pbrSpecularGlossiness)
-		if(material.IsUsingSpecularGlossinessWorkflow())
+		if (material.IsUsingSpecularGlossinessWorkflow())
 		{
 			// Values
 			tinygltf::Value::Object KHR_materials_pbrSpecularGlossiness_builder = {
-				{"diffuseFactor", tinygltf::Value({
-					tinygltf::Value(double(material.baseColor.x)),
-					tinygltf::Value(double(material.baseColor.y)),
-					tinygltf::Value(double(material.baseColor.z)),
-					tinygltf::Value(double(material.baseColor.w))
-				})},
-				{"specularFactor", tinygltf::Value({
-					tinygltf::Value(double(material.specularColor.x)),
-					tinygltf::Value(double(material.specularColor.y)),
-					tinygltf::Value(double(material.specularColor.z))
-				})},
-				{"glossinessFactor", tinygltf::Value(double(material.roughness))}
+				{ "diffuseFactor", tinygltf::Value({ tinygltf::Value(double(material.baseColor.x)), tinygltf::Value(double(material.baseColor.y)), tinygltf::Value(double(material.baseColor.z)), tinygltf::Value(double(material.baseColor.w)) }) },
+				{ "specularFactor", tinygltf::Value({ tinygltf::Value(double(material.specularColor.x)), tinygltf::Value(double(material.specularColor.y)), tinygltf::Value(double(material.specularColor.z)) }) },
+				{ "glossinessFactor", tinygltf::Value(double(material.roughness)) }
 			};
 			// Textures
-			if(material.textures[MaterialComponent::BASECOLORMAP].resource.IsValid())
+			if (material.textures[MaterialComponent::BASECOLORMAP].resource.IsValid())
 			{
 				auto diffuseTexInfo_pre = _ExportHelper_StoreMaterialTexture(
-					state, 
-					wi::helper::GetDirectoryFromPath(filename), 
+					state,
+					wi::helper::GetDirectoryFromPath(filename),
 					material,
-					wi::scene::MaterialComponent::BASECOLORMAP
-				);
-				KHR_materials_pbrSpecularGlossiness_builder["diffuseTexture"] = tinygltf::Value({
-						{"index",tinygltf::Value(diffuseTexInfo_pre.index)},
-						{"texCoord",tinygltf::Value(diffuseTexInfo_pre.texCoord)}
-					});
+					wi::scene::MaterialComponent::BASECOLORMAP);
+				KHR_materials_pbrSpecularGlossiness_builder["diffuseTexture"] = tinygltf::Value({ { "index", tinygltf::Value(diffuseTexInfo_pre.index) },
+					{ "texCoord", tinygltf::Value(diffuseTexInfo_pre.texCoord) } });
 			}
-			if(material.textures[MaterialComponent::SURFACEMAP].resource.IsValid())
+			if (material.textures[MaterialComponent::SURFACEMAP].resource.IsValid())
 			{
 				auto specglossTexInfo_pre = _ExportHelper_StoreMaterialTexture(
-					state, 
-					wi::helper::GetDirectoryFromPath(filename), 
+					state,
+					wi::helper::GetDirectoryFromPath(filename),
 					material,
-					wi::scene::MaterialComponent::SURFACEMAP
-				);
-				KHR_materials_pbrSpecularGlossiness_builder["specularGlossinessTexture"] = tinygltf::Value({
-						{"index",tinygltf::Value(specglossTexInfo_pre.index)},
-						{"texCoord",tinygltf::Value(specglossTexInfo_pre.texCoord)}
-					});
+					wi::scene::MaterialComponent::SURFACEMAP);
+				KHR_materials_pbrSpecularGlossiness_builder["specularGlossinessTexture"] = tinygltf::Value({ { "index", tinygltf::Value(specglossTexInfo_pre.index) },
+					{ "texCoord", tinygltf::Value(specglossTexInfo_pre.texCoord) } });
 			}
 		}
 
 		// Sheen extension (KHR_materials_sheen)
-		if(material.shaderType == wi::scene::MaterialComponent::SHADERTYPE_PBR_CLOTH || material.shaderType == wi::scene::MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT)
+		if (material.shaderType == wi::scene::MaterialComponent::SHADERTYPE_PBR_CLOTH || material.shaderType == wi::scene::MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT)
 		{
 			// Values
 			tinygltf::Value::Object KHR_materials_sheen_builder = {
-				{"sheenColorFactor", tinygltf::Value({
-					tinygltf::Value(double(material.sheenColor.x)),
-					tinygltf::Value(double(material.sheenColor.y)),
-					tinygltf::Value(double(material.sheenColor.z))
-				})},
-				{"sheenRoughnessFactor", tinygltf::Value(double(material.sheenRoughness))}
+				{ "sheenColorFactor", tinygltf::Value({ tinygltf::Value(double(material.sheenColor.x)), tinygltf::Value(double(material.sheenColor.y)), tinygltf::Value(double(material.sheenColor.z)) }) },
+				{ "sheenRoughnessFactor", tinygltf::Value(double(material.sheenRoughness)) }
 			};
 			// Textures
-			if(material.textures[wi::scene::MaterialComponent::SHEENCOLORMAP].resource.IsValid())
+			if (material.textures[wi::scene::MaterialComponent::SHEENCOLORMAP].resource.IsValid())
 			{
 				auto sheencolorTexInfo_pre = _ExportHelper_StoreMaterialTexture(
-					state, 
-					wi::helper::GetDirectoryFromPath(filename), 
+					state,
+					wi::helper::GetDirectoryFromPath(filename),
 					material,
-					wi::scene::MaterialComponent::SHEENCOLORMAP
-				);
-				KHR_materials_sheen_builder["sheenColorTexture"] = tinygltf::Value({
-						{"index",tinygltf::Value(sheencolorTexInfo_pre.index)},
-						{"texCoord",tinygltf::Value(sheencolorTexInfo_pre.texCoord)}
-					});
+					wi::scene::MaterialComponent::SHEENCOLORMAP);
+				KHR_materials_sheen_builder["sheenColorTexture"] = tinygltf::Value({ { "index", tinygltf::Value(sheencolorTexInfo_pre.index) },
+					{ "texCoord", tinygltf::Value(sheencolorTexInfo_pre.texCoord) } });
 			}
-			if(material.textures[wi::scene::MaterialComponent::SHEENROUGHNESSMAP].resource.IsValid())
+			if (material.textures[wi::scene::MaterialComponent::SHEENROUGHNESSMAP].resource.IsValid())
 			{
 				auto sheenRoughTexInfo_pre = _ExportHelper_StoreMaterialTexture(
-					state, 
-					wi::helper::GetDirectoryFromPath(filename), 
+					state,
+					wi::helper::GetDirectoryFromPath(filename),
 					material,
-					wi::scene::MaterialComponent::SHEENROUGHNESSMAP
-				);
-				KHR_materials_sheen_builder["sheenRoughnessTexture"] = tinygltf::Value({
-						{"index",tinygltf::Value(sheenRoughTexInfo_pre.index)},
-						{"texCoord",tinygltf::Value(sheenRoughTexInfo_pre.texCoord)}
-					});
+					wi::scene::MaterialComponent::SHEENROUGHNESSMAP);
+				KHR_materials_sheen_builder["sheenRoughnessTexture"] = tinygltf::Value({ { "index", tinygltf::Value(sheenRoughTexInfo_pre.index) },
+					{ "texCoord", tinygltf::Value(sheenRoughTexInfo_pre.texCoord) } });
 			}
 			material_builder.extensions["KHR_materials_sheen"] = tinygltf::Value(KHR_materials_sheen_builder);
 		}
@@ -3980,8 +3934,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		if (material.shaderType == MaterialComponent::SHADERTYPE_PBR_CLEARCOAT || material.shaderType == MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT)
 		{
 			tinygltf::Value::Object KHR_materials_clearcoat_builder = {
-				{"clearcoatFactor", tinygltf::Value(double(material.clearcoat))},
-				{"clearcoatRoughnessFactor", tinygltf::Value(double(material.clearcoatRoughness))}
+				{ "clearcoatFactor", tinygltf::Value(double(material.clearcoat)) },
+				{ "clearcoatRoughnessFactor", tinygltf::Value(double(material.clearcoatRoughness)) }
 			};
 			// Textures
 			if (material.textures[wi::scene::MaterialComponent::CLEARCOATMAP].resource.IsValid())
@@ -3990,12 +3944,9 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 					state,
 					wi::helper::GetDirectoryFromPath(filename),
 					material,
-					wi::scene::MaterialComponent::CLEARCOATMAP
-				);
-				KHR_materials_clearcoat_builder["clearcoatTexture"] = tinygltf::Value({
-						{"index",tinygltf::Value(clearcoatTexInfo_pre.index)},
-						{"texCoord",tinygltf::Value(clearcoatTexInfo_pre.texCoord)}
-					});
+					wi::scene::MaterialComponent::CLEARCOATMAP);
+				KHR_materials_clearcoat_builder["clearcoatTexture"] = tinygltf::Value({ { "index", tinygltf::Value(clearcoatTexInfo_pre.index) },
+					{ "texCoord", tinygltf::Value(clearcoatTexInfo_pre.texCoord) } });
 			}
 			if (material.textures[wi::scene::MaterialComponent::CLEARCOATNORMALMAP].resource.IsValid())
 			{
@@ -4003,12 +3954,9 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 					state,
 					wi::helper::GetDirectoryFromPath(filename),
 					material,
-					wi::scene::MaterialComponent::CLEARCOATNORMALMAP
-				);
-				KHR_materials_clearcoat_builder["clearcoatNormalTexture"] = tinygltf::Value({
-						{"index",tinygltf::Value(clearcoatNormTexInfo_pre.index)},
-						{"texCoord",tinygltf::Value(clearcoatNormTexInfo_pre.texCoord)}
-					});
+					wi::scene::MaterialComponent::CLEARCOATNORMALMAP);
+				KHR_materials_clearcoat_builder["clearcoatNormalTexture"] = tinygltf::Value({ { "index", tinygltf::Value(clearcoatNormTexInfo_pre.index) },
+					{ "texCoord", tinygltf::Value(clearcoatNormTexInfo_pre.texCoord) } });
 			}
 			if (material.textures[wi::scene::MaterialComponent::CLEARCOATROUGHNESSMAP].resource.IsValid())
 			{
@@ -4016,49 +3964,37 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 					state,
 					wi::helper::GetDirectoryFromPath(filename),
 					material,
-					wi::scene::MaterialComponent::CLEARCOATROUGHNESSMAP
-				);
-				KHR_materials_clearcoat_builder["clearcoatRoughnessTexture"] = tinygltf::Value({
-						{"index",tinygltf::Value(clearcoatRoughTexInfo_pre.index)},
-						{"texCoord",tinygltf::Value(clearcoatRoughTexInfo_pre.texCoord)}
-					});
+					wi::scene::MaterialComponent::CLEARCOATROUGHNESSMAP);
+				KHR_materials_clearcoat_builder["clearcoatRoughnessTexture"] = tinygltf::Value({ { "index", tinygltf::Value(clearcoatRoughTexInfo_pre.index) },
+					{ "texCoord", tinygltf::Value(clearcoatRoughTexInfo_pre.texCoord) } });
 			}
 			material_builder.extensions["KHR_materials_clearcoat"] = tinygltf::Value(KHR_materials_clearcoat_builder);
 		}
 
 		// IOR Extension (KHR_materials_ior)
 		float ior_retrieve_phase1 = std::sqrt(material.reflectance);
-		float ior_retrieve_phase2 = -(1+ior_retrieve_phase1)/(ior_retrieve_phase1-1);
+		float ior_retrieve_phase2 = -(1 + ior_retrieve_phase1) / (ior_retrieve_phase1 - 1);
 		tinygltf::Value::Object KHR_materials_ior_builder = {
-			{"ior",tinygltf::Value(double(ior_retrieve_phase2))}
+			{ "ior", tinygltf::Value(double(ior_retrieve_phase2)) }
 		};
 		material_builder.extensions["KHR_materials_ior"] = tinygltf::Value(KHR_materials_ior_builder);
 
 		// Specular Extension (KHR_materials_specular)
 		tinygltf::Value::Object KHR_materials_specular_builder = {
-			{"specularFactor", tinygltf::Value(material.specularColor.w)},
-			{"specularColorFactor",tinygltf::Value({
-				tinygltf::Value(double(material.specularColor.x)),
-				tinygltf::Value(double(material.specularColor.y)),
-				tinygltf::Value(double(material.specularColor.z))
-			})}
+			{ "specularFactor", tinygltf::Value(material.specularColor.w) },
+			{ "specularColorFactor", tinygltf::Value({ tinygltf::Value(double(material.specularColor.x)), tinygltf::Value(double(material.specularColor.y)), tinygltf::Value(double(material.specularColor.z)) }) }
 		};
-		if(material.textures[wi::scene::MaterialComponent::SPECULARMAP].resource.IsValid())
+		if (material.textures[wi::scene::MaterialComponent::SPECULARMAP].resource.IsValid())
 		{
 			auto specularTexInfo_pre = _ExportHelper_StoreMaterialTexture(
-				state, 
-				wi::helper::GetDirectoryFromPath(filename), 
+				state,
+				wi::helper::GetDirectoryFromPath(filename),
 				material,
-				wi::scene::MaterialComponent::SPECULARMAP
-			);
-			KHR_materials_specular_builder["specularTexture"] = tinygltf::Value({
-					{"index",tinygltf::Value(specularTexInfo_pre.index)},
-					{"texCoord",tinygltf::Value(specularTexInfo_pre.texCoord)}
-				});
-			KHR_materials_specular_builder["specularColorTexture"] = tinygltf::Value({
-					{"index",tinygltf::Value(specularTexInfo_pre.index)},
-					{"texCoord",tinygltf::Value(specularTexInfo_pre.texCoord)}
-				});
+				wi::scene::MaterialComponent::SPECULARMAP);
+			KHR_materials_specular_builder["specularTexture"] = tinygltf::Value({ { "index", tinygltf::Value(specularTexInfo_pre.index) },
+				{ "texCoord", tinygltf::Value(specularTexInfo_pre.texCoord) } });
+			KHR_materials_specular_builder["specularColorTexture"] = tinygltf::Value({ { "index", tinygltf::Value(specularTexInfo_pre.index) },
+				{ "texCoord", tinygltf::Value(specularTexInfo_pre.texCoord) } });
 		}
 		material_builder.extensions["KHR_materials_specular"] = tinygltf::Value(KHR_materials_specular_builder);
 
@@ -4066,8 +4002,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		{
 			// Anisotropy Extension (KHR_materials_anisotropy)
 			tinygltf::Value::Object KHR_materials_anisotropy_builder = {
-				{"anisotropyStrength", tinygltf::Value(material.anisotropy_strength)},
-				{"anisotropyRotation", tinygltf::Value(material.anisotropy_rotation)}
+				{ "anisotropyStrength", tinygltf::Value(material.anisotropy_strength) },
+				{ "anisotropyRotation", tinygltf::Value(material.anisotropy_rotation) }
 			};
 			if (material.textures[wi::scene::MaterialComponent::ANISOTROPYMAP].resource.IsValid())
 			{
@@ -4075,12 +4011,9 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 					state,
 					wi::helper::GetDirectoryFromPath(filename),
 					material,
-					wi::scene::MaterialComponent::ANISOTROPYMAP
-				);
-				KHR_materials_anisotropy_builder["anisotropyTexture"] = tinygltf::Value({
-						{"index",tinygltf::Value(specularTexInfo_pre.index)},
-						{"texCoord",tinygltf::Value(specularTexInfo_pre.texCoord)}
-					});
+					wi::scene::MaterialComponent::ANISOTROPYMAP);
+				KHR_materials_anisotropy_builder["anisotropyTexture"] = tinygltf::Value({ { "index", tinygltf::Value(specularTexInfo_pre.index) },
+					{ "texCoord", tinygltf::Value(specularTexInfo_pre.texCoord) } });
 			}
 			material_builder.extensions["KHR_materials_anisotropy"] = tinygltf::Value(KHR_materials_anisotropy_builder);
 		}
@@ -4110,7 +4043,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 	}
 
 	// Write Meshes
-	for(size_t m_id = 0; m_id < wiscene.meshes.GetCount(); ++m_id)
+	for (size_t m_id = 0; m_id < wiscene.meshes.GetCount(); ++m_id)
 	{
 		auto& mesh = wiscene.meshes[m_id];
 		auto meshEntity = wiscene.meshes.GetEntity(m_id);
@@ -4154,7 +4087,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 		// Write positions next
 		buf_d_vpos_offset = buf_i;
-		for(auto& m_position : mesh.vertex_positions)
+		for (auto& m_position : mesh.vertex_positions)
 		{
 			_ExportHelper_valuetobuf(m_position, buffer_builder, buf_i);
 		}
@@ -4162,7 +4095,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 		// Write normals next
 		buf_d_vnorm_offset = buf_i;
-		for(auto& m_normal : mesh.vertex_normals)
+		for (auto& m_normal : mesh.vertex_normals)
 		{
 			XMVECTOR nor = XMLoadFloat3(&m_normal);
 			nor = XMVector3Normalize(nor);
@@ -4173,7 +4106,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 		// Write tangents next
 		buf_d_vtan_offset = buf_i;
-		for(auto& m_tangent : mesh.vertex_tangents)
+		for (auto& m_tangent : mesh.vertex_tangents)
 		{
 			float w = m_tangent.w;
 			XMVECTOR tan = XMLoadFloat4(&m_tangent);
@@ -4186,7 +4119,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 		// Write uvset 0 next
 		buf_d_uv0_offset = buf_i;
-		for(auto& m_uv0 : mesh.vertex_uvset_0)
+		for (auto& m_uv0 : mesh.vertex_uvset_0)
 		{
 			_ExportHelper_valuetobuf(m_uv0, buffer_builder, buf_i);
 		}
@@ -4194,7 +4127,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 		// Write uvset 1 next
 		buf_d_uv1_offset = buf_i;
-		for(auto& m_uv1 : mesh.vertex_uvset_1)
+		for (auto& m_uv1 : mesh.vertex_uvset_1)
 		{
 			_ExportHelper_valuetobuf(m_uv1, buffer_builder, buf_i);
 		}
@@ -4202,7 +4135,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 		// Write animation data - armature bone id
 		buf_d_joint_offset = buf_i;
-		for(auto& m_joint : mesh.vertex_boneindices)
+		for (auto& m_joint : mesh.vertex_boneindices)
 		{
 			auto m_joint_v = XMLoadUInt4(&m_joint);
 			XMSHORT4 m_joint_s;
@@ -4213,7 +4146,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 		// Write animation data - armature weights id
 		buf_d_weights_offset = buf_i;
-		for(auto& m_bone_weights : mesh.vertex_boneweights)
+		for (auto& m_bone_weights : mesh.vertex_boneweights)
 		{
 			_ExportHelper_valuetobuf(m_bone_weights, buffer_builder, buf_i);
 		}
@@ -4221,7 +4154,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 		// Write vertex colors
 		buf_d_col_offset = buf_i;
-		for(auto& m_col : mesh.vertex_colors)
+		for (auto& m_col : mesh.vertex_colors)
 		{
 			_ExportHelper_valuetobuf(m_col, buffer_builder, buf_i);
 		}
@@ -4243,14 +4176,14 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		vpos_accessor_builder.count = mesh.vertex_positions.size();
 		vpos_accessor_builder.type = TINYGLTF_TYPE_VEC3;
 		auto bound = wi::primitive::AABB(mesh.vertex_positions[0], mesh.vertex_positions[0]);
-		for(auto& vpos : mesh.vertex_positions)
+		for (auto& vpos : mesh.vertex_positions)
 		{
 			bound = wi::primitive::AABB::Merge(bound, wi::primitive::AABB(vpos, vpos));
 		}
 		auto bound_max = bound.getMax();
 		auto bound_min = bound.getMin();
-		vpos_accessor_builder.maxValues = {bound_max.x, bound_max.y, bound_max.z};
-		vpos_accessor_builder.minValues = {bound_min.x, bound_min.y, bound_min.z};
+		vpos_accessor_builder.maxValues = { bound_max.x, bound_max.y, bound_max.z };
+		vpos_accessor_builder.minValues = { bound_min.x, bound_min.y, bound_min.z };
 		state.gltfModel.accessors.push_back(vpos_accessor_builder);
 
 		tinygltf::BufferView vnorm_bufferView_builder;
@@ -4286,7 +4219,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		state.gltfModel.accessors.push_back(vtan_accessor_builder);
 
 		int uv0_accessor_index = -1;
-		if(buf_d_uv0_size > 0)
+		if (buf_d_uv0_size > 0)
 		{
 			tinygltf::BufferView uv0_bufferView_builder;
 			int uv0_bufferView_index = (int)state.gltfModel.bufferViews.size();
@@ -4306,7 +4239,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		}
 
 		int uv1_accessor_index = -1;
-		if(buf_d_uv1_size > 0)
+		if (buf_d_uv1_size > 0)
 		{
 			tinygltf::BufferView uv1_bufferView_builder;
 			int uv1_bufferView_index = (int)state.gltfModel.bufferViews.size();
@@ -4326,7 +4259,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		}
 
 		int joint_accessor_index = -1;
-		if(buf_d_joint_size > 0)
+		if (buf_d_joint_size > 0)
 		{
 			tinygltf::BufferView joint_bufferView_builder;
 			int joint_bufferView_index = (int)state.gltfModel.bufferViews.size();
@@ -4346,7 +4279,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		}
 
 		int weight_accessor_index = -1;
-		if(buf_d_weights_size > 0)
+		if (buf_d_weights_size > 0)
 		{
 			tinygltf::BufferView weight_bufferView_builder;
 			int weight_bufferView_index = (int)state.gltfModel.bufferViews.size();
@@ -4366,7 +4299,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		}
 
 		int color_accessor_index = -1;
-		if(buf_d_col_size > 0)
+		if (buf_d_col_size > 0)
 		{
 			tinygltf::BufferView color_bufferView_builder;
 			int color_bufferView_index = (int)state.gltfModel.bufferViews.size();
@@ -4390,7 +4323,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		// Prep up a zero value defaults for sparse morph target
 		size_t buf_d_morph_def_offset, buf_d_morph_def_size;
 		buf_d_morph_def_offset = buf_i;
-		for(auto& m_position : mesh.vertex_positions)
+		for (auto& m_position : mesh.vertex_positions)
 		{
 			_ExportHelper_valuetobuf(XMFLOAT3(), buffer_builder, buf_i);
 		}
@@ -4404,9 +4337,9 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		morph_def_bufferView_builder.target = TINYGLTF_TARGET_ARRAY_BUFFER;
 		state.gltfModel.bufferViews.push_back(morph_def_bufferView_builder);
 
-		wi::vector<std::pair<size_t,bool>> morphs_pos_accessors;
-		wi::vector<std::pair<size_t,bool>> morphs_norm_accessors;
-		for(auto& m_morph : mesh.morph_targets)
+		wi::vector<std::pair<size_t, bool>> morphs_pos_accessors;
+		wi::vector<std::pair<size_t, bool>> morphs_norm_accessors;
+		for (auto& m_morph : mesh.morph_targets)
 		{
 			size_t buf_d_morph_idc_pos_offset, buf_d_morph_idc_pos_size,
 				buf_d_morph_idc_nor_offset, buf_d_morph_idc_nor_size,
@@ -4414,7 +4347,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 				buf_d_morph_norm_size, buf_d_morph_norm_offset;
 
 			buf_d_morph_idc_pos_offset = buf_i;
-			for(auto& m_morph_idc : m_morph.sparse_indices_positions)
+			for (auto& m_morph_idc : m_morph.sparse_indices_positions)
 			{
 				_ExportHelper_valuetobuf(m_morph_idc, buffer_builder, buf_i);
 			}
@@ -4426,16 +4359,16 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 				_ExportHelper_valuetobuf(m_morph_idc, buffer_builder, buf_i);
 			}
 			buf_d_morph_idc_nor_size = buf_i - buf_d_morph_idc_nor_offset;
-			
+
 			buf_d_morph_pos_offset = buf_i;
-			for(auto& m_morph_pos : m_morph.vertex_positions)
+			for (auto& m_morph_pos : m_morph.vertex_positions)
 			{
 				_ExportHelper_valuetobuf(m_morph_pos, buffer_builder, buf_i);
 			}
 			buf_d_morph_pos_size = buf_i - buf_d_morph_pos_offset;
 
 			buf_d_morph_norm_offset = buf_i;
-			for(auto& m_morph_norm : m_morph.vertex_normals)
+			for (auto& m_morph_norm : m_morph.vertex_normals)
 			{
 				_ExportHelper_valuetobuf(m_morph_norm, buffer_builder, buf_i);
 			}
@@ -4444,7 +4377,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			// Build accessors
 
 			size_t morph_pos_accessor_index;
-			if(buf_d_morph_pos_size > 0)
+			if (buf_d_morph_pos_size > 0)
 			{
 				// Sparse accessor indices
 				auto is_sparse = (m_morph.sparse_indices_positions.size() > 0);
@@ -4474,22 +4407,22 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 				morph_pos_accessor_builder.componentType = TINYGLTF_COMPONENT_TYPE_FLOAT;
 				morph_pos_accessor_builder.count = (is_sparse) ? mesh.vertex_positions.size() : m_morph.vertex_positions.size();
 				morph_pos_accessor_builder.type = TINYGLTF_TYPE_VEC3;
-				if(is_sparse)
+				if (is_sparse)
 				{
 					auto& sparse = morph_pos_accessor_builder.sparse;
 					sparse.isSparse = true;
 					sparse.count = (int)m_morph.sparse_indices_positions.size();
-					
+
 					sparse.indices.bufferView = morph_sparse_bufferView_index;
 					sparse.indices.componentType = TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT;
-					
+
 					sparse.values.bufferView = morph_pos_bufferView_index;
 				}
 				state.gltfModel.accessors.push_back(morph_pos_accessor_builder);
 			}
 
 			size_t morph_norm_accessor_index;
-			if(buf_d_morph_norm_size > 0)
+			if (buf_d_morph_norm_size > 0)
 			{
 				// Sparse accessor indices
 				auto is_sparse = (m_morph.sparse_indices_normals.size() > 0);
@@ -4521,22 +4454,22 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 				// morph_norm_accessor_builder.count = (is_sparse) ? mesh.vertex_normals.size() : m_morph.vertex_normals.size();
 				morph_norm_accessor_builder.count = (is_sparse) ? mesh.vertex_positions.size() : m_morph.vertex_normals.size();
 				morph_norm_accessor_builder.type = TINYGLTF_TYPE_VEC3;
-				if(is_sparse)
+				if (is_sparse)
 				{
 					auto& sparse = morph_norm_accessor_builder.sparse;
 					sparse.isSparse = true;
 					sparse.count = (int)m_morph.sparse_indices_normals.size();
-					
+
 					sparse.indices.bufferView = morph_sparse_bufferView_index;
 					sparse.indices.componentType = TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT;
-					
+
 					sparse.values.bufferView = morph_norm_bufferView_index;
 				}
 				state.gltfModel.accessors.push_back(morph_norm_accessor_builder);
 			}
 
-			morphs_pos_accessors.push_back({morph_pos_accessor_index, buf_d_morph_pos_size > 0});
-			morphs_norm_accessors.push_back({morph_norm_accessor_index, buf_d_morph_norm_size > 0});
+			morphs_pos_accessors.push_back({ morph_pos_accessor_index, buf_d_morph_pos_size > 0 });
+			morphs_norm_accessors.push_back({ morph_norm_accessor_index, buf_d_morph_norm_size > 0 });
 		}
 
 		// Store mesh indices by subset, which mapped to primitives
@@ -4553,8 +4486,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			tinygltf::BufferView indices_bufferView_builder;
 			int indices_bufferView_index = (int)state.gltfModel.bufferViews.size();
 			indices_bufferView_builder.buffer = buffer_index;
-			indices_bufferView_builder.byteOffset = subset.indexOffset*sizeof(uint32_t);
-			indices_bufferView_builder.byteLength = subset.indexCount*sizeof(uint32_t);
+			indices_bufferView_builder.byteOffset = subset.indexOffset * sizeof(uint32_t);
+			indices_bufferView_builder.byteLength = subset.indexCount * sizeof(uint32_t);
 			indices_bufferView_builder.target = TINYGLTF_TARGET_ELEMENT_ARRAY_BUFFER;
 			state.gltfModel.bufferViews.push_back(indices_bufferView_builder);
 
@@ -4566,31 +4499,31 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			indices_accessor_builder.count = subset.indexCount;
 			indices_accessor_builder.type = TINYGLTF_TYPE_SCALAR;
 			state.gltfModel.accessors.push_back(indices_accessor_builder);
-	
+
 			tinygltf::Primitive primitive_builder;
 			primitive_builder.indices = indices_accessor_index;
 			primitive_builder.attributes["POSITION"] = vpos_accessor_index;
 			primitive_builder.attributes["NORMAL"] = vnorm_accessor_index;
 			primitive_builder.attributes["TANGENT"] = vtan_accessor_index;
-			if(buf_d_uv0_size > 0)
+			if (buf_d_uv0_size > 0)
 				primitive_builder.attributes["TEXCOORD_0"] = uv0_accessor_index;
-			if(buf_d_uv1_size > 0)
+			if (buf_d_uv1_size > 0)
 				primitive_builder.attributes["TEXCOORD_1"] = uv1_accessor_index;
-			if(buf_d_joint_size > 0)
+			if (buf_d_joint_size > 0)
 				primitive_builder.attributes["JOINTS_0"] = joint_accessor_index;
-			if(buf_d_weights_size > 0)
+			if (buf_d_weights_size > 0)
 				primitive_builder.attributes["WEIGHTS_0"] = weight_accessor_index;
-			if(buf_d_col_size > 0)
+			if (buf_d_col_size > 0)
 				primitive_builder.attributes["COLOR_0"] = color_accessor_index;
 			primitive_builder.material = std::max(0, std::min((int)wiscene.materials.GetIndex(subset.materialID), (int)wiscene.materials.GetCount() - 1));
 			primitive_builder.mode = TINYGLTF_MODE_TRIANGLES;
 
-			for(size_t msub_morph_id = 0; msub_morph_id < morphs_pos_accessors.size(); ++msub_morph_id)
+			for (size_t msub_morph_id = 0; msub_morph_id < morphs_pos_accessors.size(); ++msub_morph_id)
 			{
 				std::map<std::string, int> morph_info;
-				if(morphs_pos_accessors[msub_morph_id].second)
+				if (morphs_pos_accessors[msub_morph_id].second)
 					morph_info["POSITION"] = (int)morphs_pos_accessors[msub_morph_id].first;
-				if(morphs_norm_accessors[msub_morph_id].second)
+				if (morphs_norm_accessors[msub_morph_id].second)
 					morph_info["NORMAL"] = (int)morphs_norm_accessors[msub_morph_id].first;
 				primitive_builder.targets.push_back(morph_info);
 			}
@@ -4603,7 +4536,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 	}
 
 	// Write Lights
-	for(size_t l_id = 0; l_id < wiscene.lights.GetCount(); ++l_id)
+	for (size_t l_id = 0; l_id < wiscene.lights.GetCount(); ++l_id)
 	{
 		auto& light = wiscene.lights[l_id];
 		auto lightEntity = wiscene.lights.GetEntity(l_id);
@@ -4612,13 +4545,13 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 		tinygltf::Light light_builder;
 
-		if(nameComponent != nullptr)
+		if (nameComponent != nullptr)
 			light_builder.name = nameComponent->name;
 
-		light_builder.type = 
-			(light.type == LightComponent::LightType::DIRECTIONAL) ? "directional" : 
-			(light.type == LightComponent::LightType::SPOT) ? "spot" : "point";
-		light_builder.color = {double(light.color.x), double(light.color.y), double(light.color.z)};
+		light_builder.type =
+			(light.type == LightComponent::LightType::DIRECTIONAL) ? "directional" : (light.type == LightComponent::LightType::SPOT) ? "spot"
+																																	 : "point";
+		light_builder.color = { double(light.color.x), double(light.color.y), double(light.color.z) };
 		light_builder.intensity = double(light.intensity);
 		light_builder.range = double(light.range);
 		light_builder.spot.outerConeAngle = double(light.outerConeAngle);
@@ -4628,20 +4561,20 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 	}
 
 	// Write Cameras
-	for(size_t cam_id = 0; cam_id < wiscene.cameras.GetCount(); ++cam_id)
+	for (size_t cam_id = 0; cam_id < wiscene.cameras.GetCount(); ++cam_id)
 	{
 		auto& camera = wiscene.cameras[cam_id];
 		auto cameraEntity = wiscene.cameras.GetEntity(cam_id);
 
 		auto nameComponent = wiscene.names.GetComponent(cameraEntity);
-		
+
 		tinygltf::Camera camera_builder;
 
-		if(nameComponent != nullptr)
+		if (nameComponent != nullptr)
 			camera_builder.name = nameComponent->name;
 
 		camera_builder.type = "perspective";
-		camera_builder.perspective.aspectRatio = camera.width/camera.height;
+		camera_builder.perspective.aspectRatio = camera.width / camera.height;
 		camera_builder.perspective.yfov = camera.fov;
 		camera_builder.perspective.zfar = camera.zFarP;
 		camera_builder.perspective.znear = camera.zNearP;
@@ -4652,22 +4585,22 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 	tinygltf::Scene scene_builder;
 
 	// Compose Node
-	for(size_t t_id = 0; t_id < wiscene.transforms.GetCount(); ++t_id)
+	for (size_t t_id = 0; t_id < wiscene.transforms.GetCount(); ++t_id)
 	{
 		auto& transformComponent = wiscene.transforms[t_id];
 		auto transformEntity = wiscene.transforms.GetEntity(t_id);
 		auto nameComponent = wiscene.names.GetComponent(transformEntity);
 
 		auto light_forward_flip = wiscene.lights.Contains(transformEntity);
-		if(light_forward_flip)
-			transformComponent.RotateRollPitchYaw(XMFLOAT3(-XM_PIDIV2,0,0));
+		if (light_forward_flip)
+			transformComponent.RotateRollPitchYaw(XMFLOAT3(-XM_PIDIV2, 0, 0));
 
 		auto objectComponent = wiscene.objects.GetComponent(transformEntity);
 
 		tinygltf::Node node_builder;
 		int node_index = (int)t_id;
-		
-		if(nameComponent != nullptr)
+
+		if (nameComponent != nullptr)
 			node_builder.name = nameComponent->name;
 
 		node_builder.scale.push_back(transformComponent.scale_local.x);
@@ -4683,40 +4616,40 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		node_builder.translation.push_back(transformComponent.translation_local.y);
 		node_builder.translation.push_back(transformComponent.translation_local.z);
 
-		if(light_forward_flip)
-			transformComponent.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2,0,0));
-		
-		if(objectComponent != nullptr)
+		if (light_forward_flip)
+			transformComponent.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
+
+		if (objectComponent != nullptr)
 		{
-			if(objectComponent->meshID != wi::ecs::INVALID_ENTITY)
+			if (objectComponent->meshID != wi::ecs::INVALID_ENTITY)
 			{
 				node_builder.mesh = (int)wiscene.meshes.GetIndex(objectComponent->meshID);
-				if(wiscene.meshes[node_builder.mesh].armatureID != wi::ecs::INVALID_ENTITY)
+				if (wiscene.meshes[node_builder.mesh].armatureID != wi::ecs::INVALID_ENTITY)
 				{
 					node_builder.skin = (int)wiscene.armatures.GetIndex(wiscene.meshes[node_builder.mesh].armatureID);
 				}
 			}
 		}
 
-		if(wiscene.lights.Contains(transformEntity))
+		if (wiscene.lights.Contains(transformEntity))
 		{
 			tinygltf::Value::Object node_light_extension_builder;
 			node_light_extension_builder["light"] = tinygltf::Value(int(wiscene.lights.GetIndex(transformEntity)));
 			node_builder.extensions["KHR_lights_punctual"] = tinygltf::Value(node_light_extension_builder);
 		}
 
-		if(wiscene.cameras.Contains(transformEntity))
+		if (wiscene.cameras.Contains(transformEntity))
 		{
 			node_builder.camera = (int)wiscene.cameras.GetIndex(transformEntity);
 		}
-		
+
 		state.nodeMap[transformEntity] = node_index;
 		state.gltfModel.nodes.push_back(node_builder);
 		scene_builder.nodes.push_back(node_index);
 	}
 
 	// Write Armature
-	for(size_t arm_id = 0; arm_id < wiscene.armatures.GetCount(); ++arm_id)
+	for (size_t arm_id = 0; arm_id < wiscene.armatures.GetCount(); ++arm_id)
 	{
 		auto& armatureComponent = wiscene.armatures[arm_id];
 		auto armatureEntity = wiscene.armatures.GetEntity(arm_id);
@@ -4724,8 +4657,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		auto nameComponent = wiscene.names.GetComponent(armatureEntity);
 
 		tinygltf::Skin skin_builder;
-		
-		if(nameComponent != nullptr)
+
+		if (nameComponent != nullptr)
 			skin_builder.name = nameComponent->name;
 
 		tinygltf::Buffer buffer_builder;
@@ -4734,7 +4667,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		size_t buf_i = 0;
 
 		// Write Inverse Bind Matrices to buffer
-		for(auto& arm_invBindMatrix : armatureComponent.inverseBindMatrices)
+		for (auto& arm_invBindMatrix : armatureComponent.inverseBindMatrices)
 		{
 			_ExportHelper_valuetobuf(arm_invBindMatrix, buffer_builder, buf_i);
 		}
@@ -4769,31 +4702,31 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 		skin_builder.inverseBindMatrices = aibm_accessor_index;
 
-		for(auto& arm_bone_id : armatureComponent.boneCollection)
+		for (auto& arm_bone_id : armatureComponent.boneCollection)
 		{
 			skin_builder.joints.push_back(state.nodeMap[arm_bone_id]);
 		}
-		
+
 		state.gltfModel.skins.push_back(skin_builder);
 	}
 
 	// Write Animations
 	wi::unordered_map<Entity, std::vector<size_t>> animation_datasets;
-	if(wiscene.animations.GetCount() > 0)
+	if (wiscene.animations.GetCount() > 0)
 	{
 		// Find accessor types first!
-		wi::unordered_map<Entity, size_t> animdata_vectype; 
-		for(size_t anim_id = 0; anim_id < wiscene.animations.GetCount(); ++anim_id)
+		wi::unordered_map<Entity, size_t> animdata_vectype;
+		for (size_t anim_id = 0; anim_id < wiscene.animations.GetCount(); ++anim_id)
 		{
 			auto& animation = wiscene.animations[anim_id];
-			for(auto& channel : animation.channels)
+			for (auto& channel : animation.channels)
 			{
-				if(animdata_vectype.find(animation.samplers[channel.samplerIndex].data) == animdata_vectype.end())
-					animdata_vectype[animation.samplers[channel.samplerIndex].data] = 
-						(channel.path == AnimationComponent::AnimationChannel::Path::SCALE) ? TINYGLTF_TYPE_VEC3 :
-						(channel.path == AnimationComponent::AnimationChannel::Path::ROTATION) ? TINYGLTF_TYPE_VEC4 :
-						(channel.path == AnimationComponent::AnimationChannel::Path::TRANSLATION) ? TINYGLTF_TYPE_VEC3 :
-						(channel.path == AnimationComponent::AnimationChannel::Path::WEIGHTS) ? TINYGLTF_TYPE_SCALAR : TINYGLTF_TYPE_SCALAR;
+				if (animdata_vectype.find(animation.samplers[channel.samplerIndex].data) == animdata_vectype.end())
+					animdata_vectype[animation.samplers[channel.samplerIndex].data] =
+						(channel.path == AnimationComponent::AnimationChannel::Path::SCALE) ? TINYGLTF_TYPE_VEC3 : (channel.path == AnimationComponent::AnimationChannel::Path::ROTATION) ? TINYGLTF_TYPE_VEC4
+						: (channel.path == AnimationComponent::AnimationChannel::Path::TRANSLATION)																						  ? TINYGLTF_TYPE_VEC3
+						: (channel.path == AnimationComponent::AnimationChannel::Path::WEIGHTS)																							  ? TINYGLTF_TYPE_SCALAR
+																																														  : TINYGLTF_TYPE_SCALAR;
 			}
 		}
 
@@ -4801,22 +4734,22 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		size_t buf_i = 0;
 		tinygltf::Buffer buffer_builder;
 		int buffer_index = (int)state.gltfModel.buffers.size();
-		for(size_t animdata_id = 0; animdata_id < wiscene.animation_datas.GetCount(); ++animdata_id)
+		for (size_t animdata_id = 0; animdata_id < wiscene.animation_datas.GetCount(); ++animdata_id)
 		{
 			auto& animdata = wiscene.animation_datas[animdata_id];
 			auto animdataEntity = wiscene.animation_datas.GetEntity(animdata_id);
 
-			size_t buf_d_ftime_offset, buf_d_ftime_size, 
+			size_t buf_d_ftime_offset, buf_d_ftime_size,
 				buf_d_fdata_offset, buf_d_fdata_size;
 			buf_d_ftime_offset = buf_i;
-			for(auto& animdata_ftime : animdata.keyframe_times)
+			for (auto& animdata_ftime : animdata.keyframe_times)
 			{
 				_ExportHelper_valuetobuf(animdata_ftime, buffer_builder, buf_i);
 			}
 			buf_d_ftime_size = buf_i - buf_d_ftime_offset;
 
 			buf_d_fdata_offset = buf_i;
-			for(auto& animdata_fdata : animdata.keyframe_data)
+			for (auto& animdata_fdata : animdata.keyframe_data)
 			{
 				_ExportHelper_valuetobuf(animdata_fdata, buffer_builder, buf_i);
 			}
@@ -4849,7 +4782,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			int anim_vectype = TINYGLTF_TYPE_SCALAR;
 			size_t anim_sizedivider = 1;
 			auto find_animdata_vectype = animdata_vectype.find(animdataEntity);
-			if(find_animdata_vectype != animdata_vectype.end())
+			if (find_animdata_vectype != animdata_vectype.end())
 			{
 				anim_vectype = (int)find_animdata_vectype->second;
 				anim_sizedivider = (find_animdata_vectype->second == TINYGLTF_TYPE_SCALAR) ? 1 : find_animdata_vectype->second;
@@ -4872,44 +4805,44 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		}
 		state.gltfModel.buffers.push_back(buffer_builder);
 	}
-	for(size_t anim_id = 0; anim_id < wiscene.animations.GetCount(); ++anim_id)
+	for (size_t anim_id = 0; anim_id < wiscene.animations.GetCount(); ++anim_id)
 	{
 		auto& animation = wiscene.animations[anim_id];
-		
+
 		tinygltf::Animation animation_builder;
 
-		for(auto& sampler : animation.samplers)
+		for (auto& sampler : animation.samplers)
 		{
 			tinygltf::AnimationSampler sampler_builder;
 			sampler_builder.input = (int)animation_datasets[sampler.data][1];
 			sampler_builder.output = (int)animation_datasets[sampler.data][3];
-			sampler_builder.interpolation = 
-				(sampler.mode == AnimationComponent::AnimationSampler::Mode::CUBICSPLINE) ? "CUBICSPLINE" :
-				(sampler.mode == AnimationComponent::AnimationSampler::Mode::STEP) ? "STEP" : "LINEAR";
+			sampler_builder.interpolation =
+				(sampler.mode == AnimationComponent::AnimationSampler::Mode::CUBICSPLINE) ? "CUBICSPLINE" : (sampler.mode == AnimationComponent::AnimationSampler::Mode::STEP) ? "STEP"
+																																											   : "LINEAR";
 
 			animation_builder.samplers.push_back(sampler_builder);
 		}
-		for(auto& channel : animation.channels)
+		for (auto& channel : animation.channels)
 		{
 			tinygltf::AnimationChannel channel_builder;
 			channel_builder.target_node = state.nodeMap[channel.target];
 			channel_builder.sampler = (int)channel.samplerIndex;
-			channel_builder.target_path = 
-				(channel.path == AnimationComponent::AnimationChannel::Path::SCALE) ? "scale" :
-				(channel.path == AnimationComponent::AnimationChannel::Path::ROTATION) ? "rotation" :
-				(channel.path == AnimationComponent::AnimationChannel::Path::TRANSLATION) ? "translation" : "weights";
-			
+			channel_builder.target_path =
+				(channel.path == AnimationComponent::AnimationChannel::Path::SCALE) ? "scale" : (channel.path == AnimationComponent::AnimationChannel::Path::ROTATION) ? "rotation"
+				: (channel.path == AnimationComponent::AnimationChannel::Path::TRANSLATION)																			   ? "translation"
+																																									   : "weights";
+
 			animation_builder.channels.push_back(channel_builder);
 		}
 		state.gltfModel.animations.push_back(animation_builder);
 	}
 
 	// Compose hierarchy
-	for(size_t h_id = 0; h_id < wiscene.hierarchy.GetCount(); ++h_id)
+	for (size_t h_id = 0; h_id < wiscene.hierarchy.GetCount(); ++h_id)
 	{
 		auto& hierarchyComponent = wiscene.hierarchy[h_id];
 		auto hierarchyEntity = wiscene.hierarchy.GetEntity(h_id);
-		if(wiscene.transforms.Contains(hierarchyComponent.parentID) && wiscene.transforms.Contains(hierarchyEntity))
+		if (wiscene.transforms.Contains(hierarchyComponent.parentID) && wiscene.transforms.Contains(hierarchyEntity))
 		{
 			int node_index = (int)wiscene.transforms.GetIndex(hierarchyEntity);
 			size_t parent_node_index = wiscene.transforms.GetIndex(hierarchyComponent.parentID);
@@ -4923,7 +4856,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 	state.gltfModel.asset.generator = "WickedEngine";
 
 	auto file_extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
-	if(file_extension == "GLB")
+	if (file_extension == "GLB")
 	{
 		writer.WriteGltfSceneToFile(&state.gltfModel, filename, false, true, true, true);
 	}

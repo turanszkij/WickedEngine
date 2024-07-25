@@ -77,9 +77,9 @@ namespace wi::image
 		float fade = 0;
 		float opacity = 1;
 		float intensity = 1;
-		float hdr_scaling = 1.0f; // a scaling value for use by linear output mapping
+		float hdr_scaling = 1.0f;		  // a scaling value for use by linear output mapping
 		float mask_alpha_range_start = 0; // constrain mask alpha to not go below this level
-		float mask_alpha_range_end = 1; // constrain mask alpha to not go above this level
+		float mask_alpha_range_end = 1;	  // constrain mask alpha to not go above this level
 		XMFLOAT2 angular_softness_direction = XMFLOAT2(0, 1);
 		float angular_softness_inner_angle = 0;
 		float angular_softness_outer_angle = 0;
@@ -94,7 +94,7 @@ namespace wi::image
 
 		struct Rounding
 		{
-			float radius = 0; // the radius of corner (in logical pixel units)
+			float radius = 0;  // the radius of corner (in logical pixel units)
 			int segments = 18; // how many segments to add to smoothing curve
 		} corners_rounding[4]; // specify rounding corners (0: top left, 1: top right, 2: bottom left, 3: bottom right)
 
@@ -135,9 +135,17 @@ namespace wi::image
 		constexpr bool isDistortionMaskEnabled() const { return _flags & DISTORTION_MASK; }
 
 		// enables draw rectangle for base texture (cutout texture outside draw rectangle)
-		constexpr void enableDrawRect(const XMFLOAT4& rect) { _flags |= DRAWRECT; drawRect = rect; }
+		constexpr void enableDrawRect(const XMFLOAT4& rect)
+		{
+			_flags |= DRAWRECT;
+			drawRect = rect;
+		}
 		// enables draw rectangle for mask texture (cutout texture outside draw rectangle)
-		constexpr void enableDrawRect2(const XMFLOAT4& rect) { _flags |= DRAWRECT2; drawRect2 = rect; }
+		constexpr void enableDrawRect2(const XMFLOAT4& rect)
+		{
+			_flags |= DRAWRECT2;
+			drawRect2 = rect;
+		}
 		// mirror the image horizontally
 		constexpr void enableMirror() { _flags |= MIRROR; }
 		// enable normal map extraction shader that will perform texcolor * 2 - 1 (preferably onto a signed render target)
@@ -150,7 +158,11 @@ namespace wi::image
 		// enable HDR10 output mapping, if this image can be interpreted in linear space and converted to HDR10 display format
 		constexpr void enableHDR10OutputMapping() { _flags |= OUTPUT_COLOR_SPACE_HDR10_ST2084; }
 		// enable linear output mapping, which means removing gamma curve and outputting in linear space (useful for blending in HDR space)
-		constexpr void enableLinearOutputMapping(float scaling = 1.0f) { _flags |= OUTPUT_COLOR_SPACE_LINEAR; hdr_scaling = scaling; }
+		constexpr void enableLinearOutputMapping(float scaling = 1.0f)
+		{
+			_flags |= OUTPUT_COLOR_SPACE_LINEAR;
+			hdr_scaling = scaling;
+		}
 		constexpr void enableCornerRounding() { _flags |= CORNER_ROUNDING; }
 		constexpr void enableDepthTest() { _flags |= DEPTH_TEST; }
 		constexpr void enableAngularSoftnessDoubleSided() { _flags |= ANGULAR_DOUBLESIDED; }
@@ -178,9 +190,8 @@ namespace wi::image
 
 		Params(
 			float width,
-			float height
-		) :
-			siz(width, height)
+			float height)
+			: siz(width, height)
 		{}
 
 		Params(
@@ -188,20 +199,18 @@ namespace wi::image
 			float posY,
 			float width,
 			float height,
-			const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1)
-		) :
-			pos(posX, posY, 0),
-			siz(width, height),
-			color(color)
+			const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1))
+			: pos(posX, posY, 0)
+			, siz(width, height)
+			, color(color)
 		{}
 
 		Params(
 			const XMFLOAT4& color,
 			wi::enums::BLENDMODE blendFlag = wi::enums::BLENDMODE_ALPHA,
-			bool background = false
-		) :
-			color(color),
-			blendFlag(blendFlag)
+			bool background = false)
+			: color(color)
+			, blendFlag(blendFlag)
 		{
 			if (background)
 			{
@@ -210,11 +219,10 @@ namespace wi::image
 		}
 
 		Params(
-			const wi::primitive::Hitbox2D& hitbox, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1)
-		) :
-			pos(XMFLOAT3(hitbox.pos.x, hitbox.pos.y, 0)),
-			siz(hitbox.siz),
-			color(color)
+			const wi::primitive::Hitbox2D& hitbox, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1))
+			: pos(XMFLOAT3(hitbox.pos.x, hitbox.pos.y, 0))
+			, siz(hitbox.siz)
+			, color(color)
 		{}
 	};
 

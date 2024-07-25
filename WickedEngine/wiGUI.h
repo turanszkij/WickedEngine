@@ -18,8 +18,8 @@ namespace wi::gui
 
 	struct EventArgs
 	{
-		XMFLOAT2 clickPos = {};	// mouse click coordinate
-		XMFLOAT2 startPos = {};	// mouse start position of operation (drag)
+		XMFLOAT2 clickPos = {}; // mouse click coordinate
+		XMFLOAT2 startPos = {}; // mouse start position of operation (drag)
 		XMFLOAT2 deltaPos = {}; // mouse delta position of operation since last update (drag)
 		XMFLOAT2 endPos = {};	// mouse end position of operation (drag)
 		float fValue = 0;		// generic float value of operation
@@ -32,10 +32,10 @@ namespace wi::gui
 
 	enum WIDGETSTATE
 	{
-		IDLE,			// widget is doing nothing
-		FOCUS,			// widget got pointer dragged on or selected
-		ACTIVE,			// widget is interacted with right now
-		DEACTIVATING,	// widget has last been active but no more interactions are occuring
+		IDLE,		  // widget is doing nothing
+		FOCUS,		  // widget got pointer dragged on or selected
+		ACTIVE,		  // widget is interacted with right now
+		DEACTIVATING, // widget has last been active but no more interactions are occuring
 		WIDGETSTATE_COUNT,
 	};
 
@@ -97,8 +97,8 @@ namespace wi::gui
 		None = 0,
 		Text = 1 << 0,
 		Tooltip = 1 << 1,
-		Items = 1 << 2,		// ComboBox items
-		Children = 1 << 3,	// Window children
+		Items = 1 << 2,	   // ComboBox items
+		Children = 1 << 3, // Window children
 
 		All = Text | Tooltip | Items | Children,
 	};
@@ -222,8 +222,8 @@ namespace wi::gui
 		wi::vector<Widget*> widgets;
 		bool focus = false;
 		bool visible = true;
-	public:
 
+	public:
 		void Update(const wi::Canvas& canvas, float dt);
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const;
 
@@ -251,6 +251,7 @@ namespace wi::gui
 	{
 	private:
 		int tooltipTimer = 0;
+
 	protected:
 		std::string name;
 		bool enabled = true;
@@ -358,6 +359,7 @@ namespace wi::gui
 		std::function<void(EventArgs args)> onDragEnd;
 		XMFLOAT2 dragStart = XMFLOAT2(0, 0);
 		XMFLOAT2 prevPos = XMFLOAT2(0, 0);
+
 	public:
 		void Create(const std::string& name);
 
@@ -433,6 +435,7 @@ namespace wi::gui
 	{
 	protected:
 		bool wrap_enabled = true;
+
 	public:
 		void Create(const std::string& name);
 
@@ -500,6 +503,7 @@ namespace wi::gui
 		float start = 0, end = 1;
 		float step = 1000;
 		float value = 0;
+
 	public:
 		// start : slider minimum value
 		// end : slider maximum value
@@ -528,13 +532,14 @@ namespace wi::gui
 	};
 
 	// Two-state clickable box
-	class CheckBox :public Widget
+	class CheckBox : public Widget
 	{
 	protected:
 		std::function<void(EventArgs args)> onClick;
 		bool checked = false;
 		std::wstring check_text;
 		std::wstring uncheck_text;
+
 	public:
 		void Create(const std::string& name);
 
@@ -553,7 +558,7 @@ namespace wi::gui
 	};
 
 	// Drop-down list
-	class ComboBox :public Widget
+	class ComboBox : public Widget
 	{
 	protected:
 		std::function<void(EventArgs args)> onSelect;
@@ -566,11 +571,11 @@ namespace wi::gui
 		// While the widget is active (rolled down) these are the inner states that control behaviour
 		enum COMBOSTATE
 		{
-			COMBOSTATE_INACTIVE,	// When the list is just being dropped down, or the widget is not active
-			COMBOSTATE_HOVER,		// The widget is in drop-down state with the last item hovered highlited
-			COMBOSTATE_SELECTING,	// The hovered item is clicked
-			COMBOSTATE_SCROLLBAR_HOVER,		// scrollbar is to be selected
-			COMBOSTATE_SCROLLBAR_GRABBED,	// scrollbar is moved
+			COMBOSTATE_INACTIVE,		  // When the list is just being dropped down, or the widget is not active
+			COMBOSTATE_HOVER,			  // The widget is in drop-down state with the last item hovered highlited
+			COMBOSTATE_SELECTING,		  // The hovered item is clicked
+			COMBOSTATE_SCROLLBAR_HOVER,	  // scrollbar is to be selected
+			COMBOSTATE_SCROLLBAR_GRABBED, // scrollbar is moved
 			COMBOSTATE_COUNT,
 		} combostate = COMBOSTATE_INACTIVE;
 		int hovered = -1;
@@ -590,6 +595,7 @@ namespace wi::gui
 		float GetDropOffset(const wi::Canvas& canvas) const;
 		float GetDropX(const wi::Canvas& canvas) const;
 		float GetItemOffset(const wi::Canvas& canvas, int index) const;
+
 	public:
 		void Create(const std::string& name);
 
@@ -632,7 +638,7 @@ namespace wi::gui
 	};
 
 	// Widget container
-	class Window :public Widget
+	class Window : public Widget
 	{
 	protected:
 		wi::vector<Widget*> widgets;
@@ -706,7 +712,7 @@ namespace wi::gui
 		void SetCollapsed(bool value);
 		bool IsCollapsed() const;
 		void SetMinimized(bool value); // Same as SetCollapsed()
-		bool IsMinimized() const; // Same as IsCollapsed()
+		bool IsMinimized() const;	   // Same as IsCollapsed()
 		void SetControlSize(float value);
 		float GetControlSize() const;
 		XMFLOAT2 GetSize() const override; // For the window, the returned size can be modified by collapsed state
@@ -739,11 +745,12 @@ namespace wi::gui
 			CPS_HUE,
 			CPS_SATURATION,
 		} colorpickerstate = CPS_IDLE;
-		float hue = 0.0f;			// [0, 360] degrees
-		float saturation = 0.0f;	// [0, 1]
-		float luminance = 1.0f;		// [0, 1]
+		float hue = 0.0f;		 // [0, 360] degrees
+		float saturation = 0.0f; // [0, 1]
+		float luminance = 1.0f;	 // [0, 1]
 
 		void FireEvents();
+
 	public:
 		void Create(const std::string& name, WindowControls window_controls = WindowControls::ALL);
 
@@ -779,6 +786,7 @@ namespace wi::gui
 			bool open = false;
 			bool selected = false;
 		};
+
 	protected:
 		std::function<void(EventArgs args)> onSelect;
 		std::function<void(EventArgs args)> onDelete;
@@ -838,16 +846,19 @@ namespace wi::gui
 }
 
 template<>
-struct enable_bitmask_operators<wi::gui::Window::WindowControls> {
+struct enable_bitmask_operators<wi::gui::Window::WindowControls>
+{
 	static const bool enable = true;
 };
 
 template<>
-struct enable_bitmask_operators<wi::gui::Window::AttachmentOptions> {
+struct enable_bitmask_operators<wi::gui::Window::AttachmentOptions>
+{
 	static const bool enable = true;
 };
 
 template<>
-struct enable_bitmask_operators<wi::gui::LocalizationEnabled> {
+struct enable_bitmask_operators<wi::gui::LocalizationEnabled>
+{
 	static const bool enable = true;
 };

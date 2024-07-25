@@ -35,7 +35,8 @@ namespace wi::lua
 		{ NULL, NULL }
 	};
 
-	Application_BindLua::Application_BindLua(Application* component) :component(component)
+	Application_BindLua::Application_BindLua(Application* component)
+		: component(component)
 	{
 	}
 
@@ -426,14 +427,6 @@ namespace wi::lua
 			wi::lua::RegisterFunc("SetProfilerEnabled", SetProfilerEnabled);
 		}
 	}
-
-
-
-
-
-
-
-
 
 
 

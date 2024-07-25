@@ -71,7 +71,7 @@ namespace wi::lua
 		{
 			soundinstance = instance;
 		}
-		~SoundInstance_BindLua() { }
+		~SoundInstance_BindLua() {}
 
 		int SetSubmixType(lua_State* L);
 		int SetBegin(lua_State* L);
@@ -103,9 +103,11 @@ namespace wi::lua
 		static Luna<SoundInstance3D_BindLua>::FunctionType methods[];
 		static Luna<SoundInstance3D_BindLua>::PropertyType properties[];
 
-		SoundInstance3D_BindLua(lua_State* L) { }
-		SoundInstance3D_BindLua(const wi::audio::SoundInstance3D& soundinstance3D) : soundinstance3D(soundinstance3D) {}
-		~SoundInstance3D_BindLua() { }
+		SoundInstance3D_BindLua(lua_State* L) {}
+		SoundInstance3D_BindLua(const wi::audio::SoundInstance3D& soundinstance3D)
+			: soundinstance3D(soundinstance3D)
+		{}
+		~SoundInstance3D_BindLua() {}
 
 		int SetListenerPos(lua_State* L);
 		int SetListenerUp(lua_State* L);

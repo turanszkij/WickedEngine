@@ -19,14 +19,14 @@
 #define PLATFORM_WINDOWS_DESKTOP
 #endif // WINAPI_FAMILY_GAMES
 #define wiLoadLibrary(name) LoadLibraryA(name)
-#define wiGetProcAddress(handle,name) GetProcAddress(handle, name)
+#define wiGetProcAddress(handle, name) GetProcAddress(handle, name)
 #elif defined(__SCE__)
 #define PLATFORM_PS5
 #else
 #define PLATFORM_LINUX
 #include <dlfcn.h>
 #define wiLoadLibrary(name) dlopen(name, RTLD_LAZY)
-#define wiGetProcAddress(handle,name) dlsym(handle, name)
+#define wiGetProcAddress(handle, name) dlsym(handle, name)
 typedef void* HMODULE;
 #endif // _WIN32
 

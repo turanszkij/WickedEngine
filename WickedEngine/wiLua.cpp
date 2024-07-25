@@ -72,7 +72,7 @@ namespace wi::lua
 
 	uint32_t GeneratePID()
 	{
-		static std::atomic<uint32_t> scriptpid_next{ 0 + 1 };
+		static std::atomic<uint32_t> scriptpid_next { 0 + 1 };
 		return scriptpid_next.fetch_add(1);
 	}
 
@@ -123,11 +123,11 @@ namespace wi::lua
 			{
 				PID = GeneratePID();
 			}
-				
+
 			std::string customparameters_prepend;
-			if(argc >= 3) customparameters_prepend = SGetString(L, 3);
+			if (argc >= 3) customparameters_prepend = SGetString(L, 3);
 			std::string customparameters_append;
-			if(argc >= 4) customparameters_prepend = SGetString(L, 4);
+			if (argc >= 4) customparameters_prepend = SGetString(L, 4);
 
 			wi::vector<uint8_t> filedata;
 
@@ -250,7 +250,7 @@ namespace wi::lua
 
 	bool RunScript()
 	{
-		if(lua_pcall(lua_internal().m_luaState, 0, LUA_MULTRET, 0) != LUA_OK)
+		if (lua_pcall(lua_internal().m_luaState, 0, LUA_MULTRET, 0) != LUA_OK)
 		{
 			PostErrorMsg();
 			return false;
@@ -279,7 +279,7 @@ namespace wi::lua
 	}
 	bool RunText(const char* script)
 	{
-		if(luaL_loadstring(lua_internal().m_luaState, script) == LUA_OK)
+		if (luaL_loadstring(lua_internal().m_luaState, script) == LUA_OK)
 		{
 			return RunScript();
 		}
@@ -289,7 +289,7 @@ namespace wi::lua
 	}
 	bool RunBinaryData(const void* data, size_t size, const char* debugname)
 	{
-		if(luaL_loadbuffer(lua_internal().m_luaState, (const char*)data, size, debugname) == LUA_OK)
+		if (luaL_loadbuffer(lua_internal().m_luaState, (const char*)data, size, debugname) == LUA_OK)
 		{
 			return RunScript();
 		}
@@ -306,7 +306,7 @@ namespace wi::lua
 	{
 		lua_getglobal(lua_internal().m_luaState, "setDeltaTime");
 		SSetDouble(lua_internal().m_luaState, dt);
-		if(lua_pcall(lua_internal().m_luaState, 1, LUA_MULTRET, 0) != LUA_OK)
+		if (lua_pcall(lua_internal().m_luaState, 1, LUA_MULTRET, 0) != LUA_OK)
 		{
 			PostErrorMsg();
 		}
@@ -316,7 +316,7 @@ namespace wi::lua
 	{
 		lua_getglobal(L, "signal");
 		lua_pushstring(L, str);
-		if(lua_pcall(L, 1, LUA_MULTRET, 0) != LUA_OK)
+		if (lua_pcall(L, 1, LUA_MULTRET, 0) != LUA_OK)
 		{
 			PostErrorMsg();
 		}
@@ -370,7 +370,8 @@ namespace wi::lua
 	{
 		return lua_isuserdata(L, stackpos);
 	}
-	bool SIsNil(lua_State* L, int stackpos) {
+	bool SIsNil(lua_State* L, int stackpos)
+	{
 		return lua_isnil(L, stackpos);
 	}
 	int SGetType(lua_State* L, int stackpos)
@@ -589,13 +590,13 @@ namespace wi::lua
 	}
 	bool CompileText(const char* script, wi::vector<uint8_t>& dst)
 	{
-		if(luaL_loadstring(lua_internal().m_luaState, script) != LUA_OK)
+		if (luaL_loadstring(lua_internal().m_luaState, script) != LUA_OK)
 		{
 			PostErrorMsg();
 			return false;
 		}
 		dst.clear();
-		if(lua_dump(lua_internal().m_luaState, writer, &dst, 0) != LUA_OK)
+		if (lua_dump(lua_internal().m_luaState, writer, &dst, 0) != LUA_OK)
 		{
 			PostErrorMsg();
 			lua_pop(lua_internal().m_luaState, 1); // lua_dump does not pop the dumped function from stack

@@ -14,7 +14,9 @@ namespace wi::lua
 		static Luna<RenderPath_BindLua>::PropertyType properties[];
 
 		RenderPath_BindLua() = default;
-		RenderPath_BindLua(RenderPath* component) :component(component) {}
+		RenderPath_BindLua(RenderPath* component)
+			: component(component)
+		{}
 		RenderPath_BindLua(lua_State* L) {}
 		virtual ~RenderPath_BindLua() = default;
 

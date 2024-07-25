@@ -12,7 +12,6 @@ void IKWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete InverseKinematicsComponent");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -22,7 +21,7 @@ void IKWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->componentsWnd.RefreshEntityTree();
-		});
+	});
 
 	float x = 120;
 	float y = 0;
@@ -141,7 +140,6 @@ void IKWindow::SetEntity(Entity entity)
 	{
 		SetEnabled(false);
 	}
-
 }
 
 void IKWindow::ResizeLayout()
@@ -185,5 +183,4 @@ void IKWindow::ResizeLayout()
 	add_right(disabledCheckBox);
 	add(chainLengthSlider);
 	add(iterationCountSlider);
-
 }

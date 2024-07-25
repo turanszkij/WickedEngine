@@ -30,4 +30,3 @@ public:
 
 	void UpdateHumanoids();
 };
-

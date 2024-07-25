@@ -10,8 +10,7 @@ namespace wi
 	class Sprite;
 	class SpriteFont;
 
-	class RenderPath2D :
-		public RenderPath
+	class RenderPath2D : public RenderPath
 	{
 	protected:
 		wi::graphics::Texture rtStenciled;
@@ -21,8 +20,8 @@ namespace wi
 
 		wi::gui::GUI GUI;
 
-		XMUINT2 current_buffersize{};
-		float current_layoutscale{};
+		XMUINT2 current_buffersize {};
+		float current_layoutscale {};
 
 		float hdr_scaling = 9.0f;
 
@@ -78,7 +77,7 @@ namespace wi
 			std::string name;
 			int order = 0;
 		};
-		wi::vector<RenderLayer2D> layers{ 1 };
+		wi::vector<RenderLayer2D> layers { 1 };
 		void AddLayer(const std::string& name);
 		void SetLayerOrder(const std::string& name, int order);
 		void SetSpriteOrder(wi::Sprite* sprite, int order);
@@ -94,8 +93,7 @@ namespace wi
 		{
 			return XMUINT2(
 				uint32_t((float)GetPhysicalWidth() * resolutionScale),
-				uint32_t((float)GetPhysicalHeight() * resolutionScale)
-			);
+				uint32_t((float)GetPhysicalHeight() * resolutionScale));
 		}
 
 		float GetHDRScaling() const { return hdr_scaling; }

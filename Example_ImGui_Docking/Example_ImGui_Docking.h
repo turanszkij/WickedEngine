@@ -5,6 +5,7 @@
 class Example_ImGuiRenderer : public wi::RenderPath3D
 {
 	wi::gui::Label label;
+
 public:
 	void Load() override;
 	void Update(float dt) override;
@@ -23,4 +24,3 @@ public:
 	void Initialize() override;
 	void Compose(wi::graphics::CommandList cmd) override;
 };
-

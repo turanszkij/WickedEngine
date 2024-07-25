@@ -13,8 +13,7 @@ namespace wi
 	void PathQuery::process(
 		const XMFLOAT3& startpos,
 		const XMFLOAT3& goalpos,
-		const wi::VoxelGrid& voxelgrid
-	)
+		const wi::VoxelGrid& voxelgrid)
 	{
 		frontier = {};
 		came_from.clear();
@@ -32,8 +31,7 @@ namespace wi
 			// manhattan distance:
 			return std::abs(int(coord.x) - int(goal.x)) + std::abs(int(coord.y) - int(goal.y)) + std::abs(int(coord.z) - int(goal.z));
 		};
-		auto dda = [&](const XMUINT3& start, const XMUINT3& goal)
-		{
+		auto dda = [&](const XMUINT3& start, const XMUINT3& goal) {
 			const int dx = int(goal.x) - int(start.x);
 			const int dy = int(goal.y) - int(start.y);
 			const int dz = int(goal.z) - int(start.z);
@@ -240,8 +238,7 @@ namespace wi
 		const XMFLOAT3& subject,
 		const XMFLOAT3& direction,
 		float max_distance,
-		const wi::VoxelGrid& voxelgrid
-	)
+		const wi::VoxelGrid& voxelgrid)
 	{
 		XMFLOAT3 goal_world;
 		XMStoreFloat3(&goal_world, XMLoadFloat3(&subject) + XMLoadFloat3(&direction) * max_distance);
@@ -450,42 +447,42 @@ namespace wi
 		if (debug_voxels)
 		{
 			static constexpr Vertex cubeVerts[] = {
-				{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
+				{ XMFLOAT4(-1, 1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(-1, -1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(-1, -1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(1, 1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(1, -1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(-1, -1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(1, 1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(1, -1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(1, -1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(-1, 1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(-1, -1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(1, -1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(-1, -1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(1, -1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(1, -1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(1, 1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(-1, 1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(-1, 1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(-1, 1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(-1, 1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(-1, -1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(-1, 1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(1, 1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(-1, -1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(1, 1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(1, 1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(1, -1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(1, 1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(-1, 1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(1, -1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(-1, -1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(-1, -1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(1, -1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(1, 1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(1, 1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(-1, 1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
 			};
 
 			if (results.size() >= 2)

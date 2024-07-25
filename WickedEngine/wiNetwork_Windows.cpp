@@ -8,7 +8,7 @@
 #include <string>
 
 #include <winsock.h>
-#pragma comment(lib,"ws2_32.lib")
+#pragma comment(lib, "ws2_32.lib")
 
 namespace wi::network
 {
@@ -94,7 +94,7 @@ namespace wi::network
 
 			auto socketinternal = to_internal(sock);
 
-			int result = sendto(socketinternal->handle, (const char*)data, (int)dataSize, 0, (const sockaddr*)& target, sizeof(target));
+			int result = sendto(socketinternal->handle, (const char*)data, (int)dataSize, 0, (const sockaddr*)&target, sizeof(target));
 			if (result == SOCKET_ERROR)
 			{
 				int error = WSAGetLastError();
@@ -118,7 +118,7 @@ namespace wi::network
 
 			auto socketinternal = to_internal(sock);
 
-			int result = bind(socketinternal->handle, (const sockaddr*)& target, sizeof(target));
+			int result = bind(socketinternal->handle, (const sockaddr*)&target, sizeof(target));
 			if (result == SOCKET_ERROR)
 			{
 				int error = WSAGetLastError();
@@ -165,7 +165,7 @@ namespace wi::network
 
 			sockaddr_in sender;
 			int targetsize = sizeof(sender);
-			int result = recvfrom(socketinternal->handle, (char*)data, (int)dataSize, 0, (sockaddr*)& sender, &targetsize);
+			int result = recvfrom(socketinternal->handle, (char*)data, (int)dataSize, 0, (sockaddr*)&sender, &targetsize);
 			if (result == SOCKET_ERROR)
 			{
 				int error = WSAGetLastError();

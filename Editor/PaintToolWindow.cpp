@@ -106,7 +106,6 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 		{
 			SetSize(XMFLOAT2(GetSize().x, 800));
 		}
-
 	});
 	AddWidget(&modeComboBox);
 
@@ -175,7 +174,7 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	stabilizerSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->main->config.GetSection("paint_tool").Set("stabilizer", args.iValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&stabilizerSlider);
 
 	backfaceCheckBox.Create("Backfaces: ");
@@ -189,7 +188,7 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	backfaceCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->main->config.GetSection("paint_tool").Set("backfaces", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&backfaceCheckBox);
 
 	wireCheckBox.Create("Wireframe: ");
@@ -204,7 +203,7 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	wireCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->main->config.GetSection("paint_tool").Set("wireframe", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&wireCheckBox);
 
 	pressureCheckBox.Create("Pressure: ");
@@ -218,7 +217,7 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	pressureCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->main->config.GetSection("paint_tool").Set("pressure", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	pressureCheckBox.SetCheckText(ICON_PEN);
 	AddWidget(&pressureCheckBox);
 
@@ -285,8 +284,7 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	saveTextureButton.SetTooltip("Save edited texture.");
 	saveTextureButton.SetSize(XMFLOAT2(wid, hei));
 	saveTextureButton.SetPos(XMFLOAT2(x, y += step));
-	saveTextureButton.OnClick([this] (wi::gui::EventArgs args) {
-
+	saveTextureButton.OnClick([this](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
 		for (auto& selected : editor->translator.selected)
 		{
@@ -315,22 +313,20 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 					material->textures[sel].name,
 					wi::resourcemanager::Flags::NONE,
 					texturefiledata.data(),
-					texturefiledata.size()
-				);
+					texturefiledata.size());
 			}
 			else
 			{
 				wi::helper::messageBox("Saving texture failed! :(");
 			}
 		}
-
 	});
 	AddWidget(&saveTextureButton);
 
 	brushTextureButton.Create("");
 	brushTextureButton.SetDescription("Brush tex: ");
 	brushTextureButton.SetTooltip("Open an image to use as brush texture (splatting mode).\nSplat mode means that the texture will be relative to the brush position");
-	brushTextureButton.SetSize(XMFLOAT2(hei*2, hei*2));
+	brushTextureButton.SetSize(XMFLOAT2(hei * 2, hei * 2));
 	brushTextureButton.SetPos(XMFLOAT2(x, y += step));
 	brushTextureButton.sprites[wi::gui::IDLE].params.color = wi::Color::White();
 	brushTextureButton.sprites[wi::gui::FOCUS].params.color = wi::Color::Gray();
@@ -352,10 +348,10 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					brushTex = wi::resourcemanager::Load(fileName);
 					brushTextureButton.SetImage(brushTex);
-					});
 				});
+			});
 		}
-		});
+	});
 	AddWidget(&brushTextureButton);
 
 	revealTextureButton.Create("");
@@ -383,10 +379,10 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					revealTex = wi::resourcemanager::Load(fileName);
 					revealTextureButton.SetImage(revealTex);
-					});
 				});
+			});
 		}
-		});
+	});
 	AddWidget(&revealTextureButton);
 
 	SetVisible(false);
@@ -530,8 +526,7 @@ void PaintToolWindow::Update(float dt)
 			spline_p1,
 			spline_p2,
 			spline_p3,
-			t
-		);
+			t);
 		XMFLOAT2 pos_eval;
 		XMStoreFloat2(&pos_eval, spline_p);
 		stroke_dist += wi::math::Distance(pos, pos_eval);
@@ -1128,8 +1123,7 @@ void PaintToolWindow::Update(float dt)
 						XMStoreFloat3(
 							&sculpt_dir_line.end,
 							XMLoadFloat3(&sculpt_dir_line.start) +
-							XMVector3Normalize(XMLoadFloat3(&sculpting_normal))
-						);
+								XMVector3Normalize(XMLoadFloat3(&sculpting_normal)));
 						wi::renderer::DrawLine(sculpt_dir_line);
 					}
 				}
@@ -1370,7 +1364,6 @@ void PaintToolWindow::Update(float dt)
 			}
 		}
 		break;
-
 		}
 
 		wi::jobsystem::Wait(ctx);
@@ -1457,12 +1450,12 @@ void PaintToolWindow::DrawBrush(const wi::Canvas& canvas, CommandList cmd) const
 		XMFLOAT4 color_inner = XMFLOAT4(brightness, brightness, brightness, 1);
 		XMFLOAT4 color_outer = XMFLOAT4(brightness, brightness, brightness, 0);
 		Vertex verts[] = {
-			{XMFLOAT4(std::sin(angle0) * radius, 0, std::cos(angle0) * radius, 1), color_inner},
-			{XMFLOAT4(std::sin(angle1) * radius, 0, std::cos(angle1) * radius, 1), color_inner},
-			{XMFLOAT4(std::sin(angle0) * radius_outer, 0, std::cos(angle0) * radius_outer, 1), color_outer},
-			{XMFLOAT4(std::sin(angle0) * radius_outer, 0, std::cos(angle0) * radius_outer, 1), color_outer},
-			{XMFLOAT4(std::sin(angle1) * radius_outer, 0, std::cos(angle1) * radius_outer, 1), color_outer},
-			{XMFLOAT4(std::sin(angle1) * radius, 0, std::cos(angle1) * radius, 1), color_inner},
+			{ XMFLOAT4(std::sin(angle0) * radius, 0, std::cos(angle0) * radius, 1), color_inner },
+			{ XMFLOAT4(std::sin(angle1) * radius, 0, std::cos(angle1) * radius, 1), color_inner },
+			{ XMFLOAT4(std::sin(angle0) * radius_outer, 0, std::cos(angle0) * radius_outer, 1), color_outer },
+			{ XMFLOAT4(std::sin(angle0) * radius_outer, 0, std::cos(angle0) * radius_outer, 1), color_outer },
+			{ XMFLOAT4(std::sin(angle1) * radius_outer, 0, std::cos(angle1) * radius_outer, 1), color_outer },
+			{ XMFLOAT4(std::sin(angle1) * radius, 0, std::cos(angle1) * radius, 1), color_inner },
 		};
 		for (auto& x : verts)
 		{
@@ -1491,7 +1484,6 @@ void PaintToolWindow::DrawBrush(const wi::Canvas& canvas, CommandList cmd) const
 	device->Draw(vertexCount, 0, cmd);
 
 	device->EventEnd(cmd);
-
 }
 
 PaintToolWindow::MODE PaintToolWindow::GetMode() const
@@ -1552,18 +1544,15 @@ void PaintToolWindow::WriteHistoryData(Entity entity, wi::Archive& archive, Comm
 					SubresourceType::SRV,
 					0, -1,
 					0, -1,
-					&srgb_format
-				);
+					&srgb_format);
 			}
 			wi::renderer::CopyTexture2D(
 				newslot.texture, 0, 0, 0,
 				editTexture.texture, 0, 0, 0,
-				cmd
-			); // custom copy with format conversion and decompression capability!
+				cmd); // custom copy with format conversion and decompression capability!
 
 			ReplaceEditTextureSlot(*material, newslot);
 		}
-
 	}
 	break;
 	case PaintToolWindow::MODE_VERTEXCOLOR:
@@ -1617,29 +1606,29 @@ void PaintToolWindow::WriteHistoryData(Entity entity, wi::Archive& archive, Comm
 	}
 	break;
 	case PaintToolWindow::MODE_TERRAIN_MATERIAL:
+	{
+		bool found = false;
+		for (size_t i = 0; i < scene.terrains.GetCount() && !found; ++i)
 		{
-			bool found = false;
-			for (size_t i = 0; i < scene.terrains.GetCount() && !found; ++i)
+			wi::terrain::Terrain& terrain = scene.terrains[i];
+			for (auto& chunk : terrain.chunks)
 			{
-				wi::terrain::Terrain& terrain = scene.terrains[i];
-				for (auto& chunk : terrain.chunks)
+				auto& chunk_data = chunk.second;
+				if (chunk_data.entity == entity)
 				{
-					auto& chunk_data = chunk.second;
-					if (chunk_data.entity == entity)
+					found = true;
+					archive << terrain_material_layer;
+					archive << chunk_data.blendmap_layers.size();
+					for (size_t l = terrain_material_layer; l < chunk_data.blendmap_layers.size(); ++l)
 					{
-						found = true;
-						archive << terrain_material_layer;
-						archive << chunk_data.blendmap_layers.size();
-						for (size_t l = terrain_material_layer; l < chunk_data.blendmap_layers.size(); ++l)
-						{
-							archive << chunk_data.blendmap_layers[l].pixels;
-						}
-						break;
+						archive << chunk_data.blendmap_layers[l].pixels;
 					}
+					break;
 				}
 			}
 		}
-		break;
+	}
+	break;
 	default:
 		assert(0);
 		break;
@@ -1654,7 +1643,7 @@ void PaintToolWindow::RecordHistory(Entity entity, CommandList cmd)
 			return; // already saved start data
 		WriteHistoryData(entity, historyStartDatas[entity], cmd);
 	}
-	else if(!historyStartDatas.empty() && strokes.empty())
+	else if (!historyStartDatas.empty() && strokes.empty())
 	{
 		currentHistory = &editor->AdvanceHistory();
 		wi::Archive& archive = *currentHistory;
@@ -1715,7 +1704,6 @@ void PaintToolWindow::ConsumeHistoryOperation(wi::Archive& archive, bool undo)
 			textureSlotComboBox.SetSelected(slot);
 			history_textureIndex = textureindex;
 			ReplaceEditTextureSlot(*material, history_textures[history_textureIndex]);
-
 		}
 		break;
 		case PaintToolWindow::MODE_VERTEXCOLOR:

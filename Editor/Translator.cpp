@@ -64,42 +64,42 @@ namespace Translator_Internal
 		XMFLOAT4 color;
 	};
 	const Vertex cubeVerts[] = {
-		{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
-		{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
+		{ XMFLOAT4(-1, 1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(-1, -1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(-1, -1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(1, 1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(1, -1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(-1, -1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(1, 1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(1, -1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(1, -1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(-1, 1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(-1, -1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(1, -1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(-1, -1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(1, -1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(1, -1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(1, 1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(-1, 1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(-1, 1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(-1, 1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(-1, 1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(-1, -1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(-1, 1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(1, 1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(-1, -1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(1, 1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(1, 1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(1, -1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(1, 1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(-1, 1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(1, -1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(-1, -1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(-1, -1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(1, -1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(1, 1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(1, 1, 1, 1), XMFLOAT4(1, 1, 1, 1) },
+		{ XMFLOAT4(-1, 1, -1, 1), XMFLOAT4(1, 1, 1, 1) },
 	};
 }
 using namespace Translator_Internal;
@@ -212,7 +212,6 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 					state = TRANSLATOR_XYZ;
 					XMStoreFloat3(&axis, screen_normal);
 				}
-				
 			}
 			else
 			{
@@ -324,13 +323,13 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 					angle_start = wi::math::GetAngle(XMFLOAT3(1, 0, 0), original, axis);
 					break;
 				case Translator::TRANSLATOR_XYZ:
-					{
-						XMMATRIX M = XMMatrixInverse(nullptr, XMMatrixLookToLH(XMVectorZero(), XMVector3Normalize(transform.GetPositionV() - camera.GetEye()), camera.GetUp()));
-						XMFLOAT3 ref;
-						XMStoreFloat3(&ref, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), M));
-						angle_start = wi::math::GetAngle(ref, original, axis);
-					}
-					break;
+				{
+					XMMATRIX M = XMMatrixInverse(nullptr, XMMatrixLookToLH(XMVectorZero(), XMVector3Normalize(transform.GetPositionV() - camera.GetEye()), camera.GetUp()));
+					XMFLOAT3 ref;
+					XMStoreFloat3(&ref, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), M));
+					angle_start = wi::math::GetAngle(ref, original, axis);
+				}
+				break;
 				default:
 					break;
 				}
@@ -486,7 +485,6 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 		}
 
 		PostTranslate();
-
 	}
 	else
 	{
@@ -526,10 +524,10 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 
 	MiscCB sb;
 
-	XMMATRIX mat = XMMatrixScaling(dist, dist, dist)*XMMatrixTranslationFromVector(transform.GetPositionV()) * VP;
+	XMMATRIX mat = XMMatrixScaling(dist, dist, dist) * XMMatrixTranslationFromVector(transform.GetPositionV()) * VP;
 	XMMATRIX matX = XMMatrixIdentity();
-	XMMATRIX matY = XMMatrixRotationZ(XM_PIDIV2)*XMMatrixRotationY(XM_PIDIV2);
-	XMMATRIX matZ = XMMatrixRotationY(-XM_PIDIV2)*XMMatrixRotationZ(-XM_PIDIV2);
+	XMMATRIX matY = XMMatrixRotationZ(XM_PIDIV2) * XMMatrixRotationY(XM_PIDIV2);
+	XMMATRIX matZ = XMMatrixRotationY(-XM_PIDIV2) * XMMatrixRotationZ(-XM_PIDIV2);
 
 	const float channel_min = 0.25f; // min color channel, to avoid pure red/green/blue
 	const XMFLOAT4 highlight_color = XMFLOAT4(1, 0.6f, 0, 1);
@@ -557,12 +555,12 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 				const float circle_radius_inner = circle_radius - circle_width;
 				const float circle_halfway = circle_radius - circle_width * 0.5f;
 				const Vertex verts[] = {
-					{XMFLOAT4(0, std::sin(angle0) * circle_radius_inner, std::cos(angle0) * circle_radius_inner, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(0, std::sin(angle1) * circle_radius_inner, std::cos(angle1) * circle_radius_inner, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(0, std::sin(angle0) * circle_radius, std::cos(angle0) * circle_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(0, std::sin(angle0) * circle_radius, std::cos(angle0) * circle_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(0, std::sin(angle1) * circle_radius, std::cos(angle1) * circle_radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(0, std::sin(angle1) * circle_radius_inner, std::cos(angle1) * circle_radius_inner, 1), XMFLOAT4(1,1,1,1)},
+					{ XMFLOAT4(0, std::sin(angle0) * circle_radius_inner, std::cos(angle0) * circle_radius_inner, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(0, std::sin(angle1) * circle_radius_inner, std::cos(angle1) * circle_radius_inner, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(0, std::sin(angle0) * circle_radius, std::cos(angle0) * circle_radius, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(0, std::sin(angle0) * circle_radius, std::cos(angle0) * circle_radius, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(0, std::sin(angle1) * circle_radius, std::cos(angle1) * circle_radius, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(0, std::sin(angle1) * circle_radius_inner, std::cos(angle1) * circle_radius_inner, 1), XMFLOAT4(1, 1, 1, 1) },
 				};
 				std::memcpy(dst, verts, sizeof(verts));
 				dst += sizeof(verts);
@@ -598,12 +596,12 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 				{
 					const float cylinder_radius = 0.075f;
 					const Vertex verts[] = {
-						{XMFLOAT4(origin_size, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-						{XMFLOAT4(origin_size, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-						{XMFLOAT4(cylinder_length, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-						{XMFLOAT4(cylinder_length, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-						{XMFLOAT4(cylinder_length, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
-						{XMFLOAT4(origin_size, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
+						{ XMFLOAT4(origin_size, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1, 1, 1, 1) },
+						{ XMFLOAT4(origin_size, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1, 1, 1, 1) },
+						{ XMFLOAT4(cylinder_length, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1, 1, 1, 1) },
+						{ XMFLOAT4(cylinder_length, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1, 1, 1, 1) },
+						{ XMFLOAT4(cylinder_length, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1, 1, 1, 1) },
+						{ XMFLOAT4(origin_size, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1, 1, 1, 1) },
 					};
 					std::memcpy(dst, verts, sizeof(verts));
 					dst += sizeof(verts);
@@ -613,12 +611,12 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 					// cone cap:
 					const float cone_radius = origin_size;
 					const Vertex verts[] = {
-						{XMFLOAT4(cylinder_length, 0, 0, 1), XMFLOAT4(1,1,1,1)},
-						{XMFLOAT4(cylinder_length, std::sin(angle0) * cone_radius, std::cos(angle0) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
-						{XMFLOAT4(cylinder_length, std::sin(angle1) * cone_radius, std::cos(angle1) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
-						{XMFLOAT4(axis_length, 0, 0, 1), XMFLOAT4(1,1,1,1)},
-						{XMFLOAT4(cylinder_length, std::sin(angle0) * cone_radius, std::cos(angle0) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
-						{XMFLOAT4(cylinder_length, std::sin(angle1) * cone_radius, std::cos(angle1) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
+						{ XMFLOAT4(cylinder_length, 0, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+						{ XMFLOAT4(cylinder_length, std::sin(angle0) * cone_radius, std::cos(angle0) * cone_radius, 1), XMFLOAT4(1, 1, 1, 1) },
+						{ XMFLOAT4(cylinder_length, std::sin(angle1) * cone_radius, std::cos(angle1) * cone_radius, 1), XMFLOAT4(1, 1, 1, 1) },
+						{ XMFLOAT4(axis_length, 0, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+						{ XMFLOAT4(cylinder_length, std::sin(angle0) * cone_radius, std::cos(angle0) * cone_radius, 1), XMFLOAT4(1, 1, 1, 1) },
+						{ XMFLOAT4(cylinder_length, std::sin(angle1) * cone_radius, std::cos(angle1) * cone_radius, 1), XMFLOAT4(1, 1, 1, 1) },
 					};
 					std::memcpy(dst, verts, sizeof(verts));
 					dst += sizeof(verts);
@@ -659,19 +657,18 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 		device->Draw(vertexCount, 0, cmd);
 
 		// y
-		XMStoreFloat4x4(&sb.g_xTransform, matY * GetMirrorMatrix(TRANSLATOR_Y, camera)* mat);
+		XMStoreFloat4x4(&sb.g_xTransform, matY * GetMirrorMatrix(TRANSLATOR_Y, camera) * mat);
 		sb.g_xColor = state == TRANSLATOR_Y ? highlight_color : XMFLOAT4(channel_min, 1, channel_min, 1);
 		sb.g_xColor.w *= opacity;
 		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 		device->Draw(vertexCount, 0, cmd);
 
 		// z
-		XMStoreFloat4x4(&sb.g_xTransform, matZ * GetMirrorMatrix(TRANSLATOR_Z, camera)* mat);
+		XMStoreFloat4x4(&sb.g_xTransform, matZ * GetMirrorMatrix(TRANSLATOR_Z, camera) * mat);
 		sb.g_xColor = state == TRANSLATOR_Z ? highlight_color : XMFLOAT4(channel_min, channel_min, 1, 1);
 		sb.g_xColor.w *= opacity;
 		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 		device->Draw(vertexCount, 0, cmd);
-
 	}
 
 	if (isRotator)
@@ -691,12 +688,12 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 			const float circle2_radius_inner = circle2_radius - circle2_width;
 			const float circle2_halfway = circle2_radius - circle2_width * 0.5f;
 			const Vertex verts[] = {
-				{XMFLOAT4(0, std::sin(angle0) * circle2_radius_inner, std::cos(angle0) * circle2_radius_inner, 1), XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(0, std::sin(angle1) * circle2_radius_inner, std::cos(angle1) * circle2_radius_inner, 1), XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(0, std::sin(angle0) * circle2_radius, std::cos(angle0) * circle2_radius, 1), XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(0, std::sin(angle0) * circle2_radius, std::cos(angle0) * circle2_radius, 1), XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(0, std::sin(angle1) * circle2_radius, std::cos(angle1) * circle2_radius, 1), XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(0, std::sin(angle1) * circle2_radius_inner, std::cos(angle1) * circle2_radius_inner, 1), XMFLOAT4(1,1,1,1)},
+				{ XMFLOAT4(0, std::sin(angle0) * circle2_radius_inner, std::cos(angle0) * circle2_radius_inner, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(0, std::sin(angle1) * circle2_radius_inner, std::cos(angle1) * circle2_radius_inner, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(0, std::sin(angle0) * circle2_radius, std::cos(angle0) * circle2_radius, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(0, std::sin(angle0) * circle2_radius, std::cos(angle0) * circle2_radius, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(0, std::sin(angle1) * circle2_radius, std::cos(angle1) * circle2_radius, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(0, std::sin(angle1) * circle2_radius_inner, std::cos(angle1) * circle2_radius_inner, 1), XMFLOAT4(1, 1, 1, 1) },
 			};
 			std::memcpy(dst, verts, sizeof(verts));
 			dst += sizeof(verts);
@@ -715,9 +712,8 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 
 		XMStoreFloat4x4(&sb.g_xTransform,
 			XMMatrixRotationY(XM_PIDIV2) *
-			XMMatrixInverse(nullptr, XMMatrixLookToLH(XMVectorZero(), XMVector3Normalize(transform.GetPositionV() - camera.GetEye()), camera.GetUp())) *
-			mat
-		);
+				XMMatrixInverse(nullptr, XMMatrixLookToLH(XMVectorZero(), XMVector3Normalize(transform.GetPositionV() - camera.GetEye()), camera.GetUp())) *
+				mat);
 		sb.g_xColor = state == TRANSLATOR_XYZ ? highlight_color : XMFLOAT4(1, 1, 1, 0.5f);
 		sb.g_xColor.w *= opacity;
 		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
@@ -725,7 +721,7 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 	}
 
 	// Origin:
-	if(!isRotator)
+	if (!isRotator)
 	{
 		device->BindPipelineState(&pso_solidpart, cmd);
 
@@ -757,17 +753,17 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 			device->BindPipelineState(&pso_wirepart, cmd);
 
 			const Vertex verts[] = {
-				{XMFLOAT4(plane_min,plane_min,0,1), XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(plane_min,plane_max,0,1), XMFLOAT4(1,1,1,1)},
+				{ XMFLOAT4(plane_min, plane_min, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(plane_min, plane_max, 0, 1), XMFLOAT4(1, 1, 1, 1) },
 
-				{XMFLOAT4(plane_min,plane_max,0,1), XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(plane_max,plane_max,0,1), XMFLOAT4(1,1,1,1)},
+				{ XMFLOAT4(plane_min, plane_max, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(plane_max, plane_max, 0, 1), XMFLOAT4(1, 1, 1, 1) },
 
-				{XMFLOAT4(plane_max,plane_max,0,1), XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(plane_max,plane_min,0,1), XMFLOAT4(1,1,1,1)},
+				{ XMFLOAT4(plane_max, plane_max, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(plane_max, plane_min, 0, 1), XMFLOAT4(1, 1, 1, 1) },
 
-				{XMFLOAT4(plane_max,plane_min,0,1), XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(plane_min,plane_min,0,1), XMFLOAT4(1,1,1,1)},
+				{ XMFLOAT4(plane_max, plane_min, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(plane_min, plane_min, 0, 1), XMFLOAT4(1, 1, 1, 1) },
 			};
 			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(verts), cmd);
 			std::memcpy(mem.data, verts, sizeof(verts));
@@ -809,13 +805,13 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 			device->BindPipelineState(&pso_solidpart, cmd);
 
 			const Vertex verts[] = {
-				{XMFLOAT4(plane_min,plane_min,0,1), XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(plane_max,plane_min,0,1), XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(plane_max,plane_max,0,1), XMFLOAT4(1,1,1,1)},
+				{ XMFLOAT4(plane_min, plane_min, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(plane_max, plane_min, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(plane_max, plane_max, 0, 1), XMFLOAT4(1, 1, 1, 1) },
 
-				{XMFLOAT4(plane_min,plane_min,0,1), XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(plane_max,plane_max,0,1), XMFLOAT4(1,1,1,1)},
-				{XMFLOAT4(plane_min,plane_max,0,1), XMFLOAT4(1,1,1,1)},
+				{ XMFLOAT4(plane_min, plane_min, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(plane_max, plane_max, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+				{ XMFLOAT4(plane_min, plane_max, 0, 1), XMFLOAT4(1, 1, 1, 1) },
 			};
 			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(verts), cmd);
 			std::memcpy(mem.data, verts, sizeof(verts));
@@ -855,7 +851,7 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 
 
 	// Axis texts:
-	if(!isRotator)
+	if (!isRotator)
 	{
 		char TEXT[3];
 		XMMATRIX R = XMLoadFloat3x3(&camera.rotationMatrix);
@@ -911,9 +907,9 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 
 					const float radius = 0.2f * dist;
 					const Vertex verts[] = {
-						{XMFLOAT4(0, 0, 0, 1), XMFLOAT4(1,1,1,1)},
-						{XMFLOAT4(0, std::cos(angle0) * radius, std::sin(angle0) * radius, 1), XMFLOAT4(1,1,1,1)},
-						{XMFLOAT4(0, std::cos(angle1) * radius, std::sin(angle1) * radius, 1), XMFLOAT4(1,1,1,1)},
+						{ XMFLOAT4(0, 0, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+						{ XMFLOAT4(0, std::cos(angle0) * radius, std::sin(angle0) * radius, 1), XMFLOAT4(1, 1, 1, 1) },
+						{ XMFLOAT4(0, std::cos(angle1) * radius, std::sin(angle1) * radius, 1), XMFLOAT4(1, 1, 1, 1) },
 					};
 					std::memcpy(dst, verts, sizeof(verts));
 					dst += sizeof(verts);
@@ -931,11 +927,10 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 				device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 
 				XMStoreFloat4x4(&sb.g_xTransform,
-					XMMatrixRotationY(XM_PIDIV2)*
-					XMMatrixInverse(nullptr, XMMatrixLookToLH(XMVectorZero(), XMVector3Normalize(transform_start.GetPositionV() - camera.GetEye()), camera.GetUp()))*
-					XMMatrixTranslationFromVector(transform_start.GetPositionV())*
-					VP
-				);
+					XMMatrixRotationY(XM_PIDIV2) *
+						XMMatrixInverse(nullptr, XMMatrixLookToLH(XMVectorZero(), XMVector3Normalize(transform_start.GetPositionV() - camera.GetEye()), camera.GetUp())) *
+						XMMatrixTranslationFromVector(transform_start.GetPositionV()) *
+						VP);
 				sb.g_xColor = XMFLOAT4(1, 1, 1, 0.5f);
 				sb.g_xColor.w *= opacity;
 				device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
@@ -946,8 +941,8 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 			{
 				device->BindPipelineState(&pso_wirepart, cmd);
 				const Vertex verts[] = {
-					{XMFLOAT4(transform_start.translation_local.x, transform_start.translation_local.y, transform_start.translation_local.z, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(transform.translation_local.x, transform.translation_local.y, transform.translation_local.z, 1), XMFLOAT4(1,1,1,1)},
+					{ XMFLOAT4(transform_start.translation_local.x, transform_start.translation_local.y, transform_start.translation_local.z, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(transform.translation_local.x, transform.translation_local.y, transform.translation_local.z, 1), XMFLOAT4(1, 1, 1, 1) },
 				};
 				GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(verts), cmd);
 				std::memcpy(mem.data, verts, sizeof(verts));
@@ -991,9 +986,8 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 			case Translator::TRANSLATOR_XYZ:
 				XMStoreFloat4x4(&sb.g_xTransform,
 					XMMatrixRotationY(XM_PIDIV2) *
-					XMMatrixInverse(nullptr, XMMatrixLookToLH(XMVectorZero(), XMVector3Normalize(transform.GetPositionV() - camera.GetEye()), camera.GetUp())) *
-					mat
-				);
+						XMMatrixInverse(nullptr, XMMatrixLookToLH(XMVectorZero(), XMVector3Normalize(transform.GetPositionV() - camera.GetEye()), camera.GetUp())) *
+						mat);
 				break;
 			default:
 				break;
@@ -1007,9 +1001,9 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 
 				const float radius = state == TRANSLATOR_XYZ ? (circle2_radius - circle2_width) : (circle_radius - circle_width);
 				const Vertex verts[] = {
-					{XMFLOAT4(0, 0, 0, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(0, std::cos(angle0) * radius, std::sin(angle0) * radius, 1), XMFLOAT4(1,1,1,1)},
-					{XMFLOAT4(0, std::cos(angle1) * radius, std::sin(angle1) * radius, 1), XMFLOAT4(1,1,1,1)},
+					{ XMFLOAT4(0, 0, 0, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(0, std::cos(angle0) * radius, std::sin(angle0) * radius, 1), XMFLOAT4(1, 1, 1, 1) },
+					{ XMFLOAT4(0, std::cos(angle1) * radius, std::sin(angle1) * radius, 1), XMFLOAT4(1, 1, 1, 1) },
 				};
 				std::memcpy(dst, verts, sizeof(verts));
 				dst += sizeof(verts);
@@ -1265,4 +1259,3 @@ void Translator::WriteAxisText(TRANSLATOR_STATE axis, const wi::scene::CameraCom
 		break;
 	}
 }
-

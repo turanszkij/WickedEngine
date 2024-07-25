@@ -19,7 +19,6 @@ namespace wi
 	class EmittedParticleSystem
 	{
 	public:
-
 		// This is serialized, order of enums shouldn't change!
 		enum PARTICLESHADERTYPE
 		{
@@ -37,10 +36,10 @@ namespace wi
 		wi::graphics::GPUBuffer particleBuffer;
 		wi::graphics::GPUBuffer aliveList[2];
 		wi::graphics::GPUBuffer deadList;
-		wi::graphics::GPUBuffer distanceBuffer; // for sorting
-		wi::graphics::GPUBuffer sphGridCells;  // for SPH
-		wi::graphics::GPUBuffer sphParticleCells;  // for SPH
-		wi::graphics::GPUBuffer densityBuffer; // for SPH
+		wi::graphics::GPUBuffer distanceBuffer;	  // for sorting
+		wi::graphics::GPUBuffer sphGridCells;	  // for SPH
+		wi::graphics::GPUBuffer sphParticleCells; // for SPH
+		wi::graphics::GPUBuffer densityBuffer;	  // for SPH
 		wi::graphics::GPUBuffer counterBuffer;
 		wi::graphics::GPUBuffer indirectBuffers; // kickoffUpdate, simulation, draw
 		wi::graphics::GPUBuffer constantBuffer;
@@ -49,8 +48,8 @@ namespace wi
 		wi::scene::MeshComponent::BufferView vb_nor;
 		wi::scene::MeshComponent::BufferView vb_uvs;
 		wi::scene::MeshComponent::BufferView vb_col;
-		wi::graphics::GPUBuffer primitiveBuffer; // raytracing
-		wi::graphics::GPUBuffer culledIndirectionBuffer; // rasterization
+		wi::graphics::GPUBuffer primitiveBuffer;		  // raytracing
+		wi::graphics::GPUBuffer culledIndirectionBuffer;  // rasterization
 		wi::graphics::GPUBuffer culledIndirectionBuffer2; // rasterization
 
 		wi::graphics::RaytracingAccelerationStructure BLAS;
@@ -116,15 +115,15 @@ namespace wi
 		float mass = 1.0f;
 		float random_color = 0;
 
-		XMFLOAT3 velocity = {}; // starting velocity of all new particles
-		XMFLOAT3 gravity = {}; // constant gravity force
-		float drag = 1.0f; // constant drag (per frame velocity multiplier, reducing it will make particles slow down over time)
+		XMFLOAT3 velocity = {};	   // starting velocity of all new particles
+		XMFLOAT3 gravity = {};	   // constant gravity force
+		float drag = 1.0f;		   // constant drag (per frame velocity multiplier, reducing it will make particles slow down over time)
 		float restitution = 0.98f; // if the particles have collision enabled, then after collision this is a multiplier for their bouncing velocities
 
-		float SPH_h = 1.0f;		// smoothing radius
-		float SPH_K = 250.0f;	// pressure constant
-		float SPH_p0 = 1.0f;	// reference density
-		float SPH_e = 0.018f;	// viscosity constant
+		float SPH_h = 1.0f;	  // smoothing radius
+		float SPH_K = 250.0f; // pressure constant
+		float SPH_p0 = 1.0f;  // reference density
+		float SPH_e = 0.018f; // viscosity constant
 
 		// Sprite sheet properties:
 		uint32_t framesX = 1;
@@ -152,15 +151,105 @@ namespace wi
 		inline bool IsCollidersDisabled() const { return _flags & FLAG_COLLIDERS_DISABLED; }
 		inline bool IsTakeColorFromMesh() const { return _flags & FLAG_TAKE_COLOR_FROM_MESH; }
 
-		inline void SetDebug(bool value) { if (value) { _flags |= FLAG_DEBUG; } else { _flags &= ~FLAG_DEBUG; } }
-		inline void SetPaused(bool value) { if (value) { _flags |= FLAG_PAUSED; } else { _flags &= ~FLAG_PAUSED; } }
-		inline void SetSorted(bool value) { if (value) { _flags |= FLAG_SORTING; } else { _flags &= ~FLAG_SORTING; } }
-		inline void SetDepthCollisionEnabled(bool value) { if (value) { _flags |= FLAG_DEPTHCOLLISION; } else { _flags &= ~FLAG_DEPTHCOLLISION; } }
-		inline void SetSPHEnabled(bool value) { if (value) { _flags |= FLAG_SPH_FLUIDSIMULATION; } else { _flags &= ~FLAG_SPH_FLUIDSIMULATION; } }
-		inline void SetVolumeEnabled(bool value) { if (value) { _flags |= FLAG_HAS_VOLUME; } else { _flags &= ~FLAG_HAS_VOLUME; } }
-		inline void SetFrameBlendingEnabled(bool value) { if (value) { _flags |= FLAG_FRAME_BLENDING; } else { _flags &= ~FLAG_FRAME_BLENDING; } }
-		inline void SetCollidersDisabled(bool value) { if (value) { _flags |= FLAG_COLLIDERS_DISABLED; } else { _flags &= ~FLAG_COLLIDERS_DISABLED; } }
-		inline void SetTakeColorFromMesh(bool value) { if (value) { _flags |= FLAG_TAKE_COLOR_FROM_MESH; } else { _flags &= ~FLAG_TAKE_COLOR_FROM_MESH; } }
+		inline void SetDebug(bool value)
+		{
+			if (value)
+			{
+				_flags |= FLAG_DEBUG;
+			}
+			else
+			{
+				_flags &= ~FLAG_DEBUG;
+			}
+		}
+		inline void SetPaused(bool value)
+		{
+			if (value)
+			{
+				_flags |= FLAG_PAUSED;
+			}
+			else
+			{
+				_flags &= ~FLAG_PAUSED;
+			}
+		}
+		inline void SetSorted(bool value)
+		{
+			if (value)
+			{
+				_flags |= FLAG_SORTING;
+			}
+			else
+			{
+				_flags &= ~FLAG_SORTING;
+			}
+		}
+		inline void SetDepthCollisionEnabled(bool value)
+		{
+			if (value)
+			{
+				_flags |= FLAG_DEPTHCOLLISION;
+			}
+			else
+			{
+				_flags &= ~FLAG_DEPTHCOLLISION;
+			}
+		}
+		inline void SetSPHEnabled(bool value)
+		{
+			if (value)
+			{
+				_flags |= FLAG_SPH_FLUIDSIMULATION;
+			}
+			else
+			{
+				_flags &= ~FLAG_SPH_FLUIDSIMULATION;
+			}
+		}
+		inline void SetVolumeEnabled(bool value)
+		{
+			if (value)
+			{
+				_flags |= FLAG_HAS_VOLUME;
+			}
+			else
+			{
+				_flags &= ~FLAG_HAS_VOLUME;
+			}
+		}
+		inline void SetFrameBlendingEnabled(bool value)
+		{
+			if (value)
+			{
+				_flags |= FLAG_FRAME_BLENDING;
+			}
+			else
+			{
+				_flags &= ~FLAG_FRAME_BLENDING;
+			}
+		}
+		inline void SetCollidersDisabled(bool value)
+		{
+			if (value)
+			{
+				_flags |= FLAG_COLLIDERS_DISABLED;
+			}
+			else
+			{
+				_flags &= ~FLAG_COLLIDERS_DISABLED;
+			}
+		}
+		inline void SetTakeColorFromMesh(bool value)
+		{
+			if (value)
+			{
+				_flags |= FLAG_TAKE_COLOR_FROM_MESH;
+			}
+			else
+			{
+				_flags &= ~FLAG_TAKE_COLOR_FROM_MESH;
+			}
+		}
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 
@@ -168,4 +257,3 @@ namespace wi
 	};
 
 }
-

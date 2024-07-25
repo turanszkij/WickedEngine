@@ -30,8 +30,13 @@ namespace wi::lua::scene
 		static Luna<Scene_BindLua>::FunctionType methods[];
 		static Luna<Scene_BindLua>::PropertyType properties[];
 
-		Scene_BindLua(wi::scene::Scene* scene) :scene(scene) {}
-		Scene_BindLua(lua_State* L) : owning(std::make_unique<wi::scene::Scene>()), scene(owning.get()) {}
+		Scene_BindLua(wi::scene::Scene* scene)
+			: scene(scene)
+		{}
+		Scene_BindLua(lua_State* L)
+			: owning(std::make_unique<wi::scene::Scene>())
+			, scene(owning.get())
+		{}
 
 		int Update(lua_State* L);
 		int Clear(lua_State* L);
@@ -211,6 +216,7 @@ namespace wi::lua::scene
 	{
 	private:
 		wi::scene::NameComponent owning;
+
 	public:
 		wi::scene::NameComponent* component = nullptr;
 
@@ -218,8 +224,12 @@ namespace wi::lua::scene
 		static Luna<NameComponent_BindLua>::FunctionType methods[];
 		static Luna<NameComponent_BindLua>::PropertyType properties[];
 
-		NameComponent_BindLua(wi::scene::NameComponent* component) :component(component) {}
-		NameComponent_BindLua(lua_State* L) : component(&owning) {}
+		NameComponent_BindLua(wi::scene::NameComponent* component)
+			: component(component)
+		{}
+		NameComponent_BindLua(lua_State* L)
+			: component(&owning)
+		{}
 
 		int SetName(lua_State* L);
 		int GetName(lua_State* L);
@@ -229,6 +239,7 @@ namespace wi::lua::scene
 	{
 	private:
 		wi::scene::LayerComponent owning;
+
 	public:
 		wi::scene::LayerComponent* component = nullptr;
 
@@ -236,8 +247,12 @@ namespace wi::lua::scene
 		static Luna<LayerComponent_BindLua>::FunctionType methods[];
 		static Luna<LayerComponent_BindLua>::PropertyType properties[];
 
-		LayerComponent_BindLua(wi::scene::LayerComponent* component) :component(component) {}
-		LayerComponent_BindLua(lua_State* L) : component(&owning) {}
+		LayerComponent_BindLua(wi::scene::LayerComponent* component)
+			: component(component)
+		{}
+		LayerComponent_BindLua(lua_State* L)
+			: component(&owning)
+		{}
 
 		int SetLayerMask(lua_State* L);
 		int GetLayerMask(lua_State* L);
@@ -247,6 +262,7 @@ namespace wi::lua::scene
 	{
 	private:
 		wi::scene::TransformComponent owning;
+
 	public:
 		wi::scene::TransformComponent* component = nullptr;
 
@@ -261,11 +277,13 @@ namespace wi::lua::scene
 			Scale_local = VectorProperty(&component->scale_local);
 		}
 
-		TransformComponent_BindLua(wi::scene::TransformComponent* component) :component(component)
+		TransformComponent_BindLua(wi::scene::TransformComponent* component)
+			: component(component)
 		{
 			BuildBindings();
 		}
-		TransformComponent_BindLua(lua_State* L) : component(&owning)
+		TransformComponent_BindLua(lua_State* L)
+			: component(&owning)
 		{
 			BuildBindings();
 		}
@@ -275,10 +293,10 @@ namespace wi::lua::scene
 		VectorProperty Scale_local;
 
 		PropertyFunction(Translation_local)
-		PropertyFunction(Rotation_local)
-		PropertyFunction(Scale_local)
+			PropertyFunction(Rotation_local)
+				PropertyFunction(Scale_local)
 
-		int Scale(lua_State* L);
+					int Scale(lua_State* L);
 		int Rotate(lua_State* L);
 		int RotateQuaternion(lua_State* L);
 		int Translate(lua_State* L);
@@ -305,6 +323,7 @@ namespace wi::lua::scene
 	{
 	private:
 		wi::scene::CameraComponent owning;
+
 	public:
 		wi::scene::CameraComponent* component = nullptr;
 
@@ -312,8 +331,12 @@ namespace wi::lua::scene
 		static Luna<CameraComponent_BindLua>::FunctionType methods[];
 		static Luna<CameraComponent_BindLua>::PropertyType properties[];
 
-		CameraComponent_BindLua(wi::scene::CameraComponent* component) :component(component) {}
-		CameraComponent_BindLua(lua_State* L) : component(&owning) {}
+		CameraComponent_BindLua(wi::scene::CameraComponent* component)
+			: component(component)
+		{}
+		CameraComponent_BindLua(lua_State* L)
+			: component(&owning)
+		{}
 
 		int UpdateCamera(lua_State* L);
 		int TransformCamera(lua_State* L);
@@ -348,6 +371,7 @@ namespace wi::lua::scene
 	{
 	private:
 		wi::scene::AnimationComponent owning;
+
 	public:
 		wi::scene::AnimationComponent* component = nullptr;
 
@@ -355,8 +379,12 @@ namespace wi::lua::scene
 		static Luna<AnimationComponent_BindLua>::FunctionType methods[];
 		static Luna<AnimationComponent_BindLua>::PropertyType properties[];
 
-		AnimationComponent_BindLua(wi::scene::AnimationComponent* component) :component(component) {}
-		AnimationComponent_BindLua(lua_State* L) : component(&owning) {}
+		AnimationComponent_BindLua(wi::scene::AnimationComponent* component)
+			: component(component)
+		{}
+		AnimationComponent_BindLua(lua_State* L)
+			: component(&owning)
+		{}
 
 		int Play(lua_State* L);
 		int Pause(lua_State* L);
@@ -390,6 +418,7 @@ namespace wi::lua::scene
 	{
 	private:
 		wi::scene::MaterialComponent owning;
+
 	public:
 		wi::scene::MaterialComponent* component = nullptr;
 
@@ -425,11 +454,13 @@ namespace wi::lua::scene
 			customShaderID = IntProperty(&component->customShaderID);
 		}
 
-		MaterialComponent_BindLua(wi::scene::MaterialComponent* component) :component(component)
+		MaterialComponent_BindLua(wi::scene::MaterialComponent* component)
+			: component(component)
 		{
 			BuildBindings();
 		}
-		MaterialComponent_BindLua(lua_State* L) : component(&owning)
+		MaterialComponent_BindLua(lua_State* L)
+			: component(&owning)
 		{
 			BuildBindings();
 		}
@@ -460,31 +491,31 @@ namespace wi::lua::scene
 		IntProperty customShaderID;
 
 		PropertyFunction(_flags)
-		PropertyFunction(ShaderType)
-		PropertyFunction(UserBlendMode)
-		PropertyFunction(SpecularColor)
-		PropertyFunction(SubsurfaceScattering)
-		PropertyFunction(TexMulAdd)
-		PropertyFunction(Roughness)
-		PropertyFunction(Reflectance)
-		PropertyFunction(Metalness)
-		PropertyFunction(NormalMapStrength)
-		PropertyFunction(ParallaxOcclusionMapping)
-		PropertyFunction(DisplacementMapping)
-		PropertyFunction(Refraction)
-		PropertyFunction(Transmission)
-		PropertyFunction(AlphaRef)
-		PropertyFunction(SheenColor)
-		PropertyFunction(SheenRoughness)
-		PropertyFunction(Clearcoat)
-		PropertyFunction(ClearcoatRoughness)
-		PropertyFunction(ShadingRate)
-		PropertyFunction(TexAnimDirection)
-		PropertyFunction(TexAnimFrameRate)
-		PropertyFunction(texAnimElapsedTime)
-		PropertyFunction(customShaderID)
+			PropertyFunction(ShaderType)
+				PropertyFunction(UserBlendMode)
+					PropertyFunction(SpecularColor)
+						PropertyFunction(SubsurfaceScattering)
+							PropertyFunction(TexMulAdd)
+								PropertyFunction(Roughness)
+									PropertyFunction(Reflectance)
+										PropertyFunction(Metalness)
+											PropertyFunction(NormalMapStrength)
+												PropertyFunction(ParallaxOcclusionMapping)
+													PropertyFunction(DisplacementMapping)
+														PropertyFunction(Refraction)
+															PropertyFunction(Transmission)
+																PropertyFunction(AlphaRef)
+																	PropertyFunction(SheenColor)
+																		PropertyFunction(SheenRoughness)
+																			PropertyFunction(Clearcoat)
+																				PropertyFunction(ClearcoatRoughness)
+																					PropertyFunction(ShadingRate)
+																						PropertyFunction(TexAnimDirection)
+																							PropertyFunction(TexAnimFrameRate)
+																								PropertyFunction(texAnimElapsedTime)
+																									PropertyFunction(customShaderID)
 
-		int SetBaseColor(lua_State* L);
+																										int SetBaseColor(lua_State* L);
 		int GetBaseColor(lua_State* L);
 		int SetEmissiveColor(lua_State* L);
 		int GetEmissiveColor(lua_State* L);
@@ -507,6 +538,7 @@ namespace wi::lua::scene
 	{
 	private:
 		wi::scene::MeshComponent owning;
+
 	public:
 		wi::scene::MeshComponent* component = nullptr;
 
@@ -522,11 +554,13 @@ namespace wi::lua::scene
 			SubsetsPerLOD = LongLongProperty(reinterpret_cast<long long*>(&component->subsets_per_lod));
 		}
 
-		MeshComponent_BindLua(wi::scene::MeshComponent* component) :component(component)
+		MeshComponent_BindLua(wi::scene::MeshComponent* component)
+			: component(component)
 		{
 			BuildBindings();
 		}
-		MeshComponent_BindLua(lua_State* L) : component(&owning)
+		MeshComponent_BindLua(lua_State* L)
+			: component(&owning)
 		{
 			BuildBindings();
 		}
@@ -537,11 +571,11 @@ namespace wi::lua::scene
 		LongLongProperty SubsetsPerLOD;
 
 		PropertyFunction(_flags)
-		PropertyFunction(TessellationFactor)
-		PropertyFunction(ArmatureID)
-		PropertyFunction(SubsetsPerLOD)
+			PropertyFunction(TessellationFactor)
+				PropertyFunction(ArmatureID)
+					PropertyFunction(SubsetsPerLOD)
 
-		int SetMeshSubsetMaterialID(lua_State* L);
+						int SetMeshSubsetMaterialID(lua_State* L);
 		int GetMeshSubsetMaterialID(lua_State* L);
 		int CreateSubset(lua_State* L);
 	};
@@ -550,6 +584,7 @@ namespace wi::lua::scene
 	{
 	private:
 		wi::EmittedParticleSystem owning;
+
 	public:
 		wi::EmittedParticleSystem* component = nullptr;
 
@@ -581,11 +616,13 @@ namespace wi::lua::scene
 			SpriteSheet_Framerate = FloatProperty(&component->frameRate);
 		}
 
-		EmitterComponent_BindLua(wi::EmittedParticleSystem* component) :component(component)
+		EmitterComponent_BindLua(wi::EmittedParticleSystem* component)
+			: component(component)
 		{
 			BuildBindings();
 		}
-		EmitterComponent_BindLua(lua_State* L) : component(&owning)
+		EmitterComponent_BindLua(lua_State* L)
+			: component(&owning)
 		{
 			BuildBindings();
 		}
@@ -613,26 +650,26 @@ namespace wi::lua::scene
 
 		PropertyFunction(_flags)
 
-		PropertyFunction(ShaderType)
+			PropertyFunction(ShaderType)
 
-		PropertyFunction(Mass)
-		PropertyFunction(Velocity)
-		PropertyFunction(Gravity)
-		PropertyFunction(Drag)
-		PropertyFunction(Restitution)
+				PropertyFunction(Mass)
+					PropertyFunction(Velocity)
+						PropertyFunction(Gravity)
+							PropertyFunction(Drag)
+								PropertyFunction(Restitution)
 
-		PropertyFunction(SPH_h)
-		PropertyFunction(SPH_K)
-		PropertyFunction(SPH_p0)
-		PropertyFunction(SPH_e)
+									PropertyFunction(SPH_h)
+										PropertyFunction(SPH_K)
+											PropertyFunction(SPH_p0)
+												PropertyFunction(SPH_e)
 
-		PropertyFunction(SpriteSheet_Frames_X)
-		PropertyFunction(SpriteSheet_Frames_Y)
-		PropertyFunction(SpriteSheet_Frame_Count)
-		PropertyFunction(SpriteSheet_Frame_Start)
-		PropertyFunction(SpriteSheet_Framerate)
+													PropertyFunction(SpriteSheet_Frames_X)
+														PropertyFunction(SpriteSheet_Frames_Y)
+															PropertyFunction(SpriteSheet_Frame_Count)
+																PropertyFunction(SpriteSheet_Frame_Start)
+																	PropertyFunction(SpriteSheet_Framerate)
 
-		int Burst(lua_State* L);
+																		int Burst(lua_State* L);
 		int SetEmitCount(lua_State* L);
 		int SetSize(lua_State* L);
 		int SetLife(lua_State* L);
@@ -662,6 +699,7 @@ namespace wi::lua::scene
 	{
 	private:
 		wi::HairParticleSystem owning;
+
 	public:
 		wi::HairParticleSystem* component = nullptr;
 
@@ -680,18 +718,20 @@ namespace wi::lua::scene
 			Stiffness = FloatProperty(&component->stiffness);
 			Randomness = FloatProperty(&component->randomness);
 			ViewDistance = FloatProperty(&component->viewDistance);
-		
+
 			SpriteSheet_Frames_X = LongLongProperty(reinterpret_cast<long long*>(&component->framesX));
 			SpriteSheet_Frames_Y = LongLongProperty(reinterpret_cast<long long*>(&component->framesY));
 			SpriteSheet_Frame_Count = LongLongProperty(reinterpret_cast<long long*>(&component->frameCount));
 			SpriteSheet_Frame_Start = LongLongProperty(reinterpret_cast<long long*>(&component->frameStart));
 		}
 
-		HairParticleSystem_BindLua(HairParticleSystem* component) :component(component)
+		HairParticleSystem_BindLua(HairParticleSystem* component)
+			: component(component)
 		{
 			BuildBindings();
 		}
-		HairParticleSystem_BindLua(lua_State* L) : component(&owning)
+		HairParticleSystem_BindLua(lua_State* L)
+			: component(&owning)
 		{
 			BuildBindings();
 		}
@@ -713,24 +753,25 @@ namespace wi::lua::scene
 
 		PropertyFunction(_flags)
 
-		PropertyFunction(StrandCount)
-		PropertyFunction(SegmentCount)
-		PropertyFunction(RandomSeed)
-		PropertyFunction(Length)
-		PropertyFunction(Stiffness)
-		PropertyFunction(Randomness)
-		PropertyFunction(ViewDistance)
+			PropertyFunction(StrandCount)
+				PropertyFunction(SegmentCount)
+					PropertyFunction(RandomSeed)
+						PropertyFunction(Length)
+							PropertyFunction(Stiffness)
+								PropertyFunction(Randomness)
+									PropertyFunction(ViewDistance)
 
-		PropertyFunction(SpriteSheet_Frames_X)
-		PropertyFunction(SpriteSheet_Frames_Y)
-		PropertyFunction(SpriteSheet_Frame_Count)
-		PropertyFunction(SpriteSheet_Frame_Start)
+										PropertyFunction(SpriteSheet_Frames_X)
+											PropertyFunction(SpriteSheet_Frames_Y)
+												PropertyFunction(SpriteSheet_Frame_Count)
+													PropertyFunction(SpriteSheet_Frame_Start)
 	};
 
 	class LightComponent_BindLua
 	{
 	private:
 		wi::scene::LightComponent owning;
+
 	public:
 		wi::scene::LightComponent* component = nullptr;
 
@@ -738,8 +779,12 @@ namespace wi::lua::scene
 		static Luna<LightComponent_BindLua>::FunctionType methods[];
 		static Luna<LightComponent_BindLua>::PropertyType properties[];
 
-		LightComponent_BindLua(wi::scene::LightComponent* component) :component(component) {}
-		LightComponent_BindLua(lua_State* L) : component(&owning) {}
+		LightComponent_BindLua(wi::scene::LightComponent* component)
+			: component(component)
+		{}
+		LightComponent_BindLua(lua_State* L)
+			: component(&owning)
+		{}
 
 		int SetType(lua_State* L);
 		int SetRange(lua_State* L);
@@ -770,6 +815,7 @@ namespace wi::lua::scene
 	{
 	private:
 		wi::scene::ObjectComponent owning;
+
 	public:
 		wi::scene::ObjectComponent* component = nullptr;
 
@@ -777,8 +823,12 @@ namespace wi::lua::scene
 		static Luna<ObjectComponent_BindLua>::FunctionType methods[];
 		static Luna<ObjectComponent_BindLua>::PropertyType properties[];
 
-		ObjectComponent_BindLua(wi::scene::ObjectComponent* component) :component(component) {}
-		ObjectComponent_BindLua(lua_State* L) : component(&owning) {}
+		ObjectComponent_BindLua(wi::scene::ObjectComponent* component)
+			: component(component)
+		{}
+		ObjectComponent_BindLua(lua_State* L)
+			: component(&owning)
+		{}
 
 		int GetMeshID(lua_State* L);
 		int GetCascadeMask(lua_State* L);
@@ -813,6 +863,7 @@ namespace wi::lua::scene
 	{
 	private:
 		wi::scene::InverseKinematicsComponent owning;
+
 	public:
 		wi::scene::InverseKinematicsComponent* component = nullptr;
 
@@ -820,8 +871,12 @@ namespace wi::lua::scene
 		static Luna<InverseKinematicsComponent_BindLua>::FunctionType methods[];
 		static Luna<InverseKinematicsComponent_BindLua>::PropertyType properties[];
 
-		InverseKinematicsComponent_BindLua(wi::scene::InverseKinematicsComponent* component) :component(component) {}
-		InverseKinematicsComponent_BindLua(lua_State* L) : component(&owning) {}
+		InverseKinematicsComponent_BindLua(wi::scene::InverseKinematicsComponent* component)
+			: component(component)
+		{}
+		InverseKinematicsComponent_BindLua(lua_State* L)
+			: component(&owning)
+		{}
 
 		int SetTarget(lua_State* L);
 		int SetChainLength(lua_State* L);
@@ -837,6 +892,7 @@ namespace wi::lua::scene
 	{
 	private:
 		wi::scene::SpringComponent owning;
+
 	public:
 		wi::scene::SpringComponent* component = nullptr;
 
@@ -851,12 +907,14 @@ namespace wi::lua::scene
 			GravityPower = FloatProperty(&component->gravityPower);
 			GravityDirection = VectorProperty(&component->gravityDir);
 		}
-		
-		SpringComponent_BindLua(wi::scene::SpringComponent* component) :component(component)
+
+		SpringComponent_BindLua(wi::scene::SpringComponent* component)
+			: component(component)
 		{
 			BuildBindings();
 		}
-		SpringComponent_BindLua(lua_State* L) : component(&owning)
+		SpringComponent_BindLua(lua_State* L)
+			: component(&owning)
 		{
 			BuildBindings();
 		}
@@ -865,13 +923,13 @@ namespace wi::lua::scene
 		FloatProperty HitRadius;
 		FloatProperty GravityPower;
 		VectorProperty GravityDirection;
-		
-		PropertyFunction(DragForce)
-		PropertyFunction(HitRadius)
-		PropertyFunction(GravityPower)
-		PropertyFunction(GravityDirection)
 
-		int SetStiffness(lua_State* L);
+		PropertyFunction(DragForce)
+			PropertyFunction(HitRadius)
+				PropertyFunction(GravityPower)
+					PropertyFunction(GravityDirection)
+
+						int SetStiffness(lua_State* L);
 		int SetDamping(lua_State* L);
 		int SetWindAffection(lua_State* L);
 		int GetStiffness(lua_State* L);
@@ -883,6 +941,7 @@ namespace wi::lua::scene
 	{
 	private:
 		wi::scene::ScriptComponent owning;
+
 	public:
 		wi::scene::ScriptComponent* component = nullptr;
 
@@ -890,8 +949,12 @@ namespace wi::lua::scene
 		static Luna<ScriptComponent_BindLua>::FunctionType methods[];
 		static Luna<ScriptComponent_BindLua>::PropertyType properties[];
 
-		ScriptComponent_BindLua(wi::scene::ScriptComponent* component) :component(component) {}
-		ScriptComponent_BindLua(lua_State* L) : component(&owning) {}
+		ScriptComponent_BindLua(wi::scene::ScriptComponent* component)
+			: component(component)
+		{}
+		ScriptComponent_BindLua(lua_State* L)
+			: component(&owning)
+		{}
 
 		int CreateFromFile(lua_State* L);
 		int Play(lua_State* L);
@@ -904,6 +967,7 @@ namespace wi::lua::scene
 	{
 	private:
 		wi::scene::RigidBodyPhysicsComponent owning;
+
 	public:
 		wi::scene::RigidBodyPhysicsComponent* component = nullptr;
 
@@ -926,11 +990,13 @@ namespace wi::lua::scene
 			TargetMeshLOD = LongLongProperty(reinterpret_cast<long long*>(&component->mesh_lod));
 		}
 
-		RigidBodyPhysicsComponent_BindLua(wi::scene::RigidBodyPhysicsComponent* component) :component(component)
+		RigidBodyPhysicsComponent_BindLua(wi::scene::RigidBodyPhysicsComponent* component)
+			: component(component)
 		{
 			BuildBindings();
 		}
-		RigidBodyPhysicsComponent_BindLua(lua_State* L) : component(&owning)
+		RigidBodyPhysicsComponent_BindLua(lua_State* L)
+			: component(&owning)
 		{
 			BuildBindings();
 		}
@@ -946,20 +1012,20 @@ namespace wi::lua::scene
 		FloatProperty CapsuleParams_Radius;
 		FloatProperty CapsuleParams_Height;
 		LongLongProperty TargetMeshLOD;
-		
-		PropertyFunction(Shape)
-		PropertyFunction(Mass)
-		PropertyFunction(Friction)
-		PropertyFunction(Restitution)
-		PropertyFunction(LinearDamping)
-		PropertyFunction(AngularDamping)
-		PropertyFunction(BoxParams_HalfExtents)
-		PropertyFunction(SphereParams_Radius)
-		PropertyFunction(CapsuleParams_Radius)
-		PropertyFunction(CapsuleParams_Height)
-		PropertyFunction(TargetMeshLOD)
 
-		int SetDisableDeactivation(lua_State* L);
+		PropertyFunction(Shape)
+			PropertyFunction(Mass)
+				PropertyFunction(Friction)
+					PropertyFunction(Restitution)
+						PropertyFunction(LinearDamping)
+							PropertyFunction(AngularDamping)
+								PropertyFunction(BoxParams_HalfExtents)
+									PropertyFunction(SphereParams_Radius)
+										PropertyFunction(CapsuleParams_Radius)
+											PropertyFunction(CapsuleParams_Height)
+												PropertyFunction(TargetMeshLOD)
+
+													int SetDisableDeactivation(lua_State* L);
 		int SetKinematic(lua_State* L);
 		int SetStartDeactivated(lua_State* L);
 
@@ -972,6 +1038,7 @@ namespace wi::lua::scene
 	{
 	private:
 		wi::scene::SoftBodyPhysicsComponent owning;
+
 	public:
 		wi::scene::SoftBodyPhysicsComponent* component = nullptr;
 
@@ -987,11 +1054,13 @@ namespace wi::lua::scene
 			VertexRadius = wi::lua::FloatProperty(&component->vertex_radius);
 		}
 
-		SoftBodyPhysicsComponent_BindLua(wi::scene::SoftBodyPhysicsComponent* component) :component(component)
+		SoftBodyPhysicsComponent_BindLua(wi::scene::SoftBodyPhysicsComponent* component)
+			: component(component)
 		{
 			BuildBindings();
 		}
-		SoftBodyPhysicsComponent_BindLua(lua_State* L) : component(&owning)
+		SoftBodyPhysicsComponent_BindLua(lua_State* L)
+			: component(&owning)
 		{
 			BuildBindings();
 		}
@@ -1002,11 +1071,11 @@ namespace wi::lua::scene
 		wi::lua::FloatProperty VertexRadius;
 
 		PropertyFunction(Mass)
-		PropertyFunction(Friction)
-		PropertyFunction(Restitution)
-		PropertyFunction(VertexRadius)
+			PropertyFunction(Friction)
+				PropertyFunction(Restitution)
+					PropertyFunction(VertexRadius)
 
-		int SetDetail(lua_State* L);
+						int SetDetail(lua_State* L);
 		int GetDetail(lua_State* L);
 		int SetDisableDeactivation(lua_State* L);
 		int IsDisableDeactivation(lua_State* L);
@@ -1019,6 +1088,7 @@ namespace wi::lua::scene
 	{
 	private:
 		wi::scene::ForceFieldComponent owning;
+
 	public:
 		wi::scene::ForceFieldComponent* component = nullptr;
 
@@ -1033,11 +1103,13 @@ namespace wi::lua::scene
 			Range = FloatProperty(&component->range);
 		}
 
-		ForceFieldComponent_BindLua(wi::scene::ForceFieldComponent* component) :component(component)
+		ForceFieldComponent_BindLua(wi::scene::ForceFieldComponent* component)
+			: component(component)
 		{
 			BuildBindings();
 		}
-		ForceFieldComponent_BindLua(lua_State* L) : component(&owning)
+		ForceFieldComponent_BindLua(lua_State* L)
+			: component(&owning)
 		{
 			BuildBindings();
 		}
@@ -1047,14 +1119,15 @@ namespace wi::lua::scene
 		FloatProperty Range;
 
 		PropertyFunction(Type)
-		PropertyFunction(Gravity)
-		PropertyFunction(Range)
+			PropertyFunction(Gravity)
+				PropertyFunction(Range)
 	};
 
 	class Weather_OceanParams_BindLua
 	{
 	private:
 		wi::Ocean::OceanParameters owning;
+
 	public:
 		wi::Ocean::OceanParameters* parameter = nullptr;
 
@@ -1074,11 +1147,13 @@ namespace wi::lua::scene
 			choppy_scale = FloatProperty(&parameter->choppy_scale);
 		}
 
-		Weather_OceanParams_BindLua(wi::Ocean::OceanParameters* parameter) :parameter(parameter)
+		Weather_OceanParams_BindLua(wi::Ocean::OceanParameters* parameter)
+			: parameter(parameter)
 		{
 			BuildBindings();
 		}
-		Weather_OceanParams_BindLua(lua_State* L) : parameter(&owning)
+		Weather_OceanParams_BindLua(lua_State* L)
+			: parameter(&owning)
 		{
 			BuildBindings();
 		}
@@ -1097,23 +1172,25 @@ namespace wi::lua::scene
 		FloatProperty surfaceDisplacement;
 
 		PropertyFunction(dmap_dim)
-		PropertyFunction(patch_length)
-		PropertyFunction(time_scale)
-		PropertyFunction(wave_amplitude)
-		PropertyFunction(wind_dir)
-		PropertyFunction(wind_speed)
-		PropertyFunction(wind_dependency)
-		PropertyFunction(choppy_scale)
-		PropertyFunction(waterColor)
-		PropertyFunction(waterHeight)
-		PropertyFunction(surfaceDetail)
-		PropertyFunction(surfaceDisplacement)
+			PropertyFunction(patch_length)
+				PropertyFunction(time_scale)
+					PropertyFunction(wave_amplitude)
+						PropertyFunction(wind_dir)
+							PropertyFunction(wind_speed)
+								PropertyFunction(wind_dependency)
+									PropertyFunction(choppy_scale)
+										PropertyFunction(waterColor)
+											PropertyFunction(waterHeight)
+												PropertyFunction(surfaceDetail)
+													PropertyFunction(surfaceDisplacement)
 	};
 	struct Weather_OceanParams_Property
 	{
 		wi::Ocean::OceanParameters* data = nullptr;
-		Weather_OceanParams_Property(){}
-		Weather_OceanParams_Property(wi::Ocean::OceanParameters* data) :data(data){}
+		Weather_OceanParams_Property() {}
+		Weather_OceanParams_Property(wi::Ocean::OceanParameters* data)
+			: data(data)
+		{}
 		int Get(lua_State* L);
 		int Set(lua_State* L);
 	};
@@ -1122,6 +1199,7 @@ namespace wi::lua::scene
 	{
 	private:
 		AtmosphereParameters owning;
+
 	public:
 		AtmosphereParameters* parameter = nullptr;
 
@@ -1152,11 +1230,13 @@ namespace wi::lua::scene
 			groundAlbedo = VectorProperty(&parameter->groundAlbedo);
 		}
 
-		Weather_AtmosphereParams_BindLua(AtmosphereParameters* parameter) :parameter(parameter)
+		Weather_AtmosphereParams_BindLua(AtmosphereParameters* parameter)
+			: parameter(parameter)
 		{
 			BuildBindings();
 		}
-		Weather_AtmosphereParams_BindLua(lua_State* L) : parameter(&owning)
+		Weather_AtmosphereParams_BindLua(lua_State* L)
+			: parameter(&owning)
 		{
 			BuildBindings();
 		}
@@ -1183,30 +1263,32 @@ namespace wi::lua::scene
 
 
 		PropertyFunction(bottomRadius)
-		PropertyFunction(topRadius)
-		PropertyFunction(planetCenter)
-		PropertyFunction(rayleighDensityExpScale)
-		PropertyFunction(rayleighScattering)
-		PropertyFunction(mieDensityExpScale)
-		PropertyFunction(mieScattering)
-		PropertyFunction(mieExtinction)
-		PropertyFunction(mieAbsorption)
-		PropertyFunction(miePhaseG)
+			PropertyFunction(topRadius)
+				PropertyFunction(planetCenter)
+					PropertyFunction(rayleighDensityExpScale)
+						PropertyFunction(rayleighScattering)
+							PropertyFunction(mieDensityExpScale)
+								PropertyFunction(mieScattering)
+									PropertyFunction(mieExtinction)
+										PropertyFunction(mieAbsorption)
+											PropertyFunction(miePhaseG)
 
-		PropertyFunction(absorptionDensity0LayerWidth)
-		PropertyFunction(absorptionDensity0ConstantTerm)
-		PropertyFunction(absorptionDensity0LinearTerm)
-		PropertyFunction(absorptionDensity1ConstantTerm)
-		PropertyFunction(absorptionDensity1LinearTerm)
+												PropertyFunction(absorptionDensity0LayerWidth)
+													PropertyFunction(absorptionDensity0ConstantTerm)
+														PropertyFunction(absorptionDensity0LinearTerm)
+															PropertyFunction(absorptionDensity1ConstantTerm)
+																PropertyFunction(absorptionDensity1LinearTerm)
 
-		PropertyFunction(absorptionExtinction)
-		PropertyFunction(groundAlbedo)
+																	PropertyFunction(absorptionExtinction)
+																		PropertyFunction(groundAlbedo)
 	};
 	struct Weather_AtmosphereParams_Property
 	{
 		AtmosphereParameters* data = nullptr;
-		Weather_AtmosphereParams_Property(){}
-		Weather_AtmosphereParams_Property(AtmosphereParameters* data) :data(data){}
+		Weather_AtmosphereParams_Property() {}
+		Weather_AtmosphereParams_Property(AtmosphereParameters* data)
+			: data(data)
+		{}
 		int Get(lua_State* L);
 		int Set(lua_State* L);
 	};
@@ -1215,6 +1297,7 @@ namespace wi::lua::scene
 	{
 	private:
 		VolumetricCloudParameters owning;
+
 	public:
 		VolumetricCloudParameters* parameter = nullptr;
 
@@ -1301,11 +1384,13 @@ namespace wi::lua::scene
 		}
 
 
-		Weather_VolumetricCloudParams_BindLua(VolumetricCloudParameters* parameter) : parameter(parameter)
+		Weather_VolumetricCloudParams_BindLua(VolumetricCloudParameters* parameter)
+			: parameter(parameter)
 		{
 			BuildBindings();
 		}
-		Weather_VolumetricCloudParams_BindLua(lua_State* L) : parameter(&owning)
+		Weather_VolumetricCloudParams_BindLua(lua_State* L)
+			: parameter(&owning)
 		{
 			BuildBindings();
 		}
@@ -1387,84 +1472,86 @@ namespace wi::lua::scene
 
 		PropertyFunction(cloudAmbientGroundMultiplier)
 
-		PropertyFunction(horizonBlendAmount)
-		PropertyFunction(horizonBlendPower)
-		PropertyFunction(cloudStartHeight)
-		PropertyFunction(cloudThickness)
+			PropertyFunction(horizonBlendAmount)
+				PropertyFunction(horizonBlendPower)
+					PropertyFunction(cloudStartHeight)
+						PropertyFunction(cloudThickness)
 
-		PropertyFunction(animationMultiplier)
+							PropertyFunction(animationMultiplier)
 
-		// First layer
-		PropertyFunction(albedoFirst)
-		PropertyFunction(extinctionCoefficientFirst)
+			// First layer
+			PropertyFunction(albedoFirst)
+				PropertyFunction(extinctionCoefficientFirst)
 
-		PropertyFunction(skewAlongWindDirectionFirst)
-		PropertyFunction(totalNoiseScaleFirst)
-		PropertyFunction(curlScaleFirst)
-		PropertyFunction(curlNoiseModifierFirst)
-		PropertyFunction(detailScaleFirst)
-		PropertyFunction(detailNoiseModifierFirst)
-		PropertyFunction(skewAlongCoverageWindDirectionFirst)
-		PropertyFunction(weatherScaleFirst)
-		PropertyFunction(coverageAmountFirst)
-		PropertyFunction(coverageMinimumFirst)
-		PropertyFunction(typeAmountFirst)
-		PropertyFunction(typeMinimumFirst)
-		PropertyFunction(rainAmountFirst)
-		PropertyFunction(rainMinimumFirst)
+					PropertyFunction(skewAlongWindDirectionFirst)
+						PropertyFunction(totalNoiseScaleFirst)
+							PropertyFunction(curlScaleFirst)
+								PropertyFunction(curlNoiseModifierFirst)
+									PropertyFunction(detailScaleFirst)
+										PropertyFunction(detailNoiseModifierFirst)
+											PropertyFunction(skewAlongCoverageWindDirectionFirst)
+												PropertyFunction(weatherScaleFirst)
+													PropertyFunction(coverageAmountFirst)
+														PropertyFunction(coverageMinimumFirst)
+															PropertyFunction(typeAmountFirst)
+																PropertyFunction(typeMinimumFirst)
+																	PropertyFunction(rainAmountFirst)
+																		PropertyFunction(rainMinimumFirst)
 
-		PropertyFunction(gradientSmallFirst)
-		PropertyFunction(gradientMediumFirst)
-		PropertyFunction(gradientLargeFirst)
+																			PropertyFunction(gradientSmallFirst)
+																				PropertyFunction(gradientMediumFirst)
+																					PropertyFunction(gradientLargeFirst)
 
-		PropertyFunction(anvilDeformationSmallFirst)
-		PropertyFunction(anvilDeformationMediumFirst)
-		PropertyFunction(anvilDeformationLargeFirst)
+																						PropertyFunction(anvilDeformationSmallFirst)
+																							PropertyFunction(anvilDeformationMediumFirst)
+																								PropertyFunction(anvilDeformationLargeFirst)
 
-		PropertyFunction(windSpeedFirst)
-		PropertyFunction(windAngleFirst)
-		PropertyFunction(windUpAmountFirst)
-		PropertyFunction(coverageWindSpeedFirst)
-		PropertyFunction(coverageWindAngleFirst)
+																									PropertyFunction(windSpeedFirst)
+																										PropertyFunction(windAngleFirst)
+																											PropertyFunction(windUpAmountFirst)
+																												PropertyFunction(coverageWindSpeedFirst)
+																													PropertyFunction(coverageWindAngleFirst)
 
-		// Second layer
-		PropertyFunction(albedoSecond)
-		PropertyFunction(extinctionCoefficientSecond)
+			// Second layer
+			PropertyFunction(albedoSecond)
+				PropertyFunction(extinctionCoefficientSecond)
 
-		PropertyFunction(skewAlongWindDirectionSecond)
-		PropertyFunction(totalNoiseScaleSecond)
-		PropertyFunction(curlScaleSecond)
-		PropertyFunction(curlNoiseModifierSecond)
-		PropertyFunction(detailScaleSecond)
-		PropertyFunction(detailNoiseModifierSecond)
-		PropertyFunction(skewAlongCoverageWindDirectionSecond)
-		PropertyFunction(weatherScaleSecond)
-		PropertyFunction(coverageAmountSecond)
-		PropertyFunction(coverageMinimumSecond)
-		PropertyFunction(typeAmountSecond)
-		PropertyFunction(typeMinimumSecond)
-		PropertyFunction(rainAmountSecond)
-		PropertyFunction(rainMinimumSecond)
+					PropertyFunction(skewAlongWindDirectionSecond)
+						PropertyFunction(totalNoiseScaleSecond)
+							PropertyFunction(curlScaleSecond)
+								PropertyFunction(curlNoiseModifierSecond)
+									PropertyFunction(detailScaleSecond)
+										PropertyFunction(detailNoiseModifierSecond)
+											PropertyFunction(skewAlongCoverageWindDirectionSecond)
+												PropertyFunction(weatherScaleSecond)
+													PropertyFunction(coverageAmountSecond)
+														PropertyFunction(coverageMinimumSecond)
+															PropertyFunction(typeAmountSecond)
+																PropertyFunction(typeMinimumSecond)
+																	PropertyFunction(rainAmountSecond)
+																		PropertyFunction(rainMinimumSecond)
 
-		PropertyFunction(gradientSmallSecond)
-		PropertyFunction(gradientMediumSecond)
-		PropertyFunction(gradientLargeSecond)
+																			PropertyFunction(gradientSmallSecond)
+																				PropertyFunction(gradientMediumSecond)
+																					PropertyFunction(gradientLargeSecond)
 
-		PropertyFunction(anvilDeformationSmallSecond)
-		PropertyFunction(anvilDeformationMediumSecond)
-		PropertyFunction(anvilDeformationLargeSecond)
+																						PropertyFunction(anvilDeformationSmallSecond)
+																							PropertyFunction(anvilDeformationMediumSecond)
+																								PropertyFunction(anvilDeformationLargeSecond)
 
-		PropertyFunction(windSpeedSecond)
-		PropertyFunction(windAngleSecond)
-		PropertyFunction(windUpAmountSecond)
-		PropertyFunction(coverageWindSpeedSecond)
-		PropertyFunction(coverageWindAngleSecond)
+																									PropertyFunction(windSpeedSecond)
+																										PropertyFunction(windAngleSecond)
+																											PropertyFunction(windUpAmountSecond)
+																												PropertyFunction(coverageWindSpeedSecond)
+																													PropertyFunction(coverageWindAngleSecond)
 	};
 	struct Weather_VolumetricCloudParams_Property
 	{
 		VolumetricCloudParameters* data = nullptr;
-		Weather_VolumetricCloudParams_Property(){}
-		Weather_VolumetricCloudParams_Property(VolumetricCloudParameters* data) :data(data){}
+		Weather_VolumetricCloudParams_Property() {}
+		Weather_VolumetricCloudParams_Property(VolumetricCloudParameters* data)
+			: data(data)
+		{}
 		int Get(lua_State* L);
 		int Set(lua_State* L);
 	};
@@ -1473,6 +1560,7 @@ namespace wi::lua::scene
 	{
 	private:
 		wi::scene::WeatherComponent owning;
+
 	public:
 		wi::scene::WeatherComponent* component = nullptr;
 
@@ -1507,18 +1595,20 @@ namespace wi::lua::scene
 			OceanParameters = Weather_OceanParams_Property(&component->oceanParameters);
 			AtmosphereParameters = Weather_AtmosphereParams_Property(&component->atmosphereParameters);
 			VolumetricCloudParameters = Weather_VolumetricCloudParams_Property(&component->volumetricCloudParameters);
-		
+
 			skyMapName = StringProperty(&component->skyMapName);
 			colorGradingMapName = StringProperty(&component->colorGradingMapName);
 			volumetricCloudsWeatherMapFirstName = StringProperty(&component->volumetricCloudsWeatherMapFirstName);
 			volumetricCloudsWeatherMapSecondName = StringProperty(&component->volumetricCloudsWeatherMapSecondName);
 		}
 
-		WeatherComponent_BindLua(wi::scene::WeatherComponent* component) :component(component)
+		WeatherComponent_BindLua(wi::scene::WeatherComponent* component)
+			: component(component)
 		{
 			BuildBindings();
 		}
-		WeatherComponent_BindLua(lua_State* L) : component(&owning)
+		WeatherComponent_BindLua(lua_State* L)
+			: component(&owning)
 		{
 			BuildBindings();
 		}
@@ -1553,53 +1643,53 @@ namespace wi::lua::scene
 		VectorProperty rainColor;
 
 		PropertyFunction(sunColor)
-		PropertyFunction(sunDirection)
-		PropertyFunction(skyExposure)
-		PropertyFunction(horizon)
-		PropertyFunction(zenith)
-		PropertyFunction(ambient)
-		PropertyFunction(fogStart)
-		PropertyFunction(fogDensity)
-		PropertyFunction(fogHeightStart)
-		PropertyFunction(fogHeightEnd)
-		PropertyFunction(fogHeightSky)
-		PropertyFunction(cloudiness)
-		PropertyFunction(cloudScale)
-		PropertyFunction(cloudSpeed)
-		PropertyFunction(cloud_shadow_amount)
-		PropertyFunction(cloud_shadow_scale)
-		PropertyFunction(cloud_shadow_speed)
-		PropertyFunction(windDirection)
-		PropertyFunction(gravity)
-		PropertyFunction(windRandomness)
-		PropertyFunction(windWaveSize)
-		PropertyFunction(windSpeed)
-		PropertyFunction(stars)
-		PropertyFunction(rainAmount)
-		PropertyFunction(rainLength)
-		PropertyFunction(rainSpeed)
-		PropertyFunction(rainScale)
-		PropertyFunction(rainColor)
+			PropertyFunction(sunDirection)
+				PropertyFunction(skyExposure)
+					PropertyFunction(horizon)
+						PropertyFunction(zenith)
+							PropertyFunction(ambient)
+								PropertyFunction(fogStart)
+									PropertyFunction(fogDensity)
+										PropertyFunction(fogHeightStart)
+											PropertyFunction(fogHeightEnd)
+												PropertyFunction(fogHeightSky)
+													PropertyFunction(cloudiness)
+														PropertyFunction(cloudScale)
+															PropertyFunction(cloudSpeed)
+																PropertyFunction(cloud_shadow_amount)
+																	PropertyFunction(cloud_shadow_scale)
+																		PropertyFunction(cloud_shadow_speed)
+																			PropertyFunction(windDirection)
+																				PropertyFunction(gravity)
+																					PropertyFunction(windRandomness)
+																						PropertyFunction(windWaveSize)
+																							PropertyFunction(windSpeed)
+																								PropertyFunction(stars)
+																									PropertyFunction(rainAmount)
+																										PropertyFunction(rainLength)
+																											PropertyFunction(rainSpeed)
+																												PropertyFunction(rainScale)
+																													PropertyFunction(rainColor)
 
-		Weather_OceanParams_Property OceanParameters;
+																														Weather_OceanParams_Property OceanParameters;
 		Weather_AtmosphereParams_Property AtmosphereParameters;
 		Weather_VolumetricCloudParams_Property VolumetricCloudParameters;
-		
-		PropertyFunction(OceanParameters)
-		PropertyFunction(AtmosphereParameters)
-		PropertyFunction(VolumetricCloudParameters)
 
-		StringProperty skyMapName;
+		PropertyFunction(OceanParameters)
+			PropertyFunction(AtmosphereParameters)
+				PropertyFunction(VolumetricCloudParameters)
+
+					StringProperty skyMapName;
 		StringProperty colorGradingMapName;
 		StringProperty volumetricCloudsWeatherMapFirstName;
 		StringProperty volumetricCloudsWeatherMapSecondName;
 
 		PropertyFunction(skyMapName)
-		PropertyFunction(colorGradingMapName)
-		PropertyFunction(volumetricCloudsWeatherMapFirstName)
-		PropertyFunction(volumetricCloudsWeatherMapSecondName)
+			PropertyFunction(colorGradingMapName)
+				PropertyFunction(volumetricCloudsWeatherMapFirstName)
+					PropertyFunction(volumetricCloudsWeatherMapSecondName)
 
-		int IsOceanEnabled(lua_State* L);
+						int IsOceanEnabled(lua_State* L);
 		int IsSimpleSky(lua_State* L);
 		int IsRealisticSky(lua_State* L);
 		int IsVolumetricClouds(lua_State* L);
@@ -1629,11 +1719,12 @@ namespace wi::lua::scene
 		int SetSkyMapName(lua_State* L);
 		int SetColorGradingMapName(lua_State* L);
 	};
-	
+
 	class SoundComponent_BindLua
 	{
 	private:
 		wi::scene::SoundComponent owning;
+
 	public:
 		wi::scene::SoundComponent* component = nullptr;
 
@@ -1647,11 +1738,13 @@ namespace wi::lua::scene
 			Volume = FloatProperty(&component->volume);
 		}
 
-		SoundComponent_BindLua(wi::scene::SoundComponent* component) :component(component)
+		SoundComponent_BindLua(wi::scene::SoundComponent* component)
+			: component(component)
 		{
 			BuildBindings();
 		}
-		SoundComponent_BindLua(lua_State* L) : component(&owning)
+		SoundComponent_BindLua(lua_State* L)
+			: component(&owning)
 		{
 			BuildBindings();
 		}
@@ -1660,9 +1753,9 @@ namespace wi::lua::scene
 		FloatProperty Volume;
 
 		PropertyFunction(Filename)
-		PropertyFunction(Volume)
+			PropertyFunction(Volume)
 
-		int IsPlaying(lua_State* L);
+				int IsPlaying(lua_State* L);
 		int IsLooped(lua_State* L);
 		int IsDisable3D(lua_State* L);
 
@@ -1680,6 +1773,7 @@ namespace wi::lua::scene
 	{
 	private:
 		wi::scene::ColliderComponent owning;
+
 	public:
 		wi::scene::ColliderComponent* component = nullptr;
 
@@ -1695,11 +1789,13 @@ namespace wi::lua::scene
 			Tail = VectorProperty(&component->tail);
 		}
 
-		ColliderComponent_BindLua(wi::scene::ColliderComponent* component) :component(component)
+		ColliderComponent_BindLua(wi::scene::ColliderComponent* component)
+			: component(component)
 		{
 			BuildBindings();
 		}
-		ColliderComponent_BindLua(lua_State* L) : component(&owning)
+		ColliderComponent_BindLua(lua_State* L)
+			: component(&owning)
 		{
 			BuildBindings();
 		}
@@ -1710,11 +1806,11 @@ namespace wi::lua::scene
 		VectorProperty Tail;
 
 		PropertyFunction(Shape)
-		PropertyFunction(Radius)
-		PropertyFunction(Offset)
-		PropertyFunction(Tail)
+			PropertyFunction(Radius)
+				PropertyFunction(Offset)
+					PropertyFunction(Tail)
 
-		int SetCPUEnabled(lua_State* L);
+						int SetCPUEnabled(lua_State* L);
 		int SetGPUEnabled(lua_State* L);
 
 		int GetCapsule(lua_State* L);
@@ -1725,6 +1821,7 @@ namespace wi::lua::scene
 	{
 	private:
 		wi::scene::ExpressionComponent owning;
+
 	public:
 		wi::scene::ExpressionComponent* component = nullptr;
 
@@ -1732,8 +1829,12 @@ namespace wi::lua::scene
 		static Luna<ExpressionComponent_BindLua>::FunctionType methods[];
 		static Luna<ExpressionComponent_BindLua>::PropertyType properties[];
 
-		ExpressionComponent_BindLua(wi::scene::ExpressionComponent* component) :component(component) {}
-		ExpressionComponent_BindLua(lua_State* L) : component(&owning) {}
+		ExpressionComponent_BindLua(wi::scene::ExpressionComponent* component)
+			: component(component)
+		{}
+		ExpressionComponent_BindLua(lua_State* L)
+			: component(&owning)
+		{}
 
 		int FindExpressionID(lua_State* L);
 		int SetWeight(lua_State* L);
@@ -1755,6 +1856,7 @@ namespace wi::lua::scene
 	{
 	private:
 		wi::scene::HumanoidComponent owning;
+
 	public:
 		wi::scene::HumanoidComponent* component = nullptr;
 
@@ -1762,8 +1864,12 @@ namespace wi::lua::scene
 		static Luna<HumanoidComponent_BindLua>::FunctionType methods[];
 		static Luna<HumanoidComponent_BindLua>::PropertyType properties[];
 
-		HumanoidComponent_BindLua(wi::scene::HumanoidComponent* component) :component(component) {}
-		HumanoidComponent_BindLua(lua_State* L) : component(&owning) {}
+		HumanoidComponent_BindLua(wi::scene::HumanoidComponent* component)
+			: component(component)
+		{}
+		HumanoidComponent_BindLua(lua_State* L)
+			: component(&owning)
+		{}
 
 		int GetBoneEntity(lua_State* L);
 		int SetLookAtEnabled(lua_State* L);
@@ -1780,6 +1886,7 @@ namespace wi::lua::scene
 	{
 	private:
 		wi::scene::DecalComponent owning;
+
 	public:
 		wi::scene::DecalComponent* component = nullptr;
 
@@ -1787,8 +1894,12 @@ namespace wi::lua::scene
 		static Luna<DecalComponent_BindLua>::FunctionType methods[];
 		static Luna<DecalComponent_BindLua>::PropertyType properties[];
 
-		DecalComponent_BindLua(wi::scene::DecalComponent* component) :component(component) {}
-		DecalComponent_BindLua(lua_State* L) : component(&owning) {}
+		DecalComponent_BindLua(wi::scene::DecalComponent* component)
+			: component(component)
+		{}
+		DecalComponent_BindLua(lua_State* L)
+			: component(&owning)
+		{}
 
 		int SetBaseColorOnlyAlpha(lua_State* L);
 		int IsBaseColorOnlyAlpha(lua_State* L);
@@ -1800,6 +1911,7 @@ namespace wi::lua::scene
 	{
 	private:
 		wi::scene::MetadataComponent owning;
+
 	public:
 		wi::scene::MetadataComponent* component = nullptr;
 
@@ -1807,8 +1919,12 @@ namespace wi::lua::scene
 		static Luna<MetadataComponent_BindLua>::FunctionType methods[];
 		static Luna<MetadataComponent_BindLua>::PropertyType properties[];
 
-		MetadataComponent_BindLua(wi::scene::MetadataComponent* component) :component(component) {}
-		MetadataComponent_BindLua(lua_State* L) : component(&owning) {}
+		MetadataComponent_BindLua(wi::scene::MetadataComponent* component)
+			: component(component)
+		{}
+		MetadataComponent_BindLua(lua_State* L)
+			: component(&owning)
+		{}
 
 		int HasBool(lua_State* L);
 		int HasInt(lua_State* L);
@@ -1828,4 +1944,3 @@ namespace wi::lua::scene
 		int SetString(lua_State* L);
 	};
 }
-

@@ -11,8 +11,7 @@ void DummyVisualizer::Draw(
 	const XMMATRIX& matrix,
 	const XMFLOAT4& color,
 	bool depth,
-	wi::graphics::CommandList cmd
-)
+	wi::graphics::CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 
@@ -58,7 +57,7 @@ void DummyVisualizer::Draw(
 
 			uint32_t* gpu_indices = (uint32_t*)(gpu_vertices + vertices_count);
 			std::memcpy(gpu_indices, indices, indices_count * sizeof(uint32_t));
-			};
+		};
 
 		GPUBufferDesc desc;
 		desc.size = indices_count * sizeof(uint32_t) + vertices_count * sizeof(Vertex);

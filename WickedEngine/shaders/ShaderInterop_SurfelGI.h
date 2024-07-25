@@ -11,7 +11,7 @@ static const uint3 SURFEL_GRID_DIMENSIONS = uint3(128, 64, 128);
 static const uint SURFEL_TABLE_SIZE = SURFEL_GRID_DIMENSIONS.x * SURFEL_GRID_DIMENSIONS.y * SURFEL_GRID_DIMENSIONS.z;
 static const float SURFEL_MAX_RADIUS = 2;
 static const float SURFEL_RECYCLE_DISTANCE = 0; // if surfel is behind camera and farther than this distance, it starts preparing for recycling
-static const uint SURFEL_RECYCLE_TIME = 60; // if surfel is preparing for recycling, this is how many frames it takes to recycle it.
+static const uint SURFEL_RECYCLE_TIME = 60;		// if surfel is preparing for recycling, this is how many frames it takes to recycle it.
 static const uint SURFEL_STATS_OFFSET_COUNT = 0;
 static const uint SURFEL_STATS_OFFSET_NEXTCOUNT = SURFEL_STATS_OFFSET_COUNT + 4;
 static const uint SURFEL_STATS_OFFSET_DEADCOUNT = SURFEL_STATS_OFFSET_NEXTCOUNT + 4;
@@ -25,12 +25,12 @@ static const uint SURFEL_INDIRECT_OFFSET_INTEGRATE = wi::graphics::AlignTo(SURFE
 static const uint SURFEL_INDIRECT_SIZE = SURFEL_INDIRECT_OFFSET_INTEGRATE + 4 * 3;
 static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
 static const float SURFEL_TARGET_COVERAGE = 0.8f; // how many surfels should affect a pixel fully, higher values will increase quality and cost
-static const uint SURFEL_CELL_LIMIT = ~0; // limit the amount of allocated surfels in a cell
-static const uint SURFEL_RAY_BUDGET = 500000; // max number of rays per frame
-static const uint SURFEL_RAY_BOOST_MAX = 64; // max amount of rays per surfel
-#define SURFEL_GRID_CULLING // if defined, surfels will not be added to grid cells that they do not intersect
-#define SURFEL_USE_HASHING // if defined, hashing will be used to retrieve surfels, hashing is good because it supports infinite world trivially, but slower due to hash collisions
-#define SURFEL_ENABLE_INFINITE_BOUNCES // if defined, previous frame's surfel data will be sampled at ray tracing hit points
+static const uint SURFEL_CELL_LIMIT = ~0;		  // limit the amount of allocated surfels in a cell
+static const uint SURFEL_RAY_BUDGET = 500000;	  // max number of rays per frame
+static const uint SURFEL_RAY_BOOST_MAX = 64;	  // max amount of rays per surfel
+#define SURFEL_GRID_CULLING						  // if defined, surfels will not be added to grid cells that they do not intersect
+#define SURFEL_USE_HASHING						  // if defined, hashing will be used to retrieve surfels, hashing is good because it supports infinite world trivially, but slower due to hash collisions
+#define SURFEL_ENABLE_INFINITE_BOUNCES			  // if defined, previous frame's surfel data will be sampled at ray tracing hit points
 
 #ifdef __cplusplus
 static_assert(SURFEL_RECYCLE_TIME < 256, "Must be < 256 because it is packed at 8 bits!");
@@ -53,7 +53,7 @@ struct SurfelData
 	uint bary;
 	uint uid;
 
-	uint raydata; // 24bit rayOffset, 8bit rayCount
+	uint raydata;	 // 24bit rayOffset, 8bit rayCount
 	uint properties; // 8bit life frames, 8bit recycle frames, 1bit backface normal
 	float max_inconsistency;
 	int padding1;
@@ -67,7 +67,11 @@ struct SurfelData
 
 	void SetLife(uint value) { properties |= value & 0xFF; }
 	void SetRecycle(uint value) { properties |= (value & 0xFF) << 8u; }
-	void SetBackfaceNormal(bool value) { if (value) properties |= 1u << 9u; else properties &= ~(1u << 9u); }
+	void SetBackfaceNormal(bool value)
+	{
+		if (value) properties |= 1u << 9u;
+		else properties &= ~(1u << 9u);
+	}
 };
 struct SurfelVarianceData
 {
@@ -178,7 +182,7 @@ float3 surfel_griduv(float3 position)
 inline uint surfel_cellindex(int3 cell)
 {
 #ifdef SURFEL_USE_HASHING
-	const uint p1 = 73856093;   // some large primes 
+	const uint p1 = 73856093; // some large primes
 	const uint p2 = 19349663;
 	const uint p3 = 83492791;
 	int n = p1 * cell.x ^ p2 * cell.y ^ p3 * cell.z;
@@ -285,8 +289,7 @@ float surfel_moment_weight(float2 moments, float dist)
 void MultiscaleMeanEstimator(
 	float3 y,
 	inout SurfelVarianceData data,
-	float shortWindowBlend = 0.08f
-)
+	float shortWindowBlend = 0.08f)
 {
 	float3 mean = data.mean;
 	float3 shortMean = data.shortMean;
@@ -320,10 +323,12 @@ void MultiscaleMeanEstimator(
 
 	float varianceBasedBlendReduction =
 		clamp(dot(float3(0.299, 0.587, 0.114),
-			0.5 * shortMean / max(1e-5, dev)), 1.0 / 32, 1);
+				  0.5 * shortMean / max(1e-5, dev)),
+			1.0 / 32, 1);
 
 	float3 catchUpBlend = clamp(smoothstep(0, 1,
-		relativeDiff * max(0.02, inconsistency - 0.2)), 1.0 / 256, 1);
+									relativeDiff * max(0.02, inconsistency - 0.2)),
+		1.0 / 256, 1);
 	catchUpBlend *= vbbr;
 
 	vbbr = lerp(vbbr, varianceBasedBlendReduction, 0.1);

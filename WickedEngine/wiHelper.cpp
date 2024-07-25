@@ -24,7 +24,7 @@
 
 #if defined(_WIN32)
 #include <direct.h>
-#include <Psapi.h> // GetProcessMemoryInfo
+#include <Psapi.h>	 // GetProcessMemoryInfo
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
 #elif defined(PLATFORM_PS5)
@@ -119,7 +119,7 @@ namespace wi::helper
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&texture,texture.desc.layout,ResourceState::COPY_SRC),
+				GPUBarrier::Image(&texture, texture.desc.layout, ResourceState::COPY_SRC),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -128,7 +128,7 @@ namespace wi::helper
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&texture,ResourceState::COPY_SRC,texture.desc.layout),
+				GPUBarrier::Image(&texture, ResourceState::COPY_SRC, texture.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -167,8 +167,7 @@ namespace wi::helper
 							std::memcpy(
 								dst_slice + i * dst_rowpitch,
 								src_slice + i * subresourcedata.row_pitch,
-								dst_rowpitch
-							);
+								dst_rowpitch);
 						}
 						cpy_offset += mip_height * dst_rowpitch;
 					}
@@ -406,8 +405,7 @@ namespace wi::helper
 				desc.mip_levels,
 				desc.array_size,
 				has_flag(desc.misc_flags, ResourceMiscFlag::TEXTURECUBE),
-				desc.type == TextureDesc::Type::TEXTURE_3D ? desc.depth : 0
-			);
+				desc.type == TextureDesc::Type::TEXTURE_3D ? desc.depth : 0);
 			std::memcpy(filedata.data() + sizeof(dds::Header), texturedata.data(), texturedata.size());
 			return true;
 		}
@@ -979,7 +977,6 @@ namespace wi::helper
 				path = relative.generic_u8string();
 			}
 		}
-
 	}
 
 	void MakePathAbsolute(std::string& path)
@@ -1082,22 +1079,28 @@ namespace wi::helper
 
 	std::string GetCacheDirectoryPath()
 	{
-		#ifdef PLATFORM_LINUX
-			const char* xdg_cache = std::getenv("XDG_CACHE_HOME");
-			if (xdg_cache == nullptr || *xdg_cache == '\0') {
-				const char* home = std::getenv("HOME");
-				if (home != nullptr) {
-					return std::string(home) + "/.cache";
-				} else {
-					// shouldn't happen, just to be safe
-					return GetTempDirectoryPath();
-				}
-			} else {
-				return xdg_cache;
+#ifdef PLATFORM_LINUX
+		const char* xdg_cache = std::getenv("XDG_CACHE_HOME");
+		if (xdg_cache == nullptr || *xdg_cache == '\0')
+		{
+			const char* home = std::getenv("HOME");
+			if (home != nullptr)
+			{
+				return std::string(home) + "/.cache";
 			}
-		#else
-			return GetTempDirectoryPath();
-		#endif
+			else
+			{
+				// shouldn't happen, just to be safe
+				return GetTempDirectoryPath();
+			}
+		}
+		else
+		{
+			return xdg_cache;
+		}
+#else
+		return GetTempDirectoryPath();
+#endif
 	}
 
 	std::string GetCurrentPath()
@@ -1114,7 +1117,6 @@ namespace wi::helper
 	{
 #ifdef PLATFORM_WINDOWS_DESKTOP
 		std::thread([=] {
-
 			wchar_t szFile[256];
 
 			OPENFILENAME ofn;
@@ -1122,7 +1124,7 @@ namespace wi::helper
 			ofn.lStructSize = sizeof(ofn);
 			ofn.hwndOwner = nullptr;
 			ofn.lpstrFile = szFile;
-			// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
+			// Set lpstrFile[0] to '\0' so that GetOpenFileName does not
 			// use the contents of szFile to initialize itself.
 			ofn.lpstrFile[0] = '\0';
 			ofn.nMaxFile = sizeof(szFile);
@@ -1182,60 +1184,64 @@ namespace wi::helper
 				StringConvert(ofn.lpstrFile, result_filename);
 				onSuccess(result_filename);
 			}
-
-			}).detach();
+		}).detach();
 #endif // PLATFORM_WINDOWS_DESKTOP
 
 #ifdef PLATFORM_LINUX
-		if (!pfd::settings::available()) {
-			const char *message = "No dialog backend available";
+		if (!pfd::settings::available())
+		{
+			const char* message = "No dialog backend available";
 #ifdef SDL2
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-									 "File dialog error!",
-									 message,
-									 nullptr);
+				"File dialog error!",
+				message,
+				nullptr);
 #endif
 			std::cerr << message << std::endl;
 		}
 
-		std::vector<std::string> extensions = {params.description, ""};
+		std::vector<std::string> extensions = { params.description, "" };
 		int extcount = 0;
 		for (auto& x : params.extensions)
 		{
 			extensions[1] += "*." + toLower(x);
 			extensions[1] += " ";
 			extensions[1] += "*." + toUpper(x);
-			if (extcount < params.extensions.size() - 1) {
+			if (extcount < params.extensions.size() - 1)
+			{
 				extensions[1] += " ";
 			}
 			extcount++;
 		}
 
-		switch (params.type) {
-			case FileDialogParams::OPEN: {
-				std::vector<std::string> selection = pfd::open_file(
-					"Open file",
-					std::filesystem::current_path().string(),
-					extensions
-				).result();
-				if (!selection.empty())
-				{
-					onSuccess(selection[0]);
-				}
-				break;
+		switch (params.type)
+		{
+		case FileDialogParams::OPEN:
+		{
+			std::vector<std::string> selection = pfd::open_file(
+				"Open file",
+				std::filesystem::current_path().string(),
+				extensions)
+													 .result();
+			if (!selection.empty())
+			{
+				onSuccess(selection[0]);
 			}
-			case FileDialogParams::SAVE: {
-				std::string destination = pfd::save_file(
-					"Save file",
-					std::filesystem::current_path().string(),
-					extensions
-				).result();
-				if (!destination.empty())
-				{
-					onSuccess(destination);
-				}
-				break;
+			break;
+		}
+		case FileDialogParams::SAVE:
+		{
+			std::string destination = pfd::save_file(
+				"Save file",
+				std::filesystem::current_path().string(),
+				extensions)
+										  .result();
+			if (!destination.empty())
+			{
+				onSuccess(destination);
 			}
+			break;
+		}
 		}
 #endif // PLATFORM_LINUX
 	}
@@ -1278,7 +1284,7 @@ namespace wi::helper
 		std::string ss;
 		ss += "// clang-format off\n";
 		ss += "const uint8_t ";
-		ss += dataName ;
+		ss += dataName;
 		ss += "[] = {";
 		for (size_t i = 0; i < size; ++i)
 		{
@@ -1373,7 +1379,7 @@ namespace wi::helper
 		return num;
 #endif // _WIN32
 	}
-	
+
 	void DebugOut(const std::string& str, DebugLevel level)
 	{
 #ifdef _WIN32
@@ -1392,10 +1398,10 @@ namespace wi::helper
 		case DebugLevel::Error:
 			std::cerr << str;
 			break;
-	}
+		}
 #endif // _WIN32
 	}
-	
+
 	void Sleep(float milliseconds)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds((int)milliseconds));
@@ -1405,7 +1411,8 @@ namespace wi::helper
 	{
 		const std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
 		const double seconds = double(milliseconds) / 1000.0;
-		while (std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::high_resolution_clock::now() - t1).count() < seconds);
+		while (std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::high_resolution_clock::now() - t1).count() < seconds)
+			;
 	}
 
 	void QuickSleep(float milliseconds)

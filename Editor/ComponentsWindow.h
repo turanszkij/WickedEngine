@@ -124,6 +124,7 @@ public:
 };
 
 template<>
-struct enable_bitmask_operators<ComponentsWindow::Filter> {
+struct enable_bitmask_operators<ComponentsWindow::Filter>
+{
 	static const bool enable = true;
 };

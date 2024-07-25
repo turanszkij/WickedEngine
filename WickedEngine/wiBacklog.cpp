@@ -152,7 +152,7 @@ namespace wi::backlog
 					toggleButton.Create("V");
 					toggleButton.OnClick([](wi::gui::EventArgs args) {
 						Toggle();
-						});
+					});
 					toggleButton.SetColor(theme_color_idle, wi::gui::IDLE);
 					toggleButton.SetColor(theme_color_focus, wi::gui::FOCUS);
 					toggleButton.SetColor(theme_color_active, wi::gui::ACTIVE);
@@ -174,7 +174,6 @@ namespace wi::backlog
 				{
 					inputField.SetAsActive();
 				}
-
 			}
 			else
 			{
@@ -203,8 +202,7 @@ namespace wi::backlog
 	void Draw(
 		const wi::Canvas& canvas,
 		CommandList cmd,
-		ColorSpace colorspace
-	)
+		ColorSpace colorspace)
 	{
 		if (!was_ever_enabled)
 			return;
@@ -283,8 +281,7 @@ namespace wi::backlog
 	void DrawOutputText(
 		const wi::Canvas& canvas,
 		CommandList cmd,
-		ColorSpace colorspace
-	)
+		ColorSpace colorspace)
 	{
 		std::scoped_lock lock(logLock);
 		wi::font::SetCanvas(canvas); // always set here as it can be called from outside...

@@ -40,10 +40,10 @@ namespace wi
 	{
 		addLoadingFunction([=](wi::jobsystem::JobArgs args) {
 			component->Load();
-			});
+		});
 		onFinished([=] {
 			main->ActivatePath(component, fadeSeconds, fadeColor);
-			});
+		});
 	}
 
 	void LoadingScreen::onFinished(std::function<void()> finishFunction)

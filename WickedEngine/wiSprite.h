@@ -33,11 +33,51 @@ namespace wi
 		virtual void Update(float dt);
 		virtual void Draw(wi::graphics::CommandList cmd) const;
 
-		constexpr void SetHidden(bool value = true) { if (value) { _flags |= HIDDEN; } else { _flags &= ~HIDDEN; } }
+		constexpr void SetHidden(bool value = true)
+		{
+			if (value)
+			{
+				_flags |= HIDDEN;
+			}
+			else
+			{
+				_flags &= ~HIDDEN;
+			}
+		}
 		constexpr bool IsHidden() const { return _flags & HIDDEN; }
-		constexpr void SetDisableUpdate(bool value = true) { if (value) { _flags |= DISABLE_UPDATE; } else { _flags &= ~DISABLE_UPDATE; } }
-		constexpr void SetCameraFacing(bool value = true) { if (value) { _flags |= CAMERA_FACING; } else { _flags &= ~CAMERA_FACING; } }
-		constexpr void SetCameraScaling(bool value = true) { if (value) { _flags |= CAMERA_SCALING; } else { _flags &= ~CAMERA_SCALING; } }
+		constexpr void SetDisableUpdate(bool value = true)
+		{
+			if (value)
+			{
+				_flags |= DISABLE_UPDATE;
+			}
+			else
+			{
+				_flags &= ~DISABLE_UPDATE;
+			}
+		}
+		constexpr void SetCameraFacing(bool value = true)
+		{
+			if (value)
+			{
+				_flags |= CAMERA_FACING;
+			}
+			else
+			{
+				_flags &= ~CAMERA_FACING;
+			}
+		}
+		constexpr void SetCameraScaling(bool value = true)
+		{
+			if (value)
+			{
+				_flags |= CAMERA_SCALING;
+			}
+			else
+			{
+				_flags &= ~CAMERA_SCALING;
+			}
+		}
 
 		constexpr bool IsDisableUpdate() const { return _flags & DISABLE_UPDATE; }
 		constexpr bool IsCameraFacing() const { return _flags & CAMERA_FACING; }
@@ -59,13 +99,13 @@ namespace wi
 			};
 			struct DrawRectAnim
 			{
-				float frameRate = 30; // target frame rate of the spritesheet animation (eg. 30, 60, etc.)
-				int frameCount = 1; // how many frames are in the animation in total
+				float frameRate = 30;		  // target frame rate of the spritesheet animation (eg. 30, 60, etc.)
+				int frameCount = 1;			  // how many frames are in the animation in total
 				int horizontalFrameCount = 0; // how many horizontal frames there are (optional, use if the spritesheet contains multiple rows)
 
-				float _elapsedTime = 0; // internal use; you don't need to initialize
-				int _currentFrame = 0; // internal use; you don't need to initialize
-				XMFLOAT4 originalDrawRect = XMFLOAT4(0, 0, 0, 0);  // internal use; you don't need to initialize
+				float _elapsedTime = 0;							  // internal use; you don't need to initialize
+				int _currentFrame = 0;							  // internal use; you don't need to initialize
+				XMFLOAT4 originalDrawRect = XMFLOAT4(0, 0, 0, 0); // internal use; you don't need to initialize
 
 				void restart()
 				{
@@ -75,11 +115,11 @@ namespace wi
 			};
 			struct WobbleAnim
 			{
-				XMFLOAT2 amount = XMFLOAT2(0, 0);	// how much the sprite wobbles in X and Y direction
-				float speed = 1; // how fast the sprite wobbles
+				XMFLOAT2 amount = XMFLOAT2(0, 0); // how much the sprite wobbles in X and Y direction
+				float speed = 1;				  // how fast the sprite wobbles
 
-				float corner_angles[4]; // internal use; you don't need to initialize
-				float corner_speeds[4]; // internal use; you don't need to initialize
+				float corner_angles[4];	 // internal use; you don't need to initialize
+				float corner_speeds[4];	 // internal use; you don't need to initialize
 				float corner_angles2[4]; // internal use; you don't need to initialize
 				float corner_speeds2[4]; // internal use; you don't need to initialize
 				WobbleAnim()

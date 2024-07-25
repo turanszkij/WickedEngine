@@ -48,6 +48,7 @@ namespace wi::shadercompiler
 }
 
 template<>
-struct enable_bitmask_operators<wi::shadercompiler::Flags> {
+struct enable_bitmask_operators<wi::shadercompiler::Flags>
+{
 	static const bool enable = true;
 };

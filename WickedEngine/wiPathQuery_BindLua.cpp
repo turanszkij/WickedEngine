@@ -95,8 +95,7 @@ namespace wi::lua
 			subject->GetFloat3(),
 			direction->GetFloat3(),
 			max_distance,
-			*voxelgrid->voxelgrid
-		);
+			*voxelgrid->voxelgrid);
 
 		wi::lua::SSetBool(L, result);
 

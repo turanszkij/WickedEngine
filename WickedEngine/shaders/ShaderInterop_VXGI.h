@@ -16,21 +16,21 @@ static const uint VXGI_CLIPMAP_COUNT = 6;
 
 struct alignas(16) VoxelClipMap
 {
-	float3 center;		// center of clipmap volume in world space
-	float voxelSize;	// half-extent of one voxel
+	float3 center;	 // center of clipmap volume in world space
+	float voxelSize; // half-extent of one voxel
 };
 
 struct alignas(16) VXGI
 {
-	uint	resolution;		// voxel grid resolution
-	float	resolution_rcp;	// 1.0 / voxel grid resolution
-	float	stepsize;		// raymarch step size in voxel space units
-	float	max_distance;	// maximum raymarch distance for voxel GI in world-space
+	uint resolution;	  // voxel grid resolution
+	float resolution_rcp; // 1.0 / voxel grid resolution
+	float stepsize;		  // raymarch step size in voxel space units
+	float max_distance;	  // maximum raymarch distance for voxel GI in world-space
 
-	int		texture_radiance;
-	int		texture_sdf;
-	int		padding0;
-	int		padding1;
+	int texture_radiance;
+	int texture_sdf;
+	int padding0;
+	int padding1;
 
 	VoxelClipMap clipmaps[VXGI_CLIPMAP_COUNT];
 

@@ -9,26 +9,27 @@
 #if WI_VECTOR_TYPE
 namespace std
 {
-	template < typename, typename > class vector;
+	template<typename, typename>
+	class vector;
 }
 #endif // WI_VECTOR_TYPE
 
 namespace wi::helper
 {
-	template <class T>
+	template<class T>
 	constexpr void hash_combine(std::size_t& seed, const T& v)
 	{
 		std::hash<T> hasher;
 		seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 	}
 
-	constexpr size_t string_hash(const char* input) 
+	constexpr size_t string_hash(const char* input)
 	{
 		// https://stackoverflow.com/questions/2111667/compile-time-string-hashing
 		size_t hash = sizeof(size_t) == 8 ? 0xcbf29ce484222325 : 0x811c9dc5;
 		const size_t prime = sizeof(size_t) == 8 ? 0x00000100000001b3 : 0x01000193;
 
-		while (*input) 
+		while (*input)
 		{
 			hash ^= static_cast<size_t>(*input);
 			hash *= prime;
@@ -165,10 +166,10 @@ namespace wi::helper
 
 	struct MemoryUsage
 	{
-		uint64_t total_physical = 0;	// size of physical memory on whole system (in bytes)
-		uint64_t total_virtual = 0;		// size of virtual address space on whole system (in bytes)
-		uint64_t process_physical = 0;	// size of currently committed physical memory by application (in bytes)
-		uint64_t process_virtual = 0;	// size of currently mapped virtual memory by application (in bytes)
+		uint64_t total_physical = 0;   // size of physical memory on whole system (in bytes)
+		uint64_t total_virtual = 0;	   // size of virtual address space on whole system (in bytes)
+		uint64_t process_physical = 0; // size of currently committed physical memory by application (in bytes)
+		uint64_t process_virtual = 0;  // size of currently mapped virtual memory by application (in bytes)
 	};
 	MemoryUsage GetMemoryUsage();
 

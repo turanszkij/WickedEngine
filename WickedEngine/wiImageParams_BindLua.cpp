@@ -68,7 +68,8 @@ namespace wi::lua
 	};
 
 
-	ImageParams_BindLua::ImageParams_BindLua(const wi::image::Params& params) :params(params)
+	ImageParams_BindLua::ImageParams_BindLua(const wi::image::Params& params)
+		: params(params)
 	{
 	}
 
@@ -496,19 +497,20 @@ namespace wi::lua
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			if (argc < 3)//w
+			if (argc < 3) //w
 			{
 				w = wi::lua::SGetFloat(L, 1);
-				if (argc > 1)//h
+				if (argc > 1) //h
 				{
 					h = wi::lua::SGetFloat(L, 2);
 				}
 			}
-			else {//x,y,w
+			else
+			{ //x,y,w
 				x = wi::lua::SGetFloat(L, 1);
 				y = wi::lua::SGetFloat(L, 2);
 				w = wi::lua::SGetFloat(L, 3);
-				if (argc > 3)//h
+				if (argc > 3) //h
 				{
 					h = wi::lua::SGetFloat(L, 4);
 				}
@@ -554,7 +556,6 @@ BLENDMODE_ALPHA				= 1
 BLENDMODE_PREMULTIPLIED		= 2
 BLENDMODE_ADDITIVE			= 3
 )");
-
 		}
 	}
 

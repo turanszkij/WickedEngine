@@ -13,7 +13,6 @@ void FontWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete Font");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -81,7 +80,7 @@ void FontWindow::Create(EditorComponent* _editor)
 					font->fontStyleName = fileName;
 					fontStyleButton.SetText(wi::helper::GetFileNameFromPath(font->fontStyleName));
 					fontStyleButton.font.fontStyleResource = font->fontStyleResource;
-					});
+				});
 			}
 		}
 	});

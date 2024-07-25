@@ -66,10 +66,8 @@ namespace wi::primitive
 	}
 	XMMATRIX AABB::AABB::getUnormRemapMatrix() const
 	{
-		return
-			XMMatrixScaling(_max.x - _min.x, _max.y - _min.y, _max.z - _min.z) *
-			XMMatrixTranslation(_min.x, _min.y, _min.z)
-			;
+		return XMMatrixScaling(_max.x - _min.x, _max.y - _min.y, _max.z - _min.z) *
+			XMMatrixTranslation(_min.x, _min.y, _min.z);
 	}
 	float AABB::getArea() const
 	{
@@ -189,7 +187,7 @@ namespace wi::primitive
 		bool intersection = frustum.Intersects(bb);
 		return intersection;
 	}
-	AABB AABB::operator* (float a)
+	AABB AABB::operator*(float a)
 	{
 		XMFLOAT3 min = getMin();
 		XMFLOAT3 max = getMax();
@@ -233,9 +231,6 @@ namespace wi::primitive
 
 
 
-
-
-
 	bool Sphere::intersects(const XMVECTOR& P) const
 	{
 		float distsq = wi::math::DistanceSquared(XMLoadFloat3(&center), P);
@@ -258,7 +253,7 @@ namespace wi::primitive
 		float distanceSquared = wi::math::DistanceSquared(closestPointInAabb, center);
 		return distanceSquared < (radius * radius);
 	}
-	bool Sphere::intersects(const Sphere& b)const
+	bool Sphere::intersects(const Sphere& b) const
 	{
 		float dist = 0;
 		return intersects(b, dist);
@@ -350,7 +345,7 @@ namespace wi::primitive
 			float discrSq = std::sqrt(discr);
 
 			float t = (-B - discrSq);
-			if (t<b.TMax && t>b.TMin)
+			if (t < b.TMax && t > b.TMin)
 			{
 				XMVECTOR P = O + D * t;
 				XMVECTOR N = XMVector3Normalize(P - C);
@@ -360,7 +355,7 @@ namespace wi::primitive
 			}
 
 			t = (-B + discrSq);
-			if (t<b.TMax && t>b.TMin)
+			if (t < b.TMax && t > b.TMin)
 			{
 				XMVECTOR P = O + D * t;
 				XMVECTOR N = XMVector3Normalize(P - C);
@@ -773,7 +768,6 @@ namespace wi::primitive
 
 
 
-
 	void Frustum::Create(const XMMATRIX& viewProjection)
 	{
 		// We are interested in columns of the matrix, so transpose because we can access only rows:
@@ -850,8 +844,8 @@ namespace wi::primitive
 			iTotalIn += iPtIn;
 		}
 		if (iTotalIn == 6)
-			return(BOX_FRUSTUM_INSIDE);
-		return(BOX_FRUSTUM_INTERSECTS);
+			return (BOX_FRUSTUM_INSIDE);
+		return (BOX_FRUSTUM_INTERSECTS);
 	}
 	bool Frustum::CheckBoxFast(const AABB& box) const
 	{

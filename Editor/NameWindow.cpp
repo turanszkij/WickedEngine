@@ -12,7 +12,6 @@ void NameWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete NameComponent");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -22,7 +21,7 @@ void NameWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->componentsWnd.RefreshEntityTree();
-		});
+	});
 
 	float x = 60;
 	float y = 0;

@@ -153,8 +153,7 @@ namespace wi::lua
 			}
 			wi::physics::SetLinearVelocity(
 				*component->component,
-				*(XMFLOAT3*)vec
-			);
+				*(XMFLOAT3*)vec);
 		}
 		else
 			wi::lua::SError(L, "SetLinearVelocity(RigidBodyPhysicsComponent component, Vector velocity) not enough arguments!");
@@ -179,8 +178,7 @@ namespace wi::lua
 			}
 			wi::physics::SetAngularVelocity(
 				*component->component,
-				*(XMFLOAT3*)vec
-			);
+				*(XMFLOAT3*)vec);
 		}
 		else
 			wi::lua::SError(L, "SetAngularVelocity(RigidBodyPhysicsComponent component, Vector velocity) not enough arguments!");
@@ -205,8 +203,7 @@ namespace wi::lua
 			}
 			wi::physics::ApplyForce(
 				*component->component,
-				*(XMFLOAT3*)vec
-			);
+				*(XMFLOAT3*)vec);
 		}
 		else
 			wi::lua::SError(L, "ApplyForce(RigidBodyPhysicsComponent component, Vector force) not enough arguments!");
@@ -238,8 +235,7 @@ namespace wi::lua
 			wi::physics::ApplyForceAt(
 				*component->component,
 				*(XMFLOAT3*)vec,
-				*(XMFLOAT3*)vec2
-			);
+				*(XMFLOAT3*)vec2);
 		}
 		else
 			wi::lua::SError(L, "ApplyForceAt(RigidBodyPhysicsComponent component, Vector force, Vector at) not enough arguments!");
@@ -270,8 +266,7 @@ namespace wi::lua
 				wi::physics::ApplyImpulse(
 					*humanoid->component,
 					bone,
-					*(XMFLOAT3*)vec
-				);
+					*(XMFLOAT3*)vec);
 				return 0;
 			}
 			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 2);
@@ -282,8 +277,7 @@ namespace wi::lua
 			}
 			wi::physics::ApplyImpulse(
 				*component->component,
-				*(XMFLOAT3*)vec
-			);
+				*(XMFLOAT3*)vec);
 		}
 		else
 			wi::lua::SError(L, "ApplyImpulse(RigidBodyPhysicsComponent component, Vector impulse) not enough arguments!");
@@ -321,8 +315,7 @@ namespace wi::lua
 					*humanoid->component,
 					bone,
 					*(XMFLOAT3*)vec,
-					*(XMFLOAT3*)vec2
-				);
+					*(XMFLOAT3*)vec2);
 				return 0;
 			}
 			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 2);
@@ -340,8 +333,7 @@ namespace wi::lua
 			wi::physics::ApplyImpulseAt(
 				*component->component,
 				*(XMFLOAT3*)vec,
-				*(XMFLOAT3*)vec2
-			);
+				*(XMFLOAT3*)vec2);
 		}
 		else
 			wi::lua::SError(L, "ApplyImpulseAt(RigidBodyPhysicsComponent component, Vector impulse, Vector at) not enough arguments!");
@@ -366,8 +358,7 @@ namespace wi::lua
 			}
 			wi::physics::ApplyTorque(
 				*component->component,
-				*(XMFLOAT3*)vec
-			);
+				*(XMFLOAT3*)vec);
 		}
 		else
 			wi::lua::SError(L, "ApplyTorque(RigidBodyPhysicsComponent component, Vector torque) not enough arguments!");
@@ -389,14 +380,12 @@ namespace wi::lua
 				}
 				wi::physics::SetActivationState(
 					*soft->component,
-					(wi::physics::ActivationState)wi::lua::SGetInt(L, 2)
-				);
+					(wi::physics::ActivationState)wi::lua::SGetInt(L, 2));
 				return 0;
 			}
 			wi::physics::SetActivationState(
 				*rigid->component,
-				(wi::physics::ActivationState)wi::lua::SGetInt(L, 2)
-			);
+				(wi::physics::ActivationState)wi::lua::SGetInt(L, 2));
 		}
 		else
 			wi::lua::SError(L, "SetActivationState(RigidBodyPhysicsComponent | SoftBodyPhysicsComponent component, int state) not enough arguments!");
@@ -480,7 +469,6 @@ ACTIVATION_STATE_INACTIVE = 1
 )");
 		}
 	}
-
 
 
 

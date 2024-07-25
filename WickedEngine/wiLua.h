@@ -5,14 +5,13 @@
 
 #include <string>
 
-extern "C"
-{
+extern "C" {
 #include "LUA/lua.h"
 #include "LUA/lualib.h"
 #include "LUA/lauxlib.h"
 }
 
-typedef int(*lua_CFunction) (lua_State* L);
+typedef int (*lua_CFunction)(lua_State* L);
 
 namespace wi::lua
 {
@@ -98,7 +97,7 @@ namespace wi::lua
 	int SGetArgCount(lua_State* L);
 	//get class context information
 	void* SGetUserData(lua_State* L);
-	
+
 	//push int to lua stack
 	void SSetInt(lua_State* L, int data);
 	//push long to lua stack
@@ -128,9 +127,11 @@ namespace wi::lua
 	//get-setters for int type
 	struct IntProperty
 	{
-		int *data = nullptr;
-		IntProperty(){}
-		IntProperty(int* data): data(data) {}
+		int* data = nullptr;
+		IntProperty() {}
+		IntProperty(int* data)
+			: data(data)
+		{}
 		int Get(lua_State* L);
 		int Set(lua_State* L);
 	};
@@ -138,8 +139,10 @@ namespace wi::lua
 	struct LongProperty
 	{
 		long* data = nullptr;
-		LongProperty(){}
-		LongProperty(long* data): data(data) {}
+		LongProperty() {}
+		LongProperty(long* data)
+			: data(data)
+		{}
 		int Get(lua_State* L);
 		int Set(lua_State* L);
 	};
@@ -147,8 +150,10 @@ namespace wi::lua
 	struct LongLongProperty
 	{
 		long long* data = nullptr;
-		LongLongProperty(){}
-		LongLongProperty(long long* data): data(data) {}
+		LongLongProperty() {}
+		LongLongProperty(long long* data)
+			: data(data)
+		{}
 		int Get(lua_State* L);
 		int Set(lua_State* L);
 	};
@@ -156,8 +161,10 @@ namespace wi::lua
 	struct FloatProperty
 	{
 		float* data = nullptr;
-		FloatProperty(){}
-		FloatProperty(float* data): data(data) {}
+		FloatProperty() {}
+		FloatProperty(float* data)
+			: data(data)
+		{}
 		int Get(lua_State* L);
 		int Set(lua_State* L);
 	};
@@ -165,8 +172,10 @@ namespace wi::lua
 	struct DoubleProperty
 	{
 		double* data = nullptr;
-		DoubleProperty(){}
-		DoubleProperty(double* data): data(data) {}
+		DoubleProperty() {}
+		DoubleProperty(double* data)
+			: data(data)
+		{}
 		int Get(lua_State* L);
 		int Set(lua_State* L);
 	};
@@ -174,8 +183,10 @@ namespace wi::lua
 	struct StringProperty
 	{
 		std::string* data = nullptr;
-		StringProperty(){}
-		StringProperty(std::string* data): data(data) {}
+		StringProperty() {}
+		StringProperty(std::string* data)
+			: data(data)
+		{}
 		int Get(lua_State* L);
 		int Set(lua_State* L);
 	};
@@ -183,15 +194,17 @@ namespace wi::lua
 	struct BoolProperty
 	{
 		bool* data = nullptr;
-		BoolProperty(){}
-		BoolProperty(bool* data): data(data) {}
+		BoolProperty() {}
+		BoolProperty(bool* data)
+			: data(data)
+		{}
 		int Get(lua_State* L);
 		int Set(lua_State* L);
 	};
 
 	//throw error
 	void SError(lua_State* L, const std::string& error = "");
-	
+
 	// Compiles text file containing LUA source code to binary LUA code
 	bool CompileFile(const char* filename, wi::vector<uint8_t>& dst);
 	inline bool CompileFile(const std::string& filename, wi::vector<uint8_t>& dst) { return CompileFile(filename.c_str(), dst); }
@@ -199,4 +212,3 @@ namespace wi::lua
 	bool CompileText(const char* script, wi::vector<uint8_t>& dst);
 	inline bool CompileText(const std::string& script, wi::vector<uint8_t>& dst) { return CompileText(script.c_str(), dst); }
 };
-

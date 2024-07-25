@@ -28,7 +28,7 @@ namespace wi::terrain
 
 namespace std
 {
-	template <>
+	template<>
 	struct hash<wi::terrain::Chunk>
 	{
 		inline size_t operator()(const wi::terrain::Chunk& chunk) const
@@ -239,18 +239,18 @@ namespace wi::terrain
 
 	struct Prop
 	{
-		wi::vector<uint8_t> data; // serialized component data storage
-		int min_count_per_chunk = 0; // a chunk will try to generate min this many props of this type
+		wi::vector<uint8_t> data;	  // serialized component data storage
+		int min_count_per_chunk = 0;  // a chunk will try to generate min this many props of this type
 		int max_count_per_chunk = 10; // a chunk will try to generate max this many props of this type
-		int region = 0; // region selection in range [0,3] (0: base/grass, 1: slopes, 2: low altitude (bottom level-0), 3: high altitude (0-top level))
-		float region_power = 1; // region weight affection power factor
-		float noise_frequency = 1; // perlin noise's frequency for placement factor
-		float noise_power = 1; // perlin noise's power
-		float threshold = 0.5f; // the chance of placement (higher is less chance)
-		float min_size = 1; // scaling randomization range min
-		float max_size = 1; // scaling randomization range max
-		float min_y_offset = 0; // min randomized offset on Y axis
-		float max_y_offset = 0; // max randomized offset on Y axis
+		int region = 0;				  // region selection in range [0,3] (0: base/grass, 1: slopes, 2: low altitude (bottom level-0), 3: high altitude (0-top level))
+		float region_power = 1;		  // region weight affection power factor
+		float noise_frequency = 1;	  // perlin noise's frequency for placement factor
+		float noise_power = 1;		  // perlin noise's power
+		float threshold = 0.5f;		  // the chance of placement (higher is less chance)
+		float min_size = 1;			  // scaling randomization range min
+		float max_size = 1;			  // scaling randomization range max
+		float min_y_offset = 0;		  // min randomized offset on Y axis
+		float max_y_offset = 0;		  // max randomized offset on Y axis
 	};
 
 	struct Modifier;
@@ -305,12 +305,72 @@ namespace wi::terrain
 		constexpr bool IsPhysicsEnabled() const { return _flags & PHYSICS; }
 		constexpr bool IsTessellationEnabled() const { return _flags & TESSELLATION; }
 
-		constexpr void SetCenterToCamEnabled(bool value) { if (value) { _flags |= CENTER_TO_CAM; } else { _flags &= ~CENTER_TO_CAM; } }
-		constexpr void SetRemovalEnabled(bool value) { if (value) { _flags |= REMOVAL; } else { _flags &= ~REMOVAL; } }
-		constexpr void SetGrassEnabled(bool value) { if (value) { _flags |= GRASS; } else { _flags &= ~GRASS; } }
-		constexpr void SetGenerationStarted(bool value) { if (value) { _flags |= GENERATION_STARTED; } else { _flags &= ~GENERATION_STARTED; } }
-		constexpr void SetPhysicsEnabled(bool value) { if (value) { _flags |= PHYSICS; } else { _flags &= ~PHYSICS; } }
-		constexpr void SetTessellationEnabled(bool value) { if (value) { _flags |= TESSELLATION; } else { _flags &= ~TESSELLATION; } }
+		constexpr void SetCenterToCamEnabled(bool value)
+		{
+			if (value)
+			{
+				_flags |= CENTER_TO_CAM;
+			}
+			else
+			{
+				_flags &= ~CENTER_TO_CAM;
+			}
+		}
+		constexpr void SetRemovalEnabled(bool value)
+		{
+			if (value)
+			{
+				_flags |= REMOVAL;
+			}
+			else
+			{
+				_flags &= ~REMOVAL;
+			}
+		}
+		constexpr void SetGrassEnabled(bool value)
+		{
+			if (value)
+			{
+				_flags |= GRASS;
+			}
+			else
+			{
+				_flags &= ~GRASS;
+			}
+		}
+		constexpr void SetGenerationStarted(bool value)
+		{
+			if (value)
+			{
+				_flags |= GENERATION_STARTED;
+			}
+			else
+			{
+				_flags &= ~GENERATION_STARTED;
+			}
+		}
+		constexpr void SetPhysicsEnabled(bool value)
+		{
+			if (value)
+			{
+				_flags |= PHYSICS;
+			}
+			else
+			{
+				_flags &= ~PHYSICS;
+			}
+		}
+		constexpr void SetTessellationEnabled(bool value)
+		{
+			if (value)
+			{
+				_flags |= TESSELLATION;
+			}
+			else
+			{
+				_flags &= ~TESSELLATION;
+			}
+		}
 
 		float lod_multiplier = 0.005f;
 		int generation = 12;

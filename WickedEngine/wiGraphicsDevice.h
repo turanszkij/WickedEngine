@@ -161,8 +161,8 @@ namespace wi::graphics
 
 		struct MemoryUsage
 		{
-			uint64_t budget = 0ull;		// total video memory available for use by the current application (in bytes)
-			uint64_t usage = 0ull;		// used video memory by the current application (in bytes)
+			uint64_t budget = 0ull; // total video memory available for use by the current application (in bytes)
+			uint64_t usage = 0ull;	// used video memory by the current application (in bytes)
 		};
 		// Returns video memory statistics for the current application
 		virtual MemoryUsage GetMemoryUsage() const = 0;
@@ -193,12 +193,12 @@ namespace wi::graphics
 		virtual void BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) = 0;
 		virtual void BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd) = 0;
 		virtual void BindResource(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) = 0;
-		virtual void BindResources(const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd) = 0;
+		virtual void BindResources(const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) = 0;
 		virtual void BindUAV(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) = 0;
-		virtual void BindUAVs(const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd) = 0;
+		virtual void BindUAVs(const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) = 0;
 		virtual void BindSampler(const Sampler* sampler, uint32_t slot, CommandList cmd) = 0;
 		virtual void BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset = 0ull) = 0;
-		virtual void BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint64_t* offsets, CommandList cmd) = 0;
+		virtual void BindVertexBuffers(const GPUBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint64_t* offsets, CommandList cmd) = 0;
 		virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, const IndexBufferFormat format, uint64_t offset, CommandList cmd) = 0;
 		virtual void BindStencilRef(uint32_t value, CommandList cmd) = 0;
 		virtual void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) = 0;
@@ -222,8 +222,8 @@ namespace wi::graphics
 		virtual void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) = 0;
 		virtual void CopyBuffer(const GPUBuffer* pDst, uint64_t dst_offset, const GPUBuffer* pSrc, uint64_t src_offset, uint64_t size, CommandList cmd) = 0;
 		virtual void CopyTexture(const Texture* dst, uint32_t dstX, uint32_t dstY, uint32_t dstZ, uint32_t dstMip, uint32_t dstSlice, const Texture* src, uint32_t srcMip, uint32_t srcSlice, CommandList cmd, const Box* srcbox = nullptr, ImageAspect dst_aspect = ImageAspect::COLOR, ImageAspect src_aspect = ImageAspect::COLOR) = 0;
-		virtual void QueryBegin(const GPUQueryHeap *heap, uint32_t index, CommandList cmd) = 0;
-		virtual void QueryEnd(const GPUQueryHeap *heap, uint32_t index, CommandList cmd) = 0;
+		virtual void QueryBegin(const GPUQueryHeap* heap, uint32_t index, CommandList cmd) = 0;
+		virtual void QueryEnd(const GPUQueryHeap* heap, uint32_t index, CommandList cmd) = 0;
 		virtual void QueryResolve(const GPUQueryHeap* heap, uint32_t index, uint32_t count, const GPUBuffer* dest, uint64_t dest_offset, CommandList cmd) = 0;
 		virtual void QueryReset(const GPUQueryHeap* heap, uint32_t index, uint32_t count, CommandList cmd) {}
 		virtual void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) = 0;
@@ -250,7 +250,8 @@ namespace wi::graphics
 			{
 				return CreateBuffer2(desc, nullptr, buffer, alias, alias_offset);
 			}
-			return CreateBuffer2(desc, [&](void* dest) { std::memcpy(dest, initial_data, desc->size); }, buffer, alias, alias_offset);
+			return CreateBuffer2(
+				desc, [&](void* dest) { std::memcpy(dest, initial_data, desc->size); }, buffer, alias, alias_offset);
 		}
 
 		void Barrier(const GPUBarrier& barrier, CommandList cmd)
@@ -272,15 +273,15 @@ namespace wi::graphics
 
 		struct GPUAllocation
 		{
-			void* data = nullptr;	// application can write to this. Reads might be not supported or slow. The offset is already applied
-			GPUBuffer buffer;		// application can bind it to the GPU
-			uint64_t offset = 0;	// allocation's offset from the GPUbuffer's beginning
+			void* data = nullptr; // application can write to this. Reads might be not supported or slow. The offset is already applied
+			GPUBuffer buffer;	  // application can bind it to the GPU
+			uint64_t offset = 0;  // allocation's offset from the GPUbuffer's beginning
 
 			// Returns true if the allocation was successful
 			inline bool IsValid() const { return data != nullptr && buffer.IsValid(); }
 		};
 
-		// Allocates temporary memory that the CPU can write and GPU can read. 
+		// Allocates temporary memory that the CPU can write and GPU can read.
 		//	It is only alive for one frame and automatically invalidated after that.
 		GPUAllocation AllocateGPU(uint64_t dataSize, CommandList cmd)
 		{

@@ -33,7 +33,6 @@ void MaterialWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete MaterialComponent");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -303,7 +302,6 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	shadingRateComboBox.SetEnabled(false);
 	shadingRateComboBox.SetMaxVisibleItemCount(4);
 	AddWidget(&shadingRateComboBox);
-
 
 
 
@@ -666,7 +664,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	AddWidget(&blendTerrainSlider);
 
 
-	// 
+	//
 	hei = 20;
 	step = hei + 2;
 	x = 10;
@@ -803,7 +801,6 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		}
 	}
 	textureSlotComboBox.OnSelect([this](wi::gui::EventArgs args) {
-
 		std::string tooltiptext;
 
 		switch (args.iValue)
@@ -875,7 +872,6 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		}
 
 		textureSlotButton.SetTooltip(tooltiptext);
-
 	});
 	textureSlotComboBox.SetSelected(0);
 	textureSlotComboBox.SetTooltip("Choose the texture slot to modify.");
@@ -925,7 +921,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 				});
 			});
 		}
-		});
+	});
 	AddWidget(&textureSlotButton);
 
 	y += textureSlotButton.GetScale().y - step + 2;
@@ -1044,7 +1040,7 @@ void MaterialWindow::SetEntity(Entity entity)
 
 		colorComboBox.SetEnabled(true);
 		colorPicker.SetEnabled(true);
-		
+
 		switch (colorComboBox.GetSelected())
 		{
 		default:
@@ -1119,7 +1115,6 @@ void MaterialWindow::SetEntity(Entity entity)
 		textureSlotLabel.SetText("");
 		textureSlotUvsetField.SetText("");
 	}
-
 }
 
 
@@ -1204,5 +1199,4 @@ void MaterialWindow::ResizeLayout()
 	add_fullwidth(textureSlotLabel);
 	textureSlotLabel.SetSize(XMFLOAT2(textureSlotLabel.GetSize().x - textureSlotLabel.GetSize().y - 2, textureSlotLabel.GetSize().y));
 	textureSlotUvsetField.SetPos(XMFLOAT2(textureSlotLabel.GetPos().x + textureSlotLabel.GetSize().x + 2, textureSlotLabel.GetPos().y));
-
 }

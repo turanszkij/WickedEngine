@@ -14,7 +14,9 @@ namespace wi::lua
 		static Luna<Canvas_BindLua>::FunctionType methods[];
 		static Luna<Canvas_BindLua>::PropertyType properties[];
 
-		Canvas_BindLua(const wi::Canvas& canvas) : canvas(canvas) {}
+		Canvas_BindLua(const wi::Canvas& canvas)
+			: canvas(canvas)
+		{}
 		Canvas_BindLua(lua_State* L) {}
 
 		int GetDPI(lua_State* L);

@@ -14,7 +14,9 @@ namespace wi::scene
 {
 	struct DEPRECATED_PreviousFrameTransformComponent
 	{
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri) { /*this never serialized any data*/ }
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri)
+		{ /*this never serialized any data*/
+		}
 	};
 
 	void NameComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
@@ -454,11 +456,11 @@ namespace wi::scene
 
 			if (archive.GetVersion() >= 53)
 			{
-			    size_t targetCount;
-			    archive >> targetCount;
-			    morph_targets.resize(targetCount);
-			    for (size_t i = 0; i < targetCount; ++i)
-			    {
+				size_t targetCount;
+				archive >> targetCount;
+				morph_targets.resize(targetCount);
+				for (size_t i = 0; i < targetCount; ++i)
+				{
 					archive >> morph_targets[i].vertex_positions;
 					archive >> morph_targets[i].vertex_normals;
 					archive >> morph_targets[i].weight;
@@ -470,7 +472,7 @@ namespace wi::scene
 					{
 						archive >> morph_targets[i].sparse_indices_normals;
 					}
-			    }
+				}
 			}
 
 			if (archive.GetVersion() >= 76)
@@ -544,9 +546,9 @@ namespace wi::scene
 
 			if (archive.GetVersion() >= 53)
 			{
-			    archive << morph_targets.size();
-			    for (size_t i = 0; i < morph_targets.size(); ++i)
-			    {
+				archive << morph_targets.size();
+				for (size_t i = 0; i < morph_targets.size(); ++i)
+				{
 					archive << morph_targets[i].vertex_positions;
 					archive << morph_targets[i].vertex_normals;
 					archive << morph_targets[i].weight;
@@ -558,7 +560,7 @@ namespace wi::scene
 					{
 						archive << morph_targets[i].sparse_indices_normals;
 					}
-			    }
+				}
 			}
 
 			if (archive.GetVersion() >= 76)
@@ -571,7 +573,6 @@ namespace wi::scene
 				archive << vertex_boneindices2;
 				archive << vertex_boneweights2;
 			}
-
 		}
 	}
 	void ImpostorComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
@@ -1215,7 +1216,6 @@ namespace wi::scene
 					archive >> retargets[i].srcRelativeParentMatrix;
 				}
 			}
-
 		}
 		else
 		{
@@ -1973,7 +1973,7 @@ namespace wi::scene
 
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				CreateFromFile(dir + filename);
-				});
+			});
 		}
 		else
 		{
@@ -2259,7 +2259,7 @@ namespace wi::scene
 		EntitySerializer seri;
 		seri.ctx.priority = wi::jobsystem::Priority::Low; // serialization tasks will be low priority to not block rendering if scene loading is asynchronous
 
-		if(archive.GetVersion() >= 84)
+		if (archive.GetVersion() >= 84)
 		{
 			// New scene serialization path with component library:
 			componentLibrary.Serialize(archive, seri);
@@ -2402,7 +2402,7 @@ namespace wi::scene
 
 			// color texture:
 			archive >> data;
-			if(!data.empty())
+			if (!data.empty())
 			{
 				TextureDesc desc;
 				desc.bind_flags = BindFlag::SHADER_RESOURCE;
@@ -2428,7 +2428,7 @@ namespace wi::scene
 
 			// depth texture:
 			archive >> data;
-			if(!data.empty())
+			if (!data.empty())
 			{
 				TextureDesc desc;
 				desc.width = DDGI_DEPTH_TEXELS * grid_dimensions.x * grid_dimensions.y;
@@ -2446,7 +2446,7 @@ namespace wi::scene
 
 			// offset texture:
 			archive >> data;
-			if(!data.empty())
+			if (!data.empty())
 			{
 				TextureDesc desc;
 				desc.type = TextureDesc::Type::TEXTURE_3D;
@@ -2516,8 +2516,7 @@ namespace wi::scene
 		wi::Archive& archive,
 		EntitySerializer& seri,
 		Entity entity,
-		Scene::EntitySerializeFlags flags
-	)
+		Scene::EntitySerializeFlags flags)
 	{
 		SerializeEntity(archive, entity, seri);
 
@@ -2526,7 +2525,7 @@ namespace wi::scene
 		{
 			seri.allow_remap = false;
 		}
-		
+
 		if (archive.GetVersion() >= 84)
 		{
 			// New entity serialization path with component library:
@@ -2587,7 +2586,6 @@ namespace wi::scene
 					}
 				}
 			}
-
 		}
 		else
 		{
@@ -2622,7 +2620,7 @@ namespace wi::scene
 						component.Serialize(archive, seri);
 					}
 				}
-				if(archive.GetVersion() < 75)
+				if (archive.GetVersion() < 75)
 				{
 					bool component_exists;
 					archive >> component_exists;
@@ -3143,7 +3141,7 @@ namespace wi::scene
 						archive << false;
 					}
 				}
-				if(archive.GetVersion() >= 30)
+				if (archive.GetVersion() >= 30)
 				{
 					auto component = scene.sounds.GetComponent(entity);
 					if (component != nullptr)
@@ -3232,8 +3230,7 @@ namespace wi::scene
 		wi::Archive& archive,
 		EntitySerializer& seri,
 		Entity entity,
-		EntitySerializeFlags flags
-	)
+		EntitySerializeFlags flags)
 	{
 		// Manage jump position to jump to resource serialization WRITE area:
 		size_t jump_before = 0;
@@ -3269,8 +3266,7 @@ namespace wi::scene
 			archive,
 			seri,
 			entity,
-			flags
-		);
+			flags);
 
 		if (archive.GetVersion() >= 90)
 		{

@@ -310,16 +310,11 @@ TOUCHSTATE_PRESSED			= 0
 TOUCHSTATE_RELEASED			= 1
 TOUCHSTATE_MOVED			= 2
 )");
-
 		}
 
 		Touch_BindLua::Bind();
 		ControllerFeedback_BindLua::Bind();
 	}
-
-
-
-
 
 
 
@@ -352,10 +347,6 @@ TOUCHSTATE_MOVED			= 2
 			Luna<Touch_BindLua>::Register(wi::lua::GetLuaState());
 		}
 	}
-
-
-
-
 
 
 

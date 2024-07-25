@@ -17,21 +17,19 @@ namespace wi::arguments
 
 		std::istringstream iss(to);
 
-		params =
-		{
-			std::istream_iterator<std::string>{iss},
-			std::istream_iterator<std::string>{}
+		params = {
+			std::istream_iterator<std::string> { iss },
+			std::istream_iterator<std::string> {}
 		};
-
 	}
 
-	void Parse(int argc, char *argv[])
-    {
+	void Parse(int argc, char* argv[])
+	{
 		for (int i = 1; i < argc; i++)
 		{
 			params.insert(std::string(argv[i]));
 		}
-    }
+	}
 
 	bool HasArgument(const std::string& value)
 	{

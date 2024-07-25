@@ -33,7 +33,7 @@ namespace wi::profiler
 	range_id gpu_frame;
 	GPUQueryHeap queryHeap;
 	GPUBuffer queryResultBuffer[GraphicsDevice::GetBufferCount()];
-	std::atomic<uint32_t> nextQuery{ 0 };
+	std::atomic<uint32_t> nextQuery { 0 };
 	uint32_t queryheap_idx = 0;
 	bool drawn_this_frame = false;
 	wi::Color background_color = wi::Color(20, 20, 20, 230);
@@ -154,8 +154,7 @@ namespace wi::profiler
 			&queryHeap,
 			0,
 			queryHeap.desc.query_count,
-			cmd
-		);
+			cmd);
 
 		gpu_frame = BeginRangeGPU("GPU Frame", cmd);
 		drawn_this_frame = false;
@@ -180,8 +179,7 @@ namespace wi::profiler
 			nextQuery.load(),
 			&queryResultBuffer[queryheap_idx],
 			0ull,
-			cmd
-		);
+			cmd);
 
 		nextQuery.store(0);
 	}
@@ -318,8 +316,7 @@ namespace wi::profiler
 		float x,
 		float y,
 		CommandList cmd,
-		ColorSpace colorspace
-	)
+		ColorSpace colorspace)
 	{
 		if (!ENABLED || !ENABLED_REQUEST || !initialized || drawn_this_frame)
 			return;
@@ -361,9 +358,10 @@ namespace wi::profiler
 		{
 			if (x.second.num_hits > 1)
 			{
-				ss << "\t" << x.first << " (" << x.second.num_hits << "x)" << ": " << std::fixed << x.second.total_time << " ms" << std::endl;
+				ss << "\t" << x.first << " (" << x.second.num_hits << "x)"
+				   << ": " << std::fixed << x.second.total_time << " ms" << std::endl;
 			}
-			else if(x.second.num_hits == 1)
+			else if (x.second.num_hits == 1)
 			{
 				ss << "\t" << x.first << ": " << std::fixed << x.second.total_time << " ms" << std::endl;
 			}
@@ -378,7 +376,8 @@ namespace wi::profiler
 		{
 			if (x.second.num_hits > 1)
 			{
-				ss << "\t" << x.first << " (" << x.second.num_hits << "x)" << ": " << std::fixed << x.second.total_time << " ms" << std::endl;
+				ss << "\t" << x.first << " (" << x.second.num_hits << "x)"
+				   << ": " << std::fixed << x.second.total_time << " ms" << std::endl;
 			}
 			else if (x.second.num_hits == 1)
 			{
@@ -439,7 +438,7 @@ namespace wi::profiler
 			cpu_graph[0] = ranges[cpu_frame].time;
 			gpu_graph[0] = ranges[gpu_frame].time;
 			cpu_memory_graph[0] = float(double(cpu_memory_usage.process_physical) / (1024.0 * 1024.0 * 1024.0)); // Gigabytes
-			gpu_memory_graph[0] = float(double(gpu_memory_usage.usage) / (1024.0 * 1024.0 * 1024.0)); // Gigabytes
+			gpu_memory_graph[0] = float(double(gpu_memory_usage.usage) / (1024.0 * 1024.0 * 1024.0));			 // Gigabytes
 			graph_max = std::max(graph_max, cpu_graph[0]);
 			graph_max = std::max(graph_max, gpu_graph[0]);
 			graph_max_gpu_memory = std::max(graph_max_gpu_memory, gpu_memory_graph[0]);
@@ -453,37 +452,37 @@ namespace wi::profiler
 			};
 			const Vertex graph_info[] = {
 				// axes:
-				{XMFLOAT4(0, 0, 0, 1), text_color},
-				{XMFLOAT4(0, 1, 0, 1), text_color},
-				{XMFLOAT4(0, 1, 0, 1), text_color},
-				{XMFLOAT4(1, 1, 0, 1), text_color},
+				{ XMFLOAT4(0, 0, 0, 1), text_color },
+				{ XMFLOAT4(0, 1, 0, 1), text_color },
+				{ XMFLOAT4(0, 1, 0, 1), text_color },
+				{ XMFLOAT4(1, 1, 0, 1), text_color },
 
 				// markers:
-				{XMFLOAT4(0, 0, 0, 1), text_color}, // graph_max
-				{XMFLOAT4(-10.0f / graph_size.x, 0, 0, 1), text_color}, // graph_max
-				{XMFLOAT4(0, 1 - 16.6f / graph_max, 0, 1), text_color}, // 16.6f
-				{XMFLOAT4(-10.0f / graph_size.x, 1 - 16.6f / graph_max, 0, 1), text_color}, // 16.6f
-				{XMFLOAT4(60.0f / float(graph_vertex_count),1,0,1), text_color}, // 60 frames
-				{XMFLOAT4(60.0f / float(graph_vertex_count),1 + 10.0f / graph_size.x,0,1), text_color}, // 60 frames
-				{XMFLOAT4(1,1,0,1), text_color}, // 0 frames
-				{XMFLOAT4(1,1 + 10.0f / graph_size.x,0,1), text_color}, // 0 frames
+				{ XMFLOAT4(0, 0, 0, 1), text_color },														 // graph_max
+				{ XMFLOAT4(-10.0f / graph_size.x, 0, 0, 1), text_color },									 // graph_max
+				{ XMFLOAT4(0, 1 - 16.6f / graph_max, 0, 1), text_color },									 // 16.6f
+				{ XMFLOAT4(-10.0f / graph_size.x, 1 - 16.6f / graph_max, 0, 1), text_color },				 // 16.6f
+				{ XMFLOAT4(60.0f / float(graph_vertex_count), 1, 0, 1), text_color },						 // 60 frames
+				{ XMFLOAT4(60.0f / float(graph_vertex_count), 1 + 10.0f / graph_size.x, 0, 1), text_color }, // 60 frames
+				{ XMFLOAT4(1, 1, 0, 1), text_color },														 // 0 frames
+				{ XMFLOAT4(1, 1 + 10.0f / graph_size.x, 0, 1), text_color },								 // 0 frames
 			};
 			const Vertex graph_memory_info[] = {
 				// axes:
-				{XMFLOAT4(0, 0, 0, 1), text_color},
-				{XMFLOAT4(0, 1, 0, 1), text_color},
-				{XMFLOAT4(0, 1, 0, 1), text_color},
-				{XMFLOAT4(1, 1, 0, 1), text_color},
+				{ XMFLOAT4(0, 0, 0, 1), text_color },
+				{ XMFLOAT4(0, 1, 0, 1), text_color },
+				{ XMFLOAT4(0, 1, 0, 1), text_color },
+				{ XMFLOAT4(1, 1, 0, 1), text_color },
 
 				// markers:
-				{XMFLOAT4(0, 0, 0, 1), text_color}, // graph_max_memory
-				{XMFLOAT4(-10.0f / graph_size.x, 0, 0, 1), text_color}, // graph_max_memory
-				{XMFLOAT4(0, 0.5f, 0, 1), text_color}, // half_memory_budget
-				{XMFLOAT4(-10.0f / graph_size.x, 0.5f, 0, 1), text_color}, // half_memory_budget
-				{XMFLOAT4(60.0f / float(graph_vertex_count),1,0,1), text_color}, // 60 frames
-				{XMFLOAT4(60.0f / float(graph_vertex_count),1 + 10.0f / graph_size.x,0,1), text_color}, // 60 frames
-				{XMFLOAT4(1,1,0,1), text_color}, // 0 frames
-				{XMFLOAT4(1,1 + 10.0f / graph_size.x,0,1), text_color}, // 0 frames
+				{ XMFLOAT4(0, 0, 0, 1), text_color },														 // graph_max_memory
+				{ XMFLOAT4(-10.0f / graph_size.x, 0, 0, 1), text_color },									 // graph_max_memory
+				{ XMFLOAT4(0, 0.5f, 0, 1), text_color },													 // half_memory_budget
+				{ XMFLOAT4(-10.0f / graph_size.x, 0.5f, 0, 1), text_color },								 // half_memory_budget
+				{ XMFLOAT4(60.0f / float(graph_vertex_count), 1, 0, 1), text_color },						 // 60 frames
+				{ XMFLOAT4(60.0f / float(graph_vertex_count), 1 + 10.0f / graph_size.x, 0, 1), text_color }, // 60 frames
+				{ XMFLOAT4(1, 1, 0, 1), text_color },														 // 0 frames
+				{ XMFLOAT4(1, 1 + 10.0f / graph_size.x, 0, 1), text_color },								 // 0 frames
 			};
 
 			GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(sizeof(Vertex) * graph_vertex_count * 4 + sizeof(graph_info) + sizeof(graph_memory_info), cmd);
@@ -516,9 +515,8 @@ namespace wi::profiler
 			cb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 			XMStoreFloat4x4(&cb.g_xTransform,
 				XMMatrixScaling(graph_size.x - graph_left_offset, graph_size.y, 1) *
-				XMMatrixTranslation(x + graph_left_offset, y, 0) *
-				canvas.GetProjection()
-			);
+					XMMatrixTranslation(x + graph_left_offset, y, 0) *
+					canvas.GetProjection());
 			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			const GPUBuffer* buffers[] = {
@@ -542,9 +540,8 @@ namespace wi::profiler
 			const float memory_graph_y = y + graph_size.y + graph_padding_y;
 			XMStoreFloat4x4(&cb.g_xTransform,
 				XMMatrixScaling(graph_size.x - graph_left_offset, graph_size.y, 1) *
-				XMMatrixTranslation(x + graph_left_offset, memory_graph_y, 0) *
-				canvas.GetProjection()
-			);
+					XMMatrixTranslation(x + graph_left_offset, memory_graph_y, 0) *
+					canvas.GetProjection());
 			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MiscCB), cmd);
 			device->BindPipelineState(&pso_linestrip, cmd);
 			device->Draw(graph_vertex_count, graph_vertex_count * 2, cmd);

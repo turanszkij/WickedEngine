@@ -75,13 +75,13 @@ namespace wi
 
 		// This is where the critical initializations happen (before any rendering or anything else)
 		virtual void Initialize();
-		// This is where application-wide updates get executed once per frame. 
+		// This is where application-wide updates get executed once per frame.
 		//  RenderPath::Update is also called from here for the active component
 		virtual void Update(float dt);
-		// This is where application-wide updates get executed in a fixed timestep based manner. 
+		// This is where application-wide updates get executed in a fixed timestep based manner.
 		//  RenderPath::FixedUpdate is also called from here for the active component
 		virtual void FixedUpdate();
-		// This is where application-wide rendering happens to offscreen buffers. 
+		// This is where application-wide rendering happens to offscreen buffers.
 		//  RenderPath::Render is also called from here for the active component
 		virtual void Render();
 		// This is where the application will render to the screen (backbuffer). It must render to the provided command list.
@@ -124,7 +124,6 @@ namespace wi
 		InfoDisplayer infoDisplay;
 
 		bool IsFaded() const { return fadeManager.IsFaded(); }
-
 	};
 
 }

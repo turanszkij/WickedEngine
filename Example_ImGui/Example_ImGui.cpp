@@ -21,7 +21,7 @@ Shader imguiVS;
 Shader imguiPS;
 Texture fontTexture;
 Sampler sampler;
-InputLayout	imguiInputLayout;
+InputLayout imguiInputLayout;
 PipelineState imguiPSO;
 
 struct ImGui_Impl_Data
@@ -70,8 +70,7 @@ bool ImGui_Impl_CreateDeviceObjects()
 	// Store our identifier
 	io.Fonts->SetTexID((ImTextureID)&fontTexture);
 
-	imguiInputLayout.elements =
-	{
+	imguiInputLayout.elements = {
 		{ "POSITION", 0, Format::R32G32_FLOAT, 0, (uint32_t)IM_OFFSETOF(ImDrawVert, pos), InputClassification::PER_VERTEX_DATA },
 		{ "TEXCOORD", 0, Format::R32G32_FLOAT, 0, (uint32_t)IM_OFFSETOF(ImDrawVert, uv), InputClassification::PER_VERTEX_DATA },
 		{ "COLOR", 0, Format::R8G8B8A8_UNORM, 0, (uint32_t)IM_OFFSETOF(ImDrawVert, col), InputClassification::PER_VERTEX_DATA },
@@ -119,7 +118,8 @@ void Example_ImGui::Initialize()
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	ImGuiIO& io = ImGui::GetIO();
+	(void)io;
 	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
 	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
@@ -139,7 +139,7 @@ void Example_ImGui::Initialize()
 	ImGui_Impl_Data* bd = IM_NEW(ImGui_Impl_Data)();
 	io.BackendRendererUserData = (void*)bd;
 	io.BackendRendererName = "Wicked";
-	io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+	io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset; // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
 	Application::Initialize();
 
@@ -200,7 +200,7 @@ void Example_ImGui::Compose(wi::graphics::CommandList cmd)
 	// Setup orthographic projection matrix into our constant buffer
 	struct ImGuiConstants
 	{
-		float   mvp[4][4];
+		float mvp[4][4];
 	};
 
 	{
@@ -213,12 +213,11 @@ void Example_ImGui::Compose(wi::graphics::CommandList cmd)
 
 		ImGuiConstants constants;
 
-		float mvp[4][4] =
-		{
-			{ 2.0f / (R - L),   0.0f,           0.0f,       0.0f },
-			{ 0.0f,         2.0f / (T - B),     0.0f,       0.0f },
-			{ 0.0f,         0.0f,           0.5f,       0.0f },
-			{ (R + L) / (L - R),  (T + B) / (B - T),    0.5f,       1.0f },
+		float mvp[4][4] = {
+			{ 2.0f / (R - L), 0.0f, 0.0f, 0.0f },
+			{ 0.0f, 2.0f / (T - B), 0.0f, 0.0f },
+			{ 0.0f, 0.0f, 0.5f, 0.0f },
+			{ (R + L) / (L - R), (T + B) / (B - T), 0.5f, 1.0f },
 		};
 		memcpy(&constants.mvp, mvp, sizeof(mvp));
 
@@ -248,7 +247,7 @@ void Example_ImGui::Compose(wi::graphics::CommandList cmd)
 	device->BindSampler(&sampler, 0, cmd);
 
 	// Will project scissor/clipping rectangles into framebuffer space
-	ImVec2 clip_off = drawData->DisplayPos;         // (0,0) unless using multi-viewports
+	ImVec2 clip_off = drawData->DisplayPos;			// (0,0) unless using multi-viewports
 	ImVec2 clip_scale = drawData->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
 	//passEncoder->SetSampler(0, Sampler::LinearWrap());
@@ -341,7 +340,8 @@ void Example_ImGuiRenderer::Load()
 	wi::scene::GetScene().weather = WeatherComponent();
 	this->ClearSprites();
 	this->ClearFonts();
-	if (wi::lua::GetLuaState() != nullptr) {
+	if (wi::lua::GetLuaState() != nullptr)
+	{
 		wi::lua::KillProcesses();
 	}
 
@@ -388,16 +388,16 @@ void Example_ImGuiRenderer::Update(float dt)
 		static float f = 0.0f;
 		static int counter = 0;
 
-		ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+		ImGui::Begin("Hello, world!"); // Create a window called "Hello, world!" and append into it.
 
-		ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-		ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+		ImGui::Text("This is some useful text.");		   // Display some text (you can use a format strings too)
+		ImGui::Checkbox("Demo Window", &show_demo_window); // Edit bools storing our window open/close state
 		ImGui::Checkbox("Another Window", &show_another_window);
 
-		ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+		ImGui::SliderFloat("float", &f, 0.0f, 1.0f);			// Edit 1 float using a slider from 0.0f to 1.0f
 		ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
 
-		if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+		if (ImGui::Button("Button")) // Buttons return true when clicked (most widgets return true when edited/activated)
 			counter++;
 		ImGui::SameLine();
 		ImGui::Text("counter = %d", counter);
@@ -409,7 +409,7 @@ void Example_ImGuiRenderer::Update(float dt)
 	// 3. Show another simple window.
 	if (show_another_window)
 	{
-		ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+		ImGui::Begin("Another Window", &show_another_window); // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
 		ImGui::Text("Hello from another window!");
 		if (ImGui::Button("Close Me"))
 			show_another_window = false;

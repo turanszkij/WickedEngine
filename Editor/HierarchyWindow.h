@@ -5,6 +5,7 @@ class HierarchyWindow : public wi::gui::Window
 {
 private:
 	wi::unordered_set<wi::ecs::Entity> entities;
+
 public:
 	void Create(EditorComponent* editor);
 
@@ -16,4 +17,3 @@ public:
 
 	void ResizeLayout() override;
 };
-

@@ -570,18 +570,17 @@ namespace wi::lua
 
 
 
-
 	int VectorProperty::Get(lua_State* L)
 	{
-		if(data_f2)
+		if (data_f2)
 		{
 			Luna<Vector_BindLua>::push(L, XMLoadFloat2(data_f2));
 		}
-		if(data_f3)
+		if (data_f3)
 		{
 			Luna<Vector_BindLua>::push(L, XMLoadFloat3(data_f3));
 		}
-		if(data_f4)
+		if (data_f4)
 		{
 			Luna<Vector_BindLua>::push(L, XMLoadFloat4(data_f4));
 		}
@@ -590,25 +589,23 @@ namespace wi::lua
 	int VectorProperty::Set(lua_State* L)
 	{
 		Vector_BindLua* get = Luna<Vector_BindLua>::lightcheck(L, 1);
-		if(get)
+		if (get)
 		{
-			if(data_f2)
+			if (data_f2)
 			{
 				XMStoreFloat2(data_f2, XMLoadFloat4(&get->data));
 			}
-			if(data_f3)
+			if (data_f3)
 			{
 				XMStoreFloat3(data_f3, XMLoadFloat4(&get->data));
 			}
-			if(data_f4)
+			if (data_f4)
 			{
 				*data_f4 = get->data;
 			}
 		}
 		return 0;
 	}
-
-
 
 
 
@@ -677,7 +674,6 @@ namespace wi::lua
 			data.m[i][2] = x;
 			data.m[i][3] = x;
 		}
-
 	}
 
 	int Matrix_BindLua::GetRow(lua_State* L)
@@ -979,20 +975,20 @@ namespace wi::lua
 
 
 
-	int MatrixProperty::Get(lua_State *L)
+	int MatrixProperty::Get(lua_State* L)
 	{
-		if(data_f4x4)
+		if (data_f4x4)
 		{
 			Luna<Matrix_BindLua>::push(L, *data_f4x4);
 		}
 		return 1;
 	}
-	int MatrixProperty::Set(lua_State *L)
+	int MatrixProperty::Set(lua_State* L)
 	{
 		Matrix_BindLua* get = Luna<Matrix_BindLua>::check(L, 1);
-		if(get)
+		if (get)
 		{
-			if(data_f4x4)
+			if (data_f4x4)
 			{
 				*data_f4x4 = get->data;
 			}

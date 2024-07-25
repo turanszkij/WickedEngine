@@ -28,7 +28,7 @@ namespace wi
 			uint32_t slice_pitch = 0;
 		};
 		StreamingSubresourceData streaming_data[16] = {};
-		uint32_t mip_count = 0; // mip count of full resource
+		uint32_t mip_count = 0;			  // mip count of full resource
 		float min_lod_clamp_absolute = 0; // relative to mip_count of full resource
 	};
 	//static constexpr size_t streaming_texture_min_size = 4096; // 4KB is the minimum texture memory alignment
@@ -58,7 +58,7 @@ namespace wi
 
 		// Streaming parameters:
 		StreamingTexture streaming_texture;
-		std::atomic<uint32_t> streaming_resolution{ 0 };
+		std::atomic<uint32_t> streaming_resolution { 0 };
 		uint32_t streaming_unload_delay = 0;
 	};
 
@@ -205,21 +205,21 @@ namespace wi
 			FONTSTYLE,
 		};
 		static const wi::unordered_map<std::string, DataType> types = {
-			{"BASIS", DataType::IMAGE},
-			{"KTX2", DataType::IMAGE},
-			{"JPG", DataType::IMAGE},
-			{"JPEG", DataType::IMAGE},
-			{"PNG", DataType::IMAGE},
-			{"BMP", DataType::IMAGE},
-			{"DDS", DataType::IMAGE},
-			{"TGA", DataType::IMAGE},
-			{"QOI", DataType::IMAGE},
-			{"HDR", DataType::IMAGE},
-			{"WAV", DataType::SOUND},
-			{"OGG", DataType::SOUND},
-			{"LUA", DataType::SCRIPT},
-			{"MP4", DataType::VIDEO},
-			{"TTF", DataType::FONTSTYLE},
+			{ "BASIS", DataType::IMAGE },
+			{ "KTX2", DataType::IMAGE },
+			{ "JPG", DataType::IMAGE },
+			{ "JPEG", DataType::IMAGE },
+			{ "PNG", DataType::IMAGE },
+			{ "BMP", DataType::IMAGE },
+			{ "DDS", DataType::IMAGE },
+			{ "TGA", DataType::IMAGE },
+			{ "QOI", DataType::IMAGE },
+			{ "HDR", DataType::IMAGE },
+			{ "WAV", DataType::SOUND },
+			{ "OGG", DataType::SOUND },
+			{ "LUA", DataType::SCRIPT },
+			{ "MP4", DataType::VIDEO },
+			{ "TTF", DataType::FONTSTYLE },
 		};
 		wi::vector<std::string> GetSupportedImageExtensions()
 		{
@@ -287,8 +287,7 @@ namespace wi
 			Flags flags,
 			const uint8_t* filedata,
 			size_t filesize,
-			ResourceInternal* resource
-		)
+			ResourceInternal* resource)
 		{
 			std::string ext = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(name));
 			DataType type;
@@ -380,8 +379,8 @@ namespace wi
 										if (transcoder.get_image_level_info(level_info, mip, layer, face))
 										{
 											uint32_t pixel_or_block_count = (import_compressed
-												? level_info.m_total_blocks
-												: (level_info.m_orig_width * level_info.m_orig_height));
+													? level_info.m_total_blocks
+													: (level_info.m_orig_width * level_info.m_orig_height));
 											transcoded_data_size += bytes_per_block * pixel_or_block_count;
 										}
 									}
@@ -402,17 +401,16 @@ namespace wi
 										{
 											void* data_ptr = transcoded_data.data() + transcoded_data_offset;
 											uint32_t pixel_or_block_count = (import_compressed
-												? level_info.m_total_blocks
-												: (level_info.m_orig_width * level_info.m_orig_height));
+													? level_info.m_total_blocks
+													: (level_info.m_orig_width * level_info.m_orig_height));
 											transcoded_data_offset += bytes_per_block * pixel_or_block_count;
 											if (transcoder.transcode_image_level(
-												mip,
-												layer,
-												face,
-												data_ptr,
-												pixel_or_block_count,
-												fmt
-											))
+													mip,
+													layer,
+													face,
+													data_ptr,
+													pixel_or_block_count,
+													fmt))
 											{
 												SubresourceData subresourceData;
 												subresourceData.data_ptr = data_ptr;
@@ -448,8 +446,7 @@ namespace wi
 										SubresourceType::SRV,
 										0, -1,
 										0, -1,
-										&srgb_format
-									);
+										&srgb_format);
 								}
 							}
 						}
@@ -518,8 +515,8 @@ namespace wi
 										if (transcoder.get_image_level_info(filedata, (uint32_t)filesize, level_info, image_index, mip))
 										{
 											uint32_t pixel_or_block_count = (import_compressed
-												? level_info.m_total_blocks
-												: (level_info.m_orig_width * level_info.m_orig_height));
+													? level_info.m_total_blocks
+													: (level_info.m_orig_width * level_info.m_orig_height));
 											transcoded_data_size += bytes_per_block * pixel_or_block_count;
 										}
 									}
@@ -534,18 +531,17 @@ namespace wi
 										{
 											void* data_ptr = transcoded_data.data() + transcoded_data_offset;
 											uint32_t pixel_or_block_count = (import_compressed
-												? level_info.m_total_blocks
-												: (level_info.m_orig_width * level_info.m_orig_height));
+													? level_info.m_total_blocks
+													: (level_info.m_orig_width * level_info.m_orig_height));
 											transcoded_data_offset += pixel_or_block_count * bytes_per_block;
 											if (transcoder.transcode_image_level(
-												filedata,
-												(uint32_t)filesize,
-												image_index,
-												mip,
-												data_ptr,
-												pixel_or_block_count,
-												fmt
-											))
+													filedata,
+													(uint32_t)filesize,
+													image_index,
+													mip,
+													data_ptr,
+													pixel_or_block_count,
+													fmt))
 											{
 												SubresourceData subresourceData;
 												subresourceData.data_ptr = data_ptr;
@@ -579,8 +575,7 @@ namespace wi
 												SubresourceType::SRV,
 												0, -1,
 												0, -1,
-												&srgb_format
-											);
+												&srgb_format);
 										}
 									}
 								}
@@ -619,71 +614,197 @@ namespace wi
 
 						switch (ddsFormat)
 						{
-						case dds::DXGI_FORMAT_R32G32B32A32_FLOAT: desc.format = Format::R32G32B32A32_FLOAT; break;
-						case dds::DXGI_FORMAT_R32G32B32A32_UINT: desc.format = Format::R32G32B32A32_UINT; break;
-						case dds::DXGI_FORMAT_R32G32B32A32_SINT: desc.format = Format::R32G32B32A32_SINT; break;
-						case dds::DXGI_FORMAT_R32G32B32_FLOAT: desc.format = Format::R32G32B32_FLOAT; break;
-						case dds::DXGI_FORMAT_R32G32B32_UINT: desc.format = Format::R32G32B32_UINT; break;
-						case dds::DXGI_FORMAT_R32G32B32_SINT: desc.format = Format::R32G32B32_SINT; break;
-						case dds::DXGI_FORMAT_R16G16B16A16_FLOAT: desc.format = Format::R16G16B16A16_FLOAT; break;
-						case dds::DXGI_FORMAT_R16G16B16A16_UNORM: desc.format = Format::R16G16B16A16_UNORM; break;
-						case dds::DXGI_FORMAT_R16G16B16A16_UINT: desc.format = Format::R16G16B16A16_UINT; break;
-						case dds::DXGI_FORMAT_R16G16B16A16_SNORM: desc.format = Format::R16G16B16A16_SNORM; break;
-						case dds::DXGI_FORMAT_R16G16B16A16_SINT: desc.format = Format::R16G16B16A16_SINT; break;
-						case dds::DXGI_FORMAT_R32G32_FLOAT: desc.format = Format::R32G32_FLOAT; break;
-						case dds::DXGI_FORMAT_R32G32_UINT: desc.format = Format::R32G32_UINT; break;
-						case dds::DXGI_FORMAT_R32G32_SINT: desc.format = Format::R32G32_SINT; break;
-						case dds::DXGI_FORMAT_R10G10B10A2_UNORM: desc.format = Format::R10G10B10A2_UNORM; break;
-						case dds::DXGI_FORMAT_R10G10B10A2_UINT: desc.format = Format::R10G10B10A2_UINT; break;
-						case dds::DXGI_FORMAT_R11G11B10_FLOAT: desc.format = Format::R11G11B10_FLOAT; break;
-						case dds::DXGI_FORMAT_R9G9B9E5_SHAREDEXP: desc.format = Format::R9G9B9E5_SHAREDEXP; break;
-						case dds::DXGI_FORMAT_B8G8R8X8_UNORM: desc.format = Format::B8G8R8A8_UNORM; break;
-						case dds::DXGI_FORMAT_B8G8R8A8_UNORM: desc.format = Format::B8G8R8A8_UNORM; break;
-						case dds::DXGI_FORMAT_B8G8R8A8_UNORM_SRGB: desc.format = Format::B8G8R8A8_UNORM_SRGB; break;
-						case dds::DXGI_FORMAT_R8G8B8A8_UNORM: desc.format = Format::R8G8B8A8_UNORM; break;
-						case dds::DXGI_FORMAT_R8G8B8A8_UNORM_SRGB: desc.format = Format::R8G8B8A8_UNORM_SRGB; break;
-						case dds::DXGI_FORMAT_R8G8B8A8_UINT: desc.format = Format::R8G8B8A8_UINT; break;
-						case dds::DXGI_FORMAT_R8G8B8A8_SNORM: desc.format = Format::R8G8B8A8_SNORM; break;
-						case dds::DXGI_FORMAT_R8G8B8A8_SINT: desc.format = Format::R8G8B8A8_SINT; break;
-						case dds::DXGI_FORMAT_R16G16_FLOAT: desc.format = Format::R16G16_FLOAT; break;
-						case dds::DXGI_FORMAT_R16G16_UNORM: desc.format = Format::R16G16_UNORM; break;
-						case dds::DXGI_FORMAT_R16G16_UINT: desc.format = Format::R16G16_UINT; break;
-						case dds::DXGI_FORMAT_R16G16_SNORM: desc.format = Format::R16G16_SNORM; break;
-						case dds::DXGI_FORMAT_R16G16_SINT: desc.format = Format::R16G16_SINT; break;
-						case dds::DXGI_FORMAT_D32_FLOAT: desc.format = Format::D32_FLOAT; break;
-						case dds::DXGI_FORMAT_R32_FLOAT: desc.format = Format::R32_FLOAT; break;
-						case dds::DXGI_FORMAT_R32_UINT: desc.format = Format::R32_UINT; break;
-						case dds::DXGI_FORMAT_R32_SINT: desc.format = Format::R32_SINT; break;
-						case dds::DXGI_FORMAT_R8G8_UNORM: desc.format = Format::R8G8_UNORM; break;
-						case dds::DXGI_FORMAT_R8G8_UINT: desc.format = Format::R8G8_UINT; break;
-						case dds::DXGI_FORMAT_R8G8_SNORM: desc.format = Format::R8G8_SNORM; break;
-						case dds::DXGI_FORMAT_R8G8_SINT: desc.format = Format::R8G8_SINT; break;
-						case dds::DXGI_FORMAT_R16_FLOAT: desc.format = Format::R16_FLOAT; break;
-						case dds::DXGI_FORMAT_D16_UNORM: desc.format = Format::D16_UNORM; break;
-						case dds::DXGI_FORMAT_R16_UNORM: desc.format = Format::R16_UNORM; break;
-						case dds::DXGI_FORMAT_R16_UINT: desc.format = Format::R16_UINT; break;
-						case dds::DXGI_FORMAT_R16_SNORM: desc.format = Format::R16_SNORM; break;
-						case dds::DXGI_FORMAT_R16_SINT: desc.format = Format::R16_SINT; break;
-						case dds::DXGI_FORMAT_R8_UNORM: desc.format = Format::R8_UNORM; break;
-						case dds::DXGI_FORMAT_R8_UINT: desc.format = Format::R8_UINT; break;
-						case dds::DXGI_FORMAT_R8_SNORM: desc.format = Format::R8_SNORM; break;
-						case dds::DXGI_FORMAT_R8_SINT: desc.format = Format::R8_SINT; break;
-						case dds::DXGI_FORMAT_BC1_UNORM: desc.format = Format::BC1_UNORM; break;
-						case dds::DXGI_FORMAT_BC1_UNORM_SRGB: desc.format = Format::BC1_UNORM_SRGB; break;
-						case dds::DXGI_FORMAT_BC2_UNORM: desc.format = Format::BC2_UNORM; break;
-						case dds::DXGI_FORMAT_BC2_UNORM_SRGB: desc.format = Format::BC2_UNORM_SRGB; break;
-						case dds::DXGI_FORMAT_BC3_UNORM: desc.format = Format::BC3_UNORM; break;
-						case dds::DXGI_FORMAT_BC3_UNORM_SRGB: desc.format = Format::BC3_UNORM_SRGB; break;
-						case dds::DXGI_FORMAT_BC4_UNORM: desc.format = Format::BC4_UNORM; break;
-						case dds::DXGI_FORMAT_BC4_SNORM: desc.format = Format::BC4_SNORM; break;
-						case dds::DXGI_FORMAT_BC5_UNORM: desc.format = Format::BC5_UNORM; break;
-						case dds::DXGI_FORMAT_BC5_SNORM: desc.format = Format::BC5_SNORM; break;
-						case dds::DXGI_FORMAT_BC6H_SF16: desc.format = Format::BC6H_SF16; break;
-						case dds::DXGI_FORMAT_BC6H_UF16: desc.format = Format::BC6H_UF16; break;
-						case dds::DXGI_FORMAT_BC7_UNORM: desc.format = Format::BC7_UNORM; break;
-						case dds::DXGI_FORMAT_BC7_UNORM_SRGB: desc.format = Format::BC7_UNORM_SRGB; break;
+						case dds::DXGI_FORMAT_R32G32B32A32_FLOAT:
+							desc.format = Format::R32G32B32A32_FLOAT;
+							break;
+						case dds::DXGI_FORMAT_R32G32B32A32_UINT:
+							desc.format = Format::R32G32B32A32_UINT;
+							break;
+						case dds::DXGI_FORMAT_R32G32B32A32_SINT:
+							desc.format = Format::R32G32B32A32_SINT;
+							break;
+						case dds::DXGI_FORMAT_R32G32B32_FLOAT:
+							desc.format = Format::R32G32B32_FLOAT;
+							break;
+						case dds::DXGI_FORMAT_R32G32B32_UINT:
+							desc.format = Format::R32G32B32_UINT;
+							break;
+						case dds::DXGI_FORMAT_R32G32B32_SINT:
+							desc.format = Format::R32G32B32_SINT;
+							break;
+						case dds::DXGI_FORMAT_R16G16B16A16_FLOAT:
+							desc.format = Format::R16G16B16A16_FLOAT;
+							break;
+						case dds::DXGI_FORMAT_R16G16B16A16_UNORM:
+							desc.format = Format::R16G16B16A16_UNORM;
+							break;
+						case dds::DXGI_FORMAT_R16G16B16A16_UINT:
+							desc.format = Format::R16G16B16A16_UINT;
+							break;
+						case dds::DXGI_FORMAT_R16G16B16A16_SNORM:
+							desc.format = Format::R16G16B16A16_SNORM;
+							break;
+						case dds::DXGI_FORMAT_R16G16B16A16_SINT:
+							desc.format = Format::R16G16B16A16_SINT;
+							break;
+						case dds::DXGI_FORMAT_R32G32_FLOAT:
+							desc.format = Format::R32G32_FLOAT;
+							break;
+						case dds::DXGI_FORMAT_R32G32_UINT:
+							desc.format = Format::R32G32_UINT;
+							break;
+						case dds::DXGI_FORMAT_R32G32_SINT:
+							desc.format = Format::R32G32_SINT;
+							break;
+						case dds::DXGI_FORMAT_R10G10B10A2_UNORM:
+							desc.format = Format::R10G10B10A2_UNORM;
+							break;
+						case dds::DXGI_FORMAT_R10G10B10A2_UINT:
+							desc.format = Format::R10G10B10A2_UINT;
+							break;
+						case dds::DXGI_FORMAT_R11G11B10_FLOAT:
+							desc.format = Format::R11G11B10_FLOAT;
+							break;
+						case dds::DXGI_FORMAT_R9G9B9E5_SHAREDEXP:
+							desc.format = Format::R9G9B9E5_SHAREDEXP;
+							break;
+						case dds::DXGI_FORMAT_B8G8R8X8_UNORM:
+							desc.format = Format::B8G8R8A8_UNORM;
+							break;
+						case dds::DXGI_FORMAT_B8G8R8A8_UNORM:
+							desc.format = Format::B8G8R8A8_UNORM;
+							break;
+						case dds::DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+							desc.format = Format::B8G8R8A8_UNORM_SRGB;
+							break;
+						case dds::DXGI_FORMAT_R8G8B8A8_UNORM:
+							desc.format = Format::R8G8B8A8_UNORM;
+							break;
+						case dds::DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+							desc.format = Format::R8G8B8A8_UNORM_SRGB;
+							break;
+						case dds::DXGI_FORMAT_R8G8B8A8_UINT:
+							desc.format = Format::R8G8B8A8_UINT;
+							break;
+						case dds::DXGI_FORMAT_R8G8B8A8_SNORM:
+							desc.format = Format::R8G8B8A8_SNORM;
+							break;
+						case dds::DXGI_FORMAT_R8G8B8A8_SINT:
+							desc.format = Format::R8G8B8A8_SINT;
+							break;
+						case dds::DXGI_FORMAT_R16G16_FLOAT:
+							desc.format = Format::R16G16_FLOAT;
+							break;
+						case dds::DXGI_FORMAT_R16G16_UNORM:
+							desc.format = Format::R16G16_UNORM;
+							break;
+						case dds::DXGI_FORMAT_R16G16_UINT:
+							desc.format = Format::R16G16_UINT;
+							break;
+						case dds::DXGI_FORMAT_R16G16_SNORM:
+							desc.format = Format::R16G16_SNORM;
+							break;
+						case dds::DXGI_FORMAT_R16G16_SINT:
+							desc.format = Format::R16G16_SINT;
+							break;
+						case dds::DXGI_FORMAT_D32_FLOAT:
+							desc.format = Format::D32_FLOAT;
+							break;
+						case dds::DXGI_FORMAT_R32_FLOAT:
+							desc.format = Format::R32_FLOAT;
+							break;
+						case dds::DXGI_FORMAT_R32_UINT:
+							desc.format = Format::R32_UINT;
+							break;
+						case dds::DXGI_FORMAT_R32_SINT:
+							desc.format = Format::R32_SINT;
+							break;
+						case dds::DXGI_FORMAT_R8G8_UNORM:
+							desc.format = Format::R8G8_UNORM;
+							break;
+						case dds::DXGI_FORMAT_R8G8_UINT:
+							desc.format = Format::R8G8_UINT;
+							break;
+						case dds::DXGI_FORMAT_R8G8_SNORM:
+							desc.format = Format::R8G8_SNORM;
+							break;
+						case dds::DXGI_FORMAT_R8G8_SINT:
+							desc.format = Format::R8G8_SINT;
+							break;
+						case dds::DXGI_FORMAT_R16_FLOAT:
+							desc.format = Format::R16_FLOAT;
+							break;
+						case dds::DXGI_FORMAT_D16_UNORM:
+							desc.format = Format::D16_UNORM;
+							break;
+						case dds::DXGI_FORMAT_R16_UNORM:
+							desc.format = Format::R16_UNORM;
+							break;
+						case dds::DXGI_FORMAT_R16_UINT:
+							desc.format = Format::R16_UINT;
+							break;
+						case dds::DXGI_FORMAT_R16_SNORM:
+							desc.format = Format::R16_SNORM;
+							break;
+						case dds::DXGI_FORMAT_R16_SINT:
+							desc.format = Format::R16_SINT;
+							break;
+						case dds::DXGI_FORMAT_R8_UNORM:
+							desc.format = Format::R8_UNORM;
+							break;
+						case dds::DXGI_FORMAT_R8_UINT:
+							desc.format = Format::R8_UINT;
+							break;
+						case dds::DXGI_FORMAT_R8_SNORM:
+							desc.format = Format::R8_SNORM;
+							break;
+						case dds::DXGI_FORMAT_R8_SINT:
+							desc.format = Format::R8_SINT;
+							break;
+						case dds::DXGI_FORMAT_BC1_UNORM:
+							desc.format = Format::BC1_UNORM;
+							break;
+						case dds::DXGI_FORMAT_BC1_UNORM_SRGB:
+							desc.format = Format::BC1_UNORM_SRGB;
+							break;
+						case dds::DXGI_FORMAT_BC2_UNORM:
+							desc.format = Format::BC2_UNORM;
+							break;
+						case dds::DXGI_FORMAT_BC2_UNORM_SRGB:
+							desc.format = Format::BC2_UNORM_SRGB;
+							break;
+						case dds::DXGI_FORMAT_BC3_UNORM:
+							desc.format = Format::BC3_UNORM;
+							break;
+						case dds::DXGI_FORMAT_BC3_UNORM_SRGB:
+							desc.format = Format::BC3_UNORM_SRGB;
+							break;
+						case dds::DXGI_FORMAT_BC4_UNORM:
+							desc.format = Format::BC4_UNORM;
+							break;
+						case dds::DXGI_FORMAT_BC4_SNORM:
+							desc.format = Format::BC4_SNORM;
+							break;
+						case dds::DXGI_FORMAT_BC5_UNORM:
+							desc.format = Format::BC5_UNORM;
+							break;
+						case dds::DXGI_FORMAT_BC5_SNORM:
+							desc.format = Format::BC5_SNORM;
+							break;
+						case dds::DXGI_FORMAT_BC6H_SF16:
+							desc.format = Format::BC6H_SF16;
+							break;
+						case dds::DXGI_FORMAT_BC6H_UF16:
+							desc.format = Format::BC6H_UF16;
+							break;
+						case dds::DXGI_FORMAT_BC7_UNORM:
+							desc.format = Format::BC7_UNORM;
+							break;
+						case dds::DXGI_FORMAT_BC7_UNORM_SRGB:
+							desc.format = Format::BC7_UNORM_SRGB;
+							break;
 						default:
-							assert(0); // incoming format is not supported 
+							assert(0); // incoming format is not supported
 							break;
 						}
 
@@ -775,16 +896,14 @@ namespace wi
 								SubresourceType::SRV,
 								0, -1,
 								0, -1,
-								&srgb_format
-							);
+								&srgb_format);
 						}
 					}
 					else assert(0); // failed to load DDS
-
 				}
 				else if (!ext.compare("HDR"))
 				{
-					flags &= ~Flags::STREAMING; // disable streaming
+					flags &= ~Flags::STREAMING;	 // disable streaming
 					int height, width, channels; // stb_image
 					float* data = stbi_loadf_from_memory(filedata, (int)filesize, &width, &height, &channels, 0);
 					static constexpr bool allow_packing = true; // we now always assume that we won't need full precision float textures, so pack them for memory saving
@@ -1074,8 +1193,7 @@ namespace wi
 									SubresourceType::SRV,
 									0, -1,
 									0, -1,
-									&srgb_format
-								);
+									&srgb_format);
 							}
 
 							wi::renderer::AddDeferredMIPGen(resource->texture, true);
@@ -1113,8 +1231,7 @@ namespace wi
 										SubresourceType::SRV,
 										0, -1,
 										0, -1,
-										&srgb_format
-									);
+										&srgb_format);
 								}
 
 								wi::renderer::AddDeferredBlockCompression(uncompressed_src, resource->texture);
@@ -1153,7 +1270,6 @@ namespace wi
 				success = resource->font_style >= 0;
 			}
 			break;
-
 			};
 
 			if (!resource->filedata.empty() && !has_flag(flags, Flags::IMPORT_RETAIN_FILEDATA) && !has_flag(flags, Flags::IMPORT_DELAY))
@@ -1172,8 +1288,7 @@ namespace wi
 			const uint8_t* filedata,
 			size_t filesize,
 			const std::string& container_filename,
-			size_t container_fileoffset
-		)
+			size_t container_fileoffset)
 		{
 			locker.lock();
 			std::weak_ptr<ResourceInternal>& weak_resource = resources[name];
@@ -1187,7 +1302,7 @@ namespace wi
 			}
 
 			uint64_t timestamp = 0;
-			if(!container_filename.empty())
+			if (!container_filename.empty())
 			{
 				timestamp = wi::helper::FileTimestamp(container_filename);
 			}
@@ -1340,7 +1455,7 @@ namespace wi
 			// Update resource min lod clamps smoothly:
 			GraphicsDevice* device = GetDevice();
 			if (!locker.try_lock()) // Use try lock as this is on the main thread which shouldn't hitch on long locking!
-				return; // Streaming is not that important, we can abandon it if some resource loading is holding the lock
+				return;				// Streaming is not that important, we can abandon it if some resource loading is holding the lock
 			for (auto& x : resources)
 			{
 				std::weak_ptr<ResourceInternal>& weak_resource = x.second;
@@ -1367,8 +1482,7 @@ namespace wi
 						nullptr,
 						nullptr,
 						nullptr,
-						min_lod_clamp_relative
-					);
+						min_lod_clamp_relative);
 					resource->srgb_subresource = -1;
 
 					Format srgb_format = GetFormatSRGB(desc.format);
@@ -1382,8 +1496,7 @@ namespace wi
 							&srgb_format,
 							nullptr,
 							nullptr,
-							min_lod_clamp_relative
-						);
+							min_lod_clamp_relative);
 					}
 				}
 			}
@@ -1415,7 +1528,7 @@ namespace wi
 			// One low priority thread will be responsible for streaming, to not cause any hitching while rendering:
 			streaming_ctx.priority = wi::jobsystem::Priority::Streaming;
 			wi::jobsystem::Execute(streaming_ctx, [](wi::jobsystem::JobArgs args) {
-				for(auto& resource : streaming_texture_jobs)
+				for (auto& resource : streaming_texture_jobs)
 				{
 					TextureDesc desc = resource->texture.desc;
 					uint32_t requested_resolution = resource->streaming_resolution.fetch_and(0); // set to zero while returning prev value
@@ -1469,11 +1582,10 @@ namespace wi
 							size_t filesize = resource->container_filesize - mip_data_offset;
 							size_t fileoffset = resource->container_fileoffset + mip_data_offset;
 							if (!wi::helper::FileRead(
-								resource->container_filename,
-								streaming_file,
-								filesize,
-								fileoffset
-							))
+									resource->container_filename,
+									streaming_file,
+									filesize,
+									fileoffset))
 							{
 								continue;
 							}
@@ -1511,8 +1623,7 @@ namespace wi
 								SubresourceType::SRV,
 								0, -1,
 								0, -1,
-								&srgb_format
-							);
+								&srgb_format);
 						}
 
 						streaming_replacement_mutex.lock();
@@ -1629,8 +1740,7 @@ namespace wi
 						tmp_resource.filedata,
 						tmp_resource.filesize,
 						archive.GetSourceFileName(),
-						file_offset
-					);
+						file_offset);
 					static std::mutex seri_locker;
 					seri_locker.lock();
 					seri.resources.push_back(res);
@@ -1687,8 +1797,7 @@ namespace wi
 								resource->container_filename,
 								resource->filedata,
 								resource->container_filesize,
-								resource->container_fileoffset
-							);
+								resource->container_fileoffset);
 						}
 
 						archive << name;

@@ -20,7 +20,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	physicsDebugCheckBox.SetTooltip("Visualize the physics world");
 	physicsDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::physics::SetDebugDrawEnabled(args.bValue);
-		});
+	});
 	physicsDebugCheckBox.SetCheck(wi::physics::IsDebugDrawEnabled());
 	AddWidget(&physicsDebugCheckBox);
 
@@ -32,7 +32,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	wireFrameCheckBox.SetTooltip("Visualize the scene as a wireframe");
 	wireFrameCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetWireRender(args.bValue);
-		});
+	});
 	wireFrameCheckBox.SetCheck(wi::renderer::IsWireRender());
 	AddWidget(&wireFrameCheckBox);
 
@@ -41,7 +41,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	aabbDebugCheckBox.SetScriptTip("SetDebugPartitionTreeEnabled(bool enabled)");
 	aabbDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetToDrawDebugPartitionTree(args.bValue);
-		});
+	});
 	aabbDebugCheckBox.SetCheck(wi::renderer::GetToDrawDebugPartitionTree());
 	AddWidget(&aabbDebugCheckBox);
 
@@ -50,7 +50,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	boneLinesCheckBox.SetScriptTip("SetDebugBonesEnabled(bool enabled)");
 	boneLinesCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetToDrawDebugBoneLines(args.bValue);
-		});
+	});
 	boneLinesCheckBox.SetCheck(wi::renderer::GetToDrawDebugBoneLines());
 	AddWidget(&boneLinesCheckBox);
 
@@ -59,7 +59,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	debugEmittersCheckBox.SetScriptTip("SetDebugEmittersEnabled(bool enabled)");
 	debugEmittersCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetToDrawDebugEmitters(args.bValue);
-		});
+	});
 	debugEmittersCheckBox.SetCheck(wi::renderer::GetToDrawDebugEmitters());
 	AddWidget(&debugEmittersCheckBox);
 
@@ -68,7 +68,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	debugForceFieldsCheckBox.SetScriptTip("SetDebugForceFieldsEnabled(bool enabled)");
 	debugForceFieldsCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetToDrawDebugForceFields(args.bValue);
-		});
+	});
 	debugForceFieldsCheckBox.SetCheck(wi::renderer::GetToDrawDebugForceFields());
 	AddWidget(&debugForceFieldsCheckBox);
 
@@ -76,7 +76,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	debugRaytraceBVHCheckBox.SetTooltip("Visualize scene BVH if raytracing is enabled (only for software raytracing currently)");
 	debugRaytraceBVHCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetRaytraceDebugBVHVisualizerEnabled(args.bValue);
-		});
+	});
 	debugRaytraceBVHCheckBox.SetCheck(wi::renderer::GetRaytraceDebugBVHVisualizerEnabled());
 	AddWidget(&debugRaytraceBVHCheckBox);
 
@@ -84,7 +84,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	envProbesCheckBox.SetTooltip("Toggle visualization of environment probes as reflective spheres");
 	envProbesCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetToDrawDebugEnvProbes(args.bValue);
-		});
+	});
 	envProbesCheckBox.SetCheck(wi::renderer::GetToDrawDebugEnvProbes());
 	AddWidget(&envProbesCheckBox);
 
@@ -92,7 +92,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	cameraVisCheckBox.SetTooltip("Toggle visualization of camera proxies in the scene");
 	cameraVisCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetToDrawDebugCameras(args.bValue);
-		});
+	});
 	cameraVisCheckBox.SetCheck(wi::renderer::GetToDrawDebugCameras());
 	AddWidget(&cameraVisCheckBox);
 
@@ -100,7 +100,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	colliderVisCheckBox.SetTooltip("Toggle visualization of colliders in the scene");
 	colliderVisCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetToDrawDebugColliders(args.bValue);
-		});
+	});
 	colliderVisCheckBox.SetCheck(wi::renderer::GetToDrawDebugColliders());
 	AddWidget(&colliderVisCheckBox);
 
@@ -108,7 +108,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	springVisCheckBox.SetTooltip("Toggle visualization of springs in the scene");
 	springVisCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetToDrawDebugSprings(args.bValue);
-		});
+	});
 	springVisCheckBox.SetCheck(wi::renderer::GetToDrawDebugSprings());
 	AddWidget(&springVisCheckBox);
 
@@ -122,7 +122,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		wi::renderer::SetToDrawGridHelper(args.bValue);
 		editor->main->config.GetSection("options").Set("grid_helper", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	gridHelperCheckBox.SetCheck(wi::renderer::GetToDrawGridHelper());
 	AddWidget(&gridHelperCheckBox);
 
@@ -131,7 +131,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	freezeCullingCameraCheckBox.SetTooltip("Freeze culling camera update. Scene culling will not be updated with the view");
 	freezeCullingCameraCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetFreezeCullingCameraEnabled(args.bValue);
-		});
+	});
 	freezeCullingCameraCheckBox.SetCheck(wi::renderer::GetFreezeCullingCameraEnabled());
 	AddWidget(&freezeCullingCameraCheckBox);
 
@@ -141,7 +141,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	disableAlbedoMapsCheckBox.SetTooltip("Disables albedo maps on objects for easier lighting debugging");
 	disableAlbedoMapsCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetDisableAlbedoMaps(args.bValue);
-		});
+	});
 	disableAlbedoMapsCheckBox.SetCheck(wi::renderer::IsDisableAlbedoMaps());
 	AddWidget(&disableAlbedoMapsCheckBox);
 
@@ -150,7 +150,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	forceDiffuseLightingCheckBox.SetTooltip("Sets every surface fully diffuse, with zero specularity");
 	forceDiffuseLightingCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetForceDiffuseLighting(args.bValue);
-		});
+	});
 	forceDiffuseLightingCheckBox.SetCheck(wi::renderer::IsForceDiffuseLighting());
 	AddWidget(&forceDiffuseLightingCheckBox);
 
@@ -164,7 +164,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->main->infoDisplay.watermark = args.bValue;
 		editor->main->config.GetSection("options").Set("version", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&versionCheckBox);
 	versionCheckBox.SetCheck(editor->main->infoDisplay.watermark);
 
@@ -176,7 +176,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->main->infoDisplay.fpsinfo = args.bValue;
 		editor->main->config.GetSection("options").Set("fps", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&fpsCheckBox);
 	fpsCheckBox.SetCheck(editor->main->infoDisplay.fpsinfo);
 
@@ -201,7 +201,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->main->infoDisplay.pipeline_count = args.bValue;
 		editor->main->config.GetSection("options").Set("info", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&otherinfoCheckBox);
 	otherinfoCheckBox.SetCheck(editor->main->infoDisplay.heap_allocation_counter);
 
@@ -215,7 +215,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	saveModeComboBox.OnSelect([=](wi::gui::EventArgs args) {
 		editor->main->config.GetSection("options").Set("save_mode", args.iValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&saveModeComboBox);
 
 
@@ -320,7 +320,6 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	themeCombo.AddItem("Hacking " ICON_HACKING, (uint64_t)Theme::Hacking);
 	themeCombo.AddItem("Nord " ICON_NORD, (uint64_t)Theme::Nord);
 	themeCombo.OnSelect([=](wi::gui::EventArgs args) {
-
 		// Dark theme defaults:
 		wi::Color theme_color_idle = wi::Color(30, 40, 60, 200);
 		wi::Color theme_color_focus = wi::Color(70, 150, 170, 220);
@@ -420,7 +419,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			gui.SetColor(wi::Color(0, 200, 90, 255), wi::gui::WIDGET_ID_SLIDER_KNOB_IDLE);
 			gui.SetColor(wi::Color(0, 200, 90, 255), wi::gui::WIDGET_ID_SCROLLBAR_KNOB_INACTIVE);
 		}
-		
+
 		if ((Theme)args.userdata == Theme::Nord)
 		{
 			gui.SetColor(wi::Color(136, 192, 208, 255), wi::gui::WIDGET_ID_SLIDER_KNOB_IDLE);
@@ -683,7 +682,6 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->aboutLabel.sprites[i].params.disableBackground();
 			editor->aboutLabel.sprites[i].params.blendFlag = wi::enums::BLENDMODE_ALPHA;
 		}
-
 	});
 	AddWidget(&themeCombo);
 
@@ -693,14 +691,12 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	eliminateCoarseCascadesButton.SetTooltip("Eliminate the coarse cascade mask for every object in the scene.");
 	eliminateCoarseCascadesButton.SetSize(XMFLOAT2(100, 18));
 	eliminateCoarseCascadesButton.OnClick([=](wi::gui::EventArgs args) {
-
 		Scene& scene = editor->GetCurrentScene();
 		for (size_t i = 0; i < scene.objects.GetCount(); ++i)
 		{
 			scene.objects[i].cascadeMask = 1;
 		}
-
-		});
+	});
 	AddWidget(&eliminateCoarseCascadesButton);
 
 
@@ -708,7 +704,6 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	ddsConvButton.SetTooltip("All material textures in the scene will be converted to DDS format.\nDDS format is optimal for GPU and can be streamed.");
 	ddsConvButton.SetSize(XMFLOAT2(100, 18));
 	ddsConvButton.OnClick([=](wi::gui::EventArgs args) {
-
 		Scene& scene = editor->GetCurrentScene();
 
 		wi::unordered_map<std::string, wi::Resource> conv;
@@ -742,8 +737,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			MaterialComponent& material = scene.materials[i];
 			material.CreateRenderData();
 		}
-
-		});
+	});
 	AddWidget(&ddsConvButton);
 
 
@@ -751,7 +745,6 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	ktxConvButton.SetTooltip("All material textures in the scene will be converted to KTX2 format.\nTHIS MIGHT TAKE LONG, SO GET YOURSELF A COFFEE OR TEA!");
 	ktxConvButton.SetSize(XMFLOAT2(100, 18));
 	ktxConvButton.OnClick([=](wi::gui::EventArgs args) {
-
 		Scene& scene = editor->GetCurrentScene();
 
 		wi::unordered_map<std::string, wi::Resource> conv;
@@ -785,8 +778,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			MaterialComponent& material = scene.materials[i];
 			material.CreateRenderData();
 		}
-
-		});
+	});
 	AddWidget(&ktxConvButton);
 
 	SetVisible(false);

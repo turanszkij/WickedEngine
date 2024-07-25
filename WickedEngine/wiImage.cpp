@@ -165,7 +165,7 @@ namespace wi::image
 		}
 
 		image.border_soften = params.border_soften;
-		image.mask_alpha_range =  XMConvertFloatToHalf(params.mask_alpha_range_start) | (XMConvertFloatToHalf(params.mask_alpha_range_end) << 16u);
+		image.mask_alpha_range = XMConvertFloatToHalf(params.mask_alpha_range_start) | (XMConvertFloatToHalf(params.mask_alpha_range_end) << 16u);
 
 		STRIP_MODE strip_mode = STRIP_ON;
 		uint32_t index_count = 0;
@@ -330,30 +330,30 @@ namespace wi::image
 		if (params.isDrawRectEnabled())
 		{
 			image.texMulAdd.x = params.drawRect.z * inv_width;	// drawRec.width: mul
-			image.texMulAdd.y = params.drawRect.w * inv_height;	// drawRec.heigh: mul
+			image.texMulAdd.y = params.drawRect.w * inv_height; // drawRec.heigh: mul
 			image.texMulAdd.z = params.drawRect.x * inv_width;	// drawRec.x: add
-			image.texMulAdd.w = params.drawRect.y * inv_height;	// drawRec.y: add
+			image.texMulAdd.w = params.drawRect.y * inv_height; // drawRec.y: add
 		}
 		else
 		{
-			image.texMulAdd = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
+			image.texMulAdd = XMFLOAT4(1, 1, 0, 0); // disabled draw rect
 		}
-		image.texMulAdd.z += params.texOffset.x * inv_width;	// texOffset.x: add
-		image.texMulAdd.w += params.texOffset.y * inv_height;	// texOffset.y: add
+		image.texMulAdd.z += params.texOffset.x * inv_width;  // texOffset.x: add
+		image.texMulAdd.w += params.texOffset.y * inv_height; // texOffset.y: add
 
 		if (params.isDrawRect2Enabled())
 		{
-			image.texMulAdd2.x = params.drawRect2.z * inv_width;	// drawRec.width: mul
-			image.texMulAdd2.y = params.drawRect2.w * inv_height;	// drawRec.heigh: mul
-			image.texMulAdd2.z = params.drawRect2.x * inv_width;	// drawRec.x: add
-			image.texMulAdd2.w = params.drawRect2.y * inv_height;	// drawRec.y: add
+			image.texMulAdd2.x = params.drawRect2.z * inv_width;  // drawRec.width: mul
+			image.texMulAdd2.y = params.drawRect2.w * inv_height; // drawRec.heigh: mul
+			image.texMulAdd2.z = params.drawRect2.x * inv_width;  // drawRec.x: add
+			image.texMulAdd2.w = params.drawRect2.y * inv_height; // drawRec.y: add
 		}
 		else
 		{
-			image.texMulAdd2 = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
+			image.texMulAdd2 = XMFLOAT4(1, 1, 0, 0); // disabled draw rect
 		}
 		image.texMulAdd2.z += params.texOffset2.x * inv_width;	// texOffset.x: add
-		image.texMulAdd2.w += params.texOffset2.y * inv_height;	// texOffset.y: add
+		image.texMulAdd2.w += params.texOffset2.y * inv_height; // texOffset.y: add
 
 		device->EventBegin("Image", cmd);
 
@@ -450,7 +450,6 @@ namespace wi::image
 		rs.multisample_enable = false;
 		rs.antialiased_line_enable = false;
 		rasterizerState = rs;
-
 
 
 

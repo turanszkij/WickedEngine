@@ -165,7 +165,7 @@ void ContentBrowserWindow::RefreshContent()
 		button.SetSize(XMFLOAT2(wid, hei));
 		button.OnClick([this](wi::gui::EventArgs args) {
 			SetSelection(SELECTION_RECENT);
-			});
+		});
 		AddWidget(&button, wi::gui::Window::AttachmentOptions::NONE);
 		if (current_selection == SELECTION_COUNT)
 		{
@@ -181,7 +181,7 @@ void ContentBrowserWindow::RefreshContent()
 		button.SetSize(XMFLOAT2(wid, hei));
 		button.OnClick([this](wi::gui::EventArgs args) {
 			SetSelection(SELECTION_MODELS);
-			});
+		});
 		AddWidget(&button, wi::gui::Window::AttachmentOptions::NONE);
 		if (current_selection == SELECTION_COUNT)
 		{
@@ -253,7 +253,7 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 			AddItems(content_folder + "scripts/", "lua", ICON_SCRIPT);
 			openFolderButton.OnClick([this](wi::gui::EventArgs args) {
 				wi::helper::OpenUrl(content_folder + "scripts/");
-				});
+			});
 			AddWidget(&openFolderButton, wi::gui::Window::AttachmentOptions::NONE);
 			break;
 		case SELECTION_MODELS:
@@ -265,7 +265,7 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 			AddItems(content_folder + "models/", "obj", ICON_OBJECT);
 			openFolderButton.OnClick([this](wi::gui::EventArgs args) {
 				wi::helper::OpenUrl(content_folder + "models/");
-				});
+			});
 			AddWidget(&openFolderButton, wi::gui::Window::AttachmentOptions::NONE);
 			break;
 		case SELECTION_RECENT:
@@ -304,23 +304,23 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 			}
 			break;
 		default:
-			{
-				size_t i = selection - SELECTION_RECENTFOLDER_BEGIN;
-				i = std::min(i, editor->recentFolders.size() - 1);
-				const std::string& folder = editor->recentFolders[editor->recentFolders.size() - 1 - i];
-				AddItems(folder, "wiscene", ICON_OBJECT);
-				AddItems(folder, "vrm", ICON_HUMANOID);
-				AddItems(folder, "gltf", ICON_OBJECT);
-				AddItems(folder, "glb", ICON_OBJECT);
-				AddItems(folder, "fbx", ICON_OBJECT);
-				AddItems(folder, "obj", ICON_OBJECT);
-				AddItems(folder, "lua", ICON_SCRIPT);
-				openFolderButton.OnClick([this, folder](wi::gui::EventArgs args) {
-					wi::helper::OpenUrl(folder);
-				});
-				AddWidget(&openFolderButton, wi::gui::Window::AttachmentOptions::NONE);
-			}
-			break;
+		{
+			size_t i = selection - SELECTION_RECENTFOLDER_BEGIN;
+			i = std::min(i, editor->recentFolders.size() - 1);
+			const std::string& folder = editor->recentFolders[editor->recentFolders.size() - 1 - i];
+			AddItems(folder, "wiscene", ICON_OBJECT);
+			AddItems(folder, "vrm", ICON_HUMANOID);
+			AddItems(folder, "gltf", ICON_OBJECT);
+			AddItems(folder, "glb", ICON_OBJECT);
+			AddItems(folder, "fbx", ICON_OBJECT);
+			AddItems(folder, "obj", ICON_OBJECT);
+			AddItems(folder, "lua", ICON_SCRIPT);
+			openFolderButton.OnClick([this, folder](wi::gui::EventArgs args) {
+				wi::helper::OpenUrl(folder);
+			});
+			AddWidget(&openFolderButton, wi::gui::Window::AttachmentOptions::NONE);
+		}
+		break;
 		}
 
 		for (auto& x : itemButtons)
@@ -330,7 +330,6 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 
 		// Refresh theme:
 		editor->generalWnd.themeCombo.SetSelected(editor->generalWnd.themeCombo.GetSelected());
-
 	});
 }
 void ContentBrowserWindow::AddItems(const std::string& folder, const std::string& extension, const std::string& icon)
@@ -346,9 +345,11 @@ void ContentBrowserWindow::AddItems(const std::string& folder, const std::string
 	});
 
 	// Individual items:
-	wi::helper::GetFileNamesInDirectory(folder, [&](std::string filename) {
-		AddItem(filename, icon);
-		}, extension);
+	wi::helper::GetFileNamesInDirectory(
+		folder, [&](std::string filename) {
+			AddItem(filename, icon);
+		},
+		extension);
 }
 void ContentBrowserWindow::AddItem(const std::string& filename, const std::string& icon)
 {
@@ -370,9 +371,9 @@ void ContentBrowserWindow::AddItem(const std::string& filename, const std::strin
 	button.OnClick([this, filename](wi::gui::EventArgs args) {
 		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 			editor->Open(filename);
-			});
-		this->SetVisible(false);
 		});
+		this->SetVisible(false);
+	});
 	button.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
 	button.font_description.params.v_align = wi::font::WIFALIGN_TOP;
 	button.font.params.size = 42;

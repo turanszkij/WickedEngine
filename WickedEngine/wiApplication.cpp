@@ -32,8 +32,8 @@
 //#define WICKED_ENGINE_HEAP_ALLOCATION_COUNTER
 
 #ifdef WICKED_ENGINE_HEAP_ALLOCATION_COUNTER
-static std::atomic<uint32_t> number_of_heap_allocations{ 0 };
-static std::atomic<size_t> size_of_heap_allocations{ 0 };
+static std::atomic<uint32_t> number_of_heap_allocations { 0 };
+static std::atomic<size_t> size_of_heap_allocations { 0 };
 #endif // WICKED_ENGINE_HEAP_ALLOCATION_COUNTER
 
 using namespace wi::graphics;
@@ -68,7 +68,6 @@ namespace wi
 
 		// Fade manager will activate on fadeout
 		fadeManager.Start(fadeSeconds, fadeColor, [this, component]() {
-
 			if (GetActivePath() != nullptr)
 			{
 				GetActivePath()->Stop();
@@ -79,7 +78,7 @@ namespace wi
 				component->Start();
 			}
 			activePath = component;
-			});
+		});
 
 		fadeManager.Update(0); // If user calls ActivatePath without fadeout, it will be instant
 	}
@@ -461,8 +460,7 @@ namespace wi
 				wi::font::WIFALIGN_LEFT,
 				wi::font::WIFALIGN_TOP,
 				wi::Color::White(),
-				wi::Color::Shadow()
-			);
+				wi::Color::Shadow());
 			params.shadow_softness = 0.4f;
 
 			// Explanation: this compose pass is in LINEAR space if display output is linear or HDR10
@@ -528,10 +526,8 @@ namespace wi
 						canvas.PhysicalToLogical((uint32_t)infoDisplay.rect.left),
 						canvas.PhysicalToLogical((uint32_t)infoDisplay.rect.top),
 						canvas.PhysicalToLogical(256),
-						canvas.PhysicalToLogical(16)
-					),
-					cmd
-				);
+						canvas.PhysicalToLogical(16)),
+					cmd);
 			}
 
 			if (infoDisplay.rect.right > 0)
@@ -586,13 +582,15 @@ namespace wi
 			bool use_vulkan = wi::arguments::HasArgument("vulkan");
 
 #ifndef WICKEDENGINE_BUILD_DX12
-			if (use_dx12) {
+			if (use_dx12)
+			{
 				wi::helper::messageBox("The engine was built without DX12 support!", "Error");
 				use_dx12 = false;
 			}
 #endif // WICKEDENGINE_BUILD_DX12
 #ifndef WICKEDENGINE_BUILD_VULKAN
-			if (use_vulkan) {
+			if (use_vulkan)
+			{
 				wi::helper::messageBox("The engine was built without Vulkan support!", "Error");
 				use_vulkan = false;
 			}
@@ -671,8 +669,7 @@ namespace wi
 			desc.vsync = userdata != 0;
 			bool success = graphicsDevice->CreateSwapChain(&desc, nullptr, &swapChain);
 			assert(success);
-			});
-
+		});
 	}
 
 }
@@ -683,32 +680,36 @@ namespace wi
 //	It is good practice to reduce the amount of heap allocations that happen during the frame,
 //	so keep an eye on the info display of the engine while Application::InfoDisplayer::heap_allocation_counter is enabled
 
-void* operator new(std::size_t size) {
+void* operator new(std::size_t size)
+{
 	number_of_heap_allocations.fetch_add(1);
 	size_of_heap_allocations.fetch_add(size);
 	void* p = malloc(size);
 	if (!p) throw std::bad_alloc();
 	return p;
 }
-void* operator new[](std::size_t size) {
+void* operator new[](std::size_t size)
+{
 	number_of_heap_allocations.fetch_add(1);
 	size_of_heap_allocations.fetch_add(size);
 	void* p = malloc(size);
 	if (!p) throw std::bad_alloc();
 	return p;
 }
-void* operator new[](std::size_t size, const std::nothrow_t&) throw() {
+void* operator new[](std::size_t size, const std::nothrow_t&) throw()
+{
 	number_of_heap_allocations.fetch_add(1);
 	size_of_heap_allocations.fetch_add(size);
 	return malloc(size);
 }
-void* operator new(std::size_t size, const std::nothrow_t&) throw() {
+void* operator new(std::size_t size, const std::nothrow_t&) throw()
+{
 	number_of_heap_allocations.fetch_add(1);
 	size_of_heap_allocations.fetch_add(size);
 	return malloc(size);
 }
 void operator delete(void* ptr) throw() { free(ptr); }
-void operator delete (void* ptr, const std::nothrow_t&) throw() { free(ptr); }
+void operator delete(void* ptr, const std::nothrow_t&) throw() { free(ptr); }
 void operator delete[](void* ptr) throw() { free(ptr); }
 void operator delete[](void* ptr, const std::nothrow_t&) throw() { free(ptr); }
 #endif // WICKED_ENGINE_HEAP_ALLOCATION_COUNTER

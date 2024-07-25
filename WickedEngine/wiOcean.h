@@ -70,10 +70,10 @@ namespace wi
 		OceanParameters params;
 
 	protected:
-		wi::graphics::Texture displacementMap;		// (RGBA32F)
-		wi::graphics::Texture gradientMap;			// (RGBA16F)
+		wi::graphics::Texture displacementMap; // (RGBA32F)
+		wi::graphics::Texture gradientMap;	   // (RGBA16F)
 
-		wi::graphics::Texture displacementMap_readback[wi::graphics::GraphicsDevice::GetBufferCount()];		// (RGBA32F)
+		wi::graphics::Texture displacementMap_readback[wi::graphics::GraphicsDevice::GetBufferCount()]; // (RGBA32F)
 		mutable bool displacement_readback_valid[arraysize(displacementMap_readback)] = {};
 		mutable uint32_t displacement_readback_index = 0;
 

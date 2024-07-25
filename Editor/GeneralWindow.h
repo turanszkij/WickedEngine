@@ -44,4 +44,3 @@ public:
 
 	void RefreshLanguageSelectionAfterWholeGUIWasInitialized();
 };
-

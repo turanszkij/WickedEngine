@@ -32,7 +32,8 @@ namespace wi::math
 	inline constexpr XMFLOAT4X4 IDENTITY_MATRIX = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 	inline constexpr float PI = XM_PI;
 
-	inline bool float_equal(float f1, float f2) {
+	inline bool float_equal(float f1, float f2)
+	{
 		return (std::abs(f1 - f2) <= std::numeric_limits<float>::epsilon() * std::max(std::abs(f1), std::abs(f2)));
 	}
 
@@ -136,7 +137,7 @@ namespace wi::math
 	}
 	constexpr XMFLOAT3 getVectorHalfWayPoint(const XMFLOAT3& a, const XMFLOAT3& b)
 	{
-		return XMFLOAT3((a.x + b.x)*0.5f, (a.y + b.y)*0.5f, (a.z + b.z)*0.5f);
+		return XMFLOAT3((a.x + b.x) * 0.5f, (a.y + b.y) * 0.5f, (a.z + b.z) * 0.5f);
 	}
 	inline XMVECTOR InverseLerp(XMVECTOR value1, XMVECTOR value2, XMVECTOR pos)
 	{
@@ -199,31 +200,40 @@ namespace wi::math
 		XMStoreFloat4(&retVal, result);
 		return retVal;
 	}
-	constexpr XMFLOAT2 Max(const XMFLOAT2& a, const XMFLOAT2& b) {
+	constexpr XMFLOAT2 Max(const XMFLOAT2& a, const XMFLOAT2& b)
+	{
 		return XMFLOAT2(std::max(a.x, b.x), std::max(a.y, b.y));
 	}
-	constexpr XMFLOAT3 Max(const XMFLOAT3& a, const XMFLOAT3& b) {
+	constexpr XMFLOAT3 Max(const XMFLOAT3& a, const XMFLOAT3& b)
+	{
 		return XMFLOAT3(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z));
 	}
-	constexpr XMFLOAT4 Max(const XMFLOAT4& a, const XMFLOAT4& b) {
+	constexpr XMFLOAT4 Max(const XMFLOAT4& a, const XMFLOAT4& b)
+	{
 		return XMFLOAT4(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z), std::max(a.w, b.w));
 	}
-	constexpr XMFLOAT2 Min(const XMFLOAT2& a, const XMFLOAT2& b) {
+	constexpr XMFLOAT2 Min(const XMFLOAT2& a, const XMFLOAT2& b)
+	{
 		return XMFLOAT2(std::min(a.x, b.x), std::min(a.y, b.y));
 	}
-	constexpr XMFLOAT3 Min(const XMFLOAT3& a, const XMFLOAT3& b) {
+	constexpr XMFLOAT3 Min(const XMFLOAT3& a, const XMFLOAT3& b)
+	{
 		return XMFLOAT3(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z));
 	}
-	constexpr XMFLOAT4 Min(const XMFLOAT4& a, const XMFLOAT4& b) {
+	constexpr XMFLOAT4 Min(const XMFLOAT4& a, const XMFLOAT4& b)
+	{
 		return XMFLOAT4(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z), std::min(a.w, b.w));
 	}
-	constexpr XMFLOAT2 Abs(const XMFLOAT2& a) {
+	constexpr XMFLOAT2 Abs(const XMFLOAT2& a)
+	{
 		return XMFLOAT2(std::abs(a.x), std::abs(a.y));
 	}
-	constexpr XMFLOAT3 Abs(const XMFLOAT3& a) {
+	constexpr XMFLOAT3 Abs(const XMFLOAT3& a)
+	{
 		return XMFLOAT3(std::abs(a.x), std::abs(a.y), std::abs(a.z));
 	}
-	constexpr XMFLOAT4 Abs(const XMFLOAT4& a) {
+	constexpr XMFLOAT4 Abs(const XMFLOAT4& a)
+	{
 		return XMFLOAT4(std::abs(a.x), std::abs(a.y), std::abs(a.z), std::abs(a.w));
 	}
 	constexpr float Clamp(float val, float min, float max)
@@ -257,7 +267,7 @@ namespace wi::math
 	constexpr float SmoothStep(float value1, float value2, float amount)
 	{
 		amount = Clamp((amount - value1) / (value2 - value1), 0.0f, 1.0f);
-		return amount * amount*amount*(amount*(amount * 6 - 15) + 10);
+		return amount * amount * amount * (amount * (amount * 6 - 15) + 10);
 	}
 	constexpr bool Collision2D(const XMFLOAT2& hitBox1Pos, const XMFLOAT2& hitBox1Siz, const XMFLOAT2& hitBox2Pos, const XMFLOAT2& hitBox2Siz)
 	{
@@ -300,7 +310,8 @@ namespace wi::math
 	// A uniform 2D random generator for hemisphere sampling: http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html
 	//	idx	: iteration index
 	//	num	: number of iterations in total
-	constexpr XMFLOAT2 Hammersley2D(uint32_t idx, uint32_t num) {
+	constexpr XMFLOAT2 Hammersley2D(uint32_t idx, uint32_t num)
+	{
 		uint32_t bits = idx;
 		bits = (bits << 16u) | (bits >> 16u);
 		bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
@@ -320,7 +331,7 @@ namespace wi::math
 		XMVECTOR normal = XMLoadFloat3(&N);
 		XMVECTOR tangent = XMVector3Normalize(XMVector3Cross(normal, helper));
 		XMVECTOR binormal = XMVector3Normalize(XMVector3Cross(normal, tangent));
-		return XMMATRIX(tangent, binormal, normal, XMVectorSet(0,0,0,1));
+		return XMMATRIX(tangent, binormal, normal, XMVectorSet(0, 0, 0, 1));
 	}
 	inline XMFLOAT3 HemispherePoint_Uniform(float u, float v)
 	{
@@ -356,9 +367,8 @@ namespace wi::math
 		const XMFLOAT3& endPos,
 		const XMFLOAT3& startTangent,
 		const XMFLOAT3& endTangent,
-		float atInterval
-	);
-	XMFLOAT3 GetQuadraticBezierPos(const XMFLOAT3& a,const XMFLOAT3&b, const XMFLOAT3& c, float t);
+		float atInterval);
+	XMFLOAT3 GetQuadraticBezierPos(const XMFLOAT3& a, const XMFLOAT3& b, const XMFLOAT3& c, float t);
 	XMFLOAT3 GetQuadraticBezierPos(const XMFLOAT4& a, const XMFLOAT4& b, const XMFLOAT4& c, float t);
 	inline XMVECTOR GetQuadraticBezierPos(const XMVECTOR& a, const XMVECTOR& b, const XMVECTOR& c, float t)
 	{
@@ -414,7 +424,7 @@ namespace wi::math
 	float GetAngle(const XMFLOAT3& a, const XMFLOAT3& b, const XMFLOAT3& axis, float max = XM_2PI);
 	float GetAngle(XMVECTOR A, XMVECTOR B, XMVECTOR axis, float max = XM_2PI);
 	void ConstructTriangleEquilateral(float radius, XMFLOAT4& A, XMFLOAT4& B, XMFLOAT4& C);
-	void GetBarycentric(const XMVECTOR& p, const XMVECTOR& a, const XMVECTOR& b, const XMVECTOR& c, float &u, float &v, float &w, bool clamp = false);
+	void GetBarycentric(const XMVECTOR& p, const XMVECTOR& a, const XMVECTOR& b, const XMVECTOR& c, float& u, float& v, float& w, bool clamp = false);
 
 	inline XMFLOAT3 GetForward(const XMFLOAT4X4& _m)
 	{
@@ -506,8 +516,7 @@ namespace wi::math
 	{
 		return XMUINT2(
 			(uint32_t)XMConvertFloatToHalf(x) | ((uint32_t)XMConvertFloatToHalf(y) << 16u),
-			(uint32_t)XMConvertFloatToHalf(z)
-		);
+			(uint32_t)XMConvertFloatToHalf(z));
 	}
 	inline XMUINT2 pack_half3(const XMFLOAT3& value)
 	{
@@ -517,8 +526,7 @@ namespace wi::math
 	{
 		return XMUINT2(
 			(uint32_t)XMConvertFloatToHalf(x) | ((uint32_t)XMConvertFloatToHalf(y) << 16u),
-			(uint32_t)XMConvertFloatToHalf(z) | ((uint32_t)XMConvertFloatToHalf(w) << 16u)
-		);
+			(uint32_t)XMConvertFloatToHalf(z) | ((uint32_t)XMConvertFloatToHalf(w) << 16u));
 	}
 	inline XMUINT2 pack_half4(const XMFLOAT4& value)
 	{
@@ -538,8 +546,7 @@ namespace wi::math
 	//
 	//	Modified for WickedEngine to return barycentrics and support TMin, TMax
 	//-----------------------------------------------------------------------------
-	_Use_decl_annotations_
-	inline bool XM_CALLCONV RayTriangleIntersects(
+	_Use_decl_annotations_ inline bool XM_CALLCONV RayTriangleIntersects(
 		FXMVECTOR Origin,
 		FXMVECTOR Direction,
 		FXMVECTOR V0,
@@ -548,8 +555,7 @@ namespace wi::math
 		float& Dist,
 		XMFLOAT2& bary,
 		float TMin = 0,
-		float TMax = std::numeric_limits<float>::max()
-	)
+		float TMax = std::numeric_limits<float>::max())
 	{
 		const XMVECTOR g_RayEpsilon = XMVectorSet(1e-20f, 1e-20f, 1e-20f, 1e-20f);
 		const XMVECTOR g_RayNegEpsilon = XMVectorSet(-1e-20f, -1e-20f, -1e-20f, -1e-20f);
@@ -651,4 +657,3 @@ namespace wi::math
 		return true;
 	}
 };
-

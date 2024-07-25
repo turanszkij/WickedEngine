@@ -23,7 +23,6 @@ namespace wi::lua::primitive
 
 
 
-
 	Luna<Ray_BindLua>::FunctionType Ray_BindLua::methods[] = {
 		lunamethod(Ray_BindLua, Intersects),
 		lunamethod(Ray_BindLua, GetOrigin),
@@ -40,7 +39,7 @@ namespace wi::lua::primitive
 		{ NULL, NULL }
 	};
 
-	Ray_BindLua::Ray_BindLua(lua_State *L)
+	Ray_BindLua::Ray_BindLua(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 1)
@@ -98,7 +97,6 @@ namespace wi::lua::primitive
 				wi::lua::SSetBool(L, intersects);
 				return 1;
 			}
-
 		}
 		wi::lua::SError(L, "[Intersects(AABB), Intersects(Sphere), Intersects(Capsule)] no matching arguments! ");
 		return 0;
@@ -108,7 +106,7 @@ namespace wi::lua::primitive
 		Luna<Vector_BindLua>::push(L, XMLoadFloat3(&ray.origin));
 		return 1;
 	}
-	int Ray_BindLua::SetOrigin(lua_State *L)
+	int Ray_BindLua::SetOrigin(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
@@ -134,7 +132,7 @@ namespace wi::lua::primitive
 		Luna<Vector_BindLua>::push(L, XMLoadFloat3(&ray.direction));
 		return 1;
 	}
-	int Ray_BindLua::SetDirection(lua_State *L)
+	int Ray_BindLua::SetDirection(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
@@ -222,7 +220,7 @@ namespace wi::lua::primitive
 		{ NULL, NULL }
 	};
 
-	AABB_BindLua::AABB_BindLua(lua_State *L)
+	AABB_BindLua::AABB_BindLua(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 1)
@@ -291,7 +289,6 @@ namespace wi::lua::primitive
 				wi::lua::SSetBool(L, intersects);
 				return 1;
 			}
-
 		}
 		wi::lua::SError(L, "[Intersects(AABB), Intersects(Sphere), Intersects(Ray)] no matching arguments! ");
 		return 0;
@@ -309,7 +306,6 @@ namespace wi::lua::primitive
 				wi::lua::SSetBool(L, aabb.intersects2D(_aabb->aabb) != AABB::INTERSECTION_TYPE::OUTSIDE); // int intersection type cannot be checked like bool in lua so we give simple bool result here!
 				return 1;
 			}
-
 		}
 		wi::lua::SError(L, "Intersects2D(AABB) not enough arguments! ");
 		return 0;
@@ -320,7 +316,7 @@ namespace wi::lua::primitive
 		Luna<Vector_BindLua>::push(L, XMLoadFloat3(&M));
 		return 1;
 	}
-	int AABB_BindLua::SetMin(lua_State *L)
+	int AABB_BindLua::SetMin(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
@@ -347,7 +343,7 @@ namespace wi::lua::primitive
 		Luna<Vector_BindLua>::push(L, XMLoadFloat3(&M));
 		return 1;
 	}
-	int AABB_BindLua::SetMax(lua_State *L)
+	int AABB_BindLua::SetMax(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
@@ -422,7 +418,7 @@ namespace wi::lua::primitive
 		{ NULL, NULL }
 	};
 
-	Sphere_BindLua::Sphere_BindLua(lua_State *L)
+	Sphere_BindLua::Sphere_BindLua(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 1)
@@ -492,7 +488,6 @@ namespace wi::lua::primitive
 				wi::lua::SSetBool(L, intersects);
 				return 1;
 			}
-
 		}
 		wi::lua::SError(L, "[Intersects(AABB), Intersects(Sphere), Intersects(Ray)] no matching arguments! ");
 		return 0;

@@ -13,7 +13,6 @@ void LightWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete LightComponent");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -502,7 +501,6 @@ void LightWindow::RefreshCascades()
 
 	// refresh theme:
 	editor->generalWnd.themeCombo.SetSelected(editor->generalWnd.themeCombo.GetSelected());
-
 }
 
 void LightWindow::ResizeLayout()
@@ -579,5 +577,4 @@ void LightWindow::ResizeLayout()
 	add_fullwidth(lensflare_Button[4]);
 	add_fullwidth(lensflare_Button[5]);
 	add_fullwidth(lensflare_Button[6]);
-
 }

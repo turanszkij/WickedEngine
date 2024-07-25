@@ -21,7 +21,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->componentsWnd.RefreshEntityTree();
-		});
+	});
 
 	float x = 80;
 	float y = 0;
@@ -64,7 +64,6 @@ void AnimationWindow::Create(EditorComponent* _editor)
 						sampler.mode = AnimationComponent::AnimationSampler::Mode::LINEAR;
 					}
 				}
-
 			}
 		}
 	});
@@ -164,7 +163,6 @@ void AnimationWindow::Create(EditorComponent* _editor)
 			animation->timer = animation->start;
 			animation->speed = speedSlider.GetValue();
 			animation->Play();
-
 		}
 	});
 	AddWidget(&playFromStartButton);
@@ -241,7 +239,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 		{
 			animation->start = args.fValue;
 		}
-		});
+	});
 	startInput.SetTooltip("Set the animation start in seconds. This will be the loop's starting point.");
 	AddWidget(&startInput);
 
@@ -255,7 +253,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 		{
 			animation->end = args.fValue;
 		}
-		});
+	});
 	endInput.SetTooltip("Set the animation end in seconds. This is relative to 0, not the animation start.");
 	AddWidget(&endInput);
 
@@ -941,21 +939,21 @@ void AnimationWindow::Create(EditorComponent* _editor)
 						animation_data->keyframe_data.erase(animation_data->keyframe_data.begin() + timeIndex * 4, animation_data->keyframe_data.begin() + timeIndex * 4 + 4);
 						break;
 					case AnimationComponent::AnimationChannel::PathDataType::Weights:
+					{
+						MeshComponent* mesh = scene.meshes.GetComponent(channel.target);
+						if (mesh == nullptr && scene.objects.Contains(channel.target))
 						{
-							MeshComponent* mesh = scene.meshes.GetComponent(channel.target);
-							if (mesh == nullptr && scene.objects.Contains(channel.target))
-							{
-								// Also try query mesh of selected object:
-								ObjectComponent* object = scene.objects.GetComponent(channel.target);
-								mesh = scene.meshes.GetComponent(object->meshID);
-							}
-							if (mesh != nullptr)
-							{
-								animation_data->keyframe_times.erase(animation_data->keyframe_times.begin() + timeIndex);
-								animation_data->keyframe_data.erase(animation_data->keyframe_data.begin() + timeIndex * mesh->morph_targets.size(), animation_data->keyframe_data.begin() + timeIndex * mesh->morph_targets.size() + mesh->morph_targets.size());
-							}
+							// Also try query mesh of selected object:
+							ObjectComponent* object = scene.objects.GetComponent(channel.target);
+							mesh = scene.meshes.GetComponent(object->meshID);
 						}
-						break;
+						if (mesh != nullptr)
+						{
+							animation_data->keyframe_times.erase(animation_data->keyframe_times.begin() + timeIndex);
+							animation_data->keyframe_data.erase(animation_data->keyframe_data.begin() + timeIndex * mesh->morph_targets.size(), animation_data->keyframe_data.begin() + timeIndex * mesh->morph_targets.size() + mesh->morph_targets.size());
+						}
+					}
+					break;
 					default:
 						break;
 					}
@@ -1008,14 +1006,16 @@ void AnimationWindow::Create(EditorComponent* _editor)
 		AnimationComponent* animation = editor->GetCurrentScene().animations.GetComponent(entity);
 		if (animation != nullptr)
 		{
-			if (args.bValue) {
+			if (args.bValue)
+			{
 				animation->RootMotionOn();
 			}
-			else {
+			else
+			{
 				animation->RootMotionOff();
 			}
 		}
-		});
+	});
 	rootMotionCheckBox.SetCheckText(ICON_CHECK);
 	AddWidget(&rootMotionCheckBox);
 	// Root Bone selector
@@ -1037,13 +1037,12 @@ void AnimationWindow::Create(EditorComponent* _editor)
 				animation->rootMotionBone = wi::ecs::INVALID_ENTITY;
 			}
 		}
-		});
+	});
 	rootBoneComboBox.SetTooltip("Choose the root bone to evaluate root motion from.");
 	AddWidget(&rootBoneComboBox);
 
 	SetMinimized(true);
 	SetVisible(false);
-
 }
 // Example function to check if an entity already exists in the list
 static bool EntityExistsInList(Entity entity, const wi::vector<Entity>& entityList)
@@ -1083,7 +1082,8 @@ void AnimationWindow::SetEntity(Entity entity)
 				for (const AnimationComponent::AnimationChannel& channel : animation->channels)
 				{
 					if (channel.path == AnimationComponent::AnimationChannel::Path::TRANSLATION ||
-						channel.path == AnimationComponent::AnimationChannel::Path::ROTATION) {
+						channel.path == AnimationComponent::AnimationChannel::Path::ROTATION)
+					{
 
 						if (!EntityExistsInList(channel.target, bone_list))
 						{
@@ -1145,7 +1145,7 @@ void AnimationWindow::Update()
 		loopTypeButton.SetTooltip("No loop. The animation will play once.");
 	}
 
-	if(!animation.samplers.empty())
+	if (!animation.samplers.empty())
 	{
 		modeComboBox.SetSelectedByUserdataWithoutCallback(animation.samplers[0].mode);
 	}
@@ -1369,7 +1369,7 @@ void AnimationWindow::ResizeLayout()
 	const float l = loopTypeButton.GetPos().x + loopTypeButton.GetSize().x + padding;
 	const float r = width - margin_right - padding * 4;
 	const float diff = r - l;
-	backwardsButton.SetSize(XMFLOAT2(diff/5, backwardsButton.GetSize().y));
+	backwardsButton.SetSize(XMFLOAT2(diff / 5, backwardsButton.GetSize().y));
 	backwardsFromEndButton.SetSize(backwardsButton.GetSize());
 	stopButton.SetSize(backwardsButton.GetSize());
 	playFromStartButton.SetSize(backwardsButton.GetSize());

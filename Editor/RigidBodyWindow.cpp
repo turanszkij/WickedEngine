@@ -13,7 +13,6 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete RigidBodyPhysicsComponent");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -466,7 +465,6 @@ void RigidBodyWindow::SetEntity(Entity entity)
 	{
 		this->entity = INVALID_ENTITY;
 	}
-
 }
 
 
@@ -523,5 +521,4 @@ void RigidBodyWindow::ResizeLayout()
 	add_right(startDeactivatedCheckBox);
 	add_right(disabledeactivationCheckBox);
 	add_right(kinematicCheckBox);
-
 }

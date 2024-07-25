@@ -43,7 +43,7 @@ namespace wi::lua::renderer
 		}
 		else
 		{
-			wi::lua::SError(L,"SetGameSpeed(float) not enough arguments!");
+			wi::lua::SError(L, "SetGameSpeed(float) not enough arguments!");
 		}
 		return 0;
 	}
@@ -442,7 +442,6 @@ namespace wi::lua::renderer
 				}
 				else
 					wi::lua::SError(L, "DrawDebugText(string text, opt Vector position, opt Vector color, opt float scaling, opt int flags) second argument was not a Vector!");
-
 			}
 			wi::renderer::DrawDebugText(text.c_str(), params);
 		}
@@ -511,7 +510,9 @@ namespace wi::lua::renderer
 	public:
 		wi::renderer::PaintTextureParams params;
 
-		PaintTextureParams_BindLua(const wi::renderer::PaintTextureParams& params) : params(params) {}
+		PaintTextureParams_BindLua(const wi::renderer::PaintTextureParams& params)
+			: params(params)
+		{}
 		PaintTextureParams_BindLua(lua_State* L) {}
 
 		int SetEditTexture(lua_State* L)
@@ -836,7 +837,6 @@ DEBUG_TEXT_DEPTH_TEST = 1
 DEBUG_TEXT_CAMERA_FACING = 2
 DEBUG_TEXT_CAMERA_SCALING = 4
 )");
-
 		}
 	}
 };

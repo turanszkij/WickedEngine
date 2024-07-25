@@ -12,7 +12,6 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete SoftBodyPhysicsComponent");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -202,7 +201,7 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 				physicscomponent->physicsobject = {};
 			}
 		}
-		});
+	});
 	AddWidget(&pressureSlider);
 
 	vertexRadiusSlider.Create(0, 1, 0, 100000, "Vertex Radius: ");
@@ -331,5 +330,4 @@ void SoftBodyWindow::ResizeLayout()
 	add(pressureSlider);
 	add(vertexRadiusSlider);
 	add_right(windCheckbox);
-
 }

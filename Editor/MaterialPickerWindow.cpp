@@ -39,7 +39,6 @@ void MaterialPickerWindow::RecreateButtons()
 		button.SetVisible(false);
 
 		button.OnClick([entity, this](wi::gui::EventArgs args) {
-
 			wi::Archive& archive = editor->AdvanceHistory();
 			archive << EditorComponent::HISTORYOP_SELECTION;
 			// record PREVIOUS selection state...
@@ -65,7 +64,7 @@ void MaterialPickerWindow::RecreateButtons()
 
 			// record NEW selection state...
 			editor->RecordSelection(archive);
-			});
+		});
 	}
 
 	ResizeLayout();

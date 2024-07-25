@@ -11,8 +11,8 @@ private:
 	float angle = 0;
 	float angle_start = 0;
 	bool has_selected_transform = false;
-public:
 
+public:
 	void Update(const wi::scene::CameraComponent& camera, const XMFLOAT4& currentMouse, const wi::Canvas& canvas);
 	void Draw(const wi::scene::CameraComponent& camera, const XMFLOAT4& currentMouse, wi::graphics::CommandList cmd) const;
 
@@ -23,9 +23,9 @@ public:
 
 	wi::scene::Scene* scene = nullptr;
 	wi::scene::TransformComponent transform;
-	wi::vector<wi::scene::PickResult> selected; // all the selected picks
+	wi::vector<wi::scene::PickResult> selected;				   // all the selected picks
 	wi::unordered_set<wi::ecs::Entity> selectedEntitiesLookup; // fast lookup for selected entities
-	wi::vector<wi::ecs::Entity> selectedEntitiesNonRecursive; // selected entities that don't contain entities that would be included in recursive iterations
+	wi::vector<wi::ecs::Entity> selectedEntitiesNonRecursive;  // selected entities that don't contain entities that would be included in recursive iterations
 
 	float scale_snap = 1;
 	float rotate_snap = XM_PIDIV4;
@@ -79,4 +79,3 @@ public:
 	wi::vector<XMFLOAT4X4> matrices_start;
 	wi::vector<XMFLOAT4X4> matrices_current;
 };
-

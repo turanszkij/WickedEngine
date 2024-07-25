@@ -43,8 +43,7 @@ namespace wi
 		void UpdateCPU(
 			const wi::scene::TransformComponent& transform,
 			const wi::scene::MeshComponent& mesh,
-			float dt
-		);
+			float dt);
 
 		struct UpdateGPUItem
 		{
@@ -57,8 +56,7 @@ namespace wi
 		static void UpdateGPU(
 			const UpdateGPUItem* items,
 			uint32_t itemCount,
-			wi::graphics::CommandList cmd
-		);
+			wi::graphics::CommandList cmd);
 
 		mutable bool gpu_initialized = false;
 		void InitializeGPUDataIfNeeded(wi::graphics::CommandList cmd);
@@ -66,8 +64,7 @@ namespace wi
 		void Draw(
 			const wi::scene::MaterialComponent& material,
 			wi::enums::RENDERPASS renderPass,
-			wi::graphics::CommandList cmd
-		) const;
+			wi::graphics::CommandList cmd) const;
 
 		enum FLAGS
 		{
@@ -111,6 +108,16 @@ namespace wi
 		uint64_t GetMemorySizeInBytes() const;
 
 		constexpr bool IsDirty() const { return _flags & DIRTY; }
-		constexpr void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
+		constexpr void SetDirty(bool value = true)
+		{
+			if (value)
+			{
+				_flags |= DIRTY;
+			}
+			else
+			{
+				_flags &= ~DIRTY;
+			}
+		}
 	};
 }
