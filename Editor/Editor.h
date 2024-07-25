@@ -116,8 +116,6 @@ public:
 
 	wi::graphics::Texture rt_metadataDummies_MSAA;
 	wi::graphics::Texture rt_metadataDummies;
-	wi::graphics::Texture rt_metadataDummies_4x;
-	wi::graphics::Texture rt_metadataDummies_4xtemp;
 
 	const wi::Color springDebugColor = wi::Color(255, 70, 165, 255);
 	const wi::Color ikDebugColor = wi::Color(49, 190, 103, 255);

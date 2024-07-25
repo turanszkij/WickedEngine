@@ -2730,6 +2730,15 @@ void EditorComponent::Render() const
 			tim += scene.dt;
 			float sca = lerp(0.4f, 0.8f, std::abs(std::sin(tim * 2)));
 
+			XMMATRIX ROT = XMLoadFloat3x3(&camera.rotationMatrix);
+			wi::font::Params fp;
+			fp.customProjection = &VP;
+			fp.customRotation = &ROT;
+			fp.scaling = 0.02f;
+			fp.h_align = wi::font::WIFALIGN_CENTER;
+			fp.v_align = wi::font::WIFALIGN_BOTTOM;
+			fp.enableDepthTest();
+
 			for (size_t i = 0; i < scene.metadatas.GetCount(); ++i)
 			{
 				Entity entity = scene.metadatas.GetEntity(i);
@@ -2737,36 +2746,50 @@ void EditorComponent::Render() const
 					continue;
 				const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 				const MetadataComponent& metadata = scene.metadatas[i];
+
+				fp.position = transform.GetPosition();
+
 				switch (metadata.preset)
 				{
 				default:
 					break;
 				case MetadataComponent::Preset::Waypoint:
-					dummy::draw_waypoint(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(1, 0.2f, 0.5f, 1), true, cmd);
+					fp.position.y += 1;
+					fp.color = wi::Color::fromFloat4(XMFLOAT4(1, 0.2f, 0.5f, 1));
+					wi::font::Draw("Waypoint", fp, cmd);
+					dummy::draw_waypoint(XMLoadFloat4x4(&transform.world) * VP, fp.color, true, cmd);
 					break;
 				case MetadataComponent::Preset::Enemy:
-					dummy::draw_direction(XMMatrixRotationY(XM_PI) * XMMatrixTranslation(0, 0.1f, 0) * XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(1, 0.2f, 0.2f, 1), true, cmd);
-					dummy::draw_soldier(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(1, 0.2f, 0.2f, 1), true, cmd);
+					fp.position.y += 2;
+					fp.color = wi::Color::fromFloat4(XMFLOAT4(0.8f, 0.2f, 0.2f, 1));
+					wi::font::Draw("Enemy", fp, cmd);
+					dummy::draw_direction(XMMatrixRotationY(XM_PI) * XMMatrixTranslation(0, 0.1f, 0) * XMLoadFloat4x4(&transform.world) * VP, fp.color, true, cmd);
+					dummy::draw_soldier(XMLoadFloat4x4(&transform.world) * VP, fp.color, true, cmd);
 					break;
 				case MetadataComponent::Preset::Player:
-					dummy::draw_direction(XMMatrixRotationY(XM_PI) * XMMatrixTranslation(0, 0.1f, 0) * XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(0.2f, 1, 0.6f, 1), true, cmd);
-					dummy::draw_male(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(0.2f, 1, 0.6f, 1), true, cmd);
+					fp.position.y += 2;
+					fp.color = wi::Color::fromFloat4(XMFLOAT4(0.2f, 0.8f, 0.6f, 1));
+					wi::font::Draw("Player", fp, cmd);
+					dummy::draw_direction(XMMatrixRotationY(XM_PI) * XMMatrixTranslation(0, 0.1f, 0) * XMLoadFloat4x4(&transform.world) * VP, fp.color, true, cmd);
+					dummy::draw_male(XMLoadFloat4x4(&transform.world) * VP, fp.color, true, cmd);
 					break;
 				case MetadataComponent::Preset::NPC:
-					dummy::draw_direction(XMMatrixRotationY(XM_PI) * XMMatrixTranslation(0, 0.1f, 0) * XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(0.2f, 0.6f, 1, 1), true, cmd);
-					dummy::draw_female(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(0.2f, 0.6f, 1, 1), true, cmd);
+					fp.position.y += 1.8f;
+					fp.color = wi::Color::fromFloat4(XMFLOAT4(0.2f, 0.6f, 0.8f, 1));
+					wi::font::Draw("NPC", fp, cmd);
+					dummy::draw_direction(XMMatrixRotationY(XM_PI) * XMMatrixTranslation(0, 0.1f, 0) * XMLoadFloat4x4(&transform.world) * VP, fp.color, true, cmd);
+					dummy::draw_female(XMLoadFloat4x4(&transform.world) * VP, fp.color, true, cmd);
 					break;
 				case MetadataComponent::Preset::Pickup:
-					dummy::draw_pickup(XMMatrixScaling(sca, sca, sca) * XMMatrixTranslation(0, 0.5f, 0) * XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(1, 0.8f, 0.4f, 1), true, cmd);
+					fp.position.y += 1;
+					fp.color = wi::Color::fromFloat4(XMFLOAT4(1, 0.8f, 0.4f, 1));
+					wi::font::Draw("Pickup", fp, cmd);
+					dummy::draw_pickup(XMMatrixScaling(sca, sca, sca) * XMMatrixTranslation(0, 0.5f, 0) * XMLoadFloat4x4(&transform.world) * VP, fp.color, true, cmd);
 					break;
 				}
 			}
 
 			device->RenderPassEnd(cmd);
-
-			wi::renderer::Postprocess_Downsample4x(rt_metadataDummies, rt_metadataDummies_4x, cmd);
-			wi::renderer::Postprocess_Blur_Gaussian(rt_metadataDummies_4x, rt_metadataDummies_4xtemp, rt_metadataDummies_4x, cmd);
-
 			device->EventEnd(cmd);
 		}
 
@@ -3296,8 +3319,9 @@ void EditorComponent::Render() const
 					fx.color.x = wi::math::Lerp(fx.color.x * 0.4f, fx.color.x, selectionColorIntensity);
 					fx.color.y = wi::math::Lerp(fx.color.y * 0.4f, fx.color.y, selectionColorIntensity);
 					fx.color.z = wi::math::Lerp(fx.color.z * 0.4f, fx.color.z, selectionColorIntensity);
-					fx.color.w = wi::math::Lerp(fx.color.w * 0.8f, fx.color.w, selectionColorIntensity);
-					wi::image::Draw(&rt_metadataDummies_4x, fx, cmd);
+					fx.color.w = 0.6f;
+					//fx.color.w = wi::math::Lerp(fx.color.w * 0.8f, fx.color.w, selectionColorIntensity);
+					wi::image::Draw(&rt_metadataDummies, fx, cmd);
 				}
 
 				for (size_t i = 0; i < scene.metadatas.GetCount(); ++i)
@@ -3852,15 +3876,6 @@ void EditorComponent::ResizeViewport3D()
 				device->CreateTexture(&desc, nullptr, &rt_metadataDummies_MSAA);
 				device->SetName(&rt_metadataDummies_MSAA, "rt_metadataDummies_MSAA");
 			}
-
-			desc.sample_count = 1;
-			desc.width = internalResolution.x / 4;
-			desc.height = internalResolution.y / 4;
-			desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
-			device->CreateTexture(&desc, nullptr, &rt_metadataDummies_4x);
-			device->SetName(&rt_metadataDummies_4x, "rt_metadataDummies_4x");
-			device->CreateTexture(&desc, nullptr, &rt_metadataDummies_4xtemp);
-			device->SetName(&rt_metadataDummies_4xtemp, "rt_metadataDummies_4xtemp");
 		}
 	}
 
