@@ -29,7 +29,6 @@ void AnimationWindow::Create(EditorComponent* _editor)
 	float wid = 200;
 	float step = hei + 4;
 	float padding = 4;
-	float lastDirection = 1;
 
 	infoLabel.Create("");
 	infoLabel.SetSize(XMFLOAT2(100, 50));
@@ -224,7 +223,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 		if (animation != nullptr)
 		{
 			// Adjusts the new animation speed based on the previous direction of animation->speed.
-			lastDirection = std::signbit(animation->speed) ? -1 : 1;
+			float lastDirection = std::signbit(animation->speed) ? -1.0f : 1.0f;
 			animation->speed = args.fValue * lastDirection;
 		}
 	});
