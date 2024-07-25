@@ -7237,15 +7237,7 @@ int MetadataComponent_BindLua::HasBool(lua_State* L)
 		return 0;
 	}
 	std::string name = wi::lua::SGetString(L, 1);
-	auto it = component->bool_values.find(name);
-	if (it == component->bool_values.end())
-	{
-		wi::lua::SSetBool(L, false);
-	}
-	else
-	{
-		wi::lua::SSetBool(L, true);
-	}
+	wi::lua::SSetBool(L, component->bool_values.has(name));
 	return 1;
 }
 int MetadataComponent_BindLua::HasInt(lua_State* L)
@@ -7257,15 +7249,7 @@ int MetadataComponent_BindLua::HasInt(lua_State* L)
 		return 0;
 	}
 	std::string name = wi::lua::SGetString(L, 1);
-	auto it = component->int_values.find(name);
-	if (it == component->int_values.end())
-	{
-		wi::lua::SSetBool(L, false);
-	}
-	else
-	{
-		wi::lua::SSetBool(L, true);
-	}
+	wi::lua::SSetBool(L, component->int_values.has(name));
 	return 1;
 }
 int MetadataComponent_BindLua::HasFloat(lua_State* L)
@@ -7277,15 +7261,7 @@ int MetadataComponent_BindLua::HasFloat(lua_State* L)
 		return 0;
 	}
 	std::string name = wi::lua::SGetString(L, 1);
-	auto it = component->float_values.find(name);
-	if (it == component->float_values.end())
-	{
-		wi::lua::SSetBool(L, false);
-	}
-	else
-	{
-		wi::lua::SSetBool(L, true);
-	}
+	wi::lua::SSetBool(L, component->float_values.has(name));
 	return 1;
 }
 int MetadataComponent_BindLua::HasString(lua_State* L)
@@ -7297,15 +7273,7 @@ int MetadataComponent_BindLua::HasString(lua_State* L)
 		return 0;
 	}
 	std::string name = wi::lua::SGetString(L, 1);
-	auto it = component->string_values.find(name);
-	if (it == component->string_values.end())
-	{
-		wi::lua::SSetBool(L, false);
-	}
-	else
-	{
-		wi::lua::SSetBool(L, true);
-	}
+	wi::lua::SSetBool(L, component->string_values.has(name));
 	return 1;
 }
 
@@ -7323,15 +7291,7 @@ int MetadataComponent_BindLua::GetBool(lua_State* L)
 		return 0;
 	}
 	std::string name = wi::lua::SGetString(L, 1);
-	auto it = component->bool_values.find(name);
-	if (it == component->bool_values.end())
-	{
-		wi::lua::SSetBool(L, false);
-	}
-	else
-	{
-		wi::lua::SSetBool(L, it->second);
-	}
+	wi::lua::SSetBool(L, component->bool_values.get(name));
 	return 1;
 }
 int MetadataComponent_BindLua::GetInt(lua_State* L)
@@ -7343,15 +7303,7 @@ int MetadataComponent_BindLua::GetInt(lua_State* L)
 		return 0;
 	}
 	std::string name = wi::lua::SGetString(L, 1);
-	auto it = component->int_values.find(name);
-	if (it == component->int_values.end())
-	{
-		wi::lua::SSetInt(L, 0);
-	}
-	else
-	{
-		wi::lua::SSetInt(L, it->second);
-	}
+	wi::lua::SSetInt(L, component->int_values.get(name));
 	return 1;
 }
 int MetadataComponent_BindLua::GetFloat(lua_State* L)
@@ -7363,15 +7315,7 @@ int MetadataComponent_BindLua::GetFloat(lua_State* L)
 		return 0;
 	}
 	std::string name = wi::lua::SGetString(L, 1);
-	auto it = component->float_values.find(name);
-	if (it == component->float_values.end())
-	{
-		wi::lua::SSetFloat(L, false);
-	}
-	else
-	{
-		wi::lua::SSetFloat(L, it->second);
-	}
+	wi::lua::SSetFloat(L, component->float_values.get(name));
 	return 1;
 }
 int MetadataComponent_BindLua::GetString(lua_State* L)
@@ -7383,15 +7327,7 @@ int MetadataComponent_BindLua::GetString(lua_State* L)
 		return 0;
 	}
 	std::string name = wi::lua::SGetString(L, 1);
-	auto it = component->string_values.find(name);
-	if (it == component->string_values.end())
-	{
-		wi::lua::SSetString(L, "");
-	}
-	else
-	{
-		wi::lua::SSetString(L, it->second);
-	}
+	wi::lua::SSetString(L, component->string_values.get(name));
 	return 1;
 }
 
@@ -7416,7 +7352,7 @@ int MetadataComponent_BindLua::SetBool(lua_State* L)
 	}
 	std::string name = wi::lua::SGetString(L, 1);
 	bool value = wi::lua::SGetBool(L, 2);
-	component->bool_values[name] = value;
+	component->bool_values.set(name, value);
 	return 0;
 }
 int MetadataComponent_BindLua::SetInt(lua_State* L)
@@ -7429,7 +7365,7 @@ int MetadataComponent_BindLua::SetInt(lua_State* L)
 	}
 	std::string name = wi::lua::SGetString(L, 1);
 	int value = wi::lua::SGetInt(L, 2);
-	component->int_values[name] = value;
+	component->int_values.set(name, value);
 	return 0;
 }
 int MetadataComponent_BindLua::SetFloat(lua_State* L)
@@ -7442,7 +7378,7 @@ int MetadataComponent_BindLua::SetFloat(lua_State* L)
 	}
 	std::string name = wi::lua::SGetString(L, 1);
 	float value = wi::lua::SGetFloat(L, 2);
-	component->float_values[name] = value;
+	component->float_values.set(name, value);
 	return 0;
 }
 int MetadataComponent_BindLua::SetString(lua_State* L)
@@ -7455,7 +7391,7 @@ int MetadataComponent_BindLua::SetString(lua_State* L)
 	}
 	std::string name = wi::lua::SGetString(L, 1);
 	std::string value = wi::lua::SGetString(L, 2);
-	component->string_values[name] = value;
+	component->string_values.set(name, value);
 	return 0;
 }
 

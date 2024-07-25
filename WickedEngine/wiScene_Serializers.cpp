@@ -2136,7 +2136,7 @@ namespace wi::scene
 				archive >> name;
 				bool value;
 				archive >> value;
-				bool_values[name] = value;
+				bool_values.set(name, value);
 			}
 
 			archive >> count;
@@ -2147,7 +2147,7 @@ namespace wi::scene
 				archive >> name;
 				int value;
 				archive >> value;
-				int_values[name] = value;
+				int_values.set(name, value);
 			}
 
 			archive >> count;
@@ -2158,7 +2158,7 @@ namespace wi::scene
 				archive >> name;
 				float value;
 				archive >> value;
-				float_values[name] = value;
+				float_values.set(name, value);
 			}
 
 			archive >> count;
@@ -2169,7 +2169,7 @@ namespace wi::scene
 				archive >> name;
 				std::string value;
 				archive >> value;
-				string_values[name] = value;
+				string_values.set(name, value);
 			}
 		}
 		else
@@ -2178,32 +2178,32 @@ namespace wi::scene
 
 			archive << (int)preset;
 
-			archive << bool_values.size();
-			for (auto& x : bool_values)
+			archive << bool_values.lookup.size();
+			for (auto& x : bool_values.lookup)
 			{
 				archive << x.first;
-				archive << x.second;
+				archive << bool_values.get(x.first);
 			}
 
-			archive << int_values.size();
-			for (auto& x : int_values)
+			archive << int_values.lookup.size();
+			for (auto& x : int_values.lookup)
 			{
 				archive << x.first;
-				archive << x.second;
+				archive << int_values.get(x.first);
 			}
 
-			archive << float_values.size();
-			for (auto& x : float_values)
+			archive << float_values.lookup.size();
+			for (auto& x : float_values.lookup)
 			{
 				archive << x.first;
-				archive << x.second;
+				archive << float_values.get(x.first);
 			}
 
-			archive << string_values.size();
-			for (auto& x : string_values)
+			archive << string_values.lookup.size();
+			for (auto& x : string_values.lookup)
 			{
 				archive << x.first;
-				archive << x.second;
+				archive << string_values.get(x.first);
 			}
 		}
 	}
