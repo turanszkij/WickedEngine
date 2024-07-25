@@ -1,0 +1,3 @@
+# no formatting for vendored files
+DisableFormat: true
+SortIncludes: Never

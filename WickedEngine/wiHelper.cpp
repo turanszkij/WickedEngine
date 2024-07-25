@@ -1276,6 +1276,7 @@ namespace wi::helper
 	bool Bin2H(const uint8_t* data, size_t size, const std::string& dst_filename, const char* dataName)
 	{
 		std::string ss;
+		ss += "// clang-format off\n";
 		ss += "const uint8_t ";
 		ss += dataName ;
 		ss += "[] = {";

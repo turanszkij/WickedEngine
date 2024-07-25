@@ -1,3 +1,4 @@
+// clang-format off
 // From https://github.com/xyproto/sdl2-examples/blob/master/include/sdl2.h
 // MIT License
 

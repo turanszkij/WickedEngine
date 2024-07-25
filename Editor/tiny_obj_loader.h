@@ -1,3 +1,4 @@
+// clang-format off
 /*
 The MIT License (MIT)
 

@@ -609,6 +609,7 @@ int main(int argc, char* argv[])
 		std::cout << "[Wicked Engine Offline Shader Compiler] Creating ShaderDump...\n";
 		timer.record();
 		std::string ss;
+		ss += "// clang-format off\n";
 		ss += "namespace wiShaderDump {\n";
 		for (auto& x : results)
 		{

@@ -1,0 +1,49 @@
+BasedOnStyle: WebKit
+
+AlignAfterOpenBracket: DontAlign
+# AlignConsecutiveDeclarations: true
+AlignTrailingComments:
+  Kind: Always
+  OverEmptyLines: 0
+AllowShortFunctionsOnASingleLine: All
+AllowShortLambdasOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+BreakBeforeBinaryOperators: None
+BreakBeforeBraces: Custom
+# Allman style (wrap before any brace) *except* before lambda bodies
+BraceWrapping:
+  AfterCaseLabel: true
+  AfterClass: true
+  AfterControlStatement: true
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  BeforeCatch: true
+  BeforeElse: true
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  SplitEmptyFunction: false
+ColumnLimit: 0
+IncludeCategories:  # only used when SortIncludes is active
+  - Regex: '^"stdafx.h"'
+    Priority: -1
+  - Regex: '<.*'
+    Priority: 1
+  - Regex: '^"wi.*"'
+    Priority: 2
+IndentWidth: 4
+# FixNamespaceComments: true    # maybe?
+MaxEmptyLinesToKeep: 3
+NamespaceIndentation: All
+# SpacesBeforeTrailingComments: 1
+# SeparateDefinitionBlocks: Always   # maybe?
+SortIncludes: Never     # maybe?
+SpaceInEmptyBlock: false
+SpaceAfterTemplateKeyword: false
+SpacesInLineCommentPrefix:
+  Minimum: 0  # maybe 1?
+  Maximum: -1
+TabWidth: 4
+UseTab: Always
