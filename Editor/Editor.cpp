@@ -2728,10 +2728,10 @@ void EditorComponent::Render() const
 				default:
 					break;
 				case MetadataComponent::Preset::Enemy:
-					dummy::draw_male(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(1, 0.2f, 0.2f, 1), cmd);
+					dummy::draw_soldier(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(1, 0.2f, 0.2f, 1), cmd);
 					break;
 				case MetadataComponent::Preset::Player:
-					dummy::draw_female(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(0.2f, 1, 0.2f, 1), cmd);
+					dummy::draw_male(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(0.2f, 1, 0.2f, 1), cmd);
 					break;
 				case MetadataComponent::Preset::NPC:
 					dummy::draw_female(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(1, 1, 0.2f, 1), cmd);
@@ -3266,9 +3266,7 @@ void EditorComponent::Render() const
 				fx.blendFlag = wi::enums::BLENDMODE_ALPHA;
 				fx.color.w = wi::math::Lerp(0.2f, 0.6f, selectionColorIntensity);
 				wi::image::Draw(&rt_metadataDummies, fx, cmd);
-				XMFLOAT4 dummyColorBlinking = XMFLOAT4(1, 1, 1, 1);
-				dummyColorBlinking.w = wi::math::Lerp(0.4f, 1, selectionColorIntensity);
-				wi::renderer::Postprocess_Outline(rt_metadataDummies, cmd, 0.1f, 1, dummyColorBlinking);
+				wi::renderer::Postprocess_Outline(rt_metadataDummies, cmd, 0.1f, 1, XMFLOAT4(1, 1, 1, 1));
 
 				for (size_t i = 0; i < scene.metadatas.GetCount(); ++i)
 				{

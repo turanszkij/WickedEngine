@@ -99,4 +99,10 @@ namespace dummy
 		static DummyVisualizer vis;
 		vis.Draw(vertices, arraysize(vertices), indices, arraysize(indices), matrix, color, cmd);
 	}
+	void draw_soldier(const XMMATRIX& matrix, const XMFLOAT4& color, wi::graphics::CommandList cmd)
+	{
+#include "dummy_soldier.h"
+		static DummyVisualizer vis;
+		vis.Draw(vertices, arraysize(vertices), indices, arraysize(indices), matrix, color, cmd);
+	}
 }

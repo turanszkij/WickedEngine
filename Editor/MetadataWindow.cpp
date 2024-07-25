@@ -8,7 +8,7 @@ void MetadataWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_METADATA " Metadata", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(300, 200));
+	SetSize(XMFLOAT2(300, 240));
 
 	closeButton.SetTooltip("Delete MetadataComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -336,6 +336,8 @@ void MetadataWindow::ResizeLayout()
 
 	add(presetCombo);
 	add_fullwidth(addCombo);
+
+	y += padding * 2;
 
 	for (auto& entry : entries)
 	{

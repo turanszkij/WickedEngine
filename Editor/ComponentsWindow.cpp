@@ -1074,176 +1074,181 @@ void ComponentsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 			name_string = name->name;
 		}
 
+		bool filter_valid = true;
 		std::string name_filter = filterInput.GetCurrentInputValue();
 		if (!name_filter.empty())
 		{
 			if (filterCaseCheckBox.GetCheck() && name_string.find(name_filter) == std::string::npos)
 			{
-				return;
+				filter_valid = false;
 			}
 			else if (wi::helper::toUpper(name_string).find(wi::helper::toUpper(name_filter)) == std::string::npos)
 			{
-				return;
+				filter_valid = false;
 			}
+			item.level = 0;
 		}
 
-		// Icons:
-		if (scene.layers.Contains(entity))
+		if (filter_valid)
 		{
-			item.name += ICON_LAYER " ";
-		}
-		if (scene.transforms.Contains(entity))
-		{
-			item.name += ICON_TRANSFORM " ";
-		}
-		if (scene.terrains.Contains(entity))
-		{
-			item.name += ICON_TERRAIN " ";
-		}
-		if (scene.meshes.Contains(entity))
-		{
-			item.name += ICON_MESH " ";
-		}
-		if (scene.objects.Contains(entity))
-		{
-			item.name += ICON_OBJECT " ";
-		}
-		if (scene.rigidbodies.Contains(entity))
-		{
-			item.name += ICON_RIGIDBODY " ";
-		}
-		if (scene.softbodies.Contains(entity))
-		{
-			item.name += ICON_SOFTBODY " ";
-		}
-		if (scene.emitters.Contains(entity))
-		{
-			item.name += ICON_EMITTER " ";
-		}
-		if (scene.hairs.Contains(entity))
-		{
-			item.name += ICON_HAIR " ";
-		}
-		if (scene.forces.Contains(entity))
-		{
-			item.name += ICON_FORCE " ";
-		}
-		if (scene.sounds.Contains(entity))
-		{
-			item.name += ICON_SOUND " ";
-		}
-		if (scene.videos.Contains(entity))
-		{
-			item.name += ICON_VIDEO " ";
-		}
-		if (scene.decals.Contains(entity))
-		{
-			item.name += ICON_DECAL " ";
-		}
-		if (scene.cameras.Contains(entity))
-		{
-			item.name += ICON_CAMERA " ";
-		}
-		if (scene.probes.Contains(entity))
-		{
-			item.name += ICON_ENVIRONMENTPROBE " ";
-		}
-		if (scene.animations.Contains(entity))
-		{
-			item.name += ICON_ANIMATION " ";
-		}
-		if (scene.animation_datas.Contains(entity))
-		{
-			item.name += "[animation_data] ";
-		}
-		if (scene.armatures.Contains(entity))
-		{
-			item.name += ICON_ARMATURE " ";
-		}
-		if (scene.humanoids.Contains(entity))
-		{
-			item.name += ICON_HUMANOID " ";
-		}
-		if (scene.sprites.Contains(entity))
-		{
-			item.name += ICON_SPRITE " ";
-		}
-		if (scene.fonts.Contains(entity))
-		{
-			item.name += ICON_FONT " ";
-		}
-		if (scene.voxel_grids.Contains(entity))
-		{
-			item.name += ICON_VOXELGRID " ";
-		}
-		if (scene.metadatas.Contains(entity))
-		{
-			item.name += ICON_METADATA " ";
-		}
-		if (scene.lights.Contains(entity))
-		{
-			const LightComponent* light = scene.lights.GetComponent(entity);
-			switch (light->type)
+			// Icons:
+			if (scene.layers.Contains(entity))
 			{
-			default:
-			case LightComponent::POINT:
-				item.name += ICON_POINTLIGHT " ";
-				break;
-			case LightComponent::SPOT:
-				item.name += ICON_SPOTLIGHT " ";
-				break;
-			case LightComponent::DIRECTIONAL:
-				item.name += ICON_DIRECTIONALLIGHT " ";
-				break;
+				item.name += ICON_LAYER " ";
 			}
-		}
-		if (scene.materials.Contains(entity))
-		{
-			item.name += ICON_MATERIAL " ";
-		}
-		if (scene.weathers.Contains(entity))
-		{
-			item.name += ICON_WEATHER " ";
-		}
-		if (scene.inverse_kinematics.Contains(entity))
-		{
-			item.name += ICON_IK " ";
-		}
-		if (scene.springs.Contains(entity))
-		{
-			item.name += ICON_SPRING " ";
-		}
-		if (scene.colliders.Contains(entity))
-		{
-			item.name += ICON_COLLIDER " ";
-		}
-		if (scene.scripts.Contains(entity))
-		{
-			item.name += ICON_SCRIPT " ";
-		}
-		if (scene.expressions.Contains(entity))
-		{
-			item.name += ICON_EXPRESSION " ";
-		}
-		bool bone_found = false;
-		for (size_t i = 0; i < scene.armatures.GetCount() && !bone_found; ++i)
-		{
-			const ArmatureComponent& armature = scene.armatures[i];
-			for (Entity bone : armature.boneCollection)
+			if (scene.transforms.Contains(entity))
 			{
-				if (entity == bone)
+				item.name += ICON_TRANSFORM " ";
+			}
+			if (scene.terrains.Contains(entity))
+			{
+				item.name += ICON_TERRAIN " ";
+			}
+			if (scene.meshes.Contains(entity))
+			{
+				item.name += ICON_MESH " ";
+			}
+			if (scene.objects.Contains(entity))
+			{
+				item.name += ICON_OBJECT " ";
+			}
+			if (scene.rigidbodies.Contains(entity))
+			{
+				item.name += ICON_RIGIDBODY " ";
+			}
+			if (scene.softbodies.Contains(entity))
+			{
+				item.name += ICON_SOFTBODY " ";
+			}
+			if (scene.emitters.Contains(entity))
+			{
+				item.name += ICON_EMITTER " ";
+			}
+			if (scene.hairs.Contains(entity))
+			{
+				item.name += ICON_HAIR " ";
+			}
+			if (scene.forces.Contains(entity))
+			{
+				item.name += ICON_FORCE " ";
+			}
+			if (scene.sounds.Contains(entity))
+			{
+				item.name += ICON_SOUND " ";
+			}
+			if (scene.videos.Contains(entity))
+			{
+				item.name += ICON_VIDEO " ";
+			}
+			if (scene.decals.Contains(entity))
+			{
+				item.name += ICON_DECAL " ";
+			}
+			if (scene.cameras.Contains(entity))
+			{
+				item.name += ICON_CAMERA " ";
+			}
+			if (scene.probes.Contains(entity))
+			{
+				item.name += ICON_ENVIRONMENTPROBE " ";
+			}
+			if (scene.animations.Contains(entity))
+			{
+				item.name += ICON_ANIMATION " ";
+			}
+			if (scene.animation_datas.Contains(entity))
+			{
+				item.name += "[animation_data] ";
+			}
+			if (scene.armatures.Contains(entity))
+			{
+				item.name += ICON_ARMATURE " ";
+			}
+			if (scene.humanoids.Contains(entity))
+			{
+				item.name += ICON_HUMANOID " ";
+			}
+			if (scene.sprites.Contains(entity))
+			{
+				item.name += ICON_SPRITE " ";
+			}
+			if (scene.fonts.Contains(entity))
+			{
+				item.name += ICON_FONT " ";
+			}
+			if (scene.voxel_grids.Contains(entity))
+			{
+				item.name += ICON_VOXELGRID " ";
+			}
+			if (scene.metadatas.Contains(entity))
+			{
+				item.name += ICON_METADATA " ";
+			}
+			if (scene.lights.Contains(entity))
+			{
+				const LightComponent* light = scene.lights.GetComponent(entity);
+				switch (light->type)
 				{
-					item.name += ICON_BONE " ";
-					bone_found = true;
+				default:
+				case LightComponent::POINT:
+					item.name += ICON_POINTLIGHT " ";
+					break;
+				case LightComponent::SPOT:
+					item.name += ICON_SPOTLIGHT " ";
+					break;
+				case LightComponent::DIRECTIONAL:
+					item.name += ICON_DIRECTIONALLIGHT " ";
 					break;
 				}
 			}
+			if (scene.materials.Contains(entity))
+			{
+				item.name += ICON_MATERIAL " ";
+			}
+			if (scene.weathers.Contains(entity))
+			{
+				item.name += ICON_WEATHER " ";
+			}
+			if (scene.inverse_kinematics.Contains(entity))
+			{
+				item.name += ICON_IK " ";
+			}
+			if (scene.springs.Contains(entity))
+			{
+				item.name += ICON_SPRING " ";
+			}
+			if (scene.colliders.Contains(entity))
+			{
+				item.name += ICON_COLLIDER " ";
+			}
+			if (scene.scripts.Contains(entity))
+			{
+				item.name += ICON_SCRIPT " ";
+			}
+			if (scene.expressions.Contains(entity))
+			{
+				item.name += ICON_EXPRESSION " ";
+			}
+			bool bone_found = false;
+			for (size_t i = 0; i < scene.armatures.GetCount() && !bone_found; ++i)
+			{
+				const ArmatureComponent& armature = scene.armatures[i];
+				for (Entity bone : armature.boneCollection)
+				{
+					if (entity == bone)
+					{
+						item.name += ICON_BONE " ";
+						bone_found = true;
+						break;
+					}
+				}
+			}
+
+			item.name += name_string;
+			entityTree.AddItem(item);
+
+			entitytree_added_items.insert(entity);
 		}
-
-		item.name += name_string;
-		entityTree.AddItem(item);
-
-		entitytree_added_items.insert(entity);
 	}
 
 	for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
