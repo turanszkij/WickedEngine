@@ -2731,15 +2731,19 @@ void EditorComponent::Render() const
 					dummy::draw_soldier(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(1, 0.2f, 0.2f, 1), cmd);
 					break;
 				case MetadataComponent::Preset::Player:
-					dummy::draw_male(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(0.2f, 1, 0.2f, 1), cmd);
+					dummy::draw_male(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(0.2f, 1, 0.6f, 1), cmd);
 					break;
 				case MetadataComponent::Preset::NPC:
-					dummy::draw_female(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(1, 1, 0.2f, 1), cmd);
+					dummy::draw_female(XMLoadFloat4x4(&transform.world) * VP, XMFLOAT4(0.2f, 0.6f, 1, 1), cmd);
 					break;
 				}
 			}
 
 			device->RenderPassEnd(cmd);
+
+			wi::renderer::Postprocess_Downsample4x(rt_metadataDummies, rt_metadataDummies_4x, cmd);
+			wi::renderer::Postprocess_Blur_Gaussian(rt_metadataDummies_4x, rt_metadataDummies_4xtemp, rt_metadataDummies_4x, cmd, -1, -1, true);
+
 			device->EventEnd(cmd);
 		}
 
@@ -3263,10 +3267,12 @@ void EditorComponent::Render() const
 			{
 				wi::image::Params fx;
 				fx.enableFullScreen();
-				fx.blendFlag = wi::enums::BLENDMODE_ALPHA;
-				fx.color.w = wi::math::Lerp(0.2f, 0.6f, selectionColorIntensity);
-				wi::image::Draw(&rt_metadataDummies, fx, cmd);
-				wi::renderer::Postprocess_Outline(rt_metadataDummies, cmd, 0.1f, 1, XMFLOAT4(1, 1, 1, 1));
+				fx.blendFlag = wi::enums::BLENDMODE_PREMULTIPLIED;
+				fx.color.x = wi::math::Lerp(fx.color.x * 0.4f, fx.color.x, selectionColorIntensity);
+				fx.color.y = wi::math::Lerp(fx.color.y * 0.4f, fx.color.y, selectionColorIntensity);
+				fx.color.z = wi::math::Lerp(fx.color.z * 0.4f, fx.color.z, selectionColorIntensity);
+				fx.color.w = wi::math::Lerp(fx.color.w * 0.8f, fx.color.w, selectionColorIntensity);
+				wi::image::Draw(&rt_metadataDummies_4x, fx, cmd);
 
 				for (size_t i = 0; i < scene.metadatas.GetCount(); ++i)
 				{
@@ -3820,6 +3826,15 @@ void EditorComponent::ResizeViewport3D()
 				device->CreateTexture(&desc, nullptr, &rt_metadataDummies_MSAA);
 				device->SetName(&rt_metadataDummies_MSAA, "rt_metadataDummies_MSAA");
 			}
+
+			desc.sample_count = 1;
+			desc.width = internalResolution.x / 4;
+			desc.height = internalResolution.y / 4;
+			desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+			device->CreateTexture(&desc, nullptr, &rt_metadataDummies_4x);
+			device->SetName(&rt_metadataDummies_4x, "rt_metadataDummies_4x");
+			device->CreateTexture(&desc, nullptr, &rt_metadataDummies_4xtemp);
+			device->SetName(&rt_metadataDummies_4xtemp, "rt_metadataDummies_4xtemp");
 		}
 	}
 
