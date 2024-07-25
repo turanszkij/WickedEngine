@@ -311,6 +311,7 @@ void EditorComponent::Load()
 		NEW_SPRITE,
 		NEW_FONT,
 		NEW_VOXELGRID,
+		NEW_METADATA,
 	};
 
 	newEntityCombo.Create("New: ");
@@ -345,6 +346,7 @@ void EditorComponent::Load()
 	newEntityCombo.AddItem("Sprite " ICON_SPRITE, NEW_SPRITE);
 	newEntityCombo.AddItem("Font " ICON_FONT, NEW_FONT);
 	newEntityCombo.AddItem("Voxel Grid " ICON_VOXELGRID, NEW_VOXELGRID);
+	newEntityCombo.AddItem("Metadata " ICON_METADATA, NEW_METADATA);
 	newEntityCombo.OnSelect([this](wi::gui::EventArgs args) {
 		newEntityCombo.SetSelectedWithoutCallback(-1);
 		const EditorComponent::EditorScene& editorscene = GetCurrentEditorScene();
@@ -525,6 +527,14 @@ void EditorComponent::Load()
 			scene.voxel_grids.Create(pick.entity).init(64, 64, 64);
 			scene.transforms.Create(pick.entity).Scale(XMFLOAT3(0.25f, 0.25f, 0.25f));
 			scene.names.Create(pick.entity) = "voxelgrid";
+		}
+		break;
+		case NEW_METADATA:
+		{
+			pick.entity = CreateEntity();
+			scene.metadatas.Create(pick.entity);
+			scene.transforms.Create(pick.entity);
+			scene.names.Create(pick.entity) = "metadata";
 		}
 		break;
 		default:

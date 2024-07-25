@@ -362,7 +362,6 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 			end
 			self.model = scene.Instantiate(model_scene, true)
 
-			scene.Update(0)
 			local layer = scene.Component_GetLayer(self.model)
 			layer.SetLayerMask(self.layerMask)
 
@@ -1299,10 +1298,10 @@ runProcess(function()
 						if metadata.HasString("state") then
 							waypoint.state = metadata.GetString("state")
 						end
-						table.insert(npc.patrol_waypoints, waypoint)
+						table.insert(npc.patrol_waypoints, waypoint) -- add waypoint to NPC
 					end
 				end
-				table.insert(npcs, npc)
+				table.insert(npcs, npc) -- add NPC
 			end
 		end
 	end
