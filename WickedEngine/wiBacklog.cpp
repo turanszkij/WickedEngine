@@ -42,6 +42,7 @@ namespace wi::backlog
 	bool refitscroll = false;
 	wi::gui::TextInputField inputField;
 	wi::gui::Button toggleButton;
+	wi::gui::GUI GUI;
 
 	bool locked = false;
 	bool blockLuaExec = false;
@@ -87,7 +88,7 @@ namespace wi::backlog
 	{
 		if (!locked)
 		{
-			if (wi::input::Press(wi::input::KEYBOARD_BUTTON_HOME))
+			if (wi::input::Press(wi::input::KEYBOARD_BUTTON_HOME) && !GUI.IsTyping())
 			{
 				Toggle();
 			}
