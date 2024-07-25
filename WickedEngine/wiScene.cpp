@@ -1191,6 +1191,8 @@ namespace wi::scene
 					tmp.Component_Attach(entity, rootEntity);
 				}
 			}
+
+			tmp.RunHierarchyUpdateSystem(seri.ctx);
 		}
 
 		wi::jobsystem::Wait(seri.ctx); // wait for completion of component serializations background threads here
