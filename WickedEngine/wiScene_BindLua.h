@@ -1810,6 +1810,11 @@ namespace wi::lua::scene
 		MetadataComponent_BindLua(wi::scene::MetadataComponent* component) :component(component) {}
 		MetadataComponent_BindLua(lua_State* L) : component(&owning) {}
 
+		int HasBool(lua_State* L);
+		int HasInt(lua_State* L);
+		int HasFloat(lua_State* L);
+		int HasString(lua_State* L);
+
 		int GetPreset(lua_State* L);
 		int GetBool(lua_State* L);
 		int GetInt(lua_State* L);

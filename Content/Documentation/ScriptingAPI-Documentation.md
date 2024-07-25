@@ -1468,7 +1468,12 @@ The decal component is a textured sticker that can be put down onto meshes. Most
 - GetSlopeBlendPower() : float
 
 #### MetadataComponent
-The metadata component can store and retrieve an arbitrary amount of named user values for an entity
+The metadata component can store and retrieve an arbitrary amount of named user values for an entity. It is possible to use the same name for multiple of different value types, but one value can not have multiple entries with the same name. 
+
+- HasBool(string name) : bool
+- HasInt(string name) : bool
+- HasFloat(string name) : bool
+- HasString(string name) : bool
 
 - GetPreset() : int
 - GetBool(string name) : bool

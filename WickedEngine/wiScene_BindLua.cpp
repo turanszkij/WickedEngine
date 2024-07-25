@@ -7207,20 +7207,107 @@ int DecalComponent_BindLua::GetSlopeBlendPower(lua_State* L)
 
 
 Luna<MetadataComponent_BindLua>::FunctionType MetadataComponent_BindLua::methods[] = {
+	lunamethod(MetadataComponent_BindLua, HasBool),
+	lunamethod(MetadataComponent_BindLua, HasInt),
+	lunamethod(MetadataComponent_BindLua, HasFloat),
+	lunamethod(MetadataComponent_BindLua, HasString),
+
 	lunamethod(MetadataComponent_BindLua, GetPreset),
 	lunamethod(MetadataComponent_BindLua, GetBool),
 	lunamethod(MetadataComponent_BindLua, GetInt),
+	lunamethod(MetadataComponent_BindLua, GetFloat),
 	lunamethod(MetadataComponent_BindLua, GetString),
 
 	lunamethod(MetadataComponent_BindLua, SetPreset),
 	lunamethod(MetadataComponent_BindLua, SetBool),
 	lunamethod(MetadataComponent_BindLua, SetInt),
+	lunamethod(MetadataComponent_BindLua, SetFloat),
 	lunamethod(MetadataComponent_BindLua, SetString),
 	{ NULL, NULL }
 };
 Luna<MetadataComponent_BindLua>::PropertyType MetadataComponent_BindLua::properties[] = {
 	{ NULL, NULL }
 };
+int MetadataComponent_BindLua::HasBool(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "GetBool(string name) not enough arguments!");
+		return 0;
+	}
+	std::string name = wi::lua::SGetString(L, 1);
+	auto it = component->bool_values.find(name);
+	if (it == component->bool_values.end())
+	{
+		wi::lua::SSetBool(L, false);
+	}
+	else
+	{
+		wi::lua::SSetBool(L, true);
+	}
+	return 1;
+}
+int MetadataComponent_BindLua::HasInt(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "GetInt(string name) not enough arguments!");
+		return 0;
+	}
+	std::string name = wi::lua::SGetString(L, 1);
+	auto it = component->int_values.find(name);
+	if (it == component->int_values.end())
+	{
+		wi::lua::SSetBool(L, false);
+	}
+	else
+	{
+		wi::lua::SSetBool(L, true);
+	}
+	return 1;
+}
+int MetadataComponent_BindLua::HasFloat(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "GetFloat(string name) not enough arguments!");
+		return 0;
+	}
+	std::string name = wi::lua::SGetString(L, 1);
+	auto it = component->float_values.find(name);
+	if (it == component->float_values.end())
+	{
+		wi::lua::SSetBool(L, false);
+	}
+	else
+	{
+		wi::lua::SSetBool(L, true);
+	}
+	return 1;
+}
+int MetadataComponent_BindLua::HasString(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "GetString(string name) not enough arguments!");
+		return 0;
+	}
+	std::string name = wi::lua::SGetString(L, 1);
+	auto it = component->string_values.find(name);
+	if (it == component->string_values.end())
+	{
+		wi::lua::SSetBool(L, false);
+	}
+	else
+	{
+		wi::lua::SSetBool(L, true);
+	}
+	return 1;
+}
 
 int MetadataComponent_BindLua::GetPreset(lua_State* L)
 {

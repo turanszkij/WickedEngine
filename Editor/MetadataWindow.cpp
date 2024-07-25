@@ -106,6 +106,10 @@ void MetadataWindow::SetEntity(Entity entity)
 
 		SetEnabled(true);
 	}
+	else
+	{
+		this->entity = INVALID_ENTITY;
+	}
 }
 
 void MetadataWindow::RefreshEntries()
