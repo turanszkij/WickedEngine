@@ -3266,6 +3266,9 @@ void EditorComponent::Render() const
 				fx.blendFlag = wi::enums::BLENDMODE_ALPHA;
 				fx.color.w = wi::math::Lerp(0.2f, 0.6f, selectionColorIntensity);
 				wi::image::Draw(&rt_metadataDummies, fx, cmd);
+				XMFLOAT4 dummyColorBlinking = XMFLOAT4(1, 1, 1, 1);
+				dummyColorBlinking.w = wi::math::Lerp(0.4f, 1, selectionColorIntensity);
+				wi::renderer::Postprocess_Outline(rt_metadataDummies, cmd, 0.1f, 1, dummyColorBlinking);
 
 				for (size_t i = 0; i < scene.metadatas.GetCount(); ++i)
 				{
