@@ -30,6 +30,7 @@
 #include "SpriteWindow.h"
 #include "FontWindow.h"
 #include "VoxelGridWindow.h"
+#include "MetadataWindow.h"
 
 class EditorComponent;
 
@@ -74,6 +75,7 @@ public:
 	SpriteWindow spriteWnd;
 	FontWindow fontWnd;
 	VoxelGridWindow voxelGridWnd;
+	MetadataWindow metadataWnd;
 
 	enum class Filter : uint64_t
 	{
@@ -105,6 +107,7 @@ public:
 		VoxelGrid = 1 << 25,
 		RigidBody = 1 << 26,
 		SoftBody = 1 << 27,
+		Metadata = 1 << 28,
 
 		All = ~0ull,
 	} filter = Filter::All;

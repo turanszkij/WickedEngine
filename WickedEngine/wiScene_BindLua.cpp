@@ -457,6 +457,15 @@ RigidBodyShape = {
 	ConvexHull = 3,
 	TriangleMesh = 4,
 }
+
+MetadataPreset = {
+	Custom = 0,
+	Waypoint = 1,
+	Player = 2,
+	Enemy = 3,
+	NPC = 4,
+	Pickup = 5,
+}
 )";
 
 void Bind()
@@ -504,6 +513,7 @@ void Bind()
 		Luna<ExpressionComponent_BindLua>::Register(L);
 		Luna<HumanoidComponent_BindLua>::Register(L);
 		Luna<DecalComponent_BindLua>::Register(L);
+		Luna<MetadataComponent_BindLua>::Register(L);
 
 		wi::lua::RunText(value_bindings);
 	}
@@ -549,6 +559,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_CreateSprite),
 	lunamethod(Scene_BindLua, Component_CreateFont),
 	lunamethod(Scene_BindLua, Component_CreateVoxelGrid),
+	lunamethod(Scene_BindLua, Component_CreateMetadata),
 
 	lunamethod(Scene_BindLua, Component_GetName),
 	lunamethod(Scene_BindLua, Component_GetLayer),
@@ -576,6 +587,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetSprite),
 	lunamethod(Scene_BindLua, Component_GetFont),
 	lunamethod(Scene_BindLua, Component_GetVoxelGrid),
+	lunamethod(Scene_BindLua, Component_GetMetadata),
 
 	lunamethod(Scene_BindLua, Component_GetNameArray),
 	lunamethod(Scene_BindLua, Component_GetLayerArray),
@@ -603,6 +615,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetSpriteArray),
 	lunamethod(Scene_BindLua, Component_GetFontArray),
 	lunamethod(Scene_BindLua, Component_GetVoxelGridArray),
+	lunamethod(Scene_BindLua, Component_GetMetadataArray),
 
 	lunamethod(Scene_BindLua, Entity_GetNameArray),
 	lunamethod(Scene_BindLua, Entity_GetLayerArray),
@@ -630,6 +643,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Entity_GetDecalArray),
 	lunamethod(Scene_BindLua, Entity_GetSpriteArray),
 	lunamethod(Scene_BindLua, Entity_GetVoxelGridArray),
+	lunamethod(Scene_BindLua, Entity_GetMetadataArray),
 
 	lunamethod(Scene_BindLua, Component_RemoveName),
 	lunamethod(Scene_BindLua, Component_RemoveLayer),
@@ -658,6 +672,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_RemoveSprite),
 	lunamethod(Scene_BindLua, Component_RemoveFont),
 	lunamethod(Scene_BindLua, Component_RemoveVoxelGrid),
+	lunamethod(Scene_BindLua, Component_RemoveMetadata),
 
 	lunamethod(Scene_BindLua, Component_Attach),
 	lunamethod(Scene_BindLua, Component_Detach),
@@ -1412,6 +1427,23 @@ int Scene_BindLua::Component_CreateVoxelGrid(lua_State* L)
 	}
 	return 0;
 }
+int Scene_BindLua::Component_CreateMetadata(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		MetadataComponent& component = scene->metadatas.Create(entity);
+		Luna<MetadataComponent_BindLua>::push(L, &component);
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_CreateMetadata(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
 
 int Scene_BindLua::Component_GetName(lua_State* L)
 {
@@ -1985,6 +2017,28 @@ int Scene_BindLua::Component_GetVoxelGrid(lua_State* L)
 	}
 	return 0;
 }
+int Scene_BindLua::Component_GetMetadata(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		MetadataComponent* component = scene->metadatas.GetComponent(entity);
+		if (component == nullptr)
+		{
+			return 0;
+		}
+
+		Luna<MetadataComponent_BindLua>::push(L, component);
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_GetMetadata(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
 
 int Scene_BindLua::Component_GetNameArray(lua_State* L)
 {
@@ -2268,6 +2322,17 @@ int Scene_BindLua::Component_GetVoxelGridArray(lua_State* L)
 	for (size_t i = 0; i < scene->voxel_grids.GetCount(); ++i)
 	{
 		Luna<VoxelGrid_BindLua>::push(L, scene->voxel_grids[i]);
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Component_GetMetadataArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->metadatas.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->metadatas.GetCount(); ++i)
+	{
+		Luna<MetadataComponent_BindLua>::push(L, &scene->metadatas[i]);
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -2566,6 +2631,17 @@ int Scene_BindLua::Entity_GetVoxelGridArray(lua_State* L)
 	for (size_t i = 0; i < scene->voxel_grids.GetCount(); ++i)
 	{
 		wi::lua::SSetLongLong(L, scene->voxel_grids.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Entity_GetMetadataArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->metadatas.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->metadatas.GetCount(); ++i)
+	{
+		wi::lua::SSetLongLong(L, scene->metadatas.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -3027,6 +3103,23 @@ int Scene_BindLua::Component_RemoveVoxelGrid(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "Scene::Component_RemoveVoxelGrid(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_RemoveMetadata(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+		if (scene->metadatas.Contains(entity))
+		{
+			scene->metadatas.Remove(entity);
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_RemoveMetadata(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
@@ -7105,6 +7198,201 @@ int DecalComponent_BindLua::GetSlopeBlendPower(lua_State* L)
 {
 	wi::lua::SSetFloat(L, component->slopeBlendPower);
 	return 1;
+}
+
+
+
+
+
+
+
+Luna<MetadataComponent_BindLua>::FunctionType MetadataComponent_BindLua::methods[] = {
+	lunamethod(MetadataComponent_BindLua, HasBool),
+	lunamethod(MetadataComponent_BindLua, HasInt),
+	lunamethod(MetadataComponent_BindLua, HasFloat),
+	lunamethod(MetadataComponent_BindLua, HasString),
+
+	lunamethod(MetadataComponent_BindLua, GetPreset),
+	lunamethod(MetadataComponent_BindLua, GetBool),
+	lunamethod(MetadataComponent_BindLua, GetInt),
+	lunamethod(MetadataComponent_BindLua, GetFloat),
+	lunamethod(MetadataComponent_BindLua, GetString),
+
+	lunamethod(MetadataComponent_BindLua, SetPreset),
+	lunamethod(MetadataComponent_BindLua, SetBool),
+	lunamethod(MetadataComponent_BindLua, SetInt),
+	lunamethod(MetadataComponent_BindLua, SetFloat),
+	lunamethod(MetadataComponent_BindLua, SetString),
+	{ NULL, NULL }
+};
+Luna<MetadataComponent_BindLua>::PropertyType MetadataComponent_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+int MetadataComponent_BindLua::HasBool(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "GetBool(string name) not enough arguments!");
+		return 0;
+	}
+	std::string name = wi::lua::SGetString(L, 1);
+	wi::lua::SSetBool(L, component->bool_values.has(name));
+	return 1;
+}
+int MetadataComponent_BindLua::HasInt(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "GetInt(string name) not enough arguments!");
+		return 0;
+	}
+	std::string name = wi::lua::SGetString(L, 1);
+	wi::lua::SSetBool(L, component->int_values.has(name));
+	return 1;
+}
+int MetadataComponent_BindLua::HasFloat(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "GetFloat(string name) not enough arguments!");
+		return 0;
+	}
+	std::string name = wi::lua::SGetString(L, 1);
+	wi::lua::SSetBool(L, component->float_values.has(name));
+	return 1;
+}
+int MetadataComponent_BindLua::HasString(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "GetString(string name) not enough arguments!");
+		return 0;
+	}
+	std::string name = wi::lua::SGetString(L, 1);
+	wi::lua::SSetBool(L, component->string_values.has(name));
+	return 1;
+}
+
+int MetadataComponent_BindLua::GetPreset(lua_State* L)
+{
+	wi::lua::SSetInt(L, (int)component->preset);
+	return 1;
+}
+int MetadataComponent_BindLua::GetBool(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "GetBool(string name) not enough arguments!");
+		return 0;
+	}
+	std::string name = wi::lua::SGetString(L, 1);
+	wi::lua::SSetBool(L, component->bool_values.get(name));
+	return 1;
+}
+int MetadataComponent_BindLua::GetInt(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "GetInt(string name) not enough arguments!");
+		return 0;
+	}
+	std::string name = wi::lua::SGetString(L, 1);
+	wi::lua::SSetInt(L, component->int_values.get(name));
+	return 1;
+}
+int MetadataComponent_BindLua::GetFloat(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "GetFloat(string name) not enough arguments!");
+		return 0;
+	}
+	std::string name = wi::lua::SGetString(L, 1);
+	wi::lua::SSetFloat(L, component->float_values.get(name));
+	return 1;
+}
+int MetadataComponent_BindLua::GetString(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "GetString(string name) not enough arguments!");
+		return 0;
+	}
+	std::string name = wi::lua::SGetString(L, 1);
+	wi::lua::SSetString(L, component->string_values.get(name));
+	return 1;
+}
+
+int MetadataComponent_BindLua::SetPreset(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "SetPreset(int preset) not enough arguments!");
+		return 0;
+	}
+	component->preset = (MetadataComponent::Preset)wi::lua::SGetInt(L, 1);
+	return 0;
+}
+int MetadataComponent_BindLua::SetBool(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 2)
+	{
+		wi::lua::SError(L, "SetBool(string name, bool value) not enough arguments!");
+		return 0;
+	}
+	std::string name = wi::lua::SGetString(L, 1);
+	bool value = wi::lua::SGetBool(L, 2);
+	component->bool_values.set(name, value);
+	return 0;
+}
+int MetadataComponent_BindLua::SetInt(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 2)
+	{
+		wi::lua::SError(L, "SetInt(string name, int value) not enough arguments!");
+		return 0;
+	}
+	std::string name = wi::lua::SGetString(L, 1);
+	int value = wi::lua::SGetInt(L, 2);
+	component->int_values.set(name, value);
+	return 0;
+}
+int MetadataComponent_BindLua::SetFloat(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 2)
+	{
+		wi::lua::SError(L, "SetFloat(string name, float value) not enough arguments!");
+		return 0;
+	}
+	std::string name = wi::lua::SGetString(L, 1);
+	float value = wi::lua::SGetFloat(L, 2);
+	component->float_values.set(name, value);
+	return 0;
+}
+int MetadataComponent_BindLua::SetString(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 2)
+	{
+		wi::lua::SError(L, "SetString(string name, string value) not enough arguments!");
+		return 0;
+	}
+	std::string name = wi::lua::SGetString(L, 1);
+	std::string value = wi::lua::SGetString(L, 2);
+	component->string_values.set(name, value);
+	return 0;
 }
 
 }

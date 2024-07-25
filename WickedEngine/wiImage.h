@@ -142,7 +142,7 @@ namespace wi::image
 		constexpr void enableMirror() { _flags |= MIRROR; }
 		// enable normal map extraction shader that will perform texcolor * 2 - 1 (preferably onto a signed render target)
 		constexpr void enableExtractNormalMap() { _flags |= EXTRACT_NORMALMAP; }
-		// enable full screen override. It just draws texture onto the full screen, disabling any other setup except sampler and stencil)
+		// enable full screen override. It will draw the image over the full screen, disabling any positioning and sizing setup
 		constexpr void enableFullScreen() { _flags |= FULLSCREEN; }
 		// enable background, which samples a background screen texture on transparent areas instead of alpha blending
 		//	the background tex should be bound with wi::image::SetBackground() beforehand

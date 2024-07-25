@@ -2116,6 +2116,97 @@ namespace wi::scene
 			}
 		}
 	}
+	void MetadataComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
+	{
+		if (archive.IsReadMode())
+		{
+			archive >> _flags;
+
+			int intpreset = 0;
+			archive >> intpreset;
+			preset = (Preset)intpreset;
+
+			size_t count = 0;
+
+			archive >> count;
+			bool_values.reserve(count);
+			for (size_t i = 0; i < count; ++i)
+			{
+				std::string name;
+				archive >> name;
+				bool value;
+				archive >> value;
+				bool_values.set(name, value);
+			}
+
+			archive >> count;
+			int_values.reserve(count);
+			for (size_t i = 0; i < count; ++i)
+			{
+				std::string name;
+				archive >> name;
+				int value;
+				archive >> value;
+				int_values.set(name, value);
+			}
+
+			archive >> count;
+			float_values.reserve(count);
+			for (size_t i = 0; i < count; ++i)
+			{
+				std::string name;
+				archive >> name;
+				float value;
+				archive >> value;
+				float_values.set(name, value);
+			}
+
+			archive >> count;
+			string_values.reserve(count);
+			for (size_t i = 0; i < count; ++i)
+			{
+				std::string name;
+				archive >> name;
+				std::string value;
+				archive >> value;
+				string_values.set(name, value);
+			}
+		}
+		else
+		{
+			archive << _flags;
+
+			archive << (int)preset;
+
+			archive << bool_values.lookup.size();
+			for (auto& x : bool_values.lookup)
+			{
+				archive << x.first;
+				archive << bool_values.get(x.first);
+			}
+
+			archive << int_values.lookup.size();
+			for (auto& x : int_values.lookup)
+			{
+				archive << x.first;
+				archive << int_values.get(x.first);
+			}
+
+			archive << float_values.lookup.size();
+			for (auto& x : float_values.lookup)
+			{
+				archive << x.first;
+				archive << float_values.get(x.first);
+			}
+
+			archive << string_values.lookup.size();
+			for (auto& x : string_values.lookup)
+			{
+				archive << x.first;
+				archive << string_values.get(x.first);
+			}
+		}
+	}
 
 	void Scene::Serialize(wi::Archive& archive)
 	{

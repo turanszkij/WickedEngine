@@ -624,61 +624,71 @@ void MeshWindow::Create(EditorComponent* _editor)
 	exportHeaderButton.SetSize(XMFLOAT2(mod_wid, hei));
 	exportHeaderButton.SetPos(XMFLOAT2(mod_x, y += step));
 	exportHeaderButton.OnClick([&](wi::gui::EventArgs args) {
-		MeshComponent* mesh = editor->GetCurrentScene().meshes.GetComponent(entity);
-		if (mesh == nullptr)
-			return;
-
 		wi::helper::FileDialogParams params;
 		params.description = ".h (C++ header file)";
 		params.extensions.push_back("h");
 		params.type = wi::helper::FileDialogParams::TYPE::SAVE;
 		wi::helper::FileDialog(params, [=](std::string filename) {
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-				// Bake transformed and skinned positions:
-				wi::vector<XMFLOAT3> vertices(mesh->vertex_positions.size());
-				const Scene& scene = editor->GetCurrentScene();
-				XMMATRIX M = XMMatrixIdentity();
-				if (editor->componentsWnd.objectWnd.entity != INVALID_ENTITY)
-				{
-					// if first selection is an object then transformation will be also applied
-					Entity object_entity = editor->componentsWnd.objectWnd.entity;
-					const ObjectComponent* object = scene.objects.GetComponent(object_entity);
-					if (object != nullptr)
-					{
-						size_t index = scene.objects.GetIndex(object_entity);
-						M = XMLoadFloat4x4(&scene.matrix_objects[index]);
-					}
-				}
-				const ArmatureComponent* armature = scene.armatures.GetComponent(mesh->armatureID);
-				for (size_t i = 0; i < mesh->vertex_positions.size(); ++i)
-				{
-					XMVECTOR P;
-					if (armature == nullptr)
-					{
-						P = XMLoadFloat3(&mesh->vertex_positions[i]);
-					}
-					else
-					{
-						P = wi::scene::SkinVertex(*mesh, *armature, (uint32_t)i);
-					}
-					P = XMVector3Transform(P, M);
-					XMStoreFloat3(&vertices[i], P);
-				}
 
-				// Gather all indices for all subsets in LOD0:
+				wi::scene::Scene& scene = editor->GetCurrentScene();
+				wi::vector<XMFLOAT3> vertices;
 				wi::vector<uint32_t> indices;
-				uint32_t first_subset = 0;
-				uint32_t last_subset = 0;
-				mesh->GetLODSubsetRange(0, first_subset, last_subset);
-				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+				uint32_t vertexOffset = 0;
+
+				for (auto& x : editor->translator.selected)
 				{
-					const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
-					if (subset.indexCount == 0)
+					const ObjectComponent* object = scene.objects.GetComponent(x.entity);
+					if (object == nullptr)
 						continue;
-					for (uint32_t i = 0; i < subset.indexCount; ++i)
+					const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+					if (mesh == nullptr)
+						continue;
+
+					size_t object_index = scene.objects.GetIndex(x.entity);
+					XMMATRIX M = XMLoadFloat4x4(&scene.matrix_objects[object_index]);
+
+					// Bake transformed and skinned positions:
+					const ArmatureComponent* armature = scene.armatures.GetComponent(mesh->armatureID);
+					for (size_t i = 0; i < mesh->vertex_positions.size(); ++i)
 					{
-						indices.push_back(mesh->indices[subset.indexOffset + i]);
+						XMVECTOR P;
+						if (armature == nullptr)
+						{
+							P = XMLoadFloat3(&mesh->vertex_positions[i]);
+						}
+						else
+						{
+							P = wi::scene::SkinVertex(*mesh, *armature, (uint32_t)i);
+						}
+						P = XMVector3Transform(P, M);
+
+						XMFLOAT3 pos;
+						XMStoreFloat3(&pos, P);
+
+						vertices.push_back(pos);
 					}
+
+					// Gather all indices for all subsets in LOD0:
+					uint32_t first_subset = 0;
+					uint32_t last_subset = 0;
+					mesh->GetLODSubsetRange(0, first_subset, last_subset);
+					for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+					{
+						const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+						if (subset.indexCount == 0)
+							continue;
+						for (uint32_t i = 0; i < subset.indexCount; ++i)
+						{
+							uint32_t index = mesh->indices[subset.indexOffset + i];
+							assert(index < mesh->vertex_positions.size());
+							index += vertexOffset;
+							assert(index < vertices.size());
+							indices.push_back(index);
+						}
+					}
+
+					vertexOffset = (uint32_t)vertices.size();
 				}
 
 				// Generate shadow indices for position-only stream:

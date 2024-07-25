@@ -4,6 +4,7 @@
 
 #include "ModelImporter.h"
 #include "Translator.h"
+#include "DummyVisualizer.h"
 
 using namespace wi::graphics;
 using namespace wi::primitive;
@@ -17,15 +18,6 @@ extern bool window_recreating;
 #elif defined(PLATFORM_LINUX)
 #include "sdl2.h"
 #endif // PLATFORM_WINDOWS
-
-namespace dummy_female
-{
-#include "dummy_female.h"
-}
-namespace dummy_male
-{
-#include "dummy_male.h"
-}
 
 enum class FileType
 {
@@ -319,6 +311,7 @@ void EditorComponent::Load()
 		NEW_SPRITE,
 		NEW_FONT,
 		NEW_VOXELGRID,
+		NEW_METADATA,
 	};
 
 	newEntityCombo.Create("New: ");
@@ -353,6 +346,7 @@ void EditorComponent::Load()
 	newEntityCombo.AddItem("Sprite " ICON_SPRITE, NEW_SPRITE);
 	newEntityCombo.AddItem("Font " ICON_FONT, NEW_FONT);
 	newEntityCombo.AddItem("Voxel Grid " ICON_VOXELGRID, NEW_VOXELGRID);
+	newEntityCombo.AddItem("Metadata " ICON_METADATA, NEW_METADATA);
 	newEntityCombo.OnSelect([this](wi::gui::EventArgs args) {
 		newEntityCombo.SetSelectedWithoutCallback(-1);
 		const EditorComponent::EditorScene& editorscene = GetCurrentEditorScene();
@@ -533,6 +527,14 @@ void EditorComponent::Load()
 			scene.voxel_grids.Create(pick.entity).init(64, 64, 64);
 			scene.transforms.Create(pick.entity).Scale(XMFLOAT3(0.25f, 0.25f, 0.25f));
 			scene.names.Create(pick.entity) = "voxelgrid";
+		}
+		break;
+		case NEW_METADATA:
+		{
+			pick.entity = CreateEntity();
+			scene.metadatas.Create(pick.entity);
+			scene.transforms.Create(pick.entity);
+			scene.names.Create(pick.entity) = "metadata";
 		}
 		break;
 		default:
@@ -1531,6 +1533,25 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Metadata))
+			{
+				for (size_t i = 0; i < scene.metadatas.GetCount(); ++i)
+				{
+					Entity entity = scene.metadatas.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
+					float dis = XMVectorGetX(disV);
+					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					{
+						hovered = wi::scene::PickResult();
+						hovered.entity = entity;
+						hovered.distance = dis;
+					}
+				}
+			}
 			if (bone_picking)
 			{
 				for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
@@ -2095,6 +2116,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.spriteWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.fontWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.voxelGridWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.metadataWnd.SetEntity(INVALID_ENTITY);
 	}
 	else
 	{
@@ -2129,6 +2151,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.spriteWnd.SetEntity(picked.entity);
 		componentsWnd.fontWnd.SetEntity(picked.entity);
 		componentsWnd.voxelGridWnd.SetEntity(picked.entity);
+		componentsWnd.metadataWnd.SetEntity(picked.entity);
 
 		if (picked.subsetIndex >= 0)
 		{
@@ -2434,6 +2457,13 @@ void EditorComponent::PostUpdate()
 void EditorComponent::Render() const
 {
 	const Scene& scene = GetCurrentScene();
+	const CameraComponent& camera = GetCurrentEditorScene().camera;
+
+	// remove camera jittering
+	CameraComponent cam = *renderPath->camera;
+	cam.jitter = XMFLOAT2(0, 0);
+	cam.UpdateCamera();
+	const XMMATRIX VP = cam.GetViewProjection();
 
 	// Hovered item boxes:
 	if (GetGUI().IsVisible())
@@ -2647,72 +2677,6 @@ void EditorComponent::Render() const
 		if(dummy_enabled)
 		{
 			device->EventBegin("Reference Dummy", cmd);
-			static PipelineState pso;
-			if (!pso.IsValid())
-			{
-				static auto LoadShaders = [] {
-					PipelineStateDesc desc;
-					desc.vs = wi::renderer::GetShader(wi::enums::VSTYPE_VERTEXCOLOR);
-					desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);
-					desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_VERTEXCOLOR);
-					desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEPTHDISABLED);
-					desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_DOUBLESIDED);
-					desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_TRANSPARENT);
-					desc.pt = PrimitiveTopology::TRIANGLELIST;
-					wi::graphics::GetDevice()->CreatePipelineState(&desc, &pso);
-				};
-				static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
-				LoadShaders();
-			}
-			struct Vertex
-			{
-				XMFLOAT4 position;
-				XMFLOAT4 color;
-			};
-
-			const float3* vertices = dummy_female::vertices;
-			size_t vertices_size = sizeof(dummy_female::vertices);
-			size_t vertices_count = arraysize(dummy_female::vertices);
-			const unsigned int* indices = dummy_female::indices;
-			size_t indices_size = sizeof(dummy_female::indices);
-			size_t indices_count = arraysize(dummy_female::indices);
-			if (dummy_male)
-			{
-				vertices = dummy_male::vertices;
-				vertices_size = sizeof(dummy_male::vertices);
-				vertices_count = arraysize(dummy_male::vertices);
-				indices = dummy_male::indices;
-				indices_size = sizeof(dummy_male::indices);
-				indices_count = arraysize(dummy_male::indices);
-			}
-
-			static GPUBuffer dummyBuffers[2];
-			if (!dummyBuffers[dummy_male].IsValid())
-			{
-				auto fill_data = [&](void* data) {
-					Vertex* gpu_vertices = (Vertex*)data;
-					for (size_t i = 0; i < vertices_count; ++i)
-					{
-						Vertex vert = {};
-						vert.position.x = vertices[i].x;
-						vert.position.y = vertices[i].y;
-						vert.position.z = vertices[i].z;
-						vert.position.w = 1;
-						vert.color = XMFLOAT4(1, 1, 1, 1);
-						std::memcpy(gpu_vertices + i, &vert, sizeof(vert));
-					}
-
-					uint32_t* gpu_indices = (uint32_t*)(gpu_vertices + vertices_count);
-					std::memcpy(gpu_indices, indices, indices_size);
-				};
-
-				GPUBufferDesc desc;
-				desc.size = indices_count * sizeof(uint32_t) + vertices_count * sizeof(Vertex);
-				desc.bind_flags = BindFlag::INDEX_BUFFER | BindFlag::VERTEX_BUFFER;
-				device->CreateBuffer2(&desc, fill_data, &dummyBuffers[dummy_male]);
-				device->SetName(&dummyBuffers[dummy_male], "dummyBuffer");
-			}
-
 			RenderPassImage rp[] = {
 				RenderPassImage::RenderTarget(&rt_dummyOutline, RenderPassImage::LoadOp::CLEAR),
 			};
@@ -2723,31 +2687,108 @@ void EditorComponent::Render() const
 			vp.height = (float)rt_dummyOutline.GetDesc().height;
 			device->BindViewports(1, &vp, cmd);
 
-			device->BindPipelineState(&pso, cmd);
+			if (dummy_male)
+			{
+				dummy::draw_male(XMMatrixTranslation(dummy_pos.x, dummy_pos.y, dummy_pos.z) * VP, XMFLOAT4(1, 1, 1, 1), false, cmd);
+			}
+			else
+			{
+				dummy::draw_female(XMMatrixTranslation(dummy_pos.x, dummy_pos.y, dummy_pos.z)* VP, XMFLOAT4(1, 1, 1, 1), false, cmd);
+			}
 
-			// remove camera jittering
-			CameraComponent cam = *renderPath->camera;
-			cam.jitter = XMFLOAT2(0, 0);
-			cam.UpdateCamera();
-			const XMMATRIX VP = cam.GetViewProjection();
+			device->RenderPassEnd(cmd);
+			device->EventEnd(cmd);
+		}
 
-			MiscCB sb;
-			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranslation(dummy_pos.x, dummy_pos.y, dummy_pos.z) * VP);
-			sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+		if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Metadata) && scene.metadatas.GetCount() > 0)
+		{
+			device->EventBegin("Metadata Dummy", cmd);
+			if (renderPath->getMSAASampleCount() > 1)
+			{
+				RenderPassImage rp[] = {
+					RenderPassImage::RenderTarget(&rt_metadataDummies_MSAA, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::DepthStencil(renderPath->GetDepthStencil()),
+					RenderPassImage::Resolve(&rt_metadataDummies)
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
+			}
+			else
+			{
+				RenderPassImage rp[] = {
+					RenderPassImage::RenderTarget(&rt_metadataDummies, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::DepthStencil(renderPath->GetDepthStencil()),
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
+			}
 
-			const GPUBuffer* vbs[] = {
-				&dummyBuffers[dummy_male],
-			};
-			const uint32_t strides[] = {
-				sizeof(Vertex),
-			};
-			const uint64_t offsets[] = {
-				0,
-			};
-			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
-			device->BindIndexBuffer(&dummyBuffers[dummy_male], IndexBufferFormat::UINT32, vertices_count * sizeof(Vertex), cmd);
-			device->DrawIndexed((uint32_t)indices_count, 0, 0, cmd);
+			Viewport vp;
+			vp.width = (float)rt_metadataDummies.GetDesc().width;
+			vp.height = (float)rt_metadataDummies.GetDesc().height;
+			device->BindViewports(1, &vp, cmd);
+
+			static float tim = 0;
+			tim += scene.dt;
+			float sca = lerp(0.4f, 0.8f, std::abs(std::sin(tim * 2)));
+
+			XMMATRIX ROT = XMLoadFloat3x3(&camera.rotationMatrix);
+			wi::font::Params fp;
+			fp.customProjection = &VP;
+			fp.customRotation = &ROT;
+			fp.scaling = 0.02f;
+			fp.h_align = wi::font::WIFALIGN_CENTER;
+			fp.v_align = wi::font::WIFALIGN_BOTTOM;
+			fp.enableDepthTest();
+
+			for (size_t i = 0; i < scene.metadatas.GetCount(); ++i)
+			{
+				Entity entity = scene.metadatas.GetEntity(i);
+				if (!scene.transforms.Contains(entity))
+					continue;
+				const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+				const MetadataComponent& metadata = scene.metadatas[i];
+
+				fp.position = transform.GetPosition();
+
+				switch (metadata.preset)
+				{
+				default:
+					break;
+				case MetadataComponent::Preset::Waypoint:
+					fp.position.y += 1;
+					fp.color = wi::Color::fromFloat4(XMFLOAT4(1, 0.2f, 0.5f, 1));
+					wi::font::Draw("Waypoint", fp, cmd);
+					dummy::draw_waypoint(XMLoadFloat4x4(&transform.world) * VP, fp.color, true, cmd);
+					break;
+				case MetadataComponent::Preset::Enemy:
+					fp.position.y += 2;
+					fp.color = wi::Color::fromFloat4(XMFLOAT4(0.8f, 0.2f, 0.2f, 1));
+					wi::font::Draw("Enemy", fp, cmd);
+					dummy::draw_direction(XMMatrixRotationY(XM_PI) * XMMatrixTranslation(0, 0.1f, 0) * XMLoadFloat4x4(&transform.world) * VP, fp.color, true, cmd);
+					dummy::draw_soldier(XMLoadFloat4x4(&transform.world) * VP, fp.color, true, cmd);
+					break;
+				case MetadataComponent::Preset::Player:
+					fp.position.y += 2;
+					fp.color = wi::Color::fromFloat4(XMFLOAT4(0.2f, 0.8f, 0.6f, 1));
+					wi::font::Draw("Player", fp, cmd);
+					dummy::draw_direction(XMMatrixRotationY(XM_PI) * XMMatrixTranslation(0, 0.1f, 0) * XMLoadFloat4x4(&transform.world) * VP, fp.color, true, cmd);
+					dummy::draw_male(XMLoadFloat4x4(&transform.world) * VP, fp.color, true, cmd);
+					break;
+				case MetadataComponent::Preset::NPC:
+					fp.position.y += 1.8f;
+					fp.color = wi::Color::fromFloat4(XMFLOAT4(0.2f, 0.6f, 0.8f, 1));
+					wi::font::Draw("NPC", fp, cmd);
+					dummy::draw_direction(XMMatrixRotationY(XM_PI) * XMMatrixTranslation(0, 0.1f, 0) * XMLoadFloat4x4(&transform.world) * VP, fp.color, true, cmd);
+					dummy::draw_female(XMLoadFloat4x4(&transform.world) * VP, fp.color, true, cmd);
+					break;
+				case MetadataComponent::Preset::Pickup:
+					fp.position.y += 1;
+					fp.color = wi::Color::fromFloat4(XMFLOAT4(1, 0.8f, 0.4f, 1));
+					wi::font::Draw("Pickup", fp, cmd);
+					dummy::draw_pickup(XMMatrixScaling(sca, sca, sca) * XMMatrixTranslation(0, 0.5f, 0) * XMLoadFloat4x4(&transform.world) * VP, fp.color, true, cmd);
+					break;
+				}
+			}
+
 			device->RenderPassEnd(cmd);
 			device->EventEnd(cmd);
 		}
@@ -2826,16 +2867,6 @@ void EditorComponent::Render() const
 				dummyColorBlinking.w = wi::math::Lerp(0.4f, 1, selectionColorIntensity);
 				wi::renderer::Postprocess_Outline(rt_dummyOutline, cmd, 0.1f, 1, dummyColorBlinking);
 			}
-
-			const CameraComponent& camera = GetCurrentEditorScene().camera;
-
-			const Scene& scene = GetCurrentScene();
-
-			// remove camera jittering
-			CameraComponent cam = *renderPath->camera;
-			cam.jitter = XMFLOAT2(0, 0);
-			cam.UpdateCamera();
-			const XMMATRIX VP = cam.GetViewProjection();
 
 			MiscCB sb;
 			XMStoreFloat4x4(&sb.g_xTransform, VP);
@@ -3275,8 +3306,49 @@ void EditorComponent::Render() const
 						}
 					}
 
-
 					wi::font::Draw(ICON_VOXELGRID, fp, cmd);
+				}
+			}
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Metadata))
+			{
+				if (scene.metadatas.GetCount() > 0)
+				{
+					wi::image::Params fx;
+					fx.enableFullScreen();
+					fx.blendFlag = wi::enums::BLENDMODE_PREMULTIPLIED;
+					fx.color.x = wi::math::Lerp(fx.color.x * 0.4f, fx.color.x, selectionColorIntensity);
+					fx.color.y = wi::math::Lerp(fx.color.y * 0.4f, fx.color.y, selectionColorIntensity);
+					fx.color.z = wi::math::Lerp(fx.color.z * 0.4f, fx.color.z, selectionColorIntensity);
+					fx.color.w = 0.6f;
+					//fx.color.w = wi::math::Lerp(fx.color.w * 0.8f, fx.color.w, selectionColorIntensity);
+					wi::image::Draw(&rt_metadataDummies, fx, cmd);
+				}
+
+				for (size_t i = 0; i < scene.metadatas.GetCount(); ++i)
+				{
+					Entity entity = scene.metadatas.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					fp.position = transform.GetPosition();
+					fp.scaling = scaling * wi::math::Distance(transform.GetPosition(), camera.Eye);
+					fp.color = inactiveEntityColor;
+
+					if (hovered.entity == entity)
+					{
+						fp.color = hoveredEntityColor;
+					}
+					for (auto& picked : translator.selected)
+					{
+						if (picked.entity == entity)
+						{
+							fp.color = selectedEntityColor;
+							break;
+						}
+					}
+
+					wi::font::Draw(ICON_METADATA, fp, cmd);
 				}
 			}
 			if (bone_picking)
@@ -3721,11 +3793,11 @@ void EditorComponent::ResizeViewport3D()
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
+		XMUINT2 internalResolution = renderPath->GetInternalResolution();
+
 		if (renderPath->GetDepthStencil() != nullptr)
 		{
 			bool success = false;
-
-			XMUINT2 internalResolution = renderPath->GetInternalResolution();
 
 			TextureDesc desc;
 			desc.width = internalResolution.x;
@@ -3786,6 +3858,25 @@ void EditorComponent::ResizeViewport3D()
 				device->SetName(&editor_rendertarget, "editor_rendertarget");
 			}
 		}
+
+		{
+			TextureDesc desc;
+			desc.width = internalResolution.x;
+			desc.height = internalResolution.y;
+			desc.format = Format::R8G8B8A8_UNORM;
+			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+			device->CreateTexture(&desc, nullptr, &rt_metadataDummies);
+			device->SetName(&rt_metadataDummies, "rt_metadataDummies");
+
+			if (renderPath->getMSAASampleCount() > 1)
+			{
+				desc.sample_count = renderPath->getMSAASampleCount();
+				desc.bind_flags = BindFlag::RENDER_TARGET;
+				desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
+				device->CreateTexture(&desc, nullptr, &rt_metadataDummies_MSAA);
+				device->SetName(&rt_metadataDummies_MSAA, "rt_metadataDummies_MSAA");
+			}
+		}
 	}
 
 	if (GetGUI().IsVisible())
@@ -3807,13 +3898,13 @@ void EditorComponent::ClearSelected()
 {
 	translator.selected.clear();
 }
-void EditorComponent::AddSelected(Entity entity)
+void EditorComponent::AddSelected(Entity entity, bool allow_refocus)
 {
 	wi::scene::PickResult res;
 	res.entity = entity;
-	AddSelected(res);
+	AddSelected(res, allow_refocus);
 }
-void EditorComponent::AddSelected(const PickResult& picked)
+void EditorComponent::AddSelected(const PickResult& picked, bool allow_refocus)
 {
 	wi::scene::Scene& scene = GetCurrentScene();
 
@@ -3833,7 +3924,10 @@ void EditorComponent::AddSelected(const PickResult& picked)
 	if (!removal)
 	{
 		translator.selected.push_back(picked);
-		componentsWnd.entityTree.FocusOnItemByUserdata(picked.entity);
+		if (allow_refocus)
+		{
+			componentsWnd.entityTree.FocusOnItemByUserdata(picked.entity);
+		}
 	}
 }
 bool EditorComponent::IsSelected(Entity entity) const
@@ -5008,6 +5102,7 @@ void EditorComponent::RefreshSceneList()
 			componentsWnd.spriteWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.fontWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.voxelGridWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.metadataWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 
 			componentsWnd.RefreshEntityTree();
 			ResetHistory();

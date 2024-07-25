@@ -74,6 +74,7 @@ namespace wi::lua::scene
 		int Component_CreateSprite(lua_State* L);
 		int Component_CreateFont(lua_State* L);
 		int Component_CreateVoxelGrid(lua_State* L);
+		int Component_CreateMetadata(lua_State* L);
 
 		int Component_GetName(lua_State* L);
 		int Component_GetLayer(lua_State* L);
@@ -101,6 +102,7 @@ namespace wi::lua::scene
 		int Component_GetSprite(lua_State* L);
 		int Component_GetFont(lua_State* L);
 		int Component_GetVoxelGrid(lua_State* L);
+		int Component_GetMetadata(lua_State* L);
 
 		int Component_GetNameArray(lua_State* L);
 		int Component_GetLayerArray(lua_State* L);
@@ -128,6 +130,7 @@ namespace wi::lua::scene
 		int Component_GetSpriteArray(lua_State* L);
 		int Component_GetFontArray(lua_State* L);
 		int Component_GetVoxelGridArray(lua_State* L);
+		int Component_GetMetadataArray(lua_State* L);
 
 		int Entity_GetNameArray(lua_State* L);
 		int Entity_GetLayerArray(lua_State* L);
@@ -156,6 +159,7 @@ namespace wi::lua::scene
 		int Entity_GetSpriteArray(lua_State* L);
 		int Entity_GetFontArray(lua_State* L);
 		int Entity_GetVoxelGridArray(lua_State* L);
+		int Entity_GetMetadataArray(lua_State* L);
 
 		int Component_RemoveName(lua_State* L);
 		int Component_RemoveLayer(lua_State* L);
@@ -184,6 +188,7 @@ namespace wi::lua::scene
 		int Component_RemoveSprite(lua_State* L);
 		int Component_RemoveFont(lua_State* L);
 		int Component_RemoveVoxelGrid(lua_State* L);
+		int Component_RemoveMetadata(lua_State* L);
 
 		int Component_Attach(lua_State* L);
 		int Component_Detach(lua_State* L);
@@ -1789,6 +1794,38 @@ namespace wi::lua::scene
 		int IsBaseColorOnlyAlpha(lua_State* L);
 		int SetSlopeBlendPower(lua_State* L);
 		int GetSlopeBlendPower(lua_State* L);
+	};
+
+	class MetadataComponent_BindLua
+	{
+	private:
+		wi::scene::MetadataComponent owning;
+	public:
+		wi::scene::MetadataComponent* component = nullptr;
+
+		inline static constexpr char className[] = "MetadataComponent";
+		static Luna<MetadataComponent_BindLua>::FunctionType methods[];
+		static Luna<MetadataComponent_BindLua>::PropertyType properties[];
+
+		MetadataComponent_BindLua(wi::scene::MetadataComponent* component) :component(component) {}
+		MetadataComponent_BindLua(lua_State* L) : component(&owning) {}
+
+		int HasBool(lua_State* L);
+		int HasInt(lua_State* L);
+		int HasFloat(lua_State* L);
+		int HasString(lua_State* L);
+
+		int GetPreset(lua_State* L);
+		int GetBool(lua_State* L);
+		int GetInt(lua_State* L);
+		int GetFloat(lua_State* L);
+		int GetString(lua_State* L);
+
+		int SetPreset(lua_State* L);
+		int SetBool(lua_State* L);
+		int SetInt(lua_State* L);
+		int SetFloat(lua_State* L);
+		int SetString(lua_State* L);
 	};
 }
 

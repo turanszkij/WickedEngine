@@ -6691,23 +6691,22 @@ std::mutex queue_locker;
 	void GraphicsDevice_DX12::BindPipelineState(const PipelineState* pso, CommandList cmd)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
-		if (commandlist.active_pso == pso)
-		{
-			return;
-		}
 		commandlist.active_cs = nullptr;
 		commandlist.active_rt = nullptr;
 
 		auto internal_state = to_internal(pso);
 		if (internal_state->resource != nullptr)
 		{
-			commandlist.GetGraphicsCommandList()->SetPipelineState(internal_state->resource.Get());
-
-			if (commandlist.prev_pt != internal_state->primitiveTopology)
+			if (commandlist.active_pso != pso)
 			{
-				commandlist.prev_pt = internal_state->primitiveTopology;
+				commandlist.GetGraphicsCommandList()->SetPipelineState(internal_state->resource.Get());
 
-				commandlist.GetGraphicsCommandList()->IASetPrimitiveTopology(internal_state->primitiveTopology);
+				if (commandlist.prev_pt != internal_state->primitiveTopology)
+				{
+					commandlist.prev_pt = internal_state->primitiveTopology;
+
+					commandlist.GetGraphicsCommandList()->IASetPrimitiveTopology(internal_state->primitiveTopology);
+				}
 			}
 
 			commandlist.prev_pipeline_hash = 0;

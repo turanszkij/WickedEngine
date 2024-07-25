@@ -22,6 +22,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)ComponentsWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ContentBrowserWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)DecalWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)DummyVisualizer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Editor.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)EmbeddedResources.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)EmitterWindow.cpp" />
@@ -38,6 +39,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)MaterialPickerWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)MaterialWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)MeshWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)MetadataWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ModelImporter_FBX.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ModelImporter_GLTF.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ModelImporter_OBJ.cpp" />
@@ -89,6 +91,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ComponentsWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ContentBrowserWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)DecalWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)DummyVisualizer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Editor.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)EmitterWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)EnvProbeWindow.h" />
@@ -108,6 +111,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)MaterialPickerWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)MaterialWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)MeshWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)MetadataWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ModelImporter.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)NameWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ObjectWindow.h" />

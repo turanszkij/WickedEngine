@@ -46,6 +46,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	filterCombo.AddItem(ICON_VOXELGRID, (uint64_t)Filter::VoxelGrid);
 	filterCombo.AddItem(ICON_RIGIDBODY, (uint64_t)Filter::RigidBody);
 	filterCombo.AddItem(ICON_SOFTBODY, (uint64_t)Filter::SoftBody);
+	filterCombo.AddItem(ICON_METADATA, (uint64_t)Filter::Metadata);
 	filterCombo.SetTooltip("Apply filtering to the Entities by components");
 	filterCombo.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	filterCombo.OnSelect([&](wi::gui::EventArgs args) {
@@ -99,7 +100,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			{
 				wi::scene::PickResult pick;
 				pick.entity = (Entity)item.userdata;
-				editor->AddSelected(pick);
+				editor->AddSelected(pick, false);
 			}
 		}
 
@@ -154,6 +155,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	spriteWnd.Create(editor);
 	fontWnd.Create(editor);
 	voxelGridWnd.Create(editor);
+	metadataWnd.Create(editor);
 
 	enum ADD_THING
 	{
@@ -183,6 +185,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		ADD_SPRITE,
 		ADD_FONT,
 		ADD_VOXELGRID,
+		ADD_METADATA,
 	};
 
 	newComponentCombo.Create("Add component  ");
@@ -218,6 +221,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.AddItem("Sprite " ICON_SPRITE, ADD_SPRITE);
 	newComponentCombo.AddItem("Font " ICON_FONT, ADD_FONT);
 	newComponentCombo.AddItem("Voxel Grid " ICON_VOXELGRID, ADD_VOXELGRID);
+	newComponentCombo.AddItem("Metadata " ICON_METADATA, ADD_METADATA);
 	newComponentCombo.OnSelect([=](wi::gui::EventArgs args) {
 		newComponentCombo.SetSelectedWithoutCallback(-1);
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -345,6 +349,10 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 				if (scene.voxel_grids.Contains(entity))
 					valid = false;
 				break;
+			case ADD_METADATA:
+				if (scene.metadatas.Contains(entity))
+					valid = false;
+				break;
 			default:
 				valid = false;
 				break;
@@ -451,6 +459,9 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			case ADD_VOXELGRID:
 				scene.voxel_grids.Create(entity);
 				break;
+			case ADD_METADATA:
+				scene.metadatas.Create(entity);
+				break;
 			default:
 				break;
 			}
@@ -495,6 +506,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	AddWidget(&spriteWnd);
 	AddWidget(&fontWnd);
 	AddWidget(&voxelGridWnd);
+	AddWidget(&metadataWnd);
 
 	materialWnd.SetVisible(false);
 	weatherWnd.SetVisible(false);
@@ -527,6 +539,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	spriteWnd.SetVisible(false);
 	fontWnd.SetVisible(false);
 	voxelGridWnd.SetVisible(false);
+	metadataWnd.SetVisible(false);
 
 	XMFLOAT2 size = XMFLOAT2(338, 500);
 	if (editor->main->config.GetSection("layout").Has("components.width"))
@@ -1006,6 +1019,19 @@ void ComponentsWindow::ResizeLayout()
 	{
 		voxelGridWnd.SetVisible(false);
 	}
+
+	if (scene.metadatas.Contains(metadataWnd.entity))
+	{
+		metadataWnd.SetVisible(true);
+		metadataWnd.SetPos(pos);
+		metadataWnd.SetSize(XMFLOAT2(width, metadataWnd.GetScale().y));
+		pos.y += metadataWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		metadataWnd.SetVisible(false);
+	}
 }
 
 
@@ -1048,172 +1074,181 @@ void ComponentsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 			name_string = name->name;
 		}
 
+		bool filter_valid = true;
 		std::string name_filter = filterInput.GetCurrentInputValue();
 		if (!name_filter.empty())
 		{
 			if (filterCaseCheckBox.GetCheck() && name_string.find(name_filter) == std::string::npos)
 			{
-				return;
+				filter_valid = false;
 			}
 			else if (wi::helper::toUpper(name_string).find(wi::helper::toUpper(name_filter)) == std::string::npos)
 			{
-				return;
+				filter_valid = false;
 			}
+			item.level = 0;
 		}
 
-		// Icons:
-		if (scene.layers.Contains(entity))
+		if (filter_valid)
 		{
-			item.name += ICON_LAYER " ";
-		}
-		if (scene.transforms.Contains(entity))
-		{
-			item.name += ICON_TRANSFORM " ";
-		}
-		if (scene.terrains.Contains(entity))
-		{
-			item.name += ICON_TERRAIN " ";
-		}
-		if (scene.meshes.Contains(entity))
-		{
-			item.name += ICON_MESH " ";
-		}
-		if (scene.objects.Contains(entity))
-		{
-			item.name += ICON_OBJECT " ";
-		}
-		if (scene.rigidbodies.Contains(entity))
-		{
-			item.name += ICON_RIGIDBODY " ";
-		}
-		if (scene.softbodies.Contains(entity))
-		{
-			item.name += ICON_SOFTBODY " ";
-		}
-		if (scene.emitters.Contains(entity))
-		{
-			item.name += ICON_EMITTER " ";
-		}
-		if (scene.hairs.Contains(entity))
-		{
-			item.name += ICON_HAIR " ";
-		}
-		if (scene.forces.Contains(entity))
-		{
-			item.name += ICON_FORCE " ";
-		}
-		if (scene.sounds.Contains(entity))
-		{
-			item.name += ICON_SOUND " ";
-		}
-		if (scene.videos.Contains(entity))
-		{
-			item.name += ICON_VIDEO " ";
-		}
-		if (scene.decals.Contains(entity))
-		{
-			item.name += ICON_DECAL " ";
-		}
-		if (scene.cameras.Contains(entity))
-		{
-			item.name += ICON_CAMERA " ";
-		}
-		if (scene.probes.Contains(entity))
-		{
-			item.name += ICON_ENVIRONMENTPROBE " ";
-		}
-		if (scene.animations.Contains(entity))
-		{
-			item.name += ICON_ANIMATION " ";
-		}
-		if (scene.animation_datas.Contains(entity))
-		{
-			item.name += "[animation_data] ";
-		}
-		if (scene.armatures.Contains(entity))
-		{
-			item.name += ICON_ARMATURE " ";
-		}
-		if (scene.humanoids.Contains(entity))
-		{
-			item.name += ICON_HUMANOID " ";
-		}
-		if (scene.sprites.Contains(entity))
-		{
-			item.name += ICON_SPRITE " ";
-		}
-		if (scene.fonts.Contains(entity))
-		{
-			item.name += ICON_FONT " ";
-		}
-		if (scene.voxel_grids.Contains(entity))
-		{
-			item.name += ICON_VOXELGRID " ";
-		}
-		if (scene.lights.Contains(entity))
-		{
-			const LightComponent* light = scene.lights.GetComponent(entity);
-			switch (light->type)
+			// Icons:
+			if (scene.layers.Contains(entity))
 			{
-			default:
-			case LightComponent::POINT:
-				item.name += ICON_POINTLIGHT " ";
-				break;
-			case LightComponent::SPOT:
-				item.name += ICON_SPOTLIGHT " ";
-				break;
-			case LightComponent::DIRECTIONAL:
-				item.name += ICON_DIRECTIONALLIGHT " ";
-				break;
+				item.name += ICON_LAYER " ";
 			}
-		}
-		if (scene.materials.Contains(entity))
-		{
-			item.name += ICON_MATERIAL " ";
-		}
-		if (scene.weathers.Contains(entity))
-		{
-			item.name += ICON_WEATHER " ";
-		}
-		if (scene.inverse_kinematics.Contains(entity))
-		{
-			item.name += ICON_IK " ";
-		}
-		if (scene.springs.Contains(entity))
-		{
-			item.name += ICON_SPRING " ";
-		}
-		if (scene.colliders.Contains(entity))
-		{
-			item.name += ICON_COLLIDER " ";
-		}
-		if (scene.scripts.Contains(entity))
-		{
-			item.name += ICON_SCRIPT " ";
-		}
-		if (scene.expressions.Contains(entity))
-		{
-			item.name += ICON_EXPRESSION " ";
-		}
-		bool bone_found = false;
-		for (size_t i = 0; i < scene.armatures.GetCount() && !bone_found; ++i)
-		{
-			const ArmatureComponent& armature = scene.armatures[i];
-			for (Entity bone : armature.boneCollection)
+			if (scene.transforms.Contains(entity))
 			{
-				if (entity == bone)
+				item.name += ICON_TRANSFORM " ";
+			}
+			if (scene.terrains.Contains(entity))
+			{
+				item.name += ICON_TERRAIN " ";
+			}
+			if (scene.meshes.Contains(entity))
+			{
+				item.name += ICON_MESH " ";
+			}
+			if (scene.objects.Contains(entity))
+			{
+				item.name += ICON_OBJECT " ";
+			}
+			if (scene.rigidbodies.Contains(entity))
+			{
+				item.name += ICON_RIGIDBODY " ";
+			}
+			if (scene.softbodies.Contains(entity))
+			{
+				item.name += ICON_SOFTBODY " ";
+			}
+			if (scene.emitters.Contains(entity))
+			{
+				item.name += ICON_EMITTER " ";
+			}
+			if (scene.hairs.Contains(entity))
+			{
+				item.name += ICON_HAIR " ";
+			}
+			if (scene.forces.Contains(entity))
+			{
+				item.name += ICON_FORCE " ";
+			}
+			if (scene.sounds.Contains(entity))
+			{
+				item.name += ICON_SOUND " ";
+			}
+			if (scene.videos.Contains(entity))
+			{
+				item.name += ICON_VIDEO " ";
+			}
+			if (scene.decals.Contains(entity))
+			{
+				item.name += ICON_DECAL " ";
+			}
+			if (scene.cameras.Contains(entity))
+			{
+				item.name += ICON_CAMERA " ";
+			}
+			if (scene.probes.Contains(entity))
+			{
+				item.name += ICON_ENVIRONMENTPROBE " ";
+			}
+			if (scene.animations.Contains(entity))
+			{
+				item.name += ICON_ANIMATION " ";
+			}
+			if (scene.animation_datas.Contains(entity))
+			{
+				item.name += "[animation_data] ";
+			}
+			if (scene.armatures.Contains(entity))
+			{
+				item.name += ICON_ARMATURE " ";
+			}
+			if (scene.humanoids.Contains(entity))
+			{
+				item.name += ICON_HUMANOID " ";
+			}
+			if (scene.sprites.Contains(entity))
+			{
+				item.name += ICON_SPRITE " ";
+			}
+			if (scene.fonts.Contains(entity))
+			{
+				item.name += ICON_FONT " ";
+			}
+			if (scene.voxel_grids.Contains(entity))
+			{
+				item.name += ICON_VOXELGRID " ";
+			}
+			if (scene.metadatas.Contains(entity))
+			{
+				item.name += ICON_METADATA " ";
+			}
+			if (scene.lights.Contains(entity))
+			{
+				const LightComponent* light = scene.lights.GetComponent(entity);
+				switch (light->type)
 				{
-					item.name += ICON_BONE " ";
-					bone_found = true;
+				default:
+				case LightComponent::POINT:
+					item.name += ICON_POINTLIGHT " ";
+					break;
+				case LightComponent::SPOT:
+					item.name += ICON_SPOTLIGHT " ";
+					break;
+				case LightComponent::DIRECTIONAL:
+					item.name += ICON_DIRECTIONALLIGHT " ";
 					break;
 				}
 			}
+			if (scene.materials.Contains(entity))
+			{
+				item.name += ICON_MATERIAL " ";
+			}
+			if (scene.weathers.Contains(entity))
+			{
+				item.name += ICON_WEATHER " ";
+			}
+			if (scene.inverse_kinematics.Contains(entity))
+			{
+				item.name += ICON_IK " ";
+			}
+			if (scene.springs.Contains(entity))
+			{
+				item.name += ICON_SPRING " ";
+			}
+			if (scene.colliders.Contains(entity))
+			{
+				item.name += ICON_COLLIDER " ";
+			}
+			if (scene.scripts.Contains(entity))
+			{
+				item.name += ICON_SCRIPT " ";
+			}
+			if (scene.expressions.Contains(entity))
+			{
+				item.name += ICON_EXPRESSION " ";
+			}
+			bool bone_found = false;
+			for (size_t i = 0; i < scene.armatures.GetCount() && !bone_found; ++i)
+			{
+				const ArmatureComponent& armature = scene.armatures[i];
+				for (Entity bone : armature.boneCollection)
+				{
+					if (entity == bone)
+					{
+						item.name += ICON_BONE " ";
+						bone_found = true;
+						break;
+					}
+				}
+			}
+
+			item.name += name_string;
+			entityTree.AddItem(item);
+
+			entitytree_added_items.insert(entity);
 		}
-
-		item.name += name_string;
-		entityTree.AddItem(item);
-
-		entitytree_added_items.insert(entity);
 	}
 
 	for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
@@ -1294,7 +1329,8 @@ bool ComponentsWindow::CheckEntityFilter(wi::ecs::Entity entity)
 		has_flag(filter, Filter::Font) && scene.fonts.Contains(entity) ||
 		has_flag(filter, Filter::VoxelGrid) && scene.voxel_grids.Contains(entity) ||
 		has_flag(filter, Filter::RigidBody) && scene.rigidbodies.Contains(entity) ||
-		has_flag(filter, Filter::SoftBody) && scene.softbodies.Contains(entity)
+		has_flag(filter, Filter::SoftBody) && scene.softbodies.Contains(entity) ||
+		has_flag(filter, Filter::Metadata) && scene.metadatas.Contains(entity)
 		)
 	{
 		valid = true;

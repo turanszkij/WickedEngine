@@ -114,6 +114,9 @@ public:
 	wi::Color backgroundEntityColor = wi::Color::Black();
 	wi::Color dummyColor = wi::Color::White();
 
+	wi::graphics::Texture rt_metadataDummies_MSAA;
+	wi::graphics::Texture rt_metadataDummies;
+
 	const wi::Color springDebugColor = wi::Color(255, 70, 165, 255);
 	const wi::Color ikDebugColor = wi::Color(49, 190, 103, 255);
 
@@ -126,8 +129,8 @@ public:
 	wi::ecs::Entity grass_interaction_entity = wi::ecs::INVALID_ENTITY;
 
 	void ClearSelected();
-	void AddSelected(wi::ecs::Entity entity);
-	void AddSelected(const wi::scene::PickResult& picked);
+	void AddSelected(wi::ecs::Entity entity, bool allow_refocus = true);
+	void AddSelected(const wi::scene::PickResult& picked, bool allow_refocus = true);
 	bool IsSelected(wi::ecs::Entity entity) const;
 	bool selectAll = false;
 	wi::unordered_set<wi::ecs::Entity> selectAllStorage;
