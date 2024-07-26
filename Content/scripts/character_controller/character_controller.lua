@@ -328,7 +328,6 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 		layerMask = ~0, -- layerMask will be used to filter collisions
 		scale = Vector(1, 1, 1),
 		rotation = Vector(0,math.pi,0),
-		start_position = Vector(0, 1, 0),
 		position = Vector(),
 		controllable = true,
 		fixed_update_remain = 0,
@@ -350,7 +349,6 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 		next_dialog = 1,
 		
 		Create = function(self, model_scene, start_transform, controllable, anim_scene)
-			self.start_position = start_transform.GetPosition()
 			self.face = vector.Rotate(start_transform.GetForward(), vector.QuaternionFromRollPitchYaw(self.rotation))
 			self.face_next = self.face
 			self.controllable = controllable
@@ -435,7 +433,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 			model_transform.ClearTransform()
 			model_transform.Scale(self.scale)
 			model_transform.Rotate(self.rotation)
-			model_transform.Translate(self.start_position)
+			model_transform.Translate(start_transform.GetPosition())
 			model_transform.UpdateTransform()
 
 			self.target_height = scene.Component_GetTransform(self.neck).GetPosition().GetY()
@@ -1280,6 +1278,7 @@ runProcess(function()
 			if metadata.GetPreset() == MetadataPreset.NPC then
 				local npc = Character(character_scene, transform, false, anim_scene)
 				-- Add patrol waypoints if found:
+				--	It will be looking for "waypoint" named string values in metadata components, and they can be chained by their value
 				local visited = {} -- avoid infinite loop
 				while metadata ~= nil and metadata.HasString("waypoint") do
 					local waypoint_name = metadata.GetString("waypoint")
@@ -1291,6 +1290,9 @@ runProcess(function()
 							metadata = scene.Component_GetMetadata(waypoint_entity) -- chain waypoints
 							visited[waypoint_entity] = true
 						end
+						if metadata == nil then
+							break
+						end
 						local waypoint = {
 							entity = waypoint_entity,
 							wait = metadata.GetFloat("wait")
@@ -1299,6 +1301,8 @@ runProcess(function()
 							waypoint.state = metadata.GetString("state")
 						end
 						table.insert(npc.patrol_waypoints, waypoint) -- add waypoint to NPC
+					else
+						break
 					end
 				end
 				table.insert(npcs, npc) -- add NPC
