@@ -12,8 +12,7 @@ struct DummyVisualizer
 		const XMMATRIX& matrix,
 		const XMFLOAT4& color,
 		bool depth,
-		wi::graphics::CommandList cmd
-	);
+		wi::graphics::CommandList cmd);
 };
 
 namespace dummy

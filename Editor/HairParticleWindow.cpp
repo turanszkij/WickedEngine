@@ -12,7 +12,6 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete HairParticleSystem");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -180,7 +179,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 			hair->viewDistance = args.fValue;
 			hair->SetDirty();
 		}
-		});
+	});
 	viewDistanceSlider.SetEnabled(false);
 	viewDistanceSlider.SetTooltip("Set view distance. After this, particles will be faded out.");
 	AddWidget(&viewDistanceSlider);
@@ -264,7 +263,6 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 
 
 
-
 	SetMinimized(true);
 	SetVisible(false);
 
@@ -297,7 +295,6 @@ void HairParticleWindow::SetEntity(Entity entity)
 	{
 		SetEnabled(false);
 	}
-
 }
 
 wi::HairParticleSystem* HairParticleWindow::GetHair()
@@ -416,5 +413,4 @@ void HairParticleWindow::ResizeLayout()
 
 	add(frameCountInput);
 	add(frameStartInput);
-
 }

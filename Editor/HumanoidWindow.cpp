@@ -13,7 +13,6 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete HumanoidComponent");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -23,7 +22,7 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->componentsWnd.RefreshEntityTree();
-		});
+	});
 
 	float x = 60;
 	float y = 4;
@@ -46,7 +45,7 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 		{
 			humanoid->SetLookAtEnabled(args.bValue);
 		}
-		});
+	});
 	AddWidget(&lookatCheckBox);
 
 	lookatMouseCheckBox.Create("Follow mouse: ");
@@ -65,7 +64,7 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 		{
 			humanoid->SetRagdollPhysicsEnabled(args.bValue);
 		}
-		});
+	});
 	AddWidget(&ragdollCheckBox);
 
 	headRotMaxXSlider.Create(0, 90, 60, 180, "Head horizontal: ");
@@ -118,7 +117,7 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 		{
 			humanoid->eye_rotation_max.x = wi::math::DegreesToRadians(args.fValue);
 		}
-		});
+	});
 	AddWidget(&eyeRotMaxXSlider);
 
 	eyeRotMaxYSlider.Create(0, 30, 15, 30, "Eye vertical: ");
@@ -131,7 +130,7 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 		{
 			humanoid->eye_rotation_max.y = wi::math::DegreesToRadians(args.fValue);
 		}
-		});
+	});
 	AddWidget(&eyeRotMaxYSlider);
 
 	eyeRotSpeedSlider.Create(0.05f, 1, 0.2f, 1000, "Eye speed: ");
@@ -144,7 +143,7 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 		{
 			humanoid->eye_rotation_speed = args.fValue;
 		}
-		});
+	});
 	AddWidget(&eyeRotSpeedSlider);
 
 	headSizeSlider.Create(0.5f, 2, 1, 1000, "Head size: ");
@@ -165,7 +164,7 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 				transform->scale_local.z = args.fValue;
 			}
 		}
-		});
+	});
 	AddWidget(&headSizeSlider);
 
 	ragdollFatnessSlider.Create(0.5f, 2, 1, 1000, "Ragdoll fatness: ");
@@ -193,14 +192,13 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 			humanoid->ragdoll_headsize = args.fValue;
 			humanoid->ragdoll = {}; // request recreate
 		}
-		});
+	});
 	AddWidget(&ragdollHeadSizeSlider);
 
 	boneList.Create("Bones: ");
 	boneList.SetSize(XMFLOAT2(wid, 200));
 	boneList.SetPos(XMFLOAT2(4, y += step));
 	boneList.OnSelect([=](wi::gui::EventArgs args) {
-
 		if (args.iValue < 0)
 			return;
 
@@ -229,8 +227,7 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 		editor->RecordSelection(archive);
 
 		editor->componentsWnd.RefreshEntityTree();
-
-		});
+	});
 	AddWidget(&boneList);
 
 
@@ -559,7 +556,6 @@ void HumanoidWindow::ResizeLayout()
 	y += jump;
 
 	add_fullwidth(boneList);
-
 }
 
 void HumanoidWindow::UpdateHumanoids()

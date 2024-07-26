@@ -15,7 +15,7 @@ namespace wi::network
 	static const uint16_t DEFAULT_PORT = 777;
 	struct Connection
 	{
-		std::array<uint8_t, 4> ipaddress = { 127,0,0,1 };
+		std::array<uint8_t, 4> ipaddress = { 127, 0, 0, 1 };
 		uint16_t port = DEFAULT_PORT;
 	};
 

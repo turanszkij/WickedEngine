@@ -12,7 +12,7 @@
 #include "OpenImageDenoise/oidn.hpp"
 #if OIDN_VERSION_MAJOR >= 2
 #define OPEN_IMAGE_DENOISE
-#pragma comment(lib,"OpenImageDenoise.lib")
+#pragma comment(lib, "OpenImageDenoise.lib")
 // Also provide the required DLL files from OpenImageDenoise release near the exe!
 #endif // OIDN_VERSION_MAJOR >= 2
 #endif // __has_include("OpenImageDenoise/oidn.hpp")
@@ -37,7 +37,10 @@ namespace wi
 	}
 	bool RenderPath3D_PathTracing::isDenoiserAvailable() const { return true; }
 #else
-	bool RenderPath3D_PathTracing::isDenoiserAvailable() const { return false; }
+	bool RenderPath3D_PathTracing::isDenoiserAvailable() const
+	{
+		return false;
+	}
 #endif // OPEN_IMAGE_DENOISE
 
 	void RenderPath3D_PathTracing::ResizeBuffers()
@@ -216,7 +219,6 @@ namespace wi
 					texturedata_dst.resize(texturedata_src.size());
 
 					wi::jobsystem::Execute(denoiserContext, [&](wi::jobsystem::JobArgs args) {
-
 						size_t width = (size_t)traceResult.desc.width;
 						size_t height = (size_t)traceResult.desc.height;
 						{
@@ -289,8 +291,7 @@ namespace wi
 						initdata.data_ptr = texturedata_dst.data();
 						initdata.row_pitch = uint32_t(sizeof(XMFLOAT4) * width);
 						device->CreateTexture(&desc, &initdata, &denoiserResult);
-
-						});
+					});
 				}
 			}
 		}
@@ -318,19 +319,17 @@ namespace wi
 					{
 						scene->terrains[i].CopyVirtualTexturePageStatusGPU(cmd_copypages);
 					}
-					});
+				});
 			}
 
 			// Setup:
 			CommandList cmd = device->BeginCommandList();
 			wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
-
 				wi::renderer::BindCameraCB(
 					*camera,
 					camera_previous,
 					camera_reflection,
-					cmd
-				);
+					cmd);
 				wi::renderer::UpdateRenderData(visibility_main, frameCB, cmd);
 
 				if (scene->IsAccelerationStructureUpdateRequested())
@@ -346,15 +345,13 @@ namespace wi
 				device->WaitCommandList(cmd, cmd_copypages);
 			}
 			wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
-
 				GraphicsDevice* device = wi::graphics::GetDevice();
 
 				wi::renderer::BindCameraCB(
 					*camera,
 					camera_previous,
 					camera_reflection,
-					cmd
-				);
+					cmd);
 				wi::renderer::BindCommonResources(cmd);
 				wi::renderer::UpdateRenderDataAsync(visibility_main, frameCB, cmd);
 
@@ -393,13 +390,11 @@ namespace wi
 						denoiserNormal.IsValid() ? &denoiserNormal : nullptr,
 						&traceDepth,
 						&traceStencil,
-						&depthBuffer_Main
-					);
+						&depthBuffer_Main);
 
 					wi::profiler::EndRange(range); // Traced Scene
 				}
-
-				});
+			});
 
 			if (scene->terrains.GetCount() > 0)
 			{
@@ -410,7 +405,7 @@ namespace wi
 					{
 						scene->terrains[i].AllocateVirtualTextureTileRequestsGPU(cmd_allocation_tilerequest);
 					}
-					});
+				});
 
 				CommandList cmd_writeback_tilerequest = device->BeginCommandList(QUEUE_COPY);
 				device->WaitCommandList(cmd_writeback_tilerequest, cmd_allocation_tilerequest);
@@ -419,22 +414,20 @@ namespace wi
 					{
 						scene->terrains[i].WritebackTileRequestsGPU(cmd_writeback_tilerequest);
 					}
-					});
+				});
 			}
 		}
 
 		// Composite, tonemap etc:
 		CommandList cmd = device->BeginCommandList();
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
-
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
 			wi::renderer::BindCameraCB(
 				*camera,
 				camera_previous,
 				camera_reflection,
-				cmd
-			);
+				cmd);
 			wi::renderer::BindCommonResources(cmd);
 
 			wi::renderer::Postprocess_Lineardepth(traceDepth, rtLinearDepth, cmd);
@@ -452,8 +445,7 @@ namespace wi
 			{
 				wi::renderer::Postprocess_AerialPerspective(
 					aerialperspectiveResources,
-					cmd
-				);
+					cmd);
 			}
 			if (scene->weather.IsVolumetricClouds())
 			{
@@ -465,8 +457,7 @@ namespace wi
 					camera_reflection,
 					false,
 					scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
-					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
-				);
+					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr);
 			}
 
 			RenderLightShafts(cmd);
@@ -537,8 +528,7 @@ namespace wi
 					wi::renderer::DrawLensFlares(
 						visibility_main,
 						cmd,
-						scene->weather.IsVolumetricClouds() ? &volumetriccloudResources.texture_cloudMask : nullptr
-					);
+						scene->weather.IsVolumetricClouds() ? &volumetriccloudResources.texture_cloudMask : nullptr);
 				}
 
 				device->RenderPassEnd(cmd);
@@ -551,8 +541,7 @@ namespace wi
 					rtMain,
 					cmd,
 					getEyeAdaptionRate(),
-					getEyeAdaptionKey()
-				);
+					getEyeAdaptionKey());
 			}
 			if (getBloomEnabled())
 			{
@@ -562,8 +551,7 @@ namespace wi
 					cmd,
 					getBloomThreshold(),
 					getExposure(),
-					getEyeAdaptionEnabled() ? &luminanceResources.luminance : nullptr
-				);
+					getEyeAdaptionEnabled() ? &luminanceResources.luminance : nullptr);
 			}
 
 			wi::renderer::Postprocess_Tonemap(
@@ -580,8 +568,7 @@ namespace wi
 				getEyeAdaptionEnabled() ? &luminanceResources.luminance : nullptr,
 				getBloomEnabled() ? &bloomResources.texture_bloom : nullptr,
 				colorspace,
-				getTonemap()
-			);
+				getTonemap());
 			lastPostprocessRT = &rtPostprocess;
 
 			// GUI Background blurring:
@@ -594,7 +581,7 @@ namespace wi
 				device->EventEnd(cmd);
 				wi::profiler::EndRange(range);
 			}
-			});
+		});
 
 		RenderPath2D::Render();
 

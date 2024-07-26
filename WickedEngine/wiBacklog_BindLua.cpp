@@ -29,11 +29,13 @@ namespace wi::lua::backlog
 				double arg = wi::lua::SGetDouble(L, i);
 				ss += std::to_string(arg);
 			}
-			else if (wi::lua::SIsBool(L, i)) {
+			else if (wi::lua::SIsBool(L, i))
+			{
 				bool arg = wi::lua::SGetBool(L, i);
 				ss += arg ? "true" : "false";
 			}
-			else if (wi::lua::SIsNil(L, i)) {
+			else if (wi::lua::SIsNil(L, i))
+			{
 				ss += "nil";
 			}
 			else

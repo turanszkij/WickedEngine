@@ -66,13 +66,20 @@ namespace wi::lua
 	struct VectorProperty
 	{
 	public:
-		VectorProperty(){}
-		VectorProperty(XMFLOAT2* data): data_f2(data) {}
-		VectorProperty(XMFLOAT3* data): data_f3(data) {}
-		VectorProperty(XMFLOAT4* data): data_f4(data) {}
-		
-		int Get(lua_State*L);
-		int Set(lua_State*L);
+		VectorProperty() {}
+		VectorProperty(XMFLOAT2* data)
+			: data_f2(data)
+		{}
+		VectorProperty(XMFLOAT3* data)
+			: data_f3(data)
+		{}
+		VectorProperty(XMFLOAT4* data)
+			: data_f4(data)
+		{}
+
+		int Get(lua_State* L);
+		int Set(lua_State* L);
+
 	private:
 		XMFLOAT2* data_f2 = nullptr;
 		XMFLOAT3* data_f3 = nullptr;
@@ -118,11 +125,14 @@ namespace wi::lua
 	struct MatrixProperty
 	{
 	public:
-		MatrixProperty(){}
-		MatrixProperty(XMFLOAT4X4* data): data_f4x4(data) {}
-		
-		int Get(lua_State*L);
-		int Set(lua_State*L);
+		MatrixProperty() {}
+		MatrixProperty(XMFLOAT4X4* data)
+			: data_f4x4(data)
+		{}
+
+		int Get(lua_State* L);
+		int Set(lua_State* L);
+
 	private:
 		XMFLOAT4X4* data_f4x4 = nullptr;
 	};

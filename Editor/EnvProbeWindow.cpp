@@ -14,7 +14,6 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete EnvironmentProbeComponent");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -71,7 +70,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 
 	refreshButton.Create("Refresh");
 	refreshButton.SetTooltip("Re-renders the selected probe.");
-	refreshButton.SetPos(XMFLOAT2(x, y+= step));
+	refreshButton.SetPos(XMFLOAT2(x, y += step));
 	refreshButton.SetEnabled(false);
 	refreshButton.OnClick([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -120,7 +119,6 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 				params.extensions = { "DDS" };
 				wi::helper::FileDialog(params, [=](std::string fileName) {
 					wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-
 						wi::Resource resource = wi::resourcemanager::Load(fileName);
 						if (has_flag(resource.GetTexture().GetDesc().misc_flags, wi::graphics::ResourceMiscFlag::TEXTURECUBE))
 						{
@@ -131,10 +129,8 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 						{
 							wi::helper::messageBox("Error!", "The texture you tried to open is not a cubemap texture, so it won't be imported!");
 						}
-
-						});
 					});
-
+				});
 			}
 		}
 	});
@@ -159,7 +155,6 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 				params.extensions = { "DDS" };
 				wi::helper::FileDialog(params, [=](std::string fileName) {
 					wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-
 						std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
 						std::string filename_replaced = fileName;
 						if (extension != "DDS")
@@ -174,10 +169,8 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 						{
 							editor->PostSaveText("Exported environment cubemap: ", filename_replaced);
 						}
-
-						});
 					});
-
+				});
 			}
 		}
 	});
@@ -239,8 +232,7 @@ void EnvProbeWindow::SetEntity(Entity entity)
 			"GPU Memory usage: " + wi::helper::GetMemorySizeText(probe->GetMemorySizeInBytes()) + "\n" +
 			"Resolution: " + std::to_string(probe->texture.desc.width) + "\n" +
 			"Mipmaps: " + std::to_string(probe->texture.desc.mip_levels) + "\n" +
-			"Format: " + std::string(wi::graphics::GetFormatString(probe->texture.desc.format)) + "\n"
-			;
+			"Format: " + std::string(wi::graphics::GetFormatString(probe->texture.desc.format)) + "\n";
 		if (!probe->textureName.empty())
 		{
 			text += "Filename: " + probe->textureName + "\n";
@@ -248,7 +240,6 @@ void EnvProbeWindow::SetEntity(Entity entity)
 		text += "\n" + default_text;
 		infoLabel.SetText(text);
 	}
-
 }
 
 
@@ -315,6 +306,4 @@ void EnvProbeWindow::ResizeLayout()
 
 	add_right(realTimeCheckBox);
 	add_right(msaaCheckBox);
-
-
 }

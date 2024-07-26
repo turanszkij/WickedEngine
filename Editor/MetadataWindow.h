@@ -27,4 +27,3 @@ public:
 
 	void ResizeLayout() override;
 };
-

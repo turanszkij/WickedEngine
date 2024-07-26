@@ -633,7 +633,7 @@ namespace wi::lua
 		return 1;
 	}
 
-static const std::string value_bindings = R"(
+	static const std::string value_bindings = R"(
 AO_DISABLED = 0
 AO_SSAO = 1
 AO_HBAO = 2

@@ -12,7 +12,6 @@ void EmitterWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete EmittedParticleSystem");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -369,7 +368,6 @@ void EmitterWindow::Create(EditorComponent* _editor)
 
 
 
-
 	VelocityXInput.Create("");
 	VelocityXInput.SetValue(0);
 	VelocityXInput.SetDescription("Starting Velocity: ");
@@ -641,7 +639,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 				continue;
 			emitter->random_color = args.fValue;
 		}
-		});
+	});
 	emitColorRandomnessSlider.SetEnabled(false);
 	emitColorRandomnessSlider.SetTooltip("Set the randomness of color for the emitted particles.");
 	AddWidget(&emitColorRandomnessSlider);
@@ -868,17 +866,14 @@ void EmitterWindow::SetEntity(Entity entity)
 		sph_K_Slider.SetValue(emitter->SPH_K);
 		sph_p0_Slider.SetValue(emitter->SPH_p0);
 		sph_e_Slider.SetValue(emitter->SPH_e);
-
 	}
 	else
 	{
 		infoLabel.SetText("No emitter object selected.");
 
 		SetEnabled(false);
-
 	}
 	debugCheckBox.SetCheck(wi::renderer::GetToDrawDebugEmitters());
-
 }
 
 wi::EmittedParticleSystem* EmitterWindow::GetEmitter()
@@ -932,7 +927,6 @@ void EmitterWindow::UpdateData()
 	ss += "Visible after frustum culling = " + std::to_string(data.culledCount) + "\n";
 
 	infoLabel.SetText(ss);
-
 }
 
 void EmitterWindow::ResizeLayout()

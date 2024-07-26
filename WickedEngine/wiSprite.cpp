@@ -48,22 +48,42 @@ namespace wi
 		params.scale.x += anim.scaleX * dt;
 		params.scale.y += anim.scaleY * dt;
 		params.opacity += anim.opa * dt;
-		if (params.opacity >= 1) {
-			if (anim.repeatable) { params.opacity = 0.99f; anim.opa *= -1; }
-			else				params.opacity = 1;
+		if (params.opacity >= 1)
+		{
+			if (anim.repeatable)
+			{
+				params.opacity = 0.99f;
+				anim.opa *= -1;
+			}
+			else params.opacity = 1;
 		}
-		else if (params.opacity <= 0) {
-			if (anim.repeatable) { params.opacity = 0.01f; anim.opa *= -1; }
-			else				params.opacity = 0;
+		else if (params.opacity <= 0)
+		{
+			if (anim.repeatable)
+			{
+				params.opacity = 0.01f;
+				anim.opa *= -1;
+			}
+			else params.opacity = 0;
 		}
 		params.fade += anim.fad * dt;
-		if (params.fade >= 1) {
-			if (anim.repeatable) { params.fade = 0.99f; anim.fad *= -1; }
-			else				params.fade = 1;
+		if (params.fade >= 1)
+		{
+			if (anim.repeatable)
+			{
+				params.fade = 0.99f;
+				anim.fad *= -1;
+			}
+			else params.fade = 1;
 		}
-		else if (params.fade <= 0) {
-			if (anim.repeatable) { params.fade = 0.01f; anim.fad *= -1; }
-			else				params.fade = 0;
+		else if (params.fade <= 0)
+		{
+			if (anim.repeatable)
+			{
+				params.fade = 0.01f;
+				anim.fad *= -1;
+			}
+			else params.fade = 0;
 		}
 
 		params.texOffset.x += anim.movingTexAnim.speedX * dt;
@@ -113,7 +133,6 @@ namespace wi
 					params.drawRect.y -= params.drawRect.w * rewind_Y;
 					anim.drawRectAnim._currentFrame = 0;
 				}
-
 			}
 		}
 
@@ -135,7 +154,6 @@ namespace wi
 				params.corners[i] = default_params.corners[i];
 			}
 		}
-
 	}
 
 	const wi::graphics::Texture* Sprite::GetTexture() const

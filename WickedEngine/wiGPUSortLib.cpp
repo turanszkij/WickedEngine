@@ -23,7 +23,6 @@ namespace wi::gpusortlib
 		wi::renderer::LoadShader(ShaderStage::CS, sortCS, "gpusortlib_sortCS.cso");
 		wi::renderer::LoadShader(ShaderStage::CS, sortInnerCS, "gpusortlib_sortInnerCS.cso");
 		wi::renderer::LoadShader(ShaderStage::CS, sortStepCS, "gpusortlib_sortStepCS.cso");
-
 	}
 
 	void Initialize()
@@ -45,10 +44,10 @@ namespace wi::gpusortlib
 
 
 	void Sort(
-		uint32_t maxCount, 
-		const GPUBuffer& comparisonBuffer_read, 
-		const GPUBuffer& counterBuffer_read, 
-		uint32_t counterReadOffset, 
+		uint32_t maxCount,
+		const GPUBuffer& comparisonBuffer_read,
+		const GPUBuffer& counterBuffer_read,
+		uint32_t counterReadOffset,
 		const GPUBuffer& indexBuffer_write,
 		CommandList cmd)
 	{
@@ -91,7 +90,6 @@ namespace wi::gpusortlib
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
-
 		}
 
 

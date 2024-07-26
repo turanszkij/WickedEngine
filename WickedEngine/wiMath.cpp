@@ -28,39 +28,40 @@ namespace wi::math
 		const XMFLOAT3& endPos,
 		const XMFLOAT3& startTangent,
 		const XMFLOAT3& endTangent,
-		float atInterval
-	)
+		float atInterval)
 	{
 		float x, y, z, t;
 		t = atInterval;
-		x = (2 * t*t*t - 3 * t*t + 1)*startPos.x + (-2 * t*t*t + 3 * t*t)*endPos.x + (t*t*t - 2 * t*t + t)*startTangent.x + (t*t*t - t*t)*endTangent.x;
-		y = (2 * t*t*t - 3 * t*t + 1)*startPos.y + (-2 * t*t*t + 3 * t*t)*endPos.y + (t*t*t - 2 * t*t + 1)*startTangent.y + (t*t*t - t*t)*endTangent.y;
-		z = (2 * t*t*t - 3 * t*t + 1)*startPos.z + (-2 * t*t*t + 3 * t*t)*endPos.z + (t*t*t - 2 * t*t + 1)*startTangent.z + (t*t*t - t*t)*endTangent.z;
+		x = (2 * t * t * t - 3 * t * t + 1) * startPos.x + (-2 * t * t * t + 3 * t * t) * endPos.x + (t * t * t - 2 * t * t + t) * startTangent.x + (t * t * t - t * t) * endTangent.x;
+		y = (2 * t * t * t - 3 * t * t + 1) * startPos.y + (-2 * t * t * t + 3 * t * t) * endPos.y + (t * t * t - 2 * t * t + 1) * startTangent.y + (t * t * t - t * t) * endTangent.y;
+		z = (2 * t * t * t - 3 * t * t + 1) * startPos.z + (-2 * t * t * t + 3 * t * t) * endPos.z + (t * t * t - 2 * t * t + 1) * startTangent.z + (t * t * t - t * t) * endTangent.z;
 		return XMFLOAT3(x, y, z);
 	}
-	XMFLOAT3 GetQuadraticBezierPos(const XMFLOAT3& a, const XMFLOAT3&b, const XMFLOAT3& c, float t){
+	XMFLOAT3 GetQuadraticBezierPos(const XMFLOAT3& a, const XMFLOAT3& b, const XMFLOAT3& c, float t)
+	{
 		float param0, param1, param2;
 		param0 = sqr(1 - t);
 		param1 = 2 * (1 - t) * t;
 		param2 = sqr(t);
-		float x = param0*a.x + param1*b.x + param2*c.x;
-		float y = param0*a.y + param1*b.y + param2*c.y;
-		float z = param0*a.z + param1*b.z + param2*c.z;
+		float x = param0 * a.x + param1 * b.x + param2 * c.x;
+		float y = param0 * a.y + param1 * b.y + param2 * c.y;
+		float z = param0 * a.z + param1 * b.z + param2 * c.z;
 		return XMFLOAT3(x, y, z);
 	}
-	XMFLOAT3 GetQuadraticBezierPos(const XMFLOAT4& a, const XMFLOAT4&b, const XMFLOAT4& c, float t){
+	XMFLOAT3 GetQuadraticBezierPos(const XMFLOAT4& a, const XMFLOAT4& b, const XMFLOAT4& c, float t)
+	{
 		return GetQuadraticBezierPos(XMFLOAT3(a.x, a.y, a.z), XMFLOAT3(b.x, b.y, b.z), XMFLOAT3(c.x, c.y, c.z), t);
 	}
-	
+
 	XMFLOAT3 QuaternionToRollPitchYaw(const XMFLOAT4& quaternion)
 	{
-		float roll = atan2f(2 * quaternion.x*quaternion.w - 2 * quaternion.y*quaternion.z, 1 - 2 * quaternion.x*quaternion.x - 2 * quaternion.z*quaternion.z);
-		float pitch = atan2f(2 * quaternion.y*quaternion.w - 2 * quaternion.x*quaternion.z, 1 - 2 * quaternion.y*quaternion.y - 2 * quaternion.z*quaternion.z);
-		float yaw = asinf(2 * quaternion.x*quaternion.y + 2 * quaternion.z*quaternion.w);
+		float roll = atan2f(2 * quaternion.x * quaternion.w - 2 * quaternion.y * quaternion.z, 1 - 2 * quaternion.x * quaternion.x - 2 * quaternion.z * quaternion.z);
+		float pitch = atan2f(2 * quaternion.y * quaternion.w - 2 * quaternion.x * quaternion.z, 1 - 2 * quaternion.y * quaternion.y - 2 * quaternion.z * quaternion.z);
+		float yaw = asinf(2 * quaternion.x * quaternion.y + 2 * quaternion.z * quaternion.w);
 
 		return XMFLOAT3(roll, pitch, yaw);
 	}
-	
+
 	XMVECTOR GetClosestPointToLine(const XMVECTOR& A, const XMVECTOR& B, const XMVECTOR& P, bool segmentClamp)
 	{
 		XMVECTOR AP_ = P - A;
@@ -68,8 +69,8 @@ namespace wi::math
 		XMFLOAT3 AB, AP;
 		XMStoreFloat3(&AB, AB_);
 		XMStoreFloat3(&AP, AP_);
-		float ab2 = AB.x*AB.x + AB.y*AB.y + AB.z*AB.z;
-		float ap_ab = AP.x*AB.x + AP.y*AB.y + AP.z*AB.z;
+		float ab2 = AB.x * AB.x + AB.y * AB.y + AB.z * AB.z;
+		float ap_ab = AP.x * AB.x + AP.y * AB.y + AP.z * AB.z;
 		float t = ap_ab / ab2;
 		if (segmentClamp)
 		{
@@ -82,22 +83,22 @@ namespace wi::math
 	float GetPointSegmentDistance(const XMVECTOR& point, const XMVECTOR& segmentA, const XMVECTOR& segmentB)
 	{
 		// Return minimum distance between line segment vw and point p
-		const float l2 = XMVectorGetX(XMVector3LengthSq(segmentB - segmentA));  // i.e. |w-v|^2 -  avoid a sqrt
-		if (l2 == 0.0) return Distance(point, segmentA);   // v == w case
-												// Consider the line extending the segment, parameterized as v + t (w - v).
-												// We find projection of point p onto the line. 
-												// It falls where t = [(p-v) . (w-v)] / |w-v|^2
-												// We clamp t from [0,1] to handle points outside the segment vw.
-		const float t = std::max(0.0f, std::min(1.0f, XMVectorGetX(XMVector3Dot(point - segmentA, segmentB-segmentA)) / l2));
-		const XMVECTOR projection = segmentA + t * (segmentB - segmentA);  // Projection falls on the segment
+		const float l2 = XMVectorGetX(XMVector3LengthSq(segmentB - segmentA)); // i.e. |w-v|^2 -  avoid a sqrt
+		if (l2 == 0.0) return Distance(point, segmentA);					   // v == w case
+																			   // Consider the line extending the segment, parameterized as v + t (w - v).
+																			   // We find projection of point p onto the line.
+																			   // It falls where t = [(p-v) . (w-v)] / |w-v|^2
+																			   // We clamp t from [0,1] to handle points outside the segment vw.
+		const float t = std::max(0.0f, std::min(1.0f, XMVectorGetX(XMVector3Dot(point - segmentA, segmentB - segmentA)) / l2));
+		const XMVECTOR projection = segmentA + t * (segmentB - segmentA); // Projection falls on the segment
 		return Distance(point, projection);
 	}
 
 	float GetAngle(const XMFLOAT2& a, const XMFLOAT2& b)
 	{
-		float dot = a.x*b.x + a.y*b.y;      // dot product
-		float det = a.x*b.y - a.y*b.x;		// determinant
-		float angle = atan2f(det, dot);		// atan2(y, x) or atan2(sin, cos)
+		float dot = a.x * b.x + a.y * b.y; // dot product
+		float det = a.x * b.y - a.y * b.x; // determinant
+		float angle = atan2f(det, dot);	   // atan2(y, x) or atan2(sin, cos)
 		if (angle < 0)
 		{
 			angle += XM_2PI;
@@ -125,15 +126,15 @@ namespace wi::math
 	{
 		float deg = 0;
 		float t = deg * XM_PI / 180.0f;
-		A = XMFLOAT4(radius*cosf(t), radius*-sinf(t), 0, 1);
+		A = XMFLOAT4(radius * cosf(t), radius * -sinf(t), 0, 1);
 		deg += 120;
 		t = deg * XM_PI / 180.0f;
-		B = XMFLOAT4(radius*cosf(t), radius*-sinf(t), 0, 1);
+		B = XMFLOAT4(radius * cosf(t), radius * -sinf(t), 0, 1);
 		deg += 120;
 		t = deg * XM_PI / 180.0f;
-		C = XMFLOAT4(radius*cosf(t), radius*-sinf(t), 0, 1);
+		C = XMFLOAT4(radius * cosf(t), radius * -sinf(t), 0, 1);
 	}
-	void GetBarycentric(const XMVECTOR& p, const XMVECTOR& a, const XMVECTOR& b, const XMVECTOR& c, float &u, float &v, float &w, bool clamp)
+	void GetBarycentric(const XMVECTOR& p, const XMVECTOR& a, const XMVECTOR& b, const XMVECTOR& c, float& u, float& v, float& w, bool clamp)
 	{
 		XMVECTOR v0 = b - a, v1 = c - a, v2 = p - a;
 		float d00 = XMVectorGetX(XMVector3Dot(v0, v0));

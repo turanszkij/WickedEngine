@@ -13,7 +13,6 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete ExpressionComponent");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -23,7 +22,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->componentsWnd.RefreshEntityTree();
-		});
+	});
 
 	float x = 60;
 	float y = 4;
@@ -58,7 +57,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 		if (expression_mastering == nullptr)
 			return;
 		expression_mastering->blink_frequency = args.fValue;
-		});
+	});
 	AddWidget(&blinkFrequencySlider);
 
 	blinkLengthSlider.Create(0, 1, 0, 1000, "Blink Length: ");
@@ -69,7 +68,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 		if (expression_mastering == nullptr)
 			return;
 		expression_mastering->blink_length = args.fValue;
-		});
+	});
 	AddWidget(&blinkLengthSlider);
 
 	blinkCountSlider.Create(1, 4, 2, 3, "Blink Count: ");
@@ -80,7 +79,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 		if (expression_mastering == nullptr)
 			return;
 		expression_mastering->blink_count = args.iValue;
-		});
+	});
 	AddWidget(&blinkCountSlider);
 
 	lookFrequencySlider.Create(0, 1, 0, 1000, "Looks: ");
@@ -92,7 +91,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 		if (expression_mastering == nullptr)
 			return;
 		expression_mastering->look_frequency = args.fValue;
-		});
+	});
 	AddWidget(&lookFrequencySlider);
 
 	lookLengthSlider.Create(0, 1, 0, 1000, "Look Length: ");
@@ -103,7 +102,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 		if (expression_mastering == nullptr)
 			return;
 		expression_mastering->look_length = args.fValue;
-		});
+	});
 	AddWidget(&lookLengthSlider);
 
 	expressionList.Create("Expressions: ");
@@ -123,7 +122,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 		overrideMouthCombo.SetSelectedByUserdataWithoutCallback((uint64_t)expression.override_mouth);
 		overrideBlinkCombo.SetSelectedByUserdataWithoutCallback((uint64_t)expression.override_blink);
 		overrideLookCombo.SetSelectedByUserdataWithoutCallback((uint64_t)expression.override_look);
-		});
+	});
 	AddWidget(&expressionList);
 
 	binaryCheckBox.Create("Binary: ");
@@ -230,7 +229,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 			expression.override_blink = (ExpressionComponent::Override)args.userdata;
 			expression.SetDirty();
 		}
-		});
+	});
 	AddWidget(&overrideBlinkCombo);
 
 	overrideLookCombo.Create("Override Look: ");
@@ -259,7 +258,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 			expression.override_look = (ExpressionComponent::Override)args.userdata;
 			expression.SetDirty();
 		}
-		});
+	});
 	AddWidget(&overrideLookCombo);
 
 
@@ -347,5 +346,4 @@ void ExpressionWindow::ResizeLayout()
 	add(overrideMouthCombo);
 	add(overrideBlinkCombo);
 	add(overrideLookCombo);
-
 }

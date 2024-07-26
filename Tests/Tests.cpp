@@ -28,19 +28,20 @@ enum TEST_TYPE
 };
 
 // Controller Test UI Data, info down below will be using Xbox Controller as reference
-wi::SpriteFont 
-	b_a, b_b, b_x, b_y, // Action Buttons: A, B, X, Y 
+wi::SpriteFont
+	b_a,
+	b_b, b_x, b_y,			// Action Buttons: A, B, X, Y
 	b_du, b_dd, b_dl, b_dr, // Directional Buttons: Up, Down, Left, Right
-	b_sta, b_bck, // Menu Buttons: Start, Back 
-	b_lb, b_rb, // Shoulder Buttons: LB, RB
-	b_ls, b_rs, // Stick Press Buttons: Left Stick, Right Stick
-	t_l, t_r, // Trigger Inputs: LT, RT
-	s_l, s_r, // Stick Axes: Left Stick, Right Stick
-	i_led; // Controller LED status
+	b_sta, b_bck,			// Menu Buttons: Start, Back
+	b_lb, b_rb,				// Shoulder Buttons: LB, RB
+	b_ls, b_rs,				// Stick Press Buttons: Left Stick, Right Stick
+	t_l, t_r,				// Trigger Inputs: LT, RT
+	s_l, s_r,				// Stick Axes: Left Stick, Right Stick
+	i_led;					// Controller LED status
 
 void Tests::Initialize()
 {
-    wi::Application::Initialize();
+	wi::Application::Initialize();
 
 	infoDisplay.active = true;
 	infoDisplay.watermark = true;
@@ -56,7 +57,7 @@ void Tests::Initialize()
 
 void TestsRenderer::ResizeLayout()
 {
-    RenderPath3D::ResizeLayout();
+	RenderPath3D::ResizeLayout();
 
 	float screenW = GetLogicalWidth();
 	float screenH = GetLogicalHeight();
@@ -73,7 +74,7 @@ void TestsRenderer::Load()
 	label.Create("Label1");
 	label.SetText("Wicked Engine Test Framework");
 	label.font.params.h_align = wi::font::WIFALIGN_CENTER;
-	label.SetSize(XMFLOAT2(240,20));
+	label.SetSize(XMFLOAT2(240, 20));
 	gui.AddWidget(&label);
 
 	static wi::audio::Sound sound;
@@ -130,7 +131,7 @@ void TestsRenderer::Load()
 		instance3D.emitterPos = XMFLOAT3(args.fValue, 0, 0);
 		instance3D.listenerPos = XMFLOAT3(0, 0, -0.1f);
 		wi::audio::Update3D(&soundinstance, instance3D);
-		});
+	});
 	gui.AddWidget(&direction);
 
 	testSelector.Create("TestSelector");
@@ -159,7 +160,6 @@ void TestsRenderer::Load()
 	testSelector.AddItem("Container perf", CONTAINERPERF);
 	testSelector.SetMaxVisibleItemCount(10);
 	testSelector.OnSelect([=](wi::gui::EventArgs args) {
-
 		// Reset all state that tests might have modified:
 		wi::eventhandler::SetVSync(true);
 		wi::renderer::SetToDrawGridHelper(false);
@@ -168,9 +168,10 @@ void TestsRenderer::Load()
 		wi::scene::GetScene().weather = WeatherComponent();
 		this->ClearSprites();
 		this->ClearFonts();
-		if (wi::lua::GetLuaState() != nullptr) {
-            wi::lua::KillProcesses();
-        }
+		if (wi::lua::GetLuaState() != nullptr)
+		{
+			wi::lua::KillProcesses();
+		}
 
 		// Reset camera position:
 		TransformComponent transform;
@@ -266,65 +267,65 @@ void TestsRenderer::Load()
 			head_textbuild += "\nStrength of the vibration are controlled by how hard the Trigger Buttons get pressed.";
 			head_textbuild += "\nPress Button 3 to switch the controller's LED color, every press will bring different colors.";
 			static wi::SpriteFont head(head_textbuild, baseparams);
-			head.params.posY = pos_center_y-260.f;
+			head.params.posY = pos_center_y - 260.f;
 			b_a = wi::SpriteFont("Button 2 (Xbox: A, PS: X)", baseparams);
-			b_a.params.posY = pos_center_y-160.f;
-			b_a.params.posX = pos_center_x-140.f;
+			b_a.params.posY = pos_center_y - 160.f;
+			b_a.params.posX = pos_center_x - 140.f;
 			b_b = wi::SpriteFont("Button 3 (Xbox: B, PS: O)", baseparams);
-			b_b.params.posY = b_a.params.posY+30.f;
+			b_b.params.posY = b_a.params.posY + 30.f;
 			b_b.params.posX = b_a.params.posX;
 			b_x = wi::SpriteFont("Button 1 (Xbox: X, PS: [])", baseparams);
-			b_x.params.posY = b_b.params.posY+30.f;
+			b_x.params.posY = b_b.params.posY + 30.f;
 			b_x.params.posX = b_a.params.posX;
 			b_y = wi::SpriteFont("Button 4 (Xbox: Y, PS: △)", baseparams);
-			b_y.params.posY = b_x.params.posY+30.f;
+			b_y.params.posY = b_x.params.posY + 30.f;
 			b_y.params.posX = b_a.params.posX;
 			b_bck = wi::SpriteFont("Button 9 (Xbox: Back, PS: Share)", baseparams);
-			b_bck.params.posY = b_y.params.posY+30.f;
+			b_bck.params.posY = b_y.params.posY + 30.f;
 			b_bck.params.posX = b_a.params.posX;
 			b_sta = wi::SpriteFont("Button 10 (Xbox: Start, PS: Option)", baseparams);
-			b_sta.params.posY = b_bck.params.posY+30.f;
+			b_sta.params.posY = b_bck.params.posY + 30.f;
 			b_sta.params.posX = b_a.params.posX;
 			b_ls = wi::SpriteFont("Button 7 (Left Stick)", baseparams);
-			b_ls.params.posY = b_sta.params.posY+30.f;
+			b_ls.params.posY = b_sta.params.posY + 30.f;
 			b_ls.params.posX = b_a.params.posX;
 			b_rs = wi::SpriteFont("Button 8 (Right Stick)", baseparams);
-			b_rs.params.posY = b_ls.params.posY+30.f;
+			b_rs.params.posY = b_ls.params.posY + 30.f;
 			b_rs.params.posX = b_a.params.posX;
 			s_l = wi::SpriteFont("", baseparams);
-			s_l.params.posY = b_rs.params.posY+30.f;
+			s_l.params.posY = b_rs.params.posY + 30.f;
 			s_l.params.posX = b_a.params.posX;
 			s_r = wi::SpriteFont("", baseparams);
-			s_r.params.posY = s_l.params.posY+30.f;
+			s_r.params.posY = s_l.params.posY + 30.f;
 			s_r.params.posX = b_a.params.posX;
 
 			b_du = wi::SpriteFont("Button Up", baseparams);
-			b_du.params.posY = pos_center_y-160.f;
-			b_du.params.posX = pos_center_x+140.f;
+			b_du.params.posY = pos_center_y - 160.f;
+			b_du.params.posX = pos_center_x + 140.f;
 			b_dd = wi::SpriteFont("Button Down", baseparams);
-			b_dd.params.posY = b_du.params.posY+30.f;
+			b_dd.params.posY = b_du.params.posY + 30.f;
 			b_dd.params.posX = b_du.params.posX;
 			b_dl = wi::SpriteFont("Button Left", baseparams);
-			b_dl.params.posY = b_dd.params.posY+30.f;
+			b_dl.params.posY = b_dd.params.posY + 30.f;
 			b_dl.params.posX = b_du.params.posX;
 			b_dr = wi::SpriteFont("Button Right", baseparams);
-			b_dr.params.posY = b_dl.params.posY+30.f;
+			b_dr.params.posY = b_dl.params.posY + 30.f;
 			b_dr.params.posX = b_du.params.posX;
 			b_lb = wi::SpriteFont("Button 5 (Xbox: LB, PS: L1)", baseparams);
-			b_lb.params.posY = b_dr.params.posY+30.f;
+			b_lb.params.posY = b_dr.params.posY + 30.f;
 			b_lb.params.posX = b_du.params.posX;
 			b_rb = wi::SpriteFont("Button 6 (Xbox: RB, PS: R1)", baseparams);
-			b_rb.params.posY = b_lb.params.posY+30.f;
+			b_rb.params.posY = b_lb.params.posY + 30.f;
 			b_rb.params.posX = b_du.params.posX;
 			t_l = wi::SpriteFont("", baseparams);
-			t_l.params.posY = b_rb.params.posY+30.f;
+			t_l.params.posY = b_rb.params.posY + 30.f;
 			t_l.params.posX = b_du.params.posX;
 			t_r = wi::SpriteFont("", baseparams);
-			t_r.params.posY = t_l.params.posY+30.f;
+			t_r.params.posY = t_l.params.posY + 30.f;
 			t_r.params.posX = b_du.params.posX;
 
 			i_led = wi::SpriteFont("", baseparams);
-			i_led.params.posY = s_r.params.posY+30.f;
+			i_led.params.posY = s_r.params.posY + 30.f;
 
 			AddFont(&head);
 
@@ -363,7 +364,7 @@ void TestsRenderer::Load()
 			if (ik_entity != INVALID_ENTITY)
 			{
 				InverseKinematicsComponent& ik = scene.inverse_kinematics.Create(ik_entity);
-				ik.chain_length = 2; // lower and upper arm included (two parents in hierarchy of hand)
+				ik.chain_length = 2;	// lower and upper arm included (two parents in hierarchy of hand)
 				ik.iteration_count = 5; // precision of ik simulation
 				ik.target = CreateEntity();
 				scene.transforms.Create(ik.target);
@@ -420,7 +421,6 @@ void TestsRenderer::Load()
 			assert(0);
 			break;
 		}
-
 	});
 	testSelector.SetSelected(0);
 	gui.AddWidget(&testSelector);
@@ -473,7 +473,7 @@ void TestsRenderer::Load()
 		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_COMBO_DROPDOWN);
 	}
 
-    RenderPath3D::Load();
+	RenderPath3D::Load();
 }
 void TestsRenderer::Update(float dt)
 {
@@ -482,31 +482,31 @@ void TestsRenderer::Update(float dt)
 
 	switch (userdata)
 	{
-    case MODEL:
-    {
-        Scene& scene = wi::scene::GetScene();
-        // teapot_material Base Base_mesh Top Top_mesh editorLight
-        wi::ecs::Entity e_teapot_base = scene.Entity_FindByName("Base");
-        wi::ecs::Entity e_teapot_top = scene.Entity_FindByName("Top");
-        assert(e_teapot_base != wi::ecs::INVALID_ENTITY);
-        assert(e_teapot_top != wi::ecs::INVALID_ENTITY);
-        TransformComponent* transform_base = scene.transforms.GetComponent(e_teapot_base);
-        TransformComponent* transform_top = scene.transforms.GetComponent(e_teapot_top);
-        assert(transform_base != nullptr);
-        assert(transform_top != nullptr);
-        float rotation = dt;
-        if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LEFT))
-        {
-            transform_base->Rotate(XMVectorSet(0,rotation,0,1));
-            transform_top->Rotate(XMVectorSet(0,rotation,0,1));
-        }
-        else if (wi::input::Down(wi::input::KEYBOARD_BUTTON_RIGHT))
-        {
-            transform_base->Rotate(XMVectorSet(0,-rotation,0,1));
-            transform_top->Rotate(XMVectorSet(0,-rotation,0,1));
-        }
-    }
-    break;
+	case MODEL:
+	{
+		Scene& scene = wi::scene::GetScene();
+		// teapot_material Base Base_mesh Top Top_mesh editorLight
+		wi::ecs::Entity e_teapot_base = scene.Entity_FindByName("Base");
+		wi::ecs::Entity e_teapot_top = scene.Entity_FindByName("Top");
+		assert(e_teapot_base != wi::ecs::INVALID_ENTITY);
+		assert(e_teapot_top != wi::ecs::INVALID_ENTITY);
+		TransformComponent* transform_base = scene.transforms.GetComponent(e_teapot_base);
+		TransformComponent* transform_top = scene.transforms.GetComponent(e_teapot_top);
+		assert(transform_base != nullptr);
+		assert(transform_top != nullptr);
+		float rotation = dt;
+		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LEFT))
+		{
+			transform_base->Rotate(XMVectorSet(0, rotation, 0, 1));
+			transform_top->Rotate(XMVectorSet(0, rotation, 0, 1));
+		}
+		else if (wi::input::Down(wi::input::KEYBOARD_BUTTON_RIGHT))
+		{
+			transform_base->Rotate(XMVectorSet(0, -rotation, 0, 1));
+			transform_top->Rotate(XMVectorSet(0, -rotation, 0, 1));
+		}
+	}
+	break;
 	case CONTROLLERTEST:
 	{
 		// Handle displays of all buttons here, the text will turn to white when the associated button are pressed
@@ -526,33 +526,34 @@ void TestsRenderer::Update(float dt)
 		b_rb.params.color = (wi::input::Down(wi::input::GAMEPAD_BUTTON_6)) ? wi::Color::White() : wi::Color::Gray();
 
 		// Handle displays of triggers and axes, will update the text according to the provided data of the controller
-		static std::wstring text_head_axes[] = {L"L Trigger (PS: L2): ", L"R Trigger (PS: R2): ", L"L Stick: ", L"R Stick: "};
-		t_l.text = text_head_axes[0]+std::to_wstring(wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_L).x);
-		t_r.text = text_head_axes[1]+std::to_wstring(wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_R).x);
-		s_l.text = text_head_axes[2]+
-			std::to_wstring(wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_THUMBSTICK_L).x)+L", "+
+		static std::wstring text_head_axes[] = { L"L Trigger (PS: L2): ", L"R Trigger (PS: R2): ", L"L Stick: ", L"R Stick: " };
+		t_l.text = text_head_axes[0] + std::to_wstring(wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_L).x);
+		t_r.text = text_head_axes[1] + std::to_wstring(wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_R).x);
+		s_l.text = text_head_axes[2] +
+			std::to_wstring(wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_THUMBSTICK_L).x) + L", " +
 			std::to_wstring(wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_THUMBSTICK_L).y);
-		s_r.text = text_head_axes[3]+
-			std::to_wstring(wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_THUMBSTICK_R).x)+L", "+
+		s_r.text = text_head_axes[3] +
+			std::to_wstring(wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_THUMBSTICK_R).x) + L", " +
 			std::to_wstring(wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_THUMBSTICK_R).y);
 
 		// Handling controller's vibrations and LED color
 		static float vibration_multipllier = 0.f;
 		static int color_index_set = 0;
-		static uint32_t color_sets[] = { wi::Color::Black(), wi::Color::Cyan(), wi::Color::Red(), wi::Color::Green(), wi::Color::Yellow()};
-		static std::wstring color_sets_desc[] = {L"Controller LED: None", L"Controller LED: Cyan", L"Controller LED: Red", L"Controller LED: Green", L"Controller LED: Yellow"};
+		static uint32_t color_sets[] = { wi::Color::Black(), wi::Color::Cyan(), wi::Color::Red(), wi::Color::Green(), wi::Color::Yellow() };
+		static std::wstring color_sets_desc[] = { L"Controller LED: None", L"Controller LED: Cyan", L"Controller LED: Red", L"Controller LED: Green", L"Controller LED: Yellow" };
 
-		if(wi::input::Down(wi::input::GAMEPAD_BUTTON_2)) vibration_multipllier = 1.f;
+		if (wi::input::Down(wi::input::GAMEPAD_BUTTON_2)) vibration_multipllier = 1.f;
 		else vibration_multipllier = 0.f;
-		if(wi::input::Press(wi::input::GAMEPAD_BUTTON_3)){
+		if (wi::input::Press(wi::input::GAMEPAD_BUTTON_3))
+		{
 			color_index_set++;
 			if (color_index_set > 4) color_index_set = 0;
 		}
 
 		wi::input::ControllerFeedback feedback;
 		feedback.led_color.rgba = color_sets[color_index_set];
-		feedback.vibration_left = wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_L).x*vibration_multipllier;
-		feedback.vibration_right = wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_R).x*vibration_multipllier;
+		feedback.vibration_left = wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_L).x * vibration_multipllier;
+		feedback.vibration_right = wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_R).x * vibration_multipllier;
 		wi::input::SetControllerFeedback(feedback, 0);
 
 		i_led.text = color_sets_desc[color_index_set];
@@ -602,8 +603,7 @@ void TestsRenderer::Update(float dt)
 			TransformComponent& transform = scene->transforms[args.jobIndex];
 			XMStoreFloat4x4(
 				&transform.world,
-				transform.GetLocalMatrix() * XMMatrixTranslation(0, std::sin(sec + 20 * (float)args.jobIndex / (float)scene->transforms.GetCount()) * 0.1f, 0)
-			);
+				transform.GetLocalMatrix() * XMMatrixTranslation(0, std::sin(sec + 20 * (float)args.jobIndex / (float)scene->transforms.GetCount()) * 0.1f, 0));
 		});
 		scene->materials[0].SetEmissiveColor(XMFLOAT4(1, 1, 1, 1));
 		wi::jobsystem::Dispatch(ctx, (uint32_t)scene->objects.GetCount(), 1024, [&](wi::jobsystem::JobArgs args) {
@@ -614,10 +614,9 @@ void TestsRenderer::Update(float dt)
 		wi::jobsystem::Wait(ctx);
 	}
 	break;
-
 	}
 
-    RenderPath3D::Update(dt);
+	RenderPath3D::Update(dt);
 }
 
 void TestsRenderer::RunJobSystemTest()
@@ -650,10 +649,10 @@ void TestsRenderer::RunJobSystemTest()
 	// Execute test
 	{
 		timer.record();
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args){ wi::helper::Spin(100); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args){ wi::helper::Spin(100); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args){ wi::helper::Spin(100); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args){ wi::helper::Spin(100); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::helper::Spin(100); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::helper::Spin(100); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::helper::Spin(100); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::helper::Spin(100); });
 		wi::jobsystem::Wait(ctx);
 		double time = timer.elapsed();
 		ss += "wi::jobsystem::Execute() took " + std::to_string(time) + " milliseconds\n";
@@ -709,7 +708,7 @@ void TestsRenderer::RunFontTest()
 	font_upscaled.params = font.params;
 	font_upscaled.params.posY += font.TextHeight();
 
-	font.params.style = 0; // 0 = default font
+	font.params.style = 0;			// 0 = default font
 	font_upscaled.params.style = 0; // 0 = default font
 	font_upscaled.params.size = 14;
 	font_upscaled.params.scaling = 32.0f / 14.0f;
@@ -874,7 +873,7 @@ void TestsRenderer::RunSpriteTest()
 		sprite.params.pos = params.pos;
 		sprite.params.siz = params.siz;
 		sprite.params.pivot = params.pivot;
-		sprite.params.color = XMFLOAT4(2, 2, 2, 1); // increase brightness a bit
+		sprite.params.color = XMFLOAT4(2, 2, 2, 1);				 // increase brightness a bit
 		sprite.params.sampleFlag = wi::image::SAMPLEMODE_MIRROR; // texcoords will be scrolled out of bounds, so set up a wrap mode other than clamp
 		sprite.anim.movingTexAnim.speedX = 0;
 		sprite.anim.movingTexAnim.speedY = 2; // scroll the texture vertically. This value is pixels/second. So because our texture here is 1x2 pixels, just scroll it once fully per second with a value of 2
@@ -916,8 +915,8 @@ void TestsRenderer::RunSpriteTest()
 		sprite.params = params;
 		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 128, 128)); // drawrect cutout for a 0,0,128,128 pixel rect, this is also the first frame of animation
 		sprite.anim = wi::Sprite::Anim();
-		sprite.anim.repeatable = true; // enable looping
-		sprite.anim.drawRectAnim.frameRate = 3; // 3 FPS, to be easily readable
+		sprite.anim.repeatable = true;			 // enable looping
+		sprite.anim.drawRectAnim.frameRate = 3;	 // 3 FPS, to be easily readable
 		sprite.anim.drawRectAnim.frameCount = 4; // animate only a single line horizontally
 		AddSprite(&sprite);
 
@@ -937,9 +936,9 @@ void TestsRenderer::RunSpriteTest()
 		sprite.params = params;
 		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 128, 128)); // drawrect cutout for a 0,0,128,128 pixel rect, this is also the first frame of animation
 		sprite.anim = wi::Sprite::Anim();
-		sprite.anim.repeatable = true; // enable looping
-		sprite.anim.drawRectAnim.frameRate = 3; // 3 FPS, to be easily readable
-		sprite.anim.drawRectAnim.frameCount = 4; // again, specify 4 total frames to loop...
+		sprite.anim.repeatable = true;					   // enable looping
+		sprite.anim.drawRectAnim.frameRate = 3;			   // 3 FPS, to be easily readable
+		sprite.anim.drawRectAnim.frameCount = 4;		   // again, specify 4 total frames to loop...
 		sprite.anim.drawRectAnim.horizontalFrameCount = 1; // ...but this time, limit the horizontal frame count. This way, we can get it to only animate vertically
 		AddSprite(&sprite);
 
@@ -959,9 +958,9 @@ void TestsRenderer::RunSpriteTest()
 		sprite.params = params;
 		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 128, 128)); // drawrect cutout for a 0,0,128,128 pixel rect, this is also the first frame of animation
 		sprite.anim = wi::Sprite::Anim();
-		sprite.anim.repeatable = true; // enable looping
-		sprite.anim.drawRectAnim.frameRate = 3; // 3 FPS, to be easily readable
-		sprite.anim.drawRectAnim.frameCount = 16; // all frames
+		sprite.anim.repeatable = true;					   // enable looping
+		sprite.anim.drawRectAnim.frameRate = 3;			   // 3 FPS, to be easily readable
+		sprite.anim.drawRectAnim.frameCount = 16;		   // all frames
 		sprite.anim.drawRectAnim.horizontalFrameCount = 4; // all horizontal frames
 		AddSprite(&sprite);
 
@@ -981,9 +980,9 @@ void TestsRenderer::RunSpriteTest()
 		sprite.params = params;
 		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 128, 128)); // drawrect cutout for a 0,0,128,128 pixel rect, this is also the first frame of animation
 		sprite.anim = wi::Sprite::Anim();
-		sprite.anim.repeatable = true; // enable looping
-		sprite.anim.drawRectAnim.frameRate = 3; // 3 FPS, to be easily readable
-		sprite.anim.drawRectAnim.frameCount = 14; // NOT all frames, which makes it irregular, so the last line will not contain all horizontal frames
+		sprite.anim.repeatable = true;					   // enable looping
+		sprite.anim.drawRectAnim.frameRate = 3;			   // 3 FPS, to be easily readable
+		sprite.anim.drawRectAnim.frameCount = 14;		   // NOT all frames, which makes it irregular, so the last line will not contain all horizontal frames
 		sprite.anim.drawRectAnim.horizontalFrameCount = 4; // all horizontal frames
 		AddSprite(&sprite);
 
@@ -1000,18 +999,17 @@ void TestsRenderer::RunSpriteTest()
 
 
 
-
 	// And the nice ones:
 
 	{
 		static wi::Sprite sprite("images/fire_001.png");
 		sprite.params = params;
 		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 192, 192)); // set the draw rect (texture cutout). This will also be the first frame of the animation
-		sprite.anim = wi::Sprite::Anim(); // reset animation state
-		sprite.anim.drawRectAnim.frameCount = 20; // set the total frame count of the animation
-		sprite.anim.drawRectAnim.horizontalFrameCount = 5; // this is a multiline spritesheet, so also set how many maximum frames there are in a line
-		sprite.anim.drawRectAnim.frameRate = 40; // animation frames per second
-		sprite.anim.repeatable = true; // looping
+		sprite.anim = wi::Sprite::Anim();						// reset animation state
+		sprite.anim.drawRectAnim.frameCount = 20;				// set the total frame count of the animation
+		sprite.anim.drawRectAnim.horizontalFrameCount = 5;		// this is a multiline spritesheet, so also set how many maximum frames there are in a line
+		sprite.anim.drawRectAnim.frameRate = 40;				// animation frames per second
+		sprite.anim.repeatable = true;							// looping
 		AddSprite(&sprite);
 
 		static wi::SpriteFont font("For the following spritesheets, credits belong to: https://mrbubblewand.wordpress.com/download/");
@@ -1078,15 +1076,14 @@ void TestsRenderer::RunSpriteTest()
 
 		params.pos.x += sprite.params.siz.x + step;
 	}
-
 }
 void TestsRenderer::RunNetworkTest()
 {
 	static wi::SpriteFont font;
 
 	wi::network::Connection connection;
-	connection.ipaddress = { 127,0,0,1 }; // localhost
-	connection.port = 12345; // just any random port really
+	connection.ipaddress = { 127, 0, 0, 1 }; // localhost
+	connection.port = 12345;				 // just any random port really
 
 	std::thread sender([&] {
 		// Create sender socket:
@@ -1102,8 +1099,7 @@ void TestsRenderer::RunNetworkTest()
 
 		// Then send the actual text message:
 		wi::network::Send(&sock, &connection, message, message_size);
-
-		});
+	});
 
 	std::thread receiver([&] {
 		// Create receiver socket:
@@ -1112,7 +1108,7 @@ void TestsRenderer::RunNetworkTest()
 
 		// Listen on the port which the sender uses:
 		wi::network::ListenPort(&sock, connection.port);
-		
+
 		// We can check for incoming messages with CanReceive(). A timeout value can be specified in microseconds
 		//	to let the function block for some time, otherwise it returns imediately
 		//	It is not necessary to use this, but the wi::network::Receive() will block until there is a message
@@ -1145,8 +1141,7 @@ void TestsRenderer::RunNetworkTest()
 		{
 			font.SetText("Failed to receive the message length in time");
 		}
-
-		});
+	});
 
 	sender.join();
 	receiver.join();

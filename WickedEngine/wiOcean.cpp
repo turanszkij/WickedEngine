@@ -18,17 +18,17 @@ namespace wi
 {
 	namespace ocean_internal
 	{
-		Shader		updateSpectrumCS;
-		Shader		updateDisplacementMapCS;
-		Shader		updateGradientFoldingCS;
-		Shader		oceanSurfVS;
-		Shader		wireframePS;
-		Shader		oceanSurfPS;
+		Shader updateSpectrumCS;
+		Shader updateDisplacementMapCS;
+		Shader updateGradientFoldingCS;
+		Shader oceanSurfVS;
+		Shader wireframePS;
+		Shader oceanSurfPS;
 
-		RasterizerState		rasterizerState;
-		RasterizerState		wireRS;
-		DepthStencilState	depthStencilState;
-		BlendState			blendState;
+		RasterizerState rasterizerState;
+		RasterizerState wireRS;
+		DepthStencilState depthStencilState;
+		BlendState blendState;
 
 		PipelineState PSO, PSO_wire;
 
@@ -65,8 +65,8 @@ namespace wi
 	using namespace ocean_internal;
 
 
-#define HALF_SQRT_2	0.7071068f
-#define GRAV_ACCEL	981.0f	// The acceleration of gravity, cm/s^2
+#define HALF_SQRT_2 0.7071068f
+#define GRAV_ACCEL 981.0f // The acceleration of gravity, cm/s^2
 
 	// Generating gaussian random number with mean 0 and standard deviation 1.
 	float Gauss()
@@ -237,8 +237,7 @@ namespace wi
 					bilinear(xxxx, pixel_frac),
 					bilinear(yyyy, pixel_frac),
 					bilinear(zzzz, pixel_frac),
-					bilinear(wwww, pixel_frac)
-				);
+					bilinear(wwww, pixel_frac));
 				// xzy swizzle is on purpose, that's how the data is generated on GPU:
 				ocean_pos.x += displacement.x;
 				ocean_pos.y += displacement.z;
@@ -258,7 +257,7 @@ namespace wi
 
 		XMFLOAT2 wind_dir;
 		XMStoreFloat2(&wind_dir, XMVector2Normalize(XMLoadFloat2(&params.wind_dir)));
-		float a = params.wave_amplitude * 1e-7f;	// It is too small. We must scale it for editing.
+		float a = params.wave_amplitude * 1e-7f; // It is too small. We must scale it for editing.
 		float v = params.wind_speed;
 		float dir_depend = params.wind_dependency;
 
@@ -382,8 +381,7 @@ namespace wi
 			(params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE,
 			(params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE,
 			1,
-			cmd
-		);
+			cmd);
 		device->Barrier(GPUBarrier::Image(&displacementMap, ResourceState::UNORDERED_ACCESS, displacementMap.desc.layout), cmd);
 
 		// Update gradient map:
@@ -394,8 +392,7 @@ namespace wi
 			(params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE,
 			(params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE,
 			1,
-			cmd
-		);
+			cmd);
 		device->Barrier(GPUBarrier::Image(&gradientMap, ResourceState::UNORDERED_ACCESS, gradientMap.desc.layout), cmd);
 
 		wi::renderer::GenerateMipChain(gradientMap, wi::renderer::MIPGENFILTER_LINEAR, cmd);

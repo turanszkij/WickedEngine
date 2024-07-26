@@ -12,7 +12,6 @@ void HierarchyWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete HierarchyComponent");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -36,7 +35,6 @@ void HierarchyWindow::Create(EditorComponent* _editor)
 	parentCombo.SetSize(XMFLOAT2(wid, hei));
 	parentCombo.SetPos(XMFLOAT2(x, y));
 	parentCombo.OnSelect([&](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -54,7 +52,6 @@ void HierarchyWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->componentsWnd.RefreshEntityTree();
-
 	});
 	parentCombo.SetTooltip("Choose a parent entity (also works if selected entity has no transform)");
 	AddWidget(&parentCombo);
@@ -118,7 +115,7 @@ void HierarchyWindow::SetEntity(Entity entity)
 void HierarchyWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	
+
 	parentCombo.SetPos(XMFLOAT2(60, 4));
 	parentCombo.SetSize(XMFLOAT2(GetSize().x - 86, parentCombo.GetSize().y));
 }

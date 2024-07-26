@@ -52,7 +52,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	filterCombo.OnSelect([&](wi::gui::EventArgs args) {
 		filter = (Filter)args.userdata;
 		RefreshEntityTree();
-		});
+	});
 	AddWidget(&filterCombo);
 
 
@@ -63,7 +63,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	filterInput.SetCancelInputEnabled(false);
 	filterInput.OnInput([=](wi::gui::EventArgs args) {
 		RefreshEntityTree();
-		});
+	});
 	filterInput.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	AddWidget(&filterInput);
 
@@ -75,14 +75,13 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	filterCaseCheckBox.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	filterCaseCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		RefreshEntityTree();
-		});
+	});
 	AddWidget(&filterCaseCheckBox);
 
 
 	entityTree.Create("Entities");
 	entityTree.SetSize(XMFLOAT2(300, 300));
 	entityTree.OnSelect([this](wi::gui::EventArgs args) {
-
 		if (args.iValue < 0)
 			return;
 
@@ -106,16 +105,15 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 
 		// record NEW selection state...
 		editor->RecordSelection(archive);
-
-		});
+	});
 	entityTree.OnDelete([=](wi::gui::EventArgs args) {
 		// Deletions will be performed in a batch next frame:
 		//	We don't delete here, because this callback will execute once for each item
 		editor->deleting = true;
-		});
+	});
 	entityTree.OnDoubleClick([this](wi::gui::EventArgs args) {
 		editor->FocusCameraOnSelected();
-		});
+	});
 	AddWidget(&entityTree);
 
 	if (editor->main->config.GetSection("layout").Has("entities.height"))
@@ -470,7 +468,6 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entities);
 
 		RefreshEntityTree();
-
 	});
 	AddWidget(&newComponentCombo);
 
@@ -1330,8 +1327,7 @@ bool ComponentsWindow::CheckEntityFilter(wi::ecs::Entity entity)
 		has_flag(filter, Filter::VoxelGrid) && scene.voxel_grids.Contains(entity) ||
 		has_flag(filter, Filter::RigidBody) && scene.rigidbodies.Contains(entity) ||
 		has_flag(filter, Filter::SoftBody) && scene.softbodies.Contains(entity) ||
-		has_flag(filter, Filter::Metadata) && scene.metadatas.Contains(entity)
-		)
+		has_flag(filter, Filter::Metadata) && scene.metadatas.Contains(entity))
 	{
 		valid = true;
 	}

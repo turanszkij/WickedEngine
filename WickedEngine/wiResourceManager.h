@@ -49,13 +49,13 @@ namespace wi
 	{
 		enum class Mode
 		{
-			NO_EMBEDDING,		// default behaviour, serialization will not embed resource file datas
-			EMBED_FILE_DATA,	// serialization will embed file datas if possible
+			NO_EMBEDDING,	 // default behaviour, serialization will not embed resource file datas
+			EMBED_FILE_DATA, // serialization will embed file datas if possible
 
 			// legacy modes:
-			DISCARD_FILEDATA_AFTER_LOAD = NO_EMBEDDING,					// default behaviour: file data will be discarded after loaded. This will not allow serialization of embedded resources, but less memory will be used overall
-			ALLOW_RETAIN_FILEDATA = EMBED_FILE_DATA,					// allows keeping the file datas around. This mode allows serialization of embedded resources
-			ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING = NO_EMBEDDING	// allows keeping file datas, but they won't be embedded by serializer
+			DISCARD_FILEDATA_AFTER_LOAD = NO_EMBEDDING,				   // default behaviour: file data will be discarded after loaded. This will not allow serialization of embedded resources, but less memory will be used overall
+			ALLOW_RETAIN_FILEDATA = EMBED_FILE_DATA,				   // allows keeping the file datas around. This mode allows serialization of embedded resources
+			ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING = NO_EMBEDDING // allows keeping file datas, but they won't be embedded by serializer
 		};
 		void SetMode(Mode param);
 		Mode GetMode();
@@ -69,12 +69,12 @@ namespace wi
 		enum class Flags
 		{
 			NONE = 0,
-			IMPORT_COLORGRADINGLUT = 1 << 0, // image import will convert resource to 3D color grading LUT
-			IMPORT_RETAIN_FILEDATA = 1 << 1, // file data of the resource will be kept in memory, you will be able to use Resource::GetFileData()
-			IMPORT_NORMALMAP = 1 << 2, // image import will try to use optimal normal map encoding
+			IMPORT_COLORGRADINGLUT = 1 << 0,  // image import will convert resource to 3D color grading LUT
+			IMPORT_RETAIN_FILEDATA = 1 << 1,  // file data of the resource will be kept in memory, you will be able to use Resource::GetFileData()
+			IMPORT_NORMALMAP = 1 << 2,		  // image import will try to use optimal normal map encoding
 			IMPORT_BLOCK_COMPRESSED = 1 << 3, // image import will request block compression for uncompressed or transcodable formats
-			IMPORT_DELAY = 1 << 4, // delay importing resource until later, for example when proper flags can be determined.
-			STREAMING = 1 << 5, // use streaming if possible
+			IMPORT_DELAY = 1 << 4,			  // delay importing resource until later, for example when proper flags can be determined.
+			STREAMING = 1 << 5,				  // use streaming if possible
 		};
 
 		// Load a resource
@@ -90,8 +90,7 @@ namespace wi
 			const uint8_t* filedata = nullptr,
 			size_t filesize = ~0ull,
 			const std::string& container_filename = "",
-			size_t container_fileoffset = 0
-		);
+			size_t container_fileoffset = 0);
 		// Check if a resource is currently loaded
 		bool Contains(const std::string& name);
 		// Invalidate all resources
@@ -125,6 +124,7 @@ namespace wi
 }
 
 template<>
-struct enable_bitmask_operators<wi::resourcemanager::Flags> {
+struct enable_bitmask_operators<wi::resourcemanager::Flags>
+{
 	static const bool enable = true;
 };

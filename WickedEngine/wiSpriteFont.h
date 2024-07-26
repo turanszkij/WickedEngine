@@ -27,7 +27,9 @@ namespace wi
 		std::string fontStyleName;
 
 		SpriteFont() = default;
-		SpriteFont(const std::string& value, const wi::font::Params& params = wi::font::Params(), const std::string& fontStyleName = "") :params(params), fontStyleName(fontStyleName)
+		SpriteFont(const std::string& value, const wi::font::Params& params = wi::font::Params(), const std::string& fontStyleName = "")
+			: params(params)
+			, fontStyleName(fontStyleName)
 		{
 			SetText(value);
 			if (!fontStyleName.empty())
@@ -41,11 +43,51 @@ namespace wi
 		virtual void Update(float dt);
 		virtual void Draw(wi::graphics::CommandList cmd) const;
 
-		constexpr void SetHidden(bool value = true) { if (value) { _flags |= HIDDEN; } else { _flags &= ~HIDDEN; } }
+		constexpr void SetHidden(bool value = true)
+		{
+			if (value)
+			{
+				_flags |= HIDDEN;
+			}
+			else
+			{
+				_flags &= ~HIDDEN;
+			}
+		}
 		constexpr bool IsHidden() const { return _flags & HIDDEN; }
-		constexpr void SetDisableUpdate(bool value = true) { if (value) { _flags |= DISABLE_UPDATE; } else { _flags &= ~DISABLE_UPDATE; } }
-		constexpr void SetCameraFacing(bool value = true) { if (value) { _flags |= CAMERA_FACING; } else { _flags &= ~CAMERA_FACING; } }
-		constexpr void SetCameraScaling(bool value = true) { if (value) { _flags |= CAMERA_SCALING; } else { _flags &= ~CAMERA_SCALING; } }
+		constexpr void SetDisableUpdate(bool value = true)
+		{
+			if (value)
+			{
+				_flags |= DISABLE_UPDATE;
+			}
+			else
+			{
+				_flags &= ~DISABLE_UPDATE;
+			}
+		}
+		constexpr void SetCameraFacing(bool value = true)
+		{
+			if (value)
+			{
+				_flags |= CAMERA_FACING;
+			}
+			else
+			{
+				_flags &= ~CAMERA_FACING;
+			}
+		}
+		constexpr void SetCameraScaling(bool value = true)
+		{
+			if (value)
+			{
+				_flags |= CAMERA_SCALING;
+			}
+			else
+			{
+				_flags &= ~CAMERA_SCALING;
+			}
+		}
 
 		constexpr bool IsDisableUpdate() const { return _flags & DISABLE_UPDATE; }
 		constexpr bool IsCameraFacing() const { return _flags & CAMERA_FACING; }
@@ -69,8 +111,8 @@ namespace wi
 		{
 			struct Typewriter
 			{
-				float time = 0; // time to fully type the text in seconds (0: disable)
-				bool looped = false; // if true, typing starts over when finished
+				float time = 0;				// time to fully type the text in seconds (0: disable)
+				bool looped = false;		// if true, typing starts over when finished
 				size_t character_start = 0; // starting character for the animation
 				wi::audio::Sound sound;
 				wi::audio::SoundInstance soundinstance;

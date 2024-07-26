@@ -15,12 +15,12 @@ namespace wi
 	static Shader vertexShader;
 	static Shader pixelShader;
 	static InputLayout inputLayout;
-	static BlendState			blendStates[BLENDMODE_COUNT];
-	static RasterizerState		rasterizerState;
-	static RasterizerState		wireFrameRS;
-	static DepthStencilState	depthStencilState;
-	static PipelineState		PSO[BLENDMODE_COUNT];
-	static PipelineState		PSO_wire;
+	static BlendState blendStates[BLENDMODE_COUNT];
+	static RasterizerState rasterizerState;
+	static RasterizerState wireFrameRS;
+	static DepthStencilState depthStencilState;
+	static PipelineState PSO[BLENDMODE_COUNT];
+	static PipelineState PSO_wire;
 
 	void TrailRenderer::Cut()
 	{

@@ -14,7 +14,6 @@ void SpriteWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete Sprite");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -72,7 +71,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 					{
 						sprite->params.siz = XMFLOAT2(1, 1);
 					}
-					});
+				});
 			}
 		}
 	});
@@ -113,7 +112,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 					sprite->maskResource = wi::resourcemanager::Load(fileName);
 					sprite->maskName = fileName;
 					maskButton.SetImage(sprite->maskResource);
-					});
+				});
 			}
 		}
 	});
@@ -584,8 +583,7 @@ void SpriteWindow::SetEntity(wi::ecs::Entity entity)
 		sprite->params.corners_rounding[0].radius > 0 ||
 		sprite->params.corners_rounding[1].radius > 0 ||
 		sprite->params.corners_rounding[2].radius > 0 ||
-		sprite->params.corners_rounding[3].radius > 0
-		)
+		sprite->params.corners_rounding[3].radius > 0)
 	{
 		sprite->params.enableCornerRounding();
 		sprite->params.corners_rounding[0].segments = 36;

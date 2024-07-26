@@ -12,7 +12,6 @@ void MetadataWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete MetadataComponent");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -61,7 +60,7 @@ void MetadataWindow::Create(EditorComponent* _editor)
 			{
 			default:
 			case 0:
-				if(!metadata->bool_values.has("name"))
+				if (!metadata->bool_values.has("name"))
 					metadata->bool_values.set("name", false);
 				break;
 			case 1:
@@ -136,8 +135,7 @@ void MetadataWindow::RefreshEntries()
 		metadata->bool_values.size() +
 		metadata->int_values.size() +
 		metadata->float_values.size() +
-		metadata->string_values.size()
-	);
+		metadata->string_values.size());
 
 	// Note: to not disturb the ordering of entries while editing them, we iterate by the ordered names array in each table
 
@@ -182,7 +180,7 @@ void MetadataWindow::RefreshEntries()
 			}
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
 				RefreshEntries();
-				});
+			});
 		});
 		AddWidget(&entry.check);
 
@@ -227,8 +225,8 @@ void MetadataWindow::RefreshEntries()
 			}
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
 				RefreshEntries();
-				});
 			});
+		});
 		AddWidget(&entry.name);
 
 		entry.is_bool = false;
@@ -249,8 +247,8 @@ void MetadataWindow::RefreshEntries()
 			}
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
 				RefreshEntries();
-				});
 			});
+		});
 		AddWidget(&entry.value);
 
 		entry.remove.Create("");
@@ -269,8 +267,8 @@ void MetadataWindow::RefreshEntries()
 			}
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
 				RefreshEntries();
-				});
 			});
+		});
 		AddWidget(&entry.remove);
 	}
 
@@ -294,8 +292,8 @@ void MetadataWindow::RefreshEntries()
 			}
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
 				RefreshEntries();
-				});
 			});
+		});
 		AddWidget(&entry.name);
 
 		entry.is_bool = false;
@@ -316,8 +314,8 @@ void MetadataWindow::RefreshEntries()
 			}
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
 				RefreshEntries();
-				});
 			});
+		});
 		AddWidget(&entry.value);
 
 		entry.remove.Create("");
@@ -336,8 +334,8 @@ void MetadataWindow::RefreshEntries()
 			}
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
 				RefreshEntries();
-				});
 			});
+		});
 		AddWidget(&entry.remove);
 	}
 
@@ -361,8 +359,8 @@ void MetadataWindow::RefreshEntries()
 			}
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
 				RefreshEntries();
-				});
 			});
+		});
 		AddWidget(&entry.name);
 
 		entry.is_bool = false;
@@ -383,8 +381,8 @@ void MetadataWindow::RefreshEntries()
 			}
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
 				RefreshEntries();
-				});
 			});
+		});
 		AddWidget(&entry.value);
 
 		entry.remove.Create("");
@@ -403,8 +401,8 @@ void MetadataWindow::RefreshEntries()
 			}
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
 				RefreshEntries();
-				});
 			});
+		});
 		AddWidget(&entry.remove);
 	}
 
@@ -428,7 +426,7 @@ void MetadataWindow::ResizeLayout()
 		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
 		y += widget.GetSize().y;
 		y += padding;
-		};
+	};
 	auto add_right = [&](wi::gui::Widget& widget) {
 		if (!widget.IsVisible())
 			return;
@@ -436,7 +434,7 @@ void MetadataWindow::ResizeLayout()
 		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
 		y += widget.GetSize().y;
 		y += padding;
-		};
+	};
 	auto add_fullwidth = [&](wi::gui::Widget& widget) {
 		if (!widget.IsVisible())
 			return;
@@ -446,7 +444,7 @@ void MetadataWindow::ResizeLayout()
 		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
 		y += widget.GetSize().y;
 		y += padding;
-		};
+	};
 
 	add(presetCombo);
 	add_fullwidth(addCombo);
@@ -476,5 +474,4 @@ void MetadataWindow::ResizeLayout()
 		y += entry.name.GetSize().y;
 		y += padding;
 	}
-
 }

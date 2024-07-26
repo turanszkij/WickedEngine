@@ -19,7 +19,7 @@
 #include "OpenImageDenoise/oidn.hpp"
 #if OIDN_VERSION_MAJOR >= 2
 #define OPEN_IMAGE_DENOISE
-#pragma comment(lib,"OpenImageDenoise.lib")
+#pragma comment(lib, "OpenImageDenoise.lib")
 // Also provide the required DLL files from OpenImageDenoise release near the exe!
 #endif // OIDN_VERSION_MAJOR >= 2
 #endif // __has_include("OpenImageDenoise/oidn.hpp")
@@ -70,8 +70,7 @@ namespace wi::scene
 		XMVECTOR S_local = XMLoadFloat3(&scale_local);
 		XMVECTOR R_local = XMLoadFloat4(&rotation_local);
 		XMVECTOR T_local = XMLoadFloat3(&translation_local);
-		return
-			XMMatrixScalingFromVector(S_local) *
+		return XMMatrixScalingFromVector(S_local) *
 			XMMatrixRotationQuaternion(R_local) *
 			XMMatrixTranslationFromVector(T_local);
 	}
@@ -285,8 +284,7 @@ namespace wi::scene
 			sss_inv.x = 1.0f / ((1 + sss.x) * (1 + sss.x)),
 			sss_inv.y = 1.0f / ((1 + sss.y) * (1 + sss.y)),
 			sss_inv.z = 1.0f / ((1 + sss.z) * (1 + sss.z)),
-			sss_inv.w = 1.0f / ((1 + sss.w) * (1 + sss.w))
-		);
+			sss_inv.w = 1.0f / ((1 + sss.w) * (1 + sss.w)));
 		material.subsurfaceScattering = pack_half4(sss);
 		material.subsurfaceScattering_inv = pack_half4(sss_inv);
 
@@ -734,8 +732,7 @@ namespace wi::scene
 						std::abs(p.x - pos.x) <= target_precision &&
 						std::abs(p.y - pos.y) <= target_precision &&
 						std::abs(p.z - pos.z) <= target_precision &&
-						wind == v.GetWind()
-						)
+						wind == v.GetWind())
 					{
 						// success, continue to next vertex with 8 bits
 						continue;
@@ -751,14 +748,13 @@ namespace wi::scene
 						std::abs(p.x - pos.x) <= target_precision &&
 						std::abs(p.y - pos.y) <= target_precision &&
 						std::abs(p.z - pos.z) <= target_precision &&
-						wind == v.GetWind()
-						)
+						wind == v.GetWind())
 					{
 						// success, continue to next vertex with 16 bits
 						continue;
 					}
 					position_format = vertex_windweights.empty() ? Vertex_POS32::FORMAT : Vertex_POS32W::FORMAT; // failed, increase to 32 bits
-					break; // since 32 bit is the max, we can bail out
+					break;																						 // since 32 bit is the max, we can bail out
 				}
 			}
 
@@ -831,8 +827,7 @@ namespace wi::scene
 			AlignTo(vertex_atlas.size() * sizeof(Vertex_TEX), alignment) +
 			AlignTo(vertex_colors.size() * sizeof(Vertex_COL), alignment) +
 			AlignTo(vertex_boneindices.size() * sizeof(Vertex_BON), alignment) +
-			AlignTo(vertex_boneindices2.size() * sizeof(Vertex_BON), alignment)
-			;
+			AlignTo(vertex_boneindices2.size() * sizeof(Vertex_BON), alignment);
 
 		constexpr Format morph_format = Format::R16G16B16A16_FLOAT;
 		constexpr size_t morph_stride = GetFormatStride(morph_format);
@@ -1032,9 +1027,9 @@ namespace wi::scene
 				vb_bon.size = (vertex_boneindices.size() + vertex_boneindices2.size()) * sizeof(Vertex_BON);
 				Vertex_BON* vertices = (Vertex_BON*)(buffer_data + buffer_offset);
 				buffer_offset += AlignTo(vb_bon.size, alignment);
-				assert(vertex_boneindices.size() == vertex_boneweights.size()); // must have same number of indices as weights
+				assert(vertex_boneindices.size() == vertex_boneweights.size());									// must have same number of indices as weights
 				assert(vertex_boneindices2.empty() || vertex_boneindices2.size() == vertex_boneindices.size()); // if second influence stream exists, it must be as large as the first
-				assert(vertex_boneindices2.size() == vertex_boneweights2.size()); // must have same number of indices as weights
+				assert(vertex_boneindices2.size() == vertex_boneweights2.size());								// must have same number of indices as weights
 				for (size_t i = 0; i < vertex_boneindices.size(); ++i)
 				{
 					// Normalize weights:
@@ -1221,8 +1216,7 @@ namespace wi::scene
 			AlignTo(vertex_positions.size() * sizeof(Vertex_POS32), alignment) + // pos
 			AlignTo(vertex_positions.size() * sizeof(Vertex_POS32), alignment) + // prevpos
 			AlignTo(vertex_normals.size() * sizeof(Vertex_NOR), alignment) +
-			AlignTo(vertex_tangents.size() * sizeof(Vertex_TAN), alignment)
-			;
+			AlignTo(vertex_tangents.size() * sizeof(Vertex_TAN), alignment);
 
 		bool success = device->CreateBuffer(&desc, nullptr, &streamoutBuffer);
 		assert(success);
@@ -1529,7 +1523,6 @@ namespace wi::scene
 						vertex_normals[i].y += normal.y;
 						vertex_normals[i].z += normal.z;
 					}
-
 				}
 			}
 
@@ -1623,14 +1616,10 @@ namespace wi::scene
 									index = ind0;
 								}
 							}
-
 						}
-
 					}
 				}
-
 			}
-
 		}
 		break;
 
@@ -1666,7 +1655,6 @@ namespace wi::scene
 			}
 		}
 		break;
-
 		}
 
 		vertex_tangents.clear(); // <- will be recomputed
@@ -1735,7 +1723,7 @@ namespace wi::scene
 	}
 	size_t MeshComponent::GetMemoryUsageCPU() const
 	{
-		size_t size = 
+		size_t size =
 			vertex_positions.size() * sizeof(XMFLOAT3) +
 			vertex_normals.size() * sizeof(XMFLOAT3) +
 			vertex_tangents.size() * sizeof(XMFLOAT4) +
@@ -1767,8 +1755,7 @@ namespace wi::scene
 	}
 	size_t MeshComponent::GetMemoryUsageBVH() const
 	{
-		return
-			bvh.allocation.capacity() +
+		return bvh.allocation.capacity() +
 			bvh_leaf_aabbs.size() * sizeof(wi::primitive::AABB);
 	}
 
@@ -2060,8 +2047,7 @@ namespace wi::scene
 				wi::vector<uint32_t> shadow_indices(source.size());
 				meshopt_generateShadowIndexBuffer(
 					shadow_indices.data(), source.data(), source.size(),
-					vertices.data(), vertices.size(), sizeof(XMFLOAT4), sizeof(XMFLOAT4)
-				);
+					vertices.data(), vertices.size(), sizeof(XMFLOAT4), sizeof(XMFLOAT4));
 
 				size_t result = 0;
 				size_t target_index_count = size_t(shadow_indices.size() * saturate(detail)) / 3 * 3;
@@ -2077,8 +2063,7 @@ namespace wi::scene
 						mesh.vertex_positions.size(),
 						sizeof(XMFLOAT3),
 						target_index_count,
-						target_error
-					);
+						target_error);
 					target_error *= 0.5f;
 				}
 				assert(result > 0);
@@ -2101,8 +2086,7 @@ namespace wi::scene
 						mesh.vertex_positions.size(),
 						sizeof(XMFLOAT3),
 						target_index_count,
-						target_error
-					);
+						target_error);
 					target_error *= 0.5f;
 				}
 				assert(result > 0);
@@ -2165,8 +2149,7 @@ namespace wi::scene
 						influence < 1 ? 0 : bones[0].index,
 						influence < 2 ? 0 : bones[1].index,
 						influence < 3 ? 0 : bones[2].index,
-						influence < 4 ? 0 : bones[3].index
-					);
+						influence < 4 ? 0 : bones[3].index);
 				}
 				constexpr XMUINT4 get_indices2() const
 				{
@@ -2174,8 +2157,7 @@ namespace wi::scene
 						influence < 5 ? 0 : bones[4].index,
 						influence < 6 ? 0 : bones[5].index,
 						influence < 7 ? 0 : bones[6].index,
-						influence < 8 ? 0 : bones[7].index
-					);
+						influence < 8 ? 0 : bones[7].index);
 				}
 				constexpr XMFLOAT4 get_weights() const
 				{
@@ -2183,8 +2165,7 @@ namespace wi::scene
 						influence < 1 ? 0 : bones[0].weight,
 						influence < 2 ? 0 : bones[1].weight,
 						influence < 3 ? 0 : bones[2].weight,
-						influence < 4 ? 0 : bones[3].weight
-					);
+						influence < 4 ? 0 : bones[3].weight);
 				}
 				constexpr XMFLOAT4 get_weights2() const
 				{
@@ -2192,8 +2173,7 @@ namespace wi::scene
 						influence < 5 ? 0 : bones[4].weight,
 						influence < 6 ? 0 : bones[5].weight,
 						influence < 7 ? 0 : bones[6].weight,
-						influence < 8 ? 0 : bones[7].weight
-					);
+						influence < 8 ? 0 : bones[7].weight);
 				}
 			};
 

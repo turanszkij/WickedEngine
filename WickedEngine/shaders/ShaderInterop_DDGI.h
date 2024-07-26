@@ -3,13 +3,13 @@
 #include "ShaderInterop.h"
 #include "ShaderInterop_Renderer.h"
 
-static const uint DDGI_MAX_RAYCOUNT = 512; // affects global ray buffer size
-static const uint DDGI_COLOR_RESOLUTION = 6; // this should not be modified, border update code is fixed
+static const uint DDGI_MAX_RAYCOUNT = 512;							 // affects global ray buffer size
+static const uint DDGI_COLOR_RESOLUTION = 6;						 // this should not be modified, border update code is fixed
 static const uint DDGI_COLOR_TEXELS = 1 + DDGI_COLOR_RESOLUTION + 1; // with border. NOTE: this must be 4x4 block aligned for BC6!
-static const uint DDGI_DEPTH_RESOLUTION = 16; // this should not be modified, border update code is fixed
+static const uint DDGI_DEPTH_RESOLUTION = 16;						 // this should not be modified, border update code is fixed
 static const uint DDGI_DEPTH_TEXELS = 1 + DDGI_DEPTH_RESOLUTION + 1; // with border
-static const float DDGI_KEEP_DISTANCE = 0.1f; // how much distance should probes keep from surfaces
-static const uint DDGI_RAY_BUCKET_COUNT = 4; // ray count per bucket
+static const float DDGI_KEEP_DISTANCE = 0.1f;						 // how much distance should probes keep from surfaces
+static const uint DDGI_RAY_BUCKET_COUNT = 4;						 // ray count per bucket
 
 #define DDGI_LINEAR_BLENDING
 
@@ -120,8 +120,7 @@ inline float3 ddgi_probe_position_rest(uint3 probeCoord)
 inline float3 ddgi_probe_position(uint3 probeCoord)
 {
 	float3 pos = ddgi_probe_position_rest(probeCoord);
-	[branch]
-	if (GetScene().ddgi.offset_texture >= 0)
+	[branch] if (GetScene().ddgi.offset_texture >= 0)
 	{
 		float3 offset = bindless_textures3D[GetScene().ddgi.offset_texture][ddgi_probe_offset_pixel(probeCoord)].xyz;
 		offset = (offset - 0.5) * ddgi_cellsize();
@@ -190,19 +189,19 @@ half3 ddgi_sample_irradiance(float3 P, half3 N)
 
 		// Compute the trilinear weights based on the grid cell vertex to smoothly
 		// transition between probes. Avoid ever going entirely to zero because that
-		// will cause problems at the border probes. This isn't really a lerp. 
+		// will cause problems at the border probes. This isn't really a lerp.
 		// We're using 1-a when offset = 0 and a when offset = 1.
 		half3 trilinear = lerp(1.0 - alpha, alpha, offset);
 		half weight = 1.0;
 
-		// Clamp all of the multiplies. We can't let the weight go to zero because then it would be 
+		// Clamp all of the multiplies. We can't let the weight go to zero because then it would be
 		// possible for *all* weights to be equally low and get normalized
-		// up to 1/n. We want to distinguish between weights that are 
+		// up to 1/n. We want to distinguish between weights that are
 		// low because of different factors.
 
 		// Smooth backface test
 		{
-			// Computed without the biasing applied to the "dir" variable. 
+			// Computed without the biasing applied to the "dir" variable.
 			// This test can cause reflection-map looking errors in the image
 			// (stuff looks shiny) if the transition is poor.
 			half3 true_direction_to_probe = normalize(probe_pos - P);
@@ -221,8 +220,7 @@ half3 ddgi_sample_irradiance(float3 P, half3 N)
 
 		// Moment visibility test
 #if 1
-		[branch]
-		if(GetScene().ddgi.depth_texture >= 0)
+		[branch] if (GetScene().ddgi.depth_texture >= 0)
 		{
 			//float2 tex_coord = texture_coord_from_direction(-dir, p, ddgi.depth_texture_width, ddgi.depth_texture_height, ddgi.depth_probe_side_length);
 			float2 tex_coord = ddgi_probe_depth_uv(probe_grid_coord, -dir);
@@ -238,7 +236,7 @@ half3 ddgi_sample_irradiance(float3 P, half3 N)
 			// Need the max in the denominator because biasing can cause a negative displacement
 			half chebyshev_weight = variance / (variance + sqr(max(dist_to_probe - mean, 0.0)));
 
-			// Increase contrast in the weight 
+			// Increase contrast in the weight
 			chebyshev_weight = max(pow(chebyshev_weight, 3), 0.0);
 
 			weight *= (dist_to_probe <= mean) ? 1.0 : chebyshev_weight;
@@ -404,8 +402,7 @@ static const uint4 DDGI_DEPTH_BORDER_OFFSETS[68] = {
 void MultiscaleMeanEstimator(
 	float3 y,
 	inout DDGIVarianceData data,
-	float shortWindowBlend = 0.08f
-)
+	float shortWindowBlend = 0.08f)
 {
 	float3 mean = data.mean;
 	float3 shortMean = data.shortMean;
@@ -439,10 +436,12 @@ void MultiscaleMeanEstimator(
 
 	float varianceBasedBlendReduction =
 		clamp(dot(float3(0.299, 0.587, 0.114),
-			0.5 * shortMean / max(1e-5, dev)), 1.0 / 32, 1);
+				  0.5 * shortMean / max(1e-5, dev)),
+			1.0 / 32, 1);
 
 	float3 catchUpBlend = clamp(smoothstep(0, 1,
-		relativeDiff * max(0.02, inconsistency - 0.2)), 1.0 / 256, 1);
+									relativeDiff * max(0.02, inconsistency - 0.2)),
+		1.0 / 256, 1);
 	catchUpBlend *= vbbr;
 
 	vbbr = lerp(vbbr, varianceBasedBlendReduction, 0.1);

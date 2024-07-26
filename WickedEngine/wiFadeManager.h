@@ -16,9 +16,9 @@ namespace wi
 		float targetFadeTimeInSeconds = 1.0f;
 		enum FADE_STATE
 		{
-			FADE_IN,	// no fade -> faded
-			FADE_MID,	// completely faded
-			FADE_OUT,	// faded -> no fade
+			FADE_IN,  // no fade -> faded
+			FADE_MID, // completely faded
+			FADE_OUT, // faded -> no fade
 			FADE_FINISHED,
 		} state = FADE_FINISHED;
 		wi::Color color = wi::Color(0, 0, 0, 255);

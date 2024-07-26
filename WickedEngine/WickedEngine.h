@@ -77,15 +77,15 @@
 #include "wiTrailRenderer.h"
 
 #ifdef PLATFORM_WINDOWS_DESKTOP
-#pragma comment(lib,"WickedEngine_Windows.lib")
+#pragma comment(lib, "WickedEngine_Windows.lib")
 #endif // PLATFORM_WINDOWS_DESKTOP
 
 #ifdef PLATFORM_XBOX
-#pragma comment(lib,"WickedEngine_XBOX.lib")
+#pragma comment(lib, "WickedEngine_XBOX.lib")
 #endif // PLATFORM_XBOX
 
 #ifdef PLATFORM_PS5
-#pragma comment(lib,"WickedEngine_PS5.a")
+#pragma comment(lib, "WickedEngine_PS5.a")
 #endif // PLATFORM_PS5
 
 
@@ -165,11 +165,11 @@ using RAY = wi::primitive::Ray;
 using Frustum = wi::primitive::Frustum;
 using Hitbox2D = wi::primitive::Hitbox2D;
 
+using wi::font::Alignment;
+using wi::image::QUALITY;
+using wi::image::SAMPLEMODE;
 using wi::image::STENCILMODE;
 using wi::image::STENCILREFMODE;
-using wi::image::SAMPLEMODE;
-using wi::image::QUALITY;
-using wi::font::Alignment;
 
 static constexpr int SYSTEM_EVENT_THREAD_SAFE_POINT = wi::eventhandler::EVENT_THREAD_SAFE_POINT;
 static constexpr int SYSTEM_EVENT_RELOAD_SHADERS = wi::eventhandler::EVENT_RELOAD_SHADERS;

@@ -1,3 +1,4 @@
+// clang-format off
 static const float3 vertices[2210] = {
 	float3(0.536435f,-0.085426f,-0.086257f),
 	float3(0.532677f,-0.133048f,-0.032462f),

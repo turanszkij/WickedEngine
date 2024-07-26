@@ -12,7 +12,6 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete VoxelGrid");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -22,7 +21,7 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->componentsWnd.RefreshEntityTree();
-		});
+	});
 
 	float x = 80;
 	float y = 0;
@@ -55,7 +54,7 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 		if (voxelgrid == nullptr)
 			return;
 		voxelgrid->init(voxelgrid->resolution.x, uint32_t(std::max(1, args.iValue)), voxelgrid->resolution.z);
-		});
+	});
 	AddWidget(&dimYInput);
 
 	dimZInput.Create("DimZ");
@@ -67,7 +66,7 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 		if (voxelgrid == nullptr)
 			return;
 		voxelgrid->init(voxelgrid->resolution.x, voxelgrid->resolution.y, uint32_t(std::max(1, args.iValue)));
-		});
+	});
 	AddWidget(&dimZInput);
 
 	clearButton.Create("Clear voxels " ICON_CLEARVOXELS);
@@ -102,7 +101,7 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 		if (voxelgrid == nullptr)
 			return;
 		scene.VoxelizeScene(*voxelgrid, subtractCheckBox.GetCheck(), wi::enums::FILTER_NAVIGATION_MESH);
-		});
+	});
 	AddWidget(&voxelizeNavigationButton);
 
 	voxelizeCollidersButton.Create("Voxelize CPU colliders " ICON_VOXELIZE);
@@ -114,7 +113,7 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 		if (voxelgrid == nullptr)
 			return;
 		scene.VoxelizeScene(*voxelgrid, subtractCheckBox.GetCheck(), wi::enums::FILTER_COLLIDER);
-		});
+	});
 	AddWidget(&voxelizeCollidersButton);
 
 	fitToSceneButton.Create("Fit bounds to scene " ICON_VOXELBOUNDS);
@@ -152,7 +151,6 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 
 	SetMinimized(true);
 	SetVisible(false);
-
 }
 
 void VoxelGridWindow::SetEntity(Entity entity)

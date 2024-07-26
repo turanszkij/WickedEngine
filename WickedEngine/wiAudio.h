@@ -42,10 +42,10 @@ namespace wi::audio
 		// You can specify these params before creating the sound instance:
 		//	The sound instance will need to be recreated for changes to take effect
 		SUBMIX_TYPE type = SUBMIX_TYPE_SOUNDEFFECT;
-		float begin = 0;		// beginning of the playback in seconds, relative to the Sound it will be created from (0 = from beginning)
-		float length = 0;		// length in seconds (0 = until end)
-		float loop_begin = 0;	// loop region begin in seconds, relative to the instance begin time (0 = from beginning)
-		float loop_length = 0;	// loop region length in seconds (0 = until the end)
+		float begin = 0;	   // beginning of the playback in seconds, relative to the Sound it will be created from (0 = from beginning)
+		float length = 0;	   // length in seconds (0 = until end)
+		float loop_begin = 0;  // loop region begin in seconds, relative to the instance begin time (0 = from beginning)
+		float loop_length = 0; // loop region length in seconds (0 = until the end)
 
 		enum FLAGS
 		{
@@ -55,9 +55,29 @@ namespace wi::audio
 		};
 		uint32_t _flags = EMPTY;
 
-		inline void SetEnableReverb(bool value = true) { if (value) { _flags |= ENABLE_REVERB; } else { _flags &= ~ENABLE_REVERB; } }
+		inline void SetEnableReverb(bool value = true)
+		{
+			if (value)
+			{
+				_flags |= ENABLE_REVERB;
+			}
+			else
+			{
+				_flags &= ~ENABLE_REVERB;
+			}
+		}
 		inline bool IsEnableReverb() const { return _flags & ENABLE_REVERB; }
-		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
+		inline void SetLooped(bool value = true)
+		{
+			if (value)
+			{
+				_flags |= LOOPED;
+			}
+			else
+			{
+				_flags &= ~LOOPED;
+			}
+		}
 		inline bool IsLooped() const { return _flags & LOOPED; }
 	};
 
@@ -75,10 +95,10 @@ namespace wi::audio
 
 	struct SampleInfo
 	{
-		const short* samples = nullptr;	// array of samples in the sound
-		size_t sample_count = 0;	// number of samples in the sound
-		int sample_rate = 0;	// number of samples per second
-		uint32_t channel_count = 1;	// number of channels in the samples array (1: mono, 2:stereo, etc.)
+		const short* samples = nullptr; // array of samples in the sound
+		size_t sample_count = 0;		// number of samples in the sound
+		int sample_rate = 0;			// number of samples per second
+		uint32_t channel_count = 1;		// number of channels in the samples array (1: mono, 2:stereo, etc.)
 	};
 	SampleInfo GetSampleInfo(const Sound* sound);
 	// Returns the total number of samples that were played since the creation of the sound instance

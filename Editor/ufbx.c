@@ -1,3 +1,4 @@
+// clang-format off
 #ifndef UFBX_UFBX_C_INCLUDED
 #define UFBX_UFBX_C_INCLUDED
 

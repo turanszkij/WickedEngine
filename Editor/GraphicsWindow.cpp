@@ -60,7 +60,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->resolutionScale = args.fValue;
 		editor->main->config.GetSection("graphics").Set("resolution_scale", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&resolutionScaleSlider);
 
 	streamingSlider.Create(0.1f, 1.0f, wi::resourcemanager::GetStreamingMemoryThreshold(), 100, "Streaming Threshold: ");
@@ -79,7 +79,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	renderPathComboBox.AddItem("Path Tracing", RENDERPATH_PATHTRACING);
 	renderPathComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		ChangeRenderPath((RENDERPATH)args.userdata);
-		});
+	});
 	renderPathComboBox.SetEnabled(true);
 	renderPathComboBox.SetTooltip("Choose a render path...\nPath tracing will use fallback raytracing with non-raytracing GPU, which will be slow.\nChanging render path will reset some graphics settings!");
 	AddWidget(&renderPathComboBox);
@@ -149,7 +149,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		wi::renderer::SetGIBoost(args.fValue);
 		editor->main->config.GetSection("graphics").Set("gi_boost", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&GIBoostSlider);
 
 	surfelGICheckBox.Create("Surfel GI: ");
@@ -158,7 +158,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	surfelGICheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	surfelGICheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetSurfelGIEnabled(args.bValue);
-		});
+	});
 	surfelGICheckBox.SetCheck(wi::renderer::GetSurfelGIEnabled());
 	AddWidget(&surfelGICheckBox);
 
@@ -184,7 +184,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	ddgiCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	ddgiCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetDDGIEnabled(args.bValue);
-		});
+	});
 	ddgiCheckBox.SetCheck(wi::renderer::GetDDGIEnabled());
 	AddWidget(&ddgiCheckBox);
 
@@ -194,7 +194,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	ddgiDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	ddgiDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetDDGIDebugEnabled(args.bValue);
-		});
+	});
 	ddgiDebugCheckBox.SetCheck(wi::renderer::GetDDGIDebugEnabled());
 	AddWidget(&ddgiDebugCheckBox);
 
@@ -205,7 +205,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	ddgiRayCountSlider.SetValue((float)wi::renderer::GetDDGIRayCount());
 	ddgiRayCountSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::renderer::SetDDGIRayCount((uint32_t)args.iValue);
-		});
+	});
 	AddWidget(&ddgiRayCountSlider);
 
 	ddgiBlendSpeedSlider.Create(0, 0.2f, 0.1f, 1000, "DDGI Blend Speed: ");
@@ -215,7 +215,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	ddgiBlendSpeedSlider.SetValue(wi::renderer::GetDDGIBlendSpeed());
 	ddgiBlendSpeedSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::renderer::SetDDGIBlendSpeed(args.fValue);
-		});
+	});
 	AddWidget(&ddgiBlendSpeedSlider);
 
 	ddgiSmoothBackfaceSlider.Create(0, 1, 0, 1000, "DDGI Smoothen: ");
@@ -225,7 +225,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	ddgiSmoothBackfaceSlider.OnSlide([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		scene.ddgi.smooth_backface = args.fValue;
-		});
+	});
 	AddWidget(&ddgiSmoothBackfaceSlider);
 
 	ddgiX.Create("");
@@ -252,7 +252,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		grid_dimensions.y = (uint32_t)args.iValue;
 		scene.ddgi = {}; // reset ddgi
 		scene.ddgi.grid_dimensions = grid_dimensions;
-		});
+	});
 	AddWidget(&ddgiY);
 
 	ddgiZ.Create("");
@@ -265,7 +265,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		grid_dimensions.z = (uint32_t)args.iValue;
 		scene.ddgi = {}; // reset ddgi
 		scene.ddgi.grid_dimensions = grid_dimensions;
-		});
+	});
 	AddWidget(&ddgiZ);
 
 	vxgiCheckBox.Create("VXGI: ");
@@ -352,7 +352,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	variableRateShadingClassificationCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::renderer::SetVariableRateShadingClassification(args.bValue);
 		editor->ResizeBuffers();
-		});
+	});
 	variableRateShadingClassificationCheckBox.SetCheck(wi::renderer::GetVariableRateShadingClassification());
 	AddWidget(&variableRateShadingClassificationCheckBox);
 	variableRateShadingClassificationCheckBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(wi::graphics::GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2));
@@ -363,7 +363,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	variableRateShadingClassificationDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	variableRateShadingClassificationDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetVariableRateShadingClassificationDebug(args.bValue);
-		});
+	});
 	variableRateShadingClassificationDebugCheckBox.SetCheck(wi::renderer::GetVariableRateShadingClassificationDebug());
 	AddWidget(&variableRateShadingClassificationDebugCheckBox);
 	variableRateShadingClassificationDebugCheckBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(wi::graphics::GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2));
@@ -445,7 +445,6 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		}
 	}
 	shadowTypeComboBox.OnSelect([&](wi::gui::EventArgs args) {
-
 		switch (args.iValue)
 		{
 		default:
@@ -460,8 +459,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		}
 
 		editor->main->config.Commit();
-
-		});
+	});
 	shadowTypeComboBox.SetTooltip("Choose between shadowmaps and ray traced shadows.\nNote that ray traced shadows need hardware raytracing support, otherwise they are not available");
 	AddWidget(&shadowTypeComboBox);
 
@@ -476,7 +474,6 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	shadowProps2DComboBox.AddItem("2048");
 	shadowProps2DComboBox.AddItem("4096");
 	shadowProps2DComboBox.OnSelect([&](wi::gui::EventArgs args) {
-
 		switch (args.iValue)
 		{
 		case 0:
@@ -696,7 +693,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setTonemap((wi::renderer::Tonemap)args.iValue);
 		editor->main->config.GetSection("graphics").Set("tonemap", args.iValue);
 		editor->main->config.Commit();
-		});
+	});
 	if (editor->main->config.GetSection("graphics").Has("tonemap"))
 	{
 		int tonemap = editor->main->config.GetSection("graphics").GetInt("tonemap");
@@ -717,7 +714,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setExposure(args.fValue);
 		editor->main->config.GetSection("graphics").Set("tonemap_exposure", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&exposureSlider);
 
 	brightnessSlider.Create(-1.0f, 1.0f, 0, 10000, "Brightness: ");
@@ -731,7 +728,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setBrightness(args.fValue);
 		editor->main->config.GetSection("graphics").Set("brightness", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&brightnessSlider);
 
 	contrastSlider.Create(0.0f, 2.0f, 1, 10000, "Contrast: ");
@@ -745,7 +742,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setContrast(args.fValue);
 		editor->main->config.GetSection("graphics").Set("contrast", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&contrastSlider);
 
 	saturationSlider.Create(0.0f, 2.0f, 1, 10000, "Saturation: ");
@@ -759,7 +756,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setSaturation(args.fValue);
 		editor->main->config.GetSection("graphics").Set("saturation", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&saturationSlider);
 
 	lensFlareCheckBox.Create("LensFlare: ");
@@ -772,7 +769,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setLensFlareEnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("lensflare", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&lensFlareCheckBox);
 
 	lightShaftsCheckBox.Create("LightShafts: ");
@@ -785,7 +782,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setLightShaftsEnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("lightshafts", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&lightShaftsCheckBox);
 
 	lightShaftsStrengthStrengthSlider.Create(0, 1, 0.05f, 1000, "Lightshaft.Strength: ");
@@ -801,7 +798,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setLightShaftsStrength(args.fValue);
 		editor->main->config.GetSection("graphics").Set("lightshafts_strength", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&lightShaftsStrengthStrengthSlider);
 
 	aoComboBox.Create("AO: ");
@@ -827,7 +824,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setAO((wi::RenderPath3D::AO)args.iValue);
 		editor->main->config.GetSection("graphics").Set("ambient_occlusion", args.iValue);
 		editor->main->config.Commit();
-		});
+	});
 	aoComboBox.SetSelected(ao);
 	AddWidget(&aoComboBox);
 
@@ -843,7 +840,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setAOPower(args.fValue);
 		editor->main->config.GetSection("graphics").Set("ambient_occlusion_power", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&aoPowerSlider);
 
 	aoRangeSlider.Create(1.0f, 100.0f, 1, 1000, "AO.Range: ");
@@ -859,7 +856,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setAORange(args.fValue);
 		editor->main->config.GetSection("graphics").Set("ambient_occlusion_range", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&aoRangeSlider);
 
 	aoSampleCountSlider.Create(1, 16, 9, 15, "Sample Count: ");
@@ -868,7 +865,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	aoSampleCountSlider.SetPos(XMFLOAT2(x + 100, y += step));
 	aoSampleCountSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setAOSampleCount(args.iValue);
-		});
+	});
 	AddWidget(&aoSampleCountSlider);
 
 	ssrCheckBox.Create("SSR: ");
@@ -881,7 +878,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setSSREnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("screen_space_reflections", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&ssrCheckBox);
 
 	reflectionsRoughnessCutoffSlider.Create(0, 1, 0.6f, 1000, "Cutoff: ");
@@ -896,7 +893,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setReflectionRoughnessCutoff(args.fValue);
 		editor->main->config.GetSection("graphics").Set("reflection_roughness_cutoff", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&reflectionsRoughnessCutoffSlider);
 
 	raytracedReflectionsCheckBox.Create("RT Reflections: ");
@@ -909,7 +906,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setRaytracedReflectionsEnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("raytraced_reflections", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&raytracedReflectionsCheckBox);
 	raytracedReflectionsCheckBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::RAYTRACING));
 
@@ -926,7 +923,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setRaytracedReflectionsRange(args.fValue);
 		editor->main->config.GetSection("graphics").Set("rtreflection_range", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&raytracedReflectionsRangeSlider);
 	raytracedReflectionsRangeSlider.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::RAYTRACING));
 
@@ -940,7 +937,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setRaytracedDiffuseEnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("raytraced_diffuse", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&raytracedDiffuseCheckBox);
 	raytracedDiffuseCheckBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::RAYTRACING));
 
@@ -957,7 +954,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setRaytracedDiffuseRange(args.fValue);
 		editor->main->config.GetSection("graphics").Set("rtdiffuse_range", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&raytracedDiffuseRangeSlider);
 	raytracedDiffuseRangeSlider.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::RAYTRACING));
 
@@ -974,7 +971,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setSSGIEnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("ssgi", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&ssgiCheckBox);
 
 	ssgiDepthRejectionSlider.Create(0.1f, 100.0f, 8, 1000, "SSGI.DepthRejection");
@@ -990,7 +987,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setSSGIDepthRejection(args.fValue);
 		editor->main->config.GetSection("graphics").Set("ssgi_depthrejection", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&ssgiDepthRejectionSlider);
 
 	screenSpaceShadowsCheckBox.Create("Screen Shadows: ");
@@ -1002,7 +999,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		wi::renderer::SetScreenSpaceShadowsEnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("screen_space_shadows", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&screenSpaceShadowsCheckBox);
 
 	screenSpaceShadowsRangeSlider.Create(0.1f, 10.0f, 1, 1000, "ScreenspaceShadows.Range: ");
@@ -1018,7 +1015,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setScreenSpaceShadowRange(args.fValue);
 		editor->main->config.GetSection("graphics").Set("screen_space_shadows_range", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&screenSpaceShadowsRangeSlider);
 
 	screenSpaceShadowsStepCountSlider.Create(4, 128, 16, 128 - 4, "Samples: ");
@@ -1033,7 +1030,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setScreenSpaceShadowSampleCount(args.iValue);
 		editor->main->config.GetSection("graphics").Set("screen_space_shadows_samples", args.iValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&screenSpaceShadowsStepCountSlider);
 
 	eyeAdaptionCheckBox.Create("EyeAdaption: ");
@@ -1045,7 +1042,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setEyeAdaptionEnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("eye_adaption", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&eyeAdaptionCheckBox);
 
 	eyeAdaptionKeySlider.Create(0.01f, 0.5f, 0.1f, 10000, "Key: ");
@@ -1060,7 +1057,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setEyeAdaptionKey(args.fValue);
 		editor->main->config.GetSection("graphics").Set("eye_adaption_key", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&eyeAdaptionKeySlider);
 
 	eyeAdaptionRateSlider.Create(0.01f, 4, 0.5f, 10000, "Rate: ");
@@ -1075,7 +1072,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setEyeAdaptionRate(args.fValue);
 		editor->main->config.GetSection("graphics").Set("eye_adaption_rate", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&eyeAdaptionRateSlider);
 
 	motionBlurCheckBox.Create("MotionBlur: ");
@@ -1091,7 +1088,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setMotionBlurEnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("motion_blur", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&motionBlurCheckBox);
 
 	motionBlurStrengthSlider.Create(0.1f, 400, 100, 10000, "Motionblur.Strength: ");
@@ -1108,7 +1105,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setMotionBlurStrength(args.fValue);
 		editor->main->config.GetSection("graphics").Set("motion_blur_strength", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&motionBlurStrengthSlider);
 
 	depthOfFieldCheckBox.Create("DepthOfField: ");
@@ -1124,7 +1121,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setDepthOfFieldEnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("depth_of_field", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&depthOfFieldCheckBox);
 
 	depthOfFieldScaleSlider.Create(1.0f, 20, 100, 1000, "DepthOfField.Strength: ");
@@ -1141,7 +1138,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setDepthOfFieldStrength(args.fValue);
 		editor->main->config.GetSection("graphics").Set("depth_of_field_strength", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&depthOfFieldScaleSlider);
 
 	bloomCheckBox.Create("Bloom: ");
@@ -1157,7 +1154,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setBloomEnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("bloom", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&bloomCheckBox);
 
 	bloomStrengthSlider.Create(0.0f, 10, 1, 1000, "Bloom.Threshold: ");
@@ -1173,7 +1170,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setBloomThreshold(args.fValue);
 		editor->main->config.GetSection("graphics").Set("bloom_threshold", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&bloomStrengthSlider);
 
 	fxaaCheckBox.Create("FXAA: ");
@@ -1189,7 +1186,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setFXAAEnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("fxaa", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&fxaaCheckBox);
 
 	colorGradingCheckBox.Create("Color Grading: ");
@@ -1204,7 +1201,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setColorGradingEnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("color_grading", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&colorGradingCheckBox);
 
 	ditherCheckBox.Create("Dithering: ");
@@ -1219,7 +1216,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setDitherEnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("dithering", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&ditherCheckBox);
 
 	sharpenFilterCheckBox.Create("Sharpen Filter: ");
@@ -1235,7 +1232,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setSharpenFilterEnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("sharpen", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&sharpenFilterCheckBox);
 
 	sharpenFilterAmountSlider.Create(0, 4, 1, 1000, "Sharpen.Strength: ");
@@ -1252,7 +1249,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setSharpenFilterAmount(args.fValue);
 		editor->main->config.GetSection("graphics").Set("sharpen_strength", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&sharpenFilterAmountSlider);
 
 	outlineCheckBox.Create("Cartoon Outline: ");
@@ -1267,7 +1264,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setOutlineEnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("cartoon_outline", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&outlineCheckBox);
 
 	outlineThresholdSlider.Create(0, 1, 0.1f, 1000, "Outline.Threshold: ");
@@ -1283,7 +1280,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setOutlineThreshold(args.fValue);
 		editor->main->config.GetSection("graphics").Set("cartoon_outline_threshold", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&outlineThresholdSlider);
 
 	outlineThicknessSlider.Create(0, 4, 1, 1000, "Thickness: ");
@@ -1298,7 +1295,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setOutlineThickness(args.fValue);
 		editor->main->config.GetSection("graphics").Set("cartoon_outline_thickness", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&outlineThicknessSlider);
 
 	chromaticaberrationCheckBox.Create("Chromatic Aberration: ");
@@ -1313,7 +1310,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setChromaticAberrationEnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("chromatic_aberration", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&chromaticaberrationCheckBox);
 
 	chromaticaberrationSlider.Create(0, 40, 1.0f, 1000, "Strength: ");
@@ -1328,7 +1325,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setChromaticAberrationAmount(args.fValue);
 		editor->main->config.GetSection("graphics").Set("chromatic_aberration_strength", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&chromaticaberrationSlider);
 
 	fsrCheckBox.Create("FSR 1.0: ");
@@ -1343,7 +1340,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setFSREnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("fsr", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&fsrCheckBox);
 
 	fsrSlider.Create(0, 2, 1.0f, 1000, "FSR1.Sharpness: ");
@@ -1359,7 +1356,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setFSRSharpness(args.fValue);
 		editor->main->config.GetSection("graphics").Set("fsr_sharpness", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&fsrSlider);
 
 	fsr2CheckBox.Create("FSR 2.1: ");
@@ -1380,7 +1377,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 			desc.mip_lod_bias = wi::math::Clamp(mipLodBiasSlider.GetValue(), -15.9f, 15.9f);
 			wi::renderer::ModifyObjectSampler(desc);
 		}
-		});
+	});
 	AddWidget(&fsr2CheckBox);
 
 	fsr2Slider.Create(0, 1, 1.0f, 1000, "FSR2.Sharpness: ");
@@ -1396,7 +1393,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setFSR2Sharpness(args.fValue);
 		editor->main->config.GetSection("graphics").Set("fsr2_sharpness", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&fsr2Slider);
 
 	fsr2Combo.Create("FSR 2.1 Preset: ");
@@ -1416,7 +1413,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		}
 		editor->main->config.GetSection("graphics").Set("fsr2_preset", args.iValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&fsr2Combo);
 
 	SetVisible(false);
@@ -1472,7 +1469,6 @@ void GraphicsWindow::UpdateSwapChainFormats(wi::graphics::SwapChain* swapChain)
 	}
 
 	swapchainComboBox.OnSelect([=](wi::gui::EventArgs args) {
-
 		swapChain->desc.format = (wi::graphics::Format)args.userdata;
 		switch (args.iValue)
 		{
@@ -1490,7 +1486,7 @@ void GraphicsWindow::UpdateSwapChainFormats(wi::graphics::SwapChain* swapChain)
 
 		bool success = wi::graphics::GetDevice()->CreateSwapChain(&swapChain->desc, nullptr, swapChain);
 		assert(success);
-		});
+	});
 }
 
 void GraphicsWindow::Update()
@@ -1855,8 +1851,6 @@ void GraphicsWindow::ResizeLayout()
 	add_right(fsr2Slider);
 	fsr2CheckBox.SetPos(XMFLOAT2(fsr2Slider.GetPos().x - fsr2CheckBox.GetSize().x - 80, fsr2Slider.GetPos().y));
 	add_right(fsr2Combo);
-
-
 }
 
 void GraphicsWindow::ApplySamplerSettings()

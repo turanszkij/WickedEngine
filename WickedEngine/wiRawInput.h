@@ -10,7 +10,7 @@ namespace wi::input::rawinput
 	// Updates the state of raw input devices, call once per frame
 	void Update();
 
-	// Parse Windows message from message loop. Not necessary to call if you don't use message loop in the application. 
+	// Parse Windows message from message loop. Not necessary to call if you don't use message loop in the application.
 	void ParseMessage(void* lparam);
 
 	// Writes the keyboard state into state parameter

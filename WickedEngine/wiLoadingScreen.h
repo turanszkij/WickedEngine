@@ -11,14 +11,14 @@ namespace wi
 
 	class Application;
 
-	class LoadingScreen :
-		public RenderPath2D
+	class LoadingScreen : public RenderPath2D
 	{
 	protected:
 		wi::jobsystem::context ctx;
 		wi::vector<std::function<void(wi::jobsystem::JobArgs)>> tasks;
 		std::function<void()> finish;
 		uint32_t launchedTasks = 0;
+
 	public:
 		wi::Resource backgroundTexture;
 
@@ -26,7 +26,7 @@ namespace wi
 		{
 			Fill,	// fill the whole screen, will cut off parts of the image if aspects don't match
 			Fit,	// fit the image completely inside the screen, will result in black bars on screen if aspects don't match
-			Stretch	// fill the whole screen, and stretch the image if needed
+			Stretch // fill the whole screen, and stretch the image if needed
 		} background_mode = BackgroundMode::Fill;
 
 		//Add a loading task which should be executed

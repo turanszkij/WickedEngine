@@ -119,7 +119,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 		camera.focal_length = args.fValue;
 		camera.UpdateCamera();
 		camera.SetDirty();
-		});
+	});
 	AddWidget(&focalLengthSlider);
 
 	apertureSizeSlider.Create(0, 1, 0, 10000, "Aperture Size: ");
@@ -132,7 +132,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 		camera.aperture_size = args.fValue;
 		camera.UpdateCamera();
 		camera.SetDirty();
-		});
+	});
 	AddWidget(&apertureSizeSlider);
 
 	apertureShapeXSlider.Create(0, 2, 1, 10000, "Aperture Shape X: ");
@@ -145,7 +145,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 		camera.aperture_shape.x = args.fValue;
 		camera.UpdateCamera();
 		camera.SetDirty();
-		});
+	});
 	AddWidget(&apertureShapeXSlider);
 
 	apertureShapeYSlider.Create(0, 2, 1, 10000, "Aperture Shape Y: ");
@@ -158,7 +158,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 		camera.aperture_shape.y = args.fValue;
 		camera.UpdateCamera();
 		camera.SetDirty();
-		});
+	});
 	AddWidget(&apertureShapeYSlider);
 
 	movespeedSlider.Create(1, 100, 10, 10000, "Movement Speed: ");
@@ -171,7 +171,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	movespeedSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->main->config.GetSection("camera").Set("move_speed", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&movespeedSlider);
 
 	accelerationSlider.Create(0.01f, 1, 0.18f, 10000, "Acceleration: ");
@@ -184,7 +184,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	accelerationSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->main->config.GetSection("camera").Set("acceleration", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&accelerationSlider);
 
 	rotationspeedSlider.Create(0.1f, 2, 1, 10000, "Rotation Speed: ");
@@ -197,7 +197,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	rotationspeedSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->main->config.GetSection("camera").Set("rotation_speed", args.fValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&rotationspeedSlider);
 
 	resetButton.Create("Reset Camera");
@@ -225,7 +225,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	fpsCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		editor->main->config.GetSection("camera").Set("fps", args.bValue);
 		editor->main->config.Commit();
-		});
+	});
 	AddWidget(&fpsCheckBox);
 
 
@@ -235,7 +235,6 @@ void CameraWindow::Create(EditorComponent* _editor)
 	proxyButton.SetSize(XMFLOAT2(wid, hei));
 	proxyButton.SetPos(XMFLOAT2(x, y += step * 2));
 	proxyButton.OnClick([=](wi::gui::EventArgs args) {
-
 		const CameraComponent& camera = editor->GetCurrentEditorScene().camera;
 
 		Scene& scene = editor->GetCurrentScene();
@@ -378,5 +377,4 @@ void CameraWindow::ResizeLayout()
 	add_fullwidth(proxyButton);
 	add_right(followCheckBox);
 	add(followSlider);
-
 }

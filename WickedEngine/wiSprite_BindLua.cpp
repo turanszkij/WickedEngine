@@ -28,7 +28,8 @@ namespace wi::lua
 		{ NULL, NULL }
 	};
 
-	Sprite_BindLua::Sprite_BindLua(const wi::Sprite& sprite) :sprite(sprite)
+	Sprite_BindLua::Sprite_BindLua(const wi::Sprite& sprite)
+		: sprite(sprite)
 	{
 	}
 

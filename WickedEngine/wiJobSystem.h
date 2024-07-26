@@ -13,23 +13,23 @@ namespace wi::jobsystem
 		uint32_t jobIndex;		// job index relative to dispatch (like SV_DispatchThreadID in HLSL)
 		uint32_t groupID;		// group index relative to dispatch (like SV_GroupID in HLSL)
 		uint32_t groupIndex;	// job index relative to group (like SV_GroupIndex in HLSL)
-		bool isFirstJobInGroup;	// is the current job the first one in the group?
+		bool isFirstJobInGroup; // is the current job the first one in the group?
 		bool isLastJobInGroup;	// is the current job the last one in the group?
 		void* sharedmemory;		// stack memory shared within the current group (jobs within a group execute serially)
 	};
 
 	enum class Priority
 	{
-		High,		// Default
-		Low,		// Pool of low priority threads, useful for generic tasks that shouldn't interfere with high priority tasks
-		Streaming,	// Single low priority thread, for streaming resources
+		High,	   // Default
+		Low,	   // Pool of low priority threads, useful for generic tasks that shouldn't interfere with high priority tasks
+		Streaming, // Single low priority thread, for streaming resources
 		Count
 	};
 
 	// Defines a state of execution, can be waited on
 	struct context
 	{
-		std::atomic<uint32_t> counter{ 0 };
+		std::atomic<uint32_t> counter { 0 };
 		Priority priority = Priority::High;
 	};
 

@@ -8,7 +8,7 @@
 #include <string>
 #include <hidsdi.h>
 
-#pragma comment(lib,"Hid.lib")
+#pragma comment(lib, "Hid.lib")
 
 namespace wi::input::rawinput
 {
@@ -100,8 +100,8 @@ namespace wi::input::rawinput
 		Rid[1].usUsagePage = 0x01;
 		Rid[1].usUsage = 0x06;
 		Rid[1].dwFlags = 0;
-		Rid[1].hwndTarget = 0; 
-		
+		Rid[1].hwndTarget = 0;
+
 		// Register gamepad:
 		Rid[2].usUsagePage = 0x01;
 		Rid[2].usUsage = 0x05;
@@ -114,7 +114,7 @@ namespace wi::input::rawinput
 		Rid[3].dwFlags = 0;
 		Rid[3].hwndTarget = 0;
 
-		if (RegisterRawInputDevices(Rid, arraysize(Rid), sizeof(Rid[0])) == FALSE) 
+		if (RegisterRawInputDevices(Rid, arraysize(Rid), sizeof(Rid[0])) == FALSE)
 		{
 			//registration failed. Call GetLastError for the cause of the error
 			assert(0);
@@ -290,8 +290,7 @@ namespace wi::input::rawinput
 				status = HidP_GetUsages(
 					HidP_Input, pButtonCaps->UsagePage, 0, usage,
 					&numberOfButtons, pPreparsedData,
-					(PCHAR)raw.data.hid.bRawData, raw.data.hid.dwSizeHid
-				);
+					(PCHAR)raw.data.hid.bRawData, raw.data.hid.dwSizeHid);
 				assert(status == HIDP_STATUS_SUCCESS);
 
 				wi::input::ControllerState& controller = internal_controller.state;
@@ -305,20 +304,20 @@ namespace wi::input::rawinput
 				for (USHORT i = 0; i < Caps.NumberInputValueCaps; i++)
 				{
 					ULONG value;
-					if(HidP_GetUsageValue(
-						HidP_Input, pValueCaps[i].UsagePage, 0,
-						pValueCaps[i].Range.UsageMin, &value, pPreparsedData,
-						(PCHAR)raw.data.hid.bRawData, raw.data.hid.dwSizeHid) != HIDP_STATUS_SUCCESS)
+					if (HidP_GetUsageValue(
+							HidP_Input, pValueCaps[i].UsagePage, 0,
+							pValueCaps[i].Range.UsageMin, &value, pPreparsedData,
+							(PCHAR)raw.data.hid.bRawData, raw.data.hid.dwSizeHid) != HIDP_STATUS_SUCCESS)
 					{
 						continue;
 					}
 
 					switch (pValueCaps[i].Range.UsageMin)
 					{
-					case 0x30:  // X-axis
+					case 0x30: // X-axis
 						controller.thumbstick_L.x = deadzone(((float)value - 128) / 128.0f);
 						break;
-					case 0x31:  // Y-axis
+					case 0x31: // Y-axis
 						controller.thumbstick_L.y = deadzone(-((float)value - 128) / 128.0f);
 						break;
 					case 0x32: // Z-axis
@@ -333,7 +332,7 @@ namespace wi::input::rawinput
 					case 0x35: // Rotate-Z
 						controller.thumbstick_R.y = deadzone(((float)value - 128) / 128.0f);
 						break;
-					case 0x39:  // Hat Switch
+					case 0x39: // Hat Switch
 					{
 						enum POV
 						{
@@ -385,7 +384,6 @@ namespace wi::input::rawinput
 				}
 
 				allocator.free(preparsed_data_size + buttoncaps_buffer_size + valuecaps_buffer_size);
-
 			}
 		}
 	}
@@ -536,11 +534,10 @@ namespace wi::input::rawinput
 		{
 			// WARNING: This was only tested for a PS4 controller, it will most likely fail with others!
 			HANDLE hid_device = CreateFile(
-				controllers[index].name.c_str(), 
+				controllers[index].name.c_str(),
 				GENERIC_READ | GENERIC_WRITE,
 				FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-				OPEN_EXISTING, 0, NULL
-			);
+				OPEN_EXISTING, 0, NULL);
 			assert(hid_device != INVALID_HANDLE_VALUE);
 			uint8_t buf[32] = {};
 			buf[0] = 0x05;

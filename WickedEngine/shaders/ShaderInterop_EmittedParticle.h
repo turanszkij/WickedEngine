@@ -41,54 +41,54 @@ static const uint EMITTER_OPTION_BIT_TAKE_COLOR_FROM_MESH = 1 << 5;
 
 CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 {
-	uint		xEmitBufferOffset;
-	float		xEmitterRandomness;
-	float		xParticleRandomColorFactor;
-	float		xParticleSize;
+	uint xEmitBufferOffset;
+	float xEmitterRandomness;
+	float xParticleRandomColorFactor;
+	float xParticleSize;
 
-	float		xParticleScaling;
-	float		xParticleRotation;
-	float		xParticleRandomFactor;
-	float		xParticleNormalFactor;
+	float xParticleScaling;
+	float xParticleRotation;
+	float xParticleRandomFactor;
+	float xParticleNormalFactor;
 
-	float		xParticleLifeSpan;
-	float		xParticleLifeSpanRandomness;
-	float		xParticleMass;
-	float		xParticleMotionBlurAmount;
+	float xParticleLifeSpan;
+	float xParticleLifeSpanRandomness;
+	float xParticleMass;
+	float xParticleMotionBlurAmount;
 
-	uint		xEmitterMaxParticleCount;
-	uint		xEmitterInstanceIndex;
-	uint		xEmitterMeshGeometryOffset;
-	uint		xEmitterMeshGeometryCount;
+	uint xEmitterMaxParticleCount;
+	uint xEmitterInstanceIndex;
+	uint xEmitterMeshGeometryOffset;
+	uint xEmitterMeshGeometryCount;
 
-	uint2		xEmitterFramesXY;
-	uint		xEmitterFrameCount;
-	uint		xEmitterFrameStart;
+	uint2 xEmitterFramesXY;
+	uint xEmitterFrameCount;
+	uint xEmitterFrameStart;
 
-	float2		xEmitterTexMul;
-	float		xEmitterFrameRate;
-	uint		xEmitterLayerMask;
+	float2 xEmitterTexMul;
+	float xEmitterFrameRate;
+	uint xEmitterLayerMask;
 
-	float		xSPH_h;					// smoothing radius
-	float		xSPH_h_rcp;				// 1.0f / smoothing radius
-	float		xSPH_h2;				// smoothing radius ^ 2
-	float		xSPH_h3;				// smoothing radius ^ 3
+	float xSPH_h;	  // smoothing radius
+	float xSPH_h_rcp; // 1.0f / smoothing radius
+	float xSPH_h2;	  // smoothing radius ^ 2
+	float xSPH_h3;	  // smoothing radius ^ 3
 
-	float		xSPH_poly6_constant;	// precomputed Poly6 kernel constant term
-	float		xSPH_spiky_constant;	// precomputed Spiky kernel function constant term
-	float		xSPH_visc_constant;	    // precomputed viscosity kernel function constant term
-	float		xSPH_K;					// pressure constant
+	float xSPH_poly6_constant; // precomputed Poly6 kernel constant term
+	float xSPH_spiky_constant; // precomputed Spiky kernel function constant term
+	float xSPH_visc_constant;  // precomputed viscosity kernel function constant term
+	float xSPH_K;			   // pressure constant
 
-	float		xSPH_e;					// viscosity constant
-	float		xSPH_p0;				// reference density
-	uint		xEmitterOptions;
-	float		xEmitterFixedTimestep;	// we can force a fixed timestep (>0) onto the simulation to avoid blowing up
+	float xSPH_e;  // viscosity constant
+	float xSPH_p0; // reference density
+	uint xEmitterOptions;
+	float xEmitterFixedTimestep; // we can force a fixed timestep (>0) onto the simulation to avoid blowing up
 
-	float3		xParticleGravity;
-	float		xEmitterRestitution;
+	float3 xParticleGravity;
+	float xEmitterRestitution;
 
-	float3		xParticleVelocity;
-	float		xParticleDrag;
+	float3 xParticleVelocity;
+	float xParticleDrag;
 
 	ShaderTransform xEmitterBaseMeshUnormRemap;
 };
@@ -121,10 +121,10 @@ static const uint THREADCOUNT_SIMULATION = 256;
 
 inline uint SPH_GridHash(int3 cellIndex)
 {
-	const uint p1 = 73856093;   // some large primes 
+	const uint p1 = 73856093; // some large primes
 	const uint p2 = 19349663;
 	const uint p3 = 83492791;
-	int n = p1 * cellIndex.x ^ p2*cellIndex.y ^ p3*cellIndex.z;
+	int n = p1 * cellIndex.x ^ p2 * cellIndex.y ^ p3 * cellIndex.z;
 	n %= SPH_PARTITION_BUCKET_COUNT;
 	return n;
 }
@@ -166,4 +166,3 @@ static const int3 sph_neighbor_offsets[27] = {
 };
 
 #endif // WI_SHADERINTEROP_EMITTEDPARTICLE_H
-

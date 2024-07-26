@@ -10,6 +10,7 @@ namespace wi::lua
 	{
 	private:
 		wi::VoxelGrid owning;
+
 	public:
 		wi::VoxelGrid* voxelgrid = nullptr;
 
@@ -19,8 +20,12 @@ namespace wi::lua
 
 		VoxelGrid_BindLua() = default;
 		VoxelGrid_BindLua(lua_State* L);
-		VoxelGrid_BindLua(wi::VoxelGrid& ref) : voxelgrid(&ref) {}
-		VoxelGrid_BindLua(wi::VoxelGrid* ref) : voxelgrid(ref) {}
+		VoxelGrid_BindLua(wi::VoxelGrid& ref)
+			: voxelgrid(&ref)
+		{}
+		VoxelGrid_BindLua(wi::VoxelGrid* ref)
+			: voxelgrid(ref)
+		{}
 
 		int Init(lua_State* L);
 		int ClearData(lua_State* L);

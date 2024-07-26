@@ -28,8 +28,7 @@ namespace wi::profiler
 		float x,
 		float y,
 		wi::graphics::CommandList cmd,
-		wi::graphics::ColorSpace colorspace = wi::graphics::ColorSpace::SRGB
-	);
+		wi::graphics::ColorSpace colorspace = wi::graphics::ColorSpace::SRGB);
 	void DisableDrawForThisFrame();
 
 	// Enable/disable profiling
@@ -40,4 +39,3 @@ namespace wi::profiler
 	void SetBackgroundColor(wi::Color color);
 	void SetTextColor(wi::Color color);
 };
-

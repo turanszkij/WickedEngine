@@ -13,7 +13,6 @@ void DecalWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete DecalComponent");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -145,5 +144,4 @@ void DecalWindow::ResizeLayout()
 	add_right(placementCheckBox);
 	add_right(onlyalphaCheckBox);
 	add(slopeBlendPowerSlider);
-
 }

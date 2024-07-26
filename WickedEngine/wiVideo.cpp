@@ -27,11 +27,10 @@ namespace wi::video
 		{
 			const uint8_t* buffer;
 			size_t size;
-		} input_buffer = { input_buf,filesize };
+		} input_buffer = { input_buf, filesize };
 		MP4D_demux_t mp4 = {};
 		int token = 0;
-		auto read_callback = [](int64_t offset, void* buffer, size_t size, void* token) -> int
-		{
+		auto read_callback = [](int64_t offset, void* buffer, size_t size, void* token) -> int {
 			INPUT_BUFFER* buf = (INPUT_BUFFER*)token;
 			size_t to_copy = MINIMP4_MIN(size, buf->size - offset - size);
 			std::memcpy(buffer, buf->buffer + offset, to_copy);
@@ -332,8 +331,7 @@ namespace wi::video
 
 								if (
 									nal.type != h264::NAL_UNIT_TYPE_CODED_SLICE_IDR &&
-									nal.type != h264::NAL_UNIT_TYPE_CODED_SLICE_NON_IDR
-									)
+									nal.type != h264::NAL_UNIT_TYPE_CODED_SLICE_NON_IDR)
 								{
 									frame_bytes -= size;
 									src_buffer += size;
@@ -417,8 +415,7 @@ namespace wi::video
 				&instance->dpb.texture,
 				SubresourceType::SRV,
 				i, 1, 0, 1,
-				&luminance_format, &luminance_aspect
-			);
+				&luminance_format, &luminance_aspect);
 
 			Format chrominance_format = Format::R8G8_UNORM;
 			ImageAspect chrominance_aspect = ImageAspect::CHROMINANCE;
@@ -426,8 +423,7 @@ namespace wi::video
 				&instance->dpb.texture,
 				SubresourceType::SRV,
 				i, 1, 0, 1,
-				&chrominance_format, &chrominance_aspect
-			);
+				&chrominance_format, &chrominance_aspect);
 		}
 
 		return success;
@@ -630,8 +626,7 @@ namespace wi::video
 				SubresourceType::SRV,
 				0, -1,
 				0, -1,
-				&srgb_format
-			);
+				&srgb_format);
 		}
 
 		VideoInstance::OutputTexture output = std::move(instance->output_textures_free.back());
@@ -643,8 +638,7 @@ namespace wi::video
 			instance->dpb.subresources_luminance[instance->dpb.current_slot],
 			instance->dpb.subresources_chrominance[instance->dpb.current_slot],
 			output.texture,
-			cmd
-		);
+			cmd);
 
 		if (has_flag(instance->flags, VideoInstance::Flags::Mipmapped))
 		{

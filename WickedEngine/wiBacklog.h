@@ -23,13 +23,11 @@ namespace wi::backlog
 	void Draw(
 		const wi::Canvas& canvas,
 		wi::graphics::CommandList cmd,
-		wi::graphics::ColorSpace colorspace = wi::graphics::ColorSpace::SRGB
-	);
+		wi::graphics::ColorSpace colorspace = wi::graphics::ColorSpace::SRGB);
 	void DrawOutputText(
 		const wi::Canvas& canvas,
 		wi::graphics::CommandList cmd,
-		wi::graphics::ColorSpace colorspace = wi::graphics::ColorSpace::SRGB
-	);
+		wi::graphics::ColorSpace colorspace = wi::graphics::ColorSpace::SRGB);
 
 	std::string getText();
 	void clear();

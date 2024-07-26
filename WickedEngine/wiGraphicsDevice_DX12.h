@@ -281,7 +281,7 @@ namespace wi::graphics
 		~GraphicsDevice_DX12() override;
 
 		bool CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const override;
-		bool CreateBuffer2(const GPUBufferDesc * desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer, const GPUResource* alias = nullptr, uint64_t alias_offset = 0ull) const override;
+		bool CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer, const GPUResource* alias = nullptr, uint64_t alias_offset = 0ull) const override;
 		bool CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture, const GPUResource* alias = nullptr, uint64_t alias_offset = 0ull) const override;
 		bool CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const override;
 		bool CreateSampler(const SamplerDesc* desc, Sampler* sampler) const override;
@@ -373,12 +373,12 @@ namespace wi::graphics
 		void BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) override;
 		void BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd) override;
 		void BindResource(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
-		void BindResources(const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
+		void BindResources(const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
 		void BindUAV(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
-		void BindUAVs(const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
+		void BindUAVs(const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
 		void BindSampler(const Sampler* sampler, uint32_t slot, CommandList cmd) override;
 		void BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset = 0ull) override;
-		void BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint64_t* offsets, CommandList cmd) override;
+		void BindVertexBuffers(const GPUBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint64_t* offsets, CommandList cmd) override;
 		void BindIndexBuffer(const GPUBuffer* indexBuffer, const IndexBufferFormat format, uint64_t offset, CommandList cmd) override;
 		void BindStencilRef(uint32_t value, CommandList cmd) override;
 		void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) override;
@@ -438,7 +438,7 @@ namespace wi::graphics
 			D3D12_GPU_DESCRIPTOR_HANDLE start_gpu = {};
 
 			// CPU status:
-			std::atomic<uint64_t> allocationOffset{ 0 };
+			std::atomic<uint64_t> allocationOffset { 0 };
 
 			// GPU status:
 			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
@@ -670,7 +670,6 @@ namespace wi::graphics
 			}
 		};
 		std::shared_ptr<AllocationHandler> allocationhandler;
-
 	};
 
 }

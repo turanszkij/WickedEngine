@@ -62,8 +62,7 @@ struct alignas(16) AtmosphereParameters
 		float earthBottomRadius = 6360.0f,
 		float earthTopRadius = 6460.0f, // 100km atmosphere radius, less edge visible and it contain 99.99% of the atmosphere medium https://en.wikipedia.org/wiki/K%C3%A1rm%C3%A1n_line
 		float earthRayleighScaleHeight = 8.0f,
-		float earthMieScaleHeight = 1.2f
-	)
+		float earthMieScaleHeight = 1.2f)
 	{
 
 		// Values shown here are the result of integration over wavelength power spectrum integrated with paricular function.
@@ -100,7 +99,10 @@ struct alignas(16) AtmosphereParameters
 
 
 #ifdef __cplusplus
-	AtmosphereParameters() { init(); }
+	AtmosphereParameters()
+	{
+		init();
+	}
 #endif // __cplusplus
 };
 
@@ -160,9 +162,9 @@ struct alignas(16) VolumetricCloudParameters
 	float beerPowder;
 	float beerPowderPower;
 	float ambientGroundMultiplier; // [0; 1] Amount of ambient light to reach the bottom of clouds
-	float phaseG; // [-0.999; 0.999]
+	float phaseG;				   // [-0.999; 0.999]
 
-	float phaseG2; // [-0.999; 0.999]
+	float phaseG2;	  // [-0.999; 0.999]
 	float phaseBlend; // [0; 1]
 	float multiScatteringScattering;
 	float multiScatteringExtinction;
@@ -181,14 +183,14 @@ struct alignas(16) VolumetricCloudParameters
 	VolumetricCloudLayer layerSecond;
 
 	// Performance
-	int maxStepCount; // Maximum number of iterations. Higher gives better images but may be slow.
-	float maxMarchingDistance; // Clamping the marching steps to be within a certain distance.
+	int maxStepCount;				// Maximum number of iterations. Higher gives better images but may be slow.
+	float maxMarchingDistance;		// Clamping the marching steps to be within a certain distance.
 	float inverseDistanceStepCount; // Distance over which the raymarch steps will be evenly distributed.
-	float renderDistance; // Maximum distance to march before returning a miss.
+	float renderDistance;			// Maximum distance to march before returning a miss.
 
-	float LODDistance; // After a certain distance, noises will get higher LOD
-	float LODMin; // 
-	float bigStepMarch; // How long inital rays should be until they hit something. Lower values may give a better image but may be slower.
+	float LODDistance;			  // After a certain distance, noises will get higher LOD
+	float LODMin;				  //
+	float bigStepMarch;			  // How long inital rays should be until they hit something. Lower values may give a better image but may be slower.
 	float transmittanceThreshold; // Default: 0.005. If the clouds transmittance has reached it's desired opacity, there's no need to keep raymarching for performance.
 
 	float shadowSampleCount;
@@ -202,8 +204,8 @@ struct alignas(16) VolumetricCloudParameters
 		beerPowder = 20.0f;
 		beerPowderPower = 0.5f;
 		ambientGroundMultiplier = 0.75f;
-		phaseG = 0.5f; // [-0.999; 0.999]
-		phaseG2 = -0.5f; // [-0.999; 0.999]
+		phaseG = 0.5f;	   // [-0.999; 0.999]
+		phaseG2 = -0.5f;   // [-0.999; 0.999]
 		phaseBlend = 0.2f; // [0; 1]
 		multiScatteringScattering = 1.0f;
 		multiScatteringExtinction = 0.1f;
@@ -317,9 +319,11 @@ struct alignas(16) VolumetricCloudParameters
 	}
 
 #ifdef __cplusplus
-	VolumetricCloudParameters() { init(); }
+	VolumetricCloudParameters()
+	{
+		init();
+	}
 #endif // __cplusplus
-
 };
 
 struct alignas(16) ShaderFog

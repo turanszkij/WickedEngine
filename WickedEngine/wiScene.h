@@ -33,30 +33,30 @@ namespace wi::scene
 		wi::ecs::ComponentManager<TransformComponent>& transforms = componentLibrary.Register<TransformComponent>("wi::scene::Scene::transforms");
 		wi::ecs::ComponentManager<HierarchyComponent>& hierarchy = componentLibrary.Register<HierarchyComponent>("wi::scene::Scene::hierarchy");
 		wi::ecs::ComponentManager<MaterialComponent>& materials = componentLibrary.Register<MaterialComponent>("wi::scene::Scene::materials", 5); // version = 5
-		wi::ecs::ComponentManager<MeshComponent>& meshes = componentLibrary.Register<MeshComponent>("wi::scene::Scene::meshes", 3); // version = 3
+		wi::ecs::ComponentManager<MeshComponent>& meshes = componentLibrary.Register<MeshComponent>("wi::scene::Scene::meshes", 3);				  // version = 3
 		wi::ecs::ComponentManager<ImpostorComponent>& impostors = componentLibrary.Register<ImpostorComponent>("wi::scene::Scene::impostors");
-		wi::ecs::ComponentManager<ObjectComponent>& objects = componentLibrary.Register<ObjectComponent>("wi::scene::Scene::objects", 3); // version = 3
+		wi::ecs::ComponentManager<ObjectComponent>& objects = componentLibrary.Register<ObjectComponent>("wi::scene::Scene::objects", 3);							  // version = 3
 		wi::ecs::ComponentManager<RigidBodyPhysicsComponent>& rigidbodies = componentLibrary.Register<RigidBodyPhysicsComponent>("wi::scene::Scene::rigidbodies", 3); // version = 3
-		wi::ecs::ComponentManager<SoftBodyPhysicsComponent>& softbodies = componentLibrary.Register<SoftBodyPhysicsComponent>("wi::scene::Scene::softbodies", 3); // version = 3
+		wi::ecs::ComponentManager<SoftBodyPhysicsComponent>& softbodies = componentLibrary.Register<SoftBodyPhysicsComponent>("wi::scene::Scene::softbodies", 3);	  // version = 3
 		wi::ecs::ComponentManager<ArmatureComponent>& armatures = componentLibrary.Register<ArmatureComponent>("wi::scene::Scene::armatures");
 		wi::ecs::ComponentManager<LightComponent>& lights = componentLibrary.Register<LightComponent>("wi::scene::Scene::lights", 2); // version = 2
 		wi::ecs::ComponentManager<CameraComponent>& cameras = componentLibrary.Register<CameraComponent>("wi::scene::Scene::cameras");
 		wi::ecs::ComponentManager<EnvironmentProbeComponent>& probes = componentLibrary.Register<EnvironmentProbeComponent>("wi::scene::Scene::probes", 1); // version = 1
-		wi::ecs::ComponentManager<ForceFieldComponent>& forces = componentLibrary.Register<ForceFieldComponent>("wi::scene::Scene::forces", 1); // version = 1
-		wi::ecs::ComponentManager<DecalComponent>& decals = componentLibrary.Register<DecalComponent>("wi::scene::Scene::decals", 1); // version = 1
-		wi::ecs::ComponentManager<AnimationComponent>& animations = componentLibrary.Register<AnimationComponent>("wi::scene::Scene::animations", 2); // version = 2
+		wi::ecs::ComponentManager<ForceFieldComponent>& forces = componentLibrary.Register<ForceFieldComponent>("wi::scene::Scene::forces", 1);				// version = 1
+		wi::ecs::ComponentManager<DecalComponent>& decals = componentLibrary.Register<DecalComponent>("wi::scene::Scene::decals", 1);						// version = 1
+		wi::ecs::ComponentManager<AnimationComponent>& animations = componentLibrary.Register<AnimationComponent>("wi::scene::Scene::animations", 2);		// version = 2
 		wi::ecs::ComponentManager<AnimationDataComponent>& animation_datas = componentLibrary.Register<AnimationDataComponent>("wi::scene::Scene::animation_datas");
 		wi::ecs::ComponentManager<EmittedParticleSystem>& emitters = componentLibrary.Register<EmittedParticleSystem>("wi::scene::Scene::emitters");
 		wi::ecs::ComponentManager<HairParticleSystem>& hairs = componentLibrary.Register<HairParticleSystem>("wi::scene::Scene::hairs");
 		wi::ecs::ComponentManager<WeatherComponent>& weathers = componentLibrary.Register<WeatherComponent>("wi::scene::Scene::weathers", 6); // version = 6
-		wi::ecs::ComponentManager<SoundComponent>& sounds = componentLibrary.Register<SoundComponent>("wi::scene::Scene::sounds", 1); // version = 1
+		wi::ecs::ComponentManager<SoundComponent>& sounds = componentLibrary.Register<SoundComponent>("wi::scene::Scene::sounds", 1);		  // version = 1
 		wi::ecs::ComponentManager<VideoComponent>& videos = componentLibrary.Register<VideoComponent>("wi::scene::Scene::videos");
 		wi::ecs::ComponentManager<InverseKinematicsComponent>& inverse_kinematics = componentLibrary.Register<InverseKinematicsComponent>("wi::scene::Scene::inverse_kinematics");
-		wi::ecs::ComponentManager<SpringComponent>& springs = componentLibrary.Register<SpringComponent>("wi::scene::Scene::springs", 1); // version = 1
+		wi::ecs::ComponentManager<SpringComponent>& springs = componentLibrary.Register<SpringComponent>("wi::scene::Scene::springs", 1);		  // version = 1
 		wi::ecs::ComponentManager<ColliderComponent>& colliders = componentLibrary.Register<ColliderComponent>("wi::scene::Scene::colliders", 2); // version = 2
 		wi::ecs::ComponentManager<ScriptComponent>& scripts = componentLibrary.Register<ScriptComponent>("wi::scene::Scene::scripts");
 		wi::ecs::ComponentManager<ExpressionComponent>& expressions = componentLibrary.Register<ExpressionComponent>("wi::scene::Scene::expressions");
-		wi::ecs::ComponentManager<HumanoidComponent>& humanoids = componentLibrary.Register<HumanoidComponent>("wi::scene::Scene::humanoids", 1); // version = 1
+		wi::ecs::ComponentManager<HumanoidComponent>& humanoids = componentLibrary.Register<HumanoidComponent>("wi::scene::Scene::humanoids", 1);	  // version = 1
 		wi::ecs::ComponentManager<wi::terrain::Terrain>& terrains = componentLibrary.Register<wi::terrain::Terrain>("wi::scene::Scene::terrains", 5); // version = 5
 		wi::ecs::ComponentManager<wi::Sprite>& sprites = componentLibrary.Register<wi::Sprite>("wi::scene::Scene::sprites");
 		wi::ecs::ComponentManager<wi::SpriteFont>& fonts = componentLibrary.Register<wi::SpriteFont>("wi::scene::Scene::fonts");
@@ -120,7 +120,7 @@ namespace wi::scene
 		ShaderGeometry* geometryArrayMapped = nullptr;
 		size_t geometryArraySize = 0;
 		wi::graphics::GPUBuffer geometryBuffer;
-		std::atomic<uint32_t> geometryAllocator{ 0 };
+		std::atomic<uint32_t> geometryAllocator { 0 };
 
 		// Materials for bindless visibility indexing:
 		wi::graphics::GPUBuffer materialUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
@@ -133,14 +133,14 @@ namespace wi::scene
 
 		// Meshlets:
 		wi::graphics::GPUBuffer meshletBuffer;
-		std::atomic<uint32_t> meshletAllocator{ 0 };
+		std::atomic<uint32_t> meshletAllocator { 0 };
 
 		// Skinning GPU data containining all bones, all morph descriptions:
 		wi::graphics::GPUBuffer skinningUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
 		void* skinningDataMapped = nullptr;
 		size_t skinningDataSize = 0;
 		wi::graphics::GPUBuffer skinningBuffer;
-		std::atomic<uint32_t> skinningAllocator{ 0 };
+		std::atomic<uint32_t> skinningAllocator { 0 };
 
 		// Occlusion query state:
 		struct OcclusionResult
@@ -163,7 +163,7 @@ namespace wi::scene
 		wi::graphics::GPUBuffer queryResultBuffer[arraysize(OcclusionResult::occlusionQueries)];
 		wi::graphics::GPUBuffer queryPredicationBuffer;
 		uint32_t queryheap_idx = 0;
-		mutable std::atomic<uint32_t> queryAllocator{ 0 };
+		mutable std::atomic<uint32_t> queryAllocator { 0 };
 
 		// Surfel GI resources:
 		struct SurfelGI
@@ -262,13 +262,13 @@ namespace wi::scene
 		uint32_t rainMaterialOffset = ~0u;
 		LightComponent rain_blocker_dummy_light;
 
-		std::atomic<uint32_t> lightmap_request_allocator{ 0 };
+		std::atomic<uint32_t> lightmap_request_allocator { 0 };
 		wi::vector<uint32_t> lightmap_requests;
 		wi::vector<TransformComponent> transforms_temp;
 
 		// CPU/GPU Colliders:
-		std::atomic<uint32_t> collider_allocator_cpu{ 0 };
-		std::atomic<uint32_t> collider_allocator_gpu{ 0 };
+		std::atomic<uint32_t> collider_allocator_cpu { 0 };
+		std::atomic<uint32_t> collider_allocator_gpu { 0 };
 		wi::vector<uint8_t> collider_deinterleaved_data;
 		uint32_t collider_count_cpu = 0;
 		uint32_t collider_count_gpu = 0;
@@ -296,7 +296,7 @@ namespace wi::scene
 			wi::unordered_set<wi::ecs::Entity> entities;
 		};
 		wi::vector<AnimationQueue> animation_queues; // different animation queues can be processed in different threads in any order
-		size_t animation_queue_count = 0; // to avoid resizing animation queues downwards because the internals for them needs to be reallocated in that case
+		size_t animation_queue_count = 0;			 // to avoid resizing animation queues downwards because the internals for them needs to be reallocated in that case
 		wi::jobsystem::context animation_dependency_scan_workload;
 		void ScanAnimationDependencies();
 
@@ -340,7 +340,7 @@ namespace wi::scene
 		enum class EntitySerializeFlags
 		{
 			NONE = 0,
-			RECURSIVE = 1 << 0, // children entities will be also serialized
+			RECURSIVE = 1 << 0,						  // children entities will be also serialized
 			KEEP_INTERNAL_ENTITY_REFERENCES = 1 << 1, // entity handles inside components will be kept intact, they won't use remapping of wi::ecs::EntitySerializer
 		};
 		// Serializes entity and all of its components to archive:
@@ -348,83 +348,66 @@ namespace wi::scene
 		//	seri		: serializer state for entity component system
 		//	entity		: if archive is in write mode, this is the entity to serialize. If archive is in read mode, it should be INVALID_ENTITY
 		//	flags		: specify options as EntitySerializeFlags bits to control internal behaviour
-		// 
+		//
 		//	Returns either the new entity that was read, or the original entity that was written
 		wi::ecs::Entity Entity_Serialize(
 			wi::Archive& archive,
 			wi::ecs::EntitySerializer& seri,
 			wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY,
-			EntitySerializeFlags flags = EntitySerializeFlags::RECURSIVE
-		);
+			EntitySerializeFlags flags = EntitySerializeFlags::RECURSIVE);
 
 		wi::ecs::Entity Entity_CreateTransform(
-			const std::string& name
-		);
+			const std::string& name);
 		wi::ecs::Entity Entity_CreateMaterial(
-			const std::string& name
-		);
+			const std::string& name);
 		wi::ecs::Entity Entity_CreateObject(
-			const std::string& name
-		);
+			const std::string& name);
 		wi::ecs::Entity Entity_CreateMesh(
-			const std::string& name
-		);
+			const std::string& name);
 		wi::ecs::Entity Entity_CreateLight(
-			const std::string& name, 
-			const XMFLOAT3& position = XMFLOAT3(0, 0, 0), 
-			const XMFLOAT3& color = XMFLOAT3(1, 1, 1), 
-			float intensity = 1, 
+			const std::string& name,
+			const XMFLOAT3& position = XMFLOAT3(0, 0, 0),
+			const XMFLOAT3& color = XMFLOAT3(1, 1, 1),
+			float intensity = 1,
 			float range = 10,
 			LightComponent::LightType type = LightComponent::POINT,
 			float outerConeAngle = XM_PIDIV4,
-			float innerConeAngle = 0
-		);
+			float innerConeAngle = 0);
 		wi::ecs::Entity Entity_CreateForce(
 			const std::string& name,
-			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
-		);
+			const XMFLOAT3& position = XMFLOAT3(0, 0, 0));
 		wi::ecs::Entity Entity_CreateEnvironmentProbe(
 			const std::string& name,
-			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
-		);
+			const XMFLOAT3& position = XMFLOAT3(0, 0, 0));
 		wi::ecs::Entity Entity_CreateDecal(
 			const std::string& name,
 			const std::string& textureName,
-			const std::string& normalMapName = ""
-		);
+			const std::string& normalMapName = "");
 		wi::ecs::Entity Entity_CreateCamera(
 			const std::string& name,
-			float width, float height, float nearPlane = 0.01f, float farPlane = 1000.0f, float fov = XM_PIDIV4
-		);
+			float width, float height, float nearPlane = 0.01f, float farPlane = 1000.0f, float fov = XM_PIDIV4);
 		wi::ecs::Entity Entity_CreateEmitter(
 			const std::string& name,
-			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
-		);
+			const XMFLOAT3& position = XMFLOAT3(0, 0, 0));
 		wi::ecs::Entity Entity_CreateHair(
 			const std::string& name,
-			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
-		);
+			const XMFLOAT3& position = XMFLOAT3(0, 0, 0));
 		wi::ecs::Entity Entity_CreateSound(
 			const std::string& name,
 			const std::string& filename,
-			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
-		);
+			const XMFLOAT3& position = XMFLOAT3(0, 0, 0));
 		wi::ecs::Entity Entity_CreateVideo(
 			const std::string& name,
-			const std::string& filename
-		);
+			const std::string& filename);
 		wi::ecs::Entity Entity_CreateCube(
-			const std::string& name
-		);
+			const std::string& name);
 		wi::ecs::Entity Entity_CreatePlane(
-			const std::string& name
-		);
+			const std::string& name);
 		wi::ecs::Entity Entity_CreateSphere(
 			const std::string& name,
 			float radius = 1,
 			uint32_t latitudeBands = 64,
-			uint32_t longitudeBands = 64
-		);
+			uint32_t longitudeBands = 64);
 
 		// Attaches an entity to a parent:
 		//	child_already_in_local_space	:	child won't be transformed from world space to local space
@@ -627,6 +610,7 @@ namespace wi::scene
 }
 
 template<>
-struct enable_bitmask_operators<wi::scene::Scene::EntitySerializeFlags> {
+struct enable_bitmask_operators<wi::scene::Scene::EntitySerializeFlags>
+{
 	static const bool enable = true;
 };

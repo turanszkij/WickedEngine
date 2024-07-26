@@ -39,12 +39,12 @@ namespace wi
 	static Shader simulateCS_DEPTHCOLLISIONS;
 	static Shader simulateCS_SORTING_DEPTHCOLLISIONS;
 
-	static BlendState			blendStates[BLENDMODE_COUNT];
-	static RasterizerState		rasterizerState;
-	static RasterizerState		wireFrameRS;
-	static DepthStencilState	depthStencilState;
-	static PipelineState		PSO[BLENDMODE_COUNT][EmittedParticleSystem::PARTICLESHADERTYPE_COUNT];
-	static PipelineState		PSO_wire;
+	static BlendState blendStates[BLENDMODE_COUNT];
+	static RasterizerState rasterizerState;
+	static RasterizerState wireFrameRS;
+	static DepthStencilState depthStencilState;
+	static PipelineState PSO[BLENDMODE_COUNT][EmittedParticleSystem::PARTICLESHADERTYPE_COUNT];
+	static PipelineState PSO_wire;
 
 	static bool ALLOW_MESH_SHADER = false;
 
@@ -113,8 +113,7 @@ namespace wi
 				AlignTo(vb_pos.size, alignment) +
 				AlignTo(vb_nor.size, alignment) +
 				AlignTo(vb_uvs.size, alignment) +
-				AlignTo(vb_col.size, alignment)
-			;
+				AlignTo(vb_col.size, alignment);
 
 			device->CreateBuffer(&bd, nullptr, &generalBuffer);
 			device->SetName(&generalBuffer, "EmittedParticleSystem::generalBuffer");
@@ -269,7 +268,6 @@ namespace wi
 				}
 			}
 		}
-
 	}
 
 	void EmittedParticleSystem::CreateRaytracingRenderData()
@@ -740,7 +738,6 @@ namespace wi
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 			device->EventEnd(cmd);
-
 		}
 
 		if (IsSorted())
@@ -775,7 +772,6 @@ namespace wi
 			device->Dispatch(1, 1, 1, cmd);
 
 			device->EventEnd(cmd);
-
 		}
 
 		{
@@ -922,7 +918,6 @@ namespace wi
 
 				device->CreatePipelineState(&desc, &PSO_wire);
 			}
-
 		}
 	}
 
@@ -1079,7 +1074,6 @@ namespace wi
 			{
 				archive >> restitution;
 			}
-
 		}
 		else
 		{

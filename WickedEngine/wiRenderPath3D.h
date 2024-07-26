@@ -8,18 +8,17 @@
 namespace wi
 {
 
-	class RenderPath3D :
-		public RenderPath2D
+	class RenderPath3D : public RenderPath2D
 	{
 	public:
 		enum AO
 		{
-			AO_DISABLED,	// no ambient occlusion
-			AO_SSAO,		// simple brute force screen space ambient occlusion
-			AO_HBAO,		// horizon based screen space ambient occlusion
-			AO_MSAO,		// multi scale screen space ambient occlusion
-			AO_RTAO,		// ray traced ambient occlusion
-			// Don't alter order! (bound to lua manually)
+			AO_DISABLED, // no ambient occlusion
+			AO_SSAO,	 // simple brute force screen space ambient occlusion
+			AO_HBAO,	 // horizon based screen space ambient occlusion
+			AO_MSAO,	 // multi scale screen space ambient occlusion
+			AO_RTAO,	 // ray traced ambient occlusion
+						 // Don't alter order! (bound to lua manually)
 		};
 		enum class FSR2_Preset
 		{
@@ -29,6 +28,7 @@ namespace wi
 			Performance,
 			Ultra_Performance,
 		};
+
 	private:
 		float exposure = 1.0f;
 		float brightness = 0.0f;
@@ -87,36 +87,36 @@ namespace wi
 		wi::graphics::Texture rtMain;
 		wi::graphics::Texture rtMain_render; // can be MSAA
 		wi::graphics::Texture rtPrimitiveID;
-		wi::graphics::Texture rtPrimitiveID_render; // can be MSAA
-		wi::graphics::Texture rtVelocity; // optional R16G16_FLOAT
-		wi::graphics::Texture rtReflection; // contains the scene rendered for planar reflections
-		wi::graphics::Texture rtRaytracedDiffuse; // raytraced diffuse screen space texture
-		wi::graphics::Texture rtSSR; // standard screen-space reflection results
-		wi::graphics::Texture rtSSGI; // standard screen-space GI results
-		wi::graphics::Texture rtSceneCopy; // contains the rendered scene that can be fed into transparent pass for distortion effect
-		wi::graphics::Texture rtSceneCopy_tmp; // temporary for gaussian mipchain
-		wi::graphics::Texture rtWaterRipple; // water ripple sprite normal maps are rendered into this
+		wi::graphics::Texture rtPrimitiveID_render;		   // can be MSAA
+		wi::graphics::Texture rtVelocity;				   // optional R16G16_FLOAT
+		wi::graphics::Texture rtReflection;				   // contains the scene rendered for planar reflections
+		wi::graphics::Texture rtRaytracedDiffuse;		   // raytraced diffuse screen space texture
+		wi::graphics::Texture rtSSR;					   // standard screen-space reflection results
+		wi::graphics::Texture rtSSGI;					   // standard screen-space GI results
+		wi::graphics::Texture rtSceneCopy;				   // contains the rendered scene that can be fed into transparent pass for distortion effect
+		wi::graphics::Texture rtSceneCopy_tmp;			   // temporary for gaussian mipchain
+		wi::graphics::Texture rtWaterRipple;			   // water ripple sprite normal maps are rendered into this
 		wi::graphics::Texture rtParticleDistortion_render; // contains distortive particles (can be MSAA)
-		wi::graphics::Texture rtParticleDistortion; // contains distortive particles
-		wi::graphics::Texture rtVolumetricLights; // contains the volumetric light results
-		wi::graphics::Texture rtBloom; // contains the bright parts of the image + mipchain
-		wi::graphics::Texture rtBloom_tmp; // temporary for bloom downsampling
-		wi::graphics::Texture rtAO; // full res AO
-		wi::graphics::Texture rtShadow; // raytraced shadows mask
-		wi::graphics::Texture rtSun[2]; // 0: sun render target used for lightshafts (can be MSAA), 1: radial blurred lightshafts
-		wi::graphics::Texture rtSun_resolved; // sun render target, but the resolved version if MSAA is enabled
-		wi::graphics::Texture rtGUIBlurredBackground[3];	// downsampled, gaussian blurred scene for GUI
-		wi::graphics::Texture rtShadingRate; // UINT8 shading rate per tile
-		wi::graphics::Texture rtFSR[2]; // FSR upscaling result (full resolution LDR)
-		wi::graphics::Texture rtOutlineSource; // linear depth but only the regions which have outline stencil
+		wi::graphics::Texture rtParticleDistortion;		   // contains distortive particles
+		wi::graphics::Texture rtVolumetricLights;		   // contains the volumetric light results
+		wi::graphics::Texture rtBloom;					   // contains the bright parts of the image + mipchain
+		wi::graphics::Texture rtBloom_tmp;				   // temporary for bloom downsampling
+		wi::graphics::Texture rtAO;						   // full res AO
+		wi::graphics::Texture rtShadow;					   // raytraced shadows mask
+		wi::graphics::Texture rtSun[2];					   // 0: sun render target used for lightshafts (can be MSAA), 1: radial blurred lightshafts
+		wi::graphics::Texture rtSun_resolved;			   // sun render target, but the resolved version if MSAA is enabled
+		wi::graphics::Texture rtGUIBlurredBackground[3];   // downsampled, gaussian blurred scene for GUI
+		wi::graphics::Texture rtShadingRate;			   // UINT8 shading rate per tile
+		wi::graphics::Texture rtFSR[2];					   // FSR upscaling result (full resolution LDR)
+		wi::graphics::Texture rtOutlineSource;			   // linear depth but only the regions which have outline stencil
 
 		wi::graphics::Texture rtPostprocess; // ping-pong with main scene RT in post-process chain
 
-		wi::graphics::Texture depthBuffer_Main; // used for depth-testing, can be MSAA
-		wi::graphics::Texture depthBuffer_Copy; // used for shader resource, single sample
-		wi::graphics::Texture depthBuffer_Copy1; // used for disocclusion check
+		wi::graphics::Texture depthBuffer_Main;		  // used for depth-testing, can be MSAA
+		wi::graphics::Texture depthBuffer_Copy;		  // used for shader resource, single sample
+		wi::graphics::Texture depthBuffer_Copy1;	  // used for disocclusion check
 		wi::graphics::Texture depthBuffer_Reflection; // used for reflection, single sample
-		wi::graphics::Texture rtLinearDepth; // linear depth result + mipchain (max filter)
+		wi::graphics::Texture rtLinearDepth;		  // linear depth result + mipchain (max filter)
 
 		wi::graphics::Texture debugUAV; // debug UAV can be used by some shaders...
 		wi::renderer::TiledLightResources tiledLightResources;
@@ -324,7 +324,7 @@ namespace wi
 			enum class Stage
 			{
 				BeforeTonemap, // Before tonemap and bloom in HDR color space
-				AfterTonemap // After tonemap, in display color space
+				AfterTonemap   // After tonemap, in display color space
 			} stage = Stage::AfterTonemap;
 		};
 		wi::vector<CustomPostprocess> custom_post_processes;

@@ -13,7 +13,6 @@ void ArmatureWindow::Create(EditorComponent* _editor)
 
 	closeButton.SetTooltip("Delete ArmatureComponent");
 	OnClose([=](wi::gui::EventArgs args) {
-
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 		editor->RecordEntity(archive, entity);
@@ -23,7 +22,7 @@ void ArmatureWindow::Create(EditorComponent* _editor)
 		editor->RecordEntity(archive, entity);
 
 		editor->componentsWnd.RefreshEntityTree();
-		});
+	});
 
 	float x = 60;
 	float y = 4;
@@ -61,65 +60,65 @@ void ArmatureWindow::Create(EditorComponent* _editor)
 			return;
 
 		static const wi::unordered_map<HumanoidComponent::HumanoidBone, wi::vector<std::string>> mapping = {
-			{HumanoidComponent::HumanoidBone::Hips, {"Hips"}},
-			{HumanoidComponent::HumanoidBone::Spine, {"Spine"}},
-			{HumanoidComponent::HumanoidBone::Chest, {"Chest", "Spine1"}},
-			{HumanoidComponent::HumanoidBone::UpperChest, {"UpperChest", "Spine2"}},
-			{HumanoidComponent::HumanoidBone::Neck, {"Neck"}},
+			{ HumanoidComponent::HumanoidBone::Hips, { "Hips" } },
+			{ HumanoidComponent::HumanoidBone::Spine, { "Spine" } },
+			{ HumanoidComponent::HumanoidBone::Chest, { "Chest", "Spine1" } },
+			{ HumanoidComponent::HumanoidBone::UpperChest, { "UpperChest", "Spine2" } },
+			{ HumanoidComponent::HumanoidBone::Neck, { "Neck" } },
 
-			{HumanoidComponent::HumanoidBone::Head, {"Head"}},
-			{HumanoidComponent::HumanoidBone::LeftEye, {"LeftEye"}},
-			{HumanoidComponent::HumanoidBone::RightEye, {"RightEye"}},
-			{HumanoidComponent::HumanoidBone::Jaw, {"Jaw"}},
+			{ HumanoidComponent::HumanoidBone::Head, { "Head" } },
+			{ HumanoidComponent::HumanoidBone::LeftEye, { "LeftEye" } },
+			{ HumanoidComponent::HumanoidBone::RightEye, { "RightEye" } },
+			{ HumanoidComponent::HumanoidBone::Jaw, { "Jaw" } },
 
-			{HumanoidComponent::HumanoidBone::LeftUpperLeg, {"LeftUpperLeg", "LeftUpLeg"}},
-			{HumanoidComponent::HumanoidBone::LeftLowerLeg, {"LeftLowerLeg", "LeftLeg"}},
-			{HumanoidComponent::HumanoidBone::LeftFoot, {"LeftFoot"}},
-			{HumanoidComponent::HumanoidBone::LeftToes, {"LeftToe"}},
-			{HumanoidComponent::HumanoidBone::RightUpperLeg, {"RightUpperLeg", "RightUpLeg"}},
-			{HumanoidComponent::HumanoidBone::RightLowerLeg, {"RightLowerLeg", "RightLeg"}},
-			{HumanoidComponent::HumanoidBone::RightFoot, {"RightFoot"}},
-			{HumanoidComponent::HumanoidBone::RightToes, {"RightToe"}},
+			{ HumanoidComponent::HumanoidBone::LeftUpperLeg, { "LeftUpperLeg", "LeftUpLeg" } },
+			{ HumanoidComponent::HumanoidBone::LeftLowerLeg, { "LeftLowerLeg", "LeftLeg" } },
+			{ HumanoidComponent::HumanoidBone::LeftFoot, { "LeftFoot" } },
+			{ HumanoidComponent::HumanoidBone::LeftToes, { "LeftToe" } },
+			{ HumanoidComponent::HumanoidBone::RightUpperLeg, { "RightUpperLeg", "RightUpLeg" } },
+			{ HumanoidComponent::HumanoidBone::RightLowerLeg, { "RightLowerLeg", "RightLeg" } },
+			{ HumanoidComponent::HumanoidBone::RightFoot, { "RightFoot" } },
+			{ HumanoidComponent::HumanoidBone::RightToes, { "RightToe" } },
 
-			{HumanoidComponent::HumanoidBone::LeftShoulder, {"LeftShoulder"}},
-			{HumanoidComponent::HumanoidBone::LeftUpperArm, {"LeftUpperArm", "LeftArm"}},
-			{HumanoidComponent::HumanoidBone::LeftLowerArm, {"LeftLowerArm", "LeftForeArm"}},
-			{HumanoidComponent::HumanoidBone::LeftHand, {"LeftHand"}},
-			{HumanoidComponent::HumanoidBone::RightShoulder, {"RightShoulder"}},
-			{HumanoidComponent::HumanoidBone::RightUpperArm, {"RightUpperArm", "RightArm"}},
-			{HumanoidComponent::HumanoidBone::RightLowerArm, {"RightLowerArm", "RightForeArm"}},
-			{HumanoidComponent::HumanoidBone::RightHand, {"RightHand"}},
+			{ HumanoidComponent::HumanoidBone::LeftShoulder, { "LeftShoulder" } },
+			{ HumanoidComponent::HumanoidBone::LeftUpperArm, { "LeftUpperArm", "LeftArm" } },
+			{ HumanoidComponent::HumanoidBone::LeftLowerArm, { "LeftLowerArm", "LeftForeArm" } },
+			{ HumanoidComponent::HumanoidBone::LeftHand, { "LeftHand" } },
+			{ HumanoidComponent::HumanoidBone::RightShoulder, { "RightShoulder" } },
+			{ HumanoidComponent::HumanoidBone::RightUpperArm, { "RightUpperArm", "RightArm" } },
+			{ HumanoidComponent::HumanoidBone::RightLowerArm, { "RightLowerArm", "RightForeArm" } },
+			{ HumanoidComponent::HumanoidBone::RightHand, { "RightHand" } },
 
-			{HumanoidComponent::HumanoidBone::LeftThumbMetacarpal, {"LeftThumbMetacarpal", "LeftHandThumb1"}},
-			{HumanoidComponent::HumanoidBone::LeftThumbProximal, {"LeftThumbProximal", "LeftHandThumb2"}},
-			{HumanoidComponent::HumanoidBone::LeftThumbDistal, {"LeftThumbDistal", "LeftHandThumb3"}},
-			{HumanoidComponent::HumanoidBone::LeftIndexProximal, {"LeftIndexProximal", "LeftHandIndex1"}},
-			{HumanoidComponent::HumanoidBone::LeftIndexIntermediate, {"LeftIndexIntermediate", "LeftHandIndex2"}},
-			{HumanoidComponent::HumanoidBone::LeftIndexDistal, {"LeftIndexDistal", "LeftHandIndex3"}},
-			{HumanoidComponent::HumanoidBone::LeftMiddleProximal, {"LeftMiddleProximal", "LeftHandMiddle1"}},
-			{HumanoidComponent::HumanoidBone::LeftMiddleIntermediate, {"LeftMiddleIntermediate", "LeftHandMiddle2"}},
-			{HumanoidComponent::HumanoidBone::LeftMiddleDistal, {"LeftMiddleDistal", "LeftHandMiddle3"}},
-			{HumanoidComponent::HumanoidBone::LeftRingProximal, {"LeftRingProximal", "LeftHandRing1"}},
-			{HumanoidComponent::HumanoidBone::LeftRingIntermediate, {"LeftRingIntermediate", "LeftHandRing2"}},
-			{HumanoidComponent::HumanoidBone::LeftRingDistal, {"LeftRingDistal", "LeftHandRing3"}},
-			{HumanoidComponent::HumanoidBone::LeftLittleProximal, {"LeftLittleProximal", "LeftHandPinky1"}},
-			{HumanoidComponent::HumanoidBone::LeftLittleIntermediate, {"LeftLittleIntermediate", "LeftHandPinky2"}},
-			{HumanoidComponent::HumanoidBone::LeftLittleDistal, {"LeftLittleDistal", "LeftHandPinky3"}},
-			{HumanoidComponent::HumanoidBone::RightThumbMetacarpal, {"RightThumbMetacarpal", "RightHandThumb1"}},
-			{HumanoidComponent::HumanoidBone::RightThumbProximal, {"RightThumbProximal", "RightHandThumb2"}},
-			{HumanoidComponent::HumanoidBone::RightThumbDistal, {"RightThumbDistal", "RightHandThumb3"}},
-			{HumanoidComponent::HumanoidBone::RightIndexIntermediate, {"RightIndexIntermediate", "RightHandIndex2"}},
-			{HumanoidComponent::HumanoidBone::RightIndexDistal, {"RightIndexDistal", "RightHandIndex3"}},
-			{HumanoidComponent::HumanoidBone::RightIndexProximal, {"RightIndexProximal", "RightHandIndex1"}},
-			{HumanoidComponent::HumanoidBone::RightMiddleProximal, {"RightMiddleProximal", "RightHandMiddle1"}},
-			{HumanoidComponent::HumanoidBone::RightMiddleIntermediate, {"RightMiddleIntermediate", "RightHandMiddle2"}},
-			{HumanoidComponent::HumanoidBone::RightMiddleDistal, {"RightMiddleDistal", "RightHandMiddle3"}},
-			{HumanoidComponent::HumanoidBone::RightRingProximal, {"RightRingProximal", "RightHandRing1"}},
-			{HumanoidComponent::HumanoidBone::RightRingIntermediate, {"RightRingIntermediate", "RightHandRing2"}},
-			{HumanoidComponent::HumanoidBone::RightRingDistal, {"RightRingDistal", "RightHandRing3"}},
-			{HumanoidComponent::HumanoidBone::RightLittleProximal, {"RightLittleProximal", "RightHandPinky1"}},
-			{HumanoidComponent::HumanoidBone::RightLittleIntermediate, {"RightLittleIntermediate", "RightHandPinky2"}},
-			{HumanoidComponent::HumanoidBone::RightLittleDistal, {"RightLittleDistal", "RightHandPinky3"}},
+			{ HumanoidComponent::HumanoidBone::LeftThumbMetacarpal, { "LeftThumbMetacarpal", "LeftHandThumb1" } },
+			{ HumanoidComponent::HumanoidBone::LeftThumbProximal, { "LeftThumbProximal", "LeftHandThumb2" } },
+			{ HumanoidComponent::HumanoidBone::LeftThumbDistal, { "LeftThumbDistal", "LeftHandThumb3" } },
+			{ HumanoidComponent::HumanoidBone::LeftIndexProximal, { "LeftIndexProximal", "LeftHandIndex1" } },
+			{ HumanoidComponent::HumanoidBone::LeftIndexIntermediate, { "LeftIndexIntermediate", "LeftHandIndex2" } },
+			{ HumanoidComponent::HumanoidBone::LeftIndexDistal, { "LeftIndexDistal", "LeftHandIndex3" } },
+			{ HumanoidComponent::HumanoidBone::LeftMiddleProximal, { "LeftMiddleProximal", "LeftHandMiddle1" } },
+			{ HumanoidComponent::HumanoidBone::LeftMiddleIntermediate, { "LeftMiddleIntermediate", "LeftHandMiddle2" } },
+			{ HumanoidComponent::HumanoidBone::LeftMiddleDistal, { "LeftMiddleDistal", "LeftHandMiddle3" } },
+			{ HumanoidComponent::HumanoidBone::LeftRingProximal, { "LeftRingProximal", "LeftHandRing1" } },
+			{ HumanoidComponent::HumanoidBone::LeftRingIntermediate, { "LeftRingIntermediate", "LeftHandRing2" } },
+			{ HumanoidComponent::HumanoidBone::LeftRingDistal, { "LeftRingDistal", "LeftHandRing3" } },
+			{ HumanoidComponent::HumanoidBone::LeftLittleProximal, { "LeftLittleProximal", "LeftHandPinky1" } },
+			{ HumanoidComponent::HumanoidBone::LeftLittleIntermediate, { "LeftLittleIntermediate", "LeftHandPinky2" } },
+			{ HumanoidComponent::HumanoidBone::LeftLittleDistal, { "LeftLittleDistal", "LeftHandPinky3" } },
+			{ HumanoidComponent::HumanoidBone::RightThumbMetacarpal, { "RightThumbMetacarpal", "RightHandThumb1" } },
+			{ HumanoidComponent::HumanoidBone::RightThumbProximal, { "RightThumbProximal", "RightHandThumb2" } },
+			{ HumanoidComponent::HumanoidBone::RightThumbDistal, { "RightThumbDistal", "RightHandThumb3" } },
+			{ HumanoidComponent::HumanoidBone::RightIndexIntermediate, { "RightIndexIntermediate", "RightHandIndex2" } },
+			{ HumanoidComponent::HumanoidBone::RightIndexDistal, { "RightIndexDistal", "RightHandIndex3" } },
+			{ HumanoidComponent::HumanoidBone::RightIndexProximal, { "RightIndexProximal", "RightHandIndex1" } },
+			{ HumanoidComponent::HumanoidBone::RightMiddleProximal, { "RightMiddleProximal", "RightHandMiddle1" } },
+			{ HumanoidComponent::HumanoidBone::RightMiddleIntermediate, { "RightMiddleIntermediate", "RightHandMiddle2" } },
+			{ HumanoidComponent::HumanoidBone::RightMiddleDistal, { "RightMiddleDistal", "RightHandMiddle3" } },
+			{ HumanoidComponent::HumanoidBone::RightRingProximal, { "RightRingProximal", "RightHandRing1" } },
+			{ HumanoidComponent::HumanoidBone::RightRingIntermediate, { "RightRingIntermediate", "RightHandRing2" } },
+			{ HumanoidComponent::HumanoidBone::RightRingDistal, { "RightRingDistal", "RightHandRing3" } },
+			{ HumanoidComponent::HumanoidBone::RightLittleProximal, { "RightLittleProximal", "RightHandPinky1" } },
+			{ HumanoidComponent::HumanoidBone::RightLittleIntermediate, { "RightLittleIntermediate", "RightHandPinky2" } },
+			{ HumanoidComponent::HumanoidBone::RightLittleDistal, { "RightLittleDistal", "RightHandPinky3" } },
 		};
 
 		HumanoidComponent humanoid;
@@ -173,7 +172,6 @@ void ArmatureWindow::Create(EditorComponent* _editor)
 	boneList.SetSize(XMFLOAT2(wid, 200));
 	boneList.SetPos(XMFLOAT2(4, y += step));
 	boneList.OnSelect([=](wi::gui::EventArgs args) {
-
 		if (args.iValue < 0)
 			return;
 
@@ -199,8 +197,7 @@ void ArmatureWindow::Create(EditorComponent* _editor)
 		editor->RecordSelection(archive);
 
 		editor->componentsWnd.RefreshEntityTree();
-
-		});
+	});
 	AddWidget(&boneList);
 
 
@@ -302,5 +299,4 @@ void ArmatureWindow::ResizeLayout()
 	y += jump;
 
 	add_fullwidth(boneList);
-
 }

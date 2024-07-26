@@ -16,14 +16,14 @@ namespace wi
 	class Archive
 	{
 	private:
-		uint64_t version = 0; // the version number is used for maintaining backwards compatibility with earlier archive versions
-		bool readMode = false; // archive can be either read or write mode, but not both
-		size_t pos = 0; // position of the next memory operation, relative to the data's beginning
-		wi::vector<uint8_t> DATA; // data suitable for read/write operations
+		uint64_t version = 0;			   // the version number is used for maintaining backwards compatibility with earlier archive versions
+		bool readMode = false;			   // archive can be either read or write mode, but not both
+		size_t pos = 0;					   // position of the next memory operation, relative to the data's beginning
+		wi::vector<uint8_t> DATA;		   // data suitable for read/write operations
 		const uint8_t* data_ptr = nullptr; // this can either be a memory mapped pointer (read only), or the DATA's pointer
 		size_t data_ptr_size = 0;
 
-		std::string fileName; // save to this file on closing if not empty
+		std::string fileName;  // save to this file on closing if not empty
 		std::string directory; // the directory part from the fileName
 
 		size_t thumbnail_data_size = 0;
@@ -47,7 +47,11 @@ namespace wi
 		Archive& operator=(const Archive&) = default;
 		Archive& operator=(Archive&&) = default;
 
-		void WriteData(wi::vector<uint8_t>& dest) const { dest.resize(pos); std::memcpy(dest.data(), data_ptr, pos); }
+		void WriteData(wi::vector<uint8_t>& dest) const
+		{
+			dest.resize(pos);
+			std::memcpy(dest.data(), data_ptr, pos);
+		}
 		const uint8_t* GetData() const { return data_ptr; }
 		size_t GetPos() const { return pos; }
 		constexpr uint64_t GetVersion() const { return version; }
@@ -436,7 +440,6 @@ namespace wi
 
 
 	private:
-
 		// This should not be exposed to avoid misaligning data by mistake
 		// Any specific type serialization should be implemented by hand
 		// But these can be used as helper functions inside this class

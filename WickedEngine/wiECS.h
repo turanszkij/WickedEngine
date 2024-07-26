@@ -25,7 +25,7 @@ namespace wi::ecs
 	// Runtime can create a new entity with this
 	inline Entity CreateEntity()
 	{
-		static std::atomic<Entity> next{ INVALID_ENTITY + 1 };
+		static std::atomic<Entity> next { INVALID_ENTITY + 1 };
 		return next.fetch_add(1);
 	}
 
@@ -35,7 +35,7 @@ namespace wi::ecs
 		wi::jobsystem::context ctx; // allow components to spawn serialization subtasks
 		wi::unordered_map<uint64_t, Entity> remap;
 		bool allow_remap = true;
-		uint64_t version = 0; // The ComponentLibrary serialization will modify this by the registered component's version number
+		uint64_t version = 0;								  // The ComponentLibrary serialization will modify this by the registered component's version number
 		wi::unordered_set<std::string> resource_registration; // register for resource manager serialization
 		ComponentLibrary* componentlibrary = nullptr;
 		wi::unordered_map<std::string, uint64_t> library_versions;
@@ -138,7 +138,6 @@ namespace wi::ecs
 	class ComponentManager final : public ComponentManager_Interface
 	{
 	public:
-
 		// reservedCount : how much components can be held initially before growing the container
 		ComponentManager(size_t reservedCount = 0)
 		{
@@ -244,7 +243,7 @@ namespace wi::ecs
 		//Read one single component onto an archive, make sure entity are serialized first
 		inline void Component_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri)
 		{
-			if(archive.IsReadMode())
+			if (archive.IsReadMode())
 			{
 				bool component_exists;
 				archive >> component_exists;
@@ -516,7 +515,7 @@ namespace wi::ecs
 		inline void Serialize(wi::Archive& archive, EntitySerializer& seri)
 		{
 			seri.componentlibrary = this;
-			if(archive.IsReadMode())
+			if (archive.IsReadMode())
 			{
 				bool has_next = false;
 				size_t begin = archive.GetPos();
@@ -550,14 +549,14 @@ namespace wi::ecs
 				do
 				{
 					archive >> has_next;
-					if(has_next)
+					if (has_next)
 					{
 						std::string name;
 						archive >> name;
 						uint64_t jump_pos = 0;
 						archive >> jump_pos;
 						auto it = entries.find(name);
-						if(it != entries.end())
+						if (it != entries.end())
 						{
 							archive >> seri.version;
 							it->second.component_manager->Serialize(archive, seri);
@@ -568,8 +567,7 @@ namespace wi::ecs
 							archive.Jump(jump_pos);
 						}
 					}
-				}
-				while(has_next);
+				} while (has_next);
 			}
 			else
 			{
@@ -579,10 +577,10 @@ namespace wi::ecs
 					seri.library_versions[it.first] = it.second.version;
 				}
 				// Serialize all component data, at this point component type version lookup is also complete
-				for(auto& it : entries)
+				for (auto& it : entries)
 				{
 					archive << true;
-					archive << it.first; // name
+					archive << it.first;								// name
 					size_t offset = archive.WriteUnknownJumpPosition(); // we will be able to jump from here...
 					archive << it.second.version;
 					seri.version = it.second.version;
@@ -597,13 +595,13 @@ namespace wi::ecs
 		inline void Entity_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri)
 		{
 			seri.componentlibrary = this;
-			if(archive.IsReadMode())
+			if (archive.IsReadMode())
 			{
 				bool has_next = false;
 				do
 				{
 					archive >> has_next;
-					if(has_next)
+					if (has_next)
 					{
 						std::string name;
 						archive >> name;
@@ -621,15 +619,14 @@ namespace wi::ecs
 							archive.Jump(jump_size);
 						}
 					}
-				}
-				while(has_next);
+				} while (has_next);
 			}
 			else
 			{
-				for(auto& it : entries)
+				for (auto& it : entries)
 				{
 					archive << true;
-					archive << it.first; // name
+					archive << it.first;								// name
 					size_t offset = archive.WriteUnknownJumpPosition(); // we will be able to jump from here...
 					archive << it.second.version;
 					seri.version = it.second.version;

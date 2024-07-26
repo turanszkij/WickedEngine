@@ -33,8 +33,7 @@ namespace wi
 			const uint32_t node_capacity = aabb_count * 2 - 1;
 			allocation.reserve(
 				sizeof(Node) * node_capacity +
-				sizeof(uint32_t) * aabb_count
-			);
+				sizeof(uint32_t) * aabb_count);
 			nodes = (Node*)allocation.data();
 			leaf_indices = (uint32_t*)(nodes + node_capacity);
 			leaf_count = aabb_count;
@@ -117,12 +116,11 @@ namespace wi
 			}
 		}
 
-		template <typename T>
+		template<typename T>
 		void Intersects(
 			const T& primitive,
 			uint32_t nodeIndex,
-			const std::function<void(uint32_t index)>& callback
-		) const
+			const std::function<void(uint32_t index)>& callback) const
 		{
 			Node& node = nodes[nodeIndex];
 			if (!node.aabb.intersects(primitive))
@@ -142,11 +140,10 @@ namespace wi
 		}
 
 		// Returning true from callback will immediately exit the whole search
-		template <typename T>
+		template<typename T>
 		bool IntersectsFirst(
 			const T& primitive,
-			const std::function<bool(uint32_t index)>& callback
-		) const
+			const std::function<bool(uint32_t index)>& callback) const
 		{
 			uint32_t stack[64];
 			uint32_t count = 0;

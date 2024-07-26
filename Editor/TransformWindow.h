@@ -19,12 +19,12 @@ public:
 	wi::gui::TextInputField rollInput;
 	wi::gui::TextInputField pitchInput;
 	wi::gui::TextInputField yawInput;
-					 
+
 	wi::gui::TextInputField rxInput;
 	wi::gui::TextInputField ryInput;
 	wi::gui::TextInputField rzInput;
 	wi::gui::TextInputField rwInput;
-					 
+
 	wi::gui::TextInputField sxInput;
 	wi::gui::TextInputField syInput;
 	wi::gui::TextInputField szInput;
@@ -39,4 +39,3 @@ public:
 
 	void ResizeLayout() override;
 };
-

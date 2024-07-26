@@ -15,7 +15,7 @@ struct alignas(16) ShaderScene
 
 	int texturestreamingbuffer;
 	int globalenvmap; // static sky, not guaranteed to be cubemap, mipmaps or format, just whatever is imported
-	int globalprobe; // rendered probe with guaranteed mipmaps, hdr, etc.
+	int globalprobe;  // rendered probe with guaranteed mipmaps, hdr, etc.
 	int impostorInstanceOffset;
 
 	int TLAS;
@@ -27,9 +27,9 @@ struct alignas(16) ShaderScene
 	float padding3;
 	float3 aabb_max;
 	float padding4;
-	float3 aabb_extents;		// enclosing AABB abs(max - min)
+	float3 aabb_extents; // enclosing AABB abs(max - min)
 	float padding5;
-	float3 aabb_extents_rcp;	// enclosing AABB 1.0f / abs(max - min)
+	float3 aabb_extents_rcp; // enclosing AABB 1.0f / abs(max - min)
 	float padding6;
 
 	ShaderWeather weather;
@@ -173,14 +173,12 @@ struct alignas(16) ShaderTextureSlot
 		in Texture2D<uint4> residency_map,
 		in uint2 virtual_tile_count,
 		in uint2 virtual_image_dim,
-		in float virtual_lod
-	)
+		in float virtual_lod)
 	{
 		virtual_lod = max(0, virtual_lod);
 
 #ifdef SVT_FEEDBACK
-		[branch]
-		if (sparse_feedbackmap_descriptor >= 0)
+		[branch] if (sparse_feedbackmap_descriptor >= 0)
 		{
 			RWTexture2D<uint> feedback_map = bindless_rwtextures_uint[UniformTextureSlot(sparse_feedbackmap_descriptor)];
 			uint2 pixel = uv * virtual_tile_count;
@@ -240,8 +238,7 @@ struct alignas(16) ShaderTextureSlot
 		float2 uv = GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
 
 #ifndef DISABLE_SVT
-		[branch]
-		if (sparse_residencymap_descriptor >= 0)
+		[branch] if (sparse_residencymap_descriptor >= 0)
 		{
 			Texture2D<uint4> residency_map = bindless_textures_uint4[UniformTextureSlot(sparse_residencymap_descriptor)];
 			float2 virtual_tile_count;
@@ -261,8 +258,7 @@ struct alignas(16) ShaderTextureSlot
 		float2 uv = GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
 
 #ifndef DISABLE_SVT
-		[branch]
-		if (sparse_residencymap_descriptor >= 0)
+		[branch] if (sparse_residencymap_descriptor >= 0)
 		{
 			Texture2D<uint4> residency_map = bindless_textures_uint4[UniformTextureSlot(sparse_residencymap_descriptor)];
 			float2 virtual_tile_count;
@@ -281,8 +277,7 @@ struct alignas(16) ShaderTextureSlot
 		float2 uv = GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
 
 #ifndef DISABLE_SVT
-		[branch]
-		if (sparse_residencymap_descriptor >= 0)
+		[branch] if (sparse_residencymap_descriptor >= 0)
 		{
 			Texture2D<uint4> residency_map = bindless_textures_uint4[UniformTextureSlot(sparse_residencymap_descriptor)];
 			float2 virtual_tile_count;
@@ -305,8 +300,7 @@ struct alignas(16) ShaderTextureSlot
 		float2 uv_dy = GetUVSet() == 0 ? uvsets_dy.xy : uvsets_dy.zw;
 
 #ifndef DISABLE_SVT
-		[branch]
-		if (sparse_residencymap_descriptor >= 0)
+		[branch] if (sparse_residencymap_descriptor >= 0)
 		{
 			Texture2D<uint4> residency_map = bindless_textures_uint4[UniformTextureSlot(sparse_residencymap_descriptor)];
 			float2 virtual_tile_count;
@@ -383,7 +377,10 @@ struct alignas(16) ShaderMaterial
 	}
 
 #ifndef __cplusplus
-	inline half4 GetBaseColor() { return unpack_half4(baseColor); }
+	inline half4 GetBaseColor()
+	{
+		return unpack_half4(baseColor);
+	}
 	inline half4 GetSSS() { return unpack_half4(subsurfaceScattering); }
 	inline half4 GetSSSInverse() { return unpack_half4(subsurfaceScattering_inv); }
 	inline half3 GetEmissive() { return unpack_half3(emissive); }
@@ -408,7 +405,10 @@ struct alignas(16) ShaderMaterial
 	inline uint GetStencilRef() { return options_stencilref >> 24u; }
 #endif // __cplusplus
 
-	inline uint GetOptions() { return options_stencilref; }
+	inline uint GetOptions()
+	{
+		return options_stencilref;
+	}
 	inline bool IsUsingVertexColors() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS; }
 	inline bool IsUsingVertexAO() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_USE_VERTEXAO; }
 	inline bool IsUsingSpecularGlossinessWorkflow() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW; }
@@ -432,7 +432,7 @@ struct alignas(16) ShaderTypeBin
 	uint shaderType;
 #if defined(__SCE__) || defined(__PSSL_)
 	uint4 padding; // 32-byte alignment
-#endif // __SCE__ || __PSSL__
+#endif			   // __SCE__ || __PSSL__
 };
 static const uint SHADERTYPE_BIN_COUNT = 11;
 
@@ -556,26 +556,25 @@ struct alignas(16) ShaderTransform
 			mat0.x, mat0.y, mat0.z, mat0.w,
 			mat1.x, mat1.y, mat1.z, mat1.w,
 			mat2.x, mat2.y, mat2.z, mat2.w,
-			0, 0, 0, 1
-		);
+			0, 0, 0, 1);
 	}
 };
 
 struct alignas(16) ShaderMeshInstance
 {
 	uint uid;
-	uint flags;	// high 8 bits: user stencilRef
+	uint flags; // high 8 bits: user stencilRef
 	uint layerMask;
-	uint geometryOffset;	// offset of all geometries for currently active LOD
+	uint geometryOffset; // offset of all geometries for currently active LOD
 
 	uint2 emissive;
 	uint color;
-	uint geometryCount;		// number of all geometries in currently active LOD
+	uint geometryCount; // number of all geometries in currently active LOD
 
 	uint meshletOffset; // offset in the global meshlet buffer for first subset (for LOD0)
 	float fadeDistance;
-	uint baseGeometryOffset;	// offset of all geometries of the instance (if no LODs, then it is equal to geometryOffset)
-	uint baseGeometryCount;		// number of all geometries of the instance (if no LODs, then it is equal to geometryCount)
+	uint baseGeometryOffset; // offset of all geometries of the instance (if no LODs, then it is equal to geometryOffset)
+	uint baseGeometryCount;	 // number of all geometries of the instance (if no LODs, then it is equal to geometryCount)
 
 	float3 center;
 	float radius;
@@ -623,7 +622,10 @@ struct alignas(16) ShaderMeshInstance
 	}
 
 #ifndef __cplusplus
-	inline half4 GetColor() { return (half4)unpack_rgba(color); }
+	inline half4 GetColor()
+	{
+		return (half4)unpack_rgba(color);
+	}
 	inline half3 GetEmissive() { return unpack_half3(emissive); }
 	inline half GetAlphaTest() { return (half)alphaTest; }
 #endif // __cplusplus
@@ -675,7 +677,7 @@ struct alignas(16) ShaderEntity
 	uint type8_flags8_range16;
 
 	uint2 direction16_coneAngleCos16; // coneAngleCos is used for cascade count in directional light
-	uint2 color; // half4 packed
+	uint2 color;					  // half4 packed
 
 	uint layerMask;
 	uint indices;
@@ -711,8 +713,7 @@ struct alignas(16) ShaderEntity
 		return normalize(half3(
 			(half)f16tof32(direction16_coneAngleCos16.x),
 			(half)f16tof32(direction16_coneAngleCos16.x >> 16u),
-			(half)f16tof32(direction16_coneAngleCos16.y)
-		));
+			(half)f16tof32(direction16_coneAngleCos16.y)));
 	}
 	inline half GetConeAngleCos()
 	{
@@ -941,59 +942,59 @@ enum FRAME_OPTIONS
 
 struct alignas(16) FrameCB
 {
-	uint		options;					// wi::renderer bool options packed into bitmask (OPTION_BIT_ values)
-	float		time;
-	float		time_previous;
-	float		delta_time;
+	uint options; // wi::renderer bool options packed into bitmask (OPTION_BIT_ values)
+	float time;
+	float time_previous;
+	float delta_time;
 
-	uint		frame_count;
-	uint		temporalaa_samplerotation;
-	int			texture_shadowatlas_index;
-	int			texture_shadowatlas_transparent_index;
+	uint frame_count;
+	uint temporalaa_samplerotation;
+	int texture_shadowatlas_index;
+	int texture_shadowatlas_transparent_index;
 
-	uint2		shadow_atlas_resolution;
-	float2		shadow_atlas_resolution_rcp;
+	uint2 shadow_atlas_resolution;
+	float2 shadow_atlas_resolution_rcp;
 
-	float4x4	cloudShadowLightSpaceMatrix;
-	float4x4	cloudShadowLightSpaceMatrixInverse;
+	float4x4 cloudShadowLightSpaceMatrix;
+	float4x4 cloudShadowLightSpaceMatrixInverse;
 
-	float		cloudShadowFarPlaneKm;
-	int			texture_volumetricclouds_shadow_index;
-	float		gi_boost;
-	int			padding0;
+	float cloudShadowFarPlaneKm;
+	int texture_volumetricclouds_shadow_index;
+	float gi_boost;
+	int padding0;
 
-	uint		lightarray_offset;			// indexing into entity array
-	uint		lightarray_count;			// indexing into entity array
-	uint		decalarray_offset;			// indexing into entity array
-	uint		decalarray_count;			// indexing into entity array
+	uint lightarray_offset; // indexing into entity array
+	uint lightarray_count;	// indexing into entity array
+	uint decalarray_offset; // indexing into entity array
+	uint decalarray_count;	// indexing into entity array
 
-	uint		forcefieldarray_offset;		// indexing into entity array
-	uint		forcefieldarray_count;		// indexing into entity array
-	uint		envprobearray_offset;		// indexing into entity array
-	uint		envprobearray_count;		// indexing into entity array
+	uint forcefieldarray_offset; // indexing into entity array
+	uint forcefieldarray_count;	 // indexing into entity array
+	uint envprobearray_offset;	 // indexing into entity array
+	uint envprobearray_count;	 // indexing into entity array
 
-	float		blue_noise_phase;
-	int			texture_random64x64_index;
-	int			texture_bluenoise_index;
-	int			texture_sheenlut_index;
+	float blue_noise_phase;
+	int texture_random64x64_index;
+	int texture_bluenoise_index;
+	int texture_sheenlut_index;
 
-	int			texture_skyviewlut_index;
-	int			texture_transmittancelut_index;
-	int			texture_multiscatteringlut_index;
-	int			texture_skyluminancelut_index;
+	int texture_skyviewlut_index;
+	int texture_transmittancelut_index;
+	int texture_multiscatteringlut_index;
+	int texture_skyluminancelut_index;
 
-	int			texture_cameravolumelut_index;
-	int			texture_wind_index;
-	int			texture_wind_prev_index;
-	int			texture_caustics_index;
+	int texture_cameravolumelut_index;
+	int texture_wind_index;
+	int texture_wind_prev_index;
+	int texture_caustics_index;
 
-	float4		rain_blocker_mad;
-	float4x4	rain_blocker_matrix;
-	float4x4	rain_blocker_matrix_inverse;
+	float4 rain_blocker_mad;
+	float4x4 rain_blocker_matrix;
+	float4x4 rain_blocker_matrix_inverse;
 
-	float4		rain_blocker_mad_prev;
-	float4x4	rain_blocker_matrix_prev;
-	float4x4	rain_blocker_matrix_inverse_prev;
+	float4 rain_blocker_mad_prev;
+	float4x4 rain_blocker_matrix_prev;
+	float4x4 rain_blocker_matrix_inverse_prev;
 
 	ShaderScene scene;
 
@@ -1011,55 +1012,55 @@ enum SHADERCAMERA_OPTIONS
 
 struct alignas(16) ShaderCamera
 {
-	float4x4	view_projection;
+	float4x4 view_projection;
 
-	float3		position;
-	uint		output_index; // viewport or rendertarget array index
+	float3 position;
+	uint output_index; // viewport or rendertarget array index
 
-	float4		clip_plane;
-	float4		reflection_plane; // not clip plane (not reversed when camera is under), but the original plane
+	float4 clip_plane;
+	float4 reflection_plane; // not clip plane (not reversed when camera is under), but the original plane
 
-	float3		forward;
-	float		z_near;
+	float3 forward;
+	float z_near;
 
-	float3		up;
-	float		z_far;
+	float3 up;
+	float z_far;
 
-	float		z_near_rcp;
-	float		z_far_rcp;
-	float		z_range;
-	float		z_range_rcp;
+	float z_near_rcp;
+	float z_far_rcp;
+	float z_range;
+	float z_range_rcp;
 
-	float4x4	view;
-	float4x4	projection;
-	float4x4	inverse_view;
-	float4x4	inverse_projection;
-	float4x4	inverse_view_projection;
+	float4x4 view;
+	float4x4 projection;
+	float4x4 inverse_view;
+	float4x4 inverse_projection;
+	float4x4 inverse_view_projection;
 
 	ShaderFrustum frustum;
 
-	float2		temporalaa_jitter;
-	float2		temporalaa_jitter_prev;
+	float2 temporalaa_jitter;
+	float2 temporalaa_jitter_prev;
 
-	float4x4	previous_view;
-	float4x4	previous_projection;
-	float4x4	previous_view_projection;
-	float4x4	previous_inverse_view_projection;
-	float4x4	reflection_view_projection;
-	float4x4	reflection_inverse_view_projection;
-	float4x4	reprojection; // view_projection_inverse_matrix * previous_view_projection_matrix
+	float4x4 previous_view;
+	float4x4 previous_projection;
+	float4x4 previous_view_projection;
+	float4x4 previous_inverse_view_projection;
+	float4x4 reflection_view_projection;
+	float4x4 reflection_inverse_view_projection;
+	float4x4 reprojection; // view_projection_inverse_matrix * previous_view_projection_matrix
 
-	float2		aperture_shape;
-	float		aperture_size;
-	float		focal_length;
+	float2 aperture_shape;
+	float aperture_size;
+	float focal_length;
 
 	float2 canvas_size;
 	float2 canvas_size_rcp;
-		   
+
 	uint2 internal_resolution;
 	float2 internal_resolution_rcp;
 
-	uint4 scissor; // scissor in physical coordinates (left,top,right,bottom) range: [0, internal_resolution]
+	uint4 scissor;	   // scissor in physical coordinates (left,top,right,bottom) range: [0, internal_resolution]
 	float4 scissor_uv; // scissor in screen UV coordinates (left,top,right,bottom) range: [0, 1]
 
 	uint2 entity_culling_tilecount;
@@ -1169,15 +1170,13 @@ struct alignas(16) ShaderCamera
 	{
 		return float2(
 			clamp(uv.x, scissor_uv.x, scissor_uv.z),
-			clamp(uv.y, scissor_uv.y, scissor_uv.w)
-		);
+			clamp(uv.y, scissor_uv.y, scissor_uv.w));
 	}
 	inline float2 clamp_pixel_to_scissor(in uint2 pixel)
 	{
 		return uint2(
 			clamp(pixel.x, scissor.x, scissor.z),
-			clamp(pixel.y, scissor.y, scissor.w)
-		);
+			clamp(pixel.y, scissor.y, scissor.w));
 	}
 	inline bool is_uv_inside_scissor(float2 uv)
 	{
@@ -1213,15 +1212,15 @@ CONSTANTBUFFER(g_xCamera, CameraCB, CBSLOT_RENDERER_CAMERA);
 
 CBUFFER(MiscCB, CBSLOT_RENDERER_MISC)
 {
-	float4x4	g_xTransform;
-	float4		g_xColor;
+	float4x4 g_xTransform;
+	float4 g_xColor;
 };
 
 CBUFFER(ForwardEntityMaskCB, CBSLOT_RENDERER_FORWARD_LIGHTMASK)
 {
-	uint2 xForwardLightMask;	// supports indexing 64 lights
-	uint xForwardDecalMask;		// supports indexing 32 decals
-	uint xForwardEnvProbeMask;	// supports indexing 32 environment probes
+	uint2 xForwardLightMask;   // supports indexing 64 lights
+	uint xForwardDecalMask;	   // supports indexing 32 decals
+	uint xForwardEnvProbeMask; // supports indexing 32 environment probes
 };
 
 CBUFFER(VolumeLightCB, CBSLOT_RENDERER_VOLUMELIGHT)
@@ -1293,8 +1292,8 @@ struct CopyTextureCB
 	int2 xCopyDst;
 	int2 xCopySrc;
 	int2 xCopySrcSize;
-	int  xCopySrcMIP;
-	int  xCopyFlags;
+	int xCopySrcMIP;
+	int xCopyFlags;
 };
 
 
@@ -1449,16 +1448,16 @@ struct VirtualTextureTileRequestsPush
 
 CBUFFER(TrailRendererCB, CBSLOT_TRAILRENDERER)
 {
-	float4x4	g_xTrailTransform;
-	float4		g_xTrailColor;
-	float4		g_xTrailTexMulAdd;
-	float4		g_xTrailTexMulAdd2;
-	int			g_xTrailTextureIndex1;
-	int			g_xTrailTextureIndex2;
-	int			g_xTrailLinearDepthTextureIndex;
-	float		g_xTrailDepthSoften;
-	float3		g_xTrailPadding;
-	float		g_xTrailCameraFar;
+	float4x4 g_xTrailTransform;
+	float4 g_xTrailColor;
+	float4 g_xTrailTexMulAdd;
+	float4 g_xTrailTexMulAdd2;
+	int g_xTrailTextureIndex1;
+	int g_xTrailTextureIndex2;
+	int g_xTrailLinearDepthTextureIndex;
+	float g_xTrailDepthSoften;
+	float3 g_xTrailPadding;
+	float g_xTrailCameraFar;
 };
 
 

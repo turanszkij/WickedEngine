@@ -17,4 +17,3 @@ public:
 	// Recreating buttons shouldn't be done every frame because interaction states need multi-frame execution
 	void RecreateButtons();
 };
-

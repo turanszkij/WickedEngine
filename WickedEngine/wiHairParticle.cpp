@@ -125,15 +125,14 @@ namespace wi
 
 			bd.size =
 				AlignTo(AlignTo(indirect_view.size, alignment), sizeof(IndirectDrawArgsIndexedInstanced)) + // additional structured buffer alignment
-				AlignTo(AlignTo(simulation_view.size, alignment), sizeof(PatchSimulationData)) + // additional structured buffer alignment
+				AlignTo(AlignTo(simulation_view.size, alignment), sizeof(PatchSimulationData)) +			// additional structured buffer alignment
 				AlignTo(vb_pos[0].size, alignment) +
 				AlignTo(vb_pos[1].size, alignment) +
 				AlignTo(vb_nor.size, alignment) +
 				AlignTo(vb_uvs.size, alignment) +
 				AlignTo(wetmap.size, alignment) +
 				AlignTo(ib_culled.size, alignment) +
-				AlignTo(vb_pos_raytracing.size, alignment)
-			;
+				AlignTo(vb_pos_raytracing.size, alignment);
 			device->CreateBuffer(&bd, nullptr, &generalBuffer);
 			device->SetName(&generalBuffer, "HairParticleSystem::generalBuffer");
 			gpu_initialized = false;
@@ -319,15 +318,13 @@ namespace wi
 	void HairParticleSystem::UpdateGPU(
 		const UpdateGPUItem* items,
 		uint32_t itemCount,
-		CommandList cmd
-	)
+		CommandList cmd)
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		device->EventBegin("HairParticleSystem - UpdateGPU", cmd);
 
 		static thread_local wi::vector<GPUBarrier> barrier_stack;
-		auto barrier_stack_flush = [&]()
-		{
+		auto barrier_stack_flush = [&]() {
 			if (barrier_stack.empty())
 				return;
 			device->Barrier(barrier_stack.data(), (uint32_t)barrier_stack.size(), cmd);
@@ -623,8 +620,6 @@ namespace wi
 				desc.pt = PrimitiveTopology::TRIANGLELIST;
 				device->CreatePipelineState(&desc, &PSO_wire);
 			}
-
-
 		}
 	}
 

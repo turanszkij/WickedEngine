@@ -5,4 +5,3 @@ namespace wi::lua::renderer
 {
 	void Bind();
 };
-

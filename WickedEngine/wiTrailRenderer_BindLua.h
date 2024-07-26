@@ -17,8 +17,12 @@ namespace wi::lua
 
 		TrailRenderer_BindLua() = default;
 		TrailRenderer_BindLua(lua_State* L) {}
-		TrailRenderer_BindLua(wi::TrailRenderer& ref) : trail(ref) {}
-		TrailRenderer_BindLua(wi::TrailRenderer* ref) : trail(*ref) {}
+		TrailRenderer_BindLua(wi::TrailRenderer& ref)
+			: trail(ref)
+		{}
+		TrailRenderer_BindLua(wi::TrailRenderer* ref)
+			: trail(*ref)
+		{}
 
 		int AddPoint(lua_State* L);
 		int Cut(lua_State* L);

@@ -288,7 +288,6 @@ REVERB_PRESET_PLATE = 29
 
 
 
-
 	Luna<Sound_BindLua>::FunctionType Sound_BindLua::methods[] = {
 		lunamethod(Sound_BindLua, IsValid),
 		{ NULL, NULL }
@@ -503,7 +502,6 @@ REVERB_PRESET_PLATE = 29
 			Luna<SoundInstance_BindLua>::Register(wi::lua::GetLuaState());
 		}
 	}
-
 
 
 

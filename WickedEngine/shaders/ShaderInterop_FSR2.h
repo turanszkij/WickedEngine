@@ -11,7 +11,7 @@
 
 #ifndef FFX_HALF
 #define FFX_HALF 0 // FP16 doesn't have perf benefit for me
-#endif // FFX_HALF
+#endif			   // FFX_HALF
 
 #define FFX_FSR2_OPTION_INVERTED_DEPTH 1
 #define FFX_FSR2_OPTION_HDR_COLOR_INPUT 1

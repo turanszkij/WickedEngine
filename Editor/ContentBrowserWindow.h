@@ -36,4 +36,3 @@ public:
 	void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 	void ResizeLayout() override;
 };
-

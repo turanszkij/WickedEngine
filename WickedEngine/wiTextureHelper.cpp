@@ -112,7 +112,7 @@ namespace wi::texturehelper
 
 			for (int cubeMapFaceIndex = 0; cubeMapFaceIndex < 6; cubeMapFaceIndex++)
 			{
-				pData[cubeMapFaceIndex].data_ptr = &d[cubeMapFaceIndex][0];// description.data;
+				pData[cubeMapFaceIndex].data_ptr = &d[cubeMapFaceIndex][0]; // description.data;
 				pData[cubeMapFaceIndex].row_pitch = width * 4;
 				pData[cubeMapFaceIndex].slice_pitch = 0;
 			}
@@ -156,7 +156,7 @@ namespace wi::texturehelper
 			desc.height = 64;
 			desc.mip_levels = 7;
 			desc.format = Format::BC5_UNORM;
-			desc.swizzle = { ComponentSwizzle::R,ComponentSwizzle::G,ComponentSwizzle::ONE,ComponentSwizzle::ONE };
+			desc.swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::ONE, ComponentSwizzle::ONE };
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 
 			const uint32_t data_stride = GetFormatStride(desc.format);
@@ -249,8 +249,7 @@ namespace wi::texturehelper
 		uint32_t width,
 		uint32_t height,
 		Format format,
-		Swizzle swizzle
-	)
+		Swizzle swizzle)
 	{
 		if (data == nullptr)
 		{
@@ -286,8 +285,7 @@ namespace wi::texturehelper
 		float perlin_scale,
 		uint32_t perlin_seed,
 		int perlin_octaves,
-		float perlin_persistence
-	)
+		float perlin_persistence)
 	{
 		wi::vector<uint8_t> data;
 		wi::vector<uint16_t> data16;
@@ -423,7 +421,6 @@ namespace wi::texturehelper
 			}
 		}
 		break;
-
 		}
 
 		Texture texture;
@@ -443,8 +440,7 @@ namespace wi::texturehelper
 		uint32_t height,
 		const XMFLOAT2& direction,
 		bool counter_clockwise,
-		Swizzle swizzle
-	)
+		Swizzle swizzle)
 	{
 		wi::vector<uint8_t> data(width * height);
 		for (uint32_t y = 0; y < height; ++y)
@@ -473,8 +469,7 @@ namespace wi::texturehelper
 		float radius,
 		float squish,
 		float blend,
-		float edge_smoothness
-	)
+		float edge_smoothness)
 	{
 		XMFLOAT2 offset = XMFLOAT2(uv_start.x * 2 - 1, uv_start.y * 2 - 1);
 		float scale = 1.0f / (radius * 2);

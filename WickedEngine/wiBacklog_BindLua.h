@@ -4,4 +4,3 @@ namespace wi::lua::backlog
 {
 	void Bind();
 };
-

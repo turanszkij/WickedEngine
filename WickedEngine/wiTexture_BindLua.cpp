@@ -117,8 +117,7 @@ namespace wi::lua
 			perlin_scale,
 			perlin_seed,
 			perlin_octaves,
-			perlin_persistence
-		);
+			perlin_persistence);
 		Luna<Texture_BindLua>::push(L, texture);
 		return 1;
 	}
@@ -177,8 +176,7 @@ namespace wi::lua
 			radius,
 			squish,
 			blend,
-			edge_smoothness
-		);
+			edge_smoothness);
 		Luna<Texture_BindLua>::push(L, texture);
 		return 1;
 	}

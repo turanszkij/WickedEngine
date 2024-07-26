@@ -9,6 +9,7 @@ namespace wi
 	{
 	private:
 		std::atomic_flag lck = ATOMIC_FLAG_INIT;
+
 	public:
 		inline void lock()
 		{

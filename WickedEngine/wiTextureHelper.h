@@ -26,8 +26,7 @@ namespace wi::texturehelper
 		uint32_t width,
 		uint32_t height,
 		wi::graphics::Format format = wi::graphics::Format::R8G8B8A8_UNORM,
-		wi::graphics::Swizzle swizzle = {}
-	);
+		wi::graphics::Swizzle swizzle = {});
 
 	enum class GradientType
 	{
@@ -38,10 +37,10 @@ namespace wi::texturehelper
 	enum class GradientFlags
 	{
 		None = 0,
-		Inverse = 1 << 0,		// inverts resulting gradient
-		Smoothstep = 1 << 1,	// applies smoothstep function to resulting gradient
-		PerlinNoise = 1 << 2,	// applies perlin noise to gradient
-		R16Unorm = 1 << 3,		// the texture will be created in R16_UNORM format instead of R8_UNORM
+		Inverse = 1 << 0,	  // inverts resulting gradient
+		Smoothstep = 1 << 1,  // applies smoothstep function to resulting gradient
+		PerlinNoise = 1 << 2, // applies perlin noise to gradient
+		R16Unorm = 1 << 3,	  // the texture will be created in R16_UNORM format instead of R8_UNORM
 	};
 	wi::graphics::Texture CreateGradientTexture(
 		GradientType type,
@@ -54,8 +53,7 @@ namespace wi::texturehelper
 		float perlin_scale = 1,
 		uint32_t perlin_seed = 1234u,
 		int perlin_octaves = 8,
-		float perlin_persistence = 0.5f
-	);
+		float perlin_persistence = 0.5f);
 
 	// Similar to CreateGradientTexture() with GradientType::Angular type but different parameters
 	wi::graphics::Texture CreateCircularProgressGradientTexture(
@@ -63,8 +61,7 @@ namespace wi::texturehelper
 		uint32_t height,
 		const XMFLOAT2& direction = XMFLOAT2(0, 1),
 		bool counter_clockwise = false,
-		wi::graphics::Swizzle swizzle = { wi::graphics::ComponentSwizzle::R, wi::graphics::ComponentSwizzle::R, wi::graphics::ComponentSwizzle::R, wi::graphics::ComponentSwizzle::R }
-	);
+		wi::graphics::Swizzle swizzle = { wi::graphics::ComponentSwizzle::R, wi::graphics::ComponentSwizzle::R, wi::graphics::ComponentSwizzle::R, wi::graphics::ComponentSwizzle::R });
 
 	// Create a lens distortion normal map (16-bit precision)
 	//	width		: texture width in pixels
@@ -81,11 +78,11 @@ namespace wi::texturehelper
 		float radius = 0.5f,
 		float squish = 1,
 		float blend = 1,
-		float edge_smoothness = 0.04f
-	);
+		float edge_smoothness = 0.04f);
 };
 
 template<>
-struct enable_bitmask_operators<wi::texturehelper::GradientFlags> {
+struct enable_bitmask_operators<wi::texturehelper::GradientFlags>
+{
 	static const bool enable = true;
 };

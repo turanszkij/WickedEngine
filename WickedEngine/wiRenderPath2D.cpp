@@ -156,7 +156,7 @@ namespace wi
 
 		const Texture* dsv = GetDepthStencil();
 
-		// Special care for internal resolution, because stencil buffer is of internal resolution, 
+		// Special care for internal resolution, because stencil buffer is of internal resolution,
 		//	so we might need to render stencil sprites to separate render target that matches internal resolution!
 		if (rtStenciled.IsValid())
 		{
@@ -167,8 +167,7 @@ namespace wi
 					RenderPassImage::DepthStencil(
 						dsv,
 						RenderPassImage::LoadOp::LOAD,
-						RenderPassImage::StoreOp::STORE
-					),
+						RenderPassImage::StoreOp::STORE),
 					RenderPassImage::Resolve(&rtStenciled_resolved)
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
@@ -180,8 +179,7 @@ namespace wi
 					RenderPassImage::DepthStencil(
 						dsv,
 						RenderPassImage::LoadOp::LOAD,
-						RenderPassImage::StoreOp::STORE
-					),
+						RenderPassImage::StoreOp::STORE),
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 			}
@@ -220,13 +218,11 @@ namespace wi
 						RenderPassImage::LoadOp::CLEAR,
 						RenderPassImage::StoreOp::DONTCARE,
 						ResourceState::RENDERTARGET,
-						ResourceState::RENDERTARGET
-					),
+						ResourceState::RENDERTARGET),
 					RenderPassImage::DepthStencil(
 						dsv,
 						RenderPassImage::LoadOp::LOAD,
-						RenderPassImage::StoreOp::STORE
-					),
+						RenderPassImage::StoreOp::STORE),
 					RenderPassImage::Resolve(&rtFinal),
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
@@ -238,8 +234,7 @@ namespace wi
 					RenderPassImage::DepthStencil(
 						dsv,
 						RenderPassImage::LoadOp::LOAD,
-						RenderPassImage::StoreOp::STORE
-					),
+						RenderPassImage::StoreOp::STORE),
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 			}
@@ -254,8 +249,7 @@ namespace wi
 						RenderPassImage::LoadOp::CLEAR,
 						RenderPassImage::StoreOp::DONTCARE,
 						ResourceState::RENDERTARGET,
-						ResourceState::RENDERTARGET
-					),
+						ResourceState::RENDERTARGET),
 					RenderPassImage::Resolve(&rtFinal),
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
@@ -265,8 +259,7 @@ namespace wi
 				RenderPassImage rp[] = {
 					RenderPassImage::RenderTarget(
 						&rtFinal,
-						RenderPassImage::LoadOp::CLEAR
-					),
+						RenderPassImage::LoadOp::CLEAR),
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 			}

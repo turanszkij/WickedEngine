@@ -4,6 +4,7 @@ class EditorComponent;
 class WeatherWindow : public wi::gui::Window
 {
 	void UpdateWind();
+
 public:
 	void Create(EditorComponent* editor);
 
@@ -109,4 +110,3 @@ public:
 
 	void ResizeLayout() override;
 };
-

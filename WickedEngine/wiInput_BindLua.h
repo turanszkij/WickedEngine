@@ -39,7 +39,9 @@ namespace wi::lua
 		static Luna<Touch_BindLua>::PropertyType properties[];
 
 		Touch_BindLua(lua_State* L) {}
-		Touch_BindLua(const wi::input::Touch& touch) :touch(touch) {}
+		Touch_BindLua(const wi::input::Touch& touch)
+			: touch(touch)
+		{}
 
 		int GetState(lua_State* L);
 		int GetPos(lua_State* L);
@@ -56,7 +58,9 @@ namespace wi::lua
 		static Luna<ControllerFeedback_BindLua>::PropertyType properties[];
 
 		ControllerFeedback_BindLua(lua_State* L) {}
-		ControllerFeedback_BindLua(const wi::input::ControllerFeedback& feedback) :feedback(feedback) {}
+		ControllerFeedback_BindLua(const wi::input::ControllerFeedback& feedback)
+			: feedback(feedback)
+		{}
 
 		int SetVibrationLeft(lua_State* L);
 		int SetVibrationRight(lua_State* L);

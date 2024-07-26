@@ -114,4 +114,3 @@ public:
 
 	void ApplySamplerSettings();
 };
-

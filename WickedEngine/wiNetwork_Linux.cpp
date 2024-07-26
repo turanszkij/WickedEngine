@@ -15,19 +15,30 @@
 namespace wi::network
 {
 	//For easy address conversion
-	struct in_addr_union {
-		union {
-			struct { uint8_t s_b1,s_b2,s_b3,s_b4; } S_un_b;
-			struct { uint16_t s_w1,s_w2; } S_un_w;
+	struct in_addr_union
+	{
+		union
+		{
+			struct
+			{
+				uint8_t s_b1, s_b2, s_b3, s_b4;
+			} S_un_b;
+			struct
+			{
+				uint16_t s_w1, s_w2;
+			} S_un_w;
 			uint32_t S_addr;
 		};
 	};
 
-	struct SocketInternal{
+	struct SocketInternal
+	{
 		int handle;
-		~SocketInternal(){
+		~SocketInternal()
+		{
 			int result = close(handle);
-			if(result < 0){
+			if (result < 0)
+			{
 				assert(0);
 			}
 		}
@@ -45,7 +56,7 @@ namespace wi::network
 
 		socketinternal->handle = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
-		if(socketinternal->handle == -1)
+		if (socketinternal->handle == -1)
 		{
 			wi::backlog::post("wi::network_Linux error in CreateSocket: Could not create socket");
 			return false;
@@ -56,7 +67,8 @@ namespace wi::network
 
 	bool Send(const Socket* sock, const Connection* connection, const void* data, size_t dataSize)
 	{
-		if (sock->IsValid()){
+		if (sock->IsValid())
+		{
 			sockaddr_in target;
 			target.sin_family = AF_INET;
 			target.sin_port = htons(connection->port);
@@ -82,7 +94,8 @@ namespace wi::network
 
 	bool ListenPort(const Socket* sock, uint16_t port)
 	{
-		if (sock->IsValid()){
+		if (sock->IsValid())
+		{
 			sockaddr_in target;
 			target.sin_family = AF_INET;
 			target.sin_port = htons(port);
@@ -90,7 +103,7 @@ namespace wi::network
 
 			auto socketinternal = to_internal(sock);
 
-			int result = bind(socketinternal->handle, (struct sockaddr *)&target , sizeof(target));
+			int result = bind(socketinternal->handle, (struct sockaddr*)&target, sizeof(target));
 			if (result < 0)
 			{
 				wi::backlog::post("wi::network_Linux error in Send: (Error Code: " + std::to_string(result) + ") " + std::string(strerror(result)));
@@ -104,7 +117,8 @@ namespace wi::network
 
 	bool CanReceive(const Socket* sock, long timeout_microseconds)
 	{
-		if (sock->IsValid()){
+		if (sock->IsValid())
+		{
 			auto socketinternal = to_internal(sock);
 
 			fd_set readfds;
@@ -129,12 +143,13 @@ namespace wi::network
 
 	bool Receive(const Socket* sock, Connection* connection, void* data, size_t dataSize)
 	{
-		if (sock->IsValid()){
+		if (sock->IsValid())
+		{
 			auto socketinternal = to_internal(sock);
 
 			sockaddr_in sender;
 			int targetsize = sizeof(sender);
-			int result = recvfrom(socketinternal->handle, (char*)data, (int)dataSize, 0, (sockaddr*)& sender, (socklen_t*)&targetsize);
+			int result = recvfrom(socketinternal->handle, (char*)data, (int)dataSize, 0, (sockaddr*)&sender, (socklen_t*)&targetsize);
 			if (result < 0)
 			{
 				wi::backlog::post("wi::network_Linux error in Send: (Error Code: " + std::to_string(result) + ") " + std::string(strerror(result)));

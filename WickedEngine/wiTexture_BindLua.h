@@ -17,7 +17,9 @@ namespace wi::lua
 		static Luna<Texture_BindLua>::PropertyType properties[];
 
 		Texture_BindLua() = default;
-		Texture_BindLua(wi::Resource resource) :resource(resource) {}
+		Texture_BindLua(wi::Resource resource)
+			: resource(resource)
+		{}
 		Texture_BindLua(wi::graphics::Texture texture) { resource.SetTexture(texture); }
 		Texture_BindLua(lua_State* L);
 

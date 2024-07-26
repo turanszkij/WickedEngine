@@ -1,3 +1,4 @@
+// clang-format off
 #pragma once
 #include "IconsFontAwesome6.h" // icon descriptions, source: https://github.com/juliettef/IconFontCppHeaders
 
