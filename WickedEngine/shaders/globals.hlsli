@@ -708,6 +708,7 @@ inline uint2 GetInternalResolution() { return GetCamera().internal_resolution; }
 inline float GetDeltaTime() { return GetFrame().delta_time; }
 inline float GetTime() { return GetFrame().time; }
 inline float GetTimePrev() { return GetFrame().time_previous; }
+inline float GetFrameCount() { return GetFrame().frame_count; }
 inline uint2 GetTemporalAASampleRotation() { return uint2((GetFrame().temporalaa_samplerotation >> 0u) & 0x000000FF, (GetFrame().temporalaa_samplerotation >> 8) & 0x000000FF); }
 inline bool IsStaticSky() { return GetScene().globalenvmap >= 0; }
 

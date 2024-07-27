@@ -141,6 +141,8 @@ Texture shadowMapAtlas;
 Texture shadowMapAtlas_Transparent;
 int max_shadow_resolution_2D = 1024;
 int max_shadow_resolution_cube = 256;
+uint soft_shadow_sample_count = 4;
+float soft_shadow_spread = 2;
 
 wi::vector<std::pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes;
 wi::vector<std::pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes_depth;
@@ -4255,6 +4257,11 @@ void UpdatePerFrameData(
 			entityCounter++;
 		}
 	}
+
+	frameCB.soft_shadow_sample_count = GetSoftShadowSampleCount();
+	frameCB.soft_shadow_sample_count_rcp = 1.0f / (float)frameCB.soft_shadow_sample_count;
+	frameCB.soft_shadow_sample_count_sqrt_rcp = 1.0f / std::sqrt((float)frameCB.soft_shadow_sample_count);
+	frameCB.soft_shadow_spread = GetSoftShadowSpread();
 }
 void UpdateRenderData(
 	const Visibility& vis,
@@ -5736,6 +5743,22 @@ void SetShadowPropsCube(int resolution)
 {
 	max_shadow_resolution_cube = resolution;
 }
+void SetSoftShadowSampleCount(uint32_t value)
+{
+	soft_shadow_sample_count = value;
+}
+uint32_t GetSoftShadowSampleCount()
+{
+	return soft_shadow_sample_count;
+}
+void SetSoftShadowSpread(float value)
+{
+	soft_shadow_spread = value;
+}
+float GetSoftShadowSpread()
+{
+	return soft_shadow_spread;
+}
 
 void DrawShadowmaps(
 	const Visibility& vis,
@@ -5880,7 +5903,7 @@ void DrawShadowmaps(
 				if (!vis.visibleHairs.empty())
 				{
 					cb.cameras[0].position = vis.camera->Eye;
-					for (uint32_t cascade = 0; cascade < cascade_count; ++cascade)
+					for (uint32_t cascade = 0; cascade < std::min(2u, cascade_count); ++cascade)
 					{
 						XMStoreFloat4x4(&cb.cameras[0].view_projection, shcams[cascade].view_projection);
 						device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);

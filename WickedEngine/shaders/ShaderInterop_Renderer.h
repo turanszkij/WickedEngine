@@ -1001,6 +1001,11 @@ struct alignas(16) FrameCB
 
 	ShaderEntity entityArray[SHADER_ENTITY_COUNT];
 	float4x4 matrixArray[SHADER_ENTITY_COUNT];
+
+	uint soft_shadow_sample_count;
+	float soft_shadow_sample_count_rcp;
+	float soft_shadow_sample_count_sqrt_rcp;
+	float soft_shadow_spread;
 };
 
 enum SHADERCAMERA_OPTIONS

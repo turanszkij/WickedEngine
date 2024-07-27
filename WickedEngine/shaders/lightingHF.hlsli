@@ -93,7 +93,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 						if (cascade_fade > 0 && dither(surface.pixel + GetTemporalAASampleRotation()) < cascade_fade)
 							continue;
 						
-						shadow *= shadow_2D(light, shadow_pos, shadow_uv.xy, cascade);
+						shadow *= shadow_2D(light, shadow_pos, shadow_uv.xy, cascade, surface.pixel);
 						break;
 					}
 				}
@@ -200,7 +200,7 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 				if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0 || (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) == 0)
 #endif // SHADOW_MASK_ENABLED
 				{
-					shadow *= shadow_cube(light, LunnormalizedShadow);
+					shadow *= shadow_cube(light, LunnormalizedShadow, surface.pixel);
 				}
 			}
 
@@ -305,7 +305,7 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 						[branch]
 						if (is_saturated(shadow_uv))
 						{
-							shadow *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0);
+							shadow *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0, surface.pixel);
 						}
 					}
 				}
