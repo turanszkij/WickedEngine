@@ -11,6 +11,7 @@ private:
 	float angle = 0;
 	float angle_start = 0;
 	bool has_selected_transform = false;
+	wi::vector<uint32_t> temp_filters;
 public:
 
 	void Update(const wi::scene::CameraComponent& camera, const XMFLOAT4& currentMouse, const wi::Canvas& canvas);

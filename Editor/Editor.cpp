@@ -884,7 +884,8 @@ void EditorComponent::Load()
 		ss += "Select: Left mouse button\n";
 		ss += "Interact with physics/water/grass: Middle mouse button\n";
 		ss += "Faster camera: Left Shift button or controller R2/RT\n";
-		ss += "Snap transform: Left Ctrl (hold while transforming)\n";
+		ss += "Snap to grid transform: Ctrl (hold while transforming)\n";
+		ss += "Snap to surface transform: Shift (hold while transforming)\n";
 		ss += "Camera up: E\n";
 		ss += "Camera down: Q\n";
 		ss += "Duplicate entity: Ctrl + D\n";

@@ -453,9 +453,9 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 					transform.Scale(scale);
 				}
 
-				if (wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_LCONTROL))
+				if (wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_RCONTROL))
 				{
-					// Snap mode:
+					// Snap to grid mode:
 					if (isTranslator)
 					{
 						transform.translation_local.x = std::round(transform.translation_local.x / translate_snap) * translate_snap;
@@ -467,6 +467,30 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 						transform.scale_local.x = std::max(scale_snap, std::round(transform.scale_local.x / scale_snap) * scale_snap);
 						transform.scale_local.y = std::max(scale_snap, std::round(transform.scale_local.y / scale_snap) * scale_snap);
 						transform.scale_local.z = std::max(scale_snap, std::round(transform.scale_local.z / scale_snap) * scale_snap);
+					}
+				}
+				if (wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_LSHIFT) || wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_RSHIFT))
+				{
+					// Snap to surface mode:
+					temp_filters.reserve(selected.size());
+					for (auto& x : selected)
+					{
+						ObjectComponent* object = scene.objects.GetComponent(x.entity);
+						if (object == nullptr)
+							continue;
+						temp_filters.push_back(object->filterMask);
+						object->filterMask = 0;
+					}
+					Ray ray = wi::renderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, canvas, camera);
+					wi::scene::Scene::RayIntersectionResult result = scene.Intersects(ray, wi::enums::FILTER_OBJECT_ALL);
+					transform.translation_local = result.position;
+					size_t ind = 0;
+					for (auto& x : selected)
+					{
+						ObjectComponent* object = scene.objects.GetComponent(x.entity);
+						if (object == nullptr)
+							continue;
+						object->filterMask = temp_filters[ind++];
 					}
 				}
 			}
