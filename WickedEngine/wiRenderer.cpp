@@ -2071,7 +2071,7 @@ void SetUpStates()
 	rs.front_counter_clockwise = true;
 	rs.depth_bias = -1;
 	rs.depth_bias_clamp = 0;
-	rs.slope_scaled_depth_bias = -2.0f;
+	rs.slope_scaled_depth_bias = -4.0f;
 	rs.depth_clip_enable = true;
 	rs.multisample_enable = false;
 	rs.antialiased_line_enable = false;

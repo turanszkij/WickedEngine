@@ -9,7 +9,7 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, uint2 pixel
 		return 1;
 
 	Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
-
+	
 #ifdef DISABLE_SOFT_SHADOWMAP
 	half3 shadow = (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, clamp(uv, uv_clamping.xy, uv_clamping.zw), cmp).r;
 #else
