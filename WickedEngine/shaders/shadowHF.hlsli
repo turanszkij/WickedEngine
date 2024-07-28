@@ -2,7 +2,16 @@
 #define WI_SHADOW_HF
 #include "globals.hlsli"
 
-static const min16uint soft_shadow_sample_count = 4;
+// "Vogel disk" sampling pattern based on: https://github.com/corporateshark/poisson-disk-generator/blob/master/PoissonGenerator.h
+//	Baked values are remapped from [0, 1] range into [-1, 1] range by doing: value * 2 - 1
+static const float2 vogel_points[] = {
+	float2(0.353553, 0.000000),
+	float2(-0.451560, 0.413635),
+	float2(0.069174, -0.787537),
+	float2(0.569060, 0.742409),
+};
+
+static const min16uint soft_shadow_sample_count = arraysize(vogel_points);
 static const half soft_shadow_sample_count_rcp = 1.0 / (half)soft_shadow_sample_count;
 static const half soft_shadow_sample_count_sqrt_rcp = rsqrt((half)soft_shadow_sample_count);
 static const half kGoldenAngle = 2.4;
@@ -20,15 +29,10 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, float sprea
 
 #ifndef DISABLE_SOFT_SHADOWMAP
 	const float2 spread_offset = GetFrame().shadow_atlas_resolution_rcp.xy * (2 + spread * 8); // remap spread to try to match ray traced shadow result
-	const half phi = dither(pixel + GetTemporalAASampleRotation()) * 2 * PI; // per pixel disk rotation
+	const half2x2 rot = dither_rot2x2(pixel + GetTemporalAASampleRotation()); // per pixel rotation for every sample
 	for (min16uint i = 0; i < soft_shadow_sample_count; ++i)
 	{
-		// "Vogel disk" sampling pattern based on: https://github.com/corporateshark/poisson-disk-generator/blob/master/PoissonGenerator.h
-		const half r = sqrt(half(i) + 0.5) * soft_shadow_sample_count_sqrt_rcp;
-		const half theta = i * kGoldenAngle + phi;
-		half2 theta_cos_sin;
-		sincos(theta, theta_cos_sin.y, theta_cos_sin.x);
-		float2 sample_uv = uv + r * theta_cos_sin * spread_offset;
+		float2 sample_uv = uv + mul(vogel_points[i], rot) * spread_offset;
 #else
 		float2 sample_uv = uv;
 #endif // DISABLE_SOFT_SHADOWMAP
