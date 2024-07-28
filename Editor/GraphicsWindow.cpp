@@ -14,7 +14,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(300, 1720));
+	SetSize(XMFLOAT2(300, 1680));
 
 	float step = 21;
 	float itemheight = 18;
