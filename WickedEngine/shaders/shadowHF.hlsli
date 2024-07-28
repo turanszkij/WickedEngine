@@ -13,8 +13,6 @@ static const float2 vogel_points[] = {
 
 static const min16uint soft_shadow_sample_count = arraysize(vogel_points);
 static const half soft_shadow_sample_count_rcp = 1.0 / (half)soft_shadow_sample_count;
-static const half soft_shadow_sample_count_sqrt_rcp = rsqrt((half)soft_shadow_sample_count);
-static const half kGoldenAngle = 2.4;
 
 inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, float spread, uint2 pixel)
 {
