@@ -141,8 +141,6 @@ Texture shadowMapAtlas;
 Texture shadowMapAtlas_Transparent;
 int max_shadow_resolution_2D = 1024;
 int max_shadow_resolution_cube = 256;
-uint soft_shadow_sample_count = 4;
-float soft_shadow_spread = 2;
 
 wi::vector<std::pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes;
 wi::vector<std::pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes_depth;
@@ -4257,11 +4255,6 @@ void UpdatePerFrameData(
 			entityCounter++;
 		}
 	}
-
-	frameCB.soft_shadow_sample_count = GetSoftShadowSampleCount();
-	frameCB.soft_shadow_sample_count_rcp = 1.0f / (float)frameCB.soft_shadow_sample_count;
-	frameCB.soft_shadow_sample_count_sqrt_rcp = 1.0f / std::sqrt((float)frameCB.soft_shadow_sample_count);
-	frameCB.soft_shadow_spread = GetSoftShadowSpread();
 }
 void UpdateRenderData(
 	const Visibility& vis,
@@ -5742,22 +5735,6 @@ void SetShadowProps2D(int resolution)
 void SetShadowPropsCube(int resolution)
 {
 	max_shadow_resolution_cube = resolution;
-}
-void SetSoftShadowSampleCount(uint32_t value)
-{
-	soft_shadow_sample_count = value;
-}
-uint32_t GetSoftShadowSampleCount()
-{
-	return soft_shadow_sample_count;
-}
-void SetSoftShadowSpread(float value)
-{
-	soft_shadow_spread = value;
-}
-float GetSoftShadowSpread()
-{
-	return soft_shadow_spread;
 }
 
 void DrawShadowmaps(

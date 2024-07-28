@@ -1023,10 +1023,6 @@ namespace wi::renderer
 
 	void SetShadowProps2D(int max_resolution);
 	void SetShadowPropsCube(int max_resolution);
-	void SetSoftShadowSampleCount(uint32_t value);
-	uint32_t GetSoftShadowSampleCount();
-	void SetSoftShadowSpread(float value);
-	float GetSoftShadowSpread();
 
 
 	void SetTransparentShadowsEnabled(bool value);

@@ -39,8 +39,6 @@ public:
 	wi::gui::ComboBox shadowTypeComboBox;
 	wi::gui::ComboBox shadowProps2DComboBox;
 	wi::gui::ComboBox shadowPropsCubeComboBox;
-	wi::gui::Slider shadowSoftSampleCount;
-	wi::gui::Slider shadowSoftSpread;
 	wi::gui::ComboBox MSAAComboBox;
 	wi::gui::CheckBox temporalAACheckBox;
 	wi::gui::CheckBox temporalAADebugCheckBox;

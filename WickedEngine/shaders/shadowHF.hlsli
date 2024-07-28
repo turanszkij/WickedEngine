@@ -2,7 +2,12 @@
 #define WI_SHADOW_HF
 #include "globals.hlsli"
 
-inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, uint2 pixel)
+static const min16uint soft_shadow_sample_count = 4;
+static const half soft_shadow_sample_count_rcp = 1.0 / (half)soft_shadow_sample_count;
+static const half soft_shadow_sample_count_sqrt_rcp = rsqrt((half)soft_shadow_sample_count);
+static const half kGoldenAngle = 2.4;
+
+inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, float spread, uint2 pixel)
 {
 	[branch]
 	if (GetFrame().texture_shadowatlas_index < 0)
@@ -14,20 +19,19 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, uint2 pixel
 	half3 shadow = (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, clamp(uv, uv_clamping.xy, uv_clamping.zw), cmp).r;
 #else
 	half3 shadow = 0;
-	const float phi = dither(pixel + GetTemporalAASampleRotation()) * 2 * PI; // per pixel disk rotation
-	const float2 offset = GetFrame().shadow_atlas_resolution_rcp.xy * GetFrame().soft_shadow_spread;
-	for (uint i = 0; i < GetFrame().soft_shadow_sample_count; ++i)
+	const float2 spread_offset = GetFrame().shadow_atlas_resolution_rcp.xy * (2 + spread * 8); // remap spread to try to match ray traced shadow result
+	const half phi = dither(pixel + GetTemporalAASampleRotation()) * 2 * PI; // per pixel disk rotation
+	for (min16uint i = 0; i < soft_shadow_sample_count; ++i)
 	{
 		// "Vogel disk" sampling pattern based on: https://github.com/corporateshark/poisson-disk-generator/blob/master/PoissonGenerator.h
-		const float kGoldenAngle = 2.4;
-		const float r = sqrt(float(i) + 0.5) * GetFrame().soft_shadow_sample_count_sqrt_rcp;
-		const float theta = i * kGoldenAngle + phi;
-		float2 theta_cos_sin;
+		const half r = sqrt(half(i) + 0.5) * soft_shadow_sample_count_sqrt_rcp;
+		const half theta = i * kGoldenAngle + phi;
+		half2 theta_cos_sin;
 		sincos(theta, theta_cos_sin.y, theta_cos_sin.x);
-		const float2 sample_uv = uv + r * theta_cos_sin * offset;
+		const float2 sample_uv = uv + r * theta_cos_sin * spread_offset;
 		shadow.x += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, clamp(sample_uv, uv_clamping.xy, uv_clamping.zw), cmp).r;
 	}
-	shadow = shadow.xxx * GetFrame().soft_shadow_sample_count_rcp;
+	shadow = shadow.xxx * soft_shadow_sample_count_rcp;
 #endif // DISABLE_SOFT_SHADOWMAP
 
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
@@ -62,7 +66,7 @@ inline half3 shadow_2D(in ShaderEntity light, in float3 shadow_pos, in float2 sh
 {
 	shadow_uv.x += cascade;
 	shadow_uv = mad(shadow_uv, light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw);
-	return sample_shadow(shadow_uv, shadow_pos.z, shadow_border_clamp(light, cascade), pixel);
+	return sample_shadow(shadow_uv, shadow_pos.z, shadow_border_clamp(light, cascade), light.GetRadius(), pixel);
 }
 
 inline half3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized, uint2 pixel = 0)
@@ -72,7 +76,7 @@ inline half3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized, uint2 p
 	float2 shadow_uv = uv_slice.xy;
 	shadow_uv.x += uv_slice.z;
 	shadow_uv = mad(shadow_uv, light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw);
-	return sample_shadow(shadow_uv, remapped_distance, shadow_border_clamp(light, uv_slice.z), pixel);
+	return sample_shadow(shadow_uv, remapped_distance, shadow_border_clamp(light, uv_slice.z), light.GetRadius(), pixel);
 }
 
 inline half shadow_2D_volumetricclouds(float3 P)

@@ -566,34 +566,6 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	shadowPropsCubeComboBox.SetScriptTip("SetShadowPropsCube(int resolution, int count)");
 	AddWidget(&shadowPropsCubeComboBox);
 
-	shadowSoftSampleCount.Create(1, 32, 8, 31, "Soft Shadowmap Samples: ");
-	shadowSoftSampleCount.SetTooltip("Increasing the number of shadow map samples can improve the appearance of shadows, but reduce performance.");
-	shadowSoftSampleCount.OnSlide([=](wi::gui::EventArgs args) {
-		wi::renderer::SetSoftShadowSampleCount((uint32_t)args.iValue);
-		editor->main->config.GetSection("graphics").Set("shadow_samples", args.iValue);
-		editor->main->config.Commit();
-	});
-	if (editor->main->config.GetSection("graphics").Has("shadow_samples"))
-	{
-		wi::renderer::SetSoftShadowSampleCount((uint32_t)editor->main->config.GetSection("graphics").GetInt("shadow_samples"));
-	}
-	shadowSoftSampleCount.SetValue((int)wi::renderer::GetSoftShadowSampleCount());
-	AddWidget(&shadowSoftSampleCount);
-
-	shadowSoftSpread.Create(0, 8, 3, 1000, "Soft Shadowmap Spread: ");
-	shadowSoftSpread.SetTooltip("Adjust the overall shadow softness.");
-	shadowSoftSpread.OnSlide([=](wi::gui::EventArgs args) {
-		wi::renderer::SetSoftShadowSpread(args.fValue);
-		editor->main->config.GetSection("graphics").Set("shadow_spread", args.fValue);
-		editor->main->config.Commit();
-	});
-	if (editor->main->config.GetSection("graphics").Has("shadow_spread"))
-	{
-		wi::renderer::SetSoftShadowSpread(editor->main->config.GetSection("graphics").GetFloat("shadow_spread"));
-	}
-	shadowSoftSpread.SetValue(wi::renderer::GetSoftShadowSpread());
-	AddWidget(&shadowSoftSpread);
-
 	MSAAComboBox.Create("MSAA: ");
 	MSAAComboBox.SetSize(XMFLOAT2(wid, itemheight));
 	MSAAComboBox.SetPos(XMFLOAT2(x, y += step));
@@ -1735,8 +1707,6 @@ void GraphicsWindow::ResizeLayout()
 		add(shadowTypeComboBox);
 		add(shadowProps2DComboBox);
 		add(shadowPropsCubeComboBox);
-		add(shadowSoftSampleCount);
-		add(shadowSoftSpread);
 		add(MSAAComboBox);
 		add_right(temporalAADebugCheckBox);
 		temporalAACheckBox.SetPos(XMFLOAT2(temporalAADebugCheckBox.GetPos().x - temporalAACheckBox.GetSize().x - 70, temporalAADebugCheckBox.GetPos().y));
