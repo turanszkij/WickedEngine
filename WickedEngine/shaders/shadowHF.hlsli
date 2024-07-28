@@ -57,7 +57,7 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, float sprea
 inline float4 shadow_border_clamp(in ShaderEntity light, in float slice)
 {
 	const float2 shadow_resolution = light.shadowAtlasMulAdd.xy * GetFrame().shadow_atlas_resolution;
-	const float border_size = 0.5 * GetFrame().shadow_atlas_resolution_rcp;
+	const float border_size = 0.75 * GetFrame().shadow_atlas_resolution_rcp;
 	const float2 topleft = mad(float2(slice, 0), light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw) + border_size;
 	const float2 bottomright = mad(float2(slice + 1, 1), light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw) - border_size;
 	return float4(topleft, bottomright);
