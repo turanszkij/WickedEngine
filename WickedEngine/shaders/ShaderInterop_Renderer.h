@@ -918,7 +918,7 @@ static const int impostorCaptureAngles = 36;
 enum FRAME_OPTIONS
 {
 	OPTION_BIT_TEMPORALAA_ENABLED = 1 << 0,
-	OPTION_BIT_TRANSPARENTSHADOWS_ENABLED = 1 << 1,
+	//OPTION_BIT_TRANSPARENTSHADOWS_ENABLED = 1 << 1,
 	OPTION_BIT_VXGI_ENABLED = 1 << 2,
 	OPTION_BIT_VXGI_REFLECTIONS_ENABLED = 1 << 3,
 	OPTION_BIT_REALISTIC_SKY = 1 << 6,
@@ -1001,11 +1001,6 @@ struct alignas(16) FrameCB
 
 	ShaderEntity entityArray[SHADER_ENTITY_COUNT];
 	float4x4 matrixArray[SHADER_ENTITY_COUNT];
-
-	uint soft_shadow_sample_count;
-	float soft_shadow_sample_count_rcp;
-	float soft_shadow_sample_count_sqrt_rcp;
-	float soft_shadow_spread;
 };
 
 enum SHADERCAMERA_OPTIONS

@@ -14,10 +14,8 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, float sprea
 		return 1;
 
 	Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
+	Texture2D texture_shadowatlas_transparent = bindless_textures[GetFrame().texture_shadowatlas_transparent_index];
 	
-#ifdef DISABLE_SOFT_SHADOWMAP
-	half3 shadow = (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, clamp(uv, uv_clamping.xy, uv_clamping.zw), cmp).r;
-#else
 	half3 shadow = 0;
 	const float2 spread_offset = GetFrame().shadow_atlas_resolution_rcp.xy * (2 + spread * 8); // remap spread to try to match ray traced shadow result
 	const half phi = dither(pixel + GetTemporalAASampleRotation()) * 2 * PI; // per pixel disk rotation
@@ -28,26 +26,22 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, float sprea
 		const half theta = i * kGoldenAngle + phi;
 		half2 theta_cos_sin;
 		sincos(theta, theta_cos_sin.y, theta_cos_sin.x);
-		const float2 sample_uv = uv + r * theta_cos_sin * spread_offset;
-		shadow.x += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, clamp(sample_uv, uv_clamping.xy, uv_clamping.zw), cmp).r;
-	}
-	shadow = shadow.xxx * soft_shadow_sample_count_rcp;
-#endif // DISABLE_SOFT_SHADOWMAP
-
-#ifndef DISABLE_TRANSPARENT_SHADOWMAP
-	[branch]
-	if (GetFrame().options & OPTION_BIT_TRANSPARENTSHADOWS_ENABLED && GetFrame().texture_shadowatlas_transparent_index)
-	{
-		Texture2D texture_shadowatlas_transparent = bindless_textures[GetFrame().texture_shadowatlas_transparent_index];
-		half4 transparent_shadow = (half4)texture_shadowatlas_transparent.SampleLevel(sampler_linear_clamp, uv, 0);
-#ifdef TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
-		if (transparent_shadow.a > cmp)
-#endif // TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
+		float2 sample_uv = clamp(uv + r * theta_cos_sin * spread_offset, uv_clamping.xy, uv_clamping.zw);
+		sample_uv = clamp(sample_uv, uv_clamping.xy, uv_clamping.zw);
+		half3 pcf = texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, sample_uv, cmp).rrr;
+		if(pcf.x > 0)
 		{
-			shadow *= transparent_shadow.rgb;
+			half4 transparent_shadow = texture_shadowatlas_transparent.SampleLevel(sampler_linear_clamp, sample_uv, 0);
+#ifdef TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
+			if (transparent_shadow.a > cmp)
+#endif // TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
+			{
+				pcf *= transparent_shadow.rgb;
+			}
+			shadow += pcf;
 		}
 	}
-#endif //DISABLE_TRANSPARENT_SHADOWMAP
+	shadow *= soft_shadow_sample_count_rcp;
 
 	return shadow;
 }

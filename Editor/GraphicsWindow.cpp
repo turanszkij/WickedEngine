@@ -415,22 +415,6 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&speedMultiplierSlider);
 
-	transparentShadowsCheckBox.Create("Transparent Shadows: ");
-	transparentShadowsCheckBox.SetTooltip("Enables color tinted shadows and refraction caustics effects for transparent objects and water.");
-	transparentShadowsCheckBox.SetPos(XMFLOAT2(x, y += step));
-	transparentShadowsCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	if (editor->main->config.GetSection("graphics").Has("transparent_shadows"))
-	{
-		wi::renderer::SetTransparentShadowsEnabled(editor->main->config.GetSection("graphics").GetBool("transparent_shadows"));
-	}
-	transparentShadowsCheckBox.SetCheck(wi::renderer::GetTransparentShadowsEnabled());
-	transparentShadowsCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		wi::renderer::SetTransparentShadowsEnabled(args.bValue);
-		editor->main->config.GetSection("graphics").Set("transparent_shadows", args.bValue);
-		editor->main->config.Commit();
-	});
-	AddWidget(&transparentShadowsCheckBox);
-
 	shadowTypeComboBox.Create("Shadow type: ");
 	shadowTypeComboBox.SetSize(XMFLOAT2(wid, itemheight));
 	shadowTypeComboBox.SetPos(XMFLOAT2(x, y += step));
@@ -1685,7 +1669,6 @@ void GraphicsWindow::ResizeLayout()
 		occlusionCullingCheckBox.SetVisible(false);
 		visibilityComputeShadingCheckBox.SetVisible(false);
 		tessellationCheckBox.SetVisible(false);
-		transparentShadowsCheckBox.SetVisible(false);
 	}
 	else
 	{
@@ -1702,7 +1685,6 @@ void GraphicsWindow::ResizeLayout()
 		occlusionCullingCheckBox.SetVisible(true);
 		visibilityComputeShadingCheckBox.SetVisible(true);
 		tessellationCheckBox.SetVisible(true);
-		transparentShadowsCheckBox.SetVisible(true);
 
 		add(shadowTypeComboBox);
 		add(shadowProps2DComboBox);
@@ -1717,7 +1699,6 @@ void GraphicsWindow::ResizeLayout()
 		add_right(occlusionCullingCheckBox);
 		add_right(visibilityComputeShadingCheckBox);
 		add_right(tessellationCheckBox);
-		add_right(transparentShadowsCheckBox);
 	}
 
 	y += jump;

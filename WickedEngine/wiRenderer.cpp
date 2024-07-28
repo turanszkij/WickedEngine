@@ -96,7 +96,6 @@ void barrier_stack_flush(CommandList cmd)
 	barrier_stack.clear();
 }
 
-bool TRANSPARENTSHADOWSENABLED = true;
 bool wireRender = false;
 bool debugBoneLines = false;
 bool debugPartitionTree = false;
@@ -3757,10 +3756,6 @@ void UpdatePerFrameData(
 	{
 		frameCB.options |= OPTION_BIT_TEMPORALAA_ENABLED;
 	}
-	if (GetTransparentShadowsEnabled())
-	{
-		frameCB.options |= OPTION_BIT_TRANSPARENTSHADOWS_ENABLED;
-	}
 	if (GetVXGIEnabled())
 	{
 		frameCB.options |= OPTION_BIT_VXGI_ENABLED;
@@ -5871,7 +5866,7 @@ void DrawShadowmaps(
 
 					renderQueue.sort_opaque();
 					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_OPAQUE, cmd, 0, cascade_count);
-					if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
+					if (transparentShadowsRequested)
 					{
 						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_TRANSPARENT | FILTER_WATER, cmd, 0, (uint32_t)cascade_count);
 					}
@@ -5975,7 +5970,7 @@ void DrawShadowmaps(
 
 					renderQueue.sort_opaque();
 					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_OPAQUE, cmd);
-					if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
+					if (transparentShadowsRequested)
 					{
 						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_TRANSPARENT | FILTER_WATER, cmd);
 					}
@@ -6112,7 +6107,7 @@ void DrawShadowmaps(
 
 					renderQueue.sort_opaque();
 					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_OPAQUE, cmd, 0, camera_count);
-					if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
+					if (transparentShadowsRequested)
 					{
 						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_TRANSPARENT | FILTER_WATER, cmd, 0, camera_count);
 					}
@@ -17504,8 +17499,6 @@ void AddDeferredBlockCompression(const wi::graphics::Texture& texture_src, const
 
 
 
-void SetTransparentShadowsEnabled(bool value) { TRANSPARENTSHADOWSENABLED = value; }
-float GetTransparentShadowsEnabled() { return TRANSPARENTSHADOWSENABLED; }
 void SetWireRender(bool value) { wireRender = value; }
 bool IsWireRender() { return wireRender; }
 void SetToDrawDebugBoneLines(bool param) { debugBoneLines = param; }
