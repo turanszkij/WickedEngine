@@ -12,14 +12,10 @@ static const float2 vogel_points[] = {
 };
 
 static const min16uint soft_shadow_sample_count = arraysize(vogel_points);
-static const half soft_shadow_sample_count_rcp = 1.0 / (half)soft_shadow_sample_count;
+static const half soft_shadow_sample_count_rcp = rcp((half)soft_shadow_sample_count);
 
 inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, float spread, uint2 pixel)
 {
-	[branch]
-	if (GetFrame().texture_shadowatlas_index < 0)
-		return 1;
-
 	Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
 	Texture2D texture_shadowatlas_transparent = bindless_textures[GetFrame().texture_shadowatlas_transparent_index];
 	
