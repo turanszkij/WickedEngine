@@ -4,17 +4,17 @@
 
 // "Vogel disk" sampling pattern based on: https://github.com/corporateshark/poisson-disk-generator/blob/master/PoissonGenerator.h
 //	Baked values are remapped from [0, 1] range into [-1, 1] range by doing: value * 2 - 1
-static const float2 vogel_points[] = {
-	float2(0.353553, 0.000000),
-	float2(-0.451560, 0.413635),
-	float2(0.069174, -0.787537),
-	float2(0.569060, 0.742409),
+static const half2 vogel_points[] = {
+	half2(0.353553, 0.000000),
+	half2(-0.451560, 0.413635),
+	half2(0.069174, -0.787537),
+	half2(0.569060, 0.742409),
 };
 
 static const min16uint soft_shadow_sample_count = arraysize(vogel_points);
 static const half soft_shadow_sample_count_rcp = rcp((half)soft_shadow_sample_count);
 
-inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, float spread, uint2 pixel)
+inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half radius, uint2 pixel)
 {
 	Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
 	Texture2D texture_shadowatlas_transparent = bindless_textures[GetFrame().texture_shadowatlas_transparent_index];
@@ -22,11 +22,11 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, float sprea
 	half3 shadow = 0;
 
 #ifndef DISABLE_SOFT_SHADOWMAP
-	const float2 spread_offset = GetFrame().shadow_atlas_resolution_rcp.xy * (2 + spread * 8); // remap spread to try to match ray traced shadow result
+	const float2 spread = GetFrame().shadow_atlas_resolution_rcp.xy * (2 + radius * 8); // remap radius to try to match ray traced shadow result
 	const half2x2 rot = dither_rot2x2(pixel + GetTemporalAASampleRotation()); // per pixel rotation for every sample
 	for (min16uint i = 0; i < soft_shadow_sample_count; ++i)
 	{
-		float2 sample_uv = uv + mul(vogel_points[i], rot) * spread_offset;
+		float2 sample_uv = uv + mul(vogel_points[i], rot) * spread;
 #else
 		float2 sample_uv = uv;
 #endif // DISABLE_SOFT_SHADOWMAP
@@ -35,6 +35,7 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, float sprea
 		half3 pcf = texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, sample_uv, cmp).rrr;
 		if(pcf.x > 0)
 		{
+#ifndef DISABLE_TRANSPARENT_SHADOWMAP
 			half4 transparent_shadow = texture_shadowatlas_transparent.SampleLevel(sampler_linear_clamp, sample_uv, 0);
 #ifdef TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
 			if (transparent_shadow.a > cmp)
@@ -42,6 +43,7 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, float sprea
 			{
 				pcf *= transparent_shadow.rgb;
 			}
+#endif // DISABLE_TRANSPARENT_SHADOWMAP
 			shadow += pcf;
 		}
 
