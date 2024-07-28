@@ -14,7 +14,7 @@
 #define LIGHTING_SCATTER
 #endif // WATER
 
-#ifdef __SHADER_STAGE_PIXEL
+#if __SHADER_TARGET_STAGE == __SHADER_STAGE_PIXEL
 // Average shadow within quad, this smooths out the dithering a bit:
 //	Note that I don't implement this in shadowHF.hlsli because we need to
 //	make sure that when averaging, all lanes in the quad are coherent
@@ -100,10 +100,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 		}
 
 #ifdef SHADOW_QUAD_BLUR
-		half3 shadow0 = QuadReadAcrossX(shadow);
-		half3 shadow1 = QuadReadAcrossY(shadow);
-		half3 shadow2 = QuadReadAcrossDiagonal(shadow);
-		shadow = (shadow + shadow0 + shadow1 + shadow2) / 4.0;
+		shadow = (shadow + QuadReadAcrossX(shadow) + QuadReadAcrossY(shadow) + QuadReadAcrossDiagonal(shadow)) / 4.0;
 #endif // SHADOW_QUAD_BLUR
 	}
 	if(!any(shadow))
@@ -184,10 +181,7 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 		}
 
 #ifdef SHADOW_QUAD_BLUR
-		half3 shadow0 = QuadReadAcrossX(shadow);
-		half3 shadow1 = QuadReadAcrossY(shadow);
-		half3 shadow2 = QuadReadAcrossDiagonal(shadow);
-		shadow = (shadow + shadow0 + shadow1 + shadow2) / 4.0;
+		shadow = (shadow + QuadReadAcrossX(shadow) + QuadReadAcrossY(shadow) + QuadReadAcrossDiagonal(shadow)) / 4.0;
 #endif // SHADOW_QUAD_BLUR
 	}
 	if(!any(shadow))
@@ -301,10 +295,7 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 		}
 
 #ifdef SHADOW_QUAD_BLUR
-		half3 shadow0 = QuadReadAcrossX(shadow);
-		half3 shadow1 = QuadReadAcrossY(shadow);
-		half3 shadow2 = QuadReadAcrossDiagonal(shadow);
-		shadow = (shadow + shadow0 + shadow1 + shadow2) / 4.0;
+		shadow = (shadow + QuadReadAcrossX(shadow) + QuadReadAcrossY(shadow) + QuadReadAcrossDiagonal(shadow)) / 4.0;
 #endif // SHADOW_QUAD_BLUR
 	}
 	if(!any(shadow))
