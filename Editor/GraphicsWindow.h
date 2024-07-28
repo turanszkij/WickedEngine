@@ -35,7 +35,6 @@ public:
 	wi::gui::Slider vxgiRayStepSizeSlider;
 	wi::gui::Slider vxgiMaxDistanceSlider;
 	wi::gui::Slider speedMultiplierSlider;
-	wi::gui::CheckBox transparentShadowsCheckBox;
 	wi::gui::ComboBox shadowTypeComboBox;
 	wi::gui::ComboBox shadowProps2DComboBox;
 	wi::gui::ComboBox shadowPropsCubeComboBox;

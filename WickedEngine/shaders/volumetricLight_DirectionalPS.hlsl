@@ -1,4 +1,3 @@
-#define DISABLE_SOFT_SHADOWMAP
 #define TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK // fix the lack of depth testing
 #include "volumetricLightHF.hlsli"
 #include "volumetricCloudsHF.hlsli"
@@ -59,7 +58,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 			[branch]
 			if (is_saturated(shadow_uv))
 			{
-				shadow *= shadow_2D(light, shadow_pos, shadow_uv.xy, cascade);
+				shadow *= shadow_2D(light, shadow_pos, shadow_uv.xy, cascade, input.pos.xy);
 				break;
 			}
 		}

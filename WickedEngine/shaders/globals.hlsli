@@ -708,6 +708,7 @@ inline uint2 GetInternalResolution() { return GetCamera().internal_resolution; }
 inline float GetDeltaTime() { return GetFrame().delta_time; }
 inline float GetTime() { return GetFrame().time; }
 inline float GetTimePrev() { return GetFrame().time_previous; }
+inline float GetFrameCount() { return GetFrame().frame_count; }
 inline uint2 GetTemporalAASampleRotation() { return uint2((GetFrame().temporalaa_samplerotation >> 0u) & 0x000000FF, (GetFrame().temporalaa_samplerotation >> 8) & 0x000000FF); }
 inline bool IsStaticSky() { return GetScene().globalenvmap >= 0; }
 
@@ -1389,6 +1390,30 @@ inline half ditherMask8(in float2 pixel)
 inline half dither(in float2 pixel)
 {
 	return ditherMask8(pixel);
+}
+
+// For every value of BayerMatrix8, this contains: half2(sin(value * 2 * PI), cos(value * 2 * PI))
+static const half2 BayerMatrix8_sincos[8][8] = {
+	{half2(0.096514, 0.995332),half2(-0.999708, 0.024164),half2(0.951057, 0.309017),half2(-0.377095, 0.926175),half2(0.377095, 0.926175),half2(-0.951056, 0.309017),half2(0.999708, 0.024164),half2(-0.096514, 0.995332),},
+	{half2(-0.048314, -0.998832),half2(0.997373, -0.072435),half2(-0.935016, -0.354605),half2(0.331908, -0.943312),half2(-0.331908, -0.943312),half2(0.935016, -0.354605),half2(-0.997373, -0.072434),half2(0.048313, -0.998832),},
+	{half2(0.764316, 0.644842),half2(-0.698511, 0.715599),half2(0.464723, 0.885456),half2(-0.916792, 0.399365),half2(0.916792, 0.399364),half2(-0.464723, 0.885456),half2(0.698511, 0.715599),half2(-0.764316, 0.644842),},
+	{half2(-0.732269, -0.681016),half2(0.663123, -0.748511),half2(-0.421401, -0.906874),half2(0.896427, -0.443192),half2(-0.896427, -0.443191),half2(0.421401, -0.906874),half2(-0.663123, -0.748511),half2(0.732269, -0.681016),},
+	{half2(0.285946, 0.958246),half2(-0.976441, 0.215784),half2(0.992709, 0.120537),half2(-0.192127, 0.981370),half2(0.192127, 0.981370),half2(-0.992709, 0.120537),half2(0.976441, 0.215784),half2(-0.285946, 0.958246),},
+	{half2(-0.239316, -0.970942),half2(0.964876, -0.262708),half2(-0.985726, -0.168357),half2(0.144489, -0.989506),half2(-0.144489, -0.989506),half2(0.985726, -0.168357),half2(-0.964876, -0.262707),half2(0.239316, -0.970942),},
+	{half2(0.873968, 0.485983),half2(-0.548012, 0.836470),half2(0.626185, 0.779674),half2(-0.822984, 0.568065),half2(0.822984, 0.568065),half2(-0.626185, 0.779675),half2(0.548013, 0.836470),half2(-0.873968, 0.485984),},
+	{half2(-0.849468, -0.527640),half2(0.506960, -0.861970),half2(-0.587786, -0.809017),half2(0.794578, -0.607163),half2(-0.794578, -0.607162),half2(0.587785, -0.809017),half2(-0.506960, -0.861970),half2(0.849468, -0.527640),},
+};
+inline half2 dither_sincos(in float2 pixel)
+{
+	return BayerMatrix8_sincos[pixel.x % 8][pixel.y % 8];
+}
+inline half2x2 dither_rot2x2(in float2 pixel)
+{
+	half2 sincos = dither_sincos(pixel);
+	return half2x2(
+		sincos.y, -sincos.x,
+		sincos.x, sincos.y
+	);
 }
 
 // Quaternion multiplication

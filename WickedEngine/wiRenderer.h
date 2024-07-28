@@ -1025,9 +1025,6 @@ namespace wi::renderer
 	void SetShadowPropsCube(int max_resolution);
 
 
-
-	void SetTransparentShadowsEnabled(bool value);
-	float GetTransparentShadowsEnabled();
 	void SetWireRender(bool value);
 	bool IsWireRender();
 	void SetToDrawDebugBoneLines(bool param);

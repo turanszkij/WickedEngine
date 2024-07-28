@@ -1,4 +1,3 @@
-#define DISABLE_SOFT_SHADOWMAP
 #define TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK // fix the lack of depth testing
 #include "volumetricLightHF.hlsli"
 #include "fogHF.hlsli"
@@ -112,7 +111,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 				[branch]
 				if ((saturate(shadow_uv.x) == shadow_uv.x) && (saturate(shadow_uv.y) == shadow_uv.y))
 				{
-					attenuation *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0);
+					attenuation *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0, input.pos.xy);
 				}
 			}
 

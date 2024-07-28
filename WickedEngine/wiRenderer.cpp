@@ -96,7 +96,6 @@ void barrier_stack_flush(CommandList cmd)
 	barrier_stack.clear();
 }
 
-bool TRANSPARENTSHADOWSENABLED = true;
 bool wireRender = false;
 bool debugBoneLines = false;
 bool debugPartitionTree = false;
@@ -2069,7 +2068,7 @@ void SetUpStates()
 	rs.front_counter_clockwise = true;
 	rs.depth_bias = -1;
 	rs.depth_bias_clamp = 0;
-	rs.slope_scaled_depth_bias = -2.0f;
+	rs.slope_scaled_depth_bias = -4.0f;
 	rs.depth_clip_enable = true;
 	rs.multisample_enable = false;
 	rs.antialiased_line_enable = false;
@@ -3756,10 +3755,6 @@ void UpdatePerFrameData(
 	if (GetTemporalAAEnabled())
 	{
 		frameCB.options |= OPTION_BIT_TEMPORALAA_ENABLED;
-	}
-	if (GetTransparentShadowsEnabled())
-	{
-		frameCB.options |= OPTION_BIT_TRANSPARENTSHADOWS_ENABLED;
 	}
 	if (GetVXGIEnabled())
 	{
@@ -5871,7 +5866,7 @@ void DrawShadowmaps(
 
 					renderQueue.sort_opaque();
 					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_OPAQUE, cmd, 0, cascade_count);
-					if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
+					if (transparentShadowsRequested)
 					{
 						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_TRANSPARENT | FILTER_WATER, cmd, 0, (uint32_t)cascade_count);
 					}
@@ -5880,7 +5875,7 @@ void DrawShadowmaps(
 				if (!vis.visibleHairs.empty())
 				{
 					cb.cameras[0].position = vis.camera->Eye;
-					for (uint32_t cascade = 0; cascade < cascade_count; ++cascade)
+					for (uint32_t cascade = 0; cascade < std::min(2u, cascade_count); ++cascade)
 					{
 						XMStoreFloat4x4(&cb.cameras[0].view_projection, shcams[cascade].view_projection);
 						device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
@@ -5975,7 +5970,7 @@ void DrawShadowmaps(
 
 					renderQueue.sort_opaque();
 					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_OPAQUE, cmd);
-					if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
+					if (transparentShadowsRequested)
 					{
 						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_TRANSPARENT | FILTER_WATER, cmd);
 					}
@@ -6112,7 +6107,7 @@ void DrawShadowmaps(
 
 					renderQueue.sort_opaque();
 					RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_OPAQUE, cmd, 0, camera_count);
-					if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
+					if (transparentShadowsRequested)
 					{
 						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_TRANSPARENT | FILTER_WATER, cmd, 0, camera_count);
 					}
@@ -17504,8 +17499,6 @@ void AddDeferredBlockCompression(const wi::graphics::Texture& texture_src, const
 
 
 
-void SetTransparentShadowsEnabled(bool value) { TRANSPARENTSHADOWSENABLED = value; }
-float GetTransparentShadowsEnabled() { return TRANSPARENTSHADOWSENABLED; }
 void SetWireRender(bool value) { wireRender = value; }
 bool IsWireRender() { return wireRender; }
 void SetToDrawDebugBoneLines(bool param) { debugBoneLines = param; }
