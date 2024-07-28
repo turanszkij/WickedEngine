@@ -17,6 +17,8 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, float sprea
 	Texture2D texture_shadowatlas_transparent = bindless_textures[GetFrame().texture_shadowatlas_transparent_index];
 	
 	half3 shadow = 0;
+
+#ifndef DISABLE_SOFT_SHADOWMAP
 	const float2 spread_offset = GetFrame().shadow_atlas_resolution_rcp.xy * (2 + spread * 8); // remap spread to try to match ray traced shadow result
 	const half phi = dither(pixel + GetTemporalAASampleRotation()) * 2 * PI; // per pixel disk rotation
 	for (min16uint i = 0; i < soft_shadow_sample_count; ++i)
@@ -26,7 +28,11 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, float sprea
 		const half theta = i * kGoldenAngle + phi;
 		half2 theta_cos_sin;
 		sincos(theta, theta_cos_sin.y, theta_cos_sin.x);
-		float2 sample_uv = clamp(uv + r * theta_cos_sin * spread_offset, uv_clamping.xy, uv_clamping.zw);
+		float2 sample_uv = uv + r * theta_cos_sin * spread_offset;
+#else
+		float2 sample_uv = uv;
+#endif // DISABLE_SOFT_SHADOWMAP
+
 		sample_uv = clamp(sample_uv, uv_clamping.xy, uv_clamping.zw);
 		half3 pcf = texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, sample_uv, cmp).rrr;
 		if(pcf.x > 0)
@@ -40,8 +46,11 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, float sprea
 			}
 			shadow += pcf;
 		}
+
+#ifndef DISABLE_SOFT_SHADOWMAP
 	}
 	shadow *= soft_shadow_sample_count_rcp;
+#endif // DISABLE_SOFT_SHADOWMAP
 
 	return shadow;
 }
