@@ -10,7 +10,7 @@
 inline void LightMapping(in int lightmap, in float2 ATLAS, inout Lighting lighting, inout Surface surface)
 {
 	[branch]
-	if (lightmap >= 0 && any(ATLAS))
+	if (lightmap >= 0)
 	{
 		Texture2D<float4> texture_lightmap = bindless_textures[NonUniformResourceIndex(lightmap)];
 #ifdef LIGHTMAP_QUALITY_BICUBIC
@@ -127,7 +127,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 				ShaderEntity light = load_entity(GetFrame().lightarray_offset + entity_index);
 				
 				// under here will be VGPR!
-				if ((light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC) || (light.layerMask & surface.layerMask) == 0)
+				if ((light.layerMask & surface.layerMask) == 0)
 					continue;
 				switch (light.GetType())
 				{
@@ -406,7 +406,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 #endif // SHADOW_MASK_ENABLED && !TRANSPARENT
 
 					// under here will be VGPR!
-					if ((light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC) || (light.layerMask & surface.layerMask) == 0)
+					if ((light.layerMask & surface.layerMask) == 0)
 						continue;
 					switch (light.GetType())
 					{

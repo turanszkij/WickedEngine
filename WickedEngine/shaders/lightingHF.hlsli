@@ -14,13 +14,17 @@
 #define LIGHTING_SCATTER
 #endif // WATER
 
-#if __SHADER_TARGET_STAGE == __SHADER_STAGE_PIXEL
+template<typename T>
+inline void QuadBlur(inout T value)
+{
+#if __SHADER_TARGET_STAGE == __SHADER_STAGE_PIXEL && defined(SHADOW_SAMPLING_DISK)
 // Average shadow within quad, this smooths out the dithering a bit:
 //	Note that I don't implement this in shadowHF.hlsli because we need to
 //	make sure that when averaging, all lanes in the quad are coherent
 //	It wouldn't be good if some waves are not sampling shadows or sampling different slices
-#define SHADOW_QUAD_BLUR
+	value = (value + QuadReadAcrossX(value) + QuadReadAcrossY(value) + QuadReadAcrossDiagonal(value)) * 0.25;
 #endif // __SHADER_STAGE_PIXEL
+}
 
 struct LightingPart
 {
@@ -64,14 +68,14 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 	if (!any(surface_to_light.NdotL_sss))
 		return; // early exit: facing away from light
 		
-	half3 shadow = shadow_mask;
+	half3 light_color = light.GetColor().rgb * shadow_mask;
 
 	[branch]
 	if (light.IsCastingShadow() && surface.IsReceiveShadow())
 	{
 		if (GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_CAST_SHADOW)
 		{
-			shadow *= shadow_2D_volumetricclouds(surface.P);
+			light_color *= shadow_2D_volumetricclouds(surface.P);
 		}
 
 #if defined(SHADOW_MASK_ENABLED) && !defined(TRANSPARENT)
@@ -100,21 +104,14 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 					if (cascade_fade > 0 && dither(surface.pixel + GetTemporalAASampleRotation()) < cascade_fade)
 						continue;
 						
-					shadow *= shadow_2D(light, shadow_pos, shadow_uv.xy, cascade, surface.pixel);
+					light_color *= shadow_2D(light, shadow_pos, shadow_uv.xy, cascade, surface.pixel);
 					break;
 				}
 			}
 		}
-
-#ifdef SHADOW_QUAD_BLUR
-		shadow = (shadow + QuadReadAcrossX(shadow) + QuadReadAcrossY(shadow) + QuadReadAcrossDiagonal(shadow)) / 4.0;
-#endif // SHADOW_QUAD_BLUR
+		
+		QuadBlur(light_color);
 	}
-	
-	if(!any(shadow))
-		return; // early exit: completely shadowed
-			
-	half3 light_color = light.GetColor().rgb * shadow;
 
 	[branch]
 	if (GetFrame().options & OPTION_BIT_REALISTIC_SKY)
@@ -167,7 +164,7 @@ inline half attenuation_pointlight(in half dist2, in half range, in half range2)
 inline void light_point(in ShaderEntity light, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
 {
 	float3 Lunnormalized = light.position - surface.P;
-	float3 LunnormalizedShadow = Lunnormalized;
+	const float3 LunnormalizedShadow = Lunnormalized;
 
 #ifndef DISABLE_AREA_LIGHTS
 	if (light.GetLength() > 0)
@@ -197,8 +194,8 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 		
 	if (!any(surface_to_light.NdotL_sss))
 		return; // early exit: facing away from light
-			
-	half3 shadow = shadow_mask;
+		
+	half3 light_color = light.GetColor().rgb * shadow_mask;
 
 	[branch]
 	if (light.IsCastingShadow() && surface.IsReceiveShadow())
@@ -208,18 +205,12 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 		if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0 || (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) == 0)
 #endif // SHADOW_MASK_ENABLED
 		{
-			shadow *= shadow_cube(light, LunnormalizedShadow, surface.pixel);
+			light_color *= shadow_cube(light, LunnormalizedShadow, surface.pixel);
 		}
-
-#ifdef SHADOW_QUAD_BLUR
-		shadow = (shadow + QuadReadAcrossX(shadow) + QuadReadAcrossY(shadow) + QuadReadAcrossDiagonal(shadow)) / 4.0;
-#endif // SHADOW_QUAD_BLUR
+		
+		QuadBlur(light_color);
 	}
-	
-	if(!any(shadow))
-		return; // early exit: completely shadowed
-				
-	half3 light_color = light.GetColor().rgb * shadow;
+
 	light_color *= attenuation_pointlight(dist2, range, range2);
 
 	lighting.direct.diffuse = mad(light_color, BRDF_GetDiffuse(surface, surface_to_light), lighting.direct.diffuse);
@@ -297,8 +288,8 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 			
 	if (spot_factor < spot_cutoff)
 		return; // early exit: outside spotlight cone
-				
-	half3 shadow = shadow_mask;
+
+	half3 light_color = light.GetColor().rgb * shadow_mask;
 
 	[branch]
 	if (light.IsCastingShadow() && surface.IsReceiveShadow())
@@ -314,19 +305,13 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 			[branch]
 			if (is_saturated(shadow_uv))
 			{
-				shadow *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0, surface.pixel);
+				light_color *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0, surface.pixel);
 			}
 		}
-
-#ifdef SHADOW_QUAD_BLUR
-		shadow = (shadow + QuadReadAcrossX(shadow) + QuadReadAcrossY(shadow) + QuadReadAcrossDiagonal(shadow)) / 4.0;
-#endif // SHADOW_QUAD_BLUR
+		
+		QuadBlur(light_color);
 	}
-	
-	if(!any(shadow))
-		return; // early exit: completely shadowed
-			
-	half3 light_color = light.GetColor().rgb * shadow;
+
 	light_color *= attenuation_spotlight(dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
 
 	lighting.direct.diffuse = mad(light_color, BRDF_GetDiffuse(surface, surface_to_light), lighting.direct.diffuse);
@@ -352,7 +337,6 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 	lighting.indirect.specular += scattering * light_color * (1 - surface.extinction) * (1 - sqr(1 - saturate(1 - surface.N.y)));
 #endif // LIGHTING_SCATTER
 }
-
 
 // ENVIRONMENT MAPS
 

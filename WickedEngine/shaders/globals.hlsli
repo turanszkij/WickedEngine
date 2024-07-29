@@ -537,7 +537,7 @@ struct PrimitiveID
 #define MEDIUMP_FLT_MAX 65504.0
 
 #define sqr(a) ((a)*(a))
-#define pow5(x) pow(x, 5)
+#define pow5(a) ((a)*(a)*(a)*(a)*(a))
 #define arraysize(a) (sizeof(a) / sizeof(a[0]))
 #define saturateMediump(x) min(x, MEDIUMP_FLT_MAX)
 #define highp
@@ -709,7 +709,7 @@ inline float GetDeltaTime() { return GetFrame().delta_time; }
 inline float GetTime() { return GetFrame().time; }
 inline float GetTimePrev() { return GetFrame().time_previous; }
 inline float GetFrameCount() { return GetFrame().frame_count; }
-inline uint2 GetTemporalAASampleRotation() { return uint2((GetFrame().temporalaa_samplerotation >> 0u) & 0x000000FF, (GetFrame().temporalaa_samplerotation >> 8) & 0x000000FF); }
+inline min16uint2 GetTemporalAASampleRotation() { return uint2(GetFrame().temporalaa_samplerotation & 0xFF, (GetFrame().temporalaa_samplerotation >> 8u) & 0xFF); }
 inline bool IsStaticSky() { return GetScene().globalenvmap >= 0; }
 
 // Mie scaterring approximated with Henyey-Greenstein phase function.
@@ -1367,27 +1367,27 @@ static const half BayerMatrix8[8][8] =
 };
 
 
-inline half ditherMask2(in float2 pixel)
+inline half ditherMask2(in min16uint2 pixel)
 {
 	return BayerMatrix2[pixel.x % 2][pixel.y % 2];
 }
 
-inline half ditherMask3(in float2 pixel)
+inline half ditherMask3(in min16uint2 pixel)
 {
 	return BayerMatrix3[pixel.x % 3][pixel.y % 3];
 }
 
-inline half ditherMask4(in float2 pixel)
+inline half ditherMask4(in min16uint2 pixel)
 {
 	return BayerMatrix4[pixel.x % 4][pixel.y % 4];
 }
 
-inline half ditherMask8(in float2 pixel)
+inline half ditherMask8(in min16uint2 pixel)
 {
 	return BayerMatrix8[pixel.x % 8][pixel.y % 8];
 }
 
-inline half dither(in float2 pixel)
+inline half dither(in min16uint2 pixel)
 {
 	return ditherMask8(pixel);
 }
@@ -1403,11 +1403,11 @@ static const half2 BayerMatrix8_sincos[8][8] = {
 	{half2(0.873968, 0.485983),half2(-0.548012, 0.836470),half2(0.626185, 0.779674),half2(-0.822984, 0.568065),half2(0.822984, 0.568065),half2(-0.626185, 0.779675),half2(0.548013, 0.836470),half2(-0.873968, 0.485984),},
 	{half2(-0.849468, -0.527640),half2(0.506960, -0.861970),half2(-0.587786, -0.809017),half2(0.794578, -0.607163),half2(-0.794578, -0.607162),half2(0.587785, -0.809017),half2(-0.506960, -0.861970),half2(0.849468, -0.527640),},
 };
-inline half2 dither_sincos(in float2 pixel)
+inline half2 dither_sincos(in min16uint2 pixel)
 {
 	return BayerMatrix8_sincos[pixel.x % 8][pixel.y % 8];
 }
-inline half2x2 dither_rot2x2(in float2 pixel)
+inline half2x2 dither_rot2x2(in min16uint2 pixel)
 {
 	half2 sincos = dither_sincos(pixel);
 	return half2x2(

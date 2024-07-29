@@ -9,7 +9,7 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_HUMANOID " Humanoid", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 580));
+	SetSize(XMFLOAT2(670, 620));
 
 	closeButton.SetTooltip("Delete HumanoidComponent");
 	OnClose([=](wi::gui::EventArgs args) {

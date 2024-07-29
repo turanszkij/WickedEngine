@@ -79,7 +79,7 @@ struct Surface
 	half3 emissiveColor;	// light emission [0 -> 1]
 	half4 refraction;		// refraction color (rgb), refraction amount (a)
 	half transmission;		// transmission factor
-	float2 pixel;			// pixel coordinate (used for randomization effects)
+	min16uint2 pixel;		// pixel coordinate (used for randomization effects)
 	float2 screenUV;		// pixel coordinate in UV space [0 -> 1] (used for randomization effects)
 	half4 T;				// tangent
 	half3 B;				// bitangent
