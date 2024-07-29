@@ -329,6 +329,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 		scale = Vector(1, 1, 1),
 		rotation = Vector(0,math.pi,0),
 		position = Vector(),
+        ground_intersect = false,
 		controllable = true,
 		fixed_update_remain = 0,
 		timestep_occured = false,
@@ -349,6 +350,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 		next_dialog = 1,
 		
 		Create = function(self, model_scene, start_transform, controllable, anim_scene)
+			self.position = start_transform.GetPosition()
 			self.face = vector.Rotate(start_transform.GetForward(), vector.QuaternionFromRollPitchYaw(self.rotation))
 			self.face_next = self.face
 			self.controllable = controllable
@@ -358,6 +360,8 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 			else
 				self.layerMask = Layers.NPC
 			end
+
+			-- Note: we instantiate the model_scene into the main scene, start_transform stores a component pointer which gets invalidated after this!!
 			self.model = scene.Instantiate(model_scene, true)
 
 			local layer = scene.Component_GetLayer(self.model)
@@ -433,7 +437,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 			model_transform.ClearTransform()
 			model_transform.Scale(self.scale)
 			model_transform.Rotate(self.rotation)
-			model_transform.Translate(start_transform.GetPosition())
+			model_transform.Translate(self.position)
 			model_transform.UpdateTransform()
 
 			self.target_height = scene.Component_GetTransform(self.neck).GetPosition().GetY()
@@ -541,7 +545,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 						self.state = States.IDLE
 					end
 				else
-					if self.velocity.Length() < 0.1 and self.state ~= States.DANCE and self.state ~= States.WAVE then
+					if self.ground_intersect and self.state ~= States.DANCE and self.state ~= States.WAVE then
 						self.state = States.IDLE
 					end
 				end
@@ -601,32 +605,27 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 					local analog = input.GetAnalog(GAMEPAD_ANALOG_THUMBSTICK_L)
 					lookDir = vector.Add(lookDir, Vector(analog.GetX(), 0, analog.GetY()))
 						
-					if self.state ~= States.JUMP and self.state_prev ~= States.JUMP and self.velocity.GetY() == 0 then
-						if(lookDir.Length() > 0) then
-							if self.state == States.SWIM_IDLE then
-								self.state = States.SWIM
-								self:MoveDirection(lookDir)
-							else
-								if(input.Down(KEYBOARD_BUTTON_LSHIFT) or input.Down(GAMEPAD_BUTTON_6)) then
-									if input.Down(string.byte('E')) or input.Down(GAMEPAD_BUTTON_5) then
-										self.state = States.RUN
-										self:MoveDirection(lookDir)
-									else
-										self.state = States.JOG
-										self:MoveDirection(lookDir)
-									end
+					-- Apply movement:
+					if(lookDir.Length() > 0) then
+						if self.state == States.SWIM_IDLE then
+							self.state = States.SWIM
+							self:MoveDirection(lookDir)
+						elseif self.ground_intersect then
+							if(input.Down(KEYBOARD_BUTTON_LSHIFT) or input.Down(GAMEPAD_BUTTON_6)) then
+								if input.Down(string.byte('E')) or input.Down(GAMEPAD_BUTTON_5) then
+									self.state = States.RUN
 								else
-									self.state = States.WALK
-									self:MoveDirection(lookDir)
+									self.state = States.JOG
 								end
+							else
+								self.state = States.WALK
 							end
+							self:MoveDirection(lookDir)
 						end
-						
-						if(input.Press(string.byte('J')) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_3)) then
-							self:Jump(self.jump_speed)
-						end
-					elseif self.velocity.GetY() > 0 then
-						self:MoveDirection(lookDir)
+					end
+					
+					if(input.Press(string.byte('J')) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_3)) then
+						self:Jump(self.jump_speed)
 					end
 				end
 
@@ -744,6 +743,10 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 			local fixed_dt = 1.0 / fixed_update_fps
 			self.timestep_occured = false
 
+            if self.fixed_update_remain >= fixed_dt then
+                self.ground_intersect = false
+            end
+
 			while self.fixed_update_remain >= fixed_dt do
 				self.timestep_occured = true;
 				self.fixed_update_remain = self.fixed_update_remain - fixed_dt
@@ -757,6 +760,8 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 				self.velocity = vector.Add(self.velocity, self.movement_velocity)
 
 				capsulepos = vector.Add(capsulepos, vector.Multiply(self.velocity, fixed_dt))
+
+				-- Check ground:
 				capsule = Capsule(capsulepos, vector.Add(capsulepos, Vector(0, capsuleheight)), radius)
 				local o2, p2, n2, depth, platform_velocity = scene.Intersects(capsule, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, collision_layer) -- scene/capsule collision
 				if(o2 ~= INVALID_ENTITY) then
@@ -766,17 +771,30 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 						DrawLine(p2, vector.Add(p2, n2), Vector(1,1,0,1))
 					end
 
-					local ground_slope = vector.Dot(n2, Vector(0,1,0))
-
-					if ground_slope > slope_threshold then
+					local slope = vector.Dot(n2, Vector(0,1,0))
+					if slope > slope_threshold then
 						-- Ground intersection:
+                        self.ground_intersect = true
 						self.velocity = vector.Multiply(self.velocity, 0.92) -- ground friction
 						capsulepos = vector.Add(capsulepos, Vector(0, depth, 0)) -- avoid sliding, instead stand upright
 						platform_velocity_accumulation = vector.Add(platform_velocity_accumulation, platform_velocity)
 						platform_velocity_count = platform_velocity_count + 1
-						self.velocity.SetY(0)
-					else
-						-- Slide on contact surface:
+					end
+				end
+
+				-- Check wall:
+				capsule = Capsule(capsulepos, vector.Add(capsulepos, Vector(0, capsuleheight)), radius)
+				o2, p2, n2, depth, platform_velocity = scene.Intersects(capsule, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, collision_layer) -- scene/capsule collision
+				if(o2 ~= INVALID_ENTITY) then
+
+					if debug then
+						DrawPoint(p2,0.1,Vector(1,1,0,1))
+						DrawLine(p2, vector.Add(p2, n2), Vector(1,1,0,1))
+					end
+
+					local slope = vector.Dot(n2, Vector(0,1,0))
+					if slope <= slope_threshold then
+						-- Wall intersection:
 						local velocityLen = self.velocity.Length()
 						local velocityNormalized = self.velocity.Normalize()
 						local undesiredMotion = n2:Multiply(vector.Dot(velocityNormalized, n2))
@@ -790,7 +808,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 				self.face = vector.Lerp(self.face, self.face_next, 0.1) -- smooth the turning in fixed update
 				self.face.SetY(0)
 				self.face = self.face.Normalize()
-				self.leaning_next = math.lerp(self.leaning_next, vector.TransformNormal(vector.Subtract(self.face_next, self.face), face_rotation).GetX() * self.velocity.Length() * 0.08, 0.05)
+				self.leaning_next = math.lerp(self.leaning_next, vector.TransformNormal(vector.Subtract(self.face_next, self.face), face_rotation).GetX() * Vector(self.velocity.GetX(), self.velocity.GetZ()).Length() * 0.08, 0.05)
 				self.leaning = math.lerp(self.leaning, self.leaning_next, 0.05)
 
 				-- Animation blending
@@ -823,7 +841,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 			self.movement_velocity = Vector()
 			
 			-- try to put water ripple:
-			if self.velocity.Length() > 0.01 and self.state ~= States.SWIM_IDLE then
+			if Vector(self.velocity.GetX(), self.velocity.GetZ()).Length() > 0.01 and self.state ~= States.SWIM_IDLE then
 				local oceanpos = scene.GetOceanPosAt(self.position)
 				if self.position.GetY() < oceanpos.GetY() then
 					PutWaterRipple(Vector(self.position.GetX(), oceanpos.GetY(), self.position.GetZ()))
@@ -878,7 +896,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 			-- Compute root offset:
 			--	I determine which foot wants to step on lower ground, that will offset whole root downwards
 			--	The other foot will be the upper foot which will be later attached an Inverse Kinematics (IK) effector
-			if (self.state == States.IDLE or self.state == States.DANCE) and self.velocity.GetY() == 0 then
+			if (self.state == States.IDLE or self.state == States.DANCE) and self.ground_intersect then
 				local pos_left = scene.Component_GetTransform(self.left_foot).GetPosition()
 				local pos_right = scene.Component_GetTransform(self.right_foot).GetPosition()
 				local ray_left = Ray(vector.Add(pos_left, Vector(0, 1)), Vector(0, -1), 0, 1.8)
@@ -1480,6 +1498,7 @@ runProcess(function()
 
 			local str = "State: " .. player.state .. "\n"
 			--str = str .. "Velocity = " .. player.velocity.GetX() .. ", " .. player.velocity.GetY() .. "," .. player.velocity.GetZ() .. "\n"
+			str = str .. "Velocity = " .. player.velocity.GetY() .. "\n"
 			DrawDebugText(str, vector.Add(capsule.GetBase(), Vector(0,0.4)), Vector(1,1,1,1), 1, DEBUG_TEXT_CAMERA_FACING | DEBUG_TEXT_CAMERA_SCALING)
 
 			DrawVoxelGrid(voxelgrid)
