@@ -16,6 +16,9 @@ namespace wi::lua
 		lunamethod(Vector_BindLua, TransformNormal),
 		lunamethod(Vector_BindLua, TransformCoord),
 		lunamethod(Vector_BindLua, Length),
+		lunamethod(Vector_BindLua, LengthSquared),
+		lunamethod(Vector_BindLua, Distance),
+		lunamethod(Vector_BindLua, DistanceSquared),
 		lunamethod(Vector_BindLua, Normalize),
 		lunamethod(Vector_BindLua, Add),
 		lunamethod(Vector_BindLua, Subtract),
@@ -225,6 +228,68 @@ namespace wi::lua
 		}
 		wi::lua::SSetFloat(L, XMVectorGetX(XMVector3Length(XMLoadFloat4(&data))));
 		return 1;
+	}
+	int Vector_BindLua::LengthSquared(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (vec)
+			{
+				// Additional syntax support for static access
+				wi::lua::SSetFloat(L, XMVectorGetX(XMVector3LengthSq(XMLoadFloat4(&vec->data))));
+				return 1;
+			}
+		}
+		wi::lua::SSetFloat(L, XMVectorGetX(XMVector3LengthSq(XMLoadFloat4(&data))));
+		return 1;
+	}
+	int Vector_BindLua::Distance(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (v1 == nullptr)
+			{
+				wi::lua::SError(L, "Distance(Vector v1, v2) first argument is not a Vector!");
+				return 0;
+			}
+			Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
+			if (v2 == nullptr)
+			{
+				wi::lua::SError(L, "Distance(Vector v1, v2) second argument is not a Vector!");
+				return 0;
+			}
+			wi::lua::SSetFloat(L, XMVectorGetX(XMVector3Length(XMLoadFloat4(&v1->data) - XMLoadFloat4(&v2->data))));
+			return 1;
+		}
+		wi::lua::SError(L, "Distance(Vector v1, v2) not enough arguments!");
+		return 0;
+	}
+	int Vector_BindLua::DistanceSquared(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (v1 == nullptr)
+			{
+				wi::lua::SError(L, "DistanceSquared(Vector v1, v2) first argument is not a Vector!");
+				return 0;
+			}
+			Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
+			if (v2 == nullptr)
+			{
+				wi::lua::SError(L, "DistanceSquared(Vector v1, v2) second argument is not a Vector!");
+				return 0;
+			}
+			wi::lua::SSetFloat(L, XMVectorGetX(XMVector3LengthSq(XMLoadFloat4(&v1->data) - XMLoadFloat4(&v2->data))));
+			return 1;
+		}
+		wi::lua::SError(L, "DistanceSquared(Vector v1, v2) not enough arguments!");
+		return 0;
 	}
 	int Vector_BindLua::Normalize(lua_State* L)
 	{

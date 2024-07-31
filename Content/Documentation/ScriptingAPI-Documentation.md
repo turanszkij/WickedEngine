@@ -607,6 +607,10 @@ A four component floating point vector. Provides efficient calculations with SIM
 - SetW(float value)
 - Length() : float result	-- old syntax with operation on current object
 - Length(Vector v) : float result
+- LengthSquared() : float result	-- old syntax with operation on current object
+- LengthSquared(Vector v) : float result
+- Distance(Vector v1, v2)
+- DistanceSquared(Vector v1, v2)
 - Normalize() : Vector result	-- old syntax with operation on current object
 - Normalize(Vector v) : Vector result
 - QuaternionNormalize() : Vector result	-- old syntax with operation on current object
@@ -1633,8 +1637,8 @@ Tonemap = {
 It is a RenderPath2D but one that internally manages resource loading and can display information about the process.
 It inherits functions from RenderPath2D.
 - [constructor]LoadingScreen()
-- AddLoadModelTask(string fileName, Matrix matrix) : Entity -- Adds a scene loading task into the global scene and returns the root entity handle immediately. The loading task will be started asynchronously when the LoadingScreen is activated by the Application.
-- AddLoadModelTask(Scene scene, string fileName, Matrix matrix) : Entity -- Adds a scene loading task into the specified scene and returns the root entity handle immediately. The loading task will be started asynchronously when the LoadingScreen is activated by the Application.
+- AddLoadModelTask(string fileName, opt Matrix matrix) : Entity -- Adds a scene loading task into the global scene and returns the root entity handle immediately. The loading task will be started asynchronously when the LoadingScreen is activated by the Application.
+- AddLoadModelTask(Scene scene, string fileName, opt Matrix matrix) : Entity -- Adds a scene loading task into the specified scene and returns the root entity handle immediately. The loading task will be started asynchronously when the LoadingScreen is activated by the Application.
 - AddRenderPathActivationTask(RenderPath path, opt float fadeSeconds = 0, opt int fadeR = 0,fadeG = 0,fadeB = 0) -- loads resources of a RenderPath and activates it after all loading tasks have finished
 - IsFinished() : bool -- returns true when all loading tasks have finished
 - GetProgress() : int -- returns percentage of loading complete (0% - 100%)

@@ -1167,8 +1167,17 @@ namespace wi::scene
 		wi::Archive archive;
 		EntitySerializer seri;
 
-		archive.SetReadModeAndResetPos(false);
-		prefab.componentLibrary.Serialize(archive, seri);
+		if (!prefab.optimized_instatiation_data.IsReadMode())
+		{
+			// Create optimized data
+			prefab.locker.lock();
+			prefab.optimized_instatiation_data.SetReadModeAndResetPos(false);
+			prefab.componentLibrary.Serialize(prefab.optimized_instatiation_data, seri);
+			prefab.optimized_instatiation_data.SetReadModeAndResetPos(true);
+			prefab.locker.unlock();
+		}
+
+		archive = wi::Archive(prefab.optimized_instatiation_data.GetData(), prefab.optimized_instatiation_data.GetSize());
 
 		archive.SetReadModeAndResetPos(true);
 		tmp.componentLibrary.Serialize(archive, seri);

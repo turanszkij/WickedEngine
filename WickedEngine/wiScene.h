@@ -85,6 +85,7 @@ namespace wi::scene
 		mutable bool acceleration_structure_update_requested = false;
 		void SetAccelerationStructureUpdateRequested(bool value = true) { acceleration_structure_update_requested = value; }
 		bool IsAccelerationStructureUpdateRequested() const { return acceleration_structure_update_requested; }
+		wi::Archive optimized_instatiation_data;
 
 		// AABB culling streams:
 		wi::vector<wi::primitive::AABB> aabb_objects;
@@ -553,6 +554,7 @@ namespace wi::scene
 		//	The result position is approximate because it involves reading back from GPU to the CPU, so the result can be delayed compared to the current GPU simulation.
 		//	Note that the input position to this function will be taken on the XZ plane and modified by the displacement map's XZ value, and the Y (vertical) position will be taken from the ocean water height and displacement map only.
 		XMFLOAT3 GetOceanPosAt(const XMFLOAT3& worldPosition) const;
+
 	};
 
 	// Returns skinned vertex position

@@ -37,6 +37,9 @@ namespace wi::lua
 		int TransformNormal(lua_State* L);
 		int TransformCoord(lua_State* L);
 		int Length(lua_State* L);
+		int LengthSquared(lua_State* L);
+		int Distance(lua_State* L);
+		int DistanceSquared(lua_State* L);
 		int Normalize(lua_State* L);
 		int Clamp(lua_State* L);
 		int Saturate(lua_State* L);
