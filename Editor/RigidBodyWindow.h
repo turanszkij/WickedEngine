@@ -21,6 +21,7 @@ public:
 	wi::gui::Slider restitutionSlider;
 	wi::gui::Slider lineardampingSlider;
 	wi::gui::Slider angulardampingSlider;
+	wi::gui::Slider buoyancySlider;
 	wi::gui::Slider physicsMeshLODSlider;
 	wi::gui::CheckBox startDeactivatedCheckBox;
 	wi::gui::CheckBox disabledeactivationCheckBox;

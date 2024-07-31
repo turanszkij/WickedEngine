@@ -205,6 +205,7 @@ namespace wi::physics
 			ObjectLayerPairFilterImpl object_vs_object_layer_filter;
 			float accumulator = 0;
 			float alpha = 0;
+			bool activate_all_rigid_bodies = false;
 			float GetKinematicDT(float dt) const
 			{
 				return clamp(accumulator + dt, 0.0f, TIMESTEP * ACCURACY);
@@ -1227,7 +1228,14 @@ namespace wi::physics
 				if (transform == nullptr)
 					return;
 
-				if (currentMotionType == EMotionType::Dynamic)
+				if (physics_scene.activate_all_rigid_bodies)
+				{
+					body_interface.ActivateBody(physicsobject.bodyID);
+				}
+
+				const bool is_active = body_interface.IsActive(physicsobject.bodyID);
+
+				if (currentMotionType == EMotionType::Dynamic && is_active)
 				{
 					// Apply effects on dynamics if needed:
 					if (scene.weather.IsOceanEnabled())
@@ -1245,7 +1253,7 @@ namespace wi::physics
 								physicsobject.bodyID,
 								surface_position,
 								surface_normal,
-								4.0f,
+								physicscomponent.buoyancy,
 								0.8f,
 								0.6f,
 								Vec3::sZero(),
@@ -1256,14 +1264,14 @@ namespace wi::physics
 					}
 				}
 
+				const Vec3 position = cast(transform->GetPosition());
+				const Quat rotation = cast(transform->GetRotation());
+				Mat44 m = Mat44::sTranslation(position) * Mat44::sRotation(rotation);
+				m = m * physicsobject.additionalTransform;
+
 				if (IsSimulationEnabled())
 				{
 					// Feedback system transform to kinematic and static physics objects:
-					const Vec3 position = cast(transform->GetPosition());
-					const Quat rotation = cast(transform->GetRotation());
-					Mat44 m = Mat44::sTranslation(position) * Mat44::sRotation(rotation);
-					m = m * physicsobject.additionalTransform;
-
 					if (currentMotionType == EMotionType::Kinematic)
 					{
 						body_interface.MoveKinematic(
@@ -1273,7 +1281,7 @@ namespace wi::physics
 							physics_scene.GetKinematicDT(scene.dt)
 						);
 					}
-					else if (currentMotionType == EMotionType::Static)
+					else if (currentMotionType == EMotionType::Static || !is_active)
 					{
 						body_interface.SetPositionAndRotation(
 							physicsobject.bodyID,
@@ -1286,12 +1294,12 @@ namespace wi::physics
 				else
 				{
 					// Simulation is disabled, update physics state immediately:
-					physicsobject.prev_position = cast(transform->GetPosition());
-					physicsobject.prev_rotation = cast(transform->GetRotation());
+					physicsobject.prev_position = position;
+					physicsobject.prev_rotation = rotation;
 					body_interface.SetPositionAndRotation(
 						physicsobject.bodyID,
-						physicsobject.prev_position,
-						physicsobject.prev_rotation,
+						m.GetTranslation(),
+						m.GetQuaternion().Normalized(),
 						EActivation::Activate
 					);
 				}
@@ -1395,6 +1403,41 @@ namespace wi::physics
 				if (humanoid.IsRagdollPhysicsEnabled())
 				{
 					ragdoll.Activate(scene, humanoidEntity);
+
+					// Apply effects on dynamics if needed:
+					if (scene.weather.IsOceanEnabled())
+					{
+						BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface(); // locking, these jobs can be adding bodies
+						static const Ragdoll::BODYPART floating_bodyparts[] = {
+							Ragdoll::BODYPART_PELVIS,
+							Ragdoll::BODYPART_SPINE,
+						};
+						for (auto& bodypart : floating_bodyparts)
+						{
+							auto& rb = ragdoll.rigidbodies[bodypart];
+							const Vec3 com = body_interface.GetCenterOfMassPosition(rb.bodyID);
+							const Vec3 surface_position = cast(scene.GetOceanPosAt(cast(com)));
+
+							if (com.GetY() <= surface_position.GetY())
+							{
+								const Vec3 p2 = cast(scene.GetOceanPosAt(cast(com + Vec3(0, 0, 0.1f))));
+								const Vec3 p3 = cast(scene.GetOceanPosAt(cast(com + Vec3(0.1f, 0, 0))));
+								const Vec3 surface_normal = Vec3(p2 - surface_position).Cross(Vec3(p3 - surface_position)).Normalized();
+
+								body_interface.ApplyBuoyancyImpulse(
+									rb.bodyID,
+									surface_position,
+									surface_normal,
+									6.0f,
+									0.8f,
+									0.6f,
+									Vec3::sZero(),
+									physics_scene.physics_system.GetGravity(),
+									scene.dt
+								);
+							}
+						}
+					}
 				}
 				else
 				{
@@ -1457,6 +1500,8 @@ namespace wi::physics
 
 		static wi::jobsystem::context broadphase_optimization_ctx;
 		wi::jobsystem::Wait(broadphase_optimization_ctx);
+
+		physics_scene.activate_all_rigid_bodies = false;
 		
 		// Perform internal simulation step:
 		bool simulation_happened = false;
@@ -1950,6 +1995,11 @@ namespace wi::physics
 		default:
 			break;
 		}
+	}
+	void ActivateAllRigidBodies(Scene& scene)
+	{
+		PhysicsScene& physics_scene = *(PhysicsScene*)scene.physics_scene.get();
+		physics_scene.activate_all_rigid_bodies = true;
 	}
 
 	XMFLOAT3 GetSoftBodyNodePosition(

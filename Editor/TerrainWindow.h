@@ -133,6 +133,7 @@ public:
 		PRESET_ISLANDS,
 		PRESET_MOUNTAINS,
 		PRESET_ARCTIC,
+		PRESET_DESERT,
 	};
 
 	wi::vector<std::unique_ptr<ModifierWindow>> modifiers;

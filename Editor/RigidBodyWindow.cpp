@@ -9,7 +9,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_RIGIDBODY " Rigid Body Physics", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 420));
+	SetSize(XMFLOAT2(670, 440));
 
 	closeButton.SetTooltip("Delete RigidBodyPhysicsComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -236,6 +236,24 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&angulardampingSlider);
 
+	buoyancySlider.Create(0, 2, 0, 1000, "Buoyancy: ");
+	buoyancySlider.SetTooltip("Higher buoyancy will make the bodies float up faster in water.");
+	buoyancySlider.SetSize(XMFLOAT2(wid, hei));
+	buoyancySlider.SetPos(XMFLOAT2(x, y += step));
+	buoyancySlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->buoyancy = args.fValue;
+				physicscomponent->physicsobject = {};
+			}
+		}
+		});
+	AddWidget(&buoyancySlider);
+
 	physicsMeshLODSlider.Create(0, 6, 0, 6, "Use Mesh LOD: ");
 	physicsMeshLODSlider.SetTooltip("Specify which LOD to use for triangle mesh physics.");
 	physicsMeshLODSlider.SetSize(XMFLOAT2(wid, hei));
@@ -448,6 +466,7 @@ void RigidBodyWindow::SetEntity(Entity entity)
 		restitutionSlider.SetValue(physicsComponent->restitution);
 		lineardampingSlider.SetValue(physicsComponent->damping_linear);
 		angulardampingSlider.SetValue(physicsComponent->damping_angular);
+		buoyancySlider.SetValue(physicsComponent->buoyancy);
 		physicsMeshLODSlider.SetValue(float(physicsComponent->mesh_lod));
 
 		offsetXSlider.SetValue(physicsComponent->local_offset.x);
@@ -516,6 +535,7 @@ void RigidBodyWindow::ResizeLayout()
 	add(restitutionSlider);
 	add(lineardampingSlider);
 	add(angulardampingSlider);
+	add(buoyancySlider);
 	add(physicsMeshLODSlider);
 	add(offsetXSlider);
 	add(offsetYSlider);

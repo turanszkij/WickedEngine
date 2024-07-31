@@ -5872,6 +5872,7 @@ Luna<RigidBodyPhysicsComponent_BindLua>::PropertyType RigidBodyPhysicsComponent_
 	lunaproperty(RigidBodyPhysicsComponent_BindLua, Restitution),
 	lunaproperty(RigidBodyPhysicsComponent_BindLua, LinearDamping),
 	lunaproperty(RigidBodyPhysicsComponent_BindLua, AngularDamping),
+	lunaproperty(RigidBodyPhysicsComponent_BindLua, Buoyancy),
 	lunaproperty(RigidBodyPhysicsComponent_BindLua, BoxParams_HalfExtents),
 	lunaproperty(RigidBodyPhysicsComponent_BindLua, SphereParams_Radius),
 	lunaproperty(RigidBodyPhysicsComponent_BindLua, CapsuleParams_Radius),

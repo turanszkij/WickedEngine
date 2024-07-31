@@ -142,6 +142,8 @@ namespace wi
 			// If the application is not active, disable Update loops:
 			deltaTimeAccumulator = 0;
 			wi::helper::Sleep(10);
+			wi::input::Update(window, canvas); // update input while inactive, this solves a problem with past inputs processed immediately after activation
+			timer.record_elapsed_seconds(); // after application becomes active, delta time shouldn't spike, could blow up gameplay or physics
 			return;
 		}
 

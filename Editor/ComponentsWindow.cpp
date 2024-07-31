@@ -429,7 +429,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			case ADD_RIGIDBODY:
 			{
 				RigidBodyPhysicsComponent& rigidbody = scene.rigidbodies.Create(entity);
-				rigidbody.SetKinematic(true); // Set it to kinematic so that it can be easily placed
+				rigidbody.SetStartDeactivated(true);
 			}
 			break;
 			case ADD_SOFTBODY:

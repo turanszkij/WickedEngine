@@ -730,6 +730,10 @@ namespace wi::scene
 				capsule.height = box.halfextents.y;
 				capsule.radius = box.halfextents.x;
 			}
+			if (seri.GetVersion() >= 4)
+			{
+				archive >> buoyancy;
+			}
 		}
 		else
 		{
@@ -760,6 +764,10 @@ namespace wi::scene
 			if (seri.GetVersion() >= 2)
 			{
 				archive << local_offset;
+			}
+			if (seri.GetVersion() >= 4)
+			{
+				archive << buoyancy;
 			}
 		}
 	}

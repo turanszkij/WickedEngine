@@ -846,6 +846,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	presetCombo.AddItem("Islands", PRESET_ISLANDS);
 	presetCombo.AddItem("Mountains", PRESET_MOUNTAINS);
 	presetCombo.AddItem("Arctic", PRESET_ARCTIC);
+	presetCombo.AddItem("Desert", PRESET_DESERT);
 	presetCombo.OnSelect([=](wi::gui::EventArgs args) {
 
 		terrain->Generation_Cancel();
@@ -879,9 +880,9 @@ void TerrainWindow::Create(EditorComponent* _editor)
 			voronoi->shapeSlider.SetValue(0.7f);
 			voronoi->falloffSlider.SetValue(6);
 			voronoi->perturbationSlider.SetValue(0.1f);
-			region1Slider.SetValue(1);
-			region2Slider.SetValue(2);
-			region3Slider.SetValue(8);
+			region1Slider.SetValue(0.8f);
+			region2Slider.SetValue(1.2f);
+			region3Slider.SetValue(100);
 			break;
 		case PRESET_ISLANDS:
 			terrain->weather.SetOceanEnabled(true);
@@ -897,9 +898,9 @@ void TerrainWindow::Create(EditorComponent* _editor)
 			voronoi->shapeSlider.SetValue(0.126f);
 			voronoi->falloffSlider.SetValue(1.392f);
 			voronoi->perturbationSlider.SetValue(0.126f);
-			region1Slider.SetValue(8);
-			region2Slider.SetValue(0.7f);
-			region3Slider.SetValue(8);
+			region1Slider.SetValue(1);
+			region2Slider.SetValue(0.2f);
+			region3Slider.SetValue(100);
 			break;
 		case PRESET_MOUNTAINS:
 			terrain->weather.SetOceanEnabled(false);
@@ -933,9 +934,27 @@ void TerrainWindow::Create(EditorComponent* _editor)
 			voronoi->shapeSlider.SetValue(0.518f);
 			voronoi->falloffSlider.SetValue(0.2f);
 			voronoi->perturbationSlider.SetValue(0.298f);
-			region1Slider.SetValue(8);
-			region2Slider.SetValue(8);
+			region1Slider.SetValue(1);
+			region2Slider.SetValue(1);
 			region3Slider.SetValue(0);
+			break;
+		case PRESET_DESERT:
+			terrain->weather.SetOceanEnabled(false);
+			seedSlider.SetValue(1597);
+			bottomLevelSlider.SetValue(-50);
+			topLevelSlider.SetValue(40);
+			perlin->weightSlider.SetValue(1);
+			perlin->frequencySlider.SetValue(0.002f);
+			perlin->octavesSlider.SetValue(4);
+			voronoi->weightSlider.SetValue(1);
+			voronoi->frequencySlider.SetValue(0.004f);
+			voronoi->fadeSlider.SetValue(1.8f);
+			voronoi->shapeSlider.SetValue(0.518f);
+			voronoi->falloffSlider.SetValue(0.2f);
+			voronoi->perturbationSlider.SetValue(0.298f);
+			region1Slider.SetValue(8);
+			region2Slider.SetValue(0);
+			region3Slider.SetValue(100);
 			break;
 		}
 
@@ -1061,7 +1080,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	saveRegionButton.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&saveRegionButton);
 
-	region1Slider.Create(0, 8, 1, 10000, "Slope Region: ");
+	region1Slider.Create(0, 2, 1, 1000, "Slope Region: ");
 	region1Slider.SetTooltip("The region's falloff power");
 	region1Slider.SetSize(XMFLOAT2(wid, hei));
 	region1Slider.SetPos(XMFLOAT2(x, y += step));
@@ -1071,7 +1090,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&region1Slider);
 
-	region2Slider.Create(0, 8, 2, 10000, "Low Altitude Region: ");
+	region2Slider.Create(0, 2, 1, 1000, "Low Altitude Region: ");
 	region2Slider.SetTooltip("The region's falloff power");
 	region2Slider.SetSize(XMFLOAT2(wid, hei));
 	region2Slider.SetPos(XMFLOAT2(x, y += step));
@@ -1081,7 +1100,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&region2Slider);
 
-	region3Slider.Create(0, 8, 8, 10000, "High Altitude Region: ");
+	region3Slider.Create(0, 2, 1, 1000, "High Altitude Region: ");
 	region3Slider.SetTooltip("The region's falloff power");
 	region3Slider.SetSize(XMFLOAT2(wid, hei));
 	region3Slider.SetPos(XMFLOAT2(x, y += step));

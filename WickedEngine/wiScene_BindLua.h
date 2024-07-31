@@ -919,6 +919,7 @@ namespace wi::lua::scene
 			Restitution = FloatProperty(&component->restitution);
 			LinearDamping = FloatProperty(&component->damping_linear);
 			AngularDamping = FloatProperty(&component->damping_angular);
+			Buoyancy = FloatProperty(&component->buoyancy);
 			BoxParams_HalfExtents = VectorProperty(&component->box.halfextents);
 			SphereParams_Radius = FloatProperty(&component->sphere.radius);
 			CapsuleParams_Radius = FloatProperty(&component->capsule.radius);
@@ -941,6 +942,7 @@ namespace wi::lua::scene
 		FloatProperty Restitution;
 		FloatProperty LinearDamping;
 		FloatProperty AngularDamping;
+		FloatProperty Buoyancy;
 		VectorProperty BoxParams_HalfExtents;
 		FloatProperty SphereParams_Radius;
 		FloatProperty CapsuleParams_Radius;
@@ -953,6 +955,7 @@ namespace wi::lua::scene
 		PropertyFunction(Restitution)
 		PropertyFunction(LinearDamping)
 		PropertyFunction(AngularDamping)
+		PropertyFunction(Buoyancy)
 		PropertyFunction(BoxParams_HalfExtents)
 		PropertyFunction(SphereParams_Radius)
 		PropertyFunction(CapsuleParams_Radius)

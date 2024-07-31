@@ -390,8 +390,9 @@ namespace wi::terrain
 		weather.volumetricCloudParameters.layerFirst.windSpeed = 20.0f;
 		weather.volumetricCloudParameters.layerFirst.coverageWindSpeed = 35.0f;
 		weather.volumetricCloudParameters.layerSecond.coverageAmount = 0.0f;
-		weather.oceanParameters.waterHeight = -40;
-		weather.oceanParameters.wave_amplitude = 120;
+		weather.oceanParameters.waterHeight = -10;
+		weather.oceanParameters.wave_amplitude = 1000;
+		weather.oceanParameters.patch_length = 20;
 		weather.fogStart = 0;
 		weather.fogDensity = 0.001f;
 		weather.SetHeightFog(true);
@@ -809,6 +810,7 @@ namespace wi::terrain
 						RigidBodyPhysicsComponent& newrigidbody = scene->rigidbodies.Create(chunk_data.entity);
 						newrigidbody.shape = RigidBodyPhysicsComponent::TRIANGLE_MESH;
 						newrigidbody.mass = 0; // terrain chunks are static
+						newrigidbody.friction = 0.8f;
 						newrigidbody.mesh_lod = lod_required;
 					}
 				}
@@ -954,10 +956,13 @@ namespace wi::terrain
 						if (slope_amount > 0.1f)
 							slope_cast_shadow.store(true);
 
-						const float region_base = 1;
-						const float region_slope = std::pow(slope_amount, region1);
-						const float region_low_altitude = bottomLevel == 0 ? 0 : std::pow(saturate(wi::math::InverseLerp(0, bottomLevel, height)), region2);
-						const float region_high_altitude = topLevel == 0 ? 0 : std::pow(saturate(wi::math::InverseLerp(0, topLevel, height)), region3);
+						float region_base = 1;
+						float region_slope = region1 == 0 ? 1 : smoothstep(0.0f, region1, slope_amount);
+						float region_low_altitude = region2 == 0 ? 1 : smoothstep(0.0f, region2, wi::math::InverseLerp(0, bottomLevel, height));
+						float region_high_altitude = region3 == 0 ? 1 : smoothstep(0.0f, region3, wi::math::InverseLerp(0, topLevel, height));
+
+						region_low_altitude = saturate(region_low_altitude - region_slope);
+						region_high_altitude = saturate(region_high_altitude - region_slope);
 
 						XMFLOAT4 materialBlendWeights(region_base, region_slope, region_low_altitude, region_high_altitude);
 

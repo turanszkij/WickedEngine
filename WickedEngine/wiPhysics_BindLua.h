@@ -36,6 +36,7 @@ namespace wi::lua
 		int ApplyImpulseAt(lua_State* L);
 		int ApplyTorque(lua_State* L);
 		int SetActivationState(lua_State* L);
+		int ActivateAllRigidBodies(lua_State* L);
 
 		int Intersects(lua_State* L);
 		int PickDrag(lua_State* L);

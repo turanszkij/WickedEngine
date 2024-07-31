@@ -111,6 +111,7 @@ namespace wi::physics
 		wi::scene::SoftBodyPhysicsComponent& physicscomponent,
 		ActivationState state
 	);
+	void ActivateAllRigidBodies(wi::scene::Scene& scene);
 
 	XMFLOAT3 GetSoftBodyNodePosition(
 		wi::scene::SoftBodyPhysicsComponent& physicscomponent,

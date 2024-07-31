@@ -72,9 +72,16 @@ void SoundWindow::Create(EditorComponent* _editor)
 			params.extensions = wi::resourcemanager::GetSupportedSoundExtensions();
 			wi::helper::FileDialog(params, [=](std::string fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					sound->filename = fileName;
-					sound->soundResource = wi::resourcemanager::Load(fileName);
-					wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
+					wi::scene::Scene& scene = editor->GetCurrentScene();
+					for (auto& x : editor->translator.selected)
+					{
+						SoundComponent* sound = scene.sounds.GetComponent(x.entity);
+						if (sound == nullptr)
+							continue;
+						sound->filename = fileName;
+						sound->soundResource = wi::resourcemanager::Load(fileName);
+						wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
+					}
 					filenameLabel.SetText(wi::helper::GetFileNameFromPath(sound->filename));
 					});
 				});

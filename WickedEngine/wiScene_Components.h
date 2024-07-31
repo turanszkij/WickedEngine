@@ -940,6 +940,7 @@ namespace wi::scene
 		float restitution = 0.1f;
 		float damping_linear = 0.05f;
 		float damping_angular = 0.05f;
+		float buoyancy = 1.2f;
 		XMFLOAT3 local_offset = XMFLOAT3(0, 0, 0);
 
 		struct BoxParams

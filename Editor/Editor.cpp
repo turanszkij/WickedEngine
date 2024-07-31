@@ -1821,7 +1821,7 @@ void EditorComponent::Update(float dt)
 			{
 				// Add the hovered item to the selection:
 
-				if (!translator.selected.empty() && wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT))
+				if (!translator.selected.empty() && (wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) || wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL)))
 				{
 					// Union selection:
 					wi::vector<wi::scene::PickResult> saved = translator.selected;
