@@ -6,7 +6,9 @@
 #include "wiTimer.h"
 #include "wiUnorderedSet.h"
 
-#ifndef PLATFORM_XBOX
+#ifdef PLATFORM_XBOX
+DEFINE_GUID(D3D12_VIDEO_DECODE_PROFILE_H264, 0x1b81be68, 0xa0c7, 0x11d3, 0xb9, 0x84, 0x00, 0xc0, 0x4f, 0x2e, 0x73, 0xc5);
+#else
 #include "Utility/dx12/dxgiformat.h"
 #include "Utility/dx12/d3dx12_default.h"
 #include "Utility/dx12/d3dx12_resource_helpers.h"
@@ -15,8 +17,9 @@
 #ifdef _DEBUG
 #include <dxgidebug.h>
 #endif
-#pragma comment(lib,"dxguid.lib")
 #endif // PLATFORM_XBOX
+
+#pragma comment(lib,"dxguid.lib")
 
 #include "Utility/D3D12MemAlloc.cpp" // include this here because we use D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
 #include "Utility/h264.h"
@@ -1734,7 +1737,7 @@ std::mutex queue_locker;
 		};
 
 #ifdef PLATFORM_XBOX
-		std::scoped_lock lock(device->queue_locker); // queue operations are not thread-safe on XBOX
+		std::scoped_lock lock(queue_locker); // queue operations are not thread-safe on XBOX
 #endif // PLATFORM_XBOX
 
 		queue->ExecuteCommandLists(1, commandlists);
@@ -3664,6 +3667,9 @@ std::mutex queue_locker;
 			//	thus it cannot be offsetted. This is why we create custom allocation here which will never be committed resource
 			//	(since it has no resource)
 			D3D12_RESOURCE_ALLOCATION_INFO allocationInfo = device->GetResourceAllocationInfo(0, 1, &resourcedesc);
+
+			// D3D12MA ValidateAllocateMemoryParameters requires this, wasn't always true on Xbox:
+			allocationInfo.SizeInBytes = AlignTo(allocationInfo.SizeInBytes, (UINT64)D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
 
 			if (resource_heap_tier >= D3D12_RESOURCE_HEAP_TIER_2)
 			{

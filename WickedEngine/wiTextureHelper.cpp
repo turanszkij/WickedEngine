@@ -130,7 +130,7 @@ namespace wi::texturehelper
 
 		// Blue Noise:
 		{
-			wi::Color bluenoise[128 * 128];
+			wi::vector<wi::Color> bluenoise(128 * 128); // heap alloc intended (PS5)
 
 			for (int y = 0; y < 128; ++y)
 			{
@@ -145,7 +145,7 @@ namespace wi::texturehelper
 				}
 			}
 
-			CreateTexture(helperTextures[HELPERTEXTURE_BLUENOISE], (const uint8_t*)bluenoise, 128, 128, Format::R8G8B8A8_UNORM);
+			CreateTexture(helperTextures[HELPERTEXTURE_BLUENOISE], bluenoise.data(), 128, 128, Format::R8G8B8A8_UNORM);
 			device->SetName(&helperTextures[HELPERTEXTURE_BLUENOISE], "HELPERTEXTURE_BLUENOISE");
 		}
 

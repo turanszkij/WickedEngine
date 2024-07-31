@@ -568,6 +568,11 @@ int main(int argc, char* argv[])
 						// TODO PS5 raytracing, mesh shader
 						return;
 					}
+					if (target.format == ShaderFormat::HLSL6_XS && input.stage == ShaderStage::MS)
+					{
+						// TODO Xbox mesh shader
+						return;
+					}
 
 					wi::shadercompiler::CompilerOutput output;
 					wi::shadercompiler::Compile(input, output);

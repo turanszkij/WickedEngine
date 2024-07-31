@@ -476,8 +476,11 @@ namespace wi::lua
 			wi::lua::SError(L, "SetTypewriterSound(Sound sound, SoundInstance soundinstance) second argument is not a sound instance!");
 			return 0;
 		}
-		font.anim.typewriter.sound = sound->soundResource.GetSound();
-		font.anim.typewriter.soundinstance = soundinstance->soundinstance;
+		if (sound->soundResource.IsValid())
+		{
+			font.anim.typewriter.sound = sound->soundResource.GetSound();
+			font.anim.typewriter.soundinstance = soundinstance->soundinstance;
+		}
 		return 0;
 	}
 	int SpriteFont_BindLua::ResetTypewriter(lua_State* L)

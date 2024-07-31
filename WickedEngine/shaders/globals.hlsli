@@ -4,6 +4,8 @@
 // Enable / disable FP16 shader ops here
 //	Note: when using -enable-16bit-types compile flag, half will be always FP16
 #if 1
+#ifndef __XBOX_SCARLETT // currently there is some issue on xbox
+#ifndef __PSSL__ // min types are already redefined on PS5
 #define half min16float
 #define half2 min16float2
 #define half3 min16float3
@@ -11,6 +13,8 @@
 #define half3x3 min16float3x3
 #define half3x4 min16float3x4
 #define half4x4 min16float4x4
+#endif // __PSSL__
+#endif // __XBOX_SCARLETT
 #endif
 
 #include "ColorSpaceUtility.hlsli"

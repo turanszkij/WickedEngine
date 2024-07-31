@@ -33,6 +33,11 @@ namespace wi::lua
 			if (sound != nullptr)
 			{
 				sound->soundResource = wi::resourcemanager::Load(wi::lua::SGetString(L, 1));
+				if (!sound->soundResource.IsValid())
+				{
+					wi::lua::SSetBool(L, false);
+					return 1;
+				}
 				wi::lua::SSetBool(L, sound->soundResource.GetSound().IsValid());
 				return 1;
 			}

@@ -75,7 +75,7 @@ float computeLod(float pdf, uint width, uint sampleCount)
 }
 
 static const uint THREAD_OFFLOAD = 16;
-groupshared float4 shared_colors[GENERATEMIPCHAIN_2D_BLOCK_SIZE][GENERATEMIPCHAIN_2D_BLOCK_SIZE][THREAD_OFFLOAD];
+groupshared uint2 shared_colors[GENERATEMIPCHAIN_2D_BLOCK_SIZE][GENERATEMIPCHAIN_2D_BLOCK_SIZE][THREAD_OFFLOAD];
 
 [numthreads(GENERATEMIPCHAIN_2D_BLOCK_SIZE, GENERATEMIPCHAIN_2D_BLOCK_SIZE, THREAD_OFFLOAD)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
@@ -112,7 +112,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 		}
 	}
 
-	shared_colors[GTid.x][GTid.y][threadstart] = col;
+	shared_colors[GTid.x][GTid.y][threadstart] = pack_half4(saturateMediump(col));
 	GroupMemoryBarrierWithGroupSync();
 
 	if(threadstart == 0)
@@ -120,10 +120,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 		float4 accum = 0;
 		for (uint j = 0; j < THREAD_OFFLOAD;++j)
 		{
-			accum += shared_colors[GTid.x][GTid.y][j];
+			accum += unpack_half4(shared_colors[GTid.x][GTid.y][j]);
 		}
 		accum /= accum.a;
-		output[uint3(DTid.xy, face)] = accum;
+		output[uint3(DTid.xy, face)] = saturateMediump(accum);
 	}
 
 }

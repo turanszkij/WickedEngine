@@ -20,7 +20,7 @@ void main(uint DTid : SV_DispatchThreadID)
 	{
 		Buffer<float4> vb_nor = bindless_buffers_float4[geometry.vb_nor];
 		float3 normal = vb_nor[DTid].xyz;
-		normal = mul(normal, meshinstance.quaternion);
+		normal = rotate_vector(normal, meshinstance.quaternion);
 		normal = normalize(normal);
 		drying *= lerp(4, 1, pow(saturate(normal.y), 8)); // modulate drying speed based on surface slope
 	}
