@@ -73,7 +73,7 @@ float4 main(PSIn input) : SV_TARGET
 			water_depth += texture_ocean_displacementmap.SampleLevel(sampler_linear_wrap, reflectivePosition.xz * xOceanPatchSizeRecip, 0).z; // texture contains xzy!
 			reflectiveColor.rgb = lerp(color.rgb, reflectiveColor.rgb, saturate(exp(-water_depth * color.a)));
 		}
-		lighting.indirect.specular = reflectiveColor.rgb * surface.F;
+		lighting.indirect.specular = reflectiveColor.rgb * surface.F * saturate(dist * 0.1); // fade out very close to camera, doesn't look good
 	}
 
 	float water_depth = FLT_MAX;
