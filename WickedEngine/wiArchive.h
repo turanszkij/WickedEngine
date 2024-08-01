@@ -258,8 +258,9 @@ namespace wi
 		inline Archive& operator<<(const wi::Archive& other)
 		{
 			// Here we will use the << operator so that non-specified types will have compile error!
-			//	Note: version is skipped, only data is appended
-			for (size_t i = sizeof(version); i < other.pos; ++i)
+			//	Note: version and thumbnail data is skipped, only data is appended
+			const size_t start = sizeof(uint64_t) * 2; // version and thumbnail size
+			for (size_t i = start; i < other.pos; ++i)
 			{
 				(*this) << other.data_ptr[i];
 			}
