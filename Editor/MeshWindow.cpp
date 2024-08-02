@@ -26,7 +26,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_MESH " Mesh", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(580, 800));
+	SetSize(XMFLOAT2(580, 880));
 
 	closeButton.SetTooltip("Delete MeshComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -48,7 +48,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 	float step = hei + 2;
 	float wid = 170;
 
-	float infolabel_height = 200;
+	float infolabel_height = 280;
 	meshInfoLabel.Create("Mesh Info");
 	meshInfoLabel.SetPos(XMFLOAT2(20, y));
 	meshInfoLabel.SetSize(XMFLOAT2(260, infolabel_height));
@@ -373,7 +373,6 @@ void MeshWindow::Create(EditorComponent* _editor)
 		Entity prev_subset_material = INVALID_ENTITY;
 
 		// Search for first object with a mesh from selection, that will be the base:
-		Entity baseEntityParent = INVALID_ENTITY;
 		Entity baseEntity = INVALID_ENTITY;
 		TransformComponent* baseTransform = nullptr;
 		ObjectComponent* baseObject = nullptr;
@@ -387,11 +386,6 @@ void MeshWindow::Create(EditorComponent* _editor)
 			if (mesh == nullptr)
 				continue;
 			baseEntity = picked.entity;
-			HierarchyComponent* hier = scene.hierarchy.GetComponent(baseEntity);
-			if (hier != nullptr)
-			{
-				baseEntityParent = hier->parentID;
-			}
 			baseTransform = scene.transforms.GetComponent(picked.entity);
 			baseObject = object;
 			baseMesh = mesh;
@@ -581,7 +575,6 @@ void MeshWindow::Create(EditorComponent* _editor)
 			{
 				baseTransform->ClearTransform();
 			}
-			scene.Component_Attach(baseEntity, baseEntityParent);
 		}
 
 		for (auto& x : entities_to_remove)

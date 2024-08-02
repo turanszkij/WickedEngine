@@ -28,6 +28,7 @@ public:
 	wi::gui::TextInputField sxInput;
 	wi::gui::TextInputField syInput;
 	wi::gui::TextInputField szInput;
+	wi::gui::TextInputField suInput;
 
 	wi::gui::TextInputField snapScaleInput;
 	wi::gui::TextInputField snapRotateInput;
@@ -35,6 +36,7 @@ public:
 
 	wi::gui::Button resetTranslationButton;
 	wi::gui::Button resetScaleButton;
+	wi::gui::Button resetScaleUniformButton;
 	wi::gui::Button resetRotationButton;
 
 	void ResizeLayout() override;

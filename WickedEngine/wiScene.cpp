@@ -6801,22 +6801,29 @@ namespace wi::scene
 
 	float Scene::GetHumanoidDefaultFacing(const HumanoidComponent& humanoid, Entity humanoidEntity) const
 	{
-		Entity left_shoulder = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftUpperArm];
-		Entity right_shoulder = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightUpperArm];
-		XMVECTOR left_shoulder_pos = GetRestPose(left_shoulder).r[3];
-		XMVECTOR right_shoulder_pos = GetRestPose(right_shoulder).r[3];
-		const TransformComponent* transform = transforms.GetComponent(humanoidEntity);
-		if (transform != nullptr)
+		if (humanoid.default_facing == 0)
 		{
-			XMVECTOR S = transform->GetScaleV();
-			left_shoulder_pos *= S;
-			right_shoulder_pos *= S;
+			Entity left_shoulder = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftUpperArm];
+			Entity right_shoulder = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightUpperArm];
+			XMVECTOR left_shoulder_pos = GetRestPose(left_shoulder).r[3];
+			XMVECTOR right_shoulder_pos = GetRestPose(right_shoulder).r[3];
+			const TransformComponent* transform = transforms.GetComponent(humanoidEntity);
+			if (transform != nullptr)
+			{
+				XMVECTOR S = transform->GetScaleV();
+				left_shoulder_pos *= S;
+				right_shoulder_pos *= S;
+			}
+			if (XMVectorGetX(right_shoulder_pos) < XMVectorGetX(left_shoulder_pos))
+			{
+				humanoid.default_facing = -1;
+			}
+			else
+			{
+				humanoid.default_facing = 1;
+			}
 		}
-		if (XMVectorGetX(right_shoulder_pos) < XMVectorGetX(left_shoulder_pos))
-		{
-			return -1;
-		}
-		return 1;
+		return humanoid.default_facing;
 	}
 
 	void Scene::ScanAnimationDependencies()

@@ -149,14 +149,17 @@ namespace wi
 
 		wi::profiler::BeginFrame();
 
-		deltaTime = float(std::max(0.0, timer.record_elapsed_seconds()));
+		deltaTime = float(timer.record_elapsed_seconds());
 
 		const float target_deltaTime = 1.0f / targetFrameRate;
 		if (framerate_lock && deltaTime < target_deltaTime)
 		{
 			wi::helper::QuickSleep((target_deltaTime - deltaTime) * 1000);
-			deltaTime += float(std::max(0.0, timer.record_elapsed_seconds()));
+			deltaTime += float(timer.record_elapsed_seconds());
 		}
+
+		// avoid instability caused by large delta time
+		deltaTime = clamp(deltaTime, 0.0f, 0.5f);
 
 		wi::input::Update(window, canvas);
 

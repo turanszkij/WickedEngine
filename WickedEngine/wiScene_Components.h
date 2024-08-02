@@ -1961,6 +1961,7 @@ namespace wi::scene
 		XMFLOAT4 lookAtDeltaRotationState_LeftEye = XMFLOAT4(0, 0, 0, 1);
 		XMFLOAT4 lookAtDeltaRotationState_RightEye = XMFLOAT4(0, 0, 0, 1);
 		std::shared_ptr<void> ragdoll = nullptr; // physics system implementation-specific object
+		mutable float default_facing = 0; // 0 = not yet computed
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

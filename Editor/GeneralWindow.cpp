@@ -651,6 +651,14 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			sprite.params.corners_rounding[3].radius = 10;
 		}
 
+		editor->componentsWnd.transformWnd.resetScaleUniformButton.SetColor(wi::Color::Error(), wi::gui::WIDGETSTATE::FOCUS);
+		for (auto& sprite : editor->componentsWnd.transformWnd.resetScaleUniformButton.sprites)
+		{
+			sprite.params.enableCornerRounding();
+			sprite.params.corners_rounding[1].radius = 10;
+			sprite.params.corners_rounding[3].radius = 10;
+		}
+
 		editor->componentsWnd.transformWnd.resetRotationButton.SetColor(wi::Color::Error(), wi::gui::WIDGETSTATE::FOCUS);
 		for (auto& sprite : editor->componentsWnd.transformWnd.resetRotationButton.sprites)
 		{
