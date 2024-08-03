@@ -334,6 +334,8 @@ namespace wi
 		if (IsPaused() || dt == 0)
 			return;
 
+		active_frames <<= 1; // advance next frame
+
 		emit = std::max(0.0f, emit - std::floor(emit));
 
 		center = transform.GetPosition();
@@ -349,6 +351,7 @@ namespace wi
 			location.transform.init();
 			location.count = (uint)emit;
 			location.color = wi::Color::White();
+			active_frames |= 1; // activate current frame
 		}
 
 		worldMatrix = transform.world;
@@ -359,6 +362,11 @@ namespace wi
 		// Read back statistics (with GPU delay):
 		const uint32_t oldest_stat_index = wi::graphics::GetDevice()->GetBufferIndex();
 		memcpy(&statistics, statisticsReadbackBuffer[oldest_stat_index].mapped_data, sizeof(statistics));
+
+		if (statistics.aliveCount > 0 || statistics.aliveCount_afterSimulation > 0)
+		{
+			active_frames |= 1; // activate current frame
+		}
 	}
 	void EmittedParticleSystem::Burst(int num)
 	{
@@ -366,6 +374,11 @@ namespace wi
 			return;
 
 		burst += num;
+
+		if (num > 0)
+		{
+			active_frames |= 1; // activate current frame
+		}
 	}
 	void EmittedParticleSystem::Burst(int num, const XMFLOAT3& position, const wi::Color& color)
 	{
@@ -379,6 +392,11 @@ namespace wi
 		location.count = (uint)num;
 		location.transform.Create(transform);
 		location.color = color;
+
+		if (num > 0)
+		{
+			active_frames |= 1; // activate current frame
+		}
 	}
 	void EmittedParticleSystem::Burst(int num, const XMFLOAT4X4& transform, const wi::Color& color)
 	{
@@ -389,6 +407,11 @@ namespace wi
 		location.count = (uint)num;
 		location.transform.Create(transform);
 		location.color = color;
+
+		if (num > 0)
+		{
+			active_frames |= 1; // activate current frame
+		}
 	}
 	void EmittedParticleSystem::Restart()
 	{
@@ -398,10 +421,10 @@ namespace wi
 
 	void EmittedParticleSystem::UpdateGPU(uint32_t instanceIndex, const MeshComponent* mesh, CommandList cmd) const
 	{
-		if (!particleBuffer.IsValid())
-		{
+		if (IsInactive())
 			return;
-		}
+		if (!particleBuffer.IsValid())
+			return;
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		device->EventBegin("UpdateEmittedParticles", cmd);
@@ -809,6 +832,8 @@ namespace wi
 
 	void EmittedParticleSystem::Draw(const MaterialComponent& material, CommandList cmd, const PARTICLESHADERTYPE* shadertype_override) const
 	{
+		if (IsInactive())
+			return;
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		device->EventBegin("EmittedParticle", cmd);
 

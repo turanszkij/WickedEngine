@@ -2,7 +2,7 @@
 #include "ShaderInterop_Postprocess.h"
 
 #ifndef UPSAMPLE_FORMAT
-#define UPSAMPLE_FORMAT float4
+#define UPSAMPLE_FORMAT half4
 #endif // UPSAMPLE_FORMAT
 
 PUSHCONSTANT(postprocess, PostProcess);
@@ -43,7 +43,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float lineardepth_highres = input_lineardepth_high[pixel] * GetCamera().z_far;
 	
 	UPSAMPLE_FORMAT color = 0;
-	float sum = 0;
+	half sum = 0;
 
 	int2 lowres_pixel = int2(float2(pixel) * postprocess.params0.w);
 
@@ -51,23 +51,23 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	{
 		const float2 sample_uv = uv + offsets[i] * lowres_texel_size;
 		const float4 zzzz = input_lineardepth_low.GatherRed(sampler_linear_clamp, sample_uv) * GetCamera().z_far;
-		const float4 wwww = max(0.001, 1 - saturate(abs(zzzz - lineardepth_highres) * threshold));
-		const float4 rrrr = input.GatherRed(sampler_linear_clamp, sample_uv);
-		const float4 gggg = input.GatherGreen(sampler_linear_clamp, sample_uv);
-		const float4 bbbb = input.GatherBlue(sampler_linear_clamp, sample_uv);
-		const float4 aaaa = input.GatherAlpha(sampler_linear_clamp, sample_uv);
+		const half4 wwww = max(0.001, 1 - saturate(abs(zzzz - lineardepth_highres) * threshold));
+		const half4 rrrr = input.GatherRed(sampler_linear_clamp, sample_uv);
+		const half4 gggg = input.GatherGreen(sampler_linear_clamp, sample_uv);
+		const half4 bbbb = input.GatherBlue(sampler_linear_clamp, sample_uv);
+		const half4 aaaa = input.GatherAlpha(sampler_linear_clamp, sample_uv);
 		
 		float2 sam_pixel = sample_uv * lowres_size + (-0.5 + 1.0 / 512.0); // (1.0 / 512.0) correction is described here: https://www.reedbeta.com/blog/texture-gathers-and-coordinate-precision/
-		float2 sam_pixel_frac = frac(sam_pixel);
+		half2 sam_pixel_frac = frac(sam_pixel);
 
-		color += (UPSAMPLE_FORMAT)float4(
+		color += (UPSAMPLE_FORMAT)half4(
 			bilinear(rrrr * wwww, sam_pixel_frac),
 			bilinear(gggg * wwww, sam_pixel_frac),
 			bilinear(bbbb * wwww, sam_pixel_frac),
 			bilinear(aaaa * wwww, sam_pixel_frac)
 		);
 		
-		float weight = bilinear(wwww, sam_pixel_frac);
+		half weight = bilinear(wwww, sam_pixel_frac);
 		sum += weight;
 	}
 	

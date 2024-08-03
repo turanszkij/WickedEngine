@@ -156,8 +156,8 @@ inline half attenuation_pointlight(in half dist2, in half range, in half range2)
 	// GLTF recommendation: https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual#range-property
 	//return saturate(1 - pow(dist / range, 4)) / dist2;
 
-	// Removed pow(x, 4), and avoid zero divisions:
-	half dist_per_range = dist2 / max(0.0001, range2); // pow2
+	// Removed pow(x, 4):
+	half dist_per_range = dist2 / range2; // pow2 (note: range cannot be 0, in that case light is not uploaded to GPU, so here will not be zero-division)
 	dist_per_range *= dist_per_range; // pow4
 	return saturate(1 - dist_per_range) / max(0.0001, dist2);
 }

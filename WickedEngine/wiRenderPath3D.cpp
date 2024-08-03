@@ -800,7 +800,6 @@ namespace wi
 		if (scene->terrains.GetCount() > 0)
 		{
 			cmd_copypages = device->BeginCommandList(QUEUE_COPY);
-			device->WaitQueue(cmd_copypages, QUEUE_GRAPHICS); // sync to prev frame graphics
 			wi::jobsystem::Execute(ctx, [this, cmd_copypages](wi::jobsystem::JobArgs args) {
 				for (size_t i = 0; i < scene->terrains.GetCount(); ++i)
 				{
@@ -839,14 +838,23 @@ namespace wi
 
 		});
 
+		// async compute terrain tasks parellel with graphics prepareframe task
+		if (scene->terrains.GetCount() > 0)
+		{
+			CommandList cmd_updatepages = device->BeginCommandList(QUEUE_COMPUTE);
+			device->WaitCommandList(cmd_updatepages, cmd_copypages);
+			wi::jobsystem::Execute(ctx, [this, cmd_updatepages](wi::jobsystem::JobArgs args) {
+				for (size_t i = 0; i < scene->terrains.GetCount(); ++i)
+				{
+					scene->terrains[i].UpdateVirtualTexturesGPU(cmd_updatepages);
+				}
+			});
+		}
+
 		// async compute parallel with depth prepass
 		cmd = device->BeginCommandList(QUEUE_COMPUTE);
 		CommandList cmd_prepareframe_async = cmd;
 		device->WaitCommandList(cmd, cmd_prepareframe);
-		if (cmd_copypages.IsValid())
-		{
-			device->WaitCommandList(cmd, cmd_copypages);
-		}
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 
 			wi::renderer::BindCameraCB(

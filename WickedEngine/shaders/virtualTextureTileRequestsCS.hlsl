@@ -9,7 +9,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	if (DTid.x >= push.width / 2 || DTid.y >= push.height / 2)
 		return;
 
-	Texture2D<uint> feedbackTexture = bindless_textures_uint[push.feedbackTextureRO];
+	RWTexture2D<uint> feedbackTexture = bindless_rwtextures_uint[push.feedbackTextureRW]; // this is not written, but we keep it in UAV state intentionally
 	RWByteAddressBuffer requestBuffer = bindless_rwbuffers[push.requestBufferRW];
 
 	uint page_count = 0;

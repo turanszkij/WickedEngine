@@ -1222,5 +1222,9 @@ namespace wi::renderer
 	int RegisterCustomShader(const CustomShader& customShader);
 	const wi::vector<CustomShader>& GetCustomShaders();
 
+	// Thread-local barrier batching helpers:
+	void PushBarrier(const wi::graphics::GPUBarrier& barrier);
+	void FlushBarriers(wi::graphics::CommandList cmd);
+
 };
 

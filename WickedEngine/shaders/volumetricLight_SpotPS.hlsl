@@ -1,4 +1,5 @@
 #define TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK // fix the lack of depth testing
+#define DISABLE_SOFT_SHADOWMAP
 #include "volumetricLightHF.hlsli"
 #include "fogHF.hlsli"
 #include "oceanSurfaceHF.hlsli"

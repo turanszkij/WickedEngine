@@ -95,6 +95,14 @@ void barrier_stack_flush(CommandList cmd)
 	device->Barrier(barrier_stack.data(), (uint32_t)barrier_stack.size(), cmd);
 	barrier_stack.clear();
 }
+void PushBarrier(const GPUBarrier& barrier)
+{
+	barrier_stack.push_back(barrier);
+}
+void FlushBarriers(CommandList cmd)
+{
+	barrier_stack_flush(cmd);
+}
 
 bool wireRender = false;
 bool debugBoneLines = false;
@@ -3445,6 +3453,8 @@ void UpdateVisibility(Visibility& vis)
 			for (uint32_t lightIndex : vis.visibleLights)
 			{
 				const LightComponent& light = vis.scene->lights[lightIndex];
+				if (light.IsInactive())
+					continue;
 				if (!light.IsCastingShadow() || light.IsStatic())
 					continue;
 
@@ -4063,6 +4073,8 @@ void UpdatePerFrameData(
 			shaderentity = {};
 
 			const LightComponent& light = vis.scene->lights[lightIndex];
+			if (light.IsInactive())
+				continue;
 
 			shaderentity.layerMask = ~0u;
 
@@ -4763,11 +4775,6 @@ void UpdateRenderDataAsync(
 			vis.scene->rainEmitter.UpdateGPU(vis.scene->rainInstanceOffset, nullptr, cmd);
 		}
 		wi::profiler::EndRange(range);
-	}
-
-	for (size_t i = 0; i < vis.scene->terrains.GetCount(); ++i)
-	{
-		vis.scene->terrains[i].UpdateVirtualTexturesGPU(cmd);
 	}
 
 	if (vis.scene->textureStreamingFeedbackBuffer.IsValid())
@@ -5786,12 +5793,12 @@ void DrawShadowmaps(
 		for (uint32_t lightIndex : vis.visibleLights)
 		{
 			const LightComponent& light = vis.scene->lights[lightIndex];
-			
-			bool shadow = light.IsCastingShadow() && !light.IsStatic();
-			if (!shadow)
-			{
+			if (light.IsInactive())
 				continue;
-			}
+			
+			const bool shadow = light.IsCastingShadow() && !light.IsStatic();
+			if (!shadow)
+				continue;
 			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
 
 			switch (light.GetType())

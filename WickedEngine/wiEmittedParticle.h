@@ -61,6 +61,7 @@ namespace wi
 		float emit = 0.0f;
 		int burst = 0;
 		float dt = 0;
+		uint32_t active_frames = 0;
 
 		uint32_t MAX_PARTICLES = 1000;
 
@@ -136,6 +137,8 @@ namespace wi
 		void SetMaxParticleCount(uint32_t value);
 		uint32_t GetMaxParticleCount() const { return MAX_PARTICLES; }
 		uint64_t GetMemorySizeInBytes() const;
+
+		bool IsInactive() const { return active_frames == 0; }
 
 		// Non-serialized attributes:
 		XMFLOAT3 center;

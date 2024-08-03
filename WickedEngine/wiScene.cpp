@@ -4737,6 +4737,8 @@ namespace wi::scene
 
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			emitter.UpdateCPU(transform, dt);
+			if (emitter.IsInactive()) // check after UpdateCPU
+				return; // can skip writing TLAS instace below
 
 			GraphicsDevice* device = wi::graphics::GetDevice();
 

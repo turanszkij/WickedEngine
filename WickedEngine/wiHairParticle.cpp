@@ -325,15 +325,6 @@ namespace wi
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		device->EventBegin("HairParticleSystem - UpdateGPU", cmd);
 
-		static thread_local wi::vector<GPUBarrier> barrier_stack;
-		auto barrier_stack_flush = [&]()
-		{
-			if (barrier_stack.empty())
-				return;
-			device->Barrier(barrier_stack.data(), (uint32_t)barrier_stack.size(), cmd);
-			barrier_stack.clear();
-		};
-
 		for (uint32_t i = 0; i < itemCount; ++i)
 		{
 			const UpdateGPUItem& item = items[i];
@@ -380,7 +371,7 @@ namespace wi
 			hcb.xHairLayerMask = hair.layerMask;
 			hcb.xHairInstanceIndex = item.instanceIndex;
 			device->UpdateBuffer(&hair.constantBuffer, &hcb, cmd);
-			barrier_stack.push_back(GPUBarrier::Buffer(&hair.constantBuffer, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER));
+			wi::renderer::PushBarrier(GPUBarrier::Buffer(&hair.constantBuffer, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER));
 
 			IndirectDrawArgsIndexedInstanced args = {};
 			args.BaseVertexLocation = 0;
@@ -389,7 +380,7 @@ namespace wi
 			args.StartIndexLocation = 0;
 			args.StartInstanceLocation = 0;
 			device->UpdateBuffer(&hair.generalBuffer, &args, cmd, sizeof(args), hair.indirect_view.offset);
-			barrier_stack.push_back(GPUBarrier::Buffer(&hair.generalBuffer, ResourceState::COPY_DST, ResourceState::UNORDERED_ACCESS));
+			wi::renderer::PushBarrier(GPUBarrier::Buffer(&hair.generalBuffer, ResourceState::COPY_DST, ResourceState::UNORDERED_ACCESS));
 
 			if (hair.regenerate_frame)
 			{
@@ -397,7 +388,7 @@ namespace wi
 			}
 		}
 
-		barrier_stack_flush();
+		wi::renderer::FlushBarriers(cmd);
 
 		// Simulate:
 		device->BindComputeShader(&cs_simulate, cmd);
@@ -443,10 +434,10 @@ namespace wi
 
 			device->Dispatch((hair.strandCount + THREADCOUNT_SIMULATEHAIR - 1) / THREADCOUNT_SIMULATEHAIR, 1, 1, cmd);
 
-			barrier_stack.push_back(GPUBarrier::Buffer(&hair.generalBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT | ResourceState::INDEX_BUFFER | ResourceState::SHADER_RESOURCE));
+			wi::renderer::PushBarrier(GPUBarrier::Buffer(&hair.generalBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT | ResourceState::INDEX_BUFFER | ResourceState::SHADER_RESOURCE));
 		}
 
-		barrier_stack_flush();
+		wi::renderer::FlushBarriers(cmd);
 
 		device->EventEnd(cmd);
 	}

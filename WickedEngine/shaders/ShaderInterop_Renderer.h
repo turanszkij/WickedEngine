@@ -1440,7 +1440,7 @@ struct VirtualTextureTileRequestsPush
 	uint lodCount;
 	uint width;
 	uint height;
-	int feedbackTextureRO;
+	int feedbackTextureRW;
 	int requestBufferRW;
 	int padding0;
 	int padding1;

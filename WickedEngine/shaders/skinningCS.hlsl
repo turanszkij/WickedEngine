@@ -99,6 +99,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 		float4 p = 0;
 		half3 n = 0;
 		half3 t = 0;
+		half weisum = 0;
 		for (uint influence = 0; influence < push.influence_div4; ++influence)
 		{
 			uint4 ind = 0;
@@ -121,8 +122,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 			}
 			if (any(wei))
 			{
-				half weisum = 0;
-			
 				for (uint i = 0; ((i < 4) && (weisum < 1.0)); ++i)
 				{
 					float4x4 m = skinningbuffer.Load<ShaderTransform>(push.bone_offset + ind[i] * sizeof(ShaderTransform)).GetMatrix();
