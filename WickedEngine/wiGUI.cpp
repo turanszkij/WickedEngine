@@ -4977,7 +4977,7 @@ namespace wi::gui
 				clicked = true;
 			}
 
-			if (onDelete && state == FOCUS && wi::input::Press(wi::input::KEYBOARD_BUTTON_DELETE))
+			if (onDelete && state == FOCUS && wi::input::Press(wi::input::KEYBOARD_BUTTON_DELETE) && !typing_active)
 			{
 				int index = 0;
 				for (auto& item : items)
