@@ -4603,6 +4603,11 @@ void UpdateRenderDataAsync(
 
 	BindCommonResources(cmd);
 
+	for (size_t i = 0; i < vis.scene->terrains.GetCount(); ++i)
+	{
+		vis.scene->terrains[i].UpdateVirtualTexturesGPU(cmd);
+	}
+
 	// Wetmaps will be initialized:
 	for (uint32_t objectIndex = 0; objectIndex < vis.scene->objects.GetCount(); ++objectIndex)
 	{

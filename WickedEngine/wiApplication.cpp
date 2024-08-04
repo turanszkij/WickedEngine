@@ -96,12 +96,45 @@ namespace wi
 		wi::font::UpdateAtlas(canvas.GetDPIScaling());
 
 		ColorSpace colorspace = graphicsDevice->GetSwapChainColorSpace(&swapChain);
+		bool colorspace_conversion_required = colorspace == ColorSpace::HDR10_ST2084;
+		if (colorspace_conversion_required)
+		{
+			// In HDR10, we perform the compositing in a custom linear color space render target
+			if (!rendertarget.IsValid())
+			{
+				TextureDesc desc;
+				desc.width = swapChain.desc.width;
+				desc.height = swapChain.desc.height;
+				desc.format = Format::R11G11B10_FLOAT;
+				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+				bool success = graphicsDevice->CreateTexture(&desc, nullptr, &rendertarget);
+				assert(success);
+				graphicsDevice->SetName(&rendertarget, "Application::rendertarget");
+			}
+		}
+		else
+		{
+			// If swapchain is SRGB or Linear HDR, it can be used for blending
+			//	- If it is SRGB, the render path will ensure tonemapping to SDR
+			//	- If it is Linear HDR, we can blend trivially in linear space
+			rendertarget = {};
+		}
 
 		if (!wi::initializer::IsInitializeFinished())
 		{
 			// Until engine is not loaded, present initialization screen...
 			CommandList cmd = graphicsDevice->BeginCommandList();
-			graphicsDevice->RenderPassBegin(&swapChain, cmd);
+			if (colorspace_conversion_required)
+			{
+				RenderPassImage rp[] = {
+					RenderPassImage::RenderTarget(&rendertarget, RenderPassImage::LoadOp::CLEAR),
+				};
+				graphicsDevice->RenderPassBegin(rp, arraysize(rp), cmd);
+			}
+			else
+			{
+				graphicsDevice->RenderPassBegin(&swapChain, cmd);
+			}
 			Viewport viewport;
 			viewport.width = (float)swapChain.desc.width;
 			viewport.height = (float)swapChain.desc.height;
@@ -111,6 +144,17 @@ namespace wi
 				wi::backlog::DrawOutputText(canvas, cmd, colorspace);
 			}
 			graphicsDevice->RenderPassEnd(cmd);
+
+			if (colorspace_conversion_required)
+			{
+				// In HDR10, we perform a final mapping from linear to HDR10, into the swapchain
+				graphicsDevice->RenderPassBegin(&swapChain, cmd);
+				wi::image::Params fx;
+				fx.enableFullScreen();
+				fx.enableHDR10OutputMapping();
+				wi::image::Draw(&rendertarget, fx, cmd);
+				graphicsDevice->RenderPassEnd(cmd);
+			}
 			graphicsDevice->SubmitCommandLists();
 			return;
 		}
@@ -215,21 +259,8 @@ namespace wi
 		viewport.height = (float)swapChain.desc.height;
 		graphicsDevice->BindViewports(1, &viewport, cmd);
 
-		bool colorspace_conversion_required = colorspace == ColorSpace::HDR10_ST2084;
 		if (colorspace_conversion_required)
 		{
-			// In HDR10, we perform the compositing in a custom linear color space render target
-			if (!rendertarget.IsValid())
-			{
-				TextureDesc desc;
-				desc.width = swapChain.desc.width;
-				desc.height = swapChain.desc.height;
-				desc.format = Format::R11G11B10_FLOAT;
-				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-				bool success = graphicsDevice->CreateTexture(&desc, nullptr, &rendertarget);
-				assert(success);
-				graphicsDevice->SetName(&rendertarget, "Application::rendertarget");
-			}
 			RenderPassImage rp[] = {
 				RenderPassImage::RenderTarget(&rendertarget, RenderPassImage::LoadOp::CLEAR),
 			};
@@ -237,10 +268,6 @@ namespace wi
 		}
 		else
 		{
-			// If swapchain is SRGB or Linear HDR, it can be used for blending
-			//	- If it is SRGB, the render path will ensure tonemapping to SDR
-			//	- If it is Linear HDR, we can blend trivially in linear space
-			rendertarget = {};
 			graphicsDevice->RenderPassBegin(&swapChain, cmd);
 		}
 		Compose(cmd);

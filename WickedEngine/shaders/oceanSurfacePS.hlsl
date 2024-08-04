@@ -1,6 +1,7 @@
 #define DISABLE_DECALS
 #define DISABLE_ENVMAPS
 #define DISABLE_TRANSPARENT_SHADOWMAP
+#define DISABLE_SOFT_SHADOWMAP
 #define TRANSPARENT
 #define WATER
 #include "globals.hlsli"
@@ -14,17 +15,16 @@ Texture2D<float4> texture_gradientmap : register(t1);
 float4 main(PSIn input) : SV_TARGET
 {
 	float lineardepth = input.pos.w;
-	float4 color = xOceanWaterColor;
+	half4 color = xOceanWaterColor;
 	float3 V = GetCamera().position - input.pos3D;
 	float dist = length(V);
 	V /= dist;
-	float emissive = 0;
 	uint2 pixel = input.pos.xy;
 
-	const float gradient_fade = saturate(dist * 0.001);
-	const float4 gradientNear = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv);
-	const float4 gradientFar = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv * 0.125);
-	float4 gradient = lerp(gradientNear, gradientFar, gradient_fade);
+	const half gradient_fade = saturate(dist * 0.001);
+	const half4 gradientNear = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv);
+	const half4 gradientFar = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv * 0.125);
+	half4 gradient = lerp(gradientNear, gradientFar, gradient_fade);
 	
 	float2 ScreenCoord = pixel * GetCamera().internal_resolution_rcp;
 	
@@ -63,7 +63,7 @@ float4 main(PSIn input) : SV_TARGET
 		//REFLECTION
 		float4 reflectionPos = mul(GetCamera().reflection_view_projection, float4(input.pos3D, 1));
 		float2 reflectionUV = clipspace_to_uv(reflectionPos.xy / reflectionPos.w) + surface.N.xz * bump_strength;
-		float4 reflectiveColor = bindless_textures[GetCamera().texture_reflection_index].SampleLevel(sampler_linear_mirror, reflectionUV, 0);
+		half4 reflectiveColor = bindless_textures[GetCamera().texture_reflection_index].SampleLevel(sampler_linear_mirror, reflectionUV, 0);
 		[branch]
 		if(GetCamera().texture_reflection_depth_index >=0)
 		{

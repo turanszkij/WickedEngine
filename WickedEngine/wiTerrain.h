@@ -91,10 +91,10 @@ namespace wi::terrain
 			wi::graphics::Texture residencyMap;
 			wi::graphics::GPUBuffer requestBuffer;
 			wi::graphics::GPUBuffer allocationBuffer;
-			wi::graphics::GPUBuffer allocationBuffer_CPU_readback[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+			wi::graphics::GPUBuffer allocationBuffer_CPU_readback[wi::graphics::GraphicsDevice::GetBufferCount()];
 			wi::graphics::GPUBuffer pageBuffer;
-			wi::graphics::GPUBuffer pageBuffer_CPU_upload[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
-			bool data_available_CPU[wi::graphics::GraphicsDevice::GetBufferCount() + 1] = {};
+			wi::graphics::GPUBuffer pageBuffer_CPU_upload[wi::graphics::GraphicsDevice::GetBufferCount()];
+			bool data_available_CPU[wi::graphics::GraphicsDevice::GetBufferCount()] = {};
 			int cpu_resource_id = 0;
 			uint32_t resolution = 0;
 

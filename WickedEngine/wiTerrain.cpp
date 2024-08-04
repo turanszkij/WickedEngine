@@ -1408,7 +1408,7 @@ namespace wi::terrain
 					commands[0].range_tile_counts = &count;
 					commands[1] = commands[0];
 					commands[1].sparse_resource = &atlas.maps[map_type].texture_raw_block;
-					device->SparseUpdate(QUEUE_COPY, commands, arraysize(commands));
+					device->SparseUpdate(QUEUE_COMPUTE, commands, arraysize(commands));
 					offset += count;
 				}
 			}
@@ -1656,7 +1656,6 @@ namespace wi::terrain
 
 		device->EventBegin("Render Tile Regions", cmd);
 		wi::renderer::BindCommonResources(cmd);
-
 		for (const VirtualTexture* vt : virtual_textures_in_use)
 		{
 			if (vt->update_requests.empty())
@@ -1763,6 +1762,7 @@ namespace wi::terrain
 			}
 			vt->update_requests.clear();
 		}
+		device->Barrier(GPUBarrier::Memory(), cmd);
 		device->EventEnd(cmd);
 
 		wi::profiler::EndRange(range);

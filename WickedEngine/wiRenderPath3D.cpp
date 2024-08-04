@@ -811,8 +811,8 @@ namespace wi
 		// Preparing the frame:
 		CommandList cmd = device->BeginCommandList();
 		device->WaitQueue(cmd, QUEUE_COMPUTE); // sync to prev frame compute (disallow prev frame overlapping a compute task into updating global scene resources for this frame)
-		CommandList cmd_prepareframe = cmd;
 		wi::renderer::ProcessDeferredTextureRequests(cmd); // Execute it first thing in the frame here, on main thread, to not allow other thread steal it and execute on different command list!
+		CommandList cmd_prepareframe = cmd;
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
@@ -838,23 +838,14 @@ namespace wi
 
 		});
 
-		// async compute terrain tasks parellel with graphics prepareframe task
-		if (scene->terrains.GetCount() > 0)
-		{
-			CommandList cmd_updatepages = device->BeginCommandList(QUEUE_COMPUTE);
-			device->WaitCommandList(cmd_updatepages, cmd_copypages);
-			wi::jobsystem::Execute(ctx, [this, cmd_updatepages](wi::jobsystem::JobArgs args) {
-				for (size_t i = 0; i < scene->terrains.GetCount(); ++i)
-				{
-					scene->terrains[i].UpdateVirtualTexturesGPU(cmd_updatepages);
-				}
-			});
-		}
-
 		// async compute parallel with depth prepass
 		cmd = device->BeginCommandList(QUEUE_COMPUTE);
 		CommandList cmd_prepareframe_async = cmd;
 		device->WaitCommandList(cmd, cmd_prepareframe);
+		if (cmd_copypages.IsValid())
+		{
+			device->WaitCommandList(cmd, cmd_copypages);
+		}
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 
 			wi::renderer::BindCameraCB(
@@ -2062,19 +2053,6 @@ namespace wi
 			auto range = wi::profiler::BeginRangeGPU("Transparent Scene", cmd);
 			device->EventBegin("Transparent Scene", cmd);
 
-			// Foreground:
-			vp.min_depth = 1 - foreground_depth_range;
-			vp.max_depth = 1;
-			device->BindViewports(1, &vp, cmd);
-			wi::renderer::DrawScene(
-				visibility_main,
-				RENDERPASS_MAIN,
-				cmd,
-				wi::renderer::DRAWSCENE_TRANSPARENT |
-				wi::renderer::DRAWSCENE_FOREGROUND_ONLY |
-				wi::renderer::DRAWSCENE_MAINCAMERA
-			);
-
 			// Regular:
 			vp.min_depth = 0;
 			vp.max_depth = 1;
@@ -2088,6 +2066,24 @@ namespace wi
 				wi::renderer::DRAWSCENE_OCCLUSIONCULLING |
 				wi::renderer::DRAWSCENE_MAINCAMERA
 			);
+
+			// Foreground:
+			vp.min_depth = 1 - foreground_depth_range;
+			vp.max_depth = 1;
+			device->BindViewports(1, &vp, cmd);
+			wi::renderer::DrawScene(
+				visibility_main,
+				RENDERPASS_MAIN,
+				cmd,
+				wi::renderer::DRAWSCENE_TRANSPARENT |
+				wi::renderer::DRAWSCENE_FOREGROUND_ONLY |
+				wi::renderer::DRAWSCENE_MAINCAMERA
+			);
+
+			// Reset normal viewport:
+			vp.min_depth = 0;
+			vp.max_depth = 1;
+			device->BindViewports(1, &vp, cmd);
 
 			device->EventEnd(cmd);
 			wi::profiler::EndRange(range); // Transparent Scene
