@@ -921,7 +921,7 @@ struct ShaderEntityBucketRange
 		const uint last_bucket = clamp(last_item / 32u, 0u, SHADER_ENTITY_TILE_BUCKET_LAST);
 		bucket_range = first_bucket | (last_bucket << 16u);
 		type_mask = ~0u << first_bucket;
-		type_mask = type_mask >> (31u - last_bucket);
+		type_mask &= ~0u >> (31u - last_bucket);
 		first_mask = ~0u << (first_item % 32u);
 		last_mask = ~0u >> (31u - (last_item % 32u));
 	}
