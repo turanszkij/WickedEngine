@@ -1,7 +1,6 @@
 #define DISABLE_DECALS
 #define DISABLE_ENVMAPS
 #define DISABLE_TRANSPARENT_SHADOWMAP
-#define DISABLE_SOFT_SHADOWMAP
 #define TRANSPARENT
 #define WATER
 #include "globals.hlsli"

@@ -57,29 +57,28 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		
 	// Blocker shadow map check using previous frame:
 	//	This is extended with blocker position calculation for splashing
-	[branch]
-	if ((xEmitterOptions & EMITTER_OPTION_BIT_USE_RAIN_BLOCKER) && GetFrame().texture_shadowatlas_index >= 0 && any(GetFrame().rain_blocker_mad_prev))
-	{
-		Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
-		float3 shadow_pos = mul(GetFrame().rain_blocker_matrix_prev, float4(particle.position, 1)).xyz;
-		float3 shadow_uv = clipspace_to_uv(shadow_pos);
-		if (is_saturated(shadow_uv))
-		{
-			shadow_uv.xy = mad(shadow_uv.xy, GetFrame().rain_blocker_mad_prev.xy, GetFrame().rain_blocker_mad_prev.zw);
-			float shadow = texture_shadowatlas.SampleLevel(sampler_point_clamp, shadow_uv.xy, 0).r;
+	//[branch]
+	//if ((xEmitterOptions & EMITTER_OPTION_BIT_USE_RAIN_BLOCKER) && any(GetFrame().rain_blocker_mad_prev))
+	//{
+	//	float3 shadow_pos = mul(GetFrame().rain_blocker_matrix_prev, float4(particle.position, 1)).xyz;
+	//	float3 shadow_uv = clipspace_to_uv(shadow_pos);
+	//	if (is_saturated(shadow_uv))
+	//	{
+	//		shadow_uv.xy = mad(shadow_uv.xy, GetFrame().rain_blocker_mad_prev.xy, GetFrame().rain_blocker_mad_prev.zw);
+	//		float shadow = sample_shadow(shadow_uv.xy, shadow_pos.z).r;
 
-			if(shadow > shadow_pos.z)
-			{
-				// Under blocker, make a splash by placing above blocker and modulating some params:
-				float3 blockerPos = reconstruct_position(clipspace_to_uv(shadow_pos.xy), shadow, GetFrame().rain_blocker_matrix_inverse_prev);
-				particle.velocity = 0;
-				float splashSize = GetWeather().rain_splash_scale;
-				particle.position = blockerPos + float3(0, splashSize * 0.5, 0);
-				particle.sizeBeginEnd = splashSize;
-				particle.life = 0.15;
-			}
-		}
-	}
+	//		if(shadow < 1)
+	//		{
+	//			// Under blocker, make a splash by placing above blocker and modulating some params:
+	//			float3 blockerPos = reconstruct_position(clipspace_to_uv(shadow_pos.xy), shadow, GetFrame().rain_blocker_matrix_inverse_prev);
+	//			particle.velocity = 0;
+	//			float splashSize = GetWeather().rain_splash_scale;
+	//			particle.position = blockerPos + float3(0, splashSize * 0.5, 0);
+	//			particle.sizeBeginEnd = splashSize;
+	//			particle.life = 0.15;
+	//		}
+	//	}
+	//}
 
 	if (particle.life > 0)
 	{

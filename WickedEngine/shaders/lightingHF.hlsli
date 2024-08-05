@@ -6,25 +6,9 @@
 #include "voxelConeTracingHF.hlsli"
 #include "skyHF.hlsli"
 
-#ifdef CARTOON
-#define DISABLE_SOFT_SHADOWMAP
-#endif // CARTOON
-
 #ifdef WATER
 #define LIGHTING_SCATTER
 #endif // WATER
-
-template<typename T>
-inline void QuadBlur(inout T value)
-{
-#if __SHADER_TARGET_STAGE == __SHADER_STAGE_PIXEL && defined(SHADOW_SAMPLING_DISK) && !defined(__spirv__) // Note: Vulkan is disabled because AMD doesn't handle it correctly
-// Average shadow within quad, this smooths out the dithering a bit:
-//	Note that I don't implement this in shadowHF.hlsli because we need to
-//	make sure that when averaging, all lanes in the quad are coherent
-//	It wouldn't be good if some waves are not sampling shadows or sampling different slices
-	value = (value + QuadReadAcrossX(value) + QuadReadAcrossY(value) + QuadReadAcrossDiagonal(value)) * 0.25;
-#endif // __SHADER_STAGE_PIXEL
-}
 
 struct LightingPart
 {
@@ -104,13 +88,11 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 					if (cascade_fade > 0 && dither(surface.pixel + GetTemporalAASampleRotation()) < cascade_fade)
 						continue;
 						
-					light_color *= shadow_2D(light, shadow_pos, shadow_uv.xy, cascade, surface.pixel);
+					light_color *= shadow_2D(light, shadow_pos, shadow_uv.xy, cascade);
 					break;
 				}
 			}
 		}
-		
-		QuadBlur(light_color);
 	}
 
 	[branch]
@@ -205,10 +187,8 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 		if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0 || (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) == 0)
 #endif // SHADOW_MASK_ENABLED
 		{
-			light_color *= shadow_cube(light, LunnormalizedShadow, surface.pixel);
+			light_color *= shadow_cube(light, LunnormalizedShadow);
 		}
-		
-		QuadBlur(light_color);
 	}
 
 	light_color *= attenuation_pointlight(dist2, range, range2);
@@ -305,11 +285,9 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 			[branch]
 			if (is_saturated(shadow_uv))
 			{
-				light_color *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0, surface.pixel);
+				light_color *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0);
 			}
 		}
-		
-		QuadBlur(light_color);
 	}
 
 	light_color *= attenuation_spotlight(dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());

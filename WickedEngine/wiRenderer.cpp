@@ -146,6 +146,7 @@ int VXGI_DEBUG_CLIPMAP = 0;
 
 Texture shadowMapAtlas;
 Texture shadowMapAtlas_Transparent;
+Texture shadowMapAtlas_Filtered;
 int max_shadow_resolution_2D = 1024;
 int max_shadow_resolution_cube = 256;
 
@@ -1143,6 +1144,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_YUV_TO_RGB], "yuv_to_rgbCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_WETMAP_UPDATE], "wetmap_updateCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_CAUSTICS], "causticsCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SHADOW_FILTER], "shadow_filterCS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT], "objectHS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT_PREPASS], "objectHS_prepass.cso"); });
@@ -2044,6 +2046,11 @@ void LoadBuffers()
 		device->CreateTexture(&desc, nullptr, &shadowMapAtlas);
 		device->SetName(&shadowMapAtlas, "shadowMapAtlas");
 
+		desc.format = format_texture_shadowmap_filtered;
+		desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+		device->CreateTexture(&desc, nullptr, &shadowMapAtlas_Filtered);
+		device->SetName(&shadowMapAtlas_Filtered, "shadowMapAtlas_Filtered");
+
 		desc.format = format_rendertarget_shadowmap;
 		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 		desc.layout = ResourceState::SHADER_RESOURCE;
@@ -2074,10 +2081,10 @@ void SetUpStates()
 	rs.fill_mode = FillMode::SOLID;
 	rs.cull_mode = CullMode::BACK;
 	rs.front_counter_clockwise = true;
-	rs.depth_bias = -1;
+	rs.depth_bias = 0;
 	rs.depth_bias_clamp = 0;
-	rs.slope_scaled_depth_bias = -4.0f;
-	rs.depth_clip_enable = true;
+	rs.slope_scaled_depth_bias = 0;
+	rs.depth_clip_enable = false; // to not clip ortho shadow near plane
 	rs.multisample_enable = false;
 	rs.antialiased_line_enable = false;
 	rs.conservative_rasterization_enable = false;
@@ -2668,16 +2675,19 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 		XMStoreFloat3(&_min, vMin);
 		XMStoreFloat3(&_max, vMax);
 
-		// Extrude bounds to avoid early shadow clipping:
+		// This is not extruded projection, the GPU depth clipping will be turned off!
+		XMMATRIX lightProjection = XMMatrixOrthographicOffCenterLH(_min.x, _max.x, _min.y, _max.y, _max.z, _min.z); // notice reversed Z!
+		shcams[cascade].view_projection = XMMatrixMultiply(lightView, lightProjection);
+
+		// Extrude bounds to avoid early shadow culling:
 		float ext = abs(_center.z - _min.z);
 		ext = std::max(ext, std::min(1500.0f, farPlane) * 0.5f);
 		_min.z = _center.z - ext;
 		_max.z = _center.z + ext;
 
-		const XMMATRIX lightProjection = XMMatrixOrthographicOffCenterLH(_min.x, _max.x, _min.y, _max.y, _max.z, _min.z); // notice reversed Z!
-
-		shcams[cascade].view_projection = XMMatrixMultiply(lightView, lightProjection);
-		shcams[cascade].frustum.Create(shcams[cascade].view_projection);
+		lightProjection = XMMatrixOrthographicOffCenterLH(_min.x, _max.x, _min.y, _max.y, _max.z, _min.z); // notice reversed Z!
+		XMMATRIX culling_view_projection = XMMatrixMultiply(lightView, lightProjection);
+		shcams[cascade].frustum.Create(culling_view_projection);
 	}
 
 }
@@ -3559,6 +3569,11 @@ void UpdateVisibility(Visibility& vis)
 						device->CreateTexture(&desc, nullptr, &shadowMapAtlas);
 						device->SetName(&shadowMapAtlas, "shadowMapAtlas");
 
+						desc.format = format_texture_shadowmap_filtered;
+						desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+						device->CreateTexture(&desc, nullptr, &shadowMapAtlas_Filtered);
+						device->SetName(&shadowMapAtlas_Filtered, "shadowMapAtlas_Filtered");
+
 						desc.format = format_rendertarget_shadowmap;
 						desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 						desc.layout = ResourceState::SHADER_RESOURCE;
@@ -3846,10 +3861,10 @@ void UpdatePerFrameData(
 	frameCB.texture_wind_prev_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_WIND_PREV], SubresourceType::SRV);
 	frameCB.texture_caustics_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_CAUSTICS], SubresourceType::SRV);
 
-	frameCB.texture_shadowatlas_index = device->GetDescriptorIndex(&shadowMapAtlas, SubresourceType::SRV);
+	frameCB.texture_shadowatlas_index = device->GetDescriptorIndex(&shadowMapAtlas_Filtered, SubresourceType::SRV);
 	frameCB.texture_shadowatlas_transparent_index = device->GetDescriptorIndex(&shadowMapAtlas_Transparent, SubresourceType::SRV);
-	frameCB.shadow_atlas_resolution.x = shadowMapAtlas.desc.width;
-	frameCB.shadow_atlas_resolution.y = shadowMapAtlas.desc.height;
+	frameCB.shadow_atlas_resolution.x = shadowMapAtlas_Filtered.desc.width;
+	frameCB.shadow_atlas_resolution.y = shadowMapAtlas_Filtered.desc.height;
 	frameCB.shadow_atlas_resolution_rcp.x = 1.0f / frameCB.shadow_atlas_resolution.x;
 	frameCB.shadow_atlas_resolution_rcp.y = 1.0f / frameCB.shadow_atlas_resolution.y;
 
@@ -6228,6 +6243,140 @@ void DrawShadowmaps(
 		}
 
 		device->RenderPassEnd(cmd);
+
+		device->EventBegin("Shadow Filtering", cmd);
+		device->Barrier(GPUBarrier::Image(&shadowMapAtlas_Filtered, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS), cmd);
+		device->BindComputeShader(&shaders[CSTYPE_SHADOW_FILTER], cmd);
+		device->BindResource(&shadowMapAtlas, 0, cmd);
+		device->BindUAV(&shadowMapAtlas_Filtered, 0, cmd);
+		ShadowFilterPush push = {};
+		push.atlas_resolution_rcp.x = 1.0f / float(shadowMapAtlas.desc.width);
+		push.atlas_resolution_rcp.y = 1.0f / float(shadowMapAtlas.desc.height);
+		for (uint32_t lightIndex : vis.visibleLights)
+		{
+			const LightComponent& light = vis.scene->lights[lightIndex];
+			if (light.IsInactive())
+				continue;
+
+			const bool shadow = light.IsCastingShadow() && !light.IsStatic();
+			if (!shadow)
+				continue;
+			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
+
+			switch (light.GetType())
+			{
+			case LightComponent::DIRECTIONAL:
+			{
+				if (max_shadow_resolution_2D == 0 && light.forced_shadow_resolution < 0)
+					break;
+				if (light.cascade_distances.empty())
+					break;
+
+				const uint32_t cascade_count = std::min((uint32_t)light.cascade_distances.size(), max_viewport_count);
+				for (uint32_t cascade = 0; cascade < cascade_count; ++cascade)
+				{
+					push.rect.x = shadow_rect.x + cascade * shadow_rect.w;
+					push.rect.y = shadow_rect.y;
+					push.rect.z = shadow_rect.w;
+					push.rect.w = shadow_rect.h;
+					push.spread = light.radius;
+					device->PushConstants(&push, sizeof(push), cmd);
+					device->Dispatch((push.rect.z + 7u) / 8u, (push.rect.w + 7u) / 8u, 1, cmd);
+				}
+			}
+			break;
+			case LightComponent::SPOT:
+			{
+				if (max_shadow_resolution_2D == 0 && light.forced_shadow_resolution < 0)
+					break;
+
+				SHCAM shcam;
+				CreateSpotLightShadowCam(light, shcam);
+				if (!cam_frustum.Intersects(shcam.boundingfrustum))
+					break;
+
+				if (predicationRequest && light.occlusionquery >= 0)
+				{
+					device->PredicationBegin(
+						&vis.scene->queryPredicationBuffer,
+						(uint64_t)light.occlusionquery * sizeof(uint64_t),
+						PredicationOp::EQUAL_ZERO,
+						cmd
+					);
+				}
+
+				push.rect.x = shadow_rect.x;
+				push.rect.y = shadow_rect.y;
+				push.rect.z = shadow_rect.w;
+				push.rect.w = shadow_rect.h;
+				push.spread = light.radius;
+				device->PushConstants(&push, sizeof(push), cmd);
+				device->Dispatch((push.rect.z + 7u) / 8u, (push.rect.w + 7u) / 8u, 1, cmd);
+
+				if (predicationRequest && light.occlusionquery >= 0)
+				{
+					device->PredicationEnd(cmd);
+				}
+			}
+			break;
+			case LightComponent::POINT:
+			{
+				if (max_shadow_resolution_cube == 0 && light.forced_shadow_resolution < 0)
+					break;
+
+				Sphere boundingsphere(light.position, light.GetRange());
+
+				const float zNearP = 0.1f;
+				const float zFarP = std::max(1.0f, light.GetRange());
+				SHCAM cameras[6];
+				CreateCubemapCameras(light.position, zNearP, zFarP, cameras, arraysize(cameras));
+
+				if (predicationRequest && light.occlusionquery >= 0)
+				{
+					device->PredicationBegin(
+						&vis.scene->queryPredicationBuffer,
+						(uint64_t)light.occlusionquery * sizeof(uint64_t),
+						PredicationOp::EQUAL_ZERO,
+						cmd
+					);
+				}
+
+				for (uint32_t shcam = 0; shcam < arraysize(cameras); ++shcam)
+				{
+					// Check if cubemap face frustum is visible from main camera, otherwise, it will be skipped:
+					if (cam_frustum.Intersects(cameras[shcam].boundingfrustum))
+					{
+						push.rect.x = shadow_rect.x + shcam * shadow_rect.w;
+						push.rect.y = shadow_rect.y;
+						push.rect.z = shadow_rect.w;
+						push.rect.w = shadow_rect.h;
+						push.spread = light.radius;
+						device->PushConstants(&push, sizeof(push), cmd);
+						device->Dispatch((push.rect.z + 7u) / 8u, (push.rect.w + 7u) / 8u, 1, cmd);
+					}
+				}
+
+				if (predicationRequest && light.occlusionquery >= 0)
+				{
+					device->PredicationEnd(cmd);
+				}
+			}
+			break;
+			} // terminate switch
+		}
+		// Rain blocker filtering:
+		if (vis.scene->weather.rain_amount > 0)
+		{
+			push.rect.x = vis.rain_blocker_shadow_rect.x;
+			push.rect.y = vis.rain_blocker_shadow_rect.y;
+			push.rect.z = vis.rain_blocker_shadow_rect.w;
+			push.rect.w = vis.rain_blocker_shadow_rect.h;
+			push.spread = 0.5f;
+			device->PushConstants(&push, sizeof(push), cmd);
+			device->Dispatch((push.rect.z + 7u) / 8u, (push.rect.w + 7u) / 8u, 1, cmd);
+		}
+		device->Barrier(GPUBarrier::Image(&shadowMapAtlas_Filtered, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE), cmd);
+		device->EventEnd(cmd);
 
 		wi::profiler::EndRange(range_gpu);
 		wi::profiler::EndRange(range_cpu);

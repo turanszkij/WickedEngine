@@ -541,6 +541,9 @@ struct PrimitiveID
 #define MEDIUMP_FLT_MAX 65504.0
 
 #define sqr(a) ((a)*(a))
+#define pow2(a) ((a)*(a))
+#define pow3(a) ((a)*(a)*(a))
+#define pow4(a) ((a)*(a)*(a)*(a))
 #define pow5(a) ((a)*(a)*(a)*(a)*(a))
 #define arraysize(a) (sizeof(a) / sizeof(a[0]))
 #define saturateMediump(x) min(x, MEDIUMP_FLT_MAX)

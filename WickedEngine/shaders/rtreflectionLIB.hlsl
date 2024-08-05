@@ -1,5 +1,4 @@
 #define RTAPI
-#define DISABLE_SOFT_SHADOWMAP
 #define DISABLE_TRANSPARENT_SHADOWMAP
 
 #include "globals.hlsli"

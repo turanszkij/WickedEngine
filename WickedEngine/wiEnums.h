@@ -413,6 +413,7 @@ namespace wi::enums
 		CSTYPE_YUV_TO_RGB,
 		CSTYPE_WETMAP_UPDATE,
 		CSTYPE_CAUSTICS,
+		CSTYPE_SHADOW_FILTER,
 
 
 		// raytracing pipelines:

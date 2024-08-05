@@ -1461,5 +1461,13 @@ CBUFFER(TrailRendererCB, CBSLOT_TRAILRENDERER)
 	float		g_xTrailCameraFar;
 };
 
+struct ShadowFilterPush
+{
+	uint4 rect;
+	float2 atlas_resolution_rcp;
+	float spread;
+	float padding;
+};
+
 
 #endif // WI_SHADERINTEROP_RENDERER_H

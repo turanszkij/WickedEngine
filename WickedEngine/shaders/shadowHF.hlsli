@@ -2,108 +2,86 @@
 #define WI_SHADOW_HF
 #include "globals.hlsli"
 
-#define SHADOW_SAMPLING_DISK
+// Moment shadow mapping things from: https://github.com/TheRealMJP/Shadows
+float Linstep(float a, float b, float v)
+{
+    return saturate((v - a) / (b - a));
+}
+float ReduceLightBleeding(float pMax, float amount)
+{
+  // Remove the [0, amount] tail and linearly rescale (amount, 1].
+   return Linstep(amount, 1.0f, pMax);
+}
+float4 ConvertOptimizedMoments(in float4 optimizedMoments)
+{
+    optimizedMoments[0] -= 0.035955884801f;
+    return mul(optimizedMoments, float4x4(0.2227744146f, 0.1549679261f, 0.1451988946f, 0.163127443f,
+                                          0.0771972861f, 0.1394629426f, 0.2120202157f, 0.2591432266f,
+                                          0.7926986636f, 0.7963415838f, 0.7258694464f, 0.6539092497f,
+                                          0.0319417555f,-0.1722823173f,-0.2758014811f,-0.3376131734f));
+}
+float ComputeMSMHamburger(in float4 moments, in float fragmentDepth , in float depthBias, in float momentBias)
+{
+    // Bias input data to avoid artifacts
+    float4 b = lerp(moments, float4(0.5f, 0.5f, 0.5f, 0.5f), momentBias);
+    float3 z;
+    z[0] = fragmentDepth - depthBias;
 
-#ifdef SHADOW_SAMPLING_DISK
+    // Compute a Cholesky factorization of the Hankel matrix B storing only non-
+    // trivial entries or related products
+    float L32D22 = mad(-b[0], b[1], b[2]);
+    float D22 = mad(-b[0], b[0], b[1]);
+    float squaredDepthVariance = mad(-b[1], b[1], b[3]);
+    float D33D22 = dot(float2(squaredDepthVariance, -L32D22), float2(D22, L32D22));
+    float InvD22 = 1.0f / D22;
+    float L32 = L32D22 * InvD22;
 
-// "Vogel disk" sampling pattern based on: https://github.com/corporateshark/poisson-disk-generator/blob/master/PoissonGenerator.h
-//	Baked values are remapped from [0, 1] range into [-1, 1] range by doing: value * 2 - 1
-static const half2 vogel_points[] = {
-	half2(0.353553, 0.000000),
-	half2(-0.451560, 0.413635),
-	half2(0.069174, -0.787537),
-	half2(0.569060, 0.742409),
-};
+    // Obtain a scaled inverse image of bz = (1,z[0],z[0]*z[0])^T
+    float3 c = float3(1.0f, z[0], z[0] * z[0]);
 
-static const min16uint soft_shadow_sample_count = arraysize(vogel_points);
-static const half soft_shadow_sample_count_rcp = rcp((half)soft_shadow_sample_count);
+    // Forward substitution to solve L*c1=bz
+    c[1] -= b.x;
+    c[2] -= b.y + L32 * c[1];
 
-inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half radius, uint2 pixel)
+    // Scaling to solve D*c2=c1
+    c[1] *= InvD22;
+    c[2] *= D22 / D33D22;
+
+    // Backward substitution to solve L^T*c3=c2
+    c[1] -= L32 * c[2];
+    c[0] -= dot(c.yz, b.xy);
+
+    // Solve the quadratic equation c[0]+c[1]*z+c[2]*z^2 to obtain solutions
+    // z[1] and z[2]
+    float p = c[1] / c[2];
+    float q = c[0] / c[2];
+    float D = (p * p * 0.25f) - q;
+    float r = sqrt(D);
+    z[1] =- p * 0.5f - r;
+    z[2] =- p * 0.5f + r;
+
+    // Compute the shadow intensity by summing the appropriate weights
+    float4 switchVal = (z[2] < z[0]) ? float4(z[1], z[0], 1.0f, 1.0f) :
+                      ((z[1] < z[0]) ? float4(z[0], z[1], 0.0f, 1.0f) :
+                      float4(0.0f,0.0f,0.0f,0.0f));
+    float quotient = (switchVal[0] * z[2] - b[0] * (switchVal[0] + z[2]) + b[1])/((z[2] - switchVal[1]) * (z[0] - z[1]));
+    float shadowIntensity = switchVal[2] + switchVal[3] * quotient;
+    return 1.0f - saturate(shadowIntensity);
+}
+
+static const float MSMDepthBias = 0.0;
+static const float MSMMomentBias = 0.01;
+static const float LightBleedingReduction = 0.16;
+
+inline half3 sample_shadow(float2 uv, float cmp)
 {
 	Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
-	Texture2D texture_shadowatlas_transparent = bindless_textures[GetFrame().texture_shadowatlas_transparent_index];
 	
-	half3 shadow = 0;
-
-#ifndef DISABLE_SOFT_SHADOWMAP
-	const float2 spread = GetFrame().shadow_atlas_resolution_rcp.xy * (mad(radius, 8, 2)); // remap radius to try to match ray traced shadow result
-	const half2x2 rot = dither_rot2x2(pixel + GetTemporalAASampleRotation()); // per pixel rotation for every sample
-	for (min16uint i = 0; i < soft_shadow_sample_count; ++i)
-	{
-		float2 sample_uv = mad(mul(vogel_points[i], rot), spread, uv);
-#else
-		float2 sample_uv = uv;
-#endif // DISABLE_SOFT_SHADOWMAP
-
-		sample_uv = clamp(sample_uv, uv_clamping.xy, uv_clamping.zw);
-		half3 pcf = texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, sample_uv, cmp).rrr;
-		
-#ifndef DISABLE_TRANSPARENT_SHADOWMAP
-		half4 transparent_shadow = texture_shadowatlas_transparent.SampleLevel(sampler_linear_clamp, sample_uv, 0);
-#ifdef TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
-		if (transparent_shadow.a > cmp)
-#endif // TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
-		{
-			pcf *= transparent_shadow.rgb;
-		}
-#endif // DISABLE_TRANSPARENT_SHADOWMAP
-
-		shadow += pcf;
-		
-#ifndef DISABLE_SOFT_SHADOWMAP
-	}
-	shadow *= soft_shadow_sample_count_rcp;
-#endif // DISABLE_SOFT_SHADOWMAP
-
-	return shadow;
-}
-
-// This is used to clamp the uvs to last texel center to avoid sampling on the border and overfiltering into a different shadow
-inline float4 shadow_border_clamp(in ShaderEntity light, in float slice)
-{
-	const float border_size = 0.75 * GetFrame().shadow_atlas_resolution_rcp;
-	const float2 topleft = mad(float2(slice, 0), light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw) + border_size;
-	const float2 bottomright = mad(float2(slice + 1, 1), light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw) - border_size;
-	return float4(topleft, bottomright);
-}
-
-inline half3 shadow_2D(in ShaderEntity light, in float3 shadow_pos, in float2 shadow_uv, in uint cascade, uint2 pixel = 0)
-{
-	shadow_uv.x += cascade;
-	shadow_uv = mad(shadow_uv, light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw);
-	return sample_shadow(shadow_uv, shadow_pos.z, shadow_border_clamp(light, cascade), light.GetRadius(), pixel);
-}
-
-inline half3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized, uint2 pixel = 0)
-{
-	const float remapped_distance = light.GetCubemapDepthRemapNear() + light.GetCubemapDepthRemapFar() / (max(max(abs(Lunnormalized.x), abs(Lunnormalized.y)), abs(Lunnormalized.z)) * 0.989); // little bias to avoid artifact
-	const float3 uv_slice = cubemap_to_uv(-Lunnormalized);
-	float2 shadow_uv = uv_slice.xy;
-	shadow_uv.x += uv_slice.z;
-	shadow_uv = mad(shadow_uv, light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw);
-	return sample_shadow(shadow_uv, remapped_distance, shadow_border_clamp(light, uv_slice.z), light.GetRadius(), pixel);
-}
-
-#else
-
-inline half3 sample_shadow(float2 uv, float cmp, uint2 pixel)
-{
-	Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
-	half3 shadow = (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp).r;
-
-#ifndef DISABLE_SOFT_SHADOWMAP
-	// sample along a rectangle pattern around center:
-	shadow.x += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(-1, -1)).r;
-	shadow.x += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(-1, 0)).r;
-	shadow.x += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(-1, 1)).r;
-	shadow.x += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(0, -1)).r;
-	shadow.x += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(0, 1)).r;
-	shadow.x += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(1, -1)).r;
-	shadow.x += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(1, 0)).r;
-	shadow.x += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(1, 1)).r;
-	shadow = shadow.xxx / 9.0;
-#endif // DISABLE_SOFT_SHADOWMAP
-
+	float4 moments = texture_shadowatlas.SampleLevel(sampler_linear_clamp, uv, 0);
+	moments = ConvertOptimizedMoments(moments); // 16-bit moments fix
+	float msm = ComputeMSMHamburger(moments, 1 - cmp, MSMDepthBias * 0.001f, MSMMomentBias * 0.001f);
+	half3 shadow = ReduceLightBleeding(msm, LightBleedingReduction);
+	
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
 	Texture2D texture_shadowatlas_transparent = bindless_textures[GetFrame().texture_shadowatlas_transparent_index];
 	half4 transparent_shadow = (half4)texture_shadowatlas_transparent.SampleLevel(sampler_linear_clamp, uv, 0);
@@ -122,11 +100,7 @@ inline half3 sample_shadow(float2 uv, float cmp, uint2 pixel)
 inline void shadow_border_shrink(in ShaderEntity light, inout float2 shadow_uv)
 {
 	const float2 shadow_resolution = light.shadowAtlasMulAdd.xy * GetFrame().shadow_atlas_resolution;
-#ifdef DISABLE_SOFT_SHADOWMAP
 	const float border_size = 0.5;
-#else
-	const float border_size = 1.5;
-#endif // DISABLE_SOFT_SHADOWMAP
 	shadow_uv = clamp(shadow_uv * shadow_resolution, border_size, shadow_resolution - border_size) / shadow_resolution;
 }
 
@@ -135,10 +109,10 @@ inline half3 shadow_2D(in ShaderEntity light, in float3 shadow_pos, in float2 sh
 	shadow_border_shrink(light, shadow_uv);
 	shadow_uv.x += cascade;
 	shadow_uv = mad(shadow_uv, light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw);
-	return sample_shadow(shadow_uv, shadow_pos.z, pixel);
+	return sample_shadow(shadow_uv, shadow_pos.z);
 }
 
-inline half3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized, in uint2 pixel = 0)
+inline half3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized)
 {
 	const float remapped_distance = light.GetCubemapDepthRemapNear() + light.GetCubemapDepthRemapFar() / (max(max(abs(Lunnormalized.x), abs(Lunnormalized.y)), abs(Lunnormalized.z)) * 0.989); // little bias to avoid artifact
 	const float3 uv_slice = cubemap_to_uv(-Lunnormalized);
@@ -146,10 +120,8 @@ inline half3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized, in uint
 	shadow_border_shrink(light, shadow_uv);
 	shadow_uv.x += uv_slice.z;
 	shadow_uv = mad(shadow_uv, light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw);
-	return sample_shadow(shadow_uv, remapped_distance, pixel);
+	return sample_shadow(shadow_uv, remapped_distance);
 }
-
-#endif // SHADOW_SAMPLING_DISK
 
 inline half shadow_2D_volumetricclouds(float3 P)
 {
@@ -217,18 +189,17 @@ inline bool rain_blocker_check(in float3 P)
 	}
 
 	[branch]
-	if (GetFrame().texture_shadowatlas_index < 0 || !any(GetFrame().rain_blocker_mad))
+	if (!any(GetFrame().rain_blocker_mad))
 		return false;
 		
-	Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
 	float3 shadow_pos = mul(GetFrame().rain_blocker_matrix, float4(P, 1)).xyz;
 	float3 shadow_uv = clipspace_to_uv(shadow_pos);
 	if (is_saturated(shadow_uv))
 	{
 		shadow_uv.xy = mad(shadow_uv.xy, GetFrame().rain_blocker_mad.xy, GetFrame().rain_blocker_mad.zw);
-		float shadow = texture_shadowatlas.SampleLevel(sampler_point_clamp, shadow_uv.xy, 0).r;
+		float shadow = sample_shadow(shadow_uv.xy, shadow_pos.z).r;
 
-		if(shadow > shadow_pos.z)
+		if(shadow < 0.5)
 		{
 			return true;
 		}
@@ -250,18 +221,17 @@ inline bool rain_blocker_check_prev(in float3 P)
 	}
 		
 	[branch]
-	if (GetFrame().texture_shadowatlas_index < 0 || !any(GetFrame().rain_blocker_mad_prev))
+	if (!any(GetFrame().rain_blocker_mad_prev))
 		return false;
 		
-	Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
 	float3 shadow_pos = mul(GetFrame().rain_blocker_matrix_prev, float4(P, 1)).xyz;
 	float3 shadow_uv = clipspace_to_uv(shadow_pos);
 	if (is_saturated(shadow_uv))
 	{
 		shadow_uv.xy = mad(shadow_uv.xy, GetFrame().rain_blocker_mad_prev.xy, GetFrame().rain_blocker_mad_prev.zw);
-		float shadow = texture_shadowatlas.SampleLevel(sampler_point_clamp, shadow_uv.xy, 0).r;
-
-		if(shadow > shadow_pos.z)
+		float shadow = sample_shadow(shadow_uv.xy, shadow_pos.z).r;
+		
+		if(shadow < 0.5)
 		{
 			return true;
 		}

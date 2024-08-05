@@ -1,4 +1,3 @@
-#define DISABLE_SOFT_SHADOWMAP
 #define DISABLE_VOXELGI
 #include "objectHF.hlsli"
 #include "voxelHF.hlsli"
