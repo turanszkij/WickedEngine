@@ -645,7 +645,7 @@ namespace wi::terrain
 		}
 
 		// What was generated, will be merged in to the main scene
-		scene->Merge(generator->scene);
+		scene->MergeFastInternal(generator->scene);
 
 		const float chunk_scale_rcp = 1.0f / chunk_scale;
 

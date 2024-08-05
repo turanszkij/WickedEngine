@@ -1049,12 +1049,16 @@ namespace wi::scene
 		collider_count_cpu = 0;
 		collider_count_gpu = 0;
 	}
-	void Scene::Merge(Scene& other)
+	void Scene::MergeFastInternal(Scene& other)
 	{
 		for (auto& entry : componentLibrary.entries)
 		{
 			entry.second.component_manager->Merge(*other.componentLibrary.entries[entry.first].component_manager);
 		}
+	}
+	void Scene::Merge(Scene& other)
+	{
+		MergeFastInternal(other);
 
 		bounds = AABB::Merge(bounds, other.bounds);
 

@@ -317,6 +317,8 @@ namespace wi::scene
 		// Merge an other scene into this.
 		//	The contents of the other scene will be lost (and moved to this)!
 		virtual void Merge(Scene& other);
+		// Similar to merge but skipping some things that are safe to skip within the Update look
+		void MergeFastInternal(Scene& other);
 		// Create a copy of prefab and merge it into this.
 		//	prefab		: source scene to be copied from
 		//	attached	: if true, everything from prefab will be attached to a root entity
