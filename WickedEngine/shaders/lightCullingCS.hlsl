@@ -14,6 +14,8 @@ groupshared uint uMaxDepth;
 groupshared uint uDepthMask;		// Harada Siggraph 2012 2.5D culling
 groupshared uint tile_opaque[SHADER_ENTITY_TILE_BUCKET_COUNT];
 groupshared uint tile_transparent[SHADER_ENTITY_TILE_BUCKET_COUNT];
+groupshared uint tile_bucket_mask_opaque;
+groupshared uint tile_bucket_mask_transparent;
 #ifdef DEBUG_TILEDLIGHTCULLING
 groupshared uint entityCountDebug;
 RWTexture2D<unorm float4> DebugTexture : register(u3);
@@ -24,6 +26,8 @@ void AppendEntity_Opaque(uint entityIndex)
 	const uint bucket_index = entityIndex / 32;
 	const uint bucket_place = entityIndex % 32;
 	InterlockedOr(tile_opaque[bucket_index], 1u << bucket_place);
+	
+	tile_bucket_mask_opaque |= 1u << bucket_index;
 
 #ifdef DEBUG_TILEDLIGHTCULLING
 	InterlockedAdd(entityCountDebug, 1);
@@ -35,6 +39,8 @@ void AppendEntity_Transparent(uint entityIndex)
 	const uint bucket_index = entityIndex / 32;
 	const uint bucket_place = entityIndex % 32;
 	InterlockedOr(tile_transparent[bucket_index], 1u << bucket_place);
+	
+	tile_bucket_mask_transparent |= 1u << bucket_index;
 }
 
 inline uint ConstructEntityMask(in float depthRangeMin, in float depthRangeRecip, in Sphere bounds)
@@ -88,7 +94,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 
 	// Compute addresses and load frustum:
 	const uint flatTileIndex = flatten2D(Gid.xy, GetCamera().entity_culling_tilecount.xy);
-	const uint tileBucketsAddress = flatTileIndex * SHADER_ENTITY_TILE_BUCKET_COUNT;
+	const uint tileBucketsAddress = flatTileIndex * SHADER_ENTITY_TILE_UINT_COUNT;
 	Frustum GroupFrustum = in_Frustums[flatTileIndex];
 
 	// Each thread will zero out one bucket in the LDS:
@@ -104,6 +110,8 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		uMinDepth = 0xffffffff;
 		uMaxDepth = 0;
 		uDepthMask = 0;
+		tile_bucket_mask_opaque = 0;
+		tile_bucket_mask_transparent = 0;
 
 #ifdef DEBUG_TILEDLIGHTCULLING
 		entityCountDebug = 0;
@@ -328,7 +336,16 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	for (i = groupIndex; i < SHADER_ENTITY_TILE_BUCKET_COUNT; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		entityTiles[tileBucketsAddress + i] = tile_opaque[i];
-		entityTiles[GetCamera().entity_culling_tile_bucket_count_flat + tileBucketsAddress + i] = tile_transparent[i];
+		entityTiles[GetCamera().entity_culling_tile_uint_count_flat + tileBucketsAddress + i] = tile_transparent[i];
+	}
+
+	if (groupIndex == 0)
+	{
+		entityTiles[tileBucketsAddress + SHADER_ENTITY_TILE_BUCKET_MASK] = tile_bucket_mask_opaque;
+	}
+	else if (groupIndex == 1)
+	{
+		entityTiles[GetCamera().entity_culling_tile_uint_count_flat + tileBucketsAddress + SHADER_ENTITY_TILE_BUCKET_MASK] = tile_bucket_mask_transparent;
 	}
 
 #ifdef DEBUG_TILEDLIGHTCULLING

@@ -266,11 +266,17 @@ inline void ForwardDecals(inout Surface surface, inout half4 surfaceMap, Sampler
 inline uint GetFlatTileIndex(uint2 pixel)
 {
 	const uint2 tileIndex = uint2(floor(pixel / TILED_CULLING_BLOCKSIZE));
-	return flatten2D(tileIndex, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
+	return flatten2D(tileIndex, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_UINT_COUNT;
 }
 
 inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint flatTileIndex)
 {
+	// Tile mask contains 1 bit for each bucket used in the current tile:
+	uint tile_mask = load_entitytile(flatTileIndex + SHADER_ENTITY_TILE_BUCKET_MASK);
+#ifndef ENTITY_TILE_UNIFORM
+	tile_mask = WaveReadLaneFirst(WaveActiveBitOr(tile_mask));
+#endif // ENTITY_TILE_UNIFORM
+
 #ifndef DISABLE_ENVMAPS
 	// Apply environment maps:
 	half4 envmapAccumulation = 0;
@@ -281,9 +287,12 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		// Loop through envmap buckets in the tile:
 		ShaderEntityBucketRange buckets = GetFrame().probe_buckets;
-		[loop]
-		for (uint bucket = buckets.first; bucket <= buckets.last; ++bucket)
+		uint bucket_mask = buckets.bucket_mask(tile_mask);
+		while (bucket_mask != 0)
 		{
+			const uint bucket = firstbitlow(bucket_mask);
+			bucket_mask ^= 1u << bucket;
+			
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
 #ifndef ENTITY_TILE_UNIFORM
@@ -291,7 +300,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
 #endif // ENTITY_TILE_UNIFORM
 
-			buckets.mask(bucket, bucket_bits);
+			bucket_bits = buckets.entity_mask(bucket, bucket_bits);
 
 			[loop]
 			while (WaveActiveAnyTrue(bucket_bits != 0 && envmapAccumulation.a < 0.99))
@@ -345,9 +354,12 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		// Loop through light buckets in the tile:
 		ShaderEntityBucketRange buckets = GetFrame().light_buckets_directional;
-		[loop]
-		for (uint bucket = buckets.first; bucket <= buckets.last; ++bucket)
+		uint bucket_mask = buckets.bucket_mask(tile_mask);
+		while (bucket_mask != 0)
 		{
+			const uint bucket = firstbitlow(bucket_mask);
+			bucket_mask ^= 1u << bucket;
+			
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
 #ifndef ENTITY_TILE_UNIFORM
@@ -355,7 +367,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
 #endif // ENTITY_TILE_UNIFORM
 
-			buckets.mask(bucket, bucket_bits);
+			bucket_bits = buckets.entity_mask(bucket, bucket_bits);
 
 			[loop]
 			while (bucket_bits != 0)
@@ -391,9 +403,12 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		// Loop through light buckets in the tile:
 		ShaderEntityBucketRange buckets = GetFrame().light_buckets_spot;
-		[loop]
-		for (uint bucket = buckets.first; bucket <= buckets.last; ++bucket)
+		uint bucket_mask = buckets.bucket_mask(tile_mask);
+		while (bucket_mask != 0)
 		{
+			const uint bucket = firstbitlow(bucket_mask);
+			bucket_mask ^= 1u << bucket;
+			
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
 #ifndef ENTITY_TILE_UNIFORM
@@ -401,7 +416,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
 #endif // ENTITY_TILE_UNIFORM
 
-			buckets.mask(bucket, bucket_bits);
+			bucket_bits = buckets.entity_mask(bucket, bucket_bits);
 
 			[loop]
 			while (bucket_bits != 0)
@@ -437,9 +452,12 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		// Loop through light buckets in the tile:
 		ShaderEntityBucketRange buckets = GetFrame().light_buckets_point;
-		[loop]
-		for (uint bucket = buckets.first; bucket <= buckets.last; ++bucket)
+		uint bucket_mask = buckets.bucket_mask(tile_mask);
+		while (bucket_mask != 0)
 		{
+			const uint bucket = firstbitlow(bucket_mask);
+			bucket_mask ^= 1u << bucket;
+			
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
 #ifndef ENTITY_TILE_UNIFORM
@@ -447,7 +465,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
 #endif // ENTITY_TILE_UNIFORM
 
-			buckets.mask(bucket, bucket_bits);
+			bucket_bits = buckets.entity_mask(bucket, bucket_bits);
 
 			[loop]
 			while (bucket_bits != 0)
@@ -523,6 +541,12 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 	if (GetFrame().decalarray_count == 0)
 		return;
 
+	// Tile mask contains 1 bit for each bucket used in the current tile:
+	uint tile_mask = load_entitytile(flatTileIndex + SHADER_ENTITY_TILE_BUCKET_MASK);
+#ifndef ENTITY_TILE_UNIFORM
+	tile_mask = WaveReadLaneFirst(WaveActiveBitOr(tile_mask));
+#endif // ENTITY_TILE_UNIFORM
+
 	// decals are enabled, loop through them first:
 	half4 decalAccumulation = 0;
 	half4 decalBumpAccumulation = 0;
@@ -539,9 +563,12 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 
 	// Loop through decal buckets in the tile:
 	ShaderEntityBucketRange buckets = GetFrame().decal_buckets;
-	[loop]
-	for (uint bucket = buckets.first; bucket <= buckets.last; ++bucket)
+		uint bucket_mask = buckets.bucket_mask(tile_mask);
+	while (bucket_mask != 0)
 	{
+		const uint bucket = firstbitlow(bucket_mask);
+		bucket_mask ^= 1u << bucket;
+			
 		uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
 #ifndef ENTITY_TILE_UNIFORM
@@ -549,7 +576,7 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 		bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
 #endif // ENTITY_TILE_UNIFORM
 
-		buckets.mask(bucket, bucket_bits);
+		bucket_bits = buckets.entity_mask(bucket, bucket_bits);
 
 		[loop]
 		while (WaveActiveAnyTrue(bucket_bits != 0 && decalAccumulation.a < 1 && decalBumpAccumulation.a < 1 && decalSurfaceAccumulationAlpha < 1))

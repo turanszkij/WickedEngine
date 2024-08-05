@@ -900,32 +900,53 @@ enum SHADER_ENTITY_FLAGS
 
 static const uint SHADER_ENTITY_COUNT = 256;
 static const uint SHADER_ENTITY_TILE_BUCKET_COUNT = SHADER_ENTITY_COUNT / 32;
+static const uint SHADER_ENTITY_TILE_UINT_COUNT = SHADER_ENTITY_TILE_BUCKET_COUNT + 1; // +1: tile mask
 static const uint SHADER_ENTITY_TILE_BUCKET_LAST = SHADER_ENTITY_TILE_BUCKET_COUNT - 1;
+static const uint SHADER_ENTITY_TILE_BUCKET_MASK = SHADER_ENTITY_TILE_UINT_COUNT - 1;
+#ifdef __cplusplus
+static_assert(SHADER_ENTITY_TILE_BUCKET_LAST < 32); // whole bucket count must be indexable within 32 bits
+#endif // __cplusplus
 
 struct ShaderEntityBucketRange
 {
-	uint first;
-	uint last;
+	uint bucket_range;
+	uint type_mask;
 	uint first_mask;
 	uint last_mask;
 	void init(uint offset, uint count)
 	{
 		const uint first_item = offset;
 		const uint last_item = (offset + count - 1);
-		first = clamp(first_item / 32u, 0u, SHADER_ENTITY_TILE_BUCKET_LAST);
-		last = clamp(last_item / 32u, 0u, SHADER_ENTITY_TILE_BUCKET_LAST);
+		const uint first_bucket = clamp(first_item / 32u, 0u, SHADER_ENTITY_TILE_BUCKET_LAST);
+		const uint last_bucket = clamp(last_item / 32u, 0u, SHADER_ENTITY_TILE_BUCKET_LAST);
+		bucket_range = first_bucket | (last_bucket << 16u);
+		type_mask = ~0u << first_bucket;
+		type_mask = type_mask >> (31u - last_bucket);
 		first_mask = ~0u << (first_item % 32u);
 		last_mask = ~0u >> (31u - (last_item % 32u));
 	}
-#ifndef __cplusplus
-	inline void mask(in uint bucket, inout uint bucket_bits)
+	inline uint begin()
 	{
-		if (bucket == first)
-			bucket_bits &= first_mask;
-		if (bucket == last)
-			bucket_bits &= last_mask;
+		return bucket_range & 0xFFFF;
 	}
-#endif // __cplusplus
+	inline uint end()
+	{
+		return bucket_range >> 16u;
+	}
+	// This mask out inactive buckets of the current type based on a whole tile bucket mask
+	inline uint bucket_mask(uint tile_mask)
+	{
+		return tile_mask & type_mask;
+	}
+	// This masks out inactive entities for the current bucket type when processing either the first or the last bucket in the list
+	inline uint entity_mask(uint bucket, uint bucket_bits)
+	{
+		if (bucket == begin())
+			bucket_bits &= first_mask;
+		if (bucket == end())
+			bucket_bits &= last_mask;
+		return bucket_bits;
+	}
 };
 
 static const uint MATRIXARRAY_COUNT = SHADER_ENTITY_COUNT;
@@ -1106,7 +1127,7 @@ struct alignas(16) ShaderCamera
 	float4 scissor_uv; // scissor in screen UV coordinates (left,top,right,bottom) range: [0, 1]
 
 	uint2 entity_culling_tilecount;
-	uint entity_culling_tile_bucket_count_flat; // tilecount.x * tilecount.y * SHADER_ENTITY_TILE_BUCKET_COUNT (the total number of uint buckets for the whole screen)
+	uint entity_culling_tile_uint_count_flat; // tilecount.x * tilecount.y * SHADER_ENTITY_TILE_UINT_COUNT (the total number of uint buckets for the whole screen)
 	uint sample_count;
 
 	uint2 visibility_tilecount;
@@ -1180,7 +1201,7 @@ struct alignas(16) ShaderCamera
 		scissor = {};
 		scissor_uv = {};
 		entity_culling_tilecount = {};
-		entity_culling_tile_bucket_count_flat = 0;
+		entity_culling_tile_uint_count_flat = 0;
 		sample_count = {};
 		visibility_tilecount = {};
 		visibility_tilecount_flat = {};

@@ -50,7 +50,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	const float4 bluenoise = blue_noise(DTid.xy);
 
 	const uint2 tileIndex = uint2(floor(DTid.xy * DOWNSAMPLE / TILED_CULLING_BLOCKSIZE));
-	const uint flatTileIndex = flatten2D(tileIndex, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
+	const uint flatTileIndex = flatten2D(tileIndex, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_UINT_COUNT;
 
 	uint4 shadow_mask = 0;
 	uint shadow_index = 0;

@@ -730,12 +730,21 @@ struct Surface
 			half4 decalBumpAccumulation = 0;
 			half4 decalSurfaceAccumulation = 0;
 			half decalSurfaceAccumulationAlpha = 0;
+			
+			// Tile mask contains 1 bit for each bucket used in the current tile:
+			uint tile_mask = load_entitytile(flatTileIndex + SHADER_ENTITY_TILE_BUCKET_MASK);
+#ifndef ENTITY_TILE_UNIFORM
+			tile_mask = WaveReadLaneFirst(WaveActiveBitOr(tile_mask));
+#endif // ENTITY_TILE_UNIFORM
 
 			// Loop through decal buckets in the tile:
 			ShaderEntityBucketRange buckets = GetFrame().decal_buckets;
-			[loop]
-			for (uint bucket = buckets.first; bucket <= buckets.last; ++bucket)
+			uint bucket_mask = buckets.bucket_mask(tile_mask);
+			while (bucket_mask != 0)
 			{
+				const uint bucket = firstbitlow(bucket_mask);
+				bucket_mask ^= 1u << bucket;
+			
 				uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
 #ifndef ENTITY_TILE_UNIFORM
@@ -743,7 +752,7 @@ struct Surface
 				bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
 #endif // ENTITY_TILE_UNIFORM
 
-				buckets.mask(bucket, bucket_bits);
+				bucket_bits = buckets.entity_mask(bucket, bucket_bits);
 
 				[loop]
 				while (WaveActiveAnyTrue(bucket_bits != 0 && decalAccumulation.a < 1 && decalBumpAccumulation.a < 1 && decalSurfaceAccumulationAlpha < 1))
