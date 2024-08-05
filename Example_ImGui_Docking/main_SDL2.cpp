@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
     wi::arguments::Parse(argc, argv);
 
     sdl2::sdlsystem_ptr_t system = sdl2::make_sdlsystem(SDL_INIT_EVERYTHING | SDL_INIT_EVENTS);
-    if (!system) {
+    if (*system) {
         throw sdl2::SDLError("Error creating SDL2 system");
     }
 
