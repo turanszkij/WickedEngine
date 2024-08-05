@@ -2,7 +2,7 @@
 #include "cullingShaderHF.hlsli"
 #include "lightingHF.hlsli"
 
-#define entityCount (GetFrame().lightarray_count + GetFrame().decalarray_count + GetFrame().envprobearray_count)
+#define entityCount (GetFrame().culled_entity_count)
 
 StructuredBuffer<Frustum> in_Frustums : register(t0);
 

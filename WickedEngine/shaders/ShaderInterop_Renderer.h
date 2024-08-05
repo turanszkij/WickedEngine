@@ -900,6 +900,33 @@ enum SHADER_ENTITY_FLAGS
 
 static const uint SHADER_ENTITY_COUNT = 256;
 static const uint SHADER_ENTITY_TILE_BUCKET_COUNT = SHADER_ENTITY_COUNT / 32;
+static const uint SHADER_ENTITY_TILE_BUCKET_LAST = SHADER_ENTITY_TILE_BUCKET_COUNT - 1;
+
+struct ShaderEntityBucketRange
+{
+	uint first;
+	uint last;
+	uint first_mask;
+	uint last_mask;
+	void init(uint offset, uint count)
+	{
+		const uint first_item = offset;
+		const uint last_item = (offset + count - 1);
+		first = clamp(first_item / 32u, 0u, SHADER_ENTITY_TILE_BUCKET_LAST);
+		last = clamp(last_item / 32u, 0u, SHADER_ENTITY_TILE_BUCKET_LAST);
+		first_mask = ~0u << (first_item % 32u);
+		last_mask = ~0u >> (31u - (last_item % 32u));
+	}
+#ifndef __cplusplus
+	inline void mask(in uint bucket, inout uint bucket_bits)
+	{
+		if (bucket == first)
+			bucket_bits &= first_mask;
+		if (bucket == last)
+			bucket_bits &= last_mask;
+	}
+#endif // __cplusplus
+};
 
 static const uint MATRIXARRAY_COUNT = SHADER_ENTITY_COUNT;
 static const uint MAX_SHADER_DECAL_COUNT = 128;
@@ -962,16 +989,6 @@ struct alignas(16) FrameCB
 	float		gi_boost;
 	int			padding0;
 
-	uint		lightarray_offset;			// indexing into entity array
-	uint		lightarray_count;			// indexing into entity array
-	uint		decalarray_offset;			// indexing into entity array
-	uint		decalarray_count;			// indexing into entity array
-
-	uint		forcefieldarray_offset;		// indexing into entity array
-	uint		forcefieldarray_count;		// indexing into entity array
-	uint		envprobearray_offset;		// indexing into entity array
-	uint		envprobearray_count;		// indexing into entity array
-
 	float		blue_noise_phase;
 	int			texture_random64x64_index;
 	int			texture_bluenoise_index;
@@ -998,6 +1015,32 @@ struct alignas(16) FrameCB
 	ShaderScene scene;
 
 	VXGI vxgi;
+
+	uint envprobearray_offset;
+	uint envprobearray_count;
+	uint lightarray_offset_directional;
+	uint lightarray_count_directional;
+
+	uint lightarray_offset_spot;
+	uint lightarray_count_spot;
+	uint lightarray_offset_point;
+	uint lightarray_count_point;
+
+	uint lightarray_offset;
+	uint lightarray_count;
+	uint decalarray_offset;
+	uint decalarray_count;
+
+	uint forcefieldarray_offset;
+	uint forcefieldarray_count;
+	uint culled_entity_count;
+	uint padding2;
+
+	ShaderEntityBucketRange probe_buckets;
+	ShaderEntityBucketRange light_buckets_directional;
+	ShaderEntityBucketRange light_buckets_spot;
+	ShaderEntityBucketRange light_buckets_point;
+	ShaderEntityBucketRange decal_buckets;
 
 	ShaderEntity entityArray[SHADER_ENTITY_COUNT];
 	float4x4 matrixArray[SHADER_ENTITY_COUNT];
