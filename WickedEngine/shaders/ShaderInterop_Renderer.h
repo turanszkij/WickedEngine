@@ -913,6 +913,77 @@ static const uint SHADER_ENTITY_TILE_BUCKET_MASK = SHADER_ENTITY_TILE_UINT_COUNT
 static_assert(SHADER_ENTITY_TILE_BUCKET_LAST < 32); // whole bucket count must be indexable within 32 bits
 #endif // __cplusplus
 
+#if 1
+// Compacted storage, but unfortunately because of HLSL constant buffer packing rules, it needs the padding:
+struct ShaderEntityIterator
+{
+	uint value;
+	uint padding0; // damn hlsl needs this padding in constant buffer
+	uint padding1; // damn hlsl needs this padding in constant buffer
+	uint padding2; // damn hlsl needs this padding in constant buffer
+	inline void init(uint offset, uint count)
+	{
+		value = offset | (count << 16u);
+	}
+	inline bool empty()
+	{
+		return value == 0;
+	}
+	inline uint item_offset()
+	{
+		return value & 0xFFFF;
+	}
+	inline uint item_count()
+	{
+		return value >> 16u;
+	}
+	inline uint first_item()
+	{
+		return item_offset();
+	}
+	inline uint last_item()
+	{
+		return item_count() == 0 ? item_offset() : (item_offset() + item_count() - 1);
+	}
+	inline uint first_bucket()
+	{
+		return clamp(first_item() / 32u, 0u, SHADER_ENTITY_TILE_BUCKET_LAST);
+	}
+	inline uint last_bucket()
+	{
+		return clamp(last_item() / 32u, 0u, SHADER_ENTITY_TILE_BUCKET_LAST);
+	}
+	inline uint bucket_mask()
+	{
+		const uint bucket_mask_lo = ~0u << first_bucket();
+		const uint bucket_mask_hi = ~0u >> (31u - last_bucket());
+		return bucket_mask_lo & bucket_mask_hi;
+	}
+	inline uint first_bucket_entity_mask()
+	{
+		return ~0u << (first_item() % 32u);
+	}
+	inline uint last_bucket_entity_mask()
+	{
+		return ~0u >> (31u - (last_item() % 32u));
+	}
+	// This mask out inactive buckets of the current type based on a whole tile bucket mask
+	inline uint mask_type(uint tile_mask)
+	{
+		return tile_mask & bucket_mask();
+	}
+	// This masks out inactive entities for the current bucket type when processing either the first or the last bucket in the list
+	inline uint mask_entity(uint bucket, uint bucket_bits)
+	{
+		if (bucket == first_bucket())
+			bucket_bits &= first_bucket_entity_mask();
+		if (bucket == last_bucket())
+			bucket_bits &= last_bucket_entity_mask();
+		return bucket_bits;
+	}
+};
+#else
+// Bigger storage, but the values are precomputed:
 struct ShaderEntityIterator
 {
 	uint item_range;
@@ -977,6 +1048,7 @@ struct ShaderEntityIterator
 	}
 #endif // __cplusplus
 };
+#endif
 
 static const uint MATRIXARRAY_COUNT = SHADER_ENTITY_COUNT;
 static const uint MAX_SHADER_DECAL_COUNT = 128;
@@ -1070,9 +1142,11 @@ struct alignas(16) FrameCB
 	ShaderEntityIterator light_iterator_directional;
 	ShaderEntityIterator light_iterator_spot;
 	ShaderEntityIterator light_iterator_point;
+
 	ShaderEntityIterator light_iterator;
 	ShaderEntityIterator decal_iterator;
 	ShaderEntityIterator force_iterator;
+	ShaderEntityIterator padding;
 
 	ShaderEntity entityArray[SHADER_ENTITY_COUNT];
 	float4x4 matrixArray[SHADER_ENTITY_COUNT];

@@ -357,7 +357,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 #endif // TRANSPARENT
 #endif //DISABLE_VOXELGI
 
-#if 0
+#if 1
 	// Combined light loops:
 
 	[branch]
