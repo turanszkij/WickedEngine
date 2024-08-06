@@ -86,9 +86,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		const bool colliders_disabled = xEmitterOptions & EMITTER_OPTION_BIT_COLLIDERS_DISABLED;
 
 		// process forces and colliders:
-		for (uint i = 0; i < GetFrame().forces.item_count(); ++i)
+		for (uint i = 0; i < forces().item_count(); ++i)
 		{
-			ShaderEntity entity = load_entity(GetFrame().forces.first_item() + i);
+			ShaderEntity entity = load_entity(forces().first_item() + i);
 
 			[branch]
 			if (entity.layerMask & xEmitterLayerMask)

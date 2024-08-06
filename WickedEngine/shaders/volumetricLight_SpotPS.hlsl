@@ -38,7 +38,7 @@ bool intersectInfiniteCone(float3 p, float3 v, float3 pa, float3 va, float sina2
 
 float4 main(VertexToPixel input) : SV_TARGET
 {
-	ShaderEntity light = load_entity(GetFrame().spotlights.first_item() + (uint)g_xColor.x);
+	ShaderEntity light = load_entity(spotlights().first_item() + (uint)g_xColor.x);
 
 	float2 ScreenCoord = input.pos2D.xy / input.pos2D.w * float2(0.5f, -0.5f) + 0.5f;
 	float4 depths = texture_depth.GatherRed(sampler_point_clamp, ScreenCoord);

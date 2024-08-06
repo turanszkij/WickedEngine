@@ -4431,13 +4431,13 @@ void UpdatePerFrameData(
 		}
 	}
 
-	frameCB.probes.init(envprobearray_offset, envprobearray_count);
-	frameCB.directional_lights.init(lightarray_offset_directional, lightarray_count_directional);
-	frameCB.spotlights.init(lightarray_offset_spot, lightarray_count_spot);
-	frameCB.pointlights.init(lightarray_offset_point, lightarray_count_point);
-	frameCB.lights.init(lightarray_offset, lightarray_count);
-	frameCB.decals.init(decalarray_offset, decalarray_count);
-	frameCB.forces.init(forcefieldarray_offset, forcefieldarray_count);
+	frameCB.probes = ShaderEntityIterator(envprobearray_offset, envprobearray_count);
+	frameCB.directional_lights = ShaderEntityIterator(lightarray_offset_directional, lightarray_count_directional);
+	frameCB.spotlights = ShaderEntityIterator(lightarray_offset_spot, lightarray_count_spot);
+	frameCB.pointlights = ShaderEntityIterator(lightarray_offset_point, lightarray_count_point);
+	frameCB.lights = ShaderEntityIterator(lightarray_offset, lightarray_count);
+	frameCB.decals = ShaderEntityIterator(decalarray_offset, decalarray_count);
+	frameCB.forces = ShaderEntityIterator(forcefieldarray_offset, forcefieldarray_count);
 
 }
 void UpdateRenderData(

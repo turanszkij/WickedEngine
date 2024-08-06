@@ -425,14 +425,6 @@ uint load_entitytile(uint tileIndex)
 #endif // TRANSPARENT
 	return bindless_structured_uint[GetCamera().buffer_entitytiles_index][offset + tileIndex];
 }
-uint load_entitytile_mask(uint tileIndex)
-{
-	uint offset = GetCamera().entity_culling_tile_bucket_count_flat * 2;
-#ifdef TRANSPARENT
-	offset += GetCamera().entity_culling_tilecount;
-#endif // TRANSPARENT
-	return bindless_structured_uint[GetCamera().buffer_entitytiles_index][offset + tileIndex / SHADER_ENTITY_TILE_BUCKET_COUNT];
-}
 inline ShaderEntity load_entity(uint entityIndex)
 {
 	return GetFrame().entityArray[entityIndex];
@@ -466,6 +458,49 @@ inline void write_mipmap_feedback(uint materialIndex, uint resolution0, uint res
 		const uint mask = resolution0 | (resolution1 << 16u);
 		InterlockedOr(bindless_rwbuffers_uint[GetScene().texturestreamingbuffer][materialIndex], mask);
 	}
+}
+
+inline ShaderEntityIterator lights()
+{
+	ShaderEntityIterator iter;
+	iter.value = GetFrame().lights;
+	return iter;
+}
+inline ShaderEntityIterator directional_lights()
+{
+	ShaderEntityIterator iter;
+	iter.value = GetFrame().directional_lights;
+	return iter;
+}
+inline ShaderEntityIterator spotlights()
+{
+	ShaderEntityIterator iter;
+	iter.value = GetFrame().spotlights;
+	return iter;
+}
+inline ShaderEntityIterator pointlights()
+{
+	ShaderEntityIterator iter;
+	iter.value = GetFrame().pointlights;
+	return iter;
+}
+inline ShaderEntityIterator probes()
+{
+	ShaderEntityIterator iter;
+	iter.value = GetFrame().probes;
+	return iter;
+}
+inline ShaderEntityIterator decals()
+{
+	ShaderEntityIterator iter;
+	iter.value = GetFrame().decals;
+	return iter;
+}
+inline ShaderEntityIterator forces()
+{
+	ShaderEntityIterator iter;
+	iter.value = GetFrame().forces;
+	return iter;
 }
 
 struct PrimitiveID

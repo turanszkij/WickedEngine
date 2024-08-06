@@ -904,13 +904,15 @@ static const uint SHADER_ENTITY_TILE_BUCKET_COUNT = SHADER_ENTITY_COUNT / 32;
 struct ShaderEntityIterator
 {
 	uint value;
-	uint padding0; // damn hlsl needs this padding in constant buffer
-	uint padding1; // damn hlsl needs this padding in constant buffer
-	uint padding2; // damn hlsl needs this padding in constant buffer
-	inline void init(uint offset, uint count)
+
+#ifdef __cplusplus
+	ShaderEntityIterator(uint offset, uint count)
 	{
 		value = offset | (count << 16u);
 	}
+	constexpr operator uint() const { return value; }
+#endif // __cplusplus
+
 	inline bool empty()
 	{
 		return value == 0;
@@ -1057,15 +1059,15 @@ struct alignas(16) FrameCB
 
 	VXGI vxgi;
 
-	ShaderEntityIterator probes;
-	ShaderEntityIterator directional_lights;
-	ShaderEntityIterator spotlights;
-	ShaderEntityIterator pointlights;
+	uint probes;
+	uint directional_lights;
+	uint spotlights;
+	uint pointlights;
 
-	ShaderEntityIterator lights;
-	ShaderEntityIterator decals;
-	ShaderEntityIterator forces;
-	ShaderEntityIterator padding;
+	uint lights;
+	uint decals;
+	uint forces;
+	uint padding;
 
 	ShaderEntity entityArray[SHADER_ENTITY_COUNT];
 	float4x4 matrixArray[SHADER_ENTITY_COUNT];

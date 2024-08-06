@@ -57,7 +57,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			const uint entity_index = bucket_bit_index;
 			bucket_bits ^= 1u << bucket_bit_index;
 
-			ShaderEntity probe = load_entity(GetFrame().probes.first_item() + entity_index);
+			ShaderEntity probe = load_entity(probes().first_item() + entity_index);
 				
 			float4x4 probeProjection = load_entitymatrix(probe.GetMatrixIndex());
 			const int probeTexture = asint(probeProjection[3][0]);
@@ -105,7 +105,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 	{
 		// Loop through light buckets for the draw call:
 		const uint first_item = 0;
-		const uint last_item = first_item + GetFrame().lights.item_count() - 1;
+		const uint last_item = first_item + lights().item_count() - 1;
 		const uint first_bucket = first_item / 32;
 		const uint last_bucket = min(last_item / 32, 1); // only 2 buckets max (uint2) for forward pass!
 		[loop]
@@ -121,7 +121,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 				const uint entity_index = bucket * 32 + bucket_bit_index;
 				bucket_bits ^= 1u << bucket_bit_index;
 
-				ShaderEntity light = load_entity(GetFrame().lights.first_item() + entity_index);
+				ShaderEntity light = load_entity(lights().first_item() + entity_index);
 				
 				switch (light.GetType())
 				{
@@ -179,7 +179,7 @@ inline void ForwardDecals(inout Surface surface, inout half4 surfaceMap, Sampler
 		const uint entity_index = bucket_bit_index;
 		bucket_bits ^= 1u << bucket_bit_index;
 
-		ShaderEntity decal = load_entity(GetFrame().decals.first_item() + entity_index);
+		ShaderEntity decal = load_entity(decals().first_item() + entity_index);
 
 		float4x4 decalProjection = load_entitymatrix(decal.GetMatrixIndex());
 		const int decalTexture = asint(decalProjection[3][0]);
@@ -277,10 +277,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 
 #ifndef DISABLE_LOCALENVPMAPS
 	[branch]
-	if (!GetFrame().probes.empty())
+	if (!probes().empty())
 	{
 		// Loop through envmap buckets in the tile:
-		ShaderEntityIterator iterator = GetFrame().probes;
+		ShaderEntityIterator iterator = probes();
 		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
@@ -343,10 +343,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	// Combined light loops:
 
 	[branch]
-	if (!GetFrame().lights.empty())
+	if (!lights().empty())
 	{
 		// Loop through light buckets in the tile:
-		ShaderEntityIterator iterator = GetFrame().lights;
+		ShaderEntityIterator iterator = lights();
 		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
@@ -373,7 +373,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 				[branch]
 				if (light.IsCastingShadow() && (GetFrame().options & OPTION_BIT_SHADOW_MASK) && (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) && GetCamera().texture_rtshadow_index >= 0)
 				{
-					uint shadow_index = entity_index - GetFrame().lights.first_item();
+					uint shadow_index = entity_index - lights().first_item();
 					if (shadow_index < 16)
 					{
 						shadow_mask = (half)bindless_textures2DArray[GetCamera().texture_rtshadow_index][uint3(surface.pixel, shadow_index)].r;
@@ -408,10 +408,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	// Separated light loops by type:
 
 	[branch]
-	if (!GetFrame().directional_lights.empty())
+	if (!directional_lights().empty())
 	{
 		// Loop through light buckets in the tile:
-		ShaderEntityIterator iterator = GetFrame().directional_lights;
+		ShaderEntityIterator iterator = directional_lights();
 		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
@@ -438,7 +438,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 				[branch]
 				if (light.IsCastingShadow() && (GetFrame().options & OPTION_BIT_SHADOW_MASK) && (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) && GetCamera().texture_rtshadow_index >= 0)
 				{
-					uint shadow_index = entity_index - GetFrame().lights.first_item();
+					uint shadow_index = entity_index - lights().first_item();
 					if (shadow_index < 16)
 					{
 						shadow_mask = (half)bindless_textures2DArray[GetCamera().texture_rtshadow_index][uint3(surface.pixel, shadow_index)].r;
@@ -453,10 +453,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	}
 
 	[branch]
-	if (!GetFrame().spotlights.empty())
+	if (!spotlights().empty())
 	{
 		// Loop through light buckets in the tile:
-		ShaderEntityIterator iterator = GetFrame().spotlights;
+		ShaderEntityIterator iterator = spotlights();
 		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
@@ -483,7 +483,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 				[branch]
 				if (light.IsCastingShadow() && (GetFrame().options & OPTION_BIT_SHADOW_MASK) && (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) && GetCamera().texture_rtshadow_index >= 0)
 				{
-					uint shadow_index = entity_index - GetFrame().lights.first_item();
+					uint shadow_index = entity_index - lights().first_item();
 					if (shadow_index < 16)
 					{
 						shadow_mask = (half)bindless_textures2DArray[GetCamera().texture_rtshadow_index][uint3(surface.pixel, shadow_index)].r;
@@ -498,10 +498,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	}
 
 	[branch]
-	if (!GetFrame().pointlights.empty())
+	if (!pointlights().empty())
 	{
 		// Loop through light buckets in the tile:
-		ShaderEntityIterator iterator = GetFrame().pointlights;
+		ShaderEntityIterator iterator = pointlights();
 		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
@@ -528,7 +528,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 				[branch]
 				if (light.IsCastingShadow() && (GetFrame().options & OPTION_BIT_SHADOW_MASK) && (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) && GetCamera().texture_rtshadow_index >= 0)
 				{
-					uint shadow_index = entity_index - GetFrame().lights.first_item();
+					uint shadow_index = entity_index - lights().first_item();
 					if (shadow_index < 16)
 					{
 						shadow_mask = (half)bindless_textures2DArray[GetCamera().texture_rtshadow_index][uint3(surface.pixel, shadow_index)].r;
@@ -585,7 +585,7 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 {
 #ifndef DISABLE_DECALS
 	[branch]
-	if (GetFrame().decals.empty())
+	if (decals().empty())
 		return;
 		
 	// decals are enabled, loop through them first:
@@ -603,7 +603,7 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 
 	// Loop through decal buckets in the tile:
-	ShaderEntityIterator iterator = GetFrame().decals;
+	ShaderEntityIterator iterator = decals();
 	for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 	{
 		uint bucket_bits = load_entitytile(flatTileIndex + bucket);

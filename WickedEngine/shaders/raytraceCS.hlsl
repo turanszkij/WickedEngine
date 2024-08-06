@@ -203,8 +203,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		// Light sampling:
 		if (!surface.material.IsUnlit())
 		{
-			const uint light_count = GetFrame().lights.item_count();
-			const uint light_index = GetFrame().lights.first_item() + rng.next_uint(light_count);
+			const uint light_count = lights().item_count();
+			const uint light_index = lights().first_item() + rng.next_uint(light_count);
 			ShaderEntity light = load_entity(light_index);
 
 			Lighting lighting;
