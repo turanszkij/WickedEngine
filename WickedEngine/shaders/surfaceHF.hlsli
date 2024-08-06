@@ -730,20 +730,28 @@ struct Surface
 			half4 decalBumpAccumulation = 0;
 			half4 decalSurfaceAccumulation = 0;
 			half decalSurfaceAccumulationAlpha = 0;
-			
+
+#ifdef SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
 			// Tile mask contains 1 bit for each bucket used in the current tile:
 			uint tile_mask = load_entitytile(flatTileIndex + SHADER_ENTITY_TILE_BUCKET_MASK);
 #ifndef ENTITY_TILE_UNIFORM
 			tile_mask = WaveReadLaneFirst(WaveActiveBitOr(tile_mask));
 #endif // ENTITY_TILE_UNIFORM
+#endif // SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
 
 			// Loop through decal buckets in the tile:
 			ShaderEntityIterator iterator = GetFrame().decal_iterator;
+
+#ifdef SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
 			uint bucket_mask = iterator.mask_type(tile_mask);
 			while (bucket_mask != 0)
 			{
 				const uint bucket = firstbitlow(bucket_mask);
 				bucket_mask ^= 1u << bucket;
+#else
+			for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
+			{
+#endif // SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
 			
 				uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
