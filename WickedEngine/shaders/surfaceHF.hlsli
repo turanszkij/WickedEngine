@@ -723,7 +723,7 @@ struct Surface
 		// I need to copy the decal code here because include resolve issues:
 #ifndef DISABLE_DECALS
 		[branch]
-		if (!simple_lighting && !GetFrame().decal_iterator.empty())
+		if (!simple_lighting && !GetFrame().decals.empty())
 		{
 			// decals are enabled, loop through them first:
 			half4 decalAccumulation = 0;
@@ -732,7 +732,7 @@ struct Surface
 			half decalSurfaceAccumulationAlpha = 0;
 			
 			// Loop through decal buckets in the tile:
-			ShaderEntityIterator iterator = GetFrame().decal_iterator;
+			ShaderEntityIterator iterator = GetFrame().decals;
 			for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 			{
 				uint bucket_bits = load_entitytile(flatTileIndex + bucket);

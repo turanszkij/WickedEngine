@@ -4431,13 +4431,13 @@ void UpdatePerFrameData(
 		}
 	}
 
-	frameCB.probe_iterator.init(envprobearray_offset, envprobearray_count);
-	frameCB.light_iterator_directional.init(lightarray_offset_directional, lightarray_count_directional);
-	frameCB.light_iterator_spot.init(lightarray_offset_spot, lightarray_count_spot);
-	frameCB.light_iterator_point.init(lightarray_offset_point, lightarray_count_point);
-	frameCB.light_iterator.init(lightarray_offset, lightarray_count);
-	frameCB.decal_iterator.init(decalarray_offset, decalarray_count);
-	frameCB.force_iterator.init(forcefieldarray_offset, forcefieldarray_count);
+	frameCB.probes.init(envprobearray_offset, envprobearray_count);
+	frameCB.directional_lights.init(lightarray_offset_directional, lightarray_count_directional);
+	frameCB.spotlights.init(lightarray_offset_spot, lightarray_count_spot);
+	frameCB.pointlights.init(lightarray_offset_point, lightarray_count_point);
+	frameCB.lights.init(lightarray_offset, lightarray_count);
+	frameCB.decals.init(decalarray_offset, decalarray_count);
+	frameCB.forces.init(forcefieldarray_offset, forcefieldarray_count);
 
 }
 void UpdateRenderData(

@@ -9,7 +9,7 @@ struct PSIn
 
 float4 main(PSIn input) : SV_TARGET
 {
-	uint forceFieldID = GetFrame().force_iterator.first_item() + (uint)g_xColor.w;
+	uint forceFieldID = GetFrame().forces.first_item() + (uint)g_xColor.w;
 	ShaderEntity forceField = load_entity(forceFieldID);
 
 	float4 color = forceField.GetGravity() < 0 ? float4(0, 0, 1, 1) : float4(1, 0, 0, 1);

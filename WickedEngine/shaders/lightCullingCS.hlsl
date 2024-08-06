@@ -323,7 +323,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	// This is an optimized version of the above, separated entity processing loops by type, reduces divergence and increases performance:
 
 	// Point lights:
-	for (uint i = GetFrame().light_iterator_point.first_item() + groupIndex; i <= GetFrame().light_iterator_point.last_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	for (uint i = GetFrame().pointlights.first_item() + groupIndex; i <= GetFrame().pointlights.last_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		ShaderEntity entity = load_entity(i);
 		
@@ -348,7 +348,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	}
 
 	// Spot lights:
-	for (uint i = GetFrame().light_iterator_spot.first_item() + groupIndex; i <= GetFrame().light_iterator_spot.last_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	for (uint i = GetFrame().spotlights.first_item() + groupIndex; i <= GetFrame().spotlights.last_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		ShaderEntity entity = load_entity(i);
 		
@@ -377,7 +377,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	}
 
 	// Directional lights:
-	for (uint i = GetFrame().light_iterator_directional.first_item() + groupIndex; i <= GetFrame().light_iterator_directional.last_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	for (uint i = GetFrame().directional_lights.first_item() + groupIndex; i <= GetFrame().directional_lights.last_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		ShaderEntity entity = load_entity(i);
 		
@@ -388,7 +388,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	}
 
 	// Decals:
-	for (uint i = GetFrame().decal_iterator.first_item() + groupIndex; i <= GetFrame().decal_iterator.last_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	for (uint i = GetFrame().decals.first_item() + groupIndex; i <= GetFrame().decals.last_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		ShaderEntity entity = load_entity(i);
 		float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;
@@ -419,7 +419,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	}
 
 	// Environment probes:
-	for (uint i = GetFrame().probe_iterator.first_item() + groupIndex; i <= GetFrame().probe_iterator.last_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	for (uint i = GetFrame().probes.first_item() + groupIndex; i <= GetFrame().probes.last_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		ShaderEntity entity = load_entity(i);
 		float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;

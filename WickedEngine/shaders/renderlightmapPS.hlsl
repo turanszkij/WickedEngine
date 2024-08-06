@@ -44,8 +44,8 @@ float4 main(Input input) : SV_TARGET
 
 		// Light sampling:
 		{
-			const uint light_count = GetFrame().light_iterator.item_count();
-			const uint light_index = GetFrame().light_iterator.first_item() + rng.next_uint(light_count);
+			const uint light_count = GetFrame().lights.item_count();
+			const uint light_index = GetFrame().lights.first_item() + rng.next_uint(light_count);
 			ShaderEntity light = load_entity(light_index);
 
 			if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC) // dynamic lights will not be baked into lightmap

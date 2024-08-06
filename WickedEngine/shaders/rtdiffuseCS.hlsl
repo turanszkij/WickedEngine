@@ -160,9 +160,9 @@ void main(uint2 DTid : SV_DispatchThreadID)
 				lighting.create(0, 0, 0, 0);
 
 				[loop]
-				for (uint iterator = 0; iterator < GetFrame().light_iterator.item_count(); iterator++)
+				for (uint iterator = 0; iterator < GetFrame().lights.item_count(); iterator++)
 				{
-					ShaderEntity light = load_entity(GetFrame().light_iterator.first_item() + iterator);
+					ShaderEntity light = load_entity(GetFrame().lights.first_item() + iterator);
 					if ((light.layerMask & surface.material.layerMask) == 0)
 						continue;
 

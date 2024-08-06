@@ -1057,14 +1057,14 @@ struct alignas(16) FrameCB
 
 	VXGI vxgi;
 
-	ShaderEntityIterator probe_iterator;
-	ShaderEntityIterator light_iterator_directional;
-	ShaderEntityIterator light_iterator_spot;
-	ShaderEntityIterator light_iterator_point;
+	ShaderEntityIterator probes;
+	ShaderEntityIterator directional_lights;
+	ShaderEntityIterator spotlights;
+	ShaderEntityIterator pointlights;
 
-	ShaderEntityIterator light_iterator;
-	ShaderEntityIterator decal_iterator;
-	ShaderEntityIterator force_iterator;
+	ShaderEntityIterator lights;
+	ShaderEntityIterator decals;
+	ShaderEntityIterator forces;
 	ShaderEntityIterator padding;
 
 	ShaderEntity entityArray[SHADER_ENTITY_COUNT];
