@@ -898,7 +898,7 @@ enum SHADER_ENTITY_FLAGS
 	ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA = 1 << 0,
 };
 
-// Experimental: sparase bucket iteration, can be faster when many entity buckets are used
+// Experimental: sparse bucket iteration, can be faster when many entity buckets are used
 //#define SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
 static const uint SHADER_ENTITY_COUNT = 256;
 static const uint SHADER_ENTITY_TILE_BUCKET_COUNT = SHADER_ENTITY_COUNT / 32;
