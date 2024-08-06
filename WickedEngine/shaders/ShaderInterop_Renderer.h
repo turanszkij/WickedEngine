@@ -917,8 +917,8 @@ struct ShaderEntityIterator
 {
 	uint item_range;
 	uint bucket_mask;
-	uint first_mask;
-	uint last_mask;
+	uint first_bucket_entity_mask;
+	uint last_bucket_entity_mask;
 	void init(uint offset, uint count)
 	{
 		const uint first_item = offset;
@@ -929,8 +929,8 @@ struct ShaderEntityIterator
 		const uint bucket_mask_hi = ~0u >> (31u - last_bucket);
 		item_range = first_item | (last_item << 16u);
 		bucket_mask = bucket_mask_lo & bucket_mask_hi;
-		first_mask = ~0u << (first_item % 32u);
-		last_mask = ~0u >> (31u - (last_item % 32u));
+		first_bucket_entity_mask = ~0u << (first_item % 32u);
+		last_bucket_entity_mask = ~0u >> (31u - (last_item % 32u));
 	}
 #ifndef __cplusplus
 	inline bool empty()
@@ -970,9 +970,9 @@ struct ShaderEntityIterator
 	inline uint mask_entity(uint bucket, uint bucket_bits)
 	{
 		if (bucket == first_bucket())
-			bucket_bits &= first_mask;
+			bucket_bits &= first_bucket_entity_mask;
 		if (bucket == last_bucket())
-			bucket_bits &= last_mask;
+			bucket_bits &= last_bucket_entity_mask;
 		return bucket_bits;
 	}
 #endif // __cplusplus

@@ -357,6 +357,84 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 #endif // TRANSPARENT
 #endif //DISABLE_VOXELGI
 
+#if 0
+	// Combined light loops:
+
+	[branch]
+	if (!GetFrame().light_iterator.empty())
+	{
+		// Loop through light buckets in the tile:
+		ShaderEntityIterator iterator = GetFrame().light_iterator;
+		
+#ifdef SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
+		uint bucket_mask = iterator.mask_type(tile_mask);
+		while (bucket_mask != 0)
+		{
+			const uint bucket = firstbitlow(bucket_mask);
+			bucket_mask ^= 1u << bucket;
+#else
+		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
+		{
+#endif // SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
+			
+			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
+
+#ifndef ENTITY_TILE_UNIFORM
+			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
+			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+#endif // ENTITY_TILE_UNIFORM
+
+			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
+
+			[loop]
+			while (bucket_bits != 0)
+			{
+				// Retrieve global entity index from local bucket, then remove bit from local bucket:
+				const uint bucket_bit_index = firstbitlow(bucket_bits);
+				const uint entity_index = bucket * 32 + bucket_bit_index;
+				bucket_bits ^= 1u << bucket_bit_index;
+				
+				ShaderEntity light = load_entity(entity_index);
+
+				half shadow_mask = 1;
+#if defined(SHADOW_MASK_ENABLED) && !defined(TRANSPARENT)
+				[branch]
+				if (light.IsCastingShadow() && (GetFrame().options & OPTION_BIT_SHADOW_MASK) && (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) && GetCamera().texture_rtshadow_index >= 0)
+				{
+					uint shadow_index = entity_index - GetFrame().light_iterator.first_item();
+					if (shadow_index < 16)
+					{
+						shadow_mask = (half)bindless_textures2DArray[GetCamera().texture_rtshadow_index][uint3(surface.pixel, shadow_index)].r;
+					}
+				}
+#endif // SHADOW_MASK_ENABLED && !TRANSPARENT
+
+				switch (light.GetType())
+				{
+				case ENTITY_TYPE_DIRECTIONALLIGHT:
+				{
+					light_directional(light, surface, lighting);
+				}
+				break;
+				case ENTITY_TYPE_POINTLIGHT:
+				{
+					light_point(light, surface, lighting);
+				}
+				break;
+				case ENTITY_TYPE_SPOTLIGHT:
+				{
+					light_spot(light, surface, lighting);
+				}
+				break;
+				}
+
+			}
+		}
+	}
+
+#else
+	// Separated light loops by type:
+
 	[branch]
 	if (!GetFrame().light_iterator_directional.empty())
 	{
@@ -521,6 +599,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 			}
 		}
 	}
+#endif
 
 #ifndef TRANSPARENT
 	[branch]
