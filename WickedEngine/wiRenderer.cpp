@@ -3216,23 +3216,26 @@ void UpdateVisibility(Visibility& vis)
 
 			if ((aabb.layerMask & vis.layerMask) && vis.frustum.CheckBoxFast(aabb))
 			{
-				// Local stream compaction:
-				//	(also compute light distance for shadow priority sorting)
-				group_list[group_count] = args.jobIndex;
 				const LightComponent& light = vis.scene->lights[args.jobIndex];
-				group_count++;
-				if (light.IsVolumetricsEnabled())
+				if (!light.IsInactive())
 				{
-					vis.volumetriclight_request.store(true);
-				}
-
-				if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
-				{
-					if (!light.IsStatic() && light.GetType() != LightComponent::DIRECTIONAL || light.occlusionquery < 0)
+					// Local stream compaction:
+					//	(also compute light distance for shadow priority sorting)
+					group_list[group_count] = args.jobIndex;
+					group_count++;
+					if (light.IsVolumetricsEnabled())
 					{
-						if (!aabb.intersects(vis.camera->Eye))
+						vis.volumetriclight_request.store(true);
+					}
+
+					if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
+					{
+						if (!light.IsStatic() && light.GetType() != LightComponent::DIRECTIONAL || light.occlusionquery < 0)
 						{
-							light.occlusionquery = vis.scene->queryAllocator.fetch_add(1); // allocate new occlusion query from heap
+							if (!aabb.intersects(vis.camera->Eye))
+							{
+								light.occlusionquery = vis.scene->queryAllocator.fetch_add(1); // allocate new occlusion query from heap
+							}
 						}
 					}
 				}
@@ -5731,93 +5734,91 @@ void DrawVolumeLights(
 	CommandList cmd
 )
 {
+	if (vis.visibleLights.empty())
+		return;
 
-	if (!vis.visibleLights.empty())
+	device->EventBegin("Volumetric Light Render", cmd);
+
+	BindCommonResources(cmd);
+
+	XMMATRIX VP = vis.camera->GetViewProjection();
+	const XMVECTOR CamPos = vis.camera->GetEye();
+
+	for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 	{
-		device->EventBegin("Volumetric Light Render", cmd);
+		const PipelineState& pso = PSO_volumetriclight[type];
 
-		BindCommonResources(cmd);
+		if (!pso.IsValid())
+			continue;
 
-		XMMATRIX VP = vis.camera->GetViewProjection();
-		const XMVECTOR CamPos = vis.camera->GetEye();
+		device->BindPipelineState(&pso, cmd);
 
-		for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
+		int type_idx = -1;
+		for (size_t i = 0; i < vis.visibleLights.size(); ++i)
 		{
-			const PipelineState& pso = PSO_volumetriclight[type];
-
-			if (!pso.IsValid())
-			{
+			const uint32_t lightIndex = vis.visibleLights[i];
+			const LightComponent& light = vis.scene->lights[lightIndex];
+			if (light.GetType() != type)
 				continue;
-			}
+			type_idx++;
 
-			device->BindPipelineState(&pso, cmd);
+			if (!light.IsVolumetricsEnabled())
+				continue;
 
-			for (size_t i = 0; i < vis.visibleLights.size(); ++i)
+			switch (type)
 			{
-				const uint32_t lightIndex = vis.visibleLights[i];
-				const LightComponent& light = vis.scene->lights[lightIndex];
-				if (light.GetType() == type && light.IsVolumetricsEnabled())
-				{
+			case LightComponent::DIRECTIONAL:
+			{
+				MiscCB miscCb;
+				miscCb.g_xColor.x = float(type_idx);
+				device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
 
-					switch (type)
-					{
-					case LightComponent::DIRECTIONAL:
-					{
-						MiscCB miscCb;
-						miscCb.g_xColor.x = float(i);
-						device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
-
-						device->Draw(3, 0, cmd); // full screen triangle
-					}
-					break;
-					case LightComponent::POINT:
-					{
-						MiscCB miscCb;
-						miscCb.g_xColor.x = float(i);
-						float sca = light.GetRange() + 1;
-						XMStoreFloat4x4(&miscCb.g_xTransform, XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * VP);
-						device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
-
-						device->Draw(240, 0, cmd); // icosphere
-					}
-					break;
-					case LightComponent::SPOT:
-					{
-						MiscCB miscCb;
-						miscCb.g_xColor.x = float(i);
-						miscCb.g_xColor.y = std::pow(std::sin(light.outerConeAngle), 2.0f);
-						miscCb.g_xColor.z = std::pow(std::cos(light.outerConeAngle), 2.0f);
-
-						const XMVECTOR LightPos = XMLoadFloat3(&light.position);
-						const XMVECTOR LightDirection = XMLoadFloat3(&light.direction);
-						const XMVECTOR L = XMVector3Normalize(LightPos - CamPos);
-						const float spot_factor = XMVectorGetX(XMVector3Dot(L, LightDirection));
-						const float spot_cutoff = std::cos(light.outerConeAngle);
-						miscCb.g_xColor.w = (spot_factor < spot_cutoff) ? 1.0f : 0.0f;
-
-						const float coneS = (const float)(light.outerConeAngle * 2 / XM_PIDIV4);
-						XMStoreFloat4x4(&miscCb.g_xTransform, 
-							XMMatrixScaling(coneS * light.GetRange(), light.GetRange(), coneS * light.GetRange()) *
-							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)) *
-							XMMatrixTranslationFromVector(LightPos) *
-							VP
-						);
-						device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
-
-						device->Draw(192, 0, cmd); // cone
-					}
-					break;
-					}
-
-				}
+				device->Draw(3, 0, cmd); // full screen triangle
 			}
+			break;
+			case LightComponent::POINT:
+			{
+				MiscCB miscCb;
+				miscCb.g_xColor.x = float(type_idx);
+				float sca = light.GetRange() + 1;
+				XMStoreFloat4x4(&miscCb.g_xTransform, XMMatrixScaling(sca, sca, sca) * XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * VP);
+				device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
 
+				device->Draw(240, 0, cmd); // icosphere
+			}
+			break;
+			case LightComponent::SPOT:
+			{
+				MiscCB miscCb;
+				miscCb.g_xColor.x = float(type_idx);
+				miscCb.g_xColor.y = std::pow(std::sin(light.outerConeAngle), 2.0f);
+				miscCb.g_xColor.z = std::pow(std::cos(light.outerConeAngle), 2.0f);
+
+				const XMVECTOR LightPos = XMLoadFloat3(&light.position);
+				const XMVECTOR LightDirection = XMLoadFloat3(&light.direction);
+				const XMVECTOR L = XMVector3Normalize(LightPos - CamPos);
+				const float spot_factor = XMVectorGetX(XMVector3Dot(L, LightDirection));
+				const float spot_cutoff = std::cos(light.outerConeAngle);
+				miscCb.g_xColor.w = (spot_factor < spot_cutoff) ? 1.0f : 0.0f;
+
+				const float coneS = (const float)(light.outerConeAngle * 2 / XM_PIDIV4);
+				XMStoreFloat4x4(&miscCb.g_xTransform,
+					XMMatrixScaling(coneS * light.GetRange(), light.GetRange(), coneS * light.GetRange()) *
+					XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)) *
+					XMMatrixTranslationFromVector(LightPos) *
+					VP
+				);
+				device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
+
+				device->Draw(192, 0, cmd); // cone
+			}
+			break;
+			}
 		}
 
-		device->EventEnd(cmd);
 	}
 
-
+	device->EventEnd(cmd);
 }
 void DrawLensFlares(
 	const Visibility& vis,

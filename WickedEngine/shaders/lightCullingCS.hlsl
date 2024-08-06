@@ -454,16 +454,10 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	GroupMemoryBarrierWithGroupSync();
 
 	// Each thread will export one bucket from LDS to global memory:
-	uint tile_bucket_mask_opaque = 0;
-	uint tile_bucket_mask_transparent = 0;
 	for (uint i = groupIndex; i < SHADER_ENTITY_TILE_BUCKET_COUNT; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		entityTiles[tileBucketsAddress + i] = tile_opaque[i];
-		if (tile_opaque[i] != 0)
-			tile_bucket_mask_opaque |= 1u << i;
 		entityTiles[GetCamera().entity_culling_tile_bucket_count_flat + tileBucketsAddress + i] = tile_transparent[i];
-		if (tile_transparent[i] != 0)
-			tile_bucket_mask_transparent |= 1u << i;
 	}
 
 #ifdef DEBUG_TILEDLIGHTCULLING
