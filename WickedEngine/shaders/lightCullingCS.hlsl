@@ -14,8 +14,6 @@ groupshared uint uMaxDepth;
 groupshared uint uDepthMask;		// Harada Siggraph 2012 2.5D culling
 groupshared uint tile_opaque[SHADER_ENTITY_TILE_BUCKET_COUNT];
 groupshared uint tile_transparent[SHADER_ENTITY_TILE_BUCKET_COUNT];
-groupshared uint tile_bucket_mask_opaque;
-groupshared uint tile_bucket_mask_transparent;
 #ifdef DEBUG_TILEDLIGHTCULLING
 groupshared uint entityCountDebug;
 RWTexture2D<unorm float4> DebugTexture : register(u3);
@@ -26,7 +24,6 @@ void AppendEntity_Opaque(uint entityIndex)
 	const uint bucket_index = entityIndex / 32;
 	const uint bucket_place = entityIndex % 32;
 	InterlockedOr(tile_opaque[bucket_index], 1u << bucket_place);
-	InterlockedOr(tile_bucket_mask_opaque, 1u << bucket_index);
 
 #ifdef DEBUG_TILEDLIGHTCULLING
 	InterlockedAdd(entityCountDebug, 1);
@@ -38,7 +35,6 @@ void AppendEntity_Transparent(uint entityIndex)
 	const uint bucket_index = entityIndex / 32;
 	const uint bucket_place = entityIndex % 32;
 	InterlockedOr(tile_transparent[bucket_index], 1u << bucket_place);
-	InterlockedOr(tile_bucket_mask_transparent, 1u << bucket_index);
 }
 
 inline uint ConstructEntityMask(in float depthRangeMin, in float depthRangeRecip, in Sphere bounds)
@@ -49,8 +45,8 @@ inline uint ConstructEntityMask(in float depthRangeMin, in float depthRangeRecip
 
 	const float fMin = bounds.c.z - bounds.r;
 	const float fMax = bounds.c.z + bounds.r;
-	const uint __entitymaskcellindexSTART = max(0, min(31, floor((fMin - depthRangeMin) * depthRangeRecip)));
-	const uint __entitymaskcellindexEND = max(0, min(31, floor((fMax - depthRangeMin) * depthRangeRecip)));
+	const uint __entitymaskcellindexSTART = clamp(floor((fMin - depthRangeMin) * depthRangeRecip), 0, 31);
+	const uint __entitymaskcellindexEND = clamp(floor((fMax - depthRangeMin) * depthRangeRecip), 0, 31);
 
 	//// Unoptimized mask construction with loop:
 	//// Construct mask from START to END:
@@ -61,8 +57,7 @@ inline uint ConstructEntityMask(in float depthRangeMin, in float depthRangeRecip
 	//{
 	//	uLightMask |= 1u << c;
 	//}
-
-
+	
 	// Optimized mask construction, without loop:
 	//	- First, fill full mask:
 	//	1111111111111111111111111111111
@@ -87,16 +82,13 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	// This controls the unrolling granularity if the blocksize and threadsize are different:
 	uint granularity = 0;
 
-	// Reused loop counter:
-	uint i = 0;
-
 	// Compute addresses and load frustum:
 	const uint flatTileIndex = flatten2D(Gid.xy, GetCamera().entity_culling_tilecount.xy);
 	const uint tileBucketsAddress = flatTileIndex * SHADER_ENTITY_TILE_UINT_COUNT;
 	Frustum GroupFrustum = in_Frustums[flatTileIndex];
 
 	// Each thread will zero out one bucket in the LDS:
-	for (i = groupIndex; i < SHADER_ENTITY_TILE_BUCKET_COUNT; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	for (uint i = groupIndex; i < SHADER_ENTITY_TILE_BUCKET_COUNT; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		tile_opaque[i] = 0;
 		tile_transparent[i] = 0;
@@ -108,8 +100,6 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		uMinDepth = 0xffffffff;
 		uMaxDepth = 0;
 		uDepthMask = 0;
-		tile_bucket_mask_opaque = 0;
-		tile_bucket_mask_transparent = 0;
 
 #ifdef DEBUG_TILEDLIGHTCULLING
 		entityCountDebug = 0;
@@ -226,8 +216,9 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 
 	const uint depth_mask = uDepthMask; // take out from groupshared into register
 
+#if 0
 	// Each thread will cull one entity until all entities have been culled:
-	for (i = groupIndex; i < entityCount; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	for (uint i = groupIndex; i < entityCount; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		ShaderEntity entity = load_entity(i);
 
@@ -327,23 +318,161 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		break;
 		}
 	}
+#else
+
+	// This is an optimized version of the above, separated entity processing loops by type, reduces divergence and increases performance:
+
+	// Point lights:
+	for (uint i = GetFrame().light_iterator_point.first_item() + groupIndex; i <= GetFrame().light_iterator_point.last_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	{
+		ShaderEntity entity = load_entity(i);
+		
+		if (entity.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
+			continue; // static lights will be skipped here (they are used at lightmap baking)
+		float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;
+		Sphere sphere = { positionVS.xyz, entity.GetRange() + entity.GetLength() };
+		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
+		{
+			AppendEntity_Transparent(i);
+
+			if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than sphere-frustum culling
+			{
+#ifdef ADVANCED_CULLING
+				if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
+#endif
+				{
+					AppendEntity_Opaque(i);
+				}
+			}
+		}
+	}
+
+	// Spot lights:
+	for (uint i = GetFrame().light_iterator_spot.first_item() + groupIndex; i <= GetFrame().light_iterator_spot.last_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	{
+		ShaderEntity entity = load_entity(i);
+		
+		if (entity.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
+			continue; // static lights will be skipped here (they are used at lightmap baking)
+		float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;
+		float3 directionVS = mul((float3x3)GetCamera().view, entity.GetDirection());
+		// Construct a tight fitting sphere around the spotlight cone:
+		const float r = entity.GetRange() * 0.5f / (entity.GetConeAngleCos() * entity.GetConeAngleCos());
+		Sphere sphere = { positionVS - directionVS * r, r };
+		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
+		{
+			AppendEntity_Transparent(i);
+
+			if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than sphere-frustum culling
+			{
+#ifdef ADVANCED_CULLING
+				if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
+#endif
+				{
+					AppendEntity_Opaque(i);
+				}
+			}
+
+		}
+	}
+
+	// Directional lights:
+	for (uint i = GetFrame().light_iterator_directional.first_item() + groupIndex; i <= GetFrame().light_iterator_directional.last_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	{
+		ShaderEntity entity = load_entity(i);
+		
+		if (entity.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
+			continue; // static lights will be skipped here (they are used at lightmap baking)
+		AppendEntity_Transparent(i);
+		AppendEntity_Opaque(i);
+	}
+
+	// Decals:
+	for (uint i = GetFrame().decal_iterator.first_item() + groupIndex; i <= GetFrame().decal_iterator.last_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	{
+		ShaderEntity entity = load_entity(i);
+		float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;
+		Sphere sphere = { positionVS.xyz, entity.GetRange() };
+		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
+		{
+			AppendEntity_Transparent(i);
+
+			// unit AABB: 
+			AABB a;
+			a.c = 0;
+			a.e = 1.0;
+
+			// frustum AABB in world space transformed into the space of the probe/decal OBB:
+			AABB b = GroupAABB_WS;
+			AABBtransform(b, load_entitymatrix(entity.GetMatrixIndex()));
+
+			if (IntersectAABB(a, b))
+			{
+#ifdef ADVANCED_CULLING
+				if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
+#endif
+				{
+					AppendEntity_Opaque(i);
+				}
+			}
+		}
+	}
+
+	// Environment probes:
+	for (uint i = GetFrame().probe_iterator.first_item() + groupIndex; i <= GetFrame().probe_iterator.last_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	{
+		ShaderEntity entity = load_entity(i);
+		float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;
+		Sphere sphere = { positionVS.xyz, entity.GetRange() };
+		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
+		{
+			AppendEntity_Transparent(i);
+
+			// unit AABB: 
+			AABB a;
+			a.c = 0;
+			a.e = 1.0;
+
+			// frustum AABB in world space transformed into the space of the probe/decal OBB:
+			AABB b = GroupAABB_WS;
+			AABBtransform(b, load_entitymatrix(entity.GetMatrixIndex()));
+
+			if (IntersectAABB(a, b))
+			{
+#ifdef ADVANCED_CULLING
+				if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
+#endif
+				{
+					AppendEntity_Opaque(i);
+				}
+			}
+		}
+	}
+
+#endif
 
 	GroupMemoryBarrierWithGroupSync();
 
 	// Each thread will export one bucket from LDS to global memory:
-	for (i = groupIndex; i < SHADER_ENTITY_TILE_BUCKET_COUNT; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	uint tile_bucket_mask_opaque = 0;
+	uint tile_bucket_mask_transparent = 0;
+	for (uint i = groupIndex; i < SHADER_ENTITY_TILE_BUCKET_COUNT; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		entityTiles[tileBucketsAddress + i] = tile_opaque[i];
+		if (tile_opaque[i] != 0)
+			tile_bucket_mask_opaque |= 1u << i;
 		entityTiles[GetCamera().entity_culling_tile_uint_count_flat + tileBucketsAddress + i] = tile_transparent[i];
+		if (tile_transparent[i] != 0)
+			tile_bucket_mask_transparent |= 1u << i;
 	}
-
-	if (groupIndex == 0)
+	
+	// Since we have guaranteed to have max 32 buckets per tile, wave operation can be done to compact the mask:
+	uint wave_tile_bucket_mask_opaque = WaveActiveBitOr(tile_bucket_mask_opaque);
+	uint wave_tile_bucket_mask_transparent= WaveActiveBitOr(tile_bucket_mask_transparent);
+	if (groupIndex == 0) // not all first waves should write out, only once per whole group
 	{
-		entityTiles[tileBucketsAddress + SHADER_ENTITY_TILE_BUCKET_MASK] = tile_bucket_mask_opaque;
-	}
-	else if (groupIndex == 1)
-	{
-		entityTiles[GetCamera().entity_culling_tile_uint_count_flat + tileBucketsAddress + SHADER_ENTITY_TILE_BUCKET_MASK] = tile_bucket_mask_transparent;
+		entityTiles[tileBucketsAddress + SHADER_ENTITY_TILE_BUCKET_MASK] = wave_tile_bucket_mask_opaque;
+		entityTiles[GetCamera().entity_culling_tile_uint_count_flat + tileBucketsAddress + SHADER_ENTITY_TILE_BUCKET_MASK] = wave_tile_bucket_mask_transparent;
 	}
 
 #ifdef DEBUG_TILEDLIGHTCULLING

@@ -916,7 +916,7 @@ struct ShaderEntityIterator
 	void init(uint offset, uint count)
 	{
 		const uint first_item = offset;
-		const uint last_item = (offset + count - 1);
+		const uint last_item = count == 0 ? offset : (offset + count - 1);
 		const uint first_bucket = clamp(first_item / 32u, 0u, SHADER_ENTITY_TILE_BUCKET_LAST);
 		const uint last_bucket = clamp(last_item / 32u, 0u, SHADER_ENTITY_TILE_BUCKET_LAST);
 		const uint bucket_mask_lo = ~0u << first_bucket;
