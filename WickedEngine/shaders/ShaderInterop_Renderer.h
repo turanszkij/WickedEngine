@@ -907,10 +907,10 @@ static const uint SHADER_ENTITY_TILE_BUCKET_MASK = SHADER_ENTITY_TILE_UINT_COUNT
 static_assert(SHADER_ENTITY_TILE_BUCKET_LAST < 32); // whole bucket count must be indexable within 32 bits
 #endif // __cplusplus
 
-struct ShaderEntityBucketRange
+struct ShaderEntityIterator
 {
-	uint bucket_range;
-	uint type_mask;
+	uint item_range;
+	uint bucket_mask;
 	uint first_mask;
 	uint last_mask;
 	void init(uint offset, uint count)
@@ -919,34 +919,57 @@ struct ShaderEntityBucketRange
 		const uint last_item = (offset + count - 1);
 		const uint first_bucket = clamp(first_item / 32u, 0u, SHADER_ENTITY_TILE_BUCKET_LAST);
 		const uint last_bucket = clamp(last_item / 32u, 0u, SHADER_ENTITY_TILE_BUCKET_LAST);
-		bucket_range = first_bucket | (last_bucket << 16u);
-		type_mask = ~0u << first_bucket;
-		type_mask &= ~0u >> (31u - last_bucket);
+		const uint bucket_mask_lo = ~0u << first_bucket;
+		const uint bucket_mask_hi = ~0u >> (31u - last_bucket);
+		item_range = first_item | (last_item << 16u);
+		bucket_mask = bucket_mask_lo & bucket_mask_hi;
 		first_mask = ~0u << (first_item % 32u);
 		last_mask = ~0u >> (31u - (last_item % 32u));
 	}
-	inline uint begin()
+#ifndef __cplusplus
+	inline bool empty()
 	{
-		return bucket_range & 0xFFFF;
+		return bucket_mask == 0;
 	}
-	inline uint end()
+	inline uint first_item()
 	{
-		return bucket_range >> 16u;
+		return item_range & 0xFFFF;
+	}
+	inline uint last_item()
+	{
+		return item_range >> 16u;
+	}
+	inline uint item_count()
+	{
+		return last_item() + 1 - first_item();
+	}
+	inline uint first_bucket()
+	{
+		return firstbitlow(bucket_mask);
+	}
+	inline uint last_bucket()
+	{
+		return firstbithigh(bucket_mask);
+	}
+	inline uint bucket_count()
+	{
+		return countbits(bucket_mask);
 	}
 	// This mask out inactive buckets of the current type based on a whole tile bucket mask
-	inline uint bucket_mask(uint tile_mask)
+	inline uint mask_type(uint tile_mask)
 	{
-		return tile_mask & type_mask;
+		return tile_mask & bucket_mask;
 	}
 	// This masks out inactive entities for the current bucket type when processing either the first or the last bucket in the list
-	inline uint entity_mask(uint bucket, uint bucket_bits)
+	inline uint mask_entity(uint bucket, uint bucket_bits)
 	{
-		if (bucket == begin())
+		if (bucket == first_bucket())
 			bucket_bits &= first_mask;
-		if (bucket == end())
+		if (bucket == last_bucket())
 			bucket_bits &= last_mask;
 		return bucket_bits;
 	}
+#endif // __cplusplus
 };
 
 static const uint MATRIXARRAY_COUNT = SHADER_ENTITY_COUNT;
@@ -1008,7 +1031,7 @@ struct alignas(16) FrameCB
 	float		cloudShadowFarPlaneKm;
 	int			texture_volumetricclouds_shadow_index;
 	float		gi_boost;
-	int			padding0;
+	uint		entity_culling_count;
 
 	float		blue_noise_phase;
 	int			texture_random64x64_index;
@@ -1037,31 +1060,13 @@ struct alignas(16) FrameCB
 
 	VXGI vxgi;
 
-	uint envprobearray_offset;
-	uint envprobearray_count;
-	uint lightarray_offset_directional;
-	uint lightarray_count_directional;
-
-	uint lightarray_offset_spot;
-	uint lightarray_count_spot;
-	uint lightarray_offset_point;
-	uint lightarray_count_point;
-
-	uint lightarray_offset;
-	uint lightarray_count;
-	uint decalarray_offset;
-	uint decalarray_count;
-
-	uint forcefieldarray_offset;
-	uint forcefieldarray_count;
-	uint culled_entity_count;
-	uint padding2;
-
-	ShaderEntityBucketRange probe_buckets;
-	ShaderEntityBucketRange light_buckets_directional;
-	ShaderEntityBucketRange light_buckets_spot;
-	ShaderEntityBucketRange light_buckets_point;
-	ShaderEntityBucketRange decal_buckets;
+	ShaderEntityIterator probe_iterator;
+	ShaderEntityIterator light_iterator_directional;
+	ShaderEntityIterator light_iterator_spot;
+	ShaderEntityIterator light_iterator_point;
+	ShaderEntityIterator light_iterator;
+	ShaderEntityIterator decal_iterator;
+	ShaderEntityIterator force_iterator;
 
 	ShaderEntity entityArray[SHADER_ENTITY_COUNT];
 	float4x4 matrixArray[SHADER_ENTITY_COUNT];

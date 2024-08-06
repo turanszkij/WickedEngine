@@ -2,7 +2,7 @@
 #include "cullingShaderHF.hlsli"
 #include "lightingHF.hlsli"
 
-#define entityCount (GetFrame().culled_entity_count)
+#define entityCount (GetFrame().entity_culling_count)
 
 StructuredBuffer<Frustum> in_Frustums : register(t0);
 
@@ -26,8 +26,7 @@ void AppendEntity_Opaque(uint entityIndex)
 	const uint bucket_index = entityIndex / 32;
 	const uint bucket_place = entityIndex % 32;
 	InterlockedOr(tile_opaque[bucket_index], 1u << bucket_place);
-	
-	tile_bucket_mask_opaque |= 1u << bucket_index;
+	InterlockedOr(tile_bucket_mask_opaque, 1u << bucket_index);
 
 #ifdef DEBUG_TILEDLIGHTCULLING
 	InterlockedAdd(entityCountDebug, 1);
@@ -39,8 +38,7 @@ void AppendEntity_Transparent(uint entityIndex)
 	const uint bucket_index = entityIndex / 32;
 	const uint bucket_place = entityIndex % 32;
 	InterlockedOr(tile_transparent[bucket_index], 1u << bucket_place);
-	
-	tile_bucket_mask_transparent |= 1u << bucket_index;
+	InterlockedOr(tile_bucket_mask_transparent, 1u << bucket_index);
 }
 
 inline uint ConstructEntityMask(in float depthRangeMin, in float depthRangeRecip, in Sphere bounds)

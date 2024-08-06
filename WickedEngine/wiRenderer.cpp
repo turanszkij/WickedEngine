@@ -3901,20 +3901,21 @@ void UpdatePerFrameData(
 	}
 
 	// Fill Entity Array with decals + envprobes + lights in the frustum:
-	frameCB.envprobearray_offset = 0;
-	frameCB.envprobearray_count = 0;
-	frameCB.lightarray_offset_directional = 0;
-	frameCB.lightarray_count_directional = 0;
-	frameCB.lightarray_offset_spot = 0;
-	frameCB.lightarray_count_spot = 0;
-	frameCB.lightarray_offset_point = 0;
-	frameCB.lightarray_count_point = 0;
-	frameCB.lightarray_offset = 0;
-	frameCB.lightarray_count = 0;
-	frameCB.decalarray_offset = 0;
-	frameCB.decalarray_count = 0;
-	frameCB.forcefieldarray_offset = 0;
-	frameCB.forcefieldarray_count = 0;
+	uint envprobearray_offset = 0;
+	uint envprobearray_count = 0;
+	uint lightarray_offset_directional = 0;
+	uint lightarray_count_directional = 0;
+	uint lightarray_offset_spot = 0;
+	uint lightarray_count_spot = 0;
+	uint lightarray_offset_point = 0;
+	uint lightarray_count_point = 0;
+	uint lightarray_offset = 0;
+	uint lightarray_count = 0;
+	uint decalarray_offset = 0;
+	uint decalarray_count = 0;
+	uint forcefieldarray_offset = 0;
+	uint forcefieldarray_count = 0;
+	frameCB.entity_culling_count = 0;
 	{
 		ShaderEntity* entityArray = frameCB.entityArray;
 		float4x4* matrixArray = frameCB.matrixArray;
@@ -3923,7 +3924,7 @@ void UpdatePerFrameData(
 		uint32_t matrixCounter = 0;
 
 		// Write decals into entity array:
-		frameCB.decalarray_offset = entityCounter;
+		decalarray_offset = entityCounter;
 		const size_t decal_iterations = std::min((size_t)MAX_SHADER_DECAL_COUNT, vis.visibleDecals.size());
 		for (size_t i = 0; i < decal_iterations; ++i)
 		{
@@ -4001,11 +4002,11 @@ void UpdatePerFrameData(
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
-			frameCB.decalarray_count++;
+			decalarray_count++;
 		}
 
 		// Write environment probes into entity array:
-		frameCB.envprobearray_offset = entityCounter;
+		envprobearray_offset = entityCounter;
 		const size_t probe_iterations = std::min((size_t)MAX_SHADER_PROBE_COUNT, vis.visibleEnvProbes.size());
 		for (size_t i = 0; i < probe_iterations; ++i)
 		{
@@ -4058,14 +4059,14 @@ void UpdatePerFrameData(
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
-			frameCB.envprobearray_count++;
+			envprobearray_count++;
 		}
 
 		const XMFLOAT2 atlas_dim_rcp = XMFLOAT2(1.0f / float(shadowMapAtlas.desc.width), 1.0f / float(shadowMapAtlas.desc.height));
 
 		// Write directional lights into entity array:
-		frameCB.lightarray_offset = entityCounter;
-		frameCB.lightarray_offset_directional = entityCounter;
+		lightarray_offset = entityCounter;
+		lightarray_offset_directional = entityCounter;
 		for (uint32_t lightIndex : vis.visibleLights)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
@@ -4180,11 +4181,11 @@ void UpdatePerFrameData(
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
-			frameCB.lightarray_count_directional++;
+			lightarray_count_directional++;
 		}
 
 		// Write spot lights into entity array:
-		frameCB.lightarray_offset_spot = entityCounter;
+		lightarray_offset_spot = entityCounter;
 		for (uint32_t lightIndex : vis.visibleLights)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
@@ -4262,11 +4263,11 @@ void UpdatePerFrameData(
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
-			frameCB.lightarray_count_spot++;
+			lightarray_count_spot++;
 		}
 
 		// Write point lights into entity array:
-		frameCB.lightarray_offset_point = entityCounter;
+		lightarray_offset_point = entityCounter;
 		for (uint32_t lightIndex : vis.visibleLights)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
@@ -4335,13 +4336,13 @@ void UpdatePerFrameData(
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
-			frameCB.lightarray_count_point++;
+			lightarray_count_point++;
 		}
-		frameCB.lightarray_count = frameCB.lightarray_count_directional + frameCB.lightarray_count_spot + frameCB.lightarray_count_point;
-		frameCB.culled_entity_count = frameCB.lightarray_count + frameCB.decalarray_count + frameCB.envprobearray_count;
+		lightarray_count = lightarray_count_directional + lightarray_count_spot + lightarray_count_point;
+		frameCB.entity_culling_count = lightarray_count + decalarray_count + envprobearray_count;
 
 		// Write colliders into entity array:
-		frameCB.forcefieldarray_offset = entityCounter;
+		forcefieldarray_offset = entityCounter;
 		for (size_t i = 0; i < vis.scene->collider_count_gpu; ++i)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
@@ -4381,7 +4382,7 @@ void UpdatePerFrameData(
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
-			frameCB.forcefieldarray_count++;
+			forcefieldarray_count++;
 		}
 
 		// Write force fields into entity array:
@@ -4423,15 +4424,17 @@ void UpdatePerFrameData(
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
-			frameCB.forcefieldarray_count++;
+			forcefieldarray_count++;
 		}
 	}
 
-	frameCB.probe_buckets.init(frameCB.envprobearray_offset, frameCB.envprobearray_count);
-	frameCB.light_buckets_directional.init(frameCB.lightarray_offset_directional, frameCB.lightarray_count_directional);
-	frameCB.light_buckets_spot.init(frameCB.lightarray_offset_spot, frameCB.lightarray_count_spot);
-	frameCB.light_buckets_point.init(frameCB.lightarray_offset_point, frameCB.lightarray_count_point);
-	frameCB.decal_buckets.init(frameCB.decalarray_offset, frameCB.decalarray_count);
+	frameCB.probe_iterator.init(envprobearray_offset, envprobearray_count);
+	frameCB.light_iterator_directional.init(lightarray_offset_directional, lightarray_count_directional);
+	frameCB.light_iterator_spot.init(lightarray_offset_spot, lightarray_count_spot);
+	frameCB.light_iterator_point.init(lightarray_offset_point, lightarray_count_point);
+	frameCB.light_iterator.init(lightarray_offset, lightarray_count);
+	frameCB.decal_iterator.init(decalarray_offset, decalarray_count);
+	frameCB.force_iterator.init(forcefieldarray_offset, forcefieldarray_count);
 
 }
 void UpdateRenderData(

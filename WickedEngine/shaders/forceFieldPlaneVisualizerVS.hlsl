@@ -13,7 +13,7 @@ PSIn main(uint vID : SV_VERTEXID)
 
 	Out.pos = float4(vertexID_create_cube(vID) * 2 - 1, 1);
 
-	uint forceFieldID = GetFrame().forcefieldarray_offset + (uint)g_xColor.w;
+	uint forceFieldID = GetFrame().force_iterator.first_item() + (uint)g_xColor.w;
 	ShaderEntity forceField = load_entity(forceFieldID);
 
 	Out.pos.xyz *= forceField.GetRange();

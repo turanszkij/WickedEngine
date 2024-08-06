@@ -119,8 +119,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #if 1
 			// Light sampling:
 			{
-				const uint light_count = GetFrame().lightarray_count;
-				const uint light_index = GetFrame().lightarray_offset + rng.next_uint(light_count);
+				const uint light_count = GetFrame().light_iterator.item_count();
+				const uint light_index = GetFrame().light_iterator.first_item() + rng.next_uint(light_count);
 				ShaderEntity light = load_entity(light_index);
 
 				Lighting lighting;

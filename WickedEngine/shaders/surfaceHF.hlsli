@@ -723,7 +723,7 @@ struct Surface
 		// I need to copy the decal code here because include resolve issues:
 #ifndef DISABLE_DECALS
 		[branch]
-		if (!simple_lighting && GetFrame().decalarray_count > 0)
+		if (!simple_lighting && !GetFrame().decal_iterator.empty())
 		{
 			// decals are enabled, loop through them first:
 			half4 decalAccumulation = 0;
@@ -738,8 +738,8 @@ struct Surface
 #endif // ENTITY_TILE_UNIFORM
 
 			// Loop through decal buckets in the tile:
-			ShaderEntityBucketRange buckets = GetFrame().decal_buckets;
-			uint bucket_mask = buckets.bucket_mask(tile_mask);
+			ShaderEntityIterator iterator = GetFrame().decal_iterator;
+			uint bucket_mask = iterator.mask_type(tile_mask);
 			while (bucket_mask != 0)
 			{
 				const uint bucket = firstbitlow(bucket_mask);
@@ -752,7 +752,7 @@ struct Surface
 				bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
 #endif // ENTITY_TILE_UNIFORM
 
-				bucket_bits = buckets.entity_mask(bucket, bucket_bits);
+				bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 
 				[loop]
 				while (WaveActiveAnyTrue(bucket_bits != 0 && decalAccumulation.a < 1 && decalBumpAccumulation.a < 1 && decalSurfaceAccumulationAlpha < 1))
