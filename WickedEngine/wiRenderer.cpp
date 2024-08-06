@@ -9212,13 +9212,13 @@ void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution)
 		bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 		bd.usage = Usage::DEFAULT;
 		device->CreateBuffer(&bd, nullptr, &res.tileFrustums);
-
 		device->SetName(&res.tileFrustums, "tileFrustums");
 	}
 	{
 		GPUBufferDesc bd;
 		bd.stride = sizeof(uint);
-		bd.size = res.tileCount.x * res.tileCount.y * bd.stride * SHADER_ENTITY_TILE_UINT_COUNT * 2; // *2: opaque and transparent arrays
+		bd.size = res.tileCount.x * res.tileCount.y * bd.stride * SHADER_ENTITY_TILE_BUCKET_COUNT * 2; // *2: opaque and transparent arrays
+		bd.size += res.tileCount.x * res.tileCount.y * bd.stride * 2; // +1 uint mask per tile
 		bd.usage = Usage::DEFAULT;
 		bd.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 		bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
@@ -10275,7 +10275,7 @@ void BindCameraCB(
 	shadercam.scissor_uv.w = (shadercam.scissor.w - 0.5f) * shadercam.internal_resolution_rcp.y;
 
 	shadercam.entity_culling_tilecount = GetEntityCullingTileCount(shadercam.internal_resolution);
-	shadercam.entity_culling_tile_uint_count_flat = shadercam.entity_culling_tilecount.x * shadercam.entity_culling_tilecount.y * SHADER_ENTITY_TILE_UINT_COUNT;
+	shadercam.entity_culling_tile_bucket_count_flat = shadercam.entity_culling_tilecount.x * shadercam.entity_culling_tilecount.y * SHADER_ENTITY_TILE_BUCKET_COUNT;
 	shadercam.sample_count = camera.sample_count;
 	shadercam.visibility_tilecount = GetVisibilityTileCount(shadercam.internal_resolution);
 	shadercam.visibility_tilecount_flat = shadercam.visibility_tilecount.x * shadercam.visibility_tilecount.y;

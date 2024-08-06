@@ -84,7 +84,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 
 	// Compute addresses and load frustum:
 	const uint flatTileIndex = flatten2D(Gid.xy, GetCamera().entity_culling_tilecount.xy);
-	const uint tileBucketsAddress = flatTileIndex * SHADER_ENTITY_TILE_UINT_COUNT;
+	const uint tileBucketsAddress = flatTileIndex * SHADER_ENTITY_TILE_BUCKET_COUNT;
 	Frustum GroupFrustum = in_Frustums[flatTileIndex];
 
 	// Each thread will zero out one bucket in the LDS:
@@ -461,7 +461,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		entityTiles[tileBucketsAddress + i] = tile_opaque[i];
 		if (tile_opaque[i] != 0)
 			tile_bucket_mask_opaque |= 1u << i;
-		entityTiles[GetCamera().entity_culling_tile_uint_count_flat + tileBucketsAddress + i] = tile_transparent[i];
+		entityTiles[GetCamera().entity_culling_tile_bucket_count_flat + tileBucketsAddress + i] = tile_transparent[i];
 		if (tile_transparent[i] != 0)
 			tile_bucket_mask_transparent |= 1u << i;
 	}
@@ -472,8 +472,11 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	uint wave_tile_bucket_mask_transparent= WaveActiveBitOr(tile_bucket_mask_transparent);
 	if (groupIndex == 0) // not all first waves should write out, only once per whole group
 	{
-		entityTiles[tileBucketsAddress + SHADER_ENTITY_TILE_BUCKET_MASK] = wave_tile_bucket_mask_opaque;
-		entityTiles[GetCamera().entity_culling_tile_uint_count_flat + tileBucketsAddress + SHADER_ENTITY_TILE_BUCKET_MASK] = wave_tile_bucket_mask_transparent;
+		uint offset = GetCamera().entity_culling_tile_bucket_count_flat * 2;
+		entityTiles[offset + flatTileIndex] = wave_tile_bucket_mask_opaque;
+		
+		offset += GetCamera().entity_culling_tilecount;
+		entityTiles[offset + flatTileIndex] = wave_tile_bucket_mask_transparent;
 	}
 #endif // SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
 

@@ -266,14 +266,14 @@ inline void ForwardDecals(inout Surface surface, inout half4 surfaceMap, Sampler
 inline uint GetFlatTileIndex(uint2 pixel)
 {
 	const uint2 tileIndex = uint2(floor(pixel / TILED_CULLING_BLOCKSIZE));
-	return flatten2D(tileIndex, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_UINT_COUNT;
+	return flatten2D(tileIndex, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
 }
 
 inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint flatTileIndex)
 {
 #ifdef SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
 	// Tile mask contains 1 bit for each bucket used in the current tile, it enables sparse iteration of buckets:
-	uint tile_mask = load_entitytile(flatTileIndex + SHADER_ENTITY_TILE_BUCKET_MASK);
+	uint tile_mask = load_entitytile_mask(flatTileIndex);
 #ifndef ENTITY_TILE_UNIFORM
 	tile_mask = WaveReadLaneFirst(WaveActiveBitOr(tile_mask));
 #endif // ENTITY_TILE_UNIFORM
@@ -357,7 +357,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 #endif // TRANSPARENT
 #endif //DISABLE_VOXELGI
 
-#if 1
+#if 0
 	// Combined light loops:
 
 	[branch]
@@ -648,7 +648,7 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 
 #ifdef SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
 	// Tile mask contains 1 bit for each bucket used in the current tile, it enables sparse iteration of buckets:
-	uint tile_mask = load_entitytile(flatTileIndex + SHADER_ENTITY_TILE_BUCKET_MASK);
+	uint tile_mask = load_entitytile_mask(flatTileIndex);
 #ifndef ENTITY_TILE_UNIFORM
 	tile_mask = WaveReadLaneFirst(WaveActiveBitOr(tile_mask));
 #endif // ENTITY_TILE_UNIFORM

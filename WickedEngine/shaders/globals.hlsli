@@ -419,11 +419,19 @@ inline ShaderMaterial load_material(uint materialIndex)
 }
 uint load_entitytile(uint tileIndex)
 {
+	uint offset = 0;
 #ifdef TRANSPARENT
-	return bindless_structured_uint[GetCamera().buffer_entitytiles_index][GetCamera().entity_culling_tile_uint_count_flat + tileIndex];
-#else
-	return bindless_structured_uint[GetCamera().buffer_entitytiles_index][tileIndex];
+	offset += GetCamera().entity_culling_tile_bucket_count_flat;
 #endif // TRANSPARENT
+	return bindless_structured_uint[GetCamera().buffer_entitytiles_index][offset + tileIndex];
+}
+uint load_entitytile_mask(uint tileIndex)
+{
+	uint offset = GetCamera().entity_culling_tile_bucket_count_flat * 2;
+#ifdef TRANSPARENT
+	offset += GetCamera().entity_culling_tilecount;
+#endif // TRANSPARENT
+	return bindless_structured_uint[GetCamera().buffer_entitytiles_index][offset + tileIndex / SHADER_ENTITY_TILE_BUCKET_COUNT];
 }
 inline ShaderEntity load_entity(uint entityIndex)
 {

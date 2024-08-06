@@ -898,22 +898,13 @@ enum SHADER_ENTITY_FLAGS
 	ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA = 1 << 0,
 };
 
-// Experimental: sparse bucket iteration, can be faster when many entity buckets are used
-//#define SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
+#define SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
 static const uint SHADER_ENTITY_COUNT = 256;
 static const uint SHADER_ENTITY_TILE_BUCKET_COUNT = SHADER_ENTITY_COUNT / 32;
-#ifdef SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
-static const uint SHADER_ENTITY_TILE_UINT_COUNT = SHADER_ENTITY_TILE_BUCKET_COUNT + 1; // +1: tile mask
-#else
-static const uint SHADER_ENTITY_TILE_UINT_COUNT = SHADER_ENTITY_TILE_BUCKET_COUNT;
-#endif // SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
-static const uint SHADER_ENTITY_TILE_BUCKET_LAST = SHADER_ENTITY_TILE_BUCKET_COUNT - 1;
-static const uint SHADER_ENTITY_TILE_BUCKET_MASK = SHADER_ENTITY_TILE_UINT_COUNT - 1;
 #ifdef __cplusplus
-static_assert(SHADER_ENTITY_TILE_BUCKET_LAST < 32); // whole bucket count must be indexable within 32 bits
+static_assert(SHADER_ENTITY_TILE_BUCKET_COUNT <= 32); // whole bucket count must be indexable within 32 bits
 #endif // __cplusplus
 
-#if 1
 // Compacted storage, but unfortunately because of HLSL constant buffer packing rules, it needs the padding:
 struct ShaderEntityIterator
 {
@@ -947,11 +938,11 @@ struct ShaderEntityIterator
 	}
 	inline uint first_bucket()
 	{
-		return clamp(first_item() / 32u, 0u, SHADER_ENTITY_TILE_BUCKET_LAST);
+		return first_item() / 32u;
 	}
 	inline uint last_bucket()
 	{
-		return clamp(last_item() / 32u, 0u, SHADER_ENTITY_TILE_BUCKET_LAST);
+		return last_item() / 32u;
 	}
 	inline uint bucket_mask()
 	{
@@ -982,73 +973,6 @@ struct ShaderEntityIterator
 		return bucket_bits;
 	}
 };
-#else
-// Bigger storage, but the values are precomputed:
-struct ShaderEntityIterator
-{
-	uint item_range;
-	uint bucket_mask;
-	uint first_bucket_entity_mask;
-	uint last_bucket_entity_mask;
-	void init(uint offset, uint count)
-	{
-		const uint first_item = offset;
-		const uint last_item = count == 0 ? offset : (offset + count - 1);
-		const uint first_bucket = clamp(first_item / 32u, 0u, SHADER_ENTITY_TILE_BUCKET_LAST);
-		const uint last_bucket = clamp(last_item / 32u, 0u, SHADER_ENTITY_TILE_BUCKET_LAST);
-		const uint bucket_mask_lo = ~0u << first_bucket;
-		const uint bucket_mask_hi = ~0u >> (31u - last_bucket);
-		item_range = first_item | (last_item << 16u);
-		bucket_mask = bucket_mask_lo & bucket_mask_hi;
-		first_bucket_entity_mask = ~0u << (first_item % 32u);
-		last_bucket_entity_mask = ~0u >> (31u - (last_item % 32u));
-	}
-#ifndef __cplusplus
-	inline bool empty()
-	{
-		return bucket_mask == 0;
-	}
-	inline uint first_item()
-	{
-		return item_range & 0xFFFF;
-	}
-	inline uint last_item()
-	{
-		return item_range >> 16u;
-	}
-	inline uint item_count()
-	{
-		return last_item() + 1 - first_item();
-	}
-	inline uint first_bucket()
-	{
-		return firstbitlow(bucket_mask);
-	}
-	inline uint last_bucket()
-	{
-		return firstbithigh(bucket_mask);
-	}
-	inline uint bucket_count()
-	{
-		return countbits(bucket_mask);
-	}
-	// This mask out inactive buckets of the current type based on a whole tile bucket mask
-	inline uint mask_type(uint tile_mask)
-	{
-		return tile_mask & bucket_mask;
-	}
-	// This masks out inactive entities for the current bucket type when processing either the first or the last bucket in the list
-	inline uint mask_entity(uint bucket, uint bucket_bits)
-	{
-		if (bucket == first_bucket())
-			bucket_bits &= first_bucket_entity_mask;
-		if (bucket == last_bucket())
-			bucket_bits &= last_bucket_entity_mask;
-		return bucket_bits;
-	}
-#endif // __cplusplus
-};
-#endif
 
 static const uint MATRIXARRAY_COUNT = SHADER_ENTITY_COUNT;
 static const uint MAX_SHADER_DECAL_COUNT = 128;
@@ -1212,7 +1136,7 @@ struct alignas(16) ShaderCamera
 	float4 scissor_uv; // scissor in screen UV coordinates (left,top,right,bottom) range: [0, 1]
 
 	uint2 entity_culling_tilecount;
-	uint entity_culling_tile_uint_count_flat; // tilecount.x * tilecount.y * SHADER_ENTITY_TILE_UINT_COUNT (the total number of uint buckets for the whole screen)
+	uint entity_culling_tile_bucket_count_flat; // tilecount.x * tilecount.y * SHADER_ENTITY_TILE_BUCKET_COUNT (the total number of uint buckets for the whole screen)
 	uint sample_count;
 
 	uint2 visibility_tilecount;
@@ -1286,7 +1210,7 @@ struct alignas(16) ShaderCamera
 		scissor = {};
 		scissor_uv = {};
 		entity_culling_tilecount = {};
-		entity_culling_tile_uint_count_flat = 0;
+		entity_culling_tile_bucket_count_flat = 0;
 		sample_count = {};
 		visibility_tilecount = {};
 		visibility_tilecount_flat = {};

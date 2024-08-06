@@ -733,7 +733,7 @@ struct Surface
 
 #ifdef SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
 			// Tile mask contains 1 bit for each bucket used in the current tile:
-			uint tile_mask = load_entitytile(flatTileIndex + SHADER_ENTITY_TILE_BUCKET_MASK);
+			uint tile_mask = load_entitytile_mask(flatTileIndex);
 #ifndef ENTITY_TILE_UNIFORM
 			tile_mask = WaveReadLaneFirst(WaveActiveBitOr(tile_mask));
 #endif // ENTITY_TILE_UNIFORM
