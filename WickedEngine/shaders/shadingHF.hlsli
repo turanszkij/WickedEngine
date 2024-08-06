@@ -271,14 +271,6 @@ inline uint GetFlatTileIndex(uint2 pixel)
 
 inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint flatTileIndex)
 {
-#ifdef SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
-	// Tile mask contains 1 bit for each bucket used in the current tile, it enables sparse iteration of buckets:
-	uint tile_mask = load_entitytile_mask(flatTileIndex);
-#ifndef ENTITY_TILE_UNIFORM
-	tile_mask = WaveReadLaneFirst(WaveActiveBitOr(tile_mask));
-#endif // ENTITY_TILE_UNIFORM
-#endif // SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
-
 #ifndef DISABLE_ENVMAPS
 	// Apply environment maps:
 	half4 envmapAccumulation = 0;
@@ -289,18 +281,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		// Loop through envmap buckets in the tile:
 		ShaderEntityIterator iterator = GetFrame().probe_iterator;
-		
-#ifdef SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
-		uint bucket_mask = iterator.mask_type(tile_mask);
-		while (bucket_mask != 0)
-		{
-			const uint bucket = firstbitlow(bucket_mask);
-			bucket_mask ^= 1u << bucket;
-#else
 		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
-#endif // SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
-			
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
 #ifndef ENTITY_TILE_UNIFORM
@@ -365,18 +347,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		// Loop through light buckets in the tile:
 		ShaderEntityIterator iterator = GetFrame().light_iterator;
-		
-#ifdef SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
-		uint bucket_mask = iterator.mask_type(tile_mask);
-		while (bucket_mask != 0)
-		{
-			const uint bucket = firstbitlow(bucket_mask);
-			bucket_mask ^= 1u << bucket;
-#else
 		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
-#endif // SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
-			
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
 #ifndef ENTITY_TILE_UNIFORM
@@ -440,18 +412,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		// Loop through light buckets in the tile:
 		ShaderEntityIterator iterator = GetFrame().light_iterator_directional;
-		
-#ifdef SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
-		uint bucket_mask = iterator.mask_type(tile_mask);
-		while (bucket_mask != 0)
-		{
-			const uint bucket = firstbitlow(bucket_mask);
-			bucket_mask ^= 1u << bucket;
-#else
 		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
-#endif // SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
-			
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
 #ifndef ENTITY_TILE_UNIFORM
@@ -495,18 +457,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		// Loop through light buckets in the tile:
 		ShaderEntityIterator iterator = GetFrame().light_iterator_spot;
-		
-#ifdef SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
-		uint bucket_mask = iterator.mask_type(tile_mask);
-		while (bucket_mask != 0)
-		{
-			const uint bucket = firstbitlow(bucket_mask);
-			bucket_mask ^= 1u << bucket;
-#else
 		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
-#endif // SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
-			
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
 #ifndef ENTITY_TILE_UNIFORM
@@ -550,18 +502,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		// Loop through light buckets in the tile:
 		ShaderEntityIterator iterator = GetFrame().light_iterator_point;
-		
-#ifdef SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
-		uint bucket_mask = iterator.mask_type(tile_mask);
-		while (bucket_mask != 0)
-		{
-			const uint bucket = firstbitlow(bucket_mask);
-			bucket_mask ^= 1u << bucket;
-#else
 		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
-#endif // SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
-			
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
 #ifndef ENTITY_TILE_UNIFORM
@@ -645,15 +587,7 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 	[branch]
 	if (GetFrame().decal_iterator.empty())
 		return;
-
-#ifdef SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
-	// Tile mask contains 1 bit for each bucket used in the current tile, it enables sparse iteration of buckets:
-	uint tile_mask = load_entitytile_mask(flatTileIndex);
-#ifndef ENTITY_TILE_UNIFORM
-	tile_mask = WaveReadLaneFirst(WaveActiveBitOr(tile_mask));
-#endif // ENTITY_TILE_UNIFORM
-#endif // SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
-
+		
 	// decals are enabled, loop through them first:
 	half4 decalAccumulation = 0;
 	half4 decalBumpAccumulation = 0;
@@ -670,18 +604,8 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 
 	// Loop through decal buckets in the tile:
 	ShaderEntityIterator iterator = GetFrame().decal_iterator;
-		
-#ifdef SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
-	uint bucket_mask = iterator.mask_type(tile_mask);
-	while (bucket_mask != 0)
-	{
-		const uint bucket = firstbitlow(bucket_mask);
-		bucket_mask ^= 1u << bucket;
-#else
 	for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 	{
-#endif // SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
-			
 		uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
 #ifndef ENTITY_TILE_UNIFORM

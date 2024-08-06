@@ -9218,7 +9218,6 @@ void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution)
 		GPUBufferDesc bd;
 		bd.stride = sizeof(uint);
 		bd.size = res.tileCount.x * res.tileCount.y * bd.stride * SHADER_ENTITY_TILE_BUCKET_COUNT * 2; // *2: opaque and transparent arrays
-		bd.size += res.tileCount.x * res.tileCount.y * bd.stride * 2; // +1 uint mask per tile
 		bd.usage = Usage::DEFAULT;
 		bd.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 		bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;

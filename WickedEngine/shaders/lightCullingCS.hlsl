@@ -466,20 +466,6 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 			tile_bucket_mask_transparent |= 1u << i;
 	}
 
-#ifdef SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
-	// Since we have guaranteed to have max 32 buckets per tile, wave operation can be done to compact the mask:
-	uint wave_tile_bucket_mask_opaque = WaveActiveBitOr(tile_bucket_mask_opaque);
-	uint wave_tile_bucket_mask_transparent= WaveActiveBitOr(tile_bucket_mask_transparent);
-	if (groupIndex == 0) // not all first waves should write out, only once per whole group
-	{
-		uint offset = GetCamera().entity_culling_tile_bucket_count_flat * 2;
-		entityTiles[offset + flatTileIndex] = wave_tile_bucket_mask_opaque;
-		
-		offset += GetCamera().entity_culling_tilecount;
-		entityTiles[offset + flatTileIndex] = wave_tile_bucket_mask_transparent;
-	}
-#endif // SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
-
 #ifdef DEBUG_TILEDLIGHTCULLING
 	for (granularity = 0; granularity < TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY; ++granularity)
 	{

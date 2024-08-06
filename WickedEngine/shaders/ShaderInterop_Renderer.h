@@ -898,14 +898,9 @@ enum SHADER_ENTITY_FLAGS
 	ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA = 1 << 0,
 };
 
-#define SHADER_ENTITY_SPARSE_BUCKET_ITERATOR
 static const uint SHADER_ENTITY_COUNT = 256;
 static const uint SHADER_ENTITY_TILE_BUCKET_COUNT = SHADER_ENTITY_COUNT / 32;
-#ifdef __cplusplus
-static_assert(SHADER_ENTITY_TILE_BUCKET_COUNT <= 32); // whole bucket count must be indexable within 32 bits
-#endif // __cplusplus
 
-// Compacted storage, but unfortunately because of HLSL constant buffer packing rules, it needs the padding:
 struct ShaderEntityIterator
 {
 	uint value;
@@ -934,7 +929,7 @@ struct ShaderEntityIterator
 	}
 	inline uint last_item()
 	{
-		return item_count() == 0 ? item_offset() : (item_offset() + item_count() - 1);
+		return empty() ? 0 : (item_offset() + item_count() - 1);
 	}
 	inline uint first_bucket()
 	{
@@ -958,7 +953,7 @@ struct ShaderEntityIterator
 	{
 		return ~0u >> (31u - (last_item() % 32u));
 	}
-	// This mask out inactive buckets of the current type based on a whole tile bucket mask
+	// This masks out inactive buckets of the current type based on a whole tile bucket mask
 	inline uint mask_type(uint tile_mask)
 	{
 		return tile_mask & bucket_mask();
