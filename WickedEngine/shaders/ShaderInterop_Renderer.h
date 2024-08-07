@@ -901,6 +901,76 @@ enum SHADER_ENTITY_FLAGS
 static const uint SHADER_ENTITY_COUNT = 256;
 static const uint SHADER_ENTITY_TILE_BUCKET_COUNT = SHADER_ENTITY_COUNT / 32;
 
+struct ShaderEntityIterator
+{
+	uint value;
+
+#ifdef __cplusplus
+	ShaderEntityIterator(uint offset, uint count)
+	{
+		value = offset | (count << 16u);
+	}
+	constexpr operator uint() const { return value; }
+#endif // __cplusplus
+
+	inline bool empty()
+	{
+		return value == 0;
+	}
+	inline uint item_offset()
+	{
+		return value & 0xFFFF;
+	}
+	inline uint item_count()
+	{
+		return value >> 16u;
+	}
+	inline uint first_item()
+	{
+		return item_offset();
+	}
+	inline uint last_item()
+	{
+		return empty() ? 0 : (item_offset() + item_count() - 1);
+	}
+	inline uint first_bucket()
+	{
+		return first_item() / 32u;
+	}
+	inline uint last_bucket()
+	{
+		return last_item() / 32u;
+	}
+	inline uint bucket_mask()
+	{
+		const uint bucket_mask_lo = ~0u << first_bucket();
+		const uint bucket_mask_hi = ~0u >> (31u - last_bucket());
+		return bucket_mask_lo & bucket_mask_hi;
+	}
+	inline uint first_bucket_entity_mask()
+	{
+		return ~0u << (first_item() % 32u);
+	}
+	inline uint last_bucket_entity_mask()
+	{
+		return ~0u >> (31u - (last_item() % 32u));
+	}
+	// This masks out inactive buckets of the current type based on a whole tile bucket mask
+	inline uint mask_type(uint tile_mask)
+	{
+		return tile_mask & bucket_mask();
+	}
+	// This masks out inactive entities for the current bucket type when processing either the first or the last bucket in the list
+	inline uint mask_entity(uint bucket, uint bucket_bits)
+	{
+		if (bucket == first_bucket())
+			bucket_bits &= first_bucket_entity_mask();
+		if (bucket == last_bucket())
+			bucket_bits &= last_bucket_entity_mask();
+		return bucket_bits;
+	}
+};
+
 static const uint MATRIXARRAY_COUNT = SHADER_ENTITY_COUNT;
 static const uint MAX_SHADER_DECAL_COUNT = 128;
 static const uint MAX_SHADER_PROBE_COUNT = 32;
@@ -960,17 +1030,7 @@ struct alignas(16) FrameCB
 	float		cloudShadowFarPlaneKm;
 	int			texture_volumetricclouds_shadow_index;
 	float		gi_boost;
-	int			padding0;
-
-	uint		lightarray_offset;			// indexing into entity array
-	uint		lightarray_count;			// indexing into entity array
-	uint		decalarray_offset;			// indexing into entity array
-	uint		decalarray_count;			// indexing into entity array
-
-	uint		forcefieldarray_offset;		// indexing into entity array
-	uint		forcefieldarray_count;		// indexing into entity array
-	uint		envprobearray_offset;		// indexing into entity array
-	uint		envprobearray_count;		// indexing into entity array
+	uint		entity_culling_count;
 
 	float		blue_noise_phase;
 	int			texture_random64x64_index;
@@ -998,6 +1058,16 @@ struct alignas(16) FrameCB
 	ShaderScene scene;
 
 	VXGI vxgi;
+
+	uint probes;
+	uint directional_lights;
+	uint spotlights;
+	uint pointlights;
+
+	uint lights;
+	uint decals;
+	uint forces;
+	uint padding;
 
 	ShaderEntity entityArray[SHADER_ENTITY_COUNT];
 	float4x4 matrixArray[SHADER_ENTITY_COUNT];

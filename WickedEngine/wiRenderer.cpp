@@ -3216,23 +3216,26 @@ void UpdateVisibility(Visibility& vis)
 
 			if ((aabb.layerMask & vis.layerMask) && vis.frustum.CheckBoxFast(aabb))
 			{
-				// Local stream compaction:
-				//	(also compute light distance for shadow priority sorting)
-				group_list[group_count] = args.jobIndex;
 				const LightComponent& light = vis.scene->lights[args.jobIndex];
-				group_count++;
-				if (light.IsVolumetricsEnabled())
+				if (!light.IsInactive())
 				{
-					vis.volumetriclight_request.store(true);
-				}
-
-				if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
-				{
-					if (!light.IsStatic() && light.GetType() != LightComponent::DIRECTIONAL || light.occlusionquery < 0)
+					// Local stream compaction:
+					//	(also compute light distance for shadow priority sorting)
+					group_list[group_count] = args.jobIndex;
+					group_count++;
+					if (light.IsVolumetricsEnabled())
 					{
-						if (!aabb.intersects(vis.camera->Eye))
+						vis.volumetriclight_request.store(true);
+					}
+
+					if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
+					{
+						if (!light.IsStatic() && light.GetType() != LightComponent::DIRECTIONAL || light.occlusionquery < 0)
 						{
-							light.occlusionquery = vis.scene->queryAllocator.fetch_add(1); // allocate new occlusion query from heap
+							if (!aabb.intersects(vis.camera->Eye))
+							{
+								light.occlusionquery = vis.scene->queryAllocator.fetch_add(1); // allocate new occlusion query from heap
+							}
 						}
 					}
 				}
@@ -3718,22 +3721,6 @@ void UpdatePerFrameData(
 		frameCB.vxgi.clipmaps[i].voxelSize = scene.vxgi.clipmaps[i].voxelsize;
 	}
 
-	// The order is very important here:
-	frameCB.decalarray_offset = 0;
-	frameCB.decalarray_count = std::min(MAX_SHADER_DECAL_COUNT, (uint)vis.visibleDecals.size());
-	frameCB.envprobearray_offset = frameCB.decalarray_count;
-	frameCB.envprobearray_count = std::min(MAX_SHADER_PROBE_COUNT, (uint)vis.visibleEnvProbes.size());
-	frameCB.lightarray_offset = frameCB.envprobearray_offset + frameCB.envprobearray_count;
-	frameCB.lightarray_count = (uint)vis.visibleLights.size();
-	frameCB.forcefieldarray_offset = frameCB.lightarray_offset + frameCB.lightarray_count;
-	frameCB.forcefieldarray_count = uint(vis.scene->forces.GetCount() + vis.scene->collider_count_gpu);
-
-	// Limit to avoid out of bounds accesses:
-	frameCB.decalarray_offset = std::min(SHADER_ENTITY_COUNT, frameCB.decalarray_offset);
-	frameCB.envprobearray_offset = std::min(SHADER_ENTITY_COUNT, frameCB.envprobearray_offset);
-	frameCB.lightarray_offset = std::min(SHADER_ENTITY_COUNT, frameCB.lightarray_offset);
-	frameCB.forcefieldarray_offset = std::min(SHADER_ENTITY_COUNT, frameCB.forcefieldarray_offset);
-
 	frameCB.gi_boost = GetGIBoost();
 
 	if (scene.weather.rain_amount > 0)
@@ -3917,6 +3904,21 @@ void UpdatePerFrameData(
 	}
 
 	// Fill Entity Array with decals + envprobes + lights in the frustum:
+	uint envprobearray_offset = 0;
+	uint envprobearray_count = 0;
+	uint lightarray_offset_directional = 0;
+	uint lightarray_count_directional = 0;
+	uint lightarray_offset_spot = 0;
+	uint lightarray_count_spot = 0;
+	uint lightarray_offset_point = 0;
+	uint lightarray_count_point = 0;
+	uint lightarray_offset = 0;
+	uint lightarray_count = 0;
+	uint decalarray_offset = 0;
+	uint decalarray_count = 0;
+	uint forcefieldarray_offset = 0;
+	uint forcefieldarray_count = 0;
+	frameCB.entity_culling_count = 0;
 	{
 		ShaderEntity* entityArray = frameCB.entityArray;
 		float4x4* matrixArray = frameCB.matrixArray;
@@ -3925,6 +3927,7 @@ void UpdatePerFrameData(
 		uint32_t matrixCounter = 0;
 
 		// Write decals into entity array:
+		decalarray_offset = entityCounter;
 		const size_t decal_iterations = std::min((size_t)MAX_SHADER_DECAL_COUNT, vis.visibleDecals.size());
 		for (size_t i = 0; i < decal_iterations; ++i)
 		{
@@ -4002,9 +4005,11 @@ void UpdatePerFrameData(
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
+			decalarray_count++;
 		}
 
 		// Write environment probes into entity array:
+		envprobearray_offset = entityCounter;
 		const size_t probe_iterations = std::min((size_t)MAX_SHADER_PROBE_COUNT, vis.visibleEnvProbes.size());
 		for (size_t i = 0; i < probe_iterations; ++i)
 		{
@@ -4057,12 +4062,14 @@ void UpdatePerFrameData(
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
+			envprobearray_count++;
 		}
 
-		// Write lights into entity array:
 		const XMFLOAT2 atlas_dim_rcp = XMFLOAT2(1.0f / float(shadowMapAtlas.desc.width), 1.0f / float(shadowMapAtlas.desc.height));
-		ShaderEntity shaderentity;
 
+		// Write directional lights into entity array:
+		lightarray_offset = entityCounter;
+		lightarray_offset_directional = entityCounter;
 		for (uint32_t lightIndex : vis.visibleLights)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
@@ -4070,12 +4077,12 @@ void UpdatePerFrameData(
 				entityCounter--;
 				break;
 			}
-			shaderentity = {};
 
 			const LightComponent& light = vis.scene->lights[lightIndex];
-			if (light.IsInactive())
+			if (light.GetType() != LightComponent::DIRECTIONAL || light.IsInactive())
 				continue;
 
+			ShaderEntity shaderentity = {};
 			shaderentity.layerMask = ~0u;
 
 			Entity entity = vis.scene->lights.GetEntity(lightIndex);
@@ -4177,9 +4184,168 @@ void UpdatePerFrameData(
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
+			lightarray_count_directional++;
 		}
 
+		// Write spot lights into entity array:
+		lightarray_offset_spot = entityCounter;
+		for (uint32_t lightIndex : vis.visibleLights)
+		{
+			if (entityCounter == SHADER_ENTITY_COUNT)
+			{
+				entityCounter--;
+				break;
+			}
+
+			const LightComponent& light = vis.scene->lights[lightIndex];
+			if (light.GetType() != LightComponent::SPOT || light.IsInactive())
+				continue;
+
+			ShaderEntity shaderentity = {};
+			shaderentity.layerMask = ~0u;
+
+			Entity entity = vis.scene->lights.GetEntity(lightIndex);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				shaderentity.layerMask = layer->layerMask;
+			}
+
+			shaderentity.SetType(light.GetType());
+			shaderentity.position = light.position;
+			shaderentity.SetRange(light.GetRange());
+			shaderentity.SetRadius(light.radius);
+			shaderentity.SetLength(light.length);
+			shaderentity.SetDirection(light.direction);
+			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
+
+			// mark as no shadow by default:
+			shaderentity.indices = ~0;
+
+			bool shadow = light.IsCastingShadow() && !light.IsStatic();
+			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
+
+			if (shadow)
+			{
+				shaderentity.shadowAtlasMulAdd.x = shadow_rect.w * atlas_dim_rcp.x;
+				shaderentity.shadowAtlasMulAdd.y = shadow_rect.h * atlas_dim_rcp.y;
+				shaderentity.shadowAtlasMulAdd.z = shadow_rect.x * atlas_dim_rcp.x;
+				shaderentity.shadowAtlasMulAdd.w = shadow_rect.y * atlas_dim_rcp.y;
+				shaderentity.SetIndices(matrixCounter, 0);
+			}
+
+			const float outerConeAngle = light.outerConeAngle;
+			const float innerConeAngle = std::min(light.innerConeAngle, outerConeAngle);
+			const float outerConeAngleCos = std::cos(outerConeAngle);
+			const float innerConeAngleCos = std::cos(innerConeAngle);
+
+			// https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual#inner-and-outer-cone-angles
+			const float lightAngleScale = 1.0f / std::max(0.001f, innerConeAngleCos - outerConeAngleCos);
+			const float lightAngleOffset = -outerConeAngleCos * lightAngleScale;
+
+			shaderentity.SetConeAngleCos(outerConeAngleCos);
+			shaderentity.SetAngleScale(lightAngleScale);
+			shaderentity.SetAngleOffset(lightAngleOffset);
+
+			if (shadow)
+			{
+				SHCAM shcam;
+				CreateSpotLightShadowCam(light, shcam);
+				XMStoreFloat4x4(&matrixArray[matrixCounter++], shcam.view_projection);
+			}
+
+			if (light.IsStatic())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_STATIC);
+			}
+
+			if (light.IsVolumetricCloudsEnabled())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS);
+			}
+
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			entityCounter++;
+			lightarray_count_spot++;
+		}
+
+		// Write point lights into entity array:
+		lightarray_offset_point = entityCounter;
+		for (uint32_t lightIndex : vis.visibleLights)
+		{
+			if (entityCounter == SHADER_ENTITY_COUNT)
+			{
+				entityCounter--;
+				break;
+			}
+
+			const LightComponent& light = vis.scene->lights[lightIndex];
+			if (light.GetType() != LightComponent::POINT || light.IsInactive())
+				continue;
+
+			ShaderEntity shaderentity = {};
+			shaderentity.layerMask = ~0u;
+
+			Entity entity = vis.scene->lights.GetEntity(lightIndex);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				shaderentity.layerMask = layer->layerMask;
+			}
+
+			shaderentity.SetType(light.GetType());
+			shaderentity.position = light.position;
+			shaderentity.SetRange(light.GetRange());
+			shaderentity.SetRadius(light.radius);
+			shaderentity.SetLength(light.length);
+			shaderentity.SetDirection(light.direction);
+			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
+
+			// mark as no shadow by default:
+			shaderentity.indices = ~0;
+
+			bool shadow = light.IsCastingShadow() && !light.IsStatic();
+			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
+
+			if (shadow)
+			{
+				shaderentity.shadowAtlasMulAdd.x = shadow_rect.w * atlas_dim_rcp.x;
+				shaderentity.shadowAtlasMulAdd.y = shadow_rect.h * atlas_dim_rcp.y;
+				shaderentity.shadowAtlasMulAdd.z = shadow_rect.x * atlas_dim_rcp.x;
+				shaderentity.shadowAtlasMulAdd.w = shadow_rect.y * atlas_dim_rcp.y;
+				shaderentity.SetIndices(matrixCounter, 0);
+			}
+
+			if (shadow)
+			{
+				const float FarZ = 0.1f;	// watch out: reversed depth buffer! Also, light near plane is constant for simplicity, this should match on cpu side!
+				const float NearZ = std::max(1.0f, light.GetRange()); // watch out: reversed depth buffer!
+				const float fRange = FarZ / (FarZ - NearZ);
+				const float cubemapDepthRemapNear = fRange;
+				const float cubemapDepthRemapFar = -fRange * NearZ;
+				shaderentity.SetCubeRemapNear(cubemapDepthRemapNear);
+				shaderentity.SetCubeRemapFar(cubemapDepthRemapFar);
+			}
+
+			if (light.IsStatic())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_STATIC);
+			}
+
+			if (light.IsVolumetricCloudsEnabled())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS);
+			}
+
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			entityCounter++;
+			lightarray_count_point++;
+		}
+		lightarray_count = lightarray_count_directional + lightarray_count_spot + lightarray_count_point;
+		frameCB.entity_culling_count = lightarray_count + decalarray_count + envprobearray_count;
+
 		// Write colliders into entity array:
+		forcefieldarray_offset = entityCounter;
 		for (size_t i = 0; i < vis.scene->collider_count_gpu; ++i)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
@@ -4219,6 +4385,7 @@ void UpdatePerFrameData(
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
+			forcefieldarray_count++;
 		}
 
 		// Write force fields into entity array:
@@ -4260,8 +4427,18 @@ void UpdatePerFrameData(
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
+			forcefieldarray_count++;
 		}
 	}
+
+	frameCB.probes = ShaderEntityIterator(envprobearray_offset, envprobearray_count);
+	frameCB.directional_lights = ShaderEntityIterator(lightarray_offset_directional, lightarray_count_directional);
+	frameCB.spotlights = ShaderEntityIterator(lightarray_offset_spot, lightarray_count_spot);
+	frameCB.pointlights = ShaderEntityIterator(lightarray_offset_point, lightarray_count_point);
+	frameCB.lights = ShaderEntityIterator(lightarray_offset, lightarray_count);
+	frameCB.decals = ShaderEntityIterator(decalarray_offset, decalarray_count);
+	frameCB.forces = ShaderEntityIterator(forcefieldarray_offset, forcefieldarray_count);
+
 }
 void UpdateRenderData(
 	const Visibility& vis,
@@ -5557,93 +5734,91 @@ void DrawVolumeLights(
 	CommandList cmd
 )
 {
+	if (vis.visibleLights.empty())
+		return;
 
-	if (!vis.visibleLights.empty())
+	device->EventBegin("Volumetric Light Render", cmd);
+
+	BindCommonResources(cmd);
+
+	XMMATRIX VP = vis.camera->GetViewProjection();
+	const XMVECTOR CamPos = vis.camera->GetEye();
+
+	for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 	{
-		device->EventBegin("Volumetric Light Render", cmd);
+		const PipelineState& pso = PSO_volumetriclight[type];
 
-		BindCommonResources(cmd);
+		if (!pso.IsValid())
+			continue;
 
-		XMMATRIX VP = vis.camera->GetViewProjection();
-		const XMVECTOR CamPos = vis.camera->GetEye();
+		device->BindPipelineState(&pso, cmd);
 
-		for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
+		int type_idx = -1;
+		for (size_t i = 0; i < vis.visibleLights.size(); ++i)
 		{
-			const PipelineState& pso = PSO_volumetriclight[type];
-
-			if (!pso.IsValid())
-			{
+			const uint32_t lightIndex = vis.visibleLights[i];
+			const LightComponent& light = vis.scene->lights[lightIndex];
+			if (light.GetType() != type)
 				continue;
-			}
+			type_idx++;
 
-			device->BindPipelineState(&pso, cmd);
+			if (!light.IsVolumetricsEnabled())
+				continue;
 
-			for (size_t i = 0; i < vis.visibleLights.size(); ++i)
+			switch (type)
 			{
-				const uint32_t lightIndex = vis.visibleLights[i];
-				const LightComponent& light = vis.scene->lights[lightIndex];
-				if (light.GetType() == type && light.IsVolumetricsEnabled())
-				{
+			case LightComponent::DIRECTIONAL:
+			{
+				MiscCB miscCb;
+				miscCb.g_xColor.x = float(type_idx);
+				device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
 
-					switch (type)
-					{
-					case LightComponent::DIRECTIONAL:
-					{
-						MiscCB miscCb;
-						miscCb.g_xColor.x = float(i);
-						device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
-
-						device->Draw(3, 0, cmd); // full screen triangle
-					}
-					break;
-					case LightComponent::POINT:
-					{
-						MiscCB miscCb;
-						miscCb.g_xColor.x = float(i);
-						float sca = light.GetRange() + 1;
-						XMStoreFloat4x4(&miscCb.g_xTransform, XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * VP);
-						device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
-
-						device->Draw(240, 0, cmd); // icosphere
-					}
-					break;
-					case LightComponent::SPOT:
-					{
-						MiscCB miscCb;
-						miscCb.g_xColor.x = float(i);
-						miscCb.g_xColor.y = std::pow(std::sin(light.outerConeAngle), 2.0f);
-						miscCb.g_xColor.z = std::pow(std::cos(light.outerConeAngle), 2.0f);
-
-						const XMVECTOR LightPos = XMLoadFloat3(&light.position);
-						const XMVECTOR LightDirection = XMLoadFloat3(&light.direction);
-						const XMVECTOR L = XMVector3Normalize(LightPos - CamPos);
-						const float spot_factor = XMVectorGetX(XMVector3Dot(L, LightDirection));
-						const float spot_cutoff = std::cos(light.outerConeAngle);
-						miscCb.g_xColor.w = (spot_factor < spot_cutoff) ? 1.0f : 0.0f;
-
-						const float coneS = (const float)(light.outerConeAngle * 2 / XM_PIDIV4);
-						XMStoreFloat4x4(&miscCb.g_xTransform, 
-							XMMatrixScaling(coneS * light.GetRange(), light.GetRange(), coneS * light.GetRange()) *
-							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)) *
-							XMMatrixTranslationFromVector(LightPos) *
-							VP
-						);
-						device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
-
-						device->Draw(192, 0, cmd); // cone
-					}
-					break;
-					}
-
-				}
+				device->Draw(3, 0, cmd); // full screen triangle
 			}
+			break;
+			case LightComponent::POINT:
+			{
+				MiscCB miscCb;
+				miscCb.g_xColor.x = float(type_idx);
+				float sca = light.GetRange() + 1;
+				XMStoreFloat4x4(&miscCb.g_xTransform, XMMatrixScaling(sca, sca, sca) * XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * VP);
+				device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
 
+				device->Draw(240, 0, cmd); // icosphere
+			}
+			break;
+			case LightComponent::SPOT:
+			{
+				MiscCB miscCb;
+				miscCb.g_xColor.x = float(type_idx);
+				miscCb.g_xColor.y = std::pow(std::sin(light.outerConeAngle), 2.0f);
+				miscCb.g_xColor.z = std::pow(std::cos(light.outerConeAngle), 2.0f);
+
+				const XMVECTOR LightPos = XMLoadFloat3(&light.position);
+				const XMVECTOR LightDirection = XMLoadFloat3(&light.direction);
+				const XMVECTOR L = XMVector3Normalize(LightPos - CamPos);
+				const float spot_factor = XMVectorGetX(XMVector3Dot(L, LightDirection));
+				const float spot_cutoff = std::cos(light.outerConeAngle);
+				miscCb.g_xColor.w = (spot_factor < spot_cutoff) ? 1.0f : 0.0f;
+
+				const float coneS = (const float)(light.outerConeAngle * 2 / XM_PIDIV4);
+				XMStoreFloat4x4(&miscCb.g_xTransform,
+					XMMatrixScaling(coneS * light.GetRange(), light.GetRange(), coneS * light.GetRange()) *
+					XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)) *
+					XMMatrixTranslationFromVector(LightPos) *
+					VP
+				);
+				device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
+
+				device->Draw(192, 0, cmd); // cone
+			}
+			break;
+			}
 		}
 
-		device->EventEnd(cmd);
 	}
 
-
+	device->EventEnd(cmd);
 }
 void DrawLensFlares(
 	const Visibility& vis,
@@ -9038,7 +9213,6 @@ void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution)
 		bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 		bd.usage = Usage::DEFAULT;
 		device->CreateBuffer(&bd, nullptr, &res.tileFrustums);
-
 		device->SetName(&res.tileFrustums, "tileFrustums");
 	}
 	{

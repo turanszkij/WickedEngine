@@ -57,11 +57,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	uint shadow_index = 0;
 	
 	[branch]
-	if (GetFrame().lightarray_count > 0)
+	if (!lights().empty())
 	{
 		// Loop through light buckets in the tile:
-		const uint first_item = GetFrame().lightarray_offset;
-		const uint last_item = first_item + GetFrame().lightarray_count - 1;
+		const uint first_item = lights().first_item();
+		const uint last_item = lights().last_item();
 		const uint first_bucket = first_item / 32;
 		const uint last_bucket = min(last_item / 32, max(0, SHADER_ENTITY_TILE_BUCKET_COUNT - 1));
 		[loop]
@@ -84,7 +84,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 				[branch]
 				if (entity_index >= first_item && entity_index <= last_item)
 				{
-					shadow_index = entity_index - GetFrame().lightarray_offset;
+					shadow_index = entity_index - lights().first_item();
 					if (shadow_index >= MAX_RTSHADOWS)
 						break;
 

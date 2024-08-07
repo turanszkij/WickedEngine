@@ -723,21 +723,17 @@ struct Surface
 		// I need to copy the decal code here because include resolve issues:
 #ifndef DISABLE_DECALS
 		[branch]
-		if (!simple_lighting && GetFrame().decalarray_count > 0)
+		if (!simple_lighting && !decals().empty())
 		{
 			// decals are enabled, loop through them first:
 			half4 decalAccumulation = 0;
 			half4 decalBumpAccumulation = 0;
 			half4 decalSurfaceAccumulation = 0;
 			half decalSurfaceAccumulationAlpha = 0;
-
+			
 			// Loop through decal buckets in the tile:
-			const uint first_item = GetFrame().decalarray_offset;
-			const uint last_item = first_item + GetFrame().decalarray_count - 1;
-			const uint first_bucket = first_item / 32;
-			const uint last_bucket = min(last_item / 32, max(0, SHADER_ENTITY_TILE_BUCKET_COUNT - 1));
-			[loop]
-			for (uint bucket = first_bucket; bucket <= last_bucket; ++bucket)
+			ShaderEntityIterator iterator = decals();
+			for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 			{
 				uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
@@ -746,6 +742,8 @@ struct Surface
 				bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
 #endif // ENTITY_TILE_UNIFORM
 
+				bucket_bits = iterator.mask_entity(bucket, bucket_bits);
+
 				[loop]
 				while (WaveActiveAnyTrue(bucket_bits != 0 && decalAccumulation.a < 1 && decalBumpAccumulation.a < 1 && decalSurfaceAccumulationAlpha < 1))
 				{
@@ -753,92 +751,82 @@ struct Surface
 					const uint bucket_bit_index = firstbitlow(bucket_bits);
 					const uint entity_index = bucket * 32 + bucket_bit_index;
 					bucket_bits ^= 1u << bucket_bit_index;
+					
+					ShaderEntity decal = load_entity(entity_index);
 
-					[branch]
-					if (entity_index >= first_item && entity_index <= last_item)
-					{
-						ShaderEntity decal = load_entity(entity_index);
-
-						float4x4 decalProjection = load_entitymatrix(decal.GetMatrixIndex());
-						const int decalTexture = asint(decalProjection[3][0]);
-						const int decalNormal = asint(decalProjection[3][1]);
-						const int decalSurfacemap = asint(decalProjection[3][2]);
-						const int decalDisplacementmap = asint(decalProjection[3][3]);
-						decalProjection[3] = float4(0, 0, 0, 1);
+					float4x4 decalProjection = load_entitymatrix(decal.GetMatrixIndex());
+					const int decalTexture = asint(decalProjection[3][0]);
+					const int decalNormal = asint(decalProjection[3][1]);
+					const int decalSurfacemap = asint(decalProjection[3][2]);
+					const int decalDisplacementmap = asint(decalProjection[3][3]);
+					decalProjection[3] = float4(0, 0, 0, 1);
 						
-						// under here will be VGPR!
-						if ((decal.layerMask & layerMask) == 0)
-							continue;
-						const float3 clipSpacePos = mul(decalProjection, float4(P, 1)).xyz;
-						float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
+					// under here will be VGPR!
+					if ((decal.layerMask & layerMask) == 0)
+						continue;
+					const float3 clipSpacePos = mul(decalProjection, float4(P, 1)).xyz;
+					float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
+					[branch]
+					if (is_saturated(uvw))
+					{
+						uvw.xy = mad(uvw.xy, decal.shadowAtlasMulAdd.xy, decal.shadowAtlasMulAdd.zw);
+						// mipmapping needs to be performed by hand:
+						const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy;
+						const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy;
+						half4 decalColor = decal.GetColor();
+						// blend out if close to cube Z:
+						const half edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
+						const half slopeBlend = decal.GetConeAngleCos() > 0 ? pow(saturate(dot(N, decal.GetDirection())), decal.GetConeAngleCos()) : 1;
+						decalColor.a *= edgeBlend * slopeBlend;
 						[branch]
-						if (is_saturated(uvw))
+						if (decalDisplacementmap >= 0)
 						{
-							uvw.xy = mad(uvw.xy, decal.shadowAtlasMulAdd.xy, decal.shadowAtlasMulAdd.zw);
-							// mipmapping needs to be performed by hand:
-							const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy;
-							const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy;
-							half4 decalColor = decal.GetColor();
-							// blend out if close to cube Z:
-							const half edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
-							const half slopeBlend = decal.GetConeAngleCos() > 0 ? pow(saturate(dot(N, decal.GetDirection())), decal.GetConeAngleCos()) : 1;
-							decalColor.a *= edgeBlend * slopeBlend;
-							[branch]
-							if (decalDisplacementmap >= 0)
+							const half3 t = (half3)get_right(decalProjection);
+							const half3 b = -(half3)get_up(decalProjection);
+							const half3 n = (half3)N;
+							const half3x3 tbn = half3x3(t, b, n);
+							float4 inoutuv = uvw.xyxy;
+							ParallaxOcclusionMapping_Impl(
+								inoutuv,
+								V,
+								tbn,
+								decal.GetLength(),
+								bindless_textures[decalDisplacementmap],
+								uvw.xy,
+								decalDX,
+								decalDY,
+								sampler_linear_clamp
+							);
+							uvw.xy = saturate(inoutuv.xy);
+						}
+						[branch]
+						if (decalTexture >= 0)
+						{
+							decalColor *= (half4)bindless_textures[decalTexture].SampleGrad(sam, uvw.xy, decalDX, decalDY);
+							if ((decal.GetFlags() & ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA) == 0)
 							{
-								const half3 t = (half3)get_right(decalProjection);
-								const half3 b = -(half3)get_up(decalProjection);
-								const half3 n = (half3)N;
-								const half3x3 tbn = half3x3(t, b, n);
-								float4 inoutuv = uvw.xyxy;
-								ParallaxOcclusionMapping_Impl(
-									inoutuv,
-									V,
-									tbn,
-									decal.GetLength(),
-									bindless_textures[decalDisplacementmap],
-									uvw.xy,
-									decalDX,
-									decalDY,
-									sampler_linear_clamp
-								);
-								uvw.xy = saturate(inoutuv.xy);
-							}
-							[branch]
-							if (decalTexture >= 0)
-							{
-								decalColor *= (half4)bindless_textures[decalTexture].SampleGrad(sam, uvw.xy, decalDX, decalDY);
-								if ((decal.GetFlags() & ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA) == 0)
-								{
-									// perform manual blending of decals:
-									//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-									decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
-									decalAccumulation.a = mad(1 - decalColor.a, decalAccumulation.a, decalColor.a);
-								}
-							}
-							[branch]
-							if (decalNormal >= 0)
-							{
-								half3 decalBumpColor = half3((half2)bindless_textures[decalNormal].SampleGrad(sam, uvw.xy, decalDX, decalDY).rg, 1);
-								decalBumpColor = decalBumpColor * 2 - 1;
-								decalBumpColor.rg *= decal.GetAngleScale();
-								decalBumpAccumulation.rgb = mad(1 - decalBumpAccumulation.a, decalColor.a * decalBumpColor.rgb, decalBumpAccumulation.rgb);
-								decalBumpAccumulation.a = mad(1 - decalColor.a, decalBumpAccumulation.a, decalColor.a);
-							}
-							[branch]
-							if (decalSurfacemap >= 0)
-							{
-								half4 decalSurfaceColor = (half4)bindless_textures[decalSurfacemap].SampleGrad(sam, uvw.xy, decalDX, decalDY);
-								decalSurfaceAccumulation = mad(1 - decalSurfaceAccumulationAlpha, decalColor.a * decalSurfaceColor, decalSurfaceAccumulation);
-								decalSurfaceAccumulationAlpha = mad(1 - decalColor.a, decalSurfaceAccumulationAlpha, decalColor.a);
+								// perform manual blending of decals:
+								//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
+								decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
+								decalAccumulation.a = mad(1 - decalColor.a, decalAccumulation.a, decalColor.a);
 							}
 						}
-					}
-					else if (entity_index > last_item)
-					{
-						// force exit:
-						bucket = SHADER_ENTITY_TILE_BUCKET_COUNT;
-						break;
+						[branch]
+						if (decalNormal >= 0)
+						{
+							half3 decalBumpColor = half3((half2)bindless_textures[decalNormal].SampleGrad(sam, uvw.xy, decalDX, decalDY).rg, 1);
+							decalBumpColor = decalBumpColor * 2 - 1;
+							decalBumpColor.rg *= decal.GetAngleScale();
+							decalBumpAccumulation.rgb = mad(1 - decalBumpAccumulation.a, decalColor.a * decalBumpColor.rgb, decalBumpAccumulation.rgb);
+							decalBumpAccumulation.a = mad(1 - decalColor.a, decalBumpAccumulation.a, decalColor.a);
+						}
+						[branch]
+						if (decalSurfacemap >= 0)
+						{
+							half4 decalSurfaceColor = (half4)bindless_textures[decalSurfacemap].SampleGrad(sam, uvw.xy, decalDX, decalDY);
+							decalSurfaceAccumulation = mad(1 - decalSurfaceAccumulationAlpha, decalColor.a * decalSurfaceColor, decalSurfaceAccumulation);
+							decalSurfaceAccumulationAlpha = mad(1 - decalColor.a, decalSurfaceAccumulationAlpha, decalColor.a);
+						}
 					}
 
 				}

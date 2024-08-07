@@ -129,9 +129,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		// Accumulate forces, apply colliders:
 		half3 force = 0;
-		for (uint i = 0; i < GetFrame().forcefieldarray_count; ++i)
+		for (uint i = forces().first_item(); i <= forces().last_item(); ++i)
 		{
-			ShaderEntity entity = load_entity(GetFrame().forcefieldarray_offset + i);
+			ShaderEntity entity = load_entity(i);
 
 			[branch]
 			if (entity.layerMask & xHairLayerMask)

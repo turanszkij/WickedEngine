@@ -15,7 +15,7 @@ PSIn main(uint vID : SV_VERTEXID)
 	Out.pos = UVSPHERE[vID];
 
 
-	uint forceFieldID = GetFrame().forcefieldarray_offset + (uint)g_xColor.w;
+	uint forceFieldID = forces().first_item() + (uint)g_xColor.w;
 	ShaderEntity forceField = load_entity(forceFieldID);
 
 	Out.pos.xyz *= forceField.GetRange();

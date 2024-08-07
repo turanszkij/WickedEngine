@@ -61,6 +61,9 @@ inline void ApplyLighting(in Surface surface, in Lighting lighting, inout half4 
 
 inline void light_directional(in ShaderEntity light, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
 {
+	if ((light.layerMask & surface.layerMask) == 0)
+		return; // early exit: layer mismatch
+		
 	half3 L = light.GetDirection();
 	SurfaceToLight surface_to_light;
 	surface_to_light.create(surface, L);
@@ -163,6 +166,9 @@ inline half attenuation_pointlight(in half dist2, in half range, in half range2)
 }
 inline void light_point(in ShaderEntity light, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
 {
+	if ((light.layerMask & surface.layerMask) == 0)
+		return; // early exit: layer mismatch
+	
 	float3 Lunnormalized = light.position - surface.P;
 	const float3 LunnormalizedShadow = Lunnormalized;
 
@@ -266,6 +272,9 @@ inline half attenuation_spotlight(in half dist2, in half range, in half range2, 
 }
 inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
 {
+	if ((light.layerMask & surface.layerMask) == 0)
+		return; // early exit: layer mismatch
+	
 	float3 Lunnormalized = light.position - surface.P;
 	const half dist2 = dot(Lunnormalized, Lunnormalized);
 	const half range = light.GetRange();
@@ -435,6 +444,9 @@ inline half3 EnvironmentReflection_Global(in Surface surface)
 // return:				color of the environment map (rgb), blend factor of the environment map (a)
 inline half4 EnvironmentReflection_Local(in TextureCube cubemap, in Surface surface, in ShaderEntity probe, in float4x4 probeProjection, in float3 clipSpacePos)
 {
+	if ((probe.layerMask & surface.layerMask) == 0)
+		return 0; // early exit: layer mismatch
+		
 	// Perform parallax correction of reflection ray (R) into OBB:
 	half3 RayLS = mul((half3x3)probeProjection, surface.R);
 	half3 FirstPlaneIntersect = (half3(1, 1, 1) - clipSpacePos) / RayLS;

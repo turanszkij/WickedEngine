@@ -328,9 +328,9 @@ float3 SampleLocalLights(float3 worldPosition)
 	float3 localLightLuminance = 0;
 	
 	[loop]
-	for (uint iterator = 0; iterator < GetFrame().lightarray_count; iterator++)
+	for (uint iterator = 0; iterator < lights().item_count(); iterator++)
 	{
-		ShaderEntity light = load_entity(GetFrame().lightarray_offset + iterator);
+		ShaderEntity light = load_entity(lights().first_item() + iterator);
 
 		if (light.GetFlags() & ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS)
 		{
