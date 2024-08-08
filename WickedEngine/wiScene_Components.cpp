@@ -2345,4 +2345,125 @@ namespace wi::scene
 		wi::audio::CreateSoundInstance(&soundResource.GetSound(), &soundinstance);
 	}
 
+	void CharacterComponent::Move(const XMFLOAT3& direction)
+	{
+		movement = direction;
+	}
+	void CharacterComponent::Strafe(const XMFLOAT3& direction)
+	{
+		XMMATRIX facing_rot = XMMatrixLookToLH(XMVectorZero(), XMLoadFloat3(&facing), XMVectorSet(0, 1, 0, 0));
+		facing_rot = XMMatrixInverse(nullptr, facing_rot);
+		XMVECTOR dir = XMLoadFloat3(&direction);
+		dir = XMVector3TransformNormal(dir, facing_rot);
+		XMFLOAT3 absolute_direction;
+		XMStoreFloat3(&absolute_direction, dir);
+		Move(absolute_direction);
+	}
+	void CharacterComponent::Jump(float amount)
+	{
+		velocity.y = amount;
+	}
+	void CharacterComponent::Turn(const XMFLOAT3& direction)
+	{
+		XMVECTOR F = XMLoadFloat3(&facing);
+		float dot = XMVectorGetX(XMVector3Dot(F, XMLoadFloat3(&direction)));
+		if (dot < 0)
+		{
+			// help with turning around 180 degrees:
+			XMStoreFloat3(&facing, XMVector3TransformNormal(F, XMMatrixRotationY(XM_PI * 0.01f)));
+		}
+		facing_next = direction;
+	}
+	void CharacterComponent::AddAnimation(wi::ecs::Entity entity)
+	{
+		animations.push_back(entity);
+	}
+	void CharacterComponent::PlayAnimation(wi::ecs::Entity entity)
+	{
+		if (currentAnimation != entity)
+		{
+			reset_anim = true;
+			currentAnimation = entity;
+		}
+	}
+	void CharacterComponent::SetAnimationAmount(float amount)
+	{
+		anim_amount = amount;
+	}
+	float CharacterComponent::GetAnimationAmount() const
+	{
+		return anim_amount;
+	}
+	bool CharacterComponent::IsAnimationEnded() const
+	{
+		return anim_ended;
+	}
+	void CharacterComponent::SetPosition(const XMFLOAT3& value)
+	{
+		position = value;
+		position_prev = value;
+	}
+	XMFLOAT3 CharacterComponent::GetPosition() const
+	{
+		return position;
+	}
+	XMFLOAT3 CharacterComponent::GetPositionInterpolated() const
+	{
+		return wi::math::Lerp(position_prev, position, alpha);
+	}
+	void CharacterComponent::SetVelocity(const XMFLOAT3& value)
+	{
+		velocity = value;
+	}
+	XMFLOAT3 CharacterComponent::GetVelocity() const
+	{
+		return velocity;
+	}
+	Capsule CharacterComponent::GetCapsule() const
+	{
+		return Capsule(Sphere(position, width), height);
+	}
+	void CharacterComponent::SetFacing(const XMFLOAT3& value)
+	{
+		facing_next = value;
+		facing = value;
+	}
+	XMFLOAT3 CharacterComponent::GetFacing() const
+	{
+		return facing_next;
+	}
+	XMFLOAT3 CharacterComponent::GetFacingSmoothed() const
+	{
+		return facing;
+	}
+	bool CharacterComponent::IsGrounded() const
+	{
+		return ground_intersect;
+	}
+	bool CharacterComponent::IsSwimming() const
+	{
+		return swimming;
+	}
+	void CharacterComponent::SetFootPlacementEnabled(bool value)
+	{
+		foot_placement_enabled = value;
+	}
+	bool CharacterComponent::IsFootPlacementEnabled() const
+	{
+		return foot_placement_enabled;
+	}
+	void CharacterComponent::SetPathGoal(const XMFLOAT3& goal, const wi::VoxelGrid* voxelgrid)
+	{
+		this->goal = goal;
+		this->voxelgrid = voxelgrid;
+		process_goal = true;
+	}
+	void CharacterComponent::SetActive(bool value)
+	{
+		active = value;
+	}
+	bool CharacterComponent::IsActive() const
+	{
+		return active;
+	}
 }

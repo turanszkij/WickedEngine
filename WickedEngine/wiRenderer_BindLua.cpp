@@ -477,7 +477,7 @@ namespace wi::lua::renderer
 			PathQuery_BindLua* a = Luna<PathQuery_BindLua>::lightcheck(L, 1);
 			if (a)
 			{
-				wi::renderer::DrawPathQuery(&a->pathquery);
+				wi::renderer::DrawPathQuery(a->pathquery);
 			}
 			else
 				wi::lua::SError(L, "DrawPathQuery(PathQuery pathquery) first argument must be a PathQuery type!");

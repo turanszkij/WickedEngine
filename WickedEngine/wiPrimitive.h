@@ -116,6 +116,12 @@ namespace wi::primitive
 		{
 			assert(radius >= 0);
 		}
+		Capsule(XMVECTOR base, XMVECTOR tip, float radius) :radius(radius)
+		{
+			assert(radius >= 0);
+			XMStoreFloat3(&this->base, base);
+			XMStoreFloat3(&this->tip, tip);
+		}
 		Capsule(const Sphere& sphere, float height) :
 			base(XMFLOAT3(sphere.center.x, sphere.center.y - sphere.radius, sphere.center.z)),
 			tip(XMFLOAT3(base.x, base.y + height, base.z)),

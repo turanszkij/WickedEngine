@@ -52,7 +52,7 @@ namespace wi::lua
 			return 0;
 		}
 
-		pathquery.process(start->GetFloat3(), goal->GetFloat3(), *voxelgrid->voxelgrid);
+		pathquery->process(start->GetFloat3(), goal->GetFloat3(), *voxelgrid->voxelgrid);
 
 		return 0;
 	}
@@ -90,7 +90,7 @@ namespace wi::lua
 			return 0;
 		}
 
-		bool result = pathquery.search_cover(
+		bool result = pathquery->search_cover(
 			observer->GetFloat3(),
 			subject->GetFloat3(),
 			direction->GetFloat3(),
@@ -104,12 +104,12 @@ namespace wi::lua
 	}
 	int PathQuery_BindLua::IsSuccessful(lua_State* L)
 	{
-		wi::lua::SSetBool(L, pathquery.is_succesful());
+		wi::lua::SSetBool(L, pathquery->is_succesful());
 		return 1;
 	}
 	int PathQuery_BindLua::GetNextWaypoint(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, pathquery.get_next_waypoint());
+		Luna<Vector_BindLua>::push(L, pathquery->get_next_waypoint());
 		return 1;
 	}
 	int PathQuery_BindLua::SetDebugDrawWaypointsEnabled(lua_State* L)
@@ -120,7 +120,7 @@ namespace wi::lua
 			wi::lua::SError(L, "PathQuery::SetDebugDrawWaypointsEnabled(bool value) not enough arguments!");
 			return 0;
 		}
-		pathquery.debug_waypoints = wi::lua::SGetBool(L, 1);
+		pathquery->debug_waypoints = wi::lua::SGetBool(L, 1);
 		return 0;
 	}
 	int PathQuery_BindLua::SetFlying(lua_State* L)
@@ -131,12 +131,12 @@ namespace wi::lua
 			wi::lua::SError(L, "PathQuery::SetFlying(bool value) not enough arguments!");
 			return 0;
 		}
-		pathquery.flying = wi::lua::SGetBool(L, 1);
+		pathquery->flying = wi::lua::SGetBool(L, 1);
 		return 0;
 	}
 	int PathQuery_BindLua::IsFlying(lua_State* L)
 	{
-		wi::lua::SSetBool(L, pathquery.flying);
+		wi::lua::SSetBool(L, pathquery->flying);
 		return 1;
 	}
 	int PathQuery_BindLua::SetAgentHeight(lua_State* L)
@@ -147,12 +147,12 @@ namespace wi::lua
 			wi::lua::SError(L, "PathQuery::SetAgentHeight(int value) not enough arguments!");
 			return 0;
 		}
-		pathquery.agent_height = wi::lua::SGetInt(L, 1);
+		pathquery->agent_height = wi::lua::SGetInt(L, 1);
 		return 0;
 	}
 	int PathQuery_BindLua::GetAgentHeight(lua_State* L)
 	{
-		wi::lua::SSetInt(L, pathquery.agent_height);
+		wi::lua::SSetInt(L, pathquery->agent_height);
 		return 1;
 	}
 	int PathQuery_BindLua::SetAgentWidth(lua_State* L)
@@ -163,17 +163,17 @@ namespace wi::lua
 			wi::lua::SError(L, "PathQuery::SetAgentWidth(int value) not enough arguments!");
 			return 0;
 		}
-		pathquery.agent_width = wi::lua::SGetInt(L, 1);
+		pathquery->agent_width = wi::lua::SGetInt(L, 1);
 		return 0;
 	}
 	int PathQuery_BindLua::GetAgentWidth(lua_State* L)
 	{
-		wi::lua::SSetInt(L, pathquery.agent_width);
+		wi::lua::SSetInt(L, pathquery->agent_width);
 		return 1;
 	}
 	int PathQuery_BindLua::GetWaypointCount(lua_State* L)
 	{
-		wi::lua::SSetInt(L, (int)pathquery.get_waypoint_count());
+		wi::lua::SSetInt(L, (int)pathquery->get_waypoint_count());
 		return 1;
 	}
 	int PathQuery_BindLua::GetWaypoint(lua_State* L)
@@ -185,12 +185,12 @@ namespace wi::lua
 			return 0;
 		}
 		int index = wi::lua::SGetInt(L, 1);
-		Luna<Vector_BindLua>::push(L, pathquery.get_waypoint(size_t(index)));
+		Luna<Vector_BindLua>::push(L, pathquery->get_waypoint(size_t(index)));
 		return 1;
 	}
 	int PathQuery_BindLua::GetGoal(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, pathquery.get_goal());
+		Luna<Vector_BindLua>::push(L, pathquery->get_goal());
 		return 1;
 	}
 
