@@ -75,6 +75,13 @@ namespace wi
 			return P;
 		}
 
+		// Create a polygon mesh from the voxel grid:
+		void create_mesh(
+			wi::vector<uint32_t>& indices,
+			wi::vector<XMFLOAT3>& vertices,
+			bool simplify
+		);
+
 //#define DEBUG_VOXEL_OCCLUSION
 #ifdef DEBUG_VOXEL_OCCLUSION
 		mutable wi::vector<XMUINT3> debug_subject_coords;
