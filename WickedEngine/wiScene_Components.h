@@ -14,6 +14,7 @@
 #include "wiRectPacker.h"
 #include "wiUnorderedSet.h"
 #include "wiBVH.h"
+#include "wiPathQuery.h"
 
 namespace wi::scene
 {
@@ -1622,6 +1623,10 @@ namespace wi::scene
 		uint32_t chain_length = 0; // recursive depth
 		uint32_t iteration_count = 1; // computation step count. Increase this too for greater chain length
 
+		// Non-serialized attributes:
+		bool use_target_position = false;
+		XMFLOAT3 target_position = XMFLOAT3(0, 0, 0);
+
 		inline void SetDisabled(bool value = true) { if (value) { _flags |= DISABLED; } else { _flags &= ~DISABLED; } }
 		inline bool IsDisabled() const { return _flags & DISABLED; }
 
@@ -2057,6 +2062,107 @@ namespace wi::scene
 		OrderedNamedValues<int> int_values;
 		OrderedNamedValues<float> float_values;
 		OrderedNamedValues<std::string> string_values;
+
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+	};
+
+	struct CharacterComponent
+	{
+		enum FLAGS
+		{
+			NONE = 0,
+		};
+		uint32_t _flags = NONE;
+
+		int health = 100;
+		float width = 0.4f;
+		float height = 1.5f;
+
+		// Non-serialized attributes:
+		float ground_friction = 0.92f;
+		float water_friction = 0.9f;
+		float slope_threshold = 0.2f;
+		float leaning_limit = 0.12f;
+		float fixed_update_fps = 120;
+		float gravity = -30;
+		XMFLOAT3 movement = XMFLOAT3(0, 0, 0);
+		XMFLOAT3 velocity = XMFLOAT3(0, 0, 0);
+		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
+		XMFLOAT3 position_prev = XMFLOAT3(0, 0, 0);
+		float accumulator = 0; // fixed timestep accumulation
+		float alpha = 0; // fixed timestep interpolation
+		XMFLOAT3 facing = XMFLOAT3(0, 0, 1); // forward facing direction (smoothed)
+		XMFLOAT3 facing_next = XMFLOAT3(0, 0, 1); // forward facing direction (immediate)
+		float leaning = 0; // sideways leaning (smoothed)
+		float leaning_next = 0; // sideways leaning (immediate)
+		bool ground_intersect = false;
+		bool swimming = false;
+		wi::ecs::Entity humanoidEntity = wi::ecs::INVALID_ENTITY;
+		float root_offset = 0;
+		bool foot_placement_enabled = true;
+		wi::PathQuery pathquery;
+		wi::vector<wi::ecs::Entity> animations;
+		wi::ecs::Entity currentAnimation = wi::ecs::INVALID_ENTITY;
+		float anim_amount = 1;
+		bool reset_anim = true;
+		bool anim_ended = true;
+		XMFLOAT3 goal = XMFLOAT3(0, 0, 0);
+		bool process_goal = false;
+		const wi::VoxelGrid* voxelgrid = nullptr;
+
+		// Apply movement to the character in the current frame
+		void Move(const XMFLOAT3& direction);
+		void Jump(float amount);
+		void Turn(const XMFLOAT3& direction);
+
+		void AddAnimation(wi::ecs::Entity entity);
+		void PlayAnimation(wi::ecs::Entity entity);
+		void SetAnimationAmount(float amount);
+		float GetAnimationAmount() const;
+		bool IsAnimationEnded() const;
+
+		// Teleport character to position immediately
+		void SetPosition(const XMFLOAT3& position);
+
+		// Retrieve the current position without interpolation (this is the raw value from fixed timestep update)
+		XMFLOAT3 GetPosition() const;
+
+		// Retrieve the current position with interpolation (this is the position that is rendered)
+		XMFLOAT3 GetPositionInterpolated() const;
+
+		// Sets velocity immediately
+		void SetVelocity(const XMFLOAT3& position);
+
+		// Gets the current velocity
+		XMFLOAT3 GetVelocity() const;
+
+		// Returns the capsule representing the character, that is also used in collisions
+		wi::primitive::Capsule GetCapsule() const;
+
+		// Set the facing direction immediately
+		void SetFacing(const XMFLOAT3& value);
+
+		// Get the immediate facing direction
+		XMFLOAT3 GetFacing() const;
+
+		// Get the smoothed facing direction
+		XMFLOAT3 GetFacingSmoothed() const;
+
+		// Returns whether the character is currently stading on ground or not
+		bool IsGrounded() const;
+
+		// Returns whether the character is currently swimming or not
+		bool IsSwimming() const;
+
+		// Enable/disable foot placement with inverse kinematics
+		void SetFootPlacementEnabled(bool value);
+
+		// Returns whether foot placement with inverse kinematics is currently enabled or not
+		bool IsFootPlacementEnabled() const;
+
+		// Set the goal for path finding, it will be processed the next time the scene is updated.
+		//	You can get the results by accessing the pathquery object of the character.
+		void SetPathGoal(const XMFLOAT3& goal, const wi::VoxelGrid* voxelgrid);
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

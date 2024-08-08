@@ -2215,6 +2215,25 @@ namespace wi::scene
 			}
 		}
 	}
+	void CharacterComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
+	{
+		if (archive.IsReadMode())
+		{
+			archive >> _flags;
+
+			archive >> health;
+			archive >> width;
+			archive >> height;
+		}
+		else
+		{
+			archive << _flags;
+
+			archive << health;
+			archive << width;
+			archive << height;
+		}
+	}
 
 	void Scene::Serialize(wi::Archive& archive)
 	{
