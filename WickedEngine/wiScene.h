@@ -62,6 +62,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<wi::SpriteFont>& fonts = componentLibrary.Register<wi::SpriteFont>("wi::scene::Scene::fonts");
 		wi::ecs::ComponentManager<wi::VoxelGrid>& voxel_grids = componentLibrary.Register<wi::VoxelGrid>("wi::scene::Scene::voxel_grids");
 		wi::ecs::ComponentManager<MetadataComponent>& metadatas = componentLibrary.Register<MetadataComponent>("wi::scene::Scene::metadatas");
+		wi::ecs::ComponentManager<CharacterComponent>& characters = componentLibrary.Register<CharacterComponent>("wi::scene::Scene::characters");
 
 		// Non-serialized attributes:
 		float dt = 0;
@@ -86,6 +87,7 @@ namespace wi::scene
 		void SetAccelerationStructureUpdateRequested(bool value = true) { acceleration_structure_update_requested = value; }
 		bool IsAccelerationStructureUpdateRequested() const { return acceleration_structure_update_requested; }
 		wi::Archive optimized_instatiation_data;
+		wi::jobsystem::context character_pathfinding_ctx;
 
 		// AABB culling streams:
 		wi::vector<wi::primitive::AABB> aabb_objects;
@@ -462,6 +464,7 @@ namespace wi::scene
 		void RunScriptUpdateSystem(wi::jobsystem::context& ctx);
 		void RunSpriteUpdateSystem(wi::jobsystem::context& ctx);
 		void RunFontUpdateSystem(wi::jobsystem::context& ctx);
+		void RunCharacterUpdateSystem(wi::jobsystem::context& ctx);
 
 
 		struct RayIntersectionResult

@@ -75,6 +75,7 @@ namespace wi::lua::scene
 		int Component_CreateFont(lua_State* L);
 		int Component_CreateVoxelGrid(lua_State* L);
 		int Component_CreateMetadata(lua_State* L);
+		int Component_CreateCharacter(lua_State* L);
 
 		int Component_GetName(lua_State* L);
 		int Component_GetLayer(lua_State* L);
@@ -103,6 +104,7 @@ namespace wi::lua::scene
 		int Component_GetFont(lua_State* L);
 		int Component_GetVoxelGrid(lua_State* L);
 		int Component_GetMetadata(lua_State* L);
+		int Component_GetCharacter(lua_State* L);
 
 		int Component_GetNameArray(lua_State* L);
 		int Component_GetLayerArray(lua_State* L);
@@ -131,6 +133,7 @@ namespace wi::lua::scene
 		int Component_GetFontArray(lua_State* L);
 		int Component_GetVoxelGridArray(lua_State* L);
 		int Component_GetMetadataArray(lua_State* L);
+		int Component_GetCharacterArray(lua_State* L);
 
 		int Entity_GetNameArray(lua_State* L);
 		int Entity_GetLayerArray(lua_State* L);
@@ -160,6 +163,7 @@ namespace wi::lua::scene
 		int Entity_GetFontArray(lua_State* L);
 		int Entity_GetVoxelGridArray(lua_State* L);
 		int Entity_GetMetadataArray(lua_State* L);
+		int Entity_GetCharacterArray(lua_State* L);
 
 		int Component_RemoveName(lua_State* L);
 		int Component_RemoveLayer(lua_State* L);
@@ -189,6 +193,7 @@ namespace wi::lua::scene
 		int Component_RemoveFont(lua_State* L);
 		int Component_RemoveVoxelGrid(lua_State* L);
 		int Component_RemoveMetadata(lua_State* L);
+		int Component_RemoveCharacter(lua_State* L);
 
 		int Component_Attach(lua_State* L);
 		int Component_Detach(lua_State* L);
@@ -1829,6 +1834,71 @@ namespace wi::lua::scene
 		int SetInt(lua_State* L);
 		int SetFloat(lua_State* L);
 		int SetString(lua_State* L);
+	};
+
+	class CharacterComponent_BindLua
+	{
+	private:
+		wi::scene::CharacterComponent owning;
+	public:
+		wi::scene::CharacterComponent* component = nullptr;
+
+		inline static constexpr char className[] = "CharacterComponent";
+		static Luna<CharacterComponent_BindLua>::FunctionType methods[];
+		static Luna<CharacterComponent_BindLua>::PropertyType properties[];
+
+		CharacterComponent_BindLua(wi::scene::CharacterComponent* component) :component(component) {}
+		CharacterComponent_BindLua(lua_State* L) : component(&owning) {}
+
+		int Move(lua_State* L);
+		int Strafe(lua_State* L);
+		int Jump(lua_State* L);
+		int Turn(lua_State* L);
+
+		int AddAnimation(lua_State* L);
+		int PlayAnimation(lua_State* L);
+		int SetAnimationAmount(lua_State* L);
+		int GetAnimationAmount(lua_State* L);
+		int IsAnimationEnded(lua_State* L);
+
+		int SetGroundFriction(lua_State* L);
+		int SetWaterFriction(lua_State* L);
+		int SetSlopeThreshold(lua_State* L);
+		int SetLeaningLimit(lua_State* L);
+		int SetFixedUpdateFPS(lua_State* L);
+		int SetGravity(lua_State* L);
+		int SetWaterVerticalOffset(lua_State* L);
+
+		int SetActive(lua_State* L);
+		int SetHealth(lua_State* L);
+		int SetWidth(lua_State* L);
+		int SetHeight(lua_State* L);
+		int SetScale(lua_State* L);
+		int SetPosition(lua_State* L);
+		int SetVelocity(lua_State* L);
+		int SetFacing(lua_State* L);
+		int SetRelativeOffset(lua_State* L);
+		int SetFootPlacementEnabled(lua_State* L);
+
+		int GetHealth(lua_State* L);
+		int GetWidth(lua_State* L);
+		int GetHeight(lua_State* L);
+		int GetScale(lua_State* L);
+		int GetPosition(lua_State* L);
+		int GetPositionInterpolated(lua_State* L);
+		int GetVelocity(lua_State* L);
+		int GetMovement(lua_State* L);
+		int IsActive(lua_State* L);
+		int IsGrounded(lua_State* L);
+		int IsSwimming(lua_State* L);
+		int GetCapsule(lua_State* L);
+		int GetFacing(lua_State* L);
+		int GetFacingSmoothed(lua_State* L);
+		int GetRelativeOffset(lua_State* L);
+		int IsFootPlacementEnabled(lua_State* L);
+
+		int SetPathGoal(lua_State* L);
+		int GetPathQuery(lua_State* L);
 	};
 }
 

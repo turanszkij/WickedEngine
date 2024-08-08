@@ -8,14 +8,16 @@ namespace wi::lua
 {
 	class PathQuery_BindLua
 	{
+		wi::PathQuery owning;
 	public:
-		wi::PathQuery pathquery;
+		wi::PathQuery* pathquery = &owning;
 		inline static constexpr char className[] = "PathQuery";
 		static Luna<PathQuery_BindLua>::FunctionType methods[];
 		static Luna<PathQuery_BindLua>::PropertyType properties[];
 
 		PathQuery_BindLua() = default;
 		PathQuery_BindLua(lua_State* L) {}
+		PathQuery_BindLua(wi::PathQuery* component) :pathquery(component) {}
 
 		int Process(lua_State* L);
 		int SearchCover(lua_State* L);
