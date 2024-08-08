@@ -2075,8 +2075,9 @@ namespace wi::scene
 		uint32_t _flags = NONE;
 
 		int health = 100;
-		float width = 0.4f;
-		float height = 1.5f;
+		float width = 0.4f; // capsule radius
+		float height = 1.5f; // capsule height
+		float scale = 1.0f; // overall scaling
 
 		// Non-serialized attributes:
 		float ground_friction = 0.92f;
@@ -2085,10 +2086,13 @@ namespace wi::scene
 		float leaning_limit = 0.12f;
 		float fixed_update_fps = 120;
 		float gravity = -30;
+		float water_vertical_offset = 0;
 		XMFLOAT3 movement = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 velocity = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 position_prev = XMFLOAT3(0, 0, 0);
+		XMFLOAT3 relative_offset = XMFLOAT3(0, 0, 0);
+		bool active = true;
 		float accumulator = 0; // fixed timestep accumulation
 		float alpha = 0; // fixed timestep interpolation
 		XMFLOAT3 facing = XMFLOAT3(0, 0, 1); // forward facing direction (smoothed)
@@ -2110,8 +2114,10 @@ namespace wi::scene
 		bool process_goal = false;
 		const wi::VoxelGrid* voxelgrid = nullptr;
 
-		// Apply movement to the character in the current frame
+		// Apply movement to the character in the next update
 		void Move(const XMFLOAT3& direction);
+		// Apply movement relative to the character facing in the next update
+		void Strafe(const XMFLOAT3& direction);
 		void Jump(float amount);
 		void Turn(const XMFLOAT3& direction);
 
@@ -2163,6 +2169,12 @@ namespace wi::scene
 		// Set the goal for path finding, it will be processed the next time the scene is updated.
 		//	You can get the results by accessing the pathquery object of the character.
 		void SetPathGoal(const XMFLOAT3& goal, const wi::VoxelGrid* voxelgrid);
+
+		// Enable/disable the character's processing
+		void SetActive(bool value);
+
+		// Returns whether character processing is active or not
+		bool IsActive() const;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

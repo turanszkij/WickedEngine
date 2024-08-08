@@ -7489,6 +7489,7 @@ int MetadataComponent_BindLua::SetString(lua_State* L)
 
 Luna<CharacterComponent_BindLua>::FunctionType CharacterComponent_BindLua::methods[] = {
 	lunamethod(CharacterComponent_BindLua, Move),
+	lunamethod(CharacterComponent_BindLua, Strafe),
 	lunamethod(CharacterComponent_BindLua, Jump),
 	lunamethod(CharacterComponent_BindLua, Turn),
 
@@ -7504,28 +7505,35 @@ Luna<CharacterComponent_BindLua>::FunctionType CharacterComponent_BindLua::metho
 	lunamethod(CharacterComponent_BindLua, SetLeaningLimit),
 	lunamethod(CharacterComponent_BindLua, SetFixedUpdateFPS),
 	lunamethod(CharacterComponent_BindLua, SetGravity),
+	lunamethod(CharacterComponent_BindLua, SetWaterVerticalOffset),
 
+	lunamethod(CharacterComponent_BindLua, SetActive),
 	lunamethod(CharacterComponent_BindLua, SetHealth),
 	lunamethod(CharacterComponent_BindLua, SetWidth),
 	lunamethod(CharacterComponent_BindLua, SetHeight),
+	lunamethod(CharacterComponent_BindLua, SetScale),
 	lunamethod(CharacterComponent_BindLua, SetPosition),
 	lunamethod(CharacterComponent_BindLua, SetVelocity),
 	lunamethod(CharacterComponent_BindLua, SetFacing),
+	lunamethod(CharacterComponent_BindLua, SetRelativeOffset),
 	lunamethod(CharacterComponent_BindLua, SetFootPlacementEnabled),
 
 	lunamethod(CharacterComponent_BindLua, GetHealth),
 	lunamethod(CharacterComponent_BindLua, GetWidth),
 	lunamethod(CharacterComponent_BindLua, GetHeight),
+	lunamethod(CharacterComponent_BindLua, GetScale),
 	lunamethod(CharacterComponent_BindLua, GetPosition),
 	lunamethod(CharacterComponent_BindLua, GetPositionInterpolated),
 	lunamethod(CharacterComponent_BindLua, GetVelocity),
 	lunamethod(CharacterComponent_BindLua, GetMovement),
+	lunamethod(CharacterComponent_BindLua, IsActive),
 	lunamethod(CharacterComponent_BindLua, IsGrounded),
 	lunamethod(CharacterComponent_BindLua, IsSwimming),
 	lunamethod(CharacterComponent_BindLua, IsFootPlacementEnabled),
 	lunamethod(CharacterComponent_BindLua, GetCapsule),
 	lunamethod(CharacterComponent_BindLua, GetFacing),
 	lunamethod(CharacterComponent_BindLua, GetFacingSmoothed),
+	lunamethod(CharacterComponent_BindLua, GetRelativeOffset),
 
 	lunamethod(CharacterComponent_BindLua, SetPathGoal),
 	lunamethod(CharacterComponent_BindLua, GetPathQuery),
@@ -7550,6 +7558,23 @@ int CharacterComponent_BindLua::Move(lua_State* L)
 		return 0;
 	}
 	component->Move(v->GetFloat3());
+	return 0;
+}
+int CharacterComponent_BindLua::Strafe(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "Strafe(Vector value) not enough arguments!");
+		return 0;
+	}
+	Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
+	if (v == nullptr)
+	{
+		wi::lua::SError(L, "Strafe(Vector value) first argument is not a Vector!");
+		return 0;
+	}
+	component->Strafe(v->GetFloat3());
 	return 0;
 }
 int CharacterComponent_BindLua::Jump(lua_State* L)
@@ -7692,7 +7717,29 @@ int CharacterComponent_BindLua::SetGravity(lua_State* L)
 	component->gravity = wi::lua::SGetFloat(L, 1);
 	return 0;
 }
+int CharacterComponent_BindLua::SetWaterVerticalOffset(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "SetWaterVerticalOffset(float value) not enough arguments!");
+		return 0;
+	}
+	component->water_vertical_offset = wi::lua::SGetFloat(L, 1);
+	return 0;
+}
 
+int CharacterComponent_BindLua::SetActive(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "SetActive(int value) not enough arguments!");
+		return 0;
+	}
+	component->SetActive(wi::lua::SGetBool(L, 1));
+	return 0;
+}
 int CharacterComponent_BindLua::SetHealth(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -7724,6 +7771,17 @@ int CharacterComponent_BindLua::SetHeight(lua_State* L)
 		return 0;
 	}
 	component->height = wi::lua::SGetFloat(L, 1);
+	return 0;
+}
+int CharacterComponent_BindLua::SetScale(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "SetScale(float value) not enough arguments!");
+		return 0;
+	}
+	component->scale = wi::lua::SGetFloat(L, 1);
 	return 0;
 }
 int CharacterComponent_BindLua::SetPosition(lua_State* L)
@@ -7777,6 +7835,23 @@ int CharacterComponent_BindLua::SetFacing(lua_State* L)
 	component->SetFacing(v->GetFloat3());
 	return 0;
 }
+int CharacterComponent_BindLua::SetRelativeOffset(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "SetRelativeOffset(Vector value) not enough arguments!");
+		return 0;
+	}
+	Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
+	if (v == nullptr)
+	{
+		wi::lua::SError(L, "SetRelativeOffset(Vector value) first argument is not a Vector!");
+		return 0;
+	}
+	component->relative_offset = v->GetFloat3();
+	return 0;
+}
 int CharacterComponent_BindLua::SetFootPlacementEnabled(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -7804,6 +7879,11 @@ int CharacterComponent_BindLua::GetHeight(lua_State* L)
 	wi::lua::SSetFloat(L, component->height);
 	return 1;
 }
+int CharacterComponent_BindLua::GetScale(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->scale);
+	return 1;
+}
 int CharacterComponent_BindLua::GetPosition(lua_State* L)
 {
 	Luna<Vector_BindLua>::push(L, component->GetPosition());
@@ -7822,6 +7902,11 @@ int CharacterComponent_BindLua::GetVelocity(lua_State* L)
 int CharacterComponent_BindLua::GetMovement(lua_State* L)
 {
 	Luna<Vector_BindLua>::push(L, component->movement);
+	return 1;
+}
+int CharacterComponent_BindLua::IsActive(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsActive());
 	return 1;
 }
 int CharacterComponent_BindLua::IsGrounded(lua_State* L)
@@ -7852,6 +7937,11 @@ int CharacterComponent_BindLua::GetFacing(lua_State* L)
 int CharacterComponent_BindLua::GetFacingSmoothed(lua_State* L)
 {
 	Luna<Vector_BindLua>::push(L, component->GetFacingSmoothed());
+	return 1;
+}
+int CharacterComponent_BindLua::GetRelativeOffset(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, component->relative_offset);
 	return 1;
 }
 

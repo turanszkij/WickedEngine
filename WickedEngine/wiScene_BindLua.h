@@ -1851,6 +1851,7 @@ namespace wi::lua::scene
 		CharacterComponent_BindLua(lua_State* L) : component(&owning) {}
 
 		int Move(lua_State* L);
+		int Strafe(lua_State* L);
 		int Jump(lua_State* L);
 		int Turn(lua_State* L);
 
@@ -1866,27 +1867,34 @@ namespace wi::lua::scene
 		int SetLeaningLimit(lua_State* L);
 		int SetFixedUpdateFPS(lua_State* L);
 		int SetGravity(lua_State* L);
+		int SetWaterVerticalOffset(lua_State* L);
 
+		int SetActive(lua_State* L);
 		int SetHealth(lua_State* L);
 		int SetWidth(lua_State* L);
 		int SetHeight(lua_State* L);
+		int SetScale(lua_State* L);
 		int SetPosition(lua_State* L);
 		int SetVelocity(lua_State* L);
 		int SetFacing(lua_State* L);
+		int SetRelativeOffset(lua_State* L);
 		int SetFootPlacementEnabled(lua_State* L);
 
 		int GetHealth(lua_State* L);
 		int GetWidth(lua_State* L);
 		int GetHeight(lua_State* L);
+		int GetScale(lua_State* L);
 		int GetPosition(lua_State* L);
 		int GetPositionInterpolated(lua_State* L);
 		int GetVelocity(lua_State* L);
 		int GetMovement(lua_State* L);
+		int IsActive(lua_State* L);
 		int IsGrounded(lua_State* L);
 		int IsSwimming(lua_State* L);
 		int GetCapsule(lua_State* L);
 		int GetFacing(lua_State* L);
 		int GetFacingSmoothed(lua_State* L);
+		int GetRelativeOffset(lua_State* L);
 		int IsFootPlacementEnabled(lua_State* L);
 
 		int SetPathGoal(lua_State* L);

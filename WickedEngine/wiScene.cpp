@@ -5297,8 +5297,10 @@ namespace wi::scene
 					}
 				}
 			}
-			HumanoidComponent* humanoid = humanoids.GetComponent(character.humanoidEntity);
-			
+			const HumanoidComponent* humanoid = humanoids.GetComponent(character.humanoidEntity);
+			if (humanoid != nullptr && humanoid->IsRagdollPhysicsEnabled())
+				return;
+
 			XMVECTOR velocity = XMLoadFloat3(&character.velocity);
 			XMVECTOR movement = XMLoadFloat3(&character.movement);
 			XMVECTOR position = XMLoadFloat3(&character.position);
@@ -5318,6 +5320,7 @@ namespace wi::scene
 				if (neck_transform != nullptr)
 				{
 					XMFLOAT3 neck_pos = neck_transform->GetPosition();
+					neck_pos.y += character.water_vertical_offset;
 					XMFLOAT3 ocean_pos = GetOceanPosAt(neck_pos);
 					float water_distance = ocean_pos.y - neck_pos.y;
 					if (water_distance > 0)
@@ -5409,33 +5412,6 @@ namespace wi::scene
 				float velocity_leaning = clamp(XMVectorGetX(facediff * XMVector3Length(XMVectorSetY(velocity, 0))) * 0.08f, -leaning_limit, leaning_limit);
 				character.leaning_next = lerp(character.leaning_next, velocity_leaning, 0.05f);
 				character.leaning = lerp(character.leaning, character.leaning_next, 0.05f);
-
-				// Simple animation blending:
-				for (Entity animEntity : character.animations)
-				{
-					AnimationComponent* animation = animations.GetComponent(animEntity);
-					if (animation == nullptr)
-						continue;
-					if (animEntity == character.currentAnimation)
-					{
-						if (character.reset_anim)
-						{
-							character.reset_anim = false;
-							animation->timer = animation->start;
-						}
-						animation->amount = lerp(animation->amount, character.anim_amount, 0.1f);
-						animation->Play();
-						character.anim_ended = animation->timer >= animation->end;
-					}
-					else
-					{
-						animation->amount = lerp(animation->amount, 0.0f, 0.1f);
-						if (animation->amount <= 0)
-						{
-							animation->Stop();
-						}
-					}
-				}
 			}
 			character.alpha = character.accumulator / timestep;
 
@@ -5444,6 +5420,33 @@ namespace wi::scene
 				position += platform_velocity_accumulation / platform_velocity_count;
 			}
 			position += XMVectorSet(0, swim_offset, 0, 0);
+
+			// Simple animation blending:
+			for (Entity animEntity : character.animations)
+			{
+				AnimationComponent* animation = animations.GetComponent(animEntity);
+				if (animation == nullptr)
+					continue;
+				if (animEntity == character.currentAnimation)
+				{
+					if (character.reset_anim)
+					{
+						character.reset_anim = false;
+						animation->timer = animation->start;
+					}
+					animation->amount = clamp(animation->amount + dt, 0.0f, character.anim_amount);
+					animation->Play();
+					character.anim_ended = animation->timer >= animation->end;
+				}
+				else
+				{
+					animation->amount = clamp(animation->amount - dt, 0.0f, 0.1f);
+					if (animation->amount <= 0)
+					{
+						animation->Stop();
+					}
+				}
+			}
 
 			// Try to put water ripple under character:
 			float horizontal_velocity_length = XMVectorGetX(XMVector3Length(XMVectorSetY(velocity, 0)));
@@ -5473,13 +5476,19 @@ namespace wi::scene
 			TransformComponent* transform = transforms.GetComponent(entity);
 			if (transform != nullptr)
 			{
-				transform->translation_local = character.GetPositionInterpolated();
-
 				facing_rot = XMMatrixInverse(nullptr, facing_rot);
-				facing_rot = facing_rot * rotY;
-				XMVECTOR quat = XMQuaternionRotationMatrix(facing_rot);
+
+				XMVECTOR quat = XMQuaternionRotationMatrix(facing_rot * rotY);
 				XMStoreFloat4(&transform->rotation_local, quat);
 				transform->RotateRollPitchYaw(XMFLOAT3(0, 0, character.leaning * XM_PI));
+
+				transform->scale_local = XMFLOAT3(character.scale, character.scale, character.scale);
+
+				transform->translation_local = character.GetPositionInterpolated();
+
+				XMVECTOR offset = XMLoadFloat3(&character.relative_offset);
+				offset = XMVector3TransformNormal(offset, facing_rot);
+				transform->Translate(offset);
 
 				transform->SetDirty();
 			}

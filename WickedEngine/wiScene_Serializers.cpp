@@ -2224,6 +2224,7 @@ namespace wi::scene
 			archive >> health;
 			archive >> width;
 			archive >> height;
+			archive >> scale;
 		}
 		else
 		{
@@ -2232,6 +2233,7 @@ namespace wi::scene
 			archive << health;
 			archive << width;
 			archive << height;
+			archive << scale;
 		}
 	}
 

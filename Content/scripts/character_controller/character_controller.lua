@@ -313,7 +313,6 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 		right_foot = INVALID_ENTITY,
 		left_toes = INVALID_ENTITY,
 		right_toes = INVALID_ENTITY,
-		face = Vector(0,0,1), -- forward direction (smoothed)
 		leaning_next = 0, -- leaning sideways when turning
 		leaning = 0, -- leaning sideways when turning (smoothed)
 		savedPointerPos = Vector(),
@@ -347,11 +346,11 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 		
 		Create = function(self, model_scene, start_transform, controllable, anim_scene)
 			self.position = start_transform.GetPosition()
-			self.face = vector.Rotate(start_transform.GetForward(), vector.QuaternionFromRollPitchYaw(self.rotation))
+			local facing = vector.Rotate(start_transform.GetForward(), vector.QuaternionFromRollPitchYaw(self.rotation))
 			self.controllable = controllable
 			if controllable then
 				self.layerMask = Layers.Player
-				self.target_rot_horizontal = vector.GetAngle(Vector(0,0,1), self.face, Vector(0,1,0)) -- only modify camera rot for player
+				self.target_rot_horizontal = vector.GetAngle(Vector(0,0,1), facing, Vector(0,1,0)) -- only modify camera rot for player
 			else
 				self.layerMask = Layers.NPC
 			end
@@ -361,7 +360,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 
 			local charactercomponent = scene.Component_CreateCharacter(self.model) -- some character features will be handled by the built-in CharacterComponent in Wicked Engine
 			charactercomponent.SetPosition(self.position)
-			charactercomponent.SetFacing(self.face)
+			charactercomponent.SetFacing(facing)
 
 			local layer = scene.Component_GetLayer(self.model)
 			layer.SetLayerMask(self.layerMask)
@@ -453,6 +452,10 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 
 		end,
 		
+		GetFacing = function(self)
+			local charactercomponent = scene.Component_GetCharacter(self.model)
+			return charactercomponent.GetFacingSmoothed()
+		end,
 		Jump = function(self,f)
 			local charactercomponent = scene.Component_GetCharacter(self.model)
 			charactercomponent.Jump(f)
@@ -468,7 +471,6 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 			dir = vector.TransformNormal(dir.Normalize(), rotation_matrix)
 			dir.SetY(0)
 			charactercomponent.Turn(dir.Normalize())
-			self.face = charactercomponent.GetFacingSmoothed()
 			local speed = 0
 			if self.state == States.WALK then
 				speed = self.walk_speed
@@ -479,7 +481,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 			elseif self.state == States.SWIM then
 				speed = self.swim_speed
 			end
-			charactercomponent.Move(self.face:Multiply(Vector(speed,speed,speed)))
+			charactercomponent.Move(self:GetFacing():Multiply(Vector(speed,speed,speed)))
 		end,
 		SetAnimationAmount = function(self,amount)
 			local charactercomponent = scene.Component_GetCharacter(self.model)
@@ -593,7 +595,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 						end
 					end
 					
-					if self.ground_intersect and (input.Press(string.byte('J')) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_3)) then
+					if (input.Press(string.byte('J')) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_3)) and self.ground_intersect then
 						self:Jump(self.jump_speed)
 					end
 				end
@@ -733,7 +735,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 					local material = scene.Component_CreateMaterial(entity)
 					local decal = scene.Component_CreateDecal(entity)
 					local layer = scene.Component_CreateLayer(entity)
-					transform.MatrixTransform(matrix.LookTo(Vector(),self.face):Inverse())
+					transform.MatrixTransform(matrix.LookTo(Vector(),self:GetFacing()):Inverse())
 					transform.Rotate(Vector(math.pi * 0.5))
 					transform.Scale(0.1)
 					transform.Translate(collPos)
@@ -760,7 +762,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 					local material = scene.Component_CreateMaterial(entity)
 					local decal = scene.Component_CreateDecal(entity)
 					local layer = scene.Component_CreateLayer(entity)
-					transform.MatrixTransform(matrix.LookTo(Vector(),self.face):Inverse())
+					transform.MatrixTransform(matrix.LookTo(Vector(),self:GetFacing()):Inverse())
 					transform.Rotate(Vector(math.pi * 0.5))
 					transform.Scale(0.1)
 					transform.Translate(collPos)
@@ -805,7 +807,7 @@ local ResolveCharacters = function(characterA, characterB)
 			humanoidA.SetLookAt(headB)
 			humanoidB.SetLookAt(headA)
 
-			local facing_amount = vector.Dot(characterB.face, vector.Subtract(characterA.position, characterB.position).Normalize())
+			local facing_amount = vector.Dot(characterB:GetFacing(), vector.Subtract(characterA.position, characterB.position).Normalize())
 			if #characterA.dialogs > 0 and conversation.state == ConversationState.Disabled and facing_amount > 0.8 then
 				if input.Press(KEYBOARD_BUTTON_ENTER) or input.Press(GAMEPAD_BUTTON_2) then
 					characterA:Turn(vector.Subtract(headB, headA):Normalize())

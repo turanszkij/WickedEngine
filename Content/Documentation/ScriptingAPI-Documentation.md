@@ -1505,7 +1505,11 @@ The metadata component can store and retrieve an arbitrary amount of named user 
 #### CharacterComponent
 Implementation of basic character controller features such as movement in the scene, inverse kinematics for legs, swimming, water ripples, etc.
 
+- SetActive(bool value)	-- Enable/disable character processing (enabled by default)
+- IsActive() : bool	-- Returns whether the character processing is active or not
+
 - Move(Vector value)	-- Move the character in a direction continuously. The given vector doesn't need to be normalized, the length of it corresponds to the movement amount. The character will be moved the next time the scene is updated. The movement will be blocked by objects tagged as navigation mesh and CPU colliders. If this entity has a layer component, the layer will be used to ensure that the character doesn't collide with that layer.
+- Strafe(Vector value)	-- Similar to Move, but relative to the facing direction.
 - Jump(float amount)	-- Jump upwards by an amount. The jump will be executed in the next scene update, with collisions.
 - Turn(Vector value)	-- Turn towards a direction continuously.
 
@@ -1521,18 +1525,22 @@ Implementation of basic character controller features such as movement in the sc
 - SetLeaningLimit(float value)		-- Leaning min/max clamping, default: 0.12
 - SetFixedUpdateFPS(float value)	-- Frame rate of simulation, default: 120
 - SetGravity(float value)			-- Gravity value, default: -30
+- SetWaterVerticalOffset(float value)	-- vertical offset to keep from water. Useful if character is too submerged in the swimming state
 
 - SetHealth(int value)	-- Set health of the character
 - SetWidth(float value)	-- Set the horizontal size of the character capsule (same as capsule radius)
 - SetHeight(float value)	-- Set the vertical size of the character capsule (same as capsule height)
+- SetScale(float value)	-- Apply an overall scale on the character
 - SetPosition(Vector value)	-- Set current position immediately (teleport)
 - SetVelocity(Vector value)	-- Set current velocity immediately
 - SetFacing(Vector value)	-- Set the facing direction of the character
+- SetRelativeOffset(Vector value)	-- Apply a relative offset (relative to facing direction)
 - SetFootPlacementEnabled(bool value)	--Enable/disable foot placement with inverse kinematics
 
 - GetHealth() : int	-- Get the current health
 - GetWidth() : float	-- Get the horizontal size of the character capsule (same as capsule radius)
 - GetHeight() : float	-- Get the vertical size of the character capsule (same as capsule height)
+- GetScale() : float	-- Get the overall scale of the character
 - GetPosition() : Vector	-- Retrieve the current position without interpolation (this is the raw value from fixed timestep update)
 - GetPositionInterpolated() : Vector	-- Retrieve the current position with interpolation (this is the position that is rendered)
 - GetVelocity() : Vector	-- Get current velocity
@@ -1543,6 +1551,7 @@ Implementation of basic character controller features such as movement in the sc
 - GetCapsule() : Capsule	-- returns the capsule representing the character
 - GetFacing() : Vector	-- returns the immediate facing of the character
 - GetFacingSmoothed() : Vector	-- returns the smoothed facing of the character
+- GetRelativeOffset() : Vector	-- returns the relative offset (relative to facing direction)
 
 - SetPathGoal(Vector goal, VoxelGrid voxelgrid)	-- Set the goal for path finding, it will be processed the next time the scene is updated. You can get the results by accessing the pathquery object of the character with GetPathQuery().
 - GetPathQuery() : PathQuery	-- returns the PathQuery object of this character

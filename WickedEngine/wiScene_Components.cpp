@@ -2349,6 +2349,16 @@ namespace wi::scene
 	{
 		movement = direction;
 	}
+	void CharacterComponent::Strafe(const XMFLOAT3& direction)
+	{
+		XMMATRIX facing_rot = XMMatrixLookToLH(XMVectorZero(), XMLoadFloat3(&facing), XMVectorSet(0, 1, 0, 0));
+		facing_rot = XMMatrixInverse(nullptr, facing_rot);
+		XMVECTOR dir = XMLoadFloat3(&direction);
+		dir = XMVector3TransformNormal(dir, facing_rot);
+		XMFLOAT3 absolute_direction;
+		XMStoreFloat3(&absolute_direction, dir);
+		Move(absolute_direction);
+	}
 	void CharacterComponent::Jump(float amount)
 	{
 		velocity.y = amount;
@@ -2448,5 +2458,12 @@ namespace wi::scene
 		this->voxelgrid = voxelgrid;
 		process_goal = true;
 	}
-
+	void CharacterComponent::SetActive(bool value)
+	{
+		active = value;
+	}
+	bool CharacterComponent::IsActive() const
+	{
+		return active;
+	}
 }
