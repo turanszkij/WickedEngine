@@ -1501,11 +1501,11 @@ namespace wi::helper
 		}
 		else if (timerSeconds < 60 * 60)
 		{
-			ss << timerSeconds * 60 << " min";
+			ss << timerSeconds / 60 << " min";
 		}
 		else
 		{
-			ss << timerSeconds * 60 * 60 << " hours";
+			ss << timerSeconds / 60 / 60 << " hours";
 		}
 		return ss.str();
 	}
