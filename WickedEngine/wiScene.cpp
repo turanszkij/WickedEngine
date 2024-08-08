@@ -5262,6 +5262,8 @@ namespace wi::scene
 
 		wi::jobsystem::Dispatch(ctx, (uint32_t)characters.GetCount(), 1, [&](wi::jobsystem::JobArgs args) {
 			CharacterComponent& character = characters[args.jobIndex];
+			if (!character.IsActive())
+				return;
 			Entity entity = characters.GetEntity(args.jobIndex);
 			uint32_t layer = ~0u;
 			LayerComponent* layercomponent = layers.GetComponent(entity);
