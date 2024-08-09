@@ -331,6 +331,16 @@ namespace wi
 		XMStoreFloat3(&worldpos, uvw_to_world((XMLoadUInt3(&coord) + XMVectorReplicate(0.5f)) * XMLoadFloat3(&resolution_rcp), XMLoadFloat3(&center), XMLoadUInt3(&resolution), XMLoadFloat3(&voxelSize)));
 		return worldpos;
 	}
+	XMFLOAT3 VoxelGrid::coord_to_world(const XMINT3& coord) const
+	{
+		XMFLOAT3 worldpos;
+		XMStoreFloat3(&worldpos, uvw_to_world((XMVectorSet((float)coord.x, (float)coord.y, (float)coord.z, 0) + XMVectorReplicate(0.5f)) * XMLoadFloat3(&resolution_rcp), XMLoadFloat3(&center), XMLoadUInt3(&resolution), XMLoadFloat3(&voxelSize)));
+		return worldpos;
+	}
+	bool VoxelGrid::check_voxel(const XMINT3& coord) const
+	{
+		return check_voxel(XMUINT3((uint32_t)coord.x, (uint32_t)coord.y, (uint32_t)coord.z));
+	}
 	bool VoxelGrid::check_voxel(const XMUINT3& coord) const
 	{
 		if (!is_coord_valid(coord))
@@ -352,9 +362,17 @@ namespace wi
 	{
 		return check_voxel(world_to_coord(worldpos));
 	}
+	bool VoxelGrid::is_coord_valid(const XMINT3& coord) const
+	{
+		return is_coord_valid(XMUINT3((uint32_t)coord.x, (uint32_t)coord.y, (uint32_t)coord.z));
+	}
 	bool VoxelGrid::is_coord_valid(const XMUINT3& coord) const
 	{
 		return coord.x < resolution.x && coord.y < resolution.y && coord.z < resolution.z;
+	}
+	void VoxelGrid::set_voxel(const XMINT3& coord, bool value)
+	{
+		set_voxel(XMUINT3((uint32_t)coord.x, (uint32_t)coord.y, (uint32_t)coord.z), value);
 	}
 	void VoxelGrid::set_voxel(const XMUINT3& coord, bool value)
 	{
@@ -1259,21 +1277,22 @@ namespace wi
 	{
 		TRIANGLE triangles[10];
 		wi::vector<XMFLOAT3> unindexed_vertices;
-		for (uint x = 0; x < resolution.x - 1; ++x)
+		// Note: step over the voxel grid's perimeter as well, without that the polygonize can leave holes on the sides
+		for (int x = -1; x < (int)resolution.x; ++x)
 		{
-			for (uint y = 0; y < resolution.y - 1; ++y)
+			for (int y = -1; y < (int)resolution.y; ++y)
 			{
-				for (uint z = 0; z < resolution.z - 1; ++z)
+				for (int z = -1; z < (int)resolution.z; ++z)
 				{
-					uint3 coords[8] = {
-						uint3(x + 0, y + 0, z + 0),
-						uint3(x + 1, y + 0, z + 0),
-						uint3(x + 1, y + 1, z + 0),
-						uint3(x + 0, y + 1, z + 0),
-						uint3(x + 0, y + 0, z + 1),
-						uint3(x + 1, y + 0, z + 1),
-						uint3(x + 1, y + 1, z + 1),
-						uint3(x + 0, y + 1, z + 1),
+					int3 coords[8] = {
+						int3(x + 0, y + 0, z + 0),
+						int3(x + 1, y + 0, z + 0),
+						int3(x + 1, y + 1, z + 0),
+						int3(x + 0, y + 1, z + 0),
+						int3(x + 0, y + 0, z + 1),
+						int3(x + 1, y + 0, z + 1),
+						int3(x + 1, y + 1, z + 1),
+						int3(x + 0, y + 1, z + 1),
 					};
 
 					GRIDCELL grid = {};
@@ -1294,6 +1313,8 @@ namespace wi
 				}
 			}
 		}
+		if (unindexed_vertices.empty())
+			return;
 
 		size_t index_count = unindexed_vertices.size();
 		size_t unindexed_vertex_count = unindexed_vertices.size();

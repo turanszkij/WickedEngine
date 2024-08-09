@@ -150,6 +150,11 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 		wi::vector<uint32_t> indices;
 		wi::vector<XMFLOAT3> vertices;
 		voxelgrid->create_mesh(indices, vertices, false);
+		if (vertices.empty())
+		{
+			wi::backlog::post("VoxelGrid.create_mesh() : no voxels were found, so mesh creation is aborted.", wi::backlog::LogLevel::Warning);
+			return;
+		}
 		scene.Entity_CreateMeshFromData("voxelgrid_to_mesh", indices.size(), indices.data(), vertices.size(), vertices.data());
 	});
 	AddWidget(&generateMeshButton);
@@ -165,8 +170,13 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 		wi::vector<uint32_t> indices;
 		wi::vector<XMFLOAT3> vertices;
 		voxelgrid->create_mesh(indices, vertices, true);
+		if (vertices.empty())
+		{
+			wi::backlog::post("VoxelGrid.create_mesh() : no voxels were found, so mesh creation is aborted.", wi::backlog::LogLevel::Warning);
+			return;
+		}
 		scene.Entity_CreateMeshFromData("voxelgrid_to_mesh", indices.size(), indices.data(), vertices.size(), vertices.data());
-		});
+	});
 	AddWidget(&generateSimplifiedMeshButton);
 
 	subtractCheckBox.Create("Subtraction mode: ");
