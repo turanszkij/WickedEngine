@@ -430,6 +430,13 @@ namespace wi::scene
 			uint32_t latitudeBands = 64,
 			uint32_t longitudeBands = 64
 		);
+		wi::ecs::Entity Entity_CreateMeshFromData(
+			const std::string& name,
+			size_t index_count,
+			const uint32_t* indices,
+			size_t vertex_count,
+			const XMFLOAT3* positions
+		);
 
 		// Attaches an entity to a parent:
 		//	child_already_in_local_space	:	child won't be transformed from world space to local space

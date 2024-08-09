@@ -1828,6 +1828,49 @@ namespace wi::scene
 
 		return entity;
 	}
+	Entity Scene::Entity_CreateMeshFromData(
+		const std::string& name,
+		size_t index_count,
+		const uint32_t* indices,
+		size_t vertex_count,
+		const XMFLOAT3* positions
+	)
+	{
+		Entity entity = CreateEntity();
+
+		if (!name.empty())
+		{
+			names.Create(entity) = name;
+		}
+
+		layers.Create(entity);
+
+		transforms.Create(entity);
+
+		ObjectComponent& object = objects.Create(entity);
+
+		MeshComponent& mesh = meshes.Create(entity);
+
+		// object references the mesh entity (there can be multiple objects referencing one mesh):
+		object.meshID = entity;
+
+		mesh.indices.resize(index_count);
+		std::memcpy(mesh.indices.data(), indices, sizeof(uint32_t) * index_count);
+
+		mesh.vertex_positions.resize(vertex_count);
+		std::memcpy(mesh.vertex_positions.data(), positions, sizeof(XMFLOAT3) * vertex_count);
+
+		// Subset maps a part of the mesh to a material:
+		MeshComponent::MeshSubset& subset = mesh.subsets.emplace_back();
+		subset.indexCount = uint32_t(mesh.indices.size());
+		materials.Create(entity);
+		subset.materialID = entity; // the material component is created on the same entity as the mesh component, though it is not required as it could also use a different material entity
+
+		// vertex buffer GPU data will be packed and uploaded here:
+		mesh.ComputeNormals(MeshComponent::COMPUTE_NORMALS_HARD);
+
+		return entity;
+	}
 
 	void Scene::Component_Attach(Entity entity, Entity parent, bool child_already_in_local_space)
 	{

@@ -38,9 +38,13 @@ namespace wi
 		XMUINT3 world_to_coord(const XMFLOAT3& worldpos) const;
 		XMINT3 world_to_coord_signed(const XMFLOAT3& worldpos) const;
 		XMFLOAT3 coord_to_world(const XMUINT3& coord) const;
+		XMFLOAT3 coord_to_world(const XMINT3& coord) const;
+		bool check_voxel(const XMINT3& coord) const;
 		bool check_voxel(const XMUINT3& coord) const;
 		bool check_voxel(const XMFLOAT3& worldpos) const;
 		bool is_coord_valid(const XMUINT3& coord) const;
+		bool is_coord_valid(const XMINT3& coord) const;
+		void set_voxel(const XMINT3& coord, bool value);
 		void set_voxel(const XMUINT3& coord, bool value);
 		void set_voxel(const XMFLOAT3& worldpos, bool value);
 		size_t get_memory_size() const;
@@ -74,6 +78,13 @@ namespace wi
 			P += center;
 			return P;
 		}
+
+		// Create a polygon mesh from the voxel grid:
+		void create_mesh(
+			wi::vector<uint32_t>& indices,
+			wi::vector<XMFLOAT3>& vertices,
+			bool simplify
+		);
 
 //#define DEBUG_VOXEL_OCCLUSION
 #ifdef DEBUG_VOXEL_OCCLUSION
