@@ -874,9 +874,7 @@ namespace wi::scene
 			boneCollection.resize(boneCount);
 			for (size_t i = 0; i < boneCount; ++i)
 			{
-				Entity boneID;
-				SerializeEntity(archive, boneID, seri);
-				boneCollection[i] = boneID;
+				SerializeEntity(archive, boneCollection[i], seri);
 			}
 
 			archive >> inverseBindMatrices;
