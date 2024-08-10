@@ -328,7 +328,7 @@ struct alignas(16) ShaderMaterial
 	uint2 normalmap_pom_alphatest_displacement;
 
 	uint2 roughness_reflectance_metalness_refraction;
-	uint2 emissive;
+	uint2 emissive_cloak;
 
 	uint2 subsurfaceScattering;
 	uint2 subsurfaceScattering_inv;
@@ -356,7 +356,7 @@ struct alignas(16) ShaderMaterial
 		normalmap_pom_alphatest_displacement = uint2(0, 0);
 
 		roughness_reflectance_metalness_refraction = uint2(0, 0);
-		emissive = uint2(0, 0);
+		emissive_cloak = uint2(0, 0);
 
 		subsurfaceScattering = uint2(0, 0);
 		subsurfaceScattering_inv = uint2(0, 0);
@@ -386,7 +386,8 @@ struct alignas(16) ShaderMaterial
 	inline half4 GetBaseColor() { return unpack_half4(baseColor); }
 	inline half4 GetSSS() { return unpack_half4(subsurfaceScattering); }
 	inline half4 GetSSSInverse() { return unpack_half4(subsurfaceScattering_inv); }
-	inline half3 GetEmissive() { return unpack_half3(emissive); }
+	inline half3 GetEmissive() { return unpack_half4(emissive_cloak).rgb; }
+	inline half GetCloak() { return unpack_half4(emissive_cloak).a; }
 	inline half3 GetSpecular() { return unpack_half3(specular); }
 	inline half3 GetSheenColor() { return unpack_half3(sheenColor); }
 	inline half GetRoughness() { return unpack_half4(roughness_reflectance_metalness_refraction).x; }

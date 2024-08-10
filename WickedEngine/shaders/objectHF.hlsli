@@ -930,11 +930,11 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 
 #ifdef TRANSPARENT
+	surface.transmission = lerp(material.GetTransmission(), 1, material.GetCloak());
+	
 	[branch]
-	if (material.GetTransmission() > 0)
+	if (surface.transmission > 0)
 	{
-		surface.transmission = material.GetTransmission();
-
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
 		if (material.textures[TRANSMISSIONMAP].IsValid())
@@ -952,9 +952,9 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 			float mipLevels;
 			texture_refraction.GetDimensions(0, size.x, size.y, mipLevels);
 			const float2 normal2D = mul((float3x3)GetCamera().view, surface.N.xyz).xy;
-			float2 perturbatedRefrTexCoords = ScreenCoord.xy + normal2D * material.GetRefraction();
-			half4 refractiveColor = texture_refraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, surface.roughness * mipLevels);
-			surface.refraction.rgb = surface.albedo * refractiveColor.rgb;
+			float2 perturbatedRefrTexCoords = ScreenCoord.xy + normal2D * lerp(material.GetRefraction(), 0.1, material.GetCloak());
+			half4 refractiveColor = texture_refraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, lerp(surface.roughness, 0.1, material.GetCloak()) * mipLevels);
+			surface.refraction.rgb = lerp(surface.albedo, 1, material.GetCloak()) * refractiveColor.rgb;
 			surface.refraction.a = surface.transmission;
 		}
 	}

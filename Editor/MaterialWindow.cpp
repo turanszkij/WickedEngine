@@ -405,6 +405,22 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&emissiveSlider);
 
+	cloakSlider.Create(0, 1.0f, 0.02f, 1000, "Cloak: ");
+	cloakSlider.SetTooltip("The cloak effect is a combination of transmission, refraction and roughness, without color tinging.");
+	cloakSlider.SetSize(XMFLOAT2(wid, hei));
+	cloakSlider.SetPos(XMFLOAT2(x, y += step));
+	cloakSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
+			material->SetCloakAmount(args.fValue);
+		}
+		});
+	AddWidget(&cloakSlider);
+
 	transmissionSlider.Create(0, 1.0f, 0.02f, 1000, "Transmission: ");
 	transmissionSlider.SetTooltip("Adjust the transmissiveness. More transmissiveness means more diffuse light is transmitted instead of absorbed.");
 	transmissionSlider.SetSize(XMFLOAT2(wid, hei));
@@ -1000,6 +1016,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		roughnessSlider.SetValue(material->roughness);
 		reflectanceSlider.SetValue(material->reflectance);
 		metalnessSlider.SetValue(material->metalness);
+		cloakSlider.SetValue(material->cloak);
 		transmissionSlider.SetValue(material->transmission);
 		refractionSlider.SetValue(material->refraction);
 		emissiveSlider.SetValue(material->emissiveColor.w);
@@ -1181,6 +1198,7 @@ void MaterialWindow::ResizeLayout()
 	add(reflectanceSlider);
 	add(metalnessSlider);
 	add(emissiveSlider);
+	add(cloakSlider);
 	add(transmissionSlider);
 	add(refractionSlider);
 	add(pomSlider);

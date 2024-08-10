@@ -244,6 +244,10 @@ namespace wi::scene
 			{
 				archive >> extinctionColor;
 			}
+			if (seri.GetVersion() >= 6)
+			{
+				archive >> cloak;
+			}
 
 			for (auto& x : textures)
 			{
@@ -396,6 +400,10 @@ namespace wi::scene
 			if (seri.GetVersion() >= 5)
 			{
 				archive << extinctionColor;
+			}
+			if (seri.GetVersion() >= 6)
+			{
+				archive << cloak;
 			}
 		}
 	}

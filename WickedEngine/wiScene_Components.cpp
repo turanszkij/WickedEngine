@@ -272,7 +272,7 @@ namespace wi::scene
 		ShaderMaterial material;
 		material.init();
 		material.baseColor = pack_half4(baseColor);
-		material.emissive = pack_half3(XMFLOAT3(emissiveColor.x * emissiveColor.w, emissiveColor.y * emissiveColor.w, emissiveColor.z * emissiveColor.w));
+		material.emissive_cloak = pack_half4(XMFLOAT4(emissiveColor.x * emissiveColor.w, emissiveColor.y * emissiveColor.w, emissiveColor.z * emissiveColor.w, cloak));
 		material.specular = pack_half3(XMFLOAT3(specularColor.x * specularColor.w, specularColor.y * specularColor.w, specularColor.z * specularColor.w));
 		material.texMulAdd = texMulAdd;
 		material.roughness_reflectance_metalness_refraction = pack_half4(roughness, reflectance, metalness, refraction);
@@ -438,7 +438,7 @@ namespace wi::scene
 		{
 			return FILTER_TRANSPARENT | FILTER_WATER;
 		}
-		if (transmission > 0)
+		if (transmission > 0 || cloak > 0)
 		{
 			return FILTER_TRANSPARENT;
 		}

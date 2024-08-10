@@ -32,11 +32,13 @@ float4 main(PixelInput input) : SV_TARGET
 	clip(color.a - material.GetAlphaTest() - meshinstance.alphaTest);
 
 	float opacity = color.a;
+	
+	float transmission = lerp(material.GetTransmission(), 1, material.GetCloak());
+	color.rgb = lerp(color.rgb, 1, material.GetCloak());
 
 	[branch]
-	if (material.GetTransmission() > 0)
+	if (transmission > 0)
 	{
-		float transmission = material.GetTransmission();
 		[branch]
 		if (material.textures[TRANSMISSIONMAP].IsValid())
 		{

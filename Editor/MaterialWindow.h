@@ -30,6 +30,7 @@ public:
 	wi::gui::Slider reflectanceSlider;
 	wi::gui::Slider metalnessSlider;
 	wi::gui::Slider emissiveSlider;
+	wi::gui::Slider cloakSlider;
 	wi::gui::Slider transmissionSlider;
 	wi::gui::Slider refractionSlider;
 	wi::gui::Slider pomSlider;
