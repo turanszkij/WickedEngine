@@ -1,5 +1,14 @@
 cmake_minimum_required(VERSION 3.12)
 
+if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
+    message(FATAL_ERROR
+        "In-source builds are not supported!\n"
+        "Run `git clean -d -f` to clean up the files CMake has created (stash "
+        "your changes first, if you have made any), then run `cmake -B build "
+        "<other_options>` followed by `cmake --build build --parallel`"
+    )
+endif()
+
 set(WICKED_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 option(WICKED_DYNAMIC_LIBRARY "Build WickedEngine as a dynamic library" OFF)
