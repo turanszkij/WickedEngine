@@ -318,6 +318,7 @@ namespace wi::scene
 		virtual void Clear();
 		// Merge an other scene into this.
 		//	The contents of the other scene will be lost (and moved to this)!
+		//  Any references to entities or components from the other scene will now reference them in this scene.
 		virtual void Merge(Scene& other);
 		// Similar to merge but skipping some things that are safe to skip within the Update look
 		void MergeFastInternal(Scene& other);
