@@ -1633,8 +1633,6 @@ namespace wi
 
 			RenderVolumetrics(cmd);
 
-			RenderSceneMIPChain(cmd);
-
 			RenderTransparents(cmd);
 
 			// Depth buffers expect a non-pixel shader resource state as they are generated on compute queue:
@@ -1949,6 +1947,10 @@ namespace wi
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
+		device->EventBegin("Copy scene tex only mip0 for ocean", cmd);
+		wi::renderer::Postprocess_Downsample4x(rtMain, rtSceneCopy, cmd);
+		device->EventEnd(cmd);
+
 		// Water ripple rendering:
 		if (!scene->waterRipples.empty())
 		{
@@ -2019,6 +2021,12 @@ namespace wi
 			cmd,
 			wi::renderer::DRAWSCENE_OCEAN
 		);
+
+		device->RenderPassEnd(cmd);
+
+		RenderSceneMIPChain(cmd);
+
+		device->RenderPassBegin(rp, getMSAASampleCount() > 1 ? 3 : 2, cmd);
 
 		// Note: volumetrics and light shafts are blended before transparent scene, because they used depth of the opaques
 		//	But the ocean is special, because it does have depth for them implicitly computed from ocean plane

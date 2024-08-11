@@ -339,7 +339,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 						if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
 							break;
 
-						shadow *= lerp(1, surface.albedo * surface.transmission, surface.opacity);
+						shadow *= lerp(1, lerp(surface.albedo, 1, surface.material.GetCloak()) * surface.transmission, surface.opacity);
 
 						[branch]
 						if (!any(shadow))
@@ -375,10 +375,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		if (rng.next_float() < surface.transmission)
 		{
 			// Refraction
-			const float3 R = refract(ray.Direction, surface.N, 1 - surface.material.GetRefraction());
-			float roughnessBRDF = sqr(clamp(surface.roughness, min_roughness, 1));
+			const float3 R = refract(ray.Direction, surface.N, 1 - lerp(surface.material.GetRefraction(), 0.1, surface.material.GetCloak()));
+			float roughnessBRDF = sqr(clamp(lerp(surface.roughness, 0.1, surface.material.GetCloak()), min_roughness, 1));
 			ray.Direction = lerp(R, sample_hemisphere_cos(R, rng), roughnessBRDF);
-			energy *= surface.albedo / max(0.001, surface.transmission);
+			energy *= lerp(surface.albedo, 1, surface.material.GetCloak()) / max(0.001, surface.transmission);
 
 			// Add a new bounce iteration, otherwise the transparent effect can disappear:
 			bounce--;

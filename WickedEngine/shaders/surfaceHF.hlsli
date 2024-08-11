@@ -880,7 +880,8 @@ struct Surface
 			}
 		}
 
-		transmission = material.GetTransmission();
+		transmission = lerp(material.GetTransmission(), 1, material.GetCloak());
+		
 		[branch]
 		if (material.textures[TRANSMISSIONMAP].IsValid())
 		{
