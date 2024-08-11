@@ -1946,6 +1946,8 @@ namespace wi::scene
 			for (size_t animation_index = 0; animation_index < animation_queue.animations.size(); ++animation_index)
 			{
 				AnimationComponent& animation = *animation_queue.animations[animation_index];
+				if (!animation.IsPlaying())
+					continue;
 				animation.last_update_time = animation.timer;
 
 				for (const AnimationComponent::AnimationChannel& channel : animation.channels)
@@ -3175,8 +3177,33 @@ namespace wi::scene
 		auto range = wi::profiler::BeginRangeCPU("Procedural Animations");
 
 		// Character IK foot placement, should be after animations and hierarchy update:
+		for (size_t i = 0; i < characters.GetCount(); ++i)
+		{
+			CharacterComponent& character = characters[i];
+			if (character.left_foot != INVALID_ENTITY && character.right_foot != INVALID_ENTITY)
+				continue;
+			HumanoidComponent* humanoid = humanoids.GetComponent(character.humanoidEntity);
+			if (humanoid == nullptr)
+				continue;
+			character.left_foot = humanoid->bones[size_t(HumanoidComponent::HumanoidBone::LeftFoot)];
+			{
+				InverseKinematicsComponent& ik = inverse_kinematics.Create(character.left_foot);
+				ik.use_target_position = true;
+				ik.chain_length = 2;
+				ik.iteration_count = 10;
+			}
+			character.right_foot = humanoid->bones[size_t(HumanoidComponent::HumanoidBone::RightFoot)];
+			{
+				InverseKinematicsComponent& ik = inverse_kinematics.Create(character.right_foot);
+				ik.use_target_position = true;
+				ik.chain_length = 2;
+				ik.iteration_count = 10;
+			}
+		}
 		wi::jobsystem::Dispatch(ctx, (uint32_t)characters.GetCount(), 1, [&](wi::jobsystem::JobArgs args) {
 			CharacterComponent& character = characters[args.jobIndex];
+			if (character.left_foot == INVALID_ENTITY || character.right_foot == INVALID_ENTITY)
+				return;
 			if (character.humanoidEntity == INVALID_ENTITY)
 				return;
 			HumanoidComponent* humanoid = humanoids.GetComponent(character.humanoidEntity);
@@ -3184,105 +3211,106 @@ namespace wi::scene
 				return;
 
 			Entity entity = characters.GetEntity(args.jobIndex);
-			uint32_t layer = ~0u;
+			uint32_t layer = 0;
 			LayerComponent* layercomponent = layers.GetComponent(entity);
 			if (layercomponent != nullptr)
 			{
 				layer = layercomponent->GetLayerMask();
 			}
 
-			Entity left_foot = humanoid->bones[size_t(HumanoidComponent::HumanoidBone::LeftFoot)];
-			Entity right_foot = humanoid->bones[size_t(HumanoidComponent::HumanoidBone::RightFoot)];
-			if (left_foot != INVALID_ENTITY && right_foot != INVALID_ENTITY)
+			float base_y = character.position.y;
+			Entity ik_foot = INVALID_ENTITY;
+			XMFLOAT3 ik_pos = XMFLOAT3(0, 0, 0);
+			XMFLOAT3 left_pos = XMFLOAT3(0, 0, 0);
+			XMFLOAT3 right_pos = XMFLOAT3(0, 0, 0);
+			TransformComponent* left_transform = transforms.GetComponent(character.left_foot);
+			TransformComponent* right_transform = transforms.GetComponent(character.right_foot);
+			if (left_transform != nullptr && right_transform != nullptr)
 			{
-				float base_y = character.position.y;
-				Entity ik_foot = INVALID_ENTITY;
-				XMFLOAT3 ik_pos = XMFLOAT3(0, 0, 0);
+				left_pos = left_transform->GetPosition();
+				right_pos = right_transform->GetPosition();
+			}
 
-				if (character.IsFootPlacementEnabled() && character.ground_intersect && XMVectorGetX(XMVector3Length(XMVectorSetY(XMLoadFloat3(&character.velocity), 0))) < 0.1f)
+			if (character.IsFootPlacementEnabled() && character.ground_intersect)
+			{
+				// Compute root offset :
+				// I determine which foot wants to step on lower ground, that will offset whole root downwards
+				// 	The other foot will be the upper foot which will be later attached an Inverse Kinematics(IK) effector
+				Ray left_ray(XMFLOAT3(left_pos.x, left_pos.y + 0.5f, left_pos.z), XMFLOAT3(0, -1, 0), 0, 1);
+				Ray right_ray(XMFLOAT3(right_pos.x, right_pos.y + 0.5f, right_pos.z), XMFLOAT3(0, -1, 0), 0, 1);
+				RayIntersectionResult left_result = Intersects(left_ray, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~layer);
+				RayIntersectionResult right_result = Intersects(right_ray, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~layer);
+				float left_diff = 0;
+				float right_diff = 0;
+				if (left_result.entity != INVALID_ENTITY)
 				{
-					TransformComponent* left_transform = transforms.GetComponent(left_foot);
-					TransformComponent* right_transform = transforms.GetComponent(right_foot);
-					if (left_transform != nullptr && right_transform != nullptr)
+					left_diff = left_result.position.y - base_y;
+				}
+				if (right_result.entity != INVALID_ENTITY)
+				{
+					right_diff = right_result.position.y - base_y;
+				}
+				float diff = left_diff;
+				if (left_result.position.y > right_result.position.y + 0.01f)
+				{
+					diff = right_diff;
+					if (left_result.entity != INVALID_ENTITY)
 					{
-						// Compute root offset :
-						// I determine which foot wants to step on lower ground, that will offset whole root downwards
-						// 	The other foot will be the upper foot which will be later attached an Inverse Kinematics(IK) effector
-						XMFLOAT3 left_pos = left_transform->GetPosition();
-						XMFLOAT3 right_pos = right_transform->GetPosition();
-						Ray left_ray(XMFLOAT3(left_pos.x, left_pos.y + 1, left_pos.z), XMFLOAT3(0, -1, 0), 0, 1.8f);
-						Ray right_ray(XMFLOAT3(right_pos.x, right_pos.y + 1, right_pos.z), XMFLOAT3(0, -1, 0), 0, 1.8f);
-						RayIntersectionResult left_result = Intersects(left_ray, FILTER_NAVIGATION_MESH, FILTER_COLLIDER, layer);
-						RayIntersectionResult right_result = Intersects(right_ray, FILTER_NAVIGATION_MESH, FILTER_COLLIDER, layer);
-						float left_diff = 0;
-						float right_diff = 0;
-						if (left_result.entity != INVALID_ENTITY)
-						{
-							left_diff = left_result.position.y - base_y;
-						}
-						if (right_result.entity != INVALID_ENTITY)
-						{
-							right_diff = right_result.position.y - base_y;
-						}
-						float diff = left_diff;
-						if (left_result.position.y > right_result.position.y)
-						{
-							diff = right_diff;
-							if (left_result.entity != INVALID_ENTITY)
-							{
-								ik_foot = left_foot;
-								ik_pos = left_result.position;
-							}
-						}
-						else
-						{
-							if (right_result.entity != INVALID_ENTITY)
-							{
-								ik_foot = right_foot;
-								ik_pos = right_result.position;
-							}
-						}
-						character.root_offset = wi::math::Lerp(character.root_offset, diff, 0.1f);
+						ik_foot = character.left_foot;
+						ik_pos = left_result.position;
 					}
 				}
 				else
 				{
-					character.root_offset = wi::math::Lerp(character.root_offset, 0.0f, 0.1f);
+					if (right_result.entity != INVALID_ENTITY)
+					{
+						ik_foot = character.right_foot;
+						ik_pos = right_result.position;
+					}
 				}
+				character.root_offset = wi::math::Lerp(character.root_offset, diff, 0.1f);
+			}
+			else
+			{
+				character.root_offset = wi::math::Lerp(character.root_offset, 0.0f, 0.1f);
+			}
 
-				TransformComponent* humanoid_transform = transforms.GetComponent(character.humanoidEntity);
-				if (humanoid_transform != nullptr)
-				{
-					// Offset root transform to lower foot pos:
-					humanoid_transform->translation_local.y = character.root_offset;
-					humanoid_transform->SetDirty();
-				}
+			TransformComponent* humanoid_transform = transforms.GetComponent(character.humanoidEntity);
+			if (humanoid_transform != nullptr)
+			{
+				// Offset root transform to lower foot pos:
+				humanoid_transform->translation_local.y = character.root_offset;
+				humanoid_transform->SetDirty();
+			}
 
-				// Because IK component removals and creates can be performed below, we must lock:
+			// Ease out inverse kinematics by default:
+			if (inverse_kinematics.Contains(character.left_foot))
+			{
+				InverseKinematicsComponent& ik = *inverse_kinematics.GetComponent(character.left_foot);
+				ik.target_position = wi::math::Lerp(ik.target_position, left_pos, 0.6f);
+			}
+			if (inverse_kinematics.Contains(character.right_foot))
+			{
+				InverseKinematicsComponent& ik = *inverse_kinematics.GetComponent(character.right_foot);
+				ik.target_position = wi::math::Lerp(ik.target_position, right_pos, 0.6f);
+			}
+
+			// The upper foot will use IK:
+			if (ik_foot != INVALID_ENTITY && inverse_kinematics.Contains(ik_foot))
+			{
+				InverseKinematicsComponent& ik = *inverse_kinematics.GetComponent(ik_foot);
+				ik_pos.y += 0.16f;
+				ik.target_position = wi::math::Lerp(ik.target_position, ik_pos, 0.6f);
+#if 0
+				// Debug draw foot target:
 				locker.lock();
-
-				// Remove IK effectors by default:
-				if (inverse_kinematics.Contains(left_foot))
-				{
-					inverse_kinematics.Remove(left_foot);
-				}
-				if (inverse_kinematics.Contains(right_foot))
-				{
-					inverse_kinematics.Remove(right_foot);
-				}
-
-				// The upper foot will use IK:
-				if (ik_foot != INVALID_ENTITY)
-				{
-					InverseKinematicsComponent& ik = inverse_kinematics.Create(ik_foot);
-					ik.use_target_position = true;
-					ik.target_position = ik_pos;
-					ik.target_position.y += 0.15f;
-					ik.chain_length = 2;
-					ik.iteration_count = 10;
-				}
-
+				wi::renderer::RenderablePoint point;
+				point.position = ik.target_position;
+				point.color = XMFLOAT4(1, 1, 0, 1);
+				point.size = 0.1f;
+				wi::renderer::DrawPoint(point);
 				locker.unlock();
+#endif
 			}
 		});
 		wi::jobsystem::Wait(ctx);
@@ -3377,25 +3405,6 @@ namespace wi::scene
 									constraint_max = XMFLOAT3(XM_PI * 0.8f, 0, 0);
 									break;
 								}
-							}
-							if (constrain)
-							{
-								// Constraint swapping fixes for flipped model orientations:
-								if (facing < 0)
-								{
-									// Note: this is a fix for VRM 1.0 and Mixamo model
-									std::swap(constraint_min, constraint_max);
-								}
-								const TransformComponent* bone_transform = transforms.GetComponent(bone);
-								if (bone_transform != nullptr)
-								{
-									if (bone_transform->GetForward().z < 0)
-									{
-										// Note: this is a fix for FBX Mixamo models
-										std::swap(constraint_min, constraint_max);
-									}
-								}
-								break;
 							}
 							bone_type_idx++;
 						}
@@ -5302,13 +5311,14 @@ namespace wi::scene
 	{
 		static const XMVECTOR up = XMVectorSet(0, 1, 0, 0);
 		static const XMMATRIX rotY = XMMatrixRotationY(XM_PI);
+		static const int max_substeps = 4;
 
 		wi::jobsystem::Dispatch(ctx, (uint32_t)characters.GetCount(), 1, [&](wi::jobsystem::JobArgs args) {
 			CharacterComponent& character = characters[args.jobIndex];
 			if (!character.IsActive())
 				return;
 			Entity entity = characters.GetEntity(args.jobIndex);
-			uint32_t layer = ~0u;
+			uint32_t layer = 0;
 			LayerComponent* layercomponent = layers.GetComponent(entity);
 			if (layercomponent != nullptr)
 			{
@@ -5396,8 +5406,10 @@ namespace wi::scene
 			}
 
 			// Fixed timestep logic:
-			while (character.accumulator >= timestep)
+			int steps = 0;
+			while (character.accumulator >= timestep && steps <= max_substeps)
 			{
+				steps++;
 				XMStoreFloat3(&character.position_prev, position);
 				character.accumulator -= timestep;
 				if (character.swimming)
@@ -5458,6 +5470,7 @@ namespace wi::scene
 				character.leaning_next = lerp(character.leaning_next, velocity_leaning, 0.05f);
 				character.leaning = lerp(character.leaning, character.leaning_next, 0.05f);
 			}
+			character.accumulator = clamp(character.accumulator, 0.0f, timestep);
 			character.alpha = character.accumulator / timestep;
 
 			if (platform_velocity_count > 0)

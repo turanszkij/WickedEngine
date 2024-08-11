@@ -2374,17 +2374,25 @@ namespace wi::scene
 		}
 		facing_next = direction;
 	}
-	void CharacterComponent::AddAnimation(wi::ecs::Entity entity)
+	void CharacterComponent::Lean(float amount)
+	{
+		leaning_next = amount;
+	}
+	void CharacterComponent::AddAnimation(Entity entity)
 	{
 		animations.push_back(entity);
 	}
-	void CharacterComponent::PlayAnimation(wi::ecs::Entity entity)
+	void CharacterComponent::PlayAnimation(Entity entity)
 	{
 		if (currentAnimation != entity)
 		{
 			reset_anim = true;
 			currentAnimation = entity;
 		}
+	}
+	void CharacterComponent::StopAnimation()
+	{
+		currentAnimation = INVALID_ENTITY;
 	}
 	void CharacterComponent::SetAnimationAmount(float amount)
 	{

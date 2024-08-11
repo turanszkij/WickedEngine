@@ -2104,6 +2104,8 @@ namespace wi::scene
 		bool ground_intersect = false;
 		bool swimming = false;
 		wi::ecs::Entity humanoidEntity = wi::ecs::INVALID_ENTITY;
+		wi::ecs::Entity left_foot = wi::ecs::INVALID_ENTITY;
+		wi::ecs::Entity right_foot = wi::ecs::INVALID_ENTITY;
 		float root_offset = 0;
 		bool foot_placement_enabled = true;
 		wi::PathQuery pathquery;
@@ -2120,11 +2122,16 @@ namespace wi::scene
 		void Move(const XMFLOAT3& direction);
 		// Apply movement relative to the character facing in the next update
 		void Strafe(const XMFLOAT3& direction);
+		// Apply upwards movement immediately
 		void Jump(float amount);
+		// Turn towards the direction smoothly
 		void Turn(const XMFLOAT3& direction);
+		// Lean sideways, negative values mean left, positive values mean right
+		void Lean(float amount);
 
 		void AddAnimation(wi::ecs::Entity entity);
 		void PlayAnimation(wi::ecs::Entity entity);
+		void StopAnimation();
 		void SetAnimationAmount(float amount);
 		float GetAnimationAmount() const;
 		bool IsAnimationEnded() const;

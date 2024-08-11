@@ -1512,9 +1512,11 @@ Implementation of basic character controller features such as movement in the sc
 - Strafe(Vector value)	-- Similar to Move, but relative to the facing direction.
 - Jump(float amount)	-- Jump upwards by an amount. The jump will be executed in the next scene update, with collisions.
 - Turn(Vector value)	-- Turn towards a direction continuously.
+- Lean(float value)	-- Lean sideways, negative values mean left, positive values mean right
 
-- AddAnimation(Entity entity)	-- Adds animation for tracking blending state
+- AddAnimation(Entity entity)	-- Adds animation for tracking blending state. The simple animation blending will perform blend-out for each animation except the currenttly active one
 - PlayAnimation(Entity entity)	-- Play the animation. This will be blended in as primary animation, others will be belnded out.
+- StopAnimation()	-- stops current animation
 - SetAnimationAmount(float value)	-- Set target blend amount of current animation
 - GetAnimatioNAmount() : float	-- returns target blend amount of current animation
 - IsAnimationEnded() : bool	--returns true if the current animation is ended, false otherwise

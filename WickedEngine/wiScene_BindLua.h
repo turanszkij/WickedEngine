@@ -1857,9 +1857,11 @@ namespace wi::lua::scene
 		int Strafe(lua_State* L);
 		int Jump(lua_State* L);
 		int Turn(lua_State* L);
+		int Lean(lua_State* L);
 
 		int AddAnimation(lua_State* L);
 		int PlayAnimation(lua_State* L);
+		int StopAnimation(lua_State* L);
 		int SetAnimationAmount(lua_State* L);
 		int GetAnimationAmount(lua_State* L);
 		int IsAnimationEnded(lua_State* L);

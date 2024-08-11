@@ -7493,9 +7493,11 @@ Luna<CharacterComponent_BindLua>::FunctionType CharacterComponent_BindLua::metho
 	lunamethod(CharacterComponent_BindLua, Strafe),
 	lunamethod(CharacterComponent_BindLua, Jump),
 	lunamethod(CharacterComponent_BindLua, Turn),
+	lunamethod(CharacterComponent_BindLua, Lean),
 
 	lunamethod(CharacterComponent_BindLua, AddAnimation),
 	lunamethod(CharacterComponent_BindLua, PlayAnimation),
+	lunamethod(CharacterComponent_BindLua, StopAnimation),
 	lunamethod(CharacterComponent_BindLua, SetAnimationAmount),
 	lunamethod(CharacterComponent_BindLua, GetAnimationAmount),
 	lunamethod(CharacterComponent_BindLua, IsAnimationEnded),
@@ -7606,6 +7608,17 @@ int CharacterComponent_BindLua::Turn(lua_State* L)
 	component->Turn(v->GetFloat3());
 	return 0;
 }
+int CharacterComponent_BindLua::Lean(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "Lean(float value) not enough arguments!");
+		return 0;
+	}
+	component->Lean(wi::lua::SGetFloat(L, 1));
+	return 0;
+}
 
 int CharacterComponent_BindLua::AddAnimation(lua_State* L)
 {
@@ -7628,6 +7641,11 @@ int CharacterComponent_BindLua::PlayAnimation(lua_State* L)
 	}
 	Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 	component->PlayAnimation(entity);
+	return 0;
+}
+int CharacterComponent_BindLua::StopAnimation(lua_State* L)
+{
+	component->StopAnimation();
 	return 0;
 }
 int CharacterComponent_BindLua::SetAnimationAmount(lua_State* L)
