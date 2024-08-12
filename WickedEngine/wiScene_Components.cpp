@@ -829,10 +829,10 @@ namespace wi::scene
 			}
 		}
 
-		if (meshlets.empty())
+		if (clusters.empty())
 		{
-			const size_t max_vertices = MESHLET_VERTEX_COUNT;
-			const size_t max_triangles = MESHLET_TRIANGLE_COUNT;
+			const size_t max_vertices = CLUSTER_VERTEX_COUNT;
+			const size_t max_triangles = CLUSTER_TRIANGLE_COUNT;
 			const float cone_weight = 0.0f;
 
 			const uint32_t lod_count = GetLODCount();
@@ -864,11 +864,11 @@ namespace wi::scene
 						cone_weight
 					);
 
-					meshlets.reserve(meshlets.size() + meshlet_count);
+					clusters.reserve(clusters.size() + meshlet_count);
 
-					SubsetMeshletRange& meshlet_range = meshlet_ranges.emplace_back();
-					meshlet_range.meshletOffset = (uint32_t)meshlets.size();
-					meshlet_range.meshletCount = (uint32_t)meshlet_count;
+					SubsetClusterRange& meshlet_range = cluster_ranges.emplace_back();
+					meshlet_range.clusterOffset = (uint32_t)clusters.size();
+					meshlet_range.clusterCount = (uint32_t)meshlet_count;
 
 					const meshopt_Meshlet& last = meshopt_meshlets[meshlet_count - 1];
 
@@ -895,27 +895,39 @@ namespace wi::scene
 							sizeof(XMFLOAT3)
 						);
 
-						ShaderMeshlet& shader_meshlet = meshlets.emplace_back();
-						shader_meshlet.vertex_offset = meshlet.vertex_offset;
-						shader_meshlet.vertex_count = meshlet.vertex_count;
-						shader_meshlet.triangle_offset = meshlet.triangle_offset;
-						shader_meshlet.triangle_count = meshlet.triangle_count;
-						shader_meshlet.center.x = bounds.center[0];
-						shader_meshlet.center.y = bounds.center[1];
-						shader_meshlet.center.z = bounds.center[2];
-						shader_meshlet.radius = bounds.radius;
-						shader_meshlet.cone_apex.x = bounds.cone_apex[0];
-						shader_meshlet.cone_apex.y = bounds.cone_apex[1];
-						shader_meshlet.cone_apex.z = bounds.cone_apex[2];
-						shader_meshlet.cone_axis.x = bounds.cone_axis[0];
-						shader_meshlet.cone_axis.y = bounds.cone_axis[1];
-						shader_meshlet.cone_axis.z = bounds.cone_axis[2];
-						shader_meshlet.cone_cutoff = bounds.cone_cutoff;
+						ShaderCluster& cluster = clusters.emplace_back();
+						cluster.vertex_offset = meshlet.vertex_offset;
+						cluster.vertex_count = meshlet.vertex_count;
+						cluster.triangle_offset = meshlet.triangle_offset;
+						cluster.triangle_count = meshlet.triangle_count;
+						cluster.center.x = bounds.center[0];
+						cluster.center.y = bounds.center[1];
+						cluster.center.z = bounds.center[2];
+						cluster.radius = bounds.radius;
+						cluster.cone_apex.x = bounds.cone_apex[0];
+						cluster.cone_apex.y = bounds.cone_apex[1];
+						cluster.cone_apex.z = bounds.cone_apex[2];
+						cluster.cone_axis.x = bounds.cone_axis[0];
+						cluster.cone_axis.y = bounds.cone_axis[1];
+						cluster.cone_axis.z = bounds.cone_axis[2];
+						cluster.cone_cutoff = bounds.cone_cutoff;
+						for (size_t tri = 0; tri < meshlet.triangle_count; tri += 3)
+						{
+							cluster.triangles[tri].init(
+								meshlet_triangles[tri + 0],
+								meshlet_triangles[tri + 1],
+								meshlet_triangles[tri + 2]
+							);
+						}
+						for (size_t vert = 0; vert < meshlet.vertex_count; vert += 3)
+						{
+							cluster.vertices[vert] = meshlet_vertices[vert];
+						}
 					}
 				}
 			}
 		}
-		bd.size += AlignTo(meshlets.size() * sizeof(ShaderMeshlet), alignment);
+		bd.size += AlignTo(clusters.size() * sizeof(ShaderCluster), alignment);
 
 		auto init_callback = [&](void* dest) {
 			uint8_t* buffer_data = (uint8_t*)dest;
@@ -1201,12 +1213,12 @@ namespace wi::scene
 				vb_mor.size = buffer_offset - vb_mor.offset;
 			}
 
-			if (!meshlets.empty())
+			if (!clusters.empty())
 			{
-				vb_msh.offset = buffer_offset;
-				vb_msh.size = meshlets.size() * sizeof(ShaderMeshlet);
-				std::memcpy(buffer_data + buffer_offset, meshlets.data(), vb_msh.size);
-				buffer_offset += AlignTo(vb_msh.size, alignment);
+				vb_clu.offset = buffer_offset;
+				vb_clu.size = clusters.size() * sizeof(ShaderCluster);
+				std::memcpy(buffer_data + buffer_offset, clusters.data(), vb_clu.size);
+				buffer_offset += AlignTo(vb_clu.size, alignment);
 			}
 		};
 
@@ -1257,6 +1269,11 @@ namespace wi::scene
 		{
 			vb_mor.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_mor.offset, vb_mor.size, &morph_format);
 			vb_mor.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_mor.subresource_srv);
+		}
+		if (vb_clu.IsValid())
+		{
+			vb_clu.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_clu.offset, vb_clu.size);
+			vb_clu.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_clu.subresource_srv);
 		}
 
 		if (!vertex_boneindices.empty() || !morph_targets.empty())

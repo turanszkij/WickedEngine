@@ -14,33 +14,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	{
 		uint geometryIndex = inst.baseGeometryOffset + i;
 		ShaderGeometry geometry = load_geometry(geometryIndex);
-		if (geometry.vb_msh < 0)
+		for (uint j = groupIndex; j < geometry.meshletCount; j += THREADCOUNT)
 		{
-			// Simple meshlet divide:
-			for (uint j = groupIndex; j < geometry.meshletCount; j += THREADCOUNT)
-			{
-				ShaderMeshlet meshlet = (ShaderMeshlet)0;
-				meshlet.instanceIndex = instanceIndex;
-				meshlet.geometryIndex = geometryIndex;
-				meshlet.primitiveOffset = j * MESHLET_TRIANGLE_COUNT;
+			ShaderMeshlet meshlet = (ShaderMeshlet)0;
+			meshlet.instanceIndex = instanceIndex;
+			meshlet.geometryIndex = geometryIndex;
+			meshlet.primitiveOffset = j * MESHLET_TRIANGLE_COUNT;
 
-				uint meshletIndex = inst.meshletOffset + geometry.meshletOffset + j;
-				output_meshlets[meshletIndex] = meshlet;
-			}
-		}
-		else
-		{
-			// Copy and unroll meshlets:
-			ByteAddressBuffer vb_meshlets = bindless_buffers[geometry.vb_msh];
-			for (uint j = groupIndex; j < geometry.meshletCount; j += THREADCOUNT)
-			{
-				ShaderMeshlet meshlet = vb_meshlets.Load<ShaderMeshlet>(j * sizeof(ShaderMeshlet));
-				meshlet.instanceIndex = instanceIndex;
-				meshlet.geometryIndex = geometryIndex;
-
-				uint meshletIndex = inst.meshletOffset + geometry.meshletOffset + j;
-				output_meshlets[meshletIndex] = meshlet;
-			}
+			uint meshletIndex = inst.meshletOffset + geometry.meshletOffset + j;
+			output_meshlets[meshletIndex] = meshlet;
 		}
 	}
 }

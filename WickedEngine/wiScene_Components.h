@@ -412,13 +412,13 @@ namespace wi::scene
 
 		uint32_t subsets_per_lod = 0; // this needs to be specified if there are multiple LOD levels
 
-		struct SubsetMeshletRange
+		struct SubsetClusterRange
 		{
-			uint32_t meshletOffset = 0;
-			uint32_t meshletCount = 0;
+			uint32_t clusterOffset = 0;
+			uint32_t clusterCount = 0;
 		};
-		wi::vector<SubsetMeshletRange> meshlet_ranges;
-		wi::vector<ShaderMeshlet> meshlets;
+		wi::vector<SubsetClusterRange> cluster_ranges;
+		wi::vector<ShaderCluster> clusters;
 
 		// Non-serialized attributes:
 		wi::primitive::AABB aabb;
@@ -447,13 +447,13 @@ namespace wi::scene
 		BufferView vb_col;
 		BufferView vb_bon;
 		BufferView vb_mor;
-		BufferView vb_msh;
+		BufferView vb_clu;
 		BufferView so_pos;
 		BufferView so_nor;
 		BufferView so_tan;
 		BufferView so_pre;
 		uint32_t geometryOffset = 0;
-		uint32_t meshletAlloc = 0;
+		uint32_t meshletCount = 0;
 		uint32_t active_morph_count = 0;
 		uint32_t morphGPUOffset = 0;
 		XMFLOAT2 uv_range_min = XMFLOAT2(0, 0);

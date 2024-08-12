@@ -3910,7 +3910,7 @@ namespace wi::scene
 					geometry.flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
 				}
 
-				mesh.meshletAlloc = 0;
+				mesh.meshletCount = 0;
 
 				uint32_t subsetIndex = 0;
 				for (auto& subset : mesh.subsets)
@@ -3928,9 +3928,9 @@ namespace wi::scene
 					geometry.indexOffset = subset.indexOffset;
 					geometry.indexCount = subset.indexCount;
 					geometry.materialIndex = subset.materialIndex;
-					geometry.meshletOffset = mesh.meshletAlloc;
-					geometry.meshletCount = mesh.meshlet_ranges[subsetIndex].meshletCount;
-					mesh.meshletAlloc += geometry.meshletCount;
+					geometry.meshletOffset = mesh.meshletCount;
+					geometry.meshletCount = triangle_count_to_meshlet_count(subset.indexCount / 3u);
+					mesh.meshletCount += geometry.meshletCount;
 					std::memcpy(geometryArrayMapped + mesh.geometryOffset + subsetIndex, &geometry, sizeof(geometry));
 					subsetIndex++;
 				}
@@ -4450,7 +4450,7 @@ namespace wi::scene
 				inst.baseGeometryCount = (uint)mesh.subsets.size();
 				inst.geometryOffset = inst.baseGeometryOffset + first_subset;
 				inst.geometryCount = last_subset - first_subset;
-				inst.meshletOffset = meshletAllocator.fetch_add(mesh.meshletAlloc);
+				inst.meshletOffset = meshletAllocator.fetch_add(mesh.meshletCount);
 				inst.fadeDistance = object.fadeDistance;
 				inst.center = object.center;
 				inst.radius = object.radius;
