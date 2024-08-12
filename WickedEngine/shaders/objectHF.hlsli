@@ -362,20 +362,13 @@ struct PixelInput
 #endif // OBJECTSHADER_USE_UVSETS
 };
 
-
-// OBJECT SHADER PROTOTYPE
-///////////////////////////
-
-#ifdef OBJECTSHADER_COMPILE_VS
-
-// Vertex shader base:
-PixelInput main(VertexInput input)
+PixelInput vertex_to_pixel_export(VertexInput input)
 {
-	PixelInput Out;
-
 	VertexSurface surface;
 	surface.create(GetMaterial(), input);
 
+	PixelInput Out;
+	
 	Out.pos = surface.position;
 
 #ifndef OBJECTSHADER_USE_NOCAMERA
@@ -445,6 +438,18 @@ PixelInput main(VertexInput input)
 #endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 
 	return Out;
+}
+
+
+// OBJECT SHADER PROTOTYPE
+///////////////////////////
+
+#ifdef OBJECTSHADER_COMPILE_VS
+
+// Vertex shader base:
+PixelInput main(VertexInput input)
+{
+	return vertex_to_pixel_export(input);
 }
 
 #endif // OBJECTSHADER_COMPILE_VS

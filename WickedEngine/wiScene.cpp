@@ -3893,6 +3893,7 @@ namespace wi::scene
 				geometry.vb_uvs = mesh.vb_uvs.descriptor_srv;
 				geometry.vb_atl = mesh.vb_atl.descriptor_srv;
 				geometry.vb_pre = mesh.so_pre.descriptor_srv;
+				geometry.vb_clu = mesh.vb_clu.descriptor_srv;
 				geometry.aabb_min = mesh.aabb._min;
 				geometry.aabb_max = mesh.aabb._max;
 				geometry.tessellation_factor = mesh.tessellationFactor;

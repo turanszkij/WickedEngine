@@ -358,6 +358,7 @@ union ObjectRenderingVariant
 		uint32_t tessellation : 1;	// bool
 		uint32_t alphatest : 1;		// bool
 		uint32_t sample_count : 4;	// 1, 2, 4, 8
+		uint32_t mesh_shader : 1;	// bool
 	} bits;
 	uint32_t value;
 };
@@ -370,6 +371,7 @@ inline PipelineState* GetObjectPSO(ObjectRenderingVariant variant)
 wi::jobsystem::context object_pso_job_ctx[RENDERPASS_COUNT];
 PipelineState PSO_object_wire;
 PipelineState PSO_object_wire_tessellation;
+PipelineState PSO_object_wire_mesh_shader;
 
 wi::vector<CustomShader> customShaders;
 int RegisterCustomShader(const CustomShader& customShader)
@@ -385,7 +387,40 @@ const wi::vector<CustomShader>& GetCustomShaders()
 	return customShaders;
 }
 
+SHADERTYPE GetASTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool transparent, bool mesh_shader)
+{
+	if (!mesh_shader)
+		return SHADERTYPE_COUNT;
 
+	return ASTYPE_OBJECT;
+}
+SHADERTYPE GetMSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool transparent, bool mesh_shader)
+{
+	if (!mesh_shader)
+		return SHADERTYPE_COUNT;
+
+	SHADERTYPE realMS = MSTYPE_OBJECT_SIMPLE;
+
+	switch (renderPass)
+	{
+	case RENDERPASS_MAIN:
+		realMS = MSTYPE_OBJECT;
+		break;
+	case RENDERPASS_PREPASS:
+	case RENDERPASS_PREPASS_DEPTHONLY:
+		if (alphatest)
+		{
+			realMS = MSTYPE_OBJECT_PREPASS_ALPHATEST;
+		}
+		else
+		{
+			realMS = MSTYPE_OBJECT_PREPASS;
+		}
+		break;
+	}
+
+	return realMS;
+}
 SHADERTYPE GetVSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool transparent)
 {
 	SHADERTYPE realVS = VSTYPE_OBJECT_SIMPLE;
@@ -1154,6 +1189,16 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::DS, shaders[DSTYPE_OBJECT_PREPASS_ALPHATEST], "objectDS_prepass_alphatest.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::DS, shaders[DSTYPE_OBJECT_SIMPLE], "objectDS_simple.cso"); });
 
+	if (device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
+	{
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::AS, shaders[ASTYPE_OBJECT], "objectAS.cso"); });
+
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_OBJECT], "objectMS.cso"); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_OBJECT_PREPASS], "objectMS_prepass.cso"); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_OBJECT_PREPASS_ALPHATEST], "objectMS_prepass_alphatest.cso"); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_OBJECT_SIMPLE], "objectMS_simple.cso"); });
+	}
+
 	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
 
 		LoadShader(
@@ -1235,6 +1280,17 @@ void LoadShaders()
 		desc.hs = &shaders[HSTYPE_OBJECT_SIMPLE];
 		desc.ds = &shaders[DSTYPE_OBJECT_SIMPLE];
 		device->CreatePipelineState(&desc, &PSO_object_wire_tessellation);
+
+		if (device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
+		{
+			desc.vs = {};
+			desc.hs = {};
+			desc.ds = {};
+			desc.pt = PrimitiveTopology::TRIANGLELIST;
+			desc.as = &shaders[ASTYPE_OBJECT];
+			desc.ms = &shaders[MSTYPE_OBJECT_SIMPLE];
+			device->CreatePipelineState(&desc, &PSO_object_wire_mesh_shader);
+		}
 		});
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		PipelineStateDesc desc;
@@ -1760,207 +1816,224 @@ void LoadShaders()
 								continue;
 							for (uint32_t alphatest = 0; alphatest <= 1; ++alphatest)
 							{
-								const bool transparency = blendMode != BLENDMODE_OPAQUE;
-								if ((renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY) && transparency)
-									continue;
-
-								SHADERTYPE realVS = GetVSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
-								SHADERTYPE realHS = GetHSTYPE((RENDERPASS)renderPass, tessellation, alphatest);
-								SHADERTYPE realDS = GetDSTYPE((RENDERPASS)renderPass, tessellation, alphatest);
-								SHADERTYPE realGS = GetGSTYPE((RENDERPASS)renderPass, alphatest, transparency);
-								SHADERTYPE realPS = GetPSTYPE((RENDERPASS)renderPass, alphatest, transparency, (MaterialComponent::SHADERTYPE)shaderType);
-
-								if (tessellation && (realHS == SHADERTYPE_COUNT || realDS == SHADERTYPE_COUNT))
-									continue;
-
-								PipelineStateDesc desc;
-								desc.vs = realVS < SHADERTYPE_COUNT ? &shaders[realVS] : nullptr;
-								desc.hs = realHS < SHADERTYPE_COUNT ? &shaders[realHS] : nullptr;
-								desc.ds = realDS < SHADERTYPE_COUNT ? &shaders[realDS] : nullptr;
-								desc.gs = realGS < SHADERTYPE_COUNT ? &shaders[realGS] : nullptr;
-								desc.ps = realPS < SHADERTYPE_COUNT ? &shaders[realPS] : nullptr;
-
-								switch (blendMode)
+								for (uint32_t mesh_shader = 0; mesh_shader <= (device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER) ? 1u : 0u); ++mesh_shader)
 								{
-								case BLENDMODE_OPAQUE:
-									desc.bs = &blendStates[BSTYPE_OPAQUE];
-									break;
-								case BLENDMODE_ALPHA:
-									desc.bs = &blendStates[BSTYPE_TRANSPARENT];
-									break;
-								case BLENDMODE_ADDITIVE:
-									desc.bs = &blendStates[BSTYPE_ADDITIVE];
-									break;
-								case BLENDMODE_PREMULTIPLIED:
-									desc.bs = &blendStates[BSTYPE_PREMULTIPLIED];
-									break;
-								case BLENDMODE_MULTIPLY:
-									desc.bs = &blendStates[BSTYPE_MULTIPLY];
-									break;
-								default:
-									assert(0);
-									break;
-								}
+									const bool transparency = blendMode != BLENDMODE_OPAQUE;
+									if ((renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY) && transparency)
+										continue;
 
-								switch (renderPass)
-								{
-								case RENDERPASS_SHADOW:
-									desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOW : BSTYPE_COLORWRITEDISABLE];
-									break;
-								case RENDERPASS_RAINBLOCKER:
-									desc.bs = &blendStates[BSTYPE_COLORWRITEDISABLE];
-									break;
-								default:
-									break;
-								}
+									PipelineStateDesc desc;
 
-								switch (renderPass)
-								{
-								case RENDERPASS_SHADOW:
-									desc.dss = &depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
-									break;
-								case RENDERPASS_MAIN:
-									if (blendMode == BLENDMODE_ADDITIVE)
+									if (mesh_shader)
 									{
-										desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+										if (tessellation || renderPass > RENDERPASS_PREPASS_DEPTHONLY)
+											continue;
+										SHADERTYPE realAS = GetASTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency, mesh_shader);
+										SHADERTYPE realMS = GetMSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency, mesh_shader);
+										desc.as = realAS < SHADERTYPE_COUNT ? &shaders[realAS] : nullptr;
+										desc.ms = realMS < SHADERTYPE_COUNT ? &shaders[realMS] : nullptr;
 									}
 									else
 									{
-										desc.dss = &depthStencils[transparency ? DSSTYPE_TRANSPARENT : DSSTYPE_DEPTHREADEQUAL];
-									}
-									break;
-								case RENDERPASS_ENVMAPCAPTURE:
-									desc.dss = &depthStencils[DSSTYPE_ENVMAP];
-									break;
-								case RENDERPASS_VOXELIZE:
-									desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
-									break;
-								case RENDERPASS_RAINBLOCKER:
-									desc.dss = &depthStencils[DSSTYPE_DEFAULT];
-									break;
-								default:
-									if (blendMode == BLENDMODE_ADDITIVE)
-									{
-										desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
-									}
-									else
-									{
-										desc.dss = &depthStencils[DSSTYPE_DEFAULT];
-									}
-									break;
-								}
+										SHADERTYPE realVS = GetVSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
+										SHADERTYPE realHS = GetHSTYPE((RENDERPASS)renderPass, tessellation, alphatest);
+										SHADERTYPE realDS = GetDSTYPE((RENDERPASS)renderPass, tessellation, alphatest);
+										SHADERTYPE realGS = GetGSTYPE((RENDERPASS)renderPass, alphatest, transparency);
+										SHADERTYPE realPS = GetPSTYPE((RENDERPASS)renderPass, alphatest, transparency, (MaterialComponent::SHADERTYPE)shaderType);
 
-								switch (renderPass)
-								{
-								case RENDERPASS_SHADOW:
-									desc.rs = &rasterizers[cullMode == (int)CullMode::NONE ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
-									break;
-								case RENDERPASS_VOXELIZE:
-									desc.rs = &rasterizers[RSTYPE_VOXELIZE];
-									break;
-								default:
-									switch ((CullMode)cullMode)
+										if (tessellation && (realHS == SHADERTYPE_COUNT || realDS == SHADERTYPE_COUNT))
+											continue;
+
+										desc.vs = realVS < SHADERTYPE_COUNT ? &shaders[realVS] : nullptr;
+										desc.hs = realHS < SHADERTYPE_COUNT ? &shaders[realHS] : nullptr;
+										desc.ds = realDS < SHADERTYPE_COUNT ? &shaders[realDS] : nullptr;
+										desc.gs = realGS < SHADERTYPE_COUNT ? &shaders[realGS] : nullptr;
+										desc.ps = realPS < SHADERTYPE_COUNT ? &shaders[realPS] : nullptr;
+
+									}
+
+									switch (blendMode)
 									{
+									case BLENDMODE_OPAQUE:
+										desc.bs = &blendStates[BSTYPE_OPAQUE];
+										break;
+									case BLENDMODE_ALPHA:
+										desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+										break;
+									case BLENDMODE_ADDITIVE:
+										desc.bs = &blendStates[BSTYPE_ADDITIVE];
+										break;
+									case BLENDMODE_PREMULTIPLIED:
+										desc.bs = &blendStates[BSTYPE_PREMULTIPLIED];
+										break;
+									case BLENDMODE_MULTIPLY:
+										desc.bs = &blendStates[BSTYPE_MULTIPLY];
+										break;
 									default:
-									case CullMode::BACK:
-										desc.rs = &rasterizers[RSTYPE_FRONT];
-										break;
-									case CullMode::NONE:
-										desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
-										break;
-									case CullMode::FRONT:
-										desc.rs = &rasterizers[RSTYPE_BACK];
+										assert(0);
 										break;
 									}
-									break;
-								}
 
-								if (tessellation)
-								{
-									desc.pt = PrimitiveTopology::PATCHLIST;
-								}
-								else
-								{
-									desc.pt = PrimitiveTopology::TRIANGLELIST;
-								}
-
-								ObjectRenderingVariant variant = {};
-								variant.bits.renderpass = renderPass;
-								variant.bits.shadertype = shaderType;
-								variant.bits.blendmode = blendMode;
-								variant.bits.cullmode = cullMode;
-								variant.bits.tessellation = tessellation;
-								variant.bits.alphatest = alphatest;
-								variant.bits.sample_count = 1;
-
-								switch (renderPass)
-								{
-								case RENDERPASS_MAIN:
-								case RENDERPASS_PREPASS:
-								case RENDERPASS_PREPASS_DEPTHONLY:
-								{
-									RenderPassInfo renderpass_info;
-									if (renderPass == RENDERPASS_PREPASS_DEPTHONLY)
+									switch (renderPass)
 									{
-										renderpass_info.rt_count = 0;
-										renderpass_info.rt_formats[0] = Format::UNKNOWN;
+									case RENDERPASS_SHADOW:
+										desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOW : BSTYPE_COLORWRITEDISABLE];
+										break;
+									case RENDERPASS_RAINBLOCKER:
+										desc.bs = &blendStates[BSTYPE_COLORWRITEDISABLE];
+										break;
+									default:
+										break;
+									}
+
+									switch (renderPass)
+									{
+									case RENDERPASS_SHADOW:
+										desc.dss = &depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
+										break;
+									case RENDERPASS_MAIN:
+										if (blendMode == BLENDMODE_ADDITIVE)
+										{
+											desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+										}
+										else
+										{
+											desc.dss = &depthStencils[transparency ? DSSTYPE_TRANSPARENT : DSSTYPE_DEPTHREADEQUAL];
+										}
+										break;
+									case RENDERPASS_ENVMAPCAPTURE:
+										desc.dss = &depthStencils[DSSTYPE_ENVMAP];
+										break;
+									case RENDERPASS_VOXELIZE:
+										desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
+										break;
+									case RENDERPASS_RAINBLOCKER:
+										desc.dss = &depthStencils[DSSTYPE_DEFAULT];
+										break;
+									default:
+										if (blendMode == BLENDMODE_ADDITIVE)
+										{
+											desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+										}
+										else
+										{
+											desc.dss = &depthStencils[DSSTYPE_DEFAULT];
+										}
+										break;
+									}
+
+									switch (renderPass)
+									{
+									case RENDERPASS_SHADOW:
+										desc.rs = &rasterizers[cullMode == (int)CullMode::NONE ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
+										break;
+									case RENDERPASS_VOXELIZE:
+										desc.rs = &rasterizers[RSTYPE_VOXELIZE];
+										break;
+									default:
+										switch ((CullMode)cullMode)
+										{
+										default:
+										case CullMode::BACK:
+											desc.rs = &rasterizers[RSTYPE_FRONT];
+											break;
+										case CullMode::NONE:
+											desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+											break;
+										case CullMode::FRONT:
+											desc.rs = &rasterizers[RSTYPE_BACK];
+											break;
+										}
+										break;
+									}
+
+									if (tessellation)
+									{
+										desc.pt = PrimitiveTopology::PATCHLIST;
 									}
 									else
 									{
-										renderpass_info.rt_count = 1;
-										renderpass_info.rt_formats[0] = renderPass == RENDERPASS_MAIN ? format_rendertarget_main : format_idbuffer;
+										desc.pt = PrimitiveTopology::TRIANGLELIST;
 									}
-									renderpass_info.ds_format = format_depthbuffer_main;
-									const uint32_t msaa_support[] = { 1,2,4,8 };
-									for (uint32_t msaa : msaa_support)
+
+									ObjectRenderingVariant variant = {};
+									variant.bits.renderpass = renderPass;
+									variant.bits.shadertype = shaderType;
+									variant.bits.blendmode = blendMode;
+									variant.bits.cullmode = cullMode;
+									variant.bits.tessellation = tessellation;
+									variant.bits.alphatest = alphatest;
+									variant.bits.sample_count = 1;
+									variant.bits.mesh_shader = mesh_shader;
+
+									switch (renderPass)
 									{
-										variant.bits.sample_count = msaa;
-										renderpass_info.sample_count = msaa;
-										device->CreatePipelineState(&desc, GetObjectPSO(variant), &renderpass_info);
-									}
-								}
-								break;
-
-								case RENDERPASS_ENVMAPCAPTURE:
-								{
-									RenderPassInfo renderpass_info;
-									renderpass_info.rt_count = 1;
-									renderpass_info.rt_formats[0] = format_rendertarget_envprobe;
-									renderpass_info.ds_format = format_depthbuffer_envprobe;
-									const uint32_t msaa_support[] = { 1,8 };
-									for (uint32_t msaa : msaa_support)
+									case RENDERPASS_MAIN:
+									case RENDERPASS_PREPASS:
+									case RENDERPASS_PREPASS_DEPTHONLY:
 									{
-										variant.bits.sample_count = msaa;
-										renderpass_info.sample_count = msaa;
-										device->CreatePipelineState(&desc, GetObjectPSO(variant), &renderpass_info);
+										RenderPassInfo renderpass_info;
+										if (renderPass == RENDERPASS_PREPASS_DEPTHONLY)
+										{
+											renderpass_info.rt_count = 0;
+											renderpass_info.rt_formats[0] = Format::UNKNOWN;
+										}
+										else
+										{
+											renderpass_info.rt_count = 1;
+											renderpass_info.rt_formats[0] = renderPass == RENDERPASS_MAIN ? format_rendertarget_main : format_idbuffer;
+										}
+										renderpass_info.ds_format = format_depthbuffer_main;
+										const uint32_t msaa_support[] = { 1,2,4,8 };
+										for (uint32_t msaa : msaa_support)
+										{
+											variant.bits.sample_count = msaa;
+											renderpass_info.sample_count = msaa;
+											device->CreatePipelineState(&desc, GetObjectPSO(variant), &renderpass_info);
+										}
 									}
-								}
-								break;
-
-								case RENDERPASS_SHADOW:
-								{
-									RenderPassInfo renderpass_info;
-									renderpass_info.rt_count = 1;
-									renderpass_info.rt_formats[0] = format_rendertarget_shadowmap;
-									renderpass_info.ds_format = format_depthbuffer_shadowmap;
-									device->CreatePipelineState(&desc, GetObjectPSO(variant), &renderpass_info);
-								}
-								break;
-
-								case RENDERPASS_RAINBLOCKER:
-								{
-									RenderPassInfo renderpass_info;
-									renderpass_info.rt_count = 0;
-									renderpass_info.ds_format = format_depthbuffer_shadowmap;
-									device->CreatePipelineState(&desc, GetObjectPSO(variant), &renderpass_info);
-								}
-								break;
-
-								default:
-									device->CreatePipelineState(&desc, GetObjectPSO(variant));
 									break;
-								}
 
+									case RENDERPASS_ENVMAPCAPTURE:
+									{
+										RenderPassInfo renderpass_info;
+										renderpass_info.rt_count = 1;
+										renderpass_info.rt_formats[0] = format_rendertarget_envprobe;
+										renderpass_info.ds_format = format_depthbuffer_envprobe;
+										const uint32_t msaa_support[] = { 1,8 };
+										for (uint32_t msaa : msaa_support)
+										{
+											variant.bits.sample_count = msaa;
+											renderpass_info.sample_count = msaa;
+											device->CreatePipelineState(&desc, GetObjectPSO(variant), &renderpass_info);
+										}
+									}
+									break;
+
+									case RENDERPASS_SHADOW:
+									{
+										RenderPassInfo renderpass_info;
+										renderpass_info.rt_count = 1;
+										renderpass_info.rt_formats[0] = format_rendertarget_shadowmap;
+										renderpass_info.ds_format = format_depthbuffer_shadowmap;
+										device->CreatePipelineState(&desc, GetObjectPSO(variant), &renderpass_info);
+									}
+									break;
+
+									case RENDERPASS_RAINBLOCKER:
+									{
+										RenderPassInfo renderpass_info;
+										renderpass_info.rt_count = 0;
+										renderpass_info.ds_format = format_depthbuffer_shadowmap;
+										device->CreatePipelineState(&desc, GetObjectPSO(variant), &renderpass_info);
+									}
+									break;
+
+									default:
+										device->CreatePipelineState(&desc, GetObjectPSO(variant));
+										break;
+									}
+								}
 							}
 						}
 					}
@@ -2805,6 +2878,10 @@ void RenderMeshes(
 
 	const bool shadowRendering = renderPass == RENDERPASS_SHADOW;
 
+	const bool mesh_shader =
+		(renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY || renderPass == RENDERPASS_MAIN) && 
+		device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER);
+
 	// Pre-allocate space for all the instances in GPU-buffer:
 	const size_t alloc_size = renderQueue.size() * camera_count * sizeof(ShaderMeshInstancePointer);
 	const GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, cmd);
@@ -2882,7 +2959,14 @@ void RenderMeshes(
 					switch (renderPass)
 					{
 					case RENDERPASS_MAIN:
-						pso = tessellatorRequested ? &PSO_object_wire_tessellation : &PSO_object_wire;
+						if (mesh_shader)
+						{
+							pso = &PSO_object_wire_mesh_shader;
+						}
+						else
+						{
+							pso = tessellatorRequested ? &PSO_object_wire_tessellation : &PSO_object_wire;
+						}
 					}
 				}
 				else if (material.customShaderID >= 0 && material.customShaderID < (int)customShaders.size())
@@ -2903,6 +2987,7 @@ void RenderMeshes(
 					variant.bits.tessellation = tessellatorRequested;
 					variant.bits.alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
 					variant.bits.sample_count = renderpass_info.sample_count;
+					variant.bits.mesh_shader = mesh_shader;
 
 					pso = GetObjectPSO(variant);
 					assert(pso->IsValid());
@@ -2955,12 +3040,26 @@ void RenderMeshes(
 			{
 				device->BindPipelineState(pso_backside, cmd);
 				device->PushConstants(&push, sizeof(push), cmd);
-				device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, cmd);
+				if (mesh_shader)
+				{
+					device->DispatchMesh(1, 1, 1, cmd);
+				}
+				else
+				{
+					device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, cmd);
+				}
 			}
 
 			device->BindPipelineState(pso, cmd);
 			device->PushConstants(&push, sizeof(push), cmd);
-			device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, cmd);
+			if (mesh_shader)
+			{
+				device->DispatchMesh(instancedBatch.instanceCount, 1, 1, cmd);
+			}
+			else
+			{
+				device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, cmd);
+			}
 
 		}
 	};

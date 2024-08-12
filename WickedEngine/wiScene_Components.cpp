@@ -911,23 +911,24 @@ namespace wi::scene
 						cluster.cone_axis.y = bounds.cone_axis[1];
 						cluster.cone_axis.z = bounds.cone_axis[2];
 						cluster.cone_cutoff = bounds.cone_cutoff;
-						for (size_t tri = 0; tri < meshlet.triangle_count; tri += 3)
+						for (size_t tri = 0; tri < meshlet.triangle_count; ++tri)
 						{
 							cluster.triangles[tri].init(
-								meshlet_triangles[tri + 0],
-								meshlet_triangles[tri + 1],
-								meshlet_triangles[tri + 2]
+								meshlet_triangles[meshlet.triangle_offset + tri * 3 + 0],
+								meshlet_triangles[meshlet.triangle_offset + tri * 3 + 1],
+								meshlet_triangles[meshlet.triangle_offset + tri * 3 + 2]
 							);
 						}
-						for (size_t vert = 0; vert < meshlet.vertex_count; vert += 3)
+						for (size_t vert = 0; vert < meshlet.vertex_count; ++vert)
 						{
-							cluster.vertices[vert] = meshlet_vertices[vert];
+							cluster.vertices[vert] = meshlet_vertices[meshlet.vertex_offset + vert];
 						}
 					}
 				}
 			}
 		}
-		bd.size += AlignTo(clusters.size() * sizeof(ShaderCluster), alignment);
+		bd.size = AlignTo(bd.size, sizeof(ShaderCluster));
+		bd.size = AlignTo(bd.size + clusters.size() * sizeof(ShaderCluster), alignment);
 
 		auto init_callback = [&](void* dest) {
 			uint8_t* buffer_data = (uint8_t*)dest;
@@ -1215,6 +1216,7 @@ namespace wi::scene
 
 			if (!clusters.empty())
 			{
+				buffer_offset = AlignTo(buffer_offset, sizeof(ShaderCluster));
 				vb_clu.offset = buffer_offset;
 				vb_clu.size = clusters.size() * sizeof(ShaderCluster);
 				std::memcpy(buffer_data + buffer_offset, clusters.data(), vb_clu.size);
@@ -1272,7 +1274,8 @@ namespace wi::scene
 		}
 		if (vb_clu.IsValid())
 		{
-			vb_clu.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_clu.offset, vb_clu.size);
+			static constexpr uint32_t cluster_stride = sizeof(ShaderCluster);
+			vb_clu.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_clu.offset, vb_clu.size, nullptr, &cluster_stride);
 			vb_clu.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_clu.subresource_srv);
 		}
 
