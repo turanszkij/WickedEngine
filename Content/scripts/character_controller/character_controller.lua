@@ -22,7 +22,6 @@ local DrawAxis = function(point,f)
 end
 
 local debug = false -- press H to toggle
-local allow_pushaway_NPC = true -- You can decide whether NPCs can be pushed away by player
 local framerate_lock = false
 local framerate_lock_target = 20
 local slope_threshold = 0.2 -- How much slopeiness will cause character to slide down instead of standing on it
@@ -1252,6 +1251,9 @@ runProcess(function()
 				backlog_post("EXIT")
 				for i,anim in ipairs(scene.Component_GetAnimationArray()) do
 					anim.Stop() -- stop animations because some of them are retargeted and animation source scene will be lost after we exit this script!
+				end
+				for i,character in ipairs(scene.Component_GetCharacterArray()) do
+					character.StopAnimation()
 				end
 				application.SetActivePath(prevPath)
 				killProcesses()

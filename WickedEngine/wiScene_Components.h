@@ -2073,6 +2073,7 @@ namespace wi::scene
 		enum FLAGS
 		{
 			NONE = 0,
+			CHARACTER_TO_CHARACTER_COLLISION_DISABLED = 1 << 0
 		};
 		uint32_t _flags = NONE;
 
@@ -2184,6 +2185,9 @@ namespace wi::scene
 
 		// Returns whether character processing is active or not
 		bool IsActive() const;
+
+		bool IsCharacterToCharacterCollisionDisabled() const { return _flags & CHARACTER_TO_CHARACTER_COLLISION_DISABLED; }
+		void SetCharacterToCharacterCollisionDisabled(bool value = true) { if (value) { _flags |= CHARACTER_TO_CHARACTER_COLLISION_DISABLED; } else { _flags &= ~CHARACTER_TO_CHARACTER_COLLISION_DISABLED; } }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

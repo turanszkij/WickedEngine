@@ -4728,16 +4728,19 @@ int MeshComponent_BindLua::SetMeshSubsetMaterialID(lua_State* L)
 	if (argc >= 2)
 	{
 		size_t subsetindex = (uint32_t)wi::lua::SGetLongLong(L, 1);
-		uint32_t uvset = (uint32_t)wi::lua::SGetLongLong(L, 2);
+		Entity entity = (uint32_t)wi::lua::SGetLongLong(L, 2);
 
-		if(subsetindex < component->subsets.size())
+		const uint32_t lod_count = component->GetLODCount();
+		for (uint32_t lod = 0; lod < lod_count; ++lod)
 		{
-			auto& subsetdata = component->subsets[subsetindex];
-			subsetdata.materialID = uvset;
-		}
-		else
-		{
-			wi::lua::SError(L, "SetMeshSubsetMaterialID(int subsetindex, Entity materialID) index out of range!");
+			uint32_t first_subset = 0;
+			uint32_t last_subset = 0;
+			component->GetLODSubsetRange(lod, first_subset, last_subset);
+			size_t subset_offset = first_subset + subsetindex;
+			if (subset_offset < last_subset)
+			{
+				component->subsets[subset_offset].materialID = entity;
+			}
 		}
 	}
 	else
@@ -4773,11 +4776,25 @@ int MeshComponent_BindLua::GetMeshSubsetMaterialID(lua_State* L)
 }
 int MeshComponent_BindLua::CreateSubset(lua_State* L)
 {
-	int index = (int)component->subsets.size();
-	auto& subset = component->subsets.emplace_back();
-	subset.indexOffset = 0;
-	subset.indexCount = (uint32_t)component->indices.size();
-	wi::lua::SSetInt(L, index);
+	int ret = 0;
+	const uint32_t lod_count = component->GetLODCount();
+	for (uint32_t lod = 0; lod < lod_count; ++lod)
+	{
+		uint32_t first_subset = 0;
+		uint32_t last_subset = 0;
+		component->GetLODSubsetRange(lod, first_subset, last_subset);
+		MeshComponent::MeshSubset subset = component->subsets[last_subset];
+		component->subsets.insert(component->subsets.begin() + last_subset, subset);
+		if (lod == 0)
+		{
+			ret = last_subset;
+		}
+	}
+	if (lod_count > 0)
+	{
+		component->subsets_per_lod++;
+	}
+	wi::lua::SSetInt(L, ret);
 	return 1;
 }
 
@@ -7520,6 +7537,7 @@ Luna<CharacterComponent_BindLua>::FunctionType CharacterComponent_BindLua::metho
 	lunamethod(CharacterComponent_BindLua, SetFacing),
 	lunamethod(CharacterComponent_BindLua, SetRelativeOffset),
 	lunamethod(CharacterComponent_BindLua, SetFootPlacementEnabled),
+	lunamethod(CharacterComponent_BindLua, SetCharacterToCharacterCollisionDisabled),
 
 	lunamethod(CharacterComponent_BindLua, GetHealth),
 	lunamethod(CharacterComponent_BindLua, GetWidth),
@@ -7533,6 +7551,7 @@ Luna<CharacterComponent_BindLua>::FunctionType CharacterComponent_BindLua::metho
 	lunamethod(CharacterComponent_BindLua, IsGrounded),
 	lunamethod(CharacterComponent_BindLua, IsSwimming),
 	lunamethod(CharacterComponent_BindLua, IsFootPlacementEnabled),
+	lunamethod(CharacterComponent_BindLua, IsCharacterToCharacterCollisionDisabled),
 	lunamethod(CharacterComponent_BindLua, GetCapsule),
 	lunamethod(CharacterComponent_BindLua, GetFacing),
 	lunamethod(CharacterComponent_BindLua, GetFacingSmoothed),
@@ -7882,6 +7901,17 @@ int CharacterComponent_BindLua::SetFootPlacementEnabled(lua_State* L)
 	component->SetFootPlacementEnabled(wi::lua::SGetBool(L, 1));
 	return 0;
 }
+int CharacterComponent_BindLua::SetCharacterToCharacterCollisionDisabled(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "SetCharacterToCharacterCollisionDisabled(bool value) not enough arguments!");
+		return 0;
+	}
+	component->SetCharacterToCharacterCollisionDisabled(wi::lua::SGetBool(L, 1));
+	return 0;
+}
 
 int CharacterComponent_BindLua::GetHealth(lua_State* L)
 {
@@ -7941,6 +7971,11 @@ int CharacterComponent_BindLua::IsSwimming(lua_State* L)
 int CharacterComponent_BindLua::IsFootPlacementEnabled(lua_State* L)
 {
 	wi::lua::SSetBool(L, component->IsFootPlacementEnabled());
+	return 1;
+}
+int CharacterComponent_BindLua::IsCharacterToCharacterCollisionDisabled(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsCharacterToCharacterCollisionDisabled());
 	return 1;
 }
 int CharacterComponent_BindLua::GetCapsule(lua_State* L)
