@@ -7021,7 +7021,7 @@ namespace wi::scene
 	void LoadModel2(const std::string& fileName, const XMMATRIX& transformMatrix, Entity rootEntity)
 	{
 		Scene scene;
-		LoadModel(scene, fileName, transformMatrix, rootEntity);
+		LoadModel2(scene, fileName, transformMatrix, rootEntity);
 		GetScene().Merge(scene);
 	}
 
