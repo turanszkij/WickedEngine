@@ -829,6 +829,94 @@ namespace wi::scene
 			}
 		}
 
+		if (meshlets.empty())
+		{
+			const size_t max_vertices = MESHLET_VERTEX_COUNT;
+			const size_t max_triangles = MESHLET_TRIANGLE_COUNT;
+			const float cone_weight = 0.0f;
+
+			const uint32_t lod_count = GetLODCount();
+			for (uint32_t lod = 0; lod < lod_count; ++lod)
+			{
+				uint32_t first_subset = 0;
+				uint32_t last_subset = 0;
+				GetLODSubsetRange(lod, first_subset, last_subset);
+				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+				{
+					const MeshSubset& subset = subsets[subsetIndex];
+
+					size_t max_meshlets = meshopt_buildMeshletsBound(subset.indexCount, max_vertices, max_triangles);
+					std::vector<meshopt_Meshlet> meshopt_meshlets(max_meshlets);
+					std::vector<unsigned int> meshlet_vertices(max_meshlets * max_vertices);
+					std::vector<unsigned char> meshlet_triangles(max_meshlets * max_triangles * 3);
+
+					size_t meshlet_count = meshopt_buildMeshlets(
+						meshopt_meshlets.data(),
+						meshlet_vertices.data(),
+						meshlet_triangles.data(),
+						&indices[subset.indexOffset],
+						subset.indexCount,
+						&vertex_positions[0].x,
+						vertex_positions.size(),
+						sizeof(XMFLOAT3),
+						max_vertices,
+						max_triangles,
+						cone_weight
+					);
+
+					meshlets.reserve(meshlets.size() + meshlet_count);
+
+					SubsetMeshletRange& meshlet_range = meshlet_ranges.emplace_back();
+					meshlet_range.meshletOffset = (uint32_t)meshlets.size();
+					meshlet_range.meshletCount = (uint32_t)meshlet_count;
+
+					const meshopt_Meshlet& last = meshopt_meshlets[meshlet_count - 1];
+
+					meshlet_vertices.resize(last.vertex_offset + last.vertex_count);
+					meshlet_triangles.resize(last.triangle_offset + ((last.triangle_count * 3 + 3) & ~3));
+					meshopt_meshlets.resize(meshlet_count);
+
+					for (size_t i = 0; i < meshopt_meshlets.size(); ++i)
+					{
+						const meshopt_Meshlet& meshlet = meshopt_meshlets[i];
+						meshopt_optimizeMeshlet(
+							&meshlet_vertices[meshlet.vertex_offset],
+							&meshlet_triangles[meshlet.triangle_offset],
+							meshlet.triangle_count,
+							meshlet.vertex_count
+						);
+
+						meshopt_Bounds bounds = meshopt_computeMeshletBounds(
+							&meshlet_vertices[meshlet.vertex_offset],
+							&meshlet_triangles[meshlet.triangle_offset],
+							meshlet.triangle_count,
+							&vertex_positions[0].x,
+							vertex_positions.size(),
+							sizeof(XMFLOAT3)
+						);
+
+						ShaderMeshlet& shader_meshlet = meshlets.emplace_back();
+						shader_meshlet.vertex_offset = meshlet.vertex_offset;
+						shader_meshlet.vertex_count = meshlet.vertex_count;
+						shader_meshlet.triangle_offset = meshlet.triangle_offset;
+						shader_meshlet.triangle_count = meshlet.triangle_count;
+						shader_meshlet.center.x = bounds.center[0];
+						shader_meshlet.center.y = bounds.center[1];
+						shader_meshlet.center.z = bounds.center[2];
+						shader_meshlet.radius = bounds.radius;
+						shader_meshlet.cone_apex.x = bounds.cone_apex[0];
+						shader_meshlet.cone_apex.y = bounds.cone_apex[1];
+						shader_meshlet.cone_apex.z = bounds.cone_apex[2];
+						shader_meshlet.cone_axis.x = bounds.cone_axis[0];
+						shader_meshlet.cone_axis.y = bounds.cone_axis[1];
+						shader_meshlet.cone_axis.z = bounds.cone_axis[2];
+						shader_meshlet.cone_cutoff = bounds.cone_cutoff;
+					}
+				}
+			}
+		}
+		bd.size += AlignTo(meshlets.size() * sizeof(ShaderMeshlet), alignment);
+
 		auto init_callback = [&](void* dest) {
 			uint8_t* buffer_data = (uint8_t*)dest;
 			uint64_t buffer_offset = 0ull;
@@ -1111,6 +1199,14 @@ namespace wi::scene
 					}
 				}
 				vb_mor.size = buffer_offset - vb_mor.offset;
+			}
+
+			if (!meshlets.empty())
+			{
+				vb_msh.offset = buffer_offset;
+				vb_msh.size = meshlets.size() * sizeof(ShaderMeshlet);
+				std::memcpy(buffer_data + buffer_offset, meshlets.data(), vb_msh.size);
+				buffer_offset += AlignTo(vb_msh.size, alignment);
 			}
 		};
 

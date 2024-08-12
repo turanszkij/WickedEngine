@@ -485,8 +485,8 @@ struct alignas(16) ShaderGeometry
 
 	uint indexOffset;
 	uint indexCount;
+	int vb_msh;
 	int padding0;
-	int padding1;
 
 	void init()
 	{
@@ -498,6 +498,7 @@ struct alignas(16) ShaderGeometry
 		vb_col = -1;
 		vb_atl = -1;
 		vb_pre = -1;
+		vb_msh = -1;
 		materialIndex = 0;
 		meshletOffset = 0;
 		meshletCount = 0;
@@ -516,8 +517,8 @@ struct alignas(16) ShaderGeometry
 	}
 };
 
-// 256 triangle batch of a ShaderGeometry
-static const uint MESHLET_TRIANGLE_COUNT = 256u;
+static const uint MESHLET_VERTEX_COUNT = 64u;
+static const uint MESHLET_TRIANGLE_COUNT = 124u;
 inline uint triangle_count_to_meshlet_count(uint triangleCount)
 {
 	return (triangleCount + MESHLET_TRIANGLE_COUNT - 1u) / MESHLET_TRIANGLE_COUNT;
@@ -526,8 +527,21 @@ struct alignas(16) ShaderMeshlet
 {
 	uint instanceIndex;
 	uint geometryIndex;
-	uint primitiveOffset;
-	uint padding;
+	uint primitiveOffset; // within geometry
+	uint padding0;
+
+	uint vertex_offset;
+	uint triangle_offset;
+	uint vertex_count;
+	uint triangle_count;
+
+	float3 center;
+	float radius;
+
+	float3 cone_apex;
+	float padding1;
+	float3 cone_axis;
+	float cone_cutoff; // = cos(angle/2)
 };
 
 struct alignas(16) ShaderTransform
