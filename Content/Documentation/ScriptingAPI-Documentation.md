@@ -1538,6 +1538,7 @@ Implementation of basic character controller features such as movement in the sc
 - SetFacing(Vector value)	-- Set the facing direction of the character
 - SetRelativeOffset(Vector value)	-- Apply a relative offset (relative to facing direction)
 - SetFootPlacementEnabled(bool value)	--Enable/disable foot placement with inverse kinematics
+- SetCharacterToCharacterCollisionDisabled(bool value)	-- Set whether character collision with other characters is disabled or not for this character (default: false)
 
 - GetHealth() : int	-- Get the current health
 - GetWidth() : float	-- Get the horizontal size of the character capsule (same as capsule radius)
@@ -1550,6 +1551,7 @@ Implementation of basic character controller features such as movement in the sc
 - IsGrounded() : bool	-- returns whether the character is currently standing on ground or not
 - IsSwimming() : bool	-- returns whether the character is currently swimming or not
 - IsFootPlacementEnabled() : bool	-- Returns whether foot placement with inverse kinematics is currently enabled or not
+- IsCharacterToCharacterCollisionDisabled()	-- returns whether character collision with other characters is disabled or not for this character (default: false)
 - GetCapsule() : Capsule	-- returns the capsule representing the character
 - GetFacing() : Vector	-- returns the immediate facing of the character
 - GetFacingSmoothed() : Vector	-- returns the smoothed facing of the character

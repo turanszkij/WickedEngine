@@ -3381,8 +3381,6 @@ namespace wi::scene
 					for (size_t humanoid_idx = 0; (humanoid_idx < humanoids.GetCount()) && !constrain; ++humanoid_idx)
 					{
 						const HumanoidComponent& humanoid = humanoids[humanoid_idx];
-						Entity humanoidEntity = humanoids.GetEntity(humanoid_idx);
-						const float facing = GetHumanoidDefaultFacing(humanoid, humanoidEntity);
 						int bone_type_idx = 0;
 						for (auto& bone : humanoid.bones)
 						{
@@ -4390,7 +4388,7 @@ namespace wi::scene
 
 					if (material != nullptr)
 					{
-						object.filterMask |= material->GetFilterMask();
+						object.filterMaskDynamic |= material->GetFilterMask();
 
 						if (material->HasPlanarReflection())
 						{
@@ -5313,6 +5311,18 @@ namespace wi::scene
 		static const XMMATRIX rotY = XMMatrixRotationY(XM_PI);
 		static const int max_substeps = 4;
 
+		character_capsules.resize(characters.GetCount());
+		for (size_t i = 0; i < characters.GetCount(); ++i)
+		{
+			const HumanoidComponent* humanoid = humanoids.GetComponent(characters[i].humanoidEntity);
+			if (humanoid != nullptr && humanoid->IsRagdollPhysicsEnabled())
+			{
+				characters[i].SetActive(false);
+				continue;
+			}
+			character_capsules[i] = characters[i].GetCapsule();
+		}
+
 		wi::jobsystem::Dispatch(ctx, (uint32_t)characters.GetCount(), 1, [&](wi::jobsystem::JobArgs args) {
 			CharacterComponent& character = characters[args.jobIndex];
 			if (!character.IsActive())
@@ -5456,6 +5466,35 @@ namespace wi::scene
 						XMVECTOR desiredMotion = velocityNormalized - undesiredMotion;
 						velocity = desiredMotion * velocityLen;
 						position += collisionNormal * result.depth;
+					}
+				}
+
+				// Check character capsules:
+				if (!character.IsCharacterToCharacterCollisionDisabled())
+				{
+					capsule = Capsule(position, position + height, character.width);
+					XMFLOAT3 incident_position = XMFLOAT3(0, 0, 0);
+					XMFLOAT3 incident_normal = XMFLOAT3(0, 0, 0);
+					float penetration_depth = 0;
+					for (size_t i = 0; i < character_capsules.size(); ++i)
+					{
+						if (i == args.jobIndex)
+							continue;
+						if (!characters[i].IsActive())
+							continue;
+						if (characters[i].IsCharacterToCharacterCollisionDisabled())
+							continue;
+						if (capsule.intersects(character_capsules[i], incident_position, incident_normal, penetration_depth))
+						{
+							XMVECTOR collisionNormal = XMLoadFloat3(&incident_normal);
+							float velocityLen = XMVectorGetX(XMVector3Length(velocity));
+							XMVECTOR velocityNormalized = XMVector3Normalize(velocity);
+							XMVECTOR undesiredMotion = collisionNormal * XMVector3Dot(velocityNormalized, collisionNormal);
+							XMVECTOR desiredMotion = velocityNormalized - undesiredMotion;
+							velocity = desiredMotion * velocityLen;
+							position += collisionNormal * penetration_depth;
+							break;
+						}
 					}
 				}
 

@@ -1884,6 +1884,7 @@ namespace wi::lua::scene
 		int SetFacing(lua_State* L);
 		int SetRelativeOffset(lua_State* L);
 		int SetFootPlacementEnabled(lua_State* L);
+		int SetCharacterToCharacterCollisionDisabled(lua_State* L);
 
 		int GetHealth(lua_State* L);
 		int GetWidth(lua_State* L);
@@ -1901,6 +1902,7 @@ namespace wi::lua::scene
 		int GetFacingSmoothed(lua_State* L);
 		int GetRelativeOffset(lua_State* L);
 		int IsFootPlacementEnabled(lua_State* L);
+		int IsCharacterToCharacterCollisionDisabled(lua_State* L);
 
 		int SetPathGoal(lua_State* L);
 		int GetPathQuery(lua_State* L);
