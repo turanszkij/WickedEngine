@@ -1193,6 +1193,15 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)objectMS_simple.hlsl">
       <Filter>MS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)shadowMS.hlsl">
+      <Filter>MS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)shadowMS_alphatest.hlsl">
+      <Filter>MS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)shadowMS_transparent.hlsl">
+      <Filter>MS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h">

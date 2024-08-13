@@ -322,6 +322,7 @@ struct PixelInput
 	half wet : WET;
 #endif // OBJECTSHADER_USE_WETMAP
 
+#ifndef OBJECTSHADER_COMPILE_MS
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 #ifdef VPRT_EMULATION
 	uint RTIndex : RTINDEX;
@@ -329,7 +330,9 @@ struct PixelInput
 	uint RTIndex : SV_RenderTargetArrayIndex;
 #endif // VPRT_EMULATION
 #endif // OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
+#endif // OBJECTSHADER_COMPILE_MS
 
+#ifndef OBJECTSHADER_COMPILE_MS
 #ifdef OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 #ifdef VPRT_EMULATION
 	uint VPIndex : VPINDEX;
@@ -337,6 +340,7 @@ struct PixelInput
 	uint VPIndex : SV_ViewportArrayIndex;
 #endif // VPRT_EMULATION
 #endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
+#endif // OBJECTSHADER_COMPILE_MS
 
 #ifdef OBJECTSHADER_USE_INSTANCEINDEX
 	inline uint GetInstanceIndex()
@@ -423,7 +427,9 @@ PixelInput vertex_to_pixel_export(VertexInput input)
 
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 	const uint frustum_index = input.GetInstancePointer().GetCameraIndex();
+#ifndef OBJECTSHADER_COMPILE_MS
 	Out.RTIndex = GetCamera(frustum_index).output_index;
+#endif // OBJECTSHADER_COMPILE_MS
 #ifndef OBJECTSHADER_USE_NOCAMERA
 	Out.pos = mul(GetCamera(frustum_index).view_projection, surface.position);
 #endif // OBJECTSHADER_USE_NOCAMERA
@@ -431,7 +437,9 @@ PixelInput vertex_to_pixel_export(VertexInput input)
 
 #ifdef OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 	const uint frustum_index = input.GetInstancePointer().GetCameraIndex();
+#ifndef OBJECTSHADER_COMPILE_MS
 	Out.VPIndex = GetCamera(frustum_index).output_index;
+#endif // OBJECTSHADER_COMPILE_MS
 #ifndef OBJECTSHADER_USE_NOCAMERA
 	Out.pos = mul(GetCamera(frustum_index).view_projection, surface.position);
 #endif // OBJECTSHADER_USE_NOCAMERA

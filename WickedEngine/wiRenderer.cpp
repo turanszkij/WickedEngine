@@ -399,7 +399,7 @@ SHADERTYPE GetMSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, b
 	if (!mesh_shader)
 		return SHADERTYPE_COUNT;
 
-	SHADERTYPE realMS = MSTYPE_OBJECT_SIMPLE;
+	SHADERTYPE realMS = SHADERTYPE_COUNT;
 
 	switch (renderPass)
 	{
@@ -416,6 +416,26 @@ SHADERTYPE GetMSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, b
 		{
 			realMS = MSTYPE_OBJECT_PREPASS;
 		}
+		break;
+	case RENDERPASS_SHADOW:
+		if (transparent)
+		{
+			realMS = MSTYPE_SHADOW_TRANSPARENT;
+		}
+		else
+		{
+			if (alphatest)
+			{
+				realMS = MSTYPE_SHADOW_ALPHATEST;
+			}
+			else
+			{
+				realMS = MSTYPE_SHADOW;
+			}
+		}
+		break;
+	case RENDERPASS_RAINBLOCKER:
+		realMS = MSTYPE_SHADOW;
 		break;
 	}
 
@@ -1197,6 +1217,10 @@ void LoadShaders()
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_OBJECT_PREPASS], "objectMS_prepass.cso"); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_OBJECT_PREPASS_ALPHATEST], "objectMS_prepass_alphatest.cso"); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_OBJECT_SIMPLE], "objectMS_simple.cso"); });
+
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_SHADOW], "shadowMS.cso"); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_SHADOW_ALPHATEST], "shadowMS_alphatest.cso"); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_SHADOW_TRANSPARENT], "shadowMS_transparent.cso"); });
 	}
 
 	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
@@ -1826,10 +1850,12 @@ void LoadShaders()
 
 									if (mesh_shader)
 									{
-										if (tessellation || renderPass > RENDERPASS_PREPASS_DEPTHONLY)
+										if (tessellation)
 											continue;
 										SHADERTYPE realAS = GetASTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency, mesh_shader);
 										SHADERTYPE realMS = GetMSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency, mesh_shader);
+										if (realMS == SHADERTYPE_COUNT)
+											continue;
 										desc.as = realAS < SHADERTYPE_COUNT ? &shaders[realAS] : nullptr;
 										desc.ms = realMS < SHADERTYPE_COUNT ? &shaders[realMS] : nullptr;
 									}
@@ -2879,7 +2905,7 @@ void RenderMeshes(
 	const bool shadowRendering = renderPass == RENDERPASS_SHADOW;
 
 	bool mesh_shader =
-		(renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY || renderPass == RENDERPASS_MAIN) && 
+		(renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY || renderPass == RENDERPASS_MAIN || renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_RAINBLOCKER) &&
 		device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER);
 	//mesh_shader = false;
 
@@ -6136,6 +6162,10 @@ void DrawShadowmaps(
 					{
 						XMStoreFloat4x4(&cb.cameras[cascade].view_projection, shcams[cascade].view_projection);
 						cb.cameras[cascade].output_index = cascade;
+						for (int i = 0; i < arraysize(cb.cameras[cascade].frustum.planes); ++i)
+						{
+							cb.cameras[cascade].frustum.planes[i] = shcams[cascade].frustum.planes[i];
+						}
 
 						Viewport& vp = viewports[cascade];
 						vp.top_left_x = float(shadow_rect.x + cascade * shadow_rect.w);
@@ -6241,6 +6271,10 @@ void DrawShadowmaps(
 
 					XMStoreFloat4x4(&cb.cameras[0].view_projection, shcam.view_projection);
 					cb.cameras[0].output_index = 0;
+					for (int i = 0; i < arraysize(cb.cameras[0].frustum.planes); ++i)
+					{
+						cb.cameras[0].frustum.planes[i] = shcam.frustum.planes[i];
+					}
 					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
 					Viewport vp;
@@ -6340,6 +6374,10 @@ void DrawShadowmaps(
 						//	- there will be only as many cameras, as many cubemap face frustums are visible from main camera
 						//	- output_index is mapping camera to viewport, used by shader to output to SV_ViewportArrayIndex
 						cb.cameras[camera_count].output_index = shcam;
+						for (int i = 0; i < arraysize(cb.cameras[camera_count].frustum.planes); ++i)
+						{
+							cb.cameras[camera_count].frustum.planes[i] = cameras[shcam].frustum.planes[i];
+						}
 						frusta[camera_count] = cameras[shcam].frustum;
 						camera_count++;
 					}
@@ -6481,6 +6519,10 @@ void DrawShadowmaps(
 				const uint cascade = 0;
 				XMStoreFloat4x4(&cb.cameras[cascade].view_projection, shcam.view_projection);
 				cb.cameras[cascade].output_index = cascade;
+				for (int i = 0; i < arraysize(cb.cameras[cascade].frustum.planes); ++i)
+				{
+					cb.cameras[cascade].frustum.planes[i] = shcam.frustum.planes[i];
+				}
 
 				Viewport vp;
 				vp.top_left_x = float(vis.rain_blocker_shadow_rect.x + cascade * vis.rain_blocker_shadow_rect.w);
