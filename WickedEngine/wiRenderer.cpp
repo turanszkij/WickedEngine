@@ -3042,7 +3042,7 @@ void RenderMeshes(
 				device->BindStencilRef(stencilRef, cmd);
 			}
 
-			if (prev_ib != &mesh.generalBuffer)
+			if (!meshShaderRequested && prev_ib != &mesh.generalBuffer)
 			{
 				device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetIndexFormat(), mesh.ib.offset, cmd);
 				prev_ib = &mesh.generalBuffer;
