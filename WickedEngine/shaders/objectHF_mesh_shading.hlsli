@@ -10,7 +10,7 @@ static const uint MS_GROUPSIZE = 64;
 struct AmplificationPayload
 {
 	uint instanceID;
-	uint16_t clusters[AS_GROUPSIZE];
+	uint clusters[AS_GROUPSIZE];
 };
 
 #ifdef OBJECTSHADER_COMPILE_AS
@@ -22,7 +22,11 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID)
 	ShaderGeometry geometry = GetMesh();
 	
 	uint instanceID = Gid.y;
-	amplification_payload.instanceID = instanceID;
+
+	if(WaveIsFirstLane())
+	{
+		amplification_payload.instanceID = instanceID;
+	}
 
 	ShaderMeshInstancePointer poi = bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + instanceID * sizeof(ShaderMeshInstancePointer));
 	ShaderMeshInstance inst = load_instance(poi.GetInstanceIndex());

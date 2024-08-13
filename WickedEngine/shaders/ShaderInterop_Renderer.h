@@ -563,7 +563,7 @@ struct alignas(16) ShaderSphere
 	float3 center;
 	float radius;
 };
-struct alignas(16) ShaderCluster
+struct ShaderCluster
 {
 	ShaderSphere sphere;
 
