@@ -193,6 +193,7 @@ namespace wi::shadercompiler
 				args.push_back(L"ms_6_7");
 				break;
 			}
+			args.push_back(L"-enable-16bit-types");
 			break;
 		case ShaderStage::AS:
 			switch (minshadermodel)
@@ -207,6 +208,7 @@ namespace wi::shadercompiler
 				args.push_back(L"as_6_7");
 				break;
 			}
+			args.push_back(L"-enable-16bit-types");
 			break;
 		case ShaderStage::VS:
 			switch (minshadermodel)

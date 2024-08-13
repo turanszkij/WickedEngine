@@ -10,7 +10,7 @@ static const uint MS_GROUPSIZE = 64;
 struct AmplificationPayload
 {
 	uint instanceID;
-	uint clusters[AS_GROUPSIZE];
+	uint16_t clusters[AS_GROUPSIZE];
 };
 
 #ifdef OBJECTSHADER_COMPILE_AS
@@ -31,6 +31,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID)
 
 	bool visible = DTid.x < geometry.clusterCount;
 
+#if 1
 	// Culling:
 	if (visible && geometry.vb_pre < 0) // vb_pre < 0 when object is not skinned, currently skinned clusters cannot be culled
 	{
@@ -50,6 +51,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID)
 			visible = dot(normalize(cluster.cone_apex - camera.position), cluster.cone_axis) < cluster.cone_cutoff;
 		}
 	}
+#endif
 
 	if (visible)
 	{
