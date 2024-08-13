@@ -1,8 +1,11 @@
 #include "globals.hlsli"
 #include "objectHF.hlsli"
 
-static const uint AS_GROUPSIZE = 64;
-static const uint MS_GROUPSIZE = 64;
+// AS sample: https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12MeshShaders/src/MeshletCull/MeshletAS.hlsl
+// MS sample: https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12MeshShaders/src/MeshletCull/MeshletMS.hlsl
+
+static const uint AS_GROUPSIZE = 32;
+static const uint MS_GROUPSIZE = 128;
 
 struct AmplificationPayload
 {
@@ -14,22 +17,29 @@ struct AmplificationPayload
 groupshared AmplificationPayload amplification_payload;
 
 [numthreads(AS_GROUPSIZE, 1, 1)]
-void main(uint Gid : SV_GroupID, uint DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
+void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID)
 {
-	uint instanceID = Gid;
-	uint clusterID = groupIndex;
+	ShaderGeometry geometry = GetMesh();
+	
+	uint instanceID = Gid.y;
+	amplification_payload.instanceID = instanceID;
 
 	ShaderMeshInstancePointer poi = bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + instanceID * sizeof(ShaderMeshInstancePointer));
 	ShaderMeshInstance inst = load_instance(poi.GetInstanceIndex());
-	ShaderGeometry mesh = GetMesh();
 	
-	amplification_payload.instanceID = instanceID;
-	amplification_payload.clusters[clusterID] = clusterID;
+	uint clusterID = geometry.clusterOffset + DTid.x;
 
-	uint count, stride;
-	bindless_structured_cluster[mesh.vb_clu].GetDimensions(count, stride);
+	bool visible = DTid.x < geometry.clusterCount;
+
+	if (visible)
+	{
+		uint index = WavePrefixCountBits(visible);
+		amplification_payload.clusters[index] = clusterID;
+	}
+
+	uint visibleCount = WaveActiveCountBits(visible);
 	
-	DispatchMesh(count, 1, 1, amplification_payload);
+	DispatchMesh(visibleCount, 1, 1, amplification_payload);
 }
 #endif // OBJECTSHADER_COMPILE_AS
 
@@ -55,8 +65,10 @@ void main(
 	)
 {
 	uint clusterID = amplification_payload.clusters[Gid];
-	ShaderGeometry mesh = GetMesh();
-	ShaderCluster cluster = bindless_structured_cluster[mesh.vb_clu][clusterID];
+	ShaderGeometry geometry = GetMesh();
+	if(clusterID >= geometry.clusterOffset + geometry.clusterCount)
+		return;
+	ShaderCluster cluster = bindless_structured_cluster[geometry.vb_clu][clusterID];
     SetMeshOutputCounts(cluster.vertex_count, cluster.triangle_count);
 	if (groupIndex < cluster.vertex_count)
 	{
@@ -67,10 +79,6 @@ void main(
 		input.instanceID = amplification_payload.instanceID;
 		
 		verts[groupIndex] = vertex_to_pixel_export(input);
-
-		#ifdef OBJECTSHADER_USE_COLOR
-		verts[groupIndex].color = 1;
-		#endif
 	}
 	for (uint i = groupIndex; i < cluster.triangle_count; i += MS_GROUPSIZE)
 	{

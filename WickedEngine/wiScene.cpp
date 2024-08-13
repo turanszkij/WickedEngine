@@ -3931,6 +3931,8 @@ namespace wi::scene
 					geometry.materialIndex = subset.materialIndex;
 					geometry.meshletOffset = mesh.meshletCount;
 					geometry.meshletCount = triangle_count_to_meshlet_count(subset.indexCount / 3u);
+					geometry.clusterOffset = mesh.cluster_ranges[subsetIndex].clusterOffset;
+					geometry.clusterCount = mesh.cluster_ranges[subsetIndex].clusterCount;
 					mesh.meshletCount += geometry.meshletCount;
 					std::memcpy(geometryArrayMapped + mesh.geometryOffset + subsetIndex, &geometry, sizeof(geometry));
 					subsetIndex++;

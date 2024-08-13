@@ -485,8 +485,13 @@ struct alignas(16) ShaderGeometry
 
 	uint indexOffset;
 	uint indexCount;
+	uint padding0;
+	uint padding1;
+
 	int vb_clu;
-	int padding;
+	uint clusterOffset;
+	uint clusterCount;
+	uint padding2;
 
 	void init()
 	{
@@ -498,7 +503,6 @@ struct alignas(16) ShaderGeometry
 		vb_col = -1;
 		vb_atl = -1;
 		vb_pre = -1;
-		vb_clu = -1;
 		materialIndex = 0;
 		meshletOffset = 0;
 		meshletCount = 0;
@@ -514,6 +518,10 @@ struct alignas(16) ShaderGeometry
 		impostorSliceOffset = -1;
 		indexOffset = 0;
 		indexCount = 0;
+
+		vb_clu = -1;
+		clusterOffset = 0;
+		clusterCount = 0;
 	}
 };
 

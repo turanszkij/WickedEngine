@@ -1839,7 +1839,6 @@ void LoadShaders()
 										SHADERTYPE realHS = GetHSTYPE((RENDERPASS)renderPass, tessellation, alphatest);
 										SHADERTYPE realDS = GetDSTYPE((RENDERPASS)renderPass, tessellation, alphatest);
 										SHADERTYPE realGS = GetGSTYPE((RENDERPASS)renderPass, alphatest, transparency);
-										SHADERTYPE realPS = GetPSTYPE((RENDERPASS)renderPass, alphatest, transparency, (MaterialComponent::SHADERTYPE)shaderType);
 
 										if (tessellation && (realHS == SHADERTYPE_COUNT || realDS == SHADERTYPE_COUNT))
 											continue;
@@ -1848,9 +1847,10 @@ void LoadShaders()
 										desc.hs = realHS < SHADERTYPE_COUNT ? &shaders[realHS] : nullptr;
 										desc.ds = realDS < SHADERTYPE_COUNT ? &shaders[realDS] : nullptr;
 										desc.gs = realGS < SHADERTYPE_COUNT ? &shaders[realGS] : nullptr;
-										desc.ps = realPS < SHADERTYPE_COUNT ? &shaders[realPS] : nullptr;
-
 									}
+
+									SHADERTYPE realPS = GetPSTYPE((RENDERPASS)renderPass, alphatest, transparency, (MaterialComponent::SHADERTYPE)shaderType);
+									desc.ps = realPS < SHADERTYPE_COUNT ? &shaders[realPS] : nullptr;
 
 									switch (blendMode)
 									{
@@ -2878,9 +2878,10 @@ void RenderMeshes(
 
 	const bool shadowRendering = renderPass == RENDERPASS_SHADOW;
 
-	const bool mesh_shader =
+	bool mesh_shader =
 		(renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY || renderPass == RENDERPASS_MAIN) && 
 		device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER);
+	//mesh_shader = false;
 
 	// Pre-allocate space for all the instances in GPU-buffer:
 	const size_t alloc_size = renderQueue.size() * camera_count * sizeof(ShaderMeshInstancePointer);
@@ -2919,6 +2920,7 @@ void RenderMeshes(
 
 		const float tessF = mesh.GetTessellationFactor();
 		const bool tessellatorRequested = tessF > 0 && tessellation;
+		const bool meshShaderRequested = !tessellatorRequested && mesh_shader && mesh.vb_clu.IsValid();
 
 		if (forwardLightmaskRequest)
 		{
@@ -2959,7 +2961,7 @@ void RenderMeshes(
 					switch (renderPass)
 					{
 					case RENDERPASS_MAIN:
-						if (mesh_shader)
+						if (meshShaderRequested)
 						{
 							pso = &PSO_object_wire_mesh_shader;
 						}
@@ -2987,7 +2989,7 @@ void RenderMeshes(
 					variant.bits.tessellation = tessellatorRequested;
 					variant.bits.alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
 					variant.bits.sample_count = renderpass_info.sample_count;
-					variant.bits.mesh_shader = mesh_shader;
+					variant.bits.mesh_shader = meshShaderRequested;
 
 					pso = GetObjectPSO(variant);
 					assert(pso->IsValid());
@@ -3040,9 +3042,9 @@ void RenderMeshes(
 			{
 				device->BindPipelineState(pso_backside, cmd);
 				device->PushConstants(&push, sizeof(push), cmd);
-				if (mesh_shader)
+				if (meshShaderRequested)
 				{
-					device->DispatchMesh(1, 1, 1, cmd);
+					device->DispatchMesh((mesh.cluster_ranges[subsetIndex].clusterCount + 31) / 32, instancedBatch.instanceCount, 1, cmd);
 				}
 				else
 				{
@@ -3052,9 +3054,9 @@ void RenderMeshes(
 
 			device->BindPipelineState(pso, cmd);
 			device->PushConstants(&push, sizeof(push), cmd);
-			if (mesh_shader)
+			if (meshShaderRequested)
 			{
-				device->DispatchMesh(instancedBatch.instanceCount, 1, 1, cmd);
+				device->DispatchMesh((mesh.cluster_ranges[subsetIndex].clusterCount + 31) / 32, instancedBatch.instanceCount, 1, cmd);
 			}
 			else
 			{

@@ -829,7 +829,7 @@ namespace wi::scene
 			}
 		}
 
-		if (clusters.empty())
+		//if (clusters.empty())
 		{
 			const size_t max_vertices = CLUSTER_VERTEX_COUNT;
 			const size_t max_triangles = CLUSTER_TRIANGLE_COUNT;
