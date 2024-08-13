@@ -558,23 +558,29 @@ struct ShaderClusterTriangle
 	uint3 tri() { return uint3(i0(), i1(), i2()); }
 	uint flags() { return packed >> 24u; }
 };
-struct alignas(16) ShaderCluster
+struct alignas(16) ShaderSphere
 {
-	uint vertex_offset;
-	uint triangle_offset;
-	uint vertex_count;
-	uint triangle_count;
-
 	float3 center;
 	float radius;
+};
+struct alignas(16) ShaderCluster
+{
+	ShaderSphere sphere;
 
 	float3 cone_apex;
-	float padding1;
+	uint triangleCount_vertexCount;
 	float3 cone_axis;
 	float cone_cutoff; // = cos(angle/2)
 
 	uint vertices[CLUSTER_VERTEX_COUNT];
 	ShaderClusterTriangle triangles[CLUSTER_TRIANGLE_COUNT];
+
+	void init(uint triangleCount, uint vertexCount)
+	{
+		triangleCount_vertexCount = (triangleCount & 0xFFFF) | ((vertexCount & 0xFFFF) << 16u);
+	}
+	uint triangleCount() { return triangleCount_vertexCount & 0xFFFF; }
+	uint vertexCount() { return triangleCount_vertexCount >> 16u; }
 };
 
 struct alignas(16) ShaderTransform
@@ -636,6 +642,7 @@ struct alignas(16) ShaderMeshInstance
 	float4 quaternion;
 	ShaderTransform transform;
 	ShaderTransform transformPrev;
+	ShaderTransform transformRaw; // without quantization remapping applied
 
 	void init()
 	{
@@ -659,6 +666,7 @@ struct alignas(16) ShaderMeshInstance
 		quaternion = float4(0, 0, 0, 1);
 		transform.init();
 		transformPrev.init();
+		transformRaw.init();
 	}
 
 	inline void SetUserStencilRef(uint stencilRef)
@@ -892,11 +900,6 @@ struct alignas(16) ShaderEntity
 #endif // __cplusplus
 };
 
-struct alignas(16) ShaderSphere
-{
-	float3 center;
-	float radius;
-};
 struct alignas(16) ShaderFrustum
 {
 	// Frustum planes:

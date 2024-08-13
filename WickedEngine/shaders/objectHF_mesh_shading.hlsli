@@ -31,6 +31,26 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID)
 
 	bool visible = DTid.x < geometry.clusterCount;
 
+	// Culling:
+	if (visible && geometry.vb_pre < 0) // vb_pre < 0 when object is not skinned, currently skinned clusters cannot be culled
+	{
+		ShaderCluster cluster = bindless_structured_cluster[geometry.vb_clu][clusterID];
+		ShaderCamera camera = GetCamera();
+		
+		// Frustum culling:
+		cluster.sphere.center = mul(inst.transformRaw.GetMatrix(), float4(cluster.sphere.center, 1)).xyz;
+		cluster.sphere.radius = max3(mul((float3x3)inst.transformRaw.GetMatrix(), cluster.sphere.radius.xxx));
+		visible = camera.frustum.intersects(cluster.sphere);
+
+		if (visible)
+		{
+			// Cone culling:
+			cluster.cone_apex = mul(inst.transformRaw.GetMatrix(), float4(cluster.cone_apex, 1)).xyz;
+			cluster.cone_axis = rotate_vector(cluster.cone_axis, inst.quaternion);
+			visible = dot(normalize(cluster.cone_apex - camera.position), cluster.cone_axis) < cluster.cone_cutoff;
+		}
+	}
+
 	if (visible)
 	{
 		uint index = WavePrefixCountBits(visible);
@@ -69,8 +89,8 @@ void main(
 	if(clusterID >= geometry.clusterOffset + geometry.clusterCount)
 		return;
 	ShaderCluster cluster = bindless_structured_cluster[geometry.vb_clu][clusterID];
-    SetMeshOutputCounts(cluster.vertex_count, cluster.triangle_count);
-	if (groupIndex < cluster.vertex_count)
+    SetMeshOutputCounts(cluster.vertexCount(), cluster.triangleCount());
+	if (groupIndex < cluster.vertexCount())
 	{
 		uint vertexID = cluster.vertices[groupIndex];
 
@@ -80,7 +100,7 @@ void main(
 		
 		verts[groupIndex] = vertex_to_pixel_export(input);
 	}
-	for (uint i = groupIndex; i < cluster.triangle_count; i += MS_GROUPSIZE)
+	for (uint i = groupIndex; i < cluster.triangleCount(); i += MS_GROUPSIZE)
 	{
 		triangles[i] = cluster.triangles[i].tri();
 		

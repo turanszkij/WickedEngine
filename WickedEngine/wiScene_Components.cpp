@@ -833,7 +833,7 @@ namespace wi::scene
 		{
 			const size_t max_vertices = CLUSTER_VERTEX_COUNT;
 			const size_t max_triangles = CLUSTER_TRIANGLE_COUNT;
-			const float cone_weight = 0.0f;
+			const float cone_weight = 0.5f;
 
 			const uint32_t lod_count = GetLODCount();
 			for (uint32_t lod = 0; lod < lod_count; ++lod)
@@ -896,20 +896,17 @@ namespace wi::scene
 						);
 
 						ShaderCluster& cluster = clusters.emplace_back();
-						cluster.vertex_offset = meshlet.vertex_offset;
-						cluster.vertex_count = meshlet.vertex_count;
-						cluster.triangle_offset = meshlet.triangle_offset;
-						cluster.triangle_count = meshlet.triangle_count;
-						cluster.center.x = bounds.center[0];
-						cluster.center.y = bounds.center[1];
-						cluster.center.z = bounds.center[2];
-						cluster.radius = bounds.radius;
+						cluster.init(meshlet.triangle_count, meshlet.vertex_count);
+						cluster.sphere.center.x = bounds.center[0];
+						cluster.sphere.center.y = bounds.center[1];
+						cluster.sphere.center.z = bounds.center[2];
+						cluster.sphere.radius = bounds.radius;
 						cluster.cone_apex.x = bounds.cone_apex[0];
 						cluster.cone_apex.y = bounds.cone_apex[1];
 						cluster.cone_apex.z = bounds.cone_apex[2];
-						cluster.cone_axis.x = bounds.cone_axis[0];
-						cluster.cone_axis.y = bounds.cone_axis[1];
-						cluster.cone_axis.z = bounds.cone_axis[2];
+						cluster.cone_axis.x = -bounds.cone_axis[0];
+						cluster.cone_axis.y = -bounds.cone_axis[1];
+						cluster.cone_axis.z = -bounds.cone_axis[2];
 						cluster.cone_cutoff = bounds.cone_cutoff;
 						for (size_t tri = 0; tri < meshlet.triangle_count; ++tri)
 						{
