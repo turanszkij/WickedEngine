@@ -1841,7 +1841,7 @@ void LoadShaders()
 								continue;
 							for (uint32_t alphatest = 0; alphatest <= 1; ++alphatest)
 							{
-								for (uint32_t mesh_shader = 0; mesh_shader <= (device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER) ? 1u : 0u); ++mesh_shader)
+								for (uint32_t mesh_shader = 0; mesh_shader <= (IsMeshShaderAllowed() ? 1u : 0u); ++mesh_shader)
 								{
 									const bool transparency = blendMode != BLENDMODE_OPAQUE;
 									if ((renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY) && transparency)
@@ -17998,6 +17998,7 @@ float GetGIBoost()
 void SetMeshShaderAllowed(bool value)
 {
 	MESH_SHADER_ALLOWED = value;
+	ReloadShaders(); // Creating mesh shader pipelines is too slow, so if it's disabled we avoid it
 }
 bool IsMeshShaderAllowed()
 {
