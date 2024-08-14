@@ -959,6 +959,10 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		{
 			ss += "Morph target count: " + std::to_string(mesh->morph_targets.size()) + "\n";
 		}
+		if (!mesh->cluster_ranges.empty())
+		{
+			ss += "Cluster count: " + std::to_string(mesh->GetClusterCount()) + "\n";
+		}
 		ss += "CPU memory: " + wi::helper::GetMemorySizeText(mesh->GetMemoryUsageCPU()) + "\n";
 		if (mesh->bvh.IsValid())
 		{

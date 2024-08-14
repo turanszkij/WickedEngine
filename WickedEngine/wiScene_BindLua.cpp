@@ -4776,7 +4776,7 @@ int MeshComponent_BindLua::GetMeshSubsetMaterialID(lua_State* L)
 }
 int MeshComponent_BindLua::CreateSubset(lua_State* L)
 {
-	wi::lua::SSetInt(L, component->CreateSubset());
+	wi::lua::SSetInt(L, (int)component->CreateSubset());
 	return 1;
 }
 

@@ -1871,7 +1871,16 @@ namespace wi::scene
 			bvh.allocation.capacity() +
 			bvh_leaf_aabbs.size() * sizeof(wi::primitive::AABB);
 	}
-	int MeshComponent::CreateSubset()
+	size_t MeshComponent::GetClusterCount() const
+	{
+		size_t cnt = 0;
+		for (auto& x : cluster_ranges)
+		{
+			cnt = std::max(cnt, size_t(x.clusterOffset + x.clusterCount));
+		}
+		return cnt;
+	}
+	size_t MeshComponent::CreateSubset()
 	{
 		int ret = 0;
 		const uint32_t lod_count = GetLODCount();
@@ -1886,7 +1895,7 @@ namespace wi::scene
 			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 			{
 				subset.indexOffset = std::min(subset.indexOffset, subsets[subsetIndex].indexOffset);
-				subset.indexCount = std::max(subset.indexCount, subsets[subsetIndex].indexCount);
+				subset.indexCount = std::max(subset.indexCount, subsets[subsetIndex].indexOffset + subsets[subsetIndex].indexCount);
 			}
 			subsets.insert(subsets.begin() + last_subset, subset);
 			if (lod == 0)
