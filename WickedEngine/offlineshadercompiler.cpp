@@ -361,6 +361,16 @@ wi::vector<ShaderEntry> shaders = {
 
 	{"emittedparticleMS", wi::graphics::ShaderStage::MS },
 
+	{"objectMS", wi::graphics::ShaderStage::MS },
+	{"objectMS_prepass", wi::graphics::ShaderStage::MS },
+	{"objectMS_prepass_alphatest", wi::graphics::ShaderStage::MS },
+	{"objectMS_simple", wi::graphics::ShaderStage::MS },
+	{"shadowMS", wi::graphics::ShaderStage::MS },
+	{"shadowMS_alphatest", wi::graphics::ShaderStage::MS },
+	{"shadowMS_transparent", wi::graphics::ShaderStage::MS },
+
+	{"objectAS", wi::graphics::ShaderStage::AS },
+
 
 	//{"rtreflectionLIB", wi::graphics::ShaderStage::LIB },
 };
