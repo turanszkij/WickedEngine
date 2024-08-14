@@ -4794,6 +4794,7 @@ int MeshComponent_BindLua::CreateSubset(lua_State* L)
 	{
 		component->subsets_per_lod++;
 	}
+	component->CreateRenderData(); // mesh shader needs to rebuild clusters, otherwise wouldn't be needed
 	wi::lua::SSetInt(L, ret);
 	return 1;
 }

@@ -137,6 +137,7 @@ bool DDGI_DEBUG_ENABLED = false;
 uint32_t DDGI_RAYCOUNT = 256u;
 float DDGI_BLEND_SPEED = 0.1f;
 float GI_BOOST = 1.0f;
+bool MESH_SHADER_ALLOWED = true;
 std::atomic<size_t> SHADER_ERRORS{ 0 };
 std::atomic<size_t> SHADER_MISSING{ 0 };
 bool VXGI_ENABLED = false;
@@ -2904,10 +2905,8 @@ void RenderMeshes(
 
 	const bool shadowRendering = renderPass == RENDERPASS_SHADOW;
 
-	bool mesh_shader =
-		(renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY || renderPass == RENDERPASS_MAIN || renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_RAINBLOCKER) &&
-		device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER);
-	//mesh_shader = false;
+	const bool mesh_shader = IsMeshShaderAllowed() &&
+		(renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY || renderPass == RENDERPASS_MAIN || renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_RAINBLOCKER);
 
 	// Pre-allocate space for all the instances in GPU-buffer:
 	const size_t alloc_size = renderQueue.size() * camera_count * sizeof(ShaderMeshInstancePointer);
@@ -17995,6 +17994,14 @@ void SetGIBoost(float value)
 float GetGIBoost()
 {
 	return GI_BOOST;
+}
+void SetMeshShaderAllowed(bool value)
+{
+	MESH_SHADER_ALLOWED = value;
+}
+bool IsMeshShaderAllowed()
+{
+	return MESH_SHADER_ALLOWED && device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER);
 }
 
 wi::Resource CreatePaintableTexture(uint32_t width, uint32_t height, uint32_t mips, wi::Color initialColor)

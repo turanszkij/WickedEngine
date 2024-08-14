@@ -15,6 +15,7 @@ public:
 	wi::gui::Label pathTraceStatisticsLabel;
 	wi::gui::CheckBox occlusionCullingCheckBox;
 	wi::gui::CheckBox visibilityComputeShadingCheckBox;
+	wi::gui::CheckBox meshShaderCheckBox;
 	wi::gui::Slider resolutionScaleSlider;
 	wi::gui::Slider streamingSlider;
 	wi::gui::Slider GIBoostSlider;

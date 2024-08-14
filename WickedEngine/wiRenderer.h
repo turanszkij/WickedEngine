@@ -1097,6 +1097,8 @@ namespace wi::renderer
 	float GetDDGIBlendSpeed();
 	void SetGIBoost(float value);
 	float GetGIBoost();
+	void SetMeshShaderAllowed(bool value);
+	bool IsMeshShaderAllowed();
 	void Workaround( const int bug, wi::graphics::CommandList cmd);
 
 	// Gets pick ray according to the current screen resolution and pointer coordinates. Can be used as input into RayIntersectWorld()

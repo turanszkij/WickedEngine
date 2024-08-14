@@ -137,6 +137,22 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&visibilityComputeShadingCheckBox);
 
+	meshShaderCheckBox.Create("Allow Mesh Shader: ");
+	meshShaderCheckBox.SetTooltip("Allow using mesh shaders to render objects (Requires support from GPU).");
+	meshShaderCheckBox.SetPos(XMFLOAT2(x, y += step));
+	meshShaderCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	if (editor->main->config.GetSection("graphics").Has("mesh_shader"))
+	{
+		wi::renderer::SetMeshShaderAllowed(editor->main->config.GetSection("graphics").GetBool("mesh_shader"));
+	}
+	meshShaderCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		wi::renderer::SetMeshShaderAllowed(args.bValue);
+		editor->main->config.GetSection("graphics").Set("mesh_shader", args.bValue);
+		editor->main->config.Commit();
+	});
+	AddWidget(&meshShaderCheckBox);
+	meshShaderCheckBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(wi::graphics::GraphicsDeviceCapability::MESH_SHADER));
+
 	GIBoostSlider.Create(1, 10, 1.0f, 1000.0f, "GI Boost: ");
 	GIBoostSlider.SetTooltip("Adjust the strength of GI.\nNote that values other than 1.0 will cause mismatch with path tracing reference!");
 	GIBoostSlider.SetSize(XMFLOAT2(wid, itemheight));
@@ -1506,6 +1522,7 @@ void GraphicsWindow::Update()
 	occlusionCullingCheckBox.SetCheck(wi::renderer::GetOcclusionCullingEnabled());
 	GIBoostSlider.SetValue(wi::renderer::GetGIBoost());
 	visibilityComputeShadingCheckBox.SetCheck(editor->renderPath->visibility_shading_in_compute);
+	meshShaderCheckBox.SetCheck(wi::renderer::IsMeshShaderAllowed());
 	resolutionScaleSlider.SetValue(editor->resolutionScale);
 	streamingSlider.SetValue(wi::resourcemanager::GetStreamingMemoryThreshold());
 	MSAAComboBox.SetSelectedByUserdataWithoutCallback(editor->renderPath->getMSAASampleCount());
@@ -1668,6 +1685,7 @@ void GraphicsWindow::ResizeLayout()
 		advancedLightCullingCheckBox.SetVisible(false);
 		occlusionCullingCheckBox.SetVisible(false);
 		visibilityComputeShadingCheckBox.SetVisible(false);
+		meshShaderCheckBox.SetVisible(false);
 		tessellationCheckBox.SetVisible(false);
 	}
 	else
@@ -1684,6 +1702,7 @@ void GraphicsWindow::ResizeLayout()
 		advancedLightCullingCheckBox.SetVisible(true);
 		occlusionCullingCheckBox.SetVisible(true);
 		visibilityComputeShadingCheckBox.SetVisible(true);
+		meshShaderCheckBox.SetVisible(true);
 		tessellationCheckBox.SetVisible(true);
 
 		add(shadowTypeComboBox);
@@ -1698,6 +1717,7 @@ void GraphicsWindow::ResizeLayout()
 		advancedLightCullingCheckBox.SetPos(XMFLOAT2(debugLightCullingCheckBox.GetPos().x - advancedLightCullingCheckBox.GetSize().x - 70, debugLightCullingCheckBox.GetPos().y));
 		add_right(occlusionCullingCheckBox);
 		add_right(visibilityComputeShadingCheckBox);
+		add_right(meshShaderCheckBox);
 		add_right(tessellationCheckBox);
 	}
 
