@@ -10,7 +10,7 @@ static const uint MS_GROUPSIZE = 64;
 struct AmplificationPayload
 {
 	uint instanceID;
-	uint clusters[AS_GROUPSIZE];
+	min16uint meshlets[AS_GROUPSIZE];
 };
 
 #ifdef OBJECTSHADER_COMPILE_AS
@@ -31,15 +31,15 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID)
 	ShaderMeshInstancePointer poi = bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + instanceID * sizeof(ShaderMeshInstancePointer));
 	ShaderMeshInstance inst = load_instance(poi.GetInstanceIndex());
 	
-	uint clusterID = geometry.clusterOffset + DTid.x;
+	uint meshletID = geometry.meshletOffset + DTid.x;
 
-	bool visible = DTid.x < geometry.clusterCount;
+	bool visible = DTid.x < geometry.meshletCount;
 
 #if 1
 	// Culling:
 	if (visible && geometry.vb_pre < 0) // vb_pre < 0 when object is not skinned, currently skinned clusters cannot be culled
 	{
-		ShaderCluster cluster = bindless_structured_cluster[geometry.vb_clu][clusterID];
+		ShaderCluster cluster = bindless_structured_cluster[geometry.vb_clu][meshletID];
 		ShaderCamera camera = GetCamera(poi.GetCameraIndex());
 		
 		// Frustum culling:
@@ -60,7 +60,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID)
 	if (visible)
 	{
 		uint index = WavePrefixCountBits(visible);
-		amplification_payload.clusters[index] = clusterID;
+		amplification_payload.meshlets[index] = meshletID;
 	}
 
 	uint visibleCount = WaveActiveCountBits(visible);
@@ -93,18 +93,18 @@ void main(
 	uint Gid : SV_GroupID,
 	uint groupIndex : SV_GroupIndex,
     in payload AmplificationPayload amplification_payload,
-	out vertices PixelInput verts[CLUSTER_VERTEX_COUNT],
-	out indices uint3 triangles[CLUSTER_TRIANGLE_COUNT]
+	out vertices PixelInput verts[MESHLET_VERTEX_COUNT],
+	out indices uint3 triangles[MESHLET_TRIANGLE_COUNT]
 #if defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX) || defined(OBJECTSHADER_USE_RENDERTARGETARRAYINDEX) || defined(OBJECTSHADER_USE_VIEWPORTARRAYINDEX)
-	,out primitives PrimitiveAttributes primitives[CLUSTER_TRIANGLE_COUNT]
+	,out primitives PrimitiveAttributes primitives[MESHLET_TRIANGLE_COUNT]
 #endif
 	)
 {
-	uint clusterID = amplification_payload.clusters[Gid];
+	uint meshletID = amplification_payload.meshlets[Gid];
 	ShaderGeometry geometry = GetMesh();
-	if(clusterID >= geometry.clusterOffset + geometry.clusterCount)
+	if(meshletID >= geometry.meshletOffset + geometry.meshletCount)
 		return;
-	ShaderCluster cluster = bindless_structured_cluster[geometry.vb_clu][clusterID];
+	ShaderCluster cluster = bindless_structured_cluster[geometry.vb_clu][meshletID];
 	ShaderMeshInstancePointer poi = bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + amplification_payload.instanceID * sizeof(ShaderMeshInstancePointer));
     SetMeshOutputCounts(cluster.vertexCount(), cluster.triangleCount());
 	for (uint i = groupIndex; i < cluster.vertexCount(); i += MS_GROUPSIZE)

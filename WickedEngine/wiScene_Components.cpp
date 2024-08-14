@@ -831,8 +831,8 @@ namespace wi::scene
 
 		//if (clusters.empty())
 		{
-			const size_t max_vertices = CLUSTER_VERTEX_COUNT;
-			const size_t max_triangles = CLUSTER_TRIANGLE_COUNT;
+			const size_t max_vertices = MESHLET_VERTEX_COUNT;
+			const size_t max_triangles = MESHLET_TRIANGLE_COUNT;
 			const float cone_weight = 0.5f;
 
 			const uint32_t lod_count = GetLODCount();

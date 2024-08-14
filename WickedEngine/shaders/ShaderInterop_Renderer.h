@@ -485,13 +485,9 @@ struct alignas(16) ShaderGeometry
 
 	uint indexOffset;
 	uint indexCount;
-	uint padding0;
-	uint padding1;
-
 	int vb_clu;
-	uint clusterOffset;
-	uint clusterCount;
-	uint padding2;
+	uint padding;
+
 
 	void init()
 	{
@@ -503,6 +499,7 @@ struct alignas(16) ShaderGeometry
 		vb_col = -1;
 		vb_atl = -1;
 		vb_pre = -1;
+		vb_clu = -1;
 		materialIndex = 0;
 		meshletOffset = 0;
 		meshletCount = 0;
@@ -518,19 +515,16 @@ struct alignas(16) ShaderGeometry
 		impostorSliceOffset = -1;
 		indexOffset = 0;
 		indexCount = 0;
-
-		vb_clu = -1;
-		clusterOffset = 0;
-		clusterCount = 0;
 	}
 };
 
-static const uint MESHLET_TRIANGLE_COUNT = 256u;
+static const uint MESHLET_VERTEX_COUNT = 64u;
+static const uint MESHLET_TRIANGLE_COUNT = 124u;
 inline uint triangle_count_to_meshlet_count(uint triangleCount)
 {
 	return (triangleCount + MESHLET_TRIANGLE_COUNT - 1u) / MESHLET_TRIANGLE_COUNT;
 }
-struct alignas(16) ShaderMeshlet
+struct ShaderMeshlet
 {
 	uint instanceIndex;
 	uint geometryIndex;
@@ -538,9 +532,6 @@ struct alignas(16) ShaderMeshlet
 	uint padding;
 };
 
-
-static const uint CLUSTER_VERTEX_COUNT = 64u;
-static const uint CLUSTER_TRIANGLE_COUNT = 124u;
 struct ShaderClusterTriangle
 {
 	uint packed;
@@ -558,7 +549,7 @@ struct ShaderClusterTriangle
 	uint3 tri() { return uint3(i0(), i1(), i2()); }
 	uint flags() { return packed >> 24u; }
 };
-struct alignas(16) ShaderSphere
+struct ShaderSphere
 {
 	float3 center;
 	float radius;
@@ -572,8 +563,8 @@ struct ShaderCluster
 	float3 cone_axis;
 	float cone_cutoff; // = cos(angle/2)
 
-	uint vertices[CLUSTER_VERTEX_COUNT];
-	ShaderClusterTriangle triangles[CLUSTER_TRIANGLE_COUNT];
+	uint vertices[MESHLET_VERTEX_COUNT];
+	ShaderClusterTriangle triangles[MESHLET_TRIANGLE_COUNT];
 
 	void init(uint triangleCount, uint vertexCount)
 	{
