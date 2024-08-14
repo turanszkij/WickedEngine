@@ -896,18 +896,16 @@ namespace wi::scene
 						);
 
 						ShaderCluster& cluster = clusters.emplace_back();
-						cluster.init(meshlet.triangle_count, meshlet.vertex_count);
 						cluster.sphere.center.x = bounds.center[0];
 						cluster.sphere.center.y = bounds.center[1];
 						cluster.sphere.center.z = bounds.center[2];
 						cluster.sphere.radius = bounds.radius;
-						cluster.cone_apex.x = bounds.cone_apex[0];
-						cluster.cone_apex.y = bounds.cone_apex[1];
-						cluster.cone_apex.z = bounds.cone_apex[2];
 						cluster.cone_axis.x = -bounds.cone_axis[0];
 						cluster.cone_axis.y = -bounds.cone_axis[1];
 						cluster.cone_axis.z = -bounds.cone_axis[2];
 						cluster.cone_cutoff = bounds.cone_cutoff;
+						cluster.vertexCount = meshlet.vertex_count;
+						cluster.triangleCount = meshlet.triangle_count;
 						for (size_t tri = 0; tri < meshlet.triangle_count; ++tri)
 						{
 							cluster.triangles[tri].init(

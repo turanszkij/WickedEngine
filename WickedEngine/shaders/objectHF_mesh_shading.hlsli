@@ -1,8 +1,8 @@
 #include "globals.hlsli"
 #include "objectHF.hlsli"
 
-// AS sample: https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12MeshShaders/src/MeshletCull/MeshletAS.hlsl
-// MS sample: https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12MeshShaders/src/MeshletCull/MeshletMS.hlsl
+#define FRUSTUM_CULLING
+#define CONE_CULLING
 
 static const uint AS_GROUPSIZE = 32;
 static const uint MS_GROUPSIZE = 64;
@@ -34,28 +34,34 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID)
 	uint meshletID = geometry.meshletOffset + DTid.x;
 
 	bool visible = DTid.x < geometry.meshletCount;
-
-#if 1
+	
 	// Culling:
 	if (visible && geometry.vb_pre < 0) // vb_pre < 0 when object is not skinned, currently skinned clusters cannot be culled
 	{
 		ShaderCluster cluster = bindless_structured_cluster[geometry.vb_clu][meshletID];
 		ShaderCamera camera = GetCamera(poi.GetCameraIndex());
-		
+
+#ifdef FRUSTUM_CULLING
 		// Frustum culling:
 		cluster.sphere.center = mul(inst.transformRaw.GetMatrix(), float4(cluster.sphere.center, 1)).xyz;
 		cluster.sphere.radius = max3(mul((float3x3)inst.transformRaw.GetMatrix(), cluster.sphere.radius.xxx));
-		visible = camera.frustum.intersects(cluster.sphere);
+		visible &= camera.frustum.intersects(cluster.sphere);
+#endif // FRUSTUM_CULLING
 
-		if (visible)
+#ifdef CONE_CULLING
+		// Cone culling:
+		cluster.cone_axis = rotate_vector(cluster.cone_axis, inst.quaternion);
+		if (camera.options & SHADERCAMERA_OPTION_ORTHO)
 		{
-			// Cone culling:
-			cluster.cone_apex = mul(inst.transformRaw.GetMatrix(), float4(cluster.cone_apex, 1)).xyz;
-			cluster.cone_axis = rotate_vector(cluster.cone_axis, inst.quaternion);
-			visible = dot(normalize(cluster.cone_apex - camera.position), cluster.cone_axis) < cluster.cone_cutoff;
+			visible &= dot(camera.forward, cluster.cone_axis) < cluster.cone_cutoff;
 		}
+		else
+		{
+			visible &= dot(cluster.sphere.center - camera.position, cluster.cone_axis) < cluster.cone_cutoff * length(cluster.sphere.center - camera.position) + cluster.sphere.radius;
+		}
+#endif // CONE_CULLING
+		
 	}
-#endif
 
 	if (visible)
 	{
@@ -106,8 +112,8 @@ void main(
 		return;
 	ShaderCluster cluster = bindless_structured_cluster[geometry.vb_clu][meshletID];
 	ShaderMeshInstancePointer poi = bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + amplification_payload.instanceID * sizeof(ShaderMeshInstancePointer));
-	SetMeshOutputCounts(cluster.vertexCount(), cluster.triangleCount());
-	for (uint i = groupIndex; i < cluster.vertexCount(); i += MS_GROUPSIZE)
+	SetMeshOutputCounts(cluster.vertexCount, cluster.triangleCount);
+	for (uint i = groupIndex; i < cluster.vertexCount; i += MS_GROUPSIZE)
 	{
 		uint vertexID = cluster.vertices[i];
 
@@ -117,7 +123,7 @@ void main(
 		
 		verts[i] = vertex_to_pixel_export(input);
 	}
-	for (uint i = groupIndex; i < cluster.triangleCount(); i += MS_GROUPSIZE)
+	for (uint i = groupIndex; i < cluster.triangleCount; i += MS_GROUPSIZE)
 	{
 		triangles[i] = cluster.triangles[i].tri();
 		

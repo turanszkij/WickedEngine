@@ -524,7 +524,7 @@ inline uint triangle_count_to_meshlet_count(uint triangleCount)
 {
 	return (triangleCount + MESHLET_TRIANGLE_COUNT - 1u) / MESHLET_TRIANGLE_COUNT;
 }
-struct ShaderMeshlet
+struct alignas(16) ShaderMeshlet
 {
 	uint instanceIndex;
 	uint geometryIndex;
@@ -549,29 +549,25 @@ struct ShaderClusterTriangle
 	uint3 tri() { return uint3(i0(), i1(), i2()); }
 	uint flags() { return packed >> 24u; }
 };
-struct ShaderSphere
+struct alignas(16) ShaderSphere
 {
 	float3 center;
 	float radius;
 };
-struct ShaderCluster
+struct alignas(16) ShaderCluster
 {
 	ShaderSphere sphere;
 
-	float3 cone_apex;
-	uint triangleCount_vertexCount;
 	float3 cone_axis;
-	float cone_cutoff; // = cos(angle/2)
+	float cone_cutoff;
+
+	uint triangleCount;
+	uint vertexCount;
+	uint padding0;
+	uint padding1;
 
 	uint vertices[MESHLET_VERTEX_COUNT];
 	ShaderClusterTriangle triangles[MESHLET_TRIANGLE_COUNT];
-
-	void init(uint triangleCount, uint vertexCount)
-	{
-		triangleCount_vertexCount = (triangleCount & 0xFFFF) | ((vertexCount & 0xFFFF) << 16u);
-	}
-	uint triangleCount() { return triangleCount_vertexCount & 0xFFFF; }
-	uint vertexCount() { return triangleCount_vertexCount >> 16u; }
 };
 
 struct alignas(16) ShaderTransform
@@ -1119,6 +1115,7 @@ enum SHADERCAMERA_OPTIONS
 {
 	SHADERCAMERA_OPTION_NONE = 0,
 	SHADERCAMERA_OPTION_USE_SHADOW_MASK = 1 << 0,
+	SHADERCAMERA_OPTION_ORTHO = 1 << 1,
 };
 
 struct alignas(16) ShaderCamera

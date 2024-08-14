@@ -6166,6 +6166,10 @@ void DrawShadowmaps(
 						{
 							cb.cameras[cascade].frustum.planes[i] = shcams[cascade].frustum.planes[i];
 						}
+						cb.cameras[cascade].options = SHADERCAMERA_OPTION_ORTHO;
+						cb.cameras[cascade].forward.x = -light.direction.x;
+						cb.cameras[cascade].forward.y = -light.direction.y;
+						cb.cameras[cascade].forward.z = -light.direction.z;
 
 						Viewport& vp = viewports[cascade];
 						vp.top_left_x = float(shadow_rect.x + cascade * shadow_rect.w);
@@ -6306,6 +6310,7 @@ void DrawShadowmaps(
 				if (!vis.visibleHairs.empty())
 				{
 					cb.cameras[0].position = vis.camera->Eye;
+					cb.cameras[0].options = SHADERCAMERA_OPTION_NONE;
 					XMStoreFloat4x4(&cb.cameras[0].view_projection, shcam.view_projection);
 					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
@@ -6374,6 +6379,7 @@ void DrawShadowmaps(
 						//	- there will be only as many cameras, as many cubemap face frustums are visible from main camera
 						//	- output_index is mapping camera to viewport, used by shader to output to SV_ViewportArrayIndex
 						cb.cameras[camera_count].output_index = shcam;
+						cb.cameras[camera_count].options = SHADERCAMERA_OPTION_NONE;
 						for (int i = 0; i < arraysize(cb.cameras[camera_count].frustum.planes); ++i)
 						{
 							cb.cameras[camera_count].frustum.planes[i] = cameras[shcam].frustum.planes[i];
