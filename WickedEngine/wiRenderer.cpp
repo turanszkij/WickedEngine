@@ -137,7 +137,7 @@ bool DDGI_DEBUG_ENABLED = false;
 uint32_t DDGI_RAYCOUNT = 256u;
 float DDGI_BLEND_SPEED = 0.1f;
 float GI_BOOST = 1.0f;
-bool MESH_SHADER_ALLOWED = true;
+bool MESH_SHADER_ALLOWED = false;
 std::atomic<size_t> SHADER_ERRORS{ 0 };
 std::atomic<size_t> SHADER_MISSING{ 0 };
 bool VXGI_ENABLED = false;
