@@ -5265,7 +5265,6 @@ using namespace vulkan_internal;
 				auto shader_internal = to_internal(shader);
 
 				uint32_t i = 0;
-				size_t check_max = internal_state->layoutBindings.size(); // dont't check for duplicates within self table
 				for (auto& x : shader_internal->layoutBindings)
 				{
 					bool found = false;
@@ -5283,8 +5282,6 @@ using namespace vulkan_internal;
 							y.stageFlags |= x.stageFlags;
 							break;
 						}
-						if (j++ >= check_max)
-							break;
 					}
 
 					if (!found)
