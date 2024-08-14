@@ -38,26 +38,29 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID)
 	// Culling:
 	if (visible && geometry.vb_pre < 0) // vb_pre < 0 when object is not skinned, currently skinned clusters cannot be culled
 	{
-		ShaderCluster cluster = bindless_structured_cluster[geometry.vb_clu][meshletID];
+		ShaderClusterBounds bounds = bindless_structured_cluster_bounds[geometry.vb_bou][meshletID];
 		ShaderCamera camera = GetCamera(poi.GetCameraIndex());
 
 #ifdef FRUSTUM_CULLING
 		// Frustum culling:
-		cluster.sphere.center = mul(inst.transformRaw.GetMatrix(), float4(cluster.sphere.center, 1)).xyz;
-		cluster.sphere.radius = max3(mul((float3x3)inst.transformRaw.GetMatrix(), cluster.sphere.radius.xxx));
-		visible &= camera.frustum.intersects(cluster.sphere);
+		bounds.sphere.center = mul(inst.transformRaw.GetMatrix(), float4(bounds.sphere.center, 1)).xyz;
+		bounds.sphere.radius = max3(mul((float3x3)inst.transformRaw.GetMatrix(), bounds.sphere.radius.xxx));
+		visible &= camera.frustum.intersects(bounds.sphere);
 #endif // FRUSTUM_CULLING
 
 #ifdef CONE_CULLING
-		// Cone culling:
-		cluster.cone_axis = rotate_vector(cluster.cone_axis, inst.quaternion);
-		if (camera.options & SHADERCAMERA_OPTION_ORTHO)
+		if((geometry.flags & SHADERMESH_FLAG_DOUBLE_SIDED) == 0) // disable cone culling for double sided
 		{
-			visible &= dot(camera.forward, cluster.cone_axis) < cluster.cone_cutoff;
-		}
-		else
-		{
-			visible &= dot(cluster.sphere.center - camera.position, cluster.cone_axis) < cluster.cone_cutoff * length(cluster.sphere.center - camera.position) + cluster.sphere.radius;
+			// Cone culling:
+			bounds.cone_axis = rotate_vector(bounds.cone_axis, inst.quaternion);
+			if (camera.options & SHADERCAMERA_OPTION_ORTHO)
+			{
+				visible &= dot(camera.forward, bounds.cone_axis) < bounds.cone_cutoff;
+			}
+			else
+			{
+				visible &= dot(bounds.sphere.center - camera.position, bounds.cone_axis) < bounds.cone_cutoff * length(bounds.sphere.center - camera.position) + bounds.sphere.radius;
+			}
 		}
 #endif // CONE_CULLING
 		

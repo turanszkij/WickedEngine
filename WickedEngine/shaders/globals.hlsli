@@ -367,6 +367,7 @@ static const BindlessResource<StructuredBuffer<ShaderMeshInstance>> bindless_str
 static const BindlessResource<StructuredBuffer<ShaderGeometry>> bindless_structured_geometry;
 static const BindlessResource<StructuredBuffer<ShaderMeshlet>> bindless_structured_meshlet;
 static const BindlessResource<StructuredBuffer<ShaderCluster>> bindless_structured_cluster;
+static const BindlessResource<StructuredBuffer<ShaderClusterBounds>> bindless_structured_cluster_bounds;
 static const BindlessResource<StructuredBuffer<ShaderMaterial>> bindless_structured_material;
 static const BindlessResource<StructuredBuffer<uint>> bindless_structured_uint;
 static const BindlessResource<StructuredBuffer<ShaderTerrainChunk>> bindless_structured_terrain_chunks;
@@ -375,6 +376,7 @@ static const BindlessResource<StructuredBuffer<ShaderTerrainChunk>> bindless_str
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderGeometry> bindless_structured_geometry[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMeshlet> bindless_structured_meshlet[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderCluster> bindless_structured_cluster[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderClusterBounds> bindless_structured_cluster_bounds[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMaterial> bindless_structured_material[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<uint> bindless_structured_uint[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderTerrainChunk> bindless_structured_terrain_chunks[];
@@ -383,9 +385,10 @@ StructuredBuffer<ShaderMeshInstance> bindless_structured_meshinstance[] : regist
 StructuredBuffer<ShaderGeometry> bindless_structured_geometry[] : register(space38);
 StructuredBuffer<ShaderMeshlet> bindless_structured_meshlet[] : register(space39);
 StructuredBuffer<ShaderCluster> bindless_structured_cluster[] : register(space40);
-StructuredBuffer<ShaderMaterial> bindless_structured_material[] : register(space41);
-StructuredBuffer<uint> bindless_structured_uint[] : register(space42);
-StructuredBuffer<ShaderTerrainChunk> bindless_structured_terrain_chunks[] : register(space43);
+StructuredBuffer<ShaderClusterBounds> bindless_structured_cluster_bounds[] : register(space41);
+StructuredBuffer<ShaderMaterial> bindless_structured_material[] : register(space42);
+StructuredBuffer<uint> bindless_structured_uint[] : register(space43);
+StructuredBuffer<ShaderTerrainChunk> bindless_structured_terrain_chunks[] : register(space44);
 #endif // __spirv__
 
 inline FrameCB GetFrame()

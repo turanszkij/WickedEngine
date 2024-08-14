@@ -412,14 +412,6 @@ namespace wi::scene
 
 		uint32_t subsets_per_lod = 0; // this needs to be specified if there are multiple LOD levels
 
-		struct SubsetClusterRange
-		{
-			uint32_t clusterOffset = 0;
-			uint32_t clusterCount = 0;
-		};
-		wi::vector<SubsetClusterRange> cluster_ranges;
-		wi::vector<ShaderCluster> clusters;
-
 		// Non-serialized attributes:
 		wi::primitive::AABB aabb;
 		wi::graphics::GPUBuffer generalBuffer; // index buffer + all static vertex buffers
@@ -448,6 +440,7 @@ namespace wi::scene
 		BufferView vb_bon;
 		BufferView vb_mor;
 		BufferView vb_clu;
+		BufferView vb_bou;
 		BufferView so_pos;
 		BufferView so_nor;
 		BufferView so_tan;
@@ -470,6 +463,13 @@ namespace wi::scene
 
 		wi::vector<wi::primitive::AABB> bvh_leaf_aabbs;
 		wi::BVH bvh;
+
+		struct SubsetClusterRange
+		{
+			uint32_t clusterOffset = 0;
+			uint32_t clusterCount = 0;
+		};
+		wi::vector<SubsetClusterRange> cluster_ranges;
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }

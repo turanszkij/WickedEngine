@@ -829,6 +829,9 @@ namespace wi::scene
 			}
 		}
 
+		wi::vector<ShaderCluster> clusters;
+		wi::vector<ShaderClusterBounds> cluster_bounds;
+
 		if (device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
 		{
 			const size_t max_vertices = MESHLET_VERTEX_COUNT;
@@ -865,6 +868,7 @@ namespace wi::scene
 					);
 
 					clusters.reserve(clusters.size() + meshlet_count);
+					cluster_bounds.reserve(cluster_bounds.size() + meshlet_count);
 
 					SubsetClusterRange& meshlet_range = cluster_ranges.emplace_back();
 					meshlet_range.clusterOffset = (uint32_t)clusters.size();
@@ -895,15 +899,17 @@ namespace wi::scene
 							sizeof(XMFLOAT3)
 						);
 
+						ShaderClusterBounds& clusterbound = cluster_bounds.emplace_back();
+						clusterbound.sphere.center.x = bounds.center[0];
+						clusterbound.sphere.center.y = bounds.center[1];
+						clusterbound.sphere.center.z = bounds.center[2];
+						clusterbound.sphere.radius = bounds.radius;
+						clusterbound.cone_axis.x = -bounds.cone_axis[0];
+						clusterbound.cone_axis.y = -bounds.cone_axis[1];
+						clusterbound.cone_axis.z = -bounds.cone_axis[2];
+						clusterbound.cone_cutoff = bounds.cone_cutoff;
+
 						ShaderCluster& cluster = clusters.emplace_back();
-						cluster.sphere.center.x = bounds.center[0];
-						cluster.sphere.center.y = bounds.center[1];
-						cluster.sphere.center.z = bounds.center[2];
-						cluster.sphere.radius = bounds.radius;
-						cluster.cone_axis.x = -bounds.cone_axis[0];
-						cluster.cone_axis.y = -bounds.cone_axis[1];
-						cluster.cone_axis.z = -bounds.cone_axis[2];
-						cluster.cone_cutoff = bounds.cone_cutoff;
 						cluster.vertexCount = meshlet.vertex_count;
 						cluster.triangleCount = meshlet.triangle_count;
 						for (size_t tri = 0; tri < meshlet.triangle_count; ++tri)
@@ -921,8 +927,12 @@ namespace wi::scene
 					}
 				}
 			}
+
 			bd.size = AlignTo(bd.size, sizeof(ShaderCluster));
 			bd.size = AlignTo(bd.size + clusters.size() * sizeof(ShaderCluster), alignment);
+
+			bd.size = AlignTo(bd.size, sizeof(ShaderClusterBounds));
+			bd.size = AlignTo(bd.size + cluster_bounds.size() * sizeof(ShaderClusterBounds), alignment);
 		}
 
 		auto init_callback = [&](void* dest) {
@@ -1217,6 +1227,14 @@ namespace wi::scene
 				std::memcpy(buffer_data + buffer_offset, clusters.data(), vb_clu.size);
 				buffer_offset += AlignTo(vb_clu.size, alignment);
 			}
+			if (!cluster_bounds.empty())
+			{
+				buffer_offset = AlignTo(buffer_offset, sizeof(ShaderClusterBounds));
+				vb_bou.offset = buffer_offset;
+				vb_bou.size = cluster_bounds.size() * sizeof(ShaderClusterBounds);
+				std::memcpy(buffer_data + buffer_offset, cluster_bounds.data(), vb_bou.size);
+				buffer_offset += AlignTo(vb_bou.size, alignment);
+			}
 		};
 
 		bool success = device->CreateBuffer2(&bd, init_callback, &generalBuffer);
@@ -1272,6 +1290,12 @@ namespace wi::scene
 			static constexpr uint32_t cluster_stride = sizeof(ShaderCluster);
 			vb_clu.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_clu.offset, vb_clu.size, nullptr, &cluster_stride);
 			vb_clu.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_clu.subresource_srv);
+		}
+		if (vb_bou.IsValid())
+		{
+			static constexpr uint32_t cluster_stride = sizeof(ShaderClusterBounds);
+			vb_bou.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_bou.offset, vb_bou.size, nullptr, &cluster_stride);
+			vb_bou.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_bou.subresource_srv);
 		}
 
 		if (!vertex_boneindices.empty() || !morph_targets.empty())
