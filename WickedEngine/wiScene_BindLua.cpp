@@ -4776,26 +4776,7 @@ int MeshComponent_BindLua::GetMeshSubsetMaterialID(lua_State* L)
 }
 int MeshComponent_BindLua::CreateSubset(lua_State* L)
 {
-	int ret = 0;
-	const uint32_t lod_count = component->GetLODCount();
-	for (uint32_t lod = 0; lod < lod_count; ++lod)
-	{
-		uint32_t first_subset = 0;
-		uint32_t last_subset = 0;
-		component->GetLODSubsetRange(lod, first_subset, last_subset);
-		MeshComponent::MeshSubset subset = component->subsets[last_subset];
-		component->subsets.insert(component->subsets.begin() + last_subset, subset);
-		if (lod == 0)
-		{
-			ret = last_subset;
-		}
-	}
-	if (lod_count > 0)
-	{
-		component->subsets_per_lod++;
-	}
-	component->CreateRenderData(); // mesh shader needs to rebuild clusters, otherwise wouldn't be needed
-	wi::lua::SSetInt(L, ret);
+	wi::lua::SSetInt(L, component->CreateSubset());
 	return 1;
 }
 

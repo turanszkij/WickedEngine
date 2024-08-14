@@ -1871,6 +1871,36 @@ namespace wi::scene
 			bvh.allocation.capacity() +
 			bvh_leaf_aabbs.size() * sizeof(wi::primitive::AABB);
 	}
+	int MeshComponent::CreateSubset()
+	{
+		int ret = 0;
+		const uint32_t lod_count = GetLODCount();
+		for (uint32_t lod = 0; lod < lod_count; ++lod)
+		{
+			uint32_t first_subset = 0;
+			uint32_t last_subset = 0;
+			GetLODSubsetRange(lod, first_subset, last_subset);
+			MeshComponent::MeshSubset subset;
+			subset.indexOffset = ~0u;
+			subset.indexCount = 0;
+			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+			{
+				subset.indexOffset = std::min(subset.indexOffset, subsets[subsetIndex].indexOffset);
+				subset.indexCount = std::max(subset.indexCount, subsets[subsetIndex].indexCount);
+			}
+			subsets.insert(subsets.begin() + last_subset, subset);
+			if (lod == 0)
+			{
+				ret = last_subset;
+			}
+		}
+		if (lod_count > 0)
+		{
+			subsets_per_lod++;
+		}
+		CreateRenderData(); // mesh shader needs to rebuild clusters, otherwise wouldn't be needed
+		return ret;
+	}
 
 	void ObjectComponent::ClearLightmap()
 	{

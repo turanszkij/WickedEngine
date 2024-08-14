@@ -509,6 +509,9 @@ namespace wi::scene
 			}
 		}
 
+		// Creates a new subset as a combination of the subsets of the first LOD, returns its index. This works if there are multiple LODs which are also contained in subsets array
+		int CreateSubset();
+
 		// Deletes all GPU resources
 		void DeleteRenderData();
 
