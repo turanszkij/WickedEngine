@@ -106,7 +106,7 @@ void main(
 		return;
 	ShaderCluster cluster = bindless_structured_cluster[geometry.vb_clu][meshletID];
 	ShaderMeshInstancePointer poi = bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + amplification_payload.instanceID * sizeof(ShaderMeshInstancePointer));
-    SetMeshOutputCounts(cluster.vertexCount(), cluster.triangleCount());
+	SetMeshOutputCounts(cluster.vertexCount(), cluster.triangleCount());
 	for (uint i = groupIndex; i < cluster.vertexCount(); i += MS_GROUPSIZE)
 	{
 		uint vertexID = cluster.vertices[i];
@@ -122,7 +122,7 @@ void main(
 		triangles[i] = cluster.triangles[i].tri();
 		
 #if defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
-		primitives[i].primitiveID = i;
+		primitives[i].primitiveID = (meshletID - geometry.meshletOffset) * MESHLET_TRIANGLE_COUNT + i;
 #endif // defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
 
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX

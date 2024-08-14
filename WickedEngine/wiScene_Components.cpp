@@ -829,7 +829,7 @@ namespace wi::scene
 			}
 		}
 
-		//if (clusters.empty())
+		if (device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
 		{
 			const size_t max_vertices = MESHLET_VERTEX_COUNT;
 			const size_t max_triangles = MESHLET_TRIANGLE_COUNT;
@@ -923,9 +923,9 @@ namespace wi::scene
 					}
 				}
 			}
+			bd.size = AlignTo(bd.size, sizeof(ShaderCluster));
+			bd.size = AlignTo(bd.size + clusters.size() * sizeof(ShaderCluster), alignment);
 		}
-		bd.size = AlignTo(bd.size, sizeof(ShaderCluster));
-		bd.size = AlignTo(bd.size + clusters.size() * sizeof(ShaderCluster), alignment);
 
 		auto init_callback = [&](void* dest) {
 			uint8_t* buffer_data = (uint8_t*)dest;
