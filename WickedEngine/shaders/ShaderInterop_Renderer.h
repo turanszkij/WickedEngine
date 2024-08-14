@@ -528,7 +528,7 @@ struct ShaderMeshlet
 {
 	uint instanceIndex;
 	uint geometryIndex;
-	uint primitiveOffset; // direct indexing within geometry
+	uint primitiveOffset; // either direct triangle offset within index buffer, or masked cluster index for clustered geo
 	uint padding;
 };
 
