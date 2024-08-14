@@ -5,37 +5,40 @@
 #define CONE_CULLING
 
 static const uint AS_GROUPSIZE = 32;
-static const uint MS_GROUPSIZE = 64;
+static const uint MS_GROUPSIZE = 128;
 
 struct AmplificationPayload
 {
 	uint instanceID;
-	min16uint meshlets[AS_GROUPSIZE];
+	uint meshletGroupOffset;
+	min16uint meshlets[AS_GROUPSIZE]; // this could be uint8_t if HLSL supported it because they are relative to meshletGroupOffset, maybe in the future it will be a reality
 };
 
 #ifdef OBJECTSHADER_COMPILE_AS
 groupshared AmplificationPayload amplification_payload;
 
 [numthreads(AS_GROUPSIZE, 1, 1)]
-void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID)
+void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
 	ShaderGeometry geometry = GetMesh();
 	
 	uint instanceID = Gid.y;
+	uint meshletGroupOffset = geometry.meshletOffset + Gid.x * AS_GROUPSIZE;
 
 	if(WaveIsFirstLane())
 	{
 		amplification_payload.instanceID = instanceID;
+		amplification_payload.meshletGroupOffset = meshletGroupOffset;
 	}
 
 	ShaderMeshInstancePointer poi = bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + instanceID * sizeof(ShaderMeshInstancePointer));
 	ShaderMeshInstance inst = load_instance(poi.GetInstanceIndex());
 	
-	uint meshletID = geometry.meshletOffset + DTid.x;
+	uint meshletID = meshletGroupOffset + groupIndex;
 
-	bool visible = DTid.x < geometry.meshletCount;
+	bool visible = meshletID < geometry.meshletOffset + geometry.meshletCount;
 	
-	// Culling:
+	// Meshlet culling:
 	if (visible && geometry.vb_pre < 0) // vb_pre < 0 when object is not skinned, currently skinned clusters cannot be culled
 	{
 		ShaderClusterBounds bounds = bindless_structured_cluster_bounds[geometry.vb_bou][meshletID];
@@ -69,7 +72,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID)
 	if (visible)
 	{
 		uint index = WavePrefixCountBits(visible);
-		amplification_payload.meshlets[index] = meshletID;
+		amplification_payload.meshlets[index] = meshletID - meshletGroupOffset; // relative packed
 	}
 
 	uint visibleCount = WaveActiveCountBits(visible);
@@ -109,39 +112,42 @@ void main(
 #endif
 	)
 {
-	uint meshletID = amplification_payload.meshlets[Gid];
+	uint meshletGroupOffset = amplification_payload.meshletGroupOffset;
+	uint meshletID = meshletGroupOffset + amplification_payload.meshlets[Gid];
 	ShaderGeometry geometry = GetMesh();
 	if(meshletID >= geometry.meshletOffset + geometry.meshletCount)
 		return;
 	ShaderCluster cluster = bindless_structured_cluster[geometry.vb_clu][meshletID];
 	ShaderMeshInstancePointer poi = bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + amplification_payload.instanceID * sizeof(ShaderMeshInstancePointer));
 	SetMeshOutputCounts(cluster.vertexCount, cluster.triangleCount);
-	for (uint i = groupIndex; i < cluster.vertexCount; i += MS_GROUPSIZE)
+	const uint vi = groupIndex;
+	if (vi < cluster.vertexCount)
 	{
-		uint vertexID = cluster.vertices[i];
+		uint vertexID = cluster.vertices[vi];
 
 		VertexInput input;
-		input.vertexID = cluster.vertices[i];
+		input.vertexID = cluster.vertices[vi];
 		input.instanceID = amplification_payload.instanceID;
 		
-		verts[i] = vertex_to_pixel_export(input);
+		verts[vi] = vertex_to_pixel_export(input);
 	}
-	for (uint i = groupIndex; i < cluster.triangleCount; i += MS_GROUPSIZE)
+	const uint ti = MESHLET_TRIANGLE_COUNT - 1 - groupIndex; // reverse the order of threads, so those which are not writing vertices are utilized earlier
+	if (ti < cluster.triangleCount)
 	{
-		triangles[i] = cluster.triangles[i].tri();
+		triangles[ti] = cluster.triangles[ti].tri();
 		
 #if defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
-		primitives[i].primitiveID = (meshletID - geometry.meshletOffset) * MESHLET_TRIANGLE_COUNT + i;
+		primitives[ti].primitiveID = (meshletID - geometry.meshletOffset) * MESHLET_TRIANGLE_COUNT + ti;
 #endif // defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
 
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 		const uint frustum_index = poi.GetCameraIndex();
-		primitives[i].RTIndex = GetCamera(frustum_index).output_index;
+		primitives[ti].RTIndex = GetCamera(frustum_index).output_index;
 #endif // OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 
 #ifdef OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 		const uint frustum_index = poi.GetCameraIndex();
-		primitives[i].VPIndex = GetCamera(frustum_index).output_index;
+		primitives[ti].VPIndex = GetCamera(frustum_index).output_index;
 #endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 	}
 }
