@@ -485,6 +485,10 @@ namespace wi
 				infodisplay_str += std::to_string(graphicsDevice->GetActivePipelineCount());
 				infodisplay_str += "\n";
 			}
+			if (wi::renderer::IsPipelineCreationActive())
+			{
+				infodisplay_str += "Shader pipeline compilation...\n";
+			}
 
 			wi::font::Params params = wi::font::Params(
 				4 + canvas.PhysicalToLogical((uint32_t)infoDisplay.rect.left),

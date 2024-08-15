@@ -348,6 +348,13 @@ const Texture* GetTexture(TEXTYPES id)
 	return &textures[id];
 }
 
+enum OBJECT_MESH_SHADER_PSO
+{
+	OBJECT_MESH_SHADER_PSO_DISABLED,
+	OBJECT_MESH_SHADER_PSO_ENABLED,
+	OBJECT_MESH_SHADER_PSO_COUNT
+};
+
 union ObjectRenderingVariant
 {
 	struct
@@ -369,7 +376,7 @@ inline PipelineState* GetObjectPSO(ObjectRenderingVariant variant)
 {
 	return &PSO_object[variant.bits.renderpass][variant.bits.shadertype][variant.value];
 }
-wi::jobsystem::context object_pso_job_ctx[RENDERPASS_COUNT];
+wi::jobsystem::context object_pso_job_ctx[RENDERPASS_COUNT][OBJECT_MESH_SHADER_PSO_COUNT];
 PipelineState PSO_object_wire;
 PipelineState PSO_object_wire_tessellation;
 PipelineState PSO_object_wire_mesh_shader;
@@ -1210,7 +1217,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::DS, shaders[DSTYPE_OBJECT_PREPASS_ALPHATEST], "objectDS_prepass_alphatest.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::DS, shaders[DSTYPE_OBJECT_SIMPLE], "objectDS_simple.cso"); });
 
-	if (IsMeshShaderAllowed())
+	if (device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
 	{
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::AS, shaders[ASTYPE_OBJECT], "objectAS.cso"); });
 
@@ -1824,24 +1831,25 @@ void LoadShaders()
 
 	for (uint32_t renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
 	{
-		// default objectshaders:
-		//	We don't wait for these here, because then it can slow down the init time a lot
-		//	We will wait for these to complete in RenderMeshes() just before they will be first used
-		wi::jobsystem::Wait(object_pso_job_ctx[renderPass]);
-		for (uint32_t shaderType = 0; shaderType < MaterialComponent::SHADERTYPE_COUNT; ++shaderType)
+		for (uint32_t mesh_shader = 0; mesh_shader <= (IsMeshShaderAllowed() ? 1u : 0u); ++mesh_shader)
 		{
-			wi::jobsystem::Execute(object_pso_job_ctx[renderPass], [=](wi::jobsystem::JobArgs args) {
-				for (uint32_t blendMode = 0; blendMode < BLENDMODE_COUNT; ++blendMode)
-				{
-					for (uint32_t cullMode = 0; cullMode <= 3; ++cullMode)
+			// default objectshaders:
+			//	We don't wait for these here, because then it can slow down the init time a lot
+			//	We will wait for these to complete in RenderMeshes() just before they will be first used
+			wi::jobsystem::Wait(object_pso_job_ctx[renderPass][mesh_shader]);
+			object_pso_job_ctx[renderPass][mesh_shader].priority = wi::jobsystem::Priority::Low;
+			for (uint32_t shaderType = 0; shaderType < MaterialComponent::SHADERTYPE_COUNT; ++shaderType)
+			{
+				wi::jobsystem::Execute(object_pso_job_ctx[renderPass][mesh_shader], [=](wi::jobsystem::JobArgs args) {
+					for (uint32_t blendMode = 0; blendMode < BLENDMODE_COUNT; ++blendMode)
 					{
-						for (uint32_t tessellation = 0; tessellation <= 1; ++tessellation)
+						for (uint32_t cullMode = 0; cullMode <= 3; ++cullMode)
 						{
-							if (tessellation && renderPass > RENDERPASS_PREPASS_DEPTHONLY)
-								continue;
-							for (uint32_t alphatest = 0; alphatest <= 1; ++alphatest)
+							for (uint32_t tessellation = 0; tessellation <= 1; ++tessellation)
 							{
-								for (uint32_t mesh_shader = 0; mesh_shader <= (IsMeshShaderAllowed() ? 1u : 0u); ++mesh_shader)
+								if (tessellation && renderPass > RENDERPASS_PREPASS_DEPTHONLY)
+									continue;
+								for (uint32_t alphatest = 0; alphatest <= 1; ++alphatest)
 								{
 									const bool transparency = blendMode != BLENDMODE_OPAQUE;
 									if ((renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY) && transparency)
@@ -2064,11 +2072,25 @@ void LoadShaders()
 							}
 						}
 					}
-				}
-			});
+				});
+			}
 		}
 	}
 
+}
+bool IsPipelineCreationActive()
+{
+	for (uint32_t renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
+	{
+		for (uint32_t mesh_shader = 0; mesh_shader <= (IsMeshShaderAllowed() ? 1u : 0u); ++mesh_shader)
+		{
+			if (wi::jobsystem::IsBusy(object_pso_job_ctx[renderPass][mesh_shader]))
+			{
+				return true;
+			}
+		}
+	}
+	return false;
 }
 void LoadBuffers()
 {
@@ -2856,7 +2878,7 @@ void Workaround(const int bug , CommandList cmd)
 		//PE: https://github.com/turanszkij/WickedEngine/issues/450#issuecomment-1143647323
 
 		//PE: We MUST use RENDERPASS_VOXELIZE (DSSTYPE_DEPTHDISABLED) or it will not work ?
-		wi::jobsystem::Wait(object_pso_job_ctx[RENDERPASS_VOXELIZE]);
+		wi::jobsystem::Wait(object_pso_job_ctx[RENDERPASS_VOXELIZE][OBJECT_MESH_SHADER_PSO_DISABLED]);
 		ObjectRenderingVariant variant = {};
 		variant.bits.renderpass = RENDERPASS_VOXELIZE;
 		variant.bits.blendmode = BLENDMODE_OPAQUE;
@@ -2888,7 +2910,10 @@ void RenderMeshes(
 
 	device->EventBegin("RenderMeshes", cmd);
 
-	wi::jobsystem::Wait(object_pso_job_ctx[renderPass]);
+	const bool mesh_shader = IsMeshShaderAllowed() &&
+		(renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY || renderPass == RENDERPASS_MAIN || renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_RAINBLOCKER);
+
+	wi::jobsystem::Wait(object_pso_job_ctx[renderPass][mesh_shader]);
 	RenderPassInfo renderpass_info = device->GetRenderPassInfo(cmd);
 
 	const bool tessellation =
@@ -2904,9 +2929,6 @@ void RenderMeshes(
 		renderPass == RENDERPASS_VOXELIZE;
 
 	const bool shadowRendering = renderPass == RENDERPASS_SHADOW;
-
-	const bool mesh_shader = IsMeshShaderAllowed() &&
-		(renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY || renderPass == RENDERPASS_MAIN || renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_RAINBLOCKER);
 
 	// Pre-allocate space for all the instances in GPU-buffer:
 	const size_t alloc_size = renderQueue.size() * camera_count * sizeof(ShaderMeshInstancePointer);
@@ -17998,11 +18020,6 @@ float GetGIBoost()
 void SetMeshShaderAllowed(bool value)
 {
 	MESH_SHADER_ALLOWED = value;
-
-	if (IsMeshShaderAllowed())
-	{
-		ReloadShaders(); // Creating mesh shader pipelines is too slow, so if it's disabled we avoid it
-	}
 }
 bool IsMeshShaderAllowed()
 {
