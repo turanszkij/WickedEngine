@@ -485,8 +485,9 @@ struct alignas(16) ShaderGeometry
 
 	uint indexOffset;
 	uint indexCount;
-	int padding0;
-	int padding1;
+	int vb_clu;
+	int vb_bou;
+
 
 	void init()
 	{
@@ -498,6 +499,8 @@ struct alignas(16) ShaderGeometry
 		vb_col = -1;
 		vb_atl = -1;
 		vb_pre = -1;
+		vb_clu = -1;
+		vb_bou = -1;
 		materialIndex = 0;
 		meshletOffset = 0;
 		meshletCount = 0;
@@ -516,8 +519,8 @@ struct alignas(16) ShaderGeometry
 	}
 };
 
-// 256 triangle batch of a ShaderGeometry
-static const uint MESHLET_TRIANGLE_COUNT = 256u;
+static const uint MESHLET_VERTEX_COUNT = 64u;
+static const uint MESHLET_TRIANGLE_COUNT = 124u;
 inline uint triangle_count_to_meshlet_count(uint triangleCount)
 {
 	return (triangleCount + MESHLET_TRIANGLE_COUNT - 1u) / MESHLET_TRIANGLE_COUNT;
@@ -526,8 +529,50 @@ struct alignas(16) ShaderMeshlet
 {
 	uint instanceIndex;
 	uint geometryIndex;
-	uint primitiveOffset;
+	uint primitiveOffset; // either direct triangle offset within index buffer, or masked cluster index for clustered geo
 	uint padding;
+};
+
+struct ShaderClusterTriangle
+{
+	uint packed;
+	void init(uint i0, uint i1, uint i2, uint flags = 0u)
+	{
+		packed = 0;
+		packed |= i0 & 0xFF;
+		packed |= (i1 & 0xFF) << 8u;
+		packed |= (i2 & 0xFF) << 16u;
+		packed |= (flags & 0xFF) << 24u;
+	}
+	uint i0() { return packed & 0xFF; }
+	uint i1() { return (packed >> 8u) & 0xFF; }
+	uint i2() { return (packed >> 16u) & 0xFF; }
+	uint3 tri() { return uint3(i0(), i1(), i2()); }
+	uint flags() { return packed >> 24u; }
+};
+struct alignas(16) ShaderCluster
+{
+	uint triangleCount;
+	uint vertexCount;
+	uint padding0;
+	uint padding1;
+
+	uint vertices[MESHLET_VERTEX_COUNT];
+	ShaderClusterTriangle triangles[MESHLET_TRIANGLE_COUNT];
+};
+
+struct alignas(16) ShaderSphere
+{
+	float3 center;
+	float radius;
+};
+
+struct alignas(16) ShaderClusterBounds
+{
+	ShaderSphere sphere;
+
+	float3 cone_axis;
+	float cone_cutoff;
 };
 
 struct alignas(16) ShaderTransform
@@ -589,6 +634,7 @@ struct alignas(16) ShaderMeshInstance
 	float4 quaternion;
 	ShaderTransform transform;
 	ShaderTransform transformPrev;
+	ShaderTransform transformRaw; // without quantization remapping applied
 
 	void init()
 	{
@@ -612,6 +658,7 @@ struct alignas(16) ShaderMeshInstance
 		quaternion = float4(0, 0, 0, 1);
 		transform.init();
 		transformPrev.init();
+		transformRaw.init();
 	}
 
 	inline void SetUserStencilRef(uint stencilRef)
@@ -845,11 +892,6 @@ struct alignas(16) ShaderEntity
 #endif // __cplusplus
 };
 
-struct alignas(16) ShaderSphere
-{
-	float3 center;
-	float radius;
-};
 struct alignas(16) ShaderFrustum
 {
 	// Frustum planes:
@@ -1078,6 +1120,7 @@ enum SHADERCAMERA_OPTIONS
 {
 	SHADERCAMERA_OPTION_NONE = 0,
 	SHADERCAMERA_OPTION_USE_SHADOW_MASK = 1 << 0,
+	SHADERCAMERA_OPTION_ORTHO = 1 << 1,
 };
 
 struct alignas(16) ShaderCamera
@@ -1166,8 +1209,10 @@ struct alignas(16) ShaderCamera
 	int texture_vxgi_diffuse_index;
 	int texture_vxgi_specular_index;
 
-	uint3 padding;
+	int texture_reprojected_depth_index;
 	uint options;
+	uint padding0;
+	uint padding1;
 
 #ifdef __cplusplus
 	void init()
@@ -1233,6 +1278,9 @@ struct alignas(16) ShaderCamera
 		texture_depth_index_prev = -1;
 		texture_vxgi_diffuse_index = -1;
 		texture_vxgi_specular_index = -1;
+		texture_reprojected_depth_index = -1;
+
+		options = 0;
 	}
 
 #else

@@ -344,11 +344,9 @@ struct Surface
 
 		layerMask = material.layerMask & inst.layerMask;
 
-		const uint startIndex = prim.primitiveIndex * 3 + geometry.indexOffset;
-		Buffer<uint> indexBuffer = bindless_buffers_uint[NonUniformResourceIndex(geometry.ib)];
-		i0 = indexBuffer[startIndex + 0];
-		i1 = indexBuffer[startIndex + 1];
-		i2 = indexBuffer[startIndex + 2];
+		i0 = prim.i0();
+		i1 = prim.i1();
+		i2 = prim.i2();
 
 		Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(geometry.vb_pos_wind)];
 		data0 = buf[i0];

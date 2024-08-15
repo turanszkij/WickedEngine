@@ -99,6 +99,8 @@ namespace wi::renderer
 		const wi::vector<std::string>& permutation_defines = {}
 	);
 
+	// Whether background pipeline compilations are active
+	bool IsPipelineCreationActive();
 
 	struct Visibility
 	{
@@ -979,6 +981,13 @@ namespace wi::renderer
 	void OcclusionCulling_Render(const wi::scene::CameraComponent& camera, const Visibility& vis, wi::graphics::CommandList cmd);
 	void OcclusionCulling_Resolve(const Visibility& vis, wi::graphics::CommandList cmd);
 
+	void ComputeReprojectedDepthPyramid(
+		const wi::graphics::Texture& input_depth,
+		const wi::graphics::Texture& input_velocity,
+		const wi::graphics::Texture& output_depth_pyramid,
+		wi::graphics::CommandList cmd
+	);
+
 	enum MIPGENFILTER
 	{
 		MIPGENFILTER_POINT,
@@ -1097,6 +1106,10 @@ namespace wi::renderer
 	float GetDDGIBlendSpeed();
 	void SetGIBoost(float value);
 	float GetGIBoost();
+	void SetMeshShaderAllowed(bool value);
+	bool IsMeshShaderAllowed();
+	void SetMeshletOcclusionCullingEnabled(bool value);
+	bool IsMeshletOcclusionCullingEnabled();
 	void Workaround( const int bug, wi::graphics::CommandList cmd);
 
 	// Gets pick ray according to the current screen resolution and pointer coordinates. Can be used as input into RayIntersectWorld()

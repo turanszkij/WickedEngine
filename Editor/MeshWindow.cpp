@@ -76,17 +76,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 				archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 				editor->RecordEntity(archive, entity);
 
-				uint32_t first_subset = 0;
-				uint32_t last_subset = 0;
-				mesh->GetLODSubsetRange(0, first_subset, last_subset);
-				wi::vector<MeshComponent::MeshSubset> newSubsets;
-				for (uint32_t i = first_subset; i < last_subset; ++i)
-				{
-					newSubsets.push_back(mesh->subsets[i]);
-				}
-				newSubsets.emplace_back().indexCount = (uint32_t)mesh->indices.size();
-				mesh->subsets = newSubsets;
-				mesh->subsets_per_lod = 0;
+				mesh->CreateSubset();
 
 				editor->RecordEntity(archive, entity);
 			}
@@ -968,6 +958,10 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		if (!mesh->morph_targets.empty())
 		{
 			ss += "Morph target count: " + std::to_string(mesh->morph_targets.size()) + "\n";
+		}
+		if (!mesh->cluster_ranges.empty())
+		{
+			ss += "Cluster count: " + std::to_string(mesh->GetClusterCount()) + "\n";
 		}
 		ss += "CPU memory: " + wi::helper::GetMemorySizeText(mesh->GetMemoryUsageCPU()) + "\n";
 		if (mesh->bvh.IsValid())

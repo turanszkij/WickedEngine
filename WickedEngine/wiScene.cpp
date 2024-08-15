@@ -3893,6 +3893,11 @@ namespace wi::scene
 				geometry.vb_uvs = mesh.vb_uvs.descriptor_srv;
 				geometry.vb_atl = mesh.vb_atl.descriptor_srv;
 				geometry.vb_pre = mesh.so_pre.descriptor_srv;
+				if (wi::renderer::IsMeshShaderAllowed())
+				{
+					geometry.vb_clu = mesh.vb_clu.descriptor_srv;
+					geometry.vb_bou = mesh.vb_bou.descriptor_srv;
+				}
 				geometry.aabb_min = mesh.aabb._min;
 				geometry.aabb_max = mesh.aabb._max;
 				geometry.tessellation_factor = mesh.tessellationFactor;
@@ -3925,13 +3930,26 @@ namespace wi::scene
 						subset.materialIndex = 0;
 					}
 
-					geometry.indexOffset = subset.indexOffset;
-					geometry.indexCount = subset.indexCount;
-					geometry.materialIndex = subset.materialIndex;
-					geometry.meshletOffset = mesh.meshletCount;
-					geometry.meshletCount = triangle_count_to_meshlet_count(subset.indexCount / 3u);
-					mesh.meshletCount += geometry.meshletCount;
-					std::memcpy(geometryArrayMapped + mesh.geometryOffset + subsetIndex, &geometry, sizeof(geometry));
+					ShaderGeometry subsetGeometry = geometry;
+					subsetGeometry.indexOffset = subset.indexOffset;
+					subsetGeometry.indexCount = subset.indexCount;
+					subsetGeometry.materialIndex = subset.materialIndex;
+					if (wi::renderer::IsMeshShaderAllowed() && subsetIndex < mesh.cluster_ranges.size())
+					{
+						subsetGeometry.meshletOffset = mesh.cluster_ranges[subsetIndex].clusterOffset;
+						subsetGeometry.meshletCount = mesh.cluster_ranges[subsetIndex].clusterCount;
+					}
+					else
+					{
+						subsetGeometry.meshletOffset = mesh.meshletCount;
+						subsetGeometry.meshletCount = triangle_count_to_meshlet_count(subset.indexCount / 3u);
+					}
+					mesh.meshletCount += subsetGeometry.meshletCount;
+					if (material != nullptr && material->IsDoubleSided())
+					{
+						subsetGeometry.flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
+					}
+					std::memcpy(geometryArrayMapped + mesh.geometryOffset + subsetIndex, &subsetGeometry, sizeof(subsetGeometry));
 					subsetIndex++;
 				}
 			}
@@ -4423,6 +4441,7 @@ namespace wi::scene
 				XMStoreFloat4x4(matrix_objects.data() + args.jobIndex, W);
 				XMFLOAT4X4 worldMatrix = matrix_objects[args.jobIndex];
 
+				inst.transformRaw.Create(worldMatrix);
 				if (IsFormatUnorm(mesh.position_format) && !mesh.so_pos.IsValid())
 				{
 					// The UNORM correction is only done for the GPU data!

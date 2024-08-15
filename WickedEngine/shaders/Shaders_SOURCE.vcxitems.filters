@@ -43,6 +43,9 @@
     <Filter Include="ffx-shadows-dnsr">
       <UniqueIdentifier>{2bb6f2d6-f3e1-4501-95bc-bd4a0ca64c4b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="AS">
+      <UniqueIdentifier>{ef9ff702-9bcf-43c1-a022-fdba26545709}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)globals.hlsli">
@@ -166,6 +169,9 @@
       <Filter>HF</Filter>
     </None>
     <None Include="$(MSBuildThisFileDirectory)bc6h.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)objectHF_mesh_shading.hlsli">
       <Filter>HF</Filter>
     </None>
   </ItemGroup>
@@ -1170,6 +1176,36 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)causticsCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)objectAS.hlsl">
+      <Filter>AS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)objectMS_prepass.hlsl">
+      <Filter>MS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)objectMS_prepass_alphatest.hlsl">
+      <Filter>MS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)objectMS.hlsl">
+      <Filter>MS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)objectMS_simple.hlsl">
+      <Filter>MS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)shadowMS.hlsl">
+      <Filter>MS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)shadowMS_alphatest.hlsl">
+      <Filter>MS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)shadowMS_transparent.hlsl">
+      <Filter>MS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)depth_reprojectCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)depth_pyramidCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

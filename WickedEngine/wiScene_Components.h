@@ -439,6 +439,8 @@ namespace wi::scene
 		BufferView vb_col;
 		BufferView vb_bon;
 		BufferView vb_mor;
+		BufferView vb_clu;
+		BufferView vb_bou;
 		BufferView so_pos;
 		BufferView so_nor;
 		BufferView so_tan;
@@ -461,6 +463,13 @@ namespace wi::scene
 
 		wi::vector<wi::primitive::AABB> bvh_leaf_aabbs;
 		wi::BVH bvh;
+
+		struct SubsetClusterRange
+		{
+			uint32_t clusterOffset = 0;
+			uint32_t clusterCount = 0;
+		};
+		wi::vector<SubsetClusterRange> cluster_ranges;
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
@@ -499,6 +508,11 @@ namespace wi::scene
 				last_subset = first_subset + subsets_per_lod;
 			}
 		}
+
+		size_t GetClusterCount() const;
+
+		// Creates a new subset as a combination of the subsets of the first LOD, returns its index. This works if there are multiple LODs which are also contained in subsets array
+		size_t CreateSubset();
 
 		// Deletes all GPU resources
 		void DeleteRenderData();
@@ -1161,6 +1175,7 @@ namespace wi::scene
 		int buffer_entitytiles_index = -1;
 		int texture_vxgi_diffuse_index = -1;
 		int texture_vxgi_specular_index = -1;
+		int texture_reprojected_depth_index = -1;
 		uint shadercamera_options = SHADERCAMERA_OPTION_NONE;
 
 		void CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV = XM_PI / 3.0f);

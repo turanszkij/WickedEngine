@@ -150,6 +150,8 @@ You can use the Renderer with the following functions, all of which are in the g
 - SetDebugCamerasEnabled(bool value)
 - SetVSyncEnabled(opt bool enabled)
 - SetOcclusionCullingEnabled(bool enabled)
+- SetMeshShaderAllowed(bool enabled)
+- SetMeshletOcclusionCullingEnabled(bool value)
 - DrawLine(Vector origin,end, opt Vector color, opt bool depth = false)
 - DrawPoint(Vector origin, opt float size, opt Vector color, opt bool depth = false)
 - DrawBox(Matrix boxMatrix, opt Vector color, opt bool depth = true)

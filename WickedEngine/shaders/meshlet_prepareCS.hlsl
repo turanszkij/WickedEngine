@@ -9,6 +9,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 {
 	uint instanceIndex = Gid.x;
 	ShaderMeshInstance inst = load_instance(instanceIndex);
+	ShaderGeometry mesh = load_geometry(inst.baseGeometryOffset);
 
 	for (uint i = 0; i < inst.baseGeometryCount; ++i)
 	{
@@ -16,11 +17,18 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		ShaderGeometry geometry = load_geometry(geometryIndex);
 		for (uint j = groupIndex; j < geometry.meshletCount; j += THREADCOUNT)
 		{
-			ShaderMeshlet meshlet;
+			ShaderMeshlet meshlet = (ShaderMeshlet)0;
 			meshlet.instanceIndex = instanceIndex;
 			meshlet.geometryIndex = geometryIndex;
-			meshlet.primitiveOffset = j * MESHLET_TRIANGLE_COUNT;
-			meshlet.padding = 0;
+
+			if (geometry.vb_clu < 0)
+			{
+				meshlet.primitiveOffset = j * MESHLET_TRIANGLE_COUNT;
+			}
+			else
+			{
+				meshlet.primitiveOffset = (geometry.meshletOffset + j - mesh.meshletOffset) << 7u;
+			}
 
 			uint meshletIndex = inst.meshletOffset + geometry.meshletOffset + j;
 			output_meshlets[meshletIndex] = meshlet;

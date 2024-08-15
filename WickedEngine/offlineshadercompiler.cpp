@@ -231,6 +231,8 @@ wi::vector<ShaderEntry> shaders = {
 	{"yuv_to_rgbCS", wi::graphics::ShaderStage::CS },
 	{"wetmap_updateCS", wi::graphics::ShaderStage::CS },
 	{"causticsCS", wi::graphics::ShaderStage::CS },
+	{"depth_reprojectCS", wi::graphics::ShaderStage::CS },
+	{"depth_pyramidCS", wi::graphics::ShaderStage::CS },
 
 
 	{"emittedparticlePS_soft", wi::graphics::ShaderStage::PS },
@@ -360,6 +362,16 @@ wi::vector<ShaderEntry> shaders = {
 	{"objectHS_simple", wi::graphics::ShaderStage::HS },
 
 	{"emittedparticleMS", wi::graphics::ShaderStage::MS },
+
+	{"objectMS", wi::graphics::ShaderStage::MS },
+	{"objectMS_prepass", wi::graphics::ShaderStage::MS },
+	{"objectMS_prepass_alphatest", wi::graphics::ShaderStage::MS },
+	{"objectMS_simple", wi::graphics::ShaderStage::MS },
+	{"shadowMS", wi::graphics::ShaderStage::MS },
+	{"shadowMS_alphatest", wi::graphics::ShaderStage::MS },
+	{"shadowMS_transparent", wi::graphics::ShaderStage::MS },
+
+	{"objectAS", wi::graphics::ShaderStage::AS },
 
 
 	//{"rtreflectionLIB", wi::graphics::ShaderStage::LIB },
