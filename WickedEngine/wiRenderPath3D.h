@@ -83,7 +83,7 @@ namespace wi
 		bool fsrEnabled = false;
 		bool fsr2Enabled = false;
 
-		bool first_frame = true;
+		mutable bool first_frame = true;
 
 	public:
 		wi::graphics::Texture rtMain;

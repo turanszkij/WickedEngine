@@ -1707,6 +1707,8 @@ namespace wi
 		RenderPath2D::Render();
 
 		wi::jobsystem::Wait(ctx);
+
+		first_frame = false;
 	}
 
 	void RenderPath3D::Compose(CommandList cmd) const
