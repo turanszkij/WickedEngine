@@ -41,19 +41,28 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	bool visible = meshletID < geometry.meshletOffset + geometry.meshletCount;
 	
 	// Meshlet culling:
-	if (visible && geometry.vb_pre < 0) // vb_pre < 0 when object is not skinned, currently skinned clusters cannot be culled
+	if (visible)
 	{
 		ShaderCamera camera = GetCamera(poi.GetCameraIndex());
 		ShaderClusterBounds bounds = bindless_structured_cluster_bounds[geometry.vb_bou][meshletID];
-		bounds.sphere.center = mul(inst.transformRaw.GetMatrix(), float4(bounds.sphere.center, 1)).xyz;
-		bounds.sphere.radius = max3(mul((float3x3)inst.transformRaw.GetMatrix(), bounds.sphere.radius.xxx));
+		if (geometry.vb_pre >= 0)
+		{
+			// when object is skinned, we take the whole instance bounds, because skinned meshlet transforms are not computed
+			bounds.sphere.center = inst.center;
+			bounds.sphere.radius = inst.radius;
+		}
+		else
+		{
+			bounds.sphere.center = mul(inst.transformRaw.GetMatrix(), float4(bounds.sphere.center, 1)).xyz;
+			bounds.sphere.radius = max3(mul((float3x3)inst.transformRaw.GetMatrix(), bounds.sphere.radius.xxx));
+		}
 
 		// Only allow culling when camera is not inside:
 		if (distance(camera.position, bounds.sphere.center) > bounds.sphere.radius)
 		{
 		
 #ifdef CONE_CULLING
-			if((geometry.flags & SHADERMESH_FLAG_DOUBLE_SIDED) == 0) // disable cone culling for double sided
+			if((geometry.flags & SHADERMESH_FLAG_DOUBLE_SIDED) == 0 && geometry.vb_pre < 0) // disable cone culling for double sided and skinned
 			{
 				// Cone culling:
 				bounds.cone_axis = rotate_vector(bounds.cone_axis, inst.quaternion);
@@ -114,7 +123,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 #endif // ZERO_AREA_CULLING
 
 #ifdef OCCLUSION_CULLING
-				if (visible)
+				if (visible && closest_sphere_point.w > 0)
 				{
 					float lod = ceil(log2(w));
 					float4 depths = float4(
