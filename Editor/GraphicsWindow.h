@@ -16,6 +16,7 @@ public:
 	wi::gui::CheckBox occlusionCullingCheckBox;
 	wi::gui::CheckBox visibilityComputeShadingCheckBox;
 	wi::gui::CheckBox meshShaderCheckBox;
+	wi::gui::CheckBox meshletOcclusionCullingCheckBox;
 	wi::gui::Slider resolutionScaleSlider;
 	wi::gui::Slider streamingSlider;
 	wi::gui::Slider GIBoostSlider;

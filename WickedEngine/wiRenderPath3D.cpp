@@ -297,26 +297,6 @@ namespace wi
 				assert(subresource_index == i);
 			}
 		}
-		{
-			TextureDesc desc;
-			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			desc.format = Format::R16_UNORM;
-			desc.width = internalResolution.x;
-			desc.height = internalResolution.y;
-			desc.mip_levels = 0;
-			desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
-			device->CreateTexture(&desc, nullptr, &reprojectedDepth);
-			device->SetName(&reprojectedDepth, "reprojectedDepth");
-
-			for (uint32_t i = 0; i < reprojectedDepth.desc.mip_levels; ++i)
-			{
-				int subresource_index;
-				subresource_index = device->CreateSubresource(&reprojectedDepth, SubresourceType::SRV, 0, 1, i, 1);
-				assert(subresource_index == i);
-				subresource_index = device->CreateSubresource(&reprojectedDepth, SubresourceType::UAV, 0, 1, i, 1);
-				assert(subresource_index == i);
-			}
-		}
 
 		// Other resources:
 		{
@@ -584,6 +564,33 @@ namespace wi
 			vxgiResources = {};
 		}
 
+		// Check whether reprojected depth is required:
+		if (wi::renderer::IsMeshShaderAllowed() && wi::renderer::IsMeshletOcclusionCullingEnabled())
+		{
+			TextureDesc desc;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.format = Format::R16_UNORM;
+			desc.width = internalResolution.x;
+			desc.height = internalResolution.y;
+			desc.mip_levels = GetMipCount(desc.width, desc.height, 1, 4);
+			desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+			device->CreateTexture(&desc, nullptr, &reprojectedDepth);
+			device->SetName(&reprojectedDepth, "reprojectedDepth");
+
+			for (uint32_t i = 0; i < reprojectedDepth.desc.mip_levels; ++i)
+			{
+				int subresource_index;
+				subresource_index = device->CreateSubresource(&reprojectedDepth, SubresourceType::SRV, 0, 1, i, 1);
+				assert(subresource_index == i);
+				subresource_index = device->CreateSubresource(&reprojectedDepth, SubresourceType::UAV, 0, 1, i, 1);
+				assert(subresource_index == i);
+			}
+		}
+		else
+		{
+			reprojectedDepth = {};
+		}
+
 		// Check whether velocity buffer is required:
 		if (
 			getMotionBlurEnabled() ||
@@ -596,7 +603,7 @@ namespace wi
 			getAO() == AO::AO_RTAO ||
 			wi::renderer::GetVariableRateShadingClassification() ||
 			getFSR2Enabled() ||
-			wi::renderer::IsMeshShaderAllowed()
+			reprojectedDepth.IsValid()
 			)
 		{
 			if (!rtVelocity.IsValid())
@@ -939,7 +946,7 @@ namespace wi
 
 			wi::renderer::RefreshImpostors(*scene, cmd);
 
-			if (wi::renderer::IsMeshShaderAllowed())
+			if (reprojectedDepth.IsValid())
 			{
 				wi::renderer::ComputeReprojectedDepthPyramid(
 					depthBuffer_Copy,

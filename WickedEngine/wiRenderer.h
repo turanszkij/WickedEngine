@@ -1108,6 +1108,8 @@ namespace wi::renderer
 	float GetGIBoost();
 	void SetMeshShaderAllowed(bool value);
 	bool IsMeshShaderAllowed();
+	void SetMeshletOcclusionCullingEnabled(bool value);
+	bool IsMeshletOcclusionCullingEnabled();
 	void Workaround( const int bug, wi::graphics::CommandList cmd);
 
 	// Gets pick ray according to the current screen resolution and pointer coordinates. Can be used as input into RayIntersectWorld()

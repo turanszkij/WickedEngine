@@ -138,6 +138,7 @@ uint32_t DDGI_RAYCOUNT = 256u;
 float DDGI_BLEND_SPEED = 0.1f;
 float GI_BOOST = 1.0f;
 bool MESH_SHADER_ALLOWED = false;
+bool MESHLET_OCCLUSION_CULLING = false;
 std::atomic<size_t> SHADER_ERRORS{ 0 };
 std::atomic<size_t> SHADER_MISSING{ 0 };
 bool VXGI_ENABLED = false;
@@ -17737,8 +17738,8 @@ void ComputeReprojectedDepthPyramid(
 	const TextureDesc& output_desc = output_depth_pyramid.GetDesc();
 
 	PostProcess postprocess = {};
-	postprocess.resolution.x = input_desc.width;
-	postprocess.resolution.y = input_desc.height;
+	postprocess.resolution.x = output_desc.width;
+	postprocess.resolution.y = output_desc.height;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
@@ -17766,16 +17767,6 @@ void ComputeReprojectedDepthPyramid(
 		device->BindUAV(&output_depth_pyramid, 1, cmd, 1);
 		PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 1));
 	}
-	if (output_desc.mip_levels > 2)
-	{
-		device->BindUAV(&output_depth_pyramid, 2, cmd, 2);
-		PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 2));
-	}
-	if (output_desc.mip_levels > 3)
-	{
-		device->BindUAV(&output_depth_pyramid, 3, cmd, 3);
-		PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 3));
-	}
 
 	device->Dispatch(
 		(postprocess.resolution.x + 7 - 1) / 8,
@@ -17788,31 +17779,25 @@ void ComputeReprojectedDepthPyramid(
 
 	device->BindComputeShader(&shaders[CSTYPE_DEPTH_PYRAMID], cmd);
 
-	if (output_desc.mip_levels > 4)
+	uint bottom = 2;
+	while (output_desc.mip_levels > bottom)
 	{
 		device->BindUAVs(unbind, 0, arraysize(unbind), cmd);
-		postprocess.resolution.x = std::max(1u, input_desc.width >> 3);
-		postprocess.resolution.y = std::max(1u, input_desc.height >> 3);
+		postprocess.resolution.x = std::max(1u, output_desc.width >> bottom);
+		postprocess.resolution.y = std::max(1u, output_desc.height >> bottom);
 		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
-		device->BindResource(&output_depth_pyramid, 0, cmd, 3);
+		device->BindResource(&output_depth_pyramid, 0, cmd, bottom - 1);
 
-		if (output_desc.mip_levels > 4)
+		device->BindUAV(&output_depth_pyramid, 0, cmd, bottom);
+		PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, bottom));
+
+		if (output_desc.mip_levels > (bottom + 1))
 		{
-			device->BindUAV(&output_depth_pyramid, 0, cmd, 4);
-			PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 4));
-		}
-		if (output_desc.mip_levels > 5)
-		{
-			device->BindUAV(&output_depth_pyramid, 1, cmd, 5);
-			PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 5));
-		}
-		if (output_desc.mip_levels > 6)
-		{
-			device->BindUAV(&output_depth_pyramid, 2, cmd, 6);
-			PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 6));
+			device->BindUAV(&output_depth_pyramid, 1, cmd, bottom + 1);
+			PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, bottom + 1));
 		}
 
 		device->Dispatch(
@@ -17824,79 +17809,7 @@ void ComputeReprojectedDepthPyramid(
 
 		FlushBarriers(cmd);
 
-		if (output_desc.mip_levels > 7)
-		{
-			device->BindUAVs(unbind, 0, arraysize(unbind), cmd);
-			postprocess.resolution.x = std::max(1u, input_desc.width >> 6);
-			postprocess.resolution.y = std::max(1u, input_desc.height >> 6);
-			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
-			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-
-			device->BindResource(&output_depth_pyramid, 0, cmd, 6);
-
-			if (output_desc.mip_levels > 7)
-			{
-				device->BindUAV(&output_depth_pyramid, 0, cmd, 7);
-				PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 7));
-			}
-			if (output_desc.mip_levels > 8)
-			{
-				device->BindUAV(&output_depth_pyramid, 1, cmd, 8);
-				PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 8));
-			}
-			if (output_desc.mip_levels > 9)
-			{
-				device->BindUAV(&output_depth_pyramid, 2, cmd, 9);
-				PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 9));
-			}
-
-			device->Dispatch(
-				(postprocess.resolution.x + 7 - 1) / 8,
-				(postprocess.resolution.y + 7 - 1) / 8,
-				1,
-				cmd
-			);
-
-			FlushBarriers(cmd);
-
-			if (output_desc.mip_levels > 10)
-			{
-				device->BindUAVs(unbind, 0, arraysize(unbind), cmd);
-				postprocess.resolution.x = std::max(1u, input_desc.width >> 9);
-				postprocess.resolution.y = std::max(1u, input_desc.height >> 9);
-				postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
-				postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-				device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-
-				device->BindResource(&output_depth_pyramid, 0, cmd, 9);
-
-				if (output_desc.mip_levels > 10)
-				{
-					device->BindUAV(&output_depth_pyramid, 0, cmd, 10);
-					PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 10));
-				}
-				if (output_desc.mip_levels > 11)
-				{
-					device->BindUAV(&output_depth_pyramid, 1, cmd, 11);
-					PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 11));
-				}
-				if (output_desc.mip_levels > 12)
-				{
-					device->BindUAV(&output_depth_pyramid, 2, cmd, 12);
-					PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 12));
-				}
-
-				device->Dispatch(
-					(postprocess.resolution.x + 7 - 1) / 8,
-					(postprocess.resolution.y + 7 - 1) / 8,
-					1,
-					cmd
-				);
-
-				FlushBarriers(cmd);
-			}
-		}
+		bottom += 2;
 	}
 
 	device->EventEnd(cmd);
@@ -18226,6 +18139,14 @@ void SetMeshShaderAllowed(bool value)
 bool IsMeshShaderAllowed()
 {
 	return MESH_SHADER_ALLOWED && device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER);
+}
+void SetMeshletOcclusionCullingEnabled(bool value)
+{
+	MESHLET_OCCLUSION_CULLING = value;
+}
+bool IsMeshletOcclusionCullingEnabled()
+{
+	return MESHLET_OCCLUSION_CULLING;
 }
 
 wi::Resource CreatePaintableTexture(uint32_t width, uint32_t height, uint32_t mips, wi::Color initialColor)

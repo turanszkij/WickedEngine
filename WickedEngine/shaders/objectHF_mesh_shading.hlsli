@@ -125,7 +125,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 					);
 					float min_depth = min(depths.x, min(depths.y, min(depths.z, depths.w)));
 					float sphere_depth = closest_sphere_point.z / closest_sphere_point.w;
-					if (sphere_depth < min_depth - 0.001) // little safety bias
+					if (sphere_depth < min_depth - 0.01) // little safety bias
 						visible = false;
 				}
 #endif // OCCLUSION_CULLING

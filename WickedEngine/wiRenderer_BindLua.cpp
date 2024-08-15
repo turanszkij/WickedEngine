@@ -238,6 +238,19 @@ namespace wi::lua::renderer
 		}
 		return 0;
 	}
+	int SetMeshletOcclusionCullingEnabled(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::renderer::SetMeshletOcclusionCullingEnabled(wi::lua::SGetBool(L, 1));
+		}
+		else
+		{
+			wi::lua::SError(L, "SetMeshletOcclusionCullingEnabled(bool enabled) not enough arguments!");
+		}
+		return 0;
+	}
 
 	int DrawLine(lua_State* L)
 	{
@@ -823,6 +836,7 @@ namespace wi::lua::renderer
 			wi::lua::RegisterFunc("SetDebugLightCulling", SetDebugLightCulling);
 			wi::lua::RegisterFunc("SetOcclusionCullingEnabled", SetOcclusionCullingEnabled);
 			wi::lua::RegisterFunc("SetMeshShaderAllowed", SetMeshShaderAllowed);
+			wi::lua::RegisterFunc("SetMeshletOcclusionCullingEnabled", SetMeshletOcclusionCullingEnabled);
 
 			wi::lua::RegisterFunc("DrawLine", DrawLine);
 			wi::lua::RegisterFunc("DrawPoint", DrawPoint);
