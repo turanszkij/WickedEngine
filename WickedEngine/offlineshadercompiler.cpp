@@ -231,6 +231,8 @@ wi::vector<ShaderEntry> shaders = {
 	{"yuv_to_rgbCS", wi::graphics::ShaderStage::CS },
 	{"wetmap_updateCS", wi::graphics::ShaderStage::CS },
 	{"causticsCS", wi::graphics::ShaderStage::CS },
+	{"depth_reprojectCS", wi::graphics::ShaderStage::CS },
+	{"depth_pyramidCS", wi::graphics::ShaderStage::CS },
 
 
 	{"emittedparticlePS_soft", wi::graphics::ShaderStage::PS },

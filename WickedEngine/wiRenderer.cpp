@@ -1206,6 +1206,8 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_YUV_TO_RGB], "yuv_to_rgbCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_WETMAP_UPDATE], "wetmap_updateCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_CAUSTICS], "causticsCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DEPTH_REPROJECT], "depth_reprojectCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DEPTH_PYRAMID], "depth_pyramidCS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT], "objectHS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT_PREPASS], "objectHS_prepass.cso"); });
@@ -1831,7 +1833,7 @@ void LoadShaders()
 
 	for (uint32_t renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
 	{
-		for (uint32_t mesh_shader = 0; mesh_shader <= (IsMeshShaderAllowed() ? 1u : 0u); ++mesh_shader)
+		for (uint32_t mesh_shader = 0; mesh_shader <= (device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER) ? 1u : 0u); ++mesh_shader)
 		{
 			// default objectshaders:
 			//	We don't wait for these here, because then it can slow down the init time a lot
@@ -2910,10 +2912,9 @@ void RenderMeshes(
 
 	device->EventBegin("RenderMeshes", cmd);
 
-	const bool mesh_shader = IsMeshShaderAllowed() &&
-		(renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY || renderPass == RENDERPASS_MAIN || renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_RAINBLOCKER);
+	// Always wait for non-mesh shader variants, it can be used when mesh shader is not applicable for an object:
+	wi::jobsystem::Wait(object_pso_job_ctx[renderPass][OBJECT_MESH_SHADER_PSO_DISABLED]);
 
-	wi::jobsystem::Wait(object_pso_job_ctx[renderPass][mesh_shader]);
 	RenderPassInfo renderpass_info = device->GetRenderPassInfo(cmd);
 
 	const bool tessellation =
@@ -2929,6 +2930,15 @@ void RenderMeshes(
 		renderPass == RENDERPASS_VOXELIZE;
 
 	const bool shadowRendering = renderPass == RENDERPASS_SHADOW;
+
+	const bool mesh_shader = IsMeshShaderAllowed() &&
+		(renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY || renderPass == RENDERPASS_MAIN || renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_RAINBLOCKER);
+
+	if (mesh_shader)
+	{
+		// Mesh shader is optional, only wait for these completions if enabled:
+		wi::jobsystem::Wait(object_pso_job_ctx[renderPass][OBJECT_MESH_SHADER_PSO_ENABLED]);
+	}
 
 	// Pre-allocate space for all the instances in GPU-buffer:
 	const size_t alloc_size = renderQueue.size() * camera_count * sizeof(ShaderMeshInstancePointer);
@@ -10470,6 +10480,7 @@ void BindCameraCB(
 	shadercam.texture_depth_index_prev = camera_previous.texture_depth_index;
 	shadercam.texture_vxgi_diffuse_index = camera.texture_vxgi_diffuse_index;
 	shadercam.texture_vxgi_specular_index = camera.texture_vxgi_specular_index;
+	shadercam.texture_reprojected_depth_index = camera.texture_reprojected_depth_index;
 
 	device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 }
@@ -17695,6 +17706,197 @@ void CopyDepthStencil(
 		barrier_stack.push_back(GPUBarrier::Image(input_stencil, ResourceState::COPY_SRC, input_stencil->desc.layout));
 		barrier_stack.push_back(GPUBarrier::Image(&output_depth_stencil, ResourceState::COPY_DST, output_depth_stencil.desc.layout));
 		barrier_stack_flush(cmd);
+	}
+
+	device->EventEnd(cmd);
+}
+
+
+void ComputeReprojectedDepthPyramid(
+	const Texture& input_depth,
+	const Texture& input_velocity,
+	const Texture& output_depth_pyramid,
+	CommandList cmd
+)
+{
+	device->EventBegin("ComputeReprojectedDepthPyramid", cmd);
+
+	BindCommonResources(cmd);
+
+	GPUResource empty;
+	const GPUResource* unbind[] = {
+		&empty,
+		&empty,
+		&empty,
+		&empty,
+	};
+
+	device->BindComputeShader(&shaders[CSTYPE_DEPTH_REPROJECT], cmd);
+
+	const TextureDesc& input_desc = input_depth.GetDesc();
+	const TextureDesc& output_desc = output_depth_pyramid.GetDesc();
+
+	PostProcess postprocess = {};
+	postprocess.resolution.x = input_desc.width;
+	postprocess.resolution.y = input_desc.height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&output_depth_pyramid, output_depth_pyramid.desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	device->ClearUAV(&output_depth_pyramid, 0, cmd);
+	device->Barrier(GPUBarrier::Memory(&output_depth_pyramid), cmd);
+
+	device->BindResource(&input_depth, 0, cmd);
+	device->BindResource(&input_velocity, 1, cmd);
+
+	device->BindUAVs(unbind, 0, arraysize(unbind), cmd);
+
+	device->BindUAV(&output_depth_pyramid, 0, cmd, 0);
+	PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 0));
+
+	if (output_desc.mip_levels > 1)
+	{
+		device->BindUAV(&output_depth_pyramid, 1, cmd, 1);
+		PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 1));
+	}
+	if (output_desc.mip_levels > 2)
+	{
+		device->BindUAV(&output_depth_pyramid, 2, cmd, 2);
+		PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 2));
+	}
+	if (output_desc.mip_levels > 3)
+	{
+		device->BindUAV(&output_depth_pyramid, 3, cmd, 3);
+		PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 3));
+	}
+
+	device->Dispatch(
+		(postprocess.resolution.x + 7 - 1) / 8,
+		(postprocess.resolution.y + 7 - 1) / 8,
+		1,
+		cmd
+	);
+
+	FlushBarriers(cmd);
+
+	device->BindComputeShader(&shaders[CSTYPE_DEPTH_PYRAMID], cmd);
+
+	if (output_desc.mip_levels > 4)
+	{
+		device->BindUAVs(unbind, 0, arraysize(unbind), cmd);
+		postprocess.resolution.x = std::max(1u, input_desc.width >> 3);
+		postprocess.resolution.y = std::max(1u, input_desc.height >> 3);
+		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+		device->BindResource(&output_depth_pyramid, 0, cmd, 3);
+
+		if (output_desc.mip_levels > 4)
+		{
+			device->BindUAV(&output_depth_pyramid, 0, cmd, 4);
+			PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 4));
+		}
+		if (output_desc.mip_levels > 5)
+		{
+			device->BindUAV(&output_depth_pyramid, 1, cmd, 5);
+			PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 5));
+		}
+		if (output_desc.mip_levels > 6)
+		{
+			device->BindUAV(&output_depth_pyramid, 2, cmd, 6);
+			PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 6));
+		}
+
+		device->Dispatch(
+			(postprocess.resolution.x + 7 - 1) / 8,
+			(postprocess.resolution.y + 7 - 1) / 8,
+			1,
+			cmd
+		);
+
+		FlushBarriers(cmd);
+
+		if (output_desc.mip_levels > 7)
+		{
+			device->BindUAVs(unbind, 0, arraysize(unbind), cmd);
+			postprocess.resolution.x = std::max(1u, input_desc.width >> 6);
+			postprocess.resolution.y = std::max(1u, input_desc.height >> 6);
+			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+			device->BindResource(&output_depth_pyramid, 0, cmd, 6);
+
+			if (output_desc.mip_levels > 7)
+			{
+				device->BindUAV(&output_depth_pyramid, 0, cmd, 7);
+				PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 7));
+			}
+			if (output_desc.mip_levels > 8)
+			{
+				device->BindUAV(&output_depth_pyramid, 1, cmd, 8);
+				PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 8));
+			}
+			if (output_desc.mip_levels > 9)
+			{
+				device->BindUAV(&output_depth_pyramid, 2, cmd, 9);
+				PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 9));
+			}
+
+			device->Dispatch(
+				(postprocess.resolution.x + 7 - 1) / 8,
+				(postprocess.resolution.y + 7 - 1) / 8,
+				1,
+				cmd
+			);
+
+			FlushBarriers(cmd);
+
+			if (output_desc.mip_levels > 10)
+			{
+				device->BindUAVs(unbind, 0, arraysize(unbind), cmd);
+				postprocess.resolution.x = std::max(1u, input_desc.width >> 9);
+				postprocess.resolution.y = std::max(1u, input_desc.height >> 9);
+				postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+				postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+				device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+				device->BindResource(&output_depth_pyramid, 0, cmd, 9);
+
+				if (output_desc.mip_levels > 10)
+				{
+					device->BindUAV(&output_depth_pyramid, 0, cmd, 10);
+					PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 10));
+				}
+				if (output_desc.mip_levels > 11)
+				{
+					device->BindUAV(&output_depth_pyramid, 1, cmd, 11);
+					PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 11));
+				}
+				if (output_desc.mip_levels > 12)
+				{
+					device->BindUAV(&output_depth_pyramid, 2, cmd, 12);
+					PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, 12));
+				}
+
+				device->Dispatch(
+					(postprocess.resolution.x + 7 - 1) / 8,
+					(postprocess.resolution.y + 7 - 1) / 8,
+					1,
+					cmd
+				);
+
+				FlushBarriers(cmd);
+			}
+		}
 	}
 
 	device->EventEnd(cmd);

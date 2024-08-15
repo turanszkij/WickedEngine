@@ -981,6 +981,13 @@ namespace wi::renderer
 	void OcclusionCulling_Render(const wi::scene::CameraComponent& camera, const Visibility& vis, wi::graphics::CommandList cmd);
 	void OcclusionCulling_Resolve(const Visibility& vis, wi::graphics::CommandList cmd);
 
+	void ComputeReprojectedDepthPyramid(
+		const wi::graphics::Texture& input_depth,
+		const wi::graphics::Texture& input_velocity,
+		const wi::graphics::Texture& output_depth_pyramid,
+		wi::graphics::CommandList cmd
+	);
+
 	enum MIPGENFILTER
 	{
 		MIPGENFILTER_POINT,

@@ -1209,8 +1209,10 @@ struct alignas(16) ShaderCamera
 	int texture_vxgi_diffuse_index;
 	int texture_vxgi_specular_index;
 
-	uint3 padding;
+	int texture_reprojected_depth_index;
 	uint options;
+	uint padding0;
+	uint padding1;
 
 #ifdef __cplusplus
 	void init()
@@ -1276,6 +1278,9 @@ struct alignas(16) ShaderCamera
 		texture_depth_index_prev = -1;
 		texture_vxgi_diffuse_index = -1;
 		texture_vxgi_specular_index = -1;
+		texture_reprojected_depth_index = -1;
+
+		options = 0;
 	}
 
 #else

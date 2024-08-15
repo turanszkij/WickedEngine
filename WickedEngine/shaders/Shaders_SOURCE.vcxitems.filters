@@ -1202,6 +1202,12 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)shadowMS_transparent.hlsl">
       <Filter>MS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)depth_reprojectCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)depth_pyramidCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h">

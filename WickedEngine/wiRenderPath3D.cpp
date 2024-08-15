@@ -297,6 +297,26 @@ namespace wi
 				assert(subresource_index == i);
 			}
 		}
+		{
+			TextureDesc desc;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.format = Format::R16_UNORM;
+			desc.width = internalResolution.x;
+			desc.height = internalResolution.y;
+			desc.mip_levels = 0;
+			desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+			device->CreateTexture(&desc, nullptr, &reprojectedDepth);
+			device->SetName(&reprojectedDepth, "reprojectedDepth");
+
+			for (uint32_t i = 0; i < reprojectedDepth.desc.mip_levels; ++i)
+			{
+				int subresource_index;
+				subresource_index = device->CreateSubresource(&reprojectedDepth, SubresourceType::SRV, 0, 1, i, 1);
+				assert(subresource_index == i);
+				subresource_index = device->CreateSubresource(&reprojectedDepth, SubresourceType::UAV, 0, 1, i, 1);
+				assert(subresource_index == i);
+			}
+		}
 
 		// Other resources:
 		{
@@ -575,7 +595,8 @@ namespace wi
 			wi::renderer::GetRaytracedShadowsEnabled() ||
 			getAO() == AO::AO_RTAO ||
 			wi::renderer::GetVariableRateShadingClassification() ||
-			getFSR2Enabled()
+			getFSR2Enabled() ||
+			wi::renderer::IsMeshShaderAllowed()
 			)
 		{
 			if (!rtVelocity.IsValid())
@@ -741,6 +762,7 @@ namespace wi
 		{
 			camera->texture_vxgi_specular_index = -1;
 		}
+		camera->texture_reprojected_depth_index = device->GetDescriptorIndex(&reprojectedDepth, SubresourceType::SRV);
 
 		camera_reflection.canvas.init(*this);
 		camera_reflection.width = (float)depthBuffer_Reflection.desc.width;
@@ -770,6 +792,7 @@ namespace wi
 		camera_reflection.texture_surfelgi_index = -1;
 		camera_reflection.texture_vxgi_diffuse_index = -1;
 		camera_reflection.texture_vxgi_specular_index = -1;
+		camera_reflection.texture_reprojected_depth_index = -1;
 
 		video_cmd = {};
 		if (getSceneUpdateEnabled() && scene->videos.GetCount() > 0)
@@ -915,6 +938,16 @@ namespace wi
 			}
 
 			wi::renderer::RefreshImpostors(*scene, cmd);
+
+			if (wi::renderer::IsMeshShaderAllowed())
+			{
+				wi::renderer::ComputeReprojectedDepthPyramid(
+					depthBuffer_Copy,
+					rtVelocity,
+					reprojectedDepth,
+					cmd
+				);
+			}
 
 			RenderPassImage rp[] = {
 				RenderPassImage::DepthStencil(
