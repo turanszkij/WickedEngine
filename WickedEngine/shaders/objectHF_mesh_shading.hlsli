@@ -99,10 +99,10 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 				float3 corner_2_world = bounds.sphere.center - up_radius - right_radius;
 				float3 corner_3_world = bounds.sphere.center - up_radius + right_radius;
 
-				float4 corner_0_clip = mul(camera.view_projection, float4(corner_0_world, 1));
-				float4 corner_1_clip = mul(camera.view_projection, float4(corner_1_world, 1));
-				float4 corner_2_clip = mul(camera.view_projection, float4(corner_2_world, 1));
-				float4 corner_3_clip = mul(camera.view_projection, float4(corner_3_world, 1));
+				float4 corner_0_clip = mul(camera.previous_view_projection, float4(corner_0_world, 1));
+				float4 corner_1_clip = mul(camera.previous_view_projection, float4(corner_1_world, 1));
+				float4 corner_2_clip = mul(camera.previous_view_projection, float4(corner_2_world, 1));
+				float4 corner_3_clip = mul(camera.previous_view_projection, float4(corner_3_world, 1));
 
 				float2 corner_0_uv = clipspace_to_uv(corner_0_clip.xy / corner_0_clip.w);
 				float2 corner_1_uv = clipspace_to_uv(corner_1_clip.xy / corner_1_clip.w);
@@ -111,9 +111,9 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 				float sphere_width_uv = length(corner_0_uv - corner_1_uv);
 
-				float3 sphere_center_view = mul(camera.view, float4(bounds.sphere.center, 1)).xyz;
+				float3 sphere_center_view = mul(camera.previous_view, float4(bounds.sphere.center, 1)).xyz;
 				float3 pv = sphere_center_view - normalize(sphere_center_view) * bounds.sphere.radius;
-				float4 closest_sphere_point = mul(camera.projection, float4(pv, 1));
+				float4 closest_sphere_point = mul(camera.previous_projection, float4(pv, 1));
 
 				float w = sphere_width_uv * max(camera.internal_resolution.x, camera.internal_resolution.y);
 
