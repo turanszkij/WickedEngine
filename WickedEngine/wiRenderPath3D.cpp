@@ -52,6 +52,7 @@ namespace wi
 		depthBuffer_Copy1 = {};
 		depthBuffer_Reflection = {};
 		rtLinearDepth = {};
+		reprojectedDepth = {};
 
 		debugUAV = {};
 		tiledLightResources = {};
@@ -81,6 +82,7 @@ namespace wi
 
 	void RenderPath3D::ResizeBuffers()
 	{
+		first_frame = true;
 		DeleteGPUResources();
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
@@ -565,7 +567,7 @@ namespace wi
 		}
 
 		// Check whether reprojected depth is required:
-		if (wi::renderer::IsMeshShaderAllowed() && wi::renderer::IsMeshletOcclusionCullingEnabled())
+		if (!first_frame && wi::renderer::IsMeshShaderAllowed() && wi::renderer::IsMeshletOcclusionCullingEnabled())
 		{
 			TextureDesc desc;
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
