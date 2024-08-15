@@ -73,6 +73,7 @@ void Editor::Initialize()
 
 	infoDisplay.active = true;
 	infoDisplay.watermark = false; // can be toggled instead on gui
+	infoDisplay.pipeline_creation = true;
 	//infoDisplay.fpsinfo = true;
 	//infoDisplay.resolution = true;
 	//infoDisplay.logical_size = true;

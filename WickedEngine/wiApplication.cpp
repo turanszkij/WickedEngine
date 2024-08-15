@@ -485,9 +485,9 @@ namespace wi
 				infodisplay_str += std::to_string(graphicsDevice->GetActivePipelineCount());
 				infodisplay_str += "\n";
 			}
-			if (wi::renderer::IsPipelineCreationActive())
+			if (infoDisplay.pipeline_creation && wi::renderer::IsPipelineCreationActive())
 			{
-				infodisplay_str += "Shader pipeline compilation...\n";
+				infodisplay_str += "Shader pipeline creation is running...\n";
 			}
 
 			wi::font::Params params = wi::font::Params(

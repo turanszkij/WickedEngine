@@ -111,6 +111,8 @@ namespace wi
 			bool heap_allocation_counter = false;
 			// display the active graphics pipeline count
 			bool pipeline_count = false;
+			// display the pipeline creation info
+			bool pipeline_creation = false;
 			// display video memory usage and budget
 			bool vram_usage = false;
 			// text size
