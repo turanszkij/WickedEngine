@@ -138,7 +138,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	AddWidget(&visibilityComputeShadingCheckBox);
 
 	meshShaderCheckBox.Create("Allow Mesh Shader: ");
-	meshShaderCheckBox.SetTooltip("Allow using mesh shaders to render objects (Requires support from GPU).");
+	meshShaderCheckBox.SetTooltip("Allow using mesh shaders to render objects (Requires support from GPU).\nThis will enable cluster generation when loading meshes, so turning it on it will take effect the next time a mesh is loaded.");
 	meshShaderCheckBox.SetPos(XMFLOAT2(x, y += step));
 	meshShaderCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	if (editor->main->config.GetSection("graphics").Has("mesh_shader"))

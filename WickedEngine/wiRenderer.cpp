@@ -1210,7 +1210,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::DS, shaders[DSTYPE_OBJECT_PREPASS_ALPHATEST], "objectDS_prepass_alphatest.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::DS, shaders[DSTYPE_OBJECT_SIMPLE], "objectDS_simple.cso"); });
 
-	if (device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
+	if (IsMeshShaderAllowed())
 	{
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::AS, shaders[ASTYPE_OBJECT], "objectAS.cso"); });
 
@@ -17998,7 +17998,11 @@ float GetGIBoost()
 void SetMeshShaderAllowed(bool value)
 {
 	MESH_SHADER_ALLOWED = value;
-	ReloadShaders(); // Creating mesh shader pipelines is too slow, so if it's disabled we avoid it
+
+	if (IsMeshShaderAllowed())
+	{
+		ReloadShaders(); // Creating mesh shader pipelines is too slow, so if it's disabled we avoid it
+	}
 }
 bool IsMeshShaderAllowed()
 {
