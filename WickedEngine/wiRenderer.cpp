@@ -1234,39 +1234,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::DS, shaders[DSTYPE_OBJECT_PREPASS_ALPHATEST], "objectDS_prepass_alphatest.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::DS, shaders[DSTYPE_OBJECT_SIMPLE], "objectDS_simple.cso"); });
 
-	if (device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
-	{
-		// Note: Mesh shader loading is very slow in Vulkan, so all mesh shader loading will be executed on a separate context
-		//	and only waited by mesh shader PSO jobs, not holding back the rest of initialization
-		wi::jobsystem::Wait(mesh_shader_ctx);
-		mesh_shader_ctx.priority = wi::jobsystem::Priority::Low;
-
-		wi::jobsystem::Execute(mesh_shader_ctx, [](wi::jobsystem::JobArgs args) {
-			LoadShader(ShaderStage::AS, shaders[ASTYPE_OBJECT], "objectAS.cso");
-			LoadShader(ShaderStage::MS, shaders[MSTYPE_OBJECT_SIMPLE], "objectMS_simple.cso");
-
-			PipelineStateDesc desc;
-			desc.vs = &shaders[VSTYPE_OBJECT_SIMPLE];
-			desc.ps = &shaders[PSTYPE_OBJECT_SIMPLE];
-			desc.rs = &rasterizers[RSTYPE_WIRE];
-			desc.bs = &blendStates[BSTYPE_OPAQUE];
-			desc.dss = &depthStencils[DSSTYPE_DEFAULT];
-			desc.pt = PrimitiveTopology::TRIANGLELIST;
-			desc.as = &shaders[ASTYPE_OBJECT];
-			desc.ms = &shaders[MSTYPE_OBJECT_SIMPLE];
-			device->CreatePipelineState(&desc, &PSO_object_wire_mesh_shader);
-		});
-
-		wi::jobsystem::Execute(mesh_shader_ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_OBJECT], "objectMS.cso"); });
-		wi::jobsystem::Execute(mesh_shader_ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_OBJECT_PREPASS], "objectMS_prepass.cso"); });
-		wi::jobsystem::Execute(mesh_shader_ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_OBJECT_PREPASS_ALPHATEST], "objectMS_prepass_alphatest.cso"); });
-
-		wi::jobsystem::Execute(mesh_shader_ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_SHADOW], "shadowMS.cso"); });
-		wi::jobsystem::Execute(mesh_shader_ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_SHADOW_ALPHATEST], "shadowMS_alphatest.cso"); });
-		wi::jobsystem::Execute(mesh_shader_ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_SHADOW_TRANSPARENT], "shadowMS_transparent.cso"); });
-
-	}
-
 	wi::jobsystem::Dispatch(objectps_ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
 
 		LoadShader(
@@ -1332,6 +1299,37 @@ void LoadShaders()
 	});
 
 	wi::jobsystem::Wait(ctx);
+
+	if (device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
+	{
+		// Note: Mesh shader loading is very slow in Vulkan, so all mesh shader loading will be executed on a separate context
+		//	and only waited by mesh shader PSO jobs, not holding back the rest of initialization
+		wi::jobsystem::Wait(mesh_shader_ctx);
+		mesh_shader_ctx.priority = wi::jobsystem::Priority::Low;
+
+		wi::jobsystem::Execute(mesh_shader_ctx, [](wi::jobsystem::JobArgs args) {
+			LoadShader(ShaderStage::AS, shaders[ASTYPE_OBJECT], "objectAS.cso");
+			LoadShader(ShaderStage::MS, shaders[MSTYPE_OBJECT_SIMPLE], "objectMS_simple.cso");
+
+			PipelineStateDesc desc;
+			desc.as = &shaders[ASTYPE_OBJECT];
+			desc.ms = &shaders[MSTYPE_OBJECT_SIMPLE];
+			desc.ps = &shaders[PSTYPE_OBJECT_SIMPLE]; // this is created in a different thread, so wait for the ctx before getting here
+			desc.rs = &rasterizers[RSTYPE_WIRE];
+			desc.bs = &blendStates[BSTYPE_OPAQUE];
+			desc.dss = &depthStencils[DSSTYPE_DEFAULT];
+			desc.pt = PrimitiveTopology::TRIANGLELIST;
+			device->CreatePipelineState(&desc, &PSO_object_wire_mesh_shader);
+		});
+
+		wi::jobsystem::Execute(mesh_shader_ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_OBJECT], "objectMS.cso"); });
+		wi::jobsystem::Execute(mesh_shader_ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_OBJECT_PREPASS], "objectMS_prepass.cso"); });
+		wi::jobsystem::Execute(mesh_shader_ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_OBJECT_PREPASS_ALPHATEST], "objectMS_prepass_alphatest.cso"); });
+
+		wi::jobsystem::Execute(mesh_shader_ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_SHADOW], "shadowMS.cso"); });
+		wi::jobsystem::Execute(mesh_shader_ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_SHADOW_ALPHATEST], "shadowMS_alphatest.cso"); });
+		wi::jobsystem::Execute(mesh_shader_ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_SHADOW_TRANSPARENT], "shadowMS_transparent.cso"); });
+	}
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		PipelineStateDesc desc;
