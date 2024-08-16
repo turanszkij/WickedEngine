@@ -831,6 +831,7 @@ namespace wi::scene
 
 		wi::vector<ShaderCluster> clusters;
 		wi::vector<ShaderClusterBounds> cluster_bounds;
+		cluster_ranges.clear();
 
 		if (device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
 		{
