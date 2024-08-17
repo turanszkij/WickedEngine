@@ -421,7 +421,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&cloakSlider);
 
-	chromaticAberrationSlider.Create(0, 1.0f, 0.02f, 1000, "Chromatic aberration: ");
+	chromaticAberrationSlider.Create(0, 10.0f, 0, 1000, "Chromatic aberration: ");
 	chromaticAberrationSlider.SetTooltip("Separation of RGB colors inside transmissive material.");
 	chromaticAberrationSlider.SetSize(XMFLOAT2(wid, hei));
 	chromaticAberrationSlider.SetPos(XMFLOAT2(x, y += step));
