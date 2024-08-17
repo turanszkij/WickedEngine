@@ -33,9 +33,6 @@ namespace wi::scene
 
 		wi::jobsystem::context ctx;
 
-		wi::jobsystem::Wait(character_pathfinding_ctx);
-		character_pathfinding_ctx.priority = wi::jobsystem::Priority::Low;
-
 		// Script system runs first, because it could create new entities and components
 		//	So GPU persistent resources need to be created accordingly for them too:
 		RunScriptUpdateSystem(ctx);
@@ -5609,11 +5606,19 @@ namespace wi::scene
 				transform->SetDirty();
 			}
 
-			if (character.process_goal && character.voxelgrid != nullptr)
+			if (AtomicOr(&character.process_goal_completed, 0) != 0)
+			{
+				AtomicAnd(&character.process_goal_completed, 0);
+				std::swap(character.pathquery_work, character.pathquery);
+			}
+
+			if (character.process_goal && character.voxelgrid != nullptr && !wi::jobsystem::IsBusy(character.pathfinding_ctx))
 			{
 				character.process_goal = false;
-				wi::jobsystem::Execute(character_pathfinding_ctx, [&](wi::jobsystem::JobArgs args) {
-					character.pathquery.process(character.position, character.goal, *character.voxelgrid);
+				character.pathfinding_ctx.priority = wi::jobsystem::Priority::Low;
+				wi::jobsystem::Execute(character.pathfinding_ctx, [&](wi::jobsystem::JobArgs args) {
+					character.pathquery_work.process(character.position, character.goal, *character.voxelgrid);
+					AtomicOr(&character.process_goal_completed, 1);
 				});
 			}
 

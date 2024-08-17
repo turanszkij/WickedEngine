@@ -29,7 +29,7 @@ namespace wi::jobsystem
 	// Defines a state of execution, can be waited on
 	struct context
 	{
-		std::atomic<uint32_t> counter{ 0 };
+		volatile long counter = 0;
 		Priority priority = Priority::High;
 	};
 

@@ -87,7 +87,6 @@ namespace wi::scene
 		void SetAccelerationStructureUpdateRequested(bool value = true) { acceleration_structure_update_requested = value; }
 		bool IsAccelerationStructureUpdateRequested() const { return acceleration_structure_update_requested; }
 		wi::Archive optimized_instatiation_data;
-		wi::jobsystem::context character_pathfinding_ctx;
 		wi::vector<wi::primitive::Capsule> character_capsules;
 
 		// AABB culling streams:

@@ -54,7 +54,7 @@ namespace wi::jobsystem
 				task(args);
 			}
 
-			ctx->counter.fetch_sub(1);
+			AtomicAdd(&ctx->counter, -1);
 		}
 	};
 	struct JobQueue
@@ -312,7 +312,7 @@ namespace wi::jobsystem
 		PriorityResources& res = internal_state.resources[int(ctx.priority)];
 
 		// Context state is updated:
-		ctx.counter.fetch_add(1);
+		AtomicAdd(&ctx.counter, 1);
 
 		Job job;
 		job.ctx = &ctx;
@@ -344,7 +344,7 @@ namespace wi::jobsystem
 		const uint32_t groupCount = DispatchGroupCount(jobCount, groupSize);
 
 		// Context state is updated:
-		ctx.counter.fetch_add(groupCount);
+		AtomicAdd(&ctx.counter, groupCount);
 
 		Job job;
 		job.ctx = &ctx;
@@ -384,7 +384,7 @@ namespace wi::jobsystem
 	bool IsBusy(const context& ctx)
 	{
 		// Whenever the context label is greater than zero, it means that there is still work that needs to be done
-		return ctx.counter.load() > 0;
+		return AtomicLoad(&ctx.counter) > 0;
 	}
 
 	void Wait(const context& ctx)

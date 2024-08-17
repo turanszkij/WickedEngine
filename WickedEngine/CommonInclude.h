@@ -241,6 +241,15 @@ inline unsigned long firstbitlow(unsigned long long value)
 }
 #endif // _WIN32
 
+inline long AtomicLoad(const volatile long* ptr)
+{
+	return AtomicOr((volatile long*)ptr, 0);
+}
+inline long long AtomicLoad(const volatile long long* ptr)
+{
+	return AtomicOr((volatile long long*)ptr, 0);
+}
+
 // Enable enum flags:
 //	https://www.justsoftwaresolutions.co.uk/cplusplus/using-enum-classes-as-bitfields.html
 template<typename E>
