@@ -996,6 +996,8 @@ Describes an orientation in 3D space.
 - DisplacementMapping : float
 - Refraction : float
 - Transmission : float
+- Cloak : float
+- ChromaticAberration : float
 - AlphaRef : float
 - SheenColor : Vector
 - SheenRoughness : float
