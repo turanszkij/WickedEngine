@@ -2128,8 +2128,6 @@ namespace wi::scene
 		float root_offset = 0;
 		bool foot_placement_enabled = true;
 		wi::PathQuery pathquery; // completed
-		wi::PathQuery pathquery_work; // working
-		wi::jobsystem::context pathfinding_ctx;
 		wi::vector<wi::ecs::Entity> animations;
 		wi::ecs::Entity currentAnimation = wi::ecs::INVALID_ENTITY;
 		float anim_amount = 1;
@@ -2137,7 +2135,17 @@ namespace wi::scene
 		bool anim_ended = true;
 		XMFLOAT3 goal = XMFLOAT3(0, 0, 0);
 		bool process_goal = false;
-		volatile long process_goal_completed = 0;
+		struct PathfindingThreadContext
+		{
+			wi::jobsystem::context ctx;
+			volatile long process_goal_completed = 0;
+			wi::PathQuery pathquery_work; // working
+			~PathfindingThreadContext()
+			{
+				wi::jobsystem::Wait(ctx);
+			}
+		};
+		std::shared_ptr<PathfindingThreadContext> pathfinding_thread; // separate allocation, mustn't be reallocated while path finding thread is running
 		const wi::VoxelGrid* voxelgrid = nullptr;
 
 		// Apply movement to the character in the next update

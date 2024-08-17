@@ -5606,20 +5606,26 @@ namespace wi::scene
 				transform->SetDirty();
 			}
 
-			if (AtomicOr(&character.process_goal_completed, 0) != 0)
+			if (character.pathfinding_thread == nullptr && character.process_goal)
 			{
-				AtomicAnd(&character.process_goal_completed, 0);
-				std::swap(character.pathquery_work, character.pathquery);
+				character.pathfinding_thread = std::make_shared<CharacterComponent::PathfindingThreadContext>();
 			}
-
-			if (character.process_goal && character.voxelgrid != nullptr && !wi::jobsystem::IsBusy(character.pathfinding_ctx))
+			if (character.pathfinding_thread)
 			{
-				character.process_goal = false;
-				character.pathfinding_ctx.priority = wi::jobsystem::Priority::Low;
-				wi::jobsystem::Execute(character.pathfinding_ctx, [&](wi::jobsystem::JobArgs args) {
-					character.pathquery_work.process(character.position, character.goal, *character.voxelgrid);
-					AtomicOr(&character.process_goal_completed, 1);
-				});
+				if (AtomicOr(&character.pathfinding_thread->process_goal_completed, 0) != 0)
+				{
+					AtomicAnd(&character.pathfinding_thread->process_goal_completed, 0);
+					std::swap(character.pathfinding_thread->pathquery_work, character.pathquery);
+				}
+				if (character.process_goal && character.voxelgrid != nullptr && !wi::jobsystem::IsBusy(character.pathfinding_thread->ctx))
+				{
+					character.process_goal = false;
+					character.pathfinding_thread->ctx.priority = wi::jobsystem::Priority::Low;
+					wi::jobsystem::Execute(character.pathfinding_thread->ctx, [&](wi::jobsystem::JobArgs args) {
+						character.pathfinding_thread->pathquery_work.process(character.position, character.goal, *character.voxelgrid);
+						AtomicOr(&character.pathfinding_thread->process_goal_completed, 1);
+					});
+				}
 			}
 
 		});
