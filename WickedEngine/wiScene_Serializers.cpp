@@ -978,6 +978,10 @@ namespace wi::scene
 				archive >> radius;
 				archive >> length;
 			}
+			if (seri.GetVersion() >= 3)
+			{
+				archive >> volumetric_boost;
+			}
 
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				lensFlareRimTextures.resize(lensFlareNames.size());
@@ -1045,6 +1049,10 @@ namespace wi::scene
 			{
 				archive << radius;
 				archive << length;
+			}
+			if (seri.GetVersion() >= 3)
+			{
+				archive << volumetric_boost;
 			}
 		}
 	}

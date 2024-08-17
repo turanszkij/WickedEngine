@@ -9,7 +9,7 @@ void LightWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_POINTLIGHT " Light", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(650, 900));
+	SetSize(XMFLOAT2(650, 940));
 
 	closeButton.SetTooltip("Delete LightComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -161,6 +161,23 @@ void LightWindow::Create(EditorComponent* _editor)
 	innerConeAngleSlider.SetEnabled(false);
 	innerConeAngleSlider.SetTooltip("Adjust the inner cone aperture for spotlight.\n(The inner cone will always be inside the outer cone)");
 	AddWidget(&innerConeAngleSlider);
+
+	volumetricBoostSlider.Create(0, 10, 0, 1000, "Volumetric boost: ");
+	volumetricBoostSlider.SetSize(XMFLOAT2(wid, hei));
+	volumetricBoostSlider.SetPos(XMFLOAT2(x, y += step));
+	volumetricBoostSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			LightComponent* light = scene.lights.GetComponent(x.entity);
+			if (light != nullptr)
+			{
+				light->volumetric_boost = args.fValue;
+			}
+		}
+		});
+	volumetricBoostSlider.SetTooltip("Adjust the volumetric fog effect's strength just for this light");
+	AddWidget(&volumetricBoostSlider);
 
 	shadowCheckBox.Create("Shadow: ");
 	shadowCheckBox.SetSize(XMFLOAT2(hei, hei));
@@ -373,6 +390,7 @@ void LightWindow::SetEntity(Entity entity)
 		lengthSlider.SetValue(light->length);
 		outerConeAngleSlider.SetValue(light->outerConeAngle);
 		innerConeAngleSlider.SetValue(light->innerConeAngle);
+		volumetricBoostSlider.SetValue(light->volumetric_boost);
 		shadowCheckBox.SetEnabled(true);
 		shadowCheckBox.SetCheck(light->IsCastingShadow());
 		haloCheckBox.SetEnabled(true);
@@ -548,6 +566,7 @@ void LightWindow::ResizeLayout()
 	add(rangeSlider);
 	add(outerConeAngleSlider);
 	add(innerConeAngleSlider);
+	add(volumetricBoostSlider);
 	add(radiusSlider);
 	add(lengthSlider);
 	add_right(shadowCheckBox);

@@ -5955,6 +5955,7 @@ void DrawVolumeLights(
 			{
 				MiscCB miscCb;
 				miscCb.g_xColor.x = float(type_idx);
+				miscCb.g_xColor.y = light.volumetric_boost;
 				device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
 
 				device->Draw(3, 0, cmd); // full screen triangle
@@ -5964,6 +5965,7 @@ void DrawVolumeLights(
 			{
 				MiscCB miscCb;
 				miscCb.g_xColor.x = float(type_idx);
+				miscCb.g_xColor.y = light.volumetric_boost;
 				float sca = light.GetRange() + 1;
 				XMStoreFloat4x4(&miscCb.g_xTransform, XMMatrixScaling(sca, sca, sca) * XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * VP);
 				device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
@@ -5975,8 +5977,10 @@ void DrawVolumeLights(
 			{
 				MiscCB miscCb;
 				miscCb.g_xColor.x = float(type_idx);
-				miscCb.g_xColor.y = std::pow(std::sin(light.outerConeAngle), 2.0f);
-				miscCb.g_xColor.z = std::pow(std::cos(light.outerConeAngle), 2.0f);
+				miscCb.g_xColor.y = light.volumetric_boost;
+
+				uint packed = wi::math::pack_half2(std::pow(std::sin(light.outerConeAngle), 2.0f), std::pow(std::cos(light.outerConeAngle), 2.0f));
+				std::memcpy(&miscCb.g_xColor.z, &packed, sizeof(packed));
 
 				const XMVECTOR LightPos = XMLoadFloat3(&light.position);
 				const XMVECTOR LightDirection = XMLoadFloat3(&light.direction);

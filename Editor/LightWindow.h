@@ -18,6 +18,7 @@ public:
 	wi::gui::Slider lengthSlider;
 	wi::gui::Slider outerConeAngleSlider;
 	wi::gui::Slider innerConeAngleSlider;
+	wi::gui::Slider volumetricBoostSlider;
 	wi::gui::CheckBox shadowCheckBox;
 	wi::gui::CheckBox haloCheckBox;
 	wi::gui::CheckBox volumetricsCheckBox;

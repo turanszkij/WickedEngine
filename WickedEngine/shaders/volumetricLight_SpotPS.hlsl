@@ -71,7 +71,8 @@ float4 main(VertexToPixel input) : SV_TARGET
 		// If camera is outside light volume, do a cone trace to determine closest point on cone:
 		float tnear = 0;
 		float tfar = 0;
-		if(intersectInfiniteCone(GetCamera().position, -V, light.position, light.GetDirection(), g_xColor.y, g_xColor.z, tnear, tfar))
+		float2 sina2_cosa2 = unpack_half2(asuint(g_xColor.z));
+		if(intersectInfiniteCone(GetCamera().position, -V, light.position, light.GetDirection(), sina2_cosa2.x, sina2_cosa2.y, tnear, tfar))
 		{
 			rayEnd = GetCamera().position - V * max(0, tnear);
 			//return float4(1,0,0,1);
@@ -117,7 +118,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 			}
 
 			// Evaluate sample height for exponential fog calculation, given 0 for V:
-			attenuation *= GetFogAmount(cameraDistance - marchedDistance, P, float3(0.0, 0.0, 0.0));
+			attenuation *= g_xColor.y + GetFogAmount(cameraDistance - marchedDistance, P, float3(0.0, 0.0, 0.0));
 			attenuation *= ComputeScattering(saturate(dot(L, -V)));
 
 			accumulation += attenuation;

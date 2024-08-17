@@ -70,7 +70,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 		}
 
 		// Evaluate sample height for height fog calculation, given 0 for V:
-		shadow *= GetFogAmount(cameraDistance - marchedDistance, P, 0);
+		shadow *= g_xColor.y + GetFogAmount(cameraDistance - marchedDistance, P, 0);
 		shadow *= scattering;
 
 		accumulation += shadow;

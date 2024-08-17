@@ -1065,6 +1065,7 @@ namespace wi::scene
 		float innerConeAngle = 0; // default value is 0, means only outer cone angle is used
 		float radius = 0.025f;
 		float length = 0;
+		float volumetric_boost = 0; // increase the strength of volumetric fog only for this light
 
 		wi::vector<float> cascade_distances = { 8,80,800 };
 		wi::vector<std::string> lensFlareNames;
