@@ -73,6 +73,8 @@ namespace wi::lua
 
 		int GetLastPostProcessRT(lua_State* L);
 
+		int SetDistortionOverlay(lua_State* L);
+
 		static void Bind();
 	};
 

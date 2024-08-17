@@ -120,8 +120,12 @@ static const uint DEPTHOFFIELD_TILESIZE = 32;
 #define dof_cocscale postprocess.params0.x
 #define dof_maxcoc postprocess.params0.y
 
-static const uint TONEMAP_FLAG_DITHER = 1 << 0;
-static const uint TONEMAP_FLAG_ACES = 1 << 1;
+enum TONEMAP_FLAGS
+{
+	TONEMAP_FLAG_DITHER = 1 << 0,
+	TONEMAP_FLAG_ACES = 1 << 1,
+	TONEMAP_FLAG_SRGB = 1 << 2,
+};
 struct PushConstantsTonemap
 {
 	float2 resolution_rcp;
@@ -134,7 +138,7 @@ struct PushConstantsTonemap
 
 	int texture_bloom;
 	int texture_output;
-	uint display_colorspace;
+	int texture_input_distortion_overlay;
 	uint flags;
 };
 

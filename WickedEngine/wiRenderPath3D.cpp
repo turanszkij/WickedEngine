@@ -2372,7 +2372,8 @@ namespace wi
 				getEyeAdaptionEnabled() ? &luminanceResources.luminance : nullptr,
 				getBloomEnabled() ? &bloomResources.texture_bloom : nullptr,
 				colorspace,
-				getTonemap()
+				getTonemap(),
+				&distortion_overlay
 			);
 
 			rt_first = nullptr;

@@ -68,6 +68,8 @@ namespace wi::lua
 
 		lunamethod(RenderPath3D_BindLua, GetLastPostProcessRT),
 
+		lunamethod(RenderPath3D_BindLua, SetDistortionOverlay),
+
 		lunamethod(RenderPath2D_BindLua, CopyFrom),
 		{ NULL, NULL }
 	};
@@ -631,6 +633,31 @@ namespace wi::lua
 			return 0;
 		Luna<Texture_BindLua>::push(L, *tex);
 		return 1;
+	}
+
+	int RenderPath3D_BindLua::SetDistortionOverlay(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "SetDistortionOverlay(Texture texture) not enough arguments!");
+			return 0;
+		}
+		Texture_BindLua* tex = Luna<Texture_BindLua>::lightcheck(L, 1);
+		if (tex == nullptr)
+		{
+			wi::lua::SError(L, "SetDistortionOverlay(Texture texture) first argument is not a Texture!");
+			return 0;
+		}
+		if (tex->resource.IsValid())
+		{
+			((RenderPath3D*)component)->distortion_overlay = tex->resource.GetTexture();
+		}
+		else
+		{
+			((RenderPath3D*)component)->distortion_overlay = {};
+		}
+		return 0;
 	}
 
 static const std::string value_bindings = R"(

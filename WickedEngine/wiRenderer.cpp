@@ -16300,7 +16300,8 @@ void Postprocess_Tonemap(
 	const GPUBuffer* buffer_luminance,
 	const Texture* texture_bloom,
 	ColorSpace display_colorspace,
-	Tonemap tonemap
+	Tonemap tonemap,
+	const Texture* texture_distortion_overlay
 )
 {
 	if (!input.IsValid() || !output.IsValid())
@@ -16349,13 +16350,17 @@ void Postprocess_Tonemap(
 	{
 		tonemap_push.flags |= TONEMAP_FLAG_ACES;
 	}
+	if (display_colorspace == ColorSpace::SRGB)
+	{
+		tonemap_push.flags |= TONEMAP_FLAG_SRGB;
+	}
 	tonemap_push.texture_input = device->GetDescriptorIndex(&input, SubresourceType::SRV);
 	tonemap_push.buffer_input_luminance = device->GetDescriptorIndex((buffer_luminance == nullptr) ? &luminance_dummy : buffer_luminance, SubresourceType::SRV);
 	tonemap_push.texture_input_distortion = device->GetDescriptorIndex(texture_distortion, SubresourceType::SRV);
+	tonemap_push.texture_input_distortion_overlay = device->GetDescriptorIndex(texture_distortion_overlay, SubresourceType::SRV);
 	tonemap_push.texture_colorgrade_lookuptable = device->GetDescriptorIndex(texture_colorgradinglut, SubresourceType::SRV);
 	tonemap_push.texture_bloom = device->GetDescriptorIndex(texture_bloom, SubresourceType::SRV);
 	tonemap_push.texture_output = device->GetDescriptorIndex(&output, SubresourceType::UAV);
-	tonemap_push.display_colorspace = static_cast<uint32_t>(display_colorspace);
 	device->PushConstants(&tonemap_push, sizeof(tonemap_push), cmd);
 
 	device->Dispatch(

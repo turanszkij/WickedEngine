@@ -150,6 +150,8 @@ namespace wi
 		wi::graphics::CommandList video_cmd;
 		wi::vector<wi::video::VideoInstance*> video_instances_tmp;
 
+		wi::graphics::Texture distortion_overlay; // optional full screen distortion from an asset
+
 		mutable const wi::graphics::Texture* lastPostprocessRT = &rtPostprocess;
 		// Post-processes are ping-ponged, this function helps to obtain the last postprocess render target that was written
 		const wi::graphics::Texture* GetLastPostprocessRT() const

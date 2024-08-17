@@ -79,6 +79,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		uv += bindless_textures[tonemap_push.texture_input_distortion].SampleLevel(sampler_linear_clamp, uv, 0).rg;
 	}
 
+	[branch]
+	if (tonemap_push.texture_input_distortion_overlay >= 0)
+	{
+		uv += bindless_textures[tonemap_push.texture_input_distortion_overlay].SampleLevel(sampler_linear_clamp, uv, 0).rg * 2 - 1;
+	}
+
 	float4 hdr = 0;
 
 	[branch]
@@ -104,7 +110,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float4 result = hdr;
 
 	[branch]
-	if (tonemap_push.display_colorspace == (uint)ColorSpace::SRGB)
+	if (tonemap_push.flags & TONEMAP_FLAG_SRGB)
 	{
 		if (tonemap_push.flags & TONEMAP_FLAG_ACES)
 		{

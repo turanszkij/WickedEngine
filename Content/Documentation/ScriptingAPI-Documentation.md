@@ -1679,6 +1679,7 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - SetCropRight(float value) -- Sets cropping from right of the screen in logical units
 - SetCropBottom(float value) -- Sets cropping from bottom of the screen in logical units
 - GetLastPostProcessRT() : Texture -- returns the last post process render texture
+- SetDistortionOverlay(Texture texture) -- Set a normal map texture as full screen distortion mask
 
 ```lua
 FSR2_Preset = {
