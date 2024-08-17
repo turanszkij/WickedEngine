@@ -141,6 +141,7 @@ namespace wi
 		wi::renderer::CreateBloomResources(bloomResources, internalResolution);
 
 		setLightShaftsEnabled(getLightShaftsEnabled());
+		setVolumeLightsEnabled(getVolumeLightsEnabled());
 
 		resetProgress();
 
@@ -399,7 +400,12 @@ namespace wi
 					wi::profiler::EndRange(range); // Traced Scene
 				}
 
-				});
+				if (getVolumeLightsEnabled() && visibility_main.IsRequestedVolumetricLights())
+				{
+					wi::renderer::DrawShadowmaps(visibility_main, cmd);
+				}
+
+			});
 
 			if (scene->terrains.GetCount() > 0)
 			{
@@ -469,6 +475,8 @@ namespace wi
 				);
 			}
 
+			RenderVolumetrics(cmd);
+
 			RenderLightShafts(cmd);
 
 			// Composite other effects on top:
@@ -521,6 +529,20 @@ namespace wi
 				wi::renderer::DrawDebugWorld(*scene, *camera, *this, cmd);
 				wi::renderer::DrawLightVisualizers(visibility_main, cmd);
 				wi::renderer::DrawSpritesAndFonts(*scene, *camera, false, cmd);
+
+				if (getVolumeLightsEnabled() && visibility_main.IsRequestedVolumetricLights())
+				{
+					device->EventBegin("Contribute Volumetric Lights", cmd);
+					wi::renderer::Postprocess_Upsample_Bilateral(
+						rtVolumetricLights,
+						rtLinearDepth,
+						rtMain,
+						cmd,
+						true,
+						1.5f
+					);
+					device->EventEnd(cmd);
+				}
 
 				XMVECTOR sunDirection = XMLoadFloat3(&scene->weather.sunDirection);
 				if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, camera->GetAt())) > 0)
@@ -580,7 +602,8 @@ namespace wi
 				getEyeAdaptionEnabled() ? &luminanceResources.luminance : nullptr,
 				getBloomEnabled() ? &bloomResources.texture_bloom : nullptr,
 				colorspace,
-				getTonemap()
+				getTonemap(),
+				&distortion_overlay
 			);
 			lastPostprocessRT = &rtPostprocess;
 
