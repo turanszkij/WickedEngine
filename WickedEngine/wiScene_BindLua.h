@@ -425,10 +425,10 @@ namespace wi::lua::scene
 			SheenRoughness = FloatProperty(&component->sheenRoughness);
 			Clearcoat = FloatProperty(&component->clearcoat);
 			ClearcoatRoughness = FloatProperty(&component->clearcoatRoughness);
-			ShadingRate = IntProperty(reinterpret_cast<int*>(&component->roughness));
+			ShadingRate = IntProperty(reinterpret_cast<int*>(&component->shadingRate));
 			TexAnimDirection = VectorProperty(&component->texAnimDirection);
-			TexAnimFrameRate = FloatProperty(&component->roughness);
-			texAnimElapsedTime = FloatProperty(&component->roughness);
+			TexAnimFrameRate = FloatProperty(&component->texAnimFrameRate);
+			texAnimElapsedTime = FloatProperty(&component->texAnimElapsedTime);
 			customShaderID = IntProperty(&component->customShaderID);
 		}
 
