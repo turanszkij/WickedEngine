@@ -273,7 +273,7 @@ namespace wi::scene
 		material.init();
 		material.baseColor = pack_half4(baseColor);
 		material.emissive_cloak = pack_half4(XMFLOAT4(emissiveColor.x * emissiveColor.w, emissiveColor.y * emissiveColor.w, emissiveColor.z * emissiveColor.w, cloak));
-		material.specular = pack_half3(XMFLOAT3(specularColor.x * specularColor.w, specularColor.y * specularColor.w, specularColor.z * specularColor.w));
+		material.specular_chromatic = pack_half4(XMFLOAT4(specularColor.x * specularColor.w, specularColor.y * specularColor.w, specularColor.z * specularColor.w, chromatic_aberration));
 		material.texMulAdd = texMulAdd;
 		material.roughness_reflectance_metalness_refraction = pack_half4(roughness, reflectance, metalness, refraction);
 		material.normalmap_pom_alphatest_displacement = pack_half4(normalMapStrength, parallaxOcclusionMapping, 1 - alphaRef, displacementMapping);

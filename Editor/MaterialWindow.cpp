@@ -29,7 +29,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_MATERIAL " Material", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(300, 1380));
+	SetSize(XMFLOAT2(300, 1400));
 
 	closeButton.SetTooltip("Delete MaterialComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -420,6 +420,22 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		}
 		});
 	AddWidget(&cloakSlider);
+
+	chromaticAberrationSlider.Create(0, 1.0f, 0.02f, 1000, "Chromatic aberration: ");
+	chromaticAberrationSlider.SetTooltip("Separation of RGB colors inside transmissive material.");
+	chromaticAberrationSlider.SetSize(XMFLOAT2(wid, hei));
+	chromaticAberrationSlider.SetPos(XMFLOAT2(x, y += step));
+	chromaticAberrationSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
+			material->SetChromaticAberrationAmount(args.fValue);
+		}
+		});
+	AddWidget(&chromaticAberrationSlider);
 
 	transmissionSlider.Create(0, 1.0f, 0.02f, 1000, "Transmission: ");
 	transmissionSlider.SetTooltip("Adjust the transmissiveness. More transmissiveness means more diffuse light is transmitted instead of absorbed.");
@@ -1017,6 +1033,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		reflectanceSlider.SetValue(material->reflectance);
 		metalnessSlider.SetValue(material->metalness);
 		cloakSlider.SetValue(material->cloak);
+		chromaticAberrationSlider.SetValue(material->chromatic_aberration);
 		transmissionSlider.SetValue(material->transmission);
 		refractionSlider.SetValue(material->refraction);
 		emissiveSlider.SetValue(material->emissiveColor.w);
@@ -1199,6 +1216,7 @@ void MaterialWindow::ResizeLayout()
 	add(metalnessSlider);
 	add(emissiveSlider);
 	add(cloakSlider);
+	add(chromaticAberrationSlider);
 	add(transmissionSlider);
 	add(refractionSlider);
 	add(pomSlider);

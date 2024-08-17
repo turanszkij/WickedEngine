@@ -333,7 +333,7 @@ struct alignas(16) ShaderMaterial
 	uint2 subsurfaceScattering;
 	uint2 subsurfaceScattering_inv;
 
-	uint2 specular;
+	uint2 specular_chromatic;
 	uint2 sheenColor;
 
 	float4 texMulAdd;
@@ -361,7 +361,7 @@ struct alignas(16) ShaderMaterial
 		subsurfaceScattering = uint2(0, 0);
 		subsurfaceScattering_inv = uint2(0, 0);
 
-		specular = uint2(0, 0);
+		specular_chromatic = uint2(0, 0);
 		sheenColor = uint2(0, 0);
 
 		texMulAdd = float4(1, 1, 0, 0);
@@ -388,7 +388,8 @@ struct alignas(16) ShaderMaterial
 	inline half4 GetSSSInverse() { return unpack_half4(subsurfaceScattering_inv); }
 	inline half3 GetEmissive() { return unpack_half4(emissive_cloak).rgb; }
 	inline half GetCloak() { return unpack_half4(emissive_cloak).a; }
-	inline half3 GetSpecular() { return unpack_half3(specular); }
+	inline half3 GetSpecular() { return unpack_half3(specular_chromatic); }
+	inline half GetChromaticAberration() { return unpack_half4(specular_chromatic).w; }
 	inline half3 GetSheenColor() { return unpack_half3(sheenColor); }
 	inline half GetRoughness() { return unpack_half4(roughness_reflectance_metalness_refraction).x; }
 	inline half GetReflectance() { return unpack_half4(roughness_reflectance_metalness_refraction).y; }

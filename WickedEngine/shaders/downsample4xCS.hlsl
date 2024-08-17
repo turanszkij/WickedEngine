@@ -18,12 +18,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	input.GetDimensions(dim.x, dim.y);
 	float2 dim_rcp = rcp(dim);
 
-	color += input.SampleLevel(sampler_linear_clamp, uv + float2(-1, -1) * dim_rcp, 0);
-	color += input.SampleLevel(sampler_linear_clamp, uv + float2(1, -1) * dim_rcp, 0);
-	color += input.SampleLevel(sampler_linear_clamp, uv + float2(-1, 1) * dim_rcp, 0);
-	color += input.SampleLevel(sampler_linear_clamp, uv + float2(1, 1) * dim_rcp, 0);
+	color += tonemap(input.SampleLevel(sampler_linear_clamp, uv + float2(-1, -1) * dim_rcp, 0));
+	color += tonemap(input.SampleLevel(sampler_linear_clamp, uv + float2(1, -1) * dim_rcp, 0));
+	color += tonemap(input.SampleLevel(sampler_linear_clamp, uv + float2(-1, 1) * dim_rcp, 0));
+	color += tonemap(input.SampleLevel(sampler_linear_clamp, uv + float2(1, 1) * dim_rcp, 0));
 
 	color /= 4.0f;
+	
+	color.rgb = inverse_tonemap(color.rgb);
 
 	output[DTid.xy] = color;
 }

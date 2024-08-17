@@ -419,6 +419,7 @@ namespace wi::lua::scene
 			Refraction = FloatProperty(&component->refraction);
 			Transmission = FloatProperty(&component->transmission);
 			Cloak = FloatProperty(&component->cloak);
+			ChromaticAberration = FloatProperty(&component->chromatic_aberration);
 			AlphaRef = FloatProperty(&component->alphaRef);
 			SheenColor = VectorProperty(&component->sheenColor);
 			SheenRoughness = FloatProperty(&component->sheenRoughness);
@@ -455,6 +456,7 @@ namespace wi::lua::scene
 		FloatProperty Refraction;
 		FloatProperty Transmission;
 		FloatProperty Cloak;
+		FloatProperty ChromaticAberration;
 		FloatProperty AlphaRef;
 		VectorProperty SheenColor;
 		FloatProperty SheenRoughness;
@@ -481,6 +483,7 @@ namespace wi::lua::scene
 		PropertyFunction(Refraction)
 		PropertyFunction(Transmission)
 		PropertyFunction(Cloak)
+		PropertyFunction(ChromaticAberration)
 		PropertyFunction(AlphaRef)
 		PropertyFunction(SheenColor)
 		PropertyFunction(SheenRoughness)

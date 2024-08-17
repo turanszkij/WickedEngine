@@ -248,6 +248,10 @@ namespace wi::scene
 			{
 				archive >> cloak;
 			}
+			if (seri.GetVersion() >= 7)
+			{
+				archive >> chromatic_aberration;
+			}
 
 			for (auto& x : textures)
 			{
@@ -404,6 +408,10 @@ namespace wi::scene
 			if (seri.GetVersion() >= 6)
 			{
 				archive << cloak;
+			}
+			if (seri.GetVersion() >= 7)
+			{
+				archive << chromatic_aberration;
 			}
 		}
 	}

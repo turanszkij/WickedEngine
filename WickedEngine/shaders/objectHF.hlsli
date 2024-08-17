@@ -966,7 +966,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 			texture_refraction.GetDimensions(0, size.x, size.y, mipLevels);
 			const float2 normal2D = mul((float3x3)GetCamera().view, surface.N.xyz).xy;
 			float2 perturbatedRefrTexCoords = ScreenCoord.xy + normal2D * lerp(material.GetRefraction(), 0.1, material.GetCloak());
-			half4 refractiveColor = texture_refraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, lerp(surface.roughness, 0.1, material.GetCloak()) * mipLevels);
+			float mip = lerp(surface.roughness, 0.1, material.GetCloak()) * mipLevels;
+			float chromatic = material.GetChromaticAberration() / size;
+			half refractiveColorR = texture_refraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords + float2(1, 1) * chromatic, mip).r;
+			half refractiveColorG = texture_refraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords + float2(0, 0) * chromatic, mip).g;
+			half refractiveColorB = texture_refraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords - float2(1, 1) * chromatic, mip).b;
+			half3 refractiveColor = half3(refractiveColorR, refractiveColorG, refractiveColorB);
 			surface.refraction.rgb = lerp(surface.albedo, 1, material.GetCloak()) * refractiveColor.rgb;
 			surface.refraction.a = surface.transmission;
 		}

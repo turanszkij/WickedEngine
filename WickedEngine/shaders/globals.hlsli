@@ -813,17 +813,33 @@ inline float3 tonemap(float3 x)
 {
 	return x / (x + 1); // Reinhard tonemap
 }
+inline float4 tonemap(float4 x)
+{
+	return float4(tonemap(x.xyz), x.w);
+}
 inline half3 tonemap(half3 x)
 {
 	return x / (x + 1); // Reinhard tonemap
+}
+inline half4 tonemap(half4 x)
+{
+	return half4(tonemap(x.xyz), x.w);
 }
 inline float3 inverse_tonemap(float3 x)
 {
 	return x / (1 - x);
 }
+inline float4 inverse_tonemap(float4 x)
+{
+	return float4(inverse_tonemap(x.xyz), x.w);
+}
 inline half3 inverse_tonemap(half3 x)
 {
 	return x / (1 - x);
+}
+inline half4 inverse_tonemap(half4 x)
+{
+	return half4(inverse_tonemap(x.xyz), x.w);
 }
 
 inline float4 blue_noise(uint2 pixel)
