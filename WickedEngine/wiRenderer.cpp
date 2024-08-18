@@ -10802,6 +10802,8 @@ void Visibility_Prepare(
 	CommandList cmd
 )
 {
+	wi::jobsystem::Wait(visbuffer_ctx);
+
 	device->EventBegin("Visibility_Prepare", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Visibility_Prepare", cmd);
 
@@ -10935,6 +10937,8 @@ void Visibility_Surface(
 	CommandList cmd
 )
 {
+	wi::jobsystem::Wait(visbuffer_ctx);
+
 	device->EventBegin("Visibility_Surface", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Visibility_Surface", cmd);
 
@@ -10990,6 +10994,8 @@ void Visibility_Surface_Reduced(
 	CommandList cmd
 )
 {
+	wi::jobsystem::Wait(visbuffer_ctx);
+
 	device->EventBegin("Visibility_Surface_Reduced", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Visibility_Surface_Reduced", cmd);
 
@@ -11035,6 +11041,8 @@ void Visibility_Shade(
 	CommandList cmd
 )
 {
+	wi::jobsystem::Wait(visbuffer_ctx);
+
 	device->EventBegin("Visibility_Shade", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Visibility_Shade", cmd);
 
@@ -11075,6 +11083,8 @@ void Visibility_Velocity(
 	CommandList cmd
 )
 {
+	wi::jobsystem::Wait(visbuffer_ctx);
+
 	device->EventBegin("Visibility_Velocity", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Visibility_Velocity", cmd);
 

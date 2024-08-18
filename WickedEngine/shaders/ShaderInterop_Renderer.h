@@ -628,9 +628,9 @@ struct alignas(16) ShaderMeshInstance
 	float radius;
 
 	int vb_ao;
-	float alphaTest;
 	int vb_wetmap;
 	int lightmap;
+	uint alphaTest_size;
 
 	float4 quaternion;
 	ShaderTransform transform;
@@ -655,7 +655,7 @@ struct alignas(16) ShaderMeshInstance
 		radius = 0;
 		vb_ao = -1;
 		vb_wetmap = -1;
-		alphaTest = 0;
+		alphaTest_size = 0;
 		quaternion = float4(0, 0, 0, 1);
 		transform.init();
 		transformPrev.init();
@@ -674,7 +674,8 @@ struct alignas(16) ShaderMeshInstance
 #ifndef __cplusplus
 	inline half4 GetColor() { return (half4)unpack_rgba(color); }
 	inline half3 GetEmissive() { return unpack_half3(emissive); }
-	inline half GetAlphaTest() { return (half)alphaTest; }
+	inline half GetAlphaTest() { return unpack_half2(alphaTest_size).x; }
+	inline half GetSize() { return unpack_half2(alphaTest_size).y; }
 #endif // __cplusplus
 };
 struct ShaderMeshInstancePointer

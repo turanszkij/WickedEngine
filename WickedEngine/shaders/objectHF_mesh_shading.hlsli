@@ -54,7 +54,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		else
 		{
 			bounds.sphere.center = mul(inst.transformRaw.GetMatrix(), float4(bounds.sphere.center, 1)).xyz;
-			bounds.sphere.radius = max3(mul((float3x3)inst.transformRaw.GetMatrix(), bounds.sphere.radius.xxx));
+			bounds.sphere.radius *= inst.GetSize();
 		}
 
 		// Only allow culling when camera is not inside:

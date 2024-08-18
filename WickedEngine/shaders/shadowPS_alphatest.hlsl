@@ -21,5 +21,5 @@ void main(PixelInput input)
 	
 	ShaderMeshInstance meshinstance = load_instance(input.GetInstanceIndex());
 	
-	clip(alpha - material.GetAlphaTest() - meshinstance.alphaTest);
+	clip(alpha - material.GetAlphaTest() - meshinstance.GetAlphaTest());
 }

@@ -618,8 +618,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	//	- Prepass will write alpha coverage mask
 	//	- Opaque will use [earlydepthstencil] and COMPARISON_EQUAL depth test on top of depth prepass
 	clip(surface.baseColor.a - material.GetAlphaTest() - meshinstance.GetAlphaTest());
-#else
-	clip(surface.baseColor.a - meshinstance.GetAlphaTest()); // opaque hard alpha test
 #endif // TRANSPARENT
 #endif // DISABLE_ALPHATEST
 
@@ -1085,7 +1083,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 	// end point:
 #ifdef PREPASS
-	coverage = AlphaToCoverage(color.a, material.GetAlphaTest(), input.pos); // opaque soft alpha test (temporal AA, etc)
+	coverage = AlphaToCoverage(color.a, material.GetAlphaTest() + meshinstance.GetAlphaTest(), input.pos); // opaque soft alpha test (temporal AA, etc)
 #ifndef DEPTHONLY
 	PrimitiveID prim;
 	prim.primitiveIndex = primitiveID;

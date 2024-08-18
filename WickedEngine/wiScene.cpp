@@ -4453,6 +4453,7 @@ namespace wi::scene
 				XMVECTOR S, R, T;
 				XMMatrixDecompose(&S, &R, &T, W);
 				XMStoreFloat4(&inst.quaternion, R);
+				float size = std::max(XMVectorGetX(S), std::max(XMVectorGetY(S), XMVectorGetZ(S)));
 
 				if (object.lightmap.IsValid())
 				{
@@ -4472,7 +4473,7 @@ namespace wi::scene
 				inst.radius = object.radius;
 				inst.vb_ao = object.vb_ao_srv;
 				inst.vb_wetmap = device->GetDescriptorIndex(&object.wetmap, SubresourceType::SRV);
-				inst.alphaTest = 1 - object.alphaRef;
+				inst.alphaTest_size = wi::math::pack_half2(XMFLOAT2(1 - object.alphaRef, size));
 				inst.SetUserStencilRef(object.userStencilRef);
 
 				std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
