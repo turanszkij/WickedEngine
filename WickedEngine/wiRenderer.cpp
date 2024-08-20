@@ -3117,9 +3117,9 @@ void RenderMeshes(
 
 			ObjectPushConstants push;
 			push.geometryIndex = mesh.geometryOffset + subsetIndex;
-			push.materialIndex = subset.materialIndex;
 			push.instances = instanceBufferDescriptorIndex;
 			push.instance_offset = (uint)instancedBatch.dataOffset;
+			push.instance_count = instancedBatch.instanceCount;
 
 			if (pso_backside != nullptr)
 			{
@@ -3127,7 +3127,7 @@ void RenderMeshes(
 				device->PushConstants(&push, sizeof(push), cmd);
 				if (meshShaderPSO)
 				{
-					device->DispatchMesh((mesh.cluster_ranges[subsetIndex].clusterCount + 31) / 32, instancedBatch.instanceCount, 1, cmd);
+					device->DispatchMesh((mesh.cluster_ranges[subsetIndex].clusterCount * instancedBatch.instanceCount + 31) / 32, 1, 1, cmd);
 				}
 				else
 				{
@@ -3139,7 +3139,7 @@ void RenderMeshes(
 			device->PushConstants(&push, sizeof(push), cmd);
 			if (meshShaderPSO)
 			{
-				device->DispatchMesh((mesh.cluster_ranges[subsetIndex].clusterCount + 31) / 32, instancedBatch.instanceCount, 1, cmd);
+				device->DispatchMesh((mesh.cluster_ranges[subsetIndex].clusterCount * instancedBatch.instanceCount + 31) / 32, 1, 1, cmd);
 			}
 			else
 			{
@@ -7890,7 +7890,6 @@ void DrawDebugWorld(
 
 			ObjectPushConstants push;
 			push.geometryIndex = mesh.geometryOffset + x.subset;
-			push.materialIndex = subset.materialIndex;
 			push.instances = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
 			push.instance_offset = (uint)mem.offset;
 			device->PushConstants(&push, sizeof(push), cmd);
@@ -9069,7 +9068,6 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 
 				ObjectPushConstants push;
 				push.geometryIndex = mesh.geometryOffset + subsetIndex;
-				push.materialIndex = subset.materialIndex;
 				push.instances = -1;
 				push.instance_offset = 0;
 				device->PushConstants(&push, sizeof(push), cmd);

@@ -8,7 +8,7 @@ float4 main(PixelInput input) : SV_TARGET
 
 	float4 uvsets = input.GetUVSets();
 	
-	write_mipmap_feedback(push.materialIndex, ddx_coarse(uvsets), ddy_coarse(uvsets));
+	write_mipmap_feedback(GetMaterialIndex(), ddx_coarse(uvsets), ddy_coarse(uvsets));
 	
 	float4 color;
 	[branch]

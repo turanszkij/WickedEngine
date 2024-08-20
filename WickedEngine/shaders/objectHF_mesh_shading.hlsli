@@ -11,40 +11,36 @@ static const uint MS_GROUPSIZE = 32;
 
 struct AmplificationPayload
 {
-	uint instanceID;
-	uint meshletGroupOffset;
-	min16uint meshlets[AS_GROUPSIZE]; // this could be uint8_t if HLSL supported it because they are relative to meshletGroupOffset, maybe in the future it will be a reality
+	uint Gid;
+	min16uint groupIndex[AS_GROUPSIZE]; // this could be uint8_t if HLSL supported it because they are relative to Gid, maybe in the future it will be a reality
 };
 
 #ifdef OBJECTSHADER_COMPILE_AS
 groupshared AmplificationPayload amplification_payload;
 
 [numthreads(AS_GROUPSIZE, 1, 1)]
-void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
+void main(uint Gid : SV_GroupID, uint DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
 	ShaderGeometry geometry = GetMesh();
-	
-	uint instanceID = Gid.y;
-	uint meshletGroupOffset = geometry.meshletOffset + Gid.x * AS_GROUPSIZE;
 
-	if(WaveIsFirstLane())
+	if (WaveIsFirstLane())
 	{
-		amplification_payload.instanceID = instanceID;
-		amplification_payload.meshletGroupOffset = meshletGroupOffset;
+		amplification_payload.Gid = Gid * AS_GROUPSIZE;
 	}
+	
+	const uint meshletID = DTid % geometry.meshletCount;
+	const uint instanceID = DTid / geometry.meshletCount;
 
 	ShaderMeshInstancePointer poi = bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + instanceID * sizeof(ShaderMeshInstancePointer));
 	ShaderMeshInstance inst = load_instance(poi.GetInstanceIndex());
-	
-	uint meshletID = meshletGroupOffset + groupIndex;
 
-	bool visible = meshletID < geometry.meshletOffset + geometry.meshletCount;
+	bool visible = meshletID < geometry.meshletCount && instanceID < push.instance_count;
 	
 	// Meshlet culling:
 	if (visible)
 	{
 		ShaderCamera camera = GetCamera(poi.GetCameraIndex());
-		ShaderClusterBounds bounds = bindless_structured_cluster_bounds[geometry.vb_bou][meshletID];
+		ShaderClusterBounds bounds = bindless_structured_cluster_bounds[geometry.vb_bou][geometry.meshletOffset + meshletID];
 		if (geometry.vb_pre >= 0)
 		{
 			// when object is skinned, we take the whole instance bounds, because skinned meshlet transforms are not computed
@@ -146,7 +142,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	if (visible)
 	{
 		uint index = WavePrefixCountBits(visible);
-		amplification_payload.meshlets[index] = meshletID - meshletGroupOffset; // relative packed
+		amplification_payload.groupIndex[index] = groupIndex;
 	}
 
 	uint visibleCount = WaveActiveCountBits(visible);
@@ -175,7 +171,6 @@ struct PrimitiveAttributes
 [outputtopology("triangle")]
 [numthreads(MS_GROUPSIZE, 1, 1)]
 void main(
-	uint DTid : SV_DispatchThreadID,
 	uint Gid : SV_GroupID,
 	uint groupIndex : SV_GroupIndex,
     in payload AmplificationPayload amplification_payload,
@@ -186,10 +181,11 @@ void main(
 #endif
 	)
 {
-	uint meshletGroupOffset = amplification_payload.meshletGroupOffset;
-	uint meshletID = meshletGroupOffset + amplification_payload.meshlets[Gid];
 	ShaderGeometry geometry = GetMesh();
-	ShaderCluster cluster = bindless_structured_cluster[geometry.vb_clu][meshletID];
+	const uint DTid = amplification_payload.Gid + amplification_payload.groupIndex[Gid]; // amplification shader's reconstructed DTid
+	const uint meshletID = DTid % geometry.meshletCount;
+	const uint instanceID = DTid / geometry.meshletCount;
+	ShaderCluster cluster = bindless_structured_cluster[geometry.vb_clu][geometry.meshletOffset + meshletID];
 	SetMeshOutputCounts(cluster.vertexCount, cluster.triangleCount);
 
 	for (uint vi = groupIndex; vi < cluster.vertexCount; vi += MS_GROUPSIZE)
@@ -198,12 +194,12 @@ void main(
 
 		VertexInput input;
 		input.vertexID = cluster.vertices[vi];
-		input.instanceID = amplification_payload.instanceID;
+		input.instanceID = instanceID;
 		
 		verts[vi] = vertex_to_pixel_export(input);
 	}
 
-	ShaderMeshInstancePointer poi = bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + amplification_payload.instanceID * sizeof(ShaderMeshInstancePointer));
+	ShaderMeshInstancePointer poi = bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + instanceID * sizeof(ShaderMeshInstancePointer));
 	const uint frustum_index = poi.GetCameraIndex();
 	
 	for (uint ti = groupIndex; ti < cluster.triangleCount; ti += MS_GROUPSIZE)
@@ -219,7 +215,7 @@ void main(
 #endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 		
 #if defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
-		primitives[ti].primitiveID = (meshletID - geometry.meshletOffset) * MESHLET_TRIANGLE_COUNT + ti;
+		primitives[ti].primitiveID = meshletID * MESHLET_TRIANGLE_COUNT + ti;
 #endif // defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
 
 	}

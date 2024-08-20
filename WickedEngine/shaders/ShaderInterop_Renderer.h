@@ -710,9 +710,9 @@ struct ShaderMeshInstancePointer
 struct ObjectPushConstants
 {
 	uint geometryIndex;
-	uint materialIndex;
 	int instances;
 	uint instance_offset;
+	uint instance_count;
 };
 
 

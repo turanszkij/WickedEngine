@@ -49,14 +49,9 @@
 
 PUSHCONSTANT(push, ObjectPushConstants);
 
-inline ShaderGeometry GetMesh()
-{
-	return load_geometry(push.geometryIndex);
-}
-inline ShaderMaterial GetMaterial()
-{
-	return load_material(push.materialIndex);
-}
+inline ShaderGeometry GetMesh() { return load_geometry(push.geometryIndex); }
+inline uint GetMaterialIndex() { return GetMesh().materialIndex; }
+inline ShaderMaterial GetMaterial() { return load_material(GetMaterialIndex()); }
 
 #define sampler_objectshader bindless_samplers[GetMaterial().sampler_descriptor]
 
@@ -506,7 +501,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // OBJECTSHADER_USE_UVSETS
 
 #ifdef TILEDFORWARD
-	write_mipmap_feedback(push.materialIndex, ddx_coarse(uvsets), ddy_coarse(uvsets));
+	write_mipmap_feedback(GetMaterialIndex(), ddx_coarse(uvsets), ddy_coarse(uvsets));
 #endif // TILEDFORWARD
 
 #ifndef DISABLE_ALPHATEST
