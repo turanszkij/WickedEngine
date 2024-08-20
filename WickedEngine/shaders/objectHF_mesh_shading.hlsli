@@ -7,7 +7,7 @@
 #define OCCLUSION_CULLING
 
 static const uint AS_GROUPSIZE = 32;
-static const uint MS_GROUPSIZE = 128;
+static const uint MS_GROUPSIZE = 32;
 
 struct AmplificationPayload
 {
@@ -159,10 +159,6 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 struct PrimitiveAttributes
 {
-#if defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
-	uint primitiveID : SV_PrimitiveID;
-#endif // defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
-	
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 	uint RTIndex : SV_RenderTargetArrayIndex;
 #endif // OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
@@ -170,6 +166,10 @@ struct PrimitiveAttributes
 #ifdef OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 	uint VPIndex : SV_ViewportArrayIndex;
 #endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
+
+#if defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
+	uint primitiveID : SV_PrimitiveID;
+#endif // defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
 };
 
 [outputtopology("triangle")]
@@ -189,13 +189,10 @@ void main(
 	uint meshletGroupOffset = amplification_payload.meshletGroupOffset;
 	uint meshletID = meshletGroupOffset + amplification_payload.meshlets[Gid];
 	ShaderGeometry geometry = GetMesh();
-	if(meshletID >= geometry.meshletOffset + geometry.meshletCount)
-		return;
 	ShaderCluster cluster = bindless_structured_cluster[geometry.vb_clu][meshletID];
-	ShaderMeshInstancePointer poi = bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + amplification_payload.instanceID * sizeof(ShaderMeshInstancePointer));
 	SetMeshOutputCounts(cluster.vertexCount, cluster.triangleCount);
-	const uint vi = groupIndex;
-	if (vi < cluster.vertexCount)
+
+	for (uint vi = groupIndex; vi < cluster.vertexCount; vi += MS_GROUPSIZE)
 	{
 		uint vertexID = cluster.vertices[vi];
 
@@ -205,24 +202,26 @@ void main(
 		
 		verts[vi] = vertex_to_pixel_export(input);
 	}
-	const uint ti = MESHLET_TRIANGLE_COUNT - 1 - groupIndex; // reverse the order of threads, so those which are not writing vertices are utilized earlier
-	if (ti < cluster.triangleCount)
+
+	ShaderMeshInstancePointer poi = bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + amplification_payload.instanceID * sizeof(ShaderMeshInstancePointer));
+	const uint frustum_index = poi.GetCameraIndex();
+	
+	for (uint ti = groupIndex; ti < cluster.triangleCount; ti += MS_GROUPSIZE)
 	{
 		triangles[ti] = cluster.triangles[ti].tri();
+		
+#ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
+		primitives[ti].RTIndex = GetCamera(frustum_index).output_index;
+#endif // OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
+
+#ifdef OBJECTSHADER_USE_VIEWPORTARRAYINDEX
+		primitives[ti].VPIndex = GetCamera(frustum_index).output_index;
+#endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 		
 #if defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
 		primitives[ti].primitiveID = (meshletID - geometry.meshletOffset) * MESHLET_TRIANGLE_COUNT + ti;
 #endif // defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
 
-#ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
-		const uint frustum_index = poi.GetCameraIndex();
-		primitives[ti].RTIndex = GetCamera(frustum_index).output_index;
-#endif // OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
-
-#ifdef OBJECTSHADER_USE_VIEWPORTARRAYINDEX
-		const uint frustum_index = poi.GetCameraIndex();
-		primitives[ti].VPIndex = GetCamera(frustum_index).output_index;
-#endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 	}
 }
 #endif // OBJECTSHADER_COMPILE_MS

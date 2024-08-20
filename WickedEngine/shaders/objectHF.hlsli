@@ -234,7 +234,7 @@ struct VertexSurface
 		float4 pos_wind = input.GetPositionWind();
 		position = float4(pos_wind.xyz, 1);
 		normal = input.GetNormal();
-		color = half4(GetMaterial().GetBaseColor() * input.GetInstance().GetColor());
+		color = half4(material.GetBaseColor() * input.GetInstance().GetColor());
 		color.a *= half(1 - input.GetInstancePointer().GetDither());
 
 		[branch]
@@ -261,6 +261,7 @@ struct VertexSurface
 		tangent.xyz = any(tangent.xyz) ? normalize(tangent.xyz) : 0;
 		
 		uvsets = input.GetUVSets();
+		uvsets.xy = mad(uvsets.xy, material.texMulAdd.xy, material.texMulAdd.zw);
 
 		atlas = input.GetAtlasUV();
 
@@ -359,9 +360,7 @@ struct PixelInput
 #ifdef OBJECTSHADER_USE_UVSETS
 	inline float4 GetUVSets()
 	{
-		float4 ret = uvsets;
-		ret.xy = mad(ret.xy, GetMaterial().texMulAdd.xy, GetMaterial().texMulAdd.zw);
-		return ret;
+		return uvsets;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 };
