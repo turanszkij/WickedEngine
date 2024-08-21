@@ -1317,6 +1317,22 @@ void PaintToolWindow::Update(float dt)
 					}
 				}
 
+				if (hair._flags & wi::HairParticleSystem::REBUILD_BUFFERS)
+				{
+					for (size_t i = 0; i < scene.terrains.GetCount(); ++i)
+					{
+						for (auto& it : scene.terrains[i].chunks)
+						{
+							if (scene.Entity_IsDescendant(hairEntity, it.second.entity))
+							{
+								// Save modified grass lengths for chunk:
+								it.second.grass.vertex_lengths = hair.vertex_lengths;
+								break;
+							}
+						}
+					}
+				}
+
 				if (wireframe)
 				{
 					uint32_t first_subset = 0;
