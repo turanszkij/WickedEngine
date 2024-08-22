@@ -102,7 +102,7 @@ void Editor::HotReload()
 
 	static wi::jobsystem::context hotreload_ctx;
 	wi::jobsystem::Wait(hotreload_ctx);
-	hotreload_ctx.priority = wi::jobsystem::Priority::Low;
+	hotreload_ctx.priority = wi::jobsystem::Priority::Streaming;
 
 	if (wi::shadercompiler::GetRegisteredShaderCount() > 0)
 	{
