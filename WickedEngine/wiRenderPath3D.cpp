@@ -177,7 +177,7 @@ namespace wi
 			device->CreateTexture(&desc, nullptr, &rtSceneCopy);
 			device->SetName(&rtSceneCopy, "rtSceneCopy");
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET; // render target for aliasing
-			device->CreateTexture(&desc, nullptr, &rtSceneCopy_tmp, &rtParticleDistortion); // aliased!
+			device->CreateTexture(&desc, nullptr, &rtSceneCopy_tmp, &rtPrimitiveID);
 			device->SetName(&rtSceneCopy_tmp, "rtSceneCopy_tmp");
 
 			for (uint32_t i = 0; i < rtSceneCopy.GetDesc().mip_levels; ++i)
@@ -1967,7 +1967,7 @@ namespace wi
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Aliasing(&rtParticleDistortion, &rtSceneCopy_tmp),
+				GPUBarrier::Aliasing(&rtPrimitiveID, &rtSceneCopy_tmp),
 				GPUBarrier::Image(&rtSceneCopy_tmp, rtSceneCopy_tmp.desc.layout, ResourceState::UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
@@ -1982,7 +1982,7 @@ namespace wi
 		mipopt.gaussian_temp = &rtSceneCopy_tmp;
 		wi::renderer::GenerateMipChain(rtSceneCopy, wi::renderer::MIPGENFILTER_GAUSSIAN, cmd, mipopt);
 
-		device->Barrier(GPUBarrier::Aliasing(&rtSceneCopy_tmp, &rtParticleDistortion), cmd);
+		device->Barrier(GPUBarrier::Aliasing(&rtSceneCopy_tmp, &rtPrimitiveID), cmd);
 
 		device->EventEnd(cmd);
 		wi::profiler::EndRange(range);
