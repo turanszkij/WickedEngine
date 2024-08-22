@@ -310,7 +310,7 @@ namespace wi::input::sdlinput
 			case SDL_SCANCODE_TAB:
 				return wi::input::KEYBOARD_BUTTON_TAB;
 			case SDL_SCANCODE_GRAVE: 
-                return wi::input::KEYBOARD_BUTTON_TILDE;
+    return wi::input::KEYBOARD_BUTTON_TILDE;
         }
 
 
