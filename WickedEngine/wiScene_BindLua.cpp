@@ -7539,6 +7539,8 @@ Luna<CharacterComponent_BindLua>::FunctionType CharacterComponent_BindLua::metho
 	lunamethod(CharacterComponent_BindLua, GetFacing),
 	lunamethod(CharacterComponent_BindLua, GetFacingSmoothed),
 	lunamethod(CharacterComponent_BindLua, GetRelativeOffset),
+	lunamethod(CharacterComponent_BindLua, GetLeaning),
+	lunamethod(CharacterComponent_BindLua, GetLeaningSmoothed),
 
 	lunamethod(CharacterComponent_BindLua, SetPathGoal),
 	lunamethod(CharacterComponent_BindLua, GetPathQuery),
@@ -7979,6 +7981,16 @@ int CharacterComponent_BindLua::GetFacingSmoothed(lua_State* L)
 int CharacterComponent_BindLua::GetRelativeOffset(lua_State* L)
 {
 	Luna<Vector_BindLua>::push(L, component->relative_offset);
+	return 1;
+}
+int CharacterComponent_BindLua::GetLeaning(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->GetLeaning());
+	return 1;
+}
+int CharacterComponent_BindLua::GetLeaningSmoothed(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->GetLeaningSmoothed());
 	return 1;
 }
 

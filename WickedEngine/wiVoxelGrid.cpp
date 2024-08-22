@@ -2,6 +2,7 @@
 #include "shaders/ShaderInterop.h"
 #include "wiEventHandler.h"
 #include "wiRenderer.h"
+#include "wiHelper.h"
 
 #include "Utility/meshoptimizer/meshoptimizer.h"
 
@@ -573,6 +574,75 @@ namespace wi
 		for (size_t i = 0; i < voxels.size(); ++i)
 		{
 			voxels[i] &= ~other.voxels[i];
+		}
+	}
+	void VoxelGrid::flood_fill()
+	{
+		VoxelGrid traversed;
+		traversed.init(resolution.x, resolution.y, resolution.z);
+		wi::vector<int3> stack;
+
+		for(size_t i=0;i<voxels.size();++i)
+		{
+			if (voxels[i] == ~0ull)
+				continue; // whole block is filled already
+
+			const uint3 coord = unflatten3D(uint(i), resolution_div4);
+			for (uint32_t bit = 0; bit < 64; ++bit)
+			{
+				const uint3 sub_coord = unflatten3D(bit, uint3(4, 4, 4));
+				const int3 origin = int3(int(coord.x * 4 + sub_coord.x), int(coord.y * 4 + sub_coord.y), int(coord.z * 4 + sub_coord.z));
+				if (check_voxel(origin))
+					continue; // voxel is filled, abort
+
+				traversed.cleardata();
+				stack.clear();
+
+				stack.push_back(origin);
+				bool exit = false;
+
+				do
+				{
+					int3 center = stack.back();
+					stack.pop_back();
+					traversed.set_voxel(center, true);
+
+					int3 neighbors[] = {
+						// left-right:
+						int3(center.x - 1, center.y, center.z),
+						int3(center.x + 1, center.y, center.z),
+
+						// up-down:
+						int3(center.x, center.y - 1, center.z),
+						int3(center.x, center.y + 1, center.z),
+
+						// forward-back:
+						int3(center.x, center.y, center.z - 1),
+						int3(center.x, center.y, center.z + 1),
+					};
+					for (int3 neighbor : neighbors)
+					{
+						if (!is_coord_valid(neighbor))
+						{
+							// got out of the voxel grid, the origin cannot be filled
+							exit = true;
+							break;
+						}
+						if (traversed.check_voxel(neighbor))
+							continue; // don't go to a previously traversed voxel again
+						if (!check_voxel(neighbor))
+						{
+							stack.push_back(neighbor); // add empty neighbor to continue traversing
+						}
+					}
+				} while (!stack.empty() && !exit);
+
+				if (!exit)
+				{
+					// No exit was found, mark voxel as solid
+					set_voxel(origin, true);
+				}
+			}
 		}
 	}
 
@@ -1362,6 +1432,10 @@ namespace wi
 			std::swap(indices, simplified_indices);
 			std::swap(vertices, simplified_vertices);
 		}
+
+		meshopt_optimizeVertexCache(indices.data(), indices.data(), index_count, vertex_count);
+		meshopt_optimizeOverdraw(indices.data(), indices.data(), index_count, &vertices[0].x, vertex_count, sizeof(XMFLOAT3), 1.05f);
+		meshopt_optimizeVertexFetch(vertices.data(), indices.data(), index_count, vertices.data(), vertex_count, sizeof(XMFLOAT3));
 	}
 
 }

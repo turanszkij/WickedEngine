@@ -45,6 +45,7 @@ namespace wi::lua
 		int Add(lua_State* L);
 		int Subtract(lua_State* L);
 		int IsVisible(lua_State* L);
+		int FloodFill(lua_State* L);
 
 		static void Bind();
 	};

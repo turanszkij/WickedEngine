@@ -8,7 +8,7 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_VOXELGRID " VoxelGrid", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(520, 440));
+	SetSize(XMFLOAT2(520, 480));
 
 	closeButton.SetTooltip("Delete VoxelGrid");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -116,6 +116,22 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 		scene.VoxelizeScene(*voxelgrid, subtractCheckBox.GetCheck(), wi::enums::FILTER_COLLIDER);
 		});
 	AddWidget(&voxelizeCollidersButton);
+
+	floodfillButton.Create("Flood fill " ICON_VOXELFILL);
+	floodfillButton.SetTooltip("Fill enclosed empty voxel areas to solid.\nThis can take long if there are large enclosed empty areas.");
+	floodfillButton.SetSize(XMFLOAT2(100, hei));
+	floodfillButton.OnClick([=](wi::gui::EventArgs args) {
+		Scene& scene = editor->GetCurrentScene();
+		wi::VoxelGrid* voxelgrid = scene.voxel_grids.GetComponent(entity);
+		if (voxelgrid == nullptr)
+			return;
+		wi::Timer tim;
+		voxelgrid->flood_fill();
+		char text[256] = {};
+		snprintf(text, arraysize(text), "Flood filling took %.2f seconds.", tim.elapsed_seconds());
+		wi::backlog::post(text);
+		});
+	AddWidget(&floodfillButton);
 
 	fitToSceneButton.Create("Fit bounds to scene " ICON_VOXELBOUNDS);
 	fitToSceneButton.SetTooltip("Fit the bounds of the voxel grid onto the whole scene.");
@@ -273,6 +289,7 @@ void VoxelGridWindow::ResizeLayout()
 	add_fullwidth(voxelizeObjectsButton);
 	add_fullwidth(voxelizeCollidersButton);
 	add_fullwidth(voxelizeNavigationButton);
+	add_fullwidth(floodfillButton);
 	add_fullwidth(fitToSceneButton);
 	add_fullwidth(generateMeshButton);
 	add_fullwidth(generateSimplifiedMeshButton);

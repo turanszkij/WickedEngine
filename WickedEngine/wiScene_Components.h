@@ -2193,6 +2193,12 @@ namespace wi::scene
 		// Get the smoothed facing direction
 		XMFLOAT3 GetFacingSmoothed() const;
 
+		// Get the immediate leaning direction
+		float GetLeaning() const;
+
+		// Get the smoothed leaning direction
+		float GetLeaningSmoothed() const;
+
 		// Returns whether the character is currently stading on ground or not
 		bool IsGrounded() const;
 

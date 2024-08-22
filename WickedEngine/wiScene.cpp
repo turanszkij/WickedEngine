@@ -1864,7 +1864,7 @@ namespace wi::scene
 		subset.materialID = entity; // the material component is created on the same entity as the mesh component, though it is not required as it could also use a different material entity
 
 		// vertex buffer GPU data will be packed and uploaded here:
-		mesh.ComputeNormals(MeshComponent::COMPUTE_NORMALS_HARD);
+		mesh.ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST); // smooth fast is used because it will keep vertex/index count, only averages face normals
 
 		return entity;
 	}
@@ -5613,7 +5613,7 @@ namespace wi::scene
 			}
 			if (character.pathfinding_thread)
 			{
-				if (AtomicOr(&character.pathfinding_thread->process_goal_completed, 0) != 0)
+				if (AtomicLoad(&character.pathfinding_thread->process_goal_completed) != 0)
 				{
 					AtomicAnd(&character.pathfinding_thread->process_goal_completed, 0);
 					std::swap(character.pathfinding_thread->pathquery_work, character.pathquery);

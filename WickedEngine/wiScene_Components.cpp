@@ -1737,33 +1737,42 @@ namespace wi::scene
 
 		case MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST:
 		{
+			vertex_normals.resize(vertex_positions.size());
 			for (size_t i = 0; i < vertex_normals.size(); i++)
 			{
 				vertex_normals[i] = XMFLOAT3(0, 0, 0);
 			}
-			for (size_t i = 0; i < indices.size() / 3; ++i)
+			uint32_t first_subset = 0;
+			uint32_t last_subset = 0;
+			GetLODSubsetRange(0, first_subset, last_subset);
+			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 			{
-				uint32_t index1 = indices[i * 3];
-				uint32_t index2 = indices[i * 3 + 1];
-				uint32_t index3 = indices[i * 3 + 2];
+				const MeshSubset& subset = subsets[subsetIndex];
 
-				XMVECTOR side1 = XMLoadFloat3(&vertex_positions[index1]) - XMLoadFloat3(&vertex_positions[index3]);
-				XMVECTOR side2 = XMLoadFloat3(&vertex_positions[index1]) - XMLoadFloat3(&vertex_positions[index2]);
-				XMVECTOR N = XMVector3Normalize(XMVector3Cross(side1, side2));
-				XMFLOAT3 normal;
-				XMStoreFloat3(&normal, N);
+				for (uint32_t i = 0; i < subset.indexCount / 3; ++i)
+				{
+					uint32_t index1 = indices[subset.indexOffset + i * 3 + 0];
+					uint32_t index2 = indices[subset.indexOffset + i * 3 + 1];
+					uint32_t index3 = indices[subset.indexOffset + i * 3 + 2];
 
-				vertex_normals[index1].x += normal.x;
-				vertex_normals[index1].y += normal.y;
-				vertex_normals[index1].z += normal.z;
+					XMVECTOR side1 = XMLoadFloat3(&vertex_positions[index1]) - XMLoadFloat3(&vertex_positions[index3]);
+					XMVECTOR side2 = XMLoadFloat3(&vertex_positions[index1]) - XMLoadFloat3(&vertex_positions[index2]);
+					XMVECTOR N = XMVector3Normalize(XMVector3Cross(side1, side2));
+					XMFLOAT3 normal;
+					XMStoreFloat3(&normal, N);
 
-				vertex_normals[index2].x += normal.x;
-				vertex_normals[index2].y += normal.y;
-				vertex_normals[index2].z += normal.z;
+					vertex_normals[index1].x += normal.x;
+					vertex_normals[index1].y += normal.y;
+					vertex_normals[index1].z += normal.z;
 
-				vertex_normals[index3].x += normal.x;
-				vertex_normals[index3].y += normal.y;
-				vertex_normals[index3].z += normal.z;
+					vertex_normals[index2].x += normal.x;
+					vertex_normals[index2].y += normal.y;
+					vertex_normals[index2].z += normal.z;
+
+					vertex_normals[index3].x += normal.x;
+					vertex_normals[index3].y += normal.y;
+					vertex_normals[index3].z += normal.z;
+				}
 			}
 		}
 		break;
@@ -2618,6 +2627,14 @@ namespace wi::scene
 	XMFLOAT3 CharacterComponent::GetFacingSmoothed() const
 	{
 		return facing;
+	}
+	float CharacterComponent::GetLeaning() const
+	{
+		return leaning_next;
+	}
+	float CharacterComponent::GetLeaningSmoothed() const
+	{
+		return leaning;
 	}
 	bool CharacterComponent::IsGrounded() const
 	{

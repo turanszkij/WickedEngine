@@ -57,6 +57,7 @@ namespace wi
 		bool is_visible(const XMFLOAT3& observer, const wi::primitive::AABB& subject) const;
 		void add(const VoxelGrid& other);
 		void subtract(const VoxelGrid& other);
+		void flood_fill();
 		void debugdraw(const XMFLOAT4X4& ViewProjection, wi::graphics::CommandList cmd) const;
 
 		inline bool IsValid() const { return !voxels.empty(); }

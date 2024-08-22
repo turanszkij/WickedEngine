@@ -28,6 +28,7 @@ namespace wi::lua
 		lunamethod(VoxelGrid_BindLua, Add),
 		lunamethod(VoxelGrid_BindLua, Subtract),
 		lunamethod(VoxelGrid_BindLua, IsVisible),
+		lunamethod(VoxelGrid_BindLua, FloodFill),
 		{ NULL, NULL }
 	};
 	Luna<VoxelGrid_BindLua>::PropertyType VoxelGrid_BindLua::properties[] = {
@@ -437,6 +438,11 @@ namespace wi::lua
 		}
 		wi::lua::SSetBool(L, voxelgrid->is_visible(observer->GetFloat3(), subject_vec->GetFloat3()));
 		return 1;
+	}
+	int VoxelGrid_BindLua::FloodFill(lua_State* L)
+	{
+		voxelgrid->flood_fill();
+		return 0;
 	}
 
 	void VoxelGrid_BindLua::Bind()
