@@ -384,7 +384,6 @@ PipelineState PSO_object_wire_tessellation;
 PipelineState PSO_object_wire_mesh_shader;
 
 wi::jobsystem::context raytracing_ctx;
-wi::jobsystem::context visbuffer_ctx;
 wi::jobsystem::context objectps_ctx;
 
 wi::vector<CustomShader> customShaders;
@@ -851,9 +850,6 @@ void LoadShaders()
 	wi::jobsystem::Wait(raytracing_ctx);
 	raytracing_ctx.priority = wi::jobsystem::Priority::Low;
 
-	wi::jobsystem::Wait(visbuffer_ctx);
-	visbuffer_ctx.priority = wi::jobsystem::Priority::Low;
-
 	wi::jobsystem::Wait(objectps_ctx);
 	objectps_ctx.priority = wi::jobsystem::Priority::Low;
 
@@ -1249,44 +1245,6 @@ void LoadShaders()
 
 	});
 
-	wi::jobsystem::Dispatch(visbuffer_ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
-
-		LoadShader(
-			ShaderStage::CS,
-			shaders[CSTYPE_VISIBILITY_SURFACE_PERMUTATION_BEGIN + args.jobIndex],
-			"visibility_surfaceCS.cso",
-			ShaderModel::SM_6_0,
-			MaterialComponent::shaderTypeDefines[args.jobIndex] // permutation defines
-		);
-
-	});
-
-	wi::jobsystem::Dispatch(visbuffer_ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
-
-		auto defines = MaterialComponent::shaderTypeDefines[args.jobIndex];
-		defines.push_back("REDUCED");
-		LoadShader(
-			ShaderStage::CS,
-			shaders[CSTYPE_VISIBILITY_SURFACE_REDUCED_PERMUTATION_BEGIN + args.jobIndex],
-			"visibility_surfaceCS.cso",
-			ShaderModel::SM_6_0,
-			defines // permutation defines
-		);
-
-	});
-
-	wi::jobsystem::Dispatch(visbuffer_ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
-
-		LoadShader(
-			ShaderStage::CS,
-			shaders[CSTYPE_VISIBILITY_SHADE_PERMUTATION_BEGIN + args.jobIndex],
-			"visibility_shadeCS.cso",
-			ShaderModel::SM_6_0,
-			MaterialComponent::shaderTypeDefines[args.jobIndex] // permutation defines
-		);
-
-	});
-
 	wi::jobsystem::Wait(ctx);
 
 	if (device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
@@ -1319,6 +1277,44 @@ void LoadShaders()
 		wi::jobsystem::Execute(mesh_shader_ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_SHADOW_ALPHATEST], "shadowMS_alphatest.cso"); });
 		wi::jobsystem::Execute(mesh_shader_ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_SHADOW_TRANSPARENT], "shadowMS_transparent.cso"); });
 	}
+
+	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
+
+		LoadShader(
+			ShaderStage::CS,
+			shaders[CSTYPE_VISIBILITY_SURFACE_PERMUTATION_BEGIN + args.jobIndex],
+			"visibility_surfaceCS.cso",
+			ShaderModel::SM_6_0,
+			MaterialComponent::shaderTypeDefines[args.jobIndex] // permutation defines
+		);
+
+		});
+
+	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
+
+		auto defines = MaterialComponent::shaderTypeDefines[args.jobIndex];
+		defines.push_back("REDUCED");
+		LoadShader(
+			ShaderStage::CS,
+			shaders[CSTYPE_VISIBILITY_SURFACE_REDUCED_PERMUTATION_BEGIN + args.jobIndex],
+			"visibility_surfaceCS.cso",
+			ShaderModel::SM_6_0,
+			defines // permutation defines
+		);
+
+		});
+
+	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
+
+		LoadShader(
+			ShaderStage::CS,
+			shaders[CSTYPE_VISIBILITY_SHADE_PERMUTATION_BEGIN + args.jobIndex],
+			"visibility_shadeCS.cso",
+			ShaderModel::SM_6_0,
+			MaterialComponent::shaderTypeDefines[args.jobIndex] // permutation defines
+		);
+
+		});
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		PipelineStateDesc desc;
@@ -10802,8 +10798,6 @@ void Visibility_Prepare(
 	CommandList cmd
 )
 {
-	wi::jobsystem::Wait(visbuffer_ctx);
-
 	device->EventBegin("Visibility_Prepare", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Visibility_Prepare", cmd);
 
@@ -10937,8 +10931,6 @@ void Visibility_Surface(
 	CommandList cmd
 )
 {
-	wi::jobsystem::Wait(visbuffer_ctx);
-
 	device->EventBegin("Visibility_Surface", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Visibility_Surface", cmd);
 
@@ -10994,8 +10986,6 @@ void Visibility_Surface_Reduced(
 	CommandList cmd
 )
 {
-	wi::jobsystem::Wait(visbuffer_ctx);
-
 	device->EventBegin("Visibility_Surface_Reduced", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Visibility_Surface_Reduced", cmd);
 
@@ -11041,8 +11031,6 @@ void Visibility_Shade(
 	CommandList cmd
 )
 {
-	wi::jobsystem::Wait(visbuffer_ctx);
-
 	device->EventBegin("Visibility_Shade", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Visibility_Shade", cmd);
 
@@ -11083,8 +11071,6 @@ void Visibility_Velocity(
 	CommandList cmd
 )
 {
-	wi::jobsystem::Wait(visbuffer_ctx);
-
 	device->EventBegin("Visibility_Velocity", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Visibility_Velocity", cmd);
 

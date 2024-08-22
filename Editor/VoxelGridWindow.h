@@ -18,6 +18,7 @@ public:
 	wi::gui::Button	voxelizeObjectsButton;
 	wi::gui::Button	voxelizeNavigationButton;
 	wi::gui::Button	voxelizeCollidersButton;
+	wi::gui::Button	floodfillButton;
 	wi::gui::Button	fitToSceneButton;
 	wi::gui::Button	generateMeshButton;
 	wi::gui::Button	generateSimplifiedMeshButton;

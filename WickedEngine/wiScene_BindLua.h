@@ -1906,6 +1906,8 @@ namespace wi::lua::scene
 		int GetRelativeOffset(lua_State* L);
 		int IsFootPlacementEnabled(lua_State* L);
 		int IsCharacterToCharacterCollisionDisabled(lua_State* L);
+		int GetLeaning(lua_State* L);
+		int GetLeaningSmoothed(lua_State* L);
 
 		int SetPathGoal(lua_State* L);
 		int GetPathQuery(lua_State* L);

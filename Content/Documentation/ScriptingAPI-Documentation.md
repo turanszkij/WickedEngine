@@ -1560,6 +1560,8 @@ Implementation of basic character controller features such as movement in the sc
 - GetFacing() : Vector	-- returns the immediate facing of the character
 - GetFacingSmoothed() : Vector	-- returns the smoothed facing of the character
 - GetRelativeOffset() : Vector	-- returns the relative offset (relative to facing direction)
+- GetLeaning() : float	-- returns immediate leaning amount
+- GetLeaningSmoothed() : float -- returns smoothed leaning amount
 
 - SetPathGoal(Vector goal, VoxelGrid voxelgrid)	-- Set the goal for path finding, it will be processed the next time the scene is updated. You can get the results by accessing the pathquery object of the character with GetPathQuery().
 - GetPathQuery() : PathQuery	-- returns the PathQuery object of this character
@@ -2003,6 +2005,7 @@ Path finding operations can be made by using a voxel grid and path queries. The 
 - IsVisible(int observer_x,observer_y,observer_z, subject_x,subject_y,subject_z) : bool -- performs line of sight occlusion test from observer to subject voxel coordinates. Returns false if occlusion was found, true otherwise.
 - IsVisible(AABB observer, subject) : bool -- performs line of sight occlusion test from observer to subject world space points. Returns false if occlusion was found, true otherwise.
 - IsVisible(AABB observer, AABB subject) : bool -- performs line of sight occlusion test from observer world space point to subject AABB. Returns true if any of the AABB's touched voxels is visible, false otherwise.
+- FloodFill()	-- Sets every empty voxel which is enclosed to solid.
 
 #### PathQuery
 - [constructor] PathQuery()
