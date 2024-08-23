@@ -101,6 +101,13 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 #endif //DISABLE_VOXELGI
 
 	[branch]
+	if (!surface.IsGIApplied() && GetScene().ddgi.color_texture >= 0)
+	{
+		lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
+		surface.SetGIApplied(true);
+	}
+
+	[branch]
 	if (any(xForwardLightMask))
 	{
 		// Loop through light buckets for the draw call:
@@ -143,13 +150,6 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 				}
 			}
 		}
-	}
-
-	[branch]
-	if (!surface.IsGIApplied() && GetScene().ddgi.color_texture >= 0)
-	{
-		lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
-		surface.SetGIApplied(true);
 	}
 
 }
@@ -338,6 +338,42 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	VoxelGI(surface, lighting);
 #endif // TRANSPARENT
 #endif //DISABLE_VOXELGI
+
+#ifndef TRANSPARENT
+	[branch]
+	if (!surface.IsGIApplied() && GetCamera().texture_rtdiffuse_index >= 0)
+	{
+		lighting.indirect.diffuse = (half3)bindless_textures[GetCamera().texture_rtdiffuse_index][surface.pixel].rgb;
+		surface.SetGIApplied(true);
+	}
+
+	[branch]
+	if (!surface.IsGIApplied() && GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && GetCamera().texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P)))
+	{
+		lighting.indirect.diffuse = (half3)bindless_textures[GetCamera().texture_surfelgi_index][surface.pixel].rgb;
+		surface.SetGIApplied(true);
+	}
+
+	[branch]
+	if (!surface.IsGIApplied() && GetCamera().texture_vxgi_diffuse_index >= 0)
+	{
+		lighting.indirect.diffuse = (half3)bindless_textures[GetCamera().texture_vxgi_diffuse_index][surface.pixel].rgb;
+		surface.SetGIApplied(true);
+	}
+	[branch]
+	if (GetCamera().texture_vxgi_specular_index >= 0)
+	{
+		half4 vxgi_specular = (half4)bindless_textures[GetCamera().texture_vxgi_specular_index][surface.pixel];
+		lighting.indirect.specular = vxgi_specular.rgb * surface.F + lighting.indirect.specular * (1 - vxgi_specular.a);
+	}
+#endif // TRANSPARENT
+
+	[branch]
+	if (!surface.IsGIApplied() && GetScene().ddgi.color_texture >= 0)
+	{
+		lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
+		surface.SetGIApplied(true);
+	}
 
 #if 0
 	// Combined light loops:
@@ -542,42 +578,6 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		}
 	}
 #endif
-
-#ifndef TRANSPARENT
-	[branch]
-	if (!surface.IsGIApplied() && GetCamera().texture_rtdiffuse_index >= 0)
-	{
-		lighting.indirect.diffuse = (half3)bindless_textures[GetCamera().texture_rtdiffuse_index][surface.pixel].rgb;
-		surface.SetGIApplied(true);
-	}
-
-	[branch]
-	if (!surface.IsGIApplied() && GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && GetCamera().texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P)))
-	{
-		lighting.indirect.diffuse = (half3)bindless_textures[GetCamera().texture_surfelgi_index][surface.pixel].rgb;
-		surface.SetGIApplied(true);
-	}
-
-	[branch]
-	if (!surface.IsGIApplied() && GetCamera().texture_vxgi_diffuse_index >= 0)
-	{
-		lighting.indirect.diffuse = (half3)bindless_textures[GetCamera().texture_vxgi_diffuse_index][surface.pixel].rgb;
-		surface.SetGIApplied(true);
-	}
-	[branch]
-	if (GetCamera().texture_vxgi_specular_index >= 0)
-	{
-		half4 vxgi_specular = (half4)bindless_textures[GetCamera().texture_vxgi_specular_index][surface.pixel];
-		lighting.indirect.specular = vxgi_specular.rgb * surface.F + lighting.indirect.specular * (1 - vxgi_specular.a);
-	}
-#endif // TRANSPARENT
-
-	[branch]
-	if (!surface.IsGIApplied() && GetScene().ddgi.color_texture >= 0)
-	{
-		lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
-		surface.SetGIApplied(true);
-	}
 
 }
 

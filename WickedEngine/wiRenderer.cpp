@@ -129,6 +129,7 @@ bool raytracedShadows = false;
 bool tessellationEnabled = true;
 bool disableAlbedoMaps = false;
 bool forceDiffuseLighting = false;
+bool SHADOWS_ENABLED = true;
 bool SCREENSPACESHADOWS = false;
 bool SURFELGI = false;
 SURFEL_DEBUG SURFELGI_DEBUG = SURFEL_DEBUG_NONE;
@@ -3617,7 +3618,7 @@ void UpdateVisibility(Visibility& vis)
 	}
 
 	// Shadow atlas packing:
-	if ((vis.flags & Visibility::ALLOW_SHADOW_ATLAS_PACKING) && !vis.visibleLights.empty() || vis.scene->weather.rain_amount > 0)
+	if (IsShadowsEnabled() && (vis.flags & Visibility::ALLOW_SHADOW_ATLAS_PACKING) && !vis.visibleLights.empty() || vis.scene->weather.rain_amount > 0)
 	{
 		auto range = wi::profiler::BeginRangeCPU("Shadowmap packing");
 		float iterative_scaling = 1;
@@ -4283,7 +4284,7 @@ void UpdatePerFrameData(
 			// mark as no shadow by default:
 			shaderentity.indices = ~0;
 
-			bool shadow = light.IsCastingShadow() && !light.IsStatic();
+			bool shadow = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
 			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
 
 			if (shadow)
@@ -4295,61 +4296,17 @@ void UpdatePerFrameData(
 				shaderentity.SetIndices(matrixCounter, 0);
 			}
 
-			switch (light.GetType())
-			{
-			case LightComponent::DIRECTIONAL:
-			{
-				const uint cascade_count = std::min((uint)light.cascade_distances.size(), MATRIXARRAY_COUNT - matrixCounter);
-				shaderentity.SetShadowCascadeCount(cascade_count);
+			const uint cascade_count = std::min((uint)light.cascade_distances.size(), MATRIXARRAY_COUNT - matrixCounter);
+			shaderentity.SetShadowCascadeCount(cascade_count);
 
-				if (shadow && !light.cascade_distances.empty())
+			if (shadow && !light.cascade_distances.empty())
+			{
+				SHCAM* shcams = (SHCAM*)alloca(sizeof(SHCAM) * cascade_count);
+				CreateDirLightShadowCams(light, *vis.camera, shcams, cascade_count, shadow_rect);
+				for (size_t cascade = 0; cascade < cascade_count; ++cascade)
 				{
-					SHCAM* shcams = (SHCAM*)alloca(sizeof(SHCAM) * cascade_count);
-					CreateDirLightShadowCams(light, *vis.camera, shcams, cascade_count, shadow_rect);
-					for (size_t cascade = 0; cascade < cascade_count; ++cascade)
-					{
-						XMStoreFloat4x4(&matrixArray[matrixCounter++], shcams[cascade].view_projection);
-					}
+					XMStoreFloat4x4(&matrixArray[matrixCounter++], shcams[cascade].view_projection);
 				}
-			}
-			break;
-			case LightComponent::POINT:
-			{
-				if (shadow)
-				{
-					const float FarZ = 0.1f;	// watch out: reversed depth buffer! Also, light near plane is constant for simplicity, this should match on cpu side!
-					const float NearZ = std::max(1.0f, light.GetRange()); // watch out: reversed depth buffer!
-					const float fRange = FarZ / (FarZ - NearZ);
-					const float cubemapDepthRemapNear = fRange;
-					const float cubemapDepthRemapFar = -fRange * NearZ;
-					shaderentity.SetCubeRemapNear(cubemapDepthRemapNear);
-					shaderentity.SetCubeRemapFar(cubemapDepthRemapFar);
-				}
-			}
-			break;
-			case LightComponent::SPOT:
-			{
-				const float outerConeAngle = light.outerConeAngle;
-				const float innerConeAngle = std::min(light.innerConeAngle, outerConeAngle);
-				const float outerConeAngleCos = std::cos(outerConeAngle);
-				const float innerConeAngleCos = std::cos(innerConeAngle);
-
-				// https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual#inner-and-outer-cone-angles
-				const float lightAngleScale = 1.0f / std::max(0.001f, innerConeAngleCos - outerConeAngleCos);
-				const float lightAngleOffset = -outerConeAngleCos * lightAngleScale;
-
-				shaderentity.SetConeAngleCos(outerConeAngleCos);
-				shaderentity.SetAngleScale(lightAngleScale);
-				shaderentity.SetAngleOffset(lightAngleOffset);
-
-				if (shadow)
-				{
-					SHCAM shcam;
-					CreateSpotLightShadowCam(light, shcam);
-					XMStoreFloat4x4(&matrixArray[matrixCounter++], shcam.view_projection);
-				}
-			}
-			break;
 			}
 
 			if (light.IsStatic())
@@ -4402,7 +4359,7 @@ void UpdatePerFrameData(
 			// mark as no shadow by default:
 			shaderentity.indices = ~0;
 
-			bool shadow = light.IsCastingShadow() && !light.IsStatic();
+			bool shadow = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
 			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
 
 			if (shadow)
@@ -4484,7 +4441,7 @@ void UpdatePerFrameData(
 			// mark as no shadow by default:
 			shaderentity.indices = ~0;
 
-			bool shadow = light.IsCastingShadow() && !light.IsStatic();
+			bool shadow = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
 			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
 
 			if (shadow)
@@ -6108,7 +6065,7 @@ void DrawShadowmaps(
 	CommandList cmd
 )
 {
-	if (IsWireRender())
+	if (IsWireRender() || !IsShadowsEnabled())
 		return;
 
 	if ((!vis.visibleLights.empty() || vis.scene->weather.rain_amount > 0) && shadowMapAtlas.IsValid())
@@ -18066,6 +18023,14 @@ void SetVXGIReflectionsEnabled(bool enabled) { VXGI_REFLECTIONS_ENABLED = enable
 bool GetVXGIReflectionsEnabled() { return VXGI_REFLECTIONS_ENABLED; }
 void SetGameSpeed(float value) { GameSpeed = std::max(0.0f, value); }
 float GetGameSpeed() { return GameSpeed; }
+void SetShadowsEnabled(bool value)
+{
+	SHADOWS_ENABLED = value;
+}
+bool IsShadowsEnabled()
+{
+	return SHADOWS_ENABLED;
+}
 void SetRaytraceBounceCount(uint32_t bounces)
 {
 	raytraceBounceCount = bounces;

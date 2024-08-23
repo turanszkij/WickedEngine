@@ -354,6 +354,8 @@ namespace wi
 
 		RenderPath2D::Update(dt);
 
+		wi::renderer::SetShadowsEnabled(getShadowsEnabled());
+
 		float update_speed = 0;
 
 		const bool hw_raytrace = device->CheckCapability(GraphicsDeviceCapability::RAYTRACING);
@@ -1202,7 +1204,7 @@ namespace wi
 			});
 		}
 
-		if (visibility_main.IsRequestedPlanarReflections())
+		if (getReflectionsEnabled() && visibility_main.IsRequestedPlanarReflections())
 		{
 			// Planar reflections depth prepass:
 			cmd = device->BeginCommandList();

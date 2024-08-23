@@ -1079,6 +1079,8 @@ namespace wi::renderer
 	bool GetVXGIReflectionsEnabled();
 	void SetGameSpeed(float value);
 	float GetGameSpeed();
+	void SetShadowsEnabled(bool value);
+	bool IsShadowsEnabled();
 	void SetRaytraceBounceCount(uint32_t bounces);
 	uint32_t GetRaytraceBounceCount();
 	void SetRaytraceDebugBVHVisualizerEnabled(bool value);

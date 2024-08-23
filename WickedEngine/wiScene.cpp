@@ -5355,6 +5355,7 @@ namespace wi::scene
 			const float fixed_update_fps = character.fixed_update_fps;
 			const float timestep = 1.0f / fixed_update_fps;
 			const float ground_friction = character.ground_friction;
+			const XMVECTOR wall_friction = XMVectorSet(character.ground_friction, 1, character.ground_friction, 1);
 			const float water_friction = character.water_friction;
 			const float slope_threshold = character.slope_threshold;
 			const float leaning_limit = character.leaning_limit;
@@ -5430,6 +5431,7 @@ namespace wi::scene
 			if (timestep_occurred)
 			{
 				character.ground_intersect = false;
+				character.wall_intersect = false;
 			}
 
 			// Fixed timestep logic:
@@ -5459,7 +5461,7 @@ namespace wi::scene
 					XMVECTOR collisionNormal = XMLoadFloat3(&result.normal);
 					const float slope = XMVectorGetX(XMVector3Dot(collisionNormal, up));
 					if (slope > slope_threshold)
-					{
+{				
 						character.ground_intersect = true;
 						velocity *= ground_friction;
 						position += XMVectorSet(0, result.depth, 0, 0);
@@ -5477,6 +5479,11 @@ namespace wi::scene
 					const float slope = XMVectorGetX(XMVector3Dot(collisionNormal, up));
 					if (slope <= slope_threshold)
 					{
+						character.wall_intersect = true;
+						if (!character.ground_intersect)
+						{
+							velocity *= wall_friction;
+						}
 						float velocityLen = XMVectorGetX(XMVector3Length(velocity));
 						XMVECTOR velocityNormalized = XMVector3Normalize(velocity);
 						XMVECTOR undesiredMotion = collisionNormal * XMVector3Dot(velocityNormalized, collisionNormal);

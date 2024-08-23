@@ -1553,6 +1553,7 @@ Implementation of basic character controller features such as movement in the sc
 - GetVelocity() : Vector	-- Get current velocity
 - GetMovement() : Vector	-- Get current movement direction
 - IsGrounded() : bool	-- returns whether the character is currently standing on ground or not
+- IsWallIntersect() : bool	-- returns whether the character is currently intersecting a wall or not
 - IsSwimming() : bool	-- returns whether the character is currently swimming or not
 - IsFootPlacementEnabled() : bool	-- Returns whether foot placement with inverse kinematics is currently enabled or not
 - IsCharacterToCharacterCollisionDisabled()	-- returns whether character collision with other characters is disabled or not for this character (default: false)

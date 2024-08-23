@@ -7532,6 +7532,7 @@ Luna<CharacterComponent_BindLua>::FunctionType CharacterComponent_BindLua::metho
 	lunamethod(CharacterComponent_BindLua, GetMovement),
 	lunamethod(CharacterComponent_BindLua, IsActive),
 	lunamethod(CharacterComponent_BindLua, IsGrounded),
+	lunamethod(CharacterComponent_BindLua, IsWallIntersect),
 	lunamethod(CharacterComponent_BindLua, IsSwimming),
 	lunamethod(CharacterComponent_BindLua, IsFootPlacementEnabled),
 	lunamethod(CharacterComponent_BindLua, IsCharacterToCharacterCollisionDisabled),
@@ -7946,6 +7947,11 @@ int CharacterComponent_BindLua::IsActive(lua_State* L)
 int CharacterComponent_BindLua::IsGrounded(lua_State* L)
 {
 	wi::lua::SSetBool(L, component->IsGrounded());
+	return 1;
+}
+int CharacterComponent_BindLua::IsWallIntersect(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsWallIntersect());
 	return 1;
 }
 int CharacterComponent_BindLua::IsSwimming(lua_State* L)

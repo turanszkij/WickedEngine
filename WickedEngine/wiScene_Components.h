@@ -2121,6 +2121,7 @@ namespace wi::scene
 		float leaning = 0; // sideways leaning (smoothed)
 		float leaning_next = 0; // sideways leaning (immediate)
 		bool ground_intersect = false;
+		bool wall_intersect = false;
 		bool swimming = false;
 		wi::ecs::Entity humanoidEntity = wi::ecs::INVALID_ENTITY;
 		wi::ecs::Entity left_foot = wi::ecs::INVALID_ENTITY;
@@ -2201,6 +2202,9 @@ namespace wi::scene
 
 		// Returns whether the character is currently stading on ground or not
 		bool IsGrounded() const;
+
+		// Returns whether the character is currently stading on ground or not
+		bool IsWallIntersect() const;
 
 		// Returns whether the character is currently swimming or not
 		bool IsSwimming() const;

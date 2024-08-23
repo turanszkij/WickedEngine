@@ -1899,6 +1899,7 @@ namespace wi::lua::scene
 		int GetMovement(lua_State* L);
 		int IsActive(lua_State* L);
 		int IsGrounded(lua_State* L);
+		int IsWallIntersect(lua_State* L);
 		int IsSwimming(lua_State* L);
 		int GetCapsule(lua_State* L);
 		int GetFacing(lua_State* L);

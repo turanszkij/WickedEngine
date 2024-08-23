@@ -470,7 +470,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 			dir = vector.TransformNormal(dir.Normalize(), rotation_matrix)
 			dir.SetY(0)
 			charactercomponent.Turn(dir.Normalize())
-			local speed = 0
+			local speed = self.walk_speed
 			if self.state == States.WALK then
 				speed = self.walk_speed
 			elseif self.state == States.JOG then
@@ -580,15 +580,17 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 						if self.state == States.SWIM_IDLE then
 							self.state = States.SWIM
 							self:MoveDirection(lookDir)
-						elseif self.ground_intersect then
-							if(input.Down(KEYBOARD_BUTTON_LSHIFT) or input.Down(GAMEPAD_BUTTON_6)) then
-								if input.Down(string.byte('E')) or input.Down(GAMEPAD_BUTTON_5) then
-									self.state = States.RUN
+						elseif self.ground_intersect or charactercomponent.IsWallIntersect() then
+							if self.ground_intersect then
+								if(input.Down(KEYBOARD_BUTTON_LSHIFT) or input.Down(GAMEPAD_BUTTON_6)) then
+									if input.Down(string.byte('E')) or input.Down(GAMEPAD_BUTTON_5) then
+										self.state = States.RUN
+									else
+										self.state = States.JOG
+									end
 								else
-									self.state = States.JOG
+									self.state = States.WALK
 								end
-							else
-								self.state = States.WALK
 							end
 							self:MoveDirection(lookDir)
 						end

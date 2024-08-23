@@ -848,6 +848,10 @@ namespace wi::scene
 				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 				{
 					const MeshSubset& subset = subsets[subsetIndex];
+					SubsetClusterRange& meshlet_range = cluster_ranges.emplace_back();
+
+					if (subset.indexCount == 0)
+						continue;
 
 					size_t max_meshlets = meshopt_buildMeshletsBound(subset.indexCount, max_vertices, max_triangles);
 					std::vector<meshopt_Meshlet> meshopt_meshlets(max_meshlets);
@@ -871,7 +875,6 @@ namespace wi::scene
 					clusters.reserve(clusters.size() + meshlet_count);
 					cluster_bounds.reserve(cluster_bounds.size() + meshlet_count);
 
-					SubsetClusterRange& meshlet_range = cluster_ranges.emplace_back();
 					meshlet_range.clusterOffset = (uint32_t)clusters.size();
 					meshlet_range.clusterCount = (uint32_t)meshlet_count;
 
@@ -2639,6 +2642,10 @@ namespace wi::scene
 	bool CharacterComponent::IsGrounded() const
 	{
 		return ground_intersect;
+	}
+	bool CharacterComponent::IsWallIntersect() const
+	{
+		return wall_intersect;
 	}
 	bool CharacterComponent::IsSwimming() const
 	{

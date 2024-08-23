@@ -53,6 +53,8 @@ float4 main(PSIn input) : SV_TARGET
 	Lighting lighting;
 	lighting.create(0, 0, GetAmbient(surface.N), 0);
 
+	TiledLighting(surface, lighting, GetFlatTileIndex(pixel));
+
 	const float bump_strength = 0.1;
 	
 	float4 water_plane = GetCamera().reflection_plane;
@@ -74,6 +76,10 @@ float4 main(PSIn input) : SV_TARGET
 			reflectiveColor.rgb = lerp(color.rgb, reflectiveColor.rgb, saturate(exp(-water_depth * color.a)));
 		}
 		lighting.indirect.specular = reflectiveColor.rgb * surface.F * saturate(dist * 0.1); // fade out very close to camera, doesn't look good
+	}
+	else
+	{
+		lighting.indirect.specular = EnvironmentReflection_Global(surface);
 	}
 
 	float water_depth = FLT_MAX;
@@ -141,8 +147,6 @@ float4 main(PSIn input) : SV_TARGET
 	surface.refraction.a *= 1 - foam;
 	surface.refraction.a = saturate(surface.refraction.a + saturate(exp(-water_depth_diff * 4)));
 #endif
-
-	TiledLighting(surface, lighting, GetFlatTileIndex(pixel));
 
 	ApplyLighting(surface, lighting, color);
 	
