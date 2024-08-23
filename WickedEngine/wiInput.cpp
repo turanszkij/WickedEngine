@@ -585,6 +585,9 @@ namespace wi::input
 			case KEYBOARD_BUTTON_TAB:
 				keycode = VK_TAB;
 				break;
+			case KEYBOARD_BUTTON_TILDE:
+				keycode = 192;
+				break;
 #endif // _WIN32
 				default: break;
 			}
