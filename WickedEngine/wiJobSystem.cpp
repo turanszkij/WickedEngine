@@ -322,9 +322,9 @@ namespace wi::jobsystem
 		job.groupJobEnd = 1;
 		job.sharedmemory_size = 0;
 
-		if (res.numThreads <= 1)
+		if (res.numThreads < 1)
 		{
-			// If job system is not yet initialized, or only has one threads, job will be executed immediately here instead of thread:
+			// If job system is not yet initialized, job will be executed immediately here instead of thread:
 			job.execute();
 			return;
 		}
@@ -358,9 +358,9 @@ namespace wi::jobsystem
 			job.groupJobOffset = groupID * groupSize;
 			job.groupJobEnd = std::min(job.groupJobOffset + groupSize, jobCount);
 
-			if (res.numThreads <= 1)
+			if (res.numThreads < 1)
 			{
-				// If job system is not yet initialized, or only has one threads, job will be executed immediately here instead of thread:
+				// If job system is not yet initialized, job will be executed immediately here instead of thread:
 				job.execute();
 			}
 			else
