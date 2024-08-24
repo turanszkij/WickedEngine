@@ -1916,7 +1916,7 @@ namespace wi::scene
 				ret = last_subset;
 			}
 		}
-		if (lod_count > 0)
+		if (subsets_per_lod > 0)
 		{
 			subsets_per_lod++;
 		}
