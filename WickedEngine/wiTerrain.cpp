@@ -1268,6 +1268,9 @@ namespace wi::terrain
 
 	void Terrain::UpdateVirtualTexturesCPU()
 	{
+		wi::jobsystem::Wait(virtual_texture_ctx);
+		virtual_texture_ctx.priority = wi::jobsystem::Priority::Low;
+
 		GraphicsDevice* device = GetDevice();
 		virtual_textures_in_use.clear();
 

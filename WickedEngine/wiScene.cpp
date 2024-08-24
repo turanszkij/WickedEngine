@@ -3317,21 +3317,17 @@ namespace wi::scene
 			transforms_temp = transforms.GetComponentArray(); // make copy
 		}
 
-		bool recompute_hierarchy = false;
-		for (size_t i = 0; i < inverse_kinematics.GetCount(); ++i)
-		{
-			const InverseKinematicsComponent& ik = inverse_kinematics[i];
+		std::atomic_bool recompute_hierarchy{ false };
+
+		wi::jobsystem::Dispatch(ctx,(uint32_t)inverse_kinematics.GetCount(),1,[this, &recompute_hierarchy](wi::jobsystem::JobArgs args){
+			const InverseKinematicsComponent& ik = inverse_kinematics[args.jobIndex];
 			if (ik.IsDisabled())
-			{
-				continue;
-			}
-			Entity entity = inverse_kinematics.GetEntity(i);
+				return;
+			Entity entity = inverse_kinematics.GetEntity(args.jobIndex);
 			size_t transform_index = transforms.GetIndex(entity);
 			const HierarchyComponent* hier = hierarchy.GetComponent(entity);
 			if (transform_index == ~0ull || hier == nullptr)
-			{
-				continue;
-			}
+				return;
 			TransformComponent& transform = transforms_temp[transform_index];
 
 			XMVECTOR target_pos;
@@ -3343,24 +3339,32 @@ namespace wi::scene
 			{
 				size_t target_index = transforms.GetIndex(ik.target);
 				if (target_index == ~0ull)
-				{
-					continue;
-				}
+					return;
 				TransformComponent& target = transforms_temp[target_index];
 				target_pos = target.GetPositionV();
 			}
 
+			struct ChainLink
+			{
+				TransformComponent* transform = nullptr;
+				bool constrain = false;
+				XMFLOAT3 constraint_min = XMFLOAT3(0, 0, 0);
+				XMFLOAT3 constraint_max = XMFLOAT3(0, 0, 0);
+			};
+			ChainLink stack[32] = {};
+
 			for (uint32_t iteration = 0; iteration < ik.iteration_count; ++iteration)
 			{
-				TransformComponent* stack[32] = {};
 				Entity parent_entity = hier->parentID;
 				TransformComponent* child_transform = &transform;
+
 				for (uint32_t chain = 0; chain < std::min(ik.chain_length, (uint32_t)arraysize(stack)); ++chain)
 				{
-					recompute_hierarchy = true; // any IK will trigger a full transform hierarchy recompute step at the end(**)
+					recompute_hierarchy.store(true); // any IK will trigger a full transform hierarchy recompute step at the end(**)
 
 					// stack stores all traversed chain links so far:
-					stack[chain] = child_transform;
+					ChainLink& link = stack[chain];
+					link.transform = child_transform;
 
 					// Compute required parent rotation that moves ik transform closer to target transform:
 					size_t parent_index = transforms.GetIndex(parent_entity);
@@ -3372,41 +3376,41 @@ namespace wi::scene
 					const XMVECTOR dir_parent_to_target = XMVector3Normalize(target_pos - parent_pos);
 
 					// Check if this transform is part of a humanoid and need some constraining:
-					bool constrain = false;
-					XMFLOAT3 constraint_min = XMFLOAT3(0, 0, 0);
-					XMFLOAT3 constraint_max = XMFLOAT3(0, 0, 0);
-					for (size_t humanoid_idx = 0; (humanoid_idx < humanoids.GetCount()) && !constrain; ++humanoid_idx)
+					if (iteration == 0)
 					{
-						const HumanoidComponent& humanoid = humanoids[humanoid_idx];
-						int bone_type_idx = 0;
-						for (auto& bone : humanoid.bones)
+						for (size_t humanoid_idx = 0; (humanoid_idx < humanoids.GetCount()) && !link.constrain; ++humanoid_idx)
 						{
-							if (bone == parent_entity)
+							const HumanoidComponent& humanoid = humanoids[humanoid_idx];
+							int bone_type_idx = 0;
+							for (auto& bone : humanoid.bones)
 							{
-								switch ((HumanoidComponent::HumanoidBone)bone_type_idx)
+								if (bone == parent_entity)
 								{
-								default:
-									break;
-								case HumanoidComponent::HumanoidBone::LeftUpperLeg:
-								case HumanoidComponent::HumanoidBone::RightUpperLeg:
-									constrain = true;
-									constraint_min = XMFLOAT3(XM_PI * 0.6f, XM_PI * 0.1f, XM_PI * 0.1f);
-									constraint_max = XMFLOAT3(XM_PI * 0.1f, XM_PI * 0.1f, XM_PI * 0.1f);
-									break;
-								case HumanoidComponent::HumanoidBone::LeftLowerLeg:
-								case HumanoidComponent::HumanoidBone::RightLowerLeg:
-									constrain = true;
-									constraint_min = XMFLOAT3(0, 0, 0);
-									constraint_max = XMFLOAT3(XM_PI * 0.8f, 0, 0);
-									break;
+									switch ((HumanoidComponent::HumanoidBone)bone_type_idx)
+									{
+									default:
+										break;
+									case HumanoidComponent::HumanoidBone::LeftUpperLeg:
+									case HumanoidComponent::HumanoidBone::RightUpperLeg:
+										link.constrain = true;
+										link.constraint_min = XMFLOAT3(XM_PI * 0.6f, XM_PI * 0.1f, XM_PI * 0.1f);
+										link.constraint_max = XMFLOAT3(XM_PI * 0.1f, XM_PI * 0.1f, XM_PI * 0.1f);
+										break;
+									case HumanoidComponent::HumanoidBone::LeftLowerLeg:
+									case HumanoidComponent::HumanoidBone::RightLowerLeg:
+										link.constrain = true;
+										link.constraint_min = XMFLOAT3(0, 0, 0);
+										link.constraint_max = XMFLOAT3(XM_PI * 0.8f, 0, 0);
+										break;
+									}
 								}
+								bone_type_idx++;
 							}
-							bone_type_idx++;
 						}
 					}
 
 					XMVECTOR Q;
-					if (constrain)
+					if (link.constrain)
 					{
 						// Apply constrained rotation:
 						Q = XMQuaternionIdentity();
@@ -3417,8 +3421,8 @@ namespace wi::scene
 							XMFLOAT3 axis_floats = XMFLOAT3(0, 0, 0);
 							((float*)&axis_floats)[axis_idx] = 1;
 							XMVECTOR axis = XMLoadFloat3(&axis_floats);
-							const float axis_min = ((float*)&constraint_min)[axis_idx] * iteration_count_rcp;
-							const float axis_max = ((float*)&constraint_max)[axis_idx] * iteration_count_rcp;
+							const float axis_min = ((float*)&link.constraint_min)[axis_idx] * iteration_count_rcp;
+							const float axis_max = ((float*)&link.constraint_max)[axis_idx] * iteration_count_rcp;
 							axis = XMVector3Normalize(XMVector3TransformNormal(axis, W));
 							const XMVECTOR projA = XMVector3Normalize(dir_parent_to_ik - axis * XMVector3Dot(axis, dir_parent_to_ik));
 							const XMVECTOR projB = XMVector3Normalize(dir_parent_to_target - axis * XMVector3Dot(axis, dir_parent_to_target));
@@ -3469,8 +3473,8 @@ namespace wi::scene
 					const TransformComponent* recurse_parent = &parent_transform;
 					for (int recurse_chain = (int)chain; recurse_chain >= 0; --recurse_chain)
 					{
-						stack[recurse_chain]->UpdateTransform_Parented(*recurse_parent);
-						recurse_parent = stack[recurse_chain];
+						stack[recurse_chain].transform->UpdateTransform_Parented(*recurse_parent);
+						recurse_parent = stack[recurse_chain].transform;
 					}
 
 					if (hier_parent == nullptr)
@@ -3486,21 +3490,20 @@ namespace wi::scene
 
 				}
 			}
-		}
+		});
 
-		for (size_t i = 0; i < humanoids.GetCount(); ++i)
-		{
-			Entity humanoidEntity = humanoids.GetEntity(i);
-			HumanoidComponent& humanoid = humanoids[i];
+		wi::jobsystem::Dispatch(ctx, (uint32_t)humanoids.GetCount(), 1, [this, &recompute_hierarchy](wi::jobsystem::JobArgs args) {
+			Entity humanoidEntity = humanoids.GetEntity(args.jobIndex);
+			HumanoidComponent& humanoid = humanoids[args.jobIndex];
 
 			// The head is always taken as reference frame transform even for the eyes:
 			//	Note: taking eye reference frame transform for the eyes was causing issue with VRM 1.0 because eyes were rotated differently than head
 			const Entity headBone = humanoid.bones[size_t(HumanoidComponent::HumanoidBone::Head)];
 			if (headBone == INVALID_ENTITY)
-				continue;
+				return;
 			const size_t headBoneIndex = transforms.GetIndex(headBone);
 			if (headBoneIndex == ~0ull)
-				continue;
+				return;
 			const TransformComponent& head_transform = transforms_temp[headBoneIndex];
 
 			const XMVECTOR UP = XMVectorSet(0, 1, 0, 0);
@@ -3531,7 +3534,7 @@ namespace wi::scene
 
 				if (boneIndex < transforms_temp.size())
 				{
-					recompute_hierarchy = true;
+					recompute_hierarchy.store(true);
 					TransformComponent& transform = transforms_temp[boneIndex];
 					XMVECTOR Q = XMQuaternionIdentity();
 
@@ -3604,9 +3607,11 @@ namespace wi::scene
 
 				}
 			}
-		}
+		});
 
-		if (recompute_hierarchy)
+		wi::jobsystem::Wait(ctx);
+
+		if (recompute_hierarchy.load())
 		{
 			wi::jobsystem::Dispatch(ctx, (uint32_t)hierarchy.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
 

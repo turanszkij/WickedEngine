@@ -1498,9 +1498,6 @@ namespace wi::physics
 
 		wi::jobsystem::Wait(ctx);
 
-		static wi::jobsystem::context broadphase_optimization_ctx;
-		wi::jobsystem::Wait(broadphase_optimization_ctx);
-
 		physics_scene.activate_all_rigid_bodies = false;
 		
 		// Perform internal simulation step:
@@ -1558,14 +1555,6 @@ namespace wi::physics
 				physics_scene.accumulator = next_accumulator;
 			}
 			physics_scene.alpha = physics_scene.accumulator / TIMESTEP;
-		}
-
-		if (simulation_happened)
-		{
-			broadphase_optimization_ctx.priority = wi::jobsystem::Priority::Streaming;
-			wi::jobsystem::Execute(broadphase_optimization_ctx, [&](wi::jobsystem::JobArgs args) {
-				physics_scene.physics_system.OptimizeBroadPhase();
-			});
 		}
 
 		// Feedback physics objects to system:
