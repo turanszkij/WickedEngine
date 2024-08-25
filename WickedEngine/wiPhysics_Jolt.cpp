@@ -702,7 +702,11 @@ namespace wi::physics
 						entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightHand];
 						break;
 					}
-					assert(entityA != INVALID_ENTITY);
+					if (entityA == INVALID_ENTITY)
+					{
+						wi::backlog::post("Ragdoll creation aborted because humanoid has a missing required bone.", wi::backlog::LogLevel::Warning);
+						return;
+					}
 
 					// Calculations here will be done in armature local space.
 					//	Unfortunately since humanoid can be separate from armature, we use a "find" utility to find bone rest matrix in armature
