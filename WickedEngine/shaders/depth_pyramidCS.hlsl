@@ -11,7 +11,7 @@ RWTexture2D<unorm float> output_mip1 : register(u1);
 void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
 	const uint2 GTid = remap_lane_8x8(groupIndex);
-	const uint2 pixel = clamp(Gid.xy * 8 + GTid.xy, 0, push.resolution - 1);
+	const uint2 pixel = clamp(Gid.xy * 8 + GTid.xy, uint2(0, 0), push.resolution - 1);
 	float2 uv = (pixel + 0.5) * push.resolution_rcp;
 	float4 depths = input_depth.GatherRed(sampler_linear_clamp, uv, 0);
 	float depth = min(depths.x, min(depths.y, min(depths.z, depths.w)));

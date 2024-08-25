@@ -575,12 +575,12 @@ int main(int argc, char* argv[])
 						// if shader format cannot support shader model, then we cancel the task without returning error
 						return;
 					}
-					if (target.format == ShaderFormat::PS5 && (input.minshadermodel >= ShaderModel::SM_6_5 || input.stage == ShaderStage::MS))
+					if (target.format == ShaderFormat::PS5 && (input.minshadermodel >= ShaderModel::SM_6_5 || input.stage == ShaderStage::MS || input.stage == ShaderStage::AS))
 					{
 						// TODO PS5 raytracing, mesh shader
 						return;
 					}
-					if (target.format == ShaderFormat::HLSL6_XS && input.stage == ShaderStage::MS)
+					if (target.format == ShaderFormat::HLSL6_XS && (input.stage == ShaderStage::MS || input.stage == ShaderStage::AS))
 					{
 						// TODO Xbox mesh shader
 						return;

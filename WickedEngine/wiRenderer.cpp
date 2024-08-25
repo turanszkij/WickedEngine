@@ -2104,6 +2104,12 @@ void LoadShaders()
 }
 bool IsPipelineCreationActive()
 {
+	if (wi::jobsystem::IsBusy(raytracing_ctx))
+		return true;
+	if (wi::jobsystem::IsBusy(objectps_ctx))
+		return true;
+	if (wi::jobsystem::IsBusy(mesh_shader_ctx))
+		return true;
 	for (uint32_t renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
 	{
 		for (uint32_t mesh_shader = 0; mesh_shader <= (IsMeshShaderAllowed() ? 1u : 0u); ++mesh_shader)
@@ -2682,6 +2688,17 @@ void SetShaderSourcePath(const std::string& path)
 }
 void ReloadShaders()
 {
+	wi::jobsystem::Wait(raytracing_ctx);
+	wi::jobsystem::Wait(objectps_ctx);
+	wi::jobsystem::Wait(mesh_shader_ctx);
+	for (uint32_t renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
+	{
+		for (uint32_t mesh_shader = 0; mesh_shader <= (IsMeshShaderAllowed() ? 1u : 0u); ++mesh_shader)
+		{
+			wi::jobsystem::Wait(object_pso_job_ctx[renderPass][mesh_shader]);
+		}
+	}
+
 	device->ClearPipelineStateCache();
 	SHADER_ERRORS.store(0);
 	SHADER_MISSING.store(0);
@@ -9509,12 +9526,17 @@ void ResolveMSAADepthBuffer(const Texture& dst, const Texture& src, CommandList 
 	device->BindResource(&src, 0, cmd);
 	device->BindUAV(&dst, 0, cmd);
 
+	device->Barrier(GPUBarrier::Image(&dst, dst.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+
+	device->ClearUAV(&dst, 0, cmd);
+	device->Barrier(GPUBarrier::Memory(&dst), cmd);
+
 	const TextureDesc& desc = src.GetDesc();
 
 	device->BindComputeShader(&shaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL], cmd);
 	device->Dispatch((desc.width + 7) / 8, (desc.height + 7) / 8, 1, cmd);
 
-
+	device->Barrier(GPUBarrier::Image(&dst, ResourceState::UNORDERED_ACCESS, dst.desc.layout), cmd);
 
 	device->EventEnd(cmd);
 }

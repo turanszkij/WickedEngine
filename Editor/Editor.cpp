@@ -104,7 +104,7 @@ void Editor::HotReload()
 	wi::jobsystem::Wait(hotreload_ctx);
 	hotreload_ctx.priority = wi::jobsystem::Priority::Streaming;
 
-	if (wi::shadercompiler::GetRegisteredShaderCount() > 0)
+	if (wi::shadercompiler::GetRegisteredShaderCount() > 0 && !wi::renderer::IsPipelineCreationActive())
 	{
 		wi::jobsystem::Execute(hotreload_ctx, [](wi::jobsystem::JobArgs args) {
 			wi::backlog::post("[Shader check] Started checking " + std::to_string(wi::shadercompiler::GetRegisteredShaderCount()) + " registered shaders for changes...");

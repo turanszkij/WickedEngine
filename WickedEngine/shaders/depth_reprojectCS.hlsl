@@ -14,7 +14,7 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
 	ShaderCamera camera = GetCamera();
 	const uint2 GTid = remap_lane_8x8(groupIndex);
-	const uint2 pixel = clamp(Gid.xy * 8 + GTid.xy, 0, push.resolution - 1);
+	const uint2 pixel = clamp(Gid.xy * 8 + GTid.xy, uint2(0, 0), push.resolution - 1);
 	float2 uv = (pixel + 0.5) * push.resolution_rcp;
 	float2 velocity = input_velocity[pixel].xy;
 	float2 uv_prev = uv + velocity;

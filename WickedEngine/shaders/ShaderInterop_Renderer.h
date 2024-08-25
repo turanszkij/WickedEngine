@@ -536,20 +536,20 @@ struct alignas(16) ShaderMeshlet
 
 struct ShaderClusterTriangle
 {
-	uint packed;
+	uint raw;
 	void init(uint i0, uint i1, uint i2, uint flags = 0u)
 	{
-		packed = 0;
-		packed |= i0 & 0xFF;
-		packed |= (i1 & 0xFF) << 8u;
-		packed |= (i2 & 0xFF) << 16u;
-		packed |= (flags & 0xFF) << 24u;
+		raw = 0;
+		raw |= i0 & 0xFF;
+		raw |= (i1 & 0xFF) << 8u;
+		raw |= (i2 & 0xFF) << 16u;
+		raw |= (flags & 0xFF) << 24u;
 	}
-	uint i0() { return packed & 0xFF; }
-	uint i1() { return (packed >> 8u) & 0xFF; }
-	uint i2() { return (packed >> 16u) & 0xFF; }
+	uint i0() { return raw & 0xFF; }
+	uint i1() { return (raw >> 8u) & 0xFF; }
+	uint i2() { return (raw >> 16u) & 0xFF; }
 	uint3 tri() { return uint3(i0(), i1(), i2()); }
-	uint flags() { return packed >> 24u; }
+	uint flags() { return raw >> 24u; }
 };
 struct alignas(16) ShaderCluster
 {

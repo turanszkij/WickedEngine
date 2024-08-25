@@ -833,7 +833,7 @@ namespace wi::scene
 		wi::vector<ShaderClusterBounds> cluster_bounds;
 		cluster_ranges.clear();
 
-		if (device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
+		if (wi::renderer::IsMeshShaderAllowed())
 		{
 			const size_t max_vertices = MESHLET_VERTEX_COUNT;
 			const size_t max_triangles = MESHLET_TRIANGLE_COUNT;
