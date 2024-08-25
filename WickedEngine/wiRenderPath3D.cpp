@@ -929,7 +929,7 @@ namespace wi
 			wi::renderer::DRAWSCENE_MAINCAMERA
 			;
 
-		// Main camera depth prepass + occlusion culling:
+		// Main camera depth prepass:
 		cmd = device->BeginCommandList();
 		CommandList cmd_maincamera_prepass = cmd;
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
@@ -942,11 +942,6 @@ namespace wi
 				camera_reflection,
 				cmd
 			);
-
-			if (getOcclusionCullingEnabled())
-			{
-				wi::renderer::OcclusionCulling_Reset(visibility_main, cmd); // must be outside renderpass!
-			}
 
 			wi::renderer::RefreshImpostors(*scene, cmd);
 
@@ -1016,19 +1011,9 @@ namespace wi
 			wi::profiler::EndRange(range);
 			device->EventEnd(cmd);
 
-			if (getOcclusionCullingEnabled())
-			{
-				wi::renderer::OcclusionCulling_Render(*camera, visibility_main, cmd);
-			}
-
 			device->RenderPassEnd(cmd);
 
-			if (getOcclusionCullingEnabled())
-			{
-				wi::renderer::OcclusionCulling_Resolve(visibility_main, cmd); // must be outside renderpass!
-			}
-
-			});
+		});
 
 		// Main camera compute effects:
 		//	(async compute, parallel to "shadow maps" and "update textures",
@@ -1156,11 +1141,61 @@ namespace wi
 
 		});
 
+		// Occlusion culling:
+		CommandList cmd_occlusionculling;
+		if (getOcclusionCullingEnabled())
+		{
+			cmd = device->BeginCommandList();
+			cmd_occlusionculling = cmd;
+			wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
+
+				GraphicsDevice* device = wi::graphics::GetDevice();
+
+				device->EventBegin("Occlusion Culling", cmd);
+				ScopedGPUProfiling("Occlusion Culling", cmd);
+
+				wi::renderer::BindCameraCB(
+					*camera,
+					camera_previous,
+					camera_reflection,
+					cmd
+				);
+
+				wi::renderer::OcclusionCulling_Reset(visibility_main, cmd); // must be outside renderpass!
+
+				RenderPassImage rp[] = {
+					RenderPassImage::DepthStencil(&depthBuffer_Main),
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
+
+				Rect scissor = GetScissorInternalResolution();
+				device->BindScissorRects(1, &scissor, cmd);
+
+				Viewport vp;
+				vp.width = (float)depthBuffer_Main.GetDesc().width;
+				vp.height = (float)depthBuffer_Main.GetDesc().height;
+				device->BindViewports(1, &vp, cmd);
+
+				wi::renderer::OcclusionCulling_Render(*camera, visibility_main, cmd);
+
+				device->RenderPassEnd(cmd);
+
+				wi::renderer::OcclusionCulling_Resolve(visibility_main, cmd); // must be outside renderpass!
+
+				device->EventEnd(cmd);
+			});
+		}
+
 		CommandList cmd_ocean;
 		if (scene->weather.IsOceanEnabled() && scene->ocean.IsValid())
 		{
 			// Ocean simulation can be updated async to opaque passes:
 			cmd_ocean = device->BeginCommandList(QUEUE_COMPUTE);
+			if (cmd_occlusionculling.IsValid())
+			{
+				// Ocean occlusion culling must be waited
+				device->WaitCommandList(cmd_ocean, cmd_occlusionculling);
+			}
 			wi::renderer::UpdateOcean(visibility_main, cmd_ocean);
 
 			// Copying to readback is done on copy queue to use DMA instead of compute warps:

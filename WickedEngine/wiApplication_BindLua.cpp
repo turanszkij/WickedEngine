@@ -414,6 +414,11 @@ namespace wi::lua
 
 		return 0;
 	}
+	int prof(lua_State* L)
+	{
+		wi::profiler::SetEnabled(!wi::profiler::IsEnabled());
+		return 0;
+	}
 
 	void Application_BindLua::Bind()
 	{
@@ -424,6 +429,7 @@ namespace wi::lua
 			Luna<Application_BindLua>::Register(wi::lua::GetLuaState());
 
 			wi::lua::RegisterFunc("SetProfilerEnabled", SetProfilerEnabled);
+			wi::lua::RegisterFunc("prof", prof);
 		}
 	}
 

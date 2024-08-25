@@ -265,6 +265,7 @@ namespace wi
 		constexpr bool getSceneUpdateEnabled() const { return sceneUpdateEnabled; }
 		constexpr bool getFSREnabled() const { return fsrEnabled; }
 		constexpr bool getFSR2Enabled() const { return fsr2Enabled; }
+		constexpr bool getVisibilityComputeShadingEnabled() const { return visibility_shading_in_compute; }
 
 		constexpr void setExposure(float value) { exposure = value; }
 		constexpr void setBrightness(float value) { brightness = value; }
@@ -293,6 +294,7 @@ namespace wi
 		constexpr void setReflectionRoughnessCutoff(float value) { reflectionRoughnessCutoff = value; }
 		constexpr void setSSGIDepthRejection(float value) { ssgiDepthRejection = value; }
 		constexpr void setTonemap(wi::renderer::Tonemap value) { tonemap = value; }
+		constexpr void setVisibilityComputeShadingEnabled(bool value) { visibility_shading_in_compute = value; }
 
 		void setAO(AO value);
 		void setSSREnabled(bool value);

@@ -27,10 +27,10 @@ namespace wi
 
 		RasterizerState		rasterizerState;
 		RasterizerState		wireRS;
-		DepthStencilState	depthStencilState;
-		BlendState			blendState;
+		DepthStencilState	depthStencilState, depthStencilState_occlusionTest;
+		BlendState			blendState, blendState_occlusionTest;
 
-		PipelineState PSO, PSO_wire;
+		PipelineState PSO, PSO_wire, PSO_occlusionTest;
 
 
 		void LoadShaders()
@@ -59,6 +59,12 @@ namespace wi
 				desc.ps = &wireframePS;
 				desc.rs = &wireRS;
 				device->CreatePipelineState(&desc, &PSO_wire);
+
+				desc.ps = {};
+				desc.rs = &rasterizerState;
+				desc.bs = &blendState_occlusionTest;
+				desc.dss = &depthStencilState_occlusionTest;
+				device->CreatePipelineState(&desc, &PSO_occlusionTest);
 			}
 		}
 	}
@@ -293,20 +299,11 @@ namespace wi
 		}
 	}
 
-	void Ocean::UpdateDisplacementMap(CommandList cmd) const
+	OceanCB GetOceanCBAtDim(const Ocean::OceanParameters& params, uint2 dim)
 	{
-		GraphicsDevice* device = wi::graphics::GetDevice();
-
-		device->EventBegin("Ocean Simulation", cmd);
-
-		const uint2 dim = uint2(160 * params.surfaceDetail, 90 * params.surfaceDetail);
-
 		OceanCB cb = {};
-
-		// Constant buffers
 		uint32_t actual_dim = params.dmap_dim;
 		uint32_t input_width = actual_dim + 4;
-		// We use full sized data here. The value "output_width" should be actual_dim/2+1 though.
 		uint32_t output_width = actual_dim;
 		uint32_t output_height = actual_dim;
 		uint32_t dtx_offset = actual_dim * actual_dim;
@@ -333,6 +330,18 @@ namespace wi
 		cb.xOceanMapHalfTexel = 0.5f / params.dmap_dim;
 		cb.xOceanWaterHeight = params.waterHeight;
 		cb.xOceanSurfaceDisplacementTolerance = std::max(1.0f, params.surfaceDisplacementTolerance);
+
+		return cb;
+	}
+
+	void Ocean::UpdateDisplacementMap(CommandList cmd) const
+	{
+		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		device->EventBegin("Ocean Simulation", cmd);
+
+		const uint2 dim = uint2(160 * params.surfaceDetail, 90 * params.surfaceDetail);
+		OceanCB cb = GetOceanCBAtDim(params, dim);
 
 		device->Barrier(GPUBarrier::Buffer(&constantBuffer, ResourceState::CONSTANT_BUFFER, ResourceState::COPY_DST), cmd);
 		device->UpdateBuffer(&constantBuffer, &cb, cmd);
@@ -410,6 +419,62 @@ namespace wi
 		device->CopyResource(&displacementMap_readback[displacement_readback_index], &displacementMap, cmd);
 		displacement_readback_valid[displacement_readback_index] = true;
 		displacement_readback_index = (displacement_readback_index + 1) % device->GetBufferCount();
+		device->EventEnd(cmd);
+	}
+
+	void Ocean::RenderForOcclusionTest(const CameraComponent& camera, CommandList cmd) const
+	{
+		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		device->EventBegin("Ocean Occlusion Test", cmd);
+
+		constexpr uint2 dim = uint2(80, 45);
+		constexpr uint index_count = dim.x * dim.y * 6;
+		constexpr uint64_t indexbuffer_required_size = index_count * sizeof(uint16_t);
+		static std::mutex locker;
+		locker.lock(); // in case two threads draw the ocean the same time, index buffer creation must be locked
+		if (indexBuffer_occlusionTest.GetDesc().size != indexbuffer_required_size)
+		{
+			wi::vector<uint16_t> index_data(index_count);
+			size_t counter = 0;
+			for (uint16_t x = 0; x < dim.x - 1; x++)
+			{
+				for (uint16_t y = 0; y < dim.y - 1; y++)
+				{
+					uint16_t lowerLeft = x + y * dim.x;
+					uint16_t lowerRight = (x + 1) + y * dim.x;
+					uint16_t topLeft = x + (y + 1) * dim.x;
+					uint16_t topRight = (x + 1) + (y + 1) * dim.x;
+
+					index_data[counter++] = topLeft;
+					index_data[counter++] = lowerLeft;
+					index_data[counter++] = lowerRight;
+
+					index_data[counter++] = topLeft;
+					index_data[counter++] = lowerRight;
+					index_data[counter++] = topRight;
+				}
+			}
+
+			GPUBufferDesc desc;
+			desc.bind_flags = BindFlag::INDEX_BUFFER;
+			desc.size = indexbuffer_required_size;
+			device->CreateBuffer(&desc, index_data.data(), &indexBuffer_occlusionTest);
+			device->SetName(&indexBuffer_occlusionTest, "Ocean::indexBuffer_occlusionTest");
+		}
+		locker.unlock();
+
+		device->BindPipelineState(&PSO_occlusionTest, cmd);
+
+		OceanCB cb = GetOceanCBAtDim(params, dim);
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(OceanCB), cmd);
+
+		device->BindResource(&displacementMap, 0, cmd);
+
+		device->BindIndexBuffer(&indexBuffer_occlusionTest, IndexBufferFormat::UINT16, 0, cmd);
+
+		device->DrawIndexed(index_count, 0, 0, cmd);
+
 		device->EventEnd(cmd);
 	}
 
@@ -506,6 +571,9 @@ namespace wi
 		depth_desc.stencil_enable = false;
 		depthStencilState = depth_desc;
 
+		depth_desc.depth_write_mask = DepthWriteMask::ZERO;
+		depthStencilState_occlusionTest = depth_desc;
+
 		BlendState blend_desc;
 		blend_desc.alpha_to_coverage_enable = false;
 		blend_desc.independent_blend_enable = false;
@@ -518,6 +586,9 @@ namespace wi
 		blend_desc.render_target[0].blend_op_alpha = BlendOp::ADD;
 		blend_desc.render_target[0].render_target_write_mask = ColorWrite::ENABLE_ALL;
 		blendState = blend_desc;
+
+		blend_desc.render_target[0].blend_enable = false;
+		blendState_occlusionTest = blend_desc;
 
 
 		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); wi::fftgenerator::LoadShaders(); });

@@ -60,6 +60,7 @@ namespace wi::lua
 		lunamethod(RenderPath3D_BindLua, SetFSR2Sharpness),
 		lunamethod(RenderPath3D_BindLua, SetFSR2Preset),
 		lunamethod(RenderPath3D_BindLua, SetTonemap),
+		lunamethod(RenderPath3D_BindLua, SetVisibilityComputeShadingEnabled),
 
 		lunamethod(RenderPath3D_BindLua, SetCropLeft),
 		lunamethod(RenderPath3D_BindLua, SetCropTop),
@@ -623,6 +624,19 @@ namespace wi::lua
 	int RenderPath3D_BindLua::SetCropBottom(lua_State* L)
 	{
 		((RenderPath3D*)component)->crop_bottom = wi::lua::SGetFloat(L, 1);
+		return 0;
+	}
+	int RenderPath3D_BindLua::SetVisibilityComputeShadingEnabled(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetVisibilityComputeShadingEnabled(bool value) component is null!");
+			return 0;
+		}
+		if (wi::lua::SGetArgCount(L) > 0)
+			((RenderPath3D*)component)->setVisibilityComputeShadingEnabled(wi::lua::SGetBool(L, 1));
+		else
+			wi::lua::SError(L, "SetVisibilityComputeShadingEnabled(bool value) not enough arguments!");
 		return 0;
 	}
 

@@ -3177,6 +3177,18 @@ namespace wi::scene
 		for (size_t i = 0; i < characters.GetCount(); ++i)
 		{
 			CharacterComponent& character = characters[i];
+			if (!character.IsActive())
+			{
+				if (character.left_foot != INVALID_ENTITY && inverse_kinematics.Contains(character.left_foot))
+				{
+					inverse_kinematics.GetComponent(character.left_foot)->SetDisabled();
+				}
+				if (character.right_foot != INVALID_ENTITY && inverse_kinematics.Contains(character.right_foot))
+				{
+					inverse_kinematics.GetComponent(character.right_foot)->SetDisabled();
+				}
+				continue;
+			}
 			if (character.left_foot != INVALID_ENTITY && character.right_foot != INVALID_ENTITY)
 				continue;
 			HumanoidComponent* humanoid = humanoids.GetComponent(character.humanoidEntity);
@@ -3199,6 +3211,8 @@ namespace wi::scene
 		}
 		wi::jobsystem::Dispatch(ctx, (uint32_t)characters.GetCount(), 1, [&](wi::jobsystem::JobArgs args) {
 			CharacterComponent& character = characters[args.jobIndex];
+			if (!character.IsActive())
+				return;
 			if (character.left_foot == INVALID_ENTITY || character.right_foot == INVALID_ENTITY)
 				return;
 			if (character.humanoidEntity == INVALID_ENTITY)

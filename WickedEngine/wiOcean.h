@@ -41,6 +41,7 @@ namespace wi
 		void Create(const OceanParameters& params);
 
 		void UpdateDisplacementMap(wi::graphics::CommandList cmd) const;
+		void RenderForOcclusionTest(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd) const;
 		void Render(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd) const;
 
 		void CopyDisplacementMapReadback(wi::graphics::CommandList cmd) const;
@@ -95,5 +96,6 @@ namespace wi
 
 		wi::graphics::GPUBuffer constantBuffer;
 		mutable wi::graphics::GPUBuffer indexBuffer;
+		mutable wi::graphics::GPUBuffer indexBuffer_occlusionTest;
 	};
 }

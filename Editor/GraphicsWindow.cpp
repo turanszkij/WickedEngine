@@ -121,17 +121,10 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	visibilityComputeShadingCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	if (editor->main->config.GetSection("graphics").Has("visibility_compute_shading"))
 	{
-		editor->renderPath->visibility_shading_in_compute = editor->main->config.GetSection("graphics").GetBool("visibility_compute_shading");
+		editor->renderPath->setVisibilityComputeShadingEnabled(editor->main->config.GetSection("graphics").GetBool("visibility_compute_shading"));
 	}
 	visibilityComputeShadingCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		if (args.bValue)
-		{
-			editor->renderPath->visibility_shading_in_compute = true;
-		}
-		else
-		{
-			editor->renderPath->visibility_shading_in_compute = false;
-		}
+		editor->renderPath->setVisibilityComputeShadingEnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("visibility_compute_shading", args.bValue);
 		editor->main->config.Commit();
 	});
@@ -1537,7 +1530,7 @@ void GraphicsWindow::Update()
 
 	occlusionCullingCheckBox.SetCheck(wi::renderer::GetOcclusionCullingEnabled());
 	GIBoostSlider.SetValue(wi::renderer::GetGIBoost());
-	visibilityComputeShadingCheckBox.SetCheck(editor->renderPath->visibility_shading_in_compute);
+	visibilityComputeShadingCheckBox.SetCheck(editor->renderPath->getVisibilityComputeShadingEnabled());
 	meshShaderCheckBox.SetCheck(wi::renderer::IsMeshShaderAllowed());
 	meshletOcclusionCullingCheckBox.SetCheck(wi::renderer::IsMeshletOcclusionCullingEnabled());
 	resolutionScaleSlider.SetValue(editor->resolutionScale);

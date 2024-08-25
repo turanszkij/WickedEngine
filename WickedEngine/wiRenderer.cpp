@@ -5367,16 +5367,8 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 		{
 			device->EventBegin("Occlusion Culling Ocean", cmd);
 
-			AABB aabb;
-			aabb.createFromHalfWidth(
-				XMFLOAT3(vis.camera->Eye.x, vis.scene->weather.oceanParameters.waterHeight, vis.camera->Eye.z),
-				XMFLOAT3(vis.camera->zFarP, 1, vis.camera->zFarP)
-			);
-			const XMMATRIX transform = aabb.getAsBoxMatrix() * VP;
-			device->PushConstants(&transform, sizeof(transform), cmd);
-
 			device->QueryBegin(&queryHeap, queryIndex, cmd);
-			device->Draw(14, 0, cmd);
+			vis.scene->ocean.RenderForOcclusionTest(camera, cmd);
 			device->QueryEnd(&queryHeap, queryIndex, cmd);
 
 			device->EventEnd(cmd);
@@ -6275,18 +6267,19 @@ void DrawShadowmaps(
 						}
 					}
 				}
+
+				if (predicationRequest && light.occlusionquery >= 0)
+				{
+					device->PredicationBegin(
+						&vis.scene->queryPredicationBuffer,
+						(uint64_t)light.occlusionquery * sizeof(uint64_t),
+						PredicationOp::EQUAL_ZERO,
+						cmd
+					);
+				}
+
 				if (!renderQueue.empty())
 				{
-					if (predicationRequest && light.occlusionquery >= 0)
-					{
-						device->PredicationBegin(
-							&vis.scene->queryPredicationBuffer,
-							(uint64_t)light.occlusionquery * sizeof(uint64_t),
-							PredicationOp::EQUAL_ZERO,
-							cmd
-						);
-					}
-
 					XMStoreFloat4x4(&cb.cameras[0].view_projection, shcam.view_projection);
 					cb.cameras[0].output_index = 0;
 					for (int i = 0; i < arraysize(cb.cameras[0].frustum.planes); ++i)
@@ -6313,11 +6306,6 @@ void DrawShadowmaps(
 					if (transparentShadowsRequested)
 					{
 						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_TRANSPARENT | FILTER_WATER, cmd);
-					}
-
-					if (predicationRequest && light.occlusionquery >= 0)
-					{
-						device->PredicationEnd(cmd);
 					}
 				}
 
@@ -6355,6 +6343,10 @@ void DrawShadowmaps(
 					}
 				}
 
+				if (predicationRequest && light.occlusionquery >= 0)
+				{
+					device->PredicationEnd(cmd);
+				}
 			}
 			break;
 			case LightComponent::POINT:
@@ -6435,18 +6427,19 @@ void DrawShadowmaps(
 						}
 					}
 				}
+
+				if (predicationRequest && light.occlusionquery >= 0)
+				{
+					device->PredicationBegin(
+						&vis.scene->queryPredicationBuffer,
+						(uint64_t)light.occlusionquery * sizeof(uint64_t),
+						PredicationOp::EQUAL_ZERO,
+						cmd
+					);
+				}
+
 				if (!renderQueue.empty())
 				{
-					if (predicationRequest && light.occlusionquery >= 0)
-					{
-						device->PredicationBegin(
-							&vis.scene->queryPredicationBuffer,
-							(uint64_t)light.occlusionquery * sizeof(uint64_t),
-							PredicationOp::EQUAL_ZERO,
-							cmd
-						);
-					}
-
 					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 					device->BindViewports(arraysize(vp), vp, cmd);
 					device->BindScissorRects(arraysize(scissors), scissors, cmd);
@@ -6456,11 +6449,6 @@ void DrawShadowmaps(
 					if (transparentShadowsRequested)
 					{
 						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_TRANSPARENT | FILTER_WATER, cmd, 0, camera_count);
-					}
-
-					if (predicationRequest && light.occlusionquery >= 0)
-					{
-						device->PredicationEnd(cmd);
 					}
 				}
 
@@ -6498,6 +6486,11 @@ void DrawShadowmaps(
 							}
 						}
 					}
+				}
+
+				if (predicationRequest && light.occlusionquery >= 0)
+				{
+					device->PredicationEnd(cmd);
 				}
 
 			}

@@ -1094,7 +1094,7 @@ namespace wi::scene
 		inline bool IsVisualizerEnabled() const { return _flags & VISUALIZER; }
 		inline bool IsStatic() const { return _flags & LIGHTMAPONLY_STATIC; }
 		inline bool IsVolumetricCloudsEnabled() const { return _flags & VOLUMETRICCLOUDS; }
-		inline bool IsInactive() const { return intensity == 0 || range == 0; }
+		inline bool IsInactive() const { return intensity < 0.0001f || range < 0.0001f; }
 
 		inline float GetRange() const
 		{

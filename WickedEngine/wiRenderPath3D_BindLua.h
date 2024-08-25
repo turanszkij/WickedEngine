@@ -70,6 +70,7 @@ namespace wi::lua
 		int SetCropTop(lua_State* L);
 		int SetCropRight(lua_State* L);
 		int SetCropBottom(lua_State* L);
+		int SetVisibilityComputeShadingEnabled(lua_State* L);
 
 		int GetLastPostProcessRT(lua_State* L);
 
