@@ -2286,8 +2286,8 @@ void SetUpStates()
 	rs.fill_mode = FillMode::SOLID;
 	rs.cull_mode = CullMode::NONE;
 	rs.front_counter_clockwise = true;
-	rs.depth_bias = 1;
-	rs.depth_bias_clamp = 0.01f;
+	rs.depth_bias = 0;
+	rs.depth_bias_clamp = 0;
 	rs.slope_scaled_depth_bias = 0;
 	rs.depth_clip_enable = false;
 	rs.multisample_enable = false;
@@ -5323,7 +5323,14 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 			int queryIndex = occlusion_result.occlusionQueries[query_write];
 			if (queryIndex >= 0)
 			{
-				const AABB& aabb = vis.scene->aabb_objects[instanceIndex];
+				AABB aabb = vis.scene->aabb_objects[instanceIndex];
+				// extrude the bounding box a bit:
+				aabb._min.x -= 0.001f;
+				aabb._min.y -= 0.001f;
+				aabb._min.z -= 0.001f;
+				aabb._max.x += 0.001f;
+				aabb._max.y += 0.001f;
+				aabb._max.z += 0.001f;
 				const XMMATRIX transform = aabb.getAsBoxMatrix() * VP;
 				device->PushConstants(&transform, sizeof(transform), cmd);
 
