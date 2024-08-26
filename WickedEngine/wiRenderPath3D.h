@@ -92,7 +92,7 @@ namespace wi
 		wi::graphics::Texture rtPrimitiveID_render; // can be MSAA
 		wi::graphics::Texture rtVelocity; // optional R16G16_FLOAT
 		wi::graphics::Texture rtReflection; // contains the scene rendered for planar reflections, MSAA
-		wi::graphics::Texture rtReflection_resolved; // contains the scene rendered for planar reflections, MSAA
+		wi::graphics::Texture rtReflection_resolved; // contains the scene rendered for planar reflections, single sample
 		wi::graphics::Texture rtRaytracedDiffuse; // raytraced diffuse screen space texture
 		wi::graphics::Texture rtSSR; // standard screen-space reflection results
 		wi::graphics::Texture rtSSGI; // standard screen-space GI results

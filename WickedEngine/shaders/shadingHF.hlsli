@@ -446,45 +446,26 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	[branch]
 	if (!directional_lights().empty())
 	{
-		// Loop through light buckets in the tile:
+		// Directional lights are not culled, so simply iterate through each one:
 		ShaderEntityIterator iterator = directional_lights();
-		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
+		for(uint entity_index = iterator.first_item(); entity_index <= iterator.last_item(); ++entity_index)
 		{
-			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
+			ShaderEntity light = load_entity(entity_index);
 
-#ifndef ENTITY_TILE_UNIFORM
-			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
-			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
-#endif // ENTITY_TILE_UNIFORM
-
-			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
-
-			[loop]
-			while (bucket_bits != 0)
-			{
-				// Retrieve global entity index from local bucket, then remove bit from local bucket:
-				const uint bucket_bit_index = firstbitlow(bucket_bits);
-				const uint entity_index = bucket * 32 + bucket_bit_index;
-				bucket_bits ^= 1u << bucket_bit_index;
-				
-				ShaderEntity light = load_entity(entity_index);
-
-				half shadow_mask = 1;
+			half shadow_mask = 1;
 #if defined(SHADOW_MASK_ENABLED) && !defined(TRANSPARENT)
-				[branch]
-				if (light.IsCastingShadow() && (GetFrame().options & OPTION_BIT_SHADOW_MASK) && (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) && GetCamera().texture_rtshadow_index >= 0)
+			[branch]
+			if (light.IsCastingShadow() && (GetFrame().options & OPTION_BIT_SHADOW_MASK) && (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) && GetCamera().texture_rtshadow_index >= 0)
+			{
+				uint shadow_index = entity_index - lights().first_item();
+				if (shadow_index < 16)
 				{
-					uint shadow_index = entity_index - lights().first_item();
-					if (shadow_index < 16)
-					{
-						shadow_mask = (half)bindless_textures2DArray[GetCamera().texture_rtshadow_index][uint3(surface.pixel, shadow_index)].r;
-					}
+					shadow_mask = (half)bindless_textures2DArray[GetCamera().texture_rtshadow_index][uint3(surface.pixel, shadow_index)].r;
 				}
+			}
 #endif // SHADOW_MASK_ENABLED && !TRANSPARENT
 
-				light_directional(light, surface, lighting, shadow_mask);
-
-			}
+			light_directional(light, surface, lighting, shadow_mask);
 		}
 	}
 
