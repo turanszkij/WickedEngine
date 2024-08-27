@@ -327,7 +327,6 @@ namespace wi::renderer
 	struct TiledLightResources
 	{
 		XMUINT2 tileCount = {};
-		wi::graphics::GPUBuffer tileFrustums; // entity culling frustums
 		wi::graphics::GPUBuffer entityTiles; // culled entity indices
 	};
 	void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution);

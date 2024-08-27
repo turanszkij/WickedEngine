@@ -4,8 +4,6 @@
 
 #define entityCount (GetFrame().entity_culling_count)
 
-StructuredBuffer<Frustum> in_Frustums : register(t0);
-
 RWStructuredBuffer<uint> entityTiles : register(u0);
 
 // Group shared variables.
@@ -79,14 +77,6 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	texture_depth.GetDimensions(dim.x, dim.y);
 	float2 dim_rcp = rcp(dim);
 
-	// This controls the unrolling granularity if the blocksize and threadsize are different:
-	uint granularity = 0;
-
-	// Compute addresses and load frustum:
-	const uint flatTileIndex = flatten2D(Gid.xy, GetCamera().entity_culling_tilecount.xy);
-	const uint tileBucketsAddress = flatTileIndex * SHADER_ENTITY_TILE_BUCKET_COUNT;
-	Frustum GroupFrustum = in_Frustums[flatTileIndex];
-
 	// Each thread will zero out one bucket in the LDS:
 	for (uint i = groupIndex; i < SHADER_ENTITY_TILE_BUCKET_COUNT; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
@@ -112,7 +102,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	float depthMaxUnrolled = -10000000;
 
 	[unroll]
-	for (granularity = 0; granularity < TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY; ++granularity)
+	for (uint granularity = 0; granularity < TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY; ++granularity)
 	{
 		uint2 pixel = DTid.xy * uint2(TILED_CULLING_GRANULARITY, TILED_CULLING_GRANULARITY) + unflatten2D(granularity, TILED_CULLING_GRANULARITY);
 		pixel = min(pixel, dim - 1); // avoid loading from outside the texture, it messes up the min-max depth!
@@ -137,16 +127,15 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	float fMinDepth = asfloat(uMaxDepth);
 	float fMaxDepth = asfloat(uMinDepth);
 
-	// Note: the following will be SGPR
+	Frustum GroupFrustum;
 	AABB GroupAABB;			// frustum AABB around min-max depth in View Space
 	AABB GroupAABB_WS;		// frustum AABB in world space
-	if(WaveIsFirstLane())
 	{
-		// I construct an AABB around the minmax depth bounds to perform tighter culling:
-		// The frustum is asymmetric so we must consider all corners!
-
+		// View space eye position is always at the origin.
+		const float3 eyePos = float3(0, 0, 0);
+		
+		// View space frustum corners:
 		float3 viewSpace[8];
-
 		// Top left point, near
 		viewSpace[0] = ScreenToView(float4(Gid.xy * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp).xyz;
 		// Top right point, near
@@ -155,7 +144,6 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		viewSpace[2] = ScreenToView(float4(float2(Gid.x, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp).xyz;
 		// Bottom right point, near
 		viewSpace[3] = ScreenToView(float4(float2(Gid.x + 1, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp).xyz;
-
 		// Top left point, far
 		viewSpace[4] = ScreenToView(float4(Gid.xy * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp).xyz;
 		// Top right point, far
@@ -164,7 +152,18 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		viewSpace[6] = ScreenToView(float4(float2(Gid.x, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp).xyz;
 		// Bottom right point, far
 		viewSpace[7] = ScreenToView(float4(float2(Gid.x + 1, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp).xyz;
-
+	
+		// Left plane
+		GroupFrustum.planes[0] = ComputePlane(viewSpace[2], eyePos, viewSpace[0]);
+		// Right plane
+		GroupFrustum.planes[1] = ComputePlane(viewSpace[1], eyePos, viewSpace[3]);
+		// Top plane
+		GroupFrustum.planes[2] = ComputePlane(viewSpace[0], eyePos, viewSpace[1]);
+		// Bottom plane
+		GroupFrustum.planes[3] = ComputePlane(viewSpace[3], eyePos, viewSpace[2]);
+		
+		// I construct an AABB around the minmax depth bounds to perform tighter culling:
+		// The frustum is asymmetric so we must consider all corners!
 		float3 minAABB = 10000000;
 		float3 maxAABB = -10000000;
 		[unroll]
@@ -180,10 +179,6 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		GroupAABB_WS = GroupAABB;
 		AABBtransform(GroupAABB_WS, GetCamera().inverse_view);
 	}
-	GroupAABB.c = WaveReadLaneFirst(GroupAABB.c);
-	GroupAABB.e = WaveReadLaneFirst(GroupAABB.e);
-	GroupAABB_WS.c = WaveReadLaneFirst(GroupAABB_WS.c);
-	GroupAABB_WS.e = WaveReadLaneFirst(GroupAABB_WS.e);
 
 	// Convert depth values to view space.
 	float minDepthVS = ScreenToView(float4(0, 0, fMinDepth, 1), dim_rcp).z;
@@ -198,7 +193,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	uint __depthmaskUnrolled = 0;
 
 	[unroll]
-	for (granularity = 0; granularity < TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY; ++granularity)
+	for (uint granularity = 0; granularity < TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY; ++granularity)
 	{
 		float realDepthVS = ScreenToView(float4(0, 0, depth[granularity], 1), dim_rcp).z;
 		const uint __depthmaskcellindex = max(0, min(31, floor((realDepthVS - minDepthVS) * __depthRangeRecip)));
@@ -452,6 +447,9 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 #endif
 
 	GroupMemoryBarrierWithGroupSync();
+	
+	const uint flatTileIndex = flatten2D(Gid.xy, GetCamera().entity_culling_tilecount.xy);
+	const uint tileBucketsAddress = flatTileIndex * SHADER_ENTITY_TILE_BUCKET_COUNT;
 
 	// Each thread will export one bucket from LDS to global memory:
 	for (uint i = groupIndex; i < SHADER_ENTITY_TILE_BUCKET_COUNT; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
@@ -461,7 +459,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	}
 
 #ifdef DEBUG_TILEDLIGHTCULLING
-	for (granularity = 0; granularity < TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY; ++granularity)
+	for (uint granularity = 0; granularity < TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY; ++granularity)
 	{
 		uint2 pixel = DTid.xy * uint2(TILED_CULLING_GRANULARITY, TILED_CULLING_GRANULARITY) + unflatten2D(granularity, TILED_CULLING_GRANULARITY);
 
