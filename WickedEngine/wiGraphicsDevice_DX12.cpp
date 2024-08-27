@@ -7887,7 +7887,14 @@ std::mutex queue_locker;
 			PIXSetMarker(commandlist.GetGraphicsCommandList(), 0xFFFF0000, text);
 		}
 	}
-
+	ID3D12Resource* GraphicsDevice_DX12::GetTextureInternalResource(const Texture* texture)
+	{
+		return to_internal(texture)->resource.Get();
+	}
+	ID3D12CommandQueue* GraphicsDevice_DX12::GetGraphicCommandQueue()
+	{
+		return queues[QUEUE_GRAPHICS].queue.Get();
+	}
 }
 
 #endif // WICKEDENGINE_BUILD_DX12

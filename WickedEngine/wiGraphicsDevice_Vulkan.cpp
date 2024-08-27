@@ -2435,6 +2435,10 @@ using namespace vulkan_internal;
 			{
 				instanceExtensions.push_back(VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME);
 			}
+			else if (strcmp(availableExtension.extensionName, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) == 0)
+			{
+				instanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+			}
 		}
 
 		instanceExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
@@ -9334,7 +9338,30 @@ using namespace vulkan_internal;
 		label.color[3] = 1.0f;
 		vkCmdInsertDebugUtilsLabelEXT(commandlist.GetCommandBuffer(), &label);
 	}
-
+	VkDevice GraphicsDevice_Vulkan::GetDevice()
+	{
+		return device;
+	}
+	VkImage GraphicsDevice_Vulkan::GetTextureInternalResource(const Texture* texture)
+	{
+		return to_internal(texture)->resource;
+	}
+	VkPhysicalDevice GraphicsDevice_Vulkan::GetPhysicalDevice()
+	{
+		return physicalDevice;
+	}
+	VkInstance GraphicsDevice_Vulkan::GetInstance()
+	{
+		return instance;
+	}
+	VkQueue GraphicsDevice_Vulkan::GetGraphicCommandQueue()
+	{
+		return queues[QUEUE_GRAPHICS].queue;
+	}
+	uint32_t GraphicsDevice_Vulkan::GetGraphicFamilyIndex()
+	{
+		return graphicsFamily;
+	}
 }
 
 #endif // WICKEDENGINE_BUILD_VULKAN

@@ -461,6 +461,13 @@ namespace wi::graphics
 			return GetCommandList(cmd).frame_allocators[GetBufferIndex()];
 		}
 
+		VkDevice GetDevice();
+		VkImage GetTextureInternalResource(const Texture* texture);
+		VkPhysicalDevice GetPhysicalDevice();
+		VkInstance GetInstance();
+		VkQueue GetGraphicCommandQueue();
+		uint32_t GetGraphicFamilyIndex();
+
 		struct AllocationHandler
 		{
 			VmaAllocator allocator = VK_NULL_HANDLE;
