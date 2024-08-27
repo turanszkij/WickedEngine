@@ -54,13 +54,31 @@ PUSHCONSTANT(push, SkinningPushConstants);
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 {
 	const uint vertexID = DTid.x;
-
+	
 	[branch]
-	if (push.vb_pos_wind < 0 || vertexID >= push.vertexCount)
+	if (vertexID >= push.vertexCount)
 		return;
 	
-	float4 pos_wind = bindless_buffers_float4[push.vb_pos_wind][vertexID];
-	half3 nor = bindless_buffers_float4[push.vb_nor][vertexID].xyz;
+	float4 pos_wind = 0;
+	[branch]
+	if (push.vb_pos_wind >= 0)
+	{
+		pos_wind = bindless_buffers_float4[push.vb_pos_wind][vertexID];
+	}
+	
+	half3 nor = 0;
+	[branch]
+	if (push.vb_nor >= 0)
+	{
+		nor = bindless_buffers_float4[push.vb_nor][vertexID].xyz;
+	}
+	
+	half4 tan = 0;
+	[branch]
+	if (push.vb_tan >= 0)
+	{
+		tan = bindless_buffers_float4[push.vb_tan][vertexID];
+	}
 	
 	float3 pos = pos_wind.xyz;
 	if(any(push.aabb_min) || any(push.aabb_max))
@@ -68,14 +86,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 		// UNORM vertex position remap:
 		pos = lerp(push.aabb_min, push.aabb_max, pos);
 	}
-	
-	half4 tan = bindless_buffers_float4[push.vb_tan][vertexID];
 
 	ByteAddressBuffer skinningbuffer = bindless_buffers[push.skinningbuffer_index];
 
 	// Morph targets:
 	[branch]
-	if (push.morph_count > 0)
+	if (push.morphvb_index >= 0 && push.morph_count > 0)
 	{
 		Buffer<float4> morphvb = bindless_buffers_float4[push.morphvb_index];
 		for (uint morph_index = 0; morph_index < push.morph_count; ++morph_index)
@@ -96,6 +112,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	[branch]
 	if (push.vb_bon >= 0 && push.bone_offset != ~0u)
 	{
+		ByteAddressBuffer boneBuffer = bindless_buffers[push.vb_bon];
 		float4 p = 0;
 		half3 n = 0;
 		half3 t = 0;
@@ -108,7 +125,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 			if (push.vb_bon >= 0)
 			{
 				// Manual type-conversion for bone props:
-				uint4 ind_wei_u = bindless_buffers[push.vb_bon].Load4((vertexID * push.influence_div4 + influence) * sizeof(uint4));
+				uint4 ind_wei_u = boneBuffer.Load4((vertexID * push.influence_div4 + influence) * sizeof(uint4));
 
 				ind.x = uint(ind_wei_u.x & 0xFFFFF);
 				ind.y = uint(ind_wei_u.y & 0xFFFFF);

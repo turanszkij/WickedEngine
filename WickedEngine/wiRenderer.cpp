@@ -992,7 +992,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_LUMINANCE_PASS2], "luminancePass2CS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SHADINGRATECLASSIFICATION], "shadingRateClassificationCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SHADINGRATECLASSIFICATION_DEBUG], "shadingRateClassificationCS_DEBUG.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_TILEFRUSTUMS], "tileFrustumsCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_LIGHTCULLING], "lightCullingCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_LIGHTCULLING_DEBUG], "lightCullingCS_DEBUG.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_LIGHTCULLING_ADVANCED], "lightCullingCS_ADVANCED.cso"); });
@@ -9385,26 +9384,14 @@ void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution)
 {
 	res.tileCount = GetEntityCullingTileCount(resolution);
 
-	{
-		GPUBufferDesc bd;
-		bd.stride = sizeof(XMFLOAT4) * 4; // storing 4 planes for every tile
-		bd.size = bd.stride * res.tileCount.x * res.tileCount.y;
-		bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-		bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-		bd.usage = Usage::DEFAULT;
-		device->CreateBuffer(&bd, nullptr, &res.tileFrustums);
-		device->SetName(&res.tileFrustums, "tileFrustums");
-	}
-	{
-		GPUBufferDesc bd;
-		bd.stride = sizeof(uint);
-		bd.size = res.tileCount.x * res.tileCount.y * bd.stride * SHADER_ENTITY_TILE_BUCKET_COUNT * 2; // *2: opaque and transparent arrays
-		bd.usage = Usage::DEFAULT;
-		bd.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
-		bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-		device->CreateBuffer(&bd, nullptr, &res.entityTiles);
-		device->SetName(&res.entityTiles, "entityTiles");
-	}
+	GPUBufferDesc bd;
+	bd.stride = sizeof(uint);
+	bd.size = res.tileCount.x * res.tileCount.y * bd.stride * SHADER_ENTITY_TILE_BUCKET_COUNT * 2; // *2: opaque and transparent arrays
+	bd.usage = Usage::DEFAULT;
+	bd.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+	bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+	device->CreateBuffer(&bd, nullptr, &res.entityTiles);
+	device->SetName(&res.entityTiles, "entityTiles");
 }
 void ComputeTiledLightCulling(
 	const TiledLightResources& res,
@@ -9415,14 +9402,7 @@ void ComputeTiledLightCulling(
 {
 	auto range = wi::profiler::BeginRangeGPU("Entity Culling", cmd);
 
-	// Initial barriers to put all resources into UAV:
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Buffer(&res.tileFrustums, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
-			GPUBarrier::Buffer(&res.entityTiles, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	device->Barrier(GPUBarrier::Buffer(&res.entityTiles, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS), cmd);
 
 	if (
 		vis.visibleLights.empty() &&
@@ -9431,15 +9411,8 @@ void ComputeTiledLightCulling(
 		)
 	{
 		device->EventBegin("Tiled Entity Clear Only", cmd);
-		device->ClearUAV(&res.tileFrustums, 0, cmd);
 		device->ClearUAV(&res.entityTiles, 0, cmd);
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Buffer(&res.tileFrustums, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-				GPUBarrier::Buffer(&res.entityTiles, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
+		device->Barrier(GPUBarrier::Buffer(&res.entityTiles, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE), cmd);
 		device->EventEnd(cmd);
 		wi::profiler::EndRange(range);
 		return;
@@ -9447,38 +9420,9 @@ void ComputeTiledLightCulling(
 
 	BindCommonResources(cmd);
 
-	// Frustum computation
-	{
-		device->EventBegin("Tile Frustums", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_TILEFRUSTUMS], cmd);
-
-		const GPUResource* uavs[] = { 
-			&res.tileFrustums 
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-		device->Dispatch(
-			(res.tileCount.x + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
-			(res.tileCount.y + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
-			1,
-			cmd
-		);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Buffer(&res.tileFrustums, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->EventEnd(cmd);
-	}
-
 	// Perform the culling
 	{
 		device->EventBegin("Entity Culling", cmd);
-
-		device->BindResource(&res.tileFrustums, 0, cmd);
 
 		if (GetDebugLightCulling() && debugUAV.IsValid())
 		{

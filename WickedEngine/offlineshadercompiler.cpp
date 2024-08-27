@@ -53,7 +53,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"upsample_bilateral_unorm1CS", wi::graphics::ShaderStage::CS},
 	{"upsample_bilateral_unorm4CS", wi::graphics::ShaderStage::CS},
 	{"temporalaaCS", wi::graphics::ShaderStage::CS},
-	{"tileFrustumsCS", wi::graphics::ShaderStage::CS},
 	{"tonemapCS", wi::graphics::ShaderStage::CS},
 	{"underwaterCS", wi::graphics::ShaderStage::CS},
 	{"fsr_upscalingCS", wi::graphics::ShaderStage::CS},

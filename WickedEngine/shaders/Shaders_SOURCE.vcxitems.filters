@@ -251,9 +251,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)temporalaaCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)tileFrustumsCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)tonemapCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
