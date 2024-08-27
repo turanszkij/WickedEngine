@@ -6,11 +6,6 @@
 #include "Translator.h"
 #include "DummyVisualizer.h"
 
-#include <string>
-#include <algorithm>
-#include <cctype>
-#include <sstream>
-
 using namespace wi::graphics;
 using namespace wi::primitive;
 using namespace wi::scene;
@@ -51,76 +46,219 @@ static wi::unordered_map<std::string, FileType> filetypes = {
 };
 
 // Hotkey functions
-std::string toUpper( std::string str )
+bool ContainsKey(const std::string& str, const std::string& key)
 {
-	std::transform( str.begin(), str.end(), str.begin(),
-		[]( unsigned char c )
+	return wi::helper::toUpper(str).find(key) != std::string::npos;
+}
+bool HasKeyOnlyCTRL(const std::string& buttonName)
+{
+	return ContainsKey(buttonName, "CTRL") && !ContainsKey(buttonName, "SHIFT");
+}
+bool HasKeyOnlySHIFT(const std::string& buttonName)
+{
+	return ContainsKey(buttonName, "SHIFT") && !ContainsKey(buttonName, "CTRL");
+}
+bool HasKeyCTRLAndSHIFT(const std::string& buttonName)
+{
+	return ContainsKey(buttonName, "CTRL") && ContainsKey(buttonName, "SHIFT");
+}
+bool CheckKeysPressed(const std::string& buttonName, bool isCtrlDown, bool isShiftDown)
+{
+	if (HasKeyOnlyCTRL(buttonName) && isCtrlDown && !isShiftDown)
 	{
-		return std::toupper( c );
-	} );
-	return str;
+		return true;
+	}
+	else if(HasKeyOnlySHIFT(buttonName) && isShiftDown && !isCtrlDown)
+	{
+		return true;
+	}
+	else if (HasKeyCTRLAndSHIFT(buttonName) && isCtrlDown && isShiftDown)
+	{
+		return true;
+	}
+	return false;
 }
-bool ContainsKey( const std::string& str, const std::string& key )
+std::string GetFirstNonModifierKey(const std::string& buttonName)
 {
-	return toUpper( str ).find( key ) != std::string::npos;
-}
-bool HasKeyOnlyCTRL( const std::string& buttonName )
-{
-	return ContainsKey( buttonName, "CTRL" ) && !ContainsKey( buttonName, "SHIFT" );
-}
-bool HasKeyOnlySHIFT( const std::string& buttonName )
-{
-	return ContainsKey( buttonName, "SHIFT" ) && !ContainsKey( buttonName, "CTRL" );
-}
-bool HasKeyCTRLAndSHIFT( const std::string& buttonName )
-{
-	return ContainsKey( buttonName, "CTRL" ) && ContainsKey( buttonName, "SHIFT" );
-}
-std::string GetFirstNonModifierKey( const std::string& buttonName )
-{
-	std::istringstream iss( buttonName );
+	std::istringstream iss(buttonName);
 	std::string token;
-	while( std::getline( iss, token, '+' ) )
+	while (std::getline(iss, token, '+'))
 	{
-		token = toUpper( token );
-		if( token != "CTRL" && token != "SHIFT" && !token.empty() )
+		token = wi::helper::toUpper(token);
+		if (token != "CTRL" && token != "SHIFT" && !token.empty())
 		{
 			return token;
 		}
 	}
 	return "";
 }
-wi::input::BUTTON StringToButton( const std::string& buttonName )
+wi::input::BUTTON StringToButton(const std::string& buttonName)
 {
 	static const wi::unordered_map<std::string, wi::input::BUTTON> buttonMap = {
 		{"ESC", wi::input::KEYBOARD_BUTTON_ESCAPE},
-		{"DELETEBUTTON", wi::input::KEYBOARD_BUTTON_DELETE},
-		{"F12", wi::input::KEYBOARD_BUTTON_F12},
+		{"INSERT", wi::input::KEYBOARD_BUTTON_INSERT},
+		{"DELETE", wi::input::KEYBOARD_BUTTON_DELETE},
 		{"HOME", wi::input::KEYBOARD_BUTTON_HOME},
-		{"LEFTMOUSEBUTTON", wi::input::MOUSE_BUTTON_LEFT}
+		{"PAGEUP", wi::input::KEYBOARD_BUTTON_PAGEUP},
+		{"PAGEDOWN", wi::input::KEYBOARD_BUTTON_PAGEDOWN},
+		{"MOUSELEFT", wi::input::MOUSE_BUTTON_LEFT},
+		{"MOUSERIGHT", wi::input::MOUSE_BUTTON_RIGHT},
+		{"F1", wi::input::KEYBOARD_BUTTON_F1},
+		{"F2", wi::input::KEYBOARD_BUTTON_F2},
+		{"F3", wi::input::KEYBOARD_BUTTON_F3},
+		{"F4", wi::input::KEYBOARD_BUTTON_F4},
+		{"F5", wi::input::KEYBOARD_BUTTON_F5},
+		{"F6", wi::input::KEYBOARD_BUTTON_F6},
+		{"F7", wi::input::KEYBOARD_BUTTON_F7},
+		{"F8", wi::input::KEYBOARD_BUTTON_F8},
+		{"F9", wi::input::KEYBOARD_BUTTON_F9},
+		{"F10", wi::input::KEYBOARD_BUTTON_F10},
+		{"F11", wi::input::KEYBOARD_BUTTON_F11},
+		{"F12", wi::input::KEYBOARD_BUTTON_F12}
 	};
 
-	std::string upperName = toUpper( buttonName );
-	std::string firstKey = GetFirstNonModifierKey( upperName );
+	std::string upperName = wi::helper::toUpper(buttonName);
+	std::string firstKey = GetFirstNonModifierKey(upperName);
 
 	// Try to find the key in the map
-	auto it = buttonMap.find( firstKey );
-	if( it != buttonMap.end() )
+	auto it = buttonMap.find(firstKey);
+	if (it != buttonMap.end())
 	{
 		return it->second;
 	}
 
 	// Cast individual key to button
-	if( firstKey.length() == 1 )
+	if (firstKey.length() == 1)
 	{
-		char c = firstKey[ 0 ];
-		if( std::isalnum( c ) )
+		char c = firstKey[0];
+		if (std::isalnum(c))
 		{
-			return static_cast< wi::input::BUTTON >( c );
+			return static_cast<wi::input::BUTTON>(c);
 		}
 	}
 
 	return wi::input::BUTTON_NONE;
+}
+// EditorActions
+enum class EditorActions
+{
+	// Camera movement
+	MOVE_CAMERA_FORWARD,
+	MOVE_CAMERA_BACKWARD,
+	MOVE_CAMERA_LEFT,
+	MOVE_CAMERA_RIGHT,
+	MOVE_CAMERA_UP,
+	MOVE_CAMERA_DOWN,
+
+	// Entity actions
+	DUPLICATE_ENTITY,
+
+	// Selection actions
+	SELECT_ALL_ENTITIES,
+	DESELECT_ALL_ENTITIES,
+	FOCUS_ON_SELECTION,
+
+	// Edit actions
+	UNDO_ACTION,
+	REDO_ACTION,
+	COPY_ACTION,
+	CUT_ACTION,
+	PASTE_ACTION,
+	DELETE_ACTION,
+
+	// User actions
+	MOVE_TOGGLE_ACTION,
+	ROTATE_TOGGLE_ACTION,
+	SCALE_TOGGLE_ACTION,
+
+	// Engine actions
+	MAKE_NEW_SCREENSHOT,
+	INSPECTOR_MODE,
+	DUPLICATE_INSTANCES,
+
+	// Scene actions
+	SAVE_SCENE_AS,
+	SAVE_SCENE,
+
+	// Transform actions
+	ENABLE_TRANSFORM_TOOL,
+
+	// View mode actions
+	WIREFRAME_MODE,
+
+	// Effect actions
+	DEPTH_OF_FIELD_REFOCUS_TO_POINT,
+	COLOR_GRADING_REFERENCE,
+
+	// Other actions
+	RAGDOLL_AND_PHYSICS_IMPULSE_TESTER,
+
+	EDITOR_ACTION_COUNT
+};
+struct HotkeyInfo
+{
+	std::string keyString;
+	wi::input::BUTTON button;
+};
+wi::unordered_map<EditorActions, HotkeyInfo> hotkeyActions;
+EditorActions StringToEnum(const std::string& actionString)
+{
+	static const wi::unordered_map<std::string, EditorActions> actionMap = {
+		{"MOVE_CAMERA_FORWARD", EditorActions::MOVE_CAMERA_FORWARD},
+		{"MOVE_CAMERA_BACKWARD", EditorActions::MOVE_CAMERA_BACKWARD},
+		{"MOVE_CAMERA_LEFT", EditorActions::MOVE_CAMERA_LEFT},
+		{"MOVE_CAMERA_RIGHT", EditorActions::MOVE_CAMERA_RIGHT},
+		{"MOVE_CAMERA_UP", EditorActions::MOVE_CAMERA_UP},
+		{"MOVE_CAMERA_DOWN", EditorActions::MOVE_CAMERA_DOWN},
+		{"DUPLICATE_ENTITY", EditorActions::DUPLICATE_ENTITY},
+		{"SELECT_ALL_ENTITIES", EditorActions::SELECT_ALL_ENTITIES},
+		{"DESELECT_ALL_ENTITIES", EditorActions::DESELECT_ALL_ENTITIES},
+		{"FOCUS_ON_SELECTION", EditorActions::FOCUS_ON_SELECTION},
+		{"UNDO_ACTION", EditorActions::UNDO_ACTION},
+		{"REDO_ACTION", EditorActions::REDO_ACTION},
+		{"COPY_ACTION", EditorActions::COPY_ACTION},
+		{"CUT_ACTION", EditorActions::CUT_ACTION},
+		{"PASTE_ACTION", EditorActions::PASTE_ACTION},
+		{"DELETE_ACTION", EditorActions::DELETE_ACTION},
+		{"MOVE_TOGGLE_ACTION", EditorActions::MOVE_TOGGLE_ACTION},
+		{"ROTATE_TOGGLE_ACTION", EditorActions::ROTATE_TOGGLE_ACTION},
+		{"SCALE_TOGGLE_ACTION", EditorActions::SCALE_TOGGLE_ACTION},
+		{"MAKE_NEW_SCREENSHOT", EditorActions::MAKE_NEW_SCREENSHOT},
+		{"INSPECTOR_MODE", EditorActions::INSPECTOR_MODE},
+		{"DUPLICATE_INSTANCES", EditorActions::DUPLICATE_INSTANCES},
+		{"SAVE_SCENE_AS", EditorActions::SAVE_SCENE_AS},
+		{"SAVE_SCENE", EditorActions::SAVE_SCENE},
+		{"ENABLE_TRANSFORM_TOOL", EditorActions::ENABLE_TRANSFORM_TOOL},
+		{"WIREFRAME_MODE", EditorActions::WIREFRAME_MODE},
+		{"DEPTH_OF_FIELD_REFOCUS_TO_POINT", EditorActions::DEPTH_OF_FIELD_REFOCUS_TO_POINT},
+		{"COLOR_GRADING_REFERENCE", EditorActions::COLOR_GRADING_REFERENCE},
+		{"RAGDOLL_AND_PHYSICS_IMPULSE_TESTER", EditorActions::RAGDOLL_AND_PHYSICS_IMPULSE_TESTER}
+	};
+
+	std::string upperActionString = actionString;
+	std::transform(upperActionString.begin(), upperActionString.end(), upperActionString.begin(), ::toupper);
+
+	auto it = actionMap.find(upperActionString);
+	if (it != actionMap.end())
+	{
+		return it->second;
+	}
+
+	return EditorActions::EDITOR_ACTION_COUNT;
+}
+void InitializeHotkeysActionKeyMap(Editor* main)
+{
+	wi::config::File config = main->config;
+	wi::config::Section hotkeyssection = config.GetSection("hotkeys");
+
+	for (auto it = hotkeyssection.begin(); it != hotkeyssection.end(); ++it)
+	{
+		EditorActions action = StringToEnum(it->first);
+		std::string keyString = it->second;
+		wi::input::BUTTON button = StringToButton(it->second);
+
+		hotkeyActions[action] = HotkeyInfo{keyString, button};
+	}
 }
 
 void Editor::Initialize()
@@ -253,6 +391,9 @@ void EditorComponent::ResizeLayout()
 }
 void EditorComponent::Load()
 {
+	//Load hotkeys here
+	InitializeHotkeysActionKeyMap(main);
+
 	wi::gui::CheckBox::SetCheckTextGlobal(ICON_CHECK);
 
 	loadmodel_workload.priority = wi::jobsystem::Priority::Low;
@@ -958,7 +1099,7 @@ void EditorComponent::Load()
 		ss += "\nDiscord chat: https://discord.gg/CFjRYmE";
 		ss += "\n\nControls\n";
 		ss += "------------\n";
-		ss += "Move camera: " + main->config.GetSection("hotkeys").GetText("move_camera_forward") + main->config.GetSection("hotkeys").GetText("move_camera_left") + main->config.GetSection("hotkeys").GetText("move_camera_backward") + main->config.GetSection("hotkeys").GetText("move_camera_right") + ", or Contoller left stick or D - pad\n";
+		ss += "Move camera: " + main->config.GetSection("hotkeys").GetText("MOVE_CAMERA_FORWARD") + main->config.GetSection("hotkeys").GetText("MOVE_CAMERA_LEFT") + main->config.GetSection("hotkeys").GetText("MOVE_CAMERA_BACKWARD") + main->config.GetSection("hotkeys").GetText("MOVE_CAMERA_RIGHT") + ", or Controller left stick or D - pad\n";
 		ss += "Look: Right mouse button / arrow keys / controller right stick\n";
 		ss += "Select: Left mouse button\n";
 		ss += "Interact with physics/water/grass: Middle mouse button\n";
@@ -1152,11 +1293,9 @@ void EditorComponent::FixedUpdate()
 }
 void EditorComponent::Update(float dt)
 {
-	wi::config::File config = main->config;
-	wi::config::Section hotkeyssection = config.GetSection("hotkeys");
 	wi::profiler::range_id profrange = wi::profiler::BeginRangeCPU("Editor Update");
 
-	if (wi::input::Press(StringToButton(hotkeyssection.GetText("make_new_screenshot"))))
+	if (wi::input::Press(hotkeyActions[EditorActions::MAKE_NEW_SCREENSHOT].button))
 	{
 		std::string filename = wi::helper::screenshot(main->swapChain);
 		PostSaveText(filename);
@@ -1196,7 +1335,7 @@ void EditorComponent::Update(float dt)
 	save_text_alpha = std::max(0.0f, save_text_alpha - std::min(dt, 0.033f)); // after saving, dt can become huge
 
 	bool clear_selected = false;
-	if (wi::input::Press(StringToButton(hotkeyssection.GetText("deselect_all_entitys"))))
+	if (wi::input::Press(hotkeyActions[EditorActions::DESELECT_ALL_ENTITIES].button))
 	{
 		if (!GetGUI().IsVisible())
 		{
@@ -1221,7 +1360,7 @@ void EditorComponent::Update(float dt)
 	// Camera control:
 	if (!wi::backlog::isActive() && !GetGUI().HasFocus())
 	{
-		deleting = wi::input::Press(StringToButton(hotkeyssection.GetText("delete_action")));
+		deleting = wi::input::Press(hotkeyActions[EditorActions::DELETE_ACTION].button);
 		currentMouse = wi::input::GetPointer();
 		if (camControlStart)
 		{
@@ -1302,12 +1441,12 @@ void EditorComponent::Update(float dt)
 			if (!wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL))
 			{
 				// Only move camera if control not pressed
-				if (wi::input::Down(StringToButton(hotkeyssection.GetText("move_camera_left"))) || wi::input::Down(wi::input::GAMEPAD_BUTTON_LEFT)) { moveNew += XMVectorSet(-1, 0, 0, 0); }
-				if (wi::input::Down(StringToButton(hotkeyssection.GetText("move_camera_right"))) || wi::input::Down(wi::input::GAMEPAD_BUTTON_RIGHT)) { moveNew += XMVectorSet(1, 0, 0, 0); }
-				if (wi::input::Down(StringToButton(hotkeyssection.GetText("move_camera_forward"))) || wi::input::Down(wi::input::GAMEPAD_BUTTON_UP)) { moveNew += XMVectorSet(0, 0, 1, 0); }
-				if (wi::input::Down(StringToButton(hotkeyssection.GetText("move_camera_backward"))) || wi::input::Down(wi::input::GAMEPAD_BUTTON_DOWN)) { moveNew += XMVectorSet(0, 0, -1, 0); }
-				if (wi::input::Down(StringToButton(hotkeyssection.GetText("move_camera_up"))) || wi::input::Down(wi::input::GAMEPAD_BUTTON_2)) { moveNew += XMVectorSet(0, 1, 0, 0); }
-				if (wi::input::Down(StringToButton(hotkeyssection.GetText("move_camera_down"))) || wi::input::Down(wi::input::GAMEPAD_BUTTON_1)) { moveNew += XMVectorSet(0, -1, 0, 0); }
+				if (wi::input::Down(hotkeyActions[EditorActions::MOVE_CAMERA_LEFT].button) || wi::input::Down(wi::input::GAMEPAD_BUTTON_LEFT)) { moveNew += XMVectorSet(-1, 0, 0, 0); }
+				if (wi::input::Down(hotkeyActions[EditorActions::MOVE_CAMERA_RIGHT].button) || wi::input::Down(wi::input::GAMEPAD_BUTTON_RIGHT)) { moveNew += XMVectorSet(1, 0, 0, 0); }
+				if (wi::input::Down(hotkeyActions[EditorActions::MOVE_CAMERA_FORWARD].button) || wi::input::Down(wi::input::GAMEPAD_BUTTON_UP)) { moveNew += XMVectorSet(0, 0, 1, 0); }
+				if (wi::input::Down(hotkeyActions[EditorActions::MOVE_CAMERA_BACKWARD].button) || wi::input::Down(wi::input::GAMEPAD_BUTTON_DOWN)) { moveNew += XMVectorSet(0, 0, -1, 0); }
+				if (wi::input::Down(hotkeyActions[EditorActions::MOVE_CAMERA_UP].button) || wi::input::Down(wi::input::GAMEPAD_BUTTON_2)) { moveNew += XMVectorSet(0, 1, 0, 0); }
+				if (wi::input::Down(hotkeyActions[EditorActions::MOVE_CAMERA_DOWN].button) || wi::input::Down(wi::input::GAMEPAD_BUTTON_1)) { moveNew += XMVectorSet(0, -1, 0, 0); }
 				moveNew = XMVector3Normalize(moveNew);
 			}
 			moveNew += XMVectorSet(leftStick.x, 0, leftStick.y, 0);
@@ -1362,12 +1501,12 @@ void EditorComponent::Update(float dt)
 			editorscene.camera_transform.UpdateTransform_Parented(editorscene.camera_target);
 		}
 
-		if (!translator.selected.empty() && wi::input::Down(StringToButton(hotkeyssection.GetText("focus_on_selection"))))
+		if (!translator.selected.empty() && wi::input::Down(hotkeyActions[EditorActions::FOCUS_ON_SELECTION].button))
 		{
 			FocusCameraOnSelected();
 		}
 
-		inspector_mode = wi::input::Down(StringToButton(hotkeyssection.GetText("inspector_mode")));
+		inspector_mode = wi::input::Down(hotkeyActions[EditorActions::INSPECTOR_MODE].button);
 
 		// Begin picking:
 		pickRay = wi::renderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, *renderPath, camera);
@@ -1734,7 +1873,7 @@ void EditorComponent::Update(float dt)
 		}
 
 		if (hovered.entity != INVALID_ENTITY &&
-			wi::input::Down(StringToButton(hotkeyssection.GetText("depthoffield_refocustopoint"))) &&
+			wi::input::Down(hotkeyActions[EditorActions::DEPTH_OF_FIELD_REFOCUS_TO_POINT].button) &&
 			wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
 		{
 			camera.focal_length = hovered.distance;
@@ -1747,7 +1886,7 @@ void EditorComponent::Update(float dt)
 		{
 			// Interact:
 			bool interaction_happened = false;
-			if (wi::input::Down(StringToButton(hotkeyssection.GetText("ragdoll_and_physics_impulse_tester"))))
+			if (wi::input::Down(hotkeyActions[EditorActions::RAGDOLL_AND_PHYSICS_IMPULSE_TESTER].button))
 			{
 				if (wi::input::Press(wi::input::MOUSE_BUTTON_MIDDLE))
 				{
@@ -1945,38 +2084,26 @@ void EditorComponent::Update(float dt)
 	// Control operations...
 	if (!GetGUI().IsTyping() && wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL))
 	{
-		auto isCtrlDown = []()
-		{
-			return wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL);
-		};
-
-		auto isShiftDown = []()
-		{
-			return wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RSHIFT);
-		};
+		bool isCtrlDown = wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL);
+		bool isShiftDown = wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RSHIFT);
 
 		// Color Grading helper
-		std::string colorgradingkey = hotkeyssection.GetText("colorgrading_reference");
-		bool iscolorgradingkeypressed = wi::input::Down(StringToButton(colorgradingkey));
+		std::string colorgradingkey = hotkeyActions[EditorActions::COLOR_GRADING_REFERENCE].keyString;
+		bool iscolorgradingkeypressed = wi::input::Down(hotkeyActions[EditorActions::COLOR_GRADING_REFERENCE].button);
 
 		auto colorGradingAction = [&]()
 		{
 			main->infoDisplay.colorgrading_helper = true;
 		};
 
-		if (iscolorgradingkeypressed)
+		if (iscolorgradingkeypressed && CheckKeysPressed(colorgradingkey, isCtrlDown, isShiftDown))
 		{
-			if ((HasKeyOnlyCTRL(colorgradingkey) && isCtrlDown()) ||
-				(HasKeyOnlySHIFT(colorgradingkey) && isShiftDown()) ||
-				(HasKeyCTRLAndSHIFT(colorgradingkey) && isCtrlDown() && isShiftDown()))
-			{
-				colorGradingAction();
-			}
+			colorGradingAction();
 		}
 
 		// Toggle wireframe mode
-		std::string togglewireframekey = hotkeyssection.GetText("wireframe_mode");
-		bool istogglewireframekeypressed = wi::input::Press(StringToButton(togglewireframekey));
+		std::string togglewireframekey = hotkeyActions[EditorActions::WIREFRAME_MODE].keyString;
+		bool istogglewireframekeypressed = wi::input::Press(hotkeyActions[EditorActions::WIREFRAME_MODE].button);
 
 		auto toggleWireframeAction = [&]()
 		{
@@ -1984,38 +2111,28 @@ void EditorComponent::Update(float dt)
 			generalWnd.wireFrameCheckBox.SetCheck(wi::renderer::IsWireRender());
 		};
 
-		if (istogglewireframekeypressed)
+		if (istogglewireframekeypressed && CheckKeysPressed(togglewireframekey, isCtrlDown, isShiftDown))
 		{
-			if ((HasKeyOnlyCTRL(togglewireframekey) && isCtrlDown()) ||
-				(HasKeyOnlySHIFT(togglewireframekey) && isShiftDown()) ||
-				(HasKeyCTRLAndSHIFT(togglewireframekey) && isCtrlDown() && isShiftDown()))
-			{
-				toggleWireframeAction();
-			}
+			toggleWireframeAction();
 		}
 
 		// Enable transform tool
-		std::string toggletransformtoolkey = hotkeyssection.GetText("enable_transform_tool");
-		bool istoggletransformtoolpressed = wi::input::Press(StringToButton(toggletransformtoolkey));
+		std::string toggletransformtoolkey = hotkeyActions[EditorActions::ENABLE_TRANSFORM_TOOL].keyString;
+		bool istoggletransformtoolpressed = wi::input::Press(hotkeyActions[EditorActions::ENABLE_TRANSFORM_TOOL].button);
 
 		auto transformToolAction = [&]()
 		{
 			translator.SetEnabled(!translator.IsEnabled());
 		};
 
-		if (istoggletransformtoolpressed)
+		if (istoggletransformtoolpressed && CheckKeysPressed(toggletransformtoolkey, isCtrlDown, isShiftDown))
 		{
-			if ((HasKeyOnlyCTRL(toggletransformtoolkey) && isCtrlDown()) ||
-				(HasKeyOnlySHIFT(toggletransformtoolkey) && isShiftDown()) ||
-				(HasKeyCTRLAndSHIFT(toggletransformtoolkey) && isCtrlDown() && isShiftDown()))
-			{
-				transformToolAction();
-			}
+			transformToolAction();
 		}
 
 		// Save
-		std::string togglesavekey = hotkeyssection.GetText("save_scene");
-		bool istogglesavepressed = wi::input::Press(StringToButton(togglesavekey));
+		std::string togglesavekey = hotkeyActions[EditorActions::SAVE_SCENE].keyString;
+		bool istogglesavepressed = wi::input::Press(hotkeyActions[EditorActions::SAVE_SCENE].button);
 
 		auto saveAction = [&]()
 		{
@@ -2029,53 +2146,41 @@ void EditorComponent::Update(float dt)
 			}
 		};
 
-		if (istogglesavepressed)
+		if (istogglesavepressed && CheckKeysPressed(togglesavekey, isCtrlDown, isShiftDown))
 		{
-			if ((HasKeyOnlyCTRL(togglesavekey) && isCtrlDown()) ||
-				(HasKeyOnlySHIFT(togglesavekey) && isShiftDown()))
-			{
-				saveAction();
-			}
+			saveAction();
 		}
 
 		// Save as
-		std::string togglesaveaskey = hotkeyssection.GetText("save_scene_as");
-		bool istogglesaveaspressed = wi::input::Press(StringToButton(togglesaveaskey));
+		std::string togglesaveaskey = hotkeyActions[EditorActions::SAVE_SCENE_AS].keyString;
+		bool istogglesaveaspressed = wi::input::Press(hotkeyActions[EditorActions::SAVE_SCENE_AS].button);
 
-		if (istogglesaveaspressed)
+		if (istogglesaveaspressed && HasKeyCTRLAndSHIFT(togglesaveaskey) && isCtrlDown && isShiftDown)
 		{
-			if (HasKeyCTRLAndSHIFT(togglesaveaskey) && isCtrlDown && isShiftDown)
-			{
-				SaveAs();
-			}
+			SaveAs();
 		}
 
 		// Select All
-		std::string toggleselectallkey = hotkeyssection.GetText("select_all_entitys");
-		bool istoggleselectallpressed = wi::input::Press(StringToButton(toggleselectallkey));
+		std::string toggleselectallkey = hotkeyActions[EditorActions::SELECT_ALL_ENTITIES].keyString;
+		bool istoggleselectallpressed = wi::input::Press(hotkeyActions[EditorActions::SELECT_ALL_ENTITIES].button);
 
 		auto selectAllAction = [&]()
 		{
 			selectAll = true;
 		};
 
-		if (istoggleselectallpressed)
+		if (istoggleselectallpressed && CheckKeysPressed(toggleselectallkey, isCtrlDown, isShiftDown))
 		{
-			if ((HasKeyOnlyCTRL(toggleselectallkey) && isCtrlDown()) ||
-				(HasKeyOnlySHIFT(toggleselectallkey) && isShiftDown()) ||
-				(HasKeyCTRLAndSHIFT(toggleselectallkey) && isCtrlDown() && isShiftDown()))
-			{
-				selectAllAction();
-			}
+			selectAllAction();
 		}
 
 		// Copy
-		std::string togglecopykey = hotkeyssection.GetText("copy_action");
-		bool istogglecopypressed = wi::input::Press(StringToButton(togglecopykey));
+		std::string togglecopykey = hotkeyActions[EditorActions::COPY_ACTION].keyString;
+		bool istogglecopypressed = wi::input::Press(hotkeyActions[EditorActions::COPY_ACTION].button);
 
 		auto copyAction = [&]()
 		{
-			auto & prevSel = translator.selectedEntitiesNonRecursive;
+			auto& prevSel = translator.selectedEntitiesNonRecursive;
 
 			EntitySerializer seri;
 			clipboard.SetReadModeAndResetPos(false);
@@ -2086,19 +2191,14 @@ void EditorComponent::Update(float dt)
 			}
 		};
 
-		if (istogglecopypressed)
+		if (istogglecopypressed && CheckKeysPressed(togglecopykey, isCtrlDown, isShiftDown))
 		{
-			if ((HasKeyOnlyCTRL(togglecopykey) && isCtrlDown()) ||
-				(HasKeyOnlySHIFT(togglecopykey) && isShiftDown()) ||
-				(HasKeyCTRLAndSHIFT(togglecopykey) && isCtrlDown() && isShiftDown()))
-			{
-				copyAction();
-			}
+			copyAction();
 		}
 
 		// Cut
-		std::string togglecutkey = hotkeyssection.GetText("cut_action");
-		bool istogglecutpressed = wi::input::Press(StringToButton(togglecutkey));
+		std::string togglecutkey = hotkeyActions[EditorActions::CUT_ACTION].keyString;
+		bool istogglecutpressed = wi::input::Press(hotkeyActions[EditorActions::CUT_ACTION].button);
 
 		auto cutAction = [&]()
 		{
@@ -2115,14 +2215,9 @@ void EditorComponent::Update(float dt)
 			deleting = true;
 		};
 
-		if (istogglecutpressed)
+		if (istogglecutpressed && CheckKeysPressed(togglecutkey, isCtrlDown, isShiftDown))
 		{
-			if ((HasKeyOnlyCTRL(togglecutkey) && isCtrlDown()) ||
-				(HasKeyOnlySHIFT(togglecutkey) && isShiftDown()) ||
-				(HasKeyCTRLAndSHIFT(togglecutkey) && isCtrlDown() && isShiftDown()))
-			{
-				cutAction();
-			}
+			cutAction();
 		}
 
 		// Paste
@@ -2153,22 +2248,17 @@ void EditorComponent::Update(float dt)
 			componentsWnd.RefreshEntityTree();
 		};
 
-		std::string togglepastekey = hotkeyssection.GetText("paste_action");
-		bool istogglepastepressed = wi::input::Press(StringToButton(togglepastekey));
+		std::string togglepastekey = hotkeyActions[EditorActions::PASTE_ACTION].keyString;
+		bool istogglepastepressed = wi::input::Press(hotkeyActions[EditorActions::PASTE_ACTION].button);
 
-		if (istogglepastepressed)
+		if (istogglepastepressed && CheckKeysPressed(togglepastekey, isCtrlDown, isShiftDown))
 		{
-			if ((HasKeyOnlyCTRL(togglepastekey) && isCtrlDown()) ||
-				(HasKeyOnlySHIFT(togglepastekey) && isShiftDown()) ||
-				(HasKeyCTRLAndSHIFT(togglepastekey) && isCtrlDown() && isShiftDown()))
-			{
-				pasteAction();
-			}
+			pasteAction();
 		}
 
-		// Duplicate Instances
-		std::string toggleduplicatekey = hotkeyssection.GetText("duplicate_entity");
-		bool istoggleduplicatepressed = wi::input::Press(StringToButton(toggleduplicatekey));
+		// Duplicate Instance
+		std::string toggleduplicatekey = hotkeyActions[EditorActions::DUPLICATE_ENTITY].keyString;
+		bool istoggleduplicatepressed = wi::input::Press(hotkeyActions[EditorActions::DUPLICATE_ENTITY].button);
 
 		auto duplicateAction = [&]()
 		{
@@ -2198,19 +2288,14 @@ void EditorComponent::Update(float dt)
 			componentsWnd.RefreshEntityTree();
 		};
 
-		if (istoggleduplicatepressed)
+		if (istoggleduplicatepressed && CheckKeysPressed(toggleduplicatekey, isCtrlDown, isShiftDown))
 		{
-			if ((HasKeyOnlyCTRL(toggleduplicatekey) && isCtrlDown()) ||
-				(HasKeyOnlySHIFT(toggleduplicatekey) && isShiftDown()) ||
-				(HasKeyCTRLAndSHIFT(toggleduplicatekey) && isCtrlDown() && isShiftDown()))
-			{
-				duplicateAction();
-			}
+			duplicateAction();
 		}
 
-		// Put Instances
-		std::string toggleduplicateinstanceskey = hotkeyssection.GetText("duplicate_instances");
-		bool istoggleduplicateinstancespressed = wi::input::Press(StringToButton(toggleduplicateinstanceskey));
+		// Duplicate/Put Instances
+		std::string toggleduplicateinstanceskey = hotkeyActions[EditorActions::DUPLICATE_INSTANCES].keyString;
+		bool istoggleduplicateinstancespressed = wi::input::Press(hotkeyActions[EditorActions::DUPLICATE_INSTANCES].button);
 
 		auto duplicateinstancesAction = [&]()
 		{
@@ -2231,14 +2316,14 @@ void EditorComponent::Update(float dt)
 				if (transform != nullptr)
 				{
 					transform->translation_local = {};
-					#if 0
+#if 0
 					// orient around surface normal:
 					transform->MatrixTransform(hovered.orientation);
-					#else
+#else
 					// orient in random vertical rotation only:
 					transform->RotateRollPitchYaw(XMFLOAT3(0, wi::random::GetRandom(XM_PI), 0));
 					transform->Translate(hovered.position);
-					#endif
+#endif
 					transform->UpdateTransform();
 				}
 				if (hier != nullptr)
@@ -2258,17 +2343,14 @@ void EditorComponent::Update(float dt)
 			componentsWnd.RefreshEntityTree();
 		};
 
-		if (istoggleduplicateinstancespressed && clipboard.IsOpen() && hovered.subsetIndex >= 0)
+		if (istoggleduplicateinstancespressed && clipboard.IsOpen() && hovered.subsetIndex >= 0 && HasKeyCTRLAndSHIFT(toggleduplicateinstanceskey) && isCtrlDown && isShiftDown)
 		{
-			if (HasKeyCTRLAndSHIFT(toggleduplicateinstanceskey) && isCtrlDown && isShiftDown)
-			{
-				duplicateinstancesAction();
-			}
+			duplicateinstancesAction();
 		}
 
 		// Undo
-		std::string toggleundokey = hotkeyssection.GetText("undo_action");
-		bool istoggleundopressed = wi::input::Press(StringToButton(toggleundokey));
+		std::string toggleundokey = hotkeyActions[EditorActions::UNDO_ACTION].keyString;
+		bool istoggleundopressed = wi::input::Press(hotkeyActions[EditorActions::UNDO_ACTION].button);
 
 		auto undoAction = [&]()
 		{
@@ -2277,19 +2359,14 @@ void EditorComponent::Update(float dt)
 			componentsWnd.RefreshEntityTree();
 		};
 
-		if (istoggleundopressed)
+		if (istoggleundopressed && CheckKeysPressed(toggleundokey, isCtrlDown, isShiftDown))
 		{
-			if ((HasKeyOnlyCTRL(toggleduplicatekey) && isCtrlDown()) ||
-				(HasKeyOnlySHIFT(toggleduplicatekey) && isShiftDown()) ||
-				(HasKeyCTRLAndSHIFT(toggleduplicatekey) && isCtrlDown() && isShiftDown()))
-			{
-				undoAction();
-			}
+			undoAction();
 		}
 
 		// Redo
-		std::string toggleredokey = hotkeyssection.GetText("redo_action");
-		bool istoggleredopressed = wi::input::Press(StringToButton(toggleredokey));
+		std::string toggleredokey = hotkeyActions[EditorActions::REDO_ACTION].keyString;
+		bool istoggleredopressed = wi::input::Press(hotkeyActions[EditorActions::REDO_ACTION].button);
 
 		auto redoAction = [&]()
 		{
@@ -2298,37 +2375,33 @@ void EditorComponent::Update(float dt)
 			componentsWnd.RefreshEntityTree();
 		};
 
-		if (istoggleredopressed)
+		if (istoggleredopressed && CheckKeysPressed(toggleredokey, isCtrlDown, isShiftDown))
 		{
-			if ((HasKeyOnlyCTRL(toggleduplicatekey) && isCtrlDown()) ||
-				(HasKeyOnlySHIFT(toggleduplicatekey) && isShiftDown()) ||
-				(HasKeyCTRLAndSHIFT(toggleduplicatekey) && isCtrlDown() && isShiftDown()))
-			{
-				redoAction();
-			}
+			redoAction();
 		}
 	}
 
 	// Editor toggle inputs
-	std::string movetoolkey = hotkeyssection.GetText( "move_toggle_action" );
-	std::string rotatetoolkey = hotkeyssection.GetText( "rotate_toggle_action" );
-	std::string scaletoolkey = hotkeyssection.GetText( "scale_toggle_action" );
+	wi::input::BUTTON movetoolkey = hotkeyActions[EditorActions::MOVE_TOGGLE_ACTION].button;
+	wi::input::BUTTON rotatetoolkey = hotkeyActions[EditorActions::ROTATE_TOGGLE_ACTION].button;
+	wi::input::BUTTON scaletoolkey = hotkeyActions[EditorActions::SCALE_TOGGLE_ACTION].button;
 
+	// These keys work but for some reason in my keyboard 1 returns TAB and 2 returns TILDE keys.
 	if (!wi::backlog::isActive() && !GetGUI().IsTyping())
 	{
-		if (wi::input::Press(StringToButton(movetoolkey))) // This is not working in debug mode maybe you can test it? It returns key 49 which it should be 1
+		if (wi::input::Press(hotkeyActions[EditorActions::MOVE_TOGGLE_ACTION].button))
 		{
 			translator.isTranslator = !translator.isTranslator;
 			translator.isScalator = false;
 			translator.isRotator = false;
 		}
-		else if (wi::input::Press(StringToButton(rotatetoolkey)))
+		else if (wi::input::Press(hotkeyActions[EditorActions::ROTATE_TOGGLE_ACTION].button))
 		{
 			translator.isRotator = !translator.isRotator;
 			translator.isScalator = false;
 			translator.isTranslator = false;
 		}
-		else if (wi::input::Press(StringToButton(scaletoolkey)))
+		else if (wi::input::Press(hotkeyActions[EditorActions::SCALE_TOGGLE_ACTION].button))
 		{
 			translator.isScalator = !translator.isScalator;
 			translator.isTranslator = false;
