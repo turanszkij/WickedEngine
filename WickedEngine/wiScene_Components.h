@@ -825,6 +825,8 @@ namespace wi::scene
 		uint32_t sort_priority = 0; // increase to draw earlier (currently 4 bits will be used)
 		wi::vector<uint8_t> vertex_ao;
 		float alphaRef = 1;
+		XMFLOAT4 rimHighlightColor = XMFLOAT4(1, 1, 1, 0);
+		float rimHighlightFalloff = 8;
 
 		// Non-serialized attributes:
 		uint32_t filterMaskDynamic = 0;

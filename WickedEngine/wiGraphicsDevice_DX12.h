@@ -430,6 +430,9 @@ namespace wi::graphics
 			return GetCommandList(cmd).frame_allocators[GetBufferIndex()];
 		}
 
+		ID3D12Resource* GetTextureInternalResource(const Texture* texture);
+		ID3D12CommandQueue* GetGraphicsCommandQueue();
+
 		struct DescriptorHeapGPU
 		{
 			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};

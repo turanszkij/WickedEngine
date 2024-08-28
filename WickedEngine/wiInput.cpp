@@ -404,7 +404,7 @@ namespace wi::input
 			return false;
 		}
 
-		if(button > GAMEPAD_RANGE_START)
+		if(button > GAMEPAD_RANGE_START && button < GAMEPAD_RANGE_END)
 		{
 			if (playerindex < (int)controllers.size())
 			{
@@ -589,7 +589,7 @@ namespace wi::input
 				keycode = VK_TAB;
 				break;
 			case KEYBOARD_BUTTON_TILDE:
-				keycode = 192;
+				keycode = VK_TAB; // http://kbdedit.com/manual/low_level_vk_list.html
 				break;
 #endif // _WIN32
 				default: break;

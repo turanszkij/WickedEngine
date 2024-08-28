@@ -809,6 +809,9 @@ namespace wi::lua::scene
 		int SetCascadeMask(lua_State* L);
 		int SetRendertypeMask(lua_State* L);
 		int SetColor(lua_State* L);
+		int SetRimHighlightColor(lua_State* L);
+		int SetRimHighlightIntensity(lua_State* L);
+		int SetRimHighlightFalloff(lua_State* L);
 		int SetAlphaRef(lua_State* L);
 		int SetEmissiveColor(lua_State* L);
 		int SetUserStencilRef(lua_State* L);

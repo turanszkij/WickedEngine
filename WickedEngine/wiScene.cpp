@@ -4494,6 +4494,7 @@ namespace wi::scene
 				inst.vb_wetmap = device->GetDescriptorIndex(&object.wetmap, SubresourceType::SRV);
 				inst.alphaTest_size = wi::math::pack_half2(XMFLOAT2(1 - object.alphaRef, size));
 				inst.SetUserStencilRef(object.userStencilRef);
+				inst.rimHighlight = wi::math::pack_half4(XMFLOAT4(object.rimHighlightColor.x * object.rimHighlightColor.w, object.rimHighlightColor.y * object.rimHighlightColor.w, object.rimHighlightColor.z * object.rimHighlightColor.w, object.rimHighlightFalloff));
 
 				std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 

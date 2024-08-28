@@ -1174,6 +1174,9 @@ TextureSlot = {
 - SetCascadeMask(int value)
 - SetRendertypeMask(int value)
 - SetColor(Vector value)
+- SetRimHighlightColor(Vector value) -- set the RGB color for rim highlight
+- SetRimHighlightIntensity(float value) -- set the intensity (multiplier) of rim hoghlight color
+- SetRimHighlightFalloff(float value) -- set the falloff power of rim highlight
 - SetEmissiveColor(Vector value)
 - SetUserStencilRef(int value)
 - SetLodDistanceMultiplier(float value)

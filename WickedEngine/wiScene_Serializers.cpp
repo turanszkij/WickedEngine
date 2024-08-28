@@ -653,6 +653,11 @@ namespace wi::scene
 			{
 				archive >> vertex_ao;
 			}
+			if (seri.GetVersion() >= 4)
+			{
+				archive >> rimHighlightColor;
+				archive >> rimHighlightFalloff;
+			}
 
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				CreateRenderData();
@@ -698,6 +703,11 @@ namespace wi::scene
 			if (seri.GetVersion() >= 3)
 			{
 				archive << vertex_ao;
+			}
+			if (seri.GetVersion() >= 4)
+			{
+				archive << rimHighlightColor;
+				archive << rimHighlightFalloff;
 			}
 		}
 	}

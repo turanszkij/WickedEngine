@@ -632,6 +632,9 @@ struct alignas(16) ShaderMeshInstance
 	int lightmap;
 	uint alphaTest_size;
 
+	uint2 rimHighlight;
+	uint2 padding;
+
 	float4 quaternion;
 	ShaderTransform transform;
 	ShaderTransform transformPrev;
@@ -657,6 +660,7 @@ struct alignas(16) ShaderMeshInstance
 		vb_wetmap = -1;
 		alphaTest_size = 0;
 		quaternion = float4(0, 0, 0, 1);
+		rimHighlight = uint2(0, 0);
 		transform.init();
 		transformPrev.init();
 		transformRaw.init();
@@ -676,6 +680,7 @@ struct alignas(16) ShaderMeshInstance
 	inline half3 GetEmissive() { return unpack_half3(emissive); }
 	inline half GetAlphaTest() { return unpack_half2(alphaTest_size).x; }
 	inline half GetSize() { return unpack_half2(alphaTest_size).y; }
+	inline half4 GetRimHighlight() { return unpack_half4(rimHighlight); }
 #endif // __cplusplus
 };
 struct ShaderMeshInstancePointer
