@@ -465,8 +465,8 @@ namespace wi::graphics
 		VkImage GetTextureInternalResource(const Texture* texture);
 		VkPhysicalDevice GetPhysicalDevice();
 		VkInstance GetInstance();
-		VkQueue GetGraphicCommandQueue();
-		uint32_t GetGraphicFamilyIndex();
+		VkQueue GetGraphicsCommandQueue();
+		uint32_t GetGraphicsFamilyIndex();
 
 		struct AllocationHandler
 		{
