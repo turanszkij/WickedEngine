@@ -431,7 +431,7 @@ namespace wi::graphics
 		}
 
 		ID3D12Resource* GetTextureInternalResource(const Texture* texture);
-		ID3D12CommandQueue* GetGraphicCommandQueue();
+		ID3D12CommandQueue* GetGraphicsCommandQueue();
 
 		struct DescriptorHeapGPU
 		{
