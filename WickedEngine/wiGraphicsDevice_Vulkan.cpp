@@ -9354,11 +9354,11 @@ using namespace vulkan_internal;
 	{
 		return instance;
 	}
-	VkQueue GraphicsDevice_Vulkan::GetGraphicCommandQueue()
+	VkQueue GraphicsDevice_Vulkan::GetGraphicsCommandQueue()
 	{
 		return queues[QUEUE_GRAPHICS].queue;
 	}
-	uint32_t GraphicsDevice_Vulkan::GetGraphicFamilyIndex()
+	uint32_t GraphicsDevice_Vulkan::GetGraphicsFamilyIndex()
 	{
 		return graphicsFamily;
 	}
