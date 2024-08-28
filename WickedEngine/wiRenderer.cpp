@@ -374,9 +374,14 @@ union ObjectRenderingVariant
 };
 static_assert(sizeof(ObjectRenderingVariant) == sizeof(uint32_t));
 wi::unordered_map<uint32_t, PipelineState> PSO_object[RENDERPASS_COUNT][MaterialComponent::SHADERTYPE_COUNT];
+std::mutex PSO_object_mutex;
 inline PipelineState* GetObjectPSO(ObjectRenderingVariant variant)
 {
-	return &PSO_object[variant.bits.renderpass][variant.bits.shadertype][variant.value];
+	auto& map = PSO_object[variant.bits.renderpass][variant.bits.shadertype];
+	{
+		std::scoped_lock lock(PSO_object_mutex);
+		return &map[variant.value];
+	}
 }
 wi::jobsystem::context mesh_shader_ctx;
 wi::jobsystem::context object_pso_job_ctx[RENDERPASS_COUNT][OBJECT_MESH_SHADER_PSO_COUNT];
