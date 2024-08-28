@@ -7891,7 +7891,7 @@ std::mutex queue_locker;
 	{
 		return to_internal(texture)->resource.Get();
 	}
-	ID3D12CommandQueue* GraphicsDevice_DX12::GetGraphicCommandQueue()
+	ID3D12CommandQueue* GraphicsDevice_DX12::GetGraphicsCommandQueue()
 	{
 		return queues[QUEUE_GRAPHICS].queue.Get();
 	}
