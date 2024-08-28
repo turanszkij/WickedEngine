@@ -29,7 +29,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_MATERIAL " Material", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(300, 1400));
+	SetSize(XMFLOAT2(300, 1460));
 
 	closeButton.SetTooltip("Delete MaterialComponent");
 	OnClose([=](wi::gui::EventArgs args) {

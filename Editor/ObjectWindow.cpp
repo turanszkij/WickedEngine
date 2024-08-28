@@ -257,7 +257,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_OBJECT " Object", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 880));
+	SetSize(XMFLOAT2(670, 940));
 
 	closeButton.SetTooltip("Delete ObjectComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -461,6 +461,32 @@ void ObjectWindow::Create(EditorComponent* _editor)
 		}
 		});
 	AddWidget(&alphaRefSlider);
+
+	rimHighlightIntesitySlider.Create(0, 10, 0, 1000, "Rim Intensity: ");
+	rimHighlightIntesitySlider.SetTooltip("Strength of the rim highlight color.");
+	rimHighlightIntesitySlider.SetSize(XMFLOAT2(wid, hei));
+	rimHighlightIntesitySlider.SetPos(XMFLOAT2(x, y += step));
+	rimHighlightIntesitySlider.OnSlide([&](wi::gui::EventArgs args) {
+		ObjectComponent* object = editor->GetCurrentScene().objects.GetComponent(entity);
+		if (object != nullptr)
+		{
+			object->rimHighlightColor.w = args.fValue;
+		}
+	});
+	AddWidget(&rimHighlightIntesitySlider);
+
+	rimHighlightFalloffSlider.Create(0, 32, 8, 1000, "Rim Falloff: ");
+	rimHighlightFalloffSlider.SetTooltip("Rim falloff power of the rim highlight effect.");
+	rimHighlightFalloffSlider.SetSize(XMFLOAT2(wid, hei));
+	rimHighlightFalloffSlider.SetPos(XMFLOAT2(x, y += step));
+	rimHighlightFalloffSlider.OnSlide([&](wi::gui::EventArgs args) {
+		ObjectComponent* object = editor->GetCurrentScene().objects.GetComponent(entity);
+		if (object != nullptr)
+		{
+			object->rimHighlightFalloff = args.fValue;
+		}
+	});
+	AddWidget(&rimHighlightFalloffSlider);
 
 	cascadeMaskSlider.Create(0, 3, 0, 3, "Cascade Mask: ");
 	cascadeMaskSlider.SetTooltip("How many shadow cascades to skip when rendering this object into shadow maps? (0: skip none, it will be in all cascades, 1: skip first (biggest cascade), ...etc...");
@@ -896,6 +922,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	colorComboBox.SetPos(XMFLOAT2(x, y += step));
 	colorComboBox.AddItem("Base color");
 	colorComboBox.AddItem("Emissive color");
+	colorComboBox.AddItem("Rim highlight");
 	colorComboBox.SetTooltip("Choose the destination data of the color picker.");
 	AddWidget(&colorComboBox);
 
@@ -919,6 +946,12 @@ void ObjectWindow::Create(EditorComponent* _editor)
 			case 1:
 				object->emissiveColor = args.color.toFloat4();
 				break;
+			case 2:
+			{
+				XMFLOAT3 col = args.color.toFloat3();
+				object->rimHighlightColor = XMFLOAT4(col.x, col.y, col.z, object->rimHighlightColor.w);
+			}
+			break;
 			}
 		}
 		});
@@ -989,6 +1022,8 @@ void ObjectWindow::SetEntity(Entity entity)
 		cascadeMaskSlider.SetValue((float)object->cascadeMask);
 		ditherSlider.SetValue(object->GetTransparency());
 		alphaRefSlider.SetValue(object->alphaRef);
+		rimHighlightIntesitySlider.SetValue(object->rimHighlightColor.w);
+		rimHighlightFalloffSlider.SetValue(object->rimHighlightFalloff);
 		lodSlider.SetValue(object->lod_distance_multiplier);
 		drawdistanceSlider.SetValue(object->draw_distance);
 		sortPrioritySlider.SetValue((int)object->sort_priority);
@@ -1001,6 +1036,9 @@ void ObjectWindow::SetEntity(Entity entity)
 			break;
 		case 1:
 			colorPicker.SetPickColor(wi::Color::fromFloat4(object->emissiveColor));
+			break;
+		case 2:
+			colorPicker.SetPickColor(wi::Color::fromFloat4(object->rimHighlightColor));
 			break;
 		}
 
@@ -1068,6 +1106,8 @@ void ObjectWindow::ResizeLayout()
 	add_right(navmeshCheckBox);
 	add(ditherSlider);
 	add(alphaRefSlider);
+	add(rimHighlightIntesitySlider);
+	add(rimHighlightFalloffSlider);
 	add(cascadeMaskSlider);
 	add(lodSlider);
 	add(drawdistanceSlider);

@@ -1060,6 +1060,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	ApplyLighting(surface, lighting, color);
 
 
+#ifdef OBJECTSHADER_USE_INSTANCEINDEX
+	half4 rimHighlight = meshinstance.GetRimHighlight();
+	color.rgb += rimHighlight.rgb * pow(1 - surface.NdotV, rimHighlight.w);
+#endif // OBJECTSHADER_USE_INSTANCEINDEX
+
+
 #ifdef UNLIT
 	color = surface.baseColor;
 #endif // UNLIT

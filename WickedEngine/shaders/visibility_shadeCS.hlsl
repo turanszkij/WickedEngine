@@ -128,6 +128,9 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 	ApplyLighting(surface, lighting, color);
 
+	half4 rimHighlight = surface.inst.GetRimHighlight();
+	color.rgb += rimHighlight.rgb * pow(1 - surface.NdotV, rimHighlight.w);
+
 	ApplyFog(surface.hit_depth, surface.V, color);
 
 	color = saturateMediump(color);

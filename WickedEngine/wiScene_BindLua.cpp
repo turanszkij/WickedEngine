@@ -5406,6 +5406,9 @@ Luna<ObjectComponent_BindLua>::FunctionType ObjectComponent_BindLua::methods[] =
 	lunamethod(ObjectComponent_BindLua, SetCascadeMask),
 	lunamethod(ObjectComponent_BindLua, SetRendertypeMask),
 	lunamethod(ObjectComponent_BindLua, SetColor),
+	lunamethod(ObjectComponent_BindLua, SetRimHighlightColor),
+	lunamethod(ObjectComponent_BindLua, SetRimHighlightIntensity),
+	lunamethod(ObjectComponent_BindLua, SetRimHighlightFalloff),
 	lunamethod(ObjectComponent_BindLua, SetAlphaRef),
 	lunamethod(ObjectComponent_BindLua, SetEmissiveColor),
 	lunamethod(ObjectComponent_BindLua, SetUserStencilRef),
@@ -5552,6 +5555,59 @@ int ObjectComponent_BindLua::SetColor(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "SetColor(Vector value) not enough arguments!");
+	}
+
+	return 0;
+}
+int ObjectComponent_BindLua::SetRimHighlightColor(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* value = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (value)
+		{
+			XMFLOAT3 f3 = value->GetFloat3();
+			component->rimHighlightColor.x = f3.x;
+			component->rimHighlightColor.y = f3.y;
+			component->rimHighlightColor.z = f3.z;
+		}
+		else
+		{
+			wi::lua::SError(L, "SetRimHighlightColor(Vector value) argument must be Vector type!");
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "SetRimHighlightColor(Vector value) not enough arguments!");
+	}
+
+	return 0;
+}
+int ObjectComponent_BindLua::SetRimHighlightIntensity(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->rimHighlightColor.w = wi::lua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wi::lua::SError(L, "SetRimHighlightIntensity(float value) not enough arguments!");
+	}
+
+	return 0;
+}
+int ObjectComponent_BindLua::SetRimHighlightFalloff(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->rimHighlightFalloff = wi::lua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wi::lua::SError(L, "SetRimHighlightFalloff(float value) not enough arguments!");
 	}
 
 	return 0;
