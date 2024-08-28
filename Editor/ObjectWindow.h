@@ -20,6 +20,8 @@ public:
 	wi::gui::CheckBox wetmapCheckBox;
 	wi::gui::Slider ditherSlider;
 	wi::gui::Slider alphaRefSlider;
+	wi::gui::Slider rimHighlightIntesitySlider;
+	wi::gui::Slider rimHighlightFalloffSlider;
 	wi::gui::Slider cascadeMaskSlider;
 	wi::gui::Slider lodSlider;
 	wi::gui::Slider drawdistanceSlider;
