@@ -1109,8 +1109,8 @@ void EditorComponent::Load()
 		ss += "Camera up: " + main->config.GetSection("hotkeys").GetText("move_camera_up") + "\n";
 		ss += "Camera down: " + main->config.GetSection("hotkeys").GetText("move_camera_down") + "\n";
 		ss += "Duplicate entity: " + main->config.GetSection("hotkeys").GetText("duplicate_entity") + "\n";
-		ss += "Select All: " + main->config.GetSection("hotkeys").GetText("select_all_entitys") + "\n";
-		ss += "Deselect All: " + main->config.GetSection("hotkeys").GetText("deselect_all_entitys") + "\n";
+		ss += "Select All: " + main->config.GetSection("hotkeys").GetText("select_all_entities") + "\n";
+		ss += "Deselect All: " + main->config.GetSection("hotkeys").GetText("deselect_all_entities") + "\n";
 		ss += "Undo: " + main->config.GetSection("hotkeys").GetText("undo_action") + "\n";
 		ss += "Redo: " + main->config.GetSection("hotkeys").GetText("redo_action") + "\n";
 		ss += "Copy: " + main->config.GetSection("hotkeys").GetText("copy_action") + "\n";
