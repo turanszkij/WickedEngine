@@ -324,6 +324,7 @@ FILTER_NAVIGATION_MESH = 1 << 3
 FILTER_TERRAIN = 1 << 4
 FILTER_OBJECT_ALL = FILTER_OPAQUE | FILTER_TRANSPARENT | FILTER_WATER | FILTER_NAVIGATION_MESH | FILTER_TERRAIN
 FILTER_COLLIDER = 1 << 5
+FILTER_RAGDOLL = 1 << 6
 FILTER_ALL = ~0
 
 PICK_VOID = FILTER_NONE
@@ -443,6 +444,8 @@ HumanoidBone = {
 	RightLittleProximal = 52,
 	RightLittleIntermediate = 53,
 	RightLittleDistal = 54,
+
+	Count = 55,
 }
 
 ColliderShape = {
@@ -949,7 +952,8 @@ int Scene_BindLua::Intersects(lua_State* L)
 			wi::lua::SSetInt(L, result.subsetIndex);
 			Luna<Matrix_BindLua>::push(L, result.orientation);
 			Luna<Vector_BindLua>::push(L, result.uv);
-			return 8;
+			wi::lua::SSetInt(L, (int)result.humanoid_bone);
+			return 9;
 		}
 
 		Sphere_BindLua* sphere = Luna<Sphere_BindLua>::lightcheck(L, 1);
@@ -963,7 +967,9 @@ int Scene_BindLua::Intersects(lua_State* L)
 			Luna<Vector_BindLua>::push(L, result.velocity);
 			wi::lua::SSetInt(L, result.subsetIndex);
 			Luna<Matrix_BindLua>::push(L, result.orientation);
-			return 7;
+			Luna<Vector_BindLua>::push(L, XMFLOAT4(0, 0, 0, 0));
+			wi::lua::SSetInt(L, (int)result.humanoid_bone);
+			return 9;
 		}
 
 		Capsule_BindLua* capsule = Luna<Capsule_BindLua>::lightcheck(L, 1);
@@ -977,7 +983,9 @@ int Scene_BindLua::Intersects(lua_State* L)
 			Luna<Vector_BindLua>::push(L, result.velocity);
 			wi::lua::SSetInt(L, result.subsetIndex);
 			Luna<Matrix_BindLua>::push(L, result.orientation);
-			return 7;
+			Luna<Vector_BindLua>::push(L, XMFLOAT4(0, 0, 0, 0));
+			wi::lua::SSetInt(L, (int)result.humanoid_bone);
+			return 9;
 		}
 
 		wi::lua::SError(L, "Scene::Intersects(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) first argument is not an accepted primitive type!");
@@ -7165,6 +7173,8 @@ Luna<HumanoidComponent_BindLua>::FunctionType HumanoidComponent_BindLua::methods
 	lunamethod(HumanoidComponent_BindLua, SetLookAt),
 	lunamethod(HumanoidComponent_BindLua, SetRagdollPhysicsEnabled),
 	lunamethod(HumanoidComponent_BindLua, IsRagdollPhysicsEnabled),
+	lunamethod(HumanoidComponent_BindLua, SetIntersectionDisabled),
+	lunamethod(HumanoidComponent_BindLua, IsIntersectionDisabled),
 	lunamethod(HumanoidComponent_BindLua, SetRagdollFatness),
 	lunamethod(HumanoidComponent_BindLua, SetRagdollHeadSize),
 	lunamethod(HumanoidComponent_BindLua, GetRagdollFatness),
@@ -7250,6 +7260,24 @@ int HumanoidComponent_BindLua::SetRagdollPhysicsEnabled(lua_State* L)
 int HumanoidComponent_BindLua::IsRagdollPhysicsEnabled(lua_State* L)
 {
 	wi::lua::SSetBool(L, component->IsRagdollPhysicsEnabled());
+	return 1;
+}
+int HumanoidComponent_BindLua::SetIntersectionDisabled(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->SetIntersectionDisabled(wi::lua::SGetBool(L, 1));
+	}
+	else
+	{
+		wi::lua::SError(L, "SetIntersectionDisabled(bool value) not enough arguments!");
+	}
+	return 0;
+}
+int HumanoidComponent_BindLua::IsIntersectionDisabled(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsIntersectionDisabled());
 	return 1;
 }
 int HumanoidComponent_BindLua::SetRagdollFatness(lua_State* L)
