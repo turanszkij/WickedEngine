@@ -199,6 +199,11 @@ namespace wi
 			archive >> anim.wobbleAnim.amount;
 			archive >> anim.wobbleAnim.speed;
 
+			if (seri.GetVersion() >= 1)
+			{
+				archive >> params.saturation;
+			}
+
 			if (!textureName.empty() || !maskName.empty())
 			{
 				wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
@@ -274,6 +279,11 @@ namespace wi
 			archive << anim.drawRectAnim.horizontalFrameCount;
 			archive << anim.wobbleAnim.amount;
 			archive << anim.wobbleAnim.speed;
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive << params.saturation;
+			}
 		}
 	}
 

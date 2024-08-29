@@ -10,7 +10,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_SPRITE " Sprite", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 1500));
+	SetSize(XMFLOAT2(670, 1540));
 
 	closeButton.SetTooltip("Delete Sprite");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -174,6 +174,20 @@ void SpriteWindow::Create(EditorComponent* _editor)
 		}
 	});
 	AddWidget(&rotationSlider);
+
+	saturationSlider.Create(0, 2, 1, 1000, "Saturation: ");
+	saturationSlider.SetTooltip("Modify saturation of the image.");
+	saturationSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::Sprite* sprite = scene.sprites.GetComponent(x.entity);
+			if (sprite == nullptr)
+				continue;
+			sprite->params.saturation = args.fValue;
+		}
+	});
+	AddWidget(&saturationSlider);
 
 	alphaStartSlider.Create(0, 1, 0, 10000, "Mask Alpha Start: ");
 	alphaStartSlider.SetTooltip("Constrain mask alpha to not go below this level.");
@@ -604,6 +618,7 @@ void SpriteWindow::SetEntity(wi::ecs::Entity entity)
 	pivotYSlider.SetValue(sprite->params.pivot.y);
 	intensitySlider.SetValue(sprite->params.intensity);
 	rotationSlider.SetValue(wi::math::RadiansToDegrees(sprite->params.rotation));
+	saturationSlider.SetValue(sprite->params.saturation);
 	alphaStartSlider.SetValue(sprite->params.mask_alpha_range_start);
 	alphaEndSlider.SetValue(sprite->params.mask_alpha_range_end);
 	borderSoftenSlider.SetValue(sprite->params.border_soften);
@@ -673,6 +688,7 @@ void SpriteWindow::ResizeLayout()
 	add(pivotYSlider);
 	add(intensitySlider);
 	add(rotationSlider);
+	add(saturationSlider);
 	add(alphaStartSlider);
 	add(alphaEndSlider);
 	add(borderSoftenSlider);

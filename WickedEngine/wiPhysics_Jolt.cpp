@@ -1808,7 +1808,8 @@ namespace wi::physics
 	void ApplyForceAt(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& force,
-		const XMFLOAT3& at
+		const XMFLOAT3& at,
+		bool at_local
 	)
 	{
 		if (physicscomponent.physicsobject != nullptr)
@@ -1816,7 +1817,7 @@ namespace wi::physics
 			RigidBody& physicsobject = GetRigidBody(physicscomponent);
 			PhysicsScene& physics_scene = *(PhysicsScene*)physicsobject.physics_scene.get();
 			BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
-			Vec3 at_world = body_interface.GetCenterOfMassTransform(physicsobject.bodyID).Inversed() * cast(at);
+			Vec3 at_world = at_local ? body_interface.GetCenterOfMassTransform(physicsobject.bodyID).Inversed() * cast(at) : cast(at);
 			body_interface.AddForce(physicsobject.bodyID, cast(force), at_world);
 		}
 	}
@@ -1896,7 +1897,8 @@ namespace wi::physics
 	void ApplyImpulseAt(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& impulse,
-		const XMFLOAT3& at
+		const XMFLOAT3& at,
+		bool at_local
 	)
 	{
 		if (physicscomponent.physicsobject != nullptr)
@@ -1904,7 +1906,7 @@ namespace wi::physics
 			RigidBody& physicsobject = GetRigidBody(physicscomponent);
 			PhysicsScene& physics_scene = *(PhysicsScene*)physicsobject.physics_scene.get();
 			BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
-			Vec3 at_world = body_interface.GetCenterOfMassTransform(physicsobject.bodyID) * cast(at);
+			Vec3 at_world = at_local ? body_interface.GetCenterOfMassTransform(physicsobject.bodyID) * cast(at) : cast(at);
 			body_interface.AddImpulse(physicsobject.bodyID, cast(impulse), at_world);
 		}
 	}
@@ -1912,7 +1914,8 @@ namespace wi::physics
 		wi::scene::HumanoidComponent& humanoid,
 		wi::scene::HumanoidComponent::HumanoidBone bone,
 		const XMFLOAT3& impulse,
-		const XMFLOAT3& at
+		const XMFLOAT3& at,
+		bool at_local
 	)
 	{
 		if (humanoid.ragdoll == nullptr)
@@ -1965,7 +1968,7 @@ namespace wi::physics
 		RigidBody& physicsobject = ragdoll.rigidbodies[bodypart];
 		PhysicsScene& physics_scene = *(PhysicsScene*)physicsobject.physics_scene.get();
 		BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
-		Vec3 at_world = body_interface.GetCenterOfMassTransform(physicsobject.bodyID) * cast(at);
+		Vec3 at_world = at_local ? body_interface.GetCenterOfMassTransform(physicsobject.bodyID) * cast(at) : cast(at);
 		body_interface.SetMotionType(physicsobject.bodyID, EMotionType::Dynamic, EActivation::Activate);
 		body_interface.AddImpulse(physicsobject.bodyID, cast(impulse), at_world);
 	}

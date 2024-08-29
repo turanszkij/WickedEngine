@@ -13,6 +13,11 @@ namespace wi::lua
 		lunamethod(Texture_BindLua, CreateGradientTexture),
 		lunamethod(Texture_BindLua, CreateLensDistortionNormalMap),
 		lunamethod(Texture_BindLua, Save),
+
+		lunamethod(Texture_BindLua, GetWidth),
+		lunamethod(Texture_BindLua, GetHeight),
+		lunamethod(Texture_BindLua, GetDepth),
+		lunamethod(Texture_BindLua, GetArraySize),
 		{ NULL, NULL }
 	};
 	Luna<Texture_BindLua>::PropertyType Texture_BindLua::properties[] = {
@@ -196,6 +201,47 @@ namespace wi::lua
 		}
 		wi::helper::saveTextureToFile(resource.GetTexture(), wi::lua::SGetString(L, 1));
 		return 0;
+	}
+
+	int Texture_BindLua::GetWidth(lua_State* L)
+	{
+		if (!resource.IsValid() || !resource.GetTexture().IsValid())
+		{
+			wi::lua::SSetInt(L, 0);
+			return 1;
+		}
+		wi::lua::SSetInt(L, resource.GetTexture().GetDesc().width);
+		return 1;
+	}
+	int Texture_BindLua::GetHeight(lua_State* L)
+	{
+		if (!resource.IsValid() || !resource.GetTexture().IsValid())
+		{
+			wi::lua::SSetInt(L, 0);
+			return 1;
+		}
+		wi::lua::SSetInt(L, resource.GetTexture().GetDesc().height);
+		return 1;
+	}
+	int Texture_BindLua::GetDepth(lua_State* L)
+	{
+		if (!resource.IsValid() || !resource.GetTexture().IsValid())
+		{
+			wi::lua::SSetInt(L, 0);
+			return 1;
+		}
+		wi::lua::SSetInt(L, resource.GetTexture().GetDesc().depth);
+		return 1;
+	}
+	int Texture_BindLua::GetArraySize(lua_State* L)
+	{
+		if (!resource.IsValid() || !resource.GetTexture().IsValid())
+		{
+			wi::lua::SSetInt(L, 0);
+			return 1;
+		}
+		wi::lua::SSetInt(L, resource.GetTexture().GetDesc().array_size);
+		return 1;
 	}
 
 	void Texture_BindLua::Bind()

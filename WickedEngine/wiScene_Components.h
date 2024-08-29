@@ -190,6 +190,7 @@ namespace wi::scene
 		float blend_with_terrain_height = 0;
 		float cloak = 0;
 		float chromatic_aberration = 0;
+		float saturation = 1;
 
 		XMFLOAT4 sheenColor = XMFLOAT4(1, 1, 1, 1);
 		float sheenRoughness = 0;
@@ -293,6 +294,7 @@ namespace wi::scene
 		inline void SetReflectance(float value) { SetDirty(); reflectance = value; }
 		inline void SetMetalness(float value) { SetDirty(); metalness = value; }
 		inline void SetEmissiveStrength(float value) { SetDirty(); emissiveColor.w = value; }
+		inline void SetSaturation(float value) { SetDirty(); saturation = value; }
 		inline void SetTransmissionAmount(float value) { SetDirty(); transmission = value; }
 		inline void SetCloakAmount(float value) { SetDirty(); cloak = value; }
 		inline void SetChromaticAberrationAmount(float value) { SetDirty(); chromatic_aberration = value; }

@@ -4443,6 +4443,7 @@ Luna<MaterialComponent_BindLua>::PropertyType MaterialComponent_BindLua::propert
 	lunaproperty(MaterialComponent_BindLua, Transmission),
 	lunaproperty(MaterialComponent_BindLua, Cloak),
 	lunaproperty(MaterialComponent_BindLua, ChromaticAberration),
+	lunaproperty(MaterialComponent_BindLua, Saturation),
 	lunaproperty(MaterialComponent_BindLua, AlphaRef),
 	lunaproperty(MaterialComponent_BindLua, SheenColor),
 	lunaproperty(MaterialComponent_BindLua, SheenRoughness),

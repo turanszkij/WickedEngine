@@ -16,6 +16,7 @@ public:
 	wi::gui::Slider pivotYSlider;
 	wi::gui::Slider intensitySlider;
 	wi::gui::Slider rotationSlider;
+	wi::gui::Slider saturationSlider;
 	wi::gui::Slider alphaStartSlider;
 	wi::gui::Slider alphaEndSlider;
 	wi::gui::Slider borderSoftenSlider;

@@ -22,6 +22,7 @@ namespace wi::lua
 		int GetPivot(lua_State* L);
 		int GetColor(lua_State* L);
 		int GetOpacity(lua_State* L);
+		int GetSaturation(lua_State* L);
 		int GetFade(lua_State* L);
 		int GetRotation(lua_State* L);
 		int GetTexOffset(lua_State* L);
@@ -41,6 +42,7 @@ namespace wi::lua
 		int SetPivot(lua_State* L);
 		int SetColor(lua_State* L);
 		int SetOpacity(lua_State* L);
+		int SetSaturation(lua_State* L);
 		int SetFade(lua_State* L);
 		int SetStencil(lua_State* L);
 		int SetStencilRefMode(lua_State* L);
