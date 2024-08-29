@@ -38,7 +38,6 @@ namespace wi::scene
 		RunScriptUpdateSystem(ctx);
 
 		ScanAnimationDependencies();
-		ScanSpringDependencies();
 
 		// Terrains updates kick off:
 		if (dt > 0)
@@ -52,6 +51,8 @@ namespace wi::scene
 				terrain.Generation_Update(camera);
 			}
 		}
+
+		ScanSpringDependencies(); // after terrain, because this saves transform ptrs and terrain can add transforms
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
@@ -5721,7 +5722,9 @@ namespace wi::scene
 			for (size_t objectIndex = 0; objectIndex < objectCount; ++objectIndex)
 			{
 				const AABB& aabb = aabb_objects[objectIndex];
-				if (!ray.intersects(aabb) || (layerMask & aabb.layerMask) == 0)
+				if ((layerMask & aabb.layerMask) == 0)
+					continue;
+				if (!ray.intersects(aabb))
 					continue;
 
 				const ObjectComponent& object = objects[objectIndex];
@@ -5879,6 +5882,44 @@ namespace wi::scene
 			}
 		}
 
+		if (filterMask & FILTER_RAGDOLL)
+		{
+			for (size_t i = 0; i < humanoids.GetCount(); ++i)
+			{
+				Entity entity = humanoids.GetEntity(i);
+				const LayerComponent* layer = layers.GetComponent(entity);
+				if (layer != nullptr && (layer->GetLayerMask() & layerMask) == 0)
+					continue;
+
+				const HumanoidComponent& humanoid = humanoids[i];
+				if (humanoid.IsIntersectionDisabled())
+					continue;
+				if (!humanoid.ragdoll_bounds.intersects(ray))
+					continue;
+
+				for (auto& bp : humanoid.ragdoll_bodyparts)
+				{
+					float dist = 0;
+					XMFLOAT3 direction = {};
+					if (ray.intersects(bp.capsule, dist, direction) && dist < result.distance)
+					{
+						result.distance = dist;
+						result.bary = {};
+						result.entity = entity;
+						result.humanoid_bone = bp.bone;
+						result.normal = direction;
+						result.uv = {};
+						result.velocity = {};
+						XMStoreFloat3(&result.position, rayOrigin + rayDirection * dist);
+						result.subsetIndex = -1;
+						result.vertexID0 = 0;
+						result.vertexID1 = 0;
+						result.vertexID2 = 0;
+					}
+				}
+			}
+		}
+
 		result.orientation = ray.GetPlacementOrientation(result.position, result.normal);
 
 		return result;
@@ -5935,7 +5976,9 @@ namespace wi::scene
 			for (size_t objectIndex = 0; objectIndex < objectCount; ++objectIndex)
 			{
 				const AABB& aabb = aabb_objects[objectIndex];
-				if (!ray.intersects(aabb) || (layerMask & aabb.layerMask) == 0)
+				if ((layerMask & aabb.layerMask) == 0)
+					continue;
+				if (!ray.intersects(aabb))
 					continue;
 
 				const ObjectComponent& object = objects[objectIndex];
@@ -6045,6 +6088,34 @@ namespace wi::scene
 
 			}
 		}
+
+		if (filterMask & FILTER_RAGDOLL)
+		{
+			for (size_t i = 0; i < humanoids.GetCount(); ++i)
+			{
+				Entity entity = humanoids.GetEntity(i);
+				const LayerComponent* layer = layers.GetComponent(entity);
+				if (layer != nullptr && (layer->GetLayerMask() & layerMask) == 0)
+					continue;
+
+				const HumanoidComponent& humanoid = humanoids[i];
+				if (humanoid.IsIntersectionDisabled())
+					continue;
+				if (!humanoid.ragdoll_bounds.intersects(ray))
+					continue;
+
+				for (auto& bp : humanoid.ragdoll_bodyparts)
+				{
+					float dist = 0;
+					XMFLOAT3 direction = {};
+					if (ray.intersects(bp.capsule, dist, direction))
+					{
+						return true;
+					}
+				}
+			}
+		}
+
 		return result;
 	}
 	Scene::SphereIntersectionResult Scene::Intersects(const Sphere& sphere, uint32_t filterMask, uint32_t layerMask, uint32_t lod) const
@@ -6105,7 +6176,9 @@ namespace wi::scene
 			for (size_t objectIndex = 0; objectIndex < objectCount; ++objectIndex)
 			{
 				const AABB& aabb = aabb_objects[objectIndex];
-				if (!sphere.intersects(aabb) || (layerMask & aabb.layerMask) == 0)
+				if ((layerMask & aabb.layerMask) == 0)
+					continue;
+				if (!sphere.intersects(aabb))
 					continue;
 
 				const ObjectComponent& object = objects[objectIndex];
@@ -6318,6 +6391,39 @@ namespace wi::scene
 			}
 		}
 
+		if (filterMask & FILTER_RAGDOLL)
+		{
+			for (size_t i = 0; i < humanoids.GetCount(); ++i)
+			{
+				Entity entity = humanoids.GetEntity(i);
+				const LayerComponent* layer = layers.GetComponent(entity);
+				if (layer != nullptr && (layer->GetLayerMask() & layerMask) == 0)
+					continue;
+
+				const HumanoidComponent& humanoid = humanoids[i];
+				if (humanoid.IsIntersectionDisabled())
+					continue;
+				if (!humanoid.ragdoll_bounds.intersects(sphere))
+					continue;
+
+				for (auto& bp : humanoid.ragdoll_bodyparts)
+				{
+					float dist = 0;
+					XMFLOAT3 direction = {};
+					if (sphere.intersects(bp.capsule, dist, direction) && dist > result.depth)
+					{
+						result.depth = dist;
+						result.entity = entity;
+						result.humanoid_bone = bp.bone;
+						result.normal = direction;
+						result.velocity = {};
+						result.position = {};
+						result.subsetIndex = -1;
+					}
+				}
+			}
+		}
+
 		result.orientation = sphere.GetPlacementOrientation(result.position, result.normal);
 
 		return result;
@@ -6386,7 +6492,9 @@ namespace wi::scene
 			for (size_t objectIndex = 0; objectIndex < objectCount; ++objectIndex)
 			{
 				const AABB& aabb = aabb_objects[objectIndex];
-				if (capsule_aabb.intersects(aabb) == AABB::INTERSECTION_TYPE::OUTSIDE || (layerMask & aabb.layerMask) == 0)
+				if ((layerMask & aabb.layerMask) == 0)
+					continue;
+				if (capsule_aabb.intersects(aabb) == AABB::INTERSECTION_TYPE::OUTSIDE)
 					continue;
 
 				const ObjectComponent& object = objects[objectIndex];
@@ -6714,6 +6822,40 @@ namespace wi::scene
 			}
 		}
 
+		if (filterMask & FILTER_RAGDOLL)
+		{
+			for (size_t i = 0; i < humanoids.GetCount(); ++i)
+			{
+				Entity entity = humanoids.GetEntity(i);
+				const LayerComponent* layer = layers.GetComponent(entity);
+				if (layer != nullptr && (layer->GetLayerMask() & layerMask) == 0)
+					continue;
+
+				const HumanoidComponent& humanoid = humanoids[i];
+				if (humanoid.IsIntersectionDisabled())
+					continue;
+				if (!humanoid.ragdoll_bounds.intersects(capsule.getAABB()))
+					continue;
+
+				for (auto& bp : humanoid.ragdoll_bodyparts)
+				{
+					XMFLOAT3 position = {};
+					XMFLOAT3 normal = {};
+					float depth = {};
+					if (capsule.intersects(bp.capsule, position, normal, depth) && depth > result.depth)
+					{
+						result.depth = depth;
+						result.entity = entity;
+						result.humanoid_bone = bp.bone;
+						result.normal = normal;
+						result.velocity = {};
+						result.position = position;
+						result.subsetIndex = -1;
+					}
+				}
+			}
+		}
+
 		result.orientation = capsule.GetPlacementOrientation(result.position, result.normal);
 
 		return result;
@@ -6852,7 +6994,7 @@ namespace wi::scene
 		wi::jobsystem::Wait(ctx);
 	}
 
-	XMFLOAT3 Scene::GetPositionOnSurface(wi::ecs::Entity objectEntity, int vertexID0, int vertexID1, int vertexID2, const XMFLOAT2& bary) const
+	XMFLOAT3 Scene::GetPositionOnSurface(Entity objectEntity, int vertexID0, int vertexID1, int vertexID2, const XMFLOAT2& bary) const
 	{
 		const ObjectComponent* object = objects.GetComponent(objectEntity);
 		if (object == nullptr || object->meshID == INVALID_ENTITY)
@@ -6903,7 +7045,7 @@ namespace wi::scene
 		return result;
 	}
 
-	void Scene::ResetPose(wi::ecs::Entity entity)
+	void Scene::ResetPose(Entity entity)
 	{
 		// All child armatures will be also calling ResetPose, in case you give a parent entity of them, for convenience:
 		for (size_t i = 0; i < armatures.GetCount(); ++i)

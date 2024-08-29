@@ -254,6 +254,7 @@ namespace wi::physics
 			// for trace hit reporting:
 			wi::ecs::Entity humanoid_ragdoll_entity = wi::ecs::INVALID_ENTITY;
 			wi::scene::HumanoidComponent::HumanoidBone humanoid_bone = wi::scene::HumanoidComponent::HumanoidBone::Count;
+			wi::primitive::Capsule capsule;
 
 			~RigidBody()
 			{
@@ -785,9 +786,11 @@ namespace wi::physics
 					case BODYPART_LEFT_LOWER_ARM:
 					case BODYPART_RIGHT_UPPER_ARM:
 					case BODYPART_RIGHT_LOWER_ARM:
+						physicsobject.capsule = wi::primitive::Capsule(XMFLOAT3(-capsule_height * 0.5f - capsule_radius, 0, 0), XMFLOAT3(capsule_height * 0.5f + capsule_radius, 0, 0), capsule_radius);
 						rtshape_settings.mRotation = Quat::sRotation(Vec3::sAxisZ(), 0.5f * JPH_PI).Normalized();
 						break;
 					default:
+						physicsobject.capsule = wi::primitive::Capsule(XMFLOAT3(0, -capsule_height * 0.5f - capsule_radius, 0), XMFLOAT3(0, capsule_height * 0.5f + capsule_radius, 0), capsule_radius);
 						break;
 					}
 
@@ -1656,15 +1659,39 @@ namespace wi::physics
 			if (humanoid.ragdoll == nullptr)
 				return;
 			Ragdoll& ragdoll = *(Ragdoll*)humanoid.ragdoll.get();
-			if (humanoid.IsRagdollPhysicsEnabled())
+
+			if (humanoid.ragdoll_bodyparts.size() != Ragdoll::BODYPART_COUNT)
 			{
-				BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
-				for (auto& rb : ragdoll.rigidbodies)
+				humanoid.ragdoll_bodyparts.resize(Ragdoll::BODYPART_COUNT);
+			}
+			humanoid.ragdoll_bounds = wi::primitive::AABB();
+			int caps = 0;
+
+			BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
+			for (auto& rb : ragdoll.rigidbodies)
+			{
+				TransformComponent* transform = scene.transforms.GetComponent(rb.entity);
+				if (transform == nullptr)
+					continue;
+				Mat44 mat = body_interface.GetWorldTransform(rb.bodyID);
+
+				XMFLOAT4X4 capsulemat = cast(mat);
+				XMMATRIX M = XMLoadFloat4x4(&capsulemat);
+				auto& bp = humanoid.ragdoll_bodyparts[caps++];
+				bp.bone = rb.humanoid_bone;
+				bp.capsule.radius = rb.capsule.radius;
+				XMStoreFloat3(&bp.capsule.base, XMVector3Transform(XMLoadFloat3(&rb.capsule.base), M));
+				XMStoreFloat3(&bp.capsule.tip, XMVector3Transform(XMLoadFloat3(&rb.capsule.tip), M));
+				humanoid.ragdoll_bounds = wi::primitive::AABB::Merge(humanoid.ragdoll_bounds, bp.capsule.getAABB());
+
+#if 0
+				scene.locker.lock();
+				wi::renderer::DrawCapsule(bp.capsule, XMFLOAT4(1, 1, 1, 1), false);
+				scene.locker.unlock();
+#endif
+
+				if (humanoid.IsRagdollPhysicsEnabled())
 				{
-					TransformComponent* transform = scene.transforms.GetComponent(rb.entity);
-					if (transform == nullptr)
-						continue;
-					Mat44 mat = body_interface.GetWorldTransform(rb.bodyID);
 					mat = mat * rb.additionalTransformInverse;
 					mat = mat * rb.restBasis;
 					Vec3 position = mat.GetTranslation();
@@ -1681,6 +1708,14 @@ namespace wi::physics
 					transform->SetDirty();
 				}
 			}
+
+#if 0
+			scene.locker.lock();
+			XMFLOAT4X4 mat;
+			XMStoreFloat4x4(&mat, humanoid.ragdoll_bounds.getAsBoxMatrix());
+			wi::renderer::DrawBox(mat, XMFLOAT4(1, 1, 1, 1), false);
+			scene.locker.unlock();
+#endif
 		});
 
 #ifdef JPH_DEBUG_RENDERER
@@ -2015,6 +2050,38 @@ namespace wi::physics
 		return cast(soft_vertices[physicsIndex].mPosition);
 	}
 
+
+	template <class CollectorType>
+	class WickedClosestHitCollector : public JPH::ClosestHitCollisionCollector<CollectorType>
+	{
+	public:
+		const Scene* scene = nullptr;
+		const PhysicsScene* physics_scene = nullptr;
+
+		using ResultType = typename CollectorType::ResultType;
+		void AddHit(const ResultType& inResult) override
+		{
+			BodyLockRead lock(physics_scene->physics_system.GetBodyLockInterfaceNoLock(), inResult.mBodyID);
+			if (!lock.Succeeded())
+				return;
+			const Body& body = lock.GetBody();
+			const uint64_t userdata = body.GetUserData();
+
+			if (body.IsRigidBody())
+			{
+				const RigidBody* physicsobject = (RigidBody*)userdata;
+				if (physicsobject->humanoid_ragdoll_entity != INVALID_ENTITY)
+				{
+					const HumanoidComponent* humanoid = scene->humanoids.GetComponent(physicsobject->humanoid_ragdoll_entity);
+					if (humanoid != nullptr && humanoid->IsIntersectionDisabled())
+						return; // skip this from AddHit
+				}
+			}
+
+			ClosestHitCollisionCollector<CollectorType>::AddHit(inResult);
+		}
+	};
+
 	RayIntersectionResult Intersects(
 		const wi::scene::Scene& scene,
 		wi::primitive::Ray ray
@@ -2042,7 +2109,9 @@ namespace wi::physics
 		settings.mBackFaceMode = EBackFaceMode::IgnoreBackFaces;
 		settings.mTreatConvexAsSolid = false;
 
-		ClosestHitCollisionCollector<CastRayCollector> collector;
+		WickedClosestHitCollector<CastRayCollector> collector;
+		collector.scene = &scene;
+		collector.physics_scene = &physics_scene;
 
 		physics_scene.physics_system.GetNarrowPhaseQuery().CastRay(inray, settings, collector);
 		if (!collector.HadHit())

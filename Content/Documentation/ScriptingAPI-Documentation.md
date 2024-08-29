@@ -704,8 +704,9 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - [outer]FILTER_NAVIGATION_MESH : uint	-- include navigation meshes
 - [outer]FILTER_OBJECT_ALL : uint	-- include all objects, meshes
 - [outer]FILTER_COLLIDER : uint	-- include colliders
+- [outer]FILTER_RAGDOLL : uint	-- include ragdoll body parts
 - [outer]FILTER_ALL : uint	-- include everything
-- Intersects(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : int entity, Vector position,normal, float distance, Vector velocity, int subsetIndex, Matrix orientation, Vector uv	-- intersects a primitive with the scene and returns collision parameters
+- Intersects(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : int entity, Vector position,normal, float distance, Vector velocity, int subsetIndex, Matrix orientation, Vector uv, HumanoidBone humanoid_bone	-- intersects a primitive with the scene and returns collision parameters. If humanoid_bone is not `HumanoidBone.Count` then the intersection is a ragdoll, and entity refers to the humanoid entity
 - IntersectsFirst(Ray primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : bool	-- intersects a primitive with the scene and returns true immediately on intersection, false if there was no intersection. This can be faster for occlusion check than regular `Intersects` that searches for closest intersection.
 - Update()  -- updates the scene and every entity and component inside the scene
 - Clear()  -- deletes every entity and component inside the scene
@@ -1408,6 +1409,8 @@ Describes a Collider object.
 - SetLookAt(Vector value)	-- Set a target lookAt position (for head an eyes movement)
 - SetRagdollPhysicsEnabled(bool value) -- Activate dynamic ragdoll physics. Note that kinematic ragdoll physics is always active (ragdoll is animation-driven/kinematic by default).
 - IsRagdollPhysicsEnabled() : bool
+- SetIntersectionDisabled(bool value) -- turn off intersection test for this ragdoll. This only affects direct intersection check with Scene::Intersects()
+- IsIntersectionDisabled() : bool
 - SetRagdollFatness(float value) -- Control the overall fatness of the ragdoll body parts except head (default: 1)
 - SetRagdollHeadSize(float value) -- Control the overall size of the ragdoll head (default: 1)
 - GetRagdollFatness() : float
@@ -1469,6 +1472,8 @@ Describes a Collider object.
 	RightLittleProximal = 52,
 	RightLittleIntermediate = 53,
 	RightLittleDistal = 54,
+
+	Count = 55
 }
 
 

@@ -1894,6 +1894,7 @@ namespace wi::scene
 			NONE = 0,
 			LOOKAT = 1 << 0,
 			RAGDOLL_PHYSICS = 1 << 1,
+			DISABLE_INTERSECTION = 1 << 2,
 		};
 		uint32_t _flags = LOOKAT;
 
@@ -1971,9 +1972,11 @@ namespace wi::scene
 
 		constexpr bool IsLookAtEnabled() const { return _flags & LOOKAT; }
 		constexpr bool IsRagdollPhysicsEnabled() const { return _flags & RAGDOLL_PHYSICS; }
+		constexpr bool IsIntersectionDisabled() const { return _flags & DISABLE_INTERSECTION; }
 
 		constexpr void SetLookAtEnabled(bool value = true) { if (value) { _flags |= LOOKAT; } else { _flags &= ~LOOKAT; } }
 		constexpr void SetRagdollPhysicsEnabled(bool value = true) { if (value) { _flags |= RAGDOLL_PHYSICS; } else { _flags &= ~RAGDOLL_PHYSICS; } }
+		constexpr void SetIntersectionDisabled(bool value = true) { if (value) { _flags |= DISABLE_INTERSECTION; } else { _flags &= ~DISABLE_INTERSECTION; } }
 
 		XMFLOAT2 head_rotation_max = XMFLOAT2(XM_PI / 3.0f, XM_PI / 6.0f);
 		float head_rotation_speed = 0.1f;
@@ -1990,6 +1993,15 @@ namespace wi::scene
 		XMFLOAT4 lookAtDeltaRotationState_RightEye = XMFLOAT4(0, 0, 0, 1);
 		std::shared_ptr<void> ragdoll = nullptr; // physics system implementation-specific object
 		mutable float default_facing = 0; // 0 = not yet computed
+
+		// Things for ragdoll intersection tests:
+		struct RagdollBodypart
+		{
+			HumanoidBone bone;
+			wi::primitive::Capsule capsule;
+		};
+		wi::vector<RagdollBodypart> ragdoll_bodyparts;
+		wi::primitive::AABB ragdoll_bounds;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

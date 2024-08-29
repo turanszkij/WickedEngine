@@ -489,6 +489,7 @@ namespace wi::scene
 			int vertexID2 = -1;
 			XMFLOAT2 bary = XMFLOAT2(0, 0);
 			XMFLOAT4X4 orientation = wi::math::IDENTITY_MATRIX;
+			HumanoidComponent::HumanoidBone humanoid_bone = HumanoidComponent::HumanoidBone::Count;
 
 			constexpr bool operator==(const RayIntersectionResult& other) const
 			{
@@ -519,6 +520,7 @@ namespace wi::scene
 			float depth = 0;
 			int subsetIndex = -1;
 			XMFLOAT4X4 orientation = wi::math::IDENTITY_MATRIX;
+			HumanoidComponent::HumanoidBone humanoid_bone = HumanoidComponent::HumanoidBone::Count;
 		};
 		SphereIntersectionResult Intersects(const wi::primitive::Sphere& sphere, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;
 

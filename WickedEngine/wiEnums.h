@@ -31,6 +31,7 @@ namespace wi::enums
 
 		// Other filtering types:
 		FILTER_COLLIDER = 1 << 5,
+		FILTER_RAGDOLL = 1 << 6,
 
 		// Include everything:
 		FILTER_ALL = ~0,
