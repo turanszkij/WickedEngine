@@ -83,6 +83,7 @@ namespace wi::image
 		XMFLOAT2 angular_softness_direction = XMFLOAT2(0, 1);
 		float angular_softness_inner_angle = 0;
 		float angular_softness_outer_angle = 0;
+		float saturation = 1;
 
 		// you can deform the image by its corners (0: top left, 1: top right, 2: bottom left, 3: bottom right)
 		XMFLOAT2 corners[4] = {

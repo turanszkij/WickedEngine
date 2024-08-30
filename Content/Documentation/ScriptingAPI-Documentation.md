@@ -434,9 +434,13 @@ Gives you the ability to render text with a custom font.
 
 
 ### Texture
-Just holds texture information in VRAM.
+A texture image data.
 - [constructor]Texture(opt string filename)	-- creates a texture from file
 - [outer]texturehelper -- a global helper texture creation utility
+- GetWidth() : int
+- GetHeight() : int
+- GetDepth() : int
+- GetArraySize() : int
 - GetLogo() : Texture -- returns the Wicked Engine logo texture
 - CreateGradientTexture(
 	GradientType type = GradientType.Linear, 
@@ -1963,11 +1967,11 @@ Playstation button codes:
 - SetLinearVelocity(RigidBodyPhysicsComponent component, Vector velocity)	-- Set the linear velocity manually
 - SetAngularVelocity(RigidBodyPhysicsComponent component, Vector velocity)	-- Set the angular velocity manually
 - ApplyForce(RigidBodyPhysicsComponent component, Vector force)	-- Apply force at body center
-- ApplyForceAt(RigidBodyPhysicsComponent component, Vector force, Vector at)	-- Apply force at body local position
+- ApplyForceAt(RigidBodyPhysicsComponent component, Vector force, Vector at, bool at_local = true)	-- Apply force at body local position (at_local controls whether the at is in body's local space or not)
 - ApplyImpulse(RigidBodyPhysicsComponent component, Vector impulse)	-- Apply impulse at body center
 - ApplyImpulse(HumanoidComponent humanoid, HumanoidBone bone, Vector impulse)	-- Apply impulse at body center of ragdoll bone
-- ApplyImpulseAt(RigidBodyPhysicsComponent component, Vector impulse, Vector at)	-- Apply impulse at body local position
-- ApplyImpulseAt(HumanoidComponent humanoid, HumanoidBone bone, Vector impulse, Vector at)	-- Apply impulse at body local position of ragdoll bone
+- ApplyImpulseAt(RigidBodyPhysicsComponent component, Vector impulse, Vector at, bool at_local = true)	-- Apply impulse at body local position (at_local controls whether the at is in body's local space or not)
+- ApplyImpulseAt(HumanoidComponent humanoid, HumanoidBone bone, Vector impulse, Vector at, bool at_local = true)	-- Apply impulse at body local position of ragdoll bone (at_local controls whether the at is in body's local space or not)
 - ApplyTorque(RigidBodyPhysicsComponent component, Vector torque)	-- Apply torque at body center
 - ActivateAllRigidBodies(Scene scene)	-- Activate all rigid bodies in the scene
 - SetActivationState(RigidBodyPhysicsComponent component, int state)	-- Force set activation state to rigid body. Use a value ACTIVATION_STATE_ACTIVE or ACTIVATION_STATE_INACTIVE

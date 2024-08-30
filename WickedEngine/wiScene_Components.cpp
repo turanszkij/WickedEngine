@@ -292,11 +292,11 @@ namespace wi::scene
 
 		if (shaderType == SHADERTYPE_WATER)
 		{
-			material.sheenColor = pack_half3(XMFLOAT3(1 - extinctionColor.x, 1 - extinctionColor.y, 1 - extinctionColor.z));
+			material.sheenColor_saturation = pack_half4(XMFLOAT4(1 - extinctionColor.x, 1 - extinctionColor.y, 1 - extinctionColor.z, saturation));
 		}
 		else
 		{
-			material.sheenColor = pack_half3(XMFLOAT3(sheenColor.x, sheenColor.y, sheenColor.z));
+			material.sheenColor_saturation = pack_half4(XMFLOAT4(sheenColor.x, sheenColor.y, sheenColor.z, saturation));
 		}
 		material.transmission_sheenroughness_clearcoat_clearcoatroughness = pack_half4(transmission, sheenRoughness, clearcoat, clearcoatRoughness);
 		material.layerMask = layerMask;

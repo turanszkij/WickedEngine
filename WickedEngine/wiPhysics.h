@@ -63,11 +63,12 @@ namespace wi::physics
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& force
 	);
-	// Apply force at body local position
+	// Apply force at position
 	void ApplyForceAt(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& force,
-		const XMFLOAT3& at
+		const XMFLOAT3& at,
+		bool at_local = true // whether at is in local space of the body or not (global)
 	);
 
 	// Apply impulse at body center
@@ -80,17 +81,19 @@ namespace wi::physics
 		wi::scene::HumanoidComponent::HumanoidBone bone,
 		const XMFLOAT3& impulse
 	);
-	// Apply impulse at body local position
+	// Apply impulse at position
 	void ApplyImpulseAt(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& impulse,
-		const XMFLOAT3& at
+		const XMFLOAT3& at,
+		bool at_local = true // whether at is in local space of the body or not (global)
 	);
 	void ApplyImpulseAt(
 		wi::scene::HumanoidComponent& humanoid,
 		wi::scene::HumanoidComponent::HumanoidBone bone,
 		const XMFLOAT3& impulse,
-		const XMFLOAT3& at
+		const XMFLOAT3& at,
+		bool at_local = true // whether at is in local space of the body or not (global)
 	);
 
 	void ApplyTorque(
