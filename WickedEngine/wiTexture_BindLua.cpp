@@ -14,6 +14,7 @@ namespace wi::lua
 		lunamethod(Texture_BindLua, CreateLensDistortionNormalMap),
 		lunamethod(Texture_BindLua, Save),
 
+		lunamethod(Texture_BindLua, IsValid),
 		lunamethod(Texture_BindLua, GetWidth),
 		lunamethod(Texture_BindLua, GetHeight),
 		lunamethod(Texture_BindLua, GetDepth),
@@ -203,6 +204,11 @@ namespace wi::lua
 		return 0;
 	}
 
+	int Texture_BindLua::IsValid(lua_State* L)
+	{
+		wi::lua::SSetBool(L, resource.IsValid() && resource.GetTexture().IsValid());
+		return 1;
+	}
 	int Texture_BindLua::GetWidth(lua_State* L)
 	{
 		if (!resource.IsValid() || !resource.GetTexture().IsValid())

@@ -26,6 +26,7 @@ namespace wi::lua
 		int CreateLensDistortionNormalMap(lua_State* L);
 		int Save(lua_State* L);
 
+		int IsValid(lua_State* L);
 		int GetWidth(lua_State* L);
 		int GetHeight(lua_State* L);
 		int GetDepth(lua_State* L);

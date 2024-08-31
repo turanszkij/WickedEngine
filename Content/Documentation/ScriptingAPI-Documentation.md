@@ -437,6 +437,7 @@ Gives you the ability to render text with a custom font.
 A texture image data.
 - [constructor]Texture(opt string filename)	-- creates a texture from file
 - [outer]texturehelper -- a global helper texture creation utility
+- IsValid() : bool	-- whether the texture contains valid data, if it has been created successfully
 - GetWidth() : int
 - GetHeight() : int
 - GetDepth() : int
