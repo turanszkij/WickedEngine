@@ -522,6 +522,9 @@ namespace wi::input
 			case wi::input::KEYBOARD_BUTTON_RCONTROL:
 				keycode = VK_RCONTROL;
 				break;
+			case wi::input::KEYBOARD_BUTTON_INSERT:
+				keycode = VK_INSERT;
+				break;
 			case wi::input::KEYBOARD_BUTTON_DELETE:
 				keycode = VK_DELETE;
 				break;
