@@ -45,73 +45,6 @@ static wi::unordered_map<std::string, FileType> filetypes = {
 	{"H", FileType::HEADER},
 };
 
-// Hotkey functions
-bool ContainsKey(const std::string& str, const std::string& key)
-{
-	return wi::helper::toUpper(str).find(key) != std::string::npos;
-}
-std::string GetFirstNonModifierKey(const std::string& buttonName)
-{
-	std::istringstream iss(buttonName);
-	std::string token;
-	while (std::getline(iss, token, '+'))
-	{
-		token = wi::helper::toUpper(token);
-		if (token != "CTRL" && token != "SHIFT" && !token.empty())
-		{
-			return token;
-		}
-	}
-	return "";
-}
-wi::input::BUTTON StringToButton(const std::string& buttonName)
-{
-	static const wi::unordered_map<std::string, wi::input::BUTTON> buttonMap = {
-		{"ESC", wi::input::KEYBOARD_BUTTON_ESCAPE},
-		{"INSERT", wi::input::KEYBOARD_BUTTON_INSERT},
-		{"DELETE", wi::input::KEYBOARD_BUTTON_DELETE},
-		{"HOME", wi::input::KEYBOARD_BUTTON_HOME},
-		{"PAGEUP", wi::input::KEYBOARD_BUTTON_PAGEUP},
-		{"PAGEDOWN", wi::input::KEYBOARD_BUTTON_PAGEDOWN},
-		{"MOUSELEFT", wi::input::MOUSE_BUTTON_LEFT},
-		{"MOUSERIGHT", wi::input::MOUSE_BUTTON_RIGHT},
-		{"F1", wi::input::KEYBOARD_BUTTON_F1},
-		{"F2", wi::input::KEYBOARD_BUTTON_F2},
-		{"F3", wi::input::KEYBOARD_BUTTON_F3},
-		{"F4", wi::input::KEYBOARD_BUTTON_F4},
-		{"F5", wi::input::KEYBOARD_BUTTON_F5},
-		{"F6", wi::input::KEYBOARD_BUTTON_F6},
-		{"F7", wi::input::KEYBOARD_BUTTON_F7},
-		{"F8", wi::input::KEYBOARD_BUTTON_F8},
-		{"F9", wi::input::KEYBOARD_BUTTON_F9},
-		{"F10", wi::input::KEYBOARD_BUTTON_F10},
-		{"F11", wi::input::KEYBOARD_BUTTON_F11},
-		{"F12", wi::input::KEYBOARD_BUTTON_F12}
-	};
-
-	std::string upperName = wi::helper::toUpper(buttonName);
-	std::string firstKey = GetFirstNonModifierKey(upperName);
-
-	// Try to find the key in the map
-	auto it = buttonMap.find(firstKey);
-	if (it != buttonMap.end())
-	{
-		return it->second;
-	}
-
-	// Cast individual key to button
-	if (firstKey.length() == 1)
-	{
-		char c = firstKey[0];
-		if (std::isalnum(c))
-		{
-			return static_cast<wi::input::BUTTON>(c);
-		}
-	}
-
-	return wi::input::BUTTON_NONE;
-}
-// EditorActions
 enum class EditorActions
 {
 	// Camera movement
@@ -205,6 +138,7 @@ HotkeyInfo hotkeyActions[size_t(EditorActions::COUNT)] = {
 	{wi::input::BUTTON('G'),					/*press=*/ false,		/*control=*/ true,		/*shift=*/ false},	//COLOR_GRADING_REFERENCE,
 	{wi::input::BUTTON('P'),					/*press=*/ false,		/*control=*/ false,		/*shift=*/ false},	//RAGDOLL_AND_PHYSICS_IMPULSE_TESTER,
 };
+static_assert(arraysize(hotkeyActions) == size_t(EditorActions::COUNT));
 bool CheckInput(EditorActions action)
 {
 	const HotkeyInfo& hotkey = hotkeyActions[size_t(action)];
@@ -227,7 +161,7 @@ bool CheckInput(EditorActions action)
 	}
 	return ret;
 }
-EditorActions StringToEnum(const std::string& actionString)
+void HotkeyRemap(Editor* main)
 {
 	static const wi::unordered_map<std::string, EditorActions> actionMap = {
 		{"MOVE_CAMERA_FORWARD", EditorActions::MOVE_CAMERA_FORWARD},
@@ -260,29 +194,75 @@ EditorActions StringToEnum(const std::string& actionString)
 		{"COLOR_GRADING_REFERENCE", EditorActions::COLOR_GRADING_REFERENCE},
 		{"RAGDOLL_AND_PHYSICS_IMPULSE_TESTER", EditorActions::RAGDOLL_AND_PHYSICS_IMPULSE_TESTER}
 	};
+	static const wi::unordered_map<std::string, wi::input::BUTTON> buttonMap = {
+		{"ESC", wi::input::KEYBOARD_BUTTON_ESCAPE},
+		{"INSERT", wi::input::KEYBOARD_BUTTON_INSERT},
+		{"DELETE", wi::input::KEYBOARD_BUTTON_DELETE},
+		{"HOME", wi::input::KEYBOARD_BUTTON_HOME},
+		{"PAGEUP", wi::input::KEYBOARD_BUTTON_PAGEUP},
+		{"PAGEDOWN", wi::input::KEYBOARD_BUTTON_PAGEDOWN},
+		{"MOUSELEFT", wi::input::MOUSE_BUTTON_LEFT},
+		{"MOUSERIGHT", wi::input::MOUSE_BUTTON_RIGHT},
+		{"F1", wi::input::KEYBOARD_BUTTON_F1},
+		{"F2", wi::input::KEYBOARD_BUTTON_F2},
+		{"F3", wi::input::KEYBOARD_BUTTON_F3},
+		{"F4", wi::input::KEYBOARD_BUTTON_F4},
+		{"F5", wi::input::KEYBOARD_BUTTON_F5},
+		{"F6", wi::input::KEYBOARD_BUTTON_F6},
+		{"F7", wi::input::KEYBOARD_BUTTON_F7},
+		{"F8", wi::input::KEYBOARD_BUTTON_F8},
+		{"F9", wi::input::KEYBOARD_BUTTON_F9},
+		{"F10", wi::input::KEYBOARD_BUTTON_F10},
+		{"F11", wi::input::KEYBOARD_BUTTON_F11},
+		{"F12", wi::input::KEYBOARD_BUTTON_F12}
+	};
 
-	std::string upperActionString = actionString;
-	std::transform(upperActionString.begin(), upperActionString.end(), upperActionString.begin(), ::toupper);
-
-	auto it = actionMap.find(upperActionString);
-	if (it != actionMap.end())
+	wi::config::Section hotkeyssection = main->config.GetSection("hotkeys");
+	for (auto& x : hotkeyssection)
 	{
-		return it->second;
-	}
-	return EditorActions::COUNT;
-}
-void InitializeHotkeysActionKeyMap(Editor* main)
-{
-	wi::config::File config = main->config;
-	wi::config::Section hotkeyssection = config.GetSection("hotkeys");
+		auto itAction = actionMap.find(wi::helper::toUpper(x.first));
+		if (itAction == actionMap.end())
+			continue;
+		EditorActions action = itAction->second;
+		std::string hotkeyString = wi::helper::toUpper(x.second);
+		wi::input::BUTTON button = wi::input::BUTTON_NONE;
 
-	for (auto it = hotkeyssection.begin(); it != hotkeyssection.end(); ++it)
-	{
-		EditorActions action = StringToEnum(it->first);
-		std::string keyString = it->second;
-		wi::input::BUTTON button = StringToButton(it->second);
+		// Find the main key from the whole hotkey string:
+		std::string firstNonModifierKey;
+		std::istringstream iss(hotkeyString);
+		std::string token;
+		while (std::getline(iss, token, '+'))
+		{
+			if (token != "CTRL" && token != "SHIFT" && !token.empty())
+			{
+				firstNonModifierKey = token;
+			}
+		}
 
-		hotkeyActions[size_t(action)] = HotkeyInfo{button, hotkeyActions[size_t(action)].press, ContainsKey(keyString, "CTRL"), ContainsKey(keyString, "SHIFT")};
+		// Try to find the key in the map
+		auto itButton = buttonMap.find(firstNonModifierKey);
+		if (itButton != buttonMap.end())
+		{
+			button = itButton->second;
+		}
+		else
+		{
+			// Cast individual key to button
+			if (firstNonModifierKey.length() == 1)
+			{
+				char c = firstNonModifierKey[0];
+				if (std::isalnum(c))
+				{
+					button = wi::input::BUTTON(c);
+				}
+			}
+		}
+
+		// Remap hotkey if button is successfully found:
+		if (button != wi::input::BUTTON_NONE)
+		{
+			hotkeyActions[size_t(action)] = HotkeyInfo{ button, hotkeyActions[size_t(action)].press, hotkeyString.find("CTRL") != std::string::npos, hotkeyString.find("SHIFT") != std::string::npos };
+		}
 	}
 }
 
@@ -417,7 +397,7 @@ void EditorComponent::ResizeLayout()
 void EditorComponent::Load()
 {
 	//Load hotkeys here
-	InitializeHotkeysActionKeyMap(main);
+	HotkeyRemap(main);
 
 	wi::gui::CheckBox::SetCheckTextGlobal(ICON_CHECK);
 
