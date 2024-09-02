@@ -29,7 +29,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_MATERIAL " Material", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(300, 1460));
+	SetSize(XMFLOAT2(300, 1500));
 
 	closeButton.SetTooltip("Delete MaterialComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -404,6 +404,22 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		}
 	});
 	AddWidget(&emissiveSlider);
+
+	saturationSlider.Create(0, 2, 1, 1000, "Saturation: ");
+	saturationSlider.SetTooltip("Adjust the saturation of the material.");
+	saturationSlider.SetSize(XMFLOAT2(wid, hei));
+	saturationSlider.SetPos(XMFLOAT2(x, y += step));
+	saturationSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
+			material->SetSaturation(args.fValue);
+		}
+	});
+	AddWidget(&saturationSlider);
 
 	cloakSlider.Create(0, 1.0f, 0.02f, 1000, "Cloak: ");
 	cloakSlider.SetTooltip("The cloak effect is a combination of transmission, refraction and roughness, without color tinging.");
@@ -1037,6 +1053,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		transmissionSlider.SetValue(material->transmission);
 		refractionSlider.SetValue(material->refraction);
 		emissiveSlider.SetValue(material->emissiveColor.w);
+		saturationSlider.SetValue(material->saturation);
 		pomSlider.SetValue(material->parallaxOcclusionMapping);
 		anisotropyStrengthSlider.SetValue(material->anisotropy_strength);
 		anisotropyRotationSlider.SetValue(wi::math::RadiansToDegrees(material->anisotropy_rotation));
@@ -1215,6 +1232,7 @@ void MaterialWindow::ResizeLayout()
 	add(reflectanceSlider);
 	add(metalnessSlider);
 	add(emissiveSlider);
+	add(saturationSlider);
 	add(cloakSlider);
 	add(chromaticAberrationSlider);
 	add(transmissionSlider);

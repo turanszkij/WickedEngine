@@ -252,6 +252,10 @@ namespace wi::scene
 			{
 				archive >> chromatic_aberration;
 			}
+			if (seri.GetVersion() >= 8)
+			{
+				archive >> saturation;
+			}
 
 			for (auto& x : textures)
 			{
@@ -412,6 +416,10 @@ namespace wi::scene
 			if (seri.GetVersion() >= 7)
 			{
 				archive << chromatic_aberration;
+			}
+			if (seri.GetVersion() >= 8)
+			{
+				archive << saturation;
 			}
 		}
 	}

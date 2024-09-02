@@ -1082,6 +1082,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	ApplyFog(dist, surface.V, color);
 #endif // OBJECTSHADER_USE_POSITION3D
 
+	color.rgb = mul(saturationMatrix(material.GetSaturation()), color.rgb);
 
 	color = saturateMediump(color);
 

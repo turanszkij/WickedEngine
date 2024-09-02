@@ -1939,4 +1939,21 @@ inline float3 get_right(float4x4 m)
 	return float3(m[0][0], m[0][1], m[0][2]);
 }
 
+half3x3 saturationMatrix(half saturation)
+{
+	half3 luminance = half3(0.3086, 0.6094, 0.0820);
+	half oneMinusSat = 1.0 - saturation;
+
+	half3 red = half3(luminance * oneMinusSat);
+	red += half3(saturation, 0, 0);
+
+	half3 green = half3(luminance * oneMinusSat);
+	green += half3(0, saturation, 0);
+
+	half3 blue = half3(luminance * oneMinusSat);
+	blue += half3(0, 0, saturation);
+
+	return half3x3(red, green, blue);
+}
+
 #endif // WI_SHADER_GLOBALS_HF

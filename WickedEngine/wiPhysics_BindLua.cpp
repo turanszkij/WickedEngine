@@ -236,10 +236,15 @@ namespace wi::lua
 				wi::lua::SError(L, "ApplyForceAt(RigidBodyPhysicsComponent component, Vector force, Vector at) third argument is not a Vector!");
 				return 0;
 			}
+			bool at_local = true;
+			if (argc > 3)
+				at_local = wi::lua::SGetBool(L, 4);
+
 			wi::physics::ApplyForceAt(
 				*component->component,
 				*(XMFLOAT3*)vec,
-				*(XMFLOAT3*)vec2
+				*(XMFLOAT3*)vec2,
+				at_local
 			);
 		}
 		else
@@ -318,11 +323,16 @@ namespace wi::lua
 					wi::lua::SError(L, "ApplyImpulseAt(HumanoidComponent component, HumanoidBone bone, Vector impulse, Vector at) fourth argument is not a Vector!");
 					return 0;
 				}
+				bool at_local = true;
+				if (argc > 4)
+					at_local = wi::lua::SGetBool(L, 5);
+
 				wi::physics::ApplyImpulseAt(
 					*humanoid->component,
 					bone,
 					*(XMFLOAT3*)vec,
-					*(XMFLOAT3*)vec2
+					*(XMFLOAT3*)vec2,
+					at_local
 				);
 				return 0;
 			}
@@ -338,10 +348,15 @@ namespace wi::lua
 				wi::lua::SError(L, "ApplyImpulseAt(RigidBodyPhysicsComponent component, Vector impulse, Vector at) third argument is not a Vector!");
 				return 0;
 			}
+			bool at_local = true;
+			if (argc > 3)
+				at_local = wi::lua::SGetBool(L, 4);
+
 			wi::physics::ApplyImpulseAt(
 				*component->component,
 				*(XMFLOAT3*)vec,
-				*(XMFLOAT3*)vec2
+				*(XMFLOAT3*)vec2,
+				at_local
 			);
 		}
 		else

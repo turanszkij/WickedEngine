@@ -129,9 +129,10 @@ namespace wi::image
 			const float lightAngleScale = 1.0f / std::max(0.001f, innerConeAngleCos - outerConeAngleCos);
 			const float lightAngleOffset = -outerConeAngleCos * lightAngleScale;
 			image.angular_softness_direction = params.angular_softness_direction;
-			image.angular_softness_scale = lightAngleScale;
-			image.angular_softness_offset = lightAngleOffset;
+			image.angular_softness_mad = wi::math::pack_half2(lightAngleScale, lightAngleOffset);
 		}
+
+		image.saturation = params.saturation;
 
 		image.flags = 0;
 		if (params.isExtractNormalMapEnabled())

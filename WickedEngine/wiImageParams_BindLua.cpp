@@ -9,6 +9,7 @@ namespace wi::lua
 		lunamethod(ImageParams_BindLua, GetPivot),
 		lunamethod(ImageParams_BindLua, GetColor),
 		lunamethod(ImageParams_BindLua, GetOpacity),
+		lunamethod(ImageParams_BindLua, GetSaturation),
 		lunamethod(ImageParams_BindLua, GetFade),
 		lunamethod(ImageParams_BindLua, GetRotation),
 		lunamethod(ImageParams_BindLua, GetTexOffset),
@@ -28,6 +29,7 @@ namespace wi::lua
 		lunamethod(ImageParams_BindLua, SetPivot),
 		lunamethod(ImageParams_BindLua, SetColor),
 		lunamethod(ImageParams_BindLua, SetOpacity),
+		lunamethod(ImageParams_BindLua, SetSaturation),
 		lunamethod(ImageParams_BindLua, SetFade),
 		lunamethod(ImageParams_BindLua, SetStencil),
 		lunamethod(ImageParams_BindLua, SetStencilRefMode),
@@ -95,6 +97,11 @@ namespace wi::lua
 	int ImageParams_BindLua::GetOpacity(lua_State* L)
 	{
 		wi::lua::SSetFloat(L, params.opacity);
+		return 1;
+	}
+	int ImageParams_BindLua::GetSaturation(lua_State* L)
+	{
+		wi::lua::SSetFloat(L, params.saturation);
 		return 1;
 	}
 	int ImageParams_BindLua::GetFade(lua_State* L)
@@ -241,6 +248,19 @@ namespace wi::lua
 		else
 		{
 			wi::lua::SError(L, "SetOpacity(float x) not enough arguments!");
+		}
+		return 0;
+	}
+	int ImageParams_BindLua::SetSaturation(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			params.saturation = wi::lua::SGetFloat(L, 1);
+		}
+		else
+		{
+			wi::lua::SError(L, "SetSaturation(float x) not enough arguments!");
 		}
 		return 0;
 	}

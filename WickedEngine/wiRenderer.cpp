@@ -373,10 +373,10 @@ union ObjectRenderingVariant
 	uint32_t value;
 };
 static_assert(sizeof(ObjectRenderingVariant) == sizeof(uint32_t));
-wi::unordered_map<uint32_t, PipelineState> PSO_object[RENDERPASS_COUNT][MaterialComponent::SHADERTYPE_COUNT];
 inline PipelineState* GetObjectPSO(ObjectRenderingVariant variant)
 {
-	return &PSO_object[variant.bits.renderpass][variant.bits.shadertype][variant.value];
+	static wi::unordered_map<uint32_t, PipelineState> PSO_object[RENDERPASS_COUNT][MaterialComponent::SHADERTYPE_COUNT][OBJECT_MESH_SHADER_PSO_COUNT];
+	return &PSO_object[variant.bits.renderpass][variant.bits.shadertype][variant.bits.mesh_shader][variant.value];
 }
 wi::jobsystem::context mesh_shader_ctx;
 wi::jobsystem::context object_pso_job_ctx[RENDERPASS_COUNT][OBJECT_MESH_SHADER_PSO_COUNT];

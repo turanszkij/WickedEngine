@@ -79,7 +79,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 	}
 
 	[branch]
-	if (image.angular_softness_scale > 0)
+	if (image.angular_softness_mad > 0)
 	{
 		float2 direction = normalize(uvsets.xy - 0.5);
 		float dp = dot(direction, image.angular_softness_direction);
@@ -91,7 +91,8 @@ float4 main(VertextoPixel input) : SV_TARGET
 		{
 			dp = saturate(dp);
 		}
-		float angular = saturate(mad(dp, image.angular_softness_scale, image.angular_softness_offset));
+		float2 angular_softness_mad = unpack_half2(image.angular_softness_mad);
+		float angular = saturate(mad(dp, angular_softness_mad.x, angular_softness_mad.y));
 		if (image.flags & IMAGE_FLAG_ANGULAR_INVERSE)
 		{
 			angular = 1 - angular;
@@ -99,6 +100,8 @@ float4 main(VertextoPixel input) : SV_TARGET
 		angular = smoothstep(0, 1, angular);
 		color.a *= angular;
 	}
+	
+	color.rgb = mul(saturationMatrix(image.saturation), color.rgb);
 
 	return color;
 }
