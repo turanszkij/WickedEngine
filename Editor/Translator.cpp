@@ -478,8 +478,9 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 						ObjectComponent* object = scene.objects.GetComponent(x.entity);
 						if (object == nullptr)
 							continue;
-						temp_filters.push_back(object->filterMask);
+						temp_filters.push_back(uint64_t(object->filterMask) | (uint64_t(object->filterMaskDynamic) << 32ull));
 						object->filterMask = 0;
+						object->filterMaskDynamic = 0;
 					}
 					Ray ray = wi::renderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, canvas, camera);
 					wi::scene::Scene::RayIntersectionResult result = scene.Intersects(ray, wi::enums::FILTER_OBJECT_ALL);
@@ -490,7 +491,9 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 						ObjectComponent* object = scene.objects.GetComponent(x.entity);
 						if (object == nullptr)
 							continue;
-						object->filterMask = temp_filters[ind++];
+						uint64_t tmp = temp_filters[ind++];
+						object->filterMask = uint32_t(tmp);
+						object->filterMaskDynamic = uint32_t(tmp >> 32ull);
 					}
 				}
 			}
