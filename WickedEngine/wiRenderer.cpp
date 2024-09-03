@@ -3043,6 +3043,24 @@ void RenderMeshes(
 				subsetRenderable = subsetRenderable && material.IsCastingShadow();
 			}
 
+			if (material.IsCoplanarBlending())
+			{
+				if (
+					renderPass == RENDERPASS_PREPASS ||
+					renderPass == RENDERPASS_SHADOW ||
+					renderPass == RENDERPASS_RAINBLOCKER
+					)
+				{
+					// coplanar blending can be skipped from these passes
+					continue;
+				}
+				if (renderPass == RENDERPASS_MAIN)
+				{
+					// coplanar blending will be rendered in opaque main pass only
+					subsetRenderable = filterMask & FILTER_OPAQUE;
+				}
+			}
+
 			if (!subsetRenderable)
 			{
 				continue;

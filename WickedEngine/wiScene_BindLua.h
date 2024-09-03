@@ -509,6 +509,8 @@ namespace wi::lua::scene
 		int GetStencilRef(lua_State* L);
 		int SetCastShadow(lua_State* L);
 		int IsCastingShadow(lua_State* L);
+		int SetCoplanarBlending(lua_State* L);
+		int IsCoplanarBlending(lua_State* L);
 
 		int SetTexture(lua_State* L);
 		int SetTextureUVSet(lua_State* L);

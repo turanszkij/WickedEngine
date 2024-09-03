@@ -29,7 +29,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_MATERIAL " Material", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(300, 1500));
+	SetSize(XMFLOAT2(300, 1540));
 
 	closeButton.SetTooltip("Delete MaterialComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -227,6 +227,22 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		textureSlotComboBox.SetSelected(textureSlotComboBox.GetSelected()); // update
 	});
 	AddWidget(&preferUncompressedCheckBox);
+
+	coplanarCheckBox.Create("Coplanar blending: ");
+	coplanarCheckBox.SetTooltip("If polygons are coplanar to an opaque surface, then the blending can be done in the opaque pass.\nThis can enable some benefits of opaque render pass to a specific transparent surface.");
+	coplanarCheckBox.SetPos(XMFLOAT2(x, y += step));
+	coplanarCheckBox.SetSize(XMFLOAT2(hei, hei));
+	coplanarCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
+			material->SetCoplanarBlending(args.bValue);
+		}
+	});
+	AddWidget(&coplanarCheckBox);
 
 
 	shaderTypeComboBox.Create("Shader: ");
@@ -1044,6 +1060,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		doubleSidedCheckBox.SetCheck(material->IsDoubleSided());
 		outlineCheckBox.SetCheck(material->IsOutlineEnabled());
 		preferUncompressedCheckBox.SetCheck(material->IsPreferUncompressedTexturesEnabled());
+		coplanarCheckBox.SetCheck(material->IsCoplanarBlending());
 		normalMapSlider.SetValue(material->normalMapStrength);
 		roughnessSlider.SetValue(material->roughness);
 		reflectanceSlider.SetValue(material->reflectance);
@@ -1223,6 +1240,7 @@ void MaterialWindow::ResizeLayout()
 	add_right(doubleSidedCheckBox);
 	add_right(outlineCheckBox);
 	add_right(preferUncompressedCheckBox);
+	add_right(coplanarCheckBox);
 	add(shaderTypeComboBox);
 	add(blendModeComboBox);
 	add(shadingRateComboBox);

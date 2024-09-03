@@ -4412,6 +4412,8 @@ Luna<MaterialComponent_BindLua>::FunctionType MaterialComponent_BindLua::methods
 	lunamethod(MaterialComponent_BindLua, GetTexMulAdd),
 	lunamethod(MaterialComponent_BindLua, SetCastShadow),
 	lunamethod(MaterialComponent_BindLua, IsCastingShadow),
+	lunamethod(MaterialComponent_BindLua, SetCoplanarBlending),
+	lunamethod(MaterialComponent_BindLua, IsCoplanarBlending),
 
 	lunamethod(MaterialComponent_BindLua, SetTexture),
 	lunamethod(MaterialComponent_BindLua, SetTextureUVSet),
@@ -4706,6 +4708,22 @@ int MaterialComponent_BindLua::SetCastShadow(lua_State* L)
 int MaterialComponent_BindLua::IsCastingShadow(lua_State* L)
 {
 	wi::lua::SSetBool(L, component->IsCastingShadow());
+	return 1;
+}
+int MaterialComponent_BindLua::SetCoplanarBlending(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "SetCoplanarBlending(bool value): not enough arguments!");
+		return 0;
+	}
+	component->SetCoplanarBlending(wi::lua::SGetBool(L, 1));
+	return 0;
+}
+int MaterialComponent_BindLua::IsCoplanarBlending(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsCoplanarBlending());
 	return 1;
 }
 

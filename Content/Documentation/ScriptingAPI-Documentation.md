@@ -1032,6 +1032,8 @@ Describes an orientation in 3D space.
 - GetTextureUVSet(TextureSlot slot) : int uvset
 - SetCastShadow(bool value)
 - IsCastingShadow() : bool
+- SetCoplanarBlending(bool value)	-- force transparent material draw in opaque pass (useful for coplanar polygons)
+- IsCoplanarBlending() : bool
 
 ```lua
 TextureSlot = {

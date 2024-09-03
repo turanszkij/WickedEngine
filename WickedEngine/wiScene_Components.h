@@ -131,6 +131,7 @@ namespace wi::scene
 			PREFER_UNCOMPRESSED_TEXTURES = 1 << 13,
 			DISABLE_VERTEXAO = 1 << 14,
 			DISABLE_TEXTURE_STREAMING = 1 << 15,
+			COPLANAR_BLENDING = 1 << 16, // force transparent material draw in opaque pass (useful for coplanar polygons)
 		};
 		uint32_t _flags = CAST_SHADOW;
 
@@ -286,6 +287,7 @@ namespace wi::scene
 		inline bool IsPreferUncompressedTexturesEnabled() const { return _flags & PREFER_UNCOMPRESSED_TEXTURES; }
 		inline bool IsVertexAODisabled() const { return _flags & DISABLE_VERTEXAO; }
 		inline bool IsTextureStreamingDisabled() const { return _flags & DISABLE_TEXTURE_STREAMING; }
+		inline bool IsCoplanarBlending() const { return _flags & COPLANAR_BLENDING; }
 
 		inline void SetBaseColor(const XMFLOAT4& value) { SetDirty(); baseColor = value; }
 		inline void SetSpecularColor(const XMFLOAT4& value) { SetDirty(); specularColor = value; }
@@ -335,6 +337,7 @@ namespace wi::scene
 		inline void SetPreferUncompressedTexturesEnabled(bool value = true) { if (value) { _flags |= PREFER_UNCOMPRESSED_TEXTURES; } else { _flags &= ~PREFER_UNCOMPRESSED_TEXTURES; } CreateRenderData(true); }
 		inline void SetVertexAODisabled(bool value = true) { if (value) { _flags |= DISABLE_VERTEXAO; } else { _flags &= ~DISABLE_VERTEXAO; } }
 		inline void SetTextureStreamingDisabled(bool value = true) { if (value) { _flags |= DISABLE_TEXTURE_STREAMING; } else { _flags &= ~DISABLE_TEXTURE_STREAMING; } }
+		inline void SetCoplanarBlending(bool value = true) { if (value) { _flags |= COPLANAR_BLENDING; } else { _flags &= ~COPLANAR_BLENDING; } }
 
 		// The MaterialComponent will be written to ShaderMaterial (a struct that is optimized for GPU use)
 		void WriteShaderMaterial(ShaderMaterial* dest) const;
