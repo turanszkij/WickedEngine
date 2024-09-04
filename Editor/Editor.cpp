@@ -2115,8 +2115,11 @@ void EditorComponent::Update(float dt)
 			translator.SetEnabled(!translator.IsEnabled());
 		}
 
-		// Save
-		if (CheckInput(EditorActions::SAVE_SCENE))
+		if (CheckInput(EditorActions::SAVE_SCENE_AS))
+		{
+			SaveAs();
+		}
+		else if (CheckInput(EditorActions::SAVE_SCENE))
 		{
 			if (!GetCurrentEditorScene().path.empty())
 			{
@@ -2126,12 +2129,6 @@ void EditorComponent::Update(float dt)
 			{
 				SaveAs();
 			}
-		}
-
-		// Save as
-		if (CheckInput(EditorActions::SAVE_SCENE_AS))
-		{
-			SaveAs();
 		}
 
 		// Select All
