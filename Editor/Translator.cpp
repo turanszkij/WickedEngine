@@ -503,6 +503,14 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 			dragging = true;
 		}
 
+		if (isScalator || isRotator || isTranslator)
+		{
+			if (dragging)
+			{
+				PostTranslate();
+			}
+		}
+		
 		if (!wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
 		{
 			if (dragging)
@@ -511,9 +519,6 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 			}
 			dragging = false;
 		}
-
-		PostTranslate();
-
 	}
 	else
 	{
