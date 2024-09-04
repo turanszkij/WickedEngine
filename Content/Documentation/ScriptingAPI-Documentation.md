@@ -167,6 +167,7 @@ You can use the Renderer with the following functions, all of which are in the g
 - DrawTrail(TrailRenderer trail) -- draws the trail in the debug rendering phase. TrailRenderer object must not be destroyed until then!
 - PaintIntoTexture(PaintTextureParams params)
 - CreatePaintableTexture(int width,height, opt int mips = 0, opt Vector initialColor = Vector()) -- creates a texture that can be used for destination of PaintIntoTexture()
+- PaintDecalIntoObjectSpaceTexture(PaintDecalParams params) -- paints into texture with an object's UV mapping, while projecting a texture by a decal matrix. This is a way to bake skinned decals at runtime.
 - PutWaterRipple(Vector position) -- put down a water ripple with default embedded asset
 - PutWaterRipple(string imagename, Vector position) -- put down water ripple texture from image asset file
 - ClearWorld(opt Scene scene) -- Clears the scene and the associated renderer resources. If parmaeter is not specified, it will clear the global scene
@@ -184,6 +185,14 @@ You can use the Renderer with the following functions, all of which are in the g
 - SetBrushSmoothness(float value)
 - SetBrushRotation(float value)
 - SetBrushShape(int value) -- 0 = circle, 1 = rectangle
+
+#### PaintDecalParams
+- [constructor]PaintDecalParams
+- SetInTexture(Texture tex) -- set source texture (decal tex)
+- SetOutTexture(Texture tex) -- set destination texture (object tex)
+- SetMatrix(Matrix mat) -- set decal matrix in world space
+- SetObject(Entity entity) -- set object entity, the positions and UVs will be taken from this
+- SetSlopeBlendPower(float power) -- adjust fading of the decal based on slope of surface compared to decal projection (default: 0, no slope blend)
 
 ### Sprite
 Render images on the screen.

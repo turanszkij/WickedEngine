@@ -1236,6 +1236,7 @@ namespace wi
 				);
 				wi::renderer::RefreshLightmaps(*scene, cmd);
 				wi::renderer::RefreshEnvProbes(visibility_main, cmd);
+				wi::renderer::PaintDecals(*scene, cmd);
 			});
 		}
 

@@ -1588,5 +1588,15 @@ CBUFFER(TrailRendererCB, CBSLOT_TRAILRENDERER)
 	float		g_xTrailCameraFar;
 };
 
+CBUFFER(PaintDecalCB, CBSLOT_RENDERER_MISC)
+{
+	float4x4 g_xPaintDecalMatrix;
+
+	int g_xPaintDecalTexture;
+	int g_xPaintDecalInstanceID;
+	float g_xPaintDecalSlopeBlendPower;
+	int g_xPaintDecalpadding;
+};
+
 
 #endif // WI_SHADERINTEROP_RENDERER_H

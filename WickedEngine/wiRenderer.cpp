@@ -170,6 +170,7 @@ wi::vector<RenderableTriangle> renderableTriangles_wireframe_depth;
 wi::vector<uint8_t> debugTextStorage; // A stream of DebugText struct + text characters
 wi::vector<PaintRadius> paintrads;
 wi::vector<PaintTextureParams> painttextures;
+wi::vector<PaintDecalParams> paintdecals;
 wi::vector<const wi::VoxelGrid*> renderableVoxelgrids;
 wi::vector<const wi::PathQuery*> renderablePathqueries;
 wi::vector<const wi::TrailRenderer*> renderableTrails;
@@ -695,6 +696,7 @@ PipelineState PSO_lightvisualizer[LightComponent::LIGHTTYPE_COUNT];
 PipelineState PSO_volumetriclight[LightComponent::LIGHTTYPE_COUNT];
 
 PipelineState PSO_renderlightmap;
+PipelineState PSO_paintdecal;
 
 PipelineState PSO_lensflare;
 
@@ -912,6 +914,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_LENSFLARE], "lensFlareVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_DDGI_DEBUG], "ddgi_debugVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SCREEN], "screenVS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_PAINTDECAL], "paintdecalVS.cso"); });
 
 	if (device->CheckCapability(GraphicsDeviceCapability::RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS))
 	{
@@ -979,6 +982,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_UPSAMPLE], "volumetricCloud_upsamplePS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_COPY_DEPTH], "copyDepthPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_COPY_STENCIL_BIT], "copyStencilBitPS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_PAINTDECAL], "paintdecalPS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXELIZER], "objectGS_voxelizer.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXEL], "voxelGS.cso"); });
@@ -1487,6 +1491,20 @@ void LoadShaders()
 		renderpass_info.rt_formats[0] = Format::R32G32B32A32_FLOAT;
 
 		device->CreatePipelineState(&desc, &PSO_renderlightmap, &renderpass_info);
+		});
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
+		PipelineStateDesc desc;
+		desc.vs = &shaders[VSTYPE_PAINTDECAL];
+		desc.ps = &shaders[PSTYPE_PAINTDECAL];
+		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+		desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
+
+		RenderPassInfo renderpass_info;
+		renderpass_info.rt_count = 1;
+		renderpass_info.rt_formats[0] = Format::R8G8B8A8_UNORM;
+
+		device->CreatePipelineState(&desc, &PSO_paintdecal, &renderpass_info);
 		});
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		PipelineStateDesc desc;
@@ -9076,6 +9094,71 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 	device->EventEnd(cmd);
 }
 
+void PaintDecals(const Scene& scene, CommandList cmd)
+{
+	if (paintdecals.empty())
+		return;
+
+	device->EventBegin("PaintDecals", cmd);
+
+	BindCommonResources(cmd);
+
+	for (auto& paint : paintdecals)
+	{
+		if (!scene.objects.Contains(paint.objectEntity))
+			continue;
+		const ObjectComponent& object = *scene.objects.GetComponent(paint.objectEntity);
+		if (!scene.meshes.Contains(object.meshID))
+			continue;
+		const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+
+		PaintDecalCB cb = {};
+		XMStoreFloat4x4(&cb.g_xPaintDecalMatrix, XMMatrixInverse(nullptr, XMLoadFloat4x4(&paint.decalMatrix)));
+		cb.g_xPaintDecalTexture = device->GetDescriptorIndex(&paint.in_texture, SubresourceType::SRV);
+		cb.g_xPaintDecalInstanceID = (uint)scene.objects.GetIndex(paint.objectEntity);
+		cb.g_xPaintDecalSlopeBlendPower = paint.slopeBlendPower;
+
+		device->BindPipelineState(&PSO_paintdecal, cmd);
+
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PaintDecalCB), cmd);
+
+		device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetIndexFormat(), mesh.ib.offset, cmd);
+
+		Viewport vp;
+		vp.width = (float)paint.out_texture.desc.width;
+		vp.height = (float)paint.out_texture.desc.height;
+		device->BindViewports(1, &vp, cmd);
+
+		uint32_t indexOffset = ~0u;
+		uint32_t indexCount = 0;
+
+		uint32_t first_subset = 0;
+		uint32_t last_subset = 0;
+		mesh.GetLODSubsetRange(0, first_subset, last_subset);
+		for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+		{
+			indexOffset = std::min(indexOffset, mesh.subsets[subsetIndex].indexOffset);
+			indexCount = std::max(indexCount, mesh.subsets[subsetIndex].indexCount);
+		}
+
+		RenderPassImage rp[] = {
+			RenderPassImage::RenderTarget(&paint.out_texture)
+		};
+		device->RenderPassBegin(rp, arraysize(rp), cmd);
+
+		device->DrawIndexed(indexCount, indexOffset, 0, cmd);
+
+		device->RenderPassEnd(cmd);
+
+		MIPGEN_OPTIONS mipopt;
+		mipopt.preserve_coverage = true;
+		GenerateMipChain(paint.out_texture, MIPGENFILTER_LINEAR, cmd, mipopt);
+	}
+
+	paintdecals.clear();
+
+	device->EventEnd(cmd);
+}
 
 void CreateVXGIResources(VXGIResources& res, XMUINT2 resolution)
 {
@@ -17929,6 +18012,10 @@ void PaintIntoTexture(const PaintTextureParams& params)
 {
 	painttextures.push_back(params);
 }
+void PaintDecalIntoObjectSpaceTexture(const PaintDecalParams& params)
+{
+	paintdecals.push_back(params);
+}
 void DrawVoxelGrid(const wi::VoxelGrid* voxelgrid)
 {
 	renderableVoxelgrids.push_back(voxelgrid);
@@ -18155,7 +18242,7 @@ wi::Resource CreatePaintableTexture(uint32_t width, uint32_t height, uint32_t mi
 		desc.mip_levels = GetMipCount(desc.width, desc.height);
 	}
 	desc.format = Format::R8G8B8A8_UNORM;
-	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET;
 	wi::vector<wi::Color> data(desc.width * desc.height);
 	std::fill(data.begin(), data.end(), initialColor);
 	SubresourceData initdata[32] = {};
