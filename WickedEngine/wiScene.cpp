@@ -227,7 +227,7 @@ namespace wi::scene
 				inst.init();
 				for (uint32_t i = 0; i < instanceArraySize; ++i)
 				{
-					std::memcpy(instanceArrayMapped + i, &inst, sizeof(inst));
+					memcpy_stream(instanceArrayMapped + i, &inst, sizeof(inst));
 				}
 			});
 		}
@@ -491,7 +491,7 @@ namespace wi::scene
 					for (uint32_t i = 0; i < SURFEL_CAPACITY; ++i)
 					{
 						uint32_t ind = uint32_t(SURFEL_CAPACITY - 1 - i);
-						std::memcpy(dead_indices + i, &ind, sizeof(ind));
+						memcpy_stream(dead_indices + i, &ind, sizeof(ind));
 					}
 				};
 				device->CreateBuffer2(&buf, fill_dead_indices, &surfelgi.deadBuffer);
@@ -1853,10 +1853,10 @@ namespace wi::scene
 		object.meshID = entity;
 
 		mesh.indices.resize(index_count);
-		std::memcpy(mesh.indices.data(), indices, sizeof(uint32_t) * index_count);
+		memcpy_stream(mesh.indices.data(), indices, sizeof(uint32_t) * index_count);
 
 		mesh.vertex_positions.resize(vertex_count);
-		std::memcpy(mesh.vertex_positions.data(), positions, sizeof(XMFLOAT3) * vertex_count);
+		memcpy_stream(mesh.vertex_positions.data(), positions, sizeof(XMFLOAT3) * vertex_count);
 
 		// Subset maps a part of the mesh to a material:
 		MeshComponent::MeshSubset& subset = mesh.subsets.emplace_back();
@@ -3820,7 +3820,7 @@ namespace wi::scene
 				shadertransform.Create(mat);
 				if (skinningDataMapped != nullptr)
 				{
-					std::memcpy(gpu_dst + boneIndex, &shadertransform, sizeof(shadertransform));
+					memcpy_stream(gpu_dst + boneIndex, &shadertransform, sizeof(shadertransform));
 				}
 
 				const float bone_radius = 1;
@@ -3840,7 +3840,7 @@ namespace wi::scene
 			const uint32_t dataSize = uint32_t(softbody.boneData.size() * sizeof(ShaderTransform));
 			softbody.gpuBoneOffset = skinningAllocator.fetch_add(dataSize);
 			ShaderTransform* gpu_dst = (ShaderTransform*)((uint8_t*)skinningDataMapped + softbody.gpuBoneOffset);
-			std::memcpy(gpu_dst, softbody.boneData.data(), dataSize);
+			memcpy_stream(gpu_dst, softbody.boneData.data(), dataSize);
 		});
 	}
 	void Scene::RunMeshUpdateSystem(wi::jobsystem::context& ctx)
@@ -3871,7 +3871,7 @@ namespace wi::scene
 						morph_target_gpu.offset_pos = (uint)morph.offset_pos;
 						morph_target_gpu.offset_nor = (uint)morph.offset_nor;
 						morph_target_gpu.offset_tan = ~0u;
-						std::memcpy(gpu_dst + mesh.active_morph_count, &morph_target_gpu, sizeof(morph_target_gpu));
+						memcpy_stream(gpu_dst + mesh.active_morph_count, &morph_target_gpu, sizeof(morph_target_gpu));
 						mesh.active_morph_count++;
 					}
 				}
@@ -3966,7 +3966,7 @@ namespace wi::scene
 					{
 						subsetGeometry.flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
 					}
-					std::memcpy(geometryArrayMapped + mesh.geometryOffset + subsetIndex, &subsetGeometry, sizeof(subsetGeometry));
+					memcpy_stream(geometryArrayMapped + mesh.geometryOffset + subsetIndex, &subsetGeometry, sizeof(subsetGeometry));
 					subsetIndex++;
 				}
 			}
@@ -4227,7 +4227,7 @@ namespace wi::scene
 			ShaderMaterial material;
 			material.init();
 			material.shaderType = ~0u;
-			std::memcpy(materialArrayMapped + impostorMaterialOffset, &material, sizeof(material));
+			memcpy_stream(materialArrayMapped + impostorMaterialOffset, &material, sizeof(material));
 
 			ShaderGeometry geometry;
 			geometry.init();
@@ -4237,7 +4237,7 @@ namespace wi::scene
 			geometry.vb_pos_wind = impostor_vb_pos.descriptor_srv;
 			geometry.vb_nor = impostor_vb_nor.descriptor_srv;
 			geometry.materialIndex = impostorMaterialOffset;
-			std::memcpy(geometryArrayMapped + impostorGeometryOffset, &geometry, sizeof(geometry));
+			memcpy_stream(geometryArrayMapped + impostorGeometryOffset, &geometry, sizeof(geometry));
 
 			ShaderMeshInstance inst;
 			inst.init();
@@ -4246,7 +4246,7 @@ namespace wi::scene
 			inst.baseGeometryOffset = inst.geometryOffset;
 			inst.baseGeometryCount = inst.geometryCount;
 			inst.meshletOffset = meshletAllocator.fetch_add(geometry.meshletCount); // global meshlet offset
-			std::memcpy(instanceArrayMapped + impostorInstanceOffset, &inst, sizeof(inst));
+			memcpy_stream(instanceArrayMapped + impostorInstanceOffset, &inst, sizeof(inst));
 		}
 	}
 	void Scene::RunObjectUpdateSystem(wi::jobsystem::context& ctx)
@@ -4497,7 +4497,7 @@ namespace wi::scene
 				inst.SetUserStencilRef(object.userStencilRef);
 				inst.rimHighlight = wi::math::pack_half4(XMFLOAT4(object.rimHighlightColor.x * object.rimHighlightColor.w, object.rimHighlightColor.y * object.rimHighlightColor.w, object.rimHighlightColor.z * object.rimHighlightColor.w, object.rimHighlightFalloff));
 
-				std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
+				memcpy_stream(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst));  // streaming memcpy bypasses cache and writes into mapped GPU pointer
 
 				if (TLAS_instancesMapped != nullptr)
 				{
@@ -4873,7 +4873,7 @@ namespace wi::scene
 			geometry.aabb_max = hair.aabb._max;
 
 			size_t geometryAllocation = geometryAllocator.fetch_add(1);
-			std::memcpy(geometryArrayMapped + geometryAllocation, &geometry, sizeof(geometry));
+			memcpy_stream(geometryArrayMapped + geometryAllocation, &geometry, sizeof(geometry));
 
 			ShaderMeshInstance inst;
 			inst.init();
@@ -4896,7 +4896,7 @@ namespace wi::scene
 			inst.transformPrev = inst.transform;
 
 			const size_t instanceIndex = objects.GetCount() + args.jobIndex;
-			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
+			memcpy_stream(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
 
 			if (TLAS_instancesMapped != nullptr)
 			{
@@ -4978,7 +4978,7 @@ namespace wi::scene
 			geometry.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_EMITTEDPARTICLE;
 
 			size_t geometryAllocation = geometryAllocator.fetch_add(1);
-			std::memcpy(geometryArrayMapped + geometryAllocation, &geometry, sizeof(geometry));
+			memcpy_stream(geometryArrayMapped + geometryAllocation, &geometry, sizeof(geometry));
 
 			ShaderMeshInstance inst;
 			inst.init();
@@ -4992,7 +4992,7 @@ namespace wi::scene
 			inst.baseGeometryCount = inst.geometryCount;
 
 			const size_t instanceIndex = objects.GetCount() + hairs.GetCount() + args.jobIndex;
-			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
+			memcpy_stream(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
 
 			if (TLAS_instancesMapped != nullptr)
 			{
@@ -5136,7 +5136,7 @@ namespace wi::scene
 			ShaderMaterial material;
 			material.init();
 			rainMaterial.WriteShaderMaterial(&material);
-			std::memcpy(materialArrayMapped + rainMaterialOffset, &material, sizeof(material));
+			memcpy_stream(materialArrayMapped + rainMaterialOffset, &material, sizeof(material));
 
 			ShaderGeometry geometry;
 			geometry.init();
@@ -5150,7 +5150,7 @@ namespace wi::scene
 			geometry.vb_col = rainEmitter.vb_col.descriptor_srv;
 			geometry.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_EMITTEDPARTICLE;
 
-			std::memcpy(geometryArrayMapped + rainGeometryOffset, &geometry, sizeof(geometry));
+			memcpy_stream(geometryArrayMapped + rainGeometryOffset, &geometry, sizeof(geometry));
 
 			ShaderMeshInstance inst;
 			inst.init();
@@ -5164,7 +5164,7 @@ namespace wi::scene
 			inst.baseGeometryCount = inst.geometryCount;
 
 			const size_t instanceIndex = rainInstanceOffset;
-			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
+			memcpy_stream(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
 
 			if (TLAS_instancesMapped != nullptr)
 			{

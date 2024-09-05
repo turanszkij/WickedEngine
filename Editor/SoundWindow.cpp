@@ -361,7 +361,7 @@ void WaveGraph::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) 
 		for (uint32_t i = 0; i < vertexCount; ++i)
 		{
 			vert.position = XMFLOAT4(float(i) / vertexCount, 0, 0, 1);
-			std::memcpy((Vertex*)allocation.data + i, &vert, sizeof(vert));
+			memcpy_stream((Vertex*)allocation.data + i, &vert, sizeof(vert));
 		}
 	}
 	else
@@ -401,7 +401,7 @@ void WaveGraph::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) 
 			{
 				vert.position.y = float(info.samples[sample_idx * info.channel_count]) / 32768.0f;
 			}
-			std::memcpy((Vertex*)allocation.data + i, &vert, sizeof(vert));
+			memcpy_stream((Vertex*)allocation.data + i, &vert, sizeof(vert));
 		}
 	}
 
@@ -449,7 +449,7 @@ void WaveGraph::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) 
 			{ XMFLOAT4(0, -1, 0, 1), base_color },
 		};
 		allocation = device->AllocateGPU(sizeof(verts), cmd);
-		std::memcpy(allocation.data, verts, sizeof(verts));
+		memcpy_stream(allocation.data, verts, sizeof(verts));
 
 		device->BindPipelineState(&pso_linelist, cmd);
 		const GPUBuffer* vbs[] = {

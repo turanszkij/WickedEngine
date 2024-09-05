@@ -1702,7 +1702,7 @@ namespace wi::terrain
 				for (uint i = 0; i < blendcount; ++i)
 				{
 					const uint material_index = (uint)scene->materials.GetIndex(materialEntities[i]);
-					std::memcpy((uint*)mem.data + i, &material_index, sizeof(uint)); // force memcpy to avoid uncached write into GPU pointer!
+					memcpy_stream((uint*)mem.data + i, &material_index, sizeof(uint)); // force memcpy to avoid uncached write into GPU pointer!
 				}
 
 				push.blendmap_buffer = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);

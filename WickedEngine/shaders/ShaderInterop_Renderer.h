@@ -322,7 +322,7 @@ struct alignas(16) ShaderTextureSlot
 #endif // __cplusplus
 };
 
-struct alignas(16) ShaderMaterial
+struct alignas(128) ShaderMaterial
 {
 	uint2 baseColor;
 	uint2 normalmap_pom_alphatest_displacement;
@@ -349,6 +349,8 @@ struct alignas(16) ShaderMaterial
 	uint4 userdata;
 
 	ShaderTextureSlot textures[TEXTURESLOT_COUNT];
+
+	uint4 padding128;
 
 	void init()
 	{
@@ -426,6 +428,10 @@ struct alignas(16) ShaderMaterial
 	inline bool IsDoubleSided() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED; }
 };
 
+#ifdef __cplusplus
+static_assert(is_aligned(sizeof(ShaderMaterial), 128ull));
+#endif // __cplusplus
+
 // For binning shading based on shader types:
 struct alignas(16) ShaderTypeBin
 {
@@ -460,7 +466,7 @@ enum SHADERMESH_FLAGS
 
 // This is equivalent to a Mesh + MeshSubset
 //	But because these are always loaded toghether by shaders, they are unrolled into one to reduce individual buffer loads
-struct alignas(16) ShaderGeometry
+struct alignas(128) ShaderGeometry
 {
 	int ib;
 	int vb_pos_wind;
@@ -490,6 +496,7 @@ struct alignas(16) ShaderGeometry
 	int vb_clu;
 	int vb_bou;
 
+	uint4 padding128;
 
 	void init()
 	{
@@ -520,6 +527,10 @@ struct alignas(16) ShaderGeometry
 		indexCount = 0;
 	}
 };
+
+#ifdef __cplusplus
+static_assert(is_aligned(sizeof(ShaderGeometry), 128ull));
+#endif // __cplusplus
 
 static const uint MESHLET_VERTEX_COUNT = 64u;
 static const uint MESHLET_TRIANGLE_COUNT = 124u;
@@ -609,7 +620,7 @@ struct alignas(16) ShaderTransform
 	}
 };
 
-struct alignas(16) ShaderMeshInstance
+struct alignas(128) ShaderMeshInstance
 {
 	uint uid;
 	uint flags;	// high 8 bits: user stencilRef
@@ -684,6 +695,11 @@ struct alignas(16) ShaderMeshInstance
 	inline half4 GetRimHighlight() { return unpack_half4(rimHighlight); }
 #endif // __cplusplus
 };
+
+#ifdef __cplusplus
+static_assert(is_aligned(sizeof(ShaderMeshInstance), 256ull));
+#endif // __cplusplus
+
 struct ShaderMeshInstancePointer
 {
 	uint data;

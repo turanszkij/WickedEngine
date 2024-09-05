@@ -5222,7 +5222,7 @@ std::mutex queue_locker;
 		tmp.InstanceContributionToHitGroupIndex = instance->instance_contribution_to_hit_group_index;
 		tmp.Flags = instance->flags;
 
-		std::memcpy(dest, &tmp, sizeof(D3D12_RAYTRACING_INSTANCE_DESC)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
+		memcpy_stream(dest, &tmp, sizeof(D3D12_RAYTRACING_INSTANCE_DESC)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 	}
 	void GraphicsDevice_DX12::WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const
 	{

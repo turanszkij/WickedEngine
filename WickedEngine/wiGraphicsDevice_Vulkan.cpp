@@ -7003,7 +7003,7 @@ using namespace vulkan_internal;
 		auto internal_state = to_internal((RaytracingAccelerationStructure*)instance->bottom_level);
 		tmp.accelerationStructureReference = internal_state->as_address;
 
-		std::memcpy(dest, &tmp, sizeof(VkAccelerationStructureInstanceKHR)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
+		memcpy_stream(dest, &tmp, sizeof(VkAccelerationStructureInstanceKHR)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 	}
 	void GraphicsDevice_Vulkan::WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const
 	{

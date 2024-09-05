@@ -53,11 +53,11 @@ void DummyVisualizer::Draw(
 				vert.position.z = vertices[i].z;
 				vert.position.w = 1;
 				vert.color = XMFLOAT4(1, 1, 1, 1);
-				std::memcpy(gpu_vertices + i, &vert, sizeof(vert));
+				memcpy_stream(gpu_vertices + i, &vert, sizeof(vert));
 			}
 
 			uint32_t* gpu_indices = (uint32_t*)(gpu_vertices + vertices_count);
-			std::memcpy(gpu_indices, indices, indices_count * sizeof(uint32_t));
+			memcpy_stream(gpu_indices, indices, indices_count * sizeof(uint32_t));
 			};
 
 		GPUBufferDesc desc;

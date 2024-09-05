@@ -3256,7 +3256,7 @@ void RenderMeshes(
 			poi.Create(instanceIndex, camera_index, dither);
 
 			// Write into actual GPU-buffer:
-			std::memcpy((ShaderMeshInstancePointer*)instances.data + instanceCount, &poi, sizeof(poi)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
+			memcpy_stream((ShaderMeshInstancePointer*)instances.data + instanceCount, &poi, sizeof(poi)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 
 			instancedBatch.instanceCount++; // next instance in current InstancedBatch
 			instanceCount++;

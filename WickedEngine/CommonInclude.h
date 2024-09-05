@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <type_traits>
+#include <cstring>
 
 #define arraysize(a) (sizeof(a) / sizeof(a[0]))
 
@@ -63,6 +64,18 @@ constexpr float bilinear(float4 gather, float2 pixel_frac)
 	const float top_row = lerp(gather.w, gather.z, pixel_frac.x);
 	const float bottom_row = lerp(gather.x, gather.y, pixel_frac.x);
 	return lerp(top_row, bottom_row, pixel_frac.y);
+}
+
+template<typename T>
+constexpr T align(T value, T alignment)
+{
+	return ((value + alignment - T(1)) / alignment) * alignment;
+}
+
+template<typename T>
+constexpr bool is_aligned(T value, T alignment)
+{
+	return value == align(value, alignment);
 }
 
 // CPU intrinsics:
@@ -248,6 +261,74 @@ inline long AtomicLoad(const volatile long* ptr)
 inline long long AtomicLoad(const volatile long long* ptr)
 {
 	return AtomicOr((volatile long long*)ptr, 0);
+}
+
+#include <emmintrin.h> // SSE
+#include <immintrin.h> // AVX2
+#include <zmmintrin.h> // AVX512
+
+// AVX support can be enabled optionally:
+#define ENABLE_AVX2
+//#define ENABLE_AVX512
+
+// Streaming memcpy for bypassing cache:
+inline void memcpy_stream(void* dst, const void* src, size_t size)
+{
+#ifdef ENABLE_AVX512
+	if (is_aligned(size, sizeof(__m512i)))
+	{
+		__m512i* _dst = (__m512i*)dst;
+		const __m512i* _src = (const __m512i*)src;
+		size_t remain = size / sizeof(__m512i);
+		while (remain--)
+		{
+			_mm512_stream_si512(_dst++, _mm512_load_si512(_src++));
+		}
+		return;
+	}
+#endif // ENABLE_AVX512
+
+#ifdef ENABLE_AVX2
+	if (is_aligned(size, sizeof(__m256i)))
+	{
+		__m256i* _dst = (__m256i*)dst;
+		const __m256i* _src = (const __m256i*)src;
+		size_t remain = size / sizeof(__m256i);
+		while (remain--)
+		{
+			_mm256_stream_si256(_dst++, _mm256_load_si256(_src++));
+		}
+		return;
+	}
+#endif // ENABLE_AVX2
+
+	if (is_aligned(size, sizeof(__m128i)))
+	{
+		__m128i* _dst = (__m128i*)dst;
+		const __m128i* _src = (const __m128i*)src;
+		size_t remain = size / sizeof(__m128i);
+		while (remain--)
+		{
+			_mm_stream_si128(_dst++, _mm_load_si128(_src++));
+		}
+		return;
+	}
+
+	if (is_aligned(size, sizeof(int)))
+	{
+		int* _dst = (int*)dst;
+		const int* _src = (const int*)src;
+		size_t remain = size / sizeof(int);
+		while (remain--)
+		{
+			_mm_stream_si32(_dst++, *_src);
+			_src++;
+		}
+		return;
+	}
+
+	// Fallback to memcpy:
+	std::memcpy(dst, src, size);
 }
 
 // Enable enum flags:

@@ -3252,7 +3252,7 @@ void EditorComponent::Render() const
 								{
 									XMStoreFloat4(&vert.position, XMVector3Transform(XMLoadFloat4(&vert.position), M));
 								}
-								std::memcpy(dst, verts, sizeof(verts));
+								memcpy_stream(dst, verts, sizeof(verts));
 								dst += sizeof(verts);
 							}
 							// cone cap:
@@ -3267,7 +3267,7 @@ void EditorComponent::Render() const
 								{
 									XMStoreFloat4(&vert.position, XMVector3Transform(XMLoadFloat4(&vert.position), M));
 								}
-								std::memcpy(dst, verts, sizeof(verts));
+								memcpy_stream(dst, verts, sizeof(verts));
 								dst += sizeof(verts);
 							}
 						}
@@ -3772,7 +3772,7 @@ void EditorComponent::Render() const
 							center_vertex.position.w = 1;
 							center_vertex.color = color;
 							center_vertex.color.w = 0;
-							std::memcpy(vertices + vertex_count, &center_vertex, sizeof(center_vertex));
+							memcpy_stream(vertices + vertex_count, &center_vertex, sizeof(center_vertex));
 							vertex_count++;
 
 							for (size_t i = 0; i < segment_count; ++i)
@@ -3802,15 +3802,15 @@ void EditorComponent::Render() const
 								vertex.position.w = 1;
 								vertex.color = color;
 								//vertex.color.w = 0;
-								std::memcpy(vertices + vertex_count, &vertex, sizeof(vertex));
+								memcpy_stream(vertices + vertex_count, &vertex, sizeof(vertex));
 								uint32_t ind[] = { center_vertex_index,vertex_count - 1,vertex_count };
-								std::memcpy(indices + index_count, ind, sizeof(ind));
+								memcpy_stream(indices + index_count, ind, sizeof(ind));
 								index_count += arraysize(ind);
 								vertex_count++;
 							}
 							// closing triangle fan:
 							uint32_t ind[] = { center_vertex_index,vertex_count - 1,center_vertex_index+1 };
-							std::memcpy(indices + index_count, ind, sizeof(ind));
+							memcpy_stream(indices + index_count, ind, sizeof(ind));
 							index_count += arraysize(ind);
 						}
 					}

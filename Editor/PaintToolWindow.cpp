@@ -1485,7 +1485,7 @@ void PaintToolWindow::DrawBrush(const wi::Canvas& canvas, CommandList cmd) const
 			XMStoreFloat4(&x.position, XMVector3Transform(XMLoadFloat4(&x.position), W));
 			x.position.w = 1;
 		}
-		std::memcpy(dst, verts, sizeof(verts));
+		memcpy_stream(dst, verts, sizeof(verts));
 		dst += sizeof(verts);
 	}
 
