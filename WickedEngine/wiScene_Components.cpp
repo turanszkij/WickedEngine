@@ -958,7 +958,7 @@ namespace wi::scene
 					const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
 					Vertex_POS16 vert;
 					vert.FromFULL(aabb, pos, wind);
-					std::memcpy(vertices + i, &vert, sizeof(vert));
+					memcpy_stream(vertices + i, &vert, sizeof(vert));
 				}
 			}
 			break;
@@ -974,7 +974,7 @@ namespace wi::scene
 					const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
 					Vertex_POS32 vert;
 					vert.FromFULL(pos);
-					std::memcpy(vertices + i, &vert, sizeof(vert));
+					memcpy_stream(vertices + i, &vert, sizeof(vert));
 				}
 			}
 			break;
@@ -990,7 +990,7 @@ namespace wi::scene
 					const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
 					Vertex_POS32W vert;
 					vert.FromFULL(pos, wind);
-					std::memcpy(vertices + i, &vert, sizeof(vert));
+					memcpy_stream(vertices + i, &vert, sizeof(vert));
 				}
 			}
 			break;
@@ -1006,7 +1006,7 @@ namespace wi::scene
 				ib.size = indices.size() * sizeof(uint32_t);
 				uint32_t* indexdata = (uint32_t*)(buffer_data + buffer_offset);
 				buffer_offset += AlignTo(ib.size, alignment);
-				std::memcpy(indexdata, indices.data(), ib.size);
+				memcpy_stream(indexdata, indices.data(), ib.size);
 			}
 			else
 			{
@@ -1016,7 +1016,7 @@ namespace wi::scene
 				buffer_offset += AlignTo(ib.size, alignment);
 				for (size_t i = 0; i < indices.size(); ++i)
 				{
-					std::memcpy(indexdata + i, &indices[i], sizeof(uint16_t));
+					std::memcpy(indexdata + i, &indices[i], sizeof(uint16_t)); // less than 4-byte aligned, can't use streaming memcpy
 				}
 			}
 
@@ -1031,7 +1031,7 @@ namespace wi::scene
 				{
 					Vertex_NOR vert;
 					vert.FromFULL(vertex_normals[i]);
-					std::memcpy(vertices + i, &vert, sizeof(vert));
+					memcpy_stream(vertices + i, &vert, sizeof(vert));
 				}
 			}
 
@@ -1046,7 +1046,7 @@ namespace wi::scene
 				{
 					Vertex_TAN vert;
 					vert.FromFULL(vertex_tangents[i]);
-					std::memcpy(vertices + i, &vert, sizeof(vert));
+					memcpy_stream(vertices + i, &vert, sizeof(vert));
 				}
 			}
 
@@ -1065,7 +1065,7 @@ namespace wi::scene
 					Vertex_UVS vert;
 					vert.uv0.FromFULL(uv0_stream[i], uv_range_min, uv_range_max);
 					vert.uv1.FromFULL(uv1_stream[i], uv_range_min, uv_range_max);
-					std::memcpy(vertices + i, &vert, sizeof(vert));
+					memcpy_stream(vertices + i, &vert, sizeof(vert));
 				}
 			}
 
@@ -1080,7 +1080,7 @@ namespace wi::scene
 				{
 					Vertex_TEX vert;
 					vert.FromFULL(vertex_atlas[i]);
-					std::memcpy(vertices + i, &vert, sizeof(vert));
+					memcpy_stream(vertices + i, &vert, sizeof(vert));
 				}
 			}
 
@@ -1095,7 +1095,7 @@ namespace wi::scene
 				{
 					Vertex_COL vert;
 					vert.color = vertex_colors[i];
-					std::memcpy(vertices + i, &vert, sizeof(vert));
+					memcpy_stream(vertices + i, &vert, sizeof(vert));
 				}
 			}
 
@@ -1155,12 +1155,12 @@ namespace wi::scene
 
 					Vertex_BON vert;
 					vert.FromFULL(vertex_boneindices[i], vertex_boneweights[i]);
-					std::memcpy(vertices + (i * influence_div4 + 0), &vert, sizeof(vert));
+					memcpy_stream(vertices + (i * influence_div4 + 0), &vert, sizeof(vert));
 
 					if (influence_div4 > 1)
 					{
 						vert.FromFULL(vertex_boneindices2[i], vertex_boneweights2[i]);
-						std::memcpy(vertices + (i * influence_div4 + 1), &vert, sizeof(vert));
+						memcpy_stream(vertices + (i * influence_div4 + 1), &vert, sizeof(vert));
 					}
 				}
 			}
@@ -1228,7 +1228,7 @@ namespace wi::scene
 				buffer_offset = AlignTo(buffer_offset, sizeof(ShaderCluster));
 				vb_clu.offset = buffer_offset;
 				vb_clu.size = clusters.size() * sizeof(ShaderCluster);
-				std::memcpy(buffer_data + buffer_offset, clusters.data(), vb_clu.size);
+				memcpy_stream(buffer_data + buffer_offset, clusters.data(), vb_clu.size);
 				buffer_offset += AlignTo(vb_clu.size, alignment);
 			}
 			if (!cluster_bounds.empty())
@@ -1236,7 +1236,7 @@ namespace wi::scene
 				buffer_offset = AlignTo(buffer_offset, sizeof(ShaderClusterBounds));
 				vb_bou.offset = buffer_offset;
 				vb_bou.size = cluster_bounds.size() * sizeof(ShaderClusterBounds);
-				std::memcpy(buffer_data + buffer_offset, cluster_bounds.data(), vb_bou.size);
+				memcpy_stream(buffer_data + buffer_offset, cluster_bounds.data(), vb_bou.size);
 				buffer_offset += AlignTo(vb_bou.size, alignment);
 			}
 		};
