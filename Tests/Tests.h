@@ -15,6 +15,7 @@ public:
 	void RunSpriteTest();
 	void RunNetworkTest();
 	void ContainerTest();
+	void MemcpyTest();
 };
 
 class Tests : public wi::Application

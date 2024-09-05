@@ -6,7 +6,6 @@
 
 #include <cstdint>
 #include <type_traits>
-#include <cstring>
 
 #define arraysize(a) (sizeof(a) / sizeof(a[0]))
 
@@ -264,14 +263,22 @@ inline long long AtomicLoad(const volatile long long* ptr)
 }
 
 #include <emmintrin.h> // SSE
-#include <immintrin.h> // AVX2
-#include <zmmintrin.h> // AVX512
 
 // AVX support can be enabled optionally:
 #define ENABLE_AVX2
 //#define ENABLE_AVX512
 
-// Streaming memcpy for bypassing cache:
+#ifdef ENABLE_AVX2
+#include <immintrin.h> // AVX2
+#endif // ENABLE_AVX2
+
+#ifdef ENABLE_AVX512
+#include <zmmintrin.h> // AVX512
+#endif // ENABLE_AVX512
+
+// Streaming memcpy for bypassing cache (Minimum 4-byte alignment required!)
+//	This can be useful to avoid polluting the cache if you know that caching is not required
+//	For example this is when copying into GPU mapped pointers
 inline void memcpy_stream(void* dst, const void* src, size_t size)
 {
 #ifdef ENABLE_AVX512
@@ -326,9 +333,6 @@ inline void memcpy_stream(void* dst, const void* src, size_t size)
 		}
 		return;
 	}
-
-	// Fallback to memcpy:
-	std::memcpy(dst, src, size);
 }
 
 // Enable enum flags:

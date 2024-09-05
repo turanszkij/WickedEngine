@@ -49,6 +49,18 @@ namespace wi
 		}
 		initialized = true;
 
+		if (!XMVerifyCPUSupport())
+		{
+#if defined(ENABLE_AVX512)
+			wi::helper::messageBox("Your CPU doesn't support the AVX-512 instruction set!", "Error");
+#elif defined(ENABLE_AVX2)
+			wi::helper::messageBox("Your CPU doesn't support the AVX2 instruction set!", "Error");
+#else
+			wi::helper::messageBox("Your CPU doesn't support the SSE4 or AVX instruction set!", "Error");
+#endif
+			wi::platform::Exit();
+		}
+
 		wi::initializer::InitializeComponentsAsync();
 
 		alwaysactive = wi::arguments::HasArgument("alwaysactive");

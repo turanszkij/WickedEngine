@@ -25,6 +25,7 @@ enum TEST_TYPE
 	INVERSEKINEMATICSTEST,
 	INSTANCESTEST,
 	CONTAINERPERF,
+	MEMCPYPERF,
 };
 
 // Controller Test UI Data, info down below will be using Xbox Controller as reference
@@ -157,6 +158,7 @@ void TestsRenderer::Load()
 	testSelector.AddItem("Inverse Kinematics", INVERSEKINEMATICSTEST);
 	testSelector.AddItem("65k Instances", INSTANCESTEST);
 	testSelector.AddItem("Container perf", CONTAINERPERF);
+	testSelector.AddItem("Memcpy perf", MEMCPYPERF);
 	testSelector.SetMaxVisibleItemCount(10);
 	testSelector.OnSelect([=](wi::gui::EventArgs args) {
 
@@ -414,6 +416,10 @@ void TestsRenderer::Load()
 
 		case CONTAINERPERF:
 			ContainerTest();
+			break;
+
+		case MEMCPYPERF:
+			MemcpyTest();
 			break;
 
 		default:
@@ -1244,6 +1250,78 @@ void TestsRenderer::ContainerTest()
 #else
 	ss += "wi::vector implementation uses std::vector. There is nothing to test.";
 #endif // WI_VECTOR_TYPE
+
+	static wi::SpriteFont font;
+	font = wi::SpriteFont(ss);
+	font.params.posX = GetLogicalWidth() / 2;
+	font.params.posY = GetLogicalHeight() / 2;
+	font.params.h_align = wi::font::WIFALIGN_CENTER;
+	font.params.v_align = wi::font::WIFALIGN_CENTER;
+	font.params.size = 24;
+	this->AddFont(&font);
+}
+void TestsRenderer::MemcpyTest()
+{
+	wi::Timer timer;
+
+	const size_t elements = 1000000;
+
+	std::string ss = "Memcpy test for " + std::to_string(elements) + " elements:\n\n";
+
+	using namespace wi::graphics;
+
+	GPUBufferDesc desc;
+	desc.usage = Usage::UPLOAD;
+	desc.size = elements * sizeof(ShaderMeshInstance);
+	desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+
+	GraphicsDevice* device = GetDevice();
+
+	{
+		GPUBuffer buf;
+		device->CreateBuffer(&desc, nullptr, &buf);
+		wi::vector<ShaderMeshInstance> cpudata(elements);
+		timer.record();
+		std::memcpy(buf.mapped_data, cpudata.data(), sizeof(ShaderMeshInstance) * elements);
+		ss += "std::memcpy: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
+	}
+
+	{
+		GPUBuffer buf;
+		device->CreateBuffer(&desc, nullptr, &buf);
+		wi::vector<ShaderMeshInstance> cpudata(elements);
+		timer.record();
+		memcpy_stream(buf.mapped_data, cpudata.data(), sizeof(ShaderMeshInstance) * elements);
+		ss += "memcpy_stream: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
+	}
+
+	ss += "\n";
+
+	{
+		GPUBuffer buf;
+		device->CreateBuffer(&desc, nullptr, &buf);
+		ShaderMeshInstance inst;
+		inst.init();
+		timer.record();
+		for (size_t i = 0; i < elements; ++i)
+		{
+			std::memcpy((ShaderMeshInstance*)buf.mapped_data + i, &inst, sizeof(inst));
+		}
+		ss += "std::memcpy [unrolled]: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
+	}
+
+	{
+		GPUBuffer buf;
+		device->CreateBuffer(&desc, nullptr, &buf);
+		ShaderMeshInstance inst;
+		inst.init();
+		timer.record();
+		for (size_t i = 0; i < elements; ++i)
+		{
+			memcpy_stream((ShaderMeshInstance*)buf.mapped_data + i, &inst, sizeof(inst));
+		}
+		ss += "memcpy_stream [unrolled]: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
+	}
 
 	static wi::SpriteFont font;
 	font = wi::SpriteFont(ss);
