@@ -322,7 +322,7 @@ struct alignas(16) ShaderTextureSlot
 #endif // __cplusplus
 };
 
-struct alignas(128) ShaderMaterial
+struct alignas(64) ShaderMaterial
 {
 	uint2 baseColor;
 	uint2 normalmap_pom_alphatest_displacement;
@@ -350,7 +350,7 @@ struct alignas(128) ShaderMaterial
 
 	ShaderTextureSlot textures[TEXTURESLOT_COUNT];
 
-	uint4 padding128;
+	uint4 padding_align64;
 
 	void init()
 	{
@@ -428,8 +428,8 @@ struct alignas(128) ShaderMaterial
 	inline bool IsDoubleSided() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED; }
 };
 
-#ifdef __cplusplus
-static_assert(is_aligned(sizeof(ShaderMaterial), 128ull));
+#ifndef __cplusplus
+_Static_assert((sizeof(ShaderMaterial) % 64) == 0, "structure alignment mismatch!");
 #endif // __cplusplus
 
 // For binning shading based on shader types:
@@ -466,7 +466,7 @@ enum SHADERMESH_FLAGS
 
 // This is equivalent to a Mesh + MeshSubset
 //	But because these are always loaded toghether by shaders, they are unrolled into one to reduce individual buffer loads
-struct alignas(128) ShaderGeometry
+struct alignas(64) ShaderGeometry
 {
 	int ib;
 	int vb_pos_wind;
@@ -496,7 +496,7 @@ struct alignas(128) ShaderGeometry
 	int vb_clu;
 	int vb_bou;
 
-	uint4 padding128;
+	uint4 padding_align64;
 
 	void init()
 	{
@@ -528,8 +528,8 @@ struct alignas(128) ShaderGeometry
 	}
 };
 
-#ifdef __cplusplus
-static_assert(is_aligned(sizeof(ShaderGeometry), 128ull));
+#ifndef __cplusplus
+_Static_assert((sizeof(ShaderGeometry) % 64) == 0, "structure alignment mismatch!");
 #endif // __cplusplus
 
 static const uint MESHLET_VERTEX_COUNT = 64u;
@@ -620,7 +620,7 @@ struct alignas(16) ShaderTransform
 	}
 };
 
-struct alignas(128) ShaderMeshInstance
+struct alignas(64) ShaderMeshInstance
 {
 	uint uid;
 	uint flags;	// high 8 bits: user stencilRef
@@ -696,8 +696,8 @@ struct alignas(128) ShaderMeshInstance
 #endif // __cplusplus
 };
 
-#ifdef __cplusplus
-static_assert(is_aligned(sizeof(ShaderMeshInstance), 256ull));
+#ifndef __cplusplus
+_Static_assert((sizeof(ShaderMeshInstance) % 64) == 0, "structure alignment mismatch!");
 #endif // __cplusplus
 
 struct ShaderMeshInstancePointer
