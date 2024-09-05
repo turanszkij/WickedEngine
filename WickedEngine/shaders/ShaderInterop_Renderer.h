@@ -322,7 +322,7 @@ struct alignas(16) ShaderTextureSlot
 #endif // __cplusplus
 };
 
-struct alignas(64) ShaderMaterial
+struct alignas(16) ShaderMaterial
 {
 	uint2 baseColor;
 	uint2 normalmap_pom_alphatest_displacement;
@@ -349,8 +349,6 @@ struct alignas(64) ShaderMaterial
 	uint4 userdata;
 
 	ShaderTextureSlot textures[TEXTURESLOT_COUNT];
-
-	uint4 padding_align64;
 
 	void init()
 	{
@@ -428,10 +426,6 @@ struct alignas(64) ShaderMaterial
 	inline bool IsDoubleSided() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED; }
 };
 
-#ifndef __cplusplus
-_Static_assert((sizeof(ShaderMaterial) % 64) == 0, "structure alignment mismatch!");
-#endif // __cplusplus
-
 // For binning shading based on shader types:
 struct alignas(16) ShaderTypeBin
 {
@@ -466,7 +460,7 @@ enum SHADERMESH_FLAGS
 
 // This is equivalent to a Mesh + MeshSubset
 //	But because these are always loaded toghether by shaders, they are unrolled into one to reduce individual buffer loads
-struct alignas(64) ShaderGeometry
+struct alignas(16) ShaderGeometry
 {
 	int ib;
 	int vb_pos_wind;
@@ -495,8 +489,6 @@ struct alignas(64) ShaderGeometry
 	uint indexCount;
 	int vb_clu;
 	int vb_bou;
-
-	uint4 padding_align64;
 
 	void init()
 	{
@@ -527,10 +519,6 @@ struct alignas(64) ShaderGeometry
 		indexCount = 0;
 	}
 };
-
-#ifndef __cplusplus
-_Static_assert((sizeof(ShaderGeometry) % 64) == 0, "structure alignment mismatch!");
-#endif // __cplusplus
 
 static const uint MESHLET_VERTEX_COUNT = 64u;
 static const uint MESHLET_TRIANGLE_COUNT = 124u;
@@ -620,7 +608,7 @@ struct alignas(16) ShaderTransform
 	}
 };
 
-struct alignas(64) ShaderMeshInstance
+struct alignas(16) ShaderMeshInstance
 {
 	uint uid;
 	uint flags;	// high 8 bits: user stencilRef
@@ -695,10 +683,6 @@ struct alignas(64) ShaderMeshInstance
 	inline half4 GetRimHighlight() { return unpack_half4(rimHighlight); }
 #endif // __cplusplus
 };
-
-#ifndef __cplusplus
-_Static_assert((sizeof(ShaderMeshInstance) % 64) == 0, "structure alignment mismatch!");
-#endif // __cplusplus
 
 struct ShaderMeshInstancePointer
 {
