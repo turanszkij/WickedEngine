@@ -52,7 +52,7 @@ namespace wi
 	{
 		if (mesh.so_pos.IsValid())
 		{
-			position_format = MeshComponent::Vertex_POS32::FORMAT;
+			position_format = MeshComponent::Vertex_POS32W::FORMAT;
 		}
 		else
 		{
@@ -353,6 +353,7 @@ namespace wi
 				XMStoreFloat4x4(&unormRemap, mesh.aabb.getUnormRemapMatrix());
 				hcb.xHairBaseMeshUnormRemap.Create(unormRemap);
 			}
+			hcb.xHairPosUNORM = IsFormatUnorm(hair.position_format) ? 1 : 0;
 			hcb.xHairRegenerate = hair.regenerate_frame ? 1 : 0;
 			hcb.xLength = hair.length;
 			hcb.xStiffness = hair.stiffness;

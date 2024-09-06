@@ -274,7 +274,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			const float3 wind = sample_wind(rootposition, segmentID + patchPos.y);
 
 			float3 position = rootposition + patchPos + wind;
-			position = inverse_lerp(geometry.aabb_min, geometry.aabb_max, position); // remap to UNORM
+
+			if (xHairPosUNORM)
+			{
+				position = inverse_lerp(geometry.aabb_min, geometry.aabb_max, position); // remap to UNORM
+			}
 			
 			vertexBuffer_POS[v0 + vertexID] = float4(position, 0);
 			vertexBuffer_NOR[v0 + vertexID] = half4(normalize(normal + wind), 0);

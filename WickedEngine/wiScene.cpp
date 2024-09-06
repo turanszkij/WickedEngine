@@ -4890,9 +4890,16 @@ namespace wi::scene
 			inst.meshletOffset = meshletOffset;
 			inst.vb_wetmap = hair.wetmap.descriptor_srv;
 
-			XMFLOAT4X4 remapMatrix;
-			XMStoreFloat4x4(&remapMatrix, hair.aabb.getUnormRemapMatrix());
-			inst.transform.Create(remapMatrix);
+			XMFLOAT4X4 remapMatrix = wi::math::IDENTITY_MATRIX;
+			if (IsFormatUnorm(hair.position_format))
+			{
+				XMStoreFloat4x4(&remapMatrix, hair.aabb.getUnormRemapMatrix());
+				inst.transform.Create(remapMatrix);
+			}
+			else
+			{
+				inst.transform.init();
+			}
 			inst.transformPrev = inst.transform;
 
 			const size_t instanceIndex = objects.GetCount() + args.jobIndex;
