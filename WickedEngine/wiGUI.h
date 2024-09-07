@@ -815,7 +815,7 @@ namespace wi::gui
 		bool HasScrollbar() const;
 
 		void ClearSelection();
-		void Select(int index);
+		void Select(int index, bool allow_deselect = true);
 		void FocusOnItem(int index);
 		void FocusOnItemByUserdata(uint64_t userdata);
 

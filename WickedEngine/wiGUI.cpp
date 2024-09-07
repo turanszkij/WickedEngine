@@ -5020,6 +5020,7 @@ namespace wi::gui
 			// control-list
 			item_highlight = -1;
 			opener_highlight = -1;
+			int first_selected = -1;
 			if (scrollbar.GetState() == IDLE)
 			{
 				int i = -1;
@@ -5029,6 +5030,10 @@ namespace wi::gui
 				for (Item& item : items)
 				{
 					i++;
+					if (item.selected && first_selected < 0)
+					{
+						first_selected = i;
+					}
 					if (!parent_open && item.level > parent_level)
 					{
 						continue;
@@ -5073,9 +5078,24 @@ namespace wi::gui
 								}
 								else
 								{
-									if (!wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) && !wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL)
-										&& !wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) && !wi::input::Down(wi::input::KEYBOARD_BUTTON_RSHIFT))
+									if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL))
 									{
+										// control: nothing
+									}
+									else if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RSHIFT))
+									{
+										if (first_selected >= 0)
+										{
+											// shift: select range from first selected up to current:
+											for (int j = first_selected; j < i; ++j)
+											{
+												Select(j, false);
+											}
+										}
+									}
+									else
+									{
+										// no control, no shift then only this will be selected
 										ClearSelection();
 									}
 									Select(i);
@@ -5315,13 +5335,16 @@ namespace wi::gui
 		args.iValue = -1;
 		onSelect(args);
 	}
-	void TreeList::Select(int index)
+	void TreeList::Select(int index, bool allow_deselect)
 	{
 		int selected_count = 0;
-		for (auto& x : items)
+		if (allow_deselect)
 		{
-			if (x.selected)
-				selected_count++;
+			for (auto& x : items)
+			{
+				if (x.selected)
+					selected_count++;
+			}
 		}
 
 		if (selected_count > 1)
