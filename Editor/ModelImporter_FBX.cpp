@@ -471,6 +471,39 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 				morphs[i].vertex_positions.resize(num_vertices);
 				meshcomponent.morph_targets[i].vertex_positions.insert(meshcomponent.morph_targets[i].vertex_positions.end(), morphs[i].vertex_positions.begin(), morphs[i].vertex_positions.end());
 			}
+
+			if (!meshcomponent.vertex_normals.empty())
+			{
+				meshcomponent.vertex_normals.resize(meshcomponent.vertex_positions.size());
+			}
+			if (!meshcomponent.vertex_uvset_0.empty())
+			{
+				meshcomponent.vertex_uvset_0.resize(meshcomponent.vertex_positions.size());
+			}
+			if (!meshcomponent.vertex_uvset_1.empty())
+			{
+				meshcomponent.vertex_uvset_1.resize(meshcomponent.vertex_positions.size());
+			}
+			if (!meshcomponent.vertex_colors.empty())
+			{
+				meshcomponent.vertex_colors.resize(meshcomponent.vertex_positions.size());
+			}
+			if (!meshcomponent.vertex_boneindices.empty())
+			{
+				meshcomponent.vertex_boneindices.resize(meshcomponent.vertex_positions.size());
+			}
+			if (!meshcomponent.vertex_boneweights.empty())
+			{
+				meshcomponent.vertex_boneweights.resize(meshcomponent.vertex_positions.size());
+			}
+			if (!meshcomponent.vertex_boneindices2.empty())
+			{
+				meshcomponent.vertex_boneindices2.resize(meshcomponent.vertex_positions.size());
+			}
+			if (!meshcomponent.vertex_boneweights2.empty())
+			{
+				meshcomponent.vertex_boneweights2.resize(meshcomponent.vertex_positions.size());
+			}
 		}
 
 		meshcomponent.CreateRenderData();
