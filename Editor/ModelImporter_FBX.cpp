@@ -324,8 +324,8 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 							}
 							else
 							{
-								(&boneindices2.back().x)[i] = skin_weight.cluster_index;
-								(&boneweights2.back().x)[i] = skin_weight.weight;
+								(&boneindices2.back().x)[i - 4] = skin_weight.cluster_index;
+								(&boneweights2.back().x)[i - 4] = skin_weight.weight;
 							}
 						}
 						// Note: normalization of bone weights will be done in MeshComponent::CreateRenderData()
