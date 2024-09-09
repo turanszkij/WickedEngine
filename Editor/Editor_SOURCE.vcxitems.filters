@@ -50,6 +50,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)ModelImporter_FBX.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)MetadataWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)DummyVisualizer.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)SpriteRectWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
@@ -106,6 +107,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ufbx.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)MetadataWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)DummyVisualizer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)SpriteRectWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />

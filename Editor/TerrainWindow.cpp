@@ -1753,21 +1753,36 @@ void TerrainWindow::SetupAssets()
 	{
 		grass->length = grass_config.GetFloat("length");
 	}
+
+	bool old = false;
+	uint32_t framesX = 1;
+	uint32_t framesY = 1;
+	uint32_t frameCount = 1;
+	uint32_t frameStart = 0;
 	if (grass_config.Has("frameCount"))
 	{
-		grass->frameCount = grass_config.GetInt("frameCount");
+		old = true;
+		frameCount = grass_config.GetInt("frameCount");
 	}
 	if (grass_config.Has("framesX"))
 	{
-		grass->framesX = grass_config.GetInt("framesX");
+		old = true;
+		framesX = grass_config.GetInt("framesX");
 	}
 	if (grass_config.Has("framesY"))
 	{
-		grass->framesY = grass_config.GetInt("framesY");
+		old = true;
+		framesY = grass_config.GetInt("framesY");
 	}
 	if (grass_config.Has("frameCount"))
 	{
-		grass->frameStart = grass_config.GetInt("frameStart");
+		old = true;
+		frameStart = grass_config.GetInt("frameStart");
+	}
+
+	if (old)
+	{
+		grass->ConvertFromOLDSpriteSheet(framesX, framesY, frameCount, frameStart);
 	}
 
 	{

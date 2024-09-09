@@ -363,7 +363,8 @@ namespace wi::input
 				::LoadCursor(nullptr, IDC_SIZENESW),
 				::LoadCursor(nullptr, IDC_SIZENWSE),
 				::LoadCursor(nullptr, IDC_HAND),
-				::LoadCursor(nullptr, IDC_NO)
+				::LoadCursor(nullptr, IDC_NO),
+				::LoadCursor(nullptr, IDC_CROSS),
 			};
 			::SetCursor(cursor_table[cursor_next]);
 #endif // PLATFORM_WINDOWS_DESKTOP
@@ -379,6 +380,7 @@ namespace wi::input
 				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE),
 				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND),
 				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NO),
+				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_CROSSHAIR),
 			};
 			SDL_SetCursor(cursor_table[cursor_next] ? cursor_table[cursor_next] : cursor_table[CURSOR_DEFAULT]);
 #endif // SDL2

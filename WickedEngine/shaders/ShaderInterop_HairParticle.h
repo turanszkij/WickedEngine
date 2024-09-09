@@ -14,14 +14,29 @@ struct PatchSimulationData
 	uint binormal_length;
 };
 
+enum HAIR_FLAGS
+{
+	HAIR_FLAG_REGENERATE_FRAME = 1 << 0,
+	HAIR_FLAG_UNORM_POS = 1 << 1,
+};
+
+struct HairParticleAtlasRect
+{
+	float4 texMulAdd;
+	float size;
+	float aspect;
+	float padding1;
+	float padding2;
+};
+
 CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
 {
 	ShaderTransform xHairTransform;
 	ShaderTransform xHairBaseMeshUnormRemap;
 
-	uint xHairRegenerate;
-	float xLength;
-	float xStiffness;
+	uint xHairFlags;
+	float xHairLength;
+	float xHairStiffness;
 	float xHairRandomness;
 
 	uint xHairParticleCount;
@@ -32,15 +47,14 @@ CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
 	float xHairViewDistance;
 	uint xHairBaseMeshIndexCount;
 	uint xHairInstanceIndex;
-	uint xHairPosUNORM;
-
-	uint2 xHairFramesXY;
-	uint xHairFrameCount;
-	uint xHairFrameStart;
-
-	float2 xHairTexMul;
-	float xHairAspect;
 	uint xHairLayerMask;
+
+	float xHairAspect;
+	float xHairPadding1;
+	float xHairPadding2;
+	uint xHairAtlasRectCount;
+
+	HairParticleAtlasRect xHairAtlasRects[64];
 };
 
 #endif // WI_SHADERINTEROP_HAIRPARTICLE_H
