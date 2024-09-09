@@ -4,7 +4,7 @@
 
 void SpriteRectWindow::Create(EditorComponent* editor)
 {
-	wi::gui::Window::Create("Select an area within the sprite...");
+	wi::gui::Window::Create("Select an area within the atlas...");
 	SetLocalizationEnabled(false);
 
 	SetSize(XMFLOAT2(300, 300));
@@ -91,23 +91,33 @@ void SpriteRectWindow::Render(const wi::Canvas& canvas, wi::graphics::CommandLis
 	XMFLOAT2 size = spriteButton.GetSize();
 	XMFLOAT2 end = XMFLOAT2(pos.x + size.x, pos.y + size.y);
 
+	wi::image::Params params;
+	params.sampleFlag = wi::image::SAMPLEMODE_WRAP;
+	params.quality = wi::image::QUALITY_NEAREST;
+	params.pos = XMFLOAT3(pos.x, pos.y, 0);
+	params.siz = size;
+	params.color = XMFLOAT4(1.7f, 1.7f, 1.7f, 1);
+	params.enableDrawRect(XMFLOAT4(0, 0, size.x / 8, size.y / 8));
+	wi::image::Draw(wi::texturehelper::getCheckerBoard(), params, cmd);
+
+	params.disableDrawRect();
+	params.quality = wi::image::QUALITY_LINEAR;
+	params.color = XMFLOAT4(1, 1, 1, 1);
+	wi::image::Draw(sprite.getTexture(), params, cmd);
+
 	XMFLOAT2 rectstart = wi::math::Lerp(pos, end, dragStartUV);
 	XMFLOAT2 rectend = wi::math::Lerp(pos, end, dragEndUV);
 
-	wi::image::Params params;
 	params.pos = XMFLOAT3(rectstart.x, rectstart.y, 0);
 	params.siz = XMFLOAT2(rectend.x - rectstart.x, rectend.y - rectstart.y);
-	params.color = wi::Color(255, 255, 255, 80);
-	params.sampleFlag = wi::image::SAMPLEMODE_WRAP;
+	params.color = shadow_color;
+	params.color.w = 0.5f;
 	wi::image::Draw(nullptr, params, cmd);
 }
 
 void SpriteRectWindow::SetSprite(const wi::Sprite& sprite)
 {
-	for (auto& x : spriteButton.sprites)
-	{
-		x = sprite;
-	}
+	this->sprite = sprite;
 }
 void SpriteRectWindow::ResetSelection()
 {

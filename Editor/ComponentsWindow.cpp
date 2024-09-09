@@ -1285,7 +1285,7 @@ void ComponentsWindow::RefreshEntityTree()
 	for (auto& x : entitytree_temp_items)
 	{
 		const HierarchyComponent* hier = scene.hierarchy.GetComponent(x);
-		if (hier == nullptr || hier->parentID == INVALID_ENTITY)
+		if (hier == nullptr || hier->parentID == INVALID_ENTITY || entitytree_temp_items.count(hier->parentID) == 0)
 		{
 			PushToEntityTree(x, 0);
 		}

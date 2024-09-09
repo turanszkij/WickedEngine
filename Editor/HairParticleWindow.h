@@ -28,6 +28,7 @@ public:
 	wi::gui::Slider segmentcountSlider;
 	wi::gui::Slider randomSeedSlider;
 	wi::gui::Slider viewDistanceSlider;
+	wi::gui::Slider uniformitySlider;
 
 	wi::gui::Button addSpriteButton;
 	wi::vector<wi::gui::Button> sprites;

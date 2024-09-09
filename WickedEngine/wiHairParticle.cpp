@@ -399,6 +399,7 @@ namespace wi
 					hcb.xHairAtlasRects[a].aspect = hcb.xHairAtlasRects[a].texMulAdd.x / hcb.xHairAtlasRects[a].texMulAdd.y;
 				}
 			}
+			hcb.xHairUniformity = hair.uniformity;
 			device->UpdateBuffer(&hair.constantBuffer, &hcb, cmd);
 			wi::renderer::PushBarrier(GPUBarrier::Buffer(&hair.constantBuffer, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER));
 
@@ -573,6 +574,7 @@ namespace wi
 			if (seri.GetVersion() >= 1)
 			{
 				archive >> width;
+				archive >> uniformity;
 
 				size_t rect_count = 0;
 				archive >> rect_count;
@@ -603,6 +605,7 @@ namespace wi
 			if (seri.GetVersion() >= 1)
 			{
 				archive << width;
+				archive << uniformity;
 				archive << atlas_rects.size();
 				for (size_t i = 0; i < atlas_rects.size(); ++i)
 				{

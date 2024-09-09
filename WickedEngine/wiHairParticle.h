@@ -89,6 +89,7 @@ namespace wi
 		float viewDistance = 200;
 		wi::vector<float> vertex_lengths;
 		float width = 1;
+		float uniformity = 1;
 
 		struct AtlasRect
 		{

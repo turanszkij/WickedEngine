@@ -78,9 +78,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	tangent_random |= (uint)((uint)(tangent.z * 127.5f + 127.5f) << 16);
 	tangent_random |= (uint)(rng.next_float() * 255) << 24;
 	
-	uint rand = (tangent_random >> 24) & 0x000000FF;
-	//uint rand = noise_gradient_3D(position) * 1000;
-	const uint currentFrame = rand % xHairAtlasRectCount;
+	const uint currentFrame = uint(noise_gradient_3D(position * xHairUniformity) * 1000) % xHairAtlasRectCount;
 	const HairParticleAtlasRect atlas_rect = xHairAtlasRects[currentFrame];
 
 	uint binormal_length = 0;

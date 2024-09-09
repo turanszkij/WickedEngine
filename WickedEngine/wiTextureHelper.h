@@ -15,6 +15,7 @@ namespace wi::texturehelper
 	const wi::graphics::Texture* getUINT4();
 	const wi::graphics::Texture* getBlueNoise();
 	const wi::graphics::Texture* getWaterRipple();
+	const wi::graphics::Texture* getCheckerBoard();
 
 	const wi::graphics::Texture* getWhite();
 	const wi::graphics::Texture* getBlack();

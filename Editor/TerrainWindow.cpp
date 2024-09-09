@@ -1732,56 +1732,64 @@ void TerrainWindow::SetupAssets()
 	}
 
 	// Grass config:
-	terrain_preset.grassEntity = CreateEntity();
-	currentScene.Component_Attach(terrain_preset.grassEntity, entity);
-	currentScene.materials.Create(terrain_preset.grassEntity);
-	currentScene.hairs.Create(terrain_preset.grassEntity) = terrain_preset.grass_properties;
-	MaterialComponent* material_Grass = currentScene.materials.GetComponent(terrain_preset.grassEntity);
-	wi::HairParticleSystem* grass = currentScene.hairs.GetComponent(terrain_preset.grassEntity);
-	wi::config::File grass_config;
-	grass_config.Open(std::string(asset_path + "grass.ini").c_str());
-	if (grass_config.Has("texture"))
+	std::string grassWiscenePath = asset_path + "grass.wiscene";
+	if (wi::helper::FileExists(grassWiscenePath))
 	{
-		material_Grass->textures[MaterialComponent::BASECOLORMAP].name = asset_path + grass_config.GetText("texture");
-		material_Grass->CreateRenderData();
+		// New method: grass from wiscene file
+		Scene grassScene;
+		LoadModel(grassScene, grassWiscenePath);
+		if (grassScene.hairs.GetCount() > 0)
+		{
+			terrain_preset.grassEntity = grassScene.hairs.GetEntity(0);
+			currentScene.Merge(grassScene);
+			currentScene.Component_Attach(terrain_preset.grassEntity, entity);
+		}
 	}
-	if (grass_config.Has("alphaRef"))
+	else
 	{
-		material_Grass->alphaRef = grass_config.GetFloat("alphaRef");
-	}
-	if (grass_config.Has("length"))
-	{
-		grass->length = grass_config.GetFloat("length");
-	}
+		// Old method: from grass.ini, doesn't support some spritesheet features...
+		terrain_preset.grassEntity = CreateEntity();
+		currentScene.Component_Attach(terrain_preset.grassEntity, entity);
+		currentScene.materials.Create(terrain_preset.grassEntity);
+		currentScene.hairs.Create(terrain_preset.grassEntity) = terrain_preset.grass_properties;
+		MaterialComponent* material_Grass = currentScene.materials.GetComponent(terrain_preset.grassEntity);
+		wi::HairParticleSystem* grass = currentScene.hairs.GetComponent(terrain_preset.grassEntity);
+		wi::config::File grass_config;
+		grass_config.Open(std::string(asset_path + "grass.ini").c_str());
+		if (grass_config.Has("texture"))
+		{
+			material_Grass->textures[MaterialComponent::BASECOLORMAP].name = asset_path + grass_config.GetText("texture");
+			material_Grass->CreateRenderData();
+		}
+		if (grass_config.Has("alphaRef"))
+		{
+			material_Grass->alphaRef = grass_config.GetFloat("alphaRef");
+		}
+		if (grass_config.Has("length"))
+		{
+			grass->length = grass_config.GetFloat("length");
+		}
 
-	bool old = false;
-	uint32_t framesX = 1;
-	uint32_t framesY = 1;
-	uint32_t frameCount = 1;
-	uint32_t frameStart = 0;
-	if (grass_config.Has("frameCount"))
-	{
-		old = true;
-		frameCount = grass_config.GetInt("frameCount");
-	}
-	if (grass_config.Has("framesX"))
-	{
-		old = true;
-		framesX = grass_config.GetInt("framesX");
-	}
-	if (grass_config.Has("framesY"))
-	{
-		old = true;
-		framesY = grass_config.GetInt("framesY");
-	}
-	if (grass_config.Has("frameCount"))
-	{
-		old = true;
-		frameStart = grass_config.GetInt("frameStart");
-	}
-
-	if (old)
-	{
+		uint32_t framesX = 1;
+		uint32_t framesY = 1;
+		uint32_t frameCount = 1;
+		uint32_t frameStart = 0;
+		if (grass_config.Has("frameCount"))
+		{
+			frameCount = grass_config.GetInt("frameCount");
+		}
+		if (grass_config.Has("framesX"))
+		{
+			framesX = grass_config.GetInt("framesX");
+		}
+		if (grass_config.Has("framesY"))
+		{
+			framesY = grass_config.GetInt("framesY");
+		}
+		if (grass_config.Has("frameCount"))
+		{
+			frameStart = grass_config.GetInt("frameStart");
+		}
 		grass->ConvertFromOLDSpriteSheet(framesX, framesY, frameCount, frameStart);
 	}
 

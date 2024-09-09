@@ -594,25 +594,6 @@ namespace wi::terrain
 				break;
 			}
 		}
-		if (grassEntity != INVALID_ENTITY)
-		{
-			MaterialComponent* material_grassparticle_in_scene = scene->materials.GetComponent(grassEntity);
-			if (material_grassparticle_in_scene != nullptr)
-			{
-				if (material_grassparticle_in_scene->IsDirty())
-				{
-					restart_generation = true;
-				}
-			}
-			wi::HairParticleSystem* hair = scene->hairs.GetComponent(grassEntity);
-			if (hair != nullptr)
-			{
-				if (hair->IsDirty())
-				{
-					restart_generation = true;
-				}
-			}
-		}
 
 		if (restart_generation)
 		{
@@ -795,7 +776,19 @@ namespace wi::terrain
 					chunk_data.grass_density_current = grass_density;
 					grass->strandCount = uint32_t(chunk_data.grass.strandCount * chunk_data.grass_density_current);
 					grass->length = grass_properties.length;
+					grass->randomness = grass_properties.randomness;
+					grass->randomSeed = grass_properties.randomSeed;
+					grass->stiffness = grass_properties.stiffness;
 					grass->viewDistance = grass_properties.viewDistance;
+					grass->width = grass_properties.width;
+					grass->uniformity = grass_properties.uniformity;
+					grass->atlas_rects = grass_properties.atlas_rects;
+				}
+
+				MaterialComponent* chunkGrassMaterial = scene->materials.GetComponent(chunk_data.grass_entity);
+				if (chunkGrassMaterial != nullptr)
+				{
+					*chunkGrassMaterial = grass_material;
 				}
 			}
 

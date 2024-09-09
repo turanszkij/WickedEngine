@@ -51,7 +51,7 @@ CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
 
 	float xHairAspect;
 	float xHairPadding1;
-	float xHairPadding2;
+	float xHairUniformity;
 	uint xHairAtlasRectCount;
 
 	HairParticleAtlasRect xHairAtlasRects[64];

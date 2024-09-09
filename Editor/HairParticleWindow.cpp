@@ -8,7 +8,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_HAIR " Hair Particle System", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(600, 800));
+	SetSize(XMFLOAT2(600, 1000));
 
 	closeButton.SetTooltip("Delete HairParticleSystem");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -31,7 +31,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	float wid = 150;
 
 	infoLabel.Create("");
-	infoLabel.SetSize(XMFLOAT2(wid, 140));
+	infoLabel.SetSize(XMFLOAT2(wid, 200));
 	AddWidget(&infoLabel);
 
 	meshComboBox.Create("Mesh: ");
@@ -203,6 +203,23 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	viewDistanceSlider.SetTooltip("Set view distance. After this, particles will be faded out.");
 	AddWidget(&viewDistanceSlider);
 
+	uniformitySlider.Create(0.001f, 2.0f, 0.1f, 1000, "Uniformity: ");
+	uniformitySlider.SetSize(XMFLOAT2(wid, hei));
+	uniformitySlider.SetPos(XMFLOAT2(x, y += step));
+	uniformitySlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::HairParticleSystem* hair = scene.hairs.GetComponent(x.entity);
+			if (hair == nullptr)
+				continue;
+			hair->uniformity = args.fValue;
+			hair->SetDirty();
+		}
+		});
+	uniformitySlider.SetTooltip("How much the sprite selection distribution noise is modulated by particle positions.");
+	AddWidget(&uniformitySlider);
+
 	addSpriteButton.Create("Add Sprite");
 	addSpriteButton.OnClick([&](wi::gui::EventArgs args) {
 
@@ -336,11 +353,13 @@ void HairParticleWindow::RefreshSprites()
 
 		auto& s = spriteSizeSliders[i];
 		s.Create(0, 2, 1, 100, "");
+		s.SetValue(hair->atlas_rects[i].size);
 		s.SetLocalizationEnabled(false);
 		s.SetTooltip("Adjust sprite's overall size");
 		s.OnSlide([=](wi::gui::EventArgs args) {
 
 			hair->atlas_rects[i].size = args.fValue;
+			hair->SetDirty();
 
 		});
 		AddWidget(&s);
@@ -366,8 +385,10 @@ void HairParticleWindow::SetEntity(Entity entity)
 		//segmentcountSlider.SetValue((float)hair->segmentCount);
 		randomSeedSlider.SetValue((float)hair->randomSeed);
 		viewDistanceSlider.SetValue(hair->viewDistance);
+		uniformitySlider.SetValue(hair->uniformity);
 
-		if (changed)
+		const MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
+		if (changed || material->IsDirty())
 		{
 			RefreshSprites();
 		}
@@ -405,7 +426,7 @@ void HairParticleWindow::UpdateData()
 	Scene& scene = editor->GetCurrentScene();
 
 	std::string ss;
-	ss += "To use hair particle system, first you must select a surface mesh to spawn particles on, and then increase particle count to grow particles.\n\n";
+	ss += "To use hair particle system, first you must select a surface mesh to spawn particles on, and then increase particle count to grow particles. The particles will get their texture from the Material that is created on the current entity.\n\n";
 	ss += "Position format: " + std::string(wi::graphics::GetFormatString(hair->position_format)) + "\n";
 	ss += "Memory usage: " + wi::helper::GetMemorySizeText(hair->GetMemorySizeInBytes()) + "\n";
 	infoLabel.SetText(ss);
@@ -484,12 +505,13 @@ void HairParticleWindow::ResizeLayout()
 	add(countSlider);
 	add(randomSeedSlider);
 	add(viewDistanceSlider);
+	add(uniformitySlider);
 
 	y += jump;
 	add_fullwidth(addSpriteButton);
 
 	const float preview_size = 100;
-	const float border = 24 * preview_size / 100.0f;
+	const float border = 40 * preview_size / 100.0f;
 	int cells = std::max(1, int(GetWidgetAreaSize().x / (preview_size + border)));
 	int i = 0;
 	for (auto& x : sprites)
@@ -498,7 +520,7 @@ void HairParticleWindow::ResizeLayout()
 		x.SetPos(XMFLOAT2((i % cells) * (preview_size + border) + padding, y));
 		if ((i % cells) == (cells - 1))
 		{
-			y += preview_size + border + 20;
+			y += preview_size + 20;
 		}
 		auto& r = spriteRemoveButtons[i];
 		r.SetPos(XMFLOAT2(x.GetPos().x + x.GetSize().x + 1, x.GetPos().y));
@@ -507,6 +529,19 @@ void HairParticleWindow::ResizeLayout()
 		s.SetPos(XMFLOAT2(x.GetPos().x, x.GetPos().y + x.GetSize().y + 2));
 		s.SetSize(XMFLOAT2(x.GetSize().x, 14));
 		i++;
+	}
+
+	if (IsVisible())
+	{
+		Scene& scene = editor->GetCurrentScene();
+		if (scene.materials.Contains(entity))
+		{
+			MaterialComponent* material = scene.materials.GetComponent(entity);
+			if (material->textures[BASECOLORMAP].resource.IsValid())
+			{
+				material->textures[BASECOLORMAP].resource.StreamingRequestResolution(65536);
+			}
+		}
 	}
 
 }

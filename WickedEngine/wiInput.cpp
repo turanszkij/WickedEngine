@@ -42,7 +42,7 @@ namespace wi::input
 	bool double_click = false;
 	wi::Timer doubleclick_timer;
 	XMFLOAT2 doubleclick_prevpos = XMFLOAT2(0, 0);
-	CURSOR cursor_current = CURSOR_DEFAULT;
+	CURSOR cursor_current = CURSOR_CROSS; // something that's not default, because at least once code should change it to default
 	CURSOR cursor_next = CURSOR_DEFAULT;
 
 	const KeyboardState& GetKeyboardState() { return keyboard; }
