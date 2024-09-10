@@ -53,6 +53,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)SoftBodyWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)SoundWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)SpringWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)SpriteRectWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)SpriteWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
@@ -123,6 +124,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)SoftBodyWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SoundWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SpringWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)SpriteRectWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SpriteWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)stdafx.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)TerrainWindow.h" />

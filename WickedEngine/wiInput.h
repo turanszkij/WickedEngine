@@ -220,6 +220,7 @@ namespace wi::input
 		CURSOR_RESIZE_NWSE,
 		CURSOR_HAND,
 		CURSOR_NOTALLOWED,
+		CURSOR_CROSS,
 	};
 	void SetCursor(CURSOR cursor);
 

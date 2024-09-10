@@ -398,6 +398,8 @@ namespace wi::audio
 	}
 	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance)
 	{
+		if (sound->internal_state == nullptr)
+			return false;
 		HRESULT hr;
 		const auto& soundinternal = std::static_pointer_cast<SoundInternal>(sound->internal_state);
 		std::shared_ptr<SoundInstanceInternal> instanceinternal = std::make_shared<SoundInstanceInternal>();

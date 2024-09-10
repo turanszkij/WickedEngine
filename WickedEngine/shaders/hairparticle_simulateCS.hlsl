@@ -77,6 +77,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	tangent_random |= (uint)((uint)(tangent.y * 127.5f + 127.5f) << 8);
 	tangent_random |= (uint)((uint)(tangent.z * 127.5f + 127.5f) << 16);
 	tangent_random |= (uint)(rng.next_float() * 255) << 24;
+	
+	const uint currentFrame = uint(noise_gradient_3D(position * xHairUniformity) * 1000) % xHairAtlasRectCount;
+	const HairParticleAtlasRect atlas_rect = xHairAtlasRects[currentFrame];
 
 	uint binormal_length = 0;
 	binormal_length |= (uint)((uint)(binormal.x * 127.5f + 127.5f) << 0);
@@ -111,7 +114,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		simulationBuffer[particleID].tangent_random = tangent_random;
 		simulationBuffer[particleID].binormal_length = binormal_length;
 
-		if (xHairRegenerate)
+		if (xHairFlags & HAIR_FLAG_REGENERATE_FRAME)
 		{
 			simulationBuffer[particleID].position = base;
 			simulationBuffer[particleID].normal_velocity = f32tof16(target);
@@ -122,7 +125,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		float len = (binormal_length >> 24) & 0x000000FF;
 		len /= 255.0f;
-		len *= xLength;
+		len *= xHairLength;
+		len *= atlas_rect.size;
 
 		float3 tip = base + normal * len;
 		float3 midpoint = lerp(base, tip, 0.5);
@@ -207,7 +211,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		}
 
 		// Pull back to rest position:
-		force += (target - normal) * xStiffness;
+		force += (target - normal) * xHairStiffness;
 
 		force *= delta_time;
 
@@ -243,13 +247,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		uint v0 = particleID * 4;
 		uint i0 = particleID * 6;
 
-		uint rand = (tangent_random >> 24) & 0x000000FF;
 		half3x3 TBN = half3x3(tangent, normalize(normal + bend), binormal); // don't derive binormal, because we want the shear!
 		float3 rootposition = base - normal * 0.1 * len; // inset to the emitter a bit, to avoid disconnect:
-		float2 frame = float2(xHairAspect, 1) * len * 0.5;
-		const uint currentFrame = (xHairFrameStart + rand) % xHairFrameCount;
-		uint2 offset = uint2(currentFrame % xHairFramesXY.x, currentFrame / xHairFramesXY.x);
-
+		const float2 frame = float2(atlas_rect.aspect * xHairAspect, 1) * len * 0.5;
+		
 		for (uint vertexID = 0; vertexID < 4; ++vertexID)
 		{
 			// expand the particle into a billboard cross section, the patch:
@@ -261,8 +262,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			patchPos.y += 1;
 
 			// Sprite sheet UV transform:
-			uv.xy += offset;
-			uv.xy *= xHairTexMul;
+			uv.xy = mad(uv.xy, atlas_rect.texMulAdd.xy, atlas_rect.texMulAdd.zw);
 
 			// scale the billboard by the texture aspect:
 			patchPos.xyz *= frame.xyx;
@@ -275,7 +275,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 			float3 position = rootposition + patchPos + wind;
 
-			if (xHairPosUNORM)
+			if (xHairFlags & HAIR_FLAG_UNORM_POS)
 			{
 				position = inverse_lerp(geometry.aabb_min, geometry.aabb_max, position); // remap to UNORM
 			}

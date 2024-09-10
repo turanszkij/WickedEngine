@@ -697,10 +697,10 @@ namespace wi::lua::scene
 			Randomness = FloatProperty(&component->randomness);
 			ViewDistance = FloatProperty(&component->viewDistance);
 		
-			SpriteSheet_Frames_X = LongLongProperty(reinterpret_cast<long long*>(&component->framesX));
-			SpriteSheet_Frames_Y = LongLongProperty(reinterpret_cast<long long*>(&component->framesY));
-			SpriteSheet_Frame_Count = LongLongProperty(reinterpret_cast<long long*>(&component->frameCount));
-			SpriteSheet_Frame_Start = LongLongProperty(reinterpret_cast<long long*>(&component->frameStart));
+			//SpriteSheet_Frames_X = LongLongProperty(reinterpret_cast<long long*>(&component->framesX));
+			//SpriteSheet_Frames_Y = LongLongProperty(reinterpret_cast<long long*>(&component->framesY));
+			//SpriteSheet_Frame_Count = LongLongProperty(reinterpret_cast<long long*>(&component->frameCount));
+			//SpriteSheet_Frame_Start = LongLongProperty(reinterpret_cast<long long*>(&component->frameStart));
 		}
 
 		HairParticleSystem_BindLua(HairParticleSystem* component) :component(component)
