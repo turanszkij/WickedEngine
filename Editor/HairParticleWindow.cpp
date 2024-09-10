@@ -203,7 +203,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	viewDistanceSlider.SetTooltip("Set view distance. After this, particles will be faded out.");
 	AddWidget(&viewDistanceSlider);
 
-	uniformitySlider.Create(0.001f, 2.0f, 0.1f, 1000, "Uniformity: ");
+	uniformitySlider.Create(0.01f, 2.0f, 0.1f, 1000, "Uniformity: ");
 	uniformitySlider.SetSize(XMFLOAT2(wid, hei));
 	uniformitySlider.SetPos(XMFLOAT2(x, y += step));
 	uniformitySlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -220,17 +220,21 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	uniformitySlider.SetTooltip("How much the sprite selection distribution noise is modulated by particle positions.");
 	AddWidget(&uniformitySlider);
 
-	addSpriteButton.Create("Add Sprite");
+	addSpriteButton.Create("Select sprite rect");
 	addSpriteButton.OnClick([&](wi::gui::EventArgs args) {
 
 		Scene& scene = editor->GetCurrentScene();
 		if (!scene.materials.Contains(entity))
-			return;
+		{
+			scene.materials.Create(entity);
+		}
 		const MaterialComponent* material = scene.materials.GetComponent(entity);
 		wi::Sprite sprite;
 		sprite.textureResource = material->textures[MaterialComponent::BASECOLORMAP].resource;
 		if (!sprite.textureResource.IsValid() || !sprite.textureResource.GetTexture().IsValid())
-			return;
+		{
+			sprite.textureResource.SetTexture(*wi::texturehelper::getWhite());
+		}
 
 		spriterectwnd.SetVisible(true);
 
@@ -498,11 +502,11 @@ void HairParticleWindow::ResizeLayout()
 
 	add_fullwidth(infoLabel);
 	add(meshComboBox);
+	add(countSlider);
 	add(lengthSlider);
 	add(widthSlider);
 	add(stiffnessSlider);
 	add(randomnessSlider);
-	add(countSlider);
 	add(randomSeedSlider);
 	add(viewDistanceSlider);
 	add(uniformitySlider);
