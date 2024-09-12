@@ -21,7 +21,7 @@ set (SOURCE_FILES
 	ImGui/ImGuizmo.cpp
 	ImGui/ImGuizmo.h
 	ImGui/IconsMaterialDesign.h
-	../Editor/ModelImporter_GLTF.cpp
+	../../Editor/ModelImporter_GLTF.cpp
 )
 
 if (WIN32)

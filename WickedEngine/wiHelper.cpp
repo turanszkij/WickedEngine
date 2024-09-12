@@ -959,7 +959,7 @@ namespace wi::helper
 #define ToNativeString(x) (x)
 #endif // _WIN32
 
-	std::string GetPathRelative(const std::string& rootdir, std::string& path)
+	std::string GetPathRelative(const std::string& rootdir, const std::string& path)
 	{
 		std::string ret = path;
 		MakePathRelative(rootdir, ret);

@@ -32,6 +32,8 @@
 #include <fstream>
 #include <thread>
 
+#define CONTENT_DIR "../../Content/"
+
 using namespace wi::ecs;
 using namespace wi::scene;
 using namespace wi::graphics;
@@ -390,7 +392,7 @@ void Example_ImGuiRenderer::Load()
 	wi::scene::GetCamera().TransformCamera(transform);
 
 	// Load model.
-	wi::scene::LoadModel("../Content/models/bloom_test.wiscene");
+	wi::scene::LoadModel(CONTENT_DIR "models/bloom_test.wiscene");
 
 	RenderPath3D::Load();
 
@@ -631,14 +633,14 @@ void Example_ImGuiRenderer::Update(float dt)
 		};
 		const char* wiscene_file_items[] =
 		{
-			"../Content/models/bloom_test.wiscene",
-			"../Content/models/playground.wiscene",
-			"../Content/models/volumetric_test.wiscene",
-			"../Content/models/emitter_skinned.wiscene",
-			"../Content/models/physics_test.wiscene",
-			"../Content/models/shadows_test.wiscene",
-			"../Content/models/sponza/sponza.wiscene",
-			"../Content/models/emitter_fire.wiscene"
+			CONTENT_DIR "models/bloom_test.wiscene",
+			CONTENT_DIR "models/playground.wiscene",
+			CONTENT_DIR "models/volumetric_test.wiscene",
+			CONTENT_DIR "models/emitter_skinned.wiscene",
+			CONTENT_DIR "models/physics_test.wiscene",
+			CONTENT_DIR "models/shadows_test.wiscene",
+			CONTENT_DIR "models/sponza/sponza.wiscene",
+			CONTENT_DIR "models/emitter_fire.wiscene"
 		};
 
 		if (ImGui::CollapsingHeader(ICON_MD_PLAY_CIRCLE_OUTLINE"  Scene Demo", ImGuiTreeNodeFlags_DefaultOpen)) //ImGuiTreeNodeFlags_None

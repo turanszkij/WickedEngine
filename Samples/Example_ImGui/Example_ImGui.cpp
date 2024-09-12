@@ -13,6 +13,8 @@
 #include <fstream>
 #include <thread>
 
+#define CONTENT_DIR "../../Content/"
+
 using namespace wi::ecs;
 using namespace wi::scene;
 using namespace wi::graphics;
@@ -352,7 +354,7 @@ void Example_ImGuiRenderer::Load()
 	wi::scene::GetCamera().TransformCamera(transform);
 
 	// Load model.
-	wi::scene::LoadModel("../Content/models/teapot.wiscene");
+	wi::scene::LoadModel(CONTENT_DIR "models/teapot.wiscene");
 
 	RenderPath3D::Load();
 }

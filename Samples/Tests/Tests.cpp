@@ -1,5 +1,7 @@
 #include "stdafx.h"
 
+#define CONTENT_DIR "../../Content/"
+
 using namespace wi::ecs;
 using namespace wi::scene;
 
@@ -91,7 +93,7 @@ void TestsRenderer::Load()
 
 		if (!sound.IsValid())
 		{
-			wi::audio::CreateSound("../Content/models/water.wav", &sound);
+			wi::audio::CreateSound(CONTENT_DIR "models/water.wav", &sound);
 			wi::audio::CreateSoundInstance(&sound, &soundinstance);
 			wi::audio::SetVolume(volume.GetValue() / 100.0f, &soundinstance);
 		}
@@ -204,16 +206,16 @@ void TestsRenderer::Load()
 		}
 		case MODEL:
 			wi::renderer::SetTemporalAAEnabled(true);
-			wi::scene::LoadModel("../Content/models/teapot.wiscene");
+			wi::scene::LoadModel(CONTENT_DIR "models/teapot.wiscene");
 			break;
 		case EMITTEDPARTICLE1:
-			wi::scene::LoadModel("../Content/models/emitter_smoke.wiscene");
+			wi::scene::LoadModel(CONTENT_DIR "models/emitter_smoke.wiscene");
 			break;
 		case EMITTEDPARTICLE2:
-			wi::scene::LoadModel("../Content/models/emitter_skinned.wiscene");
+			wi::scene::LoadModel(CONTENT_DIR "models/emitter_skinned.wiscene");
 			break;
 		case HAIRPARTICLE:
-			wi::scene::LoadModel("../Content/models/hairparticle_torus.wiscene", XMMatrixTranslation(0, 1, 0));
+			wi::scene::LoadModel(CONTENT_DIR "models/hairparticle_torus.wiscene", XMMatrixTranslation(0, 1, 0));
 			break;
 		case LUASCRIPT:
 			wi::renderer::SetToDrawGridHelper(true);
@@ -221,18 +223,18 @@ void TestsRenderer::Load()
 			break;
 		case WATERTEST:
 			wi::renderer::SetTemporalAAEnabled(true);
-			wi::scene::LoadModel("../Content/models/water_test.wiscene", XMMatrixTranslation(0, 1, 0));
+			wi::scene::LoadModel(CONTENT_DIR "models/water_test.wiscene", XMMatrixTranslation(0, 1, 0));
 			break;
 		case SHADOWSTEST:
 			wi::renderer::SetTemporalAAEnabled(true);
-			wi::scene::LoadModel("../Content/models/shadows_test.wiscene", XMMatrixTranslation(0, 1, 0));
+			wi::scene::LoadModel(CONTENT_DIR "models/shadows_test.wiscene", XMMatrixTranslation(0, 1, 0));
 			break;
 		case PHYSICSTEST:
 			wi::renderer::SetTemporalAAEnabled(true);
-			wi::scene::LoadModel("../Content/models/physics_test.wiscene");
+			wi::scene::LoadModel(CONTENT_DIR "models/physics_test.wiscene");
 			break;
 		case CLOTHPHYSICSTEST:
-			wi::scene::LoadModel("../Content/models/cloth_test.wiscene", XMMatrixTranslation(0, 3, 4));
+			wi::scene::LoadModel(CONTENT_DIR "models/cloth_test.wiscene", XMMatrixTranslation(0, 3, 4));
 			break;
 		case JOBSYSTEMTEST:
 			RunJobSystemTest();
@@ -242,7 +244,7 @@ void TestsRenderer::Load()
 			break;
 		case VOLUMETRICTEST:
 			wi::renderer::SetTemporalAAEnabled(true);
-			wi::scene::LoadModel("../Content/models/volumetric_test.wiscene", XMMatrixTranslation(0, 0, 4));
+			wi::scene::LoadModel(CONTENT_DIR "models/volumetric_test.wiscene", XMMatrixTranslation(0, 0, 4));
 			break;
 		case SPRITETEST:
 			RunSpriteTest();
@@ -250,7 +252,7 @@ void TestsRenderer::Load()
 		case LIGHTMAPBAKETEST:
 			wi::eventhandler::SetVSync(false); // turn off vsync if we can to accelerate the baking
 			wi::renderer::SetTemporalAAEnabled(true);
-			wi::scene::LoadModel("../Content/models/lightmap_bake_test.wiscene", XMMatrixTranslation(0, 0, 4));
+			wi::scene::LoadModel(CONTENT_DIR "models/lightmap_bake_test.wiscene", XMMatrixTranslation(0, 0, 4));
 			break;
 		case NETWORKTEST:
 			RunNetworkTest();
@@ -353,7 +355,7 @@ void TestsRenderer::Load()
 		case INVERSEKINEMATICSTEST:
 		{
 			Scene scene;
-			LoadModel(scene, "../Content/scripts/character_controller/assets/character.wiscene", XMMatrixScaling(2, 2, 2));
+			LoadModel(scene, CONTENT_DIR "scripts/character_controller/assets/character.wiscene", XMMatrixScaling(2, 2, 2));
 			if (scene.humanoids.GetCount() == 0)
 				break;
 
@@ -389,7 +391,7 @@ void TestsRenderer::Load()
 
 		case INSTANCESTEST:
 		{
-			wi::scene::LoadModel("../Content/models/cube.wiscene");
+			wi::scene::LoadModel(CONTENT_DIR "models/cube.wiscene");
 			wi::profiler::SetEnabled(true);
 			Scene& scene = wi::scene::GetScene();
 			scene.Entity_CreateLight("testlight", XMFLOAT3(0, 2, -4), XMFLOAT3(1, 1, 1), 4, 10);
@@ -796,7 +798,7 @@ void TestsRenderer::RunSpriteTest()
 
 	// Simple sprite, no animation:
 	{
-		static wi::Sprite sprite("../Content/logo_small.png");
+		static wi::Sprite sprite(CONTENT_DIR "logo_small.png");
 		sprite.params = params;
 		AddSprite(&sprite);
 
@@ -812,7 +814,7 @@ void TestsRenderer::RunSpriteTest()
 
 	// Simple sprite, fade animation:
 	{
-		static wi::Sprite sprite("../Content/logo_small.png");
+		static wi::Sprite sprite(CONTENT_DIR "logo_small.png");
 		sprite.params = params;
 		sprite.anim = wi::Sprite::Anim();
 		sprite.anim.fad = 1.2f; // (you can also do opacity animation with sprite.anim.opa)
@@ -831,7 +833,7 @@ void TestsRenderer::RunSpriteTest()
 
 	// Simple sprite, wobble animation:
 	{
-		static wi::Sprite sprite("../Content/logo_small.png");
+		static wi::Sprite sprite(CONTENT_DIR "logo_small.png");
 		sprite.params = params;
 		sprite.anim = wi::Sprite::Anim();
 		sprite.anim.wobbleAnim.amount = XMFLOAT2(0.11f, 0.18f);
@@ -850,7 +852,7 @@ void TestsRenderer::RunSpriteTest()
 
 	// Simple sprite, rotate animation:
 	{
-		static wi::Sprite sprite("../Content/logo_small.png");
+		static wi::Sprite sprite(CONTENT_DIR "logo_small.png");
 		sprite.params = params;
 		sprite.anim = wi::Sprite::Anim();
 		sprite.anim.rot = 2.8f;
@@ -869,7 +871,7 @@ void TestsRenderer::RunSpriteTest()
 
 	// Simple sprite, movingtex:
 	{
-		static wi::Sprite sprite("images/movingtex.png", "../Content/logo_small.png"); // first param is the texture we will display (and also scroll here). Second param is a mask texture
+		static wi::Sprite sprite("images/movingtex.png", CONTENT_DIR "logo_small.png"); // first param is the texture we will display (and also scroll here). Second param is a mask texture
 		// Don't overwrite all params for this, because we want to keep the mask...
 		sprite.params.pos = params.pos;
 		sprite.params.siz = params.siz;

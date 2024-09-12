@@ -80,7 +80,7 @@ std::string SHADERSOURCEPATH = "../WickedEngine/shaders/";
 #else
 // Note: when NOT using Shader Dump, use absolute directory, to avoid the case when something (eg. file dialog) overrides working directory
 std::string SHADERPATH = wi::helper::GetCurrentPath() + "/shaders/";
-std::string SHADERSOURCEPATH = wi::helper::GetCurrentPath() + "/../WickedEngine/shaders/";
+std::string SHADERSOURCEPATH = SHADER_INTEROP_PATH;
 #endif // SHADERDUMP_ENABLED
 
 // define this to use raytracing pipeline for raytraced reflections:

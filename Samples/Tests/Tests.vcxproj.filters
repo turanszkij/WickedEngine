@@ -6,11 +6,11 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="Code">
-      <UniqueIdentifier>{7f6954b9-3868-47ed-8e6c-0dd52e678236}</UniqueIdentifier>
+      <UniqueIdentifier>{c2ccbb94-b23f-4b37-94f4-56bae2be0128}</UniqueIdentifier>
     </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="ReadMe.txt" />
+    <Filter Include="images">
+      <UniqueIdentifier>{115a0548-191e-4f7c-bd01-95f6c7de7afe}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -22,7 +22,10 @@
     <ClInclude Include="targetver.h">
       <Filter>Code</Filter>
     </ClInclude>
-    <ClInclude Include="main.h">
+    <ClInclude Include="Tests.h">
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="main_Windows.h">
       <Filter>Code</Filter>
     </ClInclude>
   </ItemGroup>
@@ -30,22 +33,31 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Code</Filter>
     </ClCompile>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="Tests.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="main_Windows.cpp">
       <Filter>Code</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="TemplateWindows.rc">
+    <Image Include="images\HelloWorld.png">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="wicked.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="test_script.lua" />
+    <None Include="..\..\WickedEngine\dxil.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Tests.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="..\WickedEngine\dxcompiler.dll" />
-    <CopyFileToFolders Include="..\WickedEngine\dxil.dll" />
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="wicked.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
+    <CopyFileToFolders Include="..\..\WickedEngine\dxcompiler.dll" />
   </ItemGroup>
 </Project>
