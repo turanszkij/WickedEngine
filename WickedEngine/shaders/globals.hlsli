@@ -213,7 +213,7 @@ inline uint2 unpack_pixel(uint value)
 
 #ifndef __PSSL__
 // These are static samplers, they don't need to be bound:
-//	They are also on slots that are not bindable as sampler bind slots must be in [0,15] range!
+//	They are also on slots that are not bindable as sampler bind slots must be in [0, DESCRIPTORBINDER_SAMPLER_COUNT] range!
 SamplerState sampler_linear_clamp : register(s100);
 SamplerState sampler_linear_wrap : register(s101);
 SamplerState sampler_linear_mirror : register(s102);
