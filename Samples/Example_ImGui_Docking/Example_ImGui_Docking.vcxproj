@@ -119,8 +119,9 @@
     <ClInclude Include="Example_ImGui_Docking.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\Editor\ModelImporter_GLTF.cpp" />
-    <ClCompile Include="..\Editor\ModelImporter_OBJ.cpp" />
+    <ClCompile Include="..\..\Editor\ModelImporter_FBX.cpp" />
+    <ClCompile Include="..\..\Editor\ModelImporter_GLTF.cpp" />
+    <ClCompile Include="..\..\Editor\ModelImporter_OBJ.cpp" />
     <ClCompile Include="ImGui\imgui.cpp" />
     <ClCompile Include="ImGui\ImGuizmo.cpp" />
     <ClCompile Include="ImGui\imgui_demo.cpp" />
@@ -139,23 +140,6 @@
     <ResourceCompile Include="Tests.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\WickedEngine\WickedEngine_Windows.vcxproj">
-      <Project>{06163dcb-b183-4ed9-9c62-13ef1658e049}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <CopyFileToFolders Include="..\WickedEngine\dxcompiler.dll">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-      <FileType>Document</FileType>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
-    </CopyFileToFolders>
-    <CopyFileToFolders Include="..\WickedEngine\dxil.dll">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-      <FileType>Document</FileType>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
-    </CopyFileToFolders>
-  </ItemGroup>
-  <ItemGroup>
     <CopyFileToFolders Include="ImGuiPS.hlsl">
       <FileType>Document</FileType>
     </CopyFileToFolders>
@@ -165,6 +149,23 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="wicked.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="..\..\WickedEngine\dxcompiler.dll">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="..\..\WickedEngine\dxil.dll">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\WickedEngine\WickedEngine_Windows.vcxproj">
+      <Project>{06163dcb-b183-4ed9-9c62-13ef1658e049}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

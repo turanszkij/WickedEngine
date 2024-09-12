@@ -25,17 +25,20 @@
     <ClCompile Include="main_Windows.cpp">
       <Filter>Code</Filter>
     </ClCompile>
-    <ClCompile Include="..\Editor\ModelImporter_GLTF.cpp">
-      <Filter>Code</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Editor\ModelImporter_OBJ.cpp">
-      <Filter>Code</Filter>
-    </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <Filter>Code</Filter>
     </ClCompile>
     <ClCompile Include="ImGui\ImGuizmo.cpp">
       <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Editor\ModelImporter_FBX.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Editor\ModelImporter_GLTF.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Editor\ModelImporter_OBJ.cpp">
+      <Filter>Code</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -77,17 +80,14 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="small.ico" />
-    <Image Include="Tests.ico" />
     <Image Include="wicked.ico">
       <Filter>Resources</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="..\WickedEngine\dxcompiler.dll" />
-    <CopyFileToFolders Include="..\WickedEngine\dxil.dll" />
     <CopyFileToFolders Include="ImGuiPS.hlsl" />
     <CopyFileToFolders Include="ImGuiVS.hlsl" />
+    <CopyFileToFolders Include="..\..\WickedEngine\dxcompiler.dll" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="ImGui">
@@ -104,5 +104,8 @@
     <ResourceCompile Include="Tests.rc">
       <Filter>Resources</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\WickedEngine\dxil.dll" />
   </ItemGroup>
 </Project>

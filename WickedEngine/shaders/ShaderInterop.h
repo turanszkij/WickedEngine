@@ -3,6 +3,10 @@
 
 #ifdef __cplusplus // not invoking shader compiler, but included in engine source
 
+// Determine shader source path:
+#include "../wiHelper.h"
+static const std::string SHADER_INTEROP_PATH = wi::helper::GetCurrentPath() + "/" + wi::helper::GetDirectoryFromPath(wi::helper::GetPathRelative(wi::helper::GetCurrentPath(), std::string(__FILE__)));
+
 // Application-side types:
 #include "../wiMath.h"
 

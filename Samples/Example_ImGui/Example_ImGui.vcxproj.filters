@@ -85,14 +85,16 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="..\WickedEngine\dxcompiler.dll" />
-    <CopyFileToFolders Include="..\WickedEngine\dxil.dll" />
     <CopyFileToFolders Include="ImGuiVS.hlsl" />
     <CopyFileToFolders Include="ImGuiPS.hlsl" />
+    <CopyFileToFolders Include="..\..\WickedEngine\dxcompiler.dll" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="wicked.ico">
       <Filter>Resource Files</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\WickedEngine\dxil.dll" />
   </ItemGroup>
 </Project>
