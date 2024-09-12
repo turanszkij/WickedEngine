@@ -68,18 +68,18 @@ if (WICKED_EDITOR)
 endif()
 
 if (WICKED_TESTS)
-    add_subdirectory(Tests)
+    add_subdirectory(Samples/Tests)
 endif()
 
 if (WICKED_IMGUI_EXAMPLE)
-    add_subdirectory(Example_ImGui)
-    add_subdirectory(Example_ImGui_Docking)
+    add_subdirectory(Samples/Example_ImGui)
+    add_subdirectory(Samples/Example_ImGui_Docking)
 endif()
 
 if (WICKED_LINUX_TEMPLATE)
-    add_subdirectory(Template_Linux)
+    add_subdirectory(Samples/Template_Linux)
 endif()
 
 if (WICKED_WINDOWS_TEMPLATE)
-    add_subdirectory(Template_Windows)
+    add_subdirectory(Samples/Template_Windows)
 endif()
