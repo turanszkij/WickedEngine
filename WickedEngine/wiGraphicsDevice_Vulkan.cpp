@@ -30,6 +30,11 @@
 #include <iostream>
 #include <algorithm>
 
+// Requires {}
+#define VK_APPEND_EXT(desc) \
+    *tail = &desc; \
+    tail = &desc.pNext
+
 namespace wi::graphics
 {
 
@@ -941,7 +946,8 @@ namespace vulkan_internal
 		VkPipelineShaderStageCreateInfo shaderStages[static_cast<size_t>(ShaderStage::Count)] = {};
 		VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
 		VkPipelineRasterizationStateCreateInfo rasterizer = {};
-		VkPipelineRasterizationDepthClipStateCreateInfoEXT depthclip = {};
+		VkPipelineRasterizationDepthClipStateCreateInfoEXT depthClipStateInfo = {};
+		VkPipelineRasterizationConservativeStateCreateInfoEXT rasterizationConservativeState = {};
 		VkPipelineViewportStateCreateInfo viewportState = {};
 		VkPipelineDepthStencilStateCreateInfo depthstencil = {};
 		VkSampleMask samplemask = {};
@@ -2563,7 +2569,7 @@ using namespace vulkan_internal;
 
 			bool h264_decode_extension = false;
 			bool suitable = false;
-
+			bool conservativeRasterization = false;
 
 			auto checkPhysicalDeviceAndFillProperties2 = [&](VkPhysicalDevice dev) {
 				suitable = true;
@@ -2616,6 +2622,8 @@ using namespace vulkan_internal;
 				raytracing_properties = {};
 				fragment_shading_rate_properties = {};
 				mesh_shader_properties = {};
+				conservative_raster_properties = {};
+				conservativeRasterization = false;
 
 				sampler_minmax_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_FILTER_MINMAX_PROPERTIES;
 				*properties_chain = &sampler_minmax_properties;
@@ -2640,6 +2648,14 @@ using namespace vulkan_internal;
 					depth_clip_enable_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_CLIP_ENABLE_FEATURES_EXT;
 					*features_chain = &depth_clip_enable_features;
 					features_chain = &depth_clip_enable_features.pNext;
+				}
+				if (checkExtensionSupport(VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME, available_deviceExtensions))
+				{
+					conservativeRasterization = true;
+					enabled_deviceExtensions.push_back(VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME);
+					conservative_raster_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CONSERVATIVE_RASTERIZATION_PROPERTIES_EXT;
+					*properties_chain = &conservative_raster_properties;
+					properties_chain = &conservative_raster_properties.pNext;
 				}
 				if (checkExtensionSupport(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, available_deviceExtensions))
 				{
@@ -2822,6 +2838,10 @@ using namespace vulkan_internal;
 			if (features2.features.tessellationShader == VK_TRUE)
 			{
 				capabilities |= GraphicsDeviceCapability::TESSELLATION;
+			}
+			if (conservativeRasterization)
+			{
+				capabilities |= GraphicsDeviceCapability::CONSERVATIVE_RASTERIZATION;
 			}
 			if (features2.features.shaderStorageImageExtendedFormats == VK_TRUE)
 			{
@@ -5566,13 +5586,15 @@ using namespace vulkan_internal;
 		rasterizer.depthBiasClamp = 0.0f;
 		rasterizer.depthBiasSlopeFactor = 0.0f;
 
+		const void** tail = &rasterizer.pNext;
+
 		// depth clip will be enabled via Vulkan 1.1 extension VK_EXT_depth_clip_enable:
-		VkPipelineRasterizationDepthClipStateCreateInfoEXT& depthclip = internal_state->depthclip;
-		depthclip.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_DEPTH_CLIP_STATE_CREATE_INFO_EXT;
-		depthclip.depthClipEnable = VK_TRUE;
+		VkPipelineRasterizationDepthClipStateCreateInfoEXT& depthClipStateInfo = internal_state->depthClipStateInfo;
+		depthClipStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_DEPTH_CLIP_STATE_CREATE_INFO_EXT;
+		depthClipStateInfo.depthClipEnable = VK_TRUE;
 		if (depth_clip_enable_features.depthClipEnable == VK_TRUE)
 		{
-			rasterizer.pNext = &depthclip;
+			VK_APPEND_EXT(depthClipStateInfo);
 		}
 
 		if (pso->desc.rs != nullptr)
@@ -5610,8 +5632,17 @@ using namespace vulkan_internal;
 			rasterizer.depthBiasClamp = desc.depth_bias_clamp;
 			rasterizer.depthBiasSlopeFactor = desc.slope_scaled_depth_bias;
 
-			// depth clip is extension in Vulkan 1.1:
-			depthclip.depthClipEnable = desc.depth_clip_enable ? VK_TRUE : VK_FALSE;
+			// Depth clip will be enabled via Vulkan 1.1 extension VK_EXT_depth_clip_enable:
+			depthClipStateInfo.depthClipEnable = desc.depth_clip_enable ? VK_TRUE : VK_FALSE;
+
+			VkPipelineRasterizationConservativeStateCreateInfoEXT& rasterizationConservativeState = internal_state->rasterizationConservativeState;
+			if (CheckCapability(GraphicsDeviceCapability::CONSERVATIVE_RASTERIZATION) && desc.conservative_rasterization_enable)
+			{
+				rasterizationConservativeState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_CONSERVATIVE_STATE_CREATE_INFO_EXT;
+				rasterizationConservativeState.conservativeRasterizationMode = VK_CONSERVATIVE_RASTERIZATION_MODE_OVERESTIMATE_EXT;
+				rasterizationConservativeState.extraPrimitiveOverestimationSize = 0.0f;
+				VK_APPEND_EXT(rasterizationConservativeState);
+			}
 		}
 
 		pipelineInfo.pRasterizationState = &rasterizer;
