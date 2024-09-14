@@ -391,6 +391,7 @@ namespace wi::scene
 
 		struct MeshSubset
 		{
+			std::string surfaceName; // custom identifier for user, not used by engine
 			wi::ecs::Entity materialID = wi::ecs::INVALID_ENTITY;
 			uint32_t indexOffset = 0;
 			uint32_t indexCount = 0;
