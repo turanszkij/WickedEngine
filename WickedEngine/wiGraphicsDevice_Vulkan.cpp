@@ -30,11 +30,6 @@
 #include <iostream>
 #include <algorithm>
 
-// Requires {}
-#define VK_APPEND_EXT(desc) \
-    *tail = &desc; \
-    tail = &desc.pNext
-
 namespace wi::graphics
 {
 
@@ -5594,7 +5589,8 @@ using namespace vulkan_internal;
 		depthClipStateInfo.depthClipEnable = VK_TRUE;
 		if (depth_clip_enable_features.depthClipEnable == VK_TRUE)
 		{
-			VK_APPEND_EXT(depthClipStateInfo);
+			*tail = &depthClipStateInfo;
+			tail = &depthClipStateInfo.pNext;
 		}
 
 		if (pso->desc.rs != nullptr)
@@ -5641,7 +5637,8 @@ using namespace vulkan_internal;
 				rasterizationConservativeState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_CONSERVATIVE_STATE_CREATE_INFO_EXT;
 				rasterizationConservativeState.conservativeRasterizationMode = VK_CONSERVATIVE_RASTERIZATION_MODE_OVERESTIMATE_EXT;
 				rasterizationConservativeState.extraPrimitiveOverestimationSize = 0.0f;
-				VK_APPEND_EXT(rasterizationConservativeState);
+				*tail = &rasterizationConservativeState;
+				tail = &rasterizationConservativeState.pNext;
 			}
 		}
 
