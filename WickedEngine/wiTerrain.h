@@ -281,6 +281,7 @@ namespace wi::terrain
 		Chunk center_chunk = {};
 		wi::noise::Perlin perlin_noise;
 		wi::vector<Prop> props;
+		int grass_chunk_dist = 1;
 
 		// For generating scene on a background thread:
 		std::shared_ptr<Generator> generator;

@@ -687,6 +687,9 @@ namespace wi::terrain
 			}
 		}
 
+		// Ensure that enough grass chunks are generated so that grass view distance will not cause popping:
+		grass_chunk_dist = int(grass_properties.viewDistance / chunk_width + 0.5f);
+
 		for (auto it = chunks.begin(); it != chunks.end();)
 		{
 			const Chunk& chunk = it->first;
@@ -752,7 +755,7 @@ namespace wi::terrain
 				else
 				{
 					// Grass patch removal:
-					if (chunk_data.grass_entity != INVALID_ENTITY && (dist > 1 || !IsGrassEnabled()))
+					if (chunk_data.grass_entity != INVALID_ENTITY && (dist > grass_chunk_dist || !IsGrassEnabled()))
 					{
 						scene->Entity_Remove(chunk_data.grass_entity);
 						chunk_data.grass_entity = INVALID_ENTITY; // grass can be generated here by generation thread...
@@ -1034,7 +1037,7 @@ namespace wi::terrain
 				const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
 
 				// Grass patch placement:
-				if (dist <= 1 && IsGrassEnabled())
+				if (dist <= grass_chunk_dist && IsGrassEnabled())
 				{
 					it = chunks.find(chunk);
 					if (it != chunks.end() && it->second.entity != INVALID_ENTITY)
