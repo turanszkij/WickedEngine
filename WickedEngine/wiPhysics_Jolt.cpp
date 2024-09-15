@@ -769,6 +769,9 @@ namespace wi::physics
 						}
 					}
 
+					capsule_radius = std::abs(capsule_radius);
+					capsule_height = std::abs(capsule_height);
+
 					ShapeSettings::ShapeResult shape_result;
 					CapsuleShapeSettings shape_settings(capsule_height * 0.5f, capsule_radius);
 					shape_settings.SetEmbedded();
