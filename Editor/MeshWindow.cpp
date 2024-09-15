@@ -357,6 +357,8 @@ void MeshWindow::Create(EditorComponent* _editor)
 		bool valid_atlas = false;
 		bool valid_boneindices = false;
 		bool valid_boneweights = false;
+		bool valid_boneindices2 = false;
+		bool valid_boneweights2 = false;
 		bool valid_colors = false;
 		bool valid_windweights = false;
 		wi::unordered_set<Entity> entities_to_remove;
@@ -489,6 +491,26 @@ void MeshWindow::Create(EditorComponent* _editor)
 					merged_mesh.vertex_boneweights.push_back(mesh->vertex_boneweights[i]);
 				}
 
+				if (mesh->vertex_boneindices2.empty())
+				{
+					merged_mesh.vertex_boneindices2.emplace_back();
+				}
+				else
+				{
+					valid_boneindices2 = true;
+					merged_mesh.vertex_boneindices2.push_back(mesh->vertex_boneindices2[i]);
+				}
+
+				if (mesh->vertex_boneweights2.empty())
+				{
+					merged_mesh.vertex_boneweights2.emplace_back();
+				}
+				else
+				{
+					valid_boneweights2 = true;
+					merged_mesh.vertex_boneweights2.push_back(mesh->vertex_boneweights2[i]);
+				}
+
 				if (mesh->vertex_colors.empty())
 				{
 					merged_mesh.vertex_colors.push_back(~0u);
@@ -552,6 +574,10 @@ void MeshWindow::Create(EditorComponent* _editor)
 				merged_mesh.vertex_boneindices.clear();
 			if (!valid_boneweights)
 				merged_mesh.vertex_boneweights.clear();
+			if (!valid_boneindices2)
+				merged_mesh.vertex_boneindices2.clear();
+			if (!valid_boneweights2)
+				merged_mesh.vertex_boneweights2.clear();
 			if (!valid_colors)
 				merged_mesh.vertex_colors.clear();
 			if (!valid_windweights)
@@ -982,15 +1008,18 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		if (!mesh->vertex_positions.empty()) ss += "\tposition;\n";
 		if (!mesh->vertex_normals.empty()) ss += "\tnormal;\n";
 		if (!mesh->vertex_windweights.empty()) ss += "\twind;\n";
-		if (mesh->vb_uvs.IsValid()) ss += "\tuvsets;\n";
-		if (mesh->vb_atl.IsValid()) ss += "\tatlas;\n";
-		if (mesh->vb_col.IsValid()) ss += "\tcolor;\n";
-		if (mesh->so_pre.IsValid()) ss += "\tprevious_position;\n";
-		if (mesh->vb_bon.IsValid()) ss += "\tbone;\n";
-		if (mesh->vb_tan.IsValid()) ss += "\ttangent;\n";
+		if (!mesh->vertex_uvset_0.empty()) ss += "\tuvset0;\n";
+		if (!mesh->vertex_uvset_1.empty()) ss += "\tuvset1;\n";
+		if (!mesh->vertex_atlas.empty()) ss += "\tatlas;\n";
+		if (!mesh->vertex_colors.empty()) ss += "\tcolor;\n";
+		if (!mesh->vertex_boneindices.empty()) ss += "\tbone 4 influence;\n";
+		if (!mesh->vertex_boneindices2.empty()) ss += "\tbone 8 influence;\n";
+		if (!mesh->vertex_tangents.empty()) ss += "\ttangent;\n";
+		if (!mesh->vertex_windweights.empty()) ss += "\twind weights;\n";
 		if (mesh->so_pos.IsValid()) ss += "\tstreamout_position;\n";
 		if (mesh->so_nor.IsValid()) ss += "\tstreamout_normals;\n";
 		if (mesh->so_tan.IsValid()) ss += "\tstreamout_tangents;\n";
+		if (mesh->so_pre.IsValid()) ss += "\tprevious_position;\n";
 		meshInfoLabel.SetText(ss);
 
 		subsetComboBox.ClearItems();
