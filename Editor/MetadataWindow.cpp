@@ -57,24 +57,29 @@ void MetadataWindow::Create(EditorComponent* _editor)
 			MetadataComponent* metadata = scene.metadatas.GetComponent(x.entity);
 			if (metadata == nullptr)
 				continue;
+			std::string property_name = "name";
 			switch (args.iValue)
 			{
 			default:
 			case 0:
-				if(!metadata->bool_values.has("name"))
-					metadata->bool_values.set("name", false);
+				while (metadata->bool_values.has(property_name))
+					property_name += "0";
+				metadata->bool_values.set(property_name, false);
 				break;
 			case 1:
-				if (!metadata->int_values.has("name"))
-					metadata->int_values.set("name", 0);
+				while (metadata->int_values.has(property_name))
+					property_name += "0";
+				metadata->int_values.set(property_name, 0);
 				break;
 			case 2:
-				if (!metadata->float_values.has("name"))
-					metadata->float_values.set("name", 0.0f);
+				while (metadata->float_values.has(property_name))
+					property_name += "0";
+				metadata->float_values.set(property_name, 0.0f);
 				break;
 			case 3:
-				if (!metadata->string_values.has("name"))
-					metadata->string_values.set("name", "");
+				while (metadata->string_values.has(property_name))
+					property_name += "0";
+				metadata->string_values.set(property_name, "");
 				break;
 			}
 		}
