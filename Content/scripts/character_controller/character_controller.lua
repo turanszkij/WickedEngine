@@ -1,6 +1,14 @@
 -- Lua Third person camera and character controller script
 --	This script will load a simple scene with a character that can be controlled
 --
+--	Tips:
+--		- Character models that you use should have a humanoid rig (this is created automatically from VRM and Mixamo model imports)
+--		- The level objects should be tagged as "Navmesh" because the characters will collide with only those, and these are optimized for intersections
+--		- To set the player start position, you can put a metadata component to the level scene and set it to "Player" preset
+--		- To add NPCs you can put a metadata component to the level scene and set it to "NPC" preset
+--		- To specify which model a character in the level (Player or NPC) uses, add a string property to its metadata named "name" and its value is the name of the character, for example name = johnny will use assets/johnny.wiscene
+--		- To set patrol route for an NPC character, add a "waypoint" named string property to its metadata and the value is a name of the target waypoint entity. Waypoints can be chained by having a metadata for them and having "waypoint" string properties on each.
+--
 -- 	CONTROLS:
 --		WASD/left thumbstick: walk
 --		SHIFT/right shoulder button: walk -> jog
@@ -992,6 +1000,7 @@ runProcess(function()
 	--SetProfilerEnabled(true)
 	SetDebugEnvProbesEnabled(false)
 	SetGridHelperEnabled(false)
+	SetDebugCamerasEnabled(false)
 
 	-- Configure a simple loading progress bar:
     local loadingbar = Sprite()
@@ -1013,8 +1022,6 @@ runProcess(function()
 	loadingscreen.AddLoadModelTask(anim_scene, script_dir() .. "assets/animations.wiscene")
 	local loading_scene = Scene()
 	loadingscreen.AddLoadModelTask(loading_scene, script_dir() .. "assets/level.wiscene")
-	local character_scene = Scene()
-	loadingscreen.AddLoadModelTask(character_scene, script_dir() .. "assets/character.wiscene")
 	loadingscreen.AddRenderPathActivationTask(path, application, 0.5)
 	application.SetActivePath(loadingscreen, 0.5) -- activate and switch to loading screen
 
@@ -1043,15 +1050,29 @@ runProcess(function()
 	-- Create characters from scene metadata components:
 	local player = nil
 	local npcs = {}
+    local character_scenes = {}
 	for i,entity in ipairs(scene.Entity_GetMetadataArray()) do
 		local metadata = scene.Component_GetMetadata(entity)
 		local transform = scene.Component_GetTransform(entity)
 		if metadata ~= nil and transform ~= nil then
+
+            -- Determine name of the placed character:
+			local name = "character" -- default name
+			if metadata.HasString("name") then
+				name = metadata.GetString("name")
+			end
+
+			-- Load character model if doesn't exist yet:
+			if character_scenes[name] == nil then
+                character_scenes[name] = Scene()
+				LoadModel(character_scenes[name], script_dir() .. "assets/" .. name .. ".wiscene")
+			end
+
 			if player == nil and metadata.GetPreset() == MetadataPreset.Player then
-				player = Character(character_scene, transform, true, anim_scene)
+				player = Character(character_scenes[name], transform, true, anim_scene)
 			end
 			if metadata.GetPreset() == MetadataPreset.NPC then
-				local npc = Character(character_scene, transform, false, anim_scene)
+				local npc = Character(character_scenes[name], transform, false, anim_scene)
 				-- Add patrol waypoints if found:
 				--	It will be looking for "waypoint" named string values in metadata components, and they can be chained by their value
 				local visited = {} -- avoid infinite loop
@@ -1087,7 +1108,7 @@ runProcess(function()
 
 	-- if player was not created from a metadata component, create a default player:
 	if player == nil then
-		player = Character(character_scene, TransformComponent(), true, anim_scene)
+		player = Character(character_scenes["character"], TransformComponent(), true, anim_scene)
 	end
 	
 	local camera = ThirdPersonCamera(player)
