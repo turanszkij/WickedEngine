@@ -97,7 +97,7 @@
 // Assertion function used in ufbx, defaults to C standard `assert()`.
 // You can define this to your custom preferred assert macro, but in that case
 // make sure that it is also used within `ufbx.c`.
-// Defining `UFBX_NO_ASSERT` to any valuedisables assertions.
+// Defining `UFBX_NO_ASSERT` to any value disables assertions.
 #ifndef ufbx_assert
 	#if defined(UFBX_NO_ASSERT)
 		#define ufbx_assert(cond) (void)0
@@ -266,7 +266,7 @@ struct ufbx_converter { };
 // `ufbx_source_version` contains the version of the corresponding source file.
 // HINT: The version can be compared numerically to the result of `ufbx_pack_version()`,
 // for example `#if UFBX_VERSION >= ufbx_pack_version(0, 12, 0)`.
-#define UFBX_HEADER_VERSION ufbx_pack_version(0, 12, 0)
+#define UFBX_HEADER_VERSION ufbx_pack_version(0, 14, 3)
 #define UFBX_VERSION UFBX_HEADER_VERSION
 
 // -- Basic types
@@ -862,6 +862,7 @@ struct ufbx_node {
 	ufbx_nullable ufbx_mesh *mesh;
 	ufbx_nullable ufbx_light *light;
 	ufbx_nullable ufbx_camera *camera;
+	ufbx_nullable ufbx_bone *bone;
 
 	// Less common attributes use these fields.
 	//
@@ -1322,6 +1323,11 @@ struct ufbx_mesh {
 
 	// Segments for each face group.
 	ufbx_mesh_part_list face_group_parts;
+
+	// Order of `material_parts` by first face that refers to it.
+	// Useful for compatibility with FBX SDK and various importers using it,
+	// as they use this material order by default.
+	ufbx_uint32_list material_part_usage_order;
 
 	// Skinned vertex positions, for efficiency the skinned positions are the
 	// same as the static ones for non-skinned meshes and `skinned_is_local`
@@ -2351,6 +2357,7 @@ typedef enum ufbx_shader_type UFBX_ENUM_REPR {
 	UFBX_SHADER_SHADERFX_GRAPH,
 	// Variation of the FBX phong shader that can recover PBR properties like
 	// `metalness` or `roughness` from the FBX non-physical values.
+	// NOTE: Enable `ufbx_load_opts.use_blender_pbr_material`.
 	UFBX_SHADER_BLENDER_PHONG,
 	// Wavefront .mtl format shader (used by .obj files)
 	UFBX_SHADER_WAVEFRONT_MTL,
@@ -2666,7 +2673,7 @@ UFBX_ENUM_TYPE(ufbx_texture_type, UFBX_TEXTURE_TYPE, UFBX_TEXTURE_SHADER);
 
 // Blend modes to combine layered textures with, compatible with common blend
 // mode definitions in many art programs. Simpler blend modes have equations
-// specified below where `src` is the layer to compososite over `dst`.
+// specified below where `src` is the layer to composite over `dst`.
 // See eg. https://www.w3.org/TR/2013/WD-compositing-1-20131010/#blendingseparable
 typedef enum ufbx_blend_mode UFBX_ENUM_REPR {
 	UFBX_BLEND_TRANSLUCENT,   // < `src` effects result alpha
@@ -3490,6 +3497,9 @@ typedef enum ufbx_warning_type UFBX_ENUM_REPR {
 	// Vertex 'W' attribute length differs from main attribute.
 	UFBX_WARNING_BAD_VERTEX_W_ATTRIBUTE,
 
+	// Missing polygon mapping type.
+	UFBX_WARNING_MISSING_POLYGON_MAPPING,
+
 	// Out-of-bounds index has been clamped to be in-bounds.
 	// HINT: You can use `ufbx_index_error_handling` to adjust behavior.
 	UFBX_WARNING_INDEX_CLAMPED,
@@ -3659,6 +3669,9 @@ typedef struct ufbx_metadata {
 
 	ufbx_real bone_prop_size_unit;
 	bool bone_prop_limb_length_relative;
+
+	ufbx_real ortho_size_unit;
+
 	int64_t ktime_second; // < One second in internal KTime units
 
 	ufbx_string original_file_path;
@@ -4324,6 +4337,10 @@ typedef enum ufbx_inherit_mode_handling UFBX_ENUM_REPR {
 	// as `UFBX_INHERIT_MODE_HANDLING_HELPER_NODES`.
 	UFBX_INHERIT_MODE_HANDLING_COMPENSATE,
 
+	// Attempt to compensate for bone scale by inversely scaling children.
+	// Will never create helper nodes.
+	UFBX_INHERIT_MODE_HANDLING_COMPENSATE_NO_FALLBACK,
+
 	// Ignore non-standard inheritance modes.
 	// Forces all nodes to have `UFBX_INHERIT_MODE_NORMAL` regardless of the
 	// inherit mode specified in the file. This can be useful for emulating
@@ -4433,6 +4450,14 @@ typedef struct ufbx_baked_element {
 
 UFBX_LIST_TYPE(ufbx_baked_element_list, ufbx_baked_element);
 
+typedef struct ufbx_baked_anim_metadata {
+	// Memory statistics
+	size_t result_memory_used;
+	size_t temp_memory_used;
+	size_t result_allocs;
+	size_t temp_allocs;
+} ufbx_baked_anim_metadata;
+
 // Animation baked into linearly interpolated keyframes.
 // See `ufbx_bake_anim()`.
 typedef struct ufbx_baked_anim {
@@ -4454,6 +4479,9 @@ typedef struct ufbx_baked_anim {
 	// Keyframe time range.
 	double key_time_min;
 	double key_time_max;
+
+	// Additional bake information.
+	ufbx_baked_anim_metadata metadata;
 
 } ufbx_baked_anim;
 
@@ -4531,6 +4559,12 @@ typedef struct ufbx_load_opts {
 
 	// Clean-up skin weights by removing negative, zero and NAN weights.
 	bool clean_skin_weights;
+
+	// Read Blender materials as PBR values.
+	// Blender converts PBR materials to legacy FBX Phong materials in a deterministic way.
+	// If this setting is enabled, such materials will be read as `UFBX_SHADER_BLENDER_PHONG`,
+	// which means ufbx will be able to parse roughness and metallic textures.
+	bool use_blender_pbr_material;
 
 	// Don't adjust reading the FBX file depending on the detected exporter
 	bool disable_quirks;
@@ -4718,6 +4752,16 @@ typedef struct ufbx_load_opts {
 
 	// (.obj) Data for the .mtl file.
 	ufbx_blob obj_mtl_data;
+
+	// The world unit in meters that .obj files are assumed to be in.
+	// .obj files do not define the working units. By default the unit scale
+	// is read as zero, and no unit conversion is performed.
+	ufbx_real obj_unit_meters;
+
+	// Coordinate space .obj files are assumed to be in.
+	// .obj files do not define the coordinate space they use. By default no
+	// coordinate space is assumed and no conversion is performed.
+	ufbx_coordinate_axes obj_axes;
 
 	uint32_t _end_zero;
 } ufbx_load_opts;
@@ -5242,6 +5286,8 @@ typedef enum ufbx_transform_flags UFBX_FLAG_REPR {
 } ufbx_transform_flags;
 
 // Evaluate the animated transform of a node given a time.
+// The returned transform is the local transform of the node (ie. relative to the parent),
+// comparable to `ufbx_node.local_transform`.
 ufbx_abi ufbx_transform ufbx_evaluate_transform(const ufbx_anim *anim, const ufbx_node *node, double time);
 ufbx_abi ufbx_transform ufbx_evaluate_transform_flags(const ufbx_anim *anim, const ufbx_node *node, double time, uint32_t flags);
 
@@ -5278,6 +5324,12 @@ ufbx_abi ufbx_baked_anim *ufbx_bake_anim(const ufbx_scene *scene, const ufbx_ani
 
 ufbx_abi void ufbx_retain_baked_anim(ufbx_baked_anim *bake);
 ufbx_abi void ufbx_free_baked_anim(ufbx_baked_anim *bake);
+
+ufbx_abi ufbx_baked_node *ufbx_find_baked_node_by_typed_id(ufbx_baked_anim *bake, uint32_t typed_id);
+ufbx_abi ufbx_baked_node *ufbx_find_baked_node(ufbx_baked_anim *bake, ufbx_node *node);
+
+ufbx_abi ufbx_baked_element *ufbx_find_baked_element_by_element_id(ufbx_baked_anim *bake, uint32_t element_id);
+ufbx_abi ufbx_baked_element *ufbx_find_baked_element(ufbx_baked_anim *bake, ufbx_element *element);
 
 // Evaluate baked animation `keyframes` at `time`.
 // Internally linearly interpolates between two adjacent keyframes.
@@ -5326,6 +5378,9 @@ ufbx_inline ufbx_shader_texture_input *ufbx_find_shader_texture_input(const ufbx
 // Returns `true` if `axes` forms a valid coordinate space.
 ufbx_abi bool ufbx_coordinate_axes_valid(ufbx_coordinate_axes axes);
 
+// Vector math utility functions.
+ufbx_abi ufbx_vec3 ufbx_vec3_normalize(ufbx_vec3 v);
+
 // Quaternion math utility functions.
 ufbx_abi ufbx_real ufbx_quat_dot(ufbx_quat a, ufbx_quat b);
 ufbx_abi ufbx_quat ufbx_quat_mul(ufbx_quat a, ufbx_quat b);
@@ -5340,7 +5395,14 @@ ufbx_abi ufbx_quat ufbx_euler_to_quat(ufbx_vec3 v, ufbx_rotation_order order);
 ufbx_abi ufbx_matrix ufbx_matrix_mul(const ufbx_matrix *a, const ufbx_matrix *b);
 ufbx_abi ufbx_real ufbx_matrix_determinant(const ufbx_matrix *m);
 ufbx_abi ufbx_matrix ufbx_matrix_invert(const ufbx_matrix *m);
+
+// Get a matrix that can be used to transform geometry normals.
+// NOTE: You must normalize the normals after transforming them with this matrix,
+// eg. using `ufbx_vec3_normalize()`.
+// NOTE: This function flips the normals if the determinant is negative.
 ufbx_abi ufbx_matrix ufbx_matrix_for_normals(const ufbx_matrix *m);
+
+// Matrix transformation utilities.
 ufbx_abi ufbx_vec3 ufbx_transform_position(const ufbx_matrix *m, ufbx_vec3 v);
 ufbx_abi ufbx_vec3 ufbx_transform_direction(const ufbx_matrix *m, ufbx_vec3 v);
 
