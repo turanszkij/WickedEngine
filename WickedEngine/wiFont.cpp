@@ -187,6 +187,9 @@ namespace wi::font
 					word_wrap();
 					status.cursor.position.x += tab_size;
 				}
+				else if (code == '\r')
+				{
+				}
 				else
 				{
 					const Glyph& glyph = glyph_lookup.at(hash.raw);

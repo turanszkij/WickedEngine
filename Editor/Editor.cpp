@@ -32,6 +32,7 @@ enum class FileType
 	IMAGE,
 	VIDEO,
 	SOUND,
+	TEXT,
 	HEADER,
 };
 static wi::unordered_map<std::string, FileType> filetypes = {
@@ -43,6 +44,7 @@ static wi::unordered_map<std::string, FileType> filetypes = {
 	{"VRM", FileType::VRM},
 	{"FBX", FileType::FBX},
 	{"H", FileType::HEADER},
+	{"TXT", FileType::TEXT},
 };
 
 enum class EditorActions
@@ -951,6 +953,7 @@ void EditorComponent::Load()
 		params.extensions.push_back("vrm");
 		params.extensions.push_back("fbx");
 		params.extensions.push_back("lua");
+		params.extensions.push_back("txt");
 		auto ext_video = wi::resourcemanager::GetSupportedVideoExtensions();
 		for (auto& x : ext_video)
 		{
@@ -4591,6 +4594,28 @@ void EditorComponent::Open(std::string filename)
 	if (type == FileType::SOUND)
 	{
 		GetCurrentScene().Entity_CreateSound(wi::helper::GetFileNameFromPath(filename), filename);
+		componentsWnd.RefreshEntityTree();
+		return;
+	}
+	if (type == FileType::TEXT)
+	{
+		Entity entity = CreateEntity();
+		wi::SpriteFont& font = GetCurrentScene().fonts.Create(entity);
+		font.params.h_align = wi::font::Alignment::WIFALIGN_CENTER;
+		font.params.v_align = wi::font::Alignment::WIFALIGN_CENTER;
+		font.params.scaling = 0.1f;
+		font.params.size = 26;
+		font.anim.typewriter.looped = true;
+		GetCurrentScene().transforms.Create(entity).Translate(XMFLOAT3(0, 2, 0));
+		GetCurrentScene().names.Create(entity) = "font";
+
+		wi::vector<uint8_t> filedata;
+		wi::helper::FileRead(filename, filedata);
+		std::string fileText;
+		fileText.resize(filedata.size() + 1);
+		std::memcpy(fileText.data(), filedata.data(), filedata.size());
+		font.SetText(fileText);
+
 		componentsWnd.RefreshEntityTree();
 		return;
 	}

@@ -11,6 +11,7 @@ public:
 	void SetEntity(wi::ecs::Entity entity);
 
 	wi::gui::TextInputField textInput;
+	wi::gui::Button fileButton;
 	wi::gui::Button fontStyleButton;
 	wi::gui::ComboBox fontSizeCombo;
 	wi::gui::ComboBox hAlignCombo;

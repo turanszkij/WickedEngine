@@ -9,7 +9,7 @@ void FontWindow::Create(EditorComponent* _editor)
 	editor = _editor;
 
 	wi::gui::Window::Create(ICON_FONT " Font", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 1000));
+	SetSize(XMFLOAT2(670, 1020));
 
 	closeButton.SetTooltip("Delete Font");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -44,6 +44,32 @@ void FontWindow::Create(EditorComponent* _editor)
 		}
 	});
 	AddWidget(&textInput);
+
+	fileButton.Create("From file...");
+	fileButton.OnClick([=](wi::gui::EventArgs args) {
+
+		wi::helper::FileDialogParams params;
+		params.type = wi::helper::FileDialogParams::OPEN;
+		params.description = "Text (*.txt)";
+		params.extensions = { "txt" };
+		wi::helper::FileDialog(params, [=](std::string fileName) {
+			wi::vector<uint8_t> filedata;
+			wi::helper::FileRead(fileName, filedata);
+			std::string fileText;
+			fileText.resize(filedata.size() + 1);
+			std::memcpy(fileText.data(), filedata.data(), filedata.size());
+			wi::scene::Scene& scene = editor->GetCurrentScene();
+			for (auto& x : editor->translator.selected)
+			{
+				wi::SpriteFont* font = scene.fonts.GetComponent(x.entity);
+				if (font == nullptr)
+					continue;
+				font->SetText(fileText);
+			}
+		});
+
+	});
+	AddWidget(&fileButton);
 
 	fontStyleButton.Create("");
 	fontStyleButton.SetDescription("Style: ");
@@ -559,6 +585,7 @@ void FontWindow::ResizeLayout()
 	};
 
 	add_fullwidth(textInput);
+	add(fileButton);
 	add(fontStyleButton);
 	add(fontSizeCombo);
 	add(hAlignCombo);
