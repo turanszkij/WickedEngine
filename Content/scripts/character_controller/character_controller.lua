@@ -7,6 +7,7 @@
 --		- To set the player start position, you can put a metadata component to the level scene and set it to "Player" preset
 --		- To add NPCs you can put a metadata component to the level scene and set it to "NPC" preset
 --		- To specify which model a character in the level (Player or NPC) uses, add a string property to its metadata named "name" and its value is the name of the character, for example name = johnny will use assets/johnny.wiscene
+--		- To specify which animation set a character should use, add "animset" string property to metadata, the value should be the name of the animset which will be concatenated to anim names with "_". For example: animset = male will load animations like "walk_male", etc. if available, else fall back to "walk"
 --		- To set patrol route for an NPC character, add a "waypoint" named string property to its metadata and the value is a name of the target waypoint entity. Waypoints can be chained by having a metadata for them and having "waypoint" string properties on each.
 --
 -- 	CONTROLS:
@@ -283,28 +284,13 @@ local Mood = {
 local enable_footprints = true
 local footprint_texture = Texture(script_dir() .. "assets/footprint.dds")
 local footprints = {}
-	
-local animations = {}
-local function LoadAnimations(anim_scene)
-	animations = {
-		IDLE = anim_scene.Entity_FindByName("idle"),
-		WALK = anim_scene.Entity_FindByName("walk"),
-		JOG = anim_scene.Entity_FindByName("jog"),
-		RUN = anim_scene.Entity_FindByName("run"),
-		JUMP = anim_scene.Entity_FindByName("jump"),
-		SWIM_IDLE = anim_scene.Entity_FindByName("swim_idle"),
-		SWIM = anim_scene.Entity_FindByName("swim"),
-		DANCE = anim_scene.Entity_FindByName("dance"),
-		WAVE = anim_scene.Entity_FindByName("wave"),
-	}
-end
 
 local character_capsules = {}
 local voxelgrid = VoxelGrid(128,32,128)
 voxelgrid.SetVoxelSize(0.25)
 voxelgrid.SetCenter(Vector(0,0.1,0))
 
-local function Character(model_scene, start_transform, controllable, anim_scene)
+local function Character(model_scene, start_transform, controllable, anim_scene, animset)
 	local self = {
 		model = INVALID_ENTITY,
 		target_rot_horizontal = 0,
@@ -351,7 +337,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 		dialogs = {},
 		next_dialog = 1,
 		
-		Create = function(self, model_scene, start_transform, controllable, anim_scene)
+		Create = function(self, model_scene, start_transform, controllable, anim_scene, animset)
 			self.position = start_transform.GetPosition()
 			local facing = vector.Rotate(start_transform.GetForward(), vector.QuaternionFromRollPitchYaw(self.rotation))
 			self.controllable = controllable
@@ -428,25 +414,33 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 			self.root = self.humanoid
 			
 			scene.ResetPose(self.model)
-			self.anims[States.IDLE] = scene.RetargetAnimation(self.humanoid, animations.IDLE, false, anim_scene)
-			self.anims[States.WALK] = scene.RetargetAnimation(self.humanoid, animations.WALK, false, anim_scene)
-			self.anims[States.JOG] = scene.RetargetAnimation(self.humanoid, animations.JOG, false, anim_scene)
-			self.anims[States.RUN] = scene.RetargetAnimation(self.humanoid, animations.RUN, false, anim_scene)
-			self.anims[States.JUMP] = scene.RetargetAnimation(self.humanoid, animations.JUMP, false, anim_scene)
-			self.anims[States.SWIM_IDLE] = scene.RetargetAnimation(self.humanoid, animations.SWIM_IDLE, false, anim_scene)
-			self.anims[States.SWIM] = scene.RetargetAnimation(self.humanoid, animations.SWIM, false, anim_scene)
-			self.anims[States.DANCE] = scene.RetargetAnimation(self.humanoid, animations.DANCE, false, anim_scene)
-			self.anims[States.WAVE] = scene.RetargetAnimation(self.humanoid, animations.WAVE, false, anim_scene)
 
-			charactercomponent.AddAnimation(self.anims[States.IDLE])
-			charactercomponent.AddAnimation(self.anims[States.WALK])
-			charactercomponent.AddAnimation(self.anims[States.JOG])
-			charactercomponent.AddAnimation(self.anims[States.RUN])
-			charactercomponent.AddAnimation(self.anims[States.JUMP])
-			charactercomponent.AddAnimation(self.anims[States.SWIM_IDLE])
-			charactercomponent.AddAnimation(self.anims[States.SWIM])
-			charactercomponent.AddAnimation(self.anims[States.DANCE])
-			charactercomponent.AddAnimation(self.anims[States.WAVE])
+    		-- The base animation entities are queried from the anim_scene, they are not yet tergeting our character:
+			self.anims[States.IDLE] = anim_scene.Entity_FindByName("idle")
+			self.anims[States.WALK] = anim_scene.Entity_FindByName("walk")
+			self.anims[States.JOG] = anim_scene.Entity_FindByName("jog")
+			self.anims[States.RUN] = anim_scene.Entity_FindByName("run")
+			self.anims[States.JUMP] = anim_scene.Entity_FindByName("jump")
+			self.anims[States.SWIM_IDLE] = anim_scene.Entity_FindByName("swim_idle")
+			self.anims[States.SWIM] = anim_scene.Entity_FindByName("swim")
+			self.anims[States.DANCE] = anim_scene.Entity_FindByName("dance")
+			self.anims[States.WAVE] = anim_scene.Entity_FindByName("wave")
+
+    		-- Retarget animation entities onto the character, and add them to the CharacterComponent:
+			--	Also see if a requested animation set (animset) is available for each animation, and use that instead if yes
+			animset = "_" .. animset
+			for state,anim in pairs(self.anims) do
+				local anim_name_component = anim_scene.Component_GetName(anim)
+				if anim_name_component ~= nil then
+					local anim_set_name = anim_name_component.GetName() .. animset
+					local anim_set_entity = anim_scene.Entity_FindByName(anim_set_name)
+					if anim_set_entity ~= INVALID_ENTITY then
+						anim = anim_set_entity -- if there is animation with requested animset, replace default anim to that
+					end
+					self.anims[state] = scene.RetargetAnimation(self.humanoid, anim, false, anim_scene)
+					charactercomponent.AddAnimation(self.anims[state]) -- 
+				end
+			end
 			
 			local model_transform = scene.Component_GetTransform(self.model)
 			model_transform.ClearTransform()
@@ -798,7 +792,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene)
 
 	}
 
-	self:Create(model_scene, start_transform, controllable, anim_scene)
+	self:Create(model_scene, start_transform, controllable, anim_scene, animset)
 	return self
 end
 
@@ -1044,9 +1038,6 @@ runProcess(function()
 	
 	scene.VoxelizeScene(voxelgrid, false, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~(Layers.Player | Layers.NPC)) -- player and npc layers not included in voxelization
 	
-	-- Parse animations from anim_scene, which was loaded by the loading screen:
-	LoadAnimations(anim_scene)
-	
 	-- Create characters from scene metadata components:
 	local player = nil
 	local npcs = {}
@@ -1069,10 +1060,10 @@ runProcess(function()
 			end
 
 			if player == nil and metadata.GetPreset() == MetadataPreset.Player then
-				player = Character(character_scenes[name], transform, true, anim_scene)
+				player = Character(character_scenes[name], transform, true, anim_scene, metadata.GetString("animset"))
 			end
 			if metadata.GetPreset() == MetadataPreset.NPC then
-				local npc = Character(character_scenes[name], transform, false, anim_scene)
+				local npc = Character(character_scenes[name], transform, false, anim_scene, metadata.GetString("animset"))
 				-- Add patrol waypoints if found:
 				--	It will be looking for "waypoint" named string values in metadata components, and they can be chained by their value
 				local visited = {} -- avoid infinite loop
