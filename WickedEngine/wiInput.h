@@ -12,6 +12,8 @@ namespace wi::input
 	{
 		BUTTON_NONE = 0,
 
+		DIGIT_RANGE_START = 48, // digit 0
+
 		CHARACTER_RANGE_START = 65, // letter A
 
 		GAMEPAD_RANGE_START = 256, // do not use!
@@ -114,6 +116,9 @@ namespace wi::input
 		KEYBOARD_BUTTON_TAB,
 		KEYBOARD_BUTTON_TILDE,
 		KEYBOARD_BUTTON_INSERT,
+
+		// must be the last entry
+		BUTTON_ENUM_SIZE
 	};
 	enum GAMEPAD_ANALOG
 	{
@@ -125,7 +130,7 @@ namespace wi::input
 
 	struct KeyboardState
 	{
-		bool buttons[256] = {}; // it contains pressed buttons as "keyboard/typewriter" like, so no continuous presses
+		bool buttons[BUTTON_ENUM_SIZE] = {}; // it contains pressed buttons as "keyboard/typewriter" like, so no continuous presses
 	};
 	struct MouseState
 	{

@@ -435,7 +435,7 @@ namespace wi::input
 		}
 		else if (playerindex == 0) // keyboard or mouse
 		{
-			uint8_t keycode = (uint8_t)button;
+			uint16_t keycode = (uint16_t)button;
 
 			switch (button)
 			{

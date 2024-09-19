@@ -239,16 +239,16 @@ namespace wi::input::sdlinput
         // Scancode Conversion Segment
 
         if(key >= 4 && key <= 29){ // A to Z
-            return key+61;
+            return (key - 4) + CHARACTER_RANGE_START;
         }
-        if(key >= 30 && key <= 39){ // 0 to 10
-            return key+18;
+        if(key >= 30 && key <= 39){ // 0 to 9
+            return (key - 30) + DIGIT_RANGE_START;
         }
         if(key >= 58 && key <= 69){ // F1 to F12
-            return key-47;
+            return (key - 58) + KEYBOARD_BUTTON_F1;
         }
         if(key >= 79 && key <= 82){ // Keyboard directional buttons
-            return (82-key)+4;
+            return (82 - key) + KEYBOARD_BUTTON_UP;
         }
         switch(key){ // Individual scancode key conversion
             case SDL_SCANCODE_SPACE:
