@@ -421,6 +421,7 @@ namespace wi::terrain
 	Terrain::~Terrain()
 	{
 		Generation_Cancel();
+		wi::jobsystem::Wait(virtual_texture_ctx);
 	}
 
 	void Terrain::Generation_Restart()
@@ -1443,6 +1444,7 @@ namespace wi::terrain
 						{
 							material->textures[map_type].sparse_feedbackmap_descriptor = -1;
 						}
+						material->textures[map_type].resource.SetTextureVirtual(atlas.tile_pool, vt.residency->residencyMap, vt.residency->feedbackMap);
 					}
 					else
 					{
@@ -1461,6 +1463,7 @@ namespace wi::terrain
 						}
 						material->textures[map_type].sparse_residencymap_descriptor = -1;
 						material->textures[map_type].sparse_feedbackmap_descriptor = -1;
+						material->textures[map_type].resource.SetTextureVirtual(atlas.tile_pool, Texture(), Texture());
 					}
 					material->textures[map_type].lod_clamp = (float)vt.lod_count - 2;
 				}

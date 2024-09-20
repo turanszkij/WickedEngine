@@ -34,6 +34,7 @@ namespace wi
 		// Allows to set a Texture to the resource from outside
 		//	srgb_subresource: you can provide a subresource for SRGB view if the texture is going to be used as SRGB with the GetTextureSRGBSubresource() (optional)
 		void SetTexture(const wi::graphics::Texture& texture, int srgb_subresource = -1);
+		void SetTextureVirtual(const wi::graphics::GPUBuffer& tile_pool, const wi::graphics::Texture& residency, const wi::graphics::Texture& feedback); // for virtual texture, bind additional resources to have same lifetime
 		void SetSound(const wi::audio::Sound& sound);
 		void SetScript(const std::string& script);
 		void SetVideo(const wi::video::Video& script);

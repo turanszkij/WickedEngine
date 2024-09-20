@@ -60,6 +60,11 @@ namespace wi
 		StreamingTexture streaming_texture;
 		std::atomic<uint32_t> streaming_resolution{ 0 };
 		uint32_t streaming_unload_delay = 0;
+
+		// Virtual texture things:
+		wi::graphics::GPUBuffer tile_pool;
+		wi::graphics::Texture texture_feedback;
+		wi::graphics::Texture texture_residency;
 	};
 
 	const wi::vector<uint8_t>& Resource::GetFileData() const
@@ -132,6 +137,17 @@ namespace wi
 		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		resourceinternal->texture = texture;
 		resourceinternal->srgb_subresource = srgb_subresource;
+	}
+	void Resource::SetTextureVirtual(const GPUBuffer& tile_pool, const Texture& residency, const Texture& feedback)
+	{
+		if (internal_state == nullptr)
+		{
+			internal_state = std::make_shared<ResourceInternal>();
+		}
+		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
+		resourceinternal->tile_pool = tile_pool;
+		resourceinternal->texture_residency = residency;
+		resourceinternal->texture_feedback = feedback;
 	}
 	void Resource::SetSound(const wi::audio::Sound& sound)
 	{
