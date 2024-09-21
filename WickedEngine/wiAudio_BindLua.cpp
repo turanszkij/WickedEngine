@@ -56,18 +56,27 @@ namespace wi::lua
 		if (argc > 0)
 		{
 			Sound_BindLua* s = Luna<Sound_BindLua>::lightcheck(L, 1);
+			if (s == nullptr)
+			{
+				wi::lua::SError(L, "CreateSoundInstance(Sound sound, SoundInstance soundinstance) first argument is not a Sound!");
+				return 0;
+			}
+			if (!s->soundResource.IsValid())
+			{
+				wi::lua::SError(L, "CreateSoundInstance(Sound sound, SoundInstance soundinstance) first argument Sound resource is not valid, probably it was not loaded successfully!");
+				return 0;
+			}
 			SoundInstance_BindLua* soundinstance = Luna<SoundInstance_BindLua>::lightcheck(L, 2);
-			if (s != nullptr && soundinstance != nullptr)
+			if (soundinstance == nullptr)
 			{
-				const wi::audio::Sound& sound = s->soundResource.GetSound();
-				bool result = wi::audio::CreateSoundInstance(&sound, &soundinstance->soundinstance);
-				wi::lua::SSetBool(L, result);
-				return 1;
+				wi::lua::SError(L, "CreateSoundInstance(Sound sound, SoundInstance soundinstance) second argument is not a SoundInstance!");
+				return 0;
 			}
-			else
-			{
-				wi::lua::SError(L, "CreateSoundInstance(Sound sound, SoundInstance soundinstance) argument types don't match!");
-			}
+
+			const wi::audio::Sound& sound = s->soundResource.GetSound();
+			bool result = wi::audio::CreateSoundInstance(&sound, &soundinstance->soundinstance);
+			wi::lua::SSetBool(L, result);
+			return 1;
 		}
 		else
 			wi::lua::SError(L, "CreateSoundInstance(Sound sound, SoundInstance soundinstance) not enough arguments!");
