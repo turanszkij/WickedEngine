@@ -89,7 +89,7 @@ namespace wi::audio
 			if (!SUCCEEDED(hr))
 			{
 				std::stringstream ss("");
-				ss << "XAudio2: CoInitializeEx returned error: 0x" << std::hex << GetLastError();
+				ss << "XAudio2: CoInitializeEx returned error: 0x" << std::hex << hr;
 				wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
 				return;
 			}
@@ -98,7 +98,7 @@ namespace wi::audio
 			if (!SUCCEEDED(hr))
 			{
 				std::stringstream ss("");
-				ss << "XAudio2: XAudio2Create returned error: 0x" << std::hex << GetLastError();
+				ss << "XAudio2: XAudio2Create returned error: 0x" << std::hex << hr;
 				wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
 				return;
 			}
@@ -114,7 +114,7 @@ namespace wi::audio
 			if (!SUCCEEDED(hr))
 			{
 				std::stringstream ss("");
-				ss << "XAudio2: CreateMasteringVoice returned error: 0x" << std::hex << GetLastError();
+				ss << "XAudio2: CreateMasteringVoice returned error: 0x" << std::hex << hr;
 				wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
 				return;
 			}
@@ -140,7 +140,7 @@ namespace wi::audio
 				if (!SUCCEEDED(hr))
 				{
 					std::stringstream ss("");
-					ss << "XAudio2: CreateSubmixVoice returned error: 0x" << std::hex << GetLastError();
+					ss << "XAudio2: CreateSubmixVoice returned error: 0x" << std::hex << hr;
 					wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
 					return;
 				}
@@ -152,7 +152,7 @@ namespace wi::audio
 			if (!SUCCEEDED(hr))
 			{
 				std::stringstream ss("");
-				ss << "XAudio2: X3DAudioInitialize returned error: 0x" << std::hex << GetLastError();
+				ss << "XAudio2: X3DAudioInitialize returned error: 0x" << std::hex << hr;
 				wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
 				return;
 			}
@@ -163,7 +163,7 @@ namespace wi::audio
 				if (!SUCCEEDED(hr))
 				{
 					std::stringstream ss("");
-					ss << "XAudio2: XAudio2CreateReverb returned error: 0x" << std::hex << GetLastError();
+					ss << "XAudio2: XAudio2CreateReverb returned error: 0x" << std::hex << hr;
 					wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
 					return;
 				}
@@ -182,7 +182,7 @@ namespace wi::audio
 				if (!SUCCEEDED(hr))
 				{
 					std::stringstream ss("");
-					ss << "XAudio2: CreateSubmixVoice returned error: 0x" << std::hex << GetLastError();
+					ss << "XAudio2: CreateSubmixVoice returned error: 0x" << std::hex << hr;
 					wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
 					return;
 				}
@@ -193,7 +193,7 @@ namespace wi::audio
 				if (!SUCCEEDED(hr))
 				{
 					std::stringstream ss("");
-					ss << "XAudio2: SetEffectParameters returned error: 0x" << std::hex << GetLastError();
+					ss << "XAudio2: SetEffectParameters returned error: 0x" << std::hex << hr;
 					wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
 					return;
 				}
@@ -794,7 +794,7 @@ namespace wi::audio
 			if (res != 0)
 			{
 				std::stringstream ss("");
-				ss << "FAudioCreate returned error: 0x" << std::hex << GetLastError();
+				ss << "FAudioCreate returned error: " << res;
 				wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
 				return;
 			}
@@ -808,7 +808,7 @@ namespace wi::audio
 			if (res != 0)
 			{
 				std::stringstream ss("");
-				ss << "FAudio_CreateMasteringVoice returned error: 0x" << std::hex << GetLastError();
+				ss << "FAudio_CreateMasteringVoice returned error: " << res;
 				wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
 				return;
 			}
@@ -825,7 +825,7 @@ namespace wi::audio
 				if (res != 0)
 				{
 					std::stringstream ss("");
-					ss << "FAudio_CreateSubmixVoice returned error: 0x" << std::hex << GetLastError();
+					ss << "FAudio_CreateSubmixVoice returned error: " << res;
 					wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
 					return;
 				}
@@ -838,7 +838,7 @@ namespace wi::audio
 			if (res != 0)
 			{
 				std::stringstream ss("");
-				ss << "F3DAudioInitialize returned error: 0x" << std::hex << GetLastError();
+				ss << "F3DAudioInitialize returned error: " << res;
 				wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
 				return;
 			}
@@ -849,7 +849,7 @@ namespace wi::audio
 				if (res != 0)
 				{
 					std::stringstream ss("");
-					ss << "FAudioCreateReverb returned error: 0x" << std::hex << GetLastError();
+					ss << "FAudioCreateReverb returned error: " << res;
 					wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
 					return;
 				}
@@ -870,7 +870,7 @@ namespace wi::audio
 				if (res != 0)
 				{
 					std::stringstream ss("");
-					ss << "FAudio_CreateSubmixVoice returned error: 0x" << std::hex << GetLastError();
+					ss << "FAudio_CreateSubmixVoice returned error: " << res;
 					wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
 					return;
 				}
