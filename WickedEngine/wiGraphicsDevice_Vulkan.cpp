@@ -616,21 +616,13 @@ namespace vulkan_internal
 		{
 			ss += "[Vulkan Warning]: ";
 			ss += callback_data->pMessage;
-			wi::backlog::post(ss, wi::backlog::LogLevel::Warning);
+			wi::helper::DebugOut(ss, wi::helper::DebugLevel::Warning);
 		}
 		else if (message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
 		{
 			ss += "[Vulkan Error]: ";
 			ss += callback_data->pMessage;
-#if 1
-			wi::backlog::post(ss, wi::backlog::LogLevel::Error);
-#else
-			OutputDebugStringA(callback_data->pMessage);
-			OutputDebugStringA("\n");
-#endif
-//#ifdef _DEBUG
-//			assert(0);
-//#endif // _DEBUG
+			wi::helper::DebugOut(ss, wi::helper::DebugLevel::Error);
 		}
 
 		return VK_FALSE;
@@ -7190,6 +7182,24 @@ using namespace vulkan_internal;
 
 			const VkDeviceSize zero = {};
 			vkCmdBindVertexBuffers2(commandlist.GetCommandBuffer(), 0, 1, &nullBuffer, &zero, &zero, &zero);
+
+			if (CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING))
+			{
+				VkExtent2D fragmentSize = {};
+				fragmentSize.width = 1;
+				fragmentSize.height = 1;
+
+				VkFragmentShadingRateCombinerOpKHR combiner[] = {
+					VK_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_KHR,
+					VK_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_KHR
+				};
+
+				vkCmdSetFragmentShadingRateKHR(
+					commandlist.GetCommandBuffer(),
+					&fragmentSize,
+					combiner
+				);
+			}
 		}
 
 		return cmd;
