@@ -25,7 +25,7 @@ You can get the full source code by using Git version control and cloning https:
 <br/>
 <br/>
 
-<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/swimming.gif" width="320px"/>
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/fps.gif" width="320px"/>
 
 ### Platforms:
 - Windows 10 or newer
@@ -44,7 +44,7 @@ If you want to develop a C++ application that uses Wicked Engine, you can build 
 
 If you have questions or stuck, please use the `windows` communication channel on Discord: [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
 
-<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/npc.gif" width="320px"/>
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/character_grass.gif" width="320px"/>
 
 #### Linux
 To build the engine for Linux, use Cmake. You can find a sample build script for Ubuntu [here](.github/workflows/build.yml) (in the linux section). On the Linux operating system, you will need to ensure some additional dependencies are installed, such as Cmake (3.7 or newer), g++ compiler (C++ 17 compliant version) and SDL2. For Ubuntu 20.04, you can use the following commands to install dependencies:

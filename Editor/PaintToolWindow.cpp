@@ -1208,9 +1208,12 @@ void PaintToolWindow::Update(float dt)
 						const float weight2 = softbody->weights[i2];
 						XMVECTOR N0 = XMVectorZero(), N1 = XMVectorZero(), N2 = XMVectorZero();
 						wi::renderer::RenderableTriangle tri;
-						XMStoreFloat3(&tri.positionA, SkinVertex(*mesh, *softbody, i0, &N0) + N0 * 0.01f);
-						XMStoreFloat3(&tri.positionB, SkinVertex(*mesh, *softbody, i1, &N1) + N1 * 0.01f);
-						XMStoreFloat3(&tri.positionC, SkinVertex(*mesh, *softbody, i2, &N2) + N2 * 0.01f);
+						XMVECTOR P0 = SkinVertex(*mesh, *softbody, i0, &N0);
+						XMVECTOR P1 = SkinVertex(*mesh, *softbody, i1, &N1);
+						XMVECTOR P2 = SkinVertex(*mesh, *softbody, i2, &N2);
+						XMStoreFloat3(&tri.positionA, P0 + N0 * 0.01f);
+						XMStoreFloat3(&tri.positionB, P1 + N1 * 0.01f);
+						XMStoreFloat3(&tri.positionC, P2 + N2 * 0.01f);
 						if (weight0 == 0)
 							tri.colorA = XMFLOAT4(1, 1, 0, 1);
 						else
