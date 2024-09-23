@@ -11247,8 +11247,6 @@ void SurfelGI(
 {
 	if (!scene.TLAS.IsValid() && !scene.BVH.IsValid())
 		return;
-	if (scene.objects.GetCount() == 0)
-		return;
 
 	wi::jobsystem::Wait(raytracing_ctx);
 

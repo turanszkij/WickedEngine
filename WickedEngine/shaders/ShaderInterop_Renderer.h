@@ -24,11 +24,11 @@ struct alignas(16) ShaderScene
 	int BVH_primitives;
 
 	float3 aabb_min;
-	float padding3;
+	uint instanceCount;
 	float3 aabb_max;
-	float padding4;
+	uint geometryCount;
 	float3 aabb_extents;		// enclosing AABB abs(max - min)
-	float padding5;
+	uint materialCount;
 	float3 aabb_extents_rcp;	// enclosing AABB 1.0f / abs(max - min)
 	float padding6;
 
