@@ -18,6 +18,7 @@ Wicked Engine is an open-source 3D engine with modern graphics. Use this as a C+
 - [Forum](https://wickedengine.net/forum/)<br/>
 - [Features](features.txt)<br/>
 - [Videos](https://www.youtube.com/playlist?list=PLLN-1FTGyLU_HJoC5zx6hJkB3D2XLiaxS)<br/>
+- [Editor Documentation](https://wickedengine.net/wp-content/uploads/2024/09/Wicked-Engine-Editor-Documentation.pdf)<br/>
 - [C++ Documentation](Content/Documentation/WickedEngine-Documentation.md)<br/>
 - [Lua Documentation](Content/Documentation/ScriptingAPI-Documentation.md)<br/>
 
