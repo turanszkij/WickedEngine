@@ -146,9 +146,9 @@ namespace wi::lua
 
 				if (status == 0)
 				{
-					SSetString(L, std::to_string(PID));
-					lua_insert(L, 1);
-					return lua_gettop(L);
+					int argc = lua_gettop(L);
+					SSetString(L, std::to_string(PID)); // the PID will be an extra return for dofile after all other returns
+					return ++argc;
 				}
 				else
 				{
