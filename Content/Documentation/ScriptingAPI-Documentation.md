@@ -1206,6 +1206,8 @@ TextureSlot = {
 - IsNotVisibleInReflections() : bool
 - SetWetmapEnabled(bool value) -- enable wet map for the object, this will automatically track the wetness
 - IsWetmapEnabled() : bool
+- SetRenderable(bool value) -- can turn off rendering of an object
+- IsRenderable() : bool
 
 #### InverseKinematicsComponent
 Describes an Inverse Kinematics effector.

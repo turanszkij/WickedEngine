@@ -2616,7 +2616,7 @@ namespace wi::scene
 	}
 	Capsule CharacterComponent::GetCapsule() const
 	{
-		return Capsule(Sphere(position, width), height);
+		return Capsule(position, XMFLOAT3(position.x, position.y + height, position.z), width);
 	}
 	void CharacterComponent::SetFacing(const XMFLOAT3& value)
 	{

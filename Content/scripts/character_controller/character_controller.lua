@@ -9,6 +9,7 @@
 --		- To specify which model a character in the level (Player or NPC) uses, add a string property to its metadata named "name" and its value is the name of the character, for example name = johnny will use assets/johnny.wiscene
 --		- To specify which animation set a character should use, add "animset" string property to metadata, the value should be the name of the animset which will be concatenated to anim names with "_". For example: animset = male will load animations like "walk_male", etc. if available, else fall back to "walk"
 --		- To set patrol route for an NPC character, add a "waypoint" named string property to its metadata and the value is a name of the target waypoint entity. Waypoints can be chained by having a metadata for them and having "waypoint" string properties on each.
+--		- To set conversation dialog for an NPC character, add a "dialog" named string property to its metadata and the value is a name of the lua file in assets/dialogs/. For example dialog = hello will make the character use the assets/dialogs/hello.lua dialog script
 --
 -- 	CONTROLS:
 --		WASD/left thumbstick: walk
@@ -23,12 +24,7 @@
 --		R: reload script
 --		ENTER: interaction
 
--- Debug Draw Helper
-local DrawAxis = function(point,f)
-	DrawLine(point,point:Add(Vector(f,0,0)),Vector(1,0,0,1))
-	DrawLine(point,point:Add(Vector(0,f,0)),Vector(0,1,0,1))
-	DrawLine(point,point:Add(Vector(0,0,f)),Vector(0,0,1,1))
-end
+package.path = package.path .. ";" .. script_dir() .. "assets/?.lua;" -- allows using require from the assets directory to load .lua files
 
 local debug = false -- press H to toggle
 local framerate_lock = false
@@ -37,222 +33,8 @@ local slope_threshold = 0.2 -- How much slopeiness will cause character to slide
 local gravity = -30
 local dynamic_voxelization = false -- Set to true to revoxelize navigation every frame
 
-local ConversationState = {
-	Disabled = 0,
-	Talking = 1,
-	Waiting = 2,
-}
-local function Conversation()
-	local self = {
-		state = ConversationState.Disabled,
-		percent = 0,
-		character = nil,
-		font = SpriteFont(),
-		advance_font = SpriteFont(""),
-		choice_fonts = {},
-		font_blink_timer = 0,
-		dialog = {},
-		speed = 30,
-		choice = 1,
-		override_input = false,
-
-		Update = function(self, path, scene, player)
-
-			local crop_height = GetScreenHeight() * 0.18
-			local text_offset = GetScreenWidth() * 0.2
-			self.font.SetPos(Vector(text_offset, GetScreenHeight() - crop_height + 10))
-			self.font.SetHorizontalWrapping(GetScreenWidth() - self.font.GetPos().GetX() * 2)
-			self.advance_font.SetPos(Vector(GetScreenWidth() - self.font.GetPos().GetX(), GetScreenHeight() - 50))
-
-			-- Update conversation percentage (fade in/out of conversation)
-			if self.state == ConversationState.Disabled then
-				self.percent = math.lerp(self.percent, 0, getDeltaTime() * 4)
-			else
-				self.percent = math.lerp(self.percent, 1, getDeltaTime() * 4)
-			end
-			path.SetCropTop(self.percent * crop_height)
-			path.SetCropBottom(self.percent * crop_height)
-			local cam = GetCamera()
-			cam.SetApertureSize(self.percent)
-
-			if self.percent < 0.9 then
-				self.font.SetHidden(true)
-				self.font.ResetTypewriter()
-			else
-				self.font.SetHidden(false)
-			end
-			self.advance_font.SetColor(Vector())
-			self.override_input = false
-			for i,choice_font in ipairs(self.choice_fonts) do
-				choice_font.SetColor(Vector())
-			end
-			self.font_blink_timer = self.font_blink_timer + getDeltaTime()
-
-			-- Focus on character:
-			if self.character ~= nil then
-				cam.SetFocalLength(vector.Subtract(scene.Component_GetTransform(self.character.head).GetPosition(), cam.GetPosition()).Length())
-			end
-
-			-- State flow:
-			if self.state == ConversationState.Disabled then
-				self.font.SetHidden(true)
-			elseif self.state == ConversationState.Talking then
-
-				self.choice = 1
-				self.override_input = true
-				self:CinematicCamera(self.character, player, scene, cam)
-
-				-- End of talking:
-				if self.font.IsTypewriterFinished() then
-					self.state = ConversationState.Waiting
-					self.font_blink_timer = 0
-				end
-
-				-- Skip talking:
-				if input.Press(KEYBOARD_BUTTON_ENTER) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_2) then
-					self.font.TypewriterFinish()
-				end
-
-				-- Turn on talking animation:
-				if self.character.expression ~= INVALID_ENTITY and self.percent >= 0.9 then
-					scene.Component_GetExpression(self.character.expression).SetForceTalkingEnabled(true)
-				end
-
-			elseif self.state == ConversationState.Waiting then
-
-				-- End of talking, waiting for input:
-				
-				if self.dialog.choices ~= nil then
-					-- Dialog choices:
-					self.override_input = true
-					self:CinematicCamera(player, self.character, scene, cam)
-
-					local pos = vector.Add(self.font.GetPos(), Vector(20, 10 + self.font.TextSize().GetY()))
-					for i,choice in ipairs(self.dialog.choices) do
-						if self.choice_fonts[i] == nil then
-							self.choice_fonts[i] = SpriteFont()
-							path.AddFont(self.choice_fonts[i])
-						end
-						self.choice_fonts[i].SetPos(pos)
-						self.choice_fonts[i].SetSize(self.font.GetSize())
-						self.choice_fonts[i].SetHorizontalWrapping(GetScreenWidth() - self.choice_fonts[i].GetPos().GetX() * 2)
-						if i == self.choice then
-							self.choice_fonts[i].SetText(" " .. choice[1])
-							self.choice_fonts[i].SetColor(vector.Lerp(Vector(1,1,1,1), self.font.GetColor(), math.abs(math.sin(self.font_blink_timer * math.pi))))
-						else
-							self.choice_fonts[i].SetText("     " .. choice[1])
-							self.choice_fonts[i].SetColor(self.font.GetColor())
-						end
-						pos = vector.Add(pos, Vector(0, self.choice_fonts[i].TextSize().GetY() + 5))
-					end
-
-					-- Dialog input:
-					if input.Press(KEYBOARD_BUTTON_UP) or input.Press(string.byte('W')) or input.Press(GAMEPAD_BUTTON_UP) then
-						self.choice = self.choice - 1
-						self.font_blink_timer = 0
-					end
-					if input.Press(KEYBOARD_BUTTON_DOWN) or input.Press(string.byte('S')) or input.Press(GAMEPAD_BUTTON_DOWN) then
-						self.choice = self.choice + 1
-						self.font_blink_timer = 0
-					end
-					if self.choice < 1 then
-						self.choice = #self.dialog.choices
-					end
-					if self.choice > #self.dialog.choices then
-						self.choice = 1
-					end
-					if input.Press(KEYBOARD_BUTTON_ENTER) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_2) then
-						if self.dialog.choices[self.choice].action ~= nil then
-							self.dialog.choices[self.choice].action() -- execute dialog choice action
-						end
-						self:Next()
-					end
-				else
-					-- No dialog choices:
-					self.override_input = true
-					self:CinematicCamera(self.character, player, scene, cam)
-
-					if input.Press(KEYBOARD_BUTTON_ENTER) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_2) then
-						if self.dialog.action_after ~= nil then
-							self.dialog.action_after() -- execute dialog action after ended
-						end
-						self:Next()
-						self.font.ResetTypewriter()
-					end
-					-- Blinking advance conversation icon:
-					self.advance_font.SetColor(vector.Lerp(Vector(0,0,0,0), self.font.GetColor(), math.abs(math.sin(self.font_blink_timer * math.pi))))	
-				end
-
-				-- Turn off talking animation:
-				if self.character.expression ~= INVALID_ENTITY then
-					scene.Component_GetExpression(self.character.expression).SetForceTalkingEnabled(false)
-				end
-			end
-
-		end,
-		
-		Enter = function(self, character)
-			backlog_post("Entering conversation")
-			self.state = ConversationState.Talking
-			self.character = character
-			if #self.character.dialogs < self.character.next_dialog then
-				self.character.next_dialog = 1
-			end
-			self:Next()
-		end,
-	
-		Exit = function(self)
-			backlog_post("Exiting conversation")
-			self.state = ConversationState.Disabled
-			self.dialog = {}
-			self.override_input = false
-			self.font.ResetTypewriter()
-		end,
-
-		Next = function(self)
-			if #self.character.dialogs < self.character.next_dialog then
-				self:Exit()
-			end
-			if self.state == ConversationState.Disabled then
-				return
-			end
-			self.dialog = self.character.dialogs[self.character.next_dialog]
-			self.character.next_dialog = self.character.next_dialog + 1
-			self.state = ConversationState.Talking
-			self.font.SetText(self.dialog[1])
-			self.font.SetTypewriterTime(string.len(self.dialog[1] or "") / self.speed)
-			self.font.ResetTypewriter()
-			if self.dialog.action ~= nil then
-				self.dialog.action() -- execute dialog action
-			end
-		end,
-
-		CinematicCamera = function(self, character_foreground, character_background, scene, camera)
-			local head_pos = scene.Component_GetTransform(character_foreground.head).GetPosition()
-			local forward_dir = vector.Subtract(character_background.position, character_foreground.position).Normalize()
-			forward_dir = vector.TransformNormal(forward_dir, matrix.RotationY(math.pi * 0.1))
-			local up_dir = Vector(0,1,0)
-			local right_dir = vector.Cross(up_dir, forward_dir).Normalize()
-			local cam_pos = vector.Add(head_pos, forward_dir)
-			local cam_target = vector.Add(vector.Add(head_pos, vector.Multiply(right_dir, -0.4)), Vector(0,-0.1))
-			local lookat = matrix.Inverse(matrix.LookAt(cam_pos, cam_target))
-			camera.TransformCamera(lookat)
-			camera.UpdateCamera()
-			camera.SetFocalLength(vector.Subtract(head_pos, camera.GetPosition()).Length())
-		end
-	}
-	self.font.SetSize(20)
-	self.font.SetColor(Vector(0.6,0.8,1,1))
-	self.advance_font.SetSize(24)
-	local sound = Sound()
-	local soundinstance = SoundInstance()
-	audio.CreateSound(script_dir() .. "assets/typewriter.wav", sound)
-	audio.CreateSoundInstance(sound, soundinstance)
-	audio.SetVolume(0.2, soundinstance)
-	self.font.SetTypewriterSound(sound, soundinstance)
-	return self
-end
-local conversation = Conversation()
+dofile(script_dir() .. "/assets/conversation.lua") -- load conversation system logic from separate file
+conversation = Conversation() -- conversation will be accessible from dialog scripts
 
 local scene = GetScene()
 
@@ -260,7 +42,7 @@ local Layers = {
 	Player = 1 << 0,
 	NPC = 1 << 1,
 }
-local States = {
+States = {
 	IDLE = "idle",
 	WALK = "walk",
 	JOG = "jog",
@@ -272,7 +54,7 @@ local States = {
 	WAVE = "wave"
 }
 
-local Mood = {
+Mood = {
 	Neutral = ExpressionPreset.Neutral,
 	Happy = ExpressionPreset.Happy,
 	Angry = ExpressionPreset.Angry,
@@ -280,6 +62,9 @@ local Mood = {
 	Relaxed = ExpressionPreset.Relaxed,
 	Surprised = ExpressionPreset.Surprised
 }
+
+player = nil
+npcs = {}
 
 local enable_footprints = true
 local footprint_texture = Texture(script_dir() .. "assets/footprint.dds")
@@ -328,130 +113,16 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 		mood = Mood.Neutral,
 		mood_amount = 1,
 		expression = INVALID_ENTITY,
+		object_entities = {},
 
 		patrol_waypoints = {},
+		patrol_waypoints_original = {},
 		patrol_next = 0,
 		patrol_wait = 0,
 		patrol_reached = false,
 		hired = nil,
 		dialogs = {},
 		next_dialog = 1,
-		
-		Create = function(self, model_scene, start_transform, controllable, anim_scene, animset)
-			self.position = start_transform.GetPosition()
-			local facing = vector.Rotate(start_transform.GetForward(), vector.QuaternionFromRollPitchYaw(self.rotation))
-			self.controllable = controllable
-			if controllable then
-				self.layerMask = Layers.Player
-				self.target_rot_horizontal = vector.GetAngle(Vector(0,0,1), facing, Vector(0,1,0)) -- only modify camera rot for player
-			else
-				self.layerMask = Layers.NPC
-			end
-
-			-- Note: we instantiate the model_scene into the main scene, start_transform stores a component pointer which gets invalidated after this!!
-			self.model = scene.Instantiate(model_scene, true)
-
-			local charactercomponent = scene.Component_CreateCharacter(self.model) -- some character features will be handled by the built-in CharacterComponent in Wicked Engine
-			charactercomponent.SetPosition(self.position)
-			charactercomponent.SetFacing(facing)
-
-			local layer = scene.Component_GetLayer(self.model)
-			layer.SetLayerMask(self.layerMask)
-
-			self.state = States.IDLE
-			self.state_prev = self.state
-
-			for i,entity in ipairs(scene.Entity_GetHumanoidArray()) do
-				if scene.Entity_IsDescendant(entity, self.model) then
-					self.humanoid = entity
-					local humanoid = scene.Component_GetHumanoid(self.humanoid)
-					humanoid.SetLookAtEnabled(false)
-					self.neck = humanoid.GetBoneEntity(HumanoidBone.Neck)
-					self.head = humanoid.GetBoneEntity(HumanoidBone.Head)
-					self.left_hand = humanoid.GetBoneEntity(HumanoidBone.LeftHand)
-					self.right_hand = humanoid.GetBoneEntity(HumanoidBone.RightHand)
-					self.left_foot = humanoid.GetBoneEntity(HumanoidBone.LeftFoot)
-					self.right_foot = humanoid.GetBoneEntity(HumanoidBone.RightFoot)
-					self.left_toes = humanoid.GetBoneEntity(HumanoidBone.LeftToes)
-					self.right_toes = humanoid.GetBoneEntity(HumanoidBone.RightToes)
-					break
-				end
-			end
-			for i,entity in ipairs(scene.Entity_GetExpressionArray()) do
-				if scene.Entity_IsDescendant(entity, self.model) then
-					self.expression = entity
-
-					-- Set up some overrides to avoid bad looking expression combinations:
-					local expression = scene.Component_GetExpression(self.expression)
-					expression.SetPresetOverrideBlink(ExpressionPreset.Happy, ExpressionOverride.Block)
-					expression.SetPresetOverrideMouth(ExpressionPreset.Happy, ExpressionOverride.Blend)
-					expression.SetPresetOverrideBlink(ExpressionPreset.Surprised, ExpressionOverride.Block)
-				end
-			end
-
-			-- Enable wetmap for all objects of character, so it can get wet in the ocean (if the weather has it):
-			for i,entity in ipairs(scene.Entity_GetObjectArray()) do
-				if scene.Entity_IsDescendant(entity, self.model) then
-					local object = scene.Component_GetObject(entity)
-					object.SetWetmapEnabled(true)
-				end
-			end
-
-			-- Create a base capsule collider for character:
-			local collider = scene.Component_CreateCollider(self.model)
-			self.collider = self.model
-			collider.SetCPUEnabled(false)
-			collider.SetGPUEnabled(true)
-			collider.Shape = ColliderShape.Capsule
-			collider.Radius = 0.3
-			collider.Offset = Vector(0, collider.Radius, 0)
-			collider.Tail = Vector(0, 1.4, 0)
-			local head_transform = scene.Component_GetTransform(self.head)
-			if head_transform ~= nil then
-				collider.Tail = head_transform.GetPosition()
-			end
-
-			self.root = self.humanoid
-			
-			scene.ResetPose(self.model)
-
-    		-- The base animation entities are queried from the anim_scene, they are not yet tergeting our character:
-			self.anims[States.IDLE] = anim_scene.Entity_FindByName("idle")
-			self.anims[States.WALK] = anim_scene.Entity_FindByName("walk")
-			self.anims[States.JOG] = anim_scene.Entity_FindByName("jog")
-			self.anims[States.RUN] = anim_scene.Entity_FindByName("run")
-			self.anims[States.JUMP] = anim_scene.Entity_FindByName("jump")
-			self.anims[States.SWIM_IDLE] = anim_scene.Entity_FindByName("swim_idle")
-			self.anims[States.SWIM] = anim_scene.Entity_FindByName("swim")
-			self.anims[States.DANCE] = anim_scene.Entity_FindByName("dance")
-			self.anims[States.WAVE] = anim_scene.Entity_FindByName("wave")
-
-    		-- Retarget animation entities onto the character, and add them to the CharacterComponent:
-			--	Also see if a requested animation set (animset) is available for each animation, and use that instead if yes
-			animset = "_" .. animset
-			for state,anim in pairs(self.anims) do
-				local anim_name_component = anim_scene.Component_GetName(anim)
-				if anim_name_component ~= nil then
-					local anim_set_name = anim_name_component.GetName() .. animset
-					local anim_set_entity = anim_scene.Entity_FindByName(anim_set_name)
-					if anim_set_entity ~= INVALID_ENTITY then
-						anim = anim_set_entity -- if there is animation with requested animset, replace default anim to that
-					end
-					self.anims[state] = scene.RetargetAnimation(self.humanoid, anim, false, anim_scene)
-					charactercomponent.AddAnimation(self.anims[state]) -- 
-				end
-			end
-			
-			local model_transform = scene.Component_GetTransform(self.model)
-			model_transform.ClearTransform()
-			model_transform.Scale(self.scale)
-			model_transform.Rotate(self.rotation)
-			model_transform.Translate(self.position)
-			model_transform.UpdateTransform()
-
-			self.target_height = scene.Component_GetTransform(self.neck).GetPosition().GetY()
-
-		end,
 		
 		GetFacing = function(self)
 			local charactercomponent = scene.Component_GetCharacter(self.model)
@@ -499,6 +170,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 			local velocity = charactercomponent.GetVelocity()
 			local capsule = charactercomponent.GetCapsule()
 			character_capsules[self.model] = capsule
+			--DrawCapsule(capsule)
 
 			local humanoid = scene.Component_GetHumanoid(self.humanoid)
 			humanoid.SetLookAtEnabled(false)
@@ -698,26 +370,22 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 
 			-- If camera is inside character capsule, fade out the character, otherwise fade in:
 			if capsule.Intersects(GetCamera().GetPosition()) then
-				for i,entity in ipairs(scene.Entity_GetObjectArray()) do
-					if scene.Entity_IsDescendant(entity, self.model) then
-						local object = scene.Component_GetObject(entity)
-						local color = object.GetColor()
-						local opacity = color.GetW()
-						opacity = math.lerp(opacity, 0, 0.1)
-						color.SetW(opacity)
-						object.SetColor(color)
-					end
+				for i,entity in ipairs(self.object_entities) do
+					local object = scene.Component_GetObject(entity)
+					local color = object.GetColor()
+					local opacity = color.GetW()
+					opacity = math.lerp(opacity, 0, 0.1)
+					color.SetW(opacity)
+					object.SetColor(color)
 				end
 			else
-				for i,entity in ipairs(scene.Entity_GetObjectArray()) do
-					if scene.Entity_IsDescendant(entity, self.model) then
-						local object = scene.Component_GetObject(entity)
-						local color = object.GetColor()
-						local opacity = color.GetW()
-						opacity = math.lerp(opacity, 1, 0.1)
-						color.SetW(opacity)
-						object.SetColor(color)
-					end
+				for i,entity in ipairs(self.object_entities) do
+					local object = scene.Component_GetObject(entity)
+					local color = object.GetColor()
+					local opacity = color.GetW()
+					opacity = math.lerp(opacity, 1, 0.1)
+					color.SetW(opacity)
+					object.SetColor(color)
 				end
 			end
 			
@@ -782,6 +450,14 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 			end
 		end,
 
+        SetPatrol = function(self, patrol)
+            self.patrol_waypoints_original = patrol
+            self.patrol_waypoints = patrol
+        end,
+        ReturnToPatrol = function(self) -- return to original patrol route
+            self.patrol_waypoints = self.patrol_waypoints_original
+        end,
+
 		Follow = function(self, leader)
 			self.hired = leader
 		end,
@@ -792,7 +468,124 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 
 	}
 
-	self:Create(model_scene, start_transform, controllable, anim_scene, animset)
+	-- Character initialization:
+	self.position = start_transform.GetPosition()
+	local facing = vector.Rotate(start_transform.GetForward(), vector.QuaternionFromRollPitchYaw(self.rotation))
+	self.controllable = controllable
+	if controllable then
+		self.layerMask = Layers.Player
+		self.target_rot_horizontal = vector.GetAngle(Vector(0,0,1), facing, Vector(0,1,0)) -- only modify camera rot for player
+	else
+		self.layerMask = Layers.NPC
+	end
+
+	-- Note: we instantiate the model_scene into the main scene, start_transform stores a component pointer which gets invalidated after this!!
+	self.model = scene.Instantiate(model_scene, true)
+
+	local charactercomponent = scene.Component_CreateCharacter(self.model) -- some character features will be handled by the built-in CharacterComponent in Wicked Engine
+	charactercomponent.SetPosition(self.position)
+	charactercomponent.SetFacing(facing)
+	charactercomponent.SetWidth(0.3)
+	charactercomponent.SetHeight(1.8)
+	--charactercomponent.SetFootPlacementEnabled(false)
+
+	local layer = scene.Component_GetLayer(self.model)
+	layer.SetLayerMask(self.layerMask)
+
+	self.state = States.IDLE
+	self.state_prev = self.state
+
+	for i,entity in ipairs(scene.Entity_GetHumanoidArray()) do
+		if scene.Entity_IsDescendant(entity, self.model) then
+			self.humanoid = entity
+			local humanoid = scene.Component_GetHumanoid(self.humanoid)
+			humanoid.SetLookAtEnabled(false)
+			self.neck = humanoid.GetBoneEntity(HumanoidBone.Neck)
+			self.head = humanoid.GetBoneEntity(HumanoidBone.Head)
+			self.left_hand = humanoid.GetBoneEntity(HumanoidBone.LeftHand)
+			self.right_hand = humanoid.GetBoneEntity(HumanoidBone.RightHand)
+			self.left_foot = humanoid.GetBoneEntity(HumanoidBone.LeftFoot)
+			self.right_foot = humanoid.GetBoneEntity(HumanoidBone.RightFoot)
+			self.left_toes = humanoid.GetBoneEntity(HumanoidBone.LeftToes)
+			self.right_toes = humanoid.GetBoneEntity(HumanoidBone.RightToes)
+			break
+		end
+	end
+	for i,entity in ipairs(scene.Entity_GetExpressionArray()) do
+		if scene.Entity_IsDescendant(entity, self.model) then
+			self.expression = entity
+
+			-- Set up some overrides to avoid bad looking expression combinations:
+			local expression = scene.Component_GetExpression(self.expression)
+			expression.SetPresetOverrideBlink(ExpressionPreset.Happy, ExpressionOverride.Block)
+			expression.SetPresetOverrideMouth(ExpressionPreset.Happy, ExpressionOverride.Blend)
+			expression.SetPresetOverrideBlink(ExpressionPreset.Surprised, ExpressionOverride.Block)
+		end
+	end
+
+	-- Enable wetmap for all objects of character, so it can get wet in the ocean (if the weather has it):
+	for i,entity in ipairs(scene.Entity_GetObjectArray()) do
+		if scene.Entity_IsDescendant(entity, self.model) then
+			local object = scene.Component_GetObject(entity)
+			object.SetWetmapEnabled(true)
+			table.insert(self.object_entities, entity) -- save object array for later use
+		end
+	end
+
+	-- Create a base capsule collider for character:
+	local collider = scene.Component_CreateCollider(self.model)
+	self.collider = self.model
+	collider.SetCPUEnabled(false)
+	collider.SetGPUEnabled(true)
+	collider.Shape = ColliderShape.Capsule
+	collider.Radius = charactercomponent.GetWidth()
+	collider.Offset = Vector(0, collider.Radius, 0)
+	collider.Tail = Vector(0, charactercomponent.GetHeight() - collider.Radius, 0)
+	local head_transform = scene.Component_GetTransform(self.head)
+	if head_transform ~= nil then
+		collider.Tail = head_transform.GetPosition()
+	end
+
+	self.root = self.humanoid
+	
+	scene.ResetPose(self.model)
+
+	-- The base animation entities are queried from the anim_scene, they are not yet tergeting our character:
+	self.anims[States.IDLE] = anim_scene.Entity_FindByName("idle")
+	self.anims[States.WALK] = anim_scene.Entity_FindByName("walk")
+	self.anims[States.JOG] = anim_scene.Entity_FindByName("jog")
+	self.anims[States.RUN] = anim_scene.Entity_FindByName("run")
+	self.anims[States.JUMP] = anim_scene.Entity_FindByName("jump")
+	self.anims[States.SWIM_IDLE] = anim_scene.Entity_FindByName("swim_idle")
+	self.anims[States.SWIM] = anim_scene.Entity_FindByName("swim")
+	self.anims[States.DANCE] = anim_scene.Entity_FindByName("dance")
+	self.anims[States.WAVE] = anim_scene.Entity_FindByName("wave")
+
+	-- Retarget animation entities onto the character, and add them to the CharacterComponent:
+	--	Also see if a requested animation set (animset) is available for each animation, and use that instead if yes
+	animset = "_" .. animset
+	for state,anim in pairs(self.anims) do
+		local anim_name_component = anim_scene.Component_GetName(anim)
+		if anim_name_component ~= nil then
+			local anim_set_name = anim_name_component.GetName() .. animset
+			local anim_set_entity = anim_scene.Entity_FindByName(anim_set_name)
+			if anim_set_entity ~= INVALID_ENTITY then
+				anim = anim_set_entity -- if there is animation with requested animset, replace default anim to that
+			end
+			self.anims[state] = scene.RetargetAnimation(self.humanoid, anim, false, anim_scene)
+			charactercomponent.AddAnimation(self.anims[state]) -- 
+		end
+	end
+	
+	local model_transform = scene.Component_GetTransform(self.model)
+	model_transform.ClearTransform()
+	model_transform.Scale(self.scale)
+	model_transform.Rotate(self.rotation)
+	model_transform.Translate(self.position)
+	model_transform.UpdateTransform()
+
+	self.target_height = scene.Component_GetTransform(self.neck).GetPosition().GetY()
+
 	return self
 end
 
@@ -1036,11 +829,13 @@ runProcess(function()
     scene.Merge(loading_scene)
     scene.Update(0)
 	
-	scene.VoxelizeScene(voxelgrid, false, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~(Layers.Player | Layers.NPC)) -- player and npc layers not included in voxelization
+    if len(scene.Component_GetVoxelGridArray()) > 0 then
+        voxelgrid = scene.Component_GetVoxelGridArray()[1] -- take existing voxel grid from scene if available
+    else
+        scene.VoxelizeScene(voxelgrid, false, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~(Layers.Player | Layers.NPC)) -- generate a voxel grid in code, player and NPCs not included
+    end
 	
 	-- Create characters from scene metadata components:
-	local player = nil
-	local npcs = {}
     local character_scenes = {}
 	for i,entity in ipairs(scene.Entity_GetMetadataArray()) do
 		local metadata = scene.Component_GetMetadata(entity)
@@ -1064,8 +859,15 @@ runProcess(function()
 			end
 			if metadata.GetPreset() == MetadataPreset.NPC then
 				local npc = Character(character_scenes[name], transform, false, anim_scene, metadata.GetString("animset"))
+
+				-- add dialog tree if found:
+				if metadata.HasString("dialog") then
+					npc.dialogs = require("dialogs/" .. metadata.GetString("dialog"))
+				end
+
 				-- Add patrol waypoints if found:
 				--	It will be looking for "waypoint" named string values in metadata components, and they can be chained by their value
+				local patrol_waypoints = {}
 				local visited = {} -- avoid infinite loop
 				while metadata ~= nil and metadata.HasString("waypoint") do
 					local waypoint_name = metadata.GetString("waypoint")
@@ -1087,11 +889,12 @@ runProcess(function()
 						if metadata.HasString("state") then
 							waypoint.state = metadata.GetString("state")
 						end
-						table.insert(npc.patrol_waypoints, waypoint) -- add waypoint to NPC
+						table.insert(patrol_waypoints, waypoint) -- add waypoint to NPC
 					else
 						break
 					end
 				end
+				npc:SetPatrol(patrol_waypoints)
 				table.insert(npcs, npc) -- add NPC
 			end
 		end
@@ -1121,66 +924,6 @@ runProcess(function()
 	help_text = help_text .. "R: reload script\n"
 	help_text = help_text .. "H: toggle debug draw\n"
 	help_text = help_text .. "L: toggle framerate lock\n"
-
-	
-	-- Conversation dialogs:
-	local dialogtree = {
-		-- Dialog starts here:
-		{"Hello! Today is a nice day for a walk, isn't it? The sun is shining, the wind blows lightly, and the temperature is just perfect! To be honest, I don't need anything else to be happy."},
-		{"I just finished my morning routine and I'm ready for the day. What should I do now...?"},
-		{
-			"Anything I can do for you?",
-			choices = {
-				{
-					"Follow me!",
-					action = function()
-						conversation.character:Follow(player)
-						conversation.character.next_dialog = 4
-					end
-				},
-				{
-					"Never mind.",
-					action = function()
-						conversation.character.next_dialog = 5
-					end
-				}
-			}
-		},
-
-		-- Dialog 4: When chosen [Follow me] or [Just keep following me]
-		{"Lead the way!", action_after = function() conversation:Exit() conversation.character.next_dialog = 6 end},
-
-		-- Dialog 5: When chosen [Never mind] - this also modifies mood (expression) and state (anim) while dialog is playing
-		{
-			"Have a nice day!",
-			action = function()
-				conversation.character.mood = Mood.Happy
-				conversation.character.state = States.WAVE
-				conversation.character:SetAnimationAmount(0.1)
-			end,
-			action_after = function()
-				conversation.character.mood = Mood.Neutral
-				conversation.character.state = States.IDLE
-				conversation.character:SetAnimationAmount(1)
-				conversation:Exit() 
-				conversation.character.next_dialog = 1 
-			end
-		},
-
-		-- Dialog 6: After Dialog 4 finished, so character is following player
-		{
-			"Where are we going?",
-			choices = {
-				{"Just keep following me.", action = function() conversation.character.next_dialog = 4 end},
-				{"Stay here!", action = function() conversation.character:Unfollow() end}
-			}
-		},
-		{"Gotcha!"}, -- After chosen [Stay here]
-	}
-
-	for i,npc in pairs(npcs) do
-		npc.dialogs = dialogtree
-	end
 
 	-- Main loop:
 	while true do
