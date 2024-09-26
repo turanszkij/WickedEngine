@@ -2557,7 +2557,7 @@ namespace wi::scene
 		if (dot < 0)
 		{
 			// help with turning around 180 degrees:
-			XMStoreFloat3(&facing, XMVector3TransformNormal(F, XMMatrixRotationY(XM_PI * 0.01f)));
+			XMStoreFloat3(&facing, XMVector3TransformNormal(F, XMMatrixRotationY(XM_PI * 0.05f)));
 		}
 		facing_next = direction;
 	}

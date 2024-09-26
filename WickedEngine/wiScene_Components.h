@@ -2130,6 +2130,7 @@ namespace wi::scene
 		float water_vertical_offset = 0;
 		XMFLOAT3 movement = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 velocity = XMFLOAT3(0, 0, 0);
+		XMFLOAT3 inertia = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 position_prev = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 relative_offset = XMFLOAT3(0, 0, 0);
@@ -2143,6 +2144,7 @@ namespace wi::scene
 		bool ground_intersect = false;
 		bool wall_intersect = false;
 		bool swimming = false;
+		bool humanoid_checked = false;
 		wi::ecs::Entity humanoidEntity = wi::ecs::INVALID_ENTITY;
 		wi::ecs::Entity left_foot = wi::ecs::INVALID_ENTITY;
 		wi::ecs::Entity right_foot = wi::ecs::INVALID_ENTITY;

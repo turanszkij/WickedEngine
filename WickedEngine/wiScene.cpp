@@ -899,9 +899,9 @@ namespace wi::scene
 			shaderscene.geometrybuffer = device->GetDescriptorIndex(&geometryBuffer, SubresourceType::SRV);
 			shaderscene.materialbuffer = device->GetDescriptorIndex(&materialBuffer, SubresourceType::SRV);
 		}
-		shaderscene.instanceCount = instanceArraySize;
-		shaderscene.geometryCount = geometryArraySize;
-		shaderscene.materialCount = materialArraySize;
+		shaderscene.instanceCount = (uint)instanceArraySize;
+		shaderscene.geometryCount = (uint)geometryArraySize;
+		shaderscene.materialCount = (uint)materialArraySize;
 		shaderscene.meshletbuffer = device->GetDescriptorIndex(&meshletBuffer, SubresourceType::SRV);
 		shaderscene.texturestreamingbuffer = device->GetDescriptorIndex(&textureStreamingFeedbackBuffer, SubresourceType::UAV);
 		if (weather.skyMap.IsValid())
@@ -5357,7 +5357,7 @@ namespace wi::scene
 	{
 		static const XMVECTOR up = XMVectorSet(0, 1, 0, 0);
 		static const XMMATRIX rotY = XMMatrixRotationY(XM_PI);
-		static const int max_substeps = 4;
+		static const int max_substeps = 6;
 
 		character_capsules.resize(characters.GetCount());
 		for (size_t i = 0; i < characters.GetCount(); ++i)
@@ -5391,10 +5391,12 @@ namespace wi::scene
 			const float slope_threshold = character.slope_threshold;
 			const float leaning_limit = character.leaning_limit;
 			const XMVECTOR gravity = XMVectorSet(0, character.gravity * timestep, 0, 0);
+			const float delta_to_timestep = timestep / dt;
 
-			if (character.humanoidEntity == INVALID_ENTITY)
+			if (!character.humanoid_checked)
 			{
 				// Search for humanoid entity that is either this entity or a child:
+				character.humanoid_checked = true;
 				if (humanoids.Contains(entity))
 				{
 					character.humanoidEntity = entity;
@@ -5413,14 +5415,13 @@ namespace wi::scene
 			}
 			const HumanoidComponent* humanoid = humanoids.GetComponent(character.humanoidEntity);
 			if (humanoid != nullptr && humanoid->IsRagdollPhysicsEnabled())
-				return;
+				return; // if ragdoll active, don't update character movement
 
 			XMVECTOR velocity = XMLoadFloat3(&character.velocity);
+			XMVECTOR inertia = XMLoadFloat3(&character.inertia);
 			XMVECTOR movement = XMLoadFloat3(&character.movement);
 			XMVECTOR position = XMLoadFloat3(&character.position);
 			XMVECTOR height = XMVectorSet(0, character.height, 0, 0);
-			XMVECTOR platform_velocity_accumulation = XMVectorZero();
-			float platform_velocity_count = 0;
 
 			XMMATRIX facing_rot = XMMatrixLookToLH(XMVectorZero(), XMLoadFloat3(&character.facing), up);
 			
@@ -5483,6 +5484,7 @@ namespace wi::scene
 				velocity += movement;
 
 				position += velocity * timestep;
+				position += inertia * delta_to_timestep; // inertia is from moving platforms which are delta velocity from previous frame
 
 				// Check ground:
 				Capsule capsule = Capsule(position, position + height, character.width);
@@ -5496,8 +5498,15 @@ namespace wi::scene
 						character.ground_intersect = true;
 						velocity *= ground_friction;
 						position += XMVectorSet(0, result.depth, 0, 0);
-						platform_velocity_accumulation += XMLoadFloat3(&result.velocity);
-						platform_velocity_count += 1.0f;
+
+						if (std::abs(result.velocity.x) > 0.001f || std::abs(result.velocity.y) > 0.001f || std::abs(result.velocity.z) > 0.001f)
+						{
+							inertia = XMLoadFloat3(&result.velocity);
+						}
+						else
+						{
+							inertia = XMVectorZero();
+						}
 					}
 				}
 
@@ -5521,6 +5530,7 @@ namespace wi::scene
 						XMVECTOR desiredMotion = velocityNormalized - undesiredMotion;
 						velocity = desiredMotion * velocityLen;
 						position += collisionNormal * result.depth;
+						inertia = XMVectorZero();
 					}
 				}
 
@@ -5548,30 +5558,30 @@ namespace wi::scene
 							XMVECTOR desiredMotion = velocityNormalized - undesiredMotion;
 							velocity = desiredMotion * velocityLen;
 							position += collisionNormal * penetration_depth;
+							inertia = XMVectorZero();
 							break;
 						}
 					}
 				}
 
-				// Some other things also updated at fixed rate:
-				character.facing = wi::math::Lerp(character.facing, character.facing_next, 0.05f); // smooth turning
-				character.facing.y = 0;
-				XMVECTOR facing_next = XMVector3Normalize(XMLoadFloat3(&character.facing_next));
-				XMVECTOR facing = XMVector3Normalize(XMLoadFloat3(&character.facing));
-				XMStoreFloat3(&character.facing, facing);
-				XMVECTOR facediff = XMVector3TransformNormal(facing_next - facing, facing_rot);
-				float velocity_leaning = clamp(XMVectorGetX(facediff * XMVector3Length(XMVectorSetY(velocity, 0))) * 0.08f, -leaning_limit, leaning_limit);
-				character.leaning_next = lerp(character.leaning_next, velocity_leaning, 0.05f);
-				character.leaning = lerp(character.leaning, character.leaning_next, 0.05f);
 			}
 			character.accumulator = clamp(character.accumulator, 0.0f, timestep);
 			character.alpha = character.accumulator / timestep;
 
-			if (platform_velocity_count > 0)
-			{
-				position += platform_velocity_accumulation / platform_velocity_count;
-			}
 			position += XMVectorSet(0, swim_offset, 0, 0);
+
+			// Smooth facing:
+			character.facing = wi::math::Lerp(character.facing, character.facing_next, dt * 5);
+			character.facing.y = 0;
+			XMVECTOR facing_next = XMVector3Normalize(XMLoadFloat3(&character.facing_next));
+			XMVECTOR facing = XMVector3Normalize(XMLoadFloat3(&character.facing));
+			XMStoreFloat3(&character.facing, facing);
+
+			// Smooth leaning:
+			XMVECTOR facediff = XMVector3TransformNormal(facing_next - facing, facing_rot);
+			float velocity_leaning = clamp(XMVectorGetX(facediff * XMVector3Length(XMVectorSetY(velocity, 0))) * 0.08f, -leaning_limit, leaning_limit);
+			character.leaning_next = lerp(character.leaning_next, velocity_leaning, dt * 5);
+			character.leaning = lerp(character.leaning, character.leaning_next, dt * 5);
 
 			// Simple animation blending:
 			for (Entity animEntity : character.animations)
@@ -5622,6 +5632,7 @@ namespace wi::scene
 
 			XMStoreFloat3(&character.position, position);
 			XMStoreFloat3(&character.velocity, velocity);
+			XMStoreFloat3(&character.inertia, inertia);
 			character.movement = XMFLOAT3(0, 0, 0);
 
 			// Apply character transformation on transform component:
