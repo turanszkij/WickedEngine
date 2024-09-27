@@ -964,6 +964,10 @@ Describes an orientation in 3D space.
 - SetPosition(Vector value)	-- Sets the position of the camera. `UpdateCamera()` should be used after this to apply the value. 
 - SetLookDirection(Vector value)		-- Sets the look direction of the camera. The value must be a normalized direction `Vector`, relative to the camera position, and also perpendicular to the up direction. `UpdateCamera()` should be used after this to apply the value. This value will also be set if using the `TransformCamera()` function, from the transform's rotation.
 - SetUpDirection(Vector value)		-- Sets the up direction of the camera. This must be a normalized direction `Vector`, relative to the camera position, and also perpendicular to the look direction. `UpdateCamera()` should be used after this to apply the value. This value will also be set if using the `TransformCamera()` function, from the transform's rotation.
+- SetOrtho(bool value)	-- enable orthographic projection for the camera.
+- IsOrtho() : bool	-- returns true if the camera is using orthographic projection, false otherwise
+- GetOrthoVerticalSize() : float result
+- SetOrthoVerticalSize(float value)	-- Sets the vertical size of the camera in world space, used only in orthographic projection mode
 
 #### AnimationComponent
 - Timer : float

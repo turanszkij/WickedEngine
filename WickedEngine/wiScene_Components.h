@@ -1141,6 +1141,7 @@ namespace wi::scene
 			EMPTY = 0,
 			DIRTY = 1 << 0,
 			CUSTOM_PROJECTION = 1 << 1,
+			ORTHO = 1 << 2,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -1152,6 +1153,7 @@ namespace wi::scene
 		float focal_length = 1;
 		float aperture_size = 0;
 		XMFLOAT2 aperture_shape = XMFLOAT2(1, 1);
+		float ortho_vertical_size = 1;
 
 		// Non-serialized attributes:
 		XMFLOAT3 Eye = XMFLOAT3(0, 0, 0);
@@ -1189,6 +1191,7 @@ namespace wi::scene
 		int texture_reprojected_depth_index = -1;
 		uint shadercamera_options = SHADERCAMERA_OPTION_NONE;
 
+		void CreateOrtho(float newWidth, float newHeight, float newNear, float newFar, float newVerticalSize = 1);
 		void CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV = XM_PI / 3.0f);
 		void UpdateCamera();
 		void TransformCamera(const XMMATRIX& W);
@@ -1206,10 +1209,15 @@ namespace wi::scene
 		inline XMMATRIX GetViewProjection() const { return XMLoadFloat4x4(&VP); }
 		inline XMMATRIX GetInvViewProjection() const { return XMLoadFloat4x4(&InvVP); }
 
+		// Returns the vertical size of ortho projection that matches the perspective size at given distance
+		float ComputeOrthoVerticalSizeFromPerspective(float dist);
+
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline void SetCustomProjectionEnabled(bool value = true) { if (value) { _flags |= CUSTOM_PROJECTION; } else { _flags &= ~CUSTOM_PROJECTION; } }
+		inline void SetOrtho(bool value = true) { if (value) { _flags |= ORTHO; } else { _flags &= ~ORTHO; } SetDirty(); }
 		inline bool IsDirty() const { return _flags & DIRTY; }
 		inline bool IsCustomProjectionEnabled() const { return _flags & CUSTOM_PROJECTION; }
+		inline bool IsOrtho() const { return _flags & ORTHO; }
 
 		void Lerp(const CameraComponent& a, const CameraComponent& b, float t);
 

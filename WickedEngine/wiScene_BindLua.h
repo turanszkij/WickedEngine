@@ -328,6 +328,8 @@ namespace wi::lua::scene
 		int SetNearPlane(lua_State* L);
 		int GetFarPlane(lua_State* L);
 		int SetFarPlane(lua_State* L);
+		int GetOrthoVerticalSize(lua_State* L);
+		int SetOrthoVerticalSize(lua_State* L);
 		int GetFocalLength(lua_State* L);
 		int SetFocalLength(lua_State* L);
 		int GetApertureSize(lua_State* L);
@@ -347,6 +349,8 @@ namespace wi::lua::scene
 		int SetPosition(lua_State* L);
 		int SetLookDirection(lua_State* L);
 		int SetUpDirection(lua_State* L);
+		int SetOrtho(lua_State* L);
+		int IsOrtho(lua_State* L);
 	};
 
 	class AnimationComponent_BindLua

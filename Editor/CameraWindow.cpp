@@ -26,7 +26,6 @@ void CameraWindow::ResetCam()
 	camera.UpdateCamera();
 
 	editorscene.camera_target.ClearTransform();
-	editorscene.camera_transform.Translate(XMFLOAT3(0, 2, 0));
 	editorscene.camera_target.UpdateTransform();
 }
 

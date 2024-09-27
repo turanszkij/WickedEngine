@@ -1108,6 +1108,11 @@ namespace wi::scene
 				archive >> aperture_shape;
 			}
 
+			if (seri.GetVersion() >= 1)
+			{
+				archive >> ortho_vertical_size;
+			}
+
 			SetDirty();
 		}
 		else
@@ -1124,6 +1129,11 @@ namespace wi::scene
 				archive << focal_length;
 				archive << aperture_size;
 				archive << aperture_shape;
+			}
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive << ortho_vertical_size;
 			}
 		}
 	}

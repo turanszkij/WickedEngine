@@ -99,6 +99,7 @@ enum class EditorActions
 
 	// Other actions
 	RAGDOLL_AND_PHYSICS_IMPULSE_TESTER,
+	ORTHO_CAMERA,
 
 	COUNT
 };
@@ -139,6 +140,7 @@ HotkeyInfo hotkeyActions[size_t(EditorActions::COUNT)] = {
 	{wi::input::BUTTON('C'),					/*press=*/ false,		/*control=*/ false,		/*shift=*/ false},	//DEPTH_OF_FIELD_REFOCUS_TO_POINT,
 	{wi::input::BUTTON('G'),					/*press=*/ false,		/*control=*/ true,		/*shift=*/ false},	//COLOR_GRADING_REFERENCE,
 	{wi::input::BUTTON('P'),					/*press=*/ false,		/*control=*/ false,		/*shift=*/ false},	//RAGDOLL_AND_PHYSICS_IMPULSE_TESTER,
+	{wi::input::BUTTON('O'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//ORTHO_CAMERA,
 };
 static_assert(arraysize(hotkeyActions) == size_t(EditorActions::COUNT));
 bool CheckInput(EditorActions action)
@@ -194,7 +196,8 @@ void HotkeyRemap(Editor* main)
 		{"WIREFRAME_MODE", EditorActions::WIREFRAME_MODE},
 		{"DEPTH_OF_FIELD_REFOCUS_TO_POINT", EditorActions::DEPTH_OF_FIELD_REFOCUS_TO_POINT},
 		{"COLOR_GRADING_REFERENCE", EditorActions::COLOR_GRADING_REFERENCE},
-		{"RAGDOLL_AND_PHYSICS_IMPULSE_TESTER", EditorActions::RAGDOLL_AND_PHYSICS_IMPULSE_TESTER}
+		{"RAGDOLL_AND_PHYSICS_IMPULSE_TESTER", EditorActions::RAGDOLL_AND_PHYSICS_IMPULSE_TESTER},
+		{"ORTHO_CAMERA", EditorActions::ORTHO_CAMERA},
 	};
 	static const wi::unordered_map<std::string, wi::input::BUTTON> buttonMap = {
 		{"ESC", wi::input::KEYBOARD_BUTTON_ESCAPE},
@@ -1116,6 +1119,7 @@ void EditorComponent::Load()
 		ss += "Snap to surface transform: Shift (hold while transforming)\n";
 		ss += "Camera up: " + main->config.GetSection("hotkeys").GetText("move_camera_up") + "\n";
 		ss += "Camera down: " + main->config.GetSection("hotkeys").GetText("move_camera_down") + "\n";
+		ss += "Orthographic camera: " + main->config.GetSection("hotkeys").GetText("ortho_camera") + "\n";
 		ss += "Duplicate entity: " + main->config.GetSection("hotkeys").GetText("duplicate_entity") + "\n";
 		ss += "Select All: " + main->config.GetSection("hotkeys").GetText("select_all_entities") + "\n";
 		ss += "Deselect All: " + main->config.GetSection("hotkeys").GetText("deselect_all_entities") + "\n";
@@ -1437,6 +1441,12 @@ void EditorComponent::Update(float dt)
 		yDif *= cameraWnd.rotationspeedSlider.GetValue();
 
 
+		if (CheckInput(EditorActions::ORTHO_CAMERA))
+		{
+			camera.SetOrtho(!camera.IsOrtho());
+			camera.ortho_vertical_size = camera.ComputeOrthoVerticalSizeFromPerspective(wi::math::Length(camera.Eye)); // camera distance from origin
+		}
+
 		if (cameraWnd.fpsCheckBox.GetCheck())
 		{
 			// FPS Camera
@@ -1451,8 +1461,8 @@ void EditorComponent::Update(float dt)
 				// Only move camera if control not pressed
 				if (CheckInput(EditorActions::MOVE_CAMERA_LEFT) || wi::input::Down(wi::input::GAMEPAD_BUTTON_LEFT)) { moveNew += XMVectorSet(-1, 0, 0, 0); }
 				if (CheckInput(EditorActions::MOVE_CAMERA_RIGHT) || wi::input::Down(wi::input::GAMEPAD_BUTTON_RIGHT)) { moveNew += XMVectorSet(1, 0, 0, 0); }
-				if (CheckInput(EditorActions::MOVE_CAMERA_FORWARD) || wi::input::Down(wi::input::GAMEPAD_BUTTON_UP)) { moveNew += XMVectorSet(0, 0, 1, 0); }
-				if (CheckInput(EditorActions::MOVE_CAMERA_BACKWARD) || wi::input::Down(wi::input::GAMEPAD_BUTTON_DOWN)) { moveNew += XMVectorSet(0, 0, -1, 0); }
+				if (CheckInput(EditorActions::MOVE_CAMERA_FORWARD) || wi::input::Down(wi::input::GAMEPAD_BUTTON_UP)) { moveNew += XMVectorSet(0, 0, 1, 0); camera.ortho_vertical_size -= 0.1f; }
+				if (CheckInput(EditorActions::MOVE_CAMERA_BACKWARD) || wi::input::Down(wi::input::GAMEPAD_BUTTON_DOWN)) { moveNew += XMVectorSet(0, 0, -1, 0); camera.ortho_vertical_size += 0.1f; }
 				if (CheckInput(EditorActions::MOVE_CAMERA_UP) || wi::input::Down(wi::input::GAMEPAD_BUTTON_2)) { moveNew += XMVectorSet(0, 1, 0, 0); }
 				if (CheckInput(EditorActions::MOVE_CAMERA_DOWN) || wi::input::Down(wi::input::GAMEPAD_BUTTON_1)) { moveNew += XMVectorSet(0, -1, 0, 0); }
 				moveNew = XMVector3Normalize(moveNew);
@@ -1497,6 +1507,7 @@ void EditorComponent::Update(float dt)
 			{
 				editorscene.camera_transform.Translate(XMFLOAT3(0, 0, yDif * 4 + currentMouse.z));
 				editorscene.camera_transform.translation_local.z = std::min(0.0f, editorscene.camera_transform.translation_local.z);
+				camera.ortho_vertical_size = camera.ComputeOrthoVerticalSizeFromPerspective(editorscene.camera_transform.translation_local.z);
 				camera.SetDirty();
 			}
 			else if (abs(xDif) + abs(yDif) > 0)

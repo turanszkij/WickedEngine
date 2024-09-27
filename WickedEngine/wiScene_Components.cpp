@@ -2387,6 +2387,20 @@ namespace wi::scene
 		}
 	}
 
+	void CameraComponent::CreateOrtho(float newWidth, float newHeight, float newNear, float newFar, float newVerticalSize)
+	{
+		zNearP = newNear;
+		zFarP = newFar;
+		width = newWidth;
+		height = newHeight;
+		ortho_vertical_size = newVerticalSize;
+
+		SetCustomProjectionEnabled(false);
+		SetOrtho(true);
+		SetDirty();
+
+		UpdateCamera();
+	}
 	void CameraComponent::CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV)
 	{
 		zNearP = newNear;
@@ -2396,14 +2410,46 @@ namespace wi::scene
 		fov = newFOV;
 
 		SetCustomProjectionEnabled(false);
+		SetOrtho(false);
+		SetDirty();
 
 		UpdateCamera();
+	}
+	inline float compute_inverse_lineardepth(float lin, float znear, float zfar)
+	{
+		float z_n = ((lin - 2 * zfar) * znear + zfar * lin) / (lin * znear - zfar * lin);
+		float z = (z_n + 1) * 0.5f;
+		return z;
+	}
+	float CameraComponent::ComputeOrthoVerticalSizeFromPerspective(float dist)
+	{
+		dist = std::abs(dist);
+		float z = compute_inverse_lineardepth(dist, zNearP, zFarP);
+		XMMATRIX P = XMMatrixPerspectiveFovLH(fov, width / height, zFarP, zNearP); // reverse zbuffer!
+		XMMATRIX Unproj = XMMatrixInverse(nullptr, P);
+		XMVECTOR Ptop = XMVector3TransformCoord(XMVectorSet(0, 1, z, 1), Unproj);
+		XMVECTOR Pbottom = XMVector3TransformCoord(XMVectorSet(0, -1, z, 1), Unproj);
+		return XMVectorGetX(XMVector3Length(Ptop - Pbottom));
 	}
 	void CameraComponent::UpdateCamera()
 	{
 		if (!IsCustomProjectionEnabled())
 		{
-			XMStoreFloat4x4(&Projection, XMMatrixPerspectiveFovLH(fov, width / height, zFarP, zNearP)); // reverse zbuffer!
+			XMMATRIX P;
+
+			if (IsOrtho())
+			{
+				float aspect = width / height;
+				float ortho_width = ortho_vertical_size * aspect;
+				float ortho_height = ortho_vertical_size;
+				P = XMMatrixOrthographicLH(ortho_width, ortho_height, zFarP, zNearP); // reverse zbuffer!
+			}
+			else
+			{
+				P = XMMatrixPerspectiveFovLH(fov, width / height, zFarP, zNearP); // reverse zbuffer!
+			}
+
+			XMStoreFloat4x4(&Projection, P);
 			Projection.m[2][0] = jitter.x;
 			Projection.m[2][1] = jitter.y;
 		}
