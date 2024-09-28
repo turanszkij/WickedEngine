@@ -40,6 +40,9 @@
     <Filter Include="terrain">
       <UniqueIdentifier>{f61a70fd-1b03-4bb7-a044-2442d8557486}</UniqueIdentifier>
     </Filter>
+    <Filter Include="scripts\character_controller\assets\dialogs">
+      <UniqueIdentifier>{e4ac077c-b9ed-4bc8-bb5c-e13dc639b988}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)scripts\camera_animation_clamped.lua">
@@ -262,6 +265,27 @@
       <Filter>terrain</Filter>
     </None>
     <None Include="$(MSBuildThisFileDirectory)terrain\props.wiscene">
+      <Filter>terrain</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\dialogs\hello.lua">
+      <Filter>scripts\character_controller\assets\dialogs</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\dialogs\niceday.lua">
+      <Filter>scripts\character_controller\assets\dialogs</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\dialogs\running_around.lua">
+      <Filter>scripts\character_controller\assets\dialogs</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\dialogs\talkative.lua">
+      <Filter>scripts\character_controller\assets\dialogs</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\dialogs\top_of_the_world.lua">
+      <Filter>scripts\character_controller\assets\dialogs</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\johnny.wiscene">
+      <Filter>scripts\character_controller\assets</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)terrain\grass.wiscene">
       <Filter>terrain</Filter>
     </None>
   </ItemGroup>

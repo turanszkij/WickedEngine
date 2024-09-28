@@ -312,6 +312,30 @@
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\dialogs\hello.lua">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\dialogs\niceday.lua">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\dialogs\running_around.lua">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\dialogs\talkative.lua">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\dialogs\top_of_the_world.lua">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\johnny.wiscene">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </None>
     <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\level.wiscene">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
@@ -506,6 +530,10 @@
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)terrain\grass.wiscene">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </None>
     <None Include="$(MSBuildThisFileDirectory)terrain\props.ini">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
@@ -610,10 +638,22 @@
     <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_round_ddn.png" />
     <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\vase_round_spec.png" />
     <Image Include="$(MSBuildThisFileDirectory)models\waterNormalMap.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\footprint.dds" />
-    <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\grassparticle.png" />
-    <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\loadingscreen.png" />
-    <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\waterNormalMap.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\footprint.dds">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\grassparticle.png">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\loadingscreen.png">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\waterNormalMap.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
     <Image Include="$(MSBuildThisFileDirectory)scripts\character_controller\thumbnail.png" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\dungeon_generator\thumbnail.png" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\baseColor.png" />
@@ -625,43 +665,139 @@
     <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\ripple.png" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\assets\smoke0.png" />
     <Image Include="$(MSBuildThisFileDirectory)scripts\fighting_game\thumbnail.png" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\base.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\base_nor.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\bricks.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\bricks_nor.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\darkrock.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\darkrock_nor.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\foil.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\foil_nor.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\grassparticle.dds" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\ground.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\ground2.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\ground2_nor.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\ground_nor.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\high_altitude.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\high_altitude_nor.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\lava.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\lava_emi.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\lava_nor.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\low_altitude.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\low_altitude_nor.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\metalplate.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\metalplate_nor.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\pavingstone.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\pavingstone_nor.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\rock.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\rock_nor.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\slope.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\slope_nor.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\tactilepaving.jpg" />
-    <Image Include="$(MSBuildThisFileDirectory)terrain\tactilepaving_nor.jpg" />
+    <Image Include="$(MSBuildThisFileDirectory)terrain\base.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\base_nor.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\bricks.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\bricks_nor.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\darkrock.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\darkrock_nor.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\foil.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\foil_nor.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\grassparticle.dds">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\ground.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\ground2.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\ground2_nor.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\ground_nor.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\high_altitude.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\high_altitude_nor.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\lava.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\lava_emi.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\lava_nor.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\low_altitude.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\low_altitude_nor.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\metalplate.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\metalplate_nor.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\pavingstone.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\pavingstone_nor.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\rock.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\rock_nor.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\slope.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\slope_nor.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\tactilepaving.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\tactilepaving_nor.jpg">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Media Include="$(MSBuildThisFileDirectory)models\water.wav" />
-    <Media Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\typewriter.wav" />
+    <Media Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\typewriter.wav">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Media>
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)models\Sponza\copyright.txt" />
-    <Text Include="$(MSBuildThisFileDirectory)terrain\licenses.txt" />
+    <Text Include="$(MSBuildThisFileDirectory)terrain\licenses.txt">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </Text>
   </ItemGroup>
 </Project>
