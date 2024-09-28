@@ -88,8 +88,8 @@ namespace wi
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		XMUINT2 internalResolution = GetInternalResolution();
-
-		camera->CreatePerspective((float)internalResolution.x, (float)internalResolution.y, camera->zNearP, camera->zFarP, camera->fov);
+		camera->width = (float)internalResolution.x;
+		camera->height = (float)internalResolution.y;
 
 		// Render targets:
 

@@ -16,17 +16,22 @@ float4 main(PSIn input) : SV_TARGET
 {
 	float lineardepth = input.pos.w;
 	half4 color = xOceanWaterColor;
-	float3 V = GetCamera().position - input.pos3D;
+	float2 ScreenCoord = input.pos.xy * GetCamera().internal_resolution_rcp;
+	
+	// support for ortho projection, cannot use camera position!
+	float2 clipspace = uv_to_clipspace(ScreenCoord);
+	float4 unprojectedNEAR = mul(GetCamera().inverse_view_projection, float4(clipspace, 1, 1));
+	unprojectedNEAR.xyz /= unprojectedNEAR.w;
+	float3 V = unprojectedNEAR - input.pos3D;
 	float dist = length(V);
 	V /= dist;
+	
 	uint2 pixel = input.pos.xy;
 
 	const half gradient_fade = saturate(dist * 0.001);
 	const half4 gradientNear = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv);
 	const half4 gradientFar = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv * 0.125);
 	half4 gradient = lerp(gradientNear, gradientFar, gradient_fade);
-	
-	float2 ScreenCoord = pixel * GetCamera().internal_resolution_rcp;
 	
 	[branch]
 	if (GetCamera().texture_waterriples_index >= 0)

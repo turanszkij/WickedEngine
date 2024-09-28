@@ -1445,6 +1445,7 @@ void EditorComponent::Update(float dt)
 		{
 			camera.SetOrtho(!camera.IsOrtho());
 			camera.ortho_vertical_size = camera.ComputeOrthoVerticalSizeFromPerspective(wi::math::Length(camera.Eye)); // camera distance from origin
+			cameraWnd.orthoCheckBox.SetCheck(camera.IsOrtho());
 		}
 
 		if (cameraWnd.fpsCheckBox.GetCheck())

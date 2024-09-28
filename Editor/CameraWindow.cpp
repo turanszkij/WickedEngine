@@ -227,6 +227,18 @@ void CameraWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&fpsCheckBox);
 
+	orthoCheckBox.Create("Orthographic: ");
+	orthoCheckBox.SetSize(XMFLOAT2(hei, hei));
+	orthoCheckBox.SetPos(XMFLOAT2(x, y += step));
+	orthoCheckBox.SetCheck(editor->GetCurrentEditorScene().camera.IsOrtho());
+	orthoCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		Scene& scene = editor->GetCurrentScene();
+		CameraComponent& camera = editor->GetCurrentEditorScene().camera;
+		camera.SetOrtho(args.bValue);
+		camera.ortho_vertical_size = camera.ComputeOrthoVerticalSizeFromPerspective(wi::math::Length(camera.Eye)); // camera distance from origin
+	});
+	AddWidget(&orthoCheckBox);
+
 
 
 	proxyButton.Create("Place Proxy");
@@ -371,6 +383,7 @@ void CameraWindow::ResizeLayout()
 	add(rotationspeedSlider);
 	add(accelerationSlider);
 	add_right(fpsCheckBox);
+	add_right(orthoCheckBox);
 
 	y += 20;
 

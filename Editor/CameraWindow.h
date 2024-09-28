@@ -26,6 +26,7 @@ public:
 	wi::gui::Slider accelerationSlider;
 	wi::gui::Button resetButton;
 	wi::gui::CheckBox fpsCheckBox;
+	wi::gui::CheckBox orthoCheckBox;
 
 	wi::gui::Button proxyButton;
 	wi::gui::CheckBox followCheckBox;
