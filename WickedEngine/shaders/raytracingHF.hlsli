@@ -23,12 +23,14 @@ struct RayDesc
 
 inline RayDesc CreateCameraRay(float2 clipspace)
 {
-	float4 unprojected = mul(GetCamera().inverse_view_projection, float4(clipspace, 0, 1));
-	unprojected.xyz /= unprojected.w;
+	float4 unprojectedNEAR = mul(GetCamera().inverse_view_projection, float4(clipspace, 1, 1));
+	unprojectedNEAR.xyz /= unprojectedNEAR.w;
+	float4 unprojectedFAR = mul(GetCamera().inverse_view_projection, float4(clipspace, 0, 1));
+	unprojectedFAR.xyz /= unprojectedFAR.w;
 
 	RayDesc ray;
-	ray.Origin = GetCamera().position;
-	ray.Direction = normalize(unprojected.xyz - ray.Origin);
+	ray.Origin = unprojectedNEAR.xyz;
+	ray.Direction = normalize(unprojectedFAR.xyz - ray.Origin);
 	ray.TMin = 0.001;
 	ray.TMax = FLT_MAX;
 

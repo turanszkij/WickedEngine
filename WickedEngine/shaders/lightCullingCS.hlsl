@@ -131,9 +131,6 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	AABB GroupAABB;			// frustum AABB around min-max depth in View Space
 	AABB GroupAABB_WS;		// frustum AABB in world space
 	{
-		// View space eye position is always at the origin.
-		const float3 eyePos = float3(0, 0, 0);
-		
 		// View space frustum corners:
 		float3 viewSpace[8];
 		// Top left point, near
@@ -154,13 +151,13 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		viewSpace[7] = ScreenToView(float4(float2(Gid.x + 1, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp).xyz;
 	
 		// Left plane
-		GroupFrustum.planes[0] = ComputePlane(viewSpace[2], eyePos, viewSpace[0]);
+		GroupFrustum.planes[0] = ComputePlane(viewSpace[2], viewSpace[0], viewSpace[4]);
 		// Right plane
-		GroupFrustum.planes[1] = ComputePlane(viewSpace[1], eyePos, viewSpace[3]);
+		GroupFrustum.planes[1] = ComputePlane(viewSpace[1], viewSpace[3], viewSpace[5]);
 		// Top plane
-		GroupFrustum.planes[2] = ComputePlane(viewSpace[0], eyePos, viewSpace[1]);
+		GroupFrustum.planes[2] = ComputePlane(viewSpace[0], viewSpace[1], viewSpace[4]);
 		// Bottom plane
-		GroupFrustum.planes[3] = ComputePlane(viewSpace[3], eyePos, viewSpace[2]);
+		GroupFrustum.planes[3] = ComputePlane(viewSpace[3], viewSpace[2], viewSpace[6]);
 		
 		// I construct an AABB around the minmax depth bounds to perform tighter culling:
 		// The frustum is asymmetric so we must consider all corners!

@@ -2449,9 +2449,9 @@ namespace wi::scene
 				P = XMMatrixPerspectiveFovLH(fov, width / height, zFarP, zNearP); // reverse zbuffer!
 			}
 
+			P = P * XMMatrixTranslation(jitter.x, jitter.y, 0);
+
 			XMStoreFloat4x4(&Projection, P);
-			Projection.m[2][0] = jitter.x;
-			Projection.m[2][1] = jitter.y;
 		}
 
 		XMVECTOR _Eye = XMLoadFloat3(&Eye);
