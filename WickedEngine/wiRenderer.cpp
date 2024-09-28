@@ -3412,8 +3412,14 @@ void UpdateVisibility(Visibility& vis)
 	//	then each group writes out it's local list to global memory
 	//	The shared memory approach reduces atomics and helps the list to remain
 	//	more coherent (less randomly organized compared to original order)
-	static const uint32_t groupSize = 64;
-	static const size_t sharedmemory_size = (groupSize + 1) * sizeof(uint32_t); // list + counter per group
+	static constexpr uint32_t groupSize = 63;
+	static_assert(groupSize <= 256); // groupIndex must fit into uint8_t stream compaction element
+	struct StreamCompaction
+	{
+		uint8_t list[groupSize];
+		uint8_t count;
+	};
+	static constexpr size_t sharedmemory_size = sizeof(StreamCompaction);
 
 	// Initialize visible indices:
 	vis.Clear();
@@ -3438,11 +3444,10 @@ void UpdateVisibility(Visibility& vis)
 		wi::jobsystem::Dispatch(ctx, light_loop, groupSize, [&](wi::jobsystem::JobArgs args) {
 
 			// Setup stream compaction:
-			uint32_t& group_count = *(uint32_t*)args.sharedmemory;
-			uint32_t* group_list = (uint32_t*)args.sharedmemory + 1;
+			StreamCompaction& stream_compaction = *(StreamCompaction*)args.sharedmemory;
 			if (args.isFirstJobInGroup)
 			{
-				group_count = 0; // first thread initializes local counter
+				stream_compaction.count = 0; // first thread initializes local counter
 			}
 
 			const AABB& aabb = vis.scene->aabb_lights[args.jobIndex];
@@ -3454,8 +3459,7 @@ void UpdateVisibility(Visibility& vis)
 				{
 					// Local stream compaction:
 					//	(also compute light distance for shadow priority sorting)
-					group_list[group_count] = args.jobIndex;
-					group_count++;
+					stream_compaction.list[stream_compaction.count++] = args.groupIndex;
 					if (light.IsVolumetricsEnabled())
 					{
 						vis.volumetriclight_request.store(true);
@@ -3475,12 +3479,13 @@ void UpdateVisibility(Visibility& vis)
 			}
 
 			// Global stream compaction:
-			if (args.isLastJobInGroup && group_count > 0)
+			if (args.isLastJobInGroup && stream_compaction.count > 0)
 			{
-				uint32_t prev_count = vis.light_counter.fetch_add(group_count);
-				for (uint32_t i = 0; i < group_count; ++i)
+				uint32_t prev_count = vis.light_counter.fetch_add(stream_compaction.count);
+				uint32_t groupOffset = args.groupID * groupSize;
+				for (uint32_t i = 0; i < stream_compaction.count; ++i)
 				{
-					vis.visibleLights[prev_count + i] = group_list[i];
+					vis.visibleLights[prev_count + i] = groupOffset + stream_compaction.list[i];
 				}
 			}
 
@@ -3495,11 +3500,10 @@ void UpdateVisibility(Visibility& vis)
 		wi::jobsystem::Dispatch(ctx, object_loop, groupSize, [&](wi::jobsystem::JobArgs args) {
 
 			// Setup stream compaction:
-			uint32_t& group_count = *(uint32_t*)args.sharedmemory;
-			uint32_t* group_list = (uint32_t*)args.sharedmemory + 1;
+			StreamCompaction& stream_compaction = *(StreamCompaction*)args.sharedmemory;
 			if (args.isFirstJobInGroup)
 			{
-				group_count = 0; // first thread initializes local counter
+				stream_compaction.count = 0; // first thread initializes local counter
 			}
 
 			const AABB& aabb = vis.scene->aabb_objects[args.jobIndex];
@@ -3507,7 +3511,7 @@ void UpdateVisibility(Visibility& vis)
 			if ((aabb.layerMask & vis.layerMask) && vis.frustum.CheckBoxFast(aabb))
 			{
 				// Local stream compaction:
-				group_list[group_count++] = args.jobIndex;
+				stream_compaction.list[stream_compaction.count++] = args.groupIndex;
 
 				const ObjectComponent& object = vis.scene->objects[args.jobIndex];
 				Scene::OcclusionResult& occlusion_result = vis.scene->occlusion_results_objects[args.jobIndex];
@@ -3555,12 +3559,13 @@ void UpdateVisibility(Visibility& vis)
 			}
 
 			// Global stream compaction:
-			if (args.isLastJobInGroup && group_count > 0)
+			if (args.isLastJobInGroup && stream_compaction.count > 0)
 			{
-				uint32_t prev_count = vis.object_counter.fetch_add(group_count);
-				for (uint32_t i = 0; i < group_count; ++i)
+				uint32_t prev_count = vis.object_counter.fetch_add(stream_compaction.count);
+				uint32_t groupOffset = args.groupID * groupSize;
+				for (uint32_t i = 0; i < stream_compaction.count; ++i)
 				{
-					vis.visibleObjects[prev_count + i] = group_list[i];
+					vis.visibleObjects[prev_count + i] = groupOffset + stream_compaction.list[i];
 				}
 			}
 

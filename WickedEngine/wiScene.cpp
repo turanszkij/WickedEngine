@@ -4597,22 +4597,18 @@ namespace wi::scene
 				aabb.layerMask = layerMask;
 
 				// parallel bounds computation using shared memory:
-				AABB* shared_bounds = (AABB*)args.sharedmemory;
+				AABB& shared_bounds = parallel_bounds[args.groupID];
 				if (args.isFirstJobInGroup)
 				{
-					*shared_bounds = aabb_objects[args.jobIndex];
+					shared_bounds = aabb_objects[args.jobIndex];
 				}
 				else
 				{
-					*shared_bounds = AABB::Merge(*shared_bounds, aabb_objects[args.jobIndex]);
-				}
-				if (args.isLastJobInGroup)
-				{
-					parallel_bounds[args.groupID] = *shared_bounds;
+					shared_bounds = AABB::Merge(shared_bounds, aabb_objects[args.jobIndex]);
 				}
 			}
 
-		}, sizeof(AABB));
+		});
 	}
 	void Scene::RunCameraUpdateSystem(wi::jobsystem::context& ctx)
 	{
