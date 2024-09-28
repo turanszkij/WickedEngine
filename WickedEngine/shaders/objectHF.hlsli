@@ -543,12 +543,19 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // OBJECTSHADER_USE_AO
 
 #ifdef OBJECTSHADER_USE_POSITION3D
+	surface.P = input.pos3D;
+	
+#ifdef ENVMAPRENDERING
+	surface.V = GetCamera().position - surface.P;
+#else
+	// Non-envmap rendering: support for ortho projection, cannot use camera position!
 	float2 clipspace = uv_to_clipspace(ScreenCoord);
 	float4 unprojectedNEAR = mul(GetCamera().inverse_view_projection, float4(clipspace, 1, 1));
 	unprojectedNEAR.xyz /= unprojectedNEAR.w;
 	
-	surface.P = input.pos3D;
-	surface.V = unprojectedNEAR.xyz - surface.P; // instead of camera.position - surface.P, unprojectedNEAR is used because it will also work correctly for orthographic projection!
+	surface.V = unprojectedNEAR.xyz - surface.P;
+#endif // ENVMAPRENDERING
+
 	float dist = length(surface.V);
 	surface.V /= dist;
 #endif // OBJECTSHADER_USE_POSITION3D
