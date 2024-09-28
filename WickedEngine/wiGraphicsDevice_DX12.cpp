@@ -2654,7 +2654,7 @@ std::mutex queue_locker;
 
 #ifdef PLATFORM_XBOX
 		adapterName = wi::graphics::xbox::GetAdapterName();
-		capabilities |= GraphicsDeviceCapability::MESH_SHADER;
+		//capabilities |= GraphicsDeviceCapability::MESH_SHADER; // TODO Mesh shader XBOX
 		capabilities |= GraphicsDeviceCapability::DEPTH_BOUNDS_TEST;
 		capabilities |= GraphicsDeviceCapability::GENERIC_SPARSE_TILE_POOL;
 		capabilities |= GraphicsDeviceCapability::CACHE_COHERENT_UMA;
