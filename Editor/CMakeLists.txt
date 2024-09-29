@@ -40,13 +40,6 @@ add_custom_command(
 include(GNUInstallDirs)
 set(EDITOR_INSTALL_FOLDER "${CMAKE_INSTALL_LIBDIR}/WickedEngine/Editor")
 
-# wicked-engine.sh (cd install folder then execs editor)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/Linux/Installer/Distribution/wicked-engine.template.sh"
-		"${CMAKE_CURRENT_BINARY_DIR}/wicked-engine.sh")
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/wicked-engine.sh"
-		DESTINATION ${CMAKE_INSTALL_BINDIR}
-		PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ)
-
 # WickedEngineEditor executable
 install(TARGETS WickedEngineEditor RUNTIME DESTINATION ${EDITOR_INSTALL_FOLDER})
 
@@ -62,15 +55,3 @@ install(FILES
 		${CMAKE_CURRENT_SOURCE_DIR}/startup.lua
 		DESTINATION ${EDITOR_INSTALL_FOLDER})
 
-# Installing icon and application "shortcut" on Linux
-if (UNIX)
-	install(FILES ${WICKED_ROOT_DIR}/Content/logo_small.png
-			RENAME wicked.png
-			DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/icons/")
-
-	configure_file("${CMAKE_CURRENT_SOURCE_DIR}/Linux/Installer/Distribution/WickedEngineEditor.template.desktop"
-			"${CMAKE_CURRENT_BINARY_DIR}/WickedEngineEditor.desktop")
-
-	install(FILES "${CMAKE_CURRENT_BINARY_DIR}/WickedEngineEditor.desktop"
-			DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications/")
-endif()
