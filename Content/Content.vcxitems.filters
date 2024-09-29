@@ -288,6 +288,9 @@
     <None Include="$(MSBuildThisFileDirectory)terrain\grass.wiscene">
       <Filter>terrain</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)scripts\character_controller\assets\conversation.lua">
+      <Filter>scripts\character_controller\assets</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="$(MSBuildThisFileDirectory)models\Sponza\textures\background.png">
