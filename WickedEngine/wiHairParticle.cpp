@@ -26,7 +26,7 @@ namespace wi
 	static Shader ps_shadow;
 	static Shader ps_simple;
 	static Shader cs_simulate;
-	static DepthStencilState dss_default, dss_equal;
+	static DepthStencilState dss_default, dss_equal, dss_shadow;
 	static RasterizerState rs, ncrs, wirers, rs_shadow;
 	static BlendState bs;
 	static BlendState bs_shadow;
@@ -659,6 +659,7 @@ namespace wi
 						desc.ps = &ps_shadow;
 						desc.rs = &rs_shadow;
 						desc.bs = &bs_shadow;
+						desc.dss = &dss_shadow;
 						break;
 					}
 
@@ -727,6 +728,9 @@ namespace wi
 		dsd.depth_enable = true;
 		dsd.depth_write_mask = DepthWriteMask::ALL;
 		dsd.depth_func = ComparisonFunc::GREATER;
+
+		dsd.stencil_enable = false;
+		dss_shadow = dsd;
 
 		dsd.stencil_enable = true;
 		dsd.stencil_read_mask = 0xFF;
