@@ -24,8 +24,6 @@
 --		R: reload script
 --		ENTER: interaction
 
-package.path = package.path .. ";" .. script_dir() .. "assets/?.lua;" -- allows using require from the assets directory to load .lua files
-
 local debug = false -- press H to toggle
 local framerate_lock = false
 local framerate_lock_target = 20
@@ -862,7 +860,7 @@ runProcess(function()
 
 				-- add dialog tree if found:
 				if metadata.HasString("dialog") then
-					npc.dialogs = require("dialogs/" .. metadata.GetString("dialog"))
+					npc.dialogs = dofile(script_dir() .. "assets/dialogs/" .. metadata.GetString("dialog") .. ".lua")
 				end
 
 				-- Add patrol waypoints if found:
