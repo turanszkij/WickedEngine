@@ -4688,7 +4688,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		
 		if(objectComponent != nullptr)
 		{
-			if(objectComponent->meshID != wi::ecs::INVALID_ENTITY)
+			if(objectComponent->meshID != wi::ecs::INVALID_ENTITY && wiscene.meshes.Contains(objectComponent->meshID))
 			{
 				node_builder.mesh = (int)wiscene.meshes.GetIndex(objectComponent->meshID);
 				if(wiscene.meshes[node_builder.mesh].armatureID != wi::ecs::INVALID_ENTITY)
