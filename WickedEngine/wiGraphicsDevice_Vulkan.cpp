@@ -2850,7 +2850,8 @@ using namespace vulkan_internal;
 			}
 			if (mesh_shader_features.meshShader == VK_TRUE && mesh_shader_features.taskShader == VK_TRUE)
 			{
-				capabilities |= GraphicsDeviceCapability::MESH_SHADER;
+				// Disable Vulkan mesh shader for now because it can crash AMD driver just by compiling shader, without any warnings
+				//capabilities |= GraphicsDeviceCapability::MESH_SHADER;
 			}
 			if (fragment_shading_rate_features.pipelineFragmentShadingRate == VK_TRUE)
 			{
