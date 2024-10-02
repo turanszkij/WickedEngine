@@ -379,6 +379,11 @@ REVERB_PRESET_PLATE = 29
 					soundinstance.length = wi::lua::SGetFloat(L, 3);
 				}
 			}
+			if (!s->soundResource.IsValid())
+			{
+				wi::lua::SError(L, "SoundInstance(Sound sound, opt float begin,end) : Sound is not valid!");
+				return;
+			}
 			const wi::audio::Sound& sound = s->soundResource.GetSound();
 			if (!sound.IsValid())
 			{
