@@ -1484,6 +1484,10 @@ namespace wi::helper
 		mem.process_physical = l * PAGE_SIZE;
 		// there doesn't seem to be an easy way to determine
 		// swapped out memory
+#elif defined(PLATFORM_PS5)
+		wi::graphics::GraphicsDevice::MemoryUsage gpumem = wi::graphics::GetDevice()->GetMemoryUsage();
+		mem.process_physical = mem.total_physical = gpumem.budget;
+		mem.process_virtual = mem.total_virtual = gpumem.usage;
 #endif // defined(_WIN32)
 		return mem;
 	}

@@ -309,7 +309,7 @@ namespace wi::jobsystem
 
 #undef handle_error_en
 #elif defined(PLATFORM_PS5)
-				wi::jobsystem::ps5::SetupWorker(worker, threadID);
+				wi::jobsystem::ps5::SetupWorker(worker, threadID, core, priority);
 #endif // _WIN32
 			}
 		}
