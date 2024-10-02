@@ -27,6 +27,8 @@ void CameraWindow::ResetCam()
 
 	editorscene.camera_target.ClearTransform();
 	editorscene.camera_target.UpdateTransform();
+
+	orthoCheckBox.SetCheck(camera.IsOrtho());
 }
 
 void CameraWindow::Create(EditorComponent* _editor)

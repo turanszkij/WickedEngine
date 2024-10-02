@@ -18,11 +18,7 @@ float4 main(PSIn input) : SV_TARGET
 	half4 color = xOceanWaterColor;
 	float2 ScreenCoord = input.pos.xy * GetCamera().internal_resolution_rcp;
 	
-	// support for ortho projection, cannot use camera position!
-	float2 clipspace = uv_to_clipspace(ScreenCoord);
-	float4 unprojectedNEAR = mul(GetCamera().inverse_view_projection, float4(clipspace, 1, 1));
-	unprojectedNEAR.xyz /= unprojectedNEAR.w;
-	float3 V = unprojectedNEAR - input.pos3D;
+	float3 V = input.GetViewVector();
 	float dist = length(V);
 	V /= dist;
 	
@@ -47,7 +43,7 @@ float4 main(PSIn input) : SV_TARGET
 	surface.albedo = color.rgb;
 	surface.f0 = 0.02;
 	surface.roughness = 0.1;
-	surface.P = input.pos3D;
+	surface.P = input.GetPos3D();
 	surface.N = normalize(float3(gradient.x, xOceanTexelLength * 2, gradient.y));
 	surface.V = V;
 	surface.sss = 1;
@@ -68,7 +64,7 @@ float4 main(PSIn input) : SV_TARGET
 	if (GetCamera().texture_reflection_index >= 0)
 	{
 		//REFLECTION
-		float4 reflectionPos = mul(GetCamera().reflection_view_projection, float4(input.pos3D, 1));
+		float4 reflectionPos = mul(GetCamera().reflection_view_projection, float4(surface.P, 1));
 		float2 reflectionUV = clipspace_to_uv(reflectionPos.xy / reflectionPos.w) + surface.N.xz * bump_strength;
 		half4 reflectiveColor = bindless_textures[GetCamera().texture_reflection_index].SampleLevel(sampler_linear_mirror, reflectionUV, 0);
 		[branch]

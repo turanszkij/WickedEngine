@@ -37,7 +37,6 @@ PSIn main(uint vertexID : SV_VertexID)
 
 	// Reproject displaced surface and output:
 	Out.pos = mul(GetCamera().view_projection, float4(worldPos, 1));
-	Out.pos3D = worldPos;
 	Out.uv = uv;
 
 	return Out;

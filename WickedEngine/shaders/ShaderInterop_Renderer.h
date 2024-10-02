@@ -926,6 +926,32 @@ struct alignas(16) ShaderFrustum
 #endif // __cplusplus
 };
 
+struct alignas(16) ShaderFrustumCorners
+{
+	// topleft, topright, bottomleft, bottomright
+	float4 cornersNEAR[4];
+	float4 cornersFAR[4];
+
+#ifndef __cplusplus
+	inline float3 position_near(float2 uv)
+	{
+		float3 posTOP = lerp(cornersNEAR[0], cornersNEAR[1], uv.x);
+		float3 posBOTTOM = lerp(cornersNEAR[2], cornersNEAR[3], uv.x);
+		return lerp(posTOP, posBOTTOM, uv.y);
+	}
+	inline float3 position_far(float2 uv)
+	{
+		float3 posTOP = lerp(cornersFAR[0], cornersFAR[1], uv.x);
+		float3 posBOTTOM = lerp(cornersFAR[2], cornersFAR[3], uv.x);
+		return lerp(posTOP, posBOTTOM, uv.y);
+	}
+	inline float3 position_from_screen(float2 uv, float lineardepth)
+	{
+		return lerp(position_near(uv), position_far(uv), lineardepth);
+	}
+#endif // __cplusplus
+};
+
 enum SHADER_ENTITY_TYPE
 {
 	ENTITY_TYPE_DIRECTIONALLIGHT,
@@ -1159,6 +1185,7 @@ struct alignas(16) ShaderCamera
 	float4x4	inverse_view_projection;
 
 	ShaderFrustum frustum;
+	ShaderFrustumCorners frustum_corners;
 
 	float2		temporalaa_jitter;
 	float2		temporalaa_jitter_prev;
@@ -1314,6 +1341,8 @@ struct alignas(16) ShaderCamera
 	{
 		return pixel.x >= scissor.x && pixel.x <= scissor.z && pixel.y >= scissor.y && pixel.y <= scissor.w;
 	}
+
+	inline bool IsOrtho() { return options & SHADERCAMERA_OPTION_ORTHO; }
 #endif // __cplusplus
 };
 

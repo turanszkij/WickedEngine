@@ -551,31 +551,6 @@ SHADERTYPE GetGSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent)
 		}
 #endif // PLATFORM_PS5
 		break;
-
-	case RENDERPASS_ENVMAPCAPTURE:
-		if (device->CheckCapability(GraphicsDeviceCapability::RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS))
-			break;
-		realGS = GSTYPE_ENVMAP_EMULATION;
-		break;
-	case RENDERPASS_SHADOW:
-		if (device->CheckCapability(GraphicsDeviceCapability::RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS))
-			break;
-		if (transparent)
-		{
-			realGS = GSTYPE_SHADOW_TRANSPARENT_EMULATION;
-		}
-		else
-		{
-			if (alphatest)
-			{
-				realGS = GSTYPE_SHADOW_ALPHATEST_EMULATION;
-			}
-			else
-			{
-				realGS = GSTYPE_SHADOW_EMULATION;
-			}
-		}
-		break;
 	}
 
 	return realGS;
@@ -932,11 +907,6 @@ void LoadShaders()
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOW_ALPHATEST], "shadowVS_alphatest_emulation.cso"); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SHADOW_TRANSPARENT], "shadowVS_transparent_emulation.cso"); });
 
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_ENVMAP_EMULATION], "envMapGS_emulation.cso"); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_ENVMAP_SKY_EMULATION], "envMap_skyGS_emulation.cso"); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_SHADOW_EMULATION], "shadowGS_emulation.cso"); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_SHADOW_ALPHATEST_EMULATION], "shadowGS_alphatest_emulation.cso"); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_SHADOW_TRANSPARENT_EMULATION], "shadowGS_transparent_emulation.cso"); });
 	}
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_IMPOSTOR], "impostorPS.cso"); });
@@ -1600,19 +1570,11 @@ void LoadShaders()
 			desc.bs = &blendStates[BSTYPE_OPAQUE];
 			desc.vs = &shaders[VSTYPE_ENVMAP_SKY];
 			desc.ps = &shaders[PSTYPE_ENVMAP_SKY_STATIC];
-			if (!device->CheckCapability(GraphicsDeviceCapability::RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS))
-			{
-				desc.gs = &shaders[GSTYPE_ENVMAP_SKY_EMULATION];
-			}
 			break;
 		case SKYRENDERING_ENVMAPCAPTURE_DYNAMIC:
 			desc.bs = &blendStates[BSTYPE_OPAQUE];
 			desc.vs = &shaders[VSTYPE_ENVMAP_SKY];
 			desc.ps = &shaders[PSTYPE_ENVMAP_SKY_DYNAMIC];
-			if (!device->CheckCapability(GraphicsDeviceCapability::RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS))
-			{
-				desc.gs = &shaders[GSTYPE_ENVMAP_SKY_EMULATION];
-			}
 			break;
 		}
 
@@ -8401,6 +8363,8 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 	const float zNearP = vis.camera->zNearP;
 	const float zFarP = vis.camera->zFarP;
+	const float zNearPRcp = 1.0f / zNearP;
+	const float zFarPRcp = 1.0f / zFarP;
 
 	auto render_probe = [&](const EnvironmentProbeComponent& probe, const AABB& probe_aabb) {
 
@@ -8416,9 +8380,27 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		for (uint32_t i = 0; i < arraysize(cameras); ++i)
 		{
 			XMStoreFloat4x4(&cb.cameras[i].view_projection, cameras[i].view_projection);
-			XMStoreFloat4x4(&cb.cameras[i].inverse_view_projection, cameras[i].view_projection);
+			XMMATRIX invVP = XMMatrixInverse(nullptr, cameras[i].view_projection);
+			XMStoreFloat4x4(&cb.cameras[i].inverse_view_projection, invVP);
 			cb.cameras[i].position = probe.position;
 			cb.cameras[i].output_index = i;
+			cb.cameras[i].z_near = zNearP;
+			cb.cameras[i].z_near_rcp = zNearPRcp;
+			cb.cameras[i].z_far = zFarP;
+			cb.cameras[i].z_far_rcp = zFarPRcp;
+			cb.cameras[i].internal_resolution = uint2(probe.texture.desc.width, probe.texture.desc.height);
+			cb.cameras[i].internal_resolution_rcp.x = 1.0f / cb.cameras[i].internal_resolution.x;
+			cb.cameras[i].internal_resolution_rcp.y = 1.0f / cb.cameras[i].internal_resolution.y;
+
+			XMStoreFloat4(&cb.cameras[i].frustum_corners.cornersNEAR[0], XMVector3TransformCoord(XMVectorSet(-1, 1, 1, 1), invVP));
+			XMStoreFloat4(&cb.cameras[i].frustum_corners.cornersNEAR[1], XMVector3TransformCoord(XMVectorSet(1, 1, 1, 1), invVP));
+			XMStoreFloat4(&cb.cameras[i].frustum_corners.cornersNEAR[2], XMVector3TransformCoord(XMVectorSet(-1, -1, 1, 1), invVP));
+			XMStoreFloat4(&cb.cameras[i].frustum_corners.cornersNEAR[3], XMVector3TransformCoord(XMVectorSet(1, -1, 1, 1), invVP));
+			XMStoreFloat4(&cb.cameras[i].frustum_corners.cornersFAR[0], XMVector3TransformCoord(XMVectorSet(-1, 1, 0, 1), invVP));
+			XMStoreFloat4(&cb.cameras[i].frustum_corners.cornersFAR[1], XMVector3TransformCoord(XMVectorSet(1, 1, 0, 1), invVP));
+			XMStoreFloat4(&cb.cameras[i].frustum_corners.cornersFAR[2], XMVector3TransformCoord(XMVectorSet(-1, -1, 0, 1), invVP));
+			XMStoreFloat4(&cb.cameras[i].frustum_corners.cornersFAR[3], XMVector3TransformCoord(XMVectorSet(1, -1, 0, 1), invVP));
+
 		}
 		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
@@ -10456,6 +10438,12 @@ void BindCameraCB(
 	ShaderCamera& shadercam = cb.cameras[0];
 
 	shadercam.options = camera.shadercamera_options;
+	if (camera.IsOrtho())
+	{
+		shadercam.options |= SHADERCAMERA_OPTION_ORTHO;
+	}
+
+	XMMATRIX invVP = camera.GetInvViewProjection();
 
 	XMStoreFloat4x4(&shadercam.view_projection, camera.GetViewProjection());
 	XMStoreFloat4x4(&shadercam.view, camera.GetView());
@@ -10464,7 +10452,7 @@ void BindCameraCB(
 	shadercam.distance_from_origin = XMVectorGetX(XMVector3Length(XMLoadFloat3(&shadercam.position)));
 	XMStoreFloat4x4(&shadercam.inverse_view, camera.GetInvView());
 	XMStoreFloat4x4(&shadercam.inverse_projection, camera.GetInvProjection());
-	XMStoreFloat4x4(&shadercam.inverse_view_projection, camera.GetInvViewProjection());
+	XMStoreFloat4x4(&shadercam.inverse_view_projection, invVP);
 	shadercam.forward = camera.At;
 	shadercam.up = camera.Up;
 	shadercam.z_near = camera.zNearP;
@@ -10481,6 +10469,16 @@ void BindCameraCB(
 	{
 		shadercam.frustum.planes[i] = camera.frustum.planes[i];
 	}
+
+	XMStoreFloat4(&shadercam.frustum_corners.cornersNEAR[0], XMVector3TransformCoord(XMVectorSet(-1, 1, 1, 1), invVP));
+	XMStoreFloat4(&shadercam.frustum_corners.cornersNEAR[1], XMVector3TransformCoord(XMVectorSet(1, 1, 1, 1), invVP));
+	XMStoreFloat4(&shadercam.frustum_corners.cornersNEAR[2], XMVector3TransformCoord(XMVectorSet(-1, -1, 1, 1), invVP));
+	XMStoreFloat4(&shadercam.frustum_corners.cornersNEAR[3], XMVector3TransformCoord(XMVectorSet(1, -1, 1, 1), invVP));
+
+	XMStoreFloat4(&shadercam.frustum_corners.cornersFAR[0], XMVector3TransformCoord(XMVectorSet(-1, 1, 0, 1), invVP));
+	XMStoreFloat4(&shadercam.frustum_corners.cornersFAR[1], XMVector3TransformCoord(XMVectorSet(1, 1, 0, 1), invVP));
+	XMStoreFloat4(&shadercam.frustum_corners.cornersFAR[2], XMVector3TransformCoord(XMVectorSet(-1, -1, 0, 1), invVP));
+	XMStoreFloat4(&shadercam.frustum_corners.cornersFAR[3], XMVector3TransformCoord(XMVectorSet(1, -1, 0, 1), invVP));
 
 	shadercam.temporalaa_jitter = camera.jitter;
 	shadercam.temporalaa_jitter_prev = camera_previous.jitter;
