@@ -39,7 +39,6 @@ VertextoPixel main(uint vid : SV_VertexID, uint instanceID : SV_InstanceID)
 	const float frameBlend = frac(spriteframe);
 
 	VertextoPixel Out;
-	Out.P = position;
 	Out.pos = float4(position, 1);
 	Out.clip = dot(Out.pos, GetCamera().clip_plane);
 	Out.pos = mul(GetCamera().view_projection, Out.pos);

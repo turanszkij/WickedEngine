@@ -10,17 +10,12 @@ struct PSIn
 	
 	inline float3 GetPos3D()
 	{
-		ShaderCamera camera = GetCamera();
-		const float2 ScreenCoord = pos.xy * camera.internal_resolution_rcp; // use pixel center!
-		const float z = camera.IsOrtho() ? (1 - pos.z) : inverse_lerp(camera.z_near, camera.z_far, pos.w);
-		return camera.frustum_corners.position_from_screen(ScreenCoord, z);
+		return GetCamera().screen_to_world(pos);
 	}
 
 	inline float3 GetViewVector()
 	{
-		ShaderCamera camera = GetCamera();
-		const float2 ScreenCoord = pos.xy * camera.internal_resolution_rcp; // use pixel center!
-		return camera.frustum_corners.position_near(ScreenCoord) - GetPos3D(); // ortho support, cannot use cameraPos!
+		return GetCamera().screen_to_nearplane(pos) - GetPos3D(); // ortho support, cannot use cameraPos!
 	}
 };
 

@@ -933,21 +933,21 @@ struct alignas(16) ShaderFrustumCorners
 	float4 cornersFAR[4];
 
 #ifndef __cplusplus
-	inline float3 position_near(float2 uv)
+	inline float3 screen_to_nearplane(float2 uv)
 	{
 		float3 posTOP = lerp(cornersNEAR[0], cornersNEAR[1], uv.x);
 		float3 posBOTTOM = lerp(cornersNEAR[2], cornersNEAR[3], uv.x);
 		return lerp(posTOP, posBOTTOM, uv.y);
 	}
-	inline float3 position_far(float2 uv)
+	inline float3 screen_to_farplane(float2 uv)
 	{
 		float3 posTOP = lerp(cornersFAR[0], cornersFAR[1], uv.x);
 		float3 posBOTTOM = lerp(cornersFAR[2], cornersFAR[3], uv.x);
 		return lerp(posTOP, posBOTTOM, uv.y);
 	}
-	inline float3 position_from_screen(float2 uv, float lineardepth)
+	inline float3 screen_to_world(float2 uv, float lineardepthNormalized)
 	{
-		return lerp(position_near(uv), position_far(uv), lineardepth);
+		return lerp(screen_to_nearplane(uv), screen_to_farplane(uv), lineardepthNormalized);
 	}
 #endif // __cplusplus
 };
@@ -1343,6 +1343,27 @@ struct alignas(16) ShaderCamera
 	}
 
 	inline bool IsOrtho() { return options & SHADERCAMERA_OPTION_ORTHO; }
+
+	inline float3 screen_to_nearplane(float4 svposition)
+	{
+		const float2 ScreenCoord = svposition.xy * internal_resolution_rcp;
+		return frustum_corners.screen_to_nearplane(ScreenCoord);
+	}
+	inline float3 screen_to_farplane(float4 svposition)
+	{
+		const float2 ScreenCoord = svposition.xy * internal_resolution_rcp;
+		return frustum_corners.screen_to_farplane(ScreenCoord);
+	}
+
+	// Convert raw screen coordinate from rasterizer to world position
+	//	Note: svposition is the SV_Position system value, the .w component can be different in different compilers
+	//	You need to ensure that the .w component is used for linear depth (Vulkan: -fvk-use-dx-position-w, Xbox: there is a define to pass SV_Position ZW via attribute)
+	inline float3 screen_to_world(float4 svposition)
+	{
+		const float2 ScreenCoord = svposition.xy * internal_resolution_rcp;
+		const float z = IsOrtho() ? (1 - svposition.z) : inverse_lerp(z_near, z_far, svposition.w);
+		return frustum_corners.screen_to_world(ScreenCoord, z);
+	}
 #endif // __cplusplus
 };
 

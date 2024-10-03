@@ -134,6 +134,12 @@ inline uint2 unpack_pixel(uint value)
 	return retVal;
 }
 
+template<typename T>
+T inverse_lerp(T value1, T value2, T pos)
+{
+	return all(value2 == value1) ? 0 : ((pos - value1) / (value2 - value1));
+}
+
 // The root signature will affect shader compilation for DX12.
 //	The shader compiler will take the defined name: WICKED_ENGINE_DEFAULT_ROOTSIGNATURE and use it as root signature
 //	If you wish to specify custom root signature, make sure that this define is not available
@@ -772,12 +778,6 @@ inline half2 clipspace_to_uv(in half2 clipspace)
 inline half3 clipspace_to_uv(in half3 clipspace)
 {
 	return clipspace * half3(0.5, -0.5, 0.5) + 0.5;
-}
-
-template<typename T>
-T inverse_lerp(T value1, T value2, T pos)
-{
-	return all(value2 == value1) ? 0 : ((pos - value1) / (value2 - value1));
 }
 
 inline float3 GetSunColor() { return GetWeather().sun_color; } // sun color with intensity applied
@@ -1517,30 +1517,30 @@ inline half2x2 dither_rot2x2(in min16uint2 pixel)
 // http://mathworld.wolfram.com/Quaternion.html
 float4 qmul(float4 q1, float4 q2)
 {
-    return float4(
-        q2.xyz * q1.w + q1.xyz * q2.w + cross(q1.xyz, q2.xyz),
-        q1.w * q2.w - dot(q1.xyz, q2.xyz)
-    );
+	return float4(
+		q2.xyz * q1.w + q1.xyz * q2.w + cross(q1.xyz, q2.xyz),
+		q1.w * q2.w - dot(q1.xyz, q2.xyz)
+	);
 }
 half4 qmul(half4 q1, half4 q2)
 {
-    return half4(
-        q2.xyz * q1.w + q1.xyz * q2.w + cross(q1.xyz, q2.xyz),
-        q1.w * q2.w - dot(q1.xyz, q2.xyz)
-    );
+	return half4(
+		q2.xyz * q1.w + q1.xyz * q2.w + cross(q1.xyz, q2.xyz),
+		q1.w * q2.w - dot(q1.xyz, q2.xyz)
+	);
 }
 
 // Vector rotation with a quaternion
 // http://mathworld.wolfram.com/Quaternion.html
 float3 rotate_vector(float3 v, float4 r)
 {
-    float4 r_c = r * float4(-1, -1, -1, 1);
-    return qmul(r, qmul(float4(v, 0), r_c)).xyz;
+	float4 r_c = r * float4(-1, -1, -1, 1);
+	return qmul(r, qmul(float4(v, 0), r_c)).xyz;
 }
 half3 rotate_vector(half3 v, half4 r)
 {
-    half4 r_c = r * half4(-1, -1, -1, 1);
-    return qmul(r, qmul(half4(v, 0), r_c)).xyz;
+	half4 r_c = r * half4(-1, -1, -1, 1);
+	return qmul(r, qmul(half4(v, 0), r_c)).xyz;
 }
 
 inline float sphere_surface_area(in float radius)
