@@ -200,7 +200,7 @@ struct VertexInput
 		[branch]
 		if (GetInstance().vb_ao < 0)
 			return 1;
-		return (half)bindless_buffers_float[GetInstance().vb_ao][vertexID];
+		return (half)bindless_buffers_float[NonUniformResourceIndex(GetInstance().vb_ao)][vertexID];
 	}
 
 	half GetWetmap()
@@ -213,7 +213,7 @@ struct VertexInput
 		// There is something seriously bad with AMD driver's shader compiler as the above commented version works incorrectly and this works correctly but only for wetmap
 		[branch]
 		if (GetInstance().vb_wetmap >= 0)
-			return (half)bindless_buffers_float[GetInstance().vb_wetmap][vertexID];
+			return (half)bindless_buffers_float[NonUniformResourceIndex(GetInstance().vb_wetmap)][vertexID];
 		return 0;
 	}
 };

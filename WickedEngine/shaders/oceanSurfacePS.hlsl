@@ -14,7 +14,7 @@ Texture2D<float4> texture_gradientmap : register(t1);
 [earlydepthstencil]
 float4 main(PSIn input) : SV_TARGET
 {
-	float lineardepth = input.pos.w;
+	float lineardepth = GetCamera().IsOrtho() ? ((1 - input.pos.z) * GetCamera().z_far) : input.pos.w;
 	half4 color = xOceanWaterColor;
 	float2 ScreenCoord = input.pos.xy * GetCamera().internal_resolution_rcp;
 	
