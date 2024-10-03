@@ -441,7 +441,15 @@ inline ShaderEntity load_entity(uint entityIndex)
 {
 	return GetFrame().entityArray[entityIndex];
 }
+inline ShaderEntity load_entity(min16uint entityIndex)
+{
+	return GetFrame().entityArray[entityIndex];
+}
 inline float4x4 load_entitymatrix(uint matrixIndex)
+{
+	return GetFrame().matrixArray[matrixIndex];
+}
+inline float4x4 load_entitymatrix(min16uint matrixIndex)
 {
 	return GetFrame().matrixArray[matrixIndex];
 }

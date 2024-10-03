@@ -742,11 +742,11 @@ struct alignas(16) ShaderEntity
 
 #ifndef __cplusplus
 	// Shader-side:
-	inline uint GetType()
+	inline min16uint GetType()
 	{
 		return type8_flags8_range16 & 0xFF;
 	}
-	inline uint GetFlags()
+	inline min16uint GetFlags()
 	{
 		return (type8_flags8_range16 >> 8u) & 0xFF;
 	}
@@ -774,7 +774,7 @@ struct alignas(16) ShaderEntity
 	{
 		return (half)f16tof32(direction16_coneAngleCos16.y >> 16u);
 	}
-	inline uint GetShadowCascadeCount()
+	inline min16uint GetShadowCascadeCount()
 	{
 		return direction16_coneAngleCos16.y >> 16u;
 	}
@@ -803,11 +803,11 @@ struct alignas(16) ShaderEntity
 		retVal.w = (half)f16tof32(color.y >> 16u);
 		return retVal;
 	}
-	inline uint GetMatrixIndex()
+	inline min16uint GetMatrixIndex()
 	{
 		return indices & 0xFFFF;
 	}
-	inline uint GetTextureIndex()
+	inline min16uint GetTextureIndex()
 	{
 		return indices >> 16u;
 	}

@@ -88,7 +88,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 		{
 			// Loop through cascades from closest (smallest) to furthest (largest)
 			[loop]
-			for (uint cascade = 0; cascade < light.GetShadowCascadeCount(); ++cascade)
+			for (min16uint cascade = 0; cascade < light.GetShadowCascadeCount(); ++cascade)
 			{
 				// Project into shadow map space (no need to divide by .w because ortho projection!):
 				const float4x4 cascade_projection = load_entitymatrix(light.GetMatrixIndex() + cascade);
@@ -471,9 +471,9 @@ inline half4 EnvironmentReflection_Local(in TextureCube cubemap, in Surface surf
 #endif // SHEEN
 
 #ifdef CLEARCOAT
-	RayLS = mul((float3x3)probeProjection, surface.clearcoat.R);
-	FirstPlaneIntersect = (float3(1, 1, 1) - clipSpacePos) / RayLS;
-	SecondPlaneIntersect = (-float3(1, 1, 1) - clipSpacePos) / RayLS;
+	RayLS = mul((half3x3)probeProjection, surface.clearcoat.R);
+	FirstPlaneIntersect = (half3(1, 1, 1) - clipSpacePos) / RayLS;
+	SecondPlaneIntersect = (-half3(1, 1, 1) - clipSpacePos) / RayLS;
 	FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
 	Distance = min(FurthestPlane.x, min(FurthestPlane.y, FurthestPlane.z));
 	IntersectPositionWS = surface.P + surface.clearcoat.R * Distance;
