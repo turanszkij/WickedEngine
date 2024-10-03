@@ -49,10 +49,8 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	const uint2 GTid = remap_lane_8x8(groupIndex);
 	const uint2 pixel = Gid.xy * VISIBILITY_BLOCKSIZE + GTid.xy;
 	const bool pixel_valid = (pixel.x < GetCamera().internal_resolution.x) && (pixel.y < GetCamera().internal_resolution.y);
-
-	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
-	const float2 clipspace = uv_to_clipspace(uv);
-	RayDesc ray = CreateCameraRay(clipspace);
+	
+	RayDesc ray = CreateCameraRay(pixel);
 	
 #ifdef VISIBILITY_MSAA
 	uint primitiveID = input_primitiveID.Load(pixel, 0);
