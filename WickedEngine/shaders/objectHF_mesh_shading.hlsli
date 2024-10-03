@@ -66,7 +66,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 			{
 				// Cone culling:
 				bounds.cone_axis = rotate_vector(bounds.cone_axis, inst.quaternion);
-				if (camera.options & SHADERCAMERA_OPTION_ORTHO)
+				if (camera.IsOrtho())
 				{
 					visible &= dot(camera.forward, bounds.cone_axis) < bounds.cone_cutoff;
 				}

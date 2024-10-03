@@ -22,7 +22,7 @@ float4 main(VertexToPixel input) : SV_Target
 	}
 	color *= material.GetBaseColor();
 
-	float3 V = GetCamera().position - input.pos3D;
+	float3 V = input.GetViewVector();
 	float dist = length(V);
 	V /= dist;
 	half emissive = 0;
@@ -33,7 +33,7 @@ float4 main(VertexToPixel input) : SV_Target
 	Surface surface;
 	surface.init();
 	surface.create(material, color, surfacemap_simple);
-	surface.P = input.pos3D;
+	surface.P = input.GetPos3D();
 	surface.N = input.nor;
 	surface.V = V;
 	surface.pixel = input.pos.xy;

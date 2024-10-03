@@ -31,9 +31,8 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		output[pixel] = 0;
 		return;
 	}
-
-	const float2 clipspace = uv_to_clipspace(uv);
-	RayDesc ray = CreateCameraRay(clipspace);
+	
+	RayDesc ray = CreateCameraRay(pixel);
 
 	float3 envColor = 0;
 

@@ -37,10 +37,10 @@ float4 main(PixelInput input) : SV_TARGET
 	uv.y *= GetCamera().internal_resolution.y * GetCamera().internal_resolution_rcp.x;
 
 	// wave:
-	color.a *= sin(input.pos3D.y * 30 + time * 10) * 0.5 + 0.5;
+	color.a *= sin(input.GetPos3D().y * 30 + time * 10) * 0.5 + 0.5;
 
 	// rim:
-	color *= lerp(0.3, 6, pow(1 - saturate(dot(normalize(input.nor), normalize(GetCamera().position - input.pos3D))), 2));
+	color *= lerp(0.3, 6, pow(1 - saturate(dot(normalize(input.nor), normalize(input.GetViewVector()))), 2));
 
 	// keep some base color
 	color.a += 0.2;

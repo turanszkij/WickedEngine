@@ -146,10 +146,6 @@ PixelInput main(ConstantOutput input, float3 uvw : SV_DomainLocation, const Outp
 	output.tan = half4(normalize(w * patch[0].tan + u * patch[1].tan + v * patch[2].tan));
 #endif // OBJECTSHADER_USE_TANGENT
 
-#ifdef OBJECTSHADER_USE_POSITION3D
-	output.pos3D = output.pos.xyz;
-#endif // OBJECTSHADER_USE_POSITION3D
-
 
 #ifdef OBJECTSHADER_USE_NORMAL
 #ifdef OBJECTSHADER_USE_UVSETS

@@ -28,10 +28,11 @@ ImpostorOutput main(PixelInput input)
 	clip(color.a - material.GetAlphaTest());
 
 	float3 N = normalize(input.nor);
-	float3 P = input.pos3D;
-
-	float3x3 TBN = compute_tangent_frame(N, P, uvsets.xy);
-
+	
+	input.tan.w = input.tan.w < 0 ? -1 : 1;
+	half3 bitangent = cross(input.tan.xyz, input.nor) * input.tan.w;
+	float3x3 TBN = float3x3(input.tan.xyz, bitangent, input.nor); // unnormalized TBN! http://www.mikktspace.com/
+	
 	[branch]
 	if (material.textures[NORMALMAP].IsValid())
 	{

@@ -14,9 +14,11 @@ static const uint SLOT = BASECOLORMAP;
 [earlydepthstencil]
 float4 main(VertextoPixel input) : SV_TARGET
 {
+	float3 pos3D = input.GetPos3D();
+	
 	// Blocker shadow map check:
 	[branch]
-	if ((xEmitterOptions & EMITTER_OPTION_BIT_USE_RAIN_BLOCKER) && rain_blocker_check(input.P))
+	if ((xEmitterOptions & EMITTER_OPTION_BIT_USE_RAIN_BLOCKER) && rain_blocker_check(pos3D))
 	{
 		return 0;
 	}
@@ -102,7 +104,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 		N = mul((float3x3)GetCamera().inverse_view, N);
 		N = normalize(N);
 		
-		float3 V = GetCamera().position - input.P;
+		float3 V = input.GetViewVector();
 		float dist = length(V);
 		V /= dist;
 
@@ -112,7 +114,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 		Surface surface;
 		surface.init();
 		surface.create(material, color, surfacemap_simple);
-		surface.P = input.P;
+		surface.P = pos3D;
 		surface.N = N;
 		surface.V = V;
 		surface.pixel = pixel;

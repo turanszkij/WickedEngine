@@ -776,18 +776,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)envMap_skyVS_emulation.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)shadowGS_emulation.hlsl">
-      <Filter>GS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)shadowGS_alphatest_emulation.hlsl">
-      <Filter>GS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)envMapGS_emulation.hlsl">
-      <Filter>GS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)envMap_skyGS_emulation.hlsl">
-      <Filter>GS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_transmittanceLutCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -802,9 +790,6 @@
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)shadowVS_transparent_emulation.hlsl">
       <Filter>VS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)shadowGS_transparent_emulation.hlsl">
-      <Filter>GS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)rtshadow_denoise_temporalCS.hlsl">
       <Filter>CS</Filter>

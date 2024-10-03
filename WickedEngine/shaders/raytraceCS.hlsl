@@ -35,11 +35,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	float3 primary_albedo = 0;
 	float3 primary_normal = 0;
 
-	// Compute screen coordinates:
-	float2 uv = (pixel + xTracePixelOffset) * xTraceResolution_rcp.xy;
-
 	// Create starting ray:
-	RayDesc ray = CreateCameraRay(uv_to_clipspace(uv));
+	RayDesc ray = CreateCameraRay(pixel, xTracePixelOffset);
 
 	// Depth of field setup:
 	float3 focal_point = ray.Origin + ray.Direction * GetCamera().focal_length;

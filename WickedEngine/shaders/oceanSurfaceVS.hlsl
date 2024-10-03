@@ -18,10 +18,12 @@ PSIn main(uint vertexID : SV_VertexID)
 	Out.pos.xy *= max(1, xOceanSurfaceDisplacementTolerance); // extrude screen space grid to tolerate displacement
 
 	// Perform ray tracing of screen grid and plane surface to unproject to world space:
-	const float3 o = GetCamera().position;
-	float4 unproj = mul(GetCamera().inverse_view_projection, float4(Out.pos.xy, 1, 1));
-	unproj.xyz /= unproj.w;
-	const float3 d = normalize(o.xyz - unproj.xyz);
+	float4 unprojNEAR = mul(GetCamera().inverse_view_projection, float4(Out.pos.xy, 1, 1));
+	unprojNEAR.xyz /= unprojNEAR.w;
+	float4 unprojFAR = mul(GetCamera().inverse_view_projection, float4(Out.pos.xy, 0, 1));
+	unprojFAR.xyz /= unprojFAR.w;
+	const float3 d = normalize(unprojNEAR.xyz - unprojFAR.xyz);
+	const float3 o = unprojNEAR.xyz;
 
 	float3 worldPos = intersectPlaneClampInfinite(o, d, float3(0, 1, 0), xOceanWaterHeight);
 	
@@ -37,7 +39,6 @@ PSIn main(uint vertexID : SV_VertexID)
 
 	// Reproject displaced surface and output:
 	Out.pos = mul(GetCamera().view_projection, float4(worldPos, 1));
-	Out.pos3D = worldPos;
 	Out.uv = uv;
 
 	return Out;

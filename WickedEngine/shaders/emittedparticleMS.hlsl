@@ -24,7 +24,6 @@ struct VertextoPixel_MS
 	float4 pos : SV_POSITION;
 	float clip : SV_ClipDistance0;
 	half4 tex : TEXCOORD0;
-	float3 P : WORLDPOSITION;
 	half2 unrotated_uv : UNROTATED_UV;
 };
 struct VertextoPixel_MS_PRIM
@@ -81,7 +80,6 @@ void main(
 		float4 uvsets = bindless_buffers_float4[geometry.vb_uvs][vertexID];
 
 		VertextoPixel_MS Out;
-		Out.P = position;
 		Out.clip = dot(Out.pos, GetCamera().clip_plane);
 		Out.tex = half4(uvsets);
 		Out.pos = mul(GetCamera().view_projection, float4(position, 1));

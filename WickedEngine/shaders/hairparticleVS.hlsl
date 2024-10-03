@@ -23,7 +23,6 @@ VertexToPixel main(uint vid : SV_VERTEXID)
 
 	Out.pos = float4(position, 1);
 	Out.clip = dot(Out.pos, GetCamera().clip_plane);
-	Out.pos3D = Out.pos.xyz;
 	Out.pos = mul(GetCamera().view_projection, Out.pos);
 
 	Out.nor = half3(normal);

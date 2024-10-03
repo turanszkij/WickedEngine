@@ -364,7 +364,7 @@ struct Surface
 	}
 	void load_internal(uint flatTileIndex = 0)
 	{
-		SamplerState sam = bindless_samplers[material.sampler_descriptor];
+		SamplerState sam = bindless_samplers[NonUniformResourceIndex(material.sampler_descriptor)];
 
 		const bool is_hairparticle = geometry.flags & SHADERMESH_FLAG_HAIRPARTICLE;
 		const bool is_emittedparticle = geometry.flags & SHADERMESH_FLAG_EMITTEDPARTICLE;

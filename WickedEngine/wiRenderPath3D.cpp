@@ -785,7 +785,7 @@ namespace wi
 		camera_reflection.sample_count = depthBuffer_Reflection.desc.sample_count;
 		camera_reflection.shadercamera_options = SHADERCAMERA_OPTION_NONE;
 		camera_reflection.texture_primitiveID_index = -1;
-		camera_reflection.texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Reflection, SubresourceType::SRV);
+		camera_reflection.texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Reflection_resolved, SubresourceType::SRV);
 		camera_reflection.texture_lineardepth_index = -1;
 		camera_reflection.texture_velocity_index = -1;
 		camera_reflection.texture_normal_index = -1;

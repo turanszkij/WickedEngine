@@ -6,9 +6,17 @@
 struct PSIn
 {
 	float4 pos		: SV_POSITION;
-	float3 pos3D	: WORLDPOSITION;
 	float2 uv		: TEXCOORD0;
-	uint behind : BEHIND;
+	
+	inline float3 GetPos3D()
+	{
+		return GetCamera().screen_to_world(pos);
+	}
+
+	inline float3 GetViewVector()
+	{
+		return GetCamera().screen_to_nearplane(pos) - GetPos3D(); // ortho support, cannot use cameraPos!
+	}
 };
 
 float3 intersectPlaneClampInfinite(in float3 rayOrigin, in float3 rayDirection, in float3 planeNormal, float planeHeight)
