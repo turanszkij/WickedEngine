@@ -8388,6 +8388,8 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			cb.cameras[i].z_near_rcp = zNearPRcp;
 			cb.cameras[i].z_far = zFarP;
 			cb.cameras[i].z_far_rcp = zFarPRcp;
+			cb.cameras[i].z_range = abs(zFarP - zNearP);
+			cb.cameras[i].z_range_rcp = 1.0f / std::max(0.0001f, cb.cameras[i].z_range);
 			cb.cameras[i].internal_resolution = uint2(probe.texture.desc.width, probe.texture.desc.height);
 			cb.cameras[i].internal_resolution_rcp.x = 1.0f / cb.cameras[i].internal_resolution.x;
 			cb.cameras[i].internal_resolution_rcp.y = 1.0f / cb.cameras[i].internal_resolution.y;
@@ -8599,7 +8601,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				),
 				RenderPassImage::RenderTarget(
 					&envrenderingColorBuffer_MSAA,
-					RenderPassImage::LoadOp::DONTCARE,
+					RenderPassImage::LoadOp::CLEAR,
 					RenderPassImage::StoreOp::DONTCARE,
 					ResourceState::RENDERTARGET,
 					ResourceState::RENDERTARGET
@@ -8626,7 +8628,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				),
 				RenderPassImage::RenderTarget(
 					&envrenderingColorBuffer,
-					RenderPassImage::LoadOp::DONTCARE,
+					RenderPassImage::LoadOp::CLEAR,
 					RenderPassImage::StoreOp::STORE,
 					ResourceState::SHADER_RESOURCE,
 					ResourceState::SHADER_RESOURCE

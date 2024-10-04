@@ -1361,7 +1361,7 @@ struct alignas(16) ShaderCamera
 	inline float3 screen_to_world(float4 svposition)
 	{
 		const float2 ScreenCoord = svposition.xy * internal_resolution_rcp;
-		const float z = IsOrtho() ? (1 - svposition.z) : inverse_lerp(z_near, z_far, svposition.w);
+		const float z = IsOrtho() ? (1 - svposition.z) : ((svposition.w - z_near) * z_range_rcp);
 		return frustum_corners.screen_to_world(ScreenCoord, z);
 	}
 #endif // __cplusplus

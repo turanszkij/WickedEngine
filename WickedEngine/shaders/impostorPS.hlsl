@@ -19,7 +19,7 @@ float4 main(VSOut input) : SV_Target
 	half metalness = surfaceparams.b;
 	half reflectance = surfaceparams.a;
 
-	float3 V = GetCamera().position - input.pos3D;
+	float3 V = input.GetViewVector();
 	float dist = length(V);
 	V /= dist;
 
@@ -33,7 +33,7 @@ float4 main(VSOut input) : SV_Target
 	surface.albedo = baseColor.rgb * (1 - max(reflectance, metalness));
 	surface.f0 = lerp(reflectance.xxx, baseColor.rgb, metalness);
 	surface.occlusion = occlusion;
-	surface.P = input.pos3D;
+	surface.P = input.GetPos3D();
 	surface.N = N;
 	surface.V = V;
 	surface.pixel = input.pos.xy;

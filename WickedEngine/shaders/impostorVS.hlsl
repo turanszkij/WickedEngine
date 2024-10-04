@@ -15,11 +15,11 @@ VSOut main(uint vertexID : SV_VertexID)
 {
 	uint impostorID = vertexID / 4u;
 	uint2 data = impostor_data.Load2(impostorID * sizeof(uint2));
+	float3 pos3D = vb_pos[vertexID].xyz;
 
 	VSOut Out;
-	Out.pos3D = vb_pos[vertexID].xyz;
-	Out.clip = dot(float4(Out.pos3D, 1), GetCamera().clip_plane);
-	Out.pos = mul(GetCamera().view_projection, float4(Out.pos3D, 1));
+	Out.clip = dot(float4(pos3D, 1), GetCamera().clip_plane);
+	Out.pos = mul(GetCamera().view_projection, float4(pos3D, 1));
 	Out.uv = float2(BILLBOARD[vertexID % 4u] * float2(0.5f, -0.5f) + 0.5f);
 	Out.slice = data.x & 0xFFFFFF;
 	Out.dither = float((data.x >> 24u) & 0xFF) / 255.0;

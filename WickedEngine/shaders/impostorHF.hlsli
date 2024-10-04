@@ -8,9 +8,18 @@ struct VSOut
 	float2 uv						: TEXCOORD;
 	uint slice						: SLICE;
 	nointerpolation float dither	: DITHER;
-	float3 pos3D					: WORLDPOSITION;
 	uint instanceColor				: COLOR;
 	uint primitiveID				: PRIMITIVEID;
+	
+	inline float3 GetPos3D()
+	{
+		return GetCamera().screen_to_world(pos);
+	}
+
+	inline float3 GetViewVector()
+	{
+		return GetCamera().screen_to_nearplane(pos) - GetPos3D(); // ortho support, cannot use cameraPos!
+	}
 };
 
 Texture2DArray<float4> impostorTex : register(t1);
