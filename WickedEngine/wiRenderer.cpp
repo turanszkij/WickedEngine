@@ -10923,20 +10923,6 @@ void Visibility_Prepare(
 		}
 		barrier_stack_flush(cmd);
 
-		if (res.depthbuffer)
-		{
-			device->ClearUAV(res.depthbuffer, 0, cmd);
-		}
-		if (res.lineardepth)
-		{
-			device->ClearUAV(res.lineardepth, 0, cmd);
-		}
-		if (res.primitiveID_resolved)
-		{
-			device->ClearUAV(res.primitiveID_resolved, 0, cmd);
-		}
-		device->Barrier(GPUBarrier::Memory(), cmd);
-
 		device->BindComputeShader(&shaders[msaa ? CSTYPE_VISIBILITY_RESOLVE_MSAA : CSTYPE_VISIBILITY_RESOLVE], cmd);
 
 		device->Dispatch(
