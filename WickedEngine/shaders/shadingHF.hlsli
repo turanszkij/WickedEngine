@@ -202,8 +202,8 @@ inline void ForwardDecals(inout Surface surface, inout half4 surfaceMap, Sampler
 			const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy;
 			half4 decalColor = decal.GetColor();
 			// blend out if close to cube Z:
-			const half edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
-			const half slopeBlend = decal.GetConeAngleCos() > 0 ? pow(saturate(dot(surface.N, decal.GetDirection())), decal.GetConeAngleCos()) : 1;
+			const half edgeBlend = 1 - pow8(saturate(abs(clipSpacePos.z)));
+			const half slopeBlend = decal.GetConeAngleCos() > 0 ? pow(saturate(dot((half3)surface.N, decal.GetDirection())), decal.GetConeAngleCos()) : 1;
 			decalColor.a *= edgeBlend * slopeBlend;
 			[branch]
 			if (decalDisplacementmap >= 0)
@@ -284,13 +284,12 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
+			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 
 #ifndef ENTITY_TILE_UNIFORM
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
 #endif // ENTITY_TILE_UNIFORM
-
-			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 
 			[loop]
 			while (WaveActiveAnyTrue(bucket_bits != 0 && envmapAccumulation.a < 0.99))
@@ -409,13 +408,12 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
+			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 
 #ifndef ENTITY_TILE_UNIFORM
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
 #endif // ENTITY_TILE_UNIFORM
-
-			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 
 			[loop]
 			while (bucket_bits != 0)
@@ -454,13 +452,12 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
+			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 
 #ifndef ENTITY_TILE_UNIFORM
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
 #endif // ENTITY_TILE_UNIFORM
-
-			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 
 			[loop]
 			while (bucket_bits != 0)
@@ -519,13 +516,12 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 	for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 	{
 		uint bucket_bits = load_entitytile(flatTileIndex + bucket);
+		bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 
 #ifndef ENTITY_TILE_UNIFORM
 		// This is the wave scalarizer from Improved Culling - Siggraph 2017 [Drobot]:
 		bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
 #endif // ENTITY_TILE_UNIFORM
-
-		bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 
 		[loop]
 		while (WaveActiveAnyTrue(bucket_bits != 0 && decalAccumulation.a < 1 && decalBumpAccumulation.a < 1 && decalSurfaceAccumulationAlpha < 1))
@@ -558,8 +554,8 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 				const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy;
 				half4 decalColor = decal.GetColor();
 				// blend out if close to cube Z:
-				const half edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
-				const half slopeBlend = decal.GetConeAngleCos() > 0 ? pow(saturate(dot(surface.N, decal.GetDirection())), decal.GetConeAngleCos()) : 1;
+				const half edgeBlend = 1 - pow8(saturate(abs((half)clipSpacePos.z)));
+				const half slopeBlend = decal.GetConeAngleCos() > 0 ? pow(saturate(dot((half3)surface.N, decal.GetDirection())), decal.GetConeAngleCos()) : 1;
 				decalColor.a *= edgeBlend * slopeBlend;
 				[branch]
 				if (decalDisplacementmap >= 0)

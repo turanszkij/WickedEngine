@@ -133,7 +133,7 @@ inline uint2 ddgi_probe_color_pixel(uint3 probeCoord)
 {
 	return probeCoord.xz * DDGI_COLOR_TEXELS + uint2(probeCoord.y * GetScene().ddgi.grid_dimensions.x * DDGI_COLOR_TEXELS, 0) + 1;
 }
-inline float2 ddgi_probe_color_uv(uint3 probeCoord, float3 direction)
+inline float2 ddgi_probe_color_uv(uint3 probeCoord, half3 direction)
 {
 	float2 pixel = ddgi_probe_color_pixel(probeCoord);
 	pixel += (encode_oct(normalize(direction)) * 0.5 + 0.5) * DDGI_COLOR_RESOLUTION;
@@ -143,7 +143,7 @@ inline uint2 ddgi_probe_depth_pixel(uint3 probeCoord)
 {
 	return probeCoord.xz * DDGI_DEPTH_TEXELS + uint2(probeCoord.y * GetScene().ddgi.grid_dimensions.x * DDGI_DEPTH_TEXELS, 0) + 1;
 }
-inline float2 ddgi_probe_depth_uv(uint3 probeCoord, float3 direction)
+inline float2 ddgi_probe_depth_uv(uint3 probeCoord, half3 direction)
 {
 	float2 pixel = ddgi_probe_depth_pixel(probeCoord);
 	pixel += (encode_oct(normalize(direction)) * 0.5 + 0.5) * DDGI_DEPTH_RESOLUTION;
@@ -216,7 +216,7 @@ half3 ddgi_sample_irradiance(float3 P, half3 N)
 
 			// The small offset at the end reduces the "going to zero" impact
 			// where this is really close to exactly opposite
-			weight *= lerp(saturate(dot(dir, N)), sqr(max(0.0001, (dot(true_direction_to_probe, N) + 1.0) * 0.5)) + 0.2, GetScene().ddgi.smooth_backface);
+			weight *= lerp(saturate(dot(dir, N)), sqr(max(0.0001, (dot(true_direction_to_probe, N) + 1.0) * 0.5)) + 0.2, (half)GetScene().ddgi.smooth_backface);
 		}
 
 		// Moment visibility test

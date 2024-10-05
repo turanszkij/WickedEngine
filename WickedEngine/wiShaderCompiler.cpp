@@ -128,7 +128,7 @@ namespace wi::shadercompiler
 		// https://github.com/microsoft/DirectXShaderCompiler/wiki/Using-dxc.exe-and-dxcompiler.dll#dxcompiler-dll-interface
 
 		wi::vector<std::wstring> args = {
-			//L"-res-may-alias",
+			L"-res-may-alias",
 			//L"-flegacy-macro-expansion",
 			//L"-no-legacy-cbuf-layout",
 			//L"-pack-optimized", // this has problem with tessellation shaders: https://github.com/microsoft/DirectXShaderCompiler/issues/3362

@@ -169,12 +169,12 @@ struct VertexInput
 		return (half4)bindless_buffers_float4[GetMesh().vb_col][vertexID];
 	}
 	
-	float3 GetNormal()
+	half3 GetNormal()
 	{
 		[branch]
 		if (GetMesh().vb_nor < 0)
 			return 0;
-		return bindless_buffers_float4[GetMesh().vb_nor][vertexID].xyz;
+		return (half3)bindless_buffers_float4[GetMesh().vb_nor][vertexID].xyz;
 	}
 
 	half4 GetTangent()
@@ -225,7 +225,7 @@ struct VertexSurface
 	float4 uvsets;
 	half2 atlas;
 	half4 color;
-	float3 normal;
+	half3 normal;
 	half4 tangent;
 	half ao;
 	half wet;
@@ -254,7 +254,7 @@ struct VertexSurface
 			ao = 1;
 		}
 
-		normal = rotate_vector(normal, input.GetInstance().quaternion);
+		normal = rotate_vector(normal, (half4)input.GetInstance().quaternion);
 		normal = any(normal) ? normalize(normal) : 0;
 
 		tangent = input.GetTangent();
@@ -282,7 +282,7 @@ struct VertexSurface
 
 struct PixelInput
 {
-	precise float4 pos : SV_POSITION;
+	precise float4 pos : SV_Position;
 
 #ifdef OBJECTSHADER_USE_CLIPPLANE
 	float clip : SV_ClipDistance0;
@@ -309,7 +309,7 @@ struct PixelInput
 #endif // OBJECTSHADER_USE_TANGENT
 
 #ifdef OBJECTSHADER_USE_NORMAL
-	float3 nor : NORMAL;
+	float3 nor : NORMAL; // Note: normal is half precision per-vertex, but interpolated at full precision intentionally!
 #endif // OBJECTSHADER_USE_NORMAL
 
 #ifdef OBJECTSHADER_USE_ATLAS
@@ -710,7 +710,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 					float terrain_height = lerp(terrain.min_height, terrain.max_height, terrain_height0);
 					float object_height = surface.P.y;
 					float diff = (object_height - terrain_height) * material.GetTerrainBlendRcp();
-					float blend = 1 - pow(saturate(diff), 2);
+					float blend = 1 - sqr(saturate(diff));
 					//blend *= lerp(1, saturate((noise_gradient_3D(surface.P * 2) * 0.5 + 0.5) * 2), saturate(diff));
 					//terrain_uv = lerp(saturate(inverse_lerp(chunk_min, chunk_max, surface.P.xz - surface.N.xz * diff)), terrain_uv, saturate(surface.N.y)); // uv stretching improvement: stretch in normal direction if normal gets horizontal
 					ShaderMaterial terrain_material = load_material(chunk.materialID);

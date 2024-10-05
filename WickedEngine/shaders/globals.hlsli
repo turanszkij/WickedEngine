@@ -632,7 +632,9 @@ struct PrimitiveID
 #define MEDIUMP_FLT_MAX 65504.0
 
 #define sqr(a) ((a)*(a))
+#define pow4(a) ((a)*(a)*(a)*(a))
 #define pow5(a) ((a)*(a)*(a)*(a)*(a))
+#define pow8(a) ((a)*(a)*(a)*(a)*(a)*(a)*(a)*(a))
 #define arraysize(a) (sizeof(a) / sizeof(a[0]))
 #define saturateMediump(x) min(x, MEDIUMP_FLT_MAX)
 #define highp
@@ -1890,11 +1892,11 @@ enum class ColorSpace
 };
 
 
-static const uint NUM_PARALLAX_OCCLUSION_STEPS = 32;
-static const float NUM_PARALLAX_OCCLUSION_STEPS_RCP = 1.0 / NUM_PARALLAX_OCCLUSION_STEPS;
+static const min16uint NUM_PARALLAX_OCCLUSION_STEPS = 32;
+static const half NUM_PARALLAX_OCCLUSION_STEPS_RCP = 1.0 / NUM_PARALLAX_OCCLUSION_STEPS;
 inline void ParallaxOcclusionMapping_Impl(
 	inout float4 uvsets,		// uvsets to modify
-	in float3 V,				// view vector (pointing towards camera)
+	in half3 V,				// view vector (pointing towards camera)
 	in half3x3 TBN,				// tangent basis matrix (same that is used for normal mapping)
 	in half strength,			// material parameters
 	in Texture2D tex,			// displacement map texture
@@ -1912,23 +1914,23 @@ inline void ParallaxOcclusionMapping_Impl(
 	TBN[1] = normalize(TBN[1]);
 	TBN[2] = normalize(TBN[2]);
 	V = normalize(mul(TBN, V));
-	float curLayerHeight = 0;
-	float2 dtex = strength * V.xy * NUM_PARALLAX_OCCLUSION_STEPS_RCP;
+	half curLayerHeight = 0;
+	half2 dtex = strength * V.xy * NUM_PARALLAX_OCCLUSION_STEPS_RCP;
 	float2 currentTextureCoords = uv;
-	float heightFromTexture = 1 - tex.SampleGrad(sam, currentTextureCoords, uv_dx, uv_dy).r;
-	uint iter = 0;
+	half heightFromTexture = 1 - (half)tex.SampleGrad(sam, currentTextureCoords, uv_dx, uv_dy).r;
+	min16uint iter = 0;
 	[loop]
 	while (heightFromTexture > curLayerHeight && iter < NUM_PARALLAX_OCCLUSION_STEPS)
 	{
 		curLayerHeight += NUM_PARALLAX_OCCLUSION_STEPS_RCP;
 		currentTextureCoords -= dtex;
-		heightFromTexture = 1 - tex.SampleGrad(sam, currentTextureCoords, uv_dx, uv_dy).r;
+		heightFromTexture = 1 - (half)tex.SampleGrad(sam, currentTextureCoords, uv_dx, uv_dy).r;
 		iter++;
 	}
 	float2 prevTCoords = currentTextureCoords + dtex;
-	float nextH = heightFromTexture - curLayerHeight;
-	float prevH = 1 - tex.SampleGrad(sam, prevTCoords, uv_dx, uv_dy).r - curLayerHeight + NUM_PARALLAX_OCCLUSION_STEPS_RCP;
-	float weight = nextH / (nextH - prevH);
+	half nextH = heightFromTexture - curLayerHeight;
+	half prevH = 1 - (half)tex.SampleGrad(sam, prevTCoords, uv_dx, uv_dy).r - curLayerHeight + NUM_PARALLAX_OCCLUSION_STEPS_RCP;
+	half weight = nextH / (nextH - prevH);
 	float2 finalTextureCoords = mad(prevTCoords, weight, currentTextureCoords * (1.0 - weight));
 	float2 difference = finalTextureCoords - uv;
 	uvsets += difference.xyxy;

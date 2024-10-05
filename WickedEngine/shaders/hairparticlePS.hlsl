@@ -67,8 +67,6 @@ float4 main(VertexToPixel input) : SV_Target
 	Lighting lighting;
 	lighting.create(0, 0, GetAmbient(surface.N), 0);
 
-	float depth = input.pos.z;
-
 	TiledLighting(surface, lighting, GetFlatTileIndex(pixel));
 	
 	ApplyLighting(surface, lighting, color);

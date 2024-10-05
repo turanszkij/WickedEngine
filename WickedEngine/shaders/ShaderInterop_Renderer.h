@@ -699,6 +699,8 @@ struct ShaderMeshInstancePointer
 		data |= (camera_index & 0xF) << 24u;
 		data |= (uint(dither * 15.0f) & 0xF) << 28u;
 	}
+
+#ifndef __cplusplus
 	uint GetInstanceIndex()
 	{
 		return data & 0xFFFFFF;
@@ -707,10 +709,11 @@ struct ShaderMeshInstancePointer
 	{
 		return (data >> 24u) & 0xF;
 	}
-	float GetDither()
+	half GetDither()
 	{
-		return float((data >> 28u) & 0xF) / 15.0f;
+		return half((data >> 28u) & 0xF) / 15.0;
 	}
+#endif // __cplusplus
 };
 
 struct ObjectPushConstants

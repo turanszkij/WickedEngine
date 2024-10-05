@@ -699,7 +699,7 @@ struct Surface
 						float terrain_height = lerp(terrain.min_height, terrain.max_height, terrain_height0);
 						float object_height = P.y;
 						float diff = (object_height - terrain_height) * material.GetTerrainBlendRcp();
-						float blend = 1 - pow(saturate(diff), 2);
+						float blend = 1 - sqr(saturate(diff));
 						//blend *= lerp(1, saturate((noise_gradient_3D(P * 2) * 0.5 + 0.5) * 2), saturate(diff));
 						//terrain_uv = lerp(saturate(inverse_lerp(chunk_min, chunk_max, P.xz - N.xz * diff)), terrain_uv, saturate(N.y)); // uv stretching improvement: stretch in normal direction if normal gets horizontal
 						ShaderMaterial terrain_material = load_material(chunk.materialID);
@@ -741,13 +741,12 @@ struct Surface
 			for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 			{
 				uint bucket_bits = load_entitytile(flatTileIndex + bucket);
+				bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 
 #ifndef ENTITY_TILE_UNIFORM
 				// This is the wave scalarizer from Improved Culling - Siggraph 2017 [Drobot]:
 				bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
 #endif // ENTITY_TILE_UNIFORM
-
-				bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 
 				[loop]
 				while (WaveActiveAnyTrue(bucket_bits != 0 && decalAccumulation.a < 1 && decalBumpAccumulation.a < 1 && decalSurfaceAccumulationAlpha < 1))
@@ -780,8 +779,8 @@ struct Surface
 						const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy;
 						half4 decalColor = decal.GetColor();
 						// blend out if close to cube Z:
-						const half edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
-						const half slopeBlend = decal.GetConeAngleCos() > 0 ? pow(saturate(dot(N, decal.GetDirection())), decal.GetConeAngleCos()) : 1;
+						const half edgeBlend = 1 - pow8(saturate(abs((half)clipSpacePos.z)));
+						const half slopeBlend = decal.GetConeAngleCos() > 0 ? pow(saturate(dot((half3)N, decal.GetDirection())), decal.GetConeAngleCos()) : 1;
 						decalColor.a *= edgeBlend * slopeBlend;
 						[branch]
 						if (decalDisplacementmap >= 0)
