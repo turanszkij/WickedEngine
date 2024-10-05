@@ -1355,7 +1355,7 @@ namespace wi
 				RenderPassImage rp[] = {
 					RenderPassImage::RenderTarget(
 						&rtReflection,
-						RenderPassImage::LoadOp::DONTCARE,
+						RenderPassImage::LoadOp::CLEAR,
 						RenderPassImage::StoreOp::DONTCARE,
 						ResourceState::RENDERTARGET,
 						ResourceState::RENDERTARGET

@@ -9980,6 +9980,9 @@ void BlockCompress(const Texture& texture_src, const Texture& texture_bc, Comman
 			device->CreateTexture(&bc_raw_desc, nullptr, bc_raw);
 			device->SetName(bc_raw, "bc_raw");
 
+			device->ClearUAV(bc_raw, 0, cmd);
+			device->Barrier(GPUBarrier::Memory(bc_raw), cmd);
+
 			std::string info;
 			info += "BlockCompress created a new raw block texture to fit request: " + std::string(GetFormatString(texture_bc.desc.format)) + " (" + std::to_string(texture_bc.desc.width) + ", " + std::to_string(texture_bc.desc.height) + ")";
 			info += "\n\tFormat = ";
@@ -10919,6 +10922,20 @@ void Visibility_Prepare(
 			device->BindUAV(&unbind, 13, cmd);
 		}
 		barrier_stack_flush(cmd);
+
+		if (res.depthbuffer)
+		{
+			device->ClearUAV(res.depthbuffer, 0, cmd);
+		}
+		if (res.lineardepth)
+		{
+			device->ClearUAV(res.lineardepth, 0, cmd);
+		}
+		if (res.primitiveID_resolved)
+		{
+			device->ClearUAV(res.primitiveID_resolved, 0, cmd);
+		}
+		device->Barrier(GPUBarrier::Memory(), cmd);
 
 		device->BindComputeShader(&shaders[msaa ? CSTYPE_VISIBILITY_RESOLVE_MSAA : CSTYPE_VISIBILITY_RESOLVE], cmd);
 
