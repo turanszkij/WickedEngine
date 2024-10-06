@@ -17,7 +17,7 @@
 template<typename T>
 inline void QuadBlur(inout T value)
 {
-#if __SHADER_TARGET_STAGE == __SHADER_STAGE_PIXEL && defined(SHADOW_SAMPLING_DISK)
+#if __SHADER_TARGET_STAGE == __SHADER_STAGE_PIXEL && defined(SHADOW_SAMPLING_DISK) && !defined(__spirv__) // Note: Vulkan is disabled because AMD doesn't handle it correctly
 // Average shadow within quad, this smooths out the dithering a bit:
 //	Note that I don't implement this in shadowHF.hlsli because we need to
 //	make sure that when averaging, all lanes in the quad are coherent
