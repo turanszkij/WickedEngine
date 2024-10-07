@@ -1408,12 +1408,15 @@ namespace wi::physics
 			}
 			Ragdoll& ragdoll = *(Ragdoll*)humanoid.ragdoll.get();
 
+			if (humanoid.IsRagdollPhysicsEnabled())
+			{
+				ragdoll.Activate(scene, humanoidEntity);
+			}
+
 			if (IsSimulationEnabled())
 			{
 				if (humanoid.IsRagdollPhysicsEnabled())
 				{
-					ragdoll.Activate(scene, humanoidEntity);
-
 					// Apply effects on dynamics if needed:
 					if (scene.weather.IsOceanEnabled())
 					{
@@ -1488,19 +1491,17 @@ namespace wi::physics
 
 					const Vec3 position = cast(transform->GetPosition());
 					const Quat rotation = cast(transform->GetRotation());
-
 					Mat44 m = Mat44::sTranslation(position) * Mat44::sRotation(rotation);
-					m = m * rb.restBasisInverse;
 					m = m * rb.additionalTransform;
 
-					rb.prev_position = m.GetTranslation();
-					rb.prev_rotation = m.GetQuaternion().Normalized();
-
+					// Simulation is disabled, update physics state immediately:
+					rb.prev_position = position;
+					rb.prev_rotation = rotation;
 					body_interface.SetPositionAndRotation(
 						rb.bodyID,
-						rb.prev_position,
-						rb.prev_rotation,
-						EActivation::DontActivate
+						m.GetTranslation(),
+						m.GetQuaternion().Normalized(),
+						EActivation::Activate
 					);
 				}
 			}
