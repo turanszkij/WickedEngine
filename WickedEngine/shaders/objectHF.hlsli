@@ -77,10 +77,7 @@ inline ShaderMaterial GetMaterial()
 //#define OBJECTSHADER_USE_COLOR					- shader will use colors (material color, vertex color...)
 //#define OBJECTSHADER_USE_DITHERING				- shader will use dithered transparency
 //#define OBJECTSHADER_USE_UVSETS					- shader will sample textures with uv sets
-//#define OBJECTSHADER_USE_ATLAS					- shader will use atlas
 //#define OBJECTSHADER_USE_NORMAL					- shader will use normals
-//#define OBJECTSHADER_USE_AO						- shader will use ambient occlusion
-//#define OBJECTSHADER_USE_WETMAP					- shader will use wetmap
 //#define OBJECTSHADER_USE_TANGENT					- shader will use tangents, normal mapping
 //#define OBJECTSHADER_USE_EMISSIVE					- shader will use emissive
 //#define OBJECTSHADER_USE_RENDERTARGETARRAYINDEX	- shader will use dynamic render target slice selection
@@ -88,6 +85,7 @@ inline ShaderMaterial GetMaterial()
 //#define OBJECTSHADER_USE_NOCAMERA					- shader will not use camera space transform
 //#define OBJECTSHADER_USE_INSTANCEINDEX			- shader will use instance ID
 //#define OBJECTSHADER_USE_CAMERAINDEX				- shader will use camera ID
+//#define OBJECTSHADER_USE_COMMON					- shader will use atlas, ambient occlusion, wetmap
 
 
 #ifdef OBJECTSHADER_LAYOUT_SHADOW
@@ -115,14 +113,12 @@ inline ShaderMaterial GetMaterial()
 #ifdef OBJECTSHADER_LAYOUT_COMMON
 #define OBJECTSHADER_USE_CLIPPLANE
 #define OBJECTSHADER_USE_UVSETS
-#define OBJECTSHADER_USE_ATLAS
 #define OBJECTSHADER_USE_COLOR
 #define OBJECTSHADER_USE_NORMAL
-#define OBJECTSHADER_USE_AO
-#define OBJECTSHADER_USE_WETMAP
 #define OBJECTSHADER_USE_TANGENT
 #define OBJECTSHADER_USE_EMISSIVE
 #define OBJECTSHADER_USE_INSTANCEINDEX
+#define OBJECTSHADER_USE_COMMON
 #endif // OBJECTSHADER_LAYOUT_COMMON
 
 struct VertexInput
@@ -312,17 +308,9 @@ struct PixelInput
 	float3 nor : NORMAL; // Note: normal is half precision per-vertex, but interpolated at full precision intentionally!
 #endif // OBJECTSHADER_USE_NORMAL
 
-#ifdef OBJECTSHADER_USE_ATLAS
-	half2 atl : ATLAS;
-#endif // OBJECTSHADER_USE_ATLAS
-
-#ifdef OBJECTSHADER_USE_AO
-	half ao : AMBIENT_OCCLUSION;
-#endif // OBJECTSHADER_USE_AO
-
-#ifdef OBJECTSHADER_USE_WETMAP
-	half wet : WET;
-#endif // OBJECTSHADER_USE_WETMAP
+#ifdef OBJECTSHADER_USE_COMMON
+	half4 atl_ao_wet : COMMON;
+#endif // OBJECTSHADER_USE_COMMON
 
 #ifndef OBJECTSHADER_COMPILE_MS
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
@@ -427,21 +415,13 @@ PixelInput vertex_to_pixel_export(VertexInput input)
 	Out.uvsets = surface.uvsets;
 #endif // OBJECTSHADER_USE_UVSETS
 
-#ifdef OBJECTSHADER_USE_ATLAS
-	Out.atl = surface.atlas;
-#endif // OBJECTSHADER_USE_ATLAS
-
 #ifdef OBJECTSHADER_USE_NORMAL
 	Out.nor = surface.normal;
 #endif // OBJECTSHADER_USE_NORMAL
 
-#ifdef OBJECTSHADER_USE_AO
-	Out.ao = surface.ao;
-#endif // OBJECTSHADER_USE_AO
-
-#ifdef OBJECTSHADER_USE_WETMAP
-	Out.wet = surface.wet;
-#endif // OBJECTSHADER_USE_WETMAP
+#ifdef OBJECTSHADER_USE_COMMON
+	Out.atl_ao_wet = half4(surface.atlas, surface.ao, surface.wet);
+#endif // OBJECTSHADER_USE_COMMON
 
 #ifdef OBJECTSHADER_USE_TANGENT
 	Out.tan = surface.tangent;
@@ -561,9 +541,9 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	surface.N = normalize(input.nor);
 #endif // OBJECTSHADER_USE_NORMAL
 
-#ifdef OBJECTSHADER_USE_AO
-	surface.occlusion = input.ao;
-#endif // OBJECTSHADER_USE_AO
+#ifdef OBJECTSHADER_USE_COMMON
+	surface.occlusion = input.atl_ao_wet.z;
+#endif // OBJECTSHADER_USE_COMMON
 
 #ifdef OBJECTSHADER_USE_TANGENT
 	if (is_frontface == false)
@@ -785,14 +765,15 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	
 	
 
-#ifdef OBJECTSHADER_USE_WETMAP
-	if(input.wet > 0)
+#ifdef OBJECTSHADER_USE_COMMON
+	half wet = input.atl_ao_wet.w;
+	if(wet > 0)
 	{
-		surface.albedo = lerp(surface.albedo, 0, input.wet);
-		surface.roughness = clamp(surface.roughness * sqr(1 - input.wet), 0.01, 1);
-		surface.N = normalize(lerp(surface.N, input.nor, input.wet));
+		surface.albedo = lerp(surface.albedo, 0, wet);
+		surface.roughness = clamp(surface.roughness * sqr(1 - wet), 0.01, 1);
+		surface.N = normalize(lerp(surface.N, input.nor, wet));
 	}
-#endif // OBJECTSHADER_USE_WETMAP
+#endif // OBJECTSHADER_USE_COMMON
 
 
 #ifdef OBJECTSHADER_USE_UVSETS
@@ -992,9 +973,9 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // TRANSPARENT
 
 
-#ifdef OBJECTSHADER_USE_ATLAS
-	LightMapping(meshinstance.lightmap, input.atl, lighting, surface);
-#endif // OBJECTSHADER_USE_ATLAS
+#ifdef OBJECTSHADER_USE_COMMON
+	LightMapping(meshinstance.lightmap, input.atl_ao_wet.xy, lighting, surface);
+#endif // OBJECTSHADER_USE_COMMON
 
 
 #ifdef PLANARREFLECTION

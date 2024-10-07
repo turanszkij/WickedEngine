@@ -177,6 +177,11 @@ namespace wi::shadercompiler
 		// global minshadermodel override:
 		//minshadermodel = std::max(minshadermodel, ShaderModel::SM_6_2);
 
+		if (input.format == ShaderFormat::HLSL6_XS)
+		{
+			minshadermodel = ShaderModel::SM_6_6;
+		}
+
 		args.push_back(L"-T");
 		switch (input.stage)
 		{

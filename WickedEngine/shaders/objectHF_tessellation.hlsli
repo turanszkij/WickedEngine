@@ -126,21 +126,13 @@ PixelInput main(ConstantOutput input, float3 uvw : SV_DomainLocation, const Outp
 	output.color = half4(w * patch[0].color + u * patch[1].color + v * patch[2].color);
 #endif // OBJECTSHADER_USE_COLOR
 
-#ifdef OBJECTSHADER_USE_ATLAS
-	output.atl = half2(w * patch[0].atl + u * patch[1].atl + v * patch[2].atl);
-#endif // OBJECTSHADER_USE_ATLAS
+#ifdef OBJECTSHADER_USE_COMMON
+	output.atl_ao_wet.xy = half4(w * patch[0].atl_ao_wet + u * patch[1].atl_ao_wet + v * patch[2].atl_ao_wet);
+#endif // OBJECTSHADER_USE_COMMON
 
 #ifdef OBJECTSHADER_USE_NORMAL
 	output.nor = normalize(w * patch[0].nor + u * patch[1].nor + v * patch[2].nor);
 #endif // OBJECTSHADER_USE_NORMAL
-
-#ifdef OBJECTSHADER_USE_AO
-	output.ao = half(w * patch[0].ao + u * patch[1].ao + v * patch[2].ao);
-#endif // OBJECTSHADER_USE_NORMAL
-
-#ifdef OBJECTSHADER_USE_WETMAP
-	output.wet = half(w * patch[0].wet + u * patch[1].wet + v * patch[2].wet);
-#endif // OBJECTSHADER_USE_WETMAP
 
 #ifdef OBJECTSHADER_USE_TANGENT
 	output.tan = half4(normalize(w * patch[0].tan + u * patch[1].tan + v * patch[2].tan));

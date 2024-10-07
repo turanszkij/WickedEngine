@@ -1360,7 +1360,7 @@ struct alignas(16) ShaderCamera
 
 	// Convert raw screen coordinate from rasterizer to world position
 	//	Note: svposition is the SV_Position system value, the .w component can be different in different compilers
-	//	You need to ensure that the .w component is used for linear depth (Vulkan: -fvk-use-dx-position-w, Xbox: there is a define to pass SV_Position ZW via attribute)
+	//	You need to ensure that the .w component is used for linear depth (Vulkan: -fvk-use-dx-position-w, Xbox: in case VRS, there is complication with this, read documentation)
 	inline float3 screen_to_world(float4 svposition)
 	{
 		const float2 ScreenCoord = svposition.xy * internal_resolution_rcp;

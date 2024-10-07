@@ -34,7 +34,7 @@ float4 main(VertexToPixel input) : SV_Target
 	surface.init();
 	surface.create(material, color, surfacemap_simple);
 	surface.P = input.GetPos3D();
-	surface.N = input.nor;
+	surface.N = input.nor_wet.xyz;
 	surface.V = V;
 	surface.pixel = input.pos.xy;
 
@@ -57,9 +57,10 @@ float4 main(VertexToPixel input) : SV_Target
 #endif // ENVMAPRENDERING
 #endif // PREPASS
 
-	if(input.wet > 0)
+	half wet = input.nor_wet.w;
+	if(wet > 0)
 	{
-		surface.albedo = lerp(surface.albedo, 0, input.wet);
+		surface.albedo = lerp(surface.albedo, 0, wet);
 	}
 
 	surface.update();

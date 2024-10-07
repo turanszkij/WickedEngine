@@ -23,8 +23,7 @@ struct VertexToPixel
 	float2 tex : TEXCOORD;
 	nointerpolation float fade : DITHERFADE;
 	uint primitiveID : PRIMITIVEID;
-	half3 nor : NORMAL;
-	half wet : WET;
+	half4 nor_wet : NORMAL_WET;
 	
 	inline float3 GetPos3D()
 	{
