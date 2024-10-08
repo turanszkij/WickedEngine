@@ -29,6 +29,60 @@ using namespace wi::enums;
 using namespace wi::graphics;
 using namespace wi::primitive;
 
+inline XMMATRIX XM_CALLCONV XMMatrixPerspectiveInfiniteReverseZFovLH
+(
+	float FovAngleY,
+	float AspectRatio,
+	float NearZ
+) noexcept
+{
+	assert(NearZ > 0.f);
+	assert(!XMScalarNearEqual(FovAngleY, 0.0f, 0.00001f * 2.0f));
+	assert(!XMScalarNearEqual(AspectRatio, 0.0f, 0.00001f));
+
+#if defined(_XM_NO_INTRINSICS_) || defined(_XM_ARM_NEON_INTRINSICS_)
+	float    SinFov;
+	float    CosFov;
+	XMScalarSinCos(&SinFov, &CosFov, 0.5f * FovAngleY);
+
+	float Height = CosFov / SinFov;
+	float Width = Height / AspectRatio;
+
+	XMMATRIX M;
+	M.m[0][0] = Width;
+	M.m[0][1] = 0.0f;
+	M.m[0][2] = 0.0f;
+	M.m[0][3] = 0.0f;
+
+	M.m[1][0] = 0.0f;
+	M.m[1][1] = Height;
+	M.m[1][2] = 0.0f;
+	M.m[1][3] = 0.0f;
+
+	M.m[2][0] = 0.0f;
+	M.m[2][1] = 0.0f;
+	M.m[2][2] = 0.0f;
+	M.m[2][3] = 1.0f;
+
+	M.m[3][0] = 0.0f;
+	M.m[3][1] = 0.0f;
+	M.m[3][2] = NearZ;
+	M.m[3][3] = 0.0f;
+	return M;
+#elif defined(_XM_SSE_INTRINSICS_)
+	float t = 1.0f / tanf(0.5f * FovAngleY);
+	__m128 vTemp = _mm_setr_ps(t / AspectRatio, t, 0.0f, NearZ);
+	const __m128 vOne = _mm_set1_ps(1.0f);
+
+	XMMATRIX M;
+	M.r[0] = _mm_insert_ps(vTemp, vTemp, 0xe);
+	M.r[1] = _mm_insert_ps(vTemp, vTemp, 0xd);
+	M.r[2] = _mm_insert_ps(vTemp, vOne, 0x33);
+	M.r[3] = _mm_insert_ps(vTemp, vTemp, 0xeb);
+	return M;
+#endif
+}
+
 namespace wi::scene
 {
 
@@ -2446,7 +2500,9 @@ namespace wi::scene
 			}
 			else
 			{
-				P = XMMatrixPerspectiveFovLH(fov, width / height, zFarP, zNearP); // reverse zbuffer!
+				//P = XMMatrixPerspectiveFovLH(fov, width / height, zFarP, zNearP); // reverse zbuffer!
+				// Infinite reverse Z
+				P = XMMatrixPerspectiveInfiniteReverseZFovLH(fov, width / height, zNearP);
 			}
 
 			P = P * XMMatrixTranslation(jitter.x, jitter.y, 0);
