@@ -379,7 +379,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		// Directional lights are not culled, so simply iterate through each one:
 		ShaderEntityIterator iterator = directional_lights();
-		for(uint entity_index = iterator.first_item(); entity_index <= iterator.last_item(); ++entity_index)
+		for(uint entity_index = iterator.first_item(); entity_index < iterator.end_item(); ++entity_index)
 		{
 			ShaderEntity light = load_entity(entity_index);
 

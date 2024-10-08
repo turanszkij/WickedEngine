@@ -315,7 +315,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	// This is an optimized version of the above, separated entity processing loops by type, reduces divergence and increases performance:
 
 	// Point lights:
-	for (uint i = pointlights().first_item() + groupIndex; i <= pointlights().last_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	for (uint i = pointlights().first_item() + groupIndex; i < pointlights().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		ShaderEntity entity = load_entity(i);
 		
@@ -340,7 +340,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	}
 
 	// Spot lights:
-	for (uint i = spotlights().first_item() + groupIndex; i <= spotlights().last_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	for (uint i = spotlights().first_item() + groupIndex; i < spotlights().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		ShaderEntity entity = load_entity(i);
 		
@@ -369,7 +369,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	}
 
 	// Directional lights:
-	for (uint i = directional_lights().first_item() + groupIndex; i <= directional_lights().last_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	for (uint i = directional_lights().first_item() + groupIndex; i < directional_lights().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		ShaderEntity entity = load_entity(i);
 		
@@ -380,7 +380,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	}
 
 	// Decals:
-	for (uint i = decals().first_item() + groupIndex; i <= decals().last_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	for (uint i = decals().first_item() + groupIndex; i < decals().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		ShaderEntity entity = load_entity(i);
 		float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;
@@ -411,7 +411,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	}
 
 	// Environment probes:
-	for (uint i = probes().first_item() + groupIndex; i <= probes().last_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	for (uint i = probes().first_item() + groupIndex; i < probes().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		ShaderEntity entity = load_entity(i);
 		float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;

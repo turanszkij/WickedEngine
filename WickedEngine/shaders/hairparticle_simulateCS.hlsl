@@ -73,18 +73,18 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	half strand_length = attribute_at_bary(length0, length1, length2, bary);
 
 	uint tangent_random = 0;
-	tangent_random |= (uint)((uint)(tangent.x * 127.5f + 127.5f) << 0);
-	tangent_random |= (uint)((uint)(tangent.y * 127.5f + 127.5f) << 8);
-	tangent_random |= (uint)((uint)(tangent.z * 127.5f + 127.5f) << 16);
+	tangent_random |= (uint)((uint)(tangent.x * 127.5 + 127.5) << 0);
+	tangent_random |= (uint)((uint)(tangent.y * 127.5 + 127.5) << 8);
+	tangent_random |= (uint)((uint)(tangent.z * 127.5 + 127.5) << 16);
 	tangent_random |= (uint)(rng.next_float() * 255) << 24;
 	
 	const uint currentFrame = uint(noise_gradient_3D(position * xHairUniformity) * 1000) % xHairAtlasRectCount;
 	const HairParticleAtlasRect atlas_rect = xHairAtlasRects[currentFrame];
 
 	uint binormal_length = 0;
-	binormal_length |= (uint)((uint)(binormal.x * 127.5f + 127.5f) << 0);
-	binormal_length |= (uint)((uint)(binormal.y * 127.5f + 127.5f) << 8);
-	binormal_length |= (uint)((uint)(binormal.z * 127.5f + 127.5f) << 16);
+	binormal_length |= (uint)((uint)(binormal.x * 127.5 + 127.5) << 0);
+	binormal_length |= (uint)((uint)(binormal.y * 127.5 + 127.5) << 8);
+	binormal_length |= (uint)((uint)(binormal.z * 127.5 + 127.5) << 16);
 	binormal_length |= (uint)(lerp(1, rng.next_float(), saturate(xHairRandomness)) * strand_length * 255) << 24;
 
 	// Identifies the hair strand root particle:
@@ -124,7 +124,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		normal = normalize(normal);
 
 		float len = (binormal_length >> 24) & 0x000000FF;
-		len /= 255.0f;
+		len /= 255.0;
 		len *= xHairLength;
 		len *= atlas_rect.size;
 
@@ -133,7 +133,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		// Accumulate forces, apply colliders:
 		half3 force = 0;
-		for (uint i = forces().first_item(); i <= forces().last_item(); ++i)
+		for (uint i = forces().first_item(); i < forces().end_item(); ++i)
 		{
 			ShaderEntity entity = load_entity(i);
 
@@ -236,7 +236,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		}
 
 		// Drag:
-		velocity *= 0.98f;
+		velocity *= 0.98;
 
 		// Store simulation data:
 		simulationBuffer[particleID].position = base;
@@ -256,7 +256,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			// expand the particle into a billboard cross section, the patch:
 			float3 patchPos = HAIRPATCH[vertexID];
 			float2 uv = vertexID < 6 ? patchPos.xy : patchPos.zy;
-			uv = uv * float2(0.5f, 0.5f) + 0.5f;
+			uv = uv * float2(0.5, 0.5) + 0.5;
 			uv.y = lerp((float)segmentID / (float)xHairSegmentCount, ((float)segmentID + 1) / (float)xHairSegmentCount, uv.y);
 			uv.y = 1 - uv.y;
 			patchPos.y += 1;
