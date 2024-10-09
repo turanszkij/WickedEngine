@@ -1443,7 +1443,7 @@ namespace wi
 					const GraphicsDevice::MemoryUsage memory_usage = device->GetMemoryUsage();
 					const float memory_percent = float(double(memory_usage.usage) / double(memory_usage.budget));
 					const bool memory_shortage = memory_percent > streaming_threshold;
-					const bool stream_in = memory_shortage ? false : (requested_resolution >= std::min(desc.width, desc.height));
+					const bool stream_in = requested_resolution >= std::min(desc.width, desc.height);
 
 					int mip_offset = int(resource->streaming_texture.mip_count - desc.mip_levels);
 					if (stream_in)
