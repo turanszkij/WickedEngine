@@ -2908,10 +2908,10 @@ static void* vma_aligned_alloc(size_t alignment, size_t size)
 
     return memalign(alignment, size);
 }
-#elif defined(__APPLE__) || defined(__ANDROID__) || (defined(__linux__) && defined(__GLIBCXX__) && !defined(_GLIBCXX_HAVE_ALIGNED_ALLOC))
+#elif defined(SDL_PLATFORM_APPLE) || defined(__ANDROID__) || (defined(__linux__) && defined(__GLIBCXX__) && !defined(_GLIBCXX_HAVE_ALIGNED_ALLOC))
 #include <cstdlib>
 
-#if defined(__APPLE__)
+#if defined(SDL_PLATFORM_APPLE)
 #include <AvailabilityMacros.h>
 #endif
 
@@ -2919,7 +2919,7 @@ static void* vma_aligned_alloc(size_t alignment, size_t size)
 {
     // Unfortunately, aligned_alloc causes VMA to crash due to it returning null pointers. (At least under 11.4)
     // Therefore, for now disable this specific exception until a proper solution is found.
-    //#if defined(__APPLE__) && (defined(MAC_OS_X_VERSION_10_16) || defined(__IPHONE_14_0))
+    //#if defined(SDL_PLATFORM_APPLE) && (defined(MAC_OS_X_VERSION_10_16) || defined(__IPHONE_14_0))
     //#if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_16 || __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_14_0
     //    // For C++14, usr/include/malloc/_malloc.h declares aligned_alloc()) only
     //    // with the MacOSX11.0 SDK in Xcode 12 (which is what adds

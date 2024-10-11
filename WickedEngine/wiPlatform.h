@@ -1,6 +1,7 @@
 #pragma once
 // This file includes platform, os specific libraries and supplies common platform specific resources
 
+#include <SDL3/SDL_video.h>
 #ifdef _WIN32
 
 #ifndef NOMINMAX
@@ -30,10 +31,10 @@
 typedef void* HMODULE;
 #endif // _WIN32
 
-#ifdef SDL2
-#include <SDL2/SDL.h>
-#include <SDL_vulkan.h>
-#include "sdl2.h"
+#ifdef SDL3
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
+#include "sdl3.h"
 #endif
 
 
@@ -41,7 +42,7 @@ namespace wi::platform
 {
 #ifdef _WIN32
 	using window_type = HWND;
-#elif SDL2
+#elif SDL3
 	using window_type = SDL_Window*;
 #else
 	using window_type = void*;
@@ -52,9 +53,9 @@ namespace wi::platform
 #ifdef _WIN32
 		PostQuitMessage(0);
 #endif // _WIN32
-#ifdef SDL2
+#ifdef SDL3
 		SDL_Event quit_event;
-		quit_event.type = SDL_QUIT;
+		quit_event.type = SDL_EVENT_QUIT;
 		SDL_PushEvent(&quit_event);
 #endif
 	}
@@ -85,7 +86,7 @@ namespace wi::platform
 #ifdef PLATFORM_LINUX
 		int window_width, window_height;
 		SDL_GetWindowSize(window, &window_width, &window_height);
-		SDL_Vulkan_GetDrawableSize(window, &dest->width, &dest->height);
+		SDL_GetWindowSizeInPixels(window, &dest->width, &dest->height);
 		dest->dpi = ((float)dest->width / (float)window_width) * 96.f;
 #endif // PLATFORM_LINUX
 	}

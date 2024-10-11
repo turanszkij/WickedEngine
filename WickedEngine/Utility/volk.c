@@ -17,7 +17,7 @@
 #	include <dlfcn.h>
 #endif
 
-#ifdef __APPLE__
+#ifdef SDL_PLATFORM_APPLE
 #	include <stdlib.h>
 #endif
 
@@ -77,7 +77,7 @@ VkResult volkInitialize(void)
 
 	// note: function pointer is cast through void function pointer to silence cast-function-type warning on gcc8
 	vkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)(void(*)(void))GetProcAddress(module, "vkGetInstanceProcAddr");
-#elif defined(__APPLE__)
+#elif defined(SDL_PLATFORM_APPLE)
 	void* module = dlopen("libvulkan.dylib", RTLD_NOW | RTLD_LOCAL);
 	if (!module)
 		module = dlopen("libvulkan.1.dylib", RTLD_NOW | RTLD_LOCAL);

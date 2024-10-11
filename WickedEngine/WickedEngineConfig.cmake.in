@@ -5,33 +5,19 @@ include(CMakeFindDependencyMacro)
 
 
 if (WIN32)
-    # TODO: Choose whether to use SDL2 on windows as well
+    # TODO: Choose whether to use SDL3 on windows as well
     set(TARGET_NAME WickedEngine::WickedEngine_Windows)
     set(LIBDXCOMPILER "dxcompiler.dll")
 else ()
     set(TARGET_NAME WickedEngine::WickedEngine_Linux)
     find_package(Vulkan REQUIRED)
-    find_package(SDL2 REQUIRED)
+    find_package(SDL3 REQUIRED)
     find_package(OpenImageDenoise QUIET)
     find_package(Threads REQUIRED)
     if(NOT ${OpenImageDenoise_FOUND})
         message("OpenImageDenoise not found, it will be disabled.")
     else()
         message("OpenImageDenoise Found.")
-    endif()
-
-    if(NOT TARGET SDL2::SDL2)
-        # using old SDL2 cmake, lets create a SDL2 target ourselves
-        find_library(SDL2_LIBRARY_FILE_LOCATION SDL2 REQUIRED)
-
-        add_library(SDL2::SDL2 SHARED IMPORTED)
-        set_target_properties(SDL2::SDL2 PROPERTIES
-                INTERFACE_INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIRS}
-                INTERFACE_LINK_LIBRARIES ${SDL2_LIBRARIES}
-                IMPORTED_LOCATION ${SDL2_LIBRARY_FILE_LOCATION}
-                )
-
-        unset(SDL2_LIBRARY_FILE_LOCATION)
     endif()
     set(LIBDXCOMPILER "libdxcompiler.so")
 endif()

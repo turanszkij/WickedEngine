@@ -6046,8 +6046,8 @@ void ImGui::ShowAboutWindow(bool* p_open)
 #ifdef __linux__
         ImGui::Text("define: __linux__");
 #endif
-#ifdef __APPLE__
-        ImGui::Text("define: __APPLE__");
+#ifdef SDL_PLATFORM_APPLE
+        ImGui::Text("define: SDL_PLATFORM_APPLE");
 #endif
 #ifdef _MSC_VER
         ImGui::Text("define: _MSC_VER=%d", _MSC_VER);

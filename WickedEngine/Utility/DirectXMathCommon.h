@@ -16,7 +16,7 @@
 
 #if defined(_WIN32)
 #   define BUILD_PLATFORM_WIN 1
-#elif defined(__APPLE__)
+#elif defined(SDL_PLATFORM_APPLE)
 #   include "TargetConditionals.h"
 #   if defined(TARGET_OS_IPHONE)
 #       define BUILD_PLATFORM_IOS 1

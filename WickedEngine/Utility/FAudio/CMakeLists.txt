@@ -68,7 +68,7 @@ add_library(FAudio STATIC
 	src/FAudio_internal.c
 	src/FAudio_internal_simd.c
 	src/FAudio_operationset.c
-	src/FAudio_platform_sdl2.c
+	src/FAudio_platform_sdl3.c
 	src/FAudio_platform_win32.c
 	# Optional source files
 	src/XNA_Song.c
@@ -95,35 +95,15 @@ set_target_properties(FAudio PROPERTIES
 
 # SDL2 Dependency
 if (PLATFORM_WIN32)
-	message(STATUS "not using SDL2")
-elseif (DEFINED SDL2_INCLUDE_DIRS AND DEFINED SDL2_LIBRARIES)
-	message(STATUS "using pre-defined SDL2 variables SDL2_INCLUDE_DIRS and SDL2_LIBRARIES")
-	target_include_directories(FAudio PUBLIC "$<BUILD_INTERFACE:${SDL2_INCLUDE_DIRS}>")
-	target_link_libraries(FAudio PUBLIC ${SDL2_LIBRARIES})
-	if(INSTALL_MINGW_DEPENDENCIES)
-		install_shared_libs(${SDL2_LIBRARIES} DESTINATION bin NO_INSTALL_SYMLINKS)
-	endif()
+	message(STATUS "not using SDL3")
 else()
-	# Only try to autodetect if both SDL2 variables aren't explicitly set
-	find_package(SDL2 CONFIG)
-	if (TARGET SDL2::SDL2)
-		message(STATUS "using TARGET SDL2::SDL2")
-		target_link_libraries(FAudio PUBLIC SDL2::SDL2)
+	find_package(SDL3 CONFIG)
+	if (TARGET SDL3::SDL3)
+		message(STATUS "using TARGET SDL3::SDL3")
+		target_link_libraries(FAudio PUBLIC SDL3::SDL3)
 		if(INSTALL_MINGW_DEPENDENCIES)
-			install_shared_libs(TARGETS SDL2::SDL2 DESTINATION bin NO_INSTALL_SYMLINKS REQUIRED)
+			install_shared_libs(TARGETS SDL3::SDL3 DESTINATION bin NO_INSTALL_SYMLINKS REQUIRED)
 		endif()
-	elseif (TARGET SDL2)
-		message(STATUS "using TARGET SDL2")
-		target_link_libraries(FAudio PUBLIC SDL2)
-		if(INSTALL_MINGW_DEPENDENCIES)
-			install_shared_libs(TARGETS SDL2 DESTINATION bin NO_INSTALL_SYMLINKS REQUIRED)
-		endif()
-	else()
-		message(STATUS "no TARGET SDL2::SDL2, or SDL2, using variables")
-		target_include_directories(FAudio PUBLIC "$<BUILD_INTERFACE:${SDL2_INCLUDE_DIRS}>")
-		target_link_libraries(FAudio PUBLIC ${SDL2_LIBRARIES})
-		if(INSTALL_MINGW_DEPENDENCIES)
-			install_shared_libs(${SDL2_LIBRARIES} DESTINATION bin NO_INSTALL_SYMLINKS)
-		endif()
+		target_compile_definitions(FAudio PUBLIC FAUDIO_SDL3_PLATFORM)
 	endif()
 endif()

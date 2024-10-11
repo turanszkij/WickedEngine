@@ -66,9 +66,9 @@ namespace wi::helper
 		MessageBoxA(GetActiveWindow(), msg.c_str(), caption.c_str(), 0);
 #endif // PLATFORM_WINDOWS_DESKTOP
 
-#ifdef SDL2
+#ifdef SDL3
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, caption.c_str(), msg.c_str(), NULL);
-#endif // SDL2
+#endif // SDL3
 	}
 
 	std::string screenshot(const wi::graphics::SwapChain& swapchain, const std::string& name)
@@ -1193,7 +1193,7 @@ namespace wi::helper
 #ifdef PLATFORM_LINUX
 		if (!pfd::settings::available()) {
 			const char *message = "No dialog backend available";
-#ifdef SDL2
+#ifdef SDL3
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
 									 "File dialog error!",
 									 message,

@@ -449,7 +449,7 @@ inline settings::settings(bool resync)
 
 #if _WIN32
     flags(flag::is_vista) = internal::is_vista();
-#elif !__APPLE__
+#elif !SDL_PLATFORM_APPLE
     flags(flag::has_zenity) = check_program("zenity");
     flags(flag::has_matedialog) = check_program("matedialog");
     flags(flag::has_qarma) = check_program("qarma");
@@ -473,7 +473,7 @@ inline bool settings::available()
 {
 #if _WIN32
     return true;
-#elif __APPLE__
+#elif SDL_PLATFORM_APPLE
     return true;
 #else
     settings tmp;
@@ -514,7 +514,7 @@ inline bool settings::check_program(std::string const &program)
 
 inline bool settings::is_osascript() const
 {
-#if __APPLE__
+#if SDL_PLATFORM_APPLE
     return true;
 #else
     return false;
@@ -811,7 +811,7 @@ inline internal::dialog::dialog()
 
 inline std::vector<std::string> internal::dialog::desktop_helper() const
 {
-#if __APPLE__
+#if SDL_PLATFORM_APPLE
     return { "osascript" };
 #else
     return { flags(flag::has_zenity) ? "zenity"

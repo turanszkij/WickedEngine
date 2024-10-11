@@ -25,7 +25,7 @@
 // We only use OpenCL v1.2 or less.
 #define CL_TARGET_OPENCL_VERSION 120
 
-#ifdef __APPLE__
+#ifdef SDL_PLATFORM_APPLE
 #include <OpenCL/opencl.h>
 #else
 #include <CL/cl.h>
