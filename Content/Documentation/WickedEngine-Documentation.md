@@ -1,7 +1,7 @@
 <img src="../logo_small.png" width="128px"/>
 
 # WickedEngine Documentation
-This is a reference for the C++ features of Wicked Engine
+This is the documentation for the C++ features of Wicked Engine
 
 ## Contents
 1. [High Level Interface](#high-level-interface)
@@ -240,10 +240,86 @@ You can find out more about the Entity-Component system and other engine-level s
 [[Header]](../../WickedEngine/wiECS.h)
 
 #### ComponentManager
-This is the core entity-component relationship handler class. The purpose of this is to efficiently store, remove, add and sort components. Components can be any movable C++ structure. The best components are simple POD (plain old data) structures.
+The Component Manager is responsible of binding data (component) to an Entity (identifier). The component can be a c++ struct that contains data for an entity. It supports serialization of this data, and if this is used, then the component structs must have a Serialize() function. Otherwise the component can be any c++ struct that can be moved.
 
 #### Entity
-Entity is a number, it can reference components through ComponentManager containers. An entity is always valid if it exists. It's not required that an entity has any components. An entity has a component, if there is a ComponentManager that has a component which is associated with the same entity.
+Entity is an identifier (number) that can reference components through ComponentManager containers. An entity is always valid if it exists. It's not required that an entity has any components. An entity has a component, if there is a ComponentManager that has a component which is associated with the same entity.
+
+#### Using the entity-component system
+To use the entity-component system, you must use the ComponentManager<T> to store components of the T type, where T is an type of c++ struct. To bind a component to an entity, this procedure should be followed:
+
+```cpp
+struct MyComponent
+{
+	float3 position;
+	float speed;
+};
+ComponentManager<MyComponent> components; // create a component manager
+Entity entity = CreateEntity(); // create a new entity ID
+MyComponent& component = components.Create(entity); // create a component and bind it to the entity
+```
+
+When you create a new component, it will be added to the end of the array, in a contiguous memory allocation. The ComponentManager can be indexed and iterated efficiently:
+
+```cpp
+for(size_t i = 0; i < components.GetCount(); ++i)
+{
+	MyComponent& component = components[i];
+	Entity entity = components.GetEntity(i);
+}
+```
+
+You can see that we can both iterate through components and entities this way by the same index. It is useful when you just want to go through everything one-by one. But it is not useful when you want to query a component for an entity but you don't know its index. Indices can change when components are removed, so you cannot usually rely on remembering indices for entities yourself. However, the component manager does manage this information internally. To query a component for a given entity, use the GetComponent() function:
+
+```cpp
+MyComponent* component = components.GetComponent(entity);
+if(component != nullptr) // check for null, which can be returned if component doesn't exist for the entity
+{
+	// use component
+}
+```
+
+You can also get the index of an entity in a component manager:
+
+```cpp
+size_t index = components.GetIndex(entity);
+if(index != ~0ull) // check if it's valid. If invalid, then the index returned will be the max value of 64 bit uint
+{
+	MyComponent& component = components[index];
+}
+```
+
+It is NOT valid to use the array operator with entity ID:
+
+```cpp
+// NOT VALID! result will be undefined (could be a valid component, or overindexing crash)
+MyComponent& component = components[entity];
+```
+
+A useful pattern is to offload the iteration of a large component manager to the job system, to parallelize the work:
+
+```cpp
+wi::jobsystem::context ctx;
+wi::jobsystem::Dispatch(ctx, (uint32_t)components.GetCount(), 64, [&](wi::jobsystem::JobArgs args){
+	MyComponent& component = components[args.jobIndex];
+	Entity entity = components[args.jobIndex];
+	// Do things...
+});
+// optionally, do unrelated things here...
+wi::jobsystem::Wait(ctx); // wait for Dispatch to finish
+```
+In this example, each entity/component will be iterated by one job, and 64 batch of jobs will be executed on one thread as a group. This can greatly improve performance when iterating a large component manager.
+
+One thing that you must look out for is pointer invalidation of the Component Manager. It is always safe to use Entity IDs whenever, but it is faster to use a pointer or an index. Those can, hovewer change as components are added or removed. You must look out for index and pointer invalidation when components are removed, because the ordering of the components can change there (the component manager is always kept dense, without holes). When adding/creating components, pointers can occasionally get invalidated the same way as for example std::vector, because reallocation of memory can happen to keep everyting contiguous. This can lead to unexpected consequences:
+
+```cpp
+MyComponent& component1 = components[0];
+MyComponent& component2 = components.Create(CreateEntity()); // here the component1 reference/pointer can get invalidated
+component1.speed = 10; // POINTER INVALIDATION HAZARD!
+```
+In the example above, a new component is created while the reference to the first element is still going to be used, this can lead to crash if the memory got reallocated while creating the component2. The correct solution would be to first create all components, then use them after all creations finished. Or re-query component pointers with GetComponent(entity) after a creation happens.
+
+The Scene structure of the engine is essentially a collection of ComponentManagers, which let you access everything in the scene in the same manner.
 
 ### Scene System
 [[Header]](../../WickedEngine/wiScene.h) [[Cpp]](../../WickedEngine/wiScene.cpp)
@@ -252,6 +328,10 @@ The logical scene representation using the Entity-Component System
 Returns a global scene instance. This is a convenience feature for simple applications that need a single scene. The RenderPath3D will use the global scene by default, but it can be set to a custom scene if needed.
 - LoadModel() <br/>
 There are two flavours to this. One of them immediately loads into the global scene. The other loads into a custom scene, which is usefult to manage the contents separately. This function will return an Entity that represents the root transform of the scene - if the attached parameter was true, otherwise it will return INVALID_ENTITY and no root transform will be created.
+- LoadModel2() <br/>
+This is an alternative usage of LoadModel, which lets you give the root entity ID as a parameter. Apart from that, it works the same way as LoadModel(), just that attachments will be made to your specified root entity.
+- Intersects(Ray/Capsule/Sphere, filterMask, layerMask, lod) <br/>
+Intersection function with scene entities and primitives. You can specify various settings to filter intersections. The filterMask lets you specify an engine-defined type enum bitmask combination, so you can choose to intersect with objects, and/or colliders, and various specifications. The layerMask lets you filter the intersections with layer bits, where binary OR of the parameter and entity layers will decide active entities. The lod parameter lets you force a lod level for meshes. 
 - Pick <br/>
 Allows to pick the closest object with a RAY (closest ray intersection hit to the ray origin). The user can provide a custom scene or layermask to filter the objects to be checked.
 - SceneIntersectSphere <br/>
