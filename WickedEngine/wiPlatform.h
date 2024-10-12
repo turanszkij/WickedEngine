@@ -1,7 +1,6 @@
 #pragma once
 // This file includes platform, os specific libraries and supplies common platform specific resources
 
-#include <SDL3/SDL_video.h>
 #ifdef _WIN32
 
 #ifndef NOMINMAX
@@ -33,6 +32,7 @@ typedef void* HMODULE;
 
 #ifdef SDL3
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_video.h>
 #include <SDL3/SDL_vulkan.h>
 #include "sdl3.h"
 #endif

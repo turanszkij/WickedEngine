@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     application.infoDisplay.resolution = true;
     application.infoDisplay.fpsinfo = true;
 
-    sdl3::sdlsystem_ptr_t system = sdl3::make_sdlsystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
+    sdl3::sdlsystem_ptr_t system = sdl3::make_sdlsystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_GAMEPAD);
     sdl3::window_ptr_t window = sdl3::make_window(
             "Template",
             2560, 1440,

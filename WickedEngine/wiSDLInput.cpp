@@ -1,9 +1,9 @@
 #include "wiSDLInput.h"
-#include <SDL3/SDL_events.h>
-#include <SDL3/SDL_gamepad.h>
 
 #ifdef SDL3
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_gamepad.h>
 
 #include "wiUnorderedMap.h"
 #include "wiBacklog.h"

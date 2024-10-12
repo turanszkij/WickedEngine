@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
 
     wi::arguments::Parse(argc, argv);
 
-    sdl3::sdlsystem_ptr_t system = sdl3::make_sdlsystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_GAMEPAD | SDL_INIT_EVENTS);
+    sdl3::sdlsystem_ptr_t system = sdl3::make_sdlsystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_GAMEPAD);
     if (!system) {
         throw sdl3::SDLError("Error creating SDL3 system");
     }

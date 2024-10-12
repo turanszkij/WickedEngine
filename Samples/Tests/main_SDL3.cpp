@@ -18,41 +18,36 @@ int sdl_loop(Tests &tests)
                 case SDL_EVENT_QUIT:
                     quit = true;
                     break;
-                // case SDL_WINDOWEVENT:
-                    // switch (event.window.event) {
-				case SDL_EVENT_WINDOW_CLOSE_REQUESTED: // exit tests
-					quit = true;
-					break;
-				case SDL_EVENT_WINDOW_RESIZED:
-					// Tells the engine to reload window configuration (size and dpi)
-					tests.SetWindow(tests.window);
-					break;
-				case SDL_EVENT_WINDOW_FOCUS_LOST:
-					tests.is_window_active = false;
-					break;
-				case SDL_EVENT_WINDOW_FOCUS_GAINED:
-					tests.is_window_active = true;
-					if (wi::shadercompiler::GetRegisteredShaderCount() > 0)
-					{
-						std::thread([] {
-							wi::backlog::post("[Shader check] Started checking " + std::to_string(wi::shadercompiler::GetRegisteredShaderCount()) + " registered shaders for changes...");
-							if (wi::shadercompiler::CheckRegisteredShadersOutdated())
-							{
-								wi::backlog::post("[Shader check] Changes detected, initiating reload...");
-								wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [](uint64_t userdata) {
-									wi::renderer::ReloadShaders();
-									});
-							}
-							else
-							{
-								wi::backlog::post("[Shader check] All up to date");
-							}
-							}).detach();
-					}
-					break;
-                        // default:
-                            // break;
-                    // }
+                case SDL_EVENT_WINDOW_CLOSE_REQUESTED: // exit tests
+                    quit = true;
+                    break;
+                case SDL_EVENT_WINDOW_RESIZED:
+                    // Tells the engine to reload window configuration (size and dpi)
+                    tests.SetWindow(tests.window);
+                    break;
+                case SDL_EVENT_WINDOW_FOCUS_LOST:
+                    tests.is_window_active = false;
+                    break;
+                case SDL_EVENT_WINDOW_FOCUS_GAINED:
+                    tests.is_window_active = true;
+                    if (wi::shadercompiler::GetRegisteredShaderCount() > 0)
+                    {
+                        std::thread([] {
+                            wi::backlog::post("[Shader check] Started checking " + std::to_string(wi::shadercompiler::GetRegisteredShaderCount()) + " registered shaders for changes...");
+                            if (wi::shadercompiler::CheckRegisteredShadersOutdated())
+                            {
+                                wi::backlog::post("[Shader check] Changes detected, initiating reload...");
+                                wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [](uint64_t userdata) {
+                                    wi::renderer::ReloadShaders();
+                                    });
+                            }
+                            else
+                            {
+                                wi::backlog::post("[Shader check] All up to date");
+                            }
+                            }).detach();
+                    }
+                    break;
                 default:
                     break;
             }
