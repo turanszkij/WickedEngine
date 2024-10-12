@@ -1424,7 +1424,7 @@ class TinyGLTF {
   bool preserve_image_channels_ = false;  /// Default false(expand channels to
                                           /// RGBA) for backward compatibility.
 
-  // Warning & error messages 
+  // Warning & error messages
   std::string warn_;
   std::string err_;
 
@@ -1701,7 +1701,7 @@ void JsonParse(JsonDocument &doc, const char *str, size_t length,
 }
 }  // namespace
 
-#ifdef SDL_PLATFORM_APPLE
+#ifdef __APPLE__
 #include "TargetConditionals.h"
 #endif
 

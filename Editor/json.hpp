@@ -17150,7 +17150,7 @@ class basic_json
         result["platform"] = "win32";
 #elif defined __linux__
         result["platform"] = "linux";
-#elif defined SDL_PLATFORM_APPLE
+#elif defined __APPLE__
         result["platform"] = "apple";
 #elif defined __unix__
         result["platform"] = "unix";

@@ -85,7 +85,7 @@
 	#define JPH_PLATFORM_LINUX
 #elif defined(__FreeBSD__)
 	#define JPH_PLATFORM_FREEBSD
-#elif defined(SDL_PLATFORM_APPLE)
+#elif defined(__APPLE__)
 	#include <TargetConditionals.h>
 	#if defined(TARGET_OS_IPHONE) && !TARGET_OS_IPHONE
 		#define JPH_PLATFORM_MACOS

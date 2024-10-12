@@ -465,7 +465,7 @@
 #define ufbxi_read_u8(ptr) (*(const uint8_t*)(ptr))
 
 // Detect support for `__attribute__((aligned(1)))`
-#if !defined(UFBX_STANDARD_C) && (defined(__clang__) && defined(SDL_PLATFORM_APPLE))
+#if !defined(UFBX_STANDARD_C) && (defined(__clang__) && defined(__APPLE__))
 	// Apple overrides Clang versioning, 5.0 here maps to 3.3
 	#if __clang_major__ >= 5
 		#define UFBXI_HAS_ATTRIBUTE_ALIGNED 1

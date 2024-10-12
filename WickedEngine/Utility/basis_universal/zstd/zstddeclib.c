@@ -6060,7 +6060,7 @@ ZSTDLIB_API size_t ZSTD_insertBlock    (ZSTD_DCtx* dctx, const void* blockStart,
  *
  * You can contact the author at :
  * - xxHash source repository : https://github.com/Cyan4973/xxHash
- * 
+ *
  * This source code is licensed under both the BSD-style license (found in the
  * LICENSE file in the root directory of this source tree) and the GPLv2 (found
  * in the COPYING file in the root directory of this source tree).
@@ -6337,7 +6337,7 @@ XXH_PUBLIC_API XXH64_hash_t XXH64_hashFromCanonical(const XXH64_canonical_t* src
  *  You can contact the author at :
  *  - xxHash homepage: http://www.xxhash.com
  *  - xxHash source repository : https://github.com/Cyan4973/xxHash
- * 
+ *
  * This source code is licensed under both the BSD-style license (found in the
  * LICENSE file in the root directory of this source tree) and the GPLv2 (found
  * in the COPYING file in the root directory of this source tree).
@@ -7495,7 +7495,7 @@ typedef struct {
 
     /* longLengthPos and longLengthID to allow us to represent either a single litLength or matchLength
      * in the seqStore that has a value larger than U16 (if it exists). To do so, we increment
-     * the existing value of the litLength or matchLength by 0x10000. 
+     * the existing value of the litLength or matchLength by 0x10000.
      */
     U32   longLengthID;   /* 0 == no longLength; 1 == Represent the long literal; 2 == Represent the long match; */
     U32   longLengthPos;  /* Index of the sequence to apply long length modification to */
@@ -8901,7 +8901,7 @@ size_t HUF_decompress1X1 (void* dst, size_t dstSize, const void* cSrc, size_t cS
     HUF_CREATE_STATIC_DTABLEX1(DTable, HUF_TABLELOG_MAX);
     return HUF_decompress1X1_DCtx (DTable, dst, dstSize, cSrc, cSrcSize);
 }
-#endif 
+#endif
 
 #ifndef HUF_FORCE_DECOMPRESS_X1
 size_t HUF_readDTableX2(HUF_DTable* DTable, const void* src, size_t srcSize)
@@ -9309,7 +9309,7 @@ extern "C" {
 
 /* weak symbol support */
 #if !defined(ZSTD_HAVE_WEAK_SYMBOLS) && defined(__GNUC__) && \
-    !defined(SDL_PLATFORM_APPLE) && !defined(_WIN32) && !defined(__MINGW32__) && \
+    !defined(__APPLE__) && !defined(_WIN32) && !defined(__MINGW32__) && \
     !defined(__CYGWIN__)
 #  define ZSTD_HAVE_WEAK_SYMBOLS 1
 #else

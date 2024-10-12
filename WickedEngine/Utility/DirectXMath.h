@@ -116,7 +116,7 @@
 // C4514/4820: Off by default noise
 #include <math.h>
 #include <float.h>
-#ifndef SDL_PLATFORM_APPLE
+#ifndef __APPLE__
 #	include <malloc.h>
 #endif
 #ifdef _MSC_VER
