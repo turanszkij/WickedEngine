@@ -4,6 +4,7 @@
 This is the documentation for the C++ features of Wicked Engine
 
 ## Contents
+0. [Building and linking](#building-and-linking)
 1. [High Level Interface](#high-level-interface)
 	1. [Application](#application)
 	2. [RenderPath](#renderpath)
@@ -159,6 +160,36 @@ This is the documentation for the C++ features of Wicked Engine
 	1. [Interop](#interop)
 	2. [Shader Compiler](#shader-compiler)
 
+## Building and linking
+Wicked Engine is a static library that can be included and linked into a standard C++ application. This comes with some differences when you try to build it for different platforms, because those have different compilers and settings. The basics of the static library will apply for all:
+
+1. You must build WickedEngine itself
+	- Windows: Use the WickedEngine.sln with Visual Studio and build the WickedEngine_Windows project
+	- Linux: Use the following commands on linux to build the solution:
+
+Ensure dependencies are installed on Linux:
+```bash
+sudo apt update
+sudo apt install libsdl2-dev
+sudo apt install build-essential
+```
+To build the engine on Linux, use `cmake` and then `make`:
+```bash
+mkdir build
+cd build
+cmake ..
+make
+```
+
+2. Set the `$(SolutionDir)WickedEngine` folder as "additional include directories" in your application's build system (for example, for me it resolves to: `C:\PROJECTS\WickedEngine\WickedEngine`)
+3. Set the `$(SolutionDir)BUILD/$(Platform)/$(Configuration)` as "additional library directories" in your application's build system (for example, for me it resolves to: `C:\PROJECTS\WickedEngine\BUILD\x64\Debug` in a Debug x64 configuration)
+4. Use `#include "WickedEngine.h` in your C++ application code
+5. Verify that you application compiles correctly and links to Wicked Engine.
+6. If succeeded, continue this guide with the [Application initialization](#application)
+
+If you have troubles, check out the Samples/Template projects which are setting up simple applications that use Wicked Engine and how they are configured.
+
+Xbox, PlayStation: The WickedEngine.sln must be used with Visual Studio similarly to Windows, but with console extension files and additional instructions which are private now, but could be offered in the future.
 
 ## High Level Interface
 The high level interface consists of classes that allow for extending the engine with custom functionality. This is usually done by overriding the classes.
@@ -166,8 +197,72 @@ The high level interface consists of classes that allow for extending the engine
 ### Application
 [[Header]](../../WickedEngine/wiApplication.h) [[Cpp]](../../WickedEngine/wiApplication.cpp)
 This is the main runtime component that has the Run() function. It should be included in the application entry point while calling Run() in an infinite loop. <br/>
-The user should call the SetWindow() function to associate it with a window of the operating system. This window will be used to render to.<br/>
-The `Application` has many uses that the user is not necessarily interested in. The most important part is that it manages the RenderPaths. There can be one active RenderPath at a time, which will be updated and rendered to the screen every frame. However, because a RenderPath is a highly customizable class, there is no limitation what can be done within the RenderPath, for example supporting multiple concurrent RenderPaths if required. RenderPaths can be switched wit ha Fade out screen easily. Loading Screen can be activated as an active Renderpath and it will load and switch to an other RenderPath if desired. A RenderPath can be simply activated with the `Application::ActivatePath()` function.<br/>
+
+To use the application, the user should at least set the operating system window to render to with the `SetWindow()`, providing the operating system-specific window handle to it. This will be the main window that the application will draw its contents to.
+
+It's also recommended to call `Initialize()` of the application if you do anything with the engine features outside of RenderPath, for example in your main function. This will kick off engine initialization immediately, instead of the first call to `Run()`. Using engine features before `application.Initialize()` was called, can be undefined behaviour. If you only use engine features withing application's Update() and other overridable functions, those are ensured to be running when it is valid to do.
+
+An example of minimal application initialization:
+
+```cpp
+Application app;
+app.SetWindow(hWnd); // operating-system dependent window handle is given
+while(true)
+{
+	app.Run(); // app.Initialize() will be called in here, don't use engine features before this.
+}
+```
+
+The example above is sufficient to rely on doing things inside the startup.lua file, which - if exists - will be executed at the appropriate time.
+
+An example of minimal application initialization with extended c++ class:
+
+```cpp
+class Game : public Application
+{
+	virtual ~Game() = default; // in c++ it's recommended to always make class destructors that are used in inheritance virtual
+
+	void Update(float deltatime) override // override Application's Update function
+	{
+		Application::Update(deltatime);
+		// your per-application update logic can go here
+	}
+}
+Game game;
+game.SetWindow(hWnd);
+while(true)
+{
+	game.Run();
+}
+```
+
+An example of application initialization and some engine usage immediately:
+
+```cpp
+Application app;
+app.SetWindow(hWnd);
+app.Initialize(); // before using engine feature LoadModel, application.Initialize() will ensure all engine system initializations are kicked off. Most things are safe to use while initalization is running in the background...
+LoadModel("something.wiscene");
+while(true)
+{
+	app.Run();
+}
+```
+
+An example of initializing application and blocking until whole engine was initialized:
+
+```cpp
+Application app;
+app.SetWindow(hWnd);
+app.Initialize(); // this returns immediately, but engine sub-system begin to be initialized in the background...
+wi::initializer::WaitForInitializationsToFinish(); // block until all engine sub-systems are ready. If this is called before Run(), then initialization screen won't be shown.
+while(true)
+{
+	app.Run();
+}
+```
+
+The `Application` has many uses that the user is not necessarily interested in. The most important part is that it manages the `RenderPath`s. There can be one active `RenderPath` at a time, which will be updated and rendered to the screen every frame. However, because a RenderPath is a highly customizable class, there is no limitation what can be done within the RenderPath, for example supporting multiple concurrent RenderPaths if required. RenderPaths can be switched with a fade out screen easily. Loading Screen can be activated as an active Renderpath and it will load and switch to an other RenderPath if desired. A RenderPath can be simply activated with the `Application::ActivatePath()` function, which will also perform the fadeout when the `fadeSeconds` and `fadeColor` arguments are used.<br/>
 The `Application` does the following every frame while it is running:<br/>
 1. FixedUpdate() <br/>
 Calls FixedUpdate for the active RenderPath and wakes up scripts that are waiting for fixedupdate(). The frequency off calls will be determined by `Application::setTargetFrameRate(float framespersecond)`. By default (parameter = 60), FixedUpdate will be called 60 times per second.
@@ -180,7 +275,7 @@ Calls Compose for the active RenderPath
 
 ### RenderPath
 [[Header]](../../WickedEngine/wiRenderPath.h)
-This is an empty base class that can be activated with a `Application`. It calls its Start(), Update(), FixedUpdate(), Render(), Compose(), Stop() functions as needed. Override this to perform custom gameplay or rendering logic. The RenderPath inherits from [wiCanvas](#wicanvas), and the canvas properties will be set by the [Application](#application) when the RenderPath was activated, and while the RenderPath is active. <br/>
+This is an empty base class that can be activated with a `Application`. It calls its Start(), Update(), FixedUpdate(), Render(), Compose(), Stop(), etc. functions as needed. Override this to perform custom gameplay or rendering logic. The RenderPath inherits from [wiCanvas](#wicanvas), and the canvas properties will be set by the [Application](#application) when the RenderPath was activated, and while the RenderPath is active. <br/>
 The order in which the functions are executed every frame: <br/>
 1. PreUpdate() <br/>
 This will be called once per frame before any script that calls Update().
