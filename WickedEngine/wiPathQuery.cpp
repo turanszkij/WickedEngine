@@ -110,12 +110,9 @@ namespace wi
 
 			XMUINT3 coord = current.coord();
 
-#if 1
+#if 0
 			// The neighbors to which traversal can happen from the current cell:
 			//	Horizontal diagonal is not allowed, only vertical (to support stairs)
-			//	Note: diagonal can be supported, but since the path will be simplified,
-			//		diagonal voxel movements do not seem to contribute much improvement,
-			//		in fact non-diagonal movements can keep away better from wall corners
 			XMUINT3 neighbors[] = {
 				// left-right:
 				XMUINT3(coord.x - 1, coord.y, coord.z),
@@ -147,6 +144,7 @@ namespace wi
 			};
 			uint32_t neighbor_count = arraysize(neighbors);
 #else
+			// Allow diagonal traversal:
 			uint32_t neighbor_count = 0;
 			XMUINT3 neighbors[26];
 			for (int x = -1; x <= 1; ++x)

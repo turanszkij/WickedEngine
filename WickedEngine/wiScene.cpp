@@ -33,6 +33,8 @@ namespace wi::scene
 
 		wi::jobsystem::context ctx;
 
+		UpdateHumanoidFacings();
+
 		// Script system runs first, because it could create new entities and components
 		//	So GPU persistent resources need to be created accordingly for them too:
 		RunScriptUpdateSystem(ctx);
@@ -3424,6 +3426,11 @@ namespace wi::scene
 								}
 								bone_type_idx++;
 							}
+
+							if (link.constrain && humanoid.knee_bending < 0)
+							{
+								std::swap(link.constraint_min, link.constraint_max);
+							}
 						}
 					}
 
@@ -3526,7 +3533,7 @@ namespace wi::scene
 
 			const XMVECTOR UP = XMVectorSet(0, 1, 0, 0);
 			const XMVECTOR SIDE = XMVectorSet(1, 0, 0, 0);
-			const XMVECTOR FORWARD = XMVectorSet(0, 0, GetHumanoidDefaultFacing(humanoid, humanoidEntity), 0);
+			const XMVECTOR FORWARD = XMVectorSet(0, 0, humanoid.default_facing, 0);
 
 			struct LookAtSource
 			{
@@ -7503,33 +7510,6 @@ namespace wi::scene
 		return XMMatrixIdentity();
 	}
 
-	float Scene::GetHumanoidDefaultFacing(const HumanoidComponent& humanoid, Entity humanoidEntity) const
-	{
-		if (humanoid.default_facing == 0)
-		{
-			Entity left_shoulder = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftUpperArm];
-			Entity right_shoulder = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightUpperArm];
-			XMVECTOR left_shoulder_pos = GetRestPose(left_shoulder).r[3];
-			XMVECTOR right_shoulder_pos = GetRestPose(right_shoulder).r[3];
-			const TransformComponent* transform = transforms.GetComponent(humanoidEntity);
-			if (transform != nullptr)
-			{
-				XMVECTOR S = transform->GetScaleV();
-				left_shoulder_pos *= S;
-				right_shoulder_pos *= S;
-			}
-			if (XMVectorGetX(right_shoulder_pos) < XMVectorGetX(left_shoulder_pos))
-			{
-				humanoid.default_facing = -1;
-			}
-			else
-			{
-				humanoid.default_facing = 1;
-			}
-		}
-		return humanoid.default_facing;
-	}
-
 	void Scene::ScanAnimationDependencies()
 	{
 		if (animations.GetCount() == 0)
@@ -7833,4 +7813,47 @@ namespace wi::scene
 		}
 	}
 
+	void Scene::UpdateHumanoidFacings()
+	{
+		// A contrived way of determining default facing and knee bending directions for humanoids:
+		//	This can be slow, so it is computed only once for each, if these values are 0
+		for (size_t i = 0; i < humanoids.GetCount(); ++i)
+		{
+			HumanoidComponent& humanoid = humanoids[i];
+			Entity humanoidEntity = humanoids.GetEntity(i);
+			if (humanoid.default_facing == 0)
+			{
+				Entity left_shoulder = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftUpperArm];
+				Entity right_shoulder = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightUpperArm];
+				XMVECTOR left_shoulder_pos = GetRestPose(left_shoulder).r[3];
+				XMVECTOR right_shoulder_pos = GetRestPose(right_shoulder).r[3];
+				const TransformComponent* transform = transforms.GetComponent(humanoidEntity);
+				if (transform != nullptr)
+				{
+					XMVECTOR S = transform->GetScaleV();
+					left_shoulder_pos *= S;
+					right_shoulder_pos *= S;
+				}
+				if (XMVectorGetX(right_shoulder_pos) < XMVectorGetX(left_shoulder_pos))
+				{
+					humanoid.default_facing = -1;
+				}
+				else
+				{
+					humanoid.default_facing = 1;
+				}
+			}
+			if (humanoid.knee_bending == 0)
+			{
+				humanoid.knee_bending = humanoid.default_facing;
+				Entity left_leg = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftUpperLeg];
+				const TransformComponent* transform = transforms.GetComponent(left_leg);
+				if (transform != nullptr)
+				{
+					XMFLOAT3 roll_pitch_yaw = wi::math::QuaternionToRollPitchYaw(transform->rotation_local);
+					humanoid.knee_bending *= (roll_pitch_yaw.y / XM_PI * 180.0f) < 0 ? -1 : 1; // MIXAMO fix!
+				}
+			}
+		}
+	}
 }

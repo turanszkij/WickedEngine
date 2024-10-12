@@ -625,7 +625,7 @@ namespace wi::physics
 #endif
 
 				// Detect which way humanoid is facing in rest pose:
-				const float facing = scene.GetHumanoidDefaultFacing(humanoid, humanoidEntity);
+				const float facing = humanoid.default_facing;
 
 				// Whole ragdoll will take a uniform scaling:
 				const XMMATRIX scaleMatrix = XMMatrixScaling(scale, scale, scale);

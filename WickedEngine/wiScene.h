@@ -570,6 +570,9 @@ namespace wi::scene
 		//	Note that the input position to this function will be taken on the XZ plane and modified by the displacement map's XZ value, and the Y (vertical) position will be taken from the ocean water height and displacement map only.
 		XMFLOAT3 GetOceanPosAt(const XMFLOAT3& worldPosition) const;
 
+	private:
+		void UpdateHumanoidFacings();
+
 	};
 
 	// Returns skinned vertex position

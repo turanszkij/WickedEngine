@@ -2006,7 +2006,8 @@ namespace wi::scene
 		XMFLOAT4 lookAtDeltaRotationState_LeftEye = XMFLOAT4(0, 0, 0, 1);
 		XMFLOAT4 lookAtDeltaRotationState_RightEye = XMFLOAT4(0, 0, 0, 1);
 		std::shared_ptr<void> ragdoll = nullptr; // physics system implementation-specific object
-		mutable float default_facing = 0; // 0 = not yet computed
+		float default_facing = 0; // 0 = not yet computed, otherwise Z direction
+		float knee_bending = 0; // 0 = not yet computed, otherwise Z direction
 
 		// Things for ragdoll intersection tests:
 		struct RagdollBodypart
