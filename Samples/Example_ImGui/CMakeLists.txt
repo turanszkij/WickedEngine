@@ -37,9 +37,9 @@ if (WIN32)
 	set(LIB_DXCOMPILER "dxcompiler.dll")
 else()
 	list (APPEND SOURCE_FILES
-		main_SDL2.cpp
-		ImGui/imgui_impl_sdl.cpp
-		ImGui/imgui_impl_sdl.h
+		main_SDL3.cpp
+		ImGui/imgui_impl_sdl3.cpp
+		ImGui/imgui_impl_sdl3.h
 	)
 
 	add_executable(Example_ImGui ${SOURCE_FILES})
