@@ -5,7 +5,7 @@ on:
     - cron:  '0 0 * * *'
 
 jobs:
-  
+
   windows:
     runs-on: windows-latest
     steps:
@@ -24,7 +24,7 @@ jobs:
       run: |
         "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /t:clean /m /p:Configuration=Release /p:Platform=x64
         "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /t:Editor_Windows /m /p:Configuration=Release /p:Platform=x64
-    
+
     - name: Move files
       shell: cmd
       run: |
@@ -33,7 +33,7 @@ jobs:
         move Editor\startup.lua .\
         move Editor\languages .\
         move Editor\fonts .\
-        
+
     - name: Package Editor
       uses: actions/upload-artifact@v4
       with:
@@ -45,7 +45,7 @@ jobs:
           startup.lua
           Editor_Windows.exe
 
-    
+
   linux:
     runs-on: ubuntu-latest
     steps:
@@ -54,7 +54,14 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install libsdl2-dev
+        # sudo apt install libsdl3-dev
+        git clone https://github.com/libsdl-org/SDL
+        cd SDL
+        mkdir build
+        cd build
+        cmake -DCMAKE_BUILD_TYPE=Release ..
+        cmake --build . --config Release --parallel
+        sudo cmake --install . --config Release
 
     - name: Initial compile
       run: |
@@ -62,7 +69,7 @@ jobs:
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release
         make -j$(nproc)
-      
+
     - name: Generate shader dump
       run: |
         cd build/WickedEngine
@@ -73,7 +80,7 @@ jobs:
       run: |
         cd build
         make -B -j $(nproc)
-        
+
     - name: Move files
       run: |
         mv build/Editor/WickedEngineEditor ./Editor_Linux
@@ -81,7 +88,7 @@ jobs:
         mv Editor/startup.lua ./
         mv Editor/languages ./
         mv Editor/fonts ./
-        
+
     - name: Package Editor
       uses: actions/upload-artifact@v4
       with:

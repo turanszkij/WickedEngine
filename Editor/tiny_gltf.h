@@ -1424,7 +1424,7 @@ class TinyGLTF {
   bool preserve_image_channels_ = false;  /// Default false(expand channels to
                                           /// RGBA) for backward compatibility.
 
-  // Warning & error messages 
+  // Warning & error messages
   std::string warn_;
   std::string err_;
 

@@ -14,9 +14,11 @@
 #include <atomic>
 #include <thread>
 
-#ifdef SDL2
-#include <SDL2/SDL.h>
-#endif // SDL2
+#ifdef SDL3
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_mouse.h>
+#endif // SDL3
 
 #ifdef PLATFORM_PS5
 #include "wiInput_PS5.h"
@@ -48,7 +50,7 @@ namespace wi::input
 	const KeyboardState& GetKeyboardState() { return keyboard; }
 	const MouseState& GetMouseState() { return mouse; }
 
-	struct Input 
+	struct Input
 	{
 		BUTTON button = BUTTON_NONE;
 		int playerIndex = 0;
@@ -118,7 +120,7 @@ namespace wi::input
 
 #if defined(_WIN32) && !defined(PLATFORM_XBOX)
 		wi::input::rawinput::GetMouseState(&mouse); // currently only the relative data can be used from this
-		wi::input::rawinput::GetKeyboardState(&keyboard); 
+		wi::input::rawinput::GetKeyboardState(&keyboard);
 
 		// apparently checking the mouse here instead of Down() avoids missing the button presses (review!)
         mouse.left_button_press |= KEY_DOWN(VK_LBUTTON);
@@ -134,7 +136,7 @@ namespace wi::input
 		mouse.position.x /= canvas.GetDPIScaling();
 		mouse.position.y /= canvas.GetDPIScaling();
 
-#elif SDL2
+#elif SDL3
 		wi::input::sdlinput::GetMouseState(&mouse);
 		mouse.position.x /= canvas.GetDPIScaling();
 		mouse.position.y /= canvas.GetDPIScaling();
@@ -369,21 +371,21 @@ namespace wi::input
 			::SetCursor(cursor_table[cursor_next]);
 #endif // PLATFORM_WINDOWS_DESKTOP
 
-#ifdef SDL2
+#ifdef SDL3
 			static SDL_Cursor* cursor_table[] = {
-				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW),
-				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM),
-				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL),
-				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS),
-				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE),
-				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW),
-				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE),
-				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND),
-				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NO),
+				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_DEFAULT),
+				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_TEXT),
+				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_MOVE),
+				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NS_RESIZE),
+				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_EW_RESIZE),
+				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NESW_RESIZE),
+				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NWSE_RESIZE),
+				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_POINTER),
+				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NOT_ALLOWED),
 				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_CROSSHAIR),
 			};
 			SDL_SetCursor(cursor_table[cursor_next] ? cursor_table[cursor_next] : cursor_table[CURSOR_DEFAULT]);
-#endif // SDL2
+#endif // SDL3
 
 			cursor_current = cursor_next;
 		}
@@ -440,15 +442,15 @@ namespace wi::input
 			switch (button)
 			{
 			case wi::input::MOUSE_BUTTON_LEFT:
-				if (mouse.left_button_press) 
+				if (mouse.left_button_press)
 					return true;
 				return false;
 			case wi::input::MOUSE_BUTTON_RIGHT:
-				if (mouse.right_button_press) 
+				if (mouse.right_button_press)
 					return true;
 				return false;
 			case wi::input::MOUSE_BUTTON_MIDDLE:
-				if (mouse.middle_button_press) 
+				if (mouse.middle_button_press)
 					return true;
 				return false;
 #ifdef _WIN32
@@ -473,7 +475,7 @@ namespace wi::input
 			case wi::input::KEYBOARD_BUTTON_LSHIFT:
 				keycode = VK_LSHIFT;
 				break;
-			case wi::input::KEYBOARD_BUTTON_F1: 
+			case wi::input::KEYBOARD_BUTTON_F1:
 				keycode = VK_F1;
 				break;
 			case wi::input::KEYBOARD_BUTTON_F2:
@@ -598,7 +600,7 @@ namespace wi::input
 			}
 #if defined(_WIN32) && !defined(PLATFORM_XBOX)
 			return KEY_DOWN(keycode) || KEY_TOGGLE(keycode);
-#elif SDL2
+#elif SDL3
 			return keyboard.buttons[keycode] == 1;
 #endif
 		}
@@ -677,24 +679,24 @@ namespace wi::input
 		p.y = (LONG)(props.y * dpiscaling);
 		ClientToScreen(hWnd, &p);
 		SetCursorPos(p.x, p.y);
-#elif defined(SDL2)
-	// Keeping with the trend of 'Set Pointer' API on different platforms, 
-	// SDL_WarpMouseInWindow is used in the case of SDL2. This unfortunately 
-	// causes SDL2 to generate a mouse event for the delta between the old 
-	// and new positions leading to 'rubber banding'. 
+#elif defined(SDL3)
+	// Keeping with the trend of 'Set Pointer' API on different platforms,
+	// SDL_WarpMouseInWindow is used in the case of SDL3. This unfortunately
+	// causes SDL3 to generate a mouse event for the delta between the old
+	// and new positions leading to 'rubber banding'.
 	// The current solution is to artifically generate a motion event of our own
 	// which will 'undo' this unwanted motion event during the mouse motion
 	// accumulation in wiSDLInput.cpp Update()
 	XMFLOAT4 currentPointer = GetPointer();
-	SDL_MouseMotionEvent motionEvent = {0};
-	motionEvent.type = SDL_MOUSEMOTION;
+	SDL_MouseMotionEvent motionEvent {};
+	motionEvent.type = SDL_EVENT_MOUSE_MOTION;
 	motionEvent.x = motionEvent.y = 0; // doesn't matter
 	motionEvent.xrel = currentPointer.x - props.x;
 	motionEvent.yrel = currentPointer.y - props.y;
 	SDL_PushEvent((SDL_Event*)&motionEvent);
 	SDL_WarpMouseInWindow(window, props.x, props.y);
 
-#endif // SDL2
+#endif // SDL3
 	}
 	void HidePointer(bool value)
 	{
@@ -707,8 +709,11 @@ namespace wi::input
 		{
 			while (ShowCursor(true) < 0) {};
 		}
-#elif SDL2
-		SDL_ShowCursor(value ? SDL_DISABLE : SDL_ENABLE);
+#elif SDL3
+		if (value)
+			SDL_HideCursor();
+		else
+			SDL_ShowCursor();
 #endif // _WIN32
 	}
 

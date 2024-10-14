@@ -1,5 +1,7 @@
 #include "stdafx.h"
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_video.h>
 
 int sdl_loop(wi::Application &application)
 {
@@ -11,25 +13,19 @@ int sdl_loop(wi::Application &application)
         SDL_PumpEvents();
         application.Run();
 
-        while( SDL_PollEvent(&event)) 
+        while( SDL_PollEvent(&event))
         {
-            switch (event.type) 
+            switch (event.type)
             {
-                case SDL_QUIT:      
+                case SDL_EVENT_QUIT:
                     quit = true;
                     break;
-                case SDL_WINDOWEVENT:
-                    switch (event.window.event) 
-                    {
-                    case SDL_WINDOWEVENT_CLOSE:
-                        quit = true;
-                        break;
-                    case SDL_WINDOWEVENT_RESIZED:
-                        application.SetWindow(application.window);
-                        break;
-                    default:
-                        break;
-                    }
+                case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+                    quit = true;
+                    break;
+                case SDL_EVENT_WINDOW_RESIZED:
+                    application.SetWindow(application.window);
+                    break;
                 default:
                     break;
             }
@@ -52,12 +48,11 @@ int main(int argc, char *argv[])
     application.infoDisplay.resolution = true;
     application.infoDisplay.fpsinfo = true;
 
-    sdl2::sdlsystem_ptr_t system = sdl2::make_sdlsystem(SDL_INIT_EVERYTHING | SDL_INIT_EVENTS);
-    sdl2::window_ptr_t window = sdl2::make_window(
+    sdl3::sdlsystem_ptr_t system = sdl3::make_sdlsystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_GAMEPAD);
+    sdl3::window_ptr_t window = sdl3::make_window(
             "Template",
-            SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
             2560, 1440,
-            SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_ALLOW_HIGHDPI);
+            SDL_WINDOW_VULKAN | SDL_WINDOW_HIGH_PIXEL_DENSITY);
 
     SDL_Event event;
 

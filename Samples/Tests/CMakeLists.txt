@@ -21,7 +21,7 @@ if (WIN32)
 	set(LIB_DXCOMPILER "dxcompiler.dll")
 else()
 	list (APPEND SOURCE_FILES
-		main_SDL2.cpp
+		main_SDL3.cpp
 	)
 
 	add_executable(Tests ${SOURCE_FILES})

@@ -1,7 +1,10 @@
 #include "stdafx.h"
 #include "Editor.h"
 
-#include "sdl2.h"
+#include "sdl3.h"
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_pixels.h>
+#include <SDL3/SDL_video.h>
 #include <fstream>
 
 #include "icon.c"
@@ -18,37 +21,32 @@ int sdl_loop(Editor &editor)
         while(SDL_PollEvent(&event)){
             bool textinput_action_delete = false;
             switch(event.type){
-                case SDL_QUIT:
+                case SDL_EVENT_QUIT:
                     quit = true;
                     break;
-                case SDL_WINDOWEVENT:
-                    switch (event.window.event) {
-                        case SDL_WINDOWEVENT_CLOSE: // exit editor
-                            quit = true;
-                            break;
-                        case SDL_WINDOWEVENT_RESIZED:
-                            // Tells the engine to reload window configuration (size and dpi)
-                            editor.SetWindow(editor.window);
-                            break;
-                        case SDL_WINDOWEVENT_FOCUS_LOST:
-                            editor.is_window_active = false;
-                            break;
-                        case SDL_WINDOWEVENT_FOCUS_GAINED:
-                            editor.is_window_active = true;
-							editor.HotReload();
-                            break;
-                        default:
-                            break;
-                    }
-                case SDL_KEYDOWN:
-                    if(event.key.keysym.scancode == SDL_SCANCODE_BACKSPACE 
-                        || event.key.keysym.scancode == SDL_SCANCODE_DELETE
-                        || event.key.keysym.scancode == SDL_SCANCODE_KP_BACKSPACE){
+                case SDL_EVENT_WINDOW_CLOSE_REQUESTED: // exit editor
+                    quit = true;
+                    break;
+                case SDL_EVENT_WINDOW_RESIZED:
+                    // Tells the engine to reload window configuration (size and dpi)
+                    editor.SetWindow(editor.window);
+                    break;
+                case SDL_EVENT_WINDOW_FOCUS_LOST:
+                    editor.is_window_active = false;
+                    break;
+                case SDL_EVENT_WINDOW_FOCUS_GAINED:
+                    editor.is_window_active = true;
+                    editor.HotReload();
+                    break;
+                case SDL_EVENT_KEY_DOWN:
+                    if(event.key.scancode == SDL_SCANCODE_BACKSPACE
+                        || event.key.scancode == SDL_SCANCODE_DELETE
+                        || event.key.scancode == SDL_SCANCODE_KP_BACKSPACE){
                             wi::gui::TextInputField::DeleteFromInput();
                             textinput_action_delete = true;
                         }
                     break;
-                case SDL_TEXTINPUT:
+                case SDL_EVENT_TEXT_INPUT:
                     if(!textinput_action_delete){
                         if(event.text.text[0] >= 21){
                             wi::gui::TextInputField::AddInput(event.text.text[0]);
@@ -81,13 +79,15 @@ void set_window_icon(SDL_Window *window) {
     bmask = 0x00ff0000;
     amask = (gimp_image.bytes_per_pixel == 3) ? 0 : 0xff000000;
 #endif
-    SDL_Surface* icon = SDL_CreateRGBSurfaceFrom((void*)gimp_image.pixel_data, gimp_image.width,
-        gimp_image.height, gimp_image.bytes_per_pixel*8, gimp_image.bytes_per_pixel*gimp_image.width,
-        rmask, gmask, bmask, amask);
+    const int depth = gimp_image.bytes_per_pixel*8;
+    const int pitch = gimp_image.bytes_per_pixel*gimp_image.width;
+    SDL_Surface* icon = SDL_CreateSurfaceFrom(gimp_image.width, gimp_image.height,
+                                              SDL_GetPixelFormatForMasks(depth, rmask, gmask, bmask, amask),
+                                              (void*)gimp_image.pixel_data, pitch);
 
     SDL_SetWindowIcon(window, icon);
- 
-    SDL_FreeSurface(icon);
+
+    SDL_DestroySurface(icon);
 }
 
 int main(int argc, char *argv[])
@@ -96,9 +96,9 @@ int main(int argc, char *argv[])
 
     wi::arguments::Parse(argc, argv);
 
-    sdl2::sdlsystem_ptr_t system = sdl2::make_sdlsystem(SDL_INIT_EVERYTHING | SDL_INIT_EVENTS);
-    if (*system) {
-        throw sdl2::SDLError("Error creating SDL2 system");
+    sdl3::sdlsystem_ptr_t system = sdl3::make_sdlsystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_GAMEPAD);
+    if (!system) {
+        throw sdl3::SDLError("Error creating SDL3 system");
     }
 
 	int width = 1920;
@@ -122,22 +122,20 @@ int main(int argc, char *argv[])
 	width = std::max(100, width);
 	height = std::max(100, height);
 
-    sdl2::window_ptr_t window = sdl2::make_window(
+    sdl3::window_ptr_t window = sdl3::make_window(
             "Wicked Engine Editor",
-            SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
             width, height,
-            SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+            SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     if (!window) {
-        throw sdl2::SDLError("Error creating window");
+        throw sdl3::SDLError("Error creating window");
     }
 
     set_window_icon(window.get());
 
 	if (fullscreen)
 	{
-		//SDL_SetWindowFullscreen(window.get(), SDL_TRUE);
-		//SDL_SetWindowFullscreen(window.get(), SDL_WINDOW_FULLSCREEN);
-		SDL_SetWindowFullscreen(window.get(), SDL_WINDOW_FULLSCREEN_DESKTOP);
+		// SDL_SetWindowFullscreenMode(window.get(), TODO);
+		SDL_SetWindowFullscreen(window.get(), true);
 	}
 
     editor.SetWindow(window.get());

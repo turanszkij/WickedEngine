@@ -6,16 +6,16 @@
 #include "stdafx.h"
 #include "Example_ImGui_Docking.h"
 
-#include "ImGui/imgui.h"
 #ifndef IMGUI_DEFINE_MATH_OPERATORS
 #define IMGUI_DEFINE_MATH_OPERATORS
 #endif
+#include "ImGui/imgui.h"
 #include "ImGui/imgui_internal.h"
 
 #ifdef _WIN32
 #include "ImGui/imgui_impl_win32.h"
-#elif defined(SDL2)
-#include "ImGui/imgui_impl_sdl.h"
+#elif defined(SDL3)
+#include "ImGui/imgui_impl_sdl3.h"
 #endif
 #include "ImGui/ImGuizmo.h"
 #ifdef INCLUDEICONFONT
@@ -131,8 +131,8 @@ Example_ImGui::~Example_ImGui()
 	//ImGui_ImplDX11_Shutdown();
 #ifdef _WIN32
 	ImGui_ImplWin32_Shutdown();
-#elif defined(SDL2)
-	ImGui_ImplSDL2_Shutdown();
+#elif defined(SDL3)
+	ImGui_ImplSDL3_Shutdown();
 #endif
 	ImGui::DestroyContext();
 }
@@ -173,8 +173,8 @@ void Example_ImGui::Initialize()
 #ifdef _WIN32
 	hWnd = window;
 	ImGui_ImplWin32_Init(window);
-#elif defined(SDL2)
-	ImGui_ImplSDL2_InitForVulkan(window);
+#elif defined(SDL3)
+	ImGui_ImplSDL3_InitForVulkan(window);
 #endif
 
 	IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");
@@ -457,11 +457,11 @@ void Example_ImGuiRenderer::Update(float dt)
 		ImGui_Impl_CreateDeviceObjects();
 	}
 
-	
+
 #ifdef _WIN32
 	ImGui_ImplWin32_NewFrame();
-#elif defined(SDL2)
-	ImGui_ImplSDL2_NewFrame();
+#elif defined(SDL3)
+	ImGui_ImplSDL3_NewFrame();
 #endif
 	ImGui::NewFrame();
 
@@ -681,7 +681,7 @@ void Example_ImGuiRenderer::Update(float dt)
 			bool bUseChild = false;
 			if (use_fixed_height > 0) bUseChild = true;
 			if(bUseChild) ImGui::BeginChild("##objectsc", ImVec2(0.0f, use_fixed_height), false, ImGuiWindowFlags_None); //ImGuiWindowFlags_AlwaysVerticalScrollbar
-			
+
 			for (int i = 0; i < size; i++)
 			{
 				Entity e = scene.objects.GetEntity(i);
@@ -740,12 +740,12 @@ void Example_ImGuiRenderer::Update(float dt)
 								float img_width = ImGui::GetContentRegionAvail().x - 2;// -12; //Padding
 
 								ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-								ImGui::ImageButton(lpTexture, ImVec2(img_width, img_width * height_ratio));
+								ImGui::ImageButton("imagebutton", lpTexture, ImVec2(img_width, img_width * height_ratio));
 								ImGui::PopStyleVar();
 								if (ImGui::IsItemHovered())
 								{
 									ImGui::BeginTooltip();
-									ImGui::ImageButton(lpTexture, ImVec2(300, 300 * height_ratio));
+									ImGui::ImageButton("imagebutton", lpTexture, ImVec2(300, 300 * height_ratio));
 									std::string filename = wi::helper::GetFileNameFromPath(pScene->materials[i].textures[a].name);
 									filename += " (" + std::to_string((int)iwidth) + "x" + std::to_string((int)iheight) + ")";
 
@@ -1029,7 +1029,7 @@ void Example_ImGuiRenderer::Update(float dt)
 				ImGui::EndTabBar();
 			}
 		}
-		
+
 		if (ImGui::CollapsingHeader(ICON_MD_SETTINGS "  Settings", ImGuiTreeNodeFlags_None)) //ImGuiTreeNodeFlags_DefaultOpen
 		{
 			ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2(0.0f, 3.0f));
@@ -1191,7 +1191,7 @@ void Example_ImGuiRenderer::Update(float dt)
 				float iwidth = (float) lpTexture->desc.width;
 				float height_ratio = iheight / iwidth;
 				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-				ImGui::ImageButton(lpTexture, ImVec2(img_width, img_width * height_ratio));
+				ImGui::ImageButton("lastPostprocessRT", lpTexture, ImVec2(img_width, img_width * height_ratio));
 				ImGui::PopStyleVar();
 			}
 			ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2((ImGui::GetContentRegionAvail().x * 0.5f) - (IMGUIBUTTONWIDE * 0.5f), 0.0f));
@@ -1217,7 +1217,7 @@ void Example_ImGuiRenderer::Update(float dt)
 						float iwidth = (float) lpTex->desc.width;
 						float height_ratio = iheight / iwidth;
 						ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-						ImGui::ImageButton(lpTex, ImVec2(img_width, img_width * height_ratio));
+						ImGui::ImageButton(screenshots[i].name.c_str(),lpTex, ImVec2(img_width, img_width * height_ratio));
 						ImGui::PopStyleVar();
 					}
 				}
@@ -1304,13 +1304,13 @@ void Example_ImGuiRenderer::Update(float dt)
 					float iwidth = (float) lpTexture->desc.width;
 					float height_ratio = iheight / iwidth;
 					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-					ImGui::ImageButton(lpTexture, ImVec2(img_width, img_width * height_ratio));
+					ImGui::ImageButton(title.c_str(), lpTexture, ImVec2(img_width, img_width * height_ratio));
 					ImGui::PopStyleVar();
 
 					if (ImGui::IsItemHovered())
 					{
 						ImGui::BeginTooltip();
-						ImGui::ImageButton(lpTexture, ImVec2(800, 800 * height_ratio));
+						ImGui::ImageButton(title.c_str(), lpTexture, ImVec2(800, 800 * height_ratio));
 						ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2((ImGui::GetContentRegionAvail().x * 0.5f) - (ImGui::CalcTextSize(title.c_str()).x * 0.5f), 0.0f));
 						ImGui::Text("%s", title.c_str());
 						ImGui::EndTooltip();
@@ -1390,7 +1390,7 @@ void Example_ImGuiRenderer::Update(float dt)
 				if (ImGui::Selectable(lua_history[i].c_str(), is_selected)) {
 					#ifdef _WIN32
 					strcpy_s(lua, lua_history[i].c_str());
-					#elif __linux__ 
+					#elif __linux__
 					strcpy(lua, lua_history[i].c_str());
 					#endif
 					bSetKeyBoardFocus = true;
@@ -1489,7 +1489,7 @@ void Example_ImGuiRenderer::Update(float dt)
 		}
 
 		float movespeed = CAMERAMOVESPEED;
-		
+
 		if (imgui_io.KeyShift)
 		{
 			movespeed *= 3.0; //Speed up camera.

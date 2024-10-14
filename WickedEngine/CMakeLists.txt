@@ -16,36 +16,17 @@ else()
 endif()
 
 if (WIN32)
-	# TODO: Choose whether to use SDL2 on windows as well
+	# TODO: Choose whether to use SDL3 on windows as well
 	set(TARGET_NAME WickedEngine_Windows)
 else ()
 	set(TARGET_NAME WickedEngine_Linux)
-	find_package(SDL2 REQUIRED)
+	find_package(SDL3 REQUIRED)
 	find_package(OpenImageDenoise "${MIN_OpenImageDenoise_VERSION}" QUIET)
 	find_package(Threads REQUIRED)
 	if(NOT ${OpenImageDenoise_FOUND})
 		message("OpenImageDenoise>=${MIN_OpenImageDenoise_VERSION} not found, it will be disabled.")
 	else()
 		message("OpenImageDenoise ${OpenImageDenoise_VERSION} Found.")
-	endif()
-
-	if(NOT TARGET SDL2::SDL2)
-		# using old SDL2 cmake, lets create a SDL2 target ourselves
-		find_library(SDL2_LIBRARY_FILE_LOCATION SDL2 REQUIRED)
-
-		add_library(SDL2::SDL2 SHARED IMPORTED)
-		set_target_properties(SDL2::SDL2 PROPERTIES
-			INTERFACE_INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIRS}
-			INTERFACE_LINK_LIBRARIES ${SDL2_LIBRARIES}
-			IMPORTED_LOCATION ${SDL2_LIBRARY_FILE_LOCATION}
-		)
-
-		unset(SDL2_LIBRARY_FILE_LOCATION)
-	endif()
-
-	# minimum sdl version is 2.0.14 for controller LED support
-	if((${SDL_VERSION_MAJOR} GREATER_EQUAL 2) AND (${SDL2_VERSION_MINOR} GREATER_EQUAL 0) AND (${SDL2_VERSION_PATCH} GREATER_EQUAL 14))
-		add_compile_definitions(SDL2_FEATURE_CONTROLLER_LED=1)
 	endif()
 endif()
 
@@ -95,7 +76,7 @@ else ()
 
 	target_link_libraries(${TARGET_NAME} PUBLIC
 		Threads::Threads
-		SDL2::SDL2
+		SDL3::SDL3
 		$<$<BOOL:${OpenImageDenoise_FOUND}>:OpenImageDenoise> # links OpenImageDenoise only if it's found
 	)
 	set(WICKEDENGINE_STATIC_LIBRARIES ${WICKEDENGINE_STATIC_LIBRARIES} FAudio)
@@ -136,8 +117,8 @@ endif()
 
 target_link_libraries(${TARGET_NAME} PUBLIC ${WICKEDENGINE_STATIC_LIBRARIES})
 
-if (PLATFORM MATCHES "SDL2")
-	target_compile_definitions(${TARGET_NAME} PUBLIC SDL2=1)
+if (PLATFORM MATCHES "SDL3")
+	target_compile_definitions(${TARGET_NAME} PUBLIC SDL3=1)
 endif()
 
 add_library(dxcompiler SHARED IMPORTED)

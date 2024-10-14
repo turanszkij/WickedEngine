@@ -63,7 +63,7 @@ namespace basisu
 
 	// This is a Public Domain 8x8 font from here:
 	// https://github.com/dhepper/font8x8/blob/master/font8x8_basic.h
-	const uint8_t g_debug_font8x8_basic[127 - 32 + 1][8] = 
+	const uint8_t g_debug_font8x8_basic[127 - 32 + 1][8] =
 	{
 	 { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},	// U+0020 ( )
 	 { 0x18, 0x3C, 0x3C, 0x18, 0x18, 0x00, 0x18, 0x00},   // U+0021 (!)
@@ -203,7 +203,7 @@ namespace basisu
 	{
 		char buf[8192];
 
-#ifdef _WIN32		
+#ifdef _WIN32
 		vsprintf_s(buf, sizeof(buf), pFmt, args);
 #else
 		vsnprintf(buf, sizeof(buf), pFmt, args);
@@ -256,7 +256,7 @@ namespace basisu
 #else
 #error TODO
 #endif
-				
+
 	interval_timer::interval_timer() : m_start_time(0), m_stop_time(0), m_started(false), m_stopped(false)
 	{
 		if (!g_timer_freq)
@@ -290,7 +290,7 @@ namespace basisu
 		timer_ticks delta = stop_time - m_start_time;
 		return delta * g_timer_freq;
 	}
-		
+
 	void interval_timer::init()
 	{
 		if (!g_timer_freq)
@@ -316,21 +316,21 @@ namespace basisu
 			init();
 		return ticks * g_timer_freq;
 	}
-		
+
 	const uint32_t MAX_32BIT_ALLOC_SIZE = 250000000;
-		
+
 	bool load_tga(const char* pFilename, image& img)
 	{
 		int w = 0, h = 0, n_chans = 0;
 		uint8_t* pImage_data = read_tga(pFilename, w, h, n_chans);
-				
+
 		if ((!pImage_data) || (!w) || (!h) || ((n_chans != 3) && (n_chans != 4)))
 		{
 			error_printf("Failed loading .TGA image \"%s\"!\n", pFilename);
 
 			if (pImage_data)
 				free(pImage_data);
-						
+
 			return false;
 		}
 
@@ -346,7 +346,7 @@ namespace basisu
 				return false;
 			}
 		}
-		
+
 		img.resize(w, h);
 
 		const uint8_t *pSrc = pImage_data;
@@ -375,7 +375,7 @@ namespace basisu
 	{
 		interval_timer tm;
 		tm.start();
-		
+
 		if (!buf_size)
 			return false;
 
@@ -393,7 +393,7 @@ namespace basisu
 
 		return true;
 	}
-		
+
 	bool load_png(const char* pFilename, image& img)
 	{
 		uint8_vec buffer;
@@ -412,9 +412,9 @@ namespace basisu
 		uint8_t *pImage_data = jpgd::decompress_jpeg_image_from_file(pFilename, &width, &height, &actual_comps, 4, jpgd::jpeg_decoder::cFlagLinearChromaFiltering);
 		if (!pImage_data)
 			return false;
-		
+
 		img.init(pImage_data, width, height, 4);
-		
+
 		free(pImage_data);
 
 		return true;
@@ -438,12 +438,12 @@ namespace basisu
 
 		return false;
 	}
-	
+
 	bool save_png(const char* pFilename, const image &img, uint32_t image_save_flags, uint32_t grayscale_comp)
 	{
 		if (!img.get_total_pixels())
 			return false;
-				
+
 		void* pPNG_data = nullptr;
 		size_t PNG_data_size = 0;
 
@@ -461,7 +461,7 @@ namespace basisu
 		else
 		{
 			bool has_alpha = false;
-			
+
 			if ((image_save_flags & cImageSaveIgnoreAlpha) == 0)
 				has_alpha = img.has_alpha();
 
@@ -478,7 +478,7 @@ namespace basisu
 						pDst[0] = pSrc->r;
 						pDst[1] = pSrc->g;
 						pDst[2] = pSrc->b;
-						
+
 						pSrc++;
 						pDst += 3;
 					}
@@ -502,10 +502,10 @@ namespace basisu
 		}
 
 		free(pPNG_data);
-						
+
 		return status;
 	}
-		
+
 	bool read_file_to_vec(const char* pFilename, uint8_vec& data)
 	{
 		FILE* pFile = nullptr;
@@ -516,7 +516,7 @@ namespace basisu
 #endif
 		if (!pFile)
 			return false;
-				
+
 		fseek(pFile, 0, SEEK_END);
 #ifdef _WIN32
 		int64_t filesize = _ftelli64(pFile);
@@ -601,17 +601,17 @@ namespace basisu
 	}
 
 	bool image_resample(const image &src, image &dst, bool srgb,
-		const char *pFilter, float filter_scale, 
+		const char *pFilter, float filter_scale,
 		bool wrapping,
 		uint32_t first_comp, uint32_t num_comps)
 	{
 		assert((first_comp + num_comps) <= 4);
 
 		const int cMaxComps = 4;
-				
+
 		const uint32_t src_w = src.get_width(), src_h = src.get_height();
 		const uint32_t dst_w = dst.get_width(), dst_h = dst.get_height();
-				
+
 		if (maximum(src_w, src_h) > BASISU_RESAMPLER_MAX_DIMENSION)
 		{
 			printf("Image is too large!\n");
@@ -620,10 +620,10 @@ namespace basisu
 
 		if (!src_w || !src_h || !dst_w || !dst_h)
 			return false;
-				
+
 		if ((num_comps < 1) || (num_comps > cMaxComps))
 			return false;
-				
+
 		if ((minimum(dst_w, dst_h) < 1) || (maximum(dst_w, dst_h) > BASISU_RESAMPLER_MAX_DIMENSION))
 		{
 			printf("Image is too large!\n");
@@ -654,7 +654,7 @@ namespace basisu
 
 		std::vector<float> samples[cMaxComps];
 		Resampler *resamplers[cMaxComps];
-		
+
 		resamplers[0] = new Resampler(src_w, src_h, dst_w, dst_h,
 			wrapping ? Resampler::BOUNDARY_WRAP : Resampler::BOUNDARY_CLAMP, 0.0f, 1.0f,
 			pFilter, nullptr, nullptr, filter_scale, filter_scale, 0, 0);
@@ -714,7 +714,7 @@ namespace basisu
 						break;
 
 					const bool linear_flag = !srgb || (comp_index == 3);
-					
+
 					color_rgba *pDst = &dst(0, dst_y);
 
 					for (uint32_t x = 0; x < dst_w; x++)
@@ -758,9 +758,9 @@ namespace basisu
 			A[0].m_key = 1;
 			return;
 		}
-		
+
 		A[0].m_key += A[1].m_key;
-		
+
 		int s = 2, r = 0, next;
 		for (next = 1; next < (num_syms - 1); ++next)
 		{
@@ -852,7 +852,7 @@ namespace basisu
 		for (i = 0; i < num_syms; i++)
 		{
 			uint32_t freq = pSyms0[i].m_key;
-			
+
 			// We scale all input frequencies to 16-bits.
 			assert(freq <= UINT16_MAX);
 
@@ -1043,7 +1043,7 @@ namespace basisu
 
 		uint32_t total_used = tab.get_total_used_codes();
 		put_bits(total_used, cHuffmanMaxSymsLog2);
-			
+
 		if (!total_used)
 			return 0;
 
@@ -1107,7 +1107,7 @@ namespace basisu
 			const uint32_t l = syms[i] & 63, e = syms[i] >> 6;
 
 			put_code(l, ct);
-				
+
 			if (l == cHuffmanSmallZeroRunCode)
 				put_bits(e, cHuffmanSmallZeroRunExtraBits);
 			else if (l == cHuffmanBigZeroRunCode)
@@ -1134,7 +1134,7 @@ namespace basisu
 
 		huffman_encoding_table etab;
 		etab.init(h, 16);
-		
+
 		{
 			bitwise_coder c;
 			c.init(1024);
@@ -1269,9 +1269,9 @@ namespace basisu
 
 			// We now have chosen an entry to place in the picked list, now determine which side it goes on.
 			const uint32_t entry_to_move = m_entries_to_do[best_entry];
-								
+
 			float side = pick_side(num_syms, entry_to_move, pDist_func, pCtx, dist_func_weight);
-								
+
 			// Put entry_to_move either on the "left" or "right" side of the picked entries
 			if (side <= 0)
 				m_entries_picked.push_back(entry_to_move);
@@ -1451,7 +1451,7 @@ namespace basisu
 
 	uint32_t hash_hsieh(const uint8_t *pBuf, size_t len)
 	{
-		if (!pBuf || !len) 
+		if (!pBuf || !len)
 			return 0;
 
 		uint32_t h = static_cast<uint32_t>(len);
@@ -1464,23 +1464,23 @@ namespace basisu
 			const uint16_t *pWords = reinterpret_cast<const uint16_t *>(pBuf);
 
 			h += pWords[0];
-			
+
 			const uint32_t t = (pWords[1] << 11) ^ h;
 			h = (h << 16) ^ t;
-			
+
 			pBuf += sizeof(uint32_t);
-			
+
 			h += h >> 11;
 		}
 
 		switch (bytes_left)
 		{
-		case 1: 
+		case 1:
 			h += *reinterpret_cast<const signed char*>(pBuf);
 			h ^= h << 10;
 			h += h >> 1;
 			break;
-		case 2: 
+		case 2:
 			h += *reinterpret_cast<const uint16_t *>(pBuf);
 			h ^= h << 11;
 			h += h >> 17;
@@ -1494,7 +1494,7 @@ namespace basisu
 		default:
 			break;
 		}
-		
+
 		h ^= h << 3;
 		h += h >> 5;
 		h ^= h << 4;
@@ -1505,7 +1505,7 @@ namespace basisu
 		return h;
 	}
 
-	job_pool::job_pool(uint32_t num_threads) : 
+	job_pool::job_pool(uint32_t num_threads) :
 		m_num_active_jobs(0),
 		m_kill_flag(false)
 	{
@@ -1525,17 +1525,17 @@ namespace basisu
 	job_pool::~job_pool()
 	{
 		debug_printf("job_pool::~job_pool\n");
-		
+
 		// Notify all workers that they need to die right now.
 		m_kill_flag = true;
-		
+
 		m_has_work.notify_all();
 
 		// Wait for all workers to die.
 		for (uint32_t i = 0; i < m_threads.size(); i++)
 			m_threads[i].join();
 	}
-				
+
 	void job_pool::add_job(const std::function<void()>& job)
 	{
 		std::unique_lock<std::mutex> lock(m_mutex);
@@ -1555,7 +1555,7 @@ namespace basisu
 		std::unique_lock<std::mutex> lock(m_mutex);
 
 		m_queue.emplace_back(std::move(job));
-						
+
 		const size_t queue_size = m_queue.size();
 
 		lock.unlock();
@@ -1591,7 +1591,7 @@ namespace basisu
 	{
 		BASISU_NOTE_UNUSED(index);
 		//debug_printf("job_pool::job_thread: starting %u\n", index);
-		
+
 		while (true)
 		{
 			std::unique_lock<std::mutex> lock(m_mutex);
@@ -1617,9 +1617,9 @@ namespace basisu
 
 			--m_num_active_jobs;
 
-			// Now check if there are no more jobs remaining. 
+			// Now check if there are no more jobs remaining.
 			const bool all_done = m_queue.empty() && !m_num_active_jobs;
-			
+
 			lock.unlock();
 
 			if (all_done)
@@ -1678,7 +1678,7 @@ namespace basisu
 		// Simple validation
 		if ((hdr.m_cmap != 0) && (hdr.m_cmap != 1))
 			return nullptr;
-		
+
 		if (hdr.m_cmap)
 		{
 			if ((hdr.m_cmap_bpp == 0) || (hdr.m_cmap_bpp > 32))
@@ -1837,13 +1837,13 @@ namespace basisu
 				bytes_remaining += bytes_to_skip;
 			}
 		}
-		
+
 		width = hdr.m_width;
 		height = hdr.m_height;
 
 		const uint32_t source_pitch = width * tga_bytes_per_pixel;
 		const uint32_t dest_pitch = width * n_chans;
-		
+
 		uint8_t *pImage = (uint8_t *)malloc(dest_pitch * height);
 		if (!pImage)
 			return nullptr;
@@ -1865,7 +1865,7 @@ namespace basisu
 				int pixels_remaining = width;
 				uint8_t *pDst = &input_line_buf[0];
 
-				do 
+				do
 				{
 					if (!run_remaining)
 					{
@@ -2050,7 +2050,7 @@ namespace basisu
 
 		if (!filedata.size() || (filedata.size() > UINT32_MAX))
 			return nullptr;
-		
+
 		return read_tga(&filedata[0], (uint32_t)filedata.size(), width, height, n_chans);
 	}
 
@@ -2060,7 +2060,7 @@ namespace basisu
 
 		va_list args;
 		va_start(args, pFmt);
-#ifdef _WIN32		
+#ifdef _WIN32
 		vsprintf_s(buf, sizeof(buf), pFmt, args);
 #else
 		vsnprintf(buf, sizeof(buf), pFmt, args);
@@ -2085,7 +2085,7 @@ namespace basisu
 				for (uint32_t x = 0; x < 8; x++)
 				{
 					const uint32_t q = row_bits & (1 << x);
-										
+
 					const color_rgba* pColor = q ? &fg : pBG;
 					if (!pColor)
 						continue;
@@ -2105,5 +2105,5 @@ namespace basisu
 			}
 		}
 	}
-		
+
 } // namespace basisu

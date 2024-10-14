@@ -24,29 +24,46 @@
  *
  */
 
-#if !defined(FAUDIO_WIN32_PLATFORM) && !defined(FAUDIO_SDL3_PLATFORM)
+#ifdef FAUDIO_SDL3_PLATFORM
 
 #include "FAudio_internal.h"
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
-#if !SDL_VERSION_ATLEAST(2, 24, 0)
-#error "SDL version older than 2.24.0"
-#endif /* !SDL_VERSION_ATLEAST */
+typedef struct SDLAudioDevice
+{
+	FAudio *audio;
+	SDL_AudioStream *stream;
+	float *stagingBuffer;
+	size_t stagingLen;
+} SDLAudioDevice;
 
 /* Mixer Thread */
 
-static void FAudio_INTERNAL_MixCallback(void *userdata, Uint8 *stream, int len)
-{
-	FAudio *audio = (FAudio*) userdata;
+static void FAudio_INTERNAL_MixCallback(
+	void *userdata,
+	SDL_AudioStream *stream,
+	int additional_amount,
+	int total_amount
+) {
+	SDLAudioDevice *dev = (SDLAudioDevice*) userdata;
 
-	FAudio_zero(stream, len);
-	if (audio->active)
+	if (!dev->audio->active)
 	{
-		FAudio_INTERNAL_UpdateEngine(
-			audio,
-			(float*) stream
+		/* Nothing to do, SDL will fill in for us */
+		return;
+	}
+
+	while (additional_amount > 0)
+	{
+		FAudio_zero(dev->stagingBuffer, dev->stagingLen);
+		FAudio_INTERNAL_UpdateEngine(dev->audio, dev->stagingBuffer);
+		SDL_PutAudioStreamData(
+			stream,
+			dev->stagingBuffer,
+			dev->stagingLen
 		);
+		additional_amount -= dev->stagingLen;
 	}
 }
 
@@ -57,7 +74,7 @@ static void FAudio_INTERNAL_PrioritizeDirectSound()
 	int numdrivers, i, wasapi, directsound;
 	void *dll, *proc;
 
-	if (SDL_GetHint("SDL_AUDIODRIVER") != NULL)
+	if (SDL_GetHint("SDL_AUDIO_DRIVER") != NULL)
 	{
 		/* Already forced to something, ignore */
 		return;
@@ -107,7 +124,7 @@ static void FAudio_INTERNAL_PrioritizeDirectSound()
 	{
 		if (wasapi < directsound)
 		{
-			SDL_SetHint("SDL_AUDIODRIVER", "directsound");
+			SDL_SetHint("SDL_AUDIO_DRIVER", "directsound");
 		}
 	}
 }
@@ -141,97 +158,96 @@ void FAudio_PlatformInit(
 	uint32_t *updateSize,
 	void** platformDevice
 ) {
-	SDL_AudioDeviceID device;
-	SDL_AudioSpec want, have;
+	SDLAudioDevice *result;
+	SDL_AudioDeviceID devID;
+	SDL_AudioSpec spec;
+	int wantSamples;
 
 	FAudio_assert(mixFormat != NULL);
 	FAudio_assert(updateSize != NULL);
-	FAudio_assert((mixFormat->Format.nChannels <= 255) && "mixFormat->Format.nChannels out of range!");
 
 	/* Build the device spec */
-	want.freq = mixFormat->Format.nSamplesPerSec;
-	want.format = AUDIO_F32SYS;
-	want.channels = (Uint8)(mixFormat->Format.nChannels);
-	want.silence = 0;
-	want.callback = FAudio_INTERNAL_MixCallback;
-	want.userdata = audio;
+	spec.freq = mixFormat->Format.nSamplesPerSec;
+	spec.format = SDL_AUDIO_F32;
+	spec.channels = mixFormat->Format.nChannels;
 	if (flags & FAUDIO_1024_QUANTUM)
 	{
 		/* Get the sample count for a 21.33ms frame.
 		 * For 48KHz this should be 1024.
 		 */
-		want.samples = (int) (
-			want.freq / (1000.0 / (64.0 / 3.0))
+		wantSamples = (int) (
+			spec.freq / (1000.0 / (64.0 / 3.0))
 		);
 	}
 	else
 	{
-		want.samples = want.freq / 100;
+		wantSamples = spec.freq / 100;
 	}
+
+	if (deviceIndex == 0)
+	{
+		devID = SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK;
+	}
+	else
+	{
+		int devcount;
+		SDL_AudioDeviceID *devs = SDL_GetAudioPlaybackDevices(&devcount);
+
+		/* Bounds checking is done before this function is called */
+		devID = devs[deviceIndex - 1];
+
+		SDL_free(devs);
+	}
+
+	result = (SDLAudioDevice*) SDL_malloc(sizeof(SDLAudioDevice));
+	result->audio = audio;
+	result->stagingLen = wantSamples * spec.channels * sizeof(float);
+	result->stagingBuffer = (float*) SDL_malloc(result->stagingLen);
 
 	/* Open the device (or at least try to) */
-iosretry:
-	device = SDL_OpenAudioDevice(
-		deviceIndex > 0 ? SDL_GetAudioDeviceName(deviceIndex - 1, 0) : NULL,
-		0,
-		&want,
-		&have,
-		0
+	result->stream = SDL_OpenAudioDeviceStream(
+		devID,
+		&spec,
+		FAudio_INTERNAL_MixCallback,
+		result
 	);
-	if (device == 0)
-	{
-		const char *err = SDL_GetError();
-		SDL_Log("OpenAudioDevice failed: %s", err);
-
-		/* iOS has a weird thing where you can't open a stream when the
-		 * app is in the background, even though the program is meant
-		 * to be suspended and thus not trip this in the first place.
-		 *
-		 * Startup suspend behavior when an app is opened then closed
-		 * is a big pile of crap, basically.
-		 *
-		 * Google the error code and you'll find that this has been a
-		 * long-standing issue that nobody seems to care about.
-		 * -flibit
-		 */
-		if (SDL_strstr(err, "Code=561015905") != NULL)
-		{
-			goto iosretry;
-		}
-
-		FAudio_assert(0 && "Failed to open audio device!");
-		return;
-	}
 
 	/* Write up the received format for the engine */
 	WriteWaveFormatExtensible(
 		mixFormat,
-		have.channels,
-		have.freq,
+		spec.channels,
+		spec.freq,
 		&DATAFORMAT_SUBTYPE_IEEE_FLOAT
 	);
-	*updateSize = have.samples;
+	*updateSize = wantSamples;
 
 	/* SDL_AudioDeviceID is a Uint32, anybody using a 16-bit PC still? */
-	*platformDevice = (void*) ((size_t) device);
+	*platformDevice = result;
 
 	/* Start the thread! */
-	SDL_PauseAudioDevice(device, 0);
+	SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(result->stream));
 }
 
 void FAudio_PlatformQuit(void* platformDevice)
 {
-	SDL_CloseAudioDevice((SDL_AudioDeviceID) ((size_t) platformDevice));
+	SDLAudioDevice *dev = (SDLAudioDevice*) platformDevice;
+	SDL_AudioDeviceID devID = SDL_GetAudioStreamDevice(dev->stream);
+	SDL_DestroyAudioStream(dev->stream);
+	SDL_CloseAudioDevice(devID);
+	SDL_free(dev->stagingBuffer);
+	SDL_free(dev);
 }
 
 uint32_t FAudio_PlatformGetDeviceCount()
 {
-	uint32_t devCount = SDL_GetNumAudioDevices(0);
-	if (devCount == 0)
+	int devcount;
+	SDL_free(SDL_GetAudioPlaybackDevices(&devcount));
+	if (devcount == 0)
 	{
 		return 0;
 	}
-	return devCount + 1; /* Add one for "Default Device" */
+	SDL_assert(devcount > 0);
+	return devcount + 1; /* Add one for "Default Device" */
 }
 
 void FAudio_UTF8_To_UTF16(const char *src, uint16_t *dst, size_t len);
@@ -243,13 +259,15 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 	const char *name, *envvar;
 	int channels, rate;
 	SDL_AudioSpec spec;
-	uint32_t devcount;
+	int devcount;
+	SDL_AudioDeviceID *devs;
 
 	FAudio_zero(details, sizeof(FAudioDeviceDetails));
 
-	devcount = FAudio_PlatformGetDeviceCount();
-	if (index >= devcount)
+	devs = SDL_GetAudioPlaybackDevices(&devcount);
+	if (index > devcount)
 	{
+		SDL_free(devs);
 		return FAUDIO_E_INVALID_CALL;
 	}
 
@@ -274,7 +292,7 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 	}
 	else
 	{
-		name = SDL_GetAudioDeviceName(index - 1, 0);
+		name = SDL_GetAudioDeviceName(devs[index - 1]);
 		details->Role = FAudioNotDefaultDevice;
 	}
 	FAudio_UTF8_To_UTF16(
@@ -306,16 +324,19 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 	/* Get the device format from the OS */
 	if (index == 0)
 	{
-		/* TODO: Do we want to squeeze the name into the output? */
-		if (SDL_GetDefaultAudioInfo(NULL, &spec, 0) < 0)
+		if (SDL_GetAudioDeviceFormat(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL) < 0)
 		{
 			SDL_zero(spec);
 		}
 	}
 	else
 	{
-		SDL_GetAudioDeviceSpec(index - 1, 0, &spec);
+		if (SDL_GetAudioDeviceFormat(devs[index - 1], &spec, NULL) < 0)
+		{
+			SDL_zero(spec);
+		}
 	}
+	SDL_free(devs);
 	if ((spec.freq > 0) && (rate <= 0))
 	{
 		rate = spec.freq;
@@ -366,12 +387,12 @@ void FAudio_PlatformWaitThread(FAudioThread thread, int32_t *retval)
 
 void FAudio_PlatformThreadPriority(FAudioThreadPriority priority)
 {
-	SDL_SetThreadPriority((SDL_ThreadPriority) priority);
+	SDL_SetCurrentThreadPriority((SDL_ThreadPriority) priority);
 }
 
 uint64_t FAudio_PlatformGetThreadID(void)
 {
-	return (uint64_t) SDL_ThreadID();
+	return (uint64_t) SDL_GetCurrentThreadID();
 }
 
 FAudioMutex FAudio_PlatformCreateMutex()
@@ -381,17 +402,17 @@ FAudioMutex FAudio_PlatformCreateMutex()
 
 void FAudio_PlatformDestroyMutex(FAudioMutex mutex)
 {
-	SDL_DestroyMutex((SDL_mutex*) mutex);
+	SDL_DestroyMutex((SDL_Mutex*) mutex);
 }
 
 void FAudio_PlatformLockMutex(FAudioMutex mutex)
 {
-	SDL_LockMutex((SDL_mutex*) mutex);
+	SDL_LockMutex((SDL_Mutex*) mutex);
 }
 
 void FAudio_PlatformUnlockMutex(FAudioMutex mutex)
 {
-	SDL_UnlockMutex((SDL_mutex*) mutex);
+	SDL_UnlockMutex((SDL_Mutex*) mutex);
 }
 
 void FAudio_sleep(uint32_t ms)
@@ -408,16 +429,39 @@ uint32_t FAudio_timems()
 
 /* FAudio I/O */
 
+static size_t FAUDIOCALL FAudio_INTERNAL_ioread(
+	void *data,
+	void *dst,
+	size_t size,
+	size_t count
+) {
+	return SDL_ReadIO((SDL_IOStream*) data, dst, size * count);
+}
+
+static int64_t FAUDIOCALL FAudio_INTERNAL_ioseek(
+	void *data,
+	int64_t offset,
+	int whence
+) {
+	return SDL_SeekIO((SDL_IOStream*) data, offset, whence);
+}
+
+static int FAUDIOCALL FAudio_INTERNAL_ioclose(
+	void *data
+) {
+	return SDL_CloseIO((SDL_IOStream*) data);
+}
+
 FAudioIOStream* FAudio_fopen(const char *path)
 {
 	FAudioIOStream *io = (FAudioIOStream*) FAudio_malloc(
 		sizeof(FAudioIOStream)
 	);
-	SDL_RWops *rwops = SDL_RWFromFile(path, "rb");
-	io->data = rwops;
-	io->read = (FAudio_readfunc) rwops->read;
-	io->seek = (FAudio_seekfunc) rwops->seek;
-	io->close = (FAudio_closefunc) rwops->close;
+	SDL_IOStream *stream = SDL_IOFromFile(path, "rb");
+	io->data = stream;
+	io->read = FAudio_INTERNAL_ioread;
+	io->seek = FAudio_INTERNAL_ioseek;
+	io->close = FAudio_INTERNAL_ioclose;
 	io->lock = FAudio_PlatformCreateMutex();
 	return io;
 }
@@ -427,20 +471,20 @@ FAudioIOStream* FAudio_memopen(void *mem, int len)
 	FAudioIOStream *io = (FAudioIOStream*) FAudio_malloc(
 		sizeof(FAudioIOStream)
 	);
-	SDL_RWops *rwops = SDL_RWFromMem(mem, len);
-	io->data = rwops;
-	io->read = (FAudio_readfunc) rwops->read;
-	io->seek = (FAudio_seekfunc) rwops->seek;
-	io->close = (FAudio_closefunc) rwops->close;
+	SDL_IOStream *stream = SDL_IOFromMem(mem, len);
+	io->data = stream;
+	io->read = FAudio_INTERNAL_ioread;
+	io->seek = FAudio_INTERNAL_ioseek;
+	io->close = FAudio_INTERNAL_ioclose;
 	io->lock = FAudio_PlatformCreateMutex();
 	return io;
 }
 
 uint8_t* FAudio_memptr(FAudioIOStream *io, size_t offset)
 {
-	SDL_RWops *rwops = (SDL_RWops*) io->data;
-	FAudio_assert(rwops->type == SDL_RWOPS_MEMORY);
-	return rwops->hidden.mem.base + offset;
+	SDL_PropertiesID props = SDL_GetIOProperties((SDL_IOStream*) io->data);
+	FAudio_assert(SDL_HasProperty(props, SDL_PROP_IOSTREAM_MEMORY_POINTER));
+	return ((uint8_t*) SDL_GetPointerProperty(props, SDL_PROP_IOSTREAM_MEMORY_POINTER, NULL)) + offset;
 }
 
 void FAudio_close(FAudioIOStream *io)
@@ -451,18 +495,33 @@ void FAudio_close(FAudioIOStream *io)
 }
 
 #ifdef FAUDIO_DUMP_VOICES
+static size_t FAUDIOCALL FAudio_INTERNAL_iowrite(
+	void *data,
+	const void *src,
+	size_t size,
+	size_t count
+) {
+	SDL_WriteIO((SDL_IOStream*) data, src, size * count);
+}
+
+static size_t FAUDIOCALL FAudio_INTERNAL_iosize(
+	void *data
+) {
+	return SDL_GetIOSize((SDL_IOStream*) data);
+}
+
 FAudioIOStreamOut* FAudio_fopen_out(const char *path, const char *mode)
 {
 	FAudioIOStreamOut *io = (FAudioIOStreamOut*) FAudio_malloc(
 		sizeof(FAudioIOStreamOut)
 	);
-	SDL_RWops *rwops = SDL_RWFromFile(path, mode);
-	io->data = rwops;
-	io->read = (FAudio_readfunc) rwops->read;
-	io->write = (FAudio_writefunc) rwops->write;
-	io->seek = (FAudio_seekfunc) rwops->seek;
-	io->size = (FAudio_sizefunc) rwops->size;
-	io->close = (FAudio_closefunc) rwops->close;
+	SDL_IOStream *stream = SDL_IOFromFile(path, mode);
+	io->data = stream;
+	io->read = FAudio_INTERNAL_ioread;
+	io->write = FAudio_INTERNAL_iowrite;
+	io->seek = FAudio_INTERNAL_ioseek;
+	io->size = FAudio_INTERNAL_iosize;
+	io->close = FAudio_INTERNAL_ioclose;
 	io->lock = FAudio_PlatformCreateMutex();
 	return io;
 }
@@ -672,4 +731,4 @@ void FAudio_UTF8_To_UTF16(const char *src, uint16_t *dst, size_t len)
 
 extern int this_tu_is_empty;
 
-#endif /* !defined(FAUDIO_WIN32_PLATFORM) && !defined(FAUDIO_SDL3_PLATFORM) */
+#endif /* FAUDIO_SDL3_PLATFORM */

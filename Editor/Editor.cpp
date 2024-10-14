@@ -16,7 +16,7 @@ using namespace wi::ecs;
 extern BOOL CreateEditorWindow(int nCmdShow);
 extern bool window_recreating;
 #elif defined(PLATFORM_LINUX)
-#include "sdl2.h"
+#include "sdl3.h"
 #endif // PLATFORM_WINDOWS
 
 enum class FileType
@@ -1068,7 +1068,8 @@ void EditorComponent::Load()
 			main->window = {};
 			CreateEditorWindow(SW_SHOWNORMAL);
 #elif defined(PLATFORM_LINUX)
-			SDL_SetWindowFullscreen(main->window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+			// wi::graphics::GetDevice()->WaitForGPU();
+			SDL_SetWindowFullscreen(main->window, fullscreen);
 #endif // PLATFORM_WINDOWS_DESKTOP
 
 		});

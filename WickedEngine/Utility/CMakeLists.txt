@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.12)
 
 include(GNUInstallDirs)
-if (PLATFORM MATCHES "SDL2")
+if (PLATFORM MATCHES "SDL3")
 	add_subdirectory(FAudio)
 endif()
 
