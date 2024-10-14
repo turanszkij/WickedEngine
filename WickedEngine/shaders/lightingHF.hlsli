@@ -14,18 +14,6 @@
 #define LIGHTING_SCATTER
 #endif // WATER
 
-template<typename T>
-inline void QuadBlur(inout T value)
-{
-#if __SHADER_TARGET_STAGE == __SHADER_STAGE_PIXEL && defined(SHADOW_SAMPLING_DISK) && !defined(__spirv__) // Note: Vulkan is disabled because AMD doesn't handle it correctly
-// Average shadow within quad, this smooths out the dithering a bit:
-//	Note that I don't implement this in shadowHF.hlsli because we need to
-//	make sure that when averaging, all lanes in the quad are coherent
-//	It wouldn't be good if some waves are not sampling shadows or sampling different slices
-	value = (value + QuadReadAcrossX(value) + QuadReadAcrossY(value) + QuadReadAcrossDiagonal(value)) * 0.25;
-#endif // __SHADER_STAGE_PIXEL
-}
-
 struct LightingPart
 {
 	half3 diffuse;
@@ -61,20 +49,19 @@ inline void ApplyLighting(in Surface surface, in Lighting lighting, inout half4 
 
 inline void light_directional(in ShaderEntity light, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
 {
-	bool early_exit = (light.layerMask & surface.layerMask) == 0; // layer mismatch
+	if (shadow_mask <= 0.001)
+		return; // shadow mask zero
+	if ((light.layerMask & surface.layerMask) == 0)
+		return; // layer mismatch
 		
 	half3 L = light.GetDirection();
 	SurfaceToLight surface_to_light;
 	surface_to_light.create(surface, L);
 
-	early_exit |= !any(surface_to_light.NdotL_sss); // facing away from light
+	if (!any(surface_to_light.NdotL_sss))
+		return; // facing away from light
 		
 	half3 light_color = light.GetColor().rgb * shadow_mask;
-	
-	early_exit |= !any(light_color); // light color lost
-
-	if (WaveActiveAllTrue(early_exit))
-		return; // COHERENT early exit before QuadBlur
 
 	[branch]
 	if (light.IsCastingShadow() && surface.IsReceiveShadow())
@@ -116,13 +103,9 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 			}
 		}
 		
-		QuadBlur(light_color);
-		
-		early_exit |= !any(light_color); // light color lost after shadow
+		if (!any(light_color))
+			return; // light color lost after shadow
 	}
-
-	if (early_exit)
-		return; // DIVERGENT early exit after QuadBlur
 
 	[branch]
 	if (GetFrame().options & OPTION_BIT_REALISTIC_SKY)
@@ -174,7 +157,10 @@ inline half attenuation_pointlight(in half dist2, in half range, in half range2)
 }
 inline void light_point(in ShaderEntity light, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
 {
-	bool early_exit = (light.layerMask & surface.layerMask) == 0; // layer mismatch
+	if (shadow_mask <= 0.001)
+		return; // shadow mask zero
+	if ((light.layerMask & surface.layerMask) == 0)
+		return; // layer mismatch
 	
 	float3 Lunnormalized = light.position - surface.P;
 	const float3 LunnormalizedShadow = Lunnormalized;
@@ -196,7 +182,8 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 	const half range = light.GetRange();
 	const half range2 = range * range;
 
-	early_exit |= dist2 > range2; // outside range
+	if (dist2 > range2)
+		return; // outside range
 		
 	const half dist_rcp = rsqrt(dist2);
 	half3 L = Lunnormalized * dist_rcp;
@@ -204,14 +191,10 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 	SurfaceToLight surface_to_light;
 	surface_to_light.create(surface, L);
 		
-	early_exit |= !any(surface_to_light.NdotL_sss); // facing away from light
+	if (!any(surface_to_light.NdotL_sss))
+		return; // facing away from light
 		
 	half3 light_color = light.GetColor().rgb * shadow_mask;
-	
-	early_exit |= !any(light_color); // light color lost
-
-	if (WaveActiveAllTrue(early_exit))
-		return; // COHERENT early exit before QuadBlur
 
 	[branch]
 	if (light.IsCastingShadow() && surface.IsReceiveShadow())
@@ -224,15 +207,10 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 			light_color *= shadow_cube(light, LunnormalizedShadow, surface.pixel);
 		}
 		
-		QuadBlur(light_color);
-		
-		early_exit |= !any(light_color); // light color lost after shadow
+		if (!any(light_color))
+			return; // light color lost after shadow
 	}
-
-	if (early_exit)
-		return; // DIVERGENT early exit after QuadBlur
 		
-	// Reminder: attenuation must be AFTER QuadBlur!
 	light_color *= attenuation_pointlight(dist2, range, range2);
 
 	lighting.direct.diffuse = mad(light_color, BRDF_GetDiffuse(surface, surface_to_light), lighting.direct.diffuse);
@@ -288,14 +266,18 @@ inline half attenuation_spotlight(in half dist2, in half range, in half range2, 
 }
 inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
 {
-	bool early_exit = (light.layerMask & surface.layerMask) == 0; // layer mismatch
+	if (shadow_mask <= 0.001)
+		return; // shadow mask zero
+	if ((light.layerMask & surface.layerMask) == 0)
+		return; // layer mismatch
 	
 	float3 Lunnormalized = light.position - surface.P;
 	const half dist2 = dot(Lunnormalized, Lunnormalized);
 	const half range = light.GetRange();
 	const half range2 = range * range;
 	
-	early_exit |= dist2 > range2; // outside range
+	if (dist2 > range2)
+		return; // outside range
 		
 	const half dist_rcp = rsqrt(dist2);
 	half3 L = Lunnormalized * dist_rcp;
@@ -303,19 +285,16 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 	SurfaceToLight surface_to_light;
 	surface_to_light.create(surface, L);
 		
-	early_exit |= !any(surface_to_light.NdotL_sss); // facing away from light
+	if (!any(surface_to_light.NdotL_sss))
+		return; // facing away from light
 			
 	const half spot_factor = dot(L, light.GetDirection());
 	const half spot_cutoff = light.GetConeAngleCos();
 			
-	early_exit |= spot_factor < spot_cutoff; // outside spotlight cone
+	if (spot_factor < spot_cutoff)
+		return; // outside spotlight cone
 
 	half3 light_color = light.GetColor().rgb * shadow_mask;
-	
-	early_exit |= !any(light_color); // light color lost
-
-	if (WaveActiveAllTrue(early_exit))
-		return; // COHERENT early exit before QuadBlur
 
 	[branch]
 	if (light.IsCastingShadow() && surface.IsReceiveShadow())
@@ -335,15 +314,10 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 			}
 		}
 		
-		QuadBlur(light_color);
-		
-		early_exit |= !any(light_color); // light color lost after shadow
+		if (!any(light_color))
+			return; // light color lost after shadow
 	}
-
-	if (early_exit)
-		return; // DIVERGENT early exit after QuadBlur
-
-	// Reminder: attenuation must be AFTER QuadBlur!
+	
 	light_color *= attenuation_spotlight(dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
 		
 	lighting.direct.diffuse = mad(light_color, BRDF_GetDiffuse(surface, surface_to_light), lighting.direct.diffuse);
