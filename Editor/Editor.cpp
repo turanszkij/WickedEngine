@@ -1103,7 +1103,7 @@ void EditorComponent::Load()
 
 	{
 		std::string ss;
-		ss += "Wicked Engine Editor v";
+		ss += "Wicked Editor v";
 		ss += wi::version::GetVersionString();
 		ss += "\n\nWebsite: https://wickedengine.net/";
 		ss += "\nSource code: https://github.com/turanszkij/WickedEngine";
@@ -1137,12 +1137,12 @@ void EditorComponent::Load()
 		ss += "Scale Toggle: " + main->config.GetSection("hotkeys").GetText("scale_toggle_action") + "\n";
 		ss += "Wireframe mode: " + main->config.GetSection("hotkeys").GetText("wireframe_mode") + "\n";
 		ss += "Screenshot (saved into Editor's screenshots folder): " + main->config.GetSection("hotkeys").GetText("make_new_screenshot") + "\n";
-		ss += "Depth of field refocus to point: " + main->config.GetSection("hotkeys").GetText("depthoffield_refocustopoint") + "+LEFTMOUSEBUTTON" + "\n";
+		ss += "Depth of field refocus to point: " + main->config.GetSection("hotkeys").GetText("depth_of_field_refocus_to_point") + " + left mouse button" + "\n";
 		ss += "Color grading reference: " + main->config.GetSection("hotkeys").GetText("colorgrading_reference") + " (color grading palette reference will be displayed in top left corner)\n";
 		ss += "Focus on selected: " + main->config.GetSection("hotkeys").GetText("focus_on_selection") + " button, this will make the camera jump to selection.\n";
 		ss += "Inspector mode: " + main->config.GetSection("hotkeys").GetText("inspector_mode") + " button (hold), hovered entity information will be displayed near mouse position.\n";
 		ss += "Place Instances: " + main->config.GetSection("hotkeys").GetText("PLACE_INSTANCES") + " (place clipboard onto clicked surface)\n";
-		ss += "Ragdoll and physics impulse tester: Hold " + main->config.GetSection("hotkeys").GetText("ragdoll_and_physics_impulse_tester") + " and click on ragdoll or rigid body physics entity.\n";
+		ss += "Ragdoll and physics impulse tester: Hold " + main->config.GetSection("hotkeys").GetText("ragdoll_and_physics_impulse_tester") + " and click on ragdoll or rigid body physics entity with middle mouse.\n";
 		ss += "Script Console / backlog: HOME button\n";
 		ss += "Bone picking: First select an armature, only then bone picking becomes available. As long as you have an armature or bone selected, bone picking will remain active.\n";
 		ss += "\n";

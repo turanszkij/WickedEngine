@@ -744,6 +744,8 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			{
 				if (x.GetGPUResource() == nullptr)
 					continue;
+				if (has_flag(x.resource.GetTexture().GetDesc().misc_flags, ResourceMiscFlag::SPARSE))
+					continue;
 				if (wi::helper::GetExtensionFromFileName(x.name).compare("DDS"))
 				{
 					x.name = wi::helper::ReplaceExtension(x.name, "DDS");
@@ -786,6 +788,8 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			for (auto& x : material.textures)
 			{
 				if (x.GetGPUResource() == nullptr)
+					continue;
+				if (has_flag(x.resource.GetTexture().GetDesc().misc_flags, ResourceMiscFlag::SPARSE))
 					continue;
 				if (wi::helper::GetExtensionFromFileName(x.name).compare("KTX2"))
 				{
