@@ -2495,10 +2495,12 @@ namespace wi::scene
 				desc.bind_flags = BindFlag::SHADER_RESOURCE;
 				desc.width = DDGI_COLOR_TEXELS * grid_dimensions.x * grid_dimensions.y;
 				desc.height = DDGI_COLOR_TEXELS * grid_dimensions.z;
+				desc.width = std::max(256u, desc.width);	// apply same padding as the sparse texture version
+				desc.height = std::max(256u, desc.height);	// apply same padding as the sparse texture version
 				desc.format = Format::BC6H_UF16;
 				const uint32_t num_blocks_x = desc.width / GetFormatBlockSize(desc.format);
-				const uint32_t num_blocks_y = desc.height / GetFormatBlockSize(desc.format);
-				if (data.size() == num_blocks_x * num_blocks_y * GetFormatStride(desc.format))
+				const size_t required_size = ComputeTextureMemorySizeInBytes(desc);
+				if (data.size() == required_size)
 				{
 					SubresourceData initdata;
 					initdata.data_ptr = data.data();
