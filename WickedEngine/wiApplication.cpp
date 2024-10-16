@@ -15,6 +15,7 @@
 #include "wiFont.h"
 #include "wiImage.h"
 #include "wiEventHandler.h"
+#include "wiPlatform.h"
 
 #ifdef PLATFORM_PS5
 #include "wiGraphicsDevice_PS5.h"
@@ -709,6 +710,42 @@ namespace wi
 			assert(success);
 			});
 
+	}
+
+	void Application::SetFullScreen(bool fullscreen)
+	{
+#if defined(PLATFORM_WINDOWS_DESKTOP)
+
+		// Based on: https://devblogs.microsoft.com/oldnewthing/20100412-00/?p=14353
+		static WINDOWPLACEMENT wp = {};
+		DWORD dwStyle = GetWindowLong(window, GWL_STYLE);
+		bool currently_windowed = dwStyle & WS_OVERLAPPEDWINDOW;
+		if (currently_windowed && fullscreen) {
+			MONITORINFO mi = { sizeof(mi) };
+			if (GetWindowPlacement(window, &wp) &&
+				GetMonitorInfo(MonitorFromWindow(window,
+					MONITOR_DEFAULTTOPRIMARY), &mi)) {
+				SetWindowLong(window, GWL_STYLE,
+					dwStyle & ~WS_OVERLAPPEDWINDOW);
+				SetWindowPos(window, HWND_TOP,
+					mi.rcMonitor.left, mi.rcMonitor.top,
+					mi.rcMonitor.right - mi.rcMonitor.left,
+					mi.rcMonitor.bottom - mi.rcMonitor.top,
+					SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+			}
+		}
+		else if (!currently_windowed && !fullscreen) {
+			SetWindowLong(window, GWL_STYLE,
+				dwStyle | WS_OVERLAPPEDWINDOW);
+			SetWindowPlacement(window, &wp);
+			SetWindowPos(window, NULL, 0, 0, 0, 0,
+				SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+				SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+		}
+
+#elif defined(PLATFORM_LINUX)
+		SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+#endif // PLATFORM_WINDOWS_DESKTOP
 	}
 
 }

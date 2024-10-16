@@ -52,6 +52,11 @@ namespace wi::lua::renderer
 		wi::lua::SSetFloat(L, wi::renderer::GetGameSpeed());
 		return 1;
 	}
+	int IsRaytracingSupported(lua_State* L)
+	{
+		wi::lua::SSetBool(L, wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::RAYTRACING));
+		return 1;
+	}
 
 	int SetShadowProps2D(lua_State* L)
 	{
@@ -222,6 +227,32 @@ namespace wi::lua::renderer
 		else
 		{
 			wi::lua::SError(L, "SetOcclusionCullingEnabled(bool enabled) not enough arguments!");
+		}
+		return 0;
+	}
+	int SetTemporalAAEnabled(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::renderer::SetTemporalAAEnabled(wi::lua::SGetBool(L, 1));
+		}
+		else
+		{
+			wi::lua::SError(L, "SetTemporalAAEnabled(bool enabled) not enough arguments!");
+		}
+		return 0;
+	}
+	int SetRaytracedShadowsEnabled(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::renderer::SetRaytracedShadowsEnabled(wi::lua::SGetBool(L, 1));
+		}
+		else
+		{
+			wi::lua::SError(L, "SetRaytracedShadowsEnabled(bool enabled) not enough arguments!");
 		}
 		return 0;
 	}
@@ -939,6 +970,7 @@ namespace wi::lua::renderer
 			wi::lua::RegisterFunc("SetGamma", SetGamma);
 			wi::lua::RegisterFunc("SetGameSpeed", SetGameSpeed);
 			wi::lua::RegisterFunc("GetGameSpeed", GetGameSpeed);
+			wi::lua::RegisterFunc("IsRaytracingSupported", IsRaytracingSupported);
 
 			wi::lua::RegisterFunc("SetShadowProps2D", SetShadowProps2D);
 			wi::lua::RegisterFunc("SetShadowPropsCube", SetShadowPropsCube);
@@ -956,6 +988,8 @@ namespace wi::lua::renderer
 			wi::lua::RegisterFunc("SetResolution", SetResolution);
 			wi::lua::RegisterFunc("SetDebugLightCulling", SetDebugLightCulling);
 			wi::lua::RegisterFunc("SetOcclusionCullingEnabled", SetOcclusionCullingEnabled);
+			wi::lua::RegisterFunc("SetTemporalAAEnabled", SetTemporalAAEnabled);
+			wi::lua::RegisterFunc("SetRaytracedShadowsEnabled", SetRaytracedShadowsEnabled);
 			wi::lua::RegisterFunc("SetMeshShaderAllowed", SetMeshShaderAllowed);
 			wi::lua::RegisterFunc("SetMeshletOcclusionCullingEnabled", SetMeshletOcclusionCullingEnabled);
 

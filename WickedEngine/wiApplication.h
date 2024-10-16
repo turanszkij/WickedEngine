@@ -90,6 +90,7 @@ namespace wi
 		// You need to call this before calling Run() or Initialize() if you want to render
 		void SetWindow(wi::platform::window_type);
 
+		void SetFullScreen(bool fullscreen);
 
 		struct InfoDisplayer
 		{

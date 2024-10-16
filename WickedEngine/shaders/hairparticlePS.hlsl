@@ -77,6 +77,8 @@ float4 main(VertexToPixel input) : SV_Target
 #endif // TRANSPARENT
 	
 	ApplyFog(dist, V, color);
+
+	color.rgb = mul(saturationMatrix(material.GetSaturation()), color.rgb);
 	
 	return color;
 }
