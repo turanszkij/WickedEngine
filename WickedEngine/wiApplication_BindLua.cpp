@@ -14,6 +14,7 @@ namespace wi::lua
 		lunamethod(Application_BindLua, GetActivePath),
 		lunamethod(Application_BindLua, SetActivePath),
 		lunamethod(Application_BindLua, SetFrameSkip),
+		lunamethod(Application_BindLua, SetFullScreen),
 		lunamethod(Application_BindLua, SetTargetFrameRate),
 		lunamethod(Application_BindLua, SetFrameRateLock),
 		lunamethod(Application_BindLua, SetInfoDisplay),
@@ -167,6 +168,23 @@ namespace wi::lua
 		}
 		else
 			wi::lua::SError(L, "SetFrameSkip(bool enabled) not enought arguments!");
+		return 0;
+	}
+	int Application_BindLua::SetFullScreen(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetFullScreen(bool enabled) component is empty!");
+			return 0;
+		}
+
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			component->SetFullScreen(wi::lua::SGetBool(L, 1));
+		}
+		else
+			wi::lua::SError(L, "SetFullScreen(bool enabled) not enought arguments!");
 		return 0;
 	}
 	int Application_BindLua::SetTargetFrameRate(lua_State* L)

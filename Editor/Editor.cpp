@@ -11,14 +11,6 @@ using namespace wi::primitive;
 using namespace wi::scene;
 using namespace wi::ecs;
 
-// These are used for platform dependent window fullscreen change:
-#if defined(PLATFORM_WINDOWS_DESKTOP)
-extern BOOL CreateEditorWindow(int nCmdShow);
-extern bool window_recreating;
-#elif defined(PLATFORM_LINUX)
-#include "sdl2.h"
-#endif // PLATFORM_WINDOWS
-
 enum class FileType
 {
 	INVALID,
@@ -1059,17 +1051,7 @@ void EditorComponent::Load()
 
 		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t) {
 
-#if defined(PLATFORM_WINDOWS_DESKTOP)
-			main->swapChain = {};
-			wi::graphics::GetDevice()->WaitForGPU();
-			main->config = {};
-			window_recreating = true;
-			DestroyWindow(main->window);
-			main->window = {};
-			CreateEditorWindow(SW_SHOWNORMAL);
-#elif defined(PLATFORM_LINUX)
-			SDL_SetWindowFullscreen(main->window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
-#endif // PLATFORM_WINDOWS_DESKTOP
+			main->SetFullScreen(fullscreen);
 
 		});
 	});

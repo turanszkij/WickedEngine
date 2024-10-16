@@ -138,5 +138,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 #endif // EMITTEDPARTICLE_LIGHTING
 
+	color.rgb = mul(saturationMatrix(material.GetSaturation()), color.rgb);
+
 	return color;
 }

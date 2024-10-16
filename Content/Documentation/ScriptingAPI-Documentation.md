@@ -133,9 +133,9 @@ parent-child relationships between the scene hierarchy, updating the world, anim
 You can use the Renderer with the following functions, all of which are in the global scope:
 - GetGameSpeed() : float result
 - SetGameSpeed(float speed)
+- IsRaytracingSupported() : bool	-- check whether graphics device supports hardware accelerated ray tracing features
 - GetScreenWidth() : float result  -- (deprecated, use application.GetCanvas().GetLogicalWidth() instead)
 - GetScreenHeight() : float result  -- (deprecated, use application.GetCanvas().GetLogicalHeight() instead)
-- HairParticleSettings(opt int lod0, opt int lod1, opt int lod2)
 - SetShadowProps2D(int resolution)
 - SetShadowPropsCube(int resolution)
 - SetDebugPartitionTreeEnabled(bool enabled)
@@ -150,6 +150,8 @@ You can use the Renderer with the following functions, all of which are in the g
 - SetDebugCamerasEnabled(bool value)
 - SetVSyncEnabled(opt bool enabled)
 - SetOcclusionCullingEnabled(bool enabled)
+- SetTemporalAAEnabled(bool value)
+- SetRaytracedShadowsEnabled(bool value)
 - SetMeshShaderAllowed(bool enabled)
 - SetMeshletOcclusionCullingEnabled(bool value)
 - DrawLine(Vector origin,end, opt Vector color, opt bool depth = false)
@@ -434,7 +436,7 @@ Gives you the ability to render text with a custom font.
 - IsFlippedVertically() : bool
 - TextSize() : Vector result -- returns text width and height in a Vector's X and Y components
 - SetTypewriterTime(float value) -- time to fully type the text in seconds (0: disable)
-- SetTypewriterLooped(bool value)) -- if true, typing starts over when finished
+- SetTypewriterLooped(bool value) -- if true, typing starts over when finished
 - SetTypewriterCharacterStart(int value) -- starting character for the animation
 - SetTypewriterSound(Sound sound, SoundInstance soundinstance) -- sound effect when new letter appears
 - ResetTypewriter() -- resets typewriter to first character
@@ -1623,6 +1625,7 @@ This is the main entry point and manages the lifetime of the application.
 - GetActivePath() : RenderPath? result
 - SetActivePath(RenderPath path, opt float fadeSeconds, opt int fadeColorR = 0, fadeColorG = 0, fadeColorB = 0)
 - SetFrameSkip(bool enabled)	-- enable/disable frame skipping in fixed update 
+- SetFullScreen(bool value)		-- switch to fullscreen/windowed
 - SetTargetFrameRate(float fps)	-- set target frame rate for fixed update and variable rate update when frame rate is locked
 - SetFrameRateLock(bool enabled)	-- if enabled, variable rate update will use a fixed delta time
 - SetInfoDisplay(bool active)	-- if enabled, information display will be visible in the top left corner of the application
@@ -1675,6 +1678,7 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 	- AO_HBAO : int  -- enable horizon based screen space ambient occlusion (use in SetAO() function)
 	- AO_MSAO : int  -- enable multi scale screen space ambient occlusion (use in SetAO() function)
 - SetAOPower(float value)  -- applies AO power value if any AO is enabled
+- SetAORange(float value)	-- sets max range for ray traced AO
 - SetSSREnabled(bool value)
 - SetSSGIEnabled(bool value)
 - SetRaytracedDiffuseEnabled(bool value)

@@ -88,7 +88,8 @@ namespace wi::lua
 		if (argc > 0)
 		{
 			std::string name = wi::lua::SGetString(L, 1);
-			font.params.style = wi::font::AddFontStyle(name.c_str());
+			font.fontStyleName = name;
+			font.fontStyleResource = wi::resourcemanager::Load(name);
 		}
 		else
 		{

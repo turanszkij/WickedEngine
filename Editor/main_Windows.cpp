@@ -23,7 +23,6 @@ HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 Editor editor;
-bool window_recreating = false;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -300,10 +299,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		break;
     case WM_DESTROY:
-		if (window_recreating)
-			window_recreating = false;
-		else
-			PostQuitMessage(0);
+		PostQuitMessage(0);
         break;
 	case WM_SETCURSOR:
 		// cursor is handled by wi::input, if this is passed through here, it can cause cursor flickering
