@@ -10,6 +10,8 @@ static const float3 BILLBOARD[] = {
 	float3(1, 1, 0),	// 4
 };
 
+Texture2D<float> opacityCurveTex : register(t0);
+
 RWStructuredBuffer<Particle> particleBuffer : register(u0);
 RWStructuredBuffer<uint> aliveBuffer_CURRENT : register(u1);
 RWStructuredBuffer<uint> aliveBuffer_NEW : register(u2);
@@ -43,6 +45,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 	const float lifeLerp = 1 - particle.life / particle.maxLife;
 	const float particleSize = lerp(particle.sizeBeginEnd.x, particle.sizeBeginEnd.y, lifeLerp);
+	const float lifeOpa = opacityCurveTex.SampleLevel(sampler_linear_clamp, float2(lifeLerp, 0), 0);
 
 	// integrate:
 	particle.force += xParticleGravity;
@@ -271,7 +274,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		// Write out render buffers:
 		//	These must be persistent, not culled (raytracing, surfels...)
 
-		float opacity = saturate(lerp(1, 0, lifeLerp) * EmitterGetMaterial().GetBaseColor().a);
+		float opacity = saturate(lifeOpa * EmitterGetMaterial().GetBaseColor().a);
 		float4 particleColor = unpack_rgba(particle.color);
 		particleColor.a *= opacity;
 

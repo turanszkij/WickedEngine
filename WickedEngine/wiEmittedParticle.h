@@ -52,6 +52,7 @@ namespace wi
 		wi::graphics::GPUBuffer primitiveBuffer; // raytracing
 		wi::graphics::GPUBuffer culledIndirectionBuffer; // rasterization
 		wi::graphics::GPUBuffer culledIndirectionBuffer2; // rasterization
+		wi::graphics::Texture opacityCurveTex;
 
 		wi::graphics::RaytracingAccelerationStructure BLAS;
 
@@ -116,6 +117,7 @@ namespace wi
 		float motionBlurAmount = 0.0f;
 		float mass = 1.0f;
 		float random_color = 0;
+		float opacityCurveControlPeak = 0.1f; // peak of the opacity relative to the particle lifeteime 
 
 		XMFLOAT3 velocity = {}; // starting velocity of all new particles
 		XMFLOAT3 gravity = {}; // constant gravity force
@@ -164,6 +166,11 @@ namespace wi
 		inline void SetFrameBlendingEnabled(bool value) { if (value) { _flags |= FLAG_FRAME_BLENDING; } else { _flags &= ~FLAG_FRAME_BLENDING; } }
 		inline void SetCollidersDisabled(bool value) { if (value) { _flags |= FLAG_COLLIDERS_DISABLED; } else { _flags &= ~FLAG_COLLIDERS_DISABLED; } }
 		inline void SetTakeColorFromMesh(bool value) { if (value) { _flags |= FLAG_TAKE_COLOR_FROM_MESH; } else { _flags &= ~FLAG_TAKE_COLOR_FROM_MESH; } }
+
+		// Set the opacity curve parameters
+		//	peak : peak of the opacity relative to particle lifetime [0,1]
+		void SetOpacityCurveControl(float peak);
+		const wi::graphics::Texture* GetOpacityCurveTex() const { return &opacityCurveTex; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 

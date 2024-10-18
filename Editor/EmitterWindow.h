@@ -38,6 +38,7 @@ public:
 	wi::gui::Slider emitNormalSlider;
 	wi::gui::Slider emitScalingSlider;
 	wi::gui::Slider emitLifeSlider;
+	wi::gui::Slider emitOpacityCurveSlider;
 	wi::gui::Slider emitRandomnessSlider;
 	wi::gui::Slider emitLifeRandomnessSlider;
 	wi::gui::Slider emitColorRandomnessSlider;

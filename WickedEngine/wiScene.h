@@ -46,7 +46,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<DecalComponent>& decals = componentLibrary.Register<DecalComponent>("wi::scene::Scene::decals", 1); // version = 1
 		wi::ecs::ComponentManager<AnimationComponent>& animations = componentLibrary.Register<AnimationComponent>("wi::scene::Scene::animations", 2); // version = 2
 		wi::ecs::ComponentManager<AnimationDataComponent>& animation_datas = componentLibrary.Register<AnimationDataComponent>("wi::scene::Scene::animation_datas");
-		wi::ecs::ComponentManager<EmittedParticleSystem>& emitters = componentLibrary.Register<EmittedParticleSystem>("wi::scene::Scene::emitters");
+		wi::ecs::ComponentManager<EmittedParticleSystem>& emitters = componentLibrary.Register<EmittedParticleSystem>("wi::scene::Scene::emitters", 1); // version = 1
 		wi::ecs::ComponentManager<HairParticleSystem>& hairs = componentLibrary.Register<HairParticleSystem>("wi::scene::Scene::hairs", 1); // version = 1
 		wi::ecs::ComponentManager<WeatherComponent>& weathers = componentLibrary.Register<WeatherComponent>("wi::scene::Scene::weathers", 6); // version = 6
 		wi::ecs::ComponentManager<SoundComponent>& sounds = componentLibrary.Register<SoundComponent>("wi::scene::Scene::sounds", 1); // version = 1

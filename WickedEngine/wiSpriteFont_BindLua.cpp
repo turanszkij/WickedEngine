@@ -9,6 +9,7 @@ namespace wi::lua
 	Luna<SpriteFont_BindLua>::FunctionType SpriteFont_BindLua::methods[] = {
 		lunamethod(SpriteFont_BindLua, SetText),
 		lunamethod(SpriteFont_BindLua, SetSize),
+		lunamethod(SpriteFont_BindLua, SetScale),
 		lunamethod(SpriteFont_BindLua, SetPos),
 		lunamethod(SpriteFont_BindLua, SetSpacing),
 		lunamethod(SpriteFont_BindLua, SetAlign),
@@ -27,6 +28,7 @@ namespace wi::lua
 		lunamethod(SpriteFont_BindLua, SetStyle),
 		lunamethod(SpriteFont_BindLua, GetText),
 		lunamethod(SpriteFont_BindLua, GetSize),
+		lunamethod(SpriteFont_BindLua, GetScale),
 		lunamethod(SpriteFont_BindLua, GetPos),
 		lunamethod(SpriteFont_BindLua, GetSpacing),
 		lunamethod(SpriteFont_BindLua, GetAlign),
@@ -115,6 +117,17 @@ namespace wi::lua
 		}
 		else
 			wi::lua::SError(L, "SetSize(int size) not enough arguments!");
+		return 0;
+	}
+	int SpriteFont_BindLua::SetScale(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			font.params.scaling = wi::lua::SGetFloat(L, 1);
+		}
+		else
+			wi::lua::SError(L, "SetScale(float scale) not enough arguments!");
 		return 0;
 	}
 	int SpriteFont_BindLua::SetPos(lua_State* L)
@@ -343,6 +356,11 @@ namespace wi::lua
 	int SpriteFont_BindLua::GetSize(lua_State* L)
 	{
 		wi::lua::SSetInt(L, font.params.size);
+		return 1;
+	}
+	int SpriteFont_BindLua::GetScale(lua_State* L)
+	{
+		wi::lua::SSetFloat(L, font.params.scaling);
 		return 1;
 	}
 	int SpriteFont_BindLua::GetPos(lua_State* L)

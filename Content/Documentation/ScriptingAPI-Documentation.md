@@ -396,6 +396,7 @@ Gives you the ability to render text with a custom font.
 - SetStyle(string fontstyle, opt int size = 16)
 - SetText(opt string text)
 - SetSize(int size)
+- SetScale(float scale)
 - SetPos(Vector pos)
 - SetSpacing(Vector spacing)
 - SetAlign(WIFALIGN Halign, opt WIFALIGN Valign)
@@ -420,6 +421,7 @@ Gives you the ability to render text with a custom font.
 - SetFlippedVertically(bool value) -- enable flipping the letters vertically
 - GetText() : string result
 - GetSize() : int result
+- GetScale() : float result
 - GetPos() : Vector result
 - GetSpacing() : Vector result
 - GetAlign() : WIFALIGN halign,valign

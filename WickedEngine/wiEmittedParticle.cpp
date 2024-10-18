@@ -269,7 +269,6 @@ namespace wi
 				}
 			}
 		}
-
 	}
 
 	void EmittedParticleSystem::CreateRaytracingRenderData()
@@ -322,6 +321,7 @@ namespace wi
 		retVal += generalBuffer.GetDesc().size;
 		retVal += culledIndirectionBuffer.GetDesc().size;
 		retVal += culledIndirectionBuffer2.GetDesc().size;
+		retVal += ComputeTextureMemorySizeInBytes(opacityCurveTex.GetDesc());
 
 		return retVal;
 	}
@@ -366,6 +366,11 @@ namespace wi
 		if (statistics.aliveCount > 0 || statistics.aliveCount_afterSimulation > 0)
 		{
 			active_frames |= 1; // activate current frame
+		}
+
+		if (!opacityCurveTex.IsValid())
+		{
+			SetOpacityCurveControl(opacityCurveControlPeak);
 		}
 	}
 	void EmittedParticleSystem::Burst(int num)
@@ -716,6 +721,8 @@ namespace wi
 
 			device->EventBegin("Simulate", cmd);
 
+			device->BindResource(&opacityCurveTex, 0, cmd);
+
 			device->BindUAV(&particleBuffer, 0, cmd);
 			device->BindUAV(&aliveList[0], 1, cmd);
 			device->BindUAV(&aliveList[1], 2, cmd);
@@ -871,6 +878,34 @@ namespace wi
 		device->EventEnd(cmd);
 	}
 
+	void EmittedParticleSystem::SetOpacityCurveControl(float peak)
+	{
+		opacityCurveControlPeak = peak;
+
+		uint16_t data[2048];
+		int startup_length = int(peak * float(arraysize(data) - 1));
+		// Ramp up:
+		for (int i = 0; i < startup_length; ++i)
+		{
+			float t = smoothstep(0.0f, 1.0f, float(i) / (startup_length - 1));
+			data[i] = uint16_t(t * 65535);
+		}
+		// Ramp down:
+		for (int i = 0; i < (arraysize(data) - startup_length); ++i)
+		{
+			float t = smoothstep(1.0f, 0.0f, float(i) / (arraysize(data) - startup_length - 1));
+			data[i + startup_length] = uint16_t(t * 65535);
+		}
+		TextureDesc desc;
+		desc.width = arraysize(data);
+		desc.format = Format::R16_UNORM;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE;
+		SubresourceData initdata;
+		initdata.data_ptr = data;
+		initdata.row_pitch = sizeof(data);
+		GetDevice()->CreateTexture(&desc, &initdata, &opacityCurveTex);
+		GetDevice()->SetName(&opacityCurveTex, "EmittedParticleSystem::opacityCurveTex");
+	}
 
 	namespace EmittedParticleSystem_Internal
 	{
@@ -1105,6 +1140,15 @@ namespace wi
 				archive >> restitution;
 			}
 
+			if (seri.GetVersion() >= 1)
+			{
+				archive >> opacityCurveControlPeak;
+			}
+			else
+			{
+				opacityCurveControlPeak = 0;
+			}
+
 		}
 		else
 		{
@@ -1149,6 +1193,11 @@ namespace wi
 			if (archive.GetVersion() >= 74)
 			{
 				archive << restitution;
+			}
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive << opacityCurveControlPeak;
 			}
 		}
 	}
