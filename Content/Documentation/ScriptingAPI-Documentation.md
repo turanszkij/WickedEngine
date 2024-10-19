@@ -1639,6 +1639,7 @@ This is the main entry point and manages the lifetime of the application.
 - SetPipelineCountDisplay(bool active)	-- toggle display of active graphics pipeline count if info display is enabled
 - SetHeapAllocationCountDisplay(bool active)	-- toggle display of heap allocation statistics if info display is enabled
 - SetVRAMUsageDisplay(bool active)	-- toggle display of video memory usage if info display is enabled
+- SetColorGradingHelper(bool value)	-- toggale color grading helper display in the top left corner
 - GetCanvas() : Canvas canvas  -- returns a copy of the application's current canvas
 - SetCanvas(Canvas canvas)  -- applies the specified canvas to the application
 - Exit() -- Closes the program
