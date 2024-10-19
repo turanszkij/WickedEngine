@@ -1691,7 +1691,6 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - SetBloomEnabled(bool value)
 - SetBloomThreshold(bool value)
 - SetColorGradingEnabled(bool value)
-- SetColorGradingTexture(Texture value)
 - SetVolumeLightsEnabled(bool value)
 - SetLightShaftsEnabled(bool value)
 - SetLensFlareEnabled(bool value)

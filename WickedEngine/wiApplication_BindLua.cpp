@@ -26,6 +26,7 @@ namespace wi::lua
 		lunamethod(Application_BindLua, SetPipelineCountDisplay),
 		lunamethod(Application_BindLua, SetHeapAllocationCountDisplay),
 		lunamethod(Application_BindLua, SetVRAMUsageDisplay),
+		lunamethod(Application_BindLua, SetColorGradingHelper),
 		lunamethod(Application_BindLua, GetCanvas),
 		lunamethod(Application_BindLua, SetCanvas),
 		lunamethod(Application_BindLua, Exit),
@@ -363,6 +364,22 @@ namespace wi::lua
 		}
 		else
 			wi::lua::SError(L, "SetVRAMUsageDisplay(bool active) not enough arguments!");
+		return 0;
+	}
+	int Application_BindLua::SetColorGradingHelper(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetColorGradingHelper() component is empty!");
+			return 0;
+		}
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			component->infoDisplay.colorgrading_helper = wi::lua::SGetBool(L, 1);
+		}
+		else
+			wi::lua::SError(L, "SetColorGradingHelper(bool active) not enough arguments!");
 		return 0;
 	}
 

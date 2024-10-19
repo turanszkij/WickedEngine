@@ -55,6 +55,7 @@ namespace wi::lua
 		int SetPipelineCountDisplay(lua_State* L);
 		int SetHeapAllocationCountDisplay(lua_State* L);
 		int SetVRAMUsageDisplay(lua_State* L);
+		int SetColorGradingHelper(lua_State* L);
 
 		int GetCanvas(lua_State* L);
 		int SetCanvas(lua_State* L);
