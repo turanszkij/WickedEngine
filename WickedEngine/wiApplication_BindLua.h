@@ -57,6 +57,9 @@ namespace wi::lua
 		int SetVRAMUsageDisplay(lua_State* L);
 		int SetColorGradingHelper(lua_State* L);
 
+		int IsHDRSupported(lua_State* L);
+		int SetHDR(lua_State* L);
+
 		int GetCanvas(lua_State* L);
 		int SetCanvas(lua_State* L);
 
