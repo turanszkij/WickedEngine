@@ -8,7 +8,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_EMITTER " Emitter", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(300, 1100));
+	SetSize(XMFLOAT2(300, 1120));
 
 	closeButton.SetTooltip("Delete EmittedParticleSystem");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -595,22 +595,35 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	emitLifeSlider.SetTooltip("Set the lifespan of the emitted particles (in seconds).");
 	AddWidget(&emitLifeSlider);
 
-	emitOpacityCurveSlider.Create(0.0f, 1.0f, 0.0f, 10000, "Opacity Curve: ");
-	emitOpacityCurveSlider.SetSize(XMFLOAT2(wid, itemheight));
-	emitOpacityCurveSlider.SetPos(XMFLOAT2(x, y += step));
-	emitOpacityCurveSlider.OnSlide([&](wi::gui::EventArgs args) {
+	emitOpacityCurveStartSlider.Create(0.0f, 1.0f, 0.0f, 10000, "Opacity Start: ");
+	emitOpacityCurveStartSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
 		{
 			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
 			if (emitter == nullptr)
 				continue;
-			emitter->SetOpacityCurveControl(args.fValue);
+			emitter->SetOpacityCurveControl(args.fValue, emitter->opacityCurveControlPeakEnd);
 		}
 		});
-	emitOpacityCurveSlider.SetEnabled(false);
-	emitOpacityCurveSlider.SetTooltip("Set the opacity curve peak of the emitted particles relative to lifetime.");
-	AddWidget(&emitOpacityCurveSlider);
+	emitOpacityCurveStartSlider.SetEnabled(false);
+	emitOpacityCurveStartSlider.SetTooltip("Set where the opacity should become full, relative to particle lifetime.");
+	AddWidget(&emitOpacityCurveStartSlider);
+
+	emitOpacityCurveEndSlider.Create(0.0f, 1.0f, 0.0f, 10000, "Opacity End: ");
+	emitOpacityCurveEndSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(x.entity);
+			if (emitter == nullptr)
+				continue;
+			emitter->SetOpacityCurveControl(emitter->opacityCurveControlPeakStart, args.fValue);
+		}
+		});
+	emitOpacityCurveEndSlider.SetEnabled(false);
+	emitOpacityCurveEndSlider.SetTooltip("Set where the opacity should begin to decay, relative to particle lifetime.");
+	AddWidget(&emitOpacityCurveEndSlider);
 
 	emitRandomnessSlider.Create(0.0f, 1.0f, 1.0f, 100000, "Randomness: ");
 	emitRandomnessSlider.SetSize(XMFLOAT2(wid, itemheight));
@@ -866,7 +879,8 @@ void EmitterWindow::SetEntity(Entity entity)
 		emitNormalSlider.SetValue(emitter->normal_factor);
 		emitScalingSlider.SetValue(emitter->scaleX);
 		emitLifeSlider.SetValue(emitter->life);
-		emitOpacityCurveSlider.SetValue(emitter->opacityCurveControlPeak);
+		emitOpacityCurveStartSlider.SetValue(emitter->opacityCurveControlPeakStart);
+		emitOpacityCurveEndSlider.SetValue(emitter->opacityCurveControlPeakEnd);
 		emitRandomnessSlider.SetValue(emitter->random_factor);
 		emitLifeRandomnessSlider.SetValue(emitter->random_life);
 		emitColorRandomnessSlider.SetValue(emitter->random_color);
@@ -951,14 +965,23 @@ void EmitterWindow::UpdateData()
 
 	infoLabel.SetText(ss);
 
-	for (auto& x : emitOpacityCurveSlider.sprites)
+	for (auto& x : emitOpacityCurveStartSlider.sprites)
 	{
 		x.textureResource.SetTexture(*emitter->GetOpacityCurveTex());
 	}
-	emitOpacityCurveSlider.SetColor(wi::Color::White(), wi::gui::WIDGET_ID_SLIDER_BASE_IDLE);
-	emitOpacityCurveSlider.SetColor(wi::Color::White(), wi::gui::WIDGET_ID_SLIDER_BASE_FOCUS);
-	emitOpacityCurveSlider.SetColor(wi::Color::White(), wi::gui::WIDGET_ID_SLIDER_BASE_ACTIVE);
-	emitOpacityCurveSlider.SetColor(wi::Color::White(), wi::gui::WIDGET_ID_SLIDER_BASE_DEACTIVATING);
+	emitOpacityCurveStartSlider.SetColor(wi::Color::White(), wi::gui::WIDGET_ID_SLIDER_BASE_IDLE);
+	emitOpacityCurveStartSlider.SetColor(wi::Color::White(), wi::gui::WIDGET_ID_SLIDER_BASE_FOCUS);
+	emitOpacityCurveStartSlider.SetColor(wi::Color::White(), wi::gui::WIDGET_ID_SLIDER_BASE_ACTIVE);
+	emitOpacityCurveStartSlider.SetColor(wi::Color::White(), wi::gui::WIDGET_ID_SLIDER_BASE_DEACTIVATING);
+
+	for (auto& x : emitOpacityCurveEndSlider.sprites)
+	{
+		x.textureResource.SetTexture(*emitter->GetOpacityCurveTex());
+	}
+	emitOpacityCurveEndSlider.SetColor(wi::Color::White(), wi::gui::WIDGET_ID_SLIDER_BASE_IDLE);
+	emitOpacityCurveEndSlider.SetColor(wi::Color::White(), wi::gui::WIDGET_ID_SLIDER_BASE_FOCUS);
+	emitOpacityCurveEndSlider.SetColor(wi::Color::White(), wi::gui::WIDGET_ID_SLIDER_BASE_ACTIVE);
+	emitOpacityCurveEndSlider.SetColor(wi::Color::White(), wi::gui::WIDGET_ID_SLIDER_BASE_DEACTIVATING);
 }
 
 void EmitterWindow::ResizeLayout()
@@ -970,7 +993,7 @@ void EmitterWindow::ResizeLayout()
 	float jump = 20;
 
 	const float margin_left = 130;
-	const float margin_right = 40;
+	const float margin_right = 45;
 
 	auto add = [&](wi::gui::Widget& widget) {
 		if (!widget.IsVisible())
@@ -1022,7 +1045,8 @@ void EmitterWindow::ResizeLayout()
 	add(emitNormalSlider);
 	add(emitScalingSlider);
 	add(emitLifeSlider);
-	add(emitOpacityCurveSlider);
+	add(emitOpacityCurveStartSlider);
+	add(emitOpacityCurveEndSlider);
 	add(emitLifeRandomnessSlider);
 	add(emitRandomnessSlider);
 	add(emitColorRandomnessSlider);

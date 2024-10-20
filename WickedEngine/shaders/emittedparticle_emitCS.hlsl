@@ -175,7 +175,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	particle.force = 0;
 	particle.mass = xParticleMass;
 	particle.velocity = velocity + (nor + (float3(rng.next_float(), rng.next_float(), rng.next_float()) - 0.5f) * xParticleRandomFactor) * xParticleNormalFactor;
-	particle.rotationalVelocity = xParticleRotation + (rng.next_float() - 0.5f) * xParticleRandomFactor;
+	particle.rotation_rotationVelocity = pack_half2(float2((rng.next_float() - 0.5f) * xParticleRandomFactor * PI * 2, xParticleRotation * (rng.next_float() - 0.5f) * (1 + xParticleRandomFactor)));
 	particle.maxLife = xParticleLifeSpan + xParticleLifeSpan * (rng.next_float() - 0.5f) * xParticleLifeSpanRandomness;
 	particle.life = particle.maxLife;
 	particle.sizeBeginEnd = float2(particleStartingSize, particleStartingSize * xParticleScaling);

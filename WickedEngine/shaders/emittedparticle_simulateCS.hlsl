@@ -263,6 +263,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 		particle.life -= dt;
 
+		float2 rotation_rotationVel = unpack_half2(particle.rotation_rotationVelocity);
+		rotation_rotationVel.x += rotation_rotationVel.y * dt;
+		particle.rotation_rotationVelocity = pack_half2(rotation_rotationVel);
+
 		// write back simulated particle:
 		particleBuffer[particleIndex] = particle;
 
@@ -277,8 +281,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		float opacity = saturate(lifeOpa * EmitterGetMaterial().GetBaseColor().a);
 		float4 particleColor = unpack_rgba(particle.color);
 		particleColor.a *= opacity;
-
-		float rotation = lifeLerp * particle.rotationalVelocity;
+		
+		float rotation = rotation_rotationVel.x;
 		float2x2 rot = float2x2(
 			cos(rotation), -sin(rotation),
 			sin(rotation), cos(rotation)

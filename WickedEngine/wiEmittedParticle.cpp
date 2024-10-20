@@ -370,7 +370,7 @@ namespace wi
 
 		if (!opacityCurveTex.IsValid())
 		{
-			SetOpacityCurveControl(opacityCurveControlPeak);
+			SetOpacityCurveControl(opacityCurveControlPeakStart, opacityCurveControlPeakEnd);
 		}
 	}
 	void EmittedParticleSystem::Burst(int num)
@@ -483,7 +483,7 @@ namespace wi
 			cb.xParticleScaling = scaleX;
 			cb.xParticleSize = size;
 			cb.xParticleMotionBlurAmount = motionBlurAmount;
-			cb.xParticleRotation = rotation * XM_PI * 60;
+			cb.xParticleRotation = rotation * XM_PI;
 			cb.xParticleMass = mass;
 			cb.xEmitterMaxParticleCount = MAX_PARTICLES;
 			cb.xEmitterFixedTimestep = FIXED_TIMESTEP;
@@ -878,23 +878,32 @@ namespace wi
 		device->EventEnd(cmd);
 	}
 
-	void EmittedParticleSystem::SetOpacityCurveControl(float peak)
+	void EmittedParticleSystem::SetOpacityCurveControl(float peakStart, float peakEnd)
 	{
-		opacityCurveControlPeak = peak;
+		peakEnd = std::max(peakStart, peakEnd);
+
+		opacityCurveControlPeakStart = peakStart;
+		opacityCurveControlPeakEnd = peakEnd;
 
 		uint16_t data[2048];
-		int startup_length = int(peak * float(arraysize(data) - 1));
+		int startup_length = int(peakStart * float(arraysize(data) - 1));
 		// Ramp up:
 		for (int i = 0; i < startup_length; ++i)
 		{
 			float t = smoothstep(0.0f, 1.0f, float(i) / (startup_length - 1));
 			data[i] = uint16_t(t * 65535);
 		}
-		// Ramp down:
-		for (int i = 0; i < (arraysize(data) - startup_length); ++i)
+		int keep_length = int((peakEnd - peakStart) * float(arraysize(data) - 1));
+		// Keep value:
+		for (int i = 0; i < keep_length; ++i)
 		{
-			float t = smoothstep(1.0f, 0.0f, float(i) / (arraysize(data) - startup_length - 1));
-			data[i + startup_length] = uint16_t(t * 65535);
+			data[i + startup_length] = uint16_t(65535);
+		}
+		// Ramp down:
+		for (int i = 0; i < (arraysize(data) - startup_length - keep_length); ++i)
+		{
+			float t = smoothstep(1.0f, 0.0f, float(i) / (arraysize(data) - startup_length - keep_length - 1));
+			data[i + startup_length + keep_length] = uint16_t(t * 65535);
 		}
 		TextureDesc desc;
 		desc.width = arraysize(data);
@@ -1142,11 +1151,20 @@ namespace wi
 
 			if (seri.GetVersion() >= 1)
 			{
-				archive >> opacityCurveControlPeak;
+				archive >> opacityCurveControlPeakStart;
 			}
 			else
 			{
-				opacityCurveControlPeak = 0;
+				opacityCurveControlPeakStart = 0;
+			}
+
+			if (seri.GetVersion() >= 2)
+			{
+				archive >> opacityCurveControlPeakEnd;
+			}
+			else
+			{
+				opacityCurveControlPeakEnd = opacityCurveControlPeakStart;
 			}
 
 		}
@@ -1197,7 +1215,12 @@ namespace wi
 
 			if (seri.GetVersion() >= 1)
 			{
-				archive << opacityCurveControlPeak;
+				archive << opacityCurveControlPeakStart;
+			}
+
+			if (seri.GetVersion() >= 2)
+			{
+				archive << opacityCurveControlPeakEnd;
 			}
 		}
 	}

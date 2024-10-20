@@ -9,7 +9,7 @@ struct Particle
 	float3 position;
 	float mass;
 	float3 force;
-	float rotationalVelocity;
+	uint rotation_rotationVelocity;
 	float3 velocity;
 	float maxLife;
 	float2 sizeBeginEnd;
