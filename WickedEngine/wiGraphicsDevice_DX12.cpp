@@ -1548,6 +1548,11 @@ namespace dx12_internal
 		ComPtr<ID3D12VideoDecoderHeap> decoder_heap;
 		ComPtr<ID3D12VideoDecoder> decoder;
 
+		std::atomic<uint32_t> current_param_idx{ 0 };
+		DXVA_PicParams_H264 pic_params[32] = {};
+		DXVA_Qmatrix_H264 qmatrix[32] = {};
+		DXVA_Slice_H264_Short slices[32] = {};
+
 		~VideoDecoder_DX12()
 		{
 			allocationhandler->destroylocker.lock();
@@ -7487,37 +7492,46 @@ std::mutex queue_locker;
 		D3D12_VIDEO_DECODE_INPUT_STREAM_ARGUMENTS input = {};
 
 		output.pOutputTexture2D = dpb_internal->resource.Get();
-		output.OutputSubresource = D3D12CalcSubresource(0, op->current_dpb, 0, 1, op->DPB->desc.array_size);
-
-		const h264::SliceHeader* slice_header = (const h264::SliceHeader*)op->slice_header;
-		const h264::PPS* pps = (const h264::PPS*)op->pps;
-		const h264::SPS* sps = (const h264::SPS*)op->sps;
+		output.OutputSubresource = D3D12CalcSubresource(0, op->current_dpb, 0, op->DPB->desc.mip_levels, op->DPB->desc.array_size);
 
 		ID3D12Resource* reference_frames[16] = {};
 		UINT reference_subresources[16] = {};
-		for (size_t i = 0; i < op->dpb_reference_count; ++i)
+		for (size_t i = 0; i < op->DPB->desc.array_size; ++i)
 		{
 			reference_frames[i] = dpb_internal->resource.Get();
-			reference_subresources[i] = D3D12CalcSubresource(0, op->dpb_reference_slots[i], 0, 1, op->DPB->desc.array_size);
+			reference_subresources[i] = D3D12CalcSubresource(0, (UINT)i, 0, op->DPB->desc.mip_levels, op->DPB->desc.array_size);
 		}
-		input.ReferenceFrames.NumTexture2Ds = (UINT)op->dpb_reference_count;
-		input.ReferenceFrames.ppTexture2Ds = input.ReferenceFrames.NumTexture2Ds > 0 ? reference_frames : nullptr;
-		input.ReferenceFrames.pSubresources = input.ReferenceFrames.NumTexture2Ds > 0 ? reference_subresources : nullptr;
+		input.ReferenceFrames.NumTexture2Ds = arraysize(reference_frames);
+		input.ReferenceFrames.ppTexture2Ds = reference_frames;
+		input.ReferenceFrames.pSubresources = reference_subresources;
 
 		input.CompressedBitstream.pBuffer = stream_internal->resource.Get();
 		input.CompressedBitstream.Offset = op->stream_offset;
 		input.CompressedBitstream.Size = op->stream_size;
 		input.pHeap = decoder_internal->decoder_heap.Get();
 
+		const h264::SliceHeader* slice_header = (const h264::SliceHeader*)op->slice_header;
+		const h264::PPS* pps = (const h264::PPS*)op->pps;
+		const h264::SPS* sps = (const h264::SPS*)op->sps;
+
+		const uint32_t current_param_idx = decoder_internal->current_param_idx.fetch_add(1) % arraysize(decoder_internal->slices);
+		DXVA_PicParams_H264& pic_params = decoder_internal->pic_params[current_param_idx];
+		DXVA_Qmatrix_H264& qmatrix = decoder_internal->qmatrix[current_param_idx];
+		DXVA_Slice_H264_Short& sliceinfo = decoder_internal->slices[current_param_idx];
+
+		pic_params = {};
+		qmatrix = {};
+		sliceinfo = {};
+
 		// DirectX Video Acceleration for H.264/MPEG-4 AVC Decoding, Microsoft, Updated 2010, Page 21
 		//	https://www.microsoft.com/en-us/download/details.aspx?id=11323
 		//	Also: https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/src/gallium/drivers/d3d12/d3d12_video_dec_h264.cpp
-		DXVA_PicParams_H264 pic_params = {};
+		//	Also: https://github.com/mofo7777/H264Dxva2Decoder
 		pic_params.wFrameWidthInMbsMinus1 = sps->pic_width_in_mbs_minus1;
 		pic_params.wFrameHeightInMbsMinus1 = sps->pic_height_in_map_units_minus1;
 		pic_params.IntraPicFlag = op->frame_type == VideoFrameType::Intra ? 1 : 0;
-		pic_params.MbaffFrameFlag = sps->mb_adaptive_frame_field_flag && !slice_header->field_pic_flag;
-		pic_params.field_pic_flag = slice_header->field_pic_flag; // 0 = full frame (top and bottom field)
+		pic_params.MbaffFrameFlag = 0 /*sps->mb_adaptive_frame_field_flag && !slice_header->field_pic_flag*/;
+		pic_params.field_pic_flag = 0 /*slice_header->field_pic_flag*/; // 0 = full frame (top and bottom field)
 		//pic_params.bottom_field_flag = 0; // missing??
 		pic_params.chroma_format_idc = 1; // sps->chroma_format_idc; // only 1 is supported (YUV420)
 		pic_params.bit_depth_chroma_minus8 = sps->bit_depth_chroma_minus8;
@@ -7546,6 +7560,7 @@ std::mutex queue_locker;
 		for (size_t i = 0; i < op->dpb_reference_count; ++i)
 		{
 			uint32_t ref_slot = op->dpb_reference_slots[i];
+			assert(ref_slot != op->current_dpb);
 			pic_params.RefFrameList[i].AssociatedFlag = 0; // 0 = short term, 1 = long term reference
 			pic_params.RefFrameList[i].Index7Bits = (UCHAR)ref_slot;
 			pic_params.FieldOrderCntList[i][0] = op->dpb_poc[ref_slot];
@@ -7563,7 +7578,7 @@ std::mutex queue_locker;
 		pic_params.num_ref_frames = sps->num_ref_frames;
 		pic_params.MbsConsecutiveFlag = 1; // The value shall be 1 unless the restricted-mode profile in use explicitly supports the value 0.
 		pic_params.frame_mbs_only_flag = sps->frame_mbs_only_flag;
-		pic_params.MinLumaBipredSize8x8Flag = 1;
+		pic_params.MinLumaBipredSize8x8Flag = sps->level_idc >= 31;
 		pic_params.RefPicFlag = op->reference_priority > 0 ? 1 : 0;
 		pic_params.frame_num = slice_header->frame_num;
 		pic_params.pic_init_qp_minus26 = pps->pic_init_qp_minus26;
@@ -7587,6 +7602,8 @@ std::mutex queue_locker;
 		pic_params.StatusReportFeedbackNumber = (UINT)op->decoded_frame_index + 1; // shall not be 0
 		assert(pic_params.StatusReportFeedbackNumber > 0);
 		pic_params.ContinuationFlag = 1;
+		pic_params.num_ref_idx_l0_active_minus1 = pps->num_ref_idx_l0_active_minus1;
+		pic_params.num_ref_idx_l1_active_minus1 = pps->num_ref_idx_l1_active_minus1;
 		input.FrameArguments[input.NumFrameArguments].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_PICTURE_PARAMETERS;
 		input.FrameArguments[input.NumFrameArguments].Size = sizeof(pic_params);
 		input.FrameArguments[input.NumFrameArguments].pData = &pic_params;
@@ -7594,36 +7611,44 @@ std::mutex queue_locker;
 
 		// DirectX Video Acceleration for H.264/MPEG-4 AVC Decoding, Microsoft, Updated 2010, Page 29
 		//	Also: https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/src/gallium/drivers/d3d12/d3d12_video_dec_h264.cpp#L548
-		static constexpr int vl_zscan_normal_16[] =
+		if (sps->seq_scaling_matrix_present_flag)
 		{
-			/* Zig-Zag scan pattern */
-			0, 1, 4, 8, 5, 2, 3, 6,
-			9, 12, 13, 10, 7, 11, 14, 15
-		};
-		static constexpr int vl_zscan_normal[] =
-		{
-			/* Zig-Zag scan pattern */
-			 0, 1, 8,16, 9, 2, 3,10,
-			17,24,32,25,18,11, 4, 5,
-			12,19,26,33,40,48,41,34,
-			27,20,13, 6, 7,14,21,28,
-			35,42,49,56,57,50,43,36,
-			29,22,15,23,30,37,44,51,
-			58,59,52,45,38,31,39,46,
-			53,60,61,54,47,55,62,63
-		};
-		DXVA_Qmatrix_H264 qmatrix = {};
-		for (int i = 0; i < 6; ++i)
-		{
-			for (int j = 0; j < 16; ++j)
+			static constexpr int vl_zscan_normal_16[] =
 			{
-				qmatrix.bScalingLists4x4[i][j] = pps->ScalingList4x4[i][vl_zscan_normal_16[j]];
+				/* Zig-Zag scan pattern */
+				0, 1, 4, 8, 5, 2, 3, 6,
+				9, 12, 13, 10, 7, 11, 14, 15
+			};
+			static constexpr int vl_zscan_normal[] =
+			{
+				/* Zig-Zag scan pattern */
+				 0, 1, 8,16, 9, 2, 3,10,
+				17,24,32,25,18,11, 4, 5,
+				12,19,26,33,40,48,41,34,
+				27,20,13, 6, 7,14,21,28,
+				35,42,49,56,57,50,43,36,
+				29,22,15,23,30,37,44,51,
+				58,59,52,45,38,31,39,46,
+				53,60,61,54,47,55,62,63
+			};
+			for (int i = 0; i < 6; ++i)
+			{
+				for (int j = 0; j < 16; ++j)
+				{
+					qmatrix.bScalingLists4x4[i][j] = pps->ScalingList4x4[i][vl_zscan_normal_16[j]];
+				}
+			}
+			for (int i = 0; i < 64; ++i)
+			{
+				qmatrix.bScalingLists8x8[0][i] = pps->ScalingList8x8[0][vl_zscan_normal[i]];
+				qmatrix.bScalingLists8x8[1][i] = pps->ScalingList8x8[1][vl_zscan_normal[i]];
 			}
 		}
-		for (int i = 0; i < 64; ++i)
+		else
 		{
-			qmatrix.bScalingLists8x8[0][i] = pps->ScalingList8x8[0][vl_zscan_normal[i]];
-			qmatrix.bScalingLists8x8[1][i] = pps->ScalingList8x8[1][vl_zscan_normal[i]];
+			// I don't know why it needs to be filled with 16, but otherwise it gets corrupted output
+			//	Source: https://github.com/mofo7777/H264Dxva2Decoder
+			std::memset(&qmatrix, 16, sizeof(DXVA_Qmatrix_H264));
 		}
 		input.FrameArguments[input.NumFrameArguments].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_INVERSE_QUANTIZATION_MATRIX;
 		input.FrameArguments[input.NumFrameArguments].Size = sizeof(qmatrix);
@@ -7631,8 +7656,6 @@ std::mutex queue_locker;
 		input.NumFrameArguments++;
 
 		// DirectX Video Acceleration for H.264/MPEG-4 AVC Decoding, Microsoft, Updated 2010, Page 31
-#if 1
-		DXVA_Slice_H264_Short sliceinfo = {};
 		sliceinfo.BSNALunitDataLocation = 0;
 		sliceinfo.SliceBytesInBuffer = (UINT)op->stream_size;
 		sliceinfo.wBadSliceChopping = 0; // whole slice is in the buffer
@@ -7640,120 +7663,6 @@ std::mutex queue_locker;
 		input.FrameArguments[input.NumFrameArguments].Size = sizeof(sliceinfo);
 		input.FrameArguments[input.NumFrameArguments].pData = &sliceinfo;
 		input.NumFrameArguments++;
-#else
-		DXVA_Slice_H264_Long sliceinfo = {};
-		//sliceinfo.BSNALunitDataLocation = (UINT)op->stream_offset;
-		sliceinfo.BSNALunitDataLocation = 0;
-		sliceinfo.SliceBytesInBuffer = (UINT)op->stream_size;
-		sliceinfo.wBadSliceChopping = 0;
-		sliceinfo.first_mb_in_slice = slice_header->first_mb_in_slice;
-		sliceinfo.NumMbsForSlice = 0;
-		sliceinfo.BitOffsetToSliceData = 0;
-		sliceinfo.slice_type = slice_header->slice_type;
-		sliceinfo.luma_log2_weight_denom = slice_header->pwt.luma_log2_weight_denom;
-		sliceinfo.chroma_log2_weight_denom = slice_header->pwt.chroma_log2_weight_denom;
-		sliceinfo.num_ref_idx_l0_active_minus1 = slice_header->num_ref_idx_l0_active_minus1;
-		sliceinfo.num_ref_idx_l1_active_minus1 = slice_header->num_ref_idx_l1_active_minus1;
-		sliceinfo.slice_alpha_c0_offset_div2 = slice_header->slice_alpha_c0_offset_div2;
-		sliceinfo.slice_beta_offset_div2 = slice_header->slice_beta_offset_div2;
-		sliceinfo.slice_qs_delta = slice_header->slice_qs_delta;
-		sliceinfo.slice_qp_delta = slice_header->slice_qp_delta;
-		sliceinfo.redundant_pic_cnt = slice_header->redundant_pic_cnt;
-		sliceinfo.direct_spatial_mv_pred_flag = slice_header->direct_spatial_mv_pred_flag;
-		sliceinfo.cabac_init_idc = slice_header->cabac_init_idc;
-		sliceinfo.disable_deblocking_filter_idc = slice_header->disable_deblocking_filter_idc;
-		sliceinfo.slice_id = 0; // if picture has multiple slices, this identifies the slice id (not supported currently)
-		std::memset(sliceinfo.RefPicList, 0xFF, sizeof(sliceinfo.RefPicList));
-		// L0:
-		switch (sliceinfo.slice_type)
-		{
-		case 2:
-		case 4:
-		case 7:
-		case 9:
-			// keep 0xFF
-			break;
-		default:
-			for (int j = 0; j < sliceinfo.num_ref_idx_l0_active_minus1; ++j)
-			{
-				sliceinfo.RefPicList[0][j] = {};
-				sliceinfo.RefPicList[0][j].Index7Bits = op->dpb_reference_slots[j];
-			}
-			break;
-		}
-		// L1:
-		switch (sliceinfo.slice_type)
-		{
-		case 0:
-		case 2:
-		case 3:
-		case 4:
-		case 5:
-		case 7:
-		case 8:
-		case 9:
-			// keep 0xFF
-			break;
-		default:
-			for (int j = 0; j < sliceinfo.num_ref_idx_l1_active_minus1; ++j)
-			{
-				sliceinfo.RefPicList[1][j] = {};
-				sliceinfo.RefPicList[1][j].Index7Bits = op->dpb_reference_slots[j];
-			}
-			break;
-		}
-		// L0:
-		for (int j = 0; j < 32; ++j) // weights/offsets
-		{
-			for (int k = 0; k < 3; ++k) // y, cb, cr
-			{
-				switch (k)
-				{
-				default:
-				case 0:
-					sliceinfo.Weights[0][j][k][0] = slice_header->pwt.luma_weight_l0[j];
-					sliceinfo.Weights[0][j][k][1] = slice_header->pwt.luma_offset_l0[j];
-					break;
-				case 1:
-					sliceinfo.Weights[0][j][k][0] = slice_header->pwt.chroma_weight_l0[j][0];
-					sliceinfo.Weights[0][j][k][1] = slice_header->pwt.chroma_offset_l0[j][0];
-					break;
-				case 2:
-					sliceinfo.Weights[0][j][k][0] = slice_header->pwt.chroma_weight_l0[j][1];
-					sliceinfo.Weights[0][j][k][1] = slice_header->pwt.chroma_offset_l0[j][1];
-					break;
-				}
-			}
-		}
-		// L1:
-		for (int j = 0; j < 32; ++j) // weights/offsets
-		{
-			for (int k = 0; k < 3; ++k) // y, cb, cr
-			{
-				switch (k)
-				{
-				default:
-				case 0:
-					sliceinfo.Weights[1][j][k][0] = slice_header->pwt.luma_weight_l1[j];
-					sliceinfo.Weights[1][j][k][1] = slice_header->pwt.luma_offset_l1[j];
-					break;
-				case 1:
-					sliceinfo.Weights[1][j][k][0] = slice_header->pwt.chroma_weight_l1[j][0];
-					sliceinfo.Weights[1][j][k][1] = slice_header->pwt.chroma_offset_l1[j][0];
-					break;
-				case 2:
-					sliceinfo.Weights[1][j][k][0] = slice_header->pwt.chroma_weight_l1[j][1];
-					sliceinfo.Weights[1][j][k][1] = slice_header->pwt.chroma_offset_l1[j][1];
-					break;
-				}
-			}
-		}
-
-		input.FrameArguments[input.NumFrameArguments].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_SLICE_CONTROL;
-		input.FrameArguments[input.NumFrameArguments].Size = sizeof(sliceinfo);
-		input.FrameArguments[input.NumFrameArguments].pData = &sliceinfo;
-		input.NumFrameArguments++;
-#endif
 
 		CommandList_DX12& commandlist = GetCommandList(cmd);
 		commandlist.GetVideoDecodeCommandList()->DecodeFrame(
@@ -7762,74 +7671,19 @@ std::mutex queue_locker;
 			&input
 		);
 
-		// Debug printout for pic params:
-#if 0
-		AllocConsole();
-		AttachConsole(GetCurrentProcessId());
-		HWND Handle = GetConsoleWindow();
-		freopen("CON", "w", stdout);
-		const DXVA_PicParams_H264* pPicParams = &pic_params;
-		printf("\n=============================================\n");
-		printf("wFrameWidthInMbsMinus1 = %d\n", pPicParams->wFrameWidthInMbsMinus1);
-		printf("wFrameHeightInMbsMinus1 = %d\n", pPicParams->wFrameHeightInMbsMinus1);
-		printf("CurrPic.Index7Bits = %d\n", pPicParams->CurrPic.Index7Bits);
-		printf("CurrPic.AssociatedFlag = %d\n", pPicParams->CurrPic.AssociatedFlag);
-		printf("num_ref_frames = %d\n", pPicParams->num_ref_frames);
-		printf("sp_for_switch_flag = %d\n", pPicParams->sp_for_switch_flag);
-		printf("field_pic_flag = %d\n", pPicParams->field_pic_flag);
-		printf("MbaffFrameFlag = %d\n", pPicParams->MbaffFrameFlag);
-		printf("residual_colour_transform_flag = %d\n", pPicParams->residual_colour_transform_flag);
-		printf("chroma_format_idc = %d\n", pPicParams->chroma_format_idc);
-		printf("RefPicFlag = %d\n", pPicParams->RefPicFlag);
-		printf("IntraPicFlag = %d\n", pPicParams->IntraPicFlag);
-		printf("constrained_intra_pred_flag = %d\n", pPicParams->constrained_intra_pred_flag);
-		printf("MinLumaBipredSize8x8Flag = %d\n", pPicParams->MinLumaBipredSize8x8Flag);
-		printf("weighted_pred_flag = %d\n", pPicParams->weighted_pred_flag);
-		printf("weighted_bipred_idc = %d\n", pPicParams->weighted_bipred_idc);
-		printf("MbsConsecutiveFlag = %d\n", pPicParams->MbsConsecutiveFlag);
-		printf("frame_mbs_only_flag = %d\n", pPicParams->frame_mbs_only_flag);
-		printf("transform_8x8_mode_flag = %d\n", pPicParams->transform_8x8_mode_flag);
-		printf("StatusReportFeedbackNumber = %d\n", pPicParams->StatusReportFeedbackNumber);
-		printf("CurrFieldOrderCnt[0] = %d\n", pPicParams->CurrFieldOrderCnt[0]);
-		printf("CurrFieldOrderCnt[1] = %d\n", pPicParams->CurrFieldOrderCnt[1]);
-		printf("chroma_qp_index_offset = %d\n", pPicParams->chroma_qp_index_offset);
-		printf("second_chroma_qp_index_offset = %d\n", pPicParams->second_chroma_qp_index_offset);
-		printf("ContinuationFlag = %d\n", pPicParams->ContinuationFlag);
-		printf("pic_init_qp_minus26 = %d\n", pPicParams->pic_init_qp_minus26);
-		printf("pic_init_qs_minus26 = %d\n", pPicParams->pic_init_qs_minus26);
-		printf("num_ref_idx_l0_active_minus1 = %d\n", pPicParams->num_ref_idx_l0_active_minus1);
-		printf("num_ref_idx_l1_active_minus1 = %d\n", pPicParams->num_ref_idx_l1_active_minus1);
-		printf("frame_num = %d\n", pPicParams->frame_num);
-		printf("log2_max_frame_num_minus4 = %d\n", pPicParams->log2_max_frame_num_minus4);
-		printf("pic_order_cnt_type = %d\n", pPicParams->pic_order_cnt_type);
-		printf("log2_max_pic_order_cnt_lsb_minus4 = %d\n", pPicParams->log2_max_pic_order_cnt_lsb_minus4);
-		printf("delta_pic_order_always_zero_flag = %d\n", pPicParams->delta_pic_order_always_zero_flag);
-		printf("direct_8x8_inference_flag = %d\n", pPicParams->direct_8x8_inference_flag);
-		printf("entropy_coding_mode_flag = %d\n", pPicParams->entropy_coding_mode_flag);
-		printf("pic_order_present_flag = %d\n", pPicParams->pic_order_present_flag);
-		printf("deblocking_filter_control_present_flag = %d\n", pPicParams->deblocking_filter_control_present_flag);
-		printf("redundant_pic_cnt_present_flag = %d\n", pPicParams->redundant_pic_cnt_present_flag);
-		printf("num_slice_groups_minus1 = %d\n", pPicParams->num_slice_groups_minus1);
-		printf("slice_group_map_type = %d\n", pPicParams->slice_group_map_type);
-		printf("slice_group_change_rate_minus1 = %d\n", pPicParams->slice_group_change_rate_minus1);
-		printf("Reserved8BitsB = %d\n", pPicParams->Reserved8BitsB);
-		printf("UsedForReferenceFlags 0x%08x\n", pPicParams->UsedForReferenceFlags);
-		printf("NonExistingFrameFlags 0x%08x\n", pPicParams->NonExistingFrameFlags);
-#endif
-
 		// Debug immediate submit-wait:
 #if 0
 		ComPtr<ID3D12Fence> fence;
 		HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(fence));
 		assert(SUCCEEDED(hr));
 
-		D3D12_RESOURCE_BARRIER bar = {};
-		bar.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		bar.Transition.pResource = dpb_internal->resource.Get();
-		bar.Transition.StateBefore = D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE;
-		bar.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
-		bar.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-		commandlist.GetVideoDecodeCommandList()->ResourceBarrier(1, &bar);
+		//D3D12_RESOURCE_BARRIER bar = {};
+		//bar.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		//bar.Transition.pResource = dpb_internal->resource.Get();
+		//bar.Transition.StateBefore = D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE;
+		//bar.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
+		//bar.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		//commandlist.GetVideoDecodeCommandList()->ResourceBarrier(1, &bar);
 
 		hr = commandlist.GetVideoDecodeCommandList()->Close();
 		assert(SUCCEEDED(hr));
