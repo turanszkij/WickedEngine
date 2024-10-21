@@ -766,7 +766,7 @@ The subresource indices are valid as long as the resource is valid that they wer
 
 The pipeline states are subject to shader compilations. Shader compilation will happen when a pipeline state is bound inside a render pass for the first time. This is required because the render target formats are necessary information for compilation, but they are not part of the pipeline state description. This choice was made for increased flexibility of defining pipeline states. However, unlike APIs where state subsets (like RasterizerDesc, or BlendStateDesc) can be bound individually, the grouping of states is more optimal regarding CPU time, because state hashes are computed only once for the whole pipeline state at creation time, as opposed to binding time for each individual state. This approach is also less prone to user error when the developer might forget setting any subset of state and the leftover state from previous render passes are incorrect. 
 
-Shaders still need to be created with `GraphicsDevice::CreateShader()` in a similar way to CreateTexture(), etc. This could result in shader compilation/hashing in some graphics APIs like DirectX 11. The CreateShader() function expects a `wiGraphics::ShaderStage` enum value which will define the type of shader:
+Shaders still need to be created with `GraphicsDevice::CreateShader()` in a similar way to CreateTexture(), etc. The CreateShader() function expects a `wiGraphics::ShaderStage` enum value which will define the type of shader:
 
 - `MS`: Mesh Shader
 - `AS`: Amplification Shader, or Task Shader
@@ -816,7 +816,7 @@ Image barriers are stating resource state transition for [textures](#textures). 
 - BUFFER_BARRIER <br/>
 Similar to `IMAGE_BARRIER`, but for [GPU Buffer](#gpu-buffers) state transitions.
 
-It is very important to place barriers to the right places if using low level graphics devices APIs like [DirectX 12](#graphicsdevice_dx12) or [Vulkan](#graphicsdevice_vulkan). Missing a barrier could lead to corruption of rendered results, crashes and generally undefined behaviour. However, barriers don't have an effect for [DirectX 11](#graphicsdevice_dx11), they are handled automatically. The [debug layer](#debug-device) will help to detect errors and missing barriers.
+It is very important to place barriers in the right places; missing a barrier could lead to corruption of rendered results, crashes and generally undefined behaviour. The [debug layer](#debug-device) will help to detect errors and missing barriers.
 
 ##### Textures
 `Texture` type resources are used to store images which will be sampled or written by the GPU efficiently. There are a lot of texture types, such as `Texture1D`, `Texture2D`, `TextureCube`, `Texture3D`, etc. used in [shaders](#shaders), that correspond to the simple `Texture` type on the CPU. The texture type will be determined when creating the resource with `GraphicsDevice::CreateTexture(const TextureDesc*, const SubresourceData*, Texture*)` function. The first argument is the `TextureDesc` that determines the dimensions, size, format and other properties of the texture resource. The `SubresourceData` is used to initialize the texture contents, it can be left as `nullptr`, when the texture contents don't need to be initialized, such as for textures that will be rendered into. The `Texture` is the texture that will be initialized.
