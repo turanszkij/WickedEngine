@@ -616,12 +616,14 @@ namespace vulkan_internal
 		{
 			ss += "[Vulkan Warning]: ";
 			ss += callback_data->pMessage;
+            ss += "\n";
 			wi::helper::DebugOut(ss, wi::helper::DebugLevel::Warning);
 		}
 		else if (message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
 		{
 			ss += "[Vulkan Error]: ";
 			ss += callback_data->pMessage;
+            ss += "\n";
 			wi::helper::DebugOut(ss, wi::helper::DebugLevel::Error);
 		}
 
