@@ -110,11 +110,11 @@ function Conversation()
 					end
 
 					-- Dialog input:
-					if input.Press(KEYBOARD_BUTTON_UP) or input.Press(string.byte('W')) or input.Press(GAMEPAD_BUTTON_UP) then
+					if input.Press(KEYBOARD_BUTTON_UP) or input.Press(string.byte('W')) or input.Press(GAMEPAD_BUTTON_UP) or input.Press(GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_UP) then
 						self.choice = self.choice - 1
 						self.font_blink_timer = 0
 					end
-					if input.Press(KEYBOARD_BUTTON_DOWN) or input.Press(string.byte('S')) or input.Press(GAMEPAD_BUTTON_DOWN) then
+					if input.Press(KEYBOARD_BUTTON_DOWN) or input.Press(string.byte('S')) or input.Press(GAMEPAD_BUTTON_DOWN) or input.Press(GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_DOWN) then
 						self.choice = self.choice + 1
 						self.font_blink_timer = 0
 					end
