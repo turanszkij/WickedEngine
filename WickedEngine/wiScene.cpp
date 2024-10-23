@@ -5080,6 +5080,7 @@ namespace wi::scene
 		if (weather.rain_amount > 0)
 		{
 			GraphicsDevice* device = wi::graphics::GetDevice();
+			rainEmitter.opacityCurveControlPeakStart = 0;
 			rainEmitter._flags |= wi::EmittedParticleSystem::FLAG_USE_RAIN_BLOCKER;
 			rainEmitter.shaderType = wi::EmittedParticleSystem::PARTICLESHADERTYPE::SOFT_LIGHTING;
 			rainEmitter.SetCollidersDisabled(true);

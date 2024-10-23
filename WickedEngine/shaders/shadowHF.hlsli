@@ -207,6 +207,20 @@ static const float rain_blocker_head_size_sq = rain_blocker_head_size * rain_blo
 //	false: above
 inline bool rain_blocker_check(in float3 P)
 {
+	// Check ocean blocker:
+	const ShaderOcean ocean = GetWeather().ocean;
+	if (ocean.texture_displacementmap >= 0)
+	{
+		Texture2D displacementmap = bindless_textures[ocean.texture_displacementmap];
+		float2 ocean_uv = P.xz * ocean.patch_size_rcp;
+		float3 displacement = displacementmap.SampleLevel(sampler_linear_wrap, ocean_uv, 0).xzy;
+		float water_height = ocean.water_height + displacement.y;
+		if (P.y < water_height)
+		{
+			return true;
+		}
+	}
+
 	// Before checking blocker shadow map, check "head" blocker:
 	if(P.y < GetCamera().position.y + rain_blocker_head_size)
 	{
@@ -240,6 +254,20 @@ inline bool rain_blocker_check(in float3 P)
 // Same as above but using previous frame's values
 inline bool rain_blocker_check_prev(in float3 P)
 {
+	// Check ocean blocker:
+	const ShaderOcean ocean = GetWeather().ocean;
+	if (ocean.texture_displacementmap >= 0)
+	{
+		Texture2D displacementmap = bindless_textures[ocean.texture_displacementmap];
+		float2 ocean_uv = P.xz * ocean.patch_size_rcp;
+		float3 displacement = displacementmap.SampleLevel(sampler_linear_wrap, ocean_uv, 0).xzy;
+		float water_height = ocean.water_height + displacement.y;
+		if (P.y < water_height)
+		{
+			return true;
+		}
+	}
+	
 	// Before checking blocker shadow map, check "head" blocker:
 	if(P.y < GetCamera().position.y + rain_blocker_head_size)
 	{
