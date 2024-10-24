@@ -4109,7 +4109,7 @@ namespace wi::scene
 	}
 	void Scene::RunImpostorUpdateSystem(wi::jobsystem::context& ctx)
 	{
-		if (dt == 0)
+		if (instanceArrayMapped == nullptr)
 			return;
 
 		if (impostors.GetCount() > 0 && !impostorArray.IsValid())

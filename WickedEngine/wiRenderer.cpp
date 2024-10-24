@@ -4899,6 +4899,12 @@ void UpdateRenderData(
 		wi::profiler::EndRange(range);
 		device->EventEnd(cmd);
 	}
+	else if(vis.scene->impostors.GetCount() > 0 && vis.scene->objects.GetCount() == 0 && vis.scene->impostorBuffer.IsValid())
+	{
+		device->ClearUAV(&vis.scene->impostorBuffer, 0, cmd);
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE | ResourceState::INDIRECT_ARGUMENT));
+		barrier_stack_flush(cmd);
+	}
 
 	// Meshlets:
 	if(vis.scene->instanceArraySize > 0 && vis.scene->meshletBuffer.IsValid())
