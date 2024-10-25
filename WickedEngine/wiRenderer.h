@@ -741,6 +741,7 @@ namespace wi::renderer
 	};
 	void CreateMotionBlurResources(MotionBlurResources& res, XMUINT2 resolution);
 	void Postprocess_MotionBlur(
+		float dt, // delta time in seconds
 		const MotionBlurResources& res,
 		const wi::graphics::Texture& input,
 		const wi::graphics::Texture& output,

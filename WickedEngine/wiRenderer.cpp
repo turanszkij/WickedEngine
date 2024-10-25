@@ -15601,6 +15601,7 @@ void CreateMotionBlurResources(MotionBlurResources& res, XMUINT2 resolution)
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_expensive);
 }
 void Postprocess_MotionBlur(
+	float dt,
 	const MotionBlurResources& res,
 	const Texture& input,
 	const Texture& output,
@@ -15661,7 +15662,7 @@ void Postprocess_MotionBlur(
 	postprocess.resolution.y = desc.height;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-	motionblur_strength = strength / 60.0f; // align to shutter speed
+	motionblur_strength = dt > 0 ? (strength / 60.0f / dt) : 0; // align to shutter speed
 
 	// Compute tile max velocities (horizontal):
 	{

@@ -63,7 +63,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 
 #else
 
-	const float strength = motionblur_strength / GetFrame().delta_time;
+	const float strength = motionblur_strength;
 
 	const float2 neighborhood_velocity = neighborhoodmax[(pixel + (dither((float2)pixel) - 0.5f) * 16) / MOTIONBLUR_TILESIZE] * strength; // dither to reduce tile artifact
 	const float neighborhood_velocity_magnitude = length(neighborhood_velocity);

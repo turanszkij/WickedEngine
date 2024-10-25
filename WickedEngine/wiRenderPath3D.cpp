@@ -2363,6 +2363,7 @@ namespace wi
 			if (getMotionBlurEnabled() && getMotionBlurStrength() > 0 && motionblurResources.IsValid())
 			{
 				wi::renderer::Postprocess_MotionBlur(
+					scene->dt,
 					motionblurResources,
 					rt_first == nullptr ? *rt_read : *rt_first,
 					*rt_write,
