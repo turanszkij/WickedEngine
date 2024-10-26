@@ -3174,9 +3174,6 @@ namespace wi::scene
 	}
 	void Scene::RunProceduralAnimationUpdateSystem(wi::jobsystem::context& ctx)
 	{
-		if (dt <= 0)
-			return;
-
 		auto range = wi::profiler::BeginRangeCPU("Procedural Animations");
 
 		// Character IK foot placement, should be after animations and hierarchy update:
@@ -3253,8 +3250,9 @@ namespace wi::scene
 				// Compute root offset :
 				// I determine which foot wants to step on lower ground, that will offset whole root downwards
 				// 	The other foot will be the upper foot which will be later attached an Inverse Kinematics(IK) effector
-				Ray left_ray(XMFLOAT3(left_pos.x, left_pos.y + 0.5f, left_pos.z), XMFLOAT3(0, -1, 0), 0, 1);
-				Ray right_ray(XMFLOAT3(right_pos.x, right_pos.y + 0.5f, right_pos.z), XMFLOAT3(0, -1, 0), 0, 1);
+				Capsule character_capsule = character.GetCapsule();
+				Ray left_ray(XMFLOAT3(left_pos.x, character_capsule.base.y + 0.5f, left_pos.z), XMFLOAT3(0, -1, 0), 0, 1);
+				Ray right_ray(XMFLOAT3(right_pos.x, character_capsule.base.y + 0.5f, right_pos.z), XMFLOAT3(0, -1, 0), 0, 1);
 				RayIntersectionResult left_result = Intersects(left_ray, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~layer);
 				RayIntersectionResult right_result = Intersects(right_ray, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~layer);
 				float left_diff = 0;

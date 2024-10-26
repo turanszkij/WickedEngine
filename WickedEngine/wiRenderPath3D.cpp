@@ -418,16 +418,12 @@ namespace wi
 		if (getFSR2Enabled())
 		{
 			camera->jitter = fsr2Resources.GetJitter();
-			camera_reflection.jitter.x = camera->jitter.x * 2;
-			camera_reflection.jitter.y = camera->jitter.x * 2;
 		}
 		else if (wi::renderer::GetTemporalAAEnabled())
 		{
 			const XMFLOAT4& halton = wi::math::GetHaltonSequence(wi::graphics::GetDevice()->GetFrameCount() % 256);
 			camera->jitter.x = (halton.x * 2 - 1) / (float)internalResolution.x;
 			camera->jitter.y = (halton.y * 2 - 1) / (float)internalResolution.y;
-			camera_reflection.jitter.x = camera->jitter.x * 2;
-			camera_reflection.jitter.y = camera->jitter.x * 2;
 			if (!temporalAAResources.IsValid())
 			{
 				wi::renderer::CreateTemporalAAResources(temporalAAResources, internalResolution);
@@ -436,9 +432,10 @@ namespace wi
 		else
 		{
 			camera->jitter = XMFLOAT2(0, 0);
-			camera_reflection.jitter = XMFLOAT2(0, 0);
 			temporalAAResources = {};
 		}
+
+		camera_reflection.jitter = XMFLOAT2(0, 0);
 
 		camera->UpdateCamera();
 		if (visibility_main.planar_reflection_visible)
