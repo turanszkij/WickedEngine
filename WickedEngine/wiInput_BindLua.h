@@ -26,6 +26,10 @@ namespace wi::lua
 		int GetAnalog(lua_State* L);
 		int GetTouches(lua_State* L);
 		int SetControllerFeedback(lua_State* L);
+		int WhatIsPressed(lua_State* L);
+		int IsGamepadButton(lua_State* L);
+		int ButtonToString(lua_State* L);
+		int StringToButton(lua_State* L);
 
 		static void Bind();
 	};

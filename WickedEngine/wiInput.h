@@ -55,7 +55,9 @@ namespace wi::input
 		GAMEPAD_BUTTON_XBOX_B = GAMEPAD_BUTTON_3,
 		GAMEPAD_BUTTON_XBOX_Y = GAMEPAD_BUTTON_4,
 		GAMEPAD_BUTTON_XBOX_L1 = GAMEPAD_BUTTON_5,
+		GAMEPAD_BUTTON_XBOX_LT = GAMEPAD_ANALOG_TRIGGER_L_AS_BUTTON,
 		GAMEPAD_BUTTON_XBOX_R1 = GAMEPAD_BUTTON_6,
+		GAMEPAD_BUTTON_XBOX_RT = GAMEPAD_ANALOG_TRIGGER_R_AS_BUTTON,
 		GAMEPAD_BUTTON_XBOX_L3 = GAMEPAD_BUTTON_7,
 		GAMEPAD_BUTTON_XBOX_R3 = GAMEPAD_BUTTON_8,
 		GAMEPAD_BUTTON_XBOX_BACK = GAMEPAD_BUTTON_9,
@@ -67,7 +69,9 @@ namespace wi::input
 		GAMEPAD_BUTTON_PLAYSTATION_CIRCLE = GAMEPAD_BUTTON_3,
 		GAMEPAD_BUTTON_PLAYSTATION_TRIANGLE = GAMEPAD_BUTTON_4,
 		GAMEPAD_BUTTON_PLAYSTATION_L1 = GAMEPAD_BUTTON_5,
+		GAMEPAD_BUTTON_PLAYSTATION_L2 = GAMEPAD_ANALOG_TRIGGER_L_AS_BUTTON,
 		GAMEPAD_BUTTON_PLAYSTATION_R1 = GAMEPAD_BUTTON_6,
+		GAMEPAD_BUTTON_PLAYSTATION_R2 = GAMEPAD_ANALOG_TRIGGER_R_AS_BUTTON,
 		GAMEPAD_BUTTON_PLAYSTATION_L3 = GAMEPAD_BUTTON_7,
 		GAMEPAD_BUTTON_PLAYSTATION_R3 = GAMEPAD_BUTTON_8,
 		GAMEPAD_BUTTON_PLAYSTATION_SHARE = GAMEPAD_BUTTON_9,
@@ -80,6 +84,10 @@ namespace wi::input
 		MOUSE_BUTTON_LEFT,
 		MOUSE_BUTTON_RIGHT,
 		MOUSE_BUTTON_MIDDLE,
+
+		// Detect mouse scroll like a button:
+		MOUSE_SCROLL_AS_BUTTON_UP,
+		MOUSE_SCROLL_AS_BUTTON_DOWN,
 
 		KEYBOARD_BUTTON_UP,
 		KEYBOARD_BUTTON_DOWN,
@@ -201,6 +209,12 @@ namespace wi::input
 	// send various feedback to the controller
 	void SetControllerFeedback(const ControllerFeedback& data, int playerindex = 0);
 
+	// returns BUTTON_NONE if currently nothing is pressed, or the first pressed button otherwise
+	BUTTON WhatIsPressed(int playerindex = 0);
+
+	// Returns true if the button belongs to gamepad, false otherwise
+	inline constexpr bool IsGamepadButton(BUTTON button) { return button > GAMEPAD_RANGE_START && button < GAMEPAD_RANGE_END; }
+
 	// Check if left mouse button was double clicked in the current frame:
 	bool IsDoubleClicked();
 
@@ -240,6 +254,31 @@ namespace wi::input
 		CURSOR_CROSS,
 	};
 	void SetCursor(CURSOR cursor);
+
+	BUTTON StringToButton(const char* str);
+
+	enum CONTROLLER_PREFERENCE
+	{
+		CONTROLLER_PREFERENCE_GENERIC,
+		CONTROLLER_PREFERENCE_PLAYSTATION,
+		CONTROLLER_PREFERENCE_XBOX,
+	};
+	struct ShortReturnString
+	{
+		char text[32] = {};
+		constexpr ShortReturnString() = default;
+		constexpr ShortReturnString(const char* str)
+		{
+			int i = 0;
+			while (str[i] && i < arraysize(text))
+			{
+				text[i] = str[i];
+				i++;
+			}
+		}
+		constexpr operator const char*() const { return text; }
+	};
+	ShortReturnString ButtonToString(BUTTON button, CONTROLLER_PREFERENCE preference = CONTROLLER_PREFERENCE_GENERIC);
 
 };
 

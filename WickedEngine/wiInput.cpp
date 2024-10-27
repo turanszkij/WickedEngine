@@ -121,9 +121,9 @@ namespace wi::input
 		wi::input::rawinput::GetKeyboardState(&keyboard); 
 
 		// apparently checking the mouse here instead of Down() avoids missing the button presses (review!)
-        mouse.left_button_press |= KEY_DOWN(VK_LBUTTON);
-        mouse.middle_button_press |= KEY_DOWN(VK_MBUTTON);
-        mouse.right_button_press |= KEY_DOWN(VK_RBUTTON);
+		mouse.left_button_press |= KEY_DOWN(VK_LBUTTON);
+		mouse.middle_button_press |= KEY_DOWN(VK_MBUTTON);
+		mouse.right_button_press |= KEY_DOWN(VK_RBUTTON);
 
 		// Since raw input doesn't contain absolute mouse position, we get it with regular winapi:
 		POINT p;
@@ -406,7 +406,7 @@ namespace wi::input
 			return false;
 		}
 
-		if(button > GAMEPAD_RANGE_START && button < GAMEPAD_RANGE_END)
+		if(IsGamepadButton(button))
 		{
 			if (playerindex < (int)controllers.size())
 			{
@@ -447,6 +447,15 @@ namespace wi::input
 		}
 		else if (playerindex == 0) // keyboard or mouse
 		{
+			if (button == MOUSE_SCROLL_AS_BUTTON_UP)
+			{
+				return mouse.delta_wheel > 0.1f;
+			}
+			if (button == MOUSE_SCROLL_AS_BUTTON_DOWN)
+			{
+				return mouse.delta_wheel < -0.1f;
+			}
+
 			uint16_t keycode = (uint16_t)button;
 
 			switch (button)
@@ -724,6 +733,16 @@ namespace wi::input
 #endif // _WIN32
 	}
 
+	BUTTON WhatIsPressed(int playerindex)
+	{
+		for (int i = DIGIT_RANGE_START; i < BUTTON_ENUM_SIZE; ++i)
+		{
+			if (Press((BUTTON)i, playerindex))
+				return (BUTTON)i;
+		}
+		return BUTTON_NONE;
+	}
+
 	bool IsDoubleClicked()
 	{
 		return double_click;
@@ -788,6 +807,386 @@ namespace wi::input
 	void SetCursor(CURSOR cursor)
 	{
 		cursor_next = cursor;
+	}
+
+	BUTTON StringToButton(const char* str)
+	{
+		if (str == nullptr)
+			return BUTTON_NONE;
+
+		if (strcmp(str, "■") == 0)
+			return GAMEPAD_BUTTON_PLAYSTATION_SQUARE;
+		if (strcmp(str, "✖") == 0)
+			return GAMEPAD_BUTTON_PLAYSTATION_CROSS;
+		if (strcmp(str, "●") == 0)
+			return GAMEPAD_BUTTON_PLAYSTATION_CIRCLE;
+		if (strcmp(str, "▲") == 0)
+			return GAMEPAD_BUTTON_PLAYSTATION_TRIANGLE;
+		if (strcmp(str, "L1") == 0)
+			return GAMEPAD_BUTTON_PLAYSTATION_L1;
+		if (strcmp(str, "L2") == 0)
+			return GAMEPAD_BUTTON_PLAYSTATION_L2;
+		if (strcmp(str, "L3") == 0)
+			return GAMEPAD_BUTTON_PLAYSTATION_L3;
+		if (strcmp(str, "R1") == 0)
+			return GAMEPAD_BUTTON_PLAYSTATION_R1;
+		if (strcmp(str, "R2") == 0)
+			return GAMEPAD_BUTTON_PLAYSTATION_R2;
+		if (strcmp(str, "R3") == 0)
+			return GAMEPAD_BUTTON_PLAYSTATION_R3;
+		if (strcmp(str, "Share") == 0)
+			return GAMEPAD_BUTTON_PLAYSTATION_SHARE;
+		if (strcmp(str, "Option") == 0)
+			return GAMEPAD_BUTTON_PLAYSTATION_OPTION;
+
+		if (strcmp(str, "X") == 0)
+			return GAMEPAD_BUTTON_XBOX_X;
+		if (strcmp(str, "A") == 0)
+			return GAMEPAD_BUTTON_XBOX_A;
+		if (strcmp(str, "B") == 0)
+			return GAMEPAD_BUTTON_XBOX_B;
+		if (strcmp(str, "Y") == 0)
+			return GAMEPAD_BUTTON_XBOX_Y;
+		if (strcmp(str, "L1") == 0)
+			return GAMEPAD_BUTTON_XBOX_L1;
+		if (strcmp(str, "LT") == 0)
+			return GAMEPAD_BUTTON_XBOX_LT;
+		if (strcmp(str, "L3") == 0)
+			return GAMEPAD_BUTTON_XBOX_L3;
+		if (strcmp(str, "R1") == 0)
+			return GAMEPAD_BUTTON_XBOX_R1;
+		if (strcmp(str, "RT") == 0)
+			return GAMEPAD_BUTTON_XBOX_RT;
+		if (strcmp(str, "R3") == 0)
+			return GAMEPAD_BUTTON_XBOX_R3;
+		if (strcmp(str, "Back") == 0)
+			return GAMEPAD_BUTTON_XBOX_BACK;
+		if (strcmp(str, "Start") == 0)
+			return GAMEPAD_BUTTON_XBOX_START;
+
+		if (strcmp(str, "Dpad ↑") == 0)
+			return GAMEPAD_BUTTON_UP;
+		if (strcmp(str, "Dpad ←") == 0)
+			return GAMEPAD_BUTTON_LEFT;
+		if (strcmp(str, "Dpad ↓") == 0)
+			return GAMEPAD_BUTTON_DOWN;
+		if (strcmp(str, "Dpad →") == 0)
+			return GAMEPAD_BUTTON_RIGHT;
+
+		if (strcmp(str, "Gamepad 1") == 0)
+			return GAMEPAD_BUTTON_1;
+		if (strcmp(str, "Gamepad 2") == 0)
+			return GAMEPAD_BUTTON_2;
+		if (strcmp(str, "Gamepad 3") == 0)
+			return GAMEPAD_BUTTON_3;
+		if (strcmp(str, "Gamepad 4") == 0)
+			return GAMEPAD_BUTTON_4;
+		if (strcmp(str, "Gamepad 5") == 0)
+			return GAMEPAD_BUTTON_5;
+		if (strcmp(str, "Gamepad 6") == 0)
+			return GAMEPAD_BUTTON_6;
+		if (strcmp(str, "Gamepad 7") == 0)
+			return GAMEPAD_BUTTON_7;
+		if (strcmp(str, "Gamepad 8") == 0)
+			return GAMEPAD_BUTTON_8;
+		if (strcmp(str, "Gamepad 9") == 0)
+			return GAMEPAD_BUTTON_9;
+		if (strcmp(str, "Gamepad 10") == 0)
+			return GAMEPAD_BUTTON_10;
+		if (strcmp(str, "Gamepad 11") == 0)
+			return GAMEPAD_BUTTON_11;
+		if (strcmp(str, "Gamepad 12") == 0)
+			return GAMEPAD_BUTTON_12;
+		if (strcmp(str, "Gamepad 13") == 0)
+			return GAMEPAD_BUTTON_13;
+		if (strcmp(str, "Gamepad 14") == 0)
+			return GAMEPAD_BUTTON_14;
+
+		if (strcmp(str, "Left Stick ↑") == 0)
+			return GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_UP;
+		if (strcmp(str, "Left Stick ←") == 0)
+			return GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_LEFT;
+		if (strcmp(str, "Left Stick ↓") == 0)
+			return GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_DOWN;
+		if (strcmp(str, "Left Stick →") == 0)
+			return GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_RIGHT;
+		if (strcmp(str, "Right Stick ↑") == 0)
+			return GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_UP;
+		if (strcmp(str, "Right Stick ←") == 0)
+			return GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_LEFT;
+		if (strcmp(str, "Right Stick ↓") == 0)
+			return GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_DOWN;
+		if (strcmp(str, "Right Stick →") == 0)
+			return GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_RIGHT;
+
+		if (strcmp(str, "Left Trigger") == 0)
+			return GAMEPAD_ANALOG_TRIGGER_L_AS_BUTTON;
+		if (strcmp(str, "Right Trigger") == 0)
+			return GAMEPAD_ANALOG_TRIGGER_R_AS_BUTTON;
+
+		if (strcmp(str, "Left Mouse Button") == 0)
+			return MOUSE_BUTTON_LEFT;
+		if (strcmp(str, "Right Mouse Button") == 0)
+			return MOUSE_BUTTON_RIGHT;
+		if (strcmp(str, "Middle Mouse Button") == 0)
+			return MOUSE_BUTTON_MIDDLE;
+		if (strcmp(str, "Mouse Wheel ↑") == 0)
+			return MOUSE_SCROLL_AS_BUTTON_UP;
+		if (strcmp(str, "Mouse Wheel ↓") == 0)
+			return MOUSE_SCROLL_AS_BUTTON_DOWN;
+
+		if (strcmp(str, "↑") == 0)
+			return KEYBOARD_BUTTON_UP;
+		if (strcmp(str, "←") == 0)
+			return KEYBOARD_BUTTON_LEFT;
+		if (strcmp(str, "↓") == 0)
+			return KEYBOARD_BUTTON_DOWN;
+		if (strcmp(str, "→") == 0)
+			return KEYBOARD_BUTTON_RIGHT;
+
+		if (strcmp(str, "Space") == 0)
+			return KEYBOARD_BUTTON_SPACE;
+		if (strcmp(str, "Enter") == 0)
+			return KEYBOARD_BUTTON_ENTER;
+		if (strcmp(str, "Escape") == 0)
+			return KEYBOARD_BUTTON_ENTER;
+		if (strcmp(str, "Home") == 0)
+			return KEYBOARD_BUTTON_HOME;
+		if (strcmp(str, "Delete") == 0)
+			return KEYBOARD_BUTTON_DELETE;
+		if (strcmp(str, "Backspace") == 0)
+			return KEYBOARD_BUTTON_BACKSPACE;
+		if (strcmp(str, "Page Down") == 0)
+			return KEYBOARD_BUTTON_PAGEDOWN;
+		if (strcmp(str, "Page Up") == 0)
+			return KEYBOARD_BUTTON_PAGEUP;
+		if (strcmp(str, "*") == 0)
+			return KEYBOARD_BUTTON_MULTIPLY;
+		if (strcmp(str, "+") == 0)
+			return KEYBOARD_BUTTON_ADD;
+		if (strcmp(str, "Separator") == 0)
+			return KEYBOARD_BUTTON_SEPARATOR;
+		if (strcmp(str, "-") == 0)
+			return KEYBOARD_BUTTON_SUBTRACT;
+		if (strcmp(str, "Decimal") == 0)
+			return KEYBOARD_BUTTON_DECIMAL;
+		if (strcmp(str, "/") == 0)
+			return KEYBOARD_BUTTON_DIVIDE;
+		if (strcmp(str, "Tab") == 0)
+			return KEYBOARD_BUTTON_TAB;
+		if (strcmp(str, "Tilde") == 0)
+			return KEYBOARD_BUTTON_TILDE;
+		if (strcmp(str, "Insert") == 0)
+			return KEYBOARD_BUTTON_INSERT;
+
+		if (strcmp(str, "Left Shift") == 0)
+			return KEYBOARD_BUTTON_LSHIFT;
+		if (strcmp(str, "Right Shift") == 0)
+			return KEYBOARD_BUTTON_RSHIFT;
+		if (strcmp(str, "Left Control") == 0)
+			return KEYBOARD_BUTTON_LCONTROL;
+		if (strcmp(str, "Right Control") == 0)
+			return KEYBOARD_BUTTON_RCONTROL;
+
+		if (strcmp(str, "F1") == 0)
+			return KEYBOARD_BUTTON_F1;
+		if (strcmp(str, "F2") == 0)
+			return KEYBOARD_BUTTON_F2;
+		if (strcmp(str, "F3") == 0)
+			return KEYBOARD_BUTTON_F3;
+		if (strcmp(str, "F4") == 0)
+			return KEYBOARD_BUTTON_F4;
+		if (strcmp(str, "F5") == 0)
+			return KEYBOARD_BUTTON_F5;
+		if (strcmp(str, "F6") == 0)
+			return KEYBOARD_BUTTON_F6;
+		if (strcmp(str, "F7") == 0)
+			return KEYBOARD_BUTTON_F7;
+		if (strcmp(str, "F8") == 0)
+			return KEYBOARD_BUTTON_F8;
+		if (strcmp(str, "F9") == 0)
+			return KEYBOARD_BUTTON_F9;
+		if (strcmp(str, "F10") == 0)
+			return KEYBOARD_BUTTON_F10;
+		if (strcmp(str, "F11") == 0)
+			return KEYBOARD_BUTTON_F11;
+		if (strcmp(str, "F12") == 0)
+			return KEYBOARD_BUTTON_F12;
+
+		if (strcmp(str, "Numpad 0") == 0)
+			return KEYBOARD_BUTTON_NUMPAD0;
+		if (strcmp(str, "Numpad 1") == 0)
+			return KEYBOARD_BUTTON_NUMPAD1;
+		if (strcmp(str, "Numpad 2") == 0)
+			return KEYBOARD_BUTTON_NUMPAD2;
+		if (strcmp(str, "Numpad 3") == 0)
+			return KEYBOARD_BUTTON_NUMPAD3;
+		if (strcmp(str, "Numpad 4") == 0)
+			return KEYBOARD_BUTTON_NUMPAD4;
+		if (strcmp(str, "Numpad 5") == 0)
+			return KEYBOARD_BUTTON_NUMPAD5;
+		if (strcmp(str, "Numpad 6") == 0)
+			return KEYBOARD_BUTTON_NUMPAD6;
+		if (strcmp(str, "Numpad 7") == 0)
+			return KEYBOARD_BUTTON_NUMPAD7;
+		if (strcmp(str, "Numpad 8") == 0)
+			return KEYBOARD_BUTTON_NUMPAD8;
+		if (strcmp(str, "Numpad 9") == 0)
+			return KEYBOARD_BUTTON_NUMPAD9;
+
+		if (str[0] >= DIGIT_RANGE_START && str[0] < GAMEPAD_RANGE_START)
+		{
+			return (BUTTON)str[0];
+		}
+
+		return BUTTON_NONE;
+	}
+
+	ShortReturnString ButtonToString(BUTTON button, CONTROLLER_PREFERENCE preference)
+	{
+#ifdef PLATFORM_PS5
+		preference = CONTROLLER_PREFERENCE_PLAYSTATION;
+#endif // PLATFORM_PS5
+#ifdef PLATFORM_XBOX
+		preference = CONTROLLER_PREFERENCE_XBOX;
+#endif // PLATFORM_XBOX
+
+		if (preference == CONTROLLER_PREFERENCE_PLAYSTATION)
+		{
+			switch (button)
+			{
+			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_SQUARE: return "■";
+			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_CROSS: return "✖";
+			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_CIRCLE: return "●";
+			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_TRIANGLE: return "▲";
+			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_L1: return "L1";
+			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_L2: return "L2";
+			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_R1: return "R1";
+			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_R2: return "R2";
+			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_L3: return "L3";
+			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_R3: return "R3";
+			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_SHARE: return "Share";
+			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_OPTION: return "Option";
+			default:
+				break;
+			}
+		}
+
+		if (preference == CONTROLLER_PREFERENCE_XBOX)
+		{
+			switch (button)
+			{
+			case wi::input::GAMEPAD_BUTTON_XBOX_X: return "X";
+			case wi::input::GAMEPAD_BUTTON_XBOX_A: return "A";
+			case wi::input::GAMEPAD_BUTTON_XBOX_B: return "B";
+			case wi::input::GAMEPAD_BUTTON_XBOX_Y: return "Y";
+			case wi::input::GAMEPAD_BUTTON_XBOX_L1: return "L1";
+			case wi::input::GAMEPAD_BUTTON_XBOX_LT: return "LT";
+			case wi::input::GAMEPAD_BUTTON_XBOX_R1: return "R1";
+			case wi::input::GAMEPAD_BUTTON_XBOX_RT: return "RT";
+			case wi::input::GAMEPAD_BUTTON_XBOX_L3: return "L3";
+			case wi::input::GAMEPAD_BUTTON_XBOX_R3: return "R3";
+			case wi::input::GAMEPAD_BUTTON_XBOX_BACK: return "Back";
+			case wi::input::GAMEPAD_BUTTON_XBOX_START: return "Start";
+			default:
+				break;
+			}
+		}
+
+		switch (button)
+		{
+		case wi::input::GAMEPAD_BUTTON_UP: return "Dpad ↑";
+		case wi::input::GAMEPAD_BUTTON_LEFT: return "Dpad ←";
+		case wi::input::GAMEPAD_BUTTON_DOWN: return "Dpad ↓";
+		case wi::input::GAMEPAD_BUTTON_RIGHT: return "Dpad →";
+		case wi::input::GAMEPAD_BUTTON_1: return "Gamepad 1";
+		case wi::input::GAMEPAD_BUTTON_2: return "Gamepad 2";
+		case wi::input::GAMEPAD_BUTTON_3: return "Gamepad 3";
+		case wi::input::GAMEPAD_BUTTON_4: return "Gamepad 4";
+		case wi::input::GAMEPAD_BUTTON_5: return "Gamepad 5";
+		case wi::input::GAMEPAD_BUTTON_6: return "Gamepad 6";
+		case wi::input::GAMEPAD_BUTTON_7: return "Gamepad 7";
+		case wi::input::GAMEPAD_BUTTON_8: return "Gamepad 8";
+		case wi::input::GAMEPAD_BUTTON_9: return "Gamepad 9";
+		case wi::input::GAMEPAD_BUTTON_10: return "Gamepad 10";
+		case wi::input::GAMEPAD_BUTTON_11: return "Gamepad 11";
+		case wi::input::GAMEPAD_BUTTON_12: return "Gamepad 12";
+		case wi::input::GAMEPAD_BUTTON_13: return "Gamepad 13";
+		case wi::input::GAMEPAD_BUTTON_14: return "Gamepad 14";
+		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_UP: return "Left Stick ↑";
+		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_LEFT: return "Left Stick ←";
+		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_DOWN: return "Left Stick ↓";
+		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_RIGHT: return "Left Stick →";
+		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_UP: return "Right Stick ↑";
+		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_LEFT: return "Right Stick ←";
+		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_DOWN: return "Right Stick ↓";
+		case wi::input::GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_RIGHT: return "Right Stick →";
+		case wi::input::GAMEPAD_ANALOG_TRIGGER_L_AS_BUTTON: return "Left Trigger";
+		case wi::input::GAMEPAD_ANALOG_TRIGGER_R_AS_BUTTON: return "Right Trigger";
+		case wi::input::MOUSE_BUTTON_LEFT: return "Left Mouse Button";
+		case wi::input::MOUSE_BUTTON_RIGHT: return "Right Mouse Button";
+		case wi::input::MOUSE_BUTTON_MIDDLE: return "Middle Mouse Button";
+		case wi::input::MOUSE_SCROLL_AS_BUTTON_UP: return "Mouse Wheel ↑";
+		case wi::input::MOUSE_SCROLL_AS_BUTTON_DOWN: return "Mouse Wheel ↓";
+		case wi::input::KEYBOARD_BUTTON_UP: return "↑";
+		case wi::input::KEYBOARD_BUTTON_DOWN: return "↓";
+		case wi::input::KEYBOARD_BUTTON_LEFT: return "←";
+		case wi::input::KEYBOARD_BUTTON_RIGHT: return "→";
+		case wi::input::KEYBOARD_BUTTON_SPACE: return "Space";
+		case wi::input::KEYBOARD_BUTTON_RSHIFT: return "Right Shift";
+		case wi::input::KEYBOARD_BUTTON_LSHIFT: return "Left Shift";
+		case wi::input::KEYBOARD_BUTTON_F1: return "F1";
+		case wi::input::KEYBOARD_BUTTON_F2: return "F2";
+		case wi::input::KEYBOARD_BUTTON_F3: return "F3";
+		case wi::input::KEYBOARD_BUTTON_F4: return "F4";
+		case wi::input::KEYBOARD_BUTTON_F5: return "F5";
+		case wi::input::KEYBOARD_BUTTON_F6: return "F6";
+		case wi::input::KEYBOARD_BUTTON_F7: return "F7";
+		case wi::input::KEYBOARD_BUTTON_F8: return "F8";
+		case wi::input::KEYBOARD_BUTTON_F9: return "F9";
+		case wi::input::KEYBOARD_BUTTON_F10: return "F10";
+		case wi::input::KEYBOARD_BUTTON_F11: return "F11";
+		case wi::input::KEYBOARD_BUTTON_F12: return "F12";
+		case wi::input::KEYBOARD_BUTTON_ENTER: return "Enter";
+		case wi::input::KEYBOARD_BUTTON_ESCAPE: return "Escape";
+		case wi::input::KEYBOARD_BUTTON_HOME: return "Home";
+		case wi::input::KEYBOARD_BUTTON_RCONTROL: return "Right Control";
+		case wi::input::KEYBOARD_BUTTON_LCONTROL: return "Left Control";
+		case wi::input::KEYBOARD_BUTTON_DELETE: return "Delete";
+		case wi::input::KEYBOARD_BUTTON_BACKSPACE: return "Backspace";
+		case wi::input::KEYBOARD_BUTTON_PAGEDOWN: return "Page Down";
+		case wi::input::KEYBOARD_BUTTON_PAGEUP: return "Page Up";
+		case wi::input::KEYBOARD_BUTTON_NUMPAD0: return "Numpad 0";
+		case wi::input::KEYBOARD_BUTTON_NUMPAD1: return "Numpad 1";
+		case wi::input::KEYBOARD_BUTTON_NUMPAD2: return "Numpad 2";
+		case wi::input::KEYBOARD_BUTTON_NUMPAD3: return "Numpad 3";
+		case wi::input::KEYBOARD_BUTTON_NUMPAD4: return "Numpad 4";
+		case wi::input::KEYBOARD_BUTTON_NUMPAD5: return "Numpad 5";
+		case wi::input::KEYBOARD_BUTTON_NUMPAD6: return "Numpad 6";
+		case wi::input::KEYBOARD_BUTTON_NUMPAD7: return "Numpad 7";
+		case wi::input::KEYBOARD_BUTTON_NUMPAD8: return "Numpad 8";
+		case wi::input::KEYBOARD_BUTTON_NUMPAD9: return "Numpad 9";
+		case wi::input::KEYBOARD_BUTTON_MULTIPLY: return "*";
+		case wi::input::KEYBOARD_BUTTON_ADD: return "+";
+		case wi::input::KEYBOARD_BUTTON_SEPARATOR: return "Separator";
+		case wi::input::KEYBOARD_BUTTON_SUBTRACT: return "-";
+		case wi::input::KEYBOARD_BUTTON_DECIMAL: return "Decimal";
+		case wi::input::KEYBOARD_BUTTON_DIVIDE: return "/";
+		case wi::input::KEYBOARD_BUTTON_TAB: return "Tab";
+		case wi::input::KEYBOARD_BUTTON_TILDE: return "Tilde";
+		case wi::input::KEYBOARD_BUTTON_INSERT: return "Insert";
+		default:
+			break;
+		}
+
+		if (button >= DIGIT_RANGE_START && button < GAMEPAD_RANGE_START)
+		{
+			ShortReturnString str;
+			str.text[0] = (char)button;
+			return str;
+		}
+
+		return "";
 	}
 
 }

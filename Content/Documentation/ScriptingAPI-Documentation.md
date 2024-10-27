@@ -1846,7 +1846,7 @@ It's like two spheres connected by a cylinder. Base and Tip are the two endpoint
 
 ### Input
 Query input devices
-- [outer]input : Input
+- [outer]input : Input -- use this global object to access input functions
 - [void-constructor]Input()
 - Down(int code, opt int playerindex = 0) : bool result  -- Check whether a button is currently being held down
 - Press(int code, opt int playerindex = 0) : bool result  -- Check whether a button has just been pushed that wasn't before
@@ -1859,6 +1859,10 @@ Query input devices
 - GetAnalog(int type, opt int playerindex = 0) : Vector result  -- read analog data from gamepad. type parameter must be from GAMEPAD_ANALOG values
 - GetTouches() : Touch result[]
 - SetControllerFeedback(ControllerFeedback feedback, opt int playerindex = 0) -- sets controller feedback such as vibration or LED color
+- WhatIsPressed(opt int playerindex = 0) : int	-- returns 0 (`BUTTON_NONE`) if nothing is pressed, or the first appropriate button code otherwise
+- IsGamepadButton(int button) : bool 	-- returns whether that button code is a gamepad button or not
+- StringToButton(string str) : int	-- returns button code for a given string name
+- ButtonToString(int button, opt int preference = CONTROLLER_PREFERENCE_GENERIC) : string	-- returns string name for the given button code. You can set a preference for controller type which can modify the string returned
 
 #### ControllerFeedback
 Describes controller feedback such as touch and LED color which can be replayed on a controller
@@ -1931,6 +1935,10 @@ Describes a touch contact point
 - [outer]MOUSE_BUTTON_RIGHT	 : int
 - [outer]MOUSE_BUTTON_MIDDLE : int
 
+Helpers to check mouse wheel scrolling like buttons:
+- [outer]MOUSE_SCROLL_AS_BUTTON_UP 		: int
+- [outer]MOUSE_SCROLL_AS_BUTTON_DOWN 	: int
+
 #### Gamepad Key Codes
 - [outer]GAMEPAD_BUTTON_UP : int
 - [outer]GAMEPAD_BUTTON_LEFT : int
@@ -1963,7 +1971,9 @@ Xbox button codes:
 - [outer]GAMEPAD_BUTTON_XBOX_B  : GAMEPAD_BUTTON_3
 - [outer]GAMEPAD_BUTTON_XBOX_Y  : GAMEPAD_BUTTON_4
 - [outer]GAMEPAD_BUTTON_XBOX_L1 : GAMEPAD_BUTTON_5
+- [outer]GAMEPAD_BUTTON_XBOX_LT : GAMEPAD_ANALOG_TRIGGER_L_AS_BUTTON
 - [outer]GAMEPAD_BUTTON_XBOX_R1 : GAMEPAD_BUTTON_6
+- [outer]GAMEPAD_BUTTON_XBOX_RT : GAMEPAD_ANALOG_TRIGGER_R_AS_BUTTON
 - [outer]GAMEPAD_BUTTON_XBOX_L3 : GAMEPAD_BUTTON_7
 - [outer]GAMEPAD_BUTTON_XBOX_R3 : GAMEPAD_BUTTON_8
 - [outer]GAMEPAD_BUTTON_XBOX_BACK : GAMEPAD_BUTTON_9
@@ -1975,7 +1985,9 @@ Playstation button codes:
 - [outer]GAMEPAD_BUTTON_PLAYSTATION_CIRCLE : GAMEPAD_BUTTON_3
 - [outer]GAMEPAD_BUTTON_PLAYSTATION_TRIANGLE : GAMEPAD_BUTTON_4
 - [outer]GAMEPAD_BUTTON_PLAYSTATION_L1 : GAMEPAD_BUTTON_5
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_L2 : GAMEPAD_ANALOG_TRIGGER_L_AS_BUTTON
 - [outer]GAMEPAD_BUTTON_PLAYSTATION_R1 : GAMEPAD_BUTTON_6
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_R2 : GAMEPAD_ANALOG_TRIGGER_R_AS_BUTTON
 - [outer]GAMEPAD_BUTTON_PLAYSTATION_L3 : GAMEPAD_BUTTON_7
 - [outer]GAMEPAD_BUTTON_PLAYSTATION_R3 : GAMEPAD_BUTTON_8
 - [outer]GAMEPAD_BUTTON_PLAYSTATION_SHARE : GAMEPAD_BUTTON_9
@@ -1986,6 +1998,11 @@ Playstation button codes:
 - [outer]GAMEPAD_ANALOG_THUMBSTICK_R : int
 - [outer]GAMEPAD_ANALOG_TRIGGER_L : int
 - [outer]GAMEPAD_ANALOG_TRIGGER_R : int
+
+#### Controller preference
+- [outer]CONTROLLER_PREFERENCE_GENERIC : int
+- [outer]CONTROLLER_PREFERENCE_PLAYSTATION : int
+- [outer]CONTROLLER_PREFERENCE_XBOX : int
 
 
 ### Physics
