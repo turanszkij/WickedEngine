@@ -62,7 +62,7 @@ namespace wi::input
 #endif // PLATFORM_WINDOWS_DESKTOP
 
 #ifdef SDL2
-	static const SDL_Cursor* cursor_table_original[] = {
+	static SDL_Cursor* cursor_table_original[] = {
 		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW),
 		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM),
 		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL),
