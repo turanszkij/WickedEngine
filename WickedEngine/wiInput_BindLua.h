@@ -30,6 +30,9 @@ namespace wi::lua
 		int IsGamepadButton(lua_State* L);
 		int ButtonToString(lua_State* L);
 		int StringToButton(lua_State* L);
+		int SetCursor(lua_State* L);
+		int SetCursorFromFile(lua_State* L);
+		int ResetCursor(lua_State* L);
 
 		static void Bind();
 	};

@@ -252,8 +252,17 @@ namespace wi::input
 		CURSOR_HAND,
 		CURSOR_NOTALLOWED,
 		CURSOR_CROSS,
+
+		CURSOR_COUNT
 	};
 	void SetCursor(CURSOR cursor);
+
+	// Replaces the specified cursor from a cursor image file
+	//	(file type must be a .cur or .ani on Windows)
+	void SetCursorFromFile(CURSOR cursor, const char* filename);
+
+	// Resets specified cursor to the original:
+	void ResetCursor(CURSOR cursor);
 
 	BUTTON StringToButton(const char* str);
 

@@ -42,8 +42,40 @@ namespace wi::input
 	bool double_click = false;
 	wi::Timer doubleclick_timer;
 	XMFLOAT2 doubleclick_prevpos = XMFLOAT2(0, 0);
-	CURSOR cursor_current = CURSOR_CROSS; // something that's not default, because at least once code should change it to default
+	CURSOR cursor_current = CURSOR_COUNT; // something that's not default, because at least once code should change it to default
 	CURSOR cursor_next = CURSOR_DEFAULT;
+
+#ifdef PLATFORM_WINDOWS_DESKTOP
+	static const HCURSOR cursor_table_original[] = {
+		::LoadCursor(nullptr, IDC_ARROW),
+		::LoadCursor(nullptr, IDC_IBEAM),
+		::LoadCursor(nullptr, IDC_SIZEALL),
+		::LoadCursor(nullptr, IDC_SIZENS),
+		::LoadCursor(nullptr, IDC_SIZEWE),
+		::LoadCursor(nullptr, IDC_SIZENESW),
+		::LoadCursor(nullptr, IDC_SIZENWSE),
+		::LoadCursor(nullptr, IDC_HAND),
+		::LoadCursor(nullptr, IDC_NO),
+		::LoadCursor(nullptr, IDC_CROSS),
+	};
+	static HCURSOR cursor_table[arraysize(cursor_table_original)] = {};
+#endif // PLATFORM_WINDOWS_DESKTOP
+
+#ifdef SDL2
+	static const SDL_Cursor* cursor_table_original[] = {
+		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW),
+		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM),
+		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL),
+		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS),
+		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE),
+		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW),
+		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE),
+		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND),
+		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NO),
+		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_CROSSHAIR),
+	};
+	static SDL_Cursor* cursor_table[arraysize(cursor_table_original)] = {};
+#endif // SDL2
 
 	const KeyboardState& GetKeyboardState() { return keyboard; }
 	const MouseState& GetMouseState() { return mouse; }
@@ -92,6 +124,11 @@ namespace wi::input
 #ifdef PLATFORM_PS5
 		wi::input::ps5::Initialize();
 #endif // PLATFORM_PS5
+
+		for (int i = 0; i < arraysize(cursor_table); ++i)
+		{
+			cursor_table[i] = cursor_table_original[i];
+		}
 
 		wi::backlog::post("wi::input Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 		initialized.store(true);
@@ -354,34 +391,10 @@ namespace wi::input
 		if(cursor_next != cursor_current || cursor_next != CURSOR_DEFAULT)
 		{
 #ifdef PLATFORM_WINDOWS_DESKTOP
-			static HCURSOR cursor_table[] = {
-				::LoadCursor(nullptr, IDC_ARROW),
-				::LoadCursor(nullptr, IDC_IBEAM),
-				::LoadCursor(nullptr, IDC_SIZEALL),
-				::LoadCursor(nullptr, IDC_SIZENS),
-				::LoadCursor(nullptr, IDC_SIZEWE),
-				::LoadCursor(nullptr, IDC_SIZENESW),
-				::LoadCursor(nullptr, IDC_SIZENWSE),
-				::LoadCursor(nullptr, IDC_HAND),
-				::LoadCursor(nullptr, IDC_NO),
-				::LoadCursor(nullptr, IDC_CROSS),
-			};
 			::SetCursor(cursor_table[cursor_next]);
 #endif // PLATFORM_WINDOWS_DESKTOP
 
 #ifdef SDL2
-			static SDL_Cursor* cursor_table[] = {
-				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW),
-				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM),
-				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL),
-				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENS),
-				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEWE),
-				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW),
-				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE),
-				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND),
-				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NO),
-				SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_CROSSHAIR),
-			};
 			SDL_SetCursor(cursor_table[cursor_next] ? cursor_table[cursor_next] : cursor_table[CURSOR_DEFAULT]);
 #endif // SDL2
 
@@ -735,7 +748,14 @@ namespace wi::input
 
 	BUTTON WhatIsPressed(int playerindex)
 	{
-		for (int i = DIGIT_RANGE_START; i < BUTTON_ENUM_SIZE; ++i)
+		// First go through predefined enums:
+		for (int i = GAMEPAD_RANGE_START + 1; i < BUTTON_ENUM_SIZE; ++i)
+		{
+			if (Press((BUTTON)i, playerindex))
+				return (BUTTON)i;
+		}
+		// Go through remaining digits, letters and undefined:
+		for (int i = DIGIT_RANGE_START; i < GAMEPAD_RANGE_START; ++i)
 		{
 			if (Press((BUTTON)i, playerindex))
 				return (BUTTON)i;
@@ -807,6 +827,28 @@ namespace wi::input
 	void SetCursor(CURSOR cursor)
 	{
 		cursor_next = cursor;
+	}
+
+	void SetCursorFromFile(CURSOR cursor, const char* filename)
+	{
+#ifdef PLATFORM_WINDOWS_DESKTOP
+		wchar_t wfilename[1024] = {};
+		wi::helper::StringConvert(filename, wfilename);
+		cursor_table[cursor] = LoadCursorFromFile(wfilename);
+#endif // PLATFORM_WINDOWS_DESKTOP
+
+		// refresh in case we set the current one:
+		cursor_next = cursor_current;
+		cursor_current = CURSOR_COUNT;
+	}
+
+	void ResetCursor(CURSOR cursor)
+	{
+		cursor_table[cursor] = cursor_table_original[cursor];
+
+		// refresh in case we set the current one:
+		cursor_next = cursor_current;
+		cursor_current = CURSOR_COUNT;
 	}
 
 	BUTTON StringToButton(const char* str)

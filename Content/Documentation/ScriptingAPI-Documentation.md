@@ -1863,6 +1863,9 @@ Query input devices
 - IsGamepadButton(int button) : bool 	-- returns whether that button code is a gamepad button or not
 - StringToButton(string str) : int	-- returns button code for a given string name
 - ButtonToString(int button, opt int preference = CONTROLLER_PREFERENCE_GENERIC) : string	-- returns string name for the given button code. You can set a preference for controller type which can modify the string returned
+- SetCursor(int cursor)	-- sets the current cursor type. Values can be of the cursor values, see below
+- SetCursorFromFile(int cursor, string filename)	-- sets the specified cursor type to an image from a cursor file
+- ResetCursor(int cursor)	-- resets the specified cursor to the default one
 
 #### ControllerFeedback
 Describes controller feedback such as touch and LED color which can be replayed on a controller
@@ -2003,6 +2006,18 @@ Playstation button codes:
 - [outer]CONTROLLER_PREFERENCE_GENERIC : int
 - [outer]CONTROLLER_PREFERENCE_PLAYSTATION : int
 - [outer]CONTROLLER_PREFERENCE_XBOX : int
+
+#### Cursor codes:
+- [outer]CURSOR_DEFAULT : int
+- [outer]CURSOR_TEXTINPUT : int
+- [outer]CURSOR_RESIZEALL : int
+- [outer]CURSOR_RESIZE_NS : int
+- [outer]CURSOR_RESIZE_EW : int
+- [outer]CURSOR_RESIZE_NESW : int
+- [outer]CURSOR_RESIZE_NWSE : int
+- [outer]CURSOR_HAND : int
+- [outer]CURSOR_NOTALLOWED : int
+- [outer]CURSOR_CROSS : int
 
 
 ### Physics

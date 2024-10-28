@@ -20,6 +20,9 @@ namespace wi::lua
 		lunamethod(Input_BindLua, IsGamepadButton),
 		lunamethod(Input_BindLua, ButtonToString),
 		lunamethod(Input_BindLua, StringToButton),
+		lunamethod(Input_BindLua, SetCursor),
+		lunamethod(Input_BindLua, SetCursorFromFile),
+		lunamethod(Input_BindLua, ResetCursor),
 		{ NULL, NULL }
 	};
 	Luna<Input_BindLua>::PropertyType Input_BindLua::properties[] = {
@@ -253,6 +256,43 @@ namespace wi::lua
 		wi::lua::SError(L, "StringToButton(string str): not enough parameters!");
 		return 0;
 	}
+	int Input_BindLua::SetCursor(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::input::CURSOR cursor = (wi::input::CURSOR)wi::lua::SGetInt(L, 1);
+			wi::input::SetCursor(cursor);
+			return 0;
+		}
+		wi::lua::SError(L, "SetCursor(int cursor) not enough arguments!");
+		return 0;
+	}
+	int Input_BindLua::SetCursorFromFile(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			wi::input::CURSOR cursor = (wi::input::CURSOR)wi::lua::SGetInt(L, 1);
+			const char* filename = wi::lua::SGetString(L, 2);
+			wi::input::SetCursorFromFile(cursor, filename);
+			return 0;
+		}
+		wi::lua::SError(L, "SetCursorFromFile(int cursor, string filename) not enough arguments!");
+		return 0;
+	}
+	int Input_BindLua::ResetCursor(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::input::CURSOR cursor = (wi::input::CURSOR)wi::lua::SGetInt(L, 1);
+			wi::input::ResetCursor(cursor);
+			return 0;
+		}
+		wi::lua::SError(L, "ResetCursor(int cursor) not enough arguments!");
+		return 0;
+	}
 
 	void Input_BindLua::Bind()
 	{
@@ -393,6 +433,17 @@ KEYBOARD_BUTTON_INSERT		= 564
 CONTROLLER_PREFERENCE_GENERIC = 0
 CONTROLLER_PREFERENCE_PLAYSTATION = 1
 CONTROLLER_PREFERENCE_XBOX = 2
+
+CURSOR_DEFAULT = 0
+CURSOR_TEXTINPUT = 1
+CURSOR_RESIZEALL = 2
+CURSOR_RESIZE_NS = 3
+CURSOR_RESIZE_EW = 4
+CURSOR_RESIZE_NESW = 5
+CURSOR_RESIZE_NWSE = 6
+CURSOR_HAND = 7
+CURSOR_NOTALLOWED = 8
+CURSOR_CROSS = 9
 )");
 
 		}
