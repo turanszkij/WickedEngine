@@ -528,7 +528,6 @@ namespace wi::terrain
 			{
 				grassEntity = CreateEntity();
 			}
-			scene->Component_Attach(grassEntity, terrainEntity);
 			if (!scene->hairs.Contains(grassEntity))
 			{
 				scene->hairs.Create(grassEntity);

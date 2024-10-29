@@ -600,6 +600,33 @@ namespace wi::ecs
 			if(archive.IsReadMode())
 			{
 				bool has_next = false;
+				size_t begin = archive.GetPos();
+
+				// First pass, gather component type versions and jump over all data:
+				//	This is so that we can look up other component versions within component serialization if needed
+				do
+				{
+					archive >> has_next;
+					if (has_next)
+					{
+						std::string name;
+						archive >> name;
+						uint64_t jump_pos = 0;
+						archive >> jump_pos;
+						auto it = entries.find(name);
+						if (it != entries.end())
+						{
+							archive >> seri.version;
+							seri.library_versions[name] = seri.version;
+						}
+						archive.Jump(jump_pos);
+					}
+				} while (has_next);
+
+				// Jump back to beginning of component library data
+				archive.Jump(begin);
+
+				// Second pass: read entities
 				do
 				{
 					archive >> has_next;
@@ -626,6 +653,12 @@ namespace wi::ecs
 			}
 			else
 			{
+				// Save all component type versions:
+				for (auto& it : entries)
+				{
+					seri.library_versions[it.first] = it.second.version;
+				}
+				// Serialize:
 				for(auto& it : entries)
 				{
 					archive << true;

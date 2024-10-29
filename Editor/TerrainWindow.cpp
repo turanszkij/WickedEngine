@@ -1742,7 +1742,6 @@ void TerrainWindow::SetupAssets()
 		{
 			terrain_preset.grassEntity = grassScene.hairs.GetEntity(0);
 			currentScene.Merge(grassScene);
-			currentScene.Component_Attach(terrain_preset.grassEntity, entity);
 		}
 	}
 	else
