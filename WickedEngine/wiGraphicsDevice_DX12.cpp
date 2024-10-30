@@ -1704,6 +1704,7 @@ std::mutex queue_locker;
 			assert(SUCCEEDED(hr));
 			hr = device->device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, cmd.commandAllocator.Get(), nullptr, PPV_ARGS(cmd.commandList));
 			assert(SUCCEEDED(hr));
+			cmd.commandList->SetName(L"CopyAllocator::commandList");
 
 			hr = cmd.commandList->Close();
 			assert(SUCCEEDED(hr));
@@ -5686,7 +5687,20 @@ std::mutex queue_locker;
 				{
 					int lastCompletedOp = *pNode->pLastBreadcrumbValue;
 
-					log += std::string("[DRED] Commandlist = [") + (pNode->pCommandListDebugNameA == nullptr ? "-" : pNode->pCommandListDebugNameA) + std::string("], CommandQueue = [") + (pNode->pCommandQueueDebugNameA == nullptr ? "-" : pNode->pCommandQueueDebugNameA) + std::string("], lastCompletedOp = [") + std::to_string(lastCompletedOp) + "], BreadCrumbCount = [" + std::to_string(pNode->BreadcrumbCount) + "]\n";
+					char commandlistname[1024] = {};
+					char commandqueuename[1024] = {};
+
+					// Note: pCommandListDebugNameA and similar doesn't seem to contain anything while pCommandListDebugNameW does, so convert these by hand:
+					if (pNode->pCommandListDebugNameW != nullptr)
+					{
+						wi::helper::StringConvert(pNode->pCommandListDebugNameW, commandlistname);
+					}
+					if (pNode->pCommandQueueDebugNameW != nullptr)
+					{
+						wi::helper::StringConvert(pNode->pCommandQueueDebugNameW, commandqueuename);
+					}
+
+					log += std::string("[DRED] Commandlist = [") + commandlistname + std::string("], CommandQueue = [") + commandqueuename + std::string("], lastCompletedOp = [") + std::to_string(lastCompletedOp) + "], BreadCrumbCount = [" + std::to_string(pNode->BreadcrumbCount) + "]\n";
 
 					int firstOp = std::max(lastCompletedOp - 100, 0);
 					int lastOp = std::min(lastCompletedOp + 20, int(pNode->BreadcrumbCount) - 1);
@@ -5735,7 +5749,12 @@ std::mutex queue_locker;
 					{
 						uint32_t alloc_type_index = pNode->AllocationType - D3D12_DRED_ALLOCATION_TYPE_COMMAND_QUEUE;
 						const char* AllocTypeName = (alloc_type_index < arraysize(AllocTypesNames)) ? AllocTypesNames[alloc_type_index] : "Unknown Alloc";
-						log += std::string("\tName: ") + pNode->ObjectNameA + std::string(" ") + AllocTypeName + std::string("\n");
+						char objectname[1024] = {};
+						if (pNode->ObjectNameW != nullptr)
+						{
+							wi::helper::StringConvert(pNode->ObjectNameW, objectname);
+						}
+						log += std::string("\tName: ") + objectname + std::string(" ") + AllocTypeName + std::string("\n");
 						pNode = pNode->pNext;
 					}
 				}
@@ -5748,7 +5767,12 @@ std::mutex queue_locker;
 					{
 						uint32_t allocTypeIndex = pNode->AllocationType - D3D12_DRED_ALLOCATION_TYPE_COMMAND_QUEUE;
 						const char* AllocTypeName = (allocTypeIndex < arraysize(AllocTypesNames)) ? AllocTypesNames[allocTypeIndex] : "Unknown Alloc";
-						log += std::string("\tName: ") + pNode->ObjectNameA + std::string(" (Type: ") + AllocTypeName + std::string(")\n");
+						char objectname[1024] = {};
+						if (pNode->ObjectNameW != nullptr)
+						{
+							wi::helper::StringConvert(pNode->ObjectNameW, objectname);
+						}
+						log += std::string("\tName: ") + objectname + std::string(" (Type: ") + AllocTypeName + std::string(")\n");
 						pNode = pNode->pNext;
 					}
 				}
