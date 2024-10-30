@@ -4928,6 +4928,11 @@ namespace wi::scene
 					}
 					instance.instance_id = (uint32_t)instanceIndex;
 					instance.instance_mask = hair.layerMask == 0 ? 0 : 0xFF;
+					const MaterialComponent* material = materials.GetComponent(entity);
+					if (material != nullptr && !material->IsCastingShadow())
+					{
+						instance.instance_mask &= ~wi::renderer::raytracing_inclusion_mask_shadow;
+					}
 					instance.bottom_level = &hair.BLAS;
 					instance.instance_contribution_to_hit_group_index = 0;
 					instance.flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
@@ -5023,6 +5028,10 @@ namespace wi::scene
 				}
 				instance.instance_id = (uint32_t)instanceIndex;
 				instance.instance_mask = emitter.layerMask == 0 ? 0 : 0xFF;
+				if (material != nullptr && !material->IsCastingShadow())
+				{
+					instance.instance_mask &= ~wi::renderer::raytracing_inclusion_mask_shadow;
+				}
 				instance.bottom_level = &emitter.BLAS;
 				instance.instance_contribution_to_hit_group_index = 0;
 				instance.flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;

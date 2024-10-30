@@ -909,6 +909,7 @@ namespace wi
 		desc.width = arraysize(data);
 		desc.format = Format::R16_UNORM;
 		desc.bind_flags = BindFlag::SHADER_RESOURCE;
+		desc.swizzle = SwizzleFromString("rrr1");
 		SubresourceData initdata;
 		initdata.data_ptr = data;
 		initdata.row_pitch = sizeof(data);
