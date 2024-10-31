@@ -3945,10 +3945,18 @@ namespace wi::scene
 				uint32_t subsetIndex = 0;
 				for (auto& subset : mesh.subsets)
 				{
+					if (mesh.IsDoubleSided())
+					{
+						subset.flags |= MeshComponent::MESH_SUBSET_DOUBLESIDED;
+					}
 					const MaterialComponent* material = materials.GetComponent(subset.materialID);
 					if (material != nullptr)
 					{
 						subset.materialIndex = (uint32_t)materials.GetIndex(subset.materialID);
+						if (material->IsDoubleSided())
+						{
+							subset.flags |= MeshComponent::MESH_SUBSET_DOUBLESIDED;
+						}
 					}
 					else
 					{
@@ -6230,7 +6238,7 @@ namespace wi::scene
 				const XMMATRIX objectMatInverse = XMMatrixInverse(nullptr, objectMat);
 				const ArmatureComponent* armature = mesh->IsSkinned() ? armatures.GetComponent(mesh->armatureID) : nullptr;
 
-				auto intersect_triangle = [&](uint32_t subsetIndex, uint32_t indexOffset, uint32_t triangleIndex)
+				auto intersect_triangle = [&](uint32_t subsetIndex, uint32_t indexOffset, uint32_t triangleIndex, bool doubleSided)
 				{
 					const uint32_t i0 = mesh->indices[indexOffset + triangleIndex * 3 + 0];
 					const uint32_t i1 = mesh->indices[indexOffset + triangleIndex * 3 + 1];
@@ -6280,7 +6288,7 @@ namespace wi::scene
 					// Find the nearest feature on the triangle to the sphere.
 					XMVECTOR Dist = XMVector3Dot(XMVectorSubtract(Center, p0), N);
 
-					if (!mesh->IsDoubleSided() && XMVectorGetX(Dist) > 0)
+					if (!doubleSided && XMVectorGetX(Dist) > 0)
 						return; // pass through back faces
 
 					// If the center of the sphere is farther from the plane of the triangle than
@@ -6396,8 +6404,8 @@ namespace wi::scene
 						if (subset.indexCount == 0)
 							return;
 						const uint32_t indexOffset = subset.indexOffset;
-						intersect_triangle(subsetIndex, indexOffset, triangleIndex);
-						});
+						intersect_triangle(subsetIndex, indexOffset, triangleIndex, subset.IsDoubleSided());
+					});
 				}
 				else
 				{
@@ -6412,10 +6420,9 @@ namespace wi::scene
 							continue;
 						const uint32_t indexOffset = subset.indexOffset;
 						const uint32_t triangleCount = subset.indexCount / 3;
-
 						for (uint32_t triangleIndex = 0; triangleIndex < triangleCount; ++triangleIndex)
 						{
-							intersect_triangle(subsetIndex, indexOffset, triangleIndex);
+							intersect_triangle(subsetIndex, indexOffset, triangleIndex, subset.IsDoubleSided());
 						}
 					}
 				}
@@ -6547,7 +6554,7 @@ namespace wi::scene
 				const ArmatureComponent* armature = mesh->IsSkinned() ? armatures.GetComponent(mesh->armatureID) : nullptr;
 				const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
 				
-				auto intersect_triangle = [&](uint32_t subsetIndex, uint32_t indexOffset, uint32_t triangleIndex)
+				auto intersect_triangle = [&](uint32_t subsetIndex, uint32_t indexOffset, uint32_t triangleIndex, bool doubleSided)
 				{
 					const uint32_t i0 = mesh->indices[indexOffset + triangleIndex * 3 + 0];
 					const uint32_t i1 = mesh->indices[indexOffset + triangleIndex * 3 + 1];
@@ -6669,7 +6676,7 @@ namespace wi::scene
 					XMVECTOR Dist = XMVector3Dot(XMVectorSubtract(Center, p0), N);
 
 					bool onBackside = XMVectorGetX(Dist) > 0;
-					if (!mesh->IsDoubleSided() && onBackside)
+					if (!doubleSided && onBackside)
 						return; // pass through back faces
 
 					// If the center of the sphere is farther from the plane of the triangle than
@@ -6827,7 +6834,7 @@ namespace wi::scene
 						if (subset.indexCount == 0)
 							return;
 						const uint32_t indexOffset = subset.indexOffset;
-						intersect_triangle(subsetIndex, indexOffset, triangleIndex);
+						intersect_triangle(subsetIndex, indexOffset, triangleIndex, subset.IsDoubleSided());
 					});
 				}
 				else
@@ -6843,10 +6850,9 @@ namespace wi::scene
 							continue;
 						const uint32_t indexOffset = subset.indexOffset;
 						const uint32_t triangleCount = subset.indexCount / 3;
-
 						for (uint32_t triangleIndex = 0; triangleIndex < triangleCount; ++triangleIndex)
 						{
-							intersect_triangle(subsetIndex, indexOffset, triangleIndex);
+							intersect_triangle(subsetIndex, indexOffset, triangleIndex, subset.IsDoubleSided());
 						}
 					}
 				}

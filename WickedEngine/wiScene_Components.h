@@ -389,6 +389,11 @@ namespace wi::scene
 		wi::vector<uint8_t> vertex_windweights;
 		wi::vector<uint32_t> indices;
 
+		enum MESH_SUBSET_FLAGS
+		{
+			MESH_SUBSET_DOUBLESIDED = 1 << 0,
+		};
+
 		struct MeshSubset
 		{
 			std::string surfaceName; // custom identifier for user, not used by engine
@@ -398,6 +403,9 @@ namespace wi::scene
 
 			// Non-serialized attributes:
 			uint32_t materialIndex = 0;
+			uint32_t flags = 0;
+
+			constexpr bool IsDoubleSided() const { return flags & MESH_SUBSET_DOUBLESIDED; }
 		};
 		wi::vector<MeshSubset> subsets;
 
