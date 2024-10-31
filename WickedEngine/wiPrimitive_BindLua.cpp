@@ -99,8 +99,19 @@ namespace wi::lua::primitive
 				return 1;
 			}
 
+			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (vec)
+			{
+				XMVECTOR P = XMLoadFloat4(&vec->data);
+				XMVECTOR O = XMLoadFloat3(&ray.origin);
+				XMVECTOR D = XMLoadFloat3(&ray.direction);
+				XMVECTOR I = XMPlaneIntersectLine(P, O + D * ray.TMin, O + D * ray.TMax);
+				Luna<Vector_BindLua>::push(L, I);
+				return 1;
+			}
+
 		}
-		wi::lua::SError(L, "[Intersects(AABB), Intersects(Sphere), Intersects(Capsule)] no matching arguments! ");
+		wi::lua::SError(L, "[Intersects(AABB), Intersects(Sphere), Intersects(Capsule), Intersects(Vector)] no matching arguments! ");
 		return 0;
 	}
 	int Ray_BindLua::GetOrigin(lua_State* L)

@@ -659,6 +659,8 @@ A four component floating point vector. Provides efficient calculations with SIM
 - QuaternionToRollPitchYaw(Vector quaternion) : Vector resultQuaternion
 - QuaternionSlerp(Vector quaternion1,quaternion2, float t) : Vector resultQuaternion
 - Slerp(Vector quaternion1,quaternion2, float t) : Vector resultQuaternion -- same as QuaternionSlerp
+- PlaneFromPointNormal(Vector point, normal) : constructs a plane from a point and a normal
+- PlaneFromPoints(Vector a,b,c) : constructs a plane from three points
 - GetAngle(Vector a,b,axis, opt float max_angle = math.pi * 2) : float result	-- computes the signed angle between two 3D vectors around specified axis
 
 ### Matrix
@@ -1348,6 +1350,19 @@ Describes a Weather
 - SetVolumetricClouds(bool value) -- Sets if weather is rendering volumetric clouds or not
 - SetHeightFog(bool value) -- Sets if weather is rendering height fog visual effect or not
 
+##### OceanParameters
+- dmap_dim : int
+- patch_length : float
+- time_scale : float
+- wave_amplitude : float
+- wind_dir : Vector
+- wind_speed : float
+- wind dependency : float
+- choppy_scale : float
+- waterColor : Vector
+- waterHeight : float
+- surfaceDisplacementTolerance : float
+
 #### SoundComponent
 Describes a Sound object.
 - Filename : string
@@ -1775,6 +1790,7 @@ A ray is defined by an origin Vector and a normalized direction Vector. It can b
 - Intersects(AABB aabb) : bool result
 - Intersects(Sphere sphere) : bool result
 - Intersects(Capsule capsule) : bool result
+- Intersects(Vector plane) : Vector result : intersects with a plane and returns intersection position or nans. Use `vector.PlaneFromPointNormal(Vector point, normal)` or `vector.PlaneFromPoints(Vector a,b,c)` to construct a plane.
 - GetOrigin() : Vector result
 - GetDirection() : Vector result
 - SetOrigin(Vector vector)

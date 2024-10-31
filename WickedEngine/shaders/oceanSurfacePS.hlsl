@@ -32,7 +32,7 @@ float4 main(PSIn input) : SV_TARGET
 	[branch]
 	if (GetCamera().texture_waterriples_index >= 0)
 	{
-		gradient.rg += bindless_textures_float2[GetCamera().texture_waterriples_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rg * 0.01;
+		gradient.rg += bindless_textures_float2[GetCamera().texture_waterriples_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rg * 0.025;
 	}
 
 	Surface surface;

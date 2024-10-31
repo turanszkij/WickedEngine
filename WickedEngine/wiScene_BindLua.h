@@ -1100,6 +1100,10 @@ namespace wi::lua::scene
 			wind_speed = FloatProperty(&parameter->wind_speed);
 			wind_dependency = FloatProperty(&parameter->wind_dependency);
 			choppy_scale = FloatProperty(&parameter->choppy_scale);
+			waterColor = VectorProperty(&parameter->waterColor);
+			waterHeight = FloatProperty(&parameter->waterHeight);
+			//surfaceDetail = IntProperty(&parameter->surfaceDetail);
+			surfaceDisplacementTolerance = FloatProperty(&parameter->surfaceDisplacementTolerance);
 		}
 
 		Weather_OceanParams_BindLua(wi::Ocean::OceanParameters* parameter) :parameter(parameter)
@@ -1121,8 +1125,8 @@ namespace wi::lua::scene
 		FloatProperty choppy_scale;
 		VectorProperty waterColor;
 		FloatProperty waterHeight;
-		LongLongProperty surfaceDetail;
-		FloatProperty surfaceDisplacement;
+		IntProperty surfaceDetail;
+		FloatProperty surfaceDisplacementTolerance;
 
 		PropertyFunction(dmap_dim)
 		PropertyFunction(patch_length)
@@ -1135,7 +1139,7 @@ namespace wi::lua::scene
 		PropertyFunction(waterColor)
 		PropertyFunction(waterHeight)
 		PropertyFunction(surfaceDetail)
-		PropertyFunction(surfaceDisplacement)
+		PropertyFunction(surfaceDisplacementTolerance)
 	};
 	struct Weather_OceanParams_Property
 	{

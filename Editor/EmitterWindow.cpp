@@ -61,7 +61,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	AddWidget(&burstButton);
 
 	burstCountInput.Create("");
-	burstCountInput.SetValue(100);
+	burstCountInput.SetValue(10);
 	burstCountInput.SetSize(XMFLOAT2(itemheight * 4, itemheight));
 	burstCountInput.SetCancelInputEnabled(false);
 	burstCountInput.SetTooltip("Specify burst count (number of particles to burst).");
@@ -282,7 +282,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	frameRateInput.SetPos(XMFLOAT2(x, y));
 	frameRateInput.SetSize(XMFLOAT2(38, 18));
 	frameRateInput.SetText("");
-	frameRateInput.SetTooltip("Enter a value to enable looping sprite sheet animation (frames per second). Set 0 for animation along paritcle lifetime.");
+	frameRateInput.SetTooltip("Enter a value to enable looping sprite sheet animation (frames per second). Set 0 for exactly one complete animation along particle lifetime.");
 	frameRateInput.SetDescription("Frame Rate: ");
 	frameRateInput.OnInputAccepted([this](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -335,7 +335,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	frameCountInput.SetPos(XMFLOAT2(x, y += step));
 	frameCountInput.SetSize(XMFLOAT2(38, 18));
 	frameCountInput.SetText("");
-	frameCountInput.SetTooltip("Enter a value to enable the random sprite sheet frame selection's max frame number.");
+	frameCountInput.SetTooltip("The total number of frames in the sprite sheet animation.");
 	frameCountInput.SetDescription("Frame Count: ");
 	frameCountInput.OnInputAccepted([this](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();

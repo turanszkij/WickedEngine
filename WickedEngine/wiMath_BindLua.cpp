@@ -36,6 +36,8 @@ namespace wi::lua
 		lunamethod(Vector_BindLua, QuaternionMultiply),
 		lunamethod(Vector_BindLua, QuaternionFromRollPitchYaw),
 		lunamethod(Vector_BindLua, QuaternionToRollPitchYaw),
+		lunamethod(Vector_BindLua, PlaneFromPointNormal),
+		lunamethod(Vector_BindLua, PlaneFromPoints),
 		lunamethod(Vector_BindLua, GetAngle),
 		{ NULL, NULL }
 	};
@@ -591,6 +593,40 @@ namespace wi::lua
 			}
 		}
 		wi::lua::SError(L, "QuaternionSlerp(Vector quaternion1,quaternion2, float t) not enough arguments!");
+		return 0;
+	}
+
+	int Vector_BindLua::PlaneFromPointNormal(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
+			Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
+			if (v1 && v2)
+			{
+				Luna<Vector_BindLua>::push(L, XMPlaneFromPointNormal(XMLoadFloat4(&v1->data), XMLoadFloat4(&v2->data)));
+				return 1;
+			}
+		}
+		wi::lua::SError(L, "PlaneFromPointNormal(Vector a,b,c) not enough arguments!");
+		return 0;
+	}
+	int Vector_BindLua::PlaneFromPoints(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 2)
+		{
+			Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
+			Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
+			Vector_BindLua* v3 = Luna<Vector_BindLua>::lightcheck(L, 3);
+			if (v1 && v2 && v3)
+			{
+				Luna<Vector_BindLua>::push(L, XMPlaneFromPoints(XMLoadFloat4(&v1->data), XMLoadFloat4(&v2->data), XMLoadFloat4(&v3->data)));
+				return 1;
+			}
+		}
+		wi::lua::SError(L, "PlaneFromPoints(Vector a,b,c) not enough arguments!");
 		return 0;
 	}
 

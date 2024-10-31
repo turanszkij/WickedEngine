@@ -43,6 +43,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 	Particle particle = particleBuffer[particleIndex];
 	uint v0 = particleIndex * 4;
 
+	particle.life -= dt;
+
 	const float lifeLerp = 1 - particle.life / particle.maxLife;
 	const float particleSize = lerp(particle.sizeBeginEnd.x, particle.sizeBeginEnd.y, lifeLerp);
 	const float lifeOpa = opacityCurveTex.SampleLevel(sampler_linear_clamp, float2(lifeLerp, 0), 0);
@@ -261,8 +263,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 		}
 
-		particle.life -= dt;
-
 		float2 rotation_rotationVel = unpack_half2(particle.rotation_rotationVelocity);
 		rotation_rotationVel.x += rotation_rotationVel.y * dt;
 		particle.rotation_rotationVelocity = pack_half2(rotation_rotationVel);
@@ -289,12 +289,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 			);
 
 		// Sprite sheet frame:
-		const float spriteframe = xEmitterFrameRate == 0 ?
+		const bool anim_over_lifetime = xEmitterFrameRate == 0;
+		const float spriteframe = anim_over_lifetime ?
 			lerp(xEmitterFrameStart, xEmitterFrameCount, lifeLerp) :
-			((xEmitterFrameStart + particle.life * xEmitterFrameRate) % xEmitterFrameCount);
+			((xEmitterFrameStart + (particle.maxLife - particle.life) * xEmitterFrameRate) % xEmitterFrameCount);
 		const uint currentFrame = floor(spriteframe);
-		const uint nextFrame = ceil(spriteframe);
-		const float frameBlend = frac(spriteframe);
+		const uint nextFrame = anim_over_lifetime ? min(ceil(spriteframe), xEmitterFrameCount - 1) : (uint(ceil(spriteframe)) % xEmitterFrameCount); // anim_over_lifetime doesn't wrap around
 		uint2 offset = uint2(currentFrame % xEmitterFramesXY.x, currentFrame / xEmitterFramesXY.x);
 		uint2 offset2 = uint2(nextFrame % xEmitterFramesXY.x, nextFrame / xEmitterFramesXY.x);
 
