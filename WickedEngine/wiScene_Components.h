@@ -238,6 +238,7 @@ namespace wi::scene
 
 			// Non-serialized attributes:
 			float lod_clamp = 0;						// optional, can be used by texture streaming
+			uint32_t virtual_anisotropy = 0;			// optional, can be used by texture streaming
 			int sparse_residencymap_descriptor = -1;	// optional, can be used by texture streaming
 			int sparse_feedbackmap_descriptor = -1;		// optional, can be used by texture streaming
 		};

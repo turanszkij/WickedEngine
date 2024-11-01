@@ -105,6 +105,7 @@ enum TEXTURESLOT
 	TEXTURESLOT_COUNT
 };
 
+static const float SVT_MIP_BIAS = 0.5;
 static const uint SVT_TILE_SIZE = 256u;
 static const uint SVT_TILE_BORDER = 4u;
 static const uint SVT_TILE_SIZE_PADDED = SVT_TILE_SIZE + SVT_TILE_BORDER * 2;
@@ -126,23 +127,51 @@ static const uint2 SVT_PACKED_MIP_OFFSETS[SVT_PACKED_MIP_COUNT] = {
 #define UniformTextureSlot(x) (x)
 #endif // TEXTURE_SLOT_NONUNIFORM
 
-inline float get_lod(in uint2 dim, in float2 uv_dx, in float2 uv_dy)
+inline float get_lod(in uint2 dim, in float2 uv_dx, in float2 uv_dy, uint anisotropy = 0)
 {
-	// https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D11_3_FunctionalSpec.htm#7.18.11%20LOD%20Calculations
-	return log2(max(length(uv_dx * dim), length(uv_dy * dim)));
+	// LOD calculations DirectX specs: https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D11_3_FunctionalSpec.htm#7.18.11%20LOD%20Calculations
+
+	// Isotropic:
+	if (anisotropy == 0)
+		return log2(max(length(uv_dx * dim), length(uv_dy * dim)));
+
+	// Anisotropic:
+	uv_dx *= dim;
+	uv_dy *= dim;
+	float squaredLengthX = dot(uv_dx, uv_dx);
+	float squaredLengthY = dot(uv_dy, uv_dy);
+	float determinant = abs(uv_dx.x * uv_dy.y - uv_dx.y * uv_dy.x);
+	bool isMajorX = squaredLengthX > squaredLengthY;
+	float squaredLengthMajor = isMajorX ? squaredLengthX : squaredLengthY;
+	float lengthMajor = sqrt(squaredLengthMajor);
+	float ratioOfAnisotropy = squaredLengthMajor / determinant;
+
+	float lengthMinor = 0;
+	if (ratioOfAnisotropy > anisotropy)
+	{
+		// ratio is clamped - LOD is based on ratio (preserves area)
+		lengthMinor = lengthMajor / anisotropy;
+	}
+	else
+	{
+		// ratio not clamped - LOD is based on area
+		lengthMinor = determinant / lengthMajor;
+	}
+
+	return log2(lengthMinor);
 }
 #endif // __cplusplus
 
 struct alignas(16) ShaderTextureSlot
 {
-	uint uvset_lodclamp;
+	uint uvset_aniso_lodclamp;
 	int texture_descriptor;
 	int sparse_residencymap_descriptor;
 	int sparse_feedbackmap_descriptor;
 
 	inline void init()
 	{
-		uvset_lodclamp = 0;
+		uvset_aniso_lodclamp = 0;
 		texture_descriptor = -1;
 		sparse_residencymap_descriptor = -1;
 		sparse_feedbackmap_descriptor = -1;
@@ -154,13 +183,17 @@ struct alignas(16) ShaderTextureSlot
 	}
 	inline uint GetUVSet()
 	{
-		return uvset_lodclamp & 1u;
+		return uvset_aniso_lodclamp & 1u;
+	}
+	inline uint GetAnisotropy()
+	{
+		return (uvset_aniso_lodclamp >> 1u) & 0x7F;
 	}
 
 #ifndef __cplusplus
 	inline float GetLodClamp()
 	{
-		return f16tof32((uvset_lodclamp >> 1u) & 0xFFFF);
+		return f16tof32((uvset_aniso_lodclamp >> 16u) & 0xFFFF);
 	}
 	Texture2D GetTexture()
 	{
@@ -247,7 +280,7 @@ struct alignas(16) ShaderTextureSlot
 			float2 virtual_tile_count;
 			residency_map.GetDimensions(virtual_tile_count.x, virtual_tile_count.y);
 			float2 virtual_image_dim = virtual_tile_count * SVT_TILE_SIZE;
-			float virtual_lod = get_lod(virtual_image_dim, ddx_coarse(uv), ddy_coarse(uv));
+			float virtual_lod = get_lod(virtual_image_dim, ddx_coarse(uv), ddy_coarse(uv), GetAnisotropy()) + SVT_MIP_BIAS;
 			return SampleVirtual(tex, sam, uv, residency_map, virtual_tile_count, virtual_image_dim, virtual_lod);
 		}
 #endif // DISABLE_SVT
@@ -288,7 +321,7 @@ struct alignas(16) ShaderTextureSlot
 			float2 virtual_tile_count;
 			residency_map.GetDimensions(virtual_tile_count.x, virtual_tile_count.y);
 			float2 virtual_image_dim = virtual_tile_count * SVT_TILE_SIZE;
-			float virtual_lod = get_lod(virtual_image_dim, ddx_coarse(uv), ddy_coarse(uv));
+			float virtual_lod = get_lod(virtual_image_dim, ddx_coarse(uv), ddy_coarse(uv), GetAnisotropy()) + SVT_MIP_BIAS;
 			virtual_lod += bias;
 			return SampleVirtual(tex, sam, uv, residency_map, virtual_tile_count, virtual_image_dim, virtual_lod + bias);
 		}
@@ -312,7 +345,7 @@ struct alignas(16) ShaderTextureSlot
 			float2 virtual_tile_count;
 			residency_map.GetDimensions(virtual_tile_count.x, virtual_tile_count.y);
 			float2 virtual_image_dim = virtual_tile_count * SVT_TILE_SIZE;
-			float virtual_lod = get_lod(virtual_image_dim, uv_dx, uv_dy);
+			float virtual_lod = get_lod(virtual_image_dim, uv_dx, uv_dy, GetAnisotropy()) + SVT_MIP_BIAS;
 			return SampleVirtual(tex, sam, uv, residency_map, virtual_tile_count, virtual_image_dim, virtual_lod);
 		}
 #endif // DISABLE_SVT

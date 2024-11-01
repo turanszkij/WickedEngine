@@ -373,8 +373,9 @@ namespace wi::scene
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		for (int i = 0; i < TEXTURESLOT_COUNT; ++i)
 		{
-			material.textures[i].uvset_lodclamp = (textures[i].uvset & 1) | (XMConvertFloatToHalf(textures[i].lod_clamp) << 1u);
-			if (textures[i].resource.IsValid())
+			const MaterialComponent::TextureMap& texturemap = textures[i];
+			material.textures[i].uvset_aniso_lodclamp = (texturemap.uvset & 1) | ((texturemap.virtual_anisotropy & 0x7F) << 1u) | (XMConvertFloatToHalf(texturemap.lod_clamp) << 16u);
+			if (texturemap.resource.IsValid())
 			{
 				int subresource = -1;
 				switch (i)
@@ -383,18 +384,18 @@ namespace wi::scene
 				case EMISSIVEMAP:
 				case SPECULARMAP:
 				case SHEENCOLORMAP:
-					subresource = textures[i].resource.GetTextureSRGBSubresource();
+					subresource = texturemap.resource.GetTextureSRGBSubresource();
 					break;
 				case SURFACEMAP:
 					if (IsUsingSpecularGlossinessWorkflow())
 					{
-						subresource = textures[i].resource.GetTextureSRGBSubresource();
+						subresource = texturemap.resource.GetTextureSRGBSubresource();
 					}
 					break;
 				default:
 					break;
 				}
-				material.textures[i].texture_descriptor = device->GetDescriptorIndex(textures[i].GetGPUResource(), SubresourceType::SRV, subresource);
+				material.textures[i].texture_descriptor = device->GetDescriptorIndex(texturemap.GetGPUResource(), SubresourceType::SRV, subresource);
 			}
 			else
 			{

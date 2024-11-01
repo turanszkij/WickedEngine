@@ -1274,7 +1274,7 @@ namespace wi::terrain
 		{
 			SamplerDesc samplerDesc;
 			samplerDesc.filter = Filter::ANISOTROPIC;
-			samplerDesc.max_anisotropy = 8; // The atlas tile border can take up to 8x anisotropic
+			samplerDesc.max_anisotropy = 4;
 			samplerDesc.address_u = TextureAddressMode::CLAMP;
 			samplerDesc.address_v = TextureAddressMode::CLAMP;
 			samplerDesc.address_w = TextureAddressMode::CLAMP;
@@ -1300,7 +1300,7 @@ namespace wi::terrain
 			if (!atlas.IsValid())
 			{
 				const uint32_t physical_width = 16384u;
-				const uint32_t physical_height = 8192u;
+				const uint32_t physical_height = 16384u;
 				GPUBufferDesc tile_pool_desc;
 
 				for (uint32_t map_type = 0; map_type < arraysize(atlas.maps); ++map_type)
@@ -1433,6 +1433,7 @@ namespace wi::terrain
 					if (vt.residency != nullptr)
 					{
 						material->texMulAdd = XMFLOAT4(1, 1, 0, 0);
+						material->textures[map_type].virtual_anisotropy = sampler.desc.max_anisotropy;
 						material->textures[map_type].sparse_residencymap_descriptor = device->GetDescriptorIndex(&vt.residency->residencyMap, SubresourceType::SRV);
 						if (map_type == 0)
 						{
