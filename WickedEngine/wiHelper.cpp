@@ -1388,12 +1388,15 @@ namespace wi::helper
 		default:
 		case DebugLevel::Normal:
 			std::cout << str;
+			std::flush(std::cout);
 			break;
 		case DebugLevel::Warning:
 			std::clog << str;
+			std::flush(std::clog);
 			break;
 		case DebugLevel::Error:
 			std::cerr << str;
+			std::flush(std::cerr);
 			break;
 	}
 #endif // _WIN32
