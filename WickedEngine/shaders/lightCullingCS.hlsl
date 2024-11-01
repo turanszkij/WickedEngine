@@ -127,6 +127,8 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	float fMinDepth = asfloat(uMaxDepth);
 	float fMaxDepth = asfloat(uMinDepth);
 
+	fMaxDepth = max(0.000001, fMaxDepth); // fix for AMD!!!!!!!!!
+
 	Frustum GroupFrustum;
 	AABB GroupAABB;			// frustum AABB around min-max depth in View Space
 	AABB GroupAABB_WS;		// frustum AABB in world space
