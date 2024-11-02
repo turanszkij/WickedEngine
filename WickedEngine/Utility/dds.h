@@ -743,15 +743,17 @@ namespace dds
 		{
 			const unsigned long long bpe = bits_per_element();
 			const unsigned long long blocksize = block_size();
-			unsigned long long num_blocks_x = (width() + blocksize - 1) / blocksize;
-			unsigned long long num_blocks_y = (height() + blocksize - 1) / blocksize;
+			unsigned long long num_elements_x = width();
+			unsigned long long num_elements_y = height();
 			unsigned long long num_elements_z = depth();
-			num_blocks_x >>= mip;
-			num_blocks_y >>= mip;
+			num_elements_x >>= mip;
+			num_elements_y >>= mip;
 			num_elements_z >>= mip;
-			num_blocks_x = num_blocks_x < 1 ? 1 : num_blocks_x;
-			num_blocks_y = num_blocks_y < 1 ? 1 : num_blocks_y;
+			num_elements_x = num_elements_x < 1 ? 1 : num_elements_x;
+			num_elements_y = num_elements_y < 1 ? 1 : num_elements_y;
 			num_elements_z = num_elements_z < 1 ? 1 : num_elements_z;
+			const unsigned long long num_blocks_x = (num_elements_x + blocksize - 1) / blocksize;
+			const unsigned long long num_blocks_y = (num_elements_y + blocksize - 1) / blocksize;
 			return num_blocks_x * num_blocks_y * num_elements_z * bpe / 8ull;
 		}
 		// returns the size of one slice in bytes
@@ -787,7 +789,6 @@ namespace dds
 		constexpr unsigned long long mip_offset(unsigned mip, unsigned slice = 0) const
 		{
 			unsigned long long offset = slice_offset(slice);
-			const unsigned mips = mip_levels();
 			for (unsigned i = 0; i < mip; ++i)
 			{
 				offset += mip_size(i);
@@ -799,9 +800,10 @@ namespace dds
 		{
 			const unsigned long long bpe = bits_per_element();
 			const unsigned long long blocksize = block_size();
-			unsigned long long num_blocks_x = (width() + blocksize - 1) / blocksize;
-			num_blocks_x >>= mip;
-			num_blocks_x = num_blocks_x < 1 ? 1 : num_blocks_x;
+			unsigned long long num_elements_x = width();
+			num_elements_x >>= mip;
+			num_elements_x = num_elements_x < 1 ? 1 : num_elements_x;
+			const unsigned long long num_blocks_x = (num_elements_x + blocksize - 1) / blocksize;
 			return unsigned(num_blocks_x * bpe / 8);
 		}
 		// returns the size of a specific slice at a specific mip level in bytes
@@ -809,12 +811,14 @@ namespace dds
 		{
 			const unsigned long long bpe = bits_per_element();
 			const unsigned long long blocksize = block_size();
-			unsigned long long num_blocks_x = (width() + blocksize - 1) / blocksize;
-			unsigned long long num_blocks_y = (height() + blocksize - 1) / blocksize;
-			num_blocks_x >>= mip;
-			num_blocks_y >>= mip;
-			num_blocks_x = num_blocks_x < 1 ? 1 : num_blocks_x;
-			num_blocks_y = num_blocks_y < 1 ? 1 : num_blocks_y;
+			unsigned long long num_elements_x = width();
+			unsigned long long num_elements_y = height();
+			num_elements_x >>= mip;
+			num_elements_y >>= mip;
+			num_elements_x = num_elements_x < 1 ? 1 : num_elements_x;
+			num_elements_y = num_elements_y < 1 ? 1 : num_elements_y;
+			const unsigned long long num_blocks_x = (num_elements_x + blocksize - 1) / blocksize;
+			const unsigned long long num_blocks_y = (num_elements_y + blocksize - 1) / blocksize;
 			return unsigned(num_blocks_x * num_blocks_y * bpe / 8ull);
 		}
 	};
