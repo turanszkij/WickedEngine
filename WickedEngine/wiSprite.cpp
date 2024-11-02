@@ -217,6 +217,20 @@ namespace wi
 						maskName = dir + maskName;
 						maskResource = wi::resourcemanager::Load(maskName);
 					}
+
+					if (anim.drawRectAnim.frameCount > 1 && textureResource.IsValid())
+					{
+						// Immediately enable params of draw rect anim, otherwise it could be lost when duplicating animated sprite because of management of originalDrawRect:
+						const TextureDesc& desc = textureResource.GetTexture().GetDesc();
+						XMFLOAT4 rect = XMFLOAT4(0, 0, 0, 0);
+						int horizontal_frame_count = std::max(1, anim.drawRectAnim.horizontalFrameCount);
+						int vertical_frame_count = anim.drawRectAnim.frameCount / horizontal_frame_count;
+						rect.z = float(desc.width) / float(horizontal_frame_count);
+						rect.w = float(desc.height) / float(vertical_frame_count);
+						anim.drawRectAnim.originalDrawRect = rect;
+						params.enableDrawRect(rect);
+						anim.drawRectAnim.restart();
+					}
 				});
 			}
 		}

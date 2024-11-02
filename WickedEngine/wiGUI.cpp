@@ -1412,6 +1412,8 @@ namespace wi::gui
 
 		font_description.params = font.params;
 		font_description.params.h_align = wi::font::WIFALIGN_RIGHT;
+
+		SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip); // disable localization of text because that can come from user input and musn't be overwritten!
 	}
 	void TextInputField::SetValue(const std::string& newValue)
 	{
