@@ -65,7 +65,6 @@ namespace wi
 
 				float _elapsedTime = 0; // internal use; you don't need to initialize
 				int _currentFrame = 0; // internal use; you don't need to initialize
-				XMFLOAT4 originalDrawRect = XMFLOAT4(0, 0, 0, 0);  // internal use; you don't need to initialize
 
 				void restart()
 				{

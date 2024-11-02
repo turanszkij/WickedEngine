@@ -72,10 +72,6 @@ namespace wi
 		// Draw rect anim:
 		if (anim.drawRectAnim.frameCount > 1)
 		{
-			if (anim.drawRectAnim._currentFrame == 0)
-			{
-				anim.drawRectAnim.originalDrawRect = params.drawRect;
-			}
 			anim.drawRectAnim._elapsedTime += dt * anim.drawRectAnim.frameRate;
 			if (anim.drawRectAnim._elapsedTime >= 1.0f)
 			{
@@ -203,6 +199,10 @@ namespace wi
 			{
 				archive >> params.saturation;
 			}
+			if (seri.GetVersion() >= 2)
+			{
+				archive >> anim.drawRectAnim._currentFrame;
+			}
 
 			if (!textureName.empty() || !maskName.empty())
 			{
@@ -216,20 +216,6 @@ namespace wi
 					{
 						maskName = dir + maskName;
 						maskResource = wi::resourcemanager::Load(maskName);
-					}
-
-					if (anim.drawRectAnim.frameCount > 1 && textureResource.IsValid())
-					{
-						// Immediately enable params of draw rect anim, otherwise it could be lost when duplicating animated sprite because of management of originalDrawRect:
-						const TextureDesc& desc = textureResource.GetTexture().GetDesc();
-						XMFLOAT4 rect = XMFLOAT4(0, 0, 0, 0);
-						int horizontal_frame_count = std::max(1, anim.drawRectAnim.horizontalFrameCount);
-						int vertical_frame_count = anim.drawRectAnim.frameCount / horizontal_frame_count;
-						rect.z = float(desc.width) / float(horizontal_frame_count);
-						rect.w = float(desc.height) / float(vertical_frame_count);
-						anim.drawRectAnim.originalDrawRect = rect;
-						params.enableDrawRect(rect);
-						anim.drawRectAnim.restart();
 					}
 				});
 			}
@@ -248,11 +234,6 @@ namespace wi
 			archive << params.siz;
 			archive << params.scale;
 			archive << params.color;
-			if (anim.drawRectAnim.frameCount > 1)
-			{
-				params.drawRect = anim.drawRectAnim.originalDrawRect;
-				anim.drawRectAnim.restart();
-			}
 			archive << params.drawRect;
 			archive << params.drawRect2;
 			archive << params.texOffset;
@@ -297,6 +278,10 @@ namespace wi
 			if (seri.GetVersion() >= 1)
 			{
 				archive << params.saturation;
+			}
+			if (seri.GetVersion() >= 2)
+			{
+				archive << anim.drawRectAnim._currentFrame;
 			}
 		}
 	}
