@@ -47,6 +47,8 @@ float4 main(PixelInput input) : SV_TARGET
 		}
 		opacity *= 1 - transmission;
 	}
+	
+	opacity = lerp(opacity, 0.5, material.GetCloak());
 
 	color.rgb *= 1 - opacity; // if fully opaque, then black (not let through any light)
 
