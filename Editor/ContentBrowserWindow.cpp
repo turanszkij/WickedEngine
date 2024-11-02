@@ -213,7 +213,11 @@ void ContentBrowserWindow::RefreshContent()
 		{
 			folder.pop_back();
 		}
-		folder = folder.substr(folder.find_last_of("/\\"));
+		
+		auto last_slash = folder.find_last_of("/\\");
+		if (last_slash != folder.npos) {
+			folder = folder.substr(last_slash);
+		}
 		button.Create(folder);
 		button.SetTooltip(editor->recentFolders[editor->recentFolders.size() - 1 - i]); // full folder name!
 		button.SetLocalizationEnabled(false);
