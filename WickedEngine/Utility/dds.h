@@ -84,6 +84,10 @@
 //		- mipmaps: Yes
 //		- arrays: Yes
 //
+// 
+//	Contributors:
+//		- Jon Jansen
+//
 //	MIT License (see the end of this file)
 
 namespace dds
