@@ -266,6 +266,7 @@ namespace wi
 			RaytracingAccelerationStructureDesc desc;
 			desc.type = RaytracingAccelerationStructureDesc::Type::BOTTOMLEVEL;
 			desc.flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
+			desc.flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
 
 			desc.bottom_level.geometries.emplace_back();
 			auto& geometry = desc.bottom_level.geometries.back();
@@ -283,6 +284,8 @@ namespace wi
 			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
 			assert(success);
 			device->SetName(&BLAS, "HairParticleSystem::BLAS");
+
+			must_rebuild_blas = true;
 		}
 	}
 

@@ -4019,13 +4019,17 @@ namespace wi::scene
 						{
 							geometry.flags = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
 						}
-						if (flags != geometry.flags || mesh.active_morph_count > 0)
+						if (flags != geometry.flags)
 						{
 							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
 						}
 						if (mesh.streamoutBuffer.IsValid())
 						{
-							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
+							if (mesh.BLAS_state != MeshComponent::BLAS_STATE_NEEDS_REBUILD)
+							{
+								// refit if it doesn't need full rebuild:
+								mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REFIT;
+							}
 							geometry.triangles.vertex_buffer = mesh.streamoutBuffer;
 							geometry.triangles.vertex_byte_offset = mesh.so_pos.offset;
 						}

@@ -5235,7 +5235,15 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 
 				if (hair.meshID != INVALID_ENTITY && hair.BLAS.IsValid())
 				{
-					device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, nullptr);
+					if (hair.must_rebuild_blas)
+					{
+						device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, nullptr);
+						hair.must_rebuild_blas = false;
+					}
+					else
+					{
+						device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, &hair.BLAS);
+					}
 				}
 			}
 

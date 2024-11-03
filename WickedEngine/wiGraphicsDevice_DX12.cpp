@@ -7304,7 +7304,7 @@ std::mutex queue_locker;
 		break;
 		}
 
-		if (src != nullptr)
+		if (src != nullptr && (desc.Inputs.Flags & D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE))
 		{
 			desc.Inputs.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;
 

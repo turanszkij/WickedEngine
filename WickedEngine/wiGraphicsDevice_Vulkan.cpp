@@ -8982,7 +8982,7 @@ using namespace vulkan_internal;
 
 		info.scratchData.deviceAddress = dst_internal->scratch_address;
 
-		if (src != nullptr)
+		if (src != nullptr && (dst->desc.flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE))
 		{
 			info.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR;
 
