@@ -214,24 +214,39 @@ HeightmapModifierWindow::HeightmapModifierWindow() : ModifierWindow("Heightmap")
 				heightmap_modifier->width = 0;
 				heightmap_modifier->height = 0;
 				int bpp = 0;
-				if (stbi_is_16_bit(fileName.c_str()))
+				wi::vector<uint8_t> filedata;
+				if (!wi::helper::FileRead(fileName, filedata))
 				{
-					stbi_us* rgba = stbi_load_16(fileName.c_str(), &heightmap_modifier->width, &heightmap_modifier->height, &bpp, 1); if (rgba != nullptr)
+					wi::backlog::post("Heightmap loading failed, file couldn't be found: " + fileName, wi::backlog::LogLevel::Error);
+				}
+
+				if (stbi_is_16_bit_from_memory((const stbi_uc*)filedata.data(), (int)filedata.size()))
+				{
+					stbi_us* rgba = stbi_load_16_from_memory((const stbi_uc*)filedata.data(), (int)filedata.size(), &heightmap_modifier->width, &heightmap_modifier->height, &bpp, 1);
+					if (rgba != nullptr)
 					{
 						heightmap_modifier->data.resize(heightmap_modifier->width * heightmap_modifier->height * sizeof(uint16_t));
 						std::memcpy(heightmap_modifier->data.data(), rgba, heightmap_modifier->data.size());
 						stbi_image_free(rgba);
 						generation_callback(); // callback after heightmap load confirmation
 					}
+					else
+					{
+						wi::backlog::post("Heightmap loading unknown failure for 16-bit image: " + fileName, wi::backlog::LogLevel::Error);
+					}
 				}
 				else
 				{
-					stbi_uc* rgba = stbi_load(fileName.c_str(), &heightmap_modifier->width, &heightmap_modifier->height, &bpp, 1);
+					stbi_uc* rgba = stbi_load_from_memory((const stbi_uc*)filedata.data(), (int)filedata.size(), &heightmap_modifier->width, &heightmap_modifier->height, &bpp, 1);
 					if (rgba != nullptr)
 					{
 						heightmap_modifier->data.resize(heightmap_modifier->width * heightmap_modifier->height * sizeof(uint8_t));
 						std::memcpy(heightmap_modifier->data.data(), rgba, heightmap_modifier->data.size());
 						generation_callback(); // callback after heightmap load confirmation
+					}
+					else
+					{
+						wi::backlog::post("Heightmap loading failure for 8-bit image: " + fileName, wi::backlog::LogLevel::Error);
 					}
 				}
 			});
