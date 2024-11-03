@@ -225,6 +225,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 						surface.init();
 						if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
 							break;
+	
+						surface.opacity = lerp(surface.opacity, 0.5, surface.material.GetCloak());
 
 						float alphatest = clamp(blue_noise(DTid.xy, q.CandidateTriangleRayT()).r, 0, 0.99);
 
