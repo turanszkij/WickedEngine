@@ -1444,6 +1444,7 @@ namespace wi
 					const float memory_percent = float(double(memory_usage.usage) / double(memory_usage.budget));
 					const bool memory_shortage = memory_percent > streaming_threshold;
 					const bool stream_in = requested_resolution >= std::min(desc.width, desc.height);
+					const uint32_t target_unload_delay = memory_shortage ? 4 : 255;
 
 					int mip_offset = int(resource->streaming_texture.mip_count - desc.mip_levels);
 					if (stream_in)
@@ -1462,7 +1463,7 @@ namespace wi
 					else
 					{
 						resource->streaming_unload_delay++; // one more frame that this wants to unload
-						if (!memory_shortage && resource->streaming_unload_delay < 255)
+						if (resource->streaming_unload_delay < target_unload_delay)
 							continue; // only unload mips if it's been wanting to unload for a couple frames, or there is memory shortage
 						if (ComputeTextureMemorySizeInBytes(desc) <= streaming_texture_min_size)
 							continue; // Don't reduce the texture below, because of 4KB alignment, this would not reduce memory usage further
