@@ -164,6 +164,7 @@ void TestsRenderer::Load()
 
 		// Reset all state that tests might have modified:
 		wi::eventhandler::SetVSync(true);
+        wi::profiler::SetEnabled(false);
 		wi::renderer::SetToDrawGridHelper(false);
 		wi::renderer::SetTemporalAAEnabled(false);
 		wi::renderer::ClearWorld(wi::scene::GetScene());
