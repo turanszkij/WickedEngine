@@ -881,13 +881,13 @@ namespace wi::input
 		if (strcmp(str, "Option") == 0)
 			return GAMEPAD_BUTTON_PLAYSTATION_OPTION;
 
-		if (strcmp(str, "X") == 0)
+		if (strcmp(str, "Ⓧ") == 0)
 			return GAMEPAD_BUTTON_XBOX_X;
-		if (strcmp(str, "A") == 0)
+		if (strcmp(str, "Ⓐ") == 0)
 			return GAMEPAD_BUTTON_XBOX_A;
-		if (strcmp(str, "B") == 0)
+		if (strcmp(str, "Ⓑ") == 0)
 			return GAMEPAD_BUTTON_XBOX_B;
-		if (strcmp(str, "Y") == 0)
+		if (strcmp(str, "Ⓨ") == 0)
 			return GAMEPAD_BUTTON_XBOX_Y;
 		if (strcmp(str, "L1") == 0)
 			return GAMEPAD_BUTTON_XBOX_L1;
@@ -1118,10 +1118,10 @@ namespace wi::input
 		{
 			switch (button)
 			{
-			case wi::input::GAMEPAD_BUTTON_XBOX_X: return "X";
-			case wi::input::GAMEPAD_BUTTON_XBOX_A: return "A";
-			case wi::input::GAMEPAD_BUTTON_XBOX_B: return "B";
-			case wi::input::GAMEPAD_BUTTON_XBOX_Y: return "Y";
+			case wi::input::GAMEPAD_BUTTON_XBOX_X: return "Ⓧ";
+			case wi::input::GAMEPAD_BUTTON_XBOX_A: return "Ⓐ";
+			case wi::input::GAMEPAD_BUTTON_XBOX_B: return "Ⓑ";
+			case wi::input::GAMEPAD_BUTTON_XBOX_Y: return "Ⓨ";
 			case wi::input::GAMEPAD_BUTTON_XBOX_L1: return "L1";
 			case wi::input::GAMEPAD_BUTTON_XBOX_LT: return "LT";
 			case wi::input::GAMEPAD_BUTTON_XBOX_R1: return "R1";
