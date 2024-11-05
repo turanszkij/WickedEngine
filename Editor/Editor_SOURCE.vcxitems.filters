@@ -98,7 +98,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)HumanoidWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)GeneralWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ProfilerWindow.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)yumin.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)VideoWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SpriteWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)FontWindow.h" />

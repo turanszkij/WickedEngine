@@ -97,7 +97,7 @@ float4 main(PSIn input) : SV_TARGET
 		float3 refraction_position = reconstruct_position(refraction_uv, refraction_depth);
 		water_depth = -dot(float4(refraction_position, 1), water_plane);
 		water_depth += texture_ocean_displacementmap.SampleLevel(sampler_linear_wrap, refraction_position.xz * xOceanPatchSizeRecip, 0).z; // texture contains xzy!
-		if (camera_above_water)
+		if (camera_above_water && V.y < 0)
 			water_depth = -water_depth;
 		if (water_depth <= 0)
 		{
@@ -115,7 +115,7 @@ float4 main(PSIn input) : SV_TARGET
 		refraction_position = reconstruct_position(refraction_uv, refraction_depth);
 		water_depth = max(water_depth, -dot(float4(refraction_position, 1), water_plane));
 		water_depth += texture_ocean_displacementmap.SampleLevel(sampler_linear_wrap, refraction_position.xz * xOceanPatchSizeRecip, 0).z; // texture contains xzy!
-		if (camera_above_water)
+		if (camera_above_water && V.y < 0)
 			water_depth = -water_depth;
 		// Water fog computation:
 		float waterfog = saturate(exp(-water_depth * color.a));

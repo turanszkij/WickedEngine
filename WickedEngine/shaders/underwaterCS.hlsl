@@ -15,7 +15,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 
 	// Unproject near plane and determine for every pixel if it's below water surface:
-	float4 clipspace = float4(uv_to_clipspace(uv), 1, 1);
+	float4 clipspace = float4(uv_to_clipspace(uv), 0.2, 1); // push further away from near plane
 	float4 unproj = mul(GetCamera().inverse_view_projection, clipspace);
 	unproj.xyz /= unproj.w;
 	float3 world_pos = unproj.xyz;
@@ -63,7 +63,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			const float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, ocean_uv, 0).xzy;
 			surface_position += displacement;
 		}
-		const float distance_from_surface = distance(GetCamera().position, surface_position);
+		const float distance_from_surface = distance(GetCamera().position, surface_position) * 0.1;
 		float water_depth = ocean_pos.y - surface_position.y;
 		water_depth = max(min(distance_from_surface, ocean_dist), water_depth);
 
