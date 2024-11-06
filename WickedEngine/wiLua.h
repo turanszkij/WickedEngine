@@ -2,6 +2,8 @@
 #include "CommonInclude.h"
 #include "wiMath.h"
 #include "wiVector.h"
+#include "wiApplication.h"
+#include "wiRenderPath.h"
 
 #include <string>
 
@@ -198,5 +200,9 @@ namespace wi::lua
 	// Compiles LUA source code text into binary LUA code
 	bool CompileText(const char* script, wi::vector<uint8_t>& dst);
 	inline bool CompileText(const std::string& script, wi::vector<uint8_t>& dst) { return CompileText(script.c_str(), dst); }
+
+	// With this you can enable the IsThisEditor() and ReturnToEditor() functionality in lua scripts
+	//	This allows easier script testing with editor functionality instead of managing previous render paths yourself in scripts
+	void EnableEditorFunctionality(wi::Application* application, wi::RenderPath* renderpath);
 };
 

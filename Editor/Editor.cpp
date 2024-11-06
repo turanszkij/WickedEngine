@@ -312,6 +312,8 @@ void Editor::Initialize()
 	renderComponent.setMSAASampleCount(msaa);
 	renderComponent.Load();
 	ActivatePath(&renderComponent, 0.2f);
+
+	wi::lua::EnableEditorFunctionality(this, &renderComponent);
 }
 void Editor::HotReload()
 {

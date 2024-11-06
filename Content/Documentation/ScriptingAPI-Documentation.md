@@ -110,6 +110,11 @@ This section describes the common tools for scripting which are not necessarily 
 - dobinaryfile(string filename) -- executes a binary LUA file
 - compilebinaryfile(string filename_src, dilename_dst) -- compiles a text LUA file (filename_src) into a binary LUA file (filename_dst)
 
+These are some helpers to aid in debugging:
+- IsThisEditor() : bool	-- returns true if current application is the editor, false otherwise
+- ReturnToEditor()	-- returns control to the editor and kills running scripts
+- IsThisDebugBuild() : bool	-- returns true if this is a debug build, false otherwise
+
 ## Engine Bindings
 The scripting API provides functions for the developer to manipulate engine behaviour or query it for information.
 
