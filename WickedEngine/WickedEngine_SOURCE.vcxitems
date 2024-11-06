@@ -60,6 +60,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\StreamOut.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\StreamUtils.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\StreamWrapper.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\StridedPtr.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\StringTools.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\TempAllocator.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\TickCounter.h" />
@@ -172,6 +173,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CollideConvexVsTriangles.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CollidePointResult.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CollideShape.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CollideSoftBodyVertexIterator.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CollideSoftBodyVerticesVsTriangles.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CollideSphereVsTriangles.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CollisionCollector.h" />
@@ -202,11 +204,13 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\ConvexShape.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\CylinderShape.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\DecoratedShape.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\EmptyShape.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\GetTrianglesContext.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\HeightFieldShape.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\MeshShape.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\MutableCompoundShape.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\OffsetCenterOfMassShape.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\PlaneShape.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\PolyhedronSubmergedVolumeCalculator.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\RotatedTranslatedShape.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\ScaledShape.h" />
@@ -217,6 +221,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\SubShapeID.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\SubShapeIDPair.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\TaperedCapsuleShape.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\TaperedCylinderShape.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\TriangleShape.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\SortReverseAndStore.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\TransformedShape.h" />
@@ -486,7 +491,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\SerializableObject.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\ObjectStream\TypeDeclarations.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\Body.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\BodyAccess.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\BodyCreationSettings.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\BodyInterface.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\BodyManager.cpp" />
@@ -520,16 +524,19 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\ConvexShape.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\CylinderShape.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\DecoratedShape.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\EmptyShape.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\HeightFieldShape.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\MeshShape.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\MutableCompoundShape.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\OffsetCenterOfMassShape.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\PlaneShape.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\RotatedTranslatedShape.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\ScaledShape.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\Shape.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\SphereShape.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\StaticCompoundShape.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\TaperedCapsuleShape.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\TaperedCylinderShape.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\TriangleShape.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\TransformedShape.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\ConeConstraint.cpp" />
@@ -555,7 +562,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\DeterminismLog.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\IslandBuilder.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\LargeIslandSplitter.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\PhysicsLock.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\PhysicsScene.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\PhysicsSystem.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\PhysicsUpdateContext.cpp" />
