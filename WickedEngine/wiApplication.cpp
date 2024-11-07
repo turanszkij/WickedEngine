@@ -97,8 +97,7 @@ namespace wi
 		wi::font::UpdateAtlas(canvas.GetDPIScaling());
 
 		ColorSpace colorspace = graphicsDevice->GetSwapChainColorSpace(&swapChain);
-		bool colorspace_conversion_required = colorspace == ColorSpace::HDR10_ST2084;
-		if (colorspace_conversion_required)
+		if (colorspace == ColorSpace::HDR10_ST2084)
 		{
 			// In HDR10, we perform the compositing in a custom linear color space render target
 			if (!rendertarget.IsValid())
@@ -125,7 +124,7 @@ namespace wi
 		{
 			// Until engine is not loaded, present initialization screen...
 			CommandList cmd = graphicsDevice->BeginCommandList();
-			if (colorspace_conversion_required)
+			if (rendertarget.IsValid())
 			{
 				RenderPassImage rp[] = {
 					RenderPassImage::RenderTarget(&rendertarget, RenderPassImage::LoadOp::CLEAR),
@@ -146,7 +145,7 @@ namespace wi
 			}
 			graphicsDevice->RenderPassEnd(cmd);
 
-			if (colorspace_conversion_required)
+			if (rendertarget.IsValid())
 			{
 				// In HDR10, we perform a final mapping from linear to HDR10, into the swapchain
 				graphicsDevice->RenderPassBegin(&swapChain, cmd);
@@ -260,7 +259,7 @@ namespace wi
 		viewport.height = (float)swapChain.desc.height;
 		graphicsDevice->BindViewports(1, &viewport, cmd);
 
-		if (colorspace_conversion_required)
+		if (rendertarget.IsValid())
 		{
 			RenderPassImage rp[] = {
 				RenderPassImage::RenderTarget(&rendertarget, RenderPassImage::LoadOp::CLEAR),
@@ -274,7 +273,7 @@ namespace wi
 		Compose(cmd);
 		graphicsDevice->RenderPassEnd(cmd);
 
-		if (colorspace_conversion_required)
+		if (rendertarget.IsValid())
 		{
 			// In HDR10, we perform a final mapping from linear to HDR10, into the swapchain
 			graphicsDevice->RenderPassBegin(&swapChain, cmd);

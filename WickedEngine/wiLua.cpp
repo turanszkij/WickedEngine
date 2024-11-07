@@ -200,6 +200,34 @@ namespace wi::lua
 		return 0;
 	}
 
+	wi::Application* editorApplication = nullptr;
+	wi::RenderPath* editorRenderPath = nullptr;
+	int IsThisEditor(lua_State* L)
+	{
+		bool ret = editorApplication != nullptr && editorRenderPath != nullptr;
+		wi::lua::SSetBool(L, ret);
+		return 1;
+	}
+	int ReturnToEditor(lua_State* L)
+	{
+		if (editorApplication != nullptr && editorRenderPath != nullptr)
+		{
+			KillProcesses();
+			editorApplication->ActivatePath(editorRenderPath);
+		}
+		return 0;
+	}
+
+	int IsThisDebugBuild(lua_State* L)
+	{
+#ifdef _DEBUG
+		wi::lua::SSetBool(L, true);
+#else
+		wi::lua::SSetBool(L, false);
+#endif
+		return 1;
+	}
+
 	void Initialize()
 	{
 		if (lua_internal().m_luaState != nullptr)
@@ -213,6 +241,10 @@ namespace wi::lua
 		RegisterFunc("dobinaryfile", Internal_DoBinaryFile);
 		RegisterFunc("compilebinaryfile", Internal_CompileBinaryFile);
 		RunText(wiLua_Globals);
+
+		RegisterFunc("IsThisEditor", IsThisEditor);
+		RegisterFunc("ReturnToEditor", ReturnToEditor);
+		RegisterFunc("IsThisDebugBuild", IsThisDebugBuild);
 
 		Vector_BindLua::Bind();
 		Matrix_BindLua::Bind();
@@ -604,4 +636,11 @@ namespace wi::lua
 		lua_pop(lua_internal().m_luaState, 1); // lua_dump does not pop the dumped function from stack
 		return true;
 	}
+
+	void EnableEditorFunctionality(wi::Application* application, wi::RenderPath* renderpath)
+	{
+		editorApplication = application;
+		editorRenderPath = renderpath;
+	}
+
 }
