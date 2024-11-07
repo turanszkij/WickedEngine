@@ -10,6 +10,7 @@ public:
 
 	wi::gui::CheckBox vsyncCheckBox;
 	wi::gui::ComboBox swapchainComboBox;
+	wi::gui::Slider hdrcalibrationSlider;
 	wi::gui::ComboBox renderPathComboBox;
 	wi::gui::Slider pathTraceTargetSlider;
 	wi::gui::Label pathTraceStatisticsLabel;

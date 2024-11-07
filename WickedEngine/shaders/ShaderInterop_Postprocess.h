@@ -139,7 +139,7 @@ struct PushConstantsTonemap
 	int texture_bloom;
 	int texture_output;
 	int texture_input_distortion_overlay;
-	uint flags;
+	uint flags_hdrcalibration;
 };
 
 struct PostprocessTileStatistics

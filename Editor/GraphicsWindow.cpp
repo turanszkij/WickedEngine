@@ -696,6 +696,19 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	wid = 140;
 	float mod_wid = 60;
 
+	hdrcalibrationSlider.Create(0, 8, 1, 100, "HDR calibration: ");
+	hdrcalibrationSlider.SetTooltip("Set multiplier for HDR output, this only takes effect when swapchain output format is non-SRGB");
+	hdrcalibrationSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->renderPath->setHDRCalibration(args.fValue);
+		editor->main->config.GetSection("graphics").Set("hdr_calibration", args.fValue);
+		editor->main->config.Commit();
+		});
+	if (editor->main->config.GetSection("graphics").Has("hdr_calibration"))
+	{
+		editor->renderPath->setHDRCalibration(editor->main->config.GetSection("graphics").GetFloat("hdr_calibration"));
+	}
+	AddWidget(&hdrcalibrationSlider);
+
 	tonemapCombo.Create("Tonemap: ");
 	tonemapCombo.SetTooltip("Choose tone mapping type");
 	tonemapCombo.SetScriptTip("RenderPath3D::SetTonemap(Tonemap value)");
@@ -1528,6 +1541,7 @@ void GraphicsWindow::Update()
 	ddgiY.SetValue(std::to_string(scene.ddgi.grid_dimensions.y));
 	ddgiZ.SetValue(std::to_string(scene.ddgi.grid_dimensions.z));
 
+	hdrcalibrationSlider.SetValue(editor->renderPath->getHDRCalibration());
 	occlusionCullingCheckBox.SetCheck(wi::renderer::GetOcclusionCullingEnabled());
 	GIBoostSlider.SetValue(wi::renderer::GetGIBoost());
 	visibilityComputeShadingCheckBox.SetCheck(editor->renderPath->getVisibilityComputeShadingEnabled());
@@ -1674,6 +1688,7 @@ void GraphicsWindow::ResizeLayout()
 
 	add_right(vsyncCheckBox);
 	add(swapchainComboBox);
+	add(hdrcalibrationSlider);
 	add(renderPathComboBox);
 	add(resolutionScaleSlider);
 	add(streamingSlider);

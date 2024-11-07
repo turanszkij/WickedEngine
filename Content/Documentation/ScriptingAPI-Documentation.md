@@ -1728,6 +1728,7 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - SetSharpenFilterEnabled(bool value)
 - SetSharpenFilterAmount(float value)
 - SetExposure(float value)
+- SetHDRCalibration(float value)
 - SetOutlineEnabled(bool value)
 - SetOutlineThreshold(float value)
 - SetOutlineThickness(float value)

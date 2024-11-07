@@ -57,6 +57,7 @@ namespace wi
 		float reflectionRoughnessCutoff = 0.6f;
 		float ssgiDepthRejection = 8;
 		wi::renderer::Tonemap tonemap = wi::renderer::Tonemap::ACES;
+		float hdr_calibration = 1;
 
 		AO ao = AO_DISABLED;
 		bool fxaaEnabled = false;
@@ -215,6 +216,7 @@ namespace wi
 		const wi::graphics::Texture* GetGUIBlurredBackground() const override { return &rtGUIBlurredBackground[2]; }
 
 		constexpr float getExposure() const { return exposure; }
+		constexpr float getHDRCalibration() const { return hdr_calibration; }
 		constexpr float getBrightness() const { return brightness; }
 		constexpr float getContrast() const { return contrast; }
 		constexpr float getSaturation() const { return saturation; }
@@ -270,6 +272,7 @@ namespace wi
 		constexpr bool getVisibilityComputeShadingEnabled() const { return visibility_shading_in_compute; }
 
 		constexpr void setExposure(float value) { exposure = value; }
+		constexpr void setHDRCalibration(float value) { hdr_calibration = value; }
 		constexpr void setBrightness(float value) { brightness = value; }
 		constexpr void setContrast(float value) { contrast = value; }
 		constexpr void setSaturation(float value) { saturation = value; }

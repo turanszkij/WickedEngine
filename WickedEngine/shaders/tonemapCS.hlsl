@@ -50,11 +50,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if(!GetCamera().is_uv_inside_scissor(uv)) // Note: uv scissoring is used because this supports upscaled resolution (FSR 2)
 		return;
 	
-	float4 exposure_brightness_contrast_saturation = unpack_half4(tonemap_push.exposure_brightness_contrast_saturation);
-	float exposure = exposure_brightness_contrast_saturation.x;
-	float brightness = exposure_brightness_contrast_saturation.y;
-	float contrast = exposure_brightness_contrast_saturation.z;
-	float saturation = exposure_brightness_contrast_saturation.w;
+	half4 exposure_brightness_contrast_saturation = unpack_half4(tonemap_push.exposure_brightness_contrast_saturation);
+	half exposure = exposure_brightness_contrast_saturation.x;
+	half brightness = exposure_brightness_contrast_saturation.y;
+	half contrast = exposure_brightness_contrast_saturation.z;
+	half saturation = exposure_brightness_contrast_saturation.w;
+	min16uint flags = tonemap_push.flags_hdrcalibration & 0xFFFF;
+	half hdr_calibration = f16tof32(tonemap_push.flags_hdrcalibration >> 16u);
 
 	[branch]
 	if (tonemap_push.texture_input_distortion >= 0)
@@ -83,19 +85,19 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if (tonemap_push.texture_bloom >= 0)
 	{
 		Texture2D<float4> texture_bloom = bindless_textures[tonemap_push.texture_bloom];
-		float3 bloom = texture_bloom.SampleLevel(sampler_linear_clamp, uv, 1.5f).rgb;
-		bloom += texture_bloom.SampleLevel(sampler_linear_clamp, uv, 3.5f).rgb;
-		bloom += texture_bloom.SampleLevel(sampler_linear_clamp, uv, 4.5f).rgb;
-		bloom /= 3.0f;
+		half3 bloom = texture_bloom.SampleLevel(sampler_linear_clamp, uv, 1.5).rgb;
+		bloom += texture_bloom.SampleLevel(sampler_linear_clamp, uv, 3.5).rgb;
+		bloom += texture_bloom.SampleLevel(sampler_linear_clamp, uv, 4.5).rgb;
+		bloom /= 3.0;
 		hdr.rgb += bloom;
 	}
 
 	float4 result = hdr;
 
 	[branch]
-	if (tonemap_push.flags & TONEMAP_FLAG_SRGB)
+	if (flags & TONEMAP_FLAG_SRGB)
 	{
-		if (tonemap_push.flags & TONEMAP_FLAG_ACES)
+		if (flags & TONEMAP_FLAG_ACES)
 		{
 			result.rgb = ACESFitted(hdr.rgb);
 		}
@@ -105,6 +107,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		}
 		result.rgb = ApplySRGBCurve_Fast(result.rgb);
 	}
+	else
+	{
+		result *= hdr_calibration;
+	}
 
 	[branch]
 	if (tonemap_push.texture_colorgrade_lookuptable >= 0)
@@ -113,13 +119,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	}
 
 	[branch]
-	if (tonemap_push.flags & TONEMAP_FLAG_DITHER)
+	if (flags & TONEMAP_FLAG_DITHER)
 	{
 		// dithering before outputting to SDR will reduce color banding:
-		result.rgb += (dither((float2)DTid.xy) - 0.5f) / 64.0f;
+		result.rgb += (dither((float2)DTid.xy) - 0.5) / 64.0;
 	}
 
-	result.rgb = (result.rgb - 0.5f) * contrast + 0.5f + brightness;
+	result.rgb = (result.rgb - 0.5) * contrast + 0.5 + brightness;
 	result.rgb = mul(saturationMatrix(saturation), result.rgb);
 
 	[branch]

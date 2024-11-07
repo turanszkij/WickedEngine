@@ -603,7 +603,8 @@ namespace wi
 				getBloomEnabled() ? &bloomResources.texture_bloom : nullptr,
 				colorspace,
 				getTonemap(),
-				&distortion_overlay
+				&distortion_overlay,
+				getHDRCalibration()
 			);
 			lastPostprocessRT = &rtPostprocess;
 

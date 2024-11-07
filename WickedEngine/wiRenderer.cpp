@@ -120,7 +120,7 @@ bool variableRateShadingClassification = false;
 bool variableRateShadingClassificationDebug = false;
 float GameSpeed = 1;
 bool debugLightCulling = false;
-bool occlusionCulling = false;
+bool occlusionCulling = true;
 bool temporalAA = false;
 bool temporalAADEBUG = false;
 uint32_t raytraceBounceCount = 3;
@@ -16348,7 +16348,8 @@ void Postprocess_Tonemap(
 	const Texture* texture_bloom,
 	ColorSpace display_colorspace,
 	Tonemap tonemap,
-	const Texture* texture_distortion_overlay
+	const Texture* texture_distortion_overlay,
+	float hdr_calibration
 )
 {
 	if (!input.IsValid() || !output.IsValid())
@@ -16388,19 +16389,20 @@ void Postprocess_Tonemap(
 	tonemap_push.resolution_rcp.y = 1.0f / desc.height;
 	tonemap_push.exposure_brightness_contrast_saturation.x = uint(exposure_brightness_contrast_saturation.v);
 	tonemap_push.exposure_brightness_contrast_saturation.y = uint(exposure_brightness_contrast_saturation.v >> 32ull);
-	tonemap_push.flags = 0;
+	tonemap_push.flags_hdrcalibration = 0;
 	if (dither)
 	{
-		tonemap_push.flags |= TONEMAP_FLAG_DITHER;
+		tonemap_push.flags_hdrcalibration |= TONEMAP_FLAG_DITHER;
 	}
 	if (tonemap == Tonemap::ACES)
 	{
-		tonemap_push.flags |= TONEMAP_FLAG_ACES;
+		tonemap_push.flags_hdrcalibration |= TONEMAP_FLAG_ACES;
 	}
 	if (display_colorspace == ColorSpace::SRGB)
 	{
-		tonemap_push.flags |= TONEMAP_FLAG_SRGB;
+		tonemap_push.flags_hdrcalibration |= TONEMAP_FLAG_SRGB;
 	}
+	tonemap_push.flags_hdrcalibration |= XMConvertFloatToHalf(hdr_calibration) << 16u;
 	tonemap_push.texture_input = device->GetDescriptorIndex(&input, SubresourceType::SRV);
 	tonemap_push.buffer_input_luminance = device->GetDescriptorIndex((buffer_luminance == nullptr) ? &luminance_dummy : buffer_luminance, SubresourceType::SRV);
 	tonemap_push.texture_input_distortion = device->GetDescriptorIndex(texture_distortion, SubresourceType::SRV);

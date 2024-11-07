@@ -48,6 +48,7 @@ namespace wi::lua
 		lunamethod(RenderPath3D_BindLua, SetSharpenFilterEnabled),
 		lunamethod(RenderPath3D_BindLua, SetSharpenFilterAmount),
 		lunamethod(RenderPath3D_BindLua, SetExposure),
+		lunamethod(RenderPath3D_BindLua, SetHDRCalibration),
 		lunamethod(RenderPath3D_BindLua, SetMotionBlurStrength),
 		lunamethod(RenderPath3D_BindLua, SetDepthOfFieldStrength),
 		lunamethod(RenderPath3D_BindLua, SetLightShaftsStrength),
@@ -430,6 +431,21 @@ namespace wi::lua
 		}
 		else
 			wi::lua::SError(L, "SetExposure(float value) not enough arguments!");
+		return 0;
+	}
+	int RenderPath3D_BindLua::SetHDRCalibration(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetHDRCalibration(float value) component is null!");
+			return 0;
+		}
+		if (wi::lua::SGetArgCount(L) > 0)
+		{
+			((RenderPath3D*)component)->setHDRCalibration(wi::lua::SGetFloat(L, 1));
+		}
+		else
+			wi::lua::SError(L, "SetHDRCalibration(float value) not enough arguments!");
 		return 0;
 	}
 	int RenderPath3D_BindLua::SetMotionBlurStrength(lua_State* L)

@@ -54,6 +54,7 @@ namespace wi::lua
 		int SetSharpenFilterEnabled(lua_State* L);
 		int SetSharpenFilterAmount(lua_State* L);
 		int SetExposure(lua_State* L);
+		int SetHDRCalibration(lua_State* L);
 		int SetMotionBlurStrength(lua_State* L);
 		int SetDepthOfFieldStrength(lua_State* L);
 		int SetLightShaftsStrength(lua_State* L);
