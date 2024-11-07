@@ -1380,6 +1380,21 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\meshoptimizer.h">
       <Filter>UTILITY\meshoptimizer</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Core\StridedPtr.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\CollideSoftBodyVertexIterator.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\EmptyShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\PlaneShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\TaperedCylinderShape.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1736,9 +1751,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\Body.cpp">
       <Filter>JOLT</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\BodyAccess.cpp">
-      <Filter>JOLT</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Body\BodyCreationSettings.cpp">
       <Filter>JOLT</Filter>
     </ClCompile>
@@ -1956,9 +1968,6 @@
       <Filter>JOLT</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Constraints\PathConstraintPathHermite.cpp">
-      <Filter>JOLT</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\PhysicsLock.cpp">
       <Filter>JOLT</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\PhysicsMaterial.cpp">
@@ -2191,6 +2200,15 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vfetchoptimizer.cpp">
       <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\EmptyShape.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\PlaneShape.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\TaperedCylinderShape.cpp">
+      <Filter>JOLT</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
