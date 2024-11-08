@@ -15265,7 +15265,6 @@ void Postprocess_DepthOfField(
 	{
 		device->EventBegin("TileMax - Horizontal", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_TILEMAXCOC_HORIZONTAL], cmd);
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_tilemax_horizontal,
