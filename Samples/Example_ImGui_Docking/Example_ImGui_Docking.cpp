@@ -639,7 +639,7 @@ void Example_ImGuiRenderer::Update(float dt)
 			CONTENT_DIR "models/emitter_skinned.wiscene",
 			CONTENT_DIR "models/physics_test.wiscene",
 			CONTENT_DIR "models/shadows_test.wiscene",
-			CONTENT_DIR "models/sponza/sponza.wiscene",
+			CONTENT_DIR "models/Sponza/sponza.wiscene",
 			CONTENT_DIR "models/emitter_fire.wiscene"
 		};
 
