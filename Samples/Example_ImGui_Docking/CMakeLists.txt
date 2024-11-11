@@ -53,11 +53,13 @@ else()
 		Threads::Threads
 	)
 
-	# Copy shaders to build and source folders just to be safe:
+	# Copy shaders and font to build and source folders just to be safe:
 	add_custom_command(
 		TARGET Example_ImGui_Docking POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/ImGuiPS.hlsl ${CMAKE_CURRENT_BINARY_DIR}
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/ImGuiVS.hlsl ${CMAKE_CURRENT_BINARY_DIR}
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/Roboto-Medium.ttf ${CMAKE_CURRENT_BINARY_DIR}
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/MaterialIcons-Regular.ttf ${CMAKE_CURRENT_BINARY_DIR}
 	)
 
 	set(LIB_DXCOMPILER "libdxcompiler.so")
