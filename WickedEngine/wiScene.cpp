@@ -5378,6 +5378,9 @@ namespace wi::scene
 	}
 	void Scene::RunCharacterUpdateSystem(wi::jobsystem::context& ctx)
 	{
+		if (dt == 0)
+			return;
+
 		static const XMVECTOR up = XMVectorSet(0, 1, 0, 0);
 		static const XMMATRIX rotY = XMMatrixRotationY(XM_PI);
 		static const int max_substeps = 6;
