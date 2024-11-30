@@ -3770,10 +3770,13 @@ namespace wi::scene
 
 		// Springs:
 		wi::jobsystem::Wait(spring_dependency_scan_workload);
-		wi::jobsystem::Dispatch(ctx, (uint32_t)spring_queues.size(), 1, [this](wi::jobsystem::JobArgs args){
-			UpdateSpringsTopDownRecursive(nullptr, *spring_queues[args.jobIndex]);
-		});
-		wi::jobsystem::Wait(ctx);
+		if (dt > 0)
+		{
+			wi::jobsystem::Dispatch(ctx, (uint32_t)spring_queues.size(), 1, [this](wi::jobsystem::JobArgs args) {
+				UpdateSpringsTopDownRecursive(nullptr, *spring_queues[args.jobIndex]);
+				});
+			wi::jobsystem::Wait(ctx);
+		}
 
 		wi::profiler::EndRange(range);
 	}
