@@ -3503,6 +3503,11 @@ void UpdateVisibility(Visibility& vis)
 					vis.locker.unlock();
 				}
 
+				if (object.GetFilterMask() & FILTER_TRANSPARENT)
+				{
+					vis.transparents_visible.store(true);
+				}
+
 				if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
 				{
 					if (object.IsRenderable() && occlusion_result.occlusionQueries[vis.scene->queryheap_idx] < 0)

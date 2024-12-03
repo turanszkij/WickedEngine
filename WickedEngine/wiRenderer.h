@@ -145,6 +145,7 @@ namespace wi::renderer
 		float closestRefPlane = std::numeric_limits<float>::max();
 		XMFLOAT4 reflectionPlane = XMFLOAT4(0, 1, 0, 0);
 		std::atomic_bool volumetriclight_request{ false };
+		std::atomic_bool transparents_visible{ false };
 
 		void Clear()
 		{
@@ -161,6 +162,7 @@ namespace wi::renderer
 			closestRefPlane = std::numeric_limits<float>::max();
 			planar_reflection_visible = false;
 			volumetriclight_request.store(false);
+			transparents_visible.store(false);
 		}
 
 		bool IsRequestedPlanarReflections() const
@@ -170,6 +172,10 @@ namespace wi::renderer
 		bool IsRequestedVolumetricLights() const
 		{
 			return volumetriclight_request.load();
+		}
+		bool IsTransparentsVisible() const
+		{
+			return transparents_visible.load();
 		}
 	};
 
@@ -242,7 +248,7 @@ namespace wi::renderer
 		DRAWSCENE_MAINCAMERA = 1 << 9, // If this is active, then ObjectComponent with SetNotVisibleInMainCamera(true) won't be drawn
 	};
 
-	// Draw the world from a camera. You must call BindCameraCB() at least once in this frame prior to this
+	// Draw the world from a camera. You must call BindCameraCB() at least once in this command list prior to this
 	void DrawScene(
 		const Visibility& vis,
 		wi::enums::RENDERPASS renderPass,

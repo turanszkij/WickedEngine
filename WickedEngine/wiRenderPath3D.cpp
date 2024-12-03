@@ -2031,10 +2031,6 @@ namespace wi
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
-		device->EventBegin("Copy scene tex only mip0 for ocean", cmd);
-		wi::renderer::Postprocess_Downsample4x(rtMain, rtSceneCopy, cmd);
-		device->EventEnd(cmd);
-
 		// Water ripple rendering:
 		if (!scene->waterRipples.empty())
 		{
@@ -2074,6 +2070,16 @@ namespace wi
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
+		Rect scissor = GetScissorInternalResolution();
+		device->BindScissorRects(1, &scissor, cmd);
+
+		Viewport vp;
+		vp.width = (float)depthBuffer_Main.GetDesc().width;
+		vp.height = (float)depthBuffer_Main.GetDesc().height;
+		vp.min_depth = 0;
+		vp.max_depth = 1;
+		device->BindViewports(1, &vp, cmd);
+
 		RenderPassImage rp[] = {
 			RenderPassImage::RenderTarget(&rtMain_render, RenderPassImage::LoadOp::LOAD),
 			RenderPassImage::DepthStencil(
@@ -2086,29 +2092,30 @@ namespace wi
 			),
 			RenderPassImage::Resolve(&rtMain),
 		};
-		device->RenderPassBegin(rp, getMSAASampleCount() > 1 ? 3 : 2, cmd);
-
-		Rect scissor = GetScissorInternalResolution();
-		device->BindScissorRects(1, &scissor, cmd);
-
-		Viewport vp;
-		vp.width = (float)depthBuffer_Main.GetDesc().width;
-		vp.height = (float)depthBuffer_Main.GetDesc().height;
-		vp.min_depth = 0;
-		vp.max_depth = 1;
-		device->BindViewports(1, &vp, cmd);
 
 		// Draw only the ocean first, fog and lightshafts will be blended on top:
-		wi::renderer::DrawScene(
-			visibility_main,
-			RENDERPASS_MAIN,
-			cmd,
-			wi::renderer::DRAWSCENE_OCEAN
-		);
+		if (scene->ocean.IsValid())
+		{
+			device->EventBegin("Copy scene tex only mip0 for ocean", cmd);
+			wi::renderer::Postprocess_Downsample4x(rtMain, rtSceneCopy, cmd);
+			device->EventEnd(cmd);
 
-		device->RenderPassEnd(cmd);
+			device->RenderPassBegin(rp, getMSAASampleCount() > 1 ? 3 : 2, cmd);
 
-		RenderSceneMIPChain(cmd);
+			wi::renderer::DrawScene(
+				visibility_main,
+				RENDERPASS_MAIN,
+				cmd,
+				wi::renderer::DRAWSCENE_OCEAN
+			);
+
+			device->RenderPassEnd(cmd);
+		}
+
+		if (visibility_main.IsTransparentsVisible())
+		{
+			RenderSceneMIPChain(cmd);
+		}
 
 		device->RenderPassBegin(rp, getMSAASampleCount() > 1 ? 3 : 2, cmd);
 
@@ -2141,6 +2148,7 @@ namespace wi
 		}
 
 		// Transparent scene
+		if (visibility_main.IsTransparentsVisible())
 		{
 			auto range = wi::profiler::BeginRangeGPU("Transparent Scene", cmd);
 			device->EventBegin("Transparent Scene", cmd);
