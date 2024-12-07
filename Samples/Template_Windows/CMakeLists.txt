@@ -17,6 +17,10 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     WickedEngine_Windows
 )
 
+if(MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+endif()
+
 set_target_properties(${PROJECT_NAME} PROPERTIES
 WIN32_EXECUTABLE YES
 )
@@ -29,7 +33,7 @@ set(STARTUP_LUA "${WICKED_ROOT_DIR}/Editor/startup.lua")
 message("libdxcompiler found at ${LIBDXCOMPILER_PATH}")
 message("startup lua found at ${STARTUP_LUA}")
 
-# this may not work on windows
+# NOTE: this wont work because client never has prvileges to copy files
 add_custom_command(
     TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBDXCOMPILER_PATH} ${CMAKE_CURRENT_BINARY_DIR}
