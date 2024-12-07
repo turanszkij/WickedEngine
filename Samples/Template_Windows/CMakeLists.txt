@@ -3,7 +3,6 @@ project(Template_Windows)
 
 file(GLOB SOURCE_FILES CONFIGURE_DEPENDS "*.cpp" "*.h")
 
-set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 set(LIB_DXCOMPILER "dxcompiler.dll")
 
 list(APPEND SOURCE_FILES
@@ -11,6 +10,8 @@ ${CMAKE_CURRENT_SOURCE_DIR}/TemplateWindows.rc
 )
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
+
+set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
     WickedEngine_Windows
