@@ -11,7 +11,7 @@ uint main(VertexToPixel input, out uint coverage : SV_Coverage) : SV_Target
 {
 	ShaderMaterial material = HairGetMaterial();
 
-	float alpha = 1;
+	half alpha = 1;
 
 	[branch]
 	if (material.textures[BASECOLORMAP].IsValid())

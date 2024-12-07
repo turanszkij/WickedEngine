@@ -497,7 +497,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	ShaderCamera camera = GetCamera();
 #endif // OBJECTSHADER_USE_CAMERAINDEX
 
-	const uint2 pixel = input.pos.xy; // no longer pixel center!
+	const min16uint2 pixel = input.pos.xy; // no longer pixel center!
 	const float2 ScreenCoord = input.pos.xy * camera.internal_resolution_rcp; // use pixel center!
 	
 	Surface surface;

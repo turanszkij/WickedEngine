@@ -24,13 +24,13 @@ float4 main(VertextoPixel input) : SV_TARGET
 	}
 
 	float2 ScreenCoord = input.pos.xy * GetCamera().internal_resolution_rcp; // use pixel center!
-	uint2 pixel = input.pos.xy; // no longer pixel center!
+	min16uint2 pixel = input.pos.xy; // no longer pixel center!
 	
 	write_mipmap_feedback(EmitterGetGeometry().materialIndex, ddx_coarse(input.tex.xyxy), ddy_coarse(input.tex.xyxy));
 	
 	ShaderMaterial material = EmitterGetMaterial();
 
-	float4 color = 1;
+	half4 color = 1;
 
 	[branch]
 	if (material.textures[SLOT].IsValid())
@@ -40,20 +40,20 @@ float4 main(VertextoPixel input) : SV_TARGET
 		[branch]
 		if (xEmitterOptions & EMITTER_OPTION_BIT_FRAME_BLENDING_ENABLED)
 		{
-			float4 color2 = material.textures[SLOT].Sample(sampler_linear_clamp, input.tex.zwzw);
+			half4 color2 = material.textures[SLOT].Sample(sampler_linear_clamp, input.tex.zwzw);
 			color = lerp(color, color2, input.frameBlend);
 		}
 	}
 	
-	float4 inputColor;
+	half4 inputColor;
 	inputColor.r = ((input.color >> 0)  & 0xFF) / 255.0f;
 	inputColor.g = ((input.color >> 8)  & 0xFF) / 255.0f;
 	inputColor.b = ((input.color >> 16) & 0xFF) / 255.0f;
 	inputColor.a = ((input.color >> 24) & 0xFF) / 255.0f;
 
-	float opacity = color.a * inputColor.a;
+	half opacity = color.a * inputColor.a;
 
-	float3 normal = 0;
+	half3 normal = 0;
 #ifndef EMITTEDPARTICLE_DISTORTION // the "distortion" shader is just using normal map as the color map and uses it for signed blending, this normal logic won't be used for that
 	[branch]
 	if (material.textures[NORMALMAP].IsValid())
@@ -63,7 +63,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 		[branch]
 		if (xEmitterOptions & EMITTER_OPTION_BIT_FRAME_BLENDING_ENABLED)
 		{
-			float3 normal2 = material.textures[NORMALMAP].Sample(sampler_linear_clamp, input.tex.zwzw).rgb;
+			half3 normal2 = material.textures[NORMALMAP].Sample(sampler_linear_clamp, input.tex.zwzw).rgb;
 			normal = lerp(normal, normal2, input.frameBlend);
 		}
 
@@ -88,7 +88,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 #ifdef EMITTEDPARTICLE_DISTORTION
 	// just make normal maps blendable:
-	color.rgb = color.rgb - 0.5f;
+	color.rgb = color.rgb - 0.5;
 #endif // EMITTEDPARTICLE_DISTORTION
 
 #ifdef EMITTEDPARTICLE_LIGHTING

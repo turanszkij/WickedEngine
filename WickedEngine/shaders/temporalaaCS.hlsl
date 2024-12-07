@@ -13,8 +13,7 @@ RWTexture2D<float3> output : register(u0);
 
 static const uint TILE_BORDER = 1;
 static const uint TILE_SIZE = POSTPROCESS_BLOCKSIZE + TILE_BORDER * 2;
-groupshared uint2 tile_color[TILE_SIZE*TILE_SIZE];
-groupshared float tile_depth[TILE_SIZE*TILE_SIZE];
+groupshared uint2 tile_cache[TILE_SIZE*TILE_SIZE];
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
@@ -25,7 +24,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 		output[DTid.xy] = input_current[DTid.xy].rgb;
 		return;
 	}
-	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
+	const float2 uv = (DTid.xy + 0.5) * postprocess.resolution_rcp;
 	half3 neighborhoodMin = 10000;
 	half3 neighborhoodMax = -10000;
 	half3 current;
@@ -35,10 +34,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	for (uint t = groupIndex; t < TILE_SIZE * TILE_SIZE; t += POSTPROCESS_BLOCKSIZE * POSTPROCESS_BLOCKSIZE)
 	{
 		const uint2 pixel = tile_upperleft + unflatten2D(t, TILE_SIZE);
-		const float depth = texture_lineardepth[pixel];
+		const half depth = texture_lineardepth[pixel];
 		const half3 color = input_current[pixel].rgb;
-		tile_color[t] = pack_half3(color);
-		tile_depth[t] = depth;
+		tile_cache[t] = pack_half4(half4(color, depth));
 	}
 	GroupMemoryBarrierWithGroupSync();
 
@@ -51,15 +49,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 			const int2 offset = int2(x, y);
 			const uint idx = flatten2D(GTid.xy + TILE_BORDER + offset, TILE_SIZE);
 
-			const half3 neighbor = unpack_half3(tile_color[idx]);
-			neighborhoodMin = min(neighborhoodMin, neighbor);
-			neighborhoodMax = max(neighborhoodMax, neighbor);
+			const half4 neighbor = unpack_half4(tile_cache[idx]);
+			neighborhoodMin = min(neighborhoodMin, neighbor.xyz);
+			neighborhoodMax = max(neighborhoodMax, neighbor.xyz);
 			if (x == 0 && y == 0)
 			{
-				current = neighbor;
+				current = neighbor.xyz;
 			}
 
-			const float depth = tile_depth[idx];
+			const half depth = neighbor.w;
 			if (depth < bestDepth)
 			{
 				bestDepth = depth;
@@ -90,10 +88,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	history.rgb = clamp(history.rgb, neighborhoodMin, neighborhoodMax);
 
 	// the linear filtering can cause blurry image, try to account for that:
-	float subpixelCorrection = frac(max(abs(velocity.x) * GetCamera().internal_resolution.x, abs(velocity.y) * GetCamera().internal_resolution.y)) * 0.5;
+	half subpixelCorrection = frac(max(abs(velocity.x) * GetCamera().internal_resolution.x, abs(velocity.y) * GetCamera().internal_resolution.y)) * 0.5;
 
 	// compute a nice blend factor:
-	float blendfactor = saturate(lerp(0.05, 0.8, subpixelCorrection));
+	half blendfactor = saturate(lerp(0.05, 0.8, subpixelCorrection));
 
 	// if information can not be found on the screen, revert to aliased image:
 	blendfactor = is_saturated(prevUV) ? blendfactor : 1.0;

@@ -2094,7 +2094,7 @@ namespace wi
 		};
 
 		// Draw only the ocean first, fog and lightshafts will be blended on top:
-		if (scene->ocean.IsValid())
+		if (scene->weather.IsOceanEnabled() && scene->ocean.IsValid() && (!scene->ocean.IsOccluded() || !wi::renderer::GetOcclusionCullingEnabled()))
 		{
 			device->EventBegin("Copy scene tex only mip0 for ocean", cmd);
 			wi::renderer::Postprocess_Downsample4x(rtMain, rtSceneCopy, cmd);

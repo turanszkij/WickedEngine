@@ -27,7 +27,7 @@ float4 main(VertexToPixel input) : SV_Target
 	V /= dist;
 	half emissive = 0;
 
-	const uint2 pixel = input.pos.xy; // no longer pixel center!
+	const min16uint2 pixel = input.pos.xy; // no longer pixel center!
 	const float2 ScreenCoord = input.pos.xy * GetCamera().internal_resolution_rcp; // use pixel center!
 
 	Surface surface;

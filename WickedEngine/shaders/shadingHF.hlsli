@@ -263,9 +263,9 @@ inline void ForwardDecals(inout Surface surface, inout half4 surfaceMap, Sampler
 #endif // DISABLE_DECALS
 }
 
-inline uint GetFlatTileIndex(uint2 pixel)
+inline uint GetFlatTileIndex(min16uint2 pixel)
 {
-	const uint2 tileIndex = uint2(floor(pixel / TILED_CULLING_BLOCKSIZE));
+	const min16uint2 tileIndex = min16uint2(floor(pixel / TILED_CULLING_BLOCKSIZE));
 	return flatten2D(tileIndex, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
 }
 
@@ -619,21 +619,21 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 
 inline void ApplyFog(in float distance, float3 V, inout float4 color)
 {
-	const float4 fog = GetFog(distance, GetCamera().position, -V);
+	const half4 fog = GetFog(distance, GetCamera().position, -V);
 	//color.rgb = (1.0 - fog.a) * color.rgb + fog.rgb; // premultiplied fog
 	color.rgb = lerp(color.rgb, fog.rgb, fog.a); // non-premultiplied fog
 }
 
-inline void ApplyAerialPerspective(float2 uv, float3 P, inout float4 color)
+inline void ApplyAerialPerspective(float2 uv, float3 P, inout half4 color)
 {
 	if (GetFrame().options & OPTION_BIT_REALISTIC_SKY_AERIAL_PERSPECTIVE)
 	{
-		const float4 AP = GetAerialPerspectiveTransmittance(uv, P, GetCamera().position, texture_cameravolumelut);
+		const half4 AP = GetAerialPerspectiveTransmittance(uv, P, GetCamera().position, texture_cameravolumelut);
 		color.rgb = color.rgb * (1.0 - AP.a) + AP.rgb;
 	}
 }
 
-inline uint AlphaToCoverage(float alpha, float alphaTest, float4 svposition)
+inline uint AlphaToCoverage(half alpha, half alphaTest, float4 svposition)
 {
 	if (alphaTest == 0)
 	{

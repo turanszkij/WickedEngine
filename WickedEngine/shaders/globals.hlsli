@@ -790,11 +790,11 @@ inline half3 clipspace_to_uv(in half3 clipspace)
 	return clipspace * half3(0.5, -0.5, 0.5) + 0.5;
 }
 
-inline float3 GetSunColor() { return GetWeather().sun_color; } // sun color with intensity applied
+inline half3 GetSunColor() { return GetWeather().sun_color; } // sun color with intensity applied
 inline float3 GetSunDirection() { return GetWeather().sun_direction; }
-inline float3 GetHorizonColor() { return GetWeather().horizon.rgb; }
-inline float3 GetZenithColor() { return GetWeather().zenith.rgb; }
-inline float3 GetAmbientColor() { return GetWeather().ambient.rgb; }
+inline half3 GetHorizonColor() { return GetWeather().horizon.rgb; }
+inline half3 GetZenithColor() { return GetWeather().zenith.rgb; }
+inline half3 GetAmbientColor() { return GetWeather().ambient.rgb; }
 inline uint2 GetInternalResolution() { return GetCamera().internal_resolution; }
 inline float GetDeltaTime() { return GetFrame().delta_time; }
 inline float GetTime() { return GetFrame().time; }
