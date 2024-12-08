@@ -364,11 +364,11 @@ inline half3 GetAmbient(in float3 N)
 	[branch]
 	if (GetScene().globalprobe >= 0)
 	{
-		TextureCube cubemap = bindless_cubemaps[GetScene().globalprobe];
+		TextureCube<half4> cubemap = bindless_cubemaps_half4[GetScene().globalprobe];
 		uint2 dim;
 		uint mipcount;
 		cubemap.GetDimensions(0, dim.x, dim.y, mipcount);
-		ambient = (half3)cubemap.SampleLevel(sampler_linear_clamp, N, mipcount).rgb;
+		ambient = cubemap.SampleLevel(sampler_linear_clamp, N, mipcount).rgb;
 	}
 	
 #endif // ENVMAPRENDERING
@@ -408,24 +408,24 @@ inline half3 EnvironmentReflection_Global(in Surface surface)
 	if (GetScene().globalprobe < 0)
 		return 0;
 	
-	TextureCube cubemap = bindless_cubemaps[GetScene().globalprobe];
+	TextureCube<half4> cubemap = bindless_cubemaps_half4[GetScene().globalprobe];
 	uint2 dim;
 	uint mipcount;
 	cubemap.GetDimensions(0, dim.x, dim.y, mipcount);
 
 	half MIP = surface.roughness * mipcount;
-	envColor = (half3)cubemap.SampleLevel(sampler_linear_clamp, surface.R, MIP).rgb * surface.F;
+	envColor = cubemap.SampleLevel(sampler_linear_clamp, surface.R, MIP).rgb * surface.F;
 
 #ifdef SHEEN
 	envColor *= surface.sheen.albedoScaling;
 	MIP = surface.sheen.roughness * mipcount;
-	envColor += (half3)cubemap.SampleLevel(sampler_linear_clamp, surface.R, MIP).rgb * surface.sheen.color * surface.sheen.DFG;
+	envColor += cubemap.SampleLevel(sampler_linear_clamp, surface.R, MIP).rgb * surface.sheen.color * surface.sheen.DFG;
 #endif // SHEEN
 
 #ifdef CLEARCOAT
 	envColor *= 1 - surface.clearcoat.F;
 	MIP = surface.clearcoat.roughness * mipcount;
-	envColor += (half3)cubemap.SampleLevel(sampler_linear_clamp, surface.clearcoat.R, MIP).rgb * surface.clearcoat.F;
+	envColor += cubemap.SampleLevel(sampler_linear_clamp, surface.clearcoat.R, MIP).rgb * surface.clearcoat.F;
 #endif // CLEARCOAT
 
 #endif // ENVMAPRENDERING
@@ -439,7 +439,7 @@ inline half3 EnvironmentReflection_Global(in Surface surface)
 // clipSpacePos:		world space pixel position transformed into OBB space by probeProjection matrix
 // MIP:					mip level to sample
 // return:				color of the environment map (rgb), blend factor of the environment map (a)
-inline half4 EnvironmentReflection_Local(in TextureCube cubemap, in Surface surface, in ShaderEntity probe, in float4x4 probeProjection, in half3 clipSpacePos)
+inline half4 EnvironmentReflection_Local(in TextureCube<half4> cubemap, in Surface surface, in ShaderEntity probe, in float4x4 probeProjection, in half3 clipSpacePos)
 {
 	if ((probe.layerMask & surface.layerMask) == 0)
 		return 0; // early exit: layer mismatch
@@ -494,7 +494,7 @@ inline void VoxelGI(inout Surface surface, inout Lighting lighting)
 	[branch]
 	if (GetFrame().vxgi.resolution != 0 && GetFrame().vxgi.texture_radiance >= 0)
 	{
-		Texture3D voxels = bindless_textures3D[GetFrame().vxgi.texture_radiance];
+		Texture3D<half4> voxels = bindless_textures3D_half4[GetFrame().vxgi.texture_radiance];
 
 		// diffuse:
 		half4 trace = ConeTraceDiffuse(voxels, surface.P, surface.N);

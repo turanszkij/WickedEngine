@@ -5,7 +5,7 @@
 #include "voxelHF.hlsli"
 #include "volumetricCloudsHF.hlsli"
 
-Texture3D<float4> input_previous_radiance : register(t0);
+Texture3D<half4> input_previous_radiance : register(t0);
 Texture3D<uint> input_render_atomic : register(t1);
 
 RWTexture3D<float4> output_radiance : register(u0);
@@ -29,17 +29,17 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		uint3 dst = src;
 		dst.y += g_xVoxelizer.clipmap_index * GetFrame().vxgi.resolution;
 
-		float4 radiance = 0;
+		half4 radiance = 0;
 		if (i < 6)
 		{
 			src.z *= VOXELIZATION_CHANNEL_COUNT;
 			uint count = input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_FRAGMENT_COUNTER)];
 			if (count > 0)
 			{
-				float4 baseColor = 0;
-				float3 emissive = 0;
-				float3 directLight = 0;
-				float3 N = 0;
+				half4 baseColor = 0;
+				half3 emissive = 0;
+				half3 directLight = 0;
+				half3 N = 0;
 				baseColor.r = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_BASECOLOR_R)]);
 				baseColor.g = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_BASECOLOR_G)]);
 				baseColor.b = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_BASECOLOR_B)]);
@@ -65,7 +65,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				Lighting lighting;
 				lighting.create(0, 0, 0, 0);
 				lighting.direct.diffuse = directLight;
-				float4 trace = ConeTraceDiffuse(input_previous_radiance, P, N);
+				half4 trace = ConeTraceDiffuse(input_previous_radiance, P, N);
 				lighting.indirect.diffuse = trace.rgb;
 				lighting.indirect.diffuse += GetAmbient(N) * (1 - trace.a);
 				radiance.rgb *= lighting.direct.diffuse / PI + lighting.indirect.diffuse;

@@ -235,7 +235,7 @@ struct alignas(16) ShaderTextureSlot
 		const float clamped_lod = virtual_lod < max_nonpacked_lod ? max(virtual_lod, residency.z) : virtual_lod;
 
 		// Mip - more detailed:
-		float4 value0;
+		half4 value0;
 		{
 			uint lod0 = uint(clamped_lod);
 			const uint packed_mip_idx = packed_mips ? uint(virtual_lod - max_nonpacked_lod - 1) : 0;
@@ -249,7 +249,7 @@ struct alignas(16) ShaderTextureSlot
 		}
 
 		// Mip - less detailed:
-		float4 value1;
+		half4 value1;
 		{
 			uint lod1 = uint(clamped_lod + 1);
 			packed_mips = uint(lod1) > max_nonpacked_lod;
@@ -265,7 +265,7 @@ struct alignas(16) ShaderTextureSlot
 			value1 = tex.SampleLevel(sam, atlas_uv, 0);
 		}
 
-		return lerp(value0, value1, frac(clamped_lod)); // custom trilinear filtering
+		return lerp(value0, value1, (half)frac(clamped_lod)); // custom trilinear filtering
 	}
 	half4 Sample(in SamplerState sam, in float4 uvsets)
 	{

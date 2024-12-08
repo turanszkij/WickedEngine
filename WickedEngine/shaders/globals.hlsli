@@ -182,30 +182,33 @@ T inverse_lerp(T value1, T value2, T pos)
 		"SRV(t0, space = 19, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"SRV(t0, space = 20, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"SRV(t0, space = 21, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"UAV(u0, space = 22, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"UAV(u0, space = 23, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"UAV(u0, space = 24, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"UAV(u0, space = 25, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"UAV(u0, space = 26, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"UAV(u0, space = 27, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"UAV(u0, space = 28, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"UAV(u0, space = 29, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"UAV(u0, space = 30, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"UAV(u0, space = 31, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"UAV(u0, space = 32, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"UAV(u0, space = 33, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"UAV(u0, space = 34, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"UAV(u0, space = 35, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"UAV(u0, space = 36, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"UAV(u0, space = 37, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"SRV(t0, space = 38, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"SRV(t0, space = 39, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"SRV(t0, space = 40, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"SRV(t0, space = 41, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"SRV(t0, space = 42, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"SRV(t0, space = 43, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"SRV(t0, space = 44, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"SRV(t0, space = 45, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)" \
+		"SRV(t0, space = 22, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 23, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 24, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 100, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 101, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 102, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 103, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 104, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 105, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 106, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 107, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 108, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 109, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 110, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 111, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 112, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 113, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 114, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 115, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 200, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 201, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 202, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 203, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 204, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 205, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 206, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 207, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)" \
 	"), " \
 	"StaticSampler(s100, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP, filter = FILTER_MIN_MAG_MIP_LINEAR)," \
 	"StaticSampler(s101, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, addressW = TEXTURE_ADDRESS_WRAP, filter = FILTER_MIN_MAG_MIP_LINEAR)," \
@@ -246,9 +249,12 @@ static const BindlessResource<Buffer<float2>> bindless_buffers_float2;
 static const BindlessResource<Buffer<float3>> bindless_buffers_float3;
 static const BindlessResource<Buffer<float4>> bindless_buffers_float4;
 static const BindlessResource<Texture2DArray> bindless_textures2DArray;
+static const BindlessResource<Texture2DArray<half4>> bindless_textures2DArray_half4;
 static const BindlessResource<TextureCube> bindless_cubemaps;
+static const BindlessResource<TextureCube<half4>> bindless_cubemaps_half4;
 static const BindlessResource<TextureCubeArray> bindless_cubearrays;
 static const BindlessResource<Texture3D> bindless_textures3D;
+static const BindlessResource<Texture3D<half4>> bindless_textures3D_half4;
 static const BindlessResource<Texture2D<float>> bindless_textures_float;
 static const BindlessResource<Texture2D<float2>> bindless_textures_float2;
 static const BindlessResource<Texture2D<uint>> bindless_textures_uint;
@@ -297,9 +303,12 @@ static const uint DESCRIPTOR_SET_BINDLESS_ACCELERATION_STRUCTURE = 7;
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLER)]] SamplerState bindless_samplers[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2D bindless_textures[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2DArray bindless_textures2DArray[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2DArray<half4> bindless_textures2DArray_half4[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] TextureCube bindless_cubemaps[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] TextureCube<half4> bindless_cubemaps_half4[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] TextureCubeArray bindless_cubearrays[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture3D bindless_textures3D[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture3D<half4> bindless_textures3D_half4[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2D<float> bindless_textures_float[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2D<float2> bindless_textures_float2[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2D<uint> bindless_textures_uint[];
@@ -342,31 +351,34 @@ Buffer<float4> bindless_buffers_float4[] : register(space11);
 RaytracingAccelerationStructure bindless_accelerationstructures[] : register(space12);
 #endif // RTAPI
 Texture2DArray bindless_textures2DArray[] : register(space13);
-TextureCube bindless_cubemaps[] : register(space14);
-TextureCubeArray bindless_cubearrays[] : register(space15);
-Texture3D bindless_textures3D[] : register(space16);
-Texture2D<float> bindless_textures_float[] : register(space17);
-Texture2D<float2> bindless_textures_float2[] : register(space18);
-Texture2D<uint> bindless_textures_uint[] : register(space19);
-Texture2D<uint4> bindless_textures_uint4[] : register(space20);
-Texture2D<half4> bindless_textures_half4[] : register(space21);
+Texture2DArray<half4> bindless_textures2DArray_half4[] : register(space14);
+TextureCube bindless_cubemaps[] : register(space15);
+TextureCube<half4> bindless_cubemaps_half4[] : register(space16);
+TextureCubeArray bindless_cubearrays[] : register(space17);
+Texture3D bindless_textures3D[] : register(space18);
+Texture3D<half4> bindless_textures3D_half4[] : register(space19);
+Texture2D<float> bindless_textures_float[] : register(space20);
+Texture2D<float2> bindless_textures_float2[] : register(space21);
+Texture2D<uint> bindless_textures_uint[] : register(space22);
+Texture2D<uint4> bindless_textures_uint4[] : register(space23);
+Texture2D<half4> bindless_textures_half4[] : register(space24);
 
-RWTexture2D<float4> bindless_rwtextures[] : register(space22);
-RWByteAddressBuffer bindless_rwbuffers[] : register(space23);
-RWBuffer<uint> bindless_rwbuffers_uint[] : register(space24);
-RWBuffer<uint2> bindless_rwbuffers_uint2[] : register(space25);
-RWBuffer<uint3> bindless_rwbuffers_uint3[] : register(space26);
-RWBuffer<uint4> bindless_rwbuffers_uint4[] : register(space27);
-RWBuffer<float> bindless_rwbuffers_float[] : register(space28);
-RWBuffer<float2> bindless_rwbuffers_float2[] : register(space29);
-RWBuffer<float3> bindless_rwbuffers_float3[] : register(space30);
-RWBuffer<float4> bindless_rwbuffers_float4[] : register(space31);
-RWTexture2DArray<float4> bindless_rwtextures2DArray[] : register(space32);
-RWTexture3D<float4> bindless_rwtextures3D[] : register(space33);
-RWTexture2D<uint> bindless_rwtextures_uint[] : register(space34);
-RWTexture2D<uint2> bindless_rwtextures_uint2[] : register(space35);
-RWTexture2D<uint3> bindless_rwtextures_uint3[] : register(space36);
-RWTexture2D<uint4> bindless_rwtextures_uint4[] : register(space37);
+RWTexture2D<float4> bindless_rwtextures[] : register(space100);
+RWByteAddressBuffer bindless_rwbuffers[] : register(space101);
+RWBuffer<uint> bindless_rwbuffers_uint[] : register(space102);
+RWBuffer<uint2> bindless_rwbuffers_uint2[] : register(space103);
+RWBuffer<uint3> bindless_rwbuffers_uint3[] : register(space104);
+RWBuffer<uint4> bindless_rwbuffers_uint4[] : register(space105);
+RWBuffer<float> bindless_rwbuffers_float[] : register(space106);
+RWBuffer<float2> bindless_rwbuffers_float2[] : register(space107);
+RWBuffer<float3> bindless_rwbuffers_float3[] : register(space108);
+RWBuffer<float4> bindless_rwbuffers_float4[] : register(space109);
+RWTexture2DArray<float4> bindless_rwtextures2DArray[] : register(space110);
+RWTexture3D<float4> bindless_rwtextures3D[] : register(space111);
+RWTexture2D<uint> bindless_rwtextures_uint[] : register(space112);
+RWTexture2D<uint2> bindless_rwtextures_uint2[] : register(space113);
+RWTexture2D<uint3> bindless_rwtextures_uint3[] : register(space114);
+RWTexture2D<uint4> bindless_rwtextures_uint4[] : register(space115);
 
 #endif // __spirv__
 
@@ -391,14 +403,14 @@ static const BindlessResource<StructuredBuffer<ShaderTerrainChunk>> bindless_str
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<uint> bindless_structured_uint[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderTerrainChunk> bindless_structured_terrain_chunks[];
 #else
-StructuredBuffer<ShaderMeshInstance> bindless_structured_meshinstance[] : register(space38);
-StructuredBuffer<ShaderGeometry> bindless_structured_geometry[] : register(space39);
-StructuredBuffer<ShaderMeshlet> bindless_structured_meshlet[] : register(space40);
-StructuredBuffer<ShaderCluster> bindless_structured_cluster[] : register(space41);
-StructuredBuffer<ShaderClusterBounds> bindless_structured_cluster_bounds[] : register(space42);
-StructuredBuffer<ShaderMaterial> bindless_structured_material[] : register(space43);
-StructuredBuffer<uint> bindless_structured_uint[] : register(space44);
-StructuredBuffer<ShaderTerrainChunk> bindless_structured_terrain_chunks[] : register(space45);
+StructuredBuffer<ShaderMeshInstance> bindless_structured_meshinstance[] : register(space200);
+StructuredBuffer<ShaderGeometry> bindless_structured_geometry[] : register(space201);
+StructuredBuffer<ShaderMeshlet> bindless_structured_meshlet[] : register(space202);
+StructuredBuffer<ShaderCluster> bindless_structured_cluster[] : register(space203);
+StructuredBuffer<ShaderClusterBounds> bindless_structured_cluster_bounds[] : register(space204);
+StructuredBuffer<ShaderMaterial> bindless_structured_material[] : register(space205);
+StructuredBuffer<uint> bindless_structured_uint[] : register(space206);
+StructuredBuffer<ShaderTerrainChunk> bindless_structured_terrain_chunks[] : register(space207);
 #endif // __spirv__
 
 inline FrameCB GetFrame()

@@ -20,9 +20,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float3 N = decode_oct(texture_normal.SampleLevel(sampler_point_clamp, uv, 0));
 	const float3 P = reconstruct_position(uv, depth);
 
-	Texture3D<float4> voxels = bindless_textures3D[GetFrame().vxgi.texture_radiance];
-	float4 trace = ConeTraceDiffuse(voxels, P, N);
-	float4 color = float4(trace.rgb, 1);
+	Texture3D<half4> voxels = bindless_textures3D_half4[GetFrame().vxgi.texture_radiance];
+	half4 trace = ConeTraceDiffuse(voxels, P, N);
+	half4 color = half4(trace.rgb, 1);
 	color.rgb += GetAmbient(N) * (1 - trace.a);
 	
 	output[pixel] = color;
