@@ -195,12 +195,12 @@ struct alignas(16) ShaderTextureSlot
 	{
 		return f16tof32((uvset_aniso_lodclamp >> 16u) & 0xFFFF);
 	}
-	Texture2D GetTexture()
+	Texture2D<half4> GetTexture()
 	{
-		return bindless_textures[UniformTextureSlot(texture_descriptor)];
+		return bindless_textures_half4[UniformTextureSlot(texture_descriptor)];
 	}
-	float4 SampleVirtual(
-		in Texture2D tex,
+	half4 SampleVirtual(
+		in Texture2D<half4> tex,
 		in SamplerState sam,
 		in float2 uv,
 		in Texture2D<uint4> residency_map,
@@ -267,9 +267,9 @@ struct alignas(16) ShaderTextureSlot
 
 		return lerp(value0, value1, frac(clamped_lod)); // custom trilinear filtering
 	}
-	float4 Sample(in SamplerState sam, in float4 uvsets)
+	half4 Sample(in SamplerState sam, in float4 uvsets)
 	{
-		Texture2D tex = GetTexture();
+		Texture2D<half4> tex = GetTexture();
 		float2 uv = GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
 
 #ifndef DISABLE_SVT
@@ -288,9 +288,9 @@ struct alignas(16) ShaderTextureSlot
 		return tex.Sample(sam, uv);
 	}
 
-	float4 SampleLevel(in SamplerState sam, in float4 uvsets, in float lod)
+	half4 SampleLevel(in SamplerState sam, in float4 uvsets, in float lod)
 	{
-		Texture2D tex = GetTexture();
+		Texture2D<half4> tex = GetTexture();
 		float2 uv = GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
 
 #ifndef DISABLE_SVT
@@ -308,9 +308,9 @@ struct alignas(16) ShaderTextureSlot
 		return tex.SampleLevel(sam, uv, lod);
 	}
 
-	float4 SampleBias(in SamplerState sam, in float4 uvsets, in float bias)
+	half4 SampleBias(in SamplerState sam, in float4 uvsets, in float bias)
 	{
-		Texture2D tex = GetTexture();
+		Texture2D<half4> tex = GetTexture();
 		float2 uv = GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
 
 #ifndef DISABLE_SVT
@@ -330,9 +330,9 @@ struct alignas(16) ShaderTextureSlot
 		return tex.SampleBias(sam, uv, bias);
 	}
 
-	float4 SampleGrad(in SamplerState sam, in float4 uvsets, in float4 uvsets_dx, in float4 uvsets_dy)
+	half4 SampleGrad(in SamplerState sam, in float4 uvsets, in float4 uvsets_dx, in float4 uvsets_dy)
 	{
-		Texture2D tex = GetTexture();
+		Texture2D<half4> tex = GetTexture();
 		float2 uv = GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
 		float2 uv_dx = GetUVSet() == 0 ? uvsets_dx.xy : uvsets_dx.zw;
 		float2 uv_dy = GetUVSet() == 0 ? uvsets_dy.xy : uvsets_dy.zw;

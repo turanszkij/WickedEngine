@@ -476,7 +476,7 @@ struct Surface
 				const float2 uv = material.textures[DISPLACEMENTMAP].GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
 				const float2 uv_dx = material.textures[DISPLACEMENTMAP].GetUVSet() == 0 ? uvsets_dx.xy : uvsets_dx.zw;
 				const float2 uv_dy = material.textures[DISPLACEMENTMAP].GetUVSet() == 0 ? uvsets_dy.xy : uvsets_dy.zw;
-				Texture2D tex = bindless_textures[NonUniformResourceIndex(material.textures[DISPLACEMENTMAP].texture_descriptor)];
+				Texture2D<half4> tex = bindless_textures_half4[NonUniformResourceIndex(material.textures[DISPLACEMENTMAP].texture_descriptor)];
 				ParallaxOcclusionMapping_Impl(
 					uvsets,
 					V,
@@ -795,7 +795,7 @@ struct Surface
 								V,
 								tbn,
 								decal.GetLength(),
-								bindless_textures[decalDisplacementmap],
+								bindless_textures_half4[decalDisplacementmap],
 								uvw.xy,
 								decalDX,
 								decalDY,
