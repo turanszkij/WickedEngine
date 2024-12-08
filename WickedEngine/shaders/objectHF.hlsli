@@ -561,7 +561,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (material.textures[DISPLACEMENTMAP].IsValid())
 	{
-		Texture2D tex = bindless_textures[material.textures[DISPLACEMENTMAP].texture_descriptor];
+		Texture2D<half4> tex = bindless_textures_half4[material.textures[DISPLACEMENTMAP].texture_descriptor];
 		float2 uv = material.textures[DISPLACEMENTMAP].GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
 		float2 uv_dx = ddx_coarse(uv);
 		float2 uv_dy = ddy_coarse(uv);
@@ -591,13 +591,13 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	if (material.textures[BASECOLORMAP].IsValid() && (GetFrame().options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 #endif // PREPASS
 	{
-		surface.baseColor *= (half4)material.textures[BASECOLORMAP].Sample(sampler_objectshader, uvsets);
+		surface.baseColor *= material.textures[BASECOLORMAP].Sample(sampler_objectshader, uvsets);
 	}
 	
 	[branch]
 	if (material.textures[TRANSPARENCYMAP].IsValid())
 	{
-		surface.baseColor.a *= (half)material.textures[TRANSPARENCYMAP].Sample(sampler_objectshader, uvsets).r;
+		surface.baseColor.a *= material.textures[TRANSPARENCYMAP].Sample(sampler_objectshader, uvsets).r;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 
@@ -622,7 +622,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (material.textures[NORMALMAP].IsValid())
 	{
-		surface.bumpColor = half3((half2)material.textures[NORMALMAP].Sample(sampler_objectshader, uvsets).rg, 1);
+		surface.bumpColor = half3(material.textures[NORMALMAP].Sample(sampler_objectshader, uvsets).rg, 1);
 		surface.bumpColor = surface.bumpColor * 2 - 1;
 		surface.bumpColor.rg *= material.GetNormalMapStrength();
 	}
@@ -637,7 +637,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (material.textures[SURFACEMAP].IsValid())
 	{
-		surfaceMap = (half4)material.textures[SURFACEMAP].Sample(sampler_objectshader, uvsets);
+		surfaceMap = material.textures[SURFACEMAP].Sample(sampler_objectshader, uvsets);
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 
@@ -649,7 +649,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (any(surface.emissiveColor) && material.textures[EMISSIVEMAP].IsValid())
 	{
-		half4 emissiveMap = (half4)material.textures[EMISSIVEMAP].Sample(sampler_objectshader, uvsets);
+		half4 emissiveMap = material.textures[EMISSIVEMAP].Sample(sampler_objectshader, uvsets);
 		surface.emissiveColor *= emissiveMap.rgb * emissiveMap.a;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
@@ -756,7 +756,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (material.textures[SPECULARMAP].IsValid())
 	{
-		specularMap = (half4)material.textures[SPECULARMAP].Sample(sampler_objectshader, uvsets);
+		specularMap = material.textures[SPECULARMAP].Sample(sampler_objectshader, uvsets);
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 
@@ -793,7 +793,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (camera.texture_ao_index >= 0)
 	{
-		surface.occlusion *= (half)bindless_textures_float[camera.texture_ao_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
+		surface.occlusion *= bindless_textures_half4[camera.texture_ao_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
 	}
 #endif // CARTOON
 #endif // TRANSPARENT
@@ -809,7 +809,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (material.textures[ANISOTROPYMAP].IsValid())
 	{
-		half2 anisotropyTexture = (half2)material.textures[ANISOTROPYMAP].Sample(sampler_objectshader, uvsets).rg * 2 - 1;
+		half2 anisotropyTexture = material.textures[ANISOTROPYMAP].Sample(sampler_objectshader, uvsets).rg * 2 - 1;
 		surface.aniso.strength *= length(anisotropyTexture);
 		surface.aniso.direction = mul(half2x2(surface.aniso.direction.x, surface.aniso.direction.y, -surface.aniso.direction.y, surface.aniso.direction.x), normalize(anisotropyTexture));
 	}
@@ -828,12 +828,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (material.textures[SHEENCOLORMAP].IsValid())
 	{
-		surface.sheen.color = (half3)material.textures[SHEENCOLORMAP].Sample(sampler_objectshader, uvsets).rgb;
+		surface.sheen.color = material.textures[SHEENCOLORMAP].Sample(sampler_objectshader, uvsets).rgb;
 	}
 	[branch]
 	if (material.textures[SHEENROUGHNESSMAP].IsValid())
 	{
-		surface.sheen.roughness = (half)material.textures[SHEENROUGHNESSMAP].Sample(sampler_objectshader, uvsets).a;
+		surface.sheen.roughness = material.textures[SHEENROUGHNESSMAP].Sample(sampler_objectshader, uvsets).a;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 #endif // SHEEN
@@ -848,12 +848,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (material.textures[CLEARCOATMAP].IsValid())
 	{
-		surface.clearcoat.factor = (half)material.textures[CLEARCOATMAP].Sample(sampler_objectshader, uvsets).r;
+		surface.clearcoat.factor = material.textures[CLEARCOATMAP].Sample(sampler_objectshader, uvsets).r;
 	}
 	[branch]
 	if (material.textures[CLEARCOATROUGHNESSMAP].IsValid())
 	{
-		surface.clearcoat.roughness = (half)material.textures[CLEARCOATROUGHNESSMAP].Sample(sampler_objectshader, uvsets).g;
+		surface.clearcoat.roughness = material.textures[CLEARCOATROUGHNESSMAP].Sample(sampler_objectshader, uvsets).g;
 	}
 #ifdef OBJECTSHADER_USE_TANGENT
 	[branch]
@@ -899,15 +899,15 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (material.textures[NORMALMAP].IsValid())
 	{
-		Texture2D texture_normalmap = bindless_textures[material.textures[NORMALMAP].texture_descriptor];
+		Texture2D<half4> texture_normalmap = bindless_textures_half4[material.textures[NORMALMAP].texture_descriptor];
 		const float2 UV_normalMap = material.textures[NORMALMAP].GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
-		bumpColor0 = 2 * (half2)texture_normalmap.Sample(sampler_objectshader, UV_normalMap - material.texMulAdd.ww).rg - 1;
-		bumpColor1 = 2 * (half2)texture_normalmap.Sample(sampler_objectshader, UV_normalMap + material.texMulAdd.zw).rg - 1;
+		bumpColor0 = 2 * texture_normalmap.Sample(sampler_objectshader, UV_normalMap - material.texMulAdd.ww).rg - 1;
+		bumpColor1 = 2 * texture_normalmap.Sample(sampler_objectshader, UV_normalMap + material.texMulAdd.zw).rg - 1;
 	}
 	[branch]
 	if (camera.texture_waterriples_index >= 0)
 	{
-		bumpColor2 = (half2)bindless_textures_float2[camera.texture_waterriples_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rg;
+		bumpColor2 = bindless_textures_half4[camera.texture_waterriples_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rg;
 	}
 	surface.bumpColor = half3(bumpColor0 + bumpColor1 + bumpColor2, 1)  * material.GetRefraction();
 	surface.N = normalize(lerp(surface.N, mul(normalize(surface.bumpColor), TBN), material.GetNormalMapStrength()));
@@ -920,7 +920,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 		float4 reflectionUV = mul(camera.reflection_view_projection, float4(surface.P, 1));
 		reflectionUV.xy /= reflectionUV.w;
 		reflectionUV.xy = clipspace_to_uv(reflectionUV.xy) + surface.bumpColor.rg;
-		half3 reflectiveColor = (half3)bindless_textures[camera.texture_reflection_index].SampleLevel(sampler_linear_mirror, reflectionUV.xy, 0).rgb;
+		half3 reflectiveColor = bindless_textures_half4[camera.texture_reflection_index].SampleLevel(sampler_linear_mirror, reflectionUV.xy, 0).rgb;
 		[branch]
 		if(camera.texture_reflection_depth_index >= 0)
 		{
@@ -954,7 +954,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 		[branch]
 		if (camera.texture_refraction_index >= 0)
 		{
-			Texture2D texture_refraction = bindless_textures[camera.texture_refraction_index];
+			Texture2D<half4> texture_refraction = bindless_textures_half4[camera.texture_refraction_index];
 			float2 size;
 			float mipLevels;
 			texture_refraction.GetDimensions(0, size.x, size.y, mipLevels);
@@ -1000,13 +1000,13 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (camera.texture_ssr_index >= 0)
 	{
-		half4 ssr = (half4)bindless_textures[camera.texture_ssr_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0);
+		half4 ssr = bindless_textures_half4[camera.texture_ssr_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0);
 		lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb * surface.F, ssr.a);
 	}
 	[branch]
 	if (camera.texture_ssgi_index >= 0)
 	{
-		surface.ssgi = (half3)bindless_textures[camera.texture_ssgi_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rgb;
+		surface.ssgi = bindless_textures_half4[camera.texture_ssgi_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rgb;
 	}
 #endif // CARTOON
 #endif // TRANSPARENT
@@ -1020,7 +1020,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 		// Water refraction:
 		float4 water_plane = camera.reflection_plane;
 		const float camera_above_water = dot(float4(camera.position, 1), water_plane) < 0; 
-		Texture2D texture_refraction = bindless_textures[camera.texture_refraction_index];
+		Texture2D<half4> texture_refraction = bindless_textures_half4[camera.texture_refraction_index];
 		// First sample using full perturbation:
 		float2 refraction_uv = ScreenCoord.xy + surface.bumpColor.rg;
 		float refraction_depth = find_max_depth(refraction_uv, 2, 2);

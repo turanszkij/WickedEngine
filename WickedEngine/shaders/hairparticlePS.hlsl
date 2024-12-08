@@ -45,7 +45,7 @@ float4 main(VertexToPixel input) : SV_Target
 	[branch]
 	if (GetCamera().texture_ao_index >= 0)
 	{
-		surface.occlusion *= bindless_textures_float[GetCamera().texture_ao_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
+		surface.occlusion *= bindless_textures_half4[GetCamera().texture_ao_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
 	}
 	[branch]
 	if (GetCamera().texture_ssgi_index >= 0)
