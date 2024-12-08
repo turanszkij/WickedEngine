@@ -13,6 +13,7 @@
 #include "wiUnorderedMap.h"
 #include "wiUnorderedSet.h"
 #include "wiVector.h"
+#include "wiMath.h"
 
 #include "Utility/liberation_sans.h"
 #include "Utility/stb_truetype.h"
@@ -590,19 +591,25 @@ namespace wi::font
 
 			device->BindPipelineState(&PSO[params.isDepthTestEnabled()], cmd);
 
-			font.flags = 0;
+			using namespace wi::math;
+			XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
+			float softness = 0;
+			float bolden = 0;
+			float hdr_scaling = 1;
+			uint32_t flags = 0;
+
 			if (params.isSDFRenderingEnabled())
 			{
-				font.flags |= FONT_FLAG_SDF_RENDERING;
+				flags |= FONT_FLAG_SDF_RENDERING;
 			}
 			if (params.isHDR10OutputMappingEnabled())
 			{
-				font.flags |= FONT_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084;
+				flags |= FONT_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084;
 			}
 			if (params.isLinearOutputMappingEnabled())
 			{
-				font.flags |= FONT_FLAG_OUTPUT_COLOR_SPACE_LINEAR;
-				font.hdr_scaling = params.hdr_scaling;
+				flags |= FONT_FLAG_OUTPUT_COLOR_SPACE_LINEAR;
+				hdr_scaling = params.hdr_scaling;
 			}
 
 			XMFLOAT3 offset = XMFLOAT3(0, 0, 0);
@@ -646,12 +653,15 @@ namespace wi::font
 			{
 				// font shadow render:
 				XMStoreFloat4x4(&font.transform, XMMatrixTranslation(params.shadow_offset_x, params.shadow_offset_y, 0) * M);
-				font.color = params.shadowColor;
-				font.color.x *= params.shadow_intensity;
-				font.color.y *= params.shadow_intensity;
-				font.color.z *= params.shadow_intensity;
-				font.bolden = params.shadow_bolden;
-				font.softness = params.shadow_softness * 0.5f;
+				color = params.shadowColor;
+				color.x *= params.shadow_intensity;
+				color.y *= params.shadow_intensity;
+				color.z *= params.shadow_intensity;
+				font.color = pack_half4(color);
+				bolden = params.shadow_bolden;
+				softness = params.shadow_softness * 0.5f;
+				font.softness_bolden_hdrscaling = pack_half3(softness, bolden, hdr_scaling);
+				font.softness_bolden_hdrscaling.y |= flags << 16u;
 				device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
 
 				device->DrawInstanced(4, status.quadCount, 0, 0, cmd);
@@ -659,12 +669,15 @@ namespace wi::font
 
 			// font base render:
 			XMStoreFloat4x4(&font.transform, M);
-			font.color = params.color;
-			font.color.x *= params.intensity;
-			font.color.y *= params.intensity;
-			font.color.z *= params.intensity;
-			font.bolden = params.bolden;
-			font.softness = params.softness * 0.5f;
+			color = params.color;
+			color.x *= params.intensity;
+			color.y *= params.intensity;
+			color.z *= params.intensity;
+			font.color = pack_half4(color);
+			bolden = params.bolden;
+			softness = params.softness * 0.5f;
+			font.softness_bolden_hdrscaling = pack_half3(softness, bolden, hdr_scaling);
+			font.softness_bolden_hdrscaling.y |= flags << 16u;
 			device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
 
 			device->DrawInstanced(4, status.quadCount, 0, 0, cmd);

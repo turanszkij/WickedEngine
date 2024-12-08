@@ -366,9 +366,9 @@ inline half3 GetAmbient(in float3 N)
 	{
 		TextureCube cubemap = bindless_cubemaps[GetScene().globalprobe];
 		uint2 dim;
-		uint mips;
-		cubemap.GetDimensions(0, dim.x, dim.y, mips);
-		ambient = (half3)cubemap.SampleLevel(sampler_linear_clamp, N, mips).rgb;
+		uint mipcount;
+		cubemap.GetDimensions(0, dim.x, dim.y, mipcount);
+		ambient = (half3)cubemap.SampleLevel(sampler_linear_clamp, N, mipcount).rgb;
 	}
 	
 #endif // ENVMAPRENDERING
@@ -410,21 +410,21 @@ inline half3 EnvironmentReflection_Global(in Surface surface)
 	
 	TextureCube cubemap = bindless_cubemaps[GetScene().globalprobe];
 	uint2 dim;
-	uint mips;
-	cubemap.GetDimensions(0, dim.x, dim.y, mips);
+	uint mipcount;
+	cubemap.GetDimensions(0, dim.x, dim.y, mipcount);
 
-	half MIP = surface.roughness * mips;
+	half MIP = surface.roughness * mipcount;
 	envColor = (half3)cubemap.SampleLevel(sampler_linear_clamp, surface.R, MIP).rgb * surface.F;
 
 #ifdef SHEEN
 	envColor *= surface.sheen.albedoScaling;
-	MIP = surface.sheen.roughness * mips;
+	MIP = surface.sheen.roughness * mipcount;
 	envColor += (half3)cubemap.SampleLevel(sampler_linear_clamp, surface.R, MIP).rgb * surface.sheen.color * surface.sheen.DFG;
 #endif // SHEEN
 
 #ifdef CLEARCOAT
 	envColor *= 1 - surface.clearcoat.F;
-	MIP = surface.clearcoat.roughness * mips;
+	MIP = surface.clearcoat.roughness * mipcount;
 	envColor += (half3)cubemap.SampleLevel(sampler_linear_clamp, surface.clearcoat.R, MIP).rgb * surface.clearcoat.F;
 #endif // CLEARCOAT
 
@@ -446,38 +446,36 @@ inline half4 EnvironmentReflection_Local(in TextureCube cubemap, in Surface surf
 		
 	// Perform parallax correction of reflection ray (R) into OBB:
 	half3 RayLS = mul((half3x3)probeProjection, surface.R);
-	half3 FirstPlaneIntersect = (half3(1, 1, 1) - clipSpacePos) / RayLS;
-	half3 SecondPlaneIntersect = (-half3(1, 1, 1) - clipSpacePos) / RayLS;
+	half3 FirstPlaneIntersect = (1 - clipSpacePos) / RayLS;
+	half3 SecondPlaneIntersect = (-1 - clipSpacePos) / RayLS;
 	half3 FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
 	half Distance = min(FurthestPlane.x, min(FurthestPlane.y, FurthestPlane.z));
-	half3 IntersectPositionWS = surface.P + surface.R * Distance;
-	half3 R_parallaxCorrected = IntersectPositionWS - probe.position;
+	half3 R_parallaxCorrected = surface.P - probe.position + surface.R * Distance;
 
 	uint2 dim;
-	uint mips;
-	cubemap.GetDimensions(0, dim.x, dim.y, mips);
+	uint mipcount;
+	cubemap.GetDimensions(0, dim.x, dim.y, mipcount);
 
 	// Sample cubemap texture:
-	half MIP = surface.roughness * mips;
+	half MIP = surface.roughness * mipcount;
 	half3 envColor = (half3)cubemap.SampleLevel(sampler_linear_clamp, R_parallaxCorrected, MIP).rgb * surface.F;
 
 #ifdef SHEEN
 	envColor *= surface.sheen.albedoScaling;
-	MIP = surface.sheen.roughness * mips;
+	MIP = surface.sheen.roughness * mipcount;
 	envColor += (half3)cubemap.SampleLevel(sampler_linear_clamp, R_parallaxCorrected, MIP).rgb * surface.sheen.color * surface.sheen.DFG;
 #endif // SHEEN
 
 #ifdef CLEARCOAT
 	RayLS = mul((half3x3)probeProjection, surface.clearcoat.R);
-	FirstPlaneIntersect = (half3(1, 1, 1) - clipSpacePos) / RayLS;
-	SecondPlaneIntersect = (-half3(1, 1, 1) - clipSpacePos) / RayLS;
+	FirstPlaneIntersect = (1 - clipSpacePos) / RayLS;
+	SecondPlaneIntersect = (-1 - clipSpacePos) / RayLS;
 	FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
 	Distance = min(FurthestPlane.x, min(FurthestPlane.y, FurthestPlane.z));
-	IntersectPositionWS = surface.P + surface.clearcoat.R * Distance;
-	R_parallaxCorrected = IntersectPositionWS - probe.position;
+	R_parallaxCorrected = surface.P - probe.position + surface.clearcoat.R * Distance;
 
 	envColor *= 1 - surface.clearcoat.F;
-	MIP = surface.clearcoat.roughness * mips;
+	MIP = surface.clearcoat.roughness * mipcount;
 	envColor += (half3)cubemap.SampleLevel(sampler_linear_clamp, R_parallaxCorrected, MIP).rgb * surface.clearcoat.F;
 #endif // CLEARCOAT
 

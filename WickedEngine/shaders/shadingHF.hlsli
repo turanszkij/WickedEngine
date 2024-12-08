@@ -64,8 +64,8 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			probeProjection[3] = float4(0, 0, 0, 1);
 			TextureCube cubemap = bindless_cubemaps[probeTexture];
 			
-			const float3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
-			const float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
+			const half3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
+			const half3 uvw = clipspace_to_uv(clipSpacePos.xyz);
 			[branch]
 			if (is_saturated(uvw))
 			{
@@ -306,8 +306,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 				probeProjection[3] = float4(0, 0, 0, 1);
 				TextureCube cubemap = bindless_cubemaps[probeTexture];
 					
-				const float3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
-				const float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
+				const half3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
+				const half3 uvw = clipspace_to_uv(clipSpacePos.xyz);
 				[branch]
 				if (is_saturated(uvw))
 				{
@@ -617,7 +617,7 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 #endif // DISABLE_DECALS
 }
 
-inline void ApplyFog(in float distance, float3 V, inout float4 color)
+inline void ApplyFog(in float distance, float3 V, inout half4 color)
 {
 	const half4 fog = GetFog(distance, GetCamera().position, -V);
 	//color.rgb = (1.0 - fog.a) * color.rgb + fog.rgb; // premultiplied fog

@@ -26,12 +26,8 @@ struct FontConstants
 	int texture_index;
 	int padding0;
 
-	float4 color;
-
-	float softness;
-	float bolden;
-	uint flags;
-	float hdr_scaling;
+	uint2 color; // packed half4
+	uint2 softness_bolden_hdrscaling; // packed half3 | uint16 flags
 
 	float4x4 transform;
 };

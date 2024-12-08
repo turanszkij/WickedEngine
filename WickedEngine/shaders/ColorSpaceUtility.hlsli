@@ -34,41 +34,25 @@
 // are--the sRGB curve needs to be removed before involving the colors in linear mathematics such
 // as physically based lighting.
 
-float3 ApplySRGBCurve( float3 x )
-{
-    // Approximately pow(x, 1.0 / 2.2)
-    return select(x < 0.0031308, 12.92 * x, 1.055 * pow(x, 1.0 / 2.4) - 0.055);
-}
+// Note: modified for Wicked Engine to use macros, for better half precision mapping
 
-float3 RemoveSRGBCurve( float3 x )
-{
-    // Approximately pow(x, 2.2)
-	return select(x < 0.04045, x / 12.92, pow((x + 0.055) / 1.055, 2.4));
-}
+// Approximately pow(x, 1.0 / 2.2)
+#define ApplySRGBCurve( x ) select(x < 0.0031308, 12.92 * x, 1.055 * pow(x, 1.0 / 2.4) - 0.055)
+
+// Approximately pow(x, 2.2)
+#define RemoveSRGBCurve( x ) select(x < 0.04045, x / 12.92, pow((x + 0.055) / 1.055, 2.4))
 
 // These functions avoid pow() to efficiently approximate sRGB with an error < 0.4%.
-float3 ApplySRGBCurve_Fast( float3 x )
-{
-	return select(x < 0.0031308, 12.92 * x, 1.13005 * sqrt(x - 0.00228) - 0.13448 * x + 0.005719);
-}
+#define ApplySRGBCurve_Fast( x ) select(x < 0.0031308, 12.92 * x, 1.13005 * sqrt(x - 0.00228) - 0.13448 * x + 0.005719)
 
-float3 RemoveSRGBCurve_Fast( float3 x )
-{
-	return select(x < 0.04045, x / 12.92, -7.43605 * x - 31.24297 * sqrt(-0.53792 * x + 1.279924) + 35.34864);
-}
+#define RemoveSRGBCurve_Fast( x ) select(x < 0.04045, x / 12.92, -7.43605 * x - 31.24297 * sqrt(-0.53792 * x + 1.279924) + 35.34864)
 
 // The OETF recommended for content shown on HDTVs.  This "gamma ramp" may increase contrast as
 // appropriate for viewing in a dark environment.  Always use this curve with Limited RGB as it is
 // used in conjunction with HDTVs.
-float3 ApplyREC709Curve( float3 x )
-{
-	return select(x < 0.0181, 4.5 * x, 1.0993 * pow(x, 0.45) - 0.0993);
-}
+#define ApplyREC709Curve( x ) select(x < 0.0181, 4.5 * x, 1.0993 * pow(x, 0.45) - 0.0993)
 
-float3 RemoveREC709Curve( float3 x )
-{
-	return select(x < 0.08145, x / 4.5, pow((x + 0.0993) / 1.0993, 1.0 / 0.45));
-}
+#define RemoveREC709Curve( x ) select(x < 0.08145, x / 4.5, pow((x + 0.0993) / 1.0993, 1.0 / 0.45))
 
 // This is the new HDR transfer function, also called "PQ" for perceptual quantizer.  Note that REC2084
 // does not also refer to a color space.  REC2084 is typically used with the REC2020 color space.
