@@ -4,7 +4,7 @@
 #include "fogHF.hlsli"
 #include "oceanSurfaceHF.hlsli"
 
-half4 main(VertexToPixel input) : SV_TARGET
+float4 main(VertexToPixel input) : SV_TARGET
 {
 	ShaderEntity light = load_entity(pointlights().first_item() + (uint)g_xColor.x);
 

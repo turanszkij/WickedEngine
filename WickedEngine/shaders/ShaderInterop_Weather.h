@@ -355,29 +355,28 @@ struct alignas(16) ShaderOcean
 
 struct alignas(16) ShaderWeather
 {
-	float3 sun_color;
+	uint2 sun_direction; // packed half3
+	uint2 sun_color; // packed half3
+
+	uint2 ambient; // packed half3
+	uint most_important_light_index;
 	float stars; // number of stars (0: disable stars, >0: increase number of stars)
 
-	float3 sun_direction;
-	uint most_important_light_index;
-
-	float3 horizon;
-	float sky_exposure;
-
-	float3 zenith;
-	float sky_rotation_sin;
-
-	float3 ambient;
-	float sky_rotation_cos;
+	uint2 horizon; // packed half3
+	uint2 zenith; // packed half3
 
 	float4x4 stars_rotation;
 
+	float3 padding_stars;
+
+	float sky_rotation_sin;
+	float sky_rotation_cos;
+	float sky_exposure;
 	float rain_amount;
+
 	float rain_length;
 	float rain_speed;
 	float rain_scale;
-
-	float3 padding_rain;
 	float rain_splash_scale;
 
 	float4 rain_color;

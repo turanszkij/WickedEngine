@@ -65,7 +65,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 			if((geometry.flags & SHADERMESH_FLAG_DOUBLE_SIDED) == 0 && geometry.vb_pre < 0) // disable cone culling for double sided and skinned
 			{
 				// Cone culling:
-				bounds.cone_axis = rotate_vector(bounds.cone_axis, inst.quaternion);
+				bounds.cone_axis = rotate_vector(bounds.cone_axis, inst.GetQuaternion());
 				if (camera.IsOrtho())
 				{
 					visible &= dot(camera.forward, bounds.cone_axis) < bounds.cone_cutoff;

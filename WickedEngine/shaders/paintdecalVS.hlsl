@@ -21,13 +21,13 @@ Output main(uint vertexID : SV_VertexID)
 	}
 	pos = mul(inst.transform.GetMatrix(), float4(pos, 1)).xyz;
 	
-	float3 nor = 0;
+	half3 nor = 0;
 	[branch]
 	if(geometry.vb_nor >= 0)
 	{
-		nor = bindless_buffers_float4[geometry.vb_nor][vertexID].xyz;
+		nor = bindless_buffers_half4[geometry.vb_nor][vertexID].xyz;
 	}
-	nor = rotate_vector(nor, inst.quaternion);
+	nor = rotate_vector(nor, inst.GetQuaternion());
 	
 	float2 uv = 0;
 	[branch]

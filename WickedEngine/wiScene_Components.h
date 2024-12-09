@@ -846,6 +846,7 @@ namespace wi::scene
 		// Non-serialized attributes:
 		uint32_t filterMaskDynamic = 0;
 
+		wi::graphics::Texture lightmap_render;
 		wi::graphics::Texture lightmap;
 		mutable uint32_t lightmapIterationCount = 0;
 		wi::graphics::GPUBuffer vb_ao;

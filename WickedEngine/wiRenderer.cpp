@@ -1170,6 +1170,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_CAUSTICS], "causticsCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DEPTH_REPROJECT], "depth_reprojectCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DEPTH_PYRAMID], "depth_pyramidCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_LIGHTMAP_EXPAND], "lightmap_expandCS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT], "objectHS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT_PREPASS], "objectHS_prepass.cso"); });
@@ -1440,7 +1441,7 @@ void LoadShaders()
 		PipelineStateDesc desc;
 		desc.vs = &shaders[VSTYPE_RENDERLIGHTMAP];
 		desc.ps = &shaders[PSTYPE_RENDERLIGHTMAP];
-		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+		desc.rs = &rasterizers[RSTYPE_LIGHTMAP];
 		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 		desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
 
@@ -2301,6 +2302,13 @@ void SetUpStates()
 	}
 	rasterizers[RSTYPE_VOXELIZE] = rs;
 
+
+	rs = rasterizers[RSTYPE_DOUBLESIDED];
+	//if (device->CheckCapability(GraphicsDeviceCapability::CONSERVATIVE_RASTERIZATION))
+	//{
+	//	rs.conservative_rasterization_enable = true;
+	//}
+	rasterizers[RSTYPE_LIGHTMAP] = rs;
 
 
 
@@ -10300,6 +10308,8 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 			const ObjectComponent& object = scene.objects[objectIndex];
 			if (!object.lightmap.IsValid())
 				continue;
+			if (!object.lightmap_render.IsValid())
+				continue;
 
 			if (object.IsLightmapRenderRequested())
 			{
@@ -10309,16 +10319,16 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 				assert(!mesh.vertex_atlas.empty());
 				assert(mesh.vb_atl.IsValid());
 
-				const TextureDesc& desc = object.lightmap.GetDesc();
+				const TextureDesc& desc = object.lightmap_render.GetDesc();
 
 				if (object.lightmapIterationCount == 0)
 				{
-					RenderPassImage rp = RenderPassImage::RenderTarget(&object.lightmap, RenderPassImage::LoadOp::CLEAR);
+					RenderPassImage rp = RenderPassImage::RenderTarget(&object.lightmap_render, RenderPassImage::LoadOp::CLEAR);
 					device->RenderPassBegin(&rp, 1, cmd);
 				}
 				else
 				{
-					RenderPassImage rp = RenderPassImage::RenderTarget(&object.lightmap, RenderPassImage::LoadOp::LOAD);
+					RenderPassImage rp = RenderPassImage::RenderTarget(&object.lightmap_render, RenderPassImage::LoadOp::LOAD);
 					device->RenderPassBegin(&rp, 1, cmd);
 				}
 
@@ -10338,16 +10348,11 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 				push.instanceIndex = objectIndex;
 				device->PushConstants(&push, sizeof(push), cmd);
 
-				RaytracingCB cb;
+				RaytracingCB cb = {};
 				cb.xTraceResolution.x = desc.width;
 				cb.xTraceResolution.y = desc.height;
 				cb.xTraceResolution_rcp.x = 1.0f / cb.xTraceResolution.x;
 				cb.xTraceResolution_rcp.y = 1.0f / cb.xTraceResolution.y;
-				XMFLOAT4 halton = wi::math::GetHaltonSequence(object.lightmapIterationCount); // for jittering the rasterization (good for eliminating atlas border artifacts)
-				cb.xTracePixelOffset.x = (halton.x * 2 - 1) * cb.xTraceResolution_rcp.x;
-				cb.xTracePixelOffset.y = (halton.y * 2 - 1) * cb.xTraceResolution_rcp.y;
-				cb.xTracePixelOffset.x *= 1.4f;	// boost the jitter by a bit
-				cb.xTracePixelOffset.y *= 1.4f;	// boost the jitter by a bit
 				cb.xTraceAccumulationFactor = 1.0f / (object.lightmapIterationCount + 1.0f); // accumulation factor (alpha)
 				cb.xTraceUserData.x = raytraceBounceCount;
 				uint8_t instanceInclusionMask = 0xFF;
@@ -10368,6 +10373,21 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 				object.lightmapIterationCount++;
 
 				device->RenderPassEnd(cmd);
+
+				// Expand opaque areas:
+				{
+					device->BindComputeShader(&shaders[CSTYPE_LIGHTMAP_EXPAND], cmd);
+
+					device->BindResource(&object.lightmap_render, 0, cmd);
+
+					device->BindUAV(&object.lightmap, 0, cmd);
+
+					device->Barrier(GPUBarrier::Image(&object.lightmap, object.lightmap.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+
+					device->Dispatch((desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE, (desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE, 1, cmd);
+
+					device->Barrier(GPUBarrier::Image(&object.lightmap, ResourceState::UNORDERED_ACCESS, object.lightmap.desc.layout), cmd);
+				}
 
 				device->EventEnd(cmd);
 			}

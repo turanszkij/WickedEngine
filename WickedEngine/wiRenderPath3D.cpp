@@ -1136,6 +1136,21 @@ namespace wi
 				);
 			}
 
+			if (scene->weather.IsVolumetricClouds() && !scene->weather.IsVolumetricCloudsReceiveShadow())
+			{
+				// When volumetric cloud DOESN'T receives shadow it can be done async to shadow maps!
+				wi::renderer::Postprocess_VolumetricClouds(
+					volumetriccloudResources,
+					cmd,
+					*camera,
+					camera_previous,
+					camera_reflection,
+					wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
+					scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
+					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
+				);
+			}
+
 		});
 
 		// Occlusion culling:
@@ -1456,8 +1471,9 @@ namespace wi
 						cmd
 					);
 				}
-				if (scene->weather.IsVolumetricClouds())
+				if (scene->weather.IsVolumetricClouds() && scene->weather.IsVolumetricCloudsReceiveShadow())
 				{
+					// When volumetric cloud receives shadow it must be done AFTER shadow maps!
 					wi::renderer::Postprocess_VolumetricClouds(
 						volumetriccloudResources,
 						cmd,

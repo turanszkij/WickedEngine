@@ -1927,7 +1927,8 @@ namespace wi::scene
 
 	void ObjectComponent::ClearLightmap()
 	{
-		lightmap = Texture();
+		lightmap_render = {};
+		lightmap = {};
 		lightmapWidth = 0;
 		lightmapHeight = 0;
 		lightmapIterationCount = 0;
@@ -1936,7 +1937,8 @@ namespace wi::scene
 	}
 	void ObjectComponent::SaveLightmap()
 	{
-		if (lightmap.IsValid() && has_flag(lightmap.desc.bind_flags, BindFlag::RENDER_TARGET))
+		lightmap_render = {};
+		if (lightmap.IsValid() && has_flag(lightmap.desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
 			SetLightmapRenderRequest(false);
 
@@ -1969,8 +1971,8 @@ namespace wi::scene
 
 					// Create a denoising filter
 					oidn::FilterRef filter = device.newFilter("RTLightmap");
-					filter.setImage("color", lightmapTextureData_buffer, oidn::Format::Float3, width, height, 0, sizeof(XMFLOAT4));
-					filter.setImage("output", texturedata_dst_buffer, oidn::Format::Float3, width, height, 0, sizeof(XMFLOAT4));
+					filter.setImage("color", lightmapTextureData_buffer, oidn::Format::Half3, width, height, 0, sizeof(XMHALF4));
+					filter.setImage("output", texturedata_dst_buffer, oidn::Format::Half3, width, height, 0, sizeof(XMHALF4));
 					filter.commit();
 
 					// Filter the image
@@ -2008,12 +2010,12 @@ namespace wi::scene
 			wi::vector<uint8_t> packed_data;
 			packed_data.resize(sizeof(XMFLOAT3PK) * lightmapWidth * lightmapHeight);
 			XMFLOAT3PK* packed_ptr = (XMFLOAT3PK*)packed_data.data();
-			XMFLOAT4* raw_ptr = (XMFLOAT4*)lightmapTextureData.data();
+			XMHALF4* raw_ptr = (XMHALF4*)lightmapTextureData.data();
 
 			uint32_t texelcount = lightmapWidth * lightmapHeight;
 			for (uint32_t i = 0; i < texelcount; ++i)
 			{
-				XMStoreFloat3PK(packed_ptr + i, XMLoadFloat4(raw_ptr + i));
+				XMStoreFloat3PK(packed_ptr + i, XMLoadHalf4(raw_ptr + i));
 			}
 
 			lightmapTextureData = std::move(packed_data);

@@ -41,11 +41,11 @@ static const float3 cameraVolumeLUTRes = float3(32, 32, 32);
 // We should precompute those terms from resolutions (Or set resolution as #defined constants)
 float FromUnitToSubUvs(float u, float resolution)
 {
-	return (u + 0.5f / resolution) * (resolution / (resolution + 1.0f));
+	return (u + 0.5 / resolution) * (resolution / (resolution + 1.0));
 }
 float FromSubUvsToUnit(float u, float resolution)
 {
-	return (u - 0.5f / resolution) * (resolution / (resolution - 1.0f));
+	return (u - 0.5 / resolution) * (resolution / (resolution - 1.0));
 }
 
 void UvToLutTransmittanceParams(AtmosphereParameters atmosphere, out float viewHeight, out float viewZenithCosAngle, in float2 uv)
@@ -61,14 +61,14 @@ void UvToLutTransmittanceParams(AtmosphereParameters atmosphere, out float viewH
 	float d_min = atmosphere.topRadius - viewHeight;
 	float d_max = rho + H;
 	float d = d_min + x_mu * (d_max - d_min);
-	viewZenithCosAngle = d == 0.0 ? 1.0f : (H * H - rho * rho - d * d) / (2.0 * viewHeight * d);
+	viewZenithCosAngle = d == 0.0 ? 1.0 : (H * H - rho * rho - d * d) / (2.0 * viewHeight * d);
 	viewZenithCosAngle = clamp(viewZenithCosAngle, -1.0, 1.0);
 }
 
 void LutTransmittanceParamsToUv(AtmosphereParameters atmosphere, in float viewHeight, in float viewZenithCosAngle, out float2 uv)
 {
-	float H = sqrt(max(0.0f, atmosphere.topRadius * atmosphere.topRadius - atmosphere.bottomRadius * atmosphere.bottomRadius));
-	float rho = sqrt(max(0.0f, viewHeight * viewHeight - atmosphere.bottomRadius * atmosphere.bottomRadius));
+	float H = sqrt(max(0.0, atmosphere.topRadius * atmosphere.topRadius - atmosphere.bottomRadius * atmosphere.bottomRadius));
+	float rho = sqrt(max(0.0, viewHeight * viewHeight - atmosphere.bottomRadius * atmosphere.bottomRadius));
 
 	float discriminant = viewHeight * viewHeight * (viewZenithCosAngle * viewZenithCosAngle - 1.0) + atmosphere.topRadius * atmosphere.topRadius;
 	float d = max(0.0, (-viewHeight * viewZenithCosAngle + sqrt(discriminant))); // Distance to atmosphere boundary
@@ -94,7 +94,7 @@ void UvToSkyViewLutParams(AtmosphereParameters atmosphere, out float viewZenithC
 	float Beta = acos(CosBeta);
 	float ZenithHorizonAngle = PI - Beta;
 
-	if (uv.y < 0.5f)
+	if (uv.y < 0.5)
 	{
 		float coord = 2.0 * uv.y;
 		coord = 1.0 - coord;
@@ -133,7 +133,7 @@ void SkyViewLutParamsToUv(AtmosphereParameters atmosphere, in bool intersectGrou
 		coord = sqrt(abs(coord));
 #endif
 		coord = 1.0 - coord;
-		uv.y = coord * 0.5f;
+		uv.y = coord * 0.5;
 	}
 	else
 	{
@@ -141,11 +141,11 @@ void SkyViewLutParamsToUv(AtmosphereParameters atmosphere, in bool intersectGrou
 #if NONLINEARSKYVIEWLUT
 		coord = sqrt(abs(coord));
 #endif
-		uv.y = coord * 0.5f + 0.5f;
+		uv.y = coord * 0.5 + 0.5;
 	}
 
 	{
-		float coord = -lightViewCosAngle * 0.5f + 0.5f;
+		float coord = -lightViewCosAngle * 0.5 + 0.5;
 		coord = sqrt(coord);
 		uv.x = coord;
 	}
@@ -210,7 +210,7 @@ MediumSampleRGB SampleMediumRGB(in float3 worldPos, in AtmosphereParameters atmo
 	s.extinctionMie = densityMie * atmosphere.mieExtinction;
 
 	s.scatteringRay = densityRay * atmosphere.rayleighScattering;
-	s.absorptionRay = 0.0f;
+	s.absorptionRay = 0.0;
 	s.extinctionRay = s.scatteringRay + s.absorptionRay;
 
 	s.scatteringOzo = 0.0;
@@ -233,19 +233,19 @@ MediumSampleRGB SampleMediumRGB(in float3 worldPos, in AtmosphereParameters atmo
 
 
 
-float RayleighPhase(float cosTheta)
+half RayleighPhase(half cosTheta)
 {
-	float factor = 3.0f / (16.0f * PI);
-	return factor * (1.0f + cosTheta * cosTheta);
+	half factor = 3.0 / (16.0 * PI);
+	return factor * (1.0 + cosTheta * cosTheta);
 }
 
-float CornetteShanksMiePhaseFunction(float g, float cosTheta)
+half CornetteShanksMiePhaseFunction(half g, half cosTheta)
 {
-	float k = 3.0 / (8.0 * PI) * (1.0 - g * g) / (2.0 + g * g);
+	half k = 3.0 / (8.0 * PI) * (1.0 - g * g) / (2.0 + g * g);
 	return k * (1.0 + cosTheta * cosTheta) / pow(abs(1.0 + g * g - 2.0 * g * -cosTheta), 1.5);
 }
 
-float HgPhase(float g, float cosTheta)
+half HgPhase(half g, half cosTheta)
 {
 #ifdef USE_CornetteShanks
 	return CornetteShanksMiePhaseFunction(g, cosTheta);
@@ -258,14 +258,14 @@ float HgPhase(float g, float cosTheta)
 #endif
 }
 
-float DualLobPhase(float g0, float g1, float w, float cosTheta)
+half DualLobPhase(half g0, half g1, half w, half cosTheta)
 {
 	return lerp(HgPhase(g0, cosTheta), HgPhase(g1, cosTheta), w);
 }
 
-float UniformPhase()
+half UniformPhase()
 {
-	return 1.0f / (4.0f * PI);
+	return 1.0 / (4.0 * PI);
 }
 
 
@@ -325,8 +325,8 @@ bool MoveToTopAtmosphere(inout float3 worldPosition, in float3 worldDirection, i
 	bool retval = true;
 	if (viewHeight > atmosphereTopRadius)
 	{
-		float tTop = RaySphereIntersectNearest(worldPosition, worldDirection, float3(0.0f, 0.0f, 0.0f), atmosphereTopRadius);
-		if (tTop >= 0.0f)
+		float tTop = RaySphereIntersectNearest(worldPosition, worldDirection, 0, atmosphereTopRadius);
+		if (tTop >= 0)
 		{
 			float3 upVector = worldPosition / viewHeight;
 			float3 upOffset = upVector * -PLANET_RADIUS_OFFSET;
@@ -341,16 +341,16 @@ bool MoveToTopAtmosphere(inout float3 worldPosition, in float3 worldDirection, i
 	return retval; // ok to start tracing
 }
 
-float3 GetMultipleScattering(AtmosphereParameters atmosphere, Texture2D<float4> multiScatteringLUTTexture, float2 multiScatteringLUTRes, float3 scattering, float3 extinction, float3 worldPosition, float viewZenithCosAngle)
+float3 GetMultipleScattering(AtmosphereParameters atmosphere, Texture2D<half4> multiScatteringLUTTexture, float2 multiScatteringLUTRes, float3 scattering, float3 extinction, float3 worldPosition, float viewZenithCosAngle)
 {
-	float2 uv = saturate(float2(viewZenithCosAngle * 0.5f + 0.5f, (length(worldPosition) - atmosphere.bottomRadius) / (atmosphere.topRadius - atmosphere.bottomRadius)));
+	float2 uv = saturate(float2(viewZenithCosAngle * 0.5 + 0.5, (length(worldPosition) - atmosphere.bottomRadius) / (atmosphere.topRadius - atmosphere.bottomRadius)));
 	uv = float2(FromUnitToSubUvs(uv.x, multiScatteringLUTRes.x), FromUnitToSubUvs(uv.y, multiScatteringLUTRes.y));
 
 	float3 multiScatteredLuminance = multiScatteringLUTTexture.SampleLevel(sampler_linear_clamp, uv, 0).rgb;
 	return multiScatteredLuminance;
 }
 
-float3 GetTransmittance(AtmosphereParameters atmosphere, float pHeight, float sunZenithCosAngle, Texture2D<float4> transmittanceLutTexture)
+float3 GetTransmittance(AtmosphereParameters atmosphere, float pHeight, float sunZenithCosAngle, Texture2D<half4> transmittanceLutTexture)
 {
 	float2 uv;
 	LutTransmittanceParamsToUv(atmosphere, pHeight, sunZenithCosAngle, uv);
@@ -359,15 +359,15 @@ float3 GetTransmittance(AtmosphereParameters atmosphere, float pHeight, float su
 	return TransmittanceToSun;
 }
 
-float3 GetAtmosphereTransmittance(float3 worldPosition, float3 worldDirection, AtmosphereParameters atmosphere, Texture2D<float4> transmittanceLutTexture)
+half3 GetAtmosphereTransmittance(float3 worldPosition, float3 worldDirection, AtmosphereParameters atmosphere, Texture2D<half4> transmittanceLutTexture)
 {
 	// If the worldDirection is occluded from this virtual planet, then return.
 	// We do this due to the low resolution LUT, where the stored zenith to horizon never reaches black, to prevent linear interpolation artefacts.
 	// At the most shadowed point of the LUT, pure black with earth shadow is never reached.
-	float2 sol = RaySphereIntersect(worldPosition, worldDirection, float3(0.0f, 0.0f, 0.0f), atmosphere.bottomRadius);
-	if (sol.x > 0.0f || sol.y > 0.0f)
+	float2 sol = RaySphereIntersect(worldPosition, worldDirection, 0, atmosphere.bottomRadius);
+	if (sol.x > 0 || sol.y > 0)
 	{
-		return 0.0f;
+		return 0;
 	}
 	
 	float pHeight = length(worldPosition);
@@ -377,16 +377,16 @@ float3 GetAtmosphereTransmittance(float3 worldPosition, float3 worldDirection, A
 	float2 uv;
 	LutTransmittanceParamsToUv(atmosphere, pHeight, SunZenithCosAngle, uv);
     
-	float3 TransmittanceToSun = transmittanceLutTexture.SampleLevel(sampler_linear_clamp, uv, 0).rgb;
+	half3 TransmittanceToSun = transmittanceLutTexture.SampleLevel(sampler_linear_clamp, uv, 0).rgb;
 	return TransmittanceToSun;
 }
 
-float3 GetAtmosphericLightTransmittance(AtmosphereParameters atmosphere, float3 worldPosition, float3 worldDirection, Texture2D<float4> transmittanceLutTexture)
+half3 GetAtmosphericLightTransmittance(AtmosphereParameters atmosphere, float3 worldPosition, half3 worldDirection, Texture2D<half4> transmittanceLutTexture)
 {
 	const float3 planetCenterWorld = atmosphere.planetCenter * SKY_UNIT_TO_M;
 	const float3 planetCenterToWorldPos = (worldPosition - planetCenterWorld) * M_TO_SKY_UNIT;
         
-	float3 atmosphereTransmittance = GetAtmosphereTransmittance(planetCenterToWorldPos, worldDirection, atmosphere, transmittanceLutTexture);
+	half3 atmosphereTransmittance = GetAtmosphereTransmittance(planetCenterToWorldPos, worldDirection, atmosphere, transmittanceLutTexture);
 	return atmosphereTransmittance;
 }
 
@@ -417,7 +417,7 @@ float3 GetCameraPlanetPos(AtmosphereParameters atmosphere, float3 cameraPosition
 	return (skyWorldCameraOrigin - planetCenterWorld) * M_TO_SKY_UNIT;
 }
 
-float3 GetSunLuminance(float3 worldPosition, float3 worldDirection, float3 sunDirection, float3 sunIlluminance, AtmosphereParameters atmosphere, Texture2D<float4> transmittanceLutTexture)
+half3 GetSunLuminance(float3 worldPosition, half3 worldDirection, half3 sunDirection, half3 sunIlluminance, AtmosphereParameters atmosphere, Texture2D<half4> transmittanceLutTexture)
 {
 	//float sunApexAngleDegree = 0.545; // Angular diameter of sun to earth from sea level, see https://en.wikipedia.org/wiki/Solid_angle
 	float sunApexAngleDegree = 2.4; // Modified sun size
@@ -426,14 +426,14 @@ float3 GetSunLuminance(float3 worldPosition, float3 worldDirection, float3 sunDi
 
 	float3 retval = 0;
 
-	float t = RaySphereIntersectNearest(worldPosition, worldDirection, float3(0.0f, 0.0f, 0.0f), atmosphere.bottomRadius);
-	if (t < 0.0f) // no intersection
+	float t = RaySphereIntersectNearest(worldPosition, worldDirection, 0, atmosphere.bottomRadius);
+	if (t < 0) // no intersection
 	{
 		float VdotL = dot(worldDirection, normalize(sunDirection)); // weird... the sun disc shrinks near the horizon if we don't normalize sun direction
 		if (VdotL > sunCosHalfApexAngle)
 		{
 			// Edge fade
-			const float halfCosHalfApex = sunCosHalfApexAngle + (1.0f - sunCosHalfApexAngle) * 0.25; // Start fading when at 75% distance from light disk center
+			const float halfCosHalfApex = sunCosHalfApexAngle + (1.0 - sunCosHalfApexAngle) * 0.25; // Start fading when at 75% distance from light disk center
 			const float weight = 1.0 - saturate((halfCosHalfApex - VdotL) / (halfCosHalfApex - sunCosHalfApexAngle));
 
 			retval = weight * sunIlluminance;
@@ -460,14 +460,14 @@ float3 GetSunLuminance(float3 worldPosition, float3 worldDirection, float3 sunDi
 
 float AerialPerspectiveDepthToSlice(float depth)
 {
-	return depth * (1.0f / AP_KM_PER_SLICE);
+	return depth * (1.0 / AP_KM_PER_SLICE);
 }
 float AerialPerspectiveSliceToDepth(float slice)
 {
 	return slice * AP_KM_PER_SLICE;
 }
 
-float4 GetAerialPerspectiveTransmittance(float2 uv, float3 worldPosition, float3 cameraPosition, Texture3D<float4> cameraVolumeLutTexture)
+float4 GetAerialPerspectiveTransmittance(float2 uv, float3 worldPosition, float3 cameraPosition, Texture3D<half4> cameraVolumeLutTexture)
 {	
 	float tDepth = length((worldPosition * M_TO_SKY_UNIT) - (cameraPosition * M_TO_SKY_UNIT));
 	float slice = AerialPerspectiveDepthToSlice(tDepth);
@@ -508,7 +508,7 @@ struct SingleScatteringResult
 SingleScatteringResult IntegrateScatteredLuminance(
 	in AtmosphereParameters atmosphere, in float2 pixelPosition, in float3 worldPosition, in float3 worldDirection, in float3 sunDirection, in float3 sunIlluminance,
     in float tDepth, in float sampleCountIni, in bool variableSampleCount, in bool perPixelNoise, in bool opaque, in bool ground, in bool mieRayPhase, in bool multiScatteringApprox,
-	in bool volumetricCloudShadow, in bool opaqueShadow, in Texture2D<float4> transmittanceLutTexture, in Texture2D<float4> multiScatteringLUTTexture, in float opticalDepthScale = 1.0f, in float tMaxMax = 9000000.0f)
+	in bool volumetricCloudShadow, in bool opaqueShadow, in Texture2D<half4> transmittanceLutTexture, in Texture2D<half4> multiScatteringLUTTexture, in float opticalDepthScale = 1.0f, in float tMaxMax = 9000000.0f)
 {
 	SingleScatteringResult result = (SingleScatteringResult) 0;
 	result.L = 0;
@@ -523,17 +523,17 @@ SingleScatteringResult IntegrateScatteredLuminance(
 	}
 	
 	// Compute next intersection with atmosphere or ground 
-	float3 earthO = float3(0.0f, 0.0f, 0.0f);
+	float3 earthO = 0;
 	float tBottom = RaySphereIntersectNearest(worldPosition, worldDirection, earthO, atmosphere.bottomRadius);
 	float tTop = RaySphereIntersectNearest(worldPosition, worldDirection, earthO, atmosphere.topRadius);
-	float tMax = 0.0f;
+	float tMax = 0;
 
 	bool proceed = true;
-	if (tBottom < 0.0f)
+	if (tBottom < 0.0)
 	{
-		if (tTop < 0.0f)
+		if (tTop < 0.0)
 		{
-			tMax = 0.0f; // No intersection with earth nor atmosphere: stop right away  
+			tMax = 0.0; // No intersection with earth nor atmosphere: stop right away  
 			proceed = false;
 		}
 		else
@@ -543,7 +543,7 @@ SingleScatteringResult IntegrateScatteredLuminance(
 	}
 	else
 	{
-		if (tTop > 0.0f)
+		if (tTop > 0.0)
 		{
 			tMax = min(tTop, tBottom);
 		}
@@ -574,7 +574,7 @@ SingleScatteringResult IntegrateScatteredLuminance(
 		float dt = tMax / sampleCount;
 
 		// Unlike volumetric fog lighting, we only care about the outmost cascade. This improves performance where we can't see the inner cascades anyway
-		ShaderEntity light = (ShaderEntity) 0;
+		ShaderEntity light = (ShaderEntity)0;
 		uint furthestCascade = 0;
 		bool validLight = false;
 		
@@ -594,13 +594,13 @@ SingleScatteringResult IntegrateScatteredLuminance(
 		float3 globalL = sunIlluminance;
 
 		// Ray march the atmosphere to integrate optical depth
-		float3 L = 0.0f;
+		float3 L = 0.0;
 		float3 throughput = 1.0;
 		float3 opticalDepth = 0.0;
-		float t = 0.0f;
+		float t = 0.0;
 		float tPrev = 0.0;
-		const float sampleSegmentT = 0.3f;
-		for (float s = 0.0f; s < sampleCount; s += 1.0f)
+		const float sampleSegmentT = 0.3;
+		for (float s = 0.0f; s < sampleCount; s += 1.0)
 		{
 			if (variableSampleCount)
 			{

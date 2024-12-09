@@ -20,8 +20,8 @@ static const half soft_shadow_sample_count_rcp = rcp((half)soft_shadow_sample_co
 
 inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half radius, min16uint2 pixel)
 {
-	Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
-	Texture2D texture_shadowatlas_transparent = bindless_textures[GetFrame().texture_shadowatlas_transparent_index];
+	Texture2D<half4> texture_shadowatlas = bindless_textures_half4[GetFrame().texture_shadowatlas_index];
+	Texture2D<half4> texture_shadowatlas_transparent = bindless_textures_half4[GetFrame().texture_shadowatlas_transparent_index];
 	
 	half3 shadow = 0;
 
@@ -88,25 +88,25 @@ inline half3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized, min16ui
 
 inline half3 sample_shadow(float2 uv, float cmp, min16uint2 pixel)
 {
-	Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
-	half3 shadow = (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp).r;
+	Texture2D<half4> texture_shadowatlas = bindless_textures_half4[GetFrame().texture_shadowatlas_index];
+	half3 shadow = texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp).r;
 
 #ifndef DISABLE_SOFT_SHADOWMAP
 	// sample along a rectangle pattern around center:
-	shadow.x += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(-1, -1)).r;
-	shadow.x += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(-1, 0)).r;
-	shadow.x += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(-1, 1)).r;
-	shadow.x += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(0, -1)).r;
-	shadow.x += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(0, 1)).r;
-	shadow.x += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(1, -1)).r;
-	shadow.x += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(1, 0)).r;
-	shadow.x += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(1, 1)).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(-1, -1)).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(-1, 0)).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(-1, 1)).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(0, -1)).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(0, 1)).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(1, -1)).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(1, 0)).r;
+	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(1, 1)).r;
 	shadow = shadow.xxx / 9.0;
 #endif // DISABLE_SOFT_SHADOWMAP
 
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
-	Texture2D texture_shadowatlas_transparent = bindless_textures[GetFrame().texture_shadowatlas_transparent_index];
-	half4 transparent_shadow = (half4)texture_shadowatlas_transparent.SampleLevel(sampler_linear_clamp, uv, 0);
+	Texture2D<half4> texture_shadowatlas_transparent = bindless_textures_half4[GetFrame().texture_shadowatlas_transparent_index];
+	half4 transparent_shadow = texture_shadowatlas_transparent.SampleLevel(sampler_linear_clamp, uv, 0);
 #ifdef TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
 	if (transparent_shadow.a > cmp)
 #endif // TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
@@ -154,8 +154,8 @@ inline half3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized, in min1
 inline half shadow_2D_volumetricclouds(float3 P)
 {
 	// Project into shadow map space (no need to divide by .w because ortho projection!):
-	float3 shadow_pos = mul(GetFrame().cloudShadowLightSpaceMatrix, float4(P, 1)).xyz;
-	float3 shadow_uv = clipspace_to_uv(shadow_pos);
+	half3 shadow_pos = mul(GetFrame().cloudShadowLightSpaceMatrix, float4(P, 1)).xyz;
+	half3 shadow_uv = clipspace_to_uv(shadow_pos);
 
 	[branch]
 	if (shadow_uv.z < 0.5)
@@ -166,18 +166,18 @@ inline half shadow_2D_volumetricclouds(float3 P)
 	[branch]
 	if (is_saturated(shadow_uv))
 	{
-		float cloudShadowSampleZ = shadow_pos.z;
+		half cloudShadowSampleZ = shadow_pos.z;
 
-		Texture2D texture_volumetricclouds_shadow = bindless_textures[GetFrame().texture_volumetricclouds_shadow_index];
-		float3 cloudShadowData = texture_volumetricclouds_shadow.SampleLevel(sampler_linear_clamp, shadow_uv.xy, 0.0f).rgb;
+		Texture2D<half4> texture_volumetricclouds_shadow = bindless_textures_half4[GetFrame().texture_volumetricclouds_shadow_index];
+		half3 cloudShadowData = texture_volumetricclouds_shadow.SampleLevel(sampler_linear_clamp, shadow_uv.xy, 0.0).rgb;
 
-		float sampleDepthKm = saturate(1.0 - cloudShadowSampleZ) * GetFrame().cloudShadowFarPlaneKm;
+		half sampleDepthKm = saturate(1.0 - cloudShadowSampleZ) * GetFrame().cloudShadowFarPlaneKm;
 		
-		float opticalDepth = cloudShadowData.g * (max(0.0f, cloudShadowData.r - sampleDepthKm) * SKY_UNIT_TO_M);
+		half opticalDepth = cloudShadowData.g * (max(0.0, cloudShadowData.r - sampleDepthKm) * SKY_UNIT_TO_M);
 		opticalDepth = min(cloudShadowData.b, opticalDepth);
 
-		float transmittance = saturate(exp(-opticalDepth));
-		return (half)transmittance;
+		half transmittance = saturate(exp(-opticalDepth));
+		return transmittance;
 	}
 
 	return 1.0;

@@ -18,11 +18,11 @@ void main(uint DTid : SV_DispatchThreadID)
 	[branch]
 	if(geometry.vb_nor >= 0)
 	{
-		Buffer<float4> vb_nor = bindless_buffers_float4[geometry.vb_nor];
-		float3 normal = vb_nor[DTid].xyz;
-		normal = rotate_vector(normal, meshinstance.quaternion);
+		Buffer<half4> vb_nor = bindless_buffers_half4[geometry.vb_nor];
+		half3 normal = vb_nor[DTid].xyz;
+		normal = rotate_vector(normal, meshinstance.GetQuaternion());
 		normal = normalize(normal);
-		drying *= lerp(4, 1, pow(saturate(normal.y), 8)); // modulate drying speed based on surface slope
+		drying *= lerp(4, 1, pow8(saturate(normal.y))); // modulate drying speed based on surface slope
 	}
 		
 	RWBuffer<float> wetmap = bindless_rwbuffers_float[push.wetmap];

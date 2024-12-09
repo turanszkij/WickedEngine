@@ -943,18 +943,18 @@ namespace wi::scene
 		shaderscene.aabb_extents_rcp.y = 1.0f / shaderscene.aabb_extents.y;
 		shaderscene.aabb_extents_rcp.z = 1.0f / shaderscene.aabb_extents.z;
 
-		shaderscene.weather.sun_color = weather.sunColor;
-		shaderscene.weather.sun_direction = weather.sunDirection;
+		shaderscene.weather.sun_color = wi::math::pack_half3(weather.sunColor);
+		shaderscene.weather.sun_direction = wi::math::pack_half3(weather.sunDirection);
 		shaderscene.weather.most_important_light_index = weather.most_important_light_index;
-		shaderscene.weather.ambient = weather.ambient;
+		shaderscene.weather.ambient = wi::math::pack_half3(weather.ambient);
 		shaderscene.weather.sky_rotation_sin = std::sin(weather.sky_rotation);
 		shaderscene.weather.sky_rotation_cos = std::cos(weather.sky_rotation);
 		shaderscene.weather.fog.start = weather.fogStart;
 		shaderscene.weather.fog.density = weather.fogDensity;
 		shaderscene.weather.fog.height_start = weather.fogHeightStart;
 		shaderscene.weather.fog.height_end = weather.fogHeightEnd;
-		shaderscene.weather.horizon = weather.horizon;
-		shaderscene.weather.zenith = weather.zenith;
+		shaderscene.weather.horizon = wi::math::pack_half3(weather.horizon);
+		shaderscene.weather.zenith = wi::math::pack_half3(weather.zenith);
 		shaderscene.weather.sky_exposure = weather.skyExposure;
 		shaderscene.weather.wind.speed = weather.windSpeed;
 		shaderscene.weather.wind.randomness = weather.windRandomness;
@@ -4495,7 +4495,9 @@ namespace wi::scene
 				// Get the quaternion from W because that reflects changes by other components (eg. softbody)
 				XMVECTOR S, R, T;
 				XMMatrixDecompose(&S, &R, &T, W);
-				XMStoreFloat4(&inst.quaternion, R);
+				XMFLOAT4 quaternionFP32;
+				XMStoreFloat4(&quaternionFP32, R);
+				inst.quaternion = wi::math::pack_half4(quaternionFP32);
 				float size = std::max(XMVectorGetX(S), std::max(XMVectorGetY(S), XMVectorGetZ(S)));
 
 				if (object.lightmap.IsValid())
@@ -4570,10 +4572,14 @@ namespace wi::scene
 				// lightmap things:
 				if (object.IsLightmapRenderRequested() && dt > 0)
 				{
-					if (!object.lightmap.IsValid())
+					if (!object.lightmap_render.IsValid())
 					{
 						object.lightmapWidth = wi::math::GetNextPowerOfTwo(object.lightmapWidth + 1) / 2;
 						object.lightmapHeight = wi::math::GetNextPowerOfTwo(object.lightmapHeight + 1) / 2;
+
+						// align to BC6 block size:
+						object.lightmapWidth = wi::graphics::AlignTo(object.lightmapWidth, 4u);
+						object.lightmapHeight = wi::graphics::AlignTo(object.lightmapHeight, 4u);
 
 						TextureDesc desc;
 						desc.width = object.lightmapWidth;
@@ -4583,10 +4589,21 @@ namespace wi::scene
 						//	But the final lightmap will be compressed into an optimal format when the rendering is finished
 						desc.format = Format::R32G32B32A32_FLOAT;
 
-						device->CreateTexture(&desc, nullptr, &object.lightmap);
-						device->SetName(&object.lightmap, "lightmap_renderable");
+						device->CreateTexture(&desc, nullptr, &object.lightmap_render);
+						device->SetName(&object.lightmap_render, "lightmap_render");
 
 						object.lightmapIterationCount = 0; // reset accumulation
+					}
+					if (!object.lightmap.IsValid())
+					{
+						TextureDesc desc;
+						desc.width = object.lightmapWidth;
+						desc.height = object.lightmapHeight;
+						desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+						desc.format = Format::R16G16B16A16_FLOAT; // denoiser needs at least half precision float
+
+						device->CreateTexture(&desc, nullptr, &object.lightmap);
+						device->SetName(&object.lightmap, "lightmap");
 					}
 				}
 

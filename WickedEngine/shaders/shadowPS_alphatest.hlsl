@@ -5,7 +5,7 @@ void main(PixelInput input)
 {
 	ShaderMaterial material = GetMaterial();
 	
-	float alpha = 1;
+	half alpha = 1;
 
 	[branch]
 	if (material.textures[BASECOLORMAP].IsValid())
