@@ -943,18 +943,18 @@ namespace wi::scene
 		shaderscene.aabb_extents_rcp.y = 1.0f / shaderscene.aabb_extents.y;
 		shaderscene.aabb_extents_rcp.z = 1.0f / shaderscene.aabb_extents.z;
 
-		shaderscene.weather.sun_color = weather.sunColor;
-		shaderscene.weather.sun_direction = weather.sunDirection;
+		shaderscene.weather.sun_color = wi::math::pack_half3(weather.sunColor);
+		shaderscene.weather.sun_direction = wi::math::pack_half3(weather.sunDirection);
 		shaderscene.weather.most_important_light_index = weather.most_important_light_index;
-		shaderscene.weather.ambient = weather.ambient;
+		shaderscene.weather.ambient = wi::math::pack_half3(weather.ambient);
 		shaderscene.weather.sky_rotation_sin = std::sin(weather.sky_rotation);
 		shaderscene.weather.sky_rotation_cos = std::cos(weather.sky_rotation);
 		shaderscene.weather.fog.start = weather.fogStart;
 		shaderscene.weather.fog.density = weather.fogDensity;
 		shaderscene.weather.fog.height_start = weather.fogHeightStart;
 		shaderscene.weather.fog.height_end = weather.fogHeightEnd;
-		shaderscene.weather.horizon = weather.horizon;
-		shaderscene.weather.zenith = weather.zenith;
+		shaderscene.weather.horizon = wi::math::pack_half3(weather.horizon);
+		shaderscene.weather.zenith = wi::math::pack_half3(weather.zenith);
 		shaderscene.weather.sky_exposure = weather.skyExposure;
 		shaderscene.weather.wind.speed = weather.windSpeed;
 		shaderscene.weather.wind.randomness = weather.windRandomness;

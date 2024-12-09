@@ -3,8 +3,8 @@
 #include "globals.hlsli"
 #include "skyAtmosphere.hlsli"
 
-Texture2D<float4> transmittanceLUT : register(t0);
-Texture2D<float4> multiScatteringLUT : register(t1);
+Texture2D<half4> transmittanceLUT : register(t0);
+Texture2D<half4> multiScatteringLUT : register(t1);
 
 RWTexture3D<float4> output : register(u0);
  

@@ -634,12 +634,12 @@ struct PrimitiveID
 
 #define texture_random64x64 bindless_textures[GetFrame().texture_random64x64_index]
 #define texture_bluenoise bindless_textures[GetFrame().texture_bluenoise_index]
-#define texture_sheenlut bindless_textures[GetFrame().texture_sheenlut_index]
-#define texture_skyviewlut bindless_textures[GetFrame().texture_skyviewlut_index]
-#define texture_transmittancelut bindless_textures[GetFrame().texture_transmittancelut_index]
-#define texture_multiscatteringlut bindless_textures[GetFrame().texture_multiscatteringlut_index]
-#define texture_skyluminancelut bindless_textures[GetFrame().texture_skyluminancelut_index]
-#define texture_cameravolumelut bindless_textures3D[GetFrame().texture_cameravolumelut_index]
+#define texture_sheenlut bindless_textures_half4[GetFrame().texture_sheenlut_index]
+#define texture_skyviewlut bindless_textures_half4[GetFrame().texture_skyviewlut_index]
+#define texture_transmittancelut bindless_textures_half4[GetFrame().texture_transmittancelut_index]
+#define texture_multiscatteringlut bindless_textures_half4[GetFrame().texture_multiscatteringlut_index]
+#define texture_skyluminancelut bindless_textures_half4[GetFrame().texture_skyluminancelut_index]
+#define texture_cameravolumelut bindless_textures3D_half4[GetFrame().texture_cameravolumelut_index]
 #define texture_wind bindless_textures3D[GetFrame().texture_wind_index]
 #define texture_wind_prev bindless_textures3D[GetFrame().texture_wind_prev_index]
 #define texture_caustics bindless_textures_half4[GetFrame().texture_caustics_index]
@@ -822,11 +822,11 @@ inline half3 clipspace_to_uv(in half3 clipspace)
 	return clipspace * half3(0.5, -0.5, 0.5) + 0.5;
 }
 
-inline half3 GetSunColor() { return GetWeather().sun_color; } // sun color with intensity applied
-inline float3 GetSunDirection() { return GetWeather().sun_direction; }
-inline half3 GetHorizonColor() { return GetWeather().horizon.rgb; }
-inline half3 GetZenithColor() { return GetWeather().zenith.rgb; }
-inline half3 GetAmbientColor() { return GetWeather().ambient.rgb; }
+inline half3 GetSunColor() { return unpack_half3(GetWeather().sun_color); } // sun color with intensity applied
+inline half3 GetSunDirection() { return unpack_half3(GetWeather().sun_direction); }
+inline half3 GetHorizonColor() { return unpack_half3(GetWeather().horizon); }
+inline half3 GetZenithColor() { return unpack_half3(GetWeather().zenith); }
+inline half3 GetAmbientColor() { return unpack_half3(GetWeather().ambient); }
 inline uint2 GetInternalResolution() { return GetCamera().internal_resolution; }
 inline float GetDeltaTime() { return GetFrame().delta_time; }
 inline float GetTime() { return GetFrame().time; }

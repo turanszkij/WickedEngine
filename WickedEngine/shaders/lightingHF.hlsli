@@ -412,19 +412,20 @@ inline half3 EnvironmentReflection_Global(in Surface surface)
 	uint2 dim;
 	uint mipcount;
 	cubemap.GetDimensions(0, dim.x, dim.y, mipcount);
+	half mipcount16f = half(mipcount);
 
-	half MIP = surface.roughness * mipcount;
+	half MIP = surface.roughness * mipcount16f;
 	envColor = cubemap.SampleLevel(sampler_linear_clamp, surface.R, MIP).rgb * surface.F;
 
 #ifdef SHEEN
 	envColor *= surface.sheen.albedoScaling;
-	MIP = surface.sheen.roughness * mipcount;
+	MIP = surface.sheen.roughness * mipcount16f;
 	envColor += cubemap.SampleLevel(sampler_linear_clamp, surface.R, MIP).rgb * surface.sheen.color * surface.sheen.DFG;
 #endif // SHEEN
 
 #ifdef CLEARCOAT
 	envColor *= 1 - surface.clearcoat.F;
-	MIP = surface.clearcoat.roughness * mipcount;
+	MIP = surface.clearcoat.roughness * mipcount16f;
 	envColor += cubemap.SampleLevel(sampler_linear_clamp, surface.clearcoat.R, MIP).rgb * surface.clearcoat.F;
 #endif // CLEARCOAT
 
@@ -455,15 +456,16 @@ inline half4 EnvironmentReflection_Local(in TextureCube<half4> cubemap, in Surfa
 	uint2 dim;
 	uint mipcount;
 	cubemap.GetDimensions(0, dim.x, dim.y, mipcount);
+	half mipcount16f = half(mipcount);
 
 	// Sample cubemap texture:
-	half MIP = surface.roughness * mipcount;
-	half3 envColor = (half3)cubemap.SampleLevel(sampler_linear_clamp, R_parallaxCorrected, MIP).rgb * surface.F;
+	half MIP = surface.roughness * mipcount16f;
+	half3 envColor = cubemap.SampleLevel(sampler_linear_clamp, R_parallaxCorrected, MIP).rgb * surface.F;
 
 #ifdef SHEEN
 	envColor *= surface.sheen.albedoScaling;
-	MIP = surface.sheen.roughness * mipcount;
-	envColor += (half3)cubemap.SampleLevel(sampler_linear_clamp, R_parallaxCorrected, MIP).rgb * surface.sheen.color * surface.sheen.DFG;
+	MIP = surface.sheen.roughness * mipcount16f;
+	envColor += cubemap.SampleLevel(sampler_linear_clamp, R_parallaxCorrected, MIP).rgb * surface.sheen.color * surface.sheen.DFG;
 #endif // SHEEN
 
 #ifdef CLEARCOAT
@@ -475,8 +477,8 @@ inline half4 EnvironmentReflection_Local(in TextureCube<half4> cubemap, in Surfa
 	R_parallaxCorrected = surface.P - probe.position + surface.clearcoat.R * Distance;
 
 	envColor *= 1 - surface.clearcoat.F;
-	MIP = surface.clearcoat.roughness * mipcount;
-	envColor += (half3)cubemap.SampleLevel(sampler_linear_clamp, R_parallaxCorrected, MIP).rgb * surface.clearcoat.F;
+	MIP = surface.clearcoat.roughness * mipcount16f;
+	envColor += cubemap.SampleLevel(sampler_linear_clamp, R_parallaxCorrected, MIP).rgb * surface.clearcoat.F;
 #endif // CLEARCOAT
 
 	// blend out if close to any cube edge:
