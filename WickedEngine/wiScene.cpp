@@ -4495,7 +4495,9 @@ namespace wi::scene
 				// Get the quaternion from W because that reflects changes by other components (eg. softbody)
 				XMVECTOR S, R, T;
 				XMMatrixDecompose(&S, &R, &T, W);
-				XMStoreFloat4(&inst.quaternion, R);
+				XMFLOAT4 quaternionFP32;
+				XMStoreFloat4(&quaternionFP32, R);
+				inst.quaternion = wi::math::pack_half4(quaternionFP32);
 				float size = std::max(XMVectorGetX(S), std::max(XMVectorGetY(S), XMVectorGetZ(S)));
 
 				if (object.lightmap.IsValid())
@@ -4570,10 +4572,14 @@ namespace wi::scene
 				// lightmap things:
 				if (object.IsLightmapRenderRequested() && dt > 0)
 				{
-					if (!object.lightmap.IsValid())
+					if (!object.lightmap_render.IsValid())
 					{
 						object.lightmapWidth = wi::math::GetNextPowerOfTwo(object.lightmapWidth + 1) / 2;
 						object.lightmapHeight = wi::math::GetNextPowerOfTwo(object.lightmapHeight + 1) / 2;
+
+						// align to BC6 block size:
+						object.lightmapWidth = wi::graphics::AlignTo(object.lightmapWidth, 4u);
+						object.lightmapHeight = wi::graphics::AlignTo(object.lightmapHeight, 4u);
 
 						TextureDesc desc;
 						desc.width = object.lightmapWidth;
@@ -4583,10 +4589,21 @@ namespace wi::scene
 						//	But the final lightmap will be compressed into an optimal format when the rendering is finished
 						desc.format = Format::R32G32B32A32_FLOAT;
 
-						device->CreateTexture(&desc, nullptr, &object.lightmap);
-						device->SetName(&object.lightmap, "lightmap_renderable");
+						device->CreateTexture(&desc, nullptr, &object.lightmap_render);
+						device->SetName(&object.lightmap_render, "lightmap_render");
 
 						object.lightmapIterationCount = 0; // reset accumulation
+					}
+					if (!object.lightmap.IsValid())
+					{
+						TextureDesc desc;
+						desc.width = object.lightmapWidth;
+						desc.height = object.lightmapHeight;
+						desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+						desc.format = Format::R16G16B16A16_FLOAT; // denoiser needs at least half precision float
+
+						device->CreateTexture(&desc, nullptr, &object.lightmap);
+						device->SetName(&object.lightmap, "lightmap");
 					}
 				}
 

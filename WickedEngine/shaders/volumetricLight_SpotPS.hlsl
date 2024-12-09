@@ -36,7 +36,7 @@ bool intersectInfiniteCone(float3 p, float3 v, float3 pa, float3 va, float sina2
 	return true;
 }
 
-half4 main(VertexToPixel input) : SV_TARGET
+float4 main(VertexToPixel input) : SV_TARGET
 {
 	ShaderEntity light = load_entity(spotlights().first_item() + (uint)g_xColor.x);
 

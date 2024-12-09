@@ -11,8 +11,8 @@ static const float3 HAIRPATCH[] = {
 
 Buffer<uint> meshIndexBuffer : register(t0);
 Buffer<float4> meshVertexBuffer_POS : register(t1);
-Buffer<float4> meshVertexBuffer_NOR : register(t2);
-Buffer<float> meshVertexBuffer_length : register(t3);
+Buffer<half4> meshVertexBuffer_NOR : register(t2);
+Buffer<half> meshVertexBuffer_length : register(t3);
 
 RWStructuredBuffer<PatchSimulationData> simulationBuffer : register(u0);
 RWBuffer<float4> vertexBuffer_POS : register(u1);

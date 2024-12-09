@@ -185,6 +185,10 @@ T inverse_lerp(T value1, T value2, T pos)
 		"SRV(t0, space = 22, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"SRV(t0, space = 23, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"SRV(t0, space = 24, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 25, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 26, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 27, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 28, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"UAV(u0, space = 100, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"UAV(u0, space = 101, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"UAV(u0, space = 102, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
@@ -248,6 +252,10 @@ static const BindlessResource<Buffer<float>> bindless_buffers_float;
 static const BindlessResource<Buffer<float2>> bindless_buffers_float2;
 static const BindlessResource<Buffer<float3>> bindless_buffers_float3;
 static const BindlessResource<Buffer<float4>> bindless_buffers_float4;
+static const BindlessResource<Buffer<half>> bindless_buffers_half;
+static const BindlessResource<Buffer<half2>> bindless_buffers_half2;
+static const BindlessResource<Buffer<half3>> bindless_buffers_half3;
+static const BindlessResource<Buffer<half4>> bindless_buffers_half4;
 static const BindlessResource<Texture2DArray> bindless_textures2DArray;
 static const BindlessResource<Texture2DArray<half4>> bindless_textures2DArray_half4;
 static const BindlessResource<TextureCube> bindless_cubemaps;
@@ -300,6 +308,10 @@ static const uint DESCRIPTOR_SET_BINDLESS_ACCELERATION_STRUCTURE = 7;
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<float2> bindless_buffers_float2[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<float3> bindless_buffers_float3[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<float4> bindless_buffers_float4[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<half> bindless_buffers_half[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<half2> bindless_buffers_half2[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<half3> bindless_buffers_half3[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<half4> bindless_buffers_half4[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLER)]] SamplerState bindless_samplers[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2D bindless_textures[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2DArray bindless_textures2DArray[];
@@ -362,6 +374,10 @@ Texture2D<float2> bindless_textures_float2[] : register(space21);
 Texture2D<uint> bindless_textures_uint[] : register(space22);
 Texture2D<uint4> bindless_textures_uint4[] : register(space23);
 Texture2D<half4> bindless_textures_half4[] : register(space24);
+Buffer<half> bindless_buffers_half[] : register(space25);
+Buffer<half2> bindless_buffers_half2[] : register(space26);
+Buffer<half3> bindless_buffers_half3[] : register(space27);
+Buffer<half4> bindless_buffers_half4[] : register(space28);
 
 RWTexture2D<float4> bindless_rwtextures[] : register(space100);
 RWByteAddressBuffer bindless_rwbuffers[] : register(space101);
@@ -626,7 +642,7 @@ struct PrimitiveID
 #define texture_cameravolumelut bindless_textures3D[GetFrame().texture_cameravolumelut_index]
 #define texture_wind bindless_textures3D[GetFrame().texture_wind_index]
 #define texture_wind_prev bindless_textures3D[GetFrame().texture_wind_prev_index]
-#define texture_caustics bindless_textures[GetFrame().texture_caustics_index]
+#define texture_caustics bindless_textures_half4[GetFrame().texture_caustics_index]
 #define scene_acceleration_structure bindless_accelerationstructures[GetScene().TLAS]
 
 #define texture_depth bindless_textures_float[GetCamera().texture_depth_index]

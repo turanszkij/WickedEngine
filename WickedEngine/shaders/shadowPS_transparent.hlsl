@@ -8,7 +8,7 @@ float4 main(PixelInput input) : SV_TARGET
 	ShaderMaterial material = GetMaterial();
 
 	float4 uvsets = input.GetUVSets();
-	float4 color;
+	half4 color;
 	[branch]
 	if (material.textures[BASECOLORMAP].IsValid())
 	{
@@ -31,9 +31,9 @@ float4 main(PixelInput input) : SV_TARGET
 
 	clip(color.a - material.GetAlphaTest() - meshinstance.GetAlphaTest());
 
-	float opacity = color.a;
+	half opacity = color.a;
 	
-	float transmission = lerp(material.GetTransmission(), 1, material.GetCloak());
+	half transmission = lerp(material.GetTransmission(), 1, material.GetCloak());
 	color.rgb = lerp(color.rgb, 1, material.GetCloak());
 
 	[branch]
@@ -42,7 +42,7 @@ float4 main(PixelInput input) : SV_TARGET
 		[branch]
 		if (material.textures[TRANSMISSIONMAP].IsValid())
 		{
-			float transmissionMap = material.textures[TRANSMISSIONMAP].Sample(sampler_objectshader, uvsets).r;
+			half transmissionMap = material.textures[TRANSMISSIONMAP].Sample(sampler_objectshader, uvsets).r;
 			transmission *= transmissionMap;
 		}
 		opacity *= 1 - transmission;

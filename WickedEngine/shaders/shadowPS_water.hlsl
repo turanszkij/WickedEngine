@@ -8,9 +8,8 @@ float4 main(PixelInput input) : SV_TARGET
 	ShaderMaterial material = GetMaterial();
 	
 	float4 uvsets = input.GetUVSets();
-	float2 pixel = input.pos.xy;
 
-	float4 color;
+	half4 color;
 	[branch]
 	if (material.textures[BASECOLORMAP].IsValid())
 	{
@@ -22,7 +21,7 @@ float4 main(PixelInput input) : SV_TARGET
 	}
 	color *= input.color;
 
-	float opacity = color.a;
+	half opacity = color.a;
 
 	color.rgb = 1; // disable water shadow because it has already fog
 

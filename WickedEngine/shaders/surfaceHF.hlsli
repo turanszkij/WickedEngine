@@ -375,10 +375,10 @@ struct Surface
 		[branch]
 		if (geometry.vb_nor >= 0)
 		{
-			Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(geometry.vb_nor)];
-			half3 n0 = rotate_vector(buf[i0].xyz, (half4)inst.quaternion);
-			half3 n1 = rotate_vector(buf[i1].xyz, (half4)inst.quaternion);
-			half3 n2 = rotate_vector(buf[i2].xyz, (half4)inst.quaternion);
+			Buffer<half4> buf = bindless_buffers_half4[NonUniformResourceIndex(geometry.vb_nor)];
+			half3 n0 = rotate_vector(buf[i0].xyz, inst.GetQuaternion());
+			half3 n1 = rotate_vector(buf[i1].xyz, inst.GetQuaternion());
+			half3 n2 = rotate_vector(buf[i2].xyz, inst.GetQuaternion());
 			n0 = any(n0) ? normalize(n0) : 0;
 			n1 = any(n1) ? normalize(n1) : 0;
 			n2 = any(n2) ? normalize(n2) : 0;
@@ -448,21 +448,17 @@ struct Surface
 		[branch]
 		if (geometry.vb_tan >= 0)
 		{
-			Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(geometry.vb_tan)];
+			Buffer<half4> buf = bindless_buffers_half4[NonUniformResourceIndex(geometry.vb_tan)];
 			half4 t0 = buf[i0];
 			half4 t1 = buf[i1];
 			half4 t2 = buf[i2];
-			t0.xyz = rotate_vector(t0.xyz, (half4)inst.quaternion);
-			t1.xyz = rotate_vector(t1.xyz, (half4)inst.quaternion);
-			t2.xyz = rotate_vector(t2.xyz, (half4)inst.quaternion);
+			t0.xyz = rotate_vector(t0.xyz, inst.GetQuaternion());
+			t1.xyz = rotate_vector(t1.xyz, inst.GetQuaternion());
+			t2.xyz = rotate_vector(t2.xyz, inst.GetQuaternion());
 			t0.xyz = any(t0.xyz) ? normalize(t0.xyz) : 0;
 			t1.xyz = any(t1.xyz) ? normalize(t1.xyz) : 0;
 			t2.xyz = any(t2.xyz) ? normalize(t2.xyz) : 0;
 			T = attribute_at_bary(t0, t1, t2, bary);
-			if (is_backface)
-			{
-				T = -T;
-			}
 			T.w = T.w < 0 ? -1 : 1;
 			half3 bitangent = cross(T.xyz, Nunnormalized) * T.w;
 			TBN = half3x3(T.xyz, bitangent, Nunnormalized); // unnormalized TBN! http://www.mikktspace.com/
@@ -576,7 +572,7 @@ struct Surface
 		[branch]
 		if (geometry.vb_col >= 0 && material.IsUsingVertexColors())
 		{
-			Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(geometry.vb_col)];
+			Buffer<half4> buf = bindless_buffers_half4[NonUniformResourceIndex(geometry.vb_col)];
 			const half4 c0 = buf[i0];
 			const half4 c1 = buf[i1];
 			const half4 c2 = buf[i2];
@@ -587,7 +583,7 @@ struct Surface
 		[branch]
 		if (inst.vb_ao >= 0 && material.IsUsingVertexAO())
 		{
-			Buffer<float> buf = bindless_buffers_float[NonUniformResourceIndex(inst.vb_ao)];
+			Buffer<half> buf = bindless_buffers_half[NonUniformResourceIndex(inst.vb_ao)];
 			const half ao0 = buf[i0];
 			const half ao1 = buf[i1];
 			const half ao2 = buf[i2];
@@ -868,7 +864,7 @@ struct Surface
 		[branch]
 		if (inst.vb_wetmap >= 0)
 		{
-			Buffer<float> buf = bindless_buffers_float[NonUniformResourceIndex(inst.vb_wetmap)];
+			Buffer<half> buf = bindless_buffers_half[NonUniformResourceIndex(inst.vb_wetmap)];
 			const half wet0 = buf[i0];
 			const half wet1 = buf[i1];
 			const half wet2 = buf[i2];
