@@ -5419,269 +5419,292 @@ namespace wi::scene
 
 		wi::jobsystem::Dispatch(ctx, (uint32_t)characters.GetCount(), 1, [&](wi::jobsystem::JobArgs args) {
 			CharacterComponent& character = characters[args.jobIndex];
-			if (!character.IsActive())
-				return;
 			Entity entity = characters.GetEntity(args.jobIndex);
-			uint32_t layer = 0;
-			LayerComponent* layercomponent = layers.GetComponent(entity);
-			if (layercomponent != nullptr)
-			{
-				layer = layercomponent->GetLayerMask();
-			}
-
-			const float fixed_update_fps = character.fixed_update_fps;
-			const float timestep = 1.0f / fixed_update_fps;
-			const float ground_friction = character.ground_friction;
-			const XMVECTOR wall_friction = XMVectorSet(character.ground_friction, 1, character.ground_friction, 1);
-			const float water_friction = character.water_friction;
-			const float slope_threshold = character.slope_threshold;
-			const float leaning_limit = character.leaning_limit;
-			const XMVECTOR gravity = XMVectorSet(0, character.gravity * timestep, 0, 0);
-			const float delta_to_timestep = timestep / dt;
-
-			if (!character.humanoid_checked)
-			{
-				// Search for humanoid entity that is either this entity or a child:
-				character.humanoid_checked = true;
-				if (humanoids.Contains(entity))
-				{
-					character.humanoidEntity = entity;
-				}
-				else
-				{
-					for (size_t i = 0; i < humanoids.GetCount(); ++i)
-					{
-						Entity humanoidEntity = humanoids.GetEntity(i);
-						if (Entity_IsDescendant(humanoidEntity, entity))
-						{
-							character.humanoidEntity = humanoidEntity;
-						}
-					}
-				}
-			}
-			const HumanoidComponent* humanoid = humanoids.GetComponent(character.humanoidEntity);
-			if (humanoid != nullptr && humanoid->IsRagdollPhysicsEnabled())
-				return; // if ragdoll active, don't update character movement
-
-			XMVECTOR velocity = XMLoadFloat3(&character.velocity);
-			XMVECTOR inertia = XMLoadFloat3(&character.inertia);
-			XMVECTOR movement = XMLoadFloat3(&character.movement);
-			XMVECTOR position = XMLoadFloat3(&character.position);
-			XMVECTOR height = XMVectorSet(0, character.height, 0, 0);
-
 			XMMATRIX facing_rot = XMMatrixLookToLH(XMVectorZero(), XMLoadFloat3(&character.facing), up);
-			
-			// Swimming:
-			character.swimming = false;
-			float swim_offset = 0;
-			if (humanoid != nullptr && humanoid->bones[size_t(HumanoidComponent::HumanoidBone::Neck)] != INVALID_ENTITY)
+			if (character.IsActive())
 			{
-				Entity neck_entity = humanoid->bones[size_t(HumanoidComponent::HumanoidBone::Neck)];
-				TransformComponent* neck_transform = transforms.GetComponent(neck_entity);
-				if (neck_transform != nullptr)
+				uint32_t layer = 0;
+				LayerComponent* layercomponent = layers.GetComponent(entity);
+				if (layercomponent != nullptr)
 				{
-					XMFLOAT3 neck_pos = neck_transform->GetPosition();
-					neck_pos.y += character.water_vertical_offset;
-					XMFLOAT3 ocean_pos = GetOceanPosAt(neck_pos);
-					float water_distance = ocean_pos.y - neck_pos.y;
-					if (water_distance > 0)
+					layer = layercomponent->GetLayerMask();
+				}
+
+				const float fixed_update_fps = character.fixed_update_fps;
+				const float timestep = 1.0f / fixed_update_fps;
+				const float ground_friction = character.ground_friction;
+				const XMVECTOR wall_friction = XMVectorSet(character.ground_friction, 1, character.ground_friction, 1);
+				const float water_friction = character.water_friction;
+				const float slope_threshold = character.slope_threshold;
+				const float leaning_limit = character.leaning_limit;
+				const XMVECTOR gravity = XMVectorSet(0, character.gravity * timestep, 0, 0);
+				const float delta_to_timestep = timestep / dt;
+
+				if (!character.humanoid_checked)
+				{
+					// Search for humanoid entity that is either this entity or a child:
+					character.humanoid_checked = true;
+					if (humanoids.Contains(entity))
 					{
-						// Ocean is above the neck:
-						character.swimming = true;
-						swim_offset = water_distance;
+						character.humanoidEntity = entity;
 					}
 					else
 					{
-						Ray ray(neck_pos, XMFLOAT3(0, 1, 0), 0, 100);
-						RayIntersectionResult result = Intersects(ray, FILTER_WATER);
-						if (result.entity != INVALID_ENTITY)
+						for (size_t i = 0; i < humanoids.GetCount(); ++i)
 						{
-							character.swimming = true;
-							swim_offset = result.distance;
+							Entity humanoidEntity = humanoids.GetEntity(i);
+							if (Entity_IsDescendant(humanoidEntity, entity))
+							{
+								character.humanoidEntity = humanoidEntity;
+							}
 						}
 					}
 				}
-			}
+				const HumanoidComponent* humanoid = humanoids.GetComponent(character.humanoidEntity);
+				if (humanoid != nullptr && humanoid->IsRagdollPhysicsEnabled())
+					return; // if ragdoll active, don't update character movement
 
-			character.accumulator += dt;
+				XMVECTOR velocity = XMLoadFloat3(&character.velocity);
+				XMVECTOR inertia = XMLoadFloat3(&character.inertia);
+				XMVECTOR movement = XMLoadFloat3(&character.movement);
+				XMVECTOR position = XMLoadFloat3(&character.position);
+				XMVECTOR height = XMVectorSet(0, character.height, 0, 0);
 
-			const bool timestep_occurred = character.accumulator >= timestep;
-			if (timestep_occurred)
-			{
-				character.ground_intersect = false;
-				character.wall_intersect = false;
-			}
-
-			// Fixed timestep logic:
-			int steps = 0;
-			while (character.accumulator >= timestep && steps <= max_substeps)
-			{
-				steps++;
-				XMStoreFloat3(&character.position_prev, position);
-				character.accumulator -= timestep;
-				if (character.swimming)
+				// Swimming:
+				character.swimming = false;
+				float swim_offset = 0;
+				if (humanoid != nullptr && humanoid->bones[size_t(HumanoidComponent::HumanoidBone::Neck)] != INVALID_ENTITY)
 				{
-					velocity *= water_friction;
-				}
-				if (character.velocity.y > character.gravity && !character.swimming)
-				{
-					velocity += gravity;
-				}
-				velocity += movement;
-
-				position += velocity * timestep;
-				position += inertia * delta_to_timestep; // inertia is from moving platforms which are delta velocity from previous frame
-
-				// Check ground:
-				Capsule capsule = Capsule(position, position + height, character.width);
-				CapsuleIntersectionResult result = Intersects(capsule, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~layer);
-				if (result.entity != INVALID_ENTITY)
-				{
-					XMVECTOR collisionNormal = XMLoadFloat3(&result.normal);
-					const float slope = XMVectorGetX(XMVector3Dot(collisionNormal, up));
-					if (slope > slope_threshold)
-{				
-						character.ground_intersect = true;
-						velocity *= ground_friction;
-						position += XMVectorSet(0, result.depth, 0, 0);
-
-						if (std::abs(result.velocity.x) > 0.001f || std::abs(result.velocity.y) > 0.001f || std::abs(result.velocity.z) > 0.001f)
+					Entity neck_entity = humanoid->bones[size_t(HumanoidComponent::HumanoidBone::Neck)];
+					TransformComponent* neck_transform = transforms.GetComponent(neck_entity);
+					if (neck_transform != nullptr)
+					{
+						XMFLOAT3 neck_pos = neck_transform->GetPosition();
+						neck_pos.y += character.water_vertical_offset;
+						XMFLOAT3 ocean_pos = GetOceanPosAt(neck_pos);
+						float water_distance = ocean_pos.y - neck_pos.y;
+						if (water_distance > 0)
 						{
-							inertia = XMLoadFloat3(&result.velocity);
+							// Ocean is above the neck:
+							character.swimming = true;
+							swim_offset = water_distance;
 						}
 						else
 						{
-							inertia = XMVectorZero();
+							Ray ray(neck_pos, XMFLOAT3(0, 1, 0), 0, 100);
+							RayIntersectionResult result = Intersects(ray, FILTER_WATER);
+							if (result.entity != INVALID_ENTITY)
+							{
+								character.swimming = true;
+								swim_offset = result.distance;
+							}
 						}
 					}
 				}
 
-				// Check wall:
-				capsule = Capsule(position, position + height, character.width);
-				result = Intersects(capsule, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~layer);
-				if (result.entity != INVALID_ENTITY)
+				character.accumulator += dt;
+
+				const bool timestep_occurred = character.accumulator >= timestep;
+				if (timestep_occurred)
 				{
-					XMVECTOR collisionNormal = XMLoadFloat3(&result.normal);
-					const float slope = XMVectorGetX(XMVector3Dot(collisionNormal, up));
-					if (slope <= slope_threshold)
+					character.ground_intersect = false;
+					character.wall_intersect = false;
+				}
+
+				// Fixed timestep logic:
+				int steps = 0;
+				while (character.accumulator >= timestep && steps <= max_substeps)
+				{
+					steps++;
+					XMStoreFloat3(&character.position_prev, position);
+					character.accumulator -= timestep;
+					if (character.swimming)
 					{
-						character.wall_intersect = true;
-						if (!character.ground_intersect)
-						{
-							velocity *= wall_friction;
-						}
-						float velocityLen = XMVectorGetX(XMVector3Length(velocity));
-						XMVECTOR velocityNormalized = XMVector3Normalize(velocity);
-						XMVECTOR undesiredMotion = collisionNormal * XMVector3Dot(velocityNormalized, collisionNormal);
-						XMVECTOR desiredMotion = velocityNormalized - undesiredMotion;
-						velocity = desiredMotion * velocityLen;
-						position += collisionNormal * result.depth;
-						inertia = XMVectorZero();
+						velocity *= water_friction;
 					}
-				}
+					if (character.velocity.y > character.gravity && !character.swimming)
+					{
+						velocity += gravity;
+					}
+					velocity += movement;
 
-				// Check character capsules:
-				if (!character.IsCharacterToCharacterCollisionDisabled())
-				{
+					position += velocity * timestep;
+					position += inertia * delta_to_timestep; // inertia is from moving platforms which are delta velocity from previous frame
+
+					// Check ground:
+					Capsule capsule = Capsule(position, position + height, character.width);
+					CapsuleIntersectionResult result = Intersects(capsule, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~layer);
+					if (result.entity != INVALID_ENTITY)
+					{
+						XMVECTOR collisionNormal = XMLoadFloat3(&result.normal);
+						const float slope = XMVectorGetX(XMVector3Dot(collisionNormal, up));
+						if (slope > slope_threshold)
+						{
+							character.ground_intersect = true;
+							velocity *= ground_friction;
+							position += XMVectorSet(0, result.depth, 0, 0);
+
+							if (std::abs(result.velocity.x) > 0.001f || std::abs(result.velocity.y) > 0.001f || std::abs(result.velocity.z) > 0.001f)
+							{
+								inertia = XMLoadFloat3(&result.velocity);
+							}
+							else
+							{
+								inertia = XMVectorZero();
+							}
+						}
+					}
+
+					// Check wall:
 					capsule = Capsule(position, position + height, character.width);
-					XMFLOAT3 incident_position = XMFLOAT3(0, 0, 0);
-					XMFLOAT3 incident_normal = XMFLOAT3(0, 0, 0);
-					float penetration_depth = 0;
-					for (size_t i = 0; i < character_capsules.size(); ++i)
+					result = Intersects(capsule, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~layer);
+					if (result.entity != INVALID_ENTITY)
 					{
-						if (i == args.jobIndex)
-							continue;
-						if (!characters[i].IsActive())
-							continue;
-						if (characters[i].IsCharacterToCharacterCollisionDisabled())
-							continue;
-						if (capsule.intersects(character_capsules[i], incident_position, incident_normal, penetration_depth))
+						XMVECTOR collisionNormal = XMLoadFloat3(&result.normal);
+						const float slope = XMVectorGetX(XMVector3Dot(collisionNormal, up));
+						if (slope <= slope_threshold)
 						{
-							XMVECTOR collisionNormal = XMLoadFloat3(&incident_normal);
+							character.wall_intersect = true;
+							if (!character.ground_intersect)
+							{
+								velocity *= wall_friction;
+							}
 							float velocityLen = XMVectorGetX(XMVector3Length(velocity));
 							XMVECTOR velocityNormalized = XMVector3Normalize(velocity);
 							XMVECTOR undesiredMotion = collisionNormal * XMVector3Dot(velocityNormalized, collisionNormal);
 							XMVECTOR desiredMotion = velocityNormalized - undesiredMotion;
 							velocity = desiredMotion * velocityLen;
-							position += collisionNormal * penetration_depth;
+							position += collisionNormal * result.depth;
 							inertia = XMVectorZero();
-							break;
+						}
+					}
+
+					// Check character capsules:
+					if (!character.IsCharacterToCharacterCollisionDisabled())
+					{
+						capsule = Capsule(position, position + height, character.width);
+						XMFLOAT3 incident_position = XMFLOAT3(0, 0, 0);
+						XMFLOAT3 incident_normal = XMFLOAT3(0, 0, 0);
+						float penetration_depth = 0;
+						for (size_t i = 0; i < character_capsules.size(); ++i)
+						{
+							if (i == args.jobIndex)
+								continue;
+							if (!characters[i].IsActive())
+								continue;
+							if (characters[i].IsCharacterToCharacterCollisionDisabled())
+								continue;
+							if (capsule.intersects(character_capsules[i], incident_position, incident_normal, penetration_depth))
+							{
+								XMVECTOR collisionNormal = XMLoadFloat3(&incident_normal);
+								float velocityLen = XMVectorGetX(XMVector3Length(velocity));
+								XMVECTOR velocityNormalized = XMVector3Normalize(velocity);
+								XMVECTOR undesiredMotion = collisionNormal * XMVector3Dot(velocityNormalized, collisionNormal);
+								XMVECTOR desiredMotion = velocityNormalized - undesiredMotion;
+								velocity = desiredMotion * velocityLen;
+								position += collisionNormal * penetration_depth;
+								inertia = XMVectorZero();
+								break;
+							}
+						}
+					}
+
+				}
+				character.accumulator = clamp(character.accumulator, 0.0f, timestep);
+				character.alpha = character.accumulator / timestep;
+
+				position += XMVectorSet(0, swim_offset, 0, 0);
+
+				// Smooth facing:
+				character.facing = wi::math::Lerp(character.facing, character.facing_next, dt * 5);
+				character.facing.y = 0;
+				XMVECTOR facing_next = XMVector3Normalize(XMLoadFloat3(&character.facing_next));
+				XMVECTOR facing = XMVector3Normalize(XMLoadFloat3(&character.facing));
+				XMStoreFloat3(&character.facing, facing);
+
+				// Smooth leaning:
+				XMVECTOR facediff = XMVector3TransformNormal(facing_next - facing, facing_rot);
+				float velocity_leaning = clamp(XMVectorGetX(facediff * XMVector3Length(XMVectorSetY(velocity, 0))) * 0.08f, -leaning_limit, leaning_limit);
+				character.leaning_next = lerp(character.leaning_next, velocity_leaning, dt * 5);
+				character.leaning = lerp(character.leaning, character.leaning_next, dt * 5);
+
+				// Simple animation blending:
+				for (Entity animEntity : character.animations)
+				{
+					AnimationComponent* animation = animations.GetComponent(animEntity);
+					if (animation == nullptr)
+						continue;
+					if (animEntity == character.currentAnimation)
+					{
+						if (character.reset_anim)
+						{
+							character.reset_anim = false;
+							animation->timer = animation->start;
+						}
+						animation->amount = clamp(animation->amount + dt, 0.0f, character.anim_amount);
+						animation->Play();
+						character.anim_ended = animation->timer >= animation->end;
+					}
+					else
+					{
+						animation->amount = clamp(animation->amount - dt, 0.0f, 0.1f);
+						if (animation->amount <= 0)
+						{
+							animation->Stop();
 						}
 					}
 				}
 
-			}
-			character.accumulator = clamp(character.accumulator, 0.0f, timestep);
-			character.alpha = character.accumulator / timestep;
-
-			position += XMVectorSet(0, swim_offset, 0, 0);
-
-			// Smooth facing:
-			character.facing = wi::math::Lerp(character.facing, character.facing_next, dt * 5);
-			character.facing.y = 0;
-			XMVECTOR facing_next = XMVector3Normalize(XMLoadFloat3(&character.facing_next));
-			XMVECTOR facing = XMVector3Normalize(XMLoadFloat3(&character.facing));
-			XMStoreFloat3(&character.facing, facing);
-
-			// Smooth leaning:
-			XMVECTOR facediff = XMVector3TransformNormal(facing_next - facing, facing_rot);
-			float velocity_leaning = clamp(XMVectorGetX(facediff * XMVector3Length(XMVectorSetY(velocity, 0))) * 0.08f, -leaning_limit, leaning_limit);
-			character.leaning_next = lerp(character.leaning_next, velocity_leaning, dt * 5);
-			character.leaning = lerp(character.leaning, character.leaning_next, dt * 5);
-
-			// Simple animation blending:
-			for (Entity animEntity : character.animations)
-			{
-				AnimationComponent* animation = animations.GetComponent(animEntity);
-				if (animation == nullptr)
-					continue;
-				if (animEntity == character.currentAnimation)
+				// Try to put water ripple under character:
+				float horizontal_velocity_length = XMVectorGetX(XMVector3Length(XMVectorSetY(velocity, 0)));
+				if (horizontal_velocity_length > 0.01)
 				{
-					if (character.reset_anim)
+					XMFLOAT3 ocean_pos = GetOceanPosAt(character.position);
+					if (character.position.y < ocean_pos.y)
 					{
-						character.reset_anim = false;
-						animation->timer = animation->start;
+						PutWaterRipple(XMFLOAT3(character.position.x, ocean_pos.y, character.position.z));
 					}
-					animation->amount = clamp(animation->amount + dt, 0.0f, character.anim_amount);
-					animation->Play();
-					character.anim_ended = animation->timer >= animation->end;
-				}
-				else
-				{
-					animation->amount = clamp(animation->amount - dt, 0.0f, 0.1f);
-					if (animation->amount <= 0)
+					else
 					{
-						animation->Stop();
+						Capsule capsule = Capsule(position, position + height, character.width);
+						CapsuleIntersectionResult result = Intersects(capsule, FILTER_WATER);
+						if (result.entity != INVALID_ENTITY)
+						{
+							PutWaterRipple(result.position);
+						}
 					}
 				}
-			}
 
-			// Try to put water ripple under character:
-			float horizontal_velocity_length = XMVectorGetX(XMVector3Length(XMVectorSetY(velocity, 0)));
-			if (horizontal_velocity_length > 0.01)
-			{
-				XMFLOAT3 ocean_pos = GetOceanPosAt(character.position);
-				if (character.position.y < ocean_pos.y)
+				XMStoreFloat3(&character.position, position);
+				XMStoreFloat3(&character.velocity, velocity);
+				XMStoreFloat3(&character.inertia, inertia);
+				character.movement = XMFLOAT3(0, 0, 0);
+
+				if (character.pathfinding_thread == nullptr && character.process_goal)
 				{
-					PutWaterRipple(XMFLOAT3(character.position.x, ocean_pos.y, character.position.z));
+					character.pathfinding_thread = std::make_shared<CharacterComponent::PathfindingThreadContext>();
 				}
-				else
+				if (character.pathfinding_thread)
 				{
-					Capsule capsule = Capsule(position, position + height, character.width);
-					CapsuleIntersectionResult result = Intersects(capsule, FILTER_WATER);
-					if (result.entity != INVALID_ENTITY)
+					if (AtomicLoad(&character.pathfinding_thread->process_goal_completed) != 0)
 					{
-						PutWaterRipple(result.position);
+						AtomicAnd(&character.pathfinding_thread->process_goal_completed, 0);
+						std::swap(character.pathfinding_thread->pathquery_work, character.pathquery);
+					}
+					if (character.process_goal && character.voxelgrid != nullptr && !wi::jobsystem::IsBusy(character.pathfinding_thread->ctx))
+					{
+						character.process_goal = false;
+						character.pathfinding_thread->ctx.priority = wi::jobsystem::Priority::Low;
+						wi::jobsystem::Execute(character.pathfinding_thread->ctx, [&](wi::jobsystem::JobArgs args) {
+							character.pathfinding_thread->pathquery_work.process(character.position, character.goal, *character.voxelgrid);
+							AtomicOr(&character.pathfinding_thread->process_goal_completed, 1);
+							});
 					}
 				}
 			}
-
-			XMStoreFloat3(&character.position, position);
-			XMStoreFloat3(&character.velocity, velocity);
-			XMStoreFloat3(&character.inertia, inertia);
-			character.movement = XMFLOAT3(0, 0, 0);
 
 			// Apply character transformation on transform component:
+			//	This gets applied even on inactive characters
 			TransformComponent* transform = transforms.GetComponent(entity);
 			if (transform != nullptr)
 			{
@@ -5700,28 +5723,6 @@ namespace wi::scene
 				transform->Translate(offset);
 
 				transform->SetDirty();
-			}
-
-			if (character.pathfinding_thread == nullptr && character.process_goal)
-			{
-				character.pathfinding_thread = std::make_shared<CharacterComponent::PathfindingThreadContext>();
-			}
-			if (character.pathfinding_thread)
-			{
-				if (AtomicLoad(&character.pathfinding_thread->process_goal_completed) != 0)
-				{
-					AtomicAnd(&character.pathfinding_thread->process_goal_completed, 0);
-					std::swap(character.pathfinding_thread->pathquery_work, character.pathquery);
-				}
-				if (character.process_goal && character.voxelgrid != nullptr && !wi::jobsystem::IsBusy(character.pathfinding_thread->ctx))
-				{
-					character.process_goal = false;
-					character.pathfinding_thread->ctx.priority = wi::jobsystem::Priority::Low;
-					wi::jobsystem::Execute(character.pathfinding_thread->ctx, [&](wi::jobsystem::JobArgs args) {
-						character.pathfinding_thread->pathquery_work.process(character.position, character.goal, *character.voxelgrid);
-						AtomicOr(&character.pathfinding_thread->process_goal_completed, 1);
-					});
-				}
 			}
 
 		});
