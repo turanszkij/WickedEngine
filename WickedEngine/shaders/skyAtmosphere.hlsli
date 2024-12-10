@@ -441,7 +441,7 @@ half3 GetSunLuminance(float3 worldPosition, float3 worldDirection, float3 sunDir
 
 		if (GetWeather().stars > 0)
 		{
-			float3 stars_direction = mul(worldDirection, (float3x3)GetWeather().stars_rotation);
+			float3 stars_direction = rotate_vector(worldDirection, GetWeather().stars_rotation);
 			float stars_visibility = pow(saturate(1 - sunDirection.y), 2);
 			float stars_density_at_maximum = lerp(22, 8, GetWeather().stars);
 			float stars_threshold = lerp(32, stars_density_at_maximum, stars_visibility); // modifies the number of stars that are visible

@@ -365,7 +365,7 @@ struct alignas(16) ShaderWeather
 	uint2 horizon; // packed half3
 	uint2 zenith; // packed half3
 
-	float4x4 stars_rotation;
+	float4 stars_rotation; // quaternion
 
 	float3 padding_stars;
 
