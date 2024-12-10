@@ -649,7 +649,7 @@ struct alignas(16) ShaderMeshInstance
 	uint layerMask;
 	uint geometryOffset;	// offset of all geometries for currently active LOD
 
-	uint2 emissive;
+	uint2 emissive; // packed half4
 	uint color;
 	uint geometryCount;		// number of all geometries in currently active LOD
 
@@ -664,12 +664,11 @@ struct alignas(16) ShaderMeshInstance
 	int vb_ao;
 	int vb_wetmap;
 	int lightmap;
-	uint alphaTest_size;
+	uint alphaTest_size; // packed half2
 
-	uint2 rimHighlight;
-	uint2 padding;
+	uint2 rimHighlight; // packed half4
+	uint2 quaternion; // packed half4
 
-	float4 quaternion;
 	ShaderTransform transform;
 	ShaderTransform transformPrev;
 	ShaderTransform transformRaw; // without quantization remapping applied
@@ -693,7 +692,11 @@ struct alignas(16) ShaderMeshInstance
 		vb_ao = -1;
 		vb_wetmap = -1;
 		alphaTest_size = 0;
-		quaternion = float4(0, 0, 0, 1);
+#ifdef __cplusplus
+		quaternion = wi::math::pack_half4(float4(0, 0, 0, 1));
+#else
+		quaternion = pack_half4(float4(0, 0, 0, 1));
+#endif // __cplusplus
 		rimHighlight = uint2(0, 0);
 		transform.init();
 		transformPrev.init();
@@ -715,6 +718,7 @@ struct alignas(16) ShaderMeshInstance
 	inline half GetAlphaTest() { return unpack_half2(alphaTest_size).x; }
 	inline half GetSize() { return unpack_half2(alphaTest_size).y; }
 	inline half4 GetRimHighlight() { return unpack_half4(rimHighlight); }
+	inline half4 GetQuaternion() { return unpack_half4(quaternion); }
 #endif // __cplusplus
 };
 struct ShaderMeshInstancePointer
@@ -1146,7 +1150,7 @@ struct alignas(16) FrameCB
 
 	float		cloudShadowFarPlaneKm;
 	int			texture_volumetricclouds_shadow_index;
-	float		gi_boost;
+	uint		giboost_packed; // force fp16 load
 	uint		entity_culling_count;
 
 	float		blue_noise_phase;

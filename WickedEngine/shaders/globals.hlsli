@@ -185,6 +185,10 @@ T inverse_lerp(T value1, T value2, T pos)
 		"SRV(t0, space = 22, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"SRV(t0, space = 23, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"SRV(t0, space = 24, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 25, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 26, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 27, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 28, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"UAV(u0, space = 100, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"UAV(u0, space = 101, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"UAV(u0, space = 102, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
@@ -248,6 +252,10 @@ static const BindlessResource<Buffer<float>> bindless_buffers_float;
 static const BindlessResource<Buffer<float2>> bindless_buffers_float2;
 static const BindlessResource<Buffer<float3>> bindless_buffers_float3;
 static const BindlessResource<Buffer<float4>> bindless_buffers_float4;
+static const BindlessResource<Buffer<half>> bindless_buffers_half;
+static const BindlessResource<Buffer<half2>> bindless_buffers_half2;
+static const BindlessResource<Buffer<half3>> bindless_buffers_half3;
+static const BindlessResource<Buffer<half4>> bindless_buffers_half4;
 static const BindlessResource<Texture2DArray> bindless_textures2DArray;
 static const BindlessResource<Texture2DArray<half4>> bindless_textures2DArray_half4;
 static const BindlessResource<TextureCube> bindless_cubemaps;
@@ -300,6 +308,10 @@ static const uint DESCRIPTOR_SET_BINDLESS_ACCELERATION_STRUCTURE = 7;
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<float2> bindless_buffers_float2[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<float3> bindless_buffers_float3[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<float4> bindless_buffers_float4[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<half> bindless_buffers_half[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<half2> bindless_buffers_half2[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<half3> bindless_buffers_half3[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<half4> bindless_buffers_half4[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLER)]] SamplerState bindless_samplers[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2D bindless_textures[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2DArray bindless_textures2DArray[];
@@ -362,6 +374,10 @@ Texture2D<float2> bindless_textures_float2[] : register(space21);
 Texture2D<uint> bindless_textures_uint[] : register(space22);
 Texture2D<uint4> bindless_textures_uint4[] : register(space23);
 Texture2D<half4> bindless_textures_half4[] : register(space24);
+Buffer<half> bindless_buffers_half[] : register(space25);
+Buffer<half2> bindless_buffers_half2[] : register(space26);
+Buffer<half3> bindless_buffers_half3[] : register(space27);
+Buffer<half4> bindless_buffers_half4[] : register(space28);
 
 RWTexture2D<float4> bindless_rwtextures[] : register(space100);
 RWByteAddressBuffer bindless_rwbuffers[] : register(space101);
@@ -618,15 +634,15 @@ struct PrimitiveID
 
 #define texture_random64x64 bindless_textures[GetFrame().texture_random64x64_index]
 #define texture_bluenoise bindless_textures[GetFrame().texture_bluenoise_index]
-#define texture_sheenlut bindless_textures[GetFrame().texture_sheenlut_index]
-#define texture_skyviewlut bindless_textures[GetFrame().texture_skyviewlut_index]
-#define texture_transmittancelut bindless_textures[GetFrame().texture_transmittancelut_index]
-#define texture_multiscatteringlut bindless_textures[GetFrame().texture_multiscatteringlut_index]
-#define texture_skyluminancelut bindless_textures[GetFrame().texture_skyluminancelut_index]
-#define texture_cameravolumelut bindless_textures3D[GetFrame().texture_cameravolumelut_index]
+#define texture_sheenlut bindless_textures_half4[GetFrame().texture_sheenlut_index]
+#define texture_skyviewlut bindless_textures_half4[GetFrame().texture_skyviewlut_index]
+#define texture_transmittancelut bindless_textures_half4[GetFrame().texture_transmittancelut_index]
+#define texture_multiscatteringlut bindless_textures_half4[GetFrame().texture_multiscatteringlut_index]
+#define texture_skyluminancelut bindless_textures_half4[GetFrame().texture_skyluminancelut_index]
+#define texture_cameravolumelut bindless_textures3D_half4[GetFrame().texture_cameravolumelut_index]
 #define texture_wind bindless_textures3D[GetFrame().texture_wind_index]
 #define texture_wind_prev bindless_textures3D[GetFrame().texture_wind_prev_index]
-#define texture_caustics bindless_textures[GetFrame().texture_caustics_index]
+#define texture_caustics bindless_textures_half4[GetFrame().texture_caustics_index]
 #define scene_acceleration_structure bindless_accelerationstructures[GetScene().TLAS]
 
 #define texture_depth bindless_textures_float[GetCamera().texture_depth_index]
@@ -806,11 +822,11 @@ inline half3 clipspace_to_uv(in half3 clipspace)
 	return clipspace * half3(0.5, -0.5, 0.5) + 0.5;
 }
 
-inline half3 GetSunColor() { return GetWeather().sun_color; } // sun color with intensity applied
-inline float3 GetSunDirection() { return GetWeather().sun_direction; }
-inline half3 GetHorizonColor() { return GetWeather().horizon.rgb; }
-inline half3 GetZenithColor() { return GetWeather().zenith.rgb; }
-inline half3 GetAmbientColor() { return GetWeather().ambient.rgb; }
+inline half3 GetSunColor() { return unpack_half3(GetWeather().sun_color); } // sun color with intensity applied
+inline half3 GetSunDirection() { return unpack_half3(GetWeather().sun_direction); }
+inline half3 GetHorizonColor() { return unpack_half3(GetWeather().horizon); }
+inline half3 GetZenithColor() { return unpack_half3(GetWeather().zenith); }
+inline half3 GetAmbientColor() { return unpack_half3(GetWeather().ambient); }
 inline uint2 GetInternalResolution() { return GetCamera().internal_resolution; }
 inline float GetDeltaTime() { return GetFrame().delta_time; }
 inline float GetTime() { return GetFrame().time; }
@@ -818,6 +834,7 @@ inline float GetTimePrev() { return GetFrame().time_previous; }
 inline float GetFrameCount() { return GetFrame().frame_count; }
 inline min16uint2 GetTemporalAASampleRotation() { return uint2(GetFrame().temporalaa_samplerotation & 0xFF, (GetFrame().temporalaa_samplerotation >> 8u) & 0xFF); }
 inline bool IsStaticSky() { return GetScene().globalenvmap >= 0; }
+inline half GetGIBoost() { return unpack_half2(GetFrame().giboost_packed).x; }
 
 // Mie scaterring approximated with Henyey-Greenstein phase function.
 //	https://www.alexandre-pestana.com/volumetric-lights/
