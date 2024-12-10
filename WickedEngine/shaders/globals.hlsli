@@ -834,6 +834,7 @@ inline float GetTimePrev() { return GetFrame().time_previous; }
 inline float GetFrameCount() { return GetFrame().frame_count; }
 inline min16uint2 GetTemporalAASampleRotation() { return uint2(GetFrame().temporalaa_samplerotation & 0xFF, (GetFrame().temporalaa_samplerotation >> 8u) & 0xFF); }
 inline bool IsStaticSky() { return GetScene().globalenvmap >= 0; }
+inline half GetGIBoost() { return unpack_half2(GetFrame().giboost_packed).x; }
 
 // Mie scaterring approximated with Henyey-Greenstein phase function.
 //	https://www.alexandre-pestana.com/volumetric-lights/

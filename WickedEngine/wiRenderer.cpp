@@ -3922,7 +3922,7 @@ void UpdatePerFrameData(
 		frameCB.vxgi.clipmaps[i].voxelSize = scene.vxgi.clipmaps[i].voxelsize;
 	}
 
-	frameCB.gi_boost = GetGIBoost();
+	frameCB.giboost_packed = wi::math::pack_half2(GetGIBoost(), 0);
 
 	if (scene.weather.rain_amount > 0)
 	{

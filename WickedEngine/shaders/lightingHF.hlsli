@@ -40,7 +40,7 @@ struct Lighting
 
 inline void ApplyLighting(in Surface surface, in Lighting lighting, inout half4 color)
 {
-	half3 diffuse = lighting.direct.diffuse / PI + lighting.indirect.diffuse * (half)GetFrame().gi_boost * (1 - surface.F) * surface.occlusion + surface.ssgi;
+	half3 diffuse = lighting.direct.diffuse / PI + lighting.indirect.diffuse * GetGIBoost() * (1 - surface.F) * surface.occlusion + surface.ssgi;
 	half3 specular = lighting.direct.specular + lighting.indirect.specular * surface.occlusion; // reminder: cannot apply surface.F for whole indirect specular, because multiple layers have separate fresnels (sheen, clearcoat)
 	color.rgb = lerp(surface.albedo * diffuse, surface.refraction.rgb, surface.refraction.a);
 	color.rgb += specular;

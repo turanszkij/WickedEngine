@@ -1150,7 +1150,7 @@ struct alignas(16) FrameCB
 
 	float		cloudShadowFarPlaneKm;
 	int			texture_volumetricclouds_shadow_index;
-	float		gi_boost;
+	uint		giboost_packed; // force fp16 load
 	uint		entity_culling_count;
 
 	float		blue_noise_phase;
