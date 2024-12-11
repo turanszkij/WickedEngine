@@ -980,7 +980,7 @@ namespace wi::helper
 			std::filesystem::path relative = std::filesystem::relative(filepath, rootpath);
 			if (!relative.empty())
 			{
-				path = relative.generic_u8string();
+				path = relative.generic_string();
 			}
 		}
 
@@ -991,7 +991,7 @@ namespace wi::helper
 		std::filesystem::path absolute = std::filesystem::absolute(ToNativeString(path));
 		if (!absolute.empty())
 		{
-			path = absolute.generic_u8string();
+			path = absolute.generic_string();
 		}
 	}
 
@@ -1080,7 +1080,7 @@ namespace wi::helper
 		return "";
 #else
 		auto path = std::filesystem::temp_directory_path();
-		return path.generic_u8string();
+		return path.generic_string();
 #endif // PLATFORM_XBOX || PLATFORM_PS5
 	}
 
@@ -1110,7 +1110,7 @@ namespace wi::helper
 		return "/app0";
 #else
 		auto path = std::filesystem::current_path();
-		return path.generic_u8string();
+		return path.generic_string();
 #endif // PLATFORM_PS5
 	}
 
@@ -1254,7 +1254,7 @@ namespace wi::helper
 		{
 			if (entry.is_directory())
 				continue;
-			std::string filename = entry.path().filename().generic_u8string();
+			std::string filename = entry.path().filename().generic_string();
 			if (filter_extension.empty() || wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename)).compare(wi::helper::toUpper(filter_extension)) == 0)
 			{
 				onSuccess(directory + filename);
@@ -1272,7 +1272,7 @@ namespace wi::helper
 		{
 			if (!entry.is_directory())
 				continue;
-			std::string filename = entry.path().filename().generic_u8string();
+			std::string filename = entry.path().filename().generic_string();
 			onSuccess(directory + filename);
 		}
 	}
