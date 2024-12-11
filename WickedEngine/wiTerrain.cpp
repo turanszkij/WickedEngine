@@ -365,8 +365,12 @@ namespace wi::terrain
 		else
 		{
 			// far away chunks only have 1 tile
-			tiles.resize(tile_count);
-			if (atlas.allocate_tile(tiles.back()))
+			tiles.clear();  // Clear first to ensure no invalid memory
+			tiles.reserve(tile_count);  // Reserve space to prevent reallocations
+			tiles.resize(tile_count);   // Now resize safely
+			
+			// Make sure we actually have tiles before accessing back()
+			if (!tiles.empty() && atlas.allocate_tile(tiles.back()))
 			{
 				// update the only tile there is:
 				UpdateRequest& request = update_requests.emplace_back();
@@ -852,7 +856,7 @@ namespace wi::terrain
 		}
 
 		// Start the generation on a background thread and keep it running until the next frame
-		wi::jobsystem::Execute(generator->workload, [=](wi::jobsystem::JobArgs args) {
+		wi::jobsystem::Execute(generator->workload, [this, chunk_scale_rcp](wi::jobsystem::JobArgs args) {
 
 			wi::Timer timer;
 			bool generated_something = false;
