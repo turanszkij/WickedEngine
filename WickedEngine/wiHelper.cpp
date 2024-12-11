@@ -36,6 +36,20 @@
 #include "Utility/portable-file-dialogs.h"
 #endif // _WIN32
 
+#ifdef _MSC_VER
+#  if _MSVC_LANG <= 201703L
+namespace std {
+	using u8string = std::string;
+}
+#  endif
+#else
+#  if __cplusplus <= 201703L
+namespace std {
+	using u8string = std::string;
+}
+#  endif
+#endif
+
 namespace wi::helper
 {
 
@@ -1254,7 +1268,7 @@ namespace wi::helper
 		{
 			if (entry.is_directory())
 				continue;
-			std::string filename = entry.path().filename().generic_string();
+			std::u8string filename = entry.path().filename().generic_u8string();
 			if (filter_extension.empty() || wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename)).compare(wi::helper::toUpper(filter_extension)) == 0)
 			{
 				onSuccess(directory + filename);
