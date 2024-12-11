@@ -232,6 +232,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"causticsCS", wi::graphics::ShaderStage::CS },
 	{"depth_reprojectCS", wi::graphics::ShaderStage::CS },
 	{"depth_pyramidCS", wi::graphics::ShaderStage::CS },
+	{"lightmap_expandCS", wi::graphics::ShaderStage::CS },
 
 
 	{"emittedparticlePS_soft", wi::graphics::ShaderStage::PS },

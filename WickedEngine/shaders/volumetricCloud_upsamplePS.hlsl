@@ -19,7 +19,7 @@ half Gaussian(half x, half sigma)
 	return exp(-x * x / (2.0 * sigma * sigma));
 }
 
-half4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_Target
+float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_Target
 {
 	const uint2 pixel = pos.xy;
 	const float depth = texture_depth[pixel];

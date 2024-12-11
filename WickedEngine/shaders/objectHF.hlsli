@@ -154,7 +154,7 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_atl < 0)
 			return 0;
-		return (half2)bindless_buffers_float2[GetMesh().vb_atl][vertexID];
+		return bindless_buffers_half2[GetMesh().vb_atl][vertexID];
 	}
 
 	half4 GetVertexColor()
@@ -162,7 +162,7 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_col < 0)
 			return 1;
-		return (half4)bindless_buffers_float4[GetMesh().vb_col][vertexID];
+		return bindless_buffers_half4[GetMesh().vb_col][vertexID];
 	}
 	
 	half3 GetNormal()
@@ -170,7 +170,7 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_nor < 0)
 			return 0;
-		return (half3)bindless_buffers_float4[GetMesh().vb_nor][vertexID].xyz;
+		return bindless_buffers_half4[GetMesh().vb_nor][vertexID].xyz;
 	}
 
 	half4 GetTangent()
@@ -178,7 +178,7 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_tan < 0)
 			return 0;
-		return (half4)bindless_buffers_float4[GetMesh().vb_tan][vertexID];
+		return bindless_buffers_half4[GetMesh().vb_tan][vertexID];
 	}
 
 	ShaderMeshInstance GetInstance()
@@ -196,7 +196,7 @@ struct VertexInput
 		[branch]
 		if (GetInstance().vb_ao < 0)
 			return 1;
-		return (half)bindless_buffers_float[NonUniformResourceIndex(GetInstance().vb_ao)][vertexID];
+		return bindless_buffers_half[NonUniformResourceIndex(GetInstance().vb_ao)][vertexID];
 	}
 
 	half GetWetmap()
@@ -204,12 +204,12 @@ struct VertexInput
 		//[branch]
 		//if (GetInstance().vb_wetmap < 0)
 		//	return 0;
-		//return (half)bindless_buffers_float[NonUniformResourceIndex(GetInstance().vb_wetmap)][vertexID];
+		//return bindless_buffers_half[NonUniformResourceIndex(GetInstance().vb_wetmap)][vertexID];
 
 		// There is something seriously bad with AMD driver's shader compiler as the above commented version works incorrectly and this works correctly but only for wetmap
 		[branch]
 		if (GetInstance().vb_wetmap >= 0)
-			return (half)bindless_buffers_float[NonUniformResourceIndex(GetInstance().vb_wetmap)][vertexID];
+			return bindless_buffers_half[NonUniformResourceIndex(GetInstance().vb_wetmap)][vertexID];
 		return 0;
 	}
 };
@@ -250,11 +250,11 @@ struct VertexSurface
 			ao = 1;
 		}
 
-		normal = rotate_vector(normal, (half4)input.GetInstance().quaternion);
+		normal = rotate_vector(normal, input.GetInstance().GetQuaternion());
 		normal = any(normal) ? normalize(normal) : 0;
 
 		tangent = input.GetTangent();
-		tangent.xyz = rotate_vector(tangent.xyz, (half4)input.GetInstance().quaternion);
+		tangent.xyz = rotate_vector(tangent.xyz, input.GetInstance().GetQuaternion());
 		tangent.xyz = any(tangent.xyz) ? normalize(tangent.xyz) : 0;
 		
 		uvsets = input.GetUVSets();
@@ -546,10 +546,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // OBJECTSHADER_USE_COMMON
 
 #ifdef OBJECTSHADER_USE_TANGENT
-	if (is_frontface == false)
-	{
-		input.tan = -input.tan;
-	}
 	surface.T = input.tan;
 	surface.T.w = surface.T.w < 0 ? -1 : 1;
 	half3 bitangent = cross(surface.T.xyz, input.nor) * surface.T.w;
