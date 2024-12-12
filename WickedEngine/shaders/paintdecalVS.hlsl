@@ -27,7 +27,7 @@ Output main(uint vertexID : SV_VertexID)
 	{
 		nor = bindless_buffers_half4[geometry.vb_nor][vertexID].xyz;
 	}
-	nor = rotate_vector(nor, inst.GetQuaternion());
+	nor = mul(inst.transformNormal.GetMatrix(), nor);
 	
 	float2 uv = 0;
 	[branch]

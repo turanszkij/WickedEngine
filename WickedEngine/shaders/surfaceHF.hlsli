@@ -376,9 +376,9 @@ struct Surface
 		if (geometry.vb_nor >= 0)
 		{
 			Buffer<half4> buf = bindless_buffers_half4[NonUniformResourceIndex(geometry.vb_nor)];
-			half3 n0 = rotate_vector(buf[i0].xyz, inst.GetQuaternion());
-			half3 n1 = rotate_vector(buf[i1].xyz, inst.GetQuaternion());
-			half3 n2 = rotate_vector(buf[i2].xyz, inst.GetQuaternion());
+			half3 n0 = mul(inst.transformNormal.GetMatrix(), buf[i0].xyz);
+			half3 n1 = mul(inst.transformNormal.GetMatrix(), buf[i1].xyz);
+			half3 n2 = mul(inst.transformNormal.GetMatrix(), buf[i2].xyz);
 			n0 = any(n0) ? normalize(n0) : 0;
 			n1 = any(n1) ? normalize(n1) : 0;
 			n2 = any(n2) ? normalize(n2) : 0;
@@ -452,9 +452,9 @@ struct Surface
 			half4 t0 = buf[i0];
 			half4 t1 = buf[i1];
 			half4 t2 = buf[i2];
-			t0.xyz = rotate_vector(t0.xyz, inst.GetQuaternion());
-			t1.xyz = rotate_vector(t1.xyz, inst.GetQuaternion());
-			t2.xyz = rotate_vector(t2.xyz, inst.GetQuaternion());
+			t0.xyz = mul(inst.transformNormal.GetMatrix(), t0.xyz);
+			t1.xyz = mul(inst.transformNormal.GetMatrix(), t1.xyz);
+			t2.xyz = mul(inst.transformNormal.GetMatrix(), t2.xyz);
 			t0.xyz = any(t0.xyz) ? normalize(t0.xyz) : 0;
 			t1.xyz = any(t1.xyz) ? normalize(t1.xyz) : 0;
 			t2.xyz = any(t2.xyz) ? normalize(t2.xyz) : 0;

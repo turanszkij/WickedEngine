@@ -28,7 +28,7 @@ Output main(uint vertexID : SV_VertexID)
 
 	output.pos3D = mul(inst.transform.GetMatrix(), float4(pos, 1)).xyz;
 
-	output.normal = rotate_vector(nor, inst.GetQuaternion());
+	output.normal = mul(inst.transformNormal.GetMatrix(), nor);
 
 	return output;
 }
