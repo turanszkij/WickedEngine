@@ -60,7 +60,7 @@ namespace wi::backlog
 	}
 	void write_logfile()
 	{
-		std::string filename = wi::helper::GetTempDirectoryPath() + "wiBacklog.txt";
+		static const std::string filename = wi::helper::GetCurrentPath() + "/log.txt";
 		std::string text = getText(); // will lock mutex
 		wi::helper::FileWrite(filename, (const uint8_t*)text.c_str(), text.length());
 	}

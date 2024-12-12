@@ -263,7 +263,7 @@ If you are having trouble getting the applications to run, make sure that you sa
 
 - If you experience crashes, you can try these to find out the problem:
 	- make sure your environment is up to date, with latest graphics drivers and operating system updates.
-	- see if there is a wiBackLog.txt in your user temp folder (for example: C:\Users\username\AppData\Local\Temp)
+	- see if there is a log.txt in the working directory of the application (most likely near the application exe)
 	- request help on the [Forum](https://wickedengine.net/forum/), [Discord](https://discord.gg/CFjRYmE) or [Github issue](https://github.com/turanszkij/WickedEngine/issues)
 	- build the engine in Debug mode and try to run it, see where it crashes
 	- run the engine with the `debugdevice` command argument and post the text from your console output window when the crash happens

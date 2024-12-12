@@ -222,3 +222,7 @@ wiShaderdump.h
 *.a
 *.elf
 *.prx
+
+# Others
+log.txt
+pso_cache_vulkan

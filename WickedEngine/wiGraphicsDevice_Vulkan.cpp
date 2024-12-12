@@ -35,6 +35,7 @@ namespace wi::graphics
 
 namespace vulkan_internal
 {
+
 	// These shifts are made so that Vulkan resource bindings slots don't interfere with each other across shader stages:
 	//	These are also defined in wi::shadercompiler.cpp as hard coded compiler arguments for SPIRV, so they need to be the same
 	enum
@@ -630,6 +631,10 @@ namespace vulkan_internal
 		return VK_FALSE;
 	}
 
+	inline std::string get_shader_cache_path()
+	{
+		return wi::helper::GetCurrentPath() + "/pso_cache_vulkan";
+	}
 
 	struct BindingUsage
 	{
@@ -1107,11 +1112,6 @@ namespace vulkan_internal
 	VideoDecoder_Vulkan* to_internal(const VideoDecoder* param)
 	{
 		return static_cast<VideoDecoder_Vulkan*>(param->internal_state.get());
-	}
-
-	inline const std::string GetCachePath()
-	{
-		return wi::helper::GetCacheDirectoryPath() + "/wiPipelineCache_Vulkan";
 	}
 
 	bool CreateSwapChainInternal(
@@ -3413,9 +3413,7 @@ using namespace vulkan_internal;
 		{
 			// Try to read pipeline cache file if exists.
 			wi::vector<uint8_t> pipelineData;
-
-			std::string cachePath = GetCachePath(); 
-			if (!wi::helper::FileRead(cachePath, pipelineData))
+			if (!wi::helper::FileRead(get_shader_cache_path(), pipelineData))
 			{
 				pipelineData.clear();
 			}
@@ -3688,8 +3686,7 @@ using namespace vulkan_internal;
 			assert(res == VK_SUCCESS);
 
 			// Write pipeline cache data to a file in binary format
-			std::string cachePath = GetCachePath();
-			wi::helper::FileWrite(cachePath, data.data(), size);
+			wi::helper::FileWrite(get_shader_cache_path(), data.data(), size);
 
 			// Destroy Vulkan pipeline cache 
 			vkDestroyPipelineCache(device, pipelineCache, nullptr);
