@@ -20,7 +20,7 @@ void main(uint DTid : SV_DispatchThreadID)
 	{
 		Buffer<half4> vb_nor = bindless_buffers_half4[geometry.vb_nor];
 		half3 normal = vb_nor[DTid].xyz;
-		normal = mul(meshinstance.transformNormal.GetMatrix(), normal);
+		normal = mul(meshinstance.transform.GetMatrixAdjoint(), normal);
 		normal = normalize(normal);
 		drying *= lerp(4, 1, pow8(saturate(normal.y))); // modulate drying speed based on surface slope
 	}

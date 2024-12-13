@@ -152,6 +152,38 @@ T inverse_lerp(T value1, T value2, T pos)
 	return all(value2 == value1) ? 0 : ((pos - value1) / (value2 - value1));
 }
 
+// Source: https://www.shadertoy.com/view/3s33zj
+float3x3 adjoint(in float4x4 m)
+{
+    return float3x3(cross(m[1].xyz, m[2].xyz), 
+                cross(m[2].xyz, m[0].xyz), 
+                cross(m[0].xyz, m[1].xyz));
+
+    /*
+    // alternative way to write the adjoint
+
+    return mat3( 
+     m[1].yzx*m[2].zxy-m[1].zxy*m[2].yzx,
+     m[2].yzx*m[0].zxy-m[2].zxy*m[0].yzx,
+     m[0].yzx*m[1].zxy-m[0].zxy*m[1].yzx );
+    */
+    
+    /*
+    // alternative way to write the adjoint
+
+    return mat3( 
+     m[1][1]*m[2][2]-m[1][2]*m[2][1],
+     m[1][2]*m[2][0]-m[1][0]*m[2][2],
+     m[1][0]*m[2][1]-m[1][1]*m[2][0],
+     m[0][2]*m[2][1]-m[0][1]*m[2][2],
+	 m[0][0]*m[2][2]-m[0][2]*m[2][0],
+     m[0][1]*m[2][0]-m[0][0]*m[2][1],
+     m[0][1]*m[1][2]-m[0][2]*m[1][1],
+     m[0][2]*m[1][0]-m[0][0]*m[1][2],
+     m[0][0]*m[1][1]-m[0][1]*m[1][0] );
+    */
+}
+
 // The root signature will affect shader compilation for DX12.
 //	The shader compiler will take the defined name: WICKED_ENGINE_DEFAULT_ROOTSIGNATURE and use it as root signature
 //	If you wish to specify custom root signature, make sure that this define is not available

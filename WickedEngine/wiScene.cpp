@@ -4468,10 +4468,10 @@ namespace wi::scene
 
 				object.sort_bits = sort_bits.value;
 
-				// Correction matrix for mesh normals with non-uniform object scaling:
-				XMMATRIX worldMatrixInverseTranspose = XMMatrixTranspose(XMMatrixInverse(nullptr, W));
-				XMFLOAT4X4 transformNormal;
-				XMStoreFloat4x4(&transformNormal, worldMatrixInverseTranspose);
+				//// Correction matrix for mesh normals with non-uniform object scaling:
+				//XMMATRIX worldMatrixInverseTranspose = XMMatrixTranspose(XMMatrixInverse(nullptr, W));
+				//XMFLOAT4X4 transformNormal;
+				//XMStoreFloat4x4(&transformNormal, worldMatrixInverseTranspose);
 
 				// Create GPU instance data:
 				ShaderMeshInstance inst;
@@ -4480,8 +4480,6 @@ namespace wi::scene
 				matrix_objects_prev[args.jobIndex] = worldMatrixPrev;
 				XMStoreFloat4x4(matrix_objects.data() + args.jobIndex, W);
 				XMFLOAT4X4 worldMatrix = matrix_objects[args.jobIndex];
-
-				inst.transformNormal.Create(transformNormal);
 
 				inst.transformRaw.Create(worldMatrix);
 				if (IsFormatUnorm(mesh.position_format) && !mesh.so_pos.IsValid())

@@ -10,6 +10,7 @@ static const std::string SHADER_INTEROP_PATH = wi::helper::GetCurrentPath() + "/
 // Application-side types:
 #include "../wiMath.h"
 
+using float3x3 = XMFLOAT3X3;
 using float4x4 = XMFLOAT4X4;
 using float2 = XMFLOAT2;
 using float3 = XMFLOAT3;

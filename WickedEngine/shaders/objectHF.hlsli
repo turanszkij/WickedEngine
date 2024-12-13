@@ -165,20 +165,20 @@ struct VertexInput
 		return bindless_buffers_half4[GetMesh().vb_col][vertexID];
 	}
 	
-	half3 GetNormal()
+	float3 GetNormal()
 	{
 		[branch]
 		if (GetMesh().vb_nor < 0)
 			return 0;
-		return bindless_buffers_half4[GetMesh().vb_nor][vertexID].xyz;
+		return bindless_buffers_float4[GetMesh().vb_nor][vertexID].xyz;
 	}
 
-	half4 GetTangent()
+	float4 GetTangent()
 	{
 		[branch]
 		if (GetMesh().vb_tan < 0)
 			return 0;
-		return bindless_buffers_half4[GetMesh().vb_tan][vertexID];
+		return bindless_buffers_float4[GetMesh().vb_tan][vertexID];
 	}
 
 	ShaderMeshInstance GetInstance()
@@ -221,8 +221,8 @@ struct VertexSurface
 	float4 uvsets;
 	half2 atlas;
 	half4 color;
-	half3 normal;
-	half4 tangent;
+	float3 normal;
+	float4 tangent;
 	half ao;
 	half wet;
 
@@ -250,11 +250,11 @@ struct VertexSurface
 			ao = 1;
 		}
 
-		normal = mul(input.GetInstance().transformNormal.GetMatrix(), normal);
+		normal = mul(input.GetInstance().transform.GetMatrixAdjoint(), normal);
 		normal = any(normal) ? normalize(normal) : 0;
 
 		tangent = input.GetTangent();
-		tangent.xyz = mul(input.GetInstance().transformNormal.GetMatrix(), tangent.xyz);
+		tangent.xyz = mul(input.GetInstance().transform.GetMatrixAdjoint(), tangent.xyz);
 		tangent.xyz = any(tangent.xyz) ? normalize(tangent.xyz) : 0;
 		
 		uvsets = input.GetUVSets();
@@ -301,11 +301,11 @@ struct PixelInput
 #endif // OBJECTSHADER_USE_COLOR
 
 #ifdef OBJECTSHADER_USE_TANGENT
-	half4 tan : TANGENT;
+	float4 tan : TANGENT;
 #endif // OBJECTSHADER_USE_TANGENT
 
 #ifdef OBJECTSHADER_USE_NORMAL
-	float3 nor : NORMAL; // Note: normal is half precision per-vertex, but interpolated at full precision intentionally!
+	float3 nor : NORMAL;
 #endif // OBJECTSHADER_USE_NORMAL
 
 #ifdef OBJECTSHADER_USE_COMMON

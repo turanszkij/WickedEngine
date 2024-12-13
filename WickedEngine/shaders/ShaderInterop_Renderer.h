@@ -640,59 +640,10 @@ struct alignas(16) ShaderTransform
 			0, 0, 0, 1
 		);
 	}
-};
-
-struct alignas(16) ShaderTransform3x3Half
-{
-	uint4 data0;
-	uint4 data1;
-
-	void init()
-	{
-#ifdef __cplusplus
-		using namespace wi::math;
-#endif // __cplusplus
-		data0 = uint4(
-			pack_half2(1, 0),
-			pack_half2(0, 0),
-			pack_half2(1, 0),
-			pack_half2(0, 0)
-		);
-		data1 = uint4(
-			pack_half2(1, 0),
-			0, 0, 0
-		);
-	}
-	void Create(float4x4 mat)
-	{
-#ifdef __cplusplus
-		using namespace wi::math;
-#endif // __cplusplus
-		data0 = uint4(
-			pack_half2(mat._11, mat._21),
-			pack_half2(mat._31, mat._12),
-			pack_half2(mat._22, mat._32),
-			pack_half2(mat._13, mat._23)
-		);
-		data1 = uint4(
-			pack_half2(mat._33, 0),
-			0, 0, 0
-		);
-	}
-
 #ifndef __cplusplus
-	half3x3 GetMatrix()
+	float3x3 GetMatrixAdjoint()
 	{
-		half2 m12 = unpack_half2(data0.x);
-		half2 m34 = unpack_half2(data0.y);
-		half2 m56 = unpack_half2(data0.z);
-		half2 m78 = unpack_half2(data0.w);
-		half m9 = unpack_half2(data1.x).x;
-		return half3x3(
-			m12.x, m12.y, m34.x,
-			m34.y, m56.x, m56.y,
-			m78.x, m78.y, m9
-		);
+		return adjoint(GetMatrix());
 	}
 #endif // __cplusplus
 };
@@ -725,7 +676,6 @@ struct alignas(16) ShaderMeshInstance
 	float radius;
 
 	ShaderTransform transform;
-	ShaderTransform3x3Half transformNormal;
 	ShaderTransform transformPrev;
 	ShaderTransform transformRaw; // without quantization remapping applied
 
@@ -750,7 +700,6 @@ struct alignas(16) ShaderMeshInstance
 		alphaTest_size = 0;
 		rimHighlight = uint2(0, 0);
 		transform.init();
-		transformNormal.init();
 		transformPrev.init();
 		transformRaw.init();
 	}
