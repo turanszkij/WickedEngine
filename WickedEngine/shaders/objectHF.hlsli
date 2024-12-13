@@ -250,11 +250,11 @@ struct VertexSurface
 			ao = 1;
 		}
 
-		normal = mul(input.GetInstance().transform.GetMatrixAdjoint(), normal);
+		normal = mul(input.GetInstance().transformRaw.GetMatrixAdjoint(), normal);
 		normal = any(normal) ? normalize(normal) : 0;
 
 		tangent = input.GetTangent();
-		tangent.xyz = mul(input.GetInstance().transform.GetMatrixAdjoint(), tangent.xyz);
+		tangent.xyz = mul(input.GetInstance().transformRaw.GetMatrixAdjoint(), tangent.xyz);
 		tangent.xyz = any(tangent.xyz) ? normalize(tangent.xyz) : 0;
 		
 		uvsets = input.GetUVSets();

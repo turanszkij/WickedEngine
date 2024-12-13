@@ -376,9 +376,9 @@ struct Surface
 		if (geometry.vb_nor >= 0)
 		{
 			Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(geometry.vb_nor)];
-			float3 n0 = mul(inst.transform.GetMatrixAdjoint(), buf[i0].xyz);
-			float3 n1 = mul(inst.transform.GetMatrixAdjoint(), buf[i1].xyz);
-			float3 n2 = mul(inst.transform.GetMatrixAdjoint(), buf[i2].xyz);
+			float3 n0 = mul(inst.transformRaw.GetMatrixAdjoint(), buf[i0].xyz);
+			float3 n1 = mul(inst.transformRaw.GetMatrixAdjoint(), buf[i1].xyz);
+			float3 n2 = mul(inst.transformRaw.GetMatrixAdjoint(), buf[i2].xyz);
 			n0 = any(n0) ? normalize(n0) : 0;
 			n1 = any(n1) ? normalize(n1) : 0;
 			n2 = any(n2) ? normalize(n2) : 0;
@@ -452,9 +452,9 @@ struct Surface
 			float4 t0 = buf[i0];
 			float4 t1 = buf[i1];
 			float4 t2 = buf[i2];
-			t0.xyz = mul(inst.transform.GetMatrixAdjoint(), t0.xyz);
-			t1.xyz = mul(inst.transform.GetMatrixAdjoint(), t1.xyz);
-			t2.xyz = mul(inst.transform.GetMatrixAdjoint(), t2.xyz);
+			t0.xyz = mul(inst.transformRaw.GetMatrixAdjoint(), t0.xyz);
+			t1.xyz = mul(inst.transformRaw.GetMatrixAdjoint(), t1.xyz);
+			t2.xyz = mul(inst.transformRaw.GetMatrixAdjoint(), t2.xyz);
 			t0.xyz = any(t0.xyz) ? normalize(t0.xyz) : 0;
 			t1.xyz = any(t1.xyz) ? normalize(t1.xyz) : 0;
 			t2.xyz = any(t2.xyz) ? normalize(t2.xyz) : 0;
