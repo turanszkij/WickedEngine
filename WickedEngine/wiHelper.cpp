@@ -959,6 +959,13 @@ namespace wi::helper
 #define ToNativeString(x) (x)
 #endif // _WIN32
 
+	std::string FromWString(const std::wstring& fileName)
+	{
+		std::string fileName_u8;
+		StringConvert(fileName, fileName_u8);
+		return fileName_u8;
+	}
+
 	std::string GetPathRelative(const std::string& rootdir, const std::string& path)
 	{
 		std::string ret = path;
@@ -980,7 +987,7 @@ namespace wi::helper
 			std::filesystem::path relative = std::filesystem::relative(filepath, rootpath);
 			if (!relative.empty())
 			{
-				path = relative.generic_u8string();
+				path = FromWString(relative.generic_wstring());
 			}
 		}
 
@@ -991,7 +998,7 @@ namespace wi::helper
 		std::filesystem::path absolute = std::filesystem::absolute(ToNativeString(path));
 		if (!absolute.empty())
 		{
-			path = absolute.generic_u8string();
+			path = FromWString(absolute.generic_wstring());
 		}
 	}
 
@@ -1080,7 +1087,7 @@ namespace wi::helper
 		return "";
 #else
 		auto path = std::filesystem::temp_directory_path();
-		return path.generic_u8string();
+		return FromWString(path.generic_wstring());
 #endif // PLATFORM_XBOX || PLATFORM_PS5
 	}
 
@@ -1110,7 +1117,7 @@ namespace wi::helper
 		return "/app0";
 #else
 		auto path = std::filesystem::current_path();
-		return path.generic_u8string();
+		return FromWString(path.generic_wstring());
 #endif // PLATFORM_PS5
 	}
 
@@ -1254,7 +1261,7 @@ namespace wi::helper
 		{
 			if (entry.is_directory())
 				continue;
-			std::string filename = entry.path().filename().generic_u8string();
+			std::string filename = FromWString(entry.path().filename().generic_wstring());
 			if (filter_extension.empty() || wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename)).compare(wi::helper::toUpper(filter_extension)) == 0)
 			{
 				onSuccess(directory + filename);
@@ -1272,7 +1279,7 @@ namespace wi::helper
 		{
 			if (!entry.is_directory())
 				continue;
-			std::string filename = entry.path().filename().generic_u8string();
+			std::string filename = FromWString(entry.path().filename().generic_wstring());
 			onSuccess(directory + filename);
 		}
 	}
