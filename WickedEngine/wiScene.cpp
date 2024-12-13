@@ -4468,10 +4468,10 @@ namespace wi::scene
 
 				object.sort_bits = sort_bits.value;
 
-				//// Correction matrix for mesh normals with non-uniform object scaling:
-				//XMMATRIX worldMatrixInverseTranspose = XMMatrixTranspose(XMMatrixInverse(nullptr, W));
-				//XMFLOAT4X4 transformIT;
-				//XMStoreFloat4x4(&transformIT, worldMatrixInverseTranspose);
+				// Correction matrix for mesh normals with non-uniform object scaling:
+				XMMATRIX worldMatrixInverseTranspose = XMMatrixTranspose(XMMatrixInverse(nullptr, W));
+				XMFLOAT4X4 transformNormal;
+				XMStoreFloat4x4(&transformNormal, worldMatrixInverseTranspose);
 
 				// Create GPU instance data:
 				ShaderMeshInstance inst;
@@ -4480,6 +4480,8 @@ namespace wi::scene
 				matrix_objects_prev[args.jobIndex] = worldMatrixPrev;
 				XMStoreFloat4x4(matrix_objects.data() + args.jobIndex, W);
 				XMFLOAT4X4 worldMatrix = matrix_objects[args.jobIndex];
+
+				inst.transformNormal.Create(transformNormal);
 
 				inst.transformRaw.Create(worldMatrix);
 				if (IsFormatUnorm(mesh.position_format) && !mesh.so_pos.IsValid())
@@ -4492,12 +4494,8 @@ namespace wi::scene
 				inst.transform.Create(worldMatrix);
 				inst.transformPrev.Create(worldMatrixPrev);
 
-				// Get the quaternion from W because that reflects changes by other components (eg. softbody)
 				XMVECTOR S, R, T;
 				XMMatrixDecompose(&S, &R, &T, W);
-				XMFLOAT4 quaternionFP32;
-				XMStoreFloat4(&quaternionFP32, R);
-				inst.quaternion = wi::math::pack_half4(quaternionFP32);
 				float size = std::max(XMVectorGetX(S), std::max(XMVectorGetY(S), XMVectorGetZ(S)));
 
 				if (object.lightmap.IsValid())
@@ -4506,7 +4504,7 @@ namespace wi::scene
 				}
 				inst.uid = entity;
 				inst.layerMask = layerMask;
-				inst.color = wi::math::CompressColor(object.color);
+				inst.color = wi::math::pack_half4(object.color);
 				inst.emissive = wi::math::pack_half3(XMFLOAT3(object.emissiveColor.x * object.emissiveColor.w, object.emissiveColor.y * object.emissiveColor.w, object.emissiveColor.z * object.emissiveColor.w));
 				inst.baseGeometryOffset = mesh.geometryOffset;
 				inst.baseGeometryCount = (uint)mesh.subsets.size();
@@ -4916,7 +4914,7 @@ namespace wi::scene
 			inst.uid = entity;
 			inst.layerMask = hair.layerMask;
 			inst.emissive = wi::math::pack_half3(XMFLOAT3(1, 1, 1));
-			inst.color = wi::math::CompressColor(XMFLOAT4(1, 1, 1, 1));
+			inst.color = wi::math::pack_half4(XMFLOAT4(1, 1, 1, 1));
 			inst.center = hair.aabb.getCenter();
 			inst.radius = hair.aabb.getRadius();
 			inst.geometryOffset = (uint)geometryAllocation;
@@ -5033,7 +5031,7 @@ namespace wi::scene
 			inst.uid = entity;
 			inst.layerMask = emitter.layerMask;
 			inst.emissive = wi::math::pack_half3(XMFLOAT3(1, 1, 1));
-			inst.color = wi::math::CompressColor(XMFLOAT4(1, 1, 1, 1));
+			inst.color = wi::math::pack_half4(XMFLOAT4(1, 1, 1, 1));
 			inst.geometryOffset = (uint)geometryAllocation;
 			inst.geometryCount = 1;
 			inst.baseGeometryOffset = inst.geometryOffset;
@@ -5210,7 +5208,7 @@ namespace wi::scene
 			inst.uid = 0;
 			inst.layerMask = ~0u;
 			inst.emissive = wi::math::pack_half3(XMFLOAT3(1, 1, 1));
-			inst.color = wi::math::CompressColor(XMFLOAT4(1, 1, 1, 1));
+			inst.color = wi::math::pack_half4(XMFLOAT4(1, 1, 1, 1));
 			inst.geometryOffset = (uint)rainGeometryOffset;
 			inst.geometryCount = 1;
 			inst.baseGeometryOffset = inst.geometryOffset;

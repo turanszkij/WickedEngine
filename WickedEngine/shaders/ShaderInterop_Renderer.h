@@ -642,24 +642,75 @@ struct alignas(16) ShaderTransform
 	}
 };
 
+struct alignas(16) ShaderTransform3x3Half
+{
+	uint4 data0;
+	uint4 data1;
+
+	void init()
+	{
+#ifdef __cplusplus
+		using namespace wi::math;
+#endif // __cplusplus
+		data0 = uint4(
+			pack_half2(1, 0),
+			pack_half2(0, 0),
+			pack_half2(1, 0),
+			pack_half2(0, 0)
+		);
+		data1 = uint4(
+			pack_half2(1, 0),
+			0, 0, 0
+		);
+	}
+	void Create(float4x4 mat)
+	{
+#ifdef __cplusplus
+		using namespace wi::math;
+#endif // __cplusplus
+		data0 = uint4(
+			pack_half2(mat._11, mat._21),
+			pack_half2(mat._31, mat._12),
+			pack_half2(mat._22, mat._32),
+			pack_half2(mat._13, mat._23)
+		);
+		data1 = uint4(
+			pack_half2(mat._33, 0),
+			0, 0, 0
+		);
+	}
+
+#ifndef __cplusplus
+	half3x3 GetMatrix()
+	{
+		half2 m12 = unpack_half2(data0.x);
+		half2 m34 = unpack_half2(data0.y);
+		half2 m56 = unpack_half2(data0.z);
+		half2 m78 = unpack_half2(data0.w);
+		half m9 = unpack_half2(data1.x).x;
+		return half3x3(
+			m12.x, m12.y, m34.x,
+			m34.y, m56.x, m56.y,
+			m78.x, m78.y, m9
+		);
+	}
+#endif // __cplusplus
+};
+
 struct alignas(16) ShaderMeshInstance
 {
 	uint uid;
 	uint flags;	// high 8 bits: user stencilRef
 	uint layerMask;
-	uint geometryOffset;	// offset of all geometries for currently active LOD
-
-	uint2 emissive; // packed half4
-	uint color;
-	uint geometryCount;		// number of all geometries in currently active LOD
-
 	uint meshletOffset; // offset in the global meshlet buffer for first subset (for LOD0)
-	float fadeDistance;
+
+	uint geometryOffset;	// offset of all geometries for currently active LOD
+	uint geometryCount;		// number of all geometries in currently active LOD
 	uint baseGeometryOffset;	// offset of all geometries of the instance (if no LODs, then it is equal to geometryOffset)
 	uint baseGeometryCount;		// number of all geometries of the instance (if no LODs, then it is equal to geometryCount)
 
-	float3 center;
-	float radius;
+	uint2 color; // packed half4
+	uint2 emissive; // packed half4
 
 	int vb_ao;
 	int vb_wetmap;
@@ -667,9 +718,14 @@ struct alignas(16) ShaderMeshInstance
 	uint alphaTest_size; // packed half2
 
 	uint2 rimHighlight; // packed half4
-	uint2 quaternion; // packed half4
+	float fadeDistance;
+	float padding;
+
+	float3 center;
+	float radius;
 
 	ShaderTransform transform;
+	ShaderTransform3x3Half transformNormal;
 	ShaderTransform transformPrev;
 	ShaderTransform transformRaw; // without quantization remapping applied
 
@@ -678,7 +734,7 @@ struct alignas(16) ShaderMeshInstance
 		uid = 0;
 		flags = 0;
 		layerMask = 0;
-		color = ~0u;
+		color = uint2(0, 0);
 		emissive = uint2(0, 0);
 		lightmap = -1;
 		geometryOffset = 0;
@@ -692,13 +748,9 @@ struct alignas(16) ShaderMeshInstance
 		vb_ao = -1;
 		vb_wetmap = -1;
 		alphaTest_size = 0;
-#ifdef __cplusplus
-		quaternion = wi::math::pack_half4(float4(0, 0, 0, 1));
-#else
-		quaternion = pack_half4(float4(0, 0, 0, 1));
-#endif // __cplusplus
 		rimHighlight = uint2(0, 0);
 		transform.init();
+		transformNormal.init();
 		transformPrev.init();
 		transformRaw.init();
 	}
@@ -713,12 +765,11 @@ struct alignas(16) ShaderMeshInstance
 	}
 
 #ifndef __cplusplus
-	inline half4 GetColor() { return (half4)unpack_rgba(color); }
+	inline half4 GetColor() { return unpack_half4(color); }
 	inline half3 GetEmissive() { return unpack_half3(emissive); }
 	inline half GetAlphaTest() { return unpack_half2(alphaTest_size).x; }
 	inline half GetSize() { return unpack_half2(alphaTest_size).y; }
 	inline half4 GetRimHighlight() { return unpack_half4(rimHighlight); }
-	inline half4 GetQuaternion() { return unpack_half4(quaternion); }
 #endif // __cplusplus
 };
 struct ShaderMeshInstancePointer
