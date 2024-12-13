@@ -28,7 +28,7 @@ Output main(uint vertexID : SV_VertexID)
 
 	output.pos3D = mul(inst.transform.GetMatrix(), float4(pos, 1)).xyz;
 
-	output.normal = mul(inst.transform.GetMatrixAdjoint(), nor);
+	output.normal = mul(inst.transformRaw.GetMatrixAdjoint(), nor);
 
 	return output;
 }

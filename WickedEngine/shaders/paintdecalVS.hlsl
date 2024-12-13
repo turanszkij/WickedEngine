@@ -27,7 +27,7 @@ Output main(uint vertexID : SV_VertexID)
 	{
 		nor = bindless_buffers_half4[geometry.vb_nor][vertexID].xyz;
 	}
-	nor = mul(inst.transform.GetMatrixAdjoint(), nor);
+	nor = mul(inst.transformRaw.GetMatrixAdjoint(), nor);
 	
 	float2 uv = 0;
 	[branch]
