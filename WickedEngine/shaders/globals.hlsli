@@ -120,7 +120,7 @@ inline uint2 pack_half4(in float4 value)
 	retVal.y = f32tof16(value.z) | (f32tof16(value.w) << 16u);
 	return retVal;
 }
-inline uint2 pack_half3(in half a, in half b, in half c, in half d)
+inline uint2 pack_half4(in half a, in half b, in half c, in half d)
 {
 	return pack_half4(half4(a, b, c, d));
 }
@@ -155,33 +155,11 @@ T inverse_lerp(T value1, T value2, T pos)
 // Source: https://www.shadertoy.com/view/3s33zj
 float3x3 adjoint(in float4x4 m)
 {
-    return float3x3(cross(m[1].xyz, m[2].xyz), 
-                cross(m[2].xyz, m[0].xyz), 
-                cross(m[0].xyz, m[1].xyz));
-
-    /*
-    // alternative way to write the adjoint
-
-    return mat3( 
-     m[1].yzx*m[2].zxy-m[1].zxy*m[2].yzx,
-     m[2].yzx*m[0].zxy-m[2].zxy*m[0].yzx,
-     m[0].yzx*m[1].zxy-m[0].zxy*m[1].yzx );
-    */
-    
-    /*
-    // alternative way to write the adjoint
-
-    return mat3( 
-     m[1][1]*m[2][2]-m[1][2]*m[2][1],
-     m[1][2]*m[2][0]-m[1][0]*m[2][2],
-     m[1][0]*m[2][1]-m[1][1]*m[2][0],
-     m[0][2]*m[2][1]-m[0][1]*m[2][2],
-	 m[0][0]*m[2][2]-m[0][2]*m[2][0],
-     m[0][1]*m[2][0]-m[0][0]*m[2][1],
-     m[0][1]*m[1][2]-m[0][2]*m[1][1],
-     m[0][2]*m[1][0]-m[0][0]*m[1][2],
-     m[0][0]*m[1][1]-m[0][1]*m[1][0] );
-    */
+    return float3x3(
+		cross(m[1].xyz, m[2].xyz), 
+		cross(m[2].xyz, m[0].xyz), 
+		cross(m[0].xyz, m[1].xyz)
+	);
 }
 
 // The root signature will affect shader compilation for DX12.

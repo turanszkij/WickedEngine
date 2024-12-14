@@ -675,16 +675,19 @@ struct alignas(16) ShaderMeshInstance
 	float3 center;
 	float radius;
 
-	ShaderTransform transform;
-	ShaderTransform transformPrev;
-	ShaderTransform transformRaw; // without quantization remapping applied
+	ShaderTransform transform; // Note: this could contain quantization remapping from UNORM -> FLOAT depending on vertex position format
+	ShaderTransform transformPrev; // Note: this could contain quantization remapping from UNORM -> FLOAT depending on vertex position format
+	ShaderTransform transformRaw; // Note: this is the world matrix without any quantization remapping
 
 	void init()
 	{
+#ifdef __cplusplus
+		using namespace wi::math;
+#endif // __cplusplus
 		uid = 0;
 		flags = 0;
 		layerMask = 0;
-		color = uint2(0, 0);
+		color = pack_half4(1, 1, 1, 1);
 		emissive = uint2(0, 0);
 		lightmap = -1;
 		geometryOffset = 0;

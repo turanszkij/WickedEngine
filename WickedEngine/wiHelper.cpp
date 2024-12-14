@@ -987,7 +987,7 @@ namespace wi::helper
 			std::filesystem::path relative = std::filesystem::relative(filepath, rootpath);
 			if (!relative.empty())
 			{
-				path = FromWString(relative.generic_wstring());
+				StringConvert(relative.generic_wstring(), path);
 			}
 		}
 
@@ -998,7 +998,7 @@ namespace wi::helper
 		std::filesystem::path absolute = std::filesystem::absolute(ToNativeString(path));
 		if (!absolute.empty())
 		{
-			path = FromWString(absolute.generic_wstring());
+			StringConvert(absolute.generic_wstring(), path);
 		}
 	}
 

@@ -94,7 +94,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		uint2 data = 0;
 		data.x |= slice & 0xFFFFFF;
 		data.x |= (uint(dither * 255) & 0xFF) << 24u;
-		data.y = instance.color;
+		data.y = pack_rgba(instance.GetColor());
 		output_impostor_data.Store2(impostorOffset * sizeof(uint2), data);
 
 		// Write out vertices:

@@ -900,7 +900,11 @@ runProcess(function()
 
 	-- if player was not created from a metadata component, create a default player:
 	if player == nil then
-		player = Character(character_scenes["character"], TransformComponent(), true, anim_scene)
+		if character_scenes["character"] == nil then
+			character_scenes["character"] = Scene()
+			LoadModel(character_scenes["character"], script_dir() .. "assets/" .. "character" .. ".wiscene")
+		end
+		player = Character(character_scenes["character"], TransformComponent(), true, anim_scene, "")
 	end
 	
 	local camera = ThirdPersonCamera(player)
