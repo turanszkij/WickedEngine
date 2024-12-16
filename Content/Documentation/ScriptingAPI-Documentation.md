@@ -1953,6 +1953,11 @@ Describes a touch contact point
 - [outer]KEYBOARD_BUTTON_SUBTRACT		 : int
 - [outer]KEYBOARD_BUTTON_DECIMAL		 : int
 - [outer]KEYBOARD_BUTTON_DIVIDE			 : int
+- [outer]KEYBOARD_BUTTON_TAB			 : int
+- [outer]KEYBOARD_BUTTON_TILDE			 : int
+- [outer]KEYBOARD_BUTTON_INSERT			 : int
+- [outer]KEYBOARD_BUTTON_ALT			 : int
+- [outer]KEYBOARD_BUTTON_ALTGR			 : int
 - You can also generate a key code by calling string.byte(char uppercaseLetter) where the parameter represents the desired key of the keyboard
 
 #### Mouse Key Codes
