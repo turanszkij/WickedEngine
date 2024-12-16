@@ -625,7 +625,13 @@ namespace wi::input
 				keycode = VK_TAB;
 				break;
 			case KEYBOARD_BUTTON_TILDE:
-				keycode = VK_TAB; // http://kbdedit.com/manual/low_level_vk_list.html
+				keycode = VK_OEM_FJ_JISHO; // http://kbdedit.com/manual/low_level_vk_list.html
+				break;
+			case KEYBOARD_BUTTON_ALT:
+				keycode = VK_LMENU;
+				break;
+			case KEYBOARD_BUTTON_ALTGR:
+				keycode = VK_RMENU;
 				break;
 #endif // _WIN32
 				default: break;
@@ -1020,6 +1026,10 @@ namespace wi::input
 			return KEYBOARD_BUTTON_TILDE;
 		if (strcmp(str, "Insert") == 0)
 			return KEYBOARD_BUTTON_INSERT;
+		if (strcmp(str, "Alt") == 0)
+			return KEYBOARD_BUTTON_ALT;
+		if (strcmp(str, "Alt Gr") == 0)
+			return KEYBOARD_BUTTON_ALTGR;
 
 		if (strcmp(str, "Left Shift") == 0)
 			return KEYBOARD_BUTTON_LSHIFT;
@@ -1217,6 +1227,8 @@ namespace wi::input
 		case wi::input::KEYBOARD_BUTTON_TAB: return "Tab";
 		case wi::input::KEYBOARD_BUTTON_TILDE: return "Tilde";
 		case wi::input::KEYBOARD_BUTTON_INSERT: return "Insert";
+		case wi::input::KEYBOARD_BUTTON_ALT: return "Alt";
+		case wi::input::KEYBOARD_BUTTON_ALTGR: return "Alt Gr";
 		default:
 			break;
 		}

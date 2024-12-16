@@ -313,6 +313,10 @@ namespace wi::input::sdlinput
 				return wi::input::KEYBOARD_BUTTON_TAB;
 			case SDL_SCANCODE_GRAVE: 
     			return wi::input::KEYBOARD_BUTTON_TILDE;
+			case SDL_SCANCODE_LALT:
+				return wi::input::KEYBOARD_BUTTON_ALT;
+			case SDL_SCANCODE_RALT:
+				return wi::input::KEYBOARD_BUTTON_ALTGR;
         }
 
 
