@@ -40,7 +40,7 @@ namespace wi
 		float getDenoiserProgress() const { return denoiserProgress; }
 		bool isDenoiserAvailable() const;
 
-		void resetProgress() { sam = -1; denoiserProgress = 0; volumetriccloudResources.frame = 0; }
+		void resetProgress() { sam = -1; denoiserProgress = 0; volumetriccloudResources.ResetFrame(); }
 
 		uint8_t instanceInclusionMask_PathTrace = 0xFF;
 	};

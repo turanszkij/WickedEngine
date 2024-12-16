@@ -1466,12 +1466,15 @@ namespace wi
 						if (resource->streaming_unload_delay < target_unload_delay)
 							continue; // only unload mips if it's been wanting to unload for a couple frames, or there is memory shortage
 						if (ComputeTextureMemorySizeInBytes(desc) <= streaming_texture_min_size)
-							continue; // Don't reduce the texture below, because of 4KB alignment, this would not reduce memory usage further
-						// Mip level streaming OUT:
-						desc.width >>= 1;
-						desc.height >>= 1;
-						desc.mip_levels--;
-						mip_offset++;
+							continue; // Don't reduce the texture below, because of min resource alignment, this would not reduce memory usage further
+						// Mip level streaming OUT, fast decay:
+						while (ComputeTextureMemorySizeInBytes(desc) > streaming_texture_min_size && desc.width > requested_resolution && desc.height > requested_resolution)
+						{
+							desc.width >>= 1;
+							desc.height >>= 1;
+							desc.mip_levels--;
+							mip_offset++;
+						}
 					}
 					if (desc.mip_levels <= resource->streaming_texture.mip_count)
 					{

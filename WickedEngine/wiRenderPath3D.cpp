@@ -520,6 +520,8 @@ namespace wi
 			{
 				volumetriccloudResources_reflection = {};
 			}
+			volumetriccloudResources.AdvanceFrame();
+			volumetriccloudResources_reflection.AdvanceFrame();
 		}
 		else
 		{
@@ -1138,7 +1140,7 @@ namespace wi
 
 			if (scene->weather.IsVolumetricClouds() && !scene->weather.IsVolumetricCloudsReceiveShadow())
 			{
-				// When volumetric cloud DOESN'T receives shadow it can be done async to shadow maps!
+				// When volumetric cloud DOESN'T receive shadow it can be done async to shadow maps!
 				wi::renderer::Postprocess_VolumetricClouds(
 					volumetriccloudResources,
 					cmd,
@@ -1428,7 +1430,7 @@ namespace wi
 					wi::image::Params fx;
 					fx.enableFullScreen();
 					fx.blendFlag = BLENDMODE_PREMULTIPLIED;
-					wi::image::Draw(&volumetriccloudResources_reflection.texture_reproject[volumetriccloudResources_reflection.frame % 2], fx, cmd);
+					wi::image::Draw(&volumetriccloudResources_reflection.texture_reproject[volumetriccloudResources_reflection.GetTemporalOutputIndex()], fx, cmd);
 					device->EventEnd(cmd);
 				}
 

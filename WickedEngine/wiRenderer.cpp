@@ -15899,7 +15899,7 @@ void Postprocess_AerialPerspective(
 }
 void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resolution)
 {
-	res.frame = 0;
+	res.ResetFrame();
 	res.final_resolution = resolution;
 
 	TextureDesc desc;
@@ -16037,10 +16037,9 @@ void Postprocess_VolumetricClouds(
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 	volumetricclouds_frame = (float)res.frame;
-	res.frame++; // before temporal_output index is computed!
 	
-	int temporal_output = res.frame % 2;
-	int temporal_history = 1 - temporal_output;
+	int temporal_output = res.GetTemporalOutputIndex();
+	int temporal_history = res.GetTemporalInputIndex();
 
 	{
 		GPUBarrier barriers[] = {
@@ -16087,7 +16086,6 @@ void Postprocess_VolumetricClouds(
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
 			GPUBarrier::Image(&res.texture_reproject[temporal_output], ResourceState::UNORDERED_ACCESS, res.texture_reproject[temporal_output].desc.layout),
 			GPUBarrier::Image(&res.texture_reproject_depth[temporal_output], ResourceState::UNORDERED_ACCESS, res.texture_reproject_depth[temporal_output].desc.layout),
 			GPUBarrier::Image(&res.texture_reproject_additional[temporal_output], ResourceState::UNORDERED_ACCESS, res.texture_reproject_additional[temporal_output].desc.layout),
@@ -16115,7 +16113,7 @@ void Postprocess_VolumetricClouds_Upsample(
 	PostProcess postprocess;
 	volumetricclouds_frame = (float)res.frame;
 
-	int temporal_output = res.frame % 2;
+	int temporal_output = res.GetTemporalOutputIndex();
 
 	// Render full-res: (output)
 	postprocess.resolution.x = res.final_resolution.x;

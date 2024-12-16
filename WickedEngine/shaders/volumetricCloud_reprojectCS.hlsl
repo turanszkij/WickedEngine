@@ -71,7 +71,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	
 	bool validHistory = is_saturated(prevUV) && volumetricclouds_frame > 0;
 
-	int subPixelIndex = GetFrame().frame_count % 4;
+	int subPixelIndex = uint(volumetricclouds_frame) % 4;
 	int localIndex = (DTid.x & 1) + (DTid.y & 1) * 2;
 	int currentIndex = ComputeCheckerBoardIndex(renderCoord, subPixelIndex);
 	

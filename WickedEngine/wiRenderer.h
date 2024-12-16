@@ -765,7 +765,7 @@ namespace wi::renderer
 	);
 	struct VolumetricCloudResources
 	{
-		mutable int frame = 0;
+		mutable int frame = -1;
 		XMUINT2 final_resolution = {};
 		wi::graphics::Texture texture_cloudRender;
 		wi::graphics::Texture texture_cloudDepth;
@@ -773,6 +773,11 @@ namespace wi::renderer
 		wi::graphics::Texture texture_reproject_depth[2];
 		wi::graphics::Texture texture_reproject_additional[2];
 		wi::graphics::Texture texture_cloudMask;
+
+		void ResetFrame() const { frame = -1; }
+		void AdvanceFrame() const { frame++; }
+		int GetTemporalOutputIndex() const { return frame % 2; }
+		int GetTemporalInputIndex() const { return 1 - GetTemporalOutputIndex(); }
 	};
 	void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resolution);
 	void Postprocess_VolumetricClouds(
