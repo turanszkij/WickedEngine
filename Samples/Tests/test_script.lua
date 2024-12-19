@@ -4,15 +4,15 @@ backlog_post("Begin script: test_script.lua");
 
 
 -- Load a model:
-local parent = LoadModel("../Content/models/teapot.wiscene");
-LoadModel("../Content/models/cameras.wiscene");
+local parent = LoadModel("../../Content/models/teapot.wiscene");
+LoadModel("../../Content/models/cameras.wiscene");
 
 -- Load camera sample script:
-dofile("../Content/scripts/camera_animation_repeat.lua");
+dofile("../../Content/scripts/camera_animation_repeat.lua");
 ToggleCameraAnimation();
 
 -- Load an image:
-local sprite = Sprite("../Content/logo_small.png");
+local sprite = Sprite("../../Content/logo_small.png");
 --sprite.SetTexture(
 --	texturehelper.CreateGradientTexture(
 --		GradientType.Circular, -- gradient type
