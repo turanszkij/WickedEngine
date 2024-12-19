@@ -154,7 +154,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	// Convert to post-projection depth so we can construct dual source reprojection buffers later
 	const float lineardepth = texture_lineardepth[DTid.xy * 2] * GetCamera().z_far;
-	float reprojectionDepth = compute_inverse_lineardepth(lineardepth + closestRayLength, GetCamera().z_near, GetCamera().z_far);
+	float reprojectionDepth = compute_inverse_lineardepth(lineardepth + closestRayLength);
 
 	texture_resolve[DTid.xy] = max(result, 0.00001f);
 	texture_resolve_variance[DTid.xy] = resolveVariance;

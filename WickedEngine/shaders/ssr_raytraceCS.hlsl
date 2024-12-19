@@ -260,7 +260,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 
 	float3 N = decode_oct(texture_normal[jitterPixel]);
 	float3 P = reconstruct_position(jitterUV, depth);
-	float3 V = normalize(GetCamera().position - P);
+	float3 V = normalize(GetCamera().frustum_corners.screen_to_nearplane(uv) - P);
 
 	float4 H;
 	float3 L;

@@ -51,7 +51,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 screenPosition = uv_to_clipspace(uv);
 
 	float currentCloudLinearDepth = cloud_depth_current.SampleLevel(sampler_point_clamp, uv, 0).x;
-	float currentCloudDepth = compute_inverse_lineardepth(currentCloudLinearDepth, GetCamera().z_near, GetCamera().z_far);
+	float currentCloudDepth = compute_inverse_lineardepth(currentCloudLinearDepth);
 	
 	float4 thisClip = float4(screenPosition, currentCloudDepth, 1.0);
 	
