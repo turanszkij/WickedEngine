@@ -86,7 +86,7 @@ uint3 hash33(uint3 x)
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
+	const float2 uv = (DTid.xy + 0.5) * postprocess.resolution_rcp;
 
 	const float depth = texture_depth[DTid.xy * 2];
 	const float roughness = texture_roughness[DTid.xy * 2];
@@ -102,7 +102,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	// Everthing in world space:
 	const float3 P = reconstruct_position(uv, depth);
 	const float3 N = decode_oct(texture_normal[DTid.xy * 2]);
-	const float3 V = normalize(GetCamera().position - P);
+	const float3 V = normalize(GetCamera().frustum_corners.screen_to_nearplane(uv) - P); // ortho support
 	const float NdotV = saturate(dot(N, V));
 
 	const float resolveSpatialScale = saturate(roughness * 5.0); // roughness 0.2 is destination

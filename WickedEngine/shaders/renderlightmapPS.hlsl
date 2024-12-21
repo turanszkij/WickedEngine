@@ -1,19 +1,108 @@
 #define RAY_BACKFACE_CULLING
+#define TEXTURE_SLOT_NONUNIFORM
 #include "globals.hlsli"
 #include "raytracingHF.hlsli"
 #include "lightingHF.hlsli"
 #include "stochasticSSRHF.hlsli"
 
 // This value specifies after which bounce the anyhit will be disabled:
-static const uint ANYTHIT_CUTOFF_AFTER_BOUNCE_COUNT = 1;
+static const uint ANYTHIT_CUTOFF_AFTER_BOUNCE_COUNT = 4;
 
 struct Input
 {
 	float4 pos : SV_POSITION;
-	float2 uv : TEXCOORD;
-	float3 pos3D : WORLDPOSITION;
-	float3 normal : NORMAL;
+	centroid float2 uv : TEXCOORD;
+	centroid float3 pos3D : WORLDPOSITION;
+	centroid float3 normal : NORMAL;
 };
+
+static const float2 tangent_directions[] = {
+	float2(1, 0),
+	float2(-1, 0),
+	float2(0, 1),
+	float2(0, -1),
+};
+
+// Bakery pixel pushing: https://ndotl.wordpress.com/2018/08/29/baking-artifact-free-lightmaps/
+//	This can push position outside of enclosed area within a pixel to remove shadow leaks
+//	Instead the shadow texel reaching outside, this will make light go inside which is better in most cases
+void BakeryPixelPush(inout float3 P, in float3 N, in float2 UV, inout RNG rng, inout float bakerydebug)
+{
+	float3 dUV1 = max(abs(ddx(P)), abs(ddy(P)));
+	float dPos = max(max(dUV1.x, dUV1.y), dUV1.z);
+	dPos = dPos * SQRT2; // convert to diagonal (small overshoot)
+	
+	float3x3 TBN = compute_tangent_frame(N, P, UV);
+
+	for (uint i = 0; i < arraysize(tangent_directions); ++i)
+	{
+		RayDesc ray;
+		ray.Origin = P + N * 0.0001;
+		ray.Direction = normalize(mul(float3(tangent_directions[i], 1), TBN));
+		ray.TMin = 0.0001;
+		ray.TMax = dPos;
+	
+		bool backface_hit = false;
+		float3 hit_pos = 0;
+		float3 hit_nor = 0;
+	
+		Surface surface;
+		surface.init();
+		surface.V = -ray.Direction;
+
+#ifdef RTAPI
+		uint flags = 0;
+		wiRayQuery q;
+		q.TraceRayInline(
+			scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
+			flags,							// uint RayFlags
+			xTraceUserData.y,				// uint InstanceInclusionMask
+			ray								// RayDesc Ray
+		);
+		while (q.Proceed());
+		if (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT && !q.CommittedTriangleFrontFace())
+		{
+			backface_hit = true;
+			hit_pos = q.WorldRayOrigin() + q.WorldRayDirection() * q.CommittedRayT();
+		
+			PrimitiveID prim;
+			prim.primitiveIndex = q.CommittedPrimitiveIndex();
+			prim.instanceIndex = q.CommittedInstanceID();
+			prim.subsetIndex = q.CommittedGeometryIndex();
+
+			surface.SetBackface(!q.CommittedTriangleFrontFace());
+
+			surface.hit_depth = q.CommittedRayT();
+			if (!surface.load(prim, q.CommittedTriangleBarycentrics()))
+				return;
+
+			hit_nor = surface.facenormal;
+		}
+#else
+		RayHit hit = TraceRay_Closest(ray, xTraceUserData.y, rng);
+		if (hit.distance < FLT_MAX && hit.is_backface)
+		{
+			backface_hit = true;
+			hit_pos = ray.Origin + ray.Direction * hit.distance;
+		
+			surface.SetBackface(hit.is_backface);
+
+			surface.hit_depth = hit.distance;
+			if (!surface.load(hit.primitiveID, hit.bary))
+				return;
+
+			hit_nor = surface.facenormal;
+		}
+#endif // RTAPI
+
+		if (backface_hit)
+		{
+			bakerydebug = 1;
+			P = hit_pos - hit_nor * 0.001;
+			return;
+		}
+	}
+}
 
 float4 main(Input input) : SV_TARGET
 {
@@ -24,11 +113,16 @@ float4 main(Input input) : SV_TARGET
 	RNG rng;
 	rng.init((uint2)input.pos.xy, xTraceSampleIndex);
 
+	float3 P = input.pos3D;
+
+	float bakerydebug = 0;
+	BakeryPixelPush(P, surface.N, input.uv, rng, bakerydebug);
+
 	float2 uv = input.uv;
 	RayDesc ray;
-	ray.Origin = input.pos3D;
+	ray.Origin = P;
 	ray.Direction = sample_hemisphere_cos(surface.N, rng);
-	ray.TMin = 0.001;
+	ray.TMin = 0.0001;
 	ray.TMax = FLT_MAX;
 	float3 result = 0;
 	float3 energy = 1;
@@ -151,7 +245,7 @@ float4 main(Input input) : SV_TARGET
 
 					RayDesc newRay;
 					newRay.Origin = surface.P;
-					newRay.TMin = 0.001;
+					newRay.TMin = 0.0001;
 					newRay.TMax = dist;
 					newRay.Direction = L + max3(surface.sss);
 
@@ -254,12 +348,16 @@ float4 main(Input input) : SV_TARGET
 		prim.instanceIndex = q.CommittedInstanceID();
 		prim.subsetIndex = q.CommittedGeometryIndex();
 
+		surface.SetBackface(!q.CommittedTriangleFrontFace());
+
 		if (!surface.load(prim, q.CommittedTriangleBarycentrics()))
 			return 0;
 
 #else
 		// ray origin updated for next bounce:
 		ray.Origin = ray.Origin + ray.Direction * hit.distance;
+
+		surface.SetBackface(hit.is_backface);
 
 		if (!surface.load(hit.primitiveID, hit.bary))
 			return 0;
@@ -307,6 +405,9 @@ float4 main(Input input) : SV_TARGET
 		energy /= termination_chance;
 
 	}
+
+	//if(bakerydebug > 0)
+	//	result = float3(1,0,0);
 
 	return float4(result, xTraceAccumulationFactor);
 }

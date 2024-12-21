@@ -40,11 +40,12 @@ float4 main(VertexToPixel input) : SV_TARGET
 {
 	ShaderEntity light = load_entity(spotlights().first_item() + (uint)g_xColor.x);
 
-	float2 ScreenCoord = input.pos2D.xy / input.pos2D.w * float2(0.5f, -0.5f) + 0.5f;
+	float2 ScreenCoord = input.pos2D.xy / input.pos2D.w * float2(0.5, -0.5) + 0.5;
 	float4 depths = texture_depth.GatherRed(sampler_point_clamp, ScreenCoord);
 	float depth = max(input.pos.z, max(depths.x, max(depths.y, max(depths.z, depths.w))));
 	float3 P = reconstruct_position(ScreenCoord, depth);
-	float3 V = GetCamera().position - P;
+	float3 nearP = GetCamera().frustum_corners.screen_to_nearplane(ScreenCoord);
+	float3 V = nearP - P; // ortho support
 	float cameraDistance = length(V);
 	V /= cameraDistance;
 
@@ -74,7 +75,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 		float2 sina2_cosa2 = unpack_half2(asuint(g_xColor.z));
 		if(intersectInfiniteCone(GetCamera().position, -V, light.position, light.GetDirection(), sina2_cosa2.x, sina2_cosa2.y, tnear, tfar))
 		{
-			rayEnd = GetCamera().position - V * max(0, tnear);
+			rayEnd = nearP - V * max(0, tnear);
 			//return float4(1,0,0,1);
 		}
 	}

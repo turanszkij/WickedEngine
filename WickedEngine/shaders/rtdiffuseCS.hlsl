@@ -41,7 +41,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 
 	const float3 N = decode_oct(texture_normal[jitterPixel]);
 	const float3 P = reconstruct_position(jitterUV, depth);
-	const float3 V = normalize(GetCamera().position - P);
+	const float3 V = normalize(GetCamera().frustum_corners.screen_to_nearplane(uv) - P); // ortho support
 
 	RayPayload payload;
 	payload.data = 0;

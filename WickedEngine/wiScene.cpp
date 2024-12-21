@@ -4611,6 +4611,10 @@ namespace wi::scene
 					{
 						object.lightmap.desc.format = Format::R32G32B32A32_FLOAT;
 					}
+					else if (lightmap_size == object.lightmapWidth * object.lightmapHeight * sizeof(XMHALF4))
+					{
+						object.lightmap.desc.format = Format::R16G16B16A16_FLOAT;
+					}
 					else if (lightmap_size == object.lightmapWidth * object.lightmapHeight * sizeof(PackedVector::XMFLOAT3PK))
 					{
 						object.lightmap.desc.format = Format::R11G11B10_FLOAT;
