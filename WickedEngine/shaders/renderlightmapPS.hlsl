@@ -37,7 +37,7 @@ void BakeryPixelPush(inout float3 P, in float3 N, in float2 UV, inout RNG rng, i
 	for (uint i = 0; i < arraysize(tangent_directions); ++i)
 	{
 		RayDesc ray;
-		ray.Origin = P;
+		ray.Origin = P + N * 0.0001;
 		ray.Direction = normalize(mul(float3(tangent_directions[i], 1), TBN));
 		ray.TMin = 0.0001;
 		ray.TMax = dPos;
