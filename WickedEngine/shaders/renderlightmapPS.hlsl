@@ -24,7 +24,9 @@ static const float2 tangent_directions[] = {
 };
 
 // Bakery pixel pushing: https://ndotl.wordpress.com/2018/08/29/baking-artifact-free-lightmaps/
-void BakeryPixelPush(inout float3 P, in float3 N, in float2 UV, inout float bakerydebug)
+//	This can push position outside of enclosed area within a pixel to remove shadow leaks
+//	Instead the shadow texel reaching outside, this will make light go inside which is better in most cases
+void BakeryPixelPush(inout float3 P, in float3 N, in float2 UV, inout RNG rng, inout float bakerydebug)
 {
 	float3 dUV1 = max(abs(ddx(P)), abs(ddy(P)));
 	float dPos = max(max(dUV1.x, dUV1.y), dUV1.z);
@@ -114,7 +116,7 @@ float4 main(Input input) : SV_TARGET
 	float3 P = input.pos3D;
 
 	float bakerydebug = 0;
-	BakeryPixelPush(P, surface.N, input.uv, bakerydebug);
+	BakeryPixelPush(P, surface.N, input.uv, rng, bakerydebug);
 
 	float2 uv = input.uv;
 	RayDesc ray;

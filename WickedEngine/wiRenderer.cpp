@@ -2304,6 +2304,7 @@ void SetUpStates()
 
 
 	rs = rasterizers[RSTYPE_DOUBLESIDED];
+	// Note: conservative raster can produce bright lightmap pixels, so now it's disabled!
 	//if (device->CheckCapability(GraphicsDeviceCapability::CONSERVATIVE_RASTERIZATION))
 	//{
 	//	rs.conservative_rasterization_enable = true;
