@@ -19,7 +19,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float roughness = texture_roughness.SampleLevel(sampler_point_clamp, uv, 0);
 	const float3 N = decode_oct(texture_normal.SampleLevel(sampler_point_clamp, uv, 0));
 	const float3 P = reconstruct_position(uv, depth);
-	const float3 V = normalize(GetCamera().position - P);
+	const float3 V = normalize(GetCamera().frustum_corners.screen_to_nearplane(uv) - P); // ortho support
 
 	Texture3D<half4> voxels = bindless_textures3D_half4[GetFrame().vxgi.texture_radiance];
 	half4 color = ConeTraceSpecular(voxels, P, N, V, roughness * roughness, pixel);

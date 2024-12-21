@@ -5,54 +5,28 @@ Texture2D lightmap_input : register(t0);
 
 RWTexture2D<float4> lightmap_output : register(u0);
 
-static const int TILE_BORDER = 4;
-static const uint TILE_SIZE = POSTPROCESS_BLOCKSIZE + TILE_BORDER * 2;
-groupshared uint2 tile_cache[TILE_SIZE*TILE_SIZE];
+static const int2 offsets[] = {
+	int2(0, -1),
+	int2(0, 1),
+	int2(-1, 0),
+	int2(1, 0),
+	
+	int2(-1, -1),
+	int2(1, -1),
+	int2(1, 1),
+	int2(-1, -1),
+};
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
-void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
+void main(uint3 DTid : SV_DispatchThreadID)
 {
-	const int2 tile_upperleft = Gid.xy * POSTPROCESS_BLOCKSIZE - TILE_BORDER;
-	for (uint t = groupIndex; t < TILE_SIZE * TILE_SIZE; t += POSTPROCESS_BLOCKSIZE * POSTPROCESS_BLOCKSIZE)
-	{
-		const uint2 pixel = tile_upperleft + unflatten2D(t, TILE_SIZE);
-		tile_cache[t] = pack_half4(lightmap_input[pixel]);
-	}
-	GroupMemoryBarrierWithGroupSync();
+	int2 pixel = DTid.xy;
+	float4 color = lightmap_input[pixel];
 
-	float4 color = unpack_half4(tile_cache[flatten2D(GTid.xy + TILE_BORDER, TILE_SIZE)]);
-
-	if (color.a < 1)
+	for (uint i = 0; (i < arraysize(offsets)) && (color.a < 1); ++i)
 	{
-		// spin outwards from center in spiral pattern and take the first sample which has valid opacity:
-		int generation = TILE_BORDER;
-		for (int growth = 0; (growth < generation) && (color.a < 1); ++growth)
-		{
-			const int side = 2 * (growth + 1);
-			int x = -growth - 1;
-			int y = -growth - 1;
-			for (int i = 0; (i < side) && (color.a < 1); ++i)
-			{
-				color = unpack_half4(tile_cache[flatten2D(GTid.xy + TILE_BORDER + int2(x, y), TILE_SIZE)]);
-				x++;
-			}
-			for (int i = 0; (i < side) && (color.a < 1); ++i)
-			{
-				color = unpack_half4(tile_cache[flatten2D(GTid.xy + TILE_BORDER + int2(x, y), TILE_SIZE)]);
-				y++;
-			}
-			for (int i = 0; (i < side) && (color.a < 1); ++i)
-			{
-				color = unpack_half4(tile_cache[flatten2D(GTid.xy + TILE_BORDER + int2(x, y), TILE_SIZE)]);
-				x--;
-			}
-			for (int i = 0; (i < side) && (color.a < 1); ++i)
-			{
-				color = unpack_half4(tile_cache[flatten2D(GTid.xy + TILE_BORDER + int2(x, y), TILE_SIZE)]);
-				y--;
-			}
-		}
+		color = lightmap_input[pixel + offsets[i]];
 	}
 	
-	lightmap_output[DTid.xy] = color;
+	lightmap_output[pixel] = color;
 }

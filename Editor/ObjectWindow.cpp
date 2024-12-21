@@ -84,7 +84,7 @@ static Atlas_Dim GenerateMeshAtlas(MeshComponent& meshcomponent, uint32_t resolu
 		mesh.indexCount = (int)meshcomponent.indices.size();
 		mesh.indexData = meshcomponent.indices.data();
 		mesh.indexFormat = xatlas::IndexFormat::UInt32;
-		xatlas::AddMeshError::Enum error = xatlas::AddMesh(atlas, mesh);
+		xatlas::AddMeshError error = xatlas::AddMesh(atlas, mesh);
 		if (error != xatlas::AddMeshError::Success) {
 			wi::helper::messageBox(xatlas::StringForEnum(error), "Adding mesh to xatlas failed!");
 			return dim;
@@ -94,13 +94,15 @@ static Atlas_Dim GenerateMeshAtlas(MeshComponent& meshcomponent, uint32_t resolu
 	// Generate atlas:
 	{
 		xatlas::ChartOptions chartoptions;
-		xatlas::ParameterizeOptions parametrizeoptions;
-		xatlas::PackOptions packoptions;
+		chartoptions.useInputMeshUvs = true;
+		chartoptions.fixWinding = true;
 
+		xatlas::PackOptions packoptions;
 		packoptions.resolution = resolution;
 		packoptions.blockAlign = true;
+		packoptions.padding = 2;
 
-		xatlas::Generate(atlas, chartoptions, parametrizeoptions, packoptions);
+		xatlas::Generate(atlas, chartoptions, packoptions);
 		dim.width = atlas->width;
 		dim.height = atlas->height;
 
@@ -543,13 +545,11 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	y += step;
 
 
-	lightmapResolutionSlider.Create(32, 1024, 128, 1024 - 32, "Lightmap resolution: ");
+	lightmapResolutionSlider.Create(32, 8192, 512, 8192 - 32, "Lightmap resolution: ");
 	lightmapResolutionSlider.SetTooltip("Set the approximate resolution for this object's lightmap. This will be packed into the larger global lightmap later.");
 	lightmapResolutionSlider.SetSize(XMFLOAT2(wid, hei));
 	lightmapResolutionSlider.SetPos(XMFLOAT2(x, y += step));
 	lightmapResolutionSlider.OnSlide([&](wi::gui::EventArgs args) {
-		// unfortunately, we must be pow2 with full float lightmap format, otherwise it could be unlimited (but accumulation blending would suffer then)
-		//	or at least for me, downloading the lightmap was glitching out when non-pow 2 and RGBA32_FLOAT format
 		lightmapResolutionSlider.SetValue(float(wi::math::GetNextPowerOfTwo(uint32_t(args.fValue)))); 
 	});
 	AddWidget(&lightmapResolutionSlider);

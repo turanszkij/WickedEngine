@@ -2308,6 +2308,10 @@ void SetUpStates()
 	//{
 	//	rs.conservative_rasterization_enable = true;
 	//}
+	//else
+	{
+		rs.forced_sample_count = 8; // MSAA approximation of conservative rasterization 
+	}
 	rasterizers[RSTYPE_LIGHTMAP] = rs;
 
 
@@ -10355,10 +10359,18 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 				cb.xTraceResolution_rcp.y = 1.0f / cb.xTraceResolution.y;
 				cb.xTraceAccumulationFactor = 1.0f / (object.lightmapIterationCount + 1.0f); // accumulation factor (alpha)
 				cb.xTraceUserData.x = raytraceBounceCount;
+				XMFLOAT4 halton = wi::math::GetHaltonSequence(object.lightmapIterationCount); // for jittering the rasterization (good for eliminating atlas border artifacts)
+				cb.xTracePixelOffset.x = (halton.x * 2 - 1) * cb.xTraceResolution_rcp.x;
+				cb.xTracePixelOffset.y = (halton.y * 2 - 1) * cb.xTraceResolution_rcp.y;
+				cb.xTracePixelOffset.x *= 1.4f;	// boost the jitter by a bit
+				cb.xTracePixelOffset.y *= 1.4f;	// boost the jitter by a bit
 				uint8_t instanceInclusionMask = 0xFF;
 				cb.xTraceUserData.y = instanceInclusionMask;
 				cb.xTraceSampleIndex = object.lightmapIterationCount;
 				device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(RaytracingCB), cmd);
+
+				uint32_t indexStart = ~0u;
+				uint32_t indexEnd = 0;
 
 				uint32_t first_subset = 0;
 				uint32_t last_subset = 0;
@@ -10368,25 +10380,72 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 					const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
 					if (subset.indexCount == 0)
 						continue;
-					device->DrawIndexed(subset.indexCount, subset.indexOffset, 0, cmd);
+					indexStart = std::min(indexStart, subset.indexOffset);
+					indexEnd = std::max(indexEnd, subset.indexOffset + subset.indexCount);
 				}
-				object.lightmapIterationCount++;
+
+				if (indexEnd > indexStart)
+				{
+					const uint32_t indexCount = indexEnd - indexStart;
+					device->DrawIndexed(indexCount, indexStart, 0, cmd);
+					object.lightmapIterationCount++;
+				}
 
 				device->RenderPassEnd(cmd);
 
 				// Expand opaque areas:
 				{
+					device->EventBegin("Lightmap expand", cmd);
+
+					static Texture lightmap_expand_temp;
+					if (lightmap_expand_temp.desc.width < object.lightmap.desc.width || lightmap_expand_temp.desc.height < object.lightmap.desc.height)
+					{
+						lightmap_expand_temp.desc = object.lightmap.desc;
+						device->CreateTexture(&lightmap_expand_temp.desc, nullptr, &lightmap_expand_temp);
+						device->Barrier(GPUBarrier::Image(&lightmap_expand_temp, lightmap_expand_temp.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+						device->ClearUAV(&lightmap_expand_temp, 0, cmd);
+						device->Barrier(GPUBarrier::Image(&lightmap_expand_temp, ResourceState::UNORDERED_ACCESS, lightmap_expand_temp.desc.layout), cmd);
+					}
+
 					device->BindComputeShader(&shaders[CSTYPE_LIGHTMAP_EXPAND], cmd);
 
-					device->BindResource(&object.lightmap_render, 0, cmd);
+					// render -> lightmap
+					{
+						device->BindResource(&object.lightmap_render, 0, cmd);
+						device->BindUAV(&object.lightmap, 0, cmd);
 
-					device->BindUAV(&object.lightmap, 0, cmd);
+						device->Barrier(GPUBarrier::Image(&object.lightmap, object.lightmap.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
 
-					device->Barrier(GPUBarrier::Image(&object.lightmap, object.lightmap.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+						device->Dispatch((desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE, (desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE, 1, cmd);
 
-					device->Dispatch((desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE, (desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE, 1, cmd);
+						device->Barrier(GPUBarrier::Image(&object.lightmap, ResourceState::UNORDERED_ACCESS, object.lightmap.desc.layout), cmd);
+					}
+					for (int repeat = 0; repeat < 2; ++repeat)
+					{
+						// lightmap -> temp
+						{
+							device->BindResource(&object.lightmap, 0, cmd);
+							device->BindUAV(&lightmap_expand_temp, 0, cmd);
 
-					device->Barrier(GPUBarrier::Image(&object.lightmap, ResourceState::UNORDERED_ACCESS, object.lightmap.desc.layout), cmd);
+							device->Barrier(GPUBarrier::Image(&lightmap_expand_temp, lightmap_expand_temp.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+
+							device->Dispatch((desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE, (desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE, 1, cmd);
+
+							device->Barrier(GPUBarrier::Image(&lightmap_expand_temp, ResourceState::UNORDERED_ACCESS, lightmap_expand_temp.desc.layout), cmd);
+						}
+						// temp -> lightmap
+						{
+							device->BindResource(&lightmap_expand_temp, 0, cmd);
+							device->BindUAV(&object.lightmap, 0, cmd);
+
+							device->Barrier(GPUBarrier::Image(&object.lightmap, object.lightmap.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+
+							device->Dispatch((desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE, (desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE, 1, cmd);
+
+							device->Barrier(GPUBarrier::Image(&object.lightmap, ResourceState::UNORDERED_ACCESS, object.lightmap.desc.layout), cmd);
+						}
+					}
+					device->EventEnd(cmd);
 				}
 
 				device->EventEnd(cmd);
