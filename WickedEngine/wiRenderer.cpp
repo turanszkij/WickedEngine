@@ -2309,10 +2309,6 @@ void SetUpStates()
 	//{
 	//	rs.conservative_rasterization_enable = true;
 	//}
-	//else
-	{
-		rs.forced_sample_count = 8; // MSAA approximation of conservative rasterization 
-	}
 	rasterizers[RSTYPE_LIGHTMAP] = rs;
 
 
