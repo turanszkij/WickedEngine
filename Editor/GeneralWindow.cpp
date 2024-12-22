@@ -709,6 +709,15 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->aboutLabel.sprites[i].params.blendFlag = wi::enums::BLENDMODE_ALPHA;
 		}
 
+		for (auto& sprite : editor->guiScalingCombo.sprites)
+		{
+			sprite.params.enableCornerRounding();
+			sprite.params.corners_rounding[0].radius = 10;
+			sprite.params.corners_rounding[1].radius = 10;
+			sprite.params.corners_rounding[2].radius = 10;
+			sprite.params.corners_rounding[3].radius = 10;
+		}
+
 	});
 	AddWidget(&themeCombo);
 

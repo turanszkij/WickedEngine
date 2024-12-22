@@ -65,6 +65,8 @@ public:
 	wi::gui::Button materialsButton;
 	wi::gui::Button paintToolButton;
 
+	wi::gui::ComboBox guiScalingCombo;
+
 	GeneralWindow generalWnd;
 	GraphicsWindow graphicsWnd;
 	CameraWindow cameraWnd;
