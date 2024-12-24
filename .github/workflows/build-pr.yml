@@ -60,7 +60,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install libsdl2-dev ccache wayland-protocols libwayland-dev
+        sudo apt install libsdl2-dev ccache wayland-protocols libwayland-dev ninja
 
     - name: Initial compile
       run: |
