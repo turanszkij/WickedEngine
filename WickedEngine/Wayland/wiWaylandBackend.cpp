@@ -1,8 +1,8 @@
 #include "wiWaylandBackend.h"
 #include "wiWaylandUtils.h"
-#include <wayland/wayland-client-core.h>
-#include <wayland/wayland-client-protocol.h>
-#include <wayland/wayland-client.h>
+#include <wayland-client-core.h>
+#include <wayland-client-protocol.h>
+#include <wayland-client.h>
 #include <iostream>
 
 #include "xdg-shell.h"

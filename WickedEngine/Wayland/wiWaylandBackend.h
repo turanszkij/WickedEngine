@@ -1,6 +1,6 @@
 #pragma once
 #include "wiWaylandWindow.h"
-#include <wayland/wayland-client.h>
+#include <wayland-client.h>
 #include <map>
 #include <string>
 #include <iostream>
