@@ -56,7 +56,10 @@ private:
 	template<typename T>
 	T* bind(const char* interface_name, const struct wl_interface *interface, uint32_t version = -1)
 	{
-		std::pair<uint32_t, uint32_t> reg = registry_map.at(interface_name);
+		auto search = registry_map.find(interface_name);
+		if (search == registry_map.end())
+			return nullptr;
+		std::pair<uint32_t, uint32_t> &reg = search->second;
 		if (version < 0) {
 			version = reg.second;
 		} else {

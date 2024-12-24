@@ -124,10 +124,13 @@ bool Window::Init(Backend* backend, const char* title)
 	xdg_toplevel_add_listener(toplevel, &toplevel_listener, this);
 
 	// DecorationManager
-	toplevel_decoration = zxdg_decoration_manager_v1_get_toplevel_decoration(backend->decoration_manager, toplevel);
-	if (toplevel_decoration != nullptr)
+	if (backend->decoration_manager)
 	{
-		zxdg_toplevel_decoration_v1_set_mode(toplevel_decoration, ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+		toplevel_decoration = zxdg_decoration_manager_v1_get_toplevel_decoration(backend->decoration_manager, toplevel);
+		if (toplevel_decoration != nullptr)
+		{
+			zxdg_toplevel_decoration_v1_set_mode(toplevel_decoration, ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+		}
 	}
 
 	SetTitle(title);

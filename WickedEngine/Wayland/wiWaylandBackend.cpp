@@ -45,7 +45,7 @@ bool Backend::Init()
 	if (!registry_has("xdg_wm_base"))	{std::cerr<<"XDG WM BASE not found"<<std::endl; return false;}
 	if (!bind_xdg_wm_base())			{std::cerr<<"bind xdg_wm_base failed"<<std::endl; return false;}
 	if (!init_window_manager())			{std::cerr<<"xdg_wm_base init failed"<<std::endl; return false;}
-	if (!bind_decoration_manager())		{std::cerr<<"bind decoration_manager failed"<<std::endl;} //optional, being "unstable" API
+	if (!bind_decoration_manager())		{std::cerr<<"bind decoration_manager failed"<<std::endl;} //optional, being "unstable" API (GNOME does not implement this)
 
 	return true;
 }
@@ -83,7 +83,7 @@ bool Backend::bind_decoration_manager()
 {
 	decoration_manager = this->bind<zxdg_decoration_manager_v1>(
 		"zxdg_decoration_manager_v1", &zxdg_decoration_manager_v1_interface);
-	return window_manager != nullptr;
+	return decoration_manager != nullptr;
 }
 
 bool Backend::init_window_manager()
