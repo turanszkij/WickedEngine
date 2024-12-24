@@ -34,6 +34,7 @@ typedef void* HMODULE;
 #include <SDL2/SDL.h>
 #include <SDL_vulkan.h>
 #include "sdl2.h"
+#include "Wayland/wiWaylandWindow.h"
 #endif
 
 
@@ -42,7 +43,25 @@ namespace wi::platform
 #ifdef _WIN32
 	using window_type = HWND;
 #elif SDL2
-	using window_type = SDL_Window*;
+	struct LinuxWindow {
+		enum ELinuxWindowType {
+			eNoneWindow,
+			eSDLWindow,
+			eWaylandWindow,
+		} type;
+		union {
+			void* null;
+			SDL_Window* sdl_window;
+			wi::wayland::Window* wl_window;
+		};
+		LinuxWindow(std::nullptr_t)
+		: type(eNoneWindow), null(nullptr) {}
+		LinuxWindow(SDL_Window* window)
+		: type(eSDLWindow), sdl_window(window) {}
+		LinuxWindow(wi::wayland::Window* window)
+		: type(eWaylandWindow), wl_window(window) {}
+	};
+	using window_type = LinuxWindow;
 #else
 	using window_type = void*;
 #endif // _WIN32
@@ -83,10 +102,18 @@ namespace wi::platform
 #endif // PLATFORM_WINDOWS_DESKTOP || PLATFORM_XBOX
 
 #ifdef PLATFORM_LINUX
-		int window_width, window_height;
-		SDL_GetWindowSize(window, &window_width, &window_height);
-		SDL_Vulkan_GetDrawableSize(window, &dest->width, &dest->height);
-		dest->dpi = ((float)dest->width / (float)window_width) * 96.f;
+		if (window.type == window.eSDLWindow)
+		{
+			int window_width, window_height;
+			SDL_GetWindowSize(window.sdl_window, &window_width, &window_height);
+			SDL_Vulkan_GetDrawableSize(window.sdl_window, &dest->width, &dest->height);
+			dest->dpi = ((float)dest->width / (float)window_width) * 96.f;
+		}
+		else if (window.type == window.eWaylandWindow)
+		{
+			window.wl_window->GetWindowCurrentSize(&dest->width, &dest->height);
+			dest->dpi = 96.f;
+		}
 #endif // PLATFORM_LINUX
 	}
 }

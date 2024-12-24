@@ -3,6 +3,9 @@
 
 #include "stdafx.h"
 #include "sdl2.h"
+#include "Wayland/wiWaylandBackend.h"
+#include "Wayland/wiWaylandWindow.h"
+#include <wiPlatform.h>
 
 int sdl_loop(Tests &tests)
 {
@@ -61,7 +64,7 @@ int sdl_loop(Tests &tests)
     return 0;
 }
 
-int main(int argc, char *argv[])
+int main_sdl2(int argc, char *argv[])
 {
     Tests tests;
     // TODO: Place code here.
@@ -88,4 +91,46 @@ int main(int argc, char *argv[])
 
     SDL_Quit();
     return ret;
+}
+
+
+void wayland_loop(wi::wayland::Backend &wwbackend, Tests &tests)
+{
+	bool quit = false;
+	wwbackend.window.on_close = [&quit](wi::wayland::Window*w) { quit = false; };
+
+	while(!quit)
+	{
+		tests.Run();
+		if (wwbackend.dispatch() < 0)
+			break;
+		if (wwbackend.window.AcceptDesiredDimensions())
+			tests.SetWindow(&wwbackend.window);
+	}
+}
+
+
+bool main_wayland(int argc, char *argv[])
+{
+	wi::wayland::Backend wwbackend;
+	if (!wwbackend.Init())
+		return false;
+	if (!wwbackend.CreateWindow("Wicked Engine Tests"))
+		return false;
+
+	Tests tests;
+	tests.SetWindow(&wwbackend.window);
+	wayland_loop(wwbackend, tests);
+
+	wwbackend.window.Deinit();
+	wwbackend.DeInit();
+
+	return true;
+}
+
+int main(int argc, char *argv[])
+{
+	// Attempt to initialize wayland backend
+	if (!main_wayland(argc, argv))
+		main_sdl2(argc, argv);
 }

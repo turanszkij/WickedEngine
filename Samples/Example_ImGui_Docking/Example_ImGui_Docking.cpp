@@ -23,10 +23,10 @@
 #endif
 
 
-#include "../WickedEngine/wiProfiler.h"
-#include "../WickedEngine/wiBacklog.h"
-#include "../WickedEngine/wiPrimitive.h"
-#include "../WickedEngine/wiRenderPath3D.h"
+#include "wiProfiler.h"
+#include "wiBacklog.h"
+#include "wiPrimitive.h"
+#include "wiRenderPath3D.h"
 #include "../Editor/ModelImporter.h"
 
 #include <fstream>
@@ -174,7 +174,8 @@ void Example_ImGui::Initialize()
 	hWnd = window;
 	ImGui_ImplWin32_Init(window);
 #elif defined(SDL2)
-	ImGui_ImplSDL2_InitForVulkan(window);
+	IM_ASSERT(window.type == wi::platform::LinuxWindow::eSDLWindow);
+	ImGui_ImplSDL2_InitForVulkan(window.sdl_window);
 #endif
 
 	IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");
@@ -457,7 +458,7 @@ void Example_ImGuiRenderer::Update(float dt)
 		ImGui_Impl_CreateDeviceObjects();
 	}
 
-	
+
 #ifdef _WIN32
 	ImGui_ImplWin32_NewFrame();
 #elif defined(SDL2)
@@ -681,7 +682,7 @@ void Example_ImGuiRenderer::Update(float dt)
 			bool bUseChild = false;
 			if (use_fixed_height > 0) bUseChild = true;
 			if(bUseChild) ImGui::BeginChild("##objectsc", ImVec2(0.0f, use_fixed_height), false, ImGuiWindowFlags_None); //ImGuiWindowFlags_AlwaysVerticalScrollbar
-			
+
 			for (int i = 0; i < size; i++)
 			{
 				Entity e = scene.objects.GetEntity(i);
@@ -1029,7 +1030,7 @@ void Example_ImGuiRenderer::Update(float dt)
 				ImGui::EndTabBar();
 			}
 		}
-		
+
 		if (ImGui::CollapsingHeader(ICON_MD_SETTINGS "  Settings", ImGuiTreeNodeFlags_None)) //ImGuiTreeNodeFlags_DefaultOpen
 		{
 			ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2(0.0f, 3.0f));
@@ -1390,7 +1391,7 @@ void Example_ImGuiRenderer::Update(float dt)
 				if (ImGui::Selectable(lua_history[i].c_str(), is_selected)) {
 					#ifdef _WIN32
 					strcpy_s(lua, lua_history[i].c_str());
-					#elif __linux__ 
+					#elif __linux__
 					strcpy(lua, lua_history[i].c_str());
 					#endif
 					bSetKeyBoardFocus = true;
@@ -1489,7 +1490,7 @@ void Example_ImGuiRenderer::Update(float dt)
 		}
 
 		float movespeed = CAMERAMOVESPEED;
-		
+
 		if (imgui_io.KeyShift)
 		{
 			movespeed *= 3.0; //Speed up camera.
