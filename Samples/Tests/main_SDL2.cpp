@@ -97,7 +97,7 @@ int main_sdl2(int argc, char *argv[])
 void wayland_loop(wi::wayland::Backend &wwbackend, Tests &tests)
 {
 	bool quit = false;
-	wwbackend.window.on_close = [&quit](wi::wayland::Window*w) { quit = false; };
+	wwbackend.window.on_close = [&quit](wi::wayland::Window*w) { quit = true; };
 
 	while(!quit)
 	{
