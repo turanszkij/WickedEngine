@@ -47,6 +47,54 @@ else ()
 	if((${SDL_VERSION_MAJOR} GREATER_EQUAL 2) AND (${SDL2_VERSION_MINOR} GREATER_EQUAL 0) AND (${SDL2_VERSION_PATCH} GREATER_EQUAL 14))
 		add_compile_definitions(SDL2_FEATURE_CONTROLLER_LED=1)
 	endif()
+
+	if (WAYLAND_BACKEND)
+
+		find_package(PkgConfig REQUIRED)
+		pkg_check_modules(WAYLAND_CLIENT REQUIRED wayland-client)
+		pkg_check_modules(WAYLAND_SCANNER REQUIRED wayland-scanner)
+		pkg_check_modules(WAYLAND_PROTOCOLS REQUIRED wayland-protocols)
+		# Get variables
+		pkg_get_variable(WAYLAND_SCANNER_BIN wayland-scanner wayland_scanner)
+		pkg_get_variable(WAYLAND_PROTOCOLS_DATADIR wayland-protocols pkgdatadir)
+		################################################################################################################
+		# Wayland protocol generated code
+		function(GENERATE_XDG_PROTOCOLS)
+			# GENERATE XDG PROTOCOLS SOURCES
+			set(XDG_PROTOCOLS_SOURCES)
+			set(XDG_PROTOCOLS_HEADERS)
+			foreach(XML ${ARGN})
+				get_filename_component(XML_NAME "${XML}" NAME_WE)
+				MESSAGE("Generating C source code for ${XML} -> ${XML_NAME}")
+				add_custom_command(COMMAND ${WAYLAND_SCANNER_BIN}
+					ARGS private-code "${XML}" "${CMAKE_CURRENT_BINARY_DIR}/${XML_NAME}.c"
+					DEPENDS "${XML}"
+					OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${XML_NAME}.c"
+					COMMENT "Generating \"${XML_NAME}\" protocol private code."
+					)
+				list(APPEND XDG_PROTOCOLS_SOURCES "${CMAKE_CURRENT_BINARY_DIR}/${XML_NAME}.c")
+
+				add_custom_command(COMMAND ${WAYLAND_SCANNER_BIN}
+					ARGS client-header "${XML}" "${CMAKE_CURRENT_BINARY_DIR}/${XML_NAME}.h"
+					DEPENDS "${XML}"
+					OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${XML_NAME}.h"
+					COMMENT "Generating \"${XML_NAME}\" protocol header."
+					)
+				list(APPEND XDG_PROTOCOLS_HEADERS "${CMAKE_CURRENT_BINARY_DIR}/${XML_NAME}.h")
+				set(XDG_PROTOCOLS_SOURCES ${XDG_PROTOCOLS_SOURCES} PARENT_SCOPE)
+				set(XDG_PROTOCOLS_HEADERS ${XDG_PROTOCOLS_HEADERS} PARENT_SCOPE)
+			endforeach()
+		endfunction()
+
+		GENERATE_XDG_PROTOCOLS(
+			"${WAYLAND_PROTOCOLS_DATADIR}/stable/xdg-shell/xdg-shell.xml"
+			"${WAYLAND_PROTOCOLS_DATADIR}/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml"
+		)
+		file(GLOB WAYLAND_SOURCES CONFIGURE_DEPENDS Wayland/*.cpp)
+		file(GLOB WAYLAND_HEADERS CONFIGURE_DEPENDS Wayland/*.h)
+		set(WAYLAND_SOURCES ${WAYLAND_SOURCES} ${XDG_PROTOCOLS_SOURCES})
+		set(WAYLAND_HEADERS ${WAYLAND_HEADERS} ${XDG_PROTOCOLS_HEADERS})
+	endif()
 endif()
 
 add_subdirectory(LUA)
@@ -64,6 +112,8 @@ list(REMOVE_ITEM SOURCE_FILES offlineshadercompiler.cpp)
 add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
 	${SOURCE_FILES}
 	${HEADER_FILES}
+	${WAYLAND_SOURCES}
+	${WAYLAND_HEADERS}
 )
 
 if(MSVC)
@@ -71,7 +121,7 @@ if(MSVC)
 endif()
 
 add_library(WickedEngine ALIAS ${TARGET_NAME})
-set_target_properties(${TARGET_NAME} PROPERTIES PUBLIC_HEADER "${HEADER_FILES}")
+set_target_properties(${TARGET_NAME} PROPERTIES PUBLIC_HEADER "${HEADER_FILES} ${WAYLAND_HEADERS}")
 
 target_include_directories(${TARGET_NAME} SYSTEM PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
@@ -106,12 +156,15 @@ else ()
 
 	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	target_compile_options(${TARGET_NAME} PRIVATE
+			# C and C++ warnings
 			-Wuninitialized
 			#-Wwrite-strings
 			#-Winit-self
 			#-Wreturn-type
-			#-Wreorder
-			#-Werror=delete-non-virtual-dtor
+			# C++ only warnings
+			#$<$<COMPILE_LANGUAGE:CXX>:-Wreorder>
+			#$<$<COMPILE_LANGUAGE:CXX>:-Werror=delete-non-virtual-dtor>
+			# Treat warnings as errors
 			#-Werror
 			#uncomment this to stop the compilation at the first error
 			# -Wfatal-errors
@@ -120,16 +173,34 @@ else ()
 	# add some warnings and set them as errors
 	# read more details here: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
 	target_compile_options(${TARGET_NAME} PRIVATE
+			# C and C++ warnings
 			-Wuninitialized
 			-Wmaybe-uninitialized
 			-Wwrite-strings
 			-Winit-self
 			-Wreturn-type
-			-Wreorder
-			-Werror=delete-non-virtual-dtor
+			# C++ only warnings
+			$<$<COMPILE_LANGUAGE:CXX>:-Wreorder>
+			$<$<COMPILE_LANGUAGE:CXX>:-Werror=delete-non-virtual-dtor>
+			# Treat warnings as errors
 			-Werror
 			#uncomment this to stop the compilation at the first error
 			# -Wfatal-errors
+			)
+	endif()
+
+
+	if (WAYLAND_BACKEND)
+		target_include_directories(${TARGET_NAME}
+			PUBLIC ${WAYLAND_CLIENT_INCLUDE_DIRS}
+			# PRIVATE ${WAYLAND_CURSOR_INCLUDE_DIRS}
+			PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+			# PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine>
+			)
+
+		target_link_libraries(${TARGET_NAME}
+			PUBLIC ${WAYLAND_CLIENT_LIBRARIES}
+			# PRIVATE ${WAYLAND_CURSOR_LIBRARIES}
 			)
 	endif()
 

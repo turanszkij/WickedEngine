@@ -743,7 +743,10 @@ namespace wi
 		}
 
 #elif defined(PLATFORM_LINUX)
-		SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+		if (window.type == platform::LinuxWindow::eSDLWindow)
+			SDL_SetWindowFullscreen(window.sdl_window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+		else if (window.type == platform::LinuxWindow::eWaylandWindow)
+			window.wl_window->SetFullscreen(fullscreen);
 #endif // PLATFORM_WINDOWS_DESKTOP
 	}
 

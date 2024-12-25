@@ -22,6 +22,7 @@ include(CMakeDependentOption)
 
 if(UNIX)
     option(WICKED_LINUX_TEMPLATE "Build WickedEngine Linux template" ON)
+    option(WAYLAND_BACKEND "Build WickedEngine Wayland backend" ON)
 elseif(WIN32)
     option(WICKED_WINDOWS_TEMPLATE "Build WickedEngine Windows template" ON)
 endif()

@@ -60,14 +60,15 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install libsdl2-dev ccache
+        sudo apt install libsdl2-dev ccache wayland-protocols libwayland-dev ninja-build
 
     - name: Initial compile
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-        CCACHE_NODIRECT=1 make -j$(nproc)
+        cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+        echo no CCACHE_NODIRECT=1 make -j$(nproc)
+        cmake --build .
       
     - name: Generate shader dump
       run: |
