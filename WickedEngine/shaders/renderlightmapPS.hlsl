@@ -11,7 +11,6 @@ static const uint ANYTHIT_CUTOFF_AFTER_BOUNCE_COUNT = 4;
 struct Input
 {
 	float4 pos : SV_POSITION;
-	centroid float2 uv : TEXCOORD;
 	centroid float3 pos3D : WORLDPOSITION;
 	centroid float3 normal : NORMAL;
 };
@@ -106,6 +105,8 @@ void BakeryPixelPush(inout float3 P, in float3 N, in float2 UV, inout RNG rng, i
 
 float4 main(Input input) : SV_TARGET
 {
+	float2 uv = input.pos.xy * xTraceResolution_rcp;
+
 	Surface surface;
 	surface.init();
 	surface.N = normalize(input.normal);
@@ -116,9 +117,8 @@ float4 main(Input input) : SV_TARGET
 	float3 P = input.pos3D;
 
 	float bakerydebug = 0;
-	BakeryPixelPush(P, surface.N, input.uv, rng, bakerydebug);
-
-	float2 uv = input.uv;
+	BakeryPixelPush(P, surface.N, uv, rng, bakerydebug);
+	
 	RayDesc ray;
 	ray.Origin = P;
 	ray.Direction = sample_hemisphere_cos(surface.N, rng);
@@ -247,7 +247,7 @@ float4 main(Input input) : SV_TARGET
 					newRay.Origin = surface.P;
 					newRay.TMin = 0.0001;
 					newRay.TMax = dist;
-					newRay.Direction = L + max3(surface.sss);
+					newRay.Direction = normalize(L + max3(surface.sss));
 
 #ifdef RTAPI
 					uint flags = RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES | RAY_FLAG_CULL_FRONT_FACING_TRIANGLES;

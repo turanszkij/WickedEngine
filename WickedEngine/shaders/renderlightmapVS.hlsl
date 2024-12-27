@@ -6,7 +6,6 @@ PUSHCONSTANT(push, LightmapPushConstants);
 struct Output
 {
 	float4 pos : SV_POSITION;
-	centroid float2 uv : TEXCOORD;
 	centroid float3 pos3D : WORLDPOSITION;
 	centroid float3 normal : NORMAL;
 };
@@ -24,8 +23,6 @@ Output main(uint vertexID : SV_VertexID)
 	output.pos.xy = output.pos.xy * 2 - 1;
 	output.pos.y *= -1;
 	output.pos.xy += xTracePixelOffset;
-
-	output.uv = atl;
 
 	output.pos3D = mul(inst.transform.GetMatrix(), float4(pos, 1)).xyz;
 

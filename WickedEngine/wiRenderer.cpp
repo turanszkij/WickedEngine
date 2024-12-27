@@ -1445,11 +1445,7 @@ void LoadShaders()
 		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 		desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
 
-		RenderPassInfo renderpass_info;
-		renderpass_info.rt_count = 1;
-		renderpass_info.rt_formats[0] = Format::R32G32B32A32_FLOAT;
-
-		device->CreatePipelineState(&desc, &PSO_renderlightmap, &renderpass_info);
+		device->CreatePipelineState(&desc, &PSO_renderlightmap);
 		});
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		PipelineStateDesc desc;
@@ -2304,7 +2300,7 @@ void SetUpStates()
 
 
 	rs = rasterizers[RSTYPE_DOUBLESIDED];
-	// Note: conservative raster can produce bright lightmap pixels, so now it's disabled!
+	// Note: conservative rasterization can cause GPU hang sometimes
 	//if (device->CheckCapability(GraphicsDeviceCapability::CONSERVATIVE_RASTERIZATION))
 	//{
 	//	rs.conservative_rasterization_enable = true;
@@ -4608,6 +4604,8 @@ void UpdateRenderData(
 
 	auto prof_updatebuffer_cpu = wi::profiler::BeginRangeCPU("Update Buffers (CPU)");
 	auto prof_updatebuffer_gpu = wi::profiler::BeginRangeGPU("Update Buffers (GPU)", cmd);
+
+	barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->meshletBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
 
 	barrier_stack.push_back(GPUBarrier::Buffer(&buffers[BUFFERTYPE_FRAMECB], ResourceState::CONSTANT_BUFFER, ResourceState::COPY_DST));
 	if (vis.scene->instanceBuffer.IsValid())
@@ -15963,7 +15961,7 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 	desc.width = resolution.x / 4;
 	desc.height = resolution.y / 4;
 	desc.format = Format::R16G16B16A16_FLOAT;
-	desc.layout = ResourceState::SHADER_RESOURCE;
+	desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&desc, nullptr, &res.texture_cloudRender);
 	device->SetName(&res.texture_cloudRender, "texture_cloudRender");
 	desc.format = Format::R32G32_FLOAT;
@@ -16191,7 +16189,23 @@ void Postprocess_VolumetricClouds_Upsample(
 		device->BindResource(&res.texture_reproject[temporal_output], 0, cmd);
 		device->BindResource(&res.texture_reproject_depth[temporal_output], 1, cmd);
 
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&res.texture_reproject[temporal_output], res.texture_reproject[temporal_output].desc.layout, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Image(&res.texture_reproject_depth[temporal_output], res.texture_reproject_depth[temporal_output].desc.layout, ResourceState::SHADER_RESOURCE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
 		device->Draw(3, 0, cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&res.texture_reproject[temporal_output], ResourceState::SHADER_RESOURCE, res.texture_reproject[temporal_output].desc.layout),
+				GPUBarrier::Image(&res.texture_reproject_depth[temporal_output], ResourceState::SHADER_RESOURCE, res.texture_reproject_depth[temporal_output].desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
 	}
 
 	wi::profiler::EndRange(range);

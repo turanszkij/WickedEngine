@@ -14,7 +14,7 @@ static const int2 offsets[] = {
 	int2(-1, -1),
 	int2(1, -1),
 	int2(1, 1),
-	int2(-1, -1),
+	int2(-1, 1),
 };
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
