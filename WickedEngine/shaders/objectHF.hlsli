@@ -149,12 +149,12 @@ struct VertexInput
 		return poi;
 	}
 
-	half2 GetAtlasUV()
+	float2 GetAtlasUV()
 	{
 		[branch]
 		if (GetMesh().vb_atl < 0)
 			return 0;
-		return bindless_buffers_half2[GetMesh().vb_atl][vertexID];
+		return bindless_buffers_float2[GetMesh().vb_atl][vertexID];
 	}
 
 	half4 GetVertexColor()
@@ -219,7 +219,7 @@ struct VertexSurface
 {
 	float4 position;
 	float4 uvsets;
-	half2 atlas;
+	float2 atlas;
 	half4 color;
 	float3 normal;
 	float4 tangent;
@@ -309,7 +309,8 @@ struct PixelInput
 #endif // OBJECTSHADER_USE_NORMAL
 
 #ifdef OBJECTSHADER_USE_COMMON
-	half4 atl_ao_wet : COMMON;
+	float2 atl : ATLAS;
+	half2 ao_wet : COMMON;
 #endif // OBJECTSHADER_USE_COMMON
 
 #ifndef OBJECTSHADER_COMPILE_MS
@@ -420,7 +421,8 @@ PixelInput vertex_to_pixel_export(VertexInput input)
 #endif // OBJECTSHADER_USE_NORMAL
 
 #ifdef OBJECTSHADER_USE_COMMON
-	Out.atl_ao_wet = half4(surface.atlas, surface.ao, surface.wet);
+	Out.atl = surface.atlas;
+	Out.ao_wet = half2(surface.ao, surface.wet);
 #endif // OBJECTSHADER_USE_COMMON
 
 #ifdef OBJECTSHADER_USE_TANGENT
@@ -542,7 +544,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // OBJECTSHADER_USE_NORMAL
 
 #ifdef OBJECTSHADER_USE_COMMON
-	surface.occlusion = input.atl_ao_wet.z;
+	surface.occlusion = input.ao_wet.x;
 #endif // OBJECTSHADER_USE_COMMON
 
 #ifdef OBJECTSHADER_USE_TANGENT
@@ -762,7 +764,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	
 
 #ifdef OBJECTSHADER_USE_COMMON
-	half wet = input.atl_ao_wet.w;
+	half wet = input.ao_wet.y;
 	if(wet > 0)
 	{
 		surface.albedo = lerp(surface.albedo, 0, wet);
@@ -970,7 +972,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 
 #ifdef OBJECTSHADER_USE_COMMON
-	LightMapping(meshinstance.lightmap, input.atl_ao_wet.xy, lighting, surface);
+	LightMapping(meshinstance.lightmap, input.atl, lighting, surface);
 #endif // OBJECTSHADER_USE_COMMON
 
 
