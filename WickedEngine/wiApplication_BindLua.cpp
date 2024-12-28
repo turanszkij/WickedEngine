@@ -148,6 +148,9 @@ namespace wi::lua
 				component->ActivatePath(comp->component, fadeSeconds, fadeColor);
 				return 0;
 			}
+
+			// If first param is neither, it can be nil to unset path:
+			component->ActivatePath(nullptr);
 		}
 		else
 		{

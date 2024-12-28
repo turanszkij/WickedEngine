@@ -28,6 +28,7 @@ namespace wi::lua
 			renderpath.camera = wi::lua::scene::GetGlobalCamera();
 			this->component = &renderpath;
 		}
+		virtual ~RenderPath3D_BindLua() = default;
 
 		int SetResolutionScale(lua_State* L);
 		int SetAO(lua_State* L);
