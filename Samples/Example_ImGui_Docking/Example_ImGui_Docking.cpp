@@ -347,6 +347,17 @@ void Example_ImGui::Compose(wi::graphics::CommandList cmd)
 		vertexOffset += drawList->VtxBuffer.size();
 	}
 
+	// Restore Scissor
+	{
+		Rect scissor;
+		scissor.left = 0;
+		scissor.top = 0;
+		scissor.right = (int32_t)viewport.width;
+		scissor.bottom = (int32_t)viewport.height;
+		device->BindScissorRects(1, &scissor, cmd);
+
+	}
+
 	//// Update and Render additional Platform Windows
 	//if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 	//{
