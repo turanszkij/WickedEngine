@@ -5,6 +5,8 @@
 #include "lightingHF.hlsli"
 #include "stochasticSSRHF.hlsli"
 
+//#define DEBUG_CHARTS
+
 // This value specifies after which bounce the anyhit will be disabled:
 static const uint ANYTHIT_CUTOFF_AFTER_BOUNCE_COUNT = 4;
 
@@ -13,6 +15,10 @@ struct Input
 	float4 pos : SV_POSITION;
 	centroid float3 pos3D : WORLDPOSITION;
 	centroid float3 normal : NORMAL;
+
+#ifdef DEBUG_CHARTS
+	uint primitiveID : SV_PrimitiveID;
+#endif // DEBUG_CHARTS
 };
 
 static const float2 tangent_directions[] = {
@@ -105,6 +111,10 @@ void BakeryPixelPush(inout float3 P, in float3 N, in float2 UV, inout RNG rng, i
 
 float4 main(Input input) : SV_TARGET
 {
+#ifdef DEBUG_CHARTS
+	return float4(random_color(input.primitiveID), 1);
+#endif // DEBUG_CHARTS
+
 	float2 uv = input.pos.xy * xTraceResolution_rcp;
 
 	Surface surface;
@@ -408,6 +418,6 @@ float4 main(Input input) : SV_TARGET
 
 	//if(bakerydebug > 0)
 	//	result = float3(1,0,0);
-
+	
 	return float4(result, xTraceAccumulationFactor);
 }

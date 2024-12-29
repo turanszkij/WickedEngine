@@ -30,7 +30,7 @@ void VideoPreview::Render(const wi::Canvas& canvas, wi::graphics::CommandList cm
 void VideoWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create(ICON_VIDEO " Video", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	wi::gui::Window::Create(ICON_VIDEO " Video", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE | wi::gui::Window::WindowControls::FIT_ALL_WIDGETS_VERTICAL);
 	SetSize(XMFLOAT2(440, 840));
 
 	closeButton.SetTooltip("Delete VideoComponent");

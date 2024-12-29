@@ -8,7 +8,7 @@ using namespace wi::scene;
 
 ModifierWindow::ModifierWindow(const std::string& name)
 {
-	wi::gui::Window::Create(name, wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
+	wi::gui::Window::Create(name, wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE | wi::gui::Window::WindowControls::FIT_ALL_WIDGETS_VERTICAL);
 	SetSize(XMFLOAT2(200, 100));
 
 	blendCombo.Create("Blend: ");
@@ -321,7 +321,7 @@ PropWindow::PropWindow(wi::terrain::Prop* prop, wi::scene::Scene* scene)
 		scene->Entity_Remove(entity);
 	}
 
-	wi::gui::Window::Create(windowName, wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE);
+	wi::gui::Window::Create(windowName, wi::gui::Window::WindowControls::CLOSE_AND_COLLAPSE | wi::gui::Window::WindowControls::FIT_ALL_WIDGETS_VERTICAL);
 
 	constexpr auto elementSize = XMFLOAT2(100, 20);
 
@@ -661,7 +661,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	RemoveWidgets();
 	ClearTransform();
 
-	wi::gui::Window::Create(ICON_TERRAIN " Terrain", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	wi::gui::Window::Create(ICON_TERRAIN " Terrain", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE | wi::gui::Window::WindowControls::FIT_ALL_WIDGETS_VERTICAL);
 	SetSize(XMFLOAT2(420, 1000));
 
 	closeButton.SetTooltip("Delete Terrain.");

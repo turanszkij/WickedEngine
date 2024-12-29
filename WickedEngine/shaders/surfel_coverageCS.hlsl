@@ -5,25 +5,6 @@
 
 PUSHCONSTANT(push, SurfelDebugPushConstants);
 
-static const uint random_colors_size = 11;
-static const float3 random_colors[random_colors_size] = {
-	float3(0,0,1),
-	float3(0,1,1),
-	float3(0,1,0),
-	float3(1,1,0),
-	float3(1,0,0),
-	float3(1,0,1),
-	float3(0.5,1,1),
-	float3(0.5,1,0.5),
-	float3(1,1,0.5),
-	float3(1,0.5,0.5),
-	float3(1,0.5,1),
-};
-float3 random_color(uint index)
-{
-	return random_colors[index % random_colors_size];
-}
-
 StructuredBuffer<Surfel> surfelBuffer : register(t0);
 StructuredBuffer<SurfelGridCell> surfelGridBuffer : register(t1);
 StructuredBuffer<uint> surfelCellBuffer : register(t2);

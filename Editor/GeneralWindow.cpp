@@ -436,6 +436,11 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->newEntityCombo.SetAngularHighlightColor(highlight);
 		editor->componentsWnd.newComponentCombo.SetAngularHighlightColor(highlight);
 		editor->componentsWnd.materialWnd.textureSlotButton.SetColor(wi::Color::White(), wi::gui::IDLE);
+		editor->componentsWnd.objectWnd.lightmapPreviewButton.SetColor(wi::Color::White());
+		for (auto& x : editor->componentsWnd.objectWnd.lightmapPreviewButton.sprites)
+		{
+			x.params.disableBackground();
+		}
 		editor->componentsWnd.spriteWnd.textureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 		editor->paintToolWnd.brushTextureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 		editor->paintToolWnd.revealTextureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
@@ -709,6 +714,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->aboutLabel.sprites[i].params.blendFlag = wi::enums::BLENDMODE_ALPHA;
 		}
 
+		editor->guiScalingCombo.SetShadowRadius(0);
 		for (auto& sprite : editor->guiScalingCombo.sprites)
 		{
 			sprite.params.enableCornerRounding();
