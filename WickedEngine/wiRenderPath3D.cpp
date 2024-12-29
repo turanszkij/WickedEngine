@@ -2542,16 +2542,38 @@ namespace wi
 		case RenderPath3D::AO_HBAO:
 			desc.width = internalResolution.x / 2;
 			desc.height = internalResolution.y / 2;
-			wi::renderer::CreateSSAOResources(ssaoResources, internalResolution);
 			break;
 		case RenderPath3D::AO_MSAO:
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
-			wi::renderer::CreateMSAOResources(msaoResources, internalResolution);
 			break;
 		case RenderPath3D::AO_RTAO:
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
+			break;
+		default:
+			break;
+		}
+
+		if (ComputeTextureMemorySizeInBytes(desc) > ComputeTextureMemorySizeInBytes(rtParticleDistortion.desc))
+		{
+			// There would be resource aliasing error if we proceed like this!
+			//	looks like ResizeBuffers() hasn't been called yet for the current internal resolution
+			//	if this happens, then ResizeBuffers() will be called next frame probably and then AO resources
+			//	will be created successdully
+			return;
+		}
+
+		switch (ao)
+		{
+		case RenderPath3D::AO_SSAO:
+		case RenderPath3D::AO_HBAO:
+			wi::renderer::CreateSSAOResources(ssaoResources, internalResolution);
+			break;
+		case RenderPath3D::AO_MSAO:
+			wi::renderer::CreateMSAOResources(msaoResources, internalResolution);
+			break;
+		case RenderPath3D::AO_RTAO:
 			wi::renderer::CreateRTAOResources(rtaoResources, internalResolution);
 			break;
 		default:
