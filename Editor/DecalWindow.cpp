@@ -8,7 +8,7 @@ using namespace wi::scene;
 void DecalWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create(ICON_DECAL " Decal", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	wi::gui::Window::Create(ICON_DECAL " Decal", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE | wi::gui::Window::WindowControls::FIT_ALL_WIDGETS_VERTICAL);
 	SetSize(XMFLOAT2(300, 200));
 
 	closeButton.SetTooltip("Delete DecalComponent");

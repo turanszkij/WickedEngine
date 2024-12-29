@@ -7,7 +7,7 @@ using namespace wi::scene;
 void ForceFieldWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
-	wi::gui::Window::Create(ICON_FORCE " Force Field", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
+	wi::gui::Window::Create(ICON_FORCE " Force Field", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE | wi::gui::Window::WindowControls::FIT_ALL_WIDGETS_VERTICAL);
 	SetSize(XMFLOAT2(420, 120));
 
 	closeButton.SetTooltip("Delete ForceFieldComponent");

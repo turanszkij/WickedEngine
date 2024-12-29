@@ -36,6 +36,7 @@ public:
 	wi::gui::Button generateLightmapButton;
 	wi::gui::Button stopLightmapGenButton;
 	wi::gui::Button clearLightmapButton;
+	wi::gui::Button lightmapPreviewButton;
 
 	wi::gui::Button vertexAOButton;
 	bool deleteAOMode = false;

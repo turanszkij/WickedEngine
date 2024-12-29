@@ -2039,4 +2039,23 @@ half3x3 saturationMatrix(half saturation)
 	return half3x3(red, green, blue);
 }
 
+
+static const float3 random_colors[] = {
+	float3(0,0,1),
+	float3(0,1,1),
+	float3(0,1,0),
+	float3(1,1,0),
+	float3(1,0,0),
+	float3(1,0,1),
+	float3(0.5,1,1),
+	float3(0.5,1,0.5),
+	float3(1,1,0.5),
+	float3(1,0.5,0.5),
+	float3(1,0.5,1),
+};
+float3 random_color(uint index)
+{
+	return random_colors[index % arraysize(random_colors)];
+}
+
 #endif // WI_SHADER_GLOBALS_HF

@@ -99,6 +99,8 @@ static Atlas_Dim GenerateMeshAtlas(Scene& scene, Entity entity, uint32_t resolut
 		xatlas::ChartOptions chartoptions;
 		chartoptions.useInputMeshUvs = true;
 		chartoptions.fixWinding = true;
+		//chartoptions.normalDeviationWeight = 0.1f;
+		//chartoptions.normalSeamWeight = 0.1f;
 
 		xatlas::PackOptions packoptions;
 		packoptions.resolution = resolution;
@@ -322,8 +324,8 @@ void ObjectWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 
-	wi::gui::Window::Create(ICON_OBJECT " Object", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE);
-	SetSize(XMFLOAT2(670, 940));
+	wi::gui::Window::Create(ICON_OBJECT " Object", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE | wi::gui::Window::WindowControls::FIT_ALL_WIDGETS_VERTICAL);
+	SetSize(XMFLOAT2(670, 980));
 
 	closeButton.SetTooltip("Delete ObjectComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -608,6 +610,13 @@ void ObjectWindow::Create(EditorComponent* _editor)
 
 	y += step;
 
+	lightmapPreviewButton.Create("");
+	lightmapPreviewButton.SetVisible(false);
+	for (auto& x : lightmapPreviewButton.sprites)
+	{
+		x.params.blendFlag = wi::enums::BLENDMODE_OPAQUE;
+	}
+	AddWidget(&lightmapPreviewButton);
 
 	lightmapResolutionSlider.Create(32, 8192, 512, 8192 - 32, "Lightmap resolution: ");
 	lightmapResolutionSlider.SetTooltip("Set the approximate resolution for this object's lightmap. This will be packed into the larger global lightmap later.");
@@ -1153,6 +1162,16 @@ void ObjectWindow::ResizeLayout()
 		y += widget.GetSize().y;
 		y += padding;
 	};
+	auto add_fullwidth_aspect = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = padding;
+		const float margin_right = padding;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, width - margin_left - margin_right));
+		y += widget.GetSize().y;
+		y += padding;
+	};
 
 	margin_left = 80;
 
@@ -1189,9 +1208,27 @@ void ObjectWindow::ResizeLayout()
 	add(stopLightmapGenButton);
 	add(clearLightmapButton);
 
+
+	Scene& scene = editor->GetCurrentScene();
+	const ObjectComponent* object = scene.objects.GetComponent(entity);
+	if (object != nullptr)
+	{
+		if (object->lightmap.IsValid())
+		{
+			wi::Resource res;
+			res.SetTexture(object->lightmap);
+			lightmapPreviewButton.SetImage(res);
+			lightmapPreviewButton.SetVisible(true);
+			add_fullwidth_aspect(lightmapPreviewButton);
+		}
+		else
+		{
+			lightmapPreviewButton.SetVisible(false);
+		}
+	}
+
 	y += jump;
 	add_fullwidth(vertexAOButton);
 	add(vertexAORayCountSlider);
 	add(vertexAORayLengthSlider);
-
 }

@@ -3344,45 +3344,61 @@ namespace wi::gui
 		scrollable_area.ClearTransform();
 		scrollable_area.Translate(translation);
 
-		// Compute scrollable area:
-		if (scrollbar_horizontal.parent != nullptr || scrollbar_vertical.parent != nullptr)
+		float scroll_length_horizontal = 0;
+		float scroll_length_vertical = 0;
+		for (auto& widget : widgets)
 		{
-			float scroll_length_horizontal = 0;
-			float scroll_length_vertical = 0;
-			for (auto& widget : widgets)
+			if (!widget->IsVisible())
+				continue;
+			if (widget->parent == &scrollable_area)
 			{
-				if (!widget->IsVisible())
-					continue;
-				if (widget->parent == &scrollable_area)
+				XMFLOAT2 size = widget->GetSize();
+				scroll_length_horizontal = std::max(scroll_length_horizontal, widget->translation_local.x + size.x);
+				scroll_length_vertical = std::max(scroll_length_vertical, widget->translation_local.y + size.y);
+			}
+		}
+
+		if (has_flag(controls, WindowControls::FIT_ALL_WIDGETS_VERTICAL))
+		{
+			if (!IsCollapsed())
+			{
+				// it will be dynamically sized to fit all widgets:
+				auto saved_parent = this->parent;
+				this->Detach();
+				scale_local.y = control_size + 1 + scroll_length_vertical + 4; // some padding at the bottom
+				this->AttachTo(saved_parent);
+			}
+		}
+		else
+		{
+			// Compute scrollable area:
+			if (scrollbar_horizontal.parent != nullptr || scrollbar_vertical.parent != nullptr)
+			{
+				scrollbar_horizontal.SetListLength(scroll_length_horizontal);
+				scrollbar_vertical.SetListLength(scroll_length_vertical);
+				scrollbar_horizontal.Update(canvas, 0);
+				scrollbar_vertical.Update(canvas, 0);
+				scrollable_area.Translate(XMFLOAT3(scrollbar_horizontal.GetOffset(), 1 + scrollbar_vertical.GetOffset(), 0));
+				scrollable_area.scissorRect.left += 1;
+				if (scrollbar_horizontal.parent != nullptr && scrollbar_horizontal.IsScrollbarRequired())
 				{
-					XMFLOAT2 size = widget->GetSize();
-					scroll_length_horizontal = std::max(scroll_length_horizontal, widget->translation_local.x + size.x);
-					scroll_length_vertical = std::max(scroll_length_vertical, widget->translation_local.y + size.y);
+					scrollable_area.scissorRect.bottom -= (int32_t)control_size + 1;
 				}
+				if (scrollbar_vertical.parent != nullptr && scrollbar_vertical.IsScrollbarRequired())
+				{
+					scrollable_area.scissorRect.right -= (int32_t)control_size + 1;
+				}
+				scrollable_area.active_area.pos.x = float(scrollable_area.scissorRect.left);
+				scrollable_area.active_area.pos.y = float(scrollable_area.scissorRect.top);
+				scrollable_area.active_area.siz.x = float(scrollable_area.scissorRect.right) - float(scrollable_area.scissorRect.left);
+				scrollable_area.active_area.siz.y = float(scrollable_area.scissorRect.bottom) - float(scrollable_area.scissorRect.top);
 			}
-			scrollbar_horizontal.SetListLength(scroll_length_horizontal);
-			scrollbar_vertical.SetListLength(scroll_length_vertical);
-			scrollbar_horizontal.Update(canvas, 0);
-			scrollbar_vertical.Update(canvas, 0);
-			scrollable_area.Translate(XMFLOAT3(scrollbar_horizontal.GetOffset(), 1 + scrollbar_vertical.GetOffset(), 0));
-			scrollable_area.scissorRect.left += 1;
-			if (has_titlebar)
-			{
-				scrollable_area.Translate(XMFLOAT3(0, control_size, 0));
-				scrollable_area.scissorRect.top += (int32_t)control_size;
-			}
-			if (scrollbar_horizontal.parent != nullptr && scrollbar_horizontal.IsScrollbarRequired())
-			{
-				scrollable_area.scissorRect.bottom -= (int32_t)control_size + 1;
-			}
-			if (scrollbar_vertical.parent != nullptr && scrollbar_vertical.IsScrollbarRequired())
-			{
-				scrollable_area.scissorRect.right -= (int32_t)control_size + 1;
-			}
-			scrollable_area.active_area.pos.x = float(scrollable_area.scissorRect.left);
-			scrollable_area.active_area.pos.y = float(scrollable_area.scissorRect.top);
-			scrollable_area.active_area.siz.x = float(scrollable_area.scissorRect.right) - float(scrollable_area.scissorRect.left);
-			scrollable_area.active_area.siz.y = float(scrollable_area.scissorRect.bottom) - float(scrollable_area.scissorRect.top);
+		}
+
+		if (has_titlebar)
+		{
+			scrollable_area.Translate(XMFLOAT3(0, control_size, 0));
+			scrollable_area.scissorRect.top += (int32_t)control_size;
 		}
 
 		scrollable_area.AttachTo(this);
