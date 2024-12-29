@@ -678,7 +678,7 @@ namespace wi::gui
 			CLOSE = 1 << 9,
 			COLLAPSE = 1 << 10,
 			DISABLE_TITLE_BAR = 1 << 11,
-			FIT_ALL_WIDGETS_VERTICAL = 1 << 13, // auto resize window to fit all widgets that are in it
+			FIT_ALL_WIDGETS_VERTICAL = 1 << 12, // auto resize window vertically to fit all widgets that are in it
 
 			RESIZE = RESIZE_LEFT | RESIZE_TOP | RESIZE_RIGHT | RESIZE_BOTTOM | RESIZE_TOPLEFT | RESIZE_TOPRIGHT | RESIZE_BOTTOMLEFT | RESIZE_BOTTOMRIGHT,
 			CLOSE_AND_COLLAPSE = CLOSE | COLLAPSE,
