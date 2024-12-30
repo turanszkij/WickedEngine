@@ -364,6 +364,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 		ObjectComponent merged_object;
 		MeshComponent merged_mesh;
 		bool valid_normals = false;
+		bool valid_tangents = false;
 		bool valid_uvset_0 = false;
 		bool valid_uvset_1 = false;
 		bool valid_atlas = false;
@@ -451,6 +452,18 @@ void MeshWindow::Create(EditorComponent* _editor)
 					valid_normals = true;
 					merged_mesh.vertex_normals.push_back(mesh->vertex_normals[i]);
 					XMStoreFloat3(&merged_mesh.vertex_normals.back(), XMVector3TransformNormal(XMLoadFloat3(&merged_mesh.vertex_normals.back()), W));
+				}
+
+				if (mesh->vertex_tangents.empty())
+				{
+					merged_mesh.vertex_tangents.emplace_back();
+				}
+				else
+				{
+					valid_tangents = true;
+					merged_mesh.vertex_tangents.push_back(mesh->vertex_tangents[i]);
+					XMFLOAT3* tan = (XMFLOAT3*)&merged_mesh.vertex_tangents.back();
+					XMStoreFloat3(tan, XMVector3TransformNormal(XMLoadFloat3(tan), W));
 				}
 
 				if (mesh->vertex_uvset_0.empty())
@@ -576,6 +589,8 @@ void MeshWindow::Create(EditorComponent* _editor)
 		{
 			if (!valid_normals)
 				merged_mesh.vertex_normals.clear();
+			if (!valid_tangents)
+				merged_mesh.vertex_tangents.clear();
 			if (!valid_uvset_0)
 				merged_mesh.vertex_uvset_0.clear();
 			if (!valid_uvset_1)
