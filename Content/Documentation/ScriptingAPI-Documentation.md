@@ -1420,7 +1420,7 @@ Describes a Collider object.
 - SetOverrideBlink(int id, ExpressionOverride override)
 - SetOverrideLook(int id, ExpressionOverride override)
 
-
+```lua
 [outer] ExpressionPreset = {
 	Happy = 0,
 	Angry = 1,
@@ -1447,6 +1447,7 @@ Describes a Collider object.
 	Block = 1,
 	Blend = 2,
 }
+```
 
 
 #### HumanoidComponent
@@ -1462,6 +1463,7 @@ Describes a Collider object.
 - GetRagdollFatness() : float
 - GetRagdollHeadSize() : float
 
+```lua
 [outer] HumanoidBone = {
 	Hips = 0,	-- included in ragdoll
 	Spine = 1,	-- included in ragdoll
@@ -1521,6 +1523,7 @@ Describes a Collider object.
 
 	Count = 55
 }
+```
 
 
 #### DecalComponent
