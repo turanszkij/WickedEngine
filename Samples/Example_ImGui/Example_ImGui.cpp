@@ -132,7 +132,8 @@ void Example_ImGui::Initialize()
 #ifdef _WIN32
 	ImGui_ImplWin32_Init(window);
 #elif defined(SDL2)
-	ImGui_ImplSDL2_InitForVulkan(window);
+	IM_ASSERT(window.type == wi::platform::LinuxWindow::eSDLWindow);
+	ImGui_ImplSDL2_InitForVulkan(window.sdl_window);
 #endif
 
 	IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");

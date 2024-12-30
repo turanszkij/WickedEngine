@@ -18,6 +18,9 @@
 
 #define VK_NO_PROTOTYPES
 #include "Utility/vulkan/vulkan.h"
+#ifdef SDL2
+#include "Utility/vulkan/vulkan_wayland.h"
+#endif
 #include "Utility/volk.h"
 #include "Utility/vk_mem_alloc.h"
 
