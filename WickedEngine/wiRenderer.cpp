@@ -198,6 +198,12 @@ Texture texture_weatherMap;
 // See: https://github.com/turanszkij/WickedEngine/issues/450
 GPUBuffer luminance_dummy;
 
+// Dummy buffers preinitialized to invalid scene structs, avoids possible GPU crash when
+//  shader compiler is incorrectly pulling buffer desciptor load outside valid branch
+GPUBuffer instance_dummy;
+GPUBuffer geometry_dummy;
+GPUBuffer material_dummy;
+
 // Direct reference to a renderable instance:
 struct RenderBatch
 {
@@ -2122,6 +2128,45 @@ void LoadBuffers()
 		device->SetName(&luminance_dummy, "luminance_dummy");
 
 		static_assert(LUMINANCE_BUFFER_OFFSET_EXPOSURE == 0);
+	}
+
+	{
+		ShaderMeshInstance data;
+		data.init();
+
+		GPUBufferDesc desc;
+		desc.stride = sizeof(data);
+		desc.size = desc.stride;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE;
+		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+		device->CreateBuffer(&desc, &data, &instance_dummy);
+		device->SetName(&instance_dummy, "instance_dummy");
+	}
+
+	{
+		ShaderGeometry data;
+		data.init();
+
+		GPUBufferDesc desc;
+		desc.stride = sizeof(data);
+		desc.size = desc.stride;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE;
+		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+		device->CreateBuffer(&desc, &data, &geometry_dummy);
+		device->SetName(&geometry_dummy, "geometry_dummy");
+	}
+
+	{
+		ShaderMaterial data;
+		data.init();
+
+		GPUBufferDesc desc;
+		desc.stride = sizeof(data);
+		desc.size = desc.stride;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE;
+		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+		device->CreateBuffer(&desc, &data, &material_dummy);
+		device->SetName(&material_dummy, "material_dummy");
 	}
 
 	{
@@ -4593,6 +4638,19 @@ void UpdatePerFrameData(
 	frameCB.decals = ShaderEntityIterator(decalarray_offset, decalarray_count);
 	frameCB.forces = ShaderEntityIterator(forcefieldarray_offset, forcefieldarray_count);
 
+	// GPU crash workarounds, setting buffers with invalid data:
+	if (frameCB.scene.instancebuffer < 0)
+	{
+		frameCB.scene.instancebuffer = device->GetDescriptorIndex(&instance_dummy, SubresourceType::SRV);
+	}
+	if (frameCB.scene.geometrybuffer < 0)
+	{
+		frameCB.scene.geometrybuffer = device->GetDescriptorIndex(&geometry_dummy, SubresourceType::SRV);
+	}
+	if (frameCB.scene.materialbuffer < 0)
+	{
+		frameCB.scene.materialbuffer = device->GetDescriptorIndex(&material_dummy, SubresourceType::SRV);
+	}
 }
 void UpdateRenderData(
 	const Visibility& vis,
@@ -16189,23 +16247,7 @@ void Postprocess_VolumetricClouds_Upsample(
 		device->BindResource(&res.texture_reproject[temporal_output], 0, cmd);
 		device->BindResource(&res.texture_reproject_depth[temporal_output], 1, cmd);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.texture_reproject[temporal_output], res.texture_reproject[temporal_output].desc.layout, ResourceState::SHADER_RESOURCE),
-				GPUBarrier::Image(&res.texture_reproject_depth[temporal_output], res.texture_reproject_depth[temporal_output].desc.layout, ResourceState::SHADER_RESOURCE),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
 		device->Draw(3, 0, cmd);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.texture_reproject[temporal_output], ResourceState::SHADER_RESOURCE, res.texture_reproject[temporal_output].desc.layout),
-				GPUBarrier::Image(&res.texture_reproject_depth[temporal_output], ResourceState::SHADER_RESOURCE, res.texture_reproject_depth[temporal_output].desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
 	}
 
 	wi::profiler::EndRange(range);
@@ -16351,7 +16393,6 @@ void Postprocess_TemporalAA(
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
 			GPUBarrier::Image(output, ResourceState::UNORDERED_ACCESS, output->GetDesc().layout),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
