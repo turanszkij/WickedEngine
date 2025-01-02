@@ -1666,9 +1666,7 @@ std::mutex queue_locker;
 		dx12_check(hr);
 		if (FAILED(hr))
 		{
-			std::stringstream ss("");
-			ss << "ID3D12Device::CreateCommandQueue[CopyAllocator] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
-			wi::helper::messageBox(ss.str(), "Error!");
+			wilog_messagebox("ID3D12Device::CreateCommandQueue[CopyAllocator] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 			wi::platform::Exit();
 		}
 		hr = queue->SetName(L"CopyAllocator");
@@ -2337,9 +2335,7 @@ std::mutex queue_locker;
 		hr = CreateDXGIFactory2((validationMode != ValidationMode::Disabled) ? DXGI_CREATE_FACTORY_DEBUG : 0u, PPV_ARGS(dxgiFactory));
 		if (FAILED(hr))
 		{
-			std::stringstream ss("");
-			ss << "CreateDXGIFactory2 failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
-			wi::helper::messageBox(ss.str(), "Error!");
+			wilog_messagebox("CreateDXGIFactory2 failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 			wi::platform::Exit();
 		}
 
@@ -2412,14 +2408,14 @@ std::mutex queue_locker;
 		assert(dxgiAdapter != nullptr);
 		if (dxgiAdapter == nullptr)
 		{
-			wi::helper::messageBox("DXGI: No capable adapter found!", "Error!");
+			wilog_messagebox("DXGI: No capable graphics adapter found!");
 			wi::platform::Exit();
 		}
 
 		assert(device != nullptr);
 		if (device == nullptr)
 		{
-			wi::helper::messageBox("D3D12: Device couldn't be created!", "Error!");
+			wilog_messagebox("D3D12: Device couldn't be created!");
 			wi::platform::Exit();
 		}
 
@@ -2478,9 +2474,7 @@ std::mutex queue_locker;
 		dx12_check(hr);
 		if (FAILED(hr))
 		{
-			std::stringstream ss("");
-			ss << "D3D12MA::CreateAllocator failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
-			wi::helper::messageBox(ss.str(), "Error!");
+			wilog_messagebox("D3D12MA::CreateAllocator failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 			wi::platform::Exit();
 		}
 
@@ -2493,9 +2487,7 @@ std::mutex queue_locker;
 			dx12_check(hr);
 			if (FAILED(hr))
 			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateCommandQueue[QUEUE_GRAPHICS] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
-				wi::helper::messageBox(ss.str(), "Error!");
+				wilog_messagebox("ID3D12Device::CreateCommandQueue[QUEUE_GRAPHICS] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 				wi::platform::Exit();
 			}
 			hr = queues[QUEUE_GRAPHICS].queue->SetName(L"QUEUE_GRAPHICS");
@@ -2511,9 +2503,7 @@ std::mutex queue_locker;
 			dx12_check(hr);
 			if (FAILED(hr))
 			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateCommandQueue[QUEUE_COMPUTE] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
-				wi::helper::messageBox(ss.str(), "Error!");
+				wilog_messagebox("ID3D12Device::CreateCommandQueue[QUEUE_COMPUTE] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 				wi::platform::Exit();
 			}
 			hr = queues[QUEUE_COMPUTE].queue->SetName(L"QUEUE_COMPUTE");
@@ -2529,9 +2519,7 @@ std::mutex queue_locker;
 			dx12_check(hr);
 			if (FAILED(hr))
 			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateCommandQueue[QUEUE_COPY] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
-				wi::helper::messageBox(ss.str(), "Error!");
+				wilog_messagebox("ID3D12Device::CreateCommandQueue[QUEUE_COPY] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 				wi::platform::Exit();
 			}
 			hr = queues[QUEUE_COPY].queue->SetName(L"QUEUE_COPY");
@@ -2569,9 +2557,7 @@ std::mutex queue_locker;
 			dx12_check(hr);
 			if (FAILED(hr))
 			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateDescriptorHeap[CBV_SRV_UAV] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
-				wi::helper::messageBox(ss.str(), "Error!");
+				wilog_messagebox("ID3D12Device::CreateDescriptorHeap[CBV_SRV_UAV] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 				wi::platform::Exit();
 			}
 
@@ -2582,9 +2568,7 @@ std::mutex queue_locker;
 			dx12_check(hr);
 			if (FAILED(hr))
 			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateFence[CBV_SRV_UAV] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
-				wi::helper::messageBox(ss.str(), "Error!");
+				wilog_messagebox("ID3D12Device::CreateFence[CBV_SRV_UAV] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 				wi::platform::Exit();
 			}
 			descriptorheap_res.fenceValue = descriptorheap_res.fence->GetCompletedValue();
@@ -2605,9 +2589,7 @@ std::mutex queue_locker;
 			dx12_check(hr);
 			if (FAILED(hr))
 			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateDescriptorHeap[SAMPLER] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
-				wi::helper::messageBox(ss.str(), "Error!");
+				wilog_messagebox("ID3D12Device::CreateDescriptorHeap[SAMPLER] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 				wi::platform::Exit();
 			}
 
@@ -2618,9 +2600,7 @@ std::mutex queue_locker;
 			dx12_check(hr);
 			if (FAILED(hr))
 			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateFence[SAMPLER] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
-				wi::helper::messageBox(ss.str(), "Error!");
+				wilog_messagebox("ID3D12Device::CreateFence[SAMPLER] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 				wi::platform::Exit();
 			}
 			descriptorheap_sam.fenceValue = descriptorheap_sam.fence->GetCompletedValue();
@@ -2640,9 +2620,7 @@ std::mutex queue_locker;
 				dx12_check(hr);
 				if (FAILED(hr))
 				{
-					std::stringstream ss("");
-					ss << "ID3D12Device::CreateFence[FRAME] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
-					wi::helper::messageBox(ss.str(), "Error!");
+					wilog_messagebox("ID3D12Device::CreateFence[FRAME] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 					wi::platform::Exit();
 				}
 			}
@@ -2749,8 +2727,7 @@ std::mutex queue_locker;
 				break;
 			}
 			error += "\nExiting.";
-			wi::helper::messageBox(error, "Error!");
-			wi::backlog::post(error, wi::backlog::LogLevel::Error);
+			wilog_messagebox(error.c_str());
 			wi::platform::Exit();
 		}
 
@@ -2829,8 +2806,7 @@ std::mutex queue_locker;
 
 		if (features.HighestRootSignatureVersion() < D3D_ROOT_SIGNATURE_VERSION_1_1)
 		{
-			assert(0);
-			wi::helper::messageBox("DX12: Root signature version 1.1 not supported!", "Error!");
+			wilog_messagebox("DX12: Root signature version 1.1 not supported!");
 			wi::platform::Exit();
 		}
 
@@ -2898,9 +2874,7 @@ std::mutex queue_locker;
 		dx12_check(hr);
 		if (FAILED(hr))
 		{
-			std::stringstream ss("");
-			ss << "ID3D12Device::CreateCommandSignature[dispatchIndirect] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
-			wi::helper::messageBox(ss.str(), "Error!");
+			wilog_messagebox("ID3D12Device::CreateCommandSignature[dispatchIndirect] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 			wi::platform::Exit();
 		}
 
@@ -2911,9 +2885,7 @@ std::mutex queue_locker;
 		dx12_check(hr);
 		if (FAILED(hr))
 		{
-			std::stringstream ss("");
-			ss << "ID3D12Device::CreateCommandSignature[drawInstancedIndirect] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
-			wi::helper::messageBox(ss.str(), "Error!");
+			wilog_messagebox("ID3D12Device::CreateCommandSignature[drawInstancedIndirect] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 			wi::platform::Exit();
 		}
 
@@ -2924,9 +2896,7 @@ std::mutex queue_locker;
 		dx12_check(hr);
 		if (FAILED(hr))
 		{
-			std::stringstream ss("");
-			ss << "ID3D12Device::CreateCommandSignature[drawIndexedInstancedIndirect] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
-			wi::helper::messageBox(ss.str(), "Error!");
+			wilog_messagebox("ID3D12Device::CreateCommandSignature[drawIndexedInstancedIndirect] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 			wi::platform::Exit();
 		}
 
@@ -2945,9 +2915,7 @@ std::mutex queue_locker;
 			dx12_check(hr);
 			if (FAILED(hr))
 			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateCommandSignature[dispatchMeshIndirect] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
-				wi::helper::messageBox(ss.str(), "Error!");
+				wilog_messagebox("ID3D12Device::CreateCommandSignature[dispatchMeshIndirect] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 				wi::platform::Exit();
 			}
 		}
@@ -2964,9 +2932,7 @@ std::mutex queue_locker;
 		dx12_check(hr);
 		if (FAILED(hr))
 		{
-			std::stringstream ss("");
-			ss << "ID3D12Device::CreateDescriptorHeap[nulldescriptorheap_cbv_srv_uav] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
-			wi::helper::messageBox(ss.str(), "Error!");
+			wilog_messagebox("ID3D12Device::CreateDescriptorHeap[nulldescriptorheap_cbv_srv_uav] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 		}
 
 		nullHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
@@ -2975,9 +2941,7 @@ std::mutex queue_locker;
 		dx12_check(hr);
 		if (FAILED(hr))
 		{
-			std::stringstream ss("");
-			ss << "ID3D12Device::CreateDescriptorHeap[nulldescriptorheap_sampler] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
-			wi::helper::messageBox(ss.str(), "Error!");
+			wilog_messagebox("ID3D12Device::CreateDescriptorHeap[nulldescriptorheap_sampler] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 		}
 
 		nullCBV = nulldescriptorheap_cbv_srv_uav->GetCPUDescriptorHandleForHeapStart();
@@ -3032,9 +2996,7 @@ std::mutex queue_locker;
 		dx12_check(hr);
 		if (FAILED(hr))
 		{
-			std::stringstream ss("");
-			ss << "ID3D12CommandQueue::GetTimestampFrequency[QUEUE_GRAPHICS] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
-			wi::helper::messageBox(ss.str(), "Warning!");
+			wilog_messagebox("ID3D12CommandQueue::GetTimestampFrequency[QUEUE_GRAPHICS] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 		}
 
 		wi::backlog::post("Created GraphicsDevice_DX12 (" + std::to_string((int)std::round(timer.elapsed())) + " ms)\nAdapter: " + adapterName);
@@ -5785,7 +5747,7 @@ std::mutex queue_locker;
 
 		std::string message = "D3D12: device removed, cause: ";
 		message += removedReasonString;
-		wi::helper::messageBox(message, "Error!");
+		wilog_messagebox(message.c_str());
 		wi::platform::Exit();
 #endif // PLATFORM_WINDOWS_DESKTOP
 	}

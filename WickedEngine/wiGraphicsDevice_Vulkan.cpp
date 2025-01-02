@@ -1384,7 +1384,7 @@ using namespace vulkan_internal;
 				}
 				else
 				{
-					assert(0);
+					vulkan_check(res);
 				}
 			}
 		}
@@ -2541,8 +2541,7 @@ using namespace vulkan_internal;
 			vulkan_check(res);
 			if (deviceCount == 0)
 			{
-				assert(0);
-				wi::helper::messageBox("Failed to find GPU with Vulkan support!");
+				wilog_messagebox("Failed to find GPU with Vulkan 1.3 support!");
 				wi::platform::Exit();
 			}
 
@@ -2768,8 +2767,7 @@ using namespace vulkan_internal;
 
 			if (physicalDevice == VK_NULL_HANDLE)
 			{
-				assert(0);
-				wi::helper::messageBox("Failed to find a suitable GPU!");
+				wilog_messagebox("Failed to find a suitable GPU!");
 				wi::platform::Exit();
 			}
 
