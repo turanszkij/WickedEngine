@@ -31,6 +31,7 @@
 #include <Psapi.h> // GetProcessMemoryInfo
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
+#include <comdef.h> // com_error
 #elif defined(PLATFORM_PS5)
 #else
 #include "Utility/portable-file-dialogs.h"
@@ -1546,5 +1547,22 @@ namespace wi::helper
 			ss << timerSeconds / 60 / 60 << " hours";
 		}
 		return ss.str();
+	}
+
+	std::string GetPlatformErrorString(wi::platform::error_type code)
+	{
+		std::string str;
+
+#ifdef _WIN32
+		_com_error err(code);
+		LPCTSTR errMsg = err.ErrorMessage();
+		wchar_t wtext[1024] = {};
+		_snwprintf_s(wtext, arraysize(wtext), arraysize(wtext), L"0x%08x (%s)", code, errMsg);
+		char text[1024] = {};
+		wi::helper::StringConvert(wtext, text, arraysize(text));
+		str = text;
+#endif // _WIN32
+
+		return str;
 	}
 }

@@ -127,9 +127,7 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 			return;
 		wi::Timer tim;
 		voxelgrid->flood_fill();
-		char text[256] = {};
-		snprintf(text, arraysize(text), "Flood filling took %.2f seconds.", tim.elapsed_seconds());
-		wi::backlog::post(text);
+		wilog(text, arraysize(text), "Flood filling took %.2f seconds.", tim.elapsed_seconds());
 		});
 	AddWidget(&floodfillButton);
 

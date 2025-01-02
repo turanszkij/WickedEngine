@@ -2,7 +2,6 @@
 
 #ifdef WICKEDENGINE_BUILD_DX12
 #include "wiHelper.h"
-#include "wiBacklog.h"
 #include "wiTimer.h"
 #include "wiUnorderedSet.h"
 
@@ -1627,14 +1626,14 @@ std::mutex queue_locker;
 		if (queue == nullptr)
 			return;
 		HRESULT hr = queue->Signal(semaphore.fence.Get(), semaphore.fenceValue);
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 	}
 	void GraphicsDevice_DX12::CommandQueue::wait(const Semaphore& semaphore)
 	{
 		if (queue == nullptr)
 			return;
 		HRESULT hr = queue->Wait(semaphore.fence.Get(), semaphore.fenceValue);
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 	}
 	void GraphicsDevice_DX12::CommandQueue::submit()
 	{
@@ -1664,16 +1663,14 @@ std::mutex queue_locker;
 		desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 		desc.NodeMask = 0;
 		HRESULT hr = device->device->CreateCommandQueue(&desc, PPV_ARGS(queue));
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 		if (FAILED(hr))
 		{
-			std::stringstream ss("");
-			ss << "ID3D12Device::CreateCommandQueue[CopyAllocator] failed! ERROR: 0x" << std::hex << hr;
-			wi::helper::messageBox(ss.str(), "Error!");
+			wilog_messagebox("ID3D12Device::CreateCommandQueue[CopyAllocator] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 			wi::platform::Exit();
 		}
 		hr = queue->SetName(L"CopyAllocator");
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 #endif // PLATFORM_XBOX
 	}
 	GraphicsDevice_DX12::CopyAllocator::CopyCMD GraphicsDevice_DX12::CopyAllocator::allocate(uint64_t staging_size)
@@ -1701,16 +1698,16 @@ std::mutex queue_locker;
 		if (!cmd.IsValid())
 		{
 			HRESULT hr = device->device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, PPV_ARGS(cmd.commandAllocator));
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 			hr = device->device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, cmd.commandAllocator.Get(), nullptr, PPV_ARGS(cmd.commandList));
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 			cmd.commandList->SetName(L"CopyAllocator::commandList");
 
 			hr = cmd.commandList->Close();
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 
 			hr = device->device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(cmd.fence));
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 
 			GPUBufferDesc uploadBufferDesc;
 			uploadBufferDesc.size = wi::math::GetNextPowerOfTwo(staging_size);
@@ -1722,9 +1719,9 @@ std::mutex queue_locker;
 
 		// begin command list in valid state:
 		HRESULT hr = cmd.commandAllocator->Reset();
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 		hr = cmd.commandList->Reset(cmd.commandAllocator.Get(), nullptr);
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 
 		return cmd;
 	}
@@ -1748,18 +1745,18 @@ std::mutex queue_locker;
 
 		queue->ExecuteCommandLists(1, commandlists);
 		hr = queue->Signal(cmd.fence.Get(), cmd.fenceValueSignaled);
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 
 		hr = device->queues[QUEUE_GRAPHICS].queue->Wait(cmd.fence.Get(), cmd.fenceValueSignaled);
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 		hr = device->queues[QUEUE_COMPUTE].queue->Wait(cmd.fence.Get(), cmd.fenceValueSignaled);
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 		hr = device->queues[QUEUE_COPY].queue->Wait(cmd.fence.Get(), cmd.fenceValueSignaled);
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 		if (device->queues[QUEUE_VIDEO_DECODE].queue)
 		{
 			hr = device->queues[QUEUE_VIDEO_DECODE].queue->Wait(cmd.fence.Get(), cmd.fenceValueSignaled);
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 		}
 	}
 
@@ -1903,7 +1900,7 @@ std::mutex queue_locker;
 						{
 							// Third step is actual wait until GPU updates fence so that requested descriptors are free:
 							HRESULT hr = heap.fence->SetEventOnCompletion(heap.fenceValue, nullptr);
-							assert(SUCCEEDED(hr));
+							dx12_check(hr);
 						}
 					}
 
@@ -2166,7 +2163,7 @@ std::mutex queue_locker;
 
 				ComPtr<ID3D12PipelineState> newpso;
 				HRESULT hr = device->CreatePipelineState(&streamDesc, PPV_ARGS(newpso));
-				assert(SUCCEEDED(hr));
+				dx12_check(hr);
 
 				commandlist.pipelines_worker.push_back(std::make_pair(pipeline_hash, newpso));
 				pipeline = newpso.Get();
@@ -2222,7 +2219,7 @@ std::mutex queue_locker;
 		if (dxgi == nullptr)
 		{
 			std::stringstream ss("");
-			ss << "Failed to load dxgi.dll! ERROR: 0x" << std::hex << GetLastError();
+			ss << "Failed to load dxgi.dll! ERROR: " << std::hex << GetLastError();
 			wi::helper::messageBox(ss.str(), "Error!");
 			wi::platform::Exit();
 		}
@@ -2231,7 +2228,7 @@ std::mutex queue_locker;
 		if (dx12 == nullptr)
 		{
 			std::stringstream ss("");
-			ss << "Failed to load d3d12.dll! ERROR: 0x" << std::hex << GetLastError();
+			ss << "Failed to load d3d12.dll! ERROR: " << std::hex << GetLastError();
 			wi::helper::messageBox(ss.str(), "Error!");
 			wi::platform::Exit();
 		}
@@ -2241,7 +2238,7 @@ std::mutex queue_locker;
 		if (CreateDXGIFactory2 == nullptr)
 		{
 			std::stringstream ss("");
-			ss << "Failed to load CreateDXGIFactory2! ERROR: 0x" << std::hex << GetLastError();
+			ss << "Failed to load CreateDXGIFactory2! ERROR: " << std::hex << GetLastError();
 			wi::helper::messageBox(ss.str(), "Error!");
 			wi::platform::Exit();
 		}
@@ -2259,7 +2256,7 @@ std::mutex queue_locker;
 		if (D3D12CreateDevice == nullptr)
 		{
 			std::stringstream ss("");
-			ss << "Failed to load D3D12CreateDevice! ERROR: 0x" << std::hex << GetLastError();
+			ss << "Failed to load D3D12CreateDevice! ERROR: " << std::hex << GetLastError();
 			wi::helper::messageBox(ss.str(), "Error!");
 			wi::platform::Exit();
 		}
@@ -2269,7 +2266,7 @@ std::mutex queue_locker;
 		if (D3D12CreateVersionedRootSignatureDeserializer == nullptr)
 		{
 			std::stringstream ss("");
-			ss << "Failed to load D3D12CreateVersionedRootSignatureDeserializer! ERROR: 0x" << std::hex << GetLastError();
+			ss << "Failed to load D3D12CreateVersionedRootSignatureDeserializer! ERROR: " << std::hex << GetLastError();
 			wi::helper::messageBox(ss.str(), "Error!");
 			wi::platform::Exit();
 		}
@@ -2338,9 +2335,7 @@ std::mutex queue_locker;
 		hr = CreateDXGIFactory2((validationMode != ValidationMode::Disabled) ? DXGI_CREATE_FACTORY_DEBUG : 0u, PPV_ARGS(dxgiFactory));
 		if (FAILED(hr))
 		{
-			std::stringstream ss("");
-			ss << "CreateDXGIFactory2 failed! ERROR: 0x" << std::hex << hr;
-			wi::helper::messageBox(ss.str(), "Error!");
+			wilog_messagebox("CreateDXGIFactory2 failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 			wi::platform::Exit();
 		}
 
@@ -2413,14 +2408,14 @@ std::mutex queue_locker;
 		assert(dxgiAdapter != nullptr);
 		if (dxgiAdapter == nullptr)
 		{
-			wi::helper::messageBox("DXGI: No capable adapter found!", "Error!");
+			wilog_messagebox("DXGI: No capable graphics adapter found!");
 			wi::platform::Exit();
 		}
 
 		assert(device != nullptr);
 		if (device == nullptr)
 		{
-			wi::helper::messageBox("D3D12: Device couldn't be created!", "Error!");
+			wilog_messagebox("D3D12: Device couldn't be created!");
 			wi::platform::Exit();
 		}
 
@@ -2476,12 +2471,10 @@ std::mutex queue_locker;
 		allocationhandler->device = device;
 
 		hr = D3D12MA::CreateAllocator(&allocatorDesc, &allocationhandler->allocator);
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 		if (FAILED(hr))
 		{
-			std::stringstream ss("");
-			ss << "D3D12MA::CreateAllocator failed! ERROR: 0x" << std::hex << hr;
-			wi::helper::messageBox(ss.str(), "Error!");
+			wilog_messagebox("D3D12MA::CreateAllocator failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 			wi::platform::Exit();
 		}
 
@@ -2491,16 +2484,14 @@ std::mutex queue_locker;
 			queues[QUEUE_GRAPHICS].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 			queues[QUEUE_GRAPHICS].desc.NodeMask = 0;
 			hr = device->CreateCommandQueue(&queues[QUEUE_GRAPHICS].desc, PPV_ARGS(queues[QUEUE_GRAPHICS].queue));
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 			if (FAILED(hr))
 			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateCommandQueue[QUEUE_GRAPHICS] failed! ERROR: 0x" << std::hex << hr;
-				wi::helper::messageBox(ss.str(), "Error!");
+				wilog_messagebox("ID3D12Device::CreateCommandQueue[QUEUE_GRAPHICS] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 				wi::platform::Exit();
 			}
 			hr = queues[QUEUE_GRAPHICS].queue->SetName(L"QUEUE_GRAPHICS");
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 		}
 
 		{
@@ -2509,16 +2500,14 @@ std::mutex queue_locker;
 			queues[QUEUE_COMPUTE].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 			queues[QUEUE_COMPUTE].desc.NodeMask = 0;
 			hr = device->CreateCommandQueue(&queues[QUEUE_COMPUTE].desc, PPV_ARGS(queues[QUEUE_COMPUTE].queue));
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 			if (FAILED(hr))
 			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateCommandQueue[QUEUE_COMPUTE] failed! ERROR: 0x" << std::hex << hr;
-				wi::helper::messageBox(ss.str(), "Error!");
+				wilog_messagebox("ID3D12Device::CreateCommandQueue[QUEUE_COMPUTE] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 				wi::platform::Exit();
 			}
 			hr = queues[QUEUE_COMPUTE].queue->SetName(L"QUEUE_COMPUTE");
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 		}
 
 		{
@@ -2527,16 +2516,14 @@ std::mutex queue_locker;
 			queues[QUEUE_COPY].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 			queues[QUEUE_COPY].desc.NodeMask = 0;
 			hr = device->CreateCommandQueue(&queues[QUEUE_COPY].desc, PPV_ARGS(queues[QUEUE_COPY].queue));
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 			if (FAILED(hr))
 			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateCommandQueue[QUEUE_COPY] failed! ERROR: 0x" << std::hex << hr;
-				wi::helper::messageBox(ss.str(), "Error!");
+				wilog_messagebox("ID3D12Device::CreateCommandQueue[QUEUE_COPY] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 				wi::platform::Exit();
 			}
 			hr = queues[QUEUE_COPY].queue->SetName(L"QUEUE_COPY");
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 		}
 
 		if (SUCCEEDED(device.As(&video_device)))
@@ -2546,12 +2533,12 @@ std::mutex queue_locker;
 			queues[QUEUE_VIDEO_DECODE].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 			queues[QUEUE_VIDEO_DECODE].desc.NodeMask = 0;
 			hr = device->CreateCommandQueue(&queues[QUEUE_VIDEO_DECODE].desc, PPV_ARGS(queues[QUEUE_VIDEO_DECODE].queue));
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 			if (SUCCEEDED(hr))
 			{
 				capabilities |= GraphicsDeviceCapability::VIDEO_DECODE_H264;
 				hr = queues[QUEUE_VIDEO_DECODE].queue->SetName(L"QUEUE_VIDEO_DECODE");
-				assert(SUCCEEDED(hr));
+				dx12_check(hr);
 			}
 		}
 
@@ -2567,12 +2554,10 @@ std::mutex queue_locker;
 			descriptorheap_res.heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 			descriptorheap_res.heapDesc.NumDescriptors = 1000000; // tier 1 limit
 			hr = device->CreateDescriptorHeap(&descriptorheap_res.heapDesc, PPV_ARGS(descriptorheap_res.heap_GPU));
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 			if (FAILED(hr))
 			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateDescriptorHeap[CBV_SRV_UAV] failed! ERROR: 0x" << std::hex << hr;
-				wi::helper::messageBox(ss.str(), "Error!");
+				wilog_messagebox("ID3D12Device::CreateDescriptorHeap[CBV_SRV_UAV] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 				wi::platform::Exit();
 			}
 
@@ -2580,12 +2565,10 @@ std::mutex queue_locker;
 			descriptorheap_res.start_gpu = descriptorheap_res.heap_GPU->GetGPUDescriptorHandleForHeapStart();
 
 			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(descriptorheap_res.fence));
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 			if (FAILED(hr))
 			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateFence[CBV_SRV_UAV] failed! ERROR: 0x" << std::hex << hr;
-				wi::helper::messageBox(ss.str(), "Error!");
+				wilog_messagebox("ID3D12Device::CreateFence[CBV_SRV_UAV] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 				wi::platform::Exit();
 			}
 			descriptorheap_res.fenceValue = descriptorheap_res.fence->GetCompletedValue();
@@ -2603,12 +2586,10 @@ std::mutex queue_locker;
 			descriptorheap_sam.heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 			descriptorheap_sam.heapDesc.NumDescriptors = 2048; // tier 1 limit
 			hr = device->CreateDescriptorHeap(&descriptorheap_sam.heapDesc, PPV_ARGS(descriptorheap_sam.heap_GPU));
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 			if (FAILED(hr))
 			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateDescriptorHeap[SAMPLER] failed! ERROR: 0x" << std::hex << hr;
-				wi::helper::messageBox(ss.str(), "Error!");
+				wilog_messagebox("ID3D12Device::CreateDescriptorHeap[SAMPLER] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 				wi::platform::Exit();
 			}
 
@@ -2616,12 +2597,10 @@ std::mutex queue_locker;
 			descriptorheap_sam.start_gpu = descriptorheap_sam.heap_GPU->GetGPUDescriptorHandleForHeapStart();
 
 			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(descriptorheap_sam.fence));
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 			if (FAILED(hr))
 			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateFence[SAMPLER] failed! ERROR: 0x" << std::hex << hr;
-				wi::helper::messageBox(ss.str(), "Error!");
+				wilog_messagebox("ID3D12Device::CreateFence[SAMPLER] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 				wi::platform::Exit();
 			}
 			descriptorheap_sam.fenceValue = descriptorheap_sam.fence->GetCompletedValue();
@@ -2638,12 +2617,10 @@ std::mutex queue_locker;
 			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
 			{
 				hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(frame_fence[buffer][queue]));
-				assert(SUCCEEDED(hr));
+				dx12_check(hr);
 				if (FAILED(hr))
 				{
-					std::stringstream ss("");
-					ss << "ID3D12Device::CreateFence[FRAME] failed! ERROR: 0x" << std::hex << hr;
-					wi::helper::messageBox(ss.str(), "Error!");
+					wilog_messagebox("ID3D12Device::CreateFence[FRAME] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 					wi::platform::Exit();
 				}
 			}
@@ -2686,13 +2663,13 @@ std::mutex queue_locker;
 		// Init feature check (https://devblogs.microsoft.com/directx/introducing-a-new-api-for-checking-feature-support-in-direct3d-12/)
 		CD3DX12FeatureSupport features;
 		hr = features.Init(device.Get());
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 
 		// Init adapter properties
 		{
 			DXGI_ADAPTER_DESC1 adapterDesc;
 			hr = dxgiAdapter->GetDesc1(&adapterDesc);
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 
 			vendorId = adapterDesc.VendorId;
 			deviceId = adapterDesc.DeviceId;
@@ -2750,8 +2727,7 @@ std::mutex queue_locker;
 				break;
 			}
 			error += "\nExiting.";
-			wi::helper::messageBox(error, "Error!");
-			wi::backlog::post(error, wi::backlog::LogLevel::Error);
+			wilog_messagebox(error.c_str());
 			wi::platform::Exit();
 		}
 
@@ -2830,8 +2806,7 @@ std::mutex queue_locker;
 
 		if (features.HighestRootSignatureVersion() < D3D_ROOT_SIGNATURE_VERSION_1_1)
 		{
-			assert(0);
-			wi::helper::messageBox("DX12: Root signature version 1.1 not supported!", "Error!");
+			wilog_messagebox("DX12: Root signature version 1.1 not supported!");
 			wi::platform::Exit();
 		}
 
@@ -2854,7 +2829,7 @@ std::mutex queue_locker;
 			pool_desc.HeapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_WRITE_COMBINE;
 			pool_desc.HeapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_L0;
 			hr = allocationhandler->allocator->CreatePool(&pool_desc, &allocationhandler->uma_pool);
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 		}
 #endif // PLATFORM_XBOX
 
@@ -2862,11 +2837,11 @@ std::mutex queue_locker;
 		// Create fence to detect device removal
 		{
 			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(deviceRemovedFence.GetAddressOf()));
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 
 			HANDLE deviceRemovedEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
 			hr = deviceRemovedFence->SetEventOnCompletion(UINT64_MAX, deviceRemovedEvent);
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 
 			RegisterWaitForSingleObject(
 				&deviceRemovedWaitHandle,
@@ -2896,12 +2871,10 @@ std::mutex queue_locker;
 		cmd_desc.NumArgumentDescs = 1;
 		cmd_desc.pArgumentDescs = dispatchArgs;
 		hr = device->CreateCommandSignature(&cmd_desc, nullptr, PPV_ARGS(dispatchIndirectCommandSignature));
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 		if (FAILED(hr))
 		{
-			std::stringstream ss("");
-			ss << "ID3D12Device::CreateCommandSignature[dispatchIndirect] failed! ERROR: 0x" << std::hex << hr;
-			wi::helper::messageBox(ss.str(), "Error!");
+			wilog_messagebox("ID3D12Device::CreateCommandSignature[dispatchIndirect] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 			wi::platform::Exit();
 		}
 
@@ -2909,12 +2882,10 @@ std::mutex queue_locker;
 		cmd_desc.NumArgumentDescs = 1;
 		cmd_desc.pArgumentDescs = drawInstancedArgs;
 		hr = device->CreateCommandSignature(&cmd_desc, nullptr, PPV_ARGS(drawInstancedIndirectCommandSignature));
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 		if (FAILED(hr))
 		{
-			std::stringstream ss("");
-			ss << "ID3D12Device::CreateCommandSignature[drawInstancedIndirect] failed! ERROR: 0x" << std::hex << hr;
-			wi::helper::messageBox(ss.str(), "Error!");
+			wilog_messagebox("ID3D12Device::CreateCommandSignature[drawInstancedIndirect] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 			wi::platform::Exit();
 		}
 
@@ -2922,12 +2893,10 @@ std::mutex queue_locker;
 		cmd_desc.NumArgumentDescs = 1;
 		cmd_desc.pArgumentDescs = drawIndexedInstancedArgs;
 		hr = device->CreateCommandSignature(&cmd_desc, nullptr, PPV_ARGS(drawIndexedInstancedIndirectCommandSignature));
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 		if (FAILED(hr))
 		{
-			std::stringstream ss("");
-			ss << "ID3D12Device::CreateCommandSignature[drawIndexedInstancedIndirect] failed! ERROR: 0x" << std::hex << hr;
-			wi::helper::messageBox(ss.str(), "Error!");
+			wilog_messagebox("ID3D12Device::CreateCommandSignature[drawIndexedInstancedIndirect] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 			wi::platform::Exit();
 		}
 
@@ -2943,12 +2912,10 @@ std::mutex queue_locker;
 			cmd_desc.NumArgumentDescs = 1;
 			cmd_desc.pArgumentDescs = dispatchMeshArgs;
 			hr = device->CreateCommandSignature(&cmd_desc, nullptr, PPV_ARGS(dispatchMeshIndirectCommandSignature));
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 			if (FAILED(hr))
 			{
-				std::stringstream ss("");
-				ss << "ID3D12Device::CreateCommandSignature[dispatchMeshIndirect] failed! ERROR: 0x" << std::hex << hr;
-				wi::helper::messageBox(ss.str(), "Error!");
+				wilog_messagebox("ID3D12Device::CreateCommandSignature[dispatchMeshIndirect] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 				wi::platform::Exit();
 			}
 		}
@@ -2962,23 +2929,19 @@ std::mutex queue_locker;
 		nullHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		nullHeapDesc.NumDescriptors = DESCRIPTORBINDER_CBV_COUNT + DESCRIPTORBINDER_SRV_COUNT + DESCRIPTORBINDER_UAV_COUNT;
 		hr = device->CreateDescriptorHeap(&nullHeapDesc, PPV_ARGS(nulldescriptorheap_cbv_srv_uav));
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 		if (FAILED(hr))
 		{
-			std::stringstream ss("");
-			ss << "ID3D12Device::CreateDescriptorHeap[nulldescriptorheap_cbv_srv_uav] failed! ERROR: 0x" << std::hex << hr;
-			wi::helper::messageBox(ss.str(), "Error!");
+			wilog_messagebox("ID3D12Device::CreateDescriptorHeap[nulldescriptorheap_cbv_srv_uav] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 		}
 
 		nullHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
 		nullHeapDesc.NumDescriptors = DESCRIPTORBINDER_SAMPLER_COUNT;
 		device->CreateDescriptorHeap(&nullHeapDesc, PPV_ARGS(nulldescriptorheap_sampler));
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 		if (FAILED(hr))
 		{
-			std::stringstream ss("");
-			ss << "ID3D12Device::CreateDescriptorHeap[nulldescriptorheap_sampler] failed! ERROR: 0x" << std::hex << hr;
-			wi::helper::messageBox(ss.str(), "Error!");
+			wilog_messagebox("ID3D12Device::CreateDescriptorHeap[nulldescriptorheap_sampler] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 		}
 
 		nullCBV = nulldescriptorheap_cbv_srv_uav->GetCPUDescriptorHandleForHeapStart();
@@ -3030,15 +2993,13 @@ std::mutex queue_locker;
 		}
 
 		hr = queues[QUEUE_GRAPHICS].queue->GetTimestampFrequency(&TIMESTAMP_FREQUENCY);
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 		if (FAILED(hr))
 		{
-			std::stringstream ss("");
-			ss << "ID3D12CommandQueue::GetTimestampFrequency[QUEUE_GRAPHICS] failed! ERROR: 0x" << std::hex << hr;
-			wi::helper::messageBox(ss.str(), "Warning!");
+			wilog_messagebox("ID3D12CommandQueue::GetTimestampFrequency[QUEUE_GRAPHICS] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 		}
 
-		wi::backlog::post("Created GraphicsDevice_DX12 (" + std::to_string((int)std::round(timer.elapsed())) + " ms)\nAdapter: " + adapterName);
+		wilog("Created GraphicsDevice_DX12 (%d ms)\nAdapter: %s", (int)std::round(timer.elapsed()), adapterName.c_str());
 	}
 	GraphicsDevice_DX12::~GraphicsDevice_DX12()
 	{
@@ -3113,10 +3074,10 @@ std::mutex queue_locker;
 				&clear_value,
 				PPV_ARGS(internal_state->backBuffers[i])
 			);
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 
 			hr = internal_state->backBuffers[i]->SetName(L"BackBufferXBOX");
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 
 			internal_state->backbufferRTV[i] = allocationhandler->descriptors_rtv.allocate();
 			device->CreateRenderTargetView(internal_state->backBuffers[i].Get(), &rtv_desc, internal_state->backbufferRTV[i]);
@@ -3194,7 +3155,7 @@ std::mutex queue_locker;
 				_ConvertFormat(desc->format),
 				swapChainFlags
 			);
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 		}
 
 		const bool hdr = desc->allow_hdr && IsSwapChainSupportsHDR(swapchain);
@@ -3227,7 +3188,7 @@ std::mutex queue_locker;
 				if (colorSpaceSupport & DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT)
 				{
 					hr = internal_state->swapChain->SetColorSpace1(colorSpace);
-					assert(SUCCEEDED(hr));
+					dx12_check(hr);
 					if (SUCCEEDED(hr))
 					{
 						switch (colorSpace)
@@ -3260,7 +3221,7 @@ std::mutex queue_locker;
 		for (uint32_t i = 0; i < desc->buffer_count; ++i)
 		{
 			hr = internal_state->swapChain->GetBuffer(i, PPV_ARGS(internal_state->backBuffers[i]));
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 
 			internal_state->backbufferRTV[i] = allocationhandler->descriptors_rtv.allocate();
 			device->CreateRenderTargetView(internal_state->backBuffers[i].Get(), &rtvDesc, internal_state->backbufferRTV[i]);
@@ -3363,7 +3324,7 @@ std::mutex queue_locker;
 				&allocationInfo,
 				&internal_state->allocation
 			);
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 
 			if (allocationDesc.ExtraHeapFlags == D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS || allocationDesc.ExtraHeapFlags == D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES)
 			{
@@ -3375,7 +3336,7 @@ std::mutex queue_locker;
 					nullptr,
 					PPV_ARGS(internal_state->resource)
 				);
-				assert(SUCCEEDED(hr));
+				dx12_check(hr);
 			}
 		}
 		else if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE))
@@ -3386,7 +3347,7 @@ std::mutex queue_locker;
 				nullptr,
 				PPV_ARGS(internal_state->resource)
 			);
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 			buffer->sparse_page_size = D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
 		}
 		else
@@ -3415,7 +3376,7 @@ std::mutex queue_locker;
 					PPV_ARGS(internal_state->resource)
 				);
 			}
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 		}
 
 		if (!SUCCEEDED(hr))
@@ -3429,14 +3390,14 @@ std::mutex queue_locker;
 		if (desc->usage == Usage::READBACK)
 		{
 			hr = internal_state->resource->Map(0, nullptr, &buffer->mapped_data);
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 			buffer->mapped_size = static_cast<uint32_t>(desc->size);
 		}
 		else if (desc->usage == Usage::UPLOAD)
 		{
 			D3D12_RANGE read_range = {};
 			hr = internal_state->resource->Map(0, &read_range, &buffer->mapped_data);
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 			buffer->mapped_size = static_cast<uint32_t>(desc->size);
 		}
 
@@ -3699,7 +3660,7 @@ std::mutex queue_locker;
 				&allocationInfo,
 				&internal_state->allocation
 			);
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 
 			hr = device->CreatePlacedResource(
 				internal_state->allocation->GetHeap(),
@@ -3709,7 +3670,7 @@ std::mutex queue_locker;
 				useClearValue ? &optimizedClearValue : nullptr,
 				PPV_ARGS(internal_state->resource)
 			);
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 		}
 		else if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::SPARSE))
 		{
@@ -3784,18 +3745,18 @@ std::mutex queue_locker;
 				);
 			}
 		}
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 
 		if (texture->desc.usage == Usage::READBACK)
 		{
 			hr = internal_state->resource->Map(0, nullptr, &texture->mapped_data);
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 		}
 		else if(texture->desc.usage == Usage::UPLOAD)
 		{
 			D3D12_RANGE read_range = {};
 			hr = internal_state->resource->Map(0, &read_range, &texture->mapped_data);
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 		}
 		else if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::SHARED))
 		{
@@ -3806,7 +3767,7 @@ std::mutex queue_locker;
 				nullptr,
 				&texture->shared_handle);
 
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 		}
 
 		if (texture->mapped_data != nullptr)
@@ -3840,7 +3801,7 @@ std::mutex queue_locker;
 						data.row_pitch,
 						data.slice_pitch
 					);
-					assert(SUCCEEDED(hr));
+					dx12_check(hr);
 				}
 			}
 			else
@@ -3926,7 +3887,7 @@ std::mutex queue_locker;
 		shader->stage = stage;
 
 		HRESULT hr = (internal_state->shadercode.empty() ? E_FAIL : S_OK);
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 
 		hr = D3D12CreateVersionedRootSignatureDeserializer(
 			internal_state->shadercode.data(),
@@ -3946,7 +3907,7 @@ std::mutex queue_locker;
 					internal_state->shadercode.size(),
 					PPV_ARGS(internal_state->rootSignature)
 				);
-				assert(SUCCEEDED(hr));
+				dx12_check(hr);
 			}
 		}
 
@@ -3973,7 +3934,7 @@ std::mutex queue_locker;
 			streamDesc.SizeInBytes = sizeof(stream);
 
 			HRESULT hr = device->CreatePipelineState(&streamDesc, PPV_ARGS(internal_state->resource));
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 		}
 
 		return SUCCEEDED(hr);
@@ -4047,7 +4008,7 @@ std::mutex queue_locker;
 		}
 
 		HRESULT hr = allocationhandler->device->CreateQueryHeap(&queryheapdesc, PPV_ARGS(internal_state->heap));
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 
 		return SUCCEEDED(hr);
 	}
@@ -4295,7 +4256,7 @@ std::mutex queue_locker;
 			}
 
 			HRESULT hr = device->CreatePipelineState(&streamDesc, PPV_ARGS(internal_state->resource));
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 		}
 
 		return true;
@@ -4419,7 +4380,7 @@ std::mutex queue_locker;
 			&internal_state->allocation,
 			PPV_ARGS(internal_state->resource)
 		);
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 
 		internal_state->gpu_address = internal_state->resource->GetGPUVirtualAddress();
 
@@ -4545,10 +4506,10 @@ std::mutex queue_locker;
 		stateobjectdesc.pSubobjects = subobjects.data();
 
 		HRESULT hr = device->CreateStateObject(&stateobjectdesc, PPV_ARGS(internal_state->resource));
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 
 		hr = internal_state->resource.As(&internal_state->stateObjectProperties);
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 
 		return SUCCEEDED(hr);
 	}
@@ -4561,14 +4522,14 @@ std::mutex queue_locker;
 
 		D3D12_FEATURE_DATA_VIDEO_DECODE_PROFILE_COUNT video_decode_profile_count = {};
 		hr = video_device->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_PROFILE_COUNT, &video_decode_profile_count, sizeof(video_decode_profile_count));
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 
 		wi::vector<GUID> profiles(video_decode_profile_count.ProfileCount);
 		D3D12_FEATURE_DATA_VIDEO_DECODE_PROFILES video_decode_profiles = {};
 		video_decode_profiles.ProfileCount = video_decode_profile_count.ProfileCount;
 		video_decode_profiles.pProfiles = profiles.data();
 		hr = video_device->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_PROFILES, &video_decode_profiles, sizeof(video_decode_profiles));
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 
 		D3D12_VIDEO_DECODER_DESC decoder_desc = {};
 		switch (desc->profile)
@@ -4599,7 +4560,7 @@ std::mutex queue_locker;
 		D3D12_FEATURE_DATA_VIDEO_DECODE_FORMAT_COUNT video_decode_format_count = {};
 		video_decode_format_count.Configuration = decoder_desc.Configuration;
 		hr = video_device->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_FORMAT_COUNT, &video_decode_format_count, sizeof(video_decode_format_count));
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 
 		wi::vector<DXGI_FORMAT> formats(video_decode_format_count.FormatCount);
 		D3D12_FEATURE_DATA_VIDEO_DECODE_FORMATS video_decode_formats = {};
@@ -4607,7 +4568,7 @@ std::mutex queue_locker;
 		video_decode_formats.FormatCount = video_decode_format_count.FormatCount;
 		video_decode_formats.pOutputFormats = formats.data();
 		hr = video_device->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_FORMATS, &video_decode_formats, sizeof(video_decode_formats));
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 
 		D3D12_FEATURE_DATA_VIDEO_DECODE_SUPPORT video_decode_support = {};
 		video_decode_support.Configuration = decoder_desc.Configuration;
@@ -4628,7 +4589,7 @@ std::mutex queue_locker;
 		video_decode_support.BitRate = desc->bit_rate;
 		video_decode_support.FrameRate = { 0, 1 };
 		hr = video_device->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_SUPPORT, &video_decode_support, sizeof(video_decode_support));
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 
 		bool reference_only = video_decode_support.ConfigurationFlags & D3D12_VIDEO_DECODE_CONFIGURATION_FLAG_REFERENCE_ONLY_ALLOCATIONS_REQUIRED;
 		assert(!reference_only); // Not supported currently, will need to use resource flags: D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY | D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE, and do output decode conversion
@@ -4660,13 +4621,13 @@ std::mutex queue_locker;
 		D3D12_FEATURE_DATA_VIDEO_DECODER_HEAP_SIZE video_decoder_heap_size = {};
 		video_decoder_heap_size.VideoDecoderHeapDesc = heap_desc;
 		hr = video_device->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODER_HEAP_SIZE, &video_decoder_heap_size, sizeof(video_decoder_heap_size));
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 #endif
 
 		hr = video_device->CreateVideoDecoderHeap(&heap_desc, PPV_ARGS(internal_state->decoder_heap));
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 		hr = video_device->CreateVideoDecoder(&decoder_desc, PPV_ARGS(internal_state->decoder));
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 
 		return SUCCEEDED(hr);
 	}
@@ -5277,7 +5238,7 @@ std::mutex queue_locker;
 			for (uint32_t buffer = 0; buffer < BUFFERCOUNT; ++buffer)
 			{
 				hr = device->CreateCommandAllocator(queues[queue].desc.Type, PPV_ARGS(commandlist.commandAllocators[buffer][queue]));
-				assert(SUCCEEDED(hr));
+				dx12_check(hr);
 			}
 
 			if (queue == QUEUE_VIDEO_DECODE)
@@ -5285,7 +5246,7 @@ std::mutex queue_locker;
 				ComPtr<ID3D12VideoDecodeCommandList> videoCommandList;
 #ifdef PLATFORM_XBOX
 				hr = device->CreateCommandList(0, queues[queue].desc.Type, commandlist.commandAllocators[0][queue].Get(), nullptr, PPV_ARGS(videoCommandList));
-				assert(SUCCEEDED(hr));
+				dx12_check(hr);
 				hr = videoCommandList->Close();
 #else
 				hr = device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, PPV_ARGS(videoCommandList));
@@ -5297,7 +5258,7 @@ std::mutex queue_locker;
 				ComPtr<ID3D12GraphicsCommandList> copyCommandList;
 #ifdef PLATFORM_XBOX
 				hr = device->CreateCommandList(0, queues[queue].desc.Type, commandlist.commandAllocators[0][queue].Get(), nullptr, PPV_ARGS(copyCommandList));
-				assert(SUCCEEDED(hr));
+				dx12_check(hr);
 				hr = copyCommandList->Close();
 #else
 				hr = device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, PPV_ARGS(copyCommandList));
@@ -5309,14 +5270,14 @@ std::mutex queue_locker;
 				ComPtr<CommandList_DX12::graphics_command_list_version> graphicsCommandList;
 #ifdef PLATFORM_XBOX
 				hr = device->CreateCommandList(0, queues[queue].desc.Type, commandlist.commandAllocators[0][queue].Get(), nullptr, PPV_ARGS(graphicsCommandList));
-				assert(SUCCEEDED(hr));
+				dx12_check(hr);
 				hr = graphicsCommandList->Close();
 #else
 				hr = device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, PPV_ARGS(graphicsCommandList));
 #endif // PLATFORM_XBOX
 				commandlist.commandLists[queue] = graphicsCommandList;
 			}
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 
 			std::wstring ws = L"cmd" + std::to_wstring(commandlist.id);
 			commandlist.GetCommandList()->SetName(ws.c_str());
@@ -5326,17 +5287,17 @@ std::mutex queue_locker;
 
 		// Start the command list in a default state:
 		hr = commandlist.GetCommandAllocator()->Reset();
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 
 		if (queue == QUEUE_VIDEO_DECODE)
 		{
 			hr = commandlist.GetVideoDecodeCommandList()->Reset(commandlist.GetCommandAllocator());
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 		}
 		else
 		{
 			hr = commandlist.GetGraphicsCommandList()->Reset(commandlist.GetCommandAllocator(), nullptr);
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 		}
 
 		if (queue == QUEUE_GRAPHICS || queue == QUEUE_COMPUTE)
@@ -5386,7 +5347,7 @@ std::mutex queue_locker;
 				{
 					hr = commandlist.GetGraphicsCommandList()->Close();
 				}
-				assert(SUCCEEDED(hr));
+				dx12_check(hr);
 
 				CommandQueue& queue = queues[commandlist.queue];
 				const bool dependency = !commandlist.signals.empty() || !commandlist.waits.empty() || !commandlist.wait_queues.empty();
@@ -5467,7 +5428,7 @@ std::mutex queue_locker;
 				queue.submit();
 
 				hr = queue.queue->Signal(frame_fence[GetBufferIndex()][q].Get(), 1);
-				assert(SUCCEEDED(hr));
+				dx12_check(hr);
 			}
 
 			for (uint32_t cmd = 0; cmd < cmd_last; ++cmd)
@@ -5531,11 +5492,11 @@ std::mutex queue_locker;
 				// NULL event handle will simply wait immediately:
 				//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12fence-seteventoncompletion#remarks
 				hr = frame_fence[bufferindex][queue]->SetEventOnCompletion(1, NULL);
-				assert(SUCCEEDED(hr));
+				dx12_check(hr);
 			}
 			hr = frame_fence[bufferindex][queue]->Signal(0);
 		}
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 
 		allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
 	}
@@ -5786,7 +5747,7 @@ std::mutex queue_locker;
 
 		std::string message = "D3D12: device removed, cause: ";
 		message += removedReasonString;
-		wi::helper::messageBox(message, "Error!");
+		wilog_messagebox(message.c_str());
 		wi::platform::Exit();
 #endif // PLATFORM_WINDOWS_DESKTOP
 	}
@@ -5795,18 +5756,18 @@ std::mutex queue_locker;
 	{
 		ComPtr<ID3D12Fence> fence;
 		HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(fence));
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 
 		for (auto& queue : queues)
 		{
 			if (queue.queue == nullptr)
 				continue;
 			hr = queue.queue->Signal(fence.Get(), 1);
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 			if (fence->GetCompletedValue() < 1)
 			{
 				hr = fence->SetEventOnCompletion(1, NULL);
-				assert(SUCCEEDED(hr));
+				dx12_check(hr);
 			}
 			fence->Signal(0);
 		}
@@ -7699,7 +7660,7 @@ std::mutex queue_locker;
 #if 0
 		ComPtr<ID3D12Fence> fence;
 		HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(fence));
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 
 		//D3D12_RESOURCE_BARRIER bar = {};
 		//bar.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -7710,7 +7671,7 @@ std::mutex queue_locker;
 		//commandlist.GetVideoDecodeCommandList()->ResourceBarrier(1, &bar);
 
 		hr = commandlist.GetVideoDecodeCommandList()->Close();
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 
 		CommandQueue& queue = queues[commandlist.queue];
 		queue.submit_cmds.push_back(commandlist.GetCommandList());
@@ -7721,18 +7682,18 @@ std::mutex queue_locker;
 		queue.submit_cmds.clear();
 
 		hr = queue.queue->Signal(fence.Get(), 1);
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 		if (fence->GetCompletedValue() < 1)
 		{
 			hr = fence->SetEventOnCompletion(1, NULL);
-			assert(SUCCEEDED(hr));
+			dx12_check(hr);
 		}
 		fence->Signal(0);
 
 		hr = commandlist.GetCommandAllocator()->Reset();
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 		hr = commandlist.GetVideoDecodeCommandList()->Reset(commandlist.GetCommandAllocator());
-		assert(SUCCEEDED(hr));
+		dx12_check(hr);
 #endif
 	}
 

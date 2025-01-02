@@ -342,7 +342,7 @@ namespace wi::font
 		static wi::eventhandler::Handle handle1 = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 		LoadShaders();
 
-		wi::backlog::post("wi::font Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		wilog("wi::font Initialized (%d ms)", (int)std::round(timer.elapsed()));
 	}
 
 	void InvalidateAtlas()

@@ -69,7 +69,7 @@ namespace wi::initializer
 
 		std::thread([] {
 			wi::jobsystem::Wait(ctx);
-			wi::backlog::post("\n[wi::initializer] Wicked Engine Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+			wilog("\n[wi::initializer] Wicked Engine Initialized (%d ms)", (int)std::round(timer.elapsed()));
 		}).detach();
 
 	}

@@ -40,7 +40,7 @@ namespace wi::gpusortlib
 		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 		LoadShaders();
 
-		wi::backlog::post("wi::gpusortlib Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		wilog("wi::gpusortlib Initialized (%d ms)", (int)std::round(timer.elapsed()));
 	}
 
 

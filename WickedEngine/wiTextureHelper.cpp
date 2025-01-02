@@ -206,7 +206,7 @@ namespace wi::texturehelper
 			device->SetName(&helperTextures[HELPERTEXTURE_NORMALMAPDEFAULT], "HELPERTEXTURE_NORMALMAPDEFAULT");
 		}
 
-		wi::backlog::post("wi::texturehelper Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		wilog("wi::texturehelper Initialized (%d ms)", (int)std::round(timer.elapsed()));
 	}
 
 	const Texture* getLogo()

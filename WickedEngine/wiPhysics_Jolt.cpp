@@ -413,9 +413,7 @@ namespace wi::physics
 
 			if (!shape_result.IsValid())
 			{
-				char text[1024] = {};
-				snprintf(text, arraysize(text), "AddRigidBody failed, shape_result: %s", shape_result.GetError().c_str());
-				wi::backlog::post(text, wi::backlog::LogLevel::Error);
+				wilog_error("AddRigidBody failed, shape_result: %s", shape_result.GetError().c_str());
 				return;
 			}
 			else
@@ -1147,9 +1145,7 @@ namespace wi::physics
 
 		RegisterTypes();
 
-		char text[256] = {};
-		snprintf(text, arraysize(text), "wi::physics Initialized [Jolt Physics %d.%d.%d] (%d ms)", JPH_VERSION_MAJOR, JPH_VERSION_MINOR, JPH_VERSION_PATCH, (int)std::round(timer.elapsed()));
-		wi::backlog::post(text);
+		wilog("wi::physics Initialized [Jolt Physics %d.%d.%d] (%d ms)", JPH_VERSION_MAJOR, JPH_VERSION_MINOR, JPH_VERSION_PATCH, (int)std::round(timer.elapsed()));
 	}
 
 	bool IsEnabled() { return ENABLED; }
