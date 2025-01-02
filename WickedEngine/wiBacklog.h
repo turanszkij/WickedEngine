@@ -7,7 +7,7 @@
 #include <string>
 #include <cassert>
 
-#define wilog_level(str,level,...) {char text[256] = {}; snprintf(text, sizeof(text), str, __VA_ARGS__); wi::backlog::post(text, level);}
+#define wilog_level(str,level,...) {char text[1024] = {}; snprintf(text, sizeof(text), str, __VA_ARGS__); wi::backlog::post(text, level);}
 #define wilog_warning(str,...) {wilog_level(str, wi::backlog::LogLevel::Warning, __VA_ARGS__)}
 #define wilog_error(str,...) {wilog_level(str, wi::backlog::LogLevel::Error, __VA_ARGS__)}
 #define wilog(str,...) {wilog_level(str, wi::backlog::LogLevel::Default, __VA_ARGS__)}
