@@ -3,6 +3,7 @@
 #include "wiGraphicsDevice.h"
 #include "wiCanvas.h"
 #include "wiColor.h"
+#include "wiHelper.h"
 
 #include <string>
 #include <cassert>
