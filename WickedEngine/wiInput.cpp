@@ -130,7 +130,7 @@ namespace wi::input
 			cursor_table[i] = cursor_table_original[i];
 		}
 
-		wi::backlog::post("wi::input Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		wilog("wi::input Initialized (%d ms)", (int)std::round(timer.elapsed()));
 		initialized.store(true);
 	}
 

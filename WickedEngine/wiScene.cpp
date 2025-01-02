@@ -1220,9 +1220,7 @@ namespace wi::scene
 
 		Merge(tmp);
 
-		char text[64] = {};
-		snprintf(text, arraysize(text), "Scene::Instantiate took %.2f ms", timer.elapsed_milliseconds());
-		wi::backlog::post(text);
+		wilog("Scene::Instantiate took %.2f ms", timer.elapsed_milliseconds());
 
 		return rootEntity;
 	}

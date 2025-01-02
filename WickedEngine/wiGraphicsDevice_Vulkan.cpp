@@ -3600,7 +3600,7 @@ using namespace vulkan_internal;
 			vulkan_check(res);
 		}
 
-		wi::backlog::post("Created GraphicsDevice_Vulkan (" + std::to_string((int)std::round(timer.elapsed())) + " ms)\nAdapter: " + adapterName);
+		wilog("Created GraphicsDevice_Vulkan (%d ms)\nAdapter: %s", (int)std::round(timer.elapsed()), adapterName.c_str());
 	}
 	GraphicsDevice_Vulkan::~GraphicsDevice_Vulkan()
 	{

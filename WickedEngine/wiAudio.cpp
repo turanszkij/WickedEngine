@@ -190,7 +190,7 @@ namespace wi::audio
 			termination_mark.AudioBytes = sizeof(termination_data);
 
 			success = true;
-			wi::backlog::post("wi::audio Initialized [XAudio2] (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+			wilog("wi::audio Initialized [XAudio2] (%d ms)", (int)std::round(timer.elapsed()));
 		}
 		~AudioInternal()
 		{
@@ -867,7 +867,7 @@ namespace wi::audio
 			termination_mark.AudioBytes = sizeof(termination_data);
 
 			success = true;
-			wi::backlog::post("wi::audio Initialized [FAudio] (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+			wilog("wi::audio Initialized [FAudio] (%d ms)", (int)std::round(timer.elapsed()));
 		}
 		~AudioInternal(){
 			if(reverbSubmix != nullptr)

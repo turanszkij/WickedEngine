@@ -30,7 +30,7 @@ namespace wi::network
 				assert(0);
 			}
 
-			wi::backlog::post("wi::network Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+			wilog("wi::network Initialized (%d ms)", (int)std::round(timer.elapsed()));
 		}
 		~NetworkInternal()
 		{

@@ -333,6 +333,6 @@ namespace wi
 		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { TrailRenderer_Internal::LoadShaders(); });
 		TrailRenderer_Internal::LoadShaders();
 
-		wi::backlog::post("wi::TrailRenderer Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		wilog("wi::TrailRenderer Initialized (%d ms)", (int)std::round(timer.elapsed()));
 	}
 }

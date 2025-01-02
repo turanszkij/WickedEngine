@@ -596,7 +596,7 @@ namespace wi
 		LoadShaders();
 		wi::fftgenerator::LoadShaders();
 
-		wi::backlog::post("wi::Ocean Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		wilog("wi::Ocean Initialized (%d ms)", (int)std::round(timer.elapsed()));
 	}
 
 	const Texture* Ocean::getDisplacementMap() const
