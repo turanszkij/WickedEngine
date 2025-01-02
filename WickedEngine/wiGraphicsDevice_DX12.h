@@ -33,17 +33,7 @@
 #include <atomic>
 #include <mutex>
 
-#include <comdef.h>
-inline std::string string_HRESULT(HRESULT hr)
-{
-	_com_error err(hr);
-	LPCTSTR errMsg = err.ErrorMessage();
-	std::wstring wstr = errMsg;
-	std::string str;
-	wi::helper::StringConvert(wstr, str);
-	return str;
-}
-#define dx12_check(hr) wilog_assert(SUCCEEDED(hr), "DX12 error: %s, line %d, hr = %s", __wi_filename__, __wi_line__, string_HRESULT(hr).c_str())
+#define dx12_check(hr) wilog_assert(SUCCEEDED(hr), "DX12 error: %s, line %d, hr = %s", relative_path(__FILE__), __LINE__, wi::helper::GetPlatformErrorString(hr).c_str())
 
 namespace wi::graphics
 {

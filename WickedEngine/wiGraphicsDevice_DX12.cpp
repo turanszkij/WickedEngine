@@ -1667,7 +1667,7 @@ std::mutex queue_locker;
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
-			ss << "ID3D12Device::CreateCommandQueue[CopyAllocator] failed! ERROR: " << string_HRESULT(hr);
+			ss << "ID3D12Device::CreateCommandQueue[CopyAllocator] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
 			wi::helper::messageBox(ss.str(), "Error!");
 			wi::platform::Exit();
 		}
@@ -2338,7 +2338,7 @@ std::mutex queue_locker;
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
-			ss << "CreateDXGIFactory2 failed! ERROR: " << string_HRESULT(hr);
+			ss << "CreateDXGIFactory2 failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
 			wi::helper::messageBox(ss.str(), "Error!");
 			wi::platform::Exit();
 		}
@@ -2479,7 +2479,7 @@ std::mutex queue_locker;
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
-			ss << "D3D12MA::CreateAllocator failed! ERROR: " << string_HRESULT(hr);
+			ss << "D3D12MA::CreateAllocator failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
 			wi::helper::messageBox(ss.str(), "Error!");
 			wi::platform::Exit();
 		}
@@ -2494,7 +2494,7 @@ std::mutex queue_locker;
 			if (FAILED(hr))
 			{
 				std::stringstream ss("");
-				ss << "ID3D12Device::CreateCommandQueue[QUEUE_GRAPHICS] failed! ERROR: " << string_HRESULT(hr);
+				ss << "ID3D12Device::CreateCommandQueue[QUEUE_GRAPHICS] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
 				wi::helper::messageBox(ss.str(), "Error!");
 				wi::platform::Exit();
 			}
@@ -2512,7 +2512,7 @@ std::mutex queue_locker;
 			if (FAILED(hr))
 			{
 				std::stringstream ss("");
-				ss << "ID3D12Device::CreateCommandQueue[QUEUE_COMPUTE] failed! ERROR: " << string_HRESULT(hr);
+				ss << "ID3D12Device::CreateCommandQueue[QUEUE_COMPUTE] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
 				wi::helper::messageBox(ss.str(), "Error!");
 				wi::platform::Exit();
 			}
@@ -2530,7 +2530,7 @@ std::mutex queue_locker;
 			if (FAILED(hr))
 			{
 				std::stringstream ss("");
-				ss << "ID3D12Device::CreateCommandQueue[QUEUE_COPY] failed! ERROR: " << string_HRESULT(hr);
+				ss << "ID3D12Device::CreateCommandQueue[QUEUE_COPY] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
 				wi::helper::messageBox(ss.str(), "Error!");
 				wi::platform::Exit();
 			}
@@ -2570,7 +2570,7 @@ std::mutex queue_locker;
 			if (FAILED(hr))
 			{
 				std::stringstream ss("");
-				ss << "ID3D12Device::CreateDescriptorHeap[CBV_SRV_UAV] failed! ERROR: " << string_HRESULT(hr);
+				ss << "ID3D12Device::CreateDescriptorHeap[CBV_SRV_UAV] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
 				wi::helper::messageBox(ss.str(), "Error!");
 				wi::platform::Exit();
 			}
@@ -2583,7 +2583,7 @@ std::mutex queue_locker;
 			if (FAILED(hr))
 			{
 				std::stringstream ss("");
-				ss << "ID3D12Device::CreateFence[CBV_SRV_UAV] failed! ERROR: " << string_HRESULT(hr);
+				ss << "ID3D12Device::CreateFence[CBV_SRV_UAV] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
 				wi::helper::messageBox(ss.str(), "Error!");
 				wi::platform::Exit();
 			}
@@ -2606,7 +2606,7 @@ std::mutex queue_locker;
 			if (FAILED(hr))
 			{
 				std::stringstream ss("");
-				ss << "ID3D12Device::CreateDescriptorHeap[SAMPLER] failed! ERROR: " << string_HRESULT(hr);
+				ss << "ID3D12Device::CreateDescriptorHeap[SAMPLER] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
 				wi::helper::messageBox(ss.str(), "Error!");
 				wi::platform::Exit();
 			}
@@ -2619,7 +2619,7 @@ std::mutex queue_locker;
 			if (FAILED(hr))
 			{
 				std::stringstream ss("");
-				ss << "ID3D12Device::CreateFence[SAMPLER] failed! ERROR: " << string_HRESULT(hr);
+				ss << "ID3D12Device::CreateFence[SAMPLER] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
 				wi::helper::messageBox(ss.str(), "Error!");
 				wi::platform::Exit();
 			}
@@ -2641,7 +2641,7 @@ std::mutex queue_locker;
 				if (FAILED(hr))
 				{
 					std::stringstream ss("");
-					ss << "ID3D12Device::CreateFence[FRAME] failed! ERROR: " << string_HRESULT(hr);
+					ss << "ID3D12Device::CreateFence[FRAME] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
 					wi::helper::messageBox(ss.str(), "Error!");
 					wi::platform::Exit();
 				}
@@ -2899,7 +2899,7 @@ std::mutex queue_locker;
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
-			ss << "ID3D12Device::CreateCommandSignature[dispatchIndirect] failed! ERROR: " << string_HRESULT(hr);
+			ss << "ID3D12Device::CreateCommandSignature[dispatchIndirect] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
 			wi::helper::messageBox(ss.str(), "Error!");
 			wi::platform::Exit();
 		}
@@ -2912,7 +2912,7 @@ std::mutex queue_locker;
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
-			ss << "ID3D12Device::CreateCommandSignature[drawInstancedIndirect] failed! ERROR: " << string_HRESULT(hr);
+			ss << "ID3D12Device::CreateCommandSignature[drawInstancedIndirect] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
 			wi::helper::messageBox(ss.str(), "Error!");
 			wi::platform::Exit();
 		}
@@ -2925,7 +2925,7 @@ std::mutex queue_locker;
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
-			ss << "ID3D12Device::CreateCommandSignature[drawIndexedInstancedIndirect] failed! ERROR: " << string_HRESULT(hr);
+			ss << "ID3D12Device::CreateCommandSignature[drawIndexedInstancedIndirect] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
 			wi::helper::messageBox(ss.str(), "Error!");
 			wi::platform::Exit();
 		}
@@ -2946,7 +2946,7 @@ std::mutex queue_locker;
 			if (FAILED(hr))
 			{
 				std::stringstream ss("");
-				ss << "ID3D12Device::CreateCommandSignature[dispatchMeshIndirect] failed! ERROR: " << string_HRESULT(hr);
+				ss << "ID3D12Device::CreateCommandSignature[dispatchMeshIndirect] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
 				wi::helper::messageBox(ss.str(), "Error!");
 				wi::platform::Exit();
 			}
@@ -2965,7 +2965,7 @@ std::mutex queue_locker;
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
-			ss << "ID3D12Device::CreateDescriptorHeap[nulldescriptorheap_cbv_srv_uav] failed! ERROR: " << string_HRESULT(hr);
+			ss << "ID3D12Device::CreateDescriptorHeap[nulldescriptorheap_cbv_srv_uav] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
 			wi::helper::messageBox(ss.str(), "Error!");
 		}
 
@@ -2976,7 +2976,7 @@ std::mutex queue_locker;
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
-			ss << "ID3D12Device::CreateDescriptorHeap[nulldescriptorheap_sampler] failed! ERROR: " << string_HRESULT(hr);
+			ss << "ID3D12Device::CreateDescriptorHeap[nulldescriptorheap_sampler] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
 			wi::helper::messageBox(ss.str(), "Error!");
 		}
 
@@ -3033,7 +3033,7 @@ std::mutex queue_locker;
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
-			ss << "ID3D12CommandQueue::GetTimestampFrequency[QUEUE_GRAPHICS] failed! ERROR: " << string_HRESULT(hr);
+			ss << "ID3D12CommandQueue::GetTimestampFrequency[QUEUE_GRAPHICS] failed! ERROR: " << wi::helper::GetPlatformErrorString(hr);
 			wi::helper::messageBox(ss.str(), "Warning!");
 		}
 

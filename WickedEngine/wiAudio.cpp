@@ -31,6 +31,8 @@ static constexpr T AlignTo(T value, T alignment)
 #define fourccXWMA 'AMWX'
 #define fourccDPDS 'sdpd'
 
+#define xaudio_check(hr) wilog_assert(SUCCEEDED(hr), "XAudio2 error: %s, line %d, hr = %s", relative_path(__FILE__), __LINE__, wi::helper::GetPlatformErrorString(hr).c_str())
+
 namespace wi::audio
 {
 	static const XAUDIO2FX_REVERB_I3DL2_PARAMETERS reverbPresets[] =
@@ -88,18 +90,14 @@ namespace wi::audio
 			hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
 			if (!SUCCEEDED(hr))
 			{
-				std::stringstream ss("");
-				ss << "XAudio2: CoInitializeEx returned error: 0x" << std::hex << hr;
-				wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
+				wilog_error("XAudio2: CoInitializeEx returned error: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 				return;
 			}
 
 			hr = XAudio2Create(&audioEngine, 0, XAUDIO2_USE_DEFAULT_PROCESSOR);
 			if (!SUCCEEDED(hr))
 			{
-				std::stringstream ss("");
-				ss << "XAudio2: XAudio2Create returned error: 0x" << std::hex << hr;
-				wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
+				wilog_error("XAudio2: XAudio2Create returned error: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 				return;
 			}
 
@@ -113,9 +111,7 @@ namespace wi::audio
 			hr = audioEngine->CreateMasteringVoice(&masteringVoice);
 			if (!SUCCEEDED(hr))
 			{
-				std::stringstream ss("");
-				ss << "XAudio2: CreateMasteringVoice returned error: 0x" << std::hex << hr;
-				wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
+				wilog_error("XAudio2: CreateMasteringVoice returned error: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 				return;
 			}
 
@@ -139,9 +135,7 @@ namespace wi::audio
 
 				if (!SUCCEEDED(hr))
 				{
-					std::stringstream ss("");
-					ss << "XAudio2: CreateSubmixVoice returned error: 0x" << std::hex << hr;
-					wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
+					wilog_error("XAudio2: CreateSubmixVoice returned error: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 					return;
 				}
 			}
@@ -151,9 +145,7 @@ namespace wi::audio
 			hr = X3DAudioInitialize(channelMask, X3DAUDIO_SPEED_OF_SOUND, audio3D);
 			if (!SUCCEEDED(hr))
 			{
-				std::stringstream ss("");
-				ss << "XAudio2: X3DAudioInitialize returned error: 0x" << std::hex << hr;
-				wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
+				wilog_error("XAudio2: X3DAudioInitialize returned error: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 				return;
 			}
 
@@ -162,9 +154,7 @@ namespace wi::audio
 				hr = XAudio2CreateReverb(&reverbEffect);
 				if (!SUCCEEDED(hr))
 				{
-					std::stringstream ss("");
-					ss << "XAudio2: XAudio2CreateReverb returned error: 0x" << std::hex << hr;
-					wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
+					wilog_error("XAudio2: XAudio2CreateReverb returned error: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 					return;
 				}
 
@@ -181,9 +171,7 @@ namespace wi::audio
 				);
 				if (!SUCCEEDED(hr))
 				{
-					std::stringstream ss("");
-					ss << "XAudio2: CreateSubmixVoice returned error: 0x" << std::hex << hr;
-					wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
+					wilog_error("XAudio2: CreateSubmixVoice returned error: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 					return;
 				}
 
@@ -192,9 +180,7 @@ namespace wi::audio
 				HRESULT hr = reverbSubmix->SetEffectParameters(0, &native, sizeof(native));
 				if (!SUCCEEDED(hr))
 				{
-					std::stringstream ss("");
-					ss << "XAudio2: SetEffectParameters returned error: 0x" << std::hex << hr;
-					wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
+					wilog_error("XAudio2: SetEffectParameters returned error: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 					return;
 				}
 			}
@@ -468,9 +454,9 @@ namespace wi::audio
 
 		hr = instanceinternal->audio->audioEngine->CreateSourceVoice(&instanceinternal->sourceVoice, &soundinternal->wfx,
 			0, XAUDIO2_DEFAULT_FREQ_RATIO, instanceinternal.get(), &SFXSendList, NULL);
+		xaudio_check(hr);
 		if (FAILED(hr))
 		{
-			assert(0);
 			return false;
 		}
 
@@ -509,9 +495,9 @@ namespace wi::audio
 		instanceinternal->buffer.LoopCount = instance->IsLooped() ? XAUDIO2_LOOP_INFINITE : 0;
 
 		hr = instanceinternal->sourceVoice->SubmitSourceBuffer(&instanceinternal->buffer);
+		xaudio_check(hr);
 		if (FAILED(hr))
 		{
-			assert(0);
 			return false;
 		}
 
@@ -523,7 +509,7 @@ namespace wi::audio
 		{
 			auto instanceinternal = to_internal(instance);
 			HRESULT hr = instanceinternal->sourceVoice->Start();
-			assert(SUCCEEDED(hr));
+			xaudio_check(hr);
 		}
 	}
 	void Pause(SoundInstance* instance)
@@ -532,7 +518,7 @@ namespace wi::audio
 		{
 			auto instanceinternal = to_internal(instance);
 			HRESULT hr = instanceinternal->sourceVoice->Stop(); // preserves cursor position
-			assert(SUCCEEDED(hr));
+			xaudio_check(hr);
 		}
 	}
 	void Stop(SoundInstance* instance)
@@ -541,16 +527,16 @@ namespace wi::audio
 		{
 			auto instanceinternal = to_internal(instance);
 			HRESULT hr = instanceinternal->sourceVoice->Stop(); // preserves cursor position
-			assert(SUCCEEDED(hr));
+			xaudio_check(hr);
 			hr = instanceinternal->sourceVoice->FlushSourceBuffers(); // reset submitted audio buffer
-			assert(SUCCEEDED(hr));
+			xaudio_check(hr);
 			if (!instanceinternal->ended) // if already ended, don't submit end again, it can cause high pitched jerky sound
 			{
 				hr = instanceinternal->sourceVoice->SubmitSourceBuffer(&audio_internal->termination_mark); // mark this as terminated, this resets XAUDIO2_VOICE_STATE::SamplesPlayed to zero
-				assert(SUCCEEDED(hr));
+				xaudio_check(hr);
 			}
 			hr = instanceinternal->sourceVoice->SubmitSourceBuffer(&instanceinternal->buffer); // resubmit
-			assert(SUCCEEDED(hr));
+			xaudio_check(hr);
 		}
 	}
 	void SetVolume(float volume, SoundInstance* instance)
@@ -558,13 +544,13 @@ namespace wi::audio
 		if (instance == nullptr || !instance->IsValid())
 		{
 			HRESULT hr = audio_internal->masteringVoice->SetVolume(volume);
-			assert(SUCCEEDED(hr));
+			xaudio_check(hr);
 		}
 		else
 		{
 			auto instanceinternal = to_internal(instance);
 			HRESULT hr = instanceinternal->sourceVoice->SetVolume(volume);
-			assert(SUCCEEDED(hr));
+			xaudio_check(hr);
 		}
 	}
 	float GetVolume(const SoundInstance* instance)
@@ -589,12 +575,12 @@ namespace wi::audio
 			if (instanceinternal->buffer.LoopCount == 0)
 				return;
 			HRESULT hr = instanceinternal->sourceVoice->ExitLoop();
-			assert(SUCCEEDED(hr));
+			xaudio_check(hr);
 			if (instanceinternal->ended)
 			{
 				instanceinternal->buffer.LoopCount = 0;
 				hr = instanceinternal->sourceVoice->SubmitSourceBuffer(&instanceinternal->buffer);
-				assert(SUCCEEDED(hr));
+				xaudio_check(hr);
 			}
 		}
 	}
@@ -636,7 +622,7 @@ namespace wi::audio
 	void SetSubmixVolume(SUBMIX_TYPE type, float volume)
 	{
 		HRESULT hr = audio_internal->submixVoices[type]->SetVolume(volume);
-		assert(SUCCEEDED(hr));
+		xaudio_check(hr);
 	}
 	float GetSubmixVolume(SUBMIX_TYPE type)
 	{
@@ -691,7 +677,7 @@ namespace wi::audio
 			HRESULT hr;
 
 			hr = instanceinternal->sourceVoice->SetFrequencyRatio(settings.DopplerFactor);
-			assert(SUCCEEDED(hr));
+			xaudio_check(hr);
 
 			hr = instanceinternal->sourceVoice->SetOutputMatrix(
 				instanceinternal->audio->submixVoices[instance->type],
@@ -699,19 +685,19 @@ namespace wi::audio
 				settings.DstChannelCount, 
 				settings.pMatrixCoefficients
 			);
-			assert(SUCCEEDED(hr));
+			xaudio_check(hr);
 			
 			XAUDIO2_FILTER_PARAMETERS FilterParametersDirect = { LowPassFilter, 2.0f * sinf(X3DAUDIO_PI / 6.0f * settings.LPFDirectCoefficient), 1.0f };
 			hr = instanceinternal->sourceVoice->SetOutputFilterParameters(instanceinternal->audio->submixVoices[instance->type], &FilterParametersDirect);
-			assert(SUCCEEDED(hr));
+			xaudio_check(hr);
 
 			if (instance->IsEnableReverb() && instanceinternal->audio->reverbSubmix != nullptr)
 			{
 				hr = instanceinternal->sourceVoice->SetOutputMatrix(instanceinternal->audio->reverbSubmix, settings.SrcChannelCount, 1, &settings.ReverbLevel);
-				assert(SUCCEEDED(hr));
+				xaudio_check(hr);
 				XAUDIO2_FILTER_PARAMETERS FilterParametersReverb = { LowPassFilter, 2.0f * sinf(X3DAUDIO_PI / 6.0f * settings.LPFReverbCoefficient), 1.0f };
 				hr = instanceinternal->sourceVoice->SetOutputFilterParameters(instanceinternal->audio->reverbSubmix, &FilterParametersReverb);
-				assert(SUCCEEDED(hr));
+				xaudio_check(hr);
 			}
 		}
 	}
@@ -721,7 +707,7 @@ namespace wi::audio
 		XAUDIO2FX_REVERB_PARAMETERS native;
 		ReverbConvertI3DL2ToNative(&reverbPresets[preset], &native);
 		HRESULT hr = audio_internal->reverbSubmix->SetEffectParameters(0, &native, sizeof(native));
-		assert(SUCCEEDED(hr));
+		xaudio_check(hr);
 	}
 }
 

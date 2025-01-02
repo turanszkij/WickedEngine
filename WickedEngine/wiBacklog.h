@@ -13,10 +13,6 @@
 #define wilog(str,...) {wilog_level(str, wi::backlog::LogLevel::Default, __VA_ARGS__)}
 #define wilog_assert(cond,str,...) {if(!cond){wilog_error(str, __VA_ARGS__) assert(cond);}}
 
-#define __wi_line__ __LINE__
-#define __wi_filename1__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
-#define __wi_filename__ (strrchr(__wi_filename1__, '\\') ? strrchr(__wi_filename1__, '\\') + 1 : __wi_filename1__)
-
 namespace wi::backlog
 {
 	// Do not modify the order, as this is exposed to LUA scripts as int!

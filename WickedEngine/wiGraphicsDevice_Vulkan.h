@@ -28,7 +28,7 @@
 #include <mutex>
 #include <algorithm>
 
-#define vulkan_check(res) wilog_assert(res == VK_SUCCESS, "Vulkan error: %s, line %d, result = %s", __wi_filename__, __wi_line__, string_VkResult(res))
+#define vulkan_check(res) wilog_assert(res == VK_SUCCESS, "Vulkan error: %s, line %d, result = %s", relative_path(__FILE__), __LINE__, string_VkResult(res))
 
 namespace wi::graphics
 {
