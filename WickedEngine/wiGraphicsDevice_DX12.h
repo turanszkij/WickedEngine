@@ -11,6 +11,8 @@
 #include "wiUnorderedMap.h"
 #include "wiVector.h"
 #include "wiSpinLock.h"
+#include "wiBacklog.h"
+#include "wiHelper.h"
 
 #ifdef PLATFORM_XBOX
 #include "wiGraphicsDevice_DX12_XBOX.h"
@@ -30,6 +32,19 @@
 #include <deque>
 #include <atomic>
 #include <mutex>
+
+#include <comdef.h>
+inline std::string string_HRESULT(HRESULT hr)
+{
+	_com_error err(hr);
+	LPCTSTR errMsg = err.ErrorMessage();
+	std::wstring wstr = errMsg;
+	std::string str;
+	wi::helper::StringConvert(wstr, str);
+	return str;
+}
+#define dx12_check(hr) wilog_assert(SUCCEEDED(hr), "DX12 error: %s, line %d, hr = %s", __wi_filename__, __wi_line__, string_HRESULT(hr).c_str())
+#define dx12_check_fatalerror(hr) wilog_assert_fatalerror(SUCCEEDED(hr), "DX12 error: %s, line %d, hr = %s", __wi_filename__, __wi_line__, string_HRESULT(hr).c_str())
 
 namespace wi::graphics
 {
@@ -138,7 +153,7 @@ namespace wi::graphics
 			{
 				Semaphore& dependency = semaphore_pool.emplace_back();
 				HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(dependency.fence));
-				assert(SUCCEEDED(hr));
+				dx12_check(hr);
 			}
 			Semaphore semaphore = std::move(semaphore_pool.back());
 			semaphore_pool.pop_back();
@@ -453,7 +468,7 @@ namespace wi::graphics
 				// Descriptor heaps' progress is recorded by the GPU:
 				fenceValue = allocationOffset.load();
 				HRESULT hr = queue->Signal(fence.Get(), fenceValue);
-				assert(SUCCEEDED(hr));
+				dx12_check(hr);
 				cached_completedValue = fence->GetCompletedValue();
 			}
 		};
@@ -489,7 +504,7 @@ namespace wi::graphics
 				{
 					heaps.emplace_back();
 					HRESULT hr = device->device->CreateDescriptorHeap(&desc, PPV_ARGS(heaps.back()));
-					assert(SUCCEEDED(hr));
+					dx12_check(hr);
 					D3D12_CPU_DESCRIPTOR_HANDLE heap_start = heaps.back()->GetCPUDescriptorHandleForHeapStart();
 					for (UINT i = 0; i < desc.NumDescriptors; ++i)
 					{
