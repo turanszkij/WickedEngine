@@ -44,7 +44,6 @@ inline std::string string_HRESULT(HRESULT hr)
 	return str;
 }
 #define dx12_check(hr) wilog_assert(SUCCEEDED(hr), "DX12 error: %s, line %d, hr = %s", __wi_filename__, __wi_line__, string_HRESULT(hr).c_str())
-#define dx12_check_fatalerror(hr) wilog_assert_fatalerror(SUCCEEDED(hr), "DX12 error: %s, line %d, hr = %s", __wi_filename__, __wi_line__, string_HRESULT(hr).c_str())
 
 namespace wi::graphics
 {
