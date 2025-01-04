@@ -86,6 +86,7 @@ namespace wi::scene
 		mutable bool acceleration_structure_update_requested = false;
 		void SetAccelerationStructureUpdateRequested(bool value = true) { acceleration_structure_update_requested = value; }
 		bool IsAccelerationStructureUpdateRequested() const { return acceleration_structure_update_requested; }
+		bool IsLightmapUpdateRequested() const { return lightmap_request_allocator.load() > 0; }
 		wi::Archive optimized_instatiation_data;
 		wi::vector<wi::primitive::Capsule> character_capsules;
 

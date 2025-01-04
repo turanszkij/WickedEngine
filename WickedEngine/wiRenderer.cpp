@@ -1449,7 +1449,7 @@ void LoadShaders()
 		desc.ps = &shaders[PSTYPE_RENDERLIGHTMAP];
 		desc.rs = &rasterizers[RSTYPE_LIGHTMAP];
 		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
-		desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
+		desc.dss = &depthStencils[DSSTYPE_DEFAULT]; // Note: depth is used to disallow overlapped pixel/primitive writes with conservative rasterization!
 
 		device->CreatePipelineState(&desc, &PSO_renderlightmap);
 		});
@@ -2345,11 +2345,10 @@ void SetUpStates()
 
 
 	rs = rasterizers[RSTYPE_DOUBLESIDED];
-	// Note: conservative rasterization can cause GPU hang sometimes
-	//if (device->CheckCapability(GraphicsDeviceCapability::CONSERVATIVE_RASTERIZATION))
-	//{
-	//	rs.conservative_rasterization_enable = true;
-	//}
+	if (device->CheckCapability(GraphicsDeviceCapability::CONSERVATIVE_RASTERIZATION))
+	{
+		rs.conservative_rasterization_enable = true;
+	}
 	rasterizers[RSTYPE_LIGHTMAP] = rs;
 
 
@@ -10346,125 +10345,167 @@ void RayTraceSceneBVH(const Scene& scene, CommandList cmd)
 
 void RefreshLightmaps(const Scene& scene, CommandList cmd)
 {
+	if (!scene.IsLightmapUpdateRequested())
+		return;
+	if (!scene.TLAS.IsValid() && !scene.BVH.IsValid())
+		return;
+
+	wi::jobsystem::Wait(raytracing_ctx);
+
 	const uint32_t lightmap_request_count = scene.lightmap_request_allocator.load();
-	if (lightmap_request_count > 0)
+
+	auto range = wi::profiler::BeginRangeGPU("Lightmap Processing", cmd);
+
+	BindCommonResources(cmd);
+
+	// Render lightmaps for each object:
+	for (uint32_t requestIndex = 0; requestIndex < lightmap_request_count; ++requestIndex)
 	{
-		auto range = wi::profiler::BeginRangeGPU("Lightmap Processing", cmd);
+		uint32_t objectIndex = *(scene.lightmap_requests.data() + requestIndex);
+		const ObjectComponent& object = scene.objects[objectIndex];
+		if (!object.lightmap.IsValid())
+			continue;
+		if (!object.lightmap_render.IsValid())
+			continue;
 
-		if (!scene.TLAS.IsValid() && !scene.BVH.IsValid())
-			return;
-
-		wi::jobsystem::Wait(raytracing_ctx);
-
-		BindCommonResources(cmd);
-
-		// Render lightmaps for each object:
-		for (uint32_t requestIndex = 0; requestIndex < lightmap_request_count; ++requestIndex)
+		if (object.IsLightmapRenderRequested())
 		{
-			uint32_t objectIndex = *(scene.lightmap_requests.data() + requestIndex);
-			const ObjectComponent& object = scene.objects[objectIndex];
-			if (!object.lightmap.IsValid())
-				continue;
-			if (!object.lightmap_render.IsValid())
-				continue;
+			device->EventBegin("RenderObjectLightMap", cmd);
 
-			if (object.IsLightmapRenderRequested())
+			const MeshComponent& mesh = scene.meshes[object.mesh_index];
+			assert(!mesh.vertex_atlas.empty());
+			assert(mesh.vb_atl.IsValid());
+
+			const TextureDesc& desc = object.lightmap_render.GetDesc();
+
+			static Texture lightmap_color_tmp;
+			static Texture lightmap_depth_tmp;
+			if (lightmap_color_tmp.desc.width < object.lightmap.desc.width || lightmap_color_tmp.desc.height < object.lightmap.desc.height)
 			{
-				device->EventBegin("RenderObjectLightMap", cmd);
+				lightmap_color_tmp.desc = object.lightmap.desc;
+				lightmap_color_tmp.desc.misc_flags = ResourceMiscFlag::ALIASING_TEXTURE_RT_DS;
+				device->CreateTexture(&lightmap_color_tmp.desc, nullptr, &lightmap_color_tmp);
 
-				const MeshComponent& mesh = scene.meshes[object.mesh_index];
-				assert(!mesh.vertex_atlas.empty());
-				assert(mesh.vb_atl.IsValid());
+				lightmap_depth_tmp.desc.width = object.lightmap.desc.width;
+				lightmap_depth_tmp.desc.height = object.lightmap.desc.height;
+				lightmap_depth_tmp.desc.format = Format::D16_UNORM;
+				lightmap_depth_tmp.desc.bind_flags = BindFlag::DEPTH_STENCIL;
+				lightmap_depth_tmp.desc.layout = ResourceState::DEPTHSTENCIL;
+				device->CreateTexture(&lightmap_depth_tmp.desc, nullptr, &lightmap_depth_tmp, &lightmap_color_tmp); // aliased!
+			}
 
-				const TextureDesc& desc = object.lightmap_render.GetDesc();
+			device->Barrier(GPUBarrier::Aliasing(&lightmap_color_tmp, &lightmap_depth_tmp), cmd);
 
-				if (object.lightmapIterationCount == 0)
+			// Note: depth is used to disallow overlapped pixel/primitive writes with conservative rasterization!
+			if (object.lightmapIterationCount == 0)
+			{
+				RenderPassImage rp[] = {
+					RenderPassImage::RenderTarget(&object.lightmap_render, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::DepthStencil(&lightmap_depth_tmp, RenderPassImage::LoadOp::CLEAR),
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
+			}
+			else
+			{
+				RenderPassImage rp[] = {
+					RenderPassImage::RenderTarget(&object.lightmap_render, RenderPassImage::LoadOp::LOAD),
+					RenderPassImage::DepthStencil(&lightmap_depth_tmp, RenderPassImage::LoadOp::CLEAR),
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
+			}
+
+			Viewport vp;
+			vp.width = (float)desc.width;
+			vp.height = (float)desc.height;
+			device->BindViewports(1, &vp, cmd);
+
+			device->BindPipelineState(&PSO_renderlightmap, cmd);
+
+			device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetIndexFormat(), mesh.ib.offset, cmd);
+
+			LightmapPushConstants push;
+			push.vb_pos_wind = mesh.vb_pos_wind.descriptor_srv;
+			push.vb_nor = mesh.vb_nor.descriptor_srv;
+			push.vb_atl = mesh.vb_atl.descriptor_srv;
+			push.instanceIndex = objectIndex;
+			device->PushConstants(&push, sizeof(push), cmd);
+
+			RaytracingCB cb = {};
+			cb.xTraceResolution.x = desc.width;
+			cb.xTraceResolution.y = desc.height;
+			cb.xTraceResolution_rcp.x = 1.0f / cb.xTraceResolution.x;
+			cb.xTraceResolution_rcp.y = 1.0f / cb.xTraceResolution.y;
+			cb.xTraceAccumulationFactor = 1.0f / (object.lightmapIterationCount + 1.0f); // accumulation factor (alpha)
+			cb.xTraceUserData.x = raytraceBounceCount;
+			XMFLOAT4 halton = wi::math::GetHaltonSequence(object.lightmapIterationCount); // for jittering the rasterization (good for eliminating atlas border artifacts)
+			cb.xTracePixelOffset.x = (halton.x * 2 - 1) * cb.xTraceResolution_rcp.x;
+			cb.xTracePixelOffset.y = (halton.y * 2 - 1) * cb.xTraceResolution_rcp.y;
+			cb.xTracePixelOffset.x *= 1.4f;	// boost the jitter by a bit
+			cb.xTracePixelOffset.y *= 1.4f;	// boost the jitter by a bit
+			uint8_t instanceInclusionMask = 0xFF;
+			cb.xTraceUserData.y = instanceInclusionMask;
+			cb.xTraceSampleIndex = object.lightmapIterationCount;
+			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(RaytracingCB), cmd);
+
+			uint32_t indexStart = ~0u;
+			uint32_t indexEnd = 0;
+
+			uint32_t first_subset = 0;
+			uint32_t last_subset = 0;
+			mesh.GetLODSubsetRange(0, first_subset, last_subset);
+			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+			{
+				const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
+				if (subset.indexCount == 0)
+					continue;
+				indexStart = std::min(indexStart, subset.indexOffset);
+				indexEnd = std::max(indexEnd, subset.indexOffset + subset.indexCount);
+			}
+
+			if (indexEnd > indexStart)
+			{
+				const uint32_t indexCount = indexEnd - indexStart;
+				device->DrawIndexed(indexCount, indexStart, 0, cmd);
+				object.lightmapIterationCount++;
+			}
+
+			device->RenderPassEnd(cmd);
+
+			device->Barrier(GPUBarrier::Aliasing(&lightmap_depth_tmp, &lightmap_color_tmp), cmd);
+
+			// Expand opaque areas:
+			{
+				device->EventBegin("Lightmap expand", cmd);
+
+				device->BindComputeShader(&shaders[CSTYPE_LIGHTMAP_EXPAND], cmd);
+
+				// render -> lightmap
 				{
-					RenderPassImage rp = RenderPassImage::RenderTarget(&object.lightmap_render, RenderPassImage::LoadOp::CLEAR);
-					device->RenderPassBegin(&rp, 1, cmd);
+					device->BindResource(&object.lightmap_render, 0, cmd);
+					device->BindUAV(&object.lightmap, 0, cmd);
+
+					device->Barrier(GPUBarrier::Image(&object.lightmap, object.lightmap.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+
+					device->Dispatch((desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE, (desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE, 1, cmd);
+
+					device->Barrier(GPUBarrier::Image(&object.lightmap, ResourceState::UNORDERED_ACCESS, object.lightmap.desc.layout), cmd);
 				}
-				else
+				for (int repeat = 0; repeat < 2; ++repeat)
 				{
-					RenderPassImage rp = RenderPassImage::RenderTarget(&object.lightmap_render, RenderPassImage::LoadOp::LOAD);
-					device->RenderPassBegin(&rp, 1, cmd);
-				}
-
-				Viewport vp;
-				vp.width = (float)desc.width;
-				vp.height = (float)desc.height;
-				device->BindViewports(1, &vp, cmd);
-
-				device->BindPipelineState(&PSO_renderlightmap, cmd);
-
-				device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetIndexFormat(), mesh.ib.offset, cmd);
-
-				LightmapPushConstants push;
-				push.vb_pos_wind = mesh.vb_pos_wind.descriptor_srv;
-				push.vb_nor = mesh.vb_nor.descriptor_srv;
-				push.vb_atl = mesh.vb_atl.descriptor_srv;
-				push.instanceIndex = objectIndex;
-				device->PushConstants(&push, sizeof(push), cmd);
-
-				RaytracingCB cb = {};
-				cb.xTraceResolution.x = desc.width;
-				cb.xTraceResolution.y = desc.height;
-				cb.xTraceResolution_rcp.x = 1.0f / cb.xTraceResolution.x;
-				cb.xTraceResolution_rcp.y = 1.0f / cb.xTraceResolution.y;
-				cb.xTraceAccumulationFactor = 1.0f / (object.lightmapIterationCount + 1.0f); // accumulation factor (alpha)
-				cb.xTraceUserData.x = raytraceBounceCount;
-				XMFLOAT4 halton = wi::math::GetHaltonSequence(object.lightmapIterationCount); // for jittering the rasterization (good for eliminating atlas border artifacts)
-				cb.xTracePixelOffset.x = (halton.x * 2 - 1) * cb.xTraceResolution_rcp.x;
-				cb.xTracePixelOffset.y = (halton.y * 2 - 1) * cb.xTraceResolution_rcp.y;
-				cb.xTracePixelOffset.x *= 1.4f;	// boost the jitter by a bit
-				cb.xTracePixelOffset.y *= 1.4f;	// boost the jitter by a bit
-				uint8_t instanceInclusionMask = 0xFF;
-				cb.xTraceUserData.y = instanceInclusionMask;
-				cb.xTraceSampleIndex = object.lightmapIterationCount;
-				device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(RaytracingCB), cmd);
-
-				uint32_t indexStart = ~0u;
-				uint32_t indexEnd = 0;
-
-				uint32_t first_subset = 0;
-				uint32_t last_subset = 0;
-				mesh.GetLODSubsetRange(0, first_subset, last_subset);
-				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
-				{
-					const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
-					if (subset.indexCount == 0)
-						continue;
-					indexStart = std::min(indexStart, subset.indexOffset);
-					indexEnd = std::max(indexEnd, subset.indexOffset + subset.indexCount);
-				}
-
-				if (indexEnd > indexStart)
-				{
-					const uint32_t indexCount = indexEnd - indexStart;
-					device->DrawIndexed(indexCount, indexStart, 0, cmd);
-					object.lightmapIterationCount++;
-				}
-
-				device->RenderPassEnd(cmd);
-
-				// Expand opaque areas:
-				{
-					device->EventBegin("Lightmap expand", cmd);
-
-					static Texture lightmap_expand_temp;
-					if (lightmap_expand_temp.desc.width < object.lightmap.desc.width || lightmap_expand_temp.desc.height < object.lightmap.desc.height)
+					// lightmap -> temp
 					{
-						lightmap_expand_temp.desc = object.lightmap.desc;
-						device->CreateTexture(&lightmap_expand_temp.desc, nullptr, &lightmap_expand_temp);
-						device->Barrier(GPUBarrier::Image(&lightmap_expand_temp, lightmap_expand_temp.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
-						device->ClearUAV(&lightmap_expand_temp, 0, cmd);
-						device->Barrier(GPUBarrier::Image(&lightmap_expand_temp, ResourceState::UNORDERED_ACCESS, lightmap_expand_temp.desc.layout), cmd);
+						device->BindResource(&object.lightmap, 0, cmd);
+						device->BindUAV(&lightmap_color_tmp, 0, cmd);
+
+						device->Barrier(GPUBarrier::Image(&lightmap_color_tmp, lightmap_color_tmp.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+
+						device->Dispatch((desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE, (desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE, 1, cmd);
+
+						device->Barrier(GPUBarrier::Image(&lightmap_color_tmp, ResourceState::UNORDERED_ACCESS, lightmap_color_tmp.desc.layout), cmd);
 					}
-
-					device->BindComputeShader(&shaders[CSTYPE_LIGHTMAP_EXPAND], cmd);
-
-					// render -> lightmap
+					// temp -> lightmap
 					{
-						device->BindResource(&object.lightmap_render, 0, cmd);
+						device->BindResource(&lightmap_color_tmp, 0, cmd);
 						device->BindUAV(&object.lightmap, 0, cmd);
 
 						device->Barrier(GPUBarrier::Image(&object.lightmap, object.lightmap.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
@@ -10473,40 +10514,16 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 
 						device->Barrier(GPUBarrier::Image(&object.lightmap, ResourceState::UNORDERED_ACCESS, object.lightmap.desc.layout), cmd);
 					}
-					for (int repeat = 0; repeat < 2; ++repeat)
-					{
-						// lightmap -> temp
-						{
-							device->BindResource(&object.lightmap, 0, cmd);
-							device->BindUAV(&lightmap_expand_temp, 0, cmd);
-
-							device->Barrier(GPUBarrier::Image(&lightmap_expand_temp, lightmap_expand_temp.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
-
-							device->Dispatch((desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE, (desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE, 1, cmd);
-
-							device->Barrier(GPUBarrier::Image(&lightmap_expand_temp, ResourceState::UNORDERED_ACCESS, lightmap_expand_temp.desc.layout), cmd);
-						}
-						// temp -> lightmap
-						{
-							device->BindResource(&lightmap_expand_temp, 0, cmd);
-							device->BindUAV(&object.lightmap, 0, cmd);
-
-							device->Barrier(GPUBarrier::Image(&object.lightmap, object.lightmap.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
-
-							device->Dispatch((desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE, (desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE, 1, cmd);
-
-							device->Barrier(GPUBarrier::Image(&object.lightmap, ResourceState::UNORDERED_ACCESS, object.lightmap.desc.layout), cmd);
-						}
-					}
-					device->EventEnd(cmd);
 				}
-
 				device->EventEnd(cmd);
 			}
-		}
 
-		wi::profiler::EndRange(range);
+			device->EventEnd(cmd);
+		}
 	}
+
+	wi::profiler::EndRange(range);
+
 }
 
 void RefreshWetmaps(const Visibility& vis, CommandList cmd)

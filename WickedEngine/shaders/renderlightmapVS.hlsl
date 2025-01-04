@@ -19,7 +19,7 @@ Output main(uint vertexID : SV_VertexID)
 
 	Output output;
 
-	output.pos = float4(atl, 0, 1);
+	output.pos = float4(atl, 1, 1); // Note: set Z to 1 for depth is intentional, there is depth write and depth test
 	output.pos.xy = output.pos.xy * 2 - 1;
 	output.pos.y *= -1;
 	output.pos.xy += xTracePixelOffset;

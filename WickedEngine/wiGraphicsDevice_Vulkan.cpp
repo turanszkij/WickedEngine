@@ -7768,12 +7768,8 @@ using namespace vulkan_internal;
 		info.layerCount = 1;
 		info.renderArea.offset.x = 0;
 		info.renderArea.offset.y = 0;
-		if (image_count == 0)
-		{
-			// no attachments can still render (UAV only rendering)
-			info.renderArea.extent.width = properties2.properties.limits.maxFramebufferWidth;
-			info.renderArea.extent.height = properties2.properties.limits.maxFramebufferHeight;
-		}
+		info.renderArea.extent.width = properties2.properties.limits.maxFramebufferWidth;
+		info.renderArea.extent.height = properties2.properties.limits.maxFramebufferHeight;
 		VkRenderingAttachmentInfo color_attachments[8] = {};
 		VkRenderingAttachmentInfo depth_attachment = {};
 		VkRenderingAttachmentInfo stencil_attachment = {};
@@ -7790,8 +7786,8 @@ using namespace vulkan_internal;
 			int subresource = image.subresource;
 			auto internal_state = to_internal(texture);
 
-			info.renderArea.extent.width = std::max(info.renderArea.extent.width, desc.width);
-			info.renderArea.extent.height = std::max(info.renderArea.extent.height, desc.height);
+			info.renderArea.extent.width = std::min(info.renderArea.extent.width, desc.width);
+			info.renderArea.extent.height = std::min(info.renderArea.extent.height, desc.height);
 
 			VkAttachmentLoadOp loadOp;
 			switch (image.loadop)
