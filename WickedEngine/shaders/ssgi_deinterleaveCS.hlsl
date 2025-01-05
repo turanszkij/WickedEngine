@@ -55,10 +55,10 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex, uint3 GTid : 
 	const float2 prevUV1 = uv1 + velocity1;
 	const float2 prevUV2 = uv2 + velocity2;
 	const float2 prevUV3 = uv3 + velocity3;
-    shared_colors[destIdx + 0] = Pack_R11G11B10_FLOAT(texture_input.SampleLevel(sampler_linear_clamp, prevUV0, 0));
-    shared_colors[destIdx + 8] = Pack_R11G11B10_FLOAT(texture_input.SampleLevel(sampler_linear_clamp, prevUV1, 0));
-    shared_colors[destIdx + 128] = Pack_R11G11B10_FLOAT(texture_input.SampleLevel(sampler_linear_clamp, prevUV2, 0));
-    shared_colors[destIdx + 136] = Pack_R11G11B10_FLOAT(texture_input.SampleLevel(sampler_linear_clamp, prevUV3, 0));
+    shared_colors[destIdx + 0]		= Pack_R11G11B10_FLOAT(clamp(texture_input.SampleLevel(sampler_linear_clamp, prevUV0, 0), 0, 1000));
+    shared_colors[destIdx + 8]		= Pack_R11G11B10_FLOAT(clamp(texture_input.SampleLevel(sampler_linear_clamp, prevUV1, 0), 0, 1000));
+    shared_colors[destIdx + 128]	= Pack_R11G11B10_FLOAT(clamp(texture_input.SampleLevel(sampler_linear_clamp, prevUV2, 0), 0, 1000));
+    shared_colors[destIdx + 136]	= Pack_R11G11B10_FLOAT(clamp(texture_input.SampleLevel(sampler_linear_clamp, prevUV3, 0), 0, 1000));
 	
     GroupMemoryBarrierWithGroupSync();
 
@@ -68,8 +68,8 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex, uint3 GTid : 
     float2 normal = unpack_half2(shared_normals[ldsIndex]);
     float3 color = Unpack_R11G11B10_FLOAT(shared_colors[ldsIndex]);
 
-	color = color - 0.2; // cut out pixels that shouldn't act as lights
-	color *= 0.9; // accumulation energy loss
+	color = all(color <= 1) ? 0 : color; // cut out pixels that are not acting as lights
+	color *= 0.96; // accumulation energy loss
 	color = max(0, color);
 
     uint2 st = DTid.xy;

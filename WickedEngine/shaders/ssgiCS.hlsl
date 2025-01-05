@@ -121,10 +121,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint2 GTid :
 		const float3 P1 = reconstruct_position(uv1, depths.z, GetCamera().inverse_projection);
 		const float3 P2 = reconstruct_position(uv2, depths.x, GetCamera().inverse_projection);
 		const float3 P3 = reconstruct_position(uv3, depths.y, GetCamera().inverse_projection);
-		const uint C0 = Pack_R11G11B10_FLOAT(float3(reds.w, greens.w, blues.w));
-		const uint C1 = Pack_R11G11B10_FLOAT(float3(reds.z, greens.z, blues.z));
-		const uint C2 = Pack_R11G11B10_FLOAT(float3(reds.x, greens.x, blues.x));
-		const uint C3 = Pack_R11G11B10_FLOAT(float3(reds.y, greens.y, blues.y));
+		const uint C0 = Pack_R11G11B10_FLOAT(clamp(float3(reds.w, greens.w, blues.w), 0, 1000));
+		const uint C1 = Pack_R11G11B10_FLOAT(clamp(float3(reds.z, greens.z, blues.z), 0, 1000));
+		const uint C2 = Pack_R11G11B10_FLOAT(clamp(float3(reds.x, greens.x, blues.x), 0, 1000));
+		const uint C3 = Pack_R11G11B10_FLOAT(clamp(float3(reds.y, greens.y, blues.y), 0, 1000));
 		
 		const uint t = coord_to_cache(int2(x, y));
 		cache_xy[t] = pack_half2(P0.xy);
