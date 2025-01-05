@@ -175,7 +175,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"volumetricCloud_renderCS_capture", wi::graphics::ShaderStage::CS },
 	{"volumetricCloud_renderCS_capture_MSAA", wi::graphics::ShaderStage::CS },
 	{"volumetricCloud_reprojectCS", wi::graphics::ShaderStage::CS },
-	{"volumetricCloud_shadow_filterCS", wi::graphics::ShaderStage::CS },
 	{"volumetricCloud_shadow_renderCS", wi::graphics::ShaderStage::CS },
 	{"volumetricCloud_shapenoiseCS", wi::graphics::ShaderStage::CS },
 	{"volumetricCloud_upsamplePS", wi::graphics::ShaderStage::PS },

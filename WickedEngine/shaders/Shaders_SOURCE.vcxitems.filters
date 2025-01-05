@@ -968,9 +968,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_shadow_renderCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_shadow_filterCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_renderCS_capture_MSAA.hlsl">
       <Filter>CS</Filter>
     </FxCompile>

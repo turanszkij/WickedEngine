@@ -11,7 +11,7 @@ Texture2D<float4> texture_curlNoise : register(t2);
 Texture2D<float4> texture_weatherMapFirst : register(t3);
 Texture2D<float4> texture_weatherMapSecond : register(t4);
 
-RWTexture2D<float3> texture_render : register(u0);
+RWTexture2D<float4> texture_render : register(u0);
 
 static const float2 sampleCountMinMax = float2(16.0, 32.0); // Based on sun angle, more angle more samples
 
@@ -139,5 +139,5 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	}
 
 	// Output
-	texture_render[DTid.xy] = result;
+	texture_render[DTid.xy] = float4(result, 1);
 }

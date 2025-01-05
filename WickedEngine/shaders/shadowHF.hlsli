@@ -154,8 +154,8 @@ inline half3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized, in min1
 inline half shadow_2D_volumetricclouds(float3 P)
 {
 	// Project into shadow map space (no need to divide by .w because ortho projection!):
-	half3 shadow_pos = mul(GetFrame().cloudShadowLightSpaceMatrix, float4(P, 1)).xyz;
-	half3 shadow_uv = clipspace_to_uv(shadow_pos);
+	float3 shadow_pos = mul(GetFrame().cloudShadowLightSpaceMatrix, float4(P, 1)).xyz;
+	float3 shadow_uv = clipspace_to_uv(shadow_pos);
 
 	[branch]
 	if (shadow_uv.z < 0.5)
@@ -166,7 +166,7 @@ inline half shadow_2D_volumetricclouds(float3 P)
 	[branch]
 	if (is_saturated(shadow_uv))
 	{
-		half cloudShadowSampleZ = shadow_pos.z;
+		float cloudShadowSampleZ = shadow_pos.z;
 
 		Texture2D<half4> texture_volumetricclouds_shadow = bindless_textures_half4[GetFrame().texture_volumetricclouds_shadow_index];
 		half3 cloudShadowData = texture_volumetricclouds_shadow.SampleLevel(sampler_linear_clamp, shadow_uv.xy, 0.0).rgb;
