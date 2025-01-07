@@ -13,7 +13,7 @@
 #define wilog_warning(str,...) {wilog_level(str, wi::backlog::LogLevel::Warning, ## __VA_ARGS__);}
 #define wilog_error(str,...) {wilog_level(str, wi::backlog::LogLevel::Error, ## __VA_ARGS__);}
 #define wilog(str,...) {wilog_level(str, wi::backlog::LogLevel::Default, ## __VA_ARGS__);}
-#define wilog_assert(cond,str,...) {if(!cond){wilog_error(str, ## __VA_ARGS__); assert(cond);}}
+#define wilog_assert(cond,str,...) {if(!(cond)){wilog_error(str, ## __VA_ARGS__); assert(cond);}}
 
 namespace wi::backlog
 {
@@ -66,7 +66,7 @@ namespace wi::backlog
 	LogLevel GetUnseenLogLevelMax();
 
 	// These are no longer used, but kept here to not break user code:
-	inline void input(const char input) {}
-	inline void acceptInput() {}
-	inline void deletefromInput() {}
+	[[deprecated("does nothing")]] inline void input(const char input) {}
+	[[deprecated("does nothing")]] inline void acceptInput() {}
+	[[deprecated("does nothing")]] inline void deletefromInput() {}
 };

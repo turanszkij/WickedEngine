@@ -2,7 +2,6 @@
 #include "wiMath.h"
 #include "wiResourceManager.h"
 #include "wiTextureHelper.h"
-#include "wiSpinLock.h"
 #include "wiFont.h"
 #include "wiSpriteFont.h"
 #include "wiImage.h"
@@ -30,6 +29,7 @@ namespace wi::backlog
 		LogLevel level = LogLevel::Default;
 	};
 	std::deque<LogEntry> entries;
+	std::recursive_mutex entriesLock;
 	std::deque<LogEntry> history;
 	const float speed = 4000.0f;
 	const size_t deletefromline = 500;
@@ -37,7 +37,6 @@ namespace wi::backlog
 	float scroll = 0;
 	int historyPos = 0;
 	wi::font::Params font_params;
-	wi::SpinLock logLock;
 	Texture backgroundTex;
 	bool refitscroll = false;
 	wi::gui::TextInputField inputField;
@@ -58,11 +57,16 @@ namespace wi::backlog
 		}
 		return retval;
 	}
-	void write_logfile()
+	void writeLogfileWithoutLock()
 	{
 		static const std::string filename = wi::helper::GetCurrentPath() + "/log.txt";
-		std::string text = getText(); // will lock mutex
+		std::string text = getTextWithoutLock();
 		wi::helper::FileWrite(filename, (const uint8_t*)text.c_str(), text.length());
+	}
+	void writeLogfile()
+	{
+		std::scoped_lock lock(entriesLock);
+		writeLogfileWithoutLock();
 	}
 
 	// The logwriter object will automatically write out the backlog to the temp folder when it's destroyed
@@ -71,7 +75,13 @@ namespace wi::backlog
 	{
 		~LogWriter()
 		{
-			write_logfile();
+			// try to get lock if possible, but if not, just do it without
+			// we could be in a crash right now with the lock still being held,
+			// it's better to write something than nothing, even if it might be incomplete
+			// or garbage
+			bool gotLock = entriesLock.try_lock();
+			writeLogfileWithoutLock();
+			if (gotLock) entriesLock.unlock();
 		}
 	} logwriter;
 
@@ -286,7 +296,6 @@ namespace wi::backlog
 		ColorSpace colorspace
 	)
 	{
-		std::scoped_lock lock(logLock);
 		wi::font::SetCanvas(canvas); // always set here as it can be called from outside...
 		wi::font::Params params = font_params;
 		params.cursor = {};
@@ -307,33 +316,37 @@ namespace wi::backlog
 		{
 			params.enableLinearOutputMapping(9);
 		}
-		for (auto& x : entries)
+
 		{
-			switch (x.level)
+			std::scoped_lock lock(entriesLock);
+			for (auto& x : entries)
 			{
-			case LogLevel::Warning:
-				params.color = wi::Color::Warning();
-				break;
-			case LogLevel::Error:
-				params.color = wi::Color::Error();
-				break;
-			default:
-				params.color = font_params.color;
-				break;
+				switch (x.level)
+				{
+				case LogLevel::Warning:
+					params.color = wi::Color::Warning();
+					break;
+				case LogLevel::Error:
+					params.color = wi::Color::Error();
+					break;
+				default:
+					params.color = font_params.color;
+					break;
+				}
+				params.cursor = wi::font::Draw(x.text, params, cmd);
 			}
-			params.cursor = wi::font::Draw(x.text, params, cmd);
 		}
 		unseen = LogLevel::None;
 	}
 
 	std::string getText()
 	{
-		std::scoped_lock lock(logLock);
+		std::scoped_lock lock(entriesLock);
 		return getTextWithoutLock();
 	}
 	void clear()
 	{
-		std::scoped_lock lock(logLock);
+		std::scoped_lock lock(entriesLock);
 		entries.clear();
 		scroll = 0;
 	}
@@ -344,60 +357,58 @@ namespace wi::backlog
 			return;
 		}
 
+		std::string str;
+		switch (level)
+		{
+		default:
+		case LogLevel::Default:
+			str = "";
+			break;
+		case LogLevel::Warning:
+			str = "[Warning] ";
+			break;
+		case LogLevel::Error:
+			str = "[Error] ";
+			break;
+		}
+		str += input;
+		str += '\n';
+		LogEntry entry;
+		entry.text = str;
+		entry.level = level;
 		// This is explicitly scoped for scoped_lock!
 		{
-			std::scoped_lock lock(logLock);
-
-			std::string str;
-			switch (level)
-			{
-			default:
-			case LogLevel::Default:
-				str = "";
-				break;
-			case LogLevel::Warning:
-				str = "[Warning] ";
-				break;
-			case LogLevel::Error:
-				str = "[Error] ";
-				break;
-			}
-			str += input;
-			str += '\n';
-			LogEntry entry;
-			entry.text = str;
-			entry.level = level;
-			entries.push_back(entry);
-			if (entries.size() > deletefromline)
+			std::scoped_lock lock(entriesLock);
+		    entries.push_back(entry);
+		    if (entries.size() > deletefromline)
 			{
 				entries.pop_front();
 			}
-			refitscroll = true;
-
-			switch (level)
-			{
-			default:
-			case LogLevel::Default:
-				wi::helper::DebugOut(str, wi::helper::DebugLevel::Normal);
-				break;
-			case LogLevel::Warning:
-				wi::helper::DebugOut(str, wi::helper::DebugLevel::Warning);
-				break;
-			case LogLevel::Error:
-				wi::helper::DebugOut(str, wi::helper::DebugLevel::Error);
-				break;
-			}
-
-			unseen = std::max(unseen, level);
-
-			// lock released on block end
 		}
+		refitscroll = true;
+
+		switch (level)
+		{
+		default:
+		case LogLevel::Default:
+			wi::helper::DebugOut(str, wi::helper::DebugLevel::Normal);
+			break;
+		case LogLevel::Warning:
+			wi::helper::DebugOut(str, wi::helper::DebugLevel::Warning);
+			break;
+		case LogLevel::Error:
+			wi::helper::DebugOut(str, wi::helper::DebugLevel::Error);
+			break;
+		}
+
+		unseen = std::max(unseen, level);
 
 		if (level >= LogLevel::Error)
 		{
-			write_logfile(); // will lock mutex
+			writeLogfile();  // will lock mutex
 		}
 	}
+
 	void post(const std::string& input, LogLevel level)
 	{
 		post(input.c_str(), level);
@@ -405,7 +416,7 @@ namespace wi::backlog
 
 	void historyPrev()
 	{
-		std::scoped_lock lock(logLock);
+		std::scoped_lock lock(entriesLock);
 		if (!history.empty())
 		{
 			inputField.SetText(history[history.size() - 1 - historyPos].text);
@@ -418,7 +429,7 @@ namespace wi::backlog
 	}
 	void historyNext()
 	{
-		std::scoped_lock lock(logLock);
+		std::scoped_lock lock(entriesLock);
 		if (!history.empty())
 		{
 			if (historyPos > 0)
