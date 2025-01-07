@@ -175,7 +175,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					for (int x = -1; x <= 1; x++)
 					{
 						// If it's middle then skip. We only evaluate neighbor samples
-						if ((abs(x) + abs(y)) == 0)
+						if (x == 0 && y == 0)
 							continue;
 
 						int2 offset = int2(x, y);

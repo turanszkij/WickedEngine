@@ -16064,6 +16064,7 @@ void Postprocess_VolumetricClouds(
 	postprocess.resolution.y = res.final_resolution.y / 4;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	volumetricclouds_frame = (float)res.frame;
 
 	// Parse reproject info
 	postprocess.params0.x = (float)res.texture_reproject[0].GetDesc().width;
@@ -16128,7 +16129,6 @@ void Postprocess_VolumetricClouds(
 	postprocess.resolution.y = res.final_resolution.y / 2;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-	volumetricclouds_frame = (float)res.frame;
 	
 	int temporal_output = res.GetTemporalOutputIndex();
 	int temporal_history = res.GetTemporalInputIndex();
