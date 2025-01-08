@@ -11880,6 +11880,7 @@ void Postprocess_Blur_Gaussian(
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Image(&temp, ResourceState::UNORDERED_ACCESS, temp.desc.layout, mip_dst),
+				GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS, mip_dst),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -11906,13 +11907,6 @@ void Postprocess_Blur_Gaussian(
 
 		device->BindResource(&temp, 0, cmd, mip_dst); // <- also mip_dst because it's second pass!
 		device->BindUAV(&output, 0, cmd, mip_dst);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS, mip_dst),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
 
 		device->Dispatch(
 			postprocess.resolution.x,
@@ -12014,8 +12008,8 @@ void Postprocess_Blur_Bilateral(
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
 				GPUBarrier::Image(&temp, ResourceState::UNORDERED_ACCESS, temp.desc.layout, mip_dst),
+				GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS, mip_dst),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -12043,13 +12037,6 @@ void Postprocess_Blur_Bilateral(
 
 		device->BindResource(&temp, 0, cmd, mip_dst); // <- also mip_dst because it's second pass!
 		device->BindUAV(&output, 0, cmd, mip_dst);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS, mip_dst),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
 
 		device->Dispatch(
 			postprocess.resolution.x,

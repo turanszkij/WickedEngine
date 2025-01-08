@@ -8,7 +8,6 @@ Texture2D<float2> cloud_depth_current : register(t1);
 
 static const int UPSAMPLE_SAMPLE_RADIUS = 1;
 
-#define GAUSSIAN_UPSAMPLE
 #define GAUSSIAN_SIGMA_SPATIAL 0.5
 #define GAUSSIAN_SIGMA_RANGE 100.0
 
@@ -16,7 +15,7 @@ static const int UPSAMPLE_SAMPLE_RADIUS = 1;
 
 half Gaussian(half x, half sigma)
 {
-	return exp(-x * x / (2.0 * sigma * sigma));
+	return exp(-x * x / max(0.0001, 2.0 * sigma * sigma));
 }
 
 float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_Target
@@ -52,15 +51,12 @@ float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_Target
 	const float4 depthDiff = abs(tToDepthBuffer - lineardepth_lowres);	
 	float depthDiffMax = max(max(depthDiff.x, depthDiff.y), max(depthDiff.z, depthDiff.w));
 	
-	bool validResult = false;
 	half4 result = 0;
 	
 	[branch]
 	if (depthDiffMax < tToDepthBuffer * 0.2)
 	{
 		// small error, take bilinear sample:
-
-		validResult = true;
 		result = cloud_current.SampleLevel(sampler_linear_clamp, uv, 0);
 	}
 	else
@@ -68,7 +64,7 @@ float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_Target
 		// large error, calculate weight and color depending on depth difference with gaussian configuration
 
 		half4 color = 0;
-		half weightSum = 0;
+		float weightSum = 0;
 				
 		[unroll]
 		for (int y = -UPSAMPLE_SAMPLE_RADIUS; y <= UPSAMPLE_SAMPLE_RADIUS; y++)
@@ -82,26 +78,23 @@ float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_Target
 				float2 neighborReprojectionUV = (neighborReprojectionCoord + 0.5) / reprojectionResolution;
 			
 				half4 cloudResult = cloud_current.SampleLevel(sampler_linear_clamp, neighborReprojectionUV, 0);
-				half cloudDepth = cloud_depth_current[neighborReprojectionCoord].g;
-
-#ifdef GAUSSIAN_UPSAMPLE
-				half spatialWeight = Gaussian(length(float2(offset)), GAUSSIAN_SIGMA_SPATIAL);
-				half rangeWeight = Gaussian(abs(tToDepthBuffer - cloudDepth), GAUSSIAN_SIGMA_RANGE);
+				float cloudDepth = cloud_depth_current[neighborReprojectionCoord].g;
 				
-				half weight = spatialWeight * rangeWeight;
-#else
-				half currentDepthDiff = abs(tToDepthBuffer - cloudDepth);
-				half weight = 1.0 / (currentDepthDiff * UPSAMPLE_TOLERANCE + 1.0);
-#endif
+				float spatialWeight = any(offset) ? Gaussian(length(float2(offset)), GAUSSIAN_SIGMA_SPATIAL) : 0;
+				float rangeWeight = Gaussian(abs(tToDepthBuffer - cloudDepth), GAUSSIAN_SIGMA_RANGE);
+				
+				float weight = spatialWeight * rangeWeight;
 				
 				color += cloudResult * weight;
 				weightSum += weight;
 			}
 		}
 
-		validResult = weightSum > 0.0;
-		result = color / weightSum;
+		if (weightSum > 0)
+		{
+			result = color / weightSum;
+		}
 	}
 
-	return validResult ? result : 0;
+	return result;
 }

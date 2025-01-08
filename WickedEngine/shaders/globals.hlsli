@@ -882,7 +882,7 @@ half ComputeScattering(half lightDotView)
 
 inline float3 tonemap(float3 x)
 {
-	return x / (x + 1); // Reinhard tonemap
+	return x / max(0.0001, x + 1); // Reinhard tonemap
 }
 inline float4 tonemap(float4 x)
 {
@@ -890,7 +890,7 @@ inline float4 tonemap(float4 x)
 }
 inline half3 tonemap(half3 x)
 {
-	return x / (x + 1); // Reinhard tonemap
+	return x / max(0.0001, x + 1); // Reinhard tonemap
 }
 inline half4 tonemap(half4 x)
 {
@@ -898,7 +898,7 @@ inline half4 tonemap(half4 x)
 }
 inline float3 inverse_tonemap(float3 x)
 {
-	return x / (1 - x);
+	return x / max(0.0001, 1 - x);
 }
 inline float4 inverse_tonemap(float4 x)
 {
@@ -906,7 +906,7 @@ inline float4 inverse_tonemap(float4 x)
 }
 inline half3 inverse_tonemap(half3 x)
 {
-	return x / (1 - x);
+	return x / max(0.0001, 1 - x);
 }
 inline half4 inverse_tonemap(half4 x)
 {
