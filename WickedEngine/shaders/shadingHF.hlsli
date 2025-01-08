@@ -12,7 +12,7 @@ inline void LightMapping(in int lightmap, in float2 ATLAS, inout Lighting lighti
 	[branch]
 	if (lightmap >= 0)
 	{
-		Texture2D<half4> texture_lightmap = bindless_textures_half4[descriptor_index(NonUniformResourceIndex(lightmap))];
+		Texture2D<half4> texture_lightmap = bindless_textures_half4[NonUniformResourceIndex(descriptor_index(lightmap))];
 #ifdef LIGHTMAP_QUALITY_BICUBIC
 		lighting.indirect.diffuse = SampleTextureCatmullRom(texture_lightmap, sampler_linear_clamp, ATLAS).rgb;
 #else

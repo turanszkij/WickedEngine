@@ -122,7 +122,7 @@ static const uint2 SVT_PACKED_MIP_OFFSETS[SVT_PACKED_MIP_COUNT] = {
 
 #ifndef __cplusplus
 #ifdef TEXTURE_SLOT_NONUNIFORM
-#define UniformTextureSlot(x) descriptor_index(NonUniformResourceIndex(x))
+#define UniformTextureSlot(x) NonUniformResourceIndex(descriptor_index(x))
 #else
 #define UniformTextureSlot(x) descriptor_index(x)
 #endif // TEXTURE_SLOT_NONUNIFORM

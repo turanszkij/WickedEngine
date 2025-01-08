@@ -196,7 +196,7 @@ struct VertexInput
 		[branch]
 		if (GetInstance().vb_ao < 0)
 			return 1;
-		return bindless_buffers_half[descriptor_index(NonUniformResourceIndex(GetInstance().vb_ao))][vertexID];
+		return bindless_buffers_half[NonUniformResourceIndex(descriptor_index(GetInstance().vb_ao))][vertexID];
 	}
 
 	half GetWetmap()
@@ -204,12 +204,12 @@ struct VertexInput
 		//[branch]
 		//if (GetInstance().vb_wetmap < 0)
 		//	return 0;
-		//return bindless_buffers_half[descriptor_index(NonUniformResourceIndex(GetInstance().vb_wetmap))][vertexID];
+		//return bindless_buffers_half[NonUniformResourceIndex(descriptor_index(GetInstance().vb_wetmap))][vertexID];
 
 		// There is something seriously bad with AMD driver's shader compiler as the above commented version works incorrectly and this works correctly but only for wetmap
 		[branch]
 		if (GetInstance().vb_wetmap >= 0)
-			return bindless_buffers_half[descriptor_index(NonUniformResourceIndex(GetInstance().vb_wetmap))][vertexID];
+			return bindless_buffers_half[NonUniformResourceIndex(descriptor_index(GetInstance().vb_wetmap))][vertexID];
 		return 0;
 	}
 };
@@ -674,7 +674,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 				[branch]
 				if(chunk.heightmap >= 0)
 				{
-					Texture2D terrain_heightmap = bindless_textures[descriptor_index(NonUniformResourceIndex(chunk.heightmap))];
+					Texture2D terrain_heightmap = bindless_textures[NonUniformResourceIndex(descriptor_index(chunk.heightmap))];
 					float2 chunk_min = terrain.center_chunk_pos.xz + chunk_coord * terrain.chunk_size;
 					float2 chunk_max = terrain.center_chunk_pos.xz + terrain.chunk_size + chunk_coord * terrain.chunk_size;
 					float2 terrain_uv = saturate(inverse_lerp(chunk_min, chunk_max, surface.P.xz));

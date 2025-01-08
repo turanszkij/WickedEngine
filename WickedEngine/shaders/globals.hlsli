@@ -21,7 +21,10 @@
 //	We init null descriptors for bindless index = 0 for access safety
 //	Because shader compiler sometimes incorrectly loads descriptor outside of safety branch
 //	Note: descriptor index 0 always contains a preinitialized null descriptor
-#define descriptor_index(x) (max(0, x))
+inline uint descriptor_index(in int x)
+{
+	return max(0, x);
+}
 
 #include "ColorSpaceUtility.hlsli"
 #include "PixelPacking_R11G11B10.hlsli"
@@ -642,14 +645,14 @@ struct PrimitiveID
 		{
 			const uint clusterID = primitiveIndex >> 7u;
 			const uint triangleID = primitiveIndex & 0x7F;
-			ShaderCluster cluster = bindless_structured_cluster[descriptor_index(NonUniformResourceIndex(geometry.vb_clu))][clusterID];
+			ShaderCluster cluster = bindless_structured_cluster[NonUniformResourceIndex(descriptor_index(geometry.vb_clu))][clusterID];
 			uint i0 = cluster.vertices[cluster.triangles[triangleID].i0()];
 			uint i1 = cluster.vertices[cluster.triangles[triangleID].i1()];
 			uint i2 = cluster.vertices[cluster.triangles[triangleID].i2()];
 			return uint3(i0, i1, i2);
 		}
 		const uint startIndex = primitiveIndex * 3 + geometry.indexOffset;
-		Buffer<uint> indexBuffer = bindless_buffers_uint[descriptor_index(NonUniformResourceIndex(geometry.ib))];
+		Buffer<uint> indexBuffer = bindless_buffers_uint[NonUniformResourceIndex(descriptor_index(geometry.ib))];
 		uint i0 = indexBuffer[startIndex + 0];
 		uint i1 = indexBuffer[startIndex + 1];
 		uint i2 = indexBuffer[startIndex + 2];
