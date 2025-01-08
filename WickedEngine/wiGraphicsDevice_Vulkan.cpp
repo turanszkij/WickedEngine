@@ -3868,6 +3868,14 @@ using namespace vulkan_internal;
 			VmaAllocationCreateInfo create_info = {};
 			create_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
+			create_info.flags |= VMA_ALLOCATION_CREATE_CAN_ALIAS_BIT;
+
+			if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS) ||
+				has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_RT_DS))
+			{
+				create_info.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT; // workaround for potential image offset issue (varying formats, varying offset requirements)
+			}
+
 			VmaAllocationInfo allocation_info = {};
 
 			res = vmaAllocateMemory(
@@ -4298,6 +4306,14 @@ using namespace vulkan_internal;
 			VmaAllocationCreateInfo allocInfo = {};
 			allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
 
+			if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER) ||
+				has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS) ||
+				has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_RT_DS))
+			{
+				allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT; // workaround for potential image offset issue (varying formats, varying offset requirements)
+				allocInfo.flags |= VMA_ALLOCATION_CREATE_CAN_ALIAS_BIT;
+			}
+
 			if (texture->desc.usage == Usage::READBACK || texture->desc.usage == Usage::UPLOAD)
 			{
 				// Note: we are creating a buffer instead of linear image because linear image cannot have mips
@@ -4322,15 +4338,15 @@ using namespace vulkan_internal;
 				bufferInfo.size *= imageInfo.arrayLayers;
 				bufferInfo.size *= data_stride;
 
-				allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+				allocInfo.flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
 				if (texture->desc.usage == Usage::READBACK)
 				{
-					allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+					allocInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
 					bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 				}
 				else if (texture->desc.usage == Usage::UPLOAD)
 				{
-					allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+					allocInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 					bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 				}
 
