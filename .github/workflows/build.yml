@@ -24,7 +24,7 @@ jobs:
       run: |
         "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /t:clean /m /p:Configuration=Release /p:Platform=x64
         "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /t:Editor_Windows /m /p:Configuration=Release /p:Platform=x64
-    
+
     - name: Move files
       shell: cmd
       run: |
@@ -33,7 +33,7 @@ jobs:
         move Editor\startup.lua .\
         move Editor\languages .\
         move Editor\fonts .\
-        
+
     - name: Package Editor
       uses: actions/upload-artifact@v4
       with:
@@ -45,19 +45,20 @@ jobs:
           startup.lua
           Editor_Windows.exe
 
-    
+
   linux:
     runs-on: ubuntu-latest
     steps:
 
-    - uses: actions/cache@v4
+    - uses: actions/checkout@v4
+
+    - name: Restore CCache database
+      id: restore-ccache
+      uses: actions/cache/restore@v4
       with:
         path: ~/.cache/ccache
         key: ccache-${{ github.run_id }}
         restore-keys: ccache
-        save-always: true
-
-    - uses: actions/checkout@v4
 
     - name: Install dependencies
       run: |
@@ -70,7 +71,6 @@ jobs:
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
         CCACHE_NODIRECT=1 make -j$(nproc)
-      
     - name: Generate shader dump
       run: |
         cd build/WickedEngine
@@ -82,7 +82,14 @@ jobs:
         cd build
         CCACHE_NODIRECT=1 make -B -j $(nproc)
 
-        
+    - name: Save Ccache database
+      id: save-ccache
+      if: always() && steps.restore-ccache.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ~/.cache/ccache
+        key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
+
     - name: Move files
       run: |
         mv build/Editor/WickedEngineEditor ./Editor_Linux
@@ -90,7 +97,7 @@ jobs:
         mv Editor/startup.lua ./
         mv Editor/languages ./
         mv Editor/fonts ./
-        
+
     - name: Package Editor
       uses: actions/upload-artifact@v4
       with:
