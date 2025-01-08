@@ -48,7 +48,7 @@ struct alignas(16) ShaderVoxelGrid
 			return false; // early exit when coord is not valid (outside of resolution)
 		const uint3 macro_coord = uint3(coord.x / 4u, coord.y / 4u, coord.z / 4u);
 		const uint idx = flatten3D(macro_coord, resolution_div4);
-		const uint64_t voxels_4x4_block = bindless_buffers[buffer].Load<uint64_t>(idx * sizeof(uint64_t));
+		const uint64_t voxels_4x4_block = bindless_buffers[descriptor_index(buffer)].Load<uint64_t>(idx * sizeof(uint64_t));
 		if (voxels_4x4_block == 0)
 			return false; // early exit when whole block is empty
 		uint3 sub_coord;

@@ -9,9 +9,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	if (DTid.x >= push.threadCount)
 		return;
 
-	Buffer<uint> pageBuffer = bindless_buffers_uint[push.pageBufferRO];
-	RWByteAddressBuffer requestBuffer = bindless_rwbuffers[push.requestBufferRW];
-	RWByteAddressBuffer allocationBuffer = bindless_rwbuffers[push.allocationBufferRW];
+	Buffer<uint> pageBuffer = bindless_buffers_uint[descriptor_index(push.pageBufferRO)];
+	RWByteAddressBuffer requestBuffer = bindless_rwbuffers[descriptor_index(push.requestBufferRW)];
+	RWByteAddressBuffer allocationBuffer = bindless_rwbuffers[descriptor_index(push.allocationBufferRW)];
 
 	uint page_count = 0;
 	uint lod_offsets[10];

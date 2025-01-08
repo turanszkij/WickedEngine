@@ -83,8 +83,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	if (DTid.x >= push.filterResolution.x || DTid.y >= push.filterResolution.y)
 		return;
 	
-	TextureCube input = bindless_cubemaps[push.texture_input];
-	RWTexture2DArray<float4> output = bindless_rwtextures2DArray[push.texture_output];
+	TextureCube input = bindless_cubemaps[descriptor_index(push.texture_input)];
+	RWTexture2DArray<float4> output = bindless_rwtextures2DArray[descriptor_index(push.texture_output)];
 
 	float2 uv = (DTid.xy + 0.5f) * push.filterResolution_rcp.xy;
 	uint face = DTid.z / THREAD_OFFLOAD;

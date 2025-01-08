@@ -20,8 +20,8 @@ static const half soft_shadow_sample_count_rcp = rcp((half)soft_shadow_sample_co
 
 inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half radius, min16uint2 pixel)
 {
-	Texture2D<half4> texture_shadowatlas = bindless_textures_half4[GetFrame().texture_shadowatlas_index];
-	Texture2D<half4> texture_shadowatlas_transparent = bindless_textures_half4[GetFrame().texture_shadowatlas_transparent_index];
+	Texture2D<half4> texture_shadowatlas = bindless_textures_half4[descriptor_index(GetFrame().texture_shadowatlas_index)];
+	Texture2D<half4> texture_shadowatlas_transparent = bindless_textures_half4[descriptor_index(GetFrame().texture_shadowatlas_transparent_index)];
 	
 	half3 shadow = 0;
 
@@ -88,7 +88,7 @@ inline half3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized, min16ui
 
 inline half3 sample_shadow(float2 uv, float cmp, min16uint2 pixel)
 {
-	Texture2D<half4> texture_shadowatlas = bindless_textures_half4[GetFrame().texture_shadowatlas_index];
+	Texture2D<half4> texture_shadowatlas = bindless_textures_half4[descriptor_index(GetFrame().texture_shadowatlas_index)];
 	half3 shadow = texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp).r;
 
 #ifndef DISABLE_SOFT_SHADOWMAP
@@ -105,7 +105,7 @@ inline half3 sample_shadow(float2 uv, float cmp, min16uint2 pixel)
 #endif // DISABLE_SOFT_SHADOWMAP
 
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
-	Texture2D<half4> texture_shadowatlas_transparent = bindless_textures_half4[GetFrame().texture_shadowatlas_transparent_index];
+	Texture2D<half4> texture_shadowatlas_transparent = bindless_textures_half4[descriptor_index(GetFrame().texture_shadowatlas_transparent_index)];
 	half4 transparent_shadow = texture_shadowatlas_transparent.SampleLevel(sampler_linear_clamp, uv, 0);
 #ifdef TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
 	if (transparent_shadow.a > cmp)
@@ -168,7 +168,7 @@ inline half shadow_2D_volumetricclouds(float3 P)
 	{
 		float cloudShadowSampleZ = shadow_pos.z;
 
-		Texture2D<half4> texture_volumetricclouds_shadow = bindless_textures_half4[GetFrame().texture_volumetricclouds_shadow_index];
+		Texture2D<half4> texture_volumetricclouds_shadow = bindless_textures_half4[descriptor_index(GetFrame().texture_volumetricclouds_shadow_index)];
 		half3 cloudShadowData = texture_volumetricclouds_shadow.SampleLevel(sampler_linear_clamp, shadow_uv.xy, 0.0).rgb;
 
 		half sampleDepthKm = saturate(1.0 - cloudShadowSampleZ) * GetFrame().cloudShadowFarPlaneKm;
@@ -211,7 +211,7 @@ inline bool rain_blocker_check(in float3 P)
 	const ShaderOcean ocean = GetWeather().ocean;
 	if (ocean.texture_displacementmap >= 0)
 	{
-		Texture2D displacementmap = bindless_textures[ocean.texture_displacementmap];
+		Texture2D displacementmap = bindless_textures[descriptor_index(ocean.texture_displacementmap)];
 		float2 ocean_uv = P.xz * ocean.patch_size_rcp;
 		float3 displacement = displacementmap.SampleLevel(sampler_linear_wrap, ocean_uv, 0).xzy;
 		float water_height = ocean.water_height + displacement.y;
@@ -234,7 +234,7 @@ inline bool rain_blocker_check(in float3 P)
 	if (GetFrame().texture_shadowatlas_index < 0 || !any(GetFrame().rain_blocker_mad))
 		return false;
 		
-	Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
+	Texture2D texture_shadowatlas = bindless_textures[descriptor_index(GetFrame().texture_shadowatlas_index)];
 	float3 shadow_pos = mul(GetFrame().rain_blocker_matrix, float4(P, 1)).xyz;
 	float3 shadow_uv = clipspace_to_uv(shadow_pos);
 	if (is_saturated(shadow_uv))
@@ -258,7 +258,7 @@ inline bool rain_blocker_check_prev(in float3 P)
 	const ShaderOcean ocean = GetWeather().ocean;
 	if (ocean.texture_displacementmap >= 0)
 	{
-		Texture2D displacementmap = bindless_textures[ocean.texture_displacementmap];
+		Texture2D displacementmap = bindless_textures[descriptor_index(ocean.texture_displacementmap)];
 		float2 ocean_uv = P.xz * ocean.patch_size_rcp;
 		float3 displacement = displacementmap.SampleLevel(sampler_linear_wrap, ocean_uv, 0).xzy;
 		float water_height = ocean.water_height + displacement.y;
@@ -281,7 +281,7 @@ inline bool rain_blocker_check_prev(in float3 P)
 	if (GetFrame().texture_shadowatlas_index < 0 || !any(GetFrame().rain_blocker_mad_prev))
 		return false;
 		
-	Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
+	Texture2D texture_shadowatlas = bindless_textures[descriptor_index(GetFrame().texture_shadowatlas_index)];
 	float3 shadow_pos = mul(GetFrame().rain_blocker_matrix_prev, float4(P, 1)).xyz;
 	float3 shadow_uv = clipspace_to_uv(shadow_pos);
 	if (is_saturated(shadow_uv))

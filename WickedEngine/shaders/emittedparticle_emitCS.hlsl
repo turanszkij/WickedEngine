@@ -50,7 +50,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	[branch]
 	if(geometry.ib >= 0)
 	{
-		Buffer<uint> buf = bindless_buffers_uint[geometry.ib];
+		Buffer<uint> buf = bindless_buffers_uint[descriptor_index(geometry.ib)];
 		i0 = buf[geometry.indexOffset + tri * 3 + 0];
 		i1 = buf[geometry.indexOffset + tri * 3 + 1];
 		i2 = buf[geometry.indexOffset + tri * 3 + 2];

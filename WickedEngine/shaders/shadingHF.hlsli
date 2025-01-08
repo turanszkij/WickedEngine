@@ -12,7 +12,7 @@ inline void LightMapping(in int lightmap, in float2 ATLAS, inout Lighting lighti
 	[branch]
 	if (lightmap >= 0)
 	{
-		Texture2D<half4> texture_lightmap = bindless_textures_half4[NonUniformResourceIndex(lightmap)];
+		Texture2D<half4> texture_lightmap = bindless_textures_half4[descriptor_index(NonUniformResourceIndex(lightmap))];
 #ifdef LIGHTMAP_QUALITY_BICUBIC
 		lighting.indirect.diffuse = SampleTextureCatmullRom(texture_lightmap, sampler_linear_clamp, ATLAS).rgb;
 #else
@@ -31,7 +31,7 @@ inline half3 PlanarReflection(in Surface surface, in half2 bumpColor)
 		float4 reflectionUV = mul(GetCamera().reflection_view_projection, float4(surface.P, 1));
 		reflectionUV.xy /= reflectionUV.w;
 		reflectionUV.xy = clipspace_to_uv(reflectionUV.xy);
-		return bindless_textures_half4[GetCamera().texture_reflection_index].SampleLevel(sampler_linear_clamp, reflectionUV.xy + bumpColor, 0).rgb;
+		return bindless_textures_half4[descriptor_index(GetCamera().texture_reflection_index)].SampleLevel(sampler_linear_clamp, reflectionUV.xy + bumpColor, 0).rgb;
 	}
 	return 0;
 }
@@ -62,7 +62,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			float4x4 probeProjection = load_entitymatrix(probe.GetMatrixIndex());
 			const int probeTexture = asint(probeProjection[3][0]);
 			probeProjection[3] = float4(0, 0, 0, 1);
-			TextureCube<half4> cubemap = bindless_cubemaps_half4[probeTexture];
+			TextureCube<half4> cubemap = bindless_cubemaps_half4[descriptor_index(probeTexture)];
 			
 			const half3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
 			const half3 uvw = clipspace_to_uv(clipSpacePos.xyz);
@@ -220,7 +220,7 @@ inline void ForwardDecals(inout Surface surface, inout half4 surfaceMap, Sampler
 					surface.V,
 					tbn,
 					decal.GetLength(),
-					bindless_textures_half4[decalDisplacementmap],
+					bindless_textures_half4[descriptor_index(decalDisplacementmap)],
 					uvw.xy,
 					decalDX,
 					decalDY,
@@ -231,7 +231,7 @@ inline void ForwardDecals(inout Surface surface, inout half4 surfaceMap, Sampler
 			[branch]
 			if (decalTexture >= 0)
 			{
-				decalColor *= bindless_textures_half4[decalTexture].SampleGrad(sam, uvw.xy, decalDX, decalDY);
+				decalColor *= bindless_textures_half4[descriptor_index(decalTexture)].SampleGrad(sam, uvw.xy, decalDX, decalDY);
 				if ((decal.GetFlags() & ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA) == 0)
 				{
 					// perform manual blending of decals:
@@ -243,7 +243,7 @@ inline void ForwardDecals(inout Surface surface, inout half4 surfaceMap, Sampler
 			[branch]
 			if (decalNormal >= 0)
 			{
-				half3 decalBumpColor = half3(bindless_textures_half4[decalNormal].SampleGrad(sam, uvw.xy, decalDX, decalDY).rg, 1);
+				half3 decalBumpColor = half3(bindless_textures_half4[descriptor_index(decalNormal)].SampleGrad(sam, uvw.xy, decalDX, decalDY).rg, 1);
 				decalBumpColor = decalBumpColor * 2 - 1;
 				decalBumpColor.rg *= decal.GetAngleScale();
 				decalBumpAccumulation.rgb = mad(1 - decalBumpAccumulation.a, decalColor.a * decalBumpColor.rgb, decalBumpAccumulation.rgb);
@@ -252,7 +252,7 @@ inline void ForwardDecals(inout Surface surface, inout half4 surfaceMap, Sampler
 			[branch]
 			if (decalSurfacemap >= 0)
 			{
-				half4 decalSurfaceColor = (half4)bindless_textures_half4[decalSurfacemap].SampleGrad(sam, uvw.xy, decalDX, decalDY);
+				half4 decalSurfaceColor = (half4)bindless_textures_half4[descriptor_index(decalSurfacemap)].SampleGrad(sam, uvw.xy, decalDX, decalDY);
 				decalSurfaceAccumulation = mad(1 - decalSurfaceAccumulationAlpha, decalColor.a * decalSurfaceColor, decalSurfaceAccumulation);
 				decalSurfaceAccumulationAlpha = mad(1 - decalColor.a, decalSurfaceAccumulationAlpha, decalColor.a);
 			}
@@ -306,7 +306,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 				float4x4 probeProjection = load_entitymatrix(probe.GetMatrixIndex());
 				const int probeTexture = asint(probeProjection[3][0]);
 				probeProjection[3] = float4(0, 0, 0, 1);
-				TextureCube<half4> cubemap = bindless_cubemaps_half4[probeTexture];
+				TextureCube<half4> cubemap = bindless_cubemaps_half4[descriptor_index(probeTexture)];
 					
 				const half3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
 				const half3 uvw = clipspace_to_uv(clipSpacePos.xyz);
@@ -344,27 +344,27 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	[branch]
 	if (!surface.IsGIApplied() && GetCamera().texture_rtdiffuse_index >= 0)
 	{
-		lighting.indirect.diffuse = bindless_textures_half4[GetCamera().texture_rtdiffuse_index][surface.pixel].rgb;
+		lighting.indirect.diffuse = bindless_textures_half4[descriptor_index(GetCamera().texture_rtdiffuse_index)][surface.pixel].rgb;
 		surface.SetGIApplied(true);
 	}
 
 	[branch]
 	if (!surface.IsGIApplied() && GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && GetCamera().texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P)))
 	{
-		lighting.indirect.diffuse = bindless_textures_half4[GetCamera().texture_surfelgi_index][surface.pixel].rgb;
+		lighting.indirect.diffuse = bindless_textures_half4[descriptor_index(GetCamera().texture_surfelgi_index)][surface.pixel].rgb;
 		surface.SetGIApplied(true);
 	}
 
 	[branch]
 	if (!surface.IsGIApplied() && GetCamera().texture_vxgi_diffuse_index >= 0)
 	{
-		lighting.indirect.diffuse = bindless_textures_half4[GetCamera().texture_vxgi_diffuse_index][surface.pixel].rgb;
+		lighting.indirect.diffuse = bindless_textures_half4[descriptor_index(GetCamera().texture_vxgi_diffuse_index)][surface.pixel].rgb;
 		surface.SetGIApplied(true);
 	}
 	[branch]
 	if (GetCamera().texture_vxgi_specular_index >= 0)
 	{
-		half4 vxgi_specular = bindless_textures_half4[GetCamera().texture_vxgi_specular_index][surface.pixel];
+		half4 vxgi_specular = bindless_textures_half4[descriptor_index(GetCamera().texture_vxgi_specular_index)][surface.pixel];
 		lighting.indirect.specular = vxgi_specular.rgb * surface.F + lighting.indirect.specular * (1 - vxgi_specular.a);
 	}
 #endif // TRANSPARENT
@@ -395,7 +395,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 				uint shadow_index = entity_index - lights().first_item();
 				if (shadow_index < 16)
 				{
-					shadow_mask = bindless_textures2DArray_half4[GetCamera().texture_rtshadow_index][uint3(surface.pixel, shadow_index)].r;
+					shadow_mask = bindless_textures2DArray_half4[descriptor_index(GetCamera().texture_rtshadow_index)][uint3(surface.pixel, shadow_index)].r;
 				}
 			}
 #endif // SHADOW_MASK_ENABLED && !TRANSPARENT
@@ -437,7 +437,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 					uint shadow_index = entity_index - lights().first_item();
 					if (shadow_index < 16)
 					{
-						shadow_mask = bindless_textures2DArray_half4[GetCamera().texture_rtshadow_index][uint3(surface.pixel, shadow_index)].r;
+						shadow_mask = bindless_textures2DArray_half4[descriptor_index(GetCamera().texture_rtshadow_index)][uint3(surface.pixel, shadow_index)].r;
 					}
 				}
 #endif // SHADOW_MASK_ENABLED && !TRANSPARENT
@@ -481,7 +481,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 					uint shadow_index = entity_index - lights().first_item();
 					if (shadow_index < 16)
 					{
-						shadow_mask = bindless_textures2DArray_half4[GetCamera().texture_rtshadow_index][uint3(surface.pixel, shadow_index)].r;
+						shadow_mask = bindless_textures2DArray_half4[descriptor_index(GetCamera().texture_rtshadow_index)][uint3(surface.pixel, shadow_index)].r;
 					}
 				}
 #endif // SHADOW_MASK_ENABLED && !TRANSPARENT
@@ -574,7 +574,7 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 						surface.V,
 						tbn,
 						decal.GetLength(),
-						bindless_textures_half4[decalDisplacementmap],
+						bindless_textures_half4[descriptor_index(decalDisplacementmap)],
 						uvw.xy,
 						decalDX,
 						decalDY,
@@ -585,7 +585,7 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 				[branch]
 				if (decalTexture >= 0)
 				{
-					decalColor *= bindless_textures_half4[decalTexture].SampleGrad(sam, uvw.xy, decalDX, decalDY);
+					decalColor *= bindless_textures_half4[descriptor_index(decalTexture)].SampleGrad(sam, uvw.xy, decalDX, decalDY);
 					if ((decal.GetFlags() & ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA) == 0)
 					{
 						// perform manual blending of decals:
@@ -597,7 +597,7 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 				[branch]
 				if (decalNormal >= 0)
 				{
-					half3 decalBumpColor = half3(bindless_textures_half4[decalNormal].SampleGrad(sam, uvw.xy, decalDX, decalDY).rg, 1);
+					half3 decalBumpColor = half3(bindless_textures_half4[descriptor_index(decalNormal)].SampleGrad(sam, uvw.xy, decalDX, decalDY).rg, 1);
 					decalBumpColor = decalBumpColor * 2 - 1;
 					decalBumpColor.rg *= decal.GetAngleScale();
 					decalBumpAccumulation.rgb = mad(1 - decalBumpAccumulation.a, decalColor.a * decalBumpColor.rgb, decalBumpAccumulation.rgb);
@@ -606,7 +606,7 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 				[branch]
 				if (decalSurfacemap >= 0)
 				{
-					half4 decalSurfaceColor = (half4)bindless_textures_half4[decalSurfacemap].SampleGrad(sam, uvw.xy, decalDX, decalDY);
+					half4 decalSurfaceColor = (half4)bindless_textures_half4[descriptor_index(decalSurfacemap)].SampleGrad(sam, uvw.xy, decalDX, decalDY);
 					decalSurfaceAccumulation = mad(1 - decalSurfaceAccumulationAlpha, decalColor.a * decalSurfaceColor, decalSurfaceAccumulation);
 					decalSurfaceAccumulationAlpha = mad(1 - decalColor.a, decalSurfaceAccumulationAlpha, decalColor.a);
 				}

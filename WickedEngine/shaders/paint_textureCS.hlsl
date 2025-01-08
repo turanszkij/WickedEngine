@@ -9,7 +9,7 @@ void main(uint groupIndex : SV_GroupIndex, uint2 Gid : SV_GroupID)
 	const uint2 GTid = remap_lane_8x8(groupIndex);
 	const uint2 DTid = Gid * PAINT_TEXTURE_BLOCKSIZE + GTid;
 	
-	RWTexture2D<float4> texture_output = bindless_rwtextures[push.texture_output];
+	RWTexture2D<float4> texture_output = bindless_rwtextures[descriptor_index(push.texture_output)];
 	
 	float2 dim;
 	texture_output.GetDimensions(dim.x, dim.y);
@@ -42,7 +42,7 @@ void main(uint groupIndex : SV_GroupIndex, uint2 Gid : SV_GroupID)
 	[branch]
 	if(push.texture_brush >= 0)
 	{
-		Texture2D texture_brush = bindless_textures[push.texture_brush];
+		Texture2D texture_brush = bindless_textures[descriptor_index(push.texture_brush)];
 		const float2 brush_uv = (diff / radius) * float2(0.5, -0.5) + 0.5;
 		const float2 brush_uv_quad_x = QuadReadAcrossX(brush_uv);
 		const float2 brush_uv_quad_y = QuadReadAcrossY(brush_uv);
@@ -54,7 +54,7 @@ void main(uint groupIndex : SV_GroupIndex, uint2 Gid : SV_GroupID)
 	[branch]
 	if(push.texture_reveal >= 0)
 	{
-		Texture2D texture_reveal = bindless_textures[push.texture_reveal];
+		Texture2D texture_reveal = bindless_textures[descriptor_index(push.texture_reveal)];
 		const float2 reveal_uv = (pixel + 0.5) / dim;
 		const float2 reveal_uv_quad_x = QuadReadAcrossX(reveal_uv);
 		const float2 reveal_uv_quad_y = QuadReadAcrossY(reveal_uv);

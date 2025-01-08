@@ -118,7 +118,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 			}
 			else if (GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && GetCamera().texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(P)))
 			{
-				payload.data += bindless_textures[GetCamera().texture_surfelgi_index][DTid.xy * 2].rgb * GetGIBoost();
+				payload.data += bindless_textures[descriptor_index(GetCamera().texture_surfelgi_index)][DTid.xy * 2].rgb * GetGIBoost();
 			}
 			else
 			{

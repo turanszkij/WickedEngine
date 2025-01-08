@@ -10,7 +10,7 @@ void main(uint DTid : SV_DispatchThreadID)
 	if(geometry.vb_pos_wind < 0)
 		return;
 
-	Buffer<float4> vb_pos_wind = bindless_buffers_float4[geometry.vb_pos_wind];
+	Buffer<float4> vb_pos_wind = bindless_buffers_float4[descriptor_index(geometry.vb_pos_wind)];
 	float3 world_pos = vb_pos_wind[DTid].xyz;
 	world_pos = mul(meshinstance.transform.GetMatrix(), float4(world_pos, 1)).xyz;
 
@@ -18,14 +18,14 @@ void main(uint DTid : SV_DispatchThreadID)
 	[branch]
 	if(geometry.vb_nor >= 0)
 	{
-		Buffer<half4> vb_nor = bindless_buffers_half4[geometry.vb_nor];
+		Buffer<half4> vb_nor = bindless_buffers_half4[descriptor_index(geometry.vb_nor)];
 		half3 normal = vb_nor[DTid].xyz;
 		normal = mul(meshinstance.transformRaw.GetMatrixAdjoint(), normal);
 		normal = normalize(normal);
 		drying *= lerp(4, 1, pow8(saturate(normal.y))); // modulate drying speed based on surface slope
 	}
 		
-	RWBuffer<float> wetmap = bindless_rwbuffers_float[push.wetmap];
+	RWBuffer<float> wetmap = bindless_rwbuffers_float[descriptor_index(push.wetmap)];
 
 	float prev = wetmap[DTid];
 	float current = prev;
@@ -38,7 +38,7 @@ void main(uint DTid : SV_DispatchThreadID)
 	if (ocean.texture_displacementmap >= 0)
 	{
 		const float2 ocean_uv = ocean_pos.xz * ocean.patch_size_rcp;
-		Texture2D texture_displacementmap = bindless_textures[ocean.texture_displacementmap];
+		Texture2D texture_displacementmap = bindless_textures[descriptor_index(ocean.texture_displacementmap)];
 		const float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, ocean_uv, 0).xzy;
 		ocean_pos += displacement;
 		float water_depth = ocean_pos.y - world_pos.y;
@@ -52,7 +52,7 @@ void main(uint DTid : SV_DispatchThreadID)
 
 	if(push.rain_amount > 0 && GetFrame().texture_shadowatlas_index >= 0 && any(GetFrame().rain_blocker_mad))
 	{
-		Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
+		Texture2D texture_shadowatlas = bindless_textures[descriptor_index(GetFrame().texture_shadowatlas_index)];
 		float3 shadow_pos = mul(GetFrame().rain_blocker_matrix, float4(world_pos, 1)).xyz;
 		float3 shadow_uv = clipspace_to_uv(shadow_pos);
 		float shadow = 1;

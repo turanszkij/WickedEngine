@@ -2,7 +2,7 @@
 
 float4 main(VertextoPixel input) : SV_TARGET
 {
-	SamplerState sam = bindless_samplers[image.sampler_index];
+	SamplerState sam = bindless_samplers[descriptor_index(image.sampler_index)];
 
 	float4 uvsets = input.compute_uvs();
 
@@ -10,7 +10,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 	[branch]
 	if (image.texture_base_index >= 0)
 	{
-		half4 tex = bindless_textures_half4[image.texture_base_index].Sample(sam, uvsets.xy);
+		half4 tex = bindless_textures_half4[descriptor_index(image.texture_base_index)].Sample(sam, uvsets.xy);
 
 		if (image.flags & IMAGE_FLAG_EXTRACT_NORMALMAP)
 		{
@@ -24,7 +24,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 	[branch]
 	if (image.texture_mask_index >= 0)
 	{
-		mask = bindless_textures_half4[image.texture_mask_index].Sample(sam, uvsets.zw);
+		mask = bindless_textures_half4[descriptor_index(image.texture_mask_index)].Sample(sam, uvsets.zw);
 	}
 
 	const half2 mask_alpha_range = unpack_half2(image.mask_alpha_range);
@@ -43,7 +43,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 	[branch]
 	if (image.texture_background_index >= 0)
 	{
-		Texture2D<half4> backgroundTexture = bindless_textures_half4[image.texture_background_index];
+		Texture2D<half4> backgroundTexture = bindless_textures_half4[descriptor_index(image.texture_background_index)];
 		float2 uv_screen = input.uv_screen();
 		if(image.flags & IMAGE_FLAG_DISTORTION_MASK)
 		{

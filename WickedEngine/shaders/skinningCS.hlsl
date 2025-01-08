@@ -71,21 +71,21 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	[branch]
 	if (push.vb_pos_wind >= 0)
 	{
-		pos_wind = bindless_buffers_float4[push.vb_pos_wind][vertexID];
+		pos_wind = bindless_buffers_float4[descriptor_index(push.vb_pos_wind)][vertexID];
 	}
 	
 	half3 nor = 0;
 	[branch]
 	if (push.vb_nor >= 0)
 	{
-		nor = bindless_buffers_half4[push.vb_nor][vertexID].xyz;
+		nor = bindless_buffers_half4[descriptor_index(push.vb_nor)][vertexID].xyz;
 	}
 	
 	half4 tan = 0;
 	[branch]
 	if (push.vb_tan >= 0)
 	{
-		tan = bindless_buffers_half4[push.vb_tan][vertexID];
+		tan = bindless_buffers_half4[descriptor_index(push.vb_tan)][vertexID];
 	}
 	
 	float3 pos = pos_wind.xyz;
@@ -95,13 +95,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 		pos = lerp(push.aabb_min, push.aabb_max, pos);
 	}
 
-	ByteAddressBuffer skinningbuffer = bindless_buffers[push.skinningbuffer_index];
+	ByteAddressBuffer skinningbuffer = bindless_buffers[descriptor_index(push.skinningbuffer_index)];
 
 	// Morph targets:
 	[branch]
 	if (push.morphvb_index >= 0 && push.morph_count > 0)
 	{
-		Buffer<float4> morphvb = bindless_buffers_float4[push.morphvb_index];
+		Buffer<float4> morphvb = bindless_buffers_float4[descriptor_index(push.morphvb_index)];
 		for (uint morph_index = 0; morph_index < push.morph_count; ++morph_index)
 		{
 			MorphTargetGPU morph = skinningbuffer.Load<MorphTargetGPU>(push.morph_offset + morph_index * sizeof(MorphTargetGPU));
@@ -120,7 +120,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	[branch]
 	if (push.vb_bon >= 0 && push.bone_offset != ~0u)
 	{
-		ByteAddressBuffer boneBuffer = bindless_buffers[push.vb_bon];
+		ByteAddressBuffer boneBuffer = bindless_buffers[descriptor_index(push.vb_bon)];
 		float4 p = 0;
 		half3 n = 0;
 		half3 t = 0;
@@ -169,21 +169,21 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	if (push.so_pos >= 0)
 	{
 #ifdef __PSSL__
-		bindless_rwbuffers[push.so_pos].TypedStore<float3>(vertexID * sizeof(float3), pos);
+		bindless_rwbuffers[descriptor_index(push.so_pos)].TypedStore<float3>(vertexID * sizeof(float3), pos);
 #else
-		bindless_rwbuffers[push.so_pos].Store<float3>(vertexID * sizeof(float3), pos);
+		bindless_rwbuffers[descriptor_index(push.so_pos)].Store<float3>(vertexID * sizeof(float3), pos);
 #endif // __PSSL__
 	}
 
 	[branch]
 	if (push.so_nor >= 0)
 	{
-		bindless_rwbuffers_float4[push.so_nor][vertexID] = float4(nor, 0);
+		bindless_rwbuffers_float4[descriptor_index(push.so_nor)][vertexID] = float4(nor, 0);
 	}
 
 	[branch]
 	if (push.so_tan >= 0)
 	{
-		bindless_rwbuffers_float4[push.so_tan][vertexID] = tan;
+		bindless_rwbuffers_float4[descriptor_index(push.so_tan)][vertexID] = tan;
 	}
 }

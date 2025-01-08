@@ -13,9 +13,9 @@ struct Output
 Output main(uint vertexID : SV_VertexID)
 {
 	ShaderMeshInstance inst = load_instance(push.instanceIndex);
-	float3 pos = bindless_buffers_float4[push.vb_pos_wind][vertexID].xyz;
-	float3 nor = bindless_buffers_float4[push.vb_nor][vertexID].xyz;
-	float2 atl = bindless_buffers_float2[push.vb_atl][vertexID];
+	float3 pos = bindless_buffers_float4[descriptor_index(push.vb_pos_wind)][vertexID].xyz;
+	float3 nor = bindless_buffers_float4[descriptor_index(push.vb_nor)][vertexID].xyz;
+	float2 atl = bindless_buffers_float2[descriptor_index(push.vb_atl)][vertexID];
 
 	Output output;
 

@@ -46,7 +46,7 @@ void main(
 	uint3 pixel = coord;
 	pixel.y += clipmap_index * GetFrame().vxgi.resolution;
 
-	Texture3D<float4> voxels = bindless_textures3D[GetFrame().vxgi.texture_radiance];
+	Texture3D<float4> voxels = bindless_textures3D[descriptor_index(GetFrame().vxgi.texture_radiance)];
 	float4 face_colors[6] = {
 		voxels[pixel + uint3(0 * GetFrame().vxgi.resolution, 0, 0)],
 		voxels[pixel + uint3(1 * GetFrame().vxgi.resolution, 0, 0)],

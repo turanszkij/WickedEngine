@@ -123,7 +123,7 @@ inline float3 ddgi_probe_position(uint3 probeCoord)
 	[branch]
 	if (GetScene().ddgi.offset_texture >= 0)
 	{
-		float3 offset = bindless_textures3D[GetScene().ddgi.offset_texture][ddgi_probe_offset_pixel(probeCoord)].xyz;
+		float3 offset = bindless_textures3D[descriptor_index(GetScene().ddgi.offset_texture)][ddgi_probe_offset_pixel(probeCoord)].xyz;
 		offset = (offset - 0.5) * ddgi_cellsize();
 		pos += offset;
 	}
@@ -230,7 +230,7 @@ half3 ddgi_sample_irradiance(float3 P, half3 N)
 			half dist_to_probe = length(probe_to_point);
 
 			//float2 temp = textureLod(depth_texture, tex_coord, 0.0f).rg;
-			half2 temp = bindless_textures_half4[GetScene().ddgi.depth_texture].SampleLevel(sampler_linear_clamp, tex_coord, 0).xy;
+			half2 temp = bindless_textures_half4[descriptor_index(GetScene().ddgi.depth_texture)].SampleLevel(sampler_linear_clamp, tex_coord, 0).xy;
 			half mean = temp.x;
 			half variance = abs(sqr(temp.x) - temp.y);
 
@@ -254,7 +254,7 @@ half3 ddgi_sample_irradiance(float3 P, half3 N)
 		float2 tex_coord = ddgi_probe_color_uv(probe_grid_coord, irradiance_dir);
 
 		//float3 probe_irradiance = textureLod(irradiance_texture, tex_coord, 0.0f).rgb;
-		half3 probe_irradiance = bindless_textures_half4[GetScene().ddgi.color_texture].SampleLevel(sampler_linear_clamp, tex_coord, 0).rgb;
+		half3 probe_irradiance = bindless_textures_half4[descriptor_index(GetScene().ddgi.color_texture)].SampleLevel(sampler_linear_clamp, tex_coord, 0).rgb;
 
 		// A tiny bit of light is really visible due to log perception, so
 		// crush tiny weights but keep the curve continuous. This must be done

@@ -95,8 +95,8 @@ void RenderAerialPerspective(uint3 DTid, float2 uv, float depth, float3 depthWor
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	TextureCube input = bindless_cubemaps[capture.texture_input];
-	RWTexture2DArray<float4> output = bindless_rwtextures2DArray[capture.texture_output];
+	TextureCube input = bindless_cubemaps[descriptor_index(capture.texture_input)];
+	RWTexture2DArray<float4> output = bindless_rwtextures2DArray[descriptor_index(capture.texture_output)];
 
 	const float2 uv = (DTid.xy + 0.5) * capture.resolution_rcp;
 	const float3 N = uv_to_cubemap(uv, DTid.z);

@@ -33,7 +33,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		amplification_payload.meshletGroupOffset = meshletGroupOffset;
 	}
 
-	ShaderMeshInstancePointer poi = bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + instanceID * sizeof(ShaderMeshInstancePointer));
+	ShaderMeshInstancePointer poi = bindless_buffers[descriptor_index(push.instances)].Load<ShaderMeshInstancePointer>(push.instance_offset + instanceID * sizeof(ShaderMeshInstancePointer));
 	ShaderMeshInstance inst = load_instance(poi.GetInstanceIndex());
 	
 	uint meshletID = meshletGroupOffset + groupIndex;
@@ -44,7 +44,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	if (visible)
 	{
 		ShaderCamera camera = GetCamera(poi.GetCameraIndex());
-		ShaderClusterBounds bounds = bindless_structured_cluster_bounds[geometry.vb_bou][meshletID];
+		ShaderClusterBounds bounds = bindless_structured_cluster_bounds[descriptor_index(geometry.vb_bou)][meshletID];
 		if (geometry.vb_pre >= 0)
 		{
 			// when object is skinned, we take the whole instance bounds, because skinned meshlet transforms are not computed
@@ -87,7 +87,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 			if (visible && camera.texture_reprojected_depth_index >= 0)
 			{
-				Texture2D reprojected_depth = bindless_textures[camera.texture_reprojected_depth_index];
+				Texture2D reprojected_depth = bindless_textures[descriptor_index(camera.texture_reprojected_depth_index)];
 				float cam_sphere_distance = length(bounds.sphere.center - camera.position);
 				float radius = cam_sphere_distance * tan(asin(bounds.sphere.radius / cam_sphere_distance)); // perspective distortion https://www.nickdarnell.com/hierarchical-z-buffer-occlusion-culling/
 				float3 up_radius = camera.up * radius;
@@ -189,7 +189,7 @@ void main(
 	uint meshletGroupOffset = amplification_payload.meshletGroupOffset;
 	uint meshletID = meshletGroupOffset + amplification_payload.meshlets[Gid];
 	ShaderGeometry geometry = GetMesh();
-	ShaderCluster cluster = bindless_structured_cluster[geometry.vb_clu][meshletID];
+	ShaderCluster cluster = bindless_structured_cluster[descriptor_index(geometry.vb_clu)][meshletID];
 	SetMeshOutputCounts(cluster.vertexCount, cluster.triangleCount);
 
 	for (uint vi = groupIndex; vi < cluster.vertexCount; vi += MS_GROUPSIZE)
@@ -203,7 +203,7 @@ void main(
 		verts[vi] = vertex_to_pixel_export(input);
 	}
 
-	ShaderMeshInstancePointer poi = bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + amplification_payload.instanceID * sizeof(ShaderMeshInstancePointer));
+	ShaderMeshInstancePointer poi = bindless_buffers[descriptor_index(push.instances)].Load<ShaderMeshInstancePointer>(push.instance_offset + amplification_payload.instanceID * sizeof(ShaderMeshInstancePointer));
 	const uint frustum_index = poi.GetCameraIndex();
 	
 	for (uint ti = groupIndex; ti < cluster.triangleCount; ti += MS_GROUPSIZE)

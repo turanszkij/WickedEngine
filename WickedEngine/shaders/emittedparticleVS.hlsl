@@ -20,10 +20,10 @@ VertextoPixel main(uint vid : SV_VertexID, uint instanceID : SV_InstanceID)
 	uint particleIndex = culledIndirectionBuffer2[culledIndirectionBuffer[instanceID]];
 	uint vertexID = particleIndex * 4 + vid;
 
-	float3 position = bindless_buffers_float4[geometry.vb_pos_wind][vertexID].xyz;
-	float3 normal = normalize(bindless_buffers_float4[geometry.vb_nor][vertexID].xyz);
-	float4 uvsets = bindless_buffers_float4[geometry.vb_uvs][vertexID];
-	float4 color = bindless_buffers_float4[geometry.vb_col][vertexID];
+	float3 position = bindless_buffers_float4[descriptor_index(geometry.vb_pos_wind)][vertexID].xyz;
+	float3 normal = normalize(bindless_buffers_float4[descriptor_index(geometry.vb_nor)][vertexID].xyz);
+	float4 uvsets = bindless_buffers_float4[descriptor_index(geometry.vb_uvs)][vertexID];
+	float4 color = bindless_buffers_float4[descriptor_index(geometry.vb_col)][vertexID];
 
 	// load particle data:
 	Particle particle = particleBuffer[particleIndex];

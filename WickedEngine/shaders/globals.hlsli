@@ -17,6 +17,12 @@
 #endif // __XBOX_SCARLETT
 #endif
 
+// Descriptor safety feature:
+//	We init null descriptors for bindless index = 0 for access safety
+//	Because shader compiler sometimes incorrectly loads descriptor outside of safety branch
+//	Note: descriptor index 0 always contains a preinitialized null descriptor
+#define descriptor_index(x) (max(0, x))
+
 #include "ColorSpaceUtility.hlsli"
 #include "PixelPacking_R11G11B10.hlsli"
 #include "PixelPacking_RGBE.hlsli"
@@ -155,7 +161,7 @@ T inverse_lerp(T value1, T value2, T pos)
 // Source: https://www.shadertoy.com/view/3s33zj
 float3x3 adjoint(in float4x4 m)
 {
-    return float3x3(
+	return float3x3(
 		cross(m[1].xyz, m[2].xyz), 
 		cross(m[2].xyz, m[0].xyz), 
 		cross(m[0].xyz, m[1].xyz)
@@ -469,19 +475,19 @@ inline ShaderWeather GetWeather()
 }
 inline ShaderMeshInstance load_instance(uint instanceIndex)
 {
-	return bindless_structured_meshinstance[GetScene().instancebuffer][instanceIndex];
+	return bindless_structured_meshinstance[descriptor_index(GetScene().instancebuffer)][instanceIndex];
 }
 inline ShaderGeometry load_geometry(uint geometryIndex)
 {
-	return bindless_structured_geometry[GetScene().geometrybuffer][geometryIndex];
+	return bindless_structured_geometry[descriptor_index(GetScene().geometrybuffer)][geometryIndex];
 }
 inline ShaderMeshlet load_meshlet(uint meshletIndex)
 {
-	return bindless_structured_meshlet[GetScene().meshletbuffer][meshletIndex];
+	return bindless_structured_meshlet[descriptor_index(GetScene().meshletbuffer)][meshletIndex];
 }
 inline ShaderMaterial load_material(uint materialIndex)
 {
-	return bindless_structured_material[GetScene().materialbuffer][materialIndex];
+	return bindless_structured_material[descriptor_index(GetScene().materialbuffer)][materialIndex];
 }
 uint load_entitytile(uint tileIndex)
 {
@@ -520,7 +526,7 @@ inline void write_mipmap_feedback(uint materialIndex, float4 uvsets_dx, float4 u
 		const uint wave_mask = WaveActiveBitOr(mask);
 		if(WaveIsFirstLane())
 		{
-			InterlockedOr(bindless_rwbuffers_uint[GetScene().texturestreamingbuffer][materialIndex], wave_mask);
+			InterlockedOr(bindless_rwbuffers_uint[descriptor_index(GetScene().texturestreamingbuffer)][materialIndex], wave_mask);
 		}
 	}
 }
@@ -530,7 +536,7 @@ inline void write_mipmap_feedback(uint materialIndex, uint resolution0, uint res
 	if(WaveIsFirstLane() && GetScene().texturestreamingbuffer >= 0)
 	{
 		const uint mask = resolution0 | (resolution1 << 16u);
-		InterlockedOr(bindless_rwbuffers_uint[GetScene().texturestreamingbuffer][materialIndex], mask);
+		InterlockedOr(bindless_rwbuffers_uint[descriptor_index(GetScene().texturestreamingbuffer)][materialIndex], mask);
 	}
 }
 
@@ -636,14 +642,14 @@ struct PrimitiveID
 		{
 			const uint clusterID = primitiveIndex >> 7u;
 			const uint triangleID = primitiveIndex & 0x7F;
-			ShaderCluster cluster = bindless_structured_cluster[NonUniformResourceIndex(geometry.vb_clu)][clusterID];
+			ShaderCluster cluster = bindless_structured_cluster[descriptor_index(NonUniformResourceIndex(geometry.vb_clu))][clusterID];
 			uint i0 = cluster.vertices[cluster.triangles[triangleID].i0()];
 			uint i1 = cluster.vertices[cluster.triangles[triangleID].i1()];
 			uint i2 = cluster.vertices[cluster.triangles[triangleID].i2()];
 			return uint3(i0, i1, i2);
 		}
 		const uint startIndex = primitiveIndex * 3 + geometry.indexOffset;
-		Buffer<uint> indexBuffer = bindless_buffers_uint[NonUniformResourceIndex(geometry.ib)];
+		Buffer<uint> indexBuffer = bindless_buffers_uint[descriptor_index(NonUniformResourceIndex(geometry.ib))];
 		uint i0 = indexBuffer[startIndex + 0];
 		uint i1 = indexBuffer[startIndex + 1];
 		uint i2 = indexBuffer[startIndex + 2];
@@ -654,26 +660,26 @@ struct PrimitiveID
 	uint i2() { return tri().z; }
 };
 
-#define texture_random64x64 bindless_textures[GetFrame().texture_random64x64_index]
-#define texture_bluenoise bindless_textures[GetFrame().texture_bluenoise_index]
-#define texture_sheenlut bindless_textures_half4[GetFrame().texture_sheenlut_index]
-#define texture_skyviewlut bindless_textures_half4[GetFrame().texture_skyviewlut_index]
-#define texture_transmittancelut bindless_textures_half4[GetFrame().texture_transmittancelut_index]
-#define texture_multiscatteringlut bindless_textures_half4[GetFrame().texture_multiscatteringlut_index]
-#define texture_skyluminancelut bindless_textures_half4[GetFrame().texture_skyluminancelut_index]
-#define texture_cameravolumelut bindless_textures3D_half4[GetFrame().texture_cameravolumelut_index]
-#define texture_wind bindless_textures3D[GetFrame().texture_wind_index]
-#define texture_wind_prev bindless_textures3D[GetFrame().texture_wind_prev_index]
-#define texture_caustics bindless_textures_half4[GetFrame().texture_caustics_index]
-#define scene_acceleration_structure bindless_accelerationstructures[GetScene().TLAS]
+#define texture_random64x64 bindless_textures[descriptor_index(GetFrame().texture_random64x64_index)]
+#define texture_bluenoise bindless_textures[descriptor_index(GetFrame().texture_bluenoise_index)]
+#define texture_sheenlut bindless_textures_half4[descriptor_index(GetFrame().texture_sheenlut_index)]
+#define texture_skyviewlut bindless_textures_half4[descriptor_index(GetFrame().texture_skyviewlut_index)]
+#define texture_transmittancelut bindless_textures_half4[descriptor_index(GetFrame().texture_transmittancelut_index)]
+#define texture_multiscatteringlut bindless_textures_half4[descriptor_index(GetFrame().texture_multiscatteringlut_index)]
+#define texture_skyluminancelut bindless_textures_half4[descriptor_index(GetFrame().texture_skyluminancelut_index)]
+#define texture_cameravolumelut bindless_textures3D_half4[descriptor_index(GetFrame().texture_cameravolumelut_index)]
+#define texture_wind bindless_textures3D[descriptor_index(GetFrame().texture_wind_index)]
+#define texture_wind_prev bindless_textures3D[descriptor_index(GetFrame().texture_wind_prev_index)]
+#define texture_caustics bindless_textures_half4[descriptor_index(GetFrame().texture_caustics_index)]
+#define scene_acceleration_structure bindless_accelerationstructures[descriptor_index(GetScene().TLAS)]
 
-#define texture_depth bindless_textures_float[GetCamera().texture_depth_index]
-#define texture_depth_history bindless_textures_float[GetCamera().texture_depth_index_prev]
-#define texture_lineardepth bindless_textures_float[GetCamera().texture_lineardepth_index]
-#define texture_primitiveID bindless_textures_uint[GetCamera().texture_primitiveID_index]
-#define texture_velocity bindless_textures_float2[GetCamera().texture_velocity_index]
-#define texture_normal bindless_textures_float2[GetCamera().texture_normal_index]
-#define texture_roughness bindless_textures_float[GetCamera().texture_roughness_index]
+#define texture_depth bindless_textures_float[descriptor_index(GetCamera().texture_depth_index)]
+#define texture_depth_history bindless_textures_float[descriptor_index(GetCamera().texture_depth_index_prev)]
+#define texture_lineardepth bindless_textures_float[descriptor_index(GetCamera().texture_lineardepth_index)]
+#define texture_primitiveID bindless_textures_uint[descriptor_index(GetCamera().texture_primitiveID_index)]
+#define texture_velocity bindless_textures_float2[descriptor_index(GetCamera().texture_velocity_index)]
+#define texture_normal bindless_textures_float2[descriptor_index(GetCamera().texture_normal_index)]
+#define texture_roughness bindless_textures_float[descriptor_index(GetCamera().texture_roughness_index)]
 
 // Note: defines can be better for choosing between half/float by compiler than "static const float"
 #define PI 3.14159265358979323846

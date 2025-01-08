@@ -94,9 +94,9 @@ void ray_clip_plane(inout RayDesc ray, float4 clip_plane)
 groupshared uint stack[RAYTRACE_STACKSIZE][RAYTRACING_LAUNCH_BLOCKSIZE * RAYTRACING_LAUNCH_BLOCKSIZE];
 #endif // RAYTRACE_STACK_SHARED
 
-#define primitiveCounterBuffer bindless_buffers[GetScene().BVH_counter]
-#define bvhNodeBuffer bindless_buffers[GetScene().BVH_nodes]
-#define primitiveBuffer bindless_buffers[GetScene().BVH_primitives]
+#define primitiveCounterBuffer bindless_buffers[descriptor_index(GetScene().BVH_counter)]
+#define bvhNodeBuffer bindless_buffers[descriptor_index(GetScene().BVH_nodes)]
+#define primitiveBuffer bindless_buffers[descriptor_index(GetScene().BVH_primitives)]
 
 struct RayHit
 {

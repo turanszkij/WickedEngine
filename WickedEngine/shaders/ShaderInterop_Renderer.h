@@ -122,9 +122,9 @@ static const uint2 SVT_PACKED_MIP_OFFSETS[SVT_PACKED_MIP_COUNT] = {
 
 #ifndef __cplusplus
 #ifdef TEXTURE_SLOT_NONUNIFORM
-#define UniformTextureSlot(x) NonUniformResourceIndex(x)
+#define UniformTextureSlot(x) descriptor_index(NonUniformResourceIndex(x))
 #else
-#define UniformTextureSlot(x) (x)
+#define UniformTextureSlot(x) descriptor_index(x)
 #endif // TEXTURE_SLOT_NONUNIFORM
 
 inline float get_lod(in uint2 dim, in float2 uv_dx, in float2 uv_dy, uint anisotropy = 0)
@@ -197,7 +197,7 @@ struct alignas(16) ShaderTextureSlot
 	}
 	Texture2D<half4> GetTexture()
 	{
-		return bindless_textures_half4[UniformTextureSlot(texture_descriptor)];
+		return bindless_textures_half4[descriptor_index(UniformTextureSlot(texture_descriptor))];
 	}
 	half4 SampleVirtual(
 		in Texture2D<half4> tex,
@@ -215,7 +215,7 @@ struct alignas(16) ShaderTextureSlot
 		[branch]
 		if (sparse_feedbackmap_descriptor >= 0)
 		{
-			RWTexture2D<uint> feedback_map = bindless_rwtextures_uint[UniformTextureSlot(sparse_feedbackmap_descriptor)];
+			RWTexture2D<uint> feedback_map = bindless_rwtextures_uint[descriptor_index(UniformTextureSlot(sparse_feedbackmap_descriptor))];
 			uint2 pixel = uv * virtual_tile_count;
 			InterlockedMin(feedback_map[pixel], uint(virtual_lod));
 		}

@@ -63,13 +63,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	[branch]
 	if (tonemap_push.texture_input_distortion >= 0)
 	{
-		uv += bindless_textures[tonemap_push.texture_input_distortion].SampleLevel(sampler_linear_clamp, uv, 0).rg;
+		uv += bindless_textures[descriptor_index(tonemap_push.texture_input_distortion)].SampleLevel(sampler_linear_clamp, uv, 0).rg;
 	}
 
 	[branch]
 	if (tonemap_push.texture_input_distortion_overlay >= 0)
 	{
-		uv += bindless_textures[tonemap_push.texture_input_distortion_overlay].SampleLevel(sampler_linear_clamp, uv, 0).rg * 2 - 1;
+		uv += bindless_textures[descriptor_index(tonemap_push.texture_input_distortion_overlay)].SampleLevel(sampler_linear_clamp, uv, 0).rg * 2 - 1;
 	}
 
 	half4 result = 0;
@@ -77,16 +77,16 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	[branch]
 	if (tonemap_push.texture_input >= 0)
 	{
-		result = bindless_textures_half4[tonemap_push.texture_input].SampleLevel(sampler_linear_clamp, uv, 0);
+		result = bindless_textures_half4[descriptor_index(tonemap_push.texture_input)].SampleLevel(sampler_linear_clamp, uv, 0);
 	}
 
-	exposure *= bindless_buffers[tonemap_push.buffer_input_luminance].Load<float>(LUMINANCE_BUFFER_OFFSET_EXPOSURE);
+	exposure *= bindless_buffers[descriptor_index(tonemap_push.buffer_input_luminance)].Load<float>(LUMINANCE_BUFFER_OFFSET_EXPOSURE);
 	result.rgb *= exposure;
 
 	[branch]
 	if (tonemap_push.texture_bloom >= 0)
 	{
-		Texture2D<half4> texture_bloom = bindless_textures_half4[tonemap_push.texture_bloom];
+		Texture2D<half4> texture_bloom = bindless_textures_half4[descriptor_index(tonemap_push.texture_bloom)];
 		half3 bloom = texture_bloom.SampleLevel(sampler_linear_clamp, uv, 1.5).rgb;
 		bloom += texture_bloom.SampleLevel(sampler_linear_clamp, uv, 3.5).rgb;
 		bloom += texture_bloom.SampleLevel(sampler_linear_clamp, uv, 4.5).rgb;
@@ -115,7 +115,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	[branch]
 	if (tonemap_push.texture_colorgrade_lookuptable >= 0)
 	{
-		result.rgb = bindless_textures3D[tonemap_push.texture_colorgrade_lookuptable].SampleLevel(sampler_linear_clamp, result.rgb, 0).rgb;
+		result.rgb = bindless_textures3D[descriptor_index(tonemap_push.texture_colorgrade_lookuptable)].SampleLevel(sampler_linear_clamp, result.rgb, 0).rgb;
 	}
 
 	[branch]
@@ -133,6 +133,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	[branch]
 	if (tonemap_push.texture_output >= 0)
 	{
-		bindless_rwtextures[tonemap_push.texture_output][DTid.xy] = result;
+		bindless_rwtextures[descriptor_index(tonemap_push.texture_output)][DTid.xy] = result;
 	}
 }

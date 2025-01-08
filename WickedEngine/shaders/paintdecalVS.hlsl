@@ -17,7 +17,7 @@ Output main(uint vertexID : SV_VertexID)
 	[branch]
 	if(geometry.vb_pos_wind >= 0)
 	{
-		pos = bindless_buffers_float4[geometry.vb_pos_wind][vertexID].xyz;
+		pos = bindless_buffers_float4[descriptor_index(geometry.vb_pos_wind)][vertexID].xyz;
 	}
 	pos = mul(inst.transform.GetMatrix(), float4(pos, 1)).xyz;
 	
@@ -25,7 +25,7 @@ Output main(uint vertexID : SV_VertexID)
 	[branch]
 	if(geometry.vb_nor >= 0)
 	{
-		nor = bindless_buffers_half4[geometry.vb_nor][vertexID].xyz;
+		nor = bindless_buffers_half4[descriptor_index(geometry.vb_nor)][vertexID].xyz;
 	}
 	nor = mul(inst.transformRaw.GetMatrixAdjoint(), nor);
 	
@@ -33,7 +33,7 @@ Output main(uint vertexID : SV_VertexID)
 	[branch]
 	if(geometry.vb_uvs >= 0)
 	{
-		uv = bindless_buffers_float4[geometry.vb_uvs][vertexID].xy;
+		uv = bindless_buffers_float4[descriptor_index(geometry.vb_uvs)][vertexID].xy;
 	}
 	
 	Output output;

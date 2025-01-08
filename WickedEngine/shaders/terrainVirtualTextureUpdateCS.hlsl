@@ -21,13 +21,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if (DTid.x >= push.write_size || DTid.y >= push.write_size)
 		return;
 
-	Texture2DArray blendmap = bindless_textures2DArray[push.blendmap_texture];
-	ByteAddressBuffer blendmap_buffer = bindless_buffers[push.blendmap_buffer];
+	Texture2DArray blendmap = bindless_textures2DArray[descriptor_index(push.blendmap_texture)];
+	ByteAddressBuffer blendmap_buffer = bindless_buffers[descriptor_index(push.blendmap_buffer)];
 	
 #if defined(UPDATE_BASECOLORMAP) || defined(UPDATE_EMISSIVEMAP)
-	RWTexture2D<uint2> output = bindless_rwtextures_uint2[push.output_texture];
+	RWTexture2D<uint2> output = bindless_rwtextures_uint2[descriptor_index(push.output_texture)];
 #else
-	RWTexture2D<uint4> output = bindless_rwtextures_uint4[push.output_texture];
+	RWTexture2D<uint4> output = bindless_rwtextures_uint4[descriptor_index(push.output_texture)];
 #endif
 		
 #ifdef UPDATE_BASECOLORMAP
@@ -73,7 +73,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			[branch]
 			if (material.textures[BASECOLORMAP].IsValid())
 			{
-				Texture2D tex = bindless_textures[material.textures[BASECOLORMAP].texture_descriptor];
+				Texture2D tex = bindless_textures[descriptor_index(material.textures[BASECOLORMAP].texture_descriptor)];
 				float2 dim = 0;
 				tex.GetDimensions(dim.x, dim.y);
 				float2 diff = dim * push.resolution_rcp;
@@ -92,7 +92,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			[branch]
 			if (material.textures[NORMALMAP].IsValid())
 			{
-				Texture2D tex = bindless_textures[material.textures[NORMALMAP].texture_descriptor];
+				Texture2D tex = bindless_textures[descriptor_index(material.textures[NORMALMAP].texture_descriptor)];
 				float2 dim = 0;
 				tex.GetDimensions(dim.x, dim.y);
 				float2 diff = dim * push.resolution_rcp;
@@ -111,7 +111,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			[branch]
 			if (material.textures[SURFACEMAP].IsValid())
 			{
-				Texture2D tex = bindless_textures[material.textures[SURFACEMAP].texture_descriptor];
+				Texture2D tex = bindless_textures[descriptor_index(material.textures[SURFACEMAP].texture_descriptor)];
 				float2 dim = 0;
 				tex.GetDimensions(dim.x, dim.y);
 				float2 diff = dim * push.resolution_rcp;
@@ -131,7 +131,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			[branch]
 			if (material.textures[EMISSIVEMAP].IsValid())
 			{
-				Texture2D tex = bindless_textures[material.textures[EMISSIVEMAP].texture_descriptor];
+				Texture2D tex = bindless_textures[descriptor_index(material.textures[EMISSIVEMAP].texture_descriptor)];
 				float2 dim = 0;
 				tex.GetDimensions(dim.x, dim.y);
 				float2 diff = dim * push.resolution_rcp;

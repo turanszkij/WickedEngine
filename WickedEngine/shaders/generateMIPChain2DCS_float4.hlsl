@@ -12,9 +12,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 {
 	if (DTid.x < mipgen.outputResolution.x && DTid.y < mipgen.outputResolution.y)
 	{
-		SamplerState customsampler = bindless_samplers[mipgen.sampler_index];
-		Texture2D input = bindless_textures[mipgen.texture_input];
-		RWTexture2D<MIP_OUTPUT_FORMAT> output = bindless_rwtextures[mipgen.texture_output];
+		SamplerState customsampler = bindless_samplers[descriptor_index(mipgen.sampler_index)];
+		Texture2D input = bindless_textures[descriptor_index(mipgen.texture_input)];
+		RWTexture2D<MIP_OUTPUT_FORMAT> output = bindless_rwtextures[descriptor_index(mipgen.texture_output)];
 
 		float2 uv = ((float2)DTid.xy + 0.5f) * (float2)mipgen.outputResolution_rcp.xy;
 		float4 rrrr = input.GatherRed(customsampler, uv);

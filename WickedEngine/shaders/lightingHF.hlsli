@@ -126,7 +126,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 	const ShaderOcean ocean = GetWeather().ocean;
 	if (ocean.texture_displacementmap >= 0)
 	{
-		Texture2D displacementmap = bindless_textures[ocean.texture_displacementmap];
+		Texture2D displacementmap = bindless_textures[descriptor_index(ocean.texture_displacementmap)];
 		float2 ocean_uv = surface.P.xz * ocean.patch_size_rcp;
 		float3 displacement = displacementmap.SampleLevel(sampler_linear_wrap, ocean_uv, 0).xzy;
 		float water_height = ocean.water_height + displacement.y;
@@ -364,7 +364,7 @@ inline half3 GetAmbient(in float3 N)
 	[branch]
 	if (GetScene().globalprobe >= 0)
 	{
-		TextureCube<half4> cubemap = bindless_cubemaps_half4[GetScene().globalprobe];
+		TextureCube<half4> cubemap = bindless_cubemaps_half4[descriptor_index(GetScene().globalprobe)];
 		uint2 dim;
 		uint mipcount;
 		cubemap.GetDimensions(0, dim.x, dim.y, mipcount);
@@ -408,7 +408,7 @@ inline half3 EnvironmentReflection_Global(in Surface surface)
 	if (GetScene().globalprobe < 0)
 		return 0;
 	
-	TextureCube<half4> cubemap = bindless_cubemaps_half4[GetScene().globalprobe];
+	TextureCube<half4> cubemap = bindless_cubemaps_half4[descriptor_index(GetScene().globalprobe)];
 	uint2 dim;
 	uint mipcount;
 	cubemap.GetDimensions(0, dim.x, dim.y, mipcount);
@@ -496,7 +496,7 @@ inline void VoxelGI(inout Surface surface, inout Lighting lighting)
 	[branch]
 	if (GetFrame().vxgi.resolution != 0 && GetFrame().vxgi.texture_radiance >= 0)
 	{
-		Texture3D<half4> voxels = bindless_textures3D_half4[GetFrame().vxgi.texture_radiance];
+		Texture3D<half4> voxels = bindless_textures3D_half4[descriptor_index(GetFrame().vxgi.texture_radiance)];
 
 		// diffuse:
 		half4 trace = ConeTraceDiffuse(voxels, surface.P, surface.N);

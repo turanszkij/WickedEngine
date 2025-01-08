@@ -490,7 +490,7 @@ namespace wi::graphics
 				wi::vector<int> freelist;
 				std::mutex locker;
 
-				void init(VkDevice device, VkDescriptorType type, uint32_t descriptorCount)
+				void init(GraphicsDevice_Vulkan* device, VkDescriptorType type, uint32_t descriptorCount)
 				{
 					descriptorCount = std::min(descriptorCount, 500000u);
 
@@ -505,7 +505,7 @@ namespace wi::graphics
 					poolInfo.maxSets = 1;
 					poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
 
-					VkResult res = vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool);
+					VkResult res = vkCreateDescriptorPool(device->device, &poolInfo, nullptr, &descriptorPool);
 					vulkan_check(res);
 
 					VkDescriptorSetLayoutBinding binding = {};
@@ -532,7 +532,7 @@ namespace wi::graphics
 					bindingFlagsInfo.pBindingFlags = &bindingFlags;
 					layoutInfo.pNext = &bindingFlagsInfo;
 
-					res = vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout);
+					res = vkCreateDescriptorSetLayout(device->device, &layoutInfo, nullptr, &descriptorSetLayout);
 					vulkan_check(res);
 
 					VkDescriptorSetAllocateInfo allocInfo = {};
@@ -540,12 +540,63 @@ namespace wi::graphics
 					allocInfo.descriptorPool = descriptorPool;
 					allocInfo.descriptorSetCount = 1;
 					allocInfo.pSetLayouts = &descriptorSetLayout;
-					res = vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet);
+					res = vkAllocateDescriptorSets(device->device, &allocInfo, &descriptorSet);
 					vulkan_check(res);
 
 					for (int i = 0; i < (int)descriptorCount; ++i)
 					{
 						freelist.push_back((int)descriptorCount - i - 1);
+					}
+
+					if (type != VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR)
+					{
+						// Descriptor safety feature:
+						//	We init null descriptors for bindless index = 0 for access safety
+						//	Because shader compiler sometimes incorrectly loads descriptor outside of safety branch
+						//	Note: these are never freed, this is intentional
+						int index = allocate();
+						wilog_assert(index == 0, "Descriptor safety feature error: descriptor index must be 0!");
+						VkWriteDescriptorSet write = {};
+						write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+						write.descriptorType = type;
+						write.dstBinding = 0;
+						write.dstArrayElement = index;
+						write.descriptorCount = 1;
+						write.dstSet = descriptorSet;
+
+						VkDescriptorImageInfo image_info = {};
+						VkDescriptorBufferInfo buffer_info = {};
+
+						switch (type)
+						{
+						case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+							image_info.imageView = device->nullImageView2D;
+							image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+							write.pImageInfo = &image_info;
+							break;
+						case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+						case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+							write.pTexelBufferView = &device->nullBufferView;
+							break;
+						case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+							buffer_info.buffer = device->nullBuffer;
+							buffer_info.range = VK_WHOLE_SIZE;
+							write.pBufferInfo = &buffer_info;
+							break;
+						case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+							image_info.imageView = device->nullImageView2D;
+							image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+							write.pImageInfo = &image_info;
+							break;
+						case VK_DESCRIPTOR_TYPE_SAMPLER:
+							image_info.sampler = device->nullSampler;
+							write.pImageInfo = &image_info;
+							break;
+						default:
+							wilog_assert(0, "Descriptor safety feature error: descriptor type not handled!");
+							break;
+						}
+						vkUpdateDescriptorSets(device->device, 1, &write, 0, nullptr);
 					}
 				}
 				void destroy(VkDevice device)
