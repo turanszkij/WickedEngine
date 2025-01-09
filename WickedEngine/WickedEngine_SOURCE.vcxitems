@@ -625,7 +625,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiPathQuery_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiPhysics_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiPhysics_Jolt.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiRendererShader.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderPath3D_PathTracing.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_reflect.c">

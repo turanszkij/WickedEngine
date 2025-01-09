@@ -2210,9 +2210,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\TaperedCylinderShape.cpp">
       <Filter>JOLT</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiRendererShader.cpp">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)Utility\DirectXCollision.inl">

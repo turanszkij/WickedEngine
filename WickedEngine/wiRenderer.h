@@ -14,7 +14,6 @@
 
 #include <memory>
 #include <limits>
-#include <string>
 
 namespace wi
 {
@@ -91,7 +90,6 @@ namespace wi::renderer
 	size_t GetShaderDumpCount();
 	size_t GetShaderErrorCount();
 	size_t GetShaderMissingCount();
-	void ResetShaderErrorCount();
 
 	bool LoadShader(
 		wi::graphics::ShaderStage stage,
