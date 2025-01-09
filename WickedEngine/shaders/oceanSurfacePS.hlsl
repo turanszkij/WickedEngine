@@ -32,7 +32,7 @@ float4 main(PSIn input) : SV_TARGET
 	[branch]
 	if (GetCamera().texture_waterriples_index >= 0)
 	{
-		gradient.rg += bindless_textures_half4[GetCamera().texture_waterriples_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rg * 0.025;
+		gradient.rg += bindless_textures_half4[descriptor_index(GetCamera().texture_waterriples_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rg * 0.025;
 	}
 
 	Surface surface;
@@ -66,11 +66,11 @@ float4 main(PSIn input) : SV_TARGET
 		//REFLECTION
 		float4 reflectionPos = mul(GetCamera().reflection_view_projection, float4(surface.P, 1));
 		float2 reflectionUV = clipspace_to_uv(reflectionPos.xy / reflectionPos.w) + surface.N.xz * bump_strength;
-		half4 reflectiveColor = bindless_textures[GetCamera().texture_reflection_index].SampleLevel(sampler_linear_mirror, reflectionUV, 0);
+		half4 reflectiveColor = bindless_textures[descriptor_index(GetCamera().texture_reflection_index)].SampleLevel(sampler_linear_mirror, reflectionUV, 0);
 		[branch]
 		if(GetCamera().texture_reflection_depth_index >=0)
 		{
-			float reflectiveDepth = bindless_textures[GetCamera().texture_reflection_depth_index].SampleLevel(sampler_point_clamp, reflectionUV, 0).r;
+			float reflectiveDepth = bindless_textures[descriptor_index(GetCamera().texture_reflection_depth_index)].SampleLevel(sampler_point_clamp, reflectionUV, 0).r;
 			float3 reflectivePosition = reconstruct_position(reflectionUV, reflectiveDepth, GetCamera().reflection_inverse_view_projection);
 			float water_depth = -dot(float4(reflectivePosition, 1), water_plane);
 			water_depth += texture_ocean_displacementmap.SampleLevel(sampler_linear_wrap, reflectivePosition.xz * xOceanPatchSizeRecip, 0).z; // texture contains xzy!
@@ -90,7 +90,7 @@ float4 main(PSIn input) : SV_TARGET
 	{
 		// Water refraction:
 		const float camera_above_water = dot(float4(GetCamera().position, 1), water_plane) < 0; 
-		Texture2D texture_refraction = bindless_textures[GetCamera().texture_refraction_index];
+		Texture2D texture_refraction = bindless_textures[descriptor_index(GetCamera().texture_refraction_index)];
 		// First sample using full perturbation:
 		float2 refraction_uv = ScreenCoord.xy + surface.N.xz * bump_strength;
 		float refraction_depth = find_max_depth(refraction_uv, 2, 2);

@@ -110,7 +110,7 @@ inline float4 ConeTrace(in Texture3D<half4> voxels, in float3 P, in float3 N, in
 			const float half_texel = 0.5 * GetFrame().vxgi.resolution_rcp;
 			float3 tc0 = clamp(tc, half_texel, 1 - half_texel);
 			tc0.y = (tc0.y + clipmap_index) / VXGI_CLIPMAP_COUNT; // remap into clipmap
-			float sdf = bindless_textures3D[GetFrame().vxgi.texture_sdf].SampleLevel(sampler_linear_clamp, tc0, 0).r;
+			float sdf = bindless_textures3D[descriptor_index(GetFrame().vxgi.texture_sdf)].SampleLevel(sampler_linear_clamp, tc0, 0).r;
 			stepSizeCurrent = max(stepSize, sdf - diameter);
 		}
 		step_dist = diameter * stepSizeCurrent;

@@ -75,9 +75,9 @@ void main(
 	{
 		uint vertexID = particleIndex * 4 + i;
 
-		float3 position = bindless_buffers_float4[geometry.vb_pos_wind][vertexID].xyz;
-		float3 normal = normalize(bindless_buffers_float4[geometry.vb_nor][vertexID].xyz);
-		float4 uvsets = bindless_buffers_float4[geometry.vb_uvs][vertexID];
+		float3 position = bindless_buffers_float4[descriptor_index(geometry.vb_pos_wind)][vertexID].xyz;
+		float3 normal = normalize(bindless_buffers_float4[descriptor_index(geometry.vb_nor)][vertexID].xyz);
+		float4 uvsets = bindless_buffers_float4[descriptor_index(geometry.vb_uvs)][vertexID];
 
 		VertextoPixel_MS Out;
 		Out.clip = dot(Out.pos, GetCamera().clip_plane);
@@ -89,7 +89,7 @@ void main(
 	}
 
 	VertextoPixel_MS_PRIM OutQuad;
-	OutQuad.color = pack_rgba(bindless_buffers_float4[geometry.vb_col][particleIndex * 4]);
+	OutQuad.color = pack_rgba(bindless_buffers_float4[descriptor_index(geometry.vb_col)][particleIndex * 4]);
 	OutQuad.size = half(size);
 	OutQuad.frameBlend = half(frameBlend);
 	sharedPrimitives[tig * 2 + 0] = OutQuad;

@@ -10,7 +10,7 @@ struct VSOut
 
 float4 main(VSOut input) : SV_Target
 {
-	Texture2D ddgiColorTexture = bindless_textures[GetScene().ddgi.color_texture];
+	Texture2D ddgiColorTexture = bindless_textures[descriptor_index(GetScene().ddgi.color_texture)];
 
 	uint3 probeCoord = ddgi_probe_coord(input.probeIndex);
 	float3 color = ddgiColorTexture.SampleLevel(sampler_linear_clamp, ddgi_probe_color_uv(probeCoord, input.normal), 0).rgb;

@@ -104,7 +104,7 @@ namespace wi
 			}
 			const uint64_t alignment = device->GetMinOffsetAlignment(&bd);
 
-			vb_pos.size = sizeof(MeshComponent::Vertex_POS32) * 4 * MAX_PARTICLES;
+			vb_pos.size = sizeof(MeshComponent::Vertex_POS32W) * 4 * MAX_PARTICLES;
 			vb_nor.size = sizeof(MeshComponent::Vertex_NOR) * 4 * MAX_PARTICLES;
 			vb_uvs.size = sizeof(MeshComponent::Vertex_UVS) * 4 * MAX_PARTICLES;
 			vb_col.size = sizeof(MeshComponent::Vertex_COL) * 4 * MAX_PARTICLES;
@@ -123,8 +123,8 @@ namespace wi
 
 			buffer_offset = AlignTo(buffer_offset, alignment);
 			vb_pos.offset = buffer_offset;
-			vb_pos.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos.offset, vb_pos.size, &MeshComponent::Vertex_POS32::FORMAT);
-			vb_pos.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos.offset, vb_pos.size); // UAV can't have RGB32_F format!
+			vb_pos.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos.offset, vb_pos.size, &MeshComponent::Vertex_POS32W::FORMAT);
+			vb_pos.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos.offset, vb_pos.size, &MeshComponent::Vertex_POS32W::FORMAT); // UAV can't have RGB32_F format!
 			vb_pos.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_pos.subresource_srv);
 			vb_pos.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_pos.subresource_uav);
 			buffer_offset += vb_pos.size;
@@ -290,9 +290,9 @@ namespace wi
 			geometry.triangles.index_format = GetIndexBufferFormat(primitiveBuffer.desc.format);
 			geometry.triangles.index_count = MAX_PARTICLES * 6;
 			geometry.triangles.index_offset = 0;
-			geometry.triangles.vertex_count = (uint32_t)(vb_pos.size / sizeof(MeshComponent::Vertex_POS32));
-			geometry.triangles.vertex_format = MeshComponent::Vertex_POS32::FORMAT;
-			geometry.triangles.vertex_stride = sizeof(MeshComponent::Vertex_POS32);
+			geometry.triangles.vertex_count = (uint32_t)(vb_pos.size / sizeof(MeshComponent::Vertex_POS32W));
+			geometry.triangles.vertex_format = Format::R32G32B32_FLOAT;
+			geometry.triangles.vertex_stride = sizeof(MeshComponent::Vertex_POS32W);
 
 			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
 			assert(success);

@@ -45,12 +45,12 @@ float4 main(VertexToPixel input) : SV_Target
 	[branch]
 	if (GetCamera().texture_ao_index >= 0)
 	{
-		surface.occlusion *= bindless_textures_half4[GetCamera().texture_ao_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
+		surface.occlusion *= bindless_textures_half4[descriptor_index(GetCamera().texture_ao_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
 	}
 	[branch]
 	if (GetCamera().texture_ssgi_index >= 0)
 	{
-		surface.ssgi = bindless_textures[GetCamera().texture_ssgi_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rgb;
+		surface.ssgi = bindless_textures[descriptor_index(GetCamera().texture_ssgi_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rgb;
 	}
 #endif // CARTOON
 #endif // TRANSPARENT

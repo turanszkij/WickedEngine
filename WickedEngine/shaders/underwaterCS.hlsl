@@ -25,7 +25,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if (ocean.texture_displacementmap >= 0)
 	{
 		const float2 ocean_uv = ocean_pos.xz * ocean.patch_size_rcp;
-		Texture2D texture_displacementmap = bindless_textures[ocean.texture_displacementmap];
+		Texture2D texture_displacementmap = bindless_textures[descriptor_index(ocean.texture_displacementmap)];
 		const float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, ocean_uv, 0).xzy;
 		ocean_pos += displacement;
 	}
@@ -50,7 +50,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		//	Otherwise the ocean surface could be same as infinite depth and incorrectly fogged
 		float3 ocean_surface_pos = intersectPlaneClampInfinite(GetCamera().position, V, float3(0, 1, 0), ocean.water_height);
 		float2 ocean_surface_uv = ocean_surface_pos.xz * ocean.patch_size_rcp;
-		Texture2D texture_displacementmap = bindless_textures[ocean.texture_displacementmap];
+		Texture2D texture_displacementmap = bindless_textures[descriptor_index(ocean.texture_displacementmap)];
 		const float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, ocean_surface_uv, 0).xzy;
 		ocean_surface_pos += displacement;
 		const float ocean_dist = length(ocean_surface_pos - GetCamera().position);
@@ -59,7 +59,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		if (ocean.texture_displacementmap >= 0)
 		{
 			const float2 ocean_uv = surface_position.xz * ocean.patch_size_rcp;
-			Texture2D texture_displacementmap = bindless_textures[ocean.texture_displacementmap];
+			Texture2D texture_displacementmap = bindless_textures[descriptor_index(ocean.texture_displacementmap)];
 			const float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, ocean_uv, 0).xzy;
 			surface_position += displacement;
 		}

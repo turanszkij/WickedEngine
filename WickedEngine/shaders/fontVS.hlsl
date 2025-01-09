@@ -11,7 +11,7 @@ struct VertextoPixel
 VertextoPixel main(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID)
 {
 	uint vID = instanceID * 4 + vertexID;
-	FontVertex vertex = bindless_buffers[font.buffer_index].Load<FontVertex>(font.buffer_offset + vID * sizeof(FontVertex));
+	FontVertex vertex = bindless_buffers[descriptor_index(font.buffer_index)].Load<FontVertex>(font.buffer_offset + vID * sizeof(FontVertex));
 
 	VertextoPixel Out;
 	Out.pos = mul(font.transform, float4(asfloat(vertex.pos), 0, 1));

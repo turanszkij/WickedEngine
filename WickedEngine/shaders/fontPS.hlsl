@@ -10,7 +10,7 @@ struct VertextoPixel
 
 float4 main(VertextoPixel input) : SV_TARGET
 {
-	Texture2D<half4> tex = bindless_textures_half4[font.texture_index];
+	Texture2D<half4> tex = bindless_textures_half4[descriptor_index(font.texture_index)];
 	half value = tex.SampleLevel(sampler_linear_clamp, input.uv, 0).r;
 	half4 color = unpack_half4(font.color);
 	

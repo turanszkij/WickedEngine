@@ -20,7 +20,7 @@ VertextoPixel main(uint vI : SV_VertexID)
 	}
 	else
 	{
-		Out.pos = bindless_buffers[image.buffer_index].Load<float4>(image.buffer_offset + vI * sizeof(float4));
+		Out.pos = bindless_buffers[descriptor_index(image.buffer_index)].Load<float4>(image.buffer_offset + vI * sizeof(float4));
 
 		// Set up inverse bilinear interpolation
 		Out.q = Out.pos.xy - image.b0;

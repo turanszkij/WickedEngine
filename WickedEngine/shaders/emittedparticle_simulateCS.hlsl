@@ -18,7 +18,7 @@ RWStructuredBuffer<uint> aliveBuffer_NEW : register(u2);
 RWStructuredBuffer<uint> deadBuffer : register(u3);
 RWByteAddressBuffer counterBuffer : register(u4);
 RWStructuredBuffer<float> distanceBuffer : register(u6);
-RWByteAddressBuffer vertexBuffer_POS : register(u7);
+RWBuffer<float4> vertexBuffer_POS : register(u7);
 RWBuffer<float4> vertexBuffer_NOR : register(u8);
 RWBuffer<float4> vertexBuffer_UVS : register(u9);
 RWBuffer<float4> vertexBuffer_COL : register(u10);
@@ -65,7 +65,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 	[branch]
 	if ((xEmitterOptions & EMITTER_OPTION_BIT_USE_RAIN_BLOCKER) && GetFrame().texture_shadowatlas_index >= 0 && any(GetFrame().rain_blocker_mad_prev))
 	{
-		Texture2D texture_shadowatlas = bindless_textures[GetFrame().texture_shadowatlas_index];
+		Texture2D texture_shadowatlas = bindless_textures[descriptor_index(GetFrame().texture_shadowatlas_index)];
 		float3 shadow_pos = mul(GetFrame().rain_blocker_matrix_prev, float4(particle.position, 1)).xyz;
 		float3 shadow_uv = clipspace_to_uv(shadow_pos);
 		if (is_saturated(shadow_uv))
@@ -325,11 +325,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 			quadPos = mul(quadPos, (float3x3)GetCamera().view); // reversed mul for inverse camera rotation!
 
 			// write out vertex:
-#ifdef __PSSL__
-			vertexBuffer_POS.TypedStore<float3>((v0 + vertexID) * sizeof(float3), particle.position + quadPos);
-#else
-			vertexBuffer_POS.Store<float3>((v0 + vertexID) * sizeof(float3), particle.position + quadPos);
-#endif // __PSSL__
+			vertexBuffer_POS[v0 + vertexID] = float4(particle.position + quadPos, 0);
 			vertexBuffer_NOR[v0 + vertexID] = float4(normalize(-GetCamera().forward), 0);
 			vertexBuffer_UVS[v0 + vertexID] = float4(uv, uv2);
 			vertexBuffer_COL[v0 + vertexID] = particleColor;
@@ -364,16 +360,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		counterBuffer.InterlockedAdd(PARTICLECOUNTER_OFFSET_DEADCOUNT, 1, deadIndex);
 		deadBuffer[deadIndex] = particleIndex;
 		
-#ifdef __PSSL__
-		vertexBuffer_POS.TypedStore<float3>((v0 + 0) * sizeof(float3), 0);
-		vertexBuffer_POS.TypedStore<float3>((v0 + 1) * sizeof(float3), 0);
-		vertexBuffer_POS.TypedStore<float3>((v0 + 2) * sizeof(float3), 0);
-		vertexBuffer_POS.TypedStore<float3>((v0 + 3) * sizeof(float3), 0);
-#else
-		vertexBuffer_POS.Store<float3>((v0 + 0) * sizeof(float3), 0);
-		vertexBuffer_POS.Store<float3>((v0 + 1) * sizeof(float3), 0);
-		vertexBuffer_POS.Store<float3>((v0 + 2) * sizeof(float3), 0);
-		vertexBuffer_POS.Store<float3>((v0 + 3) * sizeof(float3), 0);
-#endif // __PSSL__
+		vertexBuffer_POS[v0 + 0] = 0;
+		vertexBuffer_POS[v0 + 1] = 0;
+		vertexBuffer_POS[v0 + 2] = 0;
+		vertexBuffer_POS[v0 + 3] = 0;
 	}
 }

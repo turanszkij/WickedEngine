@@ -616,14 +616,14 @@ namespace vulkan_internal
 		{
 			ss += "[Vulkan Warning]: ";
 			ss += callback_data->pMessage;
-            ss += "\n";
+			ss += "\n";
 			wi::helper::DebugOut(ss, wi::helper::DebugLevel::Warning);
 		}
 		else if (message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
 		{
 			ss += "[Vulkan Error]: ";
 			ss += callback_data->pMessage;
-            ss += "\n";
+			ss += "\n";
 			wi::helper::DebugOut(ss, wi::helper::DebugLevel::Error);
 		}
 
@@ -1665,8 +1665,18 @@ using namespace vulkan_internal;
 		poolInfo.pPoolSizes = poolSizes;
 		poolInfo.maxSets = poolSize;
 
+		destroy(); // issues destroy if already exists, nop otherwise
 		res = vkCreateDescriptorPool(device->device, &poolInfo, nullptr, &descriptorPool);
 		vulkan_check(res);
+
+#if 0
+		VkDebugUtilsObjectNameInfoEXT info{ VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+		info.pObjectName = "DescriptorBinderPool";
+		info.objectType = VK_OBJECT_TYPE_DESCRIPTOR_POOL;
+		info.objectHandle = (uint64_t)descriptorPool;
+		res = vkSetDebugUtilsObjectNameEXT(device->device, &info);
+		vulkan_check(res);
+#endif
 
 		// WARNING: MUST NOT CALL reset() HERE!
 		//	This is because init can be called mid-frame when there is allocation error, but the bindings must be retained!
@@ -1758,7 +1768,6 @@ using namespace vulkan_internal;
 			while (res == VK_ERROR_OUT_OF_POOL_MEMORY)
 			{
 				binder_pool.poolSize *= 2;
-				binder_pool.destroy();
 				binder_pool.init(device);
 				allocInfo.descriptorPool = binder_pool.descriptorPool;
 				res = vkAllocateDescriptorSets(device->device, &allocInfo, &descriptorSet);
@@ -3103,7 +3112,7 @@ using namespace vulkan_internal;
 			queues[QUEUE_COPY].locker = queue_lockers[copyFamily];
 			queues[QUEUE_VIDEO_DECODE].queue = videoQueue;
 			if (videoFamily != VK_QUEUE_FAMILY_IGNORED) {
-			    queues[QUEUE_VIDEO_DECODE].locker = queue_lockers[videoFamily];
+				queues[QUEUE_VIDEO_DECODE].locker = queue_lockers[videoFamily];
 			}
 
 		}
@@ -3378,32 +3387,32 @@ using namespace vulkan_internal;
 
 		if (features_1_2.descriptorBindingSampledImageUpdateAfterBind == VK_TRUE)
 		{
-			allocationhandler->bindlessSampledImages.init(device, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, std::min(limit_bindless_descriptors, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages / 4));
+			allocationhandler->bindlessSampledImages.init(this, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, std::min(limit_bindless_descriptors, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages / 4));
 		}
 		if (features_1_2.descriptorBindingUniformTexelBufferUpdateAfterBind == VK_TRUE)
 		{
-			allocationhandler->bindlessUniformTexelBuffers.init(device, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, std::min(limit_bindless_descriptors, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages / 4));
+			allocationhandler->bindlessUniformTexelBuffers.init(this, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, std::min(limit_bindless_descriptors, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages / 4));
 		}
 		if (features_1_2.descriptorBindingStorageBufferUpdateAfterBind == VK_TRUE)
 		{
-			allocationhandler->bindlessStorageBuffers.init(device, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindStorageBuffers / 4);
+			allocationhandler->bindlessStorageBuffers.init(this, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindStorageBuffers / 4);
 		}
 		if (features_1_2.descriptorBindingStorageImageUpdateAfterBind == VK_TRUE)
 		{
-			allocationhandler->bindlessStorageImages.init(device, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, std::min(limit_bindless_descriptors, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages / 4));
+			allocationhandler->bindlessStorageImages.init(this, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, std::min(limit_bindless_descriptors, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages / 4));
 		}
 		if (features_1_2.descriptorBindingStorageTexelBufferUpdateAfterBind == VK_TRUE)
 		{
-			allocationhandler->bindlessStorageTexelBuffers.init(device, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, std::min(limit_bindless_descriptors, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages / 4));
+			allocationhandler->bindlessStorageTexelBuffers.init(this, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, std::min(limit_bindless_descriptors, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages / 4));
 		}
 		if (features_1_2.descriptorBindingSampledImageUpdateAfterBind == VK_TRUE)
 		{
-			allocationhandler->bindlessSamplers.init(device, VK_DESCRIPTOR_TYPE_SAMPLER, 256);
+			allocationhandler->bindlessSamplers.init(this, VK_DESCRIPTOR_TYPE_SAMPLER, 256);
 		}
 
 		if (CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 		{
-			allocationhandler->bindlessAccelerationStructures.init(device, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 32);
+			allocationhandler->bindlessAccelerationStructures.init(this, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 32);
 		}
 
 		// Pipeline Cache

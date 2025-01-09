@@ -122,9 +122,9 @@ static const uint2 SVT_PACKED_MIP_OFFSETS[SVT_PACKED_MIP_COUNT] = {
 
 #ifndef __cplusplus
 #ifdef TEXTURE_SLOT_NONUNIFORM
-#define UniformTextureSlot(x) NonUniformResourceIndex(x)
+#define UniformTextureSlot(x) NonUniformResourceIndex(descriptor_index(x))
 #else
-#define UniformTextureSlot(x) (x)
+#define UniformTextureSlot(x) descriptor_index(x)
 #endif // TEXTURE_SLOT_NONUNIFORM
 
 inline float get_lod(in uint2 dim, in float2 uv_dx, in float2 uv_dy, uint anisotropy = 0)

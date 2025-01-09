@@ -58,7 +58,7 @@ inline ShaderMaterial GetMaterial()
 	return load_material(push.materialIndex);
 }
 
-#define sampler_objectshader bindless_samplers[GetMaterial().sampler_descriptor]
+#define sampler_objectshader bindless_samplers[descriptor_index(GetMaterial().sampler_descriptor)]
 
 // Use these to compile this file as shader prototype:
 //#define OBJECTSHADER_COMPILE_VS				- compile vertex shader prototype
@@ -128,7 +128,7 @@ struct VertexInput
 
 	float4 GetPositionWind()
 	{
-		return bindless_buffers_float4[GetMesh().vb_pos_wind][vertexID];
+		return bindless_buffers_float4[descriptor_index(GetMesh().vb_pos_wind)][vertexID];
 	}
 
 	float4 GetUVSets()
@@ -136,13 +136,13 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_uvs < 0)
 			return 0;
-		return lerp(GetMesh().uv_range_min.xyxy, GetMesh().uv_range_max.xyxy, bindless_buffers_float4[GetMesh().vb_uvs][vertexID]);
+		return lerp(GetMesh().uv_range_min.xyxy, GetMesh().uv_range_max.xyxy, bindless_buffers_float4[descriptor_index(GetMesh().vb_uvs)][vertexID]);
 	}
 
 	ShaderMeshInstancePointer GetInstancePointer()
 	{
 		if (push.instances >= 0)
-			return bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + instanceID * sizeof(ShaderMeshInstancePointer));
+			return bindless_buffers[descriptor_index(push.instances)].Load<ShaderMeshInstancePointer>(push.instance_offset + instanceID * sizeof(ShaderMeshInstancePointer));
 
 		ShaderMeshInstancePointer poi;
 		poi.init();
@@ -154,7 +154,7 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_atl < 0)
 			return 0;
-		return bindless_buffers_float2[GetMesh().vb_atl][vertexID];
+		return bindless_buffers_float2[descriptor_index(GetMesh().vb_atl)][vertexID];
 	}
 
 	half4 GetVertexColor()
@@ -162,7 +162,7 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_col < 0)
 			return 1;
-		return bindless_buffers_half4[GetMesh().vb_col][vertexID];
+		return bindless_buffers_half4[descriptor_index(GetMesh().vb_col)][vertexID];
 	}
 	
 	float3 GetNormal()
@@ -170,7 +170,7 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_nor < 0)
 			return 0;
-		return bindless_buffers_float4[GetMesh().vb_nor][vertexID].xyz;
+		return bindless_buffers_float4[descriptor_index(GetMesh().vb_nor)][vertexID].xyz;
 	}
 
 	float4 GetTangent()
@@ -178,7 +178,7 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_tan < 0)
 			return 0;
-		return bindless_buffers_float4[GetMesh().vb_tan][vertexID];
+		return bindless_buffers_float4[descriptor_index(GetMesh().vb_tan)][vertexID];
 	}
 
 	ShaderMeshInstance GetInstance()
@@ -196,7 +196,7 @@ struct VertexInput
 		[branch]
 		if (GetInstance().vb_ao < 0)
 			return 1;
-		return bindless_buffers_half[NonUniformResourceIndex(GetInstance().vb_ao)][vertexID];
+		return bindless_buffers_half[NonUniformResourceIndex(descriptor_index(GetInstance().vb_ao))][vertexID];
 	}
 
 	half GetWetmap()
@@ -204,12 +204,12 @@ struct VertexInput
 		//[branch]
 		//if (GetInstance().vb_wetmap < 0)
 		//	return 0;
-		//return bindless_buffers_half[NonUniformResourceIndex(GetInstance().vb_wetmap)][vertexID];
+		//return bindless_buffers_half[NonUniformResourceIndex(descriptor_index(GetInstance().vb_wetmap))][vertexID];
 
 		// There is something seriously bad with AMD driver's shader compiler as the above commented version works incorrectly and this works correctly but only for wetmap
 		[branch]
 		if (GetInstance().vb_wetmap >= 0)
-			return bindless_buffers_half[NonUniformResourceIndex(GetInstance().vb_wetmap)][vertexID];
+			return bindless_buffers_half[NonUniformResourceIndex(descriptor_index(GetInstance().vb_wetmap))][vertexID];
 		return 0;
 	}
 };
@@ -559,7 +559,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (material.textures[DISPLACEMENTMAP].IsValid())
 	{
-		Texture2D<half4> tex = bindless_textures_half4[material.textures[DISPLACEMENTMAP].texture_descriptor];
+		Texture2D<half4> tex = bindless_textures_half4[descriptor_index(material.textures[DISPLACEMENTMAP].texture_descriptor)];
 		float2 uv = material.textures[DISPLACEMENTMAP].GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
 		float2 uv_dx = ddx_coarse(uv);
 		float2 uv_dy = ddy_coarse(uv);
@@ -669,12 +669,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 			if(chunk_coord.x >= -terrain.chunk_buffer_range && chunk_coord.x <= terrain.chunk_buffer_range && chunk_coord.y >= -terrain.chunk_buffer_range && chunk_coord.y <= terrain.chunk_buffer_range)
 			{
 				uint chunk_idx = flatten2D(chunk_coord + terrain.chunk_buffer_range, terrain.chunk_buffer_range * 2 + 1);
-				ShaderTerrainChunk chunk = bindless_structured_terrain_chunks[terrain.chunk_buffer][chunk_idx];
+				ShaderTerrainChunk chunk = bindless_structured_terrain_chunks[descriptor_index(terrain.chunk_buffer)][chunk_idx];
 				
 				[branch]
 				if(chunk.heightmap >= 0)
 				{
-					Texture2D terrain_heightmap = bindless_textures[NonUniformResourceIndex(chunk.heightmap)];
+					Texture2D terrain_heightmap = bindless_textures[NonUniformResourceIndex(descriptor_index(chunk.heightmap))];
 					float2 chunk_min = terrain.center_chunk_pos.xz + chunk_coord * terrain.chunk_size;
 					float2 chunk_max = terrain.center_chunk_pos.xz + terrain.chunk_size + chunk_coord * terrain.chunk_size;
 					float2 terrain_uv = saturate(inverse_lerp(chunk_min, chunk_max, surface.P.xz));
@@ -791,7 +791,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (camera.texture_ao_index >= 0)
 	{
-		surface.occlusion *= bindless_textures_half4[camera.texture_ao_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
+		surface.occlusion *= bindless_textures_half4[descriptor_index(camera.texture_ao_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
 	}
 #endif // CARTOON
 #endif // TRANSPARENT
@@ -897,7 +897,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (material.textures[NORMALMAP].IsValid())
 	{
-		Texture2D<half4> texture_normalmap = bindless_textures_half4[material.textures[NORMALMAP].texture_descriptor];
+		Texture2D<half4> texture_normalmap = bindless_textures_half4[descriptor_index(material.textures[NORMALMAP].texture_descriptor)];
 		const float2 UV_normalMap = material.textures[NORMALMAP].GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
 		bumpColor0 = 2 * texture_normalmap.Sample(sampler_objectshader, UV_normalMap - material.texMulAdd.ww).rg - 1;
 		bumpColor1 = 2 * texture_normalmap.Sample(sampler_objectshader, UV_normalMap + material.texMulAdd.zw).rg - 1;
@@ -905,7 +905,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (camera.texture_waterriples_index >= 0)
 	{
-		bumpColor2 = bindless_textures_half4[camera.texture_waterriples_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rg;
+		bumpColor2 = bindless_textures_half4[descriptor_index(camera.texture_waterriples_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rg;
 	}
 	surface.bumpColor = half3(bumpColor0 + bumpColor1 + bumpColor2, 1)  * material.GetRefraction();
 	surface.N = normalize(lerp(surface.N, mul(normalize(surface.bumpColor), TBN), material.GetNormalMapStrength()));
@@ -918,11 +918,11 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 		float4 reflectionUV = mul(camera.reflection_view_projection, float4(surface.P, 1));
 		reflectionUV.xy /= reflectionUV.w;
 		reflectionUV.xy = clipspace_to_uv(reflectionUV.xy) + surface.bumpColor.rg;
-		half3 reflectiveColor = bindless_textures_half4[camera.texture_reflection_index].SampleLevel(sampler_linear_mirror, reflectionUV.xy, 0).rgb;
+		half3 reflectiveColor = bindless_textures_half4[descriptor_index(camera.texture_reflection_index)].SampleLevel(sampler_linear_mirror, reflectionUV.xy, 0).rgb;
 		[branch]
 		if(camera.texture_reflection_depth_index >= 0)
 		{
-			float reflectiveDepth = bindless_textures[camera.texture_reflection_depth_index].SampleLevel(sampler_point_clamp, reflectionUV.xy, 0).r;
+			float reflectiveDepth = bindless_textures[descriptor_index(camera.texture_reflection_depth_index)].SampleLevel(sampler_point_clamp, reflectionUV.xy, 0).r;
 			float3 reflectivePosition = reconstruct_position(reflectionUV.xy, reflectiveDepth, camera.reflection_inverse_view_projection);
 			float4 water_plane = camera.reflection_plane;
 			float water_depth = -dot(float4(reflectivePosition, 1), water_plane);
@@ -952,7 +952,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 		[branch]
 		if (camera.texture_refraction_index >= 0)
 		{
-			Texture2D<half4> texture_refraction = bindless_textures_half4[camera.texture_refraction_index];
+			Texture2D<half4> texture_refraction = bindless_textures_half4[descriptor_index(camera.texture_refraction_index)];
 			float2 size;
 			float mipLevels;
 			texture_refraction.GetDimensions(0, size.x, size.y, mipLevels);
@@ -998,13 +998,13 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (camera.texture_ssr_index >= 0)
 	{
-		half4 ssr = bindless_textures_half4[camera.texture_ssr_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0);
+		half4 ssr = bindless_textures_half4[descriptor_index(camera.texture_ssr_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0);
 		lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb * surface.F, ssr.a);
 	}
 	[branch]
 	if (camera.texture_ssgi_index >= 0)
 	{
-		surface.ssgi = bindless_textures_half4[camera.texture_ssgi_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rgb;
+		surface.ssgi = bindless_textures_half4[descriptor_index(camera.texture_ssgi_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rgb;
 	}
 #endif // CARTOON
 #endif // TRANSPARENT
@@ -1018,7 +1018,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 		// Water refraction:
 		float4 water_plane = camera.reflection_plane;
 		const float camera_above_water = dot(float4(camera.position, 1), water_plane) < 0; 
-		Texture2D<half4> texture_refraction = bindless_textures_half4[camera.texture_refraction_index];
+		Texture2D<half4> texture_refraction = bindless_textures_half4[descriptor_index(camera.texture_refraction_index)];
 		// First sample using full perturbation:
 		float2 refraction_uv = ScreenCoord.xy + surface.bumpColor.rg;
 		float refraction_depth = find_max_depth(refraction_uv, 2, 2);

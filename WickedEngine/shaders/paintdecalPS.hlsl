@@ -17,7 +17,7 @@ float4 main(Input input) : SV_TARGET
 	float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
 	if (is_saturated(uvw))
 	{
-		Texture2D in_texture = bindless_textures[g_xPaintDecalTexture];
+		Texture2D in_texture = bindless_textures[descriptor_index(g_xPaintDecalTexture)];
 		color = in_texture.Sample(sampler_linear_clamp, uvw.xy);
 		
 		// blend out if close to cube Z:

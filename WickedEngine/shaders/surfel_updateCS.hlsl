@@ -1,3 +1,4 @@
+#define TEXTURE_SLOT_NONUNIFORM
 #include "globals.hlsli"
 #include "ShaderInterop_SurfelGI.h"
 #include "brdf.hlsli"
