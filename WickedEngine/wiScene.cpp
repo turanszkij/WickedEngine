@@ -783,7 +783,7 @@ namespace wi::scene
 				const uint64_t alignment =
 					device->GetMinOffsetAlignment(&desc) *
 					sizeof(IndirectDrawArgsIndexedInstanced) * // additional alignment
-					sizeof(MeshComponent::Vertex_POS32) // additional alignment
+					sizeof(MeshComponent::Vertex_POS32W) // additional alignment
 					;
 
 				desc.size =
