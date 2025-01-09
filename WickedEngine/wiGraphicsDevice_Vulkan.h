@@ -681,7 +681,7 @@ namespace wi::graphics
 				bindlessStorageTexelBuffers.destroy(device);
 				bindlessSamplers.destroy(device);
 				bindlessAccelerationStructures.destroy(device);
-				Update(~0, 0); // destroy all remaining
+				Update(~0ull, 0); // destroy all remaining
 				vmaDestroyAllocator(allocator);
 				vmaDestroyAllocator(externalAllocator);
 				vkDestroyDevice(device, nullptr);
