@@ -1665,8 +1665,18 @@ using namespace vulkan_internal;
 		poolInfo.pPoolSizes = poolSizes;
 		poolInfo.maxSets = poolSize;
 
+		destroy(); // issues destroy if already exists, nop otherwise
 		res = vkCreateDescriptorPool(device->device, &poolInfo, nullptr, &descriptorPool);
 		vulkan_check(res);
+
+#if 0
+		VkDebugUtilsObjectNameInfoEXT info{ VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+		info.pObjectName = "DescriptorBinderPool";
+		info.objectType = VK_OBJECT_TYPE_DESCRIPTOR_POOL;
+		info.objectHandle = (uint64_t)descriptorPool;
+		res = vkSetDebugUtilsObjectNameEXT(device->device, &info);
+		vulkan_check(res);
+#endif
 
 		// WARNING: MUST NOT CALL reset() HERE!
 		//	This is because init can be called mid-frame when there is allocation error, but the bindings must be retained!
@@ -1758,7 +1768,6 @@ using namespace vulkan_internal;
 			while (res == VK_ERROR_OUT_OF_POOL_MEMORY)
 			{
 				binder_pool.poolSize *= 2;
-				binder_pool.destroy();
 				binder_pool.init(device);
 				allocInfo.descriptorPool = binder_pool.descriptorPool;
 				res = vkAllocateDescriptorSets(device->device, &allocInfo, &descriptorSet);

@@ -508,6 +508,15 @@ namespace wi::graphics
 					VkResult res = vkCreateDescriptorPool(device->device, &poolInfo, nullptr, &descriptorPool);
 					vulkan_check(res);
 
+#if 0
+					VkDebugUtilsObjectNameInfoEXT info{ VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+					info.pObjectName = "BindlessDescriptorHeap";
+					info.objectType = VK_OBJECT_TYPE_DESCRIPTOR_POOL;
+					info.objectHandle = (uint64_t)descriptorPool;
+					res = vkSetDebugUtilsObjectNameEXT(device->device, &info);
+					vulkan_check(res);
+#endif
+
 					VkDescriptorSetLayoutBinding binding = {};
 					binding.descriptorType = type;
 					binding.binding = 0;
