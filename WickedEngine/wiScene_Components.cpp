@@ -1441,8 +1441,8 @@ namespace wi::scene
 				geometry.triangles.vertex_count = (uint32_t)vertex_positions.size();
 				if (so_pos.IsValid())
 				{
-					geometry.triangles.vertex_format = Vertex_POS32::FORMAT;
-					geometry.triangles.vertex_stride = sizeof(Vertex_POS32);
+					geometry.triangles.vertex_format = Format::R32G32B32_FLOAT;
+					geometry.triangles.vertex_stride = sizeof(Vertex_POS32W);
 				}
 				else
 				{

@@ -676,7 +676,7 @@ struct Surface
 				if(chunk_coord.x >= -terrain.chunk_buffer_range && chunk_coord.x <= terrain.chunk_buffer_range && chunk_coord.y >= -terrain.chunk_buffer_range && chunk_coord.y <= terrain.chunk_buffer_range)
 				{
 					uint chunk_idx = flatten2D(chunk_coord + terrain.chunk_buffer_range, terrain.chunk_buffer_range * 2 + 1);
-					ShaderTerrainChunk chunk = bindless_structured_terrain_chunks[descriptor_index(terrain.chunk_buffer)][chunk_idx];
+					ShaderTerrainChunk chunk = bindless_structured_terrain_chunks[NonUniformResourceIndex(descriptor_index(terrain.chunk_buffer))][chunk_idx];
 				
 					[branch]
 					if(chunk.heightmap >= 0)
