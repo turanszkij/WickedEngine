@@ -80,7 +80,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		result = bindless_textures_half4[descriptor_index(tonemap_push.texture_input)].SampleLevel(sampler_linear_clamp, uv, 0);
 	}
 
-	exposure *= bindless_buffers[descriptor_index(tonemap_push.buffer_input_luminance)].Load<float>(LUMINANCE_BUFFER_OFFSET_EXPOSURE);
+	[branch]
+	if (tonemap_push.buffer_input_luminance >= 0)
+	{
+		exposure *= bindless_buffers[descriptor_index(tonemap_push.buffer_input_luminance)].Load<float>(LUMINANCE_BUFFER_OFFSET_EXPOSURE);
+	}
+	
 	result.rgb *= exposure;
 
 	[branch]

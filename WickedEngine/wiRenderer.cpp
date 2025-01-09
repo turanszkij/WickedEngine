@@ -190,20 +190,6 @@ Texture texture_detailNoise;
 Texture texture_curlNoise;
 Texture texture_weatherMap;
 
-// A dummy luminance buffer with exposure set to 1.
-// This avoids having to branch in shaders that consume the exposure value
-// when eye adaption is disabled.
-// It also works around an apparent bug in the drivers for certain GTX 10xx cards
-// where just testing if a bindless buffer descriptor is valid requires that it is valid.
-// See: https://github.com/turanszkij/WickedEngine/issues/450
-GPUBuffer luminance_dummy;
-
-// Dummy buffers preinitialized to invalid scene structs, avoids possible GPU crash when
-//  shader compiler is incorrectly pulling buffer desciptor load outside valid branch
-GPUBuffer instance_dummy;
-GPUBuffer geometry_dummy;
-GPUBuffer material_dummy;
-
 // Direct reference to a renderable instance:
 struct RenderBatch
 {
@@ -2114,61 +2100,6 @@ void LoadBuffers()
 	}
 
 	{
-		// the dummy buffer is read-only so only the first 'exposure' value is needed,
-		// not the luminance or histogram values in the full version of the buffer used
-		// when eye adaption is enabled.
-		float values[1] = { 1 };
-
-		GPUBufferDesc desc;
-		desc.size = sizeof(values);
-		desc.bind_flags = BindFlag::SHADER_RESOURCE;
-		desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-		device->CreateBuffer(&desc, values, &luminance_dummy);
-		device->SetName(&luminance_dummy, "luminance_dummy");
-
-		static_assert(LUMINANCE_BUFFER_OFFSET_EXPOSURE == 0);
-	}
-
-	{
-		ShaderMeshInstance data;
-		data.init();
-
-		GPUBufferDesc desc;
-		desc.stride = sizeof(data);
-		desc.size = desc.stride;
-		desc.bind_flags = BindFlag::SHADER_RESOURCE;
-		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-		device->CreateBuffer(&desc, &data, &instance_dummy);
-		device->SetName(&instance_dummy, "instance_dummy");
-	}
-
-	{
-		ShaderGeometry data;
-		data.init();
-
-		GPUBufferDesc desc;
-		desc.stride = sizeof(data);
-		desc.size = desc.stride;
-		desc.bind_flags = BindFlag::SHADER_RESOURCE;
-		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-		device->CreateBuffer(&desc, &data, &geometry_dummy);
-		device->SetName(&geometry_dummy, "geometry_dummy");
-	}
-
-	{
-		ShaderMaterial data;
-		data.init();
-
-		GPUBufferDesc desc;
-		desc.stride = sizeof(data);
-		desc.size = desc.stride;
-		desc.bind_flags = BindFlag::SHADER_RESOURCE;
-		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-		device->CreateBuffer(&desc, &data, &material_dummy);
-		device->SetName(&material_dummy, "material_dummy");
-	}
-
-	{
 		TextureDesc desc;
 		desc.type = TextureDesc::Type::TEXTURE_3D;
 		desc.format = Format::R16_FLOAT;
@@ -2190,29 +2121,6 @@ void LoadBuffers()
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_CAUSTICS]);
 		device->SetName(&textures[TEXTYPE_2D_CAUSTICS], "textures[TEXTYPE_2D_CAUSTICS]");
-	}
-	{
-		// Note: Create dummy shadow map atlas to avoid issue with AMD RX 6650 GPU
-		//	It seems like it incorectly handles dynamic branch on descriptor index
-		TextureDesc desc;
-		desc.width = 1;
-		desc.height = 1;
-		desc.format = format_depthbuffer_shadowmap;
-		desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
-		desc.layout = ResourceState::SHADER_RESOURCE;
-		desc.misc_flags = ResourceMiscFlag::TEXTURE_COMPATIBLE_COMPRESSION;
-		device->CreateTexture(&desc, nullptr, &shadowMapAtlas);
-		device->SetName(&shadowMapAtlas, "shadowMapAtlas");
-
-		desc.format = format_rendertarget_shadowmap;
-		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-		desc.layout = ResourceState::SHADER_RESOURCE;
-		desc.clear.color[0] = 1;
-		desc.clear.color[1] = 1;
-		desc.clear.color[2] = 1;
-		desc.clear.color[3] = 0;
-		device->CreateTexture(&desc, nullptr, &shadowMapAtlas_Transparent);
-		device->SetName(&shadowMapAtlas_Transparent, "shadowMapAtlas_Transparent");
 	}
 }
 void SetUpStates()
@@ -4074,10 +3982,13 @@ void UpdatePerFrameData(
 	frameCB.texture_wind_prev_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_WIND_PREV], SubresourceType::SRV);
 	frameCB.texture_caustics_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_CAUSTICS], SubresourceType::SRV);
 
-	frameCB.texture_shadowatlas_index = device->GetDescriptorIndex(&shadowMapAtlas, SubresourceType::SRV);
-	frameCB.texture_shadowatlas_transparent_index = device->GetDescriptorIndex(&shadowMapAtlas_Transparent, SubresourceType::SRV);
-	frameCB.shadow_atlas_resolution.x = shadowMapAtlas.desc.width;
-	frameCB.shadow_atlas_resolution.y = shadowMapAtlas.desc.height;
+	// Note: shadow maps always assumed to be valid to avoid shader branching logic
+	const Texture& shadowMap = shadowMapAtlas.IsValid() ? shadowMapAtlas : *wi::texturehelper::getBlack();
+	const Texture& shadowMapTransparent = shadowMapAtlas_Transparent.IsValid() ? shadowMapAtlas_Transparent : *wi::texturehelper::getWhite();
+	frameCB.texture_shadowatlas_index = device->GetDescriptorIndex(&shadowMap, SubresourceType::SRV);
+	frameCB.texture_shadowatlas_transparent_index = device->GetDescriptorIndex(&shadowMapTransparent, SubresourceType::SRV);
+	frameCB.shadow_atlas_resolution.x = shadowMap.desc.width;
+	frameCB.shadow_atlas_resolution.y = shadowMap.desc.height;
 	frameCB.shadow_atlas_resolution_rcp.x = 1.0f / frameCB.shadow_atlas_resolution.x;
 	frameCB.shadow_atlas_resolution_rcp.y = 1.0f / frameCB.shadow_atlas_resolution.y;
 
@@ -4635,20 +4546,6 @@ void UpdatePerFrameData(
 	frameCB.lights = ShaderEntityIterator(lightarray_offset, lightarray_count);
 	frameCB.decals = ShaderEntityIterator(decalarray_offset, decalarray_count);
 	frameCB.forces = ShaderEntityIterator(forcefieldarray_offset, forcefieldarray_count);
-
-	// GPU crash workarounds, setting buffers with invalid data:
-	if (frameCB.scene.instancebuffer < 0)
-	{
-		frameCB.scene.instancebuffer = device->GetDescriptorIndex(&instance_dummy, SubresourceType::SRV);
-	}
-	if (frameCB.scene.geometrybuffer < 0)
-	{
-		frameCB.scene.geometrybuffer = device->GetDescriptorIndex(&geometry_dummy, SubresourceType::SRV);
-	}
-	if (frameCB.scene.materialbuffer < 0)
-	{
-		frameCB.scene.materialbuffer = device->GetDescriptorIndex(&material_dummy, SubresourceType::SRV);
-	}
 }
 void UpdateRenderData(
 	const Visibility& vis,
@@ -10822,7 +10719,7 @@ void ComputeBloom(
 		bloom.exposure = exposure;
 		bloom.texture_input = device->GetDescriptorIndex(&input, SubresourceType::SRV);
 		bloom.texture_output = device->GetDescriptorIndex(&res.texture_bloom, SubresourceType::UAV);
-		bloom.buffer_input_luminance = device->GetDescriptorIndex((buffer_luminance == nullptr) ? &luminance_dummy : buffer_luminance, SubresourceType::SRV);
+		bloom.buffer_input_luminance = device->GetDescriptorIndex(buffer_luminance, SubresourceType::SRV);
 		device->PushConstants(&bloom, sizeof(bloom), cmd);
 
 		device->Dispatch(
@@ -16505,7 +16402,7 @@ void Postprocess_Tonemap(
 	}
 	tonemap_push.flags_hdrcalibration |= XMConvertFloatToHalf(hdr_calibration) << 16u;
 	tonemap_push.texture_input = device->GetDescriptorIndex(&input, SubresourceType::SRV);
-	tonemap_push.buffer_input_luminance = device->GetDescriptorIndex((buffer_luminance == nullptr) ? &luminance_dummy : buffer_luminance, SubresourceType::SRV);
+	tonemap_push.buffer_input_luminance = device->GetDescriptorIndex(buffer_luminance, SubresourceType::SRV);
 	tonemap_push.texture_input_distortion = device->GetDescriptorIndex(texture_distortion, SubresourceType::SRV);
 	tonemap_push.texture_input_distortion_overlay = device->GetDescriptorIndex(texture_distortion_overlay, SubresourceType::SRV);
 	tonemap_push.texture_colorgrade_lookuptable = device->GetDescriptorIndex(texture_colorgradinglut, SubresourceType::SRV);
