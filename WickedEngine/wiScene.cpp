@@ -782,8 +782,7 @@ namespace wi::scene
 
 				const uint64_t alignment =
 					device->GetMinOffsetAlignment(&desc) *
-					sizeof(IndirectDrawArgsIndexedInstanced) * // additional alignment
-					sizeof(MeshComponent::Vertex_POS32W) // additional alignment
+					sizeof(IndirectDrawArgsIndexedInstanced) // additional alignment
 					;
 
 				desc.size =
@@ -799,7 +798,6 @@ namespace wi::scene
 				uint64_t buffer_offset = 0ull;
 
 				const uint32_t indirect_stride = sizeof(IndirectDrawArgsIndexedInstanced);
-				buffer_offset = AlignTo(buffer_offset, sizeof(IndirectDrawArgsIndexedInstanced)); // additional structured buffer alignment
 				buffer_offset = AlignTo(buffer_offset, alignment);
 				impostor_indirect.offset = buffer_offset;
 				impostor_indirect.size = sizeof(IndirectDrawArgsIndexedInstanced);

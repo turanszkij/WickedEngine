@@ -145,7 +145,6 @@ namespace wi
 			uint64_t buffer_offset = 0ull;
 
 			const uint32_t indirect_stride = sizeof(IndirectDrawArgsIndexedInstanced);
-			buffer_offset = AlignTo(buffer_offset, sizeof(IndirectDrawArgsIndexedInstanced)); // additional structured buffer alignment
 			buffer_offset = AlignTo(buffer_offset, alignment);
 			indirect_view.offset = buffer_offset;
 			indirect_view.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, indirect_view.offset, indirect_view.size, nullptr, &indirect_stride);
@@ -155,7 +154,6 @@ namespace wi
 			buffer_offset += indirect_view.size;
 
 			const uint32_t simulation_stride = sizeof(PatchSimulationData);
-			buffer_offset = AlignTo(buffer_offset, sizeof(PatchSimulationData)); // additional structured buffer alignment
 			buffer_offset = AlignTo(buffer_offset, alignment);
 			simulation_view.offset = buffer_offset;
 			simulation_view.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, simulation_view.offset, simulation_view.size, nullptr, &simulation_stride);
