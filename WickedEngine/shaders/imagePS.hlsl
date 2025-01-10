@@ -4,6 +4,11 @@ float4 main(VertextoPixel input) : SV_TARGET
 {
 	SamplerState sam = bindless_samplers[descriptor_index(image.sampler_index)];
 
+	const half hdr_scaling = unpack_half2(image.hdr_scaling_aspect).x;
+	const half canvas_aspect = unpack_half2(image.hdr_scaling_aspect).y;
+	const half border_soften = unpack_half2(image.bordersoften_saturation).x;
+	const half saturation = unpack_half2(image.bordersoften_saturation).y;
+
 	float4 uvsets = input.compute_uvs();
 
 	half4 color = unpack_half4(image.packed_color);
@@ -30,10 +35,13 @@ float4 main(VertextoPixel input) : SV_TARGET
 	const half2 mask_alpha_range = unpack_half2(image.mask_alpha_range);
 	mask.a = smoothstep(mask_alpha_range.x, mask_alpha_range.y, mask.a);
 	
+	float2 uv_screen = input.uv_screen();
+	
 	if(image.flags & IMAGE_FLAG_DISTORTION_MASK)
 	{
 		// Only mask alpha is used for multiplying, rg is used for distorting background:
 		color.a *= mask.a;
+		uv_screen += mask.rg * 2 - 1;
 	}
 	else
 	{
@@ -44,13 +52,19 @@ float4 main(VertextoPixel input) : SV_TARGET
 	if (image.texture_background_index >= 0)
 	{
 		Texture2D<half4> backgroundTexture = bindless_textures_half4[descriptor_index(image.texture_background_index)];
-		float2 uv_screen = input.uv_screen();
-		if(image.flags & IMAGE_FLAG_DISTORTION_MASK)
-		{
-			uv_screen += mask.rg * 2 - 1;
-		}
-		half3 background = backgroundTexture.Sample(sam, uv_screen).rgb;
+		const half3 background = backgroundTexture.Sample(sam, uv_screen).rgb;
 		color = half4(lerp(background, color.rgb, color.a), mask.a);
+	}
+
+	[branch]
+	if (image.flags & IMAGE_FLAG_HIGHLIGHT)
+	{
+		const half2 uv = half2(uv_screen) * half2(canvas_aspect, 1);
+		const half2 highlight_xy = unpack_half2(image.highlight_xy);
+		const half4 highlight_color_spread = unpack_half4(image.highlight_color_spread);
+		const half3 highlight_color = highlight_color_spread.xyz;
+		const half highlight_spread = highlight_color_spread.w;
+		color.rgb = lerp(color.rgb, highlight_color, smoothstep(highlight_spread, 0, saturate(distance(uv, highlight_xy))));
 	}
 
 	[branch]
@@ -68,21 +82,22 @@ float4 main(VertextoPixel input) : SV_TARGET
 	else if (image.flags & IMAGE_FLAG_OUTPUT_COLOR_SPACE_LINEAR)
 	{
 		color.rgb = RemoveSRGBCurve_Fast(color.rgb);
-		color.rgb *= image.hdr_scaling;
+		color.rgb *= hdr_scaling;
 	}
 	
 	[branch]
-	if (image.border_soften > 0)
+	if (border_soften > 0)
 	{
-		half edge = max(abs(input.edge.x), abs(input.edge.y));
-		color.a *= smoothstep(0, image.border_soften, 1 - edge);
+		const half edge = max(abs(input.edge.x), abs(input.edge.y));
+		color.a *= smoothstep(0, border_soften, 1 - edge);
 	}
 
 	[branch]
 	if (image.angular_softness_mad > 0)
 	{
-		float2 direction = normalize(uvsets.xy - 0.5);
-		float dp = dot(direction, image.angular_softness_direction);
+		const half2 angular_softness_direction = unpack_half2(image.angular_softness_direction);
+		const half2 direction = normalize(uvsets.xy - 0.5);
+		half dp = dot(direction, angular_softness_direction);
 		if (image.flags & IMAGE_FLAG_ANGULAR_DOUBLESIDED)
 		{
 			dp = abs(dp);
@@ -91,8 +106,8 @@ float4 main(VertextoPixel input) : SV_TARGET
 		{
 			dp = saturate(dp);
 		}
-		float2 angular_softness_mad = unpack_half2(image.angular_softness_mad);
-		float angular = saturate(mad(dp, angular_softness_mad.x, angular_softness_mad.y));
+		const half2 angular_softness_mad = unpack_half2(image.angular_softness_mad);
+		half angular = saturate(mad(dp, angular_softness_mad.x, angular_softness_mad.y));
 		if (image.flags & IMAGE_FLAG_ANGULAR_INVERSE)
 		{
 			angular = 1 - angular;
@@ -101,7 +116,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 		color.a *= angular;
 	}
 	
-	color.rgb = mul(saturationMatrix(image.saturation), color.rgb);
+	color.rgb = mul(saturationMatrix(saturation), color.rgb);
 
 	return color;
 }

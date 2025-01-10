@@ -374,6 +374,21 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			break;
 		}
 
+		theme.shadow_highlight = true;
+		theme.shadow_highlight_spread = 0.6f;
+		theme.shadow_highlight_color = theme_color_focus;
+		theme.shadow_highlight_color.x *= 1.4f;
+		theme.shadow_highlight_color.y *= 1.4f;
+		theme.shadow_highlight_color.z *= 1.4f;
+		if ((Theme)args.userdata == Theme::Nord)
+		{
+			theme.shadow_highlight_color = wi::Color::White();
+		}
+
+		//theme.image.highlight_color = theme_color_focus;
+		//theme.image.highlight_spread = 0.3f;
+		//theme.image.highlight = true;
+
 		theme.tooltipImage = theme.image;
 		theme.tooltipImage.color = theme_color_idle;
 		theme.tooltipFont = theme.font;
@@ -473,6 +488,25 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editorscene->tabCloseButton.SetColor(wi::Color::Error(), wi::gui::WIDGET_ID_FOCUS);
 			scene_id++;
 		}
+
+		editor->generalButton.SetShadowRadius(1);
+		editor->graphicsButton.SetShadowRadius(1);
+		editor->cameraButton.SetShadowRadius(1);
+		editor->materialsButton.SetShadowRadius(1);
+		editor->paintToolButton.SetShadowRadius(1);
+
+		editor->generalButton.SetShadowColor(wi::Color::Transparent());
+		editor->graphicsButton.SetShadowColor(wi::Color::Transparent());
+		editor->cameraButton.SetShadowColor(wi::Color::Transparent());
+		editor->materialsButton.SetShadowColor(wi::Color::Transparent());
+		editor->paintToolButton.SetShadowColor(wi::Color::Transparent());
+
+		editor->generalButton.SetShadowHighlightSpread(0.2f);
+		editor->graphicsButton.SetShadowHighlightSpread(0.2f);
+		editor->cameraButton.SetShadowHighlightSpread(0.2f);
+		editor->materialsButton.SetShadowHighlightSpread(0.2f);
+		editor->paintToolButton.SetShadowHighlightSpread(0.2f);
+
 		for (int i = 0; i < arraysize(editor->newSceneButton.sprites); ++i)
 		{
 			editor->newSceneButton.sprites[i].params.enableCornerRounding();
@@ -487,30 +521,35 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->newEntityCombo.sprites[i].params.corners_rounding[2].radius = 20;
 			editor->newEntityCombo.sprites[i].params.corners_rounding[3].radius = 20;
 
+			//editor->generalButton.sprites[i].params.enableHighlight();
 			editor->generalButton.sprites[i].params.enableCornerRounding();
 			editor->generalButton.sprites[i].params.corners_rounding[0].radius = 20;
 			editor->generalButton.sprites[i].params.corners_rounding[1].radius = 20;
 			editor->generalButton.sprites[i].params.corners_rounding[2].radius = 20;
 			editor->generalButton.sprites[i].params.corners_rounding[3].radius = 20;
 
+			//editor->graphicsButton.sprites[i].params.enableHighlight();
 			editor->graphicsButton.sprites[i].params.enableCornerRounding();
 			editor->graphicsButton.sprites[i].params.corners_rounding[0].radius = 20;
 			editor->graphicsButton.sprites[i].params.corners_rounding[1].radius = 20;
 			editor->graphicsButton.sprites[i].params.corners_rounding[2].radius = 20;
 			editor->graphicsButton.sprites[i].params.corners_rounding[3].radius = 20;
 
+			//editor->cameraButton.sprites[i].params.enableHighlight();
 			editor->cameraButton.sprites[i].params.enableCornerRounding();
 			editor->cameraButton.sprites[i].params.corners_rounding[0].radius = 20;
 			editor->cameraButton.sprites[i].params.corners_rounding[1].radius = 20;
 			editor->cameraButton.sprites[i].params.corners_rounding[2].radius = 20;
 			editor->cameraButton.sprites[i].params.corners_rounding[3].radius = 20;
 
+			//editor->materialsButton.sprites[i].params.enableHighlight();
 			editor->materialsButton.sprites[i].params.enableCornerRounding();
 			editor->materialsButton.sprites[i].params.corners_rounding[0].radius = 20;
 			editor->materialsButton.sprites[i].params.corners_rounding[1].radius = 20;
 			editor->materialsButton.sprites[i].params.corners_rounding[2].radius = 20;
 			editor->materialsButton.sprites[i].params.corners_rounding[3].radius = 20;
 
+			//editor->paintToolButton.sprites[i].params.enableHighlight();
 			editor->paintToolButton.sprites[i].params.enableCornerRounding();
 			editor->paintToolButton.sprites[i].params.corners_rounding[0].radius = 20;
 			editor->paintToolButton.sprites[i].params.corners_rounding[1].radius = 20;
@@ -714,9 +753,12 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->aboutLabel.sprites[i].params.blendFlag = wi::enums::BLENDMODE_ALPHA;
 		}
 
-		editor->guiScalingCombo.SetShadowRadius(0);
+		editor->guiScalingCombo.SetShadowRadius(1);
+		editor->guiScalingCombo.SetShadowColor(wi::Color::Transparent());
+		editor->guiScalingCombo.SetShadowHighlightSpread(0.2f);
 		for (auto& sprite : editor->guiScalingCombo.sprites)
 		{
+			//sprite.params.enableHighlight();
 			sprite.params.enableCornerRounding();
 			sprite.params.corners_rounding[0].radius = 10;
 			sprite.params.corners_rounding[1].radius = 10;

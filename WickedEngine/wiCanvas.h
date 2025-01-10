@@ -36,32 +36,39 @@ namespace wi
 		}
 
 		// How many pixels there are per inch
-		inline float GetDPI() const { return dpi * scaling; }
+		constexpr float GetDPI() const { return dpi * scaling; }
 		// The scaling factor between logical and physical coordinates
-		inline float GetDPIScaling() const { return GetDPI() / 96.f; }
+		constexpr float GetDPIScaling() const { return GetDPI() / 96.f; }
 		// Convert from logical to physical coordinates
-		inline uint32_t LogicalToPhysical(float logical) const { return uint32_t(logical * GetDPIScaling()); }
+		constexpr uint32_t LogicalToPhysical(float logical) const { return uint32_t(logical * GetDPIScaling()); }
 		// Convert from physical to logical coordinates
-		inline float PhysicalToLogical(uint32_t physical) const { return float(physical) / GetDPIScaling(); }
+		constexpr float PhysicalToLogical(uint32_t physical) const { return float(physical) / GetDPIScaling(); }
 		// Returns native resolution width in pixels:
 		//	Use this for texture allocations
 		//	Use this for scissor, viewport
-		inline uint32_t GetPhysicalWidth() const { return width; }
+		constexpr uint32_t GetPhysicalWidth() const { return width; }
 		// Returns native resolution height in pixels:
 		//	Use this for texture allocations
 		//	Use this for scissor, viewport
-		inline uint32_t GetPhysicalHeight() const { return height; }
+		constexpr uint32_t GetPhysicalHeight() const { return height; }
 		// Returns the width with DPI scaling applied (subpixel size):
 		//	Use this for logic and positioning drawable elements
-		inline float GetLogicalWidth() const { return PhysicalToLogical(GetPhysicalWidth()); }
+		constexpr float GetLogicalWidth() const { return PhysicalToLogical(GetPhysicalWidth()); }
 		// Returns the height with DPI scaling applied (subpixel size):
 		//	Use this for logic and positioning drawable elements
-		inline float GetLogicalHeight() const { return PhysicalToLogical(GetPhysicalHeight()); }
+		constexpr float GetLogicalHeight() const { return PhysicalToLogical(GetPhysicalHeight()); }
 		// Returns projection matrix that maps logical to physical space
 		//	Use this to render to a graphics viewport
 		inline XMMATRIX GetProjection() const
 		{
 			return XMMatrixOrthographicOffCenterLH(0, (float)GetLogicalWidth(), (float)GetLogicalHeight(), 0, -1, 1);
+		}
+		// Returns the aspect (width/height)
+		constexpr float GetAspect() const
+		{
+			if (height == 0)
+				return float(width);
+			return float(width) / float(height);
 		}
 	};
 

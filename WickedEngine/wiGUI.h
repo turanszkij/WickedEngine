@@ -116,6 +116,9 @@ namespace wi::gui
 			bool background = params.isBackgroundEnabled();
 			bool corner_rounding = params.isCornerRoundingEnabled();
 			wi::image::Params::Rounding corners_rounding[arraysize(params.corners_rounding)];
+			bool highlight = false;
+			XMFLOAT3 highlight_color = XMFLOAT3(1, 1, 1);
+			float highlight_spread = 1;
 
 			void Apply(wi::image::Params& params) const
 			{
@@ -139,6 +142,16 @@ namespace wi::gui
 				{
 					params.disableCornerRounding();
 				}
+				if (highlight)
+				{
+					params.enableHighlight();
+				}
+				else
+				{
+					params.disableHighlight();
+				}
+				params.highlight_color = highlight_color;
+				params.highlight_spread = highlight_spread;
 				std::memcpy(params.corners_rounding, corners_rounding, sizeof(corners_rounding));
 			}
 			void CopyFrom(const wi::image::Params& params)
@@ -147,22 +160,11 @@ namespace wi::gui
 				blendFlag = params.blendFlag;
 				sampleFlag = params.sampleFlag;
 				quality = params.quality;
-				if (params.isBackgroundEnabled())
-				{
-					background = true;
-				}
-				else
-				{
-					background = false;
-				}
-				if (params.isCornerRoundingEnabled())
-				{
-					corner_rounding = true;
-				}
-				else
-				{
-					corner_rounding = false;
-				}
+				background = params.isBackgroundEnabled();
+				corner_rounding = params.isCornerRoundingEnabled();
+				highlight = params.isHighlightEnabled();
+				highlight_color = params.highlight_color;
+				highlight_spread = params.highlight_spread;
 				std::memcpy(corners_rounding, params.corners_rounding, sizeof(corners_rounding));
 			}
 		} image;
@@ -208,6 +210,9 @@ namespace wi::gui
 		} font;
 
 		wi::Color shadow_color = wi::Color::Shadow(); // shadow color for whole widget
+		bool shadow_highlight = false;
+		XMFLOAT3 shadow_highlight_color = XMFLOAT3(1, 1, 1);
+		float shadow_highlight_spread = 1;
 
 		Image tooltipImage;
 		Font tooltipFont;
@@ -258,6 +263,9 @@ namespace wi::gui
 		LocalizationEnabled localization_enabled = LocalizationEnabled::All;
 		float shadow = 1; // shadow radius
 		wi::Color shadow_color = wi::Color::Shadow();
+		bool shadow_highlight = false;
+		XMFLOAT3 shadow_highlight_color = XMFLOAT3(1, 1, 1);
+		float shadow_highlight_spread = 1;
 		WIDGETSTATE state = IDLE;
 		float tooltip_shadow = 1; // shadow radius
 		wi::Color tooltip_shadow_color = wi::Color::Shadow();
@@ -296,6 +304,13 @@ namespace wi::gui
 		float GetShadowRadius() const { return shadow; }
 		void SetShadowRadius(float value) { shadow = value; }
 
+		bool IsShadowHighlightEnabled() { return shadow_highlight; }
+		void SetShadowHighlightEnabled(bool value) { shadow_highlight = value; }
+		XMFLOAT3 GetShadowHighlightColor() const { return shadow_highlight_color; }
+		void SetShadowHighlightColor(const XMFLOAT3& value) { shadow_highlight_color = value; }
+		float GetShadowHighlightSpread() const { return shadow_highlight_spread; }
+		void SetShadowHighlightSpread(float value) { shadow_highlight_spread = value; }
+
 		virtual void ResizeLayout() {};
 		virtual void Update(const wi::Canvas& canvas, float dt);
 		virtual void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const;
@@ -327,6 +342,7 @@ namespace wi::gui
 
 		void ApplyScissor(const wi::Canvas& canvas, const wi::graphics::Rect rect, wi::graphics::CommandList cmd, bool constrain_to_parent = true) const;
 		wi::primitive::Hitbox2D GetPointerHitbox(bool constrained = true) const;
+		XMFLOAT2 GetPointerHighlightPos(const wi::Canvas& canvas) const;
 
 		wi::primitive::Hitbox2D active_area; // Pointer hitbox constrain area
 		void HitboxConstrain(wi::primitive::Hitbox2D& hb) const;
