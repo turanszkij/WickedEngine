@@ -2573,6 +2573,7 @@ std::mutex queue_locker;
 			}
 			descriptorheap_res.fenceValue = descriptorheap_res.fence->GetCompletedValue();
 
+			allocationhandler->free_bindless_res.reserve(BINDLESS_RESOURCE_CAPACITY);
 			for (int i = 0; i < BINDLESS_RESOURCE_CAPACITY; ++i)
 			{
 				allocationhandler->free_bindless_res.push_back(BINDLESS_RESOURCE_CAPACITY - i - 1);
@@ -2605,6 +2606,7 @@ std::mutex queue_locker;
 			}
 			descriptorheap_sam.fenceValue = descriptorheap_sam.fence->GetCompletedValue();
 
+			allocationhandler->free_bindless_sam.reserve(BINDLESS_SAMPLER_CAPACITY);
 			for (int i = 0; i < BINDLESS_SAMPLER_CAPACITY; ++i)
 			{
 				allocationhandler->free_bindless_sam.push_back(BINDLESS_SAMPLER_CAPACITY - i - 1);
@@ -2992,34 +2994,32 @@ std::mutex queue_locker;
 			device->CreateSampler(&sampler_desc, handle);
 		}
 
+		// Descriptor safety feature:
+		//	We init null descriptors for bindless index = 0 for access safety
+		//	Because shader compiler sometimes incorrectly loads descriptor outside of safety branch
+		//	Note: these are never freed, this is intentional
+		{
+			int index = allocationhandler->free_bindless_res.back();
+			allocationhandler->free_bindless_res.pop_back();
+			wilog_assert(index == 0, "Descriptor safety feature error: descriptor index must be 0!");
+			D3D12_CPU_DESCRIPTOR_HANDLE dst_bindless = descriptorheap_res.start_cpu;
+			dst_bindless.ptr += index * resource_descriptor_size;
+			device->CopyDescriptorsSimple(1, dst_bindless, nullSRV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		}
+		{
+			int index = allocationhandler->free_bindless_sam.back();
+			allocationhandler->free_bindless_sam.pop_back();
+			wilog_assert(index == 0, "Descriptor safety feature error: descriptor index must be 0!");
+			D3D12_CPU_DESCRIPTOR_HANDLE dst_bindless = descriptorheap_sam.start_cpu;
+			dst_bindless.ptr += index * sampler_descriptor_size;
+			device->CopyDescriptorsSimple(1, dst_bindless, nullSAM, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+		}
+
 		hr = queues[QUEUE_GRAPHICS].queue->GetTimestampFrequency(&TIMESTAMP_FREQUENCY);
 		dx12_check(hr);
 		if (FAILED(hr))
 		{
 			wilog_messagebox("ID3D12CommandQueue::GetTimestampFrequency[QUEUE_GRAPHICS] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
-		}
-
-		{
-			// Descriptor safety feature:
-			//	We init null descriptors for bindless index = 0 for access safety
-			//	Because shader compiler sometimes incorrectly loads descriptor outside of safety branch
-			//	Note: these are never freed, this is intentional
-			{
-				int index = allocationhandler->free_bindless_res.back();
-				allocationhandler->free_bindless_res.pop_back();
-				wilog_assert(index == 0, "Descriptor safety feature error: descriptor index must be 0!");
-				D3D12_CPU_DESCRIPTOR_HANDLE dst_bindless = descriptorheap_res.start_cpu;
-				dst_bindless.ptr += index * allocationhandler->device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-				allocationhandler->device->CopyDescriptorsSimple(1, dst_bindless, nullSRV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			}
-			{
-				int index = allocationhandler->free_bindless_sam.back();
-				allocationhandler->free_bindless_sam.pop_back();
-				wilog_assert(index == 0, "Descriptor safety feature error: descriptor index must be 0!");
-				D3D12_CPU_DESCRIPTOR_HANDLE dst_bindless = descriptorheap_sam.start_cpu;
-				dst_bindless.ptr += index * allocationhandler->device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-				allocationhandler->device->CopyDescriptorsSimple(1, dst_bindless, nullSAM, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-			}
 		}
 
 		wilog("Created GraphicsDevice_DX12 (%d ms)\nAdapter: %s", (int)std::round(timer.elapsed()), adapterName.c_str());

@@ -328,6 +328,15 @@ namespace wi::gui
 			tooltipTimer = 0;
 		}
 
+		XMFLOAT2 highlight_pos = GetPointerHighlightPos(canvas);
+		for (auto& x : sprites)
+		{
+			if (x.params.isHighlightEnabled())
+			{
+				x.params.highlight_pos = highlight_pos;
+			}
+		}
+
 		sprites[state].Update(dt);
 		font.Update(dt);
 
@@ -674,6 +683,9 @@ namespace wi::gui
 		theme.tooltipFont.Apply(tooltipFont.params);
 		theme.tooltipImage.Apply(tooltipSprite.params);
 		tooltip_shadow_color = theme.tooltip_shadow_color;
+		shadow_highlight = theme.shadow_highlight;
+		shadow_highlight_color = theme.shadow_highlight_color;
+		shadow_highlight_spread = theme.shadow_highlight_spread;
 	}
 
 	void Widget::AttachTo(Widget* parent)
@@ -773,6 +785,11 @@ namespace wi::gui
 		{
 			parent->HitboxConstrain(hb);
 		}
+	}
+	XMFLOAT2 Widget::GetPointerHighlightPos(const wi::Canvas& canvas) const
+	{
+		XMFLOAT4 pointer = wi::input::GetPointer();
+		return XMFLOAT2(pointer.x / canvas.GetLogicalWidth(), pointer.y / canvas.GetLogicalHeight());
 	}
 
 
@@ -968,6 +985,13 @@ namespace wi::gui
 						corner_rounding.radius += shadow;
 					}
 				}
+			}
+			if (shadow_highlight)
+			{
+				fx.enableHighlight();
+				fx.highlight_pos = GetPointerHighlightPos(canvas);
+				fx.highlight_color = shadow_highlight_color;
+				fx.highlight_spread = shadow_highlight_spread;
 			}
 			wi::image::Draw(nullptr, fx, cmd);
 		}
@@ -1368,6 +1392,13 @@ namespace wi::gui
 					}
 				}
 			}
+			if (shadow_highlight)
+			{
+				fx.enableHighlight();
+				fx.highlight_pos = GetPointerHighlightPos(canvas);
+				fx.highlight_color = shadow_highlight_color;
+				fx.highlight_spread = shadow_highlight_spread;
+			}
 			wi::image::Draw(nullptr, fx, cmd);
 		}
 
@@ -1662,6 +1693,13 @@ namespace wi::gui
 						corner_rounding.radius += shadow;
 					}
 				}
+			}
+			if (shadow_highlight)
+			{
+				fx.enableHighlight();
+				fx.highlight_pos = GetPointerHighlightPos(canvas);
+				fx.highlight_color = shadow_highlight_color;
+				fx.highlight_spread = shadow_highlight_spread;
 			}
 			wi::image::Draw(nullptr, fx, cmd);
 		}
@@ -2020,6 +2058,13 @@ namespace wi::gui
 					}
 				}
 			}
+			if (shadow_highlight)
+			{
+				fx.enableHighlight();
+				fx.highlight_pos = GetPointerHighlightPos(canvas);
+				fx.highlight_color = shadow_highlight_color;
+				fx.highlight_spread = shadow_highlight_spread;
+			}
 			wi::image::Draw(nullptr, fx, cmd);
 		}
 
@@ -2190,6 +2235,13 @@ namespace wi::gui
 						corner_rounding.radius += shadow;
 					}
 				}
+			}
+			if (shadow_highlight)
+			{
+				fx.enableHighlight();
+				fx.highlight_pos = GetPointerHighlightPos(canvas);
+				fx.highlight_color = shadow_highlight_color;
+				fx.highlight_spread = shadow_highlight_spread;
 			}
 			wi::image::Draw(nullptr, fx, cmd);
 		}
@@ -2544,6 +2596,13 @@ namespace wi::gui
 						corner_rounding.radius += shadow;
 					}
 				}
+			}
+			if (shadow_highlight)
+			{
+				fx.enableHighlight();
+				fx.highlight_pos = GetPointerHighlightPos(canvas);
+				fx.highlight_color = shadow_highlight_color;
+				fx.highlight_spread = shadow_highlight_spread;
 			}
 			wi::image::Draw(nullptr, fx, cmd);
 		}
@@ -3541,6 +3600,13 @@ namespace wi::gui
 						corner_rounding.radius += shadow;
 					}
 				}
+			}
+			if (shadow_highlight)
+			{
+				fx.enableHighlight();
+				fx.highlight_pos = GetPointerHighlightPos(canvas);
+				fx.highlight_color = shadow_highlight_color;
+				fx.highlight_spread = shadow_highlight_spread;
 			}
 			wi::image::Draw(nullptr, fx, cmd);
 		}
@@ -5171,6 +5237,13 @@ namespace wi::gui
 						corner_rounding.radius += shadow;
 					}
 				}
+			}
+			if (shadow_highlight)
+			{
+				fx.enableHighlight();
+				fx.highlight_pos = GetPointerHighlightPos(canvas);
+				fx.highlight_color = shadow_highlight_color;
+				fx.highlight_spread = shadow_highlight_spread;
 			}
 			wi::image::Draw(nullptr, fx, cmd);
 		}
