@@ -63,7 +63,13 @@ namespace wi
 		{
 			return XMMatrixOrthographicOffCenterLH(0, (float)GetLogicalWidth(), (float)GetLogicalHeight(), 0, -1, 1);
 		}
-		constexpr float GetAspect() const { return float(GetPhysicalWidth()) / float(GetPhysicalHeight()); }
+		// Returns the aspect (width/height)
+		constexpr float GetAspect() const
+		{
+			if (height == 0)
+				return float(width);
+			return float(width) / float(height);
+		}
 	};
 
 }
