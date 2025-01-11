@@ -4,7 +4,9 @@
 #include "stdafx.h"
 #include "sdl2.h"
 
-int sdl_loop(Tests &tests)
+Tests tests;
+
+int sdl_loop()
 {
     bool quit = false;
     while (!quit)
@@ -63,7 +65,6 @@ int sdl_loop(Tests &tests)
 
 int main(int argc, char *argv[])
 {
-    Tests tests;
     // TODO: Place code here.
 
     wi::arguments::Parse(argc, argv);
@@ -84,7 +85,7 @@ int main(int argc, char *argv[])
 
     tests.SetWindow(window.get());
 
-    int ret = sdl_loop(tests);
+    int ret = sdl_loop();
 
     SDL_Quit();
     return ret;

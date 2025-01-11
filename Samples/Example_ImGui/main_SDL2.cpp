@@ -5,12 +5,14 @@
 #include "sdl2.h"
 #include "ImGui/imgui_impl_sdl.h"
 
-int sdl_loop(Example_ImGui &tests)
+Example_ImGui exampleImGui;
+
+int sdl_loop()
 {
     bool quit = false;
     while (!quit)
     {
-        tests.Run();
+        exampleImGui.Run();
         SDL_Event event;
         while(SDL_PollEvent(&event)){
             switch(event.type){
@@ -24,13 +26,13 @@ int sdl_loop(Example_ImGui &tests)
                             break;
                         case SDL_WINDOWEVENT_RESIZED:
                             // Tells the engine to reload window configuration (size and dpi)
-                            tests.SetWindow(tests.window);
+                            exampleImGui.SetWindow(exampleImGui.window);
                             break;
                         case SDL_WINDOWEVENT_FOCUS_LOST: //TODO
-                            tests.is_window_active = false;
+                            exampleImGui.is_window_active = false;
                             break;
                         case SDL_WINDOWEVENT_FOCUS_GAINED:
-                            tests.is_window_active = true;
+                            exampleImGui.is_window_active = true;
                             if (wi::shadercompiler::GetRegisteredShaderCount() > 0)
                             {
                                 std::thread([] {
@@ -65,7 +67,6 @@ int sdl_loop(Example_ImGui &tests)
 
 int main(int argc, char *argv[])
 {
-    Example_ImGui exampleImGui;
     // TODO: Place code here.
 
     wi::arguments::Parse(argc, argv);
@@ -86,7 +87,7 @@ int main(int argc, char *argv[])
 
     exampleImGui.SetWindow(window.get());
 
-    int ret = sdl_loop(exampleImGui);
+    int ret = sdl_loop();
 
     SDL_Quit();
     return ret;

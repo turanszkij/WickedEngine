@@ -8,7 +8,9 @@
 
 using namespace std;
 
-int sdl_loop(Editor &editor)
+Editor editor;
+
+int sdl_loop()
 {
     bool quit = false;
     while (!quit)
@@ -92,8 +94,6 @@ void set_window_icon(SDL_Window *window) {
 
 int main(int argc, char *argv[])
 {
-    Editor editor;
-
     wi::arguments::Parse(argc, argv);
 
     sdl2::sdlsystem_ptr_t system = sdl2::make_sdlsystem(SDL_INIT_EVERYTHING | SDL_INIT_EVENTS);
@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
 
     editor.SetWindow(window.get());
 
-    int ret = sdl_loop(editor);
+    int ret = sdl_loop();
 
     return ret;
 }
