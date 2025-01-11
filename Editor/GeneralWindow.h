@@ -30,6 +30,7 @@ public:
 	wi::gui::CheckBox freezeCullingCameraCheckBox;
 	wi::gui::CheckBox disableAlbedoMapsCheckBox;
 	wi::gui::CheckBox forceDiffuseLightingCheckBox;
+	wi::gui::CheckBox reduceGuiFx;
 
 	wi::gui::Slider transformToolOpacitySlider;
 	wi::gui::Slider bonePickerOpacitySlider;
