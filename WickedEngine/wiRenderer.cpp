@@ -747,7 +747,13 @@ bool LoadShader(
 		auto it = wiShaderDump::shaderdump.find(shaderbinaryfilename);
 		if (it != wiShaderDump::shaderdump.end())
 		{
-			return device->CreateShader(stage, it->second.data, it->second.size, &shader);
+			wi::vector<uint8_t> decompressed;
+			bool success = wi::helper::Decompress(it->second.data, it->second.size, decompressed);
+			if (success)
+			{
+				return device->CreateShader(stage, decompressed.data(), decompressed.size(), &shader);
+			}
+			wi::backlog::post("shader dump decompression failure: " + shaderbinaryfilename, wi::backlog::LogLevel::Error);
 		}
 		else
 		{

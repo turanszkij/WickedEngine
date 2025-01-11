@@ -623,23 +623,30 @@ int main(int argc, char* argv[])
 			auto& name = x.first;
 			auto& output = x.second;
 
+			wi::vector<uint8_t> compressed;
+			bool success = wi::helper::Compress(output.shaderdata, output.shadersize, compressed);
+			if (!success)
+			{
+				wi::helper::DebugOut("Compression failed while creating shader dump!", wi::helper::DebugLevel::Error);
+				continue;
+			}
+
 			std::string name_repl = name;
 			std::replace(name_repl.begin(), name_repl.end(), '/', '_');
 			std::replace(name_repl.begin(), name_repl.end(), '.', '_');
 			std::replace(name_repl.begin(), name_repl.end(), '-', '_');
-			ss += "const uint8_t " + name_repl + "[] = {";
-			for (size_t i = 0; i < output.shadersize; ++i)
+			ss += "static const uint8_t " + name_repl + "[] = {";
+			for (size_t i = 0; i < compressed.size(); ++i)
 			{
-				ss += std::to_string((uint32_t)output.shaderdata[i]) + ",";
+				ss += std::to_string((uint32_t)compressed[i]) + ",";
 			}
 			ss += "};\n";
 		}
 		ss += "struct ShaderDumpEntry{const uint8_t* data; size_t size;};\n";
-		ss += "const wi::unordered_map<std::string, ShaderDumpEntry> shaderdump = {\n";
+		ss += "static const wi::unordered_map<std::string, ShaderDumpEntry> shaderdump = {\n";
 		for (auto& x : results)
 		{
 			auto& name = x.first;
-			auto& output = x.second;
 
 			std::string name_repl = name;
 			std::replace(name_repl.begin(), name_repl.end(), '/', '_');
