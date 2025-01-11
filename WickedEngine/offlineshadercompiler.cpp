@@ -627,15 +627,19 @@ int main(int argc, char* argv[])
 			std::replace(name_repl.begin(), name_repl.end(), '/', '_');
 			std::replace(name_repl.begin(), name_repl.end(), '.', '_');
 			std::replace(name_repl.begin(), name_repl.end(), '-', '_');
-			ss += "const uint8_t " + name_repl + "[] = {";
+			ss += "static const uint8_t " + name_repl + "[] = {";
 			for (size_t i = 0; i < output.shadersize; ++i)
 			{
+				if (i % 32 == 0)
+				{
+					ss += "\n";
+				}
 				ss += std::to_string((uint32_t)output.shaderdata[i]) + ",";
 			}
 			ss += "};\n";
 		}
 		ss += "struct ShaderDumpEntry{const uint8_t* data; size_t size;};\n";
-		ss += "const wi::unordered_map<std::string, ShaderDumpEntry> shaderdump = {\n";
+		ss += "static const wi::unordered_map<std::string, ShaderDumpEntry> shaderdump = {\n";
 		for (auto& x : results)
 		{
 			auto& name = x.first;
