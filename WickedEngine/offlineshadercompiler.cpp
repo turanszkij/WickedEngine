@@ -630,10 +630,6 @@ int main(int argc, char* argv[])
 			ss += "static const uint8_t " + name_repl + "[] = {";
 			for (size_t i = 0; i < output.shadersize; ++i)
 			{
-				if (i % 32 == 0)
-				{
-					ss += "\n";
-				}
 				ss += std::to_string((uint32_t)output.shaderdata[i]) + ",";
 			}
 			ss += "};\n";
