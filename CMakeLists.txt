@@ -12,6 +12,7 @@ endif()
 set(WICKED_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 option(WICKED_DYNAMIC_LIBRARY "Build WickedEngine as a dynamic library" OFF)
+option(WICKED_PIC "Build WickedEngine as position-independent code" WICKED_DYNAMIC_LIBRARY)
 option(USE_LIBCXX "Link WickedEngine to llvm libc++ library - only available with the Clang compiler" OFF)
 
 option(WICKED_EDITOR "Build WickedEngine editor" ON)
@@ -30,6 +31,7 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_POSITION_INDEPENDENT_CODE WICKED_PIC)
 
 # Use solution folders to organize projects
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -50,7 +52,7 @@ endif()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdeclspec -fms-extensions")
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} $<$<NOT:$<WICKED_DYNAMIC_LIBRARY>>:--for-linker=-no-pie>" )
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} $<$<NOT:$<WICKED_PIC>>:--for-linker=-no-pie>" )
 	if (USE_LIBCXX)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -lc++abi")
