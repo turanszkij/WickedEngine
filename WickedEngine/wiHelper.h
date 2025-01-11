@@ -182,8 +182,8 @@ namespace wi::helper
 	// Get error message from platform-specific error code, for example HRESULT on windows
 	std::string GetPlatformErrorString(wi::platform::error_type code);
 
-	// Lossless compression of byte array:
-	bool Compress(const uint8_t* src_data, size_t src_size, wi::vector<uint8_t>& dst_data);
+	// Lossless compression of byte array; level = 0 means "default compression level", currently 3
+	bool Compress(const uint8_t* src_data, size_t src_size, wi::vector<uint8_t>& dst_data, int level = 0);
 
 	// Lossless decompression of byte array that was compressed with wi::helper::Compress()
 	bool Decompress(const uint8_t* src_data, size_t src_size, wi::vector<uint8_t>& dst_data);

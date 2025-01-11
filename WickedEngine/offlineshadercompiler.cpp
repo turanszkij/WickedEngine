@@ -616,6 +616,8 @@ int main(int argc, char* argv[])
 	{
 		std::cout << "[Wicked Engine Offline Shader Compiler] Creating ShaderDump...\n";
 		timer.record();
+		size_t total_raw = 0;
+		size_t total_compressed = 0;
 		std::string ss;
 		ss += "namespace wiShaderDump {\n";
 		for (auto& x : results)
@@ -625,7 +627,11 @@ int main(int argc, char* argv[])
 
 			wi::vector<uint8_t> compressed;
 			bool success = wi::helper::Compress(output.shaderdata, output.shadersize, compressed);
-			if (!success)
+			if (success) {
+				total_raw += output.shadersize;
+				total_compressed += compressed.size();
+			}
+			else
 			{
 				wi::helper::DebugOut("Compression failed while creating shader dump!", wi::helper::DebugLevel::Error);
 				continue;
@@ -642,6 +648,7 @@ int main(int argc, char* argv[])
 			}
 			ss += "};\n";
 		}
+		std::cout << "[Wicked Engine Offline Shader Compiler] Compressed shaders: " << total_raw << " -> " << total_compressed << " (" << std::setprecision(3) << (100. * total_compressed / total_raw) << "%)" << std::endl;
 		ss += "struct ShaderDumpEntry{const uint8_t* data; size_t size;};\n";
 		ss += "static const wi::unordered_map<std::string, ShaderDumpEntry> shaderdump = {\n";
 		for (auto& x : results)
