@@ -1565,4 +1565,16 @@ namespace wi::helper
 
 		return str;
 	}
+
+	bool Compress(const uint8_t* src_data, size_t src_size, wi::vector<uint8_t>& dst_data)
+	{
+		unsigned error = lodepng::compress(dst_data, src_data, src_size);
+		return error == 0;
+	}
+
+	bool Decompress(const uint8_t* src_data, size_t src_size, wi::vector<uint8_t>& dst_data)
+	{
+		unsigned error = lodepng::decompress(dst_data, src_data, src_size);
+		return error == 0;
+	}
 }
