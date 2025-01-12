@@ -9,6 +9,7 @@
 #include "Utility/stb_image_write.h"
 #include "Utility/basis_universal/encoder/basisu_comp.h"
 #include "Utility/basis_universal/encoder/basisu_gpu_texture.h"
+#include "Utility/basis_universal/zstd/zstd.h"
 
 #include <thread>
 #include <locale>
@@ -1566,15 +1567,23 @@ namespace wi::helper
 		return str;
 	}
 
-	bool Compress(const uint8_t* src_data, size_t src_size, wi::vector<uint8_t>& dst_data)
+	bool Compress(const uint8_t* src_data, size_t src_size, wi::vector<uint8_t>& dst_data, int level)
 	{
-		unsigned error = lodepng::compress(dst_data, src_data, src_size);
-		return error == 0;
+		dst_data.resize(ZSTD_compressBound(src_size));
+		size_t res = ZSTD_compress(dst_data.data(), dst_data.size(), src_data, src_size, level);
+		if (res >= 0) {
+			dst_data.resize(res);
+		}
+		return res >= 0;
 	}
 
 	bool Decompress(const uint8_t* src_data, size_t src_size, wi::vector<uint8_t>& dst_data)
 	{
-		unsigned error = lodepng::decompress(dst_data, src_data, src_size);
-		return error == 0;
+		size_t size = ZSTD_getFrameContentSize(src_data, src_size);
+		if (size < 0) {
+			return false;
+		}
+		dst_data.resize(size);
+		return ZSTD_decompress(dst_data.data(), dst_data.size(), src_data, src_size) >= 0;
 	}
 }
