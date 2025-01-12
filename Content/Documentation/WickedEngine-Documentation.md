@@ -2,16 +2,19 @@
 
 # WickedEngine Documentation
 This is the documentation for the C++ features of Wicked Engine
+- [Editor Manual](WickedEditor-Manual.pdf)<br/>
+- [Lua Documentation](ScriptingAPI-Documentation.md)<br/>
 
 ## Contents
 0. [Building and linking](#building-and-linking)
+0. [Basic runtime flow](#basic-runtime-flow)
 1. [High Level Interface](#high-level-interface)
 	1. [Application](#application)
 	2. [RenderPath](#renderpath)
 	3. [RenderPath2D](#renderpath2d)
 	4. [RenderPath3D](#renderpath3d)
 	9. [RenderPath3D_Pathtracing](#renderpath3d_pathtracing)
-		1.[Denoiser](#denoiser)
+		1. [Denoiser](#denoiser)
 	10. [LoadingScreen](#loadingscreen)
 2. [System](#system)
 	1. [Entity-Component System](#entity-component-system)
@@ -82,17 +85,19 @@ This is the documentation for the C++ features of Wicked Engine
 		6. [UpdatePerFrameData](#updateperframedata)
 		7. [UpdateRenderData](#updaterenderdata)
 		8. [Ray tracing (hardware accelerated)](#ray-tracing-hardware-accelerated)
-		8. [Ray tracing (Legacy)](#ray-tracing-legacy)
-		9. [Scene BVH](#scene-bvh)
-		10. [Decals](#decals)
-		11. [Environment probes](#environment-probes)
-		12. [Post processing](#post-processing)
-		13. [Instancing](#instancing)
-		14. [Stencil](#stencil)
-		15. [Loading Shaders](#loading-shaders)
-		16. [Debug Draw](#debug-draw)
-		17. [Animation Skinning](#animation-skinning)
-		18. [Custom Shaders](#custom-shaders)
+		8. [Ray tracing (compute)](#ray-tracing-compute)
+		9. [Path tracing](#path-tracing)
+		10. [Lightmap baking](#lightmap-baking)
+		11. [Scene BVH](#scene-bvh)
+		12. [Decals](#decals)
+		13. [Environment probes](#environment-probes)
+		14. [Post processing](#post-processing)
+		15. [Instancing](#instancing)
+		16. [Stencil](#stencil)
+		17. [Loading Shaders](#loading-shaders)
+		18. [Debug Draw](#debug-draw)
+		19. [Animation Skinning](#animation-skinning)
+		20. [Custom Shaders](#custom-shaders)
 	3. [Enums](#enums)
 	4. [Image Renderer](#image-renderer)
 	5. [Font Renderer](#font-renderer)
@@ -116,25 +121,25 @@ This is the documentation for the C++ features of Wicked Engine
 	10. [ColorPicker](#colorpicker)
 	11. [TreeList](#treelist)
 5. [Helpers](#helpers)
-	2. [Archive](#archive)
-	3. [Color](#color)
-	5. [FadeManager](#fademanager)
-	6. [Helper](#helper)
-	7. [Primitive](#primitive)
+	1. [Archive](#archive)
+	2. [Color](#color)
+	3. [FadeManager](#fademanager)
+	4. [Helper](#helper)
+	5. [Primitive](#primitive)
 		1. [AABB](#aabb)
 		2. [Sphere](#sphere)
 		2. [Capsule](#capsule)
 		3. [Ray](#ray)
 		4. [Frustum](#frustum)
 		5. [Hitbox2D](#hitbox2d)
-	8. [wiMath](#wimath)
-	9. [wiRandom](#wirandom)
-	10. [wiRectPacker](#wirectpacker)
-	11. [wiResourceManager](#wiresourcemanager)
-	12. [wiSpinLock](#wispinlock)
-	13. [wiArguments](#wiarguments)
-	14. [wiTimer](#witimer)
-	14. [wiVoxelGrid](#wivoxelgrid)
+	6. [wiMath](#wimath)
+	7. [wiRandom](#wirandom)
+	8. [wiRectPacker](#wirectpacker)
+	9. [wiResourceManager](#wiresourcemanager)
+	10. [wiSpinLock](#wispinlock)
+	11. [wiArguments](#wiarguments)
+	12. [wiTimer](#witimer)
+	13. [wiVoxelGrid](#wivoxelgrid)
 	14. [wiPathQuery](#wipathquery)
 6. [Input](#input)
 7. [Audio](#audio)
@@ -147,8 +152,8 @@ This is the documentation for the C++ features of Wicked Engine
 	1. [Rigid Body Physics](#rigid-body-physics)
 	2. [Soft Body Physics](#soft-body-physics)
 9. [Network](#network)
-	2. [Socket](#socket)
-	3. [Connection](#connection)
+	1. [Socket](#socket)
+	2. [Connection](#connection)
 10. [Scripting](#scripting)
 	1. [Lua](#lua)
 	2. [Lua_Globals](#lua_globals)
@@ -191,12 +196,35 @@ If you have troubles, check out the Samples/Template projects which are setting 
 
 Xbox, PlayStation: The WickedEngine.sln must be used with Visual Studio similarly to Windows, but with console extension files and additional instructions which are private now, but could be offered in the future.
 
+## Basic Runtime flow
+The general flow of Wicked Engine's operation is the following:
+
+- main.cpp: your entry point with all the platform-specific functionality
+	- `wi::Application::SetWindow()` is called once with operating system-specific window handle
+	- `wi::Application.Run()` is called in an infinite loop, each call is one "frame"
+		- `wi::Application::Initialize()` is called once if hasn't been called it before
+			- `wi::initializer::InitializeComponentsAsync()` will be called to initialize all engine systems in the background
+		- `wi::Application::Update()` is called every frame
+			- `wi::input::Update()` is called to read input
+			- lua script coroutines waiting for `update()` are resumed
+			- `wi::RenderPath::Update()` is called every frame if any RenderPath is activated on the Application
+				- wi::scene::Scene::Update() is called every frame if RenderPath is a RenderPath3D
+		- `wi::Application::Render()` is called every frame
+			- lua script coroutines waiting for `render()` are resumed
+			- wi::RenderPath::Render() is called every frame if any RenderPath is activated on the Application
+				- complex off-screen rendering logic is performed with multiple CPU threads (using mostly functions from the `wi::renderer` namespace)
+		- `wi::Application::Compose()` is called every frame
+			- `wi::RenderPath::Compose()` is called every frame if any RenderPath is activated on the Application
+				- simple rendering logic is performed on the main thread directly onto the display (swap chain)
+			- Application renders some info text on the very top like version, FPS, etc. if enabled (infoDisplay)
+		- Submit all GPU work on the main thread (`GraphicsDevice::SubmitCommandLists()`)
+
 ## High Level Interface
-The high level interface consists of classes that allow for extending the engine with custom functionality. This is usually done by overriding the classes.
+The high level interface consists of classes that make up the general flow of Wicked Engine and allow for extending the engine with custom functionality. This is usually done by overriding the classes. The high level interface is not necessary to be used when coding in c++, but they provide a complete simple runtime logic that is maintained by Wicked Engine.
 
 ### Application
 [[Header]](../../WickedEngine/wiApplication.h) [[Cpp]](../../WickedEngine/wiApplication.cpp)
-This is the main runtime component that has the Run() function. It should be included in the application entry point while calling Run() in an infinite loop. <br/>
+This is the main runtime component that has the `Run()` function which is called every frame. It should be included in the application entry point while calling Run() in an infinite loop. The Application is designed to handle a simple game-like functionality, with switching to different game screens with fading and rendering to a single display.
 
 To use the application, the user should at least set the operating system window to render to with the `SetWindow()`, providing the operating system-specific window handle to it. This will be the main window that the application will draw its contents to.
 
@@ -323,11 +351,20 @@ The HDR and LDR post process chain are using the "ping-ponging" technique, which
 Implements a compute shader based path tracing solution. In a static scene, the rendering will converge to ground truth. When something changes in the scene (something moves, ot material changes, etc...), the convergence will be restarted from the beginning. The raytracing is implemented in [wi::renderer](#wi::renderer) and multiple [shaders](#shaders). The ray tracing is available on any GPU that supports compute shaders.
 
 #### Denoiser
-To enable denoising for path traced images, you can use the [Open Image Denoise library](https://github.com/OpenImageDenoise/oidn). To enable this functionality, the engine will try to include the "OpenImageDenoise/oidn.hpp" file. If this file could be included, it will attempt to link with OpenImageDenoise.lib and tbb.lib. It is also required to provide the OpenImageDenoise.dll and tbb.dll near the exe to correctly launch the application after this. If you satisfy these steps, the denoiser will work automatically after the path tracer reached the target sample count. The final path traced image will be denoised and presented to the screen.
+To enable denoising for path traced images, you can use the [Open Image Denoise library](https://github.com/OpenImageDenoise/oidn). To enable this functionality, the engine will try to include the "WickedEngine/OpenImageDenoise/oidn.hpp" file. If this file could be included, it will attempt to link with OpenImageDenoise.lib and tbb.lib and any other lib that is supplied in the OpenImageDenoise release version The libs should be located in the `$(SolutionDir)BUILD\$(Platform)\$(Configuration)` path, which is for example: `C:/PROJECTS/WickedEngine/BUILD/x64/Release`. It is also required to provide the OpenImageDenoise.dll and tbb.dll and any other dll near the exe to correctly launch the application after this, which is for example: `C:\PROJECTS\WickedEngine\BUILD\x64\Release\Editor_Windows`. If you satisfy these steps, the denoiser will work automatically after you rebuild the engine and the path tracer reached the target sample count, or lightmap baking is stopped.
 
 ### LoadingScreen
 [[Header]](../../WickedEngine/wiLoadingScreen.h) [[Cpp]](../../WickedEngine/wiLoadingScreen.cpp)
-Render path that can be easily used for loading screen. It is able to load content or RenderPath in the background and switch to an other RenderPath onceit finished.
+The LoadingScreen is an example RenderPath that can be used as a drop-in loading screen for your application. It is designed to be a simple 2D screen that is shown during resource loading. You can add generic tasks with `addLoadingFunction()`, or to load an other `RenderPath` using `addLoadingComponent()`. You can specify what will be called after loading is finished by adding a task to with `onFinished()`. You can query the progress of loading with the `getProgress()` function which returns the percentage of loading as an integer in the range 0-100. You can use it to display a loading progress bar for example. The loading will start when `Start()` is called for the loading screen, but you nedd not call this yourself usually. When you activate your loading screen with the `Application` class, it will switch to the loading screen when appropriate and start it automatically. With this you can achieve nice fade-in-out of loading screen easily, as the `Application`'s `ActivatePath()` simply has a parameter for fading duration.
+
+Because the `LoadingScreen` is a `RenderPath2D`, it is safe to load a `Scene` directly into the main scene (with `LoadModel()`), because `RenderPath2D` doesn't utilize scene at all for rendering. If you use a custom loading screen that is also performing 3D rendering with a scene, you would instead load into a separate scene with `LoadModel()`, and merge into your main scene in the `LoadingScreen::onFinished()` callback.
+
+A simple helper feature of this LoadingScreen class is the `BackgroundMode` setting. You can set a background texture easily for the LoadingScreen which will simply be shown as a full screen image during loading. For this, you should at least specify the `LoadingScreen::bacgroundTexture` resource, which you can simply load from an asset file with `wi::resourcemanager::Load()`. You can set the `BackgroundMode` of this image via `LoadingScreen::background_mode` with the following modes:
+- Fill: fill the whole screen, will cut off parts of the image if aspects don't match (default)
+- Fit: fit the image completely inside the screen, will result in black bars on screen if aspects don't match
+- Stretch: fill the whole screen, and stretch the image if needed
+
+If you want to render other things on the LoadingScreen, then you can also override RenderPath2D methods such as Render() or Compose() and implement custom rendering for yourself.
 
 ## System
 You can find out more about the Entity-Component system and other engine-level systems under ENGINE/System filter in the solution.
@@ -936,17 +973,30 @@ This function prepares the scene for rendering. It must be called once every fra
 Begin rendering the frame on GPU. This means that GPU compute jobs are kicked, such as particle simulations, texture packing, mipmap generation tasks that were queued up, updating per frame GPU buffer data, animation vertex skinning and other things.
 
 #### Ray tracing (hardware accelerated)
-
-Hardware accelerated ray tracing API is now available, so a variety of renderer features are available using that. If the hardware support is available, the `Scene` will allocate a top level acceleration structure, and the meshes will allocate bottom level acceleration structures for themselves. Updating these is done by simply calling `wi::renderer::UpdateRaytracingAccelerationStructures(cmd)`. The updates will happen on the GPU timeline, so provide a [CommandList](#work-submission) as argument. The top level acceleration structure will be rebuilt from scratch. The bottom level acceleration structures will be rebuilt from scratch once, and then they will be updated (refitted).
+Hardware accelerated ray tracing API is available, so a variety of renderer features are available using that. If the hardware support is available, the `Scene` will allocate a top level acceleration structure, and the meshes will allocate bottom level acceleration structures for themselves if it's requested by some effect. Requesting is possible by using `wi::scene::Scene::SetAccelerationStructureUpdateRequested(true)`. Updating acceleration structures is done by calling `wi::renderer::UpdateRaytracingAccelerationStructures(cmd)`, which can be called on the async compute or graphics queue. The updates will happen on the GPU timeline, so provide a [CommandList](#work-submission) as argument. The top level acceleration structure will be rebuilt from scratch. The bottom level acceleration structures will be rebuilt from scratch once, and then they will be updated (refitted).
 
 After the acceleration structures are updated, ray tracing shaders can use it after binding to a shader resource slot.
 
-#### Ray tracing (legacy)
-Ray tracing can be used in multiple ways to render the scene. The `RayTraceScene()` function will render the scene with path tracing. The result will be written to a texture that is provided as parameter. The texture must have been created with `UNORDERED_ACCESS` bind flags, because it will be written in compute shaders. The scene BVH structure must have been already built to use this, it can be accomplished by calling `wi::renderer::UpdateRaytracingAccelerationStructures()`. The [RenderPath3D_Pathracing](#renderpath3d_pathtracing) uses this ray tracing functionality to render a path traced scene.
+#### Ray tracing (compute)
+If hardware accelerated ray tracing is not available, certain effects will fall back to software ray tracing implementation using compute resources. The following effects support software ray tracing implementation:
+- path tracing
+- lightmap baking
+- DDGI
+- Surfel GI
+The following do not support software ray tracing at the moment for practical reason (because it would be too slow to be useful in real time):
+- ray traced shadows
+- ray traced ambient occlusion
+- ray traced reflections
+- ray traced diffuse
+
+#### Path tracing
+The `wi::renderer::RayTraceScene()` function will render the scene with path tracing from the camera view that was bound using `wi::renderer::BindCameraCB()` for the current `CommandList`. The result will be written to a texture that is provided as parameter. You also provide the sample index parameter, since path tracing will render only 1 sample in this call, but for sample index greater than 0, it will blend results into previous result texture. The texture must have been created with `UNORDERED_ACCESS` bind flags, because it will be written in compute shaders. The scene BVH structure must have been already built to use this, it can be accomplished by calling `wi::renderer::UpdateRaytracingAccelerationStructures()`. The [RenderPath3D_Pathracing](#renderpath3d_pathtracing) uses this ray tracing functionality to render a path traced scene.
+The `RayTraceScene()` also have optional texture parameters that can be filled to aid when using denoiser, or compositing with rasterized effects. For further details, check the [RenderPath3D_Pathracing](#renderpath3d_pathtracing) implementation.
 
 Other than path tracing, the scene BVH can be rendered by using the `RayTraceSceneBVH` function. This will render the bounding box hierarchy to the screen as a heatmap. Blue colors mean that few boxes were hit per pixel, and with more bounding box hits the colors go to green, yellow, red, and finally white. This is useful to determine how expensive the scene is with regards to ray tracing performance.
 
-The lightmap baking is also using ray tracing on the GPU to precompute static lighting for objects in the scene. [Objects](#objectcomponent) that contain lightmap atlas texture coordinate set can start lightmap rendering by setting `ObjectComponent::SetLightmapRenderRequest(true)`. Every object that have this flag set will have their lightmaps updated by performing ray traced rendering by the [wi::renderer](#wi::renderer) internally. Lightmap texture coordinates can be generated by a separate tool, such as the Wicked Engine Editor application. Lightmaps will be rendered to a global lightmap atlas that can be used by all shaders to read static lighting data. The global lightmap atlas texture contains lightmaps from all objects inside the scene in a compact format for performance. Apart from that, each object contains its own lightmap in a full precision texture format that can be post-processed and saved to disc for later use. To denoise lightmaps, follow the same steps as the path tracer denoiser setup described in the [Denoiser](#denoiser) section.
+#### Lightmap baking
+The lightmap baking is also using ray tracing on the GPU to precompute static lighting for objects in the scene. [Objects](#objectcomponent) that contain lightmap atlas texture coordinate set can start lightmap rendering by setting `ObjectComponent::SetLightmapRenderRequest(true)`. Every object that have this flag set will have their lightmaps updated by performing ray traced rendering by the [wi::renderer](#wi::renderer) internally every frame. Every frame only renders 1 sample, so results will be updated in real time, and you will see how the result accumulates over time. You can stop accumulation whenever you feel it converged enough. Lightmap texture coordinates can be generated by a separate tool, such as the Wicked Engine Editor application. The lightmaps can be optionally compressed in BC6H format to save memory and improve performance. The compression will be performed only after lightmap rendering is stopped, so the compression will not interfere with lightmap accumulation. If you are using a denoiser, it will be performed after lightmap baking is stopped. To denoise lightmaps, follow the same steps as the path tracer denoiser setup described in the [Denoiser](#denoiser) section.
 
 #### Scene BVH
 The scene BVH can be rebuilt from scratch using the `wi::renderer::UpdateRaytracingAccelerationStructures()` function. The [ray tracing](#ray-tracing) features require the scene BVH to be built before using them. This is using the [wiGPUBVH](#wigpubvh) facility to build the BVH using compute shaders running on the GPU when hardware ray tracing is not available. Otherwise it uses ray tracing acceleration structure API objects. 

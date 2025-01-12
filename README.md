@@ -18,10 +18,10 @@ Wicked Engine is an open-source 3D engine with modern graphics. Use this as a C+
 - [Website](https://wickedengine.net/)<br/>
 - [Forum](https://wickedengine.net/forum/)<br/>
 - [Features](features.txt)<br/>
-- [Videos](https://www.youtube.com/playlist?list=PLLN-1FTGyLU_HJoC5zx6hJkB3D2XLiaxS)<br/>
-- [Editor Documentation](https://wickedengine.net/wp-content/uploads/2024/09/Wicked-Engine-Editor-Documentation.pdf)<br/>
+- [Editor Manual](Content/Documentation/WickedEditor-Manual.pdf)<br/>
 - [C++ Documentation](Content/Documentation/WickedEngine-Documentation.md)<br/>
 - [Lua Documentation](Content/Documentation/ScriptingAPI-Documentation.md)<br/>
+- [Videos](https://www.youtube.com/playlist?list=PLLN-1FTGyLU_HJoC5zx6hJkB3D2XLiaxS)<br/>
 
 You can get the full source code by using Git version control and cloning https://github.com/turanszkij/WickedEngine.git, or downloading it as zip. You can also download nightly packaged builds of the Editor here (requires Github sign in): [![Github Build Status](https://github.com/turanszkij/WickedEngine/workflows/Build/badge.svg)](https://github.com/turanszkij/WickedEngine/actions)
 <br/>
@@ -38,7 +38,7 @@ You can get the full source code by using Git version control and cloning https:
 ### How to build: 
 
 #### Windows
-To build Wicked Engine for Windows (10 or later), use the latest version of Visual Studio and the provided `WickedEngine.sln` solution file. By simply pressing F5, the Editor application will be built. There are other example projects that you can build as well within the solution.
+To build Wicked Engine for Windows 10 or later, use the latest version of Visual Studio and the provided `WickedEngine.sln` solution file. By simply pressing F5, Wicked Engine and the Editor application will be built and then start. There are other example projects that you can build as well within the solution.
 
 <img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/fighting_game.gif" width="320px"/>
 
@@ -105,10 +105,8 @@ while(true) {
 ```cpp
 application.Initialize(); // application will start initializing at this point (asynchronously). If you start calling engine functionality immediately before application.Run() gets called, then you must first initialize the application yourself.
 
-wi::initializer::InitializeComponentsImmediate(); // (Optional) allows to initialize all components immediately and block the application until finished. Otherwise the initialization will take place at the first application.Run() asynchronously. This is useful if you want to start using other parts of the engine before application.Run() is called.
-
 wi::RenderPath3D myGame; // Declare a game screen component, aka "RenderPath" (you could also override its Update(), Render() etc. functions). 
-application.ActivatePath(&myGame); // Register your game to the application. It will call Start(), Update(), Render(), etc. from now on...
+application.ActivatePath(&myGame); // Register your game to the application. It will call Start() once, then Update(), Render(), etc. from now on every frame...
 
 wi::scene::LoadModel("myModel.wiscene"); // Simply load a model into the current global scene
 wi::scene::GetScene(); // Get the current global scene
@@ -120,7 +118,7 @@ wi::scene::GetScene().Merge(scene2); // Combine separate scene with global scene
 myGame.setFXAAEnabled(true); // You can enable post process effects this way...
 
 wi::RenderPath2D myMenuScreen; // This is an other render path, but now a simple 2D one. It can only render 2D graphics by default (like a menu for example)
-application.ActivatePath(&myMenuScreen); // activate the menu, the previous path (myGame) will be stopped
+application.ActivatePath(&myMenuScreen, 0.8f); // activate the menu after a 0.8 second fade out, the previous path (myGame) will be stopped
 
 wi::Sprite mySprite("image.png"); // There are many utilities, such as a "sprite" helper class
 myMenuScreen.AddSprite(&mySprite); // The 2D render path is ready to handle sprite and font rendering for you
@@ -199,9 +197,10 @@ The native model format is the <b>WISCENE</b> format. Any application using Wick
 
 In addition, the Editor supports importing some common model formats: 
 - <b>OBJ</b>
-- <b>GLTF 2.0</b>
-- <b>VRM</b>
 - <b>FBX</b>
+- <b>GLTF</b>
+- <b>GLB</b>
+- <b>VRM</b>
 
 The preferred workflow is to import models into the Editor, and save them as <b>WISCENE</b>, then any Wicked Engine application can open them.<br/>
 
