@@ -28,7 +28,13 @@
 #include <mutex>
 #include <algorithm>
 
-#define vulkan_check(res) wilog_assert(res == VK_SUCCESS, "Vulkan error: %s, line %d, result = %s", relative_path(__FILE__), __LINE__, string_VkResult(res))
+#define vulkan_assert(cond, fname) { wilog_assert(cond, "Vulkan error: %s failed with %s (%s:%d)", fname, string_VkResult(res), relative_path(__FILE__), __LINE__); }
+
+#define vulkan_check_cond(cond, call) [&]() { VkResult res = call; char buf[256]; vulkan_assert(cond, wi::backlog::internal::extract_function_name(buf, #call)); return res; }()
+
+#define vulkan_check(call) vulkan_check_cond(res == VK_SUCCESS, call)
+
+#define vulkan_check_lenient(call) vulkan_check_cond(res >= VK_SUCCESS, call)
 
 namespace wi::graphics
 {
@@ -210,8 +216,7 @@ namespace wi::graphics
 				VkSemaphore& sema = semaphore_pool.emplace_back();
 				VkSemaphoreCreateInfo info = {};
 				info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-				VkResult res = vkCreateSemaphore(device, &info, nullptr, &sema);
-				vulkan_check(res);
+				vulkan_check(vkCreateSemaphore(device, &info, nullptr, &sema));
 			}
 			VkSemaphore semaphore = semaphore_pool.back();
 			semaphore_pool.pop_back();
@@ -505,8 +510,7 @@ namespace wi::graphics
 					poolInfo.maxSets = 1;
 					poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
 
-					VkResult res = vkCreateDescriptorPool(device->device, &poolInfo, nullptr, &descriptorPool);
-					vulkan_check(res);
+					vulkan_check(vkCreateDescriptorPool(device->device, &poolInfo, nullptr, &descriptorPool));
 
 #if 0
 					VkDebugUtilsObjectNameInfoEXT info{ VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
@@ -541,16 +545,14 @@ namespace wi::graphics
 					bindingFlagsInfo.pBindingFlags = &bindingFlags;
 					layoutInfo.pNext = &bindingFlagsInfo;
 
-					res = vkCreateDescriptorSetLayout(device->device, &layoutInfo, nullptr, &descriptorSetLayout);
-					vulkan_check(res);
+					vulkan_check(vkCreateDescriptorSetLayout(device->device, &layoutInfo, nullptr, &descriptorSetLayout));
 
 					VkDescriptorSetAllocateInfo allocInfo = {};
 					allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 					allocInfo.descriptorPool = descriptorPool;
 					allocInfo.descriptorSetCount = 1;
 					allocInfo.pSetLayouts = &descriptorSetLayout;
-					res = vkAllocateDescriptorSets(device->device, &allocInfo, &descriptorSet);
-					vulkan_check(res);
+					vulkan_check(vkAllocateDescriptorSets(device->device, &allocInfo, &descriptorSet));
 
 					for (int i = 0; i < (int)descriptorCount; ++i)
 					{
