@@ -33,7 +33,9 @@
 #include <atomic>
 #include <mutex>
 
-#define dx12_check(hr) wilog_assert(SUCCEEDED(hr), "DX12 error: %s, line %d, hr = %s", relative_path(__FILE__), __LINE__, wi::helper::GetPlatformErrorString(hr).c_str())
+#define dx12_assert(cond, fname) { wilog_assert(cond, "DX 12 error: %s failed with %s (%s:%d)", fname, wi::helper::GetPlatformErrorString(hr), relative_path(__FILE__), __LINE__); }
+
+#define dx12_check(call) [&]() { HRESULT hr = call; char buf[256]; dx12_assert(SUCCEEDED(hr), wi::backlog::internal::extract_function_name(buf, #call)); return hr; }()
 
 namespace wi::graphics
 {
@@ -141,8 +143,7 @@ namespace wi::graphics
 			if (semaphore_pool.empty())
 			{
 				Semaphore& dependency = semaphore_pool.emplace_back();
-				HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(dependency.fence));
-				dx12_check(hr);
+				dx12_check(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(dependency.fence)));
 			}
 			Semaphore semaphore = std::move(semaphore_pool.back());
 			semaphore_pool.pop_back();
@@ -456,8 +457,7 @@ namespace wi::graphics
 			{
 				// Descriptor heaps' progress is recorded by the GPU:
 				fenceValue = allocationOffset.load();
-				HRESULT hr = queue->Signal(fence.Get(), fenceValue);
-				dx12_check(hr);
+				dx12_check(queue->Signal(fence.Get(), fenceValue));
 				cached_completedValue = fence->GetCompletedValue();
 			}
 		};
@@ -492,8 +492,7 @@ namespace wi::graphics
 				void block_allocate()
 				{
 					heaps.emplace_back();
-					HRESULT hr = device->device->CreateDescriptorHeap(&desc, PPV_ARGS(heaps.back()));
-					dx12_check(hr);
+					dx12_check(device->device->CreateDescriptorHeap(&desc, PPV_ARGS(heaps.back())));
 					D3D12_CPU_DESCRIPTOR_HANDLE heap_start = heaps.back()->GetCPUDescriptorHandleForHeapStart();
 					for (UINT i = 0; i < desc.NumDescriptors; ++i)
 					{
