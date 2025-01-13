@@ -76,6 +76,7 @@ namespace wi
 			IMPORT_BLOCK_COMPRESSED = 1 << 3, // image import will request block compression for uncompressed or transcodable formats
 			IMPORT_DELAY = 1 << 4, // delay importing resource until later, for example when proper flags can be determined.
 			STREAMING = 1 << 5, // use streaming if possible
+			FILE_DATA_COMPRESSED = 1 << 6, // indicate that file source is comopressed, this will disable streaming
 		};
 
 		// Load a resource

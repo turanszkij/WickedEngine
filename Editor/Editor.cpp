@@ -4773,6 +4773,7 @@ void EditorComponent::Save(const std::string& filename)
 
 			if (dump_to_header)
 			{
+				archive.SetCompressed(true);
 				archive.SaveHeaderFile(filename, wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(filename)));
 			}
 		}

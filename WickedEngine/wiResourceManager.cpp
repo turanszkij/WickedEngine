@@ -754,7 +754,7 @@ namespace wi
 						}
 
 						int mip_offset = 0;
-						if (has_flag(flags, Flags::STREAMING))
+						if (has_flag(flags, Flags::STREAMING) && !has_flag(flags, Flags::FILE_DATA_COMPRESSED))
 						{
 							// Remember full mipcount for streaming:
 							resource->streaming_texture.mip_count = desc.mip_levels;
@@ -1634,7 +1634,7 @@ namespace wi
 				archive.MapVector(resource.filedata, resource.filesize);
 
 				size_t file_offset = archive.GetPos() - resource.filesize;
-
+				
 				resource.name = archive.GetSourceDirectory() + resource.name;
 
 				if (Contains(resource.name))
@@ -1643,9 +1643,14 @@ namespace wi
 				// "Loading" the resource can happen asynchronously to serialization of file data, to improve performance
 				wi::jobsystem::Execute(ctx, [i, &temp_resources, &seri, &archive, file_offset](wi::jobsystem::JobArgs args) {
 					auto& tmp_resource = temp_resources[i];
+					Flags flags = Flags::IMPORT_DELAY;
+					if (archive.IsCompressed())
+					{
+						flags |= Flags::FILE_DATA_COMPRESSED;
+					}
 					auto res = Load(
 						tmp_resource.name,
-						Flags::IMPORT_DELAY,
+						flags,
 						tmp_resource.filedata,
 						tmp_resource.filesize,
 						archive.GetSourceFileName(),
