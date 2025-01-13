@@ -6,6 +6,11 @@
 
 #include "icon.c"
 
+#ifdef __linux__
+#  include <execinfo.h>
+#  include <signal.h>
+#endif
+
 using namespace std;
 
 Editor editor;
@@ -92,8 +97,36 @@ void set_window_icon(SDL_Window *window) {
     SDL_FreeSurface(icon);
 }
 
+#ifdef __linux__
+
+void crash_handler(int sig)
+{
+	void* buf[100];
+
+	size_t size = backtrace(buf, 100);
+	fprintf(
+		stderr,
+		"\e[31m" // red
+		"The editor just crashed, sorry about that! If you make a bug report, please include the following information:\n\n"
+		"Signal: %i (%s)\n"
+		"Version: %s\nStacktrace:\n", sig, sigdescr_np(sig), wi::version::GetVersionString());
+	backtrace_symbols_fd(buf, size, STDERR_FILENO);
+	fprintf(stderr, "\e[m"); // back to normal
+	exit(1);
+}
+
+#endif
+
 int main(int argc, char *argv[])
 {
+
+#ifdef __linux__
+	for (int sig : std::array{SIGABRT, SIGBUS, SIGILL, SIGFPE, SIGSEGV})
+	{
+		signal(sig, crash_handler);
+	}
+#endif
+
     wi::arguments::Parse(argc, argv);
 
     sdl2::sdlsystem_ptr_t system = sdl2::make_sdlsystem(SDL_INIT_EVERYTHING | SDL_INIT_EVENTS);
@@ -121,7 +154,6 @@ int main(int argc, char *argv[])
 
 	width = std::max(100, width);
 	height = std::max(100, height);
-
     sdl2::window_ptr_t window = sdl2::make_window(
             "Wicked Editor",
             SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
