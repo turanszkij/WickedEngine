@@ -154,7 +154,18 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	forceDiffuseLightingCheckBox.SetCheck(wi::renderer::IsForceDiffuseLighting());
 	AddWidget(&forceDiffuseLightingCheckBox);
 
-
+	reduceGuiFx.Create(ICON_EYE " Reduce editor UI effects: ");
+	reduceGuiFx.SetTooltip("Reduce the amount of effects in the editor GUI to improve accessibility");
+	if (editor->main->config.GetSection("a11y").Has("reduceFX")) {
+		reduceGuiFx.SetCheck(editor->main->config.GetSection("a11y").GetBool("reduceFX"));
+	}
+	reduceGuiFx.OnClick([&](wi::gui::EventArgs args) {
+		editor->main->config.GetSection("a11y").Set("reduceFX", args.bValue);
+		// trigger themeCombo's OnSelect handler, which will enable/disable shadow highlighting
+		// according to this checkbox's state
+		themeCombo.SetSelected(themeCombo.GetSelected());
+	});
+	AddWidget(&reduceGuiFx);
 
 	versionCheckBox.Create("Version: ");
 	versionCheckBox.SetTooltip("Toggle the engine version display text in top left corner.");
@@ -374,7 +385,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			break;
 		}
 
-		theme.shadow_highlight = true;
+		theme.shadow_highlight = !reduceGuiFx.GetCheck();
 		theme.shadow_highlight_spread = 0.6f;
 		theme.shadow_highlight_color = theme_color_focus;
 		theme.shadow_highlight_color.x *= 1.4f;
@@ -980,6 +991,9 @@ void GeneralWindow::ResizeLayout()
 	add_right(freezeCullingCameraCheckBox);
 	add_right(disableAlbedoMapsCheckBox);
 	add_right(forceDiffuseLightingCheckBox);
+	y += jump;
+
+	add_right(reduceGuiFx);
 
 	y += jump;
 
