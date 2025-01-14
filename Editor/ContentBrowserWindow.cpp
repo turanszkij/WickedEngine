@@ -391,7 +391,7 @@ void ContentBrowserWindow::AddItem(const std::string& filename, const std::strin
 			}
 			button.SetText("");
 		}
-		button.SetTooltip(filename + "\nVersion: " + std::to_string(archive_header.version) + (archive_header.properties.bits.compressed ? "\nCompressed : true" : "\nCompressed : false"));
+		button.SetTooltip(filename + "\nSize: " + wi::helper::GetMemorySizeText(wi::helper::FileSize(filename)) + "\nVersion: " + std::to_string(archive_header.version) + (archive_header.properties.bits.compressed ? "\nCompressed : true" : "\nCompressed : false"));
 	}
 	else
 	{

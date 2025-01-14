@@ -754,7 +754,7 @@ namespace wi
 						}
 
 						int mip_offset = 0;
-						if (has_flag(flags, Flags::STREAMING) && !has_flag(flags, Flags::FILE_DATA_COMPRESSED))
+						if (has_flag(flags, Flags::STREAMING) && !has_flag(flags, Flags::FILE_ORIGIN_COMPRESSED_ARCHIVE))
 						{
 							// Remember full mipcount for streaming:
 							resource->streaming_texture.mip_count = desc.mip_levels;
@@ -1646,7 +1646,7 @@ namespace wi
 					Flags flags = Flags::IMPORT_DELAY;
 					if (archive.IsCompressed())
 					{
-						flags |= Flags::FILE_DATA_COMPRESSED;
+						flags |= Flags::FILE_ORIGIN_COMPRESSED_ARCHIVE;
 					}
 					auto res = Load(
 						tmp_resource.name,
@@ -1679,6 +1679,8 @@ namespace wi
 			}
 			else
 			{
+				wi::unordered_map<std::string, wi::Archive> temp_compressed_archives;
+
 				// Count embedded resources:
 				for (auto& name : resource_names)
 				{
@@ -1708,12 +1710,27 @@ namespace wi
 
 						if (resource->filedata.empty())
 						{
-							wi::helper::FileRead(
-								resource->container_filename,
-								resource->filedata,
-								resource->container_filesize,
-								resource->container_fileoffset
-							);
+							if (has_flag(resource->flags, Flags::FILE_ORIGIN_COMPRESSED_ARCHIVE))
+							{
+								// Can not use the file directly, need to reopen and decompress archive again, then copy data from it:
+								if (temp_compressed_archives.count(resource->container_filename) == 0)
+								{
+									temp_compressed_archives[resource->container_filename] = wi::Archive(resource->container_filename);
+								}
+								const wi::Archive& ar = temp_compressed_archives[resource->container_filename];
+								resource->filedata.resize(resource->container_filesize);
+								std::memcpy(resource->filedata.data(), ar.GetData() + resource->container_fileoffset, resource->container_filesize);
+							}
+							else
+							{
+								// Directly re-read the file part that is needed:
+								wi::helper::FileRead(
+									resource->container_filename,
+									resource->filedata,
+									resource->container_filesize,
+									resource->container_fileoffset
+								);
+							}
 						}
 
 						archive << name;

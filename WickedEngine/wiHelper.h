@@ -88,6 +88,9 @@ namespace wi::helper
 
 	void DirectoryCreate(const std::string& path);
 
+	// Returns the file size if the file exists, otherwise 0
+	size_t FileSize(const std::string& fileName);
+
 	bool FileRead(const std::string& fileName, wi::vector<uint8_t>& data, size_t max_read = ~0ull, size_t offset = 0);
 
 #if WI_VECTOR_TYPE
