@@ -15,7 +15,7 @@ namespace wi
 	//	The data flow is always FIFO (first in, first out)
 	class Archive
 	{
-	private:
+	public:
 		struct Header
 		{
 			uint64_t version = 0;
@@ -29,9 +29,11 @@ namespace wi
 				} bits;
 				uint64_t raw = 0;
 			} properties;
-		} header;
+		};
 		static_assert(sizeof(Header) == sizeof(uint64_t) * 2);
 
+	private:
+		Header header;
 		bool readMode = false; // archive can be either read or write mode, but not both
 		size_t pos = 0; // position of the next memory operation, relative to the data's beginning
 		wi::vector<uint8_t> DATA; // data suitable for read/write operations
@@ -92,11 +94,11 @@ namespace wi
 
 		// Set whether the archive should be compressed upon saving
 		//	Note that in memory, the archive is uncompressed
-		//	Note that compressed archive will not work with streaming
+		//	Note that compressed archive will not work with streaming!
 		constexpr void SetCompressed(bool value) { header.properties.bits.compressed = value; }
 		// Returns true if the archive data is originating from compressed data
 		//	Note that even if the archive was opened from compressed data source, the archive is always uncompressed in memory
-		//	If this is true, then the archive cannot be used for streaming
+		//	Note that compressed archive will not work with streaming!
 		constexpr bool IsCompressed() const { return header.properties.bits.compressed; }
 
 		// If Archive contains thumbnail image data, then creates a Texture from it:
@@ -106,7 +108,8 @@ namespace wi
 		void SetThumbnailAndResetPos(const wi::graphics::Texture& texture);
 
 		// Open just the tumbnail data from an archive, and return it as a Texture:
-		static wi::graphics::Texture PeekThumbnail(const std::string& filename);
+		//	header: optional, can return header info if not null
+		static wi::graphics::Texture PeekThumbnail(const std::string& filename, Header* out_header = nullptr);
 
 		// Appends the current archive write offset as uint64_t to the archive
 		//	Returns the previous write offset of the archive, which can be used by PatchUnknownJumpPosition()

@@ -31,9 +31,8 @@ static constexpr T AlignTo(T value, T alignment)
 #define fourccXWMA 'AMWX'
 #define fourccDPDS 'sdpd'
 
-#define xaudio_assert(cond, fname) { wilog_assert(cond, "XAudio2 error: %s failed with %s (%s:%d)", fname, wi::helper::GetPlatformErrorString(hr), relative_path(__FILE__), __LINE__); }
-
-#define xaudio_check(call) [&]() { HRESULT hr = call; char buf[256]; xaudio_assert(SUCCEEDED(hr), wi::backlog::internal::extract_function_name(buf, #call)); return hr; }()
+#define xaudio_assert(cond, fname) { wilog_assert(cond, "XAudio2 error: %s failed with %s (%s:%d)", fname, wi::helper::GetPlatformErrorString(hr).c_str(), relative_path(__FILE__), __LINE__); }
+#define xaudio_check(call) [&]() { HRESULT hr = call; xaudio_assert(SUCCEEDED(hr), extract_function_name(#call).c_str()); return hr; }()
 
 namespace wi::audio
 {

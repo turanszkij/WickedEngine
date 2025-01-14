@@ -300,10 +300,10 @@ constexpr bool has_flag(E lhs, E rhs)
 	return (lhs & rhs) == rhs;
 }
 
-constexpr auto* relative_path(const char* const path)
+constexpr const char* relative_path(const char* path)
 {
-	const auto* startPosition = path;
-	for (const auto* currentCharacter = path; *currentCharacter != '\0'; ++currentCharacter)
+	const char* startPosition = path;
+	for (const char* currentCharacter = path; *currentCharacter != '\0'; ++currentCharacter)
 	{
 		if (*currentCharacter == '\\' || *currentCharacter == '/')
 		{
@@ -317,6 +317,23 @@ constexpr auto* relative_path(const char* const path)
 	}
 
 	return startPosition;
+}
+
+struct ReturnString
+{
+	char chars[256] = {};
+	constexpr operator const char*() const { return chars; }
+	constexpr const char* const c_str() const { return chars; }
+};
+constexpr ReturnString extract_function_name(const char* str)
+{
+	ReturnString ret;
+	int i = 0;
+	for (const char* currentCharacter = str; *currentCharacter != '\0' && *currentCharacter != '('; ++currentCharacter)
+	{
+		ret.chars[i++] = *currentCharacter;
+	}
+	return ret;
 }
 
 #endif //WICKEDENGINE_COMMONINCLUDE_H

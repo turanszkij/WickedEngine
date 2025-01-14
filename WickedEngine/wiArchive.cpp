@@ -201,7 +201,7 @@ namespace wi
 		thumbnail_data_ptr_write = nullptr;
 	}
 
-	wi::graphics::Texture Archive::PeekThumbnail(const std::string& filename)
+	wi::graphics::Texture Archive::PeekThumbnail(const std::string& filename, Header* out_header)
 	{
 		wi::vector<uint8_t> filedata;
 
@@ -226,6 +226,12 @@ namespace wi
 			return {};
 
 		wi::Archive archive(filedata.data(), filedata.size());
+
+		if (out_header != nullptr)
+		{
+			*out_header = archive.header;
+		}
+
 		return archive.CreateThumbnailTexture();
 	}
 

@@ -23,16 +23,6 @@ using namespace std::chrono_literals;
 
 namespace wi::backlog
 {
-	namespace internal {
-		char* extract_function_name(char* dst, const char* src)
-		{
-		    int i = 0;
-			while (src[i] != '(') i++;
-			memcpy(dst, src, i);
-			dst[i] = 0;
-			return dst;
-		}
-	}
 	bool enabled = false;
 	bool was_ever_enabled = enabled;
 	struct LogEntry

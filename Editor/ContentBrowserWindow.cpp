@@ -370,7 +370,6 @@ void ContentBrowserWindow::AddItem(const std::string& filename, const std::strin
 	button.SetSize(siz);
 	button.SetLocalizationEnabled(false);
 	button.SetDescription(itemname);
-	button.SetTooltip(filename);
 	button.OnClick([this, filename](wi::gui::EventArgs args) {
 		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 			editor->Open(filename);
@@ -382,7 +381,8 @@ void ContentBrowserWindow::AddItem(const std::string& filename, const std::strin
 	button.font.params.size = 42;
 	if (ext.compare("WISCENE") == 0)
 	{
-		wi::graphics::Texture archiveThumbnail = wi::Archive::PeekThumbnail(filename);
+		wi::Archive::Header archive_header;
+		wi::graphics::Texture archiveThumbnail = wi::Archive::PeekThumbnail(filename, &archive_header);
 		if (archiveThumbnail.IsValid())
 		{
 			for (int i = 0; i < arraysize(sprites); ++i)
@@ -391,6 +391,7 @@ void ContentBrowserWindow::AddItem(const std::string& filename, const std::strin
 			}
 			button.SetText("");
 		}
+		button.SetTooltip(filename + "\nVersion: " + std::to_string(archive_header.version) + (archive_header.properties.bits.compressed ? "\nCompressed : true" : "\nCompressed : false"));
 	}
 	else
 	{
@@ -407,5 +408,6 @@ void ContentBrowserWindow::AddItem(const std::string& filename, const std::strin
 				button.SetText("");
 			}
 		}
+		button.SetTooltip(filename);
 	}
 }

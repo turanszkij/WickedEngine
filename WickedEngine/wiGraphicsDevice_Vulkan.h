@@ -29,11 +29,8 @@
 #include <algorithm>
 
 #define vulkan_assert(cond, fname) { wilog_assert(cond, "Vulkan error: %s failed with %s (%s:%d)", fname, string_VkResult(res), relative_path(__FILE__), __LINE__); }
-
-#define vulkan_check_cond(cond, call) [&]() { VkResult res = call; char buf[256]; vulkan_assert(cond, wi::backlog::internal::extract_function_name(buf, #call)); return res; }()
-
+#define vulkan_check_cond(cond, call) [&]() { VkResult res = call; vulkan_assert(cond, extract_function_name(#call).c_str()); return res; }()
 #define vulkan_check(call) vulkan_check_cond(res == VK_SUCCESS, call)
-
 #define vulkan_check_lenient(call) vulkan_check_cond(res >= VK_SUCCESS, call)
 
 namespace wi::graphics
