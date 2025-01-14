@@ -39,6 +39,7 @@ namespace wi
 		wi::vector<uint8_t> DATA; // data suitable for read/write operations
 		const uint8_t* data_ptr = nullptr; // this can either be a memory mapped pointer (read only), or the DATA's pointer
 		size_t data_ptr_size = 0;
+		bool data_already_decompressed = false;
 
 		std::string fileName; // save to this file on closing if not empty
 		std::string directory; // the directory part from the fileName
@@ -95,11 +96,11 @@ namespace wi
 		// Set whether the archive should be compressed upon saving
 		//	Note that in memory, the archive is uncompressed
 		//	Note that compressed archive will not work with streaming!
-		constexpr void SetCompressed(bool value) { header.properties.bits.compressed = value; }
+		constexpr void SetCompressionEnabled(bool value) { header.properties.bits.compressed = value; }
 		// Returns true if the archive data is originating from compressed data
 		//	Note that even if the archive was opened from compressed data source, the archive is always uncompressed in memory
 		//	Note that compressed archive will not work with streaming!
-		constexpr bool IsCompressed() const { return header.properties.bits.compressed; }
+		constexpr bool IsCompressionEnabled() const { return header.properties.bits.compressed; }
 
 		// If Archive contains thumbnail image data, then creates a Texture from it:
 		wi::graphics::Texture CreateThumbnailTexture() const;

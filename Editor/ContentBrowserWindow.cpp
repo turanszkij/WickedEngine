@@ -379,6 +379,7 @@ void ContentBrowserWindow::AddItem(const std::string& filename, const std::strin
 	button.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
 	button.font_description.params.v_align = wi::font::WIFALIGN_TOP;
 	button.font.params.size = 42;
+	button.SetTooltip(filename + "\nSize: " + wi::helper::GetMemorySizeText(wi::helper::FileSize(filename)));
 	if (ext.compare("WISCENE") == 0)
 	{
 		wi::Archive::Header archive_header;
@@ -391,7 +392,7 @@ void ContentBrowserWindow::AddItem(const std::string& filename, const std::strin
 			}
 			button.SetText("");
 		}
-		button.SetTooltip(filename + "\nSize: " + wi::helper::GetMemorySizeText(wi::helper::FileSize(filename)) + "\nVersion: " + std::to_string(archive_header.version) + (archive_header.properties.bits.compressed ? "\nCompressed : true" : "\nCompressed : false"));
+		button.SetTooltip(button.GetTooltip() + "\nVersion: " + std::to_string(archive_header.version) + (archive_header.properties.bits.compressed ? "\nCompressed : true" : "\nCompressed : false"));
 	}
 	else
 	{
@@ -408,6 +409,5 @@ void ContentBrowserWindow::AddItem(const std::string& filename, const std::strin
 				button.SetText("");
 			}
 		}
-		button.SetTooltip(filename);
 	}
 }

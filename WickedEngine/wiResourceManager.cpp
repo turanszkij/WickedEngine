@@ -1644,7 +1644,7 @@ namespace wi
 				wi::jobsystem::Execute(ctx, [i, &temp_resources, &seri, &archive, file_offset](wi::jobsystem::JobArgs args) {
 					auto& tmp_resource = temp_resources[i];
 					Flags flags = Flags::IMPORT_DELAY;
-					if (archive.IsCompressed())
+					if (archive.IsCompressionEnabled())
 					{
 						flags |= Flags::FILE_ORIGIN_COMPRESSED_ARCHIVE;
 					}

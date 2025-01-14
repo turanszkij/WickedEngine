@@ -4771,11 +4771,11 @@ void EditorComponent::Save(const std::string& filename)
 
 			scene.Serialize(archive);
 
-			archive.SetCompressed(generalWnd.saveCompressionCheckBox.GetCheck());
+			archive.SetCompressionEnabled(generalWnd.saveCompressionCheckBox.GetCheck());
 
 			if (dump_to_header)
 			{
-				archive.SetCompressed(true); // embedded scene always saved as compressed archive
+				archive.SetCompressionEnabled(true); // embedded scene always saved as compressed archive
 				archive.SaveHeaderFile(filename, wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(filename)));
 			}
 		}

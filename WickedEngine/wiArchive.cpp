@@ -96,7 +96,7 @@ namespace wi
 				header.properties.bits.thumbnail_data_size = thumbnail_data_size;
 			}
 
-			if (header.properties.bits.compressed)
+			if (header.properties.bits.compressed && !data_already_decompressed)
 			{
 				// Decompress data part if required and retarget data stream to uncompressed:
 				size_t data_offset = 0;
@@ -120,6 +120,7 @@ namespace wi
 					std::swap(DATA, final_data); // archive DATA is replaced by decompressed final_data
 					data_ptr = DATA.data();
 					data_ptr_size = DATA.size();
+					data_already_decompressed = true; // indicate that next call to SetReadModeAndResetPos() doesn't need to decompress data
 				}
 			}
 		}
@@ -145,7 +146,7 @@ namespace wi
 
 	bool Archive::SaveFile(const std::string& fileName)
 	{
-		if (IsCompressed())
+		if (IsCompressionEnabled())
 		{
 			wi::vector<uint8_t> final_data;
 			WriteCompressedData(final_data);
@@ -156,7 +157,7 @@ namespace wi
 
 	bool Archive::SaveHeaderFile(const std::string& fileName, const std::string& dataName)
 	{
-		if (IsCompressed())
+		if (IsCompressionEnabled())
 		{
 			wi::vector<uint8_t> final_data;
 			WriteCompressedData(final_data);
@@ -215,6 +216,10 @@ namespace wi
 			wi::Archive archive(filedata.data(), filedata.size());
 			if (archive.IsOpen())
 			{
+				if (out_header != nullptr)
+				{
+					*out_header = archive.header;
+				}
 				if (archive.header.properties.bits.thumbnail_data_size == 0)
 					return {};
 				required_size += archive.header.properties.bits.thumbnail_data_size;
@@ -226,18 +231,12 @@ namespace wi
 			return {};
 
 		wi::Archive archive(filedata.data(), filedata.size());
-
-		if (out_header != nullptr)
-		{
-			*out_header = archive.header;
-		}
-
 		return archive.CreateThumbnailTexture();
 	}
 
 	void Archive::WriteData(wi::vector<uint8_t>& dest) const
 	{
-		if (IsCompressed())
+		if (IsCompressionEnabled())
 		{
 			WriteCompressedData(dest);
 		}
