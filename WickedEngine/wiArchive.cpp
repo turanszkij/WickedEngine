@@ -251,7 +251,7 @@ namespace wi
 		data_offset += _header.properties.bits.thumbnail_data_size;
 		size_t data_size = pos - data_offset;
 		wi::vector<uint8_t> compressed_part;
-		wi::helper::Compress(data_ptr + data_offset, data_size, compressed_part);
+		wi::helper::Compress(data_ptr + data_offset, data_size, compressed_part, 9);
 		final_data.resize(data_offset + compressed_part.size());
 		size_t _offset = 0;
 		std::memcpy(final_data.data() + _offset, &_header, sizeof(Header));
