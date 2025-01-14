@@ -754,7 +754,7 @@ namespace wi
 						}
 
 						int mip_offset = 0;
-						if (has_flag(flags, Flags::STREAMING))
+						if (has_flag(flags, Flags::STREAMING) && !has_flag(flags, Flags::FILE_ORIGIN_COMPRESSED_ARCHIVE))
 						{
 							// Remember full mipcount for streaming:
 							resource->streaming_texture.mip_count = desc.mip_levels;
@@ -1634,7 +1634,7 @@ namespace wi
 				archive.MapVector(resource.filedata, resource.filesize);
 
 				size_t file_offset = archive.GetPos() - resource.filesize;
-
+				
 				resource.name = archive.GetSourceDirectory() + resource.name;
 
 				if (Contains(resource.name))
@@ -1643,9 +1643,14 @@ namespace wi
 				// "Loading" the resource can happen asynchronously to serialization of file data, to improve performance
 				wi::jobsystem::Execute(ctx, [i, &temp_resources, &seri, &archive, file_offset](wi::jobsystem::JobArgs args) {
 					auto& tmp_resource = temp_resources[i];
+					Flags flags = Flags::IMPORT_DELAY;
+					if (archive.IsCompressionEnabled())
+					{
+						flags |= Flags::FILE_ORIGIN_COMPRESSED_ARCHIVE;
+					}
 					auto res = Load(
 						tmp_resource.name,
-						Flags::IMPORT_DELAY,
+						flags,
 						tmp_resource.filedata,
 						tmp_resource.filesize,
 						archive.GetSourceFileName(),
@@ -1674,6 +1679,8 @@ namespace wi
 			}
 			else
 			{
+				wi::unordered_map<std::string, wi::Archive> temp_compressed_archives;
+
 				// Count embedded resources:
 				for (auto& name : resource_names)
 				{
@@ -1703,12 +1710,27 @@ namespace wi
 
 						if (resource->filedata.empty())
 						{
-							wi::helper::FileRead(
-								resource->container_filename,
-								resource->filedata,
-								resource->container_filesize,
-								resource->container_fileoffset
-							);
+							if (has_flag(resource->flags, Flags::FILE_ORIGIN_COMPRESSED_ARCHIVE))
+							{
+								// Can not use the file directly, need to reopen and decompress archive again, then copy data from it:
+								if (temp_compressed_archives.count(resource->container_filename) == 0)
+								{
+									temp_compressed_archives[resource->container_filename] = wi::Archive(resource->container_filename);
+								}
+								const wi::Archive& ar = temp_compressed_archives[resource->container_filename];
+								resource->filedata.resize(resource->container_filesize);
+								std::memcpy(resource->filedata.data(), ar.GetData() + resource->container_fileoffset, resource->container_filesize);
+							}
+							else
+							{
+								// Directly re-read the file part that is needed:
+								wi::helper::FileRead(
+									resource->container_filename,
+									resource->filedata,
+									resource->container_filesize,
+									resource->container_fileoffset
+								);
+							}
 						}
 
 						archive << name;

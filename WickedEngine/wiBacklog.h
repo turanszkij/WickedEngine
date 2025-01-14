@@ -17,11 +17,6 @@
 
 namespace wi::backlog
 {
-	namespace internal {
-		// Used by various *_check macros
-		char* extract_function_name(char* dst, const char* src);
-	}
-
 	// Do not modify the order, as this is exposed to LUA scripts as int!
 	enum class LogLevel
 	{

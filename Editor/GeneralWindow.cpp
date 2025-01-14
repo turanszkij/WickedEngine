@@ -218,6 +218,17 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&saveModeComboBox);
 
+	saveCompressionCheckBox.Create("Save compressed: ");
+	saveCompressionCheckBox.SetTooltip("Set whether to enable compression when saving WISCENE files.\nNote that compressed WISCENE with embedded resources doesn't support texture streaming!");
+	if (editor->main->config.GetSection("options").Has("save_compressed"))
+	{
+		saveCompressionCheckBox.SetCheck(editor->main->config.GetSection("options").GetBool("save_compressed"));
+	}
+	saveCompressionCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		editor->main->config.GetSection("options").Set("save_compressed", args.bValue);
+		editor->main->config.Commit();
+	});
+	AddWidget(&saveCompressionCheckBox);
 
 	transformToolOpacitySlider.Create(0, 1, 1, 100, "Transform Tool Opacity: ");
 	transformToolOpacitySlider.SetTooltip("You can control the transparency of the object placement tool");
@@ -942,6 +953,8 @@ void GeneralWindow::ResizeLayout()
 	saveModeComboBox.SetSize(XMFLOAT2(width - x_off - saveModeComboBox.GetScale().y - 1, saveModeComboBox.GetScale().y));
 	y += saveModeComboBox.GetSize().y;
 	y += padding;
+
+	add_right(saveCompressionCheckBox);
 
 	themeCombo.SetPos(XMFLOAT2(x_off, y));
 	themeCombo.SetSize(XMFLOAT2(width - x_off - themeCombo.GetScale().y - 1, themeCombo.GetScale().y));

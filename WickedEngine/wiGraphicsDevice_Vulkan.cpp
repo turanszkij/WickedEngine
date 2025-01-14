@@ -1576,8 +1576,6 @@ using namespace vulkan_internal;
 	{
 		this->device = device;
 
-		VkResult res;
-
 		// Create descriptor pool:
 		VkDescriptorPoolSize poolSizes[10] = {};
 		uint32_t count = 0;
@@ -3635,8 +3633,6 @@ using namespace vulkan_internal;
 		internal_state->desc = *desc;
 		swapchain->internal_state = internal_state;
 		swapchain->desc = *desc;
-
-		VkResult res;
 
 		// Surface creation:
 		if(internal_state->surface == VK_NULL_HANDLE)
@@ -6985,8 +6981,6 @@ using namespace vulkan_internal;
 
 	CommandList GraphicsDevice_Vulkan::BeginCommandList(QUEUE_TYPE queue)
 	{
-		VkResult res;
-
 		cmd_locker.lock();
 		uint32_t cmd_current = cmd_count++;
 		if (cmd_current >= commandlists.size())
@@ -7108,8 +7102,6 @@ using namespace vulkan_internal;
 	}
 	void GraphicsDevice_Vulkan::SubmitCommandLists()
 	{
-		VkResult res;
-
 		// Submit current frame:
 		{
 			uint32_t cmd_last = cmd_count;

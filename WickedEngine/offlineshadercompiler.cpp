@@ -626,7 +626,7 @@ int main(int argc, char* argv[])
 			auto& output = x.second;
 
 			wi::vector<uint8_t> compressed;
-			bool success = wi::helper::Compress(output.shaderdata, output.shadersize, compressed);
+			bool success = wi::helper::Compress(output.shaderdata, output.shadersize, compressed, 9);
 			if (success) {
 				total_raw += output.shadersize;
 				total_compressed += compressed.size();

@@ -300,10 +300,11 @@ constexpr bool has_flag(E lhs, E rhs)
 	return (lhs & rhs) == rhs;
 }
 
-constexpr auto* relative_path(const char* const path)
+// Extract file name from a path at compile-time
+constexpr const char* relative_path(const char* path)
 {
-	const auto* startPosition = path;
-	for (const auto* currentCharacter = path; *currentCharacter != '\0'; ++currentCharacter)
+	const char* startPosition = path;
+	for (const char* currentCharacter = path; *currentCharacter != '\0'; ++currentCharacter)
 	{
 		if (*currentCharacter == '\\' || *currentCharacter == '/')
 		{
@@ -317,6 +318,23 @@ constexpr auto* relative_path(const char* const path)
 	}
 
 	return startPosition;
+}
+
+// Extract function name from a string at compile-time
+constexpr auto extract_function_name(const char* str)
+{
+	struct ReturnString
+	{
+		char chars[256] = {};
+		constexpr operator const char* () const { return chars; }
+		constexpr const char* const c_str() const { return chars; }
+	} ret;
+	int i = 0;
+	for (const char* currentCharacter = str; *currentCharacter != '\0' && *currentCharacter != '(' && (i < sizeof(ret.chars) - 1); ++currentCharacter)
+	{
+		ret.chars[i++] = *currentCharacter;
+	}
+	return ret;
 }
 
 #endif //WICKEDENGINE_COMMONINCLUDE_H
