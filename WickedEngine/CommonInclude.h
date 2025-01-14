@@ -300,6 +300,7 @@ constexpr bool has_flag(E lhs, E rhs)
 	return (lhs & rhs) == rhs;
 }
 
+// Extract file name from a path at compile-time
 constexpr const char* relative_path(const char* path)
 {
 	const char* startPosition = path;
@@ -319,17 +320,17 @@ constexpr const char* relative_path(const char* path)
 	return startPosition;
 }
 
-struct ReturnString
+// Extract function name from a string at compile-time
+constexpr auto extract_function_name(const char* str)
 {
-	char chars[256] = {};
-	constexpr operator const char*() const { return chars; }
-	constexpr const char* const c_str() const { return chars; }
-};
-constexpr ReturnString extract_function_name(const char* str)
-{
-	ReturnString ret;
+	struct ReturnString
+	{
+		char chars[256] = {};
+		constexpr operator const char* () const { return chars; }
+		constexpr const char* const c_str() const { return chars; }
+	} ret;
 	int i = 0;
-	for (const char* currentCharacter = str; *currentCharacter != '\0' && *currentCharacter != '('; ++currentCharacter)
+	for (const char* currentCharacter = str; *currentCharacter != '\0' && *currentCharacter != '(' && (i < sizeof(ret.chars) - 1); ++currentCharacter)
 	{
 		ret.chars[i++] = *currentCharacter;
 	}
