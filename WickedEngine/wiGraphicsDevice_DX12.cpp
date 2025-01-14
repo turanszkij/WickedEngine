@@ -3293,16 +3293,15 @@ std::mutex queue_locker;
 				allocationDesc.ExtraHeapFlags = D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES;
 			}
 
-			dx12_check(allocationhandler->allocator->AllocateMemory(
+			hr = dx12_check(allocationhandler->allocator->AllocateMemory(
 				&allocationDesc,
 				&allocationInfo,
 				&internal_state->allocation
 			));
 
-
 			if (allocationDesc.ExtraHeapFlags == D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS || allocationDesc.ExtraHeapFlags == D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES)
 			{
-				dx12_check(device->CreatePlacedResource(
+				hr = dx12_check(device->CreatePlacedResource(
 					internal_state->allocation->GetHeap(),
 					internal_state->allocation->GetOffset(),
 					&resourceDesc,
@@ -3310,12 +3309,11 @@ std::mutex queue_locker;
 					nullptr,
 					PPV_ARGS(internal_state->resource)
 				));
-
 			}
 		}
 		else if (has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE))
 		{
-			dx12_check(device->CreateReservedResource(
+			hr = dx12_check(device->CreateReservedResource(
 				&resourceDesc,
 				resourceState,
 				nullptr,
@@ -3328,20 +3326,20 @@ std::mutex queue_locker;
 		{
 			if (alias == nullptr)
 			{
-				hr = allocationhandler->allocator->CreateResource(
+				hr = dx12_check(allocationhandler->allocator->CreateResource(
 					&allocationDesc,
 					&resourceDesc,
 					resourceState,
 					nullptr,
 					&internal_state->allocation,
 					PPV_ARGS(internal_state->resource)
-				);
+				));
 			}
 			else
 			{
 				// Aliasing: https://gpuopen-librariesandsdks.github.io/D3D12MemoryAllocator/html/resource_aliasing.html
 				auto alias_internal = to_internal(alias);
-				dx12_check(allocationhandler->allocator->CreateAliasingResource(
+				hr = dx12_check(allocationhandler->allocator->CreateAliasingResource(
 					alias_internal->allocation.Get(),
 					alias_offset,
 					&resourceDesc,
@@ -3363,13 +3361,13 @@ std::mutex queue_locker;
 
 		if (desc->usage == Usage::READBACK)
 		{
-			dx12_check(internal_state->resource->Map(0, nullptr, &buffer->mapped_data));
+			hr = dx12_check(internal_state->resource->Map(0, nullptr, &buffer->mapped_data));
 			buffer->mapped_size = static_cast<uint32_t>(desc->size);
 		}
 		else if (desc->usage == Usage::UPLOAD)
 		{
 			D3D12_RANGE read_range = {};
-			dx12_check(internal_state->resource->Map(0, &read_range, &buffer->mapped_data));
+			hr = dx12_check(internal_state->resource->Map(0, &read_range, &buffer->mapped_data));
 			buffer->mapped_size = static_cast<uint32_t>(desc->size);
 		}
 
@@ -3597,7 +3595,6 @@ std::mutex queue_locker;
 		wi::graphics::xbox::ApplyTextureCreationFlags(texture->desc, resourcedesc.Flags, allocationDesc.ExtraHeapFlags);
 #endif // PLATFORM_XBOX
 
-
 		if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER) ||
 			has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS) ||
 			has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_RT_DS))
@@ -3627,14 +3624,13 @@ std::mutex queue_locker;
 				allocationDesc.ExtraHeapFlags = D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES;
 			}
 
-			dx12_check(allocationhandler->allocator->AllocateMemory(
+			hr = dx12_check(allocationhandler->allocator->AllocateMemory(
 				&allocationDesc,
 				&allocationInfo,
 				&internal_state->allocation
 			));
 
-
-			dx12_check(device->CreatePlacedResource(
+			hr = dx12_check(device->CreatePlacedResource(
 				internal_state->allocation->GetHeap(),
 				internal_state->allocation->GetOffset(),
 				&resourcedesc,
@@ -3642,17 +3638,16 @@ std::mutex queue_locker;
 				useClearValue ? &optimizedClearValue : nullptr,
 				PPV_ARGS(internal_state->resource)
 			));
-
 		}
 		else if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::SPARSE))
 		{
 			resourcedesc.Layout = D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE;
-			hr = device->CreateReservedResource(
+			hr = dx12_check(device->CreateReservedResource(
 				&resourcedesc,
 				resourceState,
 				useClearValue ? &optimizedClearValue : nullptr,
 				PPV_ARGS(internal_state->resource)
-			);
+			));
 			texture->sparse_page_size = D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES;
 
 			UINT num_tiles_for_entire_resource = 0;
@@ -3694,20 +3689,20 @@ std::mutex queue_locker;
 
 			if (alias == nullptr)
 			{
-				hr = allocationhandler->allocator->CreateResource(
+				hr = dx12_check(allocationhandler->allocator->CreateResource(
 					&allocationDesc,
 					&resourcedesc,
 					resourceState,
 					useClearValue ? &optimizedClearValue : nullptr,
 					&internal_state->allocation,
 					PPV_ARGS(internal_state->resource)
-				);
+				));
 			}
 			else
 			{
 				// Aliasing: https://gpuopen-librariesandsdks.github.io/D3D12MemoryAllocator/html/resource_aliasing.html
 				auto alias_internal = to_internal(alias);
-				dx12_check(allocationhandler->allocator->CreateAliasingResource(
+				hr = dx12_check(allocationhandler->allocator->CreateAliasingResource(
 					alias_internal->allocation.Get(),
 					alias_offset,
 					&resourcedesc,
@@ -3718,26 +3713,24 @@ std::mutex queue_locker;
 			}
 		}
 
-
 		if (texture->desc.usage == Usage::READBACK)
 		{
-			dx12_check(internal_state->resource->Map(0, nullptr, &texture->mapped_data));
+			hr = dx12_check(internal_state->resource->Map(0, nullptr, &texture->mapped_data));
 		}
 		else if(texture->desc.usage == Usage::UPLOAD)
 		{
 			D3D12_RANGE read_range = {};
-			dx12_check(internal_state->resource->Map(0, &read_range, &texture->mapped_data));
+			hr = dx12_check(internal_state->resource->Map(0, &read_range, &texture->mapped_data));
 		}
 		else if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::SHARED))
 		{
-			dx12_check(allocationhandler->device->CreateSharedHandle(
+			hr = dx12_check(allocationhandler->device->CreateSharedHandle(
 				internal_state->resource.Get(),
 				nullptr,
 				GENERIC_ALL,
 				nullptr,
-				&texture->shared_handle));
-
-
+				&texture->shared_handle
+			));
 		}
 
 		if (texture->mapped_data != nullptr)
@@ -3764,7 +3757,7 @@ std::mutex queue_locker;
 				{
 					const SubresourceData& data = initial_data[i];
 
-					dx12_check(internal_state->resource->WriteToSubresource(
+					hr = dx12_check(internal_state->resource->WriteToSubresource(
 						(UINT)i,
 						nullptr,
 						data.data_ptr,
@@ -3858,11 +3851,11 @@ std::mutex queue_locker;
 
 		HRESULT hr = dx12_check((internal_state->shadercode.empty() ? E_FAIL : S_OK));
 
-		hr = D3D12CreateVersionedRootSignatureDeserializer(
+		hr = dx12_check(D3D12CreateVersionedRootSignatureDeserializer(
 			internal_state->shadercode.data(),
 			internal_state->shadercode.size(),
 			PPV_ARGS(internal_state->rootsig_deserializer)
-		);
+		));
 		if (SUCCEEDED(hr))
 		{
 			hr = internal_state->rootsig_deserializer->GetRootSignatureDescAtVersion(D3D_ROOT_SIGNATURE_VERSION_1_1, &internal_state->rootsig_desc);
@@ -3870,13 +3863,12 @@ std::mutex queue_locker;
 			{
 				assert(internal_state->rootsig_desc->Version == D3D_ROOT_SIGNATURE_VERSION_1_1);
 
-				dx12_check(device->CreateRootSignature(
+				hr = dx12_check(device->CreateRootSignature(
 					0,
 					internal_state->shadercode.data(),
 					internal_state->shadercode.size(),
 					PPV_ARGS(internal_state->rootSignature)
 				));
-
 			}
 		}
 
@@ -3902,7 +3894,7 @@ std::mutex queue_locker;
 			streamDesc.pPipelineStateSubobjectStream = &stream;
 			streamDesc.SizeInBytes = sizeof(stream);
 
-			dx12_check(device->CreatePipelineState(&streamDesc, PPV_ARGS(internal_state->resource)));
+			hr = dx12_check(device->CreatePipelineState(&streamDesc, PPV_ARGS(internal_state->resource)));
 		}
 
 		return SUCCEEDED(hr);
@@ -5195,7 +5187,7 @@ std::mutex queue_locker;
 				dx12_check(device->CreateCommandList(0, queues[queue].desc.Type, commandlist.commandAllocators[0][queue].Get(), nullptr, PPV_ARGS(videoCommandList)));
 				hr = videoCommandList->Close();
 #else
-				hr = device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, PPV_ARGS(videoCommandList));
+				hr = dx12_check(device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, PPV_ARGS(videoCommandList)));
 #endif // PLATFORM_XBOX
 				commandlist.commandLists[queue] = videoCommandList;
 			}
@@ -5206,7 +5198,7 @@ std::mutex queue_locker;
 				hr = dx12_check(device->CreateCommandList(0, queues[queue].desc.Type, commandlist.commandAllocators[0][queue].Get(), nullptr, PPV_ARGS(copyCommandList)));
 				hr = copyCommandList->Close();
 #else
-				hr = device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, PPV_ARGS(copyCommandList));
+				hr = dx12_check(device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, PPV_ARGS(copyCommandList)));
 #endif // PLATFORM_XBOX
 				commandlist.commandLists[queue] = copyCommandList;
 			}
@@ -5217,12 +5209,10 @@ std::mutex queue_locker;
 				hr = dx12_check(device->CreateCommandList(0, queues[queue].desc.Type, commandlist.commandAllocators[0][queue].Get(), nullptr, PPV_ARGS(graphicsCommandList)));
 				hr = graphicsCommandList->Close();
 #else
-				hr = device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, PPV_ARGS(graphicsCommandList));
+				hr = dx12_check(device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, PPV_ARGS(graphicsCommandList)));
 #endif // PLATFORM_XBOX
 				commandlist.commandLists[queue] = graphicsCommandList;
 			}
-			dx12_assert(SUCCEEDED(hr), "CreateCommandList1");
-
 
 			std::wstring ws = L"cmd" + std::to_wstring(commandlist.id);
 			commandlist.GetCommandList()->SetName(ws.c_str());
@@ -5272,8 +5262,6 @@ std::mutex queue_locker;
 		std::scoped_lock lock(queue_locker); // queue operations are not thread-safe on XBOX
 #endif // PLATFORM_XBOX
 
-		HRESULT hr;
-
 		// Submit current frame:
 		{
 			uint32_t cmd_last = cmd_count;
@@ -5283,11 +5271,11 @@ std::mutex queue_locker;
 				CommandList_DX12& commandlist = *commandlists[cmd].get();
 				if (commandlist.queue == QUEUE_VIDEO_DECODE)
 				{
-					hr = commandlist.GetVideoDecodeCommandList()->Close();
+					dx12_check(commandlist.GetVideoDecodeCommandList()->Close());
 				}
 				else
 				{
-					hr = dx12_check(commandlist.GetGraphicsCommandList()->Close());
+					dx12_check(commandlist.GetGraphicsCommandList()->Close());
 				}
 
 				CommandQueue& queue = queues[commandlist.queue];
@@ -5396,7 +5384,7 @@ std::mutex queue_locker;
 						presentFlags = DXGI_PRESENT_ALLOW_TEARING;
 					}
 
-					hr = swapchain_internal->swapChain->Present(swapchain->desc.vsync, presentFlags);
+					HRESULT hr = dx12_check(swapchain_internal->swapChain->Present(swapchain->desc.vsync, presentFlags));
 
 					// If the device was reset we must completely reinitialize the renderer.
 					if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
@@ -5442,7 +5430,8 @@ std::mutex queue_locker;
 	void GraphicsDevice_DX12::OnDeviceRemoved()
 	{
 #ifdef PLATFORM_WINDOWS_DESKTOP
-		std::lock_guard<std::mutex> lock(onDeviceRemovedMutex);
+		static std::mutex onDeviceRemovedMutex;
+		std::scoped_lock lck(onDeviceRemovedMutex);
 
 		if (deviceRemoved)
 		{

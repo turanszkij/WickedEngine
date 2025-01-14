@@ -4762,6 +4762,7 @@ void EditorComponent::Save(const std::string& filename)
 		wi::Archive archive = dump_to_header ? wi::Archive() : wi::Archive(filename, false);
 		if (archive.IsOpen())
 		{
+			archive.SetCompressionEnabled(generalWnd.saveCompressionCheckBox.GetCheck());
 			archive.SetThumbnailAndResetPos(CreateThumbnailScreenshot());
 
 			Scene& scene = GetCurrentScene();
@@ -4770,8 +4771,6 @@ void EditorComponent::Save(const std::string& filename)
 			wi::resourcemanager::SetMode(embed_mode);
 
 			scene.Serialize(archive);
-
-			archive.SetCompressionEnabled(generalWnd.saveCompressionCheckBox.GetCheck());
 
 			if (dump_to_header)
 			{
@@ -4785,7 +4784,7 @@ void EditorComponent::Save(const std::string& filename)
 			return;
 		}
 	}
-	if(type == FileType::GLTF || type == FileType::GLB)
+	else if (type == FileType::GLTF || type == FileType::GLB)
 	{
 		ExportModel_GLTF(filename, GetCurrentScene());
 	}

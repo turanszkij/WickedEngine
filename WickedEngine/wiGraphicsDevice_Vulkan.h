@@ -29,9 +29,7 @@
 #include <algorithm>
 
 #define vulkan_assert(cond, fname) { wilog_assert(cond, "Vulkan error: %s failed with %s (%s:%d)", fname, string_VkResult(res), relative_path(__FILE__), __LINE__); }
-#define vulkan_check_cond(cond, call) [&]() { VkResult res = call; vulkan_assert(cond, extract_function_name(#call).c_str()); return res; }()
-#define vulkan_check(call) vulkan_check_cond(res == VK_SUCCESS, call)
-#define vulkan_check_lenient(call) vulkan_check_cond(res >= VK_SUCCESS, call)
+#define vulkan_check(call) [&]() { VkResult res = call; vulkan_assert((res == VK_SUCCESS), extract_function_name(#call).c_str()); return res; }()
 
 namespace wi::graphics
 {
@@ -39,7 +37,6 @@ namespace wi::graphics
 	{
 		friend struct CommandQueue;
 	protected:
-		bool debugUtils = false;
 		VkInstance instance = VK_NULL_HANDLE;
 	    VkDebugUtilsMessengerEXT debugUtilsMessenger = VK_NULL_HANDLE;
 		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
@@ -55,6 +52,7 @@ namespace wi::graphics
 		VkQueue computeQueue = VK_NULL_HANDLE;
 		VkQueue copyQueue = VK_NULL_HANDLE;
 		VkQueue videoQueue = VK_NULL_HANDLE;
+		bool debugUtils = false;
 
 		VkPhysicalDeviceProperties2 properties2 = {};
 		VkPhysicalDeviceVulkan11Properties properties_1_1 = {};

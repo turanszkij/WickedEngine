@@ -51,14 +51,13 @@ namespace wi::graphics
 		Microsoft::WRL::ComPtr<ID3D12Fence> deviceRemovedFence;
 		HANDLE deviceRemovedWaitHandle = {};
 #endif // PLATFORM_WINDOWS_DESKTOP
-		std::mutex onDeviceRemovedMutex;
-		bool deviceRemoved = false;
 
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawInstancedIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawIndexedInstancedIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchMeshIndirectCommandSignature;
 
+		bool deviceRemoved = false;
 		bool tearingSupported = false;
 		bool additionalShadingRatesSupported = false;
 		bool casting_fully_typed_formats = false;

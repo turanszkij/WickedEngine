@@ -2481,7 +2481,7 @@ using namespace vulkan_internal;
 				createInfo.pNext = &debugUtilsCreateInfo;
 			}
 
-			vulkan_check(vkCreateInstance(&createInfo, nullptr, &instance));
+			res = vulkan_check(vkCreateInstance(&createInfo, nullptr, &instance));
 			if (res != VK_SUCCESS)
 			{
 				wi::helper::messageBox("vkCreateInstance failed! ERROR: " + std::string(string_VkResult(res)), "Error!");
@@ -3031,7 +3031,7 @@ using namespace vulkan_internal;
 			createInfo.enabledExtensionCount = static_cast<uint32_t>(enabled_deviceExtensions.size());
 			createInfo.ppEnabledExtensionNames = enabled_deviceExtensions.data();
 
-			vulkan_check(vkCreateDevice(physicalDevice, &createInfo, nullptr, &device));
+			res = vulkan_check(vkCreateDevice(physicalDevice, &createInfo, nullptr, &device));
 			if (res != VK_SUCCESS)
 			{
 				wi::helper::messageBox("vkCreateDevice failed! ERROR: " + std::string(string_VkResult(res)), "Error!");
@@ -3058,7 +3058,8 @@ using namespace vulkan_internal;
 			queues[QUEUE_COPY].queue = copyQueue;
 			queues[QUEUE_COPY].locker = queue_lockers[copyFamily];
 			queues[QUEUE_VIDEO_DECODE].queue = videoQueue;
-			if (videoFamily != VK_QUEUE_FAMILY_IGNORED) {
+			if (videoFamily != VK_QUEUE_FAMILY_IGNORED)
+			{
 				queues[QUEUE_VIDEO_DECODE].locker = queue_lockers[videoFamily];
 			}
 
@@ -3102,7 +3103,7 @@ using namespace vulkan_internal;
 		vulkanFunctions.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
 		allocatorInfo.pVulkanFunctions = &vulkanFunctions;
 #endif
-		vulkan_check(vmaCreateAllocator(&allocatorInfo, &allocationhandler->allocator));
+		res = vulkan_check(vmaCreateAllocator(&allocatorInfo, &allocationhandler->allocator));
 		if (res != VK_SUCCESS)
 		{
 			wi::helper::messageBox("vmaCreateAllocator failed! ERROR: " + std::string(string_VkResult(res)), "Error!");
@@ -3118,7 +3119,7 @@ using namespace vulkan_internal;
 		allocatorInfo.pTypeExternalMemoryHandleTypes = externalMemoryHandleTypes.data();
 #endif
 
-		vulkan_check(vmaCreateAllocator(&allocatorInfo, &allocationhandler->externalAllocator));
+		res = vulkan_check(vmaCreateAllocator(&allocatorInfo, &allocationhandler->externalAllocator));
 		if (res != VK_SUCCESS)
 		{
 			wi::helper::messageBox("Failed to create Vulkan external memory allocator, ERROR: " + std::string(string_VkResult(res)), "Error!");
@@ -3138,7 +3139,7 @@ using namespace vulkan_internal;
 				VkFenceCreateInfo fenceInfo = {};
 				fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 				//fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-				vulkan_check(vkCreateFence(device, &fenceInfo, nullptr, &frame_fence[fr][queue]));
+				res = vulkan_check(vkCreateFence(device, &fenceInfo, nullptr, &frame_fence[fr][queue]));
 				if (res != VK_SUCCESS)
 				{
 					wi::helper::messageBox("vkCreateFence[FRAME] failed! ERROR: " + std::string(string_VkResult(res)), "Error!");
@@ -4860,7 +4861,7 @@ using namespace vulkan_internal;
 						pipelineLayoutInfo.pPushConstantRanges = nullptr;
 					}
 
-					vulkan_check(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &internal_state->pipelineLayout_cs));
+					res = vulkan_check(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &internal_state->pipelineLayout_cs));
 					if (res == VK_SUCCESS)
 					{
 						pso_layout_cache[internal_state->binding_hash].descriptorSetLayout = internal_state->descriptorSetLayout;
@@ -5379,7 +5380,7 @@ using namespace vulkan_internal;
 					pipelineLayoutInfo.pPushConstantRanges = nullptr;
 				}
 
-				vulkan_check(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &internal_state->pipelineLayout));
+				res = vulkan_check(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &internal_state->pipelineLayout));
 				if (res == VK_SUCCESS)
 				{
 					pso_layout_cache[internal_state->binding_hash].descriptorSetLayout = internal_state->descriptorSetLayout;
