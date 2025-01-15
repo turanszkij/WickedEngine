@@ -434,7 +434,7 @@ A useful pattern is to offload the iteration of a large component manager to the
 wi::jobsystem::context ctx;
 wi::jobsystem::Dispatch(ctx, (uint32_t)components.GetCount(), 64, [&](wi::jobsystem::JobArgs args){
 	MyComponent& component = components[args.jobIndex];
-	Entity entity = components[args.jobIndex];
+	Entity entity = components.GetEntity(args.jobIndex);
 	// Do things...
 });
 // optionally, do unrelated things here...
