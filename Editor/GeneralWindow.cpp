@@ -219,7 +219,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	AddWidget(&saveModeComboBox);
 
 	saveCompressionCheckBox.Create("Save compressed: ");
-	saveCompressionCheckBox.SetTooltip("Set whether to enable compression when saving WISCENE files.\nNote that compressed WISCENE with embedded resources doesn't support texture streaming!");
+	saveCompressionCheckBox.SetTooltip("Set whether to enable compression when saving WISCENE files.\nNote that compressed WISCENE with embedded resources will have higher RAM usage when loaded to support streaming.");
 	if (editor->main->config.GetSection("options").Has("save_compressed"))
 	{
 		saveCompressionCheckBox.SetCheck(editor->main->config.GetSection("options").GetBool("save_compressed"));

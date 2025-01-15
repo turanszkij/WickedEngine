@@ -4762,7 +4762,7 @@ void EditorComponent::Save(const std::string& filename)
 		wi::Archive archive = dump_to_header ? wi::Archive() : wi::Archive(filename, false);
 		if (archive.IsOpen())
 		{
-			archive.SetCompressionEnabled(generalWnd.saveCompressionCheckBox.GetCheck());
+			archive.SetCompressionEnabled(generalWnd.saveCompressionCheckBox.GetCheck() || dump_to_header);
 			archive.SetThumbnailAndResetPos(CreateThumbnailScreenshot());
 
 			Scene& scene = GetCurrentScene();
@@ -4774,7 +4774,6 @@ void EditorComponent::Save(const std::string& filename)
 
 			if (dump_to_header)
 			{
-				archive.SetCompressionEnabled(true); // embedded scene always saved as compressed archive
 				archive.SaveHeaderFile(filename, wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(filename)));
 			}
 		}
