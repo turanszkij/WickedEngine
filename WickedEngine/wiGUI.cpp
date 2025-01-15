@@ -339,11 +339,7 @@ namespace wi::gui
 
 		sprites[state].Update(dt);
 		font.Update(dt);
-
-		if (shadow_highlight)
-		{
-			angular_highlight_timer += dt;
-		}
+		angular_highlight_timer += dt;
 	}
 	void Widget::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const
 	{

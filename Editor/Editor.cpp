@@ -545,7 +545,6 @@ void EditorComponent::Load()
 	newEntityCombo.SetDropArrowEnabled(false);
 	newEntityCombo.SetFixedDropWidth(200);
 	newEntityCombo.SetMaxVisibleItemCount(16);
-	newEntityCombo.SetAngularHighlightWidth(3);
 	newEntityCombo.AddItem("Transform " ICON_TRANSFORM, NEW_TRANSFORM);
 	newEntityCombo.AddItem("Material " ICON_MATERIAL, NEW_MATERIAL);
 	newEntityCombo.AddItem("Point Light " ICON_POINTLIGHT, NEW_POINTLIGHT);
