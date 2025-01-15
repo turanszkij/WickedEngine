@@ -4762,6 +4762,7 @@ void EditorComponent::Save(const std::string& filename)
 		wi::Archive archive = dump_to_header ? wi::Archive() : wi::Archive(filename, false);
 		if (archive.IsOpen())
 		{
+			archive.SetCompressionEnabled(generalWnd.saveCompressionCheckBox.GetCheck() || dump_to_header);
 			archive.SetThumbnailAndResetPos(CreateThumbnailScreenshot());
 
 			Scene& scene = GetCurrentScene();
@@ -4782,7 +4783,7 @@ void EditorComponent::Save(const std::string& filename)
 			return;
 		}
 	}
-	if(type == FileType::GLTF || type == FileType::GLB)
+	else if (type == FileType::GLTF || type == FileType::GLB)
 	{
 		ExportModel_GLTF(filename, GetCurrentScene());
 	}

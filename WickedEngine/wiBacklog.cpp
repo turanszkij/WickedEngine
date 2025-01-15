@@ -12,12 +12,14 @@
 #include "wiGUI.h"
 
 #include <mutex>
+#include <shared_mutex>
 #include <deque>
 #include <limits>
 #include <thread>
 #include <iostream>
 
 using namespace wi::graphics;
+using namespace std::chrono_literals;
 
 namespace wi::backlog
 {
@@ -29,8 +31,9 @@ namespace wi::backlog
 		LogLevel level = LogLevel::Default;
 	};
 	std::deque<LogEntry> entries;
-	std::recursive_mutex entriesLock;
+	std::shared_timed_mutex entriesLock;
 	std::deque<LogEntry> history;
+	std::mutex historyLock;
 	const float speed = 4000.0f;
 	const size_t deletefromline = 500;
 	float pos = 5;
@@ -65,7 +68,7 @@ namespace wi::backlog
 	}
 	void writeLogfile()
 	{
-		std::scoped_lock lock(entriesLock);
+		std::shared_lock lock(entriesLock);
 		writeLogfileWithoutLock();
 	}
 
@@ -79,9 +82,9 @@ namespace wi::backlog
 			// we could be in a crash right now with the lock still being held,
 			// it's better to write something than nothing, even if it might be incomplete
 			// or garbage
-			bool gotLock = entriesLock.try_lock();
+			bool gotLock = entriesLock.try_lock_shared_for(1s);
 			writeLogfileWithoutLock();
-			if (gotLock) entriesLock.unlock();
+			if (gotLock) entriesLock.unlock_shared();
 		}
 	} logwriter;
 
@@ -136,10 +139,13 @@ namespace wi::backlog
 						LogEntry entry;
 						entry.text = args.sValue;
 						entry.level = LogLevel::Default;
-						history.push_back(entry);
-						if (history.size() > deletefromline)
 						{
-							history.pop_front();
+							std::scoped_lock lock(historyLock);
+							history.push_back(entry);
+							if (history.size() > deletefromline)
+							{
+								history.pop_front();
+							}
 						}
 						if (!blockLuaExec)
 						{
@@ -318,7 +324,7 @@ namespace wi::backlog
 		}
 
 		{
-			std::scoped_lock lock(entriesLock);
+			std::shared_lock lock(entriesLock);
 			for (auto& x : entries)
 			{
 				switch (x.level)
@@ -341,12 +347,12 @@ namespace wi::backlog
 
 	std::string getText()
 	{
-		std::scoped_lock lock(entriesLock);
+		std::shared_lock lock(entriesLock);
 		return getTextWithoutLock();
 	}
 	void clear()
 	{
-		std::scoped_lock lock(entriesLock);
+		std::unique_lock lock(entriesLock);
 		entries.clear();
 		scroll = 0;
 	}
@@ -376,14 +382,29 @@ namespace wi::backlog
 		LogEntry entry;
 		entry.text = str;
 		entry.level = level;
-		// This is explicitly scoped for scoped_lock!
+
+		// If we can't get unique access to the entriesLock it's likely that an error occurred during rendering
+		// of the backlog, and that error is currently being post()ed. In this case, there's nothing we can do,
+		// as modifying `entries` can result in invalid data being received by the rendering loop, resulting
+		// in crashes. Hence, if we can't get the lock in time, we just don't write it to the `entries`.
+		// It won't appear in the logfile or backlog, but will still be written to the debug output.
+		//
+		// The time to wait is kinda arbitrary, but it shouldn't be too short, as the rendering of the backlog
+		// can take some time. The value of 33ms means that we wait for 1 whole frame at 30 fps, which
+		// should be more than enough.
+		bool gotLock = entriesLock.try_lock_for(33ms);
+		if (gotLock)
 		{
-			std::scoped_lock lock(entriesLock);
-		    entries.push_back(entry);
-		    if (entries.size() > deletefromline)
+			entries.push_back(entry);
+			if (entries.size() > deletefromline)
 			{
 				entries.pop_front();
 			}
+			entriesLock.unlock();
+	    }
+		else
+		{
+			wi::helper::DebugOut("[Warning] cannot get entriesLock, the following log message will not show up in the backlog\n", wi::helper::DebugLevel::Warning);
 		}
 		refitscroll = true;
 
@@ -416,7 +437,7 @@ namespace wi::backlog
 
 	void historyPrev()
 	{
-		std::scoped_lock lock(entriesLock);
+		std::scoped_lock lock(historyLock);
 		if (!history.empty())
 		{
 			inputField.SetText(history[history.size() - 1 - historyPos].text);
@@ -429,7 +450,7 @@ namespace wi::backlog
 	}
 	void historyNext()
 	{
-		std::scoped_lock lock(entriesLock);
+		std::scoped_lock lock(historyLock);
 		if (!history.empty())
 		{
 			if (historyPos > 0)

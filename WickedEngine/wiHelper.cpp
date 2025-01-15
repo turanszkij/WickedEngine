@@ -1009,6 +1009,25 @@ namespace wi::helper
 		std::filesystem::create_directories(ToNativeString(path));
 	}
 
+	size_t FileSize(const std::string& fileName)
+	{
+#if defined(PLATFORM_LINUX) || defined(PLATFORM_PS5)
+		std::string filepath = fileName;
+		std::replace(filepath.begin(), filepath.end(), '\\', '/'); // Linux cannot handle backslash in file path, need to convert it to forward slash
+		std::ifstream file(filepath, std::ios::binary | std::ios::ate);
+#else
+		std::ifstream file(ToNativeString(fileName), std::ios::binary | std::ios::ate);
+#endif // PLATFORM_LINUX || PLATFORM_PS5
+
+		if (file.is_open())
+		{
+			size_t dataSize = (size_t)file.tellg();
+			file.close();
+			return dataSize;
+		}
+		return 0;
+	}
+
 	template<template<typename T, typename A> typename vector_interface>
 	bool FileRead_Impl(const std::string& fileName, vector_interface<uint8_t, std::allocator<uint8_t>>& data, size_t max_read, size_t offset)
 	{
@@ -1571,19 +1590,19 @@ namespace wi::helper
 	{
 		dst_data.resize(ZSTD_compressBound(src_size));
 		size_t res = ZSTD_compress(dst_data.data(), dst_data.size(), src_data, src_size, level);
-		if (res >= 0) {
-			dst_data.resize(res);
-		}
-		return res >= 0;
+		if (ZSTD_isError(res))
+			return false;
+		dst_data.resize(res);
+		return true;
 	}
 
 	bool Decompress(const uint8_t* src_data, size_t src_size, wi::vector<uint8_t>& dst_data)
 	{
-		size_t size = ZSTD_getFrameContentSize(src_data, src_size);
-		if (size < 0) {
+		size_t res = ZSTD_getFrameContentSize(src_data, src_size);
+		if (ZSTD_isError(res))
 			return false;
-		}
-		dst_data.resize(size);
-		return ZSTD_decompress(dst_data.data(), dst_data.size(), src_data, src_size) >= 0;
+		dst_data.resize(res);
+		res = ZSTD_decompress(dst_data.data(), dst_data.size(), src_data, src_size);
+		return ZSTD_isError(res) == 0;
 	}
 }

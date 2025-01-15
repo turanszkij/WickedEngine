@@ -1333,11 +1333,13 @@ namespace wi
 
 		void SetStreamingMemoryThreshold(float value)
 		{
+			std::scoped_lock lck(locker);
 			streaming_threshold = value;
 		}
 
 		float GetStreamingMemoryThreshold()
 		{
+			std::scoped_lock lck(locker);
 			return streaming_threshold;
 		}
 
@@ -1603,6 +1605,8 @@ namespace wi
 		void Serialize_READ(wi::Archive& archive, ResourceSerializer& seri)
 		{
 			assert(archive.IsReadMode());
+			wi::jobsystem::Wait(streaming_ctx); // stop streaming at this point
+
 			size_t serializable_count = 0;
 			archive >> serializable_count;
 
@@ -1634,7 +1638,7 @@ namespace wi
 				archive.MapVector(resource.filedata, resource.filesize);
 
 				size_t file_offset = archive.GetPos() - resource.filesize;
-
+				
 				resource.name = archive.GetSourceDirectory() + resource.name;
 
 				if (Contains(resource.name))
@@ -1643,9 +1647,15 @@ namespace wi
 				// "Loading" the resource can happen asynchronously to serialization of file data, to improve performance
 				wi::jobsystem::Execute(ctx, [i, &temp_resources, &seri, &archive, file_offset](wi::jobsystem::JobArgs args) {
 					auto& tmp_resource = temp_resources[i];
+					Flags flags = Flags::IMPORT_DELAY;
+					if (archive.IsCompressionEnabled())
+					{
+						// If compressed archive, cannot stream from it, retain file data in memory:
+						flags |= Flags::IMPORT_RETAIN_FILEDATA;
+					}
 					auto res = Load(
 						tmp_resource.name,
-						Flags::IMPORT_DELAY,
+						flags,
 						tmp_resource.filedata,
 						tmp_resource.filesize,
 						archive.GetSourceFileName(),
@@ -1662,6 +1672,8 @@ namespace wi
 		void Serialize_WRITE(wi::Archive& archive, const wi::unordered_set<std::string>& resource_names)
 		{
 			assert(!archive.IsReadMode());
+
+			wi::jobsystem::Wait(streaming_ctx); // stop streaming at this point
 
 			locker.lock();
 			size_t serializable_count = 0;
@@ -1703,6 +1715,7 @@ namespace wi
 
 						if (resource->filedata.empty())
 						{
+							// Directly re-read the file part that is needed:
 							wi::helper::FileRead(
 								resource->container_filename,
 								resource->filedata,
@@ -1722,6 +1735,11 @@ namespace wi
 							resource->container_filename = archive.GetSourceFileName();
 							resource->container_fileoffset = archive.GetPos() - resource->filedata.size();
 							resource->container_filesize = resource->filedata.size();
+							if (archive.IsCompressionEnabled())
+							{
+								// Compressed archive: retain file data to keep resource streamable
+								resource->flags |= Flags::IMPORT_RETAIN_FILEDATA;
+							}
 							if (!has_flag(resource->flags, Flags::IMPORT_RETAIN_FILEDATA))
 							{
 								resource->filedata.clear();

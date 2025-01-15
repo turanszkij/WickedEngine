@@ -53,17 +53,17 @@ namespace wi::graphics
 	protected:
 		static constexpr uint32_t BUFFERCOUNT = 2;
 		uint64_t FRAMECOUNT = 0;
-		ValidationMode validationMode = ValidationMode::Disabled;
-		GraphicsDeviceCapability capabilities = GraphicsDeviceCapability::NONE;
 		size_t SHADER_IDENTIFIER_SIZE = 0;
 		size_t TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = 0;
-		uint32_t VARIABLE_RATE_SHADING_TILE_SIZE = 0;
 		uint64_t TIMESTAMP_FREQUENCY = 0;
 		uint64_t VIDEO_DECODE_BITSTREAM_ALIGNMENT = 1u;
+		GraphicsDeviceCapability capabilities = GraphicsDeviceCapability::NONE;
+		uint32_t VARIABLE_RATE_SHADING_TILE_SIZE = 0;
 		uint32_t vendorId = 0;
 		uint32_t deviceId = 0;
 		std::string adapterName;
 		std::string driverDescription;
+		ValidationMode validationMode = ValidationMode::Disabled;
 		AdapterType adapterType = AdapterType::Other;
 
 	public:

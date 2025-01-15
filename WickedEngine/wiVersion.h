@@ -3,7 +3,6 @@
 
 namespace wi::version
 {
-	long GetVersion();
 	// major features
 	int GetMajor();
 	// minor features, major bug fixes

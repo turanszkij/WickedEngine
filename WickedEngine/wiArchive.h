@@ -15,19 +15,39 @@ namespace wi
 	//	The data flow is always FIFO (first in, first out)
 	class Archive
 	{
+	public:
+		struct Header
+		{
+			uint64_t version = 0;
+			union Properties
+			{
+				struct
+				{
+					uint64_t thumbnail_data_size : 32;
+					uint64_t compressed : 1;
+					uint64_t reserved : 31;
+				} bits;
+				uint64_t raw = 0;
+			} properties;
+		};
+		static_assert(sizeof(Header) == sizeof(uint64_t) * 2);
+
 	private:
-		uint64_t version = 0; // the version number is used for maintaining backwards compatibility with earlier archive versions
+		Header header;
 		bool readMode = false; // archive can be either read or write mode, but not both
 		size_t pos = 0; // position of the next memory operation, relative to the data's beginning
 		wi::vector<uint8_t> DATA; // data suitable for read/write operations
 		const uint8_t* data_ptr = nullptr; // this can either be a memory mapped pointer (read only), or the DATA's pointer
 		size_t data_ptr_size = 0;
+		bool data_already_decompressed = false;
 
 		std::string fileName; // save to this file on closing if not empty
 		std::string directory; // the directory part from the fileName
 
-		size_t thumbnail_data_size = 0;
-		const uint8_t* thumbnail_data_ptr = nullptr;
+		const uint8_t* thumbnail_data_ptr_write = nullptr; // temp ptr to write archive data
+		constexpr const uint8_t* get_thumbnail_data() const { return data_ptr + sizeof(Header); }
+
+		void WriteCompressedData(wi::vector<uint8_t>& final_data) const;
 
 		void CreateEmpty(); // creates new archive in write mode
 
@@ -47,11 +67,11 @@ namespace wi
 		Archive& operator=(const Archive&) = default;
 		Archive& operator=(Archive&&) = default;
 
-		void WriteData(wi::vector<uint8_t>& dest) const { dest.resize(pos); std::memcpy(dest.data(), data_ptr, pos); }
+		void WriteData(wi::vector<uint8_t>& dest) const;
 		const uint8_t* GetData() const { return data_ptr; }
 		const size_t GetSize() const { return data_ptr_size; }
 		size_t GetPos() const { return pos; }
-		constexpr uint64_t GetVersion() const { return version; }
+		constexpr uint64_t GetVersion() const { return header.version; }
 		constexpr bool IsReadMode() const { return readMode; }
 		// This can set the archive into either read or write mode, and it will reset it's position
 		void SetReadModeAndResetPos(bool isReadMode);
@@ -65,13 +85,22 @@ namespace wi
 		//	The archive data will be written starting from the beginning, to the current position
 		bool SaveFile(const std::string& fileName);
 		// Write the archive contents into a C++ header file
-		//	dataName : it will be the name of the byte data array in the header, that can be memory mapped
+		//	dataName : it will be the name of the byte data array in the header, that can be memory mapped as an Archive
 		bool SaveHeaderFile(const std::string& fileName, const std::string& dataName);
 		// If the archive was opened from a file, this will return the file's directory
 		const std::string& GetSourceDirectory() const;
 		// If the archive was opened from a file, this will return the file's name
 		//	The file's name will include the directory as well
 		const std::string& GetSourceFileName() const;
+
+		// Set whether the archive should be compressed upon saving
+		//	Note that in memory, the archive is uncompressed
+		//	Note that compressed archive will not work with streaming!
+		constexpr void SetCompressionEnabled(bool value) { header.properties.bits.compressed = value; }
+		// Returns true if the archive data is originating from compressed data
+		//	Note that even if the archive was opened from compressed data source, the archive is always uncompressed in memory
+		//	Note that compressed archive will not work with streaming!
+		constexpr bool IsCompressionEnabled() const { return header.properties.bits.compressed; }
 
 		// If Archive contains thumbnail image data, then creates a Texture from it:
 		wi::graphics::Texture CreateThumbnailTexture() const;
@@ -80,7 +109,8 @@ namespace wi
 		void SetThumbnailAndResetPos(const wi::graphics::Texture& texture);
 
 		// Open just the tumbnail data from an archive, and return it as a Texture:
-		static wi::graphics::Texture PeekThumbnail(const std::string& filename);
+		//	header: optional, can return header info if not null
+		static wi::graphics::Texture PeekThumbnail(const std::string& filename, Header* out_header = nullptr);
 
 		// Appends the current archive write offset as uint64_t to the archive
 		//	Returns the previous write offset of the archive, which can be used by PatchUnknownJumpPosition()

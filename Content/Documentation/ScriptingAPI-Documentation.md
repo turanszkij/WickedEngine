@@ -2,6 +2,8 @@
 
 # Wicked Engine Scripting API Documentation
 This is a reference and explanation of Lua scripting features in Wicked Engine.
+- [Editor Manual](WickedEditor-Manual.pdf)<br/>
+- [C++ Documentation](WickedEngine-Documentation.md)<br/>
 
 ## Contents
 1. [Introduction and usage](#introduction-and-usage)

@@ -89,9 +89,6 @@ set(WICKEDENGINE_STATIC_LIBRARIES
 	LUA
 	Utility
 )
-set_target_properties(FAudio PROPERTIES
-	POSITION_INDEPENDENT_CODE ${WICKED_PIC}
-)
 
 if (WIN32)
 	target_compile_definitions(${TARGET_NAME} PUBLIC
@@ -110,6 +107,10 @@ else ()
 		Threads::Threads
 		SDL2::SDL2
 		$<$<BOOL:${OpenImageDenoise_FOUND}>:OpenImageDenoise> # links OpenImageDenoise only if it's found
+	)
+
+	set_target_properties(FAudio PROPERTIES
+		POSITION_INDEPENDENT_CODE ${WICKED_PIC}
 	)
 	set(WICKEDENGINE_STATIC_LIBRARIES ${WICKEDENGINE_STATIC_LIBRARIES} FAudio)
 
