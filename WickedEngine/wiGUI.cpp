@@ -339,7 +339,6 @@ namespace wi::gui
 
 		sprites[state].Update(dt);
 		font.Update(dt);
-
 		angular_highlight_timer += dt;
 	}
 	void Widget::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const
@@ -993,6 +992,10 @@ namespace wi::gui
 				fx.highlight_color = shadow_highlight_color;
 				fx.highlight_spread = shadow_highlight_spread;
 			}
+			else
+			{
+				fx.disableHighlight();
+			}
 			wi::image::Draw(nullptr, fx, cmd);
 		}
 
@@ -1399,6 +1402,10 @@ namespace wi::gui
 				fx.highlight_color = shadow_highlight_color;
 				fx.highlight_spread = shadow_highlight_spread;
 			}
+			else
+			{
+				fx.disableHighlight();
+			}
 			wi::image::Draw(nullptr, fx, cmd);
 		}
 
@@ -1700,6 +1707,10 @@ namespace wi::gui
 				fx.highlight_pos = GetPointerHighlightPos(canvas);
 				fx.highlight_color = shadow_highlight_color;
 				fx.highlight_spread = shadow_highlight_spread;
+			}
+			else
+			{
+				fx.disableHighlight();
 			}
 			wi::image::Draw(nullptr, fx, cmd);
 		}
@@ -2065,6 +2076,10 @@ namespace wi::gui
 				fx.highlight_color = shadow_highlight_color;
 				fx.highlight_spread = shadow_highlight_spread;
 			}
+			else
+			{
+				fx.disableHighlight();
+			}
 			wi::image::Draw(nullptr, fx, cmd);
 		}
 
@@ -2242,6 +2257,10 @@ namespace wi::gui
 				fx.highlight_pos = GetPointerHighlightPos(canvas);
 				fx.highlight_color = shadow_highlight_color;
 				fx.highlight_spread = shadow_highlight_spread;
+			}
+			else
+			{
+				fx.disableHighlight();
 			}
 			wi::image::Draw(nullptr, fx, cmd);
 		}
@@ -2603,6 +2622,10 @@ namespace wi::gui
 				fx.highlight_pos = GetPointerHighlightPos(canvas);
 				fx.highlight_color = shadow_highlight_color;
 				fx.highlight_spread = shadow_highlight_spread;
+			}
+			else
+			{
+				fx.disableHighlight();
 			}
 			wi::image::Draw(nullptr, fx, cmd);
 		}
@@ -3607,6 +3630,10 @@ namespace wi::gui
 				fx.highlight_pos = GetPointerHighlightPos(canvas);
 				fx.highlight_color = shadow_highlight_color;
 				fx.highlight_spread = shadow_highlight_spread;
+			}
+			else
+			{
+				fx.disableHighlight();
 			}
 			wi::image::Draw(nullptr, fx, cmd);
 		}
@@ -5244,6 +5271,10 @@ namespace wi::gui
 				fx.highlight_pos = GetPointerHighlightPos(canvas);
 				fx.highlight_color = shadow_highlight_color;
 				fx.highlight_spread = shadow_highlight_spread;
+			}
+			else
+			{
+				fx.disableHighlight();
 			}
 			wi::image::Draw(nullptr, fx, cmd);
 		}
