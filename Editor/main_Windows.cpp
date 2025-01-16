@@ -72,6 +72,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		}
 	}
 
+	wi::jobsystem::ShutDown();
+
     return (int) msg.wParam;
 }
 

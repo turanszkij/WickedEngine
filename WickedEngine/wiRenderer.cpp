@@ -1803,10 +1803,7 @@ void LoadShaders()
 		RegisterCustomShader(customShader);
 	}
 
-
 	wi::jobsystem::Wait(ctx);
-
-	
 
 	for (uint32_t renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
 	{
@@ -1975,6 +1972,9 @@ void LoadShaders()
 									{
 										wi::jobsystem::Wait(mesh_shader_ctx);
 									}
+
+									if (wi::jobsystem::IsShuttingDown())
+										return;
 
 									ObjectRenderingVariant variant = {};
 									variant.bits.renderpass = renderPass;

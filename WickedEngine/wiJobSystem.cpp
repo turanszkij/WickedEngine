@@ -113,6 +113,8 @@ namespace wi::jobsystem
 		std::atomic_bool alive{ true };
 		void ShutDown()
 		{
+			if (IsShuttingDown())
+				return;
 			alive.store(false); // indicate that new jobs cannot be started from this point
 			bool wake_loop = true;
 			std::thread waker([&] {
@@ -320,6 +322,11 @@ namespace wi::jobsystem
 	void ShutDown()
 	{
 		internal_state.ShutDown();
+	}
+
+	bool IsShuttingDown()
+	{
+		return internal_state.alive.load() == false;
 	}
 
 	uint32_t GetThreadCount(Priority priority)

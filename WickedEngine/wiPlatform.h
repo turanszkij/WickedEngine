@@ -11,7 +11,6 @@
 #endif
 #include <SDKDDKVer.h>
 #include <windows.h>
-#include <tchar.h>
 
 #if WINAPI_FAMILY == WINAPI_FAMILY_GAMES
 #define PLATFORM_XBOX
