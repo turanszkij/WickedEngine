@@ -26,6 +26,12 @@ else ()
 	)
 	set(LIB_DXCOMPILER "libdxcompiler.so")
 
+	# needed for proper names in crash stacktrace
+	set_target_properties(WickedEngineEditor
+		PROPERTIES
+		ENABLE_EXPORTS ON
+	)
+
 endif ()
 
 # Copy content to build folder:
