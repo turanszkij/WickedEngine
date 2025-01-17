@@ -3,6 +3,10 @@ name: Pull Request Verification
 on:
   pull_request
 
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
 
   windows:
