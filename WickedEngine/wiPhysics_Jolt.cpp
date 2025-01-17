@@ -191,11 +191,12 @@ namespace wi::physics
 		{
 			~JoltDestroyer()
 			{
-				UnregisterTypes();
+				// we don't call UnregisterTypes() here, this is intentional
+				// see #945 and jrouwe/JoltPhysics#1458 for more information
 				delete Factory::sInstance;
 				Factory::sInstance = nullptr;
 			}
-		} jolt_destroyer; 
+		} jolt_destroyer;
 
 		struct PhysicsScene
 		{
