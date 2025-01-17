@@ -1,6 +1,6 @@
 /* FAudio - XAudio Reimplementation for FNA
  *
- * Copyright (c) 2011-2021 Ethan Lee, Luigi Auriemma, and the MonoGame Team
+ * Copyright (c) 2011-2024 Ethan Lee, Luigi Auriemma, and the MonoGame Team
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from

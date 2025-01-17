@@ -1382,7 +1382,7 @@ static void skip(vorb *z, int n)
    }
    #ifndef STB_VORBIS_NO_STDIO
    {
-      long x = ftell(z->f);
+      int64_t x = ftell(z->f);
       fseek(z->f, x+n, SEEK_SET);
    }
    #endif
