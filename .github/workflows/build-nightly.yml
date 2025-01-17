@@ -34,6 +34,14 @@ jobs:
         move Editor\languages .\
         move Editor\fonts .\
         
+    - name: Install UPX
+      shell: cmd
+      run: choco install --no-progress upx
+
+    - name: Compress Editor with UPX
+      shell: cmd
+      run: upx --best Editor_Windows.exe
+
     - name: Package Editor
       uses: actions/upload-artifact@v4
       with:
@@ -82,6 +90,9 @@ jobs:
         mv Editor/languages ./
         mv Editor/fonts ./
         
+    - name: Compress Editor with UPX
+      run: upx --best Editor_Linux
+
     - name: Package Editor
       uses: actions/upload-artifact@v4
       with:
