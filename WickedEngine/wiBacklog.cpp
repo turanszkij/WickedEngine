@@ -390,9 +390,8 @@ namespace wi::backlog
 		// It won't appear in the logfile or backlog, but will still be written to the debug output.
 		//
 		// The time to wait is kinda arbitrary, but it shouldn't be too short, as the rendering of the backlog
-		// can take some time. The value of 33ms means that we wait for 1 whole frame at 30 fps, which
-		// should be more than enough.
-		bool gotLock = entriesLock.try_lock_for(33ms);
+		// can take some time, especially during heavy load like compiling shaders.
+		bool gotLock = entriesLock.try_lock_for(100ms);
 		if (gotLock)
 		{
 			entries.push_back(entry);
