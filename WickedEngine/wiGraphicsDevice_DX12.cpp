@@ -3276,6 +3276,9 @@ std::mutex queue_locker;
 			//	(since it has no resource)
 			D3D12_RESOURCE_ALLOCATION_INFO allocationInfo = device->GetResourceAllocationInfo(0, 1, &resourceDesc);
 
+			// D3D12MA ValidateAllocateMemoryParameters requires this, wasn't always true on Xbox:
+			allocationInfo.SizeInBytes = AlignTo(allocationInfo.SizeInBytes, (UINT64)D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+
 			if (resource_heap_tier >= D3D12_RESOURCE_HEAP_TIER_2)
 			{
 				allocationDesc.ExtraHeapFlags = D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES;
