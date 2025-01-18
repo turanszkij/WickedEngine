@@ -1360,12 +1360,11 @@ namespace dx12_internal
 
 		virtual ~Resource_DX12()
 		{
-			allocationhandler->destroylocker.lock();
+			std::scoped_lock lck(allocationhandler->destroylocker);
 			uint64_t framecount = allocationhandler->framecount;
 			if (allocation) allocationhandler->destroyer_allocations.push_back(std::make_pair(allocation, framecount));
 			if (resource) allocationhandler->destroyer_resources.push_back(std::make_pair(resource, framecount));
 			destroy_subresources();
-			allocationhandler->destroylocker.unlock();
 		}
 	};
 	struct Texture_DX12 : public Resource_DX12
@@ -1379,9 +1378,8 @@ namespace dx12_internal
 
 		~Texture_DX12() override
 		{
-			allocationhandler->destroylocker.lock();
+			std::scoped_lock lck(allocationhandler->destroylocker);
 			uint64_t framecount = allocationhandler->framecount;
-			allocationhandler->destroylocker.unlock();
 
 			rtv.destroy();
 			dsv.destroy();
@@ -1402,10 +1400,8 @@ namespace dx12_internal
 
 		~Sampler_DX12()
 		{
-			allocationhandler->destroylocker.lock();
+			std::scoped_lock lck(allocationhandler->destroylocker);
 			uint64_t framecount = allocationhandler->framecount;
-			allocationhandler->destroylocker.unlock();
-
 			descriptor.destroy();
 		}
 	};
@@ -1416,10 +1412,9 @@ namespace dx12_internal
 
 		~QueryHeap_DX12()
 		{
-			allocationhandler->destroylocker.lock();
+			std::scoped_lock lck(allocationhandler->destroylocker);
 			uint64_t framecount = allocationhandler->framecount;
 			if (heap) allocationhandler->destroyer_queryheaps.push_back(std::make_pair(heap, framecount));
-			allocationhandler->destroylocker.unlock();
 		}
 	};
 	struct PipelineState_DX12
@@ -1468,11 +1463,10 @@ namespace dx12_internal
 
 		~PipelineState_DX12()
 		{
-			allocationhandler->destroylocker.lock();
+			std::scoped_lock lck(allocationhandler->destroylocker);
 			uint64_t framecount = allocationhandler->framecount;
 			if (resource) allocationhandler->destroyer_pipelines.push_back(std::make_pair(resource, framecount));
 			if (rootSignature) allocationhandler->destroyer_rootSignatures.push_back(std::make_pair(rootSignature, framecount));
-			allocationhandler->destroylocker.unlock();
 		}
 	};
 	struct BVH_DX12 : public Resource_DX12
@@ -1497,10 +1491,9 @@ namespace dx12_internal
 
 		~RTPipelineState_DX12()
 		{
-			allocationhandler->destroylocker.lock();
+			std::scoped_lock lck(allocationhandler->destroylocker);
 			uint64_t framecount = allocationhandler->framecount;
 			if (resource) allocationhandler->destroyer_stateobjects.push_back(std::make_pair(resource, framecount));
-			allocationhandler->destroylocker.unlock();
 		}
 	};
 	struct SwapChain_DX12
@@ -1519,13 +1512,12 @@ namespace dx12_internal
 
 		~SwapChain_DX12()
 		{
-			allocationhandler->destroylocker.lock();
+			std::scoped_lock lck(allocationhandler->destroylocker);
 			uint64_t framecount = allocationhandler->framecount;
 			for (auto& x : backBuffers)
 			{
 				allocationhandler->destroyer_resources.push_back(std::make_pair(x, framecount));
 			}
-			allocationhandler->destroylocker.unlock();
 			for (auto& x : backbufferRTV)
 			{
 				allocationhandler->descriptors_rtv.free(x);
@@ -1554,11 +1546,10 @@ namespace dx12_internal
 
 		~VideoDecoder_DX12()
 		{
-			allocationhandler->destroylocker.lock();
+			std::scoped_lock lck(allocationhandler->destroylocker);
 			uint64_t framecount = allocationhandler->framecount;
 			allocationhandler->destroyer_video_decoder_heaps.push_back(std::make_pair(decoder_heap, framecount));
 			allocationhandler->destroyer_video_decoders.push_back(std::make_pair(decoder, framecount));
-			allocationhandler->destroylocker.unlock();
 		}
 	};
 
@@ -3278,6 +3269,7 @@ std::mutex queue_locker;
 
 			// D3D12MA ValidateAllocateMemoryParameters requires this, wasn't always true on Xbox:
 			allocationInfo.SizeInBytes = AlignTo(allocationInfo.SizeInBytes, (UINT64)D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+			allocationInfo.Alignment = std::max(allocationInfo.Alignment, (UINT64)D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
 
 			if (resource_heap_tier >= D3D12_RESOURCE_HEAP_TIER_2)
 			{
@@ -3609,6 +3601,7 @@ std::mutex queue_locker;
 
 			// D3D12MA ValidateAllocateMemoryParameters requires this, wasn't always true on Xbox:
 			allocationInfo.SizeInBytes = AlignTo(allocationInfo.SizeInBytes, (UINT64)D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+			allocationInfo.Alignment = std::max(allocationInfo.Alignment, (UINT64)D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
 
 			if (resource_heap_tier >= D3D12_RESOURCE_HEAP_TIER_2)
 			{
@@ -5787,6 +5780,10 @@ std::mutex queue_locker;
 
 	void GraphicsDevice_DX12::SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count)
 	{
+#ifdef PLATFORM_XBOX
+		queue = QUEUE_GRAPHICS; // looks like non-graphics queue is a problem for sparse update on xbox (TODO: investigate)
+#endif // PLATFORM_XBOX
+
 		CommandQueue& q = queues[queue];
 
 		thread_local wi::vector<D3D12_TILED_RESOURCE_COORDINATE> tiled_resource_coordinates;
