@@ -23,20 +23,21 @@
 #include <iostream>
 #include <cstdlib>
 
-#ifdef PLATFORM_LINUX
-#include <sys/sysinfo.h>
-#endif
-
 #if defined(_WIN32)
 #include <direct.h>
 #include <Psapi.h> // GetProcessMemoryInfo
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
-#include <comdef.h> // com_error
-#elif defined(PLATFORM_PS5)
-#else
-#include "Utility/portable-file-dialogs.h"
 #endif // _WIN32
+
+#ifdef PLATFORM_LINUX
+#include <sys/sysinfo.h>
+#include "Utility/portable-file-dialogs.h"
+#endif // PLATFORM_LINUX
+
+#ifdef PLATFORM_WINDOWS_DESKTOP
+#include <comdef.h> // com_error
+#endif // PLATFORM_WINDOWS_DESKTOP
 
 namespace wi::helper
 {
@@ -1573,7 +1574,7 @@ namespace wi::helper
 	{
 		std::string str;
 
-#ifdef _WIN32
+#ifdef PLATFORM_WINDOWS_DESKTOP
 		_com_error err(code);
 		LPCTSTR errMsg = err.ErrorMessage();
 		wchar_t wtext[1024] = {};
@@ -1582,6 +1583,12 @@ namespace wi::helper
 		wi::helper::StringConvert(wtext, text, arraysize(text));
 		str = text;
 #endif // _WIN32
+
+#ifdef PLATFORM_XBOX
+		char text[1024] = {};
+		snprintf(text, arraysize(text), "HRESULT error: 0x%08x", code);
+		str = text;
+#endif // PLATFORM_XBOX
 
 		return str;
 	}

@@ -45,7 +45,7 @@ namespace wi::input
 	CURSOR cursor_current = CURSOR_COUNT; // something that's not default, because at least once code should change it to default
 	CURSOR cursor_next = CURSOR_DEFAULT;
 
-#ifdef PLATFORM_WINDOWS_DESKTOP
+#ifdef _WIN32
 	static const HCURSOR cursor_table_original[] = {
 		::LoadCursor(nullptr, IDC_ARROW),
 		::LoadCursor(nullptr, IDC_IBEAM),
@@ -59,7 +59,7 @@ namespace wi::input
 		::LoadCursor(nullptr, IDC_CROSS),
 	};
 	static HCURSOR cursor_table[arraysize(cursor_table_original)] = {};
-#endif // PLATFORM_WINDOWS_DESKTOP
+#endif // _WIN32
 
 #ifdef SDL2
 	static SDL_Cursor* cursor_table_original[] = {

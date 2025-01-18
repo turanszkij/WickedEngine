@@ -3045,13 +3045,13 @@ std::mutex queue_locker;
 		for (uint32_t i = 0; i < swapchain->desc.buffer_count; ++i)
 		{
 			dx12_check(device->CreateCommittedResource(
+				&heap_properties,
 				D3D12_HEAP_FLAG_ALLOW_DISPLAY,
 				&resource_desc,
 				D3D12_RESOURCE_STATE_PRESENT,
 				&clear_value,
 				PPV_ARGS(internal_state->backBuffers[i])
 			));
-
 
 			dx12_check(internal_state->backBuffers[i]->SetName(L"BackBufferXBOX"));
 
