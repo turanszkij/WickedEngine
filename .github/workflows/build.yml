@@ -4,6 +4,9 @@ on:
   push:
     branches: [ master ]
 
+env:
+  UPX_VERSION: 4.2.4
+
 jobs:
 
   windows:
@@ -34,9 +37,11 @@ jobs:
         move Editor\languages .\
         move Editor\fonts .\
 
-    - name: Install UPX
+    - name: Install official UPX
       shell: cmd
-      run: choco install --no-progress upx
+      run: |
+        curl -sOSL https://github.com/upx/upx/releases/download/v%UPX_VERSION%/upx-%UPX_VERSION%-win64.zip
+        unzip -qj upx-%UPX_VERSION%-win64.zip upx-%UPX_VERSION%-win64/upx.exe
 
     - name: Compress Editor with UPX
       shell: cmd
@@ -106,8 +111,13 @@ jobs:
         mv Editor/languages ./
         mv Editor/fonts ./
 
+    - name: Install official UPX
+      run: |
+        curl -sOSL https://github.com/upx/upx/releases/download/v$UPX_VERSION/upx-$UPX_VERSION-amd64_linux.tar.xz
+        tar xf upx-$UPX_VERSION-amd64_linux.tar.xz upx-$UPX_VERSION-amd64_linux/upx
+
     - name: Compress Editor with UPX
-      run: upx --best Editor_Linux
+      run: upx-$UPX_VERSION-amd64_linux/upx --best Editor_Linux
 
     - name: Package Editor
       uses: actions/upload-artifact@v4
