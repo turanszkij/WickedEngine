@@ -1377,7 +1377,7 @@ The namespace that is a collection of audio related functionality.
 ### Sound
 Represents a sound file in memory. Load a sound file via wiAudio interface.
 ### SoundInstance
-An instance of a sound file that can be played and controlled in various ways through the wiAudio interface.
+An instance of a sound file that can be played and controlled in various ways through the wiAudio interface. (To ensure looped playback of its `Sound`, `SoundInstance::SetLooped(true)` must be called _before_ `audio::CreateSoundInstance`, subsequent SetLooped calls have no effect even if occurring before calling `Play`.)
 ### SoundInstance3D
 This structure describes a relation between listener and sound emitter in 3D space. Used together with a SoundInstance in wiAudio::Update3D() function
 ### SUBMIX_TYPE
