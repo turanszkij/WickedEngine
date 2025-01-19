@@ -7,21 +7,27 @@ concurrency:
   group: ${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  UPX_VERSION: 4.2.4
+
 jobs:
 
   windows:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
+
     - name: Initial compile
       shell: cmd
       run: |
         "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /t:OfflineShaderCompiler /m /p:Configuration=Release /p:Platform=x64
+
     - name: Generate shader dump
       shell: cmd
       run: |
         cd "WickedEngine"
         "../BUILD/x64/Release/OfflineShaderCompiler/OfflineShaderCompiler.exe" hlsl6 spirv shaderdump strip_reflection
+
     - name: Recompile with shader dump
       shell: cmd
       run: |
@@ -37,9 +43,11 @@ jobs:
         move Editor\languages .\
         move Editor\fonts .\
 
-    - name: Install UPX
+    - name: Install official UPX
       shell: cmd
-      run: choco install --no-progress upx
+      run: |
+        curl -sOSL https://github.com/upx/upx/releases/download/v%UPX_VERSION%/upx-%UPX_VERSION%-win64.zip
+        unzip -qj upx-%UPX_VERSION%-win64.zip upx-%UPX_VERSION%-win64/upx.exe
 
     - name: Compress Editor with UPX
       shell: cmd
@@ -109,8 +117,13 @@ jobs:
         mv Editor/languages ./
         mv Editor/fonts ./
 
+    - name: Install official UPX
+      run: |
+        curl -sOSL https://github.com/upx/upx/releases/download/v$UPX_VERSION/upx-$UPX_VERSION-amd64_linux.tar.xz
+        tar xf upx-$UPX_VERSION-amd64_linux.tar.xz upx-$UPX_VERSION-amd64_linux/upx
+
     - name: Compress Editor with UPX
-      run: upx --best Editor_Linux
+      run: upx-$UPX_VERSION-amd64_linux/upx --best Editor_Linux
 
     - name: Package Editor
       uses: actions/upload-artifact@v4
@@ -122,6 +135,7 @@ jobs:
           config.ini
           startup.lua
           Editor_Linux
+
 
   content:
     runs-on: windows-latest
