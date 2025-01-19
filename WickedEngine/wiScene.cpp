@@ -148,7 +148,7 @@ namespace wi::scene
 			desc.usage = Usage::READBACK;
 			desc.bind_flags = BindFlag::NONE;
 			desc.misc_flags = ResourceMiscFlag::NONE;
-			for (int i = 0; i < arraysize(materialUploadBuffer); ++i)
+			for (int i = 0; i < arraysize(textureStreamingFeedbackBuffer_readback); ++i)
 			{
 				device->CreateBuffer(&desc, nullptr, &textureStreamingFeedbackBuffer_readback[i]);
 				device->SetName(&textureStreamingFeedbackBuffer_readback[i], "Scene::textureStreamingFeedbackBuffer_readback");
