@@ -902,7 +902,7 @@ runProcess(function()
 	if player == nil then
 		if character_scenes["character"] == nil then
 			character_scenes["character"] = Scene()
-			LoadModel(character_scenes["character"], script_dir() .. "assets/" .. "character" .. ".wiscene")
+			LoadModel(character_scenes["character"], script_dir() .. "assets/character.wiscene")
 		end
 		player = Character(character_scenes["character"], TransformComponent(), true, anim_scene, "")
 	end

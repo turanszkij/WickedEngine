@@ -27,6 +27,7 @@
 #include "wiAsync_BindLua.h"
 #include "wiTimer.h"
 #include "wiVector.h"
+#include "wiVersion.h"
 
 #include <memory>
 
@@ -221,10 +222,41 @@ namespace wi::lua
 	int IsThisDebugBuild(lua_State* L)
 	{
 #ifdef _DEBUG
-		wi::lua::SSetBool(L, true);
+		SSetBool(L, true);
 #else
-		wi::lua::SSetBool(L, false);
+		SSetBool(L, false);
 #endif
+		return 1;
+	}
+
+	int GetVersionMajor(lua_State* L)
+	{
+		SSetInt(L, wi::version::GetMajor());
+		return 1;
+	}
+	int GetVersionMinor(lua_State* L)
+	{
+		SSetInt(L, wi::version::GetMinor());
+		return 1;
+	}
+	int GetVersionRevision(lua_State* L)
+	{
+		SSetInt(L, wi::version::GetRevision());
+		return 1;
+	}
+	int GetVersionString(lua_State* L)
+	{
+		SSetString(L, wi::version::GetVersionString());
+		return 1;
+	}
+	int GetCreditsString(lua_State* L)
+	{
+		SSetString(L, wi::version::GetCreditsString());
+		return 1;
+	}
+	int GetSupportersString(lua_State* L)
+	{
+		SSetString(L, wi::version::GetSupportersString());
 		return 1;
 	}
 
@@ -245,6 +277,13 @@ namespace wi::lua
 		RegisterFunc("IsThisEditor", IsThisEditor);
 		RegisterFunc("ReturnToEditor", ReturnToEditor);
 		RegisterFunc("IsThisDebugBuild", IsThisDebugBuild);
+
+		RegisterFunc("GetVersionMajor", GetVersionMajor);
+		RegisterFunc("GetVersionMinor", GetVersionMinor);
+		RegisterFunc("GetVersionRevision", GetVersionRevision);
+		RegisterFunc("GetVersionString", GetVersionString);
+		RegisterFunc("GetCreditsString", GetCreditsString);
+		RegisterFunc("GetSupportersString", GetSupportersString);
 
 		Vector_BindLua::Bind();
 		Matrix_BindLua::Bind();
