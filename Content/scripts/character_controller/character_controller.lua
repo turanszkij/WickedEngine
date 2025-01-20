@@ -160,7 +160,6 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 			local charactercomponent = scene.Component_GetCharacter(self.model)
 			self.ground_intersect = charactercomponent.IsGrounded()
 			self.position = charactercomponent.GetPositionInterpolated()
-			local velocity = charactercomponent.GetVelocity()
 			local capsule = charactercomponent.GetCapsule()
 			character_capsules[self.model] = capsule
 			--DrawCapsule(capsule)
