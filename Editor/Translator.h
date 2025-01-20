@@ -12,6 +12,7 @@ private:
 	float angle_start = 0;
 	bool has_selected_transform = false;
 	wi::vector<uint64_t> temp_filters;
+	wi::vector<wi::ecs::Entity> selectedWithHierarchy; // all the selected entities and their descendants
 public:
 
 	void Update(const wi::scene::CameraComponent& camera, const XMFLOAT4& currentMouse, const wi::Canvas& canvas);

@@ -472,23 +472,47 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 				if (wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_LSHIFT) || wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_RSHIFT))
 				{
 					// Snap to surface mode:
-					temp_filters.reserve(selected.size());
-					for (auto& x : selected)
+
+					// 1.) Collect all objects which could be in the hierarchy of any of the selected ones
+					//	This is important because we could select a top parent that doesn't have object
+					//	but I still want to disable children's filters
+					selectedWithHierarchy.clear();
+					for (size_t i = 0; i < scene.objects.GetCount(); ++i)
 					{
-						ObjectComponent* object = scene.objects.GetComponent(x.entity);
+						Entity entity = scene.objects.GetEntity(i);
+						for (auto& potential_parent : selectedEntitiesNonRecursive)
+						{
+							if (entity == potential_parent || scene.Entity_IsDescendant(entity, potential_parent))
+							{
+								selectedWithHierarchy.push_back(entity);
+								break;
+							}
+						}
+					}
+
+					// 2.) Disable all object filters which are part of selection hierarchy for the next picking
+					//	This is to filter them out from picking, we only want to pick what's underneath
+					temp_filters.reserve(selectedWithHierarchy.size());
+					for (auto& entity : selectedWithHierarchy)
+					{
+						ObjectComponent* object = scene.objects.GetComponent(entity);
 						if (object == nullptr)
 							continue;
 						temp_filters.push_back(uint64_t(object->filterMask) | (uint64_t(object->filterMaskDynamic) << 32ull));
 						object->filterMask = 0;
 						object->filterMaskDynamic = 0;
 					}
+
+					// 3.) Pick into scene to determine placement position
 					Ray ray = wi::renderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, canvas, camera);
 					wi::scene::Scene::RayIntersectionResult result = scene.Intersects(ray, wi::enums::FILTER_OBJECT_ALL);
 					transform.translation_local = result.position;
+
+					// 4.) Restore all filters to original values
 					size_t ind = 0;
-					for (auto& x : selected)
+					for (auto& entity : selectedWithHierarchy)
 					{
-						ObjectComponent* object = scene.objects.GetComponent(x.entity);
+						ObjectComponent* object = scene.objects.GetComponent(entity);
 						if (object == nullptr)
 							continue;
 						uint64_t tmp = temp_filters[ind++];

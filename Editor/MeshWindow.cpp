@@ -122,6 +122,47 @@ void MeshWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&subsetRemoveButton);
 
+	subsetLastButton.Create("Move subset to last index");
+	subsetLastButton.SetTooltip("Move subset to the last index to render last. Useful if you want to force transparency render order within subsets.");
+	subsetLastButton.OnClick([=](wi::gui::EventArgs args) {
+		Scene& scene = editor->GetCurrentScene();
+		MeshComponent* mesh = scene.meshes.GetComponent(entity);
+		if (mesh != nullptr)
+		{
+			wi::Archive& archive = editor->AdvanceHistory();
+			archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+			editor->RecordEntity(archive, entity);
+
+			int selected = subsetComboBox.GetSelected();
+
+			uint32_t lod_count = mesh->GetLODCount();
+			wi::vector<MeshComponent::MeshSubset> newSubsets;
+			newSubsets.reserve(mesh->subsets.size());
+
+			for (uint32_t lod = 0; lod < lod_count; ++lod)
+			{
+				uint32_t first_subset = 0;
+				uint32_t last_subset = 0;
+				mesh->GetLODSubsetRange(lod, first_subset, last_subset);
+				int s = 0;
+				for (uint32_t i = first_subset; i < last_subset; ++i)
+				{
+					if (s != selected)
+					{
+						newSubsets.push_back(mesh->subsets[i]);
+					}
+					s++;
+				}
+				newSubsets.push_back(mesh->subsets[first_subset + selected]);
+			}
+			mesh->subsets = newSubsets;
+			SetEntity(entity, mesh->subsets_per_lod > 0 ? ((int)mesh->subsets_per_lod - 1) : (int)mesh->subsets.size());
+
+			editor->RecordEntity(archive, entity);
+		}
+	});
+	AddWidget(&subsetLastButton);
+
 	doubleSidedCheckBox.Create("Double Sided: ");
 	doubleSidedCheckBox.SetTooltip("If enabled, the inside of the mesh will be visible.");
 	doubleSidedCheckBox.SetSize(XMFLOAT2(hei, hei));
@@ -1178,6 +1219,7 @@ void MeshWindow::ResizeLayout()
 	subsetRemoveButton.SetPos(XMFLOAT2(subsetComboBox.GetPos().x + subsetComboBox.GetSize().x + 1 + subsetComboBox.GetSize().y, subsetComboBox.GetPos().y));
 	subsetRemoveButton.SetSize(XMFLOAT2(subsetComboBox.GetSize().y, subsetComboBox.GetSize().y));
 	add(subsetMaterialComboBox);
+	add(subsetLastButton);
 	add_right(doubleSidedCheckBox);
 	add_right(doubleSidedShadowCheckBox);
 	add_right(bvhCheckBox);
