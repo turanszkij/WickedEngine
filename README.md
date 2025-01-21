@@ -73,10 +73,10 @@ You can also download prebuilt and packaged versions of the Editor and Tests her
 If you have questions or stuck, please use the `linux` communication channel on Discord: [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
 
 #### Xbox Series X|S
-Xbox Series specific extension files requierd for building are currently private.
+Xbox Series specific extension files required for building are currently private.
 
 #### PlayStation 5
-PlayStation 5 specific extension files requierd for building are currently private.
+PlayStation 5 specific extension files required for building are currently private.
 
 
 ### Examples:
