@@ -989,6 +989,11 @@ void MeshWindow::Create(EditorComponent* _editor)
 			mesh->subsets = subsets;
 
 			mesh->CreateRenderData();
+
+			if (mesh->IsBVHEnabled())
+			{
+				mesh->BuildBVH();
+			}
 		}
 		SetEntity(entity, subset);
 	});
