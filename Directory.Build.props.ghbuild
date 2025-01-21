@@ -1,0 +1,18 @@
+<!-- This file is only needed for Ccache compilation in GitHub actions, it can safely be ignored otherwise -->
+<Project>
+  <PropertyGroup>
+    <CLToolPath>D:\a\WickedEngine\WickedEngine</CLToolPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <UseMultiToolTask>true</UseMultiToolTask>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <ForcedIncludeFiles />
+      <ObjectFileName>$(IntDir)%(FileName).obj</ObjectFileName>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>
