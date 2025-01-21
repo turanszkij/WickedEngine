@@ -80,7 +80,6 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 		target_rot_vertical = 0,
 		target_height = 0,
 		anims = {},
-		anim_amount = 1,
 		neck = INVALID_ENTITY,
 		head = INVALID_ENTITY,
 		left_hand = INVALID_ENTITY,
@@ -89,8 +88,6 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 		right_foot = INVALID_ENTITY,
 		left_toes = INVALID_ENTITY,
 		right_toes = INVALID_ENTITY,
-		leaning_next = 0, -- leaning sideways when turning
-		leaning = 0, -- leaning sideways when turning (smoothed)
 		savedPointerPos = Vector(),
 		walk_speed = 0.1,
 		jog_speed = 0.2,
@@ -103,8 +100,6 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 		position = Vector(),
         ground_intersect = false,
 		controllable = true,
-		fixed_update_remain = 0,
-		timestep_occured = false,
 		root_offset = 0,
 		foot_placed_left = false,
 		foot_placed_right = false,
@@ -165,7 +160,6 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 			local charactercomponent = scene.Component_GetCharacter(self.model)
 			self.ground_intersect = charactercomponent.IsGrounded()
 			self.position = charactercomponent.GetPositionInterpolated()
-			local velocity = charactercomponent.GetVelocity()
 			local capsule = charactercomponent.GetCapsule()
 			character_capsules[self.model] = capsule
 			--DrawCapsule(capsule)
@@ -491,7 +485,6 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 	layer.SetLayerMask(self.layerMask)
 
 	self.state = States.IDLE
-	self.state_prev = self.state
 
 	for i,entity in ipairs(scene.Entity_GetHumanoidArray()) do
 		if scene.Entity_IsDescendant(entity, self.model) then
