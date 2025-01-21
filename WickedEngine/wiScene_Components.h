@@ -2028,6 +2028,8 @@ namespace wi::scene
 		float ragdoll_fatness = 1.0f;
 		float ragdoll_headsize = 1.0f;
 
+		wi::ecs::Entity lookAtEntity = wi::ecs::INVALID_ENTITY; // lookAt can be fixed to specific entity
+
 		// Non-serialized attributes:
 		XMFLOAT3 lookAt = {}; // lookAt target pos, can be set by user
 		XMFLOAT4 lookAtDeltaRotationState_Head = XMFLOAT4(0, 0, 0, 1);

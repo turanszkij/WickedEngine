@@ -3542,6 +3542,15 @@ namespace wi::scene
 				{ HumanoidComponent::HumanoidBone::RightEye, &humanoid.eye_rotation_max, &humanoid.eye_rotation_speed, &humanoid.lookAtDeltaRotationState_RightEye },
 			};
 
+			if (humanoid.IsLookAtEnabled() && humanoid.lookAtEntity != INVALID_ENTITY)
+			{
+				const TransformComponent* lookatTransform = transforms.GetComponent(humanoid.lookAtEntity);
+				if (lookatTransform != nullptr)
+				{
+					humanoid.lookAt = lookatTransform->GetPosition();
+				}
+			}
+
 			for (auto& source : sources)
 			{
 				const Entity bone = humanoid.bones[size_t(source.type)];

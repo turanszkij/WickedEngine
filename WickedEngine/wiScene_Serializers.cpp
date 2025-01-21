@@ -2160,6 +2160,11 @@ namespace wi::scene
 				archive >> ragdoll_fatness;
 				archive >> ragdoll_headsize;
 			}
+
+			if (seri.GetVersion() >= 2)
+			{
+				SerializeEntity(archive, lookAtEntity, seri);
+			}
 		}
 		else
 		{
@@ -2179,6 +2184,11 @@ namespace wi::scene
 			{
 				archive << ragdoll_fatness;
 				archive << ragdoll_headsize;
+			}
+
+			if (seri.GetVersion() >= 2)
+			{
+				SerializeEntity(archive, lookAtEntity, seri);
 			}
 		}
 	}
