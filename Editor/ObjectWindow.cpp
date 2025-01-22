@@ -509,10 +509,14 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	ditherSlider.SetSize(XMFLOAT2(wid, hei));
 	ditherSlider.SetPos(XMFLOAT2(x, y += step));
 	ditherSlider.OnSlide([&](wi::gui::EventArgs args) {
-		ObjectComponent* object = editor->GetCurrentScene().objects.GetComponent(entity);
-		if (object != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			object->color.w = 1 - args.fValue;
+			ObjectComponent* object = scene.objects.GetComponent(x.entity);
+			if (object != nullptr)
+			{
+				object->color.w = 1 - args.fValue;
+			}
 		}
 	});
 	AddWidget(&ditherSlider);
@@ -522,10 +526,14 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	alphaRefSlider.SetSize(XMFLOAT2(wid, hei));
 	alphaRefSlider.SetPos(XMFLOAT2(x, y += step));
 	alphaRefSlider.OnSlide([&](wi::gui::EventArgs args) {
-		ObjectComponent* object = editor->GetCurrentScene().objects.GetComponent(entity);
-		if (object != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			object->alphaRef = args.fValue;
+			ObjectComponent* object = scene.objects.GetComponent(x.entity);
+			if (object != nullptr)
+			{
+				object->alphaRef = args.fValue;
+			}
 		}
 		});
 	AddWidget(&alphaRefSlider);
@@ -535,10 +543,14 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	rimHighlightIntesitySlider.SetSize(XMFLOAT2(wid, hei));
 	rimHighlightIntesitySlider.SetPos(XMFLOAT2(x, y += step));
 	rimHighlightIntesitySlider.OnSlide([&](wi::gui::EventArgs args) {
-		ObjectComponent* object = editor->GetCurrentScene().objects.GetComponent(entity);
-		if (object != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			object->rimHighlightColor.w = args.fValue;
+			ObjectComponent* object = scene.objects.GetComponent(x.entity);
+			if (object != nullptr)
+			{
+				object->rimHighlightColor.w = args.fValue;
+			}
 		}
 	});
 	AddWidget(&rimHighlightIntesitySlider);
@@ -548,10 +560,14 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	rimHighlightFalloffSlider.SetSize(XMFLOAT2(wid, hei));
 	rimHighlightFalloffSlider.SetPos(XMFLOAT2(x, y += step));
 	rimHighlightFalloffSlider.OnSlide([&](wi::gui::EventArgs args) {
-		ObjectComponent* object = editor->GetCurrentScene().objects.GetComponent(entity);
-		if (object != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			object->rimHighlightFalloff = args.fValue;
+			ObjectComponent* object = scene.objects.GetComponent(x.entity);
+			if (object != nullptr)
+			{
+				object->rimHighlightFalloff = args.fValue;
+			}
 		}
 	});
 	AddWidget(&rimHighlightFalloffSlider);
@@ -561,10 +577,14 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	cascadeMaskSlider.SetSize(XMFLOAT2(wid, hei));
 	cascadeMaskSlider.SetPos(XMFLOAT2(x, y += step));
 	cascadeMaskSlider.OnSlide([&](wi::gui::EventArgs args) {
-		ObjectComponent* object = editor->GetCurrentScene().objects.GetComponent(entity);
-		if (object != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			object->cascadeMask = (uint32_t)args.iValue;
+			ObjectComponent* object = scene.objects.GetComponent(x.entity);
+			if (object != nullptr)
+			{
+				object->cascadeMask = (uint32_t)args.iValue;
+			}
 		}
 	});
 	AddWidget(&cascadeMaskSlider);
@@ -574,10 +594,14 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	lodSlider.SetSize(XMFLOAT2(wid, hei));
 	lodSlider.SetPos(XMFLOAT2(x, y += step));
 	lodSlider.OnSlide([&](wi::gui::EventArgs args) {
-		ObjectComponent* object = editor->GetCurrentScene().objects.GetComponent(entity);
-		if (object != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			object->lod_distance_multiplier = args.fValue;
+			ObjectComponent* object = scene.objects.GetComponent(x.entity);
+			if (object != nullptr)
+			{
+				object->lod_distance_multiplier = args.fValue;
+			}
 		}
 		});
 	AddWidget(&lodSlider);
@@ -587,10 +611,14 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	drawdistanceSlider.SetSize(XMFLOAT2(wid, hei));
 	drawdistanceSlider.SetPos(XMFLOAT2(x, y += step));
 	drawdistanceSlider.OnSlide([&](wi::gui::EventArgs args) {
-		ObjectComponent* object = editor->GetCurrentScene().objects.GetComponent(entity);
-		if (object != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			object->draw_distance = args.fValue;
+			ObjectComponent* object = scene.objects.GetComponent(x.entity);
+			if (object != nullptr)
+			{
+				object->draw_distance = args.fValue;
+			}
 		}
 		});
 	AddWidget(&drawdistanceSlider);
@@ -600,10 +628,14 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	sortPrioritySlider.SetSize(XMFLOAT2(wid, hei));
 	sortPrioritySlider.SetPos(XMFLOAT2(x, y += step));
 	sortPrioritySlider.OnSlide([&](wi::gui::EventArgs args) {
-		ObjectComponent* object = editor->GetCurrentScene().objects.GetComponent(entity);
-		if (object != nullptr)
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
 		{
-			object->sort_priority = (uint8_t)args.iValue;
+			ObjectComponent* object = scene.objects.GetComponent(x.entity);
+			if (object != nullptr)
+			{
+				object->sort_priority = (uint8_t)args.iValue;
+			}
 		}
 		});
 	AddWidget(&sortPrioritySlider);

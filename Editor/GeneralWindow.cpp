@@ -16,6 +16,18 @@ void GeneralWindow::Create(EditorComponent* _editor)
 
 	SetSize(XMFLOAT2(300, 740));
 
+	masterVolumeSlider.Create(0, 2, 1, 100, "Master Volume: ");
+	if (editor->main->config.GetSection("options").Has("volume"))
+	{
+		wi::audio::SetVolume(editor->main->config.GetSection("options").GetFloat("volume"));
+	}
+	masterVolumeSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::audio::SetVolume(args.fValue); // no specific sound instance arg: master volume
+		editor->main->config.GetSection("options").Set("volume", args.fValue);
+	});
+	masterVolumeSlider.SetValue(wi::audio::GetVolume());
+	AddWidget(&masterVolumeSlider);
+
 	physicsDebugCheckBox.Create("Physics visualizer: ");
 	physicsDebugCheckBox.SetTooltip("Visualize the physics world");
 	physicsDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
@@ -971,6 +983,10 @@ void GeneralWindow::ResizeLayout()
 	versionCheckBox.SetPos(XMFLOAT2(fpsCheckBox.GetPos().x - versionCheckBox.GetSize().x - 70, y));
 	y += versionCheckBox.GetSize().y;
 	y += padding;
+
+	width -= padding * 6;
+	add(masterVolumeSlider);
+	width += padding * 6;
 
 	saveModeComboBox.SetPos(XMFLOAT2(x_off, y));
 	saveModeComboBox.SetSize(XMFLOAT2(width - x_off - saveModeComboBox.GetScale().y - 1, saveModeComboBox.GetScale().y));

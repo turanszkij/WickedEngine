@@ -10,6 +10,7 @@ public:
 	wi::gui::CheckBox versionCheckBox;
 	wi::gui::CheckBox fpsCheckBox;
 	wi::gui::CheckBox otherinfoCheckBox;
+	wi::gui::Slider masterVolumeSlider;
 	wi::gui::ComboBox themeCombo;
 	wi::gui::ComboBox saveModeComboBox;
 	wi::gui::CheckBox saveCompressionCheckBox;
