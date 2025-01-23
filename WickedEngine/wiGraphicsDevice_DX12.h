@@ -178,8 +178,8 @@ namespace wi::graphics
 			};
 			wi::vector<Discard> discards;
 			D3D_PRIMITIVE_TOPOLOGY prev_pt = {};
-			wi::vector<std::pair<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>>> pipelines_worker;
-			size_t prev_pipeline_hash = {};
+			wi::vector<std::pair<PipelineHash, Microsoft::WRL::ComPtr<ID3D12PipelineState>>> pipelines_worker;
+			PipelineHash prev_pipeline_hash = {};
 			const PipelineState* active_pso = {};
 			const Shader* active_cs = {};
 			const RaytracingPipelineState* active_rt = {};
@@ -213,7 +213,7 @@ namespace wi::graphics
 				binder.reset();
 				frame_allocators[buffer_index].reset();
 				prev_pt = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
-				prev_pipeline_hash = 0;
+				prev_pipeline_hash = {};
 				active_pso = nullptr;
 				active_cs = nullptr;
 				active_rt = nullptr;
@@ -272,7 +272,7 @@ namespace wi::graphics
 			return *(CommandList_DX12*)cmd.internal_state;
 		}
 
-		wi::unordered_map<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_global;
+		wi::unordered_map<PipelineHash, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_global;
 
 		void pso_validate(CommandList cmd);
 
