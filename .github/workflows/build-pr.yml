@@ -33,7 +33,7 @@ jobs:
         curl -sOSL https://github.com/ccache/ccache/releases/download/v$Env:CCACHE_VERSION/ccache-$Env:CCACHE_VERSION-windows-x86_64.zip
         unzip -qj ccache-$Env:CCACHE_VERSION-windows-x86_64.zip ccache-$Env:CCACHE_VERSION-windows-x86_64/ccache.exe
         mv ccache.exe cl.exe
-        mv Directory.Build.props.ghbuild Directory.Build.props
+        mv .github/workflows/Directory.Build.props.ghbuild Directory.Build.props
 
     - name: Initial compile
       shell: cmd
