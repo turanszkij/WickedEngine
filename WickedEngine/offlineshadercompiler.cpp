@@ -373,7 +373,7 @@ int main(int argc, char* argv[])
 	std::cout << "\trebuild : \t\tAll shaders will be rebuilt, regardless if they are outdated or not\n";
 	std::cout << "\tdisable_optimization : \tShaders will be compiled without optimizations\n";
 	std::cout << "\tstrip_reflection : \tReflection will be stripped from shader binary to reduce file size\n";
-	std::cout << "\tshaderdump : \t\tShaders will be saved to wiShaderDump.h C++ header file (rebuild is assumed)\n";
+	std::cout << "\tshaderdump : \t\tShaders will be saved to wiShaderDump.h C++ header file (can be combined with \"rebuild\")\n";
 	std::cout << "Command arguments used: ";
 
 	wi::arguments::Parse(argc, argv);
@@ -407,7 +407,6 @@ int main(int argc, char* argv[])
 	if (wi::arguments::HasArgument("shaderdump"))
 	{
 		shaderdump_enabled = true;
-		rebuild = true;
 		std::cout << "shaderdump ";
 	}
 
@@ -526,9 +525,35 @@ int main(int argc, char* argv[])
 						shaderbinaryfilename += "_" + def;
 					}
 					shaderbinaryfilename += ".cso";
-					if (!rebuild && !wi::shadercompiler::IsShaderOutdated(shaderbinaryfilename))
+
+					wi::shadercompiler::CompilerOutput output;
+
+					if (!wi::shadercompiler::IsShaderOutdated(shaderbinaryfilename))
 					{
-						return;
+						if (!rebuild)
+						{
+							if (shaderdump_enabled)
+							{
+								auto vec = std::make_shared<std::vector<uint8_t>>();
+
+								if (wi::helper::FileRead(shaderbinaryfilename, *vec))
+								{
+									output.internal_state = vec;
+									output.shaderdata = vec->data();
+									output.shadersize = vec->size();
+									locker.lock();
+									results[shaderbinaryfilename] = output;
+									std::cout << "up-to-date: " << shaderbinaryfilename << std::endl;
+									locker.unlock();
+								}
+								else {
+									locker.lock();
+									std::cerr << "ERROR reading binary shader: " << shaderbinaryfilename << std::endl;
+									locker.unlock();
+								}
+							}
+							return;
+						}
 					}
 
 					wi::shadercompiler::CompilerInput input;
@@ -557,7 +582,6 @@ int main(int argc, char* argv[])
 						return;
 					}
 
-					wi::shadercompiler::CompilerOutput output;
 					wi::shadercompiler::Compile(input, output);
 
 					if (output.IsValid())
