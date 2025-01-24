@@ -668,13 +668,13 @@ inline uint AlphaToCoverage(half alpha, half alphaTest, float4 svposition)
 	return 0;
 }
 
-float4 InteriorMapping(in float3 P, in float3 V, in ShaderMaterial material, in ShaderMeshInstance meshinstance)
+half4 InteriorMapping(in float3 P, in float3 V, in ShaderMaterial material, in ShaderMeshInstance meshinstance)
 {
 	[branch]
 	if (!material.textures[BASECOLORMAP].IsValid())
 		return 0;
 	
-	TextureCube cubemap = bindless_cubemaps[descriptor_index(material.textures[BASECOLORMAP].texture_descriptor)];
+	TextureCube<half4> cubemap = bindless_cubemaps_half4[descriptor_index(material.textures[BASECOLORMAP].texture_descriptor)];
 
 	// Note: there is some heavy per-pixel matrix math here (mul, inverse, decompose) by intention
 	//	to not increase common structure sizes for single shader that would require these things!
@@ -691,7 +691,7 @@ float4 InteriorMapping(in float3 P, in float3 V, in ShaderMaterial material, in 
 		
 	const half3 clipSpacePos = mul(interiorProjection, float4(P, 1)).xyz;
 		
-	float3 R = -V;
+	half3 R = -V;
 	half3 RayLS = mul((half3x3)interiorProjection, R);
 	half3 FirstPlaneIntersect = (1 - clipSpacePos) / RayLS;
 	half3 SecondPlaneIntersect = (-1 - clipSpacePos) / RayLS;
