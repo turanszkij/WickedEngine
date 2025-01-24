@@ -15,7 +15,21 @@ float4 main(VertextoPixel input) : SV_TARGET
 	[branch]
 	if (image.texture_base_index >= 0)
 	{
-		half4 tex = bindless_textures_half4[descriptor_index(image.texture_base_index)].Sample(sam, uvsets.xy);
+		half4 tex = 0;
+		
+		[branch]
+		if (image.flags & IMAGE_FLAG_CUBEMAP_BASE)
+		{
+			float3 cube_dir = uv_to_cubemap_cross(uvsets.xy);
+			if (any(cube_dir))
+			{
+				tex = bindless_cubemaps_half4[descriptor_index(image.texture_base_index)].Sample(sam, cube_dir);
+			}
+		}
+		else
+		{
+			tex = bindless_textures_half4[descriptor_index(image.texture_base_index)].Sample(sam, uvsets.xy);
+		}
 
 		if (image.flags & IMAGE_FLAG_EXTRACT_NORMALMAP)
 		{

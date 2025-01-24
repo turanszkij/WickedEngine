@@ -374,6 +374,9 @@ struct alignas(16) ShaderMaterial
 	uint2 transmission_sheenroughness_clearcoat_clearcoatroughness;
 	uint2 aniso_anisosin_anisocos_terrainblend;
 
+	uint2 interiorscale;
+	uint2 padding;
+
 	int sampler_descriptor;
 	uint options_stencilref;
 	uint layerMask;
@@ -401,6 +404,9 @@ struct alignas(16) ShaderMaterial
 
 		transmission_sheenroughness_clearcoat_clearcoatroughness = uint2(0, 0);
 		aniso_anisosin_anisocos_terrainblend = uint2(0, 0);
+
+		interiorscale = uint2(0, 0); // packed half3 + unused half
+		padding = uint2(0, 0);
 
 		sampler_descriptor = -1;
 		options_stencilref = 0;
@@ -441,6 +447,7 @@ struct alignas(16) ShaderMaterial
 	inline half GetAnisotropySin() { return unpack_half4(aniso_anisosin_anisocos_terrainblend).y; }
 	inline half GetAnisotropyCos() { return unpack_half4(aniso_anisosin_anisocos_terrainblend).z; }
 	inline half GetTerrainBlendRcp() { return unpack_half4(aniso_anisosin_anisocos_terrainblend).w; }
+	inline half3 GetInteriorScale() { return unpack_half3(interiorscale); }
 	inline uint GetStencilRef() { return options_stencilref >> 24u; }
 #endif // __cplusplus
 
@@ -470,7 +477,7 @@ struct alignas(16) ShaderTypeBin
 	uint4 padding; // 32-byte alignment
 #endif // __SCE__ || __PSSL__
 };
-static const uint SHADERTYPE_BIN_COUNT = 11;
+static const uint SHADERTYPE_BIN_COUNT = 12;
 
 struct alignas(16) VisibilityTile
 {

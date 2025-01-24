@@ -256,6 +256,10 @@ namespace wi::scene
 			{
 				archive >> saturation;
 			}
+			if (seri.GetVersion() >= 9)
+			{
+				archive >> interiorMappingScale;
+			}
 
 			for (auto& x : textures)
 			{
@@ -420,6 +424,10 @@ namespace wi::scene
 			if (seri.GetVersion() >= 8)
 			{
 				archive << saturation;
+			}
+			if (seri.GetVersion() >= 9)
+			{
+				archive << interiorMappingScale;
 			}
 		}
 	}

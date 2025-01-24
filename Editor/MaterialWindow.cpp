@@ -742,10 +742,52 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			MaterialComponent* material = get_material(scene, x);
 			if (material == nullptr)
 				continue;
-			material->blend_with_terrain_height = args.fValue;
+			material->SetBlendWithTerrainHeight(args.fValue);
 		}
 	});
 	AddWidget(&blendTerrainSlider);
+
+	interiorScaleXSlider.Create(1, 10, 1, 1000, "Interior Scale X: ");
+	interiorScaleXSlider.SetTooltip("Set the cubemap scale for the interior mapping (if material uses interior mapping shader)");
+	interiorScaleXSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
+			material->SetInteriorMappingScale(XMFLOAT3(args.fValue, material->interiorMappingScale.y, material->interiorMappingScale.z));
+		}
+	});
+	AddWidget(&interiorScaleXSlider);
+
+	interiorScaleYSlider.Create(1, 10, 1, 1000, "Interior Scale Y: ");
+	interiorScaleYSlider.SetTooltip("Set the cubemap scale for the interior mapping (if material uses interior mapping shader)");
+	interiorScaleYSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
+			material->SetInteriorMappingScale(XMFLOAT3(material->interiorMappingScale.x, args.fValue, material->interiorMappingScale.z));
+		}
+		});
+	AddWidget(&interiorScaleYSlider);
+
+	interiorScaleZSlider.Create(1, 10, 1, 1000, "Interior Scale Z: ");
+	interiorScaleZSlider.SetTooltip("Set the cubemap scale for the interior mapping (if material uses interior mapping shader)");
+	interiorScaleZSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
+			material->SetInteriorMappingScale(XMFLOAT3(material->interiorMappingScale.x, material->interiorMappingScale.y, args.fValue));
+		}
+		});
+	AddWidget(&interiorScaleZSlider);
 
 
 	// 
@@ -947,6 +989,14 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			{
 				const Texture& texture = material->textures[args.iValue].resource.GetTexture();
 				tooltiptext += "\nResolution: " + std::to_string(texture.desc.width) + " * " + std::to_string(texture.desc.height);
+				if (texture.desc.array_size > 0)
+				{
+					tooltiptext += " * " + std::to_string(texture.desc.array_size);
+				}
+				if (has_flag(texture.desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
+				{
+					tooltiptext += " (cubemap)";
+				}
 				tooltiptext += "\nMip levels: " + std::to_string(texture.desc.mip_levels);
 				tooltiptext += "\nFormat: ";
 				tooltiptext += GetFormatString(texture.desc.format);
@@ -1115,6 +1165,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		shaderTypeComboBox.AddItem("Water", MaterialComponent::SHADERTYPE_WATER);
 		shaderTypeComboBox.AddItem("Cartoon", MaterialComponent::SHADERTYPE_CARTOON);
 		shaderTypeComboBox.AddItem("Unlit", MaterialComponent::SHADERTYPE_UNLIT);
+		shaderTypeComboBox.AddItem("Interior", MaterialComponent::SHADERTYPE_INTERIORMAPPING);
 		for (auto& x : wi::renderer::GetCustomShaders())
 		{
 			shaderTypeComboBox.AddItem("*" + x.name);
@@ -1177,6 +1228,9 @@ void MaterialWindow::SetEntity(Entity entity)
 		clearcoatSlider.SetValue(material->clearcoat);
 		clearcoatRoughnessSlider.SetValue(material->clearcoatRoughness);
 		blendTerrainSlider.SetValue(material->blend_with_terrain_height);
+		interiorScaleXSlider.SetValue(material->interiorMappingScale.x);
+		interiorScaleYSlider.SetValue(material->interiorMappingScale.y);
+		interiorScaleZSlider.SetValue(material->interiorMappingScale.z);
 
 		shadingRateComboBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING));
 
@@ -1289,6 +1343,9 @@ void MaterialWindow::ResizeLayout()
 	add(clearcoatSlider);
 	add(clearcoatRoughnessSlider);
 	add(blendTerrainSlider);
+	add(interiorScaleXSlider);
+	add(interiorScaleYSlider);
+	add(interiorScaleZSlider);
 	add(colorComboBox);
 	add_fullwidth(colorPicker);
 	add(textureSlotComboBox);

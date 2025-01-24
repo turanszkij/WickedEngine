@@ -1374,6 +1374,44 @@ inline float3 cubemap_to_uv(in float3 r)
 	return float3((uvw.xy / uvw.z + 1) * 0.5, faceIndex);
 }
 
+
+inline bool is_inside_uv(in float2 uv, in float4 uv_range)
+{
+	return all(uv.xy >= uv_range.xy) && all(uv.xy <= uv_range.zw);
+}
+
+static const float4 cubemap_cross_ranges[] = {
+	float4(0.5, 0.333, 0.75, 0.667), // positive_x
+	float4(0.0, 0.333, 0.25, 0.667), // negative_x
+	float4(0.25, 0.0, 0.5, 0.333),	 // positive_y
+	float4(0.25, 0.667, 0.5, 1.0),	 // negative_y
+	float4(0.25, 0.333, 0.5, 0.667), // positive_z
+	float4(0.75, 0.333, 1.0, 0.667), // negative_z
+};
+
+// From a 2D UV coordinate, returns 3D cubemap sampling UV to sample the cubemap as an unwrapped 2D cross image
+//	Returns 0 if the input UV doesn't correspond to any face, and a 3D direction vector that can be used to sample a TextureCube otherwise
+inline float3 uv_to_cubemap_cross(in float2 uv)
+{
+	float2 cross_uv = 0;
+	int result_face = -1;
+	for (int face = 0; face < arraysize(cubemap_cross_ranges); ++face)
+	{
+		float4 range = cubemap_cross_ranges[face];
+		if (is_inside_uv(uv.xy, range))
+		{
+			result_face = face;
+			cross_uv = inverse_lerp(range.xy, range.zw, uv.xy);
+			break;
+		}
+	}
+
+	if (result_face >= 0)
+		return uv_to_cubemap(cross_uv, result_face);
+		
+	return 0;
+}
+
 // Samples a texture with Catmull-Rom filtering, using 9 texture fetches instead of 16. ( https://gist.github.com/TheRealMJP/c83b8c0f46b63f3a88a5986f4fa982b1#file-tex2dcatmullrom-hlsl )
 // See http://vec3.ca/bicubic-filtering-in-fewer-taps/ for more details
 float4 SampleTextureCatmullRom(in Texture2D<float4> tex, in SamplerState linearSampler, in float2 uv)
@@ -2066,6 +2104,89 @@ static const float3 random_colors[] = {
 float3 random_color(uint index)
 {
 	return random_colors[index % arraysize(random_colors)];
+}
+
+// Matrix operations for HLSL: https://gist.github.com/mattatz/86fff4b32d198d0928d0fa4ff32cf6fa
+float4x4 inverse(float4x4 m)
+{
+    float n11 = m[0][0], n12 = m[1][0], n13 = m[2][0], n14 = m[3][0];
+    float n21 = m[0][1], n22 = m[1][1], n23 = m[2][1], n24 = m[3][1];
+    float n31 = m[0][2], n32 = m[1][2], n33 = m[2][2], n34 = m[3][2];
+    float n41 = m[0][3], n42 = m[1][3], n43 = m[2][3], n44 = m[3][3];
+
+    float t11 = n23 * n34 * n42 - n24 * n33 * n42 + n24 * n32 * n43 - n22 * n34 * n43 - n23 * n32 * n44 + n22 * n33 * n44;
+    float t12 = n14 * n33 * n42 - n13 * n34 * n42 - n14 * n32 * n43 + n12 * n34 * n43 + n13 * n32 * n44 - n12 * n33 * n44;
+    float t13 = n13 * n24 * n42 - n14 * n23 * n42 + n14 * n22 * n43 - n12 * n24 * n43 - n13 * n22 * n44 + n12 * n23 * n44;
+    float t14 = n14 * n23 * n32 - n13 * n24 * n32 - n14 * n22 * n33 + n12 * n24 * n33 + n13 * n22 * n34 - n12 * n23 * n34;
+
+    float det = n11 * t11 + n21 * t12 + n31 * t13 + n41 * t14;
+    float idet = 1.0f / det;
+
+    float4x4 ret;
+
+    ret[0][0] = t11 * idet;
+    ret[0][1] = (n24 * n33 * n41 - n23 * n34 * n41 - n24 * n31 * n43 + n21 * n34 * n43 + n23 * n31 * n44 - n21 * n33 * n44) * idet;
+    ret[0][2] = (n22 * n34 * n41 - n24 * n32 * n41 + n24 * n31 * n42 - n21 * n34 * n42 - n22 * n31 * n44 + n21 * n32 * n44) * idet;
+    ret[0][3] = (n23 * n32 * n41 - n22 * n33 * n41 - n23 * n31 * n42 + n21 * n33 * n42 + n22 * n31 * n43 - n21 * n32 * n43) * idet;
+
+    ret[1][0] = t12 * idet;
+    ret[1][1] = (n13 * n34 * n41 - n14 * n33 * n41 + n14 * n31 * n43 - n11 * n34 * n43 - n13 * n31 * n44 + n11 * n33 * n44) * idet;
+    ret[1][2] = (n14 * n32 * n41 - n12 * n34 * n41 - n14 * n31 * n42 + n11 * n34 * n42 + n12 * n31 * n44 - n11 * n32 * n44) * idet;
+    ret[1][3] = (n12 * n33 * n41 - n13 * n32 * n41 + n13 * n31 * n42 - n11 * n33 * n42 - n12 * n31 * n43 + n11 * n32 * n43) * idet;
+
+    ret[2][0] = t13 * idet;
+    ret[2][1] = (n14 * n23 * n41 - n13 * n24 * n41 - n14 * n21 * n43 + n11 * n24 * n43 + n13 * n21 * n44 - n11 * n23 * n44) * idet;
+    ret[2][2] = (n12 * n24 * n41 - n14 * n22 * n41 + n14 * n21 * n42 - n11 * n24 * n42 - n12 * n21 * n44 + n11 * n22 * n44) * idet;
+    ret[2][3] = (n13 * n22 * n41 - n12 * n23 * n41 - n13 * n21 * n42 + n11 * n23 * n42 + n12 * n21 * n43 - n11 * n22 * n43) * idet;
+
+    ret[3][0] = t14 * idet;
+    ret[3][1] = (n13 * n24 * n31 - n14 * n23 * n31 + n14 * n21 * n33 - n11 * n24 * n33 - n13 * n21 * n34 + n11 * n23 * n34) * idet;
+    ret[3][2] = (n14 * n22 * n31 - n12 * n24 * n31 - n14 * n21 * n32 + n11 * n24 * n32 + n12 * n21 * n34 - n11 * n22 * n34) * idet;
+    ret[3][3] = (n12 * n23 * n31 - n13 * n22 * n31 + n13 * n21 * n32 - n11 * n23 * n32 - n12 * n21 * n33 + n11 * n22 * n33) * idet;
+
+    return ret;
+}
+
+// http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/
+float4 matrix_to_quaternion(float4x4 m)
+{
+    float tr = m[0][0] + m[1][1] + m[2][2];
+    float4 q = float4(0, 0, 0, 0);
+
+    if (tr > 0)
+    {
+        float s = sqrt(tr + 1.0) * 2; // S=4*qw 
+        q.w = 0.25 * s;
+        q.x = (m[2][1] - m[1][2]) / s;
+        q.y = (m[0][2] - m[2][0]) / s;
+        q.z = (m[1][0] - m[0][1]) / s;
+    }
+    else if ((m[0][0] > m[1][1]) && (m[0][0] > m[2][2]))
+    {
+        float s = sqrt(1.0 + m[0][0] - m[1][1] - m[2][2]) * 2; // S=4*qx 
+        q.w = (m[2][1] - m[1][2]) / s;
+        q.x = 0.25 * s;
+        q.y = (m[0][1] + m[1][0]) / s;
+        q.z = (m[0][2] + m[2][0]) / s;
+    }
+    else if (m[1][1] > m[2][2])
+    {
+        float s = sqrt(1.0 + m[1][1] - m[0][0] - m[2][2]) * 2; // S=4*qy
+        q.w = (m[0][2] - m[2][0]) / s;
+        q.x = (m[0][1] + m[1][0]) / s;
+        q.y = 0.25 * s;
+        q.z = (m[1][2] + m[2][1]) / s;
+    }
+    else
+    {
+        float s = sqrt(1.0 + m[2][2] - m[0][0] - m[1][1]) * 2; // S=4*qz
+        q.w = (m[1][0] - m[0][1]) / s;
+        q.x = (m[0][2] + m[2][0]) / s;
+        q.y = (m[1][2] + m[2][1]) / s;
+        q.z = 0.25 * s;
+    }
+
+    return q;
 }
 
 #endif // WI_SHADER_GLOBALS_HF

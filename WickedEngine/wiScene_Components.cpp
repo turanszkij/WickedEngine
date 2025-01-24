@@ -315,6 +315,7 @@ namespace wi::scene
 			_blend_with_terrain_height_rcp = 1.0f / blend_with_terrain_height;
 		}
 		material.aniso_anisosin_anisocos_terrainblend = pack_half4(_anisotropy_strength, _anisotropy_rotation_sin, _anisotropy_rotation_cos, _blend_with_terrain_height_rcp);
+		material.interiorscale = pack_half3(interiorMappingScale);
 		material.shaderType = (uint)shaderType;
 		material.userdata = userdata;
 
@@ -412,6 +413,12 @@ namespace wi::scene
 		else
 		{
 			material.sampler_descriptor = sampler_descriptor;
+		}
+
+		if (shaderType == SHADERTYPE_INTERIORMAPPING && textures[BASECOLORMAP].resource.IsValid() && !has_flag(textures[BASECOLORMAP].resource.GetTexture().GetDesc().misc_flags, ResourceMiscFlag::TEXTURECUBE))
+		{
+			// If the BASECOLORMAP slot is not a cubemap, then this will be invalid for the interior mapping shader:
+			material.textures[BASECOLORMAP].texture_descriptor = -1;
 		}
 
 		std::memcpy(dest, &material, sizeof(ShaderMaterial)); // memcpy whole structure into mapped pointer to avoid read from uncached memory

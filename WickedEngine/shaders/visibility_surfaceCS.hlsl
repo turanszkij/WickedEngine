@@ -55,12 +55,12 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		return;
 	}
 
-#ifdef UNLIT
-	half4 color = half4(surface.albedo, 1);
+#if defined(UNLIT) || defined(INTERIORMAPPING)
+	half4 color = surface.baseColor;
 	ApplyFog(surface.hit_depth, surface.V, color);
 	output[pixel] = color;
 	return;
-#endif // UNLIT
+#endif // UNLIT || INTERIORMAPPING
 
 	// Write out sampleable attributes for post processing into textures:
 #ifdef CLEARCOAT
