@@ -23,7 +23,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 			float3 cube_dir = uv_to_cubemap_cross(uvsets.xy);
 			if (any(cube_dir))
 			{
-				tex = bindless_cubemaps_half4[descriptor_index(image.texture_base_index)].Sample(sam, cube_dir);
+				tex = bindless_cubemaps_half4[descriptor_index(image.texture_base_index)].SampleLevel(sam, cube_dir, 0);
 			}
 		}
 		else
