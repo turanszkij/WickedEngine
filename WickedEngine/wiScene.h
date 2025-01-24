@@ -528,6 +528,9 @@ namespace wi::scene
 		using CapsuleIntersectionResult = SphereIntersectionResult;
 		CapsuleIntersectionResult Intersects(const wi::primitive::Capsule& capsule, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;
 
+		// Goes through the hierarchy backwards and computes entity's world space matrix:
+		XMMATRIX ComputeEntityMatrixRecursive(wi::ecs::Entity entity) const;
+
 		// Goes through the hierarchy backwards and computes parent's world space matrix:
 		XMMATRIX ComputeParentMatrixRecursive(wi::ecs::Entity entity) const;
 
@@ -542,7 +545,7 @@ namespace wi::scene
 		//	returns entity ID of the new animation or INVALID_ENTITY if retargeting was not successful
 		wi::ecs::Entity RetargetAnimation(wi::ecs::Entity dst, wi::ecs::Entity src, bool bake_data, const Scene* src_scene = nullptr);
 
-		// If you don't know which armature the bone is contained int, this function can be used to find the first such armature and return the bone's rest matrix
+		// If you don't know which armature the bone is contained in, this function can be used to find the first such armature and return the bone's rest matrix
 		//	If not found, and entity has a transform, it returns transform matrix
 		//	Otherwise, returns identity matrix
 		XMMATRIX GetRestPose(wi::ecs::Entity entity) const;

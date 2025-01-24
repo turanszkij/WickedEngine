@@ -240,6 +240,10 @@ namespace wi::physics
 			BodyID bodyID;
 			Entity entity = INVALID_ENTITY;
 
+			// Things for parented objects:
+			XMFLOAT4X4 parentMatrix = wi::math::IDENTITY_MATRIX;
+			XMFLOAT4X4 parentMatrixInverse = wi::math::IDENTITY_MATRIX;
+
 			// Interpolation state:
 			Vec3 prev_position = Vec3::sZero();
 			Quat prev_rotation = Quat::sIdentity();
@@ -317,11 +321,20 @@ namespace wi::physics
 			wi::scene::Scene& scene,
 			Entity entity,
 			wi::scene::RigidBodyPhysicsComponent& physicscomponent,
-			const wi::scene::TransformComponent& transform,
+			const wi::scene::TransformComponent& _transform,
 			const wi::scene::MeshComponent* mesh
 		)
 		{
 			ShapeSettings::ShapeResult shape_result;
+
+			TransformComponent transform = _transform;
+
+			scene.locker.lock();
+			XMMATRIX parentMatrix = scene.ComputeParentMatrixRecursive(entity);
+			scene.locker.unlock();
+
+			XMStoreFloat4x4(&transform.world, parentMatrix * transform.GetLocalMatrix());
+			transform.ApplyTransform();
 
 			// The default convex radius caused issues when creating small box shape, etc, so I decrease it:
 			const float convexRadius = 0.001f;
@@ -422,6 +435,8 @@ namespace wi::physics
 				RigidBody& physicsobject = GetRigidBody(physicscomponent);
 				physicsobject.physics_scene = scene.physics_scene;
 				physicsobject.entity = entity;
+				XMStoreFloat4x4(&physicsobject.parentMatrix, parentMatrix);
+				XMStoreFloat4x4(&physicsobject.parentMatrixInverse, XMMatrixInverse(nullptr, parentMatrix));
 				PhysicsScene& physics_scene = GetPhysicsScene(scene);
 
 				physicsobject.shape = shape_result.Get();
@@ -470,15 +485,6 @@ namespace wi::physics
 				{
 					wi::backlog::post("AddRigidBody failed: body couldn't be created! This could mean that there are too many physics objects.", wi::backlog::LogLevel::Error);
 					return;
-				}
-
-				if (motionType == EMotionType::Dynamic)
-				{
-					// We must detach dynamic objects, because their physics object is created in world space
-					//	and attachment would apply double transformation to the transform
-					scene.locker.lock();
-					scene.Component_Detach(entity);
-					scene.locker.unlock();
 				}
 			}
 		}
@@ -1223,17 +1229,24 @@ namespace wi::physics
 
 					if (currentMotionType == EMotionType::Dynamic)
 					{
-						// We must detach dynamic objects, because their physics object is created in world space
-						//	and attachment would apply double transformation to the transform
+						// Changed to dynamic, remember attachment matrices at this point:
 						scene.locker.lock();
-						scene.Component_Detach(entity);
+						XMMATRIX parentMatrix = scene.ComputeParentMatrixRecursive(entity);
 						scene.locker.unlock();
+						XMStoreFloat4x4(&physicsobject.parentMatrix, parentMatrix);
+						XMStoreFloat4x4(&physicsobject.parentMatrixInverse, XMMatrixInverse(nullptr, parentMatrix));
 					}
 				}
 
 				TransformComponent* transform = scene.transforms.GetComponent(entity);
 				if (transform == nullptr)
 					return;
+
+				if (currentMotionType == EMotionType::Dynamic)
+				{
+					// Detaching object manually before the physics simulation:
+					transform->MatrixTransform(physicsobject.parentMatrix);
+				}
 
 				if (physics_scene.activate_all_rigid_bodies)
 				{
@@ -1596,7 +1609,9 @@ namespace wi::physics
 
 			transform->translation_local = cast(position);
 			transform->rotation_local = cast(rotation);
-			transform->SetDirty();
+
+			// Back to local space of parent:
+			transform->MatrixTransform(physicsobject.parentMatrixInverse);
 		});
 		
 		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.softbodies.GetCount(), 1, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {

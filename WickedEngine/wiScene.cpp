@@ -7360,6 +7360,15 @@ namespace wi::scene
 	}
 
 
+	XMMATRIX Scene::ComputeEntityMatrixRecursive(wi::ecs::Entity entity) const
+	{
+		const TransformComponent* transform = transforms.GetComponent(entity);
+		if (transform == nullptr)
+			return XMMatrixIdentity();
+
+		return transform->GetLocalMatrix() * ComputeParentMatrixRecursive(entity);
+	}
+
 	XMMATRIX Scene::ComputeParentMatrixRecursive(Entity entity) const
 	{
 		XMMATRIX parentMatrix = XMMatrixIdentity();

@@ -1275,6 +1275,21 @@ namespace wi::graphics
 		constexpr const RaytracingPipelineStateDesc& GetDesc() const { return desc; }
 	};
 
+	struct PipelineHash
+	{
+		const PipelineState* pso = nullptr;
+		uint64_t renderpass_hash = 0;
+
+		constexpr bool operator==(const PipelineHash& other) const
+		{
+			return (pso == other.pso) && (renderpass_hash == other.renderpass_hash);
+		}
+		constexpr uint64_t get_hash() const
+		{
+			return (uint64_t(pso) ^ (renderpass_hash << 1)) >> 1;
+		}
+	};
+
 	struct ShaderTable
 	{
 		const GPUBuffer* buffer = nullptr;
@@ -2107,3 +2122,15 @@ template<>
 struct enable_bitmask_operators<wi::graphics::RenderPassFlags> {
 	static const bool enable = true;
 };
+
+namespace std
+{
+	template <>
+	struct hash<wi::graphics::PipelineHash>
+	{
+		inline uint64_t operator()(const wi::graphics::PipelineHash& hash) const
+		{
+			return hash.get_hash();
+		}
+	};
+}
