@@ -857,7 +857,9 @@ namespace wi::audio
 			termination_mark.AudioBytes = sizeof(termination_data);
 
 			success = true;
-			wilog("wi::audio Initialized [FAudio] (%d ms)", (int)std::round(timer.elapsed()));
+			wilog("wi::audio Initialized [FAudio %d.%d.%d] (%d ms)",
+				  FAUDIO_MAJOR_VERSION, FAUDIO_MINOR_VERSION, FAUDIO_PATCH_VERSION,
+				  (int)std::round(timer.elapsed()));
 		}
 		~AudioInternal(){
 			if(reverbSubmix != nullptr)
