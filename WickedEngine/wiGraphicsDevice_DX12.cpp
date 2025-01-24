@@ -1422,7 +1422,6 @@ namespace dx12_internal
 		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		ComPtr<ID3D12PipelineState> resource;
 		ComPtr<ID3D12RootSignature> rootSignature;
-		size_t hash = 0;
 
 		wi::vector<uint8_t> shadercode;
 		wi::vector<D3D12_INPUT_ELEMENT_DESC> input_elements;
@@ -2089,7 +2088,7 @@ std::mutex queue_locker;
 			return;
 
 		const PipelineState* pso = commandlist.active_pso;
-		size_t pipeline_hash = commandlist.prev_pipeline_hash;
+		PipelineHash pipeline_hash = commandlist.prev_pipeline_hash;
 
 		auto internal_state = to_internal(pso);
 
@@ -3841,7 +3840,6 @@ std::mutex queue_locker;
 		shader->internal_state = internal_state;
 
 		internal_state->shadercode.resize(shadercode_size);
-		internal_state->hash = 0;
 		std::memcpy(internal_state->shadercode.data(), shadercode, shadercode_size);
 		shader->stage = stage;
 
@@ -3974,21 +3972,6 @@ std::mutex queue_locker;
 		pso->internal_state = internal_state;
 
 		pso->desc = *desc;
-
-		internal_state->hash = 0;
-		wi::helper::hash_combine(internal_state->hash, desc->ms);
-		wi::helper::hash_combine(internal_state->hash, desc->as);
-		wi::helper::hash_combine(internal_state->hash, desc->vs);
-		wi::helper::hash_combine(internal_state->hash, desc->ps);
-		wi::helper::hash_combine(internal_state->hash, desc->hs);
-		wi::helper::hash_combine(internal_state->hash, desc->ds);
-		wi::helper::hash_combine(internal_state->hash, desc->gs);
-		wi::helper::hash_combine(internal_state->hash, desc->il);
-		wi::helper::hash_combine(internal_state->hash, desc->rs);
-		wi::helper::hash_combine(internal_state->hash, desc->bs);
-		wi::helper::hash_combine(internal_state->hash, desc->dss);
-		wi::helper::hash_combine(internal_state->hash, desc->pt);
-		wi::helper::hash_combine(internal_state->hash, desc->sample_mask);
 
 		auto& stream = internal_state->stream;
 		if (pso->desc.vs != nullptr)
@@ -4186,7 +4169,6 @@ std::mutex queue_locker;
 
 		if (renderpass_info != nullptr)
 		{
-			wi::helper::hash_combine(internal_state->hash, renderpass_info->get_hash());
 			DXGI_FORMAT DSFormat = _ConvertFormat(renderpass_info->ds_format);
 			D3D12_RT_FORMAT_ARRAY formats = {};
 			formats.NumRenderTargets = renderpass_info->rt_count;
@@ -6629,14 +6611,14 @@ std::mutex queue_locker;
 				}
 			}
 
-			commandlist.prev_pipeline_hash = 0;
+			commandlist.prev_pipeline_hash = {};
 			commandlist.dirty_pso = false;
 		}
 		else
 		{
-			size_t pipeline_hash = 0;
-			wi::helper::hash_combine(pipeline_hash, internal_state->hash);
-			wi::helper::hash_combine(pipeline_hash, commandlist.renderpass_info.get_hash());
+			PipelineHash pipeline_hash;
+			pipeline_hash.pso = pso;
+			pipeline_hash.renderpass_hash = commandlist.renderpass_info.get_hash();
 			if (commandlist.prev_pipeline_hash == pipeline_hash)
 			{
 				return;
@@ -6669,7 +6651,7 @@ std::mutex queue_locker;
 
 		assert(cs->stage == ShaderStage::CS || cs->stage == ShaderStage::LIB);
 
-		commandlist.prev_pipeline_hash = 0;
+		commandlist.prev_pipeline_hash = {};
 
 		commandlist.active_cs = cs;
 
@@ -7205,7 +7187,7 @@ std::mutex queue_locker;
 		CommandList_DX12& commandlist = GetCommandList(cmd);
 		commandlist.active_cs = nullptr;
 		commandlist.active_pso = nullptr;
-		commandlist.prev_pipeline_hash = 0;
+		commandlist.prev_pipeline_hash = {};
 		commandlist.active_rt = rtpso;
 
 		BindComputeShader(rtpso->desc.shader_libraries.front().shader, cmd);

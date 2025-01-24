@@ -239,8 +239,8 @@ namespace wi::graphics
 			DescriptorBinderPool binder_pools[BUFFERCOUNT];
 			GPULinearAllocator frame_allocators[BUFFERCOUNT];
 
-			wi::vector<std::pair<size_t, VkPipeline>> pipelines_worker;
-			size_t prev_pipeline_hash = {};
+			wi::vector<std::pair<PipelineHash, VkPipeline>> pipelines_worker;
+			PipelineHash prev_pipeline_hash = {};
 			const PipelineState* active_pso = {};
 			const Shader* active_cs = {};
 			const RaytracingPipelineState* active_rt = {};
@@ -265,7 +265,7 @@ namespace wi::graphics
 				binder_pools[buffer_index].reset();
 				binder.reset();
 				frame_allocators[buffer_index].reset();
-				prev_pipeline_hash = 0;
+				prev_pipeline_hash = {};
 				active_pso = nullptr;
 				active_cs = nullptr;
 				active_rt = nullptr;
@@ -307,7 +307,7 @@ namespace wi::graphics
 		mutable std::mutex pso_layout_cache_mutex;
 
 		VkPipelineCache pipelineCache = VK_NULL_HANDLE;
-		wi::unordered_map<size_t, VkPipeline> pipelines_global;
+		wi::unordered_map<PipelineHash, VkPipeline> pipelines_global;
 
 		void pso_validate(CommandList cmd);
 
