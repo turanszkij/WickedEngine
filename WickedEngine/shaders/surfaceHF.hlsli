@@ -1038,40 +1038,6 @@ struct Surface
 		pre = mul(inst.transformPrev.GetMatrix(), float4(pre, 1)).xyz;
 #endif // SURFACE_LOAD_ENABLE_WIND
 
-#ifdef INTERIORMAPPING
-		[branch]
-		if (material.textures[BASECOLORMAP].IsValid())
-		{
-			TextureCube cubemap = bindless_cubemaps[NonUniformResourceIndex(descriptor_index(material.textures[BASECOLORMAP].texture_descriptor))];
-
-			// Note: there is some heavy per-pixel matrix math here (mul, inverse, matrix_to_quaternion) by intention
-			//	to not increase common structure sizes for single shader that would require these things!
-		
-			half3 scale = material.GetInteriorScale();
-			float4x4 scaleMatrix = float4x4(
-				scale.x, 0, 0, 0,
-				0, scale.y, 0, 0,
-				0, 0, scale.z, 0,
-				0, 0, 0, 1
-			);
-			float4x4 interiorTransform = mul(inst.transformRaw.GetMatrix(), scaleMatrix);
-			float4x4 interiorProjection = inverse(interiorTransform);
-		
-			const half3 clipSpacePos = mul(interiorProjection, float4(P, 1)).xyz;
-		
-			R = -V;
-			half3 RayLS = mul((half3x3)interiorProjection, R);
-			half3 FirstPlaneIntersect = (1 - clipSpacePos) / RayLS;
-			half3 SecondPlaneIntersect = (-1 - clipSpacePos) / RayLS;
-			half3 FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
-			half Distance = min(FurthestPlane.x, min(FurthestPlane.y, FurthestPlane.z));
-			half3 R_parallaxCorrected = P - inst.center + R * Distance;
-			R_parallaxCorrected = rotate_vector(R_parallaxCorrected, matrix_to_quaternion(interiorProjection));
-
-			baseColor *= cubemap.SampleLevel(sampler_linear_clamp, R_parallaxCorrected, 0);
-		}
-#endif // INTERIORMAPPING
-
 		update();
 	}
 

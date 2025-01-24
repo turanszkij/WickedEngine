@@ -668,4 +668,44 @@ inline uint AlphaToCoverage(half alpha, half alphaTest, float4 svposition)
 	return 0;
 }
 
+float4 InteriorMapping(in float3 P, in float3 V, in ShaderMaterial material, in ShaderMeshInstance meshinstance)
+{
+	[branch]
+	if (!material.textures[BASECOLORMAP].IsValid())
+		return 0;
+	
+	TextureCube cubemap = bindless_cubemaps[descriptor_index(material.textures[BASECOLORMAP].texture_descriptor)];
+
+	// Note: there is some heavy per-pixel matrix math here (mul, inverse, decompose) by intention
+	//	to not increase common structure sizes for single shader that would require these things!
+		
+	half3 scale = material.GetInteriorScale();
+	float4x4 scaleMatrix = float4x4(
+		scale.x, 0, 0, 0,
+		0, scale.y, 0, 0,
+		0, 0, scale.z, 0,
+		0, 0, 0, 1
+	);
+	float4x4 interiorTransform = mul(meshinstance.transformRaw.GetMatrix(), scaleMatrix);
+	float4x4 interiorProjection = inverse(interiorTransform);
+		
+	const half3 clipSpacePos = mul(interiorProjection, float4(P, 1)).xyz;
+		
+	float3 R = -V;
+	half3 RayLS = mul((half3x3)interiorProjection, R);
+	half3 FirstPlaneIntersect = (1 - clipSpacePos) / RayLS;
+	half3 SecondPlaneIntersect = (-1 - clipSpacePos) / RayLS;
+	half3 FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
+	half Distance = min(FurthestPlane.x, min(FurthestPlane.y, FurthestPlane.z));
+	half3 R_parallaxCorrected = P - meshinstance.center + R * Distance;
+
+	// By rotating the sampling vector I fix the cube projection to the object's rotation:
+	float3 t, s;
+	float4 r;
+	decompose(interiorProjection, t, r, s);
+	R_parallaxCorrected = rotate_vector(R_parallaxCorrected, r);
+
+	return cubemap.SampleLevel(sampler_linear_clamp, R_parallaxCorrected, 0);
+}
+
 #endif // WI_SHADING_HF

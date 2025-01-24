@@ -1655,6 +1655,22 @@ half4 qmul(half4 q1, half4 q2)
 	);
 }
 
+// Quaternion normalization
+float4 qnorm(float4 q)
+{
+	float len = length(q);
+	if (len > 0)
+		len = rcp(len);
+	return q * len;
+}
+half4 qnorm(half4 q)
+{
+	half len = length(q);
+	if (len > 0)
+		len = rcp(len);
+	return q * len;
+}
+
 // Vector rotation with a quaternion
 // http://mathworld.wolfram.com/Quaternion.html
 float3 rotate_vector(float3 v, float4 r)
@@ -2107,8 +2123,7 @@ float3 random_color(uint index)
 }
 
 // Matrix operations for HLSL: https://gist.github.com/mattatz/86fff4b32d198d0928d0fa4ff32cf6fa
-float4x4 inverse(float4x4 m)
-{
+float4x4 inverse(float4x4 m) {
     float n11 = m[0][0], n12 = m[1][0], n13 = m[2][0], n14 = m[3][0];
     float n21 = m[0][1], n22 = m[1][1], n23 = m[2][1], n24 = m[3][1];
     float n31 = m[0][2], n32 = m[1][2], n33 = m[2][2], n34 = m[3][2];
@@ -2187,6 +2202,172 @@ float4 matrix_to_quaternion(float4x4 m)
     }
 
     return q;
+}
+
+float4x4 m_scale(float4x4 m, float3 v)
+{
+    float x = v.x, y = v.y, z = v.z;
+
+    m[0][0] *= x; m[1][0] *= y; m[2][0] *= z;
+    m[0][1] *= x; m[1][1] *= y; m[2][1] *= z;
+    m[0][2] *= x; m[1][2] *= y; m[2][2] *= z;
+    m[0][3] *= x; m[1][3] *= y; m[2][3] *= z;
+
+    return m;
+}
+
+float4x4 quaternion_to_matrix(float4 quat)
+{
+    float4x4 m = float4x4(float4(0, 0, 0, 0), float4(0, 0, 0, 0), float4(0, 0, 0, 0), float4(0, 0, 0, 0));
+
+    float x = quat.x, y = quat.y, z = quat.z, w = quat.w;
+    float x2 = x + x, y2 = y + y, z2 = z + z;
+    float xx = x * x2, xy = x * y2, xz = x * z2;
+    float yy = y * y2, yz = y * z2, zz = z * z2;
+    float wx = w * x2, wy = w * y2, wz = w * z2;
+
+    m[0][0] = 1.0 - (yy + zz);
+    m[0][1] = xy - wz;
+    m[0][2] = xz + wy;
+
+    m[1][0] = xy + wz;
+    m[1][1] = 1.0 - (xx + zz);
+    m[1][2] = yz - wx;
+
+    m[2][0] = xz - wy;
+    m[2][1] = yz + wx;
+    m[2][2] = 1.0 - (xx + yy);
+
+    m[3][3] = 1.0;
+
+    return m;
+}
+
+float4x4 m_translate(float4x4 m, float3 v)
+{
+    float x = v.x, y = v.y, z = v.z;
+    m[0][3] = x;
+    m[1][3] = y;
+    m[2][3] = z;
+    return m;
+}
+
+float4x4 compose(float3 position, float4 quat, float3 scale)
+{
+    float4x4 m = quaternion_to_matrix(quat);
+    m = m_scale(m, scale);
+    m = m_translate(m, position);
+    return m;
+}
+
+void decompose(in float4x4 m, out float3 position, out float4 rotation, out float3 scale)
+{
+    float sx = length(float3(m[0][0], m[0][1], m[0][2]));
+    float sy = length(float3(m[1][0], m[1][1], m[1][2]));
+    float sz = length(float3(m[2][0], m[2][1], m[2][2]));
+
+    // if determine is negative, we need to invert one scale
+    float det = determinant(m);
+    if (det < 0) {
+        sx = -sx;
+    }
+
+    position.x = m[3][0];
+    position.y = m[3][1];
+    position.z = m[3][2];
+
+    // scale the rotation part
+
+    float invSX = 1.0 / sx;
+    float invSY = 1.0 / sy;
+    float invSZ = 1.0 / sz;
+
+    m[0][0] *= invSX;
+    m[0][1] *= invSX;
+    m[0][2] *= invSX;
+
+    m[1][0] *= invSY;
+    m[1][1] *= invSY;
+    m[1][2] *= invSY;
+
+    m[2][0] *= invSZ;
+    m[2][1] *= invSZ;
+    m[2][2] *= invSZ;
+
+    rotation = matrix_to_quaternion(m);
+
+    scale.x = sx;
+    scale.y = sy;
+    scale.z = sz;
+}
+
+float4x4 axis_matrix(float3 right, float3 up, float3 forward)
+{
+    float3 xaxis = right;
+    float3 yaxis = up;
+    float3 zaxis = forward;
+    return float4x4(
+		xaxis.x, yaxis.x, zaxis.x, 0,
+		xaxis.y, yaxis.y, zaxis.y, 0,
+		xaxis.z, yaxis.z, zaxis.z, 0,
+		0, 0, 0, 1
+	);
+}
+
+// http://stackoverflow.com/questions/349050/calculating-a-lookat-matrix
+float4x4 look_at_matrix(float3 forward, float3 up)
+{
+    float3 xaxis = normalize(cross(forward, up));
+    float3 yaxis = up;
+    float3 zaxis = forward;
+    return axis_matrix(xaxis, yaxis, zaxis);
+}
+
+float4x4 look_at_matrix(float3 at, float3 eye, float3 up)
+{
+    float3 zaxis = normalize(at - eye);
+    float3 xaxis = normalize(cross(up, zaxis));
+    float3 yaxis = cross(zaxis, xaxis);
+    return axis_matrix(xaxis, yaxis, zaxis);
+}
+
+float4x4 extract_rotation_matrix(float4x4 m)
+{
+    float sx = length(float3(m[0][0], m[0][1], m[0][2]));
+    float sy = length(float3(m[1][0], m[1][1], m[1][2]));
+    float sz = length(float3(m[2][0], m[2][1], m[2][2]));
+
+    // if determine is negative, we need to invert one scale
+    float det = determinant(m);
+    if (det < 0) {
+        sx = -sx;
+    }
+
+    float invSX = 1.0 / sx;
+    float invSY = 1.0 / sy;
+    float invSZ = 1.0 / sz;
+
+    m[0][0] *= invSX;
+    m[0][1] *= invSX;
+    m[0][2] *= invSX;
+    m[0][3] = 0;
+
+    m[1][0] *= invSY;
+    m[1][1] *= invSY;
+    m[1][2] *= invSY;
+    m[1][3] = 0;
+
+    m[2][0] *= invSZ;
+    m[2][1] *= invSZ;
+    m[2][2] *= invSZ;
+    m[2][3] = 0;
+
+    m[3][0] = 0;
+    m[3][1] = 0;
+    m[3][2] = 0;
+    m[3][3] = 1;
+
+    return m;
 }
 
 #endif // WI_SHADER_GLOBALS_HF
