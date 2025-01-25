@@ -668,7 +668,7 @@ inline uint AlphaToCoverage(half alpha, half alphaTest, float4 svposition)
 	return 0;
 }
 
-half4 InteriorMapping(in float3 P, in float3 V, in ShaderMaterial material, in ShaderMeshInstance meshinstance)
+half4 InteriorMapping(in Surface surface, in ShaderMaterial material, in ShaderMeshInstance meshinstance)
 {
 	[branch]
 	if (!material.textures[BASECOLORMAP].IsValid())
@@ -689,15 +689,15 @@ half4 InteriorMapping(in float3 P, in float3 V, in ShaderMaterial material, in S
 	float4x4 interiorTransform = mul(meshinstance.transformRaw.GetMatrix(), scaleMatrix);
 	float4x4 interiorProjection = inverse(interiorTransform);
 		
-	const half3 clipSpacePos = mul(interiorProjection, float4(P, 1)).xyz;
+	const half3 clipSpacePos = mul(interiorProjection, float4(surface.P, 1)).xyz;
 		
-	half3 R = -V;
+	half3 R = refract(-surface.V, surface.N, 1 - material.GetRefraction());
 	half3 RayLS = mul((half3x3)interiorProjection, R);
 	half3 FirstPlaneIntersect = (1 - clipSpacePos) / RayLS;
 	half3 SecondPlaneIntersect = (-1 - clipSpacePos) / RayLS;
 	half3 FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
 	half Distance = min(FurthestPlane.x, min(FurthestPlane.y, FurthestPlane.z));
-	half3 R_parallaxCorrected = P - meshinstance.center + R * Distance;
+	half3 R_parallaxCorrected = surface.P - meshinstance.center + R * Distance;
 
 	// By rotating the sampling vector I fix the cube projection to the object's rotation:
 	float3 t, s;

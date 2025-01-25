@@ -1068,7 +1068,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // UNLIT
 
 #ifdef INTERIORMAPPING
-	color = surface.baseColor * InteriorMapping(surface.P, surface.V, material, meshinstance);
+	color = surface.baseColor * InteriorMapping(surface, material, meshinstance);
 #endif // INTERIORMAPPING
 
 
