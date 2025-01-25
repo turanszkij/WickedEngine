@@ -1402,6 +1402,7 @@ namespace wi
 					wi::renderer::DRAWSCENE_HAIRPARTICLE |
 					wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS
 				);
+				wi::renderer::DrawSky(*scene, cmd);
 				wi::renderer::DrawScene(
 					visibility_reflection,
 					RENDERPASS_MAIN,
@@ -1409,7 +1410,6 @@ namespace wi
 					wi::renderer::DRAWSCENE_TRANSPARENT |
 					wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS
 				); // separate renderscene, to be drawn after opaque and transparent sort order
-				wi::renderer::DrawSky(*scene, cmd);
 
 				if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
 				{

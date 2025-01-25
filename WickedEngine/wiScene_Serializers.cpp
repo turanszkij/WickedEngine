@@ -260,6 +260,7 @@ namespace wi::scene
 			{
 				archive >> interiorMappingScale;
 				archive >> interiorMappingOffset;
+				archive >> interiorMappingRotation;
 			}
 
 			for (auto& x : textures)
@@ -430,6 +431,7 @@ namespace wi::scene
 			{
 				archive << interiorMappingScale;
 				archive << interiorMappingOffset;
+				archive << interiorMappingRotation;
 			}
 		}
 	}

@@ -831,6 +831,21 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&interiorOffsetZSlider);
 
+	interiorRotationSlider.Create(0, 360, 0, 360, "Interior Rotation: ");
+	interiorRotationSlider.SetTooltip("Set the cubemap horizontal rotation for the interior mapping (if material uses interior mapping shader)");
+	interiorRotationSlider.OnSlide([&](wi::gui::EventArgs args) {
+		float radians = wi::math::DegreesToRadians(args.fValue);
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
+			material->SetInteriorMappingRotation(radians);
+		}
+	});
+	AddWidget(&interiorRotationSlider);
+
 
 	// 
 	hei = 20;
@@ -1276,6 +1291,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		interiorOffsetXSlider.SetValue(material->interiorMappingOffset.x);
 		interiorOffsetYSlider.SetValue(material->interiorMappingOffset.y);
 		interiorOffsetZSlider.SetValue(material->interiorMappingOffset.z);
+		interiorRotationSlider.SetValue(wi::math::RadiansToDegrees(material->interiorMappingRotation));
 
 		shadingRateComboBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING));
 
@@ -1399,12 +1415,14 @@ void MaterialWindow::ResizeLayout()
 		interiorOffsetXSlider.SetVisible(true);
 		interiorOffsetYSlider.SetVisible(true);
 		interiorOffsetZSlider.SetVisible(true);
+		interiorRotationSlider.SetVisible(true);
 		add(interiorScaleXSlider);
 		add(interiorScaleYSlider);
 		add(interiorScaleZSlider);
 		add(interiorOffsetXSlider);
 		add(interiorOffsetYSlider);
 		add(interiorOffsetZSlider);
+		add(interiorRotationSlider);
 	}
 	else
 	{
@@ -1414,6 +1432,7 @@ void MaterialWindow::ResizeLayout()
 		interiorOffsetXSlider.SetVisible(false);
 		interiorOffsetYSlider.SetVisible(false);
 		interiorOffsetZSlider.SetVisible(false);
+		interiorRotationSlider.SetVisible(false);
 	}
 	add(colorComboBox);
 	add_fullwidth(colorPicker);

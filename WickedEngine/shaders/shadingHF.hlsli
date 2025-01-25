@@ -689,7 +689,7 @@ half4 InteriorMapping(in float3 P, in float3 N, in float3 V, in ShaderMaterial m
 	);
 	float4x4 interiorTransform = mul(meshinstance.transformRaw.GetMatrix(), modMatrix);
 	float4x4 interiorProjection = inverse(interiorTransform);
-	const half3 clipSpacePos = mul(interiorProjection, float4(P, 1)).xyz;
+	const float3 clipSpacePos = mul(interiorProjection, float4(P, 1)).xyz; // needs fp32 if offset is used
 
 	// We can handle distortion by normals with refract:
 	half3 R = refract(-V, N, 1 - material.GetRefraction());
@@ -707,6 +707,14 @@ half4 InteriorMapping(in float3 P, in float3 N, in float3 V, in ShaderMaterial m
 	float4 r;
 	decompose(interiorProjection, t, r, s);
 	R_parallaxCorrected = rotate_vector(R_parallaxCorrected, r);
+
+	half2 rot_sincos = material.GetInteriorSinCos();
+	float3x3 rotMatrix = float3x3(
+		rot_sincos.y, 0, -rot_sincos.x,
+		0, 1, 0,
+		rot_sincos.x, 0, rot_sincos.y
+	);
+	R_parallaxCorrected = mul(rotMatrix, R_parallaxCorrected);
 
 	return cubemap.SampleLevel(sampler_linear_clamp, R_parallaxCorrected, 0);
 }

@@ -208,6 +208,7 @@ namespace wi::scene
 
 		XMFLOAT3 interiorMappingScale = XMFLOAT3(1, 1, 1);
 		XMFLOAT3 interiorMappingOffset = XMFLOAT3(0, 0, 0);
+		float interiorMappingRotation = 0; // horizontal rotation in radians
 
 		enum TEXTURESLOT
 		{
@@ -358,6 +359,11 @@ namespace wi::scene
 			interiorMappingOffset.x = value.x;
 			interiorMappingOffset.y = value.y;
 			interiorMappingOffset.z = value.z;
+		}
+		inline void SetInteriorMappingRotation(float value)
+		{
+			SetDirty();
+			interiorMappingRotation = value;
 		}
 
 		// The MaterialComponent will be written to ShaderMaterial (a struct that is optimized for GPU use)

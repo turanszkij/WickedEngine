@@ -315,10 +315,15 @@ namespace wi::scene
 			_blend_with_terrain_height_rcp = 1.0f / blend_with_terrain_height;
 		}
 		material.aniso_anisosin_anisocos_terrainblend = pack_half4(_anisotropy_strength, _anisotropy_rotation_sin, _anisotropy_rotation_cos, _blend_with_terrain_height_rcp);
-		material.interiorscale = pack_half3(interiorMappingScale);
-		material.interioroffset = pack_half3(interiorMappingOffset);
 		material.shaderType = (uint)shaderType;
 		material.userdata = userdata;
+
+		if (shaderType == SHADERTYPE_INTERIORMAPPING)
+		{
+			// Note: the sss params are repurposed for this shader type
+			material.subsurfaceScattering = pack_half4(interiorMappingScale.x, interiorMappingScale.y, interiorMappingScale.z, std::sin(interiorMappingRotation));
+			material.subsurfaceScattering_inv = pack_half4(interiorMappingOffset.x, interiorMappingOffset.y, interiorMappingOffset.z, std::cos(interiorMappingRotation));
+		}
 
 		material.options_stencilref = 0;
 		if (IsUsingVertexColors())
