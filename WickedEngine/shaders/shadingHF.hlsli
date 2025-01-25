@@ -688,10 +688,12 @@ half4 InteriorMapping(in Surface surface, in ShaderMaterial material, in ShaderM
 	);
 	float4x4 interiorTransform = mul(meshinstance.transformRaw.GetMatrix(), scaleMatrix);
 	float4x4 interiorProjection = inverse(interiorTransform);
-		
 	const half3 clipSpacePos = mul(interiorProjection, float4(surface.P, 1)).xyz;
-		
+
+	// We can handle distortion by normals with refract:
 	half3 R = refract(-surface.V, surface.N, 1 - material.GetRefraction());
+
+	// This part is exactly like the local environment probes parallax correction:
 	half3 RayLS = mul((half3x3)interiorProjection, R);
 	half3 FirstPlaneIntersect = (1 - clipSpacePos) / RayLS;
 	half3 SecondPlaneIntersect = (-1 - clipSpacePos) / RayLS;
