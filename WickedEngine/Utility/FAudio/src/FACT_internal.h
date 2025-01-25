@@ -1,6 +1,6 @@
 /* FAudio - XAudio Reimplementation for FNA
  *
- * Copyright (c) 2011-2021 Ethan Lee, Luigi Auriemma, and the MonoGame Team
+ * Copyright (c) 2011-2024 Ethan Lee, Luigi Auriemma, and the MonoGame Team
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -111,7 +111,8 @@ typedef enum FACTNoticationsFlags
 	NOTIFY_WAVESTOP              = 0x00002000,
 	NOTIFY_WAVELOOPED            = 0x00004000,
 	NOTIFY_WAVEDESTROY           = 0x00008000,
-	NOTIFY_WAVEBANKPREPARED      = 0x00010000
+	NOTIFY_WAVEBANKPREPARED      = 0x00010000,
+	NOTIFY_WAVEBANKSTREAMING_INVALIDCONTENT = 0x00020000
 } FACTNoticationsFlags;
 
 /* Internal SoundBank Types */
@@ -440,6 +441,7 @@ struct FACTAudioEngine
 	void *sb_context;
 	void *wb_context;
 	void *wave_context;
+	LinkedList *wb_notifications_list;
 
 	/* Settings handle */
 	void *settings;
