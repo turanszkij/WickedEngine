@@ -668,7 +668,7 @@ inline uint AlphaToCoverage(half alpha, half alphaTest, float4 svposition)
 	return 0;
 }
 
-half4 InteriorMapping(in Surface surface, in ShaderMaterial material, in ShaderMeshInstance meshinstance)
+half4 InteriorMapping(in float3 P, in float3 N, in float3 V, in ShaderMaterial material, in ShaderMeshInstance meshinstance)
 {
 	[branch]
 	if (!material.textures[BASECOLORMAP].IsValid())
@@ -680,18 +680,19 @@ half4 InteriorMapping(in Surface surface, in ShaderMaterial material, in ShaderM
 	//	to not increase common structure sizes for single shader that would require these things!
 		
 	half3 scale = material.GetInteriorScale();
-	float4x4 scaleMatrix = float4x4(
-		scale.x, 0, 0, 0,
-		0, scale.y, 0, 0,
-		0, 0, scale.z, 0,
+	half3 offset = material.GetInteriorOffset();
+	float4x4 modMatrix = float4x4(
+		scale.x, 0, 0, offset.x,
+		0, scale.y, 0, offset.y,
+		0, 0, scale.z, offset.z,
 		0, 0, 0, 1
 	);
-	float4x4 interiorTransform = mul(meshinstance.transformRaw.GetMatrix(), scaleMatrix);
+	float4x4 interiorTransform = mul(meshinstance.transformRaw.GetMatrix(), modMatrix);
 	float4x4 interiorProjection = inverse(interiorTransform);
-	const half3 clipSpacePos = mul(interiorProjection, float4(surface.P, 1)).xyz;
+	const half3 clipSpacePos = mul(interiorProjection, float4(P, 1)).xyz;
 
 	// We can handle distortion by normals with refract:
-	half3 R = refract(-surface.V, surface.N, 1 - material.GetRefraction());
+	half3 R = refract(-V, N, 1 - material.GetRefraction());
 
 	// This part is exactly like the local environment probes parallax correction:
 	half3 RayLS = mul((half3x3)interiorProjection, R);
@@ -699,7 +700,7 @@ half4 InteriorMapping(in Surface surface, in ShaderMaterial material, in ShaderM
 	half3 SecondPlaneIntersect = (-1 - clipSpacePos) / RayLS;
 	half3 FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
 	half Distance = min(FurthestPlane.x, min(FurthestPlane.y, FurthestPlane.z));
-	half3 R_parallaxCorrected = surface.P - meshinstance.center + R * Distance;
+	half3 R_parallaxCorrected = P - meshinstance.center + R * Distance;
 
 	// By rotating the sampling vector I fix the cube projection to the object's rotation:
 	float3 t, s;

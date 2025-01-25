@@ -55,6 +55,9 @@ public:
 	wi::gui::Slider interiorScaleXSlider;
 	wi::gui::Slider interiorScaleYSlider;
 	wi::gui::Slider interiorScaleZSlider;
+	wi::gui::Slider interiorOffsetXSlider;
+	wi::gui::Slider interiorOffsetYSlider;
+	wi::gui::Slider interiorOffsetZSlider;
 
 	wi::gui::ComboBox colorComboBox;
 	wi::gui::ColorPicker colorPicker;

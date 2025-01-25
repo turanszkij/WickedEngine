@@ -789,6 +789,48 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&interiorScaleZSlider);
 
+	interiorOffsetXSlider.Create(-10, 10, 0, 2000, "Interior Offset X: ");
+	interiorOffsetXSlider.SetTooltip("Set the cubemap offset for the interior mapping (if material uses interior mapping shader)");
+	interiorOffsetXSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
+			material->SetInteriorMappingOffset(XMFLOAT3(args.fValue, material->interiorMappingOffset.y, material->interiorMappingOffset.z));
+		}
+		});
+	AddWidget(&interiorOffsetXSlider);
+
+	interiorOffsetYSlider.Create(-10, 10, 0, 2000, "Interior Offset Y: ");
+	interiorOffsetYSlider.SetTooltip("Set the cubemap offset for the interior mapping (if material uses interior mapping shader)");
+	interiorOffsetYSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
+			material->SetInteriorMappingOffset(XMFLOAT3(material->interiorMappingOffset.x, args.fValue, material->interiorMappingOffset.z));
+		}
+		});
+	AddWidget(&interiorOffsetYSlider);
+
+	interiorOffsetZSlider.Create(-10, 10, 0, 2000, "Interior Offset Z: ");
+	interiorOffsetZSlider.SetTooltip("Set the cubemap offset for the interior mapping (if material uses interior mapping shader)");
+	interiorOffsetZSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
+			material->SetInteriorMappingOffset(XMFLOAT3(material->interiorMappingOffset.x, material->interiorMappingOffset.y, args.fValue));
+		}
+		});
+	AddWidget(&interiorOffsetZSlider);
+
 
 	// 
 	hei = 20;
@@ -1231,6 +1273,9 @@ void MaterialWindow::SetEntity(Entity entity)
 		interiorScaleXSlider.SetValue(material->interiorMappingScale.x);
 		interiorScaleYSlider.SetValue(material->interiorMappingScale.y);
 		interiorScaleZSlider.SetValue(material->interiorMappingScale.z);
+		interiorOffsetXSlider.SetValue(material->interiorMappingOffset.x);
+		interiorOffsetYSlider.SetValue(material->interiorMappingOffset.y);
+		interiorOffsetZSlider.SetValue(material->interiorMappingOffset.z);
 
 		shadingRateComboBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING));
 
@@ -1301,6 +1346,9 @@ void MaterialWindow::ResizeLayout()
 		y += padding;
 	};
 
+	Scene& scene = editor->GetCurrentScene();
+	MaterialComponent* material = scene.materials.GetComponent(entity);
+
 	add_fullwidth(materialNameField);
 	add_right(shadowReceiveCheckBox);
 	add_right(shadowCasterCheckBox);
@@ -1343,9 +1391,30 @@ void MaterialWindow::ResizeLayout()
 	add(clearcoatSlider);
 	add(clearcoatRoughnessSlider);
 	add(blendTerrainSlider);
-	add(interiorScaleXSlider);
-	add(interiorScaleYSlider);
-	add(interiorScaleZSlider);
+	if (material != nullptr && material->shaderType == MaterialComponent::SHADERTYPE_INTERIORMAPPING)
+	{
+		interiorScaleXSlider.SetVisible(true);
+		interiorScaleYSlider.SetVisible(true);
+		interiorScaleZSlider.SetVisible(true);
+		interiorOffsetXSlider.SetVisible(true);
+		interiorOffsetYSlider.SetVisible(true);
+		interiorOffsetZSlider.SetVisible(true);
+		add(interiorScaleXSlider);
+		add(interiorScaleYSlider);
+		add(interiorScaleZSlider);
+		add(interiorOffsetXSlider);
+		add(interiorOffsetYSlider);
+		add(interiorOffsetZSlider);
+	}
+	else
+	{
+		interiorScaleXSlider.SetVisible(false);
+		interiorScaleYSlider.SetVisible(false);
+		interiorScaleZSlider.SetVisible(false);
+		interiorOffsetXSlider.SetVisible(false);
+		interiorOffsetYSlider.SetVisible(false);
+		interiorOffsetZSlider.SetVisible(false);
+	}
 	add(colorComboBox);
 	add_fullwidth(colorPicker);
 	add(textureSlotComboBox);

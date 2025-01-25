@@ -207,6 +207,7 @@ namespace wi::scene
 		float texAnimElapsedTime = 0.0f;
 
 		XMFLOAT3 interiorMappingScale = XMFLOAT3(1, 1, 1);
+		XMFLOAT3 interiorMappingOffset = XMFLOAT3(0, 0, 0);
 
 		enum TEXTURESLOT
 		{
@@ -350,6 +351,13 @@ namespace wi::scene
 			interiorMappingScale.x = value.x;
 			interiorMappingScale.y = value.y;
 			interiorMappingScale.z = value.z;
+		}
+		inline void SetInteriorMappingOffset(XMFLOAT3 value)
+		{
+			SetDirty();
+			interiorMappingOffset.x = value.x;
+			interiorMappingOffset.y = value.y;
+			interiorMappingOffset.z = value.z;
 		}
 
 		// The MaterialComponent will be written to ShaderMaterial (a struct that is optimized for GPU use)

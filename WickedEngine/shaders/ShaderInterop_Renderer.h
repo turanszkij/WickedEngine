@@ -375,7 +375,7 @@ struct alignas(16) ShaderMaterial
 	uint2 aniso_anisosin_anisocos_terrainblend;
 
 	uint2 interiorscale;
-	uint2 padding;
+	uint2 interioroffset;
 
 	int sampler_descriptor;
 	uint options_stencilref;
@@ -405,8 +405,8 @@ struct alignas(16) ShaderMaterial
 		transmission_sheenroughness_clearcoat_clearcoatroughness = uint2(0, 0);
 		aniso_anisosin_anisocos_terrainblend = uint2(0, 0);
 
-		interiorscale = uint2(0, 0); // packed half3 + unused half
-		padding = uint2(0, 0);
+		interiorscale = uint2(0, 0);
+		interioroffset = uint2(0, 0);
 
 		sampler_descriptor = -1;
 		options_stencilref = 0;
@@ -448,6 +448,7 @@ struct alignas(16) ShaderMaterial
 	inline half GetAnisotropyCos() { return unpack_half4(aniso_anisosin_anisocos_terrainblend).z; }
 	inline half GetTerrainBlendRcp() { return unpack_half4(aniso_anisosin_anisocos_terrainblend).w; }
 	inline half3 GetInteriorScale() { return unpack_half3(interiorscale); }
+	inline half3 GetInteriorOffset() { return unpack_half3(interioroffset); }
 	inline uint GetStencilRef() { return options_stencilref >> 24u; }
 #endif // __cplusplus
 

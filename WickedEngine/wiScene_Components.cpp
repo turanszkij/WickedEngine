@@ -316,6 +316,7 @@ namespace wi::scene
 		}
 		material.aniso_anisosin_anisocos_terrainblend = pack_half4(_anisotropy_strength, _anisotropy_rotation_sin, _anisotropy_rotation_cos, _blend_with_terrain_height_rcp);
 		material.interiorscale = pack_half3(interiorMappingScale);
+		material.interioroffset = pack_half3(interiorMappingOffset);
 		material.shaderType = (uint)shaderType;
 		material.userdata = userdata;
 

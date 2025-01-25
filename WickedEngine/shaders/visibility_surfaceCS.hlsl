@@ -56,7 +56,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	}
 
 #ifdef INTERIORMAPPING
-	surface.baseColor *= InteriorMapping(surface, surface.material, surface.inst);
+	surface.baseColor *= InteriorMapping(surface.P, surface.N, surface.V, surface.material, surface.inst);
 #endif // INTERIORMAPPING
 
 #if defined(UNLIT) || defined(INTERIORMAPPING)

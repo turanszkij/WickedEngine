@@ -259,6 +259,7 @@ namespace wi::scene
 			if (seri.GetVersion() >= 9)
 			{
 				archive >> interiorMappingScale;
+				archive >> interiorMappingOffset;
 			}
 
 			for (auto& x : textures)
@@ -428,6 +429,7 @@ namespace wi::scene
 			if (seri.GetVersion() >= 9)
 			{
 				archive << interiorMappingScale;
+				archive << interiorMappingOffset;
 			}
 		}
 	}
