@@ -318,6 +318,13 @@ namespace wi::scene
 		material.shaderType = (uint)shaderType;
 		material.userdata = userdata;
 
+		if (shaderType == SHADERTYPE_INTERIORMAPPING)
+		{
+			// Note: the sss params are repurposed for this shader type
+			material.subsurfaceScattering = pack_half4(interiorMappingScale.x, interiorMappingScale.y, interiorMappingScale.z, std::sin(interiorMappingRotation));
+			material.subsurfaceScattering_inv = pack_half4(interiorMappingOffset.x, interiorMappingOffset.y, interiorMappingOffset.z, std::cos(interiorMappingRotation));
+		}
+
 		material.options_stencilref = 0;
 		if (IsUsingVertexColors())
 		{
@@ -412,6 +419,12 @@ namespace wi::scene
 		else
 		{
 			material.sampler_descriptor = sampler_descriptor;
+		}
+
+		if (shaderType == SHADERTYPE_INTERIORMAPPING && textures[BASECOLORMAP].resource.IsValid() && !has_flag(textures[BASECOLORMAP].resource.GetTexture().GetDesc().misc_flags, ResourceMiscFlag::TEXTURECUBE))
+		{
+			// If the BASECOLORMAP slot is not a cubemap, then this will be invalid for the interior mapping shader:
+			material.textures[BASECOLORMAP].texture_descriptor = -1;
 		}
 
 		std::memcpy(dest, &material, sizeof(ShaderMaterial)); // memcpy whole structure into mapped pointer to avoid read from uncached memory

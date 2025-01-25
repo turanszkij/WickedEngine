@@ -742,10 +742,109 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			MaterialComponent* material = get_material(scene, x);
 			if (material == nullptr)
 				continue;
-			material->blend_with_terrain_height = args.fValue;
+			material->SetBlendWithTerrainHeight(args.fValue);
 		}
 	});
 	AddWidget(&blendTerrainSlider);
+
+	interiorScaleXSlider.Create(1, 10, 1, 1000, "Interior Scale X: ");
+	interiorScaleXSlider.SetTooltip("Set the cubemap scale for the interior mapping (if material uses interior mapping shader)");
+	interiorScaleXSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
+			material->SetInteriorMappingScale(XMFLOAT3(args.fValue, material->interiorMappingScale.y, material->interiorMappingScale.z));
+		}
+	});
+	AddWidget(&interiorScaleXSlider);
+
+	interiorScaleYSlider.Create(1, 10, 1, 1000, "Interior Scale Y: ");
+	interiorScaleYSlider.SetTooltip("Set the cubemap scale for the interior mapping (if material uses interior mapping shader)");
+	interiorScaleYSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
+			material->SetInteriorMappingScale(XMFLOAT3(material->interiorMappingScale.x, args.fValue, material->interiorMappingScale.z));
+		}
+		});
+	AddWidget(&interiorScaleYSlider);
+
+	interiorScaleZSlider.Create(1, 10, 1, 1000, "Interior Scale Z: ");
+	interiorScaleZSlider.SetTooltip("Set the cubemap scale for the interior mapping (if material uses interior mapping shader)");
+	interiorScaleZSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
+			material->SetInteriorMappingScale(XMFLOAT3(material->interiorMappingScale.x, material->interiorMappingScale.y, args.fValue));
+		}
+		});
+	AddWidget(&interiorScaleZSlider);
+
+	interiorOffsetXSlider.Create(-10, 10, 0, 2000, "Interior Offset X: ");
+	interiorOffsetXSlider.SetTooltip("Set the cubemap offset for the interior mapping (if material uses interior mapping shader)");
+	interiorOffsetXSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
+			material->SetInteriorMappingOffset(XMFLOAT3(args.fValue, material->interiorMappingOffset.y, material->interiorMappingOffset.z));
+		}
+		});
+	AddWidget(&interiorOffsetXSlider);
+
+	interiorOffsetYSlider.Create(-10, 10, 0, 2000, "Interior Offset Y: ");
+	interiorOffsetYSlider.SetTooltip("Set the cubemap offset for the interior mapping (if material uses interior mapping shader)");
+	interiorOffsetYSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
+			material->SetInteriorMappingOffset(XMFLOAT3(material->interiorMappingOffset.x, args.fValue, material->interiorMappingOffset.z));
+		}
+		});
+	AddWidget(&interiorOffsetYSlider);
+
+	interiorOffsetZSlider.Create(-10, 10, 0, 2000, "Interior Offset Z: ");
+	interiorOffsetZSlider.SetTooltip("Set the cubemap offset for the interior mapping (if material uses interior mapping shader)");
+	interiorOffsetZSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
+			material->SetInteriorMappingOffset(XMFLOAT3(material->interiorMappingOffset.x, material->interiorMappingOffset.y, args.fValue));
+		}
+		});
+	AddWidget(&interiorOffsetZSlider);
+
+	interiorRotationSlider.Create(0, 360, 0, 360, "Interior Rotation: ");
+	interiorRotationSlider.SetTooltip("Set the cubemap horizontal rotation for the interior mapping (if material uses interior mapping shader)");
+	interiorRotationSlider.OnSlide([&](wi::gui::EventArgs args) {
+		float radians = wi::math::DegreesToRadians(args.fValue);
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
+			material->SetInteriorMappingRotation(radians);
+		}
+	});
+	AddWidget(&interiorRotationSlider);
 
 
 	// 
@@ -947,6 +1046,14 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			{
 				const Texture& texture = material->textures[args.iValue].resource.GetTexture();
 				tooltiptext += "\nResolution: " + std::to_string(texture.desc.width) + " * " + std::to_string(texture.desc.height);
+				if (texture.desc.array_size > 0)
+				{
+					tooltiptext += " * " + std::to_string(texture.desc.array_size);
+				}
+				if (has_flag(texture.desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
+				{
+					tooltiptext += " (cubemap)";
+				}
 				tooltiptext += "\nMip levels: " + std::to_string(texture.desc.mip_levels);
 				tooltiptext += "\nFormat: ";
 				tooltiptext += GetFormatString(texture.desc.format);
@@ -1115,6 +1222,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		shaderTypeComboBox.AddItem("Water", MaterialComponent::SHADERTYPE_WATER);
 		shaderTypeComboBox.AddItem("Cartoon", MaterialComponent::SHADERTYPE_CARTOON);
 		shaderTypeComboBox.AddItem("Unlit", MaterialComponent::SHADERTYPE_UNLIT);
+		shaderTypeComboBox.AddItem("Interior", MaterialComponent::SHADERTYPE_INTERIORMAPPING);
 		for (auto& x : wi::renderer::GetCustomShaders())
 		{
 			shaderTypeComboBox.AddItem("*" + x.name);
@@ -1177,6 +1285,13 @@ void MaterialWindow::SetEntity(Entity entity)
 		clearcoatSlider.SetValue(material->clearcoat);
 		clearcoatRoughnessSlider.SetValue(material->clearcoatRoughness);
 		blendTerrainSlider.SetValue(material->blend_with_terrain_height);
+		interiorScaleXSlider.SetValue(material->interiorMappingScale.x);
+		interiorScaleYSlider.SetValue(material->interiorMappingScale.y);
+		interiorScaleZSlider.SetValue(material->interiorMappingScale.z);
+		interiorOffsetXSlider.SetValue(material->interiorMappingOffset.x);
+		interiorOffsetYSlider.SetValue(material->interiorMappingOffset.y);
+		interiorOffsetZSlider.SetValue(material->interiorMappingOffset.z);
+		interiorRotationSlider.SetValue(wi::math::RadiansToDegrees(material->interiorMappingRotation));
 
 		shadingRateComboBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING));
 
@@ -1247,6 +1362,9 @@ void MaterialWindow::ResizeLayout()
 		y += padding;
 	};
 
+	Scene& scene = editor->GetCurrentScene();
+	MaterialComponent* material = scene.materials.GetComponent(entity);
+
 	add_fullwidth(materialNameField);
 	add_right(shadowReceiveCheckBox);
 	add_right(shadowCasterCheckBox);
@@ -1289,6 +1407,33 @@ void MaterialWindow::ResizeLayout()
 	add(clearcoatSlider);
 	add(clearcoatRoughnessSlider);
 	add(blendTerrainSlider);
+	if (material != nullptr && material->shaderType == MaterialComponent::SHADERTYPE_INTERIORMAPPING)
+	{
+		interiorScaleXSlider.SetVisible(true);
+		interiorScaleYSlider.SetVisible(true);
+		interiorScaleZSlider.SetVisible(true);
+		interiorOffsetXSlider.SetVisible(true);
+		interiorOffsetYSlider.SetVisible(true);
+		interiorOffsetZSlider.SetVisible(true);
+		interiorRotationSlider.SetVisible(true);
+		add(interiorScaleXSlider);
+		add(interiorScaleYSlider);
+		add(interiorScaleZSlider);
+		add(interiorOffsetXSlider);
+		add(interiorOffsetYSlider);
+		add(interiorOffsetZSlider);
+		add(interiorRotationSlider);
+	}
+	else
+	{
+		interiorScaleXSlider.SetVisible(false);
+		interiorScaleYSlider.SetVisible(false);
+		interiorScaleZSlider.SetVisible(false);
+		interiorOffsetXSlider.SetVisible(false);
+		interiorOffsetYSlider.SetVisible(false);
+		interiorOffsetZSlider.SetVisible(false);
+		interiorRotationSlider.SetVisible(false);
+	}
 	add(colorComboBox);
 	add_fullwidth(colorPicker);
 	add(textureSlotComboBox);

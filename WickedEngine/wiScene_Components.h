@@ -148,6 +148,7 @@ namespace wi::scene
 			SHADERTYPE_PBR_CLEARCOAT,
 			SHADERTYPE_PBR_CLOTH_CLEARCOAT,
 			SHADERTYPE_PBR_TERRAINBLENDED,
+			SHADERTYPE_INTERIORMAPPING,
 			SHADERTYPE_COUNT
 		} shaderType = SHADERTYPE_PBR;
 		static_assert(SHADERTYPE_COUNT == SHADERTYPE_BIN_COUNT, "These values must match!");
@@ -164,6 +165,7 @@ namespace wi::scene
 			{"CLEARCOAT"}, // SHADERTYPE_PBR_CLEARCOAT,
 			{"SHEEN", "CLEARCOAT"}, // SHADERTYPE_PBR_CLOTH_CLEARCOAT,
 			{"TERRAINBLENDED"}, //SHADERTYPE_PBR_TERRAINBLENDED
+			{"INTERIORMAPPING"}, //SHADERTYPE_INTERIORMAPPING
 		};
 		static_assert(SHADERTYPE_COUNT == arraysize(shaderTypeDefines), "These values must match!");
 
@@ -203,6 +205,10 @@ namespace wi::scene
 		XMFLOAT2 texAnimDirection = XMFLOAT2(0, 0);
 		float texAnimFrameRate = 0.0f;
 		float texAnimElapsedTime = 0.0f;
+
+		XMFLOAT3 interiorMappingScale = XMFLOAT3(1, 1, 1);
+		XMFLOAT3 interiorMappingOffset = XMFLOAT3(0, 0, 0);
+		float interiorMappingRotation = 0; // horizontal rotation in radians
 
 		enum TEXTURESLOT
 		{
@@ -331,6 +337,7 @@ namespace wi::scene
 		inline void SetSheenRoughness(float value) { sheenRoughness = value; SetDirty(); }
 		inline void SetClearcoatFactor(float value) { clearcoat = value; SetDirty(); }
 		inline void SetClearcoatRoughness(float value) { clearcoatRoughness = value; SetDirty(); }
+		inline void SetBlendWithTerrainHeight(float value) { blend_with_terrain_height = value; SetDirty(); }
 		inline void SetCustomShaderID(int id) { customShaderID = id; }
 		inline void DisableCustomShader() { customShaderID = -1; }
 		inline void SetDoubleSided(bool value = true) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
@@ -339,6 +346,25 @@ namespace wi::scene
 		inline void SetVertexAODisabled(bool value = true) { if (value) { _flags |= DISABLE_VERTEXAO; } else { _flags &= ~DISABLE_VERTEXAO; } }
 		inline void SetTextureStreamingDisabled(bool value = true) { if (value) { _flags |= DISABLE_TEXTURE_STREAMING; } else { _flags &= ~DISABLE_TEXTURE_STREAMING; } }
 		inline void SetCoplanarBlending(bool value = true) { if (value) { _flags |= COPLANAR_BLENDING; } else { _flags &= ~COPLANAR_BLENDING; } }
+		inline void SetInteriorMappingScale(XMFLOAT3 value)
+		{
+			SetDirty();
+			interiorMappingScale.x = value.x;
+			interiorMappingScale.y = value.y;
+			interiorMappingScale.z = value.z;
+		}
+		inline void SetInteriorMappingOffset(XMFLOAT3 value)
+		{
+			SetDirty();
+			interiorMappingOffset.x = value.x;
+			interiorMappingOffset.y = value.y;
+			interiorMappingOffset.z = value.z;
+		}
+		inline void SetInteriorMappingRotation(float value)
+		{
+			SetDirty();
+			interiorMappingRotation = value;
+		}
 
 		// The MaterialComponent will be written to ShaderMaterial (a struct that is optimized for GPU use)
 		void WriteShaderMaterial(ShaderMaterial* dest) const;

@@ -11064,7 +11064,7 @@ void Visibility_Shade(
 	// shading dispatches per material type:
 	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
 	{
-		if (i != MaterialComponent::SHADERTYPE_UNLIT) // the unlit shader is special, it had already written out its final color in the surface shader
+		if (i != MaterialComponent::SHADERTYPE_UNLIT && i != MaterialComponent::SHADERTYPE_INTERIORMAPPING) // these shaders are special, already written out their final color in the surface shader
 		{
 			device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SHADE_PERMUTATION_BEGIN + i], cmd);
 			device->PushConstants(&visibility_tile_offset, sizeof(visibility_tile_offset), cmd);

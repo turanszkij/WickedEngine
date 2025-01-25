@@ -580,8 +580,9 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // OBJECTSHADER_USE_TANGENT
 
 
-
 #ifdef OBJECTSHADER_USE_UVSETS
+
+#ifndef INTERIORMAPPING
 	[branch]
 #ifdef PREPASS
 	if (material.textures[BASECOLORMAP].IsValid())
@@ -591,6 +592,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	{
 		surface.baseColor *= material.textures[BASECOLORMAP].Sample(sampler_objectshader, uvsets);
 	}
+#endif // INTERIORMAPPING
 	
 	[branch]
 	if (material.textures[TRANSPARENCYMAP].IsValid())
@@ -1065,6 +1067,10 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	color = surface.baseColor;
 #endif // UNLIT
 
+#ifdef INTERIORMAPPING
+	color = surface.baseColor * InteriorMapping(surface.P, surface.N, surface.V, material, meshinstance);
+#endif // INTERIORMAPPING
+
 
 // Transparent objects has been rendered separately from opaque, so let's apply it now.
 // Must also be applied before fog since fog is layered over.
@@ -1078,7 +1084,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	color.rgb = mul(saturationMatrix(material.GetSaturation()), color.rgb);
 
 	color = saturateMediump(color);
-
 
 	// end point:
 #ifdef PREPASS

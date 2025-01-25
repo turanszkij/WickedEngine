@@ -533,6 +533,8 @@ struct Surface
 
 		baseColor = is_emittedparticle ? 1 : material.GetBaseColor();
 		baseColor *= inst.GetColor();
+
+#ifndef INTERIORMAPPING
 		[branch]
 		if (material.textures[BASECOLORMAP].IsValid())
 		{
@@ -554,6 +556,7 @@ struct Surface
 				baseColor.a *= baseColorMap.a;
 			}
 		}
+#endif // INTERIORMAPPING
 		
 		[branch]
 		if (material.textures[TRANSPARENCYMAP].IsValid())
