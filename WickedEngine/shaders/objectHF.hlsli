@@ -7,9 +7,9 @@
 #define SHADOW_MASK_ENABLED
 #endif // TRANSPARENT
 
-#if !defined(TRANSPARENT) && !defined(PREPASS)
+#if !defined(TRANSPARENT) && !defined(PREPASS) && !defined(ENVMAPRENDERING)
 #define DISABLE_ALPHATEST
-#endif // !defined(TRANSPARENT) && !defined(PREPASS)
+#endif // !defined(TRANSPARENT) && !defined(PREPASS) && !defined(ENVMAPRENDERING)
 
 #ifdef PLANARREFLECTION
 #define DISABLE_ENVMAPS
@@ -475,6 +475,12 @@ PixelInput main(VertexInput input)
 #pragma PSSL_target_output_format (target 0 FMT_32_R)
 #endif // __PSSL__ && PREPASS
 
+#ifdef DISABLE_ALPHATEST
+#define APPEND_COVERAGE_OUTPUT
+#else
+#define APPEND_COVERAGE_OUTPUT , out uint coverage : SV_Coverage
+#endif // DISABLE_ALPHATEST
+
 #ifdef EARLY_DEPTH_STENCIL
 [earlydepthstencil]
 #endif // EARLY_DEPTH_STENCIL
@@ -482,12 +488,12 @@ PixelInput main(VertexInput input)
 // entry point:
 #ifdef PREPASS
 #ifdef DEPTHONLY
-void main(PixelInput input, in uint primitiveID : SV_PrimitiveID, out uint coverage : SV_Coverage)
+void main(PixelInput input, in uint primitiveID : SV_PrimitiveID APPEND_COVERAGE_OUTPUT)
 #else
-uint main(PixelInput input, in uint primitiveID : SV_PrimitiveID, out uint coverage : SV_Coverage) : SV_Target
+uint main(PixelInput input, in uint primitiveID : SV_PrimitiveID APPEND_COVERAGE_OUTPUT) : SV_Target
 #endif // DEPTHONLY
 #else
-float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
+float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVERAGE_OUTPUT) : SV_Target
 #endif // PREPASS
 
 
@@ -605,16 +611,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #ifdef OBJECTSHADER_USE_COLOR
 	surface.baseColor *= input.color;
 #endif // OBJECTSHADER_USE_COLOR
-
-
-#ifndef DISABLE_ALPHATEST
-#ifdef TRANSPARENT
-	// Alpha test only for transparents
-	//	- Prepass will write alpha coverage mask
-	//	- Opaque will use [earlydepthstencil] and COMPARISON_EQUAL depth test on top of depth prepass
-	clip(surface.baseColor.a - material.GetAlphaTest() - meshinstance.GetAlphaTest());
-#endif // TRANSPARENT
-#endif // DISABLE_ALPHATEST
 
 
 #ifndef WATER
@@ -1086,9 +1082,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 	color = saturateMediump(color);
 
+#ifndef DISABLE_ALPHATEST
+	coverage = AlphaToCoverage(color.a, material.GetAlphaTest() + meshinstance.GetAlphaTest(), input.pos); // opaque soft alpha test (MSAA, temporal AA support)
+#endif // DISABLE_ALPHATEST
+	
 	// end point:
 #ifdef PREPASS
-	coverage = AlphaToCoverage(color.a, material.GetAlphaTest() + meshinstance.GetAlphaTest(), input.pos); // opaque soft alpha test (temporal AA, etc)
 #ifndef DEPTHONLY
 	PrimitiveID prim;
 	prim.primitiveIndex = primitiveID;

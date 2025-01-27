@@ -1307,6 +1307,7 @@ namespace wi::scene
 		inline bool IsDirty() const { return _flags & DIRTY; }
 		inline bool IsRealTime() const { return _flags & REALTIME; }
 		inline bool IsMSAA() const { return _flags & MSAA; }
+		inline uint32_t GetSampleCount() const { return IsMSAA() ? envmapMSAASampleCount : 1; }
 
 		size_t GetMemorySizeInBytes() const;
 

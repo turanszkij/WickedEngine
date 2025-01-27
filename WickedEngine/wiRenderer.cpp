@@ -8310,6 +8310,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			cb.cameras[i].internal_resolution = uint2(probe.texture.desc.width, probe.texture.desc.height);
 			cb.cameras[i].internal_resolution_rcp.x = 1.0f / cb.cameras[i].internal_resolution.x;
 			cb.cameras[i].internal_resolution_rcp.y = 1.0f / cb.cameras[i].internal_resolution.y;
+			cb.cameras[i].sample_count = probe.GetSampleCount();
 
 			XMStoreFloat4(&cb.cameras[i].frustum_corners.cornersNEAR[0], XMVector3TransformCoord(XMVectorSet(-1, 1, 1, 1), invVP));
 			XMStoreFloat4(&cb.cameras[i].frustum_corners.cornersNEAR[1], XMVector3TransformCoord(XMVectorSet(1, 1, 1, 1), invVP));
@@ -8349,7 +8350,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		static wi::unordered_map<uint32_t, Texture> render_textures;
 		static std::mutex locker;
 		{
-			const uint32_t required_sample_count = probe.IsMSAA() ? EnvironmentProbeComponent::envmapMSAASampleCount : 1;
+			const uint32_t required_sample_count = probe.GetSampleCount();
 
 			std::scoped_lock lck(locker);
 			RenderTextureID id_depth = {};
