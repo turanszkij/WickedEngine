@@ -1286,7 +1286,14 @@ namespace wi::graphics
 		}
 		constexpr uint64_t get_hash() const
 		{
-			return (uint64_t(pso) ^ (renderpass_hash << 1)) >> 1;
+			union
+			{
+				const PipelineState* ptr;
+				uint64_t value;
+			} pso_hasher = {};
+			static_assert(sizeof(pso_hasher) == sizeof(uint64_t));
+			pso_hasher.ptr = pso; // reinterpret_cast in constexpr workaround
+			return (pso_hasher.value ^ (renderpass_hash << 1)) >> 1;
 		}
 	};
 
