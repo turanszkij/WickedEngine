@@ -900,8 +900,6 @@ namespace vulkan_internal
 		VkDeviceSize uniform_buffer_sizes[DESCRIPTORBINDER_CBV_COUNT] = {};
 		wi::vector<uint32_t> uniform_buffer_dynamic_slots;
 
-		size_t binding_hash = 0;
-
 		~Shader_Vulkan()
 		{
 			if (allocationhandler == nullptr)
@@ -930,8 +928,6 @@ namespace vulkan_internal
 
 		VkDeviceSize uniform_buffer_sizes[DESCRIPTORBINDER_CBV_COUNT] = {};
 		wi::vector<uint32_t> uniform_buffer_dynamic_slots;
-
-		size_t binding_hash = 0;
 
 		VkGraphicsPipelineCreateInfo pipelineInfo = {};
 		VkPipelineShaderStageCreateInfo shaderStages[static_cast<size_t>(ShaderStage::Count)] = {};
@@ -4783,7 +4779,6 @@ using namespace vulkan_internal;
 				}
 				layout_hasher.push = internal_state->pushconstants;
 				layout_hasher.embed_hash();
-				internal_state->binding_hash = layout_hasher.get_hash();
 
 				pso_layout_cache_mutex.lock();
 				if (pso_layout_cache[layout_hasher].pipelineLayout == VK_NULL_HANDLE)
@@ -5284,7 +5279,6 @@ using namespace vulkan_internal;
 			}
 			layout_hasher.push = internal_state->pushconstants;
 			layout_hasher.embed_hash();
-			internal_state->binding_hash = layout_hasher.get_hash();
 
 			pso_layout_cache_mutex.lock();
 			if (pso_layout_cache[layout_hasher].pipelineLayout == VK_NULL_HANDLE)
@@ -8171,7 +8165,7 @@ using namespace vulkan_internal;
 		else
 		{
 			auto active_internal = to_internal(commandlist.active_pso);
-			if (internal_state->binding_hash != active_internal->binding_hash)
+			if (internal_state->pipelineLayout != active_internal->pipelineLayout)
 			{
 				commandlist.binder.dirty |= DescriptorBinder::DIRTY_ALL;
 			}
@@ -8213,7 +8207,7 @@ using namespace vulkan_internal;
 		{
 			auto internal_state = to_internal(cs);
 			auto active_internal = to_internal(commandlist.active_cs);
-			if (internal_state->binding_hash != active_internal->binding_hash)
+			if (internal_state->pipelineLayout_cs != active_internal->pipelineLayout_cs)
 			{
 				commandlist.binder.dirty |= DescriptorBinder::DIRTY_ALL;
 			}
