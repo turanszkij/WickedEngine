@@ -598,7 +598,7 @@ struct PrimitiveID
 		primitiveIndex = 0;
 		instanceIndex = 0;
 		subsetIndex = 0;
-		maybe_clustered = 0;
+		maybe_clustered = false;
 	}
 
 	// These packing methods require meshlet data, and pack into 32 bits:

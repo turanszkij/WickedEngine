@@ -284,21 +284,13 @@ struct PixelInput
 	float clip : SV_ClipDistance0;
 #endif // OBJECTSHADER_USE_CLIPPLANE
 
-#if defined(OBJECTSHADER_USE_INSTANCEINDEX) || defined(OBJECTSHADER_USE_DITHERING)
-	uint instanceIndex_dither : INSTANCEINDEX_DITHER;
-#endif // OBJECTSHADER_USE_INSTANCEINDEX || OBJECTSHADER_USE_DITHERING
-
-#ifdef OBJECTSHADER_USE_CAMERAINDEX
-	uint cameraIndex : CAMERAINDEX;
-#endif // OBJECTSHADER_USE_CAMERAINDEX
+#if defined(OBJECTSHADER_USE_INSTANCEINDEX) || defined(OBJECTSHADER_USE_DITHERING) || defined(OBJECTSHADER_USE_CAMERAINDEX)
+	uint poi : INSTANCEPOINTER;
+#endif // OBJECTSHADER_USE_INSTANCEINDEX || OBJECTSHADER_USE_DITHERING || OBJECTSHADER_USE_CAMERAINDEX
 
 #ifdef OBJECTSHADER_USE_UVSETS
 	float4 uvsets : UVSETS;
 #endif // OBJECTSHADER_USE_UVSETS
-
-#ifdef OBJECTSHADER_USE_COLOR
-	half4 color : COLOR;
-#endif // OBJECTSHADER_USE_COLOR
 
 #ifdef OBJECTSHADER_USE_TANGENT
 	float4 tan : TANGENT;
@@ -309,9 +301,13 @@ struct PixelInput
 #endif // OBJECTSHADER_USE_NORMAL
 
 #ifdef OBJECTSHADER_USE_COMMON
-	float2 atl : ATLAS;
 	half2 ao_wet : COMMON;
+	float2 atl : ATLAS;
 #endif // OBJECTSHADER_USE_COMMON
+
+#ifdef OBJECTSHADER_USE_COLOR
+	half4 color : COLOR;
+#endif // OBJECTSHADER_USE_COLOR
 
 #ifndef OBJECTSHADER_COMPILE_MS
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
@@ -328,16 +324,29 @@ struct PixelInput
 #ifdef OBJECTSHADER_USE_INSTANCEINDEX
 	inline uint GetInstanceIndex()
 	{
-		return instanceIndex_dither & 0xFFFFFF;
+		ShaderMeshInstancePointer pointer;
+		pointer.data = poi;
+		return pointer.GetInstanceIndex();
 	}
 #endif // OBJECTSHADER_USE_INSTANCEINDEX
 
 #ifdef OBJECTSHADER_USE_DITHERING
 	inline half GetDither()
 	{
-		return half((instanceIndex_dither >> 24u) / 255.0);
+		ShaderMeshInstancePointer pointer;
+		pointer.data = poi;
+		return pointer.GetDither();
 	}
 #endif // OBJECTSHADER_USE_DITHERING
+
+#ifdef OBJECTSHADER_USE_CAMERAINDEX
+	inline uint GetCameraIndex()
+	{
+		ShaderMeshInstancePointer pointer;
+		pointer.data = poi;
+		return pointer.GetCameraIndex();
+	}
+#endif // OBJECTSHADER_USE_CAMERAINDEX
 	
 #ifdef OBJECTSHADER_USE_UVSETS
 	inline float4 GetUVSets()
@@ -349,7 +358,7 @@ struct PixelInput
 	inline float3 GetPos3D()
 	{
 #ifdef OBJECTSHADER_USE_CAMERAINDEX
-		ShaderCamera camera = GetCamera(cameraIndex);
+		ShaderCamera camera = GetCamera(GetCameraIndex());
 #else
 		ShaderCamera camera = GetCamera();
 #endif // OBJECTSHADER_USE_CAMERAINDEX
@@ -360,7 +369,7 @@ struct PixelInput
 	inline float3 GetViewVector()
 	{
 #ifdef OBJECTSHADER_USE_CAMERAINDEX
-		ShaderCamera camera = GetCamera(cameraIndex);
+		ShaderCamera camera = GetCamera(GetCameraIndex());
 #else
 		ShaderCamera camera = GetCamera();
 #endif // OBJECTSHADER_USE_CAMERAINDEX
@@ -394,19 +403,9 @@ PixelInput vertex_to_pixel_export(VertexInput input)
 	Out.clip = dot(surface.position, camera.clip_plane);
 #endif // OBJECTSHADER_USE_CLIPPLANE
 
-#if defined(OBJECTSHADER_USE_INSTANCEINDEX) || defined(OBJECTSHADER_USE_DITHERING)
-	Out.instanceIndex_dither = 0;
-#ifdef OBJECTSHADER_USE_INSTANCEINDEX
-	Out.instanceIndex_dither |= input.GetInstancePointer().GetInstanceIndex() & 0xFFFFFF;
-#endif // OBJECTSHADER_USE_INSTANCEINDEX
-#ifdef OBJECTSHADER_USE_DITHERING
-	Out.instanceIndex_dither |= (uint(surface.color.a * 255u) & 0xFF) << 24u;
-#endif // OBJECTSHADER_USE_DITHERING
-#endif // OBJECTSHADER_USE_INSTANCEINDEX || OBJECTSHADER_USE_DITHERING
-
-#ifdef OBJECTSHADER_USE_CAMERAINDEX
-	Out.cameraIndex = cameraIndex;
-#endif // OBJECTSHADER_USE_CAMERAINDEX
+#if defined(OBJECTSHADER_USE_INSTANCEINDEX) || defined(OBJECTSHADER_USE_DITHERING) || defined(OBJECTSHADER_USE_CAMERAINDEX)
+	Out.poi = input.GetInstancePointer().data;
+#endif // OBJECTSHADER_USE_INSTANCEINDEX || OBJECTSHADER_USE_DITHERING || OBJECTSHADER_USE_CAMERAINDEX
 
 #ifdef OBJECTSHADER_USE_COLOR
 	Out.color = surface.color;
@@ -500,7 +499,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 // Pixel shader base:
 {
 #ifdef OBJECTSHADER_USE_CAMERAINDEX
-	ShaderCamera camera = GetCamera(input.cameraIndex);
+	ShaderCamera camera = GetCamera(input.GetCameraIndex());
 #else
 	ShaderCamera camera = GetCamera();
 #endif // OBJECTSHADER_USE_CAMERAINDEX
@@ -528,7 +527,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 #ifndef ENVMAPRENDERING
 #ifdef OBJECTSHADER_USE_DITHERING
 	// apply dithering:
-	clip(dither(pixel + GetTemporalAASampleRotation()) - (1 - input.GetDither()));
+	clip(dither(pixel + GetTemporalAASampleRotation()) - input.GetDither());
 #endif // OBJECTSHADER_USE_DITHERING
 #endif // DISABLE_ALPHATEST
 #endif // TRANSPARENT
