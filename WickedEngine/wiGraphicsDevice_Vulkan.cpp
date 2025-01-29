@@ -2124,7 +2124,7 @@ using namespace vulkan_internal;
 			return;
 
 		const PipelineState* pso = commandlist.active_pso;
-		PipelineHash pipeline_hash = commandlist.prev_pipeline_hash;
+		const PipelineHash& pipeline_hash = commandlist.prev_pipeline_hash;
 		auto internal_state = to_internal(pso);
 
 		VkPipeline pipeline = VK_NULL_HANDLE;
@@ -7488,9 +7488,19 @@ using namespace vulkan_internal;
 
 		// Queue command:
 		{
+			if (!queues[queue].sparse_binding_supported)
+			{
+				// 1.) fall back to graphics queue if current one doesn't support sparse, might be better than crashing
+				queue = QUEUE_GRAPHICS;
+			}
+			if (!queues[queue].sparse_binding_supported)
+			{
+				// 2.) fall back to compute queue if current one doesn't support sparse, might be better than crashing
+				queue = QUEUE_COMPUTE;
+			}
 			CommandQueue& q = queues[queue];
 			std::scoped_lock lock(*q.locker);
-			assert(q.sparse_binding_supported);
+			wilog_assert(q.sparse_binding_supported, "Vulkan QUEUE_TYPE=%d doesn't report sparse binding support!", int(queue));
 
 			vulkan_check(vkQueueBindSparse(q.queue, (uint32_t)sparse_infos.size(), sparse_infos.data(), VK_NULL_HANDLE));
 		}

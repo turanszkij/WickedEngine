@@ -221,7 +221,7 @@ namespace wi::graphics
 				VkFence fence = VK_NULL_HANDLE;
 				VkSemaphore semaphores[3] = { VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE }; // graphics, compute, video
 				GPUBuffer uploadbuffer;
-				inline bool IsValid() const { return transferCommandBuffer != VK_NULL_HANDLE; }
+				constexpr bool IsValid() const { return transferCommandBuffer != VK_NULL_HANDLE; }
 			};
 			wi::vector<CopyCMD> freelist;
 
@@ -789,7 +789,7 @@ namespace wi::graphics
 
 				framecount = FRAMECOUNT;
 
-				destroylocker.lock();
+				std::scoped_lock lck(destroylocker);
 
 				destroy(destroyer_allocations, [&](auto& item) {
 					vmaFreeMemory(allocator, item);
@@ -869,8 +869,6 @@ namespace wi::graphics
 				destroy(destroyer_bindlessAccelerationStructures, [&](auto& item) {
 					bindlessAccelerationStructures.free(item);
 				});
-
-				destroylocker.unlock();
 			}
 		};
 		std::shared_ptr<AllocationHandler> allocationhandler;
