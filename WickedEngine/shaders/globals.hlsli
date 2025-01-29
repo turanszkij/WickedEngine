@@ -593,6 +593,14 @@ struct PrimitiveID
 	uint subsetIndex;
 	bool maybe_clustered;
 
+	inline void init()
+	{
+		primitiveIndex = 0;
+		instanceIndex = 0;
+		subsetIndex = 0;
+		maybe_clustered = 0;
+	}
+
 	// These packing methods require meshlet data, and pack into 32 bits:
 	inline uint pack()
 	{

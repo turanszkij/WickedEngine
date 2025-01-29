@@ -19,6 +19,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		return;
 
 	PrimitiveID prim;
+	prim.init();
 	prim.primitiveIndex = DTid.x;
 	prim.instanceIndex = push.instanceIndex;
 	prim.subsetIndex = push.subsetIndex;

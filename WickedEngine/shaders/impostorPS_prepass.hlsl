@@ -14,6 +14,7 @@ uint main(VSOut input, out uint coverage : SV_Coverage) : SV_Target
 	coverage = AlphaToCoverage(alpha, 0.75, input.pos);
 
 	PrimitiveID prim;
+	prim.init();
 	prim.primitiveIndex = input.primitiveID;
 	prim.instanceIndex = GetScene().impostorInstanceOffset;
 	prim.subsetIndex = 0;

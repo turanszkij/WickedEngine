@@ -71,6 +71,7 @@ void BakeryPixelPush(inout float3 P, in float3 N, in float2 UV, inout RNG rng, i
 			hit_pos = q.WorldRayOrigin() + q.WorldRayDirection() * q.CommittedRayT();
 		
 			PrimitiveID prim;
+			prim.init();
 			prim.primitiveIndex = q.CommittedPrimitiveIndex();
 			prim.instanceIndex = q.CommittedInstanceID();
 			prim.subsetIndex = q.CommittedGeometryIndex();
@@ -275,6 +276,7 @@ float4 main(Input input) : SV_TARGET
 					while (q.Proceed())
 					{
 						PrimitiveID prim;
+						prim.init();
 						prim.primitiveIndex = q.CandidatePrimitiveIndex();
 						prim.instanceIndex = q.CandidateInstanceID();
 						prim.subsetIndex = q.CandidateGeometryIndex();
@@ -354,6 +356,7 @@ float4 main(Input input) : SV_TARGET
 		ray.Origin = q.WorldRayOrigin() + q.WorldRayDirection() * q.CommittedRayT();
 
 		PrimitiveID prim;
+		prim.init();
 		prim.primitiveIndex = q.CommittedPrimitiveIndex();
 		prim.instanceIndex = q.CommittedInstanceID();
 		prim.subsetIndex = q.CommittedGeometryIndex();

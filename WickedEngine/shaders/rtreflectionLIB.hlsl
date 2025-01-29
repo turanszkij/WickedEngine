@@ -90,6 +90,7 @@ void RTReflection_Raygen()
 void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes attr)
 {
 	PrimitiveID prim;
+	prim.init();
 	prim.primitiveIndex = PrimitiveIndex();
 	prim.instanceIndex = InstanceID();
 	prim.subsetIndex = GeometryIndex();
@@ -167,6 +168,7 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 void RTReflection_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes attr)
 {
 	PrimitiveID prim;
+	prim.init();
 	prim.primitiveIndex = PrimitiveIndex();
 	prim.instanceIndex = InstanceID();
 	prim.subsetIndex = GeometryIndex();

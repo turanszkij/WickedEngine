@@ -91,6 +91,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			hit_depth = q.CommittedRayT();
 
 			PrimitiveID prim;
+			prim.init();
 			prim.primitiveIndex = q.CommittedPrimitiveIndex();
 			prim.instanceIndex = q.CommittedInstanceID();
 			prim.subsetIndex = q.CommittedGeometryIndex();

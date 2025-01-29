@@ -29,6 +29,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 	if (any(primitiveID))
 	{
 		PrimitiveID prim;
+		prim.init();
 		prim.unpack(primitiveID);
 
 		Surface surface;

@@ -40,6 +40,7 @@ struct BVHPrimitive
 	PrimitiveID primitiveID()
 	{
 		PrimitiveID prim;
+		prim.init();
 		prim.unpack2(packed_prim);
 		return prim;
 	}

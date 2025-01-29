@@ -43,6 +43,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 	uint primitiveID = texture_primitiveID[pixel];
 	PrimitiveID prim;
+	prim.init();
 	prim.unpack(primitiveID);
 
 	Surface surface;

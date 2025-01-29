@@ -217,6 +217,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 						if(q.CandidateType() != CANDIDATE_NON_OPAQUE_TRIANGLE) // see xbox coherent ray traversal documentation
 							continue;
 						PrimitiveID prim;
+						prim.init();
 						prim.primitiveIndex = q.CandidatePrimitiveIndex();
 						prim.instanceIndex = q.CandidateInstanceID();
 						prim.subsetIndex = q.CandidateGeometryIndex();

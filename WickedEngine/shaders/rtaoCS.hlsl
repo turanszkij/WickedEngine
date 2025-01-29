@@ -38,6 +38,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	RayDesc ray = CreateCameraRay(clipspace);
 
 	PrimitiveID prim;
+	prim.init();
 	prim.unpack(primitiveID);
 
 	Surface surface;
@@ -70,6 +71,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	while (q.Proceed())
 	{
 		PrimitiveID prim;
+		prim.init();
 		prim.primitiveIndex = q.CandidatePrimitiveIndex();
 		prim.instanceIndex = q.CandidateInstanceID();
 		prim.subsetIndex = q.CandidateGeometryIndex();

@@ -70,6 +70,7 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		if (any(primitiveID))
 		{
 			PrimitiveID prim;
+			prim.init();
 			prim.unpack(primitiveID);
 
 			Surface surface;

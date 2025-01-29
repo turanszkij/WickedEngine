@@ -80,6 +80,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 	while (q.Proceed())
 	{
 		PrimitiveID prim;
+		prim.init();
 		prim.primitiveIndex = q.CandidatePrimitiveIndex();
 		prim.instanceIndex = q.CandidateInstanceID();
 		prim.subsetIndex = q.CandidateGeometryIndex();
@@ -129,6 +130,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 	{
 		// closest hit:
 		PrimitiveID prim;
+		prim.init();
 		prim.primitiveIndex = q.CommittedPrimitiveIndex();
 		prim.instanceIndex = q.CommittedInstanceID();
 		prim.subsetIndex = q.CommittedGeometryIndex();
