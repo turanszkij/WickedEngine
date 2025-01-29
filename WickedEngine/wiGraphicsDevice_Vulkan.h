@@ -12,6 +12,7 @@
 #include "wiVector.h"
 #include "wiSpinLock.h"
 #include "wiBacklog.h"
+#include "wiHelper.h"
 
 #ifdef _WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
@@ -30,6 +31,80 @@
 
 #define vulkan_assert(cond, fname) { wilog_assert(cond, "Vulkan error: %s failed with %s (%s:%d)", fname, string_VkResult(res), relative_path(__FILE__), __LINE__); }
 #define vulkan_check(call) [&]() { VkResult res = call; vulkan_assert((res == VK_SUCCESS), extract_function_name(#call).c_str()); return res; }()
+
+namespace wi::graphics
+{
+	struct PSOLayoutHash
+	{
+		VkPushConstantRange push = {};
+		struct Item
+		{
+			bool used = true;
+			VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D;
+			VkDescriptorSetLayoutBinding binding = {};
+		};
+		wi::vector<Item> items;
+		size_t hash = 0;
+
+		inline bool operator==(const PSOLayoutHash& other) const
+		{
+			if (hash != other.hash)
+				return false;
+			if (items.size() != other.items.size())
+				return false;
+			for (size_t i = 0; i < items.size(); ++i)
+			{
+				const Item& a = items[i];
+				const Item& b = other.items[i];
+				if (
+					a.used != b.used ||
+					a.viewType != b.viewType ||
+					a.binding.binding != b.binding.binding ||
+					a.binding.descriptorCount != b.binding.descriptorCount ||
+					a.binding.descriptorType != b.binding.descriptorType ||
+					a.binding.stageFlags != b.binding.stageFlags ||
+					a.binding.pImmutableSamplers != b.binding.pImmutableSamplers
+					)
+					return false;
+			}
+			return
+				push.offset == other.push.offset &&
+				push.size == other.push.size &&
+				push.stageFlags == other.push.stageFlags;
+		}
+		inline void embed_hash()
+		{
+			hash = 0;
+			for (auto& x : items)
+			{
+				wi::helper::hash_combine(hash, x.used);
+				wi::helper::hash_combine(hash, x.viewType);
+				wi::helper::hash_combine(hash, x.binding.binding);
+				wi::helper::hash_combine(hash, x.binding.descriptorCount);
+				wi::helper::hash_combine(hash, x.binding.descriptorType);
+				wi::helper::hash_combine(hash, x.binding.stageFlags);
+			}
+			wi::helper::hash_combine(hash, push.offset);
+			wi::helper::hash_combine(hash, push.size);
+			wi::helper::hash_combine(hash, push.stageFlags);
+		}
+		constexpr size_t get_hash() const
+		{
+			return hash;
+		}
+	};
+}
+namespace std
+{
+	template <>
+	struct hash<wi::graphics::PSOLayoutHash>
+	{
+		constexpr size_t operator()(const wi::graphics::PSOLayoutHash& hash) const
+		{
+			return hash.get_hash();
+		}
+	};
+}
 
 namespace wi::graphics
 {
@@ -303,7 +378,7 @@ namespace wi::graphics
 			wi::vector<VkDescriptorSet> bindlessSets;
 			uint32_t bindlessFirstSet = 0;
 		};
-		mutable wi::unordered_map<size_t, PSOLayout> pso_layout_cache;
+		mutable wi::unordered_map<PSOLayoutHash, PSOLayout> pso_layout_cache;
 		mutable std::mutex pso_layout_cache_mutex;
 
 		VkPipelineCache pipelineCache = VK_NULL_HANDLE;
@@ -799,7 +874,6 @@ namespace wi::graphics
 			}
 		};
 		std::shared_ptr<AllocationHandler> allocationhandler;
-
 	};
 }
 
