@@ -1,7 +1,6 @@
 #include "wiGraphicsDevice_Vulkan.h"
 
 #ifdef WICKEDENGINE_BUILD_VULKAN
-#include "wiHelper.h"
 #include "wiVersion.h"
 #include "wiTimer.h"
 #include "wiUnorderedSet.h"
@@ -901,8 +900,6 @@ namespace vulkan_internal
 		VkDeviceSize uniform_buffer_sizes[DESCRIPTORBINDER_CBV_COUNT] = {};
 		wi::vector<uint32_t> uniform_buffer_dynamic_slots;
 
-		size_t binding_hash = 0;
-
 		~Shader_Vulkan()
 		{
 			if (allocationhandler == nullptr)
@@ -931,8 +928,6 @@ namespace vulkan_internal
 
 		VkDeviceSize uniform_buffer_sizes[DESCRIPTORBINDER_CBV_COUNT] = {};
 		wi::vector<uint32_t> uniform_buffer_dynamic_slots;
-
-		size_t binding_hash = 0;
 
 		VkGraphicsPipelineCreateInfo pipelineInfo = {};
 		VkPipelineShaderStageCreateInfo shaderStages[static_cast<size_t>(ShaderStage::Count)] = {};
@@ -2129,7 +2124,7 @@ using namespace vulkan_internal;
 			return;
 
 		const PipelineState* pso = commandlist.active_pso;
-		PipelineHash pipeline_hash = commandlist.prev_pipeline_hash;
+		const PipelineHash& pipeline_hash = commandlist.prev_pipeline_hash;
 		auto internal_state = to_internal(pso);
 
 		VkPipeline pipeline = VK_NULL_HANDLE;
@@ -4768,30 +4763,25 @@ using namespace vulkan_internal;
 
 			if (stage == ShaderStage::CS || stage == ShaderStage::LIB)
 			{
-				internal_state->binding_hash = 0;
+				PSOLayoutHash layout_hasher;
 				size_t i = 0;
 				for (auto& x : internal_state->layoutBindings)
 				{
-					wi::helper::hash_combine(internal_state->binding_hash, x.binding);
-					wi::helper::hash_combine(internal_state->binding_hash, x.descriptorCount);
-					wi::helper::hash_combine(internal_state->binding_hash, x.descriptorType);
-					wi::helper::hash_combine(internal_state->binding_hash, x.stageFlags);
-					wi::helper::hash_combine(internal_state->binding_hash, internal_state->imageViewTypes[i++]);
+					auto& item = layout_hasher.items.emplace_back();
+					item.binding = x;
+					item.viewType = internal_state->imageViewTypes[i++];
 				}
 				for (auto& x : internal_state->bindlessBindings)
 				{
-					wi::helper::hash_combine(internal_state->binding_hash, x.used);
-					wi::helper::hash_combine(internal_state->binding_hash, x.binding.binding);
-					wi::helper::hash_combine(internal_state->binding_hash, x.binding.descriptorCount);
-					wi::helper::hash_combine(internal_state->binding_hash, x.binding.descriptorType);
-					wi::helper::hash_combine(internal_state->binding_hash, x.binding.stageFlags);
+					auto& item = layout_hasher.items.emplace_back();
+					item.binding = x.binding;
+					item.used = x.used;
 				}
-				wi::helper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.offset);
-				wi::helper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.size);
-				wi::helper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.stageFlags);
+				layout_hasher.push = internal_state->pushconstants;
+				layout_hasher.embed_hash();
 
 				pso_layout_cache_mutex.lock();
-				if (pso_layout_cache[internal_state->binding_hash].pipelineLayout == VK_NULL_HANDLE)
+				if (pso_layout_cache[layout_hasher].pipelineLayout == VK_NULL_HANDLE)
 				{
 					wi::vector<VkDescriptorSetLayout> layouts;
 
@@ -4863,18 +4853,20 @@ using namespace vulkan_internal;
 					res = vulkan_check(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &internal_state->pipelineLayout_cs));
 					if (res == VK_SUCCESS)
 					{
-						pso_layout_cache[internal_state->binding_hash].descriptorSetLayout = internal_state->descriptorSetLayout;
-						pso_layout_cache[internal_state->binding_hash].pipelineLayout = internal_state->pipelineLayout_cs;
-						pso_layout_cache[internal_state->binding_hash].bindlessSets = internal_state->bindlessSets;
-						pso_layout_cache[internal_state->binding_hash].bindlessFirstSet = internal_state->bindlessFirstSet;
+						auto& cached_layout = pso_layout_cache[layout_hasher];
+						cached_layout.descriptorSetLayout = internal_state->descriptorSetLayout;
+						cached_layout.pipelineLayout = internal_state->pipelineLayout_cs;
+						cached_layout.bindlessSets = internal_state->bindlessSets;
+						cached_layout.bindlessFirstSet = internal_state->bindlessFirstSet;
 					}
 				}
 				else
 				{
-					internal_state->descriptorSetLayout = pso_layout_cache[internal_state->binding_hash].descriptorSetLayout;
-					internal_state->pipelineLayout_cs = pso_layout_cache[internal_state->binding_hash].pipelineLayout;
-					internal_state->bindlessSets = pso_layout_cache[internal_state->binding_hash].bindlessSets;
-					internal_state->bindlessFirstSet = pso_layout_cache[internal_state->binding_hash].bindlessFirstSet;
+					auto& cached_layout = pso_layout_cache[layout_hasher];
+					internal_state->descriptorSetLayout = cached_layout.descriptorSetLayout;
+					internal_state->pipelineLayout_cs = cached_layout.pipelineLayout;
+					internal_state->bindlessSets = cached_layout.bindlessSets;
+					internal_state->bindlessFirstSet = cached_layout.bindlessFirstSet;
 				}
 				pso_layout_cache_mutex.unlock();
 			}
@@ -5271,31 +5263,25 @@ using namespace vulkan_internal;
 			insert_shader_bindless(desc->gs);
 			insert_shader_bindless(desc->ps);
 
-			internal_state->binding_hash = 0;
+			PSOLayoutHash layout_hasher;
 			size_t i = 0;
 			for (auto& x : internal_state->layoutBindings)
 			{
-				wi::helper::hash_combine(internal_state->binding_hash, x.binding);
-				wi::helper::hash_combine(internal_state->binding_hash, x.descriptorCount);
-				wi::helper::hash_combine(internal_state->binding_hash, x.descriptorType);
-				wi::helper::hash_combine(internal_state->binding_hash, x.stageFlags);
-				wi::helper::hash_combine(internal_state->binding_hash, internal_state->imageViewTypes[i++]);
+				auto& item = layout_hasher.items.emplace_back();
+				item.binding = x;
+				item.viewType = internal_state->imageViewTypes[i++];
 			}
 			for (auto& x : internal_state->bindlessBindings)
 			{
-				wi::helper::hash_combine(internal_state->binding_hash, x.used);
-				wi::helper::hash_combine(internal_state->binding_hash, x.binding.binding);
-				wi::helper::hash_combine(internal_state->binding_hash, x.binding.descriptorCount);
-				wi::helper::hash_combine(internal_state->binding_hash, x.binding.descriptorType);
-				wi::helper::hash_combine(internal_state->binding_hash, x.binding.stageFlags);
+				auto& item = layout_hasher.items.emplace_back();
+				item.binding = x.binding;
+				item.used = x.used;
 			}
-			wi::helper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.offset);
-			wi::helper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.size);
-			wi::helper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.stageFlags);
-
+			layout_hasher.push = internal_state->pushconstants;
+			layout_hasher.embed_hash();
 
 			pso_layout_cache_mutex.lock();
-			if (pso_layout_cache[internal_state->binding_hash].pipelineLayout == VK_NULL_HANDLE)
+			if (pso_layout_cache[layout_hasher].pipelineLayout == VK_NULL_HANDLE)
 			{
 				wi::vector<VkDescriptorSetLayout> layouts;
 				{
@@ -5367,18 +5353,20 @@ using namespace vulkan_internal;
 				res = vulkan_check(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &internal_state->pipelineLayout));
 				if (res == VK_SUCCESS)
 				{
-					pso_layout_cache[internal_state->binding_hash].descriptorSetLayout = internal_state->descriptorSetLayout;
-					pso_layout_cache[internal_state->binding_hash].pipelineLayout = internal_state->pipelineLayout;
-					pso_layout_cache[internal_state->binding_hash].bindlessSets = internal_state->bindlessSets;
-					pso_layout_cache[internal_state->binding_hash].bindlessFirstSet = internal_state->bindlessFirstSet;
+					auto& cached_layout = pso_layout_cache[layout_hasher];
+					cached_layout.descriptorSetLayout = internal_state->descriptorSetLayout;
+					cached_layout.pipelineLayout = internal_state->pipelineLayout;
+					cached_layout.bindlessSets = internal_state->bindlessSets;
+					cached_layout.bindlessFirstSet = internal_state->bindlessFirstSet;
 				}
 			}
 			else
 			{
-				internal_state->descriptorSetLayout = pso_layout_cache[internal_state->binding_hash].descriptorSetLayout;
-				internal_state->pipelineLayout = pso_layout_cache[internal_state->binding_hash].pipelineLayout;
-				internal_state->bindlessSets = pso_layout_cache[internal_state->binding_hash].bindlessSets;
-				internal_state->bindlessFirstSet = pso_layout_cache[internal_state->binding_hash].bindlessFirstSet;
+				auto& cached_layout = pso_layout_cache[layout_hasher];
+				internal_state->descriptorSetLayout = cached_layout.descriptorSetLayout;
+				internal_state->pipelineLayout = cached_layout.pipelineLayout;
+				internal_state->bindlessSets = cached_layout.bindlessSets;
+				internal_state->bindlessFirstSet = cached_layout.bindlessFirstSet;
 			}
 			pso_layout_cache_mutex.unlock();
 		}
@@ -7500,9 +7488,19 @@ using namespace vulkan_internal;
 
 		// Queue command:
 		{
+			if (!queues[queue].sparse_binding_supported)
+			{
+				// 1.) fall back to graphics queue if current one doesn't support sparse, might be better than crashing
+				queue = QUEUE_GRAPHICS;
+			}
+			if (!queues[queue].sparse_binding_supported)
+			{
+				// 2.) fall back to compute queue if current one doesn't support sparse, might be better than crashing
+				queue = QUEUE_COMPUTE;
+			}
 			CommandQueue& q = queues[queue];
 			std::scoped_lock lock(*q.locker);
-			assert(q.sparse_binding_supported);
+			wilog_assert(q.sparse_binding_supported, "Vulkan QUEUE_TYPE=%d doesn't report sparse binding support!", int(queue));
 
 			vulkan_check(vkQueueBindSparse(q.queue, (uint32_t)sparse_infos.size(), sparse_infos.data(), VK_NULL_HANDLE));
 		}
@@ -8013,7 +8011,6 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint64_t* offsets, CommandList cmd)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		size_t hash = 0;
 
 		VkDeviceSize voffsets[8] = {};
 		VkDeviceSize vstrides[8] = {};
@@ -8021,8 +8018,6 @@ using namespace vulkan_internal;
 		assert(count <= 8);
 		for (uint32_t i = 0; i < count; ++i)
 		{
-			wi::helper::hash_combine(hash, strides[i]);
-
 			if (vertexBuffers[i] == nullptr || !vertexBuffers[i]->IsValid())
 			{
 				vbuffers[i] = nullBuffer;
@@ -8180,7 +8175,7 @@ using namespace vulkan_internal;
 		else
 		{
 			auto active_internal = to_internal(commandlist.active_pso);
-			if (internal_state->binding_hash != active_internal->binding_hash)
+			if (internal_state->pipelineLayout != active_internal->pipelineLayout)
 			{
 				commandlist.binder.dirty |= DescriptorBinder::DIRTY_ALL;
 			}
@@ -8222,7 +8217,7 @@ using namespace vulkan_internal;
 		{
 			auto internal_state = to_internal(cs);
 			auto active_internal = to_internal(commandlist.active_cs);
-			if (internal_state->binding_hash != active_internal->binding_hash)
+			if (internal_state->pipelineLayout_cs != active_internal->pipelineLayout_cs)
 			{
 				commandlist.binder.dirty |= DescriptorBinder::DIRTY_ALL;
 			}
