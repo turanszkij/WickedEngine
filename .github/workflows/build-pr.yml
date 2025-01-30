@@ -15,85 +15,16 @@ env:
 
 jobs:
 
-  windows:
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Restore Ccache database
-      id: restore-ccache
-      uses: actions/cache/restore@v4
-      with:
-        path: C:\Users\runneradmin\AppData\Local\ccache
-        key: win-ccache-${{ github.run_id }}
-        restore-keys: win-ccache-
-
-    - name: Install Ccache
-      run: |
-        curl -sOSL https://github.com/ccache/ccache/releases/download/v$Env:CCACHE_VERSION/ccache-$Env:CCACHE_VERSION-windows-x86_64.zip
-        unzip -qj ccache-$Env:CCACHE_VERSION-windows-x86_64.zip ccache-$Env:CCACHE_VERSION-windows-x86_64/ccache.exe
-        mv ccache.exe cl.exe
-        mv .github/workflows/Directory.Build.props.ghbuild Directory.Build.props
-
-    - name: Initial compile
-      shell: cmd
-      run: |
-        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
-        MSBuild WickedEngine.sln /t:OfflineShaderCompiler /m /p:Configuration=Release /p:Platform=x64
-
-    - name: Generate shader dump
-      shell: cmd
-      run: |
-        cd "WickedEngine"
-        "../BUILD/x64/Release/OfflineShaderCompiler/OfflineShaderCompiler.exe" hlsl6 spirv shaderdump strip_reflection
-
-    - name: Recompile with shader dump
-      shell: cmd
-      run: |
-        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
-        MSBuild WickedEngine.sln /t:clean /m /p:Configuration=Release /p:Platform=x64
-        MSBuild WickedEngine.sln /t:Editor_Windows /m /p:Configuration=Release /p:Platform=x64
-
-    - name: Save Ccache database
-      id: save-ccache
-      if: always() && steps.restore-ccache.cache-hit != 'true'
-      uses: actions/cache/save@v4
-      with:
-        path: C:\Users\runneradmin\AppData\Local\ccache
-        key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
-
-    - name: Move files
-      shell: cmd
-      run: |
-        move BUILD\x64\Release\Editor_Windows\Editor_Windows.exe .\
-        move Editor\config.ini .\
-        move Editor\startup.lua .\
-        move Editor\languages .\
-        move Editor\fonts .\
-
-    - name: Install official UPX
-      shell: cmd
-      run: |
-        curl -sOSL https://github.com/upx/upx/releases/download/v%UPX_VERSION%/upx-%UPX_VERSION%-win64.zip
-        unzip -qj upx-%UPX_VERSION%-win64.zip upx-%UPX_VERSION%-win64/upx.exe
-
-    - name: Compress Editor with UPX
-      shell: cmd
-      run: upx --best Editor_Windows.exe
-
-    - name: Package Editor
-      uses: actions/upload-artifact@v4
-      with:
-        name: Editor (Windows)
-        path: |
-          languages/
-          fonts/
-          config.ini
-          startup.lua
-          Editor_Windows.exe
-
-
   linux:
+    name: Linux (${{ matrix.shaders.type }} shaders)
+    strategy:
+      matrix:
+        shaders:
+          - type: optimized
+            sc_args:
+          - type: unoptimized
+            sc_args: disable_optimization
+
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -116,22 +47,22 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-        CCACHE_NODIRECT=1 make -j$(nproc)
+        make -j$(nproc) offlineshadercompiler
 
     - name: Generate shader dump
       run: |
         cd build/WickedEngine
-        ./offlineshadercompiler spirv rebuild shaderdump
+        ./offlineshadercompiler spirv rebuild shaderdump ${{ matrix.shaders.sc_args }}
         mv wiShaderDump.h ../../WickedEngine/
 
     - name: Recompile with shader dump
       run: |
         cd build
-        CCACHE_NODIRECT=1 make -B -j $(nproc)
+        make -B -j $(nproc)
 
     - name: Save Ccache database
       id: save-ccache
-      if: always() && steps.restore-ccache.cache-hit != 'true'
+      if: always() && steps.restore-ccache.cache-hit != 'true' && matrix.shaders.type == 'optimized'
       uses: actions/cache/save@v4
       with:
         path: ~/.cache/ccache
@@ -156,7 +87,7 @@ jobs:
     - name: Package Editor
       uses: actions/upload-artifact@v4
       with:
-        name: Editor (Linux)
+        name: Editor (Linux, ${{ matrix.shaders.type }} shaders)
         path: |
           languages/
           fonts/
@@ -164,17 +95,3 @@ jobs:
           startup.lua
           Editor_Linux
 
-
-  content:
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Package Content
-      uses: actions/upload-artifact@v4
-      with:
-        name: Content
-        path: |
-          Content/Documentation
-          Content/models
-          Content/scripts
-          Content/terrain
