@@ -94,6 +94,16 @@ jobs:
 
 
   linux:
+    name: linux ${{ matrix.shaders.postfix }}
+    strategy:
+      matrix:
+        shaders:
+          - type: optimized
+            sc_args:
+            postfix:
+          - type: unoptimized
+            sc_args: disable_optimization
+            postfix: with unoptimized shaders
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -116,22 +126,22 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-        CCACHE_NODIRECT=1 make -j$(nproc)
+        make -j$(nproc)
 
     - name: Generate shader dump
       run: |
         cd build/WickedEngine
-        ./offlineshadercompiler spirv rebuild shaderdump
+        ./offlineshadercompiler spirv rebuild shaderdump ${{ matrix.shader.sc_args }}
         mv wiShaderDump.h ../../WickedEngine/
 
     - name: Recompile with shader dump
       run: |
         cd build
-        CCACHE_NODIRECT=1 make -B -j $(nproc)
+        make -B -j $(nproc)
 
     - name: Save Ccache database
       id: save-ccache
-      if: always() && steps.restore-ccache.cache-hit != 'true'
+      if: always() && steps.restore-ccache.cache-hit != 'true' && matrix.shader.type == 'optimized'
       uses: actions/cache/save@v4
       with:
         path: ~/.cache/ccache
@@ -156,7 +166,7 @@ jobs:
     - name: Package Editor
       uses: actions/upload-artifact@v4
       with:
-        name: Editor (Linux)
+        name: Editor (Linux) ${{ matrix.shaders.postfix }}
         path: |
           languages/
           fonts/
