@@ -332,7 +332,7 @@ namespace wi::terrain
 			lod_count++;
 		}
 
-		locker.lock();
+		std::scoped_lock lck(locker);
 		free(atlas);
 		if (tile_count > 1)
 		{
@@ -852,7 +852,7 @@ namespace wi::terrain
 		}
 
 		// Start the generation on a background thread and keep it running until the next frame
-		wi::jobsystem::Execute(generator->workload, [=](wi::jobsystem::JobArgs args) {
+		wi::jobsystem::Execute(generator->workload, [=](wi::jobsystem::JobArgs a) {
 
 			wi::Timer timer;
 			bool generated_something = false;
@@ -926,6 +926,7 @@ namespace wi::terrain
 
 					// Do a parallel for loop over all the chunk's vertices and compute their properties:
 					wi::jobsystem::context ctx;
+					ctx.priority = wi::jobsystem::Priority::Low;
 					wi::jobsystem::Dispatch(ctx, vertexCount, chunk_width, [&](wi::jobsystem::JobArgs args) {
 						uint32_t index = args.jobIndex;
 						const float x = (float(index % chunk_width) - chunk_half_width) * chunk_scale;

@@ -60,7 +60,6 @@ namespace wi
 			wi::graphics::CommandList cmd
 		);
 
-		mutable bool gpu_initialized = false;
 		void InitializeGPUDataIfNeeded(wi::graphics::CommandList cmd);
 
 		void Draw(
@@ -68,6 +67,8 @@ namespace wi
 			wi::enums::RENDERPASS renderPass,
 			wi::graphics::CommandList cmd
 		) const;
+
+		wi::ecs::Entity meshID = wi::ecs::INVALID_ENTITY;
 
 		enum FLAGS
 		{
@@ -77,8 +78,6 @@ namespace wi
 			DIRTY = 1 << 2,
 		};
 		uint32_t _flags = EMPTY;
-
-		wi::ecs::Entity meshID = wi::ecs::INVALID_ENTITY;
 
 		uint32_t strandCount = 0;
 		uint32_t segmentCount = 1;
@@ -106,6 +105,7 @@ namespace wi
 		mutable bool regenerate_frame = true;
 		wi::graphics::Format position_format = wi::graphics::Format::R16G16B16A16_UNORM;
 		mutable bool must_rebuild_blas = true;
+		mutable bool gpu_initialized = false;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 

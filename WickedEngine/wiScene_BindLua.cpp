@@ -4796,7 +4796,7 @@ int MeshComponent_BindLua::SetMeshSubsetMaterialID(lua_State* L)
 	if (argc >= 2)
 	{
 		size_t subsetindex = (uint32_t)wi::lua::SGetLongLong(L, 1);
-		Entity entity = (uint32_t)wi::lua::SGetLongLong(L, 2);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 2);
 
 		const uint32_t lod_count = component->GetLODCount();
 		for (uint32_t lod = 0; lod < lod_count; ++lod)

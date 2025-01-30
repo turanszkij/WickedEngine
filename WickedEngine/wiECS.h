@@ -19,9 +19,10 @@ namespace wi::ecs
 	// The Entity is a global unique persistent identifier within the entity-component system
 	//	It can be stored and used for the duration of the application
 	//	The entity can be a different value on a different run of the application, if it was serialized
-	//	It must be only serialized with the SerializeEntity() function. It will ensure that entities still match with their components correctly after serialization
-	using Entity = uint32_t;
-	inline constexpr Entity INVALID_ENTITY = 0;
+	//	It must be only serialized with the SerializeEntity() function if persistence is needed across different program runs,
+	//		this will ensure that entities still match with their components correctly after serialization
+	using Entity = uint64_t;
+	inline static constexpr Entity INVALID_ENTITY = 0;
 	// Runtime can create a new entity with this
 	inline Entity CreateEntity()
 	{
@@ -142,9 +143,14 @@ namespace wi::ecs
 		// reservedCount : how much components can be held initially before growing the container
 		ComponentManager(size_t reservedCount = 0)
 		{
-			components.reserve(reservedCount);
-			entities.reserve(reservedCount);
-			lookup.reserve(reservedCount);
+			Reserve(reservedCount);
+		}
+
+		inline void Reserve(size_t count)
+		{
+			components.reserve(count);
+			entities.reserve(count);
+			lookup.reserve(count);
 		}
 
 		// Clear the whole container

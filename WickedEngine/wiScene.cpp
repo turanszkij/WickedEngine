@@ -4417,7 +4417,7 @@ namespace wi::scene
 						const float dist = std::sqrt(distsq);
 						const float dist_to_sphere = dist - radius;
 						object.lod = uint32_t(dist_to_sphere * object.lod_distance_multiplier);
-						object.lod = std::min(object.lod, mesh.GetLODCount() - 1);
+						object.lod = std::min(object.lod, uint16_t(mesh.GetLODCount() - 1));
 					}
 				}
 
