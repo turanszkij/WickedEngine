@@ -411,7 +411,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		}
 
 		theme.shadow_highlight = !focusModeCheckBox.GetCheck();
-		theme.shadow_highlight_spread = 0.6f;
+		theme.shadow_highlight_spread = 0.4f;
 		theme.shadow_highlight_color = theme_color_focus;
 		theme.shadow_highlight_color.x *= 1.4f;
 		theme.shadow_highlight_color.y *= 1.4f;
