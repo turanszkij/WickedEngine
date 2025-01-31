@@ -14,14 +14,21 @@ namespace wi::terrain
 {
 	struct Chunk
 	{
-		int x, z;
+		union
+		{
+			struct
+			{
+				int x, z;
+			};
+			uint64_t raw = 0;
+		};
 		constexpr bool operator==(const Chunk& other) const
 		{
-			return (x == other.x) && (z == other.z);
+			return raw == other.raw;
 		}
-		inline size_t compute_hash() const
+		constexpr uint64_t compute_hash() const
 		{
-			return ((std::hash<int>()(x) ^ (std::hash<int>()(z) << 1)) >> 1);
+			return raw;
 		}
 	};
 }
@@ -31,7 +38,7 @@ namespace std
 	template <>
 	struct hash<wi::terrain::Chunk>
 	{
-		inline size_t operator()(const wi::terrain::Chunk& chunk) const
+		constexpr uint64_t operator()(const wi::terrain::Chunk& chunk) const
 		{
 			return chunk.compute_hash();
 		}
@@ -95,7 +102,7 @@ namespace wi::terrain
 			wi::graphics::GPUBuffer pageBuffer;
 			wi::graphics::GPUBuffer pageBuffer_CPU_upload[wi::graphics::GraphicsDevice::GetBufferCount()];
 			bool data_available_CPU[wi::graphics::GraphicsDevice::GetBufferCount()] = {};
-			int cpu_resource_id = 0;
+			int16_t cpu_resource_id = 0;
 			uint32_t resolution = 0;
 
 			void init(uint32_t resolution);
@@ -213,10 +220,10 @@ namespace wi::terrain
 		wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 		wi::ecs::Entity grass_entity = wi::ecs::INVALID_ENTITY;
 		wi::ecs::Entity props_entity = wi::ecs::INVALID_ENTITY;
-		const XMFLOAT3* mesh_vertex_positions = nullptr;
 		float prop_density_current = 1;
-		wi::HairParticleSystem grass;
 		float grass_density_current = 1;
+		const XMFLOAT3* mesh_vertex_positions = nullptr;
+		wi::HairParticleSystem grass;
 		wi::vector<BlendmapLayer> blendmap_layers;
 		wi::graphics::Texture blendmap;
 		wi::primitive::Sphere sphere;
@@ -231,7 +238,6 @@ namespace wi::terrain
 			while (blendmap_layers.size() < materialIndex + 1)
 			{
 				blendmap_layers.emplace_back().pixels.resize(vertexCount);
-				std::fill(blendmap_layers.back().pixels.begin(), blendmap_layers.back().pixels.end(), 0);
 			}
 		}
 	};
@@ -284,15 +290,15 @@ namespace wi::terrain
 		int grass_chunk_dist = 1;
 
 		// For generating scene on a background thread:
+		float generation_time_budget_milliseconds = 8; // after this much time, the generation thread will start to exit. This can help avoid a very long running, resource consuming and slow cancellation generation
 		std::shared_ptr<Generator> generator;
-		float generation_time_budget_milliseconds = 12; // after this much time, the generation thread will exit. This can help avoid a very long running, resource consuming and slow cancellation generation
 
 		wi::vector<VirtualTexture*> virtual_textures_in_use;
 		wi::graphics::Sampler sampler;
 		VirtualTextureAtlas atlas;
 
-		int chunk_buffer_range = 3; // how many chunks to upload to GPU in X and Z directions
 		wi::graphics::GPUBuffer chunk_buffer;
+		int chunk_buffer_range = 3; // how many chunks to upload to GPU in X and Z directions
 
 		constexpr bool IsCenterToCamEnabled() const { return _flags & CENTER_TO_CAM; }
 		constexpr bool IsRemovalEnabled() const { return _flags & REMOVAL; }

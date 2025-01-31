@@ -653,15 +653,18 @@ struct alignas(16) ShaderTransform
 
 struct alignas(16) ShaderMeshInstance
 {
-	uint uid;
+	uint64_t uid;
 	uint flags;	// high 8 bits: user stencilRef
 	uint layerMask;
-	uint meshletOffset; // offset in the global meshlet buffer for first subset (for LOD0)
 
-	uint geometryOffset;	// offset of all geometries for currently active LOD
-	uint geometryCount;		// number of all geometries in currently active LOD
+	uint meshletOffset;			// offset in the global meshlet buffer for first subset (for LOD0)
+	uint geometryOffset;		// offset of all geometries for currently active LOD
+	uint geometryCount;			// number of all geometries in currently active LOD
 	uint baseGeometryOffset;	// offset of all geometries of the instance (if no LODs, then it is equal to geometryOffset)
+
+	uint2 rimHighlight;			// packed half4
 	uint baseGeometryCount;		// number of all geometries of the instance (if no LODs, then it is equal to geometryCount)
+	float fadeDistance;
 
 	uint2 color; // packed half4
 	uint2 emissive; // packed half4
@@ -670,10 +673,6 @@ struct alignas(16) ShaderMeshInstance
 	int vb_wetmap;
 	int lightmap;
 	uint alphaTest_size; // packed half2
-
-	uint2 rimHighlight; // packed half4
-	float fadeDistance;
-	float padding;
 
 	float3 center;
 	float radius;

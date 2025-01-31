@@ -36,6 +36,7 @@ namespace wi
 		rtShadow = {};
 		rtSun[0] = {};
 		rtSun[1] = {};
+		rtSun[2] = {};
 		rtSun_resolved = {};
 		rtGUIBlurredBackground[0] = {};
 		rtGUIBlurredBackground[1] = {};
@@ -1914,6 +1915,8 @@ namespace wi
 
 			device->EventBegin("Light Shafts", cmd);
 
+			const Texture* texture_fullres = nullptr;
+
 			// Render sun stencil cutout:
 			{
 				if (getMSAASampleCount() > 1)
@@ -1931,6 +1934,7 @@ namespace wi
 						RenderPassImage::Resolve(&rtSun_resolved),
 					};
 					device->RenderPassBegin(rp, arraysize(rp), cmd);
+					texture_fullres = &rtSun_resolved;
 				}
 				else
 				{
@@ -1946,6 +1950,7 @@ namespace wi
 						RenderPassImage::RenderTarget(&rtSun[0], RenderPassImage::LoadOp::CLEAR),
 					};
 					device->RenderPassBegin(rp, arraysize(rp), cmd);
+					texture_fullres = &rtSun[0];
 				}
 
 				Viewport vp;
@@ -1977,10 +1982,13 @@ namespace wi
 					1.0f, 1.0f, 0.1f, 1.0f,
 					camera->GetProjection(), camera->GetView(), XMMatrixIdentity());
 				{
+					// Downsample to low res first:
+					wi::renderer::Postprocess_Downsample4x(*texture_fullres, rtSun[2], cmd);
+
 					XMFLOAT2 sun;
 					XMStoreFloat2(&sun, sunPos);
 					wi::renderer::Postprocess_LightShafts(
-						getMSAASampleCount() > 1 ? rtSun_resolved : rtSun[0],
+						rtSun[2],
 						rtSun[1],
 						cmd,
 						sun,
@@ -2919,10 +2927,12 @@ namespace wi
 
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			desc.sample_count = 1;
-			desc.width = internalResolution.x / 2;
-			desc.height = internalResolution.y / 2;
+			desc.width = internalResolution.x / 4;
+			desc.height = internalResolution.y / 4;
 			device->CreateTexture(&desc, nullptr, &rtSun[1]);
 			device->SetName(&rtSun[1], "rtSun[1]");
+			device->CreateTexture(&desc, nullptr, &rtSun[2]);
+			device->SetName(&rtSun[2], "rtSun[2]");
 
 			if (getMSAASampleCount() > 1)
 			{
@@ -2937,6 +2947,7 @@ namespace wi
 		{
 			rtSun[0] = {};
 			rtSun[1] = {};
+			rtSun[2] = {};
 			rtSun_resolved = {};
 		}
 	}

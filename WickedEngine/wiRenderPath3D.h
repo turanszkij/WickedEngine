@@ -107,7 +107,7 @@ namespace wi
 		wi::graphics::Texture rtBloom_tmp; // temporary for bloom downsampling
 		wi::graphics::Texture rtAO; // full res AO
 		wi::graphics::Texture rtShadow; // raytraced shadows mask
-		wi::graphics::Texture rtSun[2]; // 0: sun render target used for lightshafts (can be MSAA), 1: radial blurred lightshafts
+		wi::graphics::Texture rtSun[3]; // 0: sun render target used for lightshafts (can be MSAA), 1: radial blurred lightshafts
 		wi::graphics::Texture rtSun_resolved; // sun render target, but the resolved version if MSAA is enabled
 		wi::graphics::Texture rtGUIBlurredBackground[3];	// downsampled, gaussian blurred scene for GUI
 		wi::graphics::Texture rtShadingRate; // UINT8 shading rate per tile

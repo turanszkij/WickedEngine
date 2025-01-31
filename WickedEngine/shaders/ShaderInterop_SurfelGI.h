@@ -49,14 +49,13 @@ struct Surfel
 // This per-surfel structure will store all additional persistent data per surfel that isn't needed at GI lookup
 struct SurfelData
 {
+	uint64_t uid;
 	uint2 primitiveID;
-	uint bary;
-	uint uid;
 
+	uint bary;
 	uint raydata; // 24bit rayOffset, 8bit rayCount
 	uint properties; // 8bit life frames, 8bit recycle frames, 1bit backface normal
 	float max_inconsistency;
-	int padding1;
 
 	inline uint GetRayOffset() { return raydata & 0xFFFFFF; }
 	inline uint GetRayCount() { return (raydata >> 24u) & 0xFF; }
