@@ -252,7 +252,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 	reverbComboBox.SetMaxVisibleItemCount(6);
 	AddWidget(&reverbComboBox);
 
-	waveGraph.SetSize(XMFLOAT2(100, 50));
+	waveGraph.SetSize(XMFLOAT2(100, 100));
 	AddWidget(&waveGraph);
 
 	beginInput.Create("");
@@ -412,8 +412,8 @@ void WaveGraph::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) 
 	MiscCB cb;
 	cb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 	XMStoreFloat4x4(&cb.g_xTransform,
-		XMMatrixScaling(GetSize().x, GetSize().y, 1) *
-		XMMatrixTranslation(GetPos().x, GetPos().y + GetSize().y, 0)*
+		XMMatrixScaling(GetSize().x, GetSize().y * 0.5f, 1) *
+		XMMatrixTranslation(GetPos().x, GetPos().y + GetSize().y * 0.5f, 0)*
 		canvas.GetProjection()
 	);
 	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MiscCB), cmd);
