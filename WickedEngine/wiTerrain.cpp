@@ -1276,9 +1276,12 @@ namespace wi::terrain
 			SamplerDesc samplerDesc;
 			samplerDesc.filter = Filter::ANISOTROPIC;
 			samplerDesc.max_anisotropy = 4;
-			samplerDesc.address_u = TextureAddressMode::CLAMP;
-			samplerDesc.address_v = TextureAddressMode::CLAMP;
-			samplerDesc.address_w = TextureAddressMode::CLAMP;
+			// Note: using wrap mode by intention!
+			//	Terrain itself doesn't need wrap mode, but decals will reuse the base material's sampler
+			//	and decals can use wrapped textures (texmuladd)
+			samplerDesc.address_u = TextureAddressMode::WRAP;
+			samplerDesc.address_v = TextureAddressMode::WRAP;
+			samplerDesc.address_w = TextureAddressMode::WRAP;
 			bool success = device->CreateSampler(&samplerDesc, &sampler);
 			assert(success);
 		}
