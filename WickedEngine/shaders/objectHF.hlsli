@@ -388,12 +388,11 @@ PixelInput vertex_to_pixel_export(VertexInput input)
 	Out.pos = surface.position;
 
 #ifdef OBJECTSHADER_USE_CAMERAINDEX
-	const uint cameraIndex = input.GetInstancePointer().GetCameraIndex();
+	ShaderCamera camera = GetCamera(input.GetInstancePointer().GetCameraIndex());
 #else
-	const uint cameraIndex = 0;
+	ShaderCamera camera = GetCamera();
 #endif // OBJECTSHADER_USE_CAMERAINDEX
 
-	ShaderCamera camera = GetCamera(cameraIndex);
 
 #ifndef OBJECTSHADER_USE_NOCAMERA
 	Out.pos = mul(camera.view_projection, Out.pos);
@@ -487,7 +486,7 @@ PixelInput main(VertexInput input)
 // entry point:
 #ifdef PREPASS
 #ifdef DEPTHONLY
-void main(PixelInput input, in uint primitiveID : SV_PrimitiveID APPEND_COVERAGE_OUTPUT)
+void main(PixelInput input APPEND_COVERAGE_OUTPUT)
 #else
 uint main(PixelInput input, in uint primitiveID : SV_PrimitiveID APPEND_COVERAGE_OUTPUT) : SV_Target
 #endif // DEPTHONLY
@@ -599,11 +598,14 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 	}
 #endif // INTERIORMAPPING
 	
+#if defined(PREPASS) || defined(TRANSPARENT)
 	[branch]
 	if (material.textures[TRANSPARENCYMAP].IsValid())
 	{
 		surface.baseColor.a *= material.textures[TRANSPARENCYMAP].Sample(sampler_objectshader, uvsets).r;
 	}
+#endif // PREPASS || TRANSPARENT
+
 #endif // OBJECTSHADER_USE_UVSETS
 
 

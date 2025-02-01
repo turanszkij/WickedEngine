@@ -248,7 +248,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"objectPS_debug", wi::graphics::ShaderStage::PS },
 	{"objectPS_prepass", wi::graphics::ShaderStage::PS },
 	{"objectPS_prepass_alphatest", wi::graphics::ShaderStage::PS },
-	{"objectPS_prepass_depthonly", wi::graphics::ShaderStage::PS },
 	{"objectPS_prepass_depthonly_alphatest", wi::graphics::ShaderStage::PS },
 	{"lightVisualizerPS", wi::graphics::ShaderStage::PS },
 	{"lensFlarePS", wi::graphics::ShaderStage::PS },
