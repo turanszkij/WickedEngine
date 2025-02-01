@@ -6810,7 +6810,7 @@ int SoundComponent_BindLua::SetLooped(lua_State* L)
 	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		bool value = wi::lua::SGetBool(L, 1);
+		value = wi::lua::SGetBool(L, 1);
 	}
 	
 	component->SetLooped(value);
@@ -6824,8 +6824,7 @@ int SoundComponent_BindLua::SetDisable3D(lua_State* L)
 	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		bool value = wi::lua::SGetBool(L, 1);
-		component->SetLooped();
+		value = wi::lua::SGetBool(L, 1);
 	}
 	
 	component->SetDisable3D(value);
