@@ -1042,7 +1042,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				const tinygltf::Buffer& buffer = state.gltfModel.buffers[bufferView.buffer];
 
 				int stride = accessor.ByteStride(bufferView);
-				size_t indexCount = accessor.count;
+				size_t indexCount = AlignTo(accessor.count, size_t(3)); // there was a model with invalid index count, this is a safety fix for it
 				size_t indexOffset = mesh.indices.size();
 				mesh.indices.resize(indexOffset + indexCount);
 				mesh.subsets.back().indexOffset = (uint32_t)indexOffset;
