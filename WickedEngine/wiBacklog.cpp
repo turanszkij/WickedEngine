@@ -12,10 +12,8 @@
 #include "wiGUI.h"
 
 #include <mutex>
-#include <shared_mutex>
 #include <deque>
 #include <limits>
-#include <thread>
 #include <iostream>
 
 using namespace wi::graphics;
@@ -30,10 +28,6 @@ namespace wi::backlog
 		std::string text;
 		LogLevel level = LogLevel::Default;
 	};
-	std::deque<LogEntry> entries;
-	std::shared_timed_mutex entriesLock;
-	std::deque<LogEntry> history;
-	std::mutex historyLock;
 	const float speed = 4000.0f;
 	const size_t deletefromline = 500;
 	float pos = 5;
@@ -51,42 +45,39 @@ namespace wi::backlog
 	LogLevel logLevel = LogLevel::Default;
 	LogLevel unseen = LogLevel::None;
 
-	std::string getTextWithoutLock()
-	{
-		std::string retval;
-		for (auto& x : entries)
-		{
-			retval += x.text;
-		}
-		return retval;
-	}
-	void writeLogfileWithoutLock()
-	{
-		static const std::string filename = wi::helper::GetCurrentPath() + "/log.txt";
-		std::string text = getTextWithoutLock();
-		wi::helper::FileWrite(filename, (const uint8_t*)text.c_str(), text.length());
-	}
-	void writeLogfile()
-	{
-		std::shared_lock lock(entriesLock);
-		writeLogfileWithoutLock();
-	}
+	std::deque<LogEntry> history;
+	std::mutex historyLock;
 
-	// The logwriter object will automatically write out the backlog to the temp folder when it's destroyed
-	//	Should happen on application exit
-	struct LogWriter
+	struct InternalState
 	{
-		~LogWriter()
+		// These must have common lifetime and destruction order, so keep them together in a struct:
+		std::deque<LogEntry> entries;
+		std::mutex entriesLock;
+
+		std::string getText()
 		{
-			// try to get lock if possible, but if not, just do it without
-			// we could be in a crash right now with the lock still being held,
-			// it's better to write something than nothing, even if it might be incomplete
-			// or garbage
-			bool gotLock = entriesLock.try_lock_shared_for(1s);
-			writeLogfileWithoutLock();
-			if (gotLock) entriesLock.unlock_shared();
+			std::scoped_lock lck(entriesLock);
+			std::string retval;
+			for (auto& x : entries)
+			{
+				retval += x.text;
+			}
+			return retval;
 		}
-	} logwriter;
+		void writeLogfile()
+		{
+			static const std::string filename = wi::helper::GetCurrentPath() + "/log.txt";
+			std::string text = getText();
+			wi::helper::FileWrite(filename, (const uint8_t*)text.c_str(), text.length());
+		}
+
+		~InternalState()
+		{
+			// The object will automatically write out the backlog to the temp folder when it's destroyed
+			//	Should happen on application exit
+			writeLogfile();
+		}
+	} internal_state;
 
 	void Toggle()
 	{
@@ -307,7 +298,7 @@ namespace wi::backlog
 		params.cursor = {};
 		if (refitscroll)
 		{
-			float textheight = wi::font::TextHeight(getTextWithoutLock(), params);
+			float textheight = wi::font::TextHeight(getText(), params);
 			float limit = canvas.GetLogicalHeight() - 50;
 			if (scroll + textheight > limit)
 			{
@@ -323,37 +314,41 @@ namespace wi::backlog
 			params.enableLinearOutputMapping(9);
 		}
 
+		static std::deque<LogEntry> entriesCopy;
+
+		internal_state.entriesLock.lock();
+		// Force copy because drawing text while locking is not safe because an error inside might try to lock again!
+		entriesCopy = internal_state.entries;
+		internal_state.entriesLock.unlock();
+
+		for (auto& x : entriesCopy)
 		{
-			std::shared_lock lock(entriesLock);
-			for (auto& x : entries)
+			switch (x.level)
 			{
-				switch (x.level)
-				{
-				case LogLevel::Warning:
-					params.color = wi::Color::Warning();
-					break;
-				case LogLevel::Error:
-					params.color = wi::Color::Error();
-					break;
-				default:
-					params.color = font_params.color;
-					break;
-				}
-				params.cursor = wi::font::Draw(x.text, params, cmd);
+			case LogLevel::Warning:
+				params.color = wi::Color::Warning();
+				break;
+			case LogLevel::Error:
+				params.color = wi::Color::Error();
+				break;
+			default:
+				params.color = font_params.color;
+				break;
 			}
+			params.cursor = wi::font::Draw(x.text, params, cmd);
 		}
+
 		unseen = LogLevel::None;
 	}
 
 	std::string getText()
 	{
-		std::shared_lock lock(entriesLock);
-		return getTextWithoutLock();
+		return internal_state.getText();
 	}
 	void clear()
 	{
-		std::unique_lock lock(entriesLock);
-		entries.clear();
+		std::scoped_lock lck(internal_state.entriesLock);
+		internal_state.entries.clear();
 		scroll = 0;
 	}
 	void post(const char* input, LogLevel level)
@@ -383,28 +378,14 @@ namespace wi::backlog
 		entry.text = str;
 		entry.level = level;
 
-		// If we can't get unique access to the entriesLock it's likely that an error occurred during rendering
-		// of the backlog, and that error is currently being post()ed. In this case, there's nothing we can do,
-		// as modifying `entries` can result in invalid data being received by the rendering loop, resulting
-		// in crashes. Hence, if we can't get the lock in time, we just don't write it to the `entries`.
-		// It won't appear in the logfile or backlog, but will still be written to the debug output.
-		//
-		// The time to wait is kinda arbitrary, but it shouldn't be too short, as the rendering of the backlog
-		// can take some time, especially during heavy load like compiling shaders.
-		bool gotLock = entriesLock.try_lock_for(100ms);
-		if (gotLock)
+		internal_state.entriesLock.lock();
+		internal_state.entries.push_back(entry);
+		if (internal_state.entries.size() > deletefromline)
 		{
-			entries.push_back(entry);
-			if (entries.size() > deletefromline)
-			{
-				entries.pop_front();
-			}
-			entriesLock.unlock();
-	    }
-		else
-		{
-			wi::helper::DebugOut("[Warning] cannot get entriesLock, the following log message will not show up in the backlog\n", wi::helper::DebugLevel::Warning);
+			internal_state.entries.pop_front();
 		}
+		internal_state.entriesLock.unlock();
+
 		refitscroll = true;
 
 		switch (level)
@@ -425,7 +406,7 @@ namespace wi::backlog
 
 		if (level >= LogLevel::Error)
 		{
-			writeLogfile();  // will lock mutex
+			internal_state.writeLogfile();  // will lock mutex
 		}
 	}
 
