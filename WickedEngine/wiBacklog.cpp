@@ -54,8 +54,9 @@ namespace wi::backlog
 		std::deque<LogEntry> entries;
 		std::mutex entriesLock;
 
-		std::string getTextWithoutLock()
+		std::string getText()
 		{
+			std::scoped_lock lck(entriesLock);
 			std::string retval;
 			for (auto& x : entries)
 			{
@@ -63,24 +64,18 @@ namespace wi::backlog
 			}
 			return retval;
 		}
-		void writeLogfileWithoutLock()
-		{
-			static const std::string filename = wi::helper::GetCurrentPath() + "/log.txt";
-			std::string text = getTextWithoutLock();
-			wi::helper::FileWrite(filename, (const uint8_t*)text.c_str(), text.length());
-		}
 		void writeLogfile()
 		{
-			std::scoped_lock lck(entriesLock);
-			writeLogfileWithoutLock();
+			static const std::string filename = wi::helper::GetCurrentPath() + "/log.txt";
+			std::string text = getText();
+			wi::helper::FileWrite(filename, (const uint8_t*)text.c_str(), text.length());
 		}
 
 		~InternalState()
 		{
 			// The object will automatically write out the backlog to the temp folder when it's destroyed
 			//	Should happen on application exit
-			std::scoped_lock lck(entriesLock);
-			writeLogfileWithoutLock();
+			writeLogfile();
 		}
 	} internal_state;
 
@@ -303,7 +298,7 @@ namespace wi::backlog
 		params.cursor = {};
 		if (refitscroll)
 		{
-			float textheight = wi::font::TextHeight(getText(), params); // getText() locks!
+			float textheight = wi::font::TextHeight(getText(), params);
 			float limit = canvas.GetLogicalHeight() - 50;
 			if (scroll + textheight > limit)
 			{
@@ -319,9 +314,11 @@ namespace wi::backlog
 			params.enableLinearOutputMapping(9);
 		}
 
-		internal_state.entriesLock.lock();
 		static std::deque<LogEntry> entriesCopy;
-		entriesCopy = internal_state.entries; // Force copy because drawing text while locking is not safe because on error it might try to lock again!
+
+		internal_state.entriesLock.lock();
+		// Force copy because drawing text while locking is not safe because an error inside might try to lock again!
+		entriesCopy = internal_state.entries;
 		internal_state.entriesLock.unlock();
 
 		for (auto& x : entriesCopy)
@@ -346,8 +343,7 @@ namespace wi::backlog
 
 	std::string getText()
 	{
-		std::scoped_lock lck(internal_state.entriesLock);
-		return internal_state.getTextWithoutLock();
+		return internal_state.getText();
 	}
 	void clear()
 	{
