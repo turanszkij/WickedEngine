@@ -190,4 +190,7 @@ namespace wi::helper
 
 	// Lossless decompression of byte array that was compressed with wi::helper::Compress()
 	bool Decompress(const uint8_t* src_data, size_t src_size, wi::vector<uint8_t>& dst_data);
+
+	// Hash the contents of a file:
+	size_t HashByteData(const uint8_t* data, size_t size);
 };

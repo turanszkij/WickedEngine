@@ -1612,4 +1612,14 @@ namespace wi::helper
 		res = ZSTD_decompress(dst_data.data(), dst_data.size(), src_data, src_size);
 		return ZSTD_isError(res) == 0;
 	}
+
+	size_t HashByteData(const uint8_t* data, size_t size)
+	{
+		size_t hash = 0;
+		for (size_t i = 0; i < size; ++i)
+		{
+			hash_combine(hash, data[i]);
+		}
+		return hash;
+	}
 }

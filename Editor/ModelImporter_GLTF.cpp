@@ -90,12 +90,7 @@ namespace tinygltf
 		if (image->uri.empty())
 		{
 			// Force some image resource name:
-			std::string ss;
-			do {
-				ss.clear();
-				ss += "gltfimport_" + std::to_string(wi::random::GetRandom(std::numeric_limits<uint32_t>::max())) + ".png";
-			} while (wi::resourcemanager::Contains(ss)); // this is to avoid overwriting an existing imported image
-			image->uri = ss;
+			image->uri = "gltfimport_" + std::to_string(wi::helper::HashByteData(bytes, size)) + ".png";
 		}
 
 		auto resource = wi::resourcemanager::Load(

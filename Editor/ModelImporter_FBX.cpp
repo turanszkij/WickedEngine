@@ -112,10 +112,7 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 		if (filename.empty())
 		{
 			// Force some image resource name:
-			do {
-				filename.clear();
-				filename += "fbximport_" + std::to_string(wi::random::GetRandom(std::numeric_limits<uint32_t>::max())) + ".png";
-			} while (wi::resourcemanager::Contains(filename)); // this is to avoid overwriting an existing imported image
+			filename = "fbximport_" + std::to_string(wi::helper::HashByteData((const uint8_t*)texture->content.data, texture->content.size)) + ".png";
 		}
 
 		auto resource = wi::resourcemanager::Load(
