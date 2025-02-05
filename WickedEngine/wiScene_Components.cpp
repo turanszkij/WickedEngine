@@ -2618,6 +2618,44 @@ namespace wi::scene
 		wi::audio::CreateSoundInstance(&soundResource.GetSound(), &soundinstance);
 	}
 
+	bool HumanoidComponent::IsValid() const
+	{
+		if (bones[size_t(HumanoidBone::Hips)] == INVALID_ENTITY)
+			return false;
+		if (bones[size_t(HumanoidBone::Spine)] == INVALID_ENTITY)
+			return false;
+		if (bones[size_t(HumanoidBone::Head)] == INVALID_ENTITY)
+			return false;
+
+		if (bones[size_t(HumanoidBone::LeftUpperLeg)] == INVALID_ENTITY)
+			return false;
+		if (bones[size_t(HumanoidBone::LeftLowerLeg)] == INVALID_ENTITY)
+			return false;
+		if (bones[size_t(HumanoidBone::LeftFoot)] == INVALID_ENTITY)
+			return false;
+		if (bones[size_t(HumanoidBone::RightUpperLeg)] == INVALID_ENTITY)
+			return false;
+		if (bones[size_t(HumanoidBone::RightLowerLeg)] == INVALID_ENTITY)
+			return false;
+		if (bones[size_t(HumanoidBone::RightFoot)] == INVALID_ENTITY)
+			return false;
+
+		if (bones[size_t(HumanoidBone::LeftUpperArm)] == INVALID_ENTITY)
+			return false;
+		if (bones[size_t(HumanoidBone::LeftLowerArm)] == INVALID_ENTITY)
+			return false;
+		if (bones[size_t(HumanoidBone::LeftHand)] == INVALID_ENTITY)
+			return false;
+		if (bones[size_t(HumanoidBone::RightUpperArm)] == INVALID_ENTITY)
+			return false;
+		if (bones[size_t(HumanoidBone::RightLowerArm)] == INVALID_ENTITY)
+			return false;
+		if (bones[size_t(HumanoidBone::RightHand)] == INVALID_ENTITY)
+			return false;
+
+		return true;
+	}
+
 	void CharacterComponent::Move(const XMFLOAT3& direction)
 	{
 		movement = direction;

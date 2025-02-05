@@ -2071,6 +2071,9 @@ namespace wi::scene
 		wi::vector<RagdollBodypart> ragdoll_bodyparts;
 		wi::primitive::AABB ragdoll_bounds;
 
+		// Returns true if all the required bones are valid, false otherwise
+		bool IsValid() const;
+
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 

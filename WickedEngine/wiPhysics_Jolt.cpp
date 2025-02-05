@@ -710,7 +710,7 @@ namespace wi::physics
 					}
 					if (entityA == INVALID_ENTITY)
 					{
-						wi::backlog::post("Ragdoll creation aborted because humanoid has a missing required bone.", wi::backlog::LogLevel::Warning);
+						wilog_warning("Ragdoll creation aborted because of a missing body part: %d", c);
 						return;
 					}
 
