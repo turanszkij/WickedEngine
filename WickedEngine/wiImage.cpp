@@ -167,6 +167,10 @@ namespace wi::image
 		{
 			image.flags |= IMAGE_FLAG_CUBEMAP_BASE;
 		}
+		if (texture != nullptr && texture->GetDesc().type == TextureDesc::Type::TEXTURE_1D)
+		{
+			image.flags |= IMAGE_FLAG_TEXTURE1D_BASE;
+		}
 
 		image.hdr_scaling_aspect = wi::math::pack_half2(params.hdr_scaling, canvas_aspect);
 		image.bordersoften_saturation = wi::math::pack_half2(params.border_soften, params.saturation);

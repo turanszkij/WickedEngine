@@ -906,6 +906,7 @@ namespace wi
 			data[i + startup_length + keep_length] = uint16_t(t * 65535);
 		}
 		TextureDesc desc;
+		desc.type = TextureDesc::Type::TEXTURE_1D;
 		desc.width = arraysize(data);
 		desc.format = Format::R16_UNORM;
 		desc.bind_flags = BindFlag::SHADER_RESOURCE;

@@ -15,6 +15,7 @@ enum IMAGE_FLAGS
 	IMAGE_FLAG_DISTORTION_MASK = 1u << 8u,
 	IMAGE_FLAG_HIGHLIGHT = 1u << 9u,
 	IMAGE_FLAG_CUBEMAP_BASE = 1u << 10u,
+	IMAGE_FLAG_TEXTURE1D_BASE = 1u << 11u,
 };
 
 struct alignas(16) ImageConstants

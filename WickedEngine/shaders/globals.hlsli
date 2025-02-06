@@ -220,6 +220,8 @@ float3x3 adjoint(in float4x4 m)
 		"SRV(t0, space = 26, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"SRV(t0, space = 27, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"SRV(t0, space = 28, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 29, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 30, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"UAV(u0, space = 100, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"UAV(u0, space = 101, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"UAV(u0, space = 102, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
@@ -299,6 +301,8 @@ static const BindlessResource<Texture2D<float2>> bindless_textures_float2;
 static const BindlessResource<Texture2D<uint>> bindless_textures_uint;
 static const BindlessResource<Texture2D<uint4>> bindless_textures_uint4;
 static const BindlessResource<Texture2D<half4>> bindless_textures_half4;
+static const BindlessResource<Texture1D<float4>> bindless_textures1D;
+static const BindlessResource<Texture1D<half4>> bindless_textures1D_half4;
 
 static const BindlessResource<RWTexture2D<float4>> bindless_rwtextures;
 static const BindlessResource<RWByteAddressBuffer> bindless_rwbuffers;
@@ -357,6 +361,8 @@ static const uint DESCRIPTOR_SET_BINDLESS_ACCELERATION_STRUCTURE = 7;
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2D<uint> bindless_textures_uint[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2D<uint4> bindless_textures_uint4[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2D<half4> bindless_textures_half4[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture1D<half4> bindless_textures1D[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture1D<half4> bindless_textures1D_half4[];
 
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] RWByteAddressBuffer bindless_rwbuffers[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_TEXEL_BUFFER)]] RWBuffer<uint> bindless_rwbuffers_uint[];
@@ -409,6 +415,8 @@ Buffer<half> bindless_buffers_half[] : register(space25);
 Buffer<half2> bindless_buffers_half2[] : register(space26);
 Buffer<half3> bindless_buffers_half3[] : register(space27);
 Buffer<half4> bindless_buffers_half4[] : register(space28);
+Texture1D<float4> bindless_textures1D[] : register(space29);
+Texture1D<half4> bindless_textures1D_half4[] : register(space30);
 
 RWTexture2D<float4> bindless_rwtextures[] : register(space100);
 RWByteAddressBuffer bindless_rwbuffers[] : register(space101);
