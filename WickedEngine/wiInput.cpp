@@ -168,16 +168,10 @@ namespace wi::input
 		ScreenToClient(window, &p);
 		mouse.position.x = (float)p.x;
 		mouse.position.y = (float)p.y;
-		mouse.position.x /= canvas.GetDPIScaling();
-		mouse.position.y /= canvas.GetDPIScaling();
 
 #elif SDL2
 		wi::input::sdlinput::GetMouseState(&mouse);
-		mouse.position.x /= canvas.GetDPIScaling();
-		mouse.position.y /= canvas.GetDPIScaling();
 		wi::input::sdlinput::GetKeyboardState(&keyboard);
-		//TODO controllers
-		//TODO touch
 #endif
 
 		if (pen_override)
@@ -187,6 +181,10 @@ namespace wi::input
 			mouse.pressure = pen.pressure;
 			pen_override = false;
 		}
+
+		// The application always works with logical mouse coordinates:
+		mouse.position.x = canvas.PhysicalToLogical(mouse.position.x);
+		mouse.position.y = canvas.PhysicalToLogical(mouse.position.y);
 
 		// Check if low-level XINPUT controller is not registered for playerindex slot and register:
 		for (int i = 0; i < wi::input::xinput::GetMaxControllerCount(); ++i)
@@ -709,31 +707,33 @@ namespace wi::input
 	}
 	void SetPointer(const XMFLOAT4& props)
 	{
+		// The application's logical mouse coordinates are converted to the system's physical coordinates:
+		const uint32_t posX = canvas.LogicalToPhysical(props.x);
+		const uint32_t posY = canvas.LogicalToPhysical(props.y);
+
 #if defined(PLATFORM_WINDOWS_DESKTOP)
 		HWND hWnd = window;
-		const float dpiscaling = (float)GetDpiForWindow(hWnd) / 96.0f;
 		POINT p;
-		p.x = (LONG)(props.x * dpiscaling);
-		p.y = (LONG)(props.y * dpiscaling);
+		p.x = (LONG)(posX);
+		p.y = (LONG)(posY);
 		ClientToScreen(hWnd, &p);
 		SetCursorPos(p.x, p.y);
 #elif defined(SDL2)
-	// Keeping with the trend of 'Set Pointer' API on different platforms, 
-	// SDL_WarpMouseInWindow is used in the case of SDL2. This unfortunately 
-	// causes SDL2 to generate a mouse event for the delta between the old 
-	// and new positions leading to 'rubber banding'. 
-	// The current solution is to artifically generate a motion event of our own
-	// which will 'undo' this unwanted motion event during the mouse motion
-	// accumulation in wiSDLInput.cpp Update()
-	XMFLOAT4 currentPointer = GetPointer();
-	SDL_MouseMotionEvent motionEvent = {0};
-	motionEvent.type = SDL_MOUSEMOTION;
-	motionEvent.x = motionEvent.y = 0; // doesn't matter
-	motionEvent.xrel = currentPointer.x - props.x;
-	motionEvent.yrel = currentPointer.y - props.y;
-	SDL_PushEvent((SDL_Event*)&motionEvent);
-	SDL_WarpMouseInWindow(window, props.x, props.y);
-
+		// Keeping with the trend of 'Set Pointer' API on different platforms, 
+		// SDL_WarpMouseInWindow is used in the case of SDL2. This unfortunately 
+		// causes SDL2 to generate a mouse event for the delta between the old 
+		// and new positions leading to 'rubber banding'. 
+		// The current solution is to artifically generate a motion event of our own
+		// which will 'undo' this unwanted motion event during the mouse motion
+		// accumulation in wiSDLInput.cpp Update()
+		XMFLOAT4 currentPointer = GetPointer();
+		SDL_MouseMotionEvent motionEvent = {0};
+		motionEvent.type = SDL_MOUSEMOTION;
+		motionEvent.x = motionEvent.y = 0; // doesn't matter
+		motionEvent.xrel = currentPointer.x - posX;
+		motionEvent.yrel = currentPointer.y - posY;
+		SDL_PushEvent((SDL_Event*)&motionEvent);
+		SDL_WarpMouseInWindow(window, posX, posY);
 #endif // SDL2
 	}
 	void HidePointer(bool value)

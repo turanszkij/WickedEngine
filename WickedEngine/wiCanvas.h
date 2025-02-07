@@ -42,7 +42,9 @@ namespace wi
 		// Convert from logical to physical coordinates
 		constexpr uint32_t LogicalToPhysical(float logical) const { return uint32_t(logical * GetDPIScaling()); }
 		// Convert from physical to logical coordinates
-		constexpr float PhysicalToLogical(uint32_t physical) const { return float(physical) / GetDPIScaling(); }
+		constexpr float PhysicalToLogical(float physical) const { return physical / GetDPIScaling(); }
+		constexpr float PhysicalToLogical(uint32_t physical) const { return PhysicalToLogical(float(physical)); }
+		constexpr float PhysicalToLogical(int physical) const { return PhysicalToLogical(float(physical)); }
 		// Returns native resolution width in pixels:
 		//	Use this for texture allocations
 		//	Use this for scissor, viewport
