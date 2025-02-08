@@ -13,7 +13,7 @@ Texture2D<float> cloud_additional_history : register(t4);
 RWTexture2D<float4> output : register(u0);
 RWTexture2D<float2> output_depth : register(u1);
 RWTexture2D<float> output_additional : register(u2);
-RWTexture2D<unorm float4> output_cloudMask : register(u3);
+RWTexture2D<unorm float> output_cloudMask : register(u3);
 
 static const float2 temporalResponseMinMax = float2(0.5, 0.9);
 
