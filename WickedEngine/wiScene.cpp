@@ -7691,24 +7691,31 @@ namespace wi::scene
 		Entity entity = spring.entity;
 		TransformComponent& transform = *spring.transform;
 
-		if (spring.IsResetting())
+		const bool resetting = spring.IsResetting();
+		if (resetting)
 		{
-			spring.Reset(false);
+			spring.Reset(false); // no longer resetting in next frame
 
-			// Note: the spring resetting works on the rest pose, not the current pose!
+			// Note: the spring resetting of axes works on the rest pose (T-pose), not the current pose!
+			//	But the current pose is applied immediately to avoid jumping on creation when current pose is different from rest pose
 
-			XMMATRIX parentWorldMatrix = XMMatrixIdentity();
+			XMMATRIX parentMatrix_rest = XMMatrixIdentity();
 			{
 				const HierarchyComponent* hier = hierarchy.GetComponent(entity);
 				if (hier != nullptr)
 				{
-					parentWorldMatrix = GetRestPose(hier->parentID);
+					parentMatrix_rest = GetRestPose(hier->parentID);
 				}
 			}
-			XMMATRIX parentWorldMatrixInverse = XMMatrixInverse(nullptr, parentWorldMatrix);
+			XMMATRIX parentMatrix_rest_inverse = XMMatrixInverse(nullptr, parentMatrix_rest);
 
-			XMVECTOR position_root = GetRestPose(entity).r[3];
-			XMVECTOR tail = position_root + XMVectorSet(0, 1, 0, 0);
+			XMVECTOR position_root_rest = GetRestPose(entity).r[3];
+			XMVECTOR tail = position_root_rest + XMVectorSet(0, 1, 0, 0);
+
+			XMVECTOR position_root_currentpose = ComputeEntityMatrixRecursive(entity).r[3];
+			XMVECTOR tail_currentpose = position_root_currentpose + XMVectorSet(0, 1, 0, 0);
+			XMMATRIX parentMatrix_currentpose = ComputeParentMatrixRecursive(entity);
+
 			// Search for child to find the rest pose tail position:
 			bool child_found = false;
 			for (size_t j = 0; j < hierarchy.GetCount(); ++j)
@@ -7718,6 +7725,7 @@ namespace wi::scene
 				if (hier.parentID == entity && transforms.Contains(child))
 				{
 					tail = GetRestPose(child).r[3];
+					tail_currentpose = ComputeEntityMatrixRecursive(child).r[3];
 					child_found = true;
 					break;
 				}
@@ -7725,15 +7733,19 @@ namespace wi::scene
 			if (!child_found)
 			{
 				// No child, try to guess tail position compared to parent:
-				const XMVECTOR parent_pos = parentWorldMatrix.r[3];
-				const XMVECTOR ab = position_root - parent_pos;
-				tail = position_root + ab;
+				const XMVECTOR parent_pos_rest = parentMatrix_rest.r[3];
+				const XMVECTOR ab_rest = position_root_rest - parent_pos_rest;
+				tail = position_root_rest + ab_rest;
+
+				const XMVECTOR parent_pos_currentpose = parentMatrix_currentpose.r[3];
+				const XMVECTOR ab_currentpose = position_root_currentpose - parent_pos_currentpose;
+				tail_currentpose = position_root_currentpose + ab_currentpose;
 			}
 
-			XMVECTOR axis = tail - position_root;
-			axis = XMVector3TransformNormal(axis, parentWorldMatrixInverse);
+			XMVECTOR axis = tail - position_root_rest;
+			axis = XMVector3TransformNormal(axis, parentMatrix_rest_inverse);
 			XMStoreFloat3(&spring.boneAxis, axis);
-			XMStoreFloat3(&spring.currentTail, tail);
+			XMStoreFloat3(&spring.currentTail, tail_currentpose);
 			spring.prevTail = spring.currentTail;
 		}
 
