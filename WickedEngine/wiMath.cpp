@@ -121,6 +121,15 @@ namespace wi::math
 		}
 		return angle;
 	}
+	float GetAngleSigned(XMVECTOR A, XMVECTOR B, XMVECTOR AXIS)
+	{
+		float angle = XMVectorGetX(XMVector3AngleBetweenVectors(A, B));
+		if (XMVectorGetX(XMVector3Dot(XMVector3Cross(A, B), AXIS)) < 0)
+		{
+			angle = -angle;
+		}
+		return angle;
+	}
 	void ConstructTriangleEquilateral(float radius, XMFLOAT4& A, XMFLOAT4& B, XMFLOAT4& C)
 	{
 		float deg = 0;

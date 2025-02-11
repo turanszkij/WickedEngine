@@ -39,6 +39,7 @@ namespace wi::lua
 		lunamethod(Vector_BindLua, PlaneFromPointNormal),
 		lunamethod(Vector_BindLua, PlaneFromPoints),
 		lunamethod(Vector_BindLua, GetAngle),
+		lunamethod(Vector_BindLua, GetAngleSigned),
 		{ NULL, NULL }
 	};
 	Luna<Vector_BindLua>::PropertyType Vector_BindLua::properties[] = {
@@ -654,6 +655,27 @@ namespace wi::lua
 			}
 		}
 		wi::lua::SError(L, "GetAngle(Vector a,b,axis, opt float max) not enough arguments!");
+		return 0;
+	}
+	int Vector_BindLua::GetAngleSigned(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 2)
+		{
+			Vector_BindLua* a = Luna<Vector_BindLua>::lightcheck(L, 1);
+			Vector_BindLua* b = Luna<Vector_BindLua>::lightcheck(L, 2);
+			Vector_BindLua* axis = Luna<Vector_BindLua>::lightcheck(L, 3);
+			if (a && b && axis)
+			{
+				wi::lua::SSetFloat(L, wi::math::GetAngleSigned(XMLoadFloat4(&a->data), XMLoadFloat4(&b->data), XMLoadFloat4(&axis->data)));
+				return 1;
+			}
+			else
+			{
+				wi::lua::SError(L, "GetAngleSigned(Vector a,b,axis) first 3 arguments are not vectors!");
+			}
+		}
+		wi::lua::SError(L, "GetAngleSigned(Vector a,b,axis) not enough arguments!");
 		return 0;
 	}
 

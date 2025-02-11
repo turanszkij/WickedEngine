@@ -66,6 +66,7 @@ namespace wi::lua
 		int PlaneFromPoints(lua_State* L);
 
 		int GetAngle(lua_State* L);
+		int GetAngleSigned(lua_State* L);
 
 		static void Bind();
 	};

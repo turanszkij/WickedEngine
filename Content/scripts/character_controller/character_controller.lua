@@ -100,7 +100,6 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 		position = Vector(),
         ground_intersect = false,
 		controllable = true,
-		root_offset = 0,
 		foot_placed_left = false,
 		foot_placed_right = false,
 		mood = Mood.Neutral,
@@ -479,6 +478,11 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 	charactercomponent.SetFacing(facing)
 	charactercomponent.SetWidth(0.3)
 	charactercomponent.SetHeight(1.8)
+	if controllable then
+		charactercomponent.SetTurningSpeed(9)
+	else
+		charactercomponent.SetTurningSpeed(7) -- Set NPC to turn slower because when we approach it for conversation, fast turning looks bad
+	end
 	--charactercomponent.SetFootPlacementEnabled(false)
 
 	local layer = scene.Component_GetLayer(self.model)
@@ -664,11 +668,11 @@ local function ThirdPersonCamera(character)
 			self.rest_distance = math.lerp(self.rest_distance, self.rest_distance_new, 0.1) -- lerp will smooth out the zooming
 
 			-- This will allow some smoothing for certain movements of camera target:
-			local character_transform = scene.Component_GetTransform(self.character.model)
-			local character_position = character_transform.GetPosition()
+			local charactercomponent = scene.Component_GetCharacter(self.character.model)
+			local character_position = charactercomponent.GetPositionInterpolated()
 			self.target_rot_horizontal = math.lerp(self.target_rot_horizontal, self.character.target_rot_horizontal, 0.1)
 			self.target_rot_vertical = math.lerp(self.target_rot_vertical, self.character.target_rot_vertical, 0.1)
-			self.target_height = math.lerp(self.target_height, character_position.GetY() + self.character.target_height + self.character.root_offset, 0.1)
+			self.target_height = math.lerp(self.target_height, character_position.GetY() + self.character.target_height + charactercomponent.GetFootOffset(), 0.1)
 
 			local camera_transform = scene.Component_GetTransform(self.camera)
 			local target_transform = TransformComponent()

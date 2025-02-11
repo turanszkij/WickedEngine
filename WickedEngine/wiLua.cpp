@@ -52,6 +52,24 @@ namespace wi::lua
 		return luainternal;
 	}
 
+	wi::Application* editorApplication = nullptr;
+	wi::RenderPath* editorRenderPath = nullptr;
+	int IsThisEditor(lua_State* L)
+	{
+		bool ret = editorApplication != nullptr && editorRenderPath != nullptr;
+		wi::lua::SSetBool(L, ret);
+		return 1;
+	}
+	int ReturnToEditor(lua_State* L)
+	{
+		if (editorApplication != nullptr && editorRenderPath != nullptr)
+		{
+			KillProcesses();
+			editorApplication->ActivatePath(editorRenderPath);
+		}
+		return 0;
+	}
+
 	void PostErrorMsg(lua_State* L)
 	{
 		const char* str = lua_tostring(L, -1);
@@ -64,6 +82,8 @@ namespace wi::lua
 		ss += str;
 		wi::backlog::post(ss, wi::backlog::LogLevel::Error);
 		lua_pop(L, 1); // remove error message
+
+		ReturnToEditor(L);
 	}
 
 	void PostErrorMsg()
@@ -198,24 +218,6 @@ namespace wi::lua
 			wi::lua::SError(L, "compilebinaryfile(string filename_src, filename_dst): Source file could not be read, or compilation failed!");
 		}
 		wi::lua::SError(L, "compilebinaryfile(string filename_src, filename_dst): Not enough arguments!");
-		return 0;
-	}
-
-	wi::Application* editorApplication = nullptr;
-	wi::RenderPath* editorRenderPath = nullptr;
-	int IsThisEditor(lua_State* L)
-	{
-		bool ret = editorApplication != nullptr && editorRenderPath != nullptr;
-		wi::lua::SSetBool(L, ret);
-		return 1;
-	}
-	int ReturnToEditor(lua_State* L)
-	{
-		if (editorApplication != nullptr && editorRenderPath != nullptr)
-		{
-			KillProcesses();
-			editorApplication->ActivatePath(editorRenderPath);
-		}
 		return 0;
 	}
 
@@ -636,6 +638,8 @@ namespace wi::lua
 			ss += error;
 		}
 		wi::backlog::post(ss, wi::backlog::LogLevel::Error);
+
+		ReturnToEditor(L);
 	}
 
 	bool CompileFile(const char* filename, wi::vector<uint8_t>& dst)

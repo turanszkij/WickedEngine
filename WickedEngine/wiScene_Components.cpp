@@ -2676,13 +2676,6 @@ namespace wi::scene
 	}
 	void CharacterComponent::Turn(const XMFLOAT3& direction)
 	{
-		XMVECTOR F = XMLoadFloat3(&facing);
-		float dot = XMVectorGetX(XMVector3Dot(F, XMLoadFloat3(&direction)));
-		if (dot < 0)
-		{
-			// help with turning around 180 degrees:
-			XMStoreFloat3(&facing, XMVector3TransformNormal(F, XMMatrixRotationY(XM_PI * 0.05f)));
-		}
 		facing_next = direction;
 	}
 	void CharacterComponent::Lean(float amount)

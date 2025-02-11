@@ -1893,6 +1893,7 @@ namespace wi::lua::scene
 		int SetWaterFriction(lua_State* L);
 		int SetSlopeThreshold(lua_State* L);
 		int SetLeaningLimit(lua_State* L);
+		int SetTurningSpeed(lua_State* L);
 		int SetFixedUpdateFPS(lua_State* L);
 		int SetGravity(lua_State* L);
 		int SetWaterVerticalOffset(lua_State* L);
@@ -1929,6 +1930,7 @@ namespace wi::lua::scene
 		int IsCharacterToCharacterCollisionDisabled(lua_State* L);
 		int GetLeaning(lua_State* L);
 		int GetLeaningSmoothed(lua_State* L);
+		int GetFootOffset(lua_State* L);
 
 		int SetPathGoal(lua_State* L);
 		int GetPathQuery(lua_State* L);

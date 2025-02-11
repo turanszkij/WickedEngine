@@ -80,7 +80,7 @@ namespace wi::primitive
 	float AABB::getRadius() const
 	{
 		XMFLOAT3 abc = getHalfWidth();
-		return std::sqrt(std::pow(std::sqrt(std::pow(abc.x, 2.0f) + std::pow(abc.y, 2.0f)), 2.0f) + std::pow(abc.z, 2.0f));
+		return std::sqrt(sqr(std::sqrt(sqr(abc.x) + sqr(abc.y))) + sqr(abc.z));
 	}
 	AABB::INTERSECTION_TYPE AABB::intersects(const AABB& b) const
 	{

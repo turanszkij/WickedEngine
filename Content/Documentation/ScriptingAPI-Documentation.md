@@ -668,7 +668,8 @@ A four component floating point vector. Provides efficient calculations with SIM
 - Slerp(Vector quaternion1,quaternion2, float t) : Vector resultQuaternion -- same as QuaternionSlerp
 - PlaneFromPointNormal(Vector point, normal) : constructs a plane from a point and a normal
 - PlaneFromPoints(Vector a,b,c) : constructs a plane from three points
-- GetAngle(Vector a,b,axis, opt float max_angle = math.pi * 2) : float result	-- computes the signed angle between two 3D vectors around specified axis
+- GetAngle(Vector a,b,axis, opt float max_angle = math.pi * 2) : float result	-- computes the angle between two 3D vectors around specified axis in range: [0, max_angle]
+- GetAngleSigned(Vector a,b,axis) : float result	-- computes the signed angle between two 3D vectors around specified axis
 
 ### Matrix
 A four by four matrix, efficient calculations with SIMD support.
@@ -1588,6 +1589,7 @@ Implementation of basic character controller features such as movement in the sc
 - SetWaterFriction(float value)		-- velocity multiplier when swimming in water, default: 0.9
 - SetSlopeThreshold(float value)	-- Slope detection threshold, default: 0.2
 - SetLeaningLimit(float value)		-- Leaning min/max clamping, default: 0.12
+- SetTurningSpeed(float value)		-- Turning smoothing speed when using Turn(), default: 10.0
 - SetFixedUpdateFPS(float value)	-- Frame rate of simulation, default: 120
 - SetGravity(float value)			-- Gravity value, default: -30
 - SetWaterVerticalOffset(float value)	-- vertical offset to keep from water. Useful if character is too submerged in the swimming state
@@ -1622,6 +1624,7 @@ Implementation of basic character controller features such as movement in the sc
 - GetRelativeOffset() : Vector	-- returns the relative offset (relative to facing direction)
 - GetLeaning() : float	-- returns immediate leaning amount
 - GetLeaningSmoothed() : float -- returns smoothed leaning amount
+- GetFootOffset() : float -- returns vertical offset that accounts for character's position after foot placements
 
 - SetPathGoal(Vector goal, VoxelGrid voxelgrid)	-- Set the goal for path finding, it will be processed the next time the scene is updated. You can get the results by accessing the pathquery object of the character with GetPathQuery().
 - GetPathQuery() : PathQuery	-- returns the PathQuery object of this character

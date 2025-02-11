@@ -3279,18 +3279,18 @@ namespace wi::scene
 						ik_pos = right_result.position;
 					}
 				}
-				character.root_offset = wi::math::Lerp(character.root_offset, diff, 0.1f);
+				character.foot_offset = wi::math::Lerp(character.foot_offset, diff, 0.1f);
 			}
 			else
 			{
-				character.root_offset = wi::math::Lerp(character.root_offset, 0.0f, 0.1f);
+				character.foot_offset = wi::math::Lerp(character.foot_offset, 0.0f, 0.1f);
 			}
 
 			TransformComponent* humanoid_transform = transforms.GetComponent(character.humanoidEntity);
 			if (humanoid_transform != nullptr)
 			{
 				// Offset root transform to lower foot pos:
-				humanoid_transform->translation_local.y = character.root_offset;
+				humanoid_transform->translation_local.y = character.foot_offset;
 				humanoid_transform->SetDirty();
 			}
 
@@ -5428,7 +5428,6 @@ namespace wi::scene
 		wi::jobsystem::Dispatch(ctx, (uint32_t)characters.GetCount(), 1, [&](wi::jobsystem::JobArgs args) {
 			CharacterComponent& character = characters[args.jobIndex];
 			Entity entity = characters.GetEntity(args.jobIndex);
-			XMMATRIX facing_rot = XMMatrixLookToLH(XMVectorZero(), XMLoadFloat3(&character.facing), up);
 			if (character.IsActive())
 			{
 				uint32_t layer = 0;
@@ -5474,7 +5473,10 @@ namespace wi::scene
 
 				XMVECTOR velocity = XMLoadFloat3(&character.velocity);
 				XMVECTOR inertia = XMLoadFloat3(&character.inertia);
-				XMVECTOR movement = XMLoadFloat3(&character.movement);
+				XMVECTOR facing_next = XMVector3Normalize(XMVectorSetY(XMLoadFloat3(&character.facing_next), 0));
+				XMVECTOR facing = XMVector3Normalize(XMVectorSetY(XMLoadFloat3(&character.facing), 0));
+				const float facing_correctness = XMVectorGetX(XMVectorSaturate(XMVector3Dot(facing, facing_next)));
+				XMVECTOR movement = XMLoadFloat3(&character.movement) * facing_correctness;
 				XMVECTOR position = XMLoadFloat3(&character.position);
 				XMVECTOR height = XMVectorSet(0, character.height, 0, 0);
 
@@ -5623,17 +5625,26 @@ namespace wi::scene
 
 				position += XMVectorSet(0, swim_offset, 0, 0);
 
+				const float horizontal_velocity_length = XMVectorGetX(XMVector3Length(XMVectorSetY(velocity, 0)));
+
 				// Smooth facing:
-				character.facing = wi::math::Lerp(character.facing, character.facing_next, dt * 5);
-				character.facing.y = 0;
-				XMVECTOR facing_next = XMVector3Normalize(XMLoadFloat3(&character.facing_next));
-				XMVECTOR facing = XMVector3Normalize(XMLoadFloat3(&character.facing));
+				float faceangle = -wi::math::GetAngleSigned(facing_next, facing, up);
+				const float turning_speed = clamp(character.turning_speed * dt, 0.0f, std::abs(faceangle));
+				if (faceangle < 0)
+				{
+					facing = XMVector3Rotate(facing, XMQuaternionNormalize(XMQuaternionRotationNormal(up, -turning_speed)));
+				}
+				else if (faceangle > 0)
+				{
+					facing = XMVector3Rotate(facing, XMQuaternionNormalize(XMQuaternionRotationNormal(up, turning_speed)));
+				}
+				facing = XMVectorSetY(facing, 0);
+				facing = XMVector3Normalize(facing);
 				XMStoreFloat3(&character.facing, facing);
 
 				// Smooth leaning:
-				XMVECTOR facediff = XMVector3TransformNormal(facing_next - facing, facing_rot);
-				float velocity_leaning = clamp(XMVectorGetX(facediff * XMVector3Length(XMVectorSetY(velocity, 0))) * 0.08f, -leaning_limit, leaning_limit);
-				character.leaning_next = lerp(character.leaning_next, velocity_leaning, dt * 5);
+				const float turn_leaning = clamp(faceangle / XM_PI * horizontal_velocity_length * facing_correctness, -leaning_limit, leaning_limit);
+				character.leaning_next = lerp(character.leaning_next, turn_leaning, dt * 5);
 				character.leaning = lerp(character.leaning, character.leaning_next, dt * 5);
 
 				// Simple animation blending:
@@ -5664,7 +5675,6 @@ namespace wi::scene
 				}
 
 				// Try to put water ripple under character:
-				float horizontal_velocity_length = XMVectorGetX(XMVector3Length(XMVectorSetY(velocity, 0)));
 				if (horizontal_velocity_length > 0.01)
 				{
 					XMFLOAT3 ocean_pos = GetOceanPosAt(character.position);
@@ -5716,6 +5726,7 @@ namespace wi::scene
 			TransformComponent* transform = transforms.GetComponent(entity);
 			if (transform != nullptr)
 			{
+				XMMATRIX facing_rot = XMMatrixLookToLH(XMVectorZero(), XMLoadFloat3(&character.facing), up);
 				facing_rot = XMMatrixInverse(nullptr, facing_rot);
 
 				XMVECTOR quat = XMQuaternionRotationMatrix(facing_rot * rotY);

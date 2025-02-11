@@ -2193,6 +2193,7 @@ namespace wi::scene
 		float fixed_update_fps = 120;
 		float gravity = -30;
 		float water_vertical_offset = 0;
+		float turning_speed = 10;
 		XMFLOAT3 movement = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 velocity = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 inertia = XMFLOAT3(0, 0, 0);
@@ -2213,7 +2214,7 @@ namespace wi::scene
 		wi::ecs::Entity humanoidEntity = wi::ecs::INVALID_ENTITY;
 		wi::ecs::Entity left_foot = wi::ecs::INVALID_ENTITY;
 		wi::ecs::Entity right_foot = wi::ecs::INVALID_ENTITY;
-		float root_offset = 0;
+		float foot_offset = 0;
 		bool foot_placement_enabled = true;
 		wi::PathQuery pathquery; // completed
 		wi::vector<wi::ecs::Entity> animations;

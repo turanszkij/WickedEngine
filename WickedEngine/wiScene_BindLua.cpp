@@ -7670,6 +7670,7 @@ Luna<CharacterComponent_BindLua>::FunctionType CharacterComponent_BindLua::metho
 	lunamethod(CharacterComponent_BindLua, SetWaterFriction),
 	lunamethod(CharacterComponent_BindLua, SetSlopeThreshold),
 	lunamethod(CharacterComponent_BindLua, SetLeaningLimit),
+	lunamethod(CharacterComponent_BindLua, SetTurningSpeed),
 	lunamethod(CharacterComponent_BindLua, SetFixedUpdateFPS),
 	lunamethod(CharacterComponent_BindLua, SetGravity),
 	lunamethod(CharacterComponent_BindLua, SetWaterVerticalOffset),
@@ -7706,6 +7707,7 @@ Luna<CharacterComponent_BindLua>::FunctionType CharacterComponent_BindLua::metho
 	lunamethod(CharacterComponent_BindLua, GetRelativeOffset),
 	lunamethod(CharacterComponent_BindLua, GetLeaning),
 	lunamethod(CharacterComponent_BindLua, GetLeaningSmoothed),
+	lunamethod(CharacterComponent_BindLua, GetFootOffset),
 
 	lunamethod(CharacterComponent_BindLua, SetPathGoal),
 	lunamethod(CharacterComponent_BindLua, GetPathQuery),
@@ -7881,6 +7883,17 @@ int CharacterComponent_BindLua::SetLeaningLimit(lua_State* L)
 		return 0;
 	}
 	component->leaning_limit = wi::lua::SGetFloat(L, 1);
+	return 0;
+}
+int CharacterComponent_BindLua::SetTurningSpeed(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "SetTurningSpeed(float value) not enough arguments!");
+		return 0;
+	}
+	component->turning_speed = wi::lua::SGetFloat(L, 1);
 	return 0;
 }
 int CharacterComponent_BindLua::SetFixedUpdateFPS(lua_State* L)
@@ -8161,6 +8174,11 @@ int CharacterComponent_BindLua::GetLeaning(lua_State* L)
 int CharacterComponent_BindLua::GetLeaningSmoothed(lua_State* L)
 {
 	wi::lua::SSetFloat(L, component->GetLeaningSmoothed());
+	return 1;
+}
+int CharacterComponent_BindLua::GetFootOffset(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->foot_offset);
 	return 1;
 }
 
