@@ -3946,6 +3946,24 @@ void EditorComponent::Render() const
 				translator.Draw(GetCurrentEditorScene().camera, currentMouse, cmd);
 			}
 
+#if 0
+			// Debug object AABB screen projection for LOD:
+			for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+			{
+				const AABB& aabb = scene.aabb_objects[i];
+				XMFLOAT4 rect = aabb.ProjectToScreen(VP);
+
+				wi::image::Params fx;
+				fx.color = wi::Color::Yellow();
+				fx.color.w = 0.4f;
+				fx.pos.x = PhysicalToLogical(rect.x * vp.width);
+				fx.pos.y = PhysicalToLogical(rect.y * vp.height);
+				fx.siz.x = PhysicalToLogical(rect.z * vp.width - rect.x * vp.width);
+				fx.siz.y = PhysicalToLogical(rect.w * vp.height - rect.y * vp.height);
+				wi::image::Draw(nullptr, fx, cmd);
+			}
+#endif
+
 			device->RenderPassEnd(cmd);
 		}
 

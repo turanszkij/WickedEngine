@@ -4405,20 +4405,14 @@ namespace wi::scene
 				// LOD select:
 				if (mesh.subsets_per_lod > 0)
 				{
-					const float distsq = wi::math::DistanceSquared(camera.Eye, object.center);
-					const float radius = object.radius;
-					const float radiussq = radius * radius;
-					if (distsq < radiussq)
-					{
-						object.lod = 0;
-					}
-					else
-					{
-						const float dist = std::sqrt(distsq);
-						const float dist_to_sphere = dist - radius;
-						object.lod = uint32_t(dist_to_sphere * object.lod_distance_multiplier);
-						object.lod = std::min(object.lod, uint16_t(mesh.GetLODCount() - 1));
-					}
+					// LOD selection based on screen projection:
+					XMFLOAT4 rect = aabb.ProjectToScreen(camera.GetViewProjection());
+					float width = rect.z - rect.x;
+					float height = rect.w - rect.y;
+					float maxdim = std::max(width, height);
+					float lod_max = float(mesh.GetLODCount() - 1);
+					float lod = clamp(std::log2(1.0f / maxdim) + object.lod_bias, 0.0f, lod_max);
+					object.lod = uint32_t(lod);
 				}
 
 				union SortBits

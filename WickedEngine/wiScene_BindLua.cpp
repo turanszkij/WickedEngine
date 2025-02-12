@@ -5535,7 +5535,7 @@ int ObjectComponent_BindLua::GetUserStencilRef(lua_State* L)
 }
 int ObjectComponent_BindLua::GetLodDistanceMultiplier(lua_State* L)
 {
-	wi::lua::SSetInt(L, (int)component->lod_distance_multiplier);
+	wi::lua::SSetInt(L, 0);
 	return 1;
 }
 int ObjectComponent_BindLua::GetDrawDistance(lua_State* L)
@@ -5743,7 +5743,7 @@ int ObjectComponent_BindLua::SetLodDistanceMultiplier(lua_State* L)
 	if (argc > 0)
 	{
 		float value = wi::lua::SGetFloat(L, 1);
-		component->lod_distance_multiplier = value;
+		component->lod_bias = value;
 	}
 	else
 	{

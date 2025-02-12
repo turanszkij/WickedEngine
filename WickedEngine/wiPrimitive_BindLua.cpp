@@ -225,6 +225,7 @@ namespace wi::lua::primitive
 		lunamethod(AABB_BindLua, GetHalfExtents),
 		lunamethod(AABB_BindLua, Transform),
 		lunamethod(AABB_BindLua, GetAsBoxMatrix),
+		lunamethod(AABB_BindLua, ProjectToScreen),
 		{ NULL, NULL }
 	};
 	Luna<AABB_BindLua>::PropertyType AABB_BindLua::properties[] = {
@@ -413,6 +414,23 @@ namespace wi::lua::primitive
 	int AABB_BindLua::GetAsBoxMatrix(lua_State* L)
 	{
 		Luna<Matrix_BindLua>::push(L, aabb.getAsBoxMatrix());
+		return 1;
+	}
+	int AABB_BindLua::ProjectToScreen(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "ProjectToScreen(Matrix ViewProjection) not enough arguments!");
+			return 0;
+		}
+		Matrix_BindLua* mat = Luna<Matrix_BindLua>::lightcheck(L, 1);
+		if (mat == nullptr)
+		{
+			wi::lua::SError(L, "ProjectToScreen(Matrix ViewProjection) first argument is not a Matrix!");
+			return 0;
+		}
+		Luna<Vector_BindLua>::push(L, aabb.ProjectToScreen(XMLoadFloat4x4(&mat->data)));
 		return 1;
 	}
 

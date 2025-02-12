@@ -314,7 +314,7 @@ namespace wi::terrain
 		constexpr void SetPhysicsEnabled(bool value) { if (value) { _flags |= PHYSICS; } else { _flags &= ~PHYSICS; } }
 		constexpr void SetTessellationEnabled(bool value) { if (value) { _flags |= TESSELLATION; } else { _flags &= ~TESSELLATION; } }
 
-		float lod_multiplier = 0.005f;
+		float lod_bias = 0;
 		int generation = 12;
 		int prop_generation = 10;
 		int physics_generation = 3;

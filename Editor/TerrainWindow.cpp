@@ -689,7 +689,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		terrain->SetCenterToCamEnabled(centerToCamCheckBox.GetCheck());
 		terrain->SetRemovalEnabled(removalCheckBox.GetCheck());
 		terrain->SetGrassEnabled(grassCheckBox.GetCheck());
-		terrain->lod_multiplier = lodSlider.GetValue();
+		terrain->lod_bias = lodSlider.GetValue();
 		terrain->generation = (int)generationSlider.GetValue();
 		terrain->prop_generation = (int)propGenerationSlider.GetValue();
 		terrain->physics_generation = (int)physicsGenerationSlider.GetValue();
@@ -759,7 +759,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&tessellationCheckBox);
 
-	lodSlider.Create(0.0001f, 0.01f, 0.005f, 10000, "Mesh LOD Distance: ");
+	lodSlider.Create(-8, 8, 0, 100, "Chunk LOD Bias: ");
 	lodSlider.SetTooltip("Set the LOD (Level Of Detail) distance multiplier.\nLow values increase LOD detail in distance");
 	lodSlider.SetSize(XMFLOAT2(wid, hei));
 	lodSlider.SetPos(XMFLOAT2(x, y += step));
@@ -772,11 +772,11 @@ void TerrainWindow::Create(EditorComponent* _editor)
 				ObjectComponent* object = terrain->scene->objects.GetComponent(chunk_data.entity);
 				if (object != nullptr)
 				{
-					object->lod_distance_multiplier = args.fValue;
+					object->lod_bias = args.fValue;
 				}
 			}
 		}
-		terrain->lod_multiplier = args.fValue;
+		terrain->lod_bias = args.fValue;
 		});
 	AddWidget(&lodSlider);
 
@@ -1365,7 +1365,7 @@ void TerrainWindow::SetEntity(Entity entity)
 	grassCheckBox.SetCheck(terrain->IsGrassEnabled());
 	physicsCheckBox.SetCheck(terrain->IsPhysicsEnabled());
 	tessellationCheckBox.SetCheck(terrain->IsTessellationEnabled());
-	lodSlider.SetValue(terrain->lod_multiplier);
+	lodSlider.SetValue(terrain->lod_bias);
 	generationSlider.SetValue((float)terrain->generation);
 	propGenerationSlider.SetValue((float)terrain->prop_generation);
 	physicsGenerationSlider.SetValue((float)terrain->physics_generation);

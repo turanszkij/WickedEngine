@@ -667,7 +667,7 @@ namespace wi::scene
 			}
 			if (archive.GetVersion() >= 76)
 			{
-				archive >> lod_distance_multiplier;
+				archive >> lod_bias;
 			}
 			if (archive.GetVersion() >= 80)
 			{
@@ -718,7 +718,7 @@ namespace wi::scene
 			}
 			if (archive.GetVersion() >= 76)
 			{
-				archive << lod_distance_multiplier;
+				archive << lod_bias;
 			}
 			if (archive.GetVersion() >= 80)
 			{

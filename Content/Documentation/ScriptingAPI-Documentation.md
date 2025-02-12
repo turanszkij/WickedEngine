@@ -1833,6 +1833,7 @@ Axis Aligned Bounding Box. Can be intersected with other primitives.
 - GetHalfExtents() : Vector result
 - Transform(Matrix matrix) : AABB result  -- transforms the AABB with a matrix and returns the resulting conservative AABB
 - GetAsBoxMatrix() : Matrix result	-- get a matrix that represents the AABB as OBB (oriented bounding box)
+- ProjectToScreen(Matrix ViewProjection) : Vector result	-- projects the AABB to the screen, returns a 2D rectangle in UV-space as Vector(topleftX, topleftY, bottomrightX, bottomrightY), each value is in range [0, 1]
 
 #### Sphere
 Sphere defined by center Vector and radius. Can be intersected with other primitives.

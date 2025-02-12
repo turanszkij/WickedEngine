@@ -230,7 +230,30 @@ namespace wi::primitive
 			}
 		}
 	}
+	XMFLOAT4 AABB::ProjectToScreen(const XMMATRIX& ViewProjection) const
+	{
+		XMVECTOR SCREEN_MIN = XMVectorSet(1000000, 1000000, 1000000, 1000000);
+		XMVECTOR SCREEN_MAX = XMVectorSet(-1000000, -1000000, -1000000, -1000000);
+		XMVECTOR MUL = XMVectorSet(0.5f, -0.5f, 1, 1);
+		XMVECTOR ADD = XMVectorSet(0.5f, 0.5f, 0, 0);
+		for (int i = 0; i < 8; ++i)
+		{
+			XMFLOAT3 c = corner(i);
+			XMVECTOR C = XMLoadFloat3(&c);
+			C = XMVector3TransformCoord(C, ViewProjection);	// world -> clip
+			C = XMVectorMultiplyAdd(C, MUL, ADD);			// clip -> uv
+			SCREEN_MIN = XMVectorMin(SCREEN_MIN, C);
+			SCREEN_MAX = XMVectorMax(SCREEN_MAX, C);
+		}
 
+		XMFLOAT4 ret;
+		ret.x = XMVectorGetX(SCREEN_MIN);
+		ret.y = XMVectorGetY(SCREEN_MIN);
+		ret.z = XMVectorGetX(SCREEN_MAX);
+		ret.w = XMVectorGetY(SCREEN_MAX);
+
+		return ret;
+	}
 
 
 

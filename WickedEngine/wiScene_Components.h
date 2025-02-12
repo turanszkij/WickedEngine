@@ -876,7 +876,7 @@ namespace wi::scene
 		uint32_t filterMask = 0;
 		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
 		XMFLOAT4 emissiveColor = XMFLOAT4(1, 1, 1, 1);
-		float lod_distance_multiplier = 1;
+		float lod_bias = 0;
 		float draw_distance = std::numeric_limits<float>::max(); // object will begin to fade out at this distance to camera
 		uint32_t lightmapWidth = 0;
 		uint32_t lightmapHeight = 0;

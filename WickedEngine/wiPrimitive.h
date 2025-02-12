@@ -51,6 +51,9 @@ namespace wi::primitive
 		AABB operator* (float a);
 		static AABB Merge(const AABB& a, const AABB& b);
 
+		// projects the AABB to the screen, returns a 2D rectangle in UV-space as Vector(topleftX, topleftY, bottomrightX, bottomrightY), each value is in range [0, 1]
+		XMFLOAT4 ProjectToScreen(const XMMATRIX& ViewProjection) const;
+
 		constexpr XMFLOAT3 getMin() const { return _min; }
 		constexpr XMFLOAT3 getMax() const { return _max; }
 		constexpr XMFLOAT3 corner(int index) const

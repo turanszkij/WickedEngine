@@ -870,7 +870,7 @@ namespace wi::terrain
 
 					chunk_data.entity = generator->scene.Entity_CreateObject("chunk_" + std::to_string(chunk.x) + "_" + std::to_string(chunk.z));
 					ObjectComponent& object = *generator->scene.objects.GetComponent(chunk_data.entity);
-					object.lod_distance_multiplier = lod_multiplier;
+					object.lod_bias = lod_bias;
 					object.filterMask |= wi::enums::FILTER_NAVIGATION_MESH;
 					object.filterMask |= wi::enums::FILTER_TERRAIN;
 					generator->scene.Component_Attach(chunk_data.entity, chunkGroupEntity);
@@ -1966,7 +1966,7 @@ namespace wi::terrain
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
-			archive >> lod_multiplier;
+			archive >> lod_bias;
 			if (terrain_version < 3)
 			{
 				float texlod;
@@ -2176,7 +2176,7 @@ namespace wi::terrain
 		else
 		{
 			archive << _flags;
-			archive << lod_multiplier;
+			archive << lod_bias;
 			if (terrain_version < 3)
 			{
 				float texlod = 1;

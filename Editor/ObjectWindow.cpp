@@ -589,8 +589,8 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&cascadeMaskSlider);
 
-	lodSlider.Create(0.001f, 10, 1, 10000, "LOD Multiplier: ");
-	lodSlider.SetTooltip("How much the distance to camera will affect LOD selection. (If the mesh has lods)");
+	lodSlider.Create(-8, 8, 0, 100, "LOD Bias: ");
+	lodSlider.SetTooltip("Increase or decrease the LOD selection");
 	lodSlider.SetSize(XMFLOAT2(wid, hei));
 	lodSlider.SetPos(XMFLOAT2(x, y += step));
 	lodSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -600,7 +600,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 			ObjectComponent* object = scene.objects.GetComponent(x.entity);
 			if (object != nullptr)
 			{
-				object->lod_distance_multiplier = args.fValue;
+				object->lod_bias = args.fValue;
 			}
 		}
 		});
@@ -1128,7 +1128,7 @@ void ObjectWindow::SetEntity(Entity entity)
 		alphaRefSlider.SetValue(object->alphaRef);
 		rimHighlightIntesitySlider.SetValue(object->rimHighlightColor.w);
 		rimHighlightFalloffSlider.SetValue(object->rimHighlightFalloff);
-		lodSlider.SetValue(object->lod_distance_multiplier);
+		lodSlider.SetValue(object->lod_bias);
 		drawdistanceSlider.SetValue(object->draw_distance);
 		sortPrioritySlider.SetValue((int)object->sort_priority);
 
