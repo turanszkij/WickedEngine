@@ -1193,7 +1193,7 @@ struct alignas(16) FrameCB
 	uint lights;
 	uint decals;
 	uint forces;
-	uint padding;
+	int	indirect_debugbufferindex;
 
 	ShaderEntity entityArray[SHADER_ENTITY_COUNT];
 	float4x4 matrixArray[SHADER_ENTITY_COUNT];

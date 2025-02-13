@@ -150,22 +150,23 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	randomnessSlider.SetTooltip("Set hair length randomization factor. This will affect randomness of hair lengths.");
 	AddWidget(&randomnessSlider);
 
-	//segmentcountSlider.Create(1, 10, 1, 9, "Segment Count: ");
-	//segmentcountSlider.SetSize(XMFLOAT2(wid, hei));
-	//segmentcountSlider.SetPos(XMFLOAT2(x, y += step));
-	//segmentcountSlider.OnSlide([&](wi::gui::EventArgs args) {
-	//	wi::scene::Scene& scene = editor->GetCurrentScene();
-	//	for (auto& x : editor->translator.selected)
-	//	{
-	//		wi::HairParticleSystem* hair = scene.hairs.GetComponent(x.entity);
-	//		if (hair == nullptr)
-	//			continue;
-	//		hair->segmentCount = (uint32_t)args.iValue;
-	//	}
-	//});
-	//segmentcountSlider.SetEnabled(false);
-	//segmentcountSlider.SetTooltip("Set hair strand segment count. This will affect simulation quality and performance.");
-	//AddWidget(&segmentcountSlider);
+	segmentcountSlider.Create(1, 10, 1, 9, "Segments: ");
+	segmentcountSlider.SetSize(XMFLOAT2(wid, hei));
+	segmentcountSlider.SetPos(XMFLOAT2(x, y += step));
+	segmentcountSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::HairParticleSystem* hair = scene.hairs.GetComponent(x.entity);
+			if (hair == nullptr)
+				continue;
+			hair->segmentCount = (uint32_t)args.iValue;
+			hair->SetDirty();
+		}
+	});
+	segmentcountSlider.SetEnabled(false);
+	segmentcountSlider.SetTooltip("Set the number of segments that make up one strand.");
+	AddWidget(&segmentcountSlider);
 
 	randomSeedSlider.Create(1, 12345, 1, 12344, "Random seed: ");
 	randomSeedSlider.SetSize(XMFLOAT2(wid, hei));
@@ -386,7 +387,7 @@ void HairParticleWindow::SetEntity(Entity entity)
 		stiffnessSlider.SetValue(hair->stiffness);
 		randomnessSlider.SetValue(hair->randomness);
 		countSlider.SetValue((float)hair->strandCount);
-		//segmentcountSlider.SetValue((float)hair->segmentCount);
+		segmentcountSlider.SetValue((float)hair->segmentCount);
 		randomSeedSlider.SetValue((float)hair->randomSeed);
 		viewDistanceSlider.SetValue(hair->viewDistance);
 		uniformitySlider.SetValue(hair->uniformity);
@@ -503,6 +504,7 @@ void HairParticleWindow::ResizeLayout()
 	add_fullwidth(infoLabel);
 	add(meshComboBox);
 	add(countSlider);
+	add(segmentcountSlider);
 	add(lengthSlider);
 	add(widthSlider);
 	add(stiffnessSlider);

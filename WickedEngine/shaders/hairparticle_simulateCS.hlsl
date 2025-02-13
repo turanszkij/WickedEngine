@@ -25,7 +25,7 @@ RWBuffer<float4> vertexBuffer_NOR : register(u6);
 [numthreads(THREADCOUNT_SIMULATEHAIR, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
-	if (DTid.x >= xHairParticleCount)
+	if (DTid.x >= xHairStrandCount)
 		return;
 		
 	ShaderGeometry geometry = HairGetGeometry();
@@ -95,18 +95,68 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	float3 base = mul(worldMatrix, float4(position.xyz, 1)).xyz;
 	target = normalize(mul((half3x3)worldMatrix, target));
 	const float3 root = base;
-
+	
 	float3 diff = GetCamera().position - root;
 	const float distsq = dot(diff, diff);
 	const bool distance_culled = distsq > sqr(xHairViewDistance);
+	
+	float len = (binormal_length >> 24) & 0x000000FF;
+	len /= 255.0;
+	len *= xHairLength;
+	len *= atlas_rect.size;
+	len /= (float)xHairSegmentCount;
+	const float2 frame = float2(atlas_rect.aspect * xHairAspect * xHairSegmentCount, 1) * len * 0.5;
+	
+	const uint gfx_vertexcount_per_strand = xHairSegmentCount * 2 + 2;
+	uint v0 = DTid.x * gfx_vertexcount_per_strand;
+
+	// Bottom vertices:
+	half3 normal_bottom = normalize(f16tof32(simulationBuffer[strandID].normal_velocity));
+	//base = base - normal_bottom * 0.1 * len * xHairSegmentCount; // inset to the emitter a bit, to avoid disconnect:
+	half3x3 TBN_bottom = half3x3(tangent, normal_bottom, binormal); // don't derive binormal, because we want the shear at the bottom!
+	for (uint vertexID = 0; vertexID < 2; ++vertexID)
+	{
+		float3 patchPos = HAIRPATCH[vertexID];
+		float2 uv = patchPos.xy;
+		uv = uv * float2(0.5, 0.5) + 0.5;
+		uv.y = 1 - uv.y;
+		patchPos.y += 1;
+
+		// Sprite sheet UV transform:
+		uv.xy = mad(uv.xy, atlas_rect.texMulAdd.xy, atlas_rect.texMulAdd.zw);
+
+		// scale the billboard by the texture aspect:
+		patchPos.xyz *= frame.xyx;
+
+		// rotate the patch into the tangent space of the emitting triangle:
+		patchPos = mul(patchPos, TBN_bottom);
+
+		float3 position = base + patchPos;
+
+		if (xHairFlags & HAIR_FLAG_UNORM_POS)
+		{
+			position = inverse_lerp(geometry.aabb_min, geometry.aabb_max, position); // remap to UNORM
+		}
+			
+		vertexBuffer_POS[v0] = float4(position, 0);
+		vertexBuffer_NOR[v0] = half4(normal_bottom, 0);
+		vertexBuffer_UVS[v0] = uv.xyxy; // a second uv set could be used here
+			
+		if (distance_culled)
+		{
+			position = 0; // We can only zero out for raytracing geometry to keep correct prevpos swapping motion vectors!
+		}
+		vertexBuffer_POS_RT[v0] = float4(position, 0);
+
+		v0++;
+	}
 
 	// Bend down to camera up vector to avoid seeing flat planes from above
 	const float3 bend = GetCamera().up * (1 - saturate(dot(target, GetCamera().up))) * 0.8;
+	
+	const float delta_time = clamp(GetFrame().delta_time, 0, 1.0 / 30.0); // clamp delta time to avoid simulation blowing up
 
 	half3 normal = 0;
-
-	const float delta_time = clamp(GetFrame().delta_time, 0, 1.0 / 30.0); // clamp delta time to avoid simulation blowing up
-	
 	for (uint segmentID = 0; segmentID < xHairSegmentCount; ++segmentID)
 	{
 		// Identifies the hair strand segment particle:
@@ -122,11 +172,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		normal += f16tof32(simulationBuffer[particleID].normal_velocity);
 		normal = normalize(normal);
-
-		float len = (binormal_length >> 24) & 0x000000FF;
-		len /= 255.0;
-		len *= xHairLength;
-		len *= atlas_rect.size;
 
 		float3 tip = base + normal * len;
 		float3 midpoint = lerp(base, tip, 0.5);
@@ -244,51 +289,53 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		// Write out render buffers:
 		//	These must be persistent, not culled (raytracing, surfels...)
-		uint v0 = particleID * 4;
-		uint i0 = particleID * 6;
+		half3 normal_bend = normalize(normal + bend);
+		binormal = cross(normal_bend, tangent);
+		tangent = cross(binormal, normal_bend);
+		half3x3 TBN = half3x3(tangent, normal_bend, binormal);
 
-		half3x3 TBN = half3x3(tangent, normalize(normal + bend), binormal); // don't derive binormal, because we want the shear!
-		float3 rootposition = base - normal * 0.1 * len; // inset to the emitter a bit, to avoid disconnect:
-		const float2 frame = float2(atlas_rect.aspect * xHairAspect, 1) * len * 0.5;
+		draw_point(base, 0.1, float4(1,0,0,1));
+		draw_line(base, tip, float4(0,1,0,1));
 		
-		for (uint vertexID = 0; vertexID < 4; ++vertexID)
+		for (uint vertexID = 2; vertexID < 4; ++vertexID)
 		{
-			// expand the particle into a billboard cross section, the patch:
 			float3 patchPos = HAIRPATCH[vertexID];
-			float2 uv = vertexID < 6 ? patchPos.xy : patchPos.zy;
+			float2 uv = patchPos.xy;
 			uv = uv * float2(0.5, 0.5) + 0.5;
 			uv.y = lerp((float)segmentID / (float)xHairSegmentCount, ((float)segmentID + 1) / (float)xHairSegmentCount, uv.y);
 			uv.y = 1 - uv.y;
 			patchPos.y += 1;
-
+		
 			// Sprite sheet UV transform:
 			uv.xy = mad(uv.xy, atlas_rect.texMulAdd.xy, atlas_rect.texMulAdd.zw);
-
+		
 			// scale the billboard by the texture aspect:
 			patchPos.xyz *= frame.xyx;
-
+		
 			// rotate the patch into the tangent space of the emitting triangle:
 			patchPos = mul(patchPos, TBN);
-
+		
 			// simplistic wind effect only affects the top, but leaves the base as is:
-			const float3 wind = sample_wind(rootposition, segmentID + patchPos.y);
-
-			float3 position = rootposition + patchPos + wind;
-
+			const float3 wind = sample_wind(base, segmentID + patchPos.y);
+		
+			float3 position = base + patchPos + wind;
+		
 			if (xHairFlags & HAIR_FLAG_UNORM_POS)
 			{
 				position = inverse_lerp(geometry.aabb_min, geometry.aabb_max, position); // remap to UNORM
 			}
 			
-			vertexBuffer_POS[v0 + vertexID] = float4(position, 0);
-			vertexBuffer_NOR[v0 + vertexID] = half4(normalize(normal + wind), 0);
-			vertexBuffer_UVS[v0 + vertexID] = uv.xyxy; // a second uv set could be used here
+			vertexBuffer_POS[v0] = float4(position, 0);
+			vertexBuffer_NOR[v0] = half4(normalize(normal + wind), 0);
+			vertexBuffer_UVS[v0] = uv.xyxy; // a second uv set could be used here
 			
 			if (distance_culled)
 			{
 				position = 0; // We can only zero out for raytracing geometry to keep correct prevpos swapping motion vectors!
 			}
-			vertexBuffer_POS_RT[v0 + vertexID] = float4(position, 0);
+			vertexBuffer_POS_RT[v0] = float4(position, 0);
+		
+			v0++;
 		}
 
 		// Frustum culling:
@@ -296,7 +343,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		sphere.center = (base + tip) * 0.5;
 		sphere.radius = len;
 		
-		const bool visible = !distance_culled && GetCamera().frustum.intersects(sphere);
+		bool visible = !distance_culled && GetCamera().frustum.intersects(sphere);
+		visible = true;
 		
 		// Optimization: reduce to 1 atomic operation per wave
 		const uint waveAppendCount = WaveActiveCountBits(visible);
@@ -310,6 +358,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		if (visible)
 		{
 			uint prevCount = waveOffset + WavePrefixSum(6u);
+			uint i0 = particleID * 6;
 			uint ii0 = prevCount;
 			culledIndexBuffer[ii0 + 0] = i0 + 0;
 			culledIndexBuffer[ii0 + 1] = i0 + 1;

@@ -4,7 +4,7 @@
 
 Buffer<uint> primitiveBuffer : register(t0);
 
-VertexToPixel main(uint vid : SV_VERTEXID)
+VertexToPixel main(uint vid : SV_VertexID)
 {
 	ShaderMeshInstance inst = HairGetInstance();
 	ShaderGeometry geometry = HairGetGeometry();
