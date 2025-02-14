@@ -63,11 +63,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		g = 1 - g;
 	}
 	float2 bary = float2(f, g);
+	
+	const float4x4 worldMatrix = xHairTransform.GetMatrix();
 
 	// compute final surface position on triangle from barycentric coords:
 	float3 position = attribute_at_bary(pos0, pos1, pos2, bary);
 	position = mul(xHairBaseMeshUnormRemap.GetMatrix(), float4(position, 1)).xyz;
 	half3 target = normalize(attribute_at_bary(nor0, nor1, nor2, bary));
+	target = normalize(mul((half3x3)worldMatrix, target));
 	half3 tangent = normalize(mul(half3(hemispherepoint_cos(rng.next_float(), rng.next_float()).xy, 0), get_tangentspace(target)));
 	half3 binormal = cross(target, tangent);
 	half strand_length = attribute_at_bary(length0, length1, length2, bary);
@@ -91,12 +94,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	const uint strandID = DTid.x * xHairSegmentCount;
 	
 	// Transform particle by the emitter object matrix:
-	const float4x4 worldMatrix = xHairTransform.GetMatrix();
 	float3 base = mul(worldMatrix, float4(position.xyz, 1)).xyz;
-	target = normalize(mul((half3x3)worldMatrix, target));
-	const float3 root = base;
 	
-	float3 diff = GetCamera().position - root;
+	float3 diff = GetCamera().position - base;
 	const float distsq = dot(diff, diff);
 	const bool distance_culled = distsq > sqr(xHairViewDistance);
 	
@@ -110,10 +110,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	const uint gfx_vertexcount_per_strand = xHairSegmentCount * 2 + 2;
 	uint v0 = DTid.x * gfx_vertexcount_per_strand;
 
+	//draw_line(base, base + tangent, float4(1,0,0,1));
+	//draw_line(base, base + target, float4(0,1,0,1));
+	//draw_line(base, base + binormal, float4(0,0,1,1));
+
 	// Bottom vertices:
-	half3 normal_bottom = normalize(f16tof32(simulationBuffer[strandID].normal_velocity));
-	//base = base - normal_bottom * 0.1 * len * xHairSegmentCount; // inset to the emitter a bit, to avoid disconnect:
-	half3x3 TBN_bottom = half3x3(tangent, normal_bottom, binormal); // don't derive binormal, because we want the shear at the bottom!
+	half3x3 TBN_bottom = half3x3(tangent, target, binormal);
 	for (uint vertexID = 0; vertexID < 2; ++vertexID)
 	{
 		float3 patchPos = HAIRPATCH[vertexID];
@@ -139,7 +141,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		}
 			
 		vertexBuffer_POS[v0] = float4(position, 0);
-		vertexBuffer_NOR[v0] = half4(normal_bottom, 0);
+		vertexBuffer_NOR[v0] = half4(target, 0);
 		vertexBuffer_UVS[v0] = uv.xyxy; // a second uv set could be used here
 			
 		if (distance_culled)
@@ -155,8 +157,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	const float3 bend = GetCamera().up * (1 - saturate(dot(target, GetCamera().up))) * 0.8;
 	
 	const float delta_time = clamp(GetFrame().delta_time, 0, 1.0 / 30.0); // clamp delta time to avoid simulation blowing up
-
-	half3 normal = 0;
+	
 	for (uint segmentID = 0; segmentID < xHairSegmentCount; ++segmentID)
 	{
 		// Identifies the hair strand segment particle:
@@ -170,7 +171,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			simulationBuffer[particleID].normal_velocity = f32tof16(target);
 		}
 
-		normal += f16tof32(simulationBuffer[particleID].normal_velocity);
+		half3 normal = f16tof32(simulationBuffer[particleID].normal_velocity);
 		normal = normalize(normal);
 
 		float3 tip = base + normal * len;
@@ -269,6 +270,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		const float3 old_tip = old_base + old_normal * len;
 		const float3 surface_velocity = old_tip - tip;
 		velocity += surface_velocity;
+		
+		const float3 wind = sample_wind(tip, ((float)segmentID + 1) / (float)xHairSegmentCount);
+		force += wind;
 
 		// Apply forces:
 		half3 newVelocity = velocity + force;
@@ -294,8 +298,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		tangent = cross(binormal, normal_bend);
 		half3x3 TBN = half3x3(tangent, normal_bend, binormal);
 
-		draw_point(base, 0.1, float4(1,0,0,1));
-		draw_line(base, tip, float4(0,1,0,1));
+		//draw_point(base, 0.1, float4(1,0,0,1));
+		//draw_line(base, tip, float4(0,1,0,1));
 		
 		for (uint vertexID = 2; vertexID < 4; ++vertexID)
 		{
@@ -315,10 +319,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			// rotate the patch into the tangent space of the emitting triangle:
 			patchPos = mul(patchPos, TBN);
 		
-			// simplistic wind effect only affects the top, but leaves the base as is:
-			const float3 wind = sample_wind(base, segmentID + patchPos.y);
-		
-			float3 position = base + patchPos + wind;
+			float3 position = base + patchPos;
 		
 			if (xHairFlags & HAIR_FLAG_UNORM_POS)
 			{
@@ -370,5 +371,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		// Offset next segment root to current tip:
 		base = tip;
+		target = normal;
 	}
 }
