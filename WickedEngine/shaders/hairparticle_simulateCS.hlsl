@@ -175,7 +175,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		normal = normalize(normal);
 
 		float3 tip = base + normal * len;
-		float3 midpoint = lerp(base, tip, 0.5);
+		float3 midpoint = (base + tip) * 0.5;
 
 		// Accumulate forces, apply colliders:
 		half3 force = 0;
@@ -258,7 +258,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		// Pull back to rest position:
 		force += (target - normal) * xHairStiffness;
-
 		force *= delta_time;
 
 		// Simulation buffer load:
