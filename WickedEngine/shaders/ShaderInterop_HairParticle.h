@@ -9,9 +9,7 @@
 struct PatchSimulationData
 {
 	float3 position;
-	uint tangent_random;
 	uint3 normal_velocity; // packed fp16
-	uint binormal_length;
 };
 
 enum HAIR_FLAGS

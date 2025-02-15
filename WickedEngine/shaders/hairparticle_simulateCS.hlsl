@@ -74,22 +74,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	half3 tangent = normalize(mul(half3(hemispherepoint_cos(rng.next_float(), rng.next_float()).xy, 0), get_tangentspace(target)));
 	half3 binormal = cross(target, tangent);
 	half strand_length = attribute_at_bary(length0, length1, length2, bary);
-
-	uint tangent_random = 0;
-	tangent_random |= (uint)((uint)(tangent.x * 127.5 + 127.5) << 0);
-	tangent_random |= (uint)((uint)(tangent.y * 127.5 + 127.5) << 8);
-	tangent_random |= (uint)((uint)(tangent.z * 127.5 + 127.5) << 16);
-	tangent_random |= (uint)(rng.next_float() * 255) << 24;
 	
 	const uint currentFrame = uint(noise_gradient_3D(position * xHairUniformity) * 1000) % xHairAtlasRectCount;
 	const HairParticleAtlasRect atlas_rect = xHairAtlasRects[currentFrame];
-
-	uint binormal_length = 0;
-	binormal_length |= (uint)((uint)(binormal.x * 127.5 + 127.5) << 0);
-	binormal_length |= (uint)((uint)(binormal.y * 127.5 + 127.5) << 8);
-	binormal_length |= (uint)((uint)(binormal.z * 127.5 + 127.5) << 16);
-	binormal_length |= (uint)(lerp(1, rng.next_float(), saturate(xHairRandomness)) * strand_length * 255) << 24;
-
+	
 	// Identifies the hair strand root particle:
 	const uint strandID = DTid.x * xHairSegmentCount;
 	
@@ -100,11 +88,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	const float distsq = dot(diff, diff);
 	const bool distance_culled = distsq > sqr(xHairViewDistance);
 	
-	float len = (binormal_length >> 24) & 0x000000FF;
-	len /= 255.0;
+	half len = lerp(1, rng.next_float(), saturate(xHairRandomness)) * strand_length;
 	len *= xHairLength;
 	len *= atlas_rect.size;
-	len /= (float)xHairSegmentCount;
+	len /= (half)xHairSegmentCount;
 	const float2 frame = float2(atlas_rect.aspect * xHairAspect * xHairSegmentCount, 1) * len * 0.5;
 	
 	const uint gfx_vertexcount_per_strand = xHairSegmentCount * 2 + 2;
@@ -162,8 +149,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	{
 		// Identifies the hair strand segment particle:
 		const uint particleID = strandID + segmentID;
-		simulationBuffer[particleID].tangent_random = tangent_random;
-		simulationBuffer[particleID].binormal_length = binormal_length;
 
 		if (xHairFlags & HAIR_FLAG_REGENERATE_FRAME)
 		{
