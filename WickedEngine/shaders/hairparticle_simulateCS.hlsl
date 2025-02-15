@@ -307,7 +307,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			}
 			
 			vertexBuffer_POS[v0] = float4(position, 0);
-			vertexBuffer_NOR[v0] = half4(normalize(normal + wind), 0);
+			vertexBuffer_NOR[v0] = half4(normal, 0);
 			vertexBuffer_UVS[v0] = uv.xyxy; // a second uv set could be used here
 			
 			if (distance_culled)
