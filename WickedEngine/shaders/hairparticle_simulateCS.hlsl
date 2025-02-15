@@ -100,9 +100,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	const uint gfx_vertexcount_per_strand = xHairSegmentCount * 2 + 2;
 	uint v0 = DTid.x * gfx_vertexcount_per_strand;
 
-	//draw_line(base, base + tangent, float4(1,0,0,1));
-	//draw_line(base, base + target, float4(0,1,0,1));
-	//draw_line(base, base + binormal, float4(0,0,1,1));
+	//draw_line(base, base + tangent, float4(1, 0, 0, 1));
+	//draw_line(base, base + target, float4(0, 1, 0, 1));
+	//draw_line(base, base + binormal, float4(0, 0, 1, 1));
 
 	// Bottom vertices:
 	half3x3 TBN = half3x3(tangent, target, binormal);
@@ -265,6 +265,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			}
 		}
 
+		// Don't allow tail to go below the axis plane:
+		float below_plane = plane_point_distance(base, boneAxis, tail_next);
+		if (below_plane < 0)
+		{
+			tail_next -= boneAxis * below_plane;
+		}
+
 		// Store simulation:
 		simulationBuffer[particleID].prevTail = tail_current;
 		simulationBuffer[particleID].currentTail = tail_next;
@@ -280,6 +287,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		binormal = cross(normal_bend, tangent);
 		tangent = cross(binormal, normal_bend);
 		TBN = half3x3(tangent, normal_bend, binormal);
+		
+		//draw_line(base, base + tangent, float4(1, 0, 0, 1));
+		//draw_line(base, base + normal, float4(0, 1, 0, 1));
+		//draw_line(base, base + binormal, float4(0, 0, 1, 1));
 		
 		for (uint vertexID = 2; vertexID < 4; ++vertexID)
 		{
