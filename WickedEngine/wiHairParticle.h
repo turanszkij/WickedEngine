@@ -83,7 +83,8 @@ namespace wi
 		uint32_t segmentCount = 1;
 		uint32_t randomSeed = 1;
 		float length = 1.0f;
-		float stiffness = 10.0f;
+		float stiffness = 0.5f;
+		float drag = 0.1f;
 		float randomness = 0.2f;
 		float viewDistance = 200;
 		wi::vector<float> vertex_lengths;

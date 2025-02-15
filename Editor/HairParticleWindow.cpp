@@ -114,7 +114,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	widthSlider.SetTooltip("Set hair strand width multiplier. This only scales the hair particles horizontally.");
 	AddWidget(&widthSlider);
 
-	stiffnessSlider.Create(0, 20, 5, 1000, "Stiffness: ");
+	stiffnessSlider.Create(0, 10, 0.5f, 100, "Stiffness: ");
 	stiffnessSlider.SetSize(XMFLOAT2(wid, hei));
 	stiffnessSlider.SetPos(XMFLOAT2(x, y += step));
 	stiffnessSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -127,10 +127,28 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 			hair->stiffness = args.fValue;
 			hair->SetDirty();
 		}
-	});
+		});
 	stiffnessSlider.SetEnabled(false);
 	stiffnessSlider.SetTooltip("Set hair strand stiffness, how much it tries to get back to rest position.");
 	AddWidget(&stiffnessSlider);
+
+	dragSlider.Create(0, 1, 0.5f, 100, "Drag: ");
+	dragSlider.SetSize(XMFLOAT2(wid, hei));
+	dragSlider.SetPos(XMFLOAT2(x, y += step));
+	dragSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			wi::HairParticleSystem* hair = scene.hairs.GetComponent(x.entity);
+			if (hair == nullptr)
+				continue;
+			hair->drag = args.fValue;
+			hair->SetDirty();
+		}
+		});
+	dragSlider.SetEnabled(false);
+	dragSlider.SetTooltip("Set hair strand drag, how much its movement slows down over time.");
+	AddWidget(&dragSlider);
 
 	randomnessSlider.Create(0, 1, 0.2f, 1000, "Randomness: ");
 	randomnessSlider.SetSize(XMFLOAT2(wid, hei));
@@ -385,6 +403,7 @@ void HairParticleWindow::SetEntity(Entity entity)
 		lengthSlider.SetValue(hair->length);
 		widthSlider.SetValue(hair->width);
 		stiffnessSlider.SetValue(hair->stiffness);
+		dragSlider.SetValue(hair->drag);
 		randomnessSlider.SetValue(hair->randomness);
 		countSlider.SetValue((float)hair->strandCount);
 		segmentcountSlider.SetValue((float)hair->segmentCount);
@@ -508,6 +527,7 @@ void HairParticleWindow::ResizeLayout()
 	add(lengthSlider);
 	add(widthSlider);
 	add(stiffnessSlider);
+	add(dragSlider);
 	add(randomnessSlider);
 	add(randomSeedSlider);
 	add(viewDistanceSlider);

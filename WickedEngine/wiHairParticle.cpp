@@ -413,6 +413,7 @@ namespace wi
 			hcb.xHairAspect = hair.width * (float)std::max(1u, desc.width) / (float)std::max(1u, desc.height);
 			hcb.xHairLength = hair.length;
 			hcb.xHairStiffness = hair.stiffness;
+			hcb.xHairDrag = hair.drag;
 			hcb.xHairRandomness = hair.randomness;
 			hcb.xHairStrandCount = hair.strandCount;
 			hcb.xHairSegmentCount = std::max(hair.segmentCount, 1u);
@@ -627,6 +628,16 @@ namespace wi
 					archive >> atlas_rects[i].size;
 				}
 			}
+
+			if (seri.GetVersion() >= 2)
+			{
+				archive >> drag;
+			}
+			else
+			{
+				// Old stiffness remap to new:
+				stiffness *= 0.05f;
+			}
 		}
 		else
 		{
@@ -654,6 +665,11 @@ namespace wi
 					archive << atlas_rects[i].texMulAdd;
 					archive << atlas_rects[i].size;
 				}
+			}
+
+			if (seri.GetVersion() >= 2)
+			{
+				archive << drag;
 			}
 		}
 	}

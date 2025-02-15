@@ -3,8 +3,11 @@
 #include "ShaderInterop_HairParticle.h"
 
 static const float3 HAIRPATCH[] = {
+	// root (for every strand):
 	float3(-1, -1, 0),
 	float3(1, -1, 0),
+
+	// cap (for every segment of every strand):
 	float3(-1, 1, 0),
 	float3(1, 1, 0),
 };
@@ -102,7 +105,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	//draw_line(base, base + binormal, float4(0,0,1,1));
 
 	// Bottom vertices:
-	half3x3 TBN_bottom = half3x3(tangent, target, binormal);
+	half3x3 TBN = half3x3(tangent, target, binormal);
 	for (uint vertexID = 0; vertexID < 2; ++vertexID)
 	{
 		float3 patchPos = HAIRPATCH[vertexID];
@@ -118,7 +121,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		patchPos.xyz *= frame.xyx;
 
 		// rotate the patch into the tangent space of the emitting triangle:
-		patchPos = mul(patchPos, TBN_bottom);
+		patchPos = mul(patchPos, TBN);
 
 		float3 position = base + patchPos;
 
@@ -143,7 +146,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	// Bend down to camera up vector to avoid seeing flat planes from above
 	const float3 bend = GetCamera().up * (1 - saturate(dot(target, GetCamera().up))) * 0.8;
 	
-	const float delta_time = clamp(GetFrame().delta_time, 0, 1.0 / 30.0); // clamp delta time to avoid simulation blowing up
+	const float dt = clamp(GetFrame().delta_time, 0, 1.0 / 30.0); // clamp delta time to avoid simulation blowing up
+
+	const float stiffnessForce = xHairStiffness;
+	const float dragForce = xHairDrag;
+	const float3 boneAxis = target;
+	const float boneLength = len;
 	
 	for (uint segmentID = 0; segmentID < xHairSegmentCount; ++segmentID)
 	{
@@ -152,18 +160,24 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		if (xHairFlags & HAIR_FLAG_REGENERATE_FRAME)
 		{
-			simulationBuffer[particleID].position = base;
-			simulationBuffer[particleID].normal_velocity = f32tof16(target);
+			float3 tail = base + boneAxis * boneLength;
+			simulationBuffer[particleID].prevTail = tail;
+			simulationBuffer[particleID].currentTail = tail;
 		}
-
-		half3 normal = f16tof32(simulationBuffer[particleID].normal_velocity);
-		normal = normalize(normal);
-
-		float3 tip = base + normal * len;
-		float3 midpoint = (base + tip) * 0.5;
+		
+		float3 tail_current = simulationBuffer[particleID].currentTail;
+		float3 tail_prev = simulationBuffer[particleID].prevTail;
+		float3 inertia = (tail_current - tail_prev) * (1 - dragForce);
+		float3 stiffness = boneAxis * stiffnessForce;
+		float3 external = 0;
+		float3 wind = sample_wind(tail_current, ((float)segmentID + 1) / (float)xHairSegmentCount);
+		external += wind;
+		
+		float3 tail_next = tail_current + inertia + dt * (stiffness + external);
+		float3 to_tail = normalize(tail_next - base);
+		tail_next = base + to_tail * boneLength;
 
 		// Accumulate forces, apply colliders:
-		half3 force = 0;
 		for (uint i = forces().first_item(); i < forces().end_item(); ++i)
 		{
 			ShaderEntity entity = load_entity(i);
@@ -181,109 +195,91 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 					float3 N = normalize(A - B);
 					A -= N * range;
 					B += N * range;
-					float3 C = closest_point_on_segment(A, B, midpoint);
-					float3 dir = C - midpoint;
+					float3 C = closest_point_on_segment(A, B, tail_next);
+					float3 dir = C - tail_next;
 					float dist = length(dir);
 					dir /= dist;
 					dist = dist - range - len * 0.5;
 					if (dist < 0)
 					{
-						tip = tip - dir * dist;
+						tail_next += dir * dist;
+						to_tail = normalize(tail_next - base);
+						tail_next = base + to_tail * boneLength;
 					}
 				}
 				else
 				{
-					float3 closest_point = closest_point_on_segment(base, tip, entity.position);
+					float3 closest_point = closest_point_on_segment(base, tail_next, entity.position);
 					float3 dir = entity.position - closest_point;
 					float dist = length(dir);
 					dir /= dist;
 
 					switch (type)
 					{
-					case ENTITY_TYPE_FORCEFIELD_POINT:
-						force += dir * entity.GetGravity() * (1 - saturate(dist / range));
-						break;
-					case ENTITY_TYPE_FORCEFIELD_PLANE:
-						force += entity.GetDirection() * entity.GetGravity() * (1 - saturate(dist / range));
-						break;
-					case ENTITY_TYPE_COLLIDER_SPHERE:
-						dist = dist - range - len;
-						if (dist < 0)
-						{
-							tip = tip - dir * dist;
-						}
-						break;
-					case ENTITY_TYPE_COLLIDER_PLANE:
-						dir = normalize(entity.GetDirection());
-						dist = plane_point_distance(entity.position, dir, closest_point);
-						if (dist < 0)
-						{
-							dir *= -1;
-							dist = abs(dist);
-						}
-						dist = dist - len;
-						if (dist < 0)
-						{
-							float4x4 planeProjection = load_entitymatrix(entity.GetMatrixIndex());
-							const float3 clipSpacePos = mul(planeProjection, float4(closest_point, 1)).xyz;
-							const float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
-							[branch]
-							if (is_saturated(uvw))
+						case ENTITY_TYPE_FORCEFIELD_POINT:
+							tail_next += dt * dir * entity.GetGravity() * (1 - saturate(dist / range));
+							to_tail = normalize(tail_next - base);
+							tail_next = base + to_tail * boneLength;
+							break;
+						case ENTITY_TYPE_FORCEFIELD_PLANE:
+							tail_next += dt * entity.GetDirection() * entity.GetGravity() * (1 - saturate(dist / range));
+							to_tail = normalize(tail_next - base);
+							tail_next = base + to_tail * boneLength;
+							break;
+						case ENTITY_TYPE_COLLIDER_SPHERE:
+							dist = dist - range - len;
+							if (dist < 0)
 							{
-								tip = tip + dir * dist;
+								tail_next += dir * dist;
+								to_tail = normalize(tail_next - base);
+								tail_next = base + to_tail * boneLength;
 							}
-						}
-						break;
-					default:
-						break;
+							break;
+						case ENTITY_TYPE_COLLIDER_PLANE:
+							dir = normalize(entity.GetDirection());
+							dist = plane_point_distance(entity.position, dir, closest_point);
+							if (dist < 0)
+							{
+								dir *= -1;
+								dist = abs(dist);
+							}
+							dist = dist - len;
+							if (dist < 0)
+							{
+								float4x4 planeProjection = load_entitymatrix(entity.GetMatrixIndex());
+								const float3 clipSpacePos = mul(planeProjection, float4(closest_point, 1)).xyz;
+								const float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
+								[branch]
+								if (is_saturated(uvw))
+								{
+									tail_next -= dir * dist;
+									to_tail = normalize(tail_next - base);
+									tail_next = base + to_tail * boneLength;
+								}
+							}
+							break;
+						default:
+							break;
 					}
 				}
 			}
 		}
 
-		// Pull back to rest position:
-		force += (target - normal) * xHairStiffness;
-		force *= delta_time;
+		// Store simulation:
+		simulationBuffer[particleID].prevTail = tail_current;
+		simulationBuffer[particleID].currentTail = tail_next;
 
-		// Simulation buffer load:
-		half3 velocity = f16tof32(simulationBuffer[particleID].normal_velocity >> 16u);
-
-		// Apply surface-movement-based velocity:
-		const float3 old_base = simulationBuffer[particleID].position;
-		const float3 old_normal = f16tof32(simulationBuffer[particleID].normal_velocity);
-		const float3 old_tip = old_base + old_normal * len;
-		const float3 surface_velocity = old_tip - tip;
-		velocity += surface_velocity;
+		//draw_point(tail_next, 0.1, float4(0,1,0,1));
+		//draw_line(base, tail_next, float4(1,0,0,1));
 		
-		const float3 wind = sample_wind(tip, ((float)segmentID + 1) / (float)xHairSegmentCount);
-		force += wind;
-
-		// Apply forces:
-		half3 newVelocity = velocity + force;
-		half3 newNormal = normal + newVelocity * delta_time;
-		newNormal = normalize(newNormal);
-		if (dot(target, newNormal) > 0.5) // clamp the offset
-		{
-			normal = newNormal;
-			velocity = newVelocity;
-		}
-
-		// Drag:
-		velocity *= 0.98;
-
-		// Store simulation data:
-		simulationBuffer[particleID].position = base;
-		simulationBuffer[particleID].normal_velocity = f32tof16(normal) | (f32tof16(velocity) << 16u);
-
+		half3 normal = to_tail;
+		
 		// Write out render buffers:
 		//	These must be persistent, not culled (raytracing, surfels...)
 		half3 normal_bend = normalize(normal + bend);
 		binormal = cross(normal_bend, tangent);
 		tangent = cross(binormal, normal_bend);
-		half3x3 TBN = half3x3(tangent, normal_bend, binormal);
-
-		//draw_point(base, 0.1, float4(1,0,0,1));
-		//draw_line(base, tip, float4(0,1,0,1));
+		TBN = half3x3(tangent, normal_bend, binormal);
 		
 		for (uint vertexID = 2; vertexID < 4; ++vertexID)
 		{
@@ -325,7 +321,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		// Frustum culling:
 		ShaderSphere sphere;
-		sphere.center = (base + tip) * 0.5;
+		sphere.center = (base + tail_next) * 0.5;
 		sphere.radius = len;
 		
 		bool visible = !distance_culled && GetCamera().frustum.intersects(sphere);
@@ -354,7 +350,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		}
 
 		// Offset next segment root to current tip:
-		base = tip;
+		base = tail_next;
 		target = normal;
 	}
 }
