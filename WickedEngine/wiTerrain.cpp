@@ -377,7 +377,6 @@ namespace wi::terrain
 				request.y = 0;
 			}
 		}
-		locker.unlock();
 	}
 
 	Terrain::Terrain()

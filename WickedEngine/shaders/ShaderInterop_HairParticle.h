@@ -8,10 +8,8 @@
 
 struct PatchSimulationData
 {
-	float3 position;
-	uint tangent_random;
-	uint3 normal_velocity; // packed fp16
-	uint binormal_length;
+	float3 prevTail;
+	float3 currentTail;
 };
 
 enum HAIR_FLAGS
@@ -37,7 +35,7 @@ CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
 	uint xHairFlags;
 	float xHairLength;
 	float xHairStiffness;
-	float xHairRandomness;
+	float xHairDrag;
 
 	uint xHairParticleCount;
 	uint xHairStrandCount;
@@ -49,8 +47,8 @@ CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
 	uint xHairInstanceIndex;
 	uint xHairLayerMask;
 
+	float xHairRandomness;
 	float xHairAspect;
-	float xHairPadding1;
 	float xHairUniformity;
 	uint xHairAtlasRectCount;
 

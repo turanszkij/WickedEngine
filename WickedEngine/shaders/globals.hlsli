@@ -884,6 +884,35 @@ inline min16uint2 GetTemporalAASampleRotation() { return uint2(GetFrame().tempor
 inline bool IsStaticSky() { return GetScene().globalenvmap >= 0; }
 inline half GetGIBoost() { return unpack_half2(GetFrame().giboost_packed).x; }
 
+// Indirect debug drawing functionality, useable from any shader:
+inline void draw_line(float3 a, float3 b, float4 color = 1)
+{
+	[branch]
+	if (GetFrame().indirect_debugbufferindex < 0)
+		return;
+	RWByteAddressBuffer indirect_debug_buffer = bindless_rwbuffers[descriptor_index(GetFrame().indirect_debugbufferindex)];
+	uint prevCount;
+	indirect_debug_buffer.InterlockedAdd(0, 2, prevCount); // VertexCountPerInstance += 2
+	struct DebugLine
+	{
+		float4 posA;
+		float4 colorA;
+		float4 posB;
+		float4 colorB;
+	} debugline;
+	debugline.posA = float4(a, 1);
+	debugline.posB = float4(b, 1);
+	debugline.colorA = color;
+	debugline.colorB = color;
+	indirect_debug_buffer.Store<DebugLine>(sizeof(IndirectDrawArgsInstanced) + sizeof(DebugLine) * prevCount / 2, debugline);
+}
+inline void draw_point(float3 pos, float size = 1, float4 color = 1)
+{
+	draw_line(pos - float3(size, 0, 0), pos + float3(size, 0, 0), color);
+	draw_line(pos - float3(0, size, 0), pos + float3(0, size, 0), color);
+	draw_line(pos - float3(0, 0, size), pos + float3(0, 0, size), color);
+}
+
 // Mie scaterring approximated with Henyey-Greenstein phase function.
 //	https://www.alexandre-pestana.com/volumetric-lights/
 #define G_SCATTERING 0.66

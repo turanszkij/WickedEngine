@@ -109,8 +109,12 @@ namespace wi
 				bd.misc_flags |= ResourceMiscFlag::RAY_TRACING;
 			}
 
+			const uint32_t gfx_vertexcount_per_strand = segmentCount * 2 + 2;
+			const uint32_t gfx_vertexcount = strandCount * gfx_vertexcount_per_strand;
+			const uint32_t gfx_indexcount = 6 * particleCount;
+
 			const size_t position_stride = GetFormatStride(position_format);
-			const Format ib_format = GetIndexBufferFormatRaw(particleCount * 4);
+			const Format ib_format = GetIndexBufferFormatRaw(gfx_vertexcount);
 			const uint64_t alignment =
 				device->GetMinOffsetAlignment(&bd) *
 				sizeof(IndirectDrawArgsIndexedInstanced) * // additional alignment
@@ -118,14 +122,14 @@ namespace wi
 				;
 
 			simulation_view.size = sizeof(PatchSimulationData) * particleCount;
-			vb_pos[0].size = position_stride * 4 * particleCount;
-			vb_pos[1].size = position_stride * 4 * particleCount;
-			vb_nor.size = sizeof(MeshComponent::Vertex_NOR) * 4 * particleCount;
-			vb_uvs.size = sizeof(MeshComponent::Vertex_UVS) * 4 * particleCount;
-			wetmap.size = sizeof(uint16_t) * 4 * particleCount;
-			ib_culled.size = GetFormatStride(ib_format) * 6 * particleCount;
+			vb_pos[0].size = position_stride * gfx_vertexcount;
+			vb_pos[1].size = position_stride * gfx_vertexcount;
+			vb_nor.size = sizeof(MeshComponent::Vertex_NOR) * gfx_vertexcount;
+			vb_uvs.size = sizeof(MeshComponent::Vertex_UVS) * gfx_vertexcount;
+			wetmap.size = sizeof(uint16_t) * gfx_vertexcount;
+			ib_culled.size = GetFormatStride(ib_format) * gfx_indexcount;
 			indirect_view.size = sizeof(IndirectDrawArgsIndexedInstanced);
-			vb_pos_raytracing.size = position_stride * 4 * particleCount;
+			vb_pos_raytracing.size = position_stride * gfx_vertexcount;
 
 			bd.size =
 				AlignTo(indirect_view.size, alignment) +
@@ -217,7 +221,40 @@ namespace wi
 			vb_pos_raytracing.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_pos_raytracing.subresource_uav);
 			buffer_offset += vb_pos_raytracing.size;
 
-			primitiveBuffer = wi::renderer::GetIndexBufferForQuads(particleCount);
+
+			bd = {};
+			bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::INDEX_BUFFER;
+			if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+			{
+				bd.misc_flags |= ResourceMiscFlag::RAY_TRACING;
+			}
+			bd.format = Format::R32_UINT;
+			bd.stride = GetFormatStride(bd.format);
+			bd.size = bd.stride * gfx_indexcount;
+			auto fill_ib = [&](void* dst)
+			{
+				uint32_t* primitiveData = (uint32_t*)dst;
+				uint32_t i = 0;
+				uint32_t v0 = 0;
+				for (uint32_t strandID = 0; strandID < strandCount; ++strandID)
+				{
+					for (uint32_t segmentID = 0; segmentID < segmentCount; ++segmentID)
+					{
+						primitiveData[i++] = v0 + 0;
+						primitiveData[i++] = v0 + 1;
+						primitiveData[i++] = v0 + 2;
+						primitiveData[i++] = v0 + 2;
+						primitiveData[i++] = v0 + 1;
+						primitiveData[i++] = v0 + 3;
+						v0 += 2;
+					}
+					v0 += 2;
+				}
+				assert(v0 == gfx_vertexcount);
+				assert(i == gfx_indexcount);
+			};
+			device->CreateBuffer2(&bd, fill_ib, &primitiveBuffer);
+			device->SetName(&primitiveBuffer, "HairParticleSystem::primitiveBuffer");
 		}
 
 
@@ -376,6 +413,7 @@ namespace wi
 			hcb.xHairAspect = hair.width * (float)std::max(1u, desc.width) / (float)std::max(1u, desc.height);
 			hcb.xHairLength = hair.length;
 			hcb.xHairStiffness = hair.stiffness;
+			hcb.xHairDrag = hair.drag;
 			hcb.xHairRandomness = hair.randomness;
 			hcb.xHairStrandCount = hair.strandCount;
 			hcb.xHairSegmentCount = std::max(hair.segmentCount, 1u);
@@ -590,6 +628,16 @@ namespace wi
 					archive >> atlas_rects[i].size;
 				}
 			}
+
+			if (seri.GetVersion() >= 2)
+			{
+				archive >> drag;
+			}
+			else
+			{
+				// Old stiffness remap to new:
+				stiffness *= 0.05f;
+			}
 		}
 		else
 		{
@@ -617,6 +665,11 @@ namespace wi
 					archive << atlas_rects[i].texMulAdd;
 					archive << atlas_rects[i].size;
 				}
+			}
+
+			if (seri.GetVersion() >= 2)
+			{
+				archive << drag;
 			}
 		}
 	}

@@ -23,6 +23,7 @@ public:
 	wi::gui::Slider lengthSlider;
 	wi::gui::Slider widthSlider;
 	wi::gui::Slider stiffnessSlider;
+	wi::gui::Slider dragSlider;
 	wi::gui::Slider randomnessSlider;
 	wi::gui::Slider countSlider;
 	wi::gui::Slider segmentcountSlider;

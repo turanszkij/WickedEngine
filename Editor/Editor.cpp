@@ -2024,8 +2024,9 @@ void EditorComponent::Update(float dt)
 								for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 								{
 									Entity entity = scene.hairs.GetEntity(i);
+									const wi::HairParticleSystem& hair = scene.hairs[i];
 									HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
-									if (hier != nullptr && hier->parentID == hovered.entity)
+									if (hair.meshID == hovered.entity || (hier != nullptr && hier->parentID == hovered.entity))
 									{
 										XMVECTOR P = XMLoadFloat3(&hovered.position);
 										P += XMLoadFloat3(&hovered.normal) * 2;
@@ -2036,8 +2037,8 @@ void EditorComponent::Update(float dt)
 										ForceFieldComponent& force = scene.forces.Create(grass_interaction_entity);
 										TransformComponent& transform = scene.transforms.Create(grass_interaction_entity);
 										force.type = ForceFieldComponent::Type::Point;
-										force.gravity = -80;
-										force.range = 3;
+										force.gravity = -40;
+										force.range = 2;
 										transform.Translate(P);
 										break;
 									}
