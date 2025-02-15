@@ -4405,14 +4405,7 @@ namespace wi::scene
 				// LOD select:
 				if (mesh.subsets_per_lod > 0)
 				{
-					// LOD selection based on screen projection:
-					XMFLOAT4 rect = aabb.ProjectToScreen(camera.GetViewProjection());
-					float width = rect.z - rect.x;
-					float height = rect.w - rect.y;
-					float maxdim = std::max(width, height);
-					float lod_max = float(mesh.GetLODCount() - 1);
-					float lod = clamp(std::log2(1.0f / maxdim) + object.lod_bias, 0.0f, lod_max);
-					object.lod = uint32_t(lod);
+					object.lod = ComputeObjectLODForView(object, aabb, mesh, camera.GetViewProjection());
 				}
 
 				union SortBits
@@ -7170,6 +7163,17 @@ namespace wi::scene
 		if (!ocean.IsValid())
 			return worldPosition;
 		return ocean.GetDisplacedPosition(worldPosition);
+	}
+
+	uint32_t Scene::ComputeObjectLODForView(const ObjectComponent& object, const AABB& aabb, const MeshComponent& mesh, const XMMATRIX& ViewProjection) const
+	{
+		XMFLOAT4 rect = aabb.ProjectToScreen(ViewProjection);
+		float width = rect.z - rect.x;
+		float height = rect.w - rect.y;
+		float maxdim = std::max(width, height);
+		float lod_max = float(mesh.GetLODCount() - 1);
+		float lod = clamp(std::log2(1.0f / maxdim) + object.lod_bias, 0.0f, lod_max);
+		return uint32_t(lod);
 	}
 
 	bool Scene::IsWetmapProcessingRequired() const

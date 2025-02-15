@@ -199,16 +199,18 @@ struct RenderBatch
 	uint32_t meshIndex;
 	uint32_t instanceIndex;
 	uint16_t distance;
-	uint16_t camera_mask;
+	uint8_t camera_mask;
+	uint8_t lod_override; // if overriding the base object LOD is needed, specify less than 0xFF in this
 	uint32_t sort_bits; // an additional bitmask for sorting only, it should be used to reduce pipeline changes
 
-	inline void Create(uint32_t meshIndex, uint32_t instanceIndex, float distance, uint32_t sort_bits, uint16_t camera_mask = 0xFFFF)
+	inline void Create(uint32_t meshIndex, uint32_t instanceIndex, float distance, uint32_t sort_bits, uint8_t camera_mask = 0xFF, uint8_t lod_override = 0xFF)
 	{
 		this->meshIndex = meshIndex;
 		this->instanceIndex = instanceIndex;
 		this->distance = XMConvertFloatToHalf(distance);
 		this->sort_bits = sort_bits;
 		this->camera_mask = camera_mask;
+		this->lod_override = lod_override;
 	}
 
 	inline float GetDistance() const
@@ -290,9 +292,9 @@ struct RenderQueue
 	{
 		batches.clear();
 	}
-	inline void add(uint32_t meshIndex, uint32_t instanceIndex, float distance, uint32_t sort_bits, uint16_t camera_mask = 0xFFFF)
+	inline void add(uint32_t meshIndex, uint32_t instanceIndex, float distance, uint32_t sort_bits, uint8_t camera_mask = 0xFF, uint8_t lod_override = 0xFF)
 	{
-		batches.emplace_back().Create(meshIndex, instanceIndex, distance, sort_bits, camera_mask);
+		batches.emplace_back().Create(meshIndex, instanceIndex, distance, sort_bits, camera_mask, lod_override);
 	}
 	inline void sort_transparent()
 	{
@@ -2918,8 +2920,8 @@ void RenderMeshes(
 		uint32_t dataOffset = 0;
 		uint8_t userStencilRefOverride = 0;
 		bool forceAlphatestForDithering = false;
+		uint8_t lod = 0;
 		AABB aabb;
-		uint32_t lod = 0;
 	} instancedBatch = {};
 
 	uint32_t prev_stencilref = STENCILREF_DEFAULT;
@@ -3116,11 +3118,12 @@ void RenderMeshes(
 		const ObjectComponent& instance = vis.scene->objects[instanceIndex];
 		const AABB& instanceAABB = vis.scene->aabb_objects[instanceIndex];
 		const uint8_t userStencilRefOverride = instance.userStencilRef;
+		const uint8_t lod = batch.lod_override == 0xFF ? (uint8_t)instance.lod : batch.lod_override;
 
 		// When we encounter a new mesh inside the global instance array, we begin a new RenderBatch:
 		if (meshIndex != instancedBatch.meshIndex ||
 			userStencilRefOverride != instancedBatch.userStencilRefOverride ||
-			instance.lod != instancedBatch.lod
+			lod != instancedBatch.lod
 			)
 		{
 			batch_flush();
@@ -3132,7 +3135,7 @@ void RenderMeshes(
 			instancedBatch.userStencilRefOverride = userStencilRefOverride;
 			instancedBatch.forceAlphatestForDithering = 0;
 			instancedBatch.aabb = AABB();
-			instancedBatch.lod = instance.lod;
+			instancedBatch.lod = lod;
 		}
 
 		const float dither = std::max(instance.GetTransparency(), std::max(0.0f, batch.GetDistance() - instance.fadeDistance) / instance.radius);
@@ -6171,18 +6174,21 @@ void DrawShadowmaps(
 						if (object.IsRenderable() && object.IsCastingShadow())
 						{
 							// Determine which cascades the object is contained in:
-							uint16_t camera_mask = 0;
+							uint8_t camera_mask = 0;
+							uint8_t shadow_lod = 0xFF;
 							for (uint32_t cascade = 0; cascade < cascade_count; ++cascade)
 							{
 								if ((cascade < (cascade_count - object.cascadeMask)) && shcams[cascade].frustum.CheckBoxFast(aabb))
 								{
 									camera_mask |= 1 << cascade;
+									uint8_t candidate_lod = (uint8_t)vis.scene->ComputeObjectLODForView(object, aabb, vis.scene->meshes[object.mesh_index], shcams[cascade].view_projection);
+									shadow_lod = std::min(shadow_lod, candidate_lod);
 								}
 							}
 							if (camera_mask == 0)
 								continue;
 
-							renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits, camera_mask);
+							renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits, camera_mask, shadow_lod);
 
 							const uint32_t filterMask = object.GetFilterMask();
 							if (filterMask & FILTER_TRANSPARENT || filterMask & FILTER_WATER)
@@ -6288,7 +6294,11 @@ void DrawShadowmaps(
 						const ObjectComponent& object = vis.scene->objects[i];
 						if (object.IsRenderable() && object.IsCastingShadow())
 						{
-							renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits);
+							uint8_t shadow_lod = 0xFF;
+							uint8_t candidate_lod = (uint8_t)vis.scene->ComputeObjectLODForView(object, aabb, vis.scene->meshes[object.mesh_index], shcam.view_projection);
+							shadow_lod = std::min(shadow_lod, candidate_lod);
+
+							renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits, 0xFF, shadow_lod);
 
 							const uint32_t filterMask = object.GetFilterMask();
 							if (filterMask & FILTER_TRANSPARENT || filterMask & FILTER_WATER)
@@ -6437,18 +6447,21 @@ void DrawShadowmaps(
 						if (object.IsRenderable() && object.IsCastingShadow())
 						{
 							// Check for each frustum, if object is visible from it:
-							uint16_t camera_mask = 0;
+							uint8_t camera_mask = 0;
+							uint8_t shadow_lod = 0xFF;
 							for (uint32_t camera_index = 0; camera_index < camera_count; ++camera_index)
 							{
 								if (frusta[camera_index].CheckBoxFast(aabb))
 								{
 									camera_mask |= 1 << camera_index;
+									uint8_t candidate_lod = (uint8_t)vis.scene->ComputeObjectLODForView(object, aabb, vis.scene->meshes[object.mesh_index], cameras[camera_index].view_projection);
+									shadow_lod = std::min(shadow_lod, candidate_lod);
 								}
 							}
 							if (camera_mask == 0)
 								continue;
 
-							renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits, camera_mask);
+							renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits, camera_mask, shadow_lod);
 
 							const uint32_t filterMask = object.GetFilterMask();
 							if (filterMask & FILTER_TRANSPARENT || filterMask & FILTER_WATER)
@@ -6544,7 +6557,7 @@ void DrawShadowmaps(
 					const ObjectComponent& object = vis.scene->objects[i];
 					if (object.IsRenderable())
 					{
-						uint16_t camera_mask = 0;
+						uint8_t camera_mask = 0;
 						if (shcam.frustum.CheckBoxFast(aabb))
 						{
 							camera_mask |= 1 << 0;
@@ -8649,7 +8662,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 					const ObjectComponent& object = vis.scene->objects[i];
 					if (object.IsRenderable() && !object.IsNotVisibleInReflections())
 					{
-						uint16_t camera_mask = 0;
+						uint8_t camera_mask = 0;
 						for (uint32_t camera_index = 0; camera_index < arraysize(cameras); ++camera_index)
 						{
 							if (cameras[camera_index].frustum.CheckBoxFast(aabb))

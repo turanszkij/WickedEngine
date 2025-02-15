@@ -574,6 +574,9 @@ namespace wi::scene
 		//	Note that the input position to this function will be taken on the XZ plane and modified by the displacement map's XZ value, and the Y (vertical) position will be taken from the ocean water height and displacement map only.
 		XMFLOAT3 GetOceanPosAt(const XMFLOAT3& worldPosition) const;
 
+		// Computes the LOD for an object AABB for a given view projection matrix
+		uint32_t ComputeObjectLODForView(const ObjectComponent& object, const wi::primitive::AABB& aabb, const MeshComponent& mesh, const XMMATRIX& ViewProjection) const;
+
 	private:
 		void UpdateHumanoidFacings();
 
