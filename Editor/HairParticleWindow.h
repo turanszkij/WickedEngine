@@ -20,13 +20,16 @@ public:
 
 	wi::gui::Label infoLabel;
 	wi::gui::ComboBox meshComboBox;
+	wi::gui::CheckBox cameraBendCheckbox;
 	wi::gui::Slider lengthSlider;
 	wi::gui::Slider widthSlider;
 	wi::gui::Slider stiffnessSlider;
 	wi::gui::Slider dragSlider;
+	wi::gui::Slider gravityPowerSlider;
 	wi::gui::Slider randomnessSlider;
 	wi::gui::Slider countSlider;
 	wi::gui::Slider segmentcountSlider;
+	wi::gui::Slider billboardcountSlider;
 	wi::gui::Slider randomSeedSlider;
 	wi::gui::Slider viewDistanceSlider;
 	wi::gui::Slider uniformitySlider;

@@ -97,57 +97,80 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	len /= (half)xHairSegmentCount;
 	const float2 frame = float2(atlas_rect.aspect * xHairAspect * xHairSegmentCount, 1) * len * 0.5;
 	
-	const uint gfx_vertexcount_per_strand = xHairSegmentCount * 2 + 2;
+	const uint gfx_vertexcount_per_strand = (xHairSegmentCount * 2 + 2) * xHairBillboardCount;
+	const uint gfx_indexcount_per_particle = 6 * xHairBillboardCount;
 	uint v0 = DTid.x * gfx_vertexcount_per_strand;
 
 	//draw_line(base, base + tangent, float4(1, 0, 0, 1));
 	//draw_line(base, base + target, float4(0, 1, 0, 1));
 	//draw_line(base, base + binormal, float4(0, 0, 1, 1));
 
-	// Bottom vertices:
-	half3x3 TBN = half3x3(tangent, target, binormal);
-	for (uint vertexID = 0; vertexID < 2; ++vertexID)
+	float3 bend = 0;
+	if (xHairFlags & HAIR_FLAG_CAMERA_BEND)
 	{
-		float3 patchPos = HAIRPATCH[vertexID];
-		float2 uv = patchPos.xy;
-		uv = uv * float2(0.5, 0.5) + 0.5;
-		uv.y = 1 - uv.y;
-		patchPos.y += 1;
-
-		// Sprite sheet UV transform:
-		uv.xy = mad(uv.xy, atlas_rect.texMulAdd.xy, atlas_rect.texMulAdd.zw);
-
-		// scale the billboard by the texture aspect:
-		patchPos.xyz *= frame.xyx;
-
-		// rotate the patch into the tangent space of the emitting triangle:
-		patchPos = mul(patchPos, TBN);
-
-		float3 position = base + patchPos;
-
-		if (xHairFlags & HAIR_FLAG_UNORM_POS)
-		{
-			position = inverse_lerp(geometry.aabb_min, geometry.aabb_max, position); // remap to UNORM
-		}
-			
-		vertexBuffer_POS[v0] = float4(position, 0);
-		vertexBuffer_NOR[v0] = half4(target, 0);
-		vertexBuffer_UVS[v0] = uv.xyxy; // a second uv set could be used here
-			
-		if (distance_culled)
-		{
-			position = 0; // We can only zero out for raytracing geometry to keep correct prevpos swapping motion vectors!
-		}
-		vertexBuffer_POS_RT[v0] = float4(position, 0);
-
-		v0++;
+		// Bend down to camera up vector to avoid seeing flat planes from above
+		bend = GetCamera().up * (1 - saturate(dot(target, GetCamera().up))) * 0.8;
 	}
 
-	// Bend down to camera up vector to avoid seeing flat planes from above
-	const float3 bend = GetCamera().up * (1 - saturate(dot(target, GetCamera().up))) * 0.8;
+	// Bottom vertices:
+	half3x3 TBN = half3x3(tangent, normalize(target + bend), binormal);
+	rng.init(uint2(xHairRandomSeed, DTid.x), 1); // reinit random for consistent billboard variation!
+	for (uint billboardID = 0; billboardID < xHairBillboardCount; ++billboardID)
+	{
+		float siz = billboardID == 0 ? 1 : lerp(0.2, 1, rng.next_float());
+		float rot = billboardID == 0 ? 0 : (rng.next_float() * PI);
+		float2 rot_sincos;
+		sincos(rot, rot_sincos.x, rot_sincos.y);
+		float3x3 variationMatrix = float3x3(
+			rot_sincos.y * siz, 0, -rot_sincos.x,
+			0, siz, 0,
+			rot_sincos.x, 0, rot_sincos.y * siz
+		);
+		
+		for (uint vertexID = 0; vertexID < 2; ++vertexID)
+		{
+			float3 patchPos = HAIRPATCH[vertexID];
+			float2 uv = patchPos.xy;
+			uv = uv * float2(0.5, 0.5) + 0.5;
+			uv.y = 1 - uv.y;
+			patchPos.y += 1;
+
+			// Sprite sheet UV transform:
+			uv.xy = mad(uv.xy, atlas_rect.texMulAdd.xy, atlas_rect.texMulAdd.zw);
+
+			// scale the billboard by the texture aspect:
+			patchPos.xyz *= frame.xyx;
+
+			// variation based on billboardID:
+			patchPos = mul(patchPos, variationMatrix);
+
+			// rotate the patch into the tangent space of the emitting triangle:
+			patchPos = mul(patchPos, TBN);
+
+			float3 position = base + patchPos;
+
+			if (xHairFlags & HAIR_FLAG_UNORM_POS)
+			{
+				position = inverse_lerp(geometry.aabb_min, geometry.aabb_max, position); // remap to UNORM
+			}
+			
+			vertexBuffer_POS[v0] = float4(position, 0);
+			vertexBuffer_NOR[v0] = half4(target, 0);
+			vertexBuffer_UVS[v0] = uv.xyxy; // a second uv set could be used here
+			
+			if (distance_culled)
+			{
+				position = 0; // We can only zero out for raytracing geometry to keep correct prevpos swapping motion vectors!
+			}
+			vertexBuffer_POS_RT[v0] = float4(position, 0);
+
+			v0++;
+		}
+	}
 	
 	const float dt = clamp(GetFrame().delta_time, 0, 1.0 / 30.0); // clamp delta time to avoid simulation blowing up
 
+	const float gravityPower = xHairGravityPower;
 	const float stiffnessForce = xHairStiffness;
 	const float dragForce = xHairDrag;
 	const float3 boneAxis = target;
@@ -169,7 +192,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		float3 tail_prev = simulationBuffer[particleID].prevTail;
 		float3 inertia = (tail_current - tail_prev) * (1 - dragForce);
 		float3 stiffness = boneAxis * stiffnessForce;
-		float3 external = 0;
+		float3 external = gravityPower * float3(0, -1, 0);
 		float3 wind = sample_wind(tail_current, ((float)segmentID + 1) / (float)xHairSegmentCount);
 		external += wind;
 		
@@ -291,43 +314,60 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		//draw_line(base, base + tangent, float4(1, 0, 0, 1));
 		//draw_line(base, base + normal, float4(0, 1, 0, 1));
 		//draw_line(base, base + binormal, float4(0, 0, 1, 1));
-		
-		for (uint vertexID = 2; vertexID < 4; ++vertexID)
+	
+		rng.init(uint2(xHairRandomSeed, DTid.x), 1); // reinit random for consistent billboard variation!
+		for(uint billboardID = 0; billboardID < xHairBillboardCount; ++billboardID)
 		{
-			float3 patchPos = HAIRPATCH[vertexID];
-			float2 uv = patchPos.xy;
-			uv = uv * float2(0.5, 0.5) + 0.5;
-			uv.y = lerp((float)segmentID / (float)xHairSegmentCount, ((float)segmentID + 1) / (float)xHairSegmentCount, uv.y);
-			uv.y = 1 - uv.y;
-			patchPos.y += 1;
-		
-			// Sprite sheet UV transform:
-			uv.xy = mad(uv.xy, atlas_rect.texMulAdd.xy, atlas_rect.texMulAdd.zw);
-		
-			// scale the billboard by the texture aspect:
-			patchPos.xyz *= frame.xyx;
-		
-			// rotate the patch into the tangent space of the emitting triangle:
-			patchPos = mul(patchPos, TBN);
-		
-			float3 position = base + patchPos;
-		
-			if (xHairFlags & HAIR_FLAG_UNORM_POS)
-			{
-				position = inverse_lerp(geometry.aabb_min, geometry.aabb_max, position); // remap to UNORM
-			}
+			float siz = billboardID == 0 ? 1 : lerp(0.2, 1, rng.next_float());
+			float rot = billboardID == 0 ? 0 : (rng.next_float() * PI);
+			float2 rot_sincos;
+			sincos(rot, rot_sincos.x, rot_sincos.y);
+			float3x3 variationMatrix = float3x3(
+				rot_sincos.y * siz, 0, -rot_sincos.x,
+				0, siz, 0,
+				rot_sincos.x, 0, rot_sincos.y * siz
+			);
 			
-			vertexBuffer_POS[v0] = float4(position, 0);
-			vertexBuffer_NOR[v0] = half4(normal, 0);
-			vertexBuffer_UVS[v0] = uv.xyxy; // a second uv set could be used here
-			
-			if (distance_culled)
+			for (uint vertexID = 2; vertexID < 4; ++vertexID)
 			{
-				position = 0; // We can only zero out for raytracing geometry to keep correct prevpos swapping motion vectors!
-			}
-			vertexBuffer_POS_RT[v0] = float4(position, 0);
+				float3 patchPos = HAIRPATCH[vertexID];
+				float2 uv = patchPos.xy;
+				uv = uv * float2(0.5, 0.5) + 0.5;
+				uv.y = lerp((float)segmentID / (float)xHairSegmentCount, ((float)segmentID + 1) / (float)xHairSegmentCount, uv.y);
+				uv.y = 1 - uv.y;
+				patchPos.y += 1;
 		
-			v0++;
+				// Sprite sheet UV transform:
+				uv.xy = mad(uv.xy, atlas_rect.texMulAdd.xy, atlas_rect.texMulAdd.zw);
+		
+				// scale the billboard by the texture aspect:
+				patchPos.xyz *= frame.xyx;
+
+				// variation based on billboardID:
+				patchPos = mul(patchPos, variationMatrix);
+		
+				// rotate the patch into the tangent space of the emitting triangle:
+				patchPos = mul(patchPos, TBN);
+		
+				float3 position = base + patchPos;
+		
+				if (xHairFlags & HAIR_FLAG_UNORM_POS)
+				{
+					position = inverse_lerp(geometry.aabb_min, geometry.aabb_max, position); // remap to UNORM
+				}
+			
+				vertexBuffer_POS[v0] = float4(position, 0);
+				vertexBuffer_NOR[v0] = half4(normal, 0);
+				vertexBuffer_UVS[v0] = uv.xyxy; // a second uv set could be used here
+			
+				if (distance_culled)
+				{
+					position = 0; // We can only zero out for raytracing geometry to keep correct prevpos swapping motion vectors!
+				}
+				vertexBuffer_POS_RT[v0] = float4(position, 0);
+		
+				v0++;
+			}
 		}
 
 		// Frustum culling:
@@ -343,21 +383,24 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		uint waveOffset;
 		if (WaveIsFirstLane() && waveAppendCount > 0)
 		{
-			InterlockedAdd(indirectBuffer[0].IndexCountPerInstance, waveAppendCount * 6, waveOffset);
+			InterlockedAdd(indirectBuffer[0].IndexCountPerInstance, waveAppendCount * gfx_indexcount_per_particle, waveOffset);
 		}
 		waveOffset = WaveReadLaneFirst(waveOffset);
 
 		if (visible)
 		{
-			uint prevCount = waveOffset + WavePrefixSum(6u);
-			uint i0 = particleID * 6;
+			uint prevCount = waveOffset + WavePrefixSum(gfx_indexcount_per_particle);
+			uint i0 = particleID * gfx_indexcount_per_particle;
 			uint ii0 = prevCount;
-			culledIndexBuffer[ii0 + 0] = i0 + 0;
-			culledIndexBuffer[ii0 + 1] = i0 + 1;
-			culledIndexBuffer[ii0 + 2] = i0 + 2;
-			culledIndexBuffer[ii0 + 3] = i0 + 3;
-			culledIndexBuffer[ii0 + 4] = i0 + 4;
-			culledIndexBuffer[ii0 + 5] = i0 + 5;
+			for (uint billboardID = 0; billboardID < xHairBillboardCount; ++billboardID)
+			{
+				culledIndexBuffer[ii0++] = i0++;
+				culledIndexBuffer[ii0++] = i0++;
+				culledIndexBuffer[ii0++] = i0++;
+				culledIndexBuffer[ii0++] = i0++;
+				culledIndexBuffer[ii0++] = i0++;
+				culledIndexBuffer[ii0++] = i0++;
+			}
 		}
 
 		// Offset next segment root to current tip:

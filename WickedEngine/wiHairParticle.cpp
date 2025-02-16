@@ -98,6 +98,9 @@ namespace wi
 		regenerate_frame = true;
 
 		const uint32_t particleCount = GetParticleCount();
+		const uint32_t gfx_vertexcount = GetVertexCount();
+		const uint32_t gfx_indexcount = GetIndexCount();
+
 		if (particleCount > 0)
 		{
 			GPUBufferDesc bd;
@@ -108,10 +111,6 @@ namespace wi
 			{
 				bd.misc_flags |= ResourceMiscFlag::RAY_TRACING;
 			}
-
-			const uint32_t gfx_vertexcount_per_strand = segmentCount * 2 + 2;
-			const uint32_t gfx_vertexcount = strandCount * gfx_vertexcount_per_strand;
-			const uint32_t gfx_indexcount = 6 * particleCount;
 
 			const size_t position_stride = GetFormatStride(position_format);
 			const Format ib_format = GetIndexBufferFormatRaw(gfx_vertexcount);
@@ -141,7 +140,7 @@ namespace wi
 				AlignTo(wetmap.size, alignment) +
 				AlignTo(ib_culled.size, alignment) +
 				AlignTo(vb_pos_raytracing.size, alignment)
-			;
+				;
 			device->CreateBuffer(&bd, nullptr, &generalBuffer);
 			device->SetName(&generalBuffer, "HairParticleSystem::generalBuffer");
 			gpu_initialized = false;
@@ -221,8 +220,11 @@ namespace wi
 			vb_pos_raytracing.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_pos_raytracing.subresource_uav);
 			buffer_offset += vb_pos_raytracing.size;
 
+		}
 
-			bd = {};
+		if (gfx_indexcount > 0 && primitiveBuffer.desc.size != gfx_indexcount * GetFormatStride(Format::R32_UINT))
+		{
+			GPUBufferDesc bd;
 			bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::INDEX_BUFFER;
 			if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 			{
@@ -238,17 +240,24 @@ namespace wi
 				uint32_t v0 = 0;
 				for (uint32_t strandID = 0; strandID < strandCount; ++strandID)
 				{
-					for (uint32_t segmentID = 0; segmentID < segmentCount; ++segmentID)
+					uint32_t rootOffset = v0;
+					uint32_t capOffset = rootOffset + 2 * billboardCount;
+					for (uint32_t billboardID = 0; billboardID < billboardCount; ++billboardID)
 					{
-						primitiveData[i++] = v0 + 0;
-						primitiveData[i++] = v0 + 1;
-						primitiveData[i++] = v0 + 2;
-						primitiveData[i++] = v0 + 2;
-						primitiveData[i++] = v0 + 1;
-						primitiveData[i++] = v0 + 3;
+						for (uint32_t segmentID = 0; segmentID < segmentCount; ++segmentID)
+						{
+							primitiveData[i++] = rootOffset + 0;
+							primitiveData[i++] = rootOffset + 1;
+							primitiveData[i++] = capOffset + 0;
+							primitiveData[i++] = capOffset + 0;
+							primitiveData[i++] = rootOffset + 1;
+							primitiveData[i++] = capOffset + 1;
+							rootOffset += 2;
+							capOffset += 2;
+							v0 += 2;
+						}
 						v0 += 2;
 					}
-					v0 += 2;
 				}
 				assert(v0 == gfx_vertexcount);
 				assert(i == gfx_indexcount);
@@ -313,7 +322,7 @@ namespace wi
 			geometry.triangles.vertex_buffer = generalBuffer;
 			geometry.triangles.index_buffer = primitiveBuffer;
 			geometry.triangles.index_format = GetIndexBufferFormat(primitiveBuffer.desc.format);
-			geometry.triangles.index_count = GetParticleCount() * 6;
+			geometry.triangles.index_count = GetIndexCount();
 			geometry.triangles.index_offset = 0;
 			geometry.triangles.vertex_count = (uint32_t)(vb_pos_raytracing.size / GetFormatStride(position_format));
 			geometry.triangles.vertex_format = position_format == Format::R32G32B32A32_FLOAT ? Format::R32G32B32_FLOAT : position_format;
@@ -358,7 +367,15 @@ namespace wi
 			CreateFromMesh(mesh);
 		}
 
-		if ((_flags & REBUILD_BUFFERS) || !constantBuffer.IsValid() || GetParticleCount() != simulation_view.size / sizeof(PatchSimulationData))
+		const uint32_t particleCount = GetParticleCount();
+		const uint32_t gfx_indexcount = GetIndexCount();
+
+		if (
+			(_flags & REBUILD_BUFFERS) ||
+			!constantBuffer.IsValid() ||
+			particleCount != simulation_view.size / sizeof(PatchSimulationData) ||
+			(gfx_indexcount > 0 && primitiveBuffer.desc.size != gfx_indexcount * GetFormatStride(Format::R32_UINT))
+			)
 		{
 			CreateRenderData();
 		}
@@ -410,13 +427,19 @@ namespace wi
 			{
 				hcb.xHairFlags |= HAIR_FLAG_REGENERATE_FRAME;
 			}
+			if (hair.IsCameraBendEnabled())
+			{
+				hcb.xHairFlags |= HAIR_FLAG_CAMERA_BEND;
+			}
 			hcb.xHairAspect = hair.width * (float)std::max(1u, desc.width) / (float)std::max(1u, desc.height);
 			hcb.xHairLength = hair.length;
 			hcb.xHairStiffness = hair.stiffness;
 			hcb.xHairDrag = hair.drag;
+			hcb.xHairGravityPower = hair.gravityPower;
 			hcb.xHairRandomness = hair.randomness;
 			hcb.xHairStrandCount = hair.strandCount;
 			hcb.xHairSegmentCount = std::max(hair.segmentCount, 1u);
+			hcb.xHairBillboardCount = std::max(hair.billboardCount, 1u);
 			hcb.xHairParticleCount = hcb.xHairStrandCount * hcb.xHairSegmentCount;
 			hcb.xHairRandomSeed = hair.randomSeed;
 			hcb.xHairViewDistance = hair.viewDistance;
@@ -563,7 +586,7 @@ namespace wi
 		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(HairParticleCB), cmd);
 		device->BindResource(&primitiveBuffer, 0, cmd);
 
-		device->BindIndexBuffer(&generalBuffer, GetIndexBufferFormat(GetParticleCount() * 4), ib_culled.offset, cmd);
+		device->BindIndexBuffer(&generalBuffer, GetIndexBufferFormat(GetVertexCount()), ib_culled.offset, cmd);
 
 		device->DrawIndexedInstancedIndirect(&generalBuffer, indirect_view.offset, cmd);
 
@@ -638,6 +661,17 @@ namespace wi
 				// Old stiffness remap to new:
 				stiffness *= 0.05f;
 			}
+
+			if (seri.GetVersion() >= 3)
+			{
+				archive >> gravityPower;
+				archive >> billboardCount;
+			}
+			else
+			{
+				// This param was always true before:
+				SetCameraBendEnabled(true);
+			}
 		}
 		else
 		{
@@ -670,6 +704,11 @@ namespace wi
 			if (seri.GetVersion() >= 2)
 			{
 				archive << drag;
+			}
+			if (seri.GetVersion() >= 3)
+			{
+				archive << gravityPower;
+				archive << billboardCount;
 			}
 		}
 	}

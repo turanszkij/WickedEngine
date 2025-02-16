@@ -76,15 +76,18 @@ namespace wi
 			_DEPRECATED_REGENERATE_FRAME = 1 << 0,
 			REBUILD_BUFFERS = 1 << 1,
 			DIRTY = 1 << 2,
+			CAMERA_BEND_ENABLED = 1 << 3,
 		};
-		uint32_t _flags = EMPTY;
+		uint32_t _flags = CAMERA_BEND_ENABLED;
 
 		uint32_t strandCount = 0;
 		uint32_t segmentCount = 1;
+		uint32_t billboardCount = 1;
 		uint32_t randomSeed = 1;
 		float length = 1.0f;
 		float stiffness = 0.5f;
 		float drag = 0.1f;
+		float gravityPower = 0;
 		float randomness = 0.2f;
 		float viewDistance = 200;
 		wi::vector<float> vertex_lengths;
@@ -113,10 +116,15 @@ namespace wi
 		static void Initialize();
 
 		constexpr uint32_t GetParticleCount() const { return strandCount * segmentCount; }
+		constexpr uint32_t GetVertexCount() const { return strandCount * (segmentCount * 2 + 2) * billboardCount; }
+		constexpr uint32_t GetIndexCount() const { return 6 * GetParticleCount() * billboardCount; }
 		uint64_t GetMemorySizeInBytes() const;
 
 		constexpr bool IsDirty() const { return _flags & DIRTY; }
+		constexpr bool IsCameraBendEnabled() const { return _flags & CAMERA_BEND_ENABLED; }
+
 		constexpr void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
+		constexpr void SetCameraBendEnabled(bool value = true) { if (value) { _flags |= CAMERA_BEND_ENABLED; } else { _flags &= ~CAMERA_BEND_ENABLED; } }
 
 		void ConvertFromOLDSpriteSheet(uint32_t framesX, uint32_t framesY, uint32_t frameCount, uint32_t frameStart);
 	};

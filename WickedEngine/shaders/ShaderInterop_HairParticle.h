@@ -16,6 +16,7 @@ enum HAIR_FLAGS
 {
 	HAIR_FLAG_REGENERATE_FRAME = 1 << 0,
 	HAIR_FLAG_UNORM_POS = 1 << 1,
+	HAIR_FLAG_CAMERA_BEND = 1 << 2,
 };
 
 struct HairParticleAtlasRect
@@ -51,6 +52,11 @@ CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
 	float xHairAspect;
 	float xHairUniformity;
 	uint xHairAtlasRectCount;
+
+	float xHairGravityPower;
+	uint xHairBillboardCount;
+	float xHair_padding0;
+	float xHair_padding1;
 
 	HairParticleAtlasRect xHairAtlasRects[64];
 };
