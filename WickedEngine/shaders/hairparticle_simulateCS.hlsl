@@ -375,8 +375,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		sphere.center = (base + tail_next) * 0.5;
 		sphere.radius = len;
 		
-		bool visible = !distance_culled && GetCamera().frustum.intersects(sphere);
-		visible = true;
+		const bool visible = !distance_culled && GetCamera().frustum.intersects(sphere);
 		
 		// Optimization: reduce to 1 atomic operation per wave
 		const uint waveAppendCount = WaveActiveCountBits(visible);
