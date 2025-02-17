@@ -8,17 +8,16 @@ float compute_wind(float3 position, float time)
 	position += time;
 	const ShaderWind wind = GetWeather().wind;
 
-	float randomness_amount = 0;
-	randomness_amount += noise_gradient_3D(position.xyz);
-	randomness_amount += noise_gradient_3D(position.xyz / 2.0f);
-	randomness_amount += noise_gradient_3D(position.xyz / 4.0f);
-	randomness_amount += noise_gradient_3D(position.xyz / 8.0f);
-	randomness_amount += noise_gradient_3D(position.xyz / 16.0f);
-	randomness_amount += noise_gradient_3D(position.xyz / 32.0f);
-	randomness_amount *= wind.randomness;
+	position.xyz *= wind.wavesize;
 
-	float direction_amount = dot(position.xyz, wind.direction);
-	float waveoffset = mad(direction_amount, wind.wavesize, randomness_amount);
+	float waveoffset = 0;
+	waveoffset += noise_gradient_3D(position.xyz);
+	waveoffset += noise_gradient_3D(position.xyz / 2.0);
+	waveoffset += noise_gradient_3D(position.xyz / 4.0);
+	waveoffset += noise_gradient_3D(position.xyz / 8.0);
+	waveoffset += noise_gradient_3D(position.xyz / 16.0);
+	waveoffset += noise_gradient_3D(position.xyz / 32.0);
+	waveoffset *= wind.randomness;
 
 	return sin(mad(time, wind.speed, waveoffset));
 }

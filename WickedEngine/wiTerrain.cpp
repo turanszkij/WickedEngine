@@ -785,6 +785,10 @@ namespace wi::terrain
 					grass->width = grass_properties.width;
 					grass->uniformity = grass_properties.uniformity;
 					grass->atlas_rects = grass_properties.atlas_rects;
+					grass->segmentCount = grass_properties.segmentCount;
+					grass->billboardCount = grass_properties.billboardCount;
+					grass->drag = grass_properties.drag;
+					grass->gravityPower = grass_properties.gravityPower;
 				}
 
 				MaterialComponent* chunkGrassMaterial = scene->materials.GetComponent(chunk_data.grass_entity);
