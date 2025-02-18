@@ -200,6 +200,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		float3 to_tail = normalize(tail_next - base);
 		tail_next = base + to_tail * boneLength;
 
+		//draw_sphere(tail_next, len);
+
 		// Accumulate forces, apply colliders:
 		for (uint i = forces().first_item(); i < forces().end_item(); ++i)
 		{
@@ -218,6 +220,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 					float3 N = normalize(A - B);
 					A -= N * range;
 					B += N * range;
+					//if (DTid.x == 0)
+					//{
+					//	draw_sphere(A, range);
+					//	draw_sphere(B, range);
+					//}
 					float3 C = closest_point_on_segment(A, B, tail_next);
 					float3 dir = C - tail_next;
 					float dist = length(dir);

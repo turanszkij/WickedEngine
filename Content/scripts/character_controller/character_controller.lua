@@ -302,7 +302,6 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 							end
 						else
 							-- move towards patrol waypoint:
-							local charactercomponent = scene.Component_GetCharacter(self.model)
 							charactercomponent.SetPathGoal(patrol_pos, voxelgrid) -- this is deferred into scene update
 							local pathquery = charactercomponent.GetPathQuery()
 							pathquery.SetAgentHeight(3)
@@ -316,7 +315,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 							end
 							self.patrol_wait = 0
 							-- check if it's blocked by player collision:
-							local capsule = scene.Component_GetCollider(self.collider).GetCapsule()
+							local capsule = charactercomponent.GetCapsule()
 							local forward_offset = vector.Multiply(patrol_vec.Normalize(), 0.5)
 							capsule.SetBase(vector.Add(capsule.GetBase(), forward_offset))
 							capsule.SetTip(vector.Add(capsule.GetTip(), forward_offset))
@@ -525,20 +524,6 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 			object.SetWetmapEnabled(true)
 			table.insert(self.object_entities, entity) -- save object array for later use
 		end
-	end
-
-	-- Create a base capsule collider for character:
-	local collider = scene.Component_CreateCollider(self.model)
-	self.collider = self.model
-	collider.SetCPUEnabled(false)
-	collider.SetGPUEnabled(true)
-	collider.Shape = ColliderShape.Capsule
-	collider.Radius = charactercomponent.GetWidth()
-	collider.Offset = Vector(0, collider.Radius, 0)
-	collider.Tail = Vector(0, charactercomponent.GetHeight() - collider.Radius, 0)
-	local head_transform = scene.Component_GetTransform(self.head)
-	if head_transform ~= nil then
-		collider.Tail = head_transform.GetPosition()
 	end
 
 	self.root = self.humanoid
@@ -988,7 +973,7 @@ runProcess(function()
 			DrawPoint(scene.Component_GetTransform(player.right_foot).GetPosition(),0.05, Vector(0,1,1,1))
 
 			
-			local capsule = scene.Component_GetCollider(player.collider).GetCapsule()
+			local capsule = scene.Component_GetCharacter(player.model).GetCapsule()
 			DrawCapsule(capsule)
 
 			local str = "State: " .. player.state .. "\n"

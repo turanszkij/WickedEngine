@@ -912,6 +912,18 @@ inline void draw_point(float3 pos, float size = 1, float4 color = 1)
 	draw_line(pos - float3(0, size, 0), pos + float3(0, size, 0), color);
 	draw_line(pos - float3(0, 0, size), pos + float3(0, 0, size), color);
 }
+inline void draw_sphere(float3 pos, float radius, float4 color = 1)
+{
+	const uint segmentcount = 36;
+	for (int i = 0; i < segmentcount; ++i)
+	{
+		const float angle0 = (float)i / (float)segmentcount * PI * 2;
+		const float angle1 = (float)(i + 1) / (float)segmentcount * PI * 2;
+		draw_line(pos + float3(sin(angle0), cos(angle0), 0) * radius, pos + float3(sin(angle1), cos(angle1), 0) * radius, color);
+		draw_line(pos + float3(sin(angle0), 0, cos(angle0)) * radius, pos + float3(sin(angle1), 0, cos(angle1)) * radius, color);
+		draw_line(pos + float3(0, sin(angle0), cos(angle0)) * radius, pos + float3(0, sin(angle1), cos(angle1)) * radius, color);
+	}
+}
 
 // Mie scaterring approximated with Henyey-Greenstein phase function.
 //	https://www.alexandre-pestana.com/volumetric-lights/

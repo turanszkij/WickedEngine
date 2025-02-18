@@ -2084,9 +2084,10 @@ void LoadBuffers()
 	bd.usage = Usage::READBACK;
 	bd.bind_flags = {};
 	bd.misc_flags = {};
+	IndirectDrawArgsInstanced initdata_readback = {};
 	for (auto& buf : indirectDebugStatsReadback)
 	{
-		device->CreateBuffer(&bd, nullptr, &buf);
+		device->CreateBuffer(&bd, &initdata_readback, &buf);
 		device->SetName(&buf, "indirectDebugStatsReadback");
 	}
 
@@ -4002,6 +4003,7 @@ void UpdatePerFrameData(
 			device->SetName(&buffers[BUFFERTYPE_INDIRECT_DEBUG_0], "buffers[BUFFERTYPE_INDIRECT_DEBUG_0]");
 			device->CreateBuffer(&bd, nullptr, &buffers[BUFFERTYPE_INDIRECT_DEBUG_1]);
 			device->SetName(&buffers[BUFFERTYPE_INDIRECT_DEBUG_1], "buffers[BUFFERTYPE_INDIRECT_DEBUG_1]");
+			std::memset(indirectDebugStatsReadback_available, 0, sizeof(indirectDebugStatsReadback_available));
 		}
 	}
 
@@ -4563,6 +4565,48 @@ void UpdatePerFrameData(
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
 			forcefieldarray_count++;
+		}
+
+		// Write ragdoll colliders into entity array:
+		for (size_t i = 0; i < vis.scene->humanoids.GetCount(); ++i)
+		{
+			if (entityCounter == SHADER_ENTITY_COUNT)
+			{
+				entityCounter--;
+				break;
+			}
+
+			uint32_t layerMask = ~0u;
+
+			Entity entity = vis.scene->humanoids.GetEntity(i);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				layerMask = layer->layerMask;
+			}
+
+			const HumanoidComponent& humanoid = vis.scene->humanoids[i];
+			for (auto& bodypart : humanoid.ragdoll_bodyparts)
+			{
+				if (entityCounter == SHADER_ENTITY_COUNT)
+				{
+					entityCounter--;
+					break;
+				}
+
+				ShaderEntity shaderentity = {};
+				shaderentity.SetType(ENTITY_TYPE_COLLIDER_CAPSULE);
+				shaderentity.layerMask = layerMask;
+				shaderentity.position = bodypart.capsule.base;
+				shaderentity.SetColliderTip(bodypart.capsule.tip);
+				shaderentity.SetRange(bodypart.capsule.radius);
+
+				//DrawCapsule(bodypart.capsule);
+
+				std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+				entityCounter++;
+				forcefieldarray_count++;
+			}
 		}
 	}
 
