@@ -181,7 +181,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	const half3 boneAxis = target;
 	const half boneLength = len;
 	
-	for (uint segmentID = 0; !distance_culled && (segmentID < xHairSegmentCount); ++segmentID)
+	for (uint segmentID = 0; segmentID < xHairSegmentCount; ++segmentID)
 	{
 		// Identifies the hair strand segment particle:
 		const uint particleID = strandID + segmentID;
@@ -208,7 +208,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		//draw_sphere(tail_next, len);
 
 		// Apply every force and collider:
-		for (uint i = forces().first_item(); i < forces().end_item(); ++i)
+		for (uint i = forces().first_item(); !distance_culled && (i < forces().end_item()); ++i)
 		{
 			ShaderEntity entity = load_entity(i);
 
