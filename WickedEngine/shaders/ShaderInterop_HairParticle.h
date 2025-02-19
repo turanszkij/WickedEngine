@@ -6,10 +6,12 @@
 
 #define THREADCOUNT_SIMULATEHAIR 64
 
-struct PatchSimulationData
+struct alignas(16) PatchSimulationData
 {
 	float3 prevTail;
+	float padding0;
 	float3 currentTail;
+	float padding1;
 };
 
 enum HAIR_FLAGS

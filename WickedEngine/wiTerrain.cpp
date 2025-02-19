@@ -855,6 +855,7 @@ namespace wi::terrain
 		}
 
 		// Start the generation on a background thread and keep it running until the next frame
+		generator->workload.priority = wi::jobsystem::Priority::Low;
 		wi::jobsystem::Execute(generator->workload, [=](wi::jobsystem::JobArgs a) {
 
 			wi::Timer timer;

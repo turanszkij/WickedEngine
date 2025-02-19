@@ -4892,7 +4892,7 @@ namespace wi::scene
 			geometry.indexOffset = 0;
 			geometry.indexCount = indexCount;
 			geometry.materialIndex = (uint)materials.GetIndex(entity);
-			geometry.ib = device->GetDescriptorIndex(&hair.primitiveBuffer, SubresourceType::SRV);
+			geometry.ib = hair.prim_view.descriptor_srv;
 			geometry.vb_pos_wind = hair.vb_pos[0].descriptor_srv;
 			geometry.vb_nor = hair.vb_nor.descriptor_srv;
 			geometry.vb_pre = hair.vb_pos[1].descriptor_srv;

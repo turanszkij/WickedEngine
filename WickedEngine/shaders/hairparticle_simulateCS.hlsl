@@ -2,14 +2,14 @@
 #include "hairparticleHF.hlsli"
 #include "ShaderInterop_HairParticle.h"
 
-static const float3 HAIRPATCH[] = {
+static const half3 HAIRPATCH[] = {
 	// root (for every strand):
-	float3(-1, -1, 0),
-	float3(1, -1, 0),
+	half3(-1, -1, 0),
+	half3(1, -1, 0),
 
 	// cap (for every segment of every strand):
-	float3(-1, 1, 0),
-	float3(1, 1, 0),
+	half3(-1, 1, 0),
+	half3(1, 1, 0),
 };
 
 Buffer<uint> meshIndexBuffer : register(t0);
@@ -24,12 +24,15 @@ RWBuffer<uint> culledIndexBuffer : register(u3);
 RWStructuredBuffer<IndirectDrawArgsIndexedInstanced> indirectBuffer : register(u4);
 RWBuffer<float4> vertexBuffer_POS_RT : register(u5);
 RWBuffer<float4> vertexBuffer_NOR : register(u6);
+RWBuffer<uint> primitiveBuffer : register(u7);
 
 [numthreads(THREADCOUNT_SIMULATEHAIR, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
 	if (DTid.x >= xHairStrandCount)
 		return;
+
+	const bool regenerate_frame = xHairFlags & HAIR_FLAG_REGENERATE_FRAME;
 		
 	ShaderGeometry geometry = HairGetGeometry();
 	
@@ -73,7 +76,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	float3 position = attribute_at_bary(pos0, pos1, pos2, bary);
 	position = mul(xHairBaseMeshUnormRemap.GetMatrix(), float4(position, 1)).xyz;
 	half3 target = normalize(attribute_at_bary(nor0, nor1, nor2, bary));
-	target = normalize(mul((half3x3)worldMatrix, target));
+	target = normalize(mul(xHairTransform.GetMatrixAdjoint(), target));
 	half3 tangent = normalize(mul(half3(hemispherepoint_cos(rng.next_float(), rng.next_float()).xy, 0), get_tangentspace(target)));
 	half3 binormal = cross(target, tangent);
 	half strand_length = attribute_at_bary(length0, length1, length2, bary);
@@ -96,16 +99,20 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	len *= atlas_rect.size;
 	len /= (half)xHairSegmentCount;
 	const float2 frame = float2(atlas_rect.aspect * xHairAspect * xHairSegmentCount, 1) * len * 0.5;
+	const float segment_radius = max(frame.x, frame.y);
 	
 	const uint gfx_vertexcount_per_strand = (xHairSegmentCount * 2 + 2) * xHairBillboardCount;
 	const uint gfx_indexcount_per_particle = 6 * xHairBillboardCount;
-	uint v0 = DTid.x * gfx_vertexcount_per_strand;
+	const uint gfx_indexcount_per_strand = gfx_indexcount_per_particle * xHairSegmentCount;
+	const uint index0 = DTid.x * gfx_indexcount_per_strand;
+	const uint vertexID0 = DTid.x * gfx_vertexcount_per_strand;
+	uint v0 = vertexID0;
 
 	//draw_line(base, base + tangent, float4(1, 0, 0, 1));
 	//draw_line(base, base + target, float4(0, 1, 0, 1));
 	//draw_line(base, base + binormal, float4(0, 0, 1, 1));
 
-	float3 bend = 0;
+	half3 bend = 0;
 	if (xHairFlags & HAIR_FLAG_CAMERA_BEND)
 	{
 		// Bend down to camera up vector to avoid seeing flat planes from above
@@ -117,19 +124,20 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	rng.init(uint2(xHairRandomSeed, DTid.x), 1); // reinit random for consistent billboard variation!
 	for (uint billboardID = 0; billboardID < xHairBillboardCount; ++billboardID)
 	{
-		float siz = billboardID == 0 ? 1 : lerp(0.2, 1, rng.next_float());
-		float rot = billboardID == 0 ? 0 : (rng.next_float() * PI);
-		float2 rot_sincos;
+		half siz = billboardID == 0 ? 1 : lerp(0.2, 1, rng.next_float());
+		half rot = billboardID == 0 ? 0 : (rng.next_float() * PI);
+		half2 rot_sincos;
 		sincos(rot, rot_sincos.x, rot_sincos.y);
-		float3x3 variationMatrix = float3x3(
+		half3x3 variationMatrix = half3x3(
 			rot_sincos.y * siz, 0, -rot_sincos.x,
 			0, siz, 0,
 			rot_sincos.x, 0, rot_sincos.y * siz
 		);
+		variationMatrix = mul(variationMatrix, TBN);
 		
 		for (uint vertexID = 0; vertexID < 2; ++vertexID)
 		{
-			float3 patchPos = HAIRPATCH[vertexID];
+			half3 patchPos = HAIRPATCH[vertexID];
 			float2 uv = patchPos.xy;
 			uv = uv * float2(0.5, 0.5) + 0.5;
 			uv.y = 1 - uv.y;
@@ -143,9 +151,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 			// variation based on billboardID:
 			patchPos = mul(patchPos, variationMatrix);
-
-			// rotate the patch into the tangent space of the emitting triangle:
-			patchPos = mul(patchPos, TBN);
 
 			float3 position = base + patchPos;
 
@@ -168,20 +173,20 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		}
 	}
 	
-	const float dt = clamp(GetFrame().delta_time, 0, 1.0 / 30.0); // clamp delta time to avoid simulation blowing up
+	const half dt = clamp(GetFrame().delta_time, 0, 1.0 / 30.0); // clamp delta time to avoid simulation blowing up
 
-	const float gravityPower = xHairGravityPower;
-	const float stiffnessForce = xHairStiffness;
-	const float dragForce = xHairDrag;
-	const float3 boneAxis = target;
-	const float boneLength = len;
+	const half gravityPower = xHairGravityPower;
+	const half stiffnessForce = xHairStiffness;
+	const half dragForce = xHairDrag;
+	const half3 boneAxis = target;
+	const half boneLength = len;
 	
-	for (uint segmentID = 0; segmentID < xHairSegmentCount; ++segmentID)
+	for (uint segmentID = 0; !distance_culled && (segmentID < xHairSegmentCount); ++segmentID)
 	{
 		// Identifies the hair strand segment particle:
 		const uint particleID = strandID + segmentID;
 
-		if (xHairFlags & HAIR_FLAG_REGENERATE_FRAME)
+		if (regenerate_frame)
 		{
 			float3 tail = base + boneAxis * boneLength;
 			simulationBuffer[particleID].prevTail = tail;
@@ -190,19 +195,19 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		
 		float3 tail_current = simulationBuffer[particleID].currentTail;
 		float3 tail_prev = simulationBuffer[particleID].prevTail;
-		float3 inertia = (tail_current - tail_prev) * (1 - dragForce);
-		float3 stiffness = boneAxis * stiffnessForce;
-		float3 external = gravityPower * float3(0, -1, 0);
-		float3 wind = sample_wind(tail_current, ((float)segmentID + 1) / (float)xHairSegmentCount);
+		half3 inertia = (tail_current - tail_prev) * (1 - dragForce);
+		half3 stiffness = boneAxis * stiffnessForce;
+		half3 external = gravityPower * float3(0, -1, 0);
+		half3 wind = sample_wind(tail_current, ((float)segmentID + 1) / (float)xHairSegmentCount);
 		external += wind;
 		
 		float3 tail_next = tail_current + inertia + dt * (stiffness + external);
-		float3 to_tail = normalize(tail_next - base);
+		half3 to_tail = normalize(tail_next - base);
 		tail_next = base + to_tail * boneLength;
 
 		//draw_sphere(tail_next, len);
 
-		// Accumulate forces, apply colliders:
+		// Apply every force and collider:
 		for (uint i = forces().first_item(); i < forces().end_item(); ++i)
 		{
 			ShaderEntity entity = load_entity(i);
@@ -217,7 +222,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 				{
 					float3 A = entity.position;
 					float3 B = entity.GetColliderTip();
-					float3 N = normalize(A - B);
+					half3 N = normalize(A - B);
 					A -= N * range;
 					B += N * range;
 					//if (DTid.x == 0)
@@ -229,7 +234,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 					float3 dir = C - tail_next;
 					float dist = length(dir);
 					dir /= dist;
-					dist = dist - range - len * 0.5;
+					dist = dist - range - segment_radius;
 					if (dist < 0)
 					{
 						tail_next += dir * dist;
@@ -257,7 +262,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 							tail_next = base + to_tail * boneLength;
 							break;
 						case ENTITY_TYPE_COLLIDER_SPHERE:
-							dist = dist - range - len;
+							dist = dist - range - segment_radius;
 							if (dist < 0)
 							{
 								tail_next += dir * dist;
@@ -273,7 +278,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 								dir *= -1;
 								dist = abs(dist);
 							}
-							dist = dist - len;
+							dist = dist - segment_radius;
 							if (dist < 0)
 							{
 								float4x4 planeProjection = load_entitymatrix(entity.GetMatrixIndex());
@@ -325,19 +330,20 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		rng.init(uint2(xHairRandomSeed, DTid.x), 1); // reinit random for consistent billboard variation!
 		for(uint billboardID = 0; billboardID < xHairBillboardCount; ++billboardID)
 		{
-			float siz = billboardID == 0 ? 1 : lerp(0.2, 1, rng.next_float());
-			float rot = billboardID == 0 ? 0 : (rng.next_float() * PI);
-			float2 rot_sincos;
+			half siz = billboardID == 0 ? 1 : lerp(0.2, 1, rng.next_float());
+			half rot = billboardID == 0 ? 0 : (rng.next_float() * PI);
+			half2 rot_sincos;
 			sincos(rot, rot_sincos.x, rot_sincos.y);
-			float3x3 variationMatrix = float3x3(
+			half3x3 variationMatrix = half3x3(
 				rot_sincos.y * siz, 0, -rot_sincos.x,
 				0, siz, 0,
 				rot_sincos.x, 0, rot_sincos.y * siz
 			);
+			variationMatrix = mul(variationMatrix, TBN);
 			
 			for (uint vertexID = 2; vertexID < 4; ++vertexID)
 			{
-				float3 patchPos = HAIRPATCH[vertexID];
+				half3 patchPos = HAIRPATCH[vertexID];
 				float2 uv = patchPos.xy;
 				uv = uv * float2(0.5, 0.5) + 0.5;
 				uv.y = lerp((float)segmentID / (float)xHairSegmentCount, ((float)segmentID + 1) / (float)xHairSegmentCount, uv.y);
@@ -352,9 +358,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 				// variation based on billboardID:
 				patchPos = mul(patchPos, variationMatrix);
-		
-				// rotate the patch into the tangent space of the emitting triangle:
-				patchPos = mul(patchPos, TBN);
 		
 				float3 position = base + patchPos;
 		
@@ -380,7 +383,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		// Frustum culling:
 		ShaderSphere sphere;
 		sphere.center = (base + tail_next) * 0.5;
-		sphere.radius = len;
+		sphere.radius = segment_radius;
+		//draw_sphere(sphere.center, sphere.radius);
 		
 		const bool visible = !distance_culled && GetCamera().frustum.intersects(sphere);
 		
@@ -412,5 +416,30 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		// Offset next segment root to current tip:
 		base = tail_next;
 		target = normal;
+	}
+
+	// Primitive buffer creation is done here instead of CPU to reduce CPU time spent in buffer creations:
+	if (regenerate_frame)
+	{
+		uint i = index0;
+		v0 = vertexID0;
+		uint rootOffset = v0;
+		uint capOffset = rootOffset + 2 * xHairBillboardCount;
+		for (uint billboardID = 0; billboardID < xHairBillboardCount; ++billboardID)
+		{
+			for (uint segmentID = 0; segmentID < xHairSegmentCount; ++segmentID)
+			{
+				primitiveBuffer[i++] = rootOffset + 0;
+				primitiveBuffer[i++] = rootOffset + 1;
+				primitiveBuffer[i++] = capOffset + 0;
+				primitiveBuffer[i++] = capOffset + 0;
+				primitiveBuffer[i++] = rootOffset + 1;
+				primitiveBuffer[i++] = capOffset + 1;
+				rootOffset += 2;
+				capOffset += 2;
+				v0 += 2;
+			}
+			v0 += 2;
+		}
 	}
 }

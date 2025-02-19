@@ -29,7 +29,7 @@ namespace wi
 		wi::scene::MeshComponent::BufferView wetmap;
 		wi::scene::MeshComponent::BufferView ib_culled;
 		wi::scene::MeshComponent::BufferView indirect_view;
-		wi::graphics::GPUBuffer primitiveBuffer;
+		wi::scene::MeshComponent::BufferView prim_view;
 
 		wi::graphics::GPUBuffer indexBuffer;
 		wi::graphics::GPUBuffer vertexBuffer_length;

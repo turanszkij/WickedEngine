@@ -114,6 +114,7 @@ namespace wi
 
 			const size_t position_stride = GetFormatStride(position_format);
 			const Format ib_format = GetIndexBufferFormatRaw(gfx_vertexcount);
+			const uint32_t ib_stride = GetFormatStride(ib_format);
 			const uint64_t alignment =
 				device->GetMinOffsetAlignment(&bd) *
 				sizeof(IndirectDrawArgsIndexedInstanced) * // additional alignment
@@ -126,7 +127,8 @@ namespace wi
 			vb_nor.size = sizeof(MeshComponent::Vertex_NOR) * gfx_vertexcount;
 			vb_uvs.size = sizeof(MeshComponent::Vertex_UVS) * gfx_vertexcount;
 			wetmap.size = sizeof(uint16_t) * gfx_vertexcount;
-			ib_culled.size = GetFormatStride(ib_format) * gfx_indexcount;
+			ib_culled.size = ib_stride * gfx_indexcount;
+			prim_view.size = ib_stride * gfx_indexcount;
 			indirect_view.size = sizeof(IndirectDrawArgsIndexedInstanced);
 			vb_pos_raytracing.size = position_stride * gfx_vertexcount;
 
@@ -139,6 +141,7 @@ namespace wi
 				AlignTo(vb_uvs.size, alignment) +
 				AlignTo(wetmap.size, alignment) +
 				AlignTo(ib_culled.size, alignment) +
+				AlignTo(prim_view.size, alignment) +
 				AlignTo(vb_pos_raytracing.size, alignment)
 				;
 			device->CreateBuffer(&bd, nullptr, &generalBuffer);
@@ -215,57 +218,20 @@ namespace wi
 			buffer_offset += ib_culled.size;
 
 			buffer_offset = AlignTo(buffer_offset, alignment);
+			prim_view.offset = buffer_offset;
+			prim_view.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, prim_view.offset, prim_view.size, &ib_format);
+			prim_view.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, prim_view.offset, prim_view.size, &ib_format);
+			prim_view.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, prim_view.subresource_srv);
+			prim_view.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, prim_view.subresource_uav);
+			buffer_offset += prim_view.size;
+
+			buffer_offset = AlignTo(buffer_offset, alignment);
 			vb_pos_raytracing.offset = buffer_offset;
 			vb_pos_raytracing.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos_raytracing.offset, vb_pos_raytracing.size, &position_format);
 			vb_pos_raytracing.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_pos_raytracing.subresource_uav);
 			buffer_offset += vb_pos_raytracing.size;
 
 		}
-
-		if (gfx_indexcount > 0 && primitiveBuffer.desc.size != gfx_indexcount * GetFormatStride(Format::R32_UINT))
-		{
-			GPUBufferDesc bd;
-			bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::INDEX_BUFFER;
-			if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
-			{
-				bd.misc_flags |= ResourceMiscFlag::RAY_TRACING;
-			}
-			bd.format = Format::R32_UINT;
-			bd.stride = GetFormatStride(bd.format);
-			bd.size = bd.stride * gfx_indexcount;
-			auto fill_ib = [&](void* dst)
-			{
-				uint32_t* primitiveData = (uint32_t*)dst;
-				uint32_t i = 0;
-				uint32_t v0 = 0;
-				for (uint32_t strandID = 0; strandID < strandCount; ++strandID)
-				{
-					uint32_t rootOffset = v0;
-					uint32_t capOffset = rootOffset + 2 * billboardCount;
-					for (uint32_t billboardID = 0; billboardID < billboardCount; ++billboardID)
-					{
-						for (uint32_t segmentID = 0; segmentID < segmentCount; ++segmentID)
-						{
-							primitiveData[i++] = rootOffset + 0;
-							primitiveData[i++] = rootOffset + 1;
-							primitiveData[i++] = capOffset + 0;
-							primitiveData[i++] = capOffset + 0;
-							primitiveData[i++] = rootOffset + 1;
-							primitiveData[i++] = capOffset + 1;
-							rootOffset += 2;
-							capOffset += 2;
-							v0 += 2;
-						}
-						v0 += 2;
-					}
-				}
-				assert(v0 == gfx_vertexcount);
-				assert(i == gfx_indexcount);
-			};
-			device->CreateBuffer2(&bd, fill_ib, &primitiveBuffer);
-			device->SetName(&primitiveBuffer, "HairParticleSystem::primitiveBuffer");
-		}
-
 
 		GPUBufferDesc bd;
 		bd.usage = Usage::DEFAULT;
@@ -274,7 +240,6 @@ namespace wi
 		bd.misc_flags = ResourceMiscFlag::NONE;
 		device->CreateBuffer(&bd, nullptr, &constantBuffer);
 		device->SetName(&constantBuffer, "HairParticleSystem::constantBuffer");
-
 
 		if (!vertex_lengths.empty())
 		{
@@ -309,7 +274,7 @@ namespace wi
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
-		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING) && primitiveBuffer.IsValid())
+		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING) && prim_view.IsValid())
 		{
 			RaytracingAccelerationStructureDesc desc;
 			desc.type = RaytracingAccelerationStructureDesc::Type::BOTTOMLEVEL;
@@ -320,10 +285,10 @@ namespace wi
 			auto& geometry = desc.bottom_level.geometries.back();
 			geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::TRIANGLES;
 			geometry.triangles.vertex_buffer = generalBuffer;
-			geometry.triangles.index_buffer = primitiveBuffer;
-			geometry.triangles.index_format = GetIndexBufferFormat(primitiveBuffer.desc.format);
+			geometry.triangles.index_buffer = generalBuffer;
+			geometry.triangles.index_format = GetIndexBufferFormat(GetVertexCount());
 			geometry.triangles.index_count = GetIndexCount();
-			geometry.triangles.index_offset = 0;
+			geometry.triangles.index_offset = prim_view.offset / GetFormatStride(GetIndexBufferFormatRaw(GetVertexCount()));
 			geometry.triangles.vertex_count = (uint32_t)(vb_pos_raytracing.size / GetFormatStride(position_format));
 			geometry.triangles.vertex_format = position_format == Format::R32G32B32A32_FLOAT ? Format::R32G32B32_FLOAT : position_format;
 			geometry.triangles.vertex_stride = GetFormatStride(position_format);
@@ -374,7 +339,7 @@ namespace wi
 			(_flags & REBUILD_BUFFERS) ||
 			!constantBuffer.IsValid() ||
 			particleCount != simulation_view.size / sizeof(PatchSimulationData) ||
-			(gfx_indexcount > 0 && primitiveBuffer.desc.size != gfx_indexcount * GetFormatStride(Format::R32_UINT))
+			(gfx_indexcount > 0 && prim_view.size != gfx_indexcount * GetFormatStride(GetIndexBufferFormatRaw(GetVertexCount())))
 			)
 		{
 			CreateRenderData();
@@ -507,6 +472,7 @@ namespace wi
 			device->BindUAV(&hair.generalBuffer, 4, cmd, hair.indirect_view.subresource_uav);
 			device->BindUAV(&hair.generalBuffer, 5, cmd, hair.vb_pos_raytracing.subresource_uav);
 			device->BindUAV(&hair.generalBuffer, 6, cmd, hair.vb_nor.subresource_uav);
+			device->BindUAV(&hair.generalBuffer, 7, cmd, hair.prim_view.subresource_uav);
 
 			if (hair.indexBuffer.IsValid())
 			{
@@ -584,7 +550,7 @@ namespace wi
 		}
 
 		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(HairParticleCB), cmd);
-		device->BindResource(&primitiveBuffer, 0, cmd);
+		device->BindResource(&generalBuffer, 0, cmd, prim_view.subresource_srv);
 
 		device->BindIndexBuffer(&generalBuffer, GetIndexBufferFormat(GetVertexCount()), ib_culled.offset, cmd);
 
