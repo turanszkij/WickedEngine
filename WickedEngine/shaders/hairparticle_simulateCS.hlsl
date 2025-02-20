@@ -33,6 +33,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		return;
 
 	const bool regenerate_frame = xHairFlags & HAIR_FLAG_REGENERATE_FRAME;
+	const uint gfx_vertexcount_per_strand = (xHairSegmentCount * 2 + 2) * xHairBillboardCount;
+	const uint gfx_indexcount_per_strand = 6 * xHairBillboardCount * xHairSegmentCount;
+	const uint index0 = DTid.x * gfx_indexcount_per_strand;
+	const uint vertexID0 = DTid.x * gfx_vertexcount_per_strand;
+	uint v0 = vertexID0;
 		
 	ShaderGeometry geometry = HairGetGeometry();
 	
@@ -69,12 +74,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		g = 1 - g;
 	}
 	float2 bary = float2(f, g);
-	
-	const float4x4 worldMatrix = xHairTransform.GetMatrix();
 
 	// compute final surface position on triangle from barycentric coords:
 	float3 position = attribute_at_bary(pos0, pos1, pos2, bary);
-	position = mul(xHairBaseMeshUnormRemap.GetMatrix(), float4(position, 1)).xyz;
+	position = mul(xHairBaseMeshUnormRemap.GetMatrix(), float4(position, 1)).xyz; // position UNORM -> FLOAT
 	half3 target = normalize(attribute_at_bary(nor0, nor1, nor2, bary));
 	target = normalize(mul(xHairTransform.GetMatrixAdjoint(), target));
 	half3 tangent = normalize(mul(half3(hemispherepoint_cos(rng.next_float(), rng.next_float()).xy, 0), get_tangentspace(target)));
@@ -84,15 +87,49 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	const uint currentFrame = uint(noise_gradient_3D(position * xHairUniformity) * 1000) % xHairAtlasRectCount;
 	const HairParticleAtlasRect atlas_rect = xHairAtlasRects[currentFrame];
 	
-	// Identifies the hair strand root particle:
-	const uint strandID = DTid.x * xHairSegmentCount;
-	
 	// Transform particle by the emitter object matrix:
-	float3 base = mul(worldMatrix, float4(position.xyz, 1)).xyz;
+	float3 base = mul(xHairTransform.GetMatrix(), float4(position.xyz, 1)).xyz;
 	
 	float3 diff = GetCamera().position - base;
 	const float distsq = dot(diff, diff);
 	const bool distance_culled = distsq > sqr(xHairViewDistance);
+	
+	// Frustum culling the whole strand at once:
+	//	intentionally overestimated, to not disappear as soon in different views (shadow map, etc)
+	ShaderSphere sphere;
+	sphere.center = base;
+	sphere.radius = xHairLength;
+	//draw_sphere(sphere.center, sphere.radius);
+	const bool visible = !distance_culled && GetCamera().frustum.intersects(sphere);
+		
+	// Optimization: reduce to 1 atomic operation per wave
+	const uint waveAppendCount = WaveActiveCountBits(visible);
+	uint waveOffset;
+	if (WaveIsFirstLane() && waveAppendCount > 0)
+	{
+		InterlockedAdd(indirectBuffer[0].IndexCountPerInstance, waveAppendCount * gfx_indexcount_per_strand, waveOffset);
+	}
+	waveOffset = WaveReadLaneFirst(waveOffset);
+
+	// Append visible indices:
+	if (visible)
+	{
+		uint prevCount = waveOffset + WavePrefixSum(gfx_indexcount_per_strand);
+		uint i0 = index0;
+		uint ii0 = prevCount;
+		for (uint segmentID = 0; segmentID < xHairSegmentCount; ++segmentID)
+		{
+			for (uint billboardID = 0; billboardID < xHairBillboardCount; ++billboardID)
+			{
+				culledIndexBuffer[ii0++] = i0++;
+				culledIndexBuffer[ii0++] = i0++;
+				culledIndexBuffer[ii0++] = i0++;
+				culledIndexBuffer[ii0++] = i0++;
+				culledIndexBuffer[ii0++] = i0++;
+				culledIndexBuffer[ii0++] = i0++;
+			}
+		}
+	}
 	
 	half len = lerp(1, rng.next_float(), saturate(xHairRandomness)) * strand_length;
 	len *= xHairLength;
@@ -100,13 +137,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	len /= (half)xHairSegmentCount;
 	const float2 frame = float2(atlas_rect.aspect * xHairAspect * xHairSegmentCount, 1) * len * 0.5;
 	const float segment_radius = max(frame.x, frame.y);
-	
-	const uint gfx_vertexcount_per_strand = (xHairSegmentCount * 2 + 2) * xHairBillboardCount;
-	const uint gfx_indexcount_per_particle = 6 * xHairBillboardCount;
-	const uint gfx_indexcount_per_strand = gfx_indexcount_per_particle * xHairSegmentCount;
-	const uint index0 = DTid.x * gfx_indexcount_per_strand;
-	const uint vertexID0 = DTid.x * gfx_vertexcount_per_strand;
-	uint v0 = vertexID0;
 
 	//draw_line(base, base + tangent, float4(1, 0, 0, 1));
 	//draw_line(base, base + target, float4(0, 1, 0, 1));
@@ -184,7 +214,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	for (uint segmentID = 0; segmentID < xHairSegmentCount; ++segmentID)
 	{
 		// Identifies the hair strand segment particle:
-		const uint particleID = strandID + segmentID;
+		const uint particleID = DTid.x * xHairSegmentCount + segmentID;
 
 		if (regenerate_frame)
 		{
@@ -377,39 +407,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 				vertexBuffer_POS_RT[v0] = float4(position, 0);
 		
 				v0++;
-			}
-		}
-
-		// Frustum culling:
-		ShaderSphere sphere;
-		sphere.center = (base + tail_next) * 0.5;
-		sphere.radius = segment_radius;
-		//draw_sphere(sphere.center, sphere.radius);
-		
-		const bool visible = !distance_culled && GetCamera().frustum.intersects(sphere);
-		
-		// Optimization: reduce to 1 atomic operation per wave
-		const uint waveAppendCount = WaveActiveCountBits(visible);
-		uint waveOffset;
-		if (WaveIsFirstLane() && waveAppendCount > 0)
-		{
-			InterlockedAdd(indirectBuffer[0].IndexCountPerInstance, waveAppendCount * gfx_indexcount_per_particle, waveOffset);
-		}
-		waveOffset = WaveReadLaneFirst(waveOffset);
-
-		if (visible)
-		{
-			uint prevCount = waveOffset + WavePrefixSum(gfx_indexcount_per_particle);
-			uint i0 = particleID * gfx_indexcount_per_particle;
-			uint ii0 = prevCount;
-			for (uint billboardID = 0; billboardID < xHairBillboardCount; ++billboardID)
-			{
-				culledIndexBuffer[ii0++] = i0++;
-				culledIndexBuffer[ii0++] = i0++;
-				culledIndexBuffer[ii0++] = i0++;
-				culledIndexBuffer[ii0++] = i0++;
-				culledIndexBuffer[ii0++] = i0++;
-				culledIndexBuffer[ii0++] = i0++;
 			}
 		}
 
