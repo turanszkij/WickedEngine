@@ -7,6 +7,7 @@ namespace wi::lua
 	Luna<TrailRenderer_BindLua>::FunctionType TrailRenderer_BindLua::methods[] = {
 		lunamethod(TrailRenderer_BindLua, AddPoint),
 		lunamethod(TrailRenderer_BindLua, Cut),
+		lunamethod(TrailRenderer_BindLua, Fade),
 		lunamethod(TrailRenderer_BindLua, Clear),
 		lunamethod(TrailRenderer_BindLua, GetPointCount),
 		lunamethod(TrailRenderer_BindLua, GetPoint),
@@ -73,6 +74,18 @@ namespace wi::lua
 	int TrailRenderer_BindLua::Cut(lua_State* L)
 	{
 		trail.Cut();
+		return 0;
+	}
+	int TrailRenderer_BindLua::Fade(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "Fade(float amount): not enough arguments!");
+			return 0;
+		}
+		float amount = wi::lua::SGetFloat(L, 1);
+		trail.Fade(amount);
 		return 0;
 	}
 	int TrailRenderer_BindLua::Clear(lua_State* L)

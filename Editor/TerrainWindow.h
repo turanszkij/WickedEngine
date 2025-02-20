@@ -62,9 +62,10 @@ struct PropWindow : public wi::gui::Window
 	wi::gui::TextInputField minYOffsetInput;
 	wi::gui::TextInputField maxYOffsetInput;
 
-	PropWindow(wi::terrain::Prop* prop, wi::scene::Scene* scene);
+	PropWindow(wi::terrain::Terrain* terrain, wi::terrain::Prop* prop, wi::scene::Scene* scene);
 	void ResizeLayout() override;
 
+	wi::terrain::Terrain* terrain = nullptr;
 	wi::terrain::Prop* prop = nullptr;
 	wi::scene::Scene* scene = nullptr;
 

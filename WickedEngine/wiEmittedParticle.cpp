@@ -443,7 +443,7 @@ namespace wi
 				EmitLocation& location = emit_locations[i];
 				XMFLOAT4X4 mat = location.transform.GetMatrix();
 				XMMATRIX M = XMMatrixTranspose(XMLoadFloat4x4(&mat));
-				M = M * W;
+				M = W * M;
 				XMStoreFloat4x4(&mat, M);
 				location.transform.Create(mat);
 				std::memcpy((EmitLocation*)alloc.data + i, &location, sizeof(location));

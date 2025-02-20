@@ -22,6 +22,7 @@ namespace wi::lua
 
 		int AddPoint(lua_State* L);
 		int Cut(lua_State* L);
+		int Fade(lua_State* L);
 		int Clear(lua_State* L);
 		int GetPointCount(lua_State* L);
 		int GetPoint(lua_State* L);

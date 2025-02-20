@@ -26,6 +26,7 @@ enum class FileType
 	SOUND,
 	TEXT,
 	HEADER,
+	CPP,
 };
 static wi::unordered_map<std::string, FileType> filetypes = {
 	{"LUA", FileType::LUA},
@@ -36,6 +37,7 @@ static wi::unordered_map<std::string, FileType> filetypes = {
 	{"VRM", FileType::VRM},
 	{"FBX", FileType::FBX},
 	{"H", FileType::HEADER},
+	{"CPP", FileType::CPP},
 	{"TXT", FileType::TEXT},
 };
 
@@ -4767,15 +4769,24 @@ void EditorComponent::Save(const std::string& filename)
 	if (type == FileType::INVALID)
 		return;
 
-	if(type == FileType::WISCENE || type == FileType::HEADER)
+	if(type == FileType::WISCENE || type == FileType::HEADER || type == FileType::CPP)
 	{
 		const bool dump_to_header = type == FileType::HEADER;
+		const bool dump_to_cpp = type == FileType::CPP;
 
-		wi::Archive archive = dump_to_header ? wi::Archive() : wi::Archive(filename, false);
+		wi::Archive archive = (dump_to_header || dump_to_cpp) ? wi::Archive() : wi::Archive(filename, false);
 		if (archive.IsOpen())
 		{
-			archive.SetCompressionEnabled(generalWnd.saveCompressionCheckBox.GetCheck() || dump_to_header);
-			archive.SetThumbnailAndResetPos(CreateThumbnailScreenshot());
+			if (dump_to_header || dump_to_cpp)
+			{
+				archive.SetCompressionEnabled(true);
+				// No thumbnail for header
+			}
+			else
+			{
+				archive.SetCompressionEnabled(generalWnd.saveCompressionCheckBox.GetCheck());
+				archive.SetThumbnailAndResetPos(CreateThumbnailScreenshot());
+			}
 
 			Scene& scene = GetCurrentScene();
 
@@ -4787,6 +4798,10 @@ void EditorComponent::Save(const std::string& filename)
 			if (dump_to_header)
 			{
 				archive.SaveHeaderFile(filename, wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(filename)));
+			}
+			else if (dump_to_cpp)
+			{
+				archive.SaveCPPFile(filename, wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(filename)));
 			}
 		}
 		else
@@ -4811,15 +4826,16 @@ void EditorComponent::SaveAs()
 {
 	wi::helper::FileDialogParams params;
 	params.type = wi::helper::FileDialogParams::SAVE;
-	params.description = "Wicked Scene (.wiscene) | GLTF Model (.gltf) | GLTF Binary Model (.glb) | C++ header (.h)";
+	params.description = "Wicked Scene (.wiscene) | GLTF Model (.gltf) | GLTF Binary Model (.glb) | C++ code (.h,.cpp)";
 	params.extensions.push_back("wiscene");
 	params.extensions.push_back("gltf");
 	params.extensions.push_back("glb");
 	params.extensions.push_back("h");
+	params.extensions.push_back("cpp");
 	wi::helper::FileDialog(params, [=](std::string fileName) {
 		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 			auto extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
-			std::string filename = (!extension.compare("GLTF") || !extension.compare("GLB") || !extension.compare("H")) ? fileName : wi::helper::ForceExtension(fileName, params.extensions.front());
+			std::string filename = (!extension.compare("GLTF") || !extension.compare("GLB") || !extension.compare("H") || !extension.compare("CPP")) ? fileName : wi::helper::ForceExtension(fileName, params.extensions.front());
 			Save(filename);
 		});
 	});

@@ -22,6 +22,14 @@ namespace wi
 	static PipelineState		PSO[BLENDMODE_COUNT];
 	static PipelineState		PSO_wire;
 
+	void TrailRenderer::AddPoint(const XMFLOAT3& position, float width, const XMFLOAT4& color)
+	{
+		TrailPoint& point = points.emplace_back();
+		point.position = position;
+		point.width = width;
+		point.color = color;
+	}
+
 	void TrailRenderer::Cut()
 	{
 		if (points.empty())
@@ -29,6 +37,32 @@ namespace wi
 		if (cuts.empty() || cuts.back() != points.size())
 		{
 			cuts.push_back((uint32_t)points.size());
+		}
+	}
+
+	void TrailRenderer::Fade(float amount)
+	{
+		if (points.size() > 1)
+		{
+			for (auto& point : points)
+			{
+				point.color.w = saturate(point.color.w - amount);
+			}
+			if (points[0].color.w <= 0 && points[1].color.w <= 0)
+			{
+				points.erase(points.begin());
+				for (auto& cut : cuts)
+				{
+					if (cut > 0)
+					{
+						cut--;
+					}
+				}
+				if (!cuts.empty() && cuts[0] == 0)
+				{
+					cuts.erase(cuts.begin());
+				}
+			}
 		}
 	}
 

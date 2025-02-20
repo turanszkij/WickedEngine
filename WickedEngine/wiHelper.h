@@ -130,6 +130,11 @@ namespace wi::helper
 	//	dataName : the byte array's name
 	bool Bin2H(const uint8_t* data, size_t size, const std::string& dst_filename, const char* dataName);
 
+	// Converts a file into a C++ source file that contains the file contents as byte array and using extern.
+	//	dataName : the byte array's name
+	//	Note: size is exported as name_size where name is the dataName that you give to it
+	bool Bin2CPP(const uint8_t* data, size_t size, const std::string& dst_filename, const char* dataName);
+
 	void StringConvert(const std::string& from, std::wstring& to);
 
 	void StringConvert(const std::wstring& from, std::string& to);

@@ -2149,6 +2149,7 @@ Path finding operations can be made by using a voxel grid and path queries. The 
 - [constructor] TrailRenderer()
 - AddPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1)) -- adds a new point to the trail
 - Cut() -- cuts the trail at last point and starts a new trail
+- Fade(float amount)	-- Applies fade for the whole trail continuously, and removes segments that can be removed due to faded
 - Clear() -- removes all points and cuts from the trail
 - GetPointCount() : int -- returns the number of points in the trail
 - GetPoint() : Vector pos, float width -- returns the point of the trail on the specified index

@@ -167,6 +167,17 @@ namespace wi
 		return wi::helper::Bin2H(data_ptr, pos, fileName, dataName.c_str());
 	}
 
+	bool Archive::SaveCPPFile(const std::string& fileName, const std::string& dataName)
+	{
+		if (IsCompressionEnabled())
+		{
+			wi::vector<uint8_t> final_data;
+			WriteCompressedData(final_data);
+			return wi::helper::Bin2CPP(final_data.data(), final_data.size(), fileName, dataName.c_str());
+		}
+		return wi::helper::Bin2CPP(data_ptr, pos, fileName, dataName.c_str());
+	}
+
 	const std::string& Archive::GetSourceDirectory() const
 	{
 		return directory;

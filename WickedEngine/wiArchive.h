@@ -87,6 +87,10 @@ namespace wi
 		// Write the archive contents into a C++ header file
 		//	dataName : it will be the name of the byte data array in the header, that can be memory mapped as an Archive
 		bool SaveHeaderFile(const std::string& fileName, const std::string& dataName);
+		// Write the archive contents into a C++ source file
+		//	dataName : it will be the name of the byte data array in the header, that can be memory mapped as an Archive
+		//	Note: size is exported as name_size where name is the dataName that you give to it
+		bool SaveCPPFile(const std::string& fileName, const std::string& dataName);
 		// If the archive was opened from a file, this will return the file's directory
 		const std::string& GetSourceDirectory() const;
 		// If the archive was opened from a file, this will return the file's name
