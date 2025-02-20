@@ -1251,7 +1251,7 @@ namespace wi::scene
 		inline XMVECTOR GetEye() const { return XMLoadFloat3(&Eye); }
 		inline XMVECTOR GetAt() const { return XMLoadFloat3(&At); }
 		inline XMVECTOR GetUp() const { return XMLoadFloat3(&Up); }
-		inline XMVECTOR GetRight() const { return XMVector3Cross(GetAt(), GetUp()); }
+		inline XMVECTOR GetRight() const { return XMVector3Cross(GetUp(), GetAt()); }
 		inline XMMATRIX GetView() const { return XMLoadFloat4x4(&View); }
 		inline XMMATRIX GetInvView() const { return XMLoadFloat4x4(&InvView); }
 		inline XMMATRIX GetProjection() const { return XMLoadFloat4x4(&Projection); }

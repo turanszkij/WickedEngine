@@ -1511,7 +1511,7 @@ void EditorComponent::Update(float dt)
 
 			if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT))
 			{
-				XMVECTOR V = XMVectorAdd(camera.GetRight() * xDif, camera.GetUp() * yDif) * 10;
+				XMVECTOR V = XMVectorAdd(-camera.GetRight() * xDif, camera.GetUp() * yDif) * 10;
 				XMFLOAT3 vec;
 				XMStoreFloat3(&vec, V);
 				editorscene.camera_target.Translate(vec);
