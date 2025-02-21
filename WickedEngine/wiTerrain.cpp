@@ -802,26 +802,13 @@ namespace wi::terrain
 			if (IsPhysicsEnabled())
 			{
 				const ObjectComponent* object = scene->objects.GetComponent(chunk_data.entity);
-				const int lod_required = object == nullptr ? 0 : object->lod;
 
-				if (rigidbody != nullptr)
+				if (rigidbody == nullptr && dist < physics_generation)
 				{
-					if (rigidbody->mesh_lod != lod_required)
-					{
-						rigidbody->mesh_lod = lod_required;
-						rigidbody->physicsobject = {}; // will be recreated
-					}
-				}
-				else
-				{
-					if (dist < physics_generation)
-					{
-						RigidBodyPhysicsComponent& newrigidbody = scene->rigidbodies.Create(chunk_data.entity);
-						newrigidbody.shape = RigidBodyPhysicsComponent::TRIANGLE_MESH;
-						newrigidbody.mass = 0; // terrain chunks are static
-						newrigidbody.friction = 0.8f;
-						newrigidbody.mesh_lod = lod_required;
-					}
+					RigidBodyPhysicsComponent& newrigidbody = scene->rigidbodies.Create(chunk_data.entity);
+					newrigidbody.shape = RigidBodyPhysicsComponent::TRIANGLE_MESH;
+					newrigidbody.mass = 0; // terrain chunks are static
+					newrigidbody.friction = 0.8f;
 				}
 			}
 			else
@@ -1035,6 +1022,16 @@ namespace wi::terrain
 
 					// Create the textures for virtual texture update:
 					CreateChunkRegionTexture(chunk_data);
+
+					const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
+					if (IsPhysicsEnabled() && dist < physics_generation)
+					{
+						RigidBodyPhysicsComponent& newrigidbody = generator->scene.rigidbodies.Create(chunk_data.entity);
+						newrigidbody.shape = RigidBodyPhysicsComponent::TRIANGLE_MESH;
+						newrigidbody.mass = 0; // terrain chunks are static
+						newrigidbody.friction = 0.8f;
+						wi::physics::CreateRigidBodyShape(newrigidbody, transform.scale_local, &mesh);
+					}
 
 					generated_something = true;
 				}

@@ -143,9 +143,23 @@ namespace wi::physics
 		std::shared_ptr<void> internal_state;
 		inline bool IsValid() const { return internal_state != nullptr; }
 	};
+	enum class ConstraintType
+	{
+		Fixed,	// Fixes the whole object with the current orientation
+		Point,	// Fixes the object to rotate around a point
+	};
 	void PickDrag(
 		const wi::scene::Scene& scene,
 		wi::primitive::Ray ray,
-		PickDragOperation& op
+		PickDragOperation& op,
+		ConstraintType constraint_type = ConstraintType::Fixed
+	);
+
+	// Create the shape immediately, useful when you want to do this from a thread
+	//	Otherwise this will be created on demand before it's used for the first time
+	void CreateRigidBodyShape(
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		const XMFLOAT3& scale_local = XMFLOAT3(1, 1, 1),
+		const wi::scene::MeshComponent* mesh = nullptr
 	);
 }

@@ -20,6 +20,7 @@
 #include <Jolt/Physics/Collision/Shape/CylinderShape.h>
 #include <Jolt/Physics/Collision/Shape/ConvexHullShape.h>
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>
+#include <Jolt/Physics/Collision/Shape/HeightFieldShape.h>
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 #include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/CastResult.h>
@@ -329,7 +330,7 @@ namespace wi::physics
 			const wi::scene::MeshComponent* mesh
 		)
 		{
-			ShapeSettings::ShapeResult shape_result;
+			RigidBody& physicsobject = GetRigidBody(physicscomponent);
 
 			TransformComponent transform = _transform;
 
@@ -340,110 +341,18 @@ namespace wi::physics
 			XMStoreFloat4x4(&transform.world, parentMatrix * transform.GetLocalMatrix());
 			transform.ApplyTransform();
 
-			// The default convex radius caused issues when creating small box shape, etc, so I decrease it:
-			const float convexRadius = 0.001f;
-
-			switch (physicscomponent.shape)
+			if (physicsobject.shape == nullptr) // shape creation can be called from outside as optimization from threads
 			{
-			case RigidBodyPhysicsComponent::CollisionShape::BOX:
-			{
-				BoxShapeSettings settings(Vec3(physicscomponent.box.halfextents.x * transform.scale_local.x, physicscomponent.box.halfextents.y * transform.scale_local.y, physicscomponent.box.halfextents.z * transform.scale_local.z), convexRadius);
-				settings.SetEmbedded();
-				shape_result = settings.Create();
-			}
-			break;
-			case RigidBodyPhysicsComponent::CollisionShape::SPHERE:
-			{
-				SphereShapeSettings settings(physicscomponent.sphere.radius * transform.scale_local.x);
-				settings.SetEmbedded();
-				shape_result = settings.Create();
-			}
-			break;
-			case RigidBodyPhysicsComponent::CollisionShape::CAPSULE:
-			{
-				CapsuleShapeSettings settings(physicscomponent.capsule.height * transform.scale_local.y, physicscomponent.capsule.radius * transform.scale_local.x);
-				settings.SetEmbedded();
-				shape_result = settings.Create();
-			}
-			break;
-			case RigidBodyPhysicsComponent::CollisionShape::CYLINDER:
-			{
-				CylinderShapeSettings settings(physicscomponent.capsule.height * transform.scale_local.y, physicscomponent.capsule.radius * transform.scale_local.x, convexRadius);
-				settings.SetEmbedded();
-				shape_result = settings.Create();
-			}
-			break;
-
-			case RigidBodyPhysicsComponent::CollisionShape::CONVEX_HULL:
-			if (mesh != nullptr)
-			{
-				Array<Vec3> points;
-				points.reserve(mesh->vertex_positions.size());
-				for (auto& pos : mesh->vertex_positions)
-				{
-					points.push_back(Vec3(pos.x * transform.scale_local.x, pos.y * transform.scale_local.y, pos.z * transform.scale_local.z));
-				}
-				ConvexHullShapeSettings settings(points, convexRadius);
-				settings.SetEmbedded();
-				shape_result = settings.Create();
-			}
-			else
-			{
-				wi::backlog::post("AddRigidBody failed: convex hull physics requested, but no MeshComponent provided!", wi::backlog::LogLevel::Error);
-				return;
-			}
-			break;
-
-			case RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH:
-			if (mesh != nullptr)
-			{
-				TriangleList trianglelist;
-
-				uint32_t first_subset = 0;
-				uint32_t last_subset = 0;
-				mesh->GetLODSubsetRange(physicscomponent.mesh_lod, first_subset, last_subset);
-				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
-				{
-					const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
-					const uint32_t* indices = mesh->indices.data() + subset.indexOffset;
-					for (uint32_t i = 0; i < subset.indexCount; i += 3)
-					{
-						Triangle triangle;
-						triangle.mMaterialIndex = 0;
-						triangle.mV[0] = Float3(mesh->vertex_positions[indices[i + 0]].x * transform.scale_local.x, mesh->vertex_positions[indices[i + 0]].y * transform.scale_local.y, mesh->vertex_positions[indices[i + 0]].z * transform.scale_local.z);
-						triangle.mV[2] = Float3(mesh->vertex_positions[indices[i + 1]].x * transform.scale_local.x, mesh->vertex_positions[indices[i + 1]].y * transform.scale_local.y, mesh->vertex_positions[indices[i + 1]].z * transform.scale_local.z);
-						triangle.mV[1] = Float3(mesh->vertex_positions[indices[i + 2]].x * transform.scale_local.x, mesh->vertex_positions[indices[i + 2]].y * transform.scale_local.y, mesh->vertex_positions[indices[i + 2]].z * transform.scale_local.z);
-						trianglelist.push_back(triangle);
-					}
-				}
-
-				MeshShapeSettings settings(trianglelist);
-				settings.SetEmbedded();
-				shape_result = settings.Create();
-			}
-			else
-			{
-				wi::backlog::post("AddRigidBody failed: triangle mesh physics requested, but no MeshComponent provided!", wi::backlog::LogLevel::Error);
-				return;
-			}
-			break;
+				CreateRigidBodyShape(physicscomponent, transform.scale_local, mesh);
 			}
 
-			if (!shape_result.IsValid())
+			if (physicsobject.shape != nullptr)
 			{
-				wilog_error("AddRigidBody failed, shape_result: %s", shape_result.GetError().c_str());
-				return;
-			}
-			else
-			{
-				RigidBody& physicsobject = GetRigidBody(physicscomponent);
 				physicsobject.physics_scene = scene.physics_scene;
 				physicsobject.entity = entity;
 				XMStoreFloat4x4(&physicsobject.parentMatrix, parentMatrix);
 				XMStoreFloat4x4(&physicsobject.parentMatrixInverse, XMMatrixInverse(nullptr, parentMatrix));
 				PhysicsScene& physics_scene = GetPhysicsScene(scene);
-
-				physicsobject.shape = shape_result.Get();
 
 				Mat44 mat = cast(transform.world);
 				Vec3 local_offset = cast(physicscomponent.local_offset);
@@ -1165,6 +1074,113 @@ namespace wi::physics
 		RegisterTypes();
 
 		wilog("wi::physics Initialized [Jolt Physics %d.%d.%d] (%d ms)", JPH_VERSION_MAJOR, JPH_VERSION_MINOR, JPH_VERSION_PATCH, (int)std::round(timer.elapsed()));
+	}
+
+	void CreateRigidBodyShape(
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		const XMFLOAT3& scale_local,
+		const wi::scene::MeshComponent* mesh
+	)
+	{
+		ShapeSettings::ShapeResult shape_result;
+
+		// The default convex radius caused issues when creating small box shape, etc, so I decrease it:
+		const float convexRadius = 0.001f;
+
+		switch (physicscomponent.shape)
+		{
+		case RigidBodyPhysicsComponent::CollisionShape::BOX:
+		{
+			BoxShapeSettings settings(Vec3(physicscomponent.box.halfextents.x * scale_local.x, physicscomponent.box.halfextents.y * scale_local.y, physicscomponent.box.halfextents.z * scale_local.z), convexRadius);
+			settings.SetEmbedded();
+			shape_result = settings.Create();
+		}
+		break;
+		case RigidBodyPhysicsComponent::CollisionShape::SPHERE:
+		{
+			SphereShapeSettings settings(physicscomponent.sphere.radius * scale_local.x);
+			settings.SetEmbedded();
+			shape_result = settings.Create();
+		}
+		break;
+		case RigidBodyPhysicsComponent::CollisionShape::CAPSULE:
+		{
+			CapsuleShapeSettings settings(physicscomponent.capsule.height * scale_local.y, physicscomponent.capsule.radius * scale_local.x);
+			settings.SetEmbedded();
+			shape_result = settings.Create();
+		}
+		break;
+		case RigidBodyPhysicsComponent::CollisionShape::CYLINDER:
+		{
+			CylinderShapeSettings settings(physicscomponent.capsule.height * scale_local.y, physicscomponent.capsule.radius * scale_local.x, convexRadius);
+			settings.SetEmbedded();
+			shape_result = settings.Create();
+		}
+		break;
+
+		case RigidBodyPhysicsComponent::CollisionShape::CONVEX_HULL:
+			if (mesh != nullptr)
+			{
+				Array<Vec3> points;
+				points.reserve(mesh->vertex_positions.size());
+				for (auto& pos : mesh->vertex_positions)
+				{
+					points.push_back(Vec3(pos.x * scale_local.x, pos.y * scale_local.y, pos.z * scale_local.z));
+				}
+				ConvexHullShapeSettings settings(points, convexRadius);
+				settings.SetEmbedded();
+				shape_result = settings.Create();
+			}
+			else
+			{
+				wi::backlog::post("CreateRigidBodyShape failed: convex hull physics requested, but no MeshComponent provided!", wi::backlog::LogLevel::Error);
+				return;
+			}
+			break;
+
+		case RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH:
+			if (mesh != nullptr)
+			{
+				TriangleList trianglelist;
+
+				uint32_t first_subset = 0;
+				uint32_t last_subset = 0;
+				mesh->GetLODSubsetRange(physicscomponent.mesh_lod, first_subset, last_subset);
+				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+				{
+					const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+					const uint32_t* indices = mesh->indices.data() + subset.indexOffset;
+					for (uint32_t i = 0; i < subset.indexCount; i += 3)
+					{
+						Triangle triangle;
+						triangle.mMaterialIndex = 0;
+						triangle.mV[0] = Float3(mesh->vertex_positions[indices[i + 0]].x * scale_local.x, mesh->vertex_positions[indices[i + 0]].y * scale_local.y, mesh->vertex_positions[indices[i + 0]].z * scale_local.z);
+						triangle.mV[2] = Float3(mesh->vertex_positions[indices[i + 1]].x * scale_local.x, mesh->vertex_positions[indices[i + 1]].y * scale_local.y, mesh->vertex_positions[indices[i + 1]].z * scale_local.z);
+						triangle.mV[1] = Float3(mesh->vertex_positions[indices[i + 2]].x * scale_local.x, mesh->vertex_positions[indices[i + 2]].y * scale_local.y, mesh->vertex_positions[indices[i + 2]].z * scale_local.z);
+						trianglelist.push_back(triangle);
+					}
+				}
+
+				MeshShapeSettings settings(trianglelist);
+				settings.SetEmbedded();
+				shape_result = settings.Create();
+			}
+			else
+			{
+				wi::backlog::post("CreateRigidBodyShape failed: triangle mesh physics requested, but no MeshComponent provided!", wi::backlog::LogLevel::Error);
+				return;
+			}
+			break;
+		}
+
+		if (!shape_result.IsValid())
+		{
+			wilog_error("CreateRigidBodyShape failed, shape_result: %s", shape_result.GetError().c_str());
+			return;
+		}
+
+		RigidBody& physicsobject = GetRigidBody(physicscomponent);
+		physicsobject.shape = shape_result.Get();
 	}
 
 	bool IsEnabled() { return ENABLED; }
@@ -2242,7 +2258,8 @@ namespace wi::physics
 	void PickDrag(
 		const wi::scene::Scene& scene,
 		wi::primitive::Ray ray,
-		PickDragOperation& op
+		PickDragOperation& op,
+		ConstraintType constraint_type
 	)
 	{
 		if (scene.physics_scene == nullptr)
@@ -2290,17 +2307,21 @@ namespace wi::physics
 				internal_state->bodyA = body_interface.CreateBody(BodyCreationSettings(new SphereShape(0.01f), pos, Quat::sIdentity(), EMotionType::Kinematic, Layers::MOVING));
 				body_interface.AddBody(internal_state->bodyA->GetID(), EActivation::Activate);
 
-#if 0
-				DistanceConstraintSettings settings;
-				settings.SetEmbedded();
-				settings.mPoint1 = settings.mPoint2 = pos;
-#else
-				FixedConstraintSettings settings;
-				settings.SetEmbedded();
-				settings.mAutoDetectPoint = true;
-#endif
+				if (constraint_type == ConstraintType::Fixed)
+				{
+					FixedConstraintSettings settings;
+					settings.SetEmbedded();
+					settings.mAutoDetectPoint = true;
+					internal_state->constraint = settings.Create(*internal_state->bodyA, *internal_state->bodyB);
+				}
+				else if (constraint_type == ConstraintType::Point)
+				{
+					DistanceConstraintSettings settings;
+					settings.SetEmbedded();
+					settings.mPoint1 = settings.mPoint2 = pos;
+					internal_state->constraint = settings.Create(*internal_state->bodyA, *internal_state->bodyB);
+				}
 
-				internal_state->constraint = settings.Create(*internal_state->bodyA, *internal_state->bodyB);
 				physics_scene.physics_system.AddConstraint(internal_state->constraint);
 			}
 			else if (body->IsSoftBody())
