@@ -313,12 +313,20 @@ namespace wi::physics
 			}
 			return *(RigidBody*)physicscomponent.physicsobject.get();
 		}
+		const RigidBody& GetRigidBody(const wi::scene::RigidBodyPhysicsComponent& physicscomponent)
+		{
+			return *(RigidBody*)physicscomponent.physicsobject.get();
+		}
 		SoftBody& GetSoftBody(wi::scene::SoftBodyPhysicsComponent& physicscomponent)
 		{
 			if (physicscomponent.physicsobject == nullptr)
 			{
 				physicscomponent.physicsobject = std::make_shared<SoftBody>();
 			}
+			return *(SoftBody*)physicscomponent.physicsobject.get();
+		}
+		const SoftBody& GetSoftBody(const wi::scene::SoftBodyPhysicsComponent& physicscomponent)
+		{
 			return *(SoftBody*)physicscomponent.physicsobject.get();
 		}
 
@@ -340,6 +348,13 @@ namespace wi::physics
 
 			XMStoreFloat4x4(&transform.world, parentMatrix * transform.GetLocalMatrix());
 			transform.ApplyTransform();
+
+			if (mesh != nullptr && mesh->precomputed_rigidbody_physics_shape.physicsobject != nullptr)
+			{
+				// The shape comes from mesh's precomputed shape:
+				const RigidBody& precomputed_rigidbody_with_shape = GetRigidBody(mesh->precomputed_rigidbody_physics_shape);
+				physicsobject.shape = precomputed_rigidbody_with_shape.shape;
+			}
 
 			if (physicsobject.shape == nullptr) // shape creation can be called from outside as optimization from threads
 			{

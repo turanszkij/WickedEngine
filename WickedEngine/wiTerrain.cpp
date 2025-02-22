@@ -556,8 +556,8 @@ namespace wi::terrain
 
 	void Terrain::Generation_Update(const CameraComponent& camera)
 	{
-		// The generation task is always cancelled every frame so we are sure that generation is not running at this point
-		Generation_Cancel();
+		if (wi::jobsystem::IsBusy(generator->workload))
+			return; // updating can't run while generation is running. Note: we could cancel here, but it could take long until cancel request is fulfilled (happened with physics mesh creations)
 
 		bool restart_generation = false;
 		if (!IsGenerationStarted())
@@ -803,12 +803,20 @@ namespace wi::terrain
 			{
 				const ObjectComponent* object = scene->objects.GetComponent(chunk_data.entity);
 
-				if (rigidbody == nullptr && dist < physics_generation)
+				if (dist < physics_generation)
 				{
-					RigidBodyPhysicsComponent& newrigidbody = scene->rigidbodies.Create(chunk_data.entity);
-					newrigidbody.shape = RigidBodyPhysicsComponent::TRIANGLE_MESH;
-					newrigidbody.mass = 0; // terrain chunks are static
-					newrigidbody.friction = 0.8f;
+					if (rigidbody == nullptr)
+					{
+						RigidBodyPhysicsComponent& newrigidbody = scene->rigidbodies.Create(chunk_data.entity);
+						newrigidbody.shape = RigidBodyPhysicsComponent::TRIANGLE_MESH;
+						newrigidbody.mass = 0; // terrain chunks are static
+						newrigidbody.friction = 0.8f;
+						newrigidbody.mesh_lod = 2;
+					}
+				}
+				else if(rigidbody != nullptr)
+				{
+					scene->rigidbodies.Remove(chunk_data.entity);
 				}
 			}
 			else
@@ -842,6 +850,7 @@ namespace wi::terrain
 		}
 
 		// Start the generation on a background thread and keep it running until the next frame
+		generator->cancelled.store(false);
 		generator->workload.priority = wi::jobsystem::Priority::Low;
 		wi::jobsystem::Execute(generator->workload, [=](wi::jobsystem::JobArgs a) {
 
@@ -1023,13 +1032,15 @@ namespace wi::terrain
 					// Create the textures for virtual texture update:
 					CreateChunkRegionTexture(chunk_data);
 
-					const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
-					if (IsPhysicsEnabled() && dist < physics_generation)
+					if (IsPhysicsEnabled())
 					{
-						RigidBodyPhysicsComponent& newrigidbody = generator->scene.rigidbodies.Create(chunk_data.entity);
+						// Precompute the physics shape here on separate thread, because computing shape for triangle mesh would be slow on main thread:
+						//	Note that this is mesh.precomputed_rigidbody_physics_shape and not a component in scene.rigidbodies, so this only contains the shape, not the simulated rigid bodies
+						RigidBodyPhysicsComponent& newrigidbody = mesh.precomputed_rigidbody_physics_shape;
 						newrigidbody.shape = RigidBodyPhysicsComponent::TRIANGLE_MESH;
 						newrigidbody.mass = 0; // terrain chunks are static
 						newrigidbody.friction = 0.8f;
+						newrigidbody.mesh_lod = 2;
 						wi::physics::CreateRigidBodyShape(newrigidbody, transform.scale_local, &mesh);
 					}
 

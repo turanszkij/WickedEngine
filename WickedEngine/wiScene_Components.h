@@ -382,6 +382,69 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
+	struct RigidBodyPhysicsComponent
+	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+			DISABLE_DEACTIVATION = 1 << 0,
+			KINEMATIC = 1 << 1,
+			START_DEACTIVATED = 1 << 2,
+		};
+		uint32_t _flags = EMPTY;
+
+		enum CollisionShape
+		{
+			BOX,
+			SPHERE,
+			CAPSULE,
+			CONVEX_HULL,
+			TRIANGLE_MESH,
+			CYLINDER,
+			ENUM_FORCE_UINT32 = 0xFFFFFFFF
+		};
+		CollisionShape shape;
+		float mass = 1.0f; // Set to 0 to make body static
+		float friction = 0.2f;
+		float restitution = 0.1f;
+		float damping_linear = 0.05f;
+		float damping_angular = 0.05f;
+		float buoyancy = 1.2f;
+		XMFLOAT3 local_offset = XMFLOAT3(0, 0, 0);
+
+		struct BoxParams
+		{
+			XMFLOAT3 halfextents = XMFLOAT3(1, 1, 1);
+		} box;
+		struct SphereParams
+		{
+			float radius = 1;
+		} sphere;
+		struct CapsuleParams
+		{
+			float radius = 1;
+			float height = 1;
+		} capsule; // also cylinder params
+
+		// This will force LOD level for rigid body if it is a TRIANGLE_MESH shape:
+		//	The geometry for LOD level will be taken from MeshComponent.
+		//	The physics object will need to be recreated for it to take effect.
+		uint32_t mesh_lod = 0;
+
+		// Non-serialized attributes:
+		std::shared_ptr<void> physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
+
+		constexpr void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
+		constexpr void SetKinematic(bool value) { if (value) { _flags |= KINEMATIC; } else { _flags &= ~KINEMATIC; } }
+		constexpr void SetStartDeactivated(bool value) { if (value) { _flags |= START_DEACTIVATED; } else { _flags &= ~START_DEACTIVATED; } }
+
+		constexpr bool IsDisableDeactivation() const { return _flags & DISABLE_DEACTIVATION; }
+		constexpr bool IsKinematic() const { return _flags & KINEMATIC; }
+		constexpr bool IsStartDeactivated() const { return _flags & START_DEACTIVATED; }
+
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+	};
+
 	struct MeshComponent
 	{
 		enum FLAGS
@@ -511,6 +574,8 @@ namespace wi::scene
 			uint32_t clusterCount = 0;
 		};
 		wi::vector<SubsetClusterRange> cluster_ranges;
+
+		RigidBodyPhysicsComponent precomputed_rigidbody_physics_shape; // you can precompute a physics shape here if you need without using a real rigid body component yet
 
 		constexpr void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		constexpr void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
@@ -953,69 +1018,6 @@ namespace wi::scene
 			uint8_t value = 0;
 			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R8_UNORM;
 		};
-	};
-
-	struct RigidBodyPhysicsComponent
-	{
-		enum FLAGS
-		{
-			EMPTY = 0,
-			DISABLE_DEACTIVATION = 1 << 0,
-			KINEMATIC = 1 << 1,
-			START_DEACTIVATED = 1 << 2,
-		};
-		uint32_t _flags = EMPTY;
-
-		enum CollisionShape
-		{
-			BOX,
-			SPHERE,
-			CAPSULE,
-			CONVEX_HULL,
-			TRIANGLE_MESH,
-			CYLINDER,
-			ENUM_FORCE_UINT32 = 0xFFFFFFFF
-		};
-		CollisionShape shape;
-		float mass = 1.0f; // Set to 0 to make body static
-		float friction = 0.2f;
-		float restitution = 0.1f;
-		float damping_linear = 0.05f;
-		float damping_angular = 0.05f;
-		float buoyancy = 1.2f;
-		XMFLOAT3 local_offset = XMFLOAT3(0, 0, 0);
-
-		struct BoxParams
-		{
-			XMFLOAT3 halfextents = XMFLOAT3(1, 1, 1);
-		} box;
-		struct SphereParams
-		{
-			float radius = 1;
-		} sphere;
-		struct CapsuleParams
-		{
-			float radius = 1;
-			float height = 1;
-		} capsule; // also cylinder params
-
-		// This will force LOD level for rigid body if it is a TRIANGLE_MESH shape:
-		//	The geometry for LOD level will be taken from MeshComponent.
-		//	The physics object will need to be recreated for it to take effect.
-		uint32_t mesh_lod = 0;
-
-		// Non-serialized attributes:
-		std::shared_ptr<void> physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
-
-		constexpr void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
-		constexpr void SetKinematic(bool value) { if (value) { _flags |= KINEMATIC; } else { _flags &= ~KINEMATIC; } }
-		constexpr void SetStartDeactivated(bool value) { if (value) { _flags |= START_DEACTIVATED; } else { _flags &= ~START_DEACTIVATED; } }
-
-		constexpr bool IsDisableDeactivation() const { return _flags & DISABLE_DEACTIVATION; }
-		constexpr bool IsKinematic() const { return _flags & KINEMATIC; }
-		constexpr bool IsStartDeactivated() const { return _flags & START_DEACTIVATED; }
-
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct SoftBodyPhysicsComponent
