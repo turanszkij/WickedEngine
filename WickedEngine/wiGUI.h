@@ -119,6 +119,7 @@ namespace wi::gui
 			bool highlight = false;
 			XMFLOAT3 highlight_color = XMFLOAT3(1, 1, 1);
 			float highlight_spread = 1;
+			float border_soften = 0;
 
 			void Apply(wi::image::Params& params) const
 			{
@@ -209,6 +210,7 @@ namespace wi::gui
 			}
 		} font;
 
+		float shadow = 1; // shadow radius
 		wi::Color shadow_color = wi::Color::Shadow(); // shadow color for whole widget
 		bool shadow_highlight = false;
 		XMFLOAT3 shadow_highlight_color = XMFLOAT3(1, 1, 1);
@@ -216,6 +218,7 @@ namespace wi::gui
 
 		Image tooltipImage;
 		Font tooltipFont;
+		float tooltip_shadow = 1; // shadow radius
 		wi::Color tooltip_shadow_color = wi::Color::Shadow();
 	};
 
@@ -462,6 +465,11 @@ namespace wi::gui
 		ScrollBar scrollbar;
 
 		void SetWrapEnabled(bool value) { wrap_enabled = value; }
+
+		float margin_left = 0;
+		float margin_right = 0;
+		float margin_top = 0;
+		float margin_bottom = 0;
 	};
 
 	// Text input box

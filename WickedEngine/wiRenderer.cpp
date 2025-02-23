@@ -6217,6 +6217,10 @@ void DrawShadowmaps(
 						const ObjectComponent& object = vis.scene->objects[i];
 						if (object.IsRenderable() && object.IsCastingShadow())
 						{
+							const float distance = wi::math::Distance(vis.camera->Eye, object.center);
+							if (distance > object.draw_distance + object.radius) // Note: here I use draw_distance instead of fadeDeistance because this doesn't account for impostor switch fade
+								continue;
+
 							// Determine which cascades the object is contained in:
 							uint8_t camera_mask = 0;
 							uint8_t shadow_lod = 0xFF;
@@ -6338,6 +6342,10 @@ void DrawShadowmaps(
 						const ObjectComponent& object = vis.scene->objects[i];
 						if (object.IsRenderable() && object.IsCastingShadow())
 						{
+							const float distance = wi::math::Distance(vis.camera->Eye, object.center);
+							if (distance > object.draw_distance + object.radius) // Note: here I use draw_distance instead of fadeDeistance because this doesn't account for impostor switch fade
+								continue;
+
 							uint8_t shadow_lod = 0xFF;
 							uint8_t candidate_lod = (uint8_t)vis.scene->ComputeObjectLODForView(object, aabb, vis.scene->meshes[object.mesh_index], shcam.view_projection);
 							shadow_lod = std::min(shadow_lod, candidate_lod);
@@ -6490,6 +6498,10 @@ void DrawShadowmaps(
 						const ObjectComponent& object = vis.scene->objects[i];
 						if (object.IsRenderable() && object.IsCastingShadow())
 						{
+							const float distance = wi::math::Distance(vis.camera->Eye, object.center);
+							if (distance > object.draw_distance + object.radius) // Note: here I use draw_distance instead of fadeDeistance because this doesn't account for impostor switch fade
+								continue;
+
 							// Check for each frustum, if object is visible from it:
 							uint8_t camera_mask = 0;
 							uint8_t shadow_lod = 0xFF;

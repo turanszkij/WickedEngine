@@ -92,15 +92,18 @@ namespace wi::gui
 				widget->priority = ~0u;
 			}
 
-			if (widget->IsVisible() && widget->hitBox.intersects(pointerHitbox))
+			const bool visible = widget->IsVisible();
+			const WIDGETSTATE state = widget->GetState();
+
+			if (visible && widget->hitBox.intersects(pointerHitbox))
 			{
 				focus = true;
 			}
-			if (widget->GetState() > IDLE)
+			if (visible && state > IDLE)
 			{
 				focus = true;
 			}
-			if (widget->GetState() > FOCUS)
+			if (visible && state > FOCUS)
 			{
 				force_disable = true;
 			}
@@ -678,13 +681,19 @@ namespace wi::gui
 			theme.image.Apply(sprites[id].params);
 		}
 		theme.font.Apply(font.params);
+		SetShadowRadius(theme.shadow);
 		SetShadowColor(theme.shadow_color);
 		theme.tooltipFont.Apply(tooltipFont.params);
 		theme.tooltipImage.Apply(tooltipSprite.params);
+		tooltip_shadow = theme.tooltip_shadow;
 		tooltip_shadow_color = theme.tooltip_shadow_color;
 		shadow_highlight = theme.shadow_highlight;
 		shadow_highlight_color = theme.shadow_highlight_color;
 		shadow_highlight_spread = theme.shadow_highlight_spread;
+		for (auto& x : sprites)
+		{
+			x.params.border_soften = theme.image.border_soften;
+		}
 	}
 
 	void Widget::AttachTo(Widget* parent)
@@ -1290,7 +1299,7 @@ namespace wi::gui
 
 		if (wrap_enabled)
 		{
-			font.params.h_wrap = scale.x;
+			font.params.h_wrap = scale.x - margin_left - margin_right;
 		}
 		else
 		{
@@ -1300,10 +1309,10 @@ namespace wi::gui
 		switch (font.params.h_align)
 		{
 		case wi::font::WIFALIGN_LEFT:
-			font.params.posX = translation.x + 2;
+			font.params.posX = translation.x + 2 + margin_left;
 			break;
 		case wi::font::WIFALIGN_RIGHT:
-			font.params.posX = translation.x + scale.x - 2;
+			font.params.posX = translation.x + scale.x - 2 - margin_right;
 			break;
 		case wi::font::WIFALIGN_CENTER:
 		default:
@@ -1313,10 +1322,10 @@ namespace wi::gui
 		switch (font.params.v_align)
 		{
 		case wi::font::WIFALIGN_TOP:
-			font.params.posY = translation.y + 2;
+			font.params.posY = translation.y + 2 + margin_top;
 			break;
 		case wi::font::WIFALIGN_BOTTOM:
-			font.params.posY = translation.y + scale.y - 2;
+			font.params.posY = translation.y + scale.y - 2 - margin_bottom;
 			break;
 		case wi::font::WIFALIGN_CENTER:
 		default:
