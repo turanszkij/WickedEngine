@@ -210,7 +210,7 @@ namespace wi::gui
 			}
 		} font;
 
-		float shadow = 1; // shadow radius
+		float shadow = -1; // shadow radius, if less than 0, it won't be used to override
 		wi::Color shadow_color = wi::Color::Shadow(); // shadow color for whole widget
 		bool shadow_highlight = false;
 		XMFLOAT3 shadow_highlight_color = XMFLOAT3(1, 1, 1);
@@ -218,7 +218,7 @@ namespace wi::gui
 
 		Image tooltipImage;
 		Font tooltipFont;
-		float tooltip_shadow = 1; // shadow radius
+		float tooltip_shadow = -1; // shadow radius, if less than 0, it won't be used to override
 		wi::Color tooltip_shadow_color = wi::Color::Shadow();
 	};
 

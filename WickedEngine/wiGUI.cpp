@@ -681,11 +681,17 @@ namespace wi::gui
 			theme.image.Apply(sprites[id].params);
 		}
 		theme.font.Apply(font.params);
-		SetShadowRadius(theme.shadow);
+		if (theme.shadow >= 0)
+		{
+			SetShadowRadius(theme.shadow);
+		}
 		SetShadowColor(theme.shadow_color);
 		theme.tooltipFont.Apply(tooltipFont.params);
 		theme.tooltipImage.Apply(tooltipSprite.params);
-		tooltip_shadow = theme.tooltip_shadow;
+		if (theme.tooltip_shadow >= 0)
+		{
+			tooltip_shadow = theme.tooltip_shadow;
+		}
 		tooltip_shadow_color = theme.tooltip_shadow_color;
 		shadow_highlight = theme.shadow_highlight;
 		shadow_highlight_color = theme.shadow_highlight_color;
