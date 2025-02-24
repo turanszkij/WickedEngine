@@ -26,8 +26,10 @@ namespace wi
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
+		const uint32_t sampleCount = std::max(getMSAASampleCount(), getMSAASampleCount2D());
+
 		const Texture* dsv = GetDepthStencil();
-		if (dsv != nullptr && (resolutionScale != 1.0f || dsv->GetDesc().sample_count != msaaSampleCount))
+		if (dsv != nullptr && (resolutionScale != 1.0f || dsv->GetDesc().sample_count != sampleCount))
 		{
 			TextureDesc desc = GetDepthStencil()->GetDesc();
 			desc.layout = ResourceState::SHADER_RESOURCE;
@@ -57,9 +59,9 @@ namespace wi
 			device->CreateTexture(&desc, nullptr, &rtFinal);
 			device->SetName(&rtFinal, "rtFinal");
 
-			if (getMSAASampleCount() > 1)
+			if (sampleCount > 1)
 			{
-				desc.sample_count = getMSAASampleCount();
+				desc.sample_count = sampleCount;
 				desc.bind_flags = BindFlag::RENDER_TARGET;
 				desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
 				desc.layout = ResourceState::RENDERTARGET;

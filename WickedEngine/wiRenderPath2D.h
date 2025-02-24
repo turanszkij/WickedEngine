@@ -27,6 +27,7 @@ namespace wi
 		float hdr_scaling = 9.0f;
 
 		uint32_t msaaSampleCount = 1;
+		uint32_t msaaSampleCount2D = 1;
 
 	public:
 		// Delete GPU resources and initialize them to default
@@ -43,6 +44,9 @@ namespace wi
 
 		virtual void setMSAASampleCount(uint32_t value) { msaaSampleCount = value; }
 		constexpr uint32_t getMSAASampleCount() const { return msaaSampleCount; }
+
+		virtual void setMSAASampleCount2D(uint32_t value) { msaaSampleCount2D = value; }
+		constexpr uint32_t getMSAASampleCount2D() const { return msaaSampleCount2D; }
 
 		const wi::graphics::Texture& GetRenderResult() const { return rtFinal; }
 		virtual const wi::graphics::Texture* GetDepthStencil() const { return nullptr; }
