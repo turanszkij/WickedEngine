@@ -101,6 +101,19 @@ namespace wi::physics
 		const XMFLOAT3& torque
 	);
 
+	// Set input from driver
+	//	forward:	Value between -1 and 1 for auto transmission and value between 0 and 1 indicating desired driving direction and amount the gas pedal is pressed
+	//	right:		Value between -1 and 1 indicating desired steering angle (1 = right)
+	//	brake:		Value between 0 and 1 indicating how strong the brake pedal is pressed
+	//	handbrake:	Value between 0 and 1 indicating how strong the hand brake is pulled
+	void DriveVehicle(
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		float forward,
+		float right = 0,
+		float brake = 0,
+		float handbrake = 0
+	);
+
 	enum class ActivationState
 	{
 		Active,

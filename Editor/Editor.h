@@ -32,6 +32,9 @@ public:
 	bool dummy_male = false;
 	XMFLOAT3 dummy_pos = XMFLOAT3(0, 0, 0);
 
+	bool drive_mode = false;
+	float drive_orbit_horizontal = 0;
+
 	wi::gui::Button navtestButton;
 	bool navtest_enabled = false;
 	wi::scene::PickResult navtest_start_pick;

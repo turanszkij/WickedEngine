@@ -30,6 +30,17 @@ public:
 	wi::gui::Slider offsetYSlider;
 	wi::gui::Slider offsetZSlider;
 
+	wi::gui::ComboBox vehicleCombo;
+	wi::gui::ComboBox vehicleCollisionCombo;
+	wi::gui::Slider wheelRadiusSlider;
+	wi::gui::Slider wheelWidthSlider;
+	wi::gui::Slider chassisHalfWidthSlider;
+	wi::gui::Slider chassisHalfHeightSlider;
+	wi::gui::Slider chassisHalfLengthSlider;
+	wi::gui::Slider chassisOffsetLengthSlider;
+	wi::gui::CheckBox fourwheelCheckbox;
+	wi::gui::CheckBox driveCheckbox;
+
 	void ResizeLayout() override;
 };
 

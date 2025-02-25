@@ -788,6 +788,34 @@ namespace wi::scene
 			{
 				archive >> buoyancy;
 			}
+
+			if (seri.GetVersion() >= 5)
+			{
+				archive >> (uint32_t&)vehicle.type;
+				archive >> (uint32_t&)vehicle.collision_mode;
+
+				archive >> vehicle.chassis_half_width;
+				archive >> vehicle.chassis_half_height;
+				archive >> vehicle.chassis_half_length;
+				archive >> vehicle.chassis_offset_length;
+				archive >> vehicle.wheel_radius;
+				archive >> vehicle.wheel_width;
+				archive >> vehicle.four_wheel_drive;
+				archive >> vehicle.max_engine_torque;
+				archive >> vehicle.clutch_strength;
+				archive >> vehicle.max_roll_angle;
+				archive >> vehicle.max_steering_angle;
+
+				archive >> vehicle.front_suspension.min_length;
+				archive >> vehicle.front_suspension.max_length;
+				archive >> vehicle.front_suspension.frequency;
+				archive >> vehicle.front_suspension.damping;
+
+				archive >> vehicle.rear_suspension.min_length;
+				archive >> vehicle.rear_suspension.max_length;
+				archive >> vehicle.rear_suspension.frequency;
+				archive >> vehicle.rear_suspension.damping;
+			}
 		}
 		else
 		{
@@ -822,6 +850,34 @@ namespace wi::scene
 			if (seri.GetVersion() >= 4)
 			{
 				archive << buoyancy;
+			}
+
+			if (seri.GetVersion() >= 5)
+			{
+				archive << (uint32_t&)vehicle.type;
+				archive << (uint32_t&)vehicle.collision_mode;
+
+				archive << vehicle.chassis_half_width;
+				archive << vehicle.chassis_half_height;
+				archive << vehicle.chassis_half_length;
+				archive << vehicle.chassis_offset_length;
+				archive << vehicle.wheel_radius;
+				archive << vehicle.wheel_width;
+				archive << vehicle.four_wheel_drive;
+				archive << vehicle.max_engine_torque;
+				archive << vehicle.clutch_strength;
+				archive << vehicle.max_roll_angle;
+				archive << vehicle.max_steering_angle;
+
+				archive << vehicle.front_suspension.min_length;
+				archive << vehicle.front_suspension.max_length;
+				archive << vehicle.front_suspension.frequency;
+				archive << vehicle.front_suspension.damping;
+
+				archive << vehicle.rear_suspension.min_length;
+				archive << vehicle.rear_suspension.max_length;
+				archive << vehicle.rear_suspension.frequency;
+				archive << vehicle.rear_suspension.damping;
 			}
 		}
 	}

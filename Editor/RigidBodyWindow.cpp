@@ -391,6 +391,151 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	AddWidget(&offsetZSlider);
 
 
+	vehicleCombo.Create("Vehicle physics: ");
+	vehicleCombo.AddItem("None", (uint64_t)RigidBodyPhysicsComponent::Vehicle::Type::None);
+	vehicleCombo.AddItem("Car", (uint64_t)RigidBodyPhysicsComponent::Vehicle::Type::Car);
+	vehicleCombo.OnSelect([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.type = (RigidBodyPhysicsComponent::Vehicle::Type)args.userdata;
+				physicscomponent->physicsobject = {};
+			}
+		}
+	});
+	AddWidget(&vehicleCombo);
+
+
+	vehicleCollisionCombo.Create("Vehicle collision: ");
+	vehicleCollisionCombo.AddItem("Ray", (uint64_t)RigidBodyPhysicsComponent::Vehicle::CollisionMode::Ray);
+	vehicleCollisionCombo.AddItem("Sphere", (uint64_t)RigidBodyPhysicsComponent::Vehicle::CollisionMode::Sphere);
+	vehicleCollisionCombo.AddItem("Cylinder", (uint64_t)RigidBodyPhysicsComponent::Vehicle::CollisionMode::Cylinder);
+	vehicleCollisionCombo.OnSelect([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.collision_mode = (RigidBodyPhysicsComponent::Vehicle::CollisionMode)args.userdata;
+				physicscomponent->physicsobject = {};
+			}
+		}
+	});
+	AddWidget(&vehicleCollisionCombo);
+
+
+	wheelRadiusSlider.Create(0.001f, 10, 1, 1000, "Wheel radius: ");
+	wheelRadiusSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.wheel_radius = args.fValue;
+				physicscomponent->physicsobject = {};
+			}
+		}
+	});
+	AddWidget(&wheelRadiusSlider);
+
+	wheelWidthSlider.Create(0.001f, 10, 1, 1000, "Wheel width: ");
+	wheelWidthSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.wheel_width = args.fValue;
+				physicscomponent->physicsobject = {};
+			}
+		}
+		});
+	AddWidget(&wheelWidthSlider);
+
+	chassisHalfWidthSlider.Create(0.001f, 10, 1, 1000, "Chassis width: ");
+	chassisHalfWidthSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.chassis_half_width = args.fValue;
+				physicscomponent->physicsobject = {};
+			}
+		}
+		});
+	AddWidget(&chassisHalfWidthSlider);
+
+	chassisHalfHeightSlider.Create(0.001f, 10, 1, 1000, "Chassis height: ");
+	chassisHalfHeightSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.chassis_half_height = args.fValue;
+				physicscomponent->physicsobject = {};
+			}
+		}
+		});
+	AddWidget(&chassisHalfHeightSlider);
+
+	chassisHalfLengthSlider.Create(0.001f, 10, 1, 1000, "Chassis length: ");
+	chassisHalfLengthSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.chassis_half_length = args.fValue;
+				physicscomponent->physicsobject = {};
+			}
+		}
+		});
+	AddWidget(&chassisHalfLengthSlider);
+
+	chassisOffsetLengthSlider.Create(-10, 10, 0, 1000, "Chassis offset: ");
+	chassisOffsetLengthSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.chassis_offset_length = args.fValue;
+				physicscomponent->physicsobject = {};
+			}
+		}
+		});
+	AddWidget(&chassisOffsetLengthSlider);
+
+	fourwheelCheckbox.Create("Four wheel drive: ");
+	fourwheelCheckbox.OnClick([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.four_wheel_drive = args.bValue;
+				physicscomponent->physicsobject = {};
+			}
+		}
+	});
+	AddWidget(&fourwheelCheckbox);
+
+	driveCheckbox.Create("Drive in Editor: ");
+	AddWidget(&driveCheckbox);
+
 
 	SetMinimized(true);
 	SetVisible(false);
@@ -479,6 +624,17 @@ void RigidBodyWindow::SetEntity(Entity entity)
 
 		collisionShapeComboBox.SetSelectedByUserdataWithoutCallback((uint64_t)physicsComponent->shape);
 
+		vehicleCombo.SetSelectedByUserdataWithoutCallback((uint64_t)physicsComponent->vehicle.type);
+		vehicleCollisionCombo.SetSelectedByUserdataWithoutCallback((uint64_t)physicsComponent->vehicle.collision_mode);
+
+		wheelRadiusSlider.SetValue(physicsComponent->vehicle.wheel_radius);
+		wheelWidthSlider.SetValue(physicsComponent->vehicle.wheel_width);
+		chassisHalfWidthSlider.SetValue(physicsComponent->vehicle.chassis_half_width);
+		chassisHalfHeightSlider.SetValue(physicsComponent->vehicle.chassis_half_height);
+		chassisHalfLengthSlider.SetValue(physicsComponent->vehicle.chassis_half_length);
+		chassisOffsetLengthSlider.SetValue(physicsComponent->vehicle.chassis_offset_length);
+		fourwheelCheckbox.SetCheck(physicsComponent->vehicle.four_wheel_drive);
+
 		RefreshShapeType();
 	}
 	else
@@ -543,5 +699,41 @@ void RigidBodyWindow::ResizeLayout()
 	add_right(startDeactivatedCheckBox);
 	add_right(disabledeactivationCheckBox);
 	add_right(kinematicCheckBox);
+
+	add(vehicleCombo);
+	if (vehicleCombo.GetSelected() > 0)
+	{
+		vehicleCollisionCombo.SetVisible(true);
+		wheelRadiusSlider.SetVisible(true);
+		wheelWidthSlider.SetVisible(true);
+		chassisHalfWidthSlider.SetVisible(true);
+		chassisHalfHeightSlider.SetVisible(true);
+		chassisHalfLengthSlider.SetVisible(true);
+		chassisOffsetLengthSlider.SetVisible(true);
+		fourwheelCheckbox.SetVisible(true);
+		driveCheckbox.SetVisible(true);
+
+		add(vehicleCollisionCombo);
+		add(wheelRadiusSlider);
+		add(wheelWidthSlider);
+		add(chassisHalfWidthSlider);
+		add(chassisHalfHeightSlider);
+		add(chassisHalfLengthSlider);
+		add(chassisOffsetLengthSlider);
+		add_right(fourwheelCheckbox);
+		add_right(driveCheckbox);
+	}
+	else
+	{
+		vehicleCollisionCombo.SetVisible(false);
+		wheelRadiusSlider.SetVisible(false);
+		wheelWidthSlider.SetVisible(false);
+		chassisHalfWidthSlider.SetVisible(false);
+		chassisHalfHeightSlider.SetVisible(false);
+		chassisHalfLengthSlider.SetVisible(false);
+		chassisOffsetLengthSlider.SetVisible(false);
+		fourwheelCheckbox.SetVisible(false);
+		driveCheckbox.SetVisible(false);
+	}
 
 }

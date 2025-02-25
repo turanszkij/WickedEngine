@@ -378,6 +378,12 @@ namespace wi
 
 		scene->Update(update_speed);
 
+		for (auto& x : post_physics_jobs)
+		{
+			if (x)
+				x();
+		}
+
 		// Frustum culling for main camera:
 		visibility_main.layerMask = getLayerMask();
 		visibility_main.scene = scene;

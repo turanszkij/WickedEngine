@@ -348,6 +348,8 @@ namespace wi
 
 		void Stop() override;
 		void Start() override;
+
+		wi::vector<std::function<void()>> post_physics_jobs;
 	};
 
 }

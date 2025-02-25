@@ -79,6 +79,8 @@ namespace wi::scene
 		XMVECTOR GetRightV() const;
 		// Computes the local space matrix from scale, rotation, translation and returns it
 		XMMATRIX GetLocalMatrix() const;
+		// Returns the stored world matrix that was computed the last time UpdateTransform() was called
+		XMMATRIX GetWorldMatrix() const { return XMLoadFloat4x4(&world); };
 		// Applies the local space to the world space matrix. This overwrites world matrix
 		void UpdateTransform();
 		// Apply a parent transform relative to the local space. This overwrites world matrix
@@ -431,6 +433,47 @@ namespace wi::scene
 		//	The physics object will need to be recreated for it to take effect.
 		uint32_t mesh_lod = 0;
 
+		// Vehicle physics will be enabled when Vehicle.type != None
+		struct Vehicle
+		{
+			enum class Type
+			{
+				None,
+				Car,
+			} type = Type::None;
+
+			enum class CollisionMode
+			{
+				Ray,
+				Sphere,
+				Cylinder,
+			} collision_mode = CollisionMode::Ray;
+
+			float chassis_half_width = 0.9f;
+			float chassis_half_height = 0.2f;
+			float chassis_half_length = 2.0f;
+			float chassis_offset_length = 0.0f;
+			float wheel_radius = 0.3f;
+			float wheel_width = 0.1f;
+			bool four_wheel_drive = false;
+			float max_engine_torque = 500.0f;
+			float clutch_strength = 10.0f;
+			float max_roll_angle = wi::math::DegreesToRadians(60.0f);
+			float max_steering_angle = wi::math::DegreesToRadians(30.0f);
+
+			struct Suspension
+			{
+				float min_length = 0.3f;
+				float max_length = 0.5f;
+				float frequency = 1.5f;
+				float damping = 0.5f;
+			};
+
+			Suspension front_suspension;
+			Suspension rear_suspension;
+
+		} vehicle;
+
 		// Non-serialized attributes:
 		std::shared_ptr<void> physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
 
@@ -438,6 +481,7 @@ namespace wi::scene
 		constexpr void SetKinematic(bool value) { if (value) { _flags |= KINEMATIC; } else { _flags &= ~KINEMATIC; } }
 		constexpr void SetStartDeactivated(bool value) { if (value) { _flags |= START_DEACTIVATED; } else { _flags &= ~START_DEACTIVATED; } }
 
+		constexpr bool IsVehicle() const { return vehicle.type != Vehicle::Type::None; }
 		constexpr bool IsDisableDeactivation() const { return _flags & DISABLE_DEACTIVATION; }
 		constexpr bool IsKinematic() const { return _flags & KINEMATIC; }
 		constexpr bool IsStartDeactivated() const { return _flags & START_DEACTIVATED; }

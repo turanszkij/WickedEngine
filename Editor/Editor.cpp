@@ -1383,8 +1383,91 @@ void EditorComponent::Update(float dt)
 		translator.Update(camera, currentMouse, *renderPath);
 	}
 
+	if (!wi::backlog::isActive())
+	{
+		if (componentsWnd.rigidWnd.driveCheckbox.GetCheck())
+		{
+			for (size_t i = 0; i < scene.rigidbodies.GetCount(); ++i)
+			{
+				RigidBodyPhysicsComponent& rigidbody = scene.rigidbodies[i];
+				if (!rigidbody.IsVehicle())
+					continue;
+				drive_mode = true;
+
+				//wi::physics::SetDebugDrawEnabled(true);
+				float forward = 0;
+				float right = 0;
+				float brake = 0;
+				float handbrake = 0;
+				if (wi::input::Down(wi::input::BUTTON('W')))
+				{
+					forward = 1;
+				}
+				if (wi::input::Down(wi::input::BUTTON('S')))
+				{
+					forward = -1;
+				}
+				if (wi::input::Down(wi::input::BUTTON('A')))
+				{
+					right = -1;
+				}
+				if (wi::input::Down(wi::input::BUTTON('D')))
+				{
+					right = 1;
+				}
+				if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL))
+				{
+					brake = 1;
+				}
+				if (wi::input::Down(wi::input::KEYBOARD_BUTTON_SPACE))
+				{
+					brake = 1;
+				}
+				if (wi::input::Down(wi::input::BUTTON('Q')))
+				{
+					drive_orbit_horizontal += XM_PI * dt;
+				}
+				if (wi::input::Down(wi::input::BUTTON('E')))
+				{
+					drive_orbit_horizontal -= XM_PI * dt;
+				}
+				wi::physics::DriveVehicle(rigidbody, forward, right, brake);
+				drive_mode = true;
+				break;
+			}
+
+			renderPath->post_physics_jobs.clear();
+			renderPath->post_physics_jobs.push_back([=] {
+				Scene& scene = GetCurrentScene();
+				EditorScene& editorscene = GetCurrentEditorScene();
+				CameraComponent& camera = editorscene.camera;
+				for (size_t i = 0; i < scene.rigidbodies.GetCount(); ++i)
+				{
+					RigidBodyPhysicsComponent& rigidbody = scene.rigidbodies[i];
+					if (!rigidbody.IsVehicle())
+						continue;
+					TransformComponent* vehicle_transform = scene.transforms.GetComponent(scene.rigidbodies.GetEntity(i));
+					if (vehicle_transform == nullptr)
+						break;
+
+					XMVECTOR P = vehicle_transform->GetPositionV();
+					XMVECTOR Q = vehicle_transform->GetRotationV();
+					XMMATRIX W = XMMatrixTranslation(0, 0, -6) * XMMatrixRotationX(XM_PI * 0.08f) * XMMatrixRotationY(drive_orbit_horizontal) * XMMatrixRotationQuaternion(Q) * XMMatrixTranslationFromVector(P);
+					camera.TransformCamera(W);
+					camera.UpdateCamera();
+					break;
+				}
+			});
+		}
+		else
+		{
+			drive_mode = false;
+		}
+		drive_orbit_horizontal = lerp(drive_orbit_horizontal, 0.0f, dt);
+	}
+
 	// Camera control:
-	if (!wi::backlog::isActive() && !GetGUI().HasFocus())
+	if (!drive_mode && !wi::backlog::isActive() && !GetGUI().HasFocus())
 	{
 		deleting = CheckInput(EditorActions::DELETE_ACTION);
 		currentMouse = wi::input::GetPointer();
@@ -2562,8 +2645,11 @@ void EditorComponent::Update(float dt)
 		}
 	}
 
-	camera.TransformCamera(editorscene.camera_transform);
-	camera.UpdateCamera();
+	if (!drive_mode)
+	{
+		camera.TransformCamera(editorscene.camera_transform);
+		camera.UpdateCamera();
+	}
 
 	wi::RenderPath3D_PathTracing* pathtracer = dynamic_cast<wi::RenderPath3D_PathTracing*>(renderPath.get());
 	if (pathtracer != nullptr)
@@ -4001,6 +4087,20 @@ void EditorComponent::Compose(CommandList cmd) const
 		params.size = 24;
 		params.position.y += cursor.size.y;
 		wi::font::Draw(save_text_filename, params, cmd);
+	}
+
+	if (drive_mode)
+	{
+		wi::font::Params params;
+		params.color = save_text_color;
+		params.shadowColor = wi::Color::Black();
+		params.shadowColor.setA(params.color.getA());
+		params.position = XMFLOAT3(PhysicalToLogical(viewport3D.top_left_x + viewport3D.width * 0.5f), PhysicalToLogical(viewport3D.top_left_y + 5), 0);
+		params.h_align = wi::font::WIFALIGN_CENTER;
+		params.v_align = wi::font::WIFALIGN_TOP;
+		params.size = 30;
+		params.shadow_softness = 1;
+		wi::font::Draw("Drive Mode", params, cmd);
 	}
 
 #ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
