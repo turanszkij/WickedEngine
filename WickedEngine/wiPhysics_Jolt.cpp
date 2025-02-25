@@ -263,8 +263,7 @@ namespace wi::physics
 			wi::primitive::Capsule capsule;
 
 			// water ripple stuff:
-			float radius = 0;
-			float time_since_waterripple = 0;
+			bool was_underwater = false;
 
 			~RigidBody()
 			{
@@ -403,10 +402,6 @@ namespace wi::physics
 				settings.mAllowSleeping = !physicscomponent.IsDisableDeactivation();
 				settings.mMotionQuality = cMotionQuality;
 				settings.mUserData = (uint64_t)&physicsobject;
-
-				XMFLOAT3 extent = cast(physicsobject.shape->GetWorldSpaceBounds(mat, cast(transform.GetScale())).GetExtent());
-				physicsobject.radius = std::sqrt(sqr(std::sqrt(sqr(extent.x) + sqr(extent.y))) + sqr(extent.z));
-				physicsobject.time_since_waterripple = wi::random::GetRandom(1.0f); // randomize the water ripples a bit
 
 				BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface(); // locking version because this is called from job system!
 
@@ -793,10 +788,6 @@ namespace wi::physics
 					physicsobject.humanoid_bone = humanoid_bone;
 
 					physicsobject.physics_scene = scene.physics_scene;
-
-					XMFLOAT3 extent = cast(physicsobject.shape->GetWorldSpaceBounds(mat, Vec3(1, 1, 1)).GetExtent());
-					physicsobject.radius = std::sqrt(sqr(std::sqrt(sqr(extent.x) + sqr(extent.y))) + sqr(extent.z));
-					physicsobject.time_since_waterripple = wi::random::GetRandom(1.0f); // randomize the water ripples a bit
 
 					masses[c] = mass;
 					positions[c] = mat.GetTranslation();
@@ -1324,15 +1315,15 @@ namespace wi::physics
 								scene.dt
 							);
 
-							if (diff > -physicsobject.radius)
+							if (!physicsobject.was_underwater)
 							{
-								physicsobject.time_since_waterripple += scene.dt;
-								if (physicsobject.time_since_waterripple > 0.2f)
-								{
-									physicsobject.time_since_waterripple = 0;
-									scene.PutWaterRipple(cast(surface_position));
-								}
+								physicsobject.was_underwater = true;
+								scene.PutWaterRipple(cast(surface_position));
 							}
+						}
+						else
+						{
+							physicsobject.was_underwater = false;
 						}
 					}
 				}
@@ -1512,15 +1503,15 @@ namespace wi::physics
 									scene.dt
 								);
 
-								if (diff > -rb.radius)
+								if (!rb.was_underwater)
 								{
-									rb.time_since_waterripple += scene.dt;
-									if (rb.time_since_waterripple > 0.2f)
-									{
-										rb.time_since_waterripple = 0;
-										scene.PutWaterRipple(cast(surface_position));
-									}
+									rb.was_underwater = true;
+									scene.PutWaterRipple(cast(surface_position));
 								}
+							}
+							else
+							{
+								rb.was_underwater = false;
 							}
 						}
 					}
