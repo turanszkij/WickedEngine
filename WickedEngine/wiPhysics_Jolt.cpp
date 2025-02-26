@@ -457,8 +457,8 @@ namespace wi::physics
 					const float	sRearSuspensionFrequency = physicscomponent.vehicle.rear_suspension.frequency;
 					const float	sRearSuspensionDamping = physicscomponent.vehicle.rear_suspension.damping;
 
-					const float	sMaxRollAngle = physicscomponent.vehicle.max_steering_angle;
-					const float	sMaxSteeringAngle = physicscomponent.vehicle.max_roll_angle;
+					const float	sMaxRollAngle = physicscomponent.vehicle.max_roll_angle;
+					const float	sMaxSteeringAngle = physicscomponent.vehicle.max_steering_angle;
 
 					static constexpr bool	sAntiRollbar = true;
 					static constexpr bool	sLimitedSlipDifferentials = true;

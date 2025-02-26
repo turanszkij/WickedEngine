@@ -34,6 +34,7 @@ public:
 
 	bool drive_mode = false;
 	float drive_orbit_horizontal = 0;
+	float drive_steering_smoothed = 0;
 
 	wi::gui::Button navtestButton;
 	bool navtest_enabled = false;

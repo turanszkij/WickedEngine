@@ -459,7 +459,7 @@ namespace wi::scene
 			bool four_wheel_drive = false;
 			float max_engine_torque = 500.0f;
 			float clutch_strength = 10.0f;
-			float max_roll_angle = wi::math::DegreesToRadians(60.0f);
+			float max_roll_angle = XM_PI;
 			float max_steering_angle = wi::math::DegreesToRadians(30.0f);
 
 			struct Suspension

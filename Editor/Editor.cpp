@@ -1399,39 +1399,44 @@ void EditorComponent::Update(float dt)
 				float right = 0;
 				float brake = 0;
 				float handbrake = 0;
-				if (wi::input::Down(wi::input::BUTTON('W')))
+				if (CheckInput(EditorActions::MOVE_CAMERA_FORWARD))
 				{
 					forward = 1;
 				}
-				if (wi::input::Down(wi::input::BUTTON('S')))
+				else if (CheckInput(EditorActions::MOVE_CAMERA_BACKWARD))
 				{
 					forward = -1;
 				}
-				if (wi::input::Down(wi::input::BUTTON('A')))
+				if (CheckInput(EditorActions::MOVE_CAMERA_LEFT))
 				{
-					right = -1;
+					drive_steering_smoothed -= dt;
 				}
-				if (wi::input::Down(wi::input::BUTTON('D')))
+				else if (CheckInput(EditorActions::MOVE_CAMERA_RIGHT))
 				{
-					right = 1;
+					drive_steering_smoothed += dt;
 				}
-				if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL))
+				else
+				{
+					drive_steering_smoothed = lerp(drive_steering_smoothed, 0.0f, 4 * dt);
+				}
+				if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT))
 				{
 					brake = 1;
 				}
 				if (wi::input::Down(wi::input::KEYBOARD_BUTTON_SPACE))
 				{
-					brake = 1;
+					handbrake = 1;
 				}
-				if (wi::input::Down(wi::input::BUTTON('Q')))
+				if (CheckInput(EditorActions::MOVE_CAMERA_DOWN))
 				{
 					drive_orbit_horizontal += XM_PI * dt;
 				}
-				if (wi::input::Down(wi::input::BUTTON('E')))
+				if (CheckInput(EditorActions::MOVE_CAMERA_UP))
 				{
 					drive_orbit_horizontal -= XM_PI * dt;
 				}
-				wi::physics::DriveVehicle(rigidbody, forward, right, brake);
+				drive_steering_smoothed = clamp(drive_steering_smoothed, -1.0f, 1.0f);
+				wi::physics::DriveVehicle(rigidbody, forward, drive_steering_smoothed, brake, handbrake);
 				drive_mode = true;
 				break;
 			}
