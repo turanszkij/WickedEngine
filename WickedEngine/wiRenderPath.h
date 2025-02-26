@@ -28,9 +28,13 @@ namespace wi
 		virtual void Update(float dt) {}
 		// executed after Update()
 		virtual void PostUpdate() {}
+		// after PostUpdate(), before Render()
+		virtual void PreRender() {}
 		// Render to layers, rendertargets, etc
 		// This will be rendered offscreen
 		virtual void Render() const {}
+		// after Render(), before Compose()
+		virtual void PostRender() {}
 		// Compose the rendered layers (for example blend the layers together as Images)
 		// This will be rendered to the backbuffer
 		virtual void Compose(wi::graphics::CommandList cmd) const {}

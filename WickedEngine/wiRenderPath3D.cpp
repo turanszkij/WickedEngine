@@ -377,12 +377,13 @@ namespace wi
 		}
 
 		scene->Update(update_speed);
+	}
 
-		for (auto& x : post_physics_jobs)
-		{
-			if (x)
-				x();
-		}
+	void RenderPath3D::PreRender()
+	{
+		RenderPath2D::PreRender();
+
+		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		// Frustum culling for main camera:
 		visibility_main.layerMask = getLayerMask();
@@ -419,7 +420,7 @@ namespace wi
 			*scene,
 			visibility_main,
 			frameCB,
-			getSceneUpdateEnabled() ? dt : 0
+			getSceneUpdateEnabled() ? scene->dt : 0
 		);
 
 		if (getFSR2Enabled())
@@ -817,7 +818,7 @@ namespace wi
 			for (size_t i = 0; i < scene->videos.GetCount(); ++i)
 			{
 				const wi::scene::VideoComponent& video = scene->videos[i];
-				if (wi::video::IsDecodingRequired(&video.videoinstance, dt))
+				if (wi::video::IsDecodingRequired(&video.videoinstance, scene->dt))
 				{
 					video_cmd = device->BeginCommandList(QUEUE_VIDEO_DECODE);
 					break;
@@ -826,13 +827,25 @@ namespace wi
 			for (size_t i = 0; i < scene->videos.GetCount(); ++i)
 			{
 				wi::scene::VideoComponent& video = scene->videos[i];
-				wi::video::UpdateVideo(&video.videoinstance, dt, video_cmd);
+				wi::video::UpdateVideo(&video.videoinstance, scene->dt, video_cmd);
 			}
 		}
+
+		prerender_happened = true;
 	}
 
 	void RenderPath3D::Render() const
 	{
+		if (!prerender_happened)
+		{
+			// Since 0.71.694: PreRender must be called before Render() because it sets up rendering resources!
+			//	The proper fix is to call PreRender() yourself for a manually managed RenderPath3D
+			//	But if you don't do that, as a last resort it will be called here using const_cast
+			assert(0);
+			const_cast<RenderPath3D*>(this)->PreRender();
+		}
+		prerender_happened = false;
+
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		wi::jobsystem::context ctx;
 

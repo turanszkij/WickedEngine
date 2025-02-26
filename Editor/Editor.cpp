@@ -1435,29 +1435,6 @@ void EditorComponent::Update(float dt)
 				drive_mode = true;
 				break;
 			}
-
-			renderPath->post_physics_jobs.clear();
-			renderPath->post_physics_jobs.push_back([=] {
-				Scene& scene = GetCurrentScene();
-				EditorScene& editorscene = GetCurrentEditorScene();
-				CameraComponent& camera = editorscene.camera;
-				for (size_t i = 0; i < scene.rigidbodies.GetCount(); ++i)
-				{
-					RigidBodyPhysicsComponent& rigidbody = scene.rigidbodies[i];
-					if (!rigidbody.IsVehicle())
-						continue;
-					TransformComponent* vehicle_transform = scene.transforms.GetComponent(scene.rigidbodies.GetEntity(i));
-					if (vehicle_transform == nullptr)
-						break;
-
-					XMVECTOR P = vehicle_transform->GetPositionV();
-					XMVECTOR Q = vehicle_transform->GetRotationV();
-					XMMATRIX W = XMMatrixTranslation(0, 0, -6) * XMMatrixRotationX(XM_PI * 0.08f) * XMMatrixRotationY(drive_orbit_horizontal) * XMMatrixRotationQuaternion(Q) * XMMatrixTranslationFromVector(P);
-					camera.TransformCamera(W);
-					camera.UpdateCamera();
-					break;
-				}
-			});
 		}
 		else
 		{
@@ -2793,6 +2770,10 @@ void EditorComponent::PostUpdate()
 
 	renderPath->PostUpdate();
 
+	Scene& scene = GetCurrentScene();
+	EditorScene& editorscene = GetCurrentEditorScene();
+	CameraComponent& camera = editorscene.camera;
+
 	// This needs to be after scene was updated fully by EditorComponent's renderPath
 	//	Because this will just render the scene without updating its resources
 	if (renderPath->getSceneUpdateEnabled()) // only update preview if scene was updated at all by main renderPath
@@ -2800,7 +2781,6 @@ void EditorComponent::PostUpdate()
 		componentsWnd.cameraComponentWnd.preview.RenderPreview();
 	}
 
-	const Scene& scene = GetCurrentScene();
 	if (componentsWnd.voxelGridWnd.debugAllCheckBox.GetCheck())
 	{
 		// Draw all voxel grids:
@@ -2817,6 +2797,32 @@ void EditorComponent::PostUpdate()
 			wi::renderer::DrawVoxelGrid(scene.voxel_grids.GetComponent(componentsWnd.voxelGridWnd.entity));
 		}
 	}
+
+	if (drive_mode)
+	{
+		for (size_t i = 0; i < scene.rigidbodies.GetCount(); ++i)
+		{
+			RigidBodyPhysicsComponent& rigidbody = scene.rigidbodies[i];
+			if (!rigidbody.IsVehicle())
+				continue;
+			TransformComponent* vehicle_transform = scene.transforms.GetComponent(scene.rigidbodies.GetEntity(i));
+			if (vehicle_transform == nullptr)
+				break;
+
+			XMVECTOR P = vehicle_transform->GetPositionV();
+			XMVECTOR Q = vehicle_transform->GetRotationV();
+			XMMATRIX W = XMMatrixTranslation(0, 0, -6) * XMMatrixRotationX(XM_PI * 0.08f) * XMMatrixRotationY(drive_orbit_horizontal) * XMMatrixRotationQuaternion(Q) * XMMatrixTranslationFromVector(P);
+			camera.TransformCamera(W);
+			camera.UpdateCamera();
+			break;
+		}
+	}
+}
+void EditorComponent::PreRender()
+{
+	RenderPath2D::PreUpdate();
+
+	renderPath->PreRender();
 }
 void EditorComponent::Render() const
 {

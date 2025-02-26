@@ -329,7 +329,9 @@ namespace wi
 
 		if (GetActivePath() != nullptr)
 		{
+			GetActivePath()->PreRender();
 			GetActivePath()->Render();
+			GetActivePath()->PostRender();
 		}
 
 		wi::profiler::EndRange(range); // Render

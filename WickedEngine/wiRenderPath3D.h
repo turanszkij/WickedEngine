@@ -85,6 +85,7 @@ namespace wi
 		bool fsr2Enabled = false;
 
 		mutable bool first_frame = true;
+		mutable bool prerender_happened = false;
 
 	public:
 		wi::graphics::Texture rtMain;
@@ -343,13 +344,12 @@ namespace wi
 
 		void PreUpdate() override;
 		void Update(float dt) override;
+		void PreRender() override;
 		void Render() const override;
 		void Compose(wi::graphics::CommandList cmd) const override;
 
 		void Stop() override;
 		void Start() override;
-
-		wi::vector<std::function<void()>> post_physics_jobs;
 	};
 
 }

@@ -19,6 +19,7 @@ void CameraPreview::RenderPreview()
 			renderpath.PreUpdate();
 			renderpath.Update(0);
 			renderpath.PostUpdate();
+			renderpath.PreRender();
 			renderpath.Render();
 		}
 		else

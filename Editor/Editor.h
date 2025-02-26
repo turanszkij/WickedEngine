@@ -90,6 +90,7 @@ public:
 	void FixedUpdate() override;
 	void Update(float dt) override;
 	void PostUpdate() override;
+	void PreRender() override;
 	void Render() const override;
 	void Compose(wi::graphics::CommandList cmd) const override;
 
