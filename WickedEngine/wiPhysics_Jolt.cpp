@@ -39,6 +39,7 @@
 #include <Jolt/Skeleton/Skeleton.h>
 #include <Jolt/Physics/Vehicle/VehicleConstraint.h>
 #include <Jolt/Physics/Vehicle/WheeledVehicleController.h>
+#include <Jolt/Physics/Vehicle/MotorcycleController.h>
 
 #ifdef JPH_DEBUG_RENDERER
 #include <Jolt/Renderer/DebugRendererSimple.h>
@@ -434,7 +435,7 @@ namespace wi::physics
 				physicsobject.bodyID = body->GetID();
 				body_interface.AddBody(physicsobject.bodyID, activation);
 
-				if (physicscomponent.vehicle.type != RigidBodyPhysicsComponent::Vehicle::Type::None)
+				if (physicscomponent.vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Car)
 				{
 					const float wheel_radius = physicscomponent.vehicle.wheel_radius;
 					const float wheel_width = physicscomponent.vehicle.wheel_width;
@@ -621,6 +622,97 @@ namespace wi::physics
 						for (VehicleDifferentialSettings& d : controller->GetDifferentials())
 							d.mLimitedSlipRatio = limited_slip_ratio;
 					}
+				}
+				else if (physicscomponent.vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Motorcycle)
+				{
+					const float back_wheel_radius = physicscomponent.vehicle.wheel_radius;
+					const float back_wheel_width = physicscomponent.vehicle.wheel_width;
+					const float back_wheel_pos_z = -physicscomponent.vehicle.chassis_half_length + physicscomponent.vehicle.rear_wheel_offset;
+					const float back_suspension_min_length = physicscomponent.vehicle.rear_suspension.min_length;
+					const float back_suspension_max_length = physicscomponent.vehicle.rear_suspension.max_length;
+					const float back_suspension_freq = physicscomponent.vehicle.rear_suspension.frequency;
+					const float back_brake_torque = 250.0f;
+
+					const float front_wheel_radius = physicscomponent.vehicle.wheel_radius;
+					const float front_wheel_width = physicscomponent.vehicle.wheel_width;
+					const float front_wheel_pos_z = physicscomponent.vehicle.chassis_half_length + physicscomponent.vehicle.front_wheel_offset;
+					const float front_suspension_min_length = physicscomponent.vehicle.front_suspension.min_length;
+					const float front_suspension_max_length = physicscomponent.vehicle.front_suspension.max_length;
+					const float front_suspension_freq = physicscomponent.vehicle.front_suspension.frequency;
+					const float front_brake_torque = 500.0f;
+					const float half_vehicle_height = physicscomponent.vehicle.chassis_half_height;
+
+					const float max_steering_angle = DegreesToRadians(30);
+
+					// Angle of the front suspension
+					const float caster_angle = DegreesToRadians(30);
+
+					const bool sOverrideFrontSuspensionForcePoint = false;	///< If true, the front suspension force point is overridden
+					const bool sOverrideRearSuspensionForcePoint = false;	///< If true, the rear suspension force point is overridden
+
+					// Create vehicle constraint
+					VehicleConstraintSettings vehicle;
+					vehicle.mDrawConstraintSize = 0.1f;
+					vehicle.mMaxPitchRollAngle = DegreesToRadians(60.0f);
+
+					// Wheels
+					WheelSettingsWV* front = new WheelSettingsWV;
+					front->mPosition = Vec3(0.0f, -0.9f * half_vehicle_height, front_wheel_pos_z);
+					front->mMaxSteerAngle = max_steering_angle;
+					front->mSuspensionDirection = Vec3(0, -1, Tan(caster_angle)).Normalized();
+					front->mSteeringAxis = -front->mSuspensionDirection;
+					front->mRadius = front_wheel_radius;
+					front->mWidth = front_wheel_width;
+					front->mSuspensionMinLength = front_suspension_min_length;
+					front->mSuspensionMaxLength = front_suspension_max_length;
+					front->mSuspensionSpring.mFrequency = front_suspension_freq;
+					front->mMaxBrakeTorque = front_brake_torque;
+
+					WheelSettingsWV* back = new WheelSettingsWV;
+					back->mPosition = Vec3(0.0f, -0.9f * half_vehicle_height, back_wheel_pos_z);
+					back->mMaxSteerAngle = 0.0f;
+					back->mRadius = back_wheel_radius;
+					back->mWidth = back_wheel_width;
+					back->mSuspensionMinLength = back_suspension_min_length;
+					back->mSuspensionMaxLength = back_suspension_max_length;
+					back->mSuspensionSpring.mFrequency = back_suspension_freq;
+					back->mMaxBrakeTorque = back_brake_torque;
+
+					if (sOverrideFrontSuspensionForcePoint)
+					{
+						front->mEnableSuspensionForcePoint = true;
+						front->mSuspensionForcePoint = front->mPosition + front->mSuspensionDirection * front->mSuspensionMinLength;
+					}
+
+					if (sOverrideRearSuspensionForcePoint)
+					{
+						back->mEnableSuspensionForcePoint = true;
+						back->mSuspensionForcePoint = back->mPosition + back->mSuspensionDirection * back->mSuspensionMinLength;
+					}
+
+					vehicle.mWheels = { front, back };
+
+					MotorcycleControllerSettings* controller = new MotorcycleControllerSettings;
+					controller->mEngine.mMaxTorque = 150.0f;
+					controller->mEngine.mMinRPM = 1000.0f;
+					controller->mEngine.mMaxRPM = 10000.0f;
+					controller->mTransmission.mShiftDownRPM = 2000.0f;
+					controller->mTransmission.mShiftUpRPM = 8000.0f;
+					controller->mTransmission.mGearRatios = { 2.27f, 1.63f, 1.3f, 1.09f, 0.96f, 0.88f }; // From: https://www.blocklayer.com/rpm-gear-bikes
+					controller->mTransmission.mReverseGearRatios = { -4.0f };
+					controller->mTransmission.mClutchStrength = 2.0f;
+					vehicle.mController = controller;
+
+					// Differential (not really applicable to a motorcycle but we need one anyway to drive it)
+					controller->mDifferentials.resize(1);
+					controller->mDifferentials[0].mLeftWheel = -1;
+					controller->mDifferentials[0].mRightWheel = 1;
+					controller->mDifferentials[0].mDifferentialRatio = 1.93f * 40.0f / 16.0f; // Combining primary and final drive (back divided by front sprockets) from: https://www.blocklayer.com/rpm-gear-bikes
+
+					physicsobject.vehicle_constraint = new VehicleConstraint(*body, vehicle);
+					physicsobject.vehicle_constraint->SetVehicleCollisionTester(new VehicleCollisionTesterCastCylinder(Layers::MOVING, 1.0f)); // Use half wheel width as convex radius so we get a rounded cylinder
+					physics_scene.physics_system.AddConstraint(physicsobject.vehicle_constraint);
+					physics_scene.physics_system.AddStepListener(physicsobject.vehicle_constraint);
 				}
 			}
 		}
@@ -2284,8 +2376,18 @@ namespace wi::physics
 		RigidBody& physicsobject = GetRigidBody(physicscomponent);
 		if (physicsobject.vehicle_constraint == nullptr)
 			return;
-		WheeledVehicleController* controller = static_cast<WheeledVehicleController*>(physicsobject.vehicle_constraint->GetController());
-		controller->SetDriverInput(forward, -right, brake, handbrake);
+
+		if (physicscomponent.vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Car)
+		{
+			WheeledVehicleController* controller = static_cast<WheeledVehicleController*>(physicsobject.vehicle_constraint->GetController());
+			controller->SetDriverInput(forward, -right, brake, handbrake);
+		}
+		else if (physicscomponent.vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Motorcycle)
+		{
+			MotorcycleController* controller = static_cast<MotorcycleController*>(physicsobject.vehicle_constraint->GetController());
+			controller->SetDriverInput(forward, -right, brake, false);
+			controller->EnableLeanController(true);
+		}
 
 		PhysicsScene& physics_scene = *(PhysicsScene*)physicsobject.physics_scene.get();
 		BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();

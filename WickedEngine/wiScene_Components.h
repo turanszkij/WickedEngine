@@ -440,6 +440,7 @@ namespace wi::scene
 			{
 				None,
 				Car,
+				Motorcycle,
 			} type = Type::None;
 
 			enum class CollisionMode

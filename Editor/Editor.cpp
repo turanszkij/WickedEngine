@@ -2816,7 +2816,15 @@ void EditorComponent::PostUpdate()
 
 			XMVECTOR P = vehicle_transform->GetPositionV();
 			XMVECTOR Q = vehicle_transform->GetRotationV();
-			XMMATRIX W = XMMatrixTranslation(0, 0, -6) * XMMatrixRotationX(XM_PI * 0.08f) * XMMatrixRotationY(drive_orbit_horizontal) * XMMatrixRotationQuaternion(Q) * XMMatrixTranslationFromVector(P);
+			XMMATRIX W = XMMatrixIdentity();
+			if (rigidbody.vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Car)
+			{
+				W = XMMatrixTranslation(0, 0, -6) * XMMatrixRotationX(XM_PI * 0.08f) * XMMatrixRotationY(drive_orbit_horizontal) * XMMatrixRotationQuaternion(Q) * XMMatrixTranslationFromVector(P);
+			}
+			else if (rigidbody.vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Motorcycle)
+			{
+				W = XMMatrixTranslation(0, 1.5f, -7) * XMMatrixRotationX(XM_PI * 0.1f) * XMMatrixRotationY(drive_orbit_horizontal) * XMMatrixRotationQuaternion(Q) * XMMatrixTranslationFromVector(P);
+			}
 			camera.TransformCamera(W);
 			camera.UpdateCamera();
 			break;
