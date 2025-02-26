@@ -912,6 +912,8 @@ runProcess(function()
 	-- Main loop:
 	while true do
 
+		update()
+
 		player:Update()
 		for k,npc in pairs(npcs) do
 			npc:Update()
@@ -934,13 +936,15 @@ runProcess(function()
 		conversation:Update(path, scene, player)
 		player.controllable = not conversation.override_input
 
-		if not conversation.override_input then
-			camera:Update()
-		end
-
 		if dynamic_voxelization then
 			voxelgrid.ClearData()
 			scene.VoxelizeScene(voxelgrid, false, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~(Layers.Player | Layers.NPC)) -- player and npc layers not included in voxelization
+		end
+
+		render() -- Camera update below will be happening after render phase is signaled, after update phase ended (this helps camera jitter as it will use the latest scene.Update() transforms doen by engine system)
+
+		if not conversation.override_input then
+			camera:Update()
 		end
 		
 		-- Do some debug draw geometry:
@@ -982,8 +986,6 @@ runProcess(function()
 			DrawVoxelGrid(voxelgrid)
 
 		end
-
-		update()
 		
 		if not backlog_isactive() then
 			if(input.Press(KEYBOARD_BUTTON_ESCAPE)) then
