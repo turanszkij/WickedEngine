@@ -2033,6 +2033,7 @@ namespace wi::physics
 			settings.mDrawSoftBodyEdgeConstraints = true;
 			settings.mDrawShapeWireframe = true;
 			settings.mDrawShapeColor = BodyManager::EShapeColor::ShapeTypeColor;
+			debug_renderer.SetCameraPos(cast(scene.camera.Eye));
 			physics_scene.physics_system.DrawBodies(settings, &debug_renderer);
 			physics_scene.physics_system.DrawConstraints(&debug_renderer);
 		}
