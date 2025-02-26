@@ -1426,6 +1426,10 @@ namespace wi::physics
 
 		wi::jobsystem::Wait(ctx);
 
+		// TODO: without this there are bugs in terrain physics generation
+		scene.RunHierarchyUpdateSystem(ctx);
+		wi::jobsystem::Wait(ctx);
+
 		auto range = wi::profiler::BeginRangeCPU("Physics");
 
 		PhysicsScene& physics_scene = GetPhysicsScene(scene);
