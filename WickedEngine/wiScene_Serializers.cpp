@@ -797,7 +797,8 @@ namespace wi::scene
 				archive >> vehicle.chassis_half_width;
 				archive >> vehicle.chassis_half_height;
 				archive >> vehicle.chassis_half_length;
-				archive >> vehicle.chassis_offset_length;
+				archive >> vehicle.front_wheel_offset;
+				archive >> vehicle.rear_wheel_offset;
 				archive >> vehicle.wheel_radius;
 				archive >> vehicle.wheel_width;
 				archive >> vehicle.four_wheel_drive;
@@ -860,7 +861,8 @@ namespace wi::scene
 				archive << vehicle.chassis_half_width;
 				archive << vehicle.chassis_half_height;
 				archive << vehicle.chassis_half_length;
-				archive << vehicle.chassis_offset_length;
+				archive << vehicle.front_wheel_offset;
+				archive << vehicle.rear_wheel_offset;
 				archive << vehicle.wheel_radius;
 				archive << vehicle.wheel_width;
 				archive << vehicle.four_wheel_drive;

@@ -37,7 +37,8 @@ public:
 	wi::gui::Slider chassisHalfWidthSlider;
 	wi::gui::Slider chassisHalfHeightSlider;
 	wi::gui::Slider chassisHalfLengthSlider;
-	wi::gui::Slider chassisOffsetLengthSlider;
+	wi::gui::Slider frontWheelOffsetSlider;
+	wi::gui::Slider rearWheelOffsetSlider;
 	wi::gui::CheckBox fourwheelCheckbox;
 	wi::gui::CheckBox driveCheckbox;
 

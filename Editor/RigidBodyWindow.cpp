@@ -503,20 +503,35 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&chassisHalfLengthSlider);
 
-	chassisOffsetLengthSlider.Create(-10, 10, 0, 1000, "Chassis offset: ");
-	chassisOffsetLengthSlider.OnSlide([=](wi::gui::EventArgs args) {
+	frontWheelOffsetSlider.Create(-10, 10, 0, 1000, "F wheel offset: ");
+	frontWheelOffsetSlider.OnSlide([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
 		{
 			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
 			if (physicscomponent != nullptr)
 			{
-				physicscomponent->vehicle.chassis_offset_length = args.fValue;
+				physicscomponent->vehicle.front_wheel_offset = args.fValue;
 				physicscomponent->physicsobject = {};
 			}
 		}
 		});
-	AddWidget(&chassisOffsetLengthSlider);
+	AddWidget(&frontWheelOffsetSlider);
+
+	rearWheelOffsetSlider.Create(-10, 10, 0, 1000, "R wheel offset: ");
+	rearWheelOffsetSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.rear_wheel_offset = args.fValue;
+				physicscomponent->physicsobject = {};
+			}
+		}
+		});
+	AddWidget(&rearWheelOffsetSlider);
 
 	fourwheelCheckbox.Create("Four wheel drive: ");
 	fourwheelCheckbox.OnClick([=](wi::gui::EventArgs args) {
@@ -632,7 +647,8 @@ void RigidBodyWindow::SetEntity(Entity entity)
 		chassisHalfWidthSlider.SetValue(physicsComponent->vehicle.chassis_half_width);
 		chassisHalfHeightSlider.SetValue(physicsComponent->vehicle.chassis_half_height);
 		chassisHalfLengthSlider.SetValue(physicsComponent->vehicle.chassis_half_length);
-		chassisOffsetLengthSlider.SetValue(physicsComponent->vehicle.chassis_offset_length);
+		frontWheelOffsetSlider.SetValue(physicsComponent->vehicle.front_wheel_offset);
+		rearWheelOffsetSlider.SetValue(physicsComponent->vehicle.rear_wheel_offset);
 		fourwheelCheckbox.SetCheck(physicsComponent->vehicle.four_wheel_drive);
 
 		RefreshShapeType();
@@ -709,7 +725,8 @@ void RigidBodyWindow::ResizeLayout()
 		chassisHalfWidthSlider.SetVisible(true);
 		chassisHalfHeightSlider.SetVisible(true);
 		chassisHalfLengthSlider.SetVisible(true);
-		chassisOffsetLengthSlider.SetVisible(true);
+		frontWheelOffsetSlider.SetVisible(true);
+		rearWheelOffsetSlider.SetVisible(true);
 		fourwheelCheckbox.SetVisible(true);
 		driveCheckbox.SetVisible(true);
 
@@ -719,7 +736,8 @@ void RigidBodyWindow::ResizeLayout()
 		add(chassisHalfWidthSlider);
 		add(chassisHalfHeightSlider);
 		add(chassisHalfLengthSlider);
-		add(chassisOffsetLengthSlider);
+		add(frontWheelOffsetSlider);
+		add(rearWheelOffsetSlider);
 		add_right(fourwheelCheckbox);
 		add_right(driveCheckbox);
 	}
@@ -731,7 +749,8 @@ void RigidBodyWindow::ResizeLayout()
 		chassisHalfWidthSlider.SetVisible(false);
 		chassisHalfHeightSlider.SetVisible(false);
 		chassisHalfLengthSlider.SetVisible(false);
-		chassisOffsetLengthSlider.SetVisible(false);
+		frontWheelOffsetSlider.SetVisible(false);
+		rearWheelOffsetSlider.SetVisible(false);
 		fourwheelCheckbox.SetVisible(false);
 		driveCheckbox.SetVisible(false);
 	}

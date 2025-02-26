@@ -441,7 +441,8 @@ namespace wi::physics
 					const float half_vehicle_length = physicscomponent.vehicle.chassis_half_length;
 					const float half_vehicle_width = physicscomponent.vehicle.chassis_half_width;
 					const float half_vehicle_height = physicscomponent.vehicle.chassis_half_height;
-					const float chassis_offset_length = physicscomponent.vehicle.chassis_offset_length;
+					const float front_wheel_offset = physicscomponent.vehicle.front_wheel_offset;
+					const float rear_wheel_offset = physicscomponent.vehicle.rear_wheel_offset;
 					const bool four_wheel_drive = physicscomponent.vehicle.four_wheel_drive;
 					const float max_engine_torque = physicscomponent.vehicle.max_engine_torque;
 					const float clutch_strength = physicscomponent.vehicle.clutch_strength;
@@ -507,7 +508,7 @@ namespace wi::physics
 
 					// Wheels, left front
 					WheelSettingsWV* w1 = new WheelSettingsWV;
-					w1->mPosition = Vec3(half_vehicle_width, -0.9f * half_vehicle_height, half_vehicle_length - 2.0f * wheel_radius + chassis_offset_length);
+					w1->mPosition = Vec3(half_vehicle_width, -0.9f * half_vehicle_height, half_vehicle_length - 2.0f * wheel_radius + front_wheel_offset);
 					w1->mSuspensionDirection = front_suspension_dir;
 					w1->mSteeringAxis = front_steering_axis;
 					w1->mWheelUp = front_wheel_up;
@@ -521,7 +522,7 @@ namespace wi::physics
 
 					// Right front
 					WheelSettingsWV* w2 = new WheelSettingsWV;
-					w2->mPosition = Vec3(-half_vehicle_width, -0.9f * half_vehicle_height, half_vehicle_length - 2.0f * wheel_radius + chassis_offset_length);
+					w2->mPosition = Vec3(-half_vehicle_width, -0.9f * half_vehicle_height, half_vehicle_length - 2.0f * wheel_radius + front_wheel_offset);
 					w2->mSuspensionDirection = flip_x * front_suspension_dir;
 					w2->mSteeringAxis = flip_x * front_steering_axis;
 					w2->mWheelUp = flip_x * front_wheel_up;
@@ -535,7 +536,7 @@ namespace wi::physics
 
 					// Left rear
 					WheelSettingsWV* w3 = new WheelSettingsWV;
-					w3->mPosition = Vec3(half_vehicle_width, -0.9f * half_vehicle_height, -half_vehicle_length + 2.0f * wheel_radius + chassis_offset_length);
+					w3->mPosition = Vec3(half_vehicle_width, -0.9f * half_vehicle_height, -half_vehicle_length + 2.0f * wheel_radius + rear_wheel_offset);
 					w3->mSuspensionDirection = rear_suspension_dir;
 					w3->mSteeringAxis = rear_steering_axis;
 					w3->mWheelUp = rear_wheel_up;
@@ -548,7 +549,7 @@ namespace wi::physics
 
 					// Right rear
 					WheelSettingsWV* w4 = new WheelSettingsWV;
-					w4->mPosition = Vec3(-half_vehicle_width, -0.9f * half_vehicle_height, -half_vehicle_length + 2.0f * wheel_radius + chassis_offset_length);
+					w4->mPosition = Vec3(-half_vehicle_width, -0.9f * half_vehicle_height, -half_vehicle_length + 2.0f * wheel_radius + rear_wheel_offset);
 					w4->mSuspensionDirection = flip_x * rear_suspension_dir;
 					w4->mSteeringAxis = flip_x * rear_steering_axis;
 					w4->mWheelUp = flip_x * rear_wheel_up;

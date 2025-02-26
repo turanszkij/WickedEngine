@@ -452,7 +452,8 @@ namespace wi::scene
 			float chassis_half_width = 0.9f;
 			float chassis_half_height = 0.2f;
 			float chassis_half_length = 2.0f;
-			float chassis_offset_length = 0.0f;
+			float front_wheel_offset = 0.0f;
+			float rear_wheel_offset = 0.0f;
 			float wheel_radius = 0.3f;
 			float wheel_width = 0.1f;
 			bool four_wheel_drive = false;
