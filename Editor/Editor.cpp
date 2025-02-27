@@ -1385,6 +1385,10 @@ void EditorComponent::Update(float dt)
 
 	if (!wi::backlog::isActive())
 	{
+		if (scene.rigidbodies.GetCount() == 0)
+		{
+			componentsWnd.rigidWnd.driveCheckbox.SetCheck(false);
+		}
 		if (componentsWnd.rigidWnd.driveCheckbox.GetCheck())
 		{
 			for (size_t i = 0; i < scene.rigidbodies.GetCount(); ++i)
@@ -1409,11 +1413,11 @@ void EditorComponent::Update(float dt)
 				}
 				if (CheckInput(EditorActions::MOVE_CAMERA_LEFT))
 				{
-					drive_steering_smoothed -= dt;
+					drive_steering_smoothed -= dt * 2;
 				}
 				else if (CheckInput(EditorActions::MOVE_CAMERA_RIGHT))
 				{
-					drive_steering_smoothed += dt;
+					drive_steering_smoothed += dt * 2;
 				}
 				else
 				{
