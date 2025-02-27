@@ -568,6 +568,63 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	AddWidget(&driveCheckbox);
 
 
+	wheelEntityFrontLeftCombo.Create("Front Left Wheel: ");
+	wheelEntityFrontLeftCombo.OnSelect([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.wheel_entity_front_left = args.userdata;
+			}
+		}
+	});
+	AddWidget(&wheelEntityFrontLeftCombo);
+
+	wheelEntityFrontRightCombo.Create("Front Right Wheel: ");
+	wheelEntityFrontRightCombo.OnSelect([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.wheel_entity_front_right = args.userdata;
+			}
+		}
+		});
+	AddWidget(&wheelEntityFrontRightCombo);
+
+	wheelEntityRearLeftCombo.Create("Rear Left Wheel: ");
+	wheelEntityRearLeftCombo.OnSelect([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.wheel_entity_rear_left = args.userdata;
+			}
+		}
+		});
+	AddWidget(&wheelEntityRearLeftCombo);
+
+	wheelEntityRearRightCombo.Create("Rear Right Wheel: ");
+	wheelEntityRearRightCombo.OnSelect([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.wheel_entity_rear_right = args.userdata;
+			}
+		}
+		});
+	AddWidget(&wheelEntityRearRightCombo);
+
+
 	SetMinimized(true);
 	SetVisible(false);
 
@@ -668,6 +725,42 @@ void RigidBodyWindow::SetEntity(Entity entity)
 		fourwheelCheckbox.SetCheck(physicsComponent->vehicle.car.four_wheel_drive);
 		motorleanCheckbox.SetCheck(physicsComponent->vehicle.motorcycle.lean_control);
 
+
+		wheelEntityFrontLeftCombo.ClearItems();
+		wheelEntityFrontLeftCombo.AddItem("INVALID_ENTITY", (uint64_t)INVALID_ENTITY);
+		wheelEntityFrontRightCombo.ClearItems();
+		wheelEntityFrontRightCombo.AddItem("INVALID_ENTITY", (uint64_t)INVALID_ENTITY);
+		wheelEntityRearLeftCombo.ClearItems();
+		wheelEntityRearLeftCombo.AddItem("INVALID_ENTITY", (uint64_t)INVALID_ENTITY);
+		wheelEntityRearRightCombo.ClearItems();
+		wheelEntityRearRightCombo.AddItem("INVALID_ENTITY", (uint64_t)INVALID_ENTITY);
+		for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
+		{
+			Entity wheelEntity = scene.transforms.GetEntity(i);
+			if (!scene.Entity_IsDescendant(wheelEntity, entity))
+				continue;
+			const NameComponent* name = scene.names.GetComponent(wheelEntity);
+			if (name == nullptr)
+			{
+				std::string gen = std::to_string(wheelEntity);
+				wheelEntityFrontLeftCombo.AddItem(gen, (uint64_t)wheelEntity);
+				wheelEntityFrontRightCombo.AddItem(gen, (uint64_t)wheelEntity);
+				wheelEntityRearLeftCombo.AddItem(gen, (uint64_t)wheelEntity);
+				wheelEntityRearRightCombo.AddItem(gen, (uint64_t)wheelEntity);
+			}
+			else
+			{
+				wheelEntityFrontLeftCombo.AddItem(name->name, (uint64_t)wheelEntity);
+				wheelEntityFrontRightCombo.AddItem(name->name, (uint64_t)wheelEntity);
+				wheelEntityRearLeftCombo.AddItem(name->name, (uint64_t)wheelEntity);
+				wheelEntityRearRightCombo.AddItem(name->name, (uint64_t)wheelEntity);
+			}
+		}
+		wheelEntityFrontLeftCombo.SetSelectedByUserdataWithoutCallback(physicsComponent->vehicle.wheel_entity_front_left);
+		wheelEntityFrontRightCombo.SetSelectedByUserdataWithoutCallback(physicsComponent->vehicle.wheel_entity_front_right);
+		wheelEntityRearLeftCombo.SetSelectedByUserdataWithoutCallback(physicsComponent->vehicle.wheel_entity_rear_left);
+		wheelEntityRearRightCombo.SetSelectedByUserdataWithoutCallback(physicsComponent->vehicle.wheel_entity_rear_right);
+
 		RefreshShapeType();
 	}
 	else
@@ -744,8 +837,6 @@ void RigidBodyWindow::ResizeLayout()
 		chassisHalfLengthSlider.SetVisible(true);
 		frontWheelOffsetSlider.SetVisible(true);
 		rearWheelOffsetSlider.SetVisible(true);
-		fourwheelCheckbox.SetVisible(true);
-		motorleanCheckbox.SetVisible(true);
 		driveCheckbox.SetVisible(true);
 
 		add(vehicleCollisionCombo);
@@ -756,8 +847,38 @@ void RigidBodyWindow::ResizeLayout()
 		add(chassisHalfLengthSlider);
 		add(frontWheelOffsetSlider);
 		add(rearWheelOffsetSlider);
-		add_right(fourwheelCheckbox);
-		add_right(motorleanCheckbox);
+
+		RigidBodyPhysicsComponent::Vehicle::Type type = (RigidBodyPhysicsComponent::Vehicle::Type)vehicleCombo.GetSelectedUserdata();
+		switch (type)
+		{
+		case wi::scene::RigidBodyPhysicsComponent::Vehicle::Type::Car:
+			wheelEntityFrontLeftCombo.SetVisible(true);
+			wheelEntityFrontRightCombo.SetVisible(true);
+			wheelEntityRearLeftCombo.SetVisible(true);
+			wheelEntityRearRightCombo.SetVisible(true);
+			add(wheelEntityFrontLeftCombo);
+			add(wheelEntityFrontRightCombo);
+			add(wheelEntityRearLeftCombo);
+			add(wheelEntityRearRightCombo);
+			fourwheelCheckbox.SetVisible(true);
+			motorleanCheckbox.SetVisible(false);
+			add_right(fourwheelCheckbox);
+			break;
+		case wi::scene::RigidBodyPhysicsComponent::Vehicle::Type::Motorcycle:
+			wheelEntityFrontLeftCombo.SetVisible(true);
+			wheelEntityFrontRightCombo.SetVisible(false);
+			wheelEntityRearLeftCombo.SetVisible(true);
+			wheelEntityRearRightCombo.SetVisible(false);
+			add(wheelEntityFrontLeftCombo);
+			add(wheelEntityRearLeftCombo);
+			motorleanCheckbox.SetVisible(true);
+			fourwheelCheckbox.SetVisible(false);
+			add_right(motorleanCheckbox);
+			break;
+		default:
+			break;
+		}
+
 		add_right(driveCheckbox);
 	}
 	else
@@ -770,6 +891,10 @@ void RigidBodyWindow::ResizeLayout()
 		chassisHalfLengthSlider.SetVisible(false);
 		frontWheelOffsetSlider.SetVisible(false);
 		rearWheelOffsetSlider.SetVisible(false);
+		wheelEntityFrontLeftCombo.SetVisible(false);
+		wheelEntityFrontRightCombo.SetVisible(false);
+		wheelEntityRearLeftCombo.SetVisible(false);
+		wheelEntityRearRightCombo.SetVisible(false);
 		fourwheelCheckbox.SetVisible(false);
 		motorleanCheckbox.SetVisible(false);
 		driveCheckbox.SetVisible(false);

@@ -488,6 +488,12 @@ namespace wi::scene
 				bool lean_control = true; // true: avoids fall over to the side
 			} motorcycle;
 
+			// These can be specified to drive wheel animation from physics engine state:
+			wi::ecs::Entity wheel_entity_front_left = wi::ecs::INVALID_ENTITY;	// car, motorcycle
+			wi::ecs::Entity wheel_entity_front_right = wi::ecs::INVALID_ENTITY;	// car
+			wi::ecs::Entity wheel_entity_rear_left = wi::ecs::INVALID_ENTITY;	// car, motorcycle
+			wi::ecs::Entity wheel_entity_rear_right = wi::ecs::INVALID_ENTITY;	// car
+
 		} vehicle;
 
 		// Non-serialized attributes:

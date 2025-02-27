@@ -114,6 +114,9 @@ namespace wi::physics
 		float handbrake = 0
 	);
 
+	// Override all vehicle wheel transforms in world space
+	void OverrideWehicleWheelTransforms(wi::scene::Scene& scene);
+
 	enum class ActivationState
 	{
 		Active,

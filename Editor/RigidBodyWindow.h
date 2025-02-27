@@ -39,6 +39,10 @@ public:
 	wi::gui::Slider chassisHalfLengthSlider;
 	wi::gui::Slider frontWheelOffsetSlider;
 	wi::gui::Slider rearWheelOffsetSlider;
+	wi::gui::ComboBox wheelEntityFrontLeftCombo;
+	wi::gui::ComboBox wheelEntityFrontRightCombo;
+	wi::gui::ComboBox wheelEntityRearLeftCombo;
+	wi::gui::ComboBox wheelEntityRearRightCombo;
 	wi::gui::CheckBox fourwheelCheckbox;
 	wi::gui::CheckBox motorleanCheckbox;
 	wi::gui::CheckBox driveCheckbox;

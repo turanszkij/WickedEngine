@@ -820,6 +820,11 @@ namespace wi::scene
 				archive >> vehicle.motorcycle.front_suspension_angle;
 				archive >> vehicle.motorcycle.front_brake_torque;
 				archive >> vehicle.motorcycle.rear_brake_torque;
+
+				SerializeEntity(archive, vehicle.wheel_entity_front_left, seri);
+				SerializeEntity(archive, vehicle.wheel_entity_front_right, seri);
+				SerializeEntity(archive, vehicle.wheel_entity_rear_left, seri);
+				SerializeEntity(archive, vehicle.wheel_entity_rear_right, seri);
 			}
 		}
 		else
@@ -888,6 +893,11 @@ namespace wi::scene
 				archive << vehicle.motorcycle.front_suspension_angle;
 				archive << vehicle.motorcycle.front_brake_torque;
 				archive << vehicle.motorcycle.rear_brake_torque;
+
+				SerializeEntity(archive, vehicle.wheel_entity_front_left, seri);
+				SerializeEntity(archive, vehicle.wheel_entity_front_right, seri);
+				SerializeEntity(archive, vehicle.wheel_entity_rear_left, seri);
+				SerializeEntity(archive, vehicle.wheel_entity_rear_right, seri);
 			}
 		}
 	}

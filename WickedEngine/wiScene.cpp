@@ -356,6 +356,8 @@ namespace wi::scene
 
 		RunProceduralAnimationUpdateSystem(ctx);
 
+		wi::physics::OverrideWehicleWheelTransforms(*this);
+
 		RunArmatureUpdateSystem(ctx);
 
 		RunWeatherUpdateSystem(ctx);
@@ -1931,6 +1933,23 @@ namespace wi::scene
 				++i;
 			}
 		}
+	}
+	void Scene::Component_TransformWorldToHierarchy(wi::ecs::Entity entity)
+	{
+		const HierarchyComponent* hier = hierarchy.GetComponent(entity);
+		if (hier == nullptr)
+			return;
+		const TransformComponent* transform_parent = transforms.GetComponent(hier->parentID);
+		if (transform_parent == nullptr)
+			return;
+		TransformComponent* transform_child = transforms.GetComponent(entity);
+		if (transform_child == nullptr)
+			return;
+		XMMATRIX B = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent->world));
+		XMMATRIX W = transform_child->GetWorldMatrix();
+		W = W * B;
+		XMStoreFloat4x4(&transform_child->world, W);
+		transform_child->ApplyTransform();
 	}
 
 	void Scene::RunAnimationUpdateSystem(wi::jobsystem::context& ctx)

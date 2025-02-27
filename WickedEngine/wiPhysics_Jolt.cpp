@@ -511,7 +511,7 @@ namespace wi::physics
 
 					// Wheels, left front
 					WheelSettingsWV* w1 = new WheelSettingsWV;
-					w1->mPosition = Vec3(half_vehicle_width, -0.9f * half_vehicle_height, half_vehicle_length - 2.0f * wheel_radius + front_wheel_offset);
+					w1->mPosition = Vec3(-half_vehicle_width, -0.9f * half_vehicle_height, half_vehicle_length + front_wheel_offset);
 					w1->mSuspensionDirection = front_suspension_dir;
 					w1->mSteeringAxis = front_steering_axis;
 					w1->mWheelUp = front_wheel_up;
@@ -525,7 +525,7 @@ namespace wi::physics
 
 					// Right front
 					WheelSettingsWV* w2 = new WheelSettingsWV;
-					w2->mPosition = Vec3(-half_vehicle_width, -0.9f * half_vehicle_height, half_vehicle_length - 2.0f * wheel_radius + front_wheel_offset);
+					w2->mPosition = Vec3(half_vehicle_width, -0.9f * half_vehicle_height, half_vehicle_length + front_wheel_offset);
 					w2->mSuspensionDirection = flip_x * front_suspension_dir;
 					w2->mSteeringAxis = flip_x * front_steering_axis;
 					w2->mWheelUp = flip_x * front_wheel_up;
@@ -539,7 +539,7 @@ namespace wi::physics
 
 					// Left rear
 					WheelSettingsWV* w3 = new WheelSettingsWV;
-					w3->mPosition = Vec3(half_vehicle_width, -0.9f * half_vehicle_height, -half_vehicle_length + 2.0f * wheel_radius + rear_wheel_offset);
+					w3->mPosition = Vec3(-half_vehicle_width, -0.9f * half_vehicle_height, -half_vehicle_length + rear_wheel_offset);
 					w3->mSuspensionDirection = rear_suspension_dir;
 					w3->mSteeringAxis = rear_steering_axis;
 					w3->mWheelUp = rear_wheel_up;
@@ -552,7 +552,7 @@ namespace wi::physics
 
 					// Right rear
 					WheelSettingsWV* w4 = new WheelSettingsWV;
-					w4->mPosition = Vec3(-half_vehicle_width, -0.9f * half_vehicle_height, -half_vehicle_length + 2.0f * wheel_radius + rear_wheel_offset);
+					w4->mPosition = Vec3(half_vehicle_width, -0.9f * half_vehicle_height, -half_vehicle_length + rear_wheel_offset);
 					w4->mSuspensionDirection = flip_x * rear_suspension_dir;
 					w4->mSteeringAxis = flip_x * rear_steering_axis;
 					w4->mWheelUp = flip_x * rear_wheel_up;
@@ -2414,6 +2414,49 @@ namespace wi::physics
 		PhysicsScene& physics_scene = *(PhysicsScene*)physicsobject.physics_scene.get();
 		BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
 		body_interface.ActivateBody(physicsobject.bodyID);
+	}
+
+	void OverrideWehicleWheelTransforms(wi::scene::Scene& scene)
+	{
+		PhysicsScene& physics_scene = GetPhysicsScene(scene);
+		wi::jobsystem::context ctx;
+		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), 1, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
+
+			RigidBodyPhysicsComponent& physicscomponent = scene.rigidbodies[args.jobIndex];
+			if (physicscomponent.physicsobject == nullptr)
+				return;
+			RigidBody& physicsobject = GetRigidBody(physicscomponent);
+			if (physicsobject.bodyID.IsInvalid())
+				return;
+			if (!physicscomponent.IsVehicle())
+				return;
+
+			const Entity wheel_entities[] = {
+				physicscomponent.vehicle.wheel_entity_front_left,
+				physicscomponent.vehicle.wheel_entity_front_right,
+				physicscomponent.vehicle.wheel_entity_rear_left,
+				physicscomponent.vehicle.wheel_entity_rear_right,
+			};
+
+			for (uint32_t i = 0; i < arraysize(wheel_entities); ++i)
+			{
+				if (wheel_entities[i] == INVALID_ENTITY)
+					continue;
+
+				TransformComponent* wheel_transform = scene.transforms.GetComponent(wheel_entities[i]);
+				if (wheel_transform != nullptr)
+				{
+					XMFLOAT4X4 localMatrix;
+					XMStoreFloat4x4(&localMatrix, wheel_transform->GetLocalMatrix());
+					Vec3 right = cast(wi::math::GetRight(localMatrix)).Normalized();
+					Vec3 up = cast(wi::math::GetUp(localMatrix)).Normalized();
+					Mat44 mat = physicsobject.vehicle_constraint->GetWheelWorldTransform(i, right, up);
+					mat = mat * Mat44::sScale(cast(wheel_transform->GetScale()));
+					wheel_transform->world = cast(mat);
+				}
+			}
+		});
+		wi::jobsystem::Wait(ctx);
 	}
 
 	void SetActivationState(

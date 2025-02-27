@@ -447,6 +447,8 @@ namespace wi::scene
 		void Component_Detach(wi::ecs::Entity entity);
 		// Detaches all children from an entity (if there are any):
 		void Component_DetachChildren(wi::ecs::Entity parent);
+		// Bakes the transform's current world matrix back to hierarchy local space (if it is part of a hierarchy)
+		void Component_TransformWorldToHierarchy(wi::ecs::Entity entity);
 
 		// Read/write whole scene into an archive
 		void Serialize(wi::Archive& archive);
