@@ -2803,6 +2803,7 @@ void EditorComponent::PostUpdate()
 		}
 	}
 
+	// Drive mode camera override is done in PostUpdate so that most recent physics updates are available:
 	if (drive_mode)
 	{
 		for (size_t i = 0; i < scene.rigidbodies.GetCount(); ++i)

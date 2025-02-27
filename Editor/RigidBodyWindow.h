@@ -40,6 +40,7 @@ public:
 	wi::gui::Slider frontWheelOffsetSlider;
 	wi::gui::Slider rearWheelOffsetSlider;
 	wi::gui::CheckBox fourwheelCheckbox;
+	wi::gui::CheckBox motorleanCheckbox;
 	wi::gui::CheckBox driveCheckbox;
 
 	void ResizeLayout() override;

@@ -457,10 +457,9 @@ namespace wi::scene
 			float rear_wheel_offset = 0.0f;
 			float wheel_radius = 0.3f;
 			float wheel_width = 0.1f;
-			bool four_wheel_drive = false;
 			float max_engine_torque = 500.0f;
 			float clutch_strength = 10.0f;
-			float max_roll_angle = XM_PI;
+			float max_roll_angle = wi::math::DegreesToRadians(60.0f);
 			float max_steering_angle = wi::math::DegreesToRadians(30.0f);
 
 			struct Suspension
@@ -473,6 +472,21 @@ namespace wi::scene
 
 			Suspension front_suspension;
 			Suspension rear_suspension;
+
+			struct Car
+			{
+				bool four_wheel_drive = false;
+			} car;
+
+			struct Motorcycle
+			{
+				float front_suspension_angle = wi::math::DegreesToRadians(30.0f);
+				float front_brake_torque = 500.0f;
+				float rear_brake_torque = 250.0f;
+
+				// Non-serialized attributes:
+				bool lean_control = true; // true: avoids fall over to the side
+			} motorcycle;
 
 		} vehicle;
 

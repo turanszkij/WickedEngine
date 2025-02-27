@@ -504,7 +504,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&chassisHalfLengthSlider);
 
-	frontWheelOffsetSlider.Create(-10, 10, 0, 1000, "F wheel offset: ");
+	frontWheelOffsetSlider.Create(-10, 10, 0, 1000, "Front wheel offset: ");
 	frontWheelOffsetSlider.OnSlide([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -519,7 +519,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&frontWheelOffsetSlider);
 
-	rearWheelOffsetSlider.Create(-10, 10, 0, 1000, "R wheel offset: ");
+	rearWheelOffsetSlider.Create(-10, 10, 0, 1000, "Rear wheel offset: ");
 	rearWheelOffsetSlider.OnSlide([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -534,7 +534,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&rearWheelOffsetSlider);
 
-	fourwheelCheckbox.Create("Four wheel drive: ");
+	fourwheelCheckbox.Create("4-wheel drive: ");
 	fourwheelCheckbox.OnClick([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -542,12 +542,27 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
 			if (physicscomponent != nullptr)
 			{
-				physicscomponent->vehicle.four_wheel_drive = args.bValue;
+				physicscomponent->vehicle.car.four_wheel_drive = args.bValue;
 				physicscomponent->physicsobject = {};
 			}
 		}
 	});
 	AddWidget(&fourwheelCheckbox);
+
+	motorleanCheckbox.Create("Motorcycle lean control: ");
+	motorleanCheckbox.OnClick([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.motorcycle.lean_control = args.bValue;
+				// Here we don't need to recreate physics!!
+			}
+		}
+	});
+	AddWidget(&motorleanCheckbox);
 
 	driveCheckbox.Create("Drive in Editor: ");
 	AddWidget(&driveCheckbox);
@@ -650,7 +665,8 @@ void RigidBodyWindow::SetEntity(Entity entity)
 		chassisHalfLengthSlider.SetValue(physicsComponent->vehicle.chassis_half_length);
 		frontWheelOffsetSlider.SetValue(physicsComponent->vehicle.front_wheel_offset);
 		rearWheelOffsetSlider.SetValue(physicsComponent->vehicle.rear_wheel_offset);
-		fourwheelCheckbox.SetCheck(physicsComponent->vehicle.four_wheel_drive);
+		fourwheelCheckbox.SetCheck(physicsComponent->vehicle.car.four_wheel_drive);
+		motorleanCheckbox.SetCheck(physicsComponent->vehicle.motorcycle.lean_control);
 
 		RefreshShapeType();
 	}
@@ -729,6 +745,7 @@ void RigidBodyWindow::ResizeLayout()
 		frontWheelOffsetSlider.SetVisible(true);
 		rearWheelOffsetSlider.SetVisible(true);
 		fourwheelCheckbox.SetVisible(true);
+		motorleanCheckbox.SetVisible(true);
 		driveCheckbox.SetVisible(true);
 
 		add(vehicleCollisionCombo);
@@ -740,6 +757,7 @@ void RigidBodyWindow::ResizeLayout()
 		add(frontWheelOffsetSlider);
 		add(rearWheelOffsetSlider);
 		add_right(fourwheelCheckbox);
+		add_right(motorleanCheckbox);
 		add_right(driveCheckbox);
 	}
 	else
@@ -753,6 +771,7 @@ void RigidBodyWindow::ResizeLayout()
 		frontWheelOffsetSlider.SetVisible(false);
 		rearWheelOffsetSlider.SetVisible(false);
 		fourwheelCheckbox.SetVisible(false);
+		motorleanCheckbox.SetVisible(false);
 		driveCheckbox.SetVisible(false);
 	}
 

@@ -801,7 +801,7 @@ namespace wi::scene
 				archive >> vehicle.rear_wheel_offset;
 				archive >> vehicle.wheel_radius;
 				archive >> vehicle.wheel_width;
-				archive >> vehicle.four_wheel_drive;
+				archive >> vehicle.car.four_wheel_drive;
 				archive >> vehicle.max_engine_torque;
 				archive >> vehicle.clutch_strength;
 				archive >> vehicle.max_roll_angle;
@@ -816,6 +816,10 @@ namespace wi::scene
 				archive >> vehicle.rear_suspension.max_length;
 				archive >> vehicle.rear_suspension.frequency;
 				archive >> vehicle.rear_suspension.damping;
+
+				archive >> vehicle.motorcycle.front_suspension_angle;
+				archive >> vehicle.motorcycle.front_brake_torque;
+				archive >> vehicle.motorcycle.rear_brake_torque;
 			}
 		}
 		else
@@ -865,7 +869,7 @@ namespace wi::scene
 				archive << vehicle.rear_wheel_offset;
 				archive << vehicle.wheel_radius;
 				archive << vehicle.wheel_width;
-				archive << vehicle.four_wheel_drive;
+				archive << vehicle.car.four_wheel_drive;
 				archive << vehicle.max_engine_torque;
 				archive << vehicle.clutch_strength;
 				archive << vehicle.max_roll_angle;
@@ -880,6 +884,10 @@ namespace wi::scene
 				archive << vehicle.rear_suspension.max_length;
 				archive << vehicle.rear_suspension.frequency;
 				archive << vehicle.rear_suspension.damping;
+
+				archive << vehicle.motorcycle.front_suspension_angle;
+				archive << vehicle.motorcycle.front_brake_torque;
+				archive << vehicle.motorcycle.rear_brake_torque;
 			}
 		}
 	}
