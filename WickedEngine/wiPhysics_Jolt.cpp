@@ -272,11 +272,6 @@ namespace wi::physics
 
 			// vehicle:
 			VehicleConstraint* vehicle_constraint = nullptr;
-			WheelSettingsWV* wheel1 = nullptr;
-			WheelSettingsWV* wheel2 = nullptr;
-			WheelSettingsWV* wheel3 = nullptr;
-			WheelSettingsWV* wheel4 = nullptr;
-			WheeledVehicleControllerSettings* controller_settings = nullptr;
 
 			~RigidBody()
 			{
@@ -576,32 +571,32 @@ namespace wi::physics
 						w->mWidth = wheel_width;
 					}
 
-					physicsobject.controller_settings = new WheeledVehicleControllerSettings;
+					WheeledVehicleControllerSettings* controller_settings = new WheeledVehicleControllerSettings;
 
-					physicsobject.controller_settings->mEngine.mMaxTorque = max_engine_torque;
-					physicsobject.controller_settings->mTransmission.mClutchStrength = clutch_strength;
+					controller_settings->mEngine.mMaxTorque = max_engine_torque;
+					controller_settings->mTransmission.mClutchStrength = clutch_strength;
 
 					// Set slip ratios to the same for everything
 					float limited_slip_ratio = sLimitedSlipDifferentials ? 1.4f : FLT_MAX;
-					physicsobject.controller_settings->mDifferentialLimitedSlipRatio = limited_slip_ratio;
-					for (auto& diff : physicsobject.controller_settings->mDifferentials)
+					controller_settings->mDifferentialLimitedSlipRatio = limited_slip_ratio;
+					for (auto& diff : controller_settings->mDifferentials)
 					{
 						diff.mLimitedSlipRatio = limited_slip_ratio;
 					}
 
-					vehicle.mController = physicsobject.controller_settings;
+					vehicle.mController = controller_settings;
 
 					// Differential
-					physicsobject.controller_settings->mDifferentials.resize(four_wheel_drive ? 2 : 1);
-					physicsobject.controller_settings->mDifferentials[0].mLeftWheel = 0;
-					physicsobject.controller_settings->mDifferentials[0].mRightWheel = 1;
+					controller_settings->mDifferentials.resize(four_wheel_drive ? 2 : 1);
+					controller_settings->mDifferentials[0].mLeftWheel = 0;
+					controller_settings->mDifferentials[0].mRightWheel = 1;
 					if (four_wheel_drive)
 					{
-						physicsobject.controller_settings->mDifferentials[1].mLeftWheel = 2;
-						physicsobject.controller_settings->mDifferentials[1].mRightWheel = 3;
+						controller_settings->mDifferentials[1].mLeftWheel = 2;
+						controller_settings->mDifferentials[1].mRightWheel = 3;
 
 						// Split engine torque
-						physicsobject.controller_settings->mDifferentials[0].mEngineTorqueRatio = physicsobject.controller_settings->mDifferentials[1].mEngineTorqueRatio = 0.5f;
+						controller_settings->mDifferentials[0].mEngineTorqueRatio = controller_settings->mDifferentials[1].mEngineTorqueRatio = 0.5f;
 					}
 
 					// Anti rollbars
@@ -2412,7 +2407,7 @@ namespace wi::physics
 		else if (physicscomponent.vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Motorcycle)
 		{
 			MotorcycleController* controller = static_cast<MotorcycleController*>(physicsobject.vehicle_constraint->GetController());
-			controller->SetDriverInput(forward, -right, brake, false);
+			controller->SetDriverInput(forward, -right, brake, handbrake);
 			controller->EnableLeanController(physicscomponent.vehicle.motorcycle.lean_control);
 		}
 

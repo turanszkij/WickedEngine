@@ -686,7 +686,7 @@ void RigidBodyWindow::ResizeLayout()
 	float y = padding;
 	float jump = 20;
 
-	const float margin_left = 120;
+	const float margin_left = 125;
 	const float margin_right = 40;
 
 	auto add = [&](wi::gui::Widget& widget) {
