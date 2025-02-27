@@ -129,6 +129,8 @@ namespace wi::physics
 	);
 	void ActivateAllRigidBodies(wi::scene::Scene& scene);
 
+	void ResetPhysicsObjects(wi::scene::Scene& scene);
+
 	XMFLOAT3 GetSoftBodyNodePosition(
 		wi::scene::SoftBodyPhysicsComponent& physicscomponent,
 		uint32_t physicsIndex

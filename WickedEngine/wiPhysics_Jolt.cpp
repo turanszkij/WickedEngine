@@ -243,6 +243,8 @@ namespace wi::physics
 			ShapeRefC shape;
 			BodyID bodyID;
 			Entity entity = INVALID_ENTITY;
+			Vec3 initial_position = Vec3::sZero();
+			Quat initial_rotation = Quat::sIdentity();
 
 			// Things for parented objects:
 			XMFLOAT4X4 parentMatrix = wi::math::IDENTITY_MATRIX;
@@ -391,8 +393,10 @@ namespace wi::physics
 				physicsobject.additionalTransform.SetTranslation(local_offset);
 				physicsobject.additionalTransformInverse = physicsobject.additionalTransform.Inversed();
 
-				physicsobject.prev_position = mat.GetTranslation();
-				physicsobject.prev_rotation = mat.GetQuaternion().Normalized();
+				physicsobject.initial_position = mat.GetTranslation();
+				physicsobject.initial_rotation = mat.GetQuaternion().Normalized();
+				physicsobject.prev_position = physicsobject.initial_position;
+				physicsobject.prev_rotation = physicsobject.prev_rotation;
 
 				const EMotionType motionType = physicscomponent.mass == 0 ? EMotionType::Static : (physicscomponent.IsKinematic() ? EMotionType::Kinematic : EMotionType::Dynamic);
 
@@ -433,6 +437,8 @@ namespace wi::physics
 				}
 				physicsobject.bodyID = body->GetID();
 				body_interface.AddBody(physicsobject.bodyID, activation);
+
+				body->SetUserData((uint64_t)&physicsobject);
 
 				// Vehicle const settings:
 				static constexpr bool	sAntiRollbar = true;
@@ -2459,6 +2465,54 @@ namespace wi::physics
 	{
 		PhysicsScene& physics_scene = *(PhysicsScene*)scene.physics_scene.get();
 		physics_scene.activate_all_rigid_bodies = true;
+	}
+
+	void ResetPhysicsObjects(Scene& scene)
+	{
+		PhysicsScene& physics_scene = *(PhysicsScene*)scene.physics_scene.get();
+		BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface();
+		BodyIDVector bodies;
+		physics_scene.physics_system.GetBodies(bodies);
+		for (BodyID& bodyID : bodies)
+		{
+			if (body_interface.GetBodyType(bodyID) == EBodyType::RigidBody)
+			{
+				RigidBody* physicsobject = (RigidBody*)body_interface.GetUserData(bodyID);
+				body_interface.SetPositionRotationAndVelocity(
+					bodyID,
+					physicsobject->additionalTransform.GetTranslation() + physicsobject->initial_position,
+					physicsobject->initial_rotation,
+					Vec3::sZero(),
+					Vec3::sZero()
+				);
+				physicsobject->prev_position = physicsobject->initial_position;
+				physicsobject->prev_rotation = physicsobject->initial_rotation;
+				if (body_interface.GetMotionType(bodyID) != EMotionType::Static)
+				{
+					body_interface.ResetSleepTimer(bodyID);
+				}
+				//body_interface.DeactivateBody(bodyID);
+
+				// Feedback dynamic bodies: physics -> system
+				if (body_interface.GetMotionType(bodyID) == EMotionType::Dynamic)
+				{
+					TransformComponent* transform = scene.transforms.GetComponent(physicsobject->entity);
+					if (transform != nullptr)
+					{
+						Mat44 mat = body_interface.GetWorldTransform(bodyID);
+						mat = mat * physicsobject->additionalTransformInverse;
+						Vec3 position = mat.GetTranslation();
+						Quat rotation = mat.GetQuaternion().Normalized();
+
+						transform->translation_local = cast(position);
+						transform->rotation_local = cast(rotation);
+
+						// Back to local space of parent:
+						transform->MatrixTransform(physicsobject->parentMatrixInverse);
+					}
+				}
+			}
+		}
 	}
 
 	XMFLOAT3 GetSoftBodyNodePosition(

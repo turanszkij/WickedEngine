@@ -820,16 +820,23 @@ void EditorComponent::Load()
 
 	physicsButton.Create(ICON_RIGIDBODY);
 	physicsButton.SetShadowRadius(2);
-	physicsButton.SetTooltip("Toggle Physics Simulation On/Off");
+	physicsButton.SetTooltip("Toggle Physics Simulation On/Off\n\tOr: press while holding left SHIFT to reset physics bodies");
 	if (main->config.GetSection("options").Has("physics"))
 	{
 		wi::physics::SetSimulationEnabled(main->config.GetSection("options").GetBool("physics"));
 	}
 	physicsButton.OnClick([&](wi::gui::EventArgs args) {
-		wi::physics::SetSimulationEnabled(!wi::physics::IsSimulationEnabled());
-		main->config.GetSection("options").Set("physics", wi::physics::IsSimulationEnabled());
-		main->config.Commit();
-		});
+		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL))
+		{
+			wi::physics::ResetPhysicsObjects(GetCurrentScene());
+		}
+		else
+		{
+			wi::physics::SetSimulationEnabled(!wi::physics::IsSimulationEnabled());
+			main->config.GetSection("options").Set("physics", wi::physics::IsSimulationEnabled());
+			main->config.Commit();
+		}
+	});
 	GetGUI().AddWidget(&physicsButton);
 
 	dummyButton.Create(ICON_DUMMY);
