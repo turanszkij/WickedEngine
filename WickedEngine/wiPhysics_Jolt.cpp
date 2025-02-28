@@ -272,6 +272,8 @@ namespace wi::physics
 
 			// vehicle:
 			VehicleConstraint* vehicle_constraint = nullptr;
+			Vec3 prev_wheel_positions[4] = { Vec3::sZero(), Vec3::sZero(), Vec3::sZero(), Vec3::sZero() };
+			Quat prev_wheel_rotations[4] = { Quat::sIdentity(), Quat::sIdentity(), Quat::sIdentity(), Quat::sIdentity() };
 
 			~RigidBody()
 			{
@@ -1930,6 +1932,40 @@ namespace wi::physics
 						mat = mat * rb.additionalTransformInverse;
 						rb.prev_position = mat.GetTranslation();
 						rb.prev_rotation = mat.GetQuaternion().Normalized();
+
+						if (rb.vehicle_constraint != nullptr)
+						{
+							const Entity car_wheel_entities[] = {
+								physicscomponent.vehicle.wheel_entity_front_left,
+								physicscomponent.vehicle.wheel_entity_front_right,
+								physicscomponent.vehicle.wheel_entity_rear_left,
+								physicscomponent.vehicle.wheel_entity_rear_right,
+							};
+							const Entity motor_wheel_entities[] = {
+								physicscomponent.vehicle.wheel_entity_front_left,
+								physicscomponent.vehicle.wheel_entity_rear_left,
+							};
+							const uint32_t count = physicscomponent.vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Car ? arraysize(car_wheel_entities) : arraysize(motor_wheel_entities);
+
+							for (uint32_t i = 0; i < count; ++i)
+							{
+								Entity wheel_entity = physicscomponent.vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Car ? car_wheel_entities[i] : motor_wheel_entities[i];
+								if (wheel_entity == INVALID_ENTITY)
+									continue;
+
+								TransformComponent* wheel_transform = scene.transforms.GetComponent(wheel_entity);
+								if (wheel_transform != nullptr)
+								{
+									XMFLOAT4X4 localMatrix;
+									XMStoreFloat4x4(&localMatrix, wheel_transform->GetLocalMatrix());
+									Vec3 right = cast(wi::math::GetRight(localMatrix)).Normalized();
+									Vec3 up = cast(wi::math::GetUp(localMatrix)).Normalized();
+									Mat44 wheelmat = rb.vehicle_constraint->GetWheelWorldTransform(i, right, up);
+									rb.prev_wheel_positions[i] = wheelmat.GetTranslation();
+									rb.prev_wheel_rotations[i] = wheelmat.GetQuaternion();
+								}
+							}
+						}
 					});
 					wi::jobsystem::Dispatch(ctx, (uint32_t)scene.humanoids.GetCount(), 1, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
 						HumanoidComponent& humanoid = scene.humanoids[args.jobIndex];
@@ -2428,31 +2464,44 @@ namespace wi::physics
 			RigidBody& physicsobject = GetRigidBody(physicscomponent);
 			if (physicsobject.bodyID.IsInvalid())
 				return;
-			if (!physicscomponent.IsVehicle())
+			if (physicsobject.vehicle_constraint == nullptr)
 				return;
 
-			const Entity wheel_entities[] = {
+			const Entity car_wheel_entities[] = {
 				physicscomponent.vehicle.wheel_entity_front_left,
 				physicscomponent.vehicle.wheel_entity_front_right,
 				physicscomponent.vehicle.wheel_entity_rear_left,
 				physicscomponent.vehicle.wheel_entity_rear_right,
 			};
+			const Entity motor_wheel_entities[] = {
+				physicscomponent.vehicle.wheel_entity_front_left,
+				physicscomponent.vehicle.wheel_entity_rear_left,
+			};
+			const uint32_t count = physicscomponent.vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Car ? arraysize(car_wheel_entities) : arraysize(motor_wheel_entities);
 
-			for (uint32_t i = 0; i < arraysize(wheel_entities); ++i)
+			for (uint32_t i = 0; i < count; ++i)
 			{
-				if (wheel_entities[i] == INVALID_ENTITY)
+				Entity wheel_entity = physicscomponent.vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Car ? car_wheel_entities[i] : motor_wheel_entities[i];
+				if (wheel_entity == INVALID_ENTITY)
 					continue;
 
-				TransformComponent* wheel_transform = scene.transforms.GetComponent(wheel_entities[i]);
+				TransformComponent* wheel_transform = scene.transforms.GetComponent(wheel_entity);
 				if (wheel_transform != nullptr)
 				{
 					XMFLOAT4X4 localMatrix;
 					XMStoreFloat4x4(&localMatrix, wheel_transform->GetLocalMatrix());
 					Vec3 right = cast(wi::math::GetRight(localMatrix)).Normalized();
 					Vec3 up = cast(wi::math::GetUp(localMatrix)).Normalized();
-					Mat44 mat = physicsobject.vehicle_constraint->GetWheelWorldTransform(i, right, up);
-					mat = mat * Mat44::sScale(cast(wheel_transform->GetScale()));
-					wheel_transform->world = cast(mat);
+					Mat44 wheelmat = physicsobject.vehicle_constraint->GetWheelWorldTransform(i, right, up);
+					Vec3 wheelpos = wheelmat.GetTranslation();
+					Quat wheelrot = wheelmat.GetQuaternion();
+					if (IsInterpolationEnabled())
+					{
+						wheelpos = wheelpos * physics_scene.alpha + physicsobject.prev_wheel_positions[i] * (1 - physics_scene.alpha);
+						wheelrot = physicsobject.prev_wheel_rotations[i].SLERP(wheelrot, physics_scene.alpha);
+					}
+					wheelmat = Mat44::sRotationTranslation(wheelrot, wheelpos) * Mat44::sScale(cast(wheel_transform->GetScale()));
+					wheel_transform->world = cast(wheelmat);
 				}
 			}
 		});
