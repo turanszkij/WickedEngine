@@ -8,6 +8,7 @@ public:
 
 	EditorComponent* editor = nullptr;
 	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
+	wi::ecs::Entity driving_entity = wi::ecs::INVALID_ENTITY;
 	void SetEntity(wi::ecs::Entity entity);
 
 	void RefreshShapeType();

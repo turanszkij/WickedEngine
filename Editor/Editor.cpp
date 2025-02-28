@@ -1398,13 +1398,9 @@ void EditorComponent::Update(float dt)
 		}
 		if (componentsWnd.rigidWnd.driveCheckbox.GetCheck())
 		{
-			for (size_t i = 0; i < scene.rigidbodies.GetCount(); ++i)
+			RigidBodyPhysicsComponent* rigidbody = scene.rigidbodies.GetComponent(componentsWnd.rigidWnd.driving_entity);
+			if (rigidbody != nullptr && rigidbody->IsVehicle())
 			{
-				RigidBodyPhysicsComponent& rigidbody = scene.rigidbodies[i];
-				if (!rigidbody.IsVehicle())
-					continue;
-				drive_mode = true;
-
 				//wi::physics::SetDebugDrawEnabled(true);
 				float forward = 0;
 				float right = 0;
@@ -1447,9 +1443,12 @@ void EditorComponent::Update(float dt)
 					drive_orbit_horizontal -= XM_PI * dt;
 				}
 				drive_steering_smoothed = clamp(drive_steering_smoothed, -1.0f, 1.0f);
-				wi::physics::DriveVehicle(rigidbody, forward, drive_steering_smoothed, brake, handbrake);
+				wi::physics::DriveVehicle(*rigidbody, forward, drive_steering_smoothed, brake, handbrake);
 				drive_mode = true;
-				break;
+			}
+			else
+			{
+				drive_mode = false;
 			}
 		}
 		else
@@ -2817,29 +2816,26 @@ void EditorComponent::PostUpdate()
 	// Drive mode camera override is done in PostUpdate so that most recent physics updates are available:
 	if (drive_mode)
 	{
-		for (size_t i = 0; i < scene.rigidbodies.GetCount(); ++i)
+		RigidBodyPhysicsComponent* rigidbody = scene.rigidbodies.GetComponent(componentsWnd.rigidWnd.driving_entity);
+		if (rigidbody != nullptr && rigidbody->IsVehicle())
 		{
-			RigidBodyPhysicsComponent& rigidbody = scene.rigidbodies[i];
-			if (!rigidbody.IsVehicle())
-				continue;
-			TransformComponent* vehicle_transform = scene.transforms.GetComponent(scene.rigidbodies.GetEntity(i));
-			if (vehicle_transform == nullptr)
-				break;
-
-			XMVECTOR P = vehicle_transform->GetPositionV();
-			XMVECTOR Q = vehicle_transform->GetRotationV();
-			XMMATRIX W = XMMatrixIdentity();
-			if (rigidbody.vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Car)
+			TransformComponent* vehicle_transform = scene.transforms.GetComponent(componentsWnd.rigidWnd.driving_entity);
+			if (vehicle_transform != nullptr)
 			{
-				W = XMMatrixTranslation(0, 0, -6) * XMMatrixRotationX(XM_PI * 0.08f) * XMMatrixRotationY(drive_orbit_horizontal) * XMMatrixRotationQuaternion(Q) * XMMatrixTranslationFromVector(P);
+				XMVECTOR P = vehicle_transform->GetPositionV();
+				XMVECTOR Q = vehicle_transform->GetRotationV();
+				XMMATRIX W = XMMatrixIdentity();
+				if (rigidbody->vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Car)
+				{
+					W = XMMatrixTranslation(0, 0, -6) * XMMatrixRotationX(XM_PI * 0.08f) * XMMatrixRotationY(drive_orbit_horizontal) * XMMatrixRotationQuaternion(Q) * XMMatrixTranslationFromVector(P);
+				}
+				else if (rigidbody->vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Motorcycle)
+				{
+					W = XMMatrixTranslation(0, 1.5f, -7) * XMMatrixRotationX(XM_PI * 0.1f) * XMMatrixRotationY(drive_orbit_horizontal) * XMMatrixRotationQuaternion(Q) * XMMatrixTranslationFromVector(P);
+				}
+				camera.TransformCamera(W);
+				camera.UpdateCamera();
 			}
-			else if (rigidbody.vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Motorcycle)
-			{
-				W = XMMatrixTranslation(0, 1.5f, -7) * XMMatrixRotationX(XM_PI * 0.1f) * XMMatrixRotationY(drive_orbit_horizontal) * XMMatrixRotationQuaternion(Q) * XMMatrixTranslationFromVector(P);
-			}
-			camera.TransformCamera(W);
-			camera.UpdateCamera();
-			break;
 		}
 	}
 }

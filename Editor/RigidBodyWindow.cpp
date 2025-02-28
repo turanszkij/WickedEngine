@@ -459,7 +459,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&wheelWidthSlider);
 
-	chassisHalfWidthSlider.Create(0.001f, 10, 1, 1000, "Chassis width: ");
+	chassisHalfWidthSlider.Create(0, 10, 1, 1000, "Chassis width: ");
 	chassisHalfWidthSlider.OnSlide([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -474,7 +474,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&chassisHalfWidthSlider);
 
-	chassisHalfHeightSlider.Create(0.001f, 10, 1, 1000, "Chassis height: ");
+	chassisHalfHeightSlider.Create(0, 10, 1, 1000, "Chassis height: ");
 	chassisHalfHeightSlider.OnSlide([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -489,7 +489,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&chassisHalfHeightSlider);
 
-	chassisHalfLengthSlider.Create(0.001f, 10, 1, 1000, "Chassis length: ");
+	chassisHalfLengthSlider.Create(0, 10, 1, 1000, "Chassis length: ");
 	chassisHalfLengthSlider.OnSlide([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -565,6 +565,16 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	AddWidget(&motorleanCheckbox);
 
 	driveCheckbox.Create("Drive in Editor: ");
+	driveCheckbox.OnClick([=](wi::gui::EventArgs args) {
+		if (args.bValue)
+		{
+			driving_entity = entity;
+		}
+		else
+		{
+			driving_entity = INVALID_ENTITY;
+		}
+	});
 	AddWidget(&driveCheckbox);
 
 

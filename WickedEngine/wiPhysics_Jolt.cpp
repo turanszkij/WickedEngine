@@ -513,7 +513,7 @@ namespace wi::physics
 
 					// Wheels, left front
 					WheelSettingsWV* w1 = new WheelSettingsWV;
-					w1->mPosition = Vec3(-half_vehicle_width, -0.9f * half_vehicle_height, half_vehicle_length + front_wheel_offset);
+					w1->mPosition = Vec3(-half_vehicle_width, half_vehicle_height, half_vehicle_length + front_wheel_offset);
 					w1->mSuspensionDirection = front_suspension_dir;
 					w1->mSteeringAxis = front_steering_axis;
 					w1->mWheelUp = front_wheel_up;
@@ -527,7 +527,7 @@ namespace wi::physics
 
 					// Right front
 					WheelSettingsWV* w2 = new WheelSettingsWV;
-					w2->mPosition = Vec3(half_vehicle_width, -0.9f * half_vehicle_height, half_vehicle_length + front_wheel_offset);
+					w2->mPosition = Vec3(half_vehicle_width, half_vehicle_height, half_vehicle_length + front_wheel_offset);
 					w2->mSuspensionDirection = flip_x * front_suspension_dir;
 					w2->mSteeringAxis = flip_x * front_steering_axis;
 					w2->mWheelUp = flip_x * front_wheel_up;
@@ -541,7 +541,7 @@ namespace wi::physics
 
 					// Left rear
 					WheelSettingsWV* w3 = new WheelSettingsWV;
-					w3->mPosition = Vec3(-half_vehicle_width, -0.9f * half_vehicle_height, -half_vehicle_length + rear_wheel_offset);
+					w3->mPosition = Vec3(-half_vehicle_width, half_vehicle_height, -half_vehicle_length + rear_wheel_offset);
 					w3->mSuspensionDirection = rear_suspension_dir;
 					w3->mSteeringAxis = rear_steering_axis;
 					w3->mWheelUp = rear_wheel_up;
@@ -554,7 +554,7 @@ namespace wi::physics
 
 					// Right rear
 					WheelSettingsWV* w4 = new WheelSettingsWV;
-					w4->mPosition = Vec3(half_vehicle_width, -0.9f * half_vehicle_height, -half_vehicle_length + rear_wheel_offset);
+					w4->mPosition = Vec3(half_vehicle_width, half_vehicle_height, -half_vehicle_length + rear_wheel_offset);
 					w4->mSuspensionDirection = flip_x * rear_suspension_dir;
 					w4->mSteeringAxis = flip_x * rear_steering_axis;
 					w4->mWheelUp = flip_x * rear_wheel_up;
@@ -680,7 +680,7 @@ namespace wi::physics
 
 					// Wheels
 					WheelSettingsWV* front = new WheelSettingsWV;
-					front->mPosition = Vec3(0.0f, -0.9f * half_vehicle_height, front_wheel_pos_z);
+					front->mPosition = Vec3(0.0f, half_vehicle_height, front_wheel_pos_z);
 					front->mMaxSteerAngle = max_steering_angle;
 					front->mSuspensionDirection = Vec3(0, -1, Tan(caster_angle)).Normalized();
 					front->mSteeringAxis = -front->mSuspensionDirection;
@@ -692,7 +692,7 @@ namespace wi::physics
 					front->mMaxBrakeTorque = front_brake_torque;
 
 					WheelSettingsWV* back = new WheelSettingsWV;
-					back->mPosition = Vec3(0.0f, -0.9f * half_vehicle_height, back_wheel_pos_z);
+					back->mPosition = Vec3(0.0f, half_vehicle_height, back_wheel_pos_z);
 					back->mMaxSteerAngle = 0.0f;
 					back->mRadius = back_wheel_radius;
 					back->mWidth = back_wheel_width;
@@ -2454,6 +2454,8 @@ namespace wi::physics
 
 	void OverrideWehicleWheelTransforms(wi::scene::Scene& scene)
 	{
+		if (!IsSimulationEnabled())
+			return;
 		PhysicsScene& physics_scene = GetPhysicsScene(scene);
 		wi::jobsystem::context ctx;
 		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), 1, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
