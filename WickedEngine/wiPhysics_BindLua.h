@@ -41,6 +41,8 @@ namespace wi::lua
 		int Intersects(lua_State* L);
 		int PickDrag(lua_State* L);
 
+		int DriveVehicle(lua_State* L);
+
 		static void Bind();
 	};
 

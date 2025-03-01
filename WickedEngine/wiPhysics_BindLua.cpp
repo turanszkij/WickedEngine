@@ -31,6 +31,7 @@ namespace wi::lua
 		lunamethod(Physics_BindLua, ActivateAllRigidBodies),
 		lunamethod(Physics_BindLua, Intersects),
 		lunamethod(Physics_BindLua, PickDrag),
+		lunamethod(Physics_BindLua, DriveVehicle),
 		{ NULL, NULL }
 	};
 	Luna<Physics_BindLua>::PropertyType Physics_BindLua::properties[] = {
@@ -494,6 +495,49 @@ namespace wi::lua
 			return 0;
 		}
 		wi::lua::SError(L, "Intersects(Scene, Ray, PickDragOperation) not enough arguments!");
+		return 0;
+	}
+
+	int Physics_BindLua::DriveVehicle(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			scene::RigidBodyPhysicsComponent_BindLua* rb = Luna<scene::RigidBodyPhysicsComponent_BindLua>::lightcheck(L, 1);
+			if (rb == nullptr)
+			{
+				wi::lua::SError(L, "DriveVehicle(RigidBodyPhysicsComponent rigidbody, opt float forward = 0, opt float right = 0, opt float brake = 0, opt float handbrake = 0) first argument is not a RigidBodyPhysicsComponent!");
+				return 0;
+			}
+
+			float forward = 0;
+			float right = 0;
+			float brake = 0;
+			float handbrake = 0;
+
+			if (argc > 1)
+			{
+				forward = wi::lua::SGetFloat(L, 2);
+
+				if (argc > 2)
+				{
+					right = wi::lua::SGetFloat(L, 3);
+
+					if (argc > 3)
+					{
+						brake = wi::lua::SGetFloat(L, 4);
+
+						if (argc > 4)
+						{
+							handbrake = wi::lua::SGetFloat(L, 5);
+						}
+					}
+				}
+			}
+
+			wi::physics::DriveVehicle(*rb->component, forward, right, brake, handbrake);
+		}
+		wi::lua::SError(L, "DriveVehicle(RigidBodyPhysicsComponent rigidbody, opt float forward = 0, opt float right = 0, opt float brake = 0, opt float handbrake = 0) not enough arguments!");
 		return 0;
 	}
 
