@@ -29,6 +29,7 @@ namespace wi::lua
 		lunamethod(Physics_BindLua, ApplyTorque),
 		lunamethod(Physics_BindLua, SetActivationState),
 		lunamethod(Physics_BindLua, ActivateAllRigidBodies),
+		lunamethod(Physics_BindLua, ResetPhysicsObjects),
 		lunamethod(Physics_BindLua, GetVelocity),
 		lunamethod(Physics_BindLua, Intersects),
 		lunamethod(Physics_BindLua, PickDrag),
@@ -436,6 +437,23 @@ namespace wi::lua
 		}
 		else
 			wi::lua::SError(L, "ActivateAllRigidBodies(Scene scene) not enough arguments!");
+		return 0;
+	}
+	int Physics_BindLua::ResetPhysicsObjects(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			scene::Scene_BindLua* scene = Luna<scene::Scene_BindLua>::lightcheck(L, 1);
+			if (scene == nullptr)
+			{
+				wi::lua::SError(L, "ResetPhysicsObjects(Scene scene) first argument is not a Scene!");
+				return 0;
+			}
+			wi::physics::ResetPhysicsObjects(*scene->scene);
+		}
+		else
+			wi::lua::SError(L, "ResetPhysicsObjects(Scene scene) not enough arguments!");
 		return 0;
 	}
 	int Physics_BindLua::GetVelocity(lua_State* L)

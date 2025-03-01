@@ -37,6 +37,7 @@ namespace wi::lua
 		int ApplyTorque(lua_State* L);
 		int SetActivationState(lua_State* L);
 		int ActivateAllRigidBodies(lua_State* L);
+		int ResetPhysicsObjects(lua_State* L);
 		int GetVelocity(lua_State* L);
 
 		int Intersects(lua_State* L);

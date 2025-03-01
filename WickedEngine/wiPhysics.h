@@ -107,7 +107,7 @@ namespace wi::physics
 	//	forward:	Value between -1 and 1 for auto transmission and value between 0 and 1 indicating desired driving direction and amount the gas pedal is pressed
 	//	right:		Value between -1 and 1 indicating desired steering angle (1 = right)
 	//	brake:		Value between 0 and 1 indicating how strong the brake pedal is pressed
-	//	handbrake:	Value between 0 and 1 indicating how strong the hand brake is pulled
+	//	handbrake:	Value between 0 and 1 indicating how strong the hand brake is pulled (back brake for motorcycles)
 	void DriveVehicle(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		float forward,
