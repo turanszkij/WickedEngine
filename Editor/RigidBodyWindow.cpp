@@ -474,7 +474,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&chassisHalfWidthSlider);
 
-	chassisHalfHeightSlider.Create(0, 10, 1, 1000, "Chassis height: ");
+	chassisHalfHeightSlider.Create(-10, 10, 1, 1000, "Chassis height: ");
 	chassisHalfHeightSlider.OnSlide([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -789,7 +789,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&motorleanCheckbox);
 
-	driveCheckbox.Create("Drive in Editor: ");
+	driveCheckbox.Create(ICON_VEHICLE " Drive in Editor: ");
 	driveCheckbox.SetTooltip("Override editor controls to drive this vehicle.\nControls: WASD for driving, left-right for camera rotation, Left Shift: brake, Space: handbrake\nController: R2: forward, L2: backward, Square/X: handbrake.");
 	driveCheckbox.OnClick([=](wi::gui::EventArgs args) {
 		if (args.bValue)
@@ -805,6 +805,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 
 
 	wheelEntityFrontLeftCombo.Create("Front Left Wheel: ");
+	wheelEntityFrontLeftCombo.SetTooltip("Map an entity transform to this wheel, so the wheel graphics can be animated by physics (optional).\nThe entity name must contain the word wheel to be displayed here.");
 	wheelEntityFrontLeftCombo.OnSelect([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -819,6 +820,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	AddWidget(&wheelEntityFrontLeftCombo);
 
 	wheelEntityFrontRightCombo.Create("Front Right Wheel: ");
+	wheelEntityFrontRightCombo.SetTooltip("Map an entity transform to this wheel, so the wheel graphics can be animated by physics (optional).\nThe entity name must contain the word wheel to be displayed here.");
 	wheelEntityFrontRightCombo.OnSelect([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -833,6 +835,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	AddWidget(&wheelEntityFrontRightCombo);
 
 	wheelEntityRearLeftCombo.Create("Rear Left Wheel: ");
+	wheelEntityRearLeftCombo.SetTooltip("Map an entity transform to this wheel, so the wheel graphics can be animated by physics (optional).\nThe entity name must contain the word wheel to be displayed here.");
 	wheelEntityRearLeftCombo.OnSelect([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -847,6 +850,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	AddWidget(&wheelEntityRearLeftCombo);
 
 	wheelEntityRearRightCombo.Create("Rear Right Wheel: ");
+	wheelEntityRearRightCombo.SetTooltip("Map an entity transform to this wheel, so the wheel graphics can be animated by physics (optional).\nThe entity name must contain the word wheel to be displayed here.");
 	wheelEntityRearRightCombo.OnSelect([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -994,15 +998,7 @@ void RigidBodyWindow::SetEntity(Entity entity)
 			if (!scene.Entity_IsDescendant(wheelEntity, entity))
 				continue;
 			const NameComponent* name = scene.names.GetComponent(wheelEntity);
-			if (name == nullptr)
-			{
-				std::string gen = std::to_string(wheelEntity);
-				wheelEntityFrontLeftCombo.AddItem(gen, (uint64_t)wheelEntity);
-				wheelEntityFrontRightCombo.AddItem(gen, (uint64_t)wheelEntity);
-				wheelEntityRearLeftCombo.AddItem(gen, (uint64_t)wheelEntity);
-				wheelEntityRearRightCombo.AddItem(gen, (uint64_t)wheelEntity);
-			}
-			else
+			if (name != nullptr && wi::helper::toUpper(name->name).find("WHEEL") != std::string::npos)
 			{
 				wheelEntityFrontLeftCombo.AddItem(name->name, (uint64_t)wheelEntity);
 				wheelEntityFrontRightCombo.AddItem(name->name, (uint64_t)wheelEntity);

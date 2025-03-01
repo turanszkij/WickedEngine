@@ -991,6 +991,9 @@ namespace wi::lua::scene
 		int SetKinematic(lua_State* L);
 		int SetStartDeactivated(lua_State* L);
 
+		int IsVehicle(lua_State* L);
+		int IsCar(lua_State* L);
+		int IsMotorcycle(lua_State* L);
 		int IsDisableDeactivation(lua_State* L);
 		int IsKinematic(lua_State* L);
 		int IsStartDeactivated(lua_State* L);

@@ -98,6 +98,12 @@ namespace wi::physics
 				Vec4(v._41, v._42, v._43, v._44)
 			);
 		}
+		inline Mat44 cast(const XMMATRIX& v)
+		{
+			XMFLOAT4X4 m;
+			XMStoreFloat4x4(&m, v);
+			return cast(m);
+		}
 		inline XMFLOAT3 cast(Vec3Arg v) { return XMFLOAT3(v.GetX(), v.GetY(), v.GetZ()); }
 		inline XMFLOAT4 cast(QuatArg v) { return XMFLOAT4(v.GetX(), v.GetY(), v.GetZ(), v.GetW()); }
 		inline XMFLOAT4X4 cast(Mat44 v)
@@ -466,7 +472,7 @@ namespace wi::physics
 				static constexpr float	sRearCamber = 0.0f;
 				static constexpr float	sRearToe = 0.0f;
 
-				if (physicscomponent.vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Car)
+				if (physicscomponent.IsCar())
 				{
 					const float wheel_radius = physicscomponent.vehicle.wheel_radius;
 					const float wheel_width = physicscomponent.vehicle.wheel_width;
@@ -637,9 +643,8 @@ namespace wi::physics
 
 					physics_scene.physics_system.AddConstraint(physicsobject.vehicle_constraint);
 					physics_scene.physics_system.AddStepListener(physicsobject.vehicle_constraint);
-
 				}
-				else if (physicscomponent.vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Motorcycle)
+				else if (physicscomponent.IsMotorcycle())
 				{
 					const float max_engine_torque = physicscomponent.vehicle.max_engine_torque;
 					const float clutch_strength = physicscomponent.vehicle.clutch_strength;
@@ -2545,6 +2550,12 @@ namespace wi::physics
 					}
 					wheelmat = Mat44::sRotationTranslation(wheelrot, wheelpos) * Mat44::sScale(cast(wheel_transform->GetScale()));
 					wheel_transform->world = cast(wheelmat);
+
+					scene.RefreshHierarchyTopdownFromParent(wheel_entity);
+
+					XMFLOAT4X4 tmp = cast(Mat44::sRotationTranslation(wheelrot, wheelpos));
+					std::scoped_lock lck(scene.locker);
+					wi::renderer::DrawAxis(XMLoadFloat4x4(&tmp), 1);
 				}
 			}
 		});

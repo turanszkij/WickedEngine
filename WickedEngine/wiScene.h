@@ -89,6 +89,8 @@ namespace wi::scene
 		bool IsLightmapUpdateRequested() const { return lightmap_request_allocator.load() > 0; }
 		wi::Archive optimized_instatiation_data;
 		wi::vector<wi::primitive::Capsule> character_capsules;
+		wi::unordered_map<wi::ecs::Entity, wi::vector<wi::ecs::Entity>> topdown_hierarchy; // managed by BuildTopDownHierarchy() in every Update(), allows parent->children traversal
+		wi::jobsystem::context topdown_hierarchy_workload;
 
 		// AABB culling streams:
 		wi::vector<wi::primitive::AABB> aabb_objects;
@@ -311,6 +313,10 @@ namespace wi::scene
 
 		float wetmap_fadeout_time = 0;
 		bool IsWetmapProcessingRequired() const;
+
+		void StartBuildTopDownHierarchy();
+		void WaitBuildTopDownHierarchy();
+		void RefreshHierarchyTopdownFromParent(wi::ecs::Entity entity);
 
 		// Update all components by a given timestep (in seconds):
 		//	This is an expensive function, prefer to call it only once per frame!

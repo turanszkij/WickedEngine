@@ -505,6 +505,8 @@ namespace wi::scene
 		constexpr void SetStartDeactivated(bool value) { if (value) { _flags |= START_DEACTIVATED; } else { _flags &= ~START_DEACTIVATED; } }
 
 		constexpr bool IsVehicle() const { return vehicle.type != Vehicle::Type::None; }
+		constexpr bool IsCar() const { return vehicle.type == Vehicle::Type::Car; }
+		constexpr bool IsMotorcycle() const { return vehicle.type == Vehicle::Type::Motorcycle; }
 		constexpr bool IsDisableDeactivation() const { return _flags & DISABLE_DEACTIVATION; }
 		constexpr bool IsKinematic() const { return _flags & KINEMATIC; }
 		constexpr bool IsStartDeactivated() const { return _flags & START_DEACTIVATED; }

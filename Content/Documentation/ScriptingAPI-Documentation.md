@@ -1288,6 +1288,9 @@ Describes a Rigid Body Physics object.
 
 </br>
 
+- IsVehicle() : bool	-- returns true if this is a vehicle, false otherwise
+- IsCar() : bool	-- returns true if this is a car vehicle, false otherwise
+- IsMotorcycle() : bool	-- returns true if this is a motorcycle vehicle, false otherwise
 - IsDisableDeactivation() : bool return -- Check if the rigidbody is able to deactivate after inactivity
 - IsKinematic() : bool return -- Check if the rigidbody is movable or just static
 - IsStartDeactivated() : bool return -- Checks whether rigid body is set to be deactivated when added to simulation

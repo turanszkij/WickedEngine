@@ -108,6 +108,7 @@ public:
 		RigidBody = 1 << 26,
 		SoftBody = 1 << 27,
 		Metadata = 1 << 28,
+		Vehicle = 1 << 29,
 
 		All = ~0ull,
 	} filter = Filter::All;

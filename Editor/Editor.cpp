@@ -1497,6 +1497,13 @@ void EditorComponent::Update(float dt)
 				}
 
 				drive_steering_smoothed = clamp(drive_steering_smoothed, -1.0f, 1.0f);
+
+				if (rigidbody->IsMotorcycle())
+				{
+					// break presses front and rear breaks:
+					handbrake = std::max(handbrake, brake);
+				}
+
 				wi::physics::DriveVehicle(*rigidbody, forward, drive_steering_smoothed, brake, handbrake);
 				drive_mode = true;
 			}
@@ -2881,7 +2888,7 @@ void EditorComponent::PostUpdate()
 				XMMATRIX W = XMMatrixIdentity();
 				if (rigidbody->vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Car)
 				{
-					W = XMMatrixTranslation(0, 0, -6) * XMMatrixRotationX(XM_PI * 0.08f) * XMMatrixRotationY(drive_orbit_horizontal) * XMMatrixRotationQuaternion(Q) * XMMatrixTranslationFromVector(P);
+					W = XMMatrixTranslation(0, 0.5f, -6) * XMMatrixRotationX(XM_PI * 0.08f) * XMMatrixRotationY(drive_orbit_horizontal) * XMMatrixRotationQuaternion(Q) * XMMatrixTranslationFromVector(P);
 				}
 				else if (rigidbody->vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Motorcycle)
 				{

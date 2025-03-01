@@ -47,6 +47,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	filterCombo.AddItem(ICON_RIGIDBODY, (uint64_t)Filter::RigidBody);
 	filterCombo.AddItem(ICON_SOFTBODY, (uint64_t)Filter::SoftBody);
 	filterCombo.AddItem(ICON_METADATA, (uint64_t)Filter::Metadata);
+	filterCombo.AddItem(ICON_VEHICLE, (uint64_t)Filter::Vehicle);
 	filterCombo.SetTooltip("Apply filtering to the Entities by components");
 	filterCombo.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	filterCombo.OnSelect([&](wi::gui::EventArgs args) {
@@ -1115,6 +1116,10 @@ void ComponentsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 			if (scene.rigidbodies.Contains(entity))
 			{
 				item.name += ICON_RIGIDBODY " ";
+				if (scene.rigidbodies.GetComponent(entity)->IsVehicle())
+				{
+					item.name += ICON_VEHICLE " ";
+				}
 			}
 			if (scene.softbodies.Contains(entity))
 			{
@@ -1330,7 +1335,8 @@ bool ComponentsWindow::CheckEntityFilter(wi::ecs::Entity entity)
 		has_flag(filter, Filter::VoxelGrid) && scene.voxel_grids.Contains(entity) ||
 		has_flag(filter, Filter::RigidBody) && scene.rigidbodies.Contains(entity) ||
 		has_flag(filter, Filter::SoftBody) && scene.softbodies.Contains(entity) ||
-		has_flag(filter, Filter::Metadata) && scene.metadatas.Contains(entity)
+		has_flag(filter, Filter::Metadata) && scene.metadatas.Contains(entity) ||
+		has_flag(filter, Filter::Vehicle) && (scene.rigidbodies.Contains(entity) && scene.rigidbodies.GetComponent(entity)->IsVehicle())
 		)
 	{
 		valid = true;
