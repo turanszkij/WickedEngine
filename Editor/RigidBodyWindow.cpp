@@ -160,7 +160,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			if (physicscomponent != nullptr)
 			{
 				physicscomponent->mass = args.fValue;
-				physicscomponent->physicsobject = {};
+				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
 	});
@@ -212,7 +212,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			if (physicscomponent != nullptr)
 			{
 				physicscomponent->damping_linear = args.fValue;
-				physicscomponent->physicsobject = {};
+				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
 	});
@@ -230,7 +230,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			if (physicscomponent != nullptr)
 			{
 				physicscomponent->damping_angular = args.fValue;
-				physicscomponent->physicsobject = {};
+				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
 	});
@@ -248,7 +248,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			if (physicscomponent != nullptr)
 			{
 				physicscomponent->buoyancy = args.fValue;
-				physicscomponent->physicsobject = {};
+				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
 		});
@@ -271,7 +271,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 					physicscomponent->mesh_lod = uint32_t(args.iValue);
 				}
 				physicscomponent->mesh_lod = uint32_t(args.iValue);
-				physicscomponent->physicsobject = {};
+				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
 	});
@@ -290,7 +290,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			if (physicscomponent != nullptr)
 			{
 				physicscomponent->SetKinematic(args.bValue);
-				physicscomponent->physicsobject = {};
+				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
 	});
@@ -309,7 +309,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			if (physicscomponent != nullptr)
 			{
 				physicscomponent->SetDisableDeactivation(args.bValue);
-				physicscomponent->physicsobject = {};
+				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
 	});
@@ -328,7 +328,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			if (physicscomponent != nullptr)
 			{
 				physicscomponent->SetStartDeactivated(args.bValue);
-				physicscomponent->physicsobject = {};
+				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
 	});
@@ -348,7 +348,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			if (physicscomponent != nullptr)
 			{
 				physicscomponent->local_offset.x = args.fValue;
-				physicscomponent->physicsobject = {};
+				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
 	});
@@ -366,7 +366,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			if (physicscomponent != nullptr)
 			{
 				physicscomponent->local_offset.y = args.fValue;
-				physicscomponent->physicsobject = {};
+				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
 	});
@@ -384,7 +384,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			if (physicscomponent != nullptr)
 			{
 				physicscomponent->local_offset.z = args.fValue;
-				physicscomponent->physicsobject = {};
+				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
 	});
@@ -403,7 +403,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			if (physicscomponent != nullptr)
 			{
 				physicscomponent->vehicle.type = (RigidBodyPhysicsComponent::Vehicle::Type)args.userdata;
-				physicscomponent->physicsobject = {};
+				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
 	});
@@ -422,7 +422,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			if (physicscomponent != nullptr)
 			{
 				physicscomponent->vehicle.collision_mode = (RigidBodyPhysicsComponent::Vehicle::CollisionMode)args.userdata;
-				physicscomponent->physicsobject = {};
+				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
 	});
@@ -438,7 +438,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			if (physicscomponent != nullptr)
 			{
 				physicscomponent->vehicle.wheel_radius = args.fValue;
-				physicscomponent->physicsobject = {};
+				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
 	});
@@ -453,7 +453,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			if (physicscomponent != nullptr)
 			{
 				physicscomponent->vehicle.wheel_width = args.fValue;
-				physicscomponent->physicsobject = {};
+				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
 		});
@@ -468,7 +468,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			if (physicscomponent != nullptr)
 			{
 				physicscomponent->vehicle.chassis_half_width = args.fValue;
-				physicscomponent->physicsobject = {};
+				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
 		});
@@ -483,7 +483,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			if (physicscomponent != nullptr)
 			{
 				physicscomponent->vehicle.chassis_half_height = args.fValue;
-				physicscomponent->physicsobject = {};
+				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
 		});
@@ -498,7 +498,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			if (physicscomponent != nullptr)
 			{
 				physicscomponent->vehicle.chassis_half_length = args.fValue;
-				physicscomponent->physicsobject = {};
+				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
 		});
@@ -513,7 +513,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			if (physicscomponent != nullptr)
 			{
 				physicscomponent->vehicle.front_wheel_offset = args.fValue;
-				physicscomponent->physicsobject = {};
+				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
 		});
@@ -528,7 +528,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			if (physicscomponent != nullptr)
 			{
 				physicscomponent->vehicle.rear_wheel_offset = args.fValue;
-				physicscomponent->physicsobject = {};
+				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
 		});
@@ -543,7 +543,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			if (physicscomponent != nullptr)
 			{
 				physicscomponent->vehicle.car.four_wheel_drive = args.bValue;
-				physicscomponent->physicsobject = {};
+				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
 	});

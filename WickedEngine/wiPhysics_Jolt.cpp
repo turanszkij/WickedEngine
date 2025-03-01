@@ -275,7 +275,7 @@ namespace wi::physics
 			Vec3 prev_wheel_positions[4] = { Vec3::sZero(), Vec3::sZero(), Vec3::sZero(), Vec3::sZero() };
 			Quat prev_wheel_rotations[4] = { Quat::sIdentity(), Quat::sIdentity(), Quat::sIdentity(), Quat::sIdentity() };
 
-			~RigidBody()
+			void Delete()
 			{
 				if (physics_scene == nullptr || bodyID.IsInvalid())
 					return;
@@ -288,6 +288,11 @@ namespace wi::physics
 					jolt_physics_scene->physics_system.RemoveStepListener(vehicle_constraint);
 					jolt_physics_scene->physics_system.RemoveConstraint(vehicle_constraint);
 				}
+			}
+
+			~RigidBody()
+			{
+				Delete();
 			}
 		};
 		struct SoftBody
@@ -355,6 +360,9 @@ namespace wi::physics
 		{
 			RigidBody& physicsobject = GetRigidBody(physicscomponent);
 
+			const bool refresh = physicsobject.bodyID.IsInvalid() == false;
+			physicsobject.Delete(); // if it was already existing, we handle recreation
+
 			TransformComponent transform = _transform;
 
 			scene.locker.lock();
@@ -390,10 +398,15 @@ namespace wi::physics
 				physicsobject.additionalTransform.SetTranslation(local_offset);
 				physicsobject.additionalTransformInverse = physicsobject.additionalTransform.Inversed();
 
-				physicsobject.initial_position = mat.GetTranslation();
-				physicsobject.initial_rotation = mat.GetQuaternion().Normalized();
-				physicsobject.prev_position = physicsobject.initial_position;
-				physicsobject.prev_rotation = physicsobject.prev_rotation;
+				physicsobject.prev_position = mat.GetTranslation();
+				physicsobject.prev_rotation = mat.GetQuaternion().Normalized();
+
+				if (!refresh)
+				{
+					// only set initial orientation when created for the first time:
+					physicsobject.initial_position = physicsobject.prev_position;
+					physicsobject.initial_rotation = physicsobject.prev_rotation;
+				}
 
 				const EMotionType motionType = physicscomponent.mass == 0 ? EMotionType::Static : (physicscomponent.IsKinematic() ? EMotionType::Kinematic : EMotionType::Dynamic);
 
@@ -1120,6 +1133,8 @@ namespace wi::physics
 					final_transforms[c] = Mat44::sTranslation(cast(tra)) * Mat44::sRotation(cast(rot));
 					physicsobject.prev_position = final_transforms[c].GetTranslation();
 					physicsobject.prev_rotation = final_transforms[c].GetQuaternion().Normalized();
+					physicsobject.initial_position = physicsobject.prev_position;
+					physicsobject.initial_rotation = physicsobject.prev_rotation;
 					final_transforms[c] = final_transforms[c] * physicsobject.restBasisInverse;
 					final_transforms[c] = final_transforms[c] * physicsobject.additionalTransform;
 				}
@@ -1558,8 +1573,9 @@ namespace wi::physics
 			RigidBodyPhysicsComponent& physicscomponent = scene.rigidbodies[args.jobIndex];
 			Entity entity = scene.rigidbodies.GetEntity(args.jobIndex);
 
-			if (physicscomponent.physicsobject == nullptr && scene.transforms.Contains(entity))
+			if ((physicscomponent.physicsobject == nullptr || physicscomponent.IsRefreshParametersNeeded()) && scene.transforms.Contains(entity))
 			{
+				physicscomponent.SetRefreshParametersNeeded(false);
 				TransformComponent* transform = scene.transforms.GetComponent(entity);
 				if (transform == nullptr)
 					return;

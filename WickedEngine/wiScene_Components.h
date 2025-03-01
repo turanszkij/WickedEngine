@@ -498,6 +498,7 @@ namespace wi::scene
 
 		// Non-serialized attributes:
 		std::shared_ptr<void> physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
+		bool refresh_parameters = false;
 
 		constexpr void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
 		constexpr void SetKinematic(bool value) { if (value) { _flags |= KINEMATIC; } else { _flags &= ~KINEMATIC; } }
@@ -507,6 +508,9 @@ namespace wi::scene
 		constexpr bool IsDisableDeactivation() const { return _flags & DISABLE_DEACTIVATION; }
 		constexpr bool IsKinematic() const { return _flags & KINEMATIC; }
 		constexpr bool IsStartDeactivated() const { return _flags & START_DEACTIVATED; }
+
+		constexpr void SetRefreshParametersNeeded(bool value = true) { refresh_parameters = value; }
+		constexpr bool IsRefreshParametersNeeded() const { return refresh_parameters; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

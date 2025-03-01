@@ -1434,11 +1434,11 @@ void EditorComponent::Update(float dt)
 				{
 					handbrake = 1;
 				}
-				if (CheckInput(EditorActions::MOVE_CAMERA_DOWN))
+				if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LEFT))
 				{
 					drive_orbit_horizontal += XM_PI * dt;
 				}
-				if (CheckInput(EditorActions::MOVE_CAMERA_UP))
+				if (wi::input::Down(wi::input::KEYBOARD_BUTTON_RIGHT))
 				{
 					drive_orbit_horizontal -= XM_PI * dt;
 				}
