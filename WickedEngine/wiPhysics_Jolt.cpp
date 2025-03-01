@@ -2553,9 +2553,12 @@ namespace wi::physics
 
 					scene.RefreshHierarchyTopdownFromParent(wheel_entity);
 
+#if 0
+					// Debug draw:
 					XMFLOAT4X4 tmp = cast(Mat44::sRotationTranslation(wheelrot, wheelpos));
 					std::scoped_lock lck(scene.locker);
 					wi::renderer::DrawAxis(XMLoadFloat4x4(&tmp), 1);
+#endif
 				}
 			}
 		});
