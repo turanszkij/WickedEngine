@@ -2070,6 +2070,7 @@ Playstation button codes:
 - GetAccuracy() : int
 - SetFrameRate(float value)	-- Set the frames per second resolution of physics simulation (default = 120 FPS)
 - GetFrameRate() : float
+- GetVelocity() : Vector-- returns linear velocity of a body
 - SetLinearVelocity(RigidBodyPhysicsComponent component, Vector velocity)	-- Set the linear velocity manually
 - SetAngularVelocity(RigidBodyPhysicsComponent component, Vector velocity)	-- Set the angular velocity manually
 - ApplyForce(RigidBodyPhysicsComponent component, Vector force)	-- Apply force at body center
@@ -2088,6 +2089,7 @@ Playstation button codes:
 - Intersects(Scene scene, Ray ray) : Entity entity, Vector position,normal, Entity humanoid_ragdoll_entity, HumanoidBone humanoid_bone, Vector position_local	-- Performns physics scene intersection for closest hit with a ray
 
 - DriveVehicle(RigidBodyPhysicsComponent rigidbody, opt float forward = 0, opt float right = 0, opt float brake = 0, opt float handbrake = 0)	-- set input from driver: forward and right values are values between -1 and 1 to indicate reverse/forward or left/right. brake and handbrake are values between 0 and 1.
+- GetVehicleForwardVelocity(RigidBodyPhysicsComponent rigidbody) : float	-- Signed velocity amount in forward direction
 
 - PickDrag(Scene scene, Ray, ray, PickDragOperation op) -- pick and drag physics objects such as ragdolls and rigid bodies.
 

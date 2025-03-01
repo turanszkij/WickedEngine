@@ -40,6 +40,25 @@ public:
 	wi::gui::Slider chassisHalfLengthSlider;
 	wi::gui::Slider frontWheelOffsetSlider;
 	wi::gui::Slider rearWheelOffsetSlider;
+	wi::gui::Slider maxTorqueSlider;
+	wi::gui::Slider clutchStrengthSlider;
+	wi::gui::Slider maxRollAngleSlider;
+	wi::gui::Slider maxSteeringAngleSlider;
+
+	wi::gui::Slider fSuspensionMinSlider;
+	wi::gui::Slider fSuspensionMaxSlider;
+	wi::gui::Slider fSuspensionFrequencySlider;
+	wi::gui::Slider fSuspensionDampingSlider;
+
+	wi::gui::Slider rSuspensionMinSlider;
+	wi::gui::Slider rSuspensionMaxSlider;
+	wi::gui::Slider rSuspensionFrequencySlider;
+	wi::gui::Slider rSuspensionDampingSlider;
+
+	wi::gui::Slider motorcycleFBrakeSuspensionAngleSlider;
+	wi::gui::Slider motorcycleFBrakeTorqueSlider;
+	wi::gui::Slider motorcycleRBrakeTorqueSlider;
+
 	wi::gui::ComboBox wheelEntityFrontLeftCombo;
 	wi::gui::ComboBox wheelEntityFrontRightCombo;
 	wi::gui::ComboBox wheelEntityRearLeftCombo;

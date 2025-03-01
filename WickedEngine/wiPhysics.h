@@ -58,6 +58,8 @@ namespace wi::physics
 		const XMFLOAT3& velocity
 	);
 
+	XMFLOAT3 GetVelocity(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
+
 	// Apply force at body center
 	void ApplyForce(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
@@ -113,6 +115,9 @@ namespace wi::physics
 		float brake = 0,
 		float handbrake = 0
 	);
+
+	// Signed velocity amount in forward direction
+	float GetVehicleForwardVelocity(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
 
 	// Override all vehicle wheel transforms in world space
 	void OverrideWehicleWheelTransforms(wi::scene::Scene& scene);

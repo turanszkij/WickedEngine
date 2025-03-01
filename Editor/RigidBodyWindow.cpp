@@ -534,6 +534,231 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&rearWheelOffsetSlider);
 
+	maxTorqueSlider.Create(0, 1000, 0, 1000, "Max Torque: ");
+	maxTorqueSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.max_engine_torque = args.fValue;
+				physicscomponent->SetRefreshParametersNeeded();
+			}
+		}
+		});
+	AddWidget(&maxTorqueSlider);
+
+	clutchStrengthSlider.Create(0, 100, 0, 1000, "Clutch Strength: ");
+	clutchStrengthSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.clutch_strength = args.fValue;
+				physicscomponent->SetRefreshParametersNeeded();
+			}
+		}
+		});
+	AddWidget(&clutchStrengthSlider);
+
+	maxRollAngleSlider.Create(0, 180, 0, 180, "Max Roll Angle: ");
+	maxRollAngleSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.max_roll_angle = wi::math::DegreesToRadians(args.fValue);
+				physicscomponent->SetRefreshParametersNeeded();
+			}
+		}
+		});
+	AddWidget(&maxRollAngleSlider);
+
+	maxSteeringAngleSlider.Create(0, 90, 0, 90, "Max Steering Angle: ");
+	maxSteeringAngleSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.max_steering_angle = wi::math::DegreesToRadians(args.fValue);
+				physicscomponent->SetRefreshParametersNeeded();
+			}
+		}
+		});
+	AddWidget(&maxSteeringAngleSlider);
+
+	fSuspensionMinSlider.Create(0, 2, 0, 200, "F. Susp. Min Length: ");
+	fSuspensionMinSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.front_suspension.min_length;
+				physicscomponent->SetRefreshParametersNeeded();
+			}
+		}
+		});
+	AddWidget(&fSuspensionMinSlider);
+
+	fSuspensionMaxSlider.Create(0, 2, 0, 200, "F. Susp. Max Length: ");
+	fSuspensionMaxSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.front_suspension.max_length;
+				physicscomponent->SetRefreshParametersNeeded();
+			}
+		}
+		});
+	AddWidget(&fSuspensionMaxSlider);
+
+	fSuspensionFrequencySlider.Create(0, 2, 0, 200, "F. Susp. Frequency: ");
+	fSuspensionFrequencySlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.front_suspension.frequency;
+				physicscomponent->SetRefreshParametersNeeded();
+			}
+		}
+		});
+	AddWidget(&fSuspensionFrequencySlider);
+
+	fSuspensionDampingSlider.Create(0, 2, 0, 200, "F. Susp. Damping: ");
+	fSuspensionDampingSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.front_suspension.damping;
+				physicscomponent->SetRefreshParametersNeeded();
+			}
+		}
+		});
+	AddWidget(&fSuspensionDampingSlider);
+
+	rSuspensionMinSlider.Create(0, 2, 0, 200, "R. Susp. Min Length: ");
+	rSuspensionMinSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.rear_suspension.min_length;
+				physicscomponent->SetRefreshParametersNeeded();
+			}
+		}
+		});
+	AddWidget(&rSuspensionMinSlider);
+
+	rSuspensionMaxSlider.Create(0, 2, 0, 200, "R. Susp. Max Length: ");
+	rSuspensionMaxSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.rear_suspension.max_length;
+				physicscomponent->SetRefreshParametersNeeded();
+			}
+		}
+		});
+	AddWidget(&rSuspensionMaxSlider);
+
+	rSuspensionFrequencySlider.Create(0, 2, 0, 200, "R. Susp. Frequency: ");
+	rSuspensionFrequencySlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.rear_suspension.frequency;
+				physicscomponent->SetRefreshParametersNeeded();
+			}
+		}
+		});
+	AddWidget(&rSuspensionFrequencySlider);
+
+	rSuspensionDampingSlider.Create(0, 2, 0, 200, "R. Susp. Damping: ");
+	rSuspensionDampingSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.rear_suspension.damping;
+				physicscomponent->SetRefreshParametersNeeded();
+			}
+		}
+		});
+	AddWidget(&rSuspensionDampingSlider);
+
+	motorcycleFBrakeSuspensionAngleSlider.Create(0, 90, 0, 90, "F. Brake Susp. Angle: ");
+	motorcycleFBrakeSuspensionAngleSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.motorcycle.front_suspension_angle = wi::math::DegreesToRadians(args.fValue);
+				physicscomponent->SetRefreshParametersNeeded();
+			}
+		}
+		});
+	AddWidget(&motorcycleFBrakeSuspensionAngleSlider);
+
+	motorcycleFBrakeTorqueSlider.Create(0, 2000, 0, 2000, "F. Brake Torque: ");
+	motorcycleFBrakeTorqueSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.motorcycle.front_brake_torque = args.fValue;
+				physicscomponent->SetRefreshParametersNeeded();
+			}
+		}
+		});
+	AddWidget(&motorcycleFBrakeTorqueSlider);
+
+	motorcycleRBrakeTorqueSlider.Create(0, 2000, 0, 2000, "R. Brake Torque: ");
+	motorcycleRBrakeTorqueSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->vehicle.motorcycle.rear_brake_torque = args.fValue;
+				physicscomponent->SetRefreshParametersNeeded();
+			}
+		}
+		});
+	AddWidget(&motorcycleRBrakeTorqueSlider);
+
 	fourwheelCheckbox.Create("4-wheel drive: ");
 	fourwheelCheckbox.OnClick([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -565,6 +790,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	AddWidget(&motorleanCheckbox);
 
 	driveCheckbox.Create("Drive in Editor: ");
+	driveCheckbox.SetTooltip("Override editor controls to drive this vehicle.\nControls: WASD for driving, left-right for camera rotation, Left Shift: brake, Space: handbrake\nController: R2: forward, L2: backward, Square/X: handbrake.");
 	driveCheckbox.OnClick([=](wi::gui::EventArgs args) {
 		if (args.bValue)
 		{
@@ -732,8 +958,26 @@ void RigidBodyWindow::SetEntity(Entity entity)
 		chassisHalfLengthSlider.SetValue(physicsComponent->vehicle.chassis_half_length);
 		frontWheelOffsetSlider.SetValue(physicsComponent->vehicle.front_wheel_offset);
 		rearWheelOffsetSlider.SetValue(physicsComponent->vehicle.rear_wheel_offset);
+		maxTorqueSlider.SetValue(physicsComponent->vehicle.max_engine_torque);
+		clutchStrengthSlider.SetValue(physicsComponent->vehicle.clutch_strength);
+		maxRollAngleSlider.SetValue(wi::math::RadiansToDegrees(physicsComponent->vehicle.max_roll_angle));
+		maxSteeringAngleSlider.SetValue(wi::math::RadiansToDegrees(physicsComponent->vehicle.max_steering_angle));
 		fourwheelCheckbox.SetCheck(physicsComponent->vehicle.car.four_wheel_drive);
 		motorleanCheckbox.SetCheck(physicsComponent->vehicle.motorcycle.lean_control);
+
+		fSuspensionMinSlider.SetValue(physicsComponent->vehicle.front_suspension.min_length);
+		fSuspensionMaxSlider.SetValue(physicsComponent->vehicle.front_suspension.max_length);
+		fSuspensionFrequencySlider.SetValue(physicsComponent->vehicle.front_suspension.frequency);
+		fSuspensionDampingSlider.SetValue(physicsComponent->vehicle.front_suspension.damping);
+
+		rSuspensionMinSlider.SetValue(physicsComponent->vehicle.rear_suspension.min_length);
+		rSuspensionMaxSlider.SetValue(physicsComponent->vehicle.rear_suspension.max_length);
+		rSuspensionFrequencySlider.SetValue(physicsComponent->vehicle.rear_suspension.frequency);
+		rSuspensionDampingSlider.SetValue(physicsComponent->vehicle.rear_suspension.damping);
+
+		motorcycleFBrakeSuspensionAngleSlider.SetValue(wi::math::RadiansToDegrees(physicsComponent->vehicle.motorcycle.front_suspension_angle));
+		motorcycleFBrakeTorqueSlider.SetValue(physicsComponent->vehicle.motorcycle.front_brake_torque);
+		motorcycleRBrakeTorqueSlider.SetValue(physicsComponent->vehicle.motorcycle.rear_brake_torque);
 
 
 		wheelEntityFrontLeftCombo.ClearItems();
@@ -789,7 +1033,7 @@ void RigidBodyWindow::ResizeLayout()
 	float y = padding;
 	float jump = 20;
 
-	const float margin_left = 125;
+	const float margin_left = 145;
 	const float margin_right = 40;
 
 	auto add = [&](wi::gui::Widget& widget) {
@@ -836,6 +1080,8 @@ void RigidBodyWindow::ResizeLayout()
 	add_right(disabledeactivationCheckBox);
 	add_right(kinematicCheckBox);
 
+	y += 20;
+
 	add(vehicleCombo);
 	if (vehicleCombo.GetSelected() > 0)
 	{
@@ -847,7 +1093,22 @@ void RigidBodyWindow::ResizeLayout()
 		chassisHalfLengthSlider.SetVisible(true);
 		frontWheelOffsetSlider.SetVisible(true);
 		rearWheelOffsetSlider.SetVisible(true);
+		maxTorqueSlider.SetVisible(true);
+		clutchStrengthSlider.SetVisible(true);
+		maxRollAngleSlider.SetVisible(true);
+		maxSteeringAngleSlider.SetVisible(true);
 		driveCheckbox.SetVisible(true);
+
+		fSuspensionMinSlider.SetVisible(true);
+		fSuspensionMaxSlider.SetVisible(true);
+		fSuspensionFrequencySlider.SetVisible(true);
+		fSuspensionDampingSlider.SetVisible(true);
+		rSuspensionMinSlider.SetVisible(true);
+		rSuspensionMaxSlider.SetVisible(true);
+		rSuspensionFrequencySlider.SetVisible(true);
+		rSuspensionDampingSlider.SetVisible(true);
+
+		add_right(driveCheckbox);
 
 		add(vehicleCollisionCombo);
 		add(wheelRadiusSlider);
@@ -857,11 +1118,29 @@ void RigidBodyWindow::ResizeLayout()
 		add(chassisHalfLengthSlider);
 		add(frontWheelOffsetSlider);
 		add(rearWheelOffsetSlider);
+		add(maxTorqueSlider);
+		add(clutchStrengthSlider);
+		add(maxRollAngleSlider);
+		add(maxSteeringAngleSlider);
+
+		add(fSuspensionMinSlider);
+		add(fSuspensionMaxSlider);
+		add(fSuspensionFrequencySlider);
+		add(fSuspensionDampingSlider);
+
+		add(rSuspensionMinSlider);
+		add(rSuspensionMaxSlider);
+		add(rSuspensionFrequencySlider);
+		add(rSuspensionDampingSlider);
 
 		RigidBodyPhysicsComponent::Vehicle::Type type = (RigidBodyPhysicsComponent::Vehicle::Type)vehicleCombo.GetSelectedUserdata();
 		switch (type)
 		{
 		case wi::scene::RigidBodyPhysicsComponent::Vehicle::Type::Car:
+			motorcycleFBrakeSuspensionAngleSlider.SetVisible(false);
+			motorcycleFBrakeTorqueSlider.SetVisible(false);
+			motorcycleRBrakeTorqueSlider.SetVisible(false);
+
 			wheelEntityFrontLeftCombo.SetVisible(true);
 			wheelEntityFrontRightCombo.SetVisible(true);
 			wheelEntityRearLeftCombo.SetVisible(true);
@@ -875,6 +1154,13 @@ void RigidBodyWindow::ResizeLayout()
 			add_right(fourwheelCheckbox);
 			break;
 		case wi::scene::RigidBodyPhysicsComponent::Vehicle::Type::Motorcycle:
+			motorcycleFBrakeSuspensionAngleSlider.SetVisible(true);
+			motorcycleFBrakeTorqueSlider.SetVisible(true);
+			motorcycleRBrakeTorqueSlider.SetVisible(true);
+			add(motorcycleFBrakeSuspensionAngleSlider);
+			add(motorcycleFBrakeTorqueSlider);
+			add(motorcycleRBrakeTorqueSlider);
+
 			wheelEntityFrontLeftCombo.SetVisible(true);
 			wheelEntityFrontRightCombo.SetVisible(false);
 			wheelEntityRearLeftCombo.SetVisible(true);
@@ -888,8 +1174,6 @@ void RigidBodyWindow::ResizeLayout()
 		default:
 			break;
 		}
-
-		add_right(driveCheckbox);
 	}
 	else
 	{
@@ -901,6 +1185,10 @@ void RigidBodyWindow::ResizeLayout()
 		chassisHalfLengthSlider.SetVisible(false);
 		frontWheelOffsetSlider.SetVisible(false);
 		rearWheelOffsetSlider.SetVisible(false);
+		maxTorqueSlider.SetVisible(false);
+		clutchStrengthSlider.SetVisible(false);
+		maxRollAngleSlider.SetVisible(false);
+		maxSteeringAngleSlider.SetVisible(false);
 		wheelEntityFrontLeftCombo.SetVisible(false);
 		wheelEntityFrontRightCombo.SetVisible(false);
 		wheelEntityRearLeftCombo.SetVisible(false);
@@ -908,6 +1196,19 @@ void RigidBodyWindow::ResizeLayout()
 		fourwheelCheckbox.SetVisible(false);
 		motorleanCheckbox.SetVisible(false);
 		driveCheckbox.SetVisible(false);
+
+		fSuspensionMinSlider.SetVisible(false);
+		fSuspensionMaxSlider.SetVisible(false);
+		fSuspensionFrequencySlider.SetVisible(false);
+		fSuspensionDampingSlider.SetVisible(false);
+		rSuspensionMinSlider.SetVisible(false);
+		rSuspensionMaxSlider.SetVisible(false);
+		rSuspensionFrequencySlider.SetVisible(false);
+		rSuspensionDampingSlider.SetVisible(false);
+
+		motorcycleFBrakeSuspensionAngleSlider.SetVisible(false);
+		motorcycleFBrakeTorqueSlider.SetVisible(false);
+		motorcycleRBrakeTorqueSlider.SetVisible(false);
 	}
 
 }

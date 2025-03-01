@@ -2242,6 +2242,18 @@ namespace wi::physics
 		}
 	}
 
+	XMFLOAT3 GetVelocity(wi::scene::RigidBodyPhysicsComponent& physicscomponent)
+	{
+		if (physicscomponent.physicsobject != nullptr)
+		{
+			RigidBody& physicsobject = GetRigidBody(physicscomponent);
+			PhysicsScene& physics_scene = *(PhysicsScene*)physicsobject.physics_scene.get();
+			BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
+			return cast(body_interface.GetLinearVelocity(physicsobject.bodyID));
+		}
+		return XMFLOAT3(0, 0, 0);
+	}
+
 	void ApplyForce(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& force
@@ -2466,6 +2478,19 @@ namespace wi::physics
 		PhysicsScene& physics_scene = *(PhysicsScene*)physicsobject.physics_scene.get();
 		BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
 		body_interface.ActivateBody(physicsobject.bodyID);
+	}
+
+	float GetVehicleForwardVelocity(wi::scene::RigidBodyPhysicsComponent& physicscomponent)
+	{
+		if (physicscomponent.physicsobject == nullptr)
+			return 0;
+		RigidBody& physicsobject = GetRigidBody(physicscomponent);
+		if (physicsobject.vehicle_constraint == nullptr)
+			return 0;
+		PhysicsScene& physics_scene = *(PhysicsScene*)physicsobject.physics_scene.get();
+		BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
+		float velocity = (body_interface.GetRotation(physicsobject.bodyID).Conjugated() * body_interface.GetLinearVelocity(physicsobject.bodyID)).GetZ();
+		return velocity;
 	}
 
 	void OverrideWehicleWheelTransforms(wi::scene::Scene& scene)

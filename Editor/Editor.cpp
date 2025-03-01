@@ -1390,6 +1390,7 @@ void EditorComponent::Update(float dt)
 		translator.Update(camera, currentMouse, *renderPath);
 	}
 
+	// Vehicle driving controls:
 	if (!wi::backlog::isActive())
 	{
 		if (scene.rigidbodies.GetCount() == 0)
@@ -1403,16 +1404,64 @@ void EditorComponent::Update(float dt)
 			{
 				//wi::physics::SetDebugDrawEnabled(true);
 				float forward = 0;
-				float right = 0;
 				float brake = 0;
 				float handbrake = 0;
+
+				float velocityAmount = wi::physics::GetVehicleForwardVelocity(*rigidbody);
+
+				if (std::abs(wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_R).x) > 0.1f)
+				{
+					if (velocityAmount >= 0)
+					{
+						forward = wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_R).x;
+					}
+					else
+					{
+						brake = wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_R).x;
+					}
+				}
+				if (wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_L).x > 0.1f)
+				{
+					if (velocityAmount > 0.001f)
+					{
+						brake = wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_L).x;
+					}
+					else
+					{
+						forward = -wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_L).x;
+					}
+				}
+				if (std::abs(wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_THUMBSTICK_L).x) > 0.1f)
+				{
+					drive_steering_smoothed = lerp(drive_steering_smoothed, wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_THUMBSTICK_L).x, dt * 2);
+				}
+				if (wi::input::Down(wi::input::GAMEPAD_BUTTON_PLAYSTATION_SQUARE))
+				{
+					handbrake = 1;
+				}
+				drive_orbit_horizontal += wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_THUMBSTICK_R).x * XM_PI * dt;
+
 				if (CheckInput(EditorActions::MOVE_CAMERA_FORWARD))
 				{
-					forward = 1;
+					if (velocityAmount >= 0)
+					{
+						forward = 1;
+					}
+					else
+					{
+						brake = 1;
+					}
 				}
 				else if (CheckInput(EditorActions::MOVE_CAMERA_BACKWARD))
 				{
-					forward = -1;
+					if (velocityAmount > 0.001f)
+					{
+						brake = 1;
+					}
+					else
+					{
+						forward = -1;
+					}
 				}
 				if (CheckInput(EditorActions::MOVE_CAMERA_LEFT))
 				{
@@ -1421,6 +1470,10 @@ void EditorComponent::Update(float dt)
 				else if (CheckInput(EditorActions::MOVE_CAMERA_RIGHT))
 				{
 					drive_steering_smoothed += dt * 2;
+				}
+				else if (std::abs(wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_THUMBSTICK_L).x) > 0.1f)
+				{
+					// nothing
 				}
 				else
 				{
@@ -1442,6 +1495,7 @@ void EditorComponent::Update(float dt)
 				{
 					drive_orbit_horizontal -= XM_PI * dt;
 				}
+
 				drive_steering_smoothed = clamp(drive_steering_smoothed, -1.0f, 1.0f);
 				wi::physics::DriveVehicle(*rigidbody, forward, drive_steering_smoothed, brake, handbrake);
 				drive_mode = true;
