@@ -30,9 +30,10 @@ void GeneralWindow::Create(EditorComponent* _editor)
 
 	physicsDebugCheckBox.Create("Physics visualizer: ");
 	physicsDebugCheckBox.SetTooltip("Visualize the physics world");
-	physicsDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
+	physicsDebugCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::physics::SetDebugDrawEnabled(args.bValue);
-		});
+		editor->componentsWnd.rigidWnd.physicsDebugCheckBox.SetCheck(args.bValue);
+	});
 	physicsDebugCheckBox.SetCheck(wi::physics::IsDebugDrawEnabled());
 	AddWidget(&physicsDebugCheckBox);
 

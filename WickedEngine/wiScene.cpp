@@ -1963,6 +1963,18 @@ namespace wi::scene
 		transform_child->ApplyTransform();
 	}
 
+	void Scene::GatherChildren(Entity parent, wi::vector<Entity>& children) const
+	{
+		for (size_t i = 0; i < hierarchy.GetCount(); ++i)
+		{
+			Entity child = hierarchy.GetEntity(i);
+			if (Entity_IsDescendant(child, parent))
+			{
+				children.push_back(child);
+			}
+		}
+	}
+
 	void Scene::RunAnimationUpdateSystem(wi::jobsystem::context& ctx)
 	{
 		auto range = wi::profiler::BeginRangeCPU("Animations");
@@ -7624,7 +7636,7 @@ namespace wi::scene
 			}
 		});
 	}
-	void Scene::WaitBuildTopDownHierarchy()
+	void Scene::WaitBuildTopDownHierarchy() const
 	{
 		wi::jobsystem::Wait(topdown_hierarchy_workload);
 	}

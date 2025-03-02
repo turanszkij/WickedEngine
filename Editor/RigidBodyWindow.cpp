@@ -25,16 +25,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		editor->componentsWnd.RefreshEntityTree();
 	});
 
-	float x = 140;
-	float y = 0;
-	float hei = 18;
-	float step = hei + 2;
-	float wid = 130;
-
-
 	collisionShapeComboBox.Create("Collision Shape: ");
-	collisionShapeComboBox.SetSize(XMFLOAT2(wid, hei));
-	collisionShapeComboBox.SetPos(XMFLOAT2(x, y));
 	collisionShapeComboBox.AddItem("Box", RigidBodyPhysicsComponent::CollisionShape::BOX);
 	collisionShapeComboBox.AddItem("Sphere", RigidBodyPhysicsComponent::CollisionShape::SPHERE);
 	collisionShapeComboBox.AddItem("Capsule", RigidBodyPhysicsComponent::CollisionShape::CAPSULE);
@@ -64,8 +55,6 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	AddWidget(&collisionShapeComboBox);
 
 	XSlider.Create(0, 10, 1, 100000, "X: ");
-	XSlider.SetSize(XMFLOAT2(wid, hei));
-	XSlider.SetPos(XMFLOAT2(x, y += step));
 	XSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -94,8 +83,6 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	AddWidget(&XSlider);
 
 	YSlider.Create(0, 10, 1, 100000, "Y: ");
-	YSlider.SetSize(XMFLOAT2(wid, hei));
-	YSlider.SetPos(XMFLOAT2(x, y += step));
 	YSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -121,8 +108,6 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	AddWidget(&YSlider);
 
 	ZSlider.Create(0, 10, 1, 100000, "Z: ");
-	ZSlider.SetSize(XMFLOAT2(wid, hei));
-	ZSlider.SetPos(XMFLOAT2(x, y += step));
 	ZSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -150,8 +135,6 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 
 	massSlider.Create(0, 10, 1, 100000, "Mass: ");
 	massSlider.SetTooltip("Set the mass amount for the physics engine.");
-	massSlider.SetSize(XMFLOAT2(wid, hei));
-	massSlider.SetPos(XMFLOAT2(x, y += step));
 	massSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -168,8 +151,6 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 
 	frictionSlider.Create(0, 1, 0.5f, 100000, "Friction: ");
 	frictionSlider.SetTooltip("Set the friction amount for the physics engine.");
-	frictionSlider.SetSize(XMFLOAT2(wid, hei));
-	frictionSlider.SetPos(XMFLOAT2(x, y += step));
 	frictionSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -185,8 +166,6 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 
 	restitutionSlider.Create(0, 1, 0, 100000, "Restitution: ");
 	restitutionSlider.SetTooltip("Set the restitution amount for the physics engine.");
-	restitutionSlider.SetSize(XMFLOAT2(wid, hei));
-	restitutionSlider.SetPos(XMFLOAT2(x, y += step));
 	restitutionSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -202,8 +181,6 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 
 	lineardampingSlider.Create(0, 1, 0, 100000, "Linear Damping: ");
 	lineardampingSlider.SetTooltip("Set the linear damping amount for the physics engine.");
-	lineardampingSlider.SetSize(XMFLOAT2(wid, hei));
-	lineardampingSlider.SetPos(XMFLOAT2(x, y += step));
 	lineardampingSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -220,8 +197,6 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 
 	angulardampingSlider.Create(0, 1, 0, 100000, "Angular Damping: ");
 	angulardampingSlider.SetTooltip("Set the angular damping amount for the physics engine.");
-	angulardampingSlider.SetSize(XMFLOAT2(wid, hei));
-	angulardampingSlider.SetPos(XMFLOAT2(x, y += step));
 	angulardampingSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -238,8 +213,6 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 
 	buoyancySlider.Create(0, 2, 0, 1000, "Buoyancy: ");
 	buoyancySlider.SetTooltip("Higher buoyancy will make the bodies float up faster in water.");
-	buoyancySlider.SetSize(XMFLOAT2(wid, hei));
-	buoyancySlider.SetPos(XMFLOAT2(x, y += step));
 	buoyancySlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -256,8 +229,6 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 
 	physicsMeshLODSlider.Create(0, 6, 0, 6, "Use Mesh LOD: ");
 	physicsMeshLODSlider.SetTooltip("Specify which LOD to use for triangle mesh physics.");
-	physicsMeshLODSlider.SetSize(XMFLOAT2(wid, hei));
-	physicsMeshLODSlider.SetPos(XMFLOAT2(x, y += step));
 	physicsMeshLODSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -279,8 +250,6 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 
 	kinematicCheckBox.Create("Kinematic: ");
 	kinematicCheckBox.SetTooltip("Toggle kinematic behaviour.");
-	kinematicCheckBox.SetSize(XMFLOAT2(hei, hei));
-	kinematicCheckBox.SetPos(XMFLOAT2(x, y += step));
 	kinematicCheckBox.SetCheck(false);
 	kinematicCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -298,8 +267,6 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 
 	disabledeactivationCheckBox.Create("Disable Deactivation: ");
 	disabledeactivationCheckBox.SetTooltip("Toggle kinematic behaviour.");
-	disabledeactivationCheckBox.SetSize(XMFLOAT2(hei, hei));
-	disabledeactivationCheckBox.SetPos(XMFLOAT2(x, y += step));
 	disabledeactivationCheckBox.SetCheck(false);
 	disabledeactivationCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -317,8 +284,6 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 
 	startDeactivatedCheckBox.Create("Start deactivated: ");
 	startDeactivatedCheckBox.SetTooltip("If enabled, the rigid body will start in a deactivated state.\nEven if the body is dynamic (non-kinematic, mass > 0), it will not fall unless interacted with.");
-	startDeactivatedCheckBox.SetSize(XMFLOAT2(hei, hei));
-	startDeactivatedCheckBox.SetPos(XMFLOAT2(x, y += step));
 	startDeactivatedCheckBox.SetCheck(false);
 	startDeactivatedCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -338,8 +303,6 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 
 	offsetXSlider.Create(-10, 10, 0, 100000, "Local Offset X: ");
 	offsetXSlider.SetTooltip("Set a local offset relative to the object transform");
-	offsetXSlider.SetSize(XMFLOAT2(wid, hei));
-	offsetXSlider.SetPos(XMFLOAT2(x, y += step));
 	offsetXSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -356,8 +319,6 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 
 	offsetYSlider.Create(-10, 10, 0, 100000, "Local Offset Y: ");
 	offsetYSlider.SetTooltip("Set a local offset relative to the object transform");
-	offsetYSlider.SetSize(XMFLOAT2(wid, hei));
-	offsetYSlider.SetPos(XMFLOAT2(x, y += step));
 	offsetYSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -374,8 +335,6 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 
 	offsetZSlider.Create(-10, 10, 0, 100000, "Local Offset Z: ");
 	offsetZSlider.SetTooltip("Set a local offset relative to the object transform");
-	offsetZSlider.SetSize(XMFLOAT2(wid, hei));
-	offsetZSlider.SetPos(XMFLOAT2(x, y += step));
 	offsetZSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -389,6 +348,15 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		}
 	});
 	AddWidget(&offsetZSlider);
+
+	physicsDebugCheckBox.Create(ICON_EYE " Physics visualizer: ");
+	physicsDebugCheckBox.SetTooltip("Visualize the physics world");
+	physicsDebugCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		wi::physics::SetDebugDrawEnabled(args.bValue);
+		editor->generalWnd.physicsDebugCheckBox.SetCheck(args.bValue);
+	});
+	physicsDebugCheckBox.SetCheck(wi::physics::IsDebugDrawEnabled());
+	AddWidget(&physicsDebugCheckBox);
 
 
 	vehicleCombo.Create("Vehicle physics: ");
@@ -1075,6 +1043,7 @@ void RigidBodyWindow::ResizeLayout()
 	add_right(startDeactivatedCheckBox);
 	add_right(disabledeactivationCheckBox);
 	add_right(kinematicCheckBox);
+	add_right(physicsDebugCheckBox);
 
 	y += 20;
 

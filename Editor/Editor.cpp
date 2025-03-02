@@ -94,6 +94,7 @@ enum class EditorActions
 	// Other actions
 	RAGDOLL_AND_PHYSICS_IMPULSE_TESTER,
 	ORTHO_CAMERA,
+	HIERARCHY_SELECT,
 
 	COUNT
 };
@@ -135,6 +136,7 @@ HotkeyInfo hotkeyActions[size_t(EditorActions::COUNT)] = {
 	{wi::input::BUTTON('G'),					/*press=*/ false,		/*control=*/ true,		/*shift=*/ false},	//COLOR_GRADING_REFERENCE,
 	{wi::input::BUTTON('P'),					/*press=*/ false,		/*control=*/ false,		/*shift=*/ false},	//RAGDOLL_AND_PHYSICS_IMPULSE_TESTER,
 	{wi::input::BUTTON('O'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//ORTHO_CAMERA,
+	{wi::input::BUTTON('H'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//HIERARCHY_SELECT,
 };
 static_assert(arraysize(hotkeyActions) == size_t(EditorActions::COUNT));
 bool CheckInput(EditorActions action)
@@ -156,6 +158,20 @@ bool CheckInput(EditorActions action)
 	if (hotkey.shift)
 	{
 		ret &= wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RSHIFT);
+	}
+	return ret;
+}
+std::string GetInputString(EditorActions action)
+{
+	const HotkeyInfo& hotkey = hotkeyActions[size_t(action)];
+	std::string ret = wi::input::ButtonToString(hotkey.button).text;
+	if (hotkey.shift)
+	{
+		ret = "Shift + " + ret;
+	}
+	if (hotkey.control)
+	{
+		ret = "Ctrl + " + ret;
 	}
 	return ret;
 }
@@ -192,6 +208,7 @@ void HotkeyRemap(Editor* main)
 		{"COLOR_GRADING_REFERENCE", EditorActions::COLOR_GRADING_REFERENCE},
 		{"RAGDOLL_AND_PHYSICS_IMPULSE_TESTER", EditorActions::RAGDOLL_AND_PHYSICS_IMPULSE_TESTER},
 		{"ORTHO_CAMERA", EditorActions::ORTHO_CAMERA},
+		{"HIERARCHY_SELECT", EditorActions::HIERARCHY_SELECT},
 	};
 	static const wi::unordered_map<std::string, wi::input::BUTTON> buttonMap = {
 		{"ESC", wi::input::KEYBOARD_BUTTON_ESCAPE},
@@ -1102,39 +1119,40 @@ void EditorComponent::Load()
 		ss += "\nDiscord chat: https://discord.gg/CFjRYmE";
 		ss += "\n\nControls\n";
 		ss += "------------\n";
-		ss += "Move camera: " + main->config.GetSection("hotkeys").GetText("MOVE_CAMERA_FORWARD") + main->config.GetSection("hotkeys").GetText("MOVE_CAMERA_LEFT") + main->config.GetSection("hotkeys").GetText("MOVE_CAMERA_BACKWARD") + main->config.GetSection("hotkeys").GetText("MOVE_CAMERA_RIGHT") + ", or Controller left stick or D - pad\n";
+		ss += "Move camera: " + GetInputString(EditorActions::MOVE_CAMERA_FORWARD) + ", " + GetInputString(EditorActions::MOVE_CAMERA_LEFT) + ", " + GetInputString(EditorActions::MOVE_CAMERA_BACKWARD) + ", " + GetInputString(EditorActions::MOVE_CAMERA_RIGHT) + ", or Controller left stick or D - pad\n";
 		ss += "Look: Right mouse button / arrow keys / controller right stick\n";
 		ss += "Select: Left mouse button\n";
 		ss += "Interact with physics/water/grass: Middle mouse button\n";
 		ss += "Faster camera: Left Shift button or controller R2/RT\n";
 		ss += "Snap to grid transform: Ctrl (hold while transforming)\n";
 		ss += "Snap to surface transform: Shift (hold while transforming)\n";
-		ss += "Camera up: " + main->config.GetSection("hotkeys").GetText("move_camera_up") + "\n";
-		ss += "Camera down: " + main->config.GetSection("hotkeys").GetText("move_camera_down") + "\n";
-		ss += "Orthographic camera: " + main->config.GetSection("hotkeys").GetText("ortho_camera") + "\n";
-		ss += "Duplicate entity: " + main->config.GetSection("hotkeys").GetText("duplicate_entity") + "\n";
-		ss += "Select All: " + main->config.GetSection("hotkeys").GetText("select_all_entities") + "\n";
-		ss += "Deselect All: " + main->config.GetSection("hotkeys").GetText("deselect_all_entities") + "\n";
-		ss += "Undo: " + main->config.GetSection("hotkeys").GetText("undo_action") + "\n";
-		ss += "Redo: " + main->config.GetSection("hotkeys").GetText("redo_action") + "\n";
-		ss += "Copy: " + main->config.GetSection("hotkeys").GetText("copy_action") + "\n";
-		ss += "Cut: " + main->config.GetSection("hotkeys").GetText("cut_action") + "\n";
-		ss += "Paste: " + main->config.GetSection("hotkeys").GetText("paste_action") + "\n";
+		ss += "Camera up: " + GetInputString(EditorActions::MOVE_CAMERA_UP) + "\n";
+		ss += "Camera down: " + GetInputString(EditorActions::MOVE_CAMERA_DOWN) + "\n";
+		ss += "Orthographic camera: " + GetInputString(EditorActions::ORTHO_CAMERA) + "\n";
+		ss += "Select whole hierarchy of selected: " + GetInputString(EditorActions::HIERARCHY_SELECT) + "\n";
+		ss += "Duplicate entity: " + GetInputString(EditorActions::DUPLICATE_ENTITY) + "\n";
+		ss += "Select All: " + GetInputString(EditorActions::SELECT_ALL_ENTITIES) + "\n";
+		ss += "Deselect All: " + GetInputString(EditorActions::DESELECT_ALL_ENTITIES) + "\n";
+		ss += "Undo: " + GetInputString(EditorActions::UNDO_ACTION) + "\n";
+		ss += "Redo: " + GetInputString(EditorActions::REDO_ACTION) + "\n";
+		ss += "Copy: " + GetInputString(EditorActions::COPY_ACTION) + "\n";
+		ss += "Cut: " + GetInputString(EditorActions::CUT_ACTION) + "\n";
+		ss += "Paste: " + GetInputString(EditorActions::PASTE_ACTION) + "\n";
 		ss += "Delete: Delete button\n";
-		ss += "Save As: " + main->config.GetSection("hotkeys").GetText("save_scene_as") + "\n";
-		ss += "Save: " + main->config.GetSection("hotkeys").GetText("save_scene") + "\n";
-		ss += "Transform: " + main->config.GetSection("hotkeys").GetText("enable_transform_tool") + "\n";
-		ss += "Move Toggle: " + main->config.GetSection("hotkeys").GetText("move_toggle_action") + "\n";
-		ss += "Rotate Toggle: " + main->config.GetSection("hotkeys").GetText("rotate_toggle_action") + "\n";
-		ss += "Scale Toggle: " + main->config.GetSection("hotkeys").GetText("scale_toggle_action") + "\n";
-		ss += "Wireframe mode: " + main->config.GetSection("hotkeys").GetText("wireframe_mode") + "\n";
-		ss += "Screenshot (saved into Editor's screenshots folder): " + main->config.GetSection("hotkeys").GetText("make_new_screenshot") + "\n";
-		ss += "Depth of field refocus to point: " + main->config.GetSection("hotkeys").GetText("depth_of_field_refocus_to_point") + " + left mouse button" + "\n";
-		ss += "Color grading reference: " + main->config.GetSection("hotkeys").GetText("colorgrading_reference") + " (color grading palette reference will be displayed in top left corner)\n";
-		ss += "Focus on selected: " + main->config.GetSection("hotkeys").GetText("focus_on_selection") + " button, this will make the camera jump to selection.\n";
-		ss += "Inspector mode: " + main->config.GetSection("hotkeys").GetText("inspector_mode") + " button (hold), hovered entity information will be displayed near mouse position.\n";
-		ss += "Place Instances: " + main->config.GetSection("hotkeys").GetText("PLACE_INSTANCES") + " (place clipboard onto clicked surface)\n";
-		ss += "Ragdoll and physics impulse tester: Hold " + main->config.GetSection("hotkeys").GetText("ragdoll_and_physics_impulse_tester") + " and click on ragdoll or rigid body physics entity with middle mouse.\n";
+		ss += "Save As: " + GetInputString(EditorActions::SAVE_SCENE_AS) + "\n";
+		ss += "Save: " + GetInputString(EditorActions::SAVE_SCENE) + "\n";
+		ss += "Transform: " + GetInputString(EditorActions::ENABLE_TRANSFORM_TOOL) + "\n";
+		ss += "Move Toggle: " + GetInputString(EditorActions::MOVE_TOGGLE_ACTION) + "\n";
+		ss += "Rotate Toggle: " + GetInputString(EditorActions::ROTATE_TOGGLE_ACTION) + "\n";
+		ss += "Scale Toggle: " + GetInputString(EditorActions::SCALE_TOGGLE_ACTION) + "\n";
+		ss += "Wireframe mode: " + GetInputString(EditorActions::WIREFRAME_MODE) + "\n";
+		ss += "Screenshot (saved into Editor's screenshots folder): " + GetInputString(EditorActions::MAKE_NEW_SCREENSHOT) + "\n";
+		ss += "Depth of field refocus to point: " + GetInputString(EditorActions::DEPTH_OF_FIELD_REFOCUS_TO_POINT) + " + left mouse button" + "\n";
+		ss += "Color grading reference: " + GetInputString(EditorActions::COLOR_GRADING_REFERENCE) + " (color grading palette reference will be displayed in top left corner)\n";
+		ss += "Focus on selected: " + GetInputString(EditorActions::FOCUS_ON_SELECTION) + " button, this will make the camera jump to selection.\n";
+		ss += "Inspector mode: " + GetInputString(EditorActions::INSPECTOR_MODE) + " button (hold), hovered entity information will be displayed near mouse position.\n";
+		ss += "Place Instances: " + GetInputString(EditorActions::PLACE_INSTANCES) + " (place clipboard onto clicked surface)\n";
+		ss += "Ragdoll and physics impulse tester: Hold " + GetInputString(EditorActions::RAGDOLL_AND_PHYSICS_IMPULSE_TESTER) + " and click on ragdoll or rigid body physics entity with middle mouse.\n";
 		ss += "Script Console / backlog: HOME button\n";
 		ss += "Bone picking: First select an armature, only then bone picking becomes available. As long as you have an armature or bone selected, bone picking will remain active.\n";
 		ss += "\n";
@@ -1596,6 +1614,19 @@ void EditorComponent::Update(float dt)
 			camera.SetOrtho(!camera.IsOrtho());
 			camera.ortho_vertical_size = camera.ComputeOrthoVerticalSizeFromPerspective(wi::math::Length(camera.Eye)); // camera distance from origin
 			cameraWnd.orthoCheckBox.SetCheck(camera.IsOrtho());
+		}
+
+		if (CheckInput(EditorActions::HIERARCHY_SELECT))
+		{
+			wi::vector<Entity> children;
+			for (auto& x : translator.selectedEntitiesNonRecursive)
+			{
+				scene.GatherChildren(x, children);
+			}
+			for (auto& x : children)
+			{
+				AddSelected(x);
+			}
 		}
 
 		if (cameraWnd.fpsCheckBox.GetCheck())
@@ -2567,68 +2598,69 @@ void EditorComponent::Update(float dt)
 		componentsWnd.voxelGridWnd.SetEntity(picked.entity);
 		componentsWnd.metadataWnd.SetEntity(picked.entity);
 
-		if (picked.subsetIndex >= 0)
-		{
-			const ObjectComponent* object = scene.objects.GetComponent(picked.entity);
-			if (object != nullptr) // maybe it was deleted...
-			{
-				componentsWnd.objectWnd.SetEntity(picked.entity);
-				componentsWnd.meshWnd.SetEntity(object->meshID, picked.subsetIndex);
-				componentsWnd.softWnd.SetEntity(object->meshID);
+		bool found_object = false;
+		bool found_mesh = false;
+		bool found_soft = false;
+		bool found_material = false;
 
-				const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
-				if (mesh != nullptr && (int)mesh->subsets.size() > picked.subsetIndex)
-				{
-					componentsWnd.materialWnd.SetEntity(mesh->subsets[picked.subsetIndex].materialID);
-				}
+		const ObjectComponent* object = scene.objects.GetComponent(picked.entity);
+		if (object != nullptr) // maybe it was deleted...
+		{
+			found_object = true;
+			componentsWnd.objectWnd.SetEntity(picked.entity);
+			componentsWnd.meshWnd.SetEntity(object->meshID, picked.subsetIndex);
+			componentsWnd.softWnd.SetEntity(object->meshID);
+
+			found_mesh = scene.meshes.Contains(object->meshID);
+			found_soft = scene.softbodies.Contains(object->meshID);
+
+			const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+			if (mesh != nullptr && (int)mesh->subsets.size() > picked.subsetIndex)
+			{
+				found_material = scene.materials.Contains(mesh->subsets[picked.subsetIndex].materialID);
+				componentsWnd.materialWnd.SetEntity(mesh->subsets[picked.subsetIndex].materialID);
 			}
 		}
-		else
-		{
-			bool found_object = false;
-			bool found_mesh = false;
-			bool found_soft = false;
-			bool found_material = false;
-			for (auto& x : translator.selected)
-			{
-				if (!found_object && scene.objects.Contains(x.entity))
-				{
-					componentsWnd.objectWnd.SetEntity(x.entity);
-					found_object = true;
-				}
-				if (!found_mesh && scene.meshes.Contains(x.entity))
-				{
-					componentsWnd.meshWnd.SetEntity(x.entity, 0);
-					found_mesh = true;
-				}
-				if (!found_soft && scene.softbodies.Contains(x.entity))
-				{
-					componentsWnd.softWnd.SetEntity(x.entity);
-					found_soft = true;
-				}
-				if (!found_material && scene.materials.Contains(x.entity))
-				{
-					componentsWnd.materialWnd.SetEntity(x.entity);
-					found_material = true;
-				}
-			}
 
-			if (!found_object)
+		for (auto& x : translator.selected)
+		{
+			if (!found_object && scene.objects.Contains(x.entity))
 			{
-				componentsWnd.objectWnd.SetEntity(INVALID_ENTITY);
+				componentsWnd.objectWnd.SetEntity(x.entity);
+				found_object = true;
 			}
-			if (!found_mesh)
+			if (!found_mesh && scene.meshes.Contains(x.entity))
 			{
-				componentsWnd.meshWnd.SetEntity(INVALID_ENTITY, -1);
+				componentsWnd.meshWnd.SetEntity(x.entity, 0);
+				found_mesh = true;
 			}
-			if (!found_soft)
+			if (!found_soft && scene.softbodies.Contains(x.entity))
 			{
-				componentsWnd.softWnd.SetEntity(INVALID_ENTITY);
+				componentsWnd.softWnd.SetEntity(x.entity);
+				found_soft = true;
 			}
-			if (!found_material)
+			if (!found_material && scene.materials.Contains(x.entity))
 			{
-				componentsWnd.materialWnd.SetEntity(INVALID_ENTITY);
+				componentsWnd.materialWnd.SetEntity(x.entity);
+				found_material = true;
 			}
+		}
+
+		if (!found_object)
+		{
+			componentsWnd.objectWnd.SetEntity(INVALID_ENTITY);
+		}
+		if (!found_mesh)
+		{
+			componentsWnd.meshWnd.SetEntity(INVALID_ENTITY, -1);
+		}
+		if (!found_soft)
+		{
+			componentsWnd.softWnd.SetEntity(INVALID_ENTITY);
+		}
+		if (!found_material)
+		{
+			componentsWnd.materialWnd.SetEntity(INVALID_ENTITY);
 		}
 
 	}

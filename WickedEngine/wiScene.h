@@ -315,7 +315,7 @@ namespace wi::scene
 		bool IsWetmapProcessingRequired() const;
 
 		void StartBuildTopDownHierarchy();
-		void WaitBuildTopDownHierarchy();
+		void WaitBuildTopDownHierarchy() const;
 		void RefreshHierarchyTopdownFromParent(wi::ecs::Entity entity);
 
 		// Update all components by a given timestep (in seconds):
@@ -455,6 +455,8 @@ namespace wi::scene
 		void Component_DetachChildren(wi::ecs::Entity parent);
 		// Bakes the transform's current world matrix back to hierarchy local space (if it is part of a hierarchy)
 		void Component_TransformWorldToHierarchy(wi::ecs::Entity entity);
+
+		void GatherChildren(wi::ecs::Entity parent, wi::vector<wi::ecs::Entity>& children) const;
 
 		// Read/write whole scene into an archive
 		void Serialize(wi::Archive& archive);
