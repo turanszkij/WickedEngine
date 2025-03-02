@@ -36,23 +36,18 @@ void HierarchyWindow::Create(EditorComponent* _editor)
 	parentCombo.SetSize(XMFLOAT2(wid, hei));
 	parentCombo.SetPos(XMFLOAT2(x, y));
 	parentCombo.OnSelect([&](wi::gui::EventArgs args) {
-
-		wi::Archive& archive = editor->AdvanceHistory();
-		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
-		editor->RecordEntity(archive, entity);
-
 		Scene& scene = editor->GetCurrentScene();
-		if (args.iValue == 0)
+		for (auto& x : editor->translator.selected)
 		{
-			scene.Component_Detach(entity);
+			if (args.iValue == 0)
+			{
+				scene.Component_Detach(x.entity);
+			}
+			else
+			{
+				scene.Component_Attach(x.entity, (Entity)args.userdata);
+			}
 		}
-		else
-		{
-			scene.Component_Attach(entity, (Entity)args.userdata);
-		}
-
-		editor->RecordEntity(archive, entity);
-
 		editor->componentsWnd.RefreshEntityTree();
 
 	});

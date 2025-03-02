@@ -94,6 +94,7 @@ enum class EditorActions
 	// Other actions
 	RAGDOLL_AND_PHYSICS_IMPULSE_TESTER,
 	ORTHO_CAMERA,
+	HIERARCHY_SELECT,
 
 	COUNT
 };
@@ -135,6 +136,7 @@ HotkeyInfo hotkeyActions[size_t(EditorActions::COUNT)] = {
 	{wi::input::BUTTON('G'),					/*press=*/ false,		/*control=*/ true,		/*shift=*/ false},	//COLOR_GRADING_REFERENCE,
 	{wi::input::BUTTON('P'),					/*press=*/ false,		/*control=*/ false,		/*shift=*/ false},	//RAGDOLL_AND_PHYSICS_IMPULSE_TESTER,
 	{wi::input::BUTTON('O'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//ORTHO_CAMERA,
+	{wi::input::BUTTON('H'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//HIERARCHY_SELECT,
 };
 static_assert(arraysize(hotkeyActions) == size_t(EditorActions::COUNT));
 bool CheckInput(EditorActions action)
@@ -156,6 +158,20 @@ bool CheckInput(EditorActions action)
 	if (hotkey.shift)
 	{
 		ret &= wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RSHIFT);
+	}
+	return ret;
+}
+std::string GetInputString(EditorActions action)
+{
+	const HotkeyInfo& hotkey = hotkeyActions[size_t(action)];
+	std::string ret = wi::input::ButtonToString(hotkey.button).text;
+	if (hotkey.shift)
+	{
+		ret = "Shift + " + ret;
+	}
+	if (hotkey.control)
+	{
+		ret = "Ctrl + " + ret;
 	}
 	return ret;
 }
@@ -192,6 +208,7 @@ void HotkeyRemap(Editor* main)
 		{"COLOR_GRADING_REFERENCE", EditorActions::COLOR_GRADING_REFERENCE},
 		{"RAGDOLL_AND_PHYSICS_IMPULSE_TESTER", EditorActions::RAGDOLL_AND_PHYSICS_IMPULSE_TESTER},
 		{"ORTHO_CAMERA", EditorActions::ORTHO_CAMERA},
+		{"HIERARCHY_SELECT", EditorActions::HIERARCHY_SELECT},
 	};
 	static const wi::unordered_map<std::string, wi::input::BUTTON> buttonMap = {
 		{"ESC", wi::input::KEYBOARD_BUTTON_ESCAPE},
@@ -820,16 +837,23 @@ void EditorComponent::Load()
 
 	physicsButton.Create(ICON_RIGIDBODY);
 	physicsButton.SetShadowRadius(2);
-	physicsButton.SetTooltip("Toggle Physics Simulation On/Off");
+	physicsButton.SetTooltip("Toggle Physics Simulation On/Off\n\tOr: press while holding left SHIFT to reset physics bodies");
 	if (main->config.GetSection("options").Has("physics"))
 	{
 		wi::physics::SetSimulationEnabled(main->config.GetSection("options").GetBool("physics"));
 	}
 	physicsButton.OnClick([&](wi::gui::EventArgs args) {
-		wi::physics::SetSimulationEnabled(!wi::physics::IsSimulationEnabled());
-		main->config.GetSection("options").Set("physics", wi::physics::IsSimulationEnabled());
-		main->config.Commit();
-		});
+		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL))
+		{
+			wi::physics::ResetPhysicsObjects(GetCurrentScene());
+		}
+		else
+		{
+			wi::physics::SetSimulationEnabled(!wi::physics::IsSimulationEnabled());
+			main->config.GetSection("options").Set("physics", wi::physics::IsSimulationEnabled());
+			main->config.Commit();
+		}
+	});
 	GetGUI().AddWidget(&physicsButton);
 
 	dummyButton.Create(ICON_DUMMY);
@@ -1095,39 +1119,40 @@ void EditorComponent::Load()
 		ss += "\nDiscord chat: https://discord.gg/CFjRYmE";
 		ss += "\n\nControls\n";
 		ss += "------------\n";
-		ss += "Move camera: " + main->config.GetSection("hotkeys").GetText("MOVE_CAMERA_FORWARD") + main->config.GetSection("hotkeys").GetText("MOVE_CAMERA_LEFT") + main->config.GetSection("hotkeys").GetText("MOVE_CAMERA_BACKWARD") + main->config.GetSection("hotkeys").GetText("MOVE_CAMERA_RIGHT") + ", or Controller left stick or D - pad\n";
+		ss += "Move camera: " + GetInputString(EditorActions::MOVE_CAMERA_FORWARD) + ", " + GetInputString(EditorActions::MOVE_CAMERA_LEFT) + ", " + GetInputString(EditorActions::MOVE_CAMERA_BACKWARD) + ", " + GetInputString(EditorActions::MOVE_CAMERA_RIGHT) + ", or Controller left stick or D - pad\n";
 		ss += "Look: Right mouse button / arrow keys / controller right stick\n";
 		ss += "Select: Left mouse button\n";
 		ss += "Interact with physics/water/grass: Middle mouse button\n";
 		ss += "Faster camera: Left Shift button or controller R2/RT\n";
 		ss += "Snap to grid transform: Ctrl (hold while transforming)\n";
 		ss += "Snap to surface transform: Shift (hold while transforming)\n";
-		ss += "Camera up: " + main->config.GetSection("hotkeys").GetText("move_camera_up") + "\n";
-		ss += "Camera down: " + main->config.GetSection("hotkeys").GetText("move_camera_down") + "\n";
-		ss += "Orthographic camera: " + main->config.GetSection("hotkeys").GetText("ortho_camera") + "\n";
-		ss += "Duplicate entity: " + main->config.GetSection("hotkeys").GetText("duplicate_entity") + "\n";
-		ss += "Select All: " + main->config.GetSection("hotkeys").GetText("select_all_entities") + "\n";
-		ss += "Deselect All: " + main->config.GetSection("hotkeys").GetText("deselect_all_entities") + "\n";
-		ss += "Undo: " + main->config.GetSection("hotkeys").GetText("undo_action") + "\n";
-		ss += "Redo: " + main->config.GetSection("hotkeys").GetText("redo_action") + "\n";
-		ss += "Copy: " + main->config.GetSection("hotkeys").GetText("copy_action") + "\n";
-		ss += "Cut: " + main->config.GetSection("hotkeys").GetText("cut_action") + "\n";
-		ss += "Paste: " + main->config.GetSection("hotkeys").GetText("paste_action") + "\n";
+		ss += "Camera up: " + GetInputString(EditorActions::MOVE_CAMERA_UP) + "\n";
+		ss += "Camera down: " + GetInputString(EditorActions::MOVE_CAMERA_DOWN) + "\n";
+		ss += "Orthographic camera: " + GetInputString(EditorActions::ORTHO_CAMERA) + "\n";
+		ss += "Select whole hierarchy of selected: " + GetInputString(EditorActions::HIERARCHY_SELECT) + "\n";
+		ss += "Duplicate entity: " + GetInputString(EditorActions::DUPLICATE_ENTITY) + "\n";
+		ss += "Select All: " + GetInputString(EditorActions::SELECT_ALL_ENTITIES) + "\n";
+		ss += "Deselect All: " + GetInputString(EditorActions::DESELECT_ALL_ENTITIES) + "\n";
+		ss += "Undo: " + GetInputString(EditorActions::UNDO_ACTION) + "\n";
+		ss += "Redo: " + GetInputString(EditorActions::REDO_ACTION) + "\n";
+		ss += "Copy: " + GetInputString(EditorActions::COPY_ACTION) + "\n";
+		ss += "Cut: " + GetInputString(EditorActions::CUT_ACTION) + "\n";
+		ss += "Paste: " + GetInputString(EditorActions::PASTE_ACTION) + "\n";
 		ss += "Delete: Delete button\n";
-		ss += "Save As: " + main->config.GetSection("hotkeys").GetText("save_scene_as") + "\n";
-		ss += "Save: " + main->config.GetSection("hotkeys").GetText("save_scene") + "\n";
-		ss += "Transform: " + main->config.GetSection("hotkeys").GetText("enable_transform_tool") + "\n";
-		ss += "Move Toggle: " + main->config.GetSection("hotkeys").GetText("move_toggle_action") + "\n";
-		ss += "Rotate Toggle: " + main->config.GetSection("hotkeys").GetText("rotate_toggle_action") + "\n";
-		ss += "Scale Toggle: " + main->config.GetSection("hotkeys").GetText("scale_toggle_action") + "\n";
-		ss += "Wireframe mode: " + main->config.GetSection("hotkeys").GetText("wireframe_mode") + "\n";
-		ss += "Screenshot (saved into Editor's screenshots folder): " + main->config.GetSection("hotkeys").GetText("make_new_screenshot") + "\n";
-		ss += "Depth of field refocus to point: " + main->config.GetSection("hotkeys").GetText("depth_of_field_refocus_to_point") + " + left mouse button" + "\n";
-		ss += "Color grading reference: " + main->config.GetSection("hotkeys").GetText("colorgrading_reference") + " (color grading palette reference will be displayed in top left corner)\n";
-		ss += "Focus on selected: " + main->config.GetSection("hotkeys").GetText("focus_on_selection") + " button, this will make the camera jump to selection.\n";
-		ss += "Inspector mode: " + main->config.GetSection("hotkeys").GetText("inspector_mode") + " button (hold), hovered entity information will be displayed near mouse position.\n";
-		ss += "Place Instances: " + main->config.GetSection("hotkeys").GetText("PLACE_INSTANCES") + " (place clipboard onto clicked surface)\n";
-		ss += "Ragdoll and physics impulse tester: Hold " + main->config.GetSection("hotkeys").GetText("ragdoll_and_physics_impulse_tester") + " and click on ragdoll or rigid body physics entity with middle mouse.\n";
+		ss += "Save As: " + GetInputString(EditorActions::SAVE_SCENE_AS) + "\n";
+		ss += "Save: " + GetInputString(EditorActions::SAVE_SCENE) + "\n";
+		ss += "Transform: " + GetInputString(EditorActions::ENABLE_TRANSFORM_TOOL) + "\n";
+		ss += "Move Toggle: " + GetInputString(EditorActions::MOVE_TOGGLE_ACTION) + "\n";
+		ss += "Rotate Toggle: " + GetInputString(EditorActions::ROTATE_TOGGLE_ACTION) + "\n";
+		ss += "Scale Toggle: " + GetInputString(EditorActions::SCALE_TOGGLE_ACTION) + "\n";
+		ss += "Wireframe mode: " + GetInputString(EditorActions::WIREFRAME_MODE) + "\n";
+		ss += "Screenshot (saved into Editor's screenshots folder): " + GetInputString(EditorActions::MAKE_NEW_SCREENSHOT) + "\n";
+		ss += "Depth of field refocus to point: " + GetInputString(EditorActions::DEPTH_OF_FIELD_REFOCUS_TO_POINT) + " + left mouse button" + "\n";
+		ss += "Color grading reference: " + GetInputString(EditorActions::COLOR_GRADING_REFERENCE) + " (color grading palette reference will be displayed in top left corner)\n";
+		ss += "Focus on selected: " + GetInputString(EditorActions::FOCUS_ON_SELECTION) + " button, this will make the camera jump to selection.\n";
+		ss += "Inspector mode: " + GetInputString(EditorActions::INSPECTOR_MODE) + " button (hold), hovered entity information will be displayed near mouse position.\n";
+		ss += "Place Instances: " + GetInputString(EditorActions::PLACE_INSTANCES) + " (place clipboard onto clicked surface)\n";
+		ss += "Ragdoll and physics impulse tester: Hold " + GetInputString(EditorActions::RAGDOLL_AND_PHYSICS_IMPULSE_TESTER) + " and click on ragdoll or rigid body physics entity with middle mouse.\n";
 		ss += "Script Console / backlog: HOME button\n";
 		ss += "Bone picking: First select an armature, only then bone picking becomes available. As long as you have an armature or bone selected, bone picking will remain active.\n";
 		ss += "\n";
@@ -1383,8 +1408,143 @@ void EditorComponent::Update(float dt)
 		translator.Update(camera, currentMouse, *renderPath);
 	}
 
+	// Vehicle driving controls:
+	if (!wi::backlog::isActive())
+	{
+		if (scene.rigidbodies.GetCount() == 0)
+		{
+			componentsWnd.rigidWnd.driveCheckbox.SetCheck(false);
+		}
+		if (componentsWnd.rigidWnd.driveCheckbox.GetCheck())
+		{
+			RigidBodyPhysicsComponent* rigidbody = scene.rigidbodies.GetComponent(componentsWnd.rigidWnd.driving_entity);
+			if (rigidbody != nullptr && rigidbody->IsVehicle())
+			{
+				//wi::physics::SetDebugDrawEnabled(true);
+				float forward = 0;
+				float brake = 0;
+				float handbrake = 0;
+
+				float velocityAmount = wi::physics::GetVehicleForwardVelocity(*rigidbody);
+
+				if (std::abs(wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_R).x) > 0.1f)
+				{
+					if (velocityAmount >= 0)
+					{
+						forward = wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_R).x;
+					}
+					else
+					{
+						brake = wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_R).x;
+					}
+				}
+				if (wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_L).x > 0.1f)
+				{
+					if (velocityAmount > 0.001f)
+					{
+						brake = wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_L).x;
+					}
+					else
+					{
+						forward = -wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_L).x;
+					}
+				}
+				if (std::abs(wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_THUMBSTICK_L).x) > 0.1f)
+				{
+					drive_steering_smoothed = lerp(drive_steering_smoothed, wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_THUMBSTICK_L).x, dt * 2);
+				}
+				if (wi::input::Down(wi::input::GAMEPAD_BUTTON_PLAYSTATION_SQUARE))
+				{
+					handbrake = 1;
+				}
+				drive_orbit_horizontal += wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_THUMBSTICK_R).x * XM_PI * dt;
+
+				if (CheckInput(EditorActions::MOVE_CAMERA_FORWARD))
+				{
+					if (velocityAmount >= 0)
+					{
+						forward = 1;
+					}
+					else
+					{
+						brake = 1;
+					}
+				}
+				else if (CheckInput(EditorActions::MOVE_CAMERA_BACKWARD))
+				{
+					if (velocityAmount > 0.001f)
+					{
+						brake = 1;
+					}
+					else
+					{
+						forward = -1;
+					}
+				}
+				if (CheckInput(EditorActions::MOVE_CAMERA_LEFT))
+				{
+					drive_steering_smoothed -= dt * 2;
+				}
+				else if (CheckInput(EditorActions::MOVE_CAMERA_RIGHT))
+				{
+					drive_steering_smoothed += dt * 2;
+				}
+				else if (std::abs(wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_THUMBSTICK_L).x) > 0.1f)
+				{
+					// nothing
+				}
+				else
+				{
+					drive_steering_smoothed = lerp(drive_steering_smoothed, 0.0f, 4 * dt);
+				}
+				if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT))
+				{
+					brake = 1;
+				}
+				if (wi::input::Down(wi::input::KEYBOARD_BUTTON_SPACE))
+				{
+					handbrake = 1;
+				}
+				if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LEFT))
+				{
+					drive_orbit_horizontal += XM_PI * dt;
+				}
+				if (wi::input::Down(wi::input::KEYBOARD_BUTTON_RIGHT))
+				{
+					drive_orbit_horizontal -= XM_PI * dt;
+				}
+
+				if (!GetGUI().HasFocus())
+				{
+					drive_cam_dist_next -= wi::input::GetPointer().z;
+				}
+				drive_cam_dist = lerp(drive_cam_dist, drive_cam_dist_next, dt * 2);
+
+				drive_steering_smoothed = clamp(drive_steering_smoothed, -1.0f, 1.0f);
+
+				if (rigidbody->IsMotorcycle())
+				{
+					// break presses front and rear breaks:
+					handbrake = std::max(handbrake, brake);
+				}
+
+				wi::physics::DriveVehicle(*rigidbody, forward, drive_steering_smoothed, brake, handbrake);
+				drive_mode = true;
+			}
+			else
+			{
+				drive_mode = false;
+			}
+		}
+		else
+		{
+			drive_mode = false;
+		}
+		drive_orbit_horizontal = lerp(drive_orbit_horizontal, 0.0f, dt);
+	}
+
 	// Camera control:
-	if (!wi::backlog::isActive() && !GetGUI().HasFocus())
+	if (!drive_mode && !wi::backlog::isActive() && !GetGUI().HasFocus())
 	{
 		deleting = CheckInput(EditorActions::DELETE_ACTION);
 		currentMouse = wi::input::GetPointer();
@@ -1460,6 +1620,19 @@ void EditorComponent::Update(float dt)
 			camera.SetOrtho(!camera.IsOrtho());
 			camera.ortho_vertical_size = camera.ComputeOrthoVerticalSizeFromPerspective(wi::math::Length(camera.Eye)); // camera distance from origin
 			cameraWnd.orthoCheckBox.SetCheck(camera.IsOrtho());
+		}
+
+		if (CheckInput(EditorActions::HIERARCHY_SELECT))
+		{
+			wi::vector<Entity> children;
+			for (auto& x : translator.selectedEntitiesNonRecursive)
+			{
+				scene.GatherChildren(x, children);
+			}
+			for (auto& x : children)
+			{
+				AddSelected(x);
+			}
 		}
 
 		if (cameraWnd.fpsCheckBox.GetCheck())
@@ -2431,68 +2604,69 @@ void EditorComponent::Update(float dt)
 		componentsWnd.voxelGridWnd.SetEntity(picked.entity);
 		componentsWnd.metadataWnd.SetEntity(picked.entity);
 
-		if (picked.subsetIndex >= 0)
-		{
-			const ObjectComponent* object = scene.objects.GetComponent(picked.entity);
-			if (object != nullptr) // maybe it was deleted...
-			{
-				componentsWnd.objectWnd.SetEntity(picked.entity);
-				componentsWnd.meshWnd.SetEntity(object->meshID, picked.subsetIndex);
-				componentsWnd.softWnd.SetEntity(object->meshID);
+		bool found_object = false;
+		bool found_mesh = false;
+		bool found_soft = false;
+		bool found_material = false;
 
-				const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
-				if (mesh != nullptr && (int)mesh->subsets.size() > picked.subsetIndex)
-				{
-					componentsWnd.materialWnd.SetEntity(mesh->subsets[picked.subsetIndex].materialID);
-				}
+		const ObjectComponent* object = scene.objects.GetComponent(picked.entity);
+		if (object != nullptr) // maybe it was deleted...
+		{
+			found_object = true;
+			componentsWnd.objectWnd.SetEntity(picked.entity);
+			componentsWnd.meshWnd.SetEntity(object->meshID, picked.subsetIndex);
+			componentsWnd.softWnd.SetEntity(object->meshID);
+
+			found_mesh = scene.meshes.Contains(object->meshID);
+			found_soft = scene.softbodies.Contains(object->meshID);
+
+			const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+			if (mesh != nullptr && (int)mesh->subsets.size() > picked.subsetIndex)
+			{
+				found_material = scene.materials.Contains(mesh->subsets[picked.subsetIndex].materialID);
+				componentsWnd.materialWnd.SetEntity(mesh->subsets[picked.subsetIndex].materialID);
 			}
 		}
-		else
-		{
-			bool found_object = false;
-			bool found_mesh = false;
-			bool found_soft = false;
-			bool found_material = false;
-			for (auto& x : translator.selected)
-			{
-				if (!found_object && scene.objects.Contains(x.entity))
-				{
-					componentsWnd.objectWnd.SetEntity(x.entity);
-					found_object = true;
-				}
-				if (!found_mesh && scene.meshes.Contains(x.entity))
-				{
-					componentsWnd.meshWnd.SetEntity(x.entity, 0);
-					found_mesh = true;
-				}
-				if (!found_soft && scene.softbodies.Contains(x.entity))
-				{
-					componentsWnd.softWnd.SetEntity(x.entity);
-					found_soft = true;
-				}
-				if (!found_material && scene.materials.Contains(x.entity))
-				{
-					componentsWnd.materialWnd.SetEntity(x.entity);
-					found_material = true;
-				}
-			}
 
-			if (!found_object)
+		for (auto& x : translator.selected)
+		{
+			if (!found_object && scene.objects.Contains(x.entity))
 			{
-				componentsWnd.objectWnd.SetEntity(INVALID_ENTITY);
+				componentsWnd.objectWnd.SetEntity(x.entity);
+				found_object = true;
 			}
-			if (!found_mesh)
+			if (!found_mesh && scene.meshes.Contains(x.entity))
 			{
-				componentsWnd.meshWnd.SetEntity(INVALID_ENTITY, -1);
+				componentsWnd.meshWnd.SetEntity(x.entity, 0);
+				found_mesh = true;
 			}
-			if (!found_soft)
+			if (!found_soft && scene.softbodies.Contains(x.entity))
 			{
-				componentsWnd.softWnd.SetEntity(INVALID_ENTITY);
+				componentsWnd.softWnd.SetEntity(x.entity);
+				found_soft = true;
 			}
-			if (!found_material)
+			if (!found_material && scene.materials.Contains(x.entity))
 			{
-				componentsWnd.materialWnd.SetEntity(INVALID_ENTITY);
+				componentsWnd.materialWnd.SetEntity(x.entity);
+				found_material = true;
 			}
+		}
+
+		if (!found_object)
+		{
+			componentsWnd.objectWnd.SetEntity(INVALID_ENTITY);
+		}
+		if (!found_mesh)
+		{
+			componentsWnd.meshWnd.SetEntity(INVALID_ENTITY, -1);
+		}
+		if (!found_soft)
+		{
+			componentsWnd.softWnd.SetEntity(INVALID_ENTITY);
+		}
+		if (!found_material)
+		{
+			componentsWnd.materialWnd.SetEntity(INVALID_ENTITY);
 		}
 
 	}
@@ -2562,8 +2736,11 @@ void EditorComponent::Update(float dt)
 		}
 	}
 
-	camera.TransformCamera(editorscene.camera_transform);
-	camera.UpdateCamera();
+	if (!drive_mode)
+	{
+		camera.TransformCamera(editorscene.camera_transform);
+		camera.UpdateCamera();
+	}
 
 	wi::RenderPath3D_PathTracing* pathtracer = dynamic_cast<wi::RenderPath3D_PathTracing*>(renderPath.get());
 	if (pathtracer != nullptr)
@@ -2707,6 +2884,10 @@ void EditorComponent::PostUpdate()
 
 	renderPath->PostUpdate();
 
+	Scene& scene = GetCurrentScene();
+	EditorScene& editorscene = GetCurrentEditorScene();
+	CameraComponent& camera = editorscene.camera;
+
 	// This needs to be after scene was updated fully by EditorComponent's renderPath
 	//	Because this will just render the scene without updating its resources
 	if (renderPath->getSceneUpdateEnabled()) // only update preview if scene was updated at all by main renderPath
@@ -2714,7 +2895,6 @@ void EditorComponent::PostUpdate()
 		componentsWnd.cameraComponentWnd.preview.RenderPreview();
 	}
 
-	const Scene& scene = GetCurrentScene();
 	if (componentsWnd.voxelGridWnd.debugAllCheckBox.GetCheck())
 	{
 		// Draw all voxel grids:
@@ -2731,6 +2911,38 @@ void EditorComponent::PostUpdate()
 			wi::renderer::DrawVoxelGrid(scene.voxel_grids.GetComponent(componentsWnd.voxelGridWnd.entity));
 		}
 	}
+
+	// Drive mode camera override is done in PostUpdate so that most recent physics updates are available:
+	if (drive_mode)
+	{
+		RigidBodyPhysicsComponent* rigidbody = scene.rigidbodies.GetComponent(componentsWnd.rigidWnd.driving_entity);
+		if (rigidbody != nullptr && rigidbody->IsVehicle())
+		{
+			TransformComponent* vehicle_transform = scene.transforms.GetComponent(componentsWnd.rigidWnd.driving_entity);
+			if (vehicle_transform != nullptr)
+			{
+				XMVECTOR P = vehicle_transform->GetPositionV();
+				XMVECTOR Q = vehicle_transform->GetRotationV();
+				XMMATRIX W = XMMatrixIdentity();
+				if (rigidbody->vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Car)
+				{
+					W = XMMatrixTranslation(0, 0.5f, -drive_cam_dist) * XMMatrixRotationX(XM_PI * 0.08f) * XMMatrixRotationY(drive_orbit_horizontal) * XMMatrixRotationQuaternion(Q) * XMMatrixTranslationFromVector(P);
+				}
+				else if (rigidbody->vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Motorcycle)
+				{
+					W = XMMatrixTranslation(0, 1.5f, -drive_cam_dist) * XMMatrixRotationX(XM_PI * 0.1f) * XMMatrixRotationY(drive_orbit_horizontal) * XMMatrixRotationQuaternion(Q) * XMMatrixTranslationFromVector(P);
+				}
+				camera.TransformCamera(W);
+				camera.UpdateCamera();
+			}
+		}
+	}
+}
+void EditorComponent::PreRender()
+{
+	RenderPath2D::PreUpdate();
+
+	renderPath->PreRender();
 }
 void EditorComponent::Render() const
 {
@@ -4001,6 +4213,20 @@ void EditorComponent::Compose(CommandList cmd) const
 		params.size = 24;
 		params.position.y += cursor.size.y;
 		wi::font::Draw(save_text_filename, params, cmd);
+	}
+
+	if (drive_mode)
+	{
+		wi::font::Params params;
+		params.color = save_text_color;
+		params.shadowColor = wi::Color::Black();
+		params.shadowColor.setA(params.color.getA());
+		params.position = XMFLOAT3(PhysicalToLogical(viewport3D.top_left_x + viewport3D.width * 0.5f), PhysicalToLogical(viewport3D.top_left_y + 5), 0);
+		params.h_align = wi::font::WIFALIGN_CENTER;
+		params.v_align = wi::font::WIFALIGN_TOP;
+		params.size = 30;
+		params.shadow_softness = 1;
+		wi::font::Draw("Drive Mode", params, cmd);
 	}
 
 #ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG

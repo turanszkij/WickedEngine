@@ -58,6 +58,8 @@ namespace wi::physics
 		const XMFLOAT3& velocity
 	);
 
+	XMFLOAT3 GetVelocity(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
+
 	// Apply force at body center
 	void ApplyForce(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
@@ -101,6 +103,25 @@ namespace wi::physics
 		const XMFLOAT3& torque
 	);
 
+	// Set input from driver
+	//	forward:	Value between -1 and 1 for auto transmission and value between 0 and 1 indicating desired driving direction and amount the gas pedal is pressed
+	//	right:		Value between -1 and 1 indicating desired steering angle (1 = right)
+	//	brake:		Value between 0 and 1 indicating how strong the brake pedal is pressed
+	//	handbrake:	Value between 0 and 1 indicating how strong the hand brake is pulled (back brake for motorcycles)
+	void DriveVehicle(
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		float forward,
+		float right = 0,
+		float brake = 0,
+		float handbrake = 0
+	);
+
+	// Signed velocity amount in forward direction
+	float GetVehicleForwardVelocity(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
+
+	// Override all vehicle wheel transforms in world space
+	void OverrideWehicleWheelTransforms(wi::scene::Scene& scene);
+
 	enum class ActivationState
 	{
 		Active,
@@ -115,6 +136,8 @@ namespace wi::physics
 		ActivationState state
 	);
 	void ActivateAllRigidBodies(wi::scene::Scene& scene);
+
+	void ResetPhysicsObjects(wi::scene::Scene& scene);
 
 	XMFLOAT3 GetSoftBodyNodePosition(
 		wi::scene::SoftBodyPhysicsComponent& physicscomponent,

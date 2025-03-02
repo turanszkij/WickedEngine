@@ -56,6 +56,8 @@ namespace wi::scene
 
 		ScanSpringDependencies(); // after terrain, because this saves transform ptrs and terrain can add transforms
 
+		StartBuildTopDownHierarchy();
+
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		instanceArraySize = objects.GetCount() + hairs.GetCount() + emitters.GetCount();
@@ -354,7 +356,11 @@ namespace wi::scene
 
 		wi::jobsystem::Wait(ctx); // dependencies
 
+		WaitBuildTopDownHierarchy();
+
 		RunProceduralAnimationUpdateSystem(ctx);
+
+		wi::physics::OverrideWehicleWheelTransforms(*this);
 
 		RunArmatureUpdateSystem(ctx);
 
@@ -1054,6 +1060,8 @@ namespace wi::scene
 
 		collider_count_cpu = 0;
 		collider_count_gpu = 0;
+
+		topdown_hierarchy.clear();
 	}
 	void Scene::MergeFastInternal(Scene& other)
 	{
@@ -1259,6 +1267,11 @@ namespace wi::scene
 			else
 			{
 				entry.second.component_manager->Remove(entity);
+			}
+
+			if (topdown_hierarchy.count(entity))
+			{
+				topdown_hierarchy.erase(entity);
 			}
 		}
 	}
@@ -1929,6 +1942,35 @@ namespace wi::scene
 			else
 			{
 				++i;
+			}
+		}
+	}
+	void Scene::Component_TransformWorldToHierarchy(wi::ecs::Entity entity)
+	{
+		const HierarchyComponent* hier = hierarchy.GetComponent(entity);
+		if (hier == nullptr)
+			return;
+		const TransformComponent* transform_parent = transforms.GetComponent(hier->parentID);
+		if (transform_parent == nullptr)
+			return;
+		TransformComponent* transform_child = transforms.GetComponent(entity);
+		if (transform_child == nullptr)
+			return;
+		XMMATRIX B = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent->world));
+		XMMATRIX W = transform_child->GetWorldMatrix();
+		W = W * B;
+		XMStoreFloat4x4(&transform_child->world, W);
+		transform_child->ApplyTransform();
+	}
+
+	void Scene::GatherChildren(Entity parent, wi::vector<Entity>& children) const
+	{
+		for (size_t i = 0; i < hierarchy.GetCount(); ++i)
+		{
+			Entity child = hierarchy.GetEntity(i);
+			if (Entity_IsDescendant(child, parent))
+			{
+				children.push_back(child);
 			}
 		}
 	}
@@ -7576,6 +7618,43 @@ namespace wi::scene
 			}
 		}
 		return XMMatrixIdentity();
+	}
+
+	void Scene::StartBuildTopDownHierarchy()
+	{
+		WaitBuildTopDownHierarchy();
+		wi::jobsystem::Execute(topdown_hierarchy_workload, [&](wi::jobsystem::JobArgs args) {
+			for (auto& x : topdown_hierarchy)
+			{
+				x.second.clear();
+			}
+			for (size_t i = 0; i < hierarchy.GetCount(); ++i)
+			{
+				const HierarchyComponent& hier = hierarchy[i];
+				Entity entity = hierarchy.GetEntity(i);
+				topdown_hierarchy[hier.parentID].push_back(entity);
+			}
+		});
+	}
+	void Scene::WaitBuildTopDownHierarchy() const
+	{
+		wi::jobsystem::Wait(topdown_hierarchy_workload);
+	}
+	void Scene::RefreshHierarchyTopdownFromParent(wi::ecs::Entity entity)
+	{
+		auto it = topdown_hierarchy.find(entity);
+		if (it == topdown_hierarchy.end())
+			return;
+		const TransformComponent* parent_transform = transforms.GetComponent(entity);
+		for (Entity child : it->second)
+		{
+			TransformComponent* child_transform = transforms.GetComponent(child);
+			if (child_transform != nullptr && parent_transform != nullptr)
+			{
+				child_transform->UpdateTransform_Parented(*parent_transform);
+			}
+			RefreshHierarchyTopdownFromParent(child);
+		}
 	}
 
 	void Scene::ScanAnimationDependencies()

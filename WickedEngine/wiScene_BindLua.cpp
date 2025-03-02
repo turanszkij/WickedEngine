@@ -6088,6 +6088,9 @@ int ScriptComponent_BindLua::Stop(lua_State* L)
 
 
 Luna<RigidBodyPhysicsComponent_BindLua>::FunctionType RigidBodyPhysicsComponent_BindLua::methods[] = {
+	lunamethod(RigidBodyPhysicsComponent_BindLua, IsVehicle),
+	lunamethod(RigidBodyPhysicsComponent_BindLua, IsCar),
+	lunamethod(RigidBodyPhysicsComponent_BindLua, IsMotorcycle),
 	lunamethod(RigidBodyPhysicsComponent_BindLua, IsDisableDeactivation),
 	lunamethod(RigidBodyPhysicsComponent_BindLua, IsKinematic),
 	lunamethod(RigidBodyPhysicsComponent_BindLua, IsStartDeactivated),
@@ -6112,6 +6115,21 @@ Luna<RigidBodyPhysicsComponent_BindLua>::PropertyType RigidBodyPhysicsComponent_
 	{ NULL, NULL }
 };
 
+int RigidBodyPhysicsComponent_BindLua::IsVehicle(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsVehicle());
+	return 1;
+}
+int RigidBodyPhysicsComponent_BindLua::IsCar(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsCar());
+	return 1;
+}
+int RigidBodyPhysicsComponent_BindLua::IsMotorcycle(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsMotorcycle());
+	return 1;
+}
 int RigidBodyPhysicsComponent_BindLua::IsDisableDeactivation(lua_State* L)
 {
 	wi::lua::SSetBool(L, component->IsDisableDeactivation());

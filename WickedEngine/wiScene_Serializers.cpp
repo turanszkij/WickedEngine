@@ -788,6 +788,44 @@ namespace wi::scene
 			{
 				archive >> buoyancy;
 			}
+
+			if (seri.GetVersion() >= 5)
+			{
+				archive >> (uint32_t&)vehicle.type;
+				archive >> (uint32_t&)vehicle.collision_mode;
+
+				archive >> vehicle.chassis_half_width;
+				archive >> vehicle.chassis_half_height;
+				archive >> vehicle.chassis_half_length;
+				archive >> vehicle.front_wheel_offset;
+				archive >> vehicle.rear_wheel_offset;
+				archive >> vehicle.wheel_radius;
+				archive >> vehicle.wheel_width;
+				archive >> vehicle.car.four_wheel_drive;
+				archive >> vehicle.max_engine_torque;
+				archive >> vehicle.clutch_strength;
+				archive >> vehicle.max_roll_angle;
+				archive >> vehicle.max_steering_angle;
+
+				archive >> vehicle.front_suspension.min_length;
+				archive >> vehicle.front_suspension.max_length;
+				archive >> vehicle.front_suspension.frequency;
+				archive >> vehicle.front_suspension.damping;
+
+				archive >> vehicle.rear_suspension.min_length;
+				archive >> vehicle.rear_suspension.max_length;
+				archive >> vehicle.rear_suspension.frequency;
+				archive >> vehicle.rear_suspension.damping;
+
+				archive >> vehicle.motorcycle.front_suspension_angle;
+				archive >> vehicle.motorcycle.front_brake_torque;
+				archive >> vehicle.motorcycle.rear_brake_torque;
+
+				SerializeEntity(archive, vehicle.wheel_entity_front_left, seri);
+				SerializeEntity(archive, vehicle.wheel_entity_front_right, seri);
+				SerializeEntity(archive, vehicle.wheel_entity_rear_left, seri);
+				SerializeEntity(archive, vehicle.wheel_entity_rear_right, seri);
+			}
 		}
 		else
 		{
@@ -822,6 +860,44 @@ namespace wi::scene
 			if (seri.GetVersion() >= 4)
 			{
 				archive << buoyancy;
+			}
+
+			if (seri.GetVersion() >= 5)
+			{
+				archive << (uint32_t&)vehicle.type;
+				archive << (uint32_t&)vehicle.collision_mode;
+
+				archive << vehicle.chassis_half_width;
+				archive << vehicle.chassis_half_height;
+				archive << vehicle.chassis_half_length;
+				archive << vehicle.front_wheel_offset;
+				archive << vehicle.rear_wheel_offset;
+				archive << vehicle.wheel_radius;
+				archive << vehicle.wheel_width;
+				archive << vehicle.car.four_wheel_drive;
+				archive << vehicle.max_engine_torque;
+				archive << vehicle.clutch_strength;
+				archive << vehicle.max_roll_angle;
+				archive << vehicle.max_steering_angle;
+
+				archive << vehicle.front_suspension.min_length;
+				archive << vehicle.front_suspension.max_length;
+				archive << vehicle.front_suspension.frequency;
+				archive << vehicle.front_suspension.damping;
+
+				archive << vehicle.rear_suspension.min_length;
+				archive << vehicle.rear_suspension.max_length;
+				archive << vehicle.rear_suspension.frequency;
+				archive << vehicle.rear_suspension.damping;
+
+				archive << vehicle.motorcycle.front_suspension_angle;
+				archive << vehicle.motorcycle.front_brake_torque;
+				archive << vehicle.motorcycle.rear_brake_torque;
+
+				SerializeEntity(archive, vehicle.wheel_entity_front_left, seri);
+				SerializeEntity(archive, vehicle.wheel_entity_front_right, seri);
+				SerializeEntity(archive, vehicle.wheel_entity_rear_left, seri);
+				SerializeEntity(archive, vehicle.wheel_entity_rear_right, seri);
 			}
 		}
 	}
