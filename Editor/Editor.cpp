@@ -1513,7 +1513,11 @@ void EditorComponent::Update(float dt)
 				{
 					drive_orbit_horizontal -= XM_PI * dt;
 				}
-				drive_cam_dist_next -= wi::input::GetPointer().z;
+
+				if (!GetGUI().HasFocus())
+				{
+					drive_cam_dist_next -= wi::input::GetPointer().z;
+				}
 				drive_cam_dist = lerp(drive_cam_dist, drive_cam_dist_next, dt * 2);
 
 				drive_steering_smoothed = clamp(drive_steering_smoothed, -1.0f, 1.0f);

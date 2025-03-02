@@ -476,15 +476,13 @@ namespace wi::physics
 				static constexpr float	sRearCamber = 0.0f;
 				static constexpr float	sRearToe = 0.0f;
 
-				const float wheel_offset_to_zero = 0.5f; // not sure why but without this, wheels are offset to -0.5 vertically
-
 				if (physicscomponent.IsCar())
 				{
 					const float wheel_radius = physicscomponent.vehicle.wheel_radius;
 					const float wheel_width = physicscomponent.vehicle.wheel_width;
 					const float half_vehicle_length = physicscomponent.vehicle.chassis_half_length;
 					const float half_vehicle_width = physicscomponent.vehicle.chassis_half_width;
-					const float half_vehicle_height = physicscomponent.vehicle.chassis_half_height + wheel_offset_to_zero;
+					const float half_vehicle_height = physicscomponent.vehicle.chassis_half_height;
 					const float front_wheel_offset = physicscomponent.vehicle.front_wheel_offset;
 					const float rear_wheel_offset = physicscomponent.vehicle.rear_wheel_offset;
 					const bool four_wheel_drive = physicscomponent.vehicle.car.four_wheel_drive;
@@ -670,7 +668,7 @@ namespace wi::physics
 					const float front_suspension_max_length = physicscomponent.vehicle.front_suspension.max_length;
 					const float front_suspension_freq = physicscomponent.vehicle.front_suspension.frequency;
 					const float front_brake_torque = physicscomponent.vehicle.motorcycle.front_brake_torque;
-					const float half_vehicle_height = physicscomponent.vehicle.chassis_half_height + wheel_offset_to_zero;
+					const float half_vehicle_height = physicscomponent.vehicle.chassis_half_height;
 
 					const float max_steering_angle = physicscomponent.vehicle.max_steering_angle;
 
@@ -1542,7 +1540,7 @@ namespace wi::physics
 		if (physicscomponent.IsVehicle())
 		{
 			// Vehicle center of mass will be offset to chassis height to improve handling:
-			physicsobject.shape = OffsetCenterOfMassShapeSettings(Vec3(0, physicscomponent.vehicle.chassis_half_height, 0), physicsobject.shape).Create().Get();
+			physicsobject.shape = OffsetCenterOfMassShapeSettings(Vec3(0, -physicsobject.shape->GetLocalBounds().GetExtent().GetY() + physicscomponent.vehicle.chassis_half_height, 0), physicsobject.shape).Create().Get();
 		}
 	}
 
@@ -2215,7 +2213,7 @@ namespace wi::physics
 			};
 			static JoltDebugRenderer debug_renderer;
 			BodyManager::DrawSettings settings;
-			settings.mDrawCenterOfMassTransform = false;
+			settings.mDrawCenterOfMassTransform = true;
 			settings.mDrawMassAndInertia = false;
 			settings.mDrawShape = true;
 			settings.mDrawSoftBodyVertices = true;
