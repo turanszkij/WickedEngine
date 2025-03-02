@@ -22,6 +22,7 @@
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>
 #include <Jolt/Physics/Collision/Shape/HeightFieldShape.h>
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
+#include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
 #include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/CastResult.h>
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
@@ -289,11 +290,14 @@ namespace wi::physics
 				BodyInterface& body_interface = jolt_physics_scene->physics_system.GetBodyInterface(); // locking version because destructor can be called from any thread
 				body_interface.RemoveBody(bodyID);
 				body_interface.DestroyBody(bodyID);
+				bodyID = {};
 				if (vehicle_constraint != nullptr)
 				{
 					jolt_physics_scene->physics_system.RemoveStepListener(vehicle_constraint);
 					jolt_physics_scene->physics_system.RemoveConstraint(vehicle_constraint);
+					vehicle_constraint = nullptr;
 				}
+				shape = nullptr;
 			}
 
 			~RigidBody()
@@ -472,13 +476,15 @@ namespace wi::physics
 				static constexpr float	sRearCamber = 0.0f;
 				static constexpr float	sRearToe = 0.0f;
 
+				const float wheel_offset_to_zero = 0.5f; // not sure why but without this, wheels are offset to -0.5 vertically
+
 				if (physicscomponent.IsCar())
 				{
 					const float wheel_radius = physicscomponent.vehicle.wheel_radius;
 					const float wheel_width = physicscomponent.vehicle.wheel_width;
 					const float half_vehicle_length = physicscomponent.vehicle.chassis_half_length;
 					const float half_vehicle_width = physicscomponent.vehicle.chassis_half_width;
-					const float half_vehicle_height = physicscomponent.vehicle.chassis_half_height;
+					const float half_vehicle_height = physicscomponent.vehicle.chassis_half_height + wheel_offset_to_zero;
 					const float front_wheel_offset = physicscomponent.vehicle.front_wheel_offset;
 					const float rear_wheel_offset = physicscomponent.vehicle.rear_wheel_offset;
 					const bool four_wheel_drive = physicscomponent.vehicle.car.four_wheel_drive;
@@ -664,7 +670,7 @@ namespace wi::physics
 					const float front_suspension_max_length = physicscomponent.vehicle.front_suspension.max_length;
 					const float front_suspension_freq = physicscomponent.vehicle.front_suspension.frequency;
 					const float front_brake_torque = physicscomponent.vehicle.motorcycle.front_brake_torque;
-					const float half_vehicle_height = physicscomponent.vehicle.chassis_half_height;
+					const float half_vehicle_height = physicscomponent.vehicle.chassis_half_height + wheel_offset_to_zero;
 
 					const float max_steering_angle = physicscomponent.vehicle.max_steering_angle;
 
@@ -1532,6 +1538,12 @@ namespace wi::physics
 
 		RigidBody& physicsobject = GetRigidBody(physicscomponent);
 		physicsobject.shape = shape_result.Get();
+
+		if (physicscomponent.IsVehicle())
+		{
+			// Vehicle center of mass will be offset to chassis height to improve handling:
+			physicsobject.shape = OffsetCenterOfMassShapeSettings(Vec3(0, physicscomponent.vehicle.chassis_half_height, 0), physicsobject.shape).Create().Get();
+		}
 	}
 
 	bool IsEnabled() { return ENABLED; }
@@ -2204,6 +2216,7 @@ namespace wi::physics
 			static JoltDebugRenderer debug_renderer;
 			BodyManager::DrawSettings settings;
 			settings.mDrawCenterOfMassTransform = false;
+			settings.mDrawMassAndInertia = false;
 			settings.mDrawShape = true;
 			settings.mDrawSoftBodyVertices = true;
 			settings.mDrawSoftBodyEdgeConstraints = true;

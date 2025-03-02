@@ -359,6 +359,18 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	AddWidget(&physicsDebugCheckBox);
 
 
+	vehicleLabel.Create("VehicleLabel");
+	std::string tips;
+	tips += "Vehicle physics tips:\n";
+	tips += "- The vehicle's base shape can be configured in the standard shape settings above\n";
+	tips += "- A vehicle is always facing forward in +Z direction by default\n";
+	tips += "- Check that mass is set higher than the default 1kg, somewhere around ~1000 kg\n";
+	tips += "- Enable physics visualizer while editing vehicle parameters\n";
+	tips += "- You can reset vehicles by Ctrl + left click on the physics toggle button\n";
+	vehicleLabel.SetText(tips);
+	vehicleLabel.SetSize(XMFLOAT2(100, 240));
+	AddWidget(&vehicleLabel);
+
 	vehicleCombo.Create("Vehicle physics: ");
 	vehicleCombo.AddItem("None", (uint64_t)RigidBodyPhysicsComponent::Vehicle::Type::None);
 	vehicleCombo.AddItem("Car", (uint64_t)RigidBodyPhysicsComponent::Vehicle::Type::Car);
@@ -1050,6 +1062,7 @@ void RigidBodyWindow::ResizeLayout()
 	add(vehicleCombo);
 	if (vehicleCombo.GetSelected() > 0)
 	{
+		vehicleLabel.SetVisible(true);
 		vehicleCollisionCombo.SetVisible(true);
 		wheelRadiusSlider.SetVisible(true);
 		wheelWidthSlider.SetVisible(true);
@@ -1072,6 +1085,8 @@ void RigidBodyWindow::ResizeLayout()
 		rSuspensionMaxSlider.SetVisible(true);
 		rSuspensionFrequencySlider.SetVisible(true);
 		rSuspensionDampingSlider.SetVisible(true);
+
+		add_fullwidth(vehicleLabel);
 
 		add_right(driveCheckbox);
 
@@ -1142,6 +1157,7 @@ void RigidBodyWindow::ResizeLayout()
 	}
 	else
 	{
+		vehicleLabel.SetVisible(false);
 		vehicleCollisionCombo.SetVisible(false);
 		wheelRadiusSlider.SetVisible(false);
 		wheelWidthSlider.SetVisible(false);

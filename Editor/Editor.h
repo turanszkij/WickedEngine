@@ -33,6 +33,8 @@ public:
 	XMFLOAT3 dummy_pos = XMFLOAT3(0, 0, 0);
 
 	bool drive_mode = false;
+	float drive_cam_dist_next = 7;
+	float drive_cam_dist = drive_cam_dist_next;
 	float drive_orbit_horizontal = 0;
 	float drive_steering_smoothed = 0;
 

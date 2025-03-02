@@ -32,6 +32,7 @@ public:
 	wi::gui::Slider offsetZSlider;
 	wi::gui::CheckBox physicsDebugCheckBox;
 
+	wi::gui::Label vehicleLabel;
 	wi::gui::ComboBox vehicleCombo;
 	wi::gui::ComboBox vehicleCollisionCombo;
 	wi::gui::Slider wheelRadiusSlider;

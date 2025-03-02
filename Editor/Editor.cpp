@@ -1513,6 +1513,8 @@ void EditorComponent::Update(float dt)
 				{
 					drive_orbit_horizontal -= XM_PI * dt;
 				}
+				drive_cam_dist_next -= wi::input::GetPointer().z;
+				drive_cam_dist = lerp(drive_cam_dist, drive_cam_dist_next, dt * 2);
 
 				drive_steering_smoothed = clamp(drive_steering_smoothed, -1.0f, 1.0f);
 
@@ -2920,11 +2922,11 @@ void EditorComponent::PostUpdate()
 				XMMATRIX W = XMMatrixIdentity();
 				if (rigidbody->vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Car)
 				{
-					W = XMMatrixTranslation(0, 0.5f, -6) * XMMatrixRotationX(XM_PI * 0.08f) * XMMatrixRotationY(drive_orbit_horizontal) * XMMatrixRotationQuaternion(Q) * XMMatrixTranslationFromVector(P);
+					W = XMMatrixTranslation(0, 0.5f, -drive_cam_dist) * XMMatrixRotationX(XM_PI * 0.08f) * XMMatrixRotationY(drive_orbit_horizontal) * XMMatrixRotationQuaternion(Q) * XMMatrixTranslationFromVector(P);
 				}
 				else if (rigidbody->vehicle.type == RigidBodyPhysicsComponent::Vehicle::Type::Motorcycle)
 				{
-					W = XMMatrixTranslation(0, 1.5f, -7) * XMMatrixRotationX(XM_PI * 0.1f) * XMMatrixRotationY(drive_orbit_horizontal) * XMMatrixRotationQuaternion(Q) * XMMatrixTranslationFromVector(P);
+					W = XMMatrixTranslation(0, 1.5f, -drive_cam_dist) * XMMatrixRotationX(XM_PI * 0.1f) * XMMatrixRotationY(drive_orbit_horizontal) * XMMatrixRotationQuaternion(Q) * XMMatrixTranslationFromVector(P);
 				}
 				camera.TransformCamera(W);
 				camera.UpdateCamera();
