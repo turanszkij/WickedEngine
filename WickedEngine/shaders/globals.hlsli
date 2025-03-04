@@ -871,7 +871,7 @@ inline half3 clipspace_to_uv(in half3 clipspace)
 }
 
 inline half3 GetSunColor() { return unpack_half3(GetWeather().sun_color); } // sun color with intensity applied
-inline half3 GetSunDirection() { return unpack_half3(GetWeather().sun_direction); }
+inline half3 GetSunDirection() { return normalize(unpack_half3(GetWeather().sun_direction)); }
 inline half3 GetHorizonColor() { return unpack_half3(GetWeather().horizon); }
 inline half3 GetZenithColor() { return unpack_half3(GetWeather().zenith); }
 inline half3 GetAmbientColor() { return unpack_half3(GetWeather().ambient); }
@@ -881,6 +881,8 @@ inline float GetTime() { return GetFrame().time; }
 inline float GetTimePrev() { return GetFrame().time_previous; }
 inline float GetFrameCount() { return GetFrame().frame_count; }
 inline min16uint2 GetTemporalAASampleRotation() { return uint2(GetFrame().temporalaa_samplerotation & 0xFF, (GetFrame().temporalaa_samplerotation >> 8u) & 0xFF); }
+inline half GetCapsuleShadowFade() { return f16tof32(GetFrame().capsuleshadow_fade_angle); }
+inline half GetCapsuleShadowAngle() { return f16tof32(GetFrame().capsuleshadow_fade_angle >> 16u); }
 inline bool IsStaticSky() { return GetScene().globalenvmap >= 0; }
 inline half GetGIBoost() { return unpack_half2(GetFrame().giboost_packed).x; }
 
@@ -1760,6 +1762,17 @@ inline float sphere_volume(in float radius)
 inline half sphere_volume(in half radius)
 {
 	return 4.0 / 3.0 * PI * radius * radius * radius;
+}
+
+inline float distance_squared(float3 a, float3 b)
+{
+	float3 diff = b - a;
+	return dot(diff, diff);
+}
+inline half distance_squared(half3 a, half3 b)
+{
+	half3 diff = b - a;
+	return dot(diff, diff);
 }
 
 

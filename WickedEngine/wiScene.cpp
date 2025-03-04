@@ -1094,11 +1094,13 @@ namespace wi::scene
 		collider_allocator_gpu.store(0u);
 		collider_deinterleaved_data.reserve(
 			sizeof(wi::primitive::AABB) * colliders.GetCount() +
+			sizeof(wi::primitive::AABB) * colliders.GetCount() +
 			sizeof(ColliderComponent) * colliders.GetCount() +
 			sizeof(ColliderComponent) * colliders.GetCount()
 		);
 		aabb_colliders_cpu = (wi::primitive::AABB*)collider_deinterleaved_data.data();
-		colliders_cpu = (ColliderComponent*)(aabb_colliders_cpu + colliders.GetCount());
+		aabb_colliders_gpu = aabb_colliders_cpu + colliders.GetCount();
+		colliders_cpu = (ColliderComponent*)(aabb_colliders_gpu + colliders.GetCount());
 		colliders_gpu = colliders_cpu + colliders.GetCount();
 
 		for (size_t i = 0; i < colliders.GetCount(); ++i)
@@ -1167,6 +1169,7 @@ namespace wi::scene
 			{
 				uint32_t index = collider_allocator_gpu.fetch_add(1u);
 				colliders_gpu[index] = collider;
+				aabb_colliders_gpu[index] = aabb;
 			}
 		}
 		collider_count_cpu = collider_allocator_cpu.load();
@@ -3726,12 +3729,14 @@ namespace wi::scene
 		collider_allocator_cpu.store(0u);
 		collider_allocator_gpu.store(0u);
 		collider_deinterleaved_data.reserve(
+			sizeof(wi::primitive::AABB)* colliders.GetCount() +
 			sizeof(wi::primitive::AABB) * colliders.GetCount() +
 			sizeof(ColliderComponent) * colliders.GetCount() +
 			sizeof(ColliderComponent) * colliders.GetCount()
 		);
 		aabb_colliders_cpu = (wi::primitive::AABB*)collider_deinterleaved_data.data();
-		colliders_cpu = (ColliderComponent*)(aabb_colliders_cpu + colliders.GetCount());
+		aabb_colliders_gpu = aabb_colliders_cpu + colliders.GetCount();
+		colliders_cpu = (ColliderComponent*)(aabb_colliders_gpu + colliders.GetCount());
 		colliders_gpu = colliders_cpu + colliders.GetCount();
 
 		wi::jobsystem::Dispatch(ctx, (uint32_t)colliders.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
@@ -3806,6 +3811,7 @@ namespace wi::scene
 			{
 				uint32_t index = collider_allocator_gpu.fetch_add(1u);
 				colliders_gpu[index] = collider;
+				aabb_colliders_gpu[index] = aabb;
 			}
 
 			});

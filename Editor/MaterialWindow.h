@@ -24,6 +24,7 @@ public:
 	wi::gui::CheckBox preferUncompressedCheckBox;
 	wi::gui::CheckBox disableStreamingCheckBox;
 	wi::gui::CheckBox coplanarCheckBox;
+	wi::gui::CheckBox capsuleShadowCheckBox;
 	wi::gui::ComboBox shaderTypeComboBox;
 	wi::gui::ComboBox blendModeComboBox;
 	wi::gui::ComboBox shadingRateComboBox;

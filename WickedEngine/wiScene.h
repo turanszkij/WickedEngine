@@ -279,6 +279,7 @@ namespace wi::scene
 		uint32_t collider_count_cpu = 0;
 		uint32_t collider_count_gpu = 0;
 		wi::primitive::AABB* aabb_colliders_cpu = nullptr;
+		wi::primitive::AABB* aabb_colliders_gpu = nullptr;
 		ColliderComponent* colliders_cpu = nullptr;
 		ColliderComponent* colliders_gpu = nullptr;
 		wi::BVH collider_bvh;

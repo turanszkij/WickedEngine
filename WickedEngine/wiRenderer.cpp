@@ -88,7 +88,7 @@ std::string SHADERSOURCEPATH = SHADER_INTEROP_PATH;
 //#define RTREFLECTION_WITH_RAYTRACING_PIPELINE
 
 static thread_local wi::vector<GPUBarrier> barrier_stack;
-void barrier_stack_flush(CommandList cmd)
+void FlushBarriers(CommandList cmd)
 {
 	if (barrier_stack.empty())
 		return;
@@ -98,10 +98,6 @@ void barrier_stack_flush(CommandList cmd)
 void PushBarrier(const GPUBarrier& barrier)
 {
 	barrier_stack.push_back(barrier);
-}
-void FlushBarriers(CommandList cmd)
-{
-	barrier_stack_flush(cmd);
 }
 
 bool wireRender = false;
@@ -146,6 +142,9 @@ bool VXGI_ENABLED = false;
 bool VXGI_REFLECTIONS_ENABLED = true;
 bool VXGI_DEBUG = false;
 int VXGI_DEBUG_CLIPMAP = 0;
+bool CAPSULE_SHADOW_ENABLED = false;
+float CAPSULE_SHADOW_ANGLE = XM_PIDIV4;
+float CAPSULE_SHADOW_FADE = 0.2f;
 
 Texture shadowMapAtlas;
 Texture shadowMapAtlas_Transparent;
@@ -3232,9 +3231,9 @@ void ProcessDeferredTextureRequests(CommandList cmd)
 		// batch begin barriers:
 		for (auto& params : painttextures)
 		{
-			barrier_stack.push_back(GPUBarrier::Image(&params.editTex, params.editTex.desc.layout, ResourceState::UNORDERED_ACCESS));
+			PushBarrier(GPUBarrier::Image(&params.editTex, params.editTex.desc.layout, ResourceState::UNORDERED_ACCESS));
 		}
-		barrier_stack_flush(cmd);
+		FlushBarriers(cmd);
 
 		// render splats:
 		device->BindComputeShader(&shaders[CSTYPE_PAINT_TEXTURE], cmd);
@@ -3275,9 +3274,9 @@ void ProcessDeferredTextureRequests(CommandList cmd)
 		// ending barriers:
 		for (auto& params : painttextures)
 		{
-			barrier_stack.push_back(GPUBarrier::Image(&params.editTex, ResourceState::UNORDERED_ACCESS, params.editTex.desc.layout));
+			PushBarrier(GPUBarrier::Image(&params.editTex, ResourceState::UNORDERED_ACCESS, params.editTex.desc.layout));
 		}
-		barrier_stack_flush(cmd);
+		FlushBarriers(cmd);
 
 		// mipgen tasks after paint:
 		for (auto& params : painttextures)
@@ -3370,7 +3369,6 @@ void UpdateVisibility(Visibility& vis)
 				if (!light.IsInactive())
 				{
 					// Local stream compaction:
-					//	(also compute light distance for shadow priority sorting)
 					stream_compaction.list[stream_compaction.count++] = args.groupIndex;
 					if (light.IsVolumetricsEnabled())
 					{
@@ -3562,6 +3560,60 @@ void UpdateVisibility(Visibility& vis)
 				vis.visibleHairs.push_back((uint32_t)i);
 			}
 			});
+	}
+
+	if (vis.flags & Visibility::ALLOW_COLLIDERS)
+	{
+		wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
+			for (size_t i = 0; i < vis.scene->collider_count_gpu; ++i)
+			{
+				ColliderComponent collider = vis.scene->colliders_gpu[i];
+				if (!(collider.layerMask & vis.layerMask))
+				{
+					continue;
+				}
+				if (!vis.frustum.CheckBoxFast(vis.scene->aabb_colliders_gpu[i]))
+				{
+					continue;
+				}
+				collider.dist = wi::math::DistanceSquared(vis.scene->aabb_colliders_gpu[i].getCenter(), vis.camera->Eye);
+				vis.visibleColliders.push_back(collider);
+			}
+			// Ragdoll GPU colliders:
+			for (size_t i = 0; i < vis.scene->humanoids.GetCount(); ++i)
+			{
+				uint32_t layerMask = ~0u;
+
+				Entity entity = vis.scene->humanoids.GetEntity(i);
+				const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+				if (layer != nullptr)
+				{
+					layerMask = layer->layerMask;
+				}
+
+				const HumanoidComponent& humanoid = vis.scene->humanoids[i];
+				const bool capsule_shadow = !humanoid.IsCapsuleShadowDisabled();
+				for (auto& bodypart : humanoid.ragdoll_bodyparts)
+				{
+					Sphere sphere = bodypart.capsule.getSphere();
+					sphere.radius += CAPSULE_SHADOW_AFFECTION_RANGE;
+					if (!vis.camera->frustum.CheckSphere(sphere.center, sphere.radius))
+						continue;
+
+					ColliderComponent collider;
+					collider.layerMask = layerMask;
+					collider.shape = ColliderComponent::Shape::Capsule;
+					collider.capsule = bodypart.capsule;
+					collider.SetCapsuleShadowEnabled(capsule_shadow);
+					collider.dist = wi::math::DistanceSquared(sphere.center, vis.camera->Eye);
+					vis.visibleColliders.push_back(collider);
+				}
+			}
+			// GPU colliders sorting to camera priority:
+			std::sort(vis.visibleColliders.begin(), vis.visibleColliders.end(), [](const ColliderComponent& a, const ColliderComponent& b) {
+				return a.dist < b.dist;
+			});
+		});
 	}
 
 	wi::jobsystem::Wait(ctx);
@@ -3903,6 +3955,8 @@ void UpdatePerFrameData(
 		frameCB.temporalaa_samplerotation = (x & 0x000000FF) | ((y & 0x000000FF) << 8);
 	}
 
+	frameCB.capsuleshadow_fade_angle = uint32_t(XMConvertFloatToHalf(CAPSULE_SHADOW_FADE)) | uint32_t(XMConvertFloatToHalf(std::max(0.001f, CAPSULE_SHADOW_ANGLE * 0.5f))) << 16u;
+
 	frameCB.options = 0;
 	if (GetTemporalAAEnabled())
 	{
@@ -3972,6 +4026,10 @@ void UpdatePerFrameData(
 	if (vis.scene->weather.IsVolumetricCloudsReceiveShadow() && vis.scene->weather.IsVolumetricClouds())
 	{
 		frameCB.options |= OPTION_BIT_VOLUMETRICCLOUDS_RECEIVE_SHADOW;
+	}
+	if (IsCapsuleShadowEnabled())
+	{
+		frameCB.options |= OPTION_BIT_CAPSULE_SHADOW_ENABLED;
 	}
 
 	frameCB.scene = vis.scene->shaderscene;
@@ -4483,7 +4541,7 @@ void UpdatePerFrameData(
 
 		// Write colliders into entity array:
 		forcefieldarray_offset = entityCounter;
-		for (size_t i = 0; i < vis.scene->collider_count_gpu; ++i)
+		for (size_t i = 0; i < vis.visibleColliders.size(); ++i)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
@@ -4492,8 +4550,13 @@ void UpdatePerFrameData(
 			}
 			ShaderEntity shaderentity = {};
 
-			const ColliderComponent& collider = vis.scene->colliders_gpu[i];
+			const ColliderComponent& collider = vis.visibleColliders[i];
 			shaderentity.layerMask = collider.layerMask;
+
+			if (collider.IsCapsuleShadowEnabled())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_CAPSULE_SHADOW_COLLIDER);
+			}
 
 			switch (collider.shape)
 			{
@@ -4566,48 +4629,6 @@ void UpdatePerFrameData(
 			entityCounter++;
 			forcefieldarray_count++;
 		}
-
-		// Write ragdoll colliders into entity array:
-		for (size_t i = 0; i < vis.scene->humanoids.GetCount(); ++i)
-		{
-			if (entityCounter == SHADER_ENTITY_COUNT)
-			{
-				entityCounter--;
-				break;
-			}
-
-			uint32_t layerMask = ~0u;
-
-			Entity entity = vis.scene->humanoids.GetEntity(i);
-			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-			if (layer != nullptr)
-			{
-				layerMask = layer->layerMask;
-			}
-
-			const HumanoidComponent& humanoid = vis.scene->humanoids[i];
-			for (auto& bodypart : humanoid.ragdoll_bodyparts)
-			{
-				if (entityCounter == SHADER_ENTITY_COUNT)
-				{
-					entityCounter--;
-					break;
-				}
-
-				ShaderEntity shaderentity = {};
-				shaderentity.SetType(ENTITY_TYPE_COLLIDER_CAPSULE);
-				shaderentity.layerMask = layerMask;
-				shaderentity.position = bodypart.capsule.base;
-				shaderentity.SetColliderTip(bodypart.capsule.tip);
-				shaderentity.SetRange(bodypart.capsule.radius);
-
-				//DrawCapsule(bodypart.capsule);
-
-				std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
-				entityCounter++;
-				forcefieldarray_count++;
-			}
-		}
 	}
 
 	frameCB.probes = ShaderEntityIterator(envprobearray_offset, envprobearray_count);
@@ -4629,33 +4650,43 @@ void UpdateRenderData(
 	auto prof_updatebuffer_cpu = wi::profiler::BeginRangeCPU("Update Buffers (CPU)");
 	auto prof_updatebuffer_gpu = wi::profiler::BeginRangeGPU("Update Buffers (GPU)", cmd);
 
+	PushBarrier(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND], textures[TEXTYPE_3D_WIND].desc.layout, ResourceState::UNORDERED_ACCESS));
+	PushBarrier(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND_PREV], textures[TEXTYPE_3D_WIND_PREV].desc.layout, ResourceState::UNORDERED_ACCESS));
+	PushBarrier(GPUBarrier::Image(&textures[TEXTYPE_2D_CAUSTICS], textures[TEXTYPE_2D_CAUSTICS].desc.layout, ResourceState::UNORDERED_ACCESS));
+	FlushBarriers(cmd);
+
+	device->ClearUAV(&textures[TEXTYPE_3D_WIND], 0, cmd);
+	device->ClearUAV(&textures[TEXTYPE_3D_WIND_PREV], 0, cmd);
+	device->ClearUAV(&textures[TEXTYPE_2D_CAUSTICS], 0, cmd);
+	PushBarrier(GPUBarrier::Memory());
+
 	device->CopyBuffer(&indirectDebugStatsReadback[device->GetBufferIndex()], 0, &buffers[BUFFERTYPE_INDIRECT_DEBUG_0], 0, sizeof(IndirectDrawArgsInstanced), cmd);
 	indirectDebugStatsReadback_available[device->GetBufferIndex()] = true;
-	barrier_stack.push_back(GPUBarrier::Buffer(&buffers[BUFFERTYPE_INDIRECT_DEBUG_0], ResourceState::COPY_SRC, ResourceState::COPY_DST));
+	PushBarrier(GPUBarrier::Buffer(&buffers[BUFFERTYPE_INDIRECT_DEBUG_0], ResourceState::COPY_SRC, ResourceState::COPY_DST));
 
-	barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->meshletBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
+	PushBarrier(GPUBarrier::Buffer(&vis.scene->meshletBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
 
-	barrier_stack.push_back(GPUBarrier::Buffer(&buffers[BUFFERTYPE_FRAMECB], ResourceState::CONSTANT_BUFFER, ResourceState::COPY_DST));
+	PushBarrier(GPUBarrier::Buffer(&buffers[BUFFERTYPE_FRAMECB], ResourceState::CONSTANT_BUFFER, ResourceState::COPY_DST));
 	if (vis.scene->instanceBuffer.IsValid())
 	{
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->instanceBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
+		PushBarrier(GPUBarrier::Buffer(&vis.scene->instanceBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
 	}
 	if (vis.scene->geometryBuffer.IsValid())
 	{
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->geometryBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
+		PushBarrier(GPUBarrier::Buffer(&vis.scene->geometryBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
 	}
 	if (vis.scene->materialBuffer.IsValid())
 	{
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->materialBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
+		PushBarrier(GPUBarrier::Buffer(&vis.scene->materialBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
 	}
 	if (vis.scene->skinningBuffer.IsValid())
 	{
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->skinningBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
+		PushBarrier(GPUBarrier::Buffer(&vis.scene->skinningBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
 	}
-	barrier_stack_flush(cmd);
+	FlushBarriers(cmd);
 
 	device->UpdateBuffer(&buffers[BUFFERTYPE_FRAMECB], &frameCB, cmd);
-	barrier_stack.push_back(GPUBarrier::Buffer(&buffers[BUFFERTYPE_FRAMECB], ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER));
+	PushBarrier(GPUBarrier::Buffer(&buffers[BUFFERTYPE_FRAMECB], ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER));
 
 	if (vis.scene->instanceBuffer.IsValid() && vis.scene->instanceArraySize > 0)
 	{
@@ -4667,7 +4698,7 @@ void UpdateRenderData(
 			vis.scene->instanceArraySize * sizeof(ShaderMeshInstance),
 			cmd
 		);
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->instanceBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+		PushBarrier(GPUBarrier::Buffer(&vis.scene->instanceBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 	}
 
 	if (vis.scene->geometryBuffer.IsValid() && vis.scene->geometryArraySize > 0)
@@ -4680,7 +4711,7 @@ void UpdateRenderData(
 			vis.scene->geometryArraySize * sizeof(ShaderGeometry),
 			cmd
 		);
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->geometryBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+		PushBarrier(GPUBarrier::Buffer(&vis.scene->geometryBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 	}
 
 	if (vis.scene->materialBuffer.IsValid() && vis.scene->materialArraySize > 0)
@@ -4693,7 +4724,7 @@ void UpdateRenderData(
 			vis.scene->materialArraySize * sizeof(ShaderMaterial),
 			cmd
 		);
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->materialBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+		PushBarrier(GPUBarrier::Buffer(&vis.scene->materialBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 	}
 
 	if (vis.scene->skinningBuffer.IsValid() && vis.scene->skinningDataSize > 0)
@@ -4706,19 +4737,15 @@ void UpdateRenderData(
 			vis.scene->skinningDataSize,
 			cmd
 		);
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->skinningBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+		PushBarrier(GPUBarrier::Buffer(&vis.scene->skinningBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 	}
 
 	if (vis.scene->voxelgrid_gpu.IsValid() && vis.scene->voxel_grids.GetCount() > 0)
 	{
 		VoxelGrid& voxelgrid = vis.scene->voxel_grids[0];
 		device->UpdateBuffer(&vis.scene->voxelgrid_gpu, voxelgrid.voxels.data(), cmd, voxelgrid.voxels.size() * sizeof(uint64_t));
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->voxelgrid_gpu, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+		PushBarrier(GPUBarrier::Buffer(&vis.scene->voxelgrid_gpu, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 	}
-
-	barrier_stack.push_back(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND], textures[TEXTYPE_3D_WIND].desc.layout, ResourceState::UNORDERED_ACCESS));
-	barrier_stack.push_back(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND_PREV], textures[TEXTYPE_3D_WIND_PREV].desc.layout, ResourceState::UNORDERED_ACCESS));
-	barrier_stack.push_back(GPUBarrier::Image(&textures[TEXTYPE_2D_CAUSTICS], textures[TEXTYPE_2D_CAUSTICS].desc.layout, ResourceState::UNORDERED_ACCESS));
 
 	// Indirect debug buffer - clear indirect args:
 	IndirectDrawArgsInstanced debug_indirect = {};
@@ -4727,23 +4754,16 @@ void UpdateRenderData(
 	debug_indirect.StartVertexLocation = 0;
 	debug_indirect.StartInstanceLocation = 0;
 	device->UpdateBuffer(&buffers[BUFFERTYPE_INDIRECT_DEBUG_0], &debug_indirect, cmd, sizeof(debug_indirect));
-	barrier_stack.push_back(GPUBarrier::Buffer(&buffers[BUFFERTYPE_INDIRECT_DEBUG_0], ResourceState::COPY_DST, ResourceState::UNORDERED_ACCESS));
-	barrier_stack.push_back(GPUBarrier::Buffer(&buffers[BUFFERTYPE_INDIRECT_DEBUG_1], ResourceState::UNORDERED_ACCESS, ResourceState::VERTEX_BUFFER | ResourceState::INDIRECT_ARGUMENT | ResourceState::COPY_SRC));
+	PushBarrier(GPUBarrier::Buffer(&buffers[BUFFERTYPE_INDIRECT_DEBUG_0], ResourceState::COPY_DST, ResourceState::UNORDERED_ACCESS));
+	PushBarrier(GPUBarrier::Buffer(&buffers[BUFFERTYPE_INDIRECT_DEBUG_1], ResourceState::UNORDERED_ACCESS, ResourceState::VERTEX_BUFFER | ResourceState::INDIRECT_ARGUMENT | ResourceState::COPY_SRC));
 
 	// Flush buffer updates:
-	barrier_stack_flush(cmd);
+	FlushBarriers(cmd);
 
 	wi::profiler::EndRange(prof_updatebuffer_cpu);
 	wi::profiler::EndRange(prof_updatebuffer_gpu);
 
 	BindCommonResources(cmd);
-
-	{
-		device->ClearUAV(&textures[TEXTYPE_3D_WIND], 0, cmd);
-		device->ClearUAV(&textures[TEXTYPE_3D_WIND_PREV], 0, cmd);
-		device->ClearUAV(&textures[TEXTYPE_2D_CAUSTICS], 0, cmd);
-		device->Barrier(GPUBarrier::Memory(), cmd);
-	}
 
 	{
 		auto range = wi::profiler::BeginRangeGPU("Wind", cmd);
@@ -4760,8 +4780,8 @@ void UpdateRenderData(
 			const TextureDesc& desc = textures[TEXTYPE_3D_WIND].GetDesc();
 			device->Dispatch(desc.width / 8, desc.height / 8, desc.depth / 8, cmd);
 		}
-		barrier_stack.push_back(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_3D_WIND].desc.layout));
-		barrier_stack.push_back(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND_PREV], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_3D_WIND_PREV].desc.layout));
+		PushBarrier(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_3D_WIND].desc.layout));
+		PushBarrier(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND_PREV], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_3D_WIND_PREV].desc.layout));
 		device->EventEnd(cmd);
 		wi::profiler::EndRange(range);
 	}
@@ -4772,7 +4792,7 @@ void UpdateRenderData(
 		device->BindUAV(&textures[TEXTYPE_2D_CAUSTICS], 0, cmd);
 		const TextureDesc& desc = textures[TEXTYPE_2D_CAUSTICS].GetDesc();
 		device->Dispatch(desc.width / 8, desc.height / 8, 1, cmd);
-		barrier_stack.push_back(GPUBarrier::Image(&textures[TEXTYPE_2D_CAUSTICS], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_2D_CAUSTICS].desc.layout));
+		PushBarrier(GPUBarrier::Image(&textures[TEXTYPE_2D_CAUSTICS], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_2D_CAUSTICS].desc.layout));
 		device->EventEnd(cmd);
 		wi::profiler::EndRange(range);
 	}
@@ -4855,7 +4875,7 @@ void UpdateRenderData(
 
 				device->Dispatch(((uint32_t)mesh.vertex_positions.size() + 63) / 64, 1, 1, cmd);
 
-				barrier_stack.push_back(GPUBarrier::Buffer(&mesh.streamoutBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+				PushBarrier(GPUBarrier::Buffer(&mesh.streamoutBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
 			}
 		}
 
@@ -4863,7 +4883,7 @@ void UpdateRenderData(
 		device->EventEnd(cmd); // Skinning and Morph
 	}
 
-	barrier_stack_flush(cmd); // wind/skinning flush
+	FlushBarriers(cmd); // wind/skinning flush
 
 	// Hair particle initialization is needed for all, not just visible ones:
 	//	This fixes an issue when hair is included in ray tracing acceleration
@@ -4907,8 +4927,8 @@ void UpdateRenderData(
 		device->EventBegin("Impostor prepare", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Impostor prepare", cmd);
 
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorBuffer, ResourceState::SHADER_RESOURCE | ResourceState::INDIRECT_ARGUMENT, ResourceState::COPY_DST));
-		barrier_stack_flush(cmd);
+		PushBarrier(GPUBarrier::Buffer(&vis.scene->impostorBuffer, ResourceState::SHADER_RESOURCE | ResourceState::INDIRECT_ARGUMENT, ResourceState::COPY_DST));
+		FlushBarriers(cmd);
 		IndirectDrawArgsIndexedInstanced clear_indirect = {};
 		clear_indirect.IndexCountPerInstance = 0;
 		clear_indirect.InstanceCount = 1;
@@ -4916,8 +4936,8 @@ void UpdateRenderData(
 		clear_indirect.BaseVertexLocation = 0;
 		clear_indirect.StartInstanceLocation = 0;
 		device->UpdateBuffer(&vis.scene->impostorBuffer, &clear_indirect, cmd, sizeof(clear_indirect), vis.scene->impostor_indirect.offset);
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorBuffer, ResourceState::COPY_DST, ResourceState::UNORDERED_ACCESS));
-		barrier_stack_flush(cmd);
+		PushBarrier(GPUBarrier::Buffer(&vis.scene->impostorBuffer, ResourceState::COPY_DST, ResourceState::UNORDERED_ACCESS));
+		FlushBarriers(cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_IMPOSTOR_PREPARE], cmd);
 		device->BindUAV(&vis.scene->impostorBuffer, 0, cmd, vis.scene->impostor_ib_format == Format::R32_UINT ? vis.scene->impostor_ib32.subresource_uav : vis.scene->impostor_ib16.subresource_uav);
@@ -4931,8 +4951,8 @@ void UpdateRenderData(
 
 		device->Dispatch((object_count + 63u) / 64u, 1, 1, cmd);
 
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE | ResourceState::INDIRECT_ARGUMENT));
-		barrier_stack_flush(cmd);
+		PushBarrier(GPUBarrier::Buffer(&vis.scene->impostorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE | ResourceState::INDIRECT_ARGUMENT));
+		FlushBarriers(cmd);
 
 		wi::profiler::EndRange(range);
 		device->EventEnd(cmd);
@@ -4940,8 +4960,8 @@ void UpdateRenderData(
 	else if(vis.scene->impostors.GetCount() > 0 && vis.scene->objects.GetCount() == 0 && vis.scene->impostorBuffer.IsValid())
 	{
 		device->ClearUAV(&vis.scene->impostorBuffer, 0, cmd);
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->impostorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE | ResourceState::INDIRECT_ARGUMENT));
-		barrier_stack_flush(cmd);
+		PushBarrier(GPUBarrier::Buffer(&vis.scene->impostorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE | ResourceState::INDIRECT_ARGUMENT));
+		FlushBarriers(cmd);
 	}
 
 	// Meshlets:
@@ -4958,13 +4978,13 @@ void UpdateRenderData(
 
 		device->Dispatch((uint32_t)vis.scene->instanceArraySize, 1, 1, cmd);
 
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->meshletBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+		PushBarrier(GPUBarrier::Buffer(&vis.scene->meshletBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
 
 		wi::profiler::EndRange(range);
 		device->EventEnd(cmd);
 	}
 
-	barrier_stack_flush(cmd);
+	FlushBarriers(cmd);
 
 	device->EventEnd(cmd);
 }
@@ -4993,9 +5013,9 @@ void UpdateRenderDataAsync(
 			continue;
 		device->ClearUAV(&object.wetmap, 0, cmd);
 		object.wetmap_cleared = true;
-		barrier_stack.push_back(GPUBarrier::Buffer(&object.wetmap, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE));
+		PushBarrier(GPUBarrier::Buffer(&object.wetmap, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE));
 	}
-	barrier_stack_flush(cmd);
+	FlushBarriers(cmd);
 
 	// Precompute static volumetric cloud textures:
 	if (!volumetric_clouds_precomputed && vis.scene->weather.IsVolumetricClouds())
@@ -10225,7 +10245,7 @@ void RayTraceScene(
 	};
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-	barrier_stack.push_back(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS));
+	PushBarrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS));
 
 	// Note: these are always in ResourceState::UNORDERED_ACCESS, no need to transition!
 	if (output_albedo != nullptr)
@@ -10244,33 +10264,33 @@ void RayTraceScene(
 	{
 		device->BindUAV(output_stencil, 4, cmd);
 	}
-	barrier_stack_flush(cmd);
+	FlushBarriers(cmd);
 
 	if (accumulation_sample == 0)
 	{
 		device->ClearUAV(&output, 0, cmd);
-		barrier_stack.push_back(GPUBarrier::Memory(&output));
+		PushBarrier(GPUBarrier::Memory(&output));
 		if (output_albedo != nullptr)
 		{
 			device->ClearUAV(output_albedo, 0, cmd);
-			barrier_stack.push_back(GPUBarrier::Memory(output_albedo));
+			PushBarrier(GPUBarrier::Memory(output_albedo));
 		}
 		if (output_normal != nullptr)
 		{
 			device->ClearUAV(output_normal, 0, cmd);
-			barrier_stack.push_back(GPUBarrier::Memory(output_normal));
+			PushBarrier(GPUBarrier::Memory(output_normal));
 		}
 		if (output_depth != nullptr)
 		{
 			device->ClearUAV(output_depth, 0, cmd);
-			barrier_stack.push_back(GPUBarrier::Memory(output_depth));
+			PushBarrier(GPUBarrier::Memory(output_depth));
 		}
 		if (output_stencil != nullptr)
 		{
 			device->ClearUAV(output_stencil, 0, cmd);
-			barrier_stack.push_back(GPUBarrier::Memory(output_stencil));
+			PushBarrier(GPUBarrier::Memory(output_stencil));
 		}
-		barrier_stack_flush(cmd);
+		FlushBarriers(cmd);
 	}
 
 	device->Dispatch(
@@ -10280,7 +10300,7 @@ void RayTraceScene(
 		cmd
 	);
 
-	barrier_stack.push_back(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout));
+	PushBarrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout));
 	if (output_depth_stencil != nullptr)
 	{
 		CopyDepthStencil(
@@ -10295,14 +10315,14 @@ void RayTraceScene(
 	{
 		if (output_depth != nullptr)
 		{
-			barrier_stack.push_back(GPUBarrier::Image(output_depth, ResourceState::UNORDERED_ACCESS, output_depth->desc.layout));
+			PushBarrier(GPUBarrier::Image(output_depth, ResourceState::UNORDERED_ACCESS, output_depth->desc.layout));
 		}
 		if (output_stencil != nullptr)
 		{
-			barrier_stack.push_back(GPUBarrier::Image(output_stencil, ResourceState::UNORDERED_ACCESS, output_stencil->desc.layout));
+			PushBarrier(GPUBarrier::Image(output_stencil, ResourceState::UNORDERED_ACCESS, output_stencil->desc.layout));
 		}
 	}
-	barrier_stack_flush(cmd);
+	FlushBarriers(cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd); // RayTraceScene
@@ -10981,9 +11001,9 @@ void Visibility_Prepare(
 			bin.shaderType = i;
 		}
 		device->UpdateBuffer(&res.bins, bins, cmd);
-		barrier_stack.push_back(GPUBarrier::Buffer(&res.bins, ResourceState::COPY_DST, ResourceState::UNORDERED_ACCESS));
-		barrier_stack.push_back(GPUBarrier::Buffer(&res.binned_tiles, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
-		barrier_stack_flush(cmd);
+		PushBarrier(GPUBarrier::Buffer(&res.bins, ResourceState::COPY_DST, ResourceState::UNORDERED_ACCESS));
+		PushBarrier(GPUBarrier::Buffer(&res.binned_tiles, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
+		FlushBarriers(cmd);
 	}
 
 	// Resolve:
@@ -11015,7 +11035,7 @@ void Visibility_Prepare(
 			device->BindUAV(res.depthbuffer, 5, cmd, 2);
 			device->BindUAV(res.depthbuffer, 6, cmd, 3);
 			device->BindUAV(res.depthbuffer, 7, cmd, 4);
-			barrier_stack.push_back(GPUBarrier::Image(res.depthbuffer, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
+			PushBarrier(GPUBarrier::Image(res.depthbuffer, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
 		}
 		else
 		{
@@ -11032,7 +11052,7 @@ void Visibility_Prepare(
 			device->BindUAV(res.lineardepth, 10, cmd, 2);
 			device->BindUAV(res.lineardepth, 11, cmd, 3);
 			device->BindUAV(res.lineardepth, 12, cmd, 4);
-			barrier_stack.push_back(GPUBarrier::Image(res.lineardepth, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
+			PushBarrier(GPUBarrier::Image(res.lineardepth, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
 		}
 		else
 		{
@@ -11045,13 +11065,13 @@ void Visibility_Prepare(
 		if (res.primitiveID_resolved)
 		{
 			device->BindUAV(res.primitiveID_resolved, 13, cmd);
-			barrier_stack.push_back(GPUBarrier::Image(res.primitiveID_resolved, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
+			PushBarrier(GPUBarrier::Image(res.primitiveID_resolved, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
 		}
 		else
 		{
 			device->BindUAV(&unbind, 13, cmd);
 		}
-		barrier_stack_flush(cmd);
+		FlushBarriers(cmd);
 
 		device->BindComputeShader(&shaders[msaa ? CSTYPE_VISIBILITY_RESOLVE_MSAA : CSTYPE_VISIBILITY_RESOLVE], cmd);
 
@@ -11064,22 +11084,22 @@ void Visibility_Prepare(
 
 		if (res.depthbuffer)
 		{
-			barrier_stack.push_back(GPUBarrier::Image(res.depthbuffer, ResourceState::UNORDERED_ACCESS, res.depthbuffer->desc.layout));
+			PushBarrier(GPUBarrier::Image(res.depthbuffer, ResourceState::UNORDERED_ACCESS, res.depthbuffer->desc.layout));
 		}
 		if (res.lineardepth)
 		{
-			barrier_stack.push_back(GPUBarrier::Image(res.lineardepth, ResourceState::UNORDERED_ACCESS, res.lineardepth->desc.layout));
+			PushBarrier(GPUBarrier::Image(res.lineardepth, ResourceState::UNORDERED_ACCESS, res.lineardepth->desc.layout));
 		}
 		if (res.primitiveID_resolved)
 		{
-			barrier_stack.push_back(GPUBarrier::Image(res.primitiveID_resolved, ResourceState::UNORDERED_ACCESS, res.primitiveID_resolved->desc.layout));
+			PushBarrier(GPUBarrier::Image(res.primitiveID_resolved, ResourceState::UNORDERED_ACCESS, res.primitiveID_resolved->desc.layout));
 		}
 		if (res.IsValid())
 		{
-			barrier_stack.push_back(GPUBarrier::Buffer(&res.bins, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT));
-			barrier_stack.push_back(GPUBarrier::Buffer(&res.binned_tiles, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+			PushBarrier(GPUBarrier::Buffer(&res.bins, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT));
+			PushBarrier(GPUBarrier::Buffer(&res.binned_tiles, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
 		}
-		barrier_stack_flush(cmd);
+		FlushBarriers(cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -11099,12 +11119,12 @@ void Visibility_Surface(
 	BindCommonResources(cmd);
 
 	// First, do a bunch of resource discards to initialize texture metadata:
-	barrier_stack.push_back(GPUBarrier::Image(&output, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
-	barrier_stack.push_back(GPUBarrier::Image(&res.texture_normals, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
-	barrier_stack.push_back(GPUBarrier::Image(&res.texture_roughness, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
-	barrier_stack.push_back(GPUBarrier::Image(&res.texture_payload_0, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
-	barrier_stack.push_back(GPUBarrier::Image(&res.texture_payload_1, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
-	barrier_stack_flush(cmd);
+	PushBarrier(GPUBarrier::Image(&output, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
+	PushBarrier(GPUBarrier::Image(&res.texture_normals, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
+	PushBarrier(GPUBarrier::Image(&res.texture_roughness, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
+	PushBarrier(GPUBarrier::Image(&res.texture_payload_0, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
+	PushBarrier(GPUBarrier::Image(&res.texture_payload_1, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
+	FlushBarriers(cmd);
 
 	device->BindResource(&res.binned_tiles, 0, cmd);
 	device->BindUAV(&output, 0, cmd);
@@ -11136,9 +11156,9 @@ void Visibility_Surface(
 
 	// Ending barriers:
 	//	These resources will be used by other post processing effects
-	barrier_stack.push_back(GPUBarrier::Image(&res.texture_normals, ResourceState::UNORDERED_ACCESS, res.texture_normals.desc.layout));
-	barrier_stack.push_back(GPUBarrier::Image(&res.texture_roughness, ResourceState::UNORDERED_ACCESS, res.texture_roughness.desc.layout));
-	barrier_stack_flush(cmd);
+	PushBarrier(GPUBarrier::Image(&res.texture_normals, ResourceState::UNORDERED_ACCESS, res.texture_normals.desc.layout));
+	PushBarrier(GPUBarrier::Image(&res.texture_roughness, ResourceState::UNORDERED_ACCESS, res.texture_roughness.desc.layout));
+	FlushBarriers(cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -11153,9 +11173,9 @@ void Visibility_Surface_Reduced(
 
 	BindCommonResources(cmd);
 
-	barrier_stack.push_back(GPUBarrier::Image(&res.texture_normals, res.texture_normals.desc.layout, ResourceState::UNORDERED_ACCESS));
-	barrier_stack.push_back(GPUBarrier::Image(&res.texture_roughness, res.texture_roughness.desc.layout, ResourceState::UNORDERED_ACCESS));
-	barrier_stack_flush(cmd);
+	PushBarrier(GPUBarrier::Image(&res.texture_normals, res.texture_normals.desc.layout, ResourceState::UNORDERED_ACCESS));
+	PushBarrier(GPUBarrier::Image(&res.texture_roughness, res.texture_roughness.desc.layout, ResourceState::UNORDERED_ACCESS));
+	FlushBarriers(cmd);
 
 	device->BindResource(&res.binned_tiles, 0, cmd);
 	device->BindUAV(&res.texture_normals, 1, cmd);
@@ -11180,9 +11200,9 @@ void Visibility_Surface_Reduced(
 
 	// Ending barriers:
 	//	These resources will be used by other post processing effects
-	barrier_stack.push_back(GPUBarrier::Image(&res.texture_normals, ResourceState::UNORDERED_ACCESS, res.texture_normals.desc.layout));
-	barrier_stack.push_back(GPUBarrier::Image(&res.texture_roughness, ResourceState::UNORDERED_ACCESS, res.texture_roughness.desc.layout));
-	barrier_stack_flush(cmd);
+	PushBarrier(GPUBarrier::Image(&res.texture_normals, ResourceState::UNORDERED_ACCESS, res.texture_normals.desc.layout));
+	PushBarrier(GPUBarrier::Image(&res.texture_roughness, ResourceState::UNORDERED_ACCESS, res.texture_roughness.desc.layout));
+	FlushBarriers(cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -11198,9 +11218,9 @@ void Visibility_Shade(
 
 	BindCommonResources(cmd);
 
-	barrier_stack.push_back(GPUBarrier::Image(&res.texture_payload_0, ResourceState::UNORDERED_ACCESS, res.texture_payload_0.desc.layout));
-	barrier_stack.push_back(GPUBarrier::Image(&res.texture_payload_1, ResourceState::UNORDERED_ACCESS, res.texture_payload_1.desc.layout));
-	barrier_stack_flush(cmd);
+	PushBarrier(GPUBarrier::Image(&res.texture_payload_0, ResourceState::UNORDERED_ACCESS, res.texture_payload_0.desc.layout));
+	PushBarrier(GPUBarrier::Image(&res.texture_payload_1, ResourceState::UNORDERED_ACCESS, res.texture_payload_1.desc.layout));
+	FlushBarriers(cmd);
 
 	device->BindResource(&res.binned_tiles, 0, cmd);
 	device->BindResource(&res.texture_payload_0, 2, cmd);
@@ -11222,8 +11242,8 @@ void Visibility_Shade(
 		visibility_tile_offset += visibility_tilecount_flat;
 	}
 
-	barrier_stack.push_back(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout));
-	barrier_stack_flush(cmd);
+	PushBarrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout));
+	FlushBarriers(cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -17810,9 +17830,9 @@ void CopyDepthStencil(
 
 	if (manual_depthstencil_copy_required)
 	{
-		barrier_stack.push_back(GPUBarrier::Image(input_depth, input_depth->desc.layout, ResourceState::SHADER_RESOURCE));
-		barrier_stack.push_back(GPUBarrier::Image(input_stencil, input_stencil->desc.layout, ResourceState::SHADER_RESOURCE));
-		barrier_stack_flush(cmd);
+		PushBarrier(GPUBarrier::Image(input_depth, input_depth->desc.layout, ResourceState::SHADER_RESOURCE));
+		PushBarrier(GPUBarrier::Image(input_stencil, input_stencil->desc.layout, ResourceState::SHADER_RESOURCE));
+		FlushBarriers(cmd);
 
 		RenderPassImage rp[] = {
 			RenderPassImage::DepthStencil(
@@ -17841,7 +17861,7 @@ void CopyDepthStencil(
 			device->BindResource(input_depth, 0, cmd);
 			device->Draw(3, 0, cmd);
 			device->EventEnd(cmd);
-			barrier_stack.push_back(GPUBarrier::Image(input_depth, ResourceState::SHADER_RESOURCE, input_depth->desc.layout));
+			PushBarrier(GPUBarrier::Image(input_depth, ResourceState::SHADER_RESOURCE, input_depth->desc.layout));
 		}
 
 		if (input_stencil != nullptr)
@@ -17864,20 +17884,20 @@ void CopyDepthStencil(
 				stencil_bits_to_copy >>= 1;
 			}
 			device->EventEnd(cmd);
-			barrier_stack.push_back(GPUBarrier::Image(input_stencil, ResourceState::SHADER_RESOURCE, input_stencil->desc.layout));
+			PushBarrier(GPUBarrier::Image(input_stencil, ResourceState::SHADER_RESOURCE, input_stencil->desc.layout));
 		}
 
 		device->RenderPassEnd(cmd);
 
-		barrier_stack_flush(cmd);
+		FlushBarriers(cmd);
 
 	}
 	else
 	{
-		barrier_stack.push_back(GPUBarrier::Image(input_depth, input_depth->desc.layout, ResourceState::COPY_SRC));
-		barrier_stack.push_back(GPUBarrier::Image(input_stencil, input_stencil->desc.layout, ResourceState::COPY_SRC));
-		barrier_stack.push_back(GPUBarrier::Image(&output_depth_stencil, output_depth_stencil.desc.layout, ResourceState::COPY_DST));
-		barrier_stack_flush(cmd);
+		PushBarrier(GPUBarrier::Image(input_depth, input_depth->desc.layout, ResourceState::COPY_SRC));
+		PushBarrier(GPUBarrier::Image(input_stencil, input_stencil->desc.layout, ResourceState::COPY_SRC));
+		PushBarrier(GPUBarrier::Image(&output_depth_stencil, output_depth_stencil.desc.layout, ResourceState::COPY_DST));
+		FlushBarriers(cmd);
 
 		device->CopyTexture(
 			&output_depth_stencil, 0, 0, 0, 0, 0,
@@ -17896,10 +17916,10 @@ void CopyDepthStencil(
 			ImageAspect::COLOR
 		);
 
-		barrier_stack.push_back(GPUBarrier::Image(input_depth, ResourceState::COPY_SRC, input_depth->desc.layout));
-		barrier_stack.push_back(GPUBarrier::Image(input_stencil, ResourceState::COPY_SRC, input_stencil->desc.layout));
-		barrier_stack.push_back(GPUBarrier::Image(&output_depth_stencil, ResourceState::COPY_DST, output_depth_stencil.desc.layout));
-		barrier_stack_flush(cmd);
+		PushBarrier(GPUBarrier::Image(input_depth, ResourceState::COPY_SRC, input_depth->desc.layout));
+		PushBarrier(GPUBarrier::Image(input_stencil, ResourceState::COPY_SRC, input_stencil->desc.layout));
+		PushBarrier(GPUBarrier::Image(&output_depth_stencil, ResourceState::COPY_DST, output_depth_stencil.desc.layout));
+		FlushBarriers(cmd);
 	}
 
 	device->EventEnd(cmd);
@@ -18352,6 +18372,30 @@ void SetMeshletOcclusionCullingEnabled(bool value)
 bool IsMeshletOcclusionCullingEnabled()
 {
 	return MESHLET_OCCLUSION_CULLING;
+}
+void SetCapsuleShadowEnabled(bool value)
+{
+	CAPSULE_SHADOW_ENABLED = value;
+}
+bool IsCapsuleShadowEnabled()
+{
+	return CAPSULE_SHADOW_ENABLED;
+}
+void SetCapsuleShadowAngle(float value)
+{
+	CAPSULE_SHADOW_ANGLE = value;
+}
+float GetCapsuleShadowAngle()
+{
+	return CAPSULE_SHADOW_ANGLE;
+}
+void SetCapsuleShadowFade(float value)
+{
+	CAPSULE_SHADOW_FADE = value;
+}
+float GetCapsuleShadowFade()
+{
+	return CAPSULE_SHADOW_FADE;
 }
 
 wi::Resource CreatePaintableTexture(uint32_t width, uint32_t height, uint32_t mips, wi::Color initialColor)

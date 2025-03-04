@@ -374,6 +374,10 @@ namespace wi::scene
 		{
 			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_USE_VERTEXAO;
 		}
+		if (IsCapsuleShadowDisabled())
+		{
+			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_CAPSULE_SHADOW_DISABLED;
+		}
 
 		material.options_stencilref |= wi::renderer::CombineStencilrefs(engineStencilRef, userStencilRef) << 24u;
 
