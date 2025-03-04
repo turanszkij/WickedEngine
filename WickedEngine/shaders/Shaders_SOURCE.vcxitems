@@ -18,6 +18,7 @@
     <None Include="$(MSBuildThisFileDirectory)bitonicSortHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)BlockCompress.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)brdf.hlsli" />
+    <None Include="$(MSBuildThisFileDirectory)capsuleShadowHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)circle.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)ColorSpaceUtility.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)cone.hlsli" />

@@ -190,17 +190,22 @@ namespace wi::jobsystem
 #ifdef PLATFORM_LINUX
 				std::thread& worker = res.threads.emplace_back([threadID, priority, &res] {
 
+					// from the sched(2) manpage:
+					// In the current [Linux 2.6.23+] implementation, each unit of
+					// difference in the nice values of two processes results in a
+					// factor of 1.25 in the degree to which the scheduler favors
+					// the higher priority process.
+					//
+					// so 3 would mean that other (prio 0) threads are around twice as important
+
 					switch (priority) {
 					case Priority::Low:
-					case Priority::Streaming:
-						// from the sched(2) manpage:
-						// In the current [Linux 2.6.23+] implementation, each unit of
-						// difference in the nice values of two processes results in a
-						// factor of 1.25 in the degree to which the scheduler favors
-						// the higher priority process.
-						//
-						// so 3 would mean that other (prio 0) threads are around twice as important
 						if (setpriority(PRIO_PROCESS, 0, 3) != 0)
+						{
+							perror("setpriority");
+						}
+					case Priority::Streaming:
+						if (setpriority(PRIO_PROCESS, 0, 2) != 0)
 						{
 							perror("setpriority");
 						}
@@ -262,7 +267,7 @@ namespace wi::jobsystem
 				}
 				else if (priority == Priority::Streaming)
 				{
-					BOOL priority_result = SetThreadPriority(handle, THREAD_PRIORITY_LOWEST);
+					BOOL priority_result = SetThreadPriority(handle, THREAD_PRIORITY_BELOW_NORMAL);
 					assert(priority_result != 0);
 
 					std::wstring wthreadname = L"wi::job_st_" + std::to_wstring(threadID);

@@ -826,6 +826,53 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&lightShaftsStrengthStrengthSlider);
 
+	capsuleshadowCheckbox.Create("Capsule Shadows: ");
+	capsuleshadowCheckbox.SetTooltip("Enable ambient occlusion capsule shadows.");
+	capsuleshadowCheckbox.SetSize(XMFLOAT2(hei, hei));
+	capsuleshadowCheckbox.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("graphics").Has("capsule_shadows"))
+	{
+		wi::renderer::SetCapsuleShadowEnabled(editor->main->config.GetSection("graphics").GetBool("capsule_shadows"));
+	}
+	capsuleshadowCheckbox.OnClick([=](wi::gui::EventArgs args) {
+		wi::renderer::SetCapsuleShadowEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("capsule_shadows", args.bValue);
+		editor->main->config.Commit();
+	});
+	AddWidget(&capsuleshadowCheckbox);
+
+	capsuleshadowFadeSlider.Create(0, 1, 0.2f, 100, "CapsuleShadow.Fade: ");
+	capsuleshadowFadeSlider.SetText("Capsule Shadow Fade: ");
+	capsuleshadowFadeSlider.SetTooltip("Set capsule shadow fading.");
+	capsuleshadowFadeSlider.SetSize(XMFLOAT2(mod_wid, hei));
+	capsuleshadowFadeSlider.SetPos(XMFLOAT2(x + 100, y));
+	if (editor->main->config.GetSection("graphics").Has("capsule_shadow_fade"))
+	{
+		wi::renderer::SetCapsuleShadowFade(editor->main->config.GetSection("graphics").GetFloat("capsule_shadow_fade"));
+	}
+	capsuleshadowFadeSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::renderer::SetCapsuleShadowFade(args.fValue);
+		editor->main->config.GetSection("graphics").Set("capsule_shadow_fade", args.fValue);
+		editor->main->config.Commit();
+	});
+	AddWidget(&capsuleshadowFadeSlider);
+
+	capsuleshadowAngleSlider.Create(0, 90, 45, 90, "CapsuleShadow.Angle: ");
+	capsuleshadowAngleSlider.SetText("Angle: ");
+	capsuleshadowAngleSlider.SetTooltip("Set capsule shadow spread angle.");
+	capsuleshadowAngleSlider.SetSize(XMFLOAT2(mod_wid, hei));
+	capsuleshadowAngleSlider.SetPos(XMFLOAT2(x + 100, y));
+	if (editor->main->config.GetSection("graphics").Has("capsule_shadow_angle"))
+	{
+		wi::renderer::SetCapsuleShadowAngle(wi::math::DegreesToRadians(editor->main->config.GetSection("graphics").GetFloat("capsule_shadow_angle")));
+	}
+	capsuleshadowAngleSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::renderer::SetCapsuleShadowAngle(wi::math::DegreesToRadians(args.fValue));
+		editor->main->config.GetSection("graphics").Set("capsule_shadow_angle", args.fValue);
+		editor->main->config.Commit();
+	});
+	AddWidget(&capsuleshadowAngleSlider);
+
 	aoComboBox.Create("AO: ");
 	aoComboBox.SetTooltip("Choose Ambient Occlusion type. RTAO is only available if hardware supports ray tracing");
 	aoComboBox.SetScriptTip("RenderPath3D::SetAO(int value)");
@@ -1558,6 +1605,9 @@ void GraphicsWindow::Update()
 	lensFlareCheckBox.SetCheck(editor->renderPath->getLensFlareEnabled());
 	lightShaftsCheckBox.SetCheck(editor->renderPath->getLightShaftsEnabled());
 	lightShaftsStrengthStrengthSlider.SetValue(editor->renderPath->getLightShaftsStrength());
+	capsuleshadowCheckbox.SetCheck(wi::renderer::IsCapsuleShadowEnabled());
+	capsuleshadowAngleSlider.SetValue(wi::math::RadiansToDegrees(wi::renderer::GetCapsuleShadowAngle()));
+	capsuleshadowFadeSlider.SetValue(wi::renderer::GetCapsuleShadowFade());
 	aoComboBox.SetSelectedWithoutCallback(editor->renderPath->getAO());
 	aoPowerSlider.SetValue((float)editor->renderPath->getAOPower());
 
@@ -1845,6 +1895,9 @@ void GraphicsWindow::ResizeLayout()
 	add_right(lensFlareCheckBox);
 	add_right(lightShaftsStrengthStrengthSlider);
 	lightShaftsCheckBox.SetPos(XMFLOAT2(lightShaftsStrengthStrengthSlider.GetPos().x - lightShaftsCheckBox.GetSize().x - 80, lightShaftsStrengthStrengthSlider.GetPos().y));
+	add_right(capsuleshadowAngleSlider);
+	add_right(capsuleshadowFadeSlider);
+	capsuleshadowCheckbox.SetPos(XMFLOAT2(capsuleshadowAngleSlider.GetPos().x - capsuleshadowCheckbox.GetSize().x - 80, capsuleshadowAngleSlider.GetPos().y));
 	add(aoComboBox);
 	add(aoPowerSlider);
 	add(aoRangeSlider);

@@ -134,6 +134,7 @@ namespace wi::scene
 			DISABLE_VERTEXAO = 1 << 14,
 			DISABLE_TEXTURE_STREAMING = 1 << 15,
 			COPLANAR_BLENDING = 1 << 16, // force transparent material draw in opaque pass (useful for coplanar polygons)
+			DISABLE_CAPSULE_SHADOW = 1 << 17,
 		};
 		uint32_t _flags = CAST_SHADOW;
 
@@ -363,6 +364,10 @@ namespace wi::scene
 			SetDirty();
 			interiorMappingRotation = value;
 		}
+
+		constexpr bool IsCapsuleShadowDisabled() const { return _flags & DISABLE_CAPSULE_SHADOW; }
+		constexpr void SetCapsuleShadowDisabled(bool value = true) { if (value) { _flags |= DISABLE_CAPSULE_SHADOW; } else { _flags &= ~DISABLE_CAPSULE_SHADOW; } }
+
 
 		void SetPreferUncompressedTexturesEnabled(bool value = true) { if (value) { _flags |= PREFER_UNCOMPRESSED_TEXTURES; } else { _flags &= ~PREFER_UNCOMPRESSED_TEXTURES; } CreateRenderData(true); }
 
@@ -1842,14 +1847,17 @@ namespace wi::scene
 			EMPTY = 0,
 			CPU = 1 << 0,
 			GPU = 1 << 1,
+			CAPSULE_SHADOW = 1 << 2,
 		};
 		uint32_t _flags = CPU;
 
 		constexpr void SetCPUEnabled(bool value = true) { if (value) { _flags |= CPU; } else { _flags &= ~CPU; } }
 		constexpr void SetGPUEnabled(bool value = true) { if (value) { _flags |= GPU; } else { _flags &= ~GPU; } }
+		constexpr void SetCapsuleShadowEnabled(bool value = true) { if (value) { _flags |= CAPSULE_SHADOW; } else { _flags &= ~CAPSULE_SHADOW; } }
 
 		constexpr bool IsCPUEnabled() const { return _flags & CPU; }
 		constexpr bool IsGPUEnabled() const { return _flags & GPU; }
+		constexpr bool IsCapsuleShadowEnabled() const { return _flags & CAPSULE_SHADOW; }
 
 		enum class Shape
 		{
@@ -1868,6 +1876,7 @@ namespace wi::scene
 		wi::primitive::Capsule capsule;
 		wi::primitive::Plane plane;
 		uint32_t layerMask = ~0u;
+		float dist = 0;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
@@ -2034,6 +2043,7 @@ namespace wi::scene
 			LOOKAT = 1 << 0,
 			RAGDOLL_PHYSICS = 1 << 1,
 			DISABLE_INTERSECTION = 1 << 2,
+			DISABLE_CAPSULE_SHADOW = 1 << 3,
 		};
 		uint32_t _flags = LOOKAT;
 
@@ -2112,10 +2122,12 @@ namespace wi::scene
 		constexpr bool IsLookAtEnabled() const { return _flags & LOOKAT; }
 		constexpr bool IsRagdollPhysicsEnabled() const { return _flags & RAGDOLL_PHYSICS; }
 		constexpr bool IsIntersectionDisabled() const { return _flags & DISABLE_INTERSECTION; }
+		constexpr bool IsCapsuleShadowDisabled() const { return _flags & DISABLE_CAPSULE_SHADOW; }
 
 		constexpr void SetLookAtEnabled(bool value = true) { if (value) { _flags |= LOOKAT; } else { _flags &= ~LOOKAT; } }
 		constexpr void SetRagdollPhysicsEnabled(bool value = true) { if (value) { _flags |= RAGDOLL_PHYSICS; } else { _flags &= ~RAGDOLL_PHYSICS; } }
 		constexpr void SetIntersectionDisabled(bool value = true) { if (value) { _flags |= DISABLE_INTERSECTION; } else { _flags &= ~DISABLE_INTERSECTION; } }
+		constexpr void SetCapsuleShadowDisabled(bool value = true) { if (value) { _flags |= DISABLE_CAPSULE_SHADOW; } else { _flags &= ~DISABLE_CAPSULE_SHADOW; } }
 
 		XMFLOAT2 head_rotation_max = XMFLOAT2(XM_PI / 3.0f, XM_PI / 6.0f);
 		float head_rotation_speed = 0.1f;

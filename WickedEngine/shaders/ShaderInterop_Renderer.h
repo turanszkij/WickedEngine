@@ -81,6 +81,7 @@ enum SHADERMATERIAL_OPTIONS
 	SHADERMATERIAL_OPTION_BIT_ADDITIVE = 1 << 9,
 	SHADERMATERIAL_OPTION_BIT_UNLIT = 1 << 10,
 	SHADERMATERIAL_OPTION_BIT_USE_VERTEXAO = 1 << 11,
+	SHADERMATERIAL_OPTION_BIT_CAPSULE_SHADOW_DISABLED = 1 << 12,
 };
 
 // Same as MaterialComponent::TEXTURESLOT
@@ -460,6 +461,7 @@ struct alignas(16) ShaderMaterial
 	inline bool IsTransparent() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_TRANSPARENT; }
 	inline bool IsAdditive() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_ADDITIVE; }
 	inline bool IsDoubleSided() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED; }
+	inline bool IsCapsuleShadowDisabled() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_CAPSULE_SHADOW_DISABLED; }
 };
 
 // For binning shading based on shader types:
@@ -1017,8 +1019,12 @@ enum SHADER_ENTITY_FLAGS
 {
 	ENTITY_FLAG_LIGHT_STATIC = 1 << 0,
 	ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS = 1 << 1,
-	ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA = 1 << 0,
+	ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA = 1 << 2,
+	ENTITY_FLAG_CAPSULE_SHADOW_COLLIDER = 1 << 3,
 };
+
+static const float CAPSULE_SHADOW_AFFECTION_RANGE = 2; // how far away the capsule shadow can reach outside of their own radius
+static const float CAPSULE_SHADOW_BOLDEN = 1.2f;
 
 static const uint SHADER_ENTITY_COUNT = 256;
 static const uint SHADER_ENTITY_TILE_BUCKET_COUNT = SHADER_ENTITY_COUNT / 32;
@@ -1131,6 +1137,7 @@ enum FRAME_OPTIONS
 	OPTION_BIT_REALISTIC_SKY_HIGH_QUALITY = 1 << 17,
 	OPTION_BIT_REALISTIC_SKY_RECEIVE_SHADOW = 1 << 18,
 	OPTION_BIT_VOLUMETRICCLOUDS_RECEIVE_SHADOW = 1 << 19,
+	OPTION_BIT_CAPSULE_SHADOW_ENABLED = 1 << 20,
 };
 
 // ---------- Common Constant buffers: -----------------
@@ -1157,6 +1164,11 @@ struct alignas(16) FrameCB
 	int			texture_volumetricclouds_shadow_index;
 	uint		giboost_packed; // force fp16 load
 	uint		entity_culling_count;
+
+	uint		capsuleshadow_fade_angle;
+	int			indirect_debugbufferindex;
+	int			padding0;
+	int			padding1;
 
 	float		blue_noise_phase;
 	int			texture_random64x64_index;
@@ -1193,7 +1205,7 @@ struct alignas(16) FrameCB
 	uint lights;
 	uint decals;
 	uint forces;
-	int	indirect_debugbufferindex;
+	uint padding2;
 
 	ShaderEntity entityArray[SHADER_ENTITY_COUNT];
 	float4x4 matrixArray[SHADER_ENTITY_COUNT];

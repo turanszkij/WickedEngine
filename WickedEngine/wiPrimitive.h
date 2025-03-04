@@ -132,6 +132,15 @@ namespace wi::primitive
 		{
 			assert(radius >= 0);
 		}
+		inline Sphere getSphere() const
+		{
+			XMVECTOR B = XMLoadFloat3(&base);
+			XMVECTOR T = XMLoadFloat3(&tip);
+			Sphere ret;
+			XMStoreFloat3(&ret.center, XMVectorLerp(B, T, 0.5f));
+			XMStoreFloat(&ret.radius, XMVector3Length(B - T) * 0.5f);
+			return ret;
+		}
 		inline AABB getAABB() const
 		{
 			XMFLOAT3 halfWidth = XMFLOAT3(radius, radius, radius);
