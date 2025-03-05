@@ -442,6 +442,39 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 			}
 		}
 	}
+	
+	// Capsule shadows:
+	for (uint i = forces().first_item() + groupIndex; i < forces().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	{
+		ShaderEntity entity = load_entity(i);
+		if ((entity.GetFlags() & ENTITY_FLAG_CAPSULE_SHADOW_COLLIDER) == 0)
+			continue;
+			
+		float3 A = entity.position;
+		float3 B = entity.GetColliderTip();
+		half radius = entity.GetRange() * CAPSULE_SHADOW_BOLDEN;
+
+		// culling based on capsule-sphere:
+		float3 center = lerp(A, B, 0.5);
+		half range = distance(center, A) + radius + CAPSULE_SHADOW_AFFECTION_RANGE;
+		
+		float3 positionVS = mul(GetCamera().view, float4(center, 1)).xyz;
+		Sphere sphere = { positionVS.xyz, range };
+		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
+		{
+			AppendEntity_Transparent(i);
+
+			if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than sphere-frustum culling
+			{
+#ifdef ADVANCED_CULLING
+				if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
+#endif
+				{
+					AppendEntity_Opaque(i);
+				}
+			}
+		}
+	}
 
 #endif
 

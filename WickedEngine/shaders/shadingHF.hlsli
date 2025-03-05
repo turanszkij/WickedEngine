@@ -6,6 +6,7 @@
 #include "brdf.hlsli"
 #include "ShaderInterop_SurfelGI.h"
 #include "ShaderInterop_DDGI.h"
+#include "capsuleShadowHF.hlsli"
 
 inline void LightMapping(in int lightmap, in float2 ATLAS, inout Lighting lighting, inout Surface surface)
 {
@@ -490,6 +491,57 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 
 			}
 		}
+	}
+
+	// Capsule shadows:
+	[branch]
+	if ((GetFrame().options & OPTION_BIT_CAPSULE_SHADOW_ENABLED) && !surface.IsCapsuleShadowDisabled() && !forces().empty()) // capsule shadows are contained in forces array for now...
+	{
+		half4 cone = half4(GetSunDirection() * half3(-1, 1, -1), GetCapsuleShadowAngle()); // horizontally reverse of sun direction (better would be precomputed dominant light dir)
+		half capsuleshadow = 1;
+		
+		// Loop through light buckets in the tile:
+		ShaderEntityIterator iterator = forces();
+		for (uint bucket = iterator.first_bucket(); (bucket <= iterator.last_bucket()) && (capsuleshadow > 0); ++bucket)
+		{
+			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
+			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
+
+#ifndef ENTITY_TILE_UNIFORM
+			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
+			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+#endif // ENTITY_TILE_UNIFORM
+
+			[loop]
+			while ((bucket_bits != 0) && (capsuleshadow > 0))
+			{
+				// Retrieve global entity index from local bucket, then remove bit from local bucket:
+				const uint bucket_bit_index = firstbitlow(bucket_bits);
+				const uint entity_index = bucket * 32 + bucket_bit_index;
+				bucket_bits ^= 1u << bucket_bit_index;
+				
+				ShaderEntity entity = load_entity(entity_index);
+				if ((entity.GetFlags() & ENTITY_FLAG_CAPSULE_SHADOW_COLLIDER) == 0)
+					continue;
+			
+				float3 A = entity.position;
+				float3 B = entity.GetColliderTip();
+				half radius = entity.GetRange() * CAPSULE_SHADOW_BOLDEN;
+				half occ = directionalOcclusionCapsule(surface.P, A, B, radius, cone);
+
+				// attenutaion based on capsule-sphere:
+				float3 center = lerp(A, B, 0.5);
+				half range = distance(center, A) + radius + CAPSULE_SHADOW_AFFECTION_RANGE;
+				half range2 = range * range;
+				half dist2 = distance_squared(surface.P, center);
+				occ = 1 - saturate((1 - occ) * saturate(attenuation_pointlight(dist2, range, range2)));
+			
+				capsuleshadow *= occ;
+			}
+		}
+		capsuleshadow = lerp(capsuleshadow, 1, GetCapsuleShadowFade());
+		capsuleshadow = saturate(capsuleshadow);
+		surface.occlusion *= capsuleshadow;
 	}
 
 }

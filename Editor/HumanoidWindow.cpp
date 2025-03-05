@@ -80,6 +80,19 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&ragdollCheckBox);
 
+	capsuleShadowCheckBox.Create("Capsule Shadow Disabled: ");
+	capsuleShadowCheckBox.SetTooltip("Disable capsule shadow for this specific humanoid.");
+	capsuleShadowCheckBox.SetSize(XMFLOAT2(hei, hei));
+	capsuleShadowCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		HumanoidComponent* humanoid = scene.humanoids.GetComponent(entity);
+		if (humanoid != nullptr)
+		{
+			humanoid->SetCapsuleShadowDisabled(args.bValue);
+		}
+	});
+	AddWidget(&capsuleShadowCheckBox);
+
 	headRotMaxXSlider.Create(0, 90, 60, 180, "Head horizontal: ");
 	headRotMaxXSlider.SetTooltip("Limit horizontal head movement (input in degrees)");
 	headRotMaxXSlider.SetSize(XMFLOAT2(wid, hei));
@@ -275,6 +288,7 @@ void HumanoidWindow::SetEntity(Entity entity)
 		{
 			lookatCheckBox.SetCheck(humanoid->IsLookAtEnabled());
 			ragdollCheckBox.SetCheck(humanoid->IsRagdollPhysicsEnabled());
+			capsuleShadowCheckBox.SetCheck(humanoid->IsCapsuleShadowDisabled());
 			headRotMaxXSlider.SetValue(wi::math::RadiansToDegrees(humanoid->head_rotation_max.x));
 			headRotMaxYSlider.SetValue(wi::math::RadiansToDegrees(humanoid->head_rotation_max.y));
 			headRotSpeedSlider.SetValue(humanoid->head_rotation_speed);
@@ -572,6 +586,7 @@ void HumanoidWindow::ResizeLayout()
 	lookatMouseCheckBox.SetPos(XMFLOAT2(lookatCheckBox.GetPos().x - 120, lookatCheckBox.GetPos().y));
 	add(lookatEntityCombo);
 	add_right(ragdollCheckBox);
+	add_right(capsuleShadowCheckBox);
 	add(headRotMaxXSlider);
 	add(headRotMaxYSlider);
 	add(headRotSpeedSlider);

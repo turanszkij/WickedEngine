@@ -117,9 +117,10 @@ namespace wi::renderer
 			ALLOW_ENVPROBES = 1 << 3,
 			ALLOW_EMITTERS = 1 << 4,
 			ALLOW_HAIRS = 1 << 5,
-			ALLOW_REQUEST_REFLECTION = 1 << 6,
-			ALLOW_OCCLUSION_CULLING = 1 << 7,
-			ALLOW_SHADOW_ATLAS_PACKING = 1 << 8,
+			ALLOW_COLLIDERS = 1 << 6,
+			ALLOW_REQUEST_REFLECTION = 1 << 7,
+			ALLOW_OCCLUSION_CULLING = 1 << 8,
+			ALLOW_SHADOW_ATLAS_PACKING = 1 << 9,
 
 			ALLOW_EVERYTHING = ~0u
 		};
@@ -133,6 +134,7 @@ namespace wi::renderer
 		wi::vector<uint32_t> visibleEmitters;
 		wi::vector<uint32_t> visibleHairs;
 		wi::vector<uint32_t> visibleLights;
+		wi::vector<wi::scene::ColliderComponent> visibleColliders;
 		wi::rectpacker::State shadow_packer;
 		wi::rectpacker::Rect rain_blocker_shadow_rect;
 		wi::vector<wi::rectpacker::Rect> visibleLightShadowRects;
@@ -155,6 +157,7 @@ namespace wi::renderer
 			visibleEnvProbes.clear();
 			visibleEmitters.clear();
 			visibleHairs.clear();
+			visibleColliders.clear();
 
 			object_counter.store(0);
 			light_counter.store(0);
@@ -1129,6 +1132,12 @@ namespace wi::renderer
 	void SetMeshletOcclusionCullingEnabled(bool value);
 	bool IsMeshletOcclusionCullingEnabled();
 	void Workaround( const int bug, wi::graphics::CommandList cmd);
+	void SetCapsuleShadowEnabled(bool value);
+	bool IsCapsuleShadowEnabled();
+	void SetCapsuleShadowAngle(float value); // cone angle in radians
+	float GetCapsuleShadowAngle();
+	void SetCapsuleShadowFade(float value);
+	float GetCapsuleShadowFade();
 
 	// Gets pick ray according to the current screen resolution and pointer coordinates. Can be used as input into RayIntersectWorld()
 	wi::primitive::Ray GetPickRay(long cursorX, long cursorY, const wi::Canvas& canvas, const wi::scene::CameraComponent& camera = wi::scene::GetCamera());

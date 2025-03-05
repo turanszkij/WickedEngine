@@ -262,6 +262,22 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&coplanarCheckBox);
 
+	capsuleShadowCheckBox.Create("Capsule Shadow Disabled: ");
+	capsuleShadowCheckBox.SetTooltip("Disable receiving capsule shadows for this material.");
+	capsuleShadowCheckBox.SetPos(XMFLOAT2(x, y += step));
+	capsuleShadowCheckBox.SetSize(XMFLOAT2(hei, hei));
+	capsuleShadowCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
+			material->SetCapsuleShadowDisabled(args.bValue);
+		}
+	});
+	AddWidget(&capsuleShadowCheckBox);
+
 
 	shaderTypeComboBox.Create("Shader: ");
 	shaderTypeComboBox.SetTooltip("Select a shader for this material. \nCustom shaders (*) will also show up here (see wi::renderer:RegisterCustomShader() for more info.)\nNote that custom shaders (*) can't select between blend modes, as they are created with an explicit blend mode.");
@@ -1187,6 +1203,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		preferUncompressedCheckBox.SetCheck(material->IsPreferUncompressedTexturesEnabled());
 		disableStreamingCheckBox.SetCheck(material->IsTextureStreamingDisabled());
 		coplanarCheckBox.SetCheck(material->IsCoplanarBlending());
+		capsuleShadowCheckBox.SetCheck(material->IsCapsuleShadowDisabled());
 		normalMapSlider.SetValue(material->normalMapStrength);
 		roughnessSlider.SetValue(material->roughness);
 		reflectanceSlider.SetValue(material->reflectance);
@@ -1379,6 +1396,7 @@ void MaterialWindow::ResizeLayout()
 	add_right(preferUncompressedCheckBox);
 	add_right(disableStreamingCheckBox);
 	add_right(coplanarCheckBox);
+	add_right(capsuleShadowCheckBox);
 	add(shaderTypeComboBox);
 	add(blendModeComboBox);
 	add(shadingRateComboBox);

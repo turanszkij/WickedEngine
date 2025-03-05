@@ -98,6 +98,7 @@ struct Surface
 	bool receiveshadow;
 	bool is_backface;
 	bool gi_applied;
+	bool capsuleshadow_disabled;
 
 	// These will be computed when calling Update():
 	half NdotV;				// cos(angle between normal and view vector)
@@ -150,6 +151,7 @@ struct Surface
 		receiveshadow = true;
 		is_backface = false;
 		gi_applied = false;
+		capsuleshadow_disabled = true;
 
 		uid_validate = 0;
 		hit_depth = 0;
@@ -181,6 +183,7 @@ struct Surface
 		sss = material.GetSSS();
 		sss_inv = material.GetSSSInverse();
 		SetReceiveShadow(material.IsReceiveShadow());
+		SetCapsuleShadowDisabled(material.IsCapsuleShadowDisabled());
 	}
 
 	inline void create(
@@ -305,10 +308,12 @@ struct Surface
 	inline bool IsReceiveShadow() { return receiveshadow; }
 	inline bool IsBackface() { return is_backface; }
 	inline bool IsGIApplied() { return gi_applied; }
+	inline bool IsCapsuleShadowDisabled() { return capsuleshadow_disabled; }
 	
 	inline void SetReceiveShadow(bool value) { receiveshadow = value; }
 	inline void SetBackface(bool value) { is_backface = value; }
 	inline void SetGIApplied(bool value) { gi_applied = value; }
+	inline void SetCapsuleShadowDisabled(bool value) { capsuleshadow_disabled = value; }
 
 
 	ShaderMeshInstance inst;
