@@ -2,7 +2,7 @@
 --	This script will load a simple scene with a character that can be controlled
 --
 --	Tips:
---		- Character models that you use should have a humanoid rig (this is created automatically from VRM and Mixamo model imports)
+--		- Character models that you use should have a humanoid rig (this is created automatically from VRM, Makehuman and Mixamo model imports)
 --		- The level objects should be tagged as "Navmesh" because the characters will collide with only those, and these are optimized for intersections
 --		- To set the player start position, you can put a metadata component to the level scene and set it to "Player" preset
 --		- To add NPCs you can put a metadata component to the level scene and set it to "NPC" preset
@@ -12,9 +12,9 @@
 --		- To set conversation dialog for an NPC character, add a "dialog" named string property to its metadata and the value is a name of the lua file in assets/dialogs/. For example dialog = hello will make the character use the assets/dialogs/hello.lua dialog script
 --
 -- 	CONTROLS:
---		WASD/left thumbstick: walk
---		SHIFT/right shoulder button: walk -> jog
---		E/left shoulder button: jog -> run
+--		WASD/left thumbstick: walk/jog
+--		Left Control: slow walk
+--		Left Shift/left shoulder button: jog -> run
 --		SPACE/gamepad X/gamepad button 3: jump
 --		Right Mouse Button/Right thumbstick: rotate camera
 --		Scoll middle mouse/Left-Right triggers: adjust camera distance
@@ -247,14 +247,15 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 							self:MoveDirection(lookDir)
 						elseif self.ground_intersect or charactercomponent.IsWallIntersect() then
 							if self.ground_intersect then
-								if(input.Down(KEYBOARD_BUTTON_LSHIFT) or input.Down(GAMEPAD_BUTTON_6)) then
-									if input.Down(string.byte('E')) or input.Down(GAMEPAD_BUTTON_5) then
+								local analog_len = vector.Length(analog)
+								if input.Down(KEYBOARD_BUTTON_LCONTROL) or (analog_len > 0 and analog_len < 0.75) then
+									self.state = States.WALK
+								else
+									if input.Down(KEYBOARD_BUTTON_LSHIFT) or input.Down(GAMEPAD_BUTTON_5) then
 										self.state = States.RUN
 									else
 										self.state = States.JOG
 									end
-								else
-									self.state = States.WALK
 								end
 							end
 							self:MoveDirection(lookDir)
@@ -758,6 +759,9 @@ runProcess(function()
 	path.SetOutlineThickness(1.7)
 	path.SetOutlineColor(0,0,0,0.6)
 	path.SetBloomThreshold(5)
+	SetCapsuleShadowEnabled(true)
+	SetCapsuleShadowFade(0.4)
+	SetCapsuleShadowAngle(math.pi * 0.15)
 
 	--application.SetInfoDisplay(false)
 	--application.SetFPSDisplay(true)

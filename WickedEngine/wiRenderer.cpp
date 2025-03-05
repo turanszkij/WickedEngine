@@ -3596,6 +3596,7 @@ void UpdateVisibility(Visibility& vis)
 				for (auto& bodypart : humanoid.ragdoll_bodyparts)
 				{
 					Sphere sphere = bodypart.capsule.getSphere();
+					sphere.radius *= CAPSULE_SHADOW_BOLDEN;
 					sphere.radius += CAPSULE_SHADOW_AFFECTION_RANGE;
 					if (!vis.camera->frustum.CheckSphere(sphere.center, sphere.radius))
 						continue;
@@ -3634,6 +3635,7 @@ void UpdateVisibility(Visibility& vis)
 								B += N * radius;
 								Capsule capsule = Capsule(A, B, radius);
 								Sphere sphere = capsule.getSphere();
+								sphere.radius *= CAPSULE_SHADOW_BOLDEN;
 								sphere.radius += CAPSULE_SHADOW_AFFECTION_RANGE;
 								if (vis.camera->frustum.CheckSphere(sphere.center, sphere.radius))
 								{

@@ -1024,7 +1024,7 @@ enum SHADER_ENTITY_FLAGS
 };
 
 static const float CAPSULE_SHADOW_AFFECTION_RANGE = 2; // how far away the capsule shadow can reach outside of their own radius
-static const float CAPSULE_SHADOW_BOLDEN = 1.2f;
+static const float CAPSULE_SHADOW_BOLDEN = 1.1f; // multiplier for capsule shadow capsule radiuses globally
 
 static const uint SHADER_ENTITY_COUNT = 256;
 static const uint SHADER_ENTITY_TILE_BUCKET_COUNT = SHADER_ENTITY_COUNT / 32;

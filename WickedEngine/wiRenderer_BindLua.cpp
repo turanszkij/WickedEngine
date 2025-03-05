@@ -282,6 +282,45 @@ namespace wi::lua::renderer
 		}
 		return 0;
 	}
+	int SetCapsuleShadowEnabled(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::renderer::SetCapsuleShadowEnabled(wi::lua::SGetBool(L, 1));
+		}
+		else
+		{
+			wi::lua::SError(L, "SetCapsuleShadowEnabled(bool enabled) not enough arguments!");
+		}
+		return 0;
+	}
+	int SetCapsuleShadowFade(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::renderer::SetCapsuleShadowFade(wi::lua::SGetFloat(L, 1));
+		}
+		else
+		{
+			wi::lua::SError(L, "SetCapsuleShadowFade(float value) not enough arguments!");
+		}
+		return 0;
+	}
+	int SetCapsuleShadowAngle(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::renderer::SetCapsuleShadowAngle(wi::lua::SGetFloat(L, 1));
+		}
+		else
+		{
+			wi::lua::SError(L, "SetCapsuleShadowAngle(float value) not enough arguments!");
+		}
+		return 0;
+	}
 
 	int DrawLine(lua_State* L)
 	{
@@ -992,6 +1031,9 @@ namespace wi::lua::renderer
 			wi::lua::RegisterFunc("SetRaytracedShadowsEnabled", SetRaytracedShadowsEnabled);
 			wi::lua::RegisterFunc("SetMeshShaderAllowed", SetMeshShaderAllowed);
 			wi::lua::RegisterFunc("SetMeshletOcclusionCullingEnabled", SetMeshletOcclusionCullingEnabled);
+			wi::lua::RegisterFunc("SetCapsuleShadowEnabled", SetCapsuleShadowEnabled);
+			wi::lua::RegisterFunc("SetCapsuleShadowFade", SetCapsuleShadowFade);
+			wi::lua::RegisterFunc("SetCapsuleShadowAngle", SetCapsuleShadowAngle);
 
 			wi::lua::RegisterFunc("DrawLine", DrawLine);
 			wi::lua::RegisterFunc("DrawPoint", DrawPoint);
