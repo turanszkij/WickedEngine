@@ -204,10 +204,8 @@ namespace wi::scene
 			wi::graphics::GPUBuffer raycount_buffer;
 			wi::graphics::GPUBuffer rayallocation_buffer;
 			wi::graphics::GPUBuffer sparse_tile_pool;
-			wi::graphics::Texture color_texture;
-			wi::graphics::Texture color_texture_rw; // alias of color_texture
+			wi::graphics::GPUBuffer probe_buffer;
 			wi::graphics::Texture depth_texture;
-			wi::graphics::Texture offset_texture;
 
 			void Serialize(wi::Archive& archive);
 		} ddgi;

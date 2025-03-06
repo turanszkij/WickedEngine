@@ -20,15 +20,15 @@ static const float WEIGHT_EPSILON = 0.0001;
 static const uint THREADCOUNT = DDGI_DEPTH_RESOLUTION;
 static const uint RESOLUTION = DDGI_DEPTH_RESOLUTION;
 RWTexture2D<float2> output : register(u0);
-RWTexture3D<float4> ddgiOffsetTexture : register(u1);
 groupshared uint shared_depths[DDGI_DEPTH_RESOLUTION * DDGI_DEPTH_RESOLUTION];
 #else
-static const uint THREADCOUNT = 8;
+static const uint THREADCOUNT = DDGI_COLOR_RESOLUTION;
 static const uint RESOLUTION = DDGI_COLOR_RESOLUTION;
-RWTexture2D<uint4> output : register(u0);	// raw uint alias for BC6H
-RWStructuredBuffer<DDGIVarianceDataPacked> varianceBuffer : register(u1);
+RWStructuredBuffer<DDGIVarianceDataPacked> varianceBuffer : register(u0);
 groupshared uint shared_texels[DDGI_COLOR_TEXELS * DDGI_COLOR_TEXELS];
 #endif // DDGI_UPDATE_DEPTH
+
+RWStructuredBuffer<DDGIProbe> ddgiProbeBuffer : register(u1);
 
 static const uint CACHE_SIZE = THREADCOUNT * THREADCOUNT;
 groupshared DDGIRayData ray_cache[CACHE_SIZE];
@@ -74,11 +74,10 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 	const float maxDistance = ddgi_max_distance();
 
 #ifdef DDGI_UPDATE_DEPTH
-	uint3 probe_offset_pixel = ddgi_probe_offset_pixel(probeCoord);
 	[branch]
 	if (groupIndex == 0 && push.frameIndex == 0)
 	{
-		ddgiOffsetTexture[probe_offset_pixel] = 0.5; // this will be zero when transformed to signed (it is stored in unorm)
+		ddgiProbeBuffer[probeIndex].offset = 0;
 	}
 	const float3 probe_limit = ddgi_cellsize() * 0.5;
 	float3 probeOffsetNew = 0;
@@ -88,14 +87,13 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 #ifdef DDGI_UPDATE_DEPTH
 	float2 result = 0;
 	const uint2 pixel_topleft = ddgi_probe_depth_pixel(probeCoord);
-#else
-	float3 result = 0;
-	const uint2 pixel_topleft = ddgi_probe_color_pixel(probeCoord);
-#endif // DDGI_UPDATE_DEPTH
 	const uint2 pixel_current = pixel_topleft + GTid.xy;
 	const uint2 copy_coord = pixel_topleft - 1;
+#else
+	float3 result = 0;
+#endif // DDGI_UPDATE_DEPTH
 
-	const float3 texel_direction = decode_oct(((GTid.xy + 0.5) / (float2)RESOLUTION) * 2 - 1);
+	const float3 texel_direction = decode_oct((((GTid.xy % RESOLUTION) + 0.5) / (float2)RESOLUTION) * 2 - 1);
 
 	float total_weight = 0;
 
@@ -198,15 +196,14 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 			}
 		}
 		
-		float3 probeOffset = (ddgiOffsetTexture[probe_offset_pixel].xyz - 0.5) * ddgi_cellsize();
+		float3 probeOffset = ddgiProbeBuffer[probeIndex].offset;
 		probeOffset = lerp(probeOffset, probeOffsetNew, 0.01);
 		probeOffset = clamp(probeOffset, -probe_limit, probe_limit);
-		probeOffset = inverse_lerp(-probe_limit, probe_limit, probeOffset);
-		ddgiOffsetTexture[probe_offset_pixel] = float4(probeOffset, 0);
+		ddgiProbeBuffer[probeIndex].offset = float4(probeOffset, 0);
 	}
 #else
 
-	if(GTid.x < DDGI_COLOR_RESOLUTION && GTid.y < DDGI_COLOR_RESOLUTION)
+	if (GTid.x < DDGI_COLOR_RESOLUTION && GTid.y < DDGI_COLOR_RESOLUTION)
 	{
 		const uint idx = flatten2D(GTid.xy, DDGI_COLOR_RESOLUTION);
 		const uint variance_data_index = probeIndex * DDGI_COLOR_RESOLUTION * DDGI_COLOR_RESOLUTION + idx;
@@ -222,30 +219,25 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 		varianceBuffer[variance_data_index].store(varianceData);
 		result = varianceData.mean;
 
-		shared_texels[flatten2D(1 + GTid, DDGI_COLOR_TEXELS)] = PackRGBE(result);
+		shared_texels[flatten2D(GTid, DDGI_COLOR_TEXELS)] = PackRGBE(result);
 	}
 
 	GroupMemoryBarrierWithGroupSync();
 
-	// Copy color borders:
-	for (uint index = groupIndex; index < arraysize(DDGI_COLOR_BORDER_OFFSETS); index += THREADCOUNT * THREADCOUNT)
+	if (groupIndex == 0)
 	{
-		uint src_coord = flatten2D(DDGI_COLOR_BORDER_OFFSETS[index].xy, DDGI_COLOR_TEXELS);
-		uint dst_coord = flatten2D(DDGI_COLOR_BORDER_OFFSETS[index].zw, DDGI_COLOR_TEXELS);
-		shared_texels[dst_coord] = shared_texels[src_coord];
-	}
-	
-	GroupMemoryBarrierWithGroupSync();
-
-	if(all((GTid % 4) == 0))
-	{
-		float3 texels[16];
-		for(int y = 0; y < 4; ++y)
-		for(int x = 0; x < 4; ++x)
+		SH::L1_RGB radiance = SH::L1_RGB::Zero();
+		for (int x = 0; x < RESOLUTION; ++x)
 		{
-			texels[x + y * 4] = UnpackRGBE(shared_texels[flatten2D(GTid + int2(x, y), DDGI_COLOR_TEXELS)]);
+			for (int y = 0; y < RESOLUTION; ++y)
+			{
+				const float3 direction = decode_oct(((float2(x, y) + 0.5) / (float2) RESOLUTION) * 2 - 1);
+				float3 value = UnpackRGBE(shared_texels[flatten2D(int2(x, y), DDGI_COLOR_TEXELS)]);
+				radiance = SH::Add(radiance, SH::ProjectOntoL1_RGB(direction, value));
+			}
 		}
-		output[pixel_current / 4] = CompressBC6H(texels);
+		radiance = SH::Multiply(radiance, rcp(RESOLUTION * RESOLUTION * SPHERE_SAMPLING_PDF));
+		ddgiProbeBuffer[probeIndex].radiance = radiance;
 	}
 	
 #endif // DDGI_UPDATE_DEPTH

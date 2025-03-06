@@ -113,9 +113,10 @@ void main(uint2 DTid : SV_DispatchThreadID)
 		{
 			// miss:
 			[branch]
-			if (GetScene().ddgi.color_texture >= 0)
+			if (GetScene().ddgi.probe_buffer >= 0)
 			{
-				payload.data += ddgi_sample_irradiance(P, N);
+				half3 dominant_lightdir = 0;
+				payload.data += ddgi_sample_irradiance(P, N, dominant_lightdir);
 			}
 			else if (GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && GetCamera().texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(P)))
 			{
@@ -196,9 +197,9 @@ void main(uint2 DTid : SV_DispatchThreadID)
 				lighting.indirect.specular += surface.emissiveColor;
 
 				[branch]
-				if (GetScene().ddgi.color_texture >= 0)
+				if (GetScene().ddgi.probe_buffer >= 0)
 				{
-					lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
+					lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N, surface.dominant_lightdir);
 				}
 
 				float4 color = 0;

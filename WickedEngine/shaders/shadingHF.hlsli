@@ -102,9 +102,9 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 #endif //DISABLE_VOXELGI
 
 	[branch]
-	if (!surface.IsGIApplied() && GetScene().ddgi.color_texture >= 0)
+	if (!surface.IsGIApplied() && GetScene().ddgi.probe_buffer >= 0)
 	{
-		lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
+		lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N, surface.dominant_lightdir);
 		surface.SetGIApplied(true);
 	}
 
@@ -371,9 +371,9 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 #endif // TRANSPARENT
 
 	[branch]
-	if (!surface.IsGIApplied() && GetScene().ddgi.color_texture >= 0)
+	if (!surface.IsGIApplied() && GetScene().ddgi.probe_buffer >= 0)
 	{
-		lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
+		lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N, surface.dominant_lightdir);
 		surface.SetGIApplied(true);
 	}
 	
@@ -497,7 +497,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	[branch]
 	if ((GetFrame().options & OPTION_BIT_CAPSULE_SHADOW_ENABLED) && !surface.IsCapsuleShadowDisabled() && !forces().empty()) // capsule shadows are contained in forces array for now...
 	{
-		half4 cone = half4(GetSunDirection() * half3(-1, 1, -1), GetCapsuleShadowAngle()); // horizontally reverse of sun direction (better would be precomputed dominant light dir)
+		half4 cone = half4(surface.dominant_lightdir, GetCapsuleShadowAngle());
 		half capsuleshadow = 1;
 		
 		// Loop through light buckets in the tile:

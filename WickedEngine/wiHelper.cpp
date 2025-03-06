@@ -853,6 +853,40 @@ namespace wi::helper
 		return false;
 	}
 
+	bool saveBufferToMemory(const wi::graphics::GPUBuffer& buffer, wi::vector<uint8_t>& data)
+	{
+		using namespace wi::graphics;
+		GraphicsDevice* device = GetDevice();
+
+		GPUBufferDesc desc = buffer.desc;
+		desc.usage = wi::graphics::Usage::READBACK;
+		desc.bind_flags = {};
+		desc.misc_flags = {};
+		GPUBuffer staging;
+		bool success = device->CreateBuffer(&desc, nullptr, &staging);
+		assert(success);
+
+		if (success)
+		{
+			CommandList cmd = device->BeginCommandList();
+
+			device->Barrier(GPUBarrier::Memory(), cmd);
+			device->CopyResource(&staging, &buffer, cmd);
+			device->Barrier(GPUBarrier::Memory(), cmd);
+
+			device->SubmitCommandLists();
+			device->WaitForGPU();
+
+			data.reserve(staging.mapped_size);
+			for (size_t i = 0; i < staging.mapped_size; ++i)
+			{
+				data.push_back(((uint8_t*)staging.mapped_data)[i]);
+			}
+		}
+
+		return success;
+	}
+
 	std::string getCurrentDateTimeAsString()
 	{
 		time_t t = std::time(nullptr);

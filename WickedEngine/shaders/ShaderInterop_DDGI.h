@@ -4,8 +4,8 @@
 #include "ShaderInterop_Renderer.h"
 
 static const uint DDGI_MAX_RAYCOUNT = 512; // affects global ray buffer size
-static const uint DDGI_COLOR_RESOLUTION = 6; // this should not be modified, border update code is fixed
-static const uint DDGI_COLOR_TEXELS = 1 + DDGI_COLOR_RESOLUTION + 1; // with border. NOTE: this must be 4x4 block aligned for BC6!
+static const uint DDGI_COLOR_RESOLUTION = 8; // this should not be modified, border update code is fixed
+static const uint DDGI_COLOR_TEXELS = DDGI_COLOR_RESOLUTION; // no border, color is stored in SH
 static const uint DDGI_DEPTH_RESOLUTION = 16; // this should not be modified, border update code is fixed
 static const uint DDGI_DEPTH_TEXELS = 1 + DDGI_DEPTH_RESOLUTION + 1; // with border
 static const float DDGI_KEEP_DISTANCE = 0.1f; // how much distance should probes keep from surfaces
@@ -120,24 +120,11 @@ inline float3 ddgi_probe_position_rest(uint3 probeCoord)
 inline float3 ddgi_probe_position(uint3 probeCoord)
 {
 	float3 pos = ddgi_probe_position_rest(probeCoord);
-	[branch]
-	if (GetScene().ddgi.offset_texture >= 0)
-	{
-		float3 offset = bindless_textures3D[descriptor_index(GetScene().ddgi.offset_texture)][ddgi_probe_offset_pixel(probeCoord)].xyz;
-		offset = (offset - 0.5) * ddgi_cellsize();
-		pos += offset;
-	}
+	uint probeIndex = ddgi_probe_index(probeCoord);
+	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
+	DDGIProbe probe = probe_buffer[probeIndex];
+	pos += probe.offset;
 	return pos;
-}
-inline uint2 ddgi_probe_color_pixel(uint3 probeCoord)
-{
-	return probeCoord.xz * DDGI_COLOR_TEXELS + uint2(probeCoord.y * GetScene().ddgi.grid_dimensions.x * DDGI_COLOR_TEXELS, 0) + 1;
-}
-inline float2 ddgi_probe_color_uv(uint3 probeCoord, half3 direction)
-{
-	float2 pixel = ddgi_probe_color_pixel(probeCoord);
-	pixel += (encode_oct(normalize(direction)) * 0.5 + 0.5) * DDGI_COLOR_RESOLUTION;
-	return pixel * GetScene().ddgi.color_texture_resolution_rcp;
 }
 inline uint2 ddgi_probe_depth_pixel(uint3 probeCoord)
 {
@@ -152,11 +139,13 @@ inline float2 ddgi_probe_depth_uv(uint3 probeCoord, half3 direction)
 
 
 // Based on: https://github.com/diharaw/hybrid-rendering/blob/master/src/shaders/gi/gi_common.glsl
-half3 ddgi_sample_irradiance(float3 P, half3 N)
+half3 ddgi_sample_irradiance(in float3 P, in half3 N, out half3 out_dominant_lightdir)
 {
+	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
 	uint3 base_grid_coord = ddgi_base_probe_coord(P);
 	float3 base_probe_pos = ddgi_probe_position(base_grid_coord);
 
+	half3 sum_dominant_lightdir = 0;
 	half3 sum_irradiance = 0;
 	half sum_weight = 0;
 
@@ -170,7 +159,8 @@ half3 ddgi_sample_irradiance(float3 P, half3 N)
 		// Offset = 0 or 1 along each axis
 		uint3 offset = uint3(i, i >> 1, i >> 2) & 1;
 		uint3 probe_grid_coord = clamp(base_grid_coord + offset, 0u.xxx, GetScene().ddgi.grid_dimensions - 1);
-		//int p = ddgi_probe_index(probe_grid_coord);
+		uint probe_index = ddgi_probe_index(probe_grid_coord);
+		DDGIProbe probe = probe_buffer[probe_index];
 
 		// Make cosine falloff in tangent plane with respect to the angle from the surface to the probe so that we never
 		// test a probe that is *behind* the surface.
@@ -250,11 +240,7 @@ half3 ddgi_sample_irradiance(float3 P, half3 N)
 
 		half3 irradiance_dir = N;
 
-		//float2 tex_coord = texture_coord_from_direction(normalize(irradiance_dir), p, ddgi.irradiance_texture_width, ddgi.irradiance_texture_height, ddgi.irradiance_probe_side_length);
-		float2 tex_coord = ddgi_probe_color_uv(probe_grid_coord, irradiance_dir);
-
-		//float3 probe_irradiance = textureLod(irradiance_texture, tex_coord, 0.0f).rgb;
-		half3 probe_irradiance = bindless_textures_half4[descriptor_index(GetScene().ddgi.color_texture)].SampleLevel(sampler_linear_clamp, tex_coord, 0).rgb;
+		half3 probe_irradiance = SH::CalculateIrradiance(probe.radiance, irradiance_dir);
 
 		// A tiny bit of light is really visible due to log perception, so
 		// crush tiny weights but keep the curve continuous. This must be done
@@ -274,13 +260,16 @@ half3 ddgi_sample_irradiance(float3 P, half3 N)
 		probe_irradiance = sqrt(probe_irradiance);
 #endif
 
+		sum_dominant_lightdir += weight * OptimalLinearDirection(probe.radiance);
 		sum_irradiance += weight * probe_irradiance;
 		sum_weight += weight;
 	}
 
 	if (sum_weight > 0)
 	{
-		half3 net_irradiance = sum_irradiance / sum_weight;
+		const half rcp_sum_weight = rcp(sum_weight);
+		out_dominant_lightdir = sum_dominant_lightdir * rcp_sum_weight;
+		half3 net_irradiance = sum_irradiance * rcp_sum_weight;
 
 		// Go back to linear irradiance
 #ifndef DDGI_LINEAR_BLENDING

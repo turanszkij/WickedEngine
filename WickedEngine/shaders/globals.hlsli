@@ -30,6 +30,7 @@ inline uint descriptor_index(in int x)
 #include "PixelPacking_R11G11B10.hlsli"
 #include "PixelPacking_RGBE.hlsli"
 #include "ShaderInterop.h"
+#include "SH_Lite.hlsli"
 
 inline uint pack_unitvector(in half3 value)
 {
@@ -245,7 +246,8 @@ float3x3 adjoint(in float4x4 m)
 		"SRV(t0, space = 204, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"SRV(t0, space = 205, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"SRV(t0, space = 206, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"SRV(t0, space = 207, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)" \
+		"SRV(t0, space = 207, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 208, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)" \
 	"), " \
 	"StaticSampler(s100, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP, filter = FILTER_MIN_MAG_MIP_LINEAR)," \
 	"StaticSampler(s101, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, addressW = TEXTURE_ADDRESS_WRAP, filter = FILTER_MIN_MAG_MIP_LINEAR)," \
@@ -448,6 +450,7 @@ static const BindlessResource<StructuredBuffer<ShaderClusterBounds>> bindless_st
 static const BindlessResource<StructuredBuffer<ShaderMaterial>> bindless_structured_material;
 static const BindlessResource<StructuredBuffer<uint>> bindless_structured_uint;
 static const BindlessResource<StructuredBuffer<ShaderTerrainChunk>> bindless_structured_terrain_chunks;
+static const BindlessResource<StructuredBuffer<DDGIProbe>> bindless_structured_ddi_probes;
 #elif defined(__spirv__)
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMeshInstance> bindless_structured_meshinstance[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderGeometry> bindless_structured_geometry[];
@@ -457,6 +460,7 @@ static const BindlessResource<StructuredBuffer<ShaderTerrainChunk>> bindless_str
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMaterial> bindless_structured_material[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<uint> bindless_structured_uint[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderTerrainChunk> bindless_structured_terrain_chunks[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<DDGIProbe> bindless_structured_ddi_probes[];
 #else
 StructuredBuffer<ShaderMeshInstance> bindless_structured_meshinstance[] : register(space200);
 StructuredBuffer<ShaderGeometry> bindless_structured_geometry[] : register(space201);
@@ -466,6 +470,7 @@ StructuredBuffer<ShaderClusterBounds> bindless_structured_cluster_bounds[] : reg
 StructuredBuffer<ShaderMaterial> bindless_structured_material[] : register(space205);
 StructuredBuffer<uint> bindless_structured_uint[] : register(space206);
 StructuredBuffer<ShaderTerrainChunk> bindless_structured_terrain_chunks[] : register(space207);
+StructuredBuffer<DDGIProbe> bindless_structured_ddi_probes[] : register(space208);
 #endif // __spirv__
 
 inline FrameCB GetFrame()
@@ -710,6 +715,7 @@ struct PrimitiveID
 #define M_TO_SKY_UNIT 0.001
 #define SKY_UNIT_TO_M rcp(M_TO_SKY_UNIT)
 #define MEDIUMP_FLT_MAX 65504.0
+#define SPHERE_SAMPLING_PDF rcp(4 * PI)
 
 #define sqr(a) ((a)*(a))
 #define pow4(a) ((a)*(a)*(a)*(a))

@@ -93,6 +93,7 @@ struct Surface
 	half3 bumpColor;
 	half3 ssgi;
 	half3 extinction;
+	half3 dominant_lightdir;
 
 	// It's good to use bools instead of flags in shaders, because bools of all lanes can be combined into one SGPR
 	bool receiveshadow;
@@ -147,6 +148,7 @@ struct Surface
 		bumpColor = 0;
 		ssgi = 0;
 		extinction = 0;
+		dominant_lightdir = GetSunDirection() * half3(-1, 1, -1); // horizontally reverse of sun direction
 		
 		receiveshadow = true;
 		is_backface = false;

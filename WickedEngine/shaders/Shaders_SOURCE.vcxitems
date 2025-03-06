@@ -45,6 +45,7 @@
     <None Include="$(MSBuildThisFileDirectory)raytracingHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)shadingHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)shadowHF.hlsli" />
+    <None Include="$(MSBuildThisFileDirectory)SH_Lite.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)skyAtmosphere.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)skyHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)stochasticSSRHF.hlsli" />

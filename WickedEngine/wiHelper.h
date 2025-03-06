@@ -63,6 +63,9 @@ namespace wi::helper
 	// Save raw texture data to file format
 	bool saveTextureToFile(const wi::vector<uint8_t>& texturedata, const wi::graphics::TextureDesc& desc, const std::string& fileName);
 
+	// Download buffer from GPU into CPU memory
+	bool saveBufferToMemory(const wi::graphics::GPUBuffer& buffer, wi::vector<uint8_t>& data);
+
 	std::string getCurrentDateTimeAsString();
 
 	void SplitPath(const std::string& fullPath, std::string& dir, std::string& fileName);

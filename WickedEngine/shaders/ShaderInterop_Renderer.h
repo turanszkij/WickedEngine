@@ -39,14 +39,11 @@ struct alignas(16) ShaderScene
 		uint3 grid_dimensions;
 		uint probe_count;
 
-		uint2 color_texture_resolution;
-		float2 color_texture_resolution_rcp;
-
 		uint2 depth_texture_resolution;
 		float2 depth_texture_resolution_rcp;
 
 		float3 grid_min;
-		int color_texture;
+		int probe_buffer;
 
 		float3 grid_extents;
 		int depth_texture;
@@ -55,7 +52,7 @@ struct alignas(16) ShaderScene
 		float max_distance;
 
 		float3 grid_extents_rcp;
-		int offset_texture;
+		float padding;
 
 		float3 cell_size_rcp;
 		float smooth_backface;
@@ -1709,5 +1706,41 @@ CBUFFER(PaintDecalCB, CBSLOT_RENDERER_MISC)
 	int g_xPaintDecalpadding;
 };
 
+#ifdef __cplusplus
+// Copied here from SH_Lite.hlsli to share with C++:
+namespace SH
+{
+	struct L1
+	{
+		static const uint NumCoefficients = 4;
+		float C[NumCoefficients];
+	};
+
+	struct L1_RGB
+	{
+		static const uint NumCoefficients = 4;
+		float3 C[NumCoefficients];
+	};
+
+	struct L2
+	{
+		static const uint NumCoefficients = 9;
+		float C[NumCoefficients];
+	};
+
+	struct L2_RGB
+	{
+		static const uint NumCoefficients = 9;
+		float3 C[NumCoefficients];
+	};
+}
+#endif // __cplusplus
+
+struct DDGIProbe
+{
+	SH::L1_RGB radiance;
+	float3 offset;
+	float padding;
+};
 
 #endif // WI_SHADERINTEROP_RENDERER_H

@@ -2585,30 +2585,18 @@ namespace wi::scene
 
 			// color texture:
 			archive >> data;
-			if(!data.empty())
+			if (!data.empty() && archive.GetVersion() >= 93)
 			{
-				TextureDesc desc;
-				desc.bind_flags = BindFlag::SHADER_RESOURCE;
-				desc.width = DDGI_COLOR_TEXELS * grid_dimensions.x * grid_dimensions.y;
-				desc.height = DDGI_COLOR_TEXELS * grid_dimensions.z;
-				desc.width = std::max(256u, desc.width);	// apply same padding as the sparse texture version
-				desc.height = std::max(256u, desc.height);	// apply same padding as the sparse texture version
-				desc.format = Format::BC6H_UF16;
-				const uint32_t num_blocks_x = desc.width / GetFormatBlockSize(desc.format);
-				const size_t required_size = ComputeTextureMemorySizeInBytes(desc);
-				if (data.size() == required_size)
-				{
-					SubresourceData initdata;
-					initdata.data_ptr = data.data();
-					initdata.row_pitch = num_blocks_x * GetFormatStride(desc.format);
+				const uint32_t probe_count = grid_dimensions.x * grid_dimensions.y * grid_dimensions.z;
 
-					device->CreateTexture(&desc, &initdata, &color_texture);
-					device->SetName(&color_texture, "ddgi.color_texture[serialized]");
-				}
-				else
-				{
-					wi::backlog::post("The serialized DDGI irradiance data structure is different from current version, discarding irradiance data.", wi::backlog::LogLevel::Warning);
-				}
+				GPUBufferDesc buf;
+				buf.stride = sizeof(DDGIProbe);
+				buf.size = buf.stride * probe_count;
+				buf.bind_flags = BindFlag::SHADER_RESOURCE;
+				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+				buf.format = Format::UNKNOWN;
+				device->CreateBuffer(&buf, data.data(), &probe_buffer);
+				device->SetName(&probe_buffer, "ddgi.probe_buffer[serialized]");
 			}
 
 			// depth texture:
@@ -2629,32 +2617,16 @@ namespace wi::scene
 				device->SetName(&depth_texture, "ddgi.depth_texture[serialized]");
 			}
 
-			// offset texture:
-			archive >> data;
-			if(!data.empty())
+			if (archive.GetVersion() < 93)
 			{
-				TextureDesc desc;
-				desc.type = TextureDesc::Type::TEXTURE_3D;
-				desc.width = grid_dimensions.x;
-				desc.height = grid_dimensions.z;
-				desc.depth = grid_dimensions.y;
-				desc.format = Format::R10G10B10A2_UNORM;
-				desc.bind_flags = BindFlag::SHADER_RESOURCE;
+				// offset texture:
+				archive >> data;
 
-				const size_t required_size = ComputeTextureMemorySizeInBytes(desc);
-				if (data.size() == required_size)
+				if (!data.empty())
 				{
-					SubresourceData initdata;
-					initdata.data_ptr = data.data();
-					initdata.row_pitch = desc.width * GetFormatStride(desc.format);
-					initdata.slice_pitch = initdata.row_pitch * desc.height;
-
-					device->CreateTexture(&desc, &initdata, &offset_texture);
-					device->SetName(&offset_texture, "ddgi.offset_texture[serialized]");
-				}
-				else
-				{
-					wi::backlog::post("The serialized DDGI probe offset structure is different from current version, discarding probe offset data.", wi::backlog::LogLevel::Warning);
+					wi::backlog::post("Found older DDGI data in the scene which is now incompatible. Please recompute the DDGI if you need it.", wi::backlog::LogLevel::Warning);
+					depth_texture = {};
+					probe_buffer = {};
 				}
 			}
 		}
@@ -2671,10 +2643,11 @@ namespace wi::scene
 			}
 
 			wi::vector<uint8_t> data;
-			if (color_texture.IsValid())
+
+			// Save probe buffer:
+			if (probe_buffer.IsValid())
 			{
-				bool success = wi::helper::saveTextureToMemory(color_texture, data);
-				assert(success);
+				wi::helper::saveBufferToMemory(probe_buffer, data);
 			}
 			archive << data;
 
@@ -2682,14 +2655,6 @@ namespace wi::scene
 			if (depth_texture.IsValid())
 			{
 				bool success = wi::helper::saveTextureToMemory(depth_texture, data);
-				assert(success);
-			}
-			archive << data;
-
-			data.clear();
-			if (offset_texture.IsValid())
-			{
-				bool success = wi::helper::saveTextureToMemory(offset_texture, data);
 				assert(success);
 			}
 			archive << data;
