@@ -4103,9 +4103,10 @@ void UpdatePerFrameData(
 			bd.size = required_debug_buffer_size;
 			bd.bind_flags = BindFlag::VERTEX_BUFFER | BindFlag::UNORDERED_ACCESS;
 			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::INDIRECT_ARGS;
-			device->CreateBuffer(&bd, nullptr, &buffers[BUFFERTYPE_INDIRECT_DEBUG_0]);
+			wi::vector<uint8_t> initdata(bd.size);
+			device->CreateBuffer(&bd, initdata.data(), &buffers[BUFFERTYPE_INDIRECT_DEBUG_0]);
 			device->SetName(&buffers[BUFFERTYPE_INDIRECT_DEBUG_0], "buffers[BUFFERTYPE_INDIRECT_DEBUG_0]");
-			device->CreateBuffer(&bd, nullptr, &buffers[BUFFERTYPE_INDIRECT_DEBUG_1]);
+			device->CreateBuffer(&bd, initdata.data(), &buffers[BUFFERTYPE_INDIRECT_DEBUG_1]);
 			device->SetName(&buffers[BUFFERTYPE_INDIRECT_DEBUG_1], "buffers[BUFFERTYPE_INDIRECT_DEBUG_1]");
 			std::memset(indirectDebugStatsReadback_available, 0, sizeof(indirectDebugStatsReadback_available));
 		}

@@ -371,10 +371,14 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 #endif // TRANSPARENT
 
 	[branch]
-	if (!surface.IsGIApplied() && GetScene().ddgi.probe_buffer >= 0)
+	if (GetScene().ddgi.probe_buffer >= 0)
 	{
-		lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N, surface.dominant_lightdir);
-		surface.SetGIApplied(true);
+		half3 irradiance = ddgi_sample_irradiance(surface.P, surface.N, surface.dominant_lightdir);
+		if (!surface.IsGIApplied())
+		{
+			lighting.indirect.diffuse = irradiance;
+			surface.SetGIApplied(true);
+		}
 	}
 	
 	[branch]

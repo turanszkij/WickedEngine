@@ -45,15 +45,161 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 	RNG rng;
 	rng.init(DTid.xx, GetFrame().frame_count);
+	
+	float3 radiance = 0;
 
 	const float3x3 random_orientation = (float3x3)g_xTransform;
+	const float3 raydir = normalize(mul(random_orientation, spherical_fibonacci(rayIndex, rayCount)));
+	
+#if 1
+	// Light sampling - direct static:
+	{
+		Surface surface;
+		surface.init();
+		surface.P = probePos;
+		surface.N = raydir;
+		surface.update();
+			
+		const uint light_count = lights().item_count();
+		const uint light_index = lights().first_item() + rng.next_uint(light_count);
+		ShaderEntity light = load_entity(light_index);
+
+		if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
+		{
+			Lighting lighting;
+			lighting.create(0, 0, 0, 0);
+
+			float3 L = 0;
+			float dist = 0;
+			float NdotL = 0;
+
+			switch (light.GetType())
+			{
+			case ENTITY_TYPE_DIRECTIONALLIGHT:
+			{
+				dist = FLT_MAX;
+
+				L = light.GetDirection().xyz;
+				L += sample_hemisphere_cos(L, rng) * light.GetRadius();
+				NdotL = saturate(dot(L, surface.N));
+
+				[branch]
+				if (NdotL > 0)
+				{
+					float3 lightColor = light.GetColor().rgb;
+
+					[branch]
+					if (GetFrame().options & OPTION_BIT_REALISTIC_SKY)
+					{
+						lightColor *= GetAtmosphericLightTransmittance(GetWeather().atmosphere, surface.P, L, texture_transmittancelut);
+					}
+
+					lighting.direct.diffuse = lightColor;
+				}
+			}
+			break;
+			case ENTITY_TYPE_POINTLIGHT:
+			{
+				light.position += light.GetDirection() * (rng.next_float() - 0.5) * light.GetLength();
+				light.position += sample_hemisphere_cos(normalize(light.position - surface.P), rng) * light.GetRadius();
+				L = light.position - surface.P;
+				const float dist2 = dot(L, L);
+				const float range = light.GetRange();
+				const float range2 = range * range;
+
+				[branch]
+				if (dist2 < range2)
+				{
+					dist = sqrt(dist2);
+					L /= dist;
+					NdotL = saturate(dot(L, surface.N));
+
+					[branch]
+					if (NdotL > 0)
+					{
+						const float3 lightColor = light.GetColor().rgb;
+
+						lighting.direct.diffuse = lightColor * attenuation_pointlight(dist2, range, range2);
+					}
+				}
+			}
+			break;
+			case ENTITY_TYPE_SPOTLIGHT:
+			{
+				float3 Loriginal = normalize(light.position - surface.P);
+				light.position += sample_hemisphere_cos(normalize(light.position - surface.P), rng) * light.GetRadius();
+				L = light.position - surface.P;
+				const float dist2 = dot(L, L);
+				const float range = light.GetRange();
+				const float range2 = range * range;
+
+				[branch]
+				if (dist2 < range2)
+				{
+					dist = sqrt(dist2);
+					L /= dist;
+					NdotL = saturate(dot(L, surface.N));
+
+					[branch]
+					if (NdotL > 0)
+					{
+						const float spot_factor = dot(Loriginal, light.GetDirection());
+						const float spot_cutoff = light.GetConeAngleCos();
+
+						[branch]
+						if (spot_factor > spot_cutoff)
+						{
+							const float3 lightColor = light.GetColor().rgb;
+
+							lighting.direct.diffuse = lightColor * attenuation_spotlight(dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
+						}
+					}
+				}
+			}
+			break;
+			}
+
+			if (NdotL > 0 && dist > 0)
+			{
+				float3 shadow = 1;
+
+				RayDesc newRay;
+				newRay.Origin = surface.P;
+				newRay.TMin = 0;
+				newRay.TMax = dist;
+				newRay.Direction = L;
+
+	#ifdef RTAPI
+				wiRayQuery q;
+				q.TraceRayInline(
+					scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
+					RAY_FLAG_CULL_FRONT_FACING_TRIANGLES |
+					RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
+					RAY_FLAG_CULL_FRONT_FACING_TRIANGLES |
+					RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,	// uint RayFlags
+					0xFF,							// uint InstanceInclusionMask
+					newRay							// RayDesc Ray
+				);
+				while (q.Proceed());
+				shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : shadow;
+	#else
+				shadow = TraceRay_Any(newRay, push.instanceInclusionMask, rng) ? 0 : shadow;
+	#endif // RTAPI
+				if (any(shadow))
+				{
+					radiance += light_count * max(0, shadow * lighting.direct.diffuse * NdotL);
+				}
+			}
+		}
+	}
+#endif
 	
 	{
 		RayDesc ray;
 		ray.Origin = probePos;
 		ray.TMin = 0; // don't need TMin because we are not tracing from a surface
 		ray.TMax = FLT_MAX;
-		ray.Direction = normalize(mul(random_orientation, spherical_fibonacci(rayIndex, rayCount)));
+		ray.Direction = raydir;
 
 #ifdef RTAPI
 		wiRayQuery q;
@@ -85,11 +231,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			{
 				envColor = GetDynamicSkyColor(ray.Direction, true, false, true);
 			}
+			radiance += envColor;
 
 			DDGIRayData rayData;
 			rayData.direction = ray.Direction;
 			rayData.depth = -1;
-			rayData.radiance = float4(envColor, 1);
+			rayData.radiance = float4(radiance, 1);
 			rayBuffer[probeIndex * DDGI_MAX_RAYCOUNT + rayIndex].store(rayData);
 		}
 		else
@@ -99,7 +246,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			surface.init();
 
 			float hit_depth = 0;
-			float3 hit_result = 0;
 
 #ifdef RTAPI
 
@@ -262,7 +408,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 #endif // RTAPI
 					if (any(shadow))
 					{
-						hit_result += light_count * max(0, shadow * lighting.direct.diffuse * NdotL / PI);
+						radiance += light_count * max(0, shadow * lighting.direct.diffuse * NdotL / PI);
 					}
 				}
 			}
@@ -271,16 +417,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			// Infinite bounces based on previous frame probe sampling:
 			if (push.frameIndex > 0)
 			{
-				const float energy_conservation = 0.95 / PI;
-				hit_result += ddgi_sample_irradiance(surface.P, surface.facenormal, surface.dominant_lightdir) * energy_conservation;
+				const float energy_conservation = 0.95 * SPHERE_SAMPLING_PDF;
+				radiance += ddgi_sample_irradiance(surface.P, surface.facenormal, surface.dominant_lightdir) * energy_conservation;
 			}
-			hit_result *= surface.albedo;
-			hit_result += surface.emissiveColor;
+			radiance *= surface.albedo;
+			radiance += surface.emissiveColor;
 
 			DDGIRayData rayData;
 			rayData.direction = ray.Direction;
 			rayData.depth = hit_depth;
-			rayData.radiance = float4(hit_result, 1);
+			rayData.radiance = float4(radiance, 1);
 			rayBuffer[probeIndex * DDGI_MAX_RAYCOUNT + rayIndex].store(rayData);
 		}
 

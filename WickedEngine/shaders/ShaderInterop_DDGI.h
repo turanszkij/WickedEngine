@@ -143,9 +143,10 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, out half3 out_dominant_lig
 {
 	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
 	uint3 base_grid_coord = ddgi_base_probe_coord(P);
-	float3 base_probe_pos = ddgi_probe_position(base_grid_coord);
+	//float3 base_probe_pos = ddgi_probe_position(base_grid_coord);
+	float3 base_probe_pos = ddgi_probe_position_rest(base_grid_coord);
 
-	half3 sum_dominant_lightdir = 0;
+	float3 sum_dominant_lightdir = 0;
 	half3 sum_irradiance = 0;
 	half sum_weight = 0;
 
@@ -166,6 +167,7 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, out half3 out_dominant_lig
 		// test a probe that is *behind* the surface.
 		// It doesn't have to be cosine, but that is efficient to compute and we must clip to the tangent plane.
 		float3 probe_pos = ddgi_probe_position(probe_grid_coord);
+		//float3 probe_pos = ddgi_probe_position_rest(probe_grid_coord);
 
 		// Bias the position at which visibility is computed; this
 		// avoids performing a shadow test *at* a surface, which is a
@@ -268,7 +270,7 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, out half3 out_dominant_lig
 	if (sum_weight > 0)
 	{
 		const half rcp_sum_weight = rcp(sum_weight);
-		out_dominant_lightdir = sum_dominant_lightdir * rcp_sum_weight;
+		out_dominant_lightdir = normalize(sum_dominant_lightdir * rcp_sum_weight + N * 0.2); // I bend it in normal direction to avoid dominant light dir that points from below surface
 		half3 net_irradiance = sum_irradiance * rcp_sum_weight;
 
 		// Go back to linear irradiance
