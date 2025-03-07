@@ -589,7 +589,7 @@ namespace wi::scene
 
 				buf.stride = sizeof(uint32_t);
 				buf.size = buf.stride * (probe_count * DDGI_MAX_RAYCOUNT + 4); // +4: counter/indirect dispatch args
-				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED | ResourceMiscFlag::INDIRECT_ARGS;
 				buf.format = Format::UNKNOWN;
 				device->CreateBuffer(&buf, nullptr, &ddgi.rayallocation_buffer);
 				device->SetName(&ddgi.rayallocation_buffer, "ddgi.rayallocation_buffer");

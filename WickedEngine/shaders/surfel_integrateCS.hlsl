@@ -20,7 +20,7 @@ RWStructuredBuffer<Surfel> surfelBuffer : register(u3);
 static const uint THREADCOUNT = 8;
 static const uint CACHE_SIZE = THREADCOUNT * THREADCOUNT;
 groupshared SurfelRayData ray_cache[CACHE_SIZE];
-groupshared float3 shared_texels[16];
+groupshared float3 shared_texels[SURFEL_MOMENT_RESOLUTION * SURFEL_MOMENT_RESOLUTION];
 groupshared float shared_inconsistency[CACHE_SIZE];
 
 [numthreads(THREADCOUNT, THREADCOUNT, 1)]
