@@ -6,17 +6,16 @@
 
 static const float WEIGHT_EPSILON = 0.0001;
 
-StructuredBuffer<Surfel> surfelBuffer : register(t0);
-ByteAddressBuffer surfelStatsBuffer : register(t1);
-StructuredBuffer<SurfelGridCell> surfelGridBuffer : register(t2);
-StructuredBuffer<uint> surfelCellBuffer : register(t3);
-StructuredBuffer<uint> surfelAliveBuffer : register(t4);
-StructuredBuffer<SurfelRayDataPacked> surfelRayBuffer : register(t5);
+ByteAddressBuffer surfelStatsBuffer : register(t0);
+StructuredBuffer<SurfelGridCell> surfelGridBuffer : register(t1);
+StructuredBuffer<uint> surfelCellBuffer : register(t2);
+StructuredBuffer<uint> surfelAliveBuffer : register(t3);
+StructuredBuffer<SurfelRayDataPacked> surfelRayBuffer : register(t4);
 
 RWStructuredBuffer<SurfelData> surfelDataBuffer : register(u0);
 RWStructuredBuffer<SurfelVarianceDataPacked> surfelVarianceBuffer : register(u1);
 RWTexture2D<float2> surfelMomentsTexture : register(u2);
-RWTexture2D<uint4> surfelIrradianceTexture : register(u3); // aliased BC6H
+RWStructuredBuffer<Surfel> surfelBuffer : register(u3);
 
 static const uint THREADCOUNT = 8;
 static const uint CACHE_SIZE = THREADCOUNT * THREADCOUNT;
@@ -109,7 +108,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 
 	float inconsistency = 0;
 	
-	if(GTid.x < SURFEL_MOMENT_RESOLUTION && GTid.y < SURFEL_MOMENT_RESOLUTION)
+	if (GTid.x < SURFEL_MOMENT_RESOLUTION && GTid.y < SURFEL_MOMENT_RESOLUTION)
 	{
 		uint2 moments_pixel = moments_topleft + GTid.xy;
 		if (life > 0)
@@ -151,7 +150,20 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 
 	if (groupIndex == 0)
 	{
-		surfelIrradianceTexture[moments_topleft / 4] = CompressBC6H(shared_texels);
+		float3x3 TBN = get_tangentspace(N);
+		SH::L1_RGB radiance = SH::L1_RGB::Zero();
+		for (int x = 0; x < SURFEL_MOMENT_RESOLUTION; ++x)
+		{
+			for (int y = 0; y < SURFEL_MOMENT_RESOLUTION; ++y)
+			{
+				const float3 direction = normalize(mul(decode_hemioct(((float2(x, y) + 0.5) / (float2)SURFEL_MOMENT_RESOLUTION) * 2 - 1), TBN));
+				float3 value = shared_texels[flatten2D(int2(x, y), SURFEL_MOMENT_RESOLUTION)];
+				radiance = SH::Add(radiance, SH::ProjectOntoL1_RGB(direction, value));
+			}
+		}
+		radiance = SH::Multiply(radiance, rcp(SURFEL_MOMENT_RESOLUTION * SURFEL_MOMENT_RESOLUTION * HEMISPHERE_SAMPLING_PDF));
+		//radiance = SH::Add(radiance, SH::ProjectOntoL1_RGB(float3(0,1,0), float3(1,0,0)));
+		surfelBuffer[surfel_index].radiance = radiance;
 	}
 	else if(groupIndex == 1)
 	{

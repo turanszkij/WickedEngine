@@ -186,9 +186,6 @@ namespace wi::scene
 			wi::graphics::GPUBuffer cellBuffer;
 			wi::graphics::GPUBuffer rayBuffer;
 			wi::graphics::Texture momentsTexture;
-			wi::graphics::Texture irradianceTexture;
-			wi::graphics::Texture irradianceTexture_rw;
-			wi::graphics::GPUBuffer sparse_tile_pool;
 		} surfelgi;
 
 		// DDGI resources:
@@ -203,7 +200,6 @@ namespace wi::scene
 			wi::graphics::GPUBuffer variance_buffer;
 			wi::graphics::GPUBuffer raycount_buffer;
 			wi::graphics::GPUBuffer rayallocation_buffer;
-			wi::graphics::GPUBuffer sparse_tile_pool;
 			wi::graphics::GPUBuffer probe_buffer;
 			wi::graphics::Texture depth_texture;
 

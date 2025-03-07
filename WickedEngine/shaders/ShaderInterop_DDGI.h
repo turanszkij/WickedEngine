@@ -262,7 +262,7 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, out half3 out_dominant_lig
 		probe_irradiance = sqrt(probe_irradiance);
 #endif
 
-		sum_dominant_lightdir += weight * OptimalLinearDirection(probe.radiance);
+		sum_dominant_lightdir += weight * SH::OptimalLinearDirection(probe.radiance);
 		sum_irradiance += weight * probe_irradiance;
 		sum_weight += weight;
 	}

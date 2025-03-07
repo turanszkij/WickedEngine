@@ -417,7 +417,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			// Infinite bounces based on previous frame probe sampling:
 			if (push.frameIndex > 0)
 			{
-				const float energy_conservation = 0.95 * SPHERE_SAMPLING_PDF;
+				const float energy_conservation = 0.95 * HEMISPHERE_SAMPLING_PDF;
 				radiance += ddgi_sample_irradiance(surface.P, surface.facenormal, surface.dominant_lightdir) * energy_conservation;
 			}
 			radiance *= surface.albedo;

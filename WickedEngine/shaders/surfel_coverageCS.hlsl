@@ -10,7 +10,6 @@ StructuredBuffer<Surfel> surfelBuffer : register(t0);
 StructuredBuffer<SurfelGridCell> surfelGridBuffer : register(t1);
 StructuredBuffer<uint> surfelCellBuffer : register(t2);
 Texture2D<float2> surfelMomentsTexture : register(t3);
-Texture2D<float4> surfelIrradianceTexture : register(t4);
 
 RWStructuredBuffer<SurfelData> surfelDataBuffer : register(u0);
 RWStructuredBuffer<uint> surfelDeadBuffer : register(u1);
@@ -115,7 +114,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 				// contribution based on life can eliminate black popping surfels, but the surfel_data must be accessed...
 				contribution = lerp(0, contribution, saturate(surfelDataBuffer[surfel_index].GetLife() / 2.0f));
 
-				color += surfelIrradianceTexture.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, N), 0) * contribution;
+				color += float4(SH::CalculateIrradiance(surfel.radiance, N), 1) * contribution;
 				//color += float4(surfel.color, 1) * contribution;
 
 				switch (push.debug)

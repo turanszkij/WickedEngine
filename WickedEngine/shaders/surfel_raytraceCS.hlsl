@@ -12,7 +12,6 @@ StructuredBuffer<SurfelGridCell> surfelGridBuffer : register(t2);
 StructuredBuffer<uint> surfelCellBuffer : register(t3);
 StructuredBuffer<uint> surfelAliveBuffer : register(t4);
 Texture2D<float2> surfelMomentsTexturePrev : register(t5);
-Texture2D<float4> surfelIrradianceTexture : register(t6);
 
 RWStructuredBuffer<SurfelRayDataPacked> surfelRayBuffer : register(u0);
 
@@ -282,14 +281,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 							float2 moments = surfelMomentsTexturePrev.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, L / dist), 0);
 							contribution *= surfel_moment_weight(moments, dist);
 
-							surfel_gi += surfelIrradianceTexture.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, surface.N), 0) * contribution;
+							surfel_gi += float4(SH::CalculateIrradiance(surfel.radiance, surface.N), 1) * contribution;
 
 						}
 					}
 				}
 				if (surfel_gi.a > 0)
 				{
-					const float energy_conservation = 0.95;
+					const float energy_conservation = 0.95 * HEMISPHERE_SAMPLING_PDF;
 					surfel_gi.rgb *= energy_conservation;
 					surfel_gi.rgb /= surfel_gi.a;
 					surfel_gi.a = saturate(surfel_gi.a);

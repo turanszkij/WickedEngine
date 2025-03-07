@@ -41,6 +41,7 @@ static_assert(SURFEL_RAY_BOOST_MAX < 256, "Must be < 256 because it is packed at
 //	But also ensure that it is 16-byte aligned for structured buffer access performance
 struct Surfel
 {
+	SH::L1_RGB radiance;
 	float3 position;
 	uint normal; // top 8 bits free
 
