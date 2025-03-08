@@ -254,8 +254,7 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, out half3 out_dominant_lig
 		// Trilinear weights
 		weight *= trilinear.x * trilinear.y * trilinear.z;
 
-		SH::L1_RGB sh = probe.radiance.Unpack();
-		sum_sh = SH::Add(sum_sh, SH::Multiply(sh, weight));
+		sum_sh = SH::Add(sum_sh, SH::Multiply(probe.radiance.Unpack(), weight));
 
 		sum_weight += weight;
 	}

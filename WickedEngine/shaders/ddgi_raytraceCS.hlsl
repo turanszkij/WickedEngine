@@ -417,10 +417,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			// Infinite bounces based on previous frame probe sampling:
 			if (push.frameIndex > 0)
 			{
-				const half energy_conservation = 0.95;
+				half energy_conservation = 0.95;
+				energy_conservation *= HEMISPHERE_SAMPLING_PDF;
 				half3 ddgi = ddgi_sample_irradiance(surface.P, surface.facenormal, surface.dominant_lightdir);
 				ddgi *= energy_conservation;
-				ddgi *= HEMISPHERE_SAMPLING_PDF;
 				radiance += ddgi;
 			}
 			radiance *= surface.albedo;
