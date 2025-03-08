@@ -96,7 +96,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		float dist2 = dot(L, L);
 		if (dist2 < sqr(surfel.GetRadius()))
 		{
-			float3 normal = normalize(unpack_unitvector(surfel.normal));
+			float3 normal = normalize(unpack_half3(surfel.normal));
 			float dotN = dot(N, normal);
 			if (dotN > 0)
 			{
@@ -114,7 +114,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 				// contribution based on life can eliminate black popping surfels, but the surfel_data must be accessed...
 				contribution = lerp(0, contribution, saturate(surfelDataBuffer[surfel_index].GetLife() / 2.0f));
 
-				color += float4(SH::CalculateIrradiance(surfel.radiance, N), 1) * contribution;
+				color += float4(SH::CalculateIrradiance(surfel.radiance.Unpack(), N), 1) * contribution;
 				//color += float4(surfel.color, 1) * contribution;
 
 				switch (push.debug)

@@ -35,7 +35,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	float maxDistance = surfel.GetRadius();
 
 	const float3 P = surfel.position;
-	const float3 N = normalize(unpack_unitvector(surfel.normal));
+	const float3 N = normalize(unpack_half3(surfel.normal));
 
 	float3 texel_direction = decode_hemioct(((GTid.xy + 0.5) / (float2)SURFEL_MOMENT_RESOLUTION) * 2 - 1);
 	texel_direction = mul(texel_direction, get_tangentspace(N));
@@ -162,8 +162,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 			}
 		}
 		radiance = SH::Multiply(radiance, rcp(SURFEL_MOMENT_RESOLUTION * SURFEL_MOMENT_RESOLUTION * HEMISPHERE_SAMPLING_PDF));
-		//radiance = SH::Add(radiance, SH::ProjectOntoL1_RGB(float3(0,1,0), float3(1,0,0)));
-		surfelBuffer[surfel_index].radiance = radiance;
+		surfelBuffer[surfel_index].radiance = radiance.Pack();
 	}
 	else if(groupIndex == 1)
 	{

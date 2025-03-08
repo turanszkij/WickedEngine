@@ -39,11 +39,12 @@ static_assert(SURFEL_RAY_BOOST_MAX < 256, "Must be < 256 because it is packed at
 
 // This per-surfel surfel structure will be accessed rapidly on GI lookup, so keep it as small as possible
 //	But also ensure that it is 16-byte aligned for structured buffer access performance
-struct Surfel
+struct alignas(16) Surfel
 {
-	SH::L1_RGB radiance;
+	SH::L1_RGB::Packed radiance;
+	uint2 normal;
 	float3 position;
-	uint normal; // top 8 bits free
+	uint padding1;
 
 	inline float GetRadius() { return SURFEL_MAX_RADIUS; }
 };

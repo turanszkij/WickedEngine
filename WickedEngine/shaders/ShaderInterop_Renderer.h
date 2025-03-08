@@ -1715,19 +1715,20 @@ namespace SH
 		static const uint NumCoefficients = 4;
 		float C[NumCoefficients];
 	};
-
 	struct L1_RGB
 	{
 		static const uint NumCoefficients = 4;
 		float3 C[NumCoefficients];
+		struct Packed
+		{
+			uint C[3 * NumCoefficients / 2];
+		};
 	};
-
 	struct L2
 	{
 		static const uint NumCoefficients = 9;
 		float C[NumCoefficients];
 	};
-
 	struct L2_RGB
 	{
 		static const uint NumCoefficients = 9;
@@ -1736,11 +1737,10 @@ namespace SH
 }
 #endif // __cplusplus
 
-struct DDGIProbe
+struct alignas(16) DDGIProbe
 {
-	SH::L1_RGB radiance;
-	float3 offset;
-	float padding;
+	SH::L1_RGB::Packed radiance;
+	uint2 offset;
 };
 
 #endif // WI_SHADERINTEROP_RENDERER_H

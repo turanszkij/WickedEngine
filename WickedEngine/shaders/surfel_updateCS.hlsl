@@ -39,7 +39,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		{
 			surface.facenormal = -surface.facenormal;
 		}
-		surfel.normal = pack_unitvector(surface.facenormal);
+		surfel.normal = pack_half3(surface.facenormal);
 		surfel.position = surface.P;
 
 		int3 center_cell = surfel_cell(surfel.position);

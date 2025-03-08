@@ -200,7 +200,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 					uint seed = 0;
 					float shadow = 0;
 
-					ray.Direction = L + max3(surface.sss);
+					ray.Direction = normalize(L + max3(surface.sss));
 
 #ifdef RTAPI
 					wiRayQuery q;
@@ -239,7 +239,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 					}
 					shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : 1;
 #else
-					shadow = TraceRay_Any(newRay, asuint(postprocess.params1.x), groupIndex) ? 0 : 1;
+					shadow = TraceRay_Any(ray, asuint(postprocess.params1.x), groupIndex) ? 0 : 1;
 #endif // RTAPI
 
 #else

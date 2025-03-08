@@ -27,7 +27,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	uint surfel_index = rayData.surfelIndex;
 	Surfel surfel = surfelBuffer[surfel_index];
 
-	const float3 N = normalize(unpack_unitvector(surfel.normal));
+	const float3 N = normalize(unpack_half3(surfel.normal));
 
 	RNG rng;
 	rng.init(DTid.xx, GetFrame().frame_count);
@@ -267,7 +267,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					float dist2 = dot(L, L);
 					if (dist2 < sqr(surfel.GetRadius()))
 					{
-						float3 normal = normalize(unpack_unitvector(surfel.normal));
+						float3 normal = normalize(unpack_half3(surfel.normal));
 						float dotN = dot(surface.N, normal);
 						if (dotN > 0)
 						{
@@ -281,7 +281,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 							float2 moments = surfelMomentsTexturePrev.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, L / dist), 0);
 							contribution *= surfel_moment_weight(moments, dist);
 
-							surfel_gi += float4(SH::CalculateIrradiance(surfel.radiance, surface.N), 1) * contribution;
+							surfel_gi += float4(SH::CalculateIrradiance(surfel.radiance.Unpack(), surface.N), 1) * contribution;
 
 						}
 					}

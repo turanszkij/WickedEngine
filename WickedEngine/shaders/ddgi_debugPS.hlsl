@@ -14,8 +14,7 @@ float4 main(VSOut input) : SV_Target
 
 	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
 	DDGIProbe probe = probe_buffer[input.probeIndex];
-	color = SH::Evaluate(probe.radiance, input.normal);
-	//color = SH::CalculateIrradiance(probe.radiance, input.normal);
+	color = SH::Evaluate(probe.radiance.Unpack(), input.normal);
 	
 	return float4(color, 1);
 }

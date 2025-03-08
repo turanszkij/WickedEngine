@@ -123,7 +123,9 @@ inline float3 ddgi_probe_position(uint3 probeCoord)
 	uint probeIndex = ddgi_probe_index(probeCoord);
 	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
 	DDGIProbe probe = probe_buffer[probeIndex];
-	pos += probe.offset;
+	float3 offset = unpack_half3(probe.offset);
+	offset = offset * ddgi_cellsize() * 0.5;
+	pos += offset;
 	return pos;
 }
 inline uint2 ddgi_probe_depth_pixel(uint3 probeCoord)
@@ -242,7 +244,8 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, out half3 out_dominant_lig
 
 		half3 irradiance_dir = N;
 
-		half3 probe_irradiance = SH::CalculateIrradiance(probe.radiance, irradiance_dir);
+		SH::L1_RGB sh = probe.radiance.Unpack();
+		half3 probe_irradiance = SH::CalculateIrradiance(sh, irradiance_dir);
 
 		// A tiny bit of light is really visible due to log perception, so
 		// crush tiny weights but keep the curve continuous. This must be done
@@ -262,7 +265,7 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, out half3 out_dominant_lig
 		probe_irradiance = sqrt(probe_irradiance);
 #endif
 
-		sum_dominant_lightdir += weight * SH::OptimalLinearDirection(probe.radiance);
+		sum_dominant_lightdir += weight * SH::OptimalLinearDirection(sh);
 		sum_irradiance += weight * probe_irradiance;
 		sum_weight += weight;
 	}
