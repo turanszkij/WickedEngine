@@ -64,7 +64,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		const uint light_index = lights().first_item() + rng.next_uint(light_count);
 		ShaderEntity light = load_entity(light_index);
 
-		if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
+		if (light.IsStaticLight())
 		{
 			Lighting lighting;
 			lighting.create(0, 0, 0, 0);

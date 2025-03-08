@@ -4389,10 +4389,10 @@ void UpdatePerFrameData(
 			// mark as no shadow by default:
 			shaderentity.indices = ~0;
 
-			bool shadow = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
+			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
 			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
 
-			if (shadow)
+			if (shadowmap)
 			{
 				shaderentity.shadowAtlasMulAdd.x = shadow_rect.w * atlas_dim_rcp.x;
 				shaderentity.shadowAtlasMulAdd.y = shadow_rect.h * atlas_dim_rcp.y;
@@ -4404,7 +4404,7 @@ void UpdatePerFrameData(
 			const uint cascade_count = std::min((uint)light.cascade_distances.size(), MATRIXARRAY_COUNT - matrixCounter);
 			shaderentity.SetShadowCascadeCount(cascade_count);
 
-			if (shadow && !light.cascade_distances.empty())
+			if (shadowmap && !light.cascade_distances.empty())
 			{
 				SHCAM* shcams = (SHCAM*)alloca(sizeof(SHCAM) * cascade_count);
 				CreateDirLightShadowCams(light, *vis.camera, shcams, cascade_count, shadow_rect);
@@ -4414,6 +4414,10 @@ void UpdatePerFrameData(
 				}
 			}
 
+			if (light.IsCastingShadow())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_CASTING_SHADOW);
+			}
 			if (light.IsStatic())
 			{
 				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_STATIC);
@@ -4464,10 +4468,10 @@ void UpdatePerFrameData(
 			// mark as no shadow by default:
 			shaderentity.indices = ~0;
 
-			bool shadow = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
+			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
 			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
 
-			if (shadow)
+			if (shadowmap)
 			{
 				shaderentity.shadowAtlasMulAdd.x = shadow_rect.w * atlas_dim_rcp.x;
 				shaderentity.shadowAtlasMulAdd.y = shadow_rect.h * atlas_dim_rcp.y;
@@ -4489,13 +4493,17 @@ void UpdatePerFrameData(
 			shaderentity.SetAngleScale(lightAngleScale);
 			shaderentity.SetAngleOffset(lightAngleOffset);
 
-			if (shadow)
+			if (shadowmap)
 			{
 				SHCAM shcam;
 				CreateSpotLightShadowCam(light, shcam);
 				XMStoreFloat4x4(&matrixArray[matrixCounter++], shcam.view_projection);
 			}
 
+			if (light.IsCastingShadow())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_CASTING_SHADOW);
+			}
 			if (light.IsStatic())
 			{
 				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_STATIC);
@@ -4546,10 +4554,10 @@ void UpdatePerFrameData(
 			// mark as no shadow by default:
 			shaderentity.indices = ~0;
 
-			bool shadow = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
+			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
 			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
 
-			if (shadow)
+			if (shadowmap)
 			{
 				shaderentity.shadowAtlasMulAdd.x = shadow_rect.w * atlas_dim_rcp.x;
 				shaderentity.shadowAtlasMulAdd.y = shadow_rect.h * atlas_dim_rcp.y;
@@ -4558,7 +4566,7 @@ void UpdatePerFrameData(
 				shaderentity.SetIndices(matrixCounter, 0);
 			}
 
-			if (shadow)
+			if (shadowmap)
 			{
 				const float FarZ = 0.1f;	// watch out: reversed depth buffer! Also, light near plane is constant for simplicity, this should match on cpu side!
 				const float NearZ = std::max(1.0f, light.GetRange()); // watch out: reversed depth buffer!
@@ -4569,6 +4577,10 @@ void UpdatePerFrameData(
 				shaderentity.SetCubeRemapFar(cubemapDepthRemapFar);
 			}
 
+			if (light.IsCastingShadow())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_CASTING_SHADOW);
+			}
 			if (light.IsStatic())
 			{
 				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_STATIC);

@@ -174,7 +174,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 				if ((light.layerMask & surface.material.layerMask) == 0)
 					continue;
 
-				if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
+				if (light.IsStaticLight())
 				{
 					continue; // static lights will be skipped (they are used in lightmap baking)
 				}

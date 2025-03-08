@@ -101,7 +101,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 					continue;
 				}
 
-				if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
+				if (light.IsStaticLight())
 				{
 					continue; // static lights will be skipped (they are used in lightmap baking)
 				}

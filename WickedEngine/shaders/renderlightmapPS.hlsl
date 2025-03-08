@@ -153,7 +153,7 @@ float4 main(Input input) : SV_TARGET
 			const uint light_index = lights().first_item() + rng.next_uint(light_count);
 			ShaderEntity light = load_entity(light_index);
 
-			if (bounce > 0 || light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC) // dynamic lights will not be baked into lightmap at first bounce
+			if (bounce > 0 || light.IsStaticLight()) // dynamic lights will not be baked into lightmap at first bounce
 			{
 				Lighting lighting;
 				lighting.create(0, 0, 0, 0);

@@ -190,7 +190,7 @@ inline bool furthest_cascade_volumetrics(inout ShaderEntity light, inout uint fu
 	light = load_entity(lights().first_item() + GetWeather().most_important_light_index);
 	furthestCascade = light.GetShadowCascadeCount() - 1;
 	
-	if ((light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC) == 0 && light.IsCastingShadow() && furthestCascade >= 0)
+	if (!light.IsStaticLight() && light.IsCastingShadow() && furthestCascade >= 0)
 	{
 		// We consider this light useless if it is static, is not casting shadow and if there are no available cascades
 		return true;
