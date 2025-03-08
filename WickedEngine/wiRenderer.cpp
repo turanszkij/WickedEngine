@@ -11754,7 +11754,6 @@ void DDGI(
 		device->EventBegin("Indirect prepare", cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_DDGI_INDIRECTPREPARE], cmd);
-		device->PushConstants(&push, sizeof(push), cmd);
 
 		const GPUResource* uavs[] = {
 			&scene.ddgi.rayallocation_buffer,
