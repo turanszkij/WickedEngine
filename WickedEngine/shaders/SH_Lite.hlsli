@@ -97,13 +97,13 @@ struct L1
 	};
 };
 
-L1 Unpack(L1::Packed packed)
+L1 Unpack(L1::Packed pk)
 {
 	L1 ret;
-	ret.C[0] = f16tof32(packed.C[0]);
-	ret.C[1] = f16tof32(packed.C[0] >> 16u);
-	ret.C[2] = f16tof32(packed.C[1]);
-	ret.C[3] = f16tof32(packed.C[1] >> 16u);
+	ret.C[0] = f16tof32(pk.C[0]);
+	ret.C[1] = f16tof32(pk.C[0] >> 16u);
+	ret.C[2] = f16tof32(pk.C[1]);
+	ret.C[3] = f16tof32(pk.C[1] >> 16u);
 	return ret;
 }
 L1::Packed Pack(L1 sh)
@@ -131,13 +131,13 @@ struct L1_RGB
 	};
 };
 
-L1_RGB Unpack(L1_RGB::Packed packed)
+L1_RGB Unpack(L1_RGB::Packed pk)
 {
 	L1_RGB ret;
-	ret.C[0] = half3(f16tof32(packed.C[0]), f16tof32(packed.C[0] >> 16u), f16tof32(packed.C[1]));
-	ret.C[1] = half3(f16tof32(packed.C[1] >> 16u), f16tof32(packed.C[2]), f16tof32(packed.C[2] >> 16u));
-	ret.C[2] = half3(f16tof32(packed.C[3]), f16tof32(packed.C[3] >> 16u), f16tof32(packed.C[4]));
-	ret.C[3] = half3(f16tof32(packed.C[4] >> 16u), f16tof32(packed.C[5]), f16tof32(packed.C[5] >> 16u));
+	ret.C[0] = half3(f16tof32(pk.C[0]), f16tof32(pk.C[0] >> 16u), f16tof32(pk.C[1]));
+	ret.C[1] = half3(f16tof32(pk.C[1] >> 16u), f16tof32(pk.C[2]), f16tof32(pk.C[2] >> 16u));
+	ret.C[2] = half3(f16tof32(pk.C[3]), f16tof32(pk.C[3] >> 16u), f16tof32(pk.C[4]));
+	ret.C[3] = half3(f16tof32(pk.C[4] >> 16u), f16tof32(pk.C[5]), f16tof32(pk.C[5] >> 16u));
 	return ret;
 }
 L1_RGB::Packed Pack(L1_RGB sh)

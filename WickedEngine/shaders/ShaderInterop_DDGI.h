@@ -105,19 +105,19 @@ inline uint3 ddgi_probe_coord(uint probeIndex)
 {
 	return unflatten3D(probeIndex, GetScene().ddgi.grid_dimensions);
 }
-inline uint ddgi_probe_index(uint3 probeCoord)
+inline uint ddgi_probe_index(min16uint3 probeCoord)
 {
 	return flatten3D(probeCoord, GetScene().ddgi.grid_dimensions);
 }
-inline uint3 ddgi_probe_offset_pixel(uint3 probeCoord)
+inline uint3 ddgi_probe_offset_pixel(min16uint3 probeCoord)
 {
 	return probeCoord.xzy;
 }
-inline float3 ddgi_probe_position_rest(uint3 probeCoord)
+inline float3 ddgi_probe_position_rest(min16uint3 probeCoord)
 {
 	return GetScene().ddgi.grid_min + probeCoord * ddgi_cellsize();
 }
-inline float3 ddgi_probe_position(uint3 probeCoord)
+inline float3 ddgi_probe_position(min16uint3 probeCoord)
 {
 	float3 pos = ddgi_probe_position_rest(probeCoord);
 	uint probeIndex = ddgi_probe_index(probeCoord);
@@ -128,11 +128,11 @@ inline float3 ddgi_probe_position(uint3 probeCoord)
 	pos += offset;
 	return pos;
 }
-inline uint2 ddgi_probe_depth_pixel(uint3 probeCoord)
+inline uint2 ddgi_probe_depth_pixel(min16uint3 probeCoord)
 {
 	return probeCoord.xz * DDGI_DEPTH_TEXELS + uint2(probeCoord.y * GetScene().ddgi.grid_dimensions.x * DDGI_DEPTH_TEXELS, 0) + 1;
 }
-inline float2 ddgi_probe_depth_uv(uint3 probeCoord, half3 direction)
+inline float2 ddgi_probe_depth_uv(min16uint3 probeCoord, half3 direction)
 {
 	float2 pixel = ddgi_probe_depth_pixel(probeCoord);
 	pixel += (encode_oct(normalize(direction)) * 0.5 + 0.5) * DDGI_DEPTH_RESOLUTION;
@@ -144,24 +144,23 @@ inline float2 ddgi_probe_depth_uv(uint3 probeCoord, half3 direction)
 half3 ddgi_sample_irradiance(in float3 P, in half3 N, out half3 out_dominant_lightdir)
 {
 	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
-	uint3 base_grid_coord = ddgi_base_probe_coord(P);
-	//float3 base_probe_pos = ddgi_probe_position(base_grid_coord);
-	float3 base_probe_pos = ddgi_probe_position_rest(base_grid_coord);
+	const min16uint3 base_grid_coord = ddgi_base_probe_coord(P);
+	const float3 reference_probe_pos = ddgi_probe_position_rest(base_grid_coord); // taking the rest pose!
 
-	float3 sum_dominant_lightdir = 0;
+	float3 sum_dominant_lightdir = 0; // full precision weighting, because half precision causes anomalies in some cases
 	half3 sum_irradiance = 0;
 	half sum_weight = 0;
 
 	// alpha is how far from the floor(currentVertex) position. on [0, 1] for each axis.
-	half3 alpha = saturate((P - base_probe_pos) * ddgi_cellsize_rcp());
+	half3 alpha = saturate((P - reference_probe_pos) * ddgi_cellsize_rcp());
 
 	// Iterate over adjacent probe cage
-	for (uint i = 0; i < 8; ++i)
+	for (min16uint i = 0; i < 8; ++i)
 	{
 		// Compute the offset grid coord and clamp to the probe grid boundary
 		// Offset = 0 or 1 along each axis
-		uint3 offset = uint3(i, i >> 1, i >> 2) & 1;
-		uint3 probe_grid_coord = clamp(base_grid_coord + offset, 0u.xxx, GetScene().ddgi.grid_dimensions - 1);
+		min16uint3 offset = uint3(i, i >> 1, i >> 2) & 1;
+		min16uint3 probe_grid_coord = clamp(base_grid_coord + offset, 0u.xxx, GetScene().ddgi.grid_dimensions - 1);
 		uint probe_index = ddgi_probe_index(probe_grid_coord);
 		DDGIProbe probe = probe_buffer[probe_index];
 
@@ -169,7 +168,6 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, out half3 out_dominant_lig
 		// test a probe that is *behind* the surface.
 		// It doesn't have to be cosine, but that is efficient to compute and we must clip to the tangent plane.
 		float3 probe_pos = ddgi_probe_position(probe_grid_coord);
-		//float3 probe_pos = ddgi_probe_position_rest(probe_grid_coord);
 
 		// Bias the position at which visibility is computed; this
 		// avoids performing a shadow test *at* a surface, which is a
@@ -265,7 +263,7 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, out half3 out_dominant_lig
 		probe_irradiance = sqrt(probe_irradiance);
 #endif
 
-		sum_dominant_lightdir += weight * SH::OptimalLinearDirection(sh);
+		sum_dominant_lightdir += weight * float3(SH::OptimalLinearDirection(sh)); // full precision weighting
 		sum_irradiance += weight * probe_irradiance;
 		sum_weight += weight;
 	}
@@ -273,8 +271,8 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, out half3 out_dominant_lig
 	if (sum_weight > 0)
 	{
 		const half rcp_sum_weight = rcp(sum_weight);
-		out_dominant_lightdir = normalize(sum_dominant_lightdir * rcp_sum_weight + N * 0.2); // I bend it in normal direction to avoid dominant light dir that points from below surface
 		half3 net_irradiance = sum_irradiance * rcp_sum_weight;
+		out_dominant_lightdir = normalize(sum_dominant_lightdir * rcp_sum_weight + N * 0.2); // I bend it in normal direction to avoid dominant light dir that points from below surface
 
 		// Go back to linear irradiance
 #ifndef DDGI_LINEAR_BLENDING
