@@ -288,9 +288,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				}
 				if (surfel_gi.a > 0)
 				{
-					const float energy_conservation = 0.95 * HEMISPHERE_SAMPLING_PDF;
+					const half energy_conservation = 0.95;
 					surfel_gi.rgb *= energy_conservation;
 					surfel_gi.rgb /= surfel_gi.a;
+					surfel_gi.rgb *= HEMISPHERE_SAMPLING_PDF;
 					surfel_gi.a = saturate(surfel_gi.a);
 					hit_result += max(0, surfel_gi.rgb);
 				}
