@@ -239,7 +239,7 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 			}
 		}
 		radiance = SH::Multiply(radiance, rcp(RESOLUTION * RESOLUTION * SPHERE_SAMPLING_PDF));
-		ddgiProbeBuffer[probeIndex].radiance = SH::Pack(radiance);
+		ddgiProbeBuffer[probeIndex].radiance = radiance.Pack();
 		
 		//draw_line(ddgi_probe_position(probeCoord), ddgi_probe_position(probeCoord) + OptimalLinearDirection(radiance));
 	}

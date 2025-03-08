@@ -281,7 +281,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 							float2 moments = surfelMomentsTexturePrev.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, L / dist), 0);
 							contribution *= surfel_moment_weight(moments, dist);
 
-							surfel_gi += float4(SH::CalculateIrradiance(SH::Unpack(surfel.radiance), surface.N), 1) * contribution;
+							surfel_gi += float4(SH::CalculateIrradiance(surfel.radiance.Unpack(), surface.N), 1) * contribution;
 
 						}
 					}

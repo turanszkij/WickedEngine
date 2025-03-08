@@ -242,7 +242,7 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, out half3 out_dominant_lig
 
 		half3 irradiance_dir = N;
 
-		SH::L1_RGB sh = SH::Unpack(probe.radiance);
+		SH::L1_RGB sh = probe.radiance.Unpack();
 		half3 probe_irradiance = SH::CalculateIrradiance(sh, irradiance_dir);
 
 		// A tiny bit of light is really visible due to log perception, so

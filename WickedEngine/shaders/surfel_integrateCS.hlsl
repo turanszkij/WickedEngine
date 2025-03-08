@@ -162,7 +162,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 			}
 		}
 		radiance = SH::Multiply(radiance, rcp(SURFEL_MOMENT_RESOLUTION * SURFEL_MOMENT_RESOLUTION * HEMISPHERE_SAMPLING_PDF));
-		surfelBuffer[surfel_index].radiance = SH::Pack(radiance);
+		surfelBuffer[surfel_index].radiance = radiance.Pack();
 	}
 	else if(groupIndex == 1)
 	{
