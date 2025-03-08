@@ -147,9 +147,11 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, out half3 out_dominant_lig
 	const min16uint3 base_grid_coord = ddgi_base_probe_coord(P);
 	const float3 reference_probe_pos = ddgi_probe_position_rest(base_grid_coord); // taking the rest pose!
 
-	float3 sum_dominant_lightdir = 0; // full precision weighting, because half precision causes anomalies in some cases
-	half3 sum_irradiance = 0;
 	half sum_weight = 0;
+
+	// Note: the quality seems to be a lot better when weighting the whole SH instead of
+	//	blending irradiance and dld separately
+	SH::L1_RGB sum_sh = SH::L1_RGB::Zero();
 
 	// alpha is how far from the floor(currentVertex) position. on [0, 1] for each axis.
 	half3 alpha = saturate((P - reference_probe_pos) * ddgi_cellsize_rcp());
@@ -184,7 +186,7 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, out half3 out_dominant_lig
 		// transition between probes. Avoid ever going entirely to zero because that
 		// will cause problems at the border probes. This isn't really a lerp. 
 		// We're using 1-a when offset = 0 and a when offset = 1.
-		half3 trilinear = lerp(1.0 - alpha, alpha, offset);
+		half3 trilinear = lerp(1.0 - alpha, alpha, half3(offset));
 		half weight = 1.0;
 
 		// Clamp all of the multiplies. We can't let the weight go to zero because then it would be 
@@ -242,9 +244,6 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, out half3 out_dominant_lig
 
 		half3 irradiance_dir = N;
 
-		SH::L1_RGB sh = probe.radiance.Unpack();
-		half3 probe_irradiance = SH::CalculateIrradiance(sh, irradiance_dir);
-
 		// A tiny bit of light is really visible due to log perception, so
 		// crush tiny weights but keep the curve continuous. This must be done
 		// before the trilinear weights, because those should be preserved.
@@ -255,34 +254,24 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, out half3 out_dominant_lig
 		// Trilinear weights
 		weight *= trilinear.x * trilinear.y * trilinear.z;
 
-		// Weight in a more-perceptual brightness space instead of radiance space.
-		// This softens the transitions between probes with respect to translation.
-		// It makes little difference most of the time, but when there are radical transitions
-		// between probes this helps soften the ramp.
-#ifndef DDGI_LINEAR_BLENDING
-		probe_irradiance = sqrt(probe_irradiance);
-#endif
+		SH::L1_RGB sh = probe.radiance.Unpack();
+		sum_sh = SH::Add(sum_sh, SH::Multiply(sh, weight));
 
-		sum_dominant_lightdir += weight * float3(SH::OptimalLinearDirection(sh)); // full precision weighting
-		sum_irradiance += weight * probe_irradiance;
 		sum_weight += weight;
 	}
 
 	if (sum_weight > 0)
 	{
-		const half rcp_sum_weight = rcp(sum_weight);
-		half3 net_irradiance = sum_irradiance * rcp_sum_weight;
-		out_dominant_lightdir = normalize(sum_dominant_lightdir * rcp_sum_weight + N * 0.2); // I bend it in normal direction to avoid dominant light dir that points from below surface
+		sum_sh = SH::Multiply(sum_sh, rcp(sum_weight));
 
-		// Go back to linear irradiance
-#ifndef DDGI_LINEAR_BLENDING
-		net_irradiance = sqr(net_irradiance);
-#endif
+		half3 net_irradiance = SH::CalculateIrradiance(sum_sh, N);
 
-		//net_irradiance *= 0.85; // energy preservation
+		// DLD notes:
+		// 1: casting to float3 avoids the "stickman" arifact when close to some walls with capsule shadow
+		// 2: bending with normal direction helps to push dld above surface level
+		out_dominant_lightdir = normalize(float3(SH::OptimalLinearDirection(sum_sh)) + N * 0.2);
 
 		return net_irradiance;
-		//return 0.5f * PI * net_irradiance;
 	}
 
 	return 0;
