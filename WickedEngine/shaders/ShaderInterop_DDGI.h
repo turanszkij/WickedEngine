@@ -141,7 +141,7 @@ inline float2 ddgi_probe_depth_uv(min16uint3 probeCoord, half3 direction)
 
 
 // Based on: https://github.com/diharaw/hybrid-rendering/blob/master/src/shaders/gi/gi_common.glsl
-half3 ddgi_sample_irradiance(in float3 P, in half3 N, out half3 out_dominant_lightdir)
+half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_lightdir, inout half3 out_dominant_lightcolor)
 {
 	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
 	const min16uint3 base_grid_coord = ddgi_base_probe_coord(P);
@@ -150,7 +150,7 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, out half3 out_dominant_lig
 	half sum_weight = 0;
 
 	// Note: the quality seems to be a lot better when weighting the whole SH instead of
-	//	blending irradiance and dld separately
+	//	blending irradiance, specular and dld separately
 	SH::L1_RGB sum_sh = SH::L1_RGB::Zero();
 
 	// alpha is how far from the floor(currentVertex) position. on [0, 1] for each axis.
@@ -263,14 +263,16 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, out half3 out_dominant_lig
 	{
 		sum_sh = SH::Multiply(sum_sh, rcp(sum_weight));
 
-		half3 net_irradiance = SH::CalculateIrradiance(sum_sh, N);
+		half3 net_irradiance = SH::CalculateIrradiance(sum_sh, N) / PI;
+
+		SH::ApproximateDirectionalLight(sum_sh, out_dominant_lightdir, out_dominant_lightcolor);
 
 		// DLD notes:
 		// 1: casting to float3 avoids the "stickman" arifact when close to some walls with capsule shadow
-		// 2: bending with normal direction to push dld above surface level
-		out_dominant_lightdir = normalize(float3(SH::OptimalLinearDirection(sum_sh)) + N);
+		// 2: bending with normal direction to push dld above surface level since light can't fall to surface from behind
+		out_dominant_lightdir = normalize(float3(out_dominant_lightdir) + N * 0.8);
 
-		return net_irradiance / PI;
+		return net_irradiance;
 	}
 
 	return 0;

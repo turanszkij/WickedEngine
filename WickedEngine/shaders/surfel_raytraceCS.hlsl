@@ -439,7 +439,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				{
 					half energy_conservation = 0.95;
 					energy_conservation /= surfel_gi.a;
-					energy_conservation *= HEMISPHERE_SAMPLING_PDF;
+					energy_conservation /= PI;
 					surfel_gi.rgb *= energy_conservation;
 					hit_result += max(0, surfel_gi.rgb);
 				}

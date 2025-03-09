@@ -419,8 +419,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			if (push.frameIndex > 0)
 			{
 				half energy_conservation = 0.95;
-				energy_conservation *= HEMISPHERE_SAMPLING_PDF;
-				half3 ddgi = ddgi_sample_irradiance(surface.P, surface.facenormal, surface.dominant_lightdir);
+				half3 ddgi = ddgi_sample_irradiance(surface.P, surface.facenormal, surface.dominant_lightdir, surface.dominant_lightcolor);
 				ddgi *= energy_conservation;
 				hit_result += ddgi;
 			}

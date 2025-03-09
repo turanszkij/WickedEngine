@@ -156,7 +156,7 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 		[branch]
 		if (GetScene().ddgi.probe_buffer >= 0)
 		{
-			lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N, surface.dominant_lightdir);
+			lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N, surface.dominant_lightdir, surface.dominant_lightcolor);
 		}
 
 		ApplyLighting(surface, lighting, payload.data);

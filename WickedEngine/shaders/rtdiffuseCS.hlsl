@@ -116,7 +116,8 @@ void main(uint2 DTid : SV_DispatchThreadID)
 			if (GetScene().ddgi.probe_buffer >= 0)
 			{
 				half3 dominant_lightdir = 0;
-				payload.data += ddgi_sample_irradiance(P, N, dominant_lightdir);
+				half3 dominant_lightcolor = 0;
+				payload.data += ddgi_sample_irradiance(P, N, dominant_lightdir, dominant_lightcolor);
 			}
 			else if (GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && GetCamera().texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(P)))
 			{
@@ -199,7 +200,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 				[branch]
 				if (GetScene().ddgi.probe_buffer >= 0)
 				{
-					lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N, surface.dominant_lightdir);
+					lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N, surface.dominant_lightdir, surface.dominant_lightcolor);
 				}
 
 				float4 color = 0;

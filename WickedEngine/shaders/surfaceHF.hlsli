@@ -94,6 +94,7 @@ struct Surface
 	half3 ssgi;
 	half3 extinction;
 	half3 dominant_lightdir;
+	half3 dominant_lightcolor;
 
 	// It's good to use bools instead of flags in shaders, because bools of all lanes can be combined into one SGPR
 	bool receiveshadow;
@@ -149,6 +150,7 @@ struct Surface
 		ssgi = 0;
 		extinction = 0;
 		dominant_lightdir = GetSunDirection();
+		dominant_lightcolor = 0;
 		
 		receiveshadow = true;
 		is_backface = false;
