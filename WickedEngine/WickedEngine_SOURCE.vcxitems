@@ -313,6 +313,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\h264.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\lodepng.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\meshoptimizer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\miniaudio.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\minimp4.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\offsetAllocator.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\pugiconfig.hpp" />
