@@ -1342,7 +1342,8 @@ namespace wi
 	void VoxelGrid::create_mesh(
 		wi::vector<uint32_t>& indices,
 		wi::vector<XMFLOAT3>& vertices,
-		bool simplify
+		bool simplify,
+		const wi::scene::Scene* navscene 
 	)
 	{
 		TRIANGLE triangles[10];
@@ -1396,6 +1397,39 @@ namespace wi
 
 		meshopt_remapIndexBuffer(indices.data(), nullptr, index_count, &remap[0]);
 		meshopt_remapVertexBuffer(vertices.data(), &unindexed_vertices[0], unindexed_vertex_count, sizeof(XMFLOAT3), &remap[0]);
+
+		if (navscene != nullptr)
+		{
+			wi::jobsystem::context ctx;
+			wi::jobsystem::Dispatch(ctx, (uint32_t)vertices.size(), 64, [&](wi::jobsystem::JobArgs args) {
+				XMFLOAT3& vertex = vertices[args.jobIndex];
+				XMFLOAT2 offsets[] = {
+					XMFLOAT2(0, 0),
+
+					XMFLOAT2(-voxelSize.x, 0),
+					XMFLOAT2(voxelSize.x, 0),
+					XMFLOAT2(0, voxelSize.z),
+					XMFLOAT2(0, -voxelSize.z),
+
+					XMFLOAT2(-voxelSize.x * 0.5f, 0),
+					XMFLOAT2(voxelSize.x * 0.5f, 0),
+					XMFLOAT2(0, voxelSize.z * 0.5f),
+					XMFLOAT2(0, -voxelSize.z * 0.5f),
+				};
+				float pushdown = voxelSize.y * 2;
+				for (auto& offset : offsets)
+				{
+					wi::primitive::Ray ray(XMFLOAT3(vertex.x + offset.x, vertex.y, vertex.z + offset.x), XMFLOAT3(0, -1, 0));
+					auto res = navscene->Intersects(ray, wi::enums::FILTER_OBJECT_ALL);
+					if (res.entity != wi::ecs::INVALID_ENTITY)
+					{
+						pushdown = std::min(pushdown, res.distance);
+					}
+				}
+				vertex.y -= pushdown;
+			});
+			wi::jobsystem::Wait(ctx);
+		}
 
 		if (simplify)
 		{
