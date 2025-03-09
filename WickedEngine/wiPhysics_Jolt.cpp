@@ -2151,7 +2151,7 @@ namespace wi::physics
 
 				Vec3 capsule_position = mat.GetTranslation();
 				Quat capsule_rotation = mat.GetQuaternion().Normalized();
-				if (IsInterpolationEnabled())
+				if (IsInterpolationEnabled() && IsSimulationEnabled())
 				{
 					capsule_position = capsule_position * physics_scene.alpha + ragdoll.prev_capsule_position[bodypart] * (1 - physics_scene.alpha);
 					capsule_rotation = ragdoll.prev_capsule_rotation[bodypart].SLERP(capsule_rotation, physics_scene.alpha);
