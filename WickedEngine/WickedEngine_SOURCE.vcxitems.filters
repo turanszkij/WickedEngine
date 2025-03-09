@@ -1395,6 +1395,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Collision\Shape\TaperedCylinderShape.h">
       <Filter>JOLT</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\miniaudio.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
