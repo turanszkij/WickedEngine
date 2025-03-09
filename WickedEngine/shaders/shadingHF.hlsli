@@ -102,9 +102,9 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 #endif //DISABLE_VOXELGI
 
 	[branch]
-	if (!surface.IsGIApplied() && GetScene().ddgi.color_texture >= 0)
+	if (!surface.IsGIApplied() && GetScene().ddgi.probe_buffer >= 0)
 	{
-		lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
+		lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N, surface.dominant_lightdir, surface.dominant_lightcolor);
 		surface.SetGIApplied(true);
 	}
 
@@ -130,9 +130,12 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 				bucket_bits ^= 1u << bucket_bit_index;
 
 				ShaderEntity light = load_entity(lights().first_item() + entity_index);
-				if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
-					continue; // static lights will be skipped here (they are used at lightmap baking)
 				
+#ifndef INCLUDE_STATIC_LIGHTS
+				if (light.IsStaticLight())
+					continue; // static lights will be skipped here (they are used at lightmap baking)
+#endif // INCLUDE_STATIC_LIGHTS
+					
 				switch (light.GetType())
 				{
 				case ENTITY_TYPE_DIRECTIONALLIGHT:
@@ -371,10 +374,19 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 #endif // TRANSPARENT
 
 	[branch]
-	if (!surface.IsGIApplied() && GetScene().ddgi.color_texture >= 0)
+	if (GetScene().ddgi.probe_buffer >= 0)
 	{
-		lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
-		surface.SetGIApplied(true);
+		// Note: even if GI is already applied, the dominant light dir is still computed by this!
+		half3 irradiance = ddgi_sample_irradiance(surface.P, surface.N, surface.dominant_lightdir, surface.dominant_lightcolor);
+		if (!surface.IsGIApplied())
+		{
+			lighting.indirect.diffuse = irradiance;
+			surface.SetGIApplied(true);
+		}
+		
+		SurfaceToLight surface_to_light;
+		surface_to_light.create(surface, surface.dominant_lightdir);
+		lighting.indirect.specular += max(0, BRDF_GetSpecular(surface, surface_to_light) * surface.dominant_lightcolor);
 	}
 	
 	[branch]
@@ -385,8 +397,11 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		for(uint entity_index = iterator.first_item(); entity_index < iterator.end_item(); ++entity_index)
 		{
 			ShaderEntity light = load_entity(entity_index);
-			if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
+
+#ifndef INCLUDE_STATIC_LIGHTS
+			if (light.IsStaticLight())
 				continue; // static lights will be skipped here (they are used at lightmap baking)
+#endif // INCLUDE_STATIC_LIGHTS
 
 			half shadow_mask = 1;
 #if defined(SHADOW_MASK_ENABLED) && !defined(TRANSPARENT)
@@ -497,7 +512,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	[branch]
 	if ((GetFrame().options & OPTION_BIT_CAPSULE_SHADOW_ENABLED) && !surface.IsCapsuleShadowDisabled() && !forces().empty()) // capsule shadows are contained in forces array for now...
 	{
-		half4 cone = half4(GetSunDirection() * half3(-1, 1, -1), GetCapsuleShadowAngle()); // horizontally reverse of sun direction (better would be precomputed dominant light dir)
+		half4 cone = half4(surface.dominant_lightdir, GetCapsuleShadowAngle());
 		half capsuleshadow = 1;
 		
 		// Loop through light buckets in the tile:

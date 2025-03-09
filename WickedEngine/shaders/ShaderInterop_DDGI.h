@@ -4,8 +4,8 @@
 #include "ShaderInterop_Renderer.h"
 
 static const uint DDGI_MAX_RAYCOUNT = 512; // affects global ray buffer size
-static const uint DDGI_COLOR_RESOLUTION = 6; // this should not be modified, border update code is fixed
-static const uint DDGI_COLOR_TEXELS = 1 + DDGI_COLOR_RESOLUTION + 1; // with border. NOTE: this must be 4x4 block aligned for BC6!
+static const uint DDGI_COLOR_RESOLUTION = 8; // this should not be modified, border update code is fixed
+static const uint DDGI_COLOR_TEXELS = DDGI_COLOR_RESOLUTION; // no border, color is stored in SH
 static const uint DDGI_DEPTH_RESOLUTION = 16; // this should not be modified, border update code is fixed
 static const uint DDGI_DEPTH_TEXELS = 1 + DDGI_DEPTH_RESOLUTION + 1; // with border
 static const float DDGI_KEEP_DISTANCE = 0.1f; // how much distance should probes keep from surfaces
@@ -105,45 +105,34 @@ inline uint3 ddgi_probe_coord(uint probeIndex)
 {
 	return unflatten3D(probeIndex, GetScene().ddgi.grid_dimensions);
 }
-inline uint ddgi_probe_index(uint3 probeCoord)
+inline uint ddgi_probe_index(min16uint3 probeCoord)
 {
 	return flatten3D(probeCoord, GetScene().ddgi.grid_dimensions);
 }
-inline uint3 ddgi_probe_offset_pixel(uint3 probeCoord)
+inline uint3 ddgi_probe_offset_pixel(min16uint3 probeCoord)
 {
 	return probeCoord.xzy;
 }
-inline float3 ddgi_probe_position_rest(uint3 probeCoord)
+inline float3 ddgi_probe_position_rest(min16uint3 probeCoord)
 {
 	return GetScene().ddgi.grid_min + probeCoord * ddgi_cellsize();
 }
-inline float3 ddgi_probe_position(uint3 probeCoord)
+inline float3 ddgi_probe_position(min16uint3 probeCoord)
 {
 	float3 pos = ddgi_probe_position_rest(probeCoord);
-	[branch]
-	if (GetScene().ddgi.offset_texture >= 0)
-	{
-		float3 offset = bindless_textures3D[descriptor_index(GetScene().ddgi.offset_texture)][ddgi_probe_offset_pixel(probeCoord)].xyz;
-		offset = (offset - 0.5) * ddgi_cellsize();
-		pos += offset;
-	}
+	uint probeIndex = ddgi_probe_index(probeCoord);
+	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
+	DDGIProbe probe = probe_buffer[probeIndex];
+	float3 offset = unpack_half3(probe.offset);
+	offset = offset * ddgi_cellsize() * 0.5;
+	pos += offset;
 	return pos;
 }
-inline uint2 ddgi_probe_color_pixel(uint3 probeCoord)
-{
-	return probeCoord.xz * DDGI_COLOR_TEXELS + uint2(probeCoord.y * GetScene().ddgi.grid_dimensions.x * DDGI_COLOR_TEXELS, 0) + 1;
-}
-inline float2 ddgi_probe_color_uv(uint3 probeCoord, half3 direction)
-{
-	float2 pixel = ddgi_probe_color_pixel(probeCoord);
-	pixel += (encode_oct(normalize(direction)) * 0.5 + 0.5) * DDGI_COLOR_RESOLUTION;
-	return pixel * GetScene().ddgi.color_texture_resolution_rcp;
-}
-inline uint2 ddgi_probe_depth_pixel(uint3 probeCoord)
+inline uint2 ddgi_probe_depth_pixel(min16uint3 probeCoord)
 {
 	return probeCoord.xz * DDGI_DEPTH_TEXELS + uint2(probeCoord.y * GetScene().ddgi.grid_dimensions.x * DDGI_DEPTH_TEXELS, 0) + 1;
 }
-inline float2 ddgi_probe_depth_uv(uint3 probeCoord, half3 direction)
+inline float2 ddgi_probe_depth_uv(min16uint3 probeCoord, half3 direction)
 {
 	float2 pixel = ddgi_probe_depth_pixel(probeCoord);
 	pixel += (encode_oct(normalize(direction)) * 0.5 + 0.5) * DDGI_DEPTH_RESOLUTION;
@@ -152,25 +141,30 @@ inline float2 ddgi_probe_depth_uv(uint3 probeCoord, half3 direction)
 
 
 // Based on: https://github.com/diharaw/hybrid-rendering/blob/master/src/shaders/gi/gi_common.glsl
-half3 ddgi_sample_irradiance(float3 P, half3 N)
+half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_lightdir, inout half3 out_dominant_lightcolor)
 {
-	uint3 base_grid_coord = ddgi_base_probe_coord(P);
-	float3 base_probe_pos = ddgi_probe_position(base_grid_coord);
+	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
+	const min16uint3 base_grid_coord = ddgi_base_probe_coord(P);
+	const float3 reference_probe_pos = ddgi_probe_position_rest(base_grid_coord); // taking the rest pose!
 
-	half3 sum_irradiance = 0;
 	half sum_weight = 0;
 
+	// Note: the quality seems to be a lot better when weighting the whole SH instead of
+	//	blending irradiance, specular and dld separately
+	SH::L1_RGB sum_sh = SH::L1_RGB::Zero();
+
 	// alpha is how far from the floor(currentVertex) position. on [0, 1] for each axis.
-	half3 alpha = saturate((P - base_probe_pos) * ddgi_cellsize_rcp());
+	half3 alpha = saturate((P - reference_probe_pos) * ddgi_cellsize_rcp());
 
 	// Iterate over adjacent probe cage
-	for (uint i = 0; i < 8; ++i)
+	for (min16uint i = 0; i < 8; ++i)
 	{
 		// Compute the offset grid coord and clamp to the probe grid boundary
 		// Offset = 0 or 1 along each axis
-		uint3 offset = uint3(i, i >> 1, i >> 2) & 1;
-		uint3 probe_grid_coord = clamp(base_grid_coord + offset, 0u.xxx, GetScene().ddgi.grid_dimensions - 1);
-		//int p = ddgi_probe_index(probe_grid_coord);
+		min16uint3 offset = uint3(i, i >> 1, i >> 2) & 1;
+		min16uint3 probe_grid_coord = clamp(base_grid_coord + offset, 0u.xxx, GetScene().ddgi.grid_dimensions - 1);
+		uint probe_index = ddgi_probe_index(probe_grid_coord);
+		DDGIProbe probe = probe_buffer[probe_index];
 
 		// Make cosine falloff in tangent plane with respect to the angle from the surface to the probe so that we never
 		// test a probe that is *behind* the surface.
@@ -192,7 +186,7 @@ half3 ddgi_sample_irradiance(float3 P, half3 N)
 		// transition between probes. Avoid ever going entirely to zero because that
 		// will cause problems at the border probes. This isn't really a lerp. 
 		// We're using 1-a when offset = 0 and a when offset = 1.
-		half3 trilinear = lerp(1.0 - alpha, alpha, offset);
+		half3 trilinear = lerp(1.0 - alpha, alpha, half3(offset));
 		half weight = 1.0;
 
 		// Clamp all of the multiplies. We can't let the weight go to zero because then it would be 
@@ -250,12 +244,6 @@ half3 ddgi_sample_irradiance(float3 P, half3 N)
 
 		half3 irradiance_dir = N;
 
-		//float2 tex_coord = texture_coord_from_direction(normalize(irradiance_dir), p, ddgi.irradiance_texture_width, ddgi.irradiance_texture_height, ddgi.irradiance_probe_side_length);
-		float2 tex_coord = ddgi_probe_color_uv(probe_grid_coord, irradiance_dir);
-
-		//float3 probe_irradiance = textureLod(irradiance_texture, tex_coord, 0.0f).rgb;
-		half3 probe_irradiance = bindless_textures_half4[descriptor_index(GetScene().ddgi.color_texture)].SampleLevel(sampler_linear_clamp, tex_coord, 0).rgb;
-
 		// A tiny bit of light is really visible due to log perception, so
 		// crush tiny weights but keep the curve continuous. This must be done
 		// before the trilinear weights, because those should be preserved.
@@ -266,31 +254,25 @@ half3 ddgi_sample_irradiance(float3 P, half3 N)
 		// Trilinear weights
 		weight *= trilinear.x * trilinear.y * trilinear.z;
 
-		// Weight in a more-perceptual brightness space instead of radiance space.
-		// This softens the transitions between probes with respect to translation.
-		// It makes little difference most of the time, but when there are radical transitions
-		// between probes this helps soften the ramp.
-#ifndef DDGI_LINEAR_BLENDING
-		probe_irradiance = sqrt(probe_irradiance);
-#endif
+		sum_sh = SH::Add(sum_sh, SH::Multiply(probe.radiance.Unpack(), weight));
 
-		sum_irradiance += weight * probe_irradiance;
 		sum_weight += weight;
 	}
 
 	if (sum_weight > 0)
 	{
-		half3 net_irradiance = sum_irradiance / sum_weight;
+		sum_sh = SH::Multiply(sum_sh, rcp(sum_weight));
 
-		// Go back to linear irradiance
-#ifndef DDGI_LINEAR_BLENDING
-		net_irradiance = sqr(net_irradiance);
-#endif
+		half3 net_irradiance = SH::CalculateIrradiance(sum_sh, N) / PI;
 
-		//net_irradiance *= 0.85; // energy preservation
+		SH::ApproximateDirectionalLight(sum_sh, out_dominant_lightdir, out_dominant_lightcolor);
+
+		// DLD notes:
+		// 1: casting to float3 avoids the "stickman" arifact when close to some walls with capsule shadow
+		// 2: bending with normal direction to push dld above surface level since light can't fall to surface from behind
+		out_dominant_lightdir = normalize(float3(out_dominant_lightdir) + N * 0.8);
 
 		return net_irradiance;
-		//return 0.5f * PI * net_irradiance;
 	}
 
 	return 0;

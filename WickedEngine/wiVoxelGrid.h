@@ -6,6 +6,7 @@
 #include "wiGraphicsDevice.h"
 #include "wiArchive.h"
 #include "wiECS.h"
+#include "wiScene_Decl.h"
 
 namespace wi
 {
@@ -81,10 +82,12 @@ namespace wi
 		}
 
 		// Create a polygon mesh from the voxel grid:
+		//	navscene	: optimize for navigation in this scene
 		void create_mesh(
 			wi::vector<uint32_t>& indices,
 			wi::vector<XMFLOAT3>& vertices,
-			bool simplify
+			bool simplify,
+			const wi::scene::Scene* navscene = nullptr
 		);
 
 //#define DEBUG_VOXEL_OCCLUSION

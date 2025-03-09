@@ -1989,8 +1989,6 @@ namespace wi::scene
 #ifdef OPEN_IMAGE_DENOISE
 			if (success)
 			{
-				wi::vector<uint8_t> texturedata_dst(lightmapTextureData.size());
-
 				size_t width = (size_t)lightmapWidth;
 				size_t height = (size_t)lightmapHeight;
 				{
@@ -2006,7 +2004,7 @@ namespace wi::scene
 					}
 
 					oidn::BufferRef lightmapTextureData_buffer = device.newBuffer(lightmapTextureData.size());
-					oidn::BufferRef texturedata_dst_buffer = device.newBuffer(texturedata_dst.size());
+					oidn::BufferRef texturedata_dst_buffer = device.newBuffer(lightmapTextureData.size());
 
 					lightmapTextureData_buffer.write(0, lightmapTextureData.size(), lightmapTextureData.data());
 
@@ -2028,11 +2026,9 @@ namespace wi::scene
 					}
 					else
 					{
-						texturedata_dst_buffer.read(0, texturedata_dst.size(), texturedata_dst.data());
+						texturedata_dst_buffer.read(0, lightmapTextureData.size(), lightmapTextureData.data());
 					}
 				}
-
-				lightmapTextureData = std::move(texturedata_dst); // replace old (raw) data with denoised data
 			}
 #endif // OPEN_IMAGE_DENOISE
 

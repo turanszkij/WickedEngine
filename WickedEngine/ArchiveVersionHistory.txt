@@ -1,5 +1,6 @@
 This file contains changelog of wi::Archive versions
 
+93: DDGI changed to store irradiance in spherical harmonics instead of octahedral atlas
 92: added support for compressed archive
 91: thumbnail image support for Archive
 90: resource serialization resource name list and improvements

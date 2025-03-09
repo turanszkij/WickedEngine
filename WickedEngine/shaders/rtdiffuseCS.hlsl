@@ -113,9 +113,11 @@ void main(uint2 DTid : SV_DispatchThreadID)
 		{
 			// miss:
 			[branch]
-			if (GetScene().ddgi.color_texture >= 0)
+			if (GetScene().ddgi.probe_buffer >= 0)
 			{
-				payload.data += ddgi_sample_irradiance(P, N);
+				half3 dominant_lightdir = 0;
+				half3 dominant_lightcolor = 0;
+				payload.data += ddgi_sample_irradiance(P, N, dominant_lightdir, dominant_lightcolor);
 			}
 			else if (GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && GetCamera().texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(P)))
 			{
@@ -168,7 +170,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 					if ((light.layerMask & surface.material.layerMask) == 0)
 						continue;
 
-					if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
+					if (light.IsStaticLight())
 					{
 						continue; // static lights will be skipped (they are used in lightmap baking)
 					}
@@ -196,9 +198,9 @@ void main(uint2 DTid : SV_DispatchThreadID)
 				lighting.indirect.specular += surface.emissiveColor;
 
 				[branch]
-				if (GetScene().ddgi.color_texture >= 0)
+				if (GetScene().ddgi.probe_buffer >= 0)
 				{
-					lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
+					lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N, surface.dominant_lightdir, surface.dominant_lightcolor);
 				}
 
 				float4 color = 0;

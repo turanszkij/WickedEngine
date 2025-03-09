@@ -10,10 +10,11 @@ struct VSOut
 
 float4 main(VSOut input) : SV_Target
 {
-	Texture2D ddgiColorTexture = bindless_textures[descriptor_index(GetScene().ddgi.color_texture)];
+	float3 color = 0;
 
-	uint3 probeCoord = ddgi_probe_coord(input.probeIndex);
-	float3 color = ddgiColorTexture.SampleLevel(sampler_linear_clamp, ddgi_probe_color_uv(probeCoord, input.normal), 0).rgb;
-
+	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
+	DDGIProbe probe = probe_buffer[input.probeIndex];
+	color = SH::Evaluate(probe.radiance.Unpack(), input.normal);
+	
 	return float4(color, 1);
 }

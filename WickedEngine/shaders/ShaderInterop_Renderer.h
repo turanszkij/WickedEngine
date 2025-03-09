@@ -39,14 +39,11 @@ struct alignas(16) ShaderScene
 		uint3 grid_dimensions;
 		uint probe_count;
 
-		uint2 color_texture_resolution;
-		float2 color_texture_resolution_rcp;
-
 		uint2 depth_texture_resolution;
 		float2 depth_texture_resolution_rcp;
 
 		float3 grid_min;
-		int color_texture;
+		int probe_buffer;
 
 		float3 grid_extents;
 		int depth_texture;
@@ -55,7 +52,7 @@ struct alignas(16) ShaderScene
 		float max_distance;
 
 		float3 grid_extents_rcp;
-		int offset_texture;
+		float padding;
 
 		float3 cell_size_rcp;
 		float smooth_backface;
@@ -769,6 +766,31 @@ struct ObjectPushConstants
 };
 
 
+enum SHADER_ENTITY_TYPE
+{
+	ENTITY_TYPE_DIRECTIONALLIGHT,
+	ENTITY_TYPE_POINTLIGHT,
+	ENTITY_TYPE_SPOTLIGHT,
+	ENTITY_TYPE_DECAL,
+	ENTITY_TYPE_ENVMAP,
+	ENTITY_TYPE_FORCEFIELD_POINT,
+	ENTITY_TYPE_FORCEFIELD_PLANE,
+	ENTITY_TYPE_COLLIDER_SPHERE,
+	ENTITY_TYPE_COLLIDER_CAPSULE,
+	ENTITY_TYPE_COLLIDER_PLANE,
+
+	ENTITY_TYPE_COUNT
+};
+
+enum SHADER_ENTITY_FLAGS
+{
+	ENTITY_FLAG_LIGHT_STATIC = 1 << 0,
+	ENTITY_FLAG_LIGHT_CASTING_SHADOW = 1 << 1,
+	ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS = 1 << 2,
+	ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA = 1 << 3,
+	ENTITY_FLAG_CAPSULE_SHADOW_COLLIDER = 1 << 4,
+};
+
 // Warning: the size of this structure directly affects shader performance.
 //	Try to reduce it as much as possible!
 //	Keep it aligned to 16 bytes for best performance!
@@ -860,7 +882,11 @@ struct alignas(16) ShaderEntity
 	}
 	inline bool IsCastingShadow()
 	{
-		return indices != ~0;
+		return GetFlags() & ENTITY_FLAG_LIGHT_CASTING_SHADOW;
+	}
+	inline bool IsStaticLight()
+	{
+		return GetFlags() & ENTITY_FLAG_LIGHT_STATIC;
 	}
 	inline half GetGravity()
 	{
@@ -997,30 +1023,6 @@ struct alignas(16) ShaderFrustumCorners
 		return lerp(screen_to_nearplane(uv), screen_to_farplane(uv), lineardepthNormalized);
 	}
 #endif // __cplusplus
-};
-
-enum SHADER_ENTITY_TYPE
-{
-	ENTITY_TYPE_DIRECTIONALLIGHT,
-	ENTITY_TYPE_POINTLIGHT,
-	ENTITY_TYPE_SPOTLIGHT,
-	ENTITY_TYPE_DECAL,
-	ENTITY_TYPE_ENVMAP,
-	ENTITY_TYPE_FORCEFIELD_POINT,
-	ENTITY_TYPE_FORCEFIELD_PLANE,
-	ENTITY_TYPE_COLLIDER_SPHERE,
-	ENTITY_TYPE_COLLIDER_CAPSULE,
-	ENTITY_TYPE_COLLIDER_PLANE,
-
-	ENTITY_TYPE_COUNT
-};
-
-enum SHADER_ENTITY_FLAGS
-{
-	ENTITY_FLAG_LIGHT_STATIC = 1 << 0,
-	ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS = 1 << 1,
-	ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA = 1 << 2,
-	ENTITY_FLAG_CAPSULE_SHADOW_COLLIDER = 1 << 3,
 };
 
 static const float CAPSULE_SHADOW_AFFECTION_RANGE = 2; // how far away the capsule shadow can reach outside of their own radius
@@ -1709,5 +1711,41 @@ CBUFFER(PaintDecalCB, CBSLOT_RENDERER_MISC)
 	int g_xPaintDecalpadding;
 };
 
+#ifdef __cplusplus
+// Copied here from SH_Lite.hlsli to share with C++:
+namespace SH
+{
+	struct L1
+	{
+		static const uint NumCoefficients = 4;
+		float C[NumCoefficients];
+	};
+	struct L1_RGB
+	{
+		static const uint NumCoefficients = 4;
+		float3 C[NumCoefficients];
+		struct Packed
+		{
+			uint C[3 * NumCoefficients / 2];
+		};
+	};
+	struct L2
+	{
+		static const uint NumCoefficients = 9;
+		float C[NumCoefficients];
+	};
+	struct L2_RGB
+	{
+		static const uint NumCoefficients = 9;
+		float3 C[NumCoefficients];
+	};
+}
+#endif // __cplusplus
+
+struct alignas(16) DDGIProbe
+{
+	SH::L1_RGB::Packed radiance;
+	uint2 offset;
+};
 
 #endif // WI_SHADERINTEROP_RENDERER_H

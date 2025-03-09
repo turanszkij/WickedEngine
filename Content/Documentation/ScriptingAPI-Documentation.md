@@ -1741,6 +1741,7 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - SetMSAASampleCount(int count)
 - SetSharpenFilterEnabled(bool value)
 - SetSharpenFilterAmount(float value)
+- SetEyeAdaptionEnabled(bool value)
 - SetExposure(float value)
 - SetHDRCalibration(float value)
 - SetOutlineEnabled(bool value)

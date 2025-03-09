@@ -119,7 +119,7 @@ bool debugLightCulling = false;
 bool occlusionCulling = true;
 bool temporalAA = false;
 bool temporalAADEBUG = false;
-uint32_t raytraceBounceCount = 3;
+uint32_t raytraceBounceCount = 8;
 bool raytraceDebugVisualizer = false;
 bool raytracedShadows = false;
 bool tessellationEnabled = true;
@@ -142,7 +142,7 @@ bool VXGI_ENABLED = false;
 bool VXGI_REFLECTIONS_ENABLED = true;
 bool VXGI_DEBUG = false;
 int VXGI_DEBUG_CLIPMAP = 0;
-bool CAPSULE_SHADOW_ENABLED = false;
+bool CAPSULE_SHADOW_ENABLED = true;
 float CAPSULE_SHADOW_ANGLE = XM_PIDIV4;
 float CAPSULE_SHADOW_FADE = 0.2f;
 
@@ -4103,9 +4103,10 @@ void UpdatePerFrameData(
 			bd.size = required_debug_buffer_size;
 			bd.bind_flags = BindFlag::VERTEX_BUFFER | BindFlag::UNORDERED_ACCESS;
 			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::INDIRECT_ARGS;
-			device->CreateBuffer(&bd, nullptr, &buffers[BUFFERTYPE_INDIRECT_DEBUG_0]);
+			wi::vector<uint8_t> initdata(bd.size);
+			device->CreateBuffer(&bd, initdata.data(), &buffers[BUFFERTYPE_INDIRECT_DEBUG_0]);
 			device->SetName(&buffers[BUFFERTYPE_INDIRECT_DEBUG_0], "buffers[BUFFERTYPE_INDIRECT_DEBUG_0]");
-			device->CreateBuffer(&bd, nullptr, &buffers[BUFFERTYPE_INDIRECT_DEBUG_1]);
+			device->CreateBuffer(&bd, initdata.data(), &buffers[BUFFERTYPE_INDIRECT_DEBUG_1]);
 			device->SetName(&buffers[BUFFERTYPE_INDIRECT_DEBUG_1], "buffers[BUFFERTYPE_INDIRECT_DEBUG_1]");
 			std::memset(indirectDebugStatsReadback_available, 0, sizeof(indirectDebugStatsReadback_available));
 		}
@@ -4388,10 +4389,10 @@ void UpdatePerFrameData(
 			// mark as no shadow by default:
 			shaderentity.indices = ~0;
 
-			bool shadow = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
+			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
 			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
 
-			if (shadow)
+			if (shadowmap)
 			{
 				shaderentity.shadowAtlasMulAdd.x = shadow_rect.w * atlas_dim_rcp.x;
 				shaderentity.shadowAtlasMulAdd.y = shadow_rect.h * atlas_dim_rcp.y;
@@ -4403,7 +4404,7 @@ void UpdatePerFrameData(
 			const uint cascade_count = std::min((uint)light.cascade_distances.size(), MATRIXARRAY_COUNT - matrixCounter);
 			shaderentity.SetShadowCascadeCount(cascade_count);
 
-			if (shadow && !light.cascade_distances.empty())
+			if (shadowmap && !light.cascade_distances.empty())
 			{
 				SHCAM* shcams = (SHCAM*)alloca(sizeof(SHCAM) * cascade_count);
 				CreateDirLightShadowCams(light, *vis.camera, shcams, cascade_count, shadow_rect);
@@ -4413,6 +4414,10 @@ void UpdatePerFrameData(
 				}
 			}
 
+			if (light.IsCastingShadow())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_CASTING_SHADOW);
+			}
 			if (light.IsStatic())
 			{
 				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_STATIC);
@@ -4463,10 +4468,10 @@ void UpdatePerFrameData(
 			// mark as no shadow by default:
 			shaderentity.indices = ~0;
 
-			bool shadow = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
+			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
 			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
 
-			if (shadow)
+			if (shadowmap)
 			{
 				shaderentity.shadowAtlasMulAdd.x = shadow_rect.w * atlas_dim_rcp.x;
 				shaderentity.shadowAtlasMulAdd.y = shadow_rect.h * atlas_dim_rcp.y;
@@ -4488,13 +4493,17 @@ void UpdatePerFrameData(
 			shaderentity.SetAngleScale(lightAngleScale);
 			shaderentity.SetAngleOffset(lightAngleOffset);
 
-			if (shadow)
+			if (shadowmap)
 			{
 				SHCAM shcam;
 				CreateSpotLightShadowCam(light, shcam);
 				XMStoreFloat4x4(&matrixArray[matrixCounter++], shcam.view_projection);
 			}
 
+			if (light.IsCastingShadow())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_CASTING_SHADOW);
+			}
 			if (light.IsStatic())
 			{
 				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_STATIC);
@@ -4545,10 +4554,10 @@ void UpdatePerFrameData(
 			// mark as no shadow by default:
 			shaderentity.indices = ~0;
 
-			bool shadow = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
+			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
 			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
 
-			if (shadow)
+			if (shadowmap)
 			{
 				shaderentity.shadowAtlasMulAdd.x = shadow_rect.w * atlas_dim_rcp.x;
 				shaderentity.shadowAtlasMulAdd.y = shadow_rect.h * atlas_dim_rcp.y;
@@ -4557,7 +4566,7 @@ void UpdatePerFrameData(
 				shaderentity.SetIndices(matrixCounter, 0);
 			}
 
-			if (shadow)
+			if (shadowmap)
 			{
 				const float FarZ = 0.1f;	// watch out: reversed depth buffer! Also, light near plane is constant for simplicity, this should match on cpu side!
 				const float NearZ = std::max(1.0f, light.GetRange()); // watch out: reversed depth buffer!
@@ -4568,6 +4577,10 @@ void UpdatePerFrameData(
 				shaderentity.SetCubeRemapFar(cubemapDepthRemapFar);
 			}
 
+			if (light.IsCastingShadow())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_CASTING_SHADOW);
+			}
 			if (light.IsStatic())
 			{
 				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_STATIC);
@@ -7839,7 +7852,7 @@ void DrawDebugWorld(
 	}
 
 
-	if (GetDDGIDebugEnabled() && scene.ddgi.color_texture.IsValid())
+	if (GetDDGIDebugEnabled() && scene.ddgi.probe_buffer.IsValid())
 	{
 		device->EventBegin("Debug DDGI", cmd);
 
@@ -11386,7 +11399,6 @@ void SurfelGI_Coverage(
 		device->BindResource(&scene.surfelgi.gridBuffer, 1, cmd);
 		device->BindResource(&scene.surfelgi.cellBuffer, 2, cmd);
 		device->BindResource(&scene.surfelgi.momentsTexture, 3, cmd);
-		device->BindResource(&scene.surfelgi.irradianceTexture, 4, cmd);
 
 		const GPUResource* uavs[] = {
 			&scene.surfelgi.dataBuffer,
@@ -11467,7 +11479,6 @@ void SurfelGI(
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 		device->ClearUAV(&scene.surfelgi.momentsTexture, 0, cmd);
-		device->ClearUAV(&scene.surfelgi.irradianceTexture_rw, 0, cmd);
 		device->ClearUAV(&scene.surfelgi.varianceBuffer, 0, cmd);
 		for (auto& x : barriers)
 		{
@@ -11606,7 +11617,6 @@ void SurfelGI(
 		device->BindResource(&scene.surfelgi.cellBuffer, 3, cmd);
 		device->BindResource(&scene.surfelgi.aliveBuffer[0], 4, cmd);
 		device->BindResource(&scene.surfelgi.momentsTexture, 5, cmd);
-		device->BindResource(&scene.surfelgi.irradianceTexture, 6, cmd);
 
 		const GPUResource* uavs[] = {
 			&scene.surfelgi.rayBuffer,
@@ -11631,24 +11641,24 @@ void SurfelGI(
 
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_INTEGRATE], cmd);
 
-		device->BindResource(&scene.surfelgi.surfelBuffer, 0, cmd);
-		device->BindResource(&scene.surfelgi.statsBuffer, 1, cmd);
-		device->BindResource(&scene.surfelgi.gridBuffer, 2, cmd);
-		device->BindResource(&scene.surfelgi.cellBuffer, 3, cmd);
-		device->BindResource(&scene.surfelgi.aliveBuffer[0], 4, cmd);
-		device->BindResource(&scene.surfelgi.rayBuffer, 5, cmd);
+		device->BindResource(&scene.surfelgi.statsBuffer, 0, cmd);
+		device->BindResource(&scene.surfelgi.gridBuffer, 1, cmd);
+		device->BindResource(&scene.surfelgi.cellBuffer, 2, cmd);
+		device->BindResource(&scene.surfelgi.aliveBuffer[0], 3, cmd);
+		device->BindResource(&scene.surfelgi.rayBuffer, 4, cmd);
 
 		const GPUResource* uavs[] = {
 			&scene.surfelgi.dataBuffer,
 			&scene.surfelgi.varianceBuffer,
 			&scene.surfelgi.momentsTexture,
-			&scene.surfelgi.irradianceTexture_rw,
+			&scene.surfelgi.surfelBuffer,
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Buffer(&scene.surfelgi.dataBuffer, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
+				GPUBarrier::Buffer(&scene.surfelgi.surfelBuffer, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
 				GPUBarrier::Image(&scene.surfelgi.momentsTexture, scene.surfelgi.momentsTexture.desc.layout, ResourceState::UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
@@ -11658,8 +11668,9 @@ void SurfelGI(
 
 		{
 			GPUBarrier barriers[] = {
+				GPUBarrier::Buffer(&scene.surfelgi.dataBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
+				GPUBarrier::Buffer(&scene.surfelgi.surfelBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 				GPUBarrier::Image(&scene.surfelgi.momentsTexture, ResourceState::UNORDERED_ACCESS, scene.surfelgi.momentsTexture.desc.layout),
-				GPUBarrier::Memory(&scene.surfelgi.irradianceTexture_rw),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -11693,14 +11704,18 @@ void DDGI(
 	if (scene.ddgi.frame_index == 0)
 	{
 		device->Barrier(GPUBarrier::Image(&scene.ddgi.depth_texture, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS), cmd);
-		device->Barrier(GPUBarrier::Image(&scene.ddgi.offset_texture, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS), cmd);
-		device->ClearUAV(&scene.ddgi.offset_texture, 0, cmd);
+		device->Barrier(GPUBarrier::Buffer(&scene.ddgi.probe_buffer, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS), cmd);
+		device->Barrier(GPUBarrier::Buffer(&scene.ddgi.variance_buffer, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS), cmd);
+		device->ClearUAV(&scene.ddgi.probe_buffer, 0, cmd);
 		device->ClearUAV(&scene.ddgi.depth_texture, 0, cmd);
-		device->ClearUAV(&scene.ddgi.color_texture_rw, 0, cmd);
 		device->ClearUAV(&scene.ddgi.variance_buffer, 0, cmd);
+		device->ClearUAV(&scene.ddgi.rayallocation_buffer, 0, cmd);
+		device->ClearUAV(&scene.ddgi.raycount_buffer, 0, cmd);
+		device->ClearUAV(&scene.ddgi.ray_buffer, 0, cmd);
 		device->Barrier(GPUBarrier::Memory(), cmd);
 		device->Barrier(GPUBarrier::Image(&scene.ddgi.depth_texture, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE), cmd);
-		device->Barrier(GPUBarrier::Image(&scene.ddgi.offset_texture, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE), cmd);
+		device->Barrier(GPUBarrier::Buffer(&scene.ddgi.probe_buffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE), cmd);
+		device->Barrier(GPUBarrier::Buffer(&scene.ddgi.variance_buffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE), cmd);
 	}
 
 	BindCommonResources(cmd);
@@ -11751,7 +11766,6 @@ void DDGI(
 		device->EventBegin("Indirect prepare", cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_DDGI_INDIRECTPREPARE], cmd);
-		device->PushConstants(&push, sizeof(push), cmd);
 
 		const GPUResource* uavs[] = {
 			&scene.ddgi.rayallocation_buffer,
@@ -11809,9 +11823,9 @@ void DDGI(
 		GPUBarrier barriers[] = {
 			GPUBarrier::Buffer(&scene.ddgi.ray_buffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 			GPUBarrier::Image(&scene.ddgi.depth_texture, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
-			GPUBarrier::Image(&scene.ddgi.offset_texture, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Buffer(&scene.ddgi.variance_buffer, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Buffer(&scene.ddgi.raycount_buffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
+			GPUBarrier::Buffer(&scene.ddgi.probe_buffer, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -11830,8 +11844,8 @@ void DDGI(
 		device->BindResources(res, 0, arraysize(res), cmd);
 
 		const GPUResource* uavs[] = {
-			&scene.ddgi.color_texture_rw,
 			&scene.ddgi.variance_buffer,
+			&scene.ddgi.probe_buffer,
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
@@ -11855,7 +11869,7 @@ void DDGI(
 
 		const GPUResource* uavs[] = {
 			&scene.ddgi.depth_texture,
-			&scene.ddgi.offset_texture,
+			&scene.ddgi.probe_buffer,
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
@@ -11866,9 +11880,8 @@ void DDGI(
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(&scene.ddgi.color_texture_rw),
+			GPUBarrier::Buffer(&scene.ddgi.probe_buffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 			GPUBarrier::Image(&scene.ddgi.depth_texture, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
-			GPUBarrier::Image(&scene.ddgi.offset_texture, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}

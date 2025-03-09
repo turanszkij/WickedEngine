@@ -320,7 +320,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					newRay.Origin = surface.P;
 					newRay.TMin = 0.001;
 					newRay.TMax = dist;
-					newRay.Direction = L + max3(surface.sss);
+					newRay.Direction = normalize(L + max3(surface.sss));
 
 #ifdef RTAPI
 

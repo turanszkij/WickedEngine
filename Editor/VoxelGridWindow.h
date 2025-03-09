@@ -22,6 +22,7 @@ public:
 	wi::gui::Button	fitToSceneButton;
 	wi::gui::Button	generateMeshButton;
 	wi::gui::Button	generateSimplifiedMeshButton;
+	wi::gui::Button	generateNavMeshButton;
 	wi::gui::CheckBox subtractCheckBox;
 	wi::gui::CheckBox debugAllCheckBox;
 
