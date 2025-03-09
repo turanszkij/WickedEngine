@@ -4572,10 +4572,14 @@ namespace wi::scene
 					}
 					else
 					{
-						assert(0); // unknown data format
+						wi::backlog::post("Invalid or old lightmap data found, it will be discarded. Re-render the lightmap if required.", wi::backlog::LogLevel::Warning);
+						object.lightmapTextureData.clear();
 					}
-					wi::texturehelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.lightmap.desc.format);
-					device->SetName(&object.lightmap, "lightmap");
+					if (object.lightmap.desc.format != Format::UNKNOWN)
+					{
+						wi::texturehelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.lightmap.desc.format);
+						device->SetName(&object.lightmap, "lightmap");
+					}
 				}
 
 				aabb.layerMask = layerMask;

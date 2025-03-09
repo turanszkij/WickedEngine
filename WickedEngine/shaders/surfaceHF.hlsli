@@ -149,7 +149,7 @@ struct Surface
 		bumpColor = 0;
 		ssgi = 0;
 		extinction = 0;
-		dominant_lightdir = GetSunDirection();
+		dominant_lightdir = GetSunDirection() * half3(-1, 1, -1);
 		dominant_lightcolor = 0;
 		
 		receiveshadow = true;
