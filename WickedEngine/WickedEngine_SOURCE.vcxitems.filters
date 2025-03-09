@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <ItemGroup>
     <Filter Include="LUA">
       <UniqueIdentifier>{1a296465-57df-45aa-b06b-e16451c607a3}</UniqueIdentifier>
@@ -1398,6 +1398,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\win32ico.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\miniaudio.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -2268,7 +2271,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="$(MSBuildThisFileDirectory)ArchiveVersionHistory.txt" />
+    <Text Include="$(MSBuildThisFileDirectory)ArchiveVersionHistory.txt"/>
     <Text Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\CMakeLists.txt">
       <Filter>UTILITY\meshoptimizer</Filter>
     </Text>
