@@ -712,8 +712,8 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	tonemapCombo.Create("Tonemap: ");
 	tonemapCombo.SetTooltip("Choose tone mapping type");
 	tonemapCombo.SetScriptTip("RenderPath3D::SetTonemap(Tonemap value)");
-	tonemapCombo.AddItem("Reinhard");
-	tonemapCombo.AddItem("ACES");
+	tonemapCombo.AddItem("Reinhard", (uint64_t)wi::renderer::Tonemap::Reinhard);
+	tonemapCombo.AddItem("ACES", (uint64_t)wi::renderer::Tonemap::ACES);
 	tonemapCombo.OnSelect([=](wi::gui::EventArgs args) {
 		editor->renderPath->setTonemap((wi::renderer::Tonemap)args.iValue);
 		editor->main->config.GetSection("graphics").Set("tonemap", args.iValue);
@@ -1597,7 +1597,7 @@ void GraphicsWindow::Update()
 	resolutionScaleSlider.SetValue(editor->resolutionScale);
 	streamingSlider.SetValue(wi::resourcemanager::GetStreamingMemoryThreshold());
 	MSAAComboBox.SetSelectedByUserdataWithoutCallback(editor->renderPath->getMSAASampleCount());
-	tonemapCombo.SetSelectedByUserdataWithoutCallback((int)editor->renderPath->getTonemap());
+	tonemapCombo.SetSelectedByUserdataWithoutCallback((uint64_t)editor->renderPath->getTonemap());
 	exposureSlider.SetValue(editor->renderPath->getExposure());
 	brightnessSlider.SetValue(editor->renderPath->getBrightness());
 	contrastSlider.SetValue(editor->renderPath->getContrast());

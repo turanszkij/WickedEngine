@@ -248,7 +248,7 @@ void LightWindow::Create(EditorComponent* _editor)
 		}
 	});
 	staticCheckBox.SetEnabled(false);
-	staticCheckBox.SetTooltip("Static lights will only be used for baking into lightmaps.");
+	staticCheckBox.SetTooltip("Static lights will only be used for baking into lightmaps, DDGI and Surfel GI.");
 	AddWidget(&staticCheckBox);
 
 	volumetricCloudsCheckBox.Create("Volumetric Clouds: ");

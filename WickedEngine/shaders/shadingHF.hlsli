@@ -130,9 +130,12 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 				bucket_bits ^= 1u << bucket_bit_index;
 
 				ShaderEntity light = load_entity(lights().first_item() + entity_index);
+				
+#ifndef INCLUDE_STATIC_LIGHTS
 				if (light.IsStaticLight())
 					continue; // static lights will be skipped here (they are used at lightmap baking)
-				
+#endif // INCLUDE_STATIC_LIGHTS
+					
 				switch (light.GetType())
 				{
 				case ENTITY_TYPE_DIRECTIONALLIGHT:
@@ -373,6 +376,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	[branch]
 	if (GetScene().ddgi.probe_buffer >= 0)
 	{
+		// Note: even if GI is already applied, the dominant light dir is still computed by this!
 		half3 irradiance = ddgi_sample_irradiance(surface.P, surface.N, surface.dominant_lightdir);
 		if (!surface.IsGIApplied())
 		{
@@ -389,8 +393,11 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		for(uint entity_index = iterator.first_item(); entity_index < iterator.end_item(); ++entity_index)
 		{
 			ShaderEntity light = load_entity(entity_index);
+
+#ifndef INCLUDE_STATIC_LIGHTS
 			if (light.IsStaticLight())
 				continue; // static lights will be skipped here (they are used at lightmap baking)
+#endif // INCLUDE_STATIC_LIGHTS
 
 			half shadow_mask = 1;
 #if defined(SHADOW_MASK_ENABLED) && !defined(TRANSPARENT)

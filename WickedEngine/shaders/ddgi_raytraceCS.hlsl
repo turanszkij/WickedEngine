@@ -187,7 +187,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	#endif // RTAPI
 				if (any(shadow))
 				{
-					radiance += light_count * max(0, shadow * lighting.direct.diffuse * NdotL);
+					radiance += light_count * max(0, shadow * lighting.direct.diffuse * NdotL / PI);
 				}
 			}
 		}
@@ -246,6 +246,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			surface.init();
 
 			float hit_depth = 0;
+			float3 hit_result = 0;
 
 #ifdef RTAPI
 
@@ -408,7 +409,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 #endif // RTAPI
 					if (any(shadow))
 					{
-						radiance += light_count * max(0, shadow * lighting.direct.diffuse * NdotL / PI);
+						hit_result += light_count * max(0, shadow * lighting.direct.diffuse * NdotL / PI);
 					}
 				}
 			}
@@ -421,10 +422,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 				energy_conservation *= HEMISPHERE_SAMPLING_PDF;
 				half3 ddgi = ddgi_sample_irradiance(surface.P, surface.facenormal, surface.dominant_lightdir);
 				ddgi *= energy_conservation;
-				radiance += ddgi;
+				hit_result += ddgi;
 			}
-			radiance *= surface.albedo;
-			radiance += surface.emissiveColor;
+			hit_result *= surface.albedo;
+			hit_result += surface.emissiveColor;
+			radiance += hit_result;
 
 			DDGIRayData rayData;
 			rayData.direction = ray.Direction;

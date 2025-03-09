@@ -230,6 +230,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			surface.init();
 
 			float hit_depth = 0;
+			float3 hit_result = 0;
 
 #ifdef RTAPI
 
@@ -392,7 +393,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #endif // RTAPI
 					if (any(shadow))
 					{
-						radiance += light_count * max(0, shadow * lighting.direct.diffuse * NdotL / PI);
+						hit_result += light_count * max(0, shadow * lighting.direct.diffuse * NdotL / PI);
 					}
 				}
 			}
@@ -440,13 +441,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					energy_conservation /= surfel_gi.a;
 					energy_conservation *= HEMISPHERE_SAMPLING_PDF;
 					surfel_gi.rgb *= energy_conservation;
-					radiance += max(0, surfel_gi.rgb);
+					hit_result += max(0, surfel_gi.rgb);
 				}
 			}
 #endif // SURFEL_ENABLE_INFINITE_BOUNCES
 
-			radiance *= surface.albedo;
-			radiance += surface.emissiveColor;
+			hit_result *= surface.albedo;
+			hit_result += surface.emissiveColor;
+			radiance += hit_result;
 
 			rayData.radiance = radiance;
 			rayData.depth = hit_depth;

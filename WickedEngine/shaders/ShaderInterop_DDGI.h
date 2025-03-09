@@ -267,10 +267,10 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, out half3 out_dominant_lig
 
 		// DLD notes:
 		// 1: casting to float3 avoids the "stickman" arifact when close to some walls with capsule shadow
-		// 2: bending with normal direction helps to push dld above surface level
-		out_dominant_lightdir = normalize(float3(SH::OptimalLinearDirection(sum_sh)) + N * 0.2);
+		// 2: bending with normal direction to push dld above surface level
+		out_dominant_lightdir = normalize(float3(SH::OptimalLinearDirection(sum_sh)) + N);
 
-		return net_irradiance;
+		return net_irradiance / PI;
 	}
 
 	return 0;
