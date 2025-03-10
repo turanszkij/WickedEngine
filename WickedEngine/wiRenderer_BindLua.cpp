@@ -190,6 +190,19 @@ namespace wi::lua::renderer
 		}
 		return 0;
 	}
+	int SetDDGIEnabled(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::renderer::SetDDGIEnabled(wi::lua::SGetBool(L, 1));
+		}
+		else
+		{
+			wi::lua::SError(L, "SetDDGIEnabled(bool enabled) not enough arguments!");
+		}
+		return 0;
+	}
 	int SetVSyncEnabled(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);
@@ -1023,6 +1036,7 @@ namespace wi::lua::renderer
 			wi::lua::RegisterFunc("SetDebugCollidersEnabled", SetDebugCollidersEnabled);
 			wi::lua::RegisterFunc("SetGridHelperEnabled", SetGridHelperEnabled);
 			wi::lua::RegisterFunc("SetDDGIDebugEnabled", SetDDGIDebugEnabled);
+			wi::lua::RegisterFunc("SetDDGIEnabled", SetDDGIEnabled);
 			wi::lua::RegisterFunc("SetVSyncEnabled", SetVSyncEnabled);
 			wi::lua::RegisterFunc("SetResolution", SetResolution);
 			wi::lua::RegisterFunc("SetDebugLightCulling", SetDebugLightCulling);

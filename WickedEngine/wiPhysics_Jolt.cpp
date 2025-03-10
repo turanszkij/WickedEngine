@@ -2707,6 +2707,21 @@ namespace wi::physics
 		return cast(soft_vertices[physicsIndex].mPosition);
 	}
 
+	void SetRagdollGhostMode(wi::scene::HumanoidComponent& humanoid, bool value)
+	{
+		if (humanoid.ragdoll == nullptr)
+			return;
+		Ragdoll& ragdoll = *(Ragdoll*)humanoid.ragdoll.get();
+		PhysicsScene& physics_scene = *(PhysicsScene*)ragdoll.physics_scene.get();
+		for (auto& rb : ragdoll.rigidbodies)
+		{
+			BodyLockWrite lock(physics_scene.physics_system.GetBodyLockInterface(), rb.bodyID);
+			if (!lock.Succeeded())
+				return;
+			Body& body = lock.GetBody();
+			body.SetIsSensor(value);
+		}
+	}
 
 	template <class CollectorType>
 	class WickedClosestHitCollector : public JPH::ClosestHitCollisionCollector<CollectorType>

@@ -144,6 +144,8 @@ namespace wi::physics
 		uint32_t physicsIndex
 	);
 
+	void SetRagdollGhostMode(wi::scene::HumanoidComponent& humanoid, bool value);
+
 	struct RayIntersectionResult
 	{
 		wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
