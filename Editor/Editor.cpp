@@ -3276,6 +3276,12 @@ void EditorComponent::Render() const
 					wi::font::Draw("Pickup", fp, cmd);
 					dummy::draw_pickup(XMMatrixScaling(sca, sca, sca) * XMMatrixTranslation(0, 0.5f, 0) * XMLoadFloat4x4(&transform.world) * VP, fp.color, true, cmd);
 					break;
+				case MetadataComponent::Preset::Vehicle:
+					fp.position.y += 1.6f;
+					fp.color = wi::Color(255, 133, 76, 255);
+					wi::font::Draw("Vehicle", fp, cmd);
+					dummy::draw_vehicle(XMLoadFloat4x4(&transform.world) * VP, fp.color, true, cmd);
+					break;
 				}
 			}
 

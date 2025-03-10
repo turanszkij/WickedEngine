@@ -601,6 +601,7 @@ namespace wi::lua
 			}
 
 			wi::physics::DriveVehicle(*rb->component, forward, right, brake, handbrake);
+			return 0;
 		}
 		wi::lua::SError(L, "DriveVehicle(RigidBodyPhysicsComponent rigidbody, opt float forward = 0, opt float right = 0, opt float brake = 0, opt float handbrake = 0) not enough arguments!");
 		return 0;

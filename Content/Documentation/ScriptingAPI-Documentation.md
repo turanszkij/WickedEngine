@@ -1571,6 +1571,7 @@ The metadata component can store and retrieve an arbitrary amount of named user 
 	Enemy = 3,
 	NPC = 4,
 	Pickup = 5,
+	Vehicle = 6,
 }
 
 #### CharacterComponent

@@ -469,6 +469,7 @@ MetadataPreset = {
 	Enemy = 3,
 	NPC = 4,
 	Pickup = 5,
+	Vehicle = 6,
 }
 )";
 

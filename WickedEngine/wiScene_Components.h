@@ -2179,6 +2179,7 @@ namespace wi::scene
 			Enemy,
 			NPC,
 			Pickup,
+			Vehicle,
 		};
 		Preset preset = Preset::Custom;
 

@@ -24,4 +24,5 @@ namespace dummy
 	void draw_direction(const XMMATRIX& matrix, const XMFLOAT4& color, bool depth, wi::graphics::CommandList cmd);
 	void draw_waypoint(const XMMATRIX& matrix, const XMFLOAT4& color, bool depth, wi::graphics::CommandList cmd);
 	void draw_pickup(const XMMATRIX& matrix, const XMFLOAT4& color, bool depth, wi::graphics::CommandList cmd);
+	void draw_vehicle(const XMMATRIX& matrix, const XMFLOAT4& color, bool depth, wi::graphics::CommandList cmd);
 }

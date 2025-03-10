@@ -379,7 +379,6 @@ namespace wi::physics
 			XMMATRIX parentMatrix = scene.ComputeParentMatrixRecursive(entity);
 			scene.locker.unlock();
 
-			XMStoreFloat4x4(&transform.world, parentMatrix * transform.GetLocalMatrix());
 			transform.ApplyTransform();
 
 			if (mesh != nullptr && mesh->precomputed_rigidbody_physics_shape.physicsobject != nullptr)
