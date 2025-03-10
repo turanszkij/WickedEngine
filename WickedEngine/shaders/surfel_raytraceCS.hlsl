@@ -160,7 +160,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
 					RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
 					RAY_FLAG_FORCE_OPAQUE |
-					RAY_FLAG_CULL_FRONT_FACING_TRIANGLES | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,	// uint RayFlags
+					//RAY_FLAG_CULL_FRONT_FACING_TRIANGLES |
+					RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,	// uint RayFlags
 					0xFF,							// uint InstanceInclusionMask
 					newRay							// RayDesc Ray
 				);
@@ -193,8 +194,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		q.TraceRayInline(
 			scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
 			RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
-			RAY_FLAG_FORCE_OPAQUE |
-			RAY_FLAG_CULL_BACK_FACING_TRIANGLES,	// uint RayFlags
+			//RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
+			RAY_FLAG_FORCE_OPAQUE,	// uint RayFlags
 			push.instanceInclusionMask,		// uint InstanceInclusionMask
 			ray								// RayDesc Ray
 		);
@@ -260,6 +261,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				return;
 
 #endif // RTAPI
+
+			if (surface.IsBackface())
+			{
+				hit_depth *= 0.5; // push inwards to help avoid shadow leaks from inwards to outside
+			}
 
 			surface.P = ray.Origin;
 			surface.V = -ray.Direction;
@@ -382,7 +388,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 						scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
 						RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
 						RAY_FLAG_FORCE_OPAQUE |
-						RAY_FLAG_CULL_FRONT_FACING_TRIANGLES | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,	// uint RayFlags
+						//RAY_FLAG_CULL_FRONT_FACING_TRIANGLES |
+						RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,	// uint RayFlags
 						0xFF,							// uint InstanceInclusionMask
 						newRay							// RayDesc Ray
 					);

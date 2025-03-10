@@ -555,6 +555,7 @@ namespace wi::scene
 
 		if (wi::renderer::GetDDGIEnabled())
 		{
+			float bounds_blend = 0.01f;
 			ddgi.frame_index++;
 			if (!TLAS.IsValid() && !BVH.IsValid())
 			{
@@ -563,6 +564,7 @@ namespace wi::scene
 			if (!ddgi.ray_buffer.IsValid()) // Check the ray_buffer here because that is invalid with serialized DDGI data, and we can detect if dynamic resources need recreation when serialized is loaded
 			{
 				ddgi.frame_index = 0;
+				bounds_blend = 1;
 
 				const uint32_t probe_count = ddgi.grid_dimensions.x * ddgi.grid_dimensions.y * ddgi.grid_dimensions.z;
 
@@ -611,14 +613,16 @@ namespace wi::scene
 				device->CreateTexture(&tex, nullptr, &ddgi.depth_texture);
 				device->SetName(&ddgi.depth_texture, "ddgi.depth_texture");
 			}
-			ddgi.grid_min = bounds.getMin();
-			ddgi.grid_min.x -= 1;
-			ddgi.grid_min.y -= 1;
-			ddgi.grid_min.z -= 1;
-			ddgi.grid_max = bounds.getMax();
-			ddgi.grid_max.x += 1;
-			ddgi.grid_max.y += 1;
-			ddgi.grid_max.z += 1;
+			float3 grid_min = bounds.getMin();
+			grid_min.x -= 1;
+			grid_min.y -= 1;
+			grid_min.z -= 1;
+			float3 grid_max = bounds.getMax();
+			grid_max.x += 1;
+			grid_max.y += 1;
+			grid_max.z += 1;
+			ddgi.grid_min = wi::math::Lerp(ddgi.grid_min, grid_min, bounds_blend);
+			ddgi.grid_max = wi::math::Lerp(ddgi.grid_max, grid_max, bounds_blend);
 		}
 		else if (ddgi.ray_buffer.IsValid()) // if ray_buffer is valid, it means DDGI was not from serialization, so it will be deleted when DDGI is disabled
 		{
