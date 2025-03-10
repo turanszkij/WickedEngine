@@ -204,6 +204,7 @@ namespace wi::jobsystem
 						{
 							perror("setpriority");
 						}
+						break;
 					case Priority::Streaming:
 						if (setpriority(PRIO_PROCESS, 0, 2) != 0)
 						{
