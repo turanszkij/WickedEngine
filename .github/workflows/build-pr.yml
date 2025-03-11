@@ -70,16 +70,6 @@ jobs:
         move Editor\languages .\
         move Editor\fonts .\
 
-    - name: Install official UPX
-      shell: cmd
-      run: |
-        curl -sOSL https://github.com/upx/upx/releases/download/v%UPX_VERSION%/upx-%UPX_VERSION%-win64.zip
-        unzip -qj upx-%UPX_VERSION%-win64.zip upx-%UPX_VERSION%-win64/upx.exe
-
-    - name: Compress Editor with UPX
-      shell: cmd
-      run: upx --best Editor_Windows.exe
-
     - name: Package Editor
       uses: actions/upload-artifact@v4
       with:
