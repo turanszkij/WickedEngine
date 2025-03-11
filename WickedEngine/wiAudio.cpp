@@ -41,26 +41,43 @@ namespace wi::audio
 
 	struct WrappedSound : ma_sound
 	{
+		ma_audio_buffer* buffer = nullptr;
+		bool playing = false;
+
+		WrappedSound() {}
+
+		// Just for testing
+		WrappedSound(WrappedSound& other) = delete;
+
+		ma_result Create(ma_engine* engine, const ma_audio_buffer_config& config)
+		{
+			buffer = new ma_audio_buffer();
+			ma_audio_buffer_init(&config, buffer);
+			ma_result res = ma_sound_init_from_data_source(engine, buffer, 0, nullptr, this);
+			return res;
+		}
+
 		~WrappedSound()
 		{
 			ma_sound_uninit(this);
+			if (buffer != nullptr) delete buffer;
 		}
 	};
 
-	struct WrappedDecoder : ma_decoder
+	struct WrappedSampleInfo : SampleInfo
 	{
-		~WrappedDecoder()
+		~WrappedSampleInfo()
 		{
-			ma_decoder_uninit(this);
+			delete samples;
 		}
 	};
 
 	static std::shared_ptr<WrappedEngine> engine;
 
 
-	static ma_sound* get_ma_sound(const SoundInstance* instance)
+	static WrappedSound* get_ma_sound(const SoundInstance* instance)
 	{
-		return (WrappedSound*)instance->internal_state.get();
+		return instance == nullptr ? nullptr : (WrappedSound*)instance->internal_state.get();
 	}
 
 	void Initialize()
@@ -68,57 +85,110 @@ namespace wi::audio
 		engine = std::make_shared<WrappedEngine>();
 	}
 
+	static bool CreateSoundInternal(std::function<ma_result (ma_decoder_config* config, ma_uint64* frameCount, void** pcmFrames)> decoder, Sound* sound)
+	{
+		auto info = std::make_shared<WrappedSampleInfo>();
+		ma_decoder_config config{};
+		info->channel_count = config.channels = 1;
+		info->sample_rate = config.sampleRate = ma_engine_get_sample_rate(engine.get());
+		config.format = ma_format_s16;
+		ma_result res = decoder(&config, &info->sample_count, (void**)(&info->samples));
+		if (res == MA_SUCCESS)
+		{
+			sound->internal_state = info;
+			info->sample_count *= info->channel_count;
+		}
+		assert(res == MA_SUCCESS);
+		return res == MA_SUCCESS;
+
+	}
+
 	bool CreateSound(const std::string& filename, Sound* sound)
 	{
-		auto decoder = std::make_shared<WrappedDecoder>();
-		ma_result res = ma_decoder_init_file(filename.c_str(), nullptr, decoder.get());
-		sound->internal_state = decoder;
-		return res == MA_SUCCESS;
+		return CreateSoundInternal(
+			[filename](auto config, auto frameCount, auto frames) {
+				return ma_decode_file(filename.c_str(), config, frameCount, frames);
+			},
+			sound
+		);
 	}
 
 	bool CreateSound(const uint8_t* data, size_t size, Sound* sound)
 	{
-		auto decoder = std::make_shared<WrappedDecoder>();
-		ma_result res = ma_decoder_init_memory(data, size, nullptr, decoder.get());
-		sound->internal_state = decoder;
-		return res == MA_SUCCESS;
+		return CreateSoundInternal(
+			[data, size](auto config, auto frameCount, auto frames) {
+				return ma_decode_memory(data, size, config, frameCount, frames);
+			},
+			sound
+		);
 	}
 
 	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance)
 	{
-		auto decoder = sound->internal_state;
+		auto info = (WrappedSampleInfo*)sound->internal_state.get();
 		auto wrapped_sound = std::make_shared<WrappedSound>();
-		ma_result res;
-		res = ma_sound_init_from_data_source(engine.get(), decoder.get(), 0, nullptr, wrapped_sound.get());
-		instance->internal_state = wrapped_sound;
+
+		ma_audio_buffer_config config{};
+		config.channels = info->channel_count;
+		config.format = ma_format_s16;
+		config.sampleRate = info->sample_rate;
+		config.sizeInFrames = info->sample_count / info->channel_count;
+		config.pData = info->samples;
+		ma_result res = wrapped_sound->Create(engine.get(), config);
+		if (res == MA_SUCCESS)
+		{
+			instance->internal_state = wrapped_sound;
+		}
+		assert(res == MA_SUCCESS);
 		return res == MA_SUCCESS;
 	}
 
 	void Play(SoundInstance* instance)
 	{
-		ma_sound_set_looping(get_ma_sound(instance), instance->IsLooped());
-		ma_sound_start(get_ma_sound(instance));
+		auto sound = get_ma_sound(instance);
+		
+		if (sound->playing) return;
+		sound->playing = true;
+		ma_sound_set_looping(sound, instance->IsLooped());
+		if (instance->begin > 0.)
+		{
+			ma_sound_seek_to_second(sound, instance->begin);
+		}
+		if (instance->length > 0.)
+		{
+			ma_sound_set_stop_time_in_milliseconds(sound, ma_engine_get_time_in_milliseconds(engine.get()) + instance->length * 1000.);
+		}
+		else
+		{
+			ma_sound_set_stop_time_in_milliseconds(sound, UINT64_MAX);
+		}
+
+		ma_sound_start(sound);
 	}
 
 	void Pause(SoundInstance* instance)
 	{
 		ma_sound_stop(get_ma_sound(instance));
+		get_ma_sound(instance)->playing = false;
 	}
 
 	void Stop(SoundInstance* instance)
 	{
 		ma_sound_stop(get_ma_sound(instance));
 		ma_sound_seek_to_pcm_frame(get_ma_sound(instance), 0);
+		get_ma_sound(instance)->playing = false;
 	}
 
 	void SetVolume(float volume, SoundInstance* instance)
 	{
-		ma_sound_set_volume(get_ma_sound(instance), volume);
+		// FIXME: temporary hack because Island level has background sounds set at volume 10
+		// and XAudio doesn't seem to support amplifiying sounds
+		ma_sound_set_volume(get_ma_sound(instance), std::min(1.f, volume));
 	}
 
 	float GetVolume(const SoundInstance* instance)
 	{
-		return instance == nullptr ? 0. : ma_sound_get_volume(get_ma_sound(instance));
+		return ma_sound_get_volume(get_ma_sound(instance));
 	}
 
 	void ExitLoop(SoundInstance* instance)
@@ -132,11 +202,12 @@ namespace wi::audio
 
 	SampleInfo GetSampleInfo(const Sound* sound)
 	{
-		return {};
+		return *(SampleInfo*)sound->internal_state.get();
 	}
 
 	uint64_t GetTotalSamplesPlayed(const SoundInstance* instance)
 	{
+		// FIXME: multiply by channels
 		return ma_sound_get_time_in_pcm_frames(get_ma_sound(instance));
 	}
 
