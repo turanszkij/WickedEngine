@@ -1,3 +1,4 @@
+cmake_minimum_required(VERSION 3.19)
 file(GLOB LUA_HEADERS CONFIGURE_DEPENDS *.h)
 file(GLOB LUA_SOURCES CONFIGURE_DEPENDS *.c)
 

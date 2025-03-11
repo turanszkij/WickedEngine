@@ -1,3 +1,4 @@
+cmake_minimum_required(VERSION 3.19)
 set (SOURCE_FILES
 	stdafx.cpp
 	Tests.cpp
