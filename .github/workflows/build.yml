@@ -5,7 +5,6 @@ on:
     branches: [ master ]
 
 env:
-  UPX_VERSION: 4.2.4
   CCACHE_VERSION: 4.10.2
   CCACHE_NODIRECT: 1
 
@@ -66,16 +65,6 @@ jobs:
         move Editor\startup.lua .\
         move Editor\languages .\
         move Editor\fonts .\
-
-    - name: Install official UPX
-      shell: cmd
-      run: |
-        curl -sOSL https://github.com/upx/upx/releases/download/v%UPX_VERSION%/upx-%UPX_VERSION%-win64.zip
-        unzip -qj upx-%UPX_VERSION%-win64.zip upx-%UPX_VERSION%-win64/upx.exe
-
-    - name: Compress Editor with UPX
-      shell: cmd
-      run: upx --best Editor_Windows.exe
 
     - name: Package Editor
       uses: actions/upload-artifact@v4
@@ -140,14 +129,6 @@ jobs:
         mv Editor/startup.lua ./
         mv Editor/languages ./
         mv Editor/fonts ./
-
-    - name: Install official UPX
-      run: |
-        curl -sOSL https://github.com/upx/upx/releases/download/v$UPX_VERSION/upx-$UPX_VERSION-amd64_linux.tar.xz
-        tar xf upx-$UPX_VERSION-amd64_linux.tar.xz upx-$UPX_VERSION-amd64_linux/upx
-
-    - name: Compress Editor with UPX
-      run: upx-$UPX_VERSION-amd64_linux/upx --best Editor_Linux
 
     - name: Package Editor
       uses: actions/upload-artifact@v4
