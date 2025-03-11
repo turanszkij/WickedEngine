@@ -17,6 +17,8 @@
 #include "shaders/ShaderInterop_SurfelGI.h"
 #include "shaders/ShaderInterop_DDGI.h"
 
+#include <sanitizer/asan_interface.h>
+
 using namespace wi::ecs;
 using namespace wi::enums;
 using namespace wi::graphics;
@@ -1000,12 +1002,14 @@ namespace wi::scene
 		// Recount colliders:
 		collider_allocator_cpu.store(0u);
 		collider_allocator_gpu.store(0u);
-		collider_deinterleaved_data.reserve(
+		const size_t size =
 			sizeof(wi::primitive::AABB) * colliders.GetCount() +
 			sizeof(wi::primitive::AABB) * colliders.GetCount() +
 			sizeof(ColliderComponent) * colliders.GetCount() +
 			sizeof(ColliderComponent) * colliders.GetCount()
-		);
+		;
+		collider_deinterleaved_data.reserve(size);
+		ASAN_UNPOISON_MEMORY_REGION(collider_deinterleaved_data.data(), size);
 		aabb_colliders_cpu = (wi::primitive::AABB*)collider_deinterleaved_data.data();
 		aabb_colliders_gpu = aabb_colliders_cpu + colliders.GetCount();
 		colliders_cpu = (ColliderComponent*)(aabb_colliders_gpu + colliders.GetCount());
@@ -3636,12 +3640,14 @@ namespace wi::scene
 		// Colliders:
 		collider_allocator_cpu.store(0u);
 		collider_allocator_gpu.store(0u);
-		collider_deinterleaved_data.reserve(
-			sizeof(wi::primitive::AABB)* colliders.GetCount() +
+		const size_t size =
+			sizeof(wi::primitive::AABB) * colliders.GetCount() +
 			sizeof(wi::primitive::AABB) * colliders.GetCount() +
 			sizeof(ColliderComponent) * colliders.GetCount() +
 			sizeof(ColliderComponent) * colliders.GetCount()
-		);
+		;
+		collider_deinterleaved_data.reserve(size);
+		ASAN_UNPOISON_MEMORY_REGION(collider_deinterleaved_data.data(), size);
 		aabb_colliders_cpu = (wi::primitive::AABB*)collider_deinterleaved_data.data();
 		aabb_colliders_gpu = aabb_colliders_cpu + colliders.GetCount();
 		colliders_cpu = (ColliderComponent*)(aabb_colliders_gpu + colliders.GetCount());
