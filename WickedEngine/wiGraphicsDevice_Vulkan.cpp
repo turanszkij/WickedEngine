@@ -7195,7 +7195,7 @@ using namespace vulkan_internal;
 				if (frame_fence[bufferindex][queue] == VK_NULL_HANDLE)
 					continue;
 
-				vulkan_check(vkWaitForFences(device, 1, &frame_fence[bufferindex][queue], VK_TRUE, 0xFFFFFFFFFFFFFFFF));
+				vulkan_check(vkWaitForFences(device, 1, &frame_fence[bufferindex][queue], VK_TRUE, 1000000)); // 1 sec timeout
 
 				vulkan_check(vkResetFences(device, 1, &frame_fence[bufferindex][queue]));
 			}
