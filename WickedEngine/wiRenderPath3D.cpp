@@ -1262,20 +1262,20 @@ namespace wi
 		// Updating textures:
 		if (getSceneUpdateEnabled())
 		{
-			cmd = device->BeginCommandList();
-			device->WaitCommandList(cmd, cmd_prepareframe_async);
-			wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
-				wi::renderer::BindCommonResources(cmd);
-				wi::renderer::BindCameraCB(
-					*camera,
-					camera_previous,
-					camera_reflection,
-					cmd
-				);
-				wi::renderer::RefreshLightmaps(*scene, cmd);
-				wi::renderer::RefreshEnvProbes(visibility_main, cmd);
-				wi::renderer::PaintDecals(*scene, cmd);
-			});
+			//cmd = device->BeginCommandList();
+			//device->WaitCommandList(cmd, cmd_prepareframe_async);
+			//wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
+			//	wi::renderer::BindCommonResources(cmd);
+			//	wi::renderer::BindCameraCB(
+			//		*camera,
+			//		camera_previous,
+			//		camera_reflection,
+			//		cmd
+			//	);
+			//	wi::renderer::RefreshLightmaps(*scene, cmd);
+			//	wi::renderer::RefreshEnvProbes(visibility_main, cmd);
+			//	wi::renderer::PaintDecals(*scene, cmd);
+			//});
 		}
 
 		if (getReflectionsEnabled() && visibility_main.IsRequestedPlanarReflections())
