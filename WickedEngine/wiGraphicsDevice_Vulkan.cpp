@@ -6954,6 +6954,9 @@ using namespace vulkan_internal;
 
 	CommandList GraphicsDevice_Vulkan::BeginCommandList(QUEUE_TYPE queue)
 	{
+#ifdef PLATFORM_LINUX
+		queue = QUEUE_GRAPHICS;
+#endif // PLATFORM_LINUX
 		cmd_locker.lock();
 		uint32_t cmd_current = cmd_count++;
 		if (cmd_current >= commandlists.size())
