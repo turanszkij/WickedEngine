@@ -3095,7 +3095,11 @@ void EditorComponent::Render() const
 				if (renderPath->getMSAASampleCount() > 1)
 				{
 					RenderPassImage rp[] = {
-						RenderPassImage::RenderTarget(&rt_selectionOutline_MSAA, RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE),
+						RenderPassImage::RenderTarget(
+							&rt_selectionOutline_MSAA,
+							RenderPassImage::LoadOp::CLEAR,
+							RenderPassImage::StoreOp::DONTCARE
+						),
 						RenderPassImage::Resolve(&rt_selectionOutline[0]),
 						RenderPassImage::DepthStencil(
 							renderPath->GetDepthStencil(),
@@ -3197,8 +3201,8 @@ void EditorComponent::Render() const
 			{
 				RenderPassImage rp[] = {
 					RenderPassImage::RenderTarget(&rt_metadataDummies_MSAA, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::Resolve(&rt_metadataDummies),
 					RenderPassImage::DepthStencil(renderPath->GetDepthStencil()),
-					RenderPassImage::Resolve(&rt_metadataDummies)
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 			}
@@ -3302,12 +3306,12 @@ void EditorComponent::Render() const
 						ResourceState::RENDERTARGET,
 						ResourceState::RENDERTARGET
 					),
+					RenderPassImage::Resolve(&render_result),
 					RenderPassImage::DepthStencil(
 						&editor_depthbuffer,
 						RenderPassImage::LoadOp::CLEAR,
 						RenderPassImage::StoreOp::DONTCARE
 					),
-					RenderPassImage::Resolve(&render_result),
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 			}

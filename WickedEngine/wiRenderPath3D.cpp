@@ -863,7 +863,6 @@ namespace wi
 
 		// Preparing the frame:
 		CommandList cmd = device->BeginCommandList();
-		device->WaitQueue(cmd, QUEUE_COMPUTE); // sync to prev frame compute (disallow prev frame overlapping a compute task into updating global scene resources for this frame)
 		wi::renderer::ProcessDeferredTextureRequests(cmd); // Execute it first thing in the frame here, on main thread, to not allow other thread steal it and execute on different command list!
 		CommandList cmd_prepareframe = cmd;
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
@@ -908,6 +907,11 @@ namespace wi
 				cmd
 			);
 			wi::renderer::UpdateRenderDataAsync(visibility_main, frameCB, cmd);
+
+			if (scene->IsWetmapProcessingRequired())
+			{
+				wi::renderer::RefreshWetmaps(visibility_main, cmd);
+			}
 
 			if (scene->IsAccelerationStructureUpdateRequested())
 			{
@@ -1394,6 +1398,7 @@ namespace wi
 						ResourceState::RENDERTARGET,
 						ResourceState::RENDERTARGET
 					),
+					RenderPassImage::Resolve(&rtReflection_resolved),
 					RenderPassImage::DepthStencil(
 						&depthBuffer_Reflection,
 						RenderPassImage::LoadOp::LOAD,
@@ -1402,7 +1407,6 @@ namespace wi
 						ResourceState::DEPTHSTENCIL,
 						ResourceState::SHADER_RESOURCE
 					),
-					RenderPassImage::Resolve(&rtReflection_resolved)
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 
@@ -1616,14 +1620,6 @@ namespace wi
 				&rtMain_render,
 				visibility_shading_in_compute ? RenderPassImage::LoadOp::LOAD : RenderPassImage::LoadOp::CLEAR
 			);
-			rp[rp_count++] = RenderPassImage::DepthStencil(
-				&depthBuffer_Main,
-				RenderPassImage::LoadOp::LOAD,
-				RenderPassImage::StoreOp::STORE,
-				ResourceState::DEPTHSTENCIL,
-				ResourceState::DEPTHSTENCIL,
-				ResourceState::DEPTHSTENCIL
-			);
 			if (getMSAASampleCount() > 1)
 			{
 				rp[rp_count++] = RenderPassImage::Resolve(&rtMain);
@@ -1632,6 +1628,14 @@ namespace wi
 			{
 				rp[rp_count++] = RenderPassImage::ShadingRateSource(&rtShadingRate, ResourceState::UNORDERED_ACCESS, ResourceState::UNORDERED_ACCESS);
 			}
+			rp[rp_count++] = RenderPassImage::DepthStencil(
+				&depthBuffer_Main,
+				RenderPassImage::LoadOp::LOAD,
+				RenderPassImage::StoreOp::STORE,
+				ResourceState::DEPTHSTENCIL,
+				ResourceState::DEPTHSTENCIL,
+				ResourceState::DEPTHSTENCIL
+			);
 			device->RenderPassBegin(rp, rp_count, cmd, RenderPassFlags::ALLOW_UAV_WRITES);
 
 			if (visibility_shading_in_compute)
@@ -1765,16 +1769,6 @@ namespace wi
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 		});
-
-		if (scene->IsWetmapProcessingRequired())
-		{
-			CommandList wetmap_cmd = device->BeginCommandList(QUEUE_COMPUTE);
-			device->WaitCommandList(wetmap_cmd, cmd); // wait for transparents, it will be scheduled with late frame (GUI, etc)
-			// Note: GPU processing of this compute task can overlap with beginning of the next frame because no one is waiting for it
-			wi::jobsystem::Execute(ctx, [this, wetmap_cmd](wi::jobsystem::JobArgs args) {
-				wi::renderer::RefreshWetmaps(visibility_main, wetmap_cmd);
-			});
-		}
 
 		cmd = device->BeginCommandList();
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
@@ -1941,6 +1935,8 @@ namespace wi
 				if (getMSAASampleCount() > 1)
 				{
 					RenderPassImage rp[] = {
+						RenderPassImage::RenderTarget(&rtSun[0], RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE),
+						RenderPassImage::Resolve(&rtSun_resolved),
 						RenderPassImage::DepthStencil(
 							&depthBuffer_Main,
 							RenderPassImage::LoadOp::LOAD,
@@ -1949,8 +1945,6 @@ namespace wi
 							ResourceState::DEPTHSTENCIL,
 							ResourceState::DEPTHSTENCIL
 						),
-						RenderPassImage::RenderTarget(&rtSun[0], RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE),
-						RenderPassImage::Resolve(&rtSun_resolved),
 					};
 					device->RenderPassBegin(rp, arraysize(rp), cmd);
 					texture_fullres = &rtSun_resolved;
@@ -2125,18 +2119,34 @@ namespace wi
 		vp.max_depth = 1;
 		device->BindViewports(1, &vp, cmd);
 
-		RenderPassImage rp[] = {
-			RenderPassImage::RenderTarget(&rtMain_render, RenderPassImage::LoadOp::LOAD),
-			RenderPassImage::DepthStencil(
+		RenderPassImage rp[3];
+		uint32_t rp_count = 0;
+		if (getMSAASampleCount() > 1)
+		{
+			rp[rp_count++] = RenderPassImage::RenderTarget(&rtMain_render, RenderPassImage::LoadOp::LOAD);
+			rp[rp_count++] = RenderPassImage::Resolve(&rtMain);
+			rp[rp_count++] = RenderPassImage::DepthStencil(
 				&depthBuffer_Main,
 				RenderPassImage::LoadOp::LOAD,
 				RenderPassImage::StoreOp::STORE,
 				ResourceState::DEPTHSTENCIL,
 				ResourceState::DEPTHSTENCIL,
 				ResourceState::DEPTHSTENCIL
-			),
-			RenderPassImage::Resolve(&rtMain),
-		};
+			);
+		}
+		else
+		{
+
+			rp[rp_count++] = RenderPassImage::RenderTarget(&rtMain_render, RenderPassImage::LoadOp::LOAD);
+			rp[rp_count++] = RenderPassImage::DepthStencil(
+				&depthBuffer_Main,
+				RenderPassImage::LoadOp::LOAD,
+				RenderPassImage::StoreOp::STORE,
+				ResourceState::DEPTHSTENCIL,
+				ResourceState::DEPTHSTENCIL,
+				ResourceState::DEPTHSTENCIL
+			);
+		}
 
 		// Draw only the ocean first, fog and lightshafts will be blended on top:
 		if (scene->weather.IsOceanEnabled() && scene->ocean.IsValid() && (!scene->ocean.IsOccluded() || !wi::renderer::GetOcclusionCullingEnabled()))
@@ -2145,7 +2155,7 @@ namespace wi
 			wi::renderer::Postprocess_Downsample4x(rtMain, rtSceneCopy, cmd);
 			device->EventEnd(cmd);
 
-			device->RenderPassBegin(rp, getMSAASampleCount() > 1 ? 3 : 2, cmd);
+			device->RenderPassBegin(rp, rp_count, cmd);
 
 			wi::renderer::DrawScene(
 				visibility_main,
@@ -2162,7 +2172,7 @@ namespace wi
 			RenderSceneMIPChain(cmd);
 		}
 
-		device->RenderPassBegin(rp, getMSAASampleCount() > 1 ? 3 : 2, cmd);
+		device->RenderPassBegin(rp, rp_count, cmd);
 
 		// Note: volumetrics and light shafts are blended before transparent scene, because they used depth of the opaques
 		//	But the ocean is special, because it does have depth for them implicitly computed from ocean plane
@@ -2263,6 +2273,7 @@ namespace wi
 			{
 				RenderPassImage rp[] = {
 					RenderPassImage::RenderTarget(&rtParticleDistortion_render, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::Resolve(&rtParticleDistortion),
 					RenderPassImage::DepthStencil(
 						&depthBuffer_Main,
 						RenderPassImage::LoadOp::LOAD,
@@ -2271,7 +2282,6 @@ namespace wi
 						ResourceState::DEPTHSTENCIL,
 						ResourceState::DEPTHSTENCIL
 					),
-					RenderPassImage::Resolve(&rtParticleDistortion)
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 			}

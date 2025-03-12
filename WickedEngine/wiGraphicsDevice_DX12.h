@@ -163,7 +163,6 @@ namespace wi::graphics
 
 			QUEUE_TYPE queue = {};
 			uint32_t id = 0;
-			wi::vector<std::pair<QUEUE_TYPE, Semaphore>> wait_queues;
 			wi::vector<Semaphore> waits;
 			wi::vector<Semaphore> signals;
 
@@ -207,7 +206,6 @@ namespace wi::graphics
 			void reset(uint32_t bufferindex)
 			{
 				buffer_index = bufferindex;
-				wait_queues.clear();
 				waits.clear();
 				signals.clear();
 				binder.reset();
@@ -369,7 +367,6 @@ namespace wi::graphics
 		///////////////Thread-sensitive////////////////////////
 
 		void WaitCommandList(CommandList cmd, CommandList wait_for) override;
-		void WaitQueue(CommandList cmd, QUEUE_TYPE wait_for) override;
 		void RenderPassBegin(const SwapChain* swapchain, CommandList cmd) override;
 		void RenderPassBegin(const RenderPassImage* images, uint32_t image_count, CommandList cmd, RenderPassFlags flags = RenderPassFlags::NONE) override;
 		void RenderPassEnd(CommandList cmd) override;
