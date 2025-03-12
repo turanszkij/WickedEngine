@@ -2119,18 +2119,34 @@ namespace wi
 		vp.max_depth = 1;
 		device->BindViewports(1, &vp, cmd);
 
-		RenderPassImage rp[] = {
-			RenderPassImage::RenderTarget(&rtMain_render, RenderPassImage::LoadOp::LOAD),
-			RenderPassImage::Resolve(&rtMain),
-			RenderPassImage::DepthStencil(
+		RenderPassImage rp[3];
+		uint32_t rp_count = 0;
+		if (getMSAASampleCount() > 1)
+		{
+			rp[rp_count++] = RenderPassImage::RenderTarget(&rtMain_render, RenderPassImage::LoadOp::LOAD);
+			rp[rp_count++] = RenderPassImage::Resolve(&rtMain);
+			rp[rp_count++] = RenderPassImage::DepthStencil(
 				&depthBuffer_Main,
 				RenderPassImage::LoadOp::LOAD,
 				RenderPassImage::StoreOp::STORE,
 				ResourceState::DEPTHSTENCIL,
 				ResourceState::DEPTHSTENCIL,
 				ResourceState::DEPTHSTENCIL
-			),
-		};
+			);
+		}
+		else
+		{
+
+			rp[rp_count++] = RenderPassImage::RenderTarget(&rtMain_render, RenderPassImage::LoadOp::LOAD);
+			rp[rp_count++] = RenderPassImage::DepthStencil(
+				&depthBuffer_Main,
+				RenderPassImage::LoadOp::LOAD,
+				RenderPassImage::StoreOp::STORE,
+				ResourceState::DEPTHSTENCIL,
+				ResourceState::DEPTHSTENCIL,
+				ResourceState::DEPTHSTENCIL
+			);
+		}
 
 		// Draw only the ocean first, fog and lightshafts will be blended on top:
 		if (scene->weather.IsOceanEnabled() && scene->ocean.IsValid() && (!scene->ocean.IsOccluded() || !wi::renderer::GetOcclusionCullingEnabled()))
@@ -2139,7 +2155,7 @@ namespace wi
 			wi::renderer::Postprocess_Downsample4x(rtMain, rtSceneCopy, cmd);
 			device->EventEnd(cmd);
 
-			device->RenderPassBegin(rp, getMSAASampleCount() > 1 ? 3 : 2, cmd);
+			device->RenderPassBegin(rp, rp_count, cmd);
 
 			wi::renderer::DrawScene(
 				visibility_main,
@@ -2156,7 +2172,7 @@ namespace wi
 			RenderSceneMIPChain(cmd);
 		}
 
-		device->RenderPassBegin(rp, getMSAASampleCount() > 1 ? 3 : 2, cmd);
+		device->RenderPassBegin(rp, rp_count, cmd);
 
 		// Note: volumetrics and light shafts are blended before transparent scene, because they used depth of the opaques
 		//	But the ocean is special, because it does have depth for them implicitly computed from ocean plane
