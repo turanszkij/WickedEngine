@@ -152,7 +152,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				newRay.Origin = surface.P;
 				newRay.TMin = 0.001;
 				newRay.TMax = dist;
-				newRay.Direction = L + max3(surface.sss);
+				newRay.Direction = normalize(L + max3(surface.sss));
 
 	#ifdef RTAPI
 				wiRayQuery q;
@@ -381,7 +381,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					newRay.Origin = surface.P;
 					newRay.TMin = 0.001;
 					newRay.TMax = dist;
-					newRay.Direction = L + max3(surface.sss);
+					newRay.Direction = normalize(L + max3(surface.sss));
 
 #ifdef RTAPI
 					q.TraceRayInline(
@@ -444,7 +444,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				}
 				if (surfel_gi.a > 0)
 				{
-					half energy_conservation = 0.95;
+					float energy_conservation = 0.95;
 					energy_conservation /= surfel_gi.a;
 					energy_conservation /= PI;
 					surfel_gi.rgb *= energy_conservation;
