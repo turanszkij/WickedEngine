@@ -8747,7 +8747,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				RenderPassImage::RenderTarget(
 					&envrenderingColorBuffer_MSAA,
 					RenderPassImage::LoadOp::CLEAR,
-					RenderPassImage::StoreOp::DONTCARE,
+					RenderPassImage::StoreOp::STORE,
 					ResourceState::RENDERTARGET,
 					ResourceState::RENDERTARGET
 				),

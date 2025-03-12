@@ -220,7 +220,7 @@ namespace wi
 					RenderPassImage::RenderTarget(
 						&rtFinal_MSAA,
 						RenderPassImage::LoadOp::CLEAR,
-						RenderPassImage::StoreOp::DONTCARE,
+						RenderPassImage::StoreOp::STORE,
 						ResourceState::RENDERTARGET,
 						ResourceState::RENDERTARGET
 					),
@@ -254,7 +254,7 @@ namespace wi
 					RenderPassImage::RenderTarget(
 						&rtFinal_MSAA,
 						RenderPassImage::LoadOp::CLEAR,
-						RenderPassImage::StoreOp::DONTCARE,
+						RenderPassImage::StoreOp::STORE,
 						ResourceState::RENDERTARGET,
 						ResourceState::RENDERTARGET
 					),

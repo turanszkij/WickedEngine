@@ -4066,7 +4066,9 @@ using namespace vulkan_internal;
 		}
 		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::TRANSIENT_ATTACHMENT))
 		{
+#ifndef PLATFORM_LINUX
 			imageInfo.usage |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+#endif // PLATFORM_LINUX
 		}
 		else
 		{

@@ -1394,7 +1394,7 @@ namespace wi
 					RenderPassImage::RenderTarget(
 						&rtReflection,
 						RenderPassImage::LoadOp::CLEAR,
-						RenderPassImage::StoreOp::DONTCARE,
+						RenderPassImage::StoreOp::STORE,
 						ResourceState::RENDERTARGET,
 						ResourceState::RENDERTARGET
 					),
@@ -1943,7 +1943,7 @@ namespace wi
 							ResourceState::DEPTHSTENCIL,
 							ResourceState::DEPTHSTENCIL
 						),
-						RenderPassImage::RenderTarget(&rtSun[0], RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE),
+						RenderPassImage::RenderTarget(&rtSun[0], RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::STORE),
 						RenderPassImage::Resolve(&rtSun_resolved),
 					};
 					device->RenderPassBegin(rp, arraysize(rp), cmd);
