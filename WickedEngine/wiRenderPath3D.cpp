@@ -1398,6 +1398,7 @@ namespace wi
 						ResourceState::RENDERTARGET,
 						ResourceState::RENDERTARGET
 					),
+					RenderPassImage::Resolve(&rtReflection_resolved),
 					RenderPassImage::DepthStencil(
 						&depthBuffer_Reflection,
 						RenderPassImage::LoadOp::LOAD,
@@ -1406,7 +1407,6 @@ namespace wi
 						ResourceState::DEPTHSTENCIL,
 						ResourceState::SHADER_RESOURCE
 					),
-					RenderPassImage::Resolve(&rtReflection_resolved)
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 
@@ -1620,14 +1620,6 @@ namespace wi
 				&rtMain_render,
 				visibility_shading_in_compute ? RenderPassImage::LoadOp::LOAD : RenderPassImage::LoadOp::CLEAR
 			);
-			rp[rp_count++] = RenderPassImage::DepthStencil(
-				&depthBuffer_Main,
-				RenderPassImage::LoadOp::LOAD,
-				RenderPassImage::StoreOp::STORE,
-				ResourceState::DEPTHSTENCIL,
-				ResourceState::DEPTHSTENCIL,
-				ResourceState::DEPTHSTENCIL
-			);
 			if (getMSAASampleCount() > 1)
 			{
 				rp[rp_count++] = RenderPassImage::Resolve(&rtMain);
@@ -1636,6 +1628,14 @@ namespace wi
 			{
 				rp[rp_count++] = RenderPassImage::ShadingRateSource(&rtShadingRate, ResourceState::UNORDERED_ACCESS, ResourceState::UNORDERED_ACCESS);
 			}
+			rp[rp_count++] = RenderPassImage::DepthStencil(
+				&depthBuffer_Main,
+				RenderPassImage::LoadOp::LOAD,
+				RenderPassImage::StoreOp::STORE,
+				ResourceState::DEPTHSTENCIL,
+				ResourceState::DEPTHSTENCIL,
+				ResourceState::DEPTHSTENCIL
+			);
 			device->RenderPassBegin(rp, rp_count, cmd, RenderPassFlags::ALLOW_UAV_WRITES);
 
 			if (visibility_shading_in_compute)
@@ -1935,6 +1935,8 @@ namespace wi
 				if (getMSAASampleCount() > 1)
 				{
 					RenderPassImage rp[] = {
+						RenderPassImage::RenderTarget(&rtSun[0], RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE),
+						RenderPassImage::Resolve(&rtSun_resolved),
 						RenderPassImage::DepthStencil(
 							&depthBuffer_Main,
 							RenderPassImage::LoadOp::LOAD,
@@ -1943,8 +1945,6 @@ namespace wi
 							ResourceState::DEPTHSTENCIL,
 							ResourceState::DEPTHSTENCIL
 						),
-						RenderPassImage::RenderTarget(&rtSun[0], RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE),
-						RenderPassImage::Resolve(&rtSun_resolved),
 					};
 					device->RenderPassBegin(rp, arraysize(rp), cmd);
 					texture_fullres = &rtSun_resolved;
@@ -2121,6 +2121,7 @@ namespace wi
 
 		RenderPassImage rp[] = {
 			RenderPassImage::RenderTarget(&rtMain_render, RenderPassImage::LoadOp::LOAD),
+			RenderPassImage::Resolve(&rtMain),
 			RenderPassImage::DepthStencil(
 				&depthBuffer_Main,
 				RenderPassImage::LoadOp::LOAD,
@@ -2129,7 +2130,6 @@ namespace wi
 				ResourceState::DEPTHSTENCIL,
 				ResourceState::DEPTHSTENCIL
 			),
-			RenderPassImage::Resolve(&rtMain),
 		};
 
 		// Draw only the ocean first, fog and lightshafts will be blended on top:
@@ -2257,6 +2257,7 @@ namespace wi
 			{
 				RenderPassImage rp[] = {
 					RenderPassImage::RenderTarget(&rtParticleDistortion_render, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::Resolve(&rtParticleDistortion),
 					RenderPassImage::DepthStencil(
 						&depthBuffer_Main,
 						RenderPassImage::LoadOp::LOAD,
@@ -2265,7 +2266,6 @@ namespace wi
 						ResourceState::DEPTHSTENCIL,
 						ResourceState::DEPTHSTENCIL
 					),
-					RenderPassImage::Resolve(&rtParticleDistortion)
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 			}

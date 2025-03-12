@@ -3681,6 +3681,11 @@ using namespace vulkan_internal;
 	}
 	bool GraphicsDevice_Vulkan::CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer, const GPUResource* alias, uint64_t alias_offset) const
 	{
+#ifdef PLATFORM_LINUX
+		alias = nullptr;
+		alias_offset = 0;
+#endif // PLATFORM_LINUX
+
 		auto internal_state = std::make_shared<Buffer_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		buffer->internal_state = internal_state;
@@ -4010,6 +4015,11 @@ using namespace vulkan_internal;
 	}
 	bool GraphicsDevice_Vulkan::CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture, const GPUResource* alias, uint64_t alias_offset) const
 	{
+#ifdef PLATFORM_LINUX
+		alias = nullptr;
+		alias_offset = 0;
+#endif // PLATFORM_LINUX
+
 		auto internal_state = std::make_shared<Texture_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		internal_state->defaultLayout = _ConvertImageLayout(desc->layout);
@@ -4064,13 +4074,13 @@ using namespace vulkan_internal;
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
 		}
+#ifndef PLATFORM_LINUX
 		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::TRANSIENT_ATTACHMENT))
 		{
-#ifndef PLATFORM_LINUX
 			imageInfo.usage |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
-#endif // PLATFORM_LINUX
 		}
 		else
+#endif // PLATFORM_LINUX
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 			imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
@@ -7668,7 +7678,11 @@ using namespace vulkan_internal;
 				storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 				break;
 			case RenderPassImage::StoreOp::DONTCARE:
+#ifdef PLATFORM_LINUX
+				storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+#else
 				storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+#endif // PLATFORM_LINUX
 				break;
 			}
 

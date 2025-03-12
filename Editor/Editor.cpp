@@ -323,14 +323,12 @@ void Editor::Initialize()
 	wi::renderer::SetOcclusionCullingEnabled(true);
 
 	renderComponent.main = this;
-#ifndef PLATFORM_LINUX
 	uint32_t msaa = 4;
 	if (config.Has("gui_antialiasing"))
 	{
 		msaa = std::max(1u, (uint32_t)config.GetInt("gui_antialiasing"));
 	}
 	renderComponent.setMSAASampleCount(msaa);
-#endif // PLATFORM_LINUX
 	renderComponent.Load();
 	ActivatePath(&renderComponent, 0.2f);
 
@@ -3203,8 +3201,8 @@ void EditorComponent::Render() const
 			{
 				RenderPassImage rp[] = {
 					RenderPassImage::RenderTarget(&rt_metadataDummies_MSAA, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::Resolve(&rt_metadataDummies),
 					RenderPassImage::DepthStencil(renderPath->GetDepthStencil()),
-					RenderPassImage::Resolve(&rt_metadataDummies)
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 			}
@@ -3308,12 +3306,12 @@ void EditorComponent::Render() const
 						ResourceState::RENDERTARGET,
 						ResourceState::RENDERTARGET
 					),
+					RenderPassImage::Resolve(&render_result),
 					RenderPassImage::DepthStencil(
 						&editor_depthbuffer,
 						RenderPassImage::LoadOp::CLEAR,
 						RenderPassImage::StoreOp::DONTCARE
 					),
-					RenderPassImage::Resolve(&render_result),
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 			}
