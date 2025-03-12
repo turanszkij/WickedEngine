@@ -132,7 +132,7 @@ float4 main(Input input) : SV_TARGET
 	
 	RayDesc ray;
 	ray.Origin = P;
-	ray.Direction = sample_hemisphere_cos(surface.N, rng);
+	ray.Direction = normalize(sample_hemisphere_cos(surface.N, rng));
 	ray.TMin = 0.0001;
 	ray.TMax = FLT_MAX;
 	float3 result = 0;

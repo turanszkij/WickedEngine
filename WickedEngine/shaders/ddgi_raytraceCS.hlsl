@@ -167,7 +167,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 				newRay.Origin = surface.P;
 				newRay.TMin = 0;
 				newRay.TMax = dist;
-				newRay.Direction = L;
+				newRay.Direction = normalize(L);
 
 	#ifdef RTAPI
 				wiRayQuery q;
@@ -198,7 +198,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		ray.Origin = probePos;
 		ray.TMin = 0; // don't need TMin because we are not tracing from a surface
 		ray.TMax = FLT_MAX;
-		ray.Direction = raydir;
+		ray.Direction = normalize(raydir);
 
 #ifdef RTAPI
 		wiRayQuery q;
@@ -394,7 +394,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 					newRay.Origin = surface.P;
 					newRay.TMin = 0.001;
 					newRay.TMax = dist;
-					newRay.Direction = L + max3(surface.sss);
+					newRay.Direction = normalize(L + max3(surface.sss));
 
 #ifdef RTAPI
 					q.TraceRayInline(
@@ -421,9 +421,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			// Infinite bounces based on previous frame probe sampling:
 			if (push.frameIndex > 0)
 			{
-				half energy_conservation = 0.95;
+				float energy_conservation = 0.95;
 				energy_conservation /= PI; // one more divide by PI is inside the ddgi_sample_irradiance, with that we will have 2 PI divides, which is needed for hemishpere sampling
-				half3 ddgi = ddgi_sample_irradiance(surface.P, surface.facenormal, surface.dominant_lightdir, surface.dominant_lightcolor);
+				float3 ddgi = ddgi_sample_irradiance(surface.P, surface.facenormal, surface.dominant_lightdir, surface.dominant_lightcolor);
 				ddgi *= energy_conservation;
 				hit_result += ddgi;
 			}
