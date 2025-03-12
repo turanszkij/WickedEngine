@@ -719,20 +719,6 @@ namespace wi::input
 		ClientToScreen(hWnd, &p);
 		SetCursorPos(p.x, p.y);
 #elif defined(SDL2)
-		// Keeping with the trend of 'Set Pointer' API on different platforms, 
-		// SDL_WarpMouseInWindow is used in the case of SDL2. This unfortunately 
-		// causes SDL2 to generate a mouse event for the delta between the old 
-		// and new positions leading to 'rubber banding'. 
-		// The current solution is to artifically generate a motion event of our own
-		// which will 'undo' this unwanted motion event during the mouse motion
-		// accumulation in wiSDLInput.cpp Update()
-		XMFLOAT4 currentPointer = GetPointer();
-		SDL_MouseMotionEvent motionEvent = {0};
-		motionEvent.type = SDL_MOUSEMOTION;
-		motionEvent.x = motionEvent.y = 0; // doesn't matter
-		motionEvent.xrel = currentPointer.x - posX;
-		motionEvent.yrel = currentPointer.y - posY;
-		SDL_PushEvent((SDL_Event*)&motionEvent);
 		SDL_WarpMouseInWindow(window, posX, posY);
 #endif // SDL2
 	}
@@ -748,7 +734,7 @@ namespace wi::input
 			while (ShowCursor(true) < 0) {};
 		}
 #elif SDL2
-		SDL_ShowCursor(value ? SDL_DISABLE : SDL_ENABLE);
+		SDL_SetRelativeMouseMode(value ? SDL_TRUE : SDL_FALSE);
 #endif // _WIN32
 	}
 
