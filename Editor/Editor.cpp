@@ -323,12 +323,14 @@ void Editor::Initialize()
 	wi::renderer::SetOcclusionCullingEnabled(true);
 
 	renderComponent.main = this;
+#ifndef PLATFORM_LINUX
 	uint32_t msaa = 4;
 	if (config.Has("gui_antialiasing"))
 	{
 		msaa = std::max(1u, (uint32_t)config.GetInt("gui_antialiasing"));
 	}
 	renderComponent.setMSAASampleCount(msaa);
+#endif // PLATFORM_LINUX
 	renderComponent.Load();
 	ActivatePath(&renderComponent, 0.2f);
 
@@ -3097,7 +3099,8 @@ void EditorComponent::Render() const
 					RenderPassImage rp[] = {
 						RenderPassImage::RenderTarget(
 							&rt_selectionOutline_MSAA,
-							RenderPassImage::LoadOp::CLEAR
+							RenderPassImage::LoadOp::CLEAR,
+							RenderPassImage::StoreOp::DONTCARE
 						),
 						RenderPassImage::Resolve(&rt_selectionOutline[0]),
 						RenderPassImage::DepthStencil(
@@ -3301,7 +3304,7 @@ void EditorComponent::Render() const
 					RenderPassImage::RenderTarget(
 						&editor_rendertarget,
 						RenderPassImage::LoadOp::CLEAR,
-						RenderPassImage::StoreOp::STORE,
+						RenderPassImage::StoreOp::DONTCARE,
 						ResourceState::RENDERTARGET,
 						ResourceState::RENDERTARGET
 					),
