@@ -3681,11 +3681,6 @@ using namespace vulkan_internal;
 	}
 	bool GraphicsDevice_Vulkan::CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer, const GPUResource* alias, uint64_t alias_offset) const
 	{
-#ifdef PLATFORM_LINUX
-		alias = nullptr;
-		alias_offset = 0;
-#endif // PLATFORM_LINUX
-
 		auto internal_state = std::make_shared<Buffer_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		buffer->internal_state = internal_state;
@@ -4015,11 +4010,6 @@ using namespace vulkan_internal;
 	}
 	bool GraphicsDevice_Vulkan::CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture, const GPUResource* alias, uint64_t alias_offset) const
 	{
-#ifdef PLATFORM_LINUX
-		alias = nullptr;
-		alias_offset = 0;
-#endif // PLATFORM_LINUX
-
 		auto internal_state = std::make_shared<Texture_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		internal_state->defaultLayout = _ConvertImageLayout(desc->layout);
@@ -7497,7 +7487,7 @@ using namespace vulkan_internal;
 			}
 			CommandQueue& q = queues[queue];
 			std::scoped_lock lock(*q.locker);
-			wilog_assert(q.sparse_binding_supported, "Vulkan QUEUE_TYPE=%d doesn't report sparse binding support!", int(queue));
+			wilog_assert(q.sparse_binding_supported, "Vulkan QUEUE_TYPE=%d doesn't report sparse binding support! This can result in broken rendering or crash. Try to update the graphics driver if this happens.", int(queue));
 
 			vulkan_check(vkQueueBindSparse(q.queue, (uint32_t)sparse_infos.size(), sparse_infos.data(), VK_NULL_HANDLE));
 		}
