@@ -323,12 +323,12 @@ void Editor::Initialize()
 	wi::renderer::SetOcclusionCullingEnabled(true);
 
 	renderComponent.main = this;
-	uint32_t msaa = 4;
-	if (config.Has("gui_antialiasing"))
-	{
-		msaa = std::max(1u, (uint32_t)config.GetInt("gui_antialiasing"));
-	}
-	renderComponent.setMSAASampleCount(msaa);
+	//uint32_t msaa = 4;
+	//if (config.Has("gui_antialiasing"))
+	//{
+	//	msaa = std::max(1u, (uint32_t)config.GetInt("gui_antialiasing"));
+	//}
+	//renderComponent.setMSAASampleCount(msaa);
 	renderComponent.Load();
 	ActivatePath(&renderComponent, 0.2f);
 
