@@ -849,932 +849,932 @@ namespace wi
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		wi::jobsystem::context ctx;
 
-		CommandList cmd_copypages;
-		if (scene->terrains.GetCount() > 0)
-		{
-			cmd_copypages = device->BeginCommandList(QUEUE_COPY);
-			wi::jobsystem::Execute(ctx, [this, cmd_copypages](wi::jobsystem::JobArgs args) {
-				for (size_t i = 0; i < scene->terrains.GetCount(); ++i)
-				{
-					scene->terrains[i].CopyVirtualTexturePageStatusGPU(cmd_copypages);
-				}
-			});
-		}
-
-		// Preparing the frame:
-		CommandList cmd = device->BeginCommandList();
-		wi::renderer::ProcessDeferredTextureRequests(cmd); // Execute it first thing in the frame here, on main thread, to not allow other thread steal it and execute on different command list!
-		CommandList cmd_prepareframe = cmd;
-		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
-			GraphicsDevice* device = wi::graphics::GetDevice();
-
-			wi::renderer::BindCameraCB(
-				*camera,
-				camera_previous,
-				camera_reflection,
-				cmd
-			);
-			wi::renderer::UpdateRenderData(visibility_main, frameCB, cmd);
-
-			uint32_t num_barriers = 2;
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&debugUAV, debugUAV.desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Aliasing(&rtPostprocess, &rtPrimitiveID),
-				GPUBarrier::Image(&rtMain, rtMain.desc.layout, ResourceState::SHADER_RESOURCE_COMPUTE), // prepares transition for discard in dx12
-			};
-			if (visibility_shading_in_compute)
-			{
-				num_barriers++;
-			}
-			device->Barrier(barriers, num_barriers, cmd);
-
-		});
-
-		// async compute parallel with depth prepass
-		cmd = device->BeginCommandList(QUEUE_COMPUTE);
-		CommandList cmd_prepareframe_async = cmd;
-		device->WaitCommandList(cmd, cmd_prepareframe);
-		if (cmd_copypages.IsValid())
-		{
-			device->WaitCommandList(cmd, cmd_copypages);
-		}
-		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
-
-			wi::renderer::BindCameraCB(
-				*camera,
-				camera_previous,
-				camera_reflection,
-				cmd
-			);
-			wi::renderer::UpdateRenderDataAsync(visibility_main, frameCB, cmd);
-
-			if (scene->IsWetmapProcessingRequired())
-			{
-				wi::renderer::RefreshWetmaps(visibility_main, cmd);
-			}
-
-			if (scene->IsAccelerationStructureUpdateRequested())
-			{
-				wi::renderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
-			}
-
-			if (scene->weather.IsRealisticSky())
-			{
-				wi::renderer::ComputeSkyAtmosphereTextures(cmd);
-				wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
-			}
-
-			if (wi::renderer::GetSurfelGIEnabled())
-			{
-				wi::renderer::SurfelGI(
-					surfelGIResources,
-					*scene,
-					cmd
-				);
-			}
-
-			if (wi::renderer::GetDDGIEnabled() && getSceneUpdateEnabled())
-			{
-				wi::renderer::DDGI(
-					*scene,
-					cmd
-				);
-			}
-
-		});
-
-		static const uint32_t drawscene_flags =
-			wi::renderer::DRAWSCENE_OPAQUE |
-			wi::renderer::DRAWSCENE_IMPOSTOR |
-			wi::renderer::DRAWSCENE_HAIRPARTICLE |
-			wi::renderer::DRAWSCENE_TESSELLATION |
-			wi::renderer::DRAWSCENE_OCCLUSIONCULLING |
-			wi::renderer::DRAWSCENE_MAINCAMERA
-			;
-
-		// Main camera depth prepass:
-		cmd = device->BeginCommandList();
-		CommandList cmd_maincamera_prepass = cmd;
-		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
-
-			GraphicsDevice* device = wi::graphics::GetDevice();
-
-			wi::renderer::BindCameraCB(
-				*camera,
-				camera_previous,
-				camera_reflection,
-				cmd
-			);
-
-			wi::renderer::RefreshImpostors(*scene, cmd);
-
-			if (reprojectedDepth.IsValid())
-			{
-				wi::renderer::ComputeReprojectedDepthPyramid(
-					depthBuffer_Copy,
-					rtVelocity,
-					reprojectedDepth,
-					cmd
-				);
-			}
-
-			RenderPassImage rp[] = {
-				RenderPassImage::DepthStencil(
-					&depthBuffer_Main,
-					RenderPassImage::LoadOp::CLEAR,
-					RenderPassImage::StoreOp::STORE,
-					ResourceState::DEPTHSTENCIL,
-					ResourceState::DEPTHSTENCIL,
-					ResourceState::DEPTHSTENCIL
-				),
-				RenderPassImage::RenderTarget(
-					&rtPrimitiveID_render,
-					RenderPassImage::LoadOp::CLEAR,
-					RenderPassImage::StoreOp::STORE,
-					ResourceState::SHADER_RESOURCE_COMPUTE,
-					ResourceState::SHADER_RESOURCE_COMPUTE
-				),
-			};
-			device->RenderPassBegin(rp, arraysize(rp), cmd);
-
-			device->EventBegin("Opaque Z-prepass", cmd);
-			auto range = wi::profiler::BeginRangeGPU("Z-Prepass", cmd);
-
-			Rect scissor = GetScissorInternalResolution();
-			device->BindScissorRects(1, &scissor, cmd);
-
-			Viewport vp;
-			vp.width = (float)depthBuffer_Main.GetDesc().width;
-			vp.height = (float)depthBuffer_Main.GetDesc().height;
-
-			// Foreground:
-			vp.min_depth = 1 - foreground_depth_range;
-			vp.max_depth = 1;
-			device->BindViewports(1, &vp, cmd);
-			wi::renderer::DrawScene(
-				visibility_main,
-				RENDERPASS_PREPASS,
-				cmd,
-				wi::renderer::DRAWSCENE_OPAQUE |
-				wi::renderer::DRAWSCENE_FOREGROUND_ONLY |
-				wi::renderer::DRAWSCENE_MAINCAMERA
-			);
-
-			// Regular:
-			vp.min_depth = 0;
-			vp.max_depth = 1;
-			device->BindViewports(1, &vp, cmd);
-			wi::renderer::DrawScene(
-				visibility_main,
-				RENDERPASS_PREPASS,
-				cmd,
-				drawscene_flags
-			);
-
-			wi::profiler::EndRange(range);
-			device->EventEnd(cmd);
-
-			device->RenderPassEnd(cmd);
-
-		});
-
-		// Main camera compute effects:
-		//	(async compute, parallel to "shadow maps" and "update textures",
-		//	must finish before "main scene opaque color pass")
-		cmd = device->BeginCommandList(QUEUE_COMPUTE);
-		device->WaitCommandList(cmd, cmd_maincamera_prepass);
-		if (video_cmd.IsValid())
-		{
-			device->WaitCommandList(cmd, video_cmd);
-		}
-		CommandList cmd_maincamera_compute_effects = cmd;
-		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
-
-			GraphicsDevice* device = wi::graphics::GetDevice();
-
-			for (size_t i = 0; i < scene->videos.GetCount(); ++i)
-			{
-				wi::scene::VideoComponent& video = scene->videos[i];
-				wi::video::ResolveVideoToRGB(&video.videoinstance, cmd);
-			}
-
-			wi::renderer::BindCameraCB(
-				*camera,
-				camera_previous,
-				camera_reflection,
-				cmd
-			);
-
-			wi::renderer::Visibility_Prepare(
-				visibilityResources,
-				rtPrimitiveID_render,
-				cmd
-			);
-
-			wi::renderer::ComputeTiledLightCulling(
-				tiledLightResources,
-				visibility_main,
-				debugUAV,
-				cmd
-			);
-
-			if (visibility_shading_in_compute)
-			{
-				wi::renderer::Visibility_Surface(
-					visibilityResources,
-					rtMain,
-					cmd
-				);
-			}
-			else if (
-				getSSREnabled() ||
-				getSSGIEnabled() ||
-				getRaytracedReflectionEnabled() ||
-				getRaytracedDiffuseEnabled() ||
-				wi::renderer::GetScreenSpaceShadowsEnabled() ||
-				wi::renderer::GetRaytracedShadowsEnabled() ||
-				wi::renderer::GetVXGIEnabled()
-				)
-			{
-				// These post effects require surface normals and/or roughness
-				wi::renderer::Visibility_Surface_Reduced(
-					visibilityResources,
-					cmd
-				);
-			}
-
-			if (rtVelocity.IsValid())
-			{
-				wi::renderer::Visibility_Velocity(
-					rtVelocity,
-					cmd
-				);
-			}
-
-			if (wi::renderer::GetSurfelGIEnabled())
-			{
-				wi::renderer::SurfelGI_Coverage(
-					surfelGIResources,
-					*scene,
-					rtLinearDepth,
-					debugUAV,
-					cmd
-				);
-			}
-
-			RenderAO(cmd);
-
-			if (wi::renderer::GetVariableRateShadingClassification() && device->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2))
-			{
-				wi::renderer::ComputeShadingRateClassification(
-					rtShadingRate,
-					debugUAV,
-					cmd
-				);
-			}
-
-			RenderSSR(cmd);
-
-			RenderSSGI(cmd);
-
-			if (wi::renderer::GetScreenSpaceShadowsEnabled())
-			{
-				wi::renderer::Postprocess_ScreenSpaceShadow(
-					screenspaceshadowResources,
-					tiledLightResources.entityTiles,
-					rtLinearDepth,
-					rtShadow,
-					cmd,
-					getScreenSpaceShadowRange(),
-					getScreenSpaceShadowSampleCount()
-				);
-			}
-
-			if (wi::renderer::GetRaytracedShadowsEnabled())
-			{
-				wi::renderer::Postprocess_RTShadow(
-					rtshadowResources,
-					*scene,
-					tiledLightResources.entityTiles,
-					rtLinearDepth,
-					rtShadow,
-					cmd
-				);
-			}
-
-			if (scene->weather.IsVolumetricClouds() && !scene->weather.IsVolumetricCloudsReceiveShadow())
-			{
-				// When volumetric cloud DOESN'T receive shadow it can be done async to shadow maps!
-				wi::renderer::Postprocess_VolumetricClouds(
-					volumetriccloudResources,
-					cmd,
-					*camera,
-					camera_previous,
-					camera_reflection,
-					wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
-					scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
-					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
-				);
-			}
-
-		});
-
-		// Occlusion culling:
-		CommandList cmd_occlusionculling;
-		if (getOcclusionCullingEnabled())
-		{
-			cmd = device->BeginCommandList();
-			cmd_occlusionculling = cmd;
-			wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
-
-				GraphicsDevice* device = wi::graphics::GetDevice();
-
-				device->EventBegin("Occlusion Culling", cmd);
-				ScopedGPUProfiling("Occlusion Culling", cmd);
-
-				wi::renderer::BindCameraCB(
-					*camera,
-					camera_previous,
-					camera_reflection,
-					cmd
-				);
-
-				wi::renderer::OcclusionCulling_Reset(visibility_main, cmd); // must be outside renderpass!
-
-				RenderPassImage rp[] = {
-					RenderPassImage::DepthStencil(&depthBuffer_Main),
-				};
-				device->RenderPassBegin(rp, arraysize(rp), cmd);
-
-				Rect scissor = GetScissorInternalResolution();
-				device->BindScissorRects(1, &scissor, cmd);
-
-				Viewport vp;
-				vp.width = (float)depthBuffer_Main.GetDesc().width;
-				vp.height = (float)depthBuffer_Main.GetDesc().height;
-				device->BindViewports(1, &vp, cmd);
-
-				wi::renderer::OcclusionCulling_Render(*camera, visibility_main, cmd);
-
-				device->RenderPassEnd(cmd);
-
-				wi::renderer::OcclusionCulling_Resolve(visibility_main, cmd); // must be outside renderpass!
-
-				device->EventEnd(cmd);
-			});
-		}
-
-		CommandList cmd_ocean;
-		if (scene->weather.IsOceanEnabled() && scene->ocean.IsValid())
-		{
-			// Ocean simulation can be updated async to opaque passes:
-			cmd_ocean = device->BeginCommandList(QUEUE_COMPUTE);
-			if (cmd_occlusionculling.IsValid())
-			{
-				// Ocean occlusion culling must be waited
-				device->WaitCommandList(cmd_ocean, cmd_occlusionculling);
-			}
-			wi::renderer::UpdateOcean(visibility_main, cmd_ocean);
-
-			// Copying to readback is done on copy queue to use DMA instead of compute warps:
-			CommandList cmd_oceancopy = device->BeginCommandList(QUEUE_COPY);
-			device->WaitCommandList(cmd_oceancopy, cmd_ocean);
-			wi::renderer::ReadbackOcean(visibility_main, cmd_oceancopy);
-		}
-
-		// Shadow maps:
-		if (getShadowsEnabled())
-		{
-			cmd = device->BeginCommandList();
-			wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
-				wi::renderer::DrawShadowmaps(visibility_main, cmd);
-			});
-		}
-
-		if (wi::renderer::GetVXGIEnabled() && getSceneUpdateEnabled())
-		{
-			cmd = device->BeginCommandList();
-			wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
-				wi::renderer::VXGI_Voxelize(visibility_main, cmd);
-			});
-		}
-
-		// Updating textures:
-		if (getSceneUpdateEnabled())
-		{
-			//cmd = device->BeginCommandList();
-			//device->WaitCommandList(cmd, cmd_prepareframe_async);
-			//wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
-			//	wi::renderer::BindCommonResources(cmd);
-			//	wi::renderer::BindCameraCB(
-			//		*camera,
-			//		camera_previous,
-			//		camera_reflection,
-			//		cmd
-			//	);
-			//	wi::renderer::RefreshLightmaps(*scene, cmd);
-			//	wi::renderer::RefreshEnvProbes(visibility_main, cmd);
-			//	wi::renderer::PaintDecals(*scene, cmd);
-			//});
-		}
-
-		if (getReflectionsEnabled() && visibility_main.IsRequestedPlanarReflections())
-		{
-			// Planar reflections depth prepass:
-			cmd = device->BeginCommandList();
-			wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
-
-				GraphicsDevice* device = wi::graphics::GetDevice();
-
-				wi::renderer::BindCameraCB(
-					camera_reflection,
-					camera_reflection_previous,
-					camera_reflection,
-					cmd
-				);
-
-				// Render SkyAtmosphere assets from planar reflections point of view
-				if (scene->weather.IsRealisticSky())
-				{
-					wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
-
-					if (scene->weather.IsRealisticSkyAerialPerspective())
-					{
-						wi::renderer::ComputeSkyAtmosphereCameraVolumeLut(cmd);
-					}
-				}
-
-				device->EventBegin("Planar reflections Z-Prepass", cmd);
-				auto range = wi::profiler::BeginRangeGPU("Planar Reflections Z-Prepass", cmd);
-
-				RenderPassImage rp[] = {
-					RenderPassImage::DepthStencil(
-						&depthBuffer_Reflection,
-						RenderPassImage::LoadOp::CLEAR,
-						RenderPassImage::StoreOp::STORE,
-						ResourceState::SHADER_RESOURCE,
-						ResourceState::DEPTHSTENCIL,
-						ResourceState::SHADER_RESOURCE
-					)
-				};
-				device->RenderPassBegin(rp, arraysize(rp), cmd);
-
-				Viewport vp;
-				vp.width = (float)depthBuffer_Reflection.GetDesc().width;
-				vp.height = (float)depthBuffer_Reflection.GetDesc().height;
-				vp.min_depth = 0;
-				vp.max_depth = 1;
-				device->BindViewports(1, &vp, cmd);
-
-				wi::renderer::DrawScene(
-					visibility_reflection,
-					RENDERPASS_PREPASS_DEPTHONLY,
-					cmd,
-					wi::renderer::DRAWSCENE_OPAQUE |
-					wi::renderer::DRAWSCENE_IMPOSTOR |
-					wi::renderer::DRAWSCENE_HAIRPARTICLE |
-					wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS
-				);
-
-				device->RenderPassEnd(cmd);
-
-				wi::renderer::ResolveMSAADepthBuffer(depthBuffer_Reflection_resolved, depthBuffer_Reflection, cmd);
-
-				if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
-				{
-					wi::renderer::Postprocess_AerialPerspective(
-						aerialperspectiveResources_reflection,
-						cmd
-					);
-				}
-
-				wi::profiler::EndRange(range); // Planar Reflections
-				device->EventEnd(cmd);
-
-			});
-
-			// Planar reflections color pass:
-			cmd = device->BeginCommandList();
-			wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
-
-				GraphicsDevice* device = wi::graphics::GetDevice();
-
-				wi::renderer::BindCameraCB(
-					camera_reflection,
-					camera_reflection_previous,
-					camera_reflection,
-					cmd
-				);
-
-				wi::renderer::ComputeTiledLightCulling(
-					tiledLightResources_planarReflection,
-					visibility_reflection,
-					Texture(),
-					cmd
-				);
-
-				if (scene->weather.IsVolumetricClouds())
-				{
-					wi::renderer::Postprocess_VolumetricClouds(
-						volumetriccloudResources_reflection,
-						cmd,
-						camera_reflection,
-						camera_reflection_previous,
-						camera_reflection,
-						wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
-						scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
-						scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
-					);
-				}
-
-				device->EventBegin("Planar reflections", cmd);
-				auto range = wi::profiler::BeginRangeGPU("Planar Reflections", cmd);
-
-				RenderPassImage rp[] = {
-					RenderPassImage::RenderTarget(
-						&rtReflection,
-						RenderPassImage::LoadOp::CLEAR,
-						RenderPassImage::StoreOp::DONTCARE,
-						ResourceState::RENDERTARGET,
-						ResourceState::RENDERTARGET
-					),
-					RenderPassImage::DepthStencil(
-						&depthBuffer_Reflection,
-						RenderPassImage::LoadOp::LOAD,
-						RenderPassImage::StoreOp::STORE,
-						ResourceState::SHADER_RESOURCE,
-						ResourceState::DEPTHSTENCIL,
-						ResourceState::SHADER_RESOURCE
-					),
-					RenderPassImage::Resolve(&rtReflection_resolved)
-				};
-				device->RenderPassBegin(rp, arraysize(rp), cmd);
-
-				Viewport vp;
-				vp.width = (float)depthBuffer_Reflection.GetDesc().width;
-				vp.height = (float)depthBuffer_Reflection.GetDesc().height;
-				vp.min_depth = 0;
-				vp.max_depth = 1;
-				device->BindViewports(1, &vp, cmd);
-
-				wi::renderer::DrawScene(
-					visibility_reflection,
-					RENDERPASS_MAIN,
-					cmd,
-					wi::renderer::DRAWSCENE_OPAQUE |
-					wi::renderer::DRAWSCENE_IMPOSTOR |
-					wi::renderer::DRAWSCENE_HAIRPARTICLE |
-					wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS
-				);
-				wi::renderer::DrawSky(*scene, cmd);
-				wi::renderer::DrawScene(
-					visibility_reflection,
-					RENDERPASS_MAIN,
-					cmd,
-					wi::renderer::DRAWSCENE_TRANSPARENT |
-					wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS
-				); // separate renderscene, to be drawn after opaque and transparent sort order
-
-				if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
-				{
-					// Blend Aerial Perspective on top:
-					device->EventBegin("Aerial Perspective Reflection Blend", cmd);
-					wi::image::Params fx;
-					fx.enableFullScreen();
-					fx.blendFlag = BLENDMODE_PREMULTIPLIED;
-					wi::image::Draw(&aerialperspectiveResources_reflection.texture_output, fx, cmd);
-					device->EventEnd(cmd);
-				}
-
-				// Blend the volumetric clouds on top:
-				//	For planar reflections, we don't use upsample, because there is no linear depth here
-				if (scene->weather.IsVolumetricClouds())
-				{
-					device->EventBegin("Volumetric Clouds Reflection Blend", cmd);
-					wi::image::Params fx;
-					fx.enableFullScreen();
-					fx.blendFlag = BLENDMODE_PREMULTIPLIED;
-					wi::image::Draw(&volumetriccloudResources_reflection.texture_reproject[volumetriccloudResources_reflection.GetTemporalOutputIndex()], fx, cmd);
-					device->EventEnd(cmd);
-				}
-
-				wi::renderer::DrawSoftParticles(visibility_reflection, false, cmd);
-				wi::renderer::DrawSpritesAndFonts(*scene, camera_reflection, false, cmd);
-
-				device->RenderPassEnd(cmd);
-
-				wi::profiler::EndRange(range); // Planar Reflections
-				device->EventEnd(cmd);
-			});
-		}
-
-		// Main camera weather compute effects depending on shadow maps, envmaps, etc, but don't depend on async surface pass:
-		if (scene->weather.IsRealisticSky() || scene->weather.IsVolumetricClouds())
-		{
-			cmd = device->BeginCommandList();
-			wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
-
-				wi::renderer::BindCameraCB(
-					*camera,
-					camera_previous,
-					camera_reflection,
-					cmd
-				);
-
-				if (scene->weather.IsRealisticSky())
-				{
-					wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
-
-					if (scene->weather.IsRealisticSkyAerialPerspective())
-					{
-						wi::renderer::ComputeSkyAtmosphereCameraVolumeLut(cmd);
-					}
-				}
-				if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
-				{
-					wi::renderer::Postprocess_AerialPerspective(
-						aerialperspectiveResources,
-						cmd
-					);
-				}
-				if (scene->weather.IsVolumetricClouds() && scene->weather.IsVolumetricCloudsReceiveShadow())
-				{
-					// When volumetric cloud receives shadow it must be done AFTER shadow maps!
-					wi::renderer::Postprocess_VolumetricClouds(
-						volumetriccloudResources,
-						cmd,
-						*camera,
-						camera_previous,
-						camera_reflection,
-						wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
-						scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
-						scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
-					);
-				}
-			});
-		}
-
-		// Main camera opaque color pass:
-		cmd = device->BeginCommandList();
-		device->WaitCommandList(cmd, cmd_maincamera_compute_effects);
-		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
-
-			GraphicsDevice* device = wi::graphics::GetDevice();
-			device->EventBegin("Opaque Scene", cmd);
-
-			wi::renderer::BindCameraCB(
-				*camera,
-				camera_previous,
-				camera_reflection,
-				cmd
-			);
-
-			if (getRaytracedReflectionEnabled())
-			{
-				wi::renderer::Postprocess_RTReflection(
-					rtreflectionResources,
-					*scene,
-					rtSSR,
-					cmd,
-					getRaytracedReflectionsRange(),
-					getReflectionRoughnessCutoff()
-				);
-			}
-			if (getRaytracedDiffuseEnabled())
-			{
-				wi::renderer::Postprocess_RTDiffuse(
-					rtdiffuseResources,
-					*scene,
-					rtRaytracedDiffuse,
-					cmd,
-					getRaytracedDiffuseRange()
-				);
-			}
-			if (wi::renderer::GetVXGIEnabled())
-			{
-				wi::renderer::VXGI_Resolve(
-					vxgiResources,
-					*scene,
-					rtLinearDepth,
-					cmd
-				);
-			}
-
-			// Depth buffers were created on COMPUTE queue, so make them available for pixel shaders here:
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&rtLinearDepth, rtLinearDepth.desc.layout, ResourceState::SHADER_RESOURCE),
-					GPUBarrier::Image(&depthBuffer_Copy, depthBuffer_Copy.desc.layout, ResourceState::SHADER_RESOURCE),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
-
-			if (wi::renderer::GetRaytracedShadowsEnabled() || wi::renderer::GetScreenSpaceShadowsEnabled())
-			{
-				GPUBarrier barrier = GPUBarrier::Image(&rtShadow, rtShadow.desc.layout, ResourceState::SHADER_RESOURCE);
-				device->Barrier(&barrier, 1, cmd);
-			}
-
-			if (visibility_shading_in_compute)
-			{
-				wi::renderer::Visibility_Shade(
-					visibilityResources,
-					rtMain,
-					cmd
-				);
-			}
-
-			Viewport vp;
-			vp.width = (float)depthBuffer_Main.GetDesc().width;
-			vp.height = (float)depthBuffer_Main.GetDesc().height;
-			device->BindViewports(1, &vp, cmd);
-
-			Rect scissor = GetScissorInternalResolution();
-			device->BindScissorRects(1, &scissor, cmd);
-
-			if (getOutlineEnabled())
-			{
-				// Cut off outline source from linear depth:
-				device->EventBegin("Outline Source", cmd);
-
-				RenderPassImage rp[] = {
-					RenderPassImage::RenderTarget(&rtOutlineSource, RenderPassImage::LoadOp::CLEAR),
-					RenderPassImage::DepthStencil(&depthBuffer_Main, RenderPassImage::LoadOp::LOAD)
-				};
-				device->RenderPassBegin(rp, arraysize(rp), cmd);
-				wi::image::Params params;
-				params.enableFullScreen();
-				params.stencilRefMode = wi::image::STENCILREFMODE_ENGINE;
-				params.stencilComp = wi::image::STENCILMODE_EQUAL;
-				params.stencilRef = wi::enums::STENCILREF_OUTLINE;
-				wi::image::Draw(&rtLinearDepth, params, cmd);
-				params.stencilRef = wi::enums::STENCILREF_CUSTOMSHADER_OUTLINE;
-				wi::image::Draw(&rtLinearDepth, params, cmd);
-				device->RenderPassEnd(cmd);
-				device->EventEnd(cmd);
-			}
-
-			RenderPassImage rp[4] = {};
-			uint32_t rp_count = 0;
-			rp[rp_count++] = RenderPassImage::RenderTarget(
-				&rtMain_render,
-				visibility_shading_in_compute ? RenderPassImage::LoadOp::LOAD : RenderPassImage::LoadOp::CLEAR
-			);
-			rp[rp_count++] = RenderPassImage::DepthStencil(
-				&depthBuffer_Main,
-				RenderPassImage::LoadOp::LOAD,
-				RenderPassImage::StoreOp::STORE,
-				ResourceState::DEPTHSTENCIL,
-				ResourceState::DEPTHSTENCIL,
-				ResourceState::DEPTHSTENCIL
-			);
-			if (getMSAASampleCount() > 1)
-			{
-				rp[rp_count++] = RenderPassImage::Resolve(&rtMain);
-			}
-			if (device->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2) && rtShadingRate.IsValid())
-			{
-				rp[rp_count++] = RenderPassImage::ShadingRateSource(&rtShadingRate, ResourceState::UNORDERED_ACCESS, ResourceState::UNORDERED_ACCESS);
-			}
-			device->RenderPassBegin(rp, rp_count, cmd, RenderPassFlags::ALLOW_UAV_WRITES);
-
-			if (visibility_shading_in_compute)
-			{
-				// In visibility compute shading, the impostors must still be drawn using rasterization:
-				wi::renderer::DrawScene(
-					visibility_main,
-					RENDERPASS_MAIN,
-					cmd,
-					wi::renderer::DRAWSCENE_IMPOSTOR
-				);
-			}
-			else
-			{
-				auto range = wi::profiler::BeginRangeGPU("Opaque Scene", cmd);
-
-				// Foreground:
-				vp.min_depth = 1 - foreground_depth_range;
-				vp.max_depth = 1;
-				device->BindViewports(1, &vp, cmd);
-				wi::renderer::DrawScene(
-					visibility_main,
-					RENDERPASS_MAIN,
-					cmd,
-					wi::renderer::DRAWSCENE_OPAQUE |
-					wi::renderer::DRAWSCENE_FOREGROUND_ONLY |
-					wi::renderer::DRAWSCENE_MAINCAMERA
-				);
-
-				// Regular:
-				vp.min_depth = 0;
-				vp.max_depth = 1;
-				device->BindViewports(1, &vp, cmd);
-				wi::renderer::DrawScene(
-					visibility_main,
-					RENDERPASS_MAIN,
-					cmd,
-					drawscene_flags
-				);
-				wi::renderer::DrawSky(*scene, cmd);
-				wi::profiler::EndRange(range); // Opaque Scene
-			}
-
-			// Blend Aerial Perspective on top:
-			if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
-			{
-				device->EventBegin("Aerial Perspective Blend", cmd);
-				wi::image::Params fx;
-				fx.enableFullScreen();
-				fx.blendFlag = BLENDMODE_PREMULTIPLIED;
-				wi::image::Draw(&aerialperspectiveResources.texture_output, fx, cmd);
-				device->EventEnd(cmd);
-			}
-
-			// Blend the volumetric clouds on top:
-			if (scene->weather.IsVolumetricClouds())
-			{
-				wi::renderer::Postprocess_VolumetricClouds_Upsample(volumetriccloudResources, cmd);
-			}
-
-			RenderOutline(cmd);
-
-			device->RenderPassEnd(cmd);
-
-			if (wi::renderer::GetRaytracedShadowsEnabled() || wi::renderer::GetScreenSpaceShadowsEnabled())
-			{
-				GPUBarrier barrier = GPUBarrier::Image(&rtShadow, ResourceState::SHADER_RESOURCE, rtShadow.desc.layout);
-				device->Barrier(&barrier, 1, cmd);
-			}
-
-			if (rtAO.IsValid())
-			{
-				device->Barrier(GPUBarrier::Aliasing(&rtAO, &rtParticleDistortion), cmd);
-			}
-
-			device->EventEnd(cmd);
-		});
-
-		if (scene->terrains.GetCount() > 0)
-		{
-			CommandList cmd_allocation_tilerequest = device->BeginCommandList(QUEUE_COMPUTE);
-			device->WaitCommandList(cmd_allocation_tilerequest, cmd); // wait for opaque scene
-			wi::jobsystem::Execute(ctx, [this, cmd_allocation_tilerequest](wi::jobsystem::JobArgs args) {
-				for (size_t i = 0; i < scene->terrains.GetCount(); ++i)
-				{
-					scene->terrains[i].AllocateVirtualTextureTileRequestsGPU(cmd_allocation_tilerequest);
-				}
-			});
-
-			CommandList cmd_writeback_tilerequest = device->BeginCommandList(QUEUE_COPY);
-			device->WaitCommandList(cmd_writeback_tilerequest, cmd_allocation_tilerequest);
-			wi::jobsystem::Execute(ctx, [this, cmd_writeback_tilerequest](wi::jobsystem::JobArgs args) {
-				for (size_t i = 0; i < scene->terrains.GetCount(); ++i)
-				{
-					scene->terrains[i].WritebackTileRequestsGPU(cmd_writeback_tilerequest);
-				}
-			});
-		}
-
-		// Transparents, post processes, etc:
-		cmd = device->BeginCommandList();
-		if (cmd_ocean.IsValid())
-		{
-			device->WaitCommandList(cmd, cmd_ocean);
-		}
-		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
-
-			GraphicsDevice* device = wi::graphics::GetDevice();
-
-			wi::renderer::BindCameraCB(
-				*camera,
-				camera_previous,
-				camera_reflection,
-				cmd
-			);
-			wi::renderer::BindCommonResources(cmd);
-
-			RenderLightShafts(cmd);
-
-			RenderVolumetrics(cmd);
-
-			RenderTransparents(cmd);
-
-			// Depth buffers expect a non-pixel shader resource state as they are generated on compute queue:
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&rtLinearDepth, ResourceState::SHADER_RESOURCE, rtLinearDepth.desc.layout),
-					GPUBarrier::Image(&depthBuffer_Copy, ResourceState::SHADER_RESOURCE, depthBuffer_Copy.desc.layout),
-					GPUBarrier::Image(&debugUAV, ResourceState::UNORDERED_ACCESS, debugUAV.desc.layout),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
-		});
-
-		cmd = device->BeginCommandList();
-		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
-			RenderPostprocessChain(cmd);
-			wi::renderer::TextureStreamingReadbackCopy(*scene, cmd);
-		});
+		//CommandList cmd_copypages;
+		//if (scene->terrains.GetCount() > 0)
+		//{
+		//	cmd_copypages = device->BeginCommandList(QUEUE_COPY);
+		//	wi::jobsystem::Execute(ctx, [this, cmd_copypages](wi::jobsystem::JobArgs args) {
+		//		for (size_t i = 0; i < scene->terrains.GetCount(); ++i)
+		//		{
+		//			scene->terrains[i].CopyVirtualTexturePageStatusGPU(cmd_copypages);
+		//		}
+		//	});
+		//}
+
+		//// Preparing the frame:
+		//CommandList cmd = device->BeginCommandList();
+		//wi::renderer::ProcessDeferredTextureRequests(cmd); // Execute it first thing in the frame here, on main thread, to not allow other thread steal it and execute on different command list!
+		//CommandList cmd_prepareframe = cmd;
+		//wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
+		//	GraphicsDevice* device = wi::graphics::GetDevice();
+
+		//	wi::renderer::BindCameraCB(
+		//		*camera,
+		//		camera_previous,
+		//		camera_reflection,
+		//		cmd
+		//	);
+		//	wi::renderer::UpdateRenderData(visibility_main, frameCB, cmd);
+
+		//	uint32_t num_barriers = 2;
+		//	GPUBarrier barriers[] = {
+		//		GPUBarrier::Image(&debugUAV, debugUAV.desc.layout, ResourceState::UNORDERED_ACCESS),
+		//		GPUBarrier::Aliasing(&rtPostprocess, &rtPrimitiveID),
+		//		GPUBarrier::Image(&rtMain, rtMain.desc.layout, ResourceState::SHADER_RESOURCE_COMPUTE), // prepares transition for discard in dx12
+		//	};
+		//	if (visibility_shading_in_compute)
+		//	{
+		//		num_barriers++;
+		//	}
+		//	device->Barrier(barriers, num_barriers, cmd);
+
+		//});
+
+		//// async compute parallel with depth prepass
+		//cmd = device->BeginCommandList(QUEUE_COMPUTE);
+		//CommandList cmd_prepareframe_async = cmd;
+		//device->WaitCommandList(cmd, cmd_prepareframe);
+		//if (cmd_copypages.IsValid())
+		//{
+		//	device->WaitCommandList(cmd, cmd_copypages);
+		//}
+		//wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
+
+		//	wi::renderer::BindCameraCB(
+		//		*camera,
+		//		camera_previous,
+		//		camera_reflection,
+		//		cmd
+		//	);
+		//	wi::renderer::UpdateRenderDataAsync(visibility_main, frameCB, cmd);
+
+		//	if (scene->IsWetmapProcessingRequired())
+		//	{
+		//		wi::renderer::RefreshWetmaps(visibility_main, cmd);
+		//	}
+
+		//	if (scene->IsAccelerationStructureUpdateRequested())
+		//	{
+		//		wi::renderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
+		//	}
+
+		//	if (scene->weather.IsRealisticSky())
+		//	{
+		//		wi::renderer::ComputeSkyAtmosphereTextures(cmd);
+		//		wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
+		//	}
+
+		//	if (wi::renderer::GetSurfelGIEnabled())
+		//	{
+		//		wi::renderer::SurfelGI(
+		//			surfelGIResources,
+		//			*scene,
+		//			cmd
+		//		);
+		//	}
+
+		//	if (wi::renderer::GetDDGIEnabled() && getSceneUpdateEnabled())
+		//	{
+		//		wi::renderer::DDGI(
+		//			*scene,
+		//			cmd
+		//		);
+		//	}
+
+		//});
+
+		//static const uint32_t drawscene_flags =
+		//	wi::renderer::DRAWSCENE_OPAQUE |
+		//	wi::renderer::DRAWSCENE_IMPOSTOR |
+		//	wi::renderer::DRAWSCENE_HAIRPARTICLE |
+		//	wi::renderer::DRAWSCENE_TESSELLATION |
+		//	wi::renderer::DRAWSCENE_OCCLUSIONCULLING |
+		//	wi::renderer::DRAWSCENE_MAINCAMERA
+		//	;
+
+		//// Main camera depth prepass:
+		//cmd = device->BeginCommandList();
+		//CommandList cmd_maincamera_prepass = cmd;
+		//wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
+
+		//	GraphicsDevice* device = wi::graphics::GetDevice();
+
+		//	wi::renderer::BindCameraCB(
+		//		*camera,
+		//		camera_previous,
+		//		camera_reflection,
+		//		cmd
+		//	);
+
+		//	wi::renderer::RefreshImpostors(*scene, cmd);
+
+		//	if (reprojectedDepth.IsValid())
+		//	{
+		//		wi::renderer::ComputeReprojectedDepthPyramid(
+		//			depthBuffer_Copy,
+		//			rtVelocity,
+		//			reprojectedDepth,
+		//			cmd
+		//		);
+		//	}
+
+		//	RenderPassImage rp[] = {
+		//		RenderPassImage::DepthStencil(
+		//			&depthBuffer_Main,
+		//			RenderPassImage::LoadOp::CLEAR,
+		//			RenderPassImage::StoreOp::STORE,
+		//			ResourceState::DEPTHSTENCIL,
+		//			ResourceState::DEPTHSTENCIL,
+		//			ResourceState::DEPTHSTENCIL
+		//		),
+		//		RenderPassImage::RenderTarget(
+		//			&rtPrimitiveID_render,
+		//			RenderPassImage::LoadOp::CLEAR,
+		//			RenderPassImage::StoreOp::STORE,
+		//			ResourceState::SHADER_RESOURCE_COMPUTE,
+		//			ResourceState::SHADER_RESOURCE_COMPUTE
+		//		),
+		//	};
+		//	device->RenderPassBegin(rp, arraysize(rp), cmd);
+
+		//	device->EventBegin("Opaque Z-prepass", cmd);
+		//	auto range = wi::profiler::BeginRangeGPU("Z-Prepass", cmd);
+
+		//	Rect scissor = GetScissorInternalResolution();
+		//	device->BindScissorRects(1, &scissor, cmd);
+
+		//	Viewport vp;
+		//	vp.width = (float)depthBuffer_Main.GetDesc().width;
+		//	vp.height = (float)depthBuffer_Main.GetDesc().height;
+
+		//	// Foreground:
+		//	vp.min_depth = 1 - foreground_depth_range;
+		//	vp.max_depth = 1;
+		//	device->BindViewports(1, &vp, cmd);
+		//	wi::renderer::DrawScene(
+		//		visibility_main,
+		//		RENDERPASS_PREPASS,
+		//		cmd,
+		//		wi::renderer::DRAWSCENE_OPAQUE |
+		//		wi::renderer::DRAWSCENE_FOREGROUND_ONLY |
+		//		wi::renderer::DRAWSCENE_MAINCAMERA
+		//	);
+
+		//	// Regular:
+		//	vp.min_depth = 0;
+		//	vp.max_depth = 1;
+		//	device->BindViewports(1, &vp, cmd);
+		//	wi::renderer::DrawScene(
+		//		visibility_main,
+		//		RENDERPASS_PREPASS,
+		//		cmd,
+		//		drawscene_flags
+		//	);
+
+		//	wi::profiler::EndRange(range);
+		//	device->EventEnd(cmd);
+
+		//	device->RenderPassEnd(cmd);
+
+		//});
+
+		//// Main camera compute effects:
+		////	(async compute, parallel to "shadow maps" and "update textures",
+		////	must finish before "main scene opaque color pass")
+		//cmd = device->BeginCommandList(QUEUE_COMPUTE);
+		//device->WaitCommandList(cmd, cmd_maincamera_prepass);
+		//if (video_cmd.IsValid())
+		//{
+		//	device->WaitCommandList(cmd, video_cmd);
+		//}
+		//CommandList cmd_maincamera_compute_effects = cmd;
+		//wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
+
+		//	GraphicsDevice* device = wi::graphics::GetDevice();
+
+		//	for (size_t i = 0; i < scene->videos.GetCount(); ++i)
+		//	{
+		//		wi::scene::VideoComponent& video = scene->videos[i];
+		//		wi::video::ResolveVideoToRGB(&video.videoinstance, cmd);
+		//	}
+
+		//	wi::renderer::BindCameraCB(
+		//		*camera,
+		//		camera_previous,
+		//		camera_reflection,
+		//		cmd
+		//	);
+
+		//	wi::renderer::Visibility_Prepare(
+		//		visibilityResources,
+		//		rtPrimitiveID_render,
+		//		cmd
+		//	);
+
+		//	wi::renderer::ComputeTiledLightCulling(
+		//		tiledLightResources,
+		//		visibility_main,
+		//		debugUAV,
+		//		cmd
+		//	);
+
+		//	if (visibility_shading_in_compute)
+		//	{
+		//		wi::renderer::Visibility_Surface(
+		//			visibilityResources,
+		//			rtMain,
+		//			cmd
+		//		);
+		//	}
+		//	else if (
+		//		getSSREnabled() ||
+		//		getSSGIEnabled() ||
+		//		getRaytracedReflectionEnabled() ||
+		//		getRaytracedDiffuseEnabled() ||
+		//		wi::renderer::GetScreenSpaceShadowsEnabled() ||
+		//		wi::renderer::GetRaytracedShadowsEnabled() ||
+		//		wi::renderer::GetVXGIEnabled()
+		//		)
+		//	{
+		//		// These post effects require surface normals and/or roughness
+		//		wi::renderer::Visibility_Surface_Reduced(
+		//			visibilityResources,
+		//			cmd
+		//		);
+		//	}
+
+		//	if (rtVelocity.IsValid())
+		//	{
+		//		wi::renderer::Visibility_Velocity(
+		//			rtVelocity,
+		//			cmd
+		//		);
+		//	}
+
+		//	if (wi::renderer::GetSurfelGIEnabled())
+		//	{
+		//		wi::renderer::SurfelGI_Coverage(
+		//			surfelGIResources,
+		//			*scene,
+		//			rtLinearDepth,
+		//			debugUAV,
+		//			cmd
+		//		);
+		//	}
+
+		//	RenderAO(cmd);
+
+		//	if (wi::renderer::GetVariableRateShadingClassification() && device->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2))
+		//	{
+		//		wi::renderer::ComputeShadingRateClassification(
+		//			rtShadingRate,
+		//			debugUAV,
+		//			cmd
+		//		);
+		//	}
+
+		//	RenderSSR(cmd);
+
+		//	RenderSSGI(cmd);
+
+		//	if (wi::renderer::GetScreenSpaceShadowsEnabled())
+		//	{
+		//		wi::renderer::Postprocess_ScreenSpaceShadow(
+		//			screenspaceshadowResources,
+		//			tiledLightResources.entityTiles,
+		//			rtLinearDepth,
+		//			rtShadow,
+		//			cmd,
+		//			getScreenSpaceShadowRange(),
+		//			getScreenSpaceShadowSampleCount()
+		//		);
+		//	}
+
+		//	if (wi::renderer::GetRaytracedShadowsEnabled())
+		//	{
+		//		wi::renderer::Postprocess_RTShadow(
+		//			rtshadowResources,
+		//			*scene,
+		//			tiledLightResources.entityTiles,
+		//			rtLinearDepth,
+		//			rtShadow,
+		//			cmd
+		//		);
+		//	}
+
+		//	if (scene->weather.IsVolumetricClouds() && !scene->weather.IsVolumetricCloudsReceiveShadow())
+		//	{
+		//		// When volumetric cloud DOESN'T receive shadow it can be done async to shadow maps!
+		//		wi::renderer::Postprocess_VolumetricClouds(
+		//			volumetriccloudResources,
+		//			cmd,
+		//			*camera,
+		//			camera_previous,
+		//			camera_reflection,
+		//			wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
+		//			scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
+		//			scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
+		//		);
+		//	}
+
+		//});
+
+		//// Occlusion culling:
+		//CommandList cmd_occlusionculling;
+		//if (getOcclusionCullingEnabled())
+		//{
+		//	cmd = device->BeginCommandList();
+		//	cmd_occlusionculling = cmd;
+		//	wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
+
+		//		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		//		device->EventBegin("Occlusion Culling", cmd);
+		//		ScopedGPUProfiling("Occlusion Culling", cmd);
+
+		//		wi::renderer::BindCameraCB(
+		//			*camera,
+		//			camera_previous,
+		//			camera_reflection,
+		//			cmd
+		//		);
+
+		//		wi::renderer::OcclusionCulling_Reset(visibility_main, cmd); // must be outside renderpass!
+
+		//		RenderPassImage rp[] = {
+		//			RenderPassImage::DepthStencil(&depthBuffer_Main),
+		//		};
+		//		device->RenderPassBegin(rp, arraysize(rp), cmd);
+
+		//		Rect scissor = GetScissorInternalResolution();
+		//		device->BindScissorRects(1, &scissor, cmd);
+
+		//		Viewport vp;
+		//		vp.width = (float)depthBuffer_Main.GetDesc().width;
+		//		vp.height = (float)depthBuffer_Main.GetDesc().height;
+		//		device->BindViewports(1, &vp, cmd);
+
+		//		wi::renderer::OcclusionCulling_Render(*camera, visibility_main, cmd);
+
+		//		device->RenderPassEnd(cmd);
+
+		//		wi::renderer::OcclusionCulling_Resolve(visibility_main, cmd); // must be outside renderpass!
+
+		//		device->EventEnd(cmd);
+		//	});
+		//}
+
+		//CommandList cmd_ocean;
+		//if (scene->weather.IsOceanEnabled() && scene->ocean.IsValid())
+		//{
+		//	// Ocean simulation can be updated async to opaque passes:
+		//	cmd_ocean = device->BeginCommandList(QUEUE_COMPUTE);
+		//	if (cmd_occlusionculling.IsValid())
+		//	{
+		//		// Ocean occlusion culling must be waited
+		//		device->WaitCommandList(cmd_ocean, cmd_occlusionculling);
+		//	}
+		//	wi::renderer::UpdateOcean(visibility_main, cmd_ocean);
+
+		//	// Copying to readback is done on copy queue to use DMA instead of compute warps:
+		//	CommandList cmd_oceancopy = device->BeginCommandList(QUEUE_COPY);
+		//	device->WaitCommandList(cmd_oceancopy, cmd_ocean);
+		//	wi::renderer::ReadbackOcean(visibility_main, cmd_oceancopy);
+		//}
+
+		//// Shadow maps:
+		//if (getShadowsEnabled())
+		//{
+		//	cmd = device->BeginCommandList();
+		//	wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
+		//		wi::renderer::DrawShadowmaps(visibility_main, cmd);
+		//	});
+		//}
+
+		//if (wi::renderer::GetVXGIEnabled() && getSceneUpdateEnabled())
+		//{
+		//	cmd = device->BeginCommandList();
+		//	wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
+		//		wi::renderer::VXGI_Voxelize(visibility_main, cmd);
+		//	});
+		//}
+
+		//// Updating textures:
+		//if (getSceneUpdateEnabled())
+		//{
+		//	cmd = device->BeginCommandList();
+		//	device->WaitCommandList(cmd, cmd_prepareframe_async);
+		//	wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
+		//		wi::renderer::BindCommonResources(cmd);
+		//		wi::renderer::BindCameraCB(
+		//			*camera,
+		//			camera_previous,
+		//			camera_reflection,
+		//			cmd
+		//		);
+		//		wi::renderer::RefreshLightmaps(*scene, cmd);
+		//		wi::renderer::RefreshEnvProbes(visibility_main, cmd);
+		//		wi::renderer::PaintDecals(*scene, cmd);
+		//	});
+		//}
+
+		//if (getReflectionsEnabled() && visibility_main.IsRequestedPlanarReflections())
+		//{
+		//	// Planar reflections depth prepass:
+		//	cmd = device->BeginCommandList();
+		//	wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
+
+		//		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		//		wi::renderer::BindCameraCB(
+		//			camera_reflection,
+		//			camera_reflection_previous,
+		//			camera_reflection,
+		//			cmd
+		//		);
+
+		//		// Render SkyAtmosphere assets from planar reflections point of view
+		//		if (scene->weather.IsRealisticSky())
+		//		{
+		//			wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
+
+		//			if (scene->weather.IsRealisticSkyAerialPerspective())
+		//			{
+		//				wi::renderer::ComputeSkyAtmosphereCameraVolumeLut(cmd);
+		//			}
+		//		}
+
+		//		device->EventBegin("Planar reflections Z-Prepass", cmd);
+		//		auto range = wi::profiler::BeginRangeGPU("Planar Reflections Z-Prepass", cmd);
+
+		//		RenderPassImage rp[] = {
+		//			RenderPassImage::DepthStencil(
+		//				&depthBuffer_Reflection,
+		//				RenderPassImage::LoadOp::CLEAR,
+		//				RenderPassImage::StoreOp::STORE,
+		//				ResourceState::SHADER_RESOURCE,
+		//				ResourceState::DEPTHSTENCIL,
+		//				ResourceState::SHADER_RESOURCE
+		//			)
+		//		};
+		//		device->RenderPassBegin(rp, arraysize(rp), cmd);
+
+		//		Viewport vp;
+		//		vp.width = (float)depthBuffer_Reflection.GetDesc().width;
+		//		vp.height = (float)depthBuffer_Reflection.GetDesc().height;
+		//		vp.min_depth = 0;
+		//		vp.max_depth = 1;
+		//		device->BindViewports(1, &vp, cmd);
+
+		//		wi::renderer::DrawScene(
+		//			visibility_reflection,
+		//			RENDERPASS_PREPASS_DEPTHONLY,
+		//			cmd,
+		//			wi::renderer::DRAWSCENE_OPAQUE |
+		//			wi::renderer::DRAWSCENE_IMPOSTOR |
+		//			wi::renderer::DRAWSCENE_HAIRPARTICLE |
+		//			wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS
+		//		);
+
+		//		device->RenderPassEnd(cmd);
+
+		//		wi::renderer::ResolveMSAADepthBuffer(depthBuffer_Reflection_resolved, depthBuffer_Reflection, cmd);
+
+		//		if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
+		//		{
+		//			wi::renderer::Postprocess_AerialPerspective(
+		//				aerialperspectiveResources_reflection,
+		//				cmd
+		//			);
+		//		}
+
+		//		wi::profiler::EndRange(range); // Planar Reflections
+		//		device->EventEnd(cmd);
+
+		//	});
+
+		//	// Planar reflections color pass:
+		//	cmd = device->BeginCommandList();
+		//	wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
+
+		//		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		//		wi::renderer::BindCameraCB(
+		//			camera_reflection,
+		//			camera_reflection_previous,
+		//			camera_reflection,
+		//			cmd
+		//		);
+
+		//		wi::renderer::ComputeTiledLightCulling(
+		//			tiledLightResources_planarReflection,
+		//			visibility_reflection,
+		//			Texture(),
+		//			cmd
+		//		);
+
+		//		if (scene->weather.IsVolumetricClouds())
+		//		{
+		//			wi::renderer::Postprocess_VolumetricClouds(
+		//				volumetriccloudResources_reflection,
+		//				cmd,
+		//				camera_reflection,
+		//				camera_reflection_previous,
+		//				camera_reflection,
+		//				wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
+		//				scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
+		//				scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
+		//			);
+		//		}
+
+		//		device->EventBegin("Planar reflections", cmd);
+		//		auto range = wi::profiler::BeginRangeGPU("Planar Reflections", cmd);
+
+		//		RenderPassImage rp[] = {
+		//			RenderPassImage::RenderTarget(
+		//				&rtReflection,
+		//				RenderPassImage::LoadOp::CLEAR,
+		//				RenderPassImage::StoreOp::DONTCARE,
+		//				ResourceState::RENDERTARGET,
+		//				ResourceState::RENDERTARGET
+		//			),
+		//			RenderPassImage::DepthStencil(
+		//				&depthBuffer_Reflection,
+		//				RenderPassImage::LoadOp::LOAD,
+		//				RenderPassImage::StoreOp::STORE,
+		//				ResourceState::SHADER_RESOURCE,
+		//				ResourceState::DEPTHSTENCIL,
+		//				ResourceState::SHADER_RESOURCE
+		//			),
+		//			RenderPassImage::Resolve(&rtReflection_resolved)
+		//		};
+		//		device->RenderPassBegin(rp, arraysize(rp), cmd);
+
+		//		Viewport vp;
+		//		vp.width = (float)depthBuffer_Reflection.GetDesc().width;
+		//		vp.height = (float)depthBuffer_Reflection.GetDesc().height;
+		//		vp.min_depth = 0;
+		//		vp.max_depth = 1;
+		//		device->BindViewports(1, &vp, cmd);
+
+		//		wi::renderer::DrawScene(
+		//			visibility_reflection,
+		//			RENDERPASS_MAIN,
+		//			cmd,
+		//			wi::renderer::DRAWSCENE_OPAQUE |
+		//			wi::renderer::DRAWSCENE_IMPOSTOR |
+		//			wi::renderer::DRAWSCENE_HAIRPARTICLE |
+		//			wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS
+		//		);
+		//		wi::renderer::DrawSky(*scene, cmd);
+		//		wi::renderer::DrawScene(
+		//			visibility_reflection,
+		//			RENDERPASS_MAIN,
+		//			cmd,
+		//			wi::renderer::DRAWSCENE_TRANSPARENT |
+		//			wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS
+		//		); // separate renderscene, to be drawn after opaque and transparent sort order
+
+		//		if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
+		//		{
+		//			// Blend Aerial Perspective on top:
+		//			device->EventBegin("Aerial Perspective Reflection Blend", cmd);
+		//			wi::image::Params fx;
+		//			fx.enableFullScreen();
+		//			fx.blendFlag = BLENDMODE_PREMULTIPLIED;
+		//			wi::image::Draw(&aerialperspectiveResources_reflection.texture_output, fx, cmd);
+		//			device->EventEnd(cmd);
+		//		}
+
+		//		// Blend the volumetric clouds on top:
+		//		//	For planar reflections, we don't use upsample, because there is no linear depth here
+		//		if (scene->weather.IsVolumetricClouds())
+		//		{
+		//			device->EventBegin("Volumetric Clouds Reflection Blend", cmd);
+		//			wi::image::Params fx;
+		//			fx.enableFullScreen();
+		//			fx.blendFlag = BLENDMODE_PREMULTIPLIED;
+		//			wi::image::Draw(&volumetriccloudResources_reflection.texture_reproject[volumetriccloudResources_reflection.GetTemporalOutputIndex()], fx, cmd);
+		//			device->EventEnd(cmd);
+		//		}
+
+		//		wi::renderer::DrawSoftParticles(visibility_reflection, false, cmd);
+		//		wi::renderer::DrawSpritesAndFonts(*scene, camera_reflection, false, cmd);
+
+		//		device->RenderPassEnd(cmd);
+
+		//		wi::profiler::EndRange(range); // Planar Reflections
+		//		device->EventEnd(cmd);
+		//	});
+		//}
+
+		//// Main camera weather compute effects depending on shadow maps, envmaps, etc, but don't depend on async surface pass:
+		//if (scene->weather.IsRealisticSky() || scene->weather.IsVolumetricClouds())
+		//{
+		//	cmd = device->BeginCommandList();
+		//	wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
+
+		//		wi::renderer::BindCameraCB(
+		//			*camera,
+		//			camera_previous,
+		//			camera_reflection,
+		//			cmd
+		//		);
+
+		//		if (scene->weather.IsRealisticSky())
+		//		{
+		//			wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
+
+		//			if (scene->weather.IsRealisticSkyAerialPerspective())
+		//			{
+		//				wi::renderer::ComputeSkyAtmosphereCameraVolumeLut(cmd);
+		//			}
+		//		}
+		//		if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
+		//		{
+		//			wi::renderer::Postprocess_AerialPerspective(
+		//				aerialperspectiveResources,
+		//				cmd
+		//			);
+		//		}
+		//		if (scene->weather.IsVolumetricClouds() && scene->weather.IsVolumetricCloudsReceiveShadow())
+		//		{
+		//			// When volumetric cloud receives shadow it must be done AFTER shadow maps!
+		//			wi::renderer::Postprocess_VolumetricClouds(
+		//				volumetriccloudResources,
+		//				cmd,
+		//				*camera,
+		//				camera_previous,
+		//				camera_reflection,
+		//				wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
+		//				scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
+		//				scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
+		//			);
+		//		}
+		//	});
+		//}
+
+		//// Main camera opaque color pass:
+		//cmd = device->BeginCommandList();
+		//device->WaitCommandList(cmd, cmd_maincamera_compute_effects);
+		//wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
+
+		//	GraphicsDevice* device = wi::graphics::GetDevice();
+		//	device->EventBegin("Opaque Scene", cmd);
+
+		//	wi::renderer::BindCameraCB(
+		//		*camera,
+		//		camera_previous,
+		//		camera_reflection,
+		//		cmd
+		//	);
+
+		//	if (getRaytracedReflectionEnabled())
+		//	{
+		//		wi::renderer::Postprocess_RTReflection(
+		//			rtreflectionResources,
+		//			*scene,
+		//			rtSSR,
+		//			cmd,
+		//			getRaytracedReflectionsRange(),
+		//			getReflectionRoughnessCutoff()
+		//		);
+		//	}
+		//	if (getRaytracedDiffuseEnabled())
+		//	{
+		//		wi::renderer::Postprocess_RTDiffuse(
+		//			rtdiffuseResources,
+		//			*scene,
+		//			rtRaytracedDiffuse,
+		//			cmd,
+		//			getRaytracedDiffuseRange()
+		//		);
+		//	}
+		//	if (wi::renderer::GetVXGIEnabled())
+		//	{
+		//		wi::renderer::VXGI_Resolve(
+		//			vxgiResources,
+		//			*scene,
+		//			rtLinearDepth,
+		//			cmd
+		//		);
+		//	}
+
+		//	// Depth buffers were created on COMPUTE queue, so make them available for pixel shaders here:
+		//	{
+		//		GPUBarrier barriers[] = {
+		//			GPUBarrier::Image(&rtLinearDepth, rtLinearDepth.desc.layout, ResourceState::SHADER_RESOURCE),
+		//			GPUBarrier::Image(&depthBuffer_Copy, depthBuffer_Copy.desc.layout, ResourceState::SHADER_RESOURCE),
+		//		};
+		//		device->Barrier(barriers, arraysize(barriers), cmd);
+		//	}
+
+		//	if (wi::renderer::GetRaytracedShadowsEnabled() || wi::renderer::GetScreenSpaceShadowsEnabled())
+		//	{
+		//		GPUBarrier barrier = GPUBarrier::Image(&rtShadow, rtShadow.desc.layout, ResourceState::SHADER_RESOURCE);
+		//		device->Barrier(&barrier, 1, cmd);
+		//	}
+
+		//	if (visibility_shading_in_compute)
+		//	{
+		//		wi::renderer::Visibility_Shade(
+		//			visibilityResources,
+		//			rtMain,
+		//			cmd
+		//		);
+		//	}
+
+		//	Viewport vp;
+		//	vp.width = (float)depthBuffer_Main.GetDesc().width;
+		//	vp.height = (float)depthBuffer_Main.GetDesc().height;
+		//	device->BindViewports(1, &vp, cmd);
+
+		//	Rect scissor = GetScissorInternalResolution();
+		//	device->BindScissorRects(1, &scissor, cmd);
+
+		//	if (getOutlineEnabled())
+		//	{
+		//		// Cut off outline source from linear depth:
+		//		device->EventBegin("Outline Source", cmd);
+
+		//		RenderPassImage rp[] = {
+		//			RenderPassImage::RenderTarget(&rtOutlineSource, RenderPassImage::LoadOp::CLEAR),
+		//			RenderPassImage::DepthStencil(&depthBuffer_Main, RenderPassImage::LoadOp::LOAD)
+		//		};
+		//		device->RenderPassBegin(rp, arraysize(rp), cmd);
+		//		wi::image::Params params;
+		//		params.enableFullScreen();
+		//		params.stencilRefMode = wi::image::STENCILREFMODE_ENGINE;
+		//		params.stencilComp = wi::image::STENCILMODE_EQUAL;
+		//		params.stencilRef = wi::enums::STENCILREF_OUTLINE;
+		//		wi::image::Draw(&rtLinearDepth, params, cmd);
+		//		params.stencilRef = wi::enums::STENCILREF_CUSTOMSHADER_OUTLINE;
+		//		wi::image::Draw(&rtLinearDepth, params, cmd);
+		//		device->RenderPassEnd(cmd);
+		//		device->EventEnd(cmd);
+		//	}
+
+		//	RenderPassImage rp[4] = {};
+		//	uint32_t rp_count = 0;
+		//	rp[rp_count++] = RenderPassImage::RenderTarget(
+		//		&rtMain_render,
+		//		visibility_shading_in_compute ? RenderPassImage::LoadOp::LOAD : RenderPassImage::LoadOp::CLEAR
+		//	);
+		//	rp[rp_count++] = RenderPassImage::DepthStencil(
+		//		&depthBuffer_Main,
+		//		RenderPassImage::LoadOp::LOAD,
+		//		RenderPassImage::StoreOp::STORE,
+		//		ResourceState::DEPTHSTENCIL,
+		//		ResourceState::DEPTHSTENCIL,
+		//		ResourceState::DEPTHSTENCIL
+		//	);
+		//	if (getMSAASampleCount() > 1)
+		//	{
+		//		rp[rp_count++] = RenderPassImage::Resolve(&rtMain);
+		//	}
+		//	if (device->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2) && rtShadingRate.IsValid())
+		//	{
+		//		rp[rp_count++] = RenderPassImage::ShadingRateSource(&rtShadingRate, ResourceState::UNORDERED_ACCESS, ResourceState::UNORDERED_ACCESS);
+		//	}
+		//	device->RenderPassBegin(rp, rp_count, cmd, RenderPassFlags::ALLOW_UAV_WRITES);
+
+		//	if (visibility_shading_in_compute)
+		//	{
+		//		// In visibility compute shading, the impostors must still be drawn using rasterization:
+		//		wi::renderer::DrawScene(
+		//			visibility_main,
+		//			RENDERPASS_MAIN,
+		//			cmd,
+		//			wi::renderer::DRAWSCENE_IMPOSTOR
+		//		);
+		//	}
+		//	else
+		//	{
+		//		auto range = wi::profiler::BeginRangeGPU("Opaque Scene", cmd);
+
+		//		// Foreground:
+		//		vp.min_depth = 1 - foreground_depth_range;
+		//		vp.max_depth = 1;
+		//		device->BindViewports(1, &vp, cmd);
+		//		wi::renderer::DrawScene(
+		//			visibility_main,
+		//			RENDERPASS_MAIN,
+		//			cmd,
+		//			wi::renderer::DRAWSCENE_OPAQUE |
+		//			wi::renderer::DRAWSCENE_FOREGROUND_ONLY |
+		//			wi::renderer::DRAWSCENE_MAINCAMERA
+		//		);
+
+		//		// Regular:
+		//		vp.min_depth = 0;
+		//		vp.max_depth = 1;
+		//		device->BindViewports(1, &vp, cmd);
+		//		wi::renderer::DrawScene(
+		//			visibility_main,
+		//			RENDERPASS_MAIN,
+		//			cmd,
+		//			drawscene_flags
+		//		);
+		//		wi::renderer::DrawSky(*scene, cmd);
+		//		wi::profiler::EndRange(range); // Opaque Scene
+		//	}
+
+		//	// Blend Aerial Perspective on top:
+		//	if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
+		//	{
+		//		device->EventBegin("Aerial Perspective Blend", cmd);
+		//		wi::image::Params fx;
+		//		fx.enableFullScreen();
+		//		fx.blendFlag = BLENDMODE_PREMULTIPLIED;
+		//		wi::image::Draw(&aerialperspectiveResources.texture_output, fx, cmd);
+		//		device->EventEnd(cmd);
+		//	}
+
+		//	// Blend the volumetric clouds on top:
+		//	if (scene->weather.IsVolumetricClouds())
+		//	{
+		//		wi::renderer::Postprocess_VolumetricClouds_Upsample(volumetriccloudResources, cmd);
+		//	}
+
+		//	RenderOutline(cmd);
+
+		//	device->RenderPassEnd(cmd);
+
+		//	if (wi::renderer::GetRaytracedShadowsEnabled() || wi::renderer::GetScreenSpaceShadowsEnabled())
+		//	{
+		//		GPUBarrier barrier = GPUBarrier::Image(&rtShadow, ResourceState::SHADER_RESOURCE, rtShadow.desc.layout);
+		//		device->Barrier(&barrier, 1, cmd);
+		//	}
+
+		//	if (rtAO.IsValid())
+		//	{
+		//		device->Barrier(GPUBarrier::Aliasing(&rtAO, &rtParticleDistortion), cmd);
+		//	}
+
+		//	device->EventEnd(cmd);
+		//});
+
+		//if (scene->terrains.GetCount() > 0)
+		//{
+		//	CommandList cmd_allocation_tilerequest = device->BeginCommandList(QUEUE_COMPUTE);
+		//	device->WaitCommandList(cmd_allocation_tilerequest, cmd); // wait for opaque scene
+		//	wi::jobsystem::Execute(ctx, [this, cmd_allocation_tilerequest](wi::jobsystem::JobArgs args) {
+		//		for (size_t i = 0; i < scene->terrains.GetCount(); ++i)
+		//		{
+		//			scene->terrains[i].AllocateVirtualTextureTileRequestsGPU(cmd_allocation_tilerequest);
+		//		}
+		//	});
+
+		//	CommandList cmd_writeback_tilerequest = device->BeginCommandList(QUEUE_COPY);
+		//	device->WaitCommandList(cmd_writeback_tilerequest, cmd_allocation_tilerequest);
+		//	wi::jobsystem::Execute(ctx, [this, cmd_writeback_tilerequest](wi::jobsystem::JobArgs args) {
+		//		for (size_t i = 0; i < scene->terrains.GetCount(); ++i)
+		//		{
+		//			scene->terrains[i].WritebackTileRequestsGPU(cmd_writeback_tilerequest);
+		//		}
+		//	});
+		//}
+
+		//// Transparents, post processes, etc:
+		//cmd = device->BeginCommandList();
+		//if (cmd_ocean.IsValid())
+		//{
+		//	device->WaitCommandList(cmd, cmd_ocean);
+		//}
+		//wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
+
+		//	GraphicsDevice* device = wi::graphics::GetDevice();
+
+		//	wi::renderer::BindCameraCB(
+		//		*camera,
+		//		camera_previous,
+		//		camera_reflection,
+		//		cmd
+		//	);
+		//	wi::renderer::BindCommonResources(cmd);
+
+		//	RenderLightShafts(cmd);
+
+		//	RenderVolumetrics(cmd);
+
+		//	RenderTransparents(cmd);
+
+		//	// Depth buffers expect a non-pixel shader resource state as they are generated on compute queue:
+		//	{
+		//		GPUBarrier barriers[] = {
+		//			GPUBarrier::Image(&rtLinearDepth, ResourceState::SHADER_RESOURCE, rtLinearDepth.desc.layout),
+		//			GPUBarrier::Image(&depthBuffer_Copy, ResourceState::SHADER_RESOURCE, depthBuffer_Copy.desc.layout),
+		//			GPUBarrier::Image(&debugUAV, ResourceState::UNORDERED_ACCESS, debugUAV.desc.layout),
+		//		};
+		//		device->Barrier(barriers, arraysize(barriers), cmd);
+		//	}
+		//});
+
+		//cmd = device->BeginCommandList();
+		//wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
+		//	RenderPostprocessChain(cmd);
+		//	wi::renderer::TextureStreamingReadbackCopy(*scene, cmd);
+		//});
 
 		RenderPath2D::Render();
 
