@@ -92,7 +92,9 @@ namespace wi::audio
 		info->channel_count = config.channels = 1;
 		info->sample_rate = config.sampleRate = ma_engine_get_sample_rate(engine.get());
 		config.format = ma_format_s16;
-		ma_result res = decoder(&config, &info->sample_count, (void**)(&info->samples));
+		ma_uint64 count;
+		ma_result res = decoder(&config, &count, (void**)(&info->samples));
+		info->sample_count = count;
 		if (res == MA_SUCCESS)
 		{
 			sound->internal_state = info;
