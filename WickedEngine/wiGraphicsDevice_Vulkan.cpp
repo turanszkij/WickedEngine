@@ -7085,7 +7085,7 @@ using namespace vulkan_internal;
 				vulkan_check(vkEndCommandBuffer(commandlist.GetCommandBuffer()));
 
 				CommandQueue& queue = queues[commandlist.queue];
-				const bool dependency = !commandlist.signals.empty() || !commandlist.waits.empty() || !commandlist.wait_queues.empty();
+				const bool dependency = !commandlist.signals.empty() || !commandlist.waits.empty();
 
 				if (dependency)
 				{
@@ -7121,23 +7121,6 @@ using namespace vulkan_internal;
 
 				if (dependency)
 				{
-					for (auto& wait : commandlist.wait_queues)
-					{
-						CommandQueue& waitqueue = queues[wait.first];
-						VkSemaphore semaphore = wait.second;
-
-						// The WaitQueue operation will submit and signal the specified dependency queue:
-						waitqueue.signal(semaphore); // signal recorded, will be executed at submit
-						waitqueue.submit(this, VK_NULL_HANDLE);
-
-						// The current queue will be waiting for the dependency queue to complete:
-						queue.wait(semaphore);
-
-						// recycle semaphore
-						free_semaphore(semaphore);
-					}
-					commandlist.wait_queues.clear();
-
 					for (auto& semaphore : commandlist.waits)
 					{
 						// Wait for command list dependency:
@@ -7190,15 +7173,17 @@ using namespace vulkan_internal;
 		if (FRAMECOUNT >= BUFFERCOUNT)
 		{
 			const uint32_t bufferindex = GetBufferIndex();
+			VkFence fences[QUEUE_COUNT] = {};
+			uint32_t fenceCount = 0;
 			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
 			{
 				if (frame_fence[bufferindex][queue] == VK_NULL_HANDLE)
 					continue;
-
-				vulkan_check(vkWaitForFences(device, 1, &frame_fence[bufferindex][queue], VK_TRUE, 1000000)); // 1 sec timeout
-
-				vulkan_check(vkResetFences(device, 1, &frame_fence[bufferindex][queue]));
+				fences[fenceCount++] = frame_fence[bufferindex][queue];
 			}
+
+			vulkan_check(vkWaitForFences(device, fenceCount, fences, VK_TRUE, ~0ull));
+			vulkan_check(vkResetFences(device, fenceCount, fences));
 		}
 
 		allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
@@ -7514,11 +7499,6 @@ using namespace vulkan_internal;
 		VkSemaphore semaphore = new_semaphore();
 		commandlist.waits.push_back(semaphore);
 		commandlist_wait_for.signals.push_back(semaphore);
-	}
-	void GraphicsDevice_Vulkan::WaitQueue(CommandList cmd, QUEUE_TYPE wait_for)
-	{
-		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		commandlist.wait_queues.push_back(std::make_pair(wait_for, new_semaphore()));
 	}
 	void GraphicsDevice_Vulkan::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{

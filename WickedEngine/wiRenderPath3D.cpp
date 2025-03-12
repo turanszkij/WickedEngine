@@ -863,7 +863,6 @@ namespace wi
 
 		// Preparing the frame:
 		CommandList cmd = device->BeginCommandList();
-		device->WaitQueue(cmd, QUEUE_COMPUTE); // sync to prev frame compute (disallow prev frame overlapping a compute task into updating global scene resources for this frame)
 		wi::renderer::ProcessDeferredTextureRequests(cmd); // Execute it first thing in the frame here, on main thread, to not allow other thread steal it and execute on different command list!
 		CommandList cmd_prepareframe = cmd;
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
@@ -908,6 +907,11 @@ namespace wi
 				cmd
 			);
 			wi::renderer::UpdateRenderDataAsync(visibility_main, frameCB, cmd);
+
+			if (scene->IsWetmapProcessingRequired())
+			{
+				wi::renderer::RefreshWetmaps(visibility_main, cmd);
+			}
 
 			if (scene->IsAccelerationStructureUpdateRequested())
 			{
@@ -1765,16 +1769,6 @@ namespace wi
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 		});
-
-		if (scene->IsWetmapProcessingRequired())
-		{
-			CommandList wetmap_cmd = device->BeginCommandList(QUEUE_COMPUTE);
-			device->WaitCommandList(wetmap_cmd, cmd); // wait for transparents, it will be scheduled with late frame (GUI, etc)
-			// Note: GPU processing of this compute task can overlap with beginning of the next frame because no one is waiting for it
-			wi::jobsystem::Execute(ctx, [this, wetmap_cmd](wi::jobsystem::JobArgs args) {
-				wi::renderer::RefreshWetmaps(visibility_main, wetmap_cmd);
-			});
-		}
 
 		cmd = device->BeginCommandList();
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
