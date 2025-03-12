@@ -1446,7 +1446,7 @@ namespace wi
 					uint32_t requested_resolution = resource->streaming_resolution.fetch_and(0); // set to zero while returning prev value
 					if (requested_resolution > 0)
 					{
-						requested_resolution = 1ul << (31ul - firstbithigh((unsigned long)requested_resolution)); // largest power of two
+						requested_resolution = 1u << (31u - firstbithigh(requested_resolution)); // largest power of two
 					}
 					GraphicsDevice* device = GetDevice();
 					const GraphicsDevice::MemoryUsage memory_usage = device->GetMemoryUsage();

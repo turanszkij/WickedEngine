@@ -105,14 +105,27 @@ inline unsigned int countbits(unsigned int value)
 {
 	return __popcnt(value);
 }
+inline unsigned long countbits(unsigned long value)
+{
+	return (unsigned long)__popcnt64((unsigned long long)value);
+}
 inline unsigned long long countbits(unsigned long long value)
 {
 	return __popcnt64(value);
 }
+inline unsigned int firstbithigh(unsigned int value)
+{
+	unsigned long bit_index;
+	if (_BitScanReverse(&bit_index, (unsigned long)value))
+	{
+		return 31u - (unsigned int)bit_index;
+	}
+	return 0;
+}
 inline unsigned long firstbithigh(unsigned long value)
 {
 	unsigned long bit_index;
-	if (_BitScanReverse(&bit_index, value))
+	if (_BitScanReverse64(&bit_index, (unsigned long long)value))
 	{
 		return 31ul - bit_index;
 	}
@@ -127,10 +140,19 @@ inline unsigned long firstbithigh(unsigned long long value)
 	}
 	return 0;
 }
-inline unsigned long firstbitlow(unsigned long value)
+inline unsigned int firstbitlow(unsigned int value)
 {
 	unsigned long bit_index;
 	if (_BitScanForward(&bit_index, value))
+	{
+		return (unsigned int)bit_index;
+	}
+	return 0;
+}
+inline unsigned long firstbitlow(unsigned long value)
+{
+	unsigned long bit_index;
+	if (_BitScanForward64(&bit_index, (unsigned long long)value))
 	{
 		return bit_index;
 	}
