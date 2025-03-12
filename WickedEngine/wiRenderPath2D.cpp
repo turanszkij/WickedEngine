@@ -166,12 +166,12 @@ namespace wi
 			{
 				RenderPassImage rp[] = {
 					RenderPassImage::RenderTarget(&rtStenciled, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::Resolve(&rtStenciled_resolved),
 					RenderPassImage::DepthStencil(
 						dsv,
 						RenderPassImage::LoadOp::LOAD,
 						RenderPassImage::StoreOp::STORE
 					),
-					RenderPassImage::Resolve(&rtStenciled_resolved)
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 			}
@@ -224,12 +224,12 @@ namespace wi
 						ResourceState::RENDERTARGET,
 						ResourceState::RENDERTARGET
 					),
+					RenderPassImage::Resolve(&rtFinal),
 					RenderPassImage::DepthStencil(
 						dsv,
 						RenderPassImage::LoadOp::LOAD,
 						RenderPassImage::StoreOp::STORE
 					),
-					RenderPassImage::Resolve(&rtFinal),
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 			}

@@ -8736,14 +8736,6 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		if (probe.IsMSAA())
 		{
 			const RenderPassImage rp[] = {
-				RenderPassImage::DepthStencil(
-					&envrenderingDepthBuffer,
-					RenderPassImage::LoadOp::CLEAR,
-					RenderPassImage::StoreOp::STORE,
-					ResourceState::SHADER_RESOURCE,
-					ResourceState::DEPTHSTENCIL,
-					ResourceState::SHADER_RESOURCE
-				),
 				RenderPassImage::RenderTarget(
 					&envrenderingColorBuffer_MSAA,
 					RenderPassImage::LoadOp::CLEAR,
@@ -8756,7 +8748,15 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 					ResourceState::SHADER_RESOURCE,
 					ResourceState::SHADER_RESOURCE,
 					0
-				)
+				),
+				RenderPassImage::DepthStencil(
+					&envrenderingDepthBuffer,
+					RenderPassImage::LoadOp::CLEAR,
+					RenderPassImage::StoreOp::STORE,
+					ResourceState::SHADER_RESOURCE,
+					ResourceState::DEPTHSTENCIL,
+					ResourceState::SHADER_RESOURCE
+				),
 			};
 			device->RenderPassBegin(rp, arraysize(rp), cmd);
 		}
