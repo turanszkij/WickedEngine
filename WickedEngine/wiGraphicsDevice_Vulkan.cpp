@@ -3681,6 +3681,12 @@ using namespace vulkan_internal;
 	}
 	bool GraphicsDevice_Vulkan::CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer, const GPUResource* alias, uint64_t alias_offset) const
 	{
+#ifdef PLATFORM_LINUX
+		// Resource aliasing on Linux sometimes fails with VK_ERROR_UNKOWN so I disable it:
+		alias = nullptr;
+		alias_offset = 0;
+#endif // PLATFORM_LINUX
+
 		auto internal_state = std::make_shared<Buffer_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		buffer->internal_state = internal_state;
@@ -4010,6 +4016,12 @@ using namespace vulkan_internal;
 	}
 	bool GraphicsDevice_Vulkan::CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture, const GPUResource* alias, uint64_t alias_offset) const
 	{
+#ifdef PLATFORM_LINUX
+		// Resource aliasing on Linux sometimes fails with VK_ERROR_UNKOWN so I disable it:
+		alias = nullptr;
+		alias_offset = 0;
+#endif // PLATFORM_LINUX
+
 		auto internal_state = std::make_shared<Texture_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		internal_state->defaultLayout = _ConvertImageLayout(desc->layout);
