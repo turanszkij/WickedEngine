@@ -557,7 +557,6 @@ namespace wi::scene
 
 		if (wi::renderer::GetDDGIEnabled())
 		{
-			float bounds_blend = 0.01f;
 			ddgi.frame_index++;
 			if (!TLAS.IsValid() && !BVH.IsValid())
 			{
@@ -566,43 +565,49 @@ namespace wi::scene
 			if (!ddgi.ray_buffer.IsValid()) // Check the ray_buffer here because that is invalid with serialized DDGI data, and we can detect if dynamic resources need recreation when serialized is loaded
 			{
 				ddgi.frame_index = 0;
-				bounds_blend = 1;
 
 				const uint32_t probe_count = ddgi.grid_dimensions.x * ddgi.grid_dimensions.y * ddgi.grid_dimensions.z;
+
+				wi::vector<uint8_t> zerodata;
 
 				GPUBufferDesc buf;
 				buf.stride = sizeof(DDGIRayDataPacked);
 				buf.size = buf.stride * probe_count * DDGI_MAX_RAYCOUNT;
 				buf.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-				device->CreateBuffer(&buf, nullptr, &ddgi.ray_buffer);
+				zerodata.resize(buf.size);
+				device->CreateBuffer(&buf, zerodata.data(), &ddgi.ray_buffer);
 				device->SetName(&ddgi.ray_buffer, "ddgi.ray_buffer");
 
 				buf.stride = sizeof(DDGIVarianceDataPacked);
 				buf.size = buf.stride * probe_count * DDGI_COLOR_RESOLUTION * DDGI_COLOR_RESOLUTION;
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-				device->CreateBuffer(&buf, nullptr, &ddgi.variance_buffer);
+				zerodata.resize(buf.size);
+				device->CreateBuffer(&buf, zerodata.data(), &ddgi.variance_buffer);
 				device->SetName(&ddgi.variance_buffer, "ddgi.variance_buffer");
 
 				buf.stride = sizeof(uint8_t);
 				buf.size = buf.stride * probe_count;
 				buf.misc_flags = ResourceMiscFlag::NONE;
 				buf.format = Format::R8_UINT;
-				device->CreateBuffer(&buf, nullptr, &ddgi.raycount_buffer);
+				zerodata.resize(buf.size);
+				device->CreateBuffer(&buf, zerodata.data(), &ddgi.raycount_buffer);
 				device->SetName(&ddgi.raycount_buffer, "ddgi.raycount_buffer");
 
 				buf.stride = sizeof(uint32_t);
 				buf.size = buf.stride * (probe_count * DDGI_MAX_RAYCOUNT + 4); // +4: counter/indirect dispatch args
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED | ResourceMiscFlag::INDIRECT_ARGS;
 				buf.format = Format::UNKNOWN;
-				device->CreateBuffer(&buf, nullptr, &ddgi.rayallocation_buffer);
+				zerodata.resize(buf.size);
+				device->CreateBuffer(&buf, zerodata.data(), &ddgi.rayallocation_buffer);
 				device->SetName(&ddgi.rayallocation_buffer, "ddgi.rayallocation_buffer");
 
 				buf.stride = sizeof(DDGIProbe);
 				buf.size = buf.stride * probe_count;
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 				buf.format = Format::UNKNOWN;
-				device->CreateBuffer(&buf, nullptr, &ddgi.probe_buffer);
+				zerodata.resize(buf.size);
+				device->CreateBuffer(&buf, zerodata.data(), &ddgi.probe_buffer);
 				device->SetName(&ddgi.probe_buffer, "ddgi.probe_buffer");
 
 				TextureDesc tex;
@@ -612,7 +617,11 @@ namespace wi::scene
 				tex.misc_flags = {};
 				tex.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 				tex.layout = ResourceState::SHADER_RESOURCE;
-				device->CreateTexture(&tex, nullptr, &ddgi.depth_texture);
+				zerodata.resize(ComputeTextureMemorySizeInBytes(tex));
+				SubresourceData initdata;
+				initdata.data_ptr = zerodata.data();
+				initdata.row_pitch = tex.width * GetFormatStride(tex.format);
+				device->CreateTexture(&tex, &initdata, &ddgi.depth_texture);
 				device->SetName(&ddgi.depth_texture, "ddgi.depth_texture");
 			}
 			float3 grid_min = bounds.getMin();
@@ -623,6 +632,12 @@ namespace wi::scene
 			grid_max.x += 1;
 			grid_max.y += 1;
 			grid_max.z += 1;
+			float bounds_blend = 0.01f;
+			const float area = AABB(ddgi.grid_min, ddgi.grid_max).getArea();
+			if (ddgi.frame_index == 0 || area < 0.001f)
+			{
+				bounds_blend = 1;
+			}
 			ddgi.grid_min = wi::math::Lerp(ddgi.grid_min, grid_min, bounds_blend);
 			ddgi.grid_max = wi::math::Lerp(ddgi.grid_max, grid_max, bounds_blend);
 		}

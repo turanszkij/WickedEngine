@@ -10982,9 +10982,15 @@ void ComputeShadingRateClassification(
 	};
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
+	device->Barrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+
+	device->ClearUAV(&output, 0, cmd);
+	device->Barrier(GPUBarrier::Memory(&output), cmd);
+
 	// Whole threadgroup for each tile:
 	device->Dispatch(desc.width, desc.height, 1, cmd);
 
+	device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -11132,6 +11138,20 @@ void Visibility_Prepare(
 		}
 		FlushBarriers(cmd);
 
+		if (res.depthbuffer)
+		{
+			device->ClearUAV(res.depthbuffer, 0, cmd);
+		}
+		if (res.lineardepth)
+		{
+			device->ClearUAV(res.lineardepth, 0, cmd);
+		}
+		if (res.primitiveID_resolved)
+		{
+			device->ClearUAV(res.primitiveID_resolved, 0, cmd);
+		}
+		device->Barrier(GPUBarrier::Memory(), cmd);
+
 		device->BindComputeShader(&shaders[msaa ? CSTYPE_VISIBILITY_RESOLVE_MSAA : CSTYPE_VISIBILITY_RESOLVE], cmd);
 
 		device->Dispatch(
@@ -11185,6 +11205,12 @@ void Visibility_Surface(
 	PushBarrier(GPUBarrier::Image(&res.texture_payload_1, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
 	FlushBarriers(cmd);
 
+	device->ClearUAV(&res.texture_normals, 0, cmd);
+	device->ClearUAV(&res.texture_roughness, 0, cmd);
+	device->ClearUAV(&res.texture_payload_0, 0, cmd);
+	device->ClearUAV(&res.texture_payload_1, 0, cmd);
+	device->Barrier(GPUBarrier::Memory(), cmd);
+
 	device->BindResource(&res.binned_tiles, 0, cmd);
 	device->BindUAV(&output, 0, cmd);
 	device->BindUAV(&res.texture_normals, 1, cmd);
@@ -11235,6 +11261,10 @@ void Visibility_Surface_Reduced(
 	PushBarrier(GPUBarrier::Image(&res.texture_normals, res.texture_normals.desc.layout, ResourceState::UNORDERED_ACCESS));
 	PushBarrier(GPUBarrier::Image(&res.texture_roughness, res.texture_roughness.desc.layout, ResourceState::UNORDERED_ACCESS));
 	FlushBarriers(cmd);
+
+	device->ClearUAV(&res.texture_normals, 0, cmd);
+	device->ClearUAV(&res.texture_roughness, 0, cmd);
+	device->Barrier(GPUBarrier::Memory(), cmd);
 
 	device->BindResource(&res.binned_tiles, 0, cmd);
 	device->BindUAV(&res.texture_normals, 1, cmd);
@@ -11317,12 +11347,7 @@ void Visibility_Velocity(
 
 	BindCommonResources(cmd);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	device->Barrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
 
 	device->ClearUAV(&output, 0, cmd);
 	device->Barrier(GPUBarrier::Memory(&output), cmd);
@@ -11336,12 +11361,7 @@ void Visibility_Velocity(
 		cmd
 	);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -11925,6 +11945,15 @@ void Postprocess_Blur_Gaussian(
 		break;
 	}
 	device->BindComputeShader(&shaders[cs], cmd);
+
+	PushBarrier(GPUBarrier::Image(&temp, temp.desc.layout, ResourceState::UNORDERED_ACCESS, mip_dst));
+	FlushBarriers(cmd);
+
+	if (mip_dst < 0)
+	{
+		device->ClearUAV(&temp, 0, cmd);
+		device->Barrier(GPUBarrier::Memory(&temp), cmd);
+	}
 	
 	// Horizontal:
 	{
@@ -11947,13 +11976,6 @@ void Postprocess_Blur_Gaussian(
 		device->BindResource(&input, 0, cmd, mip_src);
 		device->BindUAV(&temp, 0, cmd, mip_dst);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&temp, temp.desc.layout, ResourceState::UNORDERED_ACCESS, mip_dst),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
 		device->Dispatch(
 			(postprocess.resolution.x + POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT - 1) / POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT,
 			postprocess.resolution.y,
@@ -11961,13 +11983,16 @@ void Postprocess_Blur_Gaussian(
 			cmd
 		);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&temp, ResourceState::UNORDERED_ACCESS, temp.desc.layout, mip_dst),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
+	}
 
+	PushBarrier(GPUBarrier::Image(&temp, ResourceState::UNORDERED_ACCESS, temp.desc.layout, mip_dst));
+	PushBarrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS, mip_dst));
+	FlushBarriers(cmd);
+
+	if (mip_dst < 0)
+	{
+		device->ClearUAV(&output, 0, cmd);
+		device->Barrier(GPUBarrier::Memory(&output), cmd);
 	}
 
 	// Vertical:
@@ -11991,13 +12016,6 @@ void Postprocess_Blur_Gaussian(
 		device->BindResource(&temp, 0, cmd, mip_dst); // <- also mip_dst because it's second pass!
 		device->BindUAV(&output, 0, cmd, mip_dst);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS, mip_dst),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
 		device->Dispatch(
 			postprocess.resolution.x,
 			(postprocess.resolution.y + POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT - 1) / POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT,
@@ -12005,12 +12023,7 @@ void Postprocess_Blur_Gaussian(
 			cmd
 		);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout, mip_dst),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
+		device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout, mip_dst), cmd);
 
 	}
 
@@ -12054,6 +12067,15 @@ void Postprocess_Blur_Bilateral(
 	}
 	device->BindComputeShader(&shaders[cs], cmd);
 
+	PushBarrier(GPUBarrier::Image(&temp, temp.desc.layout, ResourceState::UNORDERED_ACCESS, mip_dst));
+	FlushBarriers(cmd);
+
+	if (mip_dst < 0)
+	{
+		device->ClearUAV(&temp, 0, cmd);
+		device->Barrier(GPUBarrier::Memory(&temp), cmd);
+	}
+
 	// Horizontal:
 	{
 		const TextureDesc& desc = temp.GetDesc();
@@ -12076,13 +12098,6 @@ void Postprocess_Blur_Bilateral(
 		device->BindResource(&input, 0, cmd, mip_src);
 		device->BindUAV(&temp, 0, cmd, mip_dst);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&temp, temp.desc.layout, ResourceState::UNORDERED_ACCESS, mip_dst),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
 		device->Dispatch(
 			(postprocess.resolution.x + POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT - 1) / POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT,
 			postprocess.resolution.y,
@@ -12090,14 +12105,16 @@ void Postprocess_Blur_Bilateral(
 			cmd
 		);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Image(&temp, ResourceState::UNORDERED_ACCESS, temp.desc.layout, mip_dst),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
+	}
 
+	PushBarrier(GPUBarrier::Image(&temp, ResourceState::UNORDERED_ACCESS, temp.desc.layout, mip_dst));
+	PushBarrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS, mip_dst));
+	FlushBarriers(cmd);
+
+	if (mip_dst < 0)
+	{
+		device->ClearUAV(&output, 0, cmd);
+		device->Barrier(GPUBarrier::Memory(&output), cmd);
 	}
 
 	// Vertical:
@@ -12122,13 +12139,6 @@ void Postprocess_Blur_Bilateral(
 		device->BindResource(&temp, 0, cmd, mip_dst); // <- also mip_dst because it's second pass!
 		device->BindUAV(&output, 0, cmd, mip_dst);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS, mip_dst),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
 		device->Dispatch(
 			postprocess.resolution.x,
 			(postprocess.resolution.y + POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT - 1) / POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT,
@@ -12136,13 +12146,7 @@ void Postprocess_Blur_Bilateral(
 			cmd
 		);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout, mip_dst),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
+		device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout, mip_dst), cmd);
 
 	}
 
@@ -15240,12 +15244,7 @@ void Postprocess_ScreenSpaceShadow(
 			cmd
 		);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
+		device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -15288,12 +15287,10 @@ void Postprocess_LightShafts(
 	};
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	device->Barrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+
+	device->ClearUAV(&output, 0, cmd);
+	device->Barrier(GPUBarrier::Memory(&output), cmd);
 
 	device->Dispatch(
 		(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -15302,14 +15299,7 @@ void Postprocess_LightShafts(
 		cmd
 	);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
-			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
-
+	device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -15707,12 +15697,7 @@ void Postprocess_DepthOfField(
 			cmd
 		);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
+		device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -16340,12 +16325,10 @@ void Postprocess_FXAA(
 	};
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	device->Barrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+
+	device->ClearUAV(&output, 0, cmd);
+	device->Barrier(GPUBarrier::Memory(&output), cmd);
 
 	device->Dispatch(
 		(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -16354,14 +16337,7 @@ void Postprocess_FXAA(
 		cmd
 	);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
-			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
-
+	device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -16437,12 +16413,10 @@ void Postprocess_TemporalAA(
 	};
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(output, output->GetDesc().layout, ResourceState::UNORDERED_ACCESS),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	device->Barrier(GPUBarrier::Image(output, output->GetDesc().layout, ResourceState::UNORDERED_ACCESS), cmd);
+
+	device->ClearUAV(output, 0, cmd);
+	device->Barrier(GPUBarrier::Memory(output), cmd);
 
 	device->Dispatch(
 		(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -16451,12 +16425,7 @@ void Postprocess_TemporalAA(
 		cmd
 	);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(output, ResourceState::UNORDERED_ACCESS, output->GetDesc().layout),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	device->Barrier(GPUBarrier::Image(output, ResourceState::UNORDERED_ACCESS, output->GetDesc().layout), cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -16489,12 +16458,10 @@ void Postprocess_Sharpen(
 	};
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	device->Barrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+
+	device->ClearUAV(&output, 0, cmd);
+	device->Barrier(GPUBarrier::Memory(&output), cmd);
 
 	device->Dispatch(
 		(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -16503,14 +16470,7 @@ void Postprocess_Sharpen(
 		cmd
 	);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
-			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
-
+	device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
 
 	device->EventEnd(cmd);
 }
@@ -16541,21 +16501,10 @@ void Postprocess_Tonemap(
 
 	device->EventBegin("Postprocess_Tonemap", cmd);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	device->Barrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
 
 	device->ClearUAV(&output, 0, cmd);
-
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(&output),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	device->Barrier(GPUBarrier::Memory(&output), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_TONEMAP], cmd);
 
@@ -16600,13 +16549,7 @@ void Postprocess_Tonemap(
 		cmd
 	);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
-
+	device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
 
 	device->EventEnd(cmd);
 }
@@ -17435,12 +17378,10 @@ void Postprocess_Chromatic_Aberration(
 	};
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	device->Barrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+
+	device->ClearUAV(&output, 0, cmd);
+	device->Barrier(GPUBarrier::Memory(&output), cmd);
 
 	device->Dispatch(
 		(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -17449,14 +17390,7 @@ void Postprocess_Chromatic_Aberration(
 		cmd
 	);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
-			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
-
+	device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
 
 	device->EventEnd(cmd);
 }
@@ -17530,12 +17464,10 @@ void Postprocess_Upsample_Bilateral(
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
+		device->Barrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+
+		device->ClearUAV(&output, 0, cmd);
+		device->Barrier(GPUBarrier::Memory(&output), cmd);
 
 		device->Dispatch(
 			(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -17544,13 +17476,7 @@ void Postprocess_Upsample_Bilateral(
 			cmd
 		);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
+		device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
 
 	}
 
@@ -17582,12 +17508,7 @@ void Postprocess_Downsample4x(
 	};
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	device->Barrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
 
 	device->ClearUAV(&output, 0, cmd);
 	device->Barrier(GPUBarrier::Memory(&output), cmd);
@@ -17599,12 +17520,7 @@ void Postprocess_Downsample4x(
 		cmd
 	);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
 
 	device->EventEnd(cmd);
 }
@@ -17732,12 +17648,10 @@ void Postprocess_Underwater(
 	};
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	device->Barrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+
+	device->ClearUAV(&output, 0, cmd);
+	device->Barrier(GPUBarrier::Memory(&output), cmd);
 
 	device->Dispatch(
 		(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -17746,12 +17660,7 @@ void Postprocess_Underwater(
 		cmd
 	);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -17791,12 +17700,10 @@ void Postprocess_Custom(
 	};
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	device->ClearUAV(&output, 0, cmd);
+	device->Barrier(GPUBarrier::Memory(&output), cmd);
+
+	device->Barrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
 
 	device->Dispatch(
 		(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -17805,12 +17712,7 @@ void Postprocess_Custom(
 		cmd
 	);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
