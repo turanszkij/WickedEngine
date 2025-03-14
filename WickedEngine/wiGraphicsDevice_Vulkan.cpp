@@ -2996,11 +2996,26 @@ using namespace vulkan_internal;
 				}
 			}
 
+			// Find sparse fallback:
+			for (uint32_t i = 0; i < queueFamilyCount; ++i)
+			{
+				auto& queueFamily = queueFamilies[i];
+
+				if (queueFamily.queueFamilyProperties.queueCount > 0 && (queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT))
+				{
+					sparseFamily = i;
+				}
+			}
+
 			wi::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 			wi::unordered_set<uint32_t> uniqueQueueFamilies = { graphicsFamily,copyFamily,computeFamily };
 			if (videoFamily != VK_QUEUE_FAMILY_IGNORED)
 			{
 				uniqueQueueFamilies.insert(videoFamily);
+			}
+			if (sparseFamily != VK_QUEUE_FAMILY_IGNORED)
+			{
+				uniqueQueueFamilies.insert(sparseFamily);
 			}
 
 			float queuePriority = 1.0f;
@@ -3044,6 +3059,10 @@ using namespace vulkan_internal;
 			{
 				vkGetDeviceQueue(device, videoFamily, 0, &videoQueue);
 			}
+			if (sparseFamily != VK_QUEUE_FAMILY_IGNORED)
+			{
+				vkGetDeviceQueue(device, sparseFamily, 0, &sparseQueue);
+			}
 
 			queues[QUEUE_GRAPHICS].queue = graphicsQueue;
 			queues[QUEUE_GRAPHICS].locker = queue_lockers[graphicsFamily];
@@ -3051,10 +3070,16 @@ using namespace vulkan_internal;
 			queues[QUEUE_COMPUTE].locker = queue_lockers[computeFamily];
 			queues[QUEUE_COPY].queue = copyQueue;
 			queues[QUEUE_COPY].locker = queue_lockers[copyFamily];
-			queues[QUEUE_VIDEO_DECODE].queue = videoQueue;
 			if (videoFamily != VK_QUEUE_FAMILY_IGNORED)
 			{
+				queues[QUEUE_VIDEO_DECODE].queue = videoQueue;
 				queues[QUEUE_VIDEO_DECODE].locker = queue_lockers[videoFamily];
+			}
+			if (sparseFamily != VK_QUEUE_FAMILY_IGNORED)
+			{
+				queue_sparse.queue = sparseQueue;
+				queue_sparse.locker = queue_lockers[sparseFamily];
+				queue_sparse.sparse_binding_supported = true;
 			}
 
 		}
@@ -7487,21 +7512,16 @@ using namespace vulkan_internal;
 
 		// Queue command:
 		{
-			if (!queues[queue].sparse_binding_supported)
+			CommandQueue* q = &queues[queue];
+			if (!q->sparse_binding_supported)
 			{
-				// 1.) fall back to graphics queue if current one doesn't support sparse, might be better than crashing
-				queue = QUEUE_GRAPHICS;
+				// 1.) fall back to any sparse supporting queue
+				q = &queue_sparse;
 			}
-			if (!queues[queue].sparse_binding_supported)
-			{
-				// 2.) fall back to compute queue if current one doesn't support sparse, might be better than crashing
-				queue = QUEUE_COMPUTE;
-			}
-			CommandQueue& q = queues[queue];
-			std::scoped_lock lock(*q.locker);
-			wilog_assert(q.sparse_binding_supported, "Vulkan QUEUE_TYPE=%d doesn't report sparse binding support! This can result in broken rendering or crash. Try to update the graphics driver if this happens.", int(queue));
+			std::scoped_lock lock(*q->locker);
+			wilog_assert(q->sparse_binding_supported, "Vulkan sparse mapping was used while the feature is not available! This can result in broken rendering or crash. Try to update the graphics driver if this happens.");
 
-			vulkan_check(vkQueueBindSparse(q.queue, (uint32_t)sparse_infos.size(), sparse_infos.data(), VK_NULL_HANDLE));
+			vulkan_check(vkQueueBindSparse(q->queue, (uint32_t)sparse_infos.size(), sparse_infos.data(), VK_NULL_HANDLE));
 		}
 	}
 

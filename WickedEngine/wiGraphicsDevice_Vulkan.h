@@ -122,11 +122,13 @@ namespace wi::graphics
 		uint32_t computeFamily = VK_QUEUE_FAMILY_IGNORED;
 		uint32_t copyFamily = VK_QUEUE_FAMILY_IGNORED;
 		uint32_t videoFamily = VK_QUEUE_FAMILY_IGNORED;
+		uint32_t sparseFamily = VK_QUEUE_FAMILY_IGNORED;
 		wi::vector<uint32_t> families;
 		VkQueue graphicsQueue = VK_NULL_HANDLE;
 		VkQueue computeQueue = VK_NULL_HANDLE;
 		VkQueue copyQueue = VK_NULL_HANDLE;
 		VkQueue videoQueue = VK_NULL_HANDLE;
+		VkQueue sparseQueue = VK_NULL_HANDLE;
 		bool debugUtils = false;
 
 		VkPhysicalDeviceProperties2 properties2 = {};
@@ -206,6 +208,8 @@ namespace wi::graphics
 			void submit(GraphicsDevice_Vulkan* device, VkFence fence);
 
 		} queues[QUEUE_COUNT];
+
+		CommandQueue queue_sparse;
 
 		struct CopyAllocator
 		{
