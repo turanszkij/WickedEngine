@@ -1421,7 +1421,7 @@ using namespace vulkan_internal;
 	}
 	void GraphicsDevice_Vulkan::CopyAllocator::destroy()
 	{
-		vkQueueWaitIdle(device->queues[QUEUE_COPY].queue);
+		vkQueueWaitIdle(device->queue_init.queue);
 		for (auto& x : freelist)
 		{
 			vkDestroyCommandPool(device->device, x.transferCommandPool, nullptr);
@@ -1457,7 +1457,7 @@ using namespace vulkan_internal;
 			VkCommandPoolCreateInfo poolInfo = {};
 			poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 			poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
-			poolInfo.queueFamilyIndex = device->copyFamily;
+			poolInfo.queueFamilyIndex = device->initFamily;
 			vulkan_check(vkCreateCommandPool(device->device, &poolInfo, nullptr, &cmd.transferCommandPool));
 			poolInfo.queueFamilyIndex = device->graphicsFamily;
 			vulkan_check(vkCreateCommandPool(device->device, &poolInfo, nullptr, &cmd.transitionCommandPool));
@@ -1533,12 +1533,12 @@ using namespace vulkan_internal;
 			submitInfo.signalSemaphoreInfoCount = 1;
 			submitInfo.pSignalSemaphoreInfos = signalSemaphoreInfos;
 
-			std::scoped_lock lock(*device->queues[QUEUE_COPY].locker);
-			vulkan_check(vkQueueSubmit2(device->queues[QUEUE_COPY].queue, 1, &submitInfo, VK_NULL_HANDLE));
+			std::scoped_lock lock(*device->queue_init.locker);
+			vulkan_check(vkQueueSubmit2(device->queue_init.queue, 1, &submitInfo, VK_NULL_HANDLE));
 		}
 
 		{
-			waitSemaphoreInfo.semaphore = cmd.semaphore; // wait for copy queue
+			waitSemaphoreInfo.semaphore = cmd.semaphore; // wait for init queue
 			waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 
 			cbSubmitInfo.commandBuffer = cmd.transitionCommandBuffer;
@@ -2959,6 +2959,7 @@ using namespace vulkan_internal;
 				if (copyFamily == VK_QUEUE_FAMILY_IGNORED && queueFamily.queueFamilyProperties.queueCount > 0 && queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_TRANSFER_BIT)
 				{
 					copyFamily = i;
+					initFamily = i;
 				}
 
 				if (computeFamily == VK_QUEUE_FAMILY_IGNORED && queueFamily.queueFamilyProperties.queueCount > 0 && queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_COMPUTE_BIT)
@@ -2976,7 +2977,7 @@ using namespace vulkan_internal;
 				}
 			}
 
-			// Now try to find dedicated compute and transfer queues:
+			// Now try to find dedicated COPY queue:
 			for (uint32_t i = 0; i < queueFamilyCount; ++i)
 			{
 				auto& queueFamily = queueFamilies[i];
@@ -2988,12 +2989,20 @@ using namespace vulkan_internal;
 					)
 				{
 					copyFamily = i;
+					initFamily = i;
 
 					if (queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT)
 					{
 						queues[QUEUE_COPY].sparse_binding_supported = true;
 					}
+					break; // found it!
 				}
+			}
+
+			// Now try to find dedicated COMPUTE queue:
+			for (uint32_t i = 0; i < queueFamilyCount; ++i)
+			{
+				auto& queueFamily = queueFamilies[i];
 
 				if (queueFamily.queueFamilyProperties.queueCount > 0 &&
 					queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_COMPUTE_BIT &&
@@ -3006,6 +3015,7 @@ using namespace vulkan_internal;
 					{
 						queues[QUEUE_COMPUTE].sparse_binding_supported = true;
 					}
+					break; // found it!
 				}
 			}
 
@@ -3030,11 +3040,29 @@ using namespace vulkan_internal;
 				if (queueFamily.queueFamilyProperties.queueCount > 0 && (queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT))
 				{
 					sparseFamily = i;
+					break;
+				}
+			}
+
+			// Try to find separate transfer queue for inits if available, otherwise it will use QUEUE_COPY
+			for (uint32_t i = 0; i < queueFamilyCount; ++i)
+			{
+				auto& queueFamily = queueFamilies[i];
+
+				if (queueFamily.queueFamilyProperties.queueCount > 0 &&
+					queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_TRANSFER_BIT &&
+					copyFamily != i &&
+					!(queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
+					!(queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_COMPUTE_BIT)
+					)
+				{
+					initFamily = i;
+					break;
 				}
 			}
 
 			wi::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-			wi::unordered_set<uint32_t> uniqueQueueFamilies = { graphicsFamily,copyFamily,computeFamily };
+			wi::unordered_set<uint32_t> uniqueQueueFamilies = { graphicsFamily,copyFamily,computeFamily,initFamily };
 			if (videoFamily != VK_QUEUE_FAMILY_IGNORED)
 			{
 				uniqueQueueFamilies.insert(videoFamily);
@@ -3081,6 +3109,7 @@ using namespace vulkan_internal;
 			vkGetDeviceQueue(device, graphicsFamily, 0, &graphicsQueue);
 			vkGetDeviceQueue(device, computeFamily, 0, &computeQueue);
 			vkGetDeviceQueue(device, copyFamily, 0, &copyQueue);
+			vkGetDeviceQueue(device, initFamily, 0, &initQueue);
 			if (videoFamily != VK_QUEUE_FAMILY_IGNORED)
 			{
 				vkGetDeviceQueue(device, videoFamily, 0, &videoQueue);
@@ -3096,6 +3125,8 @@ using namespace vulkan_internal;
 			queues[QUEUE_COMPUTE].locker = queue_lockers[computeFamily];
 			queues[QUEUE_COPY].queue = copyQueue;
 			queues[QUEUE_COPY].locker = queue_lockers[copyFamily];
+			queue_init.queue = initQueue;
+			queue_init.locker = queue_lockers[initFamily];
 			if (videoFamily != VK_QUEUE_FAMILY_IGNORED)
 			{
 				queues[QUEUE_VIDEO_DECODE].queue = videoQueue;

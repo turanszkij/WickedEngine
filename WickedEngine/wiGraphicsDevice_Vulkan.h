@@ -122,12 +122,14 @@ namespace wi::graphics
 		uint32_t computeFamily = VK_QUEUE_FAMILY_IGNORED;
 		uint32_t copyFamily = VK_QUEUE_FAMILY_IGNORED;
 		uint32_t videoFamily = VK_QUEUE_FAMILY_IGNORED;
+		uint32_t initFamily = VK_QUEUE_FAMILY_IGNORED;
 		uint32_t sparseFamily = VK_QUEUE_FAMILY_IGNORED;
 		wi::vector<uint32_t> families;
 		VkQueue graphicsQueue = VK_NULL_HANDLE;
 		VkQueue computeQueue = VK_NULL_HANDLE;
 		VkQueue copyQueue = VK_NULL_HANDLE;
 		VkQueue videoQueue = VK_NULL_HANDLE;
+		VkQueue initQueue = VK_NULL_HANDLE;
 		VkQueue sparseQueue = VK_NULL_HANDLE;
 		bool debugUtils = false;
 
@@ -210,6 +212,7 @@ namespace wi::graphics
 
 		} queues[QUEUE_COUNT];
 
+		CommandQueue queue_init;
 		CommandQueue queue_sparse;
 
 		struct CopyAllocator
