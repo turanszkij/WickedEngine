@@ -152,13 +152,13 @@ namespace wi::audio
 		if (sound->playing) return;
 		sound->playing = true;
 		ma_sound_set_looping(sound, instance->IsLooped());
-		if (instance->begin > 0.)
+		if (instance->begin > 0.f)
 		{
 			ma_sound_seek_to_second(sound, instance->begin);
 		}
-		if (instance->length > 0.)
+		if (instance->length > 0.f)
 		{
-			ma_sound_set_stop_time_in_milliseconds(sound, ma_engine_get_time_in_milliseconds(engine.get()) + instance->length * 1000.);
+			ma_sound_set_stop_time_in_milliseconds(sound, ma_engine_get_time_in_milliseconds(engine.get()) + ma_uint64(instance->length * 1000.f));
 		}
 		else
 		{
