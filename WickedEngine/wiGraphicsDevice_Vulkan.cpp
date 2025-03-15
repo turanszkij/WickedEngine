@@ -33,6 +33,7 @@ namespace wi::graphics
 
 namespace vulkan_internal
 {
+	static constexpr uint64_t timeout_value = 2000000000ull; // 2 seconds
 
 	// These shifts are made so that Vulkan resource bindings slots don't interfere with each other across shader stages:
 	//	These are also defined in wi::shadercompiler.cpp as hard coded compiler arguments for SPIRV, so they need to be the same
@@ -1353,29 +1354,35 @@ using namespace vulkan_internal;
 			return;
 		std::scoped_lock lock(*locker);
 
-		if (fence != VK_NULL_HANDLE)
 		{
-			// end of frame mark:
-			for (int q = 0; q < QUEUE_COUNT; ++q)
+			if (fence != VK_NULL_HANDLE)
 			{
-				if (frame_semaphores[q] == VK_NULL_HANDLE)
-					continue;
-				signal(frame_semaphores[q]);
+				// end of frame mark:
+				for (int q = 0; q < QUEUE_COUNT; ++q)
+				{
+					if (frame_semaphores[device->GetBufferIndex()][q] == VK_NULL_HANDLE)
+						continue;
+					signal(frame_semaphores[device->GetBufferIndex()][q]);
+				}
 			}
+
+			VkSubmitInfo2 submitInfo = {};
+			submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+			submitInfo.commandBufferInfoCount = (uint32_t)submit_cmds.size();
+			submitInfo.pCommandBufferInfos = submit_cmds.data();
+
+			submitInfo.waitSemaphoreInfoCount = (uint32_t)submit_waitSemaphoreInfos.size();
+			submitInfo.pWaitSemaphoreInfos = submit_waitSemaphoreInfos.data();
+
+			submitInfo.signalSemaphoreInfoCount = (uint32_t)submit_signalSemaphoreInfos.size();
+			submitInfo.pSignalSemaphoreInfos = submit_signalSemaphoreInfos.data();
+
+			vulkan_check(vkQueueSubmit2(queue, 1, &submitInfo, fence));
+
+			submit_waitSemaphoreInfos.clear();
+			submit_signalSemaphoreInfos.clear();
+			submit_cmds.clear();
 		}
-
-		VkSubmitInfo2 submitInfo = {};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
-		submitInfo.commandBufferInfoCount = (uint32_t)submit_cmds.size();
-		submitInfo.pCommandBufferInfos = submit_cmds.data();
-
-		submitInfo.waitSemaphoreInfoCount = (uint32_t)submit_waitSemaphoreInfos.size();
-		submitInfo.pWaitSemaphoreInfos = submit_waitSemaphoreInfos.data();
-
-		submitInfo.signalSemaphoreInfoCount = (uint32_t)submit_signalSemaphoreInfos.size();
-		submitInfo.pSignalSemaphoreInfos = submit_signalSemaphoreInfos.data();
-
-		vulkan_check(vkQueueSubmit2(queue, 1, &submitInfo, fence));
 
 		if (!submit_swapchains.empty())
 		{
@@ -1404,15 +1411,12 @@ using namespace vulkan_internal;
 					vulkan_assert(false, "vkQueuePresentKHR");
 				}
 			}
-		}
 
-		swapchain_updates.clear();
-		submit_swapchains.clear();
-		submit_swapChainImageIndices.clear();
-		submit_waitSemaphoreInfos.clear();
-		submit_signalSemaphores.clear();
-		submit_signalSemaphoreInfos.clear();
-		submit_cmds.clear();
+			swapchain_updates.clear();
+			submit_swapchains.clear();
+			submit_swapChainImageIndices.clear();
+			submit_signalSemaphores.clear();
+		}
 	}
 
 	void GraphicsDevice_Vulkan::CopyAllocator::init(GraphicsDevice_Vulkan* device)
@@ -1554,39 +1558,11 @@ using namespace vulkan_internal;
 			vulkan_check(vkQueueSubmit2(device->queues[QUEUE_GRAPHICS].queue, 1, &submitInfo, cmd.fence));
 		}
 
-		vulkan_check(vkWaitForFences(device->device, 1, &cmd.fence, VK_TRUE, ~0ull));
-
-		//if (device->queues[QUEUE_VIDEO_DECODE].queue != VK_NULL_HANDLE)
-		//{
-		//	waitSemaphoreInfo.semaphore = cmd.semaphores[2]; // wait for graphics queue
-		//	waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-
-		//	submitInfo.waitSemaphoreInfoCount = 1;
-		//	submitInfo.pWaitSemaphoreInfos = &waitSemaphoreInfo;
-		//	submitInfo.commandBufferInfoCount = 0;
-		//	submitInfo.pCommandBufferInfos = nullptr;
-		//	submitInfo.signalSemaphoreInfoCount = 0;
-		//	submitInfo.pSignalSemaphoreInfos = nullptr;
-
-		//	std::scoped_lock lock(*device->queues[QUEUE_VIDEO_DECODE].locker);
-		//	vulkan_check(vkQueueSubmit2(device->queues[QUEUE_VIDEO_DECODE].queue, 1, &submitInfo, VK_NULL_HANDLE));
-		//}
-
-		//// This must be final submit in this function because it will also signal a fence for state tracking by CPU!
-		//{
-		//	waitSemaphoreInfo.semaphore = cmd.semaphores[1]; // wait for graphics queue
-		//	waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-
-		//	submitInfo.waitSemaphoreInfoCount = 1;
-		//	submitInfo.pWaitSemaphoreInfos = &waitSemaphoreInfo;
-		//	submitInfo.commandBufferInfoCount = 0;
-		//	submitInfo.pCommandBufferInfos = nullptr;
-		//	submitInfo.signalSemaphoreInfoCount = 0;
-		//	submitInfo.pSignalSemaphoreInfos = nullptr;
-
-		//	std::scoped_lock lock(*device->queues[QUEUE_COMPUTE].locker);
-		//	vulkan_check(vkQueueSubmit2(device->queues[QUEUE_COMPUTE].queue, 1, &submitInfo, cmd.fence)); // final submit also signals fence!
-		//}
+		while (vulkan_check(vkWaitForFences(device->device, 1, &cmd.fence, VK_TRUE, timeout_value)) == VK_TIMEOUT)
+		{
+			wilog_error("[CopyAllocator::submit] vkWaitForFences resulted in VK_TIMEOUT");
+			std::this_thread::yield();
+		}
 
 		std::scoped_lock lock(locker);
 		freelist.push_back(cmd);
@@ -3237,24 +3213,24 @@ using namespace vulkan_internal;
 					break;
 				};
 			}
-		}
 
-		// Frame end semaphores:
-		for (int queue1 = 0; queue1 < QUEUE_COUNT; ++queue1)
-		{
-			if (queues[queue1].queue == nullptr)
-				continue;
-			for (int queue2 = 0; queue2 < QUEUE_COUNT; ++queue2)
+			// Frame end semaphores:
+			for (int queue1 = 0; queue1 < QUEUE_COUNT; ++queue1)
 			{
-				if (queue1 == queue2)
+				if (queues[queue1].queue == nullptr)
 					continue;
-				if (queues[queue2].queue == nullptr)
-					continue;
+				for (int queue2 = 0; queue2 < QUEUE_COUNT; ++queue2)
+				{
+					if (queue1 == queue2)
+						continue;
+					if (queues[queue2].queue == nullptr)
+						continue;
 
-				VkSemaphoreCreateInfo info = {};
-				info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-				vulkan_check(vkCreateSemaphore(device, &info, nullptr, &queues[queue1].frame_semaphores[queue2]));
-				set_semaphore_name(queues[queue1].frame_semaphores[queue2], "CommandQueue::frame_semaphores");
+					VkSemaphoreCreateInfo info = {};
+					info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+					vulkan_check(vkCreateSemaphore(device, &info, nullptr, &queues[queue1].frame_semaphores[fr][queue2]));
+					set_semaphore_name(queues[queue1].frame_semaphores[fr][queue2], "CommandQueue::frame_semaphores");
+				}
 			}
 		}
 
@@ -3654,6 +3630,13 @@ using namespace vulkan_internal;
 				if (fence == VK_NULL_HANDLE)
 					continue;
 				vkDestroyFence(device, fence, nullptr);
+				for (VkSemaphore semaphore : queues[queue].frame_semaphores[fr])
+				{
+					if (semaphore != VK_NULL_HANDLE)
+					{
+						vkDestroySemaphore(device, semaphore, nullptr);
+					}
+				}
 			}
 		}
 
@@ -7310,7 +7293,7 @@ using namespace vulkan_internal;
 			{
 				if (queue1 == queue2)
 					continue;
-				VkSemaphore semaphore = queues[queue2].frame_semaphores[queue1];
+				VkSemaphore semaphore = queues[queue2].frame_semaphores[GetBufferIndex()][queue1];
 				if (semaphore == VK_NULL_HANDLE)
 					continue;
 				queues[queue1].wait(semaphore);
@@ -7341,7 +7324,17 @@ using namespace vulkan_internal;
 			}
 			if (waitFenceCount > 0)
 			{
-				vulkan_check(vkWaitForFences(device, waitFenceCount, waitFences, VK_TRUE, ~0ull));
+				while (vulkan_check(vkWaitForFences(device, waitFenceCount, waitFences, VK_TRUE, timeout_value)) == VK_TIMEOUT)
+				{
+					wilog_error(
+						"[SubmitCommandLists] vkWaitForFences resulted in VK_TIMEOUT, fence statuses:\nQUEUE_GRAPHICS = %s\nQUEUE_COMPUTE = %s\nQUEUE_COPY = %s\nQUEUE_VIDEO_DECODE = %s",
+						frame_fence[bufferindex][QUEUE_GRAPHICS] == VK_NULL_HANDLE ? "" : string_VkResult(vkGetFenceStatus(device, frame_fence[bufferindex][QUEUE_GRAPHICS])),
+						frame_fence[bufferindex][QUEUE_COMPUTE] == VK_NULL_HANDLE ? "" : string_VkResult(vkGetFenceStatus(device, frame_fence[bufferindex][QUEUE_COMPUTE])),
+						frame_fence[bufferindex][QUEUE_COPY] == VK_NULL_HANDLE ? "" : string_VkResult(vkGetFenceStatus(device, frame_fence[bufferindex][QUEUE_COPY])),
+						frame_fence[bufferindex][QUEUE_VIDEO_DECODE] == VK_NULL_HANDLE ? "" : string_VkResult(vkGetFenceStatus(device, frame_fence[bufferindex][QUEUE_VIDEO_DECODE]))
+					);
+					std::this_thread::yield();
+				}
 			}
 			if (resetFenceCount > 0)
 			{
@@ -7668,14 +7661,22 @@ using namespace vulkan_internal;
 		internal_state->swapChainAcquireSemaphoreIndex = (internal_state->swapChainAcquireSemaphoreIndex + 1) % internal_state->swapchainAcquireSemaphores.size();
 
 		internal_state->locker.lock();
-		VkResult res = vkAcquireNextImageKHR(
-			device,
-			internal_state->swapChain,
-			UINT64_MAX,
-			internal_state->swapchainAcquireSemaphores[internal_state->swapChainAcquireSemaphoreIndex],
-			VK_NULL_HANDLE,
-			&internal_state->swapChainImageIndex
-		);
+		VkResult res;
+		do {
+			res = vkAcquireNextImageKHR(
+				device,
+				internal_state->swapChain,
+				timeout_value,
+				internal_state->swapchainAcquireSemaphores[internal_state->swapChainAcquireSemaphoreIndex],
+				VK_NULL_HANDLE,
+				&internal_state->swapChainImageIndex
+			);
+			if (res == VK_TIMEOUT)
+			{
+				wilog_error("vkAcquireNextImageKHR resulted in VK_TIMEOUT, retrying");
+				std::this_thread::yield();
+			}
+		} while (res == VK_TIMEOUT);
 		internal_state->locker.unlock();
 
 		if (res != VK_SUCCESS)

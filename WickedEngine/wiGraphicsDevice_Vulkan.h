@@ -30,7 +30,7 @@
 #include <algorithm>
 
 #define vulkan_assert(cond, fname) { wilog_assert(cond, "Vulkan error: %s failed with %s (%s:%d)", fname, string_VkResult(res), relative_path(__FILE__), __LINE__); }
-#define vulkan_check(call) [&]() { VkResult res = call; vulkan_assert((res == VK_SUCCESS), extract_function_name(#call).c_str()); return res; }()
+#define vulkan_check(call) [&]() { VkResult res = call; vulkan_assert((res >= VK_SUCCESS), extract_function_name(#call).c_str()); return res; }()
 
 namespace wi::graphics
 {
@@ -194,7 +194,7 @@ namespace wi::graphics
 		struct CommandQueue
 		{
 			VkQueue queue = VK_NULL_HANDLE;
-			VkSemaphore frame_semaphores[QUEUE_COUNT] = {};
+			VkSemaphore frame_semaphores[BUFFERCOUNT][QUEUE_COUNT] = {};
 			wi::vector<SwapChain> swapchain_updates;
 			wi::vector<VkSwapchainKHR> submit_swapchains;
 			wi::vector<uint32_t> submit_swapChainImageIndices;
