@@ -192,6 +192,7 @@ namespace wi::graphics
 		struct CommandQueue
 		{
 			VkQueue queue = VK_NULL_HANDLE;
+			VkSemaphore frame_semaphores[QUEUE_COUNT] = {};
 			wi::vector<SwapChain> swapchain_updates;
 			wi::vector<VkSwapchainKHR> submit_swapchains;
 			wi::vector<uint32_t> submit_swapChainImageIndices;
@@ -223,7 +224,7 @@ namespace wi::graphics
 				VkCommandPool transitionCommandPool = VK_NULL_HANDLE;
 				VkCommandBuffer transitionCommandBuffer = VK_NULL_HANDLE;
 				VkFence fence = VK_NULL_HANDLE;
-				VkSemaphore semaphores[3] = { VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE }; // graphics, compute, video
+				VkSemaphore semaphore = VK_NULL_HANDLE;
 				GPUBuffer uploadbuffer;
 				constexpr bool IsValid() const { return transferCommandBuffer != VK_NULL_HANDLE; }
 			};
@@ -291,6 +292,7 @@ namespace wi::graphics
 				VkSemaphoreCreateInfo info = {};
 				info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 				vulkan_check(vkCreateSemaphore(device, &info, nullptr, &sema));
+				set_semaphore_name(sema, "DependencySemaphore");
 			}
 			VkSemaphore semaphore = semaphore_pool.back();
 			semaphore_pool.pop_back();
@@ -393,6 +395,9 @@ namespace wi::graphics
 
 		static constexpr uint32_t immutable_sampler_slot_begin = 100;
 		wi::vector<VkSampler> immutable_samplers;
+
+		void set_fence_name(VkFence fence, const char* name);
+		void set_semaphore_name(VkSemaphore semaphore, const char* name);
 
 	public:
 		GraphicsDevice_Vulkan(wi::platform::window_type window, ValidationMode validationMode = ValidationMode::Disabled, GPUPreference preference = GPUPreference::Discrete);

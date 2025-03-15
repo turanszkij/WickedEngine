@@ -3811,9 +3811,10 @@ namespace wi::scene
 
 				ShaderTransform& shadertransform = armature.boneData[boneIndex];
 				shadertransform.Create(mat);
-				if (skinningDataMapped != nullptr)
+				uint8_t* gpu_bone_dst = (uint8_t*)(gpu_dst + boneIndex);
+				if (skinningDataMapped != nullptr && ((size_t)gpu_bone_dst - size_t(skinningDataMapped) + sizeof(ShaderTransform)) <= skinningDataSize)
 				{
-					std::memcpy(gpu_dst + boneIndex, &shadertransform, sizeof(shadertransform));
+					std::memcpy(gpu_bone_dst, &shadertransform, sizeof(shadertransform));
 				}
 
 				const float bone_radius = 1;
@@ -3833,7 +3834,10 @@ namespace wi::scene
 			const uint32_t dataSize = uint32_t(softbody.boneData.size() * sizeof(ShaderTransform));
 			softbody.gpuBoneOffset = skinningAllocator.fetch_add(dataSize);
 			ShaderTransform* gpu_dst = (ShaderTransform*)((uint8_t*)skinningDataMapped + softbody.gpuBoneOffset);
-			std::memcpy(gpu_dst, softbody.boneData.data(), dataSize);
+			if (((size_t)gpu_dst - (size_t)skinningDataMapped + (size_t)dataSize) <= skinningDataSize)
+			{
+				std::memcpy(gpu_dst, softbody.boneData.data(), dataSize);
+			}
 		});
 	}
 	void Scene::RunMeshUpdateSystem(wi::jobsystem::context& ctx)

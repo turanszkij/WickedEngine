@@ -1298,7 +1298,34 @@ namespace vulkan_internal
 }
 using namespace vulkan_internal;
 
+	void GraphicsDevice_Vulkan::set_fence_name(VkFence fence, const char* name)
+	{
+		if (!debugUtils)
+			return;
+		if (fence == VK_NULL_HANDLE)
+			return;
 
+		VkDebugUtilsObjectNameInfoEXT info{ VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+		info.pObjectName = name;
+		info.objectType = VK_OBJECT_TYPE_FENCE;
+		info.objectHandle = (uint64_t)fence;
+
+		vulkan_check(vkSetDebugUtilsObjectNameEXT(device, &info));
+	}
+	void GraphicsDevice_Vulkan::set_semaphore_name(VkSemaphore semaphore, const char* name)
+	{
+		if (!debugUtils)
+			return;
+		if (semaphore == VK_NULL_HANDLE)
+			return;
+
+		VkDebugUtilsObjectNameInfoEXT info{ VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+		info.pObjectName = name;
+		info.objectType = VK_OBJECT_TYPE_SEMAPHORE;
+		info.objectHandle = (uint64_t)semaphore;
+
+		vulkan_check(vkSetDebugUtilsObjectNameEXT(device, &info));
+	}
 
 	void GraphicsDevice_Vulkan::CommandQueue::signal(VkSemaphore semaphore)
 	{
@@ -1325,6 +1352,17 @@ using namespace vulkan_internal;
 		if (queue == VK_NULL_HANDLE)
 			return;
 		std::scoped_lock lock(*locker);
+
+		if (fence != VK_NULL_HANDLE)
+		{
+			// end of frame mark:
+			for (int q = 0; q < QUEUE_COUNT; ++q)
+			{
+				if (frame_semaphores[q] == VK_NULL_HANDLE)
+					continue;
+				signal(frame_semaphores[q]);
+			}
+		}
 
 		VkSubmitInfo2 submitInfo = {};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
@@ -1388,10 +1426,7 @@ using namespace vulkan_internal;
 		{
 			vkDestroyCommandPool(device->device, x.transferCommandPool, nullptr);
 			vkDestroyCommandPool(device->device, x.transitionCommandPool, nullptr);
-			for (auto& sema : x.semaphores)
-			{
-				vkDestroySemaphore(device->device, sema, nullptr);
-			}
+			vkDestroySemaphore(device->device, x.semaphore, nullptr);
 			vkDestroyFence(device->device, x.fence, nullptr);
 		}
 	}
@@ -1439,12 +1474,12 @@ using namespace vulkan_internal;
 			VkFenceCreateInfo fenceInfo = {};
 			fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 			vulkan_check(vkCreateFence(device->device, &fenceInfo, nullptr, &cmd.fence));
+			device->set_fence_name(cmd.fence, "CopyAllocator::fence");
 
 			VkSemaphoreCreateInfo semaphoreInfo = {};
 			semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-			vulkan_check(vkCreateSemaphore(device->device, &semaphoreInfo, nullptr, &cmd.semaphores[0]));
-			vulkan_check(vkCreateSemaphore(device->device, &semaphoreInfo, nullptr, &cmd.semaphores[1]));
-			vulkan_check(vkCreateSemaphore(device->device, &semaphoreInfo, nullptr, &cmd.semaphores[2]));
+			vulkan_check(vkCreateSemaphore(device->device, &semaphoreInfo, nullptr, &cmd.semaphore));
+			device->set_semaphore_name(cmd.semaphore, "CopyAllocator::semaphore");
 
 			GPUBufferDesc uploaddesc;
 			uploaddesc.size = wi::math::GetNextPowerOfTwo(staging_size);
@@ -1490,7 +1525,7 @@ using namespace vulkan_internal;
 
 		{
 			cbSubmitInfo.commandBuffer = cmd.transferCommandBuffer;
-			signalSemaphoreInfos[0].semaphore = cmd.semaphores[0]; // signal for graphics queue
+			signalSemaphoreInfos[0].semaphore = cmd.semaphore; // signal for graphics queue
 			signalSemaphoreInfos[0].stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 
 			submitInfo.commandBufferInfoCount = 1;
@@ -1503,64 +1538,55 @@ using namespace vulkan_internal;
 		}
 
 		{
-			waitSemaphoreInfo.semaphore = cmd.semaphores[0]; // wait for copy queue
+			waitSemaphoreInfo.semaphore = cmd.semaphore; // wait for copy queue
 			waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 
 			cbSubmitInfo.commandBuffer = cmd.transitionCommandBuffer;
-			signalSemaphoreInfos[0].semaphore = cmd.semaphores[1]; // signal for compute queue
-			signalSemaphoreInfos[0].stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT; // signal for compute queue
 
 			submitInfo.waitSemaphoreInfoCount = 1;
 			submitInfo.pWaitSemaphoreInfos = &waitSemaphoreInfo;
 			submitInfo.commandBufferInfoCount = 1;
 			submitInfo.pCommandBufferInfos = &cbSubmitInfo;
-			if (device->queues[QUEUE_VIDEO_DECODE].queue != VK_NULL_HANDLE)
-			{
-				signalSemaphoreInfos[1].semaphore = cmd.semaphores[2]; // signal for video decode queue
-				signalSemaphoreInfos[1].stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT; // signal for video decode queue
-				submitInfo.signalSemaphoreInfoCount = 2;
-			}
-			else
-			{
-				submitInfo.signalSemaphoreInfoCount = 1;
-			}
-			submitInfo.pSignalSemaphoreInfos = signalSemaphoreInfos;
+			submitInfo.signalSemaphoreInfoCount = 0;
+			submitInfo.pSignalSemaphoreInfos = nullptr;
 
 			std::scoped_lock lock(*device->queues[QUEUE_GRAPHICS].locker);
-			vulkan_check(vkQueueSubmit2(device->queues[QUEUE_GRAPHICS].queue, 1, &submitInfo, VK_NULL_HANDLE));
+			vulkan_check(vkQueueSubmit2(device->queues[QUEUE_GRAPHICS].queue, 1, &submitInfo, cmd.fence));
 		}
 
-		if (device->queues[QUEUE_VIDEO_DECODE].queue != VK_NULL_HANDLE)
-		{
-			waitSemaphoreInfo.semaphore = cmd.semaphores[2]; // wait for graphics queue
-			waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		vulkan_check(vkWaitForFences(device->device, 1, &cmd.fence, VK_TRUE, ~0ull));
 
-			submitInfo.waitSemaphoreInfoCount = 1;
-			submitInfo.pWaitSemaphoreInfos = &waitSemaphoreInfo;
-			submitInfo.commandBufferInfoCount = 0;
-			submitInfo.pCommandBufferInfos = nullptr;
-			submitInfo.signalSemaphoreInfoCount = 0;
-			submitInfo.pSignalSemaphoreInfos = nullptr;
+		//if (device->queues[QUEUE_VIDEO_DECODE].queue != VK_NULL_HANDLE)
+		//{
+		//	waitSemaphoreInfo.semaphore = cmd.semaphores[2]; // wait for graphics queue
+		//	waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 
-			std::scoped_lock lock(*device->queues[QUEUE_VIDEO_DECODE].locker);
-			vulkan_check(vkQueueSubmit2(device->queues[QUEUE_VIDEO_DECODE].queue, 1, &submitInfo, VK_NULL_HANDLE));
-		}
+		//	submitInfo.waitSemaphoreInfoCount = 1;
+		//	submitInfo.pWaitSemaphoreInfos = &waitSemaphoreInfo;
+		//	submitInfo.commandBufferInfoCount = 0;
+		//	submitInfo.pCommandBufferInfos = nullptr;
+		//	submitInfo.signalSemaphoreInfoCount = 0;
+		//	submitInfo.pSignalSemaphoreInfos = nullptr;
 
-		// This must be final submit in this function because it will also signal a fence for state tracking by CPU!
-		{
-			waitSemaphoreInfo.semaphore = cmd.semaphores[1]; // wait for graphics queue
-			waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+		//	std::scoped_lock lock(*device->queues[QUEUE_VIDEO_DECODE].locker);
+		//	vulkan_check(vkQueueSubmit2(device->queues[QUEUE_VIDEO_DECODE].queue, 1, &submitInfo, VK_NULL_HANDLE));
+		//}
 
-			submitInfo.waitSemaphoreInfoCount = 1;
-			submitInfo.pWaitSemaphoreInfos = &waitSemaphoreInfo;
-			submitInfo.commandBufferInfoCount = 0;
-			submitInfo.pCommandBufferInfos = nullptr;
-			submitInfo.signalSemaphoreInfoCount = 0;
-			submitInfo.pSignalSemaphoreInfos = nullptr;
+		//// This must be final submit in this function because it will also signal a fence for state tracking by CPU!
+		//{
+		//	waitSemaphoreInfo.semaphore = cmd.semaphores[1]; // wait for graphics queue
+		//	waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 
-			std::scoped_lock lock(*device->queues[QUEUE_COMPUTE].locker);
-			vulkan_check(vkQueueSubmit2(device->queues[QUEUE_COMPUTE].queue, 1, &submitInfo, cmd.fence)); // final submit also signals fence!
-		}
+		//	submitInfo.waitSemaphoreInfoCount = 1;
+		//	submitInfo.pWaitSemaphoreInfos = &waitSemaphoreInfo;
+		//	submitInfo.commandBufferInfoCount = 0;
+		//	submitInfo.pCommandBufferInfos = nullptr;
+		//	submitInfo.signalSemaphoreInfoCount = 0;
+		//	submitInfo.pSignalSemaphoreInfos = nullptr;
+
+		//	std::scoped_lock lock(*device->queues[QUEUE_COMPUTE].locker);
+		//	vulkan_check(vkQueueSubmit2(device->queues[QUEUE_COMPUTE].queue, 1, &submitInfo, cmd.fence)); // final submit also signals fence!
+		//}
 
 		std::scoped_lock lock(locker);
 		freelist.push_back(cmd);
@@ -3164,6 +3190,40 @@ using namespace vulkan_internal;
 					wi::helper::messageBox("vkCreateFence[FRAME] failed! ERROR: " + std::string(string_VkResult(res)), "Error!");
 					wi::platform::Exit();
 				}
+				switch (queue)
+				{
+				case QUEUE_GRAPHICS:
+					set_fence_name(frame_fence[fr][queue], "frame_fence[QUEUE_GRAPHICS]");
+					break;
+				case QUEUE_COMPUTE:
+					set_fence_name(frame_fence[fr][queue], "frame_fence[QUEUE_COMPUTE]");
+					break;
+				case QUEUE_COPY:
+					set_fence_name(frame_fence[fr][queue], "frame_fence[QUEUE_COPY]");
+					break;
+				case QUEUE_VIDEO_DECODE:
+					set_fence_name(frame_fence[fr][queue], "frame_fence[QUEUE_VIDEO_DECODE]");
+					break;
+				};
+			}
+		}
+
+		// Frame end semaphores:
+		for (int queue1 = 0; queue1 < QUEUE_COUNT; ++queue1)
+		{
+			if (queues[queue1].queue == nullptr)
+				continue;
+			for (int queue2 = 0; queue2 < QUEUE_COUNT; ++queue2)
+			{
+				if (queue1 == queue2)
+					continue;
+				if (queues[queue2].queue == nullptr)
+					continue;
+
+				VkSemaphoreCreateInfo info = {};
+				info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+				vulkan_check(vkCreateSemaphore(device, &info, nullptr, &queues[queue1].frame_semaphores[queue2]));
+				set_semaphore_name(queues[queue1].frame_semaphores[queue2], "CommandQueue::frame_semaphores");
 			}
 		}
 
@@ -3559,7 +3619,10 @@ using namespace vulkan_internal;
 		{
 			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
 			{
-				vkDestroyFence(device, frame_fence[fr][queue], nullptr);
+				VkFence fence = frame_fence[fr][queue];
+				if (fence == VK_NULL_HANDLE)
+					continue;
+				vkDestroyFence(device, fence, nullptr);
 			}
 		}
 
@@ -7155,6 +7218,7 @@ using namespace vulkan_internal;
 					VkSemaphoreSubmitInfo& signalSemaphore = queue.submit_signalSemaphoreInfos.emplace_back();
 					signalSemaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 					signalSemaphore.semaphore = internal_state->swapchainReleaseSemaphore;
+					signalSemaphore.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 					signalSemaphore.value = 0; // not a timeline semaphore
 				}
 
@@ -7205,6 +7269,24 @@ using namespace vulkan_internal;
 			}
 		}
 
+		// Sync up every queue to every other queue at the end of the frame:
+		//	Note: it disables overlapping queues into the next frame
+		for (int queue1 = 0; queue1 < QUEUE_COUNT; ++queue1)
+		{
+			if (queues[queue1].queue == nullptr)
+				continue;
+			for (int queue2 = 0; queue2 < QUEUE_COUNT; ++queue2)
+			{
+				if (queue1 == queue2)
+					continue;
+				VkSemaphore semaphore = queues[queue2].frame_semaphores[queue1];
+				if (semaphore == VK_NULL_HANDLE)
+					continue;
+				queues[queue1].wait(semaphore);
+			}
+			queues[queue1].submit(this, VK_NULL_HANDLE);
+		}
+
 		// From here, we begin a new frame, this affects GetBufferIndex()!
 		FRAMECOUNT++;
 
@@ -7212,17 +7294,28 @@ using namespace vulkan_internal;
 		if (FRAMECOUNT >= BUFFERCOUNT)
 		{
 			const uint32_t bufferindex = GetBufferIndex();
-			VkFence fences[QUEUE_COUNT] = {};
-			uint32_t fenceCount = 0;
+			VkFence waitFences[QUEUE_COUNT] = {};
+			uint32_t waitFenceCount = 0;
+			VkFence resetFences[QUEUE_COUNT] = {};
+			uint32_t resetFenceCount = 0;
 			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
 			{
-				if (frame_fence[bufferindex][queue] == VK_NULL_HANDLE)
+				VkFence fence = frame_fence[bufferindex][queue];
+				if (fence == VK_NULL_HANDLE)
 					continue;
-				fences[fenceCount++] = frame_fence[bufferindex][queue];
+				resetFences[resetFenceCount++] = fence;
+				if (vkGetFenceStatus(device, fence) == VK_SUCCESS)
+					continue;
+				waitFences[waitFenceCount++] = fence;
 			}
-
-			vulkan_check(vkWaitForFences(device, fenceCount, fences, VK_TRUE, ~0ull));
-			vulkan_check(vkResetFences(device, fenceCount, fences));
+			if (waitFenceCount > 0)
+			{
+				vulkan_check(vkWaitForFences(device, waitFenceCount, waitFences, VK_TRUE, ~0ull));
+			}
+			if (resetFenceCount > 0)
+			{
+				vulkan_check(vkResetFences(device, resetFenceCount, resetFences));
+			}
 		}
 
 		allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);

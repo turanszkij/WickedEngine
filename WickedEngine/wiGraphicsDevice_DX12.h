@@ -142,6 +142,7 @@ namespace wi::graphics
 			{
 				Semaphore& dependency = semaphore_pool.emplace_back();
 				dx12_check(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(dependency.fence)));
+				dx12_check(dependency.fence.Get()->SetName(L"DependencySemaphore"));
 			}
 			Semaphore semaphore = std::move(semaphore_pool.back());
 			semaphore_pool.pop_back();

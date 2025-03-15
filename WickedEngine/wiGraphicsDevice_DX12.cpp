@@ -1642,6 +1642,7 @@ std::mutex queue_locker;
 	{
 		this->device = device;
 #ifdef PLATFORM_XBOX
+		// Xbox only has 1 copy queue
 		queue = device->queues[QUEUE_COPY].queue;
 #else
 		// On PC we can create secondary copy queue for background uploading tasks:
@@ -1690,6 +1691,7 @@ std::mutex queue_locker;
 			dx12_check(cmd.commandList->Close());
 
 			dx12_check(device->device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(cmd.fence)));
+			dx12_check(cmd.fence->SetName(L"CopyAllocator::fence"));
 
 			GPUBufferDesc uploadBufferDesc;
 			uploadBufferDesc.size = wi::math::GetNextPowerOfTwo(staging_size);
@@ -1724,13 +1726,22 @@ std::mutex queue_locker;
 		queue->ExecuteCommandLists(1, commandlists);
 		dx12_check(queue->Signal(cmd.fence.Get(), cmd.fenceValueSignaled));
 
+#if 1
+		// Wait on CPU:
+		dx12_check(cmd.fence->SetEventOnCompletion(cmd.fenceValueSignaled, nullptr));
+#else
+		// Wait on GPU:
 		dx12_check(device->queues[QUEUE_GRAPHICS].queue->Wait(cmd.fence.Get(), cmd.fenceValueSignaled));
 		dx12_check(device->queues[QUEUE_COMPUTE].queue->Wait(cmd.fence.Get(), cmd.fenceValueSignaled));
+#ifndef PLATFORM_XBOX
+		// Xbox only has 1 copy queue, so it doesn't need to wait for itself
 		dx12_check(device->queues[QUEUE_COPY].queue->Wait(cmd.fence.Get(), cmd.fenceValueSignaled));
+#endif // PLATFORM_XBOX
 		if (device->queues[QUEUE_VIDEO_DECODE].queue)
 		{
 			dx12_check(device->queues[QUEUE_VIDEO_DECODE].queue->Wait(cmd.fence.Get(), cmd.fenceValueSignaled));
 		}
+#endif
 	}
 
 	void GraphicsDevice_DX12::DescriptorBinder::init(GraphicsDevice_DX12* device)
@@ -2531,6 +2542,7 @@ std::mutex queue_locker;
 				wilog_messagebox("ID3D12Device::CreateFence[CBV_SRV_UAV] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 				wi::platform::Exit();
 			}
+			dx12_check(descriptorheap_res.fence->SetName(L"DescriptorHeapGPU[CBV_SRV_UAV]::fence"));
 			descriptorheap_res.fenceValue = descriptorheap_res.fence->GetCompletedValue();
 
 			allocationhandler->free_bindless_res.reserve(BINDLESS_RESOURCE_CAPACITY);
@@ -2562,6 +2574,7 @@ std::mutex queue_locker;
 				wilog_messagebox("ID3D12Device::CreateFence[SAMPLER] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 				wi::platform::Exit();
 			}
+			dx12_check(descriptorheap_sam.fence->SetName(L"DescriptorHeapGPU[SAMPLER]::fence"));
 			descriptorheap_sam.fenceValue = descriptorheap_sam.fence->GetCompletedValue();
 
 			allocationhandler->free_bindless_sam.reserve(BINDLESS_SAMPLER_CAPACITY);
@@ -2582,6 +2595,21 @@ std::mutex queue_locker;
 					wilog_messagebox("ID3D12Device::CreateFence[FRAME] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 					wi::platform::Exit();
 				}
+				switch (queue)
+				{
+				case QUEUE_GRAPHICS:
+					dx12_check(frame_fence[buffer][queue]->SetName(L"frame_fence[QUEUE_GRAPHICS]"));
+					break;
+				case QUEUE_COMPUTE:
+					dx12_check(frame_fence[buffer][queue]->SetName(L"frame_fence[QUEUE_COMPUTE]"));
+					break;
+				case QUEUE_COPY:
+					dx12_check(frame_fence[buffer][queue]->SetName(L"frame_fence[QUEUE_COPY]"));
+					break;
+				case QUEUE_VIDEO_DECODE:
+					dx12_check(frame_fence[buffer][queue]->SetName(L"frame_fence[QUEUE_VIDEO_DECODE]"));
+					break;
+				};
 			}
 		}
 
@@ -2793,6 +2821,7 @@ std::mutex queue_locker;
 		// Create fence to detect device removal
 		{
 			dx12_check(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(deviceRemovedFence.GetAddressOf())));
+			dx12_check(deviceRemovedFence->SetName(L"deviceRemovedFence"));
 
 			HANDLE deviceRemovedEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
 			dx12_check(deviceRemovedFence->SetEventOnCompletion(UINT64_MAX, deviceRemovedEvent));
@@ -5365,6 +5394,23 @@ std::mutex queue_locker;
 			}
 		}
 
+		// Sync up every queue to every other queue at the end of the frame:
+		//	Note: it disables overlapping queues into the next frame
+		for (int queue1 = 0; queue1 < QUEUE_COUNT; ++queue1)
+		{
+			if (queues[queue1].queue == nullptr)
+				continue;
+			for (int queue2 = 0; queue2 < QUEUE_COUNT; ++queue2)
+			{
+				if (queue1 == queue2)
+					continue;
+				if (queues[queue2].queue == nullptr)
+					continue;
+				ID3D12Fence* fence = frame_fence[GetBufferIndex()][queue2].Get();
+				queues[queue1].queue->Wait(fence, 1);
+			}
+		}
+
 		descriptorheap_res.SignalGPU(queues[QUEUE_GRAPHICS].queue.Get());
 		descriptorheap_sam.SignalGPU(queues[QUEUE_GRAPHICS].queue.Get());
 
@@ -5377,13 +5423,17 @@ std::mutex queue_locker;
 		{
 			if (queues[queue].queue == nullptr)
 				continue;
-			if (FRAMECOUNT >= BUFFERCOUNT && frame_fence[bufferindex][queue]->GetCompletedValue() < 1)
+			ID3D12Fence* fence = frame_fence[bufferindex][queue].Get();
+			if (FRAMECOUNT >= BUFFERCOUNT)
 			{
-				// NULL event handle will simply wait immediately:
-				//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12fence-seteventoncompletion#remarks
-				dx12_check(frame_fence[bufferindex][queue]->SetEventOnCompletion(1, NULL));
+				if (fence->GetCompletedValue() < 1)
+				{
+					// nullptr event handle will simply wait immediately:
+					//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12fence-seteventoncompletion#remarks
+					dx12_check(fence->SetEventOnCompletion(1, nullptr));
+				}
 			}
-			dx12_check(frame_fence[bufferindex][queue]->Signal(0));
+			dx12_check(fence->Signal(0));
 		}
 
 		allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
@@ -5653,7 +5703,7 @@ std::mutex queue_locker;
 			dx12_check(queue.queue->Signal(fence.Get(), 1));
 			if (fence->GetCompletedValue() < 1)
 			{
-				dx12_check(fence->SetEventOnCompletion(1, NULL));
+				dx12_check(fence->SetEventOnCompletion(1, nullptr));
 			}
 			fence->Signal(0);
 		}
@@ -7567,7 +7617,7 @@ std::mutex queue_locker;
 		dx12_check(queue.queue->Signal(fence.Get(), 1));
 		if (fence->GetCompletedValue() < 1)
 		{
-			dx12_check(fence->SetEventOnCompletion(1, NULL));
+			dx12_check(fence->SetEventOnCompletion(1, nullptr));
 		}
 		fence->Signal(0);
 
