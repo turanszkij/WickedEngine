@@ -68,6 +68,8 @@ namespace wi::backlog
 		{
 			static const std::string filename = wi::helper::GetCurrentPath() + "/log.txt";
 			std::string text = getText();
+			static std::mutex writelocker;
+			std::scoped_lock lck(writelocker); // to not write the logfile from multiple threads
 			wi::helper::FileWrite(filename, (const uint8_t*)text.c_str(), text.length());
 		}
 
