@@ -60,7 +60,7 @@ namespace wi::audio
 		~WrappedSound()
 		{
 			ma_sound_uninit(this);
-			if (buffer != nullptr) delete buffer;
+			delete buffer;
 		}
 	};
 
@@ -199,7 +199,9 @@ namespace wi::audio
 	}
 	bool IsEnded(SoundInstance* instance)
 	{
-		return ma_sound_get_at_end(get_ma_sound(instance));
+		// FIXME: Dirty hack for character_controller demo, this would be true for paused sounds as well,
+		// which is incorrect.
+		return !get_ma_sound(instance)->playing || ma_sound_at_end(get_ma_sound(instance));
 	}
 
 	SampleInfo GetSampleInfo(const Sound* sound)
