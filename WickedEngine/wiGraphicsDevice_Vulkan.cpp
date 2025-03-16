@@ -1354,6 +1354,7 @@ using namespace vulkan_internal;
 			return;
 		std::scoped_lock lock(*locker);
 
+		// Main submit with command lists and semaphores:
 		{
 			if (fence != VK_NULL_HANDLE)
 			{
@@ -1384,6 +1385,7 @@ using namespace vulkan_internal;
 			submit_cmds.clear();
 		}
 
+		// Swapchain presents:
 		if (!submit_swapchains.empty())
 		{
 			VkPresentInfoKHR presentInfo = {};
@@ -7285,6 +7287,7 @@ using namespace vulkan_internal;
 
 		// Sync up every queue to every other queue at the end of the frame:
 		//	Note: it disables overlapping queues into the next frame
+		//	Note: it's not submitted immediately here, but the waits are recorded before next frame submits
 		for (int queue1 = 0; queue1 < QUEUE_COUNT; ++queue1)
 		{
 			if (queues[queue1].queue == nullptr)
@@ -7298,7 +7301,6 @@ using namespace vulkan_internal;
 					continue;
 				queues[queue1].wait(semaphore);
 			}
-			queues[queue1].submit(this, VK_NULL_HANDLE);
 		}
 
 		// From here, we begin a new frame, this affects GetBufferIndex()!
@@ -7328,10 +7330,10 @@ using namespace vulkan_internal;
 				{
 					wilog_error(
 						"[SubmitCommandLists] vkWaitForFences resulted in VK_TIMEOUT, fence statuses:\nQUEUE_GRAPHICS = %s\nQUEUE_COMPUTE = %s\nQUEUE_COPY = %s\nQUEUE_VIDEO_DECODE = %s",
-						frame_fence[bufferindex][QUEUE_GRAPHICS] == VK_NULL_HANDLE ? "" : string_VkResult(vkGetFenceStatus(device, frame_fence[bufferindex][QUEUE_GRAPHICS])),
-						frame_fence[bufferindex][QUEUE_COMPUTE] == VK_NULL_HANDLE ? "" : string_VkResult(vkGetFenceStatus(device, frame_fence[bufferindex][QUEUE_COMPUTE])),
-						frame_fence[bufferindex][QUEUE_COPY] == VK_NULL_HANDLE ? "" : string_VkResult(vkGetFenceStatus(device, frame_fence[bufferindex][QUEUE_COPY])),
-						frame_fence[bufferindex][QUEUE_VIDEO_DECODE] == VK_NULL_HANDLE ? "" : string_VkResult(vkGetFenceStatus(device, frame_fence[bufferindex][QUEUE_VIDEO_DECODE]))
+						frame_fence[bufferindex][QUEUE_GRAPHICS] == VK_NULL_HANDLE ? "OK" : string_VkResult(vkGetFenceStatus(device, frame_fence[bufferindex][QUEUE_GRAPHICS])),
+						frame_fence[bufferindex][QUEUE_COMPUTE] == VK_NULL_HANDLE ? "OK" : string_VkResult(vkGetFenceStatus(device, frame_fence[bufferindex][QUEUE_COMPUTE])),
+						frame_fence[bufferindex][QUEUE_COPY] == VK_NULL_HANDLE ? "OK" : string_VkResult(vkGetFenceStatus(device, frame_fence[bufferindex][QUEUE_COPY])),
+						frame_fence[bufferindex][QUEUE_VIDEO_DECODE] == VK_NULL_HANDLE ? "OK" : string_VkResult(vkGetFenceStatus(device, frame_fence[bufferindex][QUEUE_VIDEO_DECODE]))
 					);
 					std::this_thread::yield();
 				}
