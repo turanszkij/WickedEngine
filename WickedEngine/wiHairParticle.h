@@ -60,8 +60,6 @@ namespace wi
 			wi::graphics::CommandList cmd
 		);
 
-		void InitializeGPUDataIfNeeded(wi::graphics::CommandList cmd);
-
 		void Draw(
 			const wi::scene::MaterialComponent& material,
 			wi::enums::RENDERPASS renderPass,

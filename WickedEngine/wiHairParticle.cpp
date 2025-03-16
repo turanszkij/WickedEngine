@@ -144,7 +144,7 @@ namespace wi
 				AlignTo(prim_view.size, alignment) +
 				AlignTo(vb_pos_raytracing.size, alignment)
 				;
-			device->CreateBuffer(&bd, nullptr, &generalBuffer);
+			device->CreateBufferZeroed(&bd, &generalBuffer);
 			device->SetName(&generalBuffer, "HairParticleSystem::generalBuffer");
 			gpu_initialized = false;
 
@@ -502,18 +502,6 @@ namespace wi
 		wi::renderer::FlushBarriers(cmd);
 
 		device->EventEnd(cmd);
-	}
-
-	void HairParticleSystem::InitializeGPUDataIfNeeded(wi::graphics::CommandList cmd)
-	{
-		if (strandCount == 0 || !generalBuffer.IsValid())
-			return;
-		if (gpu_initialized)
-			return;
-		GraphicsDevice* device = wi::graphics::GetDevice();
-		device->ClearUAV(&generalBuffer, 0, cmd);
-		device->Barrier(GPUBarrier::Buffer(&generalBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_DST), cmd);
-		gpu_initialized = true;
 	}
 
 	void HairParticleSystem::Draw(const MaterialComponent& material, wi::enums::RENDERPASS renderPass, CommandList cmd) const

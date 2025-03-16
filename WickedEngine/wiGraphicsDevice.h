@@ -250,6 +250,16 @@ namespace wi::graphics
 			return CreateBuffer2(desc, [&](void* dest) { std::memcpy(dest, initial_data, desc->size); }, buffer, alias, alias_offset);
 		}
 
+		bool CreateBufferCleared(const GPUBufferDesc* desc, uint8_t value, GPUBuffer* buffer) const
+		{
+			return CreateBuffer2(desc, [&](void* dest) { std::memset(dest, value, desc->size); }, buffer);
+		}
+
+		bool CreateBufferZeroed(const GPUBufferDesc* desc, GPUBuffer* buffer) const
+		{
+			return CreateBufferCleared(desc, 0, buffer);
+		}
+
 		void Barrier(const GPUBarrier& barrier, CommandList cmd)
 		{
 			Barrier(&barrier, 1, cmd);

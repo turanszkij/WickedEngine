@@ -129,10 +129,6 @@ namespace wi
 		int input_half_size = hmap_dim * hmap_dim;
 		int output_size = hmap_dim * hmap_dim;
 
-		// For filling the buffer with zeroes.
-		wi::vector<char> zero_data(3 * output_size * sizeof(float) * 2);
-		std::fill(zero_data.begin(), zero_data.end(), 0);
-
 		GPUBufferDesc buf_desc;
 		buf_desc.usage = Usage::DEFAULT;
 		buf_desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
@@ -150,7 +146,7 @@ namespace wi
 		// Put H(t), Dx(t) and Dy(t) into one buffer because CS4.0 allows only 1 UAV at a time
 		buf_desc.stride = sizeof(float2);
 		buf_desc.size = buf_desc.stride * 3 * input_half_size;
-		device->CreateBuffer(&buf_desc, zero_data.data(), &buffer_Float2_Ht);
+		device->CreateBufferZeroed(&buf_desc, &buffer_Float2_Ht);
 
 		// omega
 		buf_desc.stride = sizeof(float);
@@ -162,7 +158,7 @@ namespace wi
 		// Put Dz, Dx and Dy into one buffer because CS4.0 allows only 1 UAV at a time
 		buf_desc.stride = sizeof(float2);
 		buf_desc.size = buf_desc.stride * 3 * output_size;
-		device->CreateBuffer(&buf_desc, zero_data.data(), &buffer_Float_Dxyz);
+		device->CreateBufferZeroed(&buf_desc, &buffer_Float_Dxyz);
 
 		TextureDesc tex_desc;
 		tex_desc.width = hmap_dim;

@@ -473,27 +473,27 @@ namespace wi::scene
 				buf.size = buf.stride * SURFEL_CAPACITY;
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 				buf.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-				device->CreateBuffer(&buf, nullptr, &surfelgi.surfelBuffer);
+				device->CreateBufferZeroed(&buf, &surfelgi.surfelBuffer);
 				device->SetName(&surfelgi.surfelBuffer, "surfelgi.surfelBuffer");
 
 				buf.stride = sizeof(SurfelData);
 				buf.size = buf.stride * SURFEL_CAPACITY;
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-				device->CreateBuffer(&buf, nullptr, &surfelgi.dataBuffer);
+				device->CreateBufferZeroed(&buf, &surfelgi.dataBuffer);
 				device->SetName(&surfelgi.dataBuffer, "surfelgi.dataBuffer");
 
 				buf.stride = sizeof(SurfelVarianceDataPacked);
 				buf.size = buf.stride * SURFEL_CAPACITY * SURFEL_MOMENT_RESOLUTION * SURFEL_MOMENT_RESOLUTION;
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-				device->CreateBuffer(&buf, nullptr, &surfelgi.varianceBuffer);
+				device->CreateBufferZeroed(&buf, &surfelgi.varianceBuffer);
 				device->SetName(&surfelgi.varianceBuffer, "surfelgi.varianceBuffer");
 
 				buf.stride = sizeof(uint);
 				buf.size = buf.stride * SURFEL_CAPACITY;
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-				device->CreateBuffer(&buf, nullptr, &surfelgi.aliveBuffer[0]);
+				device->CreateBufferZeroed(&buf, &surfelgi.aliveBuffer[0]);
 				device->SetName(&surfelgi.aliveBuffer[0], "surfelgi.aliveBuffer[0]");
-				device->CreateBuffer(&buf, nullptr, &surfelgi.aliveBuffer[1]);
+				device->CreateBufferZeroed(&buf, &surfelgi.aliveBuffer[1]);
 				device->SetName(&surfelgi.aliveBuffer[1], "surfelgi.aliveBuffer[1]");
 
 				auto fill_dead_indices = [&](void* dest) {
@@ -517,26 +517,25 @@ namespace wi::scene
 				buf.stride = sizeof(uint);
 				buf.size = SURFEL_INDIRECT_SIZE;
 				buf.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::INDIRECT_ARGS;
-				uint indirect_data[] = { 0,0,0, 0,0,0, 0,0,0 };
-				device->CreateBuffer(&buf, &indirect_data, &surfelgi.indirectBuffer);
+				device->CreateBufferZeroed(&buf, &surfelgi.indirectBuffer);
 				device->SetName(&surfelgi.indirectBuffer, "surfelgi.indirectBuffer");
 
 				buf.stride = sizeof(SurfelGridCell);
 				buf.size = buf.stride * SURFEL_TABLE_SIZE;
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-				device->CreateBuffer(&buf, nullptr, &surfelgi.gridBuffer);
+				device->CreateBufferZeroed(&buf, &surfelgi.gridBuffer);
 				device->SetName(&surfelgi.gridBuffer, "surfelgi.gridBuffer");
 
 				buf.stride = sizeof(uint);
 				buf.size = buf.stride * SURFEL_CAPACITY * 27; // each surfel can be in 3x3x3=27 cells
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-				device->CreateBuffer(&buf, nullptr, &surfelgi.cellBuffer);
+				device->CreateBufferZeroed(&buf, &surfelgi.cellBuffer);
 				device->SetName(&surfelgi.cellBuffer, "surfelgi.cellBuffer");
 
 				buf.stride = sizeof(SurfelRayDataPacked);
 				buf.size = buf.stride * SURFEL_RAY_BUDGET;
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-				device->CreateBuffer(&buf, nullptr, &surfelgi.rayBuffer);
+				device->CreateBufferZeroed(&buf, &surfelgi.rayBuffer);
 				device->SetName(&surfelgi.rayBuffer, "surfelgi.rayBuffer");
 
 				TextureDesc tex;
@@ -568,46 +567,39 @@ namespace wi::scene
 
 				const uint32_t probe_count = ddgi.grid_dimensions.x * ddgi.grid_dimensions.y * ddgi.grid_dimensions.z;
 
-				wi::vector<uint8_t> zerodata;
-
 				GPUBufferDesc buf;
 				buf.stride = sizeof(DDGIRayDataPacked);
 				buf.size = buf.stride * probe_count * DDGI_MAX_RAYCOUNT;
 				buf.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-				zerodata.resize(buf.size);
-				device->CreateBuffer(&buf, zerodata.data(), &ddgi.ray_buffer);
+				device->CreateBufferZeroed(&buf, &ddgi.ray_buffer);
 				device->SetName(&ddgi.ray_buffer, "ddgi.ray_buffer");
 
 				buf.stride = sizeof(DDGIVarianceDataPacked);
 				buf.size = buf.stride * probe_count * DDGI_COLOR_RESOLUTION * DDGI_COLOR_RESOLUTION;
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-				zerodata.resize(buf.size);
-				device->CreateBuffer(&buf, zerodata.data(), &ddgi.variance_buffer);
+				device->CreateBufferZeroed(&buf, &ddgi.variance_buffer);
 				device->SetName(&ddgi.variance_buffer, "ddgi.variance_buffer");
 
 				buf.stride = sizeof(uint8_t);
 				buf.size = buf.stride * probe_count;
 				buf.misc_flags = ResourceMiscFlag::NONE;
 				buf.format = Format::R8_UINT;
-				zerodata.resize(buf.size);
-				device->CreateBuffer(&buf, zerodata.data(), &ddgi.raycount_buffer);
+				device->CreateBufferZeroed(&buf, &ddgi.raycount_buffer);
 				device->SetName(&ddgi.raycount_buffer, "ddgi.raycount_buffer");
 
 				buf.stride = sizeof(uint32_t);
 				buf.size = buf.stride * (probe_count * DDGI_MAX_RAYCOUNT + 4); // +4: counter/indirect dispatch args
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED | ResourceMiscFlag::INDIRECT_ARGS;
 				buf.format = Format::UNKNOWN;
-				zerodata.resize(buf.size);
-				device->CreateBuffer(&buf, zerodata.data(), &ddgi.rayallocation_buffer);
+				device->CreateBufferZeroed(&buf, &ddgi.rayallocation_buffer);
 				device->SetName(&ddgi.rayallocation_buffer, "ddgi.rayallocation_buffer");
 
 				buf.stride = sizeof(DDGIProbe);
 				buf.size = buf.stride * probe_count;
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 				buf.format = Format::UNKNOWN;
-				zerodata.resize(buf.size);
-				device->CreateBuffer(&buf, zerodata.data(), &ddgi.probe_buffer);
+				device->CreateBufferZeroed(&buf, &ddgi.probe_buffer);
 				device->SetName(&ddgi.probe_buffer, "ddgi.probe_buffer");
 
 				TextureDesc tex;
@@ -617,7 +609,7 @@ namespace wi::scene
 				tex.misc_flags = {};
 				tex.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 				tex.layout = ResourceState::SHADER_RESOURCE;
-				zerodata.resize(ComputeTextureMemorySizeInBytes(tex));
+				wi::vector<uint8_t> zerodata(ComputeTextureMemorySizeInBytes(tex));
 				SubresourceData initdata;
 				initdata.data_ptr = zerodata.data();
 				initdata.row_pitch = tex.width * GetFormatStride(tex.format);
@@ -726,7 +718,7 @@ namespace wi::scene
 					AlignTo(allocated_impostor_capacity * sizeof(MeshComponent::Vertex_NOR) * 4, alignment) +	// vertices
 					AlignTo(allocated_impostor_capacity * sizeof(uint2), alignment)		// impostordata
 				;
-				device->CreateBuffer(&desc, nullptr, &impostorBuffer);
+				device->CreateBufferZeroed(&desc, &impostorBuffer);
 				device->SetName(&impostorBuffer, "impostorBuffer");
 
 				uint64_t buffer_offset = 0ull;
