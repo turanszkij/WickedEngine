@@ -1,6 +1,6 @@
 /* FAudio - XAudio Reimplementation for FNA
  *
- * Copyright (c) 2011-2024 Ethan Lee, Luigi Auriemma, and the MonoGame Team
+ * Copyright (c) 2011-2021 Ethan Lee, Luigi Auriemma, and the MonoGame Team
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -32,15 +32,7 @@
  * https://hg.icculus.org/icculus/mojoAL/file/default/mojoal.c
  */
 
-#if defined(__aarch64__) || defined(_M_ARM64) || defined(__arm64ec__) || defined(_M_ARM64EC)
-	/* Some platforms fail to define this... */
-	#ifndef __ARM_NEON__
-	#define __ARM_NEON__ 1
-	#endif
-
-	/* AArch64 guarantees NEON. */
-	#define NEED_SCALAR_CONVERTER_FALLBACKS 0
-#elif defined(__x86_64__) || defined(_M_X64)
+#if defined(__x86_64__) || defined(_M_X64)
 	/* Some platforms fail to define this... */
 	#ifndef __SSE2__
 	#define __SSE2__ 1
@@ -48,7 +40,15 @@
 
 	/* x86_64 guarantees SSE2. */
 	#define NEED_SCALAR_CONVERTER_FALLBACKS 0
-#elif __MACOSX__ && !defined(__POWERPC__)
+#elif defined(__aarch64__) || defined(_M_ARM64)
+	/* Some platforms fail to define this... */
+	#ifndef __ARM_NEON__
+	#define __ARM_NEON__ 1
+	#endif
+
+	/* AArch64 guarantees NEON. */
+	#define NEED_SCALAR_CONVERTER_FALLBACKS 0
+#elif __MACOSX__
 	/* Some build systems may need to specify this. */
 	#if !defined(__SSE2__) && !defined(__ARM_NEON__)
 	#error macOS does not have SSE2/NEON? Bad compiler?
@@ -62,7 +62,7 @@
 #endif
 
 /* Our NEON paths require AArch64, don't check __ARM_NEON__ here */
-#if defined(__aarch64__) || defined(_M_ARM64) || defined(__arm64ec__) || defined(_M_ARM64EC)
+#if defined(__aarch64__) || defined(_M_ARM64)
 #include <arm_neon.h>
 #define HAVE_NEON_INTRINSICS 1
 #endif
@@ -285,10 +285,10 @@ void FAudio_INTERNAL_Convert_U8_To_F32_NEON(
             const uint16x8_t uint16hi = vmovl_u8(vget_high_u8(bytes));  /* convert top 8 bytes to 8 uint16 */
             const uint16x8_t uint16lo = vmovl_u8(vget_low_u8(bytes));   /* convert bottom 8 bytes to 8 uint16 */
             /* split uint16 to two uint32, then convert to float, then multiply to normalize, subtract to adjust for sign, store. */
-            vst1q_f32(dst, vmlaq_f32(negone, vcvtq_f32_u32(vmovl_u16(vget_low_u16(uint16lo))), divby128));
-            vst1q_f32(dst+4, vmlaq_f32(negone, vcvtq_f32_u32(vmovl_u16(vget_high_u16(uint16lo))), divby128));
-            vst1q_f32(dst+8, vmlaq_f32(negone, vcvtq_f32_u32(vmovl_u16(vget_low_u16(uint16hi))), divby128));
-            vst1q_f32(dst+12, vmlaq_f32(negone, vcvtq_f32_u32(vmovl_u16(vget_high_u16(uint16hi))), divby128));
+            vst1q_f32(dst, vmlaq_f32(negone, vcvtq_f32_u32(vmovl_u16(vget_low_u16(uint16hi))), divby128));
+            vst1q_f32(dst+4, vmlaq_f32(negone, vcvtq_f32_u32(vmovl_u16(vget_high_u16(uint16hi))), divby128));
+            vst1q_f32(dst+8, vmlaq_f32(negone, vcvtq_f32_u32(vmovl_u16(vget_low_u16(uint16lo))), divby128));
+            vst1q_f32(dst+12, vmlaq_f32(negone, vcvtq_f32_u32(vmovl_u16(vget_high_u16(uint16lo))), divby128));
             i -= 16; mmsrc -= 16; dst -= 16;
         }
 
@@ -903,7 +903,7 @@ void FAudio_INTERNAL_ResampleMono_NEON(
 	cur_frac = vdupq_n_s32(
 		(uint32_t) (cur_scalar & FIXED_FRACTION_MASK) - DOUBLE_TO_FIXED(0.5)
 	);
-	ALIGN(int32_t, 16) data[4] =
+	int32_t __attribute__((aligned(16))) data[4] =
 	{
 		0,
 		(uint32_t) (resampleStep & FIXED_FRACTION_MASK),
@@ -1077,7 +1077,7 @@ void FAudio_INTERNAL_ResampleStereo_NEON(
 	cur_frac = vdupq_n_s32(
 		(uint32_t) (cur_scalar & FIXED_FRACTION_MASK) - DOUBLE_TO_FIXED(0.5)
 	);
-	ALIGN(int32_t, 16) data[4] =
+	int32_t __attribute__((aligned(16))) data[4] =
 	{
 		0,
 		0,

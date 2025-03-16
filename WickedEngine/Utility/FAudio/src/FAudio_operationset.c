@@ -1,6 +1,6 @@
 /* FAudio - XAudio Reimplementation for FNA
  *
- * Copyright (c) 2011-2024 Ethan Lee, Luigi Auriemma, and the MonoGame Team
+ * Copyright (c) 2011-2021 Ethan Lee, Luigi Auriemma, and the MonoGame Team
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -70,12 +70,12 @@ struct FAudio_OPERATIONSET_Operation
 		} SetEffectParameters;
 		struct
 		{
-			FAudioFilterParametersEXT Parameters;
+			FAudioFilterParameters Parameters;
 		} SetFilterParameters;
 		struct
 		{
 			FAudioVoice *pDestinationVoice;
-			FAudioFilterParametersEXT Parameters;
+			FAudioFilterParameters Parameters;
 		} SetOutputFilterParameters;
 		struct
 		{
@@ -169,7 +169,7 @@ static inline void ExecuteOperation(FAudio_OPERATIONSET_Operation *op)
 	break;
 
 	case FAUDIOOP_SETFILTERPARAMETERS:
-		FAudioVoice_SetFilterParametersEXT(
+		FAudioVoice_SetFilterParameters(
 			op->Voice,
 			&op->Data.SetFilterParameters.Parameters,
 			FAUDIO_COMMIT_NOW
@@ -177,7 +177,7 @@ static inline void ExecuteOperation(FAudio_OPERATIONSET_Operation *op)
 	break;
 
 	case FAUDIOOP_SETOUTPUTFILTERPARAMETERS:
-		FAudioVoice_SetOutputFilterParametersEXT(
+		FAudioVoice_SetOutputFilterParameters(
 			op->Voice,
 			op->Data.SetOutputFilterParameters.pDestinationVoice,
 			&op->Data.SetOutputFilterParameters.Parameters,
@@ -472,7 +472,7 @@ void FAudio_OPERATIONSET_QueueSetEffectParameters(
 
 void FAudio_OPERATIONSET_QueueSetFilterParameters(
 	FAudioVoice *voice,
-	const FAudioFilterParametersEXT *pParameters,
+	const FAudioFilterParameters *pParameters,
 	uint32_t OperationSet
 ) {
 	FAudio_OPERATIONSET_Operation *op;
@@ -489,7 +489,7 @@ void FAudio_OPERATIONSET_QueueSetFilterParameters(
 	FAudio_memcpy(
 		&op->Data.SetFilterParameters.Parameters,
 		pParameters,
-		sizeof(FAudioFilterParametersEXT)
+		sizeof(FAudioFilterParameters)
 	);
 
 	FAudio_PlatformUnlockMutex(voice->audio->operationLock);
@@ -499,7 +499,7 @@ void FAudio_OPERATIONSET_QueueSetFilterParameters(
 void FAudio_OPERATIONSET_QueueSetOutputFilterParameters(
 	FAudioVoice *voice,
 	FAudioVoice *pDestinationVoice,
-	const FAudioFilterParametersEXT *pParameters,
+	const FAudioFilterParameters *pParameters,
 	uint32_t OperationSet
 ) {
 	FAudio_OPERATIONSET_Operation *op;
@@ -517,7 +517,7 @@ void FAudio_OPERATIONSET_QueueSetOutputFilterParameters(
 	FAudio_memcpy(
 		&op->Data.SetOutputFilterParameters.Parameters,
 		pParameters,
-		sizeof(FAudioFilterParametersEXT)
+		sizeof(FAudioFilterParameters)
 	);
 
 	FAudio_PlatformUnlockMutex(voice->audio->operationLock);

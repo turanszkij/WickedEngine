@@ -1,10 +1,3 @@
-# Based on upstream's CMakeLists.txt
-# Changes compared to upstream:
-# * cmake_minimum_required adjusted
-# * unused options removed
-# * windows related stuff removed
-# * install rule added
-
 # CMake Project for FAudio
 # Written by @NeroBurner
 cmake_minimum_required(VERSION 3.19)
@@ -12,7 +5,6 @@ project(FAudio C)
 
 # Options
 option(BUILD_SHARED_LIBS "Build shared library" OFF)
-option(BUILD_SDL3 "Build against SDL 3.0" OFF)
 
 # C99 Requirement
 set(CMAKE_C_STANDARD 99)
@@ -20,8 +12,8 @@ set(CMAKE_C_EXTENSIONS OFF)
 
 # Version
 SET(LIB_MAJOR_VERSION "0")
-SET(LIB_MINOR_VERSION "25")
-SET(LIB_REVISION "01")
+SET(LIB_MINOR_VERSION "21")
+SET(LIB_REVISION "09")
 SET(LIB_VERSION "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_REVISION}")
 
 # Build Type
@@ -58,7 +50,7 @@ add_library(FAudio STATIC
 	src/FAudio_internal.h
 	src/stb.h
 	src/stb_vorbis.h
-	src/qoa_decoder.h
+	src/matrix_defaults.inl
 	# Source Files
 	src/F3DAudio.c
 	src/FACT3D.c
@@ -77,10 +69,10 @@ add_library(FAudio STATIC
 	src/FAudio_internal_simd.c
 	src/FAudio_operationset.c
 	src/FAudio_platform_sdl2.c
-	src/FAudio_platform_sdl3.c
 	src/FAudio_platform_win32.c
 	# Optional source files
 	src/XNA_Song.c
+	src/FAudio_gstreamer.c
 )
 
 install(FILES ${PUBLIC_HEADERS}
@@ -100,41 +92,9 @@ set_target_properties(FAudio PROPERTIES
 	SOVERSION ${LIB_MAJOR_VERSION}
 )
 
-# SDL Dependency
+# SDL2 Dependency
 if (PLATFORM_WIN32)
-	message(STATUS "not using SDL")
-elseif (BUILD_SDL3)
-	   if (DEFINED SDL3_INCLUDE_DIRS AND DEFINED SDL3_LIBRARIES)
-			   message(STATUS "using pre-defined SDL3 variables SDL3_INCLUDE_DIRS and SDL3_LIBRARIES")
-		target_include_directories(FAudio PUBLIC "$<BUILD_INTERFACE:${SDL3_INCLUDE_DIRS}>")
-		target_link_libraries(FAudio PUBLIC ${SDL3_LIBRARIES})
-			   if(INSTALL_MINGW_DEPENDENCIES)
-					   install_shared_libs(${SDL3_LIBRARIES} DESTINATION bin NO_INSTALL_SYMLINKS)
-			   endif()
-	   else()
-			   # Only try to autodetect if both SDL3 variables aren't explicitly set
-			   find_package(SDL3 CONFIG)
-			   if (TARGET SDL3::SDL3)
-					   message(STATUS "using TARGET SDL3::SDL3")
-					   target_link_libraries(FAudio PUBLIC SDL3::SDL3)
-					   if(INSTALL_MINGW_DEPENDENCIES)
-							   install_shared_libs(TARGETS SDL3::SDL3 DESTINATION bin NO_INSTALL_SYMLINKS REQUIRED)
-					   endif()
-			   elseif (TARGET SDL3)
-					   message(STATUS "using TARGET SDL3")
-					   target_link_libraries(FAudio PUBLIC SDL3)
-					   if(INSTALL_MINGW_DEPENDENCIES)
-							   install_shared_libs(TARGETS SDL3 DESTINATION bin NO_INSTALL_SYMLINKS REQUIRED)
-					   endif()
-			   else()
-					   message(STATUS "no TARGET SDL3::SDL3, or SDL3, using variables")
-			target_include_directories(FAudio PUBLIC "$<BUILD_INTERFACE:${SDL3_INCLUDE_DIRS}>")
-			target_link_libraries(FAudio PUBLIC ${SDL3_LIBRARIES})
-					   if(INSTALL_MINGW_DEPENDENCIES)
-							   install_shared_libs(${SDL3_LIBRARIES} DESTINATION bin NO_INSTALL_SYMLINKS)
-					   endif()
-			   endif()
-	   endif()
+	message(STATUS "not using SDL2")
 elseif (DEFINED SDL2_INCLUDE_DIRS AND DEFINED SDL2_LIBRARIES)
 	message(STATUS "using pre-defined SDL2 variables SDL2_INCLUDE_DIRS and SDL2_LIBRARIES")
 	target_include_directories(FAudio PUBLIC "$<BUILD_INTERFACE:${SDL2_INCLUDE_DIRS}>")

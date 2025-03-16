@@ -1,6 +1,6 @@
 /* FAudio - XAudio Reimplementation for FNA
  *
- * Copyright (c) 2011-2024 Ethan Lee, Luigi Auriemma, and the MonoGame Team
+ * Copyright (c) 2011-2021 Ethan Lee, Luigi Auriemma, and the MonoGame Team
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -290,7 +290,6 @@ uint32_t FACTAudioEngine_Initialize(
 			NULL
 		) != 0) {
 			FAudio_Release(pEngine->audio);
-			FAudio_PlatformUnlockMutex(pEngine->apiLock);
 			return FAUDIO_E_INVALID_CALL;
 		}
 	}
@@ -352,16 +351,6 @@ uint32_t FACTAudioEngine_ShutDown(FACTAudioEngine *pEngine)
 	{
 		FAudio_StopEngine(pEngine->audio);
 	}
-
-	/* Purge All pending notifactions */
-	while (pEngine->wb_notifications_list)
-	{
-		FACTNotification *note = (FACTNotification*) pEngine->wb_notifications_list->entry;
-		pEngine->notificationCallback(note);
-		LinkedList_RemoveEntry(&pEngine->wb_notifications_list, note, pEngine->apiLock, pEngine->pFree);
-	}
-
-	pEngine->notifications = 0;
 
 	/* This method destroys all existing cues, sound banks, and wave banks.
 	 * It blocks until all cues are destroyed.
@@ -444,16 +433,8 @@ uint32_t FACTAudioEngine_DoWork(FACTAudioEngine *pEngine)
 	uint8_t i;
 	FACTCue *cue;
 	LinkedList *list;
-	FACTNotification *note;
 
 	FAudio_PlatformLockMutex(pEngine->apiLock);
-
-	while (pEngine->wb_notifications_list)
-	{
-		note = (FACTNotification*) pEngine->wb_notifications_list->entry;
-		pEngine->notificationCallback(note);
-		LinkedList_RemoveEntry(&pEngine->wb_notifications_list, note, pEngine->apiLock, pEngine->pFree);
-	}
 
 	list = pEngine->sbList;
 	while (list != NULL)
@@ -514,7 +495,6 @@ uint32_t FACTAudioEngine_CreateInMemoryWaveBank(
 	uint32_t dwAllocAttributes,
 	FACTWaveBank **ppWaveBank
 ) {
-	FACTNotification *note;
 	uint32_t retval;
 	FAudio_PlatformLockMutex(pEngine->apiLock);
 	retval = FACT_INTERNAL_ParseWaveBank(
@@ -527,14 +507,6 @@ uint32_t FACTAudioEngine_CreateInMemoryWaveBank(
 		0,
 		ppWaveBank
 	);
-	if (pEngine->notifications & NOTIFY_WAVEBANKPREPARED)
-	{
-		note = (FACTNotification*) pEngine->pMalloc(sizeof(FACTNotification));
-		note->type = FACTNOTIFICATIONTYPE_WAVEBANKPREPARED;
-		note->waveBank.pWaveBank = *ppWaveBank;
-		note->pvContext = pEngine->wb_context;
-		LinkedList_AddEntry(&pEngine->wb_notifications_list, note, pEngine->apiLock, pEngine->pMalloc);
-	}
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
 	return retval;
 }
@@ -544,7 +516,6 @@ uint32_t FACTAudioEngine_CreateStreamingWaveBank(
 	const FACTStreamingParameters *pParms,
 	FACTWaveBank **ppWaveBank
 ) {
-	FACTNotification *note;
 	uint32_t retval, packetSize;
 	FAudio_PlatformLockMutex(pEngine->apiLock);
 	if (	pEngine->pReadFile == FACT_INTERNAL_DefaultReadFile &&
@@ -567,14 +538,6 @@ uint32_t FACTAudioEngine_CreateStreamingWaveBank(
 		1,
 		ppWaveBank
 	);
-	if (pEngine->notifications & NOTIFY_WAVEBANKPREPARED)
-	{
-		note = (FACTNotification*) pEngine->pMalloc(sizeof(FACTNotification));
-		note->type = FACTNOTIFICATIONTYPE_WAVEBANKPREPARED;
-		note->waveBank.pWaveBank = *ppWaveBank;
-		note->pvContext = pEngine->wb_context;
-		LinkedList_AddEntry(&pEngine->wb_notifications_list, note, pEngine->apiLock, pEngine->pMalloc);
-	}
 	FAudio_PlatformUnlockMutex(pEngine->apiLock);
 	return retval;
 }
@@ -732,7 +695,6 @@ uint32_t FACTAudioEngine_RegisterNotification(
 	/* WaveBanks */
 	#define PERSIST_ACTION pEngine->wb_context = pNotificationDescription->pvContext;
 	else HANDLE_PERSIST(WAVEBANKPREPARED)
-	else HANDLE_PERSIST(WAVEBANKSTREAMING_INVALIDCONTENT)
 	#undef PERSIST_ACTION
 
 	/* Anything else? */
@@ -856,7 +818,6 @@ uint32_t FACTAudioEngine_UnRegisterNotification(
 	/* WaveBanks */
 	#define PERSIST_ACTION pEngine->wb_context = pNotificationDescription->pvContext;
 	else HANDLE_PERSIST(WAVEBANKPREPARED)
-	else HANDLE_PERSIST(WAVEBANKSTREAMING_INVALIDCONTENT)
 	#undef PERSIST_ACTION
 
 	/* Anything else? */
@@ -1239,7 +1200,7 @@ uint32_t FACTSoundBank_Prepare(
 				break;
 			}
 		}
-		if ((*ppCue)->variation && (*ppCue)->variation->flags == 3)
+		if ((*ppCue)->variation->flags == 3)
 		{
 			(*ppCue)->interactive = pSoundBank->parentEngine->variables[
 				(*ppCue)->variation->variable
@@ -1422,13 +1383,16 @@ uint32_t FACTSoundBank_Destroy(FACTSoundBank *pSoundBank)
 		FACTCue_Destroy(pSoundBank->cueList);
 	}
 
-	/* Remove this SoundBank from the Engine list */
-	LinkedList_RemoveEntry(
-		&pSoundBank->parentEngine->sbList,
-		pSoundBank,
-		pSoundBank->parentEngine->sbLock,
-		pSoundBank->parentEngine->pFree
-	);
+	if (pSoundBank->parentEngine != NULL)
+	{
+		/* Remove this SoundBank from the Engine list */
+		LinkedList_RemoveEntry(
+			&pSoundBank->parentEngine->sbList,
+			pSoundBank,
+			pSoundBank->parentEngine->sbLock,
+			pSoundBank->parentEngine->pFree
+		);
+	}
 
 	/* SoundBank Name */
 	pSoundBank->parentEngine->pFree(pSoundBank->name);
@@ -1595,13 +1559,16 @@ uint32_t FACTWaveBank_Destroy(FACTWaveBank *pWaveBank)
 		}
 	}
 
-	/* Remove this WaveBank from the Engine list */
-	LinkedList_RemoveEntry(
-		&pWaveBank->parentEngine->wbList,
-		pWaveBank,
-		pWaveBank->parentEngine->wbLock,
-		pWaveBank->parentEngine->pFree
-	);
+	if (pWaveBank->parentEngine != NULL)
+	{
+		/* Remove this WaveBank from the Engine list */
+		LinkedList_RemoveEntry(
+			&pWaveBank->parentEngine->wbList,
+			pWaveBank,
+			pWaveBank->parentEngine->wbLock,
+			pWaveBank->parentEngine->pFree
+		);
+	}
 
 	/* Free everything, finally. */
 	pWaveBank->parentEngine->pFree(pWaveBank->name);
@@ -2208,13 +2175,11 @@ uint32_t FACTWave_Stop(FACTWave *pWave, uint32_t dwFlags)
 	{
 		FACTNotification note;
 		note.type = FACTNOTIFICATIONTYPE_WAVESTOP;
-		note.wave.cueIndex = pWave->parentCue->index;
-		note.wave.pCue = pWave->parentCue;
-		note.wave.pSoundBank = pWave->parentCue->parentBank;
 		note.wave.pWave = pWave;
-		note.wave.pWaveBank = pWave->parentBank;
-		note.pvContext = pWave->parentBank->parentEngine->wave_context;
-
+		if (pWave->parentBank->parentEngine->notifications & NOTIFY_WAVESTOP)
+		{
+			note.pvContext = pWave->parentBank->parentEngine->wave_context;
+		}
 		pWave->parentBank->parentEngine->notificationCallback(&note);
 	}
 
@@ -2416,6 +2381,7 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 {
 	FACTCue *cue, *prev;
 	FAudioMutex mutex;
+	FACTNotification note;
 	if (pCue == NULL)
 	{
 		return 1;
@@ -2449,7 +2415,20 @@ uint32_t FACTCue_Destroy(FACTCue *pCue)
 	FAudio_assert(cue != NULL && "Could not find Cue reference!");
 
 	pCue->parentBank->parentEngine->pFree(pCue->variableValues);
-	FACT_INTERNAL_SendCueNotification(pCue, NOTIFY_CUEDESTROY, FACTNOTIFICATIONTYPE_CUEDESTROYED);
+	if (pCue->notifyOnDestroy || pCue->parentBank->parentEngine->notifications & NOTIFY_CUEDESTROY)
+	{
+		note.type = FACTNOTIFICATIONTYPE_CUEDESTROYED;
+		note.cue.pCue = pCue;
+		if (pCue->parentBank->parentEngine->notifications & NOTIFY_CUEDESTROY)
+		{
+			note.pvContext = pCue->parentBank->parentEngine->cue_context;
+		}
+		else
+		{
+			note.pvContext = pCue->usercontext;
+		}
+		pCue->parentBank->parentEngine->notificationCallback(&note);
+	}
 
 	mutex = pCue->parentBank->parentEngine->apiLock;
 	pCue->parentBank->parentEngine->pFree(pCue);
@@ -2700,8 +2679,6 @@ uint32_t FACTCue_Stop(FACTCue *pCue, uint32_t dwFlags)
 		}
 	}
 
-	FACT_INTERNAL_SendCueNotification(pCue, NOTIFY_CUESTOP, FACTNOTIFICATIONTYPE_CUESTOP);
-
 	FAudio_PlatformUnlockMutex(pCue->parentBank->parentEngine->apiLock);
 	return 0;
 }
@@ -2768,8 +2745,6 @@ uint32_t FACTCue_SetMatrixCoefficients(
 			}
 		}
 	}
-
-	FACT_INTERNAL_SendCueNotification(pCue, NOTIFY_CUESTOP, FACTNOTIFICATIONTYPE_CUESTOP);
 
 	FAudio_PlatformUnlockMutex(pCue->parentBank->parentEngine->apiLock);
 	return 0;

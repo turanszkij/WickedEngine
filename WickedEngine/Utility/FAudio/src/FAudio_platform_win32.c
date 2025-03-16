@@ -41,17 +41,8 @@
 #include <initguid.h>
 #include <audioclient.h>
 #include <mmdeviceapi.h>
-#include <devpkey.h>
 
 DEFINE_GUID(CLSID_CWMADecMediaObject, 0x2eeb4adf, 0x4578, 0x4d10, 0xbc, 0xa7, 0xbb, 0x95, 0x5f, 0x56, 0x32, 0x0a);
-
-#ifdef _MSC_VER
-DEFINE_GUID(IID_IAudioClient,         0x1CB9AD4C, 0xDBFA, 0x4c32, 0xB1, 0x78, 0xC2, 0xF5, 0x68, 0xA7, 0x03, 0xB2);
-DEFINE_GUID(IID_IAudioRenderClient,   0xF294ACFC, 0x3146, 0x4483, 0xA7, 0xBF, 0xAD, 0xDC, 0xA7, 0xC2, 0x60, 0xE2);
-DEFINE_GUID(IID_IMMDeviceEnumerator,  0xA95664D2, 0x9614, 0x4F35, 0xA7, 0x46, 0xDE, 0x8D, 0xB6, 0x36, 0x17, 0xE6);
-DEFINE_GUID(CLSID_MMDeviceEnumerator, 0xBCDE0395, 0xE52F, 0x467C, 0x8E, 0x3D, 0xC4, 0x57, 0x92, 0x91, 0x69, 0x2E);
-#endif
-
 DEFINE_MEDIATYPE_GUID(MFAudioFormat_XMAudio2, FAUDIO_FORMAT_XMAUDIO2);
 
 static CRITICAL_SECTION faudio_cs = { NULL, -1, 0, 0, 0, 0 };
@@ -77,44 +68,6 @@ struct FAudioAudioClientThreadArgs
 void FAudio_Log(char const *msg)
 {
 	OutputDebugStringA(msg);
-}
-
-static HMODULE kernelbase = NULL;
-static HRESULT (WINAPI *my_SetThreadDescription)(HANDLE, PCWSTR) = NULL;
-
-static void FAudio_resolve_SetThreadDescription(void)
-{
-	kernelbase = LoadLibraryA("kernelbase.dll");
-	if (!kernelbase)
-		return;
-
-	my_SetThreadDescription = (HRESULT (WINAPI *)(HANDLE, PCWSTR)) GetProcAddress(kernelbase, "SetThreadDescription");
-	if (!my_SetThreadDescription)
-	{
-		FreeLibrary(kernelbase);
-		kernelbase = NULL;
-	}
-}
-
-static void FAudio_set_thread_name(char const *name)
-{
-	int ret;
-	WCHAR *nameW;
-
-	if (!my_SetThreadDescription)
-		return;
-
-	ret = MultiByteToWideChar(CP_UTF8, 0, name, -1, NULL, 0);
-
-	nameW = FAudio_malloc(ret * sizeof(WCHAR));
-	if (!nameW)
-		return;
-
-	ret = MultiByteToWideChar(CP_UTF8, 0, name, -1, nameW, ret);
-	if (ret)
-		my_SetThreadDescription(GetCurrentThread(), nameW);
-
-	FAudio_free(nameW);
 }
 
 static HRESULT FAudio_FillAudioClientBuffer(
@@ -168,8 +121,6 @@ static DWORD WINAPI FAudio_AudioClientThread(void *user)
 	HRESULT hr = S_OK;
 	UINT frames, padding = 0;
 
-	FAudio_set_thread_name(__func__);
-
 	hr = IAudioClient_GetService(
 		args->client,
 		&IID_IAudioRenderClient,
@@ -189,11 +140,6 @@ static DWORD WINAPI FAudio_AudioClientThread(void *user)
 	while (WaitForMultipleObjects(2, args->events, FALSE, INFINITE) == WAIT_OBJECT_0)
 	{
 		hr = IAudioClient_GetCurrentPadding(args->client, &padding);
-		if (hr == AUDCLNT_E_DEVICE_INVALIDATED)
-		{
-			/* Device was removed, just exit */
-			break;
-		}
 		FAudio_assert(!FAILED(hr) && "Failed to get IAudioClient current padding!");
 
 		hr = FAudio_FillAudioClientBuffer(args, render_client, frames, padding);
@@ -206,141 +152,6 @@ static DWORD WINAPI FAudio_AudioClientThread(void *user)
 	IAudioRenderClient_Release(render_client);
 	FAudio_free(args);
 	return 0;
-}
-
-/* Sets `defaultDeviceIndex` to the default audio device index in
- * `deviceCollection`.
- * On failure, `defaultDeviceIndex` is not modified and the latest error is
- * returned. */
-static HRESULT FAudio_DefaultDeviceIndex(
-	IMMDeviceCollection *deviceCollection,
-	uint32_t* defaultDeviceIndex
-) {
-	IMMDevice *device;
-	HRESULT hr;
-	uint32_t i, count;
-	WCHAR *default_guid;
-	WCHAR *device_guid; 
-
-	/* Open the default device and get its GUID. */
-	hr = IMMDeviceEnumerator_GetDefaultAudioEndpoint(
-		device_enumerator,
-		eRender,
-		eConsole,
-		&device
-	);
-	if (FAILED(hr))
-	{
-		return hr;
-	}
-	hr = IMMDevice_GetId(device, &default_guid);
-	if (FAILED(hr))
-	{
-		IMMDevice_Release(device);
-		return hr;
-	}
-
-	/* Free the default device. */
-	IMMDevice_Release(device);
-
-	hr = IMMDeviceCollection_GetCount(deviceCollection, &count);
-	if (FAILED(hr))
-	{
-		CoTaskMemFree(default_guid);
-		return hr;
-	}
-
-	for (i = 0; i < count; i += 1)
-	{
-		/* Open the device and get its GUID. */
-		hr = IMMDeviceCollection_Item(deviceCollection, i, &device);
-		if (FAILED(hr)) {
-			CoTaskMemFree(default_guid);
-			return hr;
-		}
-		hr = IMMDevice_GetId(device, &device_guid);
-		if (FAILED(hr))
-		{
-			CoTaskMemFree(default_guid);
-			IMMDevice_Release(device);
-			return hr;
-		}
-
-		if (lstrcmpW(default_guid, device_guid) == 0)
-		{
-			/* Device found. */
-			CoTaskMemFree(default_guid);
-			CoTaskMemFree(device_guid);
-			IMMDevice_Release(device);
-			*defaultDeviceIndex = i;
-			return S_OK;
-		}
-
-		CoTaskMemFree(device_guid);
-		IMMDevice_Release(device);
-	}
-
-	/* This should probably never happen. Just in case, set
-	 * `defaultDeviceIndex` to 0 and return S_OK. */
-	CoTaskMemFree(default_guid);
-	*defaultDeviceIndex = 0;
-	return S_OK;
-}
-
-/* Open `device`, corresponding to `deviceIndex`. `deviceIndex` 0 always
- * corresponds to the default device. XAudio reorders the devices so that the
- * default device is always at index 0, so we mimick this behavior here by
- * swapping the devices at indexes 0 and `defaultDeviceIndex`.
- */
-static HRESULT FAudio_OpenDevice(uint32_t deviceIndex, IMMDevice **device)
-{
-	IMMDeviceCollection *deviceCollection;
-	HRESULT hr;
-	uint32_t defaultDeviceIndex;
-	uint32_t actualIndex;
-
-	*device = NULL;
-
-	hr = IMMDeviceEnumerator_EnumAudioEndpoints(
-		device_enumerator,
-		eRender,
-		DEVICE_STATE_ACTIVE,
-		&deviceCollection
-	);
-	if (FAILED(hr))
-	{
-		return hr;
-	}
-
-	/* Get the default device index. */
-	hr = FAudio_DefaultDeviceIndex(deviceCollection, &defaultDeviceIndex);
-	if (FAILED(hr))
-	{
-		IMMDeviceCollection_Release(deviceCollection);
-		return hr;
-	}
-
-	if (deviceIndex == 0) {
-		/* Default device. */
-		actualIndex = defaultDeviceIndex;
-	} else if (deviceIndex == defaultDeviceIndex) {
-		/* Open the device at index 0 instead of the "correct" one. */
-		actualIndex = 0;
-	} else {
-		/* Otherwise, just open the device. */
-		actualIndex = deviceIndex;
-	
-	}
-	hr = IMMDeviceCollection_Item(deviceCollection, actualIndex, device);
-	if (FAILED(hr))
-	{
-		IMMDeviceCollection_Release(deviceCollection);
-		return hr;
-	}
-
-	IMMDeviceCollection_Release(deviceCollection);
-
-	return hr;
 }
 
 void FAudio_PlatformInit(
@@ -359,19 +170,13 @@ void FAudio_PlatformInit(
 	HRESULT hr;
 	HANDLE audioEvent = NULL;
 	BOOL has_sse2 = IsProcessorFeaturePresent(PF_XMMI64_INSTRUCTIONS_AVAILABLE);
-#if defined(__aarch64__) || defined(_M_ARM64) || defined(__arm64ec__) || defined(_M_ARM64EC)
-	BOOL has_neon = TRUE;
-#elif defined(__arm__) || defined(_M_ARM)
-	BOOL has_neon = IsProcessorFeaturePresent(PF_ARM_NEON_INSTRUCTIONS_AVAILABLE);
-#else
-	BOOL has_neon = FALSE;
-#endif
-	FAudio_INTERNAL_InitSIMDFunctions(has_sse2, has_neon);
-	FAudio_resolve_SetThreadDescription();
+
+	FAudio_INTERNAL_InitSIMDFunctions(has_sse2, FALSE);
 
 	FAudio_PlatformAddRef();
 
 	*platformDevice = NULL;
+	if (deviceIndex > 0) return;
 
 	args = FAudio_malloc(sizeof(*args));
 	FAudio_assert(!!args && "Failed to allocate FAudio thread args!");
@@ -405,8 +210,13 @@ void FAudio_PlatformInit(
 	data->stopEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
 	FAudio_assert(!!data->stopEvent && "Failed to create FAudio thread stop event!");
 
-	hr = FAudio_OpenDevice(deviceIndex, &device);
-	FAudio_assert(!FAILED(hr) && "Failed to get audio device!");
+	hr = IMMDeviceEnumerator_GetDefaultAudioEndpoint(
+		device_enumerator,
+		eRender,
+		eConsole,
+		&device
+	);
+	FAudio_assert(!FAILED(hr) && "Failed to get default audio endpoint!");
 
 	hr = IMMDevice_Activate(
 		device,
@@ -418,8 +228,8 @@ void FAudio_PlatformInit(
 	FAudio_assert(!FAILED(hr) && "Failed to create audio client!");
 	IMMDevice_Release(device);
 
-	if (flags & FAUDIO_1024_QUANTUM) duration = 213333;
-	else duration = 100000;
+	if (flags & FAUDIO_1024_QUANTUM) duration = 21330;
+	else duration = 30000;
 
 	hr = IAudioClient_IsFormatSupported(
 		data->client,
@@ -440,7 +250,7 @@ void FAudio_PlatformInit(
 		data->client,
 		AUDCLNT_SHAREMODE_SHARED,
 		AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-		duration * 3,
+		duration,
 		0,
 		&args->format.Format,
 		&GUID_NULL
@@ -477,8 +287,7 @@ void FAudio_PlatformInit(
 	args->events[0] = audioEvent;
 	args->events[1] = data->stopEvent;
 	args->audio = audio;
-	if (flags & FAUDIO_1024_QUANTUM) args->updateSize = args->format.Format.nSamplesPerSec / (1000.0 / (64.0 / 3.0));
-	else args->updateSize = args->format.Format.nSamplesPerSec / 100;
+	args->updateSize = args->format.Format.nSamplesPerSec / 100;
 
 	data->audioThread = CreateThread(NULL, 0, &FAudio_AudioClientThread, args, 0, NULL);
 	FAudio_assert(!!data->audioThread && "Failed to create audio client thread!");
@@ -495,12 +304,6 @@ void FAudio_PlatformQuit(void* platformDevice)
 	SetEvent(data->stopEvent);
 	WaitForSingleObject(data->audioThread, INFINITE);
 	if (data->client) IAudioClient_Release(data->client);
-	if (kernelbase)
-	{
-		my_SetThreadDescription = NULL;
-		FreeLibrary(kernelbase);
-		kernelbase = NULL;
-	}
 	FAudio_PlatformRelease();
 }
 
@@ -537,89 +340,57 @@ void FAudio_PlatformRelease()
 
 uint32_t FAudio_PlatformGetDeviceCount(void)
 {
-	IMMDeviceCollection *device_collection;
+	IMMDevice *device;
 	uint32_t count;
 	HRESULT hr;
 
 	FAudio_PlatformAddRef();
-
-	hr = IMMDeviceEnumerator_EnumAudioEndpoints(
+	hr = IMMDeviceEnumerator_GetDefaultAudioEndpoint(
 		device_enumerator,
 		eRender,
-		DEVICE_STATE_ACTIVE,
-		&device_collection
+		eConsole,
+		&device
 	);
-	if (FAILED(hr)) {
-		FAudio_PlatformRelease();
-		return 0;
-	}
+	FAudio_assert(!FAILED(hr) && "Failed to get default audio endpoint!");
 
-	hr = IMMDeviceCollection_GetCount(device_collection, &count);
-	if (FAILED(hr)) {
-		IMMDeviceCollection_Release(device_collection);
-		FAudio_PlatformRelease();
-		return 0;
-	}
-
-	IMMDeviceCollection_Release(device_collection);
-
+	IMMDevice_Release(device);
 	FAudio_PlatformRelease();
 
-	return count;
+	return 1;
 }
 
 uint32_t FAudio_PlatformGetDeviceDetails(
 	uint32_t index,
 	FAudioDeviceDetails *details
 ) {
-	WAVEFORMATEX *format, *obtained;
 	WAVEFORMATEXTENSIBLE *ext;
+	WAVEFORMATEX *format;
 	IAudioClient *client;
 	IMMDevice *device;
-	IPropertyStore* properties;
-	PROPVARIANT deviceName;
-	uint32_t count = 0;
 	uint32_t ret = 0;
 	HRESULT hr;
 	WCHAR *str;
-	GUID sub;
 
 	FAudio_memset(details, 0, sizeof(FAudioDeviceDetails));
+	if (index > 0) return FAUDIO_E_INVALID_CALL;
 
 	FAudio_PlatformAddRef();
 
-	count = FAudio_PlatformGetDeviceCount();
-	if (index >= count)
-	{
-		FAudio_PlatformRelease();
-		return FAUDIO_E_INVALID_CALL;
-	}
+	hr = IMMDeviceEnumerator_GetDefaultAudioEndpoint(
+		device_enumerator,
+		eRender,
+		eConsole,
+		&device
+	);
+	FAudio_assert(!FAILED(hr) && "Failed to get default audio endpoint!");
 
-	hr = FAudio_OpenDevice(index, &device);
-	FAudio_assert(!FAILED(hr) && "Failed to get audio endpoint!");
+	details->Role = FAudioGlobalDefaultDevice;
 
-	if (index == 0)
-	{
-		details->Role = FAudioGlobalDefaultDevice;
-	}
-	else
-	{
-		details->Role = FAudioNotDefaultDevice;
-	}
-
-	/* Set the Device Display Name */
-	hr = IMMDevice_OpenPropertyStore(device, STGM_READ, &properties);
-	FAudio_assert(!FAILED(hr) && "Failed to open device property store!");
-	hr = IPropertyStore_GetValue(properties, (PROPERTYKEY*)&DEVPKEY_Device_FriendlyName, &deviceName);
-	FAudio_assert(!FAILED(hr) && "Failed to get audio device friendly name!");
-	lstrcpynW((LPWSTR)details->DisplayName, deviceName.pwszVal, ARRAYSIZE(details->DisplayName) - 1);
-	PropVariantClear(&deviceName);
-	IPropertyStore_Release(properties);
-
-	/* Set the Device ID */
 	hr = IMMDevice_GetId(device, &str);
 	FAudio_assert(!FAILED(hr) && "Failed to get audio endpoint id!");
-	lstrcpynW((LPWSTR)details->DeviceID, str, ARRAYSIZE(details->DeviceID) - 1);
+
+	lstrcpynW(details->DeviceID, str, ARRAYSIZE(details->DeviceID) - 1);
+	lstrcpynW(details->DisplayName, str, ARRAYSIZE(details->DisplayName) - 1);
 	CoTaskMemFree(str);
 
 	hr = IMMDevice_Activate(
@@ -633,28 +404,6 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 
 	hr = IAudioClient_GetMixFormat(client, &format);
 	FAudio_assert(!FAILED(hr) && "Failed to get audio client mix format!");
-
-	if (format->wFormatTag == WAVE_FORMAT_EXTENSIBLE)
-	{
-		ext = (WAVEFORMATEXTENSIBLE *)format;
-		sub = ext->SubFormat;
-		FAudio_memcpy(
-			&ext->SubFormat,
-			&DATAFORMAT_SUBTYPE_PCM,
-			sizeof(GUID)
-		);
-
-		hr = IAudioClient_IsFormatSupported(client, AUDCLNT_SHAREMODE_SHARED, format, &obtained);
-		if (FAILED(hr))
-		{
-			ext->SubFormat = sub;
-		}
-		else if (obtained)
-		{
-			CoTaskMemFree(format);
-			format = obtained;
-		}
-	}
 
 	details->OutputFormat.Format.wFormatTag = format->wFormatTag;
 	details->OutputFormat.Format.nChannels = format->nChannels;
@@ -675,12 +424,6 @@ uint32_t FAudio_PlatformGetDeviceDetails(
 			sizeof(GUID)
 		);
 	}
-	else
-	{
-		details->OutputFormat.dwChannelMask = GetMask(format->nChannels);
-	}
-
-	CoTaskMemFree(format);
 
 	IAudioClient_Release(client);
 
@@ -731,7 +474,6 @@ static DWORD WINAPI FaudioThreadWrapper(void *user)
 	struct FAudioThreadArgs *args = user;
 	DWORD ret;
 
-	FAudio_set_thread_name(args->name);
 	ret = args->func(args->data);
 
 	FAudio_free(args);
@@ -756,7 +498,7 @@ FAudioThread FAudio_PlatformCreateThread(
 void FAudio_PlatformWaitThread(FAudioThread thread, int32_t *retval)
 {
 	WaitForSingleObject(thread, INFINITE);
-	if (retval != NULL) GetExitCodeThread(thread, (DWORD *)retval);
+	GetExitCodeThread(thread, (DWORD *)retval);
 }
 
 void FAudio_PlatformThreadPriority(FAudioThreadPriority priority)
@@ -880,7 +622,6 @@ static int FAUDIOCALL FAudio_mem_close(void *data)
 {
 	if (!data) return 0;
 	FAudio_free(data);
-	return 0;
 }
 
 FAudioIOStream* FAudio_memopen(void *mem, int len)
@@ -1221,7 +962,7 @@ FAUDIOAPI uint32_t XNA_GetSongEnded()
 		return 1;
 	}
 	FAudioSourceVoice_GetState(songVoice, &state, 0);
-	return state.BuffersQueued == 0 && state.SamplesPlayed == 0;
+	return state.BuffersQueued == 0;
 }
 
 FAUDIOAPI void XNA_EnableVisualization(uint32_t enable)
@@ -1257,7 +998,7 @@ struct FAudioWMADEC
 	size_t input_size;
 };
 
-static HRESULT FAudio_WMAMF_ProcessInput(
+static BOOL FAudio_WMAMF_ProcessInput(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer
 ) {
@@ -1269,7 +1010,7 @@ static HRESULT FAudio_WMAMF_ProcessInput(
 	HRESULT hr;
 
 	copy_size = min(buffer->AudioBytes - impl->input_pos, impl->input_size);
-	if (!copy_size) return S_FALSE;
+	if (!copy_size) return FALSE;
 	LOG_INFO(voice->audio, "pushing %x bytes at %x", copy_size, impl->input_pos);
 
 	hr = MFCreateSample(&sample);
@@ -1295,18 +1036,15 @@ static HRESULT FAudio_WMAMF_ProcessInput(
 
 	hr = IMFTransform_ProcessInput(impl->decoder, 0, sample, 0);
 	IMFSample_Release(sample);
-	if (hr == MF_E_NOTACCEPTING) return S_OK;
-	if (FAILED(hr))
-	{
-		LOG_ERROR(voice->audio, "IMFTransform_ProcessInput returned %#x", hr);
-		return hr;
-	}
+	if (hr == MF_E_NOTACCEPTING) return TRUE;
+	if (FAILED(hr)) LOG_ERROR(voice->audio, "IMFTransform_ProcessInput returned %#x", hr);
+	FAudio_assert(!FAILED(hr) || !"Failed to process input sample!");
 
 	impl->input_pos += copy_size;
-	return S_OK;
+	return TRUE;
 };
 
-static HRESULT FAudio_WMAMF_ProcessOutput(
+static BOOL FAudio_WMAMF_ProcessOutput(
 	FAudioVoice *voice,
 	FAudioBuffer *buffer
 ) {
@@ -1322,12 +1060,9 @@ static HRESULT FAudio_WMAMF_ProcessOutput(
 		FAudio_memset(&output, 0, sizeof(output));
 		output.pSample = impl->output_sample;
 		hr = IMFTransform_ProcessOutput(impl->decoder, 0, 1, &output, &status);
-		if (hr == MF_E_TRANSFORM_NEED_MORE_INPUT) return S_FALSE;
-		if (FAILED(hr))
-		{
-			LOG_ERROR(voice->audio, "IMFTransform_ProcessInput returned %#x", hr);
-			return hr;
-		}
+		if (hr == MF_E_TRANSFORM_NEED_MORE_INPUT) return FALSE;
+		if (FAILED(hr)) LOG_ERROR(voice->audio, "IMFTransform_ProcessInput returned %#x", hr);
+		FAudio_assert(!FAILED(hr) && "Failed to process output sample!");
 
 		if (output.dwStatus & MFT_OUTPUT_DATA_BUFFER_NO_SAMPLE) continue;
 
@@ -1365,7 +1100,7 @@ static HRESULT FAudio_WMAMF_ProcessOutput(
 		if (!impl->output_sample) IMFSample_Release(output.pSample);
 	}
 
-	return S_OK;
+	return TRUE;
 };
 
 static void FAudio_INTERNAL_DecodeWMAMF(
@@ -1375,8 +1110,8 @@ static void FAudio_INTERNAL_DecodeWMAMF(
 	uint32_t samples
 ) {
 	const FAudioWaveFormatExtensible *wfx = (FAudioWaveFormatExtensible *)voice->src.format;
-	size_t samples_pos, samples_size, copy_size = 0;
 	struct FAudioWMADEC *impl = voice->src.wmadec;
+	size_t samples_pos, samples_size, copy_size;
 	HRESULT hr;
 
 	LOG_FUNC_ENTER(voice->audio)
@@ -1428,14 +1163,8 @@ static void FAudio_INTERNAL_DecodeWMAMF(
 
 	while (impl->output_pos < samples_pos + samples_size)
 	{
-		hr = FAudio_WMAMF_ProcessOutput(voice, buffer);
-		if (FAILED(hr)) goto error;
-		if (hr == S_OK) continue;
-
-		hr  = FAudio_WMAMF_ProcessInput(voice, buffer);
-		if (FAILED(hr)) goto error;
-		if (hr == S_OK) continue;
-
+		if (FAudio_WMAMF_ProcessOutput(voice, buffer)) continue;
+		if (FAudio_WMAMF_ProcessInput(voice, buffer)) continue;
 		if (!impl->input_size) break;
 
 		LOG_INFO(voice->audio, "sending EOS to %p", impl->decoder);
@@ -1448,12 +1177,8 @@ static void FAudio_INTERNAL_DecodeWMAMF(
 		impl->input_size = 0;
 	}
 
-	if (impl->output_pos > samples_pos)
-	{
-		copy_size = FAudio_min(impl->output_pos - samples_pos, samples_size);
-		FAudio_memcpy(decodeCache, impl->output_buf + samples_pos, copy_size);
-	}
-	FAudio_zero(decodeCache + copy_size, samples_size - copy_size);
+	copy_size = FAudio_clamp(impl->output_pos - samples_pos, 0, samples_size);
+	FAudio_memcpy(decodeCache, impl->output_buf + samples_pos, copy_size);
 	LOG_INFO(
 		voice->audio,
 		"decoded %x / %x bytes, copied %x / %x bytes",
@@ -1464,17 +1189,11 @@ static void FAudio_INTERNAL_DecodeWMAMF(
 	);
 
 	LOG_FUNC_EXIT(voice->audio)
-	return;
-
-error:
-	FAudio_zero(decodeCache, samples * voice->src.format->nChannels * sizeof(float));
-	LOG_FUNC_EXIT(voice->audio)
 }
 
 uint32_t FAudio_WMADEC_init(FAudioSourceVoice *voice, uint32_t type)
 {
 	static const uint8_t fake_codec_data[16] = {0, 0, 0, 0, 31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-	uint8_t fake_codec_data_wma3[18] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 224, 0, 0, 0};
 	const FAudioWaveFormatExtensible *wfx = (FAudioWaveFormatExtensible *)voice->src.format;
 	struct FAudioWMADEC *impl;
 	MFT_OUTPUT_STREAM_INFO info = {0};
@@ -1487,7 +1206,7 @@ uint32_t FAudio_WMADEC_init(FAudioSourceVoice *voice, uint32_t type)
 
 	LOG_FUNC_ENTER(voice->audio)
 
-	if (!(impl = voice->audio->pMalloc(sizeof(*impl)))) return -1;
+	if (!(impl = voice->audio->pMalloc(sizeof(*impl)))) return 0;
 	FAudio_memset(impl, 0, sizeof(*impl));
 
 	hr = CoCreateInstance(
@@ -1497,11 +1216,7 @@ uint32_t FAudio_WMADEC_init(FAudioSourceVoice *voice, uint32_t type)
 		&IID_IMFTransform,
 		(void **)&decoder
 	);
-	if (FAILED(hr))
-	{
-		voice->audio->pFree(impl->output_buf);
-		return -2;
-	}
+	FAudio_assert(!FAILED(hr) && "Failed to create decoder!");
 
 	hr = MFCreateMediaType(&media_type);
 	FAudio_assert(!FAILED(hr) && "Failed create media type!");
@@ -1536,17 +1251,11 @@ uint32_t FAudio_WMADEC_init(FAudioSourceVoice *voice, uint32_t type)
 		FAudio_assert(!FAILED(hr) && "Failed set input block align!");
 		break;
 	case FAUDIO_FORMAT_WMAUDIO3:
-                *(uint16_t *)fake_codec_data_wma3  = voice->src.format->wBitsPerSample;
-                for (i = 0; i < voice->src.format->nChannels; i++)
-                {
-                    fake_codec_data_wma3[2] <<= 1;
-                    fake_codec_data_wma3[2] |= 1;
-                }
 		hr = IMFMediaType_SetBlob(
 			media_type,
 			&MF_MT_USER_DATA,
-			(void *)fake_codec_data_wma3,
-			sizeof(fake_codec_data_wma3)
+			(void *)&wfx->Samples,
+			wfx->Format.cbSize
 		);
 		FAudio_assert(!FAILED(hr) && "Failed set codec private data!");
 		hr = IMFMediaType_SetGUID(

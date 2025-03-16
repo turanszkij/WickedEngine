@@ -1,6 +1,6 @@
 /* FAudio - XAudio Reimplementation for FNA
  *
- * Copyright (c) 2011-2024 Ethan Lee, Luigi Auriemma, and the MonoGame Team
+ * Copyright (c) 2011-2021 Ethan Lee, Luigi Auriemma, and the MonoGame Team
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -33,18 +33,14 @@
 #define malloc FAudio_malloc
 #define realloc FAudio_realloc
 #define free FAudio_free
-#ifdef STB_MEMSET_OVERRIDE
 #ifdef memset /* Thanks, Apple! */
 #undef memset
 #endif
 #define memset FAudio_memset
-#endif /* STB_MEMSET_OVERRIDE */
-#ifdef STB_MEMCPY_OVERRIDE
 #ifdef memcpy /* Thanks, Apple! */
 #undef memcpy
 #endif
 #define memcpy FAudio_memcpy
-#endif /* STB_MEMCPY_OVERRIDE */
 #define memcmp FAudio_memcmp
 
 #define pow FAudio_pow
@@ -84,27 +80,16 @@
 #define STB_VORBIS_NO_INTEGER_CONVERSION 1
 #include "stb_vorbis.h"
 
-#include "qoa_decoder.h"
-
 /* Globals */
 
 static float songVolume = 1.0f;
 static FAudio *songAudio = NULL;
 static FAudioMasteringVoice *songMaster = NULL;
-static unsigned int songLength = 0;
-static unsigned int songOffset = 0;
 
 static FAudioSourceVoice *songVoice = NULL;
 static FAudioVoiceCallback callbacks;
-static stb_vorbis *activeVorbisSong = NULL;
-static stb_vorbis_info activeVorbisSongInfo;
-
-static qoa *activeQoaSong = NULL;
-static unsigned int qoaChannels = 0;
-static unsigned int qoaSampleRate = 0;
-static unsigned int qoaSamplesPerChannelPerFrame = 0;
-static unsigned int qoaTotalSamplesPerChannel = 0;
-
+static stb_vorbis *activeSong = NULL;
+static stb_vorbis_info activeSongInfo;
 static uint8_t *songCache;
 
 /* Internal Functions */
@@ -112,35 +97,20 @@ static uint8_t *songCache;
 static void XNA_SongSubmitBuffer(FAudioVoiceCallback *callback, void *pBufferContext)
 {
 	FAudioBuffer buffer;
-	uint32_t decoded = 0;
-
-	if (activeVorbisSong != NULL)
-	{
-		decoded = stb_vorbis_get_samples_float_interleaved(
-			activeVorbisSong,
-			activeVorbisSongInfo.channels,
-			(float*) songCache,
-			activeVorbisSongInfo.sample_rate * activeVorbisSongInfo.channels
-		);
-		buffer.AudioBytes = decoded * activeVorbisSongInfo.channels * sizeof(float);
-	}
-	else if (activeQoaSong != NULL)
-	{
-		/* TODO: decode multiple frames? */
-		decoded = qoa_decode_next_frame(
-			activeQoaSong,
-			(short*) songCache
-		);
-		buffer.AudioBytes = decoded * qoaChannels * sizeof(short);
-	}
-
+	uint32_t decoded = stb_vorbis_get_samples_float_interleaved(
+		activeSong,
+		activeSongInfo.channels,
+		(float*) songCache,
+		activeSongInfo.sample_rate * activeSongInfo.channels
+	);
 	if (decoded == 0)
 	{
 		return;
 	}
-
-	songOffset += decoded;
-	buffer.Flags = (songOffset >= songLength) ? FAUDIO_END_OF_STREAM : 0;
+	buffer.Flags = (decoded < activeSongInfo.sample_rate) ?
+		FAUDIO_END_OF_STREAM :
+		0;
+	buffer.AudioBytes = decoded * activeSongInfo.channels * sizeof(float);
 	buffer.pAudioData = songCache;
 	buffer.PlayBegin = 0;
 	buffer.PlayLength = decoded;
@@ -168,15 +138,10 @@ static void XNA_SongKill()
 		FAudio_free(songCache);
 		songCache = NULL;
 	}
-	if (activeVorbisSong != NULL)
+	if (activeSong != NULL)
 	{
-		stb_vorbis_close(activeVorbisSong);
-		activeVorbisSong = NULL;
-	}
-	if (activeQoaSong != NULL)
-	{
-		qoa_close(activeQoaSong);
-		activeQoaSong = NULL;
+		stb_vorbis_close(activeSong);
+		activeSong = NULL;
 	}
 }
 
@@ -208,45 +173,17 @@ FAUDIOAPI float XNA_PlaySong(const char *name)
 	FAudioWaveFormatEx format;
 	XNA_SongKill();
 
-	activeVorbisSong = stb_vorbis_open_filename(name, NULL, NULL);
+	activeSong = stb_vorbis_open_filename(name, NULL, NULL);
 
-	if (activeVorbisSong != NULL)
-	{
-		activeVorbisSongInfo = stb_vorbis_get_info(activeVorbisSong);
-		format.wFormatTag = FAUDIO_FORMAT_IEEE_FLOAT;
-		format.nChannels = activeVorbisSongInfo.channels;
-		format.nSamplesPerSec = activeVorbisSongInfo.sample_rate;
-		format.wBitsPerSample = sizeof(float) * 8;
-		format.nBlockAlign = format.nChannels * format.wBitsPerSample / 8;
-		format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
-		format.cbSize = 0;
-
-		songOffset = 0;
-		songLength = stb_vorbis_stream_length_in_samples(activeVorbisSong);
-	}
-	else /* It's not vorbis, try qoa!*/
-	{
-		activeQoaSong = qoa_open_from_filename(name);
-
-		if (activeQoaSong == NULL)
-		{
-			/* It's neither vorbis nor qoa, time to bail */
-			return 0;
-		}
-
-		qoa_attributes(activeQoaSong, &qoaChannels, &qoaSampleRate, &qoaSamplesPerChannelPerFrame, &qoaTotalSamplesPerChannel);
-
-		format.wFormatTag = FAUDIO_FORMAT_PCM;
-		format.nChannels = qoaChannels;
-		format.nSamplesPerSec = qoaSampleRate;
-		format.wBitsPerSample = 16;
-		format.nBlockAlign = format.nChannels * format.wBitsPerSample / 8;
-		format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
-		format.cbSize = 0;
-
-		songOffset = 0;
-		songLength = qoaTotalSamplesPerChannel;
-	}
+	/* Set format info */
+	activeSongInfo = stb_vorbis_get_info(activeSong);
+	format.wFormatTag = FAUDIO_FORMAT_IEEE_FLOAT;
+	format.nChannels = activeSongInfo.channels;
+	format.nSamplesPerSec = activeSongInfo.sample_rate;
+	format.wBitsPerSample = sizeof(float) * 8;
+	format.nBlockAlign = format.nChannels * format.wBitsPerSample / 8;
+	format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
+	format.cbSize = 0;
 
 	/* Allocate decode cache */
 	songCache = (uint8_t*) FAudio_malloc(format.nAvgBytesPerSec);
@@ -267,30 +204,12 @@ FAUDIOAPI float XNA_PlaySong(const char *name)
 	FAudioVoice_SetVolume(songVoice, songVolume, 0);
 
 	/* Okay, this song is decoding now */
-	if (activeVorbisSong != NULL)
-	{
-		stb_vorbis_seek_start(activeVorbisSong);
-	}
-	else if (activeQoaSong != NULL)
-	{
-		qoa_seek_frame(activeQoaSong, 0);
-	}
-
+	stb_vorbis_seek_start(activeSong);
 	XNA_SongSubmitBuffer(NULL, NULL);
 
 	/* Finally. */
 	FAudioSourceVoice_Start(songVoice, 0, 0);
-
-	if (activeVorbisSong != NULL)
-	{
-		return stb_vorbis_stream_length_in_seconds(activeVorbisSong);
-	}
-	else if (activeQoaSong != NULL)
-	{
-		return qoaTotalSamplesPerChannel / (float) qoaSampleRate;
-	}
-
-	return 0;
+	return stb_vorbis_stream_length_in_seconds(activeSong);
 }
 
 FAUDIOAPI void XNA_PauseSong()
@@ -328,12 +247,12 @@ FAUDIOAPI void XNA_SetSongVolume(float volume)
 FAUDIOAPI uint32_t XNA_GetSongEnded()
 {
 	FAudioVoiceState state;
-	if (songVoice == NULL || (activeVorbisSong == NULL && activeQoaSong == NULL))
+	if (songVoice == NULL || activeSong == NULL)
 	{
 		return 1;
 	}
 	FAudioSourceVoice_GetState(songVoice, &state, 0);
-	return state.BuffersQueued == 0 && state.SamplesPlayed == 0;
+	return state.BuffersQueued == 0;
 }
 
 FAUDIOAPI void XNA_EnableVisualization(uint32_t enable)
