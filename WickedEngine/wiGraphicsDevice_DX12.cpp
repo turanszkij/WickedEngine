@@ -2589,7 +2589,7 @@ std::mutex queue_locker;
 		{
 			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
 			{
-				hr = dx12_check(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(frame_fence[buffer][queue])));
+				hr = dx12_check(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(frame_fence_cpu[buffer][queue])));
 				if (FAILED(hr))
 				{
 					wilog_messagebox("ID3D12Device::CreateFence[FRAME] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
@@ -2598,16 +2598,38 @@ std::mutex queue_locker;
 				switch (queue)
 				{
 				case QUEUE_GRAPHICS:
-					dx12_check(frame_fence[buffer][queue]->SetName(L"frame_fence[QUEUE_GRAPHICS]"));
+					dx12_check(frame_fence_cpu[buffer][queue]->SetName(L"frame_fence_cpu[QUEUE_GRAPHICS]"));
 					break;
 				case QUEUE_COMPUTE:
-					dx12_check(frame_fence[buffer][queue]->SetName(L"frame_fence[QUEUE_COMPUTE]"));
+					dx12_check(frame_fence_cpu[buffer][queue]->SetName(L"frame_fence_cpu[QUEUE_COMPUTE]"));
 					break;
 				case QUEUE_COPY:
-					dx12_check(frame_fence[buffer][queue]->SetName(L"frame_fence[QUEUE_COPY]"));
+					dx12_check(frame_fence_cpu[buffer][queue]->SetName(L"frame_fence_cpu[QUEUE_COPY]"));
 					break;
 				case QUEUE_VIDEO_DECODE:
-					dx12_check(frame_fence[buffer][queue]->SetName(L"frame_fence[QUEUE_VIDEO_DECODE]"));
+					dx12_check(frame_fence_cpu[buffer][queue]->SetName(L"frame_fence_cpu[QUEUE_VIDEO_DECODE]"));
+					break;
+				};
+
+				hr = dx12_check(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(frame_fence_gpu[buffer][queue])));
+				if (FAILED(hr))
+				{
+					wilog_messagebox("ID3D12Device::CreateFence[FRAME] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
+					wi::platform::Exit();
+				}
+				switch (queue)
+				{
+				case QUEUE_GRAPHICS:
+					dx12_check(frame_fence_gpu[buffer][queue]->SetName(L"frame_fence_gpu[QUEUE_GRAPHICS]"));
+					break;
+				case QUEUE_COMPUTE:
+					dx12_check(frame_fence_gpu[buffer][queue]->SetName(L"frame_fence_gpu[QUEUE_COMPUTE]"));
+					break;
+				case QUEUE_COPY:
+					dx12_check(frame_fence_gpu[buffer][queue]->SetName(L"frame_fence_gpu[QUEUE_COPY]"));
+					break;
+				case QUEUE_VIDEO_DECODE:
+					dx12_check(frame_fence_gpu[buffer][queue]->SetName(L"frame_fence_gpu[QUEUE_VIDEO_DECODE]"));
 					break;
 				};
 			}
@@ -5347,7 +5369,8 @@ std::mutex queue_locker;
 
 				queue.submit();
 
-				dx12_check(queue.queue->Signal(frame_fence[GetBufferIndex()][q].Get(), 1));
+				dx12_check(queue.queue->Signal(frame_fence_cpu[GetBufferIndex()][q].Get(), 1));
+				dx12_check(queue.queue->Signal(frame_fence_gpu[GetBufferIndex()][q].Get(), FRAMECOUNT));
 			}
 
 			for (uint32_t cmd = 0; cmd < cmd_last; ++cmd)
@@ -5406,8 +5429,8 @@ std::mutex queue_locker;
 					continue;
 				if (queues[queue2].queue == nullptr)
 					continue;
-				ID3D12Fence* fence = frame_fence[GetBufferIndex()][queue2].Get();
-				queues[queue1].queue->Wait(fence, 1);
+				ID3D12Fence* fence = frame_fence_gpu[GetBufferIndex()][queue2].Get();
+				queues[queue1].queue->Wait(fence, FRAMECOUNT);
 			}
 		}
 
@@ -5423,7 +5446,7 @@ std::mutex queue_locker;
 		{
 			if (queues[queue].queue == nullptr)
 				continue;
-			ID3D12Fence* fence = frame_fence[bufferindex][queue].Get();
+			ID3D12Fence* fence = frame_fence_cpu[bufferindex][queue].Get();
 			if (FRAMECOUNT >= BUFFERCOUNT)
 			{
 				if (fence->GetCompletedValue() < 1)
