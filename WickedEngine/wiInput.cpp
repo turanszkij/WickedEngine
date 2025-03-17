@@ -872,6 +872,8 @@ namespace wi::input
 			return GAMEPAD_BUTTON_PLAYSTATION_SHARE;
 		if (strcmp(str, "Option") == 0)
 			return GAMEPAD_BUTTON_PLAYSTATION_OPTION;
+		if (strcmp(str, "Touchpad") == 0)
+			return GAMEPAD_BUTTON_PLAYSTATION_OPTION;
 
 		if (strcmp(str, "(X)") == 0)
 			return GAMEPAD_BUTTON_XBOX_X;
@@ -1105,6 +1107,7 @@ namespace wi::input
 			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_R3: return "R3";
 			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_SHARE: return "Share";
 			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_OPTION: return "Option";
+			case wi::input::GAMEPAD_BUTTON_PLAYSTATION_TOUCHPAD: return "Touchpad";
 			default:
 				break;
 			}
