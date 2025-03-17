@@ -1661,12 +1661,15 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	}
 
 	// Invalid humanoids will be removed, this is to not have humanoid if naming convention matched by mistake when trying to import humanoid bone:
-	for (size_t i = 0; i < scene.humanoids.GetCount(); ++i)
+	for (size_t i = 0; i < scene.humanoids.GetCount();)
 	{
 		if (!scene.humanoids[i].IsValid())
 		{
-			scene.humanoids.Remove(i);
-			i--;
+			scene.humanoids.Remove(scene.humanoids.GetEntity(i));
+		}
+		else
+		{
+			i++;
 		}
 	}
 
