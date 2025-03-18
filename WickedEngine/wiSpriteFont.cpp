@@ -111,6 +111,37 @@ namespace wi
 		return text_length;
 	}
 
+	wi::primitive::AABB SpriteFont::GetAABB() const
+	{
+		XMFLOAT2 size = TextSize();
+		size.x *= params.scaling;
+		size.y *= params.scaling;
+		size.x *= 0.5f;
+		size.y *= 0.5f;
+
+		XMFLOAT3 center = params.position;
+		if (params.h_align == wi::font::WIFALIGN_LEFT)
+		{
+			center.x += size.x * 0.5f;
+		}
+		else if (params.h_align == wi::font::WIFALIGN_RIGHT)
+		{
+			center.x -= size.x * 0.5f;
+		}
+
+		if (params.v_align == wi::font::WIFALIGN_TOP)
+		{
+			center.y += size.y * 0.5f;
+		}
+		else if (params.v_align == wi::font::WIFALIGN_BOTTOM)
+		{
+			center.y -= size.y * 0.5f;
+		}
+		wi::primitive::AABB ret;
+		ret.createFromHalfWidth(center, XMFLOAT3(size.x, size.y, 0));
+		return ret;
+	}
+
 	void SpriteFont::Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri)
 	{
 		const std::string& dir = archive.GetSourceDirectory();

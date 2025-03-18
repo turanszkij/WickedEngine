@@ -4,6 +4,7 @@
 #include "wiArchive.h"
 #include "wiECS.h"
 #include "wiResourceManager.h"
+#include "wiPrimitive.h"
 
 #include <string>
 
@@ -64,6 +65,8 @@ namespace wi
 		const std::wstring& GetText() const;
 
 		size_t GetCurrentTextLength() const;
+
+		wi::primitive::AABB GetAABB() const;
 
 		struct Animation
 		{

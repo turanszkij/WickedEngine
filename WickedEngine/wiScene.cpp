@@ -971,6 +971,7 @@ namespace wi::scene
 		aabb_lights.clear();
 		aabb_decals.clear();
 		aabb_probes.clear();
+		aabb_fonts.clear();
 
 		matrix_objects.clear();
 		matrix_objects_prev.clear();
@@ -5351,6 +5352,7 @@ namespace wi::scene
 	}
 	void Scene::RunFontUpdateSystem(wi::jobsystem::context& ctx)
 	{
+		aabb_fonts.resize(fonts.GetCount());
 		wi::jobsystem::Dispatch(ctx, (uint32_t)fonts.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
 			SpriteFont& font = fonts[args.jobIndex];
 			Entity entity = fonts.GetEntity(args.jobIndex);
@@ -5366,6 +5368,7 @@ namespace wi::scene
 				font.anim.typewriter.soundinstance = {};
 			}
 			font.Update(dt);
+			aabb_fonts[args.jobIndex] = font.GetAABB();
 		});
 	}
 	void Scene::RunCharacterUpdateSystem(wi::jobsystem::context& ctx)

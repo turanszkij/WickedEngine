@@ -5720,11 +5720,34 @@ void DrawSpritesAndFonts(
 			const wi::SpriteFont& font = scene.fonts[i];
 			if (font.IsHidden())
 				continue;
+			AABB aabb = scene.aabb_fonts[i];
+			Entity entity = scene.fonts.GetEntity(i);
+			const TransformComponent* transform = scene.transforms.GetComponent(entity);
+			float scale = 1;
+			if (font.IsCameraScaling())
+			{
+				if (transform != nullptr)
+				{
+					scale *= 0.05f * wi::math::Distance(transform->GetPosition(), camera.Eye);
+				}
+			}
+			aabb = aabb * scale;
+			XMMATRIX M = XMMatrixIdentity();
+			if (transform != nullptr)
+			{
+				M = transform->GetWorldMatrix();
+			}
+			if (font.IsCameraFacing())
+			{
+				M = R * M;
+			}
+			aabb = aabb.transform(M);
+			//DrawBox(aabb);
+			if (!camera.frustum.CheckBoxFast(aabb))
+				continue;
 			DistanceSorter sorter = {};
 			sorter.bits.id = uint32_t(i);
 			sorter.bits.type = FONT;
-			Entity entity = scene.fonts.GetEntity(i);
-			const TransformComponent* transform = scene.transforms.GetComponent(entity);
 			if (transform != nullptr)
 			{
 				sorter.bits.distance = XMConvertFloatToHalf(wi::math::DistanceEstimated(transform->GetPosition(), camera.Eye));
@@ -17995,6 +18018,16 @@ Ray GetPickRay(long cursorX, long cursorY, const wi::Canvas& canvas, const Camer
 	return Ray(lineStart, rayDirection);
 }
 
+void DrawBox(const wi::primitive::AABB& aabb, const XMFLOAT4& color, bool depth)
+{
+	DrawBox(aabb.getAsBoxMatrix(), color, depth);
+}
+void DrawBox(const XMMATRIX& boxMatrix, const XMFLOAT4& color, bool depth)
+{
+	XMFLOAT4X4 m;
+	XMStoreFloat4x4(&m, boxMatrix);
+	DrawBox(m, color, depth);
+}
 void DrawBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color, bool depth)
 {
 	if(depth)
