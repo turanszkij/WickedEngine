@@ -155,7 +155,8 @@ BroadPhase::AddState BroadPhaseQuadTree::AddBodiesPrepare(BodyID *ioBodies, int 
 {
 	JPH_PROFILE_FUNCTION();
 
-	JPH_ASSERT(inNumber > 0);
+	if (inNumber <= 0)
+		return nullptr;
 
 	const BodyVector &bodies = mBodyManager->GetBodies();
 	JPH_ASSERT(mMaxBodies == mBodyManager->GetMaxBodies());
@@ -208,6 +209,12 @@ void BroadPhaseQuadTree::AddBodiesFinalize(BodyID *ioBodies, int inNumber, AddSt
 {
 	JPH_PROFILE_FUNCTION();
 
+	if (inNumber <= 0)
+	{
+		JPH_ASSERT(inAddState == nullptr);
+		return;
+	}
+
 	// This cannot run concurrently with UpdatePrepare()/UpdateFinalize()
 	SharedLock lock(mUpdateMutex JPH_IF_ENABLE_ASSERTS(, mLockContext, EPhysicsLockTypes::BroadPhaseUpdate));
 
@@ -244,6 +251,12 @@ void BroadPhaseQuadTree::AddBodiesAbort(BodyID *ioBodies, int inNumber, AddState
 {
 	JPH_PROFILE_FUNCTION();
 
+	if (inNumber <= 0)
+	{
+		JPH_ASSERT(inAddState == nullptr);
+		return;
+	}
+
 	JPH_IF_ENABLE_ASSERTS(const BodyVector &bodies = mBodyManager->GetBodies();)
 	JPH_ASSERT(mMaxBodies == mBodyManager->GetMaxBodies());
 
@@ -278,10 +291,11 @@ void BroadPhaseQuadTree::RemoveBodies(BodyID *ioBodies, int inNumber)
 {
 	JPH_PROFILE_FUNCTION();
 
+	if (inNumber <= 0)
+		return;
+
 	// This cannot run concurrently with UpdatePrepare()/UpdateFinalize()
 	SharedLock lock(mUpdateMutex JPH_IF_ENABLE_ASSERTS(, mLockContext, EPhysicsLockTypes::BroadPhaseUpdate));
-
-	JPH_ASSERT(inNumber > 0);
 
 	BodyVector &bodies = mBodyManager->GetBodies();
 	JPH_ASSERT(mMaxBodies == mBodyManager->GetMaxBodies());
@@ -325,7 +339,8 @@ void BroadPhaseQuadTree::NotifyBodiesAABBChanged(BodyID *ioBodies, int inNumber,
 {
 	JPH_PROFILE_FUNCTION();
 
-	JPH_ASSERT(inNumber > 0);
+	if (inNumber <= 0)
+		return;
 
 	// This cannot run concurrently with UpdatePrepare()/UpdateFinalize()
 	if (inTakeLock)
@@ -350,7 +365,7 @@ void BroadPhaseQuadTree::NotifyBodiesAABBChanged(BodyID *ioBodies, int inNumber,
 		// Find first body with different layer
 		BodyID *b_mid = std::upper_bound(b_start, b_end, broadphase_layer, [tracking](BroadPhaseLayer::Type inLayer, BodyID inBodyID) { return inLayer < tracking[inBodyID.GetIndex()].mBroadPhaseLayer; });
 
-		// Nodify all bodies of the same layer changed
+		// Notify all bodies of the same layer changed
 		mLayers[broadphase_layer].NotifyBodiesAABBChanged(bodies, mTracking, b_start, int(b_mid - b_start));
 
 		// Repeat
@@ -365,7 +380,8 @@ void BroadPhaseQuadTree::NotifyBodiesLayerChanged(BodyID *ioBodies, int inNumber
 {
 	JPH_PROFILE_FUNCTION();
 
-	JPH_ASSERT(inNumber > 0);
+	if (inNumber <= 0)
+		return;
 
 	// First sort the bodies that actually changed layer to beginning of the array
 	const BodyVector &bodies = mBodyManager->GetBodies();
@@ -383,7 +399,7 @@ void BroadPhaseQuadTree::NotifyBodiesLayerChanged(BodyID *ioBodies, int inNumber
 			mTracking[index].mObjectLayer = body->GetObjectLayer();
 
 			// Move the body to the end, layer didn't change
-			swap(*body_id, ioBodies[inNumber - 1]);
+			std::swap(*body_id, ioBodies[inNumber - 1]);
 			--inNumber;
 		}
 	}

@@ -6,7 +6,7 @@
 
 // Jolt library version
 #define JPH_VERSION_MAJOR 5
-#define JPH_VERSION_MINOR 2
+#define JPH_VERSION_MINOR 3
 #define JPH_VERSION_PATCH 0
 
 // Determine which features the library was compiled with
@@ -83,8 +83,8 @@
 	#define JPH_PLATFORM_ANDROID
 #elif defined(__linux__)
 	#define JPH_PLATFORM_LINUX
-#elif defined(__FreeBSD__)
-	#define JPH_PLATFORM_FREEBSD
+#elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
+	#define JPH_PLATFORM_BSD
 #elif defined(__APPLE__)
 	#include <TargetConditionals.h>
 	#if defined(TARGET_OS_IPHONE) && !TARGET_OS_IPHONE
@@ -180,10 +180,26 @@
 		#define JPH_VECTOR_ALIGNMENT 8 // 32-bit ARM does not support aligning on the stack on 16 byte boundaries
 		#define JPH_DVECTOR_ALIGNMENT 8
 	#endif
+#elif defined(__riscv)
+	// RISC-V CPU architecture
+	#define JPH_CPU_RISCV
+	#if __riscv_xlen == 64
+		#define JPH_CPU_ADDRESS_BITS 64
+		#define JPH_VECTOR_ALIGNMENT 16
+		#define JPH_DVECTOR_ALIGNMENT 32
+	#else
+		#define JPH_CPU_ADDRESS_BITS 32
+		#define JPH_VECTOR_ALIGNMENT 16
+		#define JPH_DVECTOR_ALIGNMENT 8
+	#endif
 #elif defined(JPH_PLATFORM_WASM)
 	// WebAssembly CPU architecture
 	#define JPH_CPU_WASM
-	#define JPH_CPU_ADDRESS_BITS 32
+	#if defined(__wasm64__)
+		#define JPH_CPU_ADDRESS_BITS 64
+	#else
+		#define JPH_CPU_ADDRESS_BITS 32
+	#endif
 	#define JPH_VECTOR_ALIGNMENT 16
 	#define JPH_DVECTOR_ALIGNMENT 32
 	#ifdef __wasm_simd128__
@@ -191,6 +207,29 @@
 		#define JPH_USE_SSE4_1
 		#define JPH_USE_SSE4_2
 	#endif
+#elif defined(__powerpc__) || defined(__powerpc64__)
+	// PowerPC CPU architecture
+	#define JPH_CPU_PPC
+	#if defined(__powerpc64__)
+		#define JPH_CPU_ADDRESS_BITS 64
+	#else
+		#define JPH_CPU_ADDRESS_BITS 32
+	#endif
+	#ifdef _BIG_ENDIAN
+		#define JPH_CPU_BIG_ENDIAN
+	#endif
+	#define JPH_VECTOR_ALIGNMENT 16
+	#define JPH_DVECTOR_ALIGNMENT 8
+#elif defined(__loongarch__)
+	// LoongArch CPU architecture
+	#define JPH_CPU_LOONGARCH
+	#if defined(__loongarch64)
+		#define JPH_CPU_ADDRESS_BITS 64
+	#else
+		#define JPH_CPU_ADDRESS_BITS 32
+	#endif
+	#define JPH_VECTOR_ALIGNMENT 16
+	#define JPH_DVECTOR_ALIGNMENT 8
 #elif defined(__e2k__)
 	// E2K CPU architecture (MCST Elbrus 2000)
 	#define JPH_CPU_E2K
@@ -308,6 +347,7 @@
 	JPH_CLANG_SUPPRESS_WARNING("-Wgnu-zero-variadic-macro-arguments")							\
 	JPH_CLANG_SUPPRESS_WARNING("-Wdocumentation-unknown-command")								\
 	JPH_CLANG_SUPPRESS_WARNING("-Wctad-maybe-unsupported")										\
+	JPH_CLANG_SUPPRESS_WARNING("-Wswitch-default")												\
 	JPH_CLANG_13_PLUS_SUPPRESS_WARNING("-Wdeprecated-copy")										\
 	JPH_CLANG_13_PLUS_SUPPRESS_WARNING("-Wdeprecated-copy-with-dtor")							\
 	JPH_CLANG_16_PLUS_SUPPRESS_WARNING("-Wunsafe-buffer-usage")									\
@@ -324,6 +364,7 @@
 	JPH_MSVC_SUPPRESS_WARNING(4514) /* 'X' : unreferenced inline function has been removed */	\
 	JPH_MSVC_SUPPRESS_WARNING(4710) /* 'X' : function not inlined */							\
 	JPH_MSVC_SUPPRESS_WARNING(4711) /* function 'X' selected for automatic inline expansion */	\
+	JPH_MSVC_SUPPRESS_WARNING(4714) /* function 'X' marked as __forceinline not inlined */		\
 	JPH_MSVC_SUPPRESS_WARNING(4820) /* 'X': 'Y' bytes padding added after data member 'Z' */	\
 	JPH_MSVC_SUPPRESS_WARNING(4100) /* 'X' : unreferenced formal parameter */					\
 	JPH_MSVC_SUPPRESS_WARNING(4626) /* 'X' : assignment operator was implicitly defined as deleted because a base class assignment operator is inaccessible or deleted */ \
@@ -352,15 +393,15 @@
 	// Configuration for a popular game console.
 	// This file is not distributed because it would violate an NDA.
 	// Creating one should only be a couple of minutes of work if you have the documentation for the platform
-	// (you only need to define JPH_BREAKPOINT, JPH_PLATFORM_BLUE_GET_TICKS, JPH_PLATFORM_BLUE_MUTEX*, JPH_PLATFORM_BLUE_RWLOCK* and include the right header).
+	// (you only need to define JPH_BREAKPOINT, JPH_PLATFORM_BLUE_GET_TICKS, JPH_PLATFORM_BLUE_MUTEX*, JPH_PLATFORM_BLUE_RWLOCK*, JPH_PLATFORM_BLUE_SEMAPHORE* and include the right header).
 	#include <Jolt/Core/PlatformBlue.h>
-#elif defined(JPH_PLATFORM_LINUX) || defined(JPH_PLATFORM_ANDROID) || defined(JPH_PLATFORM_MACOS) || defined(JPH_PLATFORM_IOS) || defined(JPH_PLATFORM_FREEBSD)
+#elif defined(JPH_PLATFORM_LINUX) || defined(JPH_PLATFORM_ANDROID) || defined(JPH_PLATFORM_MACOS) || defined(JPH_PLATFORM_IOS) || defined(JPH_PLATFORM_BSD)
 	#if defined(JPH_CPU_X86)
 		#define JPH_BREAKPOINT	__asm volatile ("int $0x3")
-	#elif defined(JPH_CPU_ARM)
+	#elif defined(JPH_CPU_ARM) || defined(JPH_CPU_RISCV) || defined(JPH_CPU_E2K) || defined(JPH_CPU_PPC) || defined(JPH_CPU_LOONGARCH)
 		#define JPH_BREAKPOINT	__builtin_trap()
-	#elif defined(JPH_CPU_E2K)
-		#define JPH_BREAKPOINT	__builtin_trap()
+	#else
+		#error Unknown CPU architecture
 	#endif
 #elif defined(JPH_PLATFORM_WASM)
 	#define JPH_BREAKPOINT		do { } while (false) // Not supported
@@ -390,7 +431,8 @@
 	JPH_MSVC_SUPPRESS_WARNING(4514)																\
 	JPH_MSVC_SUPPRESS_WARNING(5262)																\
 	JPH_MSVC_SUPPRESS_WARNING(5264)																\
-	JPH_MSVC_SUPPRESS_WARNING(4738)
+	JPH_MSVC_SUPPRESS_WARNING(4738)																\
+	JPH_MSVC_SUPPRESS_WARNING(5045)
 
 #define JPH_SUPPRESS_WARNINGS_STD_END															\
 	JPH_SUPPRESS_WARNING_POP
@@ -424,7 +466,6 @@ JPH_SUPPRESS_WARNINGS_STD_END
 JPH_NAMESPACE_BEGIN
 
 // Commonly used STL types
-using std::pair;
 using std::min;
 using std::max;
 using std::abs;
@@ -434,17 +475,11 @@ using std::floor;
 using std::trunc;
 using std::round;
 using std::fmod;
-using std::swap;
-using std::size;
-using std::string;
 using std::string_view;
 using std::function;
 using std::numeric_limits;
 using std::isfinite;
 using std::isnan;
-using std::is_trivial;
-using std::is_trivially_constructible;
-using std::is_trivially_destructible;
 using std::ostream;
 using std::istream;
 

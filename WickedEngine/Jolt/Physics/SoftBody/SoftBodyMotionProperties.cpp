@@ -9,6 +9,7 @@
 #include <Jolt/Physics/SoftBody/SoftBodyContactListener.h>
 #include <Jolt/Physics/SoftBody/SoftBodyManifold.h>
 #include <Jolt/Physics/Collision/CollideSoftBodyVertexIterator.h>
+#include <Jolt/Physics/Collision/SimShapeFilterWrapper.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/Physics/Body/BodyManager.h>
 #include <Jolt/Core/ScopeExit.h>
@@ -105,16 +106,18 @@ void SoftBodyMotionProperties::DetermineCollidingShapes(const SoftBodyUpdateCont
 	JPH_PROFILE_FUNCTION();
 
 	// Reset flag prior to collision detection
-	mNeedContactCallback = false;
+	mNeedContactCallback.store(false, memory_order_relaxed);
 
 	struct Collector : public CollideShapeBodyCollector
 	{
-									Collector(const SoftBodyUpdateContext &inContext, const PhysicsSystem &inSystem, const BodyLockInterface &inBodyLockInterface, Array<CollidingShape> &ioHits, Array<CollidingSensor> &ioSensors) :
+									Collector(const SoftBodyUpdateContext &inContext, const PhysicsSystem &inSystem, const BodyLockInterface &inBodyLockInterface, const AABox &inLocalBounds, SimShapeFilterWrapper &inShapeFilter, Array<CollidingShape> &ioHits, Array<CollidingSensor> &ioSensors) :
 										mContext(inContext),
 										mInverseTransform(inContext.mCenterOfMassTransform.InversedRotationTranslation()),
+										mLocalBounds(inLocalBounds),
 										mBodyLockInterface(inBodyLockInterface),
 										mCombineFriction(inSystem.GetCombineFriction()),
 										mCombineRestitution(inSystem.GetCombineRestitution()),
+										mShapeFilter(inShapeFilter),
 										mHits(ioHits),
 										mSensors(ioSensors)
 		{
@@ -152,12 +155,30 @@ void SoftBodyMotionProperties::DetermineCollidingShapes(const SoftBodyUpdateCont
 							return;
 					}
 
+					// Calculate transform of this body relative to the soft body
 					Mat44 com = (mInverseTransform * body.GetCenterOfMassTransform()).ToMat44();
+
+					// Collect leaf shapes
+					mShapeFilter.SetBody2(&body);
+					struct LeafShapeCollector : public TransformedShapeCollector
+					{
+						virtual void		AddHit(const TransformedShape &inResult) override
+						{
+							mHits.emplace_back(Mat44::sRotationTranslation(inResult.mShapeRotation, Vec3(inResult.mShapePositionCOM)), inResult.GetShapeScale(), inResult.mShape);
+						}
+
+						Array<LeafShape>	mHits;
+					};
+					LeafShapeCollector collector;
+					body.GetShape()->CollectTransformedShapes(mLocalBounds, com.GetTranslation(), com.GetQuaternion(), Vec3::sOne(), SubShapeIDCreator(), collector, mShapeFilter);
+					if (collector.mHits.empty())
+						return;
+
 					if (settings.mIsSensor)
 					{
 						CollidingSensor cs;
 						cs.mCenterOfMassTransform = com;
-						cs.mShape = body.GetShape();
+						cs.mShapes = std::move(collector.mHits);
 						cs.mBodyID = inResult;
 						mSensors.push_back(cs);
 					}
@@ -165,7 +186,7 @@ void SoftBodyMotionProperties::DetermineCollidingShapes(const SoftBodyUpdateCont
 					{
 						CollidingShape cs;
 						cs.mCenterOfMassTransform = com;
-						cs.mShape = body.GetShape();
+						cs.mShapes = std::move(collector.mHits);
 						cs.mBodyID = inResult;
 						cs.mMotionType = body.GetMotionType();
 						cs.mUpdateVelocities = false;
@@ -189,22 +210,33 @@ void SoftBodyMotionProperties::DetermineCollidingShapes(const SoftBodyUpdateCont
 	private:
 		const SoftBodyUpdateContext &mContext;
 		RMat44						mInverseTransform;
+		AABox						mLocalBounds;
 		const BodyLockInterface &	mBodyLockInterface;
 		ContactConstraintManager::CombineFunction mCombineFriction;
 		ContactConstraintManager::CombineFunction mCombineRestitution;
+		SimShapeFilterWrapper &		mShapeFilter;
 		Array<CollidingShape> &		mHits;
 		Array<CollidingSensor> &	mSensors;
 	};
 
-	Collector collector(inContext, inSystem, inBodyLockInterface, mCollidingShapes, mCollidingSensors);
-	AABox bounds = mLocalBounds;
-	bounds.Encapsulate(mLocalPredictedBounds);
-	bounds = bounds.Transformed(inContext.mCenterOfMassTransform);
-	bounds.ExpandBy(Vec3::sReplicate(mSettings->mVertexRadius));
+	// Calculate local bounding box
+	AABox local_bounds = mLocalBounds;
+	local_bounds.Encapsulate(mLocalPredictedBounds);
+	local_bounds.ExpandBy(Vec3::sReplicate(mSettings->mVertexRadius));
+
+	// Calculate world space bounding box
+	AABox world_bounds = local_bounds.Transformed(inContext.mCenterOfMassTransform);
+
+	// Create shape filter
+	SimShapeFilterWrapperUnion shape_filter_union(inContext.mSimShapeFilter, inContext.mBody);
+	SimShapeFilterWrapper &shape_filter = shape_filter_union.GetSimShapeFilterWrapper();
+
+	Collector collector(inContext, inSystem, inBodyLockInterface, local_bounds, shape_filter, mCollidingShapes, mCollidingSensors);
 	ObjectLayer layer = inContext.mBody->GetObjectLayer();
 	DefaultBroadPhaseLayerFilter broadphase_layer_filter = inSystem.GetDefaultBroadPhaseLayerFilter(layer);
 	DefaultObjectLayerFilter object_layer_filter = inSystem.GetDefaultLayerFilter(layer);
-	inSystem.GetBroadPhaseQuery().CollideAABox(bounds, collector, broadphase_layer_filter, object_layer_filter);
+	inSystem.GetBroadPhaseQuery().CollideAABox(world_bounds, collector, broadphase_layer_filter, object_layer_filter);
+	mNumSensors = uint(mCollidingSensors.size()); // Workaround for TSAN false positive: store mCollidingSensors.size() in a separate variable.
 }
 
 void SoftBodyMotionProperties::DetermineCollisionPlanes(uint inVertexStart, uint inNumVertices)
@@ -213,7 +245,8 @@ void SoftBodyMotionProperties::DetermineCollisionPlanes(uint inVertexStart, uint
 
 	// Generate collision planes
 	for (const CollidingShape &cs : mCollidingShapes)
-		cs.mShape->CollideSoftBodyVertices(cs.mCenterOfMassTransform, Vec3::sReplicate(1.0f), CollideSoftBodyVertexIterator(mVertices.data() + inVertexStart), inNumVertices, int(&cs - mCollidingShapes.data()));
+		for (const LeafShape &shape : cs.mShapes)
+			shape.mShape->CollideSoftBodyVertices(shape.mTransform, shape.mScale, CollideSoftBodyVertexIterator(mVertices.data() + inVertexStart), inNumVertices, int(&cs - mCollidingShapes.data()));
 }
 
 void SoftBodyMotionProperties::DetermineSensorCollisions(CollidingSensor &ioSensor)
@@ -231,12 +264,13 @@ void SoftBodyMotionProperties::DetermineSensorCollisions(CollidingSensor &ioSens
 		StridedPtr<Plane>(&collision_plane, 0), // We want all vertices to result in a single collision so we pass stride 0
 		StridedPtr<float>(&largest_penetration, 0),
 		StridedPtr<int>(&colliding_shape_idx, 0));
-	ioSensor.mShape->CollideSoftBodyVertices(ioSensor.mCenterOfMassTransform, Vec3::sReplicate(1.0f), vertex_iterator, uint(mVertices.size()), 0);
+	for (const LeafShape &shape : ioSensor.mShapes)
+		shape.mShape->CollideSoftBodyVertices(shape.mTransform, shape.mScale, vertex_iterator, uint(mVertices.size()), 0);
 	ioSensor.mHasContact = largest_penetration > 0.0f;
 
 	// We need a contact callback if one of the sensors collided
 	if (ioSensor.mHasContact)
-		mNeedContactCallback = true;
+		mNeedContactCallback.store(true, memory_order_relaxed);
 }
 
 void SoftBodyMotionProperties::ApplyPressure(const SoftBodyUpdateContext &inContext)
@@ -282,7 +316,7 @@ void SoftBodyMotionProperties::IntegratePositions(const SoftBodyUpdateContext &i
 
 	// Integrate
 	Vec3 sub_step_gravity = inContext.mGravity * dt;
-	Vec3 sub_step_impulse = GetAccumulatedForce() * dt;
+	Vec3 sub_step_impulse = GetAccumulatedForce() * dt / max(float(mVertices.size()), 1.0f);
 	for (Vertex &v : mVertices)
 		if (v.mInvMass > 0.0f)
 		{
@@ -566,7 +600,7 @@ void SoftBodyMotionProperties::ApplyCollisionConstraintsAndUpdateVelocities(cons
 	JPH_PROFILE_FUNCTION();
 
 	float dt = inContext.mSubStepDeltaTime;
-	float restitution_treshold = -2.0f * inContext.mGravity.Length() * dt;
+	float restitution_threshold = -2.0f * inContext.mGravity.Length() * dt;
 	float vertex_radius = mSettings->mVertexRadius;
 	for (Vertex &v : mVertices)
 		if (v.mInvMass > 0.0f)
@@ -588,7 +622,7 @@ void SoftBodyMotionProperties::ApplyCollisionConstraintsAndUpdateVelocities(cons
 					v.mHasContact = true;
 
 					// We need a contact callback if one of the vertices collided
-					mNeedContactCallback = true;
+					mNeedContactCallback.store(true, memory_order_relaxed);
 
 					// Note that we already calculated the velocity, so this does not affect the velocity (next iteration starts by setting previous position to current position)
 					CollidingShape &cs = mCollidingShapes[v.mCollidingShapeIndex];
@@ -641,7 +675,7 @@ void SoftBodyMotionProperties::ApplyCollisionConstraintsAndUpdateVelocities(cons
 							// Calculate delta relative velocity due to restitution (equation 35)
 							dv += v_normal;
 							float prev_v_normal = (prev_v - v2).Dot(contact_normal);
-							if (prev_v_normal < restitution_treshold)
+							if (prev_v_normal < restitution_threshold)
 								dv += cs.mRestitution * prev_v_normal * contact_normal;
 
 							// Calculate impulse
@@ -674,7 +708,7 @@ void SoftBodyMotionProperties::ApplyCollisionConstraintsAndUpdateVelocities(cons
 						// Apply restitution (equation 35)
 						v.mVelocity -= v_normal;
 						float prev_v_normal = prev_v.Dot(contact_normal);
-						if (prev_v_normal < restitution_treshold)
+						if (prev_v_normal < restitution_threshold)
 							v.mVelocity -= cs.mRestitution * prev_v_normal * contact_normal;
 					}
 				}
@@ -687,7 +721,7 @@ void SoftBodyMotionProperties::UpdateSoftBodyState(SoftBodyUpdateContext &ioCont
 	JPH_PROFILE_FUNCTION();
 
 	// Contact callback
-	if (mNeedContactCallback && ioContext.mContactListener != nullptr)
+	if (mNeedContactCallback.load(memory_order_relaxed) && ioContext.mContactListener != nullptr)
 	{
 		// Remove non-colliding sensors from the list
 		for (int i = int(mCollidingSensors.size()) - 1; i >= 0; --i)
@@ -732,7 +766,7 @@ void SoftBodyMotionProperties::UpdateSoftBodyState(SoftBodyUpdateContext &ioCont
 
 	// Calculate linear/angular velocity of the body by averaging all vertices and bringing the value to world space
 	float num_vertices_divider = float(max(int(mVertices.size()), 1));
-	SetLinearVelocity(ioContext.mCenterOfMassTransform.Multiply3x3(linear_velocity / num_vertices_divider));
+	SetLinearVelocityClamped(ioContext.mCenterOfMassTransform.Multiply3x3(linear_velocity / num_vertices_divider));
 	SetAngularVelocity(ioContext.mCenterOfMassTransform.Multiply3x3(angular_velocity / num_vertices_divider));
 
 	if (mUpdatePosition)
@@ -798,6 +832,7 @@ void SoftBodyMotionProperties::InitializeUpdateContext(float inDeltaTime, Body &
 	ioContext.mBody = &inSoftBody;
 	ioContext.mMotionProperties = this;
 	ioContext.mContactListener = inSystem.GetSoftBodyContactListener();
+	ioContext.mSimShapeFilter = inSystem.GetSimShapeFilter();
 
 	// Convert gravity to local space
 	ioContext.mCenterOfMassTransform = inSoftBody.GetCenterOfMassTransform();
@@ -843,7 +878,7 @@ SoftBodyMotionProperties::EStatus SoftBodyMotionProperties::ParallelDetermineCol
 			// Process collision planes
 			uint num_vertices_to_process = min(SoftBodyUpdateContext::cVertexCollisionBatch, num_vertices - next_vertex);
 			DetermineCollisionPlanes(next_vertex, num_vertices_to_process);
-			uint vertices_processed = ioContext.mNumCollisionVerticesProcessed.fetch_add(SoftBodyUpdateContext::cVertexCollisionBatch, memory_order_release) + num_vertices_to_process;
+			uint vertices_processed = ioContext.mNumCollisionVerticesProcessed.fetch_add(SoftBodyUpdateContext::cVertexCollisionBatch, memory_order_acq_rel) + num_vertices_to_process;
 			if (vertices_processed >= num_vertices)
 			{
 				// Determine next state
@@ -862,19 +897,18 @@ SoftBodyMotionProperties::EStatus SoftBodyMotionProperties::ParallelDetermineCol
 SoftBodyMotionProperties::EStatus SoftBodyMotionProperties::ParallelDetermineSensorCollisions(SoftBodyUpdateContext &ioContext)
 {
 	// Do a relaxed read to see if there are more sensors to process
-	uint num_sensors = (uint)mCollidingSensors.size();
-	if (ioContext.mNextSensorIndex.load(memory_order_relaxed) < num_sensors)
+	if (ioContext.mNextSensorIndex.load(memory_order_relaxed) < mNumSensors)
 	{
 		// Fetch next sensor to process
 		uint sensor_index = ioContext.mNextSensorIndex.fetch_add(1, memory_order_acquire);
-		if (sensor_index < num_sensors)
+		if (sensor_index < mNumSensors)
 		{
 			// Process this sensor
 			DetermineSensorCollisions(mCollidingSensors[sensor_index]);
 
 			// Determine next state
-			uint sensors_processed = ioContext.mNumSensorsProcessed.fetch_add(1, memory_order_release) + 1;
-			if (sensors_processed >= num_sensors)
+			uint sensors_processed = ioContext.mNumSensorsProcessed.fetch_add(1, memory_order_acq_rel) + 1;
+			if (sensors_processed >= mNumSensors)
 				StartFirstIteration(ioContext);
 			return EStatus::DidWork;
 		}
@@ -927,7 +961,7 @@ SoftBodyMotionProperties::EStatus SoftBodyMotionProperties::ParallelApplyConstra
 				ProcessGroup(ioContext, next_group);
 
 				// Increment total number of groups processed
-				num_groups_processed = ioContext.mNumConstraintGroupsProcessed.fetch_add(1, memory_order_relaxed) + 1;
+				num_groups_processed = ioContext.mNumConstraintGroupsProcessed.fetch_add(1, memory_order_acq_rel) + 1;
 			}
 
 			if (num_groups_processed >= num_groups)
@@ -947,7 +981,7 @@ SoftBodyMotionProperties::EStatus SoftBodyMotionProperties::ParallelApplyConstra
 					StartNextIteration(ioContext);
 
 					// Reset group logic
-					ioContext.mNumConstraintGroupsProcessed.store(0, memory_order_relaxed);
+					ioContext.mNumConstraintGroupsProcessed.store(0, memory_order_release);
 					ioContext.mNextConstraintGroup.store(0, memory_order_release);
 				}
 				else
@@ -968,7 +1002,7 @@ SoftBodyMotionProperties::EStatus SoftBodyMotionProperties::ParallelApplyConstra
 
 SoftBodyMotionProperties::EStatus SoftBodyMotionProperties::ParallelUpdate(SoftBodyUpdateContext &ioContext, const PhysicsSettings &inPhysicsSettings)
 {
-	switch (ioContext.mState.load(memory_order_relaxed))
+	switch (ioContext.mState.load(memory_order_acquire))
 	{
 	case SoftBodyUpdateContext::EState::DetermineCollisionPlanes:
 		return ParallelDetermineCollisionPlanes(ioContext);
@@ -998,7 +1032,10 @@ void SoftBodyMotionProperties::SkinVertices([[maybe_unused]] RMat44Arg inCenterO
 	const Mat44 *skin_matrices_end = skin_matrices + num_skin_matrices;
 	const InvBind *inv_bind_matrix = mSettings->mInvBindMatrices.data();
 	for (Mat44 *s = skin_matrices; s < skin_matrices_end; ++s, ++inv_bind_matrix)
+	{
+		JPH_ASSERT(inv_bind_matrix->mJointIndex < inNumJoints);
 		*s = inJointMatrices[inv_bind_matrix->mJointIndex] * inv_bind_matrix->mInvBind;
+	}
 
 	// Skin the vertices
 	JPH_IF_DEBUG_RENDERER(mSkinStateTransform = inCenterOfMassTransform;)

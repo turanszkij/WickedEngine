@@ -19,7 +19,6 @@
 #include <Jolt/Core/StreamIn.h>
 #include <Jolt/Core/StreamOut.h>
 #include <Jolt/Core/UnorderedMap.h>
-#include <Jolt/Core/UnorderedSet.h>
 
 JPH_NAMESPACE_BEGIN
 
@@ -105,7 +104,7 @@ ConvexHullShape::ConvexHullShape(const ConvexHullShapeSettings &inSettings, Shap
 		{
 			Vec3 v3 = inSettings.mPoints[e->mStartIdx] - mCenterOfMass;
 
-			// Affine transform that transforms a unit tetrahedon (with vertices (0, 0, 0), (1, 0, 0), (0, 1, 0) and (0, 0, 1) to this tetrahedron
+			// Affine transform that transforms a unit tetrahedron (with vertices (0, 0, 0), (1, 0, 0), (0, 1, 0) and (0, 0, 1) to this tetrahedron
 			Mat44 a(Vec4(v1, 0), Vec4(v2, 0), Vec4(v3, 0), Vec4(0, 0, 0, 1));
 
 			// Calculate covariance matrix for this tetrahedron
@@ -126,6 +125,7 @@ ConvexHullShape::ConvexHullShape(const ConvexHullShapeSettings &inSettings, Shap
 	// Convert polygons from the builder to our internal representation
 	using VtxMap = UnorderedMap<int, uint8>;
 	VtxMap vertex_map;
+	vertex_map.reserve(VtxMap::size_type(inSettings.mPoints.size()));
 	for (BuilderFace *builder_face : builder_faces)
 	{
 		// Determine where the vertices go

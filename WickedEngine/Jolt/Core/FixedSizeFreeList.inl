@@ -79,7 +79,7 @@ uint32 FixedSizeFreeList<Object>::ConstructObject(Parameters &&... inParameters)
 			// Allocation successful
 			JPH_IF_ENABLE_ASSERTS(mNumFreeObjects.fetch_sub(1, memory_order_relaxed);)
 			ObjectStorage &storage = GetStorage(first_free);
-			::new (&storage.mObject) Object(std::forward<Parameters>(inParameters)...);
+			new (&storage.mObject) Object(std::forward<Parameters>(inParameters)...);
 			storage.mNextFreeObject.store(first_free, memory_order_release);
 			return first_free;
 		}
@@ -97,7 +97,7 @@ uint32 FixedSizeFreeList<Object>::ConstructObject(Parameters &&... inParameters)
 				// Allocation successful
 				JPH_IF_ENABLE_ASSERTS(mNumFreeObjects.fetch_sub(1, memory_order_relaxed);)
 				ObjectStorage &storage = GetStorage(first_free);
-				::new (&storage.mObject) Object(std::forward<Parameters>(inParameters)...);
+				new (&storage.mObject) Object(std::forward<Parameters>(inParameters)...);
 				storage.mNextFreeObject.store(first_free, memory_order_release);
 				return first_free;
 			}
@@ -130,7 +130,7 @@ void FixedSizeFreeList<Object>::DestructObjectBatch(Batch &ioBatch)
 	if (ioBatch.mFirstObjectIndex != cInvalidObjectIndex)
 	{
 		// Call destructors
-		if constexpr (!is_trivially_destructible<Object>())
+		if constexpr (!std::is_trivially_destructible<Object>())
 		{
 			uint32 object_idx = ioBatch.mFirstObjectIndex;
 			do
