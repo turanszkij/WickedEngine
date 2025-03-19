@@ -56,6 +56,8 @@ namespace wi::lua
 		int SetHeapAllocationCountDisplay(lua_State* L);
 		int SetVRAMUsageDisplay(lua_State* L);
 		int SetColorGradingHelper(lua_State* L);
+		int Fade(lua_State* L);
+		int CrossFade(lua_State* L);
 
 		int IsHDRSupported(lua_State* L);
 		int SetHDR(lua_State* L);

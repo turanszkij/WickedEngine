@@ -330,7 +330,7 @@ void Editor::Initialize()
 	}
 	renderComponent.setMSAASampleCount(msaa);
 	renderComponent.Load();
-	ActivatePath(&renderComponent, 0.2f);
+	ActivatePath(&renderComponent, 0.5f, wi::Color::Black(), wi::FadeManager::FadeType::CrossFade);
 
 	wi::lua::EnableEditorFunctionality(this, &renderComponent);
 }
@@ -738,6 +738,7 @@ void EditorComponent::Load()
 		case NEW_TERRAIN:
 			componentsWnd.terrainWnd.SetupAssets();
 			pick.entity = componentsWnd.terrainWnd.entity;
+			main->CrossFade(1);
 			break;
 		case NEW_SPRITE:
 		{

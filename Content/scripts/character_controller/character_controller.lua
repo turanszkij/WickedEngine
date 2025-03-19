@@ -589,6 +589,7 @@ local ResolveCharacters = function(characterA, characterB)
 				if input.Press(KEYBOARD_BUTTON_ENTER) or input.Press(GAMEPAD_BUTTON_2) then
 					characterA:Turn(vector.Subtract(headB, headA):Normalize())
 					conversation:Enter(characterA)
+					application.CrossFade(0.5)
 				end
 				DrawDebugText("", vector.Add(headA, Vector(0,0.4)), Vector(1,1,1,1), 0.1, DEBUG_TEXT_DEPTH_TEST | DEBUG_TEXT_CAMERA_FACING)
 			end
@@ -793,8 +794,8 @@ runProcess(function()
 	loadingscreen.AddLoadModelTask(anim_scene, script_dir() .. "assets/animations.wiscene")
 	local loading_scene = Scene()
 	loadingscreen.AddLoadModelTask(loading_scene, script_dir() .. "assets/level.wiscene")
-	loadingscreen.AddRenderPathActivationTask(path, application, 0.5)
-	application.SetActivePath(loadingscreen, 0.5) -- activate and switch to loading screen
+	loadingscreen.AddRenderPathActivationTask(path, application, 0.5, 0, 0, 0, FadeType.FadeToColor)
+	application.SetActivePath(loadingscreen, 0.5, 0, 0, 0, FadeType.CrossFade) -- activate and switch to loading screen
 
     -- Because we are in a runProcess, we can block loading screen like this while application is still running normally:
 	--	Meanwhile, we can update the progress bar sprite
@@ -1002,14 +1003,14 @@ runProcess(function()
 				for i,character in ipairs(scene.Component_GetCharacterArray()) do
 					character.StopAnimation()
 				end
-				application.SetActivePath(prevPath)
+				application.SetActivePath(prevPath, 0.5, 0, 0, 0, FadeType.CrossFade)
 				killProcesses()
 				return
 			end
 			if(input.Press(string.byte('R'))) then
 				-- reload script
 				backlog_post("RELOAD")
-				application.SetActivePath(prevPath, 0.5)
+				application.SetActivePath(prevPath, 0.5, 0, 0, 0, FadeType.CrossFade)
 				while not application.IsFaded() do
 					update()
 				end

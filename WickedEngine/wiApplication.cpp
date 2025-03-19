@@ -60,7 +60,7 @@ namespace wi
 		Luna<wi::lua::Application_BindLua>::push_global(wi::lua::GetLuaState(), "application", this);
 	}
 
-	void Application::ActivatePath(RenderPath* component, float fadeSeconds, wi::Color fadeColor)
+	void Application::ActivatePath(RenderPath* component, float fadeSeconds, wi::Color fadeColor, FadeManager::FadeType fadetype)
 	{
 		if (component != nullptr)
 		{
@@ -80,13 +80,15 @@ namespace wi
 				component->Start();
 			}
 			activePath = component;
-			});
+		}, fadetype);
 
 		fadeManager.Update(0); // If user calls ActivatePath without fadeout, it will be instant
 	}
 
 	void Application::Run()
 	{
+		EnsureRenderTargetValid();
+
 		if (!initialized)
 		{
 			// Initialize in a lazy way, so the user application doesn't have to call this explicitly
@@ -96,65 +98,24 @@ namespace wi
 
 		wi::font::UpdateAtlas(canvas.GetDPIScaling());
 
-		ColorSpace colorspace = graphicsDevice->GetSwapChainColorSpace(&swapChain);
-		if (colorspace == ColorSpace::HDR10_ST2084)
-		{
-			// In HDR10, we perform the compositing in a custom linear color space render target
-			if (!rendertarget.IsValid())
-			{
-				TextureDesc desc;
-				desc.width = swapChain.desc.width;
-				desc.height = swapChain.desc.height;
-				desc.format = Format::R11G11B10_FLOAT;
-				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-				bool success = graphicsDevice->CreateTexture(&desc, nullptr, &rendertarget);
-				assert(success);
-				graphicsDevice->SetName(&rendertarget, "Application::rendertarget");
-			}
-		}
-		else
-		{
-			// If swapchain is SRGB or Linear HDR, it can be used for blending
-			//	- If it is SRGB, the render path will ensure tonemapping to SDR
-			//	- If it is Linear HDR, we can blend trivially in linear space
-			rendertarget = {};
-		}
-
 		if (!wi::initializer::IsInitializeFinished())
 		{
 			// Until engine is not loaded, present initialization screen...
+			EnsureRenderTargetValid();
 			CommandList cmd = graphicsDevice->BeginCommandList();
-			if (rendertarget.IsValid())
-			{
-				RenderPassImage rp[] = {
-					RenderPassImage::RenderTarget(&rendertarget, RenderPassImage::LoadOp::CLEAR),
-				};
-				graphicsDevice->RenderPassBegin(rp, arraysize(rp), cmd);
-			}
-			else
-			{
-				graphicsDevice->RenderPassBegin(&swapChain, cmd);
-			}
+			graphicsDevice->RenderPassBegin(&rendertarget, cmd, true);
 			Viewport viewport;
 			viewport.width = (float)swapChain.desc.width;
 			viewport.height = (float)swapChain.desc.height;
 			graphicsDevice->BindViewports(1, &viewport, cmd);
 			if (wi::initializer::IsInitializeFinished(wi::initializer::INITIALIZED_SYSTEM_FONT))
 			{
-				wi::backlog::DrawOutputText(canvas, cmd, colorspace);
+				wi::backlog::DrawOutputText(canvas, cmd);
 			}
 			graphicsDevice->RenderPassEnd(cmd);
 
-			if (rendertarget.IsValid())
-			{
-				// In HDR10, we perform a final mapping from linear to HDR10, into the swapchain
-				graphicsDevice->RenderPassBegin(&swapChain, cmd);
-				wi::image::Params fx;
-				fx.enableFullScreen();
-				fx.enableHDR10OutputMapping();
-				wi::image::Draw(&rendertarget, fx, cmd);
-				graphicsDevice->RenderPassEnd(cmd);
-			}
+			SwapchainCompose(cmd);
+
 			graphicsDevice->SubmitCommandLists();
 			return;
 		}
@@ -214,6 +175,7 @@ namespace wi
 
 		if (GetActivePath() != nullptr)
 		{
+			ColorSpace colorspace = graphicsDevice->GetSwapChainColorSpace(&swapChain);
 			GetActivePath()->colorspace = colorspace;
 			GetActivePath()->init(canvas);
 			GetActivePath()->PreUpdate();
@@ -251,7 +213,32 @@ namespace wi
 		Render();
 
 		// Begin final compositing:
+		EnsureRenderTargetValid();
 		CommandList cmd = graphicsDevice->BeginCommandList();
+
+		// CrossFade texture save:
+		if (fadeManager.crossFadeTextureSaveRequired)
+		{
+			if (
+				fadeManager.crossFadeTexture.desc.width != rendertarget.desc.width ||
+				fadeManager.crossFadeTexture.desc.height != rendertarget.desc.height ||
+				fadeManager.crossFadeTexture.desc.format != rendertarget.desc.format
+				)
+			{
+				TextureDesc desc = rendertarget.desc;
+				desc.bind_flags = BindFlag::SHADER_RESOURCE;
+				bool success = graphicsDevice->CreateTexture(&desc, nullptr, &fadeManager.crossFadeTexture);
+				assert(success);
+				graphicsDevice->SetName(&fadeManager.crossFadeTexture, "wiFadeManager::crossFadeTexture");
+			}
+			graphicsDevice->Barrier(GPUBarrier::Image(&rendertarget, rendertarget.desc.layout, ResourceState::COPY_SRC), cmd);
+			graphicsDevice->Barrier(GPUBarrier::Image(&fadeManager.crossFadeTexture, fadeManager.crossFadeTexture.desc.layout, ResourceState::COPY_DST), cmd);
+			graphicsDevice->CopyResource(&fadeManager.crossFadeTexture, &rendertarget, cmd);
+			graphicsDevice->Barrier(GPUBarrier::Image(&fadeManager.crossFadeTexture, ResourceState::COPY_DST, fadeManager.crossFadeTexture.desc.layout), cmd);
+			graphicsDevice->Barrier(GPUBarrier::Image(&rendertarget, ResourceState::COPY_SRC, rendertarget.desc.layout), cmd);
+			fadeManager.crossFadeTextureSaveRequired = false;
+		}
+
 		wi::image::SetCanvas(canvas);
 		wi::font::SetCanvas(canvas);
 		Viewport viewport;
@@ -259,30 +246,11 @@ namespace wi
 		viewport.height = (float)swapChain.desc.height;
 		graphicsDevice->BindViewports(1, &viewport, cmd);
 
-		if (rendertarget.IsValid())
-		{
-			RenderPassImage rp[] = {
-				RenderPassImage::RenderTarget(&rendertarget, RenderPassImage::LoadOp::CLEAR),
-			};
-			graphicsDevice->RenderPassBegin(rp, arraysize(rp), cmd);
-		}
-		else
-		{
-			graphicsDevice->RenderPassBegin(&swapChain, cmd);
-		}
+		graphicsDevice->RenderPassBegin(&rendertarget, cmd);
 		Compose(cmd);
 		graphicsDevice->RenderPassEnd(cmd);
 
-		if (rendertarget.IsValid())
-		{
-			// In HDR10, we perform a final mapping from linear to HDR10, into the swapchain
-			graphicsDevice->RenderPassBegin(&swapChain, cmd);
-			wi::image::Params fx;
-			fx.enableFullScreen();
-			fx.enableHDR10OutputMapping();
-			wi::image::Draw(&rendertarget, fx, cmd);
-			graphicsDevice->RenderPassEnd(cmd);
-		}
+		SwapchainCompose(cmd);
 
 		wi::input::ClearForNextFrame();
 		wi::profiler::EndFrame(cmd);
@@ -352,9 +320,20 @@ namespace wi
 			// display fade rect
 			wi::image::Params fx;
 			fx.enableFullScreen();
-			fx.color = fadeManager.color;
 			fx.opacity = fadeManager.opacity;
-			wi::image::Draw(nullptr, fx, cmd);
+			if (fadeManager.type == FadeManager::FadeType::FadeToColor)
+			{
+				fx.color = fadeManager.color;
+				wi::image::Draw(nullptr, fx, cmd);
+			}
+			else if (fadeManager.type == FadeManager::FadeType::CrossFade)
+			{
+				wi::image::Draw(&fadeManager.crossFadeTexture, fx, cmd);
+			}
+		}
+		else
+		{
+			fadeManager.crossFadeTexture = {};
 		}
 
 		// Draw the information display
@@ -371,6 +350,16 @@ namespace wi
 				infodisplay_str += "Wicked Engine ";
 				infodisplay_str += wi::version::GetVersionString();
 				infodisplay_str += " ";
+
+#if defined(PLATFORM_WINDOWS_DESKTOP)
+				infodisplay_str += "[Windows]";
+#elif defined(PLATFORM_LINUX)
+				infodisplay_str += "[Linux]";
+#elif defined(PLATFORM_PS5)
+				infodisplay_str += "[PS5]";
+#elif defined(PLATFORM_XBOX)
+				infodisplay_str += "[Xbox]";
+#endif // PLATFORM
 
 #if defined(_ARM)
 				infodisplay_str += "[ARM]";
@@ -392,12 +381,6 @@ namespace wi
 					infodisplay_str += "[Vulkan]";
 				}
 #endif // WICKEDENGINE_BUILD_VULKAN
-#ifdef PLATFORM_PS5
-				if (dynamic_cast<GraphicsDevice_PS5*>(graphicsDevice.get()))
-				{
-					infodisplay_str += "[PS5]";
-				}
-#endif // PLATFORM_PS5
 
 #ifdef _DEBUG
 				infodisplay_str += "[DEBUG]";
@@ -588,6 +571,24 @@ namespace wi
 		wi::profiler::EndRange(range); // Compose
 	}
 
+	void Application::SwapchainCompose(CommandList cmd)
+	{
+		// rendertarget -> swapchain with color space conversion
+		EnsureRenderTargetValid();
+		ColorSpace colorspace = graphicsDevice->GetSwapChainColorSpace(&swapChain);
+		graphicsDevice->EventBegin("SwapchainCompose", cmd);
+		graphicsDevice->RenderPassBegin(&swapChain, cmd);
+		wi::image::Params fx;
+		fx.enableFullScreen();
+		if (colorspace == ColorSpace::HDR10_ST2084)
+		{
+			fx.enableHDR10OutputMapping();
+		}
+		wi::image::Draw(&rendertarget, fx, cmd);
+		graphicsDevice->RenderPassEnd(cmd);
+		graphicsDevice->EventEnd(cmd);
+	}
+
 	void Application::SetWindow(wi::platform::window_type window)
 	{
 		this->window = window;
@@ -699,6 +700,8 @@ namespace wi
 		bool success = graphicsDevice->CreateSwapChain(&desc, window, &swapChain);
 		assert(success);
 
+		EnsureRenderTargetValid();
+
 #ifdef PLATFORM_PS5
 		// PS5 swapchain resolution was decided in CreateSwapchain(), so reinit canvas:
 		canvas.init(swapChain.desc.width, swapChain.desc.height);
@@ -747,6 +750,30 @@ namespace wi
 #elif defined(PLATFORM_LINUX)
 		SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 #endif // PLATFORM_WINDOWS_DESKTOP
+	}
+
+	void Application::EnsureRenderTargetValid()
+	{
+		if (!rendertarget.IsValid() ||
+			rendertarget.desc.width != swapChain.desc.width ||
+			rendertarget.desc.height != swapChain.desc.height
+			)
+		{
+			TextureDesc desc;
+			desc.width = swapChain.desc.width;
+			desc.height = swapChain.desc.height;
+			desc.format = Format::R11G11B10_FLOAT;
+			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+			bool success = graphicsDevice->CreateTexture(&desc, nullptr, &rendertarget);
+			assert(success);
+			graphicsDevice->SetName(&rendertarget, "Application::rendertarget");
+			// clear and draw an empty frame immediately:
+			CommandList cmd = graphicsDevice->BeginCommandList();
+			graphicsDevice->RenderPassBegin(&rendertarget, cmd, true);
+			graphicsDevice->RenderPassEnd(cmd);
+			SwapchainCompose(cmd);
+			graphicsDevice->SubmitCommandLists();
+		}
 	}
 
 }

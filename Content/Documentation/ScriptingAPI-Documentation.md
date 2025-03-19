@@ -1661,7 +1661,7 @@ This is the main entry point and manages the lifetime of the application.
 - [void-constructor]Application()
 - GetContent() : Resource? result
 - GetActivePath() : RenderPath? result
-- SetActivePath(RenderPath path, opt float fadeSeconds, opt int fadeColorR = 0, fadeColorG = 0, fadeColorB = 0)
+- SetActivePath(RenderPath path, opt float fadeSeconds = 0, opt int fadeColorR = 0, fadeColorG = 0, fadeColorB = 0, FadeType fadetype = FadeType.FadeToColor)
 - SetFrameSkip(bool enabled)	-- enable/disable frame skipping in fixed update 
 - SetFullScreen(bool value)		-- switch to fullscreen/windowed
 - SetTargetFrameRate(float fps)	-- set target frame rate for fixed update and variable rate update when frame rate is locked
@@ -1682,8 +1682,15 @@ This is the main entry point and manages the lifetime of the application.
 - SetCanvas(Canvas canvas)  -- applies the specified canvas to the application
 - Exit() -- Closes the program
 - IsFaded() -- returns true when fadeout is full (fadeout can be set when switching paths with SetActivePath())
+- Fade(float fadeSeconds = 1, opt int fadeColorR = 0, fadeColorG = 0, fadeColorB = 0, FadeType fadetype = FadeType.FadeToColor)
+- CrossFade(float fadeSeconds = 1)
 - [outer]SetProfilerEnabled(bool enabled) -- enable/disable the on-screen profiler
 - [outer]prof() -- toggle the on-screen profiler (this function is made for convenience to write faster)
+
+FadeType = {
+	FadeToColor,
+	CrossFade,
+}
 
 ### RenderPath
 A RenderPath is a high level system that represents a part of the whole application. It is responsible to handle high level rendering and logic flow. A render path can be for example a loading screen, a menu screen, or primary game screen, etc.
@@ -1784,7 +1791,7 @@ It inherits functions from RenderPath2D.
 - [constructor]LoadingScreen()
 - AddLoadModelTask(string fileName, opt Matrix matrix) : Entity -- Adds a scene loading task into the global scene and returns the root entity handle immediately. The loading task will be started asynchronously when the LoadingScreen is activated by the Application.
 - AddLoadModelTask(Scene scene, string fileName, opt Matrix matrix) : Entity -- Adds a scene loading task into the specified scene and returns the root entity handle immediately. The loading task will be started asynchronously when the LoadingScreen is activated by the Application.
-- AddRenderPathActivationTask(RenderPath path, opt float fadeSeconds = 0, opt int fadeR = 0,fadeG = 0,fadeB = 0) -- loads resources of a RenderPath and activates it after all loading tasks have finished
+- AddRenderPathActivationTask(RenderPath path, opt float fadeSeconds = 0, opt int fadeR = 0,fadeG = 0,fadeB = 0, opt FadeType fadetype = FadeType.FadeToColor) -- loads resources of a RenderPath and activates it after all loading tasks have finished
 - IsFinished() : bool -- returns true when all loading tasks have finished
 - GetProgress() : int -- returns percentage of loading complete (0% - 100%)
 - SetBackgroundTexture(Texture tex) -- set a full screen background texture that wil be displayed when loading screen is active

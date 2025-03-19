@@ -30,12 +30,18 @@ namespace wi::initializer
 
 		initializationStarted.store(true);
 
-		std::string ss;
-		ss += "\n[wi::initializer] Initializing Wicked Engine, please wait...\n";
-		ss += "Version: ";
-		ss += wi::version::GetVersionString();
-		wi::backlog::post(ss);
+#if defined(PLATFORM_WINDOWS_DESKTOP)
+		static constexpr const char* platform_string = "Windows";
+#elif defined(PLATFORM_LINUX)
+		static constexpr const char* platform_string = "Linux";
+#elif defined(PLATFORM_PS5)
+		static constexpr const char* platform_string = "PS5";
+#elif defined(PLATFORM_XBOX)
+		static constexpr const char* platform_string = "Xbox";
+#endif // PLATFORM
 
+		wilog("\n[wi::initializer] Initializing Wicked Engine, please wait...\nVersion: %s\nPlatform: %s", wi::version::GetVersionString(), platform_string)
+		
 		size_t shaderdump_count = wi::renderer::GetShaderDumpCount();
 		if (shaderdump_count > 0)
 		{

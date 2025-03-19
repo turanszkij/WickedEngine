@@ -36,13 +36,13 @@ namespace wi
 		}
 	}
 
-	void LoadingScreen::addLoadingComponent(RenderPath* component, Application* main, float fadeSeconds, wi::Color fadeColor)
+	void LoadingScreen::addLoadingComponent(RenderPath* component, Application* main, float fadeSeconds, wi::Color fadeColor, wi::FadeManager::FadeType fadetype)
 	{
 		addLoadingFunction([=](wi::jobsystem::JobArgs args) {
 			component->Load();
 			});
 		onFinished([=] {
-			main->ActivatePath(component, fadeSeconds, fadeColor);
+			main->ActivatePath(component, fadeSeconds, fadeColor, fadetype);
 			});
 	}
 

@@ -347,6 +347,14 @@ namespace wi::graphics
 			BindConstantBuffer(&allocation.buffer, slot, cmd, allocation.offset);
 		}
 
+		void RenderPassBegin(const Texture* rendertarget, CommandList cmd, bool clear = true)
+		{
+			RenderPassImage rp[] = {
+				RenderPassImage::RenderTarget(rendertarget, clear ? RenderPassImage::LoadOp::CLEAR : RenderPassImage::LoadOp::LOAD),
+			};
+			RenderPassBegin(rp, arraysize(rp), cmd);
+		}
+
 		// Deprecated, kept for back-compat:
 		bool CreateRenderPass(const RenderPassDesc* desc, RenderPass* renderpass) const
 		{

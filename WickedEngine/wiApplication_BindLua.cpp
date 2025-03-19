@@ -33,6 +33,8 @@ namespace wi::lua
 		lunamethod(Application_BindLua, SetCanvas),
 		lunamethod(Application_BindLua, Exit),
 		lunamethod(Application_BindLua, IsFaded),
+		lunamethod(Application_BindLua, Fade),
+		lunamethod(Application_BindLua, CrossFade),
 		{ NULL, NULL }
 	};
 	Luna<Application_BindLua>::PropertyType Application_BindLua::properties[] = {
@@ -104,6 +106,7 @@ namespace wi::lua
 		{
 			float fadeSeconds = 0;
 			wi::Color fadeColor = wi::Color(0, 0, 0, 255);
+			wi::FadeManager::FadeType fadetype = wi::FadeManager::FadeType::FadeToColor;
 			if (argc > 1)
 			{
 				fadeSeconds = wi::lua::SGetFloat(L, 2);
@@ -116,6 +119,10 @@ namespace wi::lua
 						if (argc > 4)
 						{
 							fadeColor.setB((uint8_t)wi::lua::SGetInt(L, 5));
+							if (argc > 5)
+							{
+								fadetype = (wi::FadeManager::FadeType)wi::lua::SGetInt(L, 6);
+							}
 						}
 					}
 				}
@@ -124,28 +131,28 @@ namespace wi::lua
 			RenderPath3D_BindLua* comp3D = Luna<RenderPath3D_BindLua>::lightcheck(L, 1);
 			if (comp3D != nullptr)
 			{
-				component->ActivatePath(comp3D->component, fadeSeconds, fadeColor);
+				component->ActivatePath(comp3D->component, fadeSeconds, fadeColor, fadetype);
 				return 0;
 			}
 
 			LoadingScreen_BindLua* compLoad = Luna<LoadingScreen_BindLua>::lightcheck(L, 1);
 			if (compLoad != nullptr)
 			{
-				component->ActivatePath(compLoad->component, fadeSeconds, fadeColor);
+				component->ActivatePath(compLoad->component, fadeSeconds, fadeColor, fadetype);
 				return 0;
 			}
 
 			RenderPath2D_BindLua* comp2D = Luna<RenderPath2D_BindLua>::lightcheck(L, 1);
 			if (comp2D != nullptr)
 			{
-				component->ActivatePath(comp2D->component, fadeSeconds, fadeColor);
+				component->ActivatePath(comp2D->component, fadeSeconds, fadeColor, fadetype);
 				return 0;
 			}
 
 			RenderPath_BindLua* comp = Luna<RenderPath_BindLua>::lightcheck(L, 1);
 			if (comp != nullptr)
 			{
-				component->ActivatePath(comp->component, fadeSeconds, fadeColor);
+				component->ActivatePath(comp->component, fadeSeconds, fadeColor, fadetype);
 				return 0;
 			}
 
@@ -387,6 +394,62 @@ namespace wi::lua
 			wi::lua::SError(L, "SetColorGradingHelper(bool active) not enough arguments!");
 		return 0;
 	}
+	int Application_BindLua::Fade(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "Fade(float fadeSeconds = 1, opt int fadeColorR = 0, fadeColorG = 0, fadeColorB = 0, FadeType fadetype = FadeType.FadeToColor) component is empty!");
+			return 0;
+		}
+
+		float fadeSeconds = 1;
+		wi::Color fadeColor = wi::Color(0, 0, 0, 255);
+		wi::FadeManager::FadeType fadetype = wi::FadeManager::FadeType::FadeToColor;
+
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			fadeSeconds = wi::lua::SGetFloat(L, 1);
+			if (argc > 1)
+			{
+				fadeColor.setR((uint8_t)wi::lua::SGetInt(L, 2));
+				if (argc > 2)
+				{
+					fadeColor.setG((uint8_t)wi::lua::SGetInt(L, 3));
+					if (argc > 3)
+					{
+						fadeColor.setB((uint8_t)wi::lua::SGetInt(L, 4));
+						if (argc > 4)
+						{
+							fadetype = (wi::FadeManager::FadeType)wi::lua::SGetInt(L, 5);
+						}
+					}
+				}
+			}
+		}
+
+		component->Fade(fadeSeconds, fadeColor, fadetype);
+		return 0;
+	}
+	int Application_BindLua::CrossFade(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "CrossFade(float fadeSeconds = 1) component is empty!");
+			return 0;
+		}
+
+		float fadeSeconds = 1;
+
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			fadeSeconds = wi::lua::SGetFloat(L, 1);
+		}
+
+		component->Fade(fadeSeconds, wi::Color::Black(), wi::FadeManager::FadeType::CrossFade);
+		return 0;
+	}
 
 	int Application_BindLua::IsHDRSupported(lua_State* L)
 	{
@@ -495,6 +558,14 @@ namespace wi::lua
 
 			wi::lua::RegisterFunc("SetProfilerEnabled", SetProfilerEnabled);
 			wi::lua::RegisterFunc("prof", prof);
+
+			wi::lua::RunText(R"(
+FadeType = {
+	FadeToColor = 0,
+	CrossFade = 1,
+}
+)");
+
 		}
 	}
 

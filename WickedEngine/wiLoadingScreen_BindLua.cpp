@@ -140,14 +140,14 @@ namespace wi::lua
 		LoadingScreen* loading = dynamic_cast<LoadingScreen*>(component);
 		if (loading == nullptr)
 		{
-			wi::lua::SError(L, "AddRenderPathActivationTask(RenderPath path, opt float fadeSeconds = 0, opt int fadeR = 0,fadeG = 0,fadeB = 0): loading screen is invalid!");
+			wi::lua::SError(L, "AddRenderPathActivationTask(RenderPath path, opt float fadeSeconds = 0, opt int fadeR = 0,fadeG = 0,fadeB = 0, opt FadeType fadetype = FadeType.FadeToColor): loading screen is invalid!");
 			return 0;
 		}
 
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc < 2)
 		{
-			wi::lua::SError(L, "AddRenderPathActivationTask(RenderPath path, Application app, opt float fadeSeconds = 0, opt int fadeR = 0,fadeG = 0,fadeB = 0): not enough arguments!");
+			wi::lua::SError(L, "AddRenderPathActivationTask(RenderPath path, Application app, opt float fadeSeconds = 0, opt int fadeR = 0,fadeG = 0,fadeB = 0, opt FadeType fadetype = FadeType.FadeToColor): not enough arguments!");
 			return 0;
 		}
 		RenderPath* path = nullptr;
@@ -164,7 +164,7 @@ namespace wi::lua
 					RenderPath_BindLua* comp = Luna<RenderPath_BindLua>::lightcheck(L, 1);
 					if (comp == nullptr)
 					{
-						wi::lua::SError(L, "AddRenderPathActivationTask(RenderPath path, Application app, opt float fadeSeconds = 0, opt int fadeR = 0,fadeG = 0,fadeB = 0): first argument is not a RenderPath!");
+						wi::lua::SError(L, "AddRenderPathActivationTask(RenderPath path, Application app, opt float fadeSeconds = 0, opt int fadeR = 0,fadeG = 0,fadeB = 0, opt FadeType fadetype = FadeType.FadeToColor): first argument is not a RenderPath!");
 						return 0;
 					}
 					else
@@ -190,12 +190,13 @@ namespace wi::lua
 		Application_BindLua* app = Luna<Application_BindLua>::lightcheck(L, 2);
 		if (app == nullptr)
 		{
-			wi::lua::SError(L, "AddRenderPathActivationTask(RenderPath path, Application app, opt float fadeSeconds = 0, opt int fadeR = 0,fadeG = 0,fadeB = 0): second argument is not an Application!");
+			wi::lua::SError(L, "AddRenderPathActivationTask(RenderPath path, Application app, opt float fadeSeconds = 0, opt int fadeR = 0,fadeG = 0,fadeB = 0, opt FadeType fadetype = FadeType.FadeToColor): second argument is not an Application!");
 			return 0;
 		}
 
 		float fadeSeconds = 0;
 		wi::Color fadeColor = wi::Color::Black();
+		wi::FadeManager::FadeType fadetype = wi::FadeManager::FadeType::FadeToColor;
 
 		if (argc > 2)
 		{
@@ -209,12 +210,16 @@ namespace wi::lua
 					if (argc > 5)
 					{
 						fadeColor.setB((uint8_t)wi::lua::SGetInt(L, 6));
+						if (argc > 6)
+						{
+							fadetype = (wi::FadeManager::FadeType)wi::lua::SGetInt(L, 7);
+						}
 					}
 				}
 			}
 		}
 
-		loading->addLoadingComponent(path, app->component, fadeSeconds, fadeColor);
+		loading->addLoadingComponent(path, app->component, fadeSeconds, fadeColor, fadetype);
 		return 0;
 	}
 	int LoadingScreen_BindLua::IsFinished(lua_State* L)
