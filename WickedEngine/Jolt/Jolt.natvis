@@ -24,6 +24,9 @@
 	<Type Name="JPH::UVec4">
 		<DisplayString>{mU32[0]}, {mU32[1]}, {mU32[2]}, {mU32[3]}</DisplayString>
 	</Type>
+	<Type Name="JPH::BVec16">
+		<DisplayString>{uint(mU8[0])}, {uint(mU8[1])}, {uint(mU8[2])}, {uint(mU8[3])}, {uint(mU8[4])}, {uint(mU8[5])}, {uint(mU8[6])}, {uint(mU8[7])}, {uint(mU8[8])}, {uint(mU8[9])}, {uint(mU8[10])}, {uint(mU8[11])}, {uint(mU8[12])}, {uint(mU8[13])}, {uint(mU8[14])}, {uint(mU8[15])}</DisplayString>
+	</Type>
 	<Type Name="JPH::Quat">
 		<DisplayString>{mValue}</DisplayString>
 	</Type>
@@ -65,7 +68,7 @@
 		<DisplayString>min=({mMin}), max=({mMax})</DisplayString>
 	</Type>
 	<Type Name="JPH::BodyID">
-		<DisplayString>{mID}</DisplayString>
+		<DisplayString>idx={mID &amp; 0x007fffff}, seq={(mID >> 23) &amp; 0xff}, in_bp={mID >> 24,d}</DisplayString>
 	</Type>
 	<Type Name="JPH::Body">
 		<DisplayString>{mDebugName}: p=({mPosition.mF32[0],g}, {mPosition.mF32[1],g}, {mPosition.mF32[2],g}), r=({mRotation.mValue.mF32[0],g}, {mRotation.mValue.mF32[1],g}, {mRotation.mValue.mF32[2],g}, {mRotation.mValue.mF32[3],g}), v=({mLinearVelocity.mF32[0],g}, {mLinearVelocity.mF32[1],g}, {mLinearVelocity.mF32[2],g}), w=({mAngularVelocity.mF32[0],g}, {mAngularVelocity.mF32[1],g}, {mAngularVelocity.mF32[2],g})</DisplayString>
@@ -92,6 +95,19 @@
 				<Size>mSize</Size>
 				<ValuePointer>mElements</ValuePointer>
 			</ArrayItems>
+		</Expand>
+	</Type>
+	<Type Name="JPH::HashTable&lt;*&gt;">
+		<DisplayString>size={mSize}</DisplayString>
+		<Expand>
+			<Item Name="[size]" ExcludeView="simple">mSize</Item>
+			<Item Name="[bucket_count]" ExcludeView="simple">mMaxSize</Item>
+			<IndexListItems Condition="mData != nullptr">
+				<Size>mMaxSize</Size>
+				<ValueNode Condition="mControl[$i] &amp; 0x80">mData[$i]</ValueNode>
+				<ValueNode Condition="mControl[$i] == 0">"--Empty--"</ValueNode>
+				<ValueNode Condition="mControl[$i] == 0x7f">"--Deleted--"</ValueNode>
+			</IndexListItems>
 		</Expand>
 	</Type>
 	<Type Name="JPH::StridedPtr&lt;*&gt;">

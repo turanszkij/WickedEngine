@@ -46,6 +46,9 @@ public:
 	/// Vector with all zeros
 	static JPH_INLINE Vec3		sZero();
 
+	/// Vector with all ones
+	static JPH_INLINE Vec3		sOne();
+
 	/// Vector with all NaN's
 	static JPH_INLINE Vec3		sNaN();
 
@@ -288,7 +291,7 @@ public:
 	};
 };
 
-static_assert(is_trivial<Vec3>(), "Is supposed to be a trivial type!");
+static_assert(std::is_trivial<Vec3>(), "Is supposed to be a trivial type!");
 
 JPH_NAMESPACE_END
 

@@ -6,7 +6,7 @@
 
 #include <Jolt/Core/HashCombine.h>
 
-// Create a std::hash for DVec3
+// Create a std::hash/JPH::Hash for DVec3
 JPH_MAKE_HASHABLE(JPH::DVec3, t.GetX(), t.GetY(), t.GetZ())
 
 JPH_NAMESPACE_BEGIN
@@ -145,6 +145,11 @@ DVec3 DVec3::sReplicate(double inV)
 #else
 	return DVec3(inV, inV, inV);
 #endif
+}
+
+DVec3 DVec3::sOne()
+{
+	return sReplicate(1.0);
 }
 
 DVec3 DVec3::sNaN()
@@ -727,7 +732,7 @@ DVec3 DVec3::Abs() const
 
 DVec3 DVec3::Reciprocal() const
 {
-	return sReplicate(1.0) / mValue;
+	return sOne() / mValue;
 }
 
 DVec3 DVec3::Cross(DVec3Arg inV2) const

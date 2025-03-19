@@ -12,14 +12,9 @@
 #include <Jolt/Core/QuickSort.h>
 #include <Jolt/Core/UnorderedMap.h>
 #include <Jolt/Core/UnorderedSet.h>
-
-JPH_SUPPRESS_WARNINGS_STD_BEGIN
-#include <queue>
-JPH_SUPPRESS_WARNINGS_STD_END
+#include <Jolt/Core/BinaryHeap.h>
 
 JPH_NAMESPACE_BEGIN
-
-template<class T, class Container = Array<T>, class Compare = std::less<typename Container::value_type>> using PriorityQueue = std::priority_queue<T, Container, Compare>;
 
 JPH_IMPLEMENT_SERIALIZABLE_NON_VIRTUAL(SoftBodySharedSettings::Vertex)
 {
@@ -131,21 +126,26 @@ void SoftBodySharedSettings::CalculateClosestKinematic()
 	};
 
 	// Start with all kinematic elements
-	PriorityQueue<Open> to_visit;
+	Array<Open> to_visit;
 	for (uint32 v = 0; v < mVertices.size(); ++v)
 		if (mVertices[v].mInvMass == 0.0f)
 		{
 			mClosestKinematic[v].mVertex = v;
 			mClosestKinematic[v].mDistance = 0.0f;
-			to_visit.push({ v, 0.0f });
+			to_visit.push_back({ v, 0.0f });
+			BinaryHeapPush(to_visit.begin(), to_visit.end(), std::less<Open> { });
 		}
 
 	// Visit all vertices remembering the closest kinematic vertex and its distance
+	JPH_IF_ENABLE_ASSERTS(float last_closest = 0.0f;)
 	while (!to_visit.empty())
 	{
 		// Pop element from the open list
-		Open current = to_visit.top();
-		to_visit.pop();
+		BinaryHeapPop(to_visit.begin(), to_visit.end(), std::less<Open> { });
+		Open current = to_visit.back();
+		to_visit.pop_back();
+		JPH_ASSERT(current.mDistance >= last_closest);
+		JPH_IF_ENABLE_ASSERTS(last_closest = current.mDistance;)
 
 		// Loop through all of its connected vertices
 		for (uint32 v : connectivity[current.mVertex])
@@ -157,7 +157,8 @@ void SoftBodySharedSettings::CalculateClosestKinematic()
 				// Remember new closest vertex
 				mClosestKinematic[v].mVertex = mClosestKinematic[current.mVertex].mVertex;
 				mClosestKinematic[v].mDistance = new_distance;
-				to_visit.push({ v, new_distance });
+				to_visit.push_back({ v, new_distance });
+				BinaryHeapPush(to_visit.begin(), to_visit.end(), std::less<Open> { });
 			}
 		}
 	}
@@ -423,14 +424,16 @@ void SoftBodySharedSettings::CalculateSkinnedConstraintNormals()
 		return;
 
 	// First collect all vertices that are skinned
-	UnorderedSet<uint32> skinned_vertices;
-	skinned_vertices.reserve(mSkinnedConstraints.size());
+	using VertexIndexSet = UnorderedSet<uint32>;
+	VertexIndexSet skinned_vertices;
+	skinned_vertices.reserve(VertexIndexSet::size_type(mSkinnedConstraints.size()));
 	for (const Skinned &s : mSkinnedConstraints)
 		skinned_vertices.insert(s.mVertex);
 
 	// Now collect all faces that connect only to skinned vertices
-	UnorderedMap<uint32, UnorderedSet<uint32>> connected_faces;
-	connected_faces.reserve(mVertices.size());
+	using ConnectedFacesMap = UnorderedMap<uint32, VertexIndexSet>;
+	ConnectedFacesMap connected_faces;
+	connected_faces.reserve(ConnectedFacesMap::size_type(mVertices.size()));
 	for (const Face &f : mFaces)
 	{
 		// Must connect to only skinned vertices
@@ -451,12 +454,18 @@ void SoftBodySharedSettings::CalculateSkinnedConstraintNormals()
 	{
 		uint32 start = uint32(mSkinnedConstraintNormals.size());
 		JPH_ASSERT((start >> 24) == 0);
-		const UnorderedSet<uint32> &faces = connected_faces[s.mVertex];
-		uint32 num = uint32(faces.size());
-		JPH_ASSERT(num < 256);
-		mSkinnedConstraintNormals.insert(mSkinnedConstraintNormals.end(), faces.begin(), faces.end());
-		QuickSort(mSkinnedConstraintNormals.begin() + start, mSkinnedConstraintNormals.begin() + start + num);
-		s.mNormalInfo = start + (num << 24);
+		ConnectedFacesMap::const_iterator connected_faces_it = connected_faces.find(s.mVertex);
+		if (connected_faces_it != connected_faces.cend())
+		{
+			const VertexIndexSet &faces = connected_faces_it->second;
+			uint32 num = uint32(faces.size());
+			JPH_ASSERT(num < 256);
+			mSkinnedConstraintNormals.insert(mSkinnedConstraintNormals.end(), faces.begin(), faces.end());
+			QuickSort(mSkinnedConstraintNormals.begin() + start, mSkinnedConstraintNormals.begin() + start + num);
+			s.mNormalInfo = start + (num << 24);
+		}
+		else
+			s.mNormalInfo = 0;
 	}
 	mSkinnedConstraintNormals.shrink_to_fit();
 }
@@ -488,7 +497,7 @@ void SoftBodySharedSettings::Optimize(OptimizationResults &outResults)
 				if (!found)
 					connectivity[inV1].push_back({ inV2, 1 });
 
-				swap(inV1, inV2);
+				std::swap(inV1, inV2);
 			}
 		};
 	for (const Edge &c : mEdgeConstraints)
@@ -531,6 +540,10 @@ void SoftBodySharedSettings::Optimize(OptimizationResults &outResults)
 		for (uint i = 0; i < (uint)mVertices.size(); ++i)
 			if (group_idx[i] == -1)
 				bounds.Encapsulate(Vec3(mVertices[i].mPosition));
+
+		// If the bounds are invalid, it means that there were no ungrouped vertices
+		if (!bounds.IsValid())
+			break;
 
 		// Determine longest and shortest axis
 		Vec3 bounds_size = bounds.GetSize();
@@ -954,7 +967,7 @@ void SoftBodySharedSettings::SaveWithMaterials(StreamOut &inStream, SharedSettin
 	if (settings_iter == ioSettingsMap.end())
 	{
 		// Write settings ID
-		uint32 settings_id = (uint32)ioSettingsMap.size();
+		uint32 settings_id = ioSettingsMap.size();
 		ioSettingsMap[this] = settings_id;
 		inStream.Write(settings_id);
 
@@ -1018,6 +1031,149 @@ SoftBodySharedSettings::SettingsResult SoftBodySharedSettings::sRestoreWithMater
 
 	result.Set(settings);
 	return result;
+}
+
+Ref<SoftBodySharedSettings> SoftBodySharedSettings::sCreateCube(uint inGridSize, float inGridSpacing)
+{
+	const Vec3 cOffset = Vec3::sReplicate(-0.5f * inGridSpacing * (inGridSize - 1));
+
+	// Create settings
+	SoftBodySharedSettings *settings = new SoftBodySharedSettings;
+	for (uint z = 0; z < inGridSize; ++z)
+		for (uint y = 0; y < inGridSize; ++y)
+			for (uint x = 0; x < inGridSize; ++x)
+			{
+				SoftBodySharedSettings::Vertex v;
+				(cOffset + Vec3::sReplicate(inGridSpacing) * Vec3(float(x), float(y), float(z))).StoreFloat3(&v.mPosition);
+				settings->mVertices.push_back(v);
+			}
+
+	// Function to get the vertex index of a point on the cube
+	auto vertex_index = [inGridSize](uint inX, uint inY, uint inZ)
+	{
+		return inX + inY * inGridSize + inZ * inGridSize * inGridSize;
+	};
+
+	// Create edges
+	for (uint z = 0; z < inGridSize; ++z)
+		for (uint y = 0; y < inGridSize; ++y)
+			for (uint x = 0; x < inGridSize; ++x)
+			{
+				SoftBodySharedSettings::Edge e;
+				e.mVertex[0] = vertex_index(x, y, z);
+				if (x < inGridSize - 1)
+				{
+					e.mVertex[1] = vertex_index(x + 1, y, z);
+					settings->mEdgeConstraints.push_back(e);
+				}
+				if (y < inGridSize - 1)
+				{
+					e.mVertex[1] = vertex_index(x, y + 1, z);
+					settings->mEdgeConstraints.push_back(e);
+				}
+				if (z < inGridSize - 1)
+				{
+					e.mVertex[1] = vertex_index(x, y, z + 1);
+					settings->mEdgeConstraints.push_back(e);
+				}
+			}
+	settings->CalculateEdgeLengths();
+
+	// Tetrahedrons to fill a cube
+	const int tetra_indices[6][4][3] = {
+		{ {0, 0, 0}, {0, 1, 1}, {0, 0, 1}, {1, 1, 1} },
+		{ {0, 0, 0}, {0, 1, 0}, {0, 1, 1}, {1, 1, 1} },
+		{ {0, 0, 0}, {0, 0, 1}, {1, 0, 1}, {1, 1, 1} },
+		{ {0, 0, 0}, {1, 0, 1}, {1, 0, 0}, {1, 1, 1} },
+		{ {0, 0, 0}, {1, 1, 0}, {0, 1, 0}, {1, 1, 1} },
+		{ {0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {1, 1, 1} }
+	};
+
+	// Create volume constraints
+	for (uint z = 0; z < inGridSize - 1; ++z)
+		for (uint y = 0; y < inGridSize - 1; ++y)
+			for (uint x = 0; x < inGridSize - 1; ++x)
+				for (uint t = 0; t < 6; ++t)
+				{
+					SoftBodySharedSettings::Volume v;
+					for (uint i = 0; i < 4; ++i)
+						v.mVertex[i] = vertex_index(x + tetra_indices[t][i][0], y + tetra_indices[t][i][1], z + tetra_indices[t][i][2]);
+					settings->mVolumeConstraints.push_back(v);
+				}
+
+	settings->CalculateVolumeConstraintVolumes();
+
+	// Create faces
+	for (uint y = 0; y < inGridSize - 1; ++y)
+		for (uint x = 0; x < inGridSize - 1; ++x)
+		{
+			SoftBodySharedSettings::Face f;
+
+			// Face 1
+			f.mVertex[0] = vertex_index(x, y, 0);
+			f.mVertex[1] = vertex_index(x, y + 1, 0);
+			f.mVertex[2] = vertex_index(x + 1, y + 1, 0);
+			settings->AddFace(f);
+
+			f.mVertex[1] = vertex_index(x + 1, y + 1, 0);
+			f.mVertex[2] = vertex_index(x + 1, y, 0);
+			settings->AddFace(f);
+
+			// Face 2
+			f.mVertex[0] = vertex_index(x, y, inGridSize - 1);
+			f.mVertex[1] = vertex_index(x + 1, y + 1, inGridSize - 1);
+			f.mVertex[2] = vertex_index(x, y + 1, inGridSize - 1);
+			settings->AddFace(f);
+
+			f.mVertex[1] = vertex_index(x + 1, y, inGridSize - 1);
+			f.mVertex[2] = vertex_index(x + 1, y + 1, inGridSize - 1);
+			settings->AddFace(f);
+
+			// Face 3
+			f.mVertex[0] = vertex_index(x, 0, y);
+			f.mVertex[1] = vertex_index(x + 1, 0, y + 1);
+			f.mVertex[2] = vertex_index(x, 0, y + 1);
+			settings->AddFace(f);
+
+			f.mVertex[1] = vertex_index(x + 1, 0, y);
+			f.mVertex[2] = vertex_index(x + 1, 0, y + 1);
+			settings->AddFace(f);
+
+			// Face 4
+			f.mVertex[0] = vertex_index(x, inGridSize - 1, y);
+			f.mVertex[1] = vertex_index(x, inGridSize - 1, y + 1);
+			f.mVertex[2] = vertex_index(x + 1, inGridSize - 1, y + 1);
+			settings->AddFace(f);
+
+			f.mVertex[1] = vertex_index(x + 1, inGridSize - 1, y + 1);
+			f.mVertex[2] = vertex_index(x + 1, inGridSize - 1, y);
+			settings->AddFace(f);
+
+			// Face 5
+			f.mVertex[0] = vertex_index(0, x, y);
+			f.mVertex[1] = vertex_index(0, x, y + 1);
+			f.mVertex[2] = vertex_index(0, x + 1, y + 1);
+			settings->AddFace(f);
+
+			f.mVertex[1] = vertex_index(0, x + 1, y + 1);
+			f.mVertex[2] = vertex_index(0, x + 1, y);
+			settings->AddFace(f);
+
+			// Face 6
+			f.mVertex[0] = vertex_index(inGridSize - 1, x, y);
+			f.mVertex[1] = vertex_index(inGridSize - 1, x + 1, y + 1);
+			f.mVertex[2] = vertex_index(inGridSize - 1, x, y + 1);
+			settings->AddFace(f);
+
+			f.mVertex[1] = vertex_index(inGridSize - 1, x + 1, y);
+			f.mVertex[2] = vertex_index(inGridSize - 1, x + 1, y + 1);
+			settings->AddFace(f);
+		}
+
+	// Optimize the settings
+	settings->Optimize();
+
+	return settings;
 }
 
 JPH_NAMESPACE_END

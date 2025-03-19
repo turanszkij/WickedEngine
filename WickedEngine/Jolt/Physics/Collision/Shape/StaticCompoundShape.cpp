@@ -133,8 +133,8 @@ void StaticCompoundShape::sPartition(uint *ioBodyIdx, AABox *ioBounds, int inNum
 		if (start < end)
 		{
 			// Swap the two elements
-			swap(ioBodyIdx[start], ioBodyIdx[end - 1]);
-			swap(ioBounds[start], ioBounds[end - 1]);
+			std::swap(ioBodyIdx[start], ioBodyIdx[end - 1]);
+			std::swap(ioBounds[start], ioBounds[end - 1]);
 			++start;
 			--end;
 		}
@@ -234,7 +234,7 @@ StaticCompoundShape::StaticCompoundShape(const StaticCompoundShapeSettings &inSe
 
 		// Transform the shape's bounds into our local space
 		Mat44 transform = Mat44::sRotationTranslation(shape.GetRotation(), shape.GetPositionCOM());
-		AABox shape_bounds = shape.mShape->GetWorldSpaceBounds(transform, Vec3::sReplicate(1.0f));
+		AABox shape_bounds = shape.mShape->GetWorldSpaceBounds(transform, Vec3::sOne());
 
 		// Store bounds and body index for tree construction
 		bounds[i] = shape_bounds;

@@ -12,6 +12,7 @@
 #include <Jolt/Physics/Collision/CollideShape.h>
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
 #include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/InternalEdgeRemovingCollector.h>
 
 JPH_NAMESPACE_BEGIN
 
@@ -28,7 +29,7 @@ bool NarrowPhaseQuery::CastRay(const RRayCast &inRay, RayCastResult &ioHit, cons
 			mBodyLockInterface(inBodyLockInterface),
 			mBodyFilter(inBodyFilter)
 		{
-			UpdateEarlyOutFraction(ioHit.mFraction);
+			ResetEarlyOutFraction(ioHit.mFraction);
 		}
 
 		virtual void		AddHit(const ResultType &inResult) override
@@ -125,6 +126,10 @@ void NarrowPhaseQuery::CastRay(const RRayCast &inRay, const RayCastSettings &inR
 						// Do narrow phase collision check
 						ts.CastRay(mRay, mRayCastSettings, mCollector, mShapeFilter);
 
+						// Notify collector of the end of this body
+						// We do this before updating the early out fraction so that the collector can still modify it
+						mCollector.OnBodyEnd();
+
 						// Update early out fraction based on narrow phase collector
 						UpdateEarlyOutFraction(mCollector.GetEarlyOutFraction());
 					}
@@ -187,6 +192,10 @@ void NarrowPhaseQuery::CollidePoint(RVec3Arg inPoint, CollidePointCollector &ioC
 
 						// Do narrow phase collision check
 						ts.CollidePoint(mPoint, mCollector, mShapeFilter);
+
+						// Notify collector of the end of this body
+						// We do this before updating the early out fraction so that the collector can still modify it
+						mCollector.OnBodyEnd();
 
 						// Update early out fraction based on narrow phase collector
 						UpdateEarlyOutFraction(mCollector.GetEarlyOutFraction());
@@ -254,6 +263,10 @@ void NarrowPhaseQuery::CollideShape(const Shape *inShape, Vec3Arg inShapeScale, 
 						// Do narrow phase collision check
 						ts.CollideShape(mShape, mShapeScale, mCenterOfMassTransform, mCollideShapeSettings, mBaseOffset, mCollector, mShapeFilter);
 
+						// Notify collector of the end of this body
+						// We do this before updating the early out fraction so that the collector can still modify it
+						mCollector.OnBodyEnd();
+
 						// Update early out fraction based on narrow phase collector
 						UpdateEarlyOutFraction(mCollector.GetEarlyOutFraction());
 					}
@@ -279,6 +292,17 @@ void NarrowPhaseQuery::CollideShape(const Shape *inShape, Vec3Arg inShapeScale, 
 	// Do broadphase test
 	MyCollector collector(inShape, inShapeScale, inCenterOfMassTransform, inCollideShapeSettings, inBaseOffset, ioCollector, *mBodyLockInterface, inBodyFilter, inShapeFilter);
 	mBroadPhaseQuery->CollideAABox(bounds, collector, inBroadPhaseLayerFilter, inObjectLayerFilter);
+}
+
+void NarrowPhaseQuery::CollideShapeWithInternalEdgeRemoval(const Shape *inShape, Vec3Arg inShapeScale, RMat44Arg inCenterOfMassTransform, const CollideShapeSettings &inCollideShapeSettings, RVec3Arg inBaseOffset, CollideShapeCollector &ioCollector, const BroadPhaseLayerFilter &inBroadPhaseLayerFilter, const ObjectLayerFilter &inObjectLayerFilter, const BodyFilter &inBodyFilter, const ShapeFilter &inShapeFilter) const
+{
+	// We require these settings for internal edge removal to work
+	CollideShapeSettings settings = inCollideShapeSettings;
+	settings.mActiveEdgeMode = EActiveEdgeMode::CollideWithAll;
+	settings.mCollectFacesMode = ECollectFacesMode::CollectFaces;
+
+	InternalEdgeRemovingCollector wrapper(ioCollector);
+	CollideShape(inShape, inShapeScale, inCenterOfMassTransform, settings, inBaseOffset, wrapper, inBroadPhaseLayerFilter, inObjectLayerFilter, inBodyFilter, inShapeFilter);
 }
 
 void NarrowPhaseQuery::CastShape(const RShapeCast &inShapeCast, const ShapeCastSettings &inShapeCastSettings, RVec3Arg inBaseOffset, CastShapeCollector &ioCollector, const BroadPhaseLayerFilter &inBroadPhaseLayerFilter, const ObjectLayerFilter &inObjectLayerFilter, const BodyFilter &inBodyFilter, const ShapeFilter &inShapeFilter) const
@@ -327,6 +351,10 @@ void NarrowPhaseQuery::CastShape(const RShapeCast &inShapeCast, const ShapeCastS
 
 						// Do narrow phase collision check
 						ts.CastShape(mShapeCast, mShapeCastSettings, mBaseOffset, mCollector, mShapeFilter);
+
+						// Notify collector of the end of this body
+						// We do this before updating the early out fraction so that the collector can still modify it
+						mCollector.OnBodyEnd();
 
 						// Update early out fraction based on narrow phase collector
 						UpdateEarlyOutFraction(mCollector.GetEarlyOutFraction());
@@ -389,6 +417,10 @@ void NarrowPhaseQuery::CollectTransformedShapes(const AABox &inBox, TransformedS
 
 						// Do narrow phase collision check
 						ts.CollectTransformedShapes(mBox, mCollector, mShapeFilter);
+
+						// Notify collector of the end of this body
+						// We do this before updating the early out fraction so that the collector can still modify it
+						mCollector.OnBodyEnd();
 
 						// Update early out fraction based on narrow phase collector
 						UpdateEarlyOutFraction(mCollector.GetEarlyOutFraction());
