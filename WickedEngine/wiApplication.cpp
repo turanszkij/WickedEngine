@@ -106,8 +106,8 @@ namespace wi
 			CommandList cmd = graphicsDevice->BeginCommandList();
 			graphicsDevice->RenderPassBegin(&rendertarget, cmd, true);
 			Viewport viewport;
-			viewport.width = (float)swapChain.desc.width;
-			viewport.height = (float)swapChain.desc.height;
+			viewport.width = (float)rendertarget.desc.width;
+			viewport.height = (float)rendertarget.desc.height;
 			graphicsDevice->BindViewports(1, &viewport, cmd);
 			if (wi::initializer::IsInitializeFinished(wi::initializer::INITIALIZED_SYSTEM_FONT))
 			{
@@ -584,13 +584,16 @@ namespace wi
 		ColorSpace colorspace = graphicsDevice->GetSwapChainColorSpace(&swapChain);
 		graphicsDevice->EventBegin("SwapchainCompose", cmd);
 		graphicsDevice->RenderPassBegin(&swapChain, cmd);
-		wi::image::Params fx;
-		fx.enableFullScreen();
-		if (colorspace == ColorSpace::HDR10_ST2084)
+		if (wi::initializer::IsInitializeFinished(wi::initializer::INITIALIZED_SYSTEM_IMAGE))
 		{
-			fx.enableHDR10OutputMapping();
+			wi::image::Params fx;
+			fx.enableFullScreen();
+			if (colorspace == ColorSpace::HDR10_ST2084)
+			{
+				fx.enableHDR10OutputMapping();
+			}
+			wi::image::Draw(&rendertarget, fx, cmd);
 		}
-		wi::image::Draw(&rendertarget, fx, cmd);
 		graphicsDevice->RenderPassEnd(cmd);
 		graphicsDevice->EventEnd(cmd);
 	}
