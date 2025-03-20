@@ -980,6 +980,20 @@ namespace wi::renderer
 		bool depthstencil_already_cleared = false
 	);
 
+	// The input texture mask is scaled into the stencil of the current render pass with the specified viewport
+	void ScaleStencilMask(
+		const wi::graphics::Viewport& vp,
+		const wi::graphics::Texture& input,
+		wi::graphics::CommandList cmd
+	);
+
+	// Extract stencil from a depth stencil texture into a R8_UINT format texture
+	void ExtractStencil(
+		const wi::graphics::Texture& input_depthstencil,
+		const wi::graphics::Texture& output,
+		wi::graphics::CommandList cmd
+	);
+
 	// Render the scene with ray tracing
 	void RayTraceScene(
 		const wi::scene::Scene& scene,

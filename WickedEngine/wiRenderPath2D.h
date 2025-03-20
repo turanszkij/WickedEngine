@@ -14,8 +14,9 @@ namespace wi
 		public RenderPath
 	{
 	protected:
-		wi::graphics::Texture rtStenciled;
-		wi::graphics::Texture rtStenciled_resolved;
+		wi::graphics::Texture rtStencilExtracted;
+		wi::graphics::Texture stencilScaled;
+
 		wi::graphics::Texture rtFinal;
 		wi::graphics::Texture rtFinal_MSAA;
 

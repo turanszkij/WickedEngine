@@ -1786,15 +1786,14 @@ namespace wi
 	void RenderPath3D::Compose(CommandList cmd) const
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
+		device->EventBegin("RenderPath3D::Compose", cmd);
 
 		wi::image::Params fx;
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		fx.quality = wi::image::QUALITY_LINEAR;
 		fx.enableFullScreen();
 
-		device->EventBegin("Composition", cmd);
 		wi::image::Draw(GetLastPostprocessRT(), fx, cmd);
-		device->EventEnd(cmd);
 
 		if (
 			wi::renderer::GetDebugLightCulling() ||
@@ -1806,6 +1805,8 @@ namespace wi
 			fx.blendFlag = BLENDMODE_PREMULTIPLIED;
 			wi::image::Draw(&debugUAV, fx, cmd);
 		}
+
+		device->EventEnd(cmd);
 
 		RenderPath2D::Compose(cmd);
 	}

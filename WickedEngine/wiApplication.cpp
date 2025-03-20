@@ -70,9 +70,10 @@ namespace wi
 		// Fade manager will activate on fadeout
 		fadeManager.Start(fadeSeconds, fadeColor, [this, component]() {
 
-			if (GetActivePath() != nullptr)
+			RenderPath* renderpath = GetActivePath();
+			if (renderpath != nullptr)
 			{
-				GetActivePath()->Stop();
+				renderpath->Stop();
 			}
 
 			if (component != nullptr)
@@ -173,12 +174,13 @@ namespace wi
 
 		fadeManager.Update(deltaTime);
 
-		if (GetActivePath() != nullptr)
+		RenderPath* renderpath = GetActivePath();
+		if (renderpath != nullptr)
 		{
 			ColorSpace colorspace = graphicsDevice->GetSwapChainColorSpace(&swapChain);
-			GetActivePath()->colorspace = colorspace;
-			GetActivePath()->init(canvas);
-			GetActivePath()->PreUpdate();
+			renderpath->colorspace = colorspace;
+			renderpath->init(canvas);
+			renderpath->PreUpdate();
 		}
 
 		// Fixed time update:
@@ -270,10 +272,11 @@ namespace wi
 
 		wi::resourcemanager::UpdateStreamingResources(dt);
 
-		if (GetActivePath() != nullptr)
+		RenderPath* renderpath = GetActivePath();
+		if (renderpath != nullptr)
 		{
-			GetActivePath()->Update(dt);
-			GetActivePath()->PostUpdate();
+			renderpath->Update(dt);
+			renderpath->PostUpdate();
 		}
 
 		wi::profiler::EndRange(range); // Update
@@ -283,9 +286,10 @@ namespace wi
 	{
 		wi::lua::FixedUpdate();
 
-		if (GetActivePath() != nullptr)
+		RenderPath* renderpath = GetActivePath();
+		if (renderpath != nullptr)
 		{
-			GetActivePath()->FixedUpdate();
+			renderpath->FixedUpdate();
 		}
 	}
 
@@ -295,11 +299,12 @@ namespace wi
 
 		wi::lua::Render();
 
-		if (GetActivePath() != nullptr)
+		RenderPath* renderpath = GetActivePath();
+		if (renderpath != nullptr)
 		{
-			GetActivePath()->PreRender();
-			GetActivePath()->Render();
-			GetActivePath()->PostRender();
+			renderpath->PreRender();
+			renderpath->Render();
+			renderpath->PostRender();
 		}
 
 		wi::profiler::EndRange(range); // Render
@@ -310,9 +315,10 @@ namespace wi
 		auto range = wi::profiler::BeginRangeCPU("Compose");
 		ColorSpace colorspace = graphicsDevice->GetSwapChainColorSpace(&swapChain);
 
-		if (GetActivePath() != nullptr)
+		RenderPath* renderpath = GetActivePath();
+		if (renderpath != nullptr)
 		{
-			GetActivePath()->Compose(cmd);
+			renderpath->Compose(cmd);
 		}
 
 		if (fadeManager.IsActive())

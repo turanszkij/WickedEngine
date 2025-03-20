@@ -1687,6 +1687,13 @@ struct VirtualTextureTileRequestsPush
 	int padding2;
 };
 
+struct StencilBitPush
+{
+	float2 output_resolution_rcp;
+	uint input_resolution;
+	uint bit;
+};
+
 CBUFFER(TrailRendererCB, CBSLOT_TRAILRENDERER)
 {
 	float4x4	g_xTrailTransform;

@@ -269,6 +269,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"ddgi_debugPS", wi::graphics::ShaderStage::PS },
 	{"copyDepthPS", wi::graphics::ShaderStage::PS },
 	{"copyStencilBitPS", wi::graphics::ShaderStage::PS },
+	{"extractStencilBitPS", wi::graphics::ShaderStage::PS },
 	{"trailPS", wi::graphics::ShaderStage::PS },
 
 
@@ -479,6 +480,10 @@ int main(int argc, char* argv[])
 	// permutations for ssgi_upsampleCS:
 	shaders.push_back({ "ssgi_upsampleCS", wi::graphics::ShaderStage::CS });
 	shaders.back().permutations.emplace_back().defines = { "WIDE" };
+
+	// permutations for copyStencilBitPS:
+	shaders.push_back({ "copyStencilBitPS", wi::graphics::ShaderStage::PS });
+	shaders.back().permutations.emplace_back().defines = { "MSAA" };
 
 	wi::jobsystem::Initialize();
 	wi::jobsystem::context ctx;

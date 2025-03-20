@@ -1910,7 +1910,9 @@ runProcess(function()
 	--	Also save the active component that we can restore when ESCAPE is pressed
 	local prevPath = application.GetActivePath()
 	local path = RenderPath3D()
-	application.SetActivePath(path)
+	--path.SetResolutionScale(0.1)
+	--path.SetMSAASampleCount(8)
+	application.SetActivePath(path, 0.5, 0, 0, 0, FadeType.CrossFade)
 
 	local help_text = ""
 	help_text = help_text .. "Wicked Engine Fighting game sample script\n"
@@ -2026,7 +2028,7 @@ runProcess(function()
 			--	so if you loaded this script from the editor, you can go back to the editor with ESC
 			backlog_post("EXIT")
 			killProcesses()
-			application.SetActivePath(prevPath)
+			application.SetActivePath(prevPath, 0.5, 0, 0, 0, FadeType.CrossFade)
 			return
 		end
 		if(not backlog_isactive() and input.Press(string.byte('R'))) then

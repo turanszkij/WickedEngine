@@ -673,6 +673,8 @@ PipelineState PSO_volumetricclouds_upsample;
 PipelineState PSO_outline;
 PipelineState PSO_copyDepth;
 PipelineState PSO_copyStencilBit[8];
+PipelineState PSO_copyStencilBit_MSAA[8];
+PipelineState PSO_extractStencilBit[8];
 
 RaytracingPipelineState RTPSO_reflection;
 
@@ -937,6 +939,8 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_UPSAMPLE], "volumetricCloud_upsamplePS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_COPY_DEPTH], "copyDepthPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_COPY_STENCIL_BIT], "copyStencilBitPS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_COPY_STENCIL_BIT_MSAA], "copyStencilBitPS.cso", ShaderModel::SM_6_0, {"MSAA"}); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_EXTRACT_STENCIL_BIT], "extractStencilBitPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_PAINTDECAL], "paintdecalPS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXELIZER], "objectGS_voxelizer.cso"); });
@@ -1492,6 +1496,20 @@ void LoadShaders()
 		{
 			desc.dss = &depthStencils[DSSTYPE_COPY_STENCIL_BIT_0 + i];
 			device->CreatePipelineState(&desc, &PSO_copyStencilBit[i]);
+		}
+
+		desc.ps = &shaders[PSTYPE_COPY_STENCIL_BIT_MSAA];
+		for (int i = 0; i < 8; ++i)
+		{
+			desc.dss = &depthStencils[DSSTYPE_COPY_STENCIL_BIT_0 + i];
+			device->CreatePipelineState(&desc, &PSO_copyStencilBit_MSAA[i]);
+		}
+
+		desc.ps = &shaders[PSTYPE_EXTRACT_STENCIL_BIT];
+		for (int i = 0; i < 8; ++i)
+		{
+			desc.dss = &depthStencils[DSSTYPE_EXTRACT_STENCIL_BIT_0 + i];
+			device->CreatePipelineState(&desc, &PSO_extractStencilBit[i]);
 		}
 		});
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
@@ -2340,6 +2358,16 @@ void SetUpStates()
 	{
 		dsd.stencil_write_mask = uint8_t(1 << i);
 		depthStencils[DSSTYPE_COPY_STENCIL_BIT_0 + i] = dsd;
+	}
+
+	dsd.stencil_write_mask = 0;
+	dsd.front_face.stencil_func = ComparisonFunc::EQUAL;
+	dsd.front_face.stencil_pass_op = StencilOp::KEEP;
+	dsd.back_face = dsd.front_face;
+	for (int i = 0; i < 8; ++i)
+	{
+		dsd.stencil_read_mask = uint8_t(1 << i);
+		depthStencils[DSSTYPE_EXTRACT_STENCIL_BIT_0 + i] = dsd;
 	}
 
 
@@ -17805,6 +17833,7 @@ void CopyDepthStencil(
 
 	if (manual_depthstencil_copy_required)
 	{
+		// Vulkan workaround:
 		PushBarrier(GPUBarrier::Image(input_depth, input_depth->desc.layout, ResourceState::SHADER_RESOURCE));
 		PushBarrier(GPUBarrier::Image(input_stencil, input_stencil->desc.layout, ResourceState::SHADER_RESOURCE));
 		FlushBarriers(cmd);
@@ -17844,15 +17873,27 @@ void CopyDepthStencil(
 			device->EventBegin("CopyStencilBits", cmd);
 			device->BindResource(input_stencil, 0, cmd);
 
+			StencilBitPush push = {};
+			push.output_resolution_rcp.x = 1.0f / vp.width;
+			push.output_resolution_rcp.y = 1.0f / vp.height;
+			push.input_resolution = (input_stencil->desc.width & 0xFFFF) | (input_stencil->desc.height << 16u);
+
 			uint32_t bit_index = 0;
 			while (stencil_bits_to_copy != 0)
 			{
 				if (stencil_bits_to_copy & 0x1)
 				{
-					device->BindPipelineState(&PSO_copyStencilBit[bit_index], cmd);
-					const uint bit = 1u << bit_index;
-					device->PushConstants(&bit, sizeof(bit), cmd);
-					device->BindStencilRef(bit, cmd);
+					if (input_stencil->desc.sample_count > 1)
+					{
+						device->BindPipelineState(&PSO_copyStencilBit_MSAA[bit_index], cmd);
+					}
+					else
+					{
+						device->BindPipelineState(&PSO_copyStencilBit[bit_index], cmd);
+					}
+					push.bit = 1u << bit_index;
+					device->PushConstants(&push, sizeof(push), cmd);
+					device->BindStencilRef(push.bit, cmd);
 					device->Draw(3, 0, cmd);
 				}
 				bit_index++;
@@ -17869,30 +17910,49 @@ void CopyDepthStencil(
 	}
 	else
 	{
-		PushBarrier(GPUBarrier::Image(input_depth, input_depth->desc.layout, ResourceState::COPY_SRC));
-		PushBarrier(GPUBarrier::Image(input_stencil, input_stencil->desc.layout, ResourceState::COPY_SRC));
+		// Normal copy from color to depth/stencil aspects:
+		if (input_depth != nullptr)
+		{
+			PushBarrier(GPUBarrier::Image(input_depth, input_depth->desc.layout, ResourceState::COPY_SRC));
+		}
+		if (input_stencil != nullptr)
+		{
+			PushBarrier(GPUBarrier::Image(input_stencil, input_stencil->desc.layout, ResourceState::COPY_SRC));
+		}
 		PushBarrier(GPUBarrier::Image(&output_depth_stencil, output_depth_stencil.desc.layout, ResourceState::COPY_DST));
 		FlushBarriers(cmd);
 
-		device->CopyTexture(
-			&output_depth_stencil, 0, 0, 0, 0, 0,
-			input_depth, 0, 0,
-			cmd,
-			nullptr,
-			ImageAspect::DEPTH,
-			ImageAspect::COLOR
-		);
-		device->CopyTexture(
-			&output_depth_stencil, 0, 0, 0, 0, 0,
-			input_stencil, 0, 0,
-			cmd,
-			nullptr,
-			ImageAspect::STENCIL,
-			ImageAspect::COLOR
-		);
+		if (input_depth != nullptr)
+		{
+			device->CopyTexture(
+				&output_depth_stencil, 0, 0, 0, 0, 0,
+				input_depth, 0, 0,
+				cmd,
+				nullptr,
+				ImageAspect::DEPTH,
+				ImageAspect::COLOR
+			);
+		}
+		if (input_stencil != nullptr)
+		{
+			device->CopyTexture(
+				&output_depth_stencil, 0, 0, 0, 0, 0,
+				input_stencil, 0, 0,
+				cmd,
+				nullptr,
+				ImageAspect::STENCIL,
+				ImageAspect::COLOR
+			);
+		}
 
-		PushBarrier(GPUBarrier::Image(input_depth, ResourceState::COPY_SRC, input_depth->desc.layout));
-		PushBarrier(GPUBarrier::Image(input_stencil, ResourceState::COPY_SRC, input_stencil->desc.layout));
+		if (input_depth != nullptr)
+		{
+			PushBarrier(GPUBarrier::Image(input_depth, ResourceState::COPY_SRC, input_depth->desc.layout));
+		}
+		if (input_stencil != nullptr)
+		{
+			PushBarrier(GPUBarrier::Image(input_stencil, ResourceState::COPY_SRC, input_stencil->desc.layout));
+		}
 		PushBarrier(GPUBarrier::Image(&output_depth_stencil, ResourceState::COPY_DST, output_depth_stencil.desc.layout));
 		FlushBarriers(cmd);
 	}
@@ -17900,6 +17960,130 @@ void CopyDepthStencil(
 	device->EventEnd(cmd);
 }
 
+void ScaleStencilMask(
+	const Viewport& vp,
+	const Texture& input,
+	CommandList cmd
+)
+{
+	device->EventBegin("ScaleStencilMask", cmd);
+
+	device->BindResource(&input, 0, cmd);
+
+	RenderPassInfo info = device->GetRenderPassInfo(cmd);
+	assert(IsFormatStencilSupport(info.ds_format)); // the current render pass must have stencil
+
+	StencilBitPush push = {};
+	push.output_resolution_rcp.x = 1.0f / vp.width;
+	push.output_resolution_rcp.y = 1.0f / vp.height;
+	push.input_resolution = (input.desc.width & 0xFFFF) | (input.desc.height << 16u);
+
+	uint8_t stencil_bits_to_copy = 0xFF;
+	uint32_t bit_index = 0;
+	while (stencil_bits_to_copy != 0)
+	{
+		if (stencil_bits_to_copy & 0x1)
+		{
+			if (input.desc.sample_count > 1)
+			{
+				device->BindPipelineState(&PSO_copyStencilBit_MSAA[bit_index], cmd);
+			}
+			else
+			{
+				device->BindPipelineState(&PSO_copyStencilBit[bit_index], cmd);
+			}
+			push.bit = 1u << bit_index;
+			device->PushConstants(&push, sizeof(push), cmd);
+			device->BindStencilRef(push.bit, cmd);
+			device->Draw(3, 0, cmd);
+		}
+		bit_index++;
+		stencil_bits_to_copy >>= 1;
+	}
+
+	device->EventEnd(cmd);
+}
+
+void ExtractStencil(
+	const Texture& input_depthstencil,
+	const Texture& output,
+	CommandList cmd
+)
+{
+	device->EventBegin("ExtractStencil", cmd);
+
+	if (device->CheckCapability(GraphicsDeviceCapability::COPY_BETWEEN_DIFFERENT_IMAGE_ASPECTS_NOT_SUPPORTED))
+	{
+		// Vulkan workaround:
+		device->EventBegin("ExtractStencilBits", cmd);
+
+		RenderPassImage rp[] = {
+			RenderPassImage::RenderTarget(&output,RenderPassImage::LoadOp::CLEAR),
+			RenderPassImage::DepthStencil(&input_depthstencil),
+		};
+		device->RenderPassBegin(rp, arraysize(rp), cmd);
+
+		Viewport vp;
+		vp.width = (float)output.desc.width;
+		vp.height = (float)output.desc.height;
+		device->BindViewports(1, &vp, cmd);
+
+		Rect rect;
+		rect.left = 0;
+		rect.right = output.desc.width;
+		rect.top = 0;
+		rect.bottom = output.desc.height;
+		device->BindScissorRects(1, &rect, cmd);
+
+		StencilBitPush push = {};
+		push.output_resolution_rcp.x = 1.0f / vp.width;
+		push.output_resolution_rcp.y = 1.0f / vp.height;
+		push.input_resolution = (input_depthstencil.desc.width & 0xFFFF) | (input_depthstencil.desc.height << 16u);
+
+		device->BindStencilRef(0xFFFFFFFF, cmd);
+
+		uint8_t stencil_bits_to_extract = 0xFF;
+		uint32_t bit_index = 0;
+		while (stencil_bits_to_extract != 0)
+		{
+			if (stencil_bits_to_extract & 0x1)
+			{
+				device->BindPipelineState(&PSO_extractStencilBit[bit_index], cmd);
+				push.bit = 1u << bit_index;
+				device->PushConstants(&push, sizeof(push), cmd);
+				device->Draw(3, 0, cmd);
+			}
+			bit_index++;
+			stencil_bits_to_extract >>= 1;
+		}
+
+		device->RenderPassEnd(cmd);
+
+		device->EventEnd(cmd);
+	}
+	else
+	{
+		// Normal copy from stencil aspect to color:
+		PushBarrier(GPUBarrier::Image(&input_depthstencil, input_depthstencil.desc.layout, ResourceState::COPY_SRC));
+		PushBarrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::COPY_DST));
+		FlushBarriers(cmd);
+
+		device->CopyTexture(
+			&output, 0, 0, 0, 0, 0,
+			&input_depthstencil, 0, 0,
+			cmd,
+			nullptr,
+			ImageAspect::COLOR,
+			ImageAspect::STENCIL
+		);
+
+		PushBarrier(GPUBarrier::Image(&input_depthstencil, ResourceState::COPY_SRC, input_depthstencil.desc.layout));
+		PushBarrier(GPUBarrier::Image(&output, ResourceState::COPY_DST, output.desc.layout));
+		FlushBarriers(cmd);
+	}
+
+	device->EventEnd(cmd);
+}
 
 void ComputeReprojectedDepthPyramid(
 	const Texture& input_depth,
