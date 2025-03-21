@@ -37,6 +37,13 @@ float4 main(VertextoPixel input) : SV_TARGET
 	}
 
 	[branch]
+	if (flags & FONT_FLAG_OUTPUT_COLOR_SPACE_LINEAR)
+	{
+		color.rgb = RemoveSRGBCurve_Fast(color.rgb);
+		color.rgb *= hdr_scaling;
+	}
+	
+	[branch]
 	if (flags & FONT_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084)
 	{
 		// https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12HDR/src/presentPS.hlsl
@@ -47,11 +54,6 @@ float4 main(VertextoPixel input) : SV_TARGET
 		color.rgb = REC709toREC2020(color.rgb);
 		// Apply the ST.2084 curve to the result.
 		color.rgb = ApplyREC2084Curve(color.rgb * hdrScalar);
-	}
-	else if (flags & FONT_FLAG_OUTPUT_COLOR_SPACE_LINEAR)
-	{
-		color.rgb = RemoveSRGBCurve_Fast(color.rgb);
-		color.rgb *= hdr_scaling;
 	}
 
 	return color;

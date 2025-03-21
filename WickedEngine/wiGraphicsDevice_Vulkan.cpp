@@ -357,6 +357,8 @@ namespace vulkan_internal
 		case ResourceState::VIDEO_DECODE_SRC:
 		case ResourceState::VIDEO_DECODE_DST:
 			return VK_IMAGE_LAYOUT_VIDEO_DECODE_DPB_KHR;
+		case ResourceState::SWAPCHAIN:
+			return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 		default:
 			// combination of state flags will default to general
 			//	whether the combination of states is valid needs to be validated by the user
@@ -7406,6 +7408,7 @@ using namespace vulkan_internal;
 		result.desc.width = swapchain_internal->swapChainExtent.width;
 		result.desc.height = swapchain_internal->swapChainExtent.height;
 		result.desc.format = swapchain->desc.format;
+		result.desc.layout = ResourceState::SWAPCHAIN;
 		return result;
 	}
 	ColorSpace GraphicsDevice_Vulkan::GetSwapChainColorSpace(const SwapChain* swapchain) const

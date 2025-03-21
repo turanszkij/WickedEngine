@@ -136,7 +136,7 @@ namespace wi
 
 	const wi::graphics::Texture* Sprite::GetTexture() const
 	{
-		return textureResource.IsValid() ? &textureResource.GetTexture() : wi::texturehelper::getWhite();
+		return textureResource.IsValid() ? &textureResource.GetTexture() : nullptr;
 	}
 
 	void Sprite::Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri)

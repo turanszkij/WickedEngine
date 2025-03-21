@@ -123,6 +123,9 @@ namespace dx12_internal
 		if (has_flag(value, ResourceState::VIDEO_DECODE_DST))
 			ret |= D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE;
 
+		if (has_flag(value, ResourceState::SWAPCHAIN))
+			ret |= D3D12_RESOURCE_STATE_PRESENT;
+
 		return ret;
 	}
 	constexpr D3D12_FILTER _ConvertFilter(Filter value)
@@ -5781,6 +5784,7 @@ std::mutex queue_locker;
 		result.type = GPUResource::Type::TEXTURE;
 		result.internal_state = internal_state;
 		result.desc = _ConvertTextureDesc_Inv(resourcedesc);
+		result.desc.layout = ResourceState::SWAPCHAIN;
 		return result;
 	}
 

@@ -40,12 +40,9 @@ namespace wi
 		float deltatimes[20] = {};
 		int fps_avg_counter = 0;
 
-		wi::graphics::Texture rendertarget;
-
 		std::string infodisplay_str;
 
-		void SwapchainCompose(wi::graphics::CommandList cmd);
-		void EnsureRenderTargetValid();
+		wi::graphics::Texture rendertargetPreHDR10;
 
 	public:
 		virtual ~Application() = default;

@@ -17527,7 +17527,8 @@ void Postprocess_Upsample_Bilateral(
 void Postprocess_Downsample4x(
 	const Texture& input,
 	const Texture& output,
-	CommandList cmd
+	CommandList cmd,
+	bool hdrToSRGB
 )
 {
 	device->EventBegin("Postprocess_Downsample4x", cmd);
@@ -17541,6 +17542,7 @@ void Postprocess_Downsample4x(
 	postprocess.resolution.y = desc.height;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	postprocess.params0.x = hdrToSRGB ? 1.0f : 0.0f;
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	device->BindResource(&input, 0, cmd);

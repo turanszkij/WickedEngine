@@ -12,6 +12,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 
+	const bool hdrToSRGB = postprocess.params0.x > 0;
+
 	float4 color = 0;
 
 	uint2 dim;
@@ -26,6 +28,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	color /= 4.0f;
 	
 	color.rgb = inverse_tonemap(color.rgb);
+
+	if (hdrToSRGB)
+	{
+		// reverse of the IMAGE_FLAG_OUTPUT_COLOR_SPACE_LINEAR in imagePS
+		//	this is used when scene HDR result is used for GUI background
+		color.rgb /= 9.0f;
+		color.rgb = ApplySRGBCurve_Fast(color.rgb);
+	}
 
 	output[DTid.xy] = color;
 }

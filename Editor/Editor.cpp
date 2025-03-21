@@ -4355,10 +4355,11 @@ void EditorComponent::ResizeViewport3D()
 			assert(success);
 		}
 
+		const TextureDesc& renderResultDesc = renderPath->GetRenderResult().GetDesc();
 		{
 			TextureDesc desc;
-			desc.width = renderPath->GetRenderResult().GetDesc().width;
-			desc.height = renderPath->GetRenderResult().GetDesc().height;
+			desc.width = renderResultDesc.width;
+			desc.height = renderResultDesc.height;
 			desc.format = Format::R8_UNORM;
 			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 			desc.swizzle.r = ComponentSwizzle::R;
@@ -4371,8 +4372,8 @@ void EditorComponent::ResizeViewport3D()
 
 		{
 			TextureDesc desc;
-			desc.width = renderPath->GetRenderResult().GetDesc().width;
-			desc.height = renderPath->GetRenderResult().GetDesc().height;
+			desc.width = renderResultDesc.width;
+			desc.height = renderResultDesc.height;
 			desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
 			desc.sample_count = getMSAASampleCount();
 
@@ -4384,7 +4385,7 @@ void EditorComponent::ResizeViewport3D()
 
 			if (getMSAASampleCount() > 1)
 			{
-				desc.format = Format::R8G8B8A8_UNORM;
+				desc.format = renderResultDesc.format;
 				desc.bind_flags = BindFlag::RENDER_TARGET;
 				desc.layout = ResourceState::RENDERTARGET;
 				device->CreateTexture(&desc, nullptr, &editor_rendertarget);
@@ -4396,7 +4397,7 @@ void EditorComponent::ResizeViewport3D()
 			TextureDesc desc;
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
-			desc.format = Format::R8G8B8A8_UNORM;
+			desc.format = renderResultDesc.format;
 			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 			device->CreateTexture(&desc, nullptr, &rt_metadataDummies);
 			device->SetName(&rt_metadataDummies, "rt_metadataDummies");

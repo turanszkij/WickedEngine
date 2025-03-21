@@ -931,7 +931,8 @@ namespace wi::renderer
 	void Postprocess_Downsample4x(
 		const wi::graphics::Texture& input,
 		const wi::graphics::Texture& output,
-		wi::graphics::CommandList cmd
+		wi::graphics::CommandList cmd,
+		bool hdrToSRGB = false
 	);
 	void Postprocess_Lineardepth(
 		const wi::graphics::Texture& input,

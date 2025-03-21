@@ -479,6 +479,7 @@ namespace wi::graphics
 		// Other:
 		VIDEO_DECODE_SRC = 1 << 15,			// video decode operation source (bitstream buffer or DPB texture)
 		VIDEO_DECODE_DST = 1 << 16,			// video decode operation destination DPB texture
+		SWAPCHAIN = 1 << 17,				// resource state of swap chain's back buffer texture when it's not rendering
 	};
 
 	enum class RenderPassFlags

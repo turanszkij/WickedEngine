@@ -84,24 +84,6 @@ float4 main(VertextoPixel input) : SV_TARGET
 		const half highlight_spread = highlight_color_spread.w;
 		color.rgb = lerp(color.rgb, highlight_color, smoothstep(highlight_spread, 0, saturate(distance(uv, highlight_xy))));
 	}
-
-	[branch]
-	if (image.flags & IMAGE_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084)
-	{
-		// https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12HDR/src/presentPS.hlsl
-		const half referenceWhiteNits = 80.0;
-		const half st2084max = 10000.0;
-		const half hdrScalar = referenceWhiteNits / st2084max;
-		// The input is in Rec.709, but the display is Rec.2020
-		color.rgb = REC709toREC2020(color.rgb);
-		// Apply the ST.2084 curve to the result.
-		color.rgb = ApplyREC2084Curve(color.rgb * hdrScalar);
-	}
-	else if (image.flags & IMAGE_FLAG_OUTPUT_COLOR_SPACE_LINEAR)
-	{
-		color.rgb = RemoveSRGBCurve_Fast(color.rgb);
-		color.rgb *= hdr_scaling;
-	}
 	
 	[branch]
 	if (border_soften > 0)
@@ -135,6 +117,26 @@ float4 main(VertextoPixel input) : SV_TARGET
 	}
 	
 	color.rgb = mul(saturationMatrix(saturation), color.rgb);
+	
+	[branch]
+	if (image.flags & IMAGE_FLAG_OUTPUT_COLOR_SPACE_LINEAR)
+	{
+		color.rgb = RemoveSRGBCurve_Fast(color.rgb);
+		color.rgb *= hdr_scaling;
+	}
+	
+	[branch]
+	if (image.flags & IMAGE_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084)
+	{
+		// https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12HDR/src/presentPS.hlsl
+		const half referenceWhiteNits = 80.0;
+		const half st2084max = 10000.0;
+		const half hdrScalar = referenceWhiteNits / st2084max;
+		// The input is in Rec.709, but the display is Rec.2020
+		color.rgb = REC709toREC2020(color.rgb);
+		// Apply the ST.2084 curve to the result.
+		color.rgb = ApplyREC2084Curve(color.rgb * hdrScalar);
+	}
 
 	return color;
 }
