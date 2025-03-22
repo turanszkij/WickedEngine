@@ -81,6 +81,11 @@ namespace wi
 
 	void RenderPath2D::Update(float dt)
 	{
+		XMUINT2 internalResolution = GetInternalResolution();
+		if (current_buffersize.x != internalResolution.x || current_buffersize.y != internalResolution.y)
+		{
+			ResizeBuffers();
+		}
 		if (current_layoutscale != GetDPIScaling())
 		{
 			ResizeLayout();
@@ -143,7 +148,6 @@ namespace wi
 	void RenderPath2D::PreRender()
 	{
 		XMUINT2 internalResolution = GetInternalResolution();
-
 		if (current_buffersize.x != internalResolution.x || current_buffersize.y != internalResolution.y)
 		{
 			ResizeBuffers();

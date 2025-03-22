@@ -348,11 +348,6 @@ namespace wi
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
-		if (rtMain_render.desc.sample_count != msaaSampleCount)
-		{
-			ResizeBuffers();
-		}
-
 		RenderPath2D::Update(dt);
 
 		wi::renderer::SetShadowsEnabled(getShadowsEnabled());
@@ -381,9 +376,12 @@ namespace wi
 
 	void RenderPath3D::PreRender()
 	{
-		RenderPath2D::PreRender();
-
 		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		if (rtMain_render.desc.sample_count != msaaSampleCount)
+		{
+			ResizeBuffers();
+		}
 
 		// Frustum culling for main camera:
 		visibility_main.layerMask = getLayerMask();
@@ -832,6 +830,8 @@ namespace wi
 		}
 
 		prerender_happened = true;
+
+		RenderPath2D::PreRender();
 	}
 
 	void RenderPath3D::Render() const
