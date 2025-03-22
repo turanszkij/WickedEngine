@@ -40,6 +40,7 @@ namespace wi
 
 		void Update(float dt) override;
 		void FixedUpdate() override;
+		void PreRender() override;
 		void Render() const override;
 		void Compose(wi::graphics::CommandList cmd) const override;
 

@@ -81,12 +81,6 @@ namespace wi
 
 	void RenderPath2D::Update(float dt)
 	{
-		XMUINT2 internalResolution = GetInternalResolution();
-
-		if (current_buffersize.x != internalResolution.x || current_buffersize.y != internalResolution.y)
-		{
-			ResizeBuffers();
-		}
 		if (current_layoutscale != GetDPIScaling())
 		{
 			ResizeLayout();
@@ -146,8 +140,28 @@ namespace wi
 
 		RenderPath::FixedUpdate();
 	}
+	void RenderPath2D::PreRender()
+	{
+		XMUINT2 internalResolution = GetInternalResolution();
+
+		if (current_buffersize.x != internalResolution.x || current_buffersize.y != internalResolution.y)
+		{
+			ResizeBuffers();
+		}
+
+		RenderPath::PreRender();
+	}
 	void RenderPath2D::Render() const
 	{
+		if (!rtFinal.IsValid())
+		{
+			// Since 0.71.694: PreRender must be called before Render() because it sets up rendering resources!
+			//	The proper fix is to call PreRender() yourself for a manually managed RenderPath3D
+			//	But if you don't do that, as a last resort it will be called here using const_cast
+			assert(0);
+			const_cast<RenderPath2D*>(this)->PreRender();
+		}
+
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		CommandList cmd = device->BeginCommandList();
 		device->EventBegin("RenderPath2D::Render", cmd);

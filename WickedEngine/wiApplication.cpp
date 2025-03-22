@@ -70,10 +70,9 @@ namespace wi
 		// Fade manager will activate on fadeout
 		fadeManager.Start(fadeSeconds, fadeColor, [this, component]() {
 
-			RenderPath* renderpath = GetActivePath();
-			if (renderpath != nullptr)
+			if (activePath != nullptr)
 			{
-				renderpath->Stop();
+				activePath->Stop();
 			}
 
 			if (component != nullptr)
@@ -219,13 +218,12 @@ namespace wi
 
 		fadeManager.Update(deltaTime);
 
-		RenderPath* renderpath = GetActivePath();
-		if (renderpath != nullptr)
+		if (activePath != nullptr)
 		{
 			ColorSpace colorspace = graphicsDevice->GetSwapChainColorSpace(&swapChain);
-			renderpath->colorspace = colorspace;
-			renderpath->init(canvas);
-			renderpath->PreUpdate();
+			activePath->colorspace = colorspace;
+			activePath->init(canvas);
+			activePath->PreUpdate();
 		}
 
 		// Fixed time update:
@@ -335,11 +333,10 @@ namespace wi
 
 		wi::resourcemanager::UpdateStreamingResources(dt);
 
-		RenderPath* renderpath = GetActivePath();
-		if (renderpath != nullptr)
+		if (activePath != nullptr)
 		{
-			renderpath->Update(dt);
-			renderpath->PostUpdate();
+			activePath->Update(dt);
+			activePath->PostUpdate();
 		}
 
 		wi::profiler::EndRange(range); // Update
@@ -349,10 +346,9 @@ namespace wi
 	{
 		wi::lua::FixedUpdate();
 
-		RenderPath* renderpath = GetActivePath();
-		if (renderpath != nullptr)
+		if (activePath != nullptr)
 		{
-			renderpath->FixedUpdate();
+			activePath->FixedUpdate();
 		}
 	}
 
@@ -362,12 +358,11 @@ namespace wi
 
 		wi::lua::Render();
 
-		RenderPath* renderpath = GetActivePath();
-		if (renderpath != nullptr)
+		if (activePath != nullptr)
 		{
-			renderpath->PreRender();
-			renderpath->Render();
-			renderpath->PostRender();
+			activePath->PreRender();
+			activePath->Render();
+			activePath->PostRender();
 		}
 
 		wi::profiler::EndRange(range); // Render
@@ -378,10 +373,9 @@ namespace wi
 		auto range = wi::profiler::BeginRangeCPU("Compose");
 		ColorSpace colorspace = graphicsDevice->GetSwapChainColorSpace(&swapChain);
 
-		RenderPath* renderpath = GetActivePath();
-		if (renderpath != nullptr)
+		if (activePath != nullptr)
 		{
-			renderpath->Compose(cmd);
+			activePath->Compose(cmd);
 		}
 
 		if (fadeManager.IsActive())

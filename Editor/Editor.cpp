@@ -2941,7 +2941,7 @@ void EditorComponent::PostUpdate()
 }
 void EditorComponent::PreRender()
 {
-	RenderPath2D::PreUpdate();
+	RenderPath2D::PreRender();
 
 	renderPath->PreRender();
 }
