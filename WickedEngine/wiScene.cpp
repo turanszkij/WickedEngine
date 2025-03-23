@@ -26,7 +26,7 @@ using namespace wi::primitive;
 
 namespace wi::scene
 {
-	const uint32_t small_subtask_groupsize = 64u;
+	static constexpr uint32_t small_subtask_groupsize = 256u;
 
 	void Scene::Update(float dt)
 	{

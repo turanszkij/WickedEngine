@@ -42,20 +42,21 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct TransformComponent
+	struct alignas(16) TransformComponent
 	{
 		enum FLAGS
 		{
 			EMPTY = 0,
 			DIRTY = 1 << 0,
 		};
-		uint32_t _flags = DIRTY;
 
 		XMFLOAT3 scale_local = XMFLOAT3(1, 1, 1);
+		uint32_t _flags = DIRTY;
 		XMFLOAT4 rotation_local = XMFLOAT4(0, 0, 0, 1);	// this is a quaternion
 		XMFLOAT3 translation_local = XMFLOAT3(0, 0, 0);
 
 		// Non-serialized attributes:
+		float padding = 0;
 
 		// The world matrix can be computed from local scale, rotation, translation
 		//	- by calling UpdateTransform()
@@ -104,7 +105,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct HierarchyComponent
+	struct alignas(16) HierarchyComponent
 	{
 		wi::ecs::Entity parentID = wi::ecs::INVALID_ENTITY;
 		uint32_t layerMask_bind; // saved child layermask at the time of binding
@@ -112,7 +113,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct MaterialComponent
+	struct alignas(16) MaterialComponent
 	{
 		enum FLAGS
 		{
@@ -389,7 +390,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct RigidBodyPhysicsComponent
+	struct alignas(16) RigidBodyPhysicsComponent
 	{
 		enum FLAGS
 		{
@@ -397,6 +398,7 @@ namespace wi::scene
 			DISABLE_DEACTIVATION = 1 << 0,
 			KINEMATIC = 1 << 1,
 			START_DEACTIVATED = 1 << 2,
+			REFRESH_PARAMETERS_REQUEST = 1 << 3,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -419,6 +421,11 @@ namespace wi::scene
 		float buoyancy = 1.2f;
 		XMFLOAT3 local_offset = XMFLOAT3(0, 0, 0);
 
+		// This will force LOD level for rigid body if it is a TRIANGLE_MESH shape:
+		//	The geometry for LOD level will be taken from MeshComponent.
+		//	The physics object will need to be recreated for it to take effect.
+		uint32_t mesh_lod = 0;
+
 		struct BoxParams
 		{
 			XMFLOAT3 halfextents = XMFLOAT3(1, 1, 1);
@@ -432,11 +439,6 @@ namespace wi::scene
 			float radius = 1;
 			float height = 1;
 		} capsule; // also cylinder params
-
-		// This will force LOD level for rigid body if it is a TRIANGLE_MESH shape:
-		//	The geometry for LOD level will be taken from MeshComponent.
-		//	The physics object will need to be recreated for it to take effect.
-		uint32_t mesh_lod = 0;
 
 		// Vehicle physics will be enabled when Vehicle.type != None
 		struct Vehicle
@@ -503,7 +505,6 @@ namespace wi::scene
 
 		// Non-serialized attributes:
 		std::shared_ptr<void> physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
-		bool refresh_parameters = false;
 
 		constexpr void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
 		constexpr void SetKinematic(bool value) { if (value) { _flags |= KINEMATIC; } else { _flags &= ~KINEMATIC; } }
@@ -516,13 +517,13 @@ namespace wi::scene
 		constexpr bool IsKinematic() const { return _flags & KINEMATIC; }
 		constexpr bool IsStartDeactivated() const { return _flags & START_DEACTIVATED; }
 
-		constexpr void SetRefreshParametersNeeded(bool value = true) { refresh_parameters = value; }
-		constexpr bool IsRefreshParametersNeeded() const { return refresh_parameters; }
+		constexpr void SetRefreshParametersNeeded(bool value = true) { if (value) { _flags |= REFRESH_PARAMETERS_REQUEST; } else { _flags &= ~REFRESH_PARAMETERS_REQUEST; } }
+		constexpr bool IsRefreshParametersNeeded() const { return _flags & REFRESH_PARAMETERS_REQUEST; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct MeshComponent
+	struct alignas(16) MeshComponent
 	{
 		enum FLAGS
 		{
@@ -972,7 +973,7 @@ namespace wi::scene
 
 	};
 
-	struct ImpostorComponent
+	struct alignas(16) ImpostorComponent
 	{
 		enum FLAGS
 		{
@@ -993,7 +994,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct ObjectComponent
+	struct alignas(16) ObjectComponent
 	{
 		enum FLAGS
 		{
@@ -1097,7 +1098,7 @@ namespace wi::scene
 		};
 	};
 
-	struct SoftBodyPhysicsComponent
+	struct alignas(16) SoftBodyPhysicsComponent
 	{
 		enum FLAGS
 		{
@@ -1115,6 +1116,7 @@ namespace wi::scene
 		float pressure = 0.0f;
 		float vertex_radius = 0.2f; // how much distance vertices keep from other physics bodies
 		float detail = 1; // LOD target detail [0,1]
+		uint32_t gpuBoneOffset = 0; // non-serialized, but better padding here
 		wi::vector<uint32_t> physicsIndices; // physics vertex connectivity
 		wi::vector<uint32_t> physicsToGraphicsVertexMapping; // maps graphics vertex index to physics vertex index of the same position
 		wi::vector<float> weights; // weight per physics vertex controlling the mass. (0: disable weight (no physics, only animation), 1: default weight)
@@ -1122,7 +1124,6 @@ namespace wi::scene
 		// Non-serialized attributes:
 		std::shared_ptr<void> physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
 		XMFLOAT4X4 worldMatrix = wi::math::IDENTITY_MATRIX;
-		uint32_t gpuBoneOffset = 0;
 		wi::vector<ShaderTransform> boneData; // simulated soft body nodes as bone matrices that can be fed into skinning
 		wi::primitive::AABB aabb;
 
@@ -1158,13 +1159,13 @@ namespace wi::scene
 			EMPTY = 0,
 		};
 		uint32_t _flags = EMPTY;
+		uint32_t gpuBoneOffset = 0; // non-serialized, but better padding here
 
 		wi::vector<wi::ecs::Entity> boneCollection;
 		wi::vector<XMFLOAT4X4> inverseBindMatrices;
 
 		// Non-serialized attributes:
 		wi::primitive::AABB aabb;
-		uint32_t gpuBoneOffset = 0;
 		wi::vector<ShaderTransform> boneData;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
@@ -1214,9 +1215,9 @@ namespace wi::scene
 		// Non-serialized attributes:
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 direction = XMFLOAT3(0, 1, 0);
+		mutable int occlusionquery = -1;
 		XMFLOAT4 rotation = XMFLOAT4(0, 0, 0, 1);
 		XMFLOAT3 scale = XMFLOAT3(1, 1, 1);
-		mutable int occlusionquery = -1;
 
 		wi::vector<wi::Resource> lensFlareRimTextures;
 
@@ -1263,7 +1264,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct CameraComponent
+	struct alignas(16) CameraComponent
 	{
 		enum FLAGS
 		{
@@ -1288,11 +1289,12 @@ namespace wi::scene
 		XMFLOAT3 Eye = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 At = XMFLOAT3(0, 0, 1);
 		XMFLOAT3 Up = XMFLOAT3(0, 1, 0);
-		XMFLOAT3X3 rotationMatrix;
 		XMFLOAT4X4 View, Projection, VP;
 		wi::primitive::Frustum frustum;
 		XMFLOAT4X4 InvView, InvProjection, InvVP;
+		XMFLOAT3X3 rotationMatrix;
 		XMFLOAT2 jitter;
+		float padding = 0;
 		XMFLOAT4 clipPlane = XMFLOAT4(0, 0, 0, 0); // default: no clip plane
 		XMFLOAT4 clipPlaneOriginal = XMFLOAT4(0, 0, 0, 0); // not reversed clip plane
 		wi::Canvas canvas;
@@ -1840,7 +1842,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct ColliderComponent
+	struct alignas(16) ColliderComponent
 	{
 		enum FLAGS
 		{

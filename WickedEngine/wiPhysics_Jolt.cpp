@@ -71,6 +71,8 @@ namespace wi::physics
 		return XMMATRIX(T, B, N, XMVectorSetW(P0, 1));
 	}
 
+	static constexpr uint32_t dispatchGroupSize = 256u;
+
 	namespace jolt
 	{
 		bool ENABLED = true;
@@ -247,9 +249,17 @@ namespace wi::physics
 		struct RigidBody
 		{
 			std::shared_ptr<void> physics_scene;
+			Entity entity = INVALID_ENTITY;
 			ShapeRefC shape;
 			BodyID bodyID;
-			Entity entity = INVALID_ENTITY;
+
+			// property tracking:
+			float friction = 0;
+			float restitution = 0;
+			EMotionType motiontype = EMotionType::Static;
+			bool start_deactivated = false;
+			bool was_underwater = false;
+			bool was_active_prev_frame = false;
 			Vec3 initial_position = Vec3::sZero();
 			Quat initial_rotation = Quat::sIdentity();
 
@@ -273,9 +283,6 @@ namespace wi::physics
 			wi::ecs::Entity humanoid_ragdoll_entity = wi::ecs::INVALID_ENTITY;
 			wi::scene::HumanoidComponent::HumanoidBone humanoid_bone = wi::scene::HumanoidComponent::HumanoidBone::Count;
 			wi::primitive::Capsule capsule;
-
-			// water ripple stuff:
-			bool was_underwater = false;
 
 			// vehicle:
 			VehicleConstraint* vehicle_constraint = nullptr;
@@ -308,8 +315,10 @@ namespace wi::physics
 		struct SoftBody
 		{
 			std::shared_ptr<void> physics_scene;
-			BodyID bodyID;
 			Entity entity = INVALID_ENTITY;
+			BodyID bodyID;
+			float friction = 0;
+			float restitution = 0;
 
 			SoftBodySharedSettings shared_settings;
 			wi::vector<XMFLOAT4X4> inverseBindMatrices;
@@ -443,11 +452,14 @@ namespace wi::physics
 				settings.mMotionQuality = cMotionQuality;
 				settings.mUserData = (uint64_t)&physicsobject;
 
+				physicsobject.friction = settings.mFriction;
+				physicsobject.restitution = settings.mRestitution;
+				physicsobject.motiontype = settings.mMotionType;
+
+				physicsobject.start_deactivated = physicscomponent.IsStartDeactivated();
+				const EActivation activation = physicsobject.start_deactivated ? EActivation::DontActivate : EActivation::Activate;
+
 				BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface(); // locking version because this is called from job system!
-
-				const EActivation activation = physicscomponent.IsStartDeactivated() ? EActivation::DontActivate : EActivation::Activate;
-
-				//physicsobject.bodyID = body_interface.CreateAndAddBody(settings, activation);
 				Body* body = body_interface.CreateBody(settings);
 				if (body == nullptr || body->GetID().IsInvalid())
 				{
@@ -842,6 +854,9 @@ namespace wi::physics
 			settings.mUpdatePosition = false;
 			settings.mAllowSleeping = !physicscomponent.IsDisableDeactivation();
 			settings.mUserData = (uint64_t)&physicsobject;
+
+			physicsobject.friction = settings.mFriction;
+			physicsobject.restitution = settings.mRestitution;
 
 			BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface(); // locking version because this is called from job system!
 
@@ -1583,8 +1598,9 @@ namespace wi::physics
 		PhysicsScene& physics_scene = GetPhysicsScene(scene);
 		physics_scene.physics_system.SetGravity(cast(scene.weather.gravity));
 
-		// System will register rigidbodies to objects:
-		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), 64, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
+		// First, do the creations when needed (AddRigidBody, AddSoftBody, etc):
+		//	These will be locking updates, but doesn't need to be performed frequently
+		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), dispatchGroupSize, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
 
 			RigidBodyPhysicsComponent& physicscomponent = scene.rigidbodies[args.jobIndex];
 			Entity entity = scene.rigidbodies.GetEntity(args.jobIndex);
@@ -1603,135 +1619,7 @@ namespace wi::physics
 				}
 				AddRigidBody(scene, entity, physicscomponent, *transform, mesh);
 			}
-
-			if (physicscomponent.physicsobject != nullptr)
-			{
-				RigidBody& physicsobject = GetRigidBody(physicscomponent);
-				if (physicsobject.bodyID.IsInvalid())
-					return;
-
-				BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface(); // locking, these jobs can be adding bodies
-				body_interface.SetFriction(physicsobject.bodyID, physicscomponent.friction);
-				body_interface.SetRestitution(physicsobject.bodyID, physicscomponent.restitution);
-
-				const EMotionType prevMotionType = body_interface.GetMotionType(physicsobject.bodyID);
-				const EMotionType currentMotionType = physicscomponent.mass == 0 ? EMotionType::Static : (physicscomponent.IsKinematic() ? EMotionType::Kinematic : EMotionType::Dynamic);
-
-				if (prevMotionType != currentMotionType)
-				{
-					// Changed motion type:
-					body_interface.SetMotionType(physicsobject.bodyID, currentMotionType, EActivation::Activate);
-
-					if (currentMotionType == EMotionType::Dynamic)
-					{
-						// Changed to dynamic, remember attachment matrices at this point:
-						scene.locker.lock();
-						XMMATRIX parentMatrix = scene.ComputeParentMatrixRecursive(entity);
-						scene.locker.unlock();
-						XMStoreFloat4x4(&physicsobject.parentMatrix, parentMatrix);
-						XMStoreFloat4x4(&physicsobject.parentMatrixInverse, XMMatrixInverse(nullptr, parentMatrix));
-					}
-				}
-
-				TransformComponent* transform = scene.transforms.GetComponent(entity);
-				if (transform == nullptr)
-					return;
-
-				if (currentMotionType == EMotionType::Dynamic)
-				{
-					// Detaching object manually before the physics simulation:
-					transform->MatrixTransform(physicsobject.parentMatrix);
-				}
-
-				if (physics_scene.activate_all_rigid_bodies)
-				{
-					body_interface.ActivateBody(physicsobject.bodyID);
-				}
-
-				const bool is_active = body_interface.IsActive(physicsobject.bodyID);
-
-				if (currentMotionType == EMotionType::Dynamic && is_active)
-				{
-					// Apply effects on dynamics if needed:
-					if (scene.weather.IsOceanEnabled())
-					{
-						const Vec3 com = body_interface.GetCenterOfMassPosition(physicsobject.bodyID);
-						const Vec3 surface_position = cast(scene.GetOceanPosAt(cast(com)));
-						const float diff = com.GetY() - surface_position.GetY();
-						if (diff < 0)
-						{
-							const Vec3 p2 = cast(scene.GetOceanPosAt(cast(com + Vec3(0, 0, 0.1f))));
-							const Vec3 p3 = cast(scene.GetOceanPosAt(cast(com + Vec3(0.1f, 0, 0))));
-							const Vec3 surface_normal = Vec3(p2 - surface_position).Cross(Vec3(p3 - surface_position)).Normalized();
-
-							body_interface.ApplyBuoyancyImpulse(
-								physicsobject.bodyID,
-								surface_position,
-								surface_normal,
-								physicscomponent.buoyancy,
-								0.8f,
-								0.6f,
-								Vec3::sZero(),
-								physics_scene.physics_system.GetGravity(),
-								scene.dt
-							);
-
-							if (!physicsobject.was_underwater)
-							{
-								physicsobject.was_underwater = true;
-								scene.PutWaterRipple(cast(surface_position));
-							}
-						}
-						else
-						{
-							physicsobject.was_underwater = false;
-						}
-					}
-				}
-
-				const Vec3 position = cast(transform->GetPosition());
-				const Quat rotation = cast(transform->GetRotation());
-				Mat44 m = Mat44::sTranslation(position) * Mat44::sRotation(rotation);
-				m = m * physicsobject.additionalTransform;
-
-				if (IsSimulationEnabled())
-				{
-					// Feedback system transform to kinematic and static physics objects:
-					if (currentMotionType == EMotionType::Kinematic)
-					{
-						body_interface.MoveKinematic(
-							physicsobject.bodyID,
-							m.GetTranslation(),
-							m.GetQuaternion().Normalized(),
-							physics_scene.GetKinematicDT(scene.dt)
-						);
-					}
-					else if (currentMotionType == EMotionType::Static || !is_active)
-					{
-						body_interface.SetPositionAndRotation(
-							physicsobject.bodyID,
-							m.GetTranslation(),
-							m.GetQuaternion().Normalized(),
-							EActivation::DontActivate
-						);
-					}
-				}
-				else
-				{
-					// Simulation is disabled, update physics state immediately:
-					physicsobject.prev_position = position;
-					physicsobject.prev_rotation = rotation;
-					body_interface.SetPositionAndRotation(
-						physicsobject.bodyID,
-						m.GetTranslation(),
-						m.GetQuaternion().Normalized(),
-						EActivation::Activate
-					);
-				}
-			}
 		});
-
-		// System will register softbodies to meshes and update physics engine state:
 		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.softbodies.GetCount(), 1, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
 
 			SoftBodyPhysicsComponent& physicscomponent = scene.softbodies[args.jobIndex];
@@ -1748,57 +1636,7 @@ namespace wi::physics
 			{
 				AddSoftBody(scene, entity, physicscomponent, *mesh);
 			}
-
-			if (physicscomponent.physicsobject != nullptr)
-			{
-				SoftBody& physicsobject = GetSoftBody(physicscomponent);
-				if (physicsobject.bodyID.IsInvalid())
-					return;
-
-				BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface(); // locking, these jobs can be adding bodies
-				body_interface.SetFriction(physicsobject.bodyID, physicscomponent.friction);
-				body_interface.SetRestitution(physicsobject.bodyID, physicscomponent.restitution);
-
-				if (IsSimulationEnabled() && physicscomponent.IsWindEnabled())
-				{
-					// Add wind:
-					const Vec3 wind = cast(scene.weather.windDirection);
-					if (!wind.IsNearZero())
-					{
-						body_interface.AddForce(physicsobject.bodyID, wind, EActivation::Activate);
-					}
-				}
-
-				// This is different from rigid bodies, because soft body is a per mesh component (no TransformComponent). World matrix is propagated down from single mesh instance (ObjectUpdateSystem).
-				XMMATRIX worldMatrix = XMLoadFloat4x4(&physicscomponent.worldMatrix);
-
-				BodyLockRead lock(physics_scene.physics_system.GetBodyLockInterfaceNoLock(), physicsobject.bodyID);
-				if (!lock.Succeeded())
-					return;
-				const Body& body = lock.GetBody();
-				SoftBodyMotionProperties* motion = (SoftBodyMotionProperties*)body.GetMotionProperties();
-
-				// System controls zero weight soft body nodes:
-				for (size_t ind = 0; ind < physicscomponent.physicsToGraphicsVertexMapping.size(); ++ind)
-				{
-					uint32_t graphicsInd = physicscomponent.physicsToGraphicsVertexMapping[ind];
-					float weight = physicscomponent.weights[graphicsInd];
-
-					if (weight == 0)
-					{
-						XMFLOAT3 position = mesh->vertex_positions[graphicsInd];
-						XMVECTOR P = armature == nullptr ? XMLoadFloat3(&position) : wi::scene::SkinVertex(*mesh, *armature, graphicsInd);
-						P = XMVector3Transform(P, worldMatrix);
-						XMStoreFloat3(&position, P);
-
-						SoftBodyMotionProperties::Vertex& node = motion->GetVertex((uint)ind);
-						node.mPosition = cast(position);
-					}
-				}
-			}
 		});
-
-		// Ragdoll management:
 		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.humanoids.GetCount(), 1, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
 			HumanoidComponent& humanoid = scene.humanoids[args.jobIndex];
 			Entity humanoidEntity = scene.humanoids.GetEntity(args.jobIndex);
@@ -1821,12 +1659,237 @@ namespace wi::physics
 			{
 				humanoid.ragdoll = std::make_shared<Ragdoll>(scene, humanoid, humanoidEntity, scale);
 			}
+		});
+
+		wi::jobsystem::Wait(ctx);
+
+		// Now do the property updating
+		//	These will be non-locking updates and perfromed potentially every frame
+		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), dispatchGroupSize, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
+
+			RigidBodyPhysicsComponent& physicscomponent = scene.rigidbodies[args.jobIndex];
+			Entity entity = scene.rigidbodies.GetEntity(args.jobIndex);
+			if (physicscomponent.physicsobject == nullptr)
+				return;
+			RigidBody& physicsobject = GetRigidBody(physicscomponent);
+			if (physicsobject.bodyID.IsInvalid())
+				return;
+
+			BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
+
+			if (physicsobject.friction != physicscomponent.friction)
+			{
+				physicsobject.friction = physicscomponent.friction;
+				body_interface.SetFriction(physicsobject.bodyID, physicscomponent.friction);
+			}
+			if (physicsobject.restitution != physicscomponent.restitution)
+			{
+				physicsobject.restitution = physicscomponent.restitution;
+				body_interface.SetRestitution(physicsobject.bodyID, physicscomponent.restitution);
+			}
+
+			const EMotionType prevMotionType = physicsobject.motiontype;
+			const EMotionType currentMotionType = physicscomponent.mass == 0 ? EMotionType::Static : (physicscomponent.IsKinematic() ? EMotionType::Kinematic : EMotionType::Dynamic);
+
+			if (prevMotionType != currentMotionType)
+			{
+				// Changed motion type:
+				physicsobject.motiontype = currentMotionType;
+				body_interface.SetMotionType(physicsobject.bodyID, currentMotionType, EActivation::DontActivate);
+
+				if (currentMotionType == EMotionType::Dynamic)
+				{
+					// Changed to dynamic, remember attachment matrices at this point:
+					scene.locker.lock();
+					XMMATRIX parentMatrix = scene.ComputeParentMatrixRecursive(entity);
+					scene.locker.unlock();
+					XMStoreFloat4x4(&physicsobject.parentMatrix, parentMatrix);
+					XMStoreFloat4x4(&physicsobject.parentMatrixInverse, XMMatrixInverse(nullptr, parentMatrix));
+				}
+			}
+
+			TransformComponent* transform = scene.transforms.GetComponent(entity);
+			if (transform == nullptr)
+				return;
+
+			if (currentMotionType == EMotionType::Dynamic)
+			{
+				// Detaching object manually before the physics simulation:
+				transform->MatrixTransform(physicsobject.parentMatrix);
+			}
+
+			if (physics_scene.activate_all_rigid_bodies)
+			{
+				body_interface.ActivateBody(physicsobject.bodyID);
+			}
+
+			const bool is_active = physicsobject.was_active_prev_frame;
+
+			if (currentMotionType == EMotionType::Dynamic && is_active)
+			{
+				// Apply effects on dynamics if needed:
+				if (scene.weather.IsOceanEnabled())
+				{
+					const Vec3 com = body_interface.GetCenterOfMassPosition(physicsobject.bodyID);
+					const Vec3 surface_position = cast(scene.GetOceanPosAt(cast(com)));
+					const float diff = com.GetY() - surface_position.GetY();
+					if (diff < 0)
+					{
+						const Vec3 p2 = cast(scene.GetOceanPosAt(cast(com + Vec3(0, 0, 0.1f))));
+						const Vec3 p3 = cast(scene.GetOceanPosAt(cast(com + Vec3(0.1f, 0, 0))));
+						const Vec3 surface_normal = Vec3(p2 - surface_position).Cross(Vec3(p3 - surface_position)).Normalized();
+
+						body_interface.ApplyBuoyancyImpulse(
+							physicsobject.bodyID,
+							surface_position,
+							surface_normal,
+							physicscomponent.buoyancy,
+							0.8f,
+							0.6f,
+							Vec3::sZero(),
+							physics_scene.physics_system.GetGravity(),
+							scene.dt
+						);
+
+						if (!physicsobject.was_underwater)
+						{
+							physicsobject.was_underwater = true;
+							scene.PutWaterRipple(cast(surface_position));
+						}
+					}
+					else
+					{
+						physicsobject.was_underwater = false;
+					}
+				}
+			}
+
+			const Vec3 position = cast(transform->GetPosition());
+			const Quat rotation = cast(transform->GetRotation());
+			Mat44 m = Mat44::sTranslation(position) * Mat44::sRotation(rotation);
+			m = m * physicsobject.additionalTransform;
+
+			if (IsSimulationEnabled())
+			{
+				// Feedback system transform to kinematic and static physics objects:
+				if (currentMotionType == EMotionType::Kinematic)
+				{
+					body_interface.MoveKinematic(
+						physicsobject.bodyID,
+						m.GetTranslation(),
+						m.GetQuaternion().Normalized(),
+						physics_scene.GetKinematicDT(scene.dt)
+					);
+				}
+				else if (currentMotionType == EMotionType::Static || !is_active)
+				{
+					body_interface.SetPositionAndRotation(
+						physicsobject.bodyID,
+						m.GetTranslation(),
+						m.GetQuaternion().Normalized(),
+						EActivation::DontActivate
+					);
+				}
+			}
+			else
+			{
+				// Simulation is disabled, update physics state immediately:
+				physicsobject.prev_position = position;
+				physicsobject.prev_rotation = rotation;
+				body_interface.SetPositionAndRotation(
+					physicsobject.bodyID,
+					m.GetTranslation(),
+					m.GetQuaternion().Normalized(),
+					EActivation::DontActivate
+				);
+			}
+		});
+
+		// System will register softbodies to meshes and update physics engine state:
+		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.softbodies.GetCount(), 1, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
+
+			SoftBodyPhysicsComponent& physicscomponent = scene.softbodies[args.jobIndex];
+			Entity entity = scene.softbodies.GetEntity(args.jobIndex);
+			if (!scene.meshes.Contains(entity))
+				return;
+			MeshComponent* mesh = scene.meshes.GetComponent(entity);
+			if (mesh == nullptr)
+				return;
+			const ArmatureComponent* armature = mesh->IsSkinned() ? scene.armatures.GetComponent(mesh->armatureID) : nullptr;
+			mesh->SetDynamic(true);
+
+			if (physicscomponent.physicsobject == nullptr)
+				return;
+
+			SoftBody& physicsobject = GetSoftBody(physicscomponent);
+			if (physicsobject.bodyID.IsInvalid())
+				return;
+
+			BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
+
+			if (physicsobject.friction != physicscomponent.friction)
+			{
+				physicsobject.friction = physicscomponent.friction;
+				body_interface.SetFriction(physicsobject.bodyID, physicscomponent.friction);
+			}
+			if (physicsobject.restitution != physicscomponent.restitution)
+			{
+				physicsobject.restitution = physicscomponent.restitution;
+				body_interface.SetRestitution(physicsobject.bodyID, physicscomponent.restitution);
+			}
+
+			if (IsSimulationEnabled() && physicscomponent.IsWindEnabled())
+			{
+				// Add wind:
+				const Vec3 wind = cast(scene.weather.windDirection);
+				if (!wind.IsNearZero())
+				{
+					body_interface.AddForce(physicsobject.bodyID, wind, EActivation::Activate);
+				}
+			}
+
+			// This is different from rigid bodies, because soft body is a per mesh component (no TransformComponent). World matrix is propagated down from single mesh instance (ObjectUpdateSystem).
+			XMMATRIX worldMatrix = XMLoadFloat4x4(&physicscomponent.worldMatrix);
+
+			BodyLockRead lock(physics_scene.physics_system.GetBodyLockInterfaceNoLock(), physicsobject.bodyID);
+			if (!lock.Succeeded())
+				return;
+			const Body& body = lock.GetBody();
+			SoftBodyMotionProperties* motion = (SoftBodyMotionProperties*)body.GetMotionProperties();
+
+			// System controls zero weight soft body nodes:
+			for (size_t ind = 0; ind < physicscomponent.physicsToGraphicsVertexMapping.size(); ++ind)
+			{
+				uint32_t graphicsInd = physicscomponent.physicsToGraphicsVertexMapping[ind];
+				float weight = physicscomponent.weights[graphicsInd];
+
+				if (weight == 0)
+				{
+					XMFLOAT3 position = mesh->vertex_positions[graphicsInd];
+					XMVECTOR P = armature == nullptr ? XMLoadFloat3(&position) : wi::scene::SkinVertex(*mesh, *armature, graphicsInd);
+					P = XMVector3Transform(P, worldMatrix);
+					XMStoreFloat3(&position, P);
+
+					SoftBodyMotionProperties::Vertex& node = motion->GetVertex((uint)ind);
+					node.mPosition = cast(position);
+				}
+			}
+		});
+
+		// Ragdoll management:
+		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.humanoids.GetCount(), 1, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
+			HumanoidComponent& humanoid = scene.humanoids[args.jobIndex];
+			if (humanoid.ragdoll == nullptr)
+				return;
+			Entity humanoidEntity = scene.humanoids.GetEntity(args.jobIndex);
 			Ragdoll& ragdoll = *(Ragdoll*)humanoid.ragdoll.get();
 
 			if (humanoid.IsRagdollPhysicsEnabled())
 			{
 				ragdoll.Activate(scene, humanoidEntity);
 			}
+
+			BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
 
 			if (IsSimulationEnabled())
 			{
@@ -1835,7 +1898,6 @@ namespace wi::physics
 					// Apply effects on dynamics if needed:
 					if (scene.weather.IsOceanEnabled())
 					{
-						BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface(); // locking, these jobs can be adding bodies
 						static const Ragdoll::BODYPART floating_bodyparts[] = {
 							Ragdoll::BODYPART_PELVIS,
 							Ragdoll::BODYPART_SPINE,
@@ -1881,7 +1943,6 @@ namespace wi::physics
 				{
 					ragdoll.Deactivate(scene);
 
-					BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface(); // locking, these jobs can be adding bodies
 					for (auto& rb : ragdoll.rigidbodies)
 					{
 						TransformComponent* transform = scene.transforms.GetComponent(rb.entity);
@@ -1907,7 +1968,6 @@ namespace wi::physics
 			else if(!humanoid.IsRagdollPhysicsEnabled())
 			{
 				// Simulation is disabled, update physics state immediately:
-				BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface(); // locking, these jobs can be adding bodies
 				for (auto& rb : ragdoll.rigidbodies)
 				{
 					TransformComponent* transform = scene.transforms.GetComponent(rb.entity);
@@ -1937,7 +1997,6 @@ namespace wi::physics
 		physics_scene.activate_all_rigid_bodies = false;
 		
 		// Perform internal simulation step:
-		bool simulation_happened = false;
 		if (IsSimulationEnabled())
 		{
 			//static TempAllocatorImpl temp_allocator(10 * 1024 * 1024);
@@ -1954,7 +2013,7 @@ namespace wi::physics
 					// On the last step, save previous locations, this is only needed for interpolation:
 					//	We don't only save it for dynamic objects that will be interpolated, because on the next frame maybe simulation doesn't run
 					//	but object types can change!
-					wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), 64, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
+					wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), dispatchGroupSize, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
 						RigidBodyPhysicsComponent& physicscomponent = scene.rigidbodies[args.jobIndex];
 						if (physicscomponent.physicsobject == nullptr)
 							return;
@@ -2024,7 +2083,6 @@ namespace wi::physics
 					wi::jobsystem::Wait(ctx);
 				}
 
-				simulation_happened = true;
 				physics_scene.physics_system.Update(TIMESTEP, 1, &temp_allocator, &job_system);
 				physics_scene.accumulator = next_accumulator;
 			}
@@ -2032,7 +2090,7 @@ namespace wi::physics
 		}
 
 		// Feedback physics objects to system:
-		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), 64, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
+		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), dispatchGroupSize, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
 
 			RigidBodyPhysicsComponent& physicscomponent = scene.rigidbodies[args.jobIndex];
 			if (physicscomponent.physicsobject == nullptr)
@@ -2041,6 +2099,7 @@ namespace wi::physics
 			if (physicsobject.bodyID.IsInvalid())
 				return;
 			BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
+			physicsobject.was_active_prev_frame = body_interface.IsActive(physicsobject.bodyID);
 			if (body_interface.GetMotionType(physicsobject.bodyID) != EMotionType::Dynamic)
 				return;
 
@@ -2531,14 +2590,12 @@ namespace wi::physics
 			return;
 		PhysicsScene& physics_scene = GetPhysicsScene(scene);
 		wi::jobsystem::context ctx;
-		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), 1, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
+		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), dispatchGroupSize, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
 
 			RigidBodyPhysicsComponent& physicscomponent = scene.rigidbodies[args.jobIndex];
 			if (physicscomponent.physicsobject == nullptr)
 				return;
 			RigidBody& physicsobject = GetRigidBody(physicscomponent);
-			if (physicsobject.bodyID.IsInvalid())
-				return;
 			if (physicsobject.vehicle_constraint == nullptr)
 				return;
 
@@ -2641,7 +2698,7 @@ namespace wi::physics
 	void ResetPhysicsObjects(Scene& scene)
 	{
 		PhysicsScene& physics_scene = *(PhysicsScene*)scene.physics_scene.get();
-		BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface();
+		BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
 		BodyIDVector bodies;
 		physics_scene.physics_system.GetBodies(bodies);
 		for (BodyID& bodyID : bodies)
@@ -2662,7 +2719,10 @@ namespace wi::physics
 				{
 					body_interface.ResetSleepTimer(bodyID);
 				}
-				//body_interface.DeactivateBody(bodyID);
+				if (physicsobject->start_deactivated)
+				{
+					body_interface.DeactivateBody(bodyID);
+				}
 
 				// Feedback dynamic bodies: physics -> system
 				if (body_interface.GetMotionType(bodyID) == EMotionType::Dynamic)
