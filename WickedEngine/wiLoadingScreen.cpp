@@ -23,7 +23,7 @@ namespace wi
 	{
 		if (launchedTasks == 0)
 			return 100;
-		uint32_t counter = AtomicLoad(&ctx.counter);
+		uint32_t counter = wi::jobsystem::GetRemainingJobCount(ctx);
 		float percent = 1 - float(counter) / float(launchedTasks);
 		return (int)std::round(percent * 100);
 	}

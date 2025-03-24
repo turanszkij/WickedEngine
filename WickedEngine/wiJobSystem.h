@@ -33,7 +33,7 @@ namespace wi::jobsystem
 	// Defines a state of execution, can be waited on
 	struct context
 	{
-		volatile long counter = 0;
+		std::atomic<uint32_t> counter{ 0 };
 		Priority priority = Priority::High;
 	};
 
@@ -57,4 +57,7 @@ namespace wi::jobsystem
 	// Wait until all threads become idle
 	//	Current thread will become a worker thread, executing jobs
 	void Wait(const context& ctx);
+
+	// Returns the number of remaining jobs
+	uint32_t GetRemainingJobCount(const context& ctx);
 }
