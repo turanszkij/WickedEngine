@@ -5401,6 +5401,13 @@ namespace wi::scene
 				LayerComponent* layercomponent = layers.GetComponent(entity);
 				if (layercomponent != nullptr)
 				{
+					if (layercomponent->GetLayerMask() == ~0u)
+					{
+						// Note: character cannot occupy all layers because then it will collide with itself
+						//	In case when all layers are set (for example when user forgot to specify)
+						//	then only the first layer will be used instead
+						layercomponent->layerMask = 1;
+					}
 					layer = layercomponent->GetLayerMask();
 				}
 
