@@ -2586,6 +2586,8 @@ namespace wi::physics
 
 	void OverrideWehicleWheelTransforms(wi::scene::Scene& scene)
 	{
+		if (scene.physics_scene == nullptr)
+			return;
 		if (!IsSimulationEnabled())
 			return;
 		PhysicsScene& physics_scene = GetPhysicsScene(scene);
