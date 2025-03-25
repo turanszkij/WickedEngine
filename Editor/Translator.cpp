@@ -707,23 +707,28 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 
+		float darken = 1;
+
 		// x
 		XMStoreFloat4x4(&sb.g_xTransform, matX * GetMirrorMatrix(TRANSLATOR_X, camera) * mat);
-		sb.g_xColor = state == TRANSLATOR_X ? highlight_color : XMFLOAT4(1, channel_min, channel_min, 1);
+		darken = camera.Eye.x < transform.translation_local.x ? darken_negative_axes : 1;
+		sb.g_xColor = state == TRANSLATOR_X ? highlight_color : XMFLOAT4(darken, channel_min * darken, channel_min * darken, 1);
 		sb.g_xColor.w *= opacity;
 		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 		device->Draw(vertexCount, 0, cmd);
 
 		// y
 		XMStoreFloat4x4(&sb.g_xTransform, matY * GetMirrorMatrix(TRANSLATOR_Y, camera)* mat);
-		sb.g_xColor = state == TRANSLATOR_Y ? highlight_color : XMFLOAT4(channel_min, 1, channel_min, 1);
+		darken = camera.Eye.y < transform.translation_local.y ? darken_negative_axes : 1;
+		sb.g_xColor = state == TRANSLATOR_Y ? highlight_color : XMFLOAT4(channel_min * darken, darken, channel_min * darken, 1);
 		sb.g_xColor.w *= opacity;
 		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 		device->Draw(vertexCount, 0, cmd);
 
 		// z
 		XMStoreFloat4x4(&sb.g_xTransform, matZ * GetMirrorMatrix(TRANSLATOR_Z, camera)* mat);
-		sb.g_xColor = state == TRANSLATOR_Z ? highlight_color : XMFLOAT4(channel_min, channel_min, 1, 1);
+		darken = camera.Eye.z < transform.translation_local.z ? darken_negative_axes : 1;
+		sb.g_xColor = state == TRANSLATOR_Z ? highlight_color : XMFLOAT4(channel_min * darken, channel_min * darken, darken, 1);
 		sb.g_xColor.w *= opacity;
 		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 		device->Draw(vertexCount, 0, cmd);
@@ -926,19 +931,23 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 		params.shadow_softness = 0.8f;
 		XMVECTOR pos = transform.GetPositionV();
 
-		params.color = wi::Color::fromFloat4(XMFLOAT4(1, channel_min, channel_min, opacity));
+		float darken = 1;
+		darken = camera.Eye.x < transform.translation_local.x ? darken_negative_axes : 1;
+		params.color = wi::Color::fromFloat4(XMFLOAT4(darken, channel_min * darken, channel_min * darken, opacity));
 		XMStoreFloat3(&params.position, pos + XMVector3Transform(XMVectorSet(axis_length + 0.5f, 0, 0, 0) * dist, GetMirrorMatrix(TRANSLATOR_X, camera)));
 		std::memset(TEXT, 0, sizeof(TEXT));
 		WriteAxisText(TRANSLATOR_X, camera, TEXT);
 		wi::font::Draw(TEXT, strlen(TEXT), params, cmd);
 
-		params.color = wi::Color::fromFloat4(XMFLOAT4(channel_min, 1, channel_min, opacity));
+		darken = camera.Eye.y < transform.translation_local.y ? darken_negative_axes : 1;
+		params.color = wi::Color::fromFloat4(XMFLOAT4(channel_min * darken, darken, channel_min * darken, opacity));
 		XMStoreFloat3(&params.position, pos + XMVector3Transform(XMVectorSet(0, axis_length + 0.5f, 0, 0) * dist, GetMirrorMatrix(TRANSLATOR_Y, camera)));
 		std::memset(TEXT, 0, sizeof(TEXT));
 		WriteAxisText(TRANSLATOR_Y, camera, TEXT);
 		wi::font::Draw(TEXT, strlen(TEXT), params, cmd);
 
-		params.color = wi::Color::fromFloat4(XMFLOAT4(channel_min, channel_min, 1, opacity));
+		darken = camera.Eye.z < transform.translation_local.z ? darken_negative_axes : 1;
+		params.color = wi::Color::fromFloat4(XMFLOAT4(channel_min * darken, channel_min * darken, darken, opacity));
 		XMStoreFloat3(&params.position, pos + XMVector3Transform(XMVectorSet(0, 0, axis_length + 0.5f, 0) * dist, GetMirrorMatrix(TRANSLATOR_Z, camera)));
 		std::memset(TEXT, 0, sizeof(TEXT));
 		WriteAxisText(TRANSLATOR_Z, camera, TEXT);

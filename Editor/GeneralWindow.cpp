@@ -270,6 +270,20 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&transformToolOpacitySlider);
 
+	transformToolDarkenSlider.Create(0, 1, 1, 100, "Darken Negative Axes: ");
+	transformToolDarkenSlider.SetTooltip("You can control the darkening of the object placement tool's negative axes");
+	transformToolDarkenSlider.SetSize(XMFLOAT2(100, 18));
+	if (editor->main->config.GetSection("options").Has("transform_tool_darken_negative_axes"))
+	{
+		transformToolDarkenSlider.SetValue(editor->main->config.GetSection("options").GetFloat("transform_tool_darken_negative_axes"));
+		editor->translator.darken_negative_axes = transformToolDarkenSlider.GetValue();
+	}
+	transformToolDarkenSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->translator.darken_negative_axes = args.fValue;
+		editor->main->config.GetSection("options").Set("transform_tool_darken_negative_axes", args.fValue);
+	});
+	AddWidget(&transformToolDarkenSlider);
+
 	bonePickerOpacitySlider.Create(0, 1, 1, 100, "Bone Picker Opacity: ");
 	bonePickerOpacitySlider.SetTooltip("You can control the transparency of the bone selector tool");
 	bonePickerOpacitySlider.SetSize(XMFLOAT2(100, 18));
@@ -1042,6 +1056,7 @@ void GeneralWindow::ResizeLayout()
 	float prev_width = width;
 	width -= padding * 6;
 	add(transformToolOpacitySlider);
+	add(transformToolDarkenSlider);
 	add(bonePickerOpacitySlider);
 	add_right(skeletonsVisibleCheckBox);
 

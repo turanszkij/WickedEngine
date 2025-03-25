@@ -35,6 +35,7 @@ public:
 	wi::gui::CheckBox focusModeCheckBox;
 
 	wi::gui::Slider transformToolOpacitySlider;
+	wi::gui::Slider transformToolDarkenSlider;
 	wi::gui::Slider bonePickerOpacitySlider;
 	wi::gui::CheckBox skeletonsVisibleCheckBox;
 

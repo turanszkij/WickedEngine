@@ -33,6 +33,7 @@ public:
 	float rotate_snap = XM_PIDIV4;
 	float translate_snap = 1;
 	float opacity = 1;
+	float darken_negative_axes = 1;
 
 	enum TRANSLATOR_STATE
 	{
