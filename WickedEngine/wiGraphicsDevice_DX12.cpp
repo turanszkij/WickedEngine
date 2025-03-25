@@ -1673,13 +1673,10 @@ std::mutex queue_locker;
 		{
 			if (freelist[i].uploadbuffer.desc.size >= staging_size)
 			{
-				if (freelist[i].IsCompleted())
-				{
-					cmd = std::move(freelist[i]);
-					std::swap(freelist[i], freelist.back());
-					freelist.pop_back();
-					break;
-				}
+				cmd = std::move(freelist[i]);
+				std::swap(freelist[i], freelist.back());
+				freelist.pop_back();
+				break;
 			}
 		}
 		locker.unlock();
@@ -1696,10 +1693,11 @@ std::mutex queue_locker;
 			dx12_check(device->device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(cmd.fence)));
 			dx12_check(cmd.fence->SetName(L"CopyAllocator::fence"));
 
-			GPUBufferDesc uploadBufferDesc;
-			uploadBufferDesc.size = wi::math::GetNextPowerOfTwo(staging_size);
-			uploadBufferDesc.usage = Usage::UPLOAD;
-			bool upload_success = device->CreateBuffer(&uploadBufferDesc, nullptr, &cmd.uploadbuffer);
+			GPUBufferDesc uploaddesc;
+			uploaddesc.size = wi::math::GetNextPowerOfTwo(staging_size);
+			uploaddesc.size = std::max(uploaddesc.size, uint64_t(65536));
+			uploaddesc.usage = Usage::UPLOAD;
+			bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
 			assert(upload_success);
 			device->SetName(&cmd.uploadbuffer, "CopyAllocator::uploadBuffer");
 		}
@@ -1712,39 +1710,26 @@ std::mutex queue_locker;
 	}
 	void GraphicsDevice_DX12::CopyAllocator::submit(CopyCMD cmd)
 	{
-		locker.lock();
-		cmd.fenceValueSignaled++;
-		freelist.push_back(cmd);
-		locker.unlock();
-
 		cmd.commandList->Close();
 		ID3D12CommandList* commandlists[] = {
 			cmd.commandList.Get()
 		};
 
-#ifdef PLATFORM_XBOX
-		std::scoped_lock lock(queue_locker); // queue operations are not thread-safe on XBOX
-#endif // PLATFORM_XBOX
+		cmd.fence->Signal(0);
 
-		queue->ExecuteCommandLists(1, commandlists);
-		dx12_check(queue->Signal(cmd.fence.Get(), cmd.fenceValueSignaled));
-
-#if 1
-		// Wait on CPU:
-		dx12_check(cmd.fence->SetEventOnCompletion(cmd.fenceValueSignaled, nullptr));
-#else
-		// Wait on GPU:
-		dx12_check(device->queues[QUEUE_GRAPHICS].queue->Wait(cmd.fence.Get(), cmd.fenceValueSignaled));
-		dx12_check(device->queues[QUEUE_COMPUTE].queue->Wait(cmd.fence.Get(), cmd.fenceValueSignaled));
-#ifndef PLATFORM_XBOX
-		// Xbox only has 1 copy queue, so it doesn't need to wait for itself
-		dx12_check(device->queues[QUEUE_COPY].queue->Wait(cmd.fence.Get(), cmd.fenceValueSignaled));
-#endif // PLATFORM_XBOX
-		if (device->queues[QUEUE_VIDEO_DECODE].queue)
 		{
-			dx12_check(device->queues[QUEUE_VIDEO_DECODE].queue->Wait(cmd.fence.Get(), cmd.fenceValueSignaled));
+#ifdef PLATFORM_XBOX
+			std::scoped_lock lock(queue_locker); // queue operations are not thread-safe on XBOX
+#endif // PLATFORM_XBOX
+
+			queue->ExecuteCommandLists(1, commandlists);
+			dx12_check(queue->Signal(cmd.fence.Get(), 1));
 		}
-#endif
+
+		dx12_check(cmd.fence->SetEventOnCompletion(1, nullptr));
+
+		std::scoped_lock lock(locker);
+		freelist.push_back(cmd);
 	}
 
 	void GraphicsDevice_DX12::DescriptorBinder::init(GraphicsDevice_DX12* device)
@@ -2598,6 +2583,7 @@ std::mutex queue_locker;
 					wilog_messagebox("ID3D12Device::CreateFence[FRAME] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 					wi::platform::Exit();
 				}
+				dx12_check(frame_fence_cpu[buffer][queue]->Signal(1)); // immediately write 1 into fence (1 = free to reuse)
 				switch (queue)
 				{
 				case QUEUE_GRAPHICS:
@@ -5370,9 +5356,11 @@ std::mutex queue_locker;
 				if (queue.queue == nullptr)
 					continue;
 
+				dx12_check(frame_fence_cpu[GetBufferIndex()][q]->Signal(0)); // write 0 into fence immediately (0 = in use)
+
 				queue.submit();
 
-				dx12_check(queue.queue->Signal(frame_fence_cpu[GetBufferIndex()][q].Get(), 1));
+				dx12_check(queue.queue->Signal(frame_fence_cpu[GetBufferIndex()][q].Get(), 1)); // gpu will write 1 into the fence when finished with the work (1 = free to reuse)
 				dx12_check(queue.queue->Signal(frame_fence_gpu[GetBufferIndex()][q].Get(), FRAMECOUNT));
 			}
 
@@ -5406,12 +5394,8 @@ std::mutex queue_locker;
 					// If the device was reset we must completely reinitialize the renderer.
 					if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
 					{
-#ifdef _DEBUG
-						char buff[64] = {};
-						sprintf_s(buff, "Device Lost on Present: Reason code 0x%08X\n",
-							static_cast<unsigned int>((hr == DXGI_ERROR_DEVICE_REMOVED) ? device->GetDeviceRemovedReason() : hr));
-						OutputDebugStringA(buff);
-#endif
+						wilog_messagebox("Device Lost on Present: %s", wi::helper::GetPlatformErrorString(((hr == DXGI_ERROR_DEVICE_REMOVED) ? device->GetDeviceRemovedReason() : hr)).c_str());
+
 						// Handle device lost
 						OnDeviceRemoved();
 					}
@@ -5450,16 +5434,12 @@ std::mutex queue_locker;
 			if (queues[queue].queue == nullptr)
 				continue;
 			ID3D12Fence* fence = frame_fence_cpu[bufferindex][queue].Get();
-			if (FRAMECOUNT >= BUFFERCOUNT)
+			if (fence->GetCompletedValue() < 1)
 			{
-				if (fence->GetCompletedValue() < 1)
-				{
-					// nullptr event handle will simply wait immediately:
-					//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12fence-seteventoncompletion#remarks
-					dx12_check(fence->SetEventOnCompletion(1, nullptr));
-				}
+				// nullptr event handle will simply wait immediately:
+				//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12fence-seteventoncompletion#remarks
+				dx12_check(fence->SetEventOnCompletion(1, nullptr));
 			}
-			dx12_check(fence->Signal(0));
 		}
 
 		allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
@@ -6620,7 +6600,11 @@ std::mutex queue_locker;
 	void GraphicsDevice_DX12::BindStencilRef(uint32_t value, CommandList cmd)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
-		commandlist.GetGraphicsCommandList()->OMSetStencilRef(value);
+		if (commandlist.prev_stencilref != value)
+		{
+			commandlist.prev_stencilref = value;
+			commandlist.GetGraphicsCommandList()->OMSetStencilRef(value);
+		}
 	}
 	void GraphicsDevice_DX12::BindBlendFactor(float r, float g, float b, float a, CommandList cmd)
 	{

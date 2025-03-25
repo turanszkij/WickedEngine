@@ -328,6 +328,7 @@ namespace wi::graphics
 			const Shader* active_cs = {};
 			const RaytracingPipelineState* active_rt = {};
 			ShadingRate prev_shadingrate = {};
+			uint32_t prev_stencilref = 0;
 			wi::vector<SwapChain> prev_swapchains;
 			bool dirty_pso = {};
 			wi::vector<VkMemoryBarrier2> frame_memoryBarriers;
@@ -353,6 +354,7 @@ namespace wi::graphics
 				active_rt = nullptr;
 				dirty_pso = false;
 				prev_shadingrate = ShadingRate::RATE_INVALID;
+				prev_stencilref = 0;
 				prev_swapchains.clear();
 				renderpass_info = {};
 				renderpass_barriers_begin.clear();

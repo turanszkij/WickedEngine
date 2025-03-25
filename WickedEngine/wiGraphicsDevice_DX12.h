@@ -103,10 +103,8 @@ namespace wi::graphics
 				Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator;
 				Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList;
 				Microsoft::WRL::ComPtr<ID3D12Fence> fence;
-				uint64_t fenceValueSignaled = 0;
 				GPUBuffer uploadbuffer;
 				inline bool IsValid() const { return commandList != nullptr; }
-				inline bool IsCompleted() const { return fence->GetCompletedValue() >= fenceValueSignaled; }
 			};
 			wi::vector<CopyCMD> freelist;
 
@@ -187,6 +185,7 @@ namespace wi::graphics
 			const ID3D12RootSignature* active_rootsig_graphics = {};
 			const ID3D12RootSignature* active_rootsig_compute = {};
 			ShadingRate prev_shadingrate = {};
+			uint32_t prev_stencilref = 0;
 			wi::vector<const SwapChain*> swapchains;
 			bool dirty_pso = {};
 			wi::vector<D3D12_RAYTRACING_GEOMETRY_DESC> accelerationstructure_build_geometries;
@@ -220,6 +219,7 @@ namespace wi::graphics
 				active_rootsig_graphics = nullptr;
 				active_rootsig_compute = nullptr;
 				prev_shadingrate = ShadingRate::RATE_INVALID;
+				prev_stencilref = 0;
 				dirty_pso = false;
 				swapchains.clear();
 				renderpass_info = {};
