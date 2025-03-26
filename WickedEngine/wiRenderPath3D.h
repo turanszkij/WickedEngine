@@ -87,6 +87,8 @@ namespace wi
 		mutable bool first_frame = true;
 		mutable bool prerender_happened = false;
 
+		void RenderCameraComponents() const;
+
 	public:
 		wi::graphics::Texture rtMain;
 		wi::graphics::Texture rtMain_render; // can be MSAA
@@ -184,6 +186,7 @@ namespace wi
 		wi::scene::Scene* scene = &wi::scene::GetScene();
 		wi::renderer::Visibility visibility_main;
 		wi::renderer::Visibility visibility_reflection;
+		mutable wi::renderer::Visibility visibility_subcam_shared;
 
 		FrameCB frameCB = {};
 

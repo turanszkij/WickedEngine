@@ -262,6 +262,10 @@ namespace wi::scene
 				archive >> interiorMappingOffset;
 				archive >> interiorMappingRotation;
 			}
+			if (seri.GetVersion() >= 10)
+			{
+				SerializeEntity(archive, cameraSource, seri);
+			}
 
 			for (auto& x : textures)
 			{
@@ -432,6 +436,10 @@ namespace wi::scene
 				archive << interiorMappingScale;
 				archive << interiorMappingOffset;
 				archive << interiorMappingRotation;
+			}
+			if (seri.GetVersion() >= 10)
+			{
+				SerializeEntity(archive, cameraSource, seri);
 			}
 		}
 	}
@@ -1201,6 +1209,12 @@ namespace wi::scene
 				archive >> ortho_vertical_size;
 			}
 
+			if (seri.GetVersion() >= 2)
+			{
+				archive >> render_to_texture.resolution;
+				archive >> render_to_texture.sample_count;
+			}
+
 			SetDirty();
 		}
 		else
@@ -1222,6 +1236,12 @@ namespace wi::scene
 			if (seri.GetVersion() >= 1)
 			{
 				archive << ortho_vertical_size;
+			}
+
+			if (seri.GetVersion() >= 2)
+			{
+				archive << render_to_texture.resolution;
+				archive << render_to_texture.sample_count;
 			}
 		}
 	}

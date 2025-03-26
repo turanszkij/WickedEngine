@@ -4080,6 +4080,18 @@ namespace wi::scene
 				material.WriteShaderTextureSlot(materialArrayMapped + args.jobIndex, EMISSIVEMAP, descriptor);
 			}
 
+			if (material.cameraSource != INVALID_ENTITY)
+			{
+				const CameraComponent* camera = cameras.GetComponent(material.cameraSource);
+				if (camera != nullptr && camera->render_to_texture.rendertarget_render.IsValid())
+				{
+					// Camera attachment will overwrite texture slots on shader side:
+					int descriptor = GetDevice()->GetDescriptorIndex(&camera->render_to_texture.rendertarget_render, SubresourceType::SRV);
+					material.WriteShaderTextureSlot(materialArrayMapped + args.jobIndex, BASECOLORMAP, descriptor);
+					material.WriteShaderTextureSlot(materialArrayMapped + args.jobIndex, EMISSIVEMAP, descriptor);
+				}
+			}
+
 			if (textureStreamingFeedbackMapped != nullptr)
 			{
 				const uint32_t request_packed = textureStreamingFeedbackMapped[args.jobIndex];

@@ -257,6 +257,8 @@ namespace wi::scene
 		int customShaderID = -1;
 		uint4 userdata = uint4(0, 0, 0, 0); // can be accessed by custom shader
 
+		wi::ecs::Entity cameraSource = wi::ecs::INVALID_ENTITY; // take texture from camera render
+
 		// Non-serialized attributes:
 		uint32_t layerMask = ~0u;
 		int sampler_descriptor = -1; // optional
@@ -1321,6 +1323,19 @@ namespace wi::scene
 		int texture_vxgi_specular_index = -1;
 		int texture_reprojected_depth_index = -1;
 		uint shadercamera_options = SHADERCAMERA_OPTION_NONE;
+
+		struct RenderToTexture
+		{
+			XMUINT2 resolution = XMUINT2(0, 0);
+			uint32_t sample_count = 1;
+			wi::graphics::Texture rendertarget_MSAA;
+			wi::graphics::Texture rendertarget_render;
+			wi::graphics::Texture rendertarget_display;
+			wi::graphics::Texture depthstencil;
+			wi::graphics::Texture depthstencil_resolved;
+			XMUINT2 tileCount = {};
+			wi::graphics::GPUBuffer entityTiles;
+		} render_to_texture;
 
 		void CreateOrtho(float newWidth, float newHeight, float newNear, float newFar, float newVerticalSize = 1);
 		void CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV = XM_PI / 3.0f);

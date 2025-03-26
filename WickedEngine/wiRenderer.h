@@ -11,6 +11,7 @@
 #include "shaders/ShaderInterop_Renderer.h"
 #include "shaders/ShaderInterop_SurfelGI.h"
 #include "wiVector.h"
+#include "wiSpinLock.h"
 
 #include <memory>
 #include <limits>

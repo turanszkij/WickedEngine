@@ -14,13 +14,16 @@ void CameraPreview::RenderPreview()
 		{
 			renderpath.camera = camera;
 			scale_local.y = scale_local.x * renderpath.camera->height / renderpath.camera->width;
-			renderpath.setSceneUpdateEnabled(false); // we just view our scene with this that's updated by the main rernderpath
-			renderpath.setOcclusionCullingEnabled(false); // occlusion culling only works for one camera
-			renderpath.PreUpdate();
-			renderpath.Update(0);
-			renderpath.PostUpdate();
-			renderpath.PreRender();
-			renderpath.Render();
+			if (!camera->render_to_texture.rendertarget_render.IsValid())
+			{
+				renderpath.setSceneUpdateEnabled(false); // we just view our scene with this that's updated by the main rernderpath
+				renderpath.setOcclusionCullingEnabled(false); // occlusion culling only works for one camera
+				renderpath.PreUpdate();
+				renderpath.Update(0);
+				renderpath.PostUpdate();
+				renderpath.PreRender();
+				renderpath.Render();
+			}
 		}
 		else
 		{
@@ -56,9 +59,17 @@ void CameraPreview::Render(const wi::Canvas& canvas, wi::graphics::CommandList c
 		params.corners_rounding[3].radius = 8;
 		params.color = wi::Color::White();
 		params.blendFlag = wi::enums::BLENDMODE_OPAQUE;
-		wi::image::Draw(renderpath.GetLastPostprocessRT(), params, cmd);
+		if (renderpath.camera->render_to_texture.rendertarget_render.IsValid())
+		{
+			wi::image::Draw(&renderpath.camera->render_to_texture.rendertarget_render, params, cmd);
+			wi::font::Draw("Camera preview (raw render):", wi::font::Params(params.pos.x + 2, params.pos.y + 2), cmd);
+		}
+		else
+		{
+			wi::image::Draw(renderpath.GetLastPostprocessRT(), params, cmd);
+			wi::font::Draw("Camera preview (editor only):", wi::font::Params(params.pos.x + 2, params.pos.y + 2), cmd);
+		}
 
-		wi::font::Draw("Camera preview:", wi::font::Params(params.pos.x + 2, params.pos.y + 2), cmd);
 	}
 }
 
@@ -213,6 +224,91 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&apertureShapeYSlider);
 
+	renderButton.Create("RenderToTexture");
+	renderButton.SetTooltip("If Render To Texture is enabled for a camera, the camera renders the scene into its own textures\n which can be reused for other things such as materials.");
+	renderButton.OnClick([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		bool disable = true;
+		const CameraComponent* cam = scene.cameras.GetComponent(entity);
+		if (cam != nullptr)
+		{
+			disable = cam->render_to_texture.resolution.x > 0 || cam->render_to_texture.resolution.y > 0;
+		}
+		if (disable)
+		{
+			renderButton.SetText("Enable Render To Texture");
+			renderEnabled = false;
+		}
+		else
+		{
+			renderButton.SetText("Disable Render To Texture");
+			renderEnabled = true;
+		}
+		for (auto& x : editor->translator.selected)
+		{
+			CameraComponent* camera = scene.cameras.GetComponent(x.entity);
+			if (camera == nullptr)
+				continue;
+			if (disable)
+			{
+				camera->render_to_texture.resolution = {};
+			}
+			else
+			{
+				camera->render_to_texture.resolution = XMUINT2(256, 256);
+			}
+			camera->SetDirty();
+		}
+		});
+	AddWidget(&renderButton);
+
+	resolutionXSlider.Create(128, 2048, 256, 2048 - 128, "Render Width: ");
+	resolutionXSlider.SetTooltip("Set the render resolution Width");
+	resolutionXSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			CameraComponent* camera = scene.cameras.GetComponent(x.entity);
+			if (camera == nullptr)
+				continue;
+			camera->render_to_texture.resolution.x = (uint32_t)args.iValue;
+			camera->SetDirty();
+		}
+		});
+	AddWidget(&resolutionXSlider);
+
+	resolutionYSlider.Create(128, 2048, 256, 2048 - 128, "Render Height: ");
+	resolutionYSlider.SetTooltip("Set the render resolution Height");
+	resolutionYSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			CameraComponent* camera = scene.cameras.GetComponent(x.entity);
+			if (camera == nullptr)
+				continue;
+			camera->render_to_texture.resolution.y = (uint32_t)args.iValue;
+			camera->SetDirty();
+		}
+		});
+	AddWidget(&resolutionYSlider);
+
+	samplecountSlider.Create(1, 8, 1, 7, "Sample count: ");
+	samplecountSlider.SetTooltip("Set the render resolution sample count (MSAA)");
+	samplecountSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		uint32_t samplecount = wi::math::GetNextPowerOfTwo((uint32_t)args.iValue);
+		samplecountSlider.SetValue((int)samplecount);
+		for (auto& x : editor->translator.selected)
+		{
+			CameraComponent* camera = scene.cameras.GetComponent(x.entity);
+			if (camera == nullptr)
+				continue;
+			camera->render_to_texture.sample_count = samplecount;
+			camera->SetDirty();
+		}
+		});
+	AddWidget(&samplecountSlider);
+
 
 	AddWidget(&preview);
 
@@ -241,6 +337,11 @@ void CameraComponentWindow::SetEntity(Entity entity)
 		apertureSizeSlider.SetValue(camera->aperture_size);
 		apertureShapeXSlider.SetValue(camera->aperture_shape.x);
 		apertureShapeYSlider.SetValue(camera->aperture_shape.y);
+		renderEnabled = camera->render_to_texture.resolution.x > 0 || camera->render_to_texture.resolution.y > 0;
+		renderButton.SetText(renderEnabled ? "Disable Render To Texture" : "Enable Render To Texture");
+		resolutionXSlider.SetValue((int)camera->render_to_texture.resolution.x);
+		resolutionYSlider.SetValue((int)camera->render_to_texture.resolution.y);
+		samplecountSlider.SetValue((int)camera->render_to_texture.sample_count);
 
 		preview.entity = entity;
 		preview.renderpath.scene = &scene;
@@ -300,6 +401,29 @@ void CameraComponentWindow::ResizeLayout()
 	add(apertureSizeSlider);
 	add(apertureShapeXSlider);
 	add(apertureShapeYSlider);
+
+	y += jump;
+
+	add_fullwidth(renderButton);
+	if (renderEnabled)
+	{
+		resolutionXSlider.SetVisible(true);
+		resolutionYSlider.SetVisible(true);
+		samplecountSlider.SetVisible(true);
+
+		add(resolutionXSlider);
+		add(resolutionYSlider);
+		add(samplecountSlider);
+	}
+	else
+	{
+		resolutionXSlider.SetVisible(false);
+		resolutionYSlider.SetVisible(false);
+		samplecountSlider.SetVisible(false);
+	}
+
+	y += jump;
+
 	add_fullwidth(preview);
 
 }

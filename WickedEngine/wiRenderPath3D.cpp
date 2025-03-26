@@ -7,6 +7,8 @@
 
 using namespace wi::graphics;
 using namespace wi::enums;
+using namespace wi::scene;
+using namespace wi::ecs;
 
 namespace wi
 {
@@ -410,6 +412,91 @@ namespace wi
 				wi::renderer::Visibility::ALLOW_LIGHTS
 				;
 			wi::renderer::UpdateVisibility(visibility_reflection);
+		}
+
+		// Render-to-texture camera components:
+		for (uint32_t i = 0; i < scene->cameras.GetCount(); ++i)
+		{
+			wi::scene::CameraComponent& camera = scene->cameras[i];
+			if (camera.render_to_texture.resolution.x == 0 || camera.render_to_texture.resolution.y == 0)
+			{
+				camera.render_to_texture = {};
+				continue;
+			}
+			if (!camera.render_to_texture.rendertarget_render.IsValid() ||
+				camera.render_to_texture.rendertarget_render.desc.width != camera.render_to_texture.resolution.x ||
+				camera.render_to_texture.rendertarget_render.desc.height != camera.render_to_texture.resolution.y ||
+				camera.render_to_texture.rendertarget_MSAA.desc.sample_count != camera.render_to_texture.sample_count
+				)
+			{
+				TextureDesc desc;
+				desc.width = camera.render_to_texture.resolution.x;
+				desc.height = camera.render_to_texture.resolution.y;
+				desc.format = wi::renderer::format_rendertarget_main;
+				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+				bool success = device->CreateTexture(&desc, nullptr, &camera.render_to_texture.rendertarget_render);
+				assert(success);
+				device->SetName(&camera.render_to_texture.rendertarget_render, "CameraComponent::RenderToTexture::rendertarget_render");
+				success = device->CreateTexture(&desc, nullptr, &camera.render_to_texture.rendertarget_display);
+				assert(success);
+				device->SetName(&camera.render_to_texture.rendertarget_display, "CameraComponent::RenderToTexture::rendertarget_display");
+
+				if (camera.render_to_texture.sample_count > 1)
+				{
+					desc.sample_count = camera.render_to_texture.sample_count;
+					desc.layout = ResourceState::RENDERTARGET;
+					desc.bind_flags = BindFlag::RENDER_TARGET;
+					success = device->CreateTexture(&desc, nullptr, &camera.render_to_texture.rendertarget_MSAA);
+					assert(success);
+					device->SetName(&camera.render_to_texture.rendertarget_MSAA, "CameraComponent::RenderToTexture::rendertarget_MSAA");
+				}
+				else
+				{
+					camera.render_to_texture.rendertarget_MSAA = {};
+				}
+
+				desc.format = wi::renderer::format_depthbuffer_main;
+				desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
+				desc.layout = ResourceState::SHADER_RESOURCE;
+				success = device->CreateTexture(&desc, nullptr, &camera.render_to_texture.depthstencil);
+				assert(success);
+				device->SetName(&camera.render_to_texture.depthstencil, "CameraComponent::RenderToTexture::depthstencil");
+
+				if (camera.render_to_texture.sample_count > 1)
+				{
+					desc.sample_count = 1;
+					desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+					desc.layout = ResourceState::SHADER_RESOURCE;
+					desc.format = Format::R32_FLOAT;
+					success = device->CreateTexture(&desc, nullptr, &camera.render_to_texture.depthstencil_resolved);
+					assert(success);
+					device->SetName(&camera.render_to_texture.depthstencil_resolved, "CameraComponent::RenderToTexture::depthstencil_resolved");
+				}
+				else
+				{
+					camera.render_to_texture.depthstencil_resolved = {};
+				}
+
+				wi::renderer::TiledLightResources tiledres;
+				wi::renderer::CreateTiledLightResources(tiledres, camera.render_to_texture.resolution);
+				camera.render_to_texture.tileCount = tiledres.tileCount;
+				camera.render_to_texture.entityTiles = tiledres.entityTiles;
+			}
+			if (getSceneUpdateEnabled())
+			{
+				std::swap(camera.render_to_texture.rendertarget_render, camera.render_to_texture.rendertarget_display);
+			}
+			camera.width = (float)camera.render_to_texture.resolution.x;
+			camera.height = (float)camera.render_to_texture.resolution.y;
+			if (camera.render_to_texture.depthstencil_resolved.IsValid())
+			{
+				camera.texture_depth_index = device->GetDescriptorIndex(&camera.render_to_texture.depthstencil_resolved, SubresourceType::SRV);
+			}
+			else
+			{
+				camera.texture_depth_index = device->GetDescriptorIndex(&camera.render_to_texture.depthstencil, SubresourceType::SRV);
+			}
+			camera.buffer_entitytiles_index = device->GetDescriptorIndex(&camera.render_to_texture.entityTiles, SubresourceType::SRV);
 		}
 
 		XMUINT2 internalResolution = GetInternalResolution();
@@ -1770,6 +1857,8 @@ namespace wi
 			}
 		});
 
+		RenderCameraComponents();
+
 		cmd = device->BeginCommandList();
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 			RenderPostprocessChain(cmd);
@@ -2546,6 +2635,114 @@ namespace wi
 				wi::renderer::Postprocess_FSR(*rt_read, rtFSR[1], rtFSR[0], cmd, getFSRSharpness());
 				lastPostprocessRT = &rtFSR[0];
 			}
+		}
+	}
+
+	void RenderPath3D::RenderCameraComponents() const
+	{
+		GraphicsDevice* device = GetDevice();
+
+		// Render-to-texture camera components:
+		for (uint32_t i = 0; i < scene->cameras.GetCount() && getSceneUpdateEnabled(); ++i)
+		{
+			const wi::scene::CameraComponent& camera = scene->cameras[i];
+			if (camera.render_to_texture.resolution.x == 0 || camera.render_to_texture.resolution.y == 0)
+				continue;
+			if (!camera.render_to_texture.rendertarget_render.IsValid())
+				continue;
+			if (!camera.render_to_texture.depthstencil.IsValid())
+				continue;
+
+			// Note: this runs on the main thread to reduce memory usage with some shared resources
+			wi::renderer::Visibility& visibility = visibility_subcam_shared;
+			visibility.layerMask = getLayerMask();
+			visibility.scene = scene;
+			visibility.camera = &camera;
+			visibility.flags = wi::renderer::Visibility::ALLOW_OBJECTS;
+			visibility.flags |= wi::renderer::Visibility::ALLOW_LIGHTS;
+			visibility.flags |= wi::renderer::Visibility::ALLOW_DECALS;
+			visibility.flags |= wi::renderer::Visibility::ALLOW_ENVPROBES;
+			visibility.flags |= wi::renderer::Visibility::ALLOW_HAIRS;
+			wi::renderer::UpdateVisibility(visibility);
+
+			// Note: I start a new commandlist for each camera,
+			//	because there is some crash in DX12 with multiple MSAA resolves in the same renderpass with no info
+			CommandList cmd = device->BeginCommandList();
+
+			ScopedGPUProfiling("Camera Entity", cmd);
+			device->EventBegin("Camera Entity", cmd);
+			wi::renderer::BindCommonResources(cmd);
+			wi::renderer::BindCameraCB(
+				camera,
+				camera,
+				camera,
+				cmd
+			);
+			Rect scissor;
+			scissor.right = (int32_t)camera.render_to_texture.depthstencil.desc.width;
+			scissor.bottom = (int32_t)camera.render_to_texture.depthstencil.desc.height;
+			device->BindScissorRects(1, &scissor, cmd);
+			Viewport vp;
+			vp.width = (float)camera.render_to_texture.depthstencil.desc.width;
+			vp.height = (float)camera.render_to_texture.depthstencil.desc.height;
+			device->BindViewports(1, &vp, cmd);
+			// prepass:
+			{
+				RenderPassImage rp[] = {
+					RenderPassImage::DepthStencil(&camera.render_to_texture.depthstencil, RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::STORE, camera.render_to_texture.depthstencil.desc.layout, ResourceState::DEPTHSTENCIL, ResourceState::SHADER_RESOURCE),
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
+				wi::renderer::DrawScene(
+					visibility,
+					RENDERPASS_PREPASS_DEPTHONLY,
+					cmd,
+					wi::renderer::DRAWSCENE_OPAQUE |
+					wi::renderer::DRAWSCENE_IMPOSTOR |
+					wi::renderer::DRAWSCENE_HAIRPARTICLE
+				);
+				device->RenderPassEnd(cmd);
+			}
+			if (camera.render_to_texture.depthstencil_resolved.IsValid())
+			{
+				wi::renderer::ResolveMSAADepthBuffer(camera.render_to_texture.depthstencil_resolved, camera.render_to_texture.depthstencil, cmd);
+			}
+			wi::renderer::TiledLightResources tiledres;
+			tiledres.tileCount = camera.render_to_texture.tileCount;
+			tiledres.entityTiles = camera.render_to_texture.entityTiles;
+			wi::renderer::ComputeTiledLightCulling(tiledres, visibility, {}, cmd);
+			// color pass:
+			{
+				RenderPassImage rp[3];
+				uint32_t rp_count = 0;
+				if (camera.render_to_texture.rendertarget_MSAA.IsValid())
+				{
+					rp[rp_count++] = RenderPassImage::RenderTarget(&camera.render_to_texture.rendertarget_MSAA, RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE, ResourceState::RENDERTARGET, ResourceState::RENDERTARGET);
+					rp[rp_count++] = RenderPassImage::Resolve(&camera.render_to_texture.rendertarget_render);
+				}
+				else
+				{
+					rp[rp_count++] = RenderPassImage::RenderTarget(&camera.render_to_texture.rendertarget_render, RenderPassImage::LoadOp::CLEAR);
+				}
+				rp[rp_count++] = RenderPassImage::DepthStencil(&camera.render_to_texture.depthstencil, RenderPassImage::LoadOp::LOAD, RenderPassImage::StoreOp::DONTCARE, ResourceState::SHADER_RESOURCE, ResourceState::DEPTHSTENCIL, camera.render_to_texture.depthstencil.desc.layout);
+				device->RenderPassBegin(rp, rp_count, cmd);
+				wi::renderer::DrawScene(
+					visibility,
+					RENDERPASS_MAIN,
+					cmd,
+					wi::renderer::DRAWSCENE_OPAQUE |
+					wi::renderer::DRAWSCENE_IMPOSTOR |
+					wi::renderer::DRAWSCENE_HAIRPARTICLE
+				);
+				wi::renderer::DrawScene(
+					visibility,
+					RENDERPASS_MAIN,
+					cmd,
+					wi::renderer::DRAWSCENE_TRANSPARENT
+				);
+				wi::renderer::DrawSky(*scene, cmd);
+				device->RenderPassEnd(cmd);
+			}
+			device->EventEnd(cmd);
 		}
 	}
 

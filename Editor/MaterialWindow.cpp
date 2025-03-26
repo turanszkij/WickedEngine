@@ -355,6 +355,27 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	AddWidget(&shadingRateComboBox);
 
 
+	cameraComboBox.Create("Camera source: ");
+	cameraComboBox.SetTooltip("Select a camera to use as texture");
+	cameraComboBox.OnSelect([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MaterialComponent* material = get_material(scene, x);
+			if (material == nullptr)
+				continue;
+			material->cameraSource = (Entity)args.userdata;
+		}
+
+		CameraComponent* camera = scene.cameras.GetComponent((Entity)args.userdata);
+		if (camera != nullptr)
+		{
+			camera->render_to_texture.resolution = XMUINT2(256, 256);
+		}
+	});
+	AddWidget(&cameraComboBox);
+
+
 
 
 	// Sliders:
@@ -1254,6 +1275,19 @@ void MaterialWindow::SetEntity(Entity entity)
 		}
 		shadingRateComboBox.SetSelectedWithoutCallback((int)material->shadingRate);
 
+		cameraComboBox.ClearItems();
+		cameraComboBox.AddItem("INVALID_ENTITY", (uint64_t)INVALID_ENTITY);
+		for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
+		{
+			Entity cameraEntity = scene.cameras.GetEntity(i);
+			const NameComponent* name = scene.names.GetComponent(cameraEntity);
+			if (name != nullptr)
+			{
+				cameraComboBox.AddItem(name->name, (uint64_t)cameraEntity);
+			}
+		}
+		cameraComboBox.SetSelectedByUserdataWithoutCallback((uint64_t)material->cameraSource);
+
 		colorComboBox.SetEnabled(true);
 		colorPicker.SetEnabled(true);
 		
@@ -1400,6 +1434,7 @@ void MaterialWindow::ResizeLayout()
 	add(shaderTypeComboBox);
 	add(blendModeComboBox);
 	add(shadingRateComboBox);
+	add(cameraComboBox);
 	add(alphaRefSlider);
 	add(normalMapSlider);
 	add(roughnessSlider);

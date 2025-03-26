@@ -29,6 +29,12 @@ public:
 	wi::gui::Slider apertureShapeXSlider;
 	wi::gui::Slider apertureShapeYSlider;
 
+	wi::gui::Button renderButton;
+	bool renderEnabled = false;
+	wi::gui::Slider resolutionXSlider;
+	wi::gui::Slider resolutionYSlider;
+	wi::gui::Slider samplecountSlider;
+
 	CameraPreview preview;
 
 	void ResizeLayout() override;

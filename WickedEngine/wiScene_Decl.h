@@ -24,5 +24,6 @@ namespace wi::scene
 	struct SoundComponent;
 	struct InverseKinematicsComponent;
 	struct SpringComponent;
+	struct ColliderComponent;
 	struct Scene;
 }

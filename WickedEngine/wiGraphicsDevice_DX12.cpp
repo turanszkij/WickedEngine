@@ -42,6 +42,10 @@ namespace dx12_internal
 	static constexpr int BINDLESS_RESOURCE_CAPACITY = 500000;
 	static constexpr int BINDLESS_SAMPLER_CAPACITY = 256;
 
+#ifdef PLATFORM_XBOX
+// No renderpass API on xbox yet
+#define DISABLE_RENDERPASS
+#endif // PLATFORM_XBOX
 
 #ifdef PLATFORM_WINDOWS_DESKTOP
 	// On Windows PC we load DLLs manually because graphics device can be chosen at runtime:
@@ -5921,7 +5925,7 @@ std::mutex queue_locker;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 		commandlist.renderpass_barriers_end.push_back(barrier);
 
-#ifdef PLATFORM_XBOX
+#ifdef DISABLE_RENDERPASS
 		commandlist.GetGraphicsCommandList()->OMSetRenderTargets(
 			1,
 			&internal_state->backbufferRTV[internal_state->GetBufferIndex()],
@@ -5944,7 +5948,7 @@ std::mutex queue_locker;
 		RTV.BeginningAccess.Clear.ClearValue.Color[3] = swapchain->desc.clear_color[3];
 		RTV.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
 		commandlist.GetGraphicsCommandListLatest()->BeginRenderPass(1, &RTV, nullptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
-#endif // PLATFORM_XBOX
+#endif // DISABLE_RENDERPASS
 
 		commandlist.renderpass_info = RenderPassInfo::from(swapchain->desc);
 	}
@@ -6249,7 +6253,7 @@ std::mutex queue_locker;
 			commandlist.GetGraphicsCommandListLatest()->RSSetShadingRateImage(commandlist.shading_rate_image);
 		}
 
-#ifdef PLATFORM_XBOX
+#ifdef DISABLE_RENDERPASS
 
 		D3D12_CPU_DESCRIPTOR_HANDLE rt_descriptors[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 		for (uint32_t i = 0; i < rt_count; ++i)
@@ -6318,7 +6322,7 @@ std::mutex queue_locker;
 			DSV.cpuDescriptor.ptr == 0 ? nullptr : &DSV,
 			FLAGS
 		);
-#endif // PLATFORM_XBOX
+#endif // DISABLE_RENDERPASS
 
 		commandlist.renderpass_info = RenderPassInfo::from(images, image_count);
 	}
@@ -6326,7 +6330,7 @@ std::mutex queue_locker;
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
 
-#ifdef PLATFORM_XBOX
+#ifdef DISABLE_RENDERPASS
 		// Batch up resolve SRC barriers since XBOX cannot do it with RenderPass:
 		commandlist.resolve_src_barriers.clear();
 		for (uint32_t rt = 0; rt < commandlist.renderpass_info.rt_count; ++rt)
@@ -6353,7 +6357,10 @@ std::mutex queue_locker;
 				barrier.Transition.Subresource = resolve.SrcSubresource;
 			}
 		}
-		commandlist.GetGraphicsCommandList()->ResourceBarrier((UINT)commandlist.resolve_src_barriers.size(), commandlist.resolve_src_barriers.data());
+		if (!commandlist.resolve_src_barriers.empty())
+		{
+			commandlist.GetGraphicsCommandList()->ResourceBarrier((UINT)commandlist.resolve_src_barriers.size(), commandlist.resolve_src_barriers.data());
+		}
 
 		// Perform all resolves:
 		for (uint32_t rt = 0; rt < commandlist.renderpass_info.rt_count; ++rt)
@@ -6383,9 +6390,18 @@ std::mutex queue_locker;
 			}
 		}
 
+		if (!commandlist.resolve_src_barriers.empty())
+		{
+			for (auto& barrier : commandlist.resolve_src_barriers)
+			{
+				std::swap(barrier.Transition.StateBefore, barrier.Transition.StateAfter);
+			}
+			commandlist.GetGraphicsCommandList()->ResourceBarrier((UINT)commandlist.resolve_src_barriers.size(), commandlist.resolve_src_barriers.data());
+		}
+
 #else
 		commandlist.GetGraphicsCommandListLatest()->EndRenderPass();
-#endif // PLATFORM_XBOX
+#endif // DISABLE_RENDERPASS
 
 		if (commandlist.shading_rate_image != nullptr)
 		{
