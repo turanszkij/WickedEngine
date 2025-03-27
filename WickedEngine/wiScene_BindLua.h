@@ -210,6 +210,8 @@ namespace wi::lua::scene
 
 		int VoxelizeObject(lua_State* L);
 		int VoxelizeScene(lua_State* L);
+
+		int FixupNans(lua_State* L);
 	};
 
 	class NameComponent_BindLua

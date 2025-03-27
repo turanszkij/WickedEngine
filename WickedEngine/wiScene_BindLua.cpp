@@ -697,6 +697,8 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, GetOceanPosAt),
 	lunamethod(Scene_BindLua, VoxelizeObject),
 	lunamethod(Scene_BindLua, VoxelizeScene),
+
+	lunamethod(Scene_BindLua, FixupNans),
 	{ NULL, NULL }
 };
 Luna<Scene_BindLua>::PropertyType Scene_BindLua::properties[] = {
@@ -3436,7 +3438,11 @@ int Scene_BindLua::VoxelizeScene(lua_State* L)
 	scene->VoxelizeScene(*voxelgrid->voxelgrid, subtract, filterMask, layerMask, lod);
 	return 0;
 }
-
+int Scene_BindLua::FixupNans(lua_State* L)
+{
+	scene->FixupNans();
+	return 0;
+}
 
 
 

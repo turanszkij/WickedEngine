@@ -414,93 +414,6 @@ namespace wi
 			wi::renderer::UpdateVisibility(visibility_reflection);
 		}
 
-		// Render-to-texture camera components:
-		for (uint32_t i = 0; i < scene->cameras.GetCount(); ++i)
-		{
-			wi::scene::CameraComponent& camera = scene->cameras[i];
-			if (camera.render_to_texture.resolution.x == 0 || camera.render_to_texture.resolution.y == 0)
-			{
-				camera.render_to_texture = {};
-				continue;
-			}
-			if (!camera.render_to_texture.rendertarget_render.IsValid() ||
-				camera.render_to_texture.rendertarget_render.desc.width != camera.render_to_texture.resolution.x ||
-				camera.render_to_texture.rendertarget_render.desc.height != camera.render_to_texture.resolution.y ||
-				camera.render_to_texture.rendertarget_MSAA.desc.sample_count != camera.render_to_texture.sample_count
-				)
-			{
-				TextureDesc desc;
-				desc.width = camera.render_to_texture.resolution.x;
-				desc.height = camera.render_to_texture.resolution.y;
-				desc.format = wi::renderer::format_rendertarget_main;
-				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-				bool success = device->CreateTexture(&desc, nullptr, &camera.render_to_texture.rendertarget_render);
-				assert(success);
-				device->SetName(&camera.render_to_texture.rendertarget_render, "CameraComponent::RenderToTexture::rendertarget_render");
-				success = device->CreateTexture(&desc, nullptr, &camera.render_to_texture.rendertarget_display);
-				assert(success);
-				device->SetName(&camera.render_to_texture.rendertarget_display, "CameraComponent::RenderToTexture::rendertarget_display");
-
-				if (camera.render_to_texture.sample_count > 1)
-				{
-					desc.sample_count = camera.render_to_texture.sample_count;
-					desc.layout = ResourceState::RENDERTARGET;
-					desc.bind_flags = BindFlag::RENDER_TARGET;
-					success = device->CreateTexture(&desc, nullptr, &camera.render_to_texture.rendertarget_MSAA);
-					assert(success);
-					device->SetName(&camera.render_to_texture.rendertarget_MSAA, "CameraComponent::RenderToTexture::rendertarget_MSAA");
-				}
-				else
-				{
-					camera.render_to_texture.rendertarget_MSAA = {};
-				}
-
-				desc.format = wi::renderer::format_depthbuffer_main;
-				desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
-				desc.layout = ResourceState::SHADER_RESOURCE;
-				success = device->CreateTexture(&desc, nullptr, &camera.render_to_texture.depthstencil);
-				assert(success);
-				device->SetName(&camera.render_to_texture.depthstencil, "CameraComponent::RenderToTexture::depthstencil");
-
-				if (camera.render_to_texture.sample_count > 1)
-				{
-					desc.sample_count = 1;
-					desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-					desc.layout = ResourceState::SHADER_RESOURCE;
-					desc.format = Format::R32_FLOAT;
-					success = device->CreateTexture(&desc, nullptr, &camera.render_to_texture.depthstencil_resolved);
-					assert(success);
-					device->SetName(&camera.render_to_texture.depthstencil_resolved, "CameraComponent::RenderToTexture::depthstencil_resolved");
-				}
-				else
-				{
-					camera.render_to_texture.depthstencil_resolved = {};
-				}
-
-				wi::renderer::TiledLightResources tiledres;
-				wi::renderer::CreateTiledLightResources(tiledres, camera.render_to_texture.resolution);
-				camera.render_to_texture.tileCount = tiledres.tileCount;
-				camera.render_to_texture.entityTiles = tiledres.entityTiles;
-
-				camera.render_to_texture.visibility = std::make_shared<wi::renderer::Visibility>();
-			}
-			if (getSceneUpdateEnabled())
-			{
-				std::swap(camera.render_to_texture.rendertarget_render, camera.render_to_texture.rendertarget_display);
-			}
-			camera.width = (float)camera.render_to_texture.resolution.x;
-			camera.height = (float)camera.render_to_texture.resolution.y;
-			if (camera.render_to_texture.depthstencil_resolved.IsValid())
-			{
-				camera.texture_depth_index = device->GetDescriptorIndex(&camera.render_to_texture.depthstencil_resolved, SubresourceType::SRV);
-			}
-			else
-			{
-				camera.texture_depth_index = device->GetDescriptorIndex(&camera.render_to_texture.depthstencil, SubresourceType::SRV);
-			}
-			camera.buffer_entitytiles_index = device->GetDescriptorIndex(&camera.render_to_texture.entityTiles, SubresourceType::SRV);
-		}
-
 		XMUINT2 internalResolution = GetInternalResolution();
 
 		wi::renderer::UpdatePerFrameData(
@@ -2645,18 +2558,108 @@ namespace wi
 		// Render-to-texture camera components:
 		for (uint32_t i = 0; i < scene->cameras.GetCount() && getSceneUpdateEnabled(); ++i)
 		{
-			const wi::scene::CameraComponent& camera = scene->cameras[i];
+			wi::scene::CameraComponent& camera = scene->cameras[i];
 			if (camera.render_to_texture.resolution.x == 0 || camera.render_to_texture.resolution.y == 0)
+			{
+				camera.render_to_texture = {};
 				continue;
-			if (!camera.render_to_texture.rendertarget_render.IsValid())
-				continue;
-			if (!camera.render_to_texture.depthstencil.IsValid())
-				continue;
-			if (camera.render_to_texture.visibility == nullptr)
-				continue;
+			}
 
 			GraphicsDevice* device = GetDevice();
 			CommandList cmd = device->BeginCommandList();
+
+			if (!camera.render_to_texture.rendertarget_render.IsValid() ||
+				camera.render_to_texture.rendertarget_render.desc.width != camera.render_to_texture.resolution.x ||
+				camera.render_to_texture.rendertarget_render.desc.height != camera.render_to_texture.resolution.y ||
+				camera.render_to_texture.rendertarget_MSAA.desc.sample_count != camera.render_to_texture.sample_count
+				)
+			{
+				TextureDesc desc;
+				desc.width = camera.render_to_texture.resolution.x;
+				desc.height = camera.render_to_texture.resolution.y;
+				desc.format = wi::renderer::format_rendertarget_main;
+				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+				desc.mip_levels = 0;
+				bool success = device->CreateTexture(&desc, nullptr, &camera.render_to_texture.rendertarget_render);
+				assert(success);
+				device->SetName(&camera.render_to_texture.rendertarget_render, "CameraComponent::RenderToTexture::rendertarget_render");
+				success = device->CreateTexture(&desc, nullptr, &camera.render_to_texture.rendertarget_display);
+				assert(success);
+				device->SetName(&camera.render_to_texture.rendertarget_display, "CameraComponent::RenderToTexture::rendertarget_display");
+
+				for (uint32_t i = 0; i < camera.render_to_texture.rendertarget_render.desc.mip_levels; ++i)
+				{
+					int subresource_index;
+					subresource_index = device->CreateSubresource(&camera.render_to_texture.rendertarget_render, SubresourceType::SRV, 0, 1, i, 1);
+					assert(subresource_index == i);
+					subresource_index = device->CreateSubresource(&camera.render_to_texture.rendertarget_display, SubresourceType::SRV, 0, 1, i, 1);
+					assert(subresource_index == i);
+					subresource_index = device->CreateSubresource(&camera.render_to_texture.rendertarget_render, SubresourceType::UAV, 0, 1, i, 1);
+					assert(subresource_index == i);
+					subresource_index = device->CreateSubresource(&camera.render_to_texture.rendertarget_display, SubresourceType::UAV, 0, 1, i, 1);
+					assert(subresource_index == i);
+				}
+
+				desc.mip_levels = 1;
+				if (camera.render_to_texture.sample_count > 1)
+				{
+					desc.sample_count = camera.render_to_texture.sample_count;
+					desc.layout = ResourceState::RENDERTARGET;
+					desc.bind_flags = BindFlag::RENDER_TARGET;
+					success = device->CreateTexture(&desc, nullptr, &camera.render_to_texture.rendertarget_MSAA);
+					assert(success);
+					device->SetName(&camera.render_to_texture.rendertarget_MSAA, "CameraComponent::RenderToTexture::rendertarget_MSAA");
+				}
+				else
+				{
+					camera.render_to_texture.rendertarget_MSAA = {};
+				}
+
+				desc.format = wi::renderer::format_depthbuffer_main;
+				desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
+				desc.layout = ResourceState::SHADER_RESOURCE;
+				success = device->CreateTexture(&desc, nullptr, &camera.render_to_texture.depthstencil);
+				assert(success);
+				device->SetName(&camera.render_to_texture.depthstencil, "CameraComponent::RenderToTexture::depthstencil");
+
+				if (camera.render_to_texture.sample_count > 1)
+				{
+					desc.sample_count = 1;
+					desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+					desc.layout = ResourceState::SHADER_RESOURCE;
+					desc.format = Format::R32_FLOAT;
+					success = device->CreateTexture(&desc, nullptr, &camera.render_to_texture.depthstencil_resolved);
+					assert(success);
+					device->SetName(&camera.render_to_texture.depthstencil_resolved, "CameraComponent::RenderToTexture::depthstencil_resolved");
+				}
+				else
+				{
+					camera.render_to_texture.depthstencil_resolved = {};
+				}
+
+				wi::renderer::TiledLightResources tiledres;
+				wi::renderer::CreateTiledLightResources(tiledres, camera.render_to_texture.resolution);
+				camera.render_to_texture.tileCount = tiledres.tileCount;
+				camera.render_to_texture.entityTiles = tiledres.entityTiles;
+
+				camera.render_to_texture.visibility = std::make_shared<wi::renderer::Visibility>();
+			}
+			if (getSceneUpdateEnabled())
+			{
+				std::swap(camera.render_to_texture.rendertarget_render, camera.render_to_texture.rendertarget_display);
+			}
+			camera.width = (float)camera.render_to_texture.resolution.x;
+			camera.height = (float)camera.render_to_texture.resolution.y;
+			if (camera.render_to_texture.depthstencil_resolved.IsValid())
+			{
+				camera.texture_depth_index = device->GetDescriptorIndex(&camera.render_to_texture.depthstencil_resolved, SubresourceType::SRV);
+			}
+			else
+			{
+				camera.texture_depth_index = device->GetDescriptorIndex(&camera.render_to_texture.depthstencil, SubresourceType::SRV);
+			}
+			camera.buffer_entitytiles_index = device->GetDescriptorIndex(&camera.render_to_texture.entityTiles, SubresourceType::SRV);
+
 
 			wi::jobsystem::Execute(ctx, [this, cmd, i](wi::jobsystem::JobArgs args) {
 				GraphicsDevice* device = GetDevice();
@@ -2744,6 +2747,8 @@ namespace wi
 					);
 					wi::renderer::DrawSky(*scene, cmd);
 					device->RenderPassEnd(cmd);
+
+					wi::renderer::GenerateMipChain(camera.render_to_texture.rendertarget_render, wi::renderer::MIPGENFILTER_LINEAR, cmd);
 				}
 				device->EventEnd(cmd);
 			});

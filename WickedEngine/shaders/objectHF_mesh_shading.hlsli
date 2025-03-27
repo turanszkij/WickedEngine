@@ -197,7 +197,7 @@ void main(
 		uint vertexID = cluster.vertices[vi];
 
 		VertexInput input;
-		input.vertexID = cluster.vertices[vi];
+		input.vertexID = vertexID;
 		input.instanceID = amplification_payload.instanceID;
 		
 		verts[vi] = vertex_to_pixel_export(input);

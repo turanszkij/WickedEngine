@@ -7929,6 +7929,33 @@ namespace wi::scene
 		}
 	}
 
+	void Scene::FixupNans()
+	{
+		for (uint32_t i = 0; i < transforms.GetCount(); ++i)
+		{
+			TransformComponent& transform = transforms[i];
+			if (
+				std::isnan(transform.scale_local.x) || std::isnan(transform.scale_local.y) || std::isnan(transform.scale_local.z) ||
+				std::isnan(transform.translation_local.x) || std::isnan(transform.translation_local.y) || std::isnan(transform.translation_local.z) ||
+				std::isnan(transform.rotation_local.x) || std::isnan(transform.rotation_local.y) || std::isnan(transform.rotation_local.z) || std::isnan(transform.rotation_local.w)
+				)
+			{
+				Entity entity = transforms.GetEntity(i);
+				if (names.Contains(entity))
+				{
+					NameComponent* namecomponent = names.GetComponent(entity);
+					namecomponent->name += "_nanfix";
+				}
+				else
+				{
+					names.Create(entity).name += "_nanfix";
+				}
+				wilog_warning("NAN was detected in transform, it will be cleared and name will be postfixed with _nanfix! Entity ID: %llu , name = %s", (uint64_t)entity, names.GetComponent(entity)->name.c_str());
+				transform.ClearTransform();
+			}
+		}
+	}
+
 	void Scene::UpdateHumanoidFacings()
 	{
 		// A contrived way of determining default facing and knee bending directions for humanoids:

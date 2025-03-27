@@ -583,6 +583,9 @@ namespace wi::scene
 		// Computes the LOD for an object AABB for a given view projection matrix
 		uint32_t ComputeObjectLODForView(const ObjectComponent& object, const wi::primitive::AABB& aabb, const MeshComponent& mesh, const XMMATRIX& ViewProjection) const;
 
+		// If somehow NANs happened in TransformComponents, this will clear them up and rename them with _nanfix postfix to help filtering them
+		void FixupNans();
+
 	private:
 		void UpdateHumanoidFacings();
 

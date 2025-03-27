@@ -229,10 +229,7 @@ namespace wi
 		rect.bottom = (int32_t)rtFinal.GetDesc().height;
 		device->BindScissorRects(1, &rect, cmd);
 
-		if (stencilScaled.IsValid())
-		{
-			wi::renderer::ScaleStencilMask(vp, rtStencilExtracted, cmd);
-		}
+		bool stencil_scaled = false;
 
 		device->EventBegin("Layers", cmd);
 		for (auto& x : layers)
@@ -245,6 +242,12 @@ namespace wi
 				case RenderItem2D::TYPE::SPRITE:
 					if (y.sprite != nullptr)
 					{
+						if (!stencil_scaled && y.sprite->params.stencilComp != wi::image::STENCILMODE_DISABLED && stencilScaled.IsValid())
+						{
+							// Only need a scaled stencil mask if there are any stenciled sprites, and only once is enough before the first one
+							stencil_scaled = true;
+							wi::renderer::ScaleStencilMask(vp, rtStencilExtracted, cmd);
+						}
 						y.sprite->Draw(cmd);
 					}
 					break;

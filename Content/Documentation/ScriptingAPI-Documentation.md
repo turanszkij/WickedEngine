@@ -901,6 +901,8 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - VoxelizeObject(int objectIndex, VoxelGrid voxelgrid, opt bool subtract = false, opt int lod = 0) -- voxelizes a single object into the voxel grid. Subtract parameter controls whether the voxels are added (true) or removed (false). Lod argument selects object's level of detail
 - VoxelizeScene(VoxelGrid voxelgrid, opt bool subtract = false, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) -- voxelizes all entities in the scene which intersect the voxel grid volume and match the filterMask and layerMask. Subtract parameter controls whether the voxels are added (true) or removed (false). Lod argument selects object's level of detail
 
+- FixupNans()	-- maintenance utility to help fix Nan issues in TransformComponents. Transforms containing nans will be cleared and renamed with _nanfix postfix
+
 #### NameComponent
 Holds a string that can more easily identify an entity to humans than an entity ID. 
 - Name : string

@@ -28,11 +28,12 @@ bool intersectInfiniteCone(float3 p, float3 v, float3 pa, float3 va, float sina2
 	float C = cosa2 * dot(dpvava, dpvava) - sina2 * dpva * dpva;
 
 	float disc = B*B - 4 * A*C;
-	if (disc < 0.0001)return false;
+	if (disc < 0.0001)
+		return false;
 
-	float sqrtDisc = sqrt( disc );
-	tnear = (-B - sqrtDisc ) / (2*A);
-	tfar = (-B + sqrtDisc ) / (2*A);
+	float sqrtDisc = sqrt(disc);
+	tnear = (-B - sqrtDisc) / (2*A);
+	tfar = (-B + sqrtDisc) / (2*A);
 	return true;
 }
 
@@ -65,7 +66,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 	float marchedDistance = 0;
 	half3 accumulation = 0;
 
-	float3 rayEnd = GetCamera().position;
+	float3 rayEnd = nearP;
 
 	if(g_xColor.w > 0)
 	{
@@ -73,9 +74,9 @@ float4 main(VertexToPixel input) : SV_TARGET
 		float tnear = 0;
 		float tfar = 0;
 		float2 sina2_cosa2 = unpack_half2(asuint(g_xColor.z));
-		if(intersectInfiniteCone(GetCamera().position, -V, light.position, light.GetDirection(), sina2_cosa2.x, sina2_cosa2.y, tnear, tfar))
+		if (intersectInfiniteCone(GetCamera().position, -V, light.position, light.GetDirection(), sina2_cosa2.x, sina2_cosa2.y, tnear, tfar))
 		{
-			rayEnd = nearP - V * max(0, tnear);
+			rayEnd -= V * max(0, tnear);
 			//return float4(1,0,0,1);
 		}
 	}

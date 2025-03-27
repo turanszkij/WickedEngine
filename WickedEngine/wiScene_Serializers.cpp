@@ -2548,6 +2548,10 @@ namespace wi::scene
 			ddgi.Serialize(archive);
 		}
 
+#ifdef _DEBUG
+		FixupNans();
+#endif // _DEBUG
+
 		wi::jobsystem::Wait(seri.ctx); // This is needed before emitter material fixup that is below, because material CreateRenderDatas might be pending!
 
 		// Fixup old emittedparticle distortion basecolor slot -> normalmap slot
