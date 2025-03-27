@@ -97,7 +97,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install libsdl2-dev ccache
+        sudo apt -y install libsdl2-dev ccache cmake
 
     - name: Initial compile
       run: |
