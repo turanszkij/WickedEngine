@@ -1335,6 +1335,7 @@ namespace wi::scene
 			wi::graphics::Texture depthstencil_resolved;
 			XMUINT2 tileCount = {};
 			wi::graphics::GPUBuffer entityTiles;
+			std::shared_ptr<void> visibility;
 		} render_to_texture;
 
 		void CreateOrtho(float newWidth, float newHeight, float newNear, float newFar, float newVerticalSize = 1);

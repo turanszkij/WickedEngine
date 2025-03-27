@@ -4,6 +4,7 @@
 #include "wiGraphicsDevice.h"
 #include "wiResourceManager.h"
 #include "wiScene.h"
+#include "wiUnorderedMap.h"
 
 namespace wi
 {
@@ -87,7 +88,7 @@ namespace wi
 		mutable bool first_frame = true;
 		mutable bool prerender_happened = false;
 
-		void RenderCameraComponents() const;
+		void RenderCameraComponents(wi::jobsystem::context& ctx) const;
 
 	public:
 		wi::graphics::Texture rtMain;
@@ -186,7 +187,6 @@ namespace wi
 		wi::scene::Scene* scene = &wi::scene::GetScene();
 		wi::renderer::Visibility visibility_main;
 		wi::renderer::Visibility visibility_reflection;
-		mutable wi::renderer::Visibility visibility_subcam_shared;
 
 		FrameCB frameCB = {};
 
