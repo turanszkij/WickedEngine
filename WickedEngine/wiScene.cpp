@@ -7950,7 +7950,7 @@ namespace wi::scene
 				{
 					names.Create(entity).name += "_nanfix";
 				}
-				wilog_warning("NAN was detected in transform, it will be cleared and name will be postfixed with _nanfix! Entity ID: %llu , name = %s", (uint64_t)entity, names.GetComponent(entity)->name.c_str());
+				wilog_warning("NAN was detected in transform, it will be cleared and name will be postfixed with _nanfix! Entity ID: %llu , name = %s", (unsigned long long)entity, names.GetComponent(entity)->name.c_str());
 				transform.ClearTransform();
 			}
 		}
