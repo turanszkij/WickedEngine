@@ -1220,6 +1220,7 @@ namespace wi::scene
 		mutable int occlusionquery = -1;
 		XMFLOAT4 rotation = XMFLOAT4(0, 0, 0, 1);
 		XMFLOAT3 scale = XMFLOAT3(1, 1, 1);
+		int maskTexDescriptor = -1;
 
 		wi::vector<wi::Resource> lensFlareRimTextures;
 

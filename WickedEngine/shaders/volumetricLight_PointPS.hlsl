@@ -46,6 +46,8 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 	// dither ray start to help with undersampling:
 	P = P + V * stepSize * dither(input.pos.xy);
+	
+	const uint maskTex = light.GetTextureIndex();
 
 	// Perform ray marching to integrate light volume along view ray:
 	[loop]
@@ -65,6 +67,13 @@ float4 main(VertexToPixel input) : SV_TARGET
 		if (light.IsCastingShadow())
 		{
 			attenuation *= shadow_cube(light, Lunnormalized, input.pos.xy);
+		}
+		
+		[branch]
+		if (maskTex > 0)
+		{
+			half4 mask = bindless_cubemaps_half4[descriptor_index(maskTex)].Sample(sampler_linear_clamp, -Lunnormalized);
+			attenuation *= mask.rgb * mask.a;
 		}
 
 		// Evaluate sample height for height fog calculation, given 0 for V:

@@ -28,6 +28,8 @@ public:
 	wi::gui::ComboBox typeSelectorComboBox;
 	wi::gui::ComboBox shadowResolutionComboBox;
 
+	wi::gui::Label tipLabel;
+
 	wi::gui::Label lensflare_Label;
 	wi::gui::Button lensflare_Button[7];
 

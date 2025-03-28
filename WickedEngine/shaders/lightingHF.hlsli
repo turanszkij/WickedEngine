@@ -210,6 +210,14 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 		if (!any(light_color))
 			return; // light color lost after shadow
 	}
+
+	const uint maskTex = light.GetTextureIndex();
+	[branch]
+	if (maskTex > 0)
+	{
+		half4 mask = bindless_cubemaps_half4[descriptor_index(maskTex)].SampleLevel(sampler_linear_clamp, -LunnormalizedShadow, 0);
+		light_color *= mask.rgb * mask.a;
+	}
 		
 	light_color *= attenuation_pointlight(dist2, range, range2);
 
@@ -295,7 +303,7 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 		return; // outside spotlight cone
 
 	half3 light_color = light.GetColor().rgb * shadow_mask;
-
+	
 	[branch]
 	if (light.IsCastingShadow() && surface.IsReceiveShadow())
 	{
@@ -316,6 +324,17 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 		
 		if (!any(light_color))
 			return; // light color lost after shadow
+	}
+
+	const uint maskTex = light.GetTextureIndex();
+	[branch]
+	if (maskTex > 0)
+	{
+		float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(surface.P, 1));
+		shadow_pos.xyz /= shadow_pos.w;
+		float2 shadow_uv = clipspace_to_uv(shadow_pos.xy);
+		half4 mask = bindless_textures_half4[descriptor_index(maskTex)].SampleLevel(sampler_linear_clamp, shadow_uv, 0);
+		light_color *= mask.rgb * mask.a;
 	}
 	
 	light_color *= attenuation_spotlight(dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());

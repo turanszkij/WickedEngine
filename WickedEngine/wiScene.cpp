@@ -4836,6 +4836,21 @@ namespace wi::scene
 				break;
 			}
 
+			light.maskTexDescriptor = -1;
+
+			const MaterialComponent* material = materials.GetComponent(entity);
+			if (material != nullptr && material->textures[MaterialComponent::BASECOLORMAP].resource.IsValid())
+			{
+				const Texture& tex = material->textures[MaterialComponent::BASECOLORMAP].resource.GetTexture();
+				if (
+					(light.type == LightComponent::SPOT && !has_flag(tex.desc.misc_flags, ResourceMiscFlag::TEXTURECUBE)) ||
+					(light.type == LightComponent::POINT && has_flag(tex.desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
+					)
+				{
+					light.maskTexDescriptor = GetDevice()->GetDescriptorIndex(&tex, SubresourceType::SRV, material->textures[MaterialComponent::BASECOLORMAP].resource.GetTextureSRGBSubresource());
+				}
+			}
+
 		});
 	}
 	void Scene::RunParticleUpdateSystem(wi::jobsystem::context& ctx)

@@ -527,6 +527,23 @@ namespace wi::math
 	}
 
 
+	constexpr uint32_t pack_unorm16x2(float x, float y)
+	{
+		return uint32_t(saturate(x) * 65535.0f) | (uint32_t(saturate(y) * 65535.0f) << 16u);
+	}
+	constexpr uint32_t pack_unorm16x2(XMFLOAT2 value)
+	{
+		return pack_unorm16x2(value.x, value.y);
+	}
+	constexpr XMUINT2 pack_unorm16x4(float x, float y, float z, float w)
+	{
+		return XMUINT2(pack_unorm16x2(x, y), pack_unorm16x2(z, w));
+	}
+	constexpr XMUINT2 pack_unorm16x4(XMFLOAT4 value)
+	{
+		return pack_unorm16x4(value.x, value.y, value.z, value.w);
+	}
+
 
 	//-----------------------------------------------------------------------------
 	// Compute the intersection of a ray (Origin, Direction) with a triangle

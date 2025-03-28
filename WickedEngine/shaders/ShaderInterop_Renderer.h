@@ -791,9 +791,6 @@ enum SHADER_ENTITY_FLAGS
 	ENTITY_FLAG_CAPSULE_SHADOW_COLLIDER = 1 << 4,
 };
 
-// Warning: the size of this structure directly affects shader performance.
-//	Try to reduce it as much as possible!
-//	Keep it aligned to 16 bytes for best performance!
 struct alignas(16) ShaderEntity
 {
 	float3 position;
@@ -874,11 +871,11 @@ struct alignas(16) ShaderEntity
 	}
 	inline min16uint GetMatrixIndex()
 	{
-		return indices & 0xFFFF;
+		return indices & 0xFFF;
 	}
 	inline min16uint GetTextureIndex()
 	{
-		return indices >> 16u;
+		return indices >> 12u;
 	}
 	inline bool IsCastingShadow()
 	{
@@ -958,8 +955,8 @@ struct alignas(16) ShaderEntity
 	}
 	inline void SetIndices(uint matrixIndex, uint textureIndex)
 	{
-		indices = matrixIndex & 0xFFFF;
-		indices |= (textureIndex & 0xFFFF) << 16u;
+		indices = matrixIndex & 0xFFF;
+		indices |= (textureIndex & 0xFFFFF) << 12u;
 	}
 	inline void SetGravity(float value)
 	{

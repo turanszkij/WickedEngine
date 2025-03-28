@@ -4412,9 +4412,6 @@ void UpdatePerFrameData(
 			shaderentity.SetDirection(light.direction);
 			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
 
-			// mark as no shadow by default:
-			shaderentity.indices = ~0;
-
 			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
 			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
 
@@ -4424,8 +4421,9 @@ void UpdatePerFrameData(
 				shaderentity.shadowAtlasMulAdd.y = shadow_rect.h * atlas_dim_rcp.y;
 				shaderentity.shadowAtlasMulAdd.z = shadow_rect.x * atlas_dim_rcp.x;
 				shaderentity.shadowAtlasMulAdd.w = shadow_rect.y * atlas_dim_rcp.y;
-				shaderentity.SetIndices(matrixCounter, 0);
 			}
+
+			shaderentity.SetIndices(matrixCounter, 0);
 
 			const uint cascade_count = std::min((uint)light.cascade_distances.size(), MATRIXARRAY_COUNT - matrixCounter);
 			shaderentity.SetShadowCascadeCount(cascade_count);
@@ -4491,11 +4489,10 @@ void UpdatePerFrameData(
 			shaderentity.SetDirection(light.direction);
 			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
 
-			// mark as no shadow by default:
-			shaderentity.indices = ~0;
-
 			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
 			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
+
+			const uint maskTex = light.maskTexDescriptor < 0 ? 0 : light.maskTexDescriptor;
 
 			if (shadowmap)
 			{
@@ -4503,8 +4500,9 @@ void UpdatePerFrameData(
 				shaderentity.shadowAtlasMulAdd.y = shadow_rect.h * atlas_dim_rcp.y;
 				shaderentity.shadowAtlasMulAdd.z = shadow_rect.x * atlas_dim_rcp.x;
 				shaderentity.shadowAtlasMulAdd.w = shadow_rect.y * atlas_dim_rcp.y;
-				shaderentity.SetIndices(matrixCounter, 0);
 			}
+
+			shaderentity.SetIndices(matrixCounter, maskTex);
 
 			const float outerConeAngle = light.outerConeAngle;
 			const float innerConeAngle = std::min(light.innerConeAngle, outerConeAngle);
@@ -4519,7 +4517,7 @@ void UpdatePerFrameData(
 			shaderentity.SetAngleScale(lightAngleScale);
 			shaderentity.SetAngleOffset(lightAngleOffset);
 
-			if (shadowmap)
+			if (shadowmap || (maskTex > 0))
 			{
 				SHCAM shcam;
 				CreateSpotLightShadowCam(light, shcam);
@@ -4577,11 +4575,10 @@ void UpdatePerFrameData(
 			shaderentity.SetDirection(light.direction);
 			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
 
-			// mark as no shadow by default:
-			shaderentity.indices = ~0;
-
 			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
 			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
+
+			const uint maskTex = light.maskTexDescriptor < 0 ? 0 : light.maskTexDescriptor;
 
 			if (shadowmap)
 			{
@@ -4589,8 +4586,9 @@ void UpdatePerFrameData(
 				shaderentity.shadowAtlasMulAdd.y = shadow_rect.h * atlas_dim_rcp.y;
 				shaderentity.shadowAtlasMulAdd.z = shadow_rect.x * atlas_dim_rcp.x;
 				shaderentity.shadowAtlasMulAdd.w = shadow_rect.y * atlas_dim_rcp.y;
-				shaderentity.SetIndices(matrixCounter, 0);
 			}
+
+			shaderentity.SetIndices(matrixCounter, maskTex);
 
 			if (shadowmap)
 			{
@@ -4660,7 +4658,7 @@ void UpdatePerFrameData(
 				shaderentity.SetType(ENTITY_TYPE_COLLIDER_PLANE);
 				shaderentity.position = collider.plane.origin;
 				shaderentity.SetDirection(collider.plane.normal);
-				shaderentity.SetIndices(matrixCounter, ~0u);
+				shaderentity.SetIndices(matrixCounter, 0);
 				matrixArray[matrixCounter++] = collider.plane.projection;
 				break;
 			default:

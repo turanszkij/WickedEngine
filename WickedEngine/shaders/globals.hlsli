@@ -156,6 +156,31 @@ inline uint2 unpack_pixel(uint value)
 	return retVal;
 }
 
+uint pack_unorm16x2(float2 value)
+{
+	return uint(saturate(value.x) * 65535.0) | (uint(saturate(value.x) * 65535.0) << 16u);
+}
+uint2 pack_unorm16x4(float4 value)
+{
+	return uint2(pack_unorm16x2(value.xy), pack_unorm16x2(value.zw));
+}
+float2 unpack_unorm16x2(uint value)
+{
+	float2 retVal;
+	retVal.x = (value & 0xFFFF) / 65535.0;
+	retVal.y = (value >> 16u) / 65535.0;
+	return retVal;
+}
+float4 unpack_unorm16x4(uint2 value)
+{
+	float4 retVal;
+	retVal.x = (value.x & 0xFFFF) / 65535.0;
+	retVal.y = (value.x >> 16u) / 65535.0;
+	retVal.z = (value.y & 0xFFFF) / 65535.0;
+	retVal.w = (value.y >> 16u) / 65535.0;
+	return retVal;
+}
+
 template<typename T>
 T inverse_lerp(T value1, T value2, T pos)
 {
