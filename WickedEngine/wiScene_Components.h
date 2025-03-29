@@ -702,6 +702,15 @@ namespace wi::scene
 		// Creates a new subset as a combination of the subsets of the first LOD, returns its index. This works if there are multiple LODs which are also contained in subsets array
 		size_t CreateSubset();
 
+		// Deletes a subset from all LODs
+		void DeleteSubset(uint32_t subsetIndex);
+
+		// Set a material to a subset in all LODs
+		void SetSubsetMaterial(uint32_t subsetIndex, wi::ecs::Entity entity);
+
+		// Get the material from the subsetIndex in the first LOD
+		wi::ecs::Entity GetSubsetMaterial(uint32_t subsetIndex);
+
 		// Deletes all GPU resources
 		void DeleteRenderData();
 

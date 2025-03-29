@@ -48,7 +48,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 	float step = hei + 2;
 	float wid = 170;
 
-	float infolabel_height = 280;
+	float infolabel_height = 360;
 	meshInfoLabel.Create("Mesh Info");
 	meshInfoLabel.SetPos(XMFLOAT2(20, y));
 	meshInfoLabel.SetSize(XMFLOAT2(260, infolabel_height));
@@ -100,21 +100,8 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 			int selected = subsetComboBox.GetSelected();
 
-			uint32_t first_subset = 0;
-			uint32_t last_subset = 0;
-			mesh->GetLODSubsetRange(0, first_subset, last_subset);
-			wi::vector<MeshComponent::MeshSubset> newSubsets;
-			int s = 0;
-			for (uint32_t i = first_subset; i < last_subset; ++i)
-			{
-				if (s != selected)
-				{
-					newSubsets.push_back(mesh->subsets[i]);
-				}
-				s++;
-			}
-			mesh->subsets = newSubsets;
-			mesh->subsets_per_lod = 0;
+			mesh->DeleteSubset(uint32_t(selected));
+
 			SetEntity(entity, selected - 1);
 
 			editor->RecordEntity(archive, entity);
@@ -831,15 +818,13 @@ void MeshWindow::Create(EditorComponent* _editor)
 		MeshComponent* mesh = scene.meshes.GetComponent(entity);
 		if (mesh != nullptr && subset >= 0 && subset < mesh->subsets.size())
 		{
-			MeshComponent::MeshSubset& meshsubset = mesh->subsets[subset];
 			if (args.iValue == 0)
 			{
-				meshsubset.materialID = INVALID_ENTITY;
+				mesh->SetSubsetMaterial(uint32_t(subset), INVALID_ENTITY);
 			}
 			else
 			{
-				MeshComponent::MeshSubset& meshsubset = mesh->subsets[subset];
-				meshsubset.materialID = scene.materials.GetEntity(args.iValue - 1);
+				mesh->SetSubsetMaterial(uint32_t(subset), scene.materials.GetEntity(args.iValue - 1));
 			}
 		}
 	});

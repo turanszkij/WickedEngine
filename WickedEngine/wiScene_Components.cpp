@@ -1937,6 +1937,7 @@ namespace wi::scene
 	}
 	size_t MeshComponent::CreateSubset()
 	{
+		wi::vector<MeshSubset> new_subsets;
 		int ret = 0;
 		const uint32_t lod_count = GetLODCount();
 		for (uint32_t lod = 0; lod < lod_count; ++lod)
@@ -1944,26 +1945,93 @@ namespace wi::scene
 			uint32_t first_subset = 0;
 			uint32_t last_subset = 0;
 			GetLODSubsetRange(lod, first_subset, last_subset);
-			MeshComponent::MeshSubset subset;
-			subset.indexOffset = ~0u;
-			subset.indexCount = 0;
+			uint32_t firstIndex = ~0u;
+			uint32_t lastIndex = 0u;
 			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 			{
-				subset.indexOffset = std::min(subset.indexOffset, subsets[subsetIndex].indexOffset);
-				subset.indexCount = std::max(subset.indexCount, subsets[subsetIndex].indexOffset + subsets[subsetIndex].indexCount);
+				const MeshComponent::MeshSubset& subset = subsets[subsetIndex];
+				firstIndex = std::min(firstIndex, subset.indexOffset);
+				lastIndex = std::max(lastIndex, subset.indexOffset + subset.indexCount);
+				new_subsets.push_back(subset);
 			}
-			subsets.insert(subsets.begin() + last_subset, subset);
-			if (lod == 0)
+			if (lastIndex > firstIndex)
 			{
-				ret = last_subset;
+				MeshComponent::MeshSubset& subset = new_subsets.emplace_back();
+				subset.indexOffset = firstIndex;
+				subset.indexCount = lastIndex - firstIndex;
+				if (lod == 0)
+				{
+					ret = last_subset;
+				}
 			}
 		}
 		if (subsets_per_lod > 0)
 		{
 			subsets_per_lod++;
 		}
-		CreateRenderData(); // mesh shader needs to rebuild clusters, otherwise wouldn't be needed
+		std::swap(subsets, new_subsets);
+		if (wi::renderer::IsMeshShaderAllowed() || !cluster_ranges.empty())
+		{
+			// mesh shader needs to rebuild clusters, otherwise not be needed
+			CreateRenderData();
+		}
 		return ret;
+	}
+	void MeshComponent::DeleteSubset(uint32_t subsetIndexToDelete)
+	{
+		wi::vector<MeshSubset> new_subsets;
+		const uint32_t lod_count = GetLODCount();
+		for (uint32_t lod = 0; lod < lod_count; ++lod)
+		{
+			uint32_t first_subset = 0;
+			uint32_t last_subset = 0;
+			GetLODSubsetRange(lod, first_subset, last_subset);
+			uint32_t firstIndex = ~0u;
+			uint32_t lastIndex = 0u;
+			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+			{
+				if (subsetIndexToDelete != (subsetIndex - first_subset))
+				{
+					new_subsets.push_back(subsets[subsetIndex]);
+				}
+			}
+		}
+		if (subsets_per_lod > 0)
+		{
+			subsets_per_lod--;
+		}
+		std::swap(subsets, new_subsets);
+		if (wi::renderer::IsMeshShaderAllowed() || !cluster_ranges.empty())
+		{
+			// mesh shader needs to rebuild clusters, otherwise not be needed
+			CreateRenderData();
+		}
+	}
+	void MeshComponent::SetSubsetMaterial(uint32_t subsetIndex, Entity entity)
+	{
+		const uint32_t lod_count = GetLODCount();
+		for (uint32_t lod = 0; lod < lod_count; ++lod)
+		{
+			uint32_t first_subset = 0;
+			uint32_t last_subset = 0;
+			GetLODSubsetRange(lod, first_subset, last_subset);
+			size_t subset_offset = first_subset + subsetIndex;
+			if (subset_offset < last_subset)
+			{
+				subsets[subset_offset].materialID = entity;
+			}
+		}
+	}
+	Entity MeshComponent::GetSubsetMaterial(uint32_t subsetIndex)
+	{
+		uint32_t first_subset = 0;
+		uint32_t last_subset = 0;
+		GetLODSubsetRange(0, first_subset, last_subset);
+		if (subsetIndex >= first_subset && subsetIndex < last_subset)
+		{
+			return subsets[subsetIndex].materialID;
+		}
+		return INVALID_ENTITY;
 	}
 
 	void ObjectComponent::ClearLightmap()
