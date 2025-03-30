@@ -843,6 +843,11 @@ namespace wi::input
 		cursor_current = CURSOR_COUNT;
 	}
 
+	void NotifyCursorChanged()
+	{
+		cursor_current = CURSOR_COUNT;
+	}
+
 	BUTTON StringToButton(const char* str)
 	{
 		if (str == nullptr)
