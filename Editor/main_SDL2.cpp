@@ -64,6 +64,10 @@ int sdl_loop()
                         }
                     }
                     break;
+                case SDL_DROPFILE:
+				    editor.renderComponent.Open(event.drop.file);
+                    editor.is_window_active = true;
+                    break;
                 default:
                     break;
             }
