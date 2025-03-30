@@ -650,7 +650,7 @@ void Example_ImGuiRenderer::Update(float dt)
 			CONTENT_DIR "models/emitter_skinned.wiscene",
 			CONTENT_DIR "models/physics_test.wiscene",
 			CONTENT_DIR "models/shadows_test.wiscene",
-			CONTENT_DIR "models/Sponza/sponza.wiscene",
+			CONTENT_DIR "models/Sponza/Sponza.wiscene",
 			CONTENT_DIR "models/emitter_fire.wiscene"
 		};
 
@@ -1526,15 +1526,15 @@ void Example_ImGuiRenderer::Update(float dt)
 
 		if ((ImGui::IsKeyDown(ImGuiKey_D) || ImGui::IsKeyDown(ImGuiKey_RightArrow))) //D Right
 		{
-			camera_pos[0] += -movespeed * dir_right.x;
-			camera_pos[1] += -movespeed * dir_right.y;
-			camera_pos[2] += -movespeed * dir_right.z;
-		}
-		if ((ImGui::IsKeyDown(ImGuiKey_A) || ImGui::IsKeyDown(ImGuiKey_LeftArrow))) //A Left
-		{
 			camera_pos[0] += movespeed * dir_right.x;
 			camera_pos[1] += movespeed * dir_right.y;
 			camera_pos[2] += movespeed * dir_right.z;
+		}
+		if ((ImGui::IsKeyDown(ImGuiKey_A) || ImGui::IsKeyDown(ImGuiKey_LeftArrow))) //A Left
+		{
+			camera_pos[0] -= movespeed * dir_right.x;
+			camera_pos[1] -= movespeed * dir_right.y;
+			camera_pos[2] -= movespeed * dir_right.z;
 		}
 	}
 
