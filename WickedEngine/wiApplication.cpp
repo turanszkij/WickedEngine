@@ -744,6 +744,8 @@ namespace wi
 		bool success = graphicsDevice->CreateSwapChain(&desc, window, &swapChain);
 		assert(success);
 
+		rendertargetPreHDR10 = {};
+
 #ifdef PLATFORM_PS5
 		// PS5 swapchain resolution was decided in CreateSwapchain(), so reinit canvas:
 		canvas.init(swapChain.desc.width, swapChain.desc.height);

@@ -303,9 +303,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_DESTROY:
 		PostQuitMessage(0);
         break;
-	case WM_SETCURSOR:
-		// cursor is handled by wi::input, if this is passed through here, it can cause cursor flickering
-		break;
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
