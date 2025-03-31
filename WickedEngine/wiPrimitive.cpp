@@ -205,6 +205,11 @@ namespace wi::primitive
 	{
 		return AABB(wi::math::Min(a.getMin(), b.getMin()), wi::math::Max(a.getMax(), b.getMax()));
 	}
+	void AABB::AddPoint(const XMFLOAT3& pos)
+	{
+		_min = wi::math::Min(_min, pos);
+		_max = wi::math::Max(_max, pos);
+	}
 	void AABB::Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())

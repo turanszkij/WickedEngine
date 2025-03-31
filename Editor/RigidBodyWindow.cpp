@@ -32,6 +32,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	collisionShapeComboBox.AddItem("Cylinder", RigidBodyPhysicsComponent::CollisionShape::CYLINDER);
 	collisionShapeComboBox.AddItem("Convex Hull", RigidBodyPhysicsComponent::CollisionShape::CONVEX_HULL);
 	collisionShapeComboBox.AddItem("Triangle Mesh", RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH);
+	collisionShapeComboBox.AddItem("Height Field", RigidBodyPhysicsComponent::CollisionShape::HEIGHTFIELD);
 	collisionShapeComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)

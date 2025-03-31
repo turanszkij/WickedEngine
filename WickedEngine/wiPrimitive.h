@@ -50,6 +50,7 @@ namespace wi::primitive
 		bool intersects(const BoundingFrustum& frustum) const;
 		AABB operator* (float a);
 		static AABB Merge(const AABB& a, const AABB& b);
+		void AddPoint(const XMFLOAT3& pos);
 
 		// projects the AABB to the screen, returns a 2D rectangle in UV-space as Vector(topleftX, topleftY, bottomrightX, bottomrightY), each value is in range [0, 1]
 		XMFLOAT4 ProjectToScreen(const XMMATRIX& ViewProjection) const;

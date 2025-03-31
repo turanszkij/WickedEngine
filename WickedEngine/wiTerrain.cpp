@@ -808,10 +808,14 @@ namespace wi::terrain
 					if (rigidbody == nullptr)
 					{
 						RigidBodyPhysicsComponent& newrigidbody = scene->rigidbodies.Create(chunk_data.entity);
-						newrigidbody.shape = RigidBodyPhysicsComponent::TRIANGLE_MESH;
+						newrigidbody.shape = RigidBodyPhysicsComponent::HEIGHTFIELD;
 						newrigidbody.mass = 0; // terrain chunks are static
 						newrigidbody.friction = 0.8f;
-						newrigidbody.mesh_lod = 2;
+						//newrigidbody.mesh_lod = 2;
+					}
+					else
+					{
+						rigidbody->shape = RigidBodyPhysicsComponent::HEIGHTFIELD;
 					}
 				}
 				else if(rigidbody != nullptr)
@@ -1037,10 +1041,10 @@ namespace wi::terrain
 						// Precompute the physics shape here on separate thread, because computing shape for triangle mesh would be slow on main thread:
 						//	Note that this is mesh.precomputed_rigidbody_physics_shape and not a component in scene.rigidbodies, so this only contains the shape, not the simulated rigid bodies
 						RigidBodyPhysicsComponent& newrigidbody = mesh.precomputed_rigidbody_physics_shape;
-						newrigidbody.shape = RigidBodyPhysicsComponent::TRIANGLE_MESH;
+						newrigidbody.shape = RigidBodyPhysicsComponent::HEIGHTFIELD;
 						newrigidbody.mass = 0; // terrain chunks are static
 						newrigidbody.friction = 0.8f;
-						newrigidbody.mesh_lod = 2;
+						//newrigidbody.mesh_lod = 2;
 						wi::physics::CreateRigidBodyShape(newrigidbody, transform.scale_local, &mesh);
 					}
 

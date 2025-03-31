@@ -1542,6 +1542,43 @@ namespace wi::physics
 				return;
 			}
 			break;
+
+		case RigidBodyPhysicsComponent::CollisionShape::HEIGHTFIELD:
+			if (mesh != nullptr)
+			{
+				wi::vector<float> heights;
+				heights.reserve(mesh->vertex_positions.size());
+
+				wi::primitive::AABB aabb;
+
+				for (XMFLOAT3 pos : mesh->vertex_positions)
+				{
+					pos.x *= scale_local.x;
+					pos.y *= scale_local.y;
+					pos.z *= scale_local.z;
+					heights.push_back(pos.y);
+					aabb.AddPoint(pos);
+				}
+
+				XMFLOAT3 min = aabb.getMin();
+				min.y = 0;
+
+				uint32_t dim = (uint32_t)std::sqrt((double)heights.size());
+				wilog_assert(dim >= 2, "Height field shape dimension must be at least 2!");
+
+				Vec3 scale = cast(aabb.getHalfWidth()) * 2 / (float)(dim - 1);
+				scale.SetY(1);
+
+				HeightFieldShapeSettings settings(heights.data(), cast(min), scale, dim);
+				settings.SetEmbedded();
+				shape_result = settings.Create();
+			}
+			else
+			{
+				wi::backlog::post("CreateRigidBodyShape failed: height field physics requested, but no MeshComponent provided!", wi::backlog::LogLevel::Error);
+				return;
+			}
+			break;
 		}
 
 		if (!shape_result.IsValid())

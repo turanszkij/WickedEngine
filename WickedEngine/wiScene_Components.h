@@ -412,6 +412,7 @@ namespace wi::scene
 			CONVEX_HULL,
 			TRIANGLE_MESH,
 			CYLINDER,
+			HEIGHTFIELD,
 			ENUM_FORCE_UINT32 = 0xFFFFFFFF
 		};
 		CollisionShape shape;
