@@ -352,6 +352,8 @@ namespace wi::terrain
 
 		ShaderTerrain GetShaderTerrain() const;
 
+		void InvalidateProps();
+
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 
 	private:

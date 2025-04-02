@@ -271,6 +271,28 @@ void MeshWindow::Create(EditorComponent* _editor)
 	float mod_x = x - 20;
 	float mod_wid = wid + 40;
 
+	instanceSelectButton.Create("Select instances");
+	instanceSelectButton.SetTooltip("Select all instances that use this mesh.");
+	instanceSelectButton.OnClick([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		wi::vector<Entity> sel;
+		wi::unordered_set<const ObjectComponent*> visited_objects; // fix double visit (straight mesh + object->mesh)
+		for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+		{
+			const ObjectComponent& object = scene.objects[i];
+			if (object.meshID != this->entity || visited_objects.count(&object) > 0)
+				continue;
+			visited_objects.insert(&object);
+			sel.push_back(scene.objects.GetEntity(i));
+		}
+		editor->ClearSelected();
+		for (auto& x : sel)
+		{
+			editor->AddSelected(x);
+		}
+	});
+	AddWidget(&instanceSelectButton);
+
 	flipCullingButton.Create("Flip Culling");
 	flipCullingButton.SetTooltip("Flip faces to reverse triangle culling order.");
 	flipCullingButton.SetSize(XMFLOAT2(mod_wid, hei));
@@ -1217,6 +1239,7 @@ void MeshWindow::ResizeLayout()
 	add_fullwidth(impostorCreateButton);
 	add(impostorDistanceSlider);
 	add(tessellationFactorSlider);
+	add_fullwidth(instanceSelectButton);
 	add_fullwidth(flipCullingButton);
 	add_fullwidth(flipNormalsButton);
 	add_fullwidth(computeNormalsSmoothButton);

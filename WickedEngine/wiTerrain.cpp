@@ -1968,6 +1968,15 @@ namespace wi::terrain
 		return shader_terrain;
 	}
 
+	void Terrain::InvalidateProps()
+	{
+		for (auto it = chunks.begin(); it != chunks.end(); it++)
+		{
+			ChunkData& chunk_data = it->second;
+			chunk_data.prop_density_current = 0;
+		}
+	}
+
 	void Terrain::Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri)
 	{
 		Generation_Cancel();

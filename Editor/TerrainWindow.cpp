@@ -444,7 +444,7 @@ PropWindow::PropWindow(wi::terrain::Terrain* terrain, wi::terrain::Prop* prop, w
 	});
 	AddWidget(&thresholdSlider);
 
-	minSizeSlider.Create(0.0f, 1.0f, 1.0f, 1000, "Min size: ");
+	minSizeSlider.Create(0.0f, 10.0f, 1.0f, 1000, "Min size: ");
 	minSizeSlider.SetSize(elementSize);
 	minSizeSlider.SetValue(prop->min_size);
 	minSizeSlider.SetTooltip("Scaling randomization range min");
@@ -555,7 +555,7 @@ void PropsWindow::Rebuild()
 	}
 
 	generation_callback = [&] {
-		terrain->Generation_Restart();
+		terrain->InvalidateProps();
 	};
 
 	for(auto i = terrain->props.begin(); i != terrain->props.end(); ++i)

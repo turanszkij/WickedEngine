@@ -23,6 +23,7 @@ public:
 	wi::gui::Button impostorCreateButton;
 	wi::gui::Slider impostorDistanceSlider;
 	wi::gui::Slider tessellationFactorSlider;
+	wi::gui::Button instanceSelectButton;
 	wi::gui::Button flipCullingButton;
 	wi::gui::Button flipNormalsButton;
 	wi::gui::Button computeNormalsSmoothButton;
