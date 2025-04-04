@@ -39,6 +39,7 @@ namespace wi::lua
 		int ActivateAllRigidBodies(lua_State* L);
 		int ResetPhysicsObjects(lua_State* L);
 		int GetVelocity(lua_State* L);
+		int SetGhostMode(lua_State* L);
 		int SetRagdollGhostMode(lua_State* L);
 
 		int Intersects(lua_State* L);

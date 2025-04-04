@@ -2089,6 +2089,7 @@ Playstation button codes:
 - SetFrameRate(float value)	-- Set the frames per second resolution of physics simulation (default = 120 FPS)
 - GetFrameRate() : float
 - GetVelocity() : Vector-- returns linear velocity of a body
+- SetGhostMode(RigidBodyPhysicsComponent|HumanoidComponent component, bool value)	-- enable/disable ghost mode for rigid body or ragdoll (all collision disabled)
 - SetRagdollGhostMode(HumanoidComponent humanoid, bool value)	-- enable/disable ghost mode for a ragdoll. In ghost mode, the ragdoll will not collide with anything. Enable this if the humanoid sits inside a vehicle for example.
 - SetLinearVelocity(RigidBodyPhysicsComponent component, Vector velocity)	-- Set the linear velocity manually
 - SetAngularVelocity(RigidBodyPhysicsComponent component, Vector velocity)	-- Set the angular velocity manually

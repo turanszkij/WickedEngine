@@ -120,7 +120,8 @@ namespace wi::physics
 		{
 			static constexpr ObjectLayer NON_MOVING = 0;
 			static constexpr ObjectLayer MOVING = 1;
-			static constexpr ObjectLayer NUM_LAYERS = 2;
+			static constexpr ObjectLayer GHOST = 2;
+			static constexpr ObjectLayer NUM_LAYERS = 3;
 		};
 
 		/// Class that determines if two object layers can collide
@@ -134,7 +135,9 @@ namespace wi::physics
 				case Layers::NON_MOVING:
 					return inObject2 == Layers::MOVING; // Non moving only collides with moving
 				case Layers::MOVING:
-					return true; // Moving collides with everything
+					return inObject2 == Layers::MOVING || inObject2 == Layers::NON_MOVING; // Moving collides with moving and non moving
+				case Layers::GHOST:
+					return false; // collides with nothing
 				default:
 					JPH_ASSERT(false);
 					return false;
@@ -151,7 +154,8 @@ namespace wi::physics
 		{
 			static constexpr BroadPhaseLayer NON_MOVING(0);
 			static constexpr BroadPhaseLayer MOVING(1);
-			static constexpr uint NUM_LAYERS(2);
+			static constexpr BroadPhaseLayer GHOST(2);
+			static constexpr uint NUM_LAYERS(3);
 		};
 
 		// BroadPhaseLayerInterface implementation
@@ -164,6 +168,7 @@ namespace wi::physics
 				// Create a mapping table from object to broad phase layer
 				mObjectToBroadPhase[Layers::NON_MOVING] = BroadPhaseLayers::NON_MOVING;
 				mObjectToBroadPhase[Layers::MOVING] = BroadPhaseLayers::MOVING;
+				mObjectToBroadPhase[Layers::GHOST] = BroadPhaseLayers::GHOST;
 			}
 
 			virtual uint GetNumBroadPhaseLayers() const override
@@ -192,7 +197,9 @@ namespace wi::physics
 				case Layers::NON_MOVING:
 					return inLayer2 == BroadPhaseLayers::MOVING;
 				case Layers::MOVING:
-					return true;
+					return inLayer2 == BroadPhaseLayers::MOVING || inLayer2 == BroadPhaseLayers::NON_MOVING;
+				case Layers::GHOST:
+					return false;
 				default:
 					JPH_ASSERT(false);
 					return false;
@@ -451,6 +458,10 @@ namespace wi::physics
 				settings.mAllowSleeping = !physicscomponent.IsDisableDeactivation();
 				settings.mMotionQuality = cMotionQuality;
 				settings.mUserData = (uint64_t)&physicsobject;
+				if (motionType == EMotionType::Static)
+				{
+					settings.mObjectLayer = Layers::NON_MOVING;
+				}
 
 				physicsobject.friction = settings.mFriction;
 				physicsobject.restitution = settings.mRestitution;
@@ -1743,6 +1754,15 @@ namespace wi::physics
 					XMStoreFloat4x4(&physicsobject.parentMatrix, parentMatrix);
 					XMStoreFloat4x4(&physicsobject.parentMatrixInverse, XMMatrixInverse(nullptr, parentMatrix));
 				}
+
+				if (currentMotionType == EMotionType::Static)
+				{
+					body_interface.SetObjectLayer(physicsobject.bodyID, Layers::NON_MOVING);
+				}
+				else
+				{
+					body_interface.SetObjectLayer(physicsobject.bodyID, Layers::MOVING);
+				}
 			}
 
 			TransformComponent* transform = scene.transforms.GetComponent(entity);
@@ -2805,20 +2825,41 @@ namespace wi::physics
 		return cast(soft_vertices[physicsIndex].mPosition);
 	}
 
-	void SetRagdollGhostMode(wi::scene::HumanoidComponent& humanoid, bool value)
+	void SetGhostMode(
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		bool value
+	)
+	{
+		if (physicscomponent.physicsobject == nullptr)
+			return;
+		RigidBody& physicsobject = GetRigidBody(physicscomponent);
+		PhysicsScene& physics_scene = *(PhysicsScene*)physicsobject.physics_scene.get();
+		BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
+		EMotionType motionType = body_interface.GetMotionType(physicsobject.bodyID);
+		ObjectLayer layer = value ? Layers::GHOST : (motionType == EMotionType::Static ? Layers::NON_MOVING : Layers::MOVING);
+		body_interface.SetObjectLayer(physicsobject.bodyID, layer);
+	}
+	void SetGhostMode(
+		wi::scene::HumanoidComponent& humanoid,
+		bool value
+	)
 	{
 		if (humanoid.ragdoll == nullptr)
 			return;
 		Ragdoll& ragdoll = *(Ragdoll*)humanoid.ragdoll.get();
 		PhysicsScene& physics_scene = *(PhysicsScene*)ragdoll.physics_scene.get();
+		BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
+		ObjectLayer layer = value ? Layers::GHOST : Layers::MOVING;
 		for (auto& rb : ragdoll.rigidbodies)
 		{
-			BodyLockWrite lock(physics_scene.physics_system.GetBodyLockInterface(), rb.bodyID);
-			if (!lock.Succeeded())
-				return;
-			Body& body = lock.GetBody();
-			body.SetIsSensor(value);
+			if (rb.bodyID.IsInvalid())
+				continue;
+			body_interface.SetObjectLayer(rb.bodyID, layer);
 		}
+	}
+	void SetRagdollGhostMode(wi::scene::HumanoidComponent& humanoid, bool value)
+	{
+		SetGhostMode(humanoid, value);
 	}
 
 	template <class CollectorType>

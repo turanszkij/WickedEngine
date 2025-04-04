@@ -415,7 +415,7 @@ namespace wi::scene
 			HEIGHTFIELD,
 			ENUM_FORCE_UINT32 = 0xFFFFFFFF
 		};
-		CollisionShape shape;
+		CollisionShape shape = BOX;
 		float mass = 1.0f; // Set to 0 to make body static
 		float friction = 0.2f;
 		float restitution = 0.1f;

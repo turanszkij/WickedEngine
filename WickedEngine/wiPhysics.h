@@ -144,6 +144,14 @@ namespace wi::physics
 		uint32_t physicsIndex
 	);
 
+	void SetGhostMode(
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		bool value
+	);
+	void SetGhostMode(
+		wi::scene::HumanoidComponent& humanoid,
+		bool value
+	);
 	void SetRagdollGhostMode(wi::scene::HumanoidComponent& humanoid, bool value);
 
 	struct RayIntersectionResult
