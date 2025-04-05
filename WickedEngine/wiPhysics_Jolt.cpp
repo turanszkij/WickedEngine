@@ -1023,6 +1023,7 @@ namespace wi::physics
 				settings.mSpace = EConstraintSpace::WorldSpace;
 				settings.mPoint1 = settings.mPoint2 = cast(transform.GetPosition());
 				settings.mTwistAxis1 = settings.mTwistAxis2 = cast(transform.GetRight()).Normalized();
+				settings.mHalfConeAngle = physicscomponent.cone_constraint.half_cone_angle;
 				physicsobject.constraint = settings.Create(*body1, *body2);
 			}
 			else
