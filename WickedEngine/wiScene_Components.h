@@ -526,6 +526,49 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
+	struct PhysicsConstraintComponent
+	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+		};
+		uint32_t _flags = EMPTY;
+
+		enum class Type
+		{
+			Fixed,
+			Point,
+			Distance,
+			Hinge,
+			Cone,
+		} type = Type::Fixed;
+
+		wi::ecs::Entity bodyA = wi::ecs::INVALID_ENTITY;
+		wi::ecs::Entity bodyB = wi::ecs::INVALID_ENTITY;
+
+		struct DistanceConstraintSettings
+		{
+			float min_distance = 0;
+			float max_distance = 0;
+		} distance_constraint;
+
+		struct HingeConstraintSettings
+		{
+			float min_angle = -XM_PI;
+			float max_angle = XM_PI;
+		} hinge_constraint; // note: hinge axis is UP, normal axis is RIGHT directions of the TransformComponent on this entity
+
+		struct ConeConstraintSettings
+		{
+			float half_cone_angle = 0;
+		} cone_constraint; // note: cone axis is RIGHT of the TransformComponent on this entity
+
+		// Non-serialized attributes:
+		std::shared_ptr<void> physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
+
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+	};
+
 	struct alignas(16) MeshComponent
 	{
 		enum FLAGS

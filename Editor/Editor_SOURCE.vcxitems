@@ -47,6 +47,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)ObjectWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)PaintToolWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)GraphicsWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ConstraintWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ProfilerWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)RigidBodyWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ScriptWindow.cpp" />
@@ -118,6 +119,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ObjectWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)PaintToolWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)GraphicsWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ConstraintWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ProfilerWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)RigidBodyWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ScriptWindow.h" />

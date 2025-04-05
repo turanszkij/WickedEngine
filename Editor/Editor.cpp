@@ -555,6 +555,7 @@ void EditorComponent::Load()
 		NEW_FONT,
 		NEW_VOXELGRID,
 		NEW_METADATA,
+		NEW_CONSTRAINT,
 	};
 
 	newEntityCombo.Create("New: ");
@@ -589,6 +590,7 @@ void EditorComponent::Load()
 	newEntityCombo.AddItem("Font " ICON_FONT, NEW_FONT);
 	newEntityCombo.AddItem("Voxel Grid " ICON_VOXELGRID, NEW_VOXELGRID);
 	newEntityCombo.AddItem("Metadata " ICON_METADATA, NEW_METADATA);
+	newEntityCombo.AddItem("Constraint " ICON_CONSTRAINT, NEW_CONSTRAINT);
 	newEntityCombo.OnSelect([this](wi::gui::EventArgs args) {
 		newEntityCombo.SetSelectedWithoutCallback(-1);
 		const EditorComponent::EditorScene& editorscene = GetCurrentEditorScene();
@@ -778,6 +780,14 @@ void EditorComponent::Load()
 			scene.metadatas.Create(pick.entity);
 			scene.transforms.Create(pick.entity);
 			scene.names.Create(pick.entity) = "metadata";
+		}
+		break;
+		case NEW_CONSTRAINT:
+		{
+			pick.entity = CreateEntity();
+			scene.constraints.Create(pick.entity);
+			scene.transforms.Create(pick.entity);
+			scene.names.Create(pick.entity) = "constraint";
 		}
 		break;
 		default:
@@ -1771,6 +1781,25 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Constraint))
+			{
+				for (size_t i = 0; i < scene.constraints.GetCount(); ++i)
+				{
+					Entity entity = scene.constraints.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
+					float dis = XMVectorGetX(disV);
+					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					{
+						hovered = wi::scene::PickResult();
+						hovered.entity = entity;
+						hovered.distance = dis;
+					}
+				}
+			}
 			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Decal))
 			{
 				for (size_t i = 0; i < scene.decals.GetCount(); ++i)
@@ -2569,6 +2598,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.fontWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.voxelGridWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.metadataWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.constraintWnd.SetEntity(INVALID_ENTITY);
 	}
 	else
 	{
@@ -2604,6 +2634,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.fontWnd.SetEntity(picked.entity);
 		componentsWnd.voxelGridWnd.SetEntity(picked.entity);
 		componentsWnd.metadataWnd.SetEntity(picked.entity);
+		componentsWnd.constraintWnd.SetEntity(picked.entity);
 
 		bool found_object = false;
 		bool found_mesh = false;
@@ -3531,6 +3562,38 @@ void EditorComponent::Render() const
 						device->Draw(vertexCount, 0, cmd);
 						device->EventEnd(cmd);
 					}
+				}
+			}
+
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Constraint))
+			{
+				for (size_t i = 0; i < scene.constraints.GetCount(); ++i)
+				{
+					Entity entity = scene.constraints.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					fp.position = transform.GetPosition();
+					fp.scaling = scaling * wi::math::Distance(transform.GetPosition(), camera.Eye);
+					fp.color = inactiveEntityColor;
+
+					if (hovered.entity == entity)
+					{
+						fp.color = hoveredEntityColor;
+					}
+					for (auto& picked : translator.selected)
+					{
+						if (picked.entity == entity)
+						{
+							fp.color = selectedEntityColor;
+							break;
+						}
+					}
+
+
+					wi::font::Draw(ICON_CONSTRAINT, fp, cmd);
+
 				}
 			}
 
@@ -5677,6 +5740,7 @@ void EditorComponent::RefreshSceneList()
 			componentsWnd.fontWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.voxelGridWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.metadataWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.constraintWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 
 			componentsWnd.RefreshEntityTree();
 			ResetHistory();
