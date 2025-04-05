@@ -31,6 +31,7 @@
 #include "FontWindow.h"
 #include "VoxelGridWindow.h"
 #include "MetadataWindow.h"
+#include "ConstraintWindow.h"
 
 class EditorComponent;
 
@@ -76,6 +77,7 @@ public:
 	FontWindow fontWnd;
 	VoxelGridWindow voxelGridWnd;
 	MetadataWindow metadataWnd;
+	ConstraintWindow constraintWnd;
 
 	enum class Filter : uint64_t
 	{
@@ -109,6 +111,7 @@ public:
 		SoftBody = 1 << 27,
 		Metadata = 1 << 28,
 		Vehicle = 1 << 29,
+		Constraint = 1 << 30,
 
 		All = ~0ull,
 	} filter = Filter::All;

@@ -48,6 +48,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	filterCombo.AddItem(ICON_SOFTBODY, (uint64_t)Filter::SoftBody);
 	filterCombo.AddItem(ICON_METADATA, (uint64_t)Filter::Metadata);
 	filterCombo.AddItem(ICON_VEHICLE, (uint64_t)Filter::Vehicle);
+	filterCombo.AddItem(ICON_CONSTRAINT, (uint64_t)Filter::Constraint);
 	filterCombo.SetTooltip("Apply filtering to the Entities by components");
 	filterCombo.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	filterCombo.OnSelect([&](wi::gui::EventArgs args) {
@@ -157,6 +158,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	fontWnd.Create(editor);
 	voxelGridWnd.Create(editor);
 	metadataWnd.Create(editor);
+	constraintWnd.Create(editor);
 
 	enum ADD_THING
 	{
@@ -508,6 +510,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	AddWidget(&fontWnd);
 	AddWidget(&voxelGridWnd);
 	AddWidget(&metadataWnd);
+	AddWidget(&constraintWnd);
 
 	materialWnd.SetVisible(false);
 	weatherWnd.SetVisible(false);
@@ -541,6 +544,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	fontWnd.SetVisible(false);
 	voxelGridWnd.SetVisible(false);
 	metadataWnd.SetVisible(false);
+	constraintWnd.SetVisible(false);
 
 	XMFLOAT2 size = XMFLOAT2(338, 500);
 	if (editor->main->config.GetSection("layout").Has("components.width"))
@@ -878,6 +882,19 @@ void ComponentsWindow::ResizeLayout()
 		rigidWnd.SetVisible(false);
 	}
 
+	if (scene.constraints.Contains(constraintWnd.entity))
+	{
+		constraintWnd.SetVisible(true);
+		constraintWnd.SetPos(pos);
+		constraintWnd.SetSize(XMFLOAT2(width, constraintWnd.GetScale().y));
+		pos.y += constraintWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		constraintWnd.SetVisible(false);
+	}
+
 	if (scene.weathers.Contains(weatherWnd.entity))
 	{
 		weatherWnd.SetVisible(true);
@@ -1189,6 +1206,10 @@ void ComponentsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 			{
 				item.name += ICON_METADATA " ";
 			}
+			if (scene.constraints.Contains(entity))
+			{
+				item.name += ICON_CONSTRAINT " ";
+			}
 			if (scene.lights.Contains(entity))
 			{
 				const LightComponent* light = scene.lights.GetComponent(entity);
@@ -1336,6 +1357,7 @@ bool ComponentsWindow::CheckEntityFilter(wi::ecs::Entity entity)
 		has_flag(filter, Filter::RigidBody) && scene.rigidbodies.Contains(entity) ||
 		has_flag(filter, Filter::SoftBody) && scene.softbodies.Contains(entity) ||
 		has_flag(filter, Filter::Metadata) && scene.metadatas.Contains(entity) ||
+		has_flag(filter, Filter::Constraint) && scene.constraints.Contains(entity) ||
 		has_flag(filter, Filter::Vehicle) && (scene.rigidbodies.Contains(entity) && scene.rigidbodies.GetComponent(entity)->IsVehicle())
 		)
 	{

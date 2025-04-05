@@ -51,6 +51,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)MetadataWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)DummyVisualizer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)SpriteRectWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ConstraintWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
@@ -107,6 +108,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)MetadataWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)DummyVisualizer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SpriteRectWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ConstraintWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />

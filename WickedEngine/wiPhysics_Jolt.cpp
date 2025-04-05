@@ -34,8 +34,10 @@
 #include <Jolt/Physics/SoftBody/SoftBodyShape.h>
 #include <Jolt/Physics/Constraints/DistanceConstraint.h>
 #include <Jolt/Physics/Constraints/FixedConstraint.h>
+#include <Jolt/Physics/Constraints/PointConstraint.h>
 #include <Jolt/Physics/Constraints/SwingTwistConstraint.h>
 #include <Jolt/Physics/Constraints/HingeConstraint.h>
+#include <Jolt/Physics/Constraints/ConeConstraint.h>
 #include <Jolt/Physics/Ragdoll/Ragdoll.h>
 #include <Jolt/Skeleton/Skeleton.h>
 #include <Jolt/Physics/Vehicle/VehicleConstraint.h>
@@ -350,6 +352,39 @@ namespace wi::physics
 				body_interface.DestroyBody(bodyID);
 			}
 		};
+		struct Constraint
+		{
+			std::shared_ptr<void> physics_scene;
+			Entity entity = INVALID_ENTITY;
+			Ref<TwoBodyConstraint> constraint;
+			BodyID body1_self;
+			BodyID body2_self;
+
+			// to detect the case when referenced rigidbody is deleted by someone:
+			BodyID body1_ref;
+			BodyID body2_ref;
+
+			~Constraint()
+			{
+				if (physics_scene == nullptr)
+					return;
+				if (constraint != nullptr)
+				{
+					((PhysicsScene*)physics_scene.get())->physics_system.RemoveConstraint(constraint);
+				}
+				BodyInterface& body_interface = ((PhysicsScene*)physics_scene.get())->physics_system.GetBodyInterface(); // locking version because destructor can be called from any thread
+				if (!body1_self.IsInvalid())
+				{
+					body_interface.RemoveBody(body1_self);
+					body_interface.DestroyBody(body1_self);
+				}
+				if (!body2_self.IsInvalid())
+				{
+					body_interface.RemoveBody(body2_self);
+					body_interface.DestroyBody(body2_self);
+				}
+			}
+		};
 
 		RigidBody& GetRigidBody(wi::scene::RigidBodyPhysicsComponent& physicscomponent)
 		{
@@ -374,6 +409,18 @@ namespace wi::physics
 		const SoftBody& GetSoftBody(const wi::scene::SoftBodyPhysicsComponent& physicscomponent)
 		{
 			return *(SoftBody*)physicscomponent.physicsobject.get();
+		}
+		Constraint& GetConstraint(wi::scene::PhysicsConstraintComponent& physicscomponent)
+		{
+			if (physicscomponent.physicsobject == nullptr)
+			{
+				physicscomponent.physicsobject = std::make_shared<Constraint>();
+			}
+			return *(Constraint*)physicscomponent.physicsobject.get();
+		}
+		const Constraint& GetConstraint(const wi::scene::PhysicsConstraintComponent& physicscomponent)
+		{
+			return *(Constraint*)physicscomponent.physicsobject.get();
 		}
 
 		void AddRigidBody(
@@ -879,6 +926,119 @@ namespace wi::physics
 				return;
 			}
 		}
+		void AddConstraint(
+			wi::scene::Scene& scene,
+			Entity entity,
+			wi::scene::PhysicsConstraintComponent& physicscomponent,
+			const wi::scene::TransformComponent& transform
+		)
+		{
+			Constraint& physicsobject = GetConstraint(physicscomponent);
+			physicsobject.physics_scene = scene.physics_scene;
+			PhysicsScene& physics_scene = GetPhysicsScene(scene);
+			BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterface();
+
+			Body* body1 = nullptr;
+			Body* body2 = nullptr;
+
+			const RigidBodyPhysicsComponent* rigidbodyA = scene.rigidbodies.GetComponent(physicscomponent.bodyA);
+			if (rigidbodyA == nullptr || rigidbodyA->physicsobject == nullptr)
+			{
+				body1 = body_interface.CreateBody(BodyCreationSettings(new SphereShape(0.01f), cast(transform.GetPosition()), Quat::sIdentity(), EMotionType::Kinematic, Layers::GHOST));
+				physicsobject.body1_self = body1->GetID();
+				body_interface.AddBody(physicsobject.body1_self, EActivation::Activate);
+			}
+			else
+			{
+				const RigidBody& rb = GetRigidBody(*rigidbodyA);
+				BodyLockWrite lock(physics_scene.physics_system.GetBodyLockInterface(), rb.bodyID);
+				if (!lock.Succeeded())
+				{
+					wilog_error("AddConstraint error: bodyA lock did not succeed!");
+					return;
+				}
+				Body& body = lock.GetBody();
+				body1 = &body;
+				physicsobject.body1_ref = rb.bodyID;
+			}
+
+			const RigidBodyPhysicsComponent* rigidbodyB = scene.rigidbodies.GetComponent(physicscomponent.bodyB);
+			if (rigidbodyB == nullptr || rigidbodyB->physicsobject == nullptr)
+			{
+				body2 = body_interface.CreateBody(BodyCreationSettings(new SphereShape(0.01f), cast(transform.GetPosition()), Quat::sIdentity(), EMotionType::Kinematic, Layers::GHOST));
+				physicsobject.body2_self = body2->GetID();
+				body_interface.AddBody(physicsobject.body2_self, EActivation::Activate);
+			}
+			else
+			{
+				const RigidBody& rb = GetRigidBody(*rigidbodyB);
+				BodyLockWrite lock(physics_scene.physics_system.GetBodyLockInterface(), rb.bodyID);
+				if (!lock.Succeeded())
+				{
+					wilog_error("AddConstraint error: bodyB lock did not succeed!");
+					return;
+				}
+				Body& body = lock.GetBody();
+				body2 = &body;
+				physicsobject.body2_ref = rb.bodyID;
+			}
+
+			if (physicscomponent.type == PhysicsConstraintComponent::Type::Fixed)
+			{
+				FixedConstraintSettings settings;
+				settings.mSpace = EConstraintSpace::WorldSpace;
+				settings.mPoint1 = settings.mPoint2 = cast(transform.GetPosition());
+				physicsobject.constraint = settings.Create(*body1, *body2);
+			}
+			else if (physicscomponent.type == PhysicsConstraintComponent::Type::Point)
+			{
+				PointConstraintSettings settings;
+				settings.mSpace = EConstraintSpace::WorldSpace;
+				settings.mPoint1 = settings.mPoint2 = cast(transform.GetPosition());
+				physicsobject.constraint = settings.Create(*body1, *body2);
+			}
+			else if (physicscomponent.type == PhysicsConstraintComponent::Type::Distance)
+			{
+				DistanceConstraintSettings settings;
+				settings.mSpace = EConstraintSpace::WorldSpace;
+				settings.mPoint1 = settings.mPoint2 = cast(transform.GetPosition());
+				settings.mMinDistance = physicscomponent.distance_constraint.min_distance;
+				settings.mMinDistance = physicscomponent.distance_constraint.max_distance;
+				physicsobject.constraint = settings.Create(*body1, *body2);
+			}
+			else if (physicscomponent.type == PhysicsConstraintComponent::Type::Hinge)
+			{
+				HingeConstraintSettings settings;
+				settings.mSpace = EConstraintSpace::WorldSpace;
+				settings.mPoint1 = settings.mPoint2 = cast(transform.GetPosition());
+				settings.mHingeAxis1 = settings.mHingeAxis2 = cast(transform.GetUp()).Normalized();
+				settings.mNormalAxis1 = settings.mNormalAxis2 = cast(transform.GetRight()).Normalized();
+				settings.mLimitsMin = physicscomponent.hinge_constraint.min_angle;
+				settings.mLimitsMax = physicscomponent.hinge_constraint.max_angle;
+				physicsobject.constraint = settings.Create(*body1, *body2);
+			}
+			else if (physicscomponent.type == PhysicsConstraintComponent::Type::Cone)
+			{
+				ConeConstraintSettings settings;
+				settings.mSpace = EConstraintSpace::WorldSpace;
+				settings.mPoint1 = settings.mPoint2 = cast(transform.GetPosition());
+				settings.mTwistAxis1 = settings.mTwistAxis2 = cast(transform.GetRight()).Normalized();
+				physicsobject.constraint = settings.Create(*body1, *body2);
+			}
+			else
+			{
+				wilog("Constraint creation failed: constraint type is not valid!");
+				return;
+			}
+
+			if (physicsobject.constraint == nullptr)
+			{
+				wilog("Constraint creation failed: constraint is not valid!");
+				return;
+			}
+
+			physics_scene.physics_system.AddConstraint(physicsobject.constraint);
+		}
 
 		struct Ragdoll
 		{
@@ -911,8 +1071,8 @@ namespace wi::physics
 			Ref<JPH::Ragdoll> ragdoll;
 			bool state_active = false;
 			float scale = 1;
-			Vec3 prev_capsule_position[BODYPART_COUNT];
-			Quat prev_capsule_rotation[BODYPART_COUNT];
+			Vec3 prev_capsule_position[BODYPART_COUNT] = {};
+			Quat prev_capsule_rotation[BODYPART_COUNT] = {};
 
 			Ragdoll(Scene& scene, HumanoidComponent& humanoid, Entity humanoidEntity, float scale)
 			{
@@ -1709,7 +1869,65 @@ namespace wi::physics
 			}
 		});
 
-		wi::jobsystem::Wait(ctx);
+		wi::jobsystem::Wait(ctx); // wait for rigidbody creations
+		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.constraints.GetCount(), dispatchGroupSize, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
+
+			PhysicsConstraintComponent& physicscomponent = scene.constraints[args.jobIndex];
+			if (physicscomponent.bodyA == INVALID_ENTITY && physicscomponent.bodyB == INVALID_ENTITY)
+			{
+				physicscomponent.physicsobject = nullptr;
+				return;
+			}
+			if (!scene.rigidbodies.Contains(physicscomponent.bodyA) && !scene.rigidbodies.Contains(physicscomponent.bodyB))
+			{
+				physicscomponent.physicsobject = nullptr;
+				return;
+			}
+			if (physicscomponent.physicsobject != nullptr)
+			{
+				// Detection of deleted rigidbody references:
+				const Constraint& constraint = GetConstraint((const PhysicsConstraintComponent&)physicscomponent);
+				if (!constraint.body1_ref.IsInvalid())
+				{
+					const RigidBodyPhysicsComponent* rb = scene.rigidbodies.GetComponent(physicscomponent.bodyA);
+					if (rb != nullptr && rb->physicsobject != nullptr)
+					{
+						const RigidBody& body = GetRigidBody(*rb);
+						if (body.bodyID != constraint.body1_ref)
+						{
+							// Rigidbody to constraint object mismatch!
+							physicscomponent.physicsobject = nullptr;
+							return;
+						}
+					}
+				}
+				if (!constraint.body2_ref.IsInvalid())
+				{
+					const RigidBodyPhysicsComponent* rb = scene.rigidbodies.GetComponent(physicscomponent.bodyB);
+					if (rb != nullptr && rb->physicsobject != nullptr)
+					{
+						const RigidBody& body = GetRigidBody(*rb);
+						if (body.bodyID != constraint.body2_ref)
+						{
+							// Rigidbody to constraint object mismatch!
+							physicscomponent.physicsobject = nullptr;
+							return;
+						}
+					}
+				}
+			}
+
+			Entity entity = scene.constraints.GetEntity(args.jobIndex);
+			if (physicscomponent.physicsobject == nullptr && scene.transforms.Contains(entity))
+			{
+				TransformComponent* transform = scene.transforms.GetComponent(entity);
+				if (transform == nullptr)
+					return;
+				AddConstraint(scene, entity, physicscomponent, *transform);
+			}
+		});
+
+		wi::jobsystem::Wait(ctx); // wait for all creations
 
 		// Now do the property updating
 		//	These will be non-locking updates and perfromed potentially every frame
@@ -2046,6 +2264,41 @@ namespace wi::physics
 						EActivation::Activate
 					);
 				}
+			}
+		});
+
+		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.constraints.GetCount(), dispatchGroupSize, [&scene, &physics_scene](wi::jobsystem::JobArgs args) {
+
+			PhysicsConstraintComponent& physicscomponent = scene.constraints[args.jobIndex];
+			if (physicscomponent.physicsobject == nullptr)
+				return;
+			Constraint& constraint = GetConstraint(physicscomponent);
+			if (constraint.body1_self.IsInvalid() && constraint.body2_self.IsInvalid())
+				return;
+
+			// Kinematic constraint body:
+			Entity entity = scene.constraints.GetEntity(args.jobIndex);
+			const TransformComponent* transform = scene.transforms.GetComponent(entity);
+			if (transform == nullptr)
+				return;
+
+			if (!constraint.body1_self.IsInvalid())
+			{
+				physics_scene.physics_system.GetBodyInterfaceNoLock().MoveKinematic(
+					constraint.body1_self,
+					cast(transform->GetPosition()),
+					cast(transform->GetRotation()),
+					physics_scene.GetKinematicDT(scene.dt)
+				);
+			}
+			if (!constraint.body2_self.IsInvalid())
+			{
+				physics_scene.physics_system.GetBodyInterfaceNoLock().MoveKinematic(
+					constraint.body2_self,
+					cast(transform->GetPosition()),
+					cast(transform->GetRotation()),
+					physics_scene.GetKinematicDT(scene.dt)
+				);
 			}
 		});
 
@@ -2762,9 +3015,13 @@ namespace wi::physics
 		physics_scene.physics_system.GetBodies(bodies);
 		for (BodyID& bodyID : bodies)
 		{
+			uint64_t userdata = body_interface.GetUserData(bodyID);
+			if (userdata == 0)
+				continue;
+
 			if (body_interface.GetBodyType(bodyID) == EBodyType::RigidBody)
 			{
-				RigidBody* physicsobject = (RigidBody*)body_interface.GetUserData(bodyID);
+				RigidBody* physicsobject = (RigidBody*)userdata;
 				body_interface.SetPositionRotationAndVelocity(
 					bodyID,
 					physicsobject->additionalTransform.GetTranslation() + physicsobject->initial_position,
@@ -2877,6 +3134,8 @@ namespace wi::physics
 				return;
 			const Body& body = lock.GetBody();
 			const uint64_t userdata = body.GetUserData();
+			if (userdata == 0)
+				return;
 
 			if (body.IsRigidBody())
 			{
@@ -2937,6 +3196,8 @@ namespace wi::physics
 
 		const Body& body = lock.GetBody();
 		const uint64_t userdata = body.GetUserData();
+		if (userdata == 0)
+			return result;
 
 		const Vec3 position = inray.GetPointOnRay(collector.mHit.mFraction);
 		const Vec3 position_local = body.GetCenterOfMassTransform().Inversed() * position;
@@ -3048,7 +3309,7 @@ namespace wi::physics
 			{
 				Vec3 pos = cast(result.position);
 
-				internal_state->bodyA = body_interface.CreateBody(BodyCreationSettings(new SphereShape(0.01f), pos, Quat::sIdentity(), EMotionType::Kinematic, Layers::MOVING));
+				internal_state->bodyA = body_interface.CreateBody(BodyCreationSettings(new SphereShape(0.01f), pos, Quat::sIdentity(), EMotionType::Kinematic, Layers::GHOST));
 				body_interface.AddBody(internal_state->bodyA->GetID(), EActivation::Activate);
 
 				if (constraint_type == ConstraintType::Fixed)
@@ -3060,7 +3321,7 @@ namespace wi::physics
 				}
 				else if (constraint_type == ConstraintType::Point)
 				{
-					DistanceConstraintSettings settings;
+					PointConstraintSettings settings;
 					settings.SetEmbedded();
 					settings.mPoint1 = settings.mPoint2 = pos;
 					internal_state->constraint = settings.Create(*internal_state->bodyA, *internal_state->bodyB);

@@ -909,6 +909,33 @@ namespace wi::scene
 			}
 		}
 	}
+	void PhysicsConstraintComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
+	{
+		if (archive.IsReadMode())
+		{
+			archive >> _flags;
+			archive >> (uint32_t&)type;
+			SerializeEntity(archive, bodyA, seri);
+			SerializeEntity(archive, bodyB, seri);
+			archive >> distance_constraint.min_distance;
+			archive >> distance_constraint.max_distance;
+			archive >> hinge_constraint.min_angle;
+			archive >> hinge_constraint.max_angle;
+			archive >> cone_constraint.half_cone_angle;
+		}
+		else
+		{
+			archive << _flags;
+			archive << (uint32_t&)type;
+			SerializeEntity(archive, bodyA, seri);
+			SerializeEntity(archive, bodyB, seri);
+			archive << distance_constraint.min_distance;
+			archive << distance_constraint.max_distance;
+			archive << hinge_constraint.min_angle;
+			archive << hinge_constraint.max_angle;
+			archive << cone_constraint.half_cone_angle;
+		}
+	}
 	void SoftBodyPhysicsComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		wi::vector<uint32_t> graphicsToPhysicsVertexMapping;
