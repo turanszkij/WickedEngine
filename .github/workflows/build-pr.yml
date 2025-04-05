@@ -3,9 +3,6 @@ name: Pull Request Verification
 on:
   pull_request
 
-concurrency:
-  group: ${{ github.ref }}
-
 env:
   CCACHE_VERSION: 4.10.2
   # needed because wiRenderer uses conditional include via __hasinclude
