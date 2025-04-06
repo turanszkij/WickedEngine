@@ -531,16 +531,18 @@ namespace wi::scene
 		enum FLAGS
 		{
 			EMPTY = 0,
+			REFRESH_PARAMETERS_REQUEST = 1 << 0,
 		};
 		uint32_t _flags = EMPTY;
 
 		enum class Type
 		{
-			Fixed,
-			Point,
-			Distance,
-			Hinge,
-			Cone,
+			Fixed,		// fixed in place completely
+			Point,		// fixed to a point but can rotate around it
+			Distance,	// point constraint within specified distance
+			Hinge,		// rotation around a point on the UP axis of the contraint transform
+			Cone,		// constrain to a cone shape specified by the cone angle
+			SixDOF,		// manual specification of axes movement and rotation limits
 		} type = Type::Fixed;
 
 		wi::ecs::Entity bodyA = wi::ecs::INVALID_ENTITY;
@@ -554,17 +556,43 @@ namespace wi::scene
 
 		struct HingeConstraintSettings
 		{
-			float min_angle = -XM_PI;
-			float max_angle = XM_PI;
+			float min_angle = -XM_PI;	// radians
+			float max_angle = XM_PI;	// radians
 		} hinge_constraint; // note: hinge axis is UP, normal axis is RIGHT directions of the TransformComponent on this entity
 
 		struct ConeConstraintSettings
 		{
-			float half_cone_angle = 0;
+			float half_cone_angle = 0;	// radians
 		} cone_constraint; // note: cone axis is RIGHT of the TransformComponent on this entity
+
+		struct SixDOFConstraintSettings
+		{
+			XMFLOAT3 minTranslationAxes = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+			XMFLOAT3 maxTranslationAxes = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
+			XMFLOAT3 minRotationAxes = XMFLOAT3(-XM_PI, -XM_PI, -XM_PI);
+			XMFLOAT3 maxRotationAxes = XMFLOAT3(XM_PI, XM_PI, XM_PI);
+
+			void SetFixedX() { minTranslationAxes.x = FLT_MAX; maxTranslationAxes.x = -FLT_MAX; }
+			void SetFreeX() { minTranslationAxes.x = -FLT_MAX; maxTranslationAxes.x = FLT_MAX; }
+			void SetFixedY() { minTranslationAxes.y = FLT_MAX; maxTranslationAxes.y = -FLT_MAX; }
+			void SetFreeY() { minTranslationAxes.y = -FLT_MAX; maxTranslationAxes.y = FLT_MAX; }
+			void SetFixedZ() { minTranslationAxes.z = FLT_MAX; maxTranslationAxes.z = -FLT_MAX; }
+			void SetFreeZ() { minTranslationAxes.z = -FLT_MAX; maxTranslationAxes.z = FLT_MAX; }
+
+			void SetFixedRotationX() { minRotationAxes.x = XM_PI; maxRotationAxes.x = -XM_PI; }
+			void SetFreeRotationX() { minRotationAxes.x = -XM_PI; maxRotationAxes.x = XM_PI; }
+			void SetFixedRotationY() { minRotationAxes.y = XM_PI; maxRotationAxes.y = -XM_PI; }
+			void SetFreeRotationY() { minRotationAxes.y = -XM_PI; maxRotationAxes.y = XM_PI; }
+			void SetFixedRotationZ() { minRotationAxes.z = XM_PI; maxRotationAxes.z = -XM_PI; }
+			void SetFreeRotationZ() { minRotationAxes.z = -XM_PI; maxRotationAxes.z = XM_PI; }
+		} six_dof;
 
 		// Non-serialized attributes:
 		std::shared_ptr<void> physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
+
+		// Request refreshing of constraint settings without recreating the constraint
+		constexpr void SetRefreshParametersNeeded(bool value = true) { if (value) { _flags |= REFRESH_PARAMETERS_REQUEST; } else { _flags &= ~REFRESH_PARAMETERS_REQUEST; } }
+		constexpr bool IsRefreshParametersNeeded() const { return _flags & REFRESH_PARAMETERS_REQUEST; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

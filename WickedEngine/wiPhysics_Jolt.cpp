@@ -38,6 +38,7 @@
 #include <Jolt/Physics/Constraints/SwingTwistConstraint.h>
 #include <Jolt/Physics/Constraints/HingeConstraint.h>
 #include <Jolt/Physics/Constraints/ConeConstraint.h>
+#include <Jolt/Physics/Constraints/SixDOFConstraint.h>
 #include <Jolt/Physics/Ragdoll/Ragdoll.h>
 #include <Jolt/Skeleton/Skeleton.h>
 #include <Jolt/Physics/Vehicle/VehicleConstraint.h>
@@ -1034,6 +1035,27 @@ namespace wi::physics
 				settings.mHalfConeAngle = physicscomponent.cone_constraint.half_cone_angle;
 				physicsobject.constraint = settings.Create(*body1, *body2);
 			}
+			else if (physicscomponent.type == PhysicsConstraintComponent::Type::SixDOF)
+			{
+				SixDOFConstraintSettings settings;
+				settings.mSpace = EConstraintSpace::WorldSpace;
+				settings.mPosition1 = settings.mPosition2 = cast(transform.GetPosition());
+				settings.mAxisX1 = settings.mAxisX2 = cast(transform.GetRight()).Normalized();
+				settings.mAxisY1 = settings.mAxisY2 = cast(transform.GetUp()).Normalized();
+				settings.mLimitMin[SixDOFConstraintSettings::EAxis::TranslationX] = physicscomponent.six_dof.minTranslationAxes.x;
+				settings.mLimitMin[SixDOFConstraintSettings::EAxis::TranslationY] = physicscomponent.six_dof.minTranslationAxes.y;
+				settings.mLimitMin[SixDOFConstraintSettings::EAxis::TranslationZ] = physicscomponent.six_dof.minTranslationAxes.z;
+				settings.mLimitMax[SixDOFConstraintSettings::EAxis::TranslationX] = physicscomponent.six_dof.maxTranslationAxes.x;
+				settings.mLimitMax[SixDOFConstraintSettings::EAxis::TranslationY] = physicscomponent.six_dof.maxTranslationAxes.y;
+				settings.mLimitMax[SixDOFConstraintSettings::EAxis::TranslationZ] = physicscomponent.six_dof.maxTranslationAxes.z;
+				settings.mLimitMin[SixDOFConstraintSettings::EAxis::RotationX] = physicscomponent.six_dof.minRotationAxes.x;
+				settings.mLimitMin[SixDOFConstraintSettings::EAxis::RotationY] = physicscomponent.six_dof.minRotationAxes.y;
+				settings.mLimitMin[SixDOFConstraintSettings::EAxis::RotationZ] = physicscomponent.six_dof.minRotationAxes.z;
+				settings.mLimitMax[SixDOFConstraintSettings::EAxis::RotationX] = physicscomponent.six_dof.maxRotationAxes.x;
+				settings.mLimitMax[SixDOFConstraintSettings::EAxis::RotationY] = physicscomponent.six_dof.maxRotationAxes.y;
+				settings.mLimitMax[SixDOFConstraintSettings::EAxis::RotationZ] = physicscomponent.six_dof.maxRotationAxes.z;
+				physicsobject.constraint = settings.Create(*body1, *body2);
+			}
 			else
 			{
 				wilog("Constraint creation failed: constraint type is not valid!");
@@ -1047,6 +1069,7 @@ namespace wi::physics
 			}
 
 			physics_scene.physics_system.AddConstraint(physicsobject.constraint);
+			physicscomponent.SetRefreshParametersNeeded(false);
 		}
 
 		struct Ragdoll
@@ -1933,6 +1956,39 @@ namespace wi::physics
 				if (transform == nullptr)
 					return;
 				AddConstraint(scene, entity, physicscomponent, *transform);
+			}
+
+			if (physicscomponent.physicsobject != nullptr && physicscomponent.IsRefreshParametersNeeded())
+			{
+				physicscomponent.SetRefreshParametersNeeded(false);
+				Constraint& constraint = GetConstraint(physicscomponent);
+				if (physicscomponent.type == PhysicsConstraintComponent::Type::Fixed)
+				{
+				}
+				else if (physicscomponent.type == PhysicsConstraintComponent::Type::Point)
+				{
+				}
+				else if (physicscomponent.type == PhysicsConstraintComponent::Type::Distance)
+				{
+					DistanceConstraint* ptr = ((DistanceConstraint*)constraint.constraint.GetPtr());
+					ptr->SetDistance(physicscomponent.distance_constraint.min_distance, physicscomponent.distance_constraint.max_distance);
+				}
+				else if (physicscomponent.type == PhysicsConstraintComponent::Type::Hinge)
+				{
+					HingeConstraint* ptr = ((HingeConstraint*)constraint.constraint.GetPtr());
+					ptr->SetLimits(physicscomponent.hinge_constraint.min_angle, physicscomponent.hinge_constraint.max_angle);
+				}
+				else if (physicscomponent.type == PhysicsConstraintComponent::Type::Cone)
+				{
+					ConeConstraint* ptr = ((ConeConstraint*)constraint.constraint.GetPtr());
+					ptr->SetHalfConeAngle(physicscomponent.cone_constraint.half_cone_angle);
+				}
+				else if (physicscomponent.type == PhysicsConstraintComponent::Type::SixDOF)
+				{
+					SixDOFConstraint* ptr = ((SixDOFConstraint*)constraint.constraint.GetPtr());
+					ptr->SetTranslationLimits(cast(physicscomponent.six_dof.minTranslationAxes), cast(physicscomponent.six_dof.maxTranslationAxes));
+					ptr->SetRotationLimits(cast(physicscomponent.six_dof.minRotationAxes), cast(physicscomponent.six_dof.maxRotationAxes));
+				}
 			}
 		});
 

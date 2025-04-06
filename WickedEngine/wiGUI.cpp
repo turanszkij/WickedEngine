@@ -1480,9 +1480,20 @@ namespace wi::gui
 	}
 	void TextInputField::SetValue(float newValue)
 	{
-		std::stringstream ss("");
-		ss << newValue;
-		font.SetText(ss.str());
+		if (newValue == FLT_MAX)
+		{
+			font.SetText(L"FLT_MAX");
+		}
+		else if (newValue == -FLT_MAX)
+		{
+			font.SetText(L"-FLT_MAX");
+		}
+		else
+		{
+			std::stringstream ss("");
+			ss << newValue;
+			font.SetText(ss.str());
+		}
 	}
 	const std::string TextInputField::GetValue()
 	{
@@ -1901,7 +1912,7 @@ namespace wi::gui
 		valueInputField.Create(name + "_endInputField");
 		valueInputField.SetLocalizationEnabled(LocalizationEnabled::None);
 		valueInputField.SetShadowRadius(0);
-		valueInputField.SetTooltip("Enter number to modify value even outside slider limits. Enter \"reset\" to reset slider to initial state.");
+		valueInputField.SetTooltip("Enter number to modify value even outside slider limits. Other inputs:\n - reset : reset slider to initial state.\n - FLT_MAX : float max value\n - -FLT_MAX : negative float max value.");
 		valueInputField.SetValue(end);
 		valueInputField.OnInputAccepted([this, start, end, defaultValue](EventArgs args) {
 			if (args.sValue.compare("reset") == 0)
@@ -1909,6 +1920,18 @@ namespace wi::gui
 				this->value = defaultValue;
 				this->start = start;
 				this->end = end;
+				args.fValue = this->value;
+				args.iValue = (int)this->value;
+			}
+			else if (args.sValue.compare("FLT_MAX") == 0)
+			{
+				this->value = FLT_MAX;
+				args.fValue = this->value;
+				args.iValue = (int)this->value;
+			}
+			else if (args.sValue.compare("-FLT_MAX") == 0)
+			{
+				this->value = -FLT_MAX;
 				args.fValue = this->value;
 				args.iValue = (int)this->value;
 			}

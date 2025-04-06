@@ -922,6 +922,13 @@ namespace wi::scene
 			archive >> hinge_constraint.min_angle;
 			archive >> hinge_constraint.max_angle;
 			archive >> cone_constraint.half_cone_angle;
+			if (seri.GetVersion() >= 1)
+			{
+				archive >> six_dof.minTranslationAxes;
+				archive >> six_dof.maxTranslationAxes;
+				archive >> six_dof.minRotationAxes;
+				archive >> six_dof.maxRotationAxes;
+			}
 		}
 		else
 		{
@@ -934,6 +941,13 @@ namespace wi::scene
 			archive << hinge_constraint.min_angle;
 			archive << hinge_constraint.max_angle;
 			archive << cone_constraint.half_cone_angle;
+			if (seri.GetVersion() >= 1)
+			{
+				archive << six_dof.minTranslationAxes;
+				archive << six_dof.maxTranslationAxes;
+				archive << six_dof.minRotationAxes;
+				archive << six_dof.maxRotationAxes;
+			}
 		}
 	}
 	void SoftBodyPhysicsComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)

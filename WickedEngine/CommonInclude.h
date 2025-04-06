@@ -4,6 +4,7 @@
 // This is a helper include file pasted into all engine headers, try to keep it minimal!
 // Do not include engine features in this file!
 
+#include <cfloat>
 #include <cstdint>
 #include <type_traits>
 

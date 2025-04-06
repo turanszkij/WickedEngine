@@ -18,6 +18,25 @@ public:
 	wi::gui::Slider minSlider;
 	wi::gui::Slider maxSlider;
 
+	wi::gui::Button fixedXButton;
+	wi::gui::Button fixedYButton;
+	wi::gui::Button fixedZButton;
+	wi::gui::Button fixedXRotationButton;
+	wi::gui::Button fixedYRotationButton;
+	wi::gui::Button fixedZRotationButton;
+	wi::gui::Slider minTranslationXSlider;
+	wi::gui::Slider minTranslationYSlider;
+	wi::gui::Slider minTranslationZSlider;
+	wi::gui::Slider maxTranslationXSlider;
+	wi::gui::Slider maxTranslationYSlider;
+	wi::gui::Slider maxTranslationZSlider;
+	wi::gui::Slider minRotationXSlider;
+	wi::gui::Slider minRotationYSlider;
+	wi::gui::Slider minRotationZSlider;
+	wi::gui::Slider maxRotationXSlider;
+	wi::gui::Slider maxRotationYSlider;
+	wi::gui::Slider maxRotationZSlider;
+
 	void ResizeLayout() override;
 };
 

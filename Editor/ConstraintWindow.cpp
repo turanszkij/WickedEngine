@@ -50,6 +50,7 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 	typeComboBox.AddItem("Distance", (uint64_t)PhysicsConstraintComponent::Type::Distance);
 	typeComboBox.AddItem("Hinge", (uint64_t)PhysicsConstraintComponent::Type::Hinge);
 	typeComboBox.AddItem("Cone", (uint64_t)PhysicsConstraintComponent::Type::Cone);
+	typeComboBox.AddItem("Six DOF", (uint64_t)PhysicsConstraintComponent::Type::SixDOF);
 	typeComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -123,7 +124,7 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 				default:
 					break;
 				}
-				physicscomponent->physicsobject = nullptr;
+				physicscomponent->SetRefreshParametersNeeded(true);
 			}
 		}
 	});
@@ -148,11 +149,293 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 				default:
 					break;
 				}
-				physicscomponent->physicsobject = nullptr;
+				physicscomponent->SetRefreshParametersNeeded(true);
 			}
 		}
 	});
 	AddWidget(&maxSlider);
+
+
+
+
+	fixedXButton.Create("Fix X");
+	fixedXButton.OnClick([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->six_dof.SetFixedX();
+				physicscomponent->SetRefreshParametersNeeded(true);
+			}
+		}
+		SetEntity(entity);
+		});
+	AddWidget(&fixedXButton);
+
+	fixedYButton.Create("Fix Y");
+	fixedYButton.OnClick([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->six_dof.SetFixedY();
+				physicscomponent->SetRefreshParametersNeeded(true);
+			}
+		}
+		SetEntity(entity);
+		});
+	AddWidget(&fixedYButton);
+
+	fixedZButton.Create("Fix Z");
+	fixedZButton.OnClick([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->six_dof.SetFixedZ();
+				physicscomponent->SetRefreshParametersNeeded(true);
+			}
+		}
+		SetEntity(entity);
+		});
+	AddWidget(&fixedZButton);
+
+	fixedXRotationButton.Create("Fix Rot X");
+	fixedXRotationButton.OnClick([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->six_dof.SetFixedRotationX();
+				physicscomponent->SetRefreshParametersNeeded(true);
+			}
+		}
+		SetEntity(entity);
+		});
+	AddWidget(&fixedXRotationButton);
+
+	fixedYRotationButton.Create("Fix Rot Y");
+	fixedYRotationButton.OnClick([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->six_dof.SetFixedRotationY();
+				physicscomponent->SetRefreshParametersNeeded(true);
+			}
+		}
+		SetEntity(entity);
+	});
+	AddWidget(&fixedYRotationButton);
+
+	fixedZRotationButton.Create("Fix Rot Z");
+	fixedZRotationButton.OnClick([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->six_dof.SetFixedRotationZ();
+				physicscomponent->SetRefreshParametersNeeded(true);
+			}
+		}
+		SetEntity(entity);
+	});
+	AddWidget(&fixedZRotationButton);
+
+
+	minTranslationXSlider.Create(-10, 0, 1, 100000, "Min Translation X: ");
+	minTranslationXSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->six_dof.minTranslationAxes.x = args.fValue;
+				physicscomponent->SetRefreshParametersNeeded(true);
+			}
+		}
+		});
+	AddWidget(&minTranslationXSlider);
+
+	minTranslationYSlider.Create(-10, 0, 1, 100000, "Min Translation Y: ");
+	minTranslationYSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->six_dof.minTranslationAxes.y = args.fValue;
+				physicscomponent->SetRefreshParametersNeeded(true);
+			}
+		}
+		});
+	AddWidget(&minTranslationYSlider);
+
+	minTranslationZSlider.Create(-10, 0, 1, 100000, "Min Translation Z: ");
+	minTranslationZSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->six_dof.minTranslationAxes.z = args.fValue;
+				physicscomponent->SetRefreshParametersNeeded(true);
+			}
+		}
+		});
+	AddWidget(&minTranslationZSlider);
+
+	maxTranslationXSlider.Create(0, 10, 1, 100000, "Max Translation X: ");
+	maxTranslationXSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->six_dof.maxTranslationAxes.x = args.fValue;
+				physicscomponent->SetRefreshParametersNeeded(true);
+			}
+		}
+		});
+	AddWidget(&maxTranslationXSlider);
+
+	maxTranslationYSlider.Create(0, 10, 1, 100000, "Max Translation Y: ");
+	maxTranslationYSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->six_dof.maxTranslationAxes.y = args.fValue;
+				physicscomponent->SetRefreshParametersNeeded(true);
+			}
+		}
+		});
+	AddWidget(&maxTranslationYSlider);
+
+	maxTranslationZSlider.Create(0, 10, 1, 100000, "Max Translation Z: ");
+	maxTranslationZSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->six_dof.maxTranslationAxes.z = args.fValue;
+				physicscomponent->SetRefreshParametersNeeded(true);
+			}
+		}
+		});
+	AddWidget(&maxTranslationZSlider);
+
+
+
+	minRotationXSlider.Create(-180, 0, 1, 100000, "Min Rotation X: ");
+	minRotationXSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->six_dof.minRotationAxes.x = wi::math::DegreesToRadians(args.fValue);
+				physicscomponent->SetRefreshParametersNeeded(true);
+			}
+		}
+		});
+	AddWidget(&minRotationXSlider);
+
+	minRotationYSlider.Create(-180, 0, 1, 100000, "Min Rotation Y: ");
+	minRotationYSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->six_dof.minRotationAxes.y = wi::math::DegreesToRadians(args.fValue);
+				physicscomponent->SetRefreshParametersNeeded(true);
+			}
+		}
+		});
+	AddWidget(&minRotationYSlider);
+
+	minRotationZSlider.Create(-180, 0, 1, 100000, "Min Rotation Z: ");
+	minRotationZSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->six_dof.minRotationAxes.z = wi::math::DegreesToRadians(args.fValue);
+				physicscomponent->SetRefreshParametersNeeded(true);
+			}
+		}
+		});
+	AddWidget(&minRotationZSlider);
+
+	maxRotationXSlider.Create(0, 180, 1, 100000, "Max Rotation X: ");
+	maxRotationXSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->six_dof.maxRotationAxes.x = wi::math::DegreesToRadians(args.fValue);
+				physicscomponent->SetRefreshParametersNeeded(true);
+			}
+		}
+		});
+	AddWidget(&maxRotationXSlider);
+
+	maxRotationYSlider.Create(0, 180, 1, 100000, "Max Rotation Y: ");
+	maxRotationYSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->six_dof.maxRotationAxes.y = wi::math::DegreesToRadians(args.fValue);
+				physicscomponent->SetRefreshParametersNeeded(true);
+			}
+		}
+		});
+	AddWidget(&maxRotationYSlider);
+
+	maxRotationZSlider.Create(0, 180, 1, 100000, "Max Rotation Z: ");
+	maxRotationZSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->six_dof.maxRotationAxes.z = wi::math::DegreesToRadians(args.fValue);
+				physicscomponent->SetRefreshParametersNeeded(true);
+			}
+		}
+		});
+	AddWidget(&maxRotationZSlider);
 
 
 	SetMinimized(true);
@@ -169,8 +452,6 @@ void ConstraintWindow::SetEntity(Entity entity)
 
 	if (physicsComponent != nullptr)
 	{
-		if (this->entity == entity)
-			return;
 		this->entity = entity;
 
 		typeComboBox.SetSelectedByUserdataWithoutCallback((uint64_t)physicsComponent->type);
@@ -218,6 +499,19 @@ void ConstraintWindow::SetEntity(Entity entity)
 		}
 		bodyAComboBox.SetSelectedByUserdataWithoutCallback(physicsComponent->bodyA);
 		bodyBComboBox.SetSelectedByUserdataWithoutCallback(physicsComponent->bodyB);
+
+		minTranslationXSlider.SetValue(physicsComponent->six_dof.minTranslationAxes.x);
+		minTranslationYSlider.SetValue(physicsComponent->six_dof.minTranslationAxes.y);
+		minTranslationZSlider.SetValue(physicsComponent->six_dof.minTranslationAxes.z);
+		maxTranslationXSlider.SetValue(physicsComponent->six_dof.maxTranslationAxes.x);
+		maxTranslationYSlider.SetValue(physicsComponent->six_dof.maxTranslationAxes.y);
+		maxTranslationZSlider.SetValue(physicsComponent->six_dof.maxTranslationAxes.z);
+		minRotationXSlider.SetValue(wi::math::RadiansToDegrees(physicsComponent->six_dof.minRotationAxes.x));
+		minRotationYSlider.SetValue(wi::math::RadiansToDegrees(physicsComponent->six_dof.minRotationAxes.y));
+		minRotationZSlider.SetValue(wi::math::RadiansToDegrees(physicsComponent->six_dof.minRotationAxes.z));
+		maxRotationXSlider.SetValue(wi::math::RadiansToDegrees(physicsComponent->six_dof.maxRotationAxes.x));
+		maxRotationYSlider.SetValue(wi::math::RadiansToDegrees(physicsComponent->six_dof.maxRotationAxes.y));
+		maxRotationZSlider.SetValue(wi::math::RadiansToDegrees(physicsComponent->six_dof.maxRotationAxes.z));
 	}
 	else
 	{
@@ -236,7 +530,7 @@ void ConstraintWindow::ResizeLayout()
 	float jump = 20;
 
 	const float margin_left = 145;
-	const float margin_right = 40;
+	float margin_right = 40;
 
 	auto add = [&](wi::gui::Widget& widget) {
 		if (!widget.IsVisible())
@@ -281,14 +575,113 @@ void ConstraintWindow::ResizeLayout()
 		case PhysicsConstraintComponent::Type::Hinge:
 			minSlider.SetVisible(true);
 			maxSlider.SetVisible(true);
+
+			fixedXButton.SetVisible(false);
+			fixedYButton.SetVisible(false);
+			fixedZButton.SetVisible(false);
+			fixedXRotationButton.SetVisible(false);
+			fixedYRotationButton.SetVisible(false);
+			fixedZRotationButton.SetVisible(false);
+			minTranslationXSlider.SetVisible(false);
+			minTranslationYSlider.SetVisible(false);
+			minTranslationZSlider.SetVisible(false);
+			maxTranslationXSlider.SetVisible(false);
+			maxTranslationYSlider.SetVisible(false);
+			maxTranslationZSlider.SetVisible(false);
+			minRotationXSlider.SetVisible(false);
+			minRotationYSlider.SetVisible(false);
+			minRotationZSlider.SetVisible(false);
+			maxRotationXSlider.SetVisible(false);
+			maxRotationYSlider.SetVisible(false);
+			maxRotationZSlider.SetVisible(false);
 			break;
 		case PhysicsConstraintComponent::Type::Cone:
 			minSlider.SetVisible(true);
 			maxSlider.SetVisible(false);
+
+			fixedXButton.SetVisible(false);
+			fixedYButton.SetVisible(false);
+			fixedZButton.SetVisible(false);
+			fixedXRotationButton.SetVisible(false);
+			fixedYRotationButton.SetVisible(false);
+			fixedZRotationButton.SetVisible(false);
+			minTranslationXSlider.SetVisible(false);
+			minTranslationYSlider.SetVisible(false);
+			minTranslationZSlider.SetVisible(false);
+			maxTranslationXSlider.SetVisible(false);
+			maxTranslationYSlider.SetVisible(false);
+			maxTranslationZSlider.SetVisible(false);
+			minRotationXSlider.SetVisible(false);
+			minRotationYSlider.SetVisible(false);
+			minRotationZSlider.SetVisible(false);
+			maxRotationXSlider.SetVisible(false);
+			maxRotationYSlider.SetVisible(false);
+			maxRotationZSlider.SetVisible(false);
+			break;
+		case PhysicsConstraintComponent::Type::SixDOF:
+			minSlider.SetVisible(false);
+			maxSlider.SetVisible(false);
+
+			fixedXButton.SetVisible(true);
+			fixedYButton.SetVisible(true);
+			fixedZButton.SetVisible(true);
+			fixedXRotationButton.SetVisible(true);
+			fixedYRotationButton.SetVisible(true);
+			fixedZRotationButton.SetVisible(true);
+			minTranslationXSlider.SetVisible(true);
+			minTranslationYSlider.SetVisible(true);
+			minTranslationZSlider.SetVisible(true);
+			maxTranslationXSlider.SetVisible(true);
+			maxTranslationYSlider.SetVisible(true);
+			maxTranslationZSlider.SetVisible(true);
+			minRotationXSlider.SetVisible(true);
+			minRotationYSlider.SetVisible(true);
+			minRotationZSlider.SetVisible(true);
+			maxRotationXSlider.SetVisible(true);
+			maxRotationYSlider.SetVisible(true);
+			maxRotationZSlider.SetVisible(true);
+			add_fullwidth(fixedXButton);
+			add_fullwidth(fixedYButton);
+			add_fullwidth(fixedZButton);
+			add_fullwidth(fixedXRotationButton);
+			add_fullwidth(fixedYRotationButton);
+			add_fullwidth(fixedZRotationButton);
+			margin_right = 80;
+			add(minTranslationXSlider);
+			add(minTranslationYSlider);
+			add(minTranslationZSlider);
+			add(maxTranslationXSlider);
+			add(maxTranslationYSlider);
+			add(maxTranslationZSlider);
+			add(minRotationXSlider);
+			add(minRotationYSlider);
+			add(minRotationZSlider);
+			add(maxRotationXSlider);
+			add(maxRotationYSlider);
+			add(maxRotationZSlider);
 			break;
 		default:
 			minSlider.SetVisible(false);
 			maxSlider.SetVisible(false);
+
+			fixedXButton.SetVisible(false);
+			fixedYButton.SetVisible(false);
+			fixedZButton.SetVisible(false);
+			fixedXRotationButton.SetVisible(false);
+			fixedYRotationButton.SetVisible(false);
+			fixedZRotationButton.SetVisible(false);
+			minTranslationXSlider.SetVisible(false);
+			minTranslationYSlider.SetVisible(false);
+			minTranslationZSlider.SetVisible(false);
+			maxTranslationXSlider.SetVisible(false);
+			maxTranslationYSlider.SetVisible(false);
+			maxTranslationZSlider.SetVisible(false);
+			minRotationXSlider.SetVisible(false);
+			minRotationYSlider.SetVisible(false);
+			minRotationZSlider.SetVisible(false);
+			maxRotationXSlider.SetVisible(false);
+			maxRotationYSlider.SetVisible(false);
+			maxRotationZSlider.SetVisible(false);
 			break;
 		}
 
