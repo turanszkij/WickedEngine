@@ -2091,6 +2091,8 @@ Playstation button codes:
 - GetVelocity() : Vector-- returns linear velocity of a body
 - SetGhostMode(RigidBodyPhysicsComponent|HumanoidComponent component, bool value)	-- enable/disable ghost mode for rigid body or ragdoll (all collision disabled)
 - SetRagdollGhostMode(HumanoidComponent humanoid, bool value)	-- enable/disable ghost mode for a ragdoll. In ghost mode, the ragdoll will not collide with anything. Enable this if the humanoid sits inside a vehicle for example.
+- SetPosition(RigidBodyPhysicsComponent component, Vector position)	-- teleport a dynamic body
+- SetPositionAndRotation(RigidBodyPhysicsComponent component, Vector position, Vector rotationQuaternion)	-- teleport a dynamic body
 - SetLinearVelocity(RigidBodyPhysicsComponent component, Vector velocity)	-- Set the linear velocity manually
 - SetAngularVelocity(RigidBodyPhysicsComponent component, Vector velocity)	-- Set the angular velocity manually
 - ApplyForce(RigidBodyPhysicsComponent component, Vector force)	-- Apply force at body center

@@ -266,9 +266,10 @@ namespace wi::physics
 			float friction = 0;
 			float restitution = 0;
 			EMotionType motiontype = EMotionType::Static;
-			bool start_deactivated = false;
-			bool was_underwater = false;
-			bool was_active_prev_frame = false;
+			uint8_t start_deactivated : 1;
+			uint8_t was_underwater : 1;
+			uint8_t was_active_prev_frame : 1;
+			uint8_t teleporting : 1;
 			Vec3 initial_position = Vec3::sZero();
 			Quat initial_rotation = Quat::sIdentity();
 
@@ -316,6 +317,13 @@ namespace wi::physics
 				shape = nullptr;
 			}
 
+			RigidBody()
+			{
+				start_deactivated = 0;
+				was_underwater = 0;
+				was_active_prev_frame = 0;
+				teleporting = 0;
+			}
 			~RigidBody()
 			{
 				Delete();
@@ -2040,25 +2048,44 @@ namespace wi::physics
 				}
 			}
 
-			const Vec3 position = cast(transform->GetPosition());
-			const Quat rotation = cast(transform->GetRotation());
-			Mat44 m = Mat44::sTranslation(position) * Mat44::sRotation(rotation);
-			m = m * physicsobject.additionalTransform;
-
-			if (IsSimulationEnabled())
+			if (physicsobject.teleporting)
 			{
-				// Feedback system transform to kinematic and static physics objects:
-				if (currentMotionType == EMotionType::Kinematic)
+				physicsobject.teleporting = false;
+			}
+			else
+			{
+				const Vec3 position = cast(transform->GetPosition());
+				const Quat rotation = cast(transform->GetRotation());
+				Mat44 m = Mat44::sTranslation(position) * Mat44::sRotation(rotation);
+				m = m * physicsobject.additionalTransform;
+
+				if (IsSimulationEnabled())
 				{
-					body_interface.MoveKinematic(
-						physicsobject.bodyID,
-						m.GetTranslation(),
-						m.GetQuaternion().Normalized(),
-						physics_scene.GetKinematicDT(scene.dt)
-					);
+					// Feedback system transform to kinematic and static physics objects:
+					if (currentMotionType == EMotionType::Kinematic)
+					{
+						body_interface.MoveKinematic(
+							physicsobject.bodyID,
+							m.GetTranslation(),
+							m.GetQuaternion().Normalized(),
+							physics_scene.GetKinematicDT(scene.dt)
+						);
+					}
+					else if (currentMotionType == EMotionType::Static || !is_active)
+					{
+						body_interface.SetPositionAndRotation(
+							physicsobject.bodyID,
+							m.GetTranslation(),
+							m.GetQuaternion().Normalized(),
+							EActivation::DontActivate
+						);
+					}
 				}
-				else if (currentMotionType == EMotionType::Static || !is_active)
+				else
 				{
+					// Simulation is disabled, update physics state immediately:
+					physicsobject.prev_position = position;
+					physicsobject.prev_rotation = rotation;
 					body_interface.SetPositionAndRotation(
 						physicsobject.bodyID,
 						m.GetTranslation(),
@@ -2066,18 +2093,6 @@ namespace wi::physics
 						EActivation::DontActivate
 					);
 				}
-			}
-			else
-			{
-				// Simulation is disabled, update physics state immediately:
-				physicsobject.prev_position = position;
-				physicsobject.prev_rotation = rotation;
-				body_interface.SetPositionAndRotation(
-					physicsobject.bodyID,
-					m.GetTranslation(),
-					m.GetQuaternion().Normalized(),
-					EActivation::DontActivate
-				);
 			}
 		});
 
@@ -2615,6 +2630,52 @@ namespace wi::physics
 		wi::jobsystem::Wait(ctx);
 
 		wi::profiler::EndRange(range); // Physics
+	}
+
+
+	void SetPosition(
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		const XMFLOAT3& position
+	)
+	{
+		if (physicscomponent.physicsobject == nullptr)
+			return;
+		RigidBody& physicsobject = GetRigidBody(physicscomponent);
+		PhysicsScene& physics_scene = *(PhysicsScene*)physicsobject.physics_scene.get();
+		BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
+		physicsobject.prev_position = cast(position);
+		Mat44 m = Mat44::sTranslation(physicsobject.prev_position) * Mat44::sRotation(physicsobject.prev_rotation);
+		m = m * physicsobject.additionalTransform;
+		body_interface.SetPosition(
+			physicsobject.bodyID,
+			m.GetTranslation(),
+			EActivation::DontActivate
+		);
+		physicsobject.teleporting = true;
+	}
+
+	void SetPositionAndRotation(
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		const XMFLOAT3& position,
+		const XMFLOAT4& rotation
+	)
+	{
+		if (physicscomponent.physicsobject == nullptr)
+			return;
+		RigidBody& physicsobject = GetRigidBody(physicscomponent);
+		PhysicsScene& physics_scene = *(PhysicsScene*)physicsobject.physics_scene.get();
+		BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
+		physicsobject.prev_position = cast(position);
+		physicsobject.prev_rotation = cast(rotation).Normalized();
+		Mat44 m = Mat44::sTranslation(physicsobject.prev_position) * Mat44::sRotation(physicsobject.prev_rotation);
+		m = m * physicsobject.additionalTransform;
+		body_interface.SetPositionAndRotation(
+			physicsobject.bodyID,
+			m.GetTranslation(),
+			m.GetQuaternion().Normalized(),
+			EActivation::DontActivate
+		);
+		physicsobject.teleporting = true;
 	}
 
 	void SetLinearVelocity(

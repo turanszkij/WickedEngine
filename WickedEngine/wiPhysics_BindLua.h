@@ -28,6 +28,8 @@ namespace wi::lua
 		int SetFrameRate(lua_State* L);
 		int GetFrameRate(lua_State* L);
 
+		int SetPosition(lua_State* L);
+		int SetPositionAndRotation(lua_State* L);
 		int SetLinearVelocity(lua_State* L);
 		int SetAngularVelocity(lua_State* L);
 		int ApplyForce(lua_State* L);

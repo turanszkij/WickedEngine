@@ -47,6 +47,17 @@ namespace wi::physics
 		float dt
 	);
 
+	// Teleport a dynamic rigid body:
+	void SetPosition(
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		const XMFLOAT3& position
+	);
+	void SetPositionAndRotation(
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		const XMFLOAT3& position,
+		const XMFLOAT4& rotation
+	);
+
 	// Set linear velocity to rigid body
 	void SetLinearVelocity(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
