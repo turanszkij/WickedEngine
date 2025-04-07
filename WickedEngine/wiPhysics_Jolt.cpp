@@ -953,7 +953,7 @@ namespace wi::physics
 			const RigidBodyPhysicsComponent* rigidbodyA = scene.rigidbodies.GetComponent(physicscomponent.bodyA);
 			if (rigidbodyA == nullptr || rigidbodyA->physicsobject == nullptr)
 			{
-				body1 = body_interface.CreateBody(BodyCreationSettings(new SphereShape(0.01f), cast(transform.GetPosition()), Quat::sIdentity(), EMotionType::Kinematic, Layers::GHOST));
+				body1 = body_interface.CreateBody(BodyCreationSettings(new SphereShape(0.01f), cast(transform.GetPosition()), cast(transform.GetRotation()).Normalized(), EMotionType::Kinematic, Layers::GHOST));
 				physicsobject.body1_self = body1->GetID();
 				body_interface.AddBody(physicsobject.body1_self, EActivation::Activate);
 			}
@@ -974,7 +974,7 @@ namespace wi::physics
 			const RigidBodyPhysicsComponent* rigidbodyB = scene.rigidbodies.GetComponent(physicscomponent.bodyB);
 			if (rigidbodyB == nullptr || rigidbodyB->physicsobject == nullptr)
 			{
-				body2 = body_interface.CreateBody(BodyCreationSettings(new SphereShape(0.01f), cast(transform.GetPosition()), Quat::sIdentity(), EMotionType::Kinematic, Layers::GHOST));
+				body2 = body_interface.CreateBody(BodyCreationSettings(new SphereShape(0.01f), cast(transform.GetPosition()), cast(transform.GetRotation()).Normalized(), EMotionType::Kinematic, Layers::GHOST));
 				physicsobject.body2_self = body2->GetID();
 				body_interface.AddBody(physicsobject.body2_self, EActivation::Activate);
 			}
