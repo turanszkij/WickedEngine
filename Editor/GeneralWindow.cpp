@@ -33,6 +33,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	physicsDebugCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::physics::SetDebugDrawEnabled(args.bValue);
 		editor->componentsWnd.rigidWnd.physicsDebugCheckBox.SetCheck(args.bValue);
+		editor->componentsWnd.constraintWnd.physicsDebugCheckBox.SetCheck(args.bValue);
 	});
 	physicsDebugCheckBox.SetCheck(wi::physics::IsDebugDrawEnabled());
 	AddWidget(&physicsDebugCheckBox);

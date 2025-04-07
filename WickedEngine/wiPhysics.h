@@ -30,6 +30,10 @@ namespace wi::physics
 	void SetDebugDrawEnabled(bool value);
 	bool IsDebugDrawEnabled();
 
+	// Adjust constraint debugging sizes
+	void SetConstraintDebugSize(float value);
+	float GetConstraintDebugSize();
+
 	// Set the accuracy of the simulation
 	//	This value corresponds to maximum simulation step count
 	//	Higher values will be slower but more accurate

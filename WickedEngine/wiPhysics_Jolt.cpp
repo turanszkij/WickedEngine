@@ -81,6 +81,7 @@ namespace wi::physics
 		bool ENABLED = true;
 		bool SIMULATION_ENABLED = true;
 		bool DEBUGDRAW_ENABLED = false;
+		float CONSTRAINT_DEBUGSIZE = 1;
 		int ACCURACY = 4;
 		int softbodyIterationCount = 6;
 		float TIMESTEP = 1.0f / 60.0f;
@@ -1056,6 +1057,19 @@ namespace wi::physics
 				settings.mLimitMax[SixDOFConstraintSettings::EAxis::RotationZ] = physicscomponent.six_dof.maxRotationAxes.z;
 				physicsobject.constraint = settings.Create(*body1, *body2);
 			}
+			else if (physicscomponent.type == PhysicsConstraintComponent::Type::SwingTwist)
+			{
+				SwingTwistConstraintSettings settings;
+				settings.mSpace = EConstraintSpace::WorldSpace;
+				settings.mPosition1 = settings.mPosition2 = cast(transform.GetPosition());
+				settings.mTwistAxis1 = settings.mTwistAxis2 = cast(transform.GetRight()).Normalized();
+				settings.mPlaneAxis1 = settings.mPlaneAxis2 = cast(transform.GetUp()).Normalized();
+				settings.mNormalHalfConeAngle = physicscomponent.swing_twist.normal_half_cone_angle;
+				settings.mPlaneHalfConeAngle = physicscomponent.swing_twist.plane_half_cone_angle;
+				settings.mTwistMinAngle = physicscomponent.swing_twist.min_twist_angle;
+				settings.mTwistMaxAngle = physicscomponent.swing_twist.max_twist_angle;
+				physicsobject.constraint = settings.Create(*body1, *body2);
+			}
 			else
 			{
 				wilog("Constraint creation failed: constraint type is not valid!");
@@ -1812,6 +1826,9 @@ namespace wi::physics
 	bool IsDebugDrawEnabled() { return DEBUGDRAW_ENABLED; }
 	void SetDebugDrawEnabled(bool value) { DEBUGDRAW_ENABLED = value; }
 
+	void SetConstraintDebugSize(float value) { CONSTRAINT_DEBUGSIZE = value; }
+	float GetConstraintDebugSize() { return CONSTRAINT_DEBUGSIZE; }
+
 	int GetAccuracy() { return ACCURACY; }
 	void SetAccuracy(int value) { ACCURACY = value; }
 
@@ -1988,6 +2005,14 @@ namespace wi::physics
 					SixDOFConstraint* ptr = ((SixDOFConstraint*)constraint.constraint.GetPtr());
 					ptr->SetTranslationLimits(cast(physicscomponent.six_dof.minTranslationAxes), cast(physicscomponent.six_dof.maxTranslationAxes));
 					ptr->SetRotationLimits(cast(physicscomponent.six_dof.minRotationAxes), cast(physicscomponent.six_dof.maxRotationAxes));
+				}
+				else if (physicscomponent.type == PhysicsConstraintComponent::Type::SwingTwist)
+				{
+					SwingTwistConstraint* ptr = ((SwingTwistConstraint*)constraint.constraint.GetPtr());
+					ptr->SetNormalHalfConeAngle(physicscomponent.swing_twist.normal_half_cone_angle);
+					ptr->SetPlaneHalfConeAngle(physicscomponent.swing_twist.plane_half_cone_angle);
+					ptr->SetTwistMinAngle(physicscomponent.swing_twist.min_twist_angle);
+					ptr->SetTwistMaxAngle(physicscomponent.swing_twist.max_twist_angle);
 				}
 			}
 		});
@@ -2345,6 +2370,7 @@ namespace wi::physics
 			if (physicscomponent.physicsobject == nullptr)
 				return;
 			Constraint& constraint = GetConstraint(physicscomponent);
+			constraint.constraint->SetDrawConstraintSize(CONSTRAINT_DEBUGSIZE);
 			if (constraint.body1_self.IsInvalid() && constraint.body2_self.IsInvalid())
 				return;
 

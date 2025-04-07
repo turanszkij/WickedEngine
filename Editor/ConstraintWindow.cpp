@@ -30,6 +30,23 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 	infoLabel.SetText("Constraints can be added to bind one or two rigid bodies. If only one body is specified, then it will be bound to the constraint's location. If two bodies are specified, they will be bound together with the constraint acting as the pivot between them at the time of binding.");
 	AddWidget(&infoLabel);
 
+	physicsDebugCheckBox.Create(ICON_EYE " Physics visualizer: ");
+	physicsDebugCheckBox.SetTooltip("Visualize the physics world");
+	physicsDebugCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		wi::physics::SetDebugDrawEnabled(args.bValue);
+		editor->generalWnd.physicsDebugCheckBox.SetCheck(args.bValue);
+		editor->componentsWnd.rigidWnd.physicsDebugCheckBox.SetCheck(args.bValue);
+	});
+	physicsDebugCheckBox.SetCheck(wi::physics::IsDebugDrawEnabled());
+	AddWidget(&physicsDebugCheckBox);
+
+	constraintDebugSlider.Create(0, 10, 1, 100, "Debug size: ");
+	constraintDebugSlider.SetValue(wi::physics::GetConstraintDebugSize());
+	constraintDebugSlider.OnSlide([](wi::gui::EventArgs args) {
+		wi::physics::SetConstraintDebugSize(args.fValue);
+		});
+	AddWidget(&constraintDebugSlider);
+
 	rebindButton.Create("Rebind Constraint");
 	rebindButton.OnClick([this](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -51,6 +68,7 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 	typeComboBox.AddItem("Hinge", (uint64_t)PhysicsConstraintComponent::Type::Hinge);
 	typeComboBox.AddItem("Cone", (uint64_t)PhysicsConstraintComponent::Type::Cone);
 	typeComboBox.AddItem("Six DOF", (uint64_t)PhysicsConstraintComponent::Type::SixDOF);
+	typeComboBox.AddItem("Swing Twist", (uint64_t)PhysicsConstraintComponent::Type::SwingTwist);
 	typeComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -121,6 +139,9 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 				case PhysicsConstraintComponent::Type::Cone:
 					physicscomponent->cone_constraint.half_cone_angle = wi::math::DegreesToRadians(args.fValue);
 					break;
+				case PhysicsConstraintComponent::Type::SwingTwist:
+					physicscomponent->swing_twist.min_twist_angle = wi::math::DegreesToRadians(args.fValue);
+					break;
 				default:
 					break;
 				}
@@ -146,6 +167,9 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 				case PhysicsConstraintComponent::Type::Hinge:
 					physicscomponent->hinge_constraint.max_angle = wi::math::DegreesToRadians(args.fValue);
 					break;
+				case PhysicsConstraintComponent::Type::SwingTwist:
+					physicscomponent->swing_twist.max_twist_angle = wi::math::DegreesToRadians(args.fValue);
+					break;
 				default:
 					break;
 				}
@@ -154,6 +178,38 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 		}
 	});
 	AddWidget(&maxSlider);
+
+
+
+	normalConeSlider.Create(0, 90, 1, 90, "Normal Angle: ");
+	normalConeSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->swing_twist.normal_half_cone_angle = wi::math::DegreesToRadians(args.fValue);
+				physicscomponent->SetRefreshParametersNeeded(true);
+			}
+		}
+		});
+	AddWidget(&normalConeSlider);
+
+	planeConeSlider.Create(0, 90, 1, 90, "Plane Angle: ");
+	planeConeSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->swing_twist.plane_half_cone_angle = wi::math::DegreesToRadians(args.fValue);
+				physicscomponent->SetRefreshParametersNeeded(true);
+			}
+		}
+		});
+	AddWidget(&planeConeSlider);
 
 
 
@@ -479,6 +535,16 @@ void ConstraintWindow::SetEntity(Entity entity)
 			minSlider.SetRange(0, 90);
 			minSlider.SetValue(wi::math::RadiansToDegrees(physicsComponent->cone_constraint.half_cone_angle));
 			break;
+		case PhysicsConstraintComponent::Type::SwingTwist:
+			minSlider.SetText("Min twist angle: ");
+			maxSlider.SetText("Max twist angle: ");
+			minSlider.SetRange(-180, 0);
+			maxSlider.SetRange(0, 180);
+			minSlider.SetValue(wi::math::RadiansToDegrees(physicsComponent->swing_twist.min_twist_angle));
+			maxSlider.SetValue(wi::math::RadiansToDegrees(physicsComponent->swing_twist.max_twist_angle));
+			normalConeSlider.SetValue(wi::math::RadiansToDegrees(physicsComponent->swing_twist.normal_half_cone_angle));
+			planeConeSlider.SetValue(wi::math::RadiansToDegrees(physicsComponent->swing_twist.plane_half_cone_angle));
+			break;
 		default:
 			break;
 		}
@@ -569,12 +635,41 @@ void ConstraintWindow::ResizeLayout()
 	const PhysicsConstraintComponent* physicsComponent = scene.constraints.GetComponent(entity);
 	if (physicsComponent != nullptr)
 	{
+
 		switch (physicsComponent->type)
 		{
 		case PhysicsConstraintComponent::Type::Distance:
 		case PhysicsConstraintComponent::Type::Hinge:
 			minSlider.SetVisible(true);
 			maxSlider.SetVisible(true);
+
+			normalConeSlider.SetVisible(false);
+			planeConeSlider.SetVisible(false);
+
+			fixedXButton.SetVisible(false);
+			fixedYButton.SetVisible(false);
+			fixedZButton.SetVisible(false);
+			fixedXRotationButton.SetVisible(false);
+			fixedYRotationButton.SetVisible(false);
+			fixedZRotationButton.SetVisible(false);
+			minTranslationXSlider.SetVisible(false);
+			minTranslationYSlider.SetVisible(false);
+			minTranslationZSlider.SetVisible(false);
+			maxTranslationXSlider.SetVisible(false);
+			maxTranslationYSlider.SetVisible(false);
+			maxTranslationZSlider.SetVisible(false);
+			minRotationXSlider.SetVisible(false);
+			minRotationYSlider.SetVisible(false);
+			minRotationZSlider.SetVisible(false);
+			maxRotationXSlider.SetVisible(false);
+			maxRotationYSlider.SetVisible(false);
+			maxRotationZSlider.SetVisible(false);
+			break;
+		case PhysicsConstraintComponent::Type::SwingTwist:
+			minSlider.SetVisible(true);
+			maxSlider.SetVisible(true);
+			normalConeSlider.SetVisible(true);
+			planeConeSlider.SetVisible(true);
 
 			fixedXButton.SetVisible(false);
 			fixedYButton.SetVisible(false);
@@ -599,6 +694,9 @@ void ConstraintWindow::ResizeLayout()
 			minSlider.SetVisible(true);
 			maxSlider.SetVisible(false);
 
+			normalConeSlider.SetVisible(false);
+			planeConeSlider.SetVisible(false);
+
 			fixedXButton.SetVisible(false);
 			fixedYButton.SetVisible(false);
 			fixedZButton.SetVisible(false);
@@ -621,6 +719,9 @@ void ConstraintWindow::ResizeLayout()
 		case PhysicsConstraintComponent::Type::SixDOF:
 			minSlider.SetVisible(false);
 			maxSlider.SetVisible(false);
+
+			normalConeSlider.SetVisible(false);
+			planeConeSlider.SetVisible(false);
 
 			fixedXButton.SetVisible(true);
 			fixedYButton.SetVisible(true);
@@ -661,28 +762,18 @@ void ConstraintWindow::ResizeLayout()
 			add(maxRotationZSlider);
 			break;
 		default:
-			minSlider.SetVisible(false);
-			maxSlider.SetVisible(false);
-
-			fixedXButton.SetVisible(false);
-			fixedYButton.SetVisible(false);
-			fixedZButton.SetVisible(false);
-			fixedXRotationButton.SetVisible(false);
-			fixedYRotationButton.SetVisible(false);
-			fixedZRotationButton.SetVisible(false);
-			minTranslationXSlider.SetVisible(false);
-			minTranslationYSlider.SetVisible(false);
-			minTranslationZSlider.SetVisible(false);
-			maxTranslationXSlider.SetVisible(false);
-			maxTranslationYSlider.SetVisible(false);
-			maxTranslationZSlider.SetVisible(false);
-			minRotationXSlider.SetVisible(false);
-			minRotationYSlider.SetVisible(false);
-			minRotationZSlider.SetVisible(false);
-			maxRotationXSlider.SetVisible(false);
-			maxRotationYSlider.SetVisible(false);
-			maxRotationZSlider.SetVisible(false);
 			break;
+		}
+
+		margin_right = 40;
+
+		if (normalConeSlider.IsVisible())
+		{
+			add(normalConeSlider);
+		}
+		if (planeConeSlider.IsVisible())
+		{
+			add(planeConeSlider);
 		}
 
 		if (minSlider.IsVisible())
@@ -693,5 +784,8 @@ void ConstraintWindow::ResizeLayout()
 		{
 			add(maxSlider);
 		}
+
+		add_right(physicsDebugCheckBox);
+		add(constraintDebugSlider);
 	}
 }

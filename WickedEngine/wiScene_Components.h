@@ -543,6 +543,7 @@ namespace wi::scene
 			Hinge,		// rotation around a point on the UP axis of the contraint transform
 			Cone,		// constrain to a cone shape specified by the cone angle
 			SixDOF,		// manual specification of axes movement and rotation limits
+			SwingTwist,	// cone + rotational limits
 		} type = Type::Fixed;
 
 		wi::ecs::Entity bodyA = wi::ecs::INVALID_ENTITY;
@@ -586,6 +587,14 @@ namespace wi::scene
 			void SetFixedRotationZ() { minRotationAxes.z = XM_PI; maxRotationAxes.z = -XM_PI; }
 			void SetFreeRotationZ() { minRotationAxes.z = -XM_PI; maxRotationAxes.z = XM_PI; }
 		} six_dof;
+
+		struct SwingTwistConstraintSettings
+		{
+			float normal_half_cone_angle = 0;	// radians
+			float plane_half_cone_angle = 0;	// radians
+			float min_twist_angle = 0;			// radians [-PI, PI]
+			float max_twist_angle = 0;			// radians [-PI, PI]
+		} swing_twist;
 
 		// Non-serialized attributes:
 		std::shared_ptr<void> physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.

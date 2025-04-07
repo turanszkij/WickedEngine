@@ -929,6 +929,13 @@ namespace wi::scene
 				archive >> six_dof.minRotationAxes;
 				archive >> six_dof.maxRotationAxes;
 			}
+			if (seri.GetVersion() >= 2)
+			{
+				archive >> swing_twist.normal_half_cone_angle;
+				archive >> swing_twist.plane_half_cone_angle;
+				archive >> swing_twist.min_twist_angle;
+				archive >> swing_twist.max_twist_angle;
+			}
 		}
 		else
 		{
@@ -947,6 +954,13 @@ namespace wi::scene
 				archive << six_dof.maxTranslationAxes;
 				archive << six_dof.minRotationAxes;
 				archive << six_dof.maxRotationAxes;
+			}
+			if (seri.GetVersion() >= 2)
+			{
+				archive << swing_twist.normal_half_cone_angle;
+				archive << swing_twist.plane_half_cone_angle;
+				archive << swing_twist.min_twist_angle;
+				archive << swing_twist.max_twist_angle;
 			}
 		}
 	}

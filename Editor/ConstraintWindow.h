@@ -11,12 +11,17 @@ public:
 	void SetEntity(wi::ecs::Entity entity);
 
 	wi::gui::Label infoLabel;
+	wi::gui::CheckBox physicsDebugCheckBox;
+	wi::gui::Slider constraintDebugSlider;
 	wi::gui::Button rebindButton;
 	wi::gui::ComboBox typeComboBox;
 	wi::gui::ComboBox bodyAComboBox;
 	wi::gui::ComboBox bodyBComboBox;
 	wi::gui::Slider minSlider;
 	wi::gui::Slider maxSlider;
+
+	wi::gui::Slider normalConeSlider;
+	wi::gui::Slider planeConeSlider;
 
 	wi::gui::Button fixedXButton;
 	wi::gui::Button fixedYButton;
