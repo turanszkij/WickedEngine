@@ -936,6 +936,10 @@ namespace wi::scene
 				archive >> swing_twist.min_twist_angle;
 				archive >> swing_twist.max_twist_angle;
 			}
+			if (seri.GetVersion() >= 3)
+			{
+				archive >> hinge_constraint.target_angular_velocity;
+			}
 		}
 		else
 		{
@@ -961,6 +965,10 @@ namespace wi::scene
 				archive << swing_twist.plane_half_cone_angle;
 				archive << swing_twist.min_twist_angle;
 				archive << swing_twist.max_twist_angle;
+			}
+			if (seri.GetVersion() >= 3)
+			{
+				archive << hinge_constraint.target_angular_velocity;
 			}
 		}
 	}

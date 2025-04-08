@@ -559,6 +559,7 @@ namespace wi::scene
 		{
 			float min_angle = -XM_PI;	// radians
 			float max_angle = XM_PI;	// radians
+			float target_angular_velocity = 0;	// motor
 		} hinge_constraint; // note: hinge axis is UP, normal axis is RIGHT directions of the TransformComponent on this entity
 
 		struct ConeConstraintSettings

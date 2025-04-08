@@ -20,6 +20,8 @@ public:
 	wi::gui::Slider minSlider;
 	wi::gui::Slider maxSlider;
 
+	wi::gui::Slider motorSlider1;
+
 	wi::gui::Slider normalConeSlider;
 	wi::gui::Slider planeConeSlider;
 

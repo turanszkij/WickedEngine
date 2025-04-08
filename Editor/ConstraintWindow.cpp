@@ -179,6 +179,28 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&maxSlider);
 
+	motorSlider1.Create(0, 10, 1, 100000, "motorSlider1");
+	motorSlider1.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				switch (physicscomponent->type)
+				{
+				case PhysicsConstraintComponent::Type::Hinge:
+					physicscomponent->hinge_constraint.target_angular_velocity = args.fValue;
+					break;
+				default:
+					break;
+				}
+				physicscomponent->SetRefreshParametersNeeded(true);
+			}
+		}
+	});
+	AddWidget(&motorSlider1);
+
 
 
 	normalConeSlider.Create(0, 90, 1, 90, "Normal Angle: ");
@@ -529,6 +551,9 @@ void ConstraintWindow::SetEntity(Entity entity)
 			maxSlider.SetRange(0, 180);
 			minSlider.SetValue(wi::math::RadiansToDegrees(physicsComponent->hinge_constraint.min_angle));
 			maxSlider.SetValue(wi::math::RadiansToDegrees(physicsComponent->hinge_constraint.max_angle));
+			motorSlider1.SetText("Hinge Velocity: ");
+			motorSlider1.SetRange(-10, 10);
+			motorSlider1.SetValue(physicsComponent->hinge_constraint.target_angular_velocity);
 			break;
 		case PhysicsConstraintComponent::Type::Cone:
 			minSlider.SetText("Cone half angle: ");
@@ -635,6 +660,7 @@ void ConstraintWindow::ResizeLayout()
 	const PhysicsConstraintComponent* physicsComponent = scene.constraints.GetComponent(entity);
 	if (physicsComponent != nullptr)
 	{
+		motorSlider1.SetVisible(physicsComponent->type == PhysicsConstraintComponent::Type::Hinge);
 
 		switch (physicsComponent->type)
 		{
@@ -783,6 +809,11 @@ void ConstraintWindow::ResizeLayout()
 		if (maxSlider.IsVisible())
 		{
 			add(maxSlider);
+		}
+
+		if (motorSlider1.IsVisible())
+		{
+			add(motorSlider1);
 		}
 
 		add_right(physicsDebugCheckBox);

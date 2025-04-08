@@ -1083,7 +1083,7 @@ namespace wi::physics
 			}
 
 			physics_scene.physics_system.AddConstraint(physicsobject.constraint);
-			physicscomponent.SetRefreshParametersNeeded(false);
+			physicscomponent.SetRefreshParametersNeeded(true); // motors will be refreshed
 		}
 
 		struct Ragdoll
@@ -1994,6 +1994,25 @@ namespace wi::physics
 				{
 					HingeConstraint* ptr = ((HingeConstraint*)constraint.constraint.GetPtr());
 					ptr->SetLimits(physicscomponent.hinge_constraint.min_angle, physicscomponent.hinge_constraint.max_angle);
+
+					if (physicscomponent.hinge_constraint.target_angular_velocity != 0.0f)
+					{
+						BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
+						if (!constraint.body1_ref.IsInvalid())
+						{
+							body_interface.ActivateBody(constraint.body1_ref);
+						}
+						if (!constraint.body2_ref.IsInvalid())
+						{
+							body_interface.ActivateBody(constraint.body2_ref);
+						}
+						ptr->SetMotorState(EMotorState::Velocity);
+						ptr->SetTargetAngularVelocity(physicscomponent.hinge_constraint.target_angular_velocity);
+					}
+					else
+					{
+						ptr->SetMotorState(EMotorState::Off);
+					}
 				}
 				else if (physicscomponent.type == PhysicsConstraintComponent::Type::Cone)
 				{
