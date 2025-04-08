@@ -848,7 +848,7 @@ void EditorComponent::Load()
 
 	physicsButton.Create(ICON_RIGIDBODY);
 	physicsButton.SetShadowRadius(2);
-	physicsButton.SetTooltip("Toggle Physics Simulation On/Off\n\tOr: press while holding left SHIFT to reset physics bodies");
+	physicsButton.SetTooltip("Toggle Physics Simulation On/Off\n\tOr: press while holding left Ctrl to reset physics bodies");
 	if (main->config.GetSection("options").Has("physics"))
 	{
 		wi::physics::SetSimulationEnabled(main->config.GetSection("options").GetBool("physics"));
