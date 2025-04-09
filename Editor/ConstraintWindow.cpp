@@ -40,6 +40,22 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 	physicsDebugCheckBox.SetCheck(wi::physics::IsDebugDrawEnabled());
 	AddWidget(&physicsDebugCheckBox);
 
+	collisionCheckBox.Create("Disable self collision: ");
+	collisionCheckBox.SetTooltip("Disable collision between the two bodies that this constraint targets.\nNote: changing this will recreate the constraint in the current pose relative to the bodies.");
+	collisionCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->SetDisableSelfCollision(args.bValue);
+				physicscomponent->physicsobject = nullptr;
+			}
+		}
+		});
+	AddWidget(&collisionCheckBox);
+
 	constraintDebugSlider.Create(0, 10, 1, 100, "Debug size: ");
 	constraintDebugSlider.SetValue(wi::physics::GetConstraintDebugSize());
 	constraintDebugSlider.OnSlide([](wi::gui::EventArgs args) {
@@ -591,6 +607,8 @@ void ConstraintWindow::SetEntity(Entity entity)
 		bodyAComboBox.SetSelectedByUserdataWithoutCallback(physicsComponent->bodyA);
 		bodyBComboBox.SetSelectedByUserdataWithoutCallback(physicsComponent->bodyB);
 
+		collisionCheckBox.SetCheck(physicsComponent->IsDisableSelfCollision());
+
 		minTranslationXSlider.SetValue(physicsComponent->six_dof.minTranslationAxes.x);
 		minTranslationYSlider.SetValue(physicsComponent->six_dof.minTranslationAxes.y);
 		minTranslationZSlider.SetValue(physicsComponent->six_dof.minTranslationAxes.z);
@@ -654,6 +672,7 @@ void ConstraintWindow::ResizeLayout()
 	add(typeComboBox);
 	add(bodyAComboBox);
 	add(bodyBComboBox);
+	add_right(collisionCheckBox);
 
 
 	Scene& scene = editor->GetCurrentScene();

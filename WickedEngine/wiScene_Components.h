@@ -532,6 +532,7 @@ namespace wi::scene
 		{
 			EMPTY = 0,
 			REFRESH_PARAMETERS_REQUEST = 1 << 0,
+			DISABLE_SELF_COLLISION = 1 << 1,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -603,6 +604,10 @@ namespace wi::scene
 		// Request refreshing of constraint settings without recreating the constraint
 		constexpr void SetRefreshParametersNeeded(bool value = true) { if (value) { _flags |= REFRESH_PARAMETERS_REQUEST; } else { _flags &= ~REFRESH_PARAMETERS_REQUEST; } }
 		constexpr bool IsRefreshParametersNeeded() const { return _flags & REFRESH_PARAMETERS_REQUEST; }
+
+		// Enable/disable collision between the two bodies that this constraint targets
+		constexpr void SetDisableSelfCollision(bool value = true) { if (value) { _flags |= DISABLE_SELF_COLLISION; } else { _flags &= ~DISABLE_SELF_COLLISION; } }
+		constexpr bool IsDisableSelfCollision() const { return _flags & DISABLE_SELF_COLLISION; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

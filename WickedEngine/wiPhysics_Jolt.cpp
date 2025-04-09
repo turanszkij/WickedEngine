@@ -26,6 +26,7 @@
 #include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/CastResult.h>
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/GroupFilterTable.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyActivationListener.h>
 #include <Jolt/Physics/SoftBody/SoftBodySharedSettings.h>
@@ -120,6 +121,8 @@ namespace wi::physics
 			return ret;
 		}
 
+		static std::atomic<uint32_t> collisionGroupID{}; // generate unique collision group for each ragdoll to enable collision between them
+
 		namespace Layers
 		{
 			static constexpr ObjectLayer NON_MOVING = 0;
@@ -158,8 +161,7 @@ namespace wi::physics
 		{
 			static constexpr BroadPhaseLayer NON_MOVING(0);
 			static constexpr BroadPhaseLayer MOVING(1);
-			static constexpr BroadPhaseLayer GHOST(2);
-			static constexpr uint NUM_LAYERS(3);
+			static constexpr uint NUM_LAYERS(2);
 		};
 
 		// BroadPhaseLayerInterface implementation
@@ -172,7 +174,7 @@ namespace wi::physics
 				// Create a mapping table from object to broad phase layer
 				mObjectToBroadPhase[Layers::NON_MOVING] = BroadPhaseLayers::NON_MOVING;
 				mObjectToBroadPhase[Layers::MOVING] = BroadPhaseLayers::MOVING;
-				mObjectToBroadPhase[Layers::GHOST] = BroadPhaseLayers::GHOST;
+				mObjectToBroadPhase[Layers::GHOST] = BroadPhaseLayers::MOVING;
 			}
 
 			virtual uint GetNumBroadPhaseLayers() const override
@@ -1082,6 +1084,25 @@ namespace wi::physics
 				return;
 			}
 
+			if (physicscomponent.IsDisableSelfCollision())
+			{
+				uint32_t groupID = collisionGroupID.fetch_add(1);
+				body1->GetCollisionGroup().SetGroupID(groupID);
+				body1->GetCollisionGroup().SetSubGroupID(0);
+				body2->GetCollisionGroup().SetGroupID(groupID);
+				body2->GetCollisionGroup().SetSubGroupID(1);
+
+				Ref<GroupFilterTable> group_filter = new GroupFilterTable(2);
+				group_filter->DisableCollision(0, 1);
+				body1->GetCollisionGroup().SetGroupFilter(group_filter);
+				body2->GetCollisionGroup().SetGroupFilter(group_filter);
+			}
+			else
+			{
+				body1->GetCollisionGroup().SetGroupFilter(nullptr);
+				body2->GetCollisionGroup().SetGroupFilter(nullptr);
+			}
+
 			physics_scene.physics_system.AddConstraint(physicsobject.constraint);
 			physicscomponent.SetRefreshParametersNeeded(true); // motors will be refreshed
 		}
@@ -1545,7 +1566,6 @@ namespace wi::physics
 				settings.DisableParentChildCollisions();
 				settings.CalculateBodyIndexToConstraintIndex();
 
-				static std::atomic<uint32_t> collisionGroupID{}; // generate unique collision group for each ragdoll to enable collision between them
 				ragdoll = settings.CreateRagdoll(collisionGroupID.fetch_add(1), 0, &physics_system);
 				ragdoll->SetPose(Vec3::sZero(), final_transforms);
 				ragdoll->AddToPhysicsSystem(EActivation::Activate);

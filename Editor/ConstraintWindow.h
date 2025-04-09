@@ -11,6 +11,7 @@ public:
 	void SetEntity(wi::ecs::Entity entity);
 
 	wi::gui::Label infoLabel;
+	wi::gui::CheckBox collisionCheckBox;
 	wi::gui::CheckBox physicsDebugCheckBox;
 	wi::gui::Slider constraintDebugSlider;
 	wi::gui::Button rebindButton;
