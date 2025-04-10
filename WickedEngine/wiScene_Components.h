@@ -610,6 +610,8 @@ namespace wi::scene
 		{
 			float min_limit = -FLT_MAX;
 			float max_limit = FLT_MAX;
+			float target_velocity = 0;	// motor
+			float max_force = 0; // N
 		} slider_constraint;
 
 		// Non-serialized attributes:

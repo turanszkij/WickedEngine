@@ -945,6 +945,11 @@ namespace wi::scene
 				archive >> slider_constraint.min_limit;
 				archive >> slider_constraint.max_limit;
 			}
+			if (seri.GetVersion() >= 5)
+			{
+				archive >> slider_constraint.target_velocity;
+				archive >> slider_constraint.max_force;
+			}
 		}
 		else
 		{
@@ -979,6 +984,11 @@ namespace wi::scene
 			{
 				archive << slider_constraint.min_limit;
 				archive << slider_constraint.max_limit;
+			}
+			if (seri.GetVersion() >= 5)
+			{
+				archive << slider_constraint.target_velocity;
+				archive << slider_constraint.max_force;
 			}
 		}
 	}
