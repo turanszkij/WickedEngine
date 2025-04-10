@@ -85,6 +85,7 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 	typeComboBox.AddItem("Cone", (uint64_t)PhysicsConstraintComponent::Type::Cone);
 	typeComboBox.AddItem("Six DOF", (uint64_t)PhysicsConstraintComponent::Type::SixDOF);
 	typeComboBox.AddItem("Swing Twist", (uint64_t)PhysicsConstraintComponent::Type::SwingTwist);
+	typeComboBox.AddItem("Slider", (uint64_t)PhysicsConstraintComponent::Type::Slider);
 	typeComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -158,6 +159,9 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 				case PhysicsConstraintComponent::Type::SwingTwist:
 					physicscomponent->swing_twist.min_twist_angle = wi::math::DegreesToRadians(args.fValue);
 					break;
+				case PhysicsConstraintComponent::Type::Slider:
+					physicscomponent->slider_constraint.min_limit = args.fValue;
+					break;
 				default:
 					break;
 				}
@@ -185,6 +189,9 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 					break;
 				case PhysicsConstraintComponent::Type::SwingTwist:
 					physicscomponent->swing_twist.max_twist_angle = wi::math::DegreesToRadians(args.fValue);
+					break;
+				case PhysicsConstraintComponent::Type::Slider:
+					physicscomponent->slider_constraint.max_limit = args.fValue;
 					break;
 				default:
 					break;
@@ -560,6 +567,14 @@ void ConstraintWindow::SetEntity(Entity entity)
 			minSlider.SetValue(physicsComponent->distance_constraint.min_distance);
 			maxSlider.SetValue(physicsComponent->distance_constraint.max_distance);
 			break;
+		case PhysicsConstraintComponent::Type::Slider:
+			minSlider.SetText("Min limit: ");
+			maxSlider.SetText("Max limit: ");
+			minSlider.SetRange(-10, 0);
+			maxSlider.SetRange(0, 10);
+			minSlider.SetValue(physicsComponent->slider_constraint.min_limit);
+			maxSlider.SetValue(physicsComponent->slider_constraint.max_limit);
+			break;
 		case PhysicsConstraintComponent::Type::Hinge:
 			minSlider.SetText("Min angle: ");
 			maxSlider.SetText("Max angle: ");
@@ -684,6 +699,7 @@ void ConstraintWindow::ResizeLayout()
 		switch (physicsComponent->type)
 		{
 		case PhysicsConstraintComponent::Type::Distance:
+		case PhysicsConstraintComponent::Type::Slider:
 		case PhysicsConstraintComponent::Type::Hinge:
 			minSlider.SetVisible(true);
 			maxSlider.SetVisible(true);

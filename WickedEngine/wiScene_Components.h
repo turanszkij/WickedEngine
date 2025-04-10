@@ -536,15 +536,23 @@ namespace wi::scene
 		};
 		uint32_t _flags = EMPTY;
 
+		// Note: the constraint axes are taken from the TransformComponent on the constraint's entity
+		//	RIGHT axis means X axis in the default orientation
+		//	UP axis means Y axis in the default orientation
+		//
+		//	The constraints are created in world space from the current TransformComponent orientation
+		//	To issue recreation of the constraint, reset the physicsobject pointer of this structure
+		//	To only refresh cosntraint settings without recreating the constraint, use SetRefreshParametersNeeded(true)
 		enum class Type
 		{
 			Fixed,		// fixed in place completely
 			Point,		// fixed to a point but can rotate around it
 			Distance,	// point constraint within specified distance
 			Hinge,		// rotation around a point on the UP axis of the contraint transform
-			Cone,		// constrain to a cone shape specified by the cone angle
+			Cone,		// constrain to a cone shape specified by the cone angle (cone axis: UP)
 			SixDOF,		// manual specification of axes movement and rotation limits
-			SwingTwist,	// cone + rotational limits
+			SwingTwist,	// cone (UP axis) + rotational limits
+			Slider,		// constrain on the RIGHT axis between limits
 		} type = Type::Fixed;
 
 		wi::ecs::Entity bodyA = wi::ecs::INVALID_ENTITY;
@@ -561,12 +569,12 @@ namespace wi::scene
 			float min_angle = -XM_PI;	// radians
 			float max_angle = XM_PI;	// radians
 			float target_angular_velocity = 0;	// motor
-		} hinge_constraint; // note: hinge axis is UP, normal axis is RIGHT directions of the TransformComponent on this entity
+		} hinge_constraint;
 
 		struct ConeConstraintSettings
 		{
 			float half_cone_angle = 0;	// radians
-		} cone_constraint; // note: cone axis is RIGHT of the TransformComponent on this entity
+		} cone_constraint;
 
 		struct SixDOFConstraintSettings
 		{
@@ -597,6 +605,12 @@ namespace wi::scene
 			float min_twist_angle = 0;			// radians [-PI, PI]
 			float max_twist_angle = 0;			// radians [-PI, PI]
 		} swing_twist;
+
+		struct SliderConstraintSettings
+		{
+			float min_limit = -FLT_MAX;
+			float max_limit = FLT_MAX;
+		} slider_constraint;
 
 		// Non-serialized attributes:
 		std::shared_ptr<void> physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.

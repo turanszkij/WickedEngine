@@ -40,6 +40,7 @@
 #include <Jolt/Physics/Constraints/HingeConstraint.h>
 #include <Jolt/Physics/Constraints/ConeConstraint.h>
 #include <Jolt/Physics/Constraints/SixDOFConstraint.h>
+#include <Jolt/Physics/Constraints/SliderConstraint.h>
 #include <Jolt/Physics/Ragdoll/Ragdoll.h>
 #include <Jolt/Skeleton/Skeleton.h>
 #include <Jolt/Physics/Vehicle/VehicleConstraint.h>
@@ -1072,6 +1073,15 @@ namespace wi::physics
 				settings.mTwistMaxAngle = physicscomponent.swing_twist.max_twist_angle;
 				physicsobject.constraint = settings.Create(*body1, *body2);
 			}
+			else if (physicscomponent.type == PhysicsConstraintComponent::Type::Slider)
+			{
+				SliderConstraintSettings settings;
+				settings.mSpace = EConstraintSpace::WorldSpace;
+				settings.mPoint1 = settings.mPoint2 = cast(transform.GetPosition());
+				settings.mSliderAxis1 = settings.mSliderAxis2 = cast(transform.GetRight()).Normalized();
+				settings.mNormalAxis1 = settings.mNormalAxis2 = cast(transform.GetUp()).Normalized();
+				physicsobject.constraint = settings.Create(*body1, *body2);
+			}
 			else
 			{
 				wilog("Constraint creation failed: constraint type is not valid!");
@@ -2052,6 +2062,11 @@ namespace wi::physics
 					ptr->SetPlaneHalfConeAngle(physicscomponent.swing_twist.plane_half_cone_angle);
 					ptr->SetTwistMinAngle(physicscomponent.swing_twist.min_twist_angle);
 					ptr->SetTwistMaxAngle(physicscomponent.swing_twist.max_twist_angle);
+				}
+				else if (physicscomponent.type == PhysicsConstraintComponent::Type::Slider)
+				{
+					SliderConstraint* ptr = ((SliderConstraint*)constraint.constraint.GetPtr());
+					ptr->SetLimits(physicscomponent.slider_constraint.min_limit, physicscomponent.slider_constraint.max_limit);
 				}
 			}
 		});

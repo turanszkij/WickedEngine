@@ -940,6 +940,11 @@ namespace wi::scene
 			{
 				archive >> hinge_constraint.target_angular_velocity;
 			}
+			if (seri.GetVersion() >= 4)
+			{
+				archive >> slider_constraint.min_limit;
+				archive >> slider_constraint.max_limit;
+			}
 		}
 		else
 		{
@@ -969,6 +974,11 @@ namespace wi::scene
 			if (seri.GetVersion() >= 3)
 			{
 				archive << hinge_constraint.target_angular_velocity;
+			}
+			if (seri.GetVersion() >= 4)
+			{
+				archive << slider_constraint.min_limit;
+				archive << slider_constraint.max_limit;
 			}
 		}
 	}
