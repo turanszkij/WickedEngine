@@ -2028,6 +2028,9 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	// Update the scene, to have up to date values immediately after loading:
 	//	For example, snap to camera functionality relies on this
 	scene.Update(0);
+
+	// after scene update, clean up duplicate colliders that could have been loaded by some extension
+	scene.DeleteDuplicateColliders();
 }
 
 void Import_Extension_VRM(LoaderState& state)

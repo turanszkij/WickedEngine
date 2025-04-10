@@ -7971,6 +7971,29 @@ namespace wi::scene
 		}
 	}
 
+	void Scene::DeleteDuplicateColliders()
+	{
+		int cnt = 0;
+		for (uint32_t i = 0; i < colliders.GetCount(); ++i)
+		{
+			const ColliderComponent& colliderA = colliders[i];
+			for (uint32_t j = i + 1; j < colliders.GetCount();)
+			{
+				const ColliderComponent& colliderB = colliders[j];
+				if (std::memcmp(&colliderA, &colliderB, sizeof(ColliderComponent)) == 0)
+				{
+					cnt++;
+					colliders.Remove(colliders.GetEntity(j));
+				}
+				else
+				{
+					++j;
+				}
+			}
+		}
+		wilog("DeleteDuplicateColliders: removed %d duplicate colliders", cnt);
+	}
+
 	void Scene::UpdateHumanoidFacings()
 	{
 		// A contrived way of determining default facing and knee bending directions for humanoids:

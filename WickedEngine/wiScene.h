@@ -587,6 +587,9 @@ namespace wi::scene
 		// If somehow NANs happened in TransformComponents, this will clear them up and rename them with _nanfix postfix to help filtering them
 		void FixupNans();
 
+		// Duplicate colliders will be removed from the scene
+		void DeleteDuplicateColliders();
+
 	private:
 		void UpdateHumanoidFacings();
 

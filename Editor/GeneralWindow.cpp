@@ -664,6 +664,12 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			ktxConvButton.sprites[i].params.corners_rounding[2].radius = 8;
 			ktxConvButton.sprites[i].params.corners_rounding[3].radius = 8;
 
+			duplicateCollidersButton.sprites[i].params.enableCornerRounding();
+			duplicateCollidersButton.sprites[i].params.corners_rounding[0].radius = 8;
+			duplicateCollidersButton.sprites[i].params.corners_rounding[1].radius = 8;
+			duplicateCollidersButton.sprites[i].params.corners_rounding[2].radius = 8;
+			duplicateCollidersButton.sprites[i].params.corners_rounding[3].radius = 8;
+
 			editor->aboutWindow.sprites[i].params.enableCornerRounding();
 			editor->aboutWindow.sprites[i].params.corners_rounding[0].radius = 10;
 			editor->aboutWindow.sprites[i].params.corners_rounding[1].radius = 10;
@@ -937,6 +943,17 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&ktxConvButton);
 
+
+	duplicateCollidersButton.Create("Delete duplicate colliders");
+	duplicateCollidersButton.SetTooltip("Duplicate colliders will be removed from the scene.");
+	duplicateCollidersButton.SetSize(XMFLOAT2(100, 18));
+	duplicateCollidersButton.OnClick([=](wi::gui::EventArgs args) {
+		Scene& scene = editor->GetCurrentScene();
+		scene.DeleteDuplicateColliders();
+		editor->componentsWnd.RefreshEntityTree();
+	});
+	AddWidget(&duplicateCollidersButton);
+
 	SetVisible(false);
 }
 
@@ -1067,4 +1084,5 @@ void GeneralWindow::ResizeLayout()
 	add_fullwidth(eliminateCoarseCascadesButton);
 	add_fullwidth(ddsConvButton);
 	add_fullwidth(ktxConvButton);
+	add_fullwidth(duplicateCollidersButton);
 }
