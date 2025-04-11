@@ -2067,6 +2067,28 @@ namespace wi::physics
 				{
 					SliderConstraint* ptr = ((SliderConstraint*)constraint.constraint.GetPtr());
 					ptr->SetLimits(physicscomponent.slider_constraint.min_limit, physicscomponent.slider_constraint.max_limit);
+
+					if (physicscomponent.slider_constraint.target_velocity != 0.0f)
+					{
+						BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
+						if (!constraint.body1_ref.IsInvalid())
+						{
+							body_interface.ActivateBody(constraint.body1_ref);
+						}
+						if (!constraint.body2_ref.IsInvalid())
+						{
+							body_interface.ActivateBody(constraint.body2_ref);
+						}
+						ptr->SetMotorState(EMotorState(EMotorState::Velocity));
+						ptr->SetTargetVelocity(physicscomponent.slider_constraint.target_velocity);
+						auto& settings = ptr->GetMotorSettings();
+						settings.mMaxForceLimit = physicscomponent.slider_constraint.max_force;
+						settings.mMinForceLimit = -physicscomponent.slider_constraint.max_force;
+					}
+					else
+					{
+						ptr->SetMotorState(EMotorState::Off);
+					}
 				}
 			}
 		});

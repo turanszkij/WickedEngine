@@ -215,6 +215,9 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 				case PhysicsConstraintComponent::Type::Hinge:
 					physicscomponent->hinge_constraint.target_angular_velocity = args.fValue;
 					break;
+				case PhysicsConstraintComponent::Type::Slider:
+					physicscomponent->slider_constraint.target_velocity = args.fValue;
+					break;
 				default:
 					break;
 				}
@@ -224,6 +227,27 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&motorSlider1);
 
+	motorSlider2.Create(0, 10, 1, 100000, "motorSlider2");
+	motorSlider2.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				switch (physicscomponent->type)
+				{
+				case PhysicsConstraintComponent::Type::Slider:
+					physicscomponent->slider_constraint.max_force = args.fValue;
+					break;
+				default:
+					break;
+				}
+				physicscomponent->SetRefreshParametersNeeded(true);
+			}
+		}
+		});
+	AddWidget(&motorSlider2);
 
 
 	normalConeSlider.Create(0, 90, 1, 90, "Normal Angle: ");
@@ -574,6 +598,12 @@ void ConstraintWindow::SetEntity(Entity entity)
 			maxSlider.SetRange(0, 10);
 			minSlider.SetValue(physicsComponent->slider_constraint.min_limit);
 			maxSlider.SetValue(physicsComponent->slider_constraint.max_limit);
+			motorSlider1.SetText("Slider Velocity: ");
+			motorSlider1.SetRange(-10, 10);
+			motorSlider1.SetValue(physicsComponent->slider_constraint.target_velocity);
+			motorSlider2.SetText("Force limit: ");
+			motorSlider2.SetRange(0, 1000);
+			motorSlider2.SetValue(physicsComponent->slider_constraint.max_force);
 			break;
 		case PhysicsConstraintComponent::Type::Hinge:
 			minSlider.SetText("Min angle: ");
@@ -695,6 +725,8 @@ void ConstraintWindow::ResizeLayout()
 	if (physicsComponent != nullptr)
 	{
 		motorSlider1.SetVisible(physicsComponent->type == PhysicsConstraintComponent::Type::Hinge);
+		motorSlider1.SetVisible(physicsComponent->type == PhysicsConstraintComponent::Type::Slider);
+		motorSlider2.SetVisible(physicsComponent->type == PhysicsConstraintComponent::Type::Slider);
 
 		switch (physicsComponent->type)
 		{
@@ -849,6 +881,10 @@ void ConstraintWindow::ResizeLayout()
 		if (motorSlider1.IsVisible())
 		{
 			add(motorSlider1);
+		}
+		if (motorSlider2.IsVisible())
+		{
+			add(motorSlider2);
 		}
 
 		add_right(physicsDebugCheckBox);
