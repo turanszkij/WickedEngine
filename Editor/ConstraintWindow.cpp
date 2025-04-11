@@ -724,8 +724,7 @@ void ConstraintWindow::ResizeLayout()
 	const PhysicsConstraintComponent* physicsComponent = scene.constraints.GetComponent(entity);
 	if (physicsComponent != nullptr)
 	{
-		motorSlider1.SetVisible(physicsComponent->type == PhysicsConstraintComponent::Type::Hinge);
-		motorSlider1.SetVisible(physicsComponent->type == PhysicsConstraintComponent::Type::Slider);
+		motorSlider1.SetVisible(physicsComponent->type == PhysicsConstraintComponent::Type::Hinge || physicsComponent->type == PhysicsConstraintComponent::Type::Slider);
 		motorSlider2.SetVisible(physicsComponent->type == PhysicsConstraintComponent::Type::Slider);
 
 		switch (physicsComponent->type)
