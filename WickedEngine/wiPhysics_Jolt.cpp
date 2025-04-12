@@ -1137,6 +1137,9 @@ namespace wi::physics
 				BODYPART_RIGHT_UPPER_ARM,
 				BODYPART_RIGHT_LOWER_ARM,
 
+				BODYPART_LEFT_FOOT,
+				BODYPART_RIGHT_FOOT,
+
 				BODYPART_COUNT
 			};
 
@@ -1245,6 +1248,16 @@ namespace wi::physics
 						entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightLowerArm];
 						entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightHand];
 						break;
+					case BODYPART_LEFT_FOOT:
+						humanoid_bone = HumanoidComponent::HumanoidBone::LeftFoot;
+						entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftFoot];
+						entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftToes];
+						break;
+					case BODYPART_RIGHT_FOOT:
+						humanoid_bone = HumanoidComponent::HumanoidBone::RightFoot;
+						entityA = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightFoot];
+						entityB = humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightToes];
+						break;
 					}
 					if (entityA == INVALID_ENTITY)
 					{
@@ -1305,6 +1318,10 @@ namespace wi::physics
 							capsule_radius = capsule_height * 0.15f * humanoid.ragdoll_fatness;
 							capsule_height -= capsule_radius;
 							break;
+						case BODYPART_LEFT_FOOT:
+						case BODYPART_RIGHT_FOOT:
+							capsule_radius = capsule_height * 0.3f * humanoid.ragdoll_fatness;
+							break;
 						default:
 							capsule_radius = capsule_height * 0.2f * humanoid.ragdoll_fatness;
 							capsule_height -= capsule_radius * 2;
@@ -1334,6 +1351,11 @@ namespace wi::physics
 					case BODYPART_RIGHT_LOWER_ARM:
 						physicsobject.capsule = wi::primitive::Capsule(XMFLOAT3(-capsule_height * 0.5f - capsule_radius, 0, 0), XMFLOAT3(capsule_height * 0.5f + capsule_radius, 0, 0), capsule_radius);
 						rtshape_settings.mRotation = Quat::sRotation(Vec3::sAxisZ(), 0.5f * JPH_PI).Normalized();
+						break;
+					case BODYPART_LEFT_FOOT:
+					case BODYPART_RIGHT_FOOT:
+						physicsobject.capsule = wi::primitive::Capsule(XMFLOAT3(0, 0, -capsule_height * 0.5f - capsule_radius), XMFLOAT3(0, 0, capsule_height * 0.5f + capsule_radius), capsule_radius);
+						rtshape_settings.mRotation = Quat::sRotation(Vec3::sAxisX(), 0.5f * JPH_PI).Normalized();
 						break;
 					default:
 						physicsobject.capsule = wi::primitive::Capsule(XMFLOAT3(0, -capsule_height * 0.5f - capsule_radius, 0), XMFLOAT3(0, capsule_height * 0.5f + capsule_radius, 0), capsule_radius);
@@ -1369,6 +1391,10 @@ namespace wi::physics
 					case BODYPART_RIGHT_UPPER_ARM:
 					case BODYPART_RIGHT_LOWER_ARM:
 						local_offset = Vec3(offset * facing, 0, 0);
+						break;
+					case BODYPART_LEFT_FOOT:
+					case BODYPART_RIGHT_FOOT:
+						local_offset = Vec3(0, XMVectorGetY(rootB - rootA), capsule_height * 0.5f * facing);
 						break;
 					default:
 						break;
@@ -1428,6 +1454,8 @@ namespace wi::physics
 				bodyparts[BODYPART_LEFT_LOWER_ARM] = skeleton.AddJoint("LowerArmL", bodyparts[BODYPART_LEFT_UPPER_ARM]);
 				bodyparts[BODYPART_RIGHT_UPPER_ARM] = skeleton.AddJoint("UpperArmR", bodyparts[BODYPART_SPINE]);
 				bodyparts[BODYPART_RIGHT_LOWER_ARM] = skeleton.AddJoint("LowerArmR", bodyparts[BODYPART_RIGHT_UPPER_ARM]);
+				bodyparts[BODYPART_LEFT_FOOT] = skeleton.AddJoint("FootL", bodyparts[BODYPART_LEFT_LOWER_LEG]);
+				bodyparts[BODYPART_RIGHT_FOOT] = skeleton.AddJoint("FootR", bodyparts[BODYPART_RIGHT_LOWER_LEG]);
 
 				// Constraint limits
 				const float twist_angle[] = {
@@ -1442,6 +1470,8 @@ namespace wi::physics
 					45.0f,		// Lower Arm L
 					45.0f,		// Upper Arm R
 					45.0f,		// Lower Arm R
+					20.0f,		// Foot L
+					20.0f,		// Foot R
 				};
 
 				const float normal_angle[] = {
@@ -1456,6 +1486,8 @@ namespace wi::physics
 					0.0f,		// Lower Arm L
 					90.0f,		// Upper Arm R
 					0.0f,		// Lower Arm R
+					20.0f,		// Foot L
+					20.0f,		// Foot R
 				};
 
 				const float plane_angle[] = {
@@ -1470,6 +1502,8 @@ namespace wi::physics
 					90.0f,		// Lower Arm L
 					45.0f,		// Upper Arm R
 					90.0f,		// Lower Arm R
+					20.0f,		// Foot L
+					20.0f,		// Foot R
 				};
 
 				static float constraint_dbg = 0.1f;
@@ -1489,86 +1523,93 @@ namespace wi::physics
 					part.mObjectLayer = Layers::MOVING;
 					part.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
 					part.mMassPropertiesOverride.mMass = masses[p];
-					
+
 					// First part is the root, doesn't have a parent and doesn't have a constraint
-					if (p > 0)
+					if (p == 0)
+						continue;
+
+					if (p == BODYPART_LEFT_LOWER_LEG || p == BODYPART_RIGHT_LOWER_LEG)
 					{
-						if (p == BODYPART_LEFT_LOWER_LEG || p == BODYPART_RIGHT_LOWER_LEG)
+						Ref<HingeConstraintSettings> constraint = new HingeConstraintSettings;
+						constraint->mDrawConstraintSize = constraint_dbg;
+						constraint->mPoint1 = constraint->mPoint2 = constraint_positions[p];
+						constraint->mHingeAxis1 = constraint->mHingeAxis2 = Vec3::sAxisX() * facing;
+						constraint->mNormalAxis1 = constraint->mNormalAxis2 = -Vec3::sAxisY();
+						if (fixpose)
 						{
-							Ref<HingeConstraintSettings> constraint = new HingeConstraintSettings;
-							constraint->mDrawConstraintSize = constraint_dbg;
-							constraint->mPoint1 = constraint->mPoint2 = constraint_positions[p];
-							constraint->mHingeAxis1 = constraint->mHingeAxis2 = Vec3::sAxisX() * facing;
-							constraint->mNormalAxis1 = constraint->mNormalAxis2 = -Vec3::sAxisY();
-							if (fixpose)
-							{
-								constraint->mLimitsMin = constraint->mLimitsMax = 0;
-							}
-							else
-							{
-								constraint->mLimitsMin = 0;
-								constraint->mLimitsMax = JPH_PI * 0.8f;
-							}
-							part.mToParent = constraint;
-						}
-						else if (p == BODYPART_LEFT_LOWER_ARM)
-						{
-							Ref<HingeConstraintSettings> constraint = new HingeConstraintSettings;
-							constraint->mDrawConstraintSize = constraint_dbg;
-							constraint->mPoint1 = constraint->mPoint2 = constraint_positions[p];
-							constraint->mHingeAxis1 = constraint->mHingeAxis2 = Vec3::sAxisY();
-							constraint->mNormalAxis1 = constraint->mNormalAxis2 = (constraint_positions[p] - constraint_positions[p - 1]).Normalized();
-							if (fixpose)
-							{
-								constraint->mLimitsMin = constraint->mLimitsMax = 0;
-							}
-							else
-							{
-								constraint->mLimitsMin = 0;
-								constraint->mLimitsMax = JPH_PI * 0.6f;
-							}
-							part.mToParent = constraint;
-						}
-						else if (p == BODYPART_RIGHT_LOWER_ARM)
-						{
-							Ref<HingeConstraintSettings> constraint = new HingeConstraintSettings;
-							constraint->mDrawConstraintSize = constraint_dbg;
-							constraint->mPoint1 = constraint->mPoint2 = constraint_positions[p];
-							constraint->mHingeAxis1 = constraint->mHingeAxis2 = -Vec3::sAxisY();
-							constraint->mNormalAxis1 = constraint->mNormalAxis2 = (constraint_positions[p] - constraint_positions[p - 1]).Normalized();
-							if (fixpose)
-							{
-								constraint->mLimitsMin = constraint->mLimitsMax = 0;
-							}
-							else
-							{
-								constraint->mLimitsMin = 0;
-								constraint->mLimitsMax = JPH_PI * 0.6f;
-							}
-							part.mToParent = constraint;
+							constraint->mLimitsMin = constraint->mLimitsMax = 0;
 						}
 						else
 						{
-							Ref<SwingTwistConstraintSettings> constraint = new SwingTwistConstraintSettings;
-							constraint->mDrawConstraintSize = constraint_dbg;
-							constraint->mPosition1 = constraint->mPosition2 = constraint_positions[p];
-							constraint->mTwistAxis1 = constraint->mTwistAxis2 = (positions[p] - constraint_positions[p]).Normalized();
-							constraint->mPlaneAxis1 = constraint->mPlaneAxis2 = Vec3::sAxisZ() * facing;
-							if (fixpose)
-							{
-								constraint->mTwistMinAngle = constraint->mTwistMaxAngle = 0;
-								constraint->mNormalHalfConeAngle = 0;
-								constraint->mPlaneHalfConeAngle = 0;
-							}
-							else
-							{
-								constraint->mTwistMinAngle = -DegreesToRadians(twist_angle[p]);
-								constraint->mTwistMaxAngle = DegreesToRadians(twist_angle[p]);
-								constraint->mNormalHalfConeAngle = DegreesToRadians(normal_angle[p]);
-								constraint->mPlaneHalfConeAngle = DegreesToRadians(plane_angle[p]);
-							}
-							part.mToParent = constraint;
+							constraint->mLimitsMin = 0;
+							constraint->mLimitsMax = JPH_PI * 0.8f;
 						}
+						part.mToParent = constraint;
+					}
+					else if (p == BODYPART_LEFT_LOWER_ARM)
+					{
+						Ref<HingeConstraintSettings> constraint = new HingeConstraintSettings;
+						constraint->mDrawConstraintSize = constraint_dbg;
+						constraint->mPoint1 = constraint->mPoint2 = constraint_positions[p];
+						constraint->mHingeAxis1 = constraint->mHingeAxis2 = Vec3::sAxisY();
+						constraint->mNormalAxis1 = constraint->mNormalAxis2 = (constraint_positions[p] - constraint_positions[p - 1]).Normalized();
+						if (fixpose)
+						{
+							constraint->mLimitsMin = constraint->mLimitsMax = 0;
+						}
+						else
+						{
+							constraint->mLimitsMin = 0;
+							constraint->mLimitsMax = JPH_PI * 0.6f;
+						}
+						part.mToParent = constraint;
+					}
+					else if (p == BODYPART_RIGHT_LOWER_ARM)
+					{
+						Ref<HingeConstraintSettings> constraint = new HingeConstraintSettings;
+						constraint->mDrawConstraintSize = constraint_dbg;
+						constraint->mPoint1 = constraint->mPoint2 = constraint_positions[p];
+						constraint->mHingeAxis1 = constraint->mHingeAxis2 = -Vec3::sAxisY();
+						constraint->mNormalAxis1 = constraint->mNormalAxis2 = (constraint_positions[p] - constraint_positions[p - 1]).Normalized();
+						if (fixpose)
+						{
+							constraint->mLimitsMin = constraint->mLimitsMax = 0;
+						}
+						else
+						{
+							constraint->mLimitsMin = 0;
+							constraint->mLimitsMax = JPH_PI * 0.6f;
+						}
+						part.mToParent = constraint;
+					}
+					else
+					{
+						Ref<SwingTwistConstraintSettings> constraint = new SwingTwistConstraintSettings;
+						constraint->mDrawConstraintSize = constraint_dbg;
+						constraint->mPosition1 = constraint->mPosition2 = constraint_positions[p];
+						constraint->mTwistAxis1 = constraint->mTwistAxis2 = (positions[p] - constraint_positions[p]).Normalized();
+						if (p == BODYPART_LEFT_FOOT || p == BODYPART_RIGHT_FOOT)
+						{
+							constraint->mPlaneAxis1 = constraint->mPlaneAxis2 = Vec3::sAxisX() * facing;
+						}
+						else
+						{
+							constraint->mPlaneAxis1 = constraint->mPlaneAxis2 = Vec3::sAxisZ() * facing;
+						}
+						if (fixpose)
+						{
+							constraint->mTwistMinAngle = constraint->mTwistMaxAngle = 0;
+							constraint->mNormalHalfConeAngle = 0;
+							constraint->mPlaneHalfConeAngle = 0;
+						}
+						else
+						{
+							constraint->mTwistMinAngle = -DegreesToRadians(twist_angle[p]);
+							constraint->mTwistMaxAngle = DegreesToRadians(twist_angle[p]);
+							constraint->mNormalHalfConeAngle = DegreesToRadians(normal_angle[p]);
+							constraint->mPlaneHalfConeAngle = DegreesToRadians(plane_angle[p]);
+						}
+						part.mToParent = constraint;
 					}
 				}
 

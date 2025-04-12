@@ -3636,51 +3636,6 @@ void UpdateVisibility(Visibility& vis)
 					collider.dist = wi::math::DistanceSquared(sphere.center, vis.camera->Eye);
 					vis.visibleColliders.push_back(collider);
 				}
-
-				// Add foot capsules fore capsule shadow, which are not part of the ragdoll now:
-				if (capsule_shadow)
-				{
-					const std::pair<Entity, Entity> feet[] = {
-						{humanoid.bones[(int)HumanoidComponent::HumanoidBone::RightFoot], humanoid.bones[(int)HumanoidComponent::HumanoidBone::RightToes]},
-						{humanoid.bones[(int)HumanoidComponent::HumanoidBone::LeftFoot], humanoid.bones[(int)HumanoidComponent::HumanoidBone::LeftToes]},
-					};
-					for (auto& foot : feet)
-					{
-						if (foot.first != INVALID_ENTITY && foot.second != INVALID_ENTITY)
-						{
-							const TransformComponent* footTransform = vis.scene->transforms.GetComponent(foot.first);
-							const TransformComponent* toesTransform = vis.scene->transforms.GetComponent(foot.second);
-							if (footTransform != nullptr && toesTransform != nullptr)
-							{
-								XMVECTOR A = footTransform->GetPositionV();
-								XMVECTOR B = toesTransform->GetPositionV();
-								XMVECTOR DIFF = B - A;
-								XMVECTOR LEN = XMVectorMax(XMVectorSplatEpsilon(), XMVector3Length(DIFF));
-								XMVECTOR N = DIFF / LEN; // normalize
-								const float radius = XMVectorGetX(LEN) * 0.4f;
-								A -= N * radius;
-								B += N * radius;
-								Capsule capsule = Capsule(A, B, radius);
-								Sphere sphere = capsule.getSphere();
-								sphere.radius *= CAPSULE_SHADOW_BOLDEN;
-								sphere.radius += CAPSULE_SHADOW_AFFECTION_RANGE;
-								if (vis.camera->frustum.CheckSphere(sphere.center, sphere.radius))
-								{
-									ColliderComponent collider;
-									collider.layerMask = layerMask;
-									collider.shape = ColliderComponent::Shape::Capsule;
-									collider.capsule = capsule;
-									collider.SetCapsuleShadowEnabled(capsule_shadow);
-									collider.dist = wi::math::DistanceSquared(sphere.center, vis.camera->Eye);
-									vis.visibleColliders.push_back(collider);
-									//static std::mutex locker;
-									//std::scoped_lock lck(locker);
-									//DrawCapsule(capsule);
-								}
-							}
-						}
-					}
-				}
 			}
 			// GPU colliders sorting to camera priority:
 			std::sort(vis.visibleColliders.begin(), vis.visibleColliders.end(), [](const ColliderComponent& a, const ColliderComponent& b) {
