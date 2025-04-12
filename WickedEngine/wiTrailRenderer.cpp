@@ -22,6 +22,12 @@ namespace wi
 	static PipelineState		PSO[BLENDMODE_COUNT];
 	static PipelineState		PSO_wire;
 
+	void TrailRenderer::Clear()
+	{
+		points.clear();
+		cuts.clear();
+	}
+
 	void TrailRenderer::AddPoint(const XMFLOAT3& position, float width, const XMFLOAT4& color)
 	{
 		TrailPoint& point = points.emplace_back();
@@ -91,7 +97,7 @@ namespace wi
 		sb.g_xTrailTexMulAdd2 = texMulAdd2;
 		sb.g_xTrailDepthSoften = 1.0f / (width * 10);
 		sb.g_xTrailTextureIndex1 = device->GetDescriptorIndex(texture.IsValid() ? &texture : wi::texturehelper::getWhite(), SubresourceType::SRV);
-		sb.g_xTrailTextureIndex2 = device->GetDescriptorIndex(texture2.IsValid() ? &texture : wi::texturehelper::getWhite(), SubresourceType::SRV);
+		sb.g_xTrailTextureIndex2 = device->GetDescriptorIndex(texture2.IsValid() ? &texture2 : wi::texturehelper::getWhite(), SubresourceType::SRV);
 		sb.g_xTrailLinearDepthTextureIndex = camera.texture_lineardepth_index;
 		sb.g_xTrailCameraFar = camera.zFarP;
 		device->BindDynamicConstantBuffer(sb, CBSLOT_TRAILRENDERER, cmd);

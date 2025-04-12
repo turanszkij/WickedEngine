@@ -32,6 +32,7 @@
 #include "VoxelGridWindow.h"
 #include "MetadataWindow.h"
 #include "ConstraintWindow.h"
+#include "SplineWindow.h"
 
 class EditorComponent;
 
@@ -78,6 +79,7 @@ public:
 	VoxelGridWindow voxelGridWnd;
 	MetadataWindow metadataWnd;
 	ConstraintWindow constraintWnd;
+	SplineWindow splineWnd;
 
 	enum class Filter : uint64_t
 	{
@@ -112,6 +114,7 @@ public:
 		Metadata = 1 << 28,
 		Vehicle = 1 << 29,
 		Constraint = 1 << 30,
+		Spline = 1 << 31,
 
 		All = ~0ull,
 	} filter = Filter::All;

@@ -90,8 +90,7 @@ namespace wi::lua
 	}
 	int TrailRenderer_BindLua::Clear(lua_State* L)
 	{
-		trail.points.clear();
-		trail.cuts.clear();
+		trail.Clear();
 		return 0;
 	}
 	int TrailRenderer_BindLua::GetPointCount(lua_State* L)

@@ -2495,6 +2495,31 @@ namespace wi::scene
 			archive << scale;
 		}
 	}
+	void SplineComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
+	{
+		if (archive.IsReadMode())
+		{
+			archive >> _flags;
+
+			size_t node_count = 0;
+			archive >> node_count;
+			spline_node_entities.resize(node_count);
+			for (size_t i = 0; i < node_count; ++i)
+			{
+				SerializeEntity(archive, spline_node_entities[i], seri);
+			}
+		}
+		else
+		{
+			archive << _flags;
+
+			archive << spline_node_entities.size();
+			for (size_t i = 0; i < spline_node_entities.size(); ++i)
+			{
+				SerializeEntity(archive, spline_node_entities[i], seri);
+			}
+		}
+	}
 
 	void Scene::Serialize(wi::Archive& archive)
 	{

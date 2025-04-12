@@ -352,6 +352,8 @@ namespace wi::scene
 
 		RunExpressionUpdateSystem(ctx);
 
+		RunSplineUpdateSystem(ctx);
+
 		RunMeshUpdateSystem(ctx);
 
 		RunMaterialUpdateSystem(ctx);
@@ -5747,6 +5749,22 @@ namespace wi::scene
 
 		});
 		wi::jobsystem::Wait(ctx);
+	}
+	void Scene::RunSplineUpdateSystem(wi::jobsystem::context& ctx)
+	{
+		wi::jobsystem::Dispatch(ctx, (uint32_t)splines.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
+			SplineComponent& spline = splines[args.jobIndex];
+			spline.spline_node_transforms.resize(spline.spline_node_entities.size());
+			for (size_t i = 0; i < spline.spline_node_entities.size(); ++i)
+			{
+				Entity node_entity = spline.spline_node_entities[i];
+				const TransformComponent* node_transform = transforms.GetComponent(node_entity);
+				if (node_transform != nullptr)
+				{
+					spline.spline_node_transforms[i] = *node_transform;
+				}
+			}
+		});
 	}
 
 	Scene::RayIntersectionResult Scene::Intersects(const Ray& ray, uint32_t filterMask, uint32_t layerMask, uint32_t lod) const

@@ -26,6 +26,9 @@ namespace wi
 		XMFLOAT4 texMulAdd = XMFLOAT4(1, 1, 0, 0);
 		XMFLOAT4 texMulAdd2 = XMFLOAT4(1, 1, 0, 0);
 
+		// Clears points and cuts:
+		void Clear();
+
 		// Adds a new point:
 		void AddPoint(const XMFLOAT3& position, float width = 1, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1));
 

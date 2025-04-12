@@ -556,6 +556,7 @@ void EditorComponent::Load()
 		NEW_VOXELGRID,
 		NEW_METADATA,
 		NEW_CONSTRAINT,
+		NEW_SPLINE,
 	};
 
 	newEntityCombo.Create("New: ");
@@ -591,6 +592,7 @@ void EditorComponent::Load()
 	newEntityCombo.AddItem("Voxel Grid " ICON_VOXELGRID, NEW_VOXELGRID);
 	newEntityCombo.AddItem("Metadata " ICON_METADATA, NEW_METADATA);
 	newEntityCombo.AddItem("Constraint " ICON_CONSTRAINT, NEW_CONSTRAINT);
+	newEntityCombo.AddItem("Spline " ICON_SPLINE, NEW_SPLINE);
 	newEntityCombo.OnSelect([this](wi::gui::EventArgs args) {
 		newEntityCombo.SetSelectedWithoutCallback(-1);
 		const EditorComponent::EditorScene& editorscene = GetCurrentEditorScene();
@@ -788,6 +790,14 @@ void EditorComponent::Load()
 			scene.constraints.Create(pick.entity);
 			scene.transforms.Create(pick.entity);
 			scene.names.Create(pick.entity) = "constraint";
+		}
+		break;
+		case NEW_SPLINE:
+		{
+			pick.entity = CreateEntity();
+			scene.splines.Create(pick.entity);
+			scene.transforms.Create(pick.entity);
+			scene.names.Create(pick.entity) = "spline";
 		}
 		break;
 		default:
@@ -1317,6 +1327,41 @@ void EditorComponent::Load()
 		}
 	}
 
+	uint8_t spline_gradient[4096];
+	for (int i = 0; i < arraysize(spline_gradient); ++i)
+	{
+		float u = float(i) / float(arraysize(spline_gradient) - 1);
+		float p = u * 2 - 1;
+		float c = smoothstep(0.0f, 0.1f, 1.0f - saturate(std::abs(p)));
+		spline_gradient[i] = uint8_t(c * 255);
+	}
+	bool success = wi::texturehelper::CreateTexture(
+		spline_renderer.texture,
+		spline_gradient,
+		arraysize(spline_gradient),
+		1,
+		Format::R8_UNORM,
+		SwizzleFromString("111r")
+	);
+	assert(success);
+
+	for (int i = 0; i < arraysize(spline_gradient); ++i)
+	{
+		float u = float(i) / float(arraysize(spline_gradient) - 1);
+		float p = u * 2 - 1;
+		float c = lerp(0.2f, 1.0f, smoothstep(0.0f, 0.6f, std::abs(p)));
+		spline_gradient[i] = uint8_t(c * 255);
+	}
+	success = wi::texturehelper::CreateTexture(
+		spline_renderer.texture2,
+		spline_gradient,
+		arraysize(spline_gradient),
+		1,
+		Format::R8_UNORM,
+		SwizzleFromString("111r")
+	);
+	assert(success);
+
 	RenderPath2D::Load();
 }
 void EditorComponent::Start()
@@ -1786,6 +1831,38 @@ void EditorComponent::Update(float dt)
 				for (size_t i = 0; i < scene.constraints.GetCount(); ++i)
 				{
 					Entity entity = scene.constraints.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
+					float dis = XMVectorGetX(disV);
+					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					{
+						hovered = wi::scene::PickResult();
+						hovered.entity = entity;
+						hovered.distance = dis;
+					}
+				}
+			}
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Spline))
+			{
+				for (size_t i = 0; i < scene.splines.GetCount(); ++i)
+				{
+					for (size_t j = 0; j < scene.splines[i].spline_node_transforms.size(); ++j)
+					{
+						const TransformComponent& transform = scene.splines[i].spline_node_transforms[j];
+						XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
+						float dis = XMVectorGetX(disV);
+						if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * 0.025f && dis < hovered.distance)
+						{
+							hovered = wi::scene::PickResult();
+							hovered.entity = scene.splines[i].spline_node_entities[j];
+							hovered.distance = dis;
+						}
+					}
+
+					Entity entity = scene.splines.GetEntity(i);
 					if (!scene.transforms.Contains(entity))
 						continue;
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
@@ -2635,6 +2712,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.voxelGridWnd.SetEntity(picked.entity);
 		componentsWnd.metadataWnd.SetEntity(picked.entity);
 		componentsWnd.constraintWnd.SetEntity(picked.entity);
+		componentsWnd.splineWnd.SetEntity(picked.entity);
 
 		bool found_object = false;
 		bool found_mesh = false;
@@ -2968,6 +3046,26 @@ void EditorComponent::PostUpdate()
 				camera.UpdateCamera();
 			}
 		}
+	}
+
+	spline_renderer.texMulAdd2 = XMFLOAT4(1, 1, spline_renderer.texMulAdd2.z - scene.dt, 0);
+	spline_renderer.color = dummyColor;
+	spline_renderer.Clear();
+	for (size_t i = 0; i < scene.splines.GetCount(); ++i)
+	{
+		const SplineComponent& spline = scene.splines[i];
+		Entity entity = scene.splines.GetEntity(i);
+		const TransformComponent* transform = scene.transforms.GetComponent(entity);
+		if (transform != nullptr)
+		{
+			spline_renderer.AddPoint(transform->GetPosition(), transform->GetScale().x * 0.1f);
+		}
+		for (size_t j = 0; j < spline.spline_node_transforms.size(); ++j)
+		{
+			const TransformComponent& node_transform = spline.spline_node_transforms[j];
+			spline_renderer.AddPoint(node_transform.GetPosition(), node_transform.GetScale().x * 0.1f);
+		}
+		spline_renderer.Cut();
 	}
 }
 void EditorComponent::PreRender()
@@ -3597,6 +3695,59 @@ void EditorComponent::Render() const
 				}
 			}
 
+			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Spline))
+			{
+				for (size_t i = 0; i < scene.splines.GetCount(); ++i)
+				{
+					for (size_t j = 0; j < scene.splines[i].spline_node_transforms.size(); ++j)
+					{
+						Entity entity = scene.splines[i].spline_node_entities[j];
+						const TransformComponent& transform = scene.splines[i].spline_node_transforms[j];
+
+						fp.position = transform.GetPosition();
+						fp.scaling = 0.5f * scaling * wi::math::Distance(transform.GetPosition(), camera.Eye);
+						fp.color = inactiveEntityColor;
+
+						if (hovered.entity == entity)
+						{
+							fp.color = hoveredEntityColor;
+						}
+						for (auto& picked : translator.selected)
+						{
+							if (picked.entity == entity)
+							{
+								fp.color = selectedEntityColor;
+								break;
+							}
+						}
+						wi::font::Draw(ICON_SPLINE_NODE, fp, cmd);
+					}
+
+					Entity entity = scene.splines.GetEntity(i);
+					if (!scene.transforms.Contains(entity))
+						continue;
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					fp.position = transform.GetPosition();
+					fp.scaling = scaling * wi::math::Distance(transform.GetPosition(), camera.Eye);
+					fp.color = inactiveEntityColor;
+
+					if (hovered.entity == entity)
+					{
+						fp.color = hoveredEntityColor;
+					}
+					for (auto& picked : translator.selected)
+					{
+						if (picked.entity == entity)
+						{
+							fp.color = selectedEntityColor;
+							break;
+						}
+					}
+					wi::font::Draw(ICON_SPLINE, fp, cmd);
+				}
+			}
+
 			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Decal))
 			{
 				for (size_t i = 0; i < scene.decals.GetCount(); ++i)
@@ -4222,6 +4373,8 @@ void EditorComponent::Render() const
 				params.v_align = wi::font::WIFALIGN_CENTER;
 				wi::font::Draw(str, params, cmd);
 			}
+
+			spline_renderer.Draw(camera, cmd);
 
 			paintToolWnd.DrawBrush(*this, cmd);
 			if (paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED)
@@ -5741,6 +5894,7 @@ void EditorComponent::RefreshSceneList()
 			componentsWnd.voxelGridWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.metadataWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.constraintWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.splineWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 
 			componentsWnd.RefreshEntityTree();
 			ResetHistory();

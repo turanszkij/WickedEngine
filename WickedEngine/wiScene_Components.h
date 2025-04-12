@@ -2536,4 +2536,20 @@ namespace wi::scene
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
+
+	struct SplineComponent
+	{
+		enum FLAGS
+		{
+			NONE = 0,
+		};
+		uint32_t _flags = NONE;
+
+		wi::vector<wi::ecs::Entity> spline_node_entities;
+
+		// Non-serialized attributes:
+		wi::vector<TransformComponent> spline_node_transforms;
+
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+	};
 }
