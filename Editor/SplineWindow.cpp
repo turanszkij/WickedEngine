@@ -65,6 +65,7 @@ void SplineWindow::SetEntity(Entity entity)
 	{
 		this->entity = entity;
 
+		RefreshEntries();
 	}
 	else
 	{
