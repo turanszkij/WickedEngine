@@ -38,12 +38,15 @@ void SplineWindow::Create(EditorComponent* _editor)
 		SplineComponent* spline = scene.splines.GetComponent(entity);
 		if (spline == nullptr)
 			return;
-		Entity entity = CreateEntity();
-		scene.names.Create(entity) = "spline_node_" + std::to_string(spline->spline_node_entities.size());
-		const TransformComponent& transform = scene.transforms.Create(entity);
-		spline->spline_node_entities.push_back(entity);
+		Entity node_entity = CreateEntity();
+		scene.names.Create(node_entity) = "spline_node_" + std::to_string(spline->spline_node_entities.size());
+		const TransformComponent& transform = scene.transforms.Create(node_entity);
+		spline->spline_node_entities.push_back(node_entity);
 		spline->spline_node_transforms.push_back(transform);
+		scene.Component_Attach(node_entity, entity);
 		RefreshEntries();
+		editor->ClearSelected();
+		editor->AddSelected(node_entity);
 		editor->componentsWnd.RefreshEntityTree();
 	});
 	AddWidget(&addButton);
@@ -57,6 +60,7 @@ void SplineWindow::Create(EditorComponent* _editor)
 
 void SplineWindow::SetEntity(Entity entity)
 {
+	const bool changed = this->entity != entity;
 	Scene& scene = editor->GetCurrentScene();
 
 	const SplineComponent* spline = scene.splines.GetComponent(entity);
@@ -65,7 +69,11 @@ void SplineWindow::SetEntity(Entity entity)
 	{
 		this->entity = entity;
 
-		RefreshEntries();
+		if (changed)
+		{
+			RefreshEntries();
+			SetEnabled(true);
+		}
 	}
 	else
 	{
@@ -176,6 +184,7 @@ void SplineWindow::RefreshEntries()
 			spline->spline_node_transforms.erase(spline->spline_node_transforms.begin() + i);
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
 				RefreshEntries();
+				editor->componentsWnd.RefreshEntityTree();
 			});
 		});
 		AddWidget(&entry.removeButton);

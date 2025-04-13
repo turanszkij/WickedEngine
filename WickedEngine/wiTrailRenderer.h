@@ -14,6 +14,7 @@ namespace wi
 			XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 			float width = 1;
 			XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
+			XMFLOAT4 rotation = XMFLOAT4(0, 0, 0, 0); // if all zero then auto camera facing node
 		};
 		wi::vector<TrailPoint> points;
 		wi::vector<uint32_t> cuts;
@@ -30,7 +31,8 @@ namespace wi
 		void Clear();
 
 		// Adds a new point:
-		void AddPoint(const XMFLOAT3& position, float width = 1, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1));
+		//	Note: rotation parameter can be left as default, in this case the point will be camera facing, otherwise explicit rotation can be specified (up direction is rotated)
+		void AddPoint(const XMFLOAT3& position, float width = 1, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1), const XMFLOAT4& rotation = XMFLOAT4(0, 0, 0, 0));
 
 		// Adds a new cut, which will start a new continuous curve from the next AddPoint():
 		void Cut();

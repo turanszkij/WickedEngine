@@ -28,12 +28,13 @@ namespace wi
 		cuts.clear();
 	}
 
-	void TrailRenderer::AddPoint(const XMFLOAT3& position, float width, const XMFLOAT4& color)
+	void TrailRenderer::AddPoint(const XMFLOAT3& position, float width, const XMFLOAT4& color, const XMFLOAT4& rotation)
 	{
 		TrailPoint& point = points.emplace_back();
 		point.position = position;
 		point.width = width;
 		point.color = color;
+		point.rotation = rotation;
 	}
 
 	void TrailRenderer::Cut()
@@ -153,11 +154,29 @@ namespace wi
 				XMVECTOR P2 = XMLoadFloat3(&points[std::max(startcut, std::min(i + 1, count - 1))].position);
 				XMVECTOR P3 = XMLoadFloat3(&points[std::max(startcut, std::min(i + 2, count - 1))].position);
 
-				float width_current = points[i].width;
-				float width_next = points[std::min(i + 1, count - 1)].width;
+				XMVECTOR W0 = XMVectorReplicate(points[std::max(startcut, std::min(i - 1, count - 1))].width);
+				XMVECTOR W1 = XMVectorReplicate(points[std::max(startcut, std::min(i, count - 1))].width);
+				XMVECTOR W2 = XMVectorReplicate(points[std::max(startcut, std::min(i + 1, count - 1))].width);
+				XMVECTOR W3 = XMVectorReplicate(points[std::max(startcut, std::min(i + 2, count - 1))].width);
 
-				XMFLOAT4 color_current = points[i].color;
-				XMFLOAT4 color_next = points[std::min(i + 1, count - 1)].color;
+				XMVECTOR C0 = XMLoadFloat4(&points[std::max(startcut, std::min(i - 1, count - 1))].color);
+				XMVECTOR C1 = XMLoadFloat4(&points[std::max(startcut, std::min(i, count - 1))].color);
+				XMVECTOR C2 = XMLoadFloat4(&points[std::max(startcut, std::min(i + 1, count - 1))].color);
+				XMVECTOR C3 = XMLoadFloat4(&points[std::max(startcut, std::min(i + 2, count - 1))].color);
+
+				XMVECTOR Q0 = XMLoadFloat4(&points[std::max(startcut, std::min(i - 1, count - 1))].rotation);
+				XMVECTOR Q1 = XMLoadFloat4(&points[std::max(startcut, std::min(i, count - 1))].rotation);
+				XMVECTOR Q2 = XMLoadFloat4(&points[std::max(startcut, std::min(i + 1, count - 1))].rotation);
+				XMVECTOR Q3 = XMLoadFloat4(&points[std::max(startcut, std::min(i + 2, count - 1))].rotation);
+
+				const bool rotation_enabled = points[i].rotation.x != 0 || points[i].rotation.y != 0 || points[i].rotation.z != 0 || points[i].rotation.w != 0;
+				if (rotation_enabled)
+				{
+					Q0 = XMQuaternionNormalize(Q0);
+					Q1 = XMQuaternionNormalize(Q1);
+					Q2 = XMQuaternionNormalize(Q2);
+					Q3 = XMQuaternionNormalize(Q3);
+				}
 
 				if (i == startcut)
 				{
@@ -170,21 +189,45 @@ namespace wi
 					P3 += P2 - P1;
 				}
 
-				bool cap = i == (count - 1);
-				uint32_t segment_resolution = cap ? 1 : subdivision;
+				const bool cap = i == (count - 1);
+				const uint32_t segment_resolution = cap ? 1 : subdivision;
 
 				for (uint32_t j = 0; j < segment_resolution; ++j)
 				{
 					float t = float(j) / float(segment_resolution);
 
-					XMVECTOR P = cap ? XMVectorLerp(P1, P2, t) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t);
-					XMVECTOR P_prev = cap ? XMVectorLerp(P0, P1, t - resolution_rcp) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t - resolution_rcp);
-					XMVECTOR P_next = cap ? XMVectorLerp(P1, P2, t + resolution_rcp) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t + resolution_rcp);
-					float width_interpolated = wi::math::Lerp(width_current, width_next, t);
-					XMFLOAT4 color_interpolated = wi::math::Lerp(color_current, color_next, t);
+					const XMVECTOR P = cap ? XMVectorLerp(P1, P2, t) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t);
+					const XMVECTOR P_prev = cap ? XMVectorLerp(P0, P1, t - resolution_rcp) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t - resolution_rcp);
+					const XMVECTOR P_next = cap ? XMVectorLerp(P1, P2, t + resolution_rcp) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t + resolution_rcp);
+					const float width_interpolated = XMVectorGetX(cap ? XMVectorLerp(W1, W2, t) : XMVectorCatmullRom(W0, W1, W2, W3, t));
+					const XMVECTOR C = cap ? XMVectorLerp(C1, C2, t) : XMVectorCatmullRom(C0, C1, C2, C3, t);
+					XMFLOAT4 color_interpolated;
+					XMStoreFloat4(&color_interpolated, C);
 
+					XMVECTOR N;
+					if (rotation_enabled)
+					{
+						XMVECTOR Q;
+						if (cap)
+						{
+							Q = XMQuaternionSlerp(Q1, Q2, t);
+						}
+						else
+						{
+							// Note: squad interpolation wasn't working completely right here in some tests
+							Q = XMVectorCatmullRom(Q0, Q1, Q2, Q3, t);
+						}
+						Q = XMQuaternionNormalize(Q);
+						N = XMVector3Rotate(XMVectorSet(0, 1, 0, 0), Q);
+					}
+					else
+					{
+						N = P - CAM; // camera facing
+					}
+					N = XMVector3Normalize(N);
 					XMVECTOR T = XMVector3Normalize(P_next - P_prev);
-					XMVECTOR B = XMVector3Normalize(XMVector3Cross(T, P - CAM));
+					XMVECTOR B = XMVector3Normalize(XMVector3Cross(T, N));
+					N = XMVector3Normalize(XMVector3Cross(B, T));
 					B *= width_interpolated * width;
 
 					if (!cap)

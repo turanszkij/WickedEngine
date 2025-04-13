@@ -2712,12 +2712,12 @@ void EditorComponent::Update(float dt)
 		componentsWnd.voxelGridWnd.SetEntity(picked.entity);
 		componentsWnd.metadataWnd.SetEntity(picked.entity);
 		componentsWnd.constraintWnd.SetEntity(picked.entity);
-		componentsWnd.splineWnd.SetEntity(picked.entity);
 
 		bool found_object = false;
 		bool found_mesh = false;
 		bool found_soft = false;
 		bool found_material = false;
+		bool found_spline = false;
 
 		const ObjectComponent* object = scene.objects.GetComponent(picked.entity);
 		if (object != nullptr) // maybe it was deleted...
@@ -2760,6 +2760,28 @@ void EditorComponent::Update(float dt)
 				componentsWnd.materialWnd.SetEntity(x.entity);
 				found_material = true;
 			}
+
+			// Indirectly bind selected to spline window if selected is part of a spline:
+			for (size_t i = 0; i < scene.splines.GetCount(); ++i)
+			{
+				const SplineComponent& spline = scene.splines[i];
+				Entity spline_entity = scene.splines.GetEntity(i);
+				if (x.entity == spline_entity)
+				{
+					found_spline = true;
+					componentsWnd.splineWnd.SetEntity(spline_entity);
+					break;
+				}
+				for (size_t j = 0; j < spline.spline_node_entities.size(); ++j)
+				{
+					if (x.entity == spline.spline_node_entities[j])
+					{
+						found_spline = true;
+						componentsWnd.splineWnd.SetEntity(spline_entity);
+						break;
+					}
+				}
+			}
 		}
 
 		if (!found_object)
@@ -2777,6 +2799,10 @@ void EditorComponent::Update(float dt)
 		if (!found_material)
 		{
 			componentsWnd.materialWnd.SetEntity(INVALID_ENTITY);
+		}
+		if (!found_spline)
+		{
+			componentsWnd.splineWnd.SetEntity(INVALID_ENTITY);
 		}
 
 	}
@@ -3058,12 +3084,12 @@ void EditorComponent::PostUpdate()
 		const TransformComponent* transform = scene.transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
-			spline_renderer.AddPoint(transform->GetPosition(), transform->GetScale().x * 0.1f);
+			spline_renderer.AddPoint(transform->GetPosition(), std::max(0.0f, transform->GetScale().x) * 0.1f, XMFLOAT4(1, 1, 1, 1), transform->GetRotation());
 		}
 		for (size_t j = 0; j < spline.spline_node_transforms.size(); ++j)
 		{
 			const TransformComponent& node_transform = spline.spline_node_transforms[j];
-			spline_renderer.AddPoint(node_transform.GetPosition(), node_transform.GetScale().x * 0.1f);
+			spline_renderer.AddPoint(node_transform.GetPosition(), std::max(0.0f, node_transform.GetScale().x) * 0.1f, XMFLOAT4(1, 1, 1, 1), node_transform.GetRotation());
 		}
 		spline_renderer.Cut();
 	}

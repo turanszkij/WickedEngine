@@ -39,13 +39,13 @@ namespace wi::lua
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc < 1)
 		{
-			wi::lua::SError(L, "TrailRenderer::AddPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1)) not enough arguments!");
+			wi::lua::SError(L, "TrailRenderer::AddPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1), opt Vector rotationQuaternion = Vector()) not enough arguments!");
 			return 0;
 		}
 		Vector_BindLua* pos = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (pos == nullptr)
 		{
-			wi::lua::SError(L, "TrailRenderer::AddPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1)) first argument is not a Vector!");
+			wi::lua::SError(L, "TrailRenderer::AddPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1), opt Vector rotationQuaternion = Vector()) first argument is not a Vector!");
 			return 0;
 		}
 		TrailRenderer::TrailPoint point;
@@ -59,11 +59,24 @@ namespace wi::lua
 				Vector_BindLua* col = Luna<Vector_BindLua>::lightcheck(L, 3);
 				if (col == nullptr)
 				{
-					wi::lua::SError(L, "TrailRenderer::AddPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1)) third argument is not a Vector!");
+					wi::lua::SError(L, "TrailRenderer::AddPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1), opt Vector rotationQuaternion = Vector()) third argument is not a Vector!");
 				}
 				else
 				{
 					point.color = col->data;
+				}
+
+				if (argc > 3)
+				{
+					Vector_BindLua* rot = Luna<Vector_BindLua>::lightcheck(L, 4);
+					if (rot == nullptr)
+					{
+						wi::lua::SError(L, "TrailRenderer::AddPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1), opt Vector rotationQuaternion = Vector()) fourth argument is not a Vector!");
+					}
+					else
+					{
+						point.rotation = rot->data;
+					}
 				}
 			}
 		}

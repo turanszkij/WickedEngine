@@ -352,8 +352,6 @@ namespace wi::scene
 
 		RunExpressionUpdateSystem(ctx);
 
-		RunSplineUpdateSystem(ctx);
-
 		RunMeshUpdateSystem(ctx);
 
 		RunMaterialUpdateSystem(ctx);
@@ -395,6 +393,8 @@ namespace wi::scene
 		RunSpriteUpdateSystem(ctx);
 
 		RunFontUpdateSystem(ctx);
+
+		RunSplineUpdateSystem(ctx);
 
 		wi::jobsystem::Wait(ctx); // dependencies
 
