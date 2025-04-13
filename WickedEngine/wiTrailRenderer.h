@@ -26,6 +26,7 @@ namespace wi
 		wi::graphics::Texture texture2;
 		XMFLOAT4 texMulAdd = XMFLOAT4(1, 1, 0, 0);
 		XMFLOAT4 texMulAdd2 = XMFLOAT4(1, 1, 0, 0);
+		float depth_soften = 10;
 
 		// Clears points and cuts:
 		void Clear();

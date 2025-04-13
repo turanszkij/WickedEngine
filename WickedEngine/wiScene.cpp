@@ -41,6 +41,8 @@ namespace wi::scene
 		//	So GPU persistent resources need to be created accordingly for them too:
 		RunScriptUpdateSystem(ctx);
 
+		RunSplineUpdateSystem(ctx);
+
 		ScanAnimationDependencies();
 
 		// Terrains updates kick off:
@@ -393,8 +395,6 @@ namespace wi::scene
 		RunSpriteUpdateSystem(ctx);
 
 		RunFontUpdateSystem(ctx);
-
-		RunSplineUpdateSystem(ctx);
 
 		wi::jobsystem::Wait(ctx); // dependencies
 
@@ -5752,8 +5752,30 @@ namespace wi::scene
 	}
 	void Scene::RunSplineUpdateSystem(wi::jobsystem::context& ctx)
 	{
+		// On the main thread, check if any of them require mesh component, etc:
+		for (size_t i = 0; i < splines.GetCount(); ++i)
+		{
+			SplineComponent& spline = splines[i];
+			Entity entity = splines.GetEntity(i);
+			if (spline.mesh_generation_subdivision > 0 && !meshes.Contains(entity))
+			{
+				meshes.Create(entity).SetDoubleSided(true);
+			}
+			if (spline.mesh_generation_subdivision > 0 && !materials.Contains(entity))
+			{
+				materials.Create(entity);
+			}
+			if (spline.mesh_generation_subdivision > 0 && !objects.Contains(entity))
+			{
+				objects.Create(entity).meshID = entity;
+			}
+		}
+
 		wi::jobsystem::Dispatch(ctx, (uint32_t)splines.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
 			SplineComponent& spline = splines[args.jobIndex];
+			Entity entity = splines.GetEntity(args.jobIndex);
+			bool dirty = spline.prev_mesh_generation_subdivision != spline.mesh_generation_subdivision;
+			dirty |= spline.prev_mesh_generation_nodes != (int)spline.spline_node_entities.size();
 			spline.spline_node_transforms.resize(spline.spline_node_entities.size());
 			for (size_t i = 0; i < spline.spline_node_entities.size(); ++i)
 			{
@@ -5761,10 +5783,95 @@ namespace wi::scene
 				const TransformComponent* node_transform = transforms.GetComponent(node_entity);
 				if (node_transform != nullptr)
 				{
+					dirty |= node_transform->IsDirty();
 					spline.spline_node_transforms[i] = *node_transform;
+					spline.spline_node_transforms[i].SetDirty();
+					spline.spline_node_transforms[i].UpdateTransform(); // before mesh update: LOCAL spacea
+				}
+			}
+
+			if (dirty && spline.mesh_generation_subdivision > 0 && spline.spline_node_transforms.size() > 1)
+			{
+				MeshComponent* mesh = meshes.GetComponent(entity);
+				if (mesh != nullptr)
+				{
+					spline.prev_mesh_generation_subdivision = spline.mesh_generation_subdivision;
+					spline.prev_mesh_generation_nodes = (int)spline.spline_node_entities.size();
+					const size_t segmentCount = (spline.spline_node_transforms.size() - 1) * (size_t)spline.mesh_generation_subdivision;
+					const size_t vertexCount = segmentCount * 2;
+					const size_t indexCount = (segmentCount - 1) * 6;
+					mesh->vertex_positions.resize(vertexCount);
+					mesh->vertex_normals.resize(vertexCount);
+					mesh->vertex_tangents.resize(vertexCount);
+					mesh->vertex_uvset_0.resize(vertexCount);
+					mesh->indices.resize(indexCount);
+					if (mesh->subsets.empty())
+					{
+						mesh->subsets.emplace_back().materialID = entity;
+					}
+					MeshComponent::MeshSubset& subset = mesh->subsets.front();
+					subset.indexCount = (uint32_t)indexCount;
+					subset.indexOffset = 0;
+					TransformComponent eval;
+					float uv = 0;
+					for (size_t i = 0; i < segmentCount; ++i)
+					{
+						float t = float(i) / float(segmentCount - 1);
+						float uv = 0;
+						XMStoreFloat4x4(&eval.world, spline.EvaluateSplineAt(t, &uv));
+						const size_t vertex0 = i * 2 + 0;
+						const size_t vertex1 = i * 2 + 1;
+
+						const XMVECTOR P = eval.GetPositionV();
+						const XMVECTOR R = eval.GetRightV();
+						XMStoreFloat3(&mesh->vertex_positions[vertex0], P + R);
+						XMStoreFloat3(&mesh->vertex_positions[vertex1], P - R);
+
+						const XMVECTOR N = XMVector3Normalize(eval.GetUpV());
+						XMStoreFloat3(&mesh->vertex_normals[vertex0], N);
+						XMStoreFloat3(&mesh->vertex_normals[vertex1], N);
+
+						const XMVECTOR T = XMVector3Normalize(eval.GetForwardV());
+						XMStoreFloat4(&mesh->vertex_tangents[vertex0], T);
+						XMStoreFloat4(&mesh->vertex_tangents[vertex1], T);
+						mesh->vertex_tangents[vertex0].w = 1;
+						mesh->vertex_tangents[vertex1].w = 1;
+
+						mesh->vertex_uvset_0[vertex0].x = 0;
+						mesh->vertex_uvset_0[vertex0].y = uv;
+						mesh->vertex_uvset_0[vertex1].x = 1;
+						mesh->vertex_uvset_0[vertex1].y = uv;
+					}
+					size_t i0 = 0;
+					for (size_t i = 0; i < segmentCount - 1; ++i)
+					{
+						uint32_t vertex0 = uint32_t(i * 2 + 0);
+						uint32_t vertex1 = uint32_t(i * 2 + 1);
+						uint32_t vertex2 = uint32_t(i * 2 + 2);
+						uint32_t vertex3 = uint32_t(i * 2 + 3);
+						mesh->indices[i0++] = vertex0;
+						mesh->indices[i0++] = vertex1;
+						mesh->indices[i0++] = vertex2;
+						mesh->indices[i0++] = vertex2;
+						mesh->indices[i0++] = vertex1;
+						mesh->indices[i0++] = vertex3;
+					}
+					mesh->CreateRenderData();
+				}
+			}
+
+			// AFTER mesh generation, parented update:
+			for (size_t i = 0; i < spline.spline_node_entities.size(); ++i)
+			{
+				Entity node_entity = spline.spline_node_entities[i];
+				const TransformComponent* node_transform = transforms.GetComponent(node_entity);
+				if (node_transform != nullptr)
+				{
+					XMStoreFloat4x4(&spline.spline_node_transforms[i].world, ComputeEntityMatrixRecursive(node_entity));
 				}
 			}
 		});
+		wi::jobsystem::Wait(ctx);
 	}
 
 	Scene::RayIntersectionResult Scene::Intersects(const Ray& ray, uint32_t filterMask, uint32_t layerMask, uint32_t lod) const

@@ -11,6 +11,8 @@ public:
 	void SetEntity(wi::ecs::Entity entity);
 
 	wi::gui::Label infoLabel;
+	wi::gui::CheckBox alignedCheck;
+	wi::gui::Slider subdivSlider;
 	wi::gui::Button addButton;
 
 	struct Entry

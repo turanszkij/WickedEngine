@@ -26,9 +26,50 @@ void SplineWindow::Create(EditorComponent* _editor)
 	});
 
 	infoLabel.Create("SplineInfo");
-	infoLabel.SetSize(XMFLOAT2(100, 100));
+	infoLabel.SetSize(XMFLOAT2(100, 90));
 	infoLabel.SetText("The spline is a curve that goes through every specified entity that has a TransformComponent smoothly.");
 	AddWidget(&infoLabel);
+
+	alignedCheck.Create("Draw Aligned: ");
+	alignedCheck.OnClick([this](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			SplineComponent* spline = scene.splines.GetComponent(x.entity);
+			if (spline == nullptr)
+				continue;
+			spline->SetDrawAligned(args.bValue);
+		}
+
+		// indirect set:
+		SplineComponent* spline = scene.splines.GetComponent(entity);
+		if (spline != nullptr)
+		{
+			spline->SetDrawAligned(args.bValue);
+		}
+	});
+	AddWidget(&alignedCheck);
+
+	subdivSlider.Create(0, 100, 0, 100, "Mesh subdivision: ");
+	subdivSlider.OnSlide([this](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			SplineComponent* spline = scene.splines.GetComponent(x.entity);
+			if (spline == nullptr)
+				continue;
+			spline->mesh_generation_subdivision = args.iValue;
+		}
+
+		// indirect set:
+		SplineComponent* spline = scene.splines.GetComponent(entity);
+		if (spline != nullptr)
+		{
+			spline->mesh_generation_subdivision = args.iValue;
+		}
+		editor->componentsWnd.RefreshEntityTree();
+	});
+	AddWidget(&subdivSlider);
 
 	addButton.Create("AddNode");
 	addButton.SetText("+");
@@ -40,7 +81,18 @@ void SplineWindow::Create(EditorComponent* _editor)
 			return;
 		Entity node_entity = CreateEntity();
 		scene.names.Create(node_entity) = "spline_node_" + std::to_string(spline->spline_node_entities.size());
-		const TransformComponent& transform = scene.transforms.Create(node_entity);
+		TransformComponent& transform = scene.transforms.Create(node_entity);
+		if (!spline->spline_node_transforms.empty())
+		{
+			XMVECTOR D = XMVectorSet(1, 0, 0, 0);
+			if (spline->spline_node_transforms.size() > 1)
+			{
+				D = XMVector3Normalize(spline->spline_node_transforms[spline->spline_node_transforms.size() - 1].GetPositionV() - spline->spline_node_transforms[spline->spline_node_transforms.size() - 2].GetPositionV());
+			}
+			transform = spline->spline_node_transforms.back();
+			transform.Translate(D);
+			transform.UpdateTransform();
+		}
 		spline->spline_node_entities.push_back(node_entity);
 		spline->spline_node_transforms.push_back(transform);
 		scene.Component_Attach(node_entity, entity);
@@ -69,6 +121,9 @@ void SplineWindow::SetEntity(Entity entity)
 	{
 		this->entity = entity;
 
+		alignedCheck.SetCheck(spline->IsDrawAligned());
+		subdivSlider.SetValue(spline->mesh_generation_subdivision);
+
 		if (changed)
 		{
 			RefreshEntries();
@@ -82,6 +137,61 @@ void SplineWindow::SetEntity(Entity entity)
 
 }
 
+void SplineWindow::RefreshEntries()
+{
+	for (auto& entry : entries)
+	{
+		RemoveWidget(&entry.removeButton);
+		RemoveWidget(&entry.entityButton);
+	}
+	entries.clear();
+
+	Scene& scene = editor->GetCurrentScene();
+	SplineComponent* spline = scene.splines.GetComponent(entity);
+	if (spline == nullptr)
+		return;
+
+	entries.reserve(spline->spline_node_entities.size());
+
+	for (size_t i = 0; i < spline->spline_node_entities.size(); ++i)
+	{
+		Entity entity = spline->spline_node_entities[i];
+		const NameComponent* name = scene.names.GetComponent(entity);
+
+		Entry& entry = entries.emplace_back();
+		entry.entityButton.Create("");
+		if (name != nullptr)
+		{
+			entry.entityButton.SetText(name->name);
+		}
+		else
+		{
+			entry.entityButton.SetText("[unnamed] " + std::to_string(entity));
+		}
+		entry.entityButton.OnClick([this, entity](wi::gui::EventArgs args) {
+			editor->ClearSelected();
+			editor->AddSelected(entity);
+			});
+		AddWidget(&entry.entityButton);
+
+		entry.removeButton.Create("");
+		entry.removeButton.SetText("X");
+		entry.removeButton.SetSize(XMFLOAT2(entry.removeButton.GetSize().y, entry.removeButton.GetSize().y));
+		entry.removeButton.OnClick([i, spline, this](wi::gui::EventArgs args) {
+			Scene& scene = editor->GetCurrentScene();
+			scene.Entity_Remove(spline->spline_node_entities[i]);
+			spline->spline_node_entities.erase(spline->spline_node_entities.begin() + i);
+			spline->spline_node_transforms.erase(spline->spline_node_transforms.begin() + i);
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
+				RefreshEntries();
+				editor->componentsWnd.RefreshEntityTree();
+				});
+			});
+		AddWidget(&entry.removeButton);
+	}
+
+	editor->generalWnd.themeCombo.SetSelected(editor->generalWnd.themeCombo.GetSelected());
+}
 
 void SplineWindow::ResizeLayout()
 {
@@ -121,9 +231,12 @@ void SplineWindow::ResizeLayout()
 		};
 
 	add_fullwidth(infoLabel);
-	add_fullwidth(addButton);
+	add(subdivSlider);
+	add_right(alignedCheck);
 
 	y += padding * 2;
+
+	add_fullwidth(addButton);
 
 	for (auto& entry : entries)
 	{
@@ -135,60 +248,4 @@ void SplineWindow::ResizeLayout()
 		y += entry.entityButton.GetSize().y;
 		y += padding;
 	}
-}
-
-void SplineWindow::RefreshEntries()
-{
-	for (auto& entry : entries)
-	{
-		RemoveWidget(&entry.removeButton);
-		RemoveWidget(&entry.entityButton);
-	}
-	entries.clear();
-
-	Scene& scene = editor->GetCurrentScene();
-	SplineComponent* spline = scene.splines.GetComponent(entity);
-	if (spline == nullptr)
-		return;
-
-	entries.reserve(spline->spline_node_entities.size());
-
-	for (size_t i = 0; i < spline->spline_node_entities.size(); ++i)
-	{
-		Entity entity = spline->spline_node_entities[i];
-		const NameComponent* name = scene.names.GetComponent(entity);
-
-		Entry& entry = entries.emplace_back();
-		entry.entityButton.Create("");
-		if (name != nullptr)
-		{
-			entry.entityButton.SetText(name->name);
-		}
-		else
-		{
-			entry.entityButton.SetText("[unnamed] " + std::to_string(entity));
-		}
-		entry.entityButton.OnClick([this, entity](wi::gui::EventArgs args) {
-			editor->ClearSelected();
-			editor->AddSelected(entity);
-		});
-		AddWidget(&entry.entityButton);
-
-		entry.removeButton.Create("");
-		entry.removeButton.SetText("X");
-		entry.removeButton.SetSize(XMFLOAT2(entry.removeButton.GetSize().y, entry.removeButton.GetSize().y));
-		entry.removeButton.OnClick([i, spline, this](wi::gui::EventArgs args) {
-			Scene& scene = editor->GetCurrentScene();
-			scene.Entity_Remove(spline->spline_node_entities[i]);
-			spline->spline_node_entities.erase(spline->spline_node_entities.begin() + i);
-			spline->spline_node_transforms.erase(spline->spline_node_transforms.begin() + i);
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
-				RefreshEntries();
-				editor->componentsWnd.RefreshEntityTree();
-			});
-		});
-		AddWidget(&entry.removeButton);
-	}
-
-	editor->generalWnd.themeCombo.SetSelected(editor->generalWnd.themeCombo.GetSelected());
 }

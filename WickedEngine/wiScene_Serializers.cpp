@@ -2501,6 +2501,8 @@ namespace wi::scene
 		{
 			archive >> _flags;
 
+			archive >> mesh_generation_subdivision;
+
 			size_t node_count = 0;
 			archive >> node_count;
 			spline_node_entities.resize(node_count);
@@ -2512,6 +2514,8 @@ namespace wi::scene
 		else
 		{
 			archive << _flags;
+
+			archive << mesh_generation_subdivision;
 
 			archive << spline_node_entities.size();
 			for (size_t i = 0; i < spline_node_entities.size(); ++i)

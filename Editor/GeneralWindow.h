@@ -29,6 +29,7 @@ public:
 	wi::gui::CheckBox cameraVisCheckBox;
 	wi::gui::CheckBox colliderVisCheckBox;
 	wi::gui::CheckBox springVisCheckBox;
+	wi::gui::CheckBox splineVisCheckBox;
 	wi::gui::CheckBox freezeCullingCameraCheckBox;
 	wi::gui::CheckBox disableAlbedoMapsCheckBox;
 	wi::gui::CheckBox forceDiffuseLightingCheckBox;

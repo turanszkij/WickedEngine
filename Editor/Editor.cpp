@@ -3074,24 +3074,23 @@ void EditorComponent::PostUpdate()
 		}
 	}
 
-	spline_renderer.texMulAdd2 = XMFLOAT4(1, 1, spline_renderer.texMulAdd2.z - scene.dt, 0);
-	spline_renderer.color = dummyColor;
-	spline_renderer.Clear();
-	for (size_t i = 0; i < scene.splines.GetCount(); ++i)
+	if (generalWnd.splineVisCheckBox.GetCheck())
 	{
-		const SplineComponent& spline = scene.splines[i];
-		Entity entity = scene.splines.GetEntity(i);
-		const TransformComponent* transform = scene.transforms.GetComponent(entity);
-		if (transform != nullptr)
+		spline_renderer.texMulAdd2 = XMFLOAT4(1, 1, spline_renderer.texMulAdd2.z - scene.dt, 0);
+		spline_renderer.color = dummyColor;
+		spline_renderer.depth_soften = 1;
+		spline_renderer.width = 0.1f;
+		spline_renderer.Clear();
+		for (size_t i = 0; i < scene.splines.GetCount(); ++i)
 		{
-			spline_renderer.AddPoint(transform->GetPosition(), std::max(0.0f, transform->GetScale().x) * 0.1f, XMFLOAT4(1, 1, 1, 1), transform->GetRotation());
+			const SplineComponent& spline = scene.splines[i];
+			for (size_t j = 0; j < spline.spline_node_transforms.size(); ++j)
+			{
+				const TransformComponent& node_transform = spline.spline_node_transforms[j];
+				spline_renderer.AddPoint(node_transform.GetPosition(), std::max(0.0f, node_transform.GetScale().x), XMFLOAT4(1, 1, 1, 1), spline.IsDrawAligned() ? node_transform.GetRotation() : XMFLOAT4(0, 0, 0, 0));
+			}
+			spline_renderer.Cut();
 		}
-		for (size_t j = 0; j < spline.spline_node_transforms.size(); ++j)
-		{
-			const TransformComponent& node_transform = spline.spline_node_transforms[j];
-			spline_renderer.AddPoint(node_transform.GetPosition(), std::max(0.0f, node_transform.GetScale().x) * 0.1f, XMFLOAT4(1, 1, 1, 1), node_transform.GetRotation());
-		}
-		spline_renderer.Cut();
 	}
 }
 void EditorComponent::PreRender()
@@ -4400,7 +4399,10 @@ void EditorComponent::Render() const
 				wi::font::Draw(str, params, cmd);
 			}
 
-			spline_renderer.Draw(camera, cmd);
+			if (generalWnd.splineVisCheckBox.GetCheck())
+			{
+				spline_renderer.Draw(camera, cmd);
+			}
 
 			paintToolWnd.DrawBrush(*this, cmd);
 			if (paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED)

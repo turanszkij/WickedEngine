@@ -2542,13 +2542,26 @@ namespace wi::scene
 		enum FLAGS
 		{
 			NONE = 0,
+			DRAW_ALIGNED = 1 << 0,
 		};
 		uint32_t _flags = NONE;
+
+		int mesh_generation_subdivision = 0;
 
 		wi::vector<wi::ecs::Entity> spline_node_entities;
 
 		// Non-serialized attributes:
 		wi::vector<TransformComponent> spline_node_transforms;
+		int prev_mesh_generation_subdivision = 0;
+		int prev_mesh_generation_nodes = 0;
+
+		// Evaluate an interpolated location on the spline at t which in range [0,1] on the spline
+		//	out_uv : optional output value for UV coordinate tracking by length
+		XMMATRIX EvaluateSplineAt(float t, float* out_uv = nullptr);
+
+		// By default the spline is drawn as camera facing, this can be used to set it to be drawn aligned to segment rotations:
+		bool IsDrawAligned() const { return _flags & DRAW_ALIGNED; }
+		void SetDrawAligned(bool value = true) { if (value) { _flags |= DRAW_ALIGNED; } else { _flags &= ~DRAW_ALIGNED; } }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

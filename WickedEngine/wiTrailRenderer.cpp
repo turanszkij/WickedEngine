@@ -96,7 +96,7 @@ namespace wi
 		sb.g_xTrailColor = color;
 		sb.g_xTrailTexMulAdd = texMulAdd;
 		sb.g_xTrailTexMulAdd2 = texMulAdd2;
-		sb.g_xTrailDepthSoften = 1.0f / (width * 10);
+		sb.g_xTrailDepthSoften = 1.0f / (width * depth_soften);
 		sb.g_xTrailTextureIndex1 = device->GetDescriptorIndex(texture.IsValid() ? &texture : wi::texturehelper::getWhite(), SubresourceType::SRV);
 		sb.g_xTrailTextureIndex2 = device->GetDescriptorIndex(texture2.IsValid() ? &texture2 : wi::texturehelper::getWhite(), SubresourceType::SRV);
 		sb.g_xTrailLinearDepthTextureIndex = camera.texture_lineardepth_index;
@@ -227,7 +227,7 @@ namespace wi
 					N = XMVector3Normalize(N);
 					XMVECTOR T = XMVector3Normalize(P_next - P_prev);
 					XMVECTOR B = XMVector3Normalize(XMVector3Cross(T, N));
-					N = XMVector3Normalize(XMVector3Cross(B, T));
+					N = XMVector3Normalize(XMVector3Cross(B, T)); // re-orthogonalize
 					B *= width_interpolated * width;
 
 					if (!cap)

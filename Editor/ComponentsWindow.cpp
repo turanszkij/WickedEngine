@@ -170,6 +170,8 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		ADD_TRANSFORM,
 		ADD_LIGHT,
 		ADD_MATERIAL,
+		ADD_MESH,
+		ADD_OBJECT,
 		ADD_SPRING,
 		ADD_IK,
 		ADD_SOUND,
@@ -185,7 +187,6 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		ADD_SOFTBODY,
 		ADD_COLLIDER,
 		ADD_CAMERA,
-		ADD_OBJECT,
 		ADD_VIDEO,
 		ADD_SPRITE,
 		ADD_FONT,
@@ -208,6 +209,8 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.AddItem("Transform " ICON_TRANSFORM, ADD_TRANSFORM);
 	newComponentCombo.AddItem("Light " ICON_POINTLIGHT, ADD_LIGHT);
 	newComponentCombo.AddItem("Material " ICON_MATERIAL, ADD_MATERIAL);
+	newComponentCombo.AddItem("Mesh " ICON_MESH, ADD_MESH);
+	newComponentCombo.AddItem("Object " ICON_OBJECT, ADD_OBJECT);
 	newComponentCombo.AddItem("Spring " ICON_SPRING, ADD_SPRING);
 	newComponentCombo.AddItem("Inverse Kinematics " ICON_IK, ADD_IK);
 	newComponentCombo.AddItem("Sound " ICON_SOUND, ADD_SOUND);
@@ -223,7 +226,6 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	newComponentCombo.AddItem("Soft Body Physics " ICON_SOFTBODY, ADD_SOFTBODY);
 	newComponentCombo.AddItem("Collider " ICON_COLLIDER, ADD_COLLIDER);
 	newComponentCombo.AddItem("Camera " ICON_CAMERA, ADD_CAMERA);
-	newComponentCombo.AddItem("Object " ICON_OBJECT, ADD_OBJECT);
 	newComponentCombo.AddItem("Video " ICON_VIDEO, ADD_VIDEO);
 	newComponentCombo.AddItem("Sprite " ICON_SPRITE, ADD_SPRITE);
 	newComponentCombo.AddItem("Font " ICON_FONT, ADD_FONT);
@@ -272,6 +274,10 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 				break;
 			case ADD_MATERIAL:
 				if (scene.materials.Contains(entity))
+					valid = false;
+				break;
+			case ADD_MESH:
+				if (scene.meshes.Contains(entity))
 					valid = false;
 				break;
 			case ADD_SPRING:
@@ -403,6 +409,9 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 				break;
 			case ADD_MATERIAL:
 				scene.materials.Create(entity);
+				break;
+			case ADD_MESH:
+				scene.meshes.Create(entity);
 				break;
 			case ADD_SPRING:
 				scene.springs.Create(entity);

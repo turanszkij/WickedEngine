@@ -417,6 +417,10 @@ namespace wi::math
 	void ConstructTriangleEquilateral(float radius, XMFLOAT4& A, XMFLOAT4& B, XMFLOAT4& C);
 	void GetBarycentric(const XMVECTOR& p, const XMVECTOR& a, const XMVECTOR& b, const XMVECTOR& c, float &u, float &v, float &w, bool clamp = false);
 
+	inline XMFLOAT3 GetPosition(const XMFLOAT4X4& _m)
+	{
+		return *((XMFLOAT3*)&_m._41);
+	}
 	inline XMFLOAT3 GetForward(const XMFLOAT4X4& _m)
 	{
 		return XMFLOAT3(_m.m[2][0], _m.m[2][1], _m.m[2][2]);
