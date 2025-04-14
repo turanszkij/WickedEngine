@@ -2866,7 +2866,6 @@ namespace wi::scene
 		if (spline_node_transforms.size() == 1)
 			return spline_node_transforms[0].GetWorldMatrix();
 
-		TransformComponent retval;
 		if (spline_node_transforms.size() == 2)
 		{
 			XMVECTOR P0 = spline_node_transforms[0].GetPositionV();

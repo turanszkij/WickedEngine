@@ -2546,7 +2546,7 @@ namespace wi::scene
 		};
 		uint32_t _flags = NONE;
 
-		int mesh_generation_subdivision = 0;
+		int mesh_generation_subdivision = 0; // increase this above 0 to request mesh generation
 
 		wi::vector<wi::ecs::Entity> spline_node_entities;
 

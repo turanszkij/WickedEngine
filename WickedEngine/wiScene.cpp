@@ -5820,7 +5820,11 @@ namespace wi::scene
 						subset.indexCount = (uint32_t)indexCount;
 						subset.indexOffset = 0;
 						TransformComponent eval;
-						XMFLOAT3 prevpos = XMFLOAT3(0, 0, 0);
+						XMVECTOR prevRIGHT = XMVectorZero();
+						XMVECTOR prevLEFT = XMVectorZero();
+						XMVECTOR prevPLANE = XMVectorZero();
+						XMVECTOR prevPLANENORMAL = XMVectorZero();
+						XMVECTOR prevMID = XMVectorZero();
 						float dist = 0;
 						for (size_t i = 0; i < segmentCount; ++i)
 						{
@@ -5831,30 +5835,50 @@ namespace wi::scene
 
 							const XMVECTOR P = eval.GetPositionV();
 							const XMVECTOR R = eval.GetRightV();
-							XMStoreFloat3(&mesh->vertex_positions[vertex0], P + R);
-							XMStoreFloat3(&mesh->vertex_positions[vertex1], P - R);
-
 							const XMVECTOR N = XMVector3Normalize(eval.GetUpV());
+							const XMVECTOR T = XMVector3Normalize(eval.GetForwardV());
+
+							XMVECTOR currentRIGHT = P + R;
+							XMVECTOR currentLEFT = P - R;
+							static bool correction = true;
+							if (correction && i > 0)
+							{
+								// Attempting to fix backturn self intersection:
+								//	The current segment is not allowed to go behind the previous segment plane
+								//	TODO: improve this more
+								float dpRIGHT = XMVectorGetX(XMPlaneDotCoord(prevPLANE, currentRIGHT));
+								float dpLEFT = XMVectorGetX(XMPlaneDotCoord(prevPLANE, currentLEFT));
+								if (dpRIGHT < 0)
+								{
+									currentRIGHT = prevRIGHT;
+								}
+								if (dpLEFT < 0)
+								{
+									currentLEFT = prevLEFT;
+								}
+							}
+							prevRIGHT = currentRIGHT;
+							prevLEFT = currentLEFT;
+							const XMVECTOR currentMID = XMVectorLerp(currentRIGHT, currentLEFT, 0.5f);
+							prevPLANE = XMPlaneFromPointNormal(currentMID, XMVector3Normalize(XMVector3Cross(N, currentRIGHT - currentLEFT)));
+
+							XMStoreFloat3(&mesh->vertex_positions[vertex0], currentRIGHT);
+							XMStoreFloat3(&mesh->vertex_positions[vertex1], currentLEFT);
+
 							XMStoreFloat3(&mesh->vertex_normals[vertex0], N);
 							XMStoreFloat3(&mesh->vertex_normals[vertex1], N);
 
-							const XMVECTOR T = XMVector3Normalize(eval.GetForwardV());
 							XMStoreFloat4(&mesh->vertex_tangents[vertex0], T);
 							XMStoreFloat4(&mesh->vertex_tangents[vertex1], T);
 							mesh->vertex_tangents[vertex0].w = 1;
 							mesh->vertex_tangents[vertex1].w = 1;
 
-							const XMFLOAT3 currentpos = eval.GetPosition();
-							if (i == 0)
+							if (i > 0)
 							{
-								prevpos = currentpos;
-								dist = 0;
+								const float width = wi::math::Distance(currentRIGHT, currentLEFT);
+								dist += wi::math::Distance(prevMID, currentMID) / std::max(0.01f, width);
 							}
-							else
-							{
-								dist += wi::math::Distance(prevpos, currentpos) / std::max(0.01f, XMVectorGetX(XMVector3Length(R))) * 0.5f;
-								prevpos = currentpos;
-							}
+							prevMID = currentMID;
 
 							mesh->vertex_uvset_0[vertex0].x = 0;
 							mesh->vertex_uvset_0[vertex0].y = dist;
@@ -5881,6 +5905,11 @@ namespace wi::scene
 					if (object != nullptr)
 					{
 						object->SetRenderable(true);
+					}
+					RigidBodyPhysicsComponent* rigidbody = rigidbodies.GetComponent(entity);
+					if (rigidbody != nullptr)
+					{
+						rigidbody->physicsobject = {}; // recreate
 					}
 				}
 				else
