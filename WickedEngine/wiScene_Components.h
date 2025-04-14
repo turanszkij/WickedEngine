@@ -2556,8 +2556,8 @@ namespace wi::scene
 		int prev_mesh_generation_nodes = 0;
 
 		// Evaluate an interpolated location on the spline at t which in range [0,1] on the spline
-		//	out_uv : optional output value for UV coordinate tracking by length
-		XMMATRIX EvaluateSplineAt(float t, float* out_uv = nullptr);
+		//	the result matrix is oriented to look towards the spline direction and face upwards along the spline normal
+		XMMATRIX EvaluateSplineAt(float t);
 
 		// By default the spline is drawn as camera facing, this can be used to set it to be drawn aligned to segment rotations:
 		bool IsDrawAligned() const { return _flags & DRAW_ALIGNED; }

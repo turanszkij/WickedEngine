@@ -5777,86 +5777,119 @@ namespace wi::scene
 			bool dirty = spline.prev_mesh_generation_subdivision != spline.mesh_generation_subdivision;
 			dirty |= spline.prev_mesh_generation_nodes != (int)spline.spline_node_entities.size();
 			spline.spline_node_transforms.resize(spline.spline_node_entities.size());
+
+			// BEFORE mesh update: LOCAL space transform (since mesh will be also transformed by ObjectComponent instance)
 			for (size_t i = 0; i < spline.spline_node_entities.size(); ++i)
 			{
 				Entity node_entity = spline.spline_node_entities[i];
 				const TransformComponent* node_transform = transforms.GetComponent(node_entity);
 				if (node_transform != nullptr)
 				{
-					dirty |= node_transform->IsDirty();
+					dirty |= node_transform->IsDirty(); // if any transform was dirty, it will force mesh regeneration
 					spline.spline_node_transforms[i] = *node_transform;
+
+					// Force update in local space:
 					spline.spline_node_transforms[i].SetDirty();
-					spline.spline_node_transforms[i].UpdateTransform(); // before mesh update: LOCAL spacea
+					spline.spline_node_transforms[i].UpdateTransform();
 				}
 			}
 
-			if (dirty && spline.mesh_generation_subdivision > 0 && spline.spline_node_transforms.size() > 1)
+			// Mesh generation:
+			if (dirty && spline.spline_node_transforms.size() > 1)
 			{
-				MeshComponent* mesh = meshes.GetComponent(entity);
-				if (mesh != nullptr)
+				if (spline.mesh_generation_subdivision > 0)
 				{
-					spline.prev_mesh_generation_subdivision = spline.mesh_generation_subdivision;
-					spline.prev_mesh_generation_nodes = (int)spline.spline_node_entities.size();
-					const size_t segmentCount = (spline.spline_node_transforms.size() - 1) * (size_t)spline.mesh_generation_subdivision;
-					const size_t vertexCount = segmentCount * 2;
-					const size_t indexCount = (segmentCount - 1) * 6;
-					mesh->vertex_positions.resize(vertexCount);
-					mesh->vertex_normals.resize(vertexCount);
-					mesh->vertex_tangents.resize(vertexCount);
-					mesh->vertex_uvset_0.resize(vertexCount);
-					mesh->indices.resize(indexCount);
-					if (mesh->subsets.empty())
+					MeshComponent* mesh = meshes.GetComponent(entity);
+					if (mesh != nullptr)
 					{
-						mesh->subsets.emplace_back().materialID = entity;
+						spline.prev_mesh_generation_subdivision = spline.mesh_generation_subdivision;
+						spline.prev_mesh_generation_nodes = (int)spline.spline_node_entities.size();
+						const size_t segmentCount = (spline.spline_node_transforms.size() - 1) * (size_t)spline.mesh_generation_subdivision;
+						const size_t vertexCount = segmentCount * 2;
+						const size_t indexCount = (segmentCount - 1) * 6;
+						mesh->vertex_positions.resize(vertexCount);
+						mesh->vertex_normals.resize(vertexCount);
+						mesh->vertex_tangents.resize(vertexCount);
+						mesh->vertex_uvset_0.resize(vertexCount);
+						mesh->indices.resize(indexCount);
+						if (mesh->subsets.empty())
+						{
+							mesh->subsets.emplace_back().materialID = entity;
+						}
+						MeshComponent::MeshSubset& subset = mesh->subsets.front();
+						subset.indexCount = (uint32_t)indexCount;
+						subset.indexOffset = 0;
+						TransformComponent eval;
+						XMFLOAT3 prevpos = XMFLOAT3(0, 0, 0);
+						float dist = 0;
+						for (size_t i = 0; i < segmentCount; ++i)
+						{
+							float t = float(i) / float(segmentCount - 1);
+							XMStoreFloat4x4(&eval.world, spline.EvaluateSplineAt(t));
+							const size_t vertex0 = i * 2 + 0;
+							const size_t vertex1 = i * 2 + 1;
+
+							const XMVECTOR P = eval.GetPositionV();
+							const XMVECTOR R = eval.GetRightV();
+							XMStoreFloat3(&mesh->vertex_positions[vertex0], P + R);
+							XMStoreFloat3(&mesh->vertex_positions[vertex1], P - R);
+
+							const XMVECTOR N = XMVector3Normalize(eval.GetUpV());
+							XMStoreFloat3(&mesh->vertex_normals[vertex0], N);
+							XMStoreFloat3(&mesh->vertex_normals[vertex1], N);
+
+							const XMVECTOR T = XMVector3Normalize(eval.GetForwardV());
+							XMStoreFloat4(&mesh->vertex_tangents[vertex0], T);
+							XMStoreFloat4(&mesh->vertex_tangents[vertex1], T);
+							mesh->vertex_tangents[vertex0].w = 1;
+							mesh->vertex_tangents[vertex1].w = 1;
+
+							const XMFLOAT3 currentpos = eval.GetPosition();
+							if (i == 0)
+							{
+								prevpos = currentpos;
+								dist = 0;
+							}
+							else
+							{
+								dist += wi::math::Distance(prevpos, currentpos) / std::max(0.01f, XMVectorGetX(XMVector3Length(R))) * 0.5f;
+								prevpos = currentpos;
+							}
+
+							mesh->vertex_uvset_0[vertex0].x = 0;
+							mesh->vertex_uvset_0[vertex0].y = dist;
+							mesh->vertex_uvset_0[vertex1].x = 1;
+							mesh->vertex_uvset_0[vertex1].y = dist;
+						}
+						size_t i0 = 0;
+						for (size_t i = 0; i < segmentCount - 1; ++i)
+						{
+							uint32_t vertex0 = uint32_t(i * 2 + 0);
+							uint32_t vertex1 = uint32_t(i * 2 + 1);
+							uint32_t vertex2 = uint32_t(i * 2 + 2);
+							uint32_t vertex3 = uint32_t(i * 2 + 3);
+							mesh->indices[i0++] = vertex0;
+							mesh->indices[i0++] = vertex1;
+							mesh->indices[i0++] = vertex2;
+							mesh->indices[i0++] = vertex2;
+							mesh->indices[i0++] = vertex1;
+							mesh->indices[i0++] = vertex3;
+						}
+						mesh->CreateRenderData();
 					}
-					MeshComponent::MeshSubset& subset = mesh->subsets.front();
-					subset.indexCount = (uint32_t)indexCount;
-					subset.indexOffset = 0;
-					TransformComponent eval;
-					float uv = 0;
-					for (size_t i = 0; i < segmentCount; ++i)
+					ObjectComponent* object = objects.GetComponent(entity);
+					if (object != nullptr)
 					{
-						float t = float(i) / float(segmentCount - 1);
-						float uv = 0;
-						XMStoreFloat4x4(&eval.world, spline.EvaluateSplineAt(t, &uv));
-						const size_t vertex0 = i * 2 + 0;
-						const size_t vertex1 = i * 2 + 1;
-
-						const XMVECTOR P = eval.GetPositionV();
-						const XMVECTOR R = eval.GetRightV();
-						XMStoreFloat3(&mesh->vertex_positions[vertex0], P + R);
-						XMStoreFloat3(&mesh->vertex_positions[vertex1], P - R);
-
-						const XMVECTOR N = XMVector3Normalize(eval.GetUpV());
-						XMStoreFloat3(&mesh->vertex_normals[vertex0], N);
-						XMStoreFloat3(&mesh->vertex_normals[vertex1], N);
-
-						const XMVECTOR T = XMVector3Normalize(eval.GetForwardV());
-						XMStoreFloat4(&mesh->vertex_tangents[vertex0], T);
-						XMStoreFloat4(&mesh->vertex_tangents[vertex1], T);
-						mesh->vertex_tangents[vertex0].w = 1;
-						mesh->vertex_tangents[vertex1].w = 1;
-
-						mesh->vertex_uvset_0[vertex0].x = 0;
-						mesh->vertex_uvset_0[vertex0].y = uv;
-						mesh->vertex_uvset_0[vertex1].x = 1;
-						mesh->vertex_uvset_0[vertex1].y = uv;
+						object->SetRenderable(true);
 					}
-					size_t i0 = 0;
-					for (size_t i = 0; i < segmentCount - 1; ++i)
+				}
+				else
+				{
+					ObjectComponent* object = objects.GetComponent(entity);
+					if (object != nullptr)
 					{
-						uint32_t vertex0 = uint32_t(i * 2 + 0);
-						uint32_t vertex1 = uint32_t(i * 2 + 1);
-						uint32_t vertex2 = uint32_t(i * 2 + 2);
-						uint32_t vertex3 = uint32_t(i * 2 + 3);
-						mesh->indices[i0++] = vertex0;
-						mesh->indices[i0++] = vertex1;
-						mesh->indices[i0++] = vertex2;
-						mesh->indices[i0++] = vertex2;
-						mesh->indices[i0++] = vertex1;
-						mesh->indices[i0++] = vertex3;
+						object->SetRenderable(false);
 					}
-					mesh->CreateRenderData();
 				}
 			}
 

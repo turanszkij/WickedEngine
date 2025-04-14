@@ -2859,24 +2859,12 @@ namespace wi::scene
 		return active;
 	}
 
-	XMMATRIX SplineComponent::EvaluateSplineAt(float t, float* out_uv)
+	XMMATRIX SplineComponent::EvaluateSplineAt(float t)
 	{
 		if (spline_node_transforms.empty())
-		{
-			if (out_uv != nullptr)
-			{
-				*out_uv = 0;
-			}
 			return {};
-		}
 		if (spline_node_transforms.size() == 1)
-		{
-			if (out_uv != nullptr)
-			{
-				*out_uv = 0;
-			}
 			return spline_node_transforms[0].GetWorldMatrix();
-		}
 
 		TransformComponent retval;
 		if (spline_node_transforms.size() == 2)
@@ -2903,10 +2891,6 @@ namespace wi::scene
 			B = XMVectorSetW(B, 0);
 			P = XMVectorSetW(P, 1);
 			XMMATRIX M = { B, N, T, P };
-			if (out_uv != nullptr)
-			{
-				*out_uv = t * wi::math::Distance(P0, P1);
-			}
 			return M;
 		}
 
@@ -2982,12 +2966,6 @@ namespace wi::scene
 		B = XMVectorSetW(B, 0);
 		P = XMVectorSetW(P, 1);
 		XMMATRIX M = { B, N, T, P };
-
-		if (out_uv != nullptr)
-		{
-			*out_uv = tdist;
-		}
-
 		return M;
 	}
 }

@@ -27,7 +27,7 @@ void SplineWindow::Create(EditorComponent* _editor)
 
 	infoLabel.Create("SplineInfo");
 	infoLabel.SetSize(XMFLOAT2(100, 90));
-	infoLabel.SetText("The spline is a curve that goes through every specified entity that has a TransformComponent smoothly.");
+	infoLabel.SetText("The spline is a curve that goes through every specified entity that has a TransformComponent smoothly. A mesh can be generated from it automatically by increasing the subdivisions.");
 	AddWidget(&infoLabel);
 
 	alignedCheck.Create("Draw Aligned: ");
@@ -51,6 +51,7 @@ void SplineWindow::Create(EditorComponent* _editor)
 	AddWidget(&alignedCheck);
 
 	subdivSlider.Create(0, 100, 0, 100, "Mesh subdivision: ");
+	subdivSlider.SetTooltip("Set subdivision count for mesh generation. \nIncreasing this above 0 will enable mesh generation and higher values mean higher quality.");
 	subdivSlider.OnSlide([this](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
