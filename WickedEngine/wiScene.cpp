@@ -5910,7 +5910,7 @@ namespace wi::scene
 									const float sina = std::sin(alpha);
 									const float cosa = std::cos(alpha);
 
-									XMVECTOR A = XMVector3Transform(XMVectorSet(-sina, cosa, 0, 1) * width, M);
+									XMVECTOR A = XMVector3Transform(XMVectorSet(-sina, cosa, 0, 1) * width * 0.5f, M);
 									XMStoreFloat3(&mesh->vertex_positions.emplace_back(), A);
 									XMStoreFloat3(&mesh->vertex_normals.emplace_back(), XMVector3Normalize(A - P));
 									XMStoreFloat4(&mesh->vertex_tangents.emplace_back(), XMVectorSetW(T, 1));
