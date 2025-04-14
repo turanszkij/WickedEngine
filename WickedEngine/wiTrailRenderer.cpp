@@ -37,13 +37,16 @@ namespace wi
 		point.rotation = rotation;
 	}
 
-	void TrailRenderer::Cut()
+	void TrailRenderer::Cut(bool looped)
 	{
 		if (points.empty())
 			return;
-		if (cuts.empty() || cuts.back() != points.size())
+		if (cuts.empty() || cuts.back().id != points.size())
 		{
-			cuts.push_back((uint32_t)points.size());
+			CutSegment cut;
+			cut.id = (uint32_t)points.size();
+			cut.looped = looped;
+			cuts.push_back(cut);
 		}
 	}
 
@@ -60,12 +63,12 @@ namespace wi
 				points.erase(points.begin());
 				for (auto& cut : cuts)
 				{
-					if (cut > 0)
+					if (cut.id > 0)
 					{
-						cut--;
+						cut.id--;
 					}
 				}
-				if (!cuts.empty() && cuts[0] == 0)
+				if (!cuts.empty() && cuts[0].id == 0)
 				{
 					cuts.erase(cuts.begin());
 				}
@@ -111,21 +114,11 @@ namespace wi
 			XMHALF4 color;
 		};
 
-		uint32_t num_cuts = uint32_t(cuts.size());
-		if (num_cuts == 0)
-		{
-			num_cuts += 1; // there were no cuts
-		}
-		if (!cuts.empty() && cuts.back() != (uint32_t)points.size())
-		{
-			num_cuts += 1; // when last segment was not indicated with cut
-		}
-		const uint32_t num_segments = uint32_t(points.size()) - num_cuts;
-
+		const uint32_t num_segments = uint32_t(points.size());
 		const uint32_t subdivision = std::max(1u, this->subdivision);
-		const uint32_t vertexCountAlloc = (num_segments * subdivision + num_cuts) * 2;
+		const uint32_t vertexCountAlloc = num_segments * subdivision * 2;
 
-		const uint32_t indexCountAlloc = num_segments * subdivision * 6;
+		const uint32_t indexCountAlloc = num_segments * (subdivision - 1) * 6;
 
 		auto mem = device->AllocateGPU(sizeof(Vertex) * vertexCountAlloc + sizeof(uint32_t) * indexCountAlloc, cmd);
 		Vertex* vertices = (Vertex*)mem.data;
@@ -142,32 +135,55 @@ namespace wi
 		int i = 0;
 		while (next_cut <= cuts.size())
 		{
-			int startcut = i;
-			int count = next_cut < cuts.size() ? cuts[next_cut] : (uint32_t)points.size();
-			float subdiv_count_within_cut = float((count - 1 - startcut) * subdivision);
+			const int startcut = i;
+			const int count = next_cut < cuts.size() ? cuts[next_cut].id : (uint32_t)points.size();
+			const bool looped = next_cut < cuts.size() ? (bool)cuts[next_cut].looped : false;
+			const float subdiv_count_within_cut = looped ? float((count - startcut) * subdivision) : float((count - 1 - startcut) * subdivision);
 			float subdiv_within_cut = 0;
+			int last = looped ? count : (count - 1);
 
-			for (; i < count; ++i)
+			for (; i < last; ++i)
 			{
-				XMVECTOR P0 = XMLoadFloat3(&points[std::max(startcut, std::min(i - 1, count - 1))].position);
-				XMVECTOR P1 = XMLoadFloat3(&points[std::max(startcut, std::min(i, count - 1))].position);
-				XMVECTOR P2 = XMLoadFloat3(&points[std::max(startcut, std::min(i + 1, count - 1))].position);
-				XMVECTOR P3 = XMLoadFloat3(&points[std::max(startcut, std::min(i + 2, count - 1))].position);
+				int t0 = 0; // prev
+				int t1 = 0; // current
+				int t2 = 1; // next
+				int t3 = 1; // after next
+				if (looped)
+				{
+					int cut_index = i - startcut;
+					int cut_count = count - startcut;
+					t0 = startcut + (cut_index + cut_count - 1) % cut_count;
+					t1 = startcut + (cut_index + cut_count) % cut_count;
+					t2 = startcut + (cut_index + cut_count + 1) % cut_count;
+					t3 = startcut + (cut_index + cut_count + 2) % cut_count;
+				}
+				else
+				{
+					t0 = clamp(i - 1, startcut, last);
+					t1 = clamp(i, startcut, last);
+					t2 = clamp(i + 1, startcut, last);
+					t3 = clamp(i + 2, startcut, last);
+				}
 
-				XMVECTOR W0 = XMVectorReplicate(points[std::max(startcut, std::min(i - 1, count - 1))].width);
-				XMVECTOR W1 = XMVectorReplicate(points[std::max(startcut, std::min(i, count - 1))].width);
-				XMVECTOR W2 = XMVectorReplicate(points[std::max(startcut, std::min(i + 1, count - 1))].width);
-				XMVECTOR W3 = XMVectorReplicate(points[std::max(startcut, std::min(i + 2, count - 1))].width);
+				XMVECTOR P0 = XMLoadFloat3(&points[t0].position);
+				XMVECTOR P1 = XMLoadFloat3(&points[t1].position);
+				XMVECTOR P2 = XMLoadFloat3(&points[t2].position);
+				XMVECTOR P3 = XMLoadFloat3(&points[t3].position);
 
-				XMVECTOR C0 = XMLoadFloat4(&points[std::max(startcut, std::min(i - 1, count - 1))].color);
-				XMVECTOR C1 = XMLoadFloat4(&points[std::max(startcut, std::min(i, count - 1))].color);
-				XMVECTOR C2 = XMLoadFloat4(&points[std::max(startcut, std::min(i + 1, count - 1))].color);
-				XMVECTOR C3 = XMLoadFloat4(&points[std::max(startcut, std::min(i + 2, count - 1))].color);
+				XMVECTOR W0 = XMVectorReplicate(points[t0].width);
+				XMVECTOR W1 = XMVectorReplicate(points[t1].width);
+				XMVECTOR W2 = XMVectorReplicate(points[t2].width);
+				XMVECTOR W3 = XMVectorReplicate(points[t3].width);
 
-				XMVECTOR Q0 = XMLoadFloat4(&points[std::max(startcut, std::min(i - 1, count - 1))].rotation);
-				XMVECTOR Q1 = XMLoadFloat4(&points[std::max(startcut, std::min(i, count - 1))].rotation);
-				XMVECTOR Q2 = XMLoadFloat4(&points[std::max(startcut, std::min(i + 1, count - 1))].rotation);
-				XMVECTOR Q3 = XMLoadFloat4(&points[std::max(startcut, std::min(i + 2, count - 1))].rotation);
+				XMVECTOR C0 = XMLoadFloat4(&points[t0].color);
+				XMVECTOR C1 = XMLoadFloat4(&points[t1].color);
+				XMVECTOR C2 = XMLoadFloat4(&points[t2].color);
+				XMVECTOR C3 = XMLoadFloat4(&points[t3].color);
+
+				XMVECTOR Q0 = XMLoadFloat4(&points[t0].rotation);
+				XMVECTOR Q1 = XMLoadFloat4(&points[t1].rotation);
+				XMVECTOR Q2 = XMLoadFloat4(&points[t2].rotation);
+				XMVECTOR Q3 = XMLoadFloat4(&points[t3].rotation);
 
 				const bool rotation_enabled = points[i].rotation.x != 0 || points[i].rotation.y != 0 || points[i].rotation.z != 0 || points[i].rotation.w != 0;
 				if (rotation_enabled)
@@ -178,45 +194,36 @@ namespace wi
 					Q3 = XMQuaternionNormalize(Q3);
 				}
 
-				if (i == startcut)
+				if (!looped)
 				{
-					// when P0 == P1, centripetal catmull doesn't work, so we have to do a dummy control point
-					P0 += P1 - P2;
+					if (i == startcut)
+					{
+						// when P0 == P1, centripetal catmull doesn't work, so we have to do a dummy control point
+						P0 += P1 - P2;
+					}
+					if (i >= count - 2)
+					{
+						// when P2 == P3, centripetal catmull doesn't work, so we have to do a dummy control point
+						P3 += P2 - P1;
+					}
 				}
-				if (i >= count - 2)
+
+				for (uint32_t j = 0; j < subdivision; ++j)
 				{
-					// when P2 == P3, centripetal catmull doesn't work, so we have to do a dummy control point
-					P3 += P2 - P1;
-				}
+					float t = float(j) / float(subdivision - 1);
 
-				const bool cap = i == (count - 1);
-				const uint32_t segment_resolution = cap ? 1 : subdivision;
-
-				for (uint32_t j = 0; j < segment_resolution; ++j)
-				{
-					float t = float(j) / float(segment_resolution);
-
-					const XMVECTOR P = cap ? XMVectorLerp(P1, P2, t) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t);
-					const XMVECTOR P_prev = cap ? XMVectorLerp(P0, P1, t - resolution_rcp) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t - resolution_rcp);
-					const XMVECTOR P_next = cap ? XMVectorLerp(P1, P2, t + resolution_rcp) : wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t + resolution_rcp);
-					const float width_interpolated = XMVectorGetX(cap ? XMVectorLerp(W1, W2, t) : XMVectorCatmullRom(W0, W1, W2, W3, t));
-					const XMVECTOR C = cap ? XMVectorLerp(C1, C2, t) : XMVectorCatmullRom(C0, C1, C2, C3, t);
+					const XMVECTOR P = wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t);
+					const XMVECTOR P_prev = wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t - resolution_rcp);
+					const XMVECTOR P_next = wi::math::CatmullRomCentripetal(P0, P1, P2, P3, t + resolution_rcp);
+					const float width_interpolated = XMVectorGetX(XMVectorCatmullRom(W0, W1, W2, W3, t));
+					const XMVECTOR C = XMVectorCatmullRom(C0, C1, C2, C3, t);
 					XMFLOAT4 color_interpolated;
 					XMStoreFloat4(&color_interpolated, C);
 
 					XMVECTOR N;
 					if (rotation_enabled)
 					{
-						XMVECTOR Q;
-						if (cap)
-						{
-							Q = XMQuaternionSlerp(Q1, Q2, t);
-						}
-						else
-						{
-							// Note: squad interpolation wasn't working completely right here in some tests
-							Q = XMVectorCatmullRom(Q0, Q1, Q2, Q3, t);
-						}
+						XMVECTOR Q = XMVectorCatmullRom(Q0, Q1, Q2, Q3, t);
 						Q = XMQuaternionNormalize(Q);
 						N = XMVector3Rotate(XMVectorSet(0, 1, 0, 0), Q);
 					}
@@ -230,7 +237,7 @@ namespace wi
 					N = XMVector3Normalize(XMVector3Cross(B, T)); // re-orthogonalize
 					B *= width_interpolated * width;
 
-					if (!cap)
+					if (j < subdivision - 1)
 					{
 						indices[indexCount++] = vertexCount;
 						indices[indexCount++] = vertexCount + 1;
@@ -263,8 +270,8 @@ namespace wi
 			}
 			next_cut++;
 		}
-		assert(vertexCount == vertexCountAlloc);
-		assert(indexCount == indexCountAlloc);
+		assert(vertexCount <= vertexCountAlloc);
+		assert(indexCount <= indexCountAlloc);
 
 		const GPUBuffer* vbs[] = {
 			&mem.buffer,

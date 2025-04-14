@@ -2893,11 +2893,22 @@ namespace wi::scene
 			return M;
 		}
 
-		float total_distance = 0;
-		for (int i = 0; i < (int)spline_node_transforms.size() - 1; ++i)
+		int cnt = (int)spline_node_transforms.size();
+		int first = 0;
+		int second = 1;
+		int beforelast = cnt - 1;
+		if (IsLooped())
 		{
-			const TransformComponent& transform0 = spline_node_transforms[i];
-			const TransformComponent& transform1 = spline_node_transforms[i + 1];
+			first = cnt - 1;
+			second = first + 1;
+			beforelast++;
+		}
+
+		float total_distance = 0;
+		for (int i = 0; i < beforelast; ++i)
+		{
+			const TransformComponent& transform0 = spline_node_transforms[(i + first) % cnt];
+			const TransformComponent& transform1 = spline_node_transforms[(i + second) % cnt];
 			total_distance += wi::math::Distance(transform0.GetPosition(), transform1.GetPosition());
 		}
 		float tdist = t * total_distance;
@@ -2907,18 +2918,28 @@ namespace wi::scene
 		int t3 = 1; // after next
 		float tmid = 0;
 		total_distance = 0;
-		for (int i = 0; i < (int)spline_node_transforms.size() - 1; ++i)
+		for (int i = 0; i < beforelast; ++i)
 		{
-			const TransformComponent& transform0 = spline_node_transforms[i];
-			const TransformComponent& transform1 = spline_node_transforms[i + 1];
+			const TransformComponent& transform0 = spline_node_transforms[(i + first) % cnt];
+			const TransformComponent& transform1 = spline_node_transforms[(i + second) % cnt];
 			float dist_prev = total_distance;
 			total_distance += wi::math::Distance(transform0.GetPosition(), transform1.GetPosition());
 			if (total_distance >= tdist)
 			{
-				t0 = std::max(0, i - 1);
-				t1 = i;
-				t2 = i + 1;
-				t3 = std::min(i + 2, (int)spline_node_transforms.size() - 1);
+				if (IsLooped())
+				{
+					t0 = (i + first - 1) % cnt;
+					t1 = (i + first) % cnt;
+					t2 = (i + second) % cnt;
+					t3 = (i + second + 1) % cnt;
+				}
+				else
+				{
+					t0 = std::max(0, i - 1);
+					t1 = i;
+					t2 = i + 1;
+					t3 = std::min(i + 2, cnt - 1);
+				}
 				tmid = inverse_lerp(dist_prev, total_distance, tdist);
 				break;
 			}

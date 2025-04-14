@@ -1327,6 +1327,7 @@ void EditorComponent::Load()
 		}
 	}
 
+	// Set up gradients for the spline visualizer:
 	uint8_t spline_gradient[4096];
 	for (int i = 0; i < arraysize(spline_gradient); ++i)
 	{
@@ -3089,7 +3090,7 @@ void EditorComponent::PostUpdate()
 				const TransformComponent& node_transform = spline.spline_node_transforms[j];
 				spline_renderer.AddPoint(node_transform.GetPosition(), std::max(0.0f, node_transform.GetScale().x), XMFLOAT4(1, 1, 1, 1), spline.IsDrawAligned() ? node_transform.GetRotation() : XMFLOAT4(0, 0, 0, 0));
 			}
-			spline_renderer.Cut();
+			spline_renderer.Cut(spline.IsLooped());
 		}
 	}
 }

@@ -5776,6 +5776,7 @@ namespace wi::scene
 			Entity entity = splines.GetEntity(args.jobIndex);
 			bool dirty = spline.prev_mesh_generation_subdivision != spline.mesh_generation_subdivision;
 			dirty |= spline.prev_mesh_generation_nodes != (int)spline.spline_node_entities.size();
+			dirty |= spline.prev_looped != spline.IsLooped();
 			spline.spline_node_transforms.resize(spline.spline_node_entities.size());
 
 			// BEFORE mesh update: LOCAL space transform (since mesh will be also transformed by ObjectComponent instance)
@@ -5804,6 +5805,7 @@ namespace wi::scene
 					{
 						spline.prev_mesh_generation_subdivision = spline.mesh_generation_subdivision;
 						spline.prev_mesh_generation_nodes = (int)spline.spline_node_entities.size();
+						spline.prev_looped = spline.IsLooped();
 						const size_t segmentCount = (spline.spline_node_transforms.size() - 1) * (size_t)spline.mesh_generation_subdivision;
 						const size_t vertexCount = segmentCount * 2;
 						const size_t indexCount = (segmentCount - 1) * 6;
@@ -5898,6 +5900,12 @@ namespace wi::scene
 							mesh->indices[i0++] = vertex2;
 							mesh->indices[i0++] = vertex1;
 							mesh->indices[i0++] = vertex3;
+						}
+						if (spline.IsLooped() && mesh->vertex_positions.size() > 2)
+						{
+							// force end segments on start segments:
+							mesh->vertex_positions[mesh->vertex_positions.size() - 2] = mesh->vertex_positions[0];
+							mesh->vertex_positions[mesh->vertex_positions.size() - 1] = mesh->vertex_positions[1];
 						}
 						mesh->CreateRenderData();
 					}

@@ -30,6 +30,26 @@ void SplineWindow::Create(EditorComponent* _editor)
 	infoLabel.SetText("The spline is a curve that goes through every specified entity that has a TransformComponent smoothly. A mesh can be generated from it automatically by increasing the subdivisions.");
 	AddWidget(&infoLabel);
 
+	loopedCheck.Create("Looped: ");
+	loopedCheck.OnClick([this](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			SplineComponent* spline = scene.splines.GetComponent(x.entity);
+			if (spline == nullptr)
+				continue;
+			spline->SetLooped(args.bValue);
+		}
+
+		// indirect set:
+		SplineComponent* spline = scene.splines.GetComponent(entity);
+		if (spline != nullptr)
+		{
+			spline->SetLooped(args.bValue);
+		}
+	});
+	AddWidget(&loopedCheck);
+
 	alignedCheck.Create("Draw Aligned: ");
 	alignedCheck.OnClick([this](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -123,6 +143,7 @@ void SplineWindow::SetEntity(Entity entity)
 		this->entity = entity;
 
 		alignedCheck.SetCheck(spline->IsDrawAligned());
+		loopedCheck.SetCheck(spline->IsLooped());
 		subdivSlider.SetValue(spline->mesh_generation_subdivision);
 
 		if (changed)
@@ -233,6 +254,7 @@ void SplineWindow::ResizeLayout()
 
 	add_fullwidth(infoLabel);
 	add(subdivSlider);
+	add_right(loopedCheck);
 	add_right(alignedCheck);
 
 	y += padding * 2;
