@@ -95,6 +95,7 @@ enum class EditorActions
 	RAGDOLL_AND_PHYSICS_IMPULSE_TESTER,
 	ORTHO_CAMERA,
 	HIERARCHY_SELECT,
+	ADD_TO_SPLINE,
 
 	COUNT
 };
@@ -137,6 +138,7 @@ HotkeyInfo hotkeyActions[size_t(EditorActions::COUNT)] = {
 	{wi::input::BUTTON('P'),					/*press=*/ false,		/*control=*/ false,		/*shift=*/ false},	//RAGDOLL_AND_PHYSICS_IMPULSE_TESTER,
 	{wi::input::BUTTON('O'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//ORTHO_CAMERA,
 	{wi::input::BUTTON('H'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//HIERARCHY_SELECT,
+	{wi::input::BUTTON('E'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ false},	//ADD_TO_SPLINE,
 };
 static_assert(arraysize(hotkeyActions) == size_t(EditorActions::COUNT));
 bool CheckInput(EditorActions action)
@@ -1174,6 +1176,7 @@ void EditorComponent::Load()
 		ss += "Inspector mode: " + GetInputString(EditorActions::INSPECTOR_MODE) + " button (hold), hovered entity information will be displayed near mouse position.\n";
 		ss += "Place Instances: " + GetInputString(EditorActions::PLACE_INSTANCES) + " (place clipboard onto clicked surface)\n";
 		ss += "Ragdoll and physics impulse tester: Hold " + GetInputString(EditorActions::RAGDOLL_AND_PHYSICS_IMPULSE_TESTER) + " and click on ragdoll or rigid body physics entity with middle mouse.\n";
+		ss += "Add new node to spline: " + GetInputString(EditorActions::ADD_TO_SPLINE) + " while a spline is selected.\n";
 		ss += "Script Console / backlog: HOME button\n";
 		ss += "Bone picking: First select an armature, only then bone picking becomes available. As long as you have an armature or bone selected, bone picking will remain active.\n";
 		ss += "\n";
@@ -1690,6 +1693,11 @@ void EditorComponent::Update(float dt)
 			{
 				AddSelected(x);
 			}
+		}
+
+		if (CheckInput(EditorActions::ADD_TO_SPLINE) && componentsWnd.splineWnd.entity != INVALID_ENTITY)
+		{
+			componentsWnd.splineWnd.NewNode();
 		}
 
 		if (cameraWnd.fpsCheckBox.GetCheck())

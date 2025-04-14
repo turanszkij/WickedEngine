@@ -2500,7 +2500,9 @@ namespace wi::scene
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
-
+			archive >> width;
+			archive >> rotation;
+			archive >> mesh_generation_vertical_subdivision;
 			archive >> mesh_generation_subdivision;
 
 			size_t node_count = 0;
@@ -2514,7 +2516,9 @@ namespace wi::scene
 		else
 		{
 			archive << _flags;
-
+			archive << width;
+			archive << rotation;
+			archive << mesh_generation_vertical_subdivision;
 			archive << mesh_generation_subdivision;
 
 			archive << spline_node_entities.size();

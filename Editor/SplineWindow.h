@@ -13,7 +13,10 @@ public:
 	wi::gui::Label infoLabel;
 	wi::gui::CheckBox loopedCheck;
 	wi::gui::CheckBox alignedCheck;
+	wi::gui::Slider widthSlider;
+	wi::gui::Slider rotSlider;
 	wi::gui::Slider subdivSlider;
+	wi::gui::Slider subdivVerticalSlider;
 	wi::gui::Button addButton;
 
 	struct Entry
@@ -24,6 +27,8 @@ public:
 	wi::vector<Entry> entries;
 
 	void RefreshEntries();
+
+	void NewNode();
 
 	void ResizeLayout() override;
 };

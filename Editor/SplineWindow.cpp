@@ -70,6 +70,51 @@ void SplineWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&alignedCheck);
 
+	widthSlider.Create(0.001f, 4, 0, 1000, "Width: ");
+	widthSlider.SetTooltip("Set overall width multiplier for all nodes, used in mesh generation.");
+	widthSlider.OnSlide([this](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			SplineComponent* spline = scene.splines.GetComponent(x.entity);
+			if (spline == nullptr)
+				continue;
+			spline->width = args.fValue;
+		}
+
+		// indirect set:
+		SplineComponent* spline = scene.splines.GetComponent(entity);
+		if (spline != nullptr)
+		{
+			spline->width = args.fValue;
+		}
+		editor->componentsWnd.RefreshEntityTree();
+		});
+	AddWidget(&widthSlider);
+
+	rotSlider.Create(0, 360, 0, 360, "Rotation: ");
+	rotSlider.SetTooltip("Set overall rotation for all nodes, used in mesh generation.");
+	rotSlider.OnSlide([this](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		float rad = wi::math::DegreesToRadians(args.fValue);
+		for (auto& x : editor->translator.selected)
+		{
+			SplineComponent* spline = scene.splines.GetComponent(x.entity);
+			if (spline == nullptr)
+				continue;
+			spline->rotation = rad;
+		}
+
+		// indirect set:
+		SplineComponent* spline = scene.splines.GetComponent(entity);
+		if (spline != nullptr)
+		{
+			spline->rotation = rad;
+		}
+		editor->componentsWnd.RefreshEntityTree();
+		});
+	AddWidget(&rotSlider);
+
 	subdivSlider.Create(0, 100, 0, 100, "Mesh subdivision: ");
 	subdivSlider.SetTooltip("Set subdivision count for mesh generation. \nIncreasing this above 0 will enable mesh generation and higher values mean higher quality.");
 	subdivSlider.OnSlide([this](wi::gui::EventArgs args) {
@@ -92,35 +137,33 @@ void SplineWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&subdivSlider);
 
+	subdivVerticalSlider.Create(0, 36, 0, 36, "Vertical subdivision: ");
+	subdivVerticalSlider.SetTooltip("Set subdivision count for mesh generation's vertical axis to create a corridoor or a tunnel.");
+	subdivVerticalSlider.OnSlide([this](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			SplineComponent* spline = scene.splines.GetComponent(x.entity);
+			if (spline == nullptr)
+				continue;
+			spline->mesh_generation_vertical_subdivision = args.iValue;
+		}
+
+		// indirect set:
+		SplineComponent* spline = scene.splines.GetComponent(entity);
+		if (spline != nullptr)
+		{
+			spline->mesh_generation_vertical_subdivision = args.iValue;
+		}
+		editor->componentsWnd.RefreshEntityTree();
+		});
+	AddWidget(&subdivVerticalSlider);
+
 	addButton.Create("AddNode");
 	addButton.SetText("+");
-	addButton.SetTooltip("Add an entity as a node to the spline (it must have TransformComponent)");
+	addButton.SetTooltip("Add an entity as a node to the spline (it must have TransformComponent). Hotkey: Ctrl + E");
 	addButton.OnClick([this](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		SplineComponent* spline = scene.splines.GetComponent(entity);
-		if (spline == nullptr)
-			return;
-		Entity node_entity = CreateEntity();
-		scene.names.Create(node_entity) = "spline_node_" + std::to_string(spline->spline_node_entities.size());
-		TransformComponent& transform = scene.transforms.Create(node_entity);
-		if (!spline->spline_node_transforms.empty())
-		{
-			XMVECTOR D = XMVectorSet(1, 0, 0, 0);
-			if (spline->spline_node_transforms.size() > 1)
-			{
-				D = XMVector3Normalize(spline->spline_node_transforms[spline->spline_node_transforms.size() - 1].GetPositionV() - spline->spline_node_transforms[spline->spline_node_transforms.size() - 2].GetPositionV());
-			}
-			transform = spline->spline_node_transforms.back();
-			transform.Translate(D);
-			transform.UpdateTransform();
-		}
-		spline->spline_node_entities.push_back(node_entity);
-		spline->spline_node_transforms.push_back(transform);
-		scene.Component_Attach(node_entity, entity);
-		RefreshEntries();
-		editor->ClearSelected();
-		editor->AddSelected(node_entity);
-		editor->componentsWnd.RefreshEntityTree();
+		NewNode();
 	});
 	AddWidget(&addButton);
 
@@ -144,7 +187,10 @@ void SplineWindow::SetEntity(Entity entity)
 
 		alignedCheck.SetCheck(spline->IsDrawAligned());
 		loopedCheck.SetCheck(spline->IsLooped());
+		widthSlider.SetValue(spline->width);
+		rotSlider.SetValue(wi::math::RadiansToDegrees(spline->rotation));
 		subdivSlider.SetValue(spline->mesh_generation_subdivision);
+		subdivVerticalSlider.SetValue(spline->mesh_generation_vertical_subdivision);
 
 		if (changed)
 		{
@@ -215,6 +261,35 @@ void SplineWindow::RefreshEntries()
 	editor->generalWnd.themeCombo.SetSelected(editor->generalWnd.themeCombo.GetSelected());
 }
 
+void SplineWindow::NewNode()
+{
+	wi::scene::Scene& scene = editor->GetCurrentScene();
+	SplineComponent* spline = scene.splines.GetComponent(entity);
+	if (spline == nullptr)
+		return;
+	Entity node_entity = CreateEntity();
+	scene.names.Create(node_entity) = "spline_node_" + std::to_string(spline->spline_node_entities.size());
+	TransformComponent& transform = scene.transforms.Create(node_entity);
+	if (!spline->spline_node_transforms.empty())
+	{
+		XMVECTOR D = XMVectorSet(1, 0, 0, 0);
+		if (spline->spline_node_transforms.size() > 1)
+		{
+			D = XMVector3Normalize(spline->spline_node_transforms[spline->spline_node_transforms.size() - 1].GetPositionV() - spline->spline_node_transforms[spline->spline_node_transforms.size() - 2].GetPositionV());
+		}
+		transform = spline->spline_node_transforms.back();
+		transform.Translate(D);
+		transform.UpdateTransform();
+	}
+	spline->spline_node_entities.push_back(node_entity);
+	spline->spline_node_transforms.push_back(transform);
+	scene.Component_Attach(node_entity, entity);
+	RefreshEntries();
+	editor->ClearSelected();
+	editor->AddSelected(node_entity);
+	editor->componentsWnd.RefreshEntityTree();
+}
+
 void SplineWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
@@ -254,6 +329,9 @@ void SplineWindow::ResizeLayout()
 
 	add_fullwidth(infoLabel);
 	add(subdivSlider);
+	add(subdivVerticalSlider);
+	add(widthSlider);
+	add(rotSlider);
 	add_right(loopedCheck);
 	add_right(alignedCheck);
 

@@ -2547,13 +2547,19 @@ namespace wi::scene
 		};
 		uint32_t _flags = NONE;
 
+		float width = 1; // overall width multiplier for all nodes (affects mesh generation)
+		float rotation = 0; // rotation of nodes in radians around the spline axis (affects mesh generation)
 		int mesh_generation_subdivision = 0; // increase this above 0 to request mesh generation
+		int mesh_generation_vertical_subdivision = 0; // can create vertically subdivided mesh (corridoor, tunnel, etc. with this)
 
 		wi::vector<wi::ecs::Entity> spline_node_entities;
 
 		// Non-serialized attributes:
 		wi::vector<TransformComponent> spline_node_transforms;
+		float prev_width = 1;
+		float prev_rotation = 0;
 		int prev_mesh_generation_subdivision = 0;
+		int prev_mesh_generation_vertical_subdivision = 0;
 		int prev_mesh_generation_nodes = 0;
 		bool prev_looped = false;
 

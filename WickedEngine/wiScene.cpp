@@ -5774,12 +5774,17 @@ namespace wi::scene
 		wi::jobsystem::Dispatch(ctx, (uint32_t)splines.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
 			SplineComponent& spline = splines[args.jobIndex];
 			Entity entity = splines.GetEntity(args.jobIndex);
+
 			bool dirty = spline.prev_mesh_generation_subdivision != spline.mesh_generation_subdivision;
+			dirty |= spline.prev_mesh_generation_vertical_subdivision != spline.mesh_generation_vertical_subdivision;
 			dirty |= spline.prev_mesh_generation_nodes != (int)spline.spline_node_entities.size();
 			dirty |= spline.prev_looped != spline.IsLooped();
+			dirty |= spline.prev_width != spline.width;
+			dirty |= spline.prev_rotation != spline.rotation;
+
 			spline.spline_node_transforms.resize(spline.spline_node_entities.size());
 
-			// BEFORE mesh update: LOCAL space transform (since mesh will be also transformed by ObjectComponent instance)
+			// BEFORE mesh update: LOCAL space transform (because mesh will be also transformed by ObjectComponent instance)
 			for (size_t i = 0; i < spline.spline_node_entities.size(); ++i)
 			{
 				Entity node_entity = spline.spline_node_entities[i];
@@ -5803,24 +5808,20 @@ namespace wi::scene
 					MeshComponent* mesh = meshes.GetComponent(entity);
 					if (mesh != nullptr)
 					{
+						spline.prev_width = spline.width;
+						spline.prev_rotation = spline.rotation;
 						spline.prev_mesh_generation_subdivision = spline.mesh_generation_subdivision;
+						spline.prev_mesh_generation_vertical_subdivision = spline.mesh_generation_vertical_subdivision;
 						spline.prev_mesh_generation_nodes = (int)spline.spline_node_entities.size();
 						spline.prev_looped = spline.IsLooped();
+
 						const size_t segmentCount = (spline.spline_node_transforms.size() - 1) * (size_t)spline.mesh_generation_subdivision;
-						const size_t vertexCount = segmentCount * 2;
-						const size_t indexCount = (segmentCount - 1) * 6;
-						mesh->vertex_positions.resize(vertexCount);
-						mesh->vertex_normals.resize(vertexCount);
-						mesh->vertex_tangents.resize(vertexCount);
-						mesh->vertex_uvset_0.resize(vertexCount);
-						mesh->indices.resize(indexCount);
-						if (mesh->subsets.empty())
-						{
-							mesh->subsets.emplace_back().materialID = entity;
-						}
-						MeshComponent::MeshSubset& subset = mesh->subsets.front();
-						subset.indexCount = (uint32_t)indexCount;
-						subset.indexOffset = 0;
+						const int verticalSegments = std::max(3, spline.mesh_generation_vertical_subdivision);
+						mesh->vertex_positions.clear();
+						mesh->vertex_normals.clear();
+						mesh->vertex_tangents.clear();
+						mesh->vertex_uvset_0.clear();
+						mesh->indices.clear();
 						TransformComponent eval;
 						XMVECTOR prevRIGHT = XMVectorZero();
 						XMVECTOR prevLEFT = XMVectorZero();
@@ -5831,14 +5832,14 @@ namespace wi::scene
 						for (size_t i = 0; i < segmentCount; ++i)
 						{
 							float t = float(i) / float(segmentCount - 1);
-							XMStoreFloat4x4(&eval.world, spline.EvaluateSplineAt(t));
-							const size_t vertex0 = i * 2 + 0;
-							const size_t vertex1 = i * 2 + 1;
+							const XMMATRIX M = spline.EvaluateSplineAt(t);
+							XMStoreFloat4x4(&eval.world, M);
 
 							const XMVECTOR P = eval.GetPositionV();
-							const XMVECTOR R = eval.GetRightV();
-							const XMVECTOR N = XMVector3Normalize(eval.GetUpV());
 							const XMVECTOR T = XMVector3Normalize(eval.GetForwardV());
+							const XMVECTOR Q = XMQuaternionRotationAxis(T, spline.rotation);
+							const XMVECTOR R = XMVector3Rotate(eval.GetRightV() * spline.width, Q);
+							const XMVECTOR N = XMVector3Normalize(XMVector3Rotate(eval.GetUpV(), Q));
 
 							XMVECTOR currentRIGHT = P + R;
 							XMVECTOR currentLEFT = P - R;
@@ -5864,49 +5865,94 @@ namespace wi::scene
 							const XMVECTOR currentMID = XMVectorLerp(currentRIGHT, currentLEFT, 0.5f);
 							prevPLANE = XMPlaneFromPointNormal(currentMID, XMVector3Normalize(XMVector3Cross(N, currentRIGHT - currentLEFT)));
 
-							XMStoreFloat3(&mesh->vertex_positions[vertex0], currentRIGHT);
-							XMStoreFloat3(&mesh->vertex_positions[vertex1], currentLEFT);
-
-							XMStoreFloat3(&mesh->vertex_normals[vertex0], N);
-							XMStoreFloat3(&mesh->vertex_normals[vertex1], N);
-
-							XMStoreFloat4(&mesh->vertex_tangents[vertex0], T);
-							XMStoreFloat4(&mesh->vertex_tangents[vertex1], T);
-							mesh->vertex_tangents[vertex0].w = 1;
-							mesh->vertex_tangents[vertex1].w = 1;
-
+							const float width = wi::math::Distance(currentRIGHT, currentLEFT);
 							if (i > 0)
 							{
-								const float width = wi::math::Distance(currentRIGHT, currentLEFT);
 								dist += wi::math::Distance(prevMID, currentMID) / std::max(0.01f, width);
 							}
 							prevMID = currentMID;
 
-							mesh->vertex_uvset_0[vertex0].x = 0;
-							mesh->vertex_uvset_0[vertex0].y = dist;
-							mesh->vertex_uvset_0[vertex1].x = 1;
-							mesh->vertex_uvset_0[vertex1].y = dist;
+							if (spline.mesh_generation_vertical_subdivision == 0)
+							{
+								// No vertical subdivision, create simple plane (road):
+								const uint32_t startVertex = (uint32_t)mesh->vertex_positions.size();
+
+								XMStoreFloat3(&mesh->vertex_positions.emplace_back(), currentRIGHT);
+								XMStoreFloat3(&mesh->vertex_positions.emplace_back(), currentLEFT);
+
+								XMStoreFloat3(&mesh->vertex_normals.emplace_back(), N);
+								XMStoreFloat3(&mesh->vertex_normals.emplace_back(), N);
+
+								XMStoreFloat4(&mesh->vertex_tangents.emplace_back(), XMVectorSetW(T, 1));
+								XMStoreFloat4(&mesh->vertex_tangents.emplace_back(), XMVectorSetW(T, 1));
+
+								mesh->vertex_uvset_0.push_back(XMFLOAT2(0, dist));
+								mesh->vertex_uvset_0.push_back(XMFLOAT2(1, dist));
+
+								if (i < segmentCount - 1)
+								{
+									mesh->indices.push_back(startVertex + 0);
+									mesh->indices.push_back(startVertex + 1);
+									mesh->indices.push_back(startVertex + 2);
+									mesh->indices.push_back(startVertex + 2);
+									mesh->indices.push_back(startVertex + 1);
+									mesh->indices.push_back(startVertex + 3);
+								}
+							}
+							else
+							{
+								// Vertical subdivision, corridoor, tunnel:
+								for (int j = 0; j <= verticalSegments; ++j)
+								{
+									const uint32_t startVertex = (uint32_t)mesh->vertex_positions.size();
+									const float percenta = float(j) / float(verticalSegments);
+									const float alpha = percenta * XM_2PI + spline.rotation;
+									const float sina = std::sin(alpha);
+									const float cosa = std::cos(alpha);
+
+									XMVECTOR A = XMVector3Transform(XMVectorSet(-sina, cosa, 0, 1) * width, M);
+									XMStoreFloat3(&mesh->vertex_positions.emplace_back(), A);
+									XMStoreFloat3(&mesh->vertex_normals.emplace_back(), XMVector3Normalize(A - P));
+									XMStoreFloat4(&mesh->vertex_tangents.emplace_back(), XMVectorSetW(T, 1));
+									mesh->vertex_uvset_0.push_back(XMFLOAT2(percenta, dist));
+
+									if (i < segmentCount - 1 && j < verticalSegments)
+									{
+										mesh->indices.push_back(startVertex + 0);
+										mesh->indices.push_back(startVertex + 1);
+										mesh->indices.push_back(startVertex + verticalSegments + 1);
+										mesh->indices.push_back(startVertex + verticalSegments + 1);
+										mesh->indices.push_back(startVertex + 1);
+										mesh->indices.push_back(startVertex + verticalSegments + 2);
+									}
+								}
+							}
 						}
-						size_t i0 = 0;
-						for (size_t i = 0; i < segmentCount - 1; ++i)
+						if (mesh->subsets.empty())
 						{
-							uint32_t vertex0 = uint32_t(i * 2 + 0);
-							uint32_t vertex1 = uint32_t(i * 2 + 1);
-							uint32_t vertex2 = uint32_t(i * 2 + 2);
-							uint32_t vertex3 = uint32_t(i * 2 + 3);
-							mesh->indices[i0++] = vertex0;
-							mesh->indices[i0++] = vertex1;
-							mesh->indices[i0++] = vertex2;
-							mesh->indices[i0++] = vertex2;
-							mesh->indices[i0++] = vertex1;
-							mesh->indices[i0++] = vertex3;
+							mesh->subsets.emplace_back().materialID = entity;
 						}
 						if (spline.IsLooped() && mesh->vertex_positions.size() > 2)
 						{
-							// force end segments on start segments:
-							mesh->vertex_positions[mesh->vertex_positions.size() - 2] = mesh->vertex_positions[0];
-							mesh->vertex_positions[mesh->vertex_positions.size() - 1] = mesh->vertex_positions[1];
+							// force snap end segments onto start segments:
+							if (spline.mesh_generation_vertical_subdivision == 0)
+							{
+								// No vertical subdivision, create simple plane (road):
+								mesh->vertex_positions[mesh->vertex_positions.size() - 2] = mesh->vertex_positions[0];
+								mesh->vertex_positions[mesh->vertex_positions.size() - 1] = mesh->vertex_positions[1];
+							}
+							else
+							{
+								// Vertical subdivision, corridoor, tunnel:
+								for (int j = 0; j <= verticalSegments; ++j)
+								{
+									mesh->vertex_positions[j] = mesh->vertex_positions[mesh->vertex_positions.size() - verticalSegments - 1 + j];
+								}
+							}
 						}
+						MeshComponent::MeshSubset& subset = mesh->subsets.front();
+						subset.indexCount = (uint32_t)mesh->indices.size();
+						subset.indexOffset = 0;
 						mesh->CreateRenderData();
 					}
 					ObjectComponent* object = objects.GetComponent(entity);

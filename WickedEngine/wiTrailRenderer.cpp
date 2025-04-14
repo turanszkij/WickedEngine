@@ -269,6 +269,9 @@ namespace wi
 				}
 			}
 			next_cut++;
+
+			if (!looped)
+				i++;
 		}
 		assert(vertexCount <= vertexCountAlloc);
 		assert(indexCount <= indexCountAlloc);
