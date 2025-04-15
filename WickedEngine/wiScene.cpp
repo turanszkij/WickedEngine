@@ -5816,12 +5816,29 @@ namespace wi::scene
 						spline.prev_looped = spline.IsLooped();
 
 						const size_t segmentCount = (spline.spline_node_transforms.size() - 1) * (size_t)spline.mesh_generation_subdivision;
-						const int verticalSegments = std::max(3, spline.mesh_generation_vertical_subdivision);
+						const int verticalSegments = std::max(0, spline.mesh_generation_vertical_subdivision + 3);
 						mesh->vertex_positions.clear();
 						mesh->vertex_normals.clear();
 						mesh->vertex_tangents.clear();
 						mesh->vertex_uvset_0.clear();
 						mesh->indices.clear();
+						size_t vertexCount;
+						size_t indexCount;
+						if (spline.mesh_generation_vertical_subdivision == 0)
+						{
+							vertexCount = segmentCount * 2;
+							indexCount = (segmentCount - 1) * 6;
+						}
+						else
+						{
+							vertexCount = segmentCount * verticalSegments;
+							indexCount = (segmentCount - 1) * (verticalSegments - 1) * 6;
+						}
+						mesh->vertex_positions.reserve(vertexCount);
+						mesh->vertex_normals.reserve(vertexCount);
+						mesh->vertex_tangents.reserve(vertexCount);
+						mesh->vertex_uvset_0.reserve(vertexCount);
+						mesh->indices.reserve(indexCount);
 						TransformComponent eval;
 						XMVECTOR prevRIGHT = XMVectorZero();
 						XMVECTOR prevLEFT = XMVectorZero();
@@ -5902,10 +5919,10 @@ namespace wi::scene
 							else
 							{
 								// Vertical subdivision, corridoor, tunnel:
-								for (int j = 0; j <= verticalSegments; ++j)
+								for (int j = 0; j < verticalSegments; ++j)
 								{
 									const uint32_t startVertex = (uint32_t)mesh->vertex_positions.size();
-									const float percenta = float(j) / float(verticalSegments);
+									const float percenta = float(j) / float(verticalSegments - 1);
 									const float alpha = percenta * XM_2PI + spline.rotation;
 									const float sina = std::sin(alpha);
 									const float cosa = std::cos(alpha);
@@ -5916,14 +5933,14 @@ namespace wi::scene
 									XMStoreFloat4(&mesh->vertex_tangents.emplace_back(), XMVectorSetW(T, 1));
 									mesh->vertex_uvset_0.push_back(XMFLOAT2(percenta, dist));
 
-									if (i < segmentCount - 1 && j < verticalSegments)
+									if ((i < (segmentCount - 1)) && (j < (verticalSegments - 1)))
 									{
 										mesh->indices.push_back(startVertex + 0);
 										mesh->indices.push_back(startVertex + 1);
-										mesh->indices.push_back(startVertex + verticalSegments + 1);
-										mesh->indices.push_back(startVertex + verticalSegments + 1);
+										mesh->indices.push_back(startVertex + verticalSegments);
+										mesh->indices.push_back(startVertex + verticalSegments);
 										mesh->indices.push_back(startVertex + 1);
-										mesh->indices.push_back(startVertex + verticalSegments + 2);
+										mesh->indices.push_back(startVertex + verticalSegments + 1);
 									}
 								}
 							}
@@ -5944,15 +5961,17 @@ namespace wi::scene
 							else
 							{
 								// Vertical subdivision, corridoor, tunnel:
-								for (int j = 0; j <= verticalSegments; ++j)
+								for (int j = 0; j < verticalSegments; ++j)
 								{
-									mesh->vertex_positions[j] = mesh->vertex_positions[mesh->vertex_positions.size() - verticalSegments - 1 + j];
+									mesh->vertex_positions[j] = mesh->vertex_positions[mesh->vertex_positions.size() - verticalSegments + j];
 								}
 							}
 						}
 						MeshComponent::MeshSubset& subset = mesh->subsets.front();
 						subset.indexCount = (uint32_t)mesh->indices.size();
 						subset.indexOffset = 0;
+						assert(vertexCount == mesh->vertex_positions.size());
+						assert(indexCount == mesh->indices.size());
 						mesh->CreateRenderData();
 					}
 					ObjectComponent* object = objects.GetComponent(entity);
