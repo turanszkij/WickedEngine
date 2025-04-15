@@ -2174,8 +2174,8 @@ Path finding operations can be made by using a voxel grid and path queries. The 
 
 ### TrailRenderer
 - [constructor] TrailRenderer()
-- AddPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1)) -- adds a new point to the trail
-- Cut() -- cuts the trail at last point and starts a new trail
+- AddPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1), opt Vector rotationQuaternion = Vector()) -- adds a new point to the trail. Note: if rotation is not specified, then point will be camera facing, otherwise UP direction will be rotated
+- Cut(opt bool loop = false) -- cuts the trail at last point and starts a new trail. You can specify that this cut will create a loop of the previously added points.
 - Fade(float amount)	-- Applies fade for the whole trail continuously, and removes segments that can be removed due to faded
 - Clear() -- removes all points and cuts from the trail
 - GetPointCount() : int -- returns the number of points in the trail
@@ -2197,3 +2197,4 @@ Path finding operations can be made by using a voxel grid and path queries. The 
 - GetTexMulAdd() : Texture
 - SetTexMulAdd2(Texture tex) -- set the texture2 UV tiling multiply-add value of the whole trail
 - GetTexMulAdd2() : Texture
+- SetDepthSoften(float value)	-- sets the depth soften amount (default = 10)

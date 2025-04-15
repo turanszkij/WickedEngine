@@ -35,7 +35,7 @@ namespace wi::scene
 
 	XMFLOAT3 TransformComponent::GetPosition() const
 	{
-		return *((XMFLOAT3*)&world._41);
+		return wi::math::GetPosition(world);
 	}
 	XMFLOAT4 TransformComponent::GetRotation() const
 	{
@@ -2857,5 +2857,135 @@ namespace wi::scene
 	bool CharacterComponent::IsActive() const
 	{
 		return active;
+	}
+
+	XMMATRIX SplineComponent::EvaluateSplineAt(float t)
+	{
+		if (spline_node_transforms.empty())
+			return {};
+		if (spline_node_transforms.size() == 1)
+			return spline_node_transforms[0].GetWorldMatrix();
+
+		if (spline_node_transforms.size() == 2)
+		{
+			XMVECTOR P0 = spline_node_transforms[0].GetPositionV();
+			XMVECTOR P1 = spline_node_transforms[1].GetPositionV();
+
+			XMVECTOR W0 = XMVectorReplicate(spline_node_transforms[0].GetScale().x);
+			XMVECTOR W1 = XMVectorReplicate(spline_node_transforms[1].GetScale().x);
+
+			XMVECTOR Q0 = XMQuaternionNormalize(spline_node_transforms[0].GetRotationV());
+			XMVECTOR Q1 = XMQuaternionNormalize(spline_node_transforms[1].GetRotationV());
+
+			XMVECTOR P = XMVectorLerp(P0, P1, t);
+			XMVECTOR Q = XMQuaternionNormalize(XMQuaternionSlerp(Q0, Q1, t));
+			XMVECTOR W = XMVectorLerp(W0, W1, t);
+			XMVECTOR N = XMVector3Normalize(XMVector3Rotate(XMVectorSet(0, 1, 0, 0), Q));
+			XMVECTOR T = XMVector3Normalize(P1 - P0);
+			XMVECTOR B = XMVector3Normalize(XMVector3Cross(T, N));
+			N = XMVector3Normalize(XMVector3Cross(B, T));
+			B *= XMVectorGetX(W); // width offset
+			N = XMVectorSetW(N, 0);
+			T = XMVectorSetW(T, 0);
+			B = XMVectorSetW(B, 0);
+			P = XMVectorSetW(P, 1);
+			XMMATRIX M = { B, N, T, P };
+			return M;
+		}
+
+		int cnt = (int)spline_node_transforms.size();
+		int first = 0;
+		int second = 1;
+		int beforelast = cnt - 1;
+		if (IsLooped())
+		{
+			first = cnt - 1;
+			second = first + 1;
+			beforelast++;
+		}
+
+		float total_distance = 0;
+		for (int i = 0; i < beforelast; ++i)
+		{
+			const TransformComponent& transform0 = spline_node_transforms[(i + first) % cnt];
+			const TransformComponent& transform1 = spline_node_transforms[(i + second) % cnt];
+			total_distance += wi::math::Distance(transform0.GetPosition(), transform1.GetPosition());
+		}
+		float tdist = t * total_distance;
+		int t0 = 0; // prev
+		int t1 = 0; // current
+		int t2 = 1; // next
+		int t3 = 1; // after next
+		float tmid = 0;
+		total_distance = 0;
+		for (int i = 0; i < beforelast; ++i)
+		{
+			const TransformComponent& transform0 = spline_node_transforms[(i + first) % cnt];
+			const TransformComponent& transform1 = spline_node_transforms[(i + second) % cnt];
+			float dist_prev = total_distance;
+			total_distance += wi::math::Distance(transform0.GetPosition(), transform1.GetPosition());
+			if (total_distance >= tdist)
+			{
+				if (IsLooped())
+				{
+					t0 = (i + first - 1) % cnt;
+					t1 = (i + first) % cnt;
+					t2 = (i + second) % cnt;
+					t3 = (i + second + 1) % cnt;
+				}
+				else
+				{
+					t0 = std::max(0, i - 1);
+					t1 = i;
+					t2 = i + 1;
+					t3 = std::min(i + 2, cnt - 1);
+				}
+				tmid = inverse_lerp(dist_prev, total_distance, tdist);
+				break;
+			}
+		}
+
+		XMVECTOR P0 = spline_node_transforms[t0].GetPositionV();
+		XMVECTOR P1 = spline_node_transforms[t1].GetPositionV();
+		XMVECTOR P2 = spline_node_transforms[t2].GetPositionV();
+		XMVECTOR P3 = spline_node_transforms[t3].GetPositionV();
+
+		if (t1 == t0)
+		{
+			// when P0 == P1, centripetal catmull doesn't work, so we have to do a dummy control point
+			P0 += P1 - P2;
+		}
+		if (t2 == t3)
+		{
+			// when P2 == P3, centripetal catmull doesn't work, so we have to do a dummy control point
+			P3 += P2 - P1;
+		}
+
+		XMVECTOR W0 = XMVectorReplicate(spline_node_transforms[t0].GetScale().x);
+		XMVECTOR W1 = XMVectorReplicate(spline_node_transforms[t1].GetScale().x);
+		XMVECTOR W2 = XMVectorReplicate(spline_node_transforms[t2].GetScale().x);
+		XMVECTOR W3 = XMVectorReplicate(spline_node_transforms[t3].GetScale().x);
+
+		XMVECTOR Q0 = XMQuaternionNormalize(spline_node_transforms[t0].GetRotationV());
+		XMVECTOR Q1 = XMQuaternionNormalize(spline_node_transforms[t1].GetRotationV());
+		XMVECTOR Q2 = XMQuaternionNormalize(spline_node_transforms[t2].GetRotationV());
+		XMVECTOR Q3 = XMQuaternionNormalize(spline_node_transforms[t3].GetRotationV());
+
+		XMVECTOR P = wi::math::CatmullRomCentripetal(P0, P1, P2, P3, tmid);
+		XMVECTOR P_prev = wi::math::CatmullRomCentripetal(P0, P1, P2, P3, saturate(tmid - 0.01f));
+		XMVECTOR P_next = wi::math::CatmullRomCentripetal(P0, P1, P2, P3, saturate(tmid + 0.01f));
+		XMVECTOR Q = XMQuaternionNormalize(XMVectorCatmullRom(Q0, Q1, Q2, Q3, tmid));
+		XMVECTOR W = XMVectorCatmullRom(W0, W1, W2, W3, tmid);
+		XMVECTOR N = XMVector3Normalize(XMVector3Rotate(XMVectorSet(0, 1, 0, 0), Q));
+		XMVECTOR T = XMVector3Normalize(P_next - P_prev);
+		XMVECTOR B = XMVector3Normalize(XMVector3Cross(T, N));
+		N = XMVector3Normalize(XMVector3Cross(B, T));
+		B *= XMVectorGetX(W); // width offset
+		N = XMVectorSetW(N, 0);
+		T = XMVectorSetW(T, 0);
+		B = XMVectorSetW(B, 0);
+		P = XMVectorSetW(P, 1);
+		XMMATRIX M = { B, N, T, P };
+		return M;
 	}
 }

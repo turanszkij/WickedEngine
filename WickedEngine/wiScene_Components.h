@@ -2536,4 +2536,44 @@ namespace wi::scene
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
+
+	struct SplineComponent
+	{
+		enum FLAGS
+		{
+			NONE = 0,
+			DRAW_ALIGNED = 1 << 0,
+			LOOPED = 1 << 1,
+		};
+		uint32_t _flags = NONE;
+
+		float width = 1; // overall width multiplier for all nodes (affects mesh generation)
+		float rotation = 0; // rotation of nodes in radians around the spline axis (affects mesh generation)
+		int mesh_generation_subdivision = 0; // increase this above 0 to request mesh generation
+		int mesh_generation_vertical_subdivision = 0; // can create vertically subdivided mesh (corridoor, tunnel, etc. with this)
+
+		wi::vector<wi::ecs::Entity> spline_node_entities;
+
+		// Non-serialized attributes:
+		wi::vector<TransformComponent> spline_node_transforms;
+		float prev_width = 1;
+		float prev_rotation = 0;
+		int prev_mesh_generation_subdivision = 0;
+		int prev_mesh_generation_vertical_subdivision = 0;
+		int prev_mesh_generation_nodes = 0;
+		bool prev_looped = false;
+
+		// Evaluate an interpolated location on the spline at t which in range [0,1] on the spline
+		//	the result matrix is oriented to look towards the spline direction and face upwards along the spline normal
+		XMMATRIX EvaluateSplineAt(float t);
+
+		// By default the spline is drawn as camera facing, this can be used to set it to be drawn aligned to segment rotations:
+		bool IsDrawAligned() const { return _flags & DRAW_ALIGNED; }
+		void SetDrawAligned(bool value = true) { if (value) { _flags |= DRAW_ALIGNED; } else { _flags &= ~DRAW_ALIGNED; } }
+
+		bool IsLooped() const { return _flags & LOOPED; }
+		void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
+
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+	};
 }

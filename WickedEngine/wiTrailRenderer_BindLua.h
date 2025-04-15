@@ -43,6 +43,7 @@ namespace wi::lua
 		int GetTexMulAdd(lua_State* L);
 		int SetTexMulAdd2(lua_State* L);
 		int GetTexMulAdd2(lua_State* L);
+		int SetDepthSoften(lua_State* L);
 
 		static void Bind();
 	};

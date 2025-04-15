@@ -231,6 +231,8 @@ public:
 
 	wi::jobsystem::context loadmodel_workload;
 	wi::SpriteFont loadmodel_font;
+
+	wi::TrailRenderer spline_renderer;
 };
 
 class Editor : public wi::Application

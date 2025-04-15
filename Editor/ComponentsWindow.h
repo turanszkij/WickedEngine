@@ -32,6 +32,7 @@
 #include "VoxelGridWindow.h"
 #include "MetadataWindow.h"
 #include "ConstraintWindow.h"
+#include "SplineWindow.h"
 
 class EditorComponent;
 
@@ -78,40 +79,42 @@ public:
 	VoxelGridWindow voxelGridWnd;
 	MetadataWindow metadataWnd;
 	ConstraintWindow constraintWnd;
+	SplineWindow splineWnd;
 
 	enum class Filter : uint64_t
 	{
-		Transform = 1 << 0,
-		Material = 1 << 1,
-		Mesh = 1 << 2,
-		Object = 1 << 3,
-		EnvironmentProbe = 1 << 4,
-		Decal = 1 << 5,
-		Sound = 1 << 6,
-		Weather = 1 << 7,
-		Light = 1 << 8,
-		Animation = 1 << 9,
-		Force = 1 << 10,
-		Emitter = 1 << 11,
-		Hairparticle = 1 << 12,
-		IK = 1 << 13,
-		Camera = 1 << 14,
-		Armature = 1 << 15,
-		Collider = 1 << 16,
-		Script = 1 << 17,
-		Expression = 1 << 18,
-		Terrain = 1 << 19,
-		Spring = 1 << 20,
-		Humanoid = 1 << 21,
-		Video = 1 << 22,
-		Sprite = 1 << 23,
-		Font = 1 << 24,
-		VoxelGrid = 1 << 25,
-		RigidBody = 1 << 26,
-		SoftBody = 1 << 27,
-		Metadata = 1 << 28,
-		Vehicle = 1 << 29,
-		Constraint = 1 << 30,
+		Transform = 1ull << 0ull,
+		Material = 1ull << 1ull,
+		Mesh = 1ull << 2ull,
+		Object = 1ull << 3ull,
+		EnvironmentProbe = 1ull << 4ull,
+		Decal = 1ull << 5ull,
+		Sound = 1ull << 6ull,
+		Weather = 1ull << 7ull,
+		Light = 1ull << 8ull,
+		Animation = 1ull << 9ull,
+		Force = 1ull << 10ull,
+		Emitter = 1ull << 11ull,
+		Hairparticle = 1ull << 12ull,
+		IK = 1ull << 13ull,
+		Camera = 1ull << 14ull,
+		Armature = 1ull << 15ull,
+		Collider = 1ull << 16ull,
+		Script = 1ull << 17ull,
+		Expression = 1ull << 18ull,
+		Terrain = 1ull << 19ull,
+		Spring = 1ull << 20ull,
+		Humanoid = 1ull << 21ull,
+		Video = 1ull << 22ull,
+		Sprite = 1ull << 23ull,
+		Font = 1ull << 24ull,
+		VoxelGrid = 1ull << 25ull,
+		RigidBody = 1ull << 26ull,
+		SoftBody = 1ull << 27ull,
+		Metadata = 1ull << 28ull,
+		Vehicle = 1ull << 29ull,
+		Constraint = 1ull << 30ull,
+		Spline = 1ull << 31ull,
 
 		All = ~0ull,
 	} filter = Filter::All;

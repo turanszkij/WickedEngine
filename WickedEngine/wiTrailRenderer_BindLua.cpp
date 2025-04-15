@@ -28,6 +28,7 @@ namespace wi::lua
 		lunamethod(TrailRenderer_BindLua, GetTexMulAdd),
 		lunamethod(TrailRenderer_BindLua, SetTexMulAdd2),
 		lunamethod(TrailRenderer_BindLua, GetTexMulAdd2),
+		lunamethod(TrailRenderer_BindLua, SetDepthSoften),
 		{ NULL, NULL }
 	};
 	Luna<TrailRenderer_BindLua>::PropertyType TrailRenderer_BindLua::properties[] = {
@@ -39,13 +40,13 @@ namespace wi::lua
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc < 1)
 		{
-			wi::lua::SError(L, "TrailRenderer::AddPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1)) not enough arguments!");
+			wi::lua::SError(L, "TrailRenderer::AddPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1), opt Vector rotationQuaternion = Vector()) not enough arguments!");
 			return 0;
 		}
 		Vector_BindLua* pos = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (pos == nullptr)
 		{
-			wi::lua::SError(L, "TrailRenderer::AddPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1)) first argument is not a Vector!");
+			wi::lua::SError(L, "TrailRenderer::AddPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1), opt Vector rotationQuaternion = Vector()) first argument is not a Vector!");
 			return 0;
 		}
 		TrailRenderer::TrailPoint point;
@@ -59,11 +60,24 @@ namespace wi::lua
 				Vector_BindLua* col = Luna<Vector_BindLua>::lightcheck(L, 3);
 				if (col == nullptr)
 				{
-					wi::lua::SError(L, "TrailRenderer::AddPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1)) third argument is not a Vector!");
+					wi::lua::SError(L, "TrailRenderer::AddPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1), opt Vector rotationQuaternion = Vector()) third argument is not a Vector!");
 				}
 				else
 				{
 					point.color = col->data;
+				}
+
+				if (argc > 3)
+				{
+					Vector_BindLua* rot = Luna<Vector_BindLua>::lightcheck(L, 4);
+					if (rot == nullptr)
+					{
+						wi::lua::SError(L, "TrailRenderer::AddPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1), opt Vector rotationQuaternion = Vector()) fourth argument is not a Vector!");
+					}
+					else
+					{
+						point.rotation = rot->data;
+					}
 				}
 			}
 		}
@@ -73,7 +87,13 @@ namespace wi::lua
 	}
 	int TrailRenderer_BindLua::Cut(lua_State* L)
 	{
-		trail.Cut();
+		bool loop = false;
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			loop = wi::lua::SGetBool(L, 1);
+		}
+		trail.Cut(loop);
 		return 0;
 	}
 	int TrailRenderer_BindLua::Fade(lua_State* L)
@@ -90,8 +110,7 @@ namespace wi::lua
 	}
 	int TrailRenderer_BindLua::Clear(lua_State* L)
 	{
-		trail.points.clear();
-		trail.cuts.clear();
+		trail.Clear();
 		return 0;
 	}
 	int TrailRenderer_BindLua::GetPointCount(lua_State* L)
@@ -315,6 +334,17 @@ namespace wi::lua
 	{
 		Luna<Vector_BindLua>::push(L, trail.texMulAdd2);
 		return 1;
+	}
+	int TrailRenderer_BindLua::SetDepthSoften(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "TrailRenderer::SetDepthSoften(float value): not enough arguments!");
+			return 0;
+		}
+		trail.depth_soften = wi::lua::SGetFloat(L, 1);
+		return 0;
 	}
 
 	void TrailRenderer_BindLua::Bind()

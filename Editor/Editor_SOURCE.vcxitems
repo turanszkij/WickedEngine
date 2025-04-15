@@ -53,6 +53,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)ScriptWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)SoftBodyWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)SoundWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)SplineWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)SpringWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)SpriteRectWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)SpriteWindow.cpp" />
@@ -125,6 +126,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ScriptWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SoftBodyWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SoundWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)SplineWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SpringWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SpriteRectWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SpriteWindow.h" />
