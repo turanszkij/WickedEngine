@@ -5781,9 +5781,16 @@ namespace wi::scene
 			dirty |= spline.prev_looped != spline.IsLooped();
 			dirty |= spline.prev_width != spline.width;
 			dirty |= spline.prev_rotation != spline.rotation;
-			dirty |= spline.prev_terrain_modifier_amount != spline.terrain_modifier_amount;
 
-			spline.prev_terrain_modifier_amount = spline.terrain_modifier_amount;
+			bool dirty_terrain = spline.prev_terrain_modifier_amount != spline.terrain_modifier_amount;
+			dirty_terrain |= spline.prev_terrain_generation_nodes != (int)spline.spline_node_entities.size();
+			dirty_terrain |= spline.prev_looped != spline.IsLooped();
+			dirty_terrain |= spline.prev_width != spline.width;
+			dirty_terrain |= spline.prev_rotation != spline.rotation;
+
+			spline.prev_width = spline.width;
+			spline.prev_rotation = spline.rotation;
+			spline.prev_looped = spline.IsLooped();
 
 			spline.spline_node_transforms.resize(spline.spline_node_entities.size());
 
@@ -5795,6 +5802,7 @@ namespace wi::scene
 				if (node_transform != nullptr)
 				{
 					dirty |= node_transform->IsDirty(); // if any transform was dirty, it will force mesh regeneration
+					dirty_terrain |= node_transform->IsDirty(); // if any transform was dirty, it will force terrain regeneration
 					spline.spline_node_transforms[i] = *node_transform;
 
 					// Force update in local space:
@@ -5804,6 +5812,7 @@ namespace wi::scene
 			}
 
 			spline.SetDirty(dirty);
+			spline.dirty_terrain |= dirty_terrain; // flag removal only by terrain gen
 
 			// Mesh generation:
 			if (dirty && spline.spline_node_transforms.size() > 1)
@@ -5813,12 +5822,9 @@ namespace wi::scene
 					MeshComponent* mesh = meshes.GetComponent(entity);
 					if (mesh != nullptr)
 					{
-						spline.prev_width = spline.width;
-						spline.prev_rotation = spline.rotation;
 						spline.prev_mesh_generation_subdivision = spline.mesh_generation_subdivision;
 						spline.prev_mesh_generation_vertical_subdivision = spline.mesh_generation_vertical_subdivision;
 						spline.prev_mesh_generation_nodes = (int)spline.spline_node_entities.size();
-						spline.prev_looped = spline.IsLooped();
 
 						const size_t segmentCount = (spline.spline_node_transforms.size() - 1) * (size_t)spline.mesh_generation_subdivision;
 						const int verticalSegments = std::max(0, spline.mesh_generation_vertical_subdivision + 3);
@@ -6012,10 +6018,9 @@ namespace wi::scene
 			}
 
 			// Compute AABB:
-			if (dirty)
+			if (dirty || spline.dirty_terrain)
 			{
-				spline.aabb = spline.ComputeAABB(10);
-				spline.dirty_terrain = true;
+				spline.aabb = spline.ComputeAABB();
 			}
 		});
 		wi::jobsystem::Wait(ctx);

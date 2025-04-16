@@ -597,8 +597,16 @@ namespace wi::terrain
 		for (size_t i = 0; i < scene->splines.GetCount(); ++i)
 		{
 			const SplineComponent& spline = scene->splines[i];
-			restart_generation |= spline.dirty_terrain;
-			spline.dirty_terrain = false;
+			if (spline.terrain_modifier_amount > 0 || spline.prev_terrain_modifier_amount > 0)
+			{
+				restart_generation |= spline.dirty_terrain;
+				if (restart_generation)
+				{
+					spline.dirty_terrain = false;
+					spline.prev_terrain_modifier_amount = spline.terrain_modifier_amount;
+					spline.prev_terrain_generation_nodes = (int)spline.spline_node_entities.size();
+				}
+			}
 		}
 
 		if (restart_generation)
@@ -870,6 +878,9 @@ namespace wi::terrain
 			if (spline.terrain_modifier_amount > 0)
 			{
 				generator->splines.push_back(spline);
+				// extrude spline aabb for heightfield check:
+				generator->splines.back().aabb._min.y = -FLT_MAX;
+				generator->splines.back().aabb._max.y = FLT_MAX;
 			}
 		}
 		wi::jobsystem::Execute(generator->workload, [=](wi::jobsystem::JobArgs a) {
@@ -979,7 +990,8 @@ namespace wi::terrain
 							float splineheight = XMVectorGetY(S);
 							P = XMVectorSetY(P, splineheight);
 							float splinedist = wi::math::Distance(P, S);
-							height = lerp(splineheight, height, smoothstep(0.0f, 1.0f, saturate(std::max(0.0f, splinedist - spline.width) * sqr(spline.terrain_modifier_amount))));
+							float splinewidth = XMVectorGetW(S);
+							height = lerp(splineheight, height, smoothstep(0.0f, 1.0f, saturate(std::max(0.0f, splinedist - splinewidth) * sqr(spline.terrain_modifier_amount))));
 							corner = XMVectorSetY(corner, height);
 						}
 

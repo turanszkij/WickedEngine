@@ -2563,16 +2563,21 @@ namespace wi::scene
 		int prev_mesh_generation_subdivision = 0;
 		int prev_mesh_generation_vertical_subdivision = 0;
 		int prev_mesh_generation_nodes = 0;
-		float prev_terrain_modifier_amount = 0;
+		mutable float prev_terrain_modifier_amount = 0;
+		mutable int prev_terrain_generation_nodes = 0;
+		mutable bool dirty_terrain = false;
 		bool prev_looped = false;
 		wi::primitive::AABB aabb;
-		mutable bool dirty_terrain = false;
 
 		// Evaluate an interpolated location on the spline at t which in range [0,1] on the spline
 		//	the result matrix is oriented to look towards the spline direction and face upwards along the spline normal
 		XMMATRIX EvaluateSplineAt(float t) const;
 
+		// Get the closest point on the spline to a point
+		//	returns the spline's node width in the W component
 		XMVECTOR ClosestPointOnSpline(const XMVECTOR& P, int steps = 10) const;
+
+		// Trace a point on the spline's plane:
 		XMVECTOR TraceSplinePlane(const XMVECTOR& ORIGIN, const XMVECTOR& DIRECTION, int steps = 10) const;
 
 		wi::primitive::AABB ComputeAABB(int steps = 10) const;

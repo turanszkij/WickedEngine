@@ -2995,9 +2995,6 @@ namespace wi::scene
 		if (spline_node_transforms.size() == 1)
 			return spline_node_transforms[0].GetPositionV();
 
-		if (spline_node_transforms.size() == 2)
-			return wi::math::ClosestPointOnLineSegment(spline_node_transforms[0].GetPositionV(), spline_node_transforms[1].GetPositionV(), P);
-
 		steps *= (int)spline_node_transforms.size();
 		float mindist = FLT_MAX;
 		XMVECTOR MIN = XMVectorZero();
@@ -3005,14 +3002,18 @@ namespace wi::scene
 		for (int i = 1; i < steps; ++i)
 		{
 			const float t = float(i) / float(steps - 1);
-			XMMATRIX M = EvaluateSplineAt(t);
-			XMVECTOR B = wi::math::GetPosition(M);
-			XMVECTOR C = wi::math::ClosestPointOnLineSegment(A, B, P);
-			float dist = wi::math::Distance(P, C);
+			const XMMATRIX M = EvaluateSplineAt(t);
+			const XMVECTOR B = wi::math::GetPosition(M);
+			const XMVECTOR C = wi::math::ClosestPointOnLineSegment(A, B, P);
+			const float dist = wi::math::Distance(P, C);
 			if (dist < mindist)
 			{
 				mindist = dist;
 				MIN = C;
+
+				float nodewidth = XMVectorGetX(XMVector3Length(wi::math::GetRight(M)));
+				nodewidth *= width;
+				MIN = XMVectorSetW(MIN, nodewidth); // node width in w
 			}
 			A = B;
 		}
@@ -3032,12 +3033,12 @@ namespace wi::scene
 		for (int i = 0; i < steps; ++i)
 		{
 			const float t = float(i) / float(steps - 1);
-			XMMATRIX M = EvaluateSplineAt(t);
-			XMVECTOR P = wi::math::GetPosition(M);
-			XMVECTOR N = wi::math::GetUp(M);
-			XMVECTOR PLANE = XMPlaneFromPointNormal(P, N);
-			XMVECTOR I = XMPlaneIntersectLine(PLANE, ORIGIN, ORIGIN + DIRECTION * 100000);
-			float dist = wi::math::Distance(P, I);
+			const XMMATRIX M = EvaluateSplineAt(t);
+			const XMVECTOR P = wi::math::GetPosition(M);
+			const XMVECTOR N = wi::math::GetUp(M);
+			const XMVECTOR PLANE = XMPlaneFromPointNormal(P, N);
+			const XMVECTOR I = XMPlaneIntersectLine(PLANE, ORIGIN, ORIGIN + DIRECTION * 100000);
+			const float dist = wi::math::Distance(P, I);
 			if (dist < mindist)
 			{
 				mindist = dist;
@@ -3050,20 +3051,22 @@ namespace wi::scene
 	AABB SplineComponent::ComputeAABB(int steps) const
 	{
 		AABB ret;
-		float range = width;
+		float rangemod = 1;
 		if (terrain_modifier_amount > 0)
 		{
-			range /= sqr(terrain_modifier_amount);
+			rangemod = 1.0f / sqr(terrain_modifier_amount);
 		}
 		steps *= (int)spline_node_transforms.size();
 		for (int i = 0; i < steps; ++i)
 		{
 			const float t = float(i) / float(steps - 1);
-			XMMATRIX M = EvaluateSplineAt(t);
-			XMVECTOR P = wi::math::GetPosition(M);
-			XMVECTOR R = XMVector3Normalize(wi::math::GetRight(M)) * range;
-			XMVECTOR N = XMVector3Normalize(wi::math::GetUp(M)) * range;
-			XMVECTOR F = XMVector3Normalize(wi::math::GetForward(M)) * range;
+			const XMMATRIX M = EvaluateSplineAt(t);
+			const float nodewidth = XMVectorGetX(XMVector3Length(wi::math::GetRight(M)));
+			const float range = nodewidth * rangemod;
+			const XMVECTOR P = wi::math::GetPosition(M);
+			const XMVECTOR R = XMVector3Normalize(wi::math::GetRight(M)) * range;
+			const XMVECTOR N = XMVector3Normalize(wi::math::GetUp(M)) * range;
+			const XMVECTOR F = XMVector3Normalize(wi::math::GetForward(M)) * range;
 			ret.AddPoint(P - R);
 			ret.AddPoint(P + R);
 			ret.AddPoint(P - N);
